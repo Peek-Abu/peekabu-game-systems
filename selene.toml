@@ -1,0 +1,18 @@
+std = "roblox"
+
+[[globs]]
+includes = ["**/*.spec.luau"]
+
+[globs.config.rules.undefined_variable]
+# TestEZ injects these globals at runtime
+globals = [
+    "describe",
+    "it",
+    "expect",
+    "beforeEach",
+    "afterEach",
+    "beforeAll",
+    "afterAll",
+    "FOCUS",
+    "SKIP",
+]
