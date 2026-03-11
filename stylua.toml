@@ -1,0 +1,9 @@
+# StyLua formatting config. Line endings are set to Windows (CRLF) to match the
+# existing checked-in files. If you later normalize the repo to LF (e.g. via a
+# .gitattributes `* text=auto eol=lf`), change this to "Unix" and re-run `stylua src`.
+column_width = 120
+line_endings = "Windows"
+indent_type = "Tabs"
+indent_width = 4
+quote_style = "AutoPreferDouble"
+call_parentheses = "Always"

@@ -1,0 +1,8 @@
+{
+	// Workspace-recommended extensions. VS Code prompts to install these on open.
+	"recommendations": [
+		"JohnnyMorganz.stylua", // formatter — reads stylua.toml (matches CI)
+		"Kampfkarren.selene-vscode", // linter — reads selene.toml + testez.yml (matches CI)
+		"JohnnyMorganz.luau-lsp" // language server — type checking + autocomplete
+	]
+}

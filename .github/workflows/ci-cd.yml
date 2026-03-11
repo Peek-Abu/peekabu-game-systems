@@ -1,0 +1,116 @@
+name: CI/CD
+
+on:
+  # Lint + format run on every branch push for fast feedback before a PR.
+  push:
+  # PRs into main additionally run the test suite (the merge gate).
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Lint (Selene)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: CompeyDev/setup-rokit@v0.2.1
+        with:
+          cache: true
+      - run: selene src
+
+  format:
+    name: Format (StyLua)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: CompeyDev/setup-rokit@v0.2.1
+        with:
+          cache: true
+      - run: stylua --check src
+
+  typecheck:
+    name: Type Check (luau-lsp analyze)
+    runs-on: ubuntu-latest
+    # BLOCKING merge gate: the Analyze step must pass with zero errors (the codebase is clean
+    # end to end). It also gates the `test` job via that job's `needs:`.
+    # Spec files are excluded because they rely on TestEZ globals (describe/it/expect) that
+    # would need a separate definitions file; add a testez.d.luau via --definitions to include them.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: CompeyDev/setup-rokit@v0.2.1
+        with:
+          cache: true
+      - name: Install Wally packages
+        run: wally install
+      - name: Generate sourcemap
+        run: rojo sourcemap default.project.json --output sourcemap.json
+      - name: Generate package type exports
+        # Process every package realm, not just Packages/. ProfileStore lives in
+        # ServerPackages/ — without this its types resolve as `Unknown` and the entire
+        # data layer goes effectively unchecked.
+        run: |
+          wally-package-types -s sourcemap.json Packages/
+          [ -d ServerPackages ] && wally-package-types -s sourcemap.json ServerPackages/ || true
+          [ -d DevPackages ] && wally-package-types -s sourcemap.json DevPackages/ || true
+      - name: Download Roblox global type definitions
+        run: curl -fsSL "https://raw.githubusercontent.com/JohnnyMorganz/luau-lsp/main/scripts/globalTypes.d.luau" -o globalTypes.d.luau
+      - name: Analyze
+        run: >
+          luau-lsp analyze
+          --sourcemap=sourcemap.json
+          --definitions=globalTypes.d.luau
+          --ignore="**/*.spec.luau"
+          src
+
+  test:
+    name: Tests (Open Cloud Luau Execution)
+    runs-on: ubuntu-latest
+    needs: [lint, format, typecheck]
+    # Tests hit Roblox Open Cloud (rate-limited, uploads a place version), so only run
+    # them where they gate a merge/deploy: PRs into main, and pushes to main.
+    if: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/main' }}
+    # Open Cloud Luau Execution allows only 2 concurrent runs per universe.
+    # Serialize test runs across PRs/pushes so they don't fail each other.
+    concurrency:
+      group: luau-execution
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: CompeyDev/setup-rokit@v0.2.1
+        with:
+          cache: true
+      - name: Install Wally packages
+        run: wally install
+      - name: Build test place
+        run: rojo build default.project.json --output dist.rbxlx
+      - name: Upload to test place and run TestEZ
+        env:
+          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+          ROBLOX_UNIVERSE_ID: ${{ vars.ROBLOX_TEST_UNIVERSE_ID }}
+          ROBLOX_PLACE_ID: ${{ vars.ROBLOX_TEST_PLACE_ID }}
+        run: python3 scripts/python/upload_and_run_task.py dist.rbxlx tasks/runTests.luau
+
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [lint, format, test]
+    # Only deploy on a push to main (not on PRs), and only after all checks pass.
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    # The "production" GitHub Environment provides the manual-approval gate.
+    # Configure required reviewers on it (see docs/ci-cd.md) or deploys run unattended.
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: CompeyDev/setup-rokit@v0.2.1
+        with:
+          cache: true
+      - name: Install Wally packages
+        run: wally install
+      - name: Build production place
+        run: rojo build default.project.json --output dist.rbxlx
+      - name: Publish to production place
+        env:
+          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+          ROBLOX_UNIVERSE_ID: ${{ vars.ROBLOX_PRODUCTION_UNIVERSE_ID }}
+          ROBLOX_PLACE_ID: ${{ vars.ROBLOX_PRODUCTION_PLACE_ID }}
+        run: python3 scripts/python/publish_place.py dist.rbxlx

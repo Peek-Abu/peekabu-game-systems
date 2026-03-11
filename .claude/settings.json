@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(wally install)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "PowerShell(gh api repos/CompeyDev/setup-rokit/releases/latest --jq '.tag_name' 2>&1)",
+      "PowerShell(gh api repos/JohnnyMorganz/StyLua/releases/latest --jq '.tag_name' 2>&1)",
+      "PowerShell(gh api repos/Kampfkarren/selene/releases/latest --jq '.tag_name' 2>&1)",
+      "PowerShell(gh api repos/rojo-rbx/rokit/releases/latest --jq '.tag_name' 2>&1)",
+      "PowerShell(\"setup-rokit:\")",
+      "PowerShell(\"stylua:\")",
+      "PowerShell(\"selene:\")",
+      "PowerShell(\"rokit:\")",
+      "PowerShell(gh api \"repos/CompeyDev/setup-rokit/contents/action.yml?ref=v0.2.1\" -H \"Accept: application/vnd.github.raw\" 2>&1)",
+      "PowerShell(\"===== action.yml =====\")",
+      "Bash(selene src *)",
+      "Bash(stylua --check src)"
+    ]
+  }
+}
