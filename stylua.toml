@@ -1,0 +1,12 @@
+# StyLua formatting config. Line endings are Unix (LF) to match what git actually stores:
+# the index is LF-normalized and .gitattributes (`* text=auto eol=lf`) checks files out as
+# LF on every platform, so this is the only setting under which `stylua --check` passes on
+# both a Linux CI runner and a local clone. (The previous "Windows" value was wrong about
+# the checked-in files — they were always LF in the index; only autocrlf working trees
+# were CRLF — and it failed the CI format job on LF checkouts.)
+column_width = 120
+line_endings = "Unix"
+indent_type = "Tabs"
+indent_width = 4
+quote_style = "AutoPreferDouble"
+call_parentheses = "Always"

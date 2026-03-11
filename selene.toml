@@ -1,0 +1,6 @@
+std = "roblox+testez"
+
+[lints]
+# `expect(function() ... end).to.throw()` is the idiomatic TestEZ one-liner; allow
+# multiple statements on a line rather than forcing every inline assertion multi-line.
+multiple_statements = "allow"

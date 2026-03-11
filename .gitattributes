@@ -1,0 +1,13 @@
+# Line-ending policy: LF everywhere, enforced by git rather than left to each clone's
+# core.autocrlf. The index has always stored LF; this makes the WORKING TREE match it on
+# every platform, which is what the format gate actually checks — stylua.toml sets
+# line_endings = "Unix", and `stylua --check` fails on ending-only differences, so a CRLF
+# working tree (e.g. a Windows clone with autocrlf=true and no attributes) would fail the
+# gate with zero code changes. Shell scripts additionally REQUIRE LF to run under bash.
+* text=auto eol=lf
+
+# Roblox binary model files — never diff or normalize.
+*.rbxm binary
+*.rbxml binary
+*.rbxl binary
+*.rbxlx binary

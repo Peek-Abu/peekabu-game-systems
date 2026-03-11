@@ -1,0 +1,52 @@
+# Place files
+*.rbxl
+*.rbxlx
+
+# Roblox Studio lock files
+*.rbxl.lock
+*.rbxlx.lock
+
+# Rojo / Tooling
+sourcemap.json
+.sourcemap.json
+# Roblox global type defs fetched for `luau-lsp analyze` (CI + scripts/check.sh download it fresh)
+globalTypes.d.luau
+*.log
+.DS_Store
+
+# Dependencies (Wally)
+Packages/
+DevPackages/
+ServerPackages/
+
+# Optional: Keep wally.lock if you want reproducible builds
+# wally.lock
+
+# VS Code
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+
+# Python (Open Cloud helper scripts in scripts/python/ — compiled bytecode, caches, venvs)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Claude Code (share .claude/settings.json; keep personal overrides local)
+.claude/settings.local.json
+
+# Other
+build/
+dist/
+temp/
+tmp/

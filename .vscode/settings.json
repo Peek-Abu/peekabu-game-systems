@@ -1,0 +1,26 @@
+{
+	// Format on save. For .luau/.lua this runs StyLua, which reads stylua.toml —
+	// the exact same config the CI "Format (StyLua)" job uses, so local saves and
+	// CI never disagree.
+	"editor.formatOnSave": true,
+	"[luau]": {
+		"editor.defaultFormatter": "JohnnyMorganz.stylua"
+	},
+	"[lua]": {
+		"editor.defaultFormatter": "JohnnyMorganz.stylua"
+	},
+	// StyLua version used by the extension — pinned to match the CI/rokit version (2.5.2)
+	// so format-on-save produces byte-for-byte the same output as `stylua` on the command
+	// line and in CI. (A newer "latest" can format slightly differently, which shows up as
+	// whitespace churn on save.)
+	"stylua.targetReleaseVersion": "v2.5.2",
+	// Selene (the linter) auto-detects selene.toml + testez.yml — same lints as CI.
+	// You don't need to configure it; the Selene extension just needs to be installed.
+	// Whitespace hygiene for non-Luau files (StyLua already handles .luau).
+	"files.trimTrailingWhitespace": true,
+	"files.insertFinalNewline": true,
+	"[markdown]": {
+		// Markdown uses trailing double-spaces for hard line breaks — don't strip them.
+		"files.trimTrailingWhitespace": false
+	}
+}

@@ -1,0 +1,167 @@
+name: CI/CD
+
+on:
+  # Lint + format run on every branch push for fast feedback before a PR.
+  push:
+  # PRs into main additionally run the test suite (the merge gate).
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Lint (Selene)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: CompeyDev/setup-rokit@1d9390883f7ebce19d48f5b8d006e11d387c92ab # v0.2.1
+        with:
+          cache: true
+      - run: selene src
+
+  format:
+    name: Format (StyLua)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: CompeyDev/setup-rokit@1d9390883f7ebce19d48f5b8d006e11d387c92ab # v0.2.1
+        with:
+          cache: true
+      - run: stylua --check src
+
+  typecheck:
+    name: Type Check (luau-lsp analyze)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # BLOCKING merge gate: the Analyze step must pass with zero errors (the codebase is clean
+    # end to end). It also gates the `test` job via that job's `needs:`.
+    # Spec files are excluded because they rely on TestEZ globals (describe/it/expect) that
+    # would need a separate definitions file; add a testez.d.luau via --definitions to include them.
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: CompeyDev/setup-rokit@1d9390883f7ebce19d48f5b8d006e11d387c92ab # v0.2.1
+        with:
+          cache: true
+      - name: Install Wally packages
+        run: wally install
+      - name: Generate sourcemap
+        run: rojo sourcemap default.project.json --output sourcemap.json
+      - name: Generate package type exports
+        # Process every package realm, not just Packages/. ProfileStore lives in
+        # ServerPackages/ — without this its types resolve as `Unknown` and the entire
+        # data layer goes effectively unchecked.
+        # `if` (not `[ -d ] && ... || true`) so a directory that's absent is skipped but a REAL
+        # wally-package-types failure still fails the job — `|| true` would swallow it and let
+        # ProfileStore silently resolve as `Unknown`, disabling the very gate this step enables.
+        run: |
+          wally-package-types -s sourcemap.json Packages/
+          if [ -d ServerPackages ]; then wally-package-types -s sourcemap.json ServerPackages/; fi
+          if [ -d DevPackages ]; then wally-package-types -s sourcemap.json DevPackages/; fi
+      - name: Download Roblox global type definitions
+        # Pinned to the same luau-lsp release as rokit.toml (defs must match the analyzer, and an
+        # unpinned `main` fetch lets upstream silently change the type-check surface). Bump this
+        # tag together with the luau-lsp entry in rokit.toml.
+        run: curl -fsSL "https://raw.githubusercontent.com/JohnnyMorganz/luau-lsp/1.68.1/scripts/globalTypes.d.luau" -o globalTypes.d.luau
+      - name: Analyze
+        # `tasks/` is included alongside `src`: runTests.luau is the CI test entry point, so a type
+        # error there would otherwise surface only as an opaque Open Cloud task failure.
+        run: >
+          luau-lsp analyze
+          --sourcemap=sourcemap.json
+          --definitions=globalTypes.d.luau
+          --ignore="**/*.spec.luau"
+          src tasks
+
+  scripts-lint:
+    name: Lint (Ruff, Open Cloud scripts)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # The Python scripts ARE the test-upload and deploy mechanism — an unguarded edit there used to
+    # fail only at runtime inside the test/deploy jobs. Lint them like first-party code. Ruff is
+    # pinned for the same reason every action SHA and tool version here is: an unpinned linter can
+    # change the rule surface (and break the gate) with no change in this repo.
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Install Ruff
+        run: pip install ruff==0.15.21
+      - run: ruff check scripts/python
+
+  test:
+    name: Tests (Open Cloud Luau Execution)
+    runs-on: ubuntu-latest
+    # Bounds a hung Open Cloud run: the job holds the `luau-execution` concurrency lock, so
+    # without this a stuck task would block every other test run for GitHub's 6-hour default.
+    # (The poll loop in luau_execution_task.py also caps itself — belt and braces.)
+    timeout-minutes: 30
+    # scripts-lint is here because this job RUNS scripts/python — a lint failure in the upload
+    # machinery should stop the run before it burns an Open Cloud slot.
+    needs: [lint, format, typecheck, scripts-lint]
+    # Tests hit Roblox Open Cloud (rate-limited, uploads a place version), so only run
+    # them where they gate a merge/deploy: PRs into main, and pushes to main.
+    if: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/main' }}
+    # Open Cloud Luau Execution allows only 2 concurrent runs per universe.
+    # Serialize test runs across PRs/pushes so they don't fail each other.
+    concurrency:
+      group: luau-execution
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: CompeyDev/setup-rokit@1d9390883f7ebce19d48f5b8d006e11d387c92ab # v0.2.1
+        with:
+          cache: true
+      - name: Install Wally packages
+        run: wally install
+      - name: Build test place
+        run: rojo build default.project.json --output dist.rbxlx
+      - name: Upload to test place and run TestEZ
+        env:
+          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+          ROBLOX_UNIVERSE_ID: ${{ vars.ROBLOX_TEST_UNIVERSE_ID }}
+          ROBLOX_PLACE_ID: ${{ vars.ROBLOX_TEST_PLACE_ID }}
+        run: python3 scripts/python/upload_and_run_task.py dist.rbxlx tasks/runTests.luau
+
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # `typecheck` and `scripts-lint` are listed explicitly (even though `test` already needs them)
+    # so neither gate can be silently lost if test's dependencies are ever edited — and because
+    # this job runs scripts/python (publish_place.py) itself.
+    needs: [lint, format, typecheck, scripts-lint, test]
+    # Only deploy on a push to main (not on PRs), and only after all checks pass.
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    # The "production" GitHub Environment provides the manual-approval gate.
+    # Configure required reviewers on it (see docs/ci-cd.md) or deploys run unattended.
+    environment: production
+    # Serialize deploys so two rapid pushes to main can't publish out of order — without this,
+    # an OLDER run approved later would overwrite a newer build. cancel-in-progress stays false
+    # so an in-flight publish is never killed halfway.
+    concurrency:
+      group: production-deploy
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: CompeyDev/setup-rokit@1d9390883f7ebce19d48f5b8d006e11d387c92ab # v0.2.1
+        with:
+          cache: true
+      - name: Install Wally packages
+        run: wally install
+      - name: Strip test code from the production build
+        # production.project.json already omits DevPackages (TestEZ); Rojo has no glob-exclude, so
+        # spec files and the Studio test runner are deleted from the checkout before building. This
+        # only mutates the runner's workspace — nothing is committed.
+        run: |
+          find src -name '*.spec.luau' -delete
+          rm -f src/ServerScriptService/TestRunner.server.luau
+      - name: Build production place
+        run: rojo build production.project.json --output dist.rbxlx
+      - name: Publish to production place
+        env:
+          # Production-scoped key stored as a secret ON the `production` environment (not the
+          # repo), so only this environment-gated job can read it. The repo-level ROBLOX_API_KEY
+          # used by the test job is test-scoped and cannot publish here. See docs/ci-cd.md.
+          ROBLOX_API_KEY: ${{ secrets.ROBLOX_PROD_API_KEY }}
+          ROBLOX_UNIVERSE_ID: ${{ vars.ROBLOX_PRODUCTION_UNIVERSE_ID }}
+          ROBLOX_PLACE_ID: ${{ vars.ROBLOX_PRODUCTION_PLACE_ID }}
+        run: python3 scripts/python/publish_place.py dist.rbxlx
