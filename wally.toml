@@ -11,6 +11,7 @@ Janitor = "howmanysmall/janitor@1.18.3"
 Signal = "lightwxve/signalplus@3.5.0" # This is not an official release by creator
 sift = "csqrl/sift@0.0.11" # Non necessary library, but recommended for table utils
 Cmdr = "evaera/cmdr@1.12.0"
+Roact = "roblox/roact@1.4.4"
 
 [server-dependencies]
 ProfileStore = "lm-loleris/profilestore@1.0.3" # This is not an official release by creator

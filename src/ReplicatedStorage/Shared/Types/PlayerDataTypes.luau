@@ -12,11 +12,20 @@ export type InventoryItem = {
 	instanceId: string?, -- optional, for unique/modified
 }
 
+export type BattleStats = {
+	hp: number,
+	attack: number,
+	defense: number,
+	speed: number,
+	moves: { string }, -- List of move IDs
+}
+
 -- Item definitions example:
 export type ItemDefinition = {
 	name: string,
 	rarity: string,
 	icon: string,
+	battleStats: BattleStats?, -- Optional battle stats
 }
 
 -- Currency uses CurrencyType as keys
