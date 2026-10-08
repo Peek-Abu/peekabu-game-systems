@@ -119,35 +119,39 @@ function InventoryUtils.hasItem(inventory: PlayerDataTypes.Inventory, itemType: 
 	return InventoryUtils.countOf(inventory, itemType) >= required
 end
 
+-- Longest string an `attrs` value may hold: attrs are small per-instance facts (a mutation id, a
+-- nickname), and the cap keeps one item from bloating the profile.
+local MAX_ATTR_STRING_LENGTH = 64
+
 --[=[
-	Validates a per-instance modifier map that rides on a UniqueEntry (`affixes` or `statRolls`): every
-	VALUE must be a finite number. Keys are DELIBERATELY tolerated — an affixId retired from the pool,
-	or a stat id removed from the registry, is config-drift, not corruption, and rejecting it would make
-	every item carrying it un-saveable (Path of Exile's disable-don't-delete). It also never range-checks
-	a value: a "legacy" value outside a since-retuned range is legitimate persisted data, not corruption.
-	A nil map is valid (the field is simply absent). See the affix-rolling design spec, Decision 8.
-	@param map { [string]: number }? -- an entry's affixes or statRolls
+	Validates the per-instance `attrs` map that rides on a UniqueEntry: every key a non-empty string,
+	every value a finite number or a string of at most 64 characters. Unknown keys are DELIBERATELY
+	tolerated — an attribute a game retired is config-drift, not corruption, and rejecting it would make
+	every item carrying it un-saveable (disable, don't delete). It never range-checks a value: a legacy
+	value outside a since-retuned range is legitimate persisted data. A nil map is valid (absent field).
+	@param map { [string]: PlayerDataTypes.AttrValue }? -- an entry's attrs
 	@return boolean -- ok
 	@return string? -- reason on failure
 ]=]
-function InventoryUtils.validateModifierMap(map: { [string]: number }?): (boolean, string?)
+function InventoryUtils.validateAttrs(map: { [string]: PlayerDataTypes.AttrValue }?): (boolean, string?)
 	if map == nil then
 		return true
 	end
 	if type(map) ~= "table" then
-		return false, `modifier map must be a table, got {type(map)}`
+		return false, `attrs must be a table, got {type(map)}`
 	end
 	for key, value in map do
-		-- Keys must be non-empty STRINGS. Unknown string ids are tolerated (retired affix / stat — see
-		-- above), but a non-string key is malformed/corrupt data: it would later crash the client's
-		-- ItemAffixConstants.displayPrefix, which table.sorts the collected keys (mixed types throw). Same
-		-- "non-empty string" shape rule validateInventory already enforces on a UniqueEntry's uid.
+		-- A non-string key is malformed data: it would crash any consumer that sorts or formats keys.
 		if type(key) ~= "string" or key == "" then
-			return false, `modifier map has a non-string key {tostring(key)}`
+			return false, `attrs has a non-string key {tostring(key)}`
 		end
+		if type(value) == "string" then
+			if #value > MAX_ATTR_STRING_LENGTH then
+				return false, `attr "{key}" is longer than {MAX_ATTR_STRING_LENGTH} characters`
+			end
 		-- Reject non-numbers and the non-finite doubles (NaN fails `value == value`; ±inf compare direct).
-		if type(value) ~= "number" or value ~= value or value == math.huge or value == -math.huge then
-			return false, `modifier "{tostring(key)}" has a non-finite value {tostring(value)}`
+		elseif type(value) ~= "number" or value ~= value or value == math.huge or value == -math.huge then
+			return false, `attr "{key}" has an invalid value {tostring(value)}`
 		end
 	end
 	return true

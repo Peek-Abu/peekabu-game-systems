@@ -35,7 +35,7 @@ export type SliceDefinition = {
 -- The replicated slices. One entry here is the manifest edit when adding a slice.
 --
 -- A SLOT-SCOPED slice reads through `profile.slots[profile.slotState.active]`, so the atom — and
--- therefore everything charm-sync ships to the client — holds the ACTIVE character only. Inactive
+-- therefore everything charm-sync ships to the client — holds the ACTIVE slot only. Inactive
 -- slots' data never leaves the server. An ACCOUNT-WIDE slice reads through `profile.account` instead.
 local DEFINITIONS: { [string]: SliceDefinition } = {
 	currency = {
@@ -48,41 +48,14 @@ local DEFINITIONS: { [string]: SliceDefinition } = {
 			return profile.slots[profile.slotState.active].inventory
 		end,
 	},
-	stats = {
-		read = function(profile)
-			return profile.slots[profile.slotState.active].stats
-		end,
-	},
-	equipment = {
-		read = function(profile)
-			return profile.slots[profile.slotState.active].equipment
-		end,
-	},
-	bank = {
-		read = function(profile)
-			return profile.slots[profile.slotState.active].bank
-		end,
-	},
-	appearance = {
-		read = function(profile)
-			return profile.slots[profile.slotState.active].appearance
-		end,
-	},
-	-- ACCOUNT-WIDE: what the player has unlocked is earned once and shared by every character, so this
-	-- reads through `profile.account` rather than the active slot (see the header's scope note).
-	entitlements = {
-		read = function(profile)
-			return profile.account.entitlements
-		end,
-	},
-	-- ACCOUNT-WIDE: what a player has EARNED is about the player, once, shared by every character
-	-- (titles design spec, Decision 2) — reads through `profile.account` like entitlements.
+	-- ACCOUNT-WIDE: what a player has EARNED is about the player, once, shared by every slot — reads
+	-- through `profile.account` (see the header's scope note).
 	titles = {
 		read = function(profile)
 			return profile.account.titles
 		end,
 	},
-	-- SLOT-SCOPED: which title THIS character wears; inactive slots' choices never leave the server.
+	-- SLOT-SCOPED: which title the active slot wears; inactive slots' choices never leave the server.
 	equippedTitle = {
 		read = function(profile)
 			return profile.slots[profile.slotState.active].equippedTitle

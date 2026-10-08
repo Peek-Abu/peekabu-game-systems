@@ -2,7 +2,7 @@
 --[=[
 	Unit tests for the GiveItem Cmdr command implementation.
 	Mock strategy: patch InventoryService.addItem inside beforeAll/afterAll (see
-	AddCurrencyServer.spec for the rationale).
+	CurrencyAddServer.spec for the rationale).
 ]=]
 
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -38,26 +38,26 @@ return function()
 		end)
 
 		it("forwards the target's UserId, itemType, and count to the service", function()
-			giveItemCommand(nil, fakePlayer, "rusted-saw", 3)
+			giveItemCommand(nil, fakePlayer, "wrench", 3)
 			expect(#calls).to.equal(1)
 			expect(calls[1].userId).to.equal(42)
-			expect(calls[1].itemType).to.equal("rusted-saw")
+			expect(calls[1].itemType).to.equal("wrench")
 			expect(calls[1].count).to.equal(3)
 		end)
 
 		it("returns a success message on success and a failure message otherwise", function()
-			local okMessage = giveItemCommand(nil, fakePlayer, "rusted-saw", 3)
+			local okMessage = giveItemCommand(nil, fakePlayer, "wrench", 3)
 			expect(okMessage:find("Successfully")).to.be.ok()
 
 			nextResult = false
-			local failMessage = giveItemCommand(nil, fakePlayer, "rusted-saw", 3)
+			local failMessage = giveItemCommand(nil, fakePlayer, "wrench", 3)
 			expect(failMessage:find("Failed")).to.be.ok()
 		end)
 
 		it("surfaces the service's specific failure reason in the response", function()
 			nextResult = false
 			nextReason = "would exceed the tool kind cap"
-			local failMessage = giveItemCommand(nil, fakePlayer, "rusted-saw", 3)
+			local failMessage = giveItemCommand(nil, fakePlayer, "wrench", 3)
 			expect(failMessage:find("would exceed the tool kind cap", 1, true)).to.be.ok()
 		end)
 	end)

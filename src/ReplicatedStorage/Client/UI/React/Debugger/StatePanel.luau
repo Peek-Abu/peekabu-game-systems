@@ -25,8 +25,6 @@ local React = require(ReplicatedStorage.Packages.React)
 local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
 local DebuggerEvents = require(ReplicatedStorage.Shared.Features.Debugger.Net.DebuggerEvents)
 local DebuggerStore = require(ReplicatedStorage.Client.Features.Debugger.State.DebuggerStore)
-local CharacterReplicationServiceClient =
-	require(ReplicatedStorage.Client.Features.Replication.ReplicationServiceClient)
 local DebuggerTheme = require(ReplicatedStorage.Client.UI.React.Debugger.DebuggerTheme)
 local TableView = require(ReplicatedStorage.Client.UI.React.Debugger.TableView)
 local TreeView = require(ReplicatedStorage.Client.UI.React.Debugger.TreeView)
@@ -204,12 +202,11 @@ local function StatePanel(): React.ReactNode
 			return
 		end
 		local player = Players:GetPlayerByUserId(effectiveSelected)
-		-- Through the body API: the owner rig for yourself, a puppet for anyone this client has loaded.
-		local character = if player ~= nil then CharacterReplicationServiceClient:getRig(player) else nil
+		local character = if player ~= nil then player.Character else nil
 		if not character then
-			-- No rig on this client (not spawned, or out of range): skip. The effect keys only off the
-			-- userId, so a later spawn won't re-run it — reselecting reapplies the highlight, a fine
-			-- tradeoff for a debug overlay versus wiring bodySpawned listeners here.
+			-- Not spawned (or streamed out): skip. The effect keys only off the userId, so a later spawn
+			-- won't re-run it — reselecting reapplies the highlight, a fine tradeoff for a debug overlay
+			-- versus wiring up CharacterAdded listeners here.
 			return
 		end
 		local highlight = Instance.new("Highlight")

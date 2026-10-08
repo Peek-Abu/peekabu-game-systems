@@ -3,8 +3,8 @@
 	Unit tests for ItemContentRegistry — the boot-time item seeding both realms run.
 
 	Both test runners (and both boot handlers) call ItemContentRegistry.init() before anything else, so these
-	assertions double as a guard that the seeded starter set matches what the inventory specs and
-	Cmdr item enum depend on. ItemRegistry.register now REJECTS double registration, so init()
+	assertions double as a guard that the seeded sample catalog matches what the inventory specs and
+	Cmdr item enum depend on. ItemRegistry.register REJECTS double registration, so init()
 	must guard its own re-entry (the test runner and this spec both call it).
 ]=]
 
@@ -14,91 +14,107 @@ local ItemRegistry = require(ReplicatedStorage.Shared.Features.Item.Data.ItemReg
 
 return function()
 	describe("init", function()
-		it("registers the starter set of items", function()
+		it("registers the sample catalog of items", function()
 			ItemContentRegistry.init()
 
 			local expectedTypes = {
-				"rusted-saw",
-				"phoenix-blade",
-				"chambered-helmet",
-				"healing-tonic",
-				"throwing-knife",
-				"wood",
-				"crypt-key",
+				"wrench",
+				"golden-wrench",
+				"hard-hat",
+				"medkit",
+				"flare",
+				"scrap",
+				"master-key",
 			}
 			for _, itemType in expectedTypes do
 				expect(ItemRegistry.isValidItemType(itemType)).to.equal(true)
 			end
 		end)
 
-		it("registers two weapons with real display data", function()
+		it("registers two unique tools with real display data", function()
 			ItemContentRegistry.init()
-			local rustedSaw = ItemRegistry.get("rusted-saw")
-			expect(rustedSaw and rustedSaw.kind).to.equal("weapon")
-			expect(rustedSaw and rustedSaw.rarity).to.equal("common")
-			if rustedSaw and rustedSaw.kind == "weapon" then
-				expect(rustedSaw.equipSlot).to.equal("weapon")
-			end
+			local wrench = ItemRegistry.get("wrench")
+			expect(wrench and wrench.name).to.equal("Wrench")
+			expect(wrench and wrench.kind).to.equal("tool")
+			expect(wrench and wrench.rarity).to.equal("common")
+			expect(wrench and wrench.icon).to.equal("rbxassetid://123")
+			expect(wrench and wrench.description).to.equal("A sturdy wrench. Fixes most things, eventually.")
+			expect(ItemRegistry.isStackable("wrench")).to.equal(false)
 
-			local phoenixBlade = ItemRegistry.get("phoenix-blade")
-			expect(phoenixBlade and phoenixBlade.kind).to.equal("weapon")
-			expect(phoenixBlade and phoenixBlade.rarity).to.equal("legendary")
-			if phoenixBlade and phoenixBlade.kind == "weapon" then
-				expect(phoenixBlade.equipSlot).to.equal("weapon")
-			end
+			local goldenWrench = ItemRegistry.get("golden-wrench")
+			expect(goldenWrench and goldenWrench.name).to.equal("Golden Wrench")
+			expect(goldenWrench and goldenWrench.kind).to.equal("tool")
+			expect(goldenWrench and goldenWrench.rarity).to.equal("legendary")
+			expect(goldenWrench and goldenWrench.icon).to.equal("rbxassetid://456")
+			expect(goldenWrench and goldenWrench.description).to.equal("Too shiny to actually use.")
+			expect(ItemRegistry.isStackable("golden-wrench")).to.equal(false)
 		end)
 
-		it("registers an armour piece", function()
+		it("registers a unique wearable", function()
 			ItemContentRegistry.init()
-			local helmet = ItemRegistry.get("chambered-helmet")
-			expect(helmet and helmet.kind).to.equal("armour")
-			if helmet and helmet.kind == "armour" then
-				expect(helmet.equipSlot).to.equal("helmet")
-				expect(helmet.requiredLevel).to.equal(8)
-				expect(helmet.statBonuses and helmet.statBonuses.rotEndurance).to.equal(8)
-			end
+			local hardHat = ItemRegistry.get("hard-hat")
+			expect(hardHat and hardHat.name).to.equal("Hard Hat")
+			expect(hardHat and hardHat.kind).to.equal("wearable")
+			expect(hardHat and hardHat.rarity).to.equal("epic")
+			expect(hardHat and hardHat.icon).to.equal("rbxassetid://789")
+			expect(hardHat and hardHat.description).to.equal("Safety first.")
+			expect(ItemRegistry.isStackable("hard-hat")).to.equal(false)
 		end)
 
 		it("registers consumables with the documented stack shapes", function()
 			ItemContentRegistry.init()
 
-			local tonic = ItemRegistry.get("healing-tonic")
-			expect(tonic and tonic.kind).to.equal("consumable")
-			expect(ItemRegistry.isStackable("healing-tonic")).to.equal(true)
-			if tonic and tonic.kind == "consumable" then
-				expect(tonic.stackMax).to.equal(10)
-			end
+			local medkit = ItemRegistry.get("medkit")
+			expect(medkit and medkit.name).to.equal("Medkit")
+			expect(medkit and medkit.kind).to.equal("consumable")
+			expect(medkit and medkit.rarity).to.equal("common")
+			expect(medkit and medkit.icon).to.equal("rbxassetid://1011")
+			expect(medkit and medkit.description).to.equal("Patches you up.")
+			expect(ItemRegistry.isStackable("medkit")).to.equal(true)
+			expect(medkit and medkit.stackMax).to.equal(10)
+			expect(medkit and medkit.maxStacks).to.equal(nil)
 
-			local knife = ItemRegistry.get("throwing-knife")
-			expect(knife and knife.kind).to.equal("consumable")
-			if knife and knife.kind == "consumable" then
-				expect(knife.stackMax).to.equal(10)
-				expect(knife.maxStacks).to.equal(1)
-			end
+			local flare = ItemRegistry.get("flare")
+			expect(flare and flare.name).to.equal("Flare")
+			expect(flare and flare.kind).to.equal("consumable")
+			expect(flare and flare.rarity).to.equal("common")
+			expect(flare and flare.icon).to.equal("rbxassetid://1213")
+			expect(flare and flare.description).to.equal("Bright, brief, and limited to one stack.")
+			expect(ItemRegistry.isStackable("flare")).to.equal(true)
+			expect(flare and flare.stackMax).to.equal(10)
+			expect(flare and flare.maxStacks).to.equal(1)
 		end)
 
-		it("registers misc items, one stackable and one a non-stackable quest item", function()
+		it("registers misc items, one stackable and one unique", function()
 			ItemContentRegistry.init()
 
-			local wood = ItemRegistry.get("wood")
-			expect(wood and wood.kind).to.equal("misc")
-			expect(ItemRegistry.isStackable("wood")).to.equal(true)
-			if wood and wood.kind == "misc" then
-				expect(wood.stackMax).to.equal(30)
-			end
+			local scrap = ItemRegistry.get("scrap")
+			expect(scrap and scrap.name).to.equal("Scrap")
+			expect(scrap and scrap.kind).to.equal("misc")
+			expect(scrap and scrap.rarity).to.equal("common")
+			expect(scrap and scrap.icon).to.equal("rbxassetid://1415")
+			expect(scrap and scrap.description).to.equal("Bits of metal. Someone will buy it.")
+			expect(ItemRegistry.isStackable("scrap")).to.equal(true)
+			expect(scrap and scrap.stackMax).to.equal(30)
+			expect(scrap and scrap.maxStacks).to.equal(nil)
 
-			local cryptKey = ItemRegistry.get("crypt-key")
-			expect(cryptKey and cryptKey.kind).to.equal("misc")
-			expect(ItemRegistry.isStackable("crypt-key")).to.equal(false)
-			if cryptKey and cryptKey.kind == "misc" then
-				expect(cryptKey.questItem).to.equal(true)
-			end
+			local masterKey = ItemRegistry.get("master-key")
+			expect(masterKey and masterKey.name).to.equal("Master Key")
+			expect(masterKey and masterKey.kind).to.equal("misc")
+			expect(masterKey and masterKey.rarity).to.equal("legendary")
+			expect(masterKey and masterKey.icon).to.equal("rbxassetid://1617")
+			expect(masterKey and masterKey.description).to.equal("Opens the door you were told not to open.")
+			expect(ItemRegistry.isStackable("master-key")).to.equal(false)
 		end)
 
-		it("spreads rarities across the range, including one cursed item", function()
+		it("leaves the unique items without any stack fields", function()
 			ItemContentRegistry.init()
-			local cryptKey = ItemRegistry.get("crypt-key")
-			expect(cryptKey and cryptKey.rarity).to.equal("cursed")
+			for _, itemType in { "wrench", "golden-wrench", "hard-hat", "master-key" } do
+				local def = ItemRegistry.get(itemType)
+				expect(def).to.be.ok()
+				expect(def and def.stackMax).to.equal(nil)
+				expect(def and def.maxStacks).to.equal(nil)
+			end
 		end)
 
 		it("is idempotent — calling init again does not throw or corrupt definitions", function()
@@ -106,8 +122,8 @@ return function()
 				ItemContentRegistry.init()
 				ItemContentRegistry.init()
 			end).never.to.throw()
-			local def = ItemRegistry.get("rusted-saw")
-			expect(def and def.name).to.be.ok()
+			local def = ItemRegistry.get("wrench")
+			expect(def and def.name).to.equal("Wrench")
 		end)
 	end)
 end

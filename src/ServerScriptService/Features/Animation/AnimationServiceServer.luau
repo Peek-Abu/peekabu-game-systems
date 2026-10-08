@@ -1,21 +1,20 @@
 --!strict
 --[=[
-	AnimationServiceServer: the server's animation surface (Phase 6 spec, Decision 5; character replication
-	R3, decisions 2-7).
+	AnimationServiceServer: the server's animation surface.
 
-	- **Grants: play on a player's body.** `play(player, id, { speed?, variant? })` is THE entry point for a
-	  replicated action: Cmdr `animationplay` today; combat, abilities, emotes and NPC-driven player animations
-	  later. Those callers decide WHETHER and WHAT (permission, cooldowns); this decides HOW (AnimationActionGrantSystem:
-	  replicable only, clamped speed, the server's variant, duration from the declared length, the layer's
-	  interruption rule) and hands the grant to ReplicationServiceServer as timed body state of kind
-	  "action". The owner's client and every viewer receive the same ActionStarted and play it on their rig
-	  of that body: one path, no double plays. `stop` / `stopAttacks` / `stopAll` end grants early (ActionStopped).
-	- **Server-owned rigs.** NPCs and world models animate server-side through `playOnRig` — consumers
-	  arrive with the NPC phase; the path exists so nothing ever grows a second one.
+	- **Grants: play on a player's character.** `play(player, id, { speed?, variant? })` is THE entry point
+	  for a server-decided action: Cmdr `animationplay` today; combat, abilities and emotes later. Those
+	  callers decide WHETHER and WHAT (permission, cooldowns); this decides HOW (AnimationActionGrantSystem:
+	  replicable entries only, clamped speed, the server's variant, duration from the declared length, the
+	  layer's interruption rule) and sends ONE packet to the owning client, which plays it on its
+	  character. Roblox replicates the owner's character animations to every other client, so there is no
+	  second path and no double play. `stop` / `stopAttacks` / `stopAll` end grants early.
+	- **Server-owned rigs.** NPCs and world models animate server-side through `playOnRig`.
 	- **Diagnostics to one client.** `requestTrackReport` / `requestAssetProbe` (the anim-tracks and
 	  anim-report read paths).
 
-	No animation state on the charm-sync spine: grants are timed body state, not queryable state.
+	No animation state on the charm-sync spine: what is playing is the owner client's business; the server
+	only remembers what it granted (AnimationGrantTracker) to enforce the interruption rule.
 
 	@class AnimationServiceServer
 ]=]
@@ -29,14 +28,15 @@ local AnimationPlayerSystem = require(AnimationShared.Systems.AnimationPlayerSys
 local AnimationPlayerEngineSystem = require(AnimationShared.Systems.AnimationPlayerEngineSystem)
 local AnimationRegistry = require(AnimationShared.Data.AnimationRegistry)
 local AnimationTypes = require(AnimationShared.Data.AnimationTypes)
-local ReplicationEvents = require(ReplicatedStorage.Shared.Features.Replication.Net.ReplicationEvents)
+local Observers = require(ReplicatedStorage.Packages.Observers)
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
-local CharacterReplicationServiceServer = require(ServerScriptService.Features.Replication.ReplicationServiceServer)
-local ReplicationBodyStateSender = require(ServerScriptService.Features.Replication.Net.ReplicationBodyStateSender)
+local AnimationGrantTracker = require(ServerScriptService.Features.Animation.State.AnimationGrantTracker)
 local AnimationActionGrantSystem = require(ServerScriptService.Features.Animation.Systems.AnimationActionGrantSystem)
 
 type ActionData = AnimationActionGrantSystem.ActionData
-type ActionChannel = ReplicationBodyStateSender.Channel<ActionData>
+-- What the grant surface needs from its record of live grants: AnimationGrantTracker in the game, a fake in
+-- the spec (the `_setActionChannel` seam).
+export type ActionChannel = AnimationGrantTracker.Tracker<ActionData>
 
 local log = Logger.new("AnimationService")
 
@@ -47,37 +47,37 @@ end
 local roll: (count: number) -> number = defaultRoll
 local counters = { granted = 0, refused = 0, stopped = 0 }
 
--- The "action" kind's packets: a grant on `key` (a layer name) of `subject`'s body, to `target`.
-local actionSenders: ReplicationBodyStateSender.Senders<ActionData> = {
-	started = function(target, subject, epoch, key, data, startMs, durationMs)
+-- The session clock grants are stamped and expired against, in milliseconds.
+local function nowMs(): number
+	return math.floor(os.clock() * 1000)
+end
+
+-- The packets to the owning client: a grant on `key` (a layer name) of the player's own character.
+local actionSenders: AnimationGrantTracker.Senders<ActionData> = {
+	started = function(player, key, data, _durationMs)
 		local layer = AnimationTypes.layerIndex(key)
 		if layer == nil then
 			return
 		end
-		ReplicationEvents.packets.ActionStarted.sendTo({
-			userId = subject.UserId,
-			epoch = epoch,
+		AnimationEvents.packets.ActionStarted.sendTo({
 			layer = layer,
 			wireId = data.wireId,
 			variant = data.variant,
 			speedMilli = data.speedMilli,
-			startMs = startMs,
-			durationMs = durationMs,
-		}, target)
+		}, player)
 	end,
-	stopped = function(target, subject, epoch, key, startMs)
+	stopped = function(player, key)
 		local layer = AnimationTypes.layerIndex(key)
 		if layer == nil then
 			return
 		end
-		ReplicationEvents.packets.ActionStopped.sendTo({
-			userId = subject.UserId,
-			epoch = epoch,
-			layer = layer,
-			startMs = startMs,
-		}, target)
+		AnimationEvents.packets.ActionStopped.sendTo({ layer = layer }, player)
 	end,
 }
+
+local function hasCharacter(player: Player): boolean
+	return player.Character ~= nil
+end
 
 local function refuse(reason: string): (boolean, string?)
 	counters.refused += 1
@@ -109,26 +109,34 @@ export type AnimationServiceServer = {
 	) -> (AnimationPlayerSystem.PlayHandle?, string?),
 	getState: (self: AnimationServiceServer) -> { [string]: any },
 
-	-- Test seams (specs only): a fake channel instead of the replication service's, a fixed roll.
+	-- Test seams (specs only): a fake channel instead of the AnimationGrantTracker, a fixed roll.
 	_setActionChannel: (self: AnimationServiceServer, channel: ActionChannel?) -> ActionChannel?,
 	_setRoll: (self: AnimationServiceServer, nextRoll: ((count: number) -> number)?) -> (),
 }
 
 local AnimationServiceServer: AnimationServiceServer = {
-	dependencies = { "ReplicationServiceServer" },
+	dependencies = {},
 
 	--[=[
-		Defines the "action" body-state kind (a cross-service call, so at start, not init).
+		Builds the grant record, and forgets a player's grants when their character is replaced (its
+		tracks died with it) or they leave.
 	]=]
 	start = function(_self)
 		if actionChannel == nil then
-			actionChannel = CharacterReplicationServiceServer:defineBodyState("action", actionSenders)
+			local tracker = AnimationGrantTracker.new(actionSenders, nowMs, hasCharacter)
+			actionChannel = tracker
+			-- The cleanup runs when the character is removed (respawn) or the player leaves.
+			Observers.observeCharacter(function(player)
+				return function()
+					tracker:forget(player)
+				end
+			end)
 		end
 	end,
 
 	--[=[
-		Grants a replicated action on `player`'s body. False and a reason when refused: unknown or
-		non-replicable id, bad speed or variant, a protected action holding the layer, no live body.
+		Grants an action on `player`'s character. False and a reason when refused: unknown or
+		non-replicable id, bad speed or variant, a protected action holding the layer, no character.
 	]=]
 	play = function(_self, player, id, options)
 		local grant, reason = AnimationActionGrantSystem.decide(id, AnimationRegistry.get(id), options, roll)
@@ -146,12 +154,9 @@ local AnimationServiceServer: AnimationServiceServer = {
 		then
 			return refuse(`the {grant.layer} layer is held by protected "{current.data.id}"`)
 		end
-		local result =
-			channel:set(player, grant.layer, grant.data, CharacterReplicationServiceServer:nowMs(), grant.durationMs)
+		local result = channel:set(player, grant.layer, grant.data, nowMs(), grant.durationMs)
 		if result == "no-body" then
-			return refuse(`{player.Name} has no body`)
-		elseif result == "full" then
-			return refuse(`{player.Name} already holds the maximum number of body states`)
+			return refuse(`{player.Name} has no character`)
 		end
 		counters.granted += 1
 		return true, nil
@@ -206,8 +211,8 @@ local AnimationServiceServer: AnimationServiceServer = {
 	end,
 
 	--[=[
-		Ends EVERY action grant on `player`'s body, whatever its class (Stopped goes to the owner and every
-		viewer). The hook Death and Ragdoll call when they take the body over. Returns how many ended.
+		Ends EVERY action grant on `player`'s character, whatever its class. The hook a death or ragdoll
+		system calls when it takes the character over. Returns how many ended.
 	]=]
 	stopAll = function(_self, player)
 		local channel = actionChannel
@@ -260,7 +265,7 @@ local AnimationServiceServer: AnimationServiceServer = {
 		return player:play(id, opts)
 	end,
 
-	-- Grant counters for the F4 Services tab (body-state counts live on the replication service).
+	-- Grant counters for the F4 Services tab.
 	getState = function(_self)
 		return table.clone(counters)
 	end,

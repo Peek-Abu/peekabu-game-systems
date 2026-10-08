@@ -1,25 +1,21 @@
 --!strict
 --[=[
-	PublicPlayerTypes: what any client may know about another player (spec Verdict, "Other players' public
-	data rides charm-sync"; plan R2 Task 8). Never private data. R2 carried health; R4 adds the player's
-	active appearance and its version. The equipped title and nameplates are NOT in R4.
+	PublicPlayerTypes: what any client may know about another player. Never private data.
 
-	The map is keyed by the userId as a STRING (`StateSyncConstants.publicEntryKey`): charm-sync ships it through a
-	RemoteEvent, and string keys keep it a plain dictionary on the wire.
+	A PublicPlayer is a flat, game-owned record of small public facts — "is carrying an egg", "is dead",
+	a team id, an equipped title. Values are deliberately limited to plain scalars so every entry stays
+	cheap to diff and ship. A game that wants a narrow typed view declares it next to the code that
+	publishes the fields (the store itself stays string-keyed, the same rationale as `ProfilePath`).
+
+	The map is keyed by the userId as a STRING (`StateSyncConstants.publicEntryKey`): charm-sync ships it
+	through a RemoteEvent, and string keys keep it a plain dictionary on the wire.
 
 	@class PublicPlayerTypes
 ]=]
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+export type PublicValue = string | number | boolean
 
-local PlayerDataTypes = require(ReplicatedStorage.Shared.Data.PlayerDataTypes)
-
-export type PublicPlayer = {
-	health: number,
-	maxHealth: number,
-	appearance: PlayerDataTypes.Appearance,
-	appearanceVersion: number,
-}
+export type PublicPlayer = { [string]: PublicValue }
 
 export type PublicPlayerMap = { [string]: PublicPlayer }
 

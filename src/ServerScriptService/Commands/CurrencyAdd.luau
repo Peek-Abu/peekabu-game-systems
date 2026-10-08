@@ -13,7 +13,7 @@ return {
 		{
 			Type = "currencyType",
 			Name = "currencyType",
-			Description = "The type of currency (jaku)",
+			Description = "The type of currency (coins)",
 		},
 		{
 			Type = "number",

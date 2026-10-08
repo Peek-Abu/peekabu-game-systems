@@ -52,12 +52,12 @@ end
 	  live Luau execution task still saw one — Roblox re-inserts it whenever it's absent). Its
 	  nested `CommonUtils` folder happens to contain modules ending in `.spec` (e.g. CameraWrapper,
 	  ConnectionUtil) that are not TestEZ specs at all, just Roblox's own naming.
-	- `ReplicatedStorage.Modules` — the OLD game's code. `ReplicatedStorage` is mounted with
-	  `$ignoreUnknownInstances`, deliberately, so that Rojo cannot delete the artist-owned `Assets`
-	  folder (see the deployment model in AGENTS.md). The same flag means every legacy folder in an
-	  art-bearing or reference place also survives a sync — including SmartBone and the old Knit
-	  `Packages/_Index` tree, which between them ship 16 `.spec` modules that are not this project's
-	  tests. Nothing here is built from `src/`; the cutover deletes these folders by hand.
+	- `ReplicatedStorage.Modules` — legacy code in an existing place this base is synced into.
+	  `ReplicatedStorage` is mounted with `$ignoreUnknownInstances`, deliberately, so that Rojo cannot
+	  delete the artist-owned `Assets` folder (see the deployment model in AGENTS.md). The same flag
+	  means every legacy folder in an art-bearing place also survives a sync — including vendored
+	  libraries (an old Knit `Packages/_Index` tree, for one) that ship `.spec` modules which are not
+	  this project's tests. Nothing here is built from `src/`.
 	@param roots { Instance } -- The roots about to be passed to TestBootstrap:run
 ]=]
 function SpecRoots.assertAllSpecsCovered(roots: { Instance })
@@ -77,7 +77,7 @@ function SpecRoots.assertAllSpecsCovered(roots: { Instance })
 	if playerModule then
 		table.insert(excludedFolders, playerModule)
 	end
-	-- The old game's tree, present in any place synced over the live/reference game and absent from a
+	-- An existing game's legacy tree, present in a place synced over an older game and absent from a
 	-- clean build. Matched by NAME rather than by content: `src/ReplicatedStorage` has no `Modules`
 	-- child (this project's shared code lives under `Shared`), so nothing first-party can land here.
 	local legacyModules = ReplicatedStorage:FindFirstChild("Modules")
@@ -136,11 +136,8 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Shared.Data.PlayerDataTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Data.PublicPlayerTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Features.Title.Net.TitleEvents"] = "ByteNet packet definitions (no logic)",
-	["ReplicatedStorage.Shared.Features.Equipment.Net.EquipmentEvents"] = "ByteNet packet definitions (no logic)",
 	["ReplicatedStorage.Shared.Features.Debugger.Net.DebuggerEvents"] = "ByteNet packet definitions (no logic)",
 	["ReplicatedStorage.Shared.Features.Animation.Net.AnimationEvents"] = "ByteNet packet definitions (no logic)",
-	["ReplicatedStorage.Shared.Features.Bank.Net.BankEvents"] = "ByteNet packet definitions (no logic)",
-	["ReplicatedStorage.Shared.Features.Replication.Net.ReplicationEvents"] = "ByteNet packet definitions (no logic)",
 	-- React UI components — rendered and exercised in-game via the F4 overlay; TestEZ has no
 	-- renderer, so a unit test would assert nothing meaningful.
 	["ReplicatedStorage.Client.UI.React.Debugger.DebuggerOverlay"] = "React UI component (rendered in-game)",
@@ -161,30 +158,10 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.UI.React.Primitives.Panel"] = "presentational React primitive (no logic)",
 	["ReplicatedStorage.Client.UI.React.Primitives.ClippedBar"] = "presentational React primitive — the clip-technique sprite bar (no logic)",
 	["ReplicatedStorage.Client.UI.React.Primitives.FadeGroup"] = "presentational React primitive — CanvasGroup fade; its easing step TrailEasingUtils is specced",
-	["ReplicatedStorage.Client.UI.React.Primitives.Slot"] = "presentational React primitive — the item slot (no logic)",
 	["ReplicatedStorage.Client.UI.React.Hooks.useEasedTrail"] = "React hook — Heartbeat easing over bindings; its pure step TrailEasingUtils is specced",
 	["ReplicatedStorage.Client.UI.React.SceneHost"] = "React layer view — renders the stack's screens (selection specced in SceneStack.screensFor)",
-	["ReplicatedStorage.Client.UI.React.StoryFixtures"] = "sample data for the UI Labs stories — asserting a fixture's contents just restates the fixture",
 	["ReplicatedStorage.Client.UI.React.Debugger.DebugPanelScreen"] = "throwaway harness screen proving the SceneHost render path (no logic)",
 	["ReplicatedStorage.Client.UI.React.Screens.Hud.HudRoot"] = "React composition root — composes the HUD widgets + hide gate (no logic)",
-	["ReplicatedStorage.Client.UI.React.Screens.Vitals.VitalsHud"] = "React HUD widget (health path is a binding; no unit-testable logic)",
-	["ReplicatedStorage.Client.UI.React.Screens.Vitals.ResourceBars"] = "presentational React component — the 3 stacked resource bars (no logic)",
-	["ReplicatedStorage.Client.UI.React.Screens.Experience.ExperienceHud"] = "React HUD widget (its derivations are specced in VitalsViewModel)",
-	["ReplicatedStorage.Client.UI.React.Screens.Experience.ExperienceBar"] = "presentational React component — the XP bar + label (no logic)",
-	["ReplicatedStorage.Client.UI.React.Screens.Inventory.InventoryPanel"] = "React panel screen (its filter/sort/search is specced in InventoryViewModel)",
-	["ReplicatedStorage.Client.UI.React.Screens.Inventory.EquipmentPaperdoll"] = "presentational equip column — the resolution it renders is specced in InventoryViewModel.equipped",
-	["ReplicatedStorage.Client.UI.React.Screens.Containers.ItemActions"] = "presentational action menu — authored plates and labels; the actions themselves are inert until the equipment work wires them",
-	["ReplicatedStorage.Client.UI.React.Screens.Containers.SortControl"] = "presentational sort picker — open/closed state only; the sort modes it picks are specced in InventoryViewModel",
-	["ReplicatedStorage.Client.UI.React.Screens.Containers.ItemGrid"] = "presentational React component — the item grid (no logic)",
-	["ReplicatedStorage.Client.UI.React.Screens.Bank.CurrencyTransfer"] = "presentational currency strip — authored plates and labels; the amount it sends is validated server-side in BankReceiver",
-	["ReplicatedStorage.Client.UI.React.Screens.Bank.CoinCounter"] = "presentational balance readout — its formatting is CurrencyUtils.formatCurrency, which is specced",
-	["ReplicatedStorage.Client.UI.React.Screens.Bank.BankPanel"] = "React panel screen — its two containers' filter/sort/search is specced in InventoryViewModel and its drop test in DropTargets",
-	["ReplicatedStorage.Client.UI.Scenes.BankScene"] = "scene registration (declarative) + the one place the bank panel is joined to its packets",
-	["ReplicatedStorage.Client.UI.React.Hooks.useContainerFilters"] = "React hook — useState bundle for one container's filters (needs a renderer); the sort rule it applies is specced in InventoryViewModel",
-	["ReplicatedStorage.Client.UI.React.Screens.Containers.ContainerPanel"] = "presentational container plate — fully controlled, owns no state; its filtering is specced in InventoryViewModel and its card placement in DetailPlacement",
-	["ReplicatedStorage.Client.UI.React.Screens.Containers.CategoryTabs"] = "presentational React component — the category tabs (no logic)",
-	["ReplicatedStorage.Client.UI.React.Screens.Containers.ItemDetail"] = "presentational React component — the item detail panel (no logic)",
-	["ReplicatedStorage.Client.UI.Scenes.InventoryScene"] = "scene registration (data; no logic)",
 	["ReplicatedStorage.Client.Features.UI.Data.UIAssets"] = "static image-asset registry (no logic)",
 
 	-- Client services: thin, network/Cmdr-bound shells whose behavior only manifests against a live
@@ -193,8 +170,6 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.Features.Animation.AnimationServiceClient"] = "network-bound client shell",
 	["ReplicatedStorage.Client.Features.Debugger.DebuggerServiceClient"] = "network-bound client shell",
 	["ReplicatedStorage.Client.Features.StateSync.StateSyncServiceClient"] = "network-bound client shell",
-
-	["ServerScriptService.Features.Bank.Net.BankReceiver"] = "packet wiring — every branch needs live ByteNet listeners, a rate limiter and real Players; the transfer RULES it calls are specced in BankServiceServer.spec",
 
 	-- The Instance-touching half of animation playback: every verb needs a live Animator and real
 	-- animation assets, which TestEZ cannot fixture. The cache, bookkeeping, and stop-class rules
@@ -208,28 +183,10 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.UI.Layers.UIRoot"] = "trivial shared-singleton wiring (UILayers core is specced)",
 	["ReplicatedStorage.Client.UI.Suppression.UISuppression"] = "world-suppression handler shell — the mouse handler touches UserInputService (UIWorldSuppression core is specced)",
 	["ReplicatedStorage.Client.Features.UI.UIServiceClient"] = "UI lifecycle shell — stack subscription, the Escape shim, and HUD mounting (the logic it drives is specced)",
-	-- The replication harness (trace, lossy link, runner): test infrastructure with no behaviour of its own,
-	-- exercised end to end by the acceptance spec.
-	["ReplicatedStorage.Shared.Features.Replication.Testing.ReplicationLinkHarness"] = "replication harness; exercised end to end by ReplicationDesignHarness.spec",
-	["ReplicatedStorage.Shared.Features.Replication.Testing.ReplicationTraceHarness"] = "replication harness; exercised end to end by ReplicationDesignHarness.spec",
-	["ReplicatedStorage.Shared.Features.Replication.Testing.ReplicationRunHarness"] = "replication harness; exercised end to end by ReplicationDesignHarness.spec",
 
-	-- Character replication shells (R2): Players, ByteNet, Instances and Heartbeat wiring only. Their logic
-	-- lives in the specced cores beside them (ReplicationUplinkRules, ReplicationUplinkReceiver, ReplicationSlotTracker, ReplicationVisibilityTracker,
-	-- ReplicationDownlinkSystem, ReplicationFanoutSystem, StateSyncPublicPlayerStore) and they are verified by the Studio checklist.
-	["ServerScriptService.Features.Replication.ReplicationServiceServer"] = "network/Instance shell (cores are specced)",
-	["ServerScriptService.Features.Voice.VoiceServiceServer"] = "Players/Instance shell (core VoiceSettingsCheck is specced)",
-	["ServerScriptService.Features.Collision.CollisionServiceServer"] = "PhysicsService shell (collision groups; verified by the Studio checklist)",
-	["ServerScriptService.Features.Replication.Systems.ReplicationInstanceSystem"] = "Instance shell (rig template, focus parts, spawn point)",
-	["ServerScriptService.Features.Replication.Net.ReplicationReceiver"] = "ByteNet wiring shell (handlers are RequestHandler-wrapped)",
-	["ReplicatedStorage.Client.Features.Replication.ReplicationServiceClient"] = "network/Instance shell (cores are specced)",
-	["ReplicatedStorage.Client.Features.Voice.VoiceServiceClient"] = "audio/Instance shell (core VoiceWiringTracker is specced)",
-	["ReplicatedStorage.Client.Features.Collision.CollisionServiceClient"] = "body-API/RunService shell (cores CollisionBlockerSystem and CollisionSlideOffSystem are specced)",
-	["ReplicatedStorage.Client.Features.Replication.Systems.ReplicationOwnerRigSystem"] = "Instance shell (needs a live rig, camera and Humanoid)",
+	-- Native-character animation shells: the Humanoid-event adapter and the per-character entry script
+	-- that binds it. Their logic is the specced AnimationLocomotionSystem core.
 	["ReplicatedStorage.Client.Features.Animation.Systems.AnimationLocomotionHumanoidSystem"] = "Humanoid-event adapter (core is specced in AnimationLocomotionSystem.spec)",
-	-- R3: plays actions and puppet locomotion on live rigs, behind ByteNet listeners and the camera. Its rules
-	-- live in ReplicationActionTracker, ReplicationPuppetLocomotionSystem and ReplicationAnimationRules, which are specced; verified by the Studio checklist.
-	["ReplicatedStorage.Client.Features.Replication.Systems.ReplicationRigAnimationSystem"] = "ByteNet/Instance/camera shell (cores are specced)",
 
 	-- Thin typed wrappers over vendored libraries — they add types, not behavior; the one `any` cast
 	-- each isolates is the whole point, and there is nothing of ours to assert.
@@ -244,48 +201,12 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Commands.AnimationStopClass"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.AnimationTracks"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.AnimationReport"] = "Cmdr command definition (server impl is specced)",
-	["ServerScriptService.Commands.BankDepositCurrency"] = "Cmdr command definition (server impl is specced)",
-	["ServerScriptService.Commands.BankDepositItem"] = "Cmdr command definition (server impl is specced)",
-	["ServerScriptService.Commands.CustomizationEquipCosmetic"] = "Cmdr command definition (server impl is specced)",
-	["ServerScriptService.Commands.CustomizationCheckArt"] = "Cmdr command definition (server impl is specced)",
-	["ServerScriptService.Commands.CustomizationSetCosmeticColor"] = "Cmdr command definition (server impl is specced)",
-	["ServerScriptService.Commands.CustomizationTuneOffset"] = "Cmdr command definition (ClientRun body CustomizationTuneOffsetSystem is specced)",
-	["ServerScriptService.Commands.EquipmentEquipItem"] = "Cmdr command definition (server impl is specced)",
-	["ServerScriptService.Commands.CustomizationSetBodyColor"] = "Cmdr command definition (server impl is specced)",
-	["ServerScriptService.Commands.CustomizationSetHeadType"] = "Cmdr command definition (server impl is specced)",
-	["ServerScriptService.Commands.CustomizationSetSoulColor"] = "Cmdr command definition (server impl is specced)",
-	["ServerScriptService.Commands.CustomizationSetSurface"] = "Cmdr command definition (server impl is specced)",
-	["ServerScriptService.Commands.CustomizationUnlockCosmetic"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.InventoryGiveItem"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.InventoryRemoveItem"] = "Cmdr command definition (server impl is specced)",
-	["ServerScriptService.Commands.ItemRollPreview"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.CurrencySet"] = "Cmdr command definition (server impl is specced)",
-	["ServerScriptService.Commands.EquipmentUnequipItem"] = "Cmdr command definition (server impl is specced)",
-	["ServerScriptService.Commands.BankWithdrawCurrency"] = "Cmdr command definition (server impl is specced)",
-	["ServerScriptService.Commands.BankWithdrawItem"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.TitleAward"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.TitleRevoke"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.TitleEquip"] = "Cmdr command definition (server impl is specced)",
-
-	-- SwitchSlot/UnlockSlot: definitions are declarative arg schemas like the others above. Their
-	-- server impls are pure one-line pass-throughs to SlotServiceServer (whose switchSlot/unlockSlot
-	-- are themselves specced) plus string formatting of the boolean/reason they return — a unit test
-	-- would just re-assert the format string, not exercise any logic of ours.
-	["ServerScriptService.Commands.SlotSwitch"] = "Cmdr command definition (thin pass-through impl)",
-	["ServerScriptService.Commands.SlotSwitchServer"] = "thin pass-through to SlotServiceServer:switchSlot (specced)",
-	["ServerScriptService.Commands.SlotUnlock"] = "Cmdr command definition (thin pass-through impl)",
-	["ServerScriptService.Commands.SlotUnlockServer"] = "thin pass-through to SlotServiceServer:unlockSlot (specced)",
-
-	-- GiveXp/InvestStat/RespecStats: definitions are declarative arg schemas like the others above.
-	-- Their server impls are thin pass-throughs to StatServiceServer (whose addExperience/invest/
-	-- respec are themselves specced) plus string formatting of the values/reason they return — a
-	-- unit test would just re-assert the format string, not exercise any logic of ours.
-	["ServerScriptService.Commands.StatGiveXp"] = "Cmdr command definition (thin pass-through impl)",
-	["ServerScriptService.Commands.StatGiveXpServer"] = "thin pass-through to StatServiceServer:addExperience (specced)",
-	["ServerScriptService.Commands.StatInvest"] = "Cmdr command definition (thin pass-through impl)",
-	["ServerScriptService.Commands.StatInvestServer"] = "thin pass-through to StatServiceServer:invest (specced)",
-	["ServerScriptService.Commands.StatRespec"] = "Cmdr command definition (thin pass-through impl)",
-	["ServerScriptService.Commands.StatRespecServer"] = "thin pass-through to StatServiceServer:respec (specced)",
 }
 
 --[=[

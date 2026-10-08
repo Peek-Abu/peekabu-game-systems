@@ -2,12 +2,11 @@
 --[=[
 	Tokens: the shared visual language for all game UI — the single source of colour, spacing, radius,
 	and type values every primitive and screen reads. Never hardcode a Color3/number at a call site;
-	reach for a token, so a look change is one edit here, not a hunt across every screen (the exact
-	failure the census found in the old game, which had no token layer at all).
+	reach for a token, so a look change is one edit here, not a hunt across every screen.
 
-	Values are a deliberate starting palette (dark, cool — consistent with the debugger surface) and
-	are TUNABLE: when we convert a real authored screen, the values here get dialled to the game's look.
-	The STRUCTURE — semantic names, a spacing scale, a type scale — is the part that stays broad.
+	Values are a neutral starting palette (dark, cool — consistent with the debugger surface) and are
+	meant to be RE-DIALLED per game: each game edits the values to its own look. The STRUCTURE —
+	semantic names, a spacing scale, a type scale — is the part that stays shared.
 
 	Kept separate from the debugger's own `DebuggerTheme` (which carries debugger-specific helpers); this module
 	is values only, so anything can depend on it.
@@ -65,10 +64,7 @@ Tokens.stroke = table.freeze({
 })
 
 -- TYPOGRAPHY — the font roles and the size scale.
--- The face is Venture's own: the authored UI is SourceSansPro throughout (the inventory, the HUD, the
--- shop — every label in the reference place), so the framework uses the same family rather than the
--- Gotham placeholder it started with. This is the "dialled to the game's look" edit the header promises;
--- it is one block, so a re-face stays one block.
+-- A neutral default family; a game re-faces its UI by editing this one block.
 Tokens.font = table.freeze({
 	body = Enum.Font.SourceSans,
 	medium = Enum.Font.SourceSansSemibold,

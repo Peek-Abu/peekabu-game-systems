@@ -26,20 +26,14 @@ return function()
 	describe("DEFINITIONS", function()
 		it("each entry's read() extracts its own slice off the active slot", function()
 			local fakeSlot = {
-				currency = { jaku = 5 },
-				inventory = { items = { { itemType = "rusted-saw", quantity = 1 } } },
-				stats = { totalXp = 0, investments = {} },
-				equipment = { slots = {} },
-				bank = { items = {}, currency = {} },
-				appearance = { cosmetics = {}, accessories = {}, body = {}, headType = "Uncovered", surfaces = {} },
+				currency = { coins = 5 },
+				inventory = { items = { { itemType = "wrench", quantity = 1 } } },
 				equippedTitle = {},
 			}
 			local fakeProfile = {
 				slotState = { active = 1, epoch = 1 },
 				account = {
-					unlockedSlots = { 1 },
 					itemMint = { nextUid = 1 },
-					entitlements = { cosmetics = {} },
 					titles = { earned = {} },
 				},
 				slots = { fakeSlot },
@@ -47,9 +41,9 @@ return function()
 
 			-- Slices that read off `profile.account` instead of the active slot. Listed EXPLICITLY
 			-- rather than accepting "whichever scope happens to match", so a reader pointed at the
-			-- wrong SCOPE (account data replicated as if it were per-character, or vice versa) still
+			-- wrong SCOPE (account data replicated as if it were per-slot, or vice versa) still
 			-- fails loudly here — that would silently replicate the wrong data.
-			local ACCOUNT_SCOPED: { [string]: boolean } = { entitlements = true, titles = true }
+			local ACCOUNT_SCOPED: { [string]: boolean } = { titles = true }
 
 			for name, definition in StateSyncSliceRegistry.DEFINITIONS do
 				local value = definition.read(fakeProfile)
@@ -58,47 +52,17 @@ return function()
 			end
 		end)
 
-		-- Guards the customization design spec's Decision 1: what a player has UNLOCKED is account-wide
-		-- (earned once, shared by every character), unlike `appearance`, which is per-slot.
-		it("reads entitlements off the ACCOUNT, not the active slot", function()
-			local accountEntitlements = { cosmetics = { accessory = { WizardHat = true } } }
-			local fakeProfile = {
-				slotState = { active = 2, epoch = 1 },
-				account = {
-					unlockedSlots = { 1 },
-					itemMint = { nextUid = 1 },
-					entitlements = accountEntitlements,
-				},
-				slots = {
-					{
-						appearance = {
-							cosmetics = {},
-							accessories = {},
-							body = {},
-							headType = "Uncovered",
-							surfaces = {},
-						},
-					},
-					{
-						appearance = {
-							cosmetics = {},
-							accessories = {},
-							body = {},
-							headType = "Uncovered",
-							surfaces = {},
-						},
-					},
-				},
-			} :: any
-
-			-- Same value regardless of which character is active — that is what account-wide means.
-			expect(StateSyncSliceRegistry.DEFINITIONS.entitlements.read(fakeProfile)).to.equal(accountEntitlements)
-			fakeProfile.slotState.active = 1
-			expect(StateSyncSliceRegistry.DEFINITIONS.entitlements.read(fakeProfile)).to.equal(accountEntitlements)
+		it("declares exactly the currency, inventory, titles and equippedTitle slices", function()
+			local expected = { "currency", "equippedTitle", "inventory", "titles" }
+			expect(#StateSyncSliceRegistry.NAMES).to.equal(#expected)
+			for i, name in expected do
+				expect(StateSyncSliceRegistry.NAMES[i]).to.equal(name)
+			end
 		end)
 
-		-- Guards titles design spec Decision 2: earning is about the PLAYER (account-wide); only
-		-- what is WORN is per-character.
+		-- Earning is about the PLAYER (account-wide); only what is WORN is per-slot.
+		-- The registry readers are pure, so a hand-built two-slot profile exercises the active-slot
+		-- projection regardless of PlayerDataConstants.MAX_SLOTS.
 		it("reads titles off the ACCOUNT but equippedTitle off the ACTIVE slot", function()
 			local earned = { veteran = true }
 			-- Distinguishable per-slot equippedTitle values: this is what lets the assertions below
@@ -109,9 +73,7 @@ return function()
 			local fakeProfile = {
 				slotState = { active = 1, epoch = 1 },
 				account = {
-					unlockedSlots = { 1 },
 					itemMint = { nextUid = 1 },
-					entitlements = { cosmetics = {} },
 					titles = { earned = earned },
 				},
 				slots = { { equippedTitle = slot1Equipped }, { equippedTitle = slot2Equipped } },
@@ -130,97 +92,53 @@ return function()
 		end)
 	end)
 
+	-- These readers are pure functions of the profile they are handed, so hand-built three-slot
+	-- profiles exercise the active-slot projection even while PlayerDataConstants.MAX_SLOTS = 1.
 	describe("slot-scoped readers", function()
+		local function slot(coins)
+			return {
+				currency = { coins = coins },
+				inventory = { items = {} },
+				equippedTitle = {},
+			}
+		end
+
 		local function profileWith(activeSlot)
 			return {
 				slotState = { active = activeSlot, epoch = 1 },
 				account = {
-					unlockedSlots = { 1 },
 					itemMint = { nextUid = 1 },
-					entitlements = { cosmetics = {} },
 					titles = { earned = {} },
 				},
-				slots = {
-					{
-						currency = { jaku = 1 },
-						inventory = { items = {} },
-						stats = { totalXp = 0, investments = {} },
-						equipment = { slots = {} },
-						bank = { items = {}, currency = {} },
-						appearance = {
-							cosmetics = {},
-							accessories = {},
-							body = {},
-							headType = "Uncovered",
-							surfaces = {},
-						},
-						equippedTitle = {},
-					},
-					{
-						currency = { jaku = 2 },
-						inventory = { items = {} },
-						stats = { totalXp = 0, investments = {} },
-						equipment = { slots = {} },
-						bank = { items = {}, currency = {} },
-						appearance = {
-							cosmetics = {},
-							accessories = {},
-							body = {},
-							headType = "Uncovered",
-							surfaces = {},
-						},
-						equippedTitle = {},
-					},
-					{
-						currency = { jaku = 3 },
-						inventory = { items = {} },
-						stats = { totalXp = 0, investments = {} },
-						equipment = { slots = {} },
-						bank = { items = {}, currency = {} },
-						appearance = {
-							cosmetics = {},
-							accessories = {},
-							body = {},
-							headType = "Uncovered",
-							surfaces = {},
-						},
-						equippedTitle = {},
-					},
-				},
+				slots = { slot(1), slot(2), slot(3) },
 			}
 		end
 
 		it("reads currency from the ACTIVE slot", function()
-			expect(StateSyncSliceRegistry.DEFINITIONS.currency.read(profileWith(2)).jaku).to.equal(2)
+			expect(StateSyncSliceRegistry.DEFINITIONS.currency.read(profileWith(2)).coins).to.equal(2)
 		end)
 
 		it("follows the active slot", function()
-			expect(StateSyncSliceRegistry.DEFINITIONS.currency.read(profileWith(3)).jaku).to.equal(3)
+			expect(StateSyncSliceRegistry.DEFINITIONS.currency.read(profileWith(3)).coins).to.equal(3)
 		end)
 
 		it("never exposes an inactive slot's value", function()
 			local mirrored = StateSyncSliceRegistry.DEFINITIONS.currency.read(profileWith(1))
-			expect(mirrored.jaku).to.equal(1)
-			expect(mirrored.jaku).to.never.equal(2)
+			expect(mirrored.coins).to.equal(1)
+			expect(mirrored.coins).to.never.equal(2)
 		end)
 
-		it("reads stats from the ACTIVE slot", function()
-			local profile = profileWith(2)
-			profile.slots[2].stats = { totalXp = 777, investments = { health = 1 } }
-			expect(StateSyncSliceRegistry.DEFINITIONS.stats.read(profile).totalXp).to.equal(777)
-		end)
-
-		-- Task 3: inventory is now `{ items = { InventoryEntry } }`, not a bare entry array. The
-		-- reader must hand back the WRAPPER as-is (it projects the slice, it does not unwrap it) —
-		-- a reader that silently returned `.items` instead would desync from every other slice's
-		-- "hand back exactly what's on the slot" contract and break StateSyncClientStore's atom shape.
+		-- Inventory is `{ items = { InventoryEntry } }`, not a bare entry array. The reader must hand
+		-- back the WRAPPER as-is (it projects the slice, it does not unwrap it) — a reader that
+		-- silently returned `.items` instead would desync from every other slice's "hand back exactly
+		-- what's on the slot" contract and break StateSyncClientStore's atom shape.
 		it("reads the inventory WRAPPER (not the bare items array) from the ACTIVE slot", function()
 			local profile = profileWith(2)
-			profile.slots[2].inventory = { items = { { itemType = "rusted-saw", quantity = 3 } } }
+			profile.slots[2].inventory = { items = { { itemType = "wrench", quantity = 3 } } }
 			local mirrored = StateSyncSliceRegistry.DEFINITIONS.inventory.read(profile)
 			expect(mirrored.items).to.be.ok()
 			expect(#mirrored.items).to.equal(1)
-			expect(mirrored.items[1].itemType).to.equal("rusted-saw")
+			expect(mirrored.items[1].itemType).to.equal("wrench")
 		end)
 	end)
 end

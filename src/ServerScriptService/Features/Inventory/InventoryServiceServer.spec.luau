@@ -2,9 +2,8 @@
 --[=[
 	Unit tests for InventoryServiceServer.
 
-	Mock strategy: UNLIKE the sibling domain specs (CurrencyServiceServer.spec,
-	StatServiceServer.spec), which mock PlayerDataService's read/write surface, this spec seeds REAL
-	fake profiles through PlayerDataService's `_setProfileForTesting` seam (the same strategy
+	Mock strategy: UNLIKE the sibling domain specs (e.g. CurrencyServiceServer.spec), which mock
+	PlayerDataService's read/write surface, this spec seeds REAL fake profiles through PlayerDataService's `_setProfileForTesting` seam (the same strategy
 	PlayerDataServiceServer.spec uses) and drives the REAL `mutate()`/`transaction()`. That is a
 	deliberate deviation: addItem's unique-item path composes an atomic `transaction()` across TWO
 	slices (the account-wide itemMint counter and the slot-scoped inventory), and the guarantee under
@@ -28,7 +27,6 @@ local StateSyncServerStore = require(ServerScriptService.Features.StateSync.Stat
 
 local PlayerDataTypes = require(ReplicatedStorage.Shared.Data.PlayerDataTypes)
 local ItemContentRegistry = require(ReplicatedStorage.Shared.Features.Item.Data.ItemContentRegistry)
-local ItemAffixConstants = require(ReplicatedStorage.Shared.Features.Item.Data.ItemAffixConstants)
 local sift = require(ReplicatedStorage.Packages.sift)
 
 -- ============================================================
@@ -84,11 +82,8 @@ local function makeProfileData(
 	local slots: { PlayerDataTypes.PlayerSlot } = {}
 	for index = 1, PlayerDataConstants.MAX_SLOTS do
 		slots[index] = {
-			currency = { jaku = 100 },
+			currency = { coins = 100 },
 			inventory = { items = {} },
-			stats = { totalXp = 0, investments = {} },
-			equipment = { slots = {} },
-			appearance = { cosmetics = {}, accessories = {}, body = {}, headType = "Uncovered", surfaces = {} },
 			equippedTitle = {},
 		}
 	end
@@ -97,9 +92,7 @@ local function makeProfileData(
 		_schemaVersion = PlayerDataMigrationSystem.CURRENT_VERSION,
 		slotState = { active = 1, epoch = 1 },
 		account = {
-			unlockedSlots = { 1 },
 			itemMint = { nextUid = nextUid or 1 },
-			entitlements = { cosmetics = {} },
 			titles = { earned = {} },
 		},
 		slots = slots,
@@ -143,6 +136,10 @@ local function unique(itemType: string, uid: string): PlayerDataTypes.InventoryE
 end
 
 return function()
+	-- Multi-slot behaviour is dormant while MAX_SLOTS = 1; these re-enable when a game raises it.
+	local itMultiSlot = if PlayerDataConstants.MAX_SLOTS >= 2 then it else itSKIP
+	local describeMultiSlot = if PlayerDataConstants.MAX_SLOTS >= 2 then describe else describeSKIP
+
 	describe("InventoryServiceServer", function()
 		local profiles: { [number]: any } = {}
 
@@ -173,12 +170,12 @@ return function()
 		-- ---------------------------------------------------------------------
 		describe("getInventory", function()
 			it("returns the inventory wrapper for a loaded player", function()
-				seed(1, { stack("healing-tonic", 5) })
+				seed(1, { stack("medkit", 5) })
 				local inv = InventoryService:getInventory(1)
 				expect(inv).to.be.ok()
 				assert(inv, "checked above")
 				expect(#inv.items).to.equal(1)
-				expect(inv.items[1].itemType).to.equal("healing-tonic")
+				expect(inv.items[1].itemType).to.equal("medkit")
 			end)
 
 			it("returns nil when the profile is not loaded", function()
@@ -195,33 +192,33 @@ return function()
 		-- ---------------------------------------------------------------------
 		describe("hasItem", function()
 			it("returns true when the player has the item", function()
-				seed(1, { stack("healing-tonic", 10) })
-				expect(InventoryService:hasItem(1, "healing-tonic")).to.equal(true)
+				seed(1, { stack("medkit", 10) })
+				expect(InventoryService:hasItem(1, "medkit")).to.equal(true)
 			end)
 
 			it("returns false when the item is missing", function()
 				seed(1, {})
-				expect(InventoryService:hasItem(1, "healing-tonic")).to.equal(false)
+				expect(InventoryService:hasItem(1, "medkit")).to.equal(false)
 			end)
 
 			it("returns true/false around a required quantity", function()
-				seed(1, { stack("healing-tonic", 5) })
-				expect(InventoryService:hasItem(1, "healing-tonic", 5)).to.equal(true)
-				expect(InventoryService:hasItem(1, "healing-tonic", 6)).to.equal(false)
+				seed(1, { stack("medkit", 5) })
+				expect(InventoryService:hasItem(1, "medkit", 5)).to.equal(true)
+				expect(InventoryService:hasItem(1, "medkit", 6)).to.equal(false)
 			end)
 
 			it("counts unique instances (not a quantity field) for a non-stackable itemType", function()
-				seed(1, { unique("rusted-saw", "1_1"), unique("rusted-saw", "1_2") })
-				expect(InventoryService:hasItem(1, "rusted-saw", 2)).to.equal(true)
-				expect(InventoryService:hasItem(1, "rusted-saw", 3)).to.equal(false)
+				seed(1, { unique("wrench", "1_1"), unique("wrench", "1_2") })
+				expect(InventoryService:hasItem(1, "wrench", 2)).to.equal(true)
+				expect(InventoryService:hasItem(1, "wrench", 3)).to.equal(false)
 			end)
 		end)
 
 		-- ---------------------------------------------------------------------
 		describe("addItem — stackable", function()
 			it("merges into an existing stack", function()
-				local profile = seed(1, { stack("healing-tonic", 4) })
-				local ok = InventoryService:addItem(1, "healing-tonic", 3)
+				local profile = seed(1, { stack("medkit", 4) })
+				local ok = InventoryService:addItem(1, "medkit", 3)
 				expect(ok).to.equal(true)
 				local items = activeSlotOf(profile).inventory.items
 				expect(#items).to.equal(1)
@@ -229,10 +226,10 @@ return function()
 			end)
 
 			it("spills the overflow into a second stack once the first is full", function()
-				-- healing-tonic stackMax is 10: 9 held, +5 requested -> 1 tops up the first stack to
+				-- medkit stackMax is 10: 9 held, +5 requested -> 1 tops up the first stack to
 				-- 10, the remaining 4 opens a new stack.
-				local profile = seed(1, { stack("healing-tonic", 9) })
-				local ok = InventoryService:addItem(1, "healing-tonic", 5)
+				local profile = seed(1, { stack("medkit", 9) })
+				local ok = InventoryService:addItem(1, "medkit", 5)
 				expect(ok).to.equal(true)
 				local items = activeSlotOf(profile).inventory.items
 				expect(#items).to.equal(2)
@@ -241,12 +238,12 @@ return function()
 			end)
 
 			it("refuses when count exceeds remaining stack space, leaving the inventory untouched", function()
-				-- throwing-knife: stackMax 10, maxStacks 1. One full stack already holds the single
+				-- flare: stackMax 10, maxStacks 1. One full stack already holds the single
 				-- allowed stack, so even 1 more can't merge (full) or spill (maxStacks reached).
-				local profile = seed(1, { stack("throwing-knife", 10) })
+				local profile = seed(1, { stack("flare", 10) })
 				local before = sift.Dictionary.copyDeep(activeSlotOf(profile).inventory.items)
 
-				local ok, reason = InventoryService:addItem(1, "throwing-knife", 1)
+				local ok, reason = InventoryService:addItem(1, "flare", 1)
 
 				expect(ok).to.equal(false)
 				expect(reason).to.be.ok()
@@ -254,17 +251,17 @@ return function()
 			end)
 
 			it("refuses at the kind cap, leaving the inventory untouched", function()
-				-- misc's KIND_CAPS is 40. Seed exactly 40 full "wood" stacks (misc, stackMax 30, no
+				-- misc's KIND_CAPS is 40. Seed exactly 40 full "scrap" stacks (misc, stackMax 30, no
 				-- maxStacks) so every existing stack is full AND the kind is already at its cap — no
 				-- merge is possible and no new stack fits.
 				local items: { PlayerDataTypes.InventoryEntry } = {}
 				for _ = 1, 40 do
-					table.insert(items, stack("wood", 30))
+					table.insert(items, stack("scrap", 30))
 				end
 				local profile = seed(1, items)
 				local before = sift.Dictionary.copyDeep(activeSlotOf(profile).inventory.items)
 
-				local ok, reason = InventoryService:addItem(1, "wood", 5)
+				local ok, reason = InventoryService:addItem(1, "scrap", 5)
 
 				expect(ok).to.equal(false)
 				expect(reason).to.be.ok()
@@ -277,14 +274,14 @@ return function()
 			end)
 
 			it("returns a specific no-profile reason when unloaded (not a validator/kind-cap guess)", function()
-				local ok, reason = InventoryService:addItem(999, "healing-tonic", 1)
+				local ok, reason = InventoryService:addItem(999, "medkit", 1)
 				expect(ok).to.equal(false)
 				expect(reason).to.equal("no profile loaded for userId 999")
 			end)
 
 			it("defaults count to 1 when omitted", function()
 				local profile = seed(1, {})
-				local ok = InventoryService:addItem(1, "healing-tonic")
+				local ok = InventoryService:addItem(1, "medkit")
 				expect(ok).to.equal(true)
 				expect(activeSlotOf(profile).inventory.items[1].quantity).to.equal(1)
 			end)
@@ -301,13 +298,13 @@ return function()
 		describe("addItem — unique (atomic mint)", function()
 			it("mints sequential, account-scoped uids", function()
 				local profile = seed(1, {})
-				InventoryService:addItem(1, "rusted-saw", 1)
+				InventoryService:addItem(1, "wrench", 1)
 				expect(activeSlotOf(profile).inventory.items[1].uid).to.equal("1_1")
 			end)
 
 			it("mints `count` distinct uids in one call", function()
 				local profile = seed(1, {})
-				local ok = InventoryService:addItem(1, "rusted-saw", 2)
+				local ok = InventoryService:addItem(1, "wrench", 2)
 				expect(ok).to.equal(true)
 				local items = activeSlotOf(profile).inventory.items
 				expect(#items).to.equal(2)
@@ -316,17 +313,17 @@ return function()
 			end)
 
 			it("rolls back BOTH the mint counter and the inventory write on a kind-cap breach", function()
-				-- weapon's KIND_CAPS is 30. Seed exactly 30 unique weapon entries (kind already at
+				-- tool's KIND_CAPS is 30. Seed exactly 30 unique tool entries (kind already at
 				-- cap) so the inventory op's insert pushes it to 31 and validateInventory rejects —
 				-- the transaction must roll back the itemMint op too, so nextUid never advances for
 				-- an entry that was never actually added.
 				local items: { PlayerDataTypes.InventoryEntry } = {}
 				for i = 1, 30 do
-					table.insert(items, unique("rusted-saw", `seed_{i}`))
+					table.insert(items, unique("wrench", `seed_{i}`))
 				end
 				local profile = seed(1, items, 5)
 
-				local ok, reason = InventoryService:addItem(1, "rusted-saw", 1)
+				local ok, reason = InventoryService:addItem(1, "wrench", 1)
 
 				expect(ok).to.equal(false)
 				-- This is the data-layer validator's rejection (validateInventory's kind-cap check),
@@ -335,23 +332,23 @@ return function()
 				-- generic fallback.
 				assert(reason, "checked above")
 				expect(reason:find("exceeds KIND_CAPS", 1, true)).to.be.ok()
-				expect(reason:find('kind "weapon"', 1, true)).to.be.ok()
+				expect(reason:find('kind "tool"', 1, true)).to.be.ok()
 				expect(profile.Data.account.itemMint.nextUid).to.equal(5)
 				expect(#activeSlotOf(profile).inventory.items).to.equal(30)
 			end)
 
-			it("keeps uids unique across a character-slot switch (account-wide counter)", function()
+			itMultiSlot("keeps uids unique across a character-slot switch (account-wide counter)", function()
 				local profile = seed(1, {})
 
-				InventoryService:addItem(1, "rusted-saw", 1)
+				InventoryService:addItem(1, "wrench", 1)
 				expect(activeSlotOf(profile).inventory.items[1].uid).to.equal("1_1")
 
-				-- Switch the active character directly (bypassing SlotService, same technique
-				-- PlayerDataServiceServer.spec uses): bump `active` AND `epoch` together.
+				-- Switch the active character directly (same technique PlayerDataServiceServer.spec
+				-- uses): bump `active` AND `epoch` together.
 				profile.Data.slotState.active = 2
 				profile.Data.slotState.epoch += 1
 
-				InventoryService:addItem(1, "rusted-saw", 1)
+				InventoryService:addItem(1, "wrench", 1)
 				local slot2Items = profile.Data.slots[2].inventory.items
 				expect(#slot2Items).to.equal(1)
 				expect(slot2Items[1].uid).to.equal("1_2")
@@ -361,55 +358,101 @@ return function()
 			end)
 
 			it("returns a specific no-profile reason (not the generic mint-rejection message) when unloaded", function()
-				local ok, reason = InventoryService:addItem(999, "rusted-saw", 1)
+				local ok, reason = InventoryService:addItem(999, "wrench", 1)
 				expect(ok).to.equal(false)
 				expect(reason).to.equal("no profile loaded for userId 999")
 			end)
 		end)
 
-		describe("addItem — affix rolling", function()
-			it("rolls a well-formed single affix onto minted weapon AND armour copies", function()
-				-- Flat 0.30 chance, rarity-independent. Over 40 mints (weapon + armour) P(zero hits)
-				-- ≈ 0.7^40 ≈ 6e-7, so at least one copy carries a well-formed single affix. Uses the live
-				-- module RNG (the roller's exact-rate + common-also-rolls behaviour is covered
-				-- deterministically in ItemAffixFormulas.spec). ItemAffixConstants.get resolves affixes of either kind.
+		describe("addItem — attrs", function()
+			it("stamps attrs onto every minted unique copy, each copy holding its own table", function()
 				local profile = seed(1, {})
-				InventoryService:addItem(1, "phoenix-blade", 20) -- weapon
-				InventoryService:addItem(1, "chambered-helmet", 20) -- armour
+				local attrs = { level = 3, nickname = "Old Faithful" }
+				local ok = InventoryService:addItem(1, "wrench", 2, attrs)
+				expect(ok).to.equal(true)
 
-				local withAffix = 0
-				for _, entry in activeSlotOf(profile).inventory.items do
-					local uniqueEntry = entry :: PlayerDataTypes.UniqueEntry
-					if uniqueEntry.affixes then
-						local count = 0
-						for affixId, value in uniqueEntry.affixes do
-							count += 1
-							local def = ItemAffixConstants.get(affixId)
-							expect(def).to.be.ok()
-							expect(value >= def.min and value <= def.max).to.equal(true)
-						end
-						expect(count).to.equal(1)
-						withAffix += 1
-					end
-				end
-				expect(withAffix > 0).to.equal(true)
+				local items = activeSlotOf(profile).inventory.items
+				expect(#items).to.equal(2)
+				local first = items[1] :: PlayerDataTypes.UniqueEntry
+				local second = items[2] :: PlayerDataTypes.UniqueEntry
+				local firstAttrs = first.attrs
+				local secondAttrs = second.attrs
+				assert(firstAttrs, "first copy carries attrs")
+				assert(secondAttrs, "second copy carries attrs")
+				expect(firstAttrs.level).to.equal(3)
+				expect(firstAttrs.nickname).to.equal("Old Faithful")
+				expect(secondAttrs.level).to.equal(3)
+				expect(secondAttrs.nickname).to.equal("Old Faithful")
+				-- No aliasing: neither between the two copies nor with the caller's table.
+				expect(firstAttrs).never.to.equal(secondAttrs)
+				expect(firstAttrs).never.to.equal(attrs)
+				expect(secondAttrs).never.to.equal(attrs)
 			end)
 
-			it("tolerates a pre-existing entry carrying a retired affix id (validator leniency)", function()
-				local weapon = unique("rusted-saw", "old_1") :: PlayerDataTypes.UniqueEntry
-				weapon.affixes = { ["retired-affix"] = 3 }
-				seed(1, { weapon })
-				-- A benign add re-runs validateInventory over the whole slice; the retired affix must pass.
-				local ok = InventoryService:addItem(1, "wood", 1)
+			it("mints a unique copy with no attrs field when attrs is omitted", function()
+				local profile = seed(1, {})
+				local ok = InventoryService:addItem(1, "wrench", 1)
+				expect(ok).to.equal(true)
+				local entry = activeSlotOf(profile).inventory.items[1] :: PlayerDataTypes.UniqueEntry
+				expect(entry.attrs).to.equal(nil)
+			end)
+
+			it("refuses attrs on a stackable itemType, leaving the inventory untouched", function()
+				local profile = seed(1, { stack("medkit", 4) })
+				local before = sift.Dictionary.copyDeep(activeSlotOf(profile).inventory.items)
+
+				local ok, reason = InventoryService:addItem(1, "medkit", 1, { level = 1 })
+
+				expect(ok).to.equal(false)
+				assert(reason, "checked above")
+				expect(reason:find("stackable", 1, true)).to.be.ok()
+				expect(deepEqual(activeSlotOf(profile).inventory.items, before)).to.equal(true)
+			end)
+
+			it("refuses invalid attrs before minting (no entry added, nextUid unchanged)", function()
+				local profile = seed(1, {}, 5)
+
+				local ok, reason = InventoryService:addItem(1, "wrench", 1, { level = true :: any })
+
+				expect(ok).to.equal(false)
+				expect(reason).to.be.ok()
+				expect(#activeSlotOf(profile).inventory.items).to.equal(0)
+				expect(profile.Data.account.itemMint.nextUid).to.equal(5)
+			end)
+
+			it("refuses an over-long string attr before minting", function()
+				local profile = seed(1, {}, 5)
+
+				local ok = InventoryService:addItem(1, "wrench", 1, { nickname = string.rep("a", 65) })
+
+				expect(ok).to.equal(false)
+				expect(#activeSlotOf(profile).inventory.items).to.equal(0)
+				expect(profile.Data.account.itemMint.nextUid).to.equal(5)
+			end)
+
+			it("tolerates a pre-existing entry carrying an unknown attr key (validator leniency)", function()
+				local tool = unique("wrench", "old_1") :: PlayerDataTypes.UniqueEntry
+				tool.attrs = { ["retired-attr"] = 3 }
+				seed(1, { tool })
+				-- A benign add re-runs validateInventory over the whole slice; the unknown key must pass.
+				local ok = InventoryService:addItem(1, "scrap", 1)
 				expect(ok).to.equal(true)
 			end)
 
-			it("rejects an entry whose affix value is not a number", function()
-				local weapon = unique("rusted-saw", "bad_1") :: PlayerDataTypes.UniqueEntry
-				weapon.affixes = { warriors = "big" :: any }
-				seed(1, { weapon })
-				-- Any mutation re-validates the whole slice; the malformed affix must fail it.
-				local ok = InventoryService:addItem(1, "wood", 1)
+			it("rejects a write while an entry's attr value is neither a number nor a string", function()
+				local tool = unique("wrench", "bad_1") :: PlayerDataTypes.UniqueEntry
+				tool.attrs = { level = true :: any }
+				seed(1, { tool })
+				-- Any mutation re-validates the whole slice; the malformed attr must fail it.
+				local ok = InventoryService:addItem(1, "scrap", 1)
+				expect(ok).to.equal(false)
+			end)
+
+			it("rejects a write while an entry's string attr is longer than 64 characters", function()
+				local tool = unique("wrench", "bad_1") :: PlayerDataTypes.UniqueEntry
+				tool.attrs = { nickname = string.rep("a", 65) }
+				seed(1, { tool })
+				local ok = InventoryService:addItem(1, "scrap", 1)
 				expect(ok).to.equal(false)
 			end)
 		end)
@@ -417,7 +460,7 @@ return function()
 		-- ---------------------------------------------------------------------
 		describe("removeItem", function()
 			it("removes exactly the instance identified by uid", function()
-				local profile = seed(1, { unique("rusted-saw", "a"), unique("rusted-saw", "b") })
+				local profile = seed(1, { unique("wrench", "a"), unique("wrench", "b") })
 				local ok = InventoryService:removeItem(1, { uid = "a" })
 				expect(ok).to.equal(true)
 				local items = activeSlotOf(profile).inventory.items
@@ -426,7 +469,7 @@ return function()
 			end)
 
 			it("refuses (unchanged) when the uid is not found", function()
-				local profile = seed(1, { unique("rusted-saw", "a") })
+				local profile = seed(1, { unique("wrench", "a") })
 				local before = sift.Dictionary.copyDeep(activeSlotOf(profile).inventory.items)
 				local ok, reason = InventoryService:removeItem(1, { uid = "missing" })
 				expect(ok).to.equal(false)
@@ -444,15 +487,15 @@ return function()
 			end)
 
 			it("partially decrements a single stack", function()
-				local profile = seed(1, { stack("healing-tonic", 10) })
-				local ok = InventoryService:removeItem(1, { itemType = "healing-tonic", quantity = 3 })
+				local profile = seed(1, { stack("medkit", 10) })
+				local ok = InventoryService:removeItem(1, { itemType = "medkit", quantity = 3 })
 				expect(ok).to.equal(true)
 				expect(activeSlotOf(profile).inventory.items[1].quantity).to.equal(7)
 			end)
 
 			it("consumes across multiple stacks, fully draining earlier ones", function()
-				local profile = seed(1, { stack("wood", 20), stack("wood", 15) })
-				local ok = InventoryService:removeItem(1, { itemType = "wood", quantity = 30 })
+				local profile = seed(1, { stack("scrap", 20), stack("scrap", 15) })
+				local ok = InventoryService:removeItem(1, { itemType = "scrap", quantity = 30 })
 				expect(ok).to.equal(true)
 				local items = activeSlotOf(profile).inventory.items
 				-- Walked from the end: the second stack (15) is fully consumed first, then 15 more
@@ -462,9 +505,9 @@ return function()
 			end)
 
 			it("refuses (unchanged) when the held quantity is insufficient", function()
-				local profile = seed(1, { stack("wood", 5) })
+				local profile = seed(1, { stack("scrap", 5) })
 				local before = sift.Dictionary.copyDeep(activeSlotOf(profile).inventory.items)
-				local ok, reason = InventoryService:removeItem(1, { itemType = "wood", quantity = 10 })
+				local ok, reason = InventoryService:removeItem(1, { itemType = "scrap", quantity = 10 })
 				expect(ok).to.equal(false)
 				-- The profile IS loaded — the refusal is "insufficient quantity", not a missing
 				-- profile. Proves removeByTypeAndQuantity's up-front profile check doesn't paper over a
@@ -474,17 +517,17 @@ return function()
 			end)
 
 			it("returns a specific no-profile reason when removing by type/quantity on an unloaded profile", function()
-				local ok, reason = InventoryService:removeItem(999, { itemType = "wood", quantity = 1 })
+				local ok, reason = InventoryService:removeItem(999, { itemType = "scrap", quantity = 1 })
 				expect(ok).to.equal(false)
 				expect(reason).to.equal("no profile loaded for userId 999")
 			end)
 		end)
 
 		-- ---------------------------------------------------------------------
-		describe("slot isolation", function()
+		describeMultiSlot("slot isolation", function()
 			it("adding to the active slot never touches another slot's inventory", function()
 				local profile = seed(1, {})
-				InventoryService:addItem(1, "wood", 5)
+				InventoryService:addItem(1, "scrap", 5)
 				expect(#activeSlotOf(profile).inventory.items).to.equal(1)
 				expect(#profile.Data.slots[2].inventory.items).to.equal(0)
 			end)
@@ -495,7 +538,7 @@ return function()
 			it("mints a transaction operation targeting the active slot's inventory path", function()
 				seed(7, {})
 				local mutator = function(inv: any)
-					table.insert(inv.items, stack("wood", 1))
+					table.insert(inv.items, stack("scrap", 1))
 					return true
 				end
 				local op = InventoryService:inventoryOp(7, mutator)
@@ -508,7 +551,7 @@ return function()
 			it("is pure packaging — the mutator does not run when the op is minted", function()
 				local profile = seed(7, {})
 				InventoryService:inventoryOp(7, function(inv: any)
-					table.insert(inv.items, stack("wood", 1))
+					table.insert(inv.items, stack("scrap", 1))
 					return true
 				end)
 				expect(#activeSlotOf(profile).inventory.items).to.equal(0)

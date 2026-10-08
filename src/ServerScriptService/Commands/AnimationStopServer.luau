@@ -6,7 +6,7 @@ local AnimationService = require(ServerScriptService.Features.Animation.Animatio
 return function(_context, target: Player, idOrLayer: string)
 	local ok, reason = AnimationService:stop(target, idOrLayer)
 	if ok then
-		return `Stopped "{idOrLayer}" on {target.Name}'s body.`
+		return `Stopped "{idOrLayer}" on {target.Name}'s character.`
 	end
 	return `Failed: {reason or "unknown reason"}.`
 end

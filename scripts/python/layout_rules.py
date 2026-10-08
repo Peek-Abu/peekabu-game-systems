@@ -40,8 +40,8 @@ ENTRY_SCRIPTS = frozenset(
         "src/ServerScriptService/ServerHandler.server.luau",
         "src/ServerScriptService/TestRunner.server.luau",
         "src/StarterPlayer/StarterPlayerScripts/ClientHandler.client.luau",
-        # The engine replaces its own character-sounds script only when the name matches.
-        "src/StarterPlayer/StarterPlayerScripts/RbxCharacterSounds.client.luau",
+        # The engine skips inserting its own Animate script only when the name matches.
+        "src/StarterPlayer/StarterCharacterScripts/Animate.client.luau",
     }
 )
 UI_TREE = "src/ReplicatedStorage/Client/UI/"

@@ -11,7 +11,7 @@ return function()
 	describe("planStackPlacement", function()
 		it("opens new stacks for a fresh itemType when there is room", function()
 			local items: { PlayerDataTypes.InventoryEntry } = {}
-			local plan = InventoryPlacementUtils.planStackPlacement(items, "wood", 25, 30, nil, "misc", alwaysRoom)
+			local plan = InventoryPlacementUtils.planStackPlacement(items, "scrap", 25, 30, nil, "misc", alwaysRoom)
 			expect(plan.ok).to.equal(true)
 			assert(plan.newStacks, "newStacks present")
 			expect(#plan.newStacks).to.equal(1)
@@ -19,8 +19,8 @@ return function()
 		end)
 
 		it("merges into an existing partial stack before opening a new one", function()
-			local items: { PlayerDataTypes.InventoryEntry } = { { itemType = "wood", quantity = 20 } }
-			local plan = InventoryPlacementUtils.planStackPlacement(items, "wood", 15, 30, nil, "misc", alwaysRoom)
+			local items: { PlayerDataTypes.InventoryEntry } = { { itemType = "scrap", quantity = 20 } }
+			local plan = InventoryPlacementUtils.planStackPlacement(items, "scrap", 15, 30, nil, "misc", alwaysRoom)
 			expect(plan.ok).to.equal(true)
 			assert(plan.updates, "updates present")
 			expect(plan.updates[1]).to.equal(30) -- topped up to stackMax
@@ -32,16 +32,15 @@ return function()
 			local function noRoom()
 				return false, "container full"
 			end
-			local plan = InventoryPlacementUtils.planStackPlacement({}, "wood", 10, 30, nil, "misc", noRoom)
+			local plan = InventoryPlacementUtils.planStackPlacement({}, "scrap", 10, 30, nil, "misc", noRoom)
 			expect(plan.ok).to.equal(false)
 			expect(plan.reason).to.equal("container full")
 		end)
 
 		it("refuses when the spill would exceed the itemType's maxStacks (def-intrinsic, not hasRoom)", function()
 			-- maxStacks = 1, one stack already full → the overflow can't open a second stack.
-			local items: { PlayerDataTypes.InventoryEntry } = { { itemType = "throwing-knife", quantity = 10 } }
-			local plan =
-				InventoryPlacementUtils.planStackPlacement(items, "throwing-knife", 5, 10, 1, "consumable", alwaysRoom)
+			local items: { PlayerDataTypes.InventoryEntry } = { { itemType = "flare", quantity = 10 } }
+			local plan = InventoryPlacementUtils.planStackPlacement(items, "flare", 5, 10, 1, "consumable", alwaysRoom)
 			expect(plan.ok).to.equal(false)
 			expect((plan.reason :: string):find("maxStacks", 1, true)).to.be.ok()
 		end)

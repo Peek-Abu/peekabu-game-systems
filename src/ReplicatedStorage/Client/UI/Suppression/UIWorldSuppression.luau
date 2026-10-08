@@ -11,7 +11,7 @@
 
 	Injectable (`resolveScene`, `warn`) so it is fully testable with no Instances; the real handler —
 	just the mouse, touching UserInputService — lives in the exempt UISuppression shell. Every other
-	capability (blur/movement/cameraState/characterRotation this phase) has no handler yet: it is
+	capability (blur/movement/cameraState) has no handler yet: it is
 	logged ONCE, never silently dropped, until the owning system (VFX/post-fx, Input, Camera) registers
 	one via `registerHandler`. That is the seam that keeps those systems slottable.
 
@@ -40,7 +40,7 @@ export type SuppressionCore = {
 }
 
 -- The requested capabilities of a record, read field-by-field (not dynamic indexing) so this stays
--- --!strict with no casts. A string field (cameraState/characterRotation) counts as requested when
+-- --!strict with no casts. A string field (cameraState) counts as requested when
 -- present; a boolean field when true.
 local function requestedCaps(record: SuppressionRecord): { string }
 	local caps: { string } = {}
@@ -55,9 +55,6 @@ local function requestedCaps(record: SuppressionRecord): { string }
 	end
 	if record.cameraState ~= nil then
 		table.insert(caps, "cameraState")
-	end
-	if record.characterRotation ~= nil then
-		table.insert(caps, "characterRotation")
 	end
 	return caps
 end

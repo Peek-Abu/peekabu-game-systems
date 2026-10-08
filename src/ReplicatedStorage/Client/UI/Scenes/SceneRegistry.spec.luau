@@ -51,4 +51,23 @@ return function()
 			end).to.throw()
 		end)
 	end)
+
+	describe("toggle keys", function()
+		it("finds the scene that declared a toggle key", function()
+			ensure({ name = "RegSpec.Keyed", screens = {}, toggleKey = Enum.KeyCode.F9 })
+			expect(SceneRegistry.sceneForKey(Enum.KeyCode.F9)).to.equal("RegSpec.Keyed")
+		end)
+
+		it("returns nil for a key no scene declared", function()
+			expect(SceneRegistry.sceneForKey(Enum.KeyCode.F10)).to.equal(nil)
+		end)
+
+		it("refuses a second scene on the same key", function()
+			ensure({ name = "RegSpec.Keyed", screens = {}, toggleKey = Enum.KeyCode.F9 })
+			expect(function()
+				SceneRegistry.register({ name = "RegSpec.KeyClash", screens = {}, toggleKey = Enum.KeyCode.F9 })
+			end).to.throw()
+			expect(SceneRegistry.has("RegSpec.KeyClash")).to.equal(false)
+		end)
+	end)
 end

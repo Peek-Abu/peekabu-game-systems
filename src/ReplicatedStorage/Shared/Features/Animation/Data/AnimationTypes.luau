@@ -23,8 +23,7 @@
 export type InterruptionClass = "attack" | "protected" | "ambient"
 
 --[=[
-	The grant slot a replicated action occupies on a body (character replication R3): one grant per layer
-	per body, and a new grant on a layer replaces the old one under the interruption rules. Engine
+	The grant slot a server-granted action occupies on a character: one grant per layer per character, and a new grant on a layer replaces the old one under the interruption rules. Engine
 	blending is still decided by each entry's `priority`; the layer only decides what replaces what.
 
 	- `full` — whole-body actions: attacks, dodges, hit reactions, emotes.

@@ -1,13 +1,12 @@
 --!strict
 --[=[
-	AnimationLocomotionHumanoidSystem: binds the specced AnimationLocomotionSystem core to a rig's Humanoid (Phase 6 spec,
-	Decision 3; moved here from StarterCharacterScripts/Animate.client.luau by character replication R2).
+	AnimationLocomotionHumanoidSystem: binds the specced AnimationLocomotionSystem core to a rig's Humanoid.
 
-	Under client-only bodies (spec §5.1) the engine never spawns a character, so StarterCharacterScripts never
-	reach a rig: ReplicationServiceClient calls `bind` on the owner rig it builds. Thin by design:
-	every decision lives in AnimationLocomotionSystem; this adapts Humanoid state events to it, watches the kill
-	switch, and owns the lifetime: the returned function unbinds, and callers must call it (ReplicationOwnerRigSystem does)
-	because the Heartbeat connection, like the attribute connection, outlives the rig.
+	The local character is bound by `StarterCharacterScripts/Animate.client.luau` (one copy per character).
+	Thin by design: every decision lives in AnimationLocomotionSystem; this adapts Humanoid state events to
+	it, watches the kill switch, and owns the lifetime: the returned function unbinds, and callers must
+	call it (Animate does, when the character goes) because the Heartbeat connection, like the attribute
+	connection, outlives the rig.
 
 	Kill switch: the Workspace attribute `LocomotionEnabled` (unset = enabled).
 

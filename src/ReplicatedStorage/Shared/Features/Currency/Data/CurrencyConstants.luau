@@ -13,31 +13,31 @@ export type CurrencyDefinition = {
 }
 
 -- Define the type explicitly (must match CURRENCIES keys)
-export type CurrencyType = "jaku"
+export type CurrencyType = "coins"
 
 --[=[
 	DO NOT add a premium (Robux-purchased) currency here.
 
-	The "currency" slice is SLOT-SCOPED: each of the player's 3 characters has its OWN balance
-	(registered via `PlayerDataSliceSystem.registerSlot` in CurrencyServiceServer). A Robux-bought currency is
-	an ENTITLEMENT — it belongs to the ACCOUNT and is shared across all characters (see the
-	account/slot boundary in docs/superpowers/specs/2026-07-12-player-data-slots-design.md).
+	The "currency" slice is SLOT-SCOPED (registered via `PlayerDataSliceSystem.registerSlot` in
+	CurrencyServiceServer). With the default `MAX_SLOTS = 1` that is simply the player's save, but a game
+	that turns on multiple slots would give each slot its OWN balance. A Robux-bought currency is an
+	ENTITLEMENT — it belongs to the ACCOUNT and must never be per-slot.
 
-	Adding `premium` next to `jaku` would silently make it per-character: a player who buys it on one
-	character would not have it on the others. It must land as its OWN ACCOUNT slice, via
-	`PlayerDataSliceSystem.registerAccount`. That needs no migration — ProfileStore's `Reconcile()` backfills new
+	So a premium currency lands as its OWN ACCOUNT slice, via `PlayerDataSliceSystem.registerAccount`,
+	never as a key in this table. That needs no migration — ProfileStore's `Reconcile()` backfills new
 	template fields onto existing profiles.
 
-	Only soft, earned-in-play, per-character currencies belong in this table.
+	Only soft, earned-in-play currencies belong in this table. `coins` is the base's placeholder:
+	rename it (and its specs) to the game's real currency.
 ]=]
 -- Add new currencies here. Typed by CurrencyType keys so iteration yields CurrencyType (no cast)
 -- and adding a key that isn't in the CurrencyType union below is a compile error.
 local CURRENCIES: { [CurrencyType]: CurrencyDefinition } = {
-	jaku = {
-		name = "Jaku",
+	coins = {
+		name = "Coins",
 		icon = "🪙",
 	},
-	-- Add more SLOT-SCOPED (earned, per-character) currencies as needed:
+	-- Add more SLOT-SCOPED (earned-in-play) currencies as needed:
 	-- tickets = {
 	-- 	name = "Tickets",
 	-- 	icon = "🎟️",
@@ -53,7 +53,7 @@ local CURRENCIES: { [CurrencyType]: CurrencyDefinition } = {
 --   - a union member (and mirror entry) with no CURRENCIES entry, or a mirror that fell behind a
 --     grown union+CURRENCIES → validateCurrencyTypes() below errors at boot.
 -- When adding a currency, update all three: CURRENCIES, CurrencyType, and this list.
-local CURRENCY_TYPE_MEMBERS: { CurrencyType } = { "jaku" }
+local CURRENCY_TYPE_MEMBERS: { CurrencyType } = { "coins" }
 
 -- Pure core of validateCurrencyTypes, split out (and exported) so the drift failure modes are
 -- spec-testable with synthetic inputs — the real inputs can't drift in a test without failing

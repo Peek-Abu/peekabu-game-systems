@@ -2,7 +2,7 @@
 --[=[
 	Unit tests for SceneStack — push/pop/replace over the reactive scene stack.
 
-	The stack holds SCENES, not screens (Bank is one scene showing two co-visible panels). Order
+	The stack holds SCENES, not screens (a "stash" scene can show two co-visible panels). Order
 	encodes suspension: the top is active, everything below is suspended. Escape pops one. These tests
 	register "StackSpec.*" scenes (guarded by `has` for session re-runs) and reset the atom per test.
 ]=]
@@ -42,7 +42,7 @@ return function()
 		name = "StackSpec.PanelTwo",
 		screens = { { layer = "Panel", key = "two", component = noop } },
 	})
-	-- A scene showing two co-visible screens on different layers (the Bank shape).
+	-- A scene showing two co-visible screens on different layers.
 	ensureDef({
 		name = "StackSpec.MultiLayer",
 		screens = {

@@ -1,11 +1,13 @@
 --!strict
 --[=[
-	AnimationServiceClient: the client's animation surface (Phase 6 spec, Decision 5).
+	AnimationServiceClient: the client's animation surface.
 
-	Local plays on this client's own rig: local consumers (UI, the F4 panel) land on the SAME
-	per-Animator `AnimationPlayerSystem` that AnimationLocomotionHumanoidSystem and the replicated actions use, so bookkeeping
-	is one truth. Server-granted actions do not come through here: since character replication R3 they
-	are timed body state, played on the owner rig and every puppet by ReplicationRigAnimationSystem.
+	Everything plays on this client's own character through the SAME per-Animator `AnimationPlayerSystem`
+	that AnimationLocomotionHumanoidSystem uses, so bookkeeping is one truth:
+	- local plays (UI, the F4 panel) through `play` / `stop` / `stopClass`;
+	- server-granted actions (`ActionStarted` / `ActionStopped` from AnimationServiceServer), one handle per
+	  layer — a new grant on a layer replaces the one before it. The engine replicates the owner's
+	  character animations to every other client, so nothing here sends anything back.
 
 	Spec-exempt: a network-bound client shell (the DebuggerServiceClient precedent) — every rule it
 	routes to lives in specced modules (`AnimationPlayerSystem`, the registry).
@@ -26,6 +28,9 @@ local AnimationTypes = require(AnimationShared.Data.AnimationTypes)
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 
 local log = Logger.new("AnimationService")
+
+-- The granted action playing on each layer of the local character (see `start`).
+local grantedByLayer: { [string]: AnimationPlayerSystem.PlayHandle } = {}
 
 export type AnimationServiceClient = {
 	dependencies: { string },
@@ -209,9 +214,39 @@ local AnimationServiceClient: AnimationServiceClient = {
 	end,
 
 	--[=[
-		Wires the diagnostic listeners (anim-tracks, anim-report) and runs the boot-time asset probe.
+		Wires the granted-action and diagnostic listeners (anim-tracks, anim-report) and runs the
+		boot-time asset probe.
 	]=]
 	start = function(self)
+		AnimationEvents.packets.ActionStarted.listen(function(data)
+			local layer = AnimationTypes.layerAt(data.layer)
+			local id = AnimationRegistry.idForWire(data.wireId)
+			if layer == nil or id == nil then
+				log:warn(`granted action ignored: unknown layer {data.layer} or wire id {data.wireId}`)
+				return
+			end
+			local previous = grantedByLayer[layer]
+			if previous ~= nil then
+				previous:stop()
+			end
+			local handle = self:play(id, { variant = data.variant, speed = data.speedMilli / 1000 })
+			grantedByLayer[layer] = handle
+		end)
+
+		AnimationEvents.packets.ActionStopped.listen(function(data)
+			local layer = AnimationTypes.layerAt(data.layer)
+			local handle = if layer ~= nil then grantedByLayer[layer] else nil
+			if layer ~= nil and handle ~= nil then
+				handle:stop()
+				grantedByLayer[layer] = nil
+			end
+		end)
+
+		-- A new character starts with no grants (its old tracks died with the old character).
+		Players.LocalPlayer.CharacterAdded:Connect(function()
+			table.clear(grantedByLayer)
+		end)
+
 		AnimationEvents.packets.ReportTracks.listen(function(_payload: boolean)
 			self:reportTracks()
 		end)

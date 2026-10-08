@@ -7,7 +7,6 @@ local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync
 local InventoryUtils = require(ReplicatedStorage.Shared.Features.Inventory.Utils.InventoryUtils)
 local ItemConstants = require(ItemShared.Data.ItemConstants)
 local ItemRegistry = require(ItemShared.Data.ItemRegistry)
-local ItemAffixConstants = require(ItemShared.Data.ItemAffixConstants)
 
 --[=[
 	Public interface of the service — the SINGLE place method/field types are declared.
@@ -22,7 +21,10 @@ export type InventoryServiceClient = {
 
 	getInventory: (self: InventoryServiceClient) -> PlayerDataTypes.Inventory,
 	getEntriesOfKind: (self: InventoryServiceClient, kind: string) -> { PlayerDataTypes.InventoryEntry },
-	getAffixes: (self: InventoryServiceClient, entry: PlayerDataTypes.UniqueEntry) -> { [string]: number }?,
+	getAttrs: (
+		self: InventoryServiceClient,
+		entry: PlayerDataTypes.UniqueEntry
+	) -> { [string]: PlayerDataTypes.AttrValue }?,
 	displayName: (self: InventoryServiceClient, entry: PlayerDataTypes.UniqueEntry) -> string,
 	getState: (self: InventoryServiceClient) -> { [string]: any },
 }
@@ -50,30 +52,25 @@ local InventoryServiceClient: InventoryServiceClient = {
 	end,
 
 	--[=[
-		The rolled affix map on a unique entry (nil when it has none) — a passthrough so UI reads affixes
+		The per-instance attrs on a unique entry (nil when it has none) — a passthrough so UI reads attrs
 		through the service facade rather than poking the entry field directly.
 		@param entry PlayerDataTypes.UniqueEntry
-		@return { [string]: number }? -- affixId -> rolled value, or nil
+		@return { [string]: AttrValue }? -- attr key -> value, or nil
 	]=]
-	getAffixes = function(_self, entry)
-		return entry.affixes
+	getAttrs = function(_self, entry)
+		return entry.attrs
 	end,
 
 	--[=[
-		The display name for a unique entry: the item's definition name, prefixed with its affix's
-		display name when it has one ("Titan's Rusted Saw Blade"). Derived at render time from
-		ItemAffixConstants — the prefix is never stored on the entry (see the affix-rolling spec, Decision 9).
+		The display name for an entry: the item's definition name, or the raw itemType when the
+		definition is unknown (a retired item still renders). A game that derives names from attrs
+		("Golden Wrench (Lv 3)") wraps this in its own view model.
 		@param entry PlayerDataTypes.UniqueEntry
 		@return string
 	]=]
 	displayName = function(_self, entry)
 		local definition = ItemRegistry.get(entry.itemType)
-		local baseName = if definition then definition.name else entry.itemType
-		local prefix = ItemAffixConstants.displayPrefix(entry.affixes)
-		if prefix then
-			return `{prefix} {baseName}`
-		end
-		return baseName
+		return if definition then definition.name else entry.itemType
 	end,
 
 	--[=[
@@ -86,7 +83,7 @@ local InventoryServiceClient: InventoryServiceClient = {
 		local entriesPerKind: { [string]: string } = {}
 		for _, kind in ItemConstants.KINDS do
 			entriesPerKind[kind] =
-				`{InventoryUtils.countEntriesOfKind(inventory, kind)}/{ItemConstants.KIND_CAPS[kind]}`
+				`{InventoryUtils.countEntriesOfKind(inventory, kind)}/{ItemConstants.KIND_CAPS[kind] or "uncapped"}`
 		end
 		return {
 			entriesPerKind = entriesPerKind,

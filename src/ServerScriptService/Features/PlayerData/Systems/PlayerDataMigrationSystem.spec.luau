@@ -18,20 +18,20 @@ return function()
 			end)
 
 			it("stamps unversioned data as v1 and leaves fields intact", function()
-				local data = { currency = { jaku = 5 }, inventory = { items = {} } }
+				local data = { currency = { gold = 5 }, inventory = { items = {} } }
 				local result = PlayerDataMigrationSystem.apply(data, nil)
 				expect(result).to.equal("ok")
 				expect(data._schemaVersion).to.equal(1)
-				expect(data.currency.jaku).to.equal(5)
+				expect(data.currency.gold).to.equal(5)
 			end)
 		end)
 
 		describe("_applyWith", function()
 			it("is a no-op when the stored version is already current", function()
-				local data = { currency = { jaku = 5 }, _schemaVersion = 2 }
+				local data = { currency = { gold = 5 }, _schemaVersion = 2 }
 				local result = PlayerDataMigrationSystem._applyWith(data, 2, {}, 2)
 				expect(result).to.equal("ok")
-				expect(data.currency.jaku).to.equal(5)
+				expect(data.currency.gold).to.equal(5)
 				expect(data._schemaVersion).to.equal(2)
 			end)
 
@@ -48,15 +48,15 @@ return function()
 			it("runs a single migration v1 -> v2", function()
 				local migrations = {
 					function(d: any)
-						d.coins = d.jaku
-						d.jaku = nil
+						d.coins = d.gold
+						d.gold = nil
 					end,
 				}
-				local data = { jaku = 100 }
+				local data = { gold = 100 }
 				local result = PlayerDataMigrationSystem._applyWith(data, 1, migrations, 2)
 				expect(result).to.equal("ok")
 				expect(data.coins).to.equal(100)
-				expect(data.jaku).to.equal(nil)
+				expect(data.gold).to.equal(nil)
 				expect(data._schemaVersion).to.equal(2)
 			end)
 
@@ -110,10 +110,10 @@ return function()
 						error("boom")
 					end,
 				}
-				local data = { jaku = 5 }
+				local data = { gold = 5 }
 				local result = PlayerDataMigrationSystem._applyWith(data, 1, migrations, 2)
 				expect(result).to.equal("failed")
-				expect(data.jaku).to.equal(5)
+				expect(data.gold).to.equal(5)
 				expect(data._schemaVersion).to.equal(nil)
 			end)
 

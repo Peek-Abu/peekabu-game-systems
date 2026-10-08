@@ -175,7 +175,8 @@ function AnimationPlayerModule.new(
 	local live: { [string]: LiveEntry } = {}
 	local counters: Counters = { loads = 0, hits = 0 }
 	local destroyed = false
-	-- Puppet LOD's freeze: every live track held at speed 0; each entry keeps its requested speed.
+	-- A level-of-detail freeze (e.g. a distant NPC): every live track held at speed 0; each entry keeps its
+	-- requested speed.
 	local paused = false
 	local disconnectRemoved: (() -> ())? = nil
 
@@ -426,7 +427,7 @@ function AnimationPlayerModule.new(
 		end,
 
 		-- Holds every live track at speed 0 (the pose stays where it is), or resumes each at its own
-		-- requested speed. A play while paused starts held. Puppet LOD's freeze (speed mode).
+		-- requested speed. A play while paused starts held. Used for a level-of-detail freeze.
 		setPaused = function(_self: AnimationPlayerSystem, nextPaused: boolean)
 			if destroyed or paused == nextPaused then
 				return

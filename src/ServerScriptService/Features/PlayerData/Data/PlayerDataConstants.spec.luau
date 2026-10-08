@@ -3,7 +3,7 @@
 	Unit tests for PlayerDataConstants — the profile-template registry.
 
 	Covers the slot-aware profile shape: MAX_SLOTS, and the PROFILE_TEMPLATE's slotState / account /
-	slots skeleton that registerSlotPath / registerAccountPath (Task 3) build on.
+	slots skeleton that registerSlotPath / registerAccountPath build on.
 ]=]
 
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -12,10 +12,13 @@ local PlayerDataConstants = require(ServerScriptService.Features.PlayerData.Data
 local PlayerDataPathUtils = require(ServerScriptService.Features.PlayerData.Utils.PlayerDataPathUtils)
 
 return function()
+	-- Multi-slot behaviour is dormant while MAX_SLOTS = 1; these re-enable when a game raises it.
+	local itMultiSlot = if PlayerDataConstants.MAX_SLOTS >= 2 then it else itSKIP
+
 	describe("PlayerDataConstants", function()
 		describe("slot-aware template", function()
 			it("exposes MAX_SLOTS", function()
-				expect(PlayerDataConstants.MAX_SLOTS).to.equal(3)
+				expect(PlayerDataConstants.MAX_SLOTS).to.equal(1)
 			end)
 
 			it("starts new profiles on slot 1", function()
@@ -26,61 +29,32 @@ return function()
 				expect(#PlayerDataConstants.PROFILE_TEMPLATE.slots).to.equal(PlayerDataConstants.MAX_SLOTS)
 			end)
 
-			it("gives each slot its OWN table (no shared-reference aliasing)", function()
+			itMultiSlot("gives each slot its OWN table (no shared-reference aliasing)", function()
 				local slots = PlayerDataConstants.PROFILE_TEMPLATE.slots
-				expect(slots[1]).to.never.equal(slots[2])
-				expect(slots[2]).to.never.equal(slots[3])
+				for index = 2, PlayerDataConstants.MAX_SLOTS do
+					expect(slots[index - 1]).to.never.equal(slots[index])
+				end
 			end)
 
-			-- Task 3: itemMint IS an owned ACCOUNT-wide slice (InventoryServiceServer registers and
-			-- validates it via PlayerDataSliceSystem.registerAccount, same as unlockedSlots/currency/stats are each
-			-- owned by their own service) — its default is just stamped directly onto the skeleton
-			-- rather than left as an empty `{}`, because ItemMint requires `nextUid` and an empty table
-			-- wouldn't typecheck, the same reason `stats` above is hardcoded too. nextUid must start at
-			-- 1, not 0 (0 could read as falsy/absent).
+			-- itemMint IS an owned ACCOUNT-wide slice (InventoryServiceServer registers and validates it
+			-- via PlayerDataSliceSystem.registerAccount) — its default is just stamped directly onto the
+			-- skeleton rather than left as an empty `{}`, because ItemMint requires `nextUid` and an empty
+			-- table wouldn't typecheck. nextUid must start at 1, not 0 (0 could read as falsy/absent).
 			it("stamps a default itemMint onto new profiles' account", function()
 				expect(PlayerDataConstants.PROFILE_TEMPLATE.account.itemMint).to.be.ok()
 				expect(PlayerDataConstants.PROFILE_TEMPLATE.account.itemMint.nextUid).to.equal(1)
-			end)
-
-			it("stamps an empty appearance onto every slot skeleton", function()
-				local slots = PlayerDataConstants.PROFILE_TEMPLATE.slots
-				for index = 1, PlayerDataConstants.MAX_SLOTS do
-					expect(slots[index].appearance).to.be.ok()
-					expect(type(slots[index].appearance.cosmetics)).to.equal("table")
-					expect(type(slots[index].appearance.accessories)).to.equal("table")
-					expect(type(slots[index].appearance.body)).to.equal("table")
-				end
-			end)
-
-			-- Account-scoped, unlike appearance: what a player has UNLOCKED is earned once and shared by
-			-- every character (customization design spec, Decision 1).
-			it("stamps empty entitlements onto new profiles' account", function()
-				local entitlements = PlayerDataConstants.PROFILE_TEMPLATE.account.entitlements
-				expect(entitlements).to.be.ok()
-				expect(type(entitlements.cosmetics)).to.equal("table")
-				expect(next(entitlements.cosmetics)).to.equal(nil)
-			end)
-
-			it("stamps an empty bank (items + currency) onto every slot skeleton", function()
-				local slots = PlayerDataConstants.PROFILE_TEMPLATE.slots
-				for index = 1, PlayerDataConstants.MAX_SLOTS do
-					expect(slots[index].bank).to.be.ok()
-					expect(type(slots[index].bank.items)).to.equal("table")
-					expect(type(slots[index].bank.currency)).to.equal("table")
-				end
 			end)
 		end)
 
 		describe("registerSlotPath", function()
 			it("stamps the default into EVERY slot", function()
-				PlayerDataConstants.registerSlotPath("testStats", { level = 1 })
+				PlayerDataConstants.registerSlotPath("testStamped", { level = 1 })
 				for index = 1, PlayerDataConstants.MAX_SLOTS do
-					expect(PlayerDataConstants.PROFILE_TEMPLATE.slots[index].testStats.level).to.equal(1)
+					expect(PlayerDataConstants.PROFILE_TEMPLATE.slots[index].testStamped.level).to.equal(1)
 				end
 			end)
 
-			it("deep-copies the default per slot, so slots never alias one table", function()
+			itMultiSlot("deep-copies the default per slot, so slots never alias one table", function()
 				PlayerDataConstants.registerSlotPath("testAlias", { level = 1 })
 				local slots = PlayerDataConstants.PROFILE_TEMPLATE.slots
 				expect(slots[1].testAlias).to.never.equal(slots[2].testAlias)
@@ -157,9 +131,9 @@ return function()
 				expect(validator({})).to.equal(false)
 			end)
 
-			-- The epoch is the generation counter Task 2's transaction guard reads: a slotState whose
+			-- The epoch is the generation counter transaction()'s stale-op guard reads: a slotState whose
 			-- epoch is missing/fractional/below 1 would make a staleness comparison meaningless, so the
-			-- data layer refuses to store one — on ANY path into the key, not just switchSlot's.
+			-- data layer refuses to store one — on ANY path into the key, not just a slot switch's.
 			it("rejects a non-number epoch", function()
 				local validator = PlayerDataConstants.getValidator("slotState")
 				expect(validator({ active = 1, epoch = "1" })).to.equal(false)

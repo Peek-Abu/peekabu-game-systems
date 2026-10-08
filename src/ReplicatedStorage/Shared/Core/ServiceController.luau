@@ -80,8 +80,8 @@
 			-- Safe to call other services here - all are initialized.
 			local CurrencyService = require(path.to.CurrencyServiceServer)
 			for _, player in Players:GetPlayers() do
-				if CurrencyService:getCurrencyAmount(player.UserId, "jaku") == 0 then
-					CurrencyService:addCurrency(player.UserId, "jaku", 100)
+				if CurrencyService:getCurrencyAmount(player.UserId, "coins") == 0 then
+					CurrencyService:addCurrency(player.UserId, "coins", 100)
 				end
 			end
 		end,

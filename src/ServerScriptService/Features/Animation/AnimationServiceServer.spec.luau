@@ -1,7 +1,7 @@
 --[=[
-	AnimationServiceServer's grant surface against a fake "action" channel (the test seam), so no body,
-	packet or replication session is needed. The channel stands in for ReplicationServiceServer's:
-	one state per layer key, `set` / `get` / `clear`.
+	AnimationServiceServer's grant surface against a fake "action" channel (the test seam), so no
+	character or packet is needed. The channel stands in for AnimationGrantTracker: one state per layer
+	key, `set` / `get` / `clear`.
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -122,11 +122,11 @@ return function()
 			expect(AnimationService:play(fakePlayer, "testpose")).to.equal(true)
 		end)
 
-		it("reports a player with no live body", function()
+		it("reports a player with no character", function()
 			channel.nextResult = "no-body"
 			local ok, reason = AnimationService:play(fakePlayer, "testleap")
 			expect(ok).to.equal(false)
-			expect(reason:find("no body", 1, true)).to.be.ok()
+			expect(reason:find("no character", 1, true)).to.be.ok()
 		end)
 	end)
 
@@ -165,7 +165,7 @@ return function()
 	end)
 
 	describe("stopAll (the hook Death and Ragdoll call)", function()
-		it("ends every grant on the body whatever its class", function()
+		it("ends every grant on the character whatever its class", function()
 			AnimationService:play(fakePlayer, "testguard") -- protected, full
 			AnimationService:play(fakePlayer, "testpose") -- upper
 			expect(AnimationService:stopAll(fakePlayer)).to.equal(2)
@@ -174,7 +174,7 @@ return function()
 			expect(channel.states.upper).to.equal(nil)
 		end)
 
-		it("reports zero for a body with nothing playing", function()
+		it("reports zero for a character with nothing playing", function()
 			expect(AnimationService:stopAll(fakePlayer)).to.equal(0)
 			expect(#channel.clears).to.equal(0)
 		end)

@@ -8,14 +8,10 @@ local PlayerDataType = require(ReplicatedStorage.Shared.Data.PlayerDataTypes)
 	TestRunner call ItemContentRegistry.init() before anything else touches ItemRegistry, so every consumer
 	(InventoryService, InventoryUtils, the Cmdr `itemType` enum) sees a fully-populated registry.
 
-	Provisional content: real shapes (kind, rarity, stack rules), placeholder art/copy. Swap
-	names/icons/descriptions freely; the SHAPE is what other systems depend on.
-
-	`rusted-saw`, `chambered-helmet`, `throwing-knife`, and `wood` share names with real items in
-	the live game (verified against ReplicatedStorage.Modules.{Weapon.AllWeapons, Armour.AllArmours,
-	Items.AllItems} in the VentureTestingPlace reference copy) and their rarities are set to match
-	that source data (Common/Epic/Common/Common respectively). `phoenix-blade`, `healing-tonic`, and
-	`crypt-key` have no real-game analog and are fully invented placeholders.
+	SAMPLE content: a small catalog that exercises every shape the inventory supports — unique items
+	(tool, wearable, misc), a plain stackable, a stackable capped to one stack, and a stackable misc
+	material. Each game replaces this catalog with its own; the specs use these keys as fixtures, so
+	keep the shapes (or update the specs) when you do.
 
 	init() guards its own re-entry via a module-level `initialized` flag: ItemRegistry.register
 	rejects a second registration of the same item type outright (see ItemRegistry), but init()
@@ -36,96 +32,80 @@ function ItemContentRegistry.init()
 	end
 	initialized = true
 
-	-- Weapons
-	--
-	-- Each item is built as an explicitly-typed LOCAL (its specific variant, e.g.
-	-- PlayerDataType.WeaponDefinition) rather than an inline table literal passed straight into
-	-- register(): register()'s parameter is the ItemDefinition UNION, and Luau does not propagate an
-	-- expected type through a union for table-literal checking, so a literal built straight at the
-	-- call site has its `kind` field widened to plain `string` and fails to match any union arm.
-	-- Checking against the single concrete variant type on the `local` annotation gives the table
-	-- constructor its expected type directly, so `kind` is checked as its singleton literal with no
-	-- cast needed.
-	local rustedSaw: PlayerDataType.WeaponDefinition = {
-		name = "Rusted Saw Blade",
+	-- Every item is built as an explicitly-typed LOCAL rather than an inline table literal passed straight
+	-- into register(): the annotation gives the table constructor its expected type directly, so a typo'd
+	-- field is caught at the definition site.
+
+	-- Tools (unique: no stackMax, so each copy is minted with its own uid)
+	local wrench: PlayerDataType.ItemDefinition = {
+		name = "Wrench",
 		icon = "rbxassetid://123",
-		description = "A pitted old saw blade lashed to a handle. Better than nothing.",
+		description = "A sturdy wrench. Fixes most things, eventually.",
 		rarity = "common",
-		kind = "weapon",
-		equipSlot = "weapon",
+		kind = "tool",
 	}
-	ItemRegistry.register("rusted-saw", rustedSaw)
+	ItemRegistry.register("wrench", wrench)
 
-	local phoenixBlade: PlayerDataType.WeaponDefinition = {
-		name = "Phoenix Blade",
+	local goldenWrench: PlayerDataType.ItemDefinition = {
+		name = "Golden Wrench",
 		icon = "rbxassetid://456",
-		description = "Forged in the ashes of something that used to matter.",
+		description = "Too shiny to actually use.",
 		rarity = "legendary",
-		kind = "weapon",
-		equipSlot = "weapon",
+		kind = "tool",
 	}
-	ItemRegistry.register("phoenix-blade", phoenixBlade)
+	ItemRegistry.register("golden-wrench", goldenWrench)
 
-	-- Armour
-	--
-	-- chambered-helmet's requiredLevel/statBonuses match the live game's AllArmours.Chambered module
-	-- (Required Level = 8, Stats = { ["Rot Defense"] = { min = 20, max = 28 } }): rotEndurance is the
-	-- closest existing StatConstants id to "Rot Defense", and 8 is a fixed midpoint-of-the-floor
-	-- bonus standing in for that old min/max range.
-	local chamberedHelmet: PlayerDataType.ArmourDefinition = {
-		name = "Chambered Helmet",
+	-- Wearables
+	local hardHat: PlayerDataType.ItemDefinition = {
+		name = "Hard Hat",
 		icon = "rbxassetid://789",
-		description = "Riveted plate with a narrow eye-slit. Muffles everything.",
+		description = "Safety first.",
 		rarity = "epic",
-		kind = "armour",
-		equipSlot = "helmet",
-		requiredLevel = 8,
-		statBonuses = { rotEndurance = 8 },
+		kind = "wearable",
 	}
-	ItemRegistry.register("chambered-helmet", chamberedHelmet)
+	ItemRegistry.register("hard-hat", hardHat)
 
-	-- Consumables
-	local healingTonic: PlayerDataType.ConsumableDefinition = {
-		name = "Healing Tonic",
+	-- Consumables (stackable)
+	local medkit: PlayerDataType.ItemDefinition = {
+		name = "Medkit",
 		icon = "rbxassetid://1011",
-		description = "Bitter, but it closes wounds.",
+		description = "Patches you up.",
 		rarity = "common",
 		kind = "consumable",
 		stackMax = 10,
 	}
-	ItemRegistry.register("healing-tonic", healingTonic)
+	ItemRegistry.register("medkit", medkit)
 
-	local throwingKnife: PlayerDataType.ConsumableDefinition = {
-		name = "Throwing Knife",
+	local flare: PlayerDataType.ItemDefinition = {
+		name = "Flare",
 		icon = "rbxassetid://1213",
-		description = "Balanced for the throw, not the fight.",
+		description = "Bright, brief, and limited to one stack.",
 		rarity = "common",
 		kind = "consumable",
 		stackMax = 10,
 		maxStacks = 1,
 	}
-	ItemRegistry.register("throwing-knife", throwingKnife)
+	ItemRegistry.register("flare", flare)
 
 	-- Misc
-	local wood: PlayerDataType.MiscDefinition = {
-		name = "Wood",
+	local scrap: PlayerDataType.ItemDefinition = {
+		name = "Scrap",
 		icon = "rbxassetid://1415",
-		description = "Rough-cut lumber. Common crafting material.",
+		description = "Bits of metal. Someone will buy it.",
 		rarity = "common",
 		kind = "misc",
 		stackMax = 30,
 	}
-	ItemRegistry.register("wood", wood)
+	ItemRegistry.register("scrap", scrap)
 
-	local cryptKey: PlayerDataType.MiscDefinition = {
-		name = "Crypt Key",
+	local masterKey: PlayerDataType.ItemDefinition = {
+		name = "Master Key",
 		icon = "rbxassetid://1617",
-		description = "Cold to the touch. It wants to be used.",
-		rarity = "cursed",
+		description = "Opens the door you were told not to open.",
+		rarity = "legendary",
 		kind = "misc",
-		questItem = true,
 	}
-	ItemRegistry.register("crypt-key", cryptKey)
+	ItemRegistry.register("master-key", masterKey)
 end
 
 return ItemContentRegistry

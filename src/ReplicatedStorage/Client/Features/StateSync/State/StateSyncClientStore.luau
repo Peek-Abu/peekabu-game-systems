@@ -19,23 +19,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Charm = require(ReplicatedStorage.Packages.Charm)
 local PlayerDataTypes = require(ReplicatedStorage.Shared.Data.PlayerDataTypes)
-local CustomizationWearRules = require(ReplicatedStorage.Shared.Features.Customization.Rules.CustomizationWearRules)
 local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
 local PublicPlayerTypes = require(ReplicatedStorage.Shared.Data.PublicPlayerTypes)
 
 -- nil until the first init payload arrives, so the UI can show a loading state.
 local currency = Charm.atom(nil :: PlayerDataTypes.Currency?)
 local inventory = Charm.atom({ items = {} } :: PlayerDataTypes.Inventory)
-local stats = Charm.atom(nil :: PlayerDataTypes.StatsSlice?)
-local equipment = Charm.atom({ slots = {} } :: PlayerDataTypes.Equipment)
-local bank = Charm.atom({ items = {}, currency = {} } :: PlayerDataTypes.Bank) -- type the atom's initial value
--- The pre-sync placeholder is the same default look the server seeds a new slot with
--- (CustomizationWearRules.defaultAppearance, which the slice registration also uses), so there is one
--- source and nothing to drift. It is VISIBLE now: the owner rig dresses from this atom (R4, CustomizationOutfitSystem),
--- so a rig built before the first sync shows the default look rather than a bald one, and redresses when
--- the real appearance arrives.
-local appearance = Charm.atom(CustomizationWearRules.defaultAppearance())
-local entitlements = Charm.atom({ cosmetics = {} } :: PlayerDataTypes.Entitlements) -- type the atom's initial value
 local titles = Charm.atom({ earned = {} } :: PlayerDataTypes.Titles) -- type the atom's initial value
 local equippedTitle = Charm.atom({} :: PlayerDataTypes.EquippedTitle) -- type the atom's initial value
 -- The public slice: other players' public data, already filtered by the server to the players relevant
@@ -50,11 +39,6 @@ export type SliceSetter = (value: unknown) -> ()
 local StateSyncClientStore = {
 	currency = currency,
 	inventory = inventory,
-	stats = stats,
-	equipment = equipment,
-	bank = bank,
-	appearance = appearance,
-	entitlements = entitlements,
 	titles = titles,
 	equippedTitle = equippedTitle,
 	publicPlayers = publicPlayers,
@@ -67,11 +51,6 @@ local StateSyncClientStore = {
 local atoms: { [string]: any } = {
 	currency = currency,
 	inventory = inventory,
-	stats = stats,
-	equipment = equipment,
-	bank = bank,
-	appearance = appearance,
-	entitlements = entitlements,
 	titles = titles,
 	equippedTitle = equippedTitle,
 	publicPlayers = publicPlayers,

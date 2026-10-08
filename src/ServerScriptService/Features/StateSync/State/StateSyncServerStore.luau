@@ -10,8 +10,7 @@
 	profile -> atom -> charm-sync -> client atom -> UI.
 
 	Server-side consumers MAY also read a player's committed state through `getterFor`, for
-	derivation rather than replication (first sanctioned use: `StatServiceServer.getDerived`,
-	Phase 3b). This is safe because the mirror is written SYNCHRONOUSLY after every committed
+	derivation rather than replication (e.g. computing a level from a stored XP total). This is safe because the mirror is written SYNCHRONOUSLY after every committed
 	`mutate()`/`transaction()` — for the ACTIVE slot it is never stale relative to a completed
 	mutation. It is NOT a substitute for `PlayerDataSliceSystem.get` when a mutator needs pre-commit/live-profile
 	state: a mutator runs against `profile.Data` before the write commits, and the mirror only updates

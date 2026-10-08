@@ -10,5 +10,5 @@ return function(_context, target: Player, class: string)
 		return `Refused: "{class}" is not bulk-stoppable (only "attack" is — protected/ambient by design).`
 	end
 	local stopped = AnimationService:stopAttacks(target)
-	return `Stopped {stopped} attack action(s) on {target.Name}'s body.`
+	return `Stopped {stopped} attack action(s) on {target.Name}'s character.`
 end

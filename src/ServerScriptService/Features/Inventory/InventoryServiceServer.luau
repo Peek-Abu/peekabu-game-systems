@@ -8,7 +8,6 @@ local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local Guard = require(ReplicatedStorage.Shared.Core.Guard)
 local InventoryUtils = require(InventoryShared.Utils.InventoryUtils)
 local ItemRegistry = require(ItemShared.Data.ItemRegistry)
-local ItemAffixFormulas = require(ItemShared.Utils.ItemAffixFormulas)
 local InventoryContainerRules = require(InventoryShared.Rules.InventoryContainerRules)
 local InventoryPlacementUtils = require(InventoryShared.Utils.InventoryPlacementUtils)
 local ItemConstants = require(ItemShared.Data.ItemConstants)
@@ -16,7 +15,7 @@ local PlayerDataTypes = require(ReplicatedStorage.Shared.Data.PlayerDataTypes)
 local PlayerDataSliceSystem = require(ServerScriptService.Features.PlayerData.Systems.PlayerDataSliceSystem)
 local PlayerDataService = require(ServerScriptService.Features.PlayerData.PlayerDataServiceServer)
 
--- Entry-shape checking and stack placement are shared with Bank (and any future container) via the
+-- Entry-shape checking and stack placement are shared with any second container a game adds via the
 -- InventoryContainerRules / InventoryPlacementUtils modules. This service supplies only the INVENTORY cap
 -- policy (per-kind KIND_CAPS), below.
 local stackLimitsOf = InventoryContainerRules.stackLimitsOf
@@ -49,7 +48,7 @@ local function validateInventory(inventory: PlayerDataTypes.Inventory): (boolean
 	end
 	assert(result, "checkEntryShapes returns counts on success")
 
-	-- INVENTORY's own capacity policy: a per-KIND entry cap (Bank uses a flat total cap instead).
+	-- INVENTORY's own capacity policy: a per-KIND entry cap (another container may use a flat total cap instead).
 	for kind, count in result.kindCounts do
 		local cap = ItemConstants.KIND_CAPS[kind]
 		if cap and count > cap then
@@ -90,13 +89,8 @@ end, validateItemMint)
 
 local log = Logger.new("InventoryServiceServer")
 
--- One RNG stream for affix rolls at mint (see addUnique). Module-scoped so every mint draws from the
--- same live stream; specs exercise the pure ItemAffixFormulas directly with a seeded Random instead.
-local affixRng = Random.new()
-
 -- INVENTORY's room policy for InventoryPlacementUtils.planStackPlacement: the per-kind KIND_CAPS check
--- (Bank injects a flat total-cap check instead). Same math and rejection message the shared planner
--- used to hardcode before the extraction.
+-- (another container injects its own policy, e.g. a flat total cap).
 local function inventoryHasRoom(
 	items: { PlayerDataTypes.InventoryEntry },
 	kind: string,
@@ -185,7 +179,16 @@ end
 -- added. (Contrast addStackable, which precomputes feasibility because there IS a meaningful
 -- feasibility question — how the count splits across stacks; a unique mint has no such question,
 -- only pass/fail.)
-local function addUnique(userId: number, itemType: string, count: number): (boolean, string?)
+--
+-- `attrs`, when given, is stamped onto EVERY minted copy (each gets its own copy of the table, so no two
+-- entries alias). A caller that wants different attrs per copy (independent hatch rolls) mints one at a
+-- time.
+local function addUnique(
+	userId: number,
+	itemType: string,
+	count: number,
+	attrs: { [string]: PlayerDataTypes.AttrValue }?
+): (boolean, string?)
 	-- Checked BEFORE minting either op: inventorySlice.op (registerSlot's op) ASSERTS when no active
 	-- slot is resolvable, so an unloaded profile would otherwise throw here instead of failing
 	-- gracefully like addStackable/removeItem do. Bailing out first, the same "no profile loaded" way
@@ -211,12 +214,10 @@ local function addUnique(userId: number, itemType: string, count: number): (bool
 		end),
 		inventorySlice.op(userId, function(inventory)
 			for _, uid in mintedUids do
-				-- Roll each copy independently (spec Decision 5) — never share a roll across copies —
-				-- inside the mint op so the affixes commit atomically with the item and roll back with it.
 				table.insert(inventory.items, {
 					itemType = itemType,
 					uid = uid,
-					affixes = ItemAffixFormulas.roll(itemType, affixRng),
+					attrs = if attrs ~= nil then table.clone(attrs) else nil,
 				})
 			end
 			return true
@@ -337,7 +338,13 @@ export type InventoryServiceServer = {
 	dependencies: { string },
 
 	getInventory: (self: InventoryServiceServer, userId: number) -> PlayerDataTypes.Inventory?,
-	addItem: (self: InventoryServiceServer, userId: number, itemType: string, count: number?) -> (boolean, string?),
+	addItem: (
+		self: InventoryServiceServer,
+		userId: number,
+		itemType: string,
+		count: number?,
+		attrs: { [string]: PlayerDataTypes.AttrValue }?
+	) -> (boolean, string?),
 	removeItem: (
 		self: InventoryServiceServer,
 		userId: number,
@@ -350,7 +357,7 @@ export type InventoryServiceServer = {
 		mutator: (inventory: PlayerDataTypes.Inventory) -> boolean
 	) -> PlayerDataService.TransactionOperation,
 	-- Inventory's ENTRY-CAPACITY policy (per-kind KIND_CAPS), exposed as a InventoryPlacementUtils.RoomCheck
-	-- so another container placing stackables INTO inventory (Bank's withdrawItem) reuses it instead of
+	-- so another container placing stackables INTO inventory (e.g. a stash withdraw) reuses it instead of
 	-- duplicating the per-kind rule. Not a method — a plain function value.
 	roomCheck: InventoryPlacementUtils.RoomCheck,
 }
@@ -380,12 +387,17 @@ local InventoryServiceServer: InventoryServiceServer = {
 		any write. Unique itemTypes mint `count` fresh, collision-proof uids via one atomic
 		transaction spanning the account-wide mint counter and the inventory (see addUnique).
 
+		`attrs` is per-instance data stamped onto each minted copy of a UNIQUE item (a pet's level, a
+		rolled mutation). It is refused for a stackable itemType: stacks are fungible, so they cannot
+		carry per-instance data.
+
 		@param userId number -- The user ID
 		@param itemType string -- A registered item type key
 		@param count number? -- How many to add (defaults to 1; must be a positive integer)
+		@param attrs { [string]: AttrValue }? -- Per-instance data for unique items (see PlayerDataTypes)
 		@return boolean, string? -- (ok, reason-on-failure)
 	]=]
-	addItem = function(_self, userId, itemType, count)
+	addItem = function(_self, userId, itemType, count, attrs)
 		Guard.userId(userId)
 		assert(type(itemType) == "string", `itemType must be a string, got {type(itemType)}`)
 		local wanted = if count == nil then 1 else count
@@ -399,12 +411,19 @@ local InventoryServiceServer: InventoryServiceServer = {
 		end
 
 		if ItemRegistry.isStackable(itemType) then
+			if attrs ~= nil then
+				return false, `"{itemType}" is stackable; stacks cannot carry per-instance attrs`
+			end
 			local definition = ItemRegistry.get(itemType)
 			assert(definition, `itemType "{itemType}" passed isValidItemType but is missing from the registry`)
 			return addStackable(userId, itemType, definition, wanted)
 		end
 
-		return addUnique(userId, itemType, wanted)
+		local attrsOk, attrsReason = InventoryUtils.validateAttrs(attrs)
+		if not attrsOk then
+			return false, attrsReason
+		end
+		return addUnique(userId, itemType, wanted, attrs)
 	end,
 
 	--[=[

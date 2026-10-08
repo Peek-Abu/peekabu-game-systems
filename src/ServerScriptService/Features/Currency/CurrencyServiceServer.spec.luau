@@ -29,28 +29,24 @@ local CurrencyConstants = require(ReplicatedStorage.Shared.Features.Currency.Dat
 -- ============================================================
 -- Helpers
 -- ============================================================
--- A whole slot-aware profile: every slot seeded with the slice's registered template default
--- (see CurrencyServiceServer's PlayerDataSliceSystem.registerSlot call — jaku = 100), matching what a
--- freshly-created character actually gets, with the value under test stamped into the ACTIVE slot.
-local function makeProfile(jaku: number?)
+-- A whole slot-aware profile: every slot (PlayerDataConstants.MAX_SLOTS of them) seeded with the
+-- slice's registered template default (see CurrencyServiceServer's PlayerDataSliceSystem.registerSlot
+-- call — coins = 100), matching what a fresh save actually gets, with the value under test stamped into
+-- the ACTIVE slot.
+local function makeProfile(coins: number?)
 	local slots = {}
 	for index = 1, PlayerDataConstants.MAX_SLOTS do
 		slots[index] = {
-			currency = { jaku = 100 },
+			currency = { coins = 100 },
 			inventory = { items = {} },
-			stats = { totalXp = 0, investments = {} },
-			equipment = { slots = {} },
-			appearance = { cosmetics = {}, accessories = {}, body = {}, headType = "Uncovered", surfaces = {} },
 			equippedTitle = {},
 		}
 	end
-	slots[1].currency = { jaku = jaku or 0 }
+	slots[1].currency = { coins = coins or 0 }
 	return {
 		slotState = { active = 1, epoch = 1 },
 		account = {
-			unlockedSlots = { 1 },
 			itemMint = { nextUid = 1 },
-			entitlements = { cosmetics = {} },
 			titles = { earned = {} },
 		},
 		slots = slots,
@@ -58,6 +54,9 @@ local function makeProfile(jaku: number?)
 end
 
 return function()
+	-- Multi-slot behaviour is dormant while MAX_SLOTS = 1; these re-enable when a game raises it.
+	local describeMultiSlot = if PlayerDataConstants.MAX_SLOTS >= 2 then describe else describeSKIP
+
 	describe("CurrencyServiceServer", function()
 		-- In-memory store, reset per test
 		local _profiles: { [number]: any } = {}
@@ -75,10 +74,9 @@ return function()
 			return profile.slots[profile.slotState.active]
 		end
 
-		-- Switches which slot is "active" for a fake profile -- mirrors the effect of the real
-		-- slot-switch flow (the SlotService follow-on) without needing that service to exist yet.
-		-- CurrencyService is slot-blind, so this is the only lever these tests have to move which
-		-- character its reads/writes land on.
+		-- Switches which slot is "active" for a fake profile -- mirrors the effect of a game's
+		-- slot-switch flow without needing one to exist. CurrencyService is slot-blind, so this is the
+		-- only lever these tests have to move which slot its reads/writes land on.
 		local function setActiveSlot(userId: number, slotIndex: number)
 			_profiles[userId].slotState.active = slotIndex
 		end
@@ -169,7 +167,7 @@ return function()
 				_profiles[1] = makeProfile(100)
 				local currency = CurrencyService:getCurrency(1)
 				expect(currency).to.be.ok()
-				expect(currency and currency.jaku).to.equal(100)
+				expect(currency and currency.coins).to.equal(100)
 			end)
 
 			it("should return nil when profile is not loaded", function()
@@ -185,13 +183,13 @@ return function()
 
 		-- -------------------------------------------------------------------------
 		describe("getCurrencyAmount", function()
-			it("should return correct jaku amount", function()
+			it("should return correct coins amount", function()
 				_profiles[1] = makeProfile(250)
-				expect(CurrencyService:getCurrencyAmount(1, "jaku")).to.equal(250)
+				expect(CurrencyService:getCurrencyAmount(1, "coins")).to.equal(250)
 			end)
 
 			it("should return 0 when profile is not loaded", function()
-				expect(CurrencyService:getCurrencyAmount(999, "jaku")).to.equal(0)
+				expect(CurrencyService:getCurrencyAmount(999, "coins")).to.equal(0)
 			end)
 
 			it("should throw for invalid currency type", function()
@@ -206,26 +204,26 @@ return function()
 		describe("hasCurrency", function()
 			it("should return true when player has enough", function()
 				_profiles[1] = makeProfile(100)
-				expect(CurrencyService:hasCurrency(1, "jaku", 50)).to.equal(true)
-				expect(CurrencyService:hasCurrency(1, "jaku", 100)).to.equal(true)
+				expect(CurrencyService:hasCurrency(1, "coins", 50)).to.equal(true)
+				expect(CurrencyService:hasCurrency(1, "coins", 100)).to.equal(true)
 			end)
 
 			it("should return false when player has insufficient funds", function()
 				_profiles[1] = makeProfile(50)
-				expect(CurrencyService:hasCurrency(1, "jaku", 100)).to.equal(false)
+				expect(CurrencyService:hasCurrency(1, "coins", 100)).to.equal(false)
 			end)
 
 			it("should return false when profile is not loaded", function()
-				expect(CurrencyService:hasCurrency(999, "jaku", 1)).to.equal(false)
+				expect(CurrencyService:hasCurrency(999, "coins", 1)).to.equal(false)
 			end)
 
 			it("should throw for non-positive amount", function()
 				_profiles[1] = makeProfile(100)
 				expect(function()
-					CurrencyService:hasCurrency(1, "jaku", 0)
+					CurrencyService:hasCurrency(1, "coins", 0)
 				end).to.throw()
 				expect(function()
-					CurrencyService:hasCurrency(1, "jaku", -10)
+					CurrencyService:hasCurrency(1, "coins", -10)
 				end).to.throw()
 			end)
 		end)
@@ -234,13 +232,13 @@ return function()
 		describe("addCurrency", function()
 			it("should add currency to the profile", function()
 				_profiles[1] = makeProfile(100)
-				local ok = CurrencyService:addCurrency(1, "jaku", 50)
+				local ok = CurrencyService:addCurrency(1, "coins", 50)
 				expect(ok).to.equal(true)
-				expect(activeSlotOf(1).currency.jaku).to.equal(150)
+				expect(activeSlotOf(1).currency.coins).to.equal(150)
 			end)
 
 			it("should return false when profile is not loaded", function()
-				expect(CurrencyService:addCurrency(999, "jaku", 50)).to.equal(false)
+				expect(CurrencyService:addCurrency(999, "coins", 50)).to.equal(false)
 			end)
 
 			it("should throw for invalid currency type", function()
@@ -253,21 +251,21 @@ return function()
 			it("should throw for non-positive amount", function()
 				_profiles[1] = makeProfile(0)
 				expect(function()
-					CurrencyService:addCurrency(1, "jaku", 0)
+					CurrencyService:addCurrency(1, "coins", 0)
 				end).to.throw()
 				expect(function()
-					CurrencyService:addCurrency(1, "jaku", -5)
+					CurrencyService:addCurrency(1, "coins", -5)
 				end).to.throw()
 			end)
 
-			-- Venture has a single currency, so the old "adds to two currency types independently"
-			-- case cannot exist. What it really covered — successive adds each land on the slice
+			-- The base ships a single currency, so an "adds to two currency types independently"
+			-- case cannot exist. What it would cover — successive adds each land on the slice
 			-- rather than the last write clobbering the balance — is kept here.
 			it("should accumulate across successive adds", function()
 				_profiles[1] = makeProfile(0)
-				CurrencyService:addCurrency(1, "jaku", 100)
-				CurrencyService:addCurrency(1, "jaku", 25)
-				expect(activeSlotOf(1).currency.jaku).to.equal(125)
+				CurrencyService:addCurrency(1, "coins", 100)
+				CurrencyService:addCurrency(1, "coins", 25)
+				expect(activeSlotOf(1).currency.coins).to.equal(125)
 			end)
 		end)
 
@@ -275,26 +273,26 @@ return function()
 		describe("removeCurrency", function()
 			it("should remove currency from the profile", function()
 				_profiles[1] = makeProfile(100)
-				local ok = CurrencyService:removeCurrency(1, "jaku", 30)
+				local ok = CurrencyService:removeCurrency(1, "coins", 30)
 				expect(ok).to.equal(true)
-				expect(activeSlotOf(1).currency.jaku).to.equal(70)
+				expect(activeSlotOf(1).currency.coins).to.equal(70)
 			end)
 
 			it("should return false when insufficient funds", function()
 				_profiles[1] = makeProfile(20)
-				local ok = CurrencyService:removeCurrency(1, "jaku", 50)
+				local ok = CurrencyService:removeCurrency(1, "coins", 50)
 				expect(ok).to.equal(false)
-				expect(activeSlotOf(1).currency.jaku).to.equal(20)
+				expect(activeSlotOf(1).currency.coins).to.equal(20)
 			end)
 
 			it("should return false when profile is not loaded", function()
-				expect(CurrencyService:removeCurrency(999, "jaku", 10)).to.equal(false)
+				expect(CurrencyService:removeCurrency(999, "coins", 10)).to.equal(false)
 			end)
 
 			it("should throw for non-positive amount", function()
 				_profiles[1] = makeProfile(100)
 				expect(function()
-					CurrencyService:removeCurrency(1, "jaku", 0)
+					CurrencyService:removeCurrency(1, "coins", 0)
 				end).to.throw()
 			end)
 		end)
@@ -303,47 +301,47 @@ return function()
 		describe("setCurrency", function()
 			it("should set currency to exact amount", function()
 				_profiles[1] = makeProfile(50)
-				local ok = CurrencyService:setCurrency(1, "jaku", 200)
+				local ok = CurrencyService:setCurrency(1, "coins", 200)
 				expect(ok).to.equal(true)
-				expect(activeSlotOf(1).currency.jaku).to.equal(200)
+				expect(activeSlotOf(1).currency.coins).to.equal(200)
 			end)
 
 			it("should return false when setting to same amount (no change)", function()
 				_profiles[1] = makeProfile(100)
-				expect(CurrencyService:setCurrency(1, "jaku", 100)).to.equal(false)
+				expect(CurrencyService:setCurrency(1, "coins", 100)).to.equal(false)
 			end)
 
 			it("should allow setting to 0", function()
 				_profiles[1] = makeProfile(100)
-				local ok = CurrencyService:setCurrency(1, "jaku", 0)
+				local ok = CurrencyService:setCurrency(1, "coins", 0)
 				expect(ok).to.equal(true)
-				expect(activeSlotOf(1).currency.jaku).to.equal(0)
+				expect(activeSlotOf(1).currency.coins).to.equal(0)
 			end)
 
 			it("should clamp the set amount to MAX_CURRENCY", function()
 				_profiles[1] = makeProfile(0)
-				local ok = CurrencyService:setCurrency(1, "jaku", CurrencyConstants.MAX_CURRENCY + 5_000)
+				local ok = CurrencyService:setCurrency(1, "coins", CurrencyConstants.MAX_CURRENCY + 5_000)
 				expect(ok).to.equal(true)
 				-- Cap invariant holds for setCurrency, not just addCurrency.
-				expect(activeSlotOf(1).currency.jaku).to.equal(CurrencyConstants.MAX_CURRENCY)
+				expect(activeSlotOf(1).currency.coins).to.equal(CurrencyConstants.MAX_CURRENCY)
 			end)
 
 			it("should report no change when already at MAX_CURRENCY and setting above it", function()
 				_profiles[1] = makeProfile(CurrencyConstants.MAX_CURRENCY)
 				-- Clamps to MAX_CURRENCY, which equals the current value, so there is no change.
-				expect(CurrencyService:setCurrency(1, "jaku", CurrencyConstants.MAX_CURRENCY + 1)).to.equal(false)
-				expect(activeSlotOf(1).currency.jaku).to.equal(CurrencyConstants.MAX_CURRENCY)
+				expect(CurrencyService:setCurrency(1, "coins", CurrencyConstants.MAX_CURRENCY + 1)).to.equal(false)
+				expect(activeSlotOf(1).currency.coins).to.equal(CurrencyConstants.MAX_CURRENCY)
 			end)
 
 			it("should throw for negative amount", function()
 				_profiles[1] = makeProfile(100)
 				expect(function()
-					CurrencyService:setCurrency(1, "jaku", -1)
+					CurrencyService:setCurrency(1, "coins", -1)
 				end).to.throw()
 			end)
 
 			it("should return false when profile is not loaded", function()
-				expect(CurrencyService:setCurrency(999, "jaku", 100)).to.equal(false)
+				expect(CurrencyService:setCurrency(999, "coins", 100)).to.equal(false)
 			end)
 		end)
 
@@ -354,7 +352,7 @@ return function()
 			it("mints a transaction operation targeting the active slot's currency path", function()
 				_profiles[7] = makeProfile(100)
 				local mutator = function(c: any)
-					c.jaku = 1
+					c.coins = 1
 					return true
 				end
 				local op = CurrencyService:currencyOp(7, mutator)
@@ -376,7 +374,7 @@ return function()
 					return true
 				end)
 				expect(ran).to.equal(false)
-				expect(activeSlotOf(7).currency.jaku).to.equal(100)
+				expect(activeSlotOf(7).currency.coins).to.equal(100)
 			end)
 
 			it("throws when the profile is not loaded", function()
@@ -402,38 +400,38 @@ return function()
 		-- -------------------------------------------------------------------------
 		-- The proof: CurrencyService is registered via PlayerDataSliceSystem.registerSlot (not .register), so its
 		-- reads/writes transparently follow the player's ACTIVE slot without the service ever branching
-		-- on which one it is.
-		describe("slot scoping", function()
+		-- on which one it is. Needs a second slot, so it is dormant while MAX_SLOTS = 1.
+		describeMultiSlot("slot scoping", function()
 			local USER_ID = 42
 
 			it("keeps each character's currency separate", function()
 				_profiles[USER_ID] = makeProfile(100)
 
-				CurrencyService:addCurrency(USER_ID, "jaku", 50) -- active slot is 1
-				expect(CurrencyService:getCurrencyAmount(USER_ID, "jaku")).to.equal(150)
+				CurrencyService:addCurrency(USER_ID, "coins", 50) -- active slot is 1
+				expect(CurrencyService:getCurrencyAmount(USER_ID, "coins")).to.equal(150)
 
 				setActiveSlot(USER_ID, 2)
 				-- Slot 2 is a fresh character: it has the template default, not slot 1's balance.
-				expect(CurrencyService:getCurrencyAmount(USER_ID, "jaku")).to.equal(100)
+				expect(CurrencyService:getCurrencyAmount(USER_ID, "coins")).to.equal(100)
 
-				CurrencyService:addCurrency(USER_ID, "jaku", 5)
-				expect(CurrencyService:getCurrencyAmount(USER_ID, "jaku")).to.equal(105)
+				CurrencyService:addCurrency(USER_ID, "coins", 5)
+				expect(CurrencyService:getCurrencyAmount(USER_ID, "coins")).to.equal(105)
 
 				setActiveSlot(USER_ID, 1)
-				expect(CurrencyService:getCurrencyAmount(USER_ID, "jaku")).to.equal(150)
+				expect(CurrencyService:getCurrencyAmount(USER_ID, "coins")).to.equal(150)
 			end)
 
 			it("enforces the currency cap on a non-first slot", function()
 				_profiles[USER_ID] = makeProfile(100)
 				-- addCurrency clamps to MAX_CURRENCY (see its `math.min`), so a starting balance below
 				-- the cap always "succeeds" (clamped upward). To exercise the cap's true no-op path —
-				-- newAmount == oldAmount — slot 3 must already BE at the cap before the call.
-				_profiles[USER_ID].slots[3].currency.jaku = CurrencyConstants.MAX_CURRENCY
+				-- newAmount == oldAmount — slot 2 must already BE at the cap before the call.
+				_profiles[USER_ID].slots[2].currency.coins = CurrencyConstants.MAX_CURRENCY
 
-				setActiveSlot(USER_ID, 3)
-				local ok = CurrencyService:addCurrency(USER_ID, "jaku", CurrencyConstants.MAX_CURRENCY + 1)
+				setActiveSlot(USER_ID, 2)
+				local ok = CurrencyService:addCurrency(USER_ID, "coins", CurrencyConstants.MAX_CURRENCY + 1)
 				expect(ok).to.equal(false)
-				expect(CurrencyService:getCurrencyAmount(USER_ID, "jaku")).to.equal(CurrencyConstants.MAX_CURRENCY)
+				expect(CurrencyService:getCurrencyAmount(USER_ID, "coins")).to.equal(CurrencyConstants.MAX_CURRENCY)
 			end)
 		end)
 	end)

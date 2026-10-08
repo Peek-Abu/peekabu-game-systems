@@ -1,6 +1,6 @@
 --!strict
 --[=[
-	AnimationActionGrantSystem: how a server-granted action plays (character replication R3 spec, "AnimationServiceServer").
+	AnimationActionGrantSystem: how a server-granted action plays.
 	Gameplay owners decide WHETHER and WHAT; this decides HOW, before anything reaches the wire:
 
 	- only a registered, replicable entry can be granted (locomotion stays local);
@@ -33,7 +33,7 @@ export type Options = {
 	variant: number?,
 }
 
--- What rides the "action" body-state channel, and from there the ActionStarted packet.
+-- What the grant record holds per layer, and from there the ActionStarted packet.
 export type ActionData = {
 	id: string,
 	wireId: number,

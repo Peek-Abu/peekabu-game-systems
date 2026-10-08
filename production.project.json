@@ -1,5 +1,5 @@
 {
-  "name": "venture",
+  "name": "peekabu-game-systems",
   "tree": {
     "$className": "DataModel",
     "ReplicatedStorage": {
@@ -17,6 +17,9 @@
     "StarterPlayer": {
       "StarterPlayerScripts": {
         "$path": "src/StarterPlayer/StarterPlayerScripts"
+      },
+      "StarterCharacterScripts": {
+        "$path": "src/StarterPlayer/StarterCharacterScripts"
       }
     },
     "SoundService": {

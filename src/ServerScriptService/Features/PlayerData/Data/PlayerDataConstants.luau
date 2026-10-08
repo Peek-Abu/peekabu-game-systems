@@ -11,14 +11,19 @@ local sift = require(ReplicatedStorage.Packages.sift)
 	Constants and configuration for the PlayerData system.
 	@class PlayerDataConstants
 ]=]
-local MAX_SLOTS = 3
+-- THE slot switch. 1 = a single save per player (the default for most games: "slot-scoped" just
+-- means "the player's save"). Raise it to give players multiple characters / save files: the data
+-- layer (paths, epochs, the active-slot mirror gate) already handles any count, and the multi-slot
+-- specs re-enable themselves once this is >= 2. A game that does so also needs a slot-switch flow
+-- that bumps `slotState.epoch` (see PlayerDataTypes.SlotState).
+local MAX_SLOTS = 1
 
 -- Builds the empty slot array. Each slot is its OWN table: a single `{}` reused MAX_SLOTS times would
--- alias one table across all three, so a write to slot 1 would appear in slots 2 and 3.
+-- alias one table across all of them, so a write to slot 1 would appear in every other slot.
 --
 -- The slice fields are present but EMPTY: the skeleton owes the PlayerSlot type its declared fields,
 -- while the actual defaults belong to the owning service's registration (CurrencyServiceServer's
--- `{ jaku = 100 }`, …), which stamps over them at module load. That is what keeps this file free of
+-- `{ coins = 100 }`, …), which stamps over them at module load. That is what keeps this file free of
 -- domain knowledge — and free of casts, since the annotated local supplies the type.
 local function emptySlots(): { PlayerDataTypes.PlayerSlot }
 	local slots: { PlayerDataTypes.PlayerSlot } = {}
@@ -26,45 +31,29 @@ local function emptySlots(): { PlayerDataTypes.PlayerSlot }
 		slots[index] = {
 			currency = {},
 			inventory = { items = {} },
-			stats = { totalXp = 0, investments = {} },
-			equipment = { slots = {} },
-			bank = { items = {}, currency = {} },
-			appearance = { cosmetics = {}, accessories = {}, body = {}, headType = "Uncovered", surfaces = {} },
 			equippedTitle = {},
 		}
 	end
 	return slots
 end
 
--- The account skeleton, on the same terms as emptySlots: the field is declared (PlayerAccount
--- requires it) but empty — SlotServiceServer owns "unlockedSlots" and registers its `{ 1 }` default,
--- which also attaches the slice's data-layer validator. Hardcoding `{ 1 }` here instead would leave
--- the field ownerless: readable by nobody, validated by nothing.
+-- The account skeleton, on the same terms as emptySlots: each field is declared (PlayerAccount
+-- requires it) and its owning service registers the real default plus the data-layer validator.
 --
--- itemMint follows the SAME pattern as `stats` above, not an exception to it: InventoryServiceServer
--- owns and validates "itemMint" (PlayerDataSliceSystem.registerAccount("itemMint", { nextUid = 1 }, ...,
--- validateItemMint), same as unlockedSlots/currency/stats are each owned by their own service), but
--- its default is stamped here directly (`{ nextUid = 1 }`) rather than left as an empty `{}` skeleton
--- because ItemMint requires `nextUid` and an empty table wouldn't typecheck against it — exactly why
--- `stats` above is hardcoded to `{ totalXp = 0, investments = {} }` instead of `{}`. `nextUid` must
--- start at 1, not 0: uid 0 would be indistinguishable from an absent/falsy value at any callsite that
--- checks truthiness.
+-- itemMint and titles are stamped with their full shape rather than `{}` because their types require
+-- those fields (an empty table would not typecheck). InventoryServiceServer still owns and validates
+-- "itemMint", and TitleServiceServer owns "titles". `nextUid` starts at 1, not 0: uid 0 would be
+-- indistinguishable from an absent/falsy value at any callsite that checks truthiness.
 local function emptyAccount(): PlayerDataTypes.PlayerAccount
-	-- `entitlements` follows the same "skeleton declares, registration owns" split: the empty
-	-- cosmetics set is stamped here because Entitlements requires the field (an empty `{}` would not
-	-- typecheck, exactly like `stats` and `itemMint` above), while CustomizationServiceServer owns the
-	-- registration and attaches the data-layer validator.
 	return {
-		unlockedSlots = {},
 		itemMint = { nextUid = 1 },
-		entitlements = { cosmetics = {} },
 		titles = { earned = {} },
 	}
 end
 
 local PlayerDataConstants = {
 	--[=[
-		The number of character slots a profile carries.
+		The number of save slots a profile carries (1 unless the game opts into multiple characters).
 		@prop MAX_SLOTS number
 	]=]
 	MAX_SLOTS = MAX_SLOTS,
@@ -127,8 +116,7 @@ local sealed = false
 	each PlayerAccount field) has a registered owner — i.e. went through registerSlotPath /
 	registerAccountPath. A declared-but-unregistered field would still ship to every player (the
 	skeleton stamps it), but with no default owner, no data-layer validator, and no slice atom to
-	mirror it — an "ownerless" slice, silently unvalidated (this already happened once: `unlockedSlots`
-	was hardcoded on the skeleton with no registrar until a prior phase caught it).
+	mirror it — an "ownerless" slice, silently unvalidated.
 
 	Separate from `seal()` (which calls this) so it can be exercised directly by a spec: `seal()` has
 	no "unseal", so a test calling the real `seal()` would permanently lock out every OTHER spec's
@@ -197,8 +185,8 @@ local function assertRegisterable(patternKey: string, slice: string, validator: 
 end
 
 -- Deep-copy so the template owns an independent table per destination. Callers pass literals
--- (e.g. { jaku = 100 }); without this, all MAX_SLOTS slots would alias ONE default table and a write
--- to slot 1 would surface in slots 2 and 3. Scalars pass through untouched.
+-- (e.g. { coins = 100 }); without this, every slot would alias ONE default table and a write to slot 1
+-- would surface in the others. Scalars pass through untouched.
 local function copyDefault(defaultData: any): any
 	return if type(defaultData) == "table" then sift.Dictionary.copyDeep(defaultData) else defaultData
 end
@@ -231,7 +219,7 @@ end
 --[=[
 	Registers a ROOT-KEY path: CORE profile state that is not a domain slice and therefore has no
 	owning service (`slotState` — PlayerDataService and StateSyncSliceRegistry both read it, and neither may
-	depend on SlotService). The key is BARE (`slotState`, not `slots.*.x` / `account.x`), and
+	depend on a slot-switch service). The key is BARE (`slotState`, not `slots.*.x` / `account.x`), and
 	PlayerDataPathUtils.pattern leaves a bare key unchanged, so the key IS its own registration pattern and
 	`getValidator("slotState")` resolves what is registered here.
 
@@ -264,8 +252,8 @@ end
 --[=[
 	Returns the invariant validator for a CONCRETE path, looked up by its PATTERN. This normalisation
 	is load-bearing: a slice registers its validator once, and every slot must be covered by it. Keying
-	the lookup on the concrete path would find the validator for slot 1 only, silently leaving slots 2
-	and 3 unvalidated — precisely the class of bug the data-layer validator exists to prevent.
+	the lookup on the concrete path would find the validator for slot 1 only, silently leaving any other
+	slot unvalidated — precisely the class of bug the data-layer validator exists to prevent.
 	@param path string -- A concrete profile path (e.g. "slots.2.currency")
 	@return PathValidator? -- The validator, or nil if the slice is unvalidated
 ]=]
@@ -279,9 +267,8 @@ end
 -- bad value would make the very next StateSyncServerStore.sync index nil INSIDE the locked commit region.
 --
 -- LIMITATION: this cannot check that `active` is a slot the player has UNLOCKED. A validator receives
--- only its own path's value, and `unlockedSlots` is a different (account) slice — it is not visible
--- here. Range/shape is a data-layer invariant; "unlocked" stays SlotService:switchSlot's pre-flight
--- guard. A future cross-slice invariant would need a whole-profile validator, which the current
+-- only its own path's value, so a game with slot unlocks keeps "unlocked" as its slot-switch flow's
+-- pre-flight guard. A cross-slice invariant would need a whole-profile validator, which the current
 -- per-path validator contract deliberately does not have.
 local function validateSlotState(slotState: PlayerDataTypes.SlotState): (boolean, string?)
 	local active = slotState.active
@@ -314,8 +301,8 @@ end
 
 -- Registered by the CORE skeleton, not by a domain service: slotState is core profile state that
 -- PlayerDataService (getActiveSlot, the mirror gate) and StateSyncSliceRegistry (every slot-scoped reader) both
--- read, and neither may depend on SlotService — SlotService depends on PlayerDataService, so the
--- reverse would invert the dependency. Registering it here also guarantees the validator exists no
+-- read, and neither may depend on a slot-switch service — such a service depends on PlayerDataService,
+-- so the reverse would invert the dependency. Registering it here also guarantees the validator exists no
 -- matter which services a build happens to require.
 PlayerDataConstants.registerRootPath("slotState", { active = 1, epoch = 1 }, validateSlotState)
 

@@ -10,10 +10,10 @@ local CurrencyConstants = require(script.Parent.CurrencyConstants)
 
 return function()
 	describe("CURRENCIES / MAX_CURRENCY", function()
-		it("defines jaku with a name and icon", function()
-			expect(CurrencyConstants.CURRENCIES.jaku).to.be.ok()
-			expect(CurrencyConstants.CURRENCIES.jaku.name).to.equal("Jaku")
-			expect(type(CurrencyConstants.CURRENCIES.jaku.icon)).to.equal("string")
+		it("defines coins with a name and icon", function()
+			expect(CurrencyConstants.CURRENCIES.coins).to.be.ok()
+			expect(CurrencyConstants.CURRENCIES.coins.name).to.equal("Coins")
+			expect(type(CurrencyConstants.CURRENCIES.coins.icon)).to.equal("string")
 		end)
 
 		it("exposes a positive numeric MAX_CURRENCY", function()
@@ -31,14 +31,14 @@ return function()
 			for _, key in valid do
 				seen[key] = true
 			end
-			expect(seen.jaku).to.equal(true)
+			expect(seen.coins).to.equal(true)
 			expect(#valid).to.equal(1)
 		end)
 	end)
 
 	describe("isValidCurrencyType", function()
 		it("returns true for a defined currency", function()
-			expect(CurrencyConstants.isValidCurrencyType("jaku")).to.equal(true)
+			expect(CurrencyConstants.isValidCurrencyType("coins")).to.equal(true)
 		end)
 
 		it("returns false for an unknown string", function()
@@ -49,7 +49,7 @@ return function()
 
 	describe("toCurrencyType", function()
 		it("narrows a valid string to the matching currency key", function()
-			expect(CurrencyConstants.toCurrencyType("jaku")).to.equal("jaku")
+			expect(CurrencyConstants.toCurrencyType("coins")).to.equal("coins")
 		end)
 
 		it("returns nil for an unknown string", function()
@@ -66,20 +66,20 @@ return function()
 		end)
 
 		it("passes when keys and members match regardless of order", function()
-			local ok, message = CurrencyConstants.validateSync({ "tickets", "jaku" }, { "jaku", "tickets" })
+			local ok, message = CurrencyConstants.validateSync({ "tickets", "coins" }, { "coins", "tickets" })
 			expect(ok).to.equal(true)
 			expect(message).to.equal(nil)
 		end)
 
 		it("fails when a union member has no CURRENCIES entry", function()
 			-- The drift limitations.md #1 describes: currency removed from the table, left in the union.
-			local ok, message = CurrencyConstants.validateSync({ "jaku" }, { "jaku", "tickets" })
+			local ok, message = CurrencyConstants.validateSync({ "coins" }, { "coins", "tickets" })
 			expect(ok).to.equal(false)
 			expect(string.find(message :: string, "tickets", 1, true)).to.be.ok()
 		end)
 
 		it("fails when CURRENCIES grew past the union mirror", function()
-			local ok, message = CurrencyConstants.validateSync({ "jaku", "tickets", "medals" }, { "jaku", "tickets" })
+			local ok, message = CurrencyConstants.validateSync({ "coins", "tickets", "medals" }, { "coins", "tickets" })
 			expect(ok).to.equal(false)
 			expect(string.find(message :: string, "in sync", 1, true)).to.be.ok()
 		end)
@@ -87,9 +87,9 @@ return function()
 
 	describe("getCurrencyDefinition", function()
 		it("returns the definition for a defined currency", function()
-			local def = CurrencyConstants.getCurrencyDefinition("jaku")
+			local def = CurrencyConstants.getCurrencyDefinition("coins")
 			expect(def).to.be.ok()
-			expect(def.name).to.equal("Jaku")
+			expect(def.name).to.equal("Coins")
 		end)
 
 		it("throws for an undefined currency", function()

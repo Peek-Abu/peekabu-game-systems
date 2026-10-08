@@ -3,9 +3,9 @@
 	Unit tests for ItemRegistry — the runtime item-type registry.
 
 	The backing map is module-global and shared with other specs (the inventory specs rely on
-	ItemContentRegistry.init() having registered the starter set — "rusted-saw", "phoenix-blade", etc.), so
-	these tests register only uniquely-named spec items and never remove anything. Registration now
-	VALIDATES (kind, rarity, consumable stackMax) and REJECTS double registration, so every spec item
+	ItemContentRegistry.init() having registered the starter set — "wrench", "golden-wrench", etc.), so
+	these tests register only uniquely-named spec items and never remove anything. Registration
+	VALIDATES (kind, rarity, stackMax, maxStacks) and REJECTS double registration, so every spec item
 	name used here must be unique across the whole spec suite.
 ]=]
 
@@ -18,8 +18,7 @@ return function()
 				name = "Spec Test Item",
 				icon = "rbxassetid://0",
 				rarity = "common",
-				kind = "weapon",
-				equipSlot = "weapon",
+				kind = "tool",
 			})
 			local def = ItemRegistry.get("spec-test-item")
 			expect(def).to.be.ok()
@@ -34,15 +33,13 @@ return function()
 			ItemRegistry.register("spec-double-item", {
 				name = "First",
 				rarity = "common",
-				kind = "weapon",
-				equipSlot = "weapon",
+				kind = "tool",
 			})
 			expect(function()
 				ItemRegistry.register("spec-double-item", {
 					name = "Second",
 					rarity = "rare",
-					kind = "weapon",
-					equipSlot = "weapon",
+					kind = "tool",
 				})
 			end).to.throw()
 			-- The original registration is untouched.
@@ -55,8 +52,7 @@ return function()
 				ItemRegistry.register("spec-bad-kind", {
 					name = "Bad Kind",
 					rarity = "common",
-					kind = "vehicle" :: any,
-					equipSlot = "weapon",
+					kind = "vehicle",
 				})
 			end).to.throw()
 			expect(ItemRegistry.get("spec-bad-kind")).to.equal(nil)
@@ -67,26 +63,22 @@ return function()
 				ItemRegistry.register("spec-bad-rarity", {
 					name = "Bad Rarity",
 					rarity = "mythic",
-					kind = "weapon",
-					equipSlot = "weapon",
+					kind = "tool",
 				})
 			end).to.throw()
 			expect(ItemRegistry.get("spec-bad-rarity")).to.equal(nil)
 		end)
 
-		it("rejects a consumable without a stackMax", function()
-			expect(function()
-				ItemRegistry.register("spec-bad-consumable", {
-					name = "Bad Consumable",
-					rarity = "common",
-					kind = "consumable",
-					stackMax = nil :: any,
-				})
-			end).to.throw()
-			expect(ItemRegistry.get("spec-bad-consumable")).to.equal(nil)
+		it("accepts a consumable without a stackMax (a unique consumable)", function()
+			ItemRegistry.register("spec-unique-consumable", {
+				name = "Unique Consumable",
+				rarity = "common",
+				kind = "consumable",
+			})
+			expect(ItemRegistry.get("spec-unique-consumable")).to.be.ok()
 		end)
 
-		it("rejects a consumable with a non-positive or non-integer stackMax", function()
+		it("rejects a non-positive or non-integer stackMax", function()
 			expect(function()
 				ItemRegistry.register("spec-consumable-zero-stack", {
 					name = "Zero Stack",
@@ -95,6 +87,17 @@ return function()
 					stackMax = 0,
 				})
 			end).to.throw()
+			expect(ItemRegistry.get("spec-consumable-zero-stack")).to.equal(nil)
+
+			expect(function()
+				ItemRegistry.register("spec-consumable-negative-stack", {
+					name = "Negative Stack",
+					rarity = "common",
+					kind = "consumable",
+					stackMax = -3,
+				})
+			end).to.throw()
+			expect(ItemRegistry.get("spec-consumable-negative-stack")).to.equal(nil)
 
 			expect(function()
 				ItemRegistry.register("spec-consumable-fractional-stack", {
@@ -104,9 +107,10 @@ return function()
 					stackMax = 1.5,
 				})
 			end).to.throw()
+			expect(ItemRegistry.get("spec-consumable-fractional-stack")).to.equal(nil)
 		end)
 
-		it("rejects a consumable with a non-positive maxStacks when declared", function()
+		it("rejects a non-positive or non-integer maxStacks when declared", function()
 			expect(function()
 				ItemRegistry.register("spec-consumable-bad-maxstacks", {
 					name = "Bad Max Stacks",
@@ -116,9 +120,33 @@ return function()
 					maxStacks = 0,
 				})
 			end).to.throw()
+			expect(ItemRegistry.get("spec-consumable-bad-maxstacks")).to.equal(nil)
+
+			expect(function()
+				ItemRegistry.register("spec-consumable-fractional-maxstacks", {
+					name = "Fractional Max Stacks",
+					rarity = "common",
+					kind = "consumable",
+					stackMax = 5,
+					maxStacks = 2.5,
+				})
+			end).to.throw()
+			expect(ItemRegistry.get("spec-consumable-fractional-maxstacks")).to.equal(nil)
 		end)
 
-		it("accepts a well-formed consumable", function()
+		it("rejects maxStacks without a stackMax (a unique item has no stacks)", function()
+			expect(function()
+				ItemRegistry.register("spec-maxstacks-without-stackmax", {
+					name = "Max Stacks Without Stack Max",
+					rarity = "common",
+					kind = "misc",
+					maxStacks = 1,
+				})
+			end).to.throw()
+			expect(ItemRegistry.get("spec-maxstacks-without-stackmax")).to.equal(nil)
+		end)
+
+		it("accepts a well-formed stackable consumable", function()
 			ItemRegistry.register("spec-good-consumable", {
 				name = "Good Consumable",
 				rarity = "common",
@@ -129,108 +157,11 @@ return function()
 			expect(ItemRegistry.get("spec-good-consumable")).to.be.ok()
 		end)
 
-		it("rejects an unknown equipSlot on a weapon", function()
-			expect(function()
-				ItemRegistry.register("spec-bad-equipslot", {
-					name = "Bad Equip Slot",
-					rarity = "common",
-					kind = "weapon",
-					equipSlot = "trinket",
-				})
-			end).to.throw()
-			expect(ItemRegistry.get("spec-bad-equipslot")).to.equal(nil)
-		end)
-
-		it("rejects an equipSlot whose acceptsKind does not match the item's kind", function()
-			expect(function()
-				ItemRegistry.register("spec-mismatched-equipslot", {
-					name = "Mismatched Equip Slot",
-					rarity = "common",
-					kind = "weapon",
-					equipSlot = "helmet", -- helmet accepts "armour", not "weapon"
-				})
-			end).to.throw()
-			expect(ItemRegistry.get("spec-mismatched-equipslot")).to.equal(nil)
-		end)
-
-		it("rejects a non-positive or non-integer requiredLevel when declared", function()
-			expect(function()
-				ItemRegistry.register("spec-bad-required-level", {
-					name = "Bad Required Level",
-					rarity = "common",
-					kind = "weapon",
-					equipSlot = "weapon",
-					requiredLevel = 0,
-				})
-			end).to.throw()
-			expect(ItemRegistry.get("spec-bad-required-level")).to.equal(nil)
-
-			expect(function()
-				ItemRegistry.register("spec-fractional-required-level", {
-					name = "Fractional Required Level",
-					rarity = "common",
-					kind = "weapon",
-					equipSlot = "weapon",
-					requiredLevel = 2.5,
-				})
-			end).to.throw()
-			expect(ItemRegistry.get("spec-fractional-required-level")).to.equal(nil)
-		end)
-
-		it("rejects statBonuses keyed to an unknown stat id", function()
-			expect(function()
-				ItemRegistry.register("spec-bad-stat-bonus", {
-					name = "Bad Stat Bonus",
-					rarity = "common",
-					kind = "armour",
-					equipSlot = "helmet",
-					statBonuses = { mana = 10 },
-				})
-			end).to.throw()
-			expect(ItemRegistry.get("spec-bad-stat-bonus")).to.equal(nil)
-		end)
-
-		it("accepts a well-formed weapon with equipSlot, requiredLevel, and statBonuses", function()
-			ItemRegistry.register("spec-good-weapon", {
-				name = "Good Weapon",
-				rarity = "rare",
-				kind = "weapon",
-				equipSlot = "weapon",
-				requiredLevel = 5,
-				statBonuses = { strength = 3 },
-			})
-			expect(ItemRegistry.get("spec-good-weapon")).to.be.ok()
-		end)
-
-		it("accepts a well-formed armour with equipSlot, requiredLevel, and statBonuses", function()
-			ItemRegistry.register("spec-good-armour", {
-				name = "Good Armour",
-				rarity = "rare",
-				kind = "armour",
-				equipSlot = "chestplate",
-				requiredLevel = 5,
-				statBonuses = { health = 10 },
-			})
-			expect(ItemRegistry.get("spec-good-armour")).to.be.ok()
-		end)
-
-		it("accepts a negative statBonus (reserved for future cursed gear)", function()
-			ItemRegistry.register("spec-cursed-weapon", {
-				name = "Cursed Weapon",
-				rarity = "cursed",
-				kind = "weapon",
-				equipSlot = "weapon",
-				statBonuses = { strength = -5 },
-			})
-			expect(ItemRegistry.get("spec-cursed-weapon")).to.be.ok()
-		end)
-
 		it("accepts a misc item without a stackMax (non-stackable)", function()
 			ItemRegistry.register("spec-nonstackable-misc", {
 				name = "Nonstackable Misc",
-				rarity = "cursed",
+				rarity = "legendary",
 				kind = "misc",
-				questItem = true,
 			})
 			expect(ItemRegistry.get("spec-nonstackable-misc")).to.be.ok()
 		end)
@@ -241,8 +172,7 @@ return function()
 			ItemRegistry.register("spec-valid-item", {
 				name = "Valid",
 				rarity = "common",
-				kind = "weapon",
-				equipSlot = "weapon",
+				kind = "tool",
 			})
 			expect(ItemRegistry.isValidItemType("spec-valid-item")).to.equal(true)
 			expect(ItemRegistry.isValidItemType("spec-never-registered")).to.equal(false)
@@ -254,8 +184,7 @@ return function()
 			ItemRegistry.register("spec-enum-item", {
 				name = "Enum Item",
 				rarity = "common",
-				kind = "weapon",
-				equipSlot = "weapon",
+				kind = "tool",
 			})
 			local seen: { [string]: boolean } = {}
 			for _, itemType in ItemRegistry.getValidItemTypes() do
@@ -267,13 +196,12 @@ return function()
 
 	describe("kindOf", function()
 		it("returns the registered kind for a known item type", function()
-			ItemRegistry.register("spec-kindof-weapon", {
-				name = "Kindof Weapon",
+			ItemRegistry.register("spec-kindof-tool", {
+				name = "Kindof Tool",
 				rarity = "common",
-				kind = "weapon",
-				equipSlot = "weapon",
+				kind = "tool",
 			})
-			expect(ItemRegistry.kindOf("spec-kindof-weapon")).to.equal("weapon")
+			expect(ItemRegistry.kindOf("spec-kindof-tool")).to.equal("tool")
 		end)
 
 		it("returns nil for an unknown item type", function()
@@ -282,7 +210,7 @@ return function()
 	end)
 
 	describe("isStackable", function()
-		it("is true for a consumable (always carries a stackMax)", function()
+		it("is true for a consumable that declares a stackMax", function()
 			ItemRegistry.register("spec-stackable-consumable", {
 				name = "Stackable Consumable",
 				rarity = "common",
@@ -290,6 +218,34 @@ return function()
 				stackMax = 5,
 			})
 			expect(ItemRegistry.isStackable("spec-stackable-consumable")).to.equal(true)
+		end)
+
+		it("is false for a consumable without a stackMax", function()
+			ItemRegistry.register("spec-unstackable-consumable", {
+				name = "Unstackable Consumable",
+				rarity = "common",
+				kind = "consumable",
+			})
+			expect(ItemRegistry.isStackable("spec-unstackable-consumable")).to.equal(false)
+		end)
+
+		it("is true for a tool that declares a stackMax (stackability is declared, not by kind)", function()
+			ItemRegistry.register("spec-stackable-tool", {
+				name = "Stackable Tool",
+				rarity = "common",
+				kind = "tool",
+				stackMax = 3,
+			})
+			expect(ItemRegistry.isStackable("spec-stackable-tool")).to.equal(true)
+		end)
+
+		it("is false for a tool without a stackMax", function()
+			ItemRegistry.register("spec-unstackable-tool", {
+				name = "Unstackable Tool",
+				rarity = "common",
+				kind = "tool",
+			})
+			expect(ItemRegistry.isStackable("spec-unstackable-tool")).to.equal(false)
 		end)
 
 		it("is true for a misc item that declares a stackMax", function()
@@ -305,21 +261,19 @@ return function()
 		it("is false for a misc item without a stackMax", function()
 			ItemRegistry.register("spec-unstackable-misc", {
 				name = "Unstackable Misc",
-				rarity = "cursed",
+				rarity = "legendary",
 				kind = "misc",
-				questItem = true,
 			})
 			expect(ItemRegistry.isStackable("spec-unstackable-misc")).to.equal(false)
 		end)
 
-		it("is false for a weapon or armour", function()
-			ItemRegistry.register("spec-unstackable-weapon", {
-				name = "Unstackable Weapon",
+		it("is false for a wearable without a stackMax", function()
+			ItemRegistry.register("spec-unstackable-wearable", {
+				name = "Unstackable Wearable",
 				rarity = "common",
-				kind = "weapon",
-				equipSlot = "weapon",
+				kind = "wearable",
 			})
-			expect(ItemRegistry.isStackable("spec-unstackable-weapon")).to.equal(false)
+			expect(ItemRegistry.isStackable("spec-unstackable-wearable")).to.equal(false)
 		end)
 
 		it("is false for an unregistered item type", function()

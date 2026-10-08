@@ -2,7 +2,7 @@
 --[=[
 	AnimationLocomotionSystem: the pure state→pose core that replaces the forked Roblox `Animate` script
 	(Phase 6 spec, Decision 3). `AnimationLocomotionHumanoidSystem` (beside this file) is the thin adapter, bound
-	to the client-built rig by ReplicationServiceClient: it forwards Humanoid state events
+	to the local character by `StarterCharacterScripts/Animate.client.luau`: it forwards Humanoid state events
 	(with timestamps) into `handleEvent` and everything else — which pose, which fade, which speed scale,
 	the jump window, the kill switch, the override seam — lives here, where it is specced against a fake
 	AnimationPlayerSystem.
@@ -49,7 +49,8 @@ export type Config = {
 	climbScale: number?,
 	swimScale: number?,
 	jumpDuration: number?,
-	-- Optional clamp on the walk / run play rate (puppets: 0.7-1.4, spec §6.8). Unset = unclamped (the owner).
+	-- Optional clamp on the walk / run play rate (e.g. 0.7-1.4 for an NPC driven from an estimated speed).
+	-- Unset = unclamped (the local character).
 	minRate: number?,
 	maxRate: number?,
 }

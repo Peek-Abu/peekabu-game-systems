@@ -1,5 +1,5 @@
 --[[
-	Unit tests for TitleServiceServer. Same strategy as the Customization/Inventory/Bank specs:
+	Unit tests for TitleServiceServer. Same strategy as the Inventory spec:
 	seed REAL fake profiles via `_setProfileForTesting` and drive the REAL mutate()/validator
 	machinery, so the slice invariants and scopes are exercised rather than mocked.
 
@@ -64,10 +64,6 @@ local function makeProfileData(): PlayerDataTypes.PlayerProfile
 		slots[index] = {
 			currency = {},
 			inventory = { items = {} },
-			stats = { totalXp = 0, investments = {} },
-			equipment = { slots = {} },
-			bank = { items = {}, currency = {} },
-			appearance = { cosmetics = {}, accessories = {}, body = {}, headType = "Uncovered", surfaces = {} },
 			equippedTitle = {},
 		}
 	end
@@ -75,9 +71,7 @@ local function makeProfileData(): PlayerDataTypes.PlayerProfile
 		_schemaVersion = PlayerDataMigrationSystem.CURRENT_VERSION,
 		slotState = { active = 1, epoch = 1 },
 		account = {
-			unlockedSlots = { 1, 2 },
 			itemMint = { nextUid = 1 },
-			entitlements = { cosmetics = {} },
 			titles = { earned = {} },
 		},
 		slots = slots,
@@ -85,6 +79,9 @@ local function makeProfileData(): PlayerDataTypes.PlayerProfile
 end
 
 return function()
+	-- Multi-slot behaviour is dormant while MAX_SLOTS = 1; these re-enable when a game raises it.
+	local itMultiSlot = if PlayerDataConstants.MAX_SLOTS >= 2 then it else itSKIP
+
 	describe("TitleServiceServer", function()
 		local profiles: { [number]: any } = {}
 
@@ -125,7 +122,7 @@ return function()
 		end)
 
 		describe("scoping", function()
-			it("keeps earned ACCOUNT-wide while equipped stays PER-SLOT", function()
+			itMultiSlot("keeps earned ACCOUNT-wide while equipped stays PER-SLOT", function()
 				local profile = seed(1)
 				profile.Data.account.titles.earned.veteran = true
 				profile.Data.slots[1].equippedTitle.equipped = "veteran"
@@ -214,7 +211,7 @@ return function()
 				expect(string.find(reason, "already equipped") ~= nil).to.equal(true)
 			end)
 
-			it("lets a second character wear a different earned title", function()
+			itMultiSlot("lets a second character wear a different earned title", function()
 				local profile = seed(1)
 				TitlesService:award(1, "veteran")
 				TitlesService:award(1, "champion")
@@ -321,7 +318,7 @@ return function()
 				expect(TitlesService:getEquippedTitle(1)).to.equal("champion")
 			end)
 
-			it("clears only the ACTIVE character's worn copy (other slots untouched)", function()
+			itMultiSlot("clears only the ACTIVE character's worn copy (other slots untouched)", function()
 				local profile = seed(1)
 				TitlesService:award(1, "veteran")
 				TitlesService:equip(1, "veteran")

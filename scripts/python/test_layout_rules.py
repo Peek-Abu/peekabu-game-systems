@@ -21,7 +21,7 @@ class ModuleName(unittest.TestCase):
     def test_strips_extension_and_tags(self) -> None:
         self.assertEqual(module_name(f"{SHARED}Bank/Net/BankEvents.spec.luau"), "BankEvents")
         self.assertEqual(module_name("src/ServerScriptService/ServerHandler.server.luau"), "ServerHandler")
-        self.assertEqual(module_name("src/ReplicatedStorage/Client/UI/React/VentureUI.storybook.luau"), "VentureUI")
+        self.assertEqual(module_name("src/ReplicatedStorage/Client/UI/React/GameUI.storybook.luau"), "GameUI")
 
 
 class Placement(unittest.TestCase):
@@ -46,7 +46,7 @@ class Placement(unittest.TestCase):
                 "src/ReplicatedStorage/Shared/Data/PlayerDataTypes.luau",
                 "src/ReplicatedStorage/Shared/CmdrTypes/currencyType.luau",
                 "src/ServerScriptService/ServerHandler.server.luau",
-                "src/StarterPlayer/StarterPlayerScripts/RbxCharacterSounds.client.luau",
+                "src/StarterPlayer/StarterCharacterScripts/Animate.client.luau",
             ),
             [],
         )

@@ -7,10 +7,10 @@
 
 	1. **Suppression follows the stack** — subscribes to `UIStore.sceneStack` and reconciles
 	   `UISuppression` on every change (so opening a scene frees the mouse, closing it restores).
-	2. **Keybind shims** — Escape pops the top scene; `I` toggles the Inventory scene. Deliberate SHIMS
-	   the Input phase deletes and absorbs into keymaps-as-data. They gate on a focused TextBox rather
-	   than `gameProcessed`, because the engine marks Escape processed for its own menu (and so the
-	   inventory search box keeps its keystrokes).
+	2. **Scene keys** — Escape (and gamepad B) pops the top scene; a key a scene declared as its
+	   `toggleKey` (SceneRegistry) opens or closes that scene. They gate on a focused TextBox rather than
+	   `gameProcessed`, because the engine marks Escape processed for its own menu (and so a search box
+	   keeps its keystrokes). A future Input system can take these over as keymaps-as-data.
 	3. **Mounts the always-on roots** at start — the HUD on the `Hud` layer, the `SceneHost` on `Panel`.
 
 	The shared state it drives lives elsewhere and is required directly (UISuppression, SceneStack,
@@ -32,8 +32,7 @@ local UISuppression = require(ReplicatedStorage.Client.UI.Suppression.UISuppress
 local UIRoot = require(ReplicatedStorage.Client.UI.Layers.UIRoot)
 local HudRoot = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudRoot)
 local SceneHost = require(ReplicatedStorage.Client.UI.React.SceneHost)
-local InventoryScene = require(ReplicatedStorage.Client.UI.Scenes.InventoryScene)
-local BankScene = require(ReplicatedStorage.Client.UI.Scenes.BankScene)
+local SceneRegistry = require(ReplicatedStorage.Client.UI.Scenes.SceneRegistry)
 
 local log = Logger.new("UIServiceClient")
 
@@ -44,8 +43,8 @@ local janitor = Janitor.new()
 	Pushes a scene, or closes it if it is already open.
 
 	Keyed off `isActive`, not off `top`: `push` no-ops for a scene already anywhere on the stack, so
-	testing only the top made the key DEAD for a scene that is open but suspended (press I, then B, then
-	I — the third press fell into the push branch and silently did nothing). Toggling is a question about
+	testing only the top made the key DEAD for a scene that is open but suspended (open A, then B, then
+	press A's key — the third press fell into the push branch and silently did nothing). Toggling is a question about
 	the scene, so it closes the scene itself rather than popping whatever happens to be on top.
 	@param scene string -- the registered scene name
 ]=]
@@ -71,7 +70,7 @@ local UIServiceClient: UIServiceClient = {
 	_hudMounted = false,
 
 	--[=[
-		Wires suppression-follows-the-stack and the Escape shim.
+		Wires suppression-follows-the-stack and the scene keys.
 		@param self UIServiceClient -- The service instance
 	]=]
 	init = function(_self)
@@ -86,20 +85,18 @@ local UIServiceClient: UIServiceClient = {
 
 		janitor:Add(
 			UserInputService.InputBegan:Connect(function(input: InputObject)
-				-- Don't steal keys from a focused text field (the Cmdr console, the inventory search).
+				-- Don't steal keys from a focused text field (the Cmdr console, a search box).
 				if UserInputService:GetFocusedTextBox() ~= nil then
 					return
 				end
-				if input.KeyCode == Enum.KeyCode.Escape then
+				local key = input.KeyCode
+				if key == Enum.KeyCode.Escape or key == Enum.KeyCode.ButtonB then
 					SceneStack.pop()
-				elseif input.KeyCode == Enum.KeyCode.I then
-					-- SHIM: toggle the inventory — a temporary keybind the Input phase absorbs later.
-					toggleScene(InventoryScene.SCENE)
-				elseif input.KeyCode == Enum.KeyCode.B then
-					-- SHIM, and a stand-in for a WORLD trigger rather than for a keybind: a bank is opened
-					-- by a banker, not by a key. The NPC/prompt is world content and pushes this same
-					-- scene, so nothing here changes when it lands.
-					toggleScene(BankScene.SCENE)
+					return
+				end
+				local scene = SceneRegistry.sceneForKey(key)
+				if scene ~= nil then
+					toggleScene(scene)
 				end
 			end),
 			"Disconnect"

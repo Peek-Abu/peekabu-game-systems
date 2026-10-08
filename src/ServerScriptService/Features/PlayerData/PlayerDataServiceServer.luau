@@ -498,7 +498,7 @@ local PlayerDataServiceServer: PlayerDataServiceServer = {
 
 		Returns a deep-frozen COPY, not the live `profile.Data`: reads are snapshots, and every
 		write must go through mutate()/transaction(). Handing out the live table let any caller do
-		`getCurrency(uid).jaku = 1e9` directly — bypassing the transaction lock, currency caps, the
+		`getCurrency(uid).coins = 1e9` directly — bypassing the transaction lock, currency caps, the
 		audit log, and the StateSyncServerStore mirror. Freezing the copy turns that illegal write into a
 		loud error instead of silent authoritative-state corruption. The live table is never frozen
 		(mutate() writes to it); only this copy is. Single-slice reads (PlayerDataSliceSystem.get, and thus
@@ -591,7 +591,7 @@ local PlayerDataServiceServer: PlayerDataServiceServer = {
 		same reason for being its own method (a concrete return type; see _getSlotShell).
 
 		@param userId number -- The user ID to read
-		@param slice string -- The account slice name (e.g. "unlockedSlots")
+		@param slice string -- The account slice name (e.g. "titles")
 		@return PlayerDataTypes.PlayerAccount? -- The shell, or nil if the profile or slice isn't loaded
 	]=]
 	_getAccountShell = function(_self, userId, slice)
@@ -633,7 +633,7 @@ local PlayerDataServiceServer: PlayerDataServiceServer = {
 
 	--[=[
 		The GENERATION of the player's current character — monotonic, bumped by every successful slot
-		switch and never reset (see PlayerDataTypes.SlotState). Written by SlotService:switchSlot in the
+		switch and never reset (see PlayerDataTypes.SlotState). A slot-switch flow writes it in the
 		SAME `mutate(userId, "slotState", …)` that moves `active`, so a reader can never observe the two
 		disagreeing.
 
@@ -847,16 +847,16 @@ local PlayerDataServiceServer: PlayerDataServiceServer = {
 		```lua
 		-- Single user example (typed ops — the recommended form):
 		local success = PlayerDataService:transaction({
-			CurrencyService:currencyOp(playerId, function(c) c.jaku -= 100; return true end),
+			CurrencyService:currencyOp(playerId, function(c) c.coins -= 100; return true end),
 			InventoryService:inventoryOp(playerId, function(i) table.insert(i, item); return true end),
 		})
 
 		-- Trade example (two users):
 		local success = PlayerDataService:transaction({
 			InventoryService:inventoryOp(sellerUserId, function(inv) removeItem(inv, sword); return true end),
-			CurrencyService:currencyOp(sellerUserId, function(c) c.jaku += 500; return true end),
+			CurrencyService:currencyOp(sellerUserId, function(c) c.coins += 500; return true end),
 			InventoryService:inventoryOp(buyerUserId, function(inv) addItem(inv, sword); return true end),
-			CurrencyService:currencyOp(buyerUserId, function(c) c.jaku -= 500; return true end),
+			CurrencyService:currencyOp(buyerUserId, function(c) c.coins -= 500; return true end),
 		})
 		```
 		Raw operation tables remain supported (type your mutator parameters inline for intellisense), but
@@ -868,7 +868,7 @@ local PlayerDataServiceServer: PlayerDataServiceServer = {
 			{
 				userId = playerId,
 				path = PlayerDataPathUtils.forSlot("currency", slot),
-				mutator = function(c: PlayerDataTypes.Currency) c.jaku -= 100; return true end,
+				mutator = function(c: PlayerDataTypes.Currency) c.coins -= 100; return true end,
 			},
 			{
 				userId = playerId,

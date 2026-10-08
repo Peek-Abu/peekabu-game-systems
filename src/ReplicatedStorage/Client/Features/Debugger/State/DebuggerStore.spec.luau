@@ -29,7 +29,7 @@ return function()
 
 		it("recomputes when a StateSyncClientStore slice changes", function()
 			local before = DebuggerStore.clientAtoms()
-			StateSyncClientStore.currency({ jaku = 42 })
+			StateSyncClientStore.currency({ coins = 42 })
 			local after = DebuggerStore.clientAtoms()
 
 			expect(after ~= before).to.equal(true) -- computed produced a fresh snapshot table
@@ -37,7 +37,7 @@ return function()
 			local found = false
 			for _, atom in after do
 				if atom.slice == "currency" then
-					found = atom.value ~= nil and (atom.value :: any).jaku == 42
+					found = atom.value ~= nil and (atom.value :: any).coins == 42
 				end
 			end
 			expect(found).to.equal(true)

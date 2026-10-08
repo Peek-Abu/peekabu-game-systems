@@ -3,14 +3,13 @@
 	SceneRegistry: the declarative catalog of scenes.
 
 	A SCENE is the unit the stack operates on — NOT a screen. It names which screens it shows and in
-	which layers, and what it suppresses in the world. This is why the stack holds scenes: `Bank` is one
-	scene showing two co-visible container panels, which a flat screen stack cannot express. It also
-	subsumes the old game's four hardcoded `ExclusiveSets` groups — mutual exclusion becomes a
-	consequence of a scene being one entry on one stack, not a second table that must agree with another.
+	which layers, and what it suppresses in the world. This is why the stack holds scenes: a "stash"
+	scene can show two co-visible container panels, which a flat screen stack cannot express. Mutual
+	exclusion is a consequence of a scene being one entry on one stack, not a second table that must
+	agree with another.
 
-	Scenes register into this global singleton at load (like the old UIRegistry, but React renders them
-	rather than a hand-rolled `Evaluate()`). Real scenes arrive with the screens in later tasks; this
-	phase's harness drives registered scenes by name.
+	Scenes register into this global singleton at load; each game's scene modules register their own.
+	A scene may declare a `toggleKey`, which UIServiceClient binds (press to open, press again to close).
 
 	@class SceneRegistry
 ]=]
@@ -49,7 +48,6 @@ export type SuppressionRecord = {
 	blur: boolean?, -- a post-processing effect — seam; a future VFX/post-fx system handles it
 	movement: boolean?, -- freeze character movement — seam; the Input phase handles it
 	cameraState: string?, -- push a camera FSM state — seam; the Camera phase handles it
-	characterRotation: "server"?, -- hand rotation authority to the server — seam; the Camera phase
 }
 
 --[=[
@@ -67,9 +65,12 @@ export type SceneDef = {
 	screens: { SceneScreen },
 	suppress: SuppressionRecord?,
 	hud: ("visible" | "hidden")?,
+	-- A key that toggles this scene (UIServiceClient binds it). Two scenes may not share one.
+	toggleKey: Enum.KeyCode?,
 }
 
 local registry: { [string]: SceneDef } = {}
+local byToggleKey: { [Enum.KeyCode]: string } = {}
 
 local SceneRegistry = {}
 
@@ -82,7 +83,24 @@ function SceneRegistry.register(def: SceneDef)
 	if registry[def.name] ~= nil then
 		error(`SceneRegistry: scene "{def.name}" is already registered`, 2)
 	end
+	local key = def.toggleKey
+	if key ~= nil then
+		local holder = byToggleKey[key]
+		if holder ~= nil then
+			error(`SceneRegistry: toggle key {key.Name} is already bound to scene "{holder}"`, 2)
+		end
+		byToggleKey[key] = def.name
+	end
 	registry[def.name] = def
+end
+
+--[=[
+	The scene a key toggles, or nil when no scene declared it.
+	@param key Enum.KeyCode
+	@return string?
+]=]
+function SceneRegistry.sceneForKey(key: Enum.KeyCode): string?
+	return byToggleKey[key]
 end
 
 --[=[

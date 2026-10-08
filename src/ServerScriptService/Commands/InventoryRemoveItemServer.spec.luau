@@ -2,7 +2,7 @@
 --[=[
 	Unit tests for the RemoveItem Cmdr command implementation.
 	Mock strategy: patch InventoryService.removeItem inside beforeAll/afterAll (see
-	AddCurrencyServer.spec for the rationale).
+	CurrencyAddServer.spec for the rationale).
 ]=]
 
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -38,26 +38,26 @@ return function()
 		end)
 
 		it("forwards the target's UserId and an itemType + quantity spec to the service", function()
-			removeItemCommand(nil, fakePlayer, "rusted-saw", 2)
+			removeItemCommand(nil, fakePlayer, "wrench", 2)
 			expect(#calls).to.equal(1)
 			expect(calls[1].userId).to.equal(42)
-			expect(calls[1].spec.itemType).to.equal("rusted-saw")
+			expect(calls[1].spec.itemType).to.equal("wrench")
 			expect(calls[1].spec.quantity).to.equal(2)
 		end)
 
 		it("returns a success message on success and a failure message otherwise", function()
-			local okMessage = removeItemCommand(nil, fakePlayer, "rusted-saw", 2)
+			local okMessage = removeItemCommand(nil, fakePlayer, "wrench", 2)
 			expect(okMessage:find("Successfully")).to.be.ok()
 
 			nextResult = false
-			local failMessage = removeItemCommand(nil, fakePlayer, "rusted-saw", 2)
+			local failMessage = removeItemCommand(nil, fakePlayer, "wrench", 2)
 			expect(failMessage:find("Failed")).to.be.ok()
 		end)
 
 		it("surfaces the service's specific failure reason in the response", function()
 			nextResult = false
 			nextReason = "insufficient quantity"
-			local failMessage = removeItemCommand(nil, fakePlayer, "rusted-saw", 2)
+			local failMessage = removeItemCommand(nil, fakePlayer, "wrench", 2)
 			expect(failMessage:find("insufficient quantity", 1, true)).to.be.ok()
 		end)
 	end)

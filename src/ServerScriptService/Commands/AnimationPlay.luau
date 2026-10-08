@@ -2,10 +2,10 @@
 return {
 	Name = "animationplay",
 	Aliases = { "anim-play" },
-	Description = "Grants a replicated action on a player's body: the owner and every viewer play it in sync (character replication R3).",
+	Description = "Grants an action on a player's character: the owner plays it and the engine replicates it to everyone.",
 	Group = "Admins",
 	Args = {
-		{ Type = "player", Name = "target", Description = "The player whose body plays it" },
+		{ Type = "player", Name = "target", Description = "The player whose character plays it" },
 		{
 			Type = "string",
 			Name = "id",

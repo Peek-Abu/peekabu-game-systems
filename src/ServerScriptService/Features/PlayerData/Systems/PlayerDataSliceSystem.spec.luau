@@ -9,10 +9,13 @@
 
 	The fake profile is a deep copy of the REAL PROFILE_TEMPLATE, taken after the spec's slices are
 	registered. That is what makes the slot assertions honest: the defaults these tests read back out
-	of slots 2 and 3 are the ones registerSlotPath actually stamped, not ones the spec re-invented.
+	of every slot are the ones registerSlotPath actually stamped, not ones the spec re-invented.
 	The mocks reproduce production's two load-bearing behaviours — the dotted-path walk (slot index is
 	an ARRAY key, so it must be tonumber'd) and the frozen slice copy handed back by the shells — so a
 	regression in either is caught here rather than only in Studio.
+
+	Tests that need a second slot (switching the active slot, cross-slot isolation) are gated on
+	MAX_SLOTS >= 2 and skip while the game runs a single save per player.
 
 	Synthetic slice names ("__sliceOwnerSpec*") keep these registrations from colliding with the real
 	"currency"/"inventory" ones in the same test place.
@@ -49,6 +52,9 @@ local sharedSlice = PlayerDataSliceSystem.registerAccount("__sliceOwnerSpecShare
 end)
 
 return function()
+	-- Multi-slot behaviour is dormant while MAX_SLOTS = 1; these re-enable when a game raises it.
+	local itMultiSlot = if PlayerDataConstants.MAX_SLOTS >= 2 then it else itSKIP
+
 	describe("PlayerDataSliceSystem", function()
 		local _profiles: { [number]: any } = {}
 		local _origGetActiveSlot
@@ -89,7 +95,7 @@ return function()
 
 			-- registerSlot's `op` stamps the epoch it was minted under, so the mock must serve it from
 			-- the same fake slotState the active-slot mock reads (they move together in production —
-			-- one atomic mutate in SlotService:switchSlot).
+			-- a slot switch writes both in one atomic mutate of slotState).
 			PlayerDataService.getSlotEpoch = function(_self: any, userId: number): number?
 				local profile = _profiles[userId]
 				return if profile then profile.slotState.epoch else nil
@@ -158,12 +164,21 @@ return function()
 				end)
 
 				expect(testSlice.get(USER_ID).amount).to.equal(42)
-				-- The active slot is 1, so the write must have landed in slot 1 and nowhere else.
+				-- The active slot is 1, so the write must have landed in slot 1.
+				expect(testSlice.getForSlot(USER_ID, 1).amount).to.equal(42)
+			end)
+
+			itMultiSlot("writes ONLY the active slot, leaving the others untouched", function()
+				testSlice.mutate(USER_ID, function(slice)
+					slice.amount = 42
+					return true
+				end)
+
 				expect(testSlice.getForSlot(USER_ID, 1).amount).to.equal(42)
 				expect(testSlice.getForSlot(USER_ID, 2).amount).to.equal(0)
 			end)
 
-			it("follows the active slot when it changes", function()
+			itMultiSlot("follows the active slot when it changes", function()
 				followSlice.mutate(USER_ID, function(value)
 					value.amount = 1
 					return true
@@ -187,13 +202,13 @@ return function()
 				end).to.throw()
 			end)
 
-			it("mints an op against the ACTIVE slot's path", function()
-				setActiveSlot(USER_ID, 3)
+			itMultiSlot("mints an op against the ACTIVE slot's path", function()
+				setActiveSlot(USER_ID, 2)
 				local operation = testSlice.op(USER_ID, function()
 					return true
 				end)
 				expect(operation.userId).to.equal(USER_ID)
-				expect(operation.path).to.equal(PlayerDataPathUtils.forSlot("__sliceOwnerSpecTest", 3))
+				expect(operation.path).to.equal(PlayerDataPathUtils.forSlot("__sliceOwnerSpecTest", 2))
 			end)
 
 			it("stamps the current epoch onto a slot-scoped op", function()
@@ -206,7 +221,7 @@ return function()
 				expect(operation.epoch).to.equal(PlayerDataService:getSlotEpoch(USER_ID))
 			end)
 
-			it("stamps the epoch as of MINT time, not as of the switch that follows", function()
+			itMultiSlot("stamps the epoch as of MINT time, not as of the switch that follows", function()
 				local operation = testSlice.op(USER_ID, function()
 					return true
 				end)
@@ -269,12 +284,12 @@ return function()
 				expect(flagsSlice.get(USER_ID).premium).to.equal(true)
 			end)
 
-			it("is shared across slots — switching slot does not change it", function()
+			itMultiSlot("is shared across slots — switching slot does not change it", function()
 				sharedSlice.mutate(USER_ID, function(value)
 					value.n = 7
 					return true
 				end)
-				setActiveSlot(USER_ID, 3)
+				setActiveSlot(USER_ID, 2)
 				expect(sharedSlice.get(USER_ID).n).to.equal(7)
 				-- getForSlot on an account slice is the account value, whatever slot is named.
 				expect(sharedSlice.getForSlot(USER_ID, 2).n).to.equal(7)

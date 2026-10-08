@@ -145,14 +145,14 @@ return function()
 
 			it("ISOLATION: a player's getters read only that player's own slice data", function()
 				StateSyncService:init()
-				StateSyncServerStore.set("currency", 910002, { jaku = 7 })
-				StateSyncServerStore.set("currency", 910003, { jaku = 9999 })
+				StateSyncServerStore.set("currency", 910002, { coins = 7 })
+				StateSyncServerStore.set("currency", 910003, { coins = 9999 })
 
 				StateSyncService:_simulateClientReadyForTesting(fakePlayer(910002))
 				local getters = addSignalsCalls[1].getters
 
 				local value = getters[StateSyncConstants.key("currency", 910002)]() :: any
-				expect(value.jaku).to.equal(7)
+				expect(value.coins).to.equal(7)
 				-- And no getter for any OTHER user's key was registered for this client.
 				expect(getters[StateSyncConstants.key("currency", 910003)]).to.equal(nil)
 

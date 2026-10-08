@@ -1,8 +1,8 @@
 --!strict
 --[=[
 	HudRoot: the single React root element of the `Hud` layer — the composition point for every
-	persistent HUD widget. Today that's `VitalsHud` (health/rot/stamina, bottom) and `ExperienceHud`
-	(XP/level, top); tomorrow a minimap, hotbar, buff tray, objective tracker slot in here the same way,
+	persistent HUD widget. The widgets themselves are game content: each game registers them in
+	HudRegistry (a coin counter, a stamina bar, a quota meter…) and HudRoot renders them as siblings,
 	without touching the widgets themselves.
 
 	It is NOT a new layer or ScreenGui — the Hud layer already owns exactly one ReactRoblox root, and a
@@ -21,8 +21,7 @@ local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
 local UIStore = require(ReplicatedStorage.Client.UI.Scenes.UIStore)
 local SceneStack = require(ReplicatedStorage.Client.UI.Scenes.SceneStack)
 local FadeGroup = require(ReplicatedStorage.Client.UI.React.Primitives.FadeGroup)
-local VitalsHud = require(ReplicatedStorage.Client.UI.React.Screens.Vitals.VitalsHud)
-local ExperienceHud = require(ReplicatedStorage.Client.UI.React.Screens.Experience.ExperienceHud)
+local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudRegistry)
 
 local e = React.createElement
 local useAtom = ReactCharm.useAtom
@@ -37,6 +36,13 @@ local function HudRoot(): React.ReactNode
 	-- Derived from the SUBSCRIBED stack value, not a fresh atom read, so this can never render stale.
 	local hidden = SceneStack.hudHiddenIn(stack)
 
+	local widgets: { [string]: React.ReactNode } = {}
+	for _, entry in HudRegistry.list() do
+		-- Keyed by registry key, so each widget keeps its identity across re-renders. Each widget
+		-- positions itself.
+		widgets[entry.key] = e(entry.component)
+	end
+
 	-- selene: allow(roblox_incorrect_roact_usage)
 	return e("Frame", {
 		-- `Name` as a prop: this is the ROOT element of the Hud layer's React root, so there is no
@@ -47,10 +53,7 @@ local function HudRoot(): React.ReactNode
 		BackgroundTransparency = 1,
 	}, {
 		-- The one hide gate for the whole HUD: FadeGroup fades the widgets in/out instead of snapping.
-		fade = e(FadeGroup, { visible = not hidden }, {
-			vitals = e(VitalsHud),
-			experience = e(ExperienceHud),
-		}),
+		fade = e(FadeGroup, { visible = not hidden }, widgets),
 	})
 end
 

@@ -1,11 +1,11 @@
 --!strict
 --[=[
-	AnimationActionRegistry: the replicated-action domain (character replication R3). Entries here are granted by the
-	server (`AnimationServiceServer:play`) and played on the owner's rig and on every viewer's puppet, in
-	sync, with the server's variant and speed.
+	AnimationActionRegistry: the server-granted action domain. Entries here are granted by the server
+	(`AnimationServiceServer:play`) and played by the owning client on its character with the server's
+	variant and speed; the engine replicates the character's animations to everyone else.
 
-	R3 has no real actions yet, so this domain holds STAND-INS that prove the pipeline through Cmdr
-	`animationplay` until combat, abilities and emotes bring their own domains. They reuse locomotion seed
+	The base has no real actions, so this domain holds STAND-INS that prove the pipeline through Cmdr
+	`animationplay` until a game's combat, abilities or emotes bring their own domains. They reuse locomotion seed
 	assets at Action priority: the locomotion entries themselves stay ambient, Core and local (an action
 	at Core blends at half weight with locomotion, which the spike's observer-animation run showed).
 

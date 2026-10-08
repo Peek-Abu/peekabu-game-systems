@@ -2,8 +2,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local PlayerDataType = require(ReplicatedStorage.Shared.Data.PlayerDataTypes)
 local ItemConstants = require(ReplicatedStorage.Shared.Features.Item.Data.ItemConstants)
-local EquipmentConstants = require(ReplicatedStorage.Shared.Features.Equipment.Data.EquipmentConstants)
-local StatConstants = require(ReplicatedStorage.Shared.Features.Stat.Data.StatConstants)
 
 --[=[
 	Registry of item definitions (itemType -> display + kind metadata).
@@ -34,17 +32,13 @@ local ItemRegistry = {}
 	- `itemType` must not already be registered.
 	- `definition.kind` must be a known ItemConstants kind.
 	- `definition.rarity` must be a known ItemConstants rarity.
-	- A `consumable` must carry an integer `stackMax >= 1`.
-	- A declared `maxStacks` (consumable or misc) must be an integer `>= 1`.
-	- A declared misc `stackMax` must be an integer `>= 1`.
-	- A `weapon`/`armour`'s `equipSlot` must be a registered EquipmentConstants slot whose
-	  `acceptsKind` matches the item's own kind.
-	- A `weapon`/`armour`'s declared `requiredLevel` must be a positive integer.
-	- A `weapon`/`armour`'s declared `statBonuses` must key only known StatConstants stat ids, with
-	  every value a real number (negative bonuses are legal — future cursed gear — so only
-	  numeric-ness is checked, not sign).
+	- A declared `stackMax` must be an integer `>= 1` (its presence is what makes the item stackable).
+	- A declared `maxStacks` must be an integer `>= 1`, and only makes sense on a stackable item.
 
-	@param itemType string -- The item type key (e.g. "rusted-saw")
+	Game-specific fields (an equip slot, a level requirement, a pet's base stats) are added to
+	`ItemDefinition` as optional fields and validated by the game's own registration step.
+
+	@param itemType string -- The item type key (e.g. "wrench")
 	@param definition PlayerDataType.ItemDefinition -- The item's kind + display metadata
 ]=]
 function ItemRegistry.register(itemType: string, definition: PlayerDataType.ItemDefinition)
@@ -64,45 +58,15 @@ function ItemRegistry.register(itemType: string, definition: PlayerDataType.Item
 		assert(value % 1 == 0, `{fieldName} must be an integer for item type "{itemType}"`)
 	end
 
-	if definition.kind == "consumable" then
+	if definition.stackMax ~= nil then
 		assertPositiveInteger(definition.stackMax, "stackMax")
-		if definition.maxStacks ~= nil then
-			assertPositiveInteger(definition.maxStacks, "maxStacks")
-		end
-	elseif definition.kind == "misc" then
-		if definition.stackMax ~= nil then
-			assertPositiveInteger(definition.stackMax, "stackMax")
-		end
-		if definition.maxStacks ~= nil then
-			assertPositiveInteger(definition.maxStacks, "maxStacks")
-		end
-	elseif definition.kind == "weapon" or definition.kind == "armour" then
+	end
+	if definition.maxStacks ~= nil then
 		assert(
-			EquipmentConstants.isValidSlot(definition.equipSlot),
-			`unknown equipSlot "{definition.equipSlot}" for item type "{itemType}"`
+			definition.stackMax ~= nil,
+			`maxStacks needs stackMax (a unique item has no stacks) for item type "{itemType}"`
 		)
-		local slotConfig = EquipmentConstants.SLOTS[definition.equipSlot]
-		assert(slotConfig, "isValidSlot proved this slot id is registered")
-		assert(
-			slotConfig.acceptsKind == definition.kind,
-			`equipSlot "{definition.equipSlot}" accepts "{slotConfig.acceptsKind}", but item type "{itemType}" is "{definition.kind}"`
-		)
-		if definition.requiredLevel ~= nil then
-			assertPositiveInteger(definition.requiredLevel, "requiredLevel")
-		end
-		if definition.statBonuses ~= nil then
-			-- Collapse the WeaponDefinition|ArmourDefinition union's two structurally-identical
-			-- `{ [string]: number }` arms into one type: Luau's generic-for cannot iterate a union of
-			-- table types directly (no single call signature), even when both arms are identical.
-			local statBonuses: { [string]: number } = definition.statBonuses
-			for statId, bonus in statBonuses do
-				assert(
-					StatConstants.isValidStatId(statId),
-					`unknown stat id "{statId}" in statBonuses for item type "{itemType}"`
-				)
-				assert(type(bonus) == "number", `statBonuses["{statId}"] must be a number for item type "{itemType}"`)
-			end
-		end
+		assertPositiveInteger(definition.maxStacks, "maxStacks")
 	end
 
 	definitions[itemType] = definition
@@ -143,7 +107,7 @@ end
 --[=[
 	The registered kind of an item type, or nil if the type is unknown.
 	@param itemType string -- The item type key
-	@return string? -- "weapon" | "armour" | "consumable" | "misc" | nil
+	@return string? -- a registered ItemConstants kind, or nil
 ]=]
 function ItemRegistry.kindOf(itemType: string): string?
 	local definition = definitions[itemType]
@@ -154,24 +118,14 @@ function ItemRegistry.kindOf(itemType: string): string?
 end
 
 --[=[
-	True iff the item type's definition carries a `stackMax` — consumables always do (required at
-	registration); misc items only when declared. Weapons and armour are never stackable. False for
-	an unregistered item type.
+	True iff the item type's definition declares a `stackMax` (stackability is declared, not inferred
+	from kind). False for an unregistered item type.
 	@param itemType string -- The item type key
 	@return boolean
 ]=]
 function ItemRegistry.isStackable(itemType: string): boolean
 	local definition = definitions[itemType]
-	if not definition then
-		return false
-	end
-	if definition.kind == "consumable" then
-		return true
-	end
-	if definition.kind == "misc" then
-		return definition.stackMax ~= nil
-	end
-	return false
+	return definition ~= nil and definition.stackMax ~= nil
 end
 
 return ItemRegistry

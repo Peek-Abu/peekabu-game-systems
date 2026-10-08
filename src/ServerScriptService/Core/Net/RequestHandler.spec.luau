@@ -281,13 +281,13 @@ return function()
 				audit = true,
 				handler = function(_data, _player) end,
 			})
-			wrapped({ itemId = "rusted-saw" }, mockPlayer(50))
+			wrapped({ itemId = "wrench" }, mockPlayer(50))
 			unsubscribe()
 
 			expect(#captured).to.equal(1)
 			expect(string.find(captured[1].message, "AuditedBuy", 1, true)).to.be.ok()
 			-- The payload is JSON-serialized into the line, not logged as "table: 0x...".
-			expect(string.find(captured[1].message, "rusted-saw", 1, true)).to.be.ok()
+			expect(string.find(captured[1].message, "wrench", 1, true)).to.be.ok()
 		end)
 
 		it("records no AUDIT entry when audit is not enabled", function()

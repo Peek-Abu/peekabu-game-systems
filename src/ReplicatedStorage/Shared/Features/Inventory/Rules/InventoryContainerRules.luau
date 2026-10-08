@@ -1,14 +1,15 @@
 --!strict
 --[=[
 	InventoryContainerRules: pure per-entry shape checking for a `{ InventoryEntry }` array, shared by every
-	container that holds the same entry union (Inventory, Bank, and any future stash).
+	container that holds the same entry union (the Inventory, and any second container a game adds — a
+	bank, a pet pen, a run bag, a team stash).
 
-	Extracted from `InventoryServiceServer.validateInventory` so a second container (Bank) reuses the
-	exact same shape rules instead of re-deriving them. It deliberately does NOT decide capacity: the
+	Extracted from `InventoryServiceServer.validateInventory` so a second container reuses the exact same
+	shape rules instead of re-deriving them. It deliberately does NOT decide capacity: the
 	per-entry `maxStacks` bound IS enforced here (it is intrinsic to the item definition, not a container
 	policy), but the per-KIND / flat-total entry cap is the caller's own policy, applied over the
 	`kindCounts` this returns. `label` names the container in rejection messages ("inventory.items[3]…"
-	vs "bank.items[3]…").
+	vs "stash.items[3]…").
 
 	@class InventoryContainerRules
 ]=]
@@ -32,26 +33,22 @@ export type ShapeCheckResult = {
 }
 
 --[=[
-	A stackable item's def always carries `stackMax` (required for "consumable", present when declared
-	for "misc"); `maxStacks` is optional either way. Narrows the ItemDefinition union on `kind`. Throws
-	if called on a non-stackable definition — callers must check `ItemRegistry.isStackable` first.
+	A stackable item's definition always declares `stackMax` (that declaration is what makes it
+	stackable); `maxStacks` is optional. Throws if called on a non-stackable definition — callers must
+	check `ItemRegistry.isStackable` first.
 	@param definition PlayerDataTypes.ItemDefinition
 	@return number -- stackMax
 	@return number? -- maxStacks
 ]=]
 function InventoryContainerRules.stackLimitsOf(definition: PlayerDataTypes.ItemDefinition): (number, number?)
-	if definition.kind == "consumable" then
-		return definition.stackMax, definition.maxStacks
-	elseif definition.kind == "misc" then
-		assert(definition.stackMax ~= nil, `misc item "{definition.name}" is stackable but declares no stackMax`)
-		return definition.stackMax, definition.maxStacks
-	end
-	error(`stackLimitsOf called on non-stackable kind "{definition.kind}"`)
+	local stackMax = definition.stackMax
+	assert(stackMax ~= nil, `stackLimitsOf called on non-stackable item "{definition.name}"`)
+	return stackMax, definition.maxStacks
 end
 
 --[=[
 	Validates the shape of every entry in `items` (registration, stack-vs-unique shape, per-instance
-	modifier maps, per-itemType maxStacks) and tallies per-kind / per-itemType counts. Does NOT apply a
+	`attrs`, per-itemType maxStacks) and tallies per-kind / per-itemType counts. Does NOT apply a
 	container entry-capacity policy — the caller does that over the returned `kindCounts`.
 	@param items { PlayerDataTypes.InventoryEntry } -- the container's entry array
 	@param label string -- the container name for rejection messages ("inventory", "bank")
@@ -114,15 +111,10 @@ function InventoryContainerRules.checkEntryShapes(
 			end
 			seenUids[uid] = true
 
-			-- Per-instance modifier maps (affixes / statRolls): finite-number values, non-empty string
-			-- keys; unknown keys tolerated (retired affix / stat). Same rule on ANY path into the slice.
-			local okAffixes, affixReason = InventoryUtils.validateModifierMap(asUnique.affixes)
-			if not okAffixes then
-				return false, `{label}.items[{index}] ("{entry.itemType}"): {affixReason}`
-			end
-			local okStatRolls, statRollReason = InventoryUtils.validateModifierMap(asUnique.statRolls)
-			if not okStatRolls then
-				return false, `{label}.items[{index}] ("{entry.itemType}"): {statRollReason}`
+			-- Per-instance attrs: same rule on ANY path into the slice (see InventoryUtils.validateAttrs).
+			local okAttrs, attrsReason = InventoryUtils.validateAttrs(asUnique.attrs)
+			if not okAttrs then
+				return false, `{label}.items[{index}] ("{entry.itemType}"): {attrsReason}`
 			end
 		end
 	end

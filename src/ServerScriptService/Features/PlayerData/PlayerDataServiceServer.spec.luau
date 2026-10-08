@@ -20,11 +20,6 @@ local PlayerDataMigrationSystem = require(PlayerDataServer.Systems.PlayerDataMig
 local PlayerDataPathUtils = require(PlayerDataServer.Utils.PlayerDataPathUtils)
 local CurrencyService = require(ServerScriptService.Features.Currency.CurrencyServiceServer)
 local InventoryService = require(ServerScriptService.Features.Inventory.InventoryServiceServer)
--- Required (not read directly) so its module-scope PlayerDataSliceSystem.registerSlot("equipment", ...) call
--- runs and registers validateEquipment BEFORE the "slice invariant validators" cases below drive raw
--- transaction ops against the equipment slice.
-local _EquipmentService = require(ServerScriptService.Features.Equipment.EquipmentServiceServer)
-local SlotService = require(ServerScriptService.Features.Slot.SlotServiceServer)
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local PlayerDataTypes = require(ReplicatedStorage.Shared.Data.PlayerDataTypes)
 local sift = require(ReplicatedStorage.Packages.sift)
@@ -103,7 +98,7 @@ end
 
 -- The ONE profile fixture: the real slot-aware shape. Every slot is its OWN table (so a write to one
 -- can be asserted not to surface in another) seeded with the registered template defaults (currency
--- jaku = 100, an empty inventory — see the PlayerDataSliceSystem.registerSlot calls in
+-- coins = 100, an empty inventory — see the PlayerDataSliceSystem.registerSlot calls in
 -- CurrencyServiceServer / InventoryServiceServer), with the currency under test stamped into the
 -- ACTIVE slot. Same fixture shape as CurrencyServiceServer.spec / InventoryServiceServer.spec.
 --
@@ -112,55 +107,41 @@ end
 -- `profile.slots[profile.slotState.active].<slice>` — so a flat profile would throw inside mutate()'s
 -- mirror step. Slice paths are dotted; only genuine root keys (`_schemaVersion`, `slotState`) are bare.
 --
--- Every non-active slot carries the registered template default (jaku = 100 — see SLOT_2_JAKU in the
--- "slotState" describe, which switches onto slot 2 and reads that value back through CurrencyService).
-local function makeSlotData(jaku: number): PlayerDataTypes.PlayerProfile
+-- Every non-active slot (only present when MAX_SLOTS >= 2) carries the registered template default
+-- (coins = 100 — see SLOT_2_COINS in the "slotState" describe, which switches onto slot 2 and reads that
+-- value back through CurrencyService).
+local function makeSlotData(coins: number): PlayerDataTypes.PlayerProfile
 	local slots: { PlayerDataTypes.PlayerSlot } = {}
 	for index = 1, PlayerDataConstants.MAX_SLOTS do
 		slots[index] = {
-			currency = { jaku = 100 },
+			currency = { coins = 100 },
 			inventory = { items = {} },
-			stats = { totalXp = 0, investments = {} },
-			equipment = { slots = {} },
-			appearance = { cosmetics = {}, accessories = {}, body = {}, headType = "Uncovered", surfaces = {} },
-			bank = { items = {}, currency = {} },
 			equippedTitle = {},
 		}
 	end
 	slots[1] = {
-		currency = { jaku = jaku },
+		currency = { coins = coins },
 		inventory = { items = {} },
-		stats = { totalXp = 0, investments = {} },
-		equipment = { slots = {} },
-		appearance = { cosmetics = {}, accessories = {}, body = {}, headType = "Uncovered", surfaces = {} },
-		bank = { items = {}, currency = {} },
 		equippedTitle = {},
 	}
 	return {
 		_schemaVersion = PlayerDataMigrationSystem.CURRENT_VERSION,
 		slotState = { active = 1, epoch = 1 },
 		account = {
-			unlockedSlots = { 1 },
 			itemMint = { nextUid = 1 },
-			entitlements = { cosmetics = {} },
 			titles = { earned = {} },
 		},
 		slots = slots,
 	}
 end
 
--- True iff a table has no keys at all — used by the equipment-slice validator cases to assert a
--- rejected write left `equipment.slots` empty (a dict, so `#` doesn't apply).
-local function isEmptyTable(t: { [any]: any }): boolean
-	return next(t) == nil
-end
-
 -- The dotted paths every test below writes through. The active slot is 1 in every fixture, so
--- CURRENCY_PATH / INVENTORY_PATH are the ACTIVE slot's slices (the ones that mirror); SLOT_2_* name a
--- non-active slot.
+-- CURRENCY_PATH / INVENTORY_PATH are the ACTIVE slot's slices (the ones that mirror).
 local CURRENCY_PATH = PlayerDataPathUtils.forSlot("currency", 1)
 local INVENTORY_PATH = PlayerDataPathUtils.forSlot("inventory", 1)
-local EQUIPMENT_PATH = PlayerDataPathUtils.forSlot("equipment", 1)
+-- An account-wide slice path (InventoryServiceServer registers "itemMint" with a validator requiring an
+-- integer nextUid >= 1).
+local ITEM_MINT_PATH = PlayerDataPathUtils.forAccount("itemMint")
 
 -- The active slot's tables — the slot-aware spelling of the old flat `profile.Data.currency`. Mirrors
 -- the sibling domain specs' activeSlotOf().
@@ -219,6 +200,9 @@ local function makeFakeHost(userId: number)
 end
 
 return function()
+	-- Multi-slot behaviour is dormant while MAX_SLOTS = 1; these re-enable when a game raises it.
+	local itMultiSlot = if PlayerDataConstants.MAX_SLOTS >= 2 then it else itSKIP
+
 	describe("PlayerDataServiceServer", function()
 		local profiles: { [number]: any } = {}
 		local prevLogLevel: Logger.LogLevel
@@ -249,8 +233,8 @@ return function()
 
 		-- Seeds a slot-shaped profile WITHOUT mirroring it into StateSyncServerStore, so a test can assert that a
 		-- rejected write left the atom empty (`StateSyncServerStore.currencies()[userId] == nil`).
-		local function seed(userId: number, jaku: number)
-			local profile = makeFakeProfile(makeSlotData(jaku))
+		local function seed(userId: number, coins: number)
+			local profile = makeFakeProfile(makeSlotData(coins))
 			profiles[userId] = profile
 			PlayerDataService:_setProfileForTesting(userId, profile)
 			return profile
@@ -266,8 +250,8 @@ return function()
 		-- Seeds a profile AND mirrors it into StateSyncServerStore exactly as a real profile load does
 		-- (_startSession's syncFromProfile), so a spec can assert what the atom held BEFORE a write —
 		-- the only way to prove a non-active-slot write left the mirror alone.
-		local function seedSlotProfile(userId: number, jaku: number)
-			local profile = seed(userId, jaku)
+		local function seedSlotProfile(userId: number, coins: number)
+			local profile = seed(userId, coins)
 			StateSyncServerStore.syncFromProfile(userId, profile.Data)
 			return profile
 		end
@@ -277,11 +261,11 @@ return function()
 			it("applies the mutation and returns true", function()
 				local profile = seed(1, 100)
 				local ok = PlayerDataService:mutate(1, CURRENCY_PATH, function(c: any)
-					c.jaku = 250
+					c.coins = 250
 					return true
 				end)
 				expect(ok).to.equal(true)
-				expect(activeSlotOf(profile).currency.jaku).to.equal(250)
+				expect(activeSlotOf(profile).currency.coins).to.equal(250)
 			end)
 
 			it("mirrors only the mutated slice into StateSyncServerStore, not every synced slice (A2)", function()
@@ -290,11 +274,11 @@ return function()
 				local inventoryBefore = StateSyncServerStore.inventories()
 
 				PlayerDataService:mutate(1, CURRENCY_PATH, function(c: any)
-					c.jaku = 250
+					c.coins = 250
 					return true
 				end)
 
-				expect(StateSyncServerStore.currencies()[1].jaku).to.equal(250)
+				expect(StateSyncServerStore.currencies()[1].coins).to.equal(250)
 				-- Mutating "currency" must not touch the inventory atom at all.
 				expect(StateSyncServerStore.inventories()).to.equal(inventoryBefore)
 			end)
@@ -302,38 +286,38 @@ return function()
 			it("rolls back writes when the mutator reports no change (false = no change is ENFORCED)", function()
 				local profile = seed(1, 100)
 				local ok = PlayerDataService:mutate(1, CURRENCY_PATH, function(c: any)
-					c.jaku = 999 -- writes, then aborts
+					c.coins = 999 -- writes, then aborts
 					return false
 				end)
 				expect(ok).to.equal(false)
 				-- The write is rolled back from the pre-mutate snapshot, so the returned flag and
 				-- the stored state agree — the dirty 999 can never ride the next auto-save.
-				expect(activeSlotOf(profile).currency.jaku).to.equal(100)
+				expect(activeSlotOf(profile).currency.coins).to.equal(100)
 			end)
 
 			it("rejects a mutator that yields and leaves the slice untouched", function()
 				local profile = seed(1, 100)
 				local ok = PlayerDataService:mutate(1, CURRENCY_PATH, function(c: any)
 					task.wait() -- contract violation: mutators must be synchronous
-					c.jaku = 999
+					c.coins = 999
 					return true
 				end)
 				expect(ok).to.equal(false)
 				-- Rejected before the write, so the slice is untouched and never mirrored.
-				expect(activeSlotOf(profile).currency.jaku).to.equal(100)
+				expect(activeSlotOf(profile).currency.coins).to.equal(100)
 				expect(StateSyncServerStore.currencies()[1]).to.equal(nil)
 			end)
 
 			it("rolls back a mutator that writes and THEN yields (regression)", function()
 				local profile = seed(1, 100)
 				local ok = PlayerDataService:mutate(1, CURRENCY_PATH, function(c: any)
-					c.jaku = 999 -- the write lands before the contract violation...
+					c.coins = 999 -- the write lands before the contract violation...
 					task.wait()
 					return true
 				end)
 				expect(ok).to.equal(false)
 				-- ...and must be restored from the snapshot, not left to persist via auto-save.
-				expect(activeSlotOf(profile).currency.jaku).to.equal(100)
+				expect(activeSlotOf(profile).currency.coins).to.equal(100)
 				expect(StateSyncServerStore.currencies()[1]).to.equal(nil)
 			end)
 
@@ -346,17 +330,17 @@ return function()
 					end)
 				end).never.to.throw()
 				expect(ok).to.equal(false)
-				expect(activeSlotOf(profile).currency.jaku).to.equal(100)
+				expect(activeSlotOf(profile).currency.coins).to.equal(100)
 			end)
 
 			it("rolls back a mutator that writes and THEN errors (regression)", function()
 				local profile = seed(1, 100)
 				local ok = PlayerDataService:mutate(1, CURRENCY_PATH, function(c: any)
-					c.jaku = 999
+					c.coins = 999
 					error("boom after writing")
 				end)
 				expect(ok).to.equal(false)
-				expect(activeSlotOf(profile).currency.jaku).to.equal(100)
+				expect(activeSlotOf(profile).currency.coins).to.equal(100)
 			end)
 
 			it("returns false when the profile is not loaded", function()
@@ -394,12 +378,12 @@ return function()
 				-- profile is in after its session ended but before _cleanupPlayer removed the entry.
 				local profile = seedProfile(1, makeFakeProfile(makeSlotData(100), { activeUntilCall = 0 }))
 				local ok = PlayerDataService:mutate(1, CURRENCY_PATH, function(c: any)
-					c.jaku = 250
+					c.coins = 250
 					return true
 				end)
 				expect(ok).to.equal(false)
 				-- No doomed write, and nothing mirrored to the client.
-				expect(activeSlotOf(profile).currency.jaku).to.equal(100)
+				expect(activeSlotOf(profile).currency.coins).to.equal(100)
 				expect(StateSyncServerStore.currencies()[1]).to.equal(nil)
 			end)
 		end)
@@ -413,28 +397,28 @@ return function()
 			it("mutate rolls back a currency write that goes negative", function()
 				local profile = seed(1, 100)
 				local ok = PlayerDataService:mutate(1, CURRENCY_PATH, function(c: any)
-					c.jaku = -5
+					c.coins = -5
 					return true
 				end)
 				expect(ok).to.equal(false)
-				expect(activeSlotOf(profile).currency.jaku).to.equal(100)
+				expect(activeSlotOf(profile).currency.coins).to.equal(100)
 				expect(StateSyncServerStore.currencies()[1]).to.equal(nil)
 			end)
 
 			it("mutate rolls back a currency write above MAX_CURRENCY", function()
 				local profile = seed(1, 100)
 				local ok = PlayerDataService:mutate(1, CURRENCY_PATH, function(c: any)
-					c.jaku = 2_000_000_000 -- MAX_CURRENCY is 1e9
+					c.coins = 2_000_000_000 -- MAX_CURRENCY is 1e9
 					return true
 				end)
 				expect(ok).to.equal(false)
-				expect(activeSlotOf(profile).currency.jaku).to.equal(100)
+				expect(activeSlotOf(profile).currency.coins).to.equal(100)
 			end)
 
 			it("mutate() returns the validator's reason as a second value on invariant rejection", function()
 				seed(1, 100)
 				local changed, reason = PlayerDataService:mutate(1, CURRENCY_PATH, function(c: any)
-					c.jaku = -5 -- validator rejects negative
+					c.coins = -5 -- validator rejects negative
 					return true
 				end)
 				expect(changed).to.equal(false)
@@ -444,7 +428,7 @@ return function()
 			it("mutate() returns nil reason when the mutator itself aborts (business-logic false)", function()
 				seed(1, 100)
 				local changed, reason = PlayerDataService:mutate(1, CURRENCY_PATH, function(c: any)
-					c.jaku = 999 -- writes, then aborts
+					c.coins = 999 -- writes, then aborts
 					return false
 				end)
 				expect(changed).to.equal(false)
@@ -458,14 +442,14 @@ return function()
 						userId = 1,
 						path = CURRENCY_PATH,
 						mutator = function(c: any)
-							c.jaku = -1 -- a hand-built op bypassing removeCurrency's floor
+							c.coins = -1 -- a hand-built op bypassing removeCurrency's floor
 							return true
 						end,
 					},
 				})
 				expect(ok).to.equal(false)
 				expect(result.committed).to.equal(false)
-				expect(activeSlotOf(profile).currency.jaku).to.equal(100)
+				expect(activeSlotOf(profile).currency.coins).to.equal(100)
 			end)
 
 			it("transaction() populates rejectionReason and rejectedPath on validator rejection", function()
@@ -475,7 +459,7 @@ return function()
 						userId = 1,
 						path = CURRENCY_PATH,
 						mutator = function(c: any)
-							c.jaku = -1 -- a hand-built op bypassing removeCurrency's floor
+							c.coins = -1 -- a hand-built op bypassing removeCurrency's floor
 							return true
 						end,
 					},
@@ -501,10 +485,9 @@ return function()
 				expect(result.rejectedPath).to.equal(nil)
 			end)
 
-			-- There is no global MAX_INVENTORY_SIZE any more (Task 5): the size invariant is now a
-			-- PER-KIND cap (ItemConstants.KIND_CAPS), enforced by validateInventory. "wood" is misc
-			-- (KIND_CAPS.misc == 40), so 41 entries of it breaches the cap the same way an oversized
-			-- inventory used to.
+			-- There is no global MAX_INVENTORY_SIZE: the size invariant is a PER-KIND cap
+			-- (ItemConstants.KIND_CAPS), enforced by validateInventory. "scrap" is misc
+			-- (KIND_CAPS.misc == 40), so 41 single-quantity entries of it breach the cap.
 			it("transaction rolls back a raw op that breaches a per-kind cap (KIND_CAPS)", function()
 				local profile = seed(1, 100)
 				local ok = PlayerDataService:transaction({
@@ -513,7 +496,7 @@ return function()
 						path = INVENTORY_PATH,
 						mutator = function(inv: any)
 							for _ = 1, 41 do
-								table.insert(inv.items, { itemType = "wood", quantity = 1 })
+								table.insert(inv.items, { itemType = "scrap", quantity = 1 })
 							end
 							return true
 						end,
@@ -561,11 +544,11 @@ return function()
 						userId = 1,
 						path = INVENTORY_PATH,
 						mutator = function(inv: any)
-							-- "healing-tonic" is stackable (consumable); "rusted-saw" (a weapon) is NOT
+							-- "medkit" is stackable (declares stackMax); "wrench" (a tool) is NOT
 							-- stackable and would fail validation for an entirely different reason (a
 							-- quantity field on a unique entry) — see the "unique item carries a
 							-- quantity" case below, which covers that shape separately.
-							table.insert(inv.items, { itemType = "healing-tonic", quantity = -5 })
+							table.insert(inv.items, { itemType = "medkit", quantity = -5 })
 							return true
 						end,
 					},
@@ -577,20 +560,20 @@ return function()
 			it("mutate rolls back an inventory write with a non-string uid", function()
 				local profile = seed(1, 100)
 				local ok = PlayerDataService:mutate(1, INVENTORY_PATH, function(inv: any)
-					table.insert(inv.items, { itemType = "phoenix-blade", uid = 123 })
+					table.insert(inv.items, { itemType = "golden-wrench", uid = 123 })
 					return true
 				end)
 				expect(ok).to.equal(false)
 				expect(#activeSlotOf(profile).inventory.items).to.equal(0)
 			end)
 
-			-- The three shape/uniqueness rules Task 5's validateInventory adds on top of the
+			-- The three shape/uniqueness rules validateInventory adds on top of the
 			-- registration/size checks above: a stackable entry must not carry a `uid`, a unique entry
 			-- must not carry a `quantity`, and every `uid` in the array must be unique.
 			it("mutate rolls back a stackable entry that also carries a uid", function()
 				local profile = seed(1, 100)
 				local ok = PlayerDataService:mutate(1, INVENTORY_PATH, function(inv: any)
-					table.insert(inv.items, { itemType = "healing-tonic", quantity = 1, uid = "bogus" })
+					table.insert(inv.items, { itemType = "medkit", quantity = 1, uid = "bogus" })
 					return true
 				end)
 				expect(ok).to.equal(false)
@@ -600,7 +583,7 @@ return function()
 			it("mutate rolls back a unique entry that also carries a quantity", function()
 				local profile = seed(1, 100)
 				local ok = PlayerDataService:mutate(1, INVENTORY_PATH, function(inv: any)
-					table.insert(inv.items, { itemType = "phoenix-blade", uid = "u1", quantity = 1 })
+					table.insert(inv.items, { itemType = "golden-wrench", uid = "u1", quantity = 1 })
 					return true
 				end)
 				expect(ok).to.equal(false)
@@ -610,8 +593,8 @@ return function()
 			it("mutate rolls back a duplicate uid within the array", function()
 				local profile = seed(1, 100)
 				local ok = PlayerDataService:mutate(1, INVENTORY_PATH, function(inv: any)
-					table.insert(inv.items, { itemType = "phoenix-blade", uid = "dup" })
-					table.insert(inv.items, { itemType = "chambered-helmet", uid = "dup" })
+					table.insert(inv.items, { itemType = "golden-wrench", uid = "dup" })
+					table.insert(inv.items, { itemType = "hard-hat", uid = "dup" })
 					return true
 				end)
 				expect(ok).to.equal(false)
@@ -644,43 +627,6 @@ return function()
 				expect(activeSlotOf(profile).inventory.items).to.be.a("table")
 				expect(#activeSlotOf(profile).inventory.items).to.equal(0)
 			end)
-
-			-- validateEquipment's three rules (see EquipmentServiceServer): every occupied slot key is a
-			-- registered EquipmentConstants slot id, the occupant's registered kind matches that slot's
-			-- acceptsKind, and no uid repeats across slots. Direct raw-op cases, same precedent as
-			-- validateInventory's cases above — proving the invariant holds for ANY path into the slice,
-			-- not just EquipmentServiceServer:equip/unequip.
-			it("mutate rolls back an equipment write to an unregistered slot id", function()
-				local profile = seed(1, 100)
-				local ok = PlayerDataService:mutate(1, EQUIPMENT_PATH, function(equipment: any)
-					equipment.slots["not-a-slot"] = { itemType = "rusted-saw", uid = "e1" }
-					return true
-				end)
-				expect(ok).to.equal(false)
-				expect(isEmptyTable(activeSlotOf(profile).equipment.slots)).to.equal(true)
-			end)
-
-			it("mutate rolls back an equipment write whose item's kind does not match the slot", function()
-				local profile = seed(1, 100)
-				-- "chambered-helmet" is armour; the weapon slot only accepts weapon-kind items.
-				local ok = PlayerDataService:mutate(1, EQUIPMENT_PATH, function(equipment: any)
-					equipment.slots.weapon = { itemType = "chambered-helmet", uid = "e1" }
-					return true
-				end)
-				expect(ok).to.equal(false)
-				expect(isEmptyTable(activeSlotOf(profile).equipment.slots)).to.equal(true)
-			end)
-
-			it("mutate rolls back a duplicate uid across two equipment slots", function()
-				local profile = seed(1, 100)
-				local ok = PlayerDataService:mutate(1, EQUIPMENT_PATH, function(equipment: any)
-					equipment.slots.weapon = { itemType = "rusted-saw", uid = "dup" }
-					equipment.slots.helmet = { itemType = "chambered-helmet", uid = "dup" }
-					return true
-				end)
-				expect(ok).to.equal(false)
-				expect(isEmptyTable(activeSlotOf(profile).equipment.slots)).to.equal(true)
-			end)
 		end)
 
 		-- =====================================================================
@@ -695,16 +641,16 @@ return function()
 				local nestedResult: boolean? = nil
 				local ok = PlayerDataService:mutate(1, CURRENCY_PATH, function(c: any)
 					nestedResult = PlayerDataService:mutate(2, CURRENCY_PATH, function(c2: any)
-						c2.jaku = 999
+						c2.coins = 999
 						return true
 					end)
-					c.jaku = 150
+					c.coins = 150
 					return true
 				end)
 				-- The nested call is refused and writes nothing; the outer mutation itself is valid
 				-- and commits normally.
 				expect(nestedResult).to.equal(false)
-				expect(activeSlotOf(other).currency.jaku).to.equal(100)
+				expect(activeSlotOf(other).currency.coins).to.equal(100)
 				expect(ok).to.equal(true)
 			end)
 
@@ -718,16 +664,16 @@ return function()
 							userId = 2,
 							path = CURRENCY_PATH,
 							mutator = function(c2: any)
-								c2.jaku = 999
+								c2.coins = 999
 								return true
 							end,
 						},
 					})
-					c.jaku = 150
+					c.coins = 150
 					return true
 				end)
 				expect(nestedOk).to.equal(false)
-				expect(activeSlotOf(other).currency.jaku).to.equal(100)
+				expect(activeSlotOf(other).currency.coins).to.equal(100)
 			end)
 
 			it("a transaction op cannot leak a write to a THIRD profile past its own rollback (regression)", function()
@@ -744,10 +690,10 @@ return function()
 						path = CURRENCY_PATH,
 						mutator = function(c: any)
 							escrowPayment = PlayerDataService:mutate(3, CURRENCY_PATH, function(c3: any)
-								c3.jaku += 50
+								c3.coins += 50
 								return true
 							end)
-							c.jaku -= 50
+							c.coins -= 50
 							return true
 						end,
 					},
@@ -763,9 +709,9 @@ return function()
 				expect(result.committed).to.equal(false)
 				-- The nested escrow write was refused outright, so nothing survived the rollback.
 				expect(escrowPayment).to.equal(false)
-				expect(activeSlotOf(a).currency.jaku).to.equal(100)
-				expect(activeSlotOf(b).currency.jaku).to.equal(100)
-				expect(activeSlotOf(escrow).currency.jaku).to.equal(100)
+				expect(activeSlotOf(a).currency.coins).to.equal(100)
+				expect(activeSlotOf(b).currency.coins).to.equal(100)
+				expect(activeSlotOf(escrow).currency.coins).to.equal(100)
 			end)
 
 			it("clears the guard after every outcome, so subsequent mutations work", function()
@@ -780,11 +726,11 @@ return function()
 					error("boom")
 				end)
 				local ok = PlayerDataService:mutate(1, CURRENCY_PATH, function(c: any)
-					c.jaku = 123
+					c.coins = 123
 					return true
 				end)
 				expect(ok).to.equal(true)
-				expect(activeSlotOf(profile).currency.jaku).to.equal(123)
+				expect(activeSlotOf(profile).currency.coins).to.equal(123)
 			end)
 		end)
 
@@ -811,7 +757,7 @@ return function()
 						path = CURRENCY_PATH,
 						mutator = function(c: any)
 							observed = PlayerDataService:getState().sessions["1"].inTransaction
-							c.jaku = 1
+							c.coins = 1
 							return true
 						end,
 					},
@@ -827,7 +773,7 @@ return function()
 			it("returns a frozen snapshot, not the live profile data", function()
 				local profile = seed(1, 100)
 				-- Seed an inventory item so the per-item freeze loop is exercised too.
-				table.insert(activeSlotOf(profile).inventory.items, { itemType = "healing-tonic", quantity = 5 })
+				table.insert(activeSlotOf(profile).inventory.items, { itemType = "medkit", quantity = 5 })
 				local snap = PlayerDataService:getProfile(1)
 				expect(snap).to.be.ok()
 				-- A distinct copy, not the live table...
@@ -838,16 +784,16 @@ return function()
 				expect(table.isfrozen(snap :: any)).to.equal(true)
 				expect(table.isfrozen((snap :: any).slots)).to.equal(true)
 				expect(function()
-					(snap :: any).slots[1].currency.jaku = 1
+					(snap :: any).slots[1].currency.coins = 1
 				end).to.throw()
 				expect(function()
 					(snap :: any).slots[1].inventory.items[1].quantity = 999
 				end).to.throw()
 				expect(function()
-					(snap :: any).account.unlockedSlots[1] = 3
+					(snap :: any).account.itemMint.nextUid = 3
 				end).to.throw()
 				-- The live profile is untouched by the read.
-				expect(activeSlotOf(profile).currency.jaku).to.equal(100)
+				expect(activeSlotOf(profile).currency.coins).to.equal(100)
 				expect(activeSlotOf(profile).inventory.items[1].quantity).to.equal(5)
 			end)
 
@@ -863,29 +809,32 @@ return function()
 		describe("_getSlotShell / _getAccountShell", function()
 			it("swaps ONLY the requested slice of the requested SLOT for a frozen deep copy", function()
 				local profile = seedSlotProfile(1, 100)
-				table.insert(profile.Data.slots[2].inventory.items, { itemType = "healing-tonic", quantity = 5 })
-				local shell = PlayerDataService:_getSlotShell(1, 2, "currency")
+				-- The LAST slot: with MAX_SLOTS >= 2 that is a non-active slot; with one slot it is slot 1.
+				local slotIndex = PlayerDataConstants.MAX_SLOTS
+				local slot = profile.Data.slots[slotIndex]
+				table.insert(slot.inventory.items, { itemType = "medkit", quantity = 5 })
+				local shell = PlayerDataService:_getSlotShell(1, slotIndex, "currency")
 				expect(shell).to.be.ok()
 				-- The shell is a fresh table, and the requested slice is a distinct, deep-frozen copy —
 				-- writing through it throws instead of corrupting live state.
-				expect(shell).never.to.equal(profile.Data.slots[2])
-				expect((shell :: any).currency).never.to.equal(profile.Data.slots[2].currency)
+				expect(shell).never.to.equal(slot)
+				expect((shell :: any).currency).never.to.equal(slot.currency)
 				expect(table.isfrozen((shell :: any).currency)).to.equal(true)
 				expect(function()
-					(shell :: any).currency.jaku = 1
+					(shell :: any).currency.coins = 1
 				end).to.throw()
 				-- The OTHER slices are intentionally NOT copied — that is what makes this O(slice)
 				-- (the shell must be dropped right after the slice is projected out; see the contract).
-				expect((shell :: any).inventory).to.equal(profile.Data.slots[2].inventory)
+				expect((shell :: any).inventory).to.equal(slot.inventory)
 				-- The live profile is untouched and stays mutable for mutate().
-				expect(profile.Data.slots[2].currency.jaku).to.equal(100)
-				expect(table.isfrozen(profile.Data.slots[2].currency)).to.equal(false)
+				expect(slot.currency.coins).to.equal(100)
+				expect(table.isfrozen(slot.currency)).to.equal(false)
 			end)
 
-			it("reads the requested slot, not the active one", function()
+			itMultiSlot("reads the requested slot, not the active one", function()
 				local profile = seedSlotProfile(1, 100)
-				profile.Data.slots[3].currency.jaku = 42 -- the active slot is 1
-				expect(((PlayerDataService:_getSlotShell(1, 3, "currency") :: any).currency).jaku).to.equal(42)
+				profile.Data.slots[2].currency.coins = 42 -- the active slot is 1
+				expect(((PlayerDataService:_getSlotShell(1, 2, "currency") :: any).currency).coins).to.equal(42)
 			end)
 
 			it("returns nil for an unloaded profile, an out-of-range slot, and a missing slice", function()
@@ -904,21 +853,21 @@ return function()
 					PlayerDataService:_getSlotShell(1, nil :: any, "currency")
 				end).to.throw()
 				-- A valid slotIndex still works.
-				expect(PlayerDataService:_getSlotShell(1, 2, "currency")).to.be.ok()
+				expect(PlayerDataService:_getSlotShell(1, 1, "currency")).to.be.ok()
 			end)
 
 			it("swaps ONLY the requested account slice for a frozen deep copy", function()
 				local profile = seedSlotProfile(1, 100)
-				local shell = PlayerDataService:_getAccountShell(1, "unlockedSlots")
+				local shell = PlayerDataService:_getAccountShell(1, "itemMint")
 				expect(shell).to.be.ok()
-				expect((shell :: any).unlockedSlots).never.to.equal(profile.Data.account.unlockedSlots)
-				expect(table.isfrozen((shell :: any).unlockedSlots)).to.equal(true)
-				expect((shell :: any).unlockedSlots[1]).to.equal(1)
-				expect(table.isfrozen(profile.Data.account.unlockedSlots)).to.equal(false)
+				expect((shell :: any).itemMint).never.to.equal(profile.Data.account.itemMint)
+				expect(table.isfrozen((shell :: any).itemMint)).to.equal(true)
+				expect((shell :: any).itemMint.nextUid).to.equal(1)
+				expect(table.isfrozen(profile.Data.account.itemMint)).to.equal(false)
 			end)
 
 			it("returns nil for an unloaded profile and for a missing account slice", function()
-				expect(PlayerDataService:_getAccountShell(404, "unlockedSlots")).to.equal(nil)
+				expect(PlayerDataService:_getAccountShell(404, "itemMint")).to.equal(nil)
 				seedSlotProfile(1, 100)
 				expect(PlayerDataService:_getAccountShell(1, "settings")).to.equal(nil)
 			end)
@@ -929,21 +878,22 @@ return function()
 					local profile = seedSlotProfile(1, 100)
 					local currency = CurrencyService:getCurrency(1)
 					expect(currency).to.be.ok()
-					expect((currency :: any).jaku).to.equal(100)
+					expect((currency :: any).coins).to.equal(100)
 					expect(currency :: any).never.to.equal(profile.Data.slots[1].currency)
 					expect(table.isfrozen(currency :: any)).to.equal(true)
 					expect(function()
-						(currency :: any).jaku = 999
+						(currency :: any).coins = 999
 					end).to.throw()
 				end
 			)
 		end)
 
 		-- =====================================================================
-		-- Dotted paths: `slots.2.currency` / `account.unlockedSlots`. Two semantics are load-bearing
+		-- Dotted paths: `slots.2.currency` / `account.itemMint`. Two semantics are load-bearing
 		-- and easy to get wrong, so they are pinned here: the slice invariant must hold on EVERY slot
 		-- (the validator is registered once, per PATTERN), and the StateSyncServerStore mirror is keyed by SLICE
 		-- NAME and holds the ACTIVE slot only — so a write aimed at a non-active slot must not mirror.
+		-- Cases that need a second slot are gated on MAX_SLOTS >= 2.
 		describe("slot-aware paths", function()
 			local USER_ID = 1
 
@@ -956,66 +906,62 @@ return function()
 					USER_ID,
 					PlayerDataPathUtils.forSlot("currency", 1),
 					function(currency: any)
-						currency.jaku += 50
+						currency.coins += 50
 						return true
 					end
 				)
 				expect(ok).to.equal(true)
-				expect((PlayerDataService:getProfile(USER_ID) :: any).slots[1].currency.jaku).to.equal(150)
+				expect((PlayerDataService:getProfile(USER_ID) :: any).slots[1].currency.coins).to.equal(150)
 			end)
 
-			it("keeps slots independent — writing slot 1 does not touch slot 2", function()
+			itMultiSlot("keeps slots independent — writing slot 1 does not touch slot 2", function()
 				PlayerDataService:mutate(USER_ID, PlayerDataPathUtils.forSlot("currency", 1), function(currency: any)
-					currency.jaku = 777
+					currency.coins = 777
 					return true
 				end)
-				expect((PlayerDataService:getProfile(USER_ID) :: any).slots[2].currency.jaku).to.equal(100)
+				expect((PlayerDataService:getProfile(USER_ID) :: any).slots[2].currency.coins).to.equal(100)
 			end)
 
-			it("enforces the slice invariant on a NON-first slot", function()
+			itMultiSlot("enforces the slice invariant on a NON-first slot", function()
 				local ok = PlayerDataService:mutate(
 					USER_ID,
-					PlayerDataPathUtils.forSlot("currency", 3),
+					PlayerDataPathUtils.forSlot("currency", 2),
 					function(currency: any)
-						currency.jaku = -1
+						currency.coins = -1
 						return true
 					end
 				)
 				expect(ok).to.equal(false)
-				expect((PlayerDataService:getProfile(USER_ID) :: any).slots[3].currency.jaku).to.equal(100)
+				expect((PlayerDataService:getProfile(USER_ID) :: any).slots[2].currency.coins).to.equal(100)
 			end)
 
 			it("mirrors a write to the ACTIVE slot into StateSyncServerStore", function()
 				PlayerDataService:mutate(USER_ID, PlayerDataPathUtils.forSlot("currency", 1), function(currency: any)
-					currency.jaku = 500
+					currency.coins = 500
 					return true
 				end)
-				expect((StateSyncServerStore.snapshot("currency")[USER_ID] :: any).jaku).to.equal(500)
+				expect((StateSyncServerStore.snapshot("currency")[USER_ID] :: any).coins).to.equal(500)
 			end)
 
-			it("does NOT mirror a write to an INACTIVE slot", function()
+			itMultiSlot("does NOT mirror a write to an INACTIVE slot", function()
 				-- The active slot is 1; the atom must keep showing slot 1's value.
-				local before = (StateSyncServerStore.snapshot("currency")[USER_ID] :: any).jaku
+				local before = (StateSyncServerStore.snapshot("currency")[USER_ID] :: any).coins
 				PlayerDataService:mutate(USER_ID, PlayerDataPathUtils.forSlot("currency", 2), function(currency: any)
-					currency.jaku = 4242
+					currency.coins = 4242
 					return true
 				end)
-				expect((StateSyncServerStore.snapshot("currency")[USER_ID] :: any).jaku).to.equal(before)
+				expect((StateSyncServerStore.snapshot("currency")[USER_ID] :: any).coins).to.equal(before)
 				-- ...while the write itself DID land on slot 2.
-				expect((PlayerDataService:getProfile(USER_ID) :: any).slots[2].currency.jaku).to.equal(4242)
+				expect((PlayerDataService:getProfile(USER_ID) :: any).slots[2].currency.coins).to.equal(4242)
 			end)
 
 			it("mutates an account slice", function()
-				local ok = PlayerDataService:mutate(
-					USER_ID,
-					PlayerDataPathUtils.forAccount("unlockedSlots"),
-					function(unlocked: any)
-						table.insert(unlocked, 2)
-						return true
-					end
-				)
+				local ok = PlayerDataService:mutate(USER_ID, ITEM_MINT_PATH, function(mint: any)
+					mint.nextUid += 1
+					return true
+				end)
 				expect(ok).to.equal(true)
-				expect(#(PlayerDataService:getProfile(USER_ID) :: any).account.unlockedSlots).to.equal(2)
+				expect((PlayerDataService:getProfile(USER_ID) :: any).account.itemMint.nextUid).to.equal(2)
 			end)
 
 			it("returns the active slot", function()
@@ -1041,53 +987,53 @@ return function()
 						userId = USER_ID,
 						path = PlayerDataPathUtils.forSlot("currency", 1),
 						mutator = function(currency: any)
-							currency.jaku = 999
+							currency.coins = 999
 							return true
 						end,
 					},
 					{
 						userId = USER_ID,
-						path = PlayerDataPathUtils.forAccount("unlockedSlots"),
+						path = ITEM_MINT_PATH,
 						mutator = function()
 							return false -- abort the whole transaction
 						end,
 					},
 				})
 				expect(result).to.equal(false)
-				expect((PlayerDataService:getProfile(USER_ID) :: any).slots[1].currency.jaku).to.never.equal(999)
+				expect((PlayerDataService:getProfile(USER_ID) :: any).slots[1].currency.coins).to.never.equal(999)
 			end)
 
-			it("rolls back a transaction op on a NON-active slot (rollback re-resolves the path)", function()
+			itMultiSlot("rolls back a transaction op on a NON-active slot (rollback re-resolves the path)", function()
 				local profile = profiles[USER_ID]
 				local ok = PlayerDataService:transaction({
 					{
 						userId = USER_ID,
 						path = PlayerDataPathUtils.forSlot("currency", 2),
 						mutator = function(currency: any)
-							currency.jaku = 1
+							currency.coins = 1
 							return true
 						end,
 					},
 					{
 						userId = USER_ID,
-						path = PlayerDataPathUtils.forSlot("currency", 3),
+						path = PlayerDataPathUtils.forSlot("currency", 1),
 						mutator = function()
 							return false
 						end,
 					},
 				})
 				expect(ok).to.equal(false)
-				expect(profile.Data.slots[2].currency.jaku).to.equal(100)
-				expect(profile.Data.slots[3].currency.jaku).to.equal(100)
+				expect(profile.Data.slots[2].currency.coins).to.equal(100)
+				expect(profile.Data.slots[1].currency.coins).to.equal(100)
 			end)
 
-			it("mirrors an ACTIVE-slot transaction op but not an inactive-slot one", function()
+			itMultiSlot("mirrors an ACTIVE-slot transaction op but not an inactive-slot one", function()
 				local ok = PlayerDataService:transaction({
 					{
 						userId = USER_ID,
 						path = PlayerDataPathUtils.forSlot("currency", 1),
 						mutator = function(currency: any)
-							currency.jaku = 300
+							currency.coins = 300
 							return true
 						end,
 					},
@@ -1095,14 +1041,14 @@ return function()
 						userId = USER_ID,
 						path = PlayerDataPathUtils.forSlot("currency", 2),
 						mutator = function(currency: any)
-							currency.jaku = 900
+							currency.coins = 900
 							return true
 						end,
 					},
 				})
 				expect(ok).to.equal(true)
 				-- Both ops committed; only the active slot's value reached the atom.
-				expect((StateSyncServerStore.snapshot("currency")[USER_ID] :: any).jaku).to.equal(300)
+				expect((StateSyncServerStore.snapshot("currency")[USER_ID] :: any).coins).to.equal(300)
 			end)
 		end)
 
@@ -1110,19 +1056,21 @@ return function()
 		-- The active slot is a TABLE (`slotState = { active = n }`), not a bare number, because mutate()
 		-- hands the mutator the VALUE at the path and expects IN-PLACE mutation — a number cannot be
 		-- mutated by reference, so a scalar path is read-only through the data layer. These tests are the
-		-- proof: they would be impossible to write against a bare `activeSlot: number`.
+		-- proof: they would be impossible to write against a bare `activeSlot: number`. Switching needs a
+		-- second slot, so those cases are gated on MAX_SLOTS >= 2.
 		describe("slotState", function()
 			local USER_ID = 1
-			-- makeSlotData seeds every NON-active slot with the registered template default (jaku = 100)
-			-- and stamps the value under test into slot 1 — so 555 vs 100 tells the two slots apart.
-			local SLOT_1_JAKU = 555
-			local SLOT_2_JAKU = 100
+			-- makeSlotData seeds every NON-active slot (when MAX_SLOTS >= 2) with the registered template
+			-- default (coins = 100) and stamps the value under test into slot 1 — so 555 vs 100 tells the
+			-- two slots apart.
+			local SLOT_1_COINS = 555
+			local SLOT_2_COINS = 100
 
 			beforeEach(function()
-				seedSlotProfile(USER_ID, SLOT_1_JAKU)
+				seedSlotProfile(USER_ID, SLOT_1_COINS)
 			end)
 
-			it("the active slot is WRITABLE through mutate (a scalar path is not)", function()
+			itMultiSlot("the active slot is WRITABLE through mutate (a scalar path is not)", function()
 				local ok = PlayerDataService:mutate(USER_ID, "slotState", function(slotState: any)
 					slotState.active = 2
 					return true
@@ -1131,8 +1079,8 @@ return function()
 				expect(PlayerDataService:getActiveSlot(USER_ID)).to.equal(2)
 			end)
 
-			it("changing the active slot changes which slot a slice read resolves to", function()
-				expect(CurrencyService:getCurrencyAmount(USER_ID, "jaku")).to.equal(SLOT_1_JAKU)
+			itMultiSlot("changing the active slot changes which slot a slice read resolves to", function()
+				expect(CurrencyService:getCurrencyAmount(USER_ID, "coins")).to.equal(SLOT_1_COINS)
 
 				PlayerDataService:mutate(USER_ID, "slotState", function(slotState: any)
 					slotState.active = 2
@@ -1140,33 +1088,33 @@ return function()
 				end)
 
 				-- PlayerDataSliceSystem resolves the active slot at call time, so currency now reads slot 2's value.
-				expect(CurrencyService:getCurrencyAmount(USER_ID, "jaku")).to.equal(SLOT_2_JAKU)
+				expect(CurrencyService:getCurrencyAmount(USER_ID, "coins")).to.equal(SLOT_2_COINS)
 			end)
 
-			it("moves the mirror gate: after a switch, slot 2's writes mirror and slot 1's do not", function()
+			itMultiSlot("moves the mirror gate: after a switch, slot 2's writes mirror and slot 1's do not", function()
 				PlayerDataService:mutate(USER_ID, "slotState", function(slotState: any)
 					slotState.active = 2
 					return true
 				end)
 
 				PlayerDataService:mutate(USER_ID, PlayerDataPathUtils.forSlot("currency", 2), function(currency: any)
-					currency.jaku = 4242
+					currency.coins = 4242
 					return true
 				end)
-				expect((StateSyncServerStore.snapshot("currency")[USER_ID] :: any).jaku).to.equal(4242)
+				expect((StateSyncServerStore.snapshot("currency")[USER_ID] :: any).coins).to.equal(4242)
 
 				-- Slot 1 is now the INACTIVE slot: its write commits but must not reach the atom.
 				PlayerDataService:mutate(USER_ID, PlayerDataPathUtils.forSlot("currency", 1), function(currency: any)
-					currency.jaku = 1
+					currency.coins = 1
 					return true
 				end)
-				expect((StateSyncServerStore.snapshot("currency")[USER_ID] :: any).jaku).to.equal(4242)
-				expect((PlayerDataService:getProfile(USER_ID) :: any).slots[1].currency.jaku).to.equal(1)
+				expect((StateSyncServerStore.snapshot("currency")[USER_ID] :: any).coins).to.equal(4242)
+				expect((PlayerDataService:getProfile(USER_ID) :: any).slots[1].currency.coins).to.equal(1)
 			end)
 
 			-- slotState is registered by the core skeleton (PlayerDataConstants.registerRootPath), so its
-			-- invariant is enforced by the DATA LAYER — not by SlotService:switchSlot's pre-flight guards.
-			-- These write the bare path DIRECTLY, bypassing SlotService entirely: an out-of-range `active`
+			-- invariant is enforced by the DATA LAYER — not by any slot-switch flow's pre-flight guards.
+			-- These write the bare path DIRECTLY, bypassing any such flow entirely: an out-of-range `active`
 			-- must be rejected and rolled back here, because the very next StateSyncServerStore.sync would otherwise
 			-- index `profile.slots[active]` (nil) inside the locked commit region.
 			describe("data-layer validation", function()
@@ -1179,10 +1127,10 @@ return function()
 					-- Rolled back: the stored value is untouched, so getActiveSlot still resolves a real slot.
 					expect(PlayerDataService:getActiveSlot(USER_ID)).to.equal(1)
 					-- And the mirror still shows slot 1's currency (the rejected write never reached sync).
-					expect((StateSyncServerStore.snapshot("currency")[USER_ID] :: any).jaku).to.equal(SLOT_1_JAKU)
+					expect((StateSyncServerStore.snapshot("currency")[USER_ID] :: any).coins).to.equal(SLOT_1_COINS)
 				end
 
-				it("accepts an in-range slot", function()
+				itMultiSlot("accepts an in-range slot", function()
 					local ok = PlayerDataService:mutate(USER_ID, "slotState", function(slotState: any)
 						slotState.active = 2
 						return true
@@ -1207,7 +1155,7 @@ return function()
 					expectRejected("2")
 				end)
 
-				-- The epoch guards Task 2's staleness check, so the data layer rejects a shape that would
+				-- The epoch guards transaction()'s stale-op check, so the data layer rejects a shape that would
 				-- make that comparison meaningless — through mutate() as well as a raw transaction op.
 				it("rejects a non-integer epoch", function()
 					local ok = PlayerDataService:mutate(USER_ID, "slotState", function(slotState: any)
@@ -1227,7 +1175,7 @@ return function()
 					expect(PlayerDataService:getSlotEpoch(USER_ID)).to.equal(1)
 				end)
 
-				it("accepts a bumped epoch", function()
+				itMultiSlot("accepts a bumped epoch", function()
 					local ok = PlayerDataService:mutate(USER_ID, "slotState", function(slotState: any)
 						slotState.active = 2
 						slotState.epoch += 1
@@ -1262,7 +1210,7 @@ return function()
 						userId = 1,
 						path = CURRENCY_PATH,
 						mutator = function(c: any)
-							c.jaku -= 100
+							c.coins -= 100
 							return true
 						end,
 					},
@@ -1270,14 +1218,14 @@ return function()
 						userId = 1,
 						path = INVENTORY_PATH,
 						mutator = function(inv: any)
-							-- "rusted-saw" is a weapon (unique, not stackable) so it needs a uid.
-							table.insert(inv.items, { itemType = "rusted-saw", uid = "tx-1" })
+							-- "wrench" is a tool with no stackMax (unique, not stackable) so it needs a uid.
+							table.insert(inv.items, { itemType = "wrench", uid = "tx-1" })
 							return true
 						end,
 					},
 				})
 				expect(ok).to.equal(true)
-				expect(activeSlotOf(profile).currency.jaku).to.equal(0)
+				expect(activeSlotOf(profile).currency.coins).to.equal(0)
 				expect(#activeSlotOf(profile).inventory.items).to.equal(1)
 			end)
 
@@ -1286,7 +1234,7 @@ return function()
 				-- against seeded profiles. This is the typed alternative to raw operation tables.
 				local seller = seed(1, 0)
 				local buyer = seed(2, 500)
-				table.insert(activeSlotOf(seller).inventory.items, { itemType = "rusted-saw", uid = "w-1" })
+				table.insert(activeSlotOf(seller).inventory.items, { itemType = "wrench", uid = "w-1" })
 
 				local ok = PlayerDataService:transaction({
 					InventoryService:inventoryOp(1, function(inv)
@@ -1294,27 +1242,27 @@ return function()
 						return true
 					end),
 					CurrencyService:currencyOp(1, function(c)
-						c.jaku += 500
+						c.coins += 500
 						return true
 					end),
 					InventoryService:inventoryOp(2, function(inv)
-						table.insert(inv.items, { itemType = "rusted-saw", uid = "w-1" })
+						table.insert(inv.items, { itemType = "wrench", uid = "w-1" })
 						return true
 					end),
 					CurrencyService:currencyOp(2, function(c)
-						if c.jaku < 500 then
+						if c.coins < 500 then
 							return false
 						end
-						c.jaku -= 500
+						c.coins -= 500
 						return true
 					end),
 				})
 
 				expect(ok).to.equal(true)
-				expect(activeSlotOf(seller).currency.jaku).to.equal(500)
+				expect(activeSlotOf(seller).currency.coins).to.equal(500)
 				expect(#activeSlotOf(seller).inventory.items).to.equal(0)
-				expect(activeSlotOf(buyer).currency.jaku).to.equal(0)
-				expect(activeSlotOf(buyer).inventory.items[1].itemType).to.equal("rusted-saw")
+				expect(activeSlotOf(buyer).currency.coins).to.equal(0)
+				expect(activeSlotOf(buyer).inventory.items[1].itemType).to.equal("wrench")
 			end)
 
 			it("commits a multi-user trade atomically", function()
@@ -1325,7 +1273,7 @@ return function()
 						userId = 1,
 						path = CURRENCY_PATH,
 						mutator = function(c: any)
-							c.jaku += 500
+							c.coins += 500
 							return true
 						end,
 					},
@@ -1333,14 +1281,14 @@ return function()
 						userId = 2,
 						path = CURRENCY_PATH,
 						mutator = function(c: any)
-							c.jaku -= 500
+							c.coins -= 500
 							return true
 						end,
 					},
 				})
 				expect(ok).to.equal(true)
-				expect(activeSlotOf(seller).currency.jaku).to.equal(500)
-				expect(activeSlotOf(buyer).currency.jaku).to.equal(0)
+				expect(activeSlotOf(seller).currency.coins).to.equal(500)
+				expect(activeSlotOf(buyer).currency.coins).to.equal(0)
 			end)
 
 			it(
@@ -1358,7 +1306,7 @@ return function()
 							userId = 1,
 							path = CURRENCY_PATH,
 							mutator = function(c: any)
-								c.jaku += 500
+								c.coins += 500
 								return true
 							end,
 						},
@@ -1366,14 +1314,14 @@ return function()
 							userId = 2,
 							path = CURRENCY_PATH,
 							mutator = function(c: any)
-								c.jaku -= 500
+								c.coins -= 500
 								return true
 							end,
 						},
 					})
 
-					expect(StateSyncServerStore.currencies()[1].jaku).to.equal(500)
-					expect(StateSyncServerStore.currencies()[2].jaku).to.equal(0)
+					expect(StateSyncServerStore.currencies()[1].coins).to.equal(500)
+					expect(StateSyncServerStore.currencies()[2].coins).to.equal(0)
 					-- Neither op touched "inventory" for either user, so both stay untouched.
 					expect(StateSyncServerStore.inventories()[1]).to.equal(seller1InventoryBefore)
 					expect(StateSyncServerStore.inventories()[2]).to.equal(buyer2InventoryBefore)
@@ -1388,7 +1336,7 @@ return function()
 						userId = 1,
 						path = CURRENCY_PATH,
 						mutator = function(c: any)
-							c.jaku = 0
+							c.coins = 0
 							return true
 						end,
 					},
@@ -1396,14 +1344,14 @@ return function()
 						userId = 2,
 						path = CURRENCY_PATH,
 						mutator = function(c: any)
-							c.jaku = 0
+							c.coins = 0
 							return false -- abort the whole transaction
 						end,
 					},
 				})
 				expect(ok).to.equal(false)
-				expect(activeSlotOf(a).currency.jaku).to.equal(100)
-				expect(activeSlotOf(b).currency.jaku).to.equal(50)
+				expect(activeSlotOf(a).currency.coins).to.equal(100)
+				expect(activeSlotOf(b).currency.coins).to.equal(50)
 			end)
 
 			it("rolls back when a mutator errors", function()
@@ -1413,7 +1361,7 @@ return function()
 						userId = 1,
 						path = CURRENCY_PATH,
 						mutator = function(c: any)
-							c.jaku = 0
+							c.coins = 0
 							return true
 						end,
 					},
@@ -1426,7 +1374,7 @@ return function()
 					},
 				})
 				expect(ok).to.equal(false)
-				expect(activeSlotOf(profile).currency.jaku).to.equal(100)
+				expect(activeSlotOf(profile).currency.coins).to.equal(100)
 			end)
 
 			it("rolls back when a mutator yields", function()
@@ -1437,13 +1385,13 @@ return function()
 						path = CURRENCY_PATH,
 						mutator = function(c: any)
 							task.wait() -- contract violation: mutators must be synchronous
-							c.jaku = 0
+							c.coins = 0
 							return true
 						end,
 					},
 				})
 				expect(ok).to.equal(false)
-				expect(activeSlotOf(profile).currency.jaku).to.equal(100)
+				expect(activeSlotOf(profile).currency.coins).to.equal(100)
 			end)
 
 			it("returns false and leaves data untouched when a profile is not loaded", function()
@@ -1453,7 +1401,7 @@ return function()
 						userId = 1,
 						path = CURRENCY_PATH,
 						mutator = function(c: any)
-							c.jaku = 0
+							c.coins = 0
 							return true
 						end,
 					},
@@ -1461,13 +1409,13 @@ return function()
 						userId = 999, -- not loaded
 						path = CURRENCY_PATH,
 						mutator = function(c: any)
-							c.jaku = 0
+							c.coins = 0
 							return true
 						end,
 					},
 				})
 				expect(ok).to.equal(false)
-				expect(activeSlotOf(profile).currency.jaku).to.equal(100)
+				expect(activeSlotOf(profile).currency.coins).to.equal(100)
 			end)
 
 			it("does NOT leave a profile locked after a not-loaded bail (regression)", function()
@@ -1491,11 +1439,11 @@ return function()
 				})
 				-- User 1 must still be mutable — it was never locked.
 				local ok = PlayerDataService:mutate(1, CURRENCY_PATH, function(c: any)
-					c.jaku = 7
+					c.coins = 7
 					return true
 				end)
 				expect(ok).to.equal(true)
-				expect(activeSlotOf(profile).currency.jaku).to.equal(7)
+				expect(activeSlotOf(profile).currency.coins).to.equal(7)
 			end)
 
 			it("locks the profile against re-entrant mutate() during the transaction", function()
@@ -1509,17 +1457,17 @@ return function()
 							-- The profile is locked for the lifetime of the transaction,
 							-- so a nested mutate() on the same profile must be refused.
 							nestedResult = PlayerDataService:mutate(1, CURRENCY_PATH, function(cc: any)
-								cc.jaku = 999
+								cc.coins = 999
 								return true
 							end)
-							c.jaku = 5
+							c.coins = 5
 							return true
 						end,
 					},
 				})
 				expect(ok).to.equal(true)
 				expect(nestedResult).to.equal(false)
-				expect(activeSlotOf(profile).currency.jaku).to.equal(5)
+				expect(activeSlotOf(profile).currency.coins).to.equal(5)
 			end)
 
 			it("returns true for an empty operations list", function()
@@ -1556,11 +1504,11 @@ return function()
 				end
 				-- The profile was never locked — it must still be mutable.
 				local ok = PlayerDataService:mutate(1, CURRENCY_PATH, function(c: any)
-					c.jaku = 7
+					c.coins = 7
 					return true
 				end)
 				expect(ok).to.equal(true)
-				expect(activeSlotOf(profile).currency.jaku).to.equal(7)
+				expect(activeSlotOf(profile).currency.coins).to.equal(7)
 			end)
 
 			it("keeps a user mutable on rejoin after a mid-transaction session teardown", function()
@@ -1578,7 +1526,7 @@ return function()
 						mutator = function(c: any)
 							PlayerDataService:_cleanupPlayer(1)
 							sessionGoneDuring = PlayerDataService:getState().sessions["1"] == nil
-							c.jaku = 1
+							c.coins = 1
 							return true
 						end,
 					},
@@ -1587,11 +1535,11 @@ return function()
 				-- Re-seed the same userId (a rejoin): the session must accept mutations again.
 				local profile = seed(1, 50)
 				local ok = PlayerDataService:mutate(1, CURRENCY_PATH, function(c: any)
-					c.jaku = 9
+					c.coins = 9
 					return true
 				end)
 				expect(ok).to.equal(true)
-				expect(activeSlotOf(profile).currency.jaku).to.equal(9)
+				expect(activeSlotOf(profile).currency.coins).to.equal(9)
 			end)
 
 			it(
@@ -1608,7 +1556,7 @@ return function()
 							userId = 1,
 							path = CURRENCY_PATH,
 							mutator = function(c: any)
-								c.jaku = 1
+								c.coins = 1
 								PlayerDataService:_cleanupPlayer(1) -- player leaves mid-commit
 								return true
 							end,
@@ -1635,7 +1583,7 @@ return function()
 						userId = 1,
 						path = CURRENCY_PATH,
 						mutator = function(c: any)
-							c.jaku = 0
+							c.coins = 0
 							return true
 						end,
 					},
@@ -1651,13 +1599,13 @@ return function()
 				expect(ok).to.equal(false)
 				expect(result.committed).to.equal(false)
 				-- Refused in side-effect-free validation: nothing was applied...
-				expect(activeSlotOf(profile).currency.jaku).to.equal(100)
+				expect(activeSlotOf(profile).currency.coins).to.equal(100)
 				-- ...no key was created for the missing path (the rollback snapshot cannot
 				-- represent "path absent", so creation must be refused up front)...
 				expect(profile.Data.quests).to.equal(nil)
 				-- ...and the profile was never locked.
 				local mutateOk = PlayerDataService:mutate(1, CURRENCY_PATH, function(c: any)
-					c.jaku = 7
+					c.coins = 7
 					return true
 				end)
 				expect(mutateOk).to.equal(true)
@@ -1681,7 +1629,7 @@ return function()
 				expect(result.committed).to.equal(false)
 				-- Never locked: a follow-up mutate for the same user still works.
 				local mutateOk = PlayerDataService:mutate(1, CURRENCY_PATH, function(c: any)
-					c.jaku = 7
+					c.coins = 7
 					return true
 				end)
 				expect(mutateOk).to.equal(true)
@@ -1695,7 +1643,7 @@ return function()
 						userId = 1,
 						path = CURRENCY_PATH,
 						mutator = function(c: any)
-							c.jaku = 0
+							c.coins = 0
 							return true
 						end,
 					},
@@ -1703,7 +1651,7 @@ return function()
 						userId = 2,
 						path = CURRENCY_PATH,
 						mutator = function(c: any)
-							c.jaku = 0
+							c.coins = 0
 							-- Simulate ProfileStore auto-saving this profile mid-transaction. The seam
 							-- wires the same OnSave abort handler as a live session, so this flips the
 							-- abort flag; the post-mutator check must then roll back EVERY affected
@@ -1715,11 +1663,11 @@ return function()
 				})
 				expect(ok).to.equal(false)
 				expect(result.committed).to.equal(false)
-				expect(activeSlotOf(a).currency.jaku).to.equal(100)
-				expect(activeSlotOf(b).currency.jaku).to.equal(50)
+				expect(activeSlotOf(a).currency.coins).to.equal(100)
+				expect(activeSlotOf(b).currency.coins).to.equal(50)
 				-- The abort path released both locks — the profiles are mutable again.
 				expect(PlayerDataService:mutate(1, CURRENCY_PATH, function(c: any)
-					c.jaku = 1
+					c.coins = 1
 					return true
 				end)).to.equal(true)
 			end)
@@ -1731,7 +1679,7 @@ return function()
 						userId = 1,
 						path = CURRENCY_PATH,
 						mutator = function(c: any)
-							c.jaku = 50
+							c.coins = 50
 							return true
 						end,
 					},
@@ -1742,7 +1690,7 @@ return function()
 				expect(result.persisted).to.equal(false)
 				expect(#result.failedUserIds).to.equal(0)
 				-- The mutation is applied in memory...
-				expect(activeSlotOf(profile).currency.jaku).to.equal(50)
+				expect(activeSlotOf(profile).currency.coins).to.equal(50)
 				-- ...but no forced save was performed (the whole point of #5).
 				expect(profile:_getSaveCalls()).to.equal(0)
 			end)
@@ -1754,7 +1702,7 @@ return function()
 						userId = 1,
 						path = CURRENCY_PATH,
 						mutator = function(c: any)
-							c.jaku = 50
+							c.coins = 50
 							return true
 						end,
 					},
@@ -1783,12 +1731,12 @@ return function()
 									userId = 1,
 									path = CURRENCY_PATH,
 									mutator = function(cc: any)
-										cc.jaku = 999
+										cc.coins = 999
 										return true
 									end,
 								},
 							})
-							c.jaku = 5
+							c.coins = 5
 							return true
 						end,
 					},
@@ -1797,7 +1745,7 @@ return function()
 				expect(nestedOk).to.equal(false)
 				expect(nestedResult.committed).to.equal(false)
 				-- Only the outer mutation applied; the refused nested call changed nothing.
-				expect(activeSlotOf(profile).currency.jaku).to.equal(5)
+				expect(activeSlotOf(profile).currency.coins).to.equal(5)
 			end)
 
 			it("rolls back and fails when a profile is inactive at the commit gate", function()
@@ -1809,7 +1757,7 @@ return function()
 						userId = 1,
 						path = CURRENCY_PATH,
 						mutator = function(c: any)
-							c.jaku = 0
+							c.coins = 0
 							return true
 						end,
 					},
@@ -1817,7 +1765,7 @@ return function()
 				expect(ok).to.equal(false)
 				expect(result.committed).to.equal(false)
 				-- Rolled back from the in-memory snapshot: the original value is restored.
-				expect(activeSlotOf(profile).currency.jaku).to.equal(100)
+				expect(activeSlotOf(profile).currency.coins).to.equal(100)
 			end)
 
 			it("commits in memory but reports failedUserIds when a persist save keeps failing", function()
@@ -1829,7 +1777,7 @@ return function()
 						userId = 1,
 						path = CURRENCY_PATH,
 						mutator = function(c: any)
-							c.jaku = 40
+							c.coins = 40
 							return true
 						end,
 					},
@@ -1840,7 +1788,7 @@ return function()
 				expect(#result.failedUserIds).to.equal(1)
 				expect(result.failedUserIds[1]).to.equal(1)
 				-- The mutation is present in memory even though the durable save failed.
-				expect(activeSlotOf(profile).currency.jaku).to.equal(40)
+				expect(activeSlotOf(profile).currency.coins).to.equal(40)
 			end)
 
 			it("treats a dispatched-but-unconfirmed save as not persisted (no OnAfterSave)", function()
@@ -1854,7 +1802,7 @@ return function()
 						userId = 1,
 						path = CURRENCY_PATH,
 						mutator = function(c: any)
-							c.jaku = 40
+							c.coins = 40
 							return true
 						end,
 					},
@@ -1868,7 +1816,7 @@ return function()
 				-- Every attempt dispatched a save; none was ever confirmed.
 				expect(profile:_getSaveCalls()).to.equal(3)
 				-- The commit itself stands (in memory; the normal auto-save retries the write).
-				expect(activeSlotOf(profile).currency.jaku).to.equal(40)
+				expect(activeSlotOf(profile).currency.coins).to.equal(40)
 			end)
 
 			it("rolls back a scalar-path operation without leaking the transaction lock", function()
@@ -1886,7 +1834,7 @@ return function()
 						userId = 1,
 						path = CURRENCY_PATH,
 						mutator = function(c: any)
-							c.jaku = 0
+							c.coins = 0
 							return true
 						end,
 					},
@@ -1901,11 +1849,11 @@ return function()
 				expect(ok).to.equal(false)
 				expect(result.committed).to.equal(false)
 				-- Rolled back, scalar path included.
-				expect(activeSlotOf(profile).currency.jaku).to.equal(100)
+				expect(activeSlotOf(profile).currency.coins).to.equal(100)
 				expect(profile.Data._schemaVersion).to.equal(3)
 				-- And crucially: the lock was released, not leaked.
 				expect(PlayerDataService:mutate(1, CURRENCY_PATH, function(c: any)
-					c.jaku = 7
+					c.coins = 7
 					return true
 				end)).to.equal(true)
 			end)
@@ -1921,7 +1869,7 @@ return function()
 						userId = 1,
 						path = CURRENCY_PATH,
 						mutator = function(c: any)
-							c.jaku = 55
+							c.coins = 55
 							return true
 						end,
 					},
@@ -1935,7 +1883,7 @@ return function()
 				})
 				expect(ok).to.equal(true)
 				expect(result.committed).to.equal(true)
-				expect(activeSlotOf(profile).currency.jaku).to.equal(55)
+				expect(activeSlotOf(profile).currency.coins).to.equal(55)
 				expect(profile.Data._schemaVersion).to.equal(3)
 			end)
 
@@ -1951,7 +1899,7 @@ return function()
 						userId = 1,
 						path = CURRENCY_PATH,
 						mutator = function(c: any)
-							c.jaku = 90
+							c.coins = 90
 							return true
 						end,
 					},
@@ -1959,7 +1907,7 @@ return function()
 						userId = 2,
 						path = CURRENCY_PATH,
 						mutator = function(c: any)
-							c.jaku = 60
+							c.coins = 60
 							return true
 						end,
 					},
@@ -1993,23 +1941,23 @@ return function()
 				it("commits an op minted under the CURRENT epoch", function()
 					local profile = seed(1, 100)
 					local op = CurrencyService:currencyOp(1, function(currency)
-						currency.jaku += 10
+						currency.coins += 10
 						return true
 					end)
 					expect(op.epoch).to.equal(profile.Data.slotState.epoch)
 
 					local committed = PlayerDataService:transaction({ op })
 					expect(committed).to.equal(true)
-					expect(activeSlotOf(profile).currency.jaku).to.equal(110)
+					expect(activeSlotOf(profile).currency.coins).to.equal(110)
 				end)
 
-				it("REJECTS an op minted before a slot switch, and writes NOTHING", function()
+				itMultiSlot("REJECTS an op minted before a slot switch, and writes NOTHING", function()
 					local profile = seed(1, 250)
-					local jakuBefore = activeSlotOf(profile).currency.jaku
+					local coinsBefore = activeSlotOf(profile).currency.coins
 
 					-- Mint against slot 1 (the trade begins)...
 					local op = CurrencyService:currencyOp(1, function(currency)
-						currency.jaku += 1000
+						currency.coins += 1000
 						return true
 					end)
 
@@ -2026,9 +1974,9 @@ return function()
 					expect(committed).to.equal(false)
 
 					-- The abandoned character (slot 1) must be untouched — that is the whole point.
-					expect(profile.Data.slots[1].currency.jaku).to.equal(jakuBefore)
+					expect(profile.Data.slots[1].currency.coins).to.equal(coinsBefore)
 					-- And the new character must not have received it either (still the template default).
-					expect(profile.Data.slots[2].currency.jaku).to.equal(100)
+					expect(profile.Data.slots[2].currency.coins).to.equal(100)
 					-- Refused BEFORE any lock was taken, so none can have leaked.
 					expect(PlayerDataService:isInTransaction(1)).to.equal(false)
 				end)
@@ -2038,11 +1986,11 @@ return function()
 					-- be worse than committing nothing.
 					local profile = seed(1, 100)
 					local freshOp = CurrencyService:currencyOp(1, function(currency)
-						currency.jaku += 5
+						currency.coins += 5
 						return true
 					end)
 					local staleOp = CurrencyService:currencyOp(1, function(currency)
-						currency.jaku += 5
+						currency.coins += 5
 						return true
 					end)
 					staleOp.epoch = 999 -- simulate an op minted under a long-gone epoch
@@ -2050,17 +1998,22 @@ return function()
 					local committed = PlayerDataService:transaction({ freshOp, staleOp })
 					expect(committed).to.equal(false)
 					-- The fresh op's mutator must not have run either.
-					expect(activeSlotOf(profile).currency.jaku).to.equal(100)
+					expect(activeSlotOf(profile).currency.coins).to.equal(100)
 					expect(PlayerDataService:isInTransaction(1)).to.equal(false)
 				end)
 
-				it("does NOT epoch-check an ACCOUNT op (a switch cannot invalidate account data)", function()
+				itMultiSlot("does NOT epoch-check an ACCOUNT op (a switch cannot invalidate account data)", function()
 					local profile = seed(1, 100)
-					local op = SlotService:unlockedSlotsOp(1, function(unlocked)
-						table.insert(unlocked, 2)
-						return true
-					end)
-					expect(op.epoch).to.never.be.ok()
+					-- The shape PlayerDataSliceSystem.registerAccount's `op` mints: the account path and NO
+					-- epoch stamp (account data is slot-independent).
+					local op = {
+						userId = 1,
+						path = ITEM_MINT_PATH,
+						mutator = function(mint: any)
+							mint.nextUid += 1
+							return true
+						end,
+					}
 
 					PlayerDataService:mutate(1, "slotState", function(slotState: any)
 						slotState.active = 2
@@ -2070,7 +2023,7 @@ return function()
 
 					-- Minted before the switch, but account-scoped, so it still commits.
 					expect(PlayerDataService:transaction({ op })).to.equal(true)
-					expect(profile.Data.account.unlockedSlots[2]).to.equal(2)
+					expect(profile.Data.account.itemMint.nextUid).to.equal(2)
 				end)
 
 				it("does not epoch-check a RAW op table (it carries no epoch)", function()
@@ -2081,7 +2034,7 @@ return function()
 						userId = 1,
 						path = CURRENCY_PATH,
 						mutator = function(c: any)
-							c.jaku += 1
+							c.coins += 1
 							return true
 						end,
 					}
@@ -2090,7 +2043,7 @@ return function()
 						return true
 					end)
 					expect(PlayerDataService:transaction({ op })).to.equal(true)
-					expect(activeSlotOf(profile).currency.jaku).to.equal(101)
+					expect(activeSlotOf(profile).currency.coins).to.equal(101)
 				end)
 			end)
 		end)
@@ -2142,10 +2095,10 @@ return function()
 				expect(profile.Data._schemaVersion).to.equal(PlayerDataMigrationSystem.CURRENT_VERSION)
 				expect(PlayerDataService:getState().sessions["1"]).to.be.ok()
 				-- The reactive projection is seeded at load, no separate handshake.
-				expect(StateSyncServerStore.currencies()[1].jaku).to.equal(100)
+				expect(StateSyncServerStore.currencies()[1].coins).to.equal(100)
 				-- And the session accepts writes.
 				expect(PlayerDataService:mutate(1, CURRENCY_PATH, function(c: any)
-					c.jaku = 1
+					c.coins = 1
 					return true
 				end)).to.equal(true)
 			end)
@@ -2200,7 +2153,7 @@ return function()
 				-- The newer data was restored from LastSavedData exactly as loaded — never
 				-- migrated, never stamped down.
 				expect(profile.Data._schemaVersion).to.equal(PlayerDataMigrationSystem.CURRENT_VERSION + 1)
-				expect(activeSlotOf(profile).currency.jaku).to.equal(100)
+				expect(activeSlotOf(profile).currency.coins).to.equal(100)
 			end)
 
 			it("kicks and leaves data untouched when a migration fails", function()
@@ -2218,7 +2171,7 @@ return function()
 				expect(PlayerDataService:getState().sessions["1"]).to.equal(nil)
 				-- Rolled back to exactly what was loaded, so nothing half-migrated can persist.
 				expect(profile.Data._schemaVersion).to.equal(0)
-				expect(activeSlotOf(profile).currency.jaku).to.equal(100)
+				expect(activeSlotOf(profile).currency.coins).to.equal(100)
 			end)
 
 			it("ends the session quietly when the player left during load", function()
@@ -2263,14 +2216,14 @@ return function()
 						userId = 1,
 						path = CURRENCY_PATH,
 						mutator = function(c: any)
-							c.jaku = 0
+							c.coins = 0
 							profile.OnSave:Fire() -- simulated auto-save mid-transaction
 							return true
 						end,
 					},
 				})
 				expect(ok).to.equal(false)
-				expect(activeSlotOf(profile).currency.jaku).to.equal(100)
+				expect(activeSlotOf(profile).currency.coins).to.equal(100)
 			end)
 		end)
 
@@ -2300,7 +2253,7 @@ return function()
 							-- Observed from INSIDE the locked region: this is exactly the state a slot
 							-- switch must refuse on.
 							observed = PlayerDataService:isInTransaction(USER_ID)
-							currency.jaku += 1
+							currency.coins += 1
 							return true
 						end,
 					},
@@ -2314,7 +2267,7 @@ return function()
 						userId = USER_ID,
 						path = CURRENCY_PATH,
 						mutator = function(currency: any)
-							currency.jaku += 1
+							currency.coins += 1
 							return true
 						end,
 					},

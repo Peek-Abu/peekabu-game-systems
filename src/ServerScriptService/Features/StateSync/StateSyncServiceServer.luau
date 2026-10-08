@@ -112,7 +112,8 @@ local StateSyncServiceServer: StateSyncServiceServer = {
 					getters[StateSyncConstants.key(slice, player.UserId)] =
 						StateSyncServerStore.getterFor(slice, player.UserId)
 				end
-				-- The public slice: one key per client, holding the players relevant to it (StateSyncPublicPlayerStore).
+				-- The public slice: one key per client, holding the players relevant to it (StateSyncPublicPlayerStore;
+				-- every present player by default).
 				getters[StateSyncConstants.publicKey(player.UserId)] =
 					StateSyncPublicPlayerStore.getterFor(player.UserId)
 				server.addSignalsToClient(player, getters)
@@ -129,12 +130,16 @@ local StateSyncServiceServer: StateSyncServiceServer = {
 			"Disconnect"
 		)
 
-		-- Stop tracking/replicating to a client once they leave. Routed through observePlayer like
-		-- the data layer; StateSyncServerStore.remove is handled by PlayerDataServiceServer's cleanup path.
+		-- Public-slice roster membership, and stop tracking/replicating to a client once they leave.
+		-- Routed through observePlayer like the data layer; StateSyncServerStore.remove is handled by
+		-- PlayerDataServiceServer's cleanup path.
 		janitor:Add(
 			Observers.observePlayer(function(player)
+				local userId = player.UserId
+				StateSyncPublicPlayerStore.join(userId)
 				return function()
 					server.removeClient(player)
+					StateSyncPublicPlayerStore.remove(userId)
 				end
 			end),
 			true

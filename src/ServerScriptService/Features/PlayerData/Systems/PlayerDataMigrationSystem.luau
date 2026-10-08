@@ -56,9 +56,9 @@ local BASELINE_VERSION = 1
 	Ordered migrations. `MIGRATIONS[v]` upgrades a v profile to v + 1.
 
 	Example (uncomment and adapt when you change the profile shape):
-		[1] = function(data) -- v1 -> v2: rename currency.jaku to currency.coins
-			data.currency.coins = data.currency.jaku
-			data.currency.jaku = nil
+		[1] = function(data) -- v1 -> v2: rename currency.gold to currency.coins
+			data.currency.coins = data.currency.gold
+			data.currency.gold = nil
 		end,
 ]=]
 local MIGRATIONS: { Migration } = {}

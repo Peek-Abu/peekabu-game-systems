@@ -61,19 +61,19 @@ return function()
 
 		beforeEach(function()
 			calls = {}
-			stored = { jaku = 0 }
+			stored = { coins = 0 }
 		end)
 
 		it("forwards the target's UserId, currency type, and amount to the service", function()
-			addCurrencyCommand(nil, fakePlayer, "jaku", 250)
+			addCurrencyCommand(nil, fakePlayer, "coins", 250)
 			expect(#calls).to.equal(1)
 			expect(calls[1].userId).to.equal(42)
-			expect(calls[1].currencyType).to.equal("jaku")
+			expect(calls[1].currencyType).to.equal("coins")
 			expect(calls[1].amount).to.equal(250)
 		end)
 
 		it("reports the amount added and the new total when the profile is loaded", function()
-			local message = addCurrencyCommand(nil, fakePlayer, "jaku", 250)
+			local message = addCurrencyCommand(nil, fakePlayer, "coins", 250)
 			expect(message:find("Added")).to.be.ok()
 			expect(message:find("250")).to.be.ok()
 			expect(message:find("TestPlayer")).to.be.ok()
@@ -81,13 +81,13 @@ return function()
 
 		it("reports a not-loaded failure when the profile isn't loaded", function()
 			stored = nil
-			local message = addCurrencyCommand(nil, fakePlayer, "jaku", 250)
+			local message = addCurrencyCommand(nil, fakePlayer, "coins", 250)
 			expect(message:find("Failed")).to.be.ok()
 		end)
 
 		it("reports the cap (nothing added) when the player is already at MAX_CURRENCY", function()
-			stored = { jaku = CurrencyConstants.MAX_CURRENCY }
-			local message = addCurrencyCommand(nil, fakePlayer, "jaku", 500)
+			stored = { coins = CurrencyConstants.MAX_CURRENCY }
+			local message = addCurrencyCommand(nil, fakePlayer, "coins", 500)
 			expect(message:find("cap")).to.be.ok()
 		end)
 	end)

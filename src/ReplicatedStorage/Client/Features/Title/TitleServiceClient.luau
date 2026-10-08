@@ -34,7 +34,7 @@ local TitleServiceClient: TitleServiceClient = {
 
 	--[=[
 		The local player's earned-title set (empty until the first sync — StateSyncClientStore.titles is
-		non-optional, defaulted to `{ earned = {} }`, matching CustomizationServiceClient:getEntitlements).
+		non-optional, defaulted to `{ earned = {} }`).
 		@return PlayerDataTypes.Titles
 	]=]
 	getEarned = function(_self)

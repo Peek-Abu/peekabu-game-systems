@@ -17,20 +17,20 @@ return function()
 
 	describe("setCurrency", function()
 		it("stores a per-user snapshot", function()
-			StateSyncServerStore.setCurrency(USER, { jaku = 100 })
-			expect(StateSyncServerStore.currencies()[USER].jaku).to.equal(100)
+			StateSyncServerStore.setCurrency(USER, { coins = 100 })
+			expect(StateSyncServerStore.currencies()[USER].coins).to.equal(100)
 		end)
 
 		it("deep-copies so later mutation of the source can't leak in", function()
-			local live = { jaku = 100 }
+			local live = { coins = 100 }
 			StateSyncServerStore.setCurrency(USER, live)
-			live.jaku = 999 -- mutate the source after storing
-			expect(StateSyncServerStore.currencies()[USER].jaku).to.equal(100)
+			live.coins = 999 -- mutate the source after storing
+			expect(StateSyncServerStore.currencies()[USER].coins).to.equal(100)
 		end)
 
 		it("replaces the per-user map immutably (new table identity)", function()
 			local before = StateSyncServerStore.currencies()
-			StateSyncServerStore.setCurrency(USER, { jaku = 1 })
+			StateSyncServerStore.setCurrency(USER, { coins = 1 })
 			expect(StateSyncServerStore.currencies()).never.to.equal(before)
 		end)
 	end)
@@ -49,30 +49,18 @@ return function()
 			StateSyncServerStore.syncFromProfile(USER, {
 				slotState = { active = 1, epoch = 1 },
 				account = {
-					unlockedSlots = { 1 },
 					itemMint = { nextUid = 1 },
-					entitlements = { cosmetics = {} },
 					titles = { earned = {} },
 				},
 				slots = {
 					{
-						currency = { jaku = 7 },
+						currency = { coins = 7 },
 						inventory = { items = { { itemType = "potion", quantity = 2 } } },
-						stats = { totalXp = 0, investments = {} },
-						equipment = { slots = {} },
-						appearance = {
-							cosmetics = {},
-							accessories = {},
-							body = {},
-							headType = "Uncovered",
-							surfaces = {},
-						},
-						bank = { items = {}, currency = {} },
 						equippedTitle = {},
 					},
 				},
 			})
-			expect(StateSyncServerStore.currencies()[USER].jaku).to.equal(7)
+			expect(StateSyncServerStore.currencies()[USER].coins).to.equal(7)
 			expect(StateSyncServerStore.inventories()[USER].items[1].itemType).to.equal("potion")
 		end)
 	end)
@@ -83,30 +71,18 @@ return function()
 			StateSyncServerStore.sync("currency", USER, {
 				slotState = { active = 1, epoch = 1 },
 				account = {
-					unlockedSlots = { 1 },
 					itemMint = { nextUid = 1 },
-					entitlements = { cosmetics = {} },
 					titles = { earned = {} },
 				},
 				slots = {
 					{
-						currency = { jaku = 12 },
+						currency = { coins = 12 },
 						inventory = { items = { { itemType = "potion", quantity = 2 } } },
-						stats = { totalXp = 0, investments = {} },
-						equipment = { slots = {} },
-						appearance = {
-							cosmetics = {},
-							accessories = {},
-							body = {},
-							headType = "Uncovered",
-							surfaces = {},
-						},
-						bank = { items = {}, currency = {} },
 						equippedTitle = {},
 					},
 				},
 			})
-			expect(StateSyncServerStore.currencies()[USER].jaku).to.equal(12)
+			expect(StateSyncServerStore.currencies()[USER].coins).to.equal(12)
 			-- The profile's inventory field is ignored — sync("currency", ...) never reads it.
 			expect(StateSyncServerStore.inventories()[USER].items[1].itemType).to.equal("shield")
 		end)
@@ -117,56 +93,36 @@ return function()
 			end).to.throw()
 		end)
 
+		-- sync() only projects the profile it is handed through the registry reader, so a hand-built
+		-- two-slot profile exercises the active-slot gate even while PlayerDataConstants.MAX_SLOTS = 1.
 		it("mirrors the ACTIVE slot's value and never an inactive slot's", function()
 			local profile = {
 				slotState = { active = 1, epoch = 1 },
 				account = {
-					unlockedSlots = { 1, 2 },
 					itemMint = { nextUid = 1 },
-					entitlements = { cosmetics = {} },
 					titles = { earned = {} },
 				},
 				slots = {
 					{
-						currency = { jaku = 7 },
+						currency = { coins = 7 },
 						inventory = { items = {} },
-						stats = { totalXp = 0, investments = {} },
-						equipment = { slots = {} },
-						appearance = {
-							cosmetics = {},
-							accessories = {},
-							body = {},
-							headType = "Uncovered",
-							surfaces = {},
-						},
-						bank = { items = {}, currency = {} },
 						equippedTitle = {},
 					},
 					{
-						currency = { jaku = 999 },
+						currency = { coins = 999 },
 						inventory = { items = {} },
-						stats = { totalXp = 0, investments = {} },
-						equipment = { slots = {} },
-						appearance = {
-							cosmetics = {},
-							accessories = {},
-							body = {},
-							headType = "Uncovered",
-							surfaces = {},
-						},
-						bank = { items = {}, currency = {} },
 						equippedTitle = {},
 					},
 				},
 			}
 
 			StateSyncServerStore.sync("currency", USER, profile)
-			expect(StateSyncServerStore.currencies()[USER].jaku).to.equal(7)
-			expect(StateSyncServerStore.currencies()[USER].jaku).to.never.equal(999)
+			expect(StateSyncServerStore.currencies()[USER].coins).to.equal(7)
+			expect(StateSyncServerStore.currencies()[USER].coins).to.never.equal(999)
 
 			profile.slotState.active = 2
 			StateSyncServerStore.sync("currency", USER, profile)
-			expect(StateSyncServerStore.currencies()[USER].jaku).to.equal(999)
+			expect(StateSyncServerStore.currencies()[USER].coins).to.equal(999)
 		end)
 	end)
 
@@ -174,6 +130,8 @@ return function()
 		it("is true for a registered slice", function()
 			expect(StateSyncServerStore.isSyncedSlice("currency")).to.equal(true)
 			expect(StateSyncServerStore.isSyncedSlice("inventory")).to.equal(true)
+			expect(StateSyncServerStore.isSyncedSlice("titles")).to.equal(true)
+			expect(StateSyncServerStore.isSyncedSlice("equippedTitle")).to.equal(true)
 		end)
 
 		it("is false for an unregistered path", function()
@@ -183,9 +141,9 @@ return function()
 
 	describe("getterFor", function()
 		it("returns a getter reading the user's slice snapshot", function()
-			StateSyncServerStore.setCurrency(USER, { jaku = 42 })
+			StateSyncServerStore.setCurrency(USER, { coins = 42 })
 			local getter = StateSyncServerStore.getterFor("currency", USER)
-			expect((getter() :: any).jaku).to.equal(42)
+			expect((getter() :: any).coins).to.equal(42)
 		end)
 
 		it("errors on an unknown slice", function()
@@ -197,7 +155,7 @@ return function()
 
 	describe("remove", function()
 		it("drops a user's mirrored currency and inventory", function()
-			StateSyncServerStore.setCurrency(USER, { jaku = 1 })
+			StateSyncServerStore.setCurrency(USER, { coins = 1 })
 			StateSyncServerStore.setInventory(USER, { items = { { itemType = "sword", quantity = 1 } } })
 			StateSyncServerStore.remove(USER)
 			expect(StateSyncServerStore.currencies()[USER]).to.equal(nil)

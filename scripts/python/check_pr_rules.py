@@ -8,8 +8,6 @@ Every rule here comes from a bug that actually reached review, not from a style 
   a comment at the site, which is exactly the sign-off the rule asks for.
 * **Commit trailers.** "Plain commit messages, no ``Co-Authored-By:`` / ``Claude-Session:``" is a
   stated rule with zero enforcement. One careless agent run puts it in the history permanently.
-* **Placeholder currencies.** ``gold``/``gems`` were the base's placeholders, replaced by Venture's
-  ``jaku``. They must not creep back via copy-paste.
 * **Asset-id scatter.** The old game kept animation ids in six-plus places (registry tables, two
   Animate forks, 445 ``Animation`` instances as tree data, hardcoded strings in ~75 scripts) — not
   by choice, but because nothing stopped it. Asset-id literals (``rbxassetid://N`` and the legacy
@@ -52,7 +50,6 @@ CAST = re.compile(r"::\s*\S")
 # `-- selene:` / `-- stylua:` are tool directives, not justifications.
 JUSTIFICATION = re.compile(r"--(?!\s*(?:selene|stylua):)\s*\S")
 BANNED_TRAILERS = ("Co-Authored-By:", "Claude-Session:")
-PLACEHOLDER_CURRENCY = re.compile(r"\b(?:gold|gems)\b")
 # An asset-id LITERAL: either form with actual digits. Digit-less doc mentions ("rbxassetid://N")
 # deliberately don't match — prose about the convention is not an id.
 ASSET_ID = re.compile(r"(?:rbxassetid://|roblox\.com/asset/\?id=)\d+")
@@ -260,12 +257,6 @@ def main() -> int:
                 warnings.append(
                     f"{path}:{line_no}: `::` cast with no comment on the line. The no-casts rule "
                     f"wants a justification at the site.\n        {text.strip()}"
-                )
-
-            if PLACEHOLDER_CURRENCY.search(text):
-                warnings.append(
-                    f"{path}:{line_no}: mentions a placeholder currency (gold/gems). "
-                    f"Venture's currency is `jaku`.\n        {text.strip()}"
                 )
 
     for message in run("log", "--format=%B", f"{base}..HEAD").splitlines():

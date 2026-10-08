@@ -6,8 +6,8 @@
 	`registerHandler`/`reconcile`/`counts`. Everything that needs suppression requires THIS module;
 	UIServiceClient drives `reconcile` off the scene stack.
 
-	**Everything else is a seam, not UI's job.** `blur` (a post-processing effect), `movement`,
-	`cameraState`, and `characterRotation` are declared in the SuppressionRecord so scenes can ASK for
+	**Everything else is a seam, not UI's job.** `blur` (a post-processing effect), `movement`
+	and `cameraState` are declared in the SuppressionRecord so scenes can ASK for
 	them, but this phase registers no handler for them — they're logged once and adopted the moment the
 	owning system (VFX/post-fx, Input, Camera) calls `registerHandler`, with zero change to any scene
 	or to this module. That is the "is this slottable?" answer, made concrete: UI declares intent,
