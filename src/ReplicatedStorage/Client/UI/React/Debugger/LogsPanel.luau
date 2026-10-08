@@ -18,9 +18,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
 local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
-local Logger = require(ReplicatedStorage.Shared.Modules.Logger)
-local DebuggerState = require(ReplicatedStorage.Client.State.DebuggerState)
-local theme = require(ReplicatedStorage.Client.UI.React.Debugger.theme)
+local Logger = require(ReplicatedStorage.Shared.Core.Logger)
+local DebuggerStore = require(ReplicatedStorage.Client.Features.Debugger.State.DebuggerStore)
+local DebuggerTheme = require(ReplicatedStorage.Client.UI.React.Debugger.DebuggerTheme)
 
 local e = React.createElement
 local useAtom = ReactCharm.useAtom
@@ -39,16 +39,16 @@ export type Props = {
 	@return React.ReactNode
 ]=]
 local function levelButton(level: string, order: number, enabled: boolean, onToggle: () -> ()): React.ReactNode
-	local color = theme.LEVEL_COLOR[level] or theme.TEXT
+	local color = DebuggerTheme.LEVEL_COLOR[level] or DebuggerTheme.TEXT
 	return e("TextButton", {
 		LayoutOrder = order,
 		Size = UDim2.new(0, 52, 1, 0),
-		BackgroundColor3 = if enabled then color else theme.PANEL_LIGHT,
+		BackgroundColor3 = if enabled then color else DebuggerTheme.PANEL_LIGHT,
 		BackgroundTransparency = if enabled then 0.15 else 0.5,
 		BorderSizePixel = 0,
 		Font = Enum.Font.Gotham,
 		TextSize = 10,
-		TextColor3 = if enabled then theme.PANEL else theme.MUTED,
+		TextColor3 = if enabled then DebuggerTheme.PANEL else DebuggerTheme.MUTED,
 		Text = level,
 		[React.Event.Activated] = onToggle,
 	}, {
@@ -62,8 +62,8 @@ end
 	@return React.ReactNode
 ]=]
 local function LogsPanel(props: Props): React.ReactNode
-	local context = useAtom(DebuggerState.context)
-	local snapshot = useAtom(DebuggerState.serverSnapshot)
+	local context = useAtom(DebuggerStore.context)
+	local snapshot = useAtom(DebuggerStore.serverSnapshot)
 	local enabledLevels, setEnabledLevels = React.useState(function()
 		local initial: { [string]: boolean } = {}
 		for _, level in Logger.getLevels() do
@@ -76,7 +76,7 @@ local function LogsPanel(props: Props): React.ReactNode
 	if context == "server" then
 		logs = if snapshot then snapshot.logs else {}
 	else
-		logs = DebuggerState.getClientLogs()
+		logs = DebuggerStore.getClientLogs()
 	end
 
 	-- Level toggle buttons.
@@ -103,15 +103,15 @@ local function LogsPanel(props: Props): React.ReactNode
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.fromScale(1, 0),
 		Size = UDim2.new(0, 52, 1, 0),
-		BackgroundColor3 = theme.BAD,
+		BackgroundColor3 = DebuggerTheme.BAD,
 		BackgroundTransparency = 0.2,
 		BorderSizePixel = 0,
 		Font = Enum.Font.GothamMedium,
 		TextSize = 11,
-		TextColor3 = theme.PANEL,
+		TextColor3 = DebuggerTheme.PANEL,
 		Text = "Clear",
 		[React.Event.Activated] = function()
-			DebuggerState.clearLogs(context)
+			DebuggerStore.clearLogs(context)
 		end,
 	}, {
 		corner = e("UICorner", { CornerRadius = UDim.new(0, 4) }),
@@ -126,13 +126,13 @@ local function LogsPanel(props: Props): React.ReactNode
 		local contextOn = props.logContextFilter == nil or entry.context == props.logContextFilter
 		if levelOn and contextOn then
 			rowOrder += 1
-			local color = theme.LEVEL_COLOR[entry.level] or theme.TEXT
+			local color = DebuggerTheme.LEVEL_COLOR[entry.level] or DebuggerTheme.TEXT
 			local contextTag = if entry.context ~= "" then `[{entry.context}] ` else ""
-			rows[`log-{i}`] = theme.line(`{entry.level} {contextTag}{entry.message}`, color, rowOrder)
+			rows[`log-{i}`] = DebuggerTheme.line(`{entry.level} {contextTag}{entry.message}`, color, rowOrder)
 		end
 	end
 	if rowOrder == 0 then
-		rows["empty"] = theme.line("(no matching log lines)", theme.MUTED, 0)
+		rows["empty"] = DebuggerTheme.line("(no matching log lines)", DebuggerTheme.MUTED, 0)
 	end
 
 	-- Optional context-filter chip.
@@ -141,11 +141,11 @@ local function LogsPanel(props: Props): React.ReactNode
 		chip = e("TextButton", {
 			LayoutOrder = 2,
 			Size = UDim2.new(1, 0, 0, 18),
-			BackgroundColor3 = theme.PANEL_LIGHT,
+			BackgroundColor3 = DebuggerTheme.PANEL_LIGHT,
 			BorderSizePixel = 0,
 			Font = Enum.Font.Code,
 			TextSize = 11,
-			TextColor3 = theme.ACCENT,
+			TextColor3 = DebuggerTheme.ACCENT,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			Text = `  filtering: {props.logContextFilter}   (✕ clear)`,
 			[React.Event.Activated] = props.onClearContextFilter,
@@ -178,7 +178,7 @@ local function LogsPanel(props: Props): React.ReactNode
 				CanvasSize = UDim2.new(0, 0, 0, 0),
 				AutomaticCanvasSize = Enum.AutomaticSize.Y,
 				ScrollBarThickness = 6,
-				ScrollBarImageColor3 = theme.MUTED,
+				ScrollBarImageColor3 = DebuggerTheme.MUTED,
 			},
 			(function()
 				rows.layout = e("UIListLayout", {

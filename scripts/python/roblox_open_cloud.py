@@ -1,9 +1,9 @@
 """Shared Open Cloud helpers for the place-upload scripts.
 
-`upload_and_run_task.py` (test job) and `publish_place.py` (deploy job) both push a built
-place file to Roblox via the same versions endpoint — the only difference is versionType
-(Saved vs Published). This module holds that one upload implementation so the two scripts
-can't drift, and gives it the retry + HTTP-error-body reporting that `luau_execution_task.py`
+`upload_and_run_task.py` (test job) and `publish_place.py` (manual/future publish helper — not
+wired into CI) both push a built place file to Roblox via the same versions endpoint — the only
+difference is versionType (Saved vs Published). This module holds that one upload implementation so
+the two scripts can't drift, and gives it the retry + HTTP-error-body reporting that `luau_execution_task.py`
 already has for its own requests (a transient upload failure otherwise surfaced as a raw
 traceback with no server message, failing CI opaquely).
 """

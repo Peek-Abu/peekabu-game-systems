@@ -21,4 +21,4 @@ wally-package-types -s sourcemap.json Packages/
 if [ -d ServerPackages ]; then wally-package-types -s sourcemap.json ServerPackages/; fi
 if [ -d DevPackages ]; then wally-package-types -s sourcemap.json DevPackages/; fi
 
-rojo build -o peekabu-game-systems.rbxl default.project.json
+rojo build -o venture.rbxl default.project.json

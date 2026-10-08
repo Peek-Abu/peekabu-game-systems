@@ -53,6 +53,35 @@ luau-lsp analyze \
 	--ignore="**/*.spec.luau" \
 	src tasks
 
+echo "==> Project rules (added lines vs origin/main)"
+# Encodes rules that previously lived only in AGENTS.md and reviewers' memories: no `any` casts in
+# production, no Co-Authored-By/Claude-Session commit trailers, no placeholder currencies. Only
+# ADDED lines are judged — a ratchet on new work, not a demand to fix the past. Skipped when
+# origin/main isn't fetched (a fresh clone with no remote), since CI always has it.
+if git rev-parse --verify --quiet origin/main >/dev/null; then
+	python3 scripts/python/check_pr_rules.py origin/main
+else
+	echo "    origin/main not available locally — skipping; CI runs this gate."
+fi
+
+echo ""
+echo "==> File length (code lines per module)"
+# Counts CODE lines only — doc comments explain WHY and have caught real bugs in review, so a raw
+# line cap would reward deleting them. Spec files are exempt. See the script's docstring.
+python3 scripts/python/check_file_length.py
+
+echo ""
+echo "==> Module map (docs/project-structure.md matches src/)"
+python3 scripts/python/module_map.py --check
+
+echo ""
+echo "==> Python unit tests"
+# The layout rules, the module-map generator and (while the move runs) the mover are tested like
+# first-party code: a regex that silently stopped matching would let the layout drift.
+python3 -m unittest discover -s scripts/python -p "test_*.py"
+
+echo ""
+
 echo "==> Python scripts lint (ruff)"
 # Mirrors CI's scripts-lint job. Ruff isn't rokit-managed (it's a Python tool), so unlike the
 # checks above this one degrades to a warning when ruff isn't installed — CI still gates it.

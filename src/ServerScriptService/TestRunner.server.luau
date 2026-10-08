@@ -20,6 +20,16 @@ if not RunService:IsStudio() then
 	return
 end
 
+-- OPT-IN ONLY: several specs (e.g. StateSyncServiceServer.spec) exercise init/stop on REAL
+-- module singletons — running them inside a live Play session destroys production state
+-- (found 2026-07-17: the spec suite tore down and recreated the charm-sync transport
+-- mid-session, permanently severing the live client's sync — the client State tab never
+-- received another patch). To run the suite: select Workspace in Studio, add a boolean
+-- attribute `RunTests`, set it true, then hit Play. Leave it unset for normal play sessions.
+if workspace:GetAttribute("RunTests") ~= true then
+	return
+end
+
 local TestEZ = require(ReplicatedStorage.DevPackages.TestEZ)
 
 print("\n" .. string.rep("=", 60))
@@ -28,14 +38,14 @@ print(string.rep("=", 60) .. "\n")
 
 -- Test locations come from one shared module; the guard makes a spec outside them a
 -- loud failure instead of a silently-skipped file (TestEZ does not scan recursively).
-local SpecRoots = require(ServerScriptService.Modules.SpecRoots)
+local SpecRoots = require(ServerScriptService.Core.Testing.SpecRoots)
 local testLocations = SpecRoots.get()
 SpecRoots.assertAllSpecsCovered(testLocations)
 SpecRoots.assertAllModulesSpecced(testLocations)
 
 -- Initialize game data so tests have items to reference
-local GameItems = require(ReplicatedStorage.Shared.Modules.GameItems)
-GameItems.init()
+local ItemContentRegistry = require(ReplicatedStorage.Shared.Features.Item.Data.ItemContentRegistry)
+ItemContentRegistry.init()
 
 -- Run tests
 local results = TestEZ.TestBootstrap:run(testLocations, TestEZ.Reporters.TextReporter)

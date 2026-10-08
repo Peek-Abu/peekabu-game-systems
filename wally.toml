@@ -1,5 +1,5 @@
 [package]
-name = "bruka/peekabu-game-systems"
+name = "bruka/venture"
 version = "0.1.0"
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
@@ -23,3 +23,4 @@ ProfileStore = "lm-loleris/profilestore@1.0.3" # This is not an official release
 
 [dev-dependencies]
 TestEZ = "roblox/testez@0.4.1"
+UILabs = "pepeeltoro41/ui-labs@2.4.2" # Story/knob helpers for the UI Labs Studio plugin — renders `*.story` components in EDIT mode, so UI work doesn't need a Play session. Required only by `*.story` modules.

@@ -19,6 +19,7 @@ This document defines all coding standards, patterns, and style choices for this
 11. [Creating New Systems](#creating-new-systems)
 12. [Mutating Player Data](#mutating-player-data)
 13. [Adding Admin Commands (Cmdr)](#adding-admin-commands-cmdr)
+14. [Mounting React UI (the PlayerGui reset trap)](#mounting-react-ui-the-playergui-reset-trap)
 
 ---
 
@@ -236,7 +237,7 @@ assert(
 #### Validation Function Checks
 ```lua
 assert(CurrencyConstants.isValidCurrencyType(currencyType), `invalid currency type: "{currencyType}"`)
-assert(ItemDefinitions.isValidItemType(itemType), `unknown item type: "{itemType}"`)
+assert(ItemRegistry.isValidItemType(itemType), `unknown item type: "{itemType}"`)
 ```
 
 #### Required Field Checks
@@ -304,7 +305,7 @@ reserve `pcall()` for external systems you don't control (DataStore, HTTP, user 
 Every service should create a logger instance:
 
 ```lua
-local Logger = require(ReplicatedStorage.Shared.Modules.Logger)
+local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local log = Logger.new("MyServiceName")
 ```
 
@@ -385,7 +386,7 @@ function CurrencyUtils.formatCurrency(amount: number, currencyType: CurrencyCons
 | Server service | `*ServiceServer.luau` | `InventoryServiceServer.luau` |
 | Client service | `*ServiceClient.luau` | `InventoryServiceClient.luau` |
 | Events (discrete ByteNet) | `*Events.luau` | see [Networking](architecture.md#networking) |
-| Reactive state | `*Store.luau` / `SyncState.luau` | `ClientStore.luau`, `SyncState.luau` |
+| Reactive state | `*Store.luau` / `StateSyncConstants.luau` | `StateSyncClientStore.luau`, `StateSyncConstants.luau` |
 | Utils | `*Utils.luau` | `InventoryUtils.luau` |
 | Constants | `*Constants.luau` | `CurrencyConstants.luau` |
 | Types | `*Types.luau` | `PlayerDataTypes.luau` |
@@ -412,7 +413,7 @@ local Players = game:GetService("Players")
 
 -- Package imports
 local Janitor = require(ReplicatedStorage.Packages.Janitor)
-local Logger = require(ReplicatedStorage.Shared.Modules.Logger)
+local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 
 -- Local imports
 local SomeEvents = require(...)
@@ -538,7 +539,7 @@ statically — and each is commented:
 - Narrowing an `Instance` from the tree to its concrete class: `:: RemoteEvent` in
   `StateSyncServiceClient`.
 
-(Registries that must hold heterogeneous entries — the per-slice atoms in `ServerStore`, the
+(Registries that must hold heterogeneous entries — the per-slice atoms in `StateSyncServerStore`, the
 `ProfilePath` string registry — are *typed* with an erased value type at the declaration rather
 than cast; see [limitations #3](limitations.md#3-profilepath-registry-vs-compile-time-paths). Each
 *consumer* still uses the narrow slice type.)
@@ -548,7 +549,7 @@ genuine justification.
 
 ### Shared Types
 
-Define shared types in `ReplicatedStorage/Shared/Types/`:
+Define types every feature reads in `ReplicatedStorage/Shared/Data/` (a feature's own types go in its `Data/` folder, named `<Feature>Types`):
 
 ```lua
 -- PlayerDataTypes.luau
@@ -570,7 +571,7 @@ export type PlayerProfile = {
 
 When creating a new system/service infrastructure, follow these steps:
 
-1. **Create the Script**: Place it in `src/ServerScriptService/Services/[Name]/[Name]ServiceServer.luau` (or `src/ReplicatedStorage/Client/Services/` for client).
+1. **Create the Script**: Place it in `src/ServerScriptService/Features/[Name]/[Name]ServiceServer.luau` (or `src/ReplicatedStorage/Client/Features/[Name]/[Name]ServiceClient.luau` for client).
 2. **Declare the interface + build the literal**: Follow the [Service Module Shape](#service-module-shape) — `export type` interface, then `local X: X = { ... }` with methods as fields.
 3. **Define Dependencies**: List other services it requires in the `dependencies` field.
 4. **Registration is automatic**: the boot loader (`src/ServerScriptService/ServerHandler.server.luau` / `ClientHandler`) auto-discovers any module matching the `*ServiceServer` / `*ServiceClient` naming convention — there is no manual registration site.
@@ -589,39 +590,42 @@ layer that matches who you are.
 | Layer | API | Who calls it |
 |-------|-----|--------------|
 | **Public domain methods** — `CurrencyService:addCurrency`, `InventoryService:addItem`, … | validate input, enforce caps | **any service** that wants to change that data |
-| **Slice accessor** — `currencySlice.get` / `.mutate`, from `SliceOwner.register` | owns the path string; types `get`'s return and the mutator argument to the slice type | only the owning service, internally |
-| **Primitive** — `PlayerDataService:mutate` / `:transaction` | raw profile write; mirrors the slice into `ServerStore` so charm-sync replicates it | `SliceOwner` (behind `.mutate`), or cross-slice features (`transaction`) |
+| **Slice accessor** — `currencySlice.get` / `.mutate`, from `PlayerDataSliceSystem.registerSlot` / `registerAccount` | owns the path string; types `get`'s return and the mutator argument to the slice type | only the owning service, internally |
+| **Primitive** — `PlayerDataService:mutate` / `:transaction` | raw profile write; mirrors the slice into `StateSyncServerStore` so charm-sync replicates it | `PlayerDataSliceSystem` (behind `.mutate`), or cross-slice features (`transaction`) |
 
 **Rule:** to change another service's data, call its **public method**. Never call
-`PlayerDataService:mutate(userId, "currency", …)` or another service's `SliceOwner` accessor from
+`PlayerDataService:mutate(userId, "currency", …)` or another service's `PlayerDataSliceSystem` accessor from
 outside the owning service — you'd skip that service's validation and caps. (Replication still
 happens — `mutate` always mirrors into the reactive store — but the write would be unvalidated.)
 
 ### Adding a service that owns a profile slice
 
-A service "owns a slice" when it registers a root key on the profile. Follow this pattern (see
-`CurrencyServiceServer` / `InventoryServiceServer` for complete examples):
+A service "owns a slice" when it registers a slice name on the profile — either SLOT-SCOPED (one
+value per character, e.g. currency, inventory) or ACCOUNT-WIDE (one value shared by every
+character, e.g. settings, entitlements). Follow this pattern (see `CurrencyServiceServer` /
+`InventoryServiceServer` for slot-scoped examples, `SlotServiceServer` for an account-wide one):
 
-1. **Register the slice** at module load with `SliceOwner.register` — one call that registers the
-   path + defaults AND returns typed `get`/`mutate` for it. The slice's value type is inferred from
-   the `read` closure (a typed field access), so no path string is repeated and no casts are needed:
+1. **Register the slice** at module load with `PlayerDataSliceSystem.registerSlot` (or `registerAccount`) —
+   one call that registers the dotted path + defaults AND returns typed `get`/`getForSlot`/`mutate`
+   for it. The slice's value type is inferred from the `read` closure (a typed field access off one
+   `PlayerSlot` or `PlayerAccount`), so no path string is repeated and no casts are needed:
    ```lua
-   local questSlice = SliceOwner.register("quests", { active = {}, completed = {} }, function(profile)
-       return profile.quests
+   local questSlice = PlayerDataSliceSystem.registerSlot("quests", { active = {}, completed = {} }, function(slot)
+       return slot.quests
    end)
-   -- questSlice.get(userId)     -> Quests?        (nil if the profile isn't loaded)
+   -- questSlice.get(userId)     -> Quests?        (the active slot's value; nil if the profile isn't loaded)
    -- questSlice.mutate(userId, function(quests) ... return true end)  -- `quests` is typed Quests
    ```
 2. **Expose public methods** that read via `questSlice.get` and write via `questSlice.mutate`.
    Validate arguments with `Guard` (`Guard.userId`, `Guard.positiveAmount`, …) plus any
    domain-specific checks; keep the domain logic (caps, stacking, …) in these methods. Replication
-   is automatic — `mutate` mirrors the slice into `ServerStore`, and charm-sync ships it to the
+   is automatic — `mutate` mirrors the slice into `StateSyncServerStore`, and charm-sync ships it to the
    owning client. Other services call these public methods — never `questSlice` directly.
 3. **Extend `PlayerProfile`** in `PlayerDataTypes.luau` with the new field, and write the spec.
 4. **If the slice replicates to the client**, wire it into the reactive spine: add one entry to
-   `SliceManifest` (`Shared/State/SliceManifest.luau` — name + profile reader), and declare its
-   atom + registry line in `ClientStore`. `SyncState.SLICES` and the `ServerStore` registry derive
-   from the manifest automatically, and `ClientStore` is validated against it at require time, so a
+   `StateSyncSliceRegistry` (`Shared/Features/StateSync/Data/StateSyncSliceRegistry.luau` — name + profile reader), and declare its
+   atom + registry line in `StateSyncClientStore`. `StateSyncConstants.SLICES` and the `StateSyncServerStore` registry derive
+   from the manifest automatically, and `StateSyncClientStore` is validated against it at require time, so a
    missed atom fails at boot. The StateSync services need no change. See
    [architecture: Reactive state](architecture.md#reactive-state).
 
@@ -634,13 +638,19 @@ individually atomic, but two in sequence are not: if the second fails, the first
 
 ```lua
 local ok = PlayerDataService:transaction({
-    { userId = uid, path = "currency",  mutator = function(c) c.gold -= cost; return c.gold >= 0 end },
-    { userId = uid, path = "inventory", mutator = function(inv) table.insert(inv, item); return true end },
+    currencySlice.op(uid, function(c) c.jaku -= cost; return c.jaku >= 0 end),
+    inventorySlice.op(uid, function(inv) table.insert(inv, item); return true end),
 })
 ```
 
+`SliceAccessor.op` is the typed way to mint an op — it bakes in the slice's dotted path (the
+player's active slot for a slot-scoped slice, `account.<slice>` for an account-wide one) so no path
+string is restated at the call site. See [PlayerDataSliceSystem.op's contract](../src/ServerScriptService/Features/PlayerData/Systems/PlayerDataSliceSystem.luau)
+for the one timing rule that comes with it: an op must be minted immediately before the
+`transaction()` call that executes it, and never held across a yield.
+
 **Replication is handled.** On commit, `transaction` mirrors only the slice(s) each op's `path`
-actually changed into `ServerStore` (not every affected profile in full), so the reactive UI updates
+actually changed into `StateSyncServerStore` (not every affected profile in full), so the reactive UI updates
 uniformly — the same per-slice `sync` a single mutation uses. (This is why the old "resync/rebroadcast
 after a transaction" gap no longer exists.)
 
@@ -656,7 +666,7 @@ same transaction.
 **It does not type the path.** Op `path` is a raw string (the encapsulation only covers single-slice
 `mutate`). To avoid restating it, each slice-owning service exposes a typed op-builder so the path is
 written once and the mutator argument is typed — use these instead of raw op tables. `CurrencyService`
-has `currencyOp` and `InventoryService` has `inventoryOp` (both built on `SliceOwner`'s `op`), already
+has `currencyOp` and `InventoryService` has `inventoryOp` (both built on `PlayerDataSliceSystem`'s `op`), already
 used to compose transactions:
 ```lua
 -- CurrencyServiceServer.luau — the path string appears only here:
@@ -669,15 +679,15 @@ end,
 
 ## Reading State on the Client (the two-door rule)
 
-Replicated player state lives in the `ClientStore` atoms, populated by charm-sync. There are exactly
+Replicated player state lives in the `StateSyncClientStore` atoms, populated by charm-sync. There are exactly
 **two sanctioned ways to read it, and which one you use depends on who you are** — not on preference.
 
 | You are… | Read via | Why |
 |----------|----------|-----|
-| **Reactive UI** (a React component that should re-render on change) | the atom directly — `useAtom(ClientStore.currency)` | `useAtom` subscribes to the atom *reference*; a point-in-time snapshot can't drive re-renders |
+| **Reactive UI** (a React component that should re-render on change) | the atom directly — `useAtom(StateSyncClientStore.currency)` | `useAtom` subscribes to the atom *reference*; a point-in-time snapshot can't drive re-renders |
 | **Imperative code** (game logic, input handlers, anything that just needs the value *now*) | the client service getter — `CurrencyServiceClient:getCurrency()` | a Charm-agnostic, stable seam; callers never learn *how* the value is stored |
 
-**Rule: imperative code does not `require(ClientStore)`.** Only the reactive UI layer and the client
+**Rule: imperative code does not `require(StateSyncClientStore)`.** Only the reactive UI layer and the client
 services import it. Everything else goes through a `*ServiceClient` getter. This is why the thin
 read-facades (`getCurrency`, `getInventory`) exist even though they look like pass-throughs — they
 are the imperative read door, not redundant wrappers:
@@ -687,7 +697,7 @@ are the imperative read door, not redundant wrappers:
 - **A home for domain logic.** Anything beyond a raw snapshot (validation, formatting, "do I have
   enough?", item lookups) belongs on the service — see `getCurrencyAmount` / `hasCurrency` /
   `formatCurrency`. The snapshot getter is the shared internal accessor those build on.
-- **Testable.** Specs can stub a service getter without standing up ClientStore + charm-sync.
+- **Testable.** Specs can stub a service getter without standing up StateSyncClientStore + charm-sync.
 
 **The client service never writes.** The server is authoritative; state arrives only as charm-sync
 patches. Client services are read + domain-logic facades, never setters. See
@@ -709,21 +719,65 @@ Admin commands must wrap their logic in `AdminServiceServer` (or directly call t
 ```lua
 -- Example Definition
 return {
-    Name = "GiveGold",
-    Aliases = {"addgold"},
-    Description = "Gives gold to a player.",
+    Name = "GiveJaku",
+    Aliases = {"addjaku"},
+    Description = "Gives jaku to a player.",
     Group = "Admins",
     Args = {
         {
             Type = "player",
             Name = "target",
-            Description = "The player to give gold to",
+            Description = "The player to give jaku to",
         },
         {
             Type = "number",
             Name = "amount",
-            Description = "Amount of gold to give",
+            Description = "Amount of jaku to give",
         }
     }
 }
 ```
+
+---
+
+## Mounting React UI (the PlayerGui reset trap)
+
+**Rule: a React root container mounted into `PlayerGui` MUST be a `ScreenGui` with
+`ResetOnSpawn = false`, parented DIRECTLY to `PlayerGui`. Never a `Folder`, never nested.**
+
+```lua
+-- CORRECT — the root container IS the ScreenGui, and it is a direct child of PlayerGui.
+local container = Instance.new("ScreenGui")
+container.Name = "ReactMyThingRoot"
+container.ResetOnSpawn = false
+container.Parent = playerGui
+
+local root = ReactRoblox.createRoot(container)
+root:render(React.createElement(MyComponent)) -- MyComponent returns a Frame, NOT a ScreenGui
+```
+
+```lua
+-- WRONG — dies on every respawn.
+local container = Instance.new("Folder") -- a Folder has no ResetOnSpawn property AT ALL
+container.Parent = playerGui
+-- ...and a ScreenGui rendered inside it has its ResetOnSpawn silently ignored.
+```
+
+**Why.** The engine only honours `ResetOnSpawn = false` on a `LayerCollector` that is a **direct child**
+of `PlayerGui` — it scans `PlayerGui`'s own children. A `ScreenGui` nested inside a `Folder` is invisible
+to that scan, so the respawn reset destroys the `Folder` and everything under it. The `ResetOnSpawn = false`
+you carefully set does nothing.
+([Known engine bug](https://devforum.roblox.com/t/screengui-property-resetonspawn-doesnt-work-when-the-gui-is-inside-of-a-folder/2492244).)
+
+This is easy to miss because a service's `start()` typically mounts the root **once** — so the UI does not
+come back, and the failure looks like "the UI broke" rather than "the engine deleted it".
+
+**Keep doing it even now:** bodies are client-only (character replication), so no engine respawn resets
+PlayerGui today — but a Studio session with `CharacterAutoLoads` on, or any future engine-character path,
+brings the reset straight back, and the rule costs nothing.
+
+**Consequence for components:** the root component renders its panel/frame directly. It must NOT render its
+own `ScreenGui` — that would nest one inside the root container and reintroduce the bug. `ScreenGui`-level
+properties (`IgnoreGuiInset`, `ZIndexBehavior`, `DisplayOrder`) belong on the container the service creates.
+
+See `DebuggerServiceClient.start()` and `DebuggerOverlay` for the reference implementation.

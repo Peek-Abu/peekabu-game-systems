@@ -1,0 +1,1030 @@
+{
+ "spec": "docs/superpowers/specs/2026-10-07-module-layout-design.md",
+ "rows": [
+  {
+   "group": "Admin",
+   "from": "ReplicatedStorage/Shared/Modules/Admin",
+   "to": "ReplicatedStorage/Shared/Features/Admin/Rules/AdminRules"
+  },
+  {
+   "group": "Admin",
+   "from": "ReplicatedStorage/Client/Services/AdminService/AdminServiceClient",
+   "to": "ReplicatedStorage/Client/Features/Admin/AdminServiceClient"
+  },
+  {
+   "group": "Admin",
+   "from": "ServerScriptService/Services/AdminService/AdminServiceServer",
+   "to": "ServerScriptService/Features/Admin/AdminServiceServer"
+  },
+  {
+   "group": "Animation",
+   "from": "ReplicatedStorage/Shared/Modules/Constants/Animations/AnimationRegistry",
+   "to": "ReplicatedStorage/Shared/Features/Animation/Data/AnimationRegistry"
+  },
+  {
+   "group": "Animation",
+   "from": "ReplicatedStorage/Shared/Modules/Constants/Animations/AnimationTypes",
+   "to": "ReplicatedStorage/Shared/Features/Animation/Data/AnimationTypes"
+  },
+  {
+   "group": "Animation",
+   "from": "ReplicatedStorage/Shared/Modules/Constants/Animations/Actions",
+   "to": "ReplicatedStorage/Shared/Features/Animation/Data/AnimationActionRegistry"
+  },
+  {
+   "group": "Animation",
+   "from": "ReplicatedStorage/Shared/Modules/Constants/Animations/Locomotion",
+   "to": "ReplicatedStorage/Shared/Features/Animation/Data/AnimationLocomotionRegistry"
+  },
+  {
+   "group": "Animation",
+   "from": "ReplicatedStorage/Shared/Events/AnimationEvents",
+   "to": "ReplicatedStorage/Shared/Features/Animation/Net/AnimationEvents"
+  },
+  {
+   "group": "Animation",
+   "from": "ReplicatedStorage/Shared/Modules/AnimationPlayer",
+   "to": "ReplicatedStorage/Shared/Features/Animation/Systems/AnimationPlayerSystem"
+  },
+  {
+   "group": "Animation",
+   "from": "ReplicatedStorage/Shared/Modules/AnimationPlayerRuntime",
+   "to": "ReplicatedStorage/Shared/Features/Animation/Systems/AnimationPlayerEngineSystem"
+  },
+  {
+   "group": "Animation",
+   "from": "ReplicatedStorage/Client/Services/AnimationService/AnimationServiceClient",
+   "to": "ReplicatedStorage/Client/Features/Animation/AnimationServiceClient"
+  },
+  {
+   "group": "Animation",
+   "from": "ReplicatedStorage/Client/Services/AnimationService/LocomotionAnimator",
+   "to": "ReplicatedStorage/Client/Features/Animation/Systems/AnimationLocomotionSystem"
+  },
+  {
+   "group": "Animation",
+   "from": "ReplicatedStorage/Client/Services/AnimationService/LocomotionBinding",
+   "to": "ReplicatedStorage/Client/Features/Animation/Systems/AnimationLocomotionHumanoidSystem"
+  },
+  {
+   "group": "Animation",
+   "from": "ServerScriptService/Services/AnimationService/AnimationServiceServer",
+   "to": "ServerScriptService/Features/Animation/AnimationServiceServer"
+  },
+  {
+   "group": "Animation",
+   "from": "ServerScriptService/Services/AnimationService/ActionGrants",
+   "to": "ServerScriptService/Features/Animation/Systems/AnimationActionGrantSystem"
+  },
+  {
+   "group": "Bank",
+   "from": "ReplicatedStorage/Shared/Modules/Constants/BankConstants",
+   "to": "ReplicatedStorage/Shared/Features/Bank/Data/BankConstants"
+  },
+  {
+   "group": "Bank",
+   "from": "ReplicatedStorage/Shared/Events/BankEvents",
+   "to": "ReplicatedStorage/Shared/Features/Bank/Net/BankEvents"
+  },
+  {
+   "group": "Bank",
+   "from": "ReplicatedStorage/Client/Services/BankService/BankServiceClient",
+   "to": "ReplicatedStorage/Client/Features/Bank/BankServiceClient"
+  },
+  {
+   "group": "Bank",
+   "from": "ServerScriptService/Services/BankService/BankServiceServer",
+   "to": "ServerScriptService/Features/Bank/BankServiceServer"
+  },
+  {
+   "group": "Bank",
+   "from": "ServerScriptService/Services/BankService/BankRequests",
+   "to": "ServerScriptService/Features/Bank/Net/BankReceiver"
+  },
+  {
+   "group": "Replication",
+   "from": "ReplicatedStorage/Shared/Events/CharacterReplicationEvents",
+   "to": "ReplicatedStorage/Shared/Features/Replication/Net/ReplicationEvents"
+  },
+  {
+   "group": "Replication",
+   "from": "ReplicatedStorage/Shared/Modules/CharacterReplication/CharacterRecordCodec",
+   "to": "ReplicatedStorage/Shared/Features/Replication/Net/ReplicationRecordCodec"
+  },
+  {
+   "group": "Replication",
+   "from": "ReplicatedStorage/Shared/Modules/CharacterReplication/CharacterBatchCodec",
+   "to": "ReplicatedStorage/Shared/Features/Replication/Net/ReplicationBatchCodec"
+  },
+  {
+   "group": "Replication",
+   "from": "ReplicatedStorage/Shared/Modules/CharacterReplication/CharacterUplinkCodec",
+   "to": "ReplicatedStorage/Shared/Features/Replication/Net/ReplicationUplinkCodec"
+  },
+  {
+   "group": "Replication",
+   "from": "ReplicatedStorage/Shared/Modules/CharacterReplication/FallPlane",
+   "to": "ReplicatedStorage/Shared/Features/Replication/Rules/ReplicationFallRules"
+  },
+  {
+   "group": "Replication",
+   "from": "ReplicatedStorage/Shared/Modules/CharacterReplication/SendPolicy",
+   "to": "ReplicatedStorage/Shared/Features/Replication/Rules/ReplicationSendRules"
+  },
+  {
+   "group": "Replication",
+   "from": "ReplicatedStorage/Shared/Modules/CharacterReplication/CharacterInterpolator",
+   "to": "ReplicatedStorage/Shared/Features/Replication/State/ReplicationSampleTracker"
+  },
+  {
+   "group": "Replication",
+   "from": "ReplicatedStorage/Shared/Modules/CharacterReplication/BodyStateTiming",
+   "to": "ReplicatedStorage/Shared/Features/Replication/Utils/ReplicationStateTimingUtils"
+  },
+  {
+   "group": "Replication",
+   "from": "ReplicatedStorage/Shared/Modules/CharacterReplication/RenderClock",
+   "to": "ReplicatedStorage/Shared/Features/Replication/Systems/ReplicationRenderClockSystem"
+  },
+  {
+   "group": "Replication",
+   "from": "ReplicatedStorage/Shared/Modules/CharacterReplication/Harness/HarnessNetwork",
+   "to": "ReplicatedStorage/Shared/Features/Replication/Testing/ReplicationLinkHarness"
+  },
+  {
+   "group": "Replication",
+   "from": "ReplicatedStorage/Shared/Modules/CharacterReplication/Harness/HarnessRunner",
+   "to": "ReplicatedStorage/Shared/Features/Replication/Testing/ReplicationRunHarness"
+  },
+  {
+   "group": "Replication",
+   "from": "ReplicatedStorage/Shared/Modules/CharacterReplication/Harness/HarnessTrace",
+   "to": "ReplicatedStorage/Shared/Features/Replication/Testing/ReplicationTraceHarness"
+  },
+  {
+   "group": "Replication",
+   "from": "ReplicatedStorage/Shared/Modules/CharacterReplication/Harness/HarnessVenture",
+   "to": "ReplicatedStorage/Shared/Features/Replication/Testing/ReplicationDesignHarness"
+  },
+  {
+   "group": "Replication",
+   "from": "ReplicatedStorage/Client/Services/CharacterReplicationService/CharacterReplicationServiceClient",
+   "to": "ReplicatedStorage/Client/Features/Replication/ReplicationServiceClient"
+  },
+  {
+   "group": "Replication",
+   "from": "ReplicatedStorage/Client/Services/CharacterReplicationService/UplinkSender",
+   "to": "ReplicatedStorage/Client/Features/Replication/Net/ReplicationUplinkSender"
+  },
+  {
+   "group": "Replication",
+   "from": "ReplicatedStorage/Client/Services/CharacterReplicationService/PuppetLod",
+   "to": "ReplicatedStorage/Client/Features/Replication/Rules/ReplicationAnimationRules"
+  },
+  {
+   "group": "Replication",
+   "from": "ReplicatedStorage/Client/Services/CharacterReplicationService/ReplicationTripwire",
+   "to": "ReplicatedStorage/Client/Features/Replication/Rules/ReplicationViewCheck"
+  },
+  {
+   "group": "Replication",
+   "from": "ReplicatedStorage/Client/Services/CharacterReplicationService/RemoteBodies",
+   "to": "ReplicatedStorage/Client/Features/Replication/State/ReplicationRemoteBodyTracker"
+  },
+  {
+   "group": "Replication",
+   "from": "ReplicatedStorage/Client/Services/CharacterReplicationService/RigRegistry",
+   "to": "ReplicatedStorage/Client/Features/Replication/State/ReplicationRigTracker"
+  },
+  {
+   "group": "Replication",
+   "from": "ReplicatedStorage/Client/Services/CharacterReplicationService/BodyActions",
+   "to": "ReplicatedStorage/Client/Features/Replication/State/ReplicationActionTracker"
+  },
+  {
+   "group": "Replication",
+   "from": "ReplicatedStorage/Client/Services/CharacterReplicationService/PuppetPool",
+   "to": "ReplicatedStorage/Client/Features/Replication/State/ReplicationPuppetPool"
+  },
+  {
+   "group": "Replication",
+   "from": "ReplicatedStorage/Client/Services/CharacterReplicationService/OwnerRig",
+   "to": "ReplicatedStorage/Client/Features/Replication/Systems/ReplicationOwnerRigSystem"
+  },
+  {
+   "group": "Replication",
+   "from": "ReplicatedStorage/Client/Services/CharacterReplicationService/RigAnimation",
+   "to": "ReplicatedStorage/Client/Features/Replication/Systems/ReplicationRigAnimationSystem"
+  },
+  {
+   "group": "Replication",
+   "from": "ReplicatedStorage/Client/Services/CharacterReplicationService/PuppetLocomotion",
+   "to": "ReplicatedStorage/Client/Features/Replication/Systems/ReplicationPuppetLocomotionSystem"
+  },
+  {
+   "group": "Replication",
+   "from": "ReplicatedStorage/Client/Services/CharacterReplicationService/ReplicationDiagnostics",
+   "to": "ReplicatedStorage/Client/Features/Replication/Systems/ReplicationDiagnosticsSystem"
+  },
+  {
+   "group": "Replication",
+   "from": "ServerScriptService/Services/CharacterReplicationService/CharacterReplicationServiceServer",
+   "to": "ServerScriptService/Features/Replication/ReplicationServiceServer"
+  },
+  {
+   "group": "Replication",
+   "from": "ServerScriptService/Services/CharacterReplicationService/UplinkPipeline",
+   "to": "ServerScriptService/Features/Replication/Net/ReplicationUplinkReceiver"
+  },
+  {
+   "group": "Replication",
+   "from": "ServerScriptService/Services/CharacterReplicationService/ReplicationPackets",
+   "to": "ServerScriptService/Features/Replication/Net/ReplicationReceiver"
+  },
+  {
+   "group": "Replication",
+   "from": "ServerScriptService/Services/CharacterReplicationService/BodyStateRelay",
+   "to": "ServerScriptService/Features/Replication/Net/ReplicationBodyStateSender"
+  },
+  {
+   "group": "Replication",
+   "from": "ServerScriptService/Services/CharacterReplicationService/UplinkIngest",
+   "to": "ServerScriptService/Features/Replication/Rules/ReplicationUplinkRules"
+  },
+  {
+   "group": "Replication",
+   "from": "ServerScriptService/Services/CharacterReplicationService/RigIntegrity",
+   "to": "ServerScriptService/Features/Replication/Rules/ReplicationRigCheck"
+  },
+  {
+   "group": "Replication",
+   "from": "ServerScriptService/Services/CharacterReplicationService/VisibilitySet",
+   "to": "ServerScriptService/Features/Replication/State/ReplicationVisibilityTracker"
+  },
+  {
+   "group": "Replication",
+   "from": "ServerScriptService/Services/CharacterReplicationService/ReplicationSlots",
+   "to": "ServerScriptService/Features/Replication/State/ReplicationSlotTracker"
+  },
+  {
+   "group": "Replication",
+   "from": "ServerScriptService/Services/CharacterReplicationService/BodyStates",
+   "to": "ServerScriptService/Features/Replication/State/ReplicationBodyStateTracker"
+  },
+  {
+   "group": "Replication",
+   "from": "ServerScriptService/Services/CharacterReplicationService/ObserverQuery",
+   "to": "ServerScriptService/Features/Replication/Utils/ReplicationObserverUtils"
+  },
+  {
+   "group": "Replication",
+   "from": "ServerScriptService/Services/CharacterReplicationService/ReplicationFanout",
+   "to": "ServerScriptService/Features/Replication/Systems/ReplicationFanoutSystem"
+  },
+  {
+   "group": "Replication",
+   "from": "ServerScriptService/Services/CharacterReplicationService/DownlinkScheduler",
+   "to": "ServerScriptService/Features/Replication/Systems/ReplicationDownlinkSystem"
+  },
+  {
+   "group": "Replication",
+   "from": "ServerScriptService/Services/CharacterReplicationService/ReplicationInstances",
+   "to": "ServerScriptService/Features/Replication/Systems/ReplicationInstanceSystem"
+  },
+  {
+   "group": "Replication",
+   "from": "ServerScriptService/Services/CharacterReplicationService/BodyObservers",
+   "to": "ServerScriptService/Features/Replication/Systems/ReplicationBodyObserverSystem"
+  },
+  {
+   "group": "Replication",
+   "from": "ServerScriptService/Services/CharacterReplicationService/HarnessIntegrated",
+   "to": "ServerScriptService/Features/Replication/Testing/ReplicationIntegratedHarness"
+  },
+  {
+   "group": "Currency",
+   "from": "ReplicatedStorage/Shared/Modules/Constants/CurrencyConstants",
+   "to": "ReplicatedStorage/Shared/Features/Currency/Data/CurrencyConstants"
+  },
+  {
+   "group": "Currency",
+   "from": "ReplicatedStorage/Shared/Modules/Utils/CurrencyUtils",
+   "to": "ReplicatedStorage/Shared/Features/Currency/Utils/CurrencyUtils"
+  },
+  {
+   "group": "Currency",
+   "from": "ReplicatedStorage/Client/Services/CurrencyService/CurrencyServiceClient",
+   "to": "ReplicatedStorage/Client/Features/Currency/CurrencyServiceClient"
+  },
+  {
+   "group": "Currency",
+   "from": "ServerScriptService/Services/CurrencyService/CurrencyServiceServer",
+   "to": "ServerScriptService/Features/Currency/CurrencyServiceServer"
+  },
+  {
+   "group": "Customization",
+   "from": "ReplicatedStorage/Shared/Modules/Constants/CosmeticRegistry",
+   "to": "ReplicatedStorage/Shared/Features/Customization/Data/CustomizationCosmeticRegistry"
+  },
+  {
+   "group": "Customization",
+   "from": "ReplicatedStorage/Shared/Modules/Constants/SoulColorRegistry",
+   "to": "ReplicatedStorage/Shared/Features/Customization/Data/CustomizationSoulColorRegistry"
+  },
+  {
+   "group": "Customization",
+   "from": "ReplicatedStorage/Shared/Modules/CustomizationCompatibility",
+   "to": "ReplicatedStorage/Shared/Features/Customization/Rules/CustomizationWearRules"
+  },
+  {
+   "group": "Customization",
+   "from": "ReplicatedStorage/Shared/Modules/CustomizationValidation",
+   "to": "ReplicatedStorage/Shared/Features/Customization/Rules/CustomizationSliceRules"
+  },
+  {
+   "group": "Customization",
+   "from": "ReplicatedStorage/Shared/Modules/CustomizationConformance",
+   "to": "ReplicatedStorage/Shared/Features/Customization/Rules/CustomizationArtCheck"
+  },
+  {
+   "group": "Customization",
+   "from": "ReplicatedStorage/Shared/Modules/Constants/CosmeticChecks",
+   "to": "ReplicatedStorage/Shared/Features/Customization/Rules/CustomizationRegistryCheck"
+  },
+  {
+   "group": "Customization",
+   "from": "ReplicatedStorage/Shared/Modules/CustomizationPlan",
+   "to": "ReplicatedStorage/Shared/Features/Customization/Utils/CustomizationPlanUtils"
+  },
+  {
+   "group": "Customization",
+   "from": "ReplicatedStorage/Client/Services/CustomizationService/CustomizationServiceClient",
+   "to": "ReplicatedStorage/Client/Features/Customization/CustomizationServiceClient"
+  },
+  {
+   "group": "Customization",
+   "from": "ReplicatedStorage/Shared/Modules/OutfitDiff",
+   "to": "ReplicatedStorage/Client/Features/Customization/Utils/CustomizationOutfitDiffUtils"
+  },
+  {
+   "group": "Customization",
+   "from": "ReplicatedStorage/Shared/Modules/RigOutfit",
+   "to": "ReplicatedStorage/Client/Features/Customization/State/CustomizationRigOutfitTracker"
+  },
+  {
+   "group": "Customization",
+   "from": "ReplicatedStorage/Shared/Modules/PiecePool",
+   "to": "ReplicatedStorage/Client/Features/Customization/State/CustomizationPiecePool"
+  },
+  {
+   "group": "Customization",
+   "from": "ReplicatedStorage/Shared/Modules/AppearanceQueue",
+   "to": "ReplicatedStorage/Client/Features/Customization/Systems/CustomizationDressQueueSystem"
+  },
+  {
+   "group": "Customization",
+   "from": "ReplicatedStorage/Shared/Modules/CustomizationApplication",
+   "to": "ReplicatedStorage/Client/Features/Customization/Systems/CustomizationDressSystem"
+  },
+  {
+   "group": "Customization",
+   "from": "ReplicatedStorage/Shared/Modules/RigLook",
+   "to": "ReplicatedStorage/Client/Features/Customization/Systems/CustomizationRigLookSystem"
+  },
+  {
+   "group": "Customization",
+   "from": "ReplicatedStorage/Client/Modules/PuppetOutfit",
+   "to": "ReplicatedStorage/Client/Features/Customization/Systems/CustomizationOutfitSystem"
+  },
+  {
+   "group": "Customization",
+   "from": "ReplicatedStorage/Client/Modules/TuneOffsetClient",
+   "to": "ReplicatedStorage/Client/Features/Customization/Systems/CustomizationTuneOffsetSystem"
+  },
+  {
+   "group": "Customization",
+   "from": "ServerScriptService/Services/CustomizationService/CustomizationServiceServer",
+   "to": "ServerScriptService/Features/Customization/CustomizationServiceServer"
+  },
+  {
+   "group": "Customization",
+   "from": "ServerScriptService/Services/CustomizationService/CustomizationConformanceServiceServer",
+   "to": "ServerScriptService/Features/Customization/Systems/CustomizationArtCheckSystem"
+  },
+  {
+   "group": "Customization",
+   "from": "ServerScriptService/Services/CustomizationService/AppearancePublisher",
+   "to": "ServerScriptService/Features/Customization/Systems/CustomizationPublishSystem"
+  },
+  {
+   "group": "Debugger",
+   "from": "ReplicatedStorage/Shared/Events/DebuggerEvents",
+   "to": "ReplicatedStorage/Shared/Features/Debugger/Net/DebuggerEvents"
+  },
+  {
+   "group": "Debugger",
+   "from": "ReplicatedStorage/Client/Services/DebuggerService/DebuggerServiceClient",
+   "to": "ReplicatedStorage/Client/Features/Debugger/DebuggerServiceClient"
+  },
+  {
+   "group": "Debugger",
+   "from": "ReplicatedStorage/Client/State/DebuggerState",
+   "to": "ReplicatedStorage/Client/Features/Debugger/State/DebuggerStore"
+  },
+  {
+   "group": "Debugger",
+   "from": "ServerScriptService/Services/DebuggerService/DebuggerServiceServer",
+   "to": "ServerScriptService/Features/Debugger/DebuggerServiceServer"
+  },
+  {
+   "group": "Equipment",
+   "from": "ReplicatedStorage/Shared/Modules/Constants/EquipmentConstants",
+   "to": "ReplicatedStorage/Shared/Features/Equipment/Data/EquipmentConstants"
+  },
+  {
+   "group": "Equipment",
+   "from": "ReplicatedStorage/Shared/Events/EquipmentEvents",
+   "to": "ReplicatedStorage/Shared/Features/Equipment/Net/EquipmentEvents"
+  },
+  {
+   "group": "Equipment",
+   "from": "ReplicatedStorage/Shared/Modules/Utils/EquipmentBonuses",
+   "to": "ReplicatedStorage/Shared/Features/Equipment/Utils/EquipmentBonusFormulas"
+  },
+  {
+   "group": "Equipment",
+   "from": "ReplicatedStorage/Client/Services/EquipmentService/EquipmentServiceClient",
+   "to": "ReplicatedStorage/Client/Features/Equipment/EquipmentServiceClient"
+  },
+  {
+   "group": "Equipment",
+   "from": "ServerScriptService/Services/EquipmentService/EquipmentServiceServer",
+   "to": "ServerScriptService/Features/Equipment/EquipmentServiceServer"
+  },
+  {
+   "group": "Item",
+   "from": "ReplicatedStorage/Shared/Modules/ItemDefinitions",
+   "to": "ReplicatedStorage/Shared/Features/Item/Data/ItemRegistry"
+  },
+  {
+   "group": "Item",
+   "from": "ReplicatedStorage/Shared/Modules/GameItems",
+   "to": "ReplicatedStorage/Shared/Features/Item/Data/ItemContentRegistry"
+  },
+  {
+   "group": "Item",
+   "from": "ReplicatedStorage/Shared/Modules/Constants/ItemConstants",
+   "to": "ReplicatedStorage/Shared/Features/Item/Data/ItemConstants"
+  },
+  {
+   "group": "Item",
+   "from": "ReplicatedStorage/Shared/Modules/Constants/AffixConstants",
+   "to": "ReplicatedStorage/Shared/Features/Item/Data/ItemAffixConstants"
+  },
+  {
+   "group": "Inventory",
+   "from": "ReplicatedStorage/Shared/Modules/ContainerValidation",
+   "to": "ReplicatedStorage/Shared/Features/Inventory/Rules/InventoryContainerRules"
+  },
+  {
+   "group": "Item",
+   "from": "ReplicatedStorage/Shared/Modules/AffixRoller",
+   "to": "ReplicatedStorage/Shared/Features/Item/Utils/ItemAffixFormulas"
+  },
+  {
+   "group": "Inventory",
+   "from": "ReplicatedStorage/Shared/Modules/ContainerPlacement",
+   "to": "ReplicatedStorage/Shared/Features/Inventory/Utils/InventoryPlacementUtils"
+  },
+  {
+   "group": "Inventory",
+   "from": "ReplicatedStorage/Shared/Modules/Utils/InventoryUtils",
+   "to": "ReplicatedStorage/Shared/Features/Inventory/Utils/InventoryUtils"
+  },
+  {
+   "group": "Inventory",
+   "from": "ReplicatedStorage/Client/Services/InventoryService/InventoryServiceClient",
+   "to": "ReplicatedStorage/Client/Features/Inventory/InventoryServiceClient"
+  },
+  {
+   "group": "Inventory",
+   "from": "ServerScriptService/Services/InventoryService/InventoryServiceServer",
+   "to": "ServerScriptService/Features/Inventory/InventoryServiceServer"
+  },
+  {
+   "group": "PlayerData",
+   "from": "ServerScriptService/Services/PlayerDataService/PlayerDataServiceServer",
+   "to": "ServerScriptService/Features/PlayerData/PlayerDataServiceServer"
+  },
+  {
+   "group": "PlayerData",
+   "from": "ServerScriptService/Modules/Constants/PlayerDataConstants",
+   "to": "ServerScriptService/Features/PlayerData/Data/PlayerDataConstants"
+  },
+  {
+   "group": "PlayerData",
+   "from": "ServerScriptService/Modules/ProfilePath",
+   "to": "ServerScriptService/Features/PlayerData/Utils/PlayerDataPathUtils"
+  },
+  {
+   "group": "PlayerData",
+   "from": "ServerScriptService/Modules/SliceOwner",
+   "to": "ServerScriptService/Features/PlayerData/Systems/PlayerDataSliceSystem"
+  },
+  {
+   "group": "PlayerData",
+   "from": "ServerScriptService/Modules/PlayerDataMigrations",
+   "to": "ServerScriptService/Features/PlayerData/Systems/PlayerDataMigrationSystem"
+  },
+  {
+   "group": "Core",
+   "from": "ServerScriptService/Modules/ProfileStoreTyped",
+   "to": "ServerScriptService/Core/ProfileStoreTyped"
+  },
+  {
+   "group": "Slot",
+   "from": "ServerScriptService/Services/SlotService/SlotServiceServer",
+   "to": "ServerScriptService/Features/Slot/SlotServiceServer"
+  },
+  {
+   "group": "StateSync",
+   "from": "ReplicatedStorage/Shared/State/SliceManifest",
+   "to": "ReplicatedStorage/Shared/Features/StateSync/Data/StateSyncSliceRegistry"
+  },
+  {
+   "group": "StateSync",
+   "from": "ReplicatedStorage/Shared/State/SyncState",
+   "to": "ReplicatedStorage/Shared/Features/StateSync/Data/StateSyncConstants"
+  },
+  {
+   "group": "StateSync",
+   "from": "ReplicatedStorage/Client/Services/StateSyncService/StateSyncServiceClient",
+   "to": "ReplicatedStorage/Client/Features/StateSync/StateSyncServiceClient"
+  },
+  {
+   "group": "StateSync",
+   "from": "ReplicatedStorage/Client/State/ClientStore",
+   "to": "ReplicatedStorage/Client/Features/StateSync/State/StateSyncClientStore"
+  },
+  {
+   "group": "StateSync",
+   "from": "ServerScriptService/Services/StateSyncService/StateSyncServiceServer",
+   "to": "ServerScriptService/Features/StateSync/StateSyncServiceServer"
+  },
+  {
+   "group": "StateSync",
+   "from": "ServerScriptService/State/ServerStore",
+   "to": "ServerScriptService/Features/StateSync/State/StateSyncServerStore"
+  },
+  {
+   "group": "StateSync",
+   "from": "ServerScriptService/State/PublicPlayerState",
+   "to": "ServerScriptService/Features/StateSync/State/StateSyncPublicPlayerStore"
+  },
+  {
+   "group": "Stat",
+   "from": "ReplicatedStorage/Shared/Modules/Constants/StatConstants",
+   "to": "ReplicatedStorage/Shared/Features/Stat/Data/StatConstants"
+  },
+  {
+   "group": "Stat",
+   "from": "ReplicatedStorage/Shared/Modules/Utils/StatFormulas",
+   "to": "ReplicatedStorage/Shared/Features/Stat/Utils/StatFormulas"
+  },
+  {
+   "group": "Stat",
+   "from": "ReplicatedStorage/Client/Services/StatsService/StatsServiceClient",
+   "to": "ReplicatedStorage/Client/Features/Stat/StatServiceClient"
+  },
+  {
+   "group": "Stat",
+   "from": "ServerScriptService/Services/StatsService/StatsServiceServer",
+   "to": "ServerScriptService/Features/Stat/StatServiceServer"
+  },
+  {
+   "group": "Title",
+   "from": "ReplicatedStorage/Shared/Modules/Constants/Titles/TitlesRegistry",
+   "to": "ReplicatedStorage/Shared/Features/Title/Data/TitleRegistry"
+  },
+  {
+   "group": "Title",
+   "from": "ReplicatedStorage/Shared/Modules/Constants/Titles/General",
+   "to": "ReplicatedStorage/Shared/Features/Title/Data/TitleGeneralRegistry"
+  },
+  {
+   "group": "Title",
+   "from": "ReplicatedStorage/Shared/Modules/Constants/Titles/TitlesTypes",
+   "to": "ReplicatedStorage/Shared/Features/Title/Data/TitleTypes"
+  },
+  {
+   "group": "Title",
+   "from": "ReplicatedStorage/Shared/Events/TitlesEvents",
+   "to": "ReplicatedStorage/Shared/Features/Title/Net/TitleEvents"
+  },
+  {
+   "group": "Title",
+   "from": "ReplicatedStorage/Shared/Modules/TitlesRequests",
+   "to": "ReplicatedStorage/Shared/Features/Title/Rules/TitleRequestRules"
+  },
+  {
+   "group": "Title",
+   "from": "ReplicatedStorage/Shared/Modules/TitlesValidation",
+   "to": "ReplicatedStorage/Shared/Features/Title/Rules/TitleSliceRules"
+  },
+  {
+   "group": "Title",
+   "from": "ReplicatedStorage/Client/Services/TitlesService/TitlesServiceClient",
+   "to": "ReplicatedStorage/Client/Features/Title/TitleServiceClient"
+  },
+  {
+   "group": "Title",
+   "from": "ServerScriptService/Services/TitlesService/TitlesServiceServer",
+   "to": "ServerScriptService/Features/Title/TitleServiceServer"
+  },
+  {
+   "group": "UI",
+   "from": "ReplicatedStorage/Client/Services/UIService/UIServiceClient",
+   "to": "ReplicatedStorage/Client/Features/UI/UIServiceClient"
+  },
+  {
+   "group": "UI",
+   "from": "ReplicatedStorage/Shared/Modules/Constants/UIAssets",
+   "to": "ReplicatedStorage/Client/Features/UI/Data/UIAssets"
+  },
+  {
+   "group": "Voice",
+   "from": "ReplicatedStorage/Client/Services/VoiceService/VoiceServiceClient",
+   "to": "ReplicatedStorage/Client/Features/Voice/VoiceServiceClient"
+  },
+  {
+   "group": "Voice",
+   "from": "ReplicatedStorage/Client/Services/VoiceService/VoiceWiring",
+   "to": "ReplicatedStorage/Client/Features/Voice/State/VoiceWiringTracker"
+  },
+  {
+   "group": "Voice",
+   "from": "ServerScriptService/Services/VoiceService/VoiceServiceServer",
+   "to": "ServerScriptService/Features/Voice/VoiceServiceServer"
+  },
+  {
+   "group": "Voice",
+   "from": "ServerScriptService/Services/VoiceService/VoiceSettings",
+   "to": "ServerScriptService/Features/Voice/Rules/VoiceSettingsCheck"
+  },
+  {
+   "group": "Core",
+   "from": "ReplicatedStorage/Shared/Modules/ServiceController",
+   "to": "ReplicatedStorage/Shared/Core/ServiceController"
+  },
+  {
+   "group": "Core",
+   "from": "ReplicatedStorage/Shared/Modules/Logger",
+   "to": "ReplicatedStorage/Shared/Core/Logger"
+  },
+  {
+   "group": "Core",
+   "from": "ReplicatedStorage/Shared/Modules/Guard",
+   "to": "ReplicatedStorage/Shared/Core/Guard"
+  },
+  {
+   "group": "Core",
+   "from": "ReplicatedStorage/Shared/Modules/SignalTyped",
+   "to": "ReplicatedStorage/Shared/Core/SignalTyped"
+  },
+  {
+   "group": "Core",
+   "from": "ServerScriptService/Modules/RequestHandler",
+   "to": "ServerScriptService/Core/Net/RequestHandler"
+  },
+  {
+   "group": "Core",
+   "from": "ServerScriptService/Modules/SpecRoots",
+   "to": "ServerScriptService/Core/Testing/SpecRoots"
+  },
+  {
+   "group": "Data",
+   "from": "ReplicatedStorage/Shared/Types/PlayerDataTypes",
+   "to": "ReplicatedStorage/Shared/Data/PlayerDataTypes"
+  },
+  {
+   "group": "Data",
+   "from": "ReplicatedStorage/Shared/Types/PublicPlayerTypes",
+   "to": "ReplicatedStorage/Shared/Data/PublicPlayerTypes"
+  },
+  {
+   "group": "UITree",
+   "from": "ReplicatedStorage/Client/UI/Scenes/UIState",
+   "to": "ReplicatedStorage/Client/UI/Scenes/UIStore"
+  },
+  {
+   "group": "UITree",
+   "from": "ReplicatedStorage/Client/UI/React/Debugger/theme",
+   "to": "ReplicatedStorage/Client/UI/React/Debugger/DebuggerTheme"
+  },
+  {
+   "group": "UITree",
+   "from": "ReplicatedStorage/Client/UI/React/Hooks/TrailEasing",
+   "to": "ReplicatedStorage/Client/UI/React/Hooks/TrailEasingUtils"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/AddCurrency",
+   "to": "ServerScriptService/Commands/CurrencyAdd"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/AddCurrencyServer",
+   "to": "ServerScriptService/Commands/CurrencyAddServer"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/SetCurrency",
+   "to": "ServerScriptService/Commands/CurrencySet"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/SetCurrencyServer",
+   "to": "ServerScriptService/Commands/CurrencySetServer"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/DepositCurrency",
+   "to": "ServerScriptService/Commands/BankDepositCurrency"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/DepositCurrencyServer",
+   "to": "ServerScriptService/Commands/BankDepositCurrencyServer"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/WithdrawCurrency",
+   "to": "ServerScriptService/Commands/BankWithdrawCurrency"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/WithdrawCurrencyServer",
+   "to": "ServerScriptService/Commands/BankWithdrawCurrencyServer"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/DepositItem",
+   "to": "ServerScriptService/Commands/BankDepositItem"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/DepositItemServer",
+   "to": "ServerScriptService/Commands/BankDepositItemServer"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/WithdrawItem",
+   "to": "ServerScriptService/Commands/BankWithdrawItem"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/WithdrawItemServer",
+   "to": "ServerScriptService/Commands/BankWithdrawItemServer"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/GiveItem",
+   "to": "ServerScriptService/Commands/InventoryGiveItem"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/GiveItemServer",
+   "to": "ServerScriptService/Commands/InventoryGiveItemServer"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/RemoveItem",
+   "to": "ServerScriptService/Commands/InventoryRemoveItem"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/RemoveItemServer",
+   "to": "ServerScriptService/Commands/InventoryRemoveItemServer"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/RollPreview",
+   "to": "ServerScriptService/Commands/ItemRollPreview"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/RollPreviewServer",
+   "to": "ServerScriptService/Commands/ItemRollPreviewServer"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/EquipItem",
+   "to": "ServerScriptService/Commands/EquipmentEquipItem"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/EquipItemServer",
+   "to": "ServerScriptService/Commands/EquipmentEquipItemServer"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/UnequipItem",
+   "to": "ServerScriptService/Commands/EquipmentUnequipItem"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/UnequipItemServer",
+   "to": "ServerScriptService/Commands/EquipmentUnequipItemServer"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/EquipCosmetic",
+   "to": "ServerScriptService/Commands/CustomizationEquipCosmetic"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/EquipCosmeticServer",
+   "to": "ServerScriptService/Commands/CustomizationEquipCosmeticServer"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/UnlockCosmetic",
+   "to": "ServerScriptService/Commands/CustomizationUnlockCosmetic"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/UnlockCosmeticServer",
+   "to": "ServerScriptService/Commands/CustomizationUnlockCosmeticServer"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/SetBodyColor",
+   "to": "ServerScriptService/Commands/CustomizationSetBodyColor"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/SetBodyColorServer",
+   "to": "ServerScriptService/Commands/CustomizationSetBodyColorServer"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/SetCosmeticColor",
+   "to": "ServerScriptService/Commands/CustomizationSetCosmeticColor"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/SetCosmeticColorServer",
+   "to": "ServerScriptService/Commands/CustomizationSetCosmeticColorServer"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/SetHeadType",
+   "to": "ServerScriptService/Commands/CustomizationSetHeadType"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/SetHeadTypeServer",
+   "to": "ServerScriptService/Commands/CustomizationSetHeadTypeServer"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/SetSoulColor",
+   "to": "ServerScriptService/Commands/CustomizationSetSoulColor"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/SetSoulColorServer",
+   "to": "ServerScriptService/Commands/CustomizationSetSoulColorServer"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/SetSurface",
+   "to": "ServerScriptService/Commands/CustomizationSetSurface"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/SetSurfaceServer",
+   "to": "ServerScriptService/Commands/CustomizationSetSurfaceServer"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/CheckArt",
+   "to": "ServerScriptService/Commands/CustomizationCheckArt"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/CheckArtServer",
+   "to": "ServerScriptService/Commands/CustomizationCheckArtServer"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/TuneOffset",
+   "to": "ServerScriptService/Commands/CustomizationTuneOffset"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/GiveXp",
+   "to": "ServerScriptService/Commands/StatGiveXp"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/GiveXpServer",
+   "to": "ServerScriptService/Commands/StatGiveXpServer"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/InvestStat",
+   "to": "ServerScriptService/Commands/StatInvest"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/InvestStatServer",
+   "to": "ServerScriptService/Commands/StatInvestServer"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/RespecStats",
+   "to": "ServerScriptService/Commands/StatRespec"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/RespecStatsServer",
+   "to": "ServerScriptService/Commands/StatRespecServer"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/SwitchSlot",
+   "to": "ServerScriptService/Commands/SlotSwitch"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/SwitchSlotServer",
+   "to": "ServerScriptService/Commands/SlotSwitchServer"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/UnlockSlot",
+   "to": "ServerScriptService/Commands/SlotUnlock"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/UnlockSlotServer",
+   "to": "ServerScriptService/Commands/SlotUnlockServer"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/AnimPlay",
+   "to": "ServerScriptService/Commands/AnimationPlay"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/AnimPlayServer",
+   "to": "ServerScriptService/Commands/AnimationPlayServer"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/AnimStop",
+   "to": "ServerScriptService/Commands/AnimationStop"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/AnimStopServer",
+   "to": "ServerScriptService/Commands/AnimationStopServer"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/AnimStopClass",
+   "to": "ServerScriptService/Commands/AnimationStopClass"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/AnimStopClassServer",
+   "to": "ServerScriptService/Commands/AnimationStopClassServer"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/AnimTracks",
+   "to": "ServerScriptService/Commands/AnimationTracks"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/AnimTracksServer",
+   "to": "ServerScriptService/Commands/AnimationTracksServer"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/AnimReport",
+   "to": "ServerScriptService/Commands/AnimationReport"
+  },
+  {
+   "group": "Commands",
+   "from": "ServerScriptService/Commands/AnimReportServer",
+   "to": "ServerScriptService/Commands/AnimationReportServer"
+  },
+  {
+   "group": "Replication",
+   "from": "ServerScriptService/Services/CharacterReplicationService/ReplicationLoad",
+   "to": "ServerScriptService/Features/Replication/Testing/ReplicationLoadHarness"
+  }
+ ]
+}

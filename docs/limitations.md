@@ -15,10 +15,9 @@ union must be kept in sync with the `CURRENCIES` table by hand:
 ```lua
 -- CurrencyConstants.luau
 local CURRENCIES = {
-    gold = { ... },
-    gems = { ... },
+    jaku = { ... },
 }
-export type CurrencyType = "gold" | "gems"  -- Must match CURRENCIES keys manually
+export type CurrencyType = "jaku"  -- Must match CURRENCIES keys manually
 ```
 
 **Why This Exists:** Intentional trade-off for intellisense/autocomplete support. No good
@@ -67,41 +66,55 @@ rather than ByteNet by design.
 ## Scalability Limitations
 
 ### 3. `ProfilePath`: Registry vs. Compile-Time Paths
-**Status:** ✅ Registry pattern adopted.
+**Status:** ✅ Registry pattern adopted, now slot-aware.
 
-`ProfilePath` is no longer a hand-maintained union. Each domain service registers its own root
-key at load time via `PlayerDataConstants.registerProfilePath(path, defaultData)`, which also
-assembles the profile template dynamically:
+`ProfilePath` is no longer a hand-maintained union. Profile data is addressed by a **dotted**
+path — `slots.2.currency` (one character slot's slice) or `account.settings` (an account-wide
+slice) — rather than a bare root key; only genuine root scalars/tables (`_schemaVersion`,
+`slotState`) stay bare. A domain service registers its slice at load time via one of two
+registrars, which also assembles the profile template dynamically:
 
 ```lua
--- PlayerDataConstants.luau — each domain service registers its root key at load time.
--- (Services no longer call this directly: SliceOwner.register wraps it and is the only
--- call site per service — see the mitigation below.)
-PlayerDataConstants.registerProfilePath(path, defaultData)
+-- PlayerDataConstants.luau — a domain service registers its slice at load time, either
+-- slot-scoped or account-wide. (Services no longer call these directly: PlayerDataSliceSystem.registerSlot /
+-- PlayerDataSliceSystem.registerAccount wrap them and are the only call site per service — see the
+-- mitigation below.)
+PlayerDataConstants.registerSlotPath(slice, defaultData, validator)    -- stamps defaultData into EVERY slot
+PlayerDataConstants.registerAccountPath(slice, defaultData, validator) -- stamps defaultData into account.<slice>
 
 -- PlayerDataTypes.luau
 export type ProfilePath = string  -- no longer enumerated at compile time
 ```
 
+`registerSlotPath` deep-copies `defaultData` into each of the `MAX_SLOTS` character slots (so the
+slots don't alias one table), and registers the validator under the slot-index-agnostic **pattern**
+`slots.*.<slice>` rather than a concrete path. `PlayerDataConstants.getValidator(path)` normalises
+a concrete path (e.g. `slots.3.currency`) to its pattern before lookup — that normalisation is what
+makes ONE registration enforce a slice's invariant on EVERY slot; keying the lookup on the concrete
+path would find the validator for slot 1 only, silently leaving slots 2 and 3 unvalidated.
+
 This removes the per-field manual sync and lets each service own its slice of the profile — at
 the cost of compile-time checking on path strings. A typo such as `mutate(userId, "iventory", ...)`
 type-checks fine but fails at runtime: `mutate()` logs a warning and returns `false` when the
-path isn't present. `registerProfilePath` also asserts against duplicate registration.
+path isn't present. Both registrars also assert against duplicate registration, and a slice name
+may not be registered as both slot-scoped and account-wide — they'd collide on the single reactive-
+store atom keyed by that slice name.
 
 **Mitigation — encapsulate the path in a typed accessor.** `ProfilePath` stays `string` (keeping
 the open, decentralized registry), but a service that owns a slice should never expose the raw path
-to callers. `SliceOwner.register` writes the path string exactly once and hands back a typed
-`get`/`mutate` pair, so add/remove/set never restate it and the mutator payload is typed without a
-per-call annotation:
+to callers. `PlayerDataSliceSystem.registerSlot` / `PlayerDataSliceSystem.registerAccount` build the dotted path exactly
+once and hand back a typed `get`/`mutate` pair, so add/remove/set never restate it and the mutator
+payload is typed without a per-call annotation:
 
 ```lua
 -- CurrencyServiceServer.luau — the ONLY place "currency" appears as a path string
-local currencySlice = SliceOwner.register("currency", { gold = 100, gems = 10 }, function(profile)
-    return profile.currency
+local currencySlice = PlayerDataSliceSystem.registerSlot("currency", { jaku = 100 }, function(slot)
+    return slot.currency
 end)
 
 -- add/remove/set then call: currencySlice.mutate(userId, function(currency) ... end)
--- InventoryServiceServer registers "inventory" the same way.
+-- InventoryServiceServer registers "inventory" the same way; SlotServiceServer registers the
+-- account-wide "unlockedSlots" via PlayerDataSliceSystem.registerAccount instead.
 ```
 
 This shrinks the typo surface to a single line per service and types the mutator argument, without
@@ -115,7 +128,7 @@ so the accessor pattern is the portable choice today.
 ### 4. Network Batching — handled by the reactive layer
 **Status:** ✅ addressed by the reactive spine.
 
-Replicated player state no longer sends a packet per mutation. Writes mirror into `ServerStore`
+Replicated player state no longer sends a packet per mutation. Writes mirror into `StateSyncServerStore`
 atoms, and charm-sync coalesces changes and flushes at most once per `Heartbeat`
 (`config.interval`, default `0` = per frame), so a burst of same-frame writes to one player collapses
 to a single delta. See [architecture: Reactive state](architecture.md#reactive-state).
@@ -174,7 +187,7 @@ the next auto-save persists it, so the flag can be early but never durably wrong
 ## Data Persistence Limitations
 
 ### 6. Schema Versioning
-**Current Status:** ✅ Implemented via `PlayerDataMigrations`.
+**Current Status:** ✅ Implemented via `PlayerDataMigrationSystem`.
 
 `ProfileStore:Reconcile()` backfills missing template fields, but it cannot rename a field,
 change a field's type, or remove a deprecated one. Those changes are handled by ordered,
@@ -187,19 +200,19 @@ versioned migrations.
 - `MIGRATIONS[v]` upgrades a profile from version `v` to `v + 1`, so
   `CURRENT_VERSION = 1 + #MIGRATIONS`.
 - `onPlayerAdded` reads the stored version *before* `Reconcile()` (so the backfill doesn't mask
-  an old profile), then calls `PlayerDataMigrations.apply(profile.Data, storedVersion)`.
+  an old profile), then calls `PlayerDataMigrationSystem.apply(profile.Data, storedVersion)`.
 - Migrations run against a deep copy; if one errors, the live profile is left untouched and the
   player is kicked rather than persisting a half-migrated profile.
 
-**Adding a migration** (see `src/ServerScriptService/Modules/PlayerDataMigrations.luau`):
+**Adding a migration** (see `src/ServerScriptService/Features/PlayerData/Systems/PlayerDataMigrationSystem.luau`):
 ```lua
 -- 1. Append to MIGRATIONS (index = the version it upgrades FROM):
-[1] = function(data) -- v1 -> v2: rename currency.gold to currency.coins
-    data.currency.coins = data.currency.gold
-    data.currency.gold = nil
+[1] = function(data) -- v1 -> v2: rename currency.jaku to currency.coins
+    data.currency.coins = data.currency.jaku
+    data.currency.jaku = nil
 end,
--- 2. Update the template / registerProfilePath defaults so NEW profiles match the new shape.
--- 3. Add a case to PlayerDataMigrations.spec.luau.
+-- 2. Update the template / registerSlotPath (or registerAccountPath) defaults so NEW profiles match the new shape.
+-- 3. Add a case to PlayerDataMigrationSystem.spec.luau.
 ```
 
 ---
@@ -218,16 +231,17 @@ If network events fail to send (player disconnecting mid-operation), there's no 
 ### 8. No `BaseService` Abstraction — ✅ mostly resolved
 
 The **meaningful** duplication was the slice-owner scaffolding: every data service hand-rolled the
-same `registerProfilePath` + typed `getX` + one-line `_mutateX` wrapper, plus the same
+same root-key registration + typed `getX` + one-line `_mutateX` wrapper, plus the same
 `assert(type(userId) == "number", …)` / positive-amount guards at every method. That's now
 extracted:
 
-- **`SliceOwner.register(slice, default, read, validate?)`** (`ServerScriptService/Modules/SliceOwner.luau`)
-  returns typed `get`/`mutate`/`op` for a profile slice in one call — generic over the slice type (inferred
+- **`PlayerDataSliceSystem.registerSlot(slice, default, read, validate?)` / `PlayerDataSliceSystem.registerAccount(slice, default, read, validate?)`**
+  (`ServerScriptService/Features/PlayerData/Systems/PlayerDataSliceSystem.luau`)
+  return typed `get`/`getForSlot`/`mutate`/`op` for a profile slice in one call — generic over the slice type (inferred
   from `read`), so it stays cast-free; the optional `validate` closure registers the slice's data-layer
   invariant (see [#13](#13-slice-invariants-enforced-at-the-data-layer)). See the recipe in
   [conventions: Adding a service that owns a profile slice](conventions.md#adding-a-service-that-owns-a-profile-slice).
-- **`Guard`** (`ReplicatedStorage/Shared/Modules/Guard.luau`) centralises the repeated runtime
+- **`Guard`** (`ReplicatedStorage/Shared/Core/Guard.luau`) centralises the repeated runtime
   argument validators (`userId`, `positiveAmount`, `nonNegativeAmount`).
 
 `CurrencyServiceServer` and `InventoryServiceServer` now contain only their real domain logic (caps,
@@ -240,7 +254,7 @@ convenience, but there is no longer a boilerplate-duplication problem to solve.
 ---
 
 ### 9. Limited Client-Side Schema Validation
-Replicated state arrives over charm-sync and is applied into `ClientStore` atoms. The client trusts
+Replicated state arrives over charm-sync and is applied into `StateSyncClientStore` atoms. The client trusts
 server data (correct for a server-authoritative model). `StateSyncServiceClient` guards that the
 inbound payload is a table before handing it to charm-sync, but does not deep-validate slice shapes:
 
@@ -317,19 +331,20 @@ Current transaction system is single-server only. For cross-server features:
 Domain caps (currency `MAX_CURRENCY` / non-negative, inventory `MAX_INVENTORY_SIZE`) used to live only
 in the owning service's methods (`CurrencyService:addCurrency`, …). A raw
 `PlayerDataService:transaction()` op built with `currencyOp`/`inventoryOp` — whose mutator is arbitrary
-server code — could therefore bypass them and write an out-of-range value (e.g. a trade pushing gold
+server code — could therefore bypass them and write an out-of-range value (e.g. a trade pushing jaku
 past the cap or negative).
 
-Slices now register an optional **invariant validator** alongside their path. `SliceOwner.register`
-takes a `validate` closure typed to the slice value; it is stored via
-`PlayerDataConstants.registerProfilePath` and run by **both** `mutate()` and `transaction()` after each
+Slices now register an optional **invariant validator** alongside their path. `PlayerDataSliceSystem.registerSlot`
+(and `PlayerDataSliceSystem.registerAccount`) take a `validate` closure typed to the slice value; it is stored via
+`PlayerDataConstants.registerSlotPath` / `registerAccountPath`, keyed by the slice's PATTERN so one
+registration is enforced on every slot, and run by **both** `mutate()` and `transaction()` after each
 mutator, inside the no-yield locked region. A violation rolls the write back exactly like a `false`
 return — so the cap holds no matter which path built the write:
 
 ```lua
 -- CurrencyServiceServer.luau — the invariant, enforced by the data layer for every write path.
-local currencySlice = SliceOwner.register("currency", { gold = 100, gems = 10 }, function(profile)
-    return profile.currency
+local currencySlice = PlayerDataSliceSystem.registerSlot("currency", { jaku = 100 }, function(slot)
+    return slot.currency
 end, function(currency) -- validate: registered key, number, >= 0, <= MAX_CURRENCY per key
     for key, value in currency do
         if not CurrencyConstants.isValidCurrencyType(key) then
@@ -360,9 +375,9 @@ and synchronous, like a mutator.
 | `ProfilePath` compile-time safety | Low | Registry adopted (runtime-checked) |
 | Network batching | — | ✅ Handled by charm-sync (Heartbeat-coalesced) |
 | ProfileStore locking (cross-server) | High | Same-server transactions only; see §5 and §12 |
-| Schema versioning | Low | Implemented (`PlayerDataMigrations`) |
+| Schema versioning | Low | Implemented (`PlayerDataMigrationSystem`) |
 | No offline retry | Low | Queue pattern |
-| No BaseService | ✅ Resolved | Guard + SliceOwner extract the scaffolding; shell intentionally left |
+| No BaseService | ✅ Resolved | Guard + PlayerDataSliceSystem extract the scaffolding; shell intentionally left |
 | No client validation | Low | Dev-mode validation |
 | No inventory slots | Low | Add slot field |
 | Audit trail persistence | Low | Console + ring buffer today; no dedicated database |

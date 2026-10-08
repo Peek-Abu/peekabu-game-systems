@@ -11,13 +11,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local TestEZ = require(ReplicatedStorage.DevPackages.TestEZ)
-local GameItems = require(ReplicatedStorage.Shared.Modules.GameItems)
+local ItemContentRegistry = require(ReplicatedStorage.Shared.Features.Item.Data.ItemContentRegistry)
 
 -- Seed item definitions so the inventory specs have items to reference.
-GameItems.init()
+ItemContentRegistry.init()
 
 -- Shared root list + orphan-spec guard (mirrors TestRunner.server.luau; see SpecRoots).
-local SpecRoots = require(ServerScriptService.Modules.SpecRoots)
+local SpecRoots = require(ServerScriptService.Core.Testing.SpecRoots)
 local testLocations = SpecRoots.get()
 SpecRoots.assertAllSpecsCovered(testLocations)
 SpecRoots.assertAllModulesSpecced(testLocations)

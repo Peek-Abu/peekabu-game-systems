@@ -6,7 +6,7 @@
 	(init + start ms), and a "logs" button that jumps to the Logs tab filtered to that service. Clicking
 	a row expands its dependencies, full (untruncated) getState, and any init/start/state errors.
 
-	Reads the realm from `DebuggerState.context`: server services come from the snapshot, client services
+	Reads the realm from `DebuggerStore.context`: server services come from the snapshot, client services
 	are read locally. Re-renders when either atom changes.
 
 	@class ServicesPanel
@@ -16,9 +16,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
 local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
-local DebuggerEvents = require(ReplicatedStorage.Shared.Events.DebuggerEvents)
-local DebuggerState = require(ReplicatedStorage.Client.State.DebuggerState)
-local theme = require(ReplicatedStorage.Client.UI.React.Debugger.theme)
+local DebuggerEvents = require(ReplicatedStorage.Shared.Features.Debugger.Net.DebuggerEvents)
+local DebuggerStore = require(ReplicatedStorage.Client.Features.Debugger.State.DebuggerStore)
+local DebuggerTheme = require(ReplicatedStorage.Client.UI.React.Debugger.DebuggerTheme)
 local TableView = require(ReplicatedStorage.Client.UI.React.Debugger.TableView)
 
 local e = React.createElement
@@ -37,13 +37,13 @@ export type Props = {
 ]=]
 local function statusOf(service: ServiceSnapshot): (string, Color3)
 	if service.initError or service.startError then
-		return "✕", theme.BAD
+		return "✕", DebuggerTheme.BAD
 	elseif service.started then
-		return "●", theme.GOOD
+		return "●", DebuggerTheme.GOOD
 	elseif service.initialized then
-		return "◐", theme.WARNING
+		return "◐", DebuggerTheme.WARNING
 	end
-	return "○", theme.MUTED
+	return "○", DebuggerTheme.MUTED
 end
 
 --[=[
@@ -67,20 +67,20 @@ local function expansion(service: ServiceSnapshot, order: number): React.ReactNo
 	end
 
 	if #service.dependencies > 0 then
-		push(theme.line(`deps: {table.concat(service.dependencies, ", ")}`, theme.MUTED, i))
+		push(DebuggerTheme.line(`deps: {table.concat(service.dependencies, ", ")}`, DebuggerTheme.MUTED, i))
 	else
-		push(theme.line("deps: (none)", theme.MUTED, i))
+		push(DebuggerTheme.line("deps: (none)", DebuggerTheme.MUTED, i))
 	end
 
 	if service.initError then
-		push(theme.line(`init error: {service.initError}`, theme.BAD, i))
+		push(DebuggerTheme.line(`init error: {service.initError}`, DebuggerTheme.BAD, i))
 	end
 	if service.startError then
-		push(theme.line(`start error: {service.startError}`, theme.BAD, i))
+		push(DebuggerTheme.line(`start error: {service.startError}`, DebuggerTheme.BAD, i))
 	end
 
 	if service.stateError then
-		push(theme.line(`state error: {service.stateError}`, theme.BAD, i))
+		push(DebuggerTheme.line(`state error: {service.stateError}`, DebuggerTheme.BAD, i))
 	elseif service.state then
 		-- Structured Component/Data grid (same TableView as the State tab) instead of raw lines.
 		local stateRows: { TableView.Row } = {}
@@ -98,7 +98,7 @@ local function expansion(service: ServiceSnapshot, order: number): React.ReactNo
 			layoutOrder = i,
 		})
 	else
-		push(theme.line("state: (no getState)", theme.MUTED, i))
+		push(DebuggerTheme.line("state: (no getState)", DebuggerTheme.MUTED, i))
 	end
 
 	return e("Frame", {
@@ -149,11 +149,11 @@ local function serviceRow(
 			AnchorPoint = Vector2.new(1, 0),
 			Position = UDim2.fromScale(1, 0),
 			Size = UDim2.new(0, 50, 1, 0),
-			BackgroundColor3 = theme.PANEL_LIGHT,
+			BackgroundColor3 = DebuggerTheme.PANEL_LIGHT,
 			BorderSizePixel = 0,
 			Font = Enum.Font.Gotham,
 			TextSize = 11,
-			TextColor3 = theme.MUTED,
+			TextColor3 = DebuggerTheme.MUTED,
 			Text = "logs",
 			[React.Event.Activated] = onJumpToLogs,
 		}, {
@@ -168,21 +168,21 @@ end
 	@return React.ReactNode
 ]=]
 local function ServicesPanel(props: Props): React.ReactNode
-	local context = useAtom(DebuggerState.context)
-	local snapshot = useAtom(DebuggerState.serverSnapshot)
+	local context = useAtom(DebuggerStore.context)
+	local snapshot = useAtom(DebuggerStore.serverSnapshot)
 	local selected, setSelected = React.useState(nil :: string?)
 
 	local services: { ServiceSnapshot }
 	if context == "server" then
 		services = if snapshot then snapshot.services else {}
 	else
-		services = DebuggerState.getClientServices()
+		services = DebuggerStore.getClientServices()
 	end
 
 	local rows: { [string]: React.ReactNode } = {}
 	local order = 0
 	if #services == 0 then
-		rows["empty"] = theme.line("waiting for snapshot…", theme.MUTED, 0)
+		rows["empty"] = DebuggerTheme.line("waiting for snapshot…", DebuggerTheme.MUTED, 0)
 	end
 	for _, service in services do
 		order += 10
@@ -197,7 +197,7 @@ local function ServicesPanel(props: Props): React.ReactNode
 		end
 	end
 
-	return theme.scroller(rows)
+	return DebuggerTheme.scroller(rows)
 end
 
 return ServicesPanel
