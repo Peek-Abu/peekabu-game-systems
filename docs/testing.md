@@ -1,6 +1,6 @@
 # Testing Guide
 
-This document explains how to write and run tests for the venture framework using TestEZ.
+This document explains how to write and run tests for this game-systems base using TestEZ.
 
 ---
 
@@ -248,8 +248,8 @@ Before implementing any new functionality, write tests that describe the intende
 return function()
     describe("CurrencyUtils", function()
         describe("convertCurrency", function()
-            it("should convert jaku to tickets at correct rate", function()
-                local result = CurrencyUtils.convertCurrency("jaku", "tickets", 100)
+            it("should convert coins to tickets at correct rate", function()
+                local result = CurrencyUtils.convertCurrency("coins", "tickets", 100)
                 expect(result).to.equal(10) -- 10:1 conversion rate
             end)
             
@@ -260,7 +260,7 @@ return function()
             end)
             
             it("should return 0 for zero amount", function()
-                local result = CurrencyUtils.convertCurrency("jaku", "tickets", 0)
+                local result = CurrencyUtils.convertCurrency("coins", "tickets", 0)
                 expect(result).to.equal(0)
             end)
         end)
@@ -404,7 +404,7 @@ However, once the prototype is validated, **refactor it with tests** before merg
 
 ---
 
-## Testing React UI (the Phase 7 framework)
+## Testing React UI
 
 The UI framework (`Client/UI/`) splits cleanly into two kinds of module, and each is tested — or
 not — for a concrete reason:
@@ -431,12 +431,12 @@ Studio's **edit mode** with the [UI Labs](https://ui-labs.luau.page) plugin, whi
 **One-time setup:** install the *UI Labs* plugin from the Creator Store. The companion library is
 already a dev-dependency (`pepeeltoro41/ui-labs`, mounted at `ReplicatedStorage.DevPackages.UILabs`).
 
-**Writing one:** a story sits next to its component (`Slot.story.luau` beside `Slot.luau`) and returns
-`UILabs.CreateReactStory({ react, reactRoblox, controls }, render)`. Control values arrive as
-`props.controls`; `UILabs.Choose({...})` gives a dropdown. Shared sample data lives in
-`Client/UI/React/StoryFixtures.luau` so stories stay about layout.
+**Writing one:** a story sits next to its component (`Button.story.luau` beside `Button.luau` is the
+base's reference example) and returns `UILabs.CreateReactStory({ react, reactRoblox, controls }, render)`.
+Control values arrive as `props.controls`; `UILabs.Choose({...})` gives a dropdown. When several stories
+need the same sample data, put it in one fixtures module beside them so stories stay about layout.
 
-`VentureUI.storybook.luau` declares which folders UI Labs scans (`Primitives` and `Screens`, grouped).
+`GameUI.storybook.luau` declares which folders UI Labs scans (`Primitives` and `Screens`, grouped).
 Without a storybook module UI Labs files everything under a catch-all **"Unknown Stories"** node, so
 that file is what gives the tree its shape — it only needs editing if a new top-level story location
 appears, not per story.
@@ -447,7 +447,7 @@ spec.
 
 **What a story can't cover:** the scene stack, input capture, HUD suppression, and real synced data.
 Those still need a Play pass. Stories cover the visual loop — proportions, regions, colour, states that
-are hard to reach in-game (an empty slot, every rarity at once, a zero-item grid).
+are hard to reach in-game (an empty state, every variant at once, a zero-item grid).
 
 **On mounted component tests (`ReactRoblox.createRoot` + `act`, or `jsdotlua/react-test-renderer`):**
 our suite runs in a real Studio runtime, so mounting a component in a spec is *possible* with no new
@@ -465,8 +465,8 @@ extracted into a pure view-model. Until then, mounting buys complexity without c
 ❌ **Bad:**
 ```lua
 it("should handle currency operations", function()
-    expect(CurrencyUtils.getCurrencyAmount(currency, "jaku")).to.equal(100)
-    expect(CurrencyUtils.hasEnoughCurrency(currency, "jaku", 50)).to.equal(true)
+    expect(CurrencyUtils.getCurrencyAmount(currency, "coins")).to.equal(100)
+    expect(CurrencyUtils.hasEnoughCurrency(currency, "coins", 50)).to.equal(true)
     expect(CurrencyUtils.formatCurrency(100)).to.equal("100")
 end)
 ```
@@ -474,11 +474,11 @@ end)
 ✅ **Good:**
 ```lua
 it("should return correct amount for valid currency", function()
-    expect(CurrencyUtils.getCurrencyAmount(currency, "jaku")).to.equal(100)
+    expect(CurrencyUtils.getCurrencyAmount(currency, "coins")).to.equal(100)
 end)
 
 it("should return true when player has enough", function()
-    expect(CurrencyUtils.hasEnoughCurrency(currency, "jaku", 50)).to.equal(true)
+    expect(CurrencyUtils.hasEnoughCurrency(currency, "coins", 50)).to.equal(true)
 end)
 
 it("should format amounts without commas for values < 1000", function()
@@ -507,12 +507,12 @@ Always test:
 ```lua
 describe("hasEnoughCurrency", function()
     it("should return false for nil currency table", function()
-        expect(CurrencyUtils.hasEnoughCurrency(nil, "jaku", 10)).to.equal(false)
+        expect(CurrencyUtils.hasEnoughCurrency(nil, "coins", 10)).to.equal(false)
     end)
     
     it("should throw error for non-positive amount", function()
         expect(function()
-            CurrencyUtils.hasEnoughCurrency(currency, "jaku", 0)
+            CurrencyUtils.hasEnoughCurrency(currency, "coins", 0)
         end).to.throw()
     end)
 end)

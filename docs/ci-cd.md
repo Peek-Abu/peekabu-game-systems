@@ -1,6 +1,6 @@
 # CI/CD
 
-Continuous integration (validation only — lint, format, typecheck, test) for venture,
+Continuous integration (validation only — lint, format, typecheck, test) for this base (and each game built on it),
 built on GitHub Actions + Roblox Open Cloud. Defined in
 [`.github/workflows/ci-cd.yml`](../.github/workflows/ci-cd.yml). Production is deployed **manually**
 (see [Manual deployment](#manual-deployment)) — there is no automated CD.

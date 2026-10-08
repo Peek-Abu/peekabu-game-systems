@@ -1,6 +1,8 @@
-# Venture Game Systems
+# Peekabu Game Systems
 
-A strongly-typed, server-authoritative **game systems base for Roblox** — a reusable foundation you can drop into any game. It ships a service lifecycle framework, persistent player data with atomic transactions, currency and inventory systems, an admin command suite, and a lint → format → typecheck → test CI validation pipeline.
+A strongly-typed, server-authoritative **game systems base for Roblox** — the shared foundation every one of our games starts from. It ships a service lifecycle framework, persistent player data with atomic transactions, currency / item / inventory / title systems, an animation system, a React UI framework, an in-game debugger, an admin command suite, and a lint → format → typecheck → test CI validation pipeline.
+
+Each game lives in its own repo or branch on top of this base. What is in the base, what was deliberately left out, and the shared systems still to come are in [docs/ROADMAP.md](docs/ROADMAP.md).
 
 Built with Luau `--!strict` throughout, [Rojo](https://rojo.space/), [Wally](https://wally.run/), and [Rokit](https://github.com/rojo-rbx/rokit).
 
@@ -28,7 +30,10 @@ Built with Luau `--!strict` throughout, [Rojo](https://rojo.space/), [Wally](htt
 - **Service lifecycle framework** — `register → init → start → stop` with a topological dependency sort. Services at the same dependency level start concurrently; a level only begins once every service in the previous level has fully finished `start()`. Circular dependencies are detected and reported. See [ServiceController.luau](src/ReplicatedStorage/Shared/Core/ServiceController.luau).
 - **Persistent player data** — built on [ProfileStore](https://github.com/MadStudioRoblox/ProfileStore) with session locking, reconciliation, and a single `mutate()` choke point for all writes.
 - **Atomic transactions** — multi-profile, all-or-nothing mutations (e.g. trades) with in-memory per-path snapshot rollback and auto-save-mid-transaction detection. See `PlayerDataServiceServer:transaction()`.
-- **Currency & inventory systems** — capped currencies, stackable/unique items, batch operations, and reactive client sync via [Charm](https://github.com/littensy/charm)/[charm-sync](https://github.com/littensy/charm-sync) atoms.
+- **Currency, items & inventory** — capped currencies; an item registry where stackability is declared; stacks and unique items with atomically minted uids and per-instance `attrs` (a pet's level, a rolled mutation); reactive client sync via [Charm](https://github.com/littensy/charm)/[charm-sync](https://github.com/littensy/charm-sync) atoms.
+- **Animation** — one CI-enforced id registry, one track owner per Animator, a locomotion core replacing Roblox's `Animate`, declared interruption classes, and server-granted actions played by the owning client. See [docs/animation.md](docs/animation.md).
+- **UI framework** — React layers that survive respawn, a scene stack (Escape / gamepad-B to close, per-scene toggle keys), a HUD widget registry, primitives + design tokens, and UI Labs stories.
+- **In-game debugger** — F4 overlay with logs, services, a live state tree, animations, and the UI stack.
 - **Admin commands** — [Cmdr](https://eryn.io/Cmdr/) integration with a secure-by-default allowlist gate. See [AdminServiceServer.luau](src/ServerScriptService/Features/Admin/AdminServiceServer.luau).
 - **Request middleware** — per-player rate limiting, validation, and audit logging for network handlers. See [RequestHandler.luau](src/ServerScriptService/Core/Net/RequestHandler.luau).
 - **Structured logging** — leveled logger (`DEBUG`/`INFO`/`WARN`/`ERROR`/`AUDIT`) with per-context prefixes. See [Logger.luau](src/ReplicatedStorage/Shared/Core/Logger.luau).
@@ -72,14 +77,16 @@ src/
 │  │  └─ Features/       <Feature>/ with Data, Net, Rules, State, Utils, Systems, Testing subfolders
 │  └─ Client/
 │     ├─ Features/       <Feature>/ holding *ServiceClient plus the same subfolders (StateSyncClientStore is in StateSync/State)
-│     └─ UI/             React-lua debugger overlay (F4), driven by DebuggerStore atoms via useAtom
+│     └─ UI/             React UI framework: layers, scenes, suppression, HUD, primitives, debugger overlay (F4)
 ├─ ServerScriptService/
 │  ├─ Features/          <Feature>/ holding *ServiceServer plus the same subfolders (StateSyncServerStore is in StateSync/State)
 │  ├─ Core/              ProfileStoreTyped, Net/RequestHandler, Testing/SpecRoots
 │  ├─ Commands/          Cmdr command definitions + server implementations
 │  ├─ ServerHandler.server.luau   Server entry point
 │  └─ TestRunner.server.luau      Runs the TestEZ suite
-└─ StarterPlayer/StarterPlayerScripts/ClientHandler.client.luau   Client entry point
+└─ StarterPlayer/
+   ├─ StarterPlayerScripts/ClientHandler.client.luau      Client entry point
+   └─ StarterCharacterScripts/Animate.client.luau         Locomotion entry (replaces the engine's Animate)
 
 Note: this is a CODE-ONLY Rojo project. Workspace, Terrain, Lighting and other visual content are
 owned by the place file (Studio/Team Create), NOT mounted here — so `rojo serve` can never overwrite
@@ -123,7 +130,7 @@ rojo serve               # then connect via the Rojo Studio plugin
 Or build a standalone place file:
 
 ```bash
-rojo build -o venture.rbxl default.project.json
+rojo build -o peekabu.rbxl default.project.json
 ```
 
 > The built `.rbxl` is a generated artifact and is **git-ignored** — don't commit it. The source of truth is the Rojo project under `src/`.
@@ -135,7 +142,7 @@ rojo build -o venture.rbxl default.project.json
 | Task | Command |
 |------|---------|
 | Sync to Studio | `rojo serve` |
-| Build a place file | `rojo build -o venture.rbxl default.project.json` |
+| Build a place file | `rojo build -o peekabu.rbxl default.project.json` |
 | Lint | `selene src` |
 | Check formatting | `stylua --check src` |
 | Auto-format | `stylua src` |
@@ -209,6 +216,9 @@ ship together. See [Manual deployment](docs/ci-cd.md#manual-deployment).
 | [pcall-guide.md](docs/pcall-guide.md) | Targeted error-handling patterns |
 | [limitations.md](docs/limitations.md) | Known trade-offs and future considerations |
 | [ci-cd.md](docs/ci-cd.md) | Pipeline setup and required secrets |
+| [project-structure.md](docs/project-structure.md) | Feature layout, naming rules, the generated module map |
+| [animation.md](docs/animation.md) | The animation system |
+| [ROADMAP.md](docs/ROADMAP.md) | What the base has, what it left out, and the shared systems to build next |
 
 ---
 

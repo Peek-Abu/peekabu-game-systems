@@ -14,19 +14,21 @@ This file holds the non-negotiable rules and decisions; descriptive reference ma
 | [docs/architecture.md](docs/architecture.md) | How the pieces are wired at runtime — boot sequence, `ServiceController`, the data layer, transactions, networking, the reactive spine. |
 | [docs/project-structure.md](docs/project-structure.md) | The feature layout and naming rules, where new code goes, service discovery, the spec-sibling rule, the add-a-slice recipe, and the generated module map. |
 | [docs/tech-stack.md](docs/tech-stack.md) | The Rokit toolchain, the CI pipeline stages, and each Wally dependency's sanctioned role here. |
-| [docs/ROADMAP.md](docs/ROADMAP.md) | Phase-by-phase porting plan and status — what's landed, in flight, and next. |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | What the base has, what was deliberately left out, and the ordered list of shared systems still to build. |
 | [docs/testing.md](docs/testing.md) | How to write and run TestEZ specs, and what `SpecRoots` enforces. |
-| [docs/animation.md](docs/animation.md) | The animation system — registry, AnimationPlayerSystem, AnimationLocomotionSystem, how to add/play an animation, interruption classes, the Retargeting gotcha, verification tools. |
+| [docs/animation.md](docs/animation.md) | The animation system — registry, AnimationPlayerSystem, AnimationLocomotionSystem, how to add/play an animation, interruption classes, server-granted actions, Retargeting, verification tools. |
 
 ## What this project is
 
-A strongly-typed, server-authoritative **game-systems base for Roblox** that is being used to
-**rewrite "Venture"**, a messy ~5-year-old live Roblox game currently built on Knit, hand-rolled
-metatable classes, DataStore2, and state smuggled into the Instance tree.
+A strongly-typed, server-authoritative **game-systems base for Roblox** that every game of this team
+starts from (today: a rodeo-stampede / steal-an-egg / ride-a-pet game, a cleaning-sim × co-op horror
+game, and a night-shift horror game). A game is built in its own repo or branch on top of this base; the
+base holds only what several games need unchanged.
 
-The code in `src/` is the *target* architecture (the base, with reference Currency + Inventory
-domains). The old game is the *source*. Ongoing work = porting Venture's systems onto this base.
-Track it in `docs/REFACTORHANDOFF.md`.
+It was re-seeded from `venture-game-systems` (a rewrite of the RPG "Venture" on this same architecture)
+and stripped of Venture's content and of its custom character replication. Characters here are **native
+engine characters**. See [docs/ROADMAP.md](docs/ROADMAP.md) for what is in, what was left out, and what
+comes next.
 
 ## Non-negotiable working rules
 
@@ -68,11 +70,16 @@ Track it in `docs/REFACTORHANDOFF.md`.
   the charm-sync spine.
 - **Guard** — shared runtime validators (`userId`, `positiveAmount`, …). Validate once at the
   boundary.
-- **Reference implementations to mirror when porting a domain:** `CurrencyServiceServer` and
-  `InventoryServiceServer` (+ their clients). Copy their structure.
+- **Reference implementations to mirror when adding a domain:** `CurrencyServiceServer`,
+  `InventoryServiceServer` and `TitleServiceServer` (+ their clients). Copy their structure.
+- **Slots are dormant.** `PlayerDataConstants.MAX_SLOTS = 1`: "slot-scoped" means "the player's save".
+  Multi-slot specs are gated (`itMultiSlot`) and re-enable if a game raises it.
+- **Characters are native.** Read `player.Character`; never trust a client's position or claim for
+  gameplay — validate on the server.
 
 Also in the base: in-game Debugger overlay (F4), Cmdr admin commands with a fail-closed allowlist,
-`PlayerDataMigrationSystem` (schema versioning, for *future* evolution — there is no legacy migration).
+`PlayerDataMigrationSystem` (schema versioning), the animation system, and the React UI framework
+(layers, scene stack, HUD registry).
 
 ## Commands
 
@@ -84,7 +91,7 @@ Run from the repo root. On Windows use **Git Bash** for the `.sh` scripts.
 | Same, skipping `wally install` | `bash scripts/check.sh --skip-install` |
 | Lint / format / auto-format | `selene src` / `stylua --check src` / `stylua src` |
 | Sync to Studio | `rojo serve` |
-| Build a place file | `rojo build -o venture.rbxl default.project.json` |
+| Build a place file | `rojo build -o peekabu.rbxl default.project.json` |
 | Run tests | Studio only: `rojo serve`, connect, set Workspace attribute `RunTests = true`, hit Play, read Output. **Opt-in on purpose** — the suite mutates real module singletons (destroys the live charm-sync transport), so a test session is never a play session. CI runs TestEZ on Open Cloud. |
 | Preview UI (no Play) | `rojo serve`, then the **UI Labs** Studio plugin in EDIT mode — it renders any `*.story.luau` and re-renders on sync. Use this for visual iteration instead of booting the game; see [docs/testing.md](docs/testing.md). |
 
@@ -104,82 +111,29 @@ There is **no headless test runner** — TestEZ needs a real Roblox runtime (Stu
 ## Deployment model — read before touching CI
 
 **This is a code-only Rojo project.** `Workspace` / `Lighting` / `ServerStorage` are deliberately
-**not mounted**, because the map, terrain, and decorated builds are owned by the Studio place and
-edited by non-coder devs in Team Create. Rojo must never be able to overwrite artist content.
+**not mounted**, because each game's map, terrain, and decorated builds are owned by its Studio place and
+edited by builders in Team Create. Rojo must never be able to overwrite artist content.
 
 One sanctioned exception: **property-only service nodes** (`$properties` with NO `$path`, like
-`SoundService.RespectFilteringEnabled`, `Workspace.Retargeting = Disabled` and
-`Players.CharacterAutoLoads = false`). These manage
-exactly the listed properties and cannot create or delete children, so artist content stays
-untouchable — a node with `$path` on an artist-owned service remains forbidden.
-(`Workspace.Retargeting` MUST stay `Disabled`: the custom-proportioned rig uses standard R15
-joint names, and retargeting visibly breaks every animation pose. `Players.CharacterAutoLoads` MUST stay
-`false`: bodies are client-only — see docs/architecture.md, "Bodies".)
-`TextChatService` also carries one `$className` child node, `BubbleChatConfiguration` (no `$path`, so unknown
-siblings are kept), to set `Enabled = false` on the instance the engine already creates; Rojo 7.7.0 pairs it with
-the engine's existing `BubbleChatConfiguration` by name and class (verified at R5's first serve: exactly one
-instance, `Enabled = false`); a hand-set place setting remains the fallback if that ever regresses.
-
-**Place-owned settings (set by hand, per place).** A few properties cannot be written by Rojo or any script,
-so each place (dev, staging, live) must have them set in the Studio Properties panel:
-
-| Setting | Value | Why it can't be automated |
-|---|---|---|
-| `TextChatService.ChatVersion` | `TextChatService` | Write is RobloxScriptSecurity. A place still on `LegacyChatService` runs the old chat in Studio. `VoiceServiceServer` logs an error at start if it is wrong. |
-
-The two `VoiceChatService` settings (`EnableDefaultVoice = false`, `UseAudioApi = Enabled`) are NOT hand-set — `default.project.json` writes them (Rojo runs as a plugin). They cannot be checked at runtime: Read is PluginSecurity, so game scripts cannot read them. `VoiceServiceServer`'s startup check covers only script-readable settings (`ChatVersion`, `CreateDefaultTextChannels`, `BubbleChatConfiguration.Enabled`).
+`SoundService.RespectFilteringEnabled`). These manage exactly the listed properties and cannot create or
+delete children, so artist content stays untouchable — a node with `$path` on an artist-owned service
+remains forbidden. A game sets its own place-level properties this way (for example
+`Workspace.Retargeting = Disabled` for a custom-proportioned rig).
 
 ⚠ **`ReplicatedStorage` sets `$ignoreUnknownInstances: true`, and must keep it.** That container IS
 mounted (`src/ReplicatedStorage`), so by default Rojo owns it outright and DELETES every child not in
-the source tree — including `Assets/`, where customization art lives. Art has to sit in
-`ReplicatedStorage` because clients need it replicated, and it cannot live in the source tree because
-it is artist-owned binary content. Without this flag a `rojo serve` silently deletes the art: that is
-exactly what happened during 5b, where a vanished models folder cost a full debugging round and looked
-like a code bug.
+the source tree — including an `Assets/` folder of artist-owned models. Art has to sit in
+`ReplicatedStorage` when clients need it replicated, and it cannot live in the source tree because it is
+artist-owned binary content. Without this flag a `rojo serve` silently deletes the art.
 
 **The trade-off, accepted deliberately:** Rojo will no longer prune stale first-party instances from
-`ReplicatedStorage` either, so **cutover must clean the old game's `ReplicatedStorage` folders by hand**
-(`Effects`, `Events`, `Modules`, `UI`, `Skills`, …) rather than relying on the publish to remove them.
-That moves `ReplicatedStorage` into the same "clean it manually" bucket the unmounted containers are
-already in. `ServerScriptService` deliberately does NOT set the flag, so old server scripts are still
-deleted by a publish.
+`ReplicatedStorage` either, so a renamed or deleted top-level folder there must be cleaned by hand in the
+place. `ServerScriptService` deliberately does NOT set the flag, so old server scripts are still deleted by
+a sync.
 
 Because a Roblox publish overwrites the *whole* place, **there is no CD**: CI is validation-only
-(lint / format / typecheck / ruff / TestEZ on Open Cloud), and production is deployed **manually** —
-`rojo serve` code into the art-bearing place from Studio, then Publish. Don't add a deploy job.
+(lint / format / typecheck / ruff / TestEZ on Open Cloud), and a game is deployed **manually** —
+`rojo serve` code into its art-bearing place from Studio, then Publish. Don't add a deploy job.
 
-| Tier | Experience | Data | Deploy |
-|---|---|---|---|
-| CI | `Venture[Test]` (universe `10488238788`, place `97354325370574`) — Team Create OFF, no humans | throwaway | Open Cloud, automated |
-| Staging/QA | the place currently named `Venture[Prod]` | separate, wipeable | manual Studio publish |
-| Live | the existing prod experience (arenas etc.) | fresh (old data wiped) | manual Studio publish |
-
-## Refactor decisions already locked in
-
-1. **Old data is disposable — wipe it.** The 5-year-old DataStore2 data is not migrated. ProfileStore
-   uses different keys, so old data is simply never read. No migration adapter.
-2. **Reuse the existing live experience** for cutover (keeps game passes, dev products, badges,
-   favorites, discovery standing) rather than shipping a new one.
-3. **Cutover = `rojo serve` into the live art-bearing place + Publish from Studio.** This deletes the
-   old Knit scripts in the mounted code containers (intended) and preserves art in the unmounted
-   ones. Watch for old logic hiding in unmounted containers (Workspace / ServerStorage).
-4. **Sequencing: foundation and leaves first, combat core LAST** — it's the hub with 10+ deps and
-   needs a genuine server-authoritative hit-detection redesign, not a port.
-
-## Inspecting the live game
-
-The old game's source of truth is the **live Studio place**, not this repo. Use the
-`Roblox_Studio` MCP (`mcp__Roblox_Studio__*`, e.g. `execute_luau`) against the open Studio session to
-walk the real hierarchy.
-
-> **READ-ONLY. Never edit `VentureTestingPlace`.** Inspection only — enumerate instances, read
-> `ClassName` / properties / `.Source`. Do **not** create, delete, move, or set properties on any
-> instance, and do not publish. It is the reference copy of the old game.
-
-If the tools aren't loaded:
-
-```bash
-claude mcp add Roblox_Studio -- cmd.exe /c %LOCALAPPDATA%\Roblox\mcp.bat
-```
-
-then restart the session and trust the server when prompted.
+CI runs TestEZ in a dedicated test place configured through the repository's Actions variables and
+secrets (see [docs/ci-cd.md](docs/ci-cd.md)): Team Create OFF, no humans, throwaway data.

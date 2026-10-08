@@ -1,34 +1,33 @@
 # Animation system
 
-The onboarding doc for anyone touching animations — programmers, animators, modelers. Built in
-Phase 6 as a NEW system (the old game's animation code was evidence, not source; see the spec:
-`docs/superpowers/specs/2026-07-20-animation-handler-design.md`).
+The onboarding doc for anyone touching animations — programmers, animators, modelers. The design record
+behind it is `docs/superpowers/specs/2026-07-20-animation-handler-design.md` (historical; written for the
+RPG this base came from).
 
 ## The one-paragraph version
 
 Every animation id lives in **one registry** (`Shared/Features/Animation/Data/`, enforced by CI). Everything
 that plays goes through **one track owner** (`AnimationPlayerSystem` — load once, cache, reuse).
 Character movement animations (idle/walk/run/jump/…) are driven by **`AnimationLocomotionSystem`**, our
-replacement for Roblox's default `Animate` script. **Every client animates the rigs it shows**: its own
-rig from its Humanoid, and every other player's puppet from the movement records it already receives.
-**Server-granted actions** (`AnimationServiceServer:play`) reach the owner and every viewer as timed
-body state and play in sync, with the server's variant and speed. What may stop what is **declared per
+replacement for Roblox's default `Animate` script, running on each player's own native character.
+**The engine replicates what the owner plays**, so every client sees every character animate with no
+extra code. **Server-granted actions** (`AnimationServiceServer:play`) are one packet to the owning client,
+which plays them with the server's variant and speed. What may stop what is **declared per
 animation**, not guessed from names.
 
 ## Map — where everything lives
 
 | Piece | Path | Job |
 |---|---|---|
-| Registry | `src/ReplicatedStorage/Shared/Features/Animation/Data/` | THE home of animation ids. One module per domain (`AnimationLocomotionRegistry.luau`, `AnimationActionRegistry.luau` (R3 stand-ins); Combat/Emotes/Npc/... arrive with their phases) + `AnimationRegistry.luau` composing them into one lookup (and resolving wire ids), + `AnimationTypes.luau` (types, layers, guards) |
-| Track owner | `Shared/Features/Animation/Systems/AnimationPlayerSystem.luau` | The ONLY code that may call `LoadAnimation`. Per-Animator track cache, typed play handles, bookkeeping, class-based stops, `warm()` preloading, a chosen `variant`, a `startAt` seek, `setPaused` (puppet LOD) |
+| Registry | `src/ReplicatedStorage/Shared/Features/Animation/Data/` | THE home of animation ids. One module per domain (`AnimationLocomotionRegistry.luau`, `AnimationActionRegistry.luau` (stand-ins); a game adds Combat/Emotes/Npc/... domains) + `AnimationRegistry.luau` composing them into one lookup (and resolving wire ids), + `AnimationTypes.luau` (types, layers, guards) |
+| Track owner | `Shared/Features/Animation/Systems/AnimationPlayerSystem.luau` | The ONLY code that may call `LoadAnimation`. Per-Animator track cache, typed play handles, bookkeeping, class-based stops, `warm()` preloading, a chosen `variant`, a `startAt` seek, `setPaused` (a level-of-detail freeze) |
 | Runtime shell | `Shared/Features/Animation/Systems/AnimationPlayerEngineSystem.luau` | Wraps a real `Animator` for the player; memoizes ONE player per Animator so every consumer shares one truth |
 | Locomotion | `Client/Features/Animation/Systems/AnimationLocomotionSystem.luau` | Pure state→pose core: which pose, fades, speed scaling, jump window, kill switch, pose-override seam |
-| Locomotion binding | `Client/Features/Animation/Systems/AnimationLocomotionHumanoidSystem.luau` | Thin adapter: Humanoid events → AnimationLocomotionSystem, plus a Heartbeat `update` (the jump-window fall). Bound by `ReplicationOwnerRigSystem` to the client-built rig (no engine character exists, so no stock Animate script either) |
-| Client service | `Client/Features/Animation/AnimationServiceClient.luau` | Local play/stop API on your own rig + the diagnostic listeners + boot-time preload/dead-id report |
-| Server service | `ServerScriptService/Features/Animation/AnimationServiceServer.luau` | **Grants**: `play` / `stop` / `stopAttacks` / `stopAll` on a player's body (rules in `AnimationActionGrantSystem`), carried as timed body state by the replication service; `playOnRig` for server-owned rigs (NPCs, later) |
-| Rig animation (client) | `Client/Features/Replication/Systems/ReplicationRigAnimationSystem.luau` | Plays granted actions on the owner rig and every puppet (`ReplicationActionTracker`), drives each puppet's AnimationLocomotionSystem (`ReplicationPuppetLocomotionSystem`), and puppet LOD (`ReplicationAnimationRules`) |
-| Packets | `Shared/Features/Replication/Net/ReplicationEvents.luau` (`ActionStarted` / `ActionStopped`) + `Shared/Features/Animation/Net/AnimationEvents.luau` (diagnostics) | Typed reliable structs; actions ride the replication service's reliable channel, so a viewer's `Enter` always precedes the actions replayed to it |
-| Debug panel | F4 → **Anims** tab; F4 → **Services** | Anims: live tracks on YOUR character (registry id, domain/class, priority, weight, speed, asset id). Services: `ReplicationServiceClient.animation` (action counters, length mismatches, drift, puppets per LOD tier), `ReplicationServiceServer.bodyStates` and `AnimationServiceServer` (grants) |
+| Locomotion binding | `Client/Features/Animation/Systems/AnimationLocomotionHumanoidSystem.luau` | Thin adapter: Humanoid events → AnimationLocomotionSystem, plus a Heartbeat `update` (the jump-window fall). Bound per character by `StarterCharacterScripts/Animate.client.luau`, whose name also suppresses the engine's stock Animate script |
+| Client service | `Client/Features/Animation/AnimationServiceClient.luau` | Local play/stop API on your own character + plays server-granted actions (one handle per layer) + the diagnostic listeners + boot-time preload/dead-id report |
+| Server service | `ServerScriptService/Features/Animation/AnimationServiceServer.luau` | **Grants**: `play` / `stop` / `stopAttacks` / `stopAll` on a player's character (rules in `AnimationActionGrantSystem`, live grants in `AnimationGrantTracker`); `playOnRig` for server-owned rigs (NPCs) |
+| Packets | `Shared/Features/Animation/Net/AnimationEvents.luau` | Typed reliable structs, server → owning client only: `ActionStarted` / `ActionStopped` (grants) and the two diagnostics |
+| Debug panel | F4 → **Anims** tab; F4 → **Services** | Anims: live tracks on YOUR character (registry id, domain/class, priority, weight, speed, asset id). Services: `AnimationServiceServer` (granted / refused / stopped counters) |
 | Admin commands | `animationplay` `animationstop` `animationstopclass` `animationtracks` `animationreport` | The Cmdr verification harness (see below) |
 
 ## "I want to add an animation" (animators start here)
@@ -90,7 +89,7 @@ game's disease and the CI gate + review will bounce it. Instead:
 - **On the local character (client code):** `AnimationServiceClient:play("id", opts?)` → returns a
   handle (`stop` / `adjustSpeed` / `onMarker` / `isPlaying`). Options: `fadeTime`, `speed`,
   `weight`, `priority` (registry defaults apply otherwise).
-- **From the server, on a player's body (everyone sees it):**
+- **From the server, on a player's character (everyone sees it):**
   `AnimationServiceServer:play(player, "id", { speed?, variant? })` → `(ok, reason?)`. Only replicable
   entries; the server clamps the speed (0.25-4), picks the variant when you do not, and applies the
   layer's interruption rule. `stop(player, idOrLayer)` and `stopAttacks(player)` end grants early.
@@ -116,68 +115,55 @@ Individual `stop("id")` works on anything. Bulk stops act on `attack` only, refu
 else (command, server, and core all enforce it — try `animationstopclass yourname protected` to watch
 the refusal).
 
-## Replicated actions
+## Server-granted actions
 
-A grant is **timed body state** of kind `"action"` (ReplicationServiceServer), keyed by layer:
+The server remembers what it granted per player, per layer (`AnimationGrantTracker`), and sends the owner
+one packet per change:
 
-- **One grant per layer per body.** A new grant on a layer replaces the old one, unless the old one is
-  `protected` and the new one is not (an attack cannot cut a dodge; a hit reaction can cut an attack).
-- **Everyone plays the same thing.** `ActionStarted` carries the entry's wire id, the server's variant and
-  speed, the server start time and the duration (`durationMs / speed`; none for a looped entry). The owner
-  plays it on its own rig, every viewer on its puppet: one path, no double plays.
-- **Start alignment, no re-sync.** A clip starts `(now − start) × speed` seconds in. The owner's "now" is
-  the session clock; a puppet's is its render time, so the clip lines up with the motion being drawn. A
-  viewer that walks into range mid-action gets the action replayed right after the body's `Enter` and
-  joins at the right point. F4 shows drift as a readout only.
-- **Ending.** An early stop sends `ActionStopped`; a one-shot simply ends; an open-ended grant nobody stops
-  ends at the 30 s safety cap on every screen. Respawn, slot switch and leaving clear grants silently.
-- **Length check.** Each client compares a clip's real length with its `durationMs` once and counts a
-  mismatch (F4, and a log warning naming the entry).
+- **One grant per layer per character.** A new grant on a layer replaces the old one, unless the old one
+  is `protected` and the new one is not (an attack cannot cut a dodge; a hit reaction can cut an attack).
+- **The owner plays it; the engine replicates it.** `ActionStarted` carries the entry's wire id, the
+  server's variant and the clamped speed. The owner plays it on its character's Animator (stopping
+  whatever its previous grant on that layer was), and the engine shows that track to every other client.
+- **Ending.** An early stop sends `ActionStopped`; a one-shot simply ends (the server's record expires
+  after `durationMs / speed`); an open-ended (looped) grant lasts until it is stopped or replaced.
+  Respawn and leaving clear the server's record silently (the character's tracks died with it).
+- **Death / ragdoll hook.** `AnimationServiceServer:stopAll(player)` ends every action grant on that
+  character and tells the owner (`AnimationPlayerSystem:stopAll` is only the client-side track stop).
 
-## Puppets: locomotion and LOD
-
-Every puppet runs the owner's code path: an `AnimationPlayerSystem` and an `AnimationLocomotionSystem` per puppet,
-fed by `ReplicationPuppetLocomotionSystem` from the interpolated movement state (no extra network traffic), with the
-walk/run play rate clamped to 0.7-1.4. **Puppet LOD**: the engine does not throttle client-built rigs,
-so a puppet off screen or beyond 275 studs (back within 250 to unfreeze; 25 studs of hysteresis) is frozen:
-its pose is held and its position keeps updating. The pause detaches the puppet's Animator (measured on 40
-rigs: 0.214 ms per animation step vs 0.331 ms playing; zeroing track speeds saved nothing, 0.325 ms).
-Set the Workspace attribute `PuppetLodEnabled = false` to keep every puppet animating (measurement). The
-`LocomotionEnabled` kill switch stops puppet locomotion too.
-
-For the later Death and Ragdoll phases, `AnimationServiceServer:stopAll(player)` ends every action grant on
-that body and sends the Stopped messages (`AnimationPlayerSystem:stopAll` is only the client-side track stop).
+**NPCs and creatures** animate through `playOnRig` on the server (or the same `AnimationPlayerSystem` on
+a client-owned rig). `AnimationLocomotionSystem` takes an optional walk/run rate clamp for rigs driven from
+an estimated speed rather than a local Humanoid.
 
 ## Locomotion (movement animations)
 
 `AnimationLocomotionSystem` decides poses from Humanoid state: idle / walk / run (speed-scaled) / jump
 (with a window before fall) / fall / climb / swim / swimidle / sit. On death it plays NOTHING —
-it stops its tracks and latches until respawn (the old game deprecated its death animation; what
-death looks like belongs to the future Death/Ragdoll phase). Tuning knobs sit at the top of the module (`walkRunThreshold`, per-pose speed scales,
+it stops its tracks and latches until respawn (what
+death looks like belongs to a game's death/ragdoll system). Tuning knobs sit at the top of the module (`walkRunThreshold`, per-pose speed scales,
 fades). Two things to know:
 
-- **Walk vs run is a speed threshold FOR NOW** (default WalkSpeed 16 = walk; >18 = run). The old
-  game used the movement system's sprint flag; when the Movement phase ports sprinting it
-  replaces the threshold. Movement adds parkour poses through
-  `setPoseOverride`/`clearPoseOverride` — nobody edits the Animate script (that's how the old
-  1,601-line fork happened).
+- **Walk vs run is a speed threshold** (default WalkSpeed 16 = walk; >18 = run). A game with a
+  sprint system replaces the threshold with its sprint flag, and adds special poses (riding,
+  carrying, crouching) through `setPoseOverride`/`clearPoseOverride` — nobody edits the Animate
+  script itself (forks of it are how animation code rots).
 - **Kill switch:** set the Workspace attribute `LocomotionEnabled = false` and every locomotion
   track stops — instantly answers "is the weirdness on screen ours?". `true` recovers, no respawn.
 
-## The Retargeting gotcha (check this FIRST if poses ever look wrong)
+## Retargeting (check this FIRST if poses ever look wrong)
 
-`Workspace.Retargeting` MUST be `Disabled`. Our rig is custom-proportioned but uses standard R15
-joint names, and Roblox's retargeting "helpfully" remaps animations to standard proportions —
-which visibly wrecks every pose. `default.project.json` owns the property (a property-only
-`Workspace` node; Rojo still cannot touch Workspace *content*), so a Rojo-synced place is always
-correct — but a place copy that was never synced will show exactly "all animations look broken".
+`Workspace.Retargeting` is a per-place setting this base leaves at its default. A game whose rig is
+custom-proportioned but uses standard R15 joint names usually wants it `Disabled` (retargeting remaps
+animations to standard proportions, which visibly wrecks every pose on such a rig). Set it with a
+property-only `Workspace` node in that game's `default.project.json`, so a Rojo-synced place is always
+correct; a place copy that was never synced will show exactly "all animations look broken".
 
 ## Verification tools
 
 | Tool | What it answers |
 |---|---|
 | F4 → **Anims** | What is playing on my character right now, at what priority/weight/speed, from which registry entry? Are loads cached (`loads` plateaus, `hits` climbs)? |
-| `animationplay <player> <id> [speed] [variant]` / `animationstop <player> <id or layer>` | Does this action play on every screen, in sync, with the same clip and speed? Does it stop everywhere? |
+| `animationplay <player> <id> [speed] [variant]` / `animationstop <player> <id or layer>` | Does the action play on the character (and show on every other client)? Does it stop? |
 | `animationstopclass <player> attack` | Do the interruption rules hold? (only `attack` grants end; `protected` and `ambient` are refused) |
 | `animationtracks` | Dump my client's live bookkeeping to the client log |
 | `animationreport` | Registry census + probe every asset id, dead ones named by registry key |
@@ -185,9 +171,7 @@ correct — but a place copy that was never synced will show exactly "all animat
 
 ## What this system deliberately does NOT do (yet)
 
-Owned by later phases, arriving as new registry domains + consumers of the same primitives:
-emotes (wheel/ownership/gating), combat swings & skill casts (each calls `AnimationServiceServer:play`
-after its own permission checks; client-requested actions with owner prediction arrive with the first of
-them), NPC playback (via `playOnRig`), parkour poses (Movement, via the pose-override seam),
-footstep/equipment sounds and marker effects on puppets (Sound/VFX phase, via the `onMarker` hook on play
-handles), aim pitch on puppets (Combat), foot locking (later polish).
+Each game adds these as new registry domains + consumers of the same primitives: emotes
+(wheel/ownership/gating), combat swings and ability casts (each calls `AnimationServiceServer:play` after
+its own permission checks), NPC and creature playback (via `playOnRig`), special movement poses (via the
+pose-override seam), footstep sounds and marker effects (via the `onMarker` hook on play handles).

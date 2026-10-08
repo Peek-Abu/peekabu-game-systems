@@ -6,7 +6,7 @@ profile slice gets wired in. For *how the pieces are wired together at runtime* 
 ServiceController, the data layer, the reactive spine), see [architecture.md](architecture.md); for
 the style rules a file must follow once it exists, see [conventions.md](conventions.md).
 
-Code is grouped by **feature** (Bank, Currency, Replication, ...), not by kind. A feature owns one
+Code is grouped by **feature** (Currency, Inventory, Animation, ...), not by kind. A feature owns one
 folder per realm it has code in, and a module's place is decided by the job it does. The rules below
 are enforced by `scripts/python/check_pr_rules.py`.
 
@@ -28,7 +28,7 @@ Every feature gets one folder per realm it has code in:
 | client | `ReplicatedStorage/Client/Features/<Feature>/` | client only |
 | server | `ServerScriptService/Features/<Feature>/` | server only |
 
-A feature with no code in a realm has no folder there (Item is shared only; Slot is server only).
+A feature with no code in a realm has no folder there (Item is shared only).
 
 ---
 
@@ -44,7 +44,7 @@ Only these live outside a `Features/` root:
 | `ReplicatedStorage/Client/UI/` | the React UI tree (layers, components, hooks, scenes); conventions in [Naming](#naming) |
 | `ServerScriptService/Commands/` | Cmdr commands; naming in [Naming](#naming) |
 | `ReplicatedStorage/Shared/CmdrTypes/` | Cmdr argument types |
-| entry scripts | `ServerHandler.server`, `TestRunner.server`, `ClientHandler.client`, and `RbxCharacterSounds.client` (the engine replaces its own script only when the name matches) |
+| entry scripts | `ServerHandler.server`, `TestRunner.server`, `ClientHandler.client`, and `StarterCharacterScripts/Animate.client` (the engine skips inserting its own Animate script only when the name matches) |
 
 Core and Data are closed lists. A module joins Core only if it is framework every feature uses, or a
 typed wrapper around a library; anything owned by one feature goes in that feature.
@@ -76,17 +76,17 @@ A subfolder exists only when the feature has a module for it; empty subfolders a
    and only when called).
 3. Otherwise it remembers nothing and changes nothing, so it is **Utils**.
 
-Example, the Bank feature:
+Example, the Inventory feature:
 
 ```
-ReplicatedStorage/Shared/Features/Bank/
-  Data/BankConstants
-  Net/BankEvents
-ReplicatedStorage/Client/Features/Bank/
-  BankServiceClient
-ServerScriptService/Features/Bank/
-  BankServiceServer
-  Net/BankReceiver
+ReplicatedStorage/Shared/Features/Inventory/
+  Rules/InventoryContainerRules
+  Utils/InventoryPlacementUtils
+  Utils/InventoryUtils
+ReplicatedStorage/Client/Features/Inventory/
+  InventoryServiceClient
+ServerScriptService/Features/Inventory/
+  InventoryServiceServer
 ```
 
 ---
@@ -94,8 +94,8 @@ ServerScriptService/Features/Bank/
 ## Rules
 
 1. **A module belongs to the feature whose job it does,** not the feature it happens to run on.
-   `CustomizationOutfitSystem` dresses puppets for Replication, but dressing is Customization's job,
-   so it lives in Customization.
+   A system that plays an emote when a pet is petted belongs to Animation if it is animation logic,
+   even if only the pet feature calls it.
 2. **One service per feature per realm.** A second service needs the developer's approval and its
    reason recorded in this file and in the check's exceptions table. There are none today.
 3. **A new subfolder kind needs at least three modules that share it, and the developer's
@@ -108,7 +108,7 @@ ServerScriptService/Features/Bank/
 5. **The top folder is `Features`.** `Systems` is a subfolder name, and `Services` named only one
    kind of module.
 6. **Specs stay siblings.** `<Name>.spec.luau` sits next to `<Name>.luau` wherever it lives. A spec
-   that tests no single module (the 60-player replication load test) lives in its feature's
+   that tests no single module (an end-to-end load test) lives in its feature's
    `Testing/` folder with a `Harness` name.
 7. **Requires use full addresses; a folder used three or more times gets one variable.** Every
    `require` names its module from the realm root. When a file requires **three or more** modules
@@ -116,15 +116,15 @@ ServerScriptService/Features/Bank/
    full addresses, even when a line wraps: a variable is for real repetition, not for one long line.
 
    ```lua
-   local ReplicationClient = ReplicatedStorage.Client.Features.Replication
+   local AnimationShared = ReplicatedStorage.Shared.Features.Animation
 
-   local ReplicationOwnerRigSystem = require(ReplicationClient.Systems.ReplicationOwnerRigSystem)
-   local ReplicationPuppetPool = require(ReplicationClient.State.ReplicationPuppetPool)
-   local ReplicationUplinkSender = require(ReplicationClient.Net.ReplicationUplinkSender)
+   local AnimationEvents = require(AnimationShared.Net.AnimationEvents)
+   local AnimationRegistry = require(AnimationShared.Data.AnimationRegistry)
+   local AnimationTypes = require(AnimationShared.Data.AnimationTypes)
    ```
 
-   The variable is `<Feature><Realm>` (`Shared`, `Client`, `Server`): `ReplicationClient`,
-   `CustomizationShared`, `BankServer`. The one relative require is a spec requiring its own module
+   The variable is `<Feature><Realm>` (`Shared`, `Client`, `Server`): `AnimationShared`,
+   `InventoryShared`, `ItemShared`. The one relative require is a spec requiring its own module
    (`script.Parent.X` from `X.spec`); the UI tree keeps the relative requires inside itself.
 
 ---
@@ -134,13 +134,13 @@ ServerScriptService/Features/Bank/
 ### Feature modules: `<Feature><What><RoleWord>`
 
 Every feature module name starts with its feature and ends with a role word allowed in its
-subfolder. `<What>` is optional when the feature has only one module of that role (`BankEvents`,
+subfolder. `<What>` is optional when the feature has only one module of that role (`AnimationEvents`,
 `TitleRegistry`).
 
 | Folder | Role words | Meaning |
 |---|---|---|
 | `Data/` | Constants · Registry · Types · Assets | tuning values · a catalog looked up by id · type definitions only · asset id lists |
-| `Net/` | Events · Codec · Sender · Receiver | packet definitions · our own byte packing (Replication only) · decides what to send · takes in and checks what arrives |
+| `Net/` | Events · Codec · Sender · Receiver | packet definitions · our own byte packing (high-volume traffic only) · decides what to send · takes in and checks what arrives |
 | `Rules/` | Rules · Check | decides whether something is allowed or valid · checks the place's setup at boot and reports problems |
 | `State/` | Store · Tracker · Pool | Charm state others subscribe to · plain bookkeeping nothing subscribes to · spare objects kept for reuse |
 | `Utils/` | Utils · Formulas | pure helpers, plans, diffs · game maths |
@@ -148,13 +148,12 @@ subfolder. `<What>` is optional when the feature has only one module of that rol
 | `Testing/` | Harness | test tooling |
 | root | ServiceServer · ServiceClient | the feature's service |
 
-**Feature names** (singular, PascalCase): Admin, Animation, Bank, Currency, Customization, Debugger,
-Equipment, Inventory, Item (the item catalog and affixes), PlayerData, Replication, Slot, StateSync,
-Stat, Title, UI, Voice.
+**Feature names** (singular, PascalCase): Admin, Animation, Currency, Debugger, Inventory, Item (the
+item catalog), PlayerData, StateSync, Title, UI. A game adds its own (Pet, Round, Shop, ...).
 
-**Networking stays on ByteNet.** `Codec` exists only because Replication packs 16-byte records into
-`ByteNet.buff` for its high-volume traffic. Other features use ByteNet's typed fields. A new codec is
-written only for traffic of that volume; there is no custom networking library.
+**Networking stays on ByteNet.** Features use ByteNet's typed fields. A `Codec` (our own byte packing
+into `ByteNet.buff`) is written only for genuinely high-volume traffic (bit-packed per-frame records);
+there is no custom networking library.
 
 **Not renamed:** Core modules, Data modules, entry scripts and names the engine fixes.
 
@@ -162,7 +161,7 @@ written only for traffic of that volume; there is no custom networking library.
 
 The UI tree keeps its own folders. Convention:
 
-- Components are named for what they show (`LogsPanel`, `StatDisplay`).
+- Components are named for what they show (`LogsPanel`, `HudRoot`).
 - Hooks are `use<Thing>` in `Hooks/`; a hook only one screen uses may sit beside that screen.
 - View models end in `ViewModel`, scenes are `<Feature>Scene`, stores end in `Store`, constants are
   `UI<Thing>Constants`.
@@ -170,9 +169,9 @@ The UI tree keeps its own folders. Convention:
 ### Admin commands
 
 Commands live in `ServerScriptService/Commands/` (Cmdr registers them from one folder) and are
-named **feature-first**: `CurrencyAdd`, `BankDepositItem`, `StatInvest`. Each has a definition file
+named **feature-first**: `CurrencyAdd`, `InventoryGiveItem`, `TitleAward`. Each has a definition file
 and a `Server` half. The name an admin types is the file name in lower case (`currencyadd`), so the
-file, the definition's `Name` field and the typed command always match. No alias keeps an old command name; aliases that remain are short forms (for example `anim-report`). `CustomizationTuneOffset` has no `Server` half because it runs on the client.
+file, the definition's `Name` field and the typed command always match. No alias keeps an old command name; aliases that remain are short forms (for example `anim-report`).
 
 ---
 
@@ -237,7 +236,7 @@ writing/running guidance is in [testing.md](testing.md).
 ## Adding a profile slice
 
 The recipe for wiring a new replicated profile slice into the reactive spine (currency, inventory,
-stats, equipment are the existing examples) is **not duplicated here** — it lives, and should be
+titles are the existing examples) is **not duplicated here** — it lives, and should be
 edited, at exactly one place: the header comment of
 [`StateSyncSliceRegistry.luau`](../src/ReplicatedStorage/Shared/Features/StateSync/Data/StateSyncSliceRegistry.luau)
 (`ReplicatedStorage/Shared/Features/StateSync/Data/StateSyncSliceRegistry.luau`), which is also the single declaration site the
@@ -278,28 +277,8 @@ Generated by `scripts/python/module_map.py --write`; `check.sh` and CI fail when
 | client | `Systems/AnimationLocomotionHumanoidSystem` |
 | client | `Systems/AnimationLocomotionSystem` |
 | server | `AnimationServiceServer` |
+| server | `State/AnimationGrantTracker` |
 | server | `Systems/AnimationActionGrantSystem` |
-
-### Bank
-
-| Realm | Module |
-|---|---|
-| shared | `Data/BankConstants` |
-| shared | `Net/BankEvents` |
-| client | `BankServiceClient` |
-| server | `BankServiceServer` |
-| server | `Net/BankReceiver` |
-
-### Collision
-
-| Realm | Module |
-|---|---|
-| shared | `Data/CollisionConstants` |
-| shared | `Utils/CollisionShapeUtils` |
-| client | `CollisionServiceClient` |
-| client | `Systems/CollisionBlockerSystem` |
-| client | `Systems/CollisionSlideOffSystem` |
-| server | `CollisionServiceServer` |
 
 ### Currency
 
@@ -310,31 +289,6 @@ Generated by `scripts/python/module_map.py --write`; `check.sh` and CI fail when
 | client | `CurrencyServiceClient` |
 | server | `CurrencyServiceServer` |
 
-### Customization
-
-| Realm | Module |
-|---|---|
-| shared | `Data/CustomizationCosmeticRegistry` |
-| shared | `Data/CustomizationSoulColorRegistry` |
-| shared | `Rules/CustomizationArtCheck` |
-| shared | `Rules/CustomizationRegistryCheck` |
-| shared | `Rules/CustomizationSliceRules` |
-| shared | `Rules/CustomizationWearRules` |
-| shared | `Utils/CustomizationPlanUtils` |
-| client | `CustomizationServiceClient` |
-| client | `State/CustomizationPiecePool` |
-| client | `State/CustomizationRigOutfitTracker` |
-| client | `Systems/CustomizationDressQueueSystem` |
-| client | `Systems/CustomizationDressSystem` |
-| client | `Systems/CustomizationOutfitSystem` |
-| client | `Systems/CustomizationRigLookSystem` |
-| client | `Systems/CustomizationTuneOffsetSystem` |
-| client | `Utils/CustomizationOutfitDiffUtils` |
-| server | `CustomizationServiceServer` |
-| server | `Rules/CustomizationEntitlementRules` |
-| server | `Systems/CustomizationArtCheckSystem` |
-| server | `Systems/CustomizationPublishSystem` |
-
 ### Debugger
 
 | Realm | Module |
@@ -343,16 +297,6 @@ Generated by `scripts/python/module_map.py --write`; `check.sh` and CI fail when
 | client | `DebuggerServiceClient` |
 | client | `State/DebuggerStore` |
 | server | `DebuggerServiceServer` |
-
-### Equipment
-
-| Realm | Module |
-|---|---|
-| shared | `Data/EquipmentConstants` |
-| shared | `Net/EquipmentEvents` |
-| shared | `Utils/EquipmentBonusFormulas` |
-| client | `EquipmentServiceClient` |
-| server | `EquipmentServiceServer` |
 
 ### Inventory
 
@@ -368,11 +312,9 @@ Generated by `scripts/python/module_map.py --write`; `check.sh` and CI fail when
 
 | Realm | Module |
 |---|---|
-| shared | `Data/ItemAffixConstants` |
 | shared | `Data/ItemConstants` |
 | shared | `Data/ItemContentRegistry` |
 | shared | `Data/ItemRegistry` |
-| shared | `Utils/ItemAffixFormulas` |
 
 ### PlayerData
 
@@ -383,67 +325,6 @@ Generated by `scripts/python/module_map.py --write`; `check.sh` and CI fail when
 | server | `Systems/PlayerDataMigrationSystem` |
 | server | `Systems/PlayerDataSliceSystem` |
 | server | `Utils/PlayerDataPathUtils` |
-
-### Replication
-
-| Realm | Module |
-|---|---|
-| shared | `Net/ReplicationBatchCodec` |
-| shared | `Net/ReplicationEvents` |
-| shared | `Net/ReplicationRecordCodec` |
-| shared | `Net/ReplicationUplinkCodec` |
-| shared | `Rules/ReplicationFallRules` |
-| shared | `Rules/ReplicationSendRules` |
-| shared | `State/ReplicationSampleTracker` |
-| shared | `Systems/ReplicationRenderClockSystem` |
-| shared | `Testing/ReplicationDesignHarness` |
-| shared | `Testing/ReplicationLinkHarness` |
-| shared | `Testing/ReplicationRunHarness` |
-| shared | `Testing/ReplicationTraceHarness` |
-| shared | `Utils/ReplicationStateTimingUtils` |
-| client | `Net/ReplicationUplinkSender` |
-| client | `ReplicationServiceClient` |
-| client | `Rules/ReplicationAnimationRules` |
-| client | `Rules/ReplicationViewCheck` |
-| client | `State/ReplicationActionTracker` |
-| client | `State/ReplicationPuppetPool` |
-| client | `State/ReplicationRemoteBodyTracker` |
-| client | `State/ReplicationRigTracker` |
-| client | `Systems/ReplicationDiagnosticsSystem` |
-| client | `Systems/ReplicationOwnerRigSystem` |
-| client | `Systems/ReplicationPuppetLocomotionSystem` |
-| client | `Systems/ReplicationRigAnimationSystem` |
-| server | `Net/ReplicationBodyStateSender` |
-| server | `Net/ReplicationReceiver` |
-| server | `Net/ReplicationSlotSender` |
-| server | `Net/ReplicationUplinkReceiver` |
-| server | `ReplicationServiceServer` |
-| server | `Rules/ReplicationRigCheck` |
-| server | `Rules/ReplicationUplinkRules` |
-| server | `State/ReplicationBodyStateTracker` |
-| server | `State/ReplicationSlotTracker` |
-| server | `State/ReplicationVisibilityTracker` |
-| server | `Systems/ReplicationBodyObserverSystem` |
-| server | `Systems/ReplicationDownlinkSystem` |
-| server | `Systems/ReplicationFanoutSystem` |
-| server | `Systems/ReplicationInstanceSystem` |
-| server | `Testing/ReplicationIntegratedHarness` |
-| server | `Utils/ReplicationObserverUtils` |
-
-### Slot
-
-| Realm | Module |
-|---|---|
-| server | `SlotServiceServer` |
-
-### Stat
-
-| Realm | Module |
-|---|---|
-| shared | `Data/StatConstants` |
-| shared | `Utils/StatFormulas` |
-| client | `StatServiceClient` |
-| server | `StatServiceServer` |
 
 ### StateSync
 
@@ -476,15 +357,6 @@ Generated by `scripts/python/module_map.py --write`; `check.sh` and CI fail when
 |---|---|
 | client | `Data/UIAssets` |
 | client | `UIServiceClient` |
-
-### Voice
-
-| Realm | Module |
-|---|---|
-| client | `State/VoiceWiringTracker` |
-| client | `VoiceServiceClient` |
-| server | `Rules/VoiceSettingsCheck` |
-| server | `VoiceServiceServer` |
 
 ### Core
 

@@ -188,11 +188,9 @@ for any new event set.
 > the client can read at any time, it's state. If it's a momentary "this just happened" with nothing
 > to query afterward, it's an event.
 
-> *Continuous, high-rate, per-viewer state (character motion) is a third case: it rides typed **unreliable**
-> ByteNet packets owned by the character replication service. It is not an atom, because charm-sync is
-> reliable-ordered, diffs every frame, and is identical for every viewer. It is not a one-off event either.*
-> The packets live in [`Shared/Features/Replication/Net/ReplicationEvents.luau`](../src/ReplicatedStorage/Shared/Features/Replication/Net/ReplicationEvents.luau)
-> (the repo's first unreliable packets); see [Bodies](#bodies-character-replication).
+> *Continuous, high-rate state (character motion, physics) is a third case: leave it to the engine.
+> Characters are native, so the engine replicates their movement and the animations their owner plays;
+> neither belongs on an atom or in an event.*
 
 [RequestHandler.luau](../src/ServerScriptService/Core/Net/RequestHandler.luau) is opt-in middleware
 for *inbound* client requests: wrap a handler to add per-player rate limiting, validation, audit
@@ -273,73 +271,32 @@ client tries to sync it. See
 
 ---
 
-## Bodies (character replication)
+## Characters
 
-There is **no engine character**. `Players.CharacterAutoLoads` is `false` (a property-only node in
-`default.project.json`); the server destroys any engine character that appears and holds, per player, a
-replication slot, a body epoch, the validated newest sample, and server-owned health — never a model. Each
-client builds its own rig (`LocalPlayer.Character`, simulated by a normal Humanoid) and draws everyone else as
-pooled, anchored **puppets**. Design: `docs/superpowers/specs/2026-09-22-character-replication-design.md`.
+Characters are **native engine characters** (`Players.CharacterAutoLoads` stays at its default, `true`).
+The engine spawns them, replicates their movement, and replicates the animations their owning client plays
+on them. Systems that need "the player's body" read `player.Character` (or use `Observers.observeCharacter`
+for a lifetime-scoped hook).
 
-**One body API.** No system reads `player.Character` for another player's body.
+- **Animation.** Locomotion runs on the owning client through `StarterCharacterScripts/Animate.client.luau`
+  (whose name suppresses the engine's default Animate). Server-decided actions go through
+  `AnimationServiceServer:play`, which sends ONE packet to the owner; the owner plays it and the engine
+  replicates it to everyone else. See [animation.md](animation.md).
+- **Authority.** The server owns gameplay state (profiles, currencies, items, round state). Character
+  physics is client-owned by the engine, so anything a client could exploit through its own movement —
+  reaching an object, stealing from a base, a hit — is checked on the server against server-side positions
+  and rate limits (validate in the `RequestHandler`-wrapped handler), never trusted from the client.
+- **Other players' public facts** (a team, "carrying an egg", "is dead") ride the public slice
+  (`StateSyncPublicPlayerStore` → `StateSyncClientStore.publicPlayers`): every player sees every present
+  player by default; a game can narrow a viewer's set with `setRelevant`.
 
-| Side | API | Meaning |
-|---|---|---|
-| Server (`ReplicationServiceServer`) | `bodySpawned(player, epoch)` / `bodyDespawned(player, epoch)` | A body began / ended (join, respawn, slot switch, leave). SignalPlus: delivered deferred, in order |
-| | `observeBodies(callback) -> disconnect` | `callback(player, epoch)` for every live body now and later; the cleanup it returns runs at despawn |
-| | `hasBody(player)`, `getBodyPosition(player)` | The live body and its newest accepted position |
-| | `respawn(player, reason)` | New epoch, server-chosen spawn; the owner rebuilds. Does not yield |
-| | `setMaxHealth(userId, maxHealth)` | Health is server state; clamped down, published on the public slice |
-| Client (`ReplicationServiceClient`) | `bodySpawned(player, rig)` / `bodyDespawned(player, rig)` | A rig this client shows appeared / went (the owner rig, or a puppet). Delivered deferred too (SignalPlus), so a `bodyDespawned(player, rig)` handler runs after that puppet is back in the pool: consumers must not keep using the rig |
-| | `getRig(player)`, `getPlayerFromRig(rig)`, `getLocalRig()` | The rig registry. Resolve owners by id through it, never by instance name |
+> A custom, client-built character replication stack (pooled puppets, bit-packed movement records,
+> per-viewer relevance) exists in `venture-game-systems`. It pays off only at high player counts with
+> parkour-grade motion, and it gives up Tools, Seats, server `Touched`/ProximityPrompt events and
+> engine-owned physics props, so this base does not include it. Port it as an optional module only for a
+> game that measurably needs it.
 
-**Lifecycle.** Join → slot claimed and broadcast → the client's `Ready` → `Session` (time epoch), the whole
-slot table, `Spawn` → the owner builds its rig and streams send-on-change samples (unreliable `Uplink`,
-through `RequestHandler`). Every Heartbeat the server relays bodies to the viewers that have them loaded
-(600 studs in, 630 out; reliable `Enter` / `Leave`; unreliable `Downlink` ≤ 700 B per viewer-frame).
-
-**Timed body state (R3).** A timed state on a body that every observer, including a late one, must see
-(an action today; lasting VFX statuses later). A consumer defines its kind once at start,
-`defineBodyState(kind, senders)`, and gets a typed channel (`set(player, key, data, startMs, durationMs?)`,
-`clear`, `get`); the kind brings its own typed reliable packets, the service decides who receives them and
-when (`ReplicationBodyStateTracker` core, `ReplicationBodyStateSender`): Started to the owner and its observers, Stopped only on an
-early stop, a replay right after every `Enter`, silent clearing on respawn, slot switch and leave, at most
-8 states per body per kind, and a 30 s safety cap on open-ended states. Relevance helpers for later
-effects: `observersOf(player)`, `observersNear(position, radius)`, `sendToObservers(player, packet, data)`;
-`nowMs()` is the session clock states are stamped with. Animation is the first consumer: see
-[animation.md](animation.md), "Replicated actions".
-
-| Transport | Shape | Examples |
-|---|---|---|
-| Replication, unreliable records | Continuous, body-tied, nearby only | Position, movement state, ragdoll pose |
-| Replication, reliable timed body state | A timed state on a body that observers (incl. late ones) must see | Actions, lasting VFX statuses |
-| Replication, `sendToObservers` / `observersNear` | One-off, nearby-only events | An explosion at a point, a hit spark |
-| charm-sync | Queryable state | Inventory, stats, cooldown timers, public slice |
-| ByteNet reliable to one player | Outcomes for one player | Purchase result, denial reasons |
-
-**Public data.** What any client may know about another player (R2: health) rides charm-sync as the
-public slice: `StateSyncPublicPlayerStore` on the server, `StateSyncClientStore.publicPlayers` on the client, filtered to the
-players relevant to that client (its loaded bodies plus itself). A body whose entry has not arrived yet
-renders with defaults.
-
-**Remote `Character` (R5).** Each client sets every remote player's `Player.Character` to that player's
-puppet (`ReplicationRigTracker`, the one writer), and clears it when the puppet is released. It is client-local (the
-server keeps `Character = nil`). Its only purpose is the engine's own voice speaking icon; nothing in our code
-reads a remote `Character` — use `getRig` / `getPlayerFromRig`.
-The engine's default `RbxCharacterSounds` is replaced by an empty LocalScript of that name
-(`StarterPlayerScripts`): the default builds sounds for every `Character`, which made each assignment cost
-about 9 ms; without it an assignment is under 1 ms. Character sounds, the local body's included, come with the
-later sound work.
-
-**Voice (R5).** `VoiceServiceServer` gives each player an `AudioDeviceInput` named `VoiceInput`;
-`VoiceServiceClient` wires every other player's input to an `AudioEmitter` on their puppet head (full to 10
-studs, silent at 80) and listens through the camera. Text bubbles are off
-(`default.project.json` sets `TextChatService.BubbleChatConfiguration.Enabled = false`); the speaking icon stays.
-
-**`Diagnostics` (Workspace attribute, default off).** `true` turns on test-only checks. Today: the
-replication tripwire (`ReplicationViewCheck`, once a second), which logs a warning when a body the server says
-you should see has no puppet, a player has no slot entry, or a puppet is orphaned or duplicated, or a remote player's `Character` disagrees with the registry (`characterMismatch`). Off = the
-checks are not connected at all. Turn it on for a test, off after.
+---
 
 ## Type synchronization
 

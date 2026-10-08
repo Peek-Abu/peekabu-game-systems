@@ -15,9 +15,9 @@ union must be kept in sync with the `CURRENCIES` table by hand:
 ```lua
 -- CurrencyConstants.luau
 local CURRENCIES = {
-    jaku = { ... },
+    coins = { ... },
 }
-export type CurrencyType = "jaku"  -- Must match CURRENCIES keys manually
+export type CurrencyType = "coins"  -- Must match CURRENCIES keys manually
 ```
 
 **Why This Exists:** Intentional trade-off for intellisense/autocomplete support. No good
@@ -108,13 +108,13 @@ payload is typed without a per-call annotation:
 
 ```lua
 -- CurrencyServiceServer.luau — the ONLY place "currency" appears as a path string
-local currencySlice = PlayerDataSliceSystem.registerSlot("currency", { jaku = 100 }, function(slot)
+local currencySlice = PlayerDataSliceSystem.registerSlot("currency", { coins = 100 }, function(slot)
     return slot.currency
 end)
 
 -- add/remove/set then call: currencySlice.mutate(userId, function(currency) ... end)
--- InventoryServiceServer registers "inventory" the same way; SlotServiceServer registers the
--- account-wide "unlockedSlots" via PlayerDataSliceSystem.registerAccount instead.
+-- InventoryServiceServer registers "inventory" the same way; TitleServiceServer registers the
+-- account-wide "titles" via PlayerDataSliceSystem.registerAccount instead.
 ```
 
 This shrinks the typo surface to a single line per service and types the mutator argument, without
@@ -207,9 +207,9 @@ versioned migrations.
 **Adding a migration** (see `src/ServerScriptService/Features/PlayerData/Systems/PlayerDataMigrationSystem.luau`):
 ```lua
 -- 1. Append to MIGRATIONS (index = the version it upgrades FROM):
-[1] = function(data) -- v1 -> v2: rename currency.jaku to currency.coins
-    data.currency.coins = data.currency.jaku
-    data.currency.jaku = nil
+[1] = function(data) -- v1 -> v2: rename currency.coins to currency.coins
+    data.currency.coins = data.currency.coins
+    data.currency.coins = nil
 end,
 -- 2. Update the template / registerSlotPath (or registerAccountPath) defaults so NEW profiles match the new shape.
 -- 3. Add a case to PlayerDataMigrationSystem.spec.luau.
@@ -331,7 +331,7 @@ Current transaction system is single-server only. For cross-server features:
 Domain caps (currency `MAX_CURRENCY` / non-negative, inventory `MAX_INVENTORY_SIZE`) used to live only
 in the owning service's methods (`CurrencyService:addCurrency`, …). A raw
 `PlayerDataService:transaction()` op built with `currencyOp`/`inventoryOp` — whose mutator is arbitrary
-server code — could therefore bypass them and write an out-of-range value (e.g. a trade pushing jaku
+server code — could therefore bypass them and write an out-of-range value (e.g. a trade pushing coins
 past the cap or negative).
 
 Slices now register an optional **invariant validator** alongside their path. `PlayerDataSliceSystem.registerSlot`
@@ -343,7 +343,7 @@ return — so the cap holds no matter which path built the write:
 
 ```lua
 -- CurrencyServiceServer.luau — the invariant, enforced by the data layer for every write path.
-local currencySlice = PlayerDataSliceSystem.registerSlot("currency", { jaku = 100 }, function(slot)
+local currencySlice = PlayerDataSliceSystem.registerSlot("currency", { coins = 100 }, function(slot)
     return slot.currency
 end, function(currency) -- validate: registered key, number, >= 0, <= MAX_CURRENCY per key
     for key, value in currency do

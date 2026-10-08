@@ -73,7 +73,7 @@ replicated player state flows through them. See
 
 ### CharmSync
 `littensy/charm-sync@0.4.0` — diffs Charm atoms and ships deltas server->client. This is the
-transport for *all* queryable player state (currency, inventory, stats, equipment, …), riding a
+transport for *all* queryable player state (currency, inventory, titles, …), riding a
 dedicated `RemoteEvent` rather than ByteNet — a deliberate exception documented in
 [architecture.md](architecture.md#reactive-state).
 

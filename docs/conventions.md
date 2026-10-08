@@ -601,9 +601,10 @@ happens — `mutate` always mirrors into the reactive store — but the write wo
 ### Adding a service that owns a profile slice
 
 A service "owns a slice" when it registers a slice name on the profile — either SLOT-SCOPED (one
-value per character, e.g. currency, inventory) or ACCOUNT-WIDE (one value shared by every
-character, e.g. settings, entitlements). Follow this pattern (see `CurrencyServiceServer` /
-`InventoryServiceServer` for slot-scoped examples, `SlotServiceServer` for an account-wide one):
+value per save slot — with the default `MAX_SLOTS = 1` that is simply the player's save, e.g.
+currency, inventory) or ACCOUNT-WIDE (one value shared by every slot, e.g. settings, entitlements,
+titles). Follow this pattern (see `CurrencyServiceServer` / `InventoryServiceServer` for slot-scoped
+examples, `TitleServiceServer` for an account-wide one):
 
 1. **Register the slice** at module load with `PlayerDataSliceSystem.registerSlot` (or `registerAccount`) —
    one call that registers the dotted path + defaults AND returns typed `get`/`getForSlot`/`mutate`
@@ -638,7 +639,7 @@ individually atomic, but two in sequence are not: if the second fails, the first
 
 ```lua
 local ok = PlayerDataService:transaction({
-    currencySlice.op(uid, function(c) c.jaku -= cost; return c.jaku >= 0 end),
+    currencySlice.op(uid, function(c) c.coins -= cost; return c.coins >= 0 end),
     inventorySlice.op(uid, function(inv) table.insert(inv, item); return true end),
 })
 ```
@@ -719,20 +720,20 @@ Admin commands must wrap their logic in `AdminServiceServer` (or directly call t
 ```lua
 -- Example Definition
 return {
-    Name = "GiveJaku",
-    Aliases = {"addjaku"},
-    Description = "Gives jaku to a player.",
+    Name = "GiveCoins",
+    Aliases = {"addcoins"},
+    Description = "Gives coins to a player.",
     Group = "Admins",
     Args = {
         {
             Type = "player",
             Name = "target",
-            Description = "The player to give jaku to",
+            Description = "The player to give coins to",
         },
         {
             Type = "number",
             Name = "amount",
-            Description = "Amount of jaku to give",
+            Description = "Amount of coins to give",
         }
     }
 }
@@ -772,9 +773,9 @@ you carefully set does nothing.
 This is easy to miss because a service's `start()` typically mounts the root **once** — so the UI does not
 come back, and the failure looks like "the UI broke" rather than "the engine deleted it".
 
-**Keep doing it even now:** bodies are client-only (character replication), so no engine respawn resets
-PlayerGui today — but a Studio session with `CharacterAutoLoads` on, or any future engine-character path,
-brings the reset straight back, and the rule costs nothing.
+**This bites every respawn:** characters are native engine characters, so each respawn resets
+PlayerGui. A root that is not a direct `ResetOnSpawn = false` child of PlayerGui disappears on the first
+death.
 
 **Consequence for components:** the root component renders its panel/frame directly. It must NOT render its
 own `ScreenGui` — that would nest one inside the root container and reintroduce the bug. `ScreenGui`-level
