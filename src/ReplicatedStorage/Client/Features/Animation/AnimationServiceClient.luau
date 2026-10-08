@@ -230,7 +230,11 @@ local AnimationServiceClient: AnimationServiceClient = {
 				previous:stop()
 			end
 			local handle = self:play(id, { variant = data.variant, speed = data.speedMilli / 1000 })
-			grantedByLayer[layer] = handle
+			if handle ~= nil then
+				grantedByLayer[layer] = handle
+			else
+				grantedByLayer[layer] = nil
+			end
 		end)
 
 		AnimationEvents.packets.ActionStopped.listen(function(data)
