@@ -40,20 +40,25 @@ return function()
 		end)
 
 		it("takes the strongest blur and depth of field", function()
-			local state = VfxFormulas.combineScreen({ { blur = 8 }, { blur = 20, depthOfField = 0.3 }, { depthOfField = 0.6 } })
+			local state =
+				VfxFormulas.combineScreen({ { blur = 8 }, { blur = 20, depthOfField = 0.3 }, { depthOfField = 0.6 } })
 			expect(state.blur).to.equal(20)
 			expect(state.depthOfField).to.equal(0.6)
 		end)
 
 		it("adds the colour offsets", function()
-			local state = VfxFormulas.combineScreen({ { brightness = 0.1, saturation = -0.5 }, { brightness = 0.2, contrast = 0.1 } })
+			local state = VfxFormulas.combineScreen({
+				{ brightness = 0.1, saturation = -0.5 },
+				{ brightness = 0.2, contrast = 0.1 },
+			})
 			expect(near(state.brightness, 0.3)).to.equal(true)
 			expect(near(state.contrast, 0.1)).to.equal(true)
 			expect(near(state.saturation, -0.5)).to.equal(true)
 		end)
 
 		it("multiplies tints", function()
-			local state = VfxFormulas.combineScreen({ { tint = Color3.new(0.5, 1, 1) }, { tint = Color3.new(1, 0.5, 1) } })
+			local state =
+				VfxFormulas.combineScreen({ { tint = Color3.new(0.5, 1, 1) }, { tint = Color3.new(1, 0.5, 1) } })
 			expect(near(state.tint.R, 0.5)).to.equal(true)
 			expect(near(state.tint.G, 0.5)).to.equal(true)
 			expect(near(state.tint.B, 1)).to.equal(true)
@@ -88,7 +93,8 @@ return function()
 
 	describe("blendAtmosphere", function()
 		it("returns the endpoints at alpha 0 and 1 and blends between", function()
-			local night = VfxFormulas.resolveAtmosphere(BASE, { clockTime = 0, brightness = 0, ambient = Color3.new(0, 0, 0) })
+			local night =
+				VfxFormulas.resolveAtmosphere(BASE, { clockTime = 0, brightness = 0, ambient = Color3.new(0, 0, 0) })
 			expect(VfxFormulas.blendAtmosphere(BASE, night, 0).clockTime).to.equal(14)
 			expect(VfxFormulas.blendAtmosphere(BASE, night, 1).clockTime).to.equal(0)
 			local mid = VfxFormulas.blendAtmosphere(BASE, night, 0.5)

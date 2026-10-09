@@ -101,7 +101,9 @@ local function anchorFor(at: PlayAt): (Attachment, Vector3)
 		anchor.WorldPosition = at
 		anchor.Parent = Workspace.Terrain
 	elseif at:IsA("Attachment") then
-		anchor.Parent = at
+		-- An Attachment must sit directly under a part: share the given attachment's part and offset.
+		anchor.CFrame = at.CFrame
+		anchor.Parent = at.Parent
 	else
 		anchor.Parent = at
 	end
@@ -135,54 +137,64 @@ local function ignite(anchor: Attachment, lifetime: number): number
 	return tail
 end
 
-local function ensureScreenEffects(): (BlurEffect, ColorCorrectionEffect, DepthOfFieldEffect)?
-	local camera = Workspace.CurrentCamera
-	if camera == nil then
-		return nil
+-- Each post effect lives under the current Camera; these reuse it, or recreate it when the Camera
+-- changed (a new Camera starts without our effects).
+local function ensureBlur(camera: Camera): BlurEffect
+	local existing = blurEffect
+	if existing ~= nil and existing.Parent == camera then
+		return existing
 	end
-	local blur = blurEffect
-	if blur == nil or blur.Parent ~= camera then
-		blur = Instance.new("BlurEffect")
-		blur.Name = "VfxBlur"
-		blur.Size = 0
-		blur.Parent = camera
-		blurEffect = blur
-	end
-	local color = colorEffect
-	if color == nil or color.Parent ~= camera then
-		color = Instance.new("ColorCorrectionEffect")
-		color.Name = "VfxColor"
-		color.Parent = camera
-		colorEffect = color
-	end
-	local depth = depthEffect
-	if depth == nil or depth.Parent ~= camera then
-		depth = Instance.new("DepthOfFieldEffect")
-		depth.Name = "VfxDepth"
-		depth.FarIntensity = 0
-		depth.NearIntensity = 0
-		depth.Parent = camera
-		depthEffect = depth
-	end
-	return blur, color, depth
+	local created = Instance.new("BlurEffect")
+	created.Name = "VfxBlur"
+	created.Size = 0
+	created.Parent = camera
+	blurEffect = created
+	return created
 end
 
+local function ensureColor(camera: Camera): ColorCorrectionEffect
+	local existing = colorEffect
+	if existing ~= nil and existing.Parent == camera then
+		return existing
+	end
+	local created = Instance.new("ColorCorrectionEffect")
+	created.Name = "VfxColor"
+	created.Parent = camera
+	colorEffect = created
+	return created
+end
+
+local function ensureDepth(camera: Camera): DepthOfFieldEffect
+	local existing = depthEffect
+	if existing ~= nil and existing.Parent == camera then
+		return existing
+	end
+	local created = Instance.new("DepthOfFieldEffect")
+	created.Name = "VfxDepth"
+	created.FarIntensity = 0
+	created.NearIntensity = 0
+	created.Parent = camera
+	depthEffect = created
+	return created
+end
+
+-- The post effects stay enabled: at their neutral values (blur 0, no colour offset, white tint, depth of
+-- field 0) they change nothing, so there is no on/off state to manage.
 local function stepScreen(dt: number)
 	local target = VfxFormulas.combineScreen(screens:list())
 	local alpha = 1 - math.exp(-VfxConstants.SCREEN_SHARPNESS * dt)
 	screenApplied = VfxFormulas.lerpScreen(screenApplied, target, alpha)
-	local blur, color, depth = ensureScreenEffects()
-	if blur == nil or color == nil or depth == nil then
+	local camera = Workspace.CurrentCamera
+	if camera == nil then
 		return
 	end
+	local blur, color, depth = ensureBlur(camera), ensureColor(camera), ensureDepth(camera)
 	blur.Size = screenApplied.blur
-	blur.Enabled = screenApplied.blur > 0.05
 	color.Brightness = screenApplied.brightness
 	color.Contrast = screenApplied.contrast
 	color.Saturation = screenApplied.saturation
 	color.TintColor = screenApplied.tint
 	depth.FarIntensity = screenApplied.depthOfField
-	depth.Enabled = screenApplied.depthOfField > 0.005
 end
 
 local function stepAtmosphere(dt: number)
@@ -318,11 +330,8 @@ local VfxServiceClient: VfxServiceClient = {
 		seconds. False for an unknown id.
 	]=]
 	setAtmosphere = function(_self, id, fade)
-		local base = atmosphereBase
-		if base == nil then
-			base = readLighting()
-			atmosphereBase = base
-		end
+		local base: AtmosphereValues = atmosphereBase or readLighting()
+		atmosphereBase = base
 		local preset = nil
 		if id ~= nil then
 			preset = VfxAtmosphereRegistry.get(id)
