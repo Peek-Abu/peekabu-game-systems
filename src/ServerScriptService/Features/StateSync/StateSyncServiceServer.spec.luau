@@ -122,7 +122,7 @@ return function()
 		-- =====================================================================
 		describe("client ready ping", function()
 			it(
-				"registers one getter per manifest slice plus the public slice, keyed to the reporting player",
+				"registers one getter per manifest slice plus the public and world slices, keyed to the reporting player",
 				function()
 					StateSyncService:init()
 					StateSyncService:_simulateClientReadyForTesting(fakePlayer(910001))
@@ -134,12 +134,13 @@ return function()
 					for _ in getters do
 						keyCount += 1
 					end
-					expect(keyCount).to.equal(#StateSyncSliceRegistry.NAMES + 1)
+					expect(keyCount).to.equal(#StateSyncSliceRegistry.NAMES + 2)
 
 					for _, slice in StateSyncSliceRegistry.NAMES do
 						expect(getters[StateSyncConstants.key(slice, 910001)]).to.be.ok()
 					end
 					expect(getters[StateSyncConstants.publicKey(910001)]).to.be.ok()
+					expect(getters[StateSyncConstants.worldKey(910001)]).to.be.ok()
 				end
 			)
 

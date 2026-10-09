@@ -32,12 +32,14 @@ local function world()
 				end
 			end
 		end,
+		-- No `expect` in here: this helper is defined outside the spec function, where TestEZ's globals
+		-- do not exist (an `expect` call would error and read as a failed grant).
 		grantOps = function(_userId, key, _receipt)
 			self.grantCalls += 1
+			self.lastKey = key
 			if self.grantFails then
 				return nil, "handler failed"
 			end
-			expect(key).to.equal("coins-small")
 			return {
 				function()
 					self.coins += 100
@@ -61,6 +63,7 @@ return function()
 		local decision, _, granted = MarketplaceReceiptSystem.process(RECEIPT, w.deps, {})
 		expect(decision).to.equal("granted")
 		expect(granted).to.equal(true)
+		expect(w.lastKey).to.equal("coins-small")
 		expect(w.coins).to.equal(100)
 		expect(table.find(w.receipts.ids, "p-1")).to.be.ok()
 	end)

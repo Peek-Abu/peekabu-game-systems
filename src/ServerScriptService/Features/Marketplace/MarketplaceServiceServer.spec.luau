@@ -70,9 +70,11 @@ local function makeProfileData()
 		slotState = { active = 1, epoch = 1 },
 		account = {
 			itemMint = { nextUid = 1 },
-			titles = { earned = {} },
 			premium = { balance = 0 },
 			receipts = { ids = {} },
+			entitlements = { owned = {} },
+			settings = { values = {} },
+			titles = { earned = {} },
 		},
 		slots = slots,
 	}
