@@ -1,6 +1,6 @@
 # Testing Guide
 
-This document explains how to write and run tests for the peekabu-game-systems framework using TestEZ.
+This document explains how to write and run tests for this game-systems base using TestEZ.
 
 ---
 
@@ -44,8 +44,16 @@ because specs use TestEZ globals — `describe`/`it`/`expect` — that would oth
 
 1. Sync your project with Rojo: `rojo serve`
 2. Connect to the Rojo server in Studio
-3. Run the `TestRunner.server.luau` script in ServerScriptService
-4. Check the Output window for test results
+3. **Opt in:** select `Workspace`, add a boolean attribute `RunTests`, set it `true`
+4. Hit Play — `TestRunner.server.luau` runs the suite on server start
+5. Check the Output window for test results
+
+> **Why opt-in (and why not to play in a test session):** several specs exercise `init()`/`stop()`
+> on REAL module singletons — e.g. `StateSyncServiceServer.spec` tears down and recreates the
+> production charm-sync transport. Running the suite inside a live play session destroys that
+> session's runtime state (found 2026-07-17: the auto-running suite permanently severed the live
+> client's state sync every session — the client State tab never received a patch). Run tests OR
+> play; never expect both from one session. Leave `RunTests` unset for normal play.
 
 ### Via Command Line (CI/CD)
 
@@ -57,12 +65,12 @@ runtime through **Open Cloud Luau Execution**:
    included).
 2. `scripts/python/upload_and_run_task.py dist.rbxlx tasks/runTests.luau` uploads the place and runs
    [`tasks/runTests.luau`](../tasks/runTests.luau) against it via the Open Cloud API.
-3. `runTests.luau` seeds `GameItems.init()`, runs the full TestEZ suite, and **`error()`s if any test
+3. `runTests.luau` seeds `ItemContentRegistry.init()`, runs the full TestEZ suite, and **`error()`s if any test
    fails** — which fails the Open Cloud task and therefore the CI job.
 
 This mirrors the local Studio runner ([`TestRunner.server.luau`](../src/ServerScriptService/TestRunner.server.luau)),
 which shares the same list of test locations. To reproduce locally without the cloud, run the Studio
-runner (see above); the cloud path is only needed to gate merges/deploys. See
+runner (see above); the cloud path is only needed to gate merges. See
 [ci-cd.md](ci-cd.md) for the required secrets/variables.
 
 ---
@@ -77,10 +85,11 @@ Test files must use the `.spec.luau` suffix and be placed alongside the module t
 src/
   ReplicatedStorage/
     Shared/
-      Modules/
-        Utils/
-          CurrencyUtils.luau
-          CurrencyUtils.spec.luau  ← Test file
+      Features/
+        Currency/
+          Utils/
+            CurrencyUtils.luau
+            CurrencyUtils.spec.luau  ← Test file
 ```
 
 ### Basic Test Structure
@@ -106,6 +115,14 @@ end
 ```
 
 **Important:** Test files must return a function that contains your test suite.
+
+**The injected globals exist only inside that returned function.** A helper declared at the top of the
+file (outside `return function()`) that calls `expect`, `it` or `describe` fails with "attempt to call a
+nil value". Declare such helpers inside the returned function; top-level helpers may only build data.
+
+**Live singletons carry real state in a Play session.** Specs run in a real server, so a global store
+(the public-player roster, a registry) can already hold real players or entries. Assert on the ids your
+spec created, not on total counts.
 
 ### Common Matchers
 
@@ -239,19 +256,19 @@ Before implementing any new functionality, write tests that describe the intende
 return function()
     describe("CurrencyUtils", function()
         describe("convertCurrency", function()
-            it("should convert gold to gems at correct rate", function()
-                local result = CurrencyUtils.convertCurrency("gold", "gems", 100)
+            it("should convert coins to tickets at correct rate", function()
+                local result = CurrencyUtils.convertCurrency("coins", "tickets", 100)
                 expect(result).to.equal(10) -- 10:1 conversion rate
             end)
             
             it("should throw error for invalid currency types", function()
                 expect(function()
-                    CurrencyUtils.convertCurrency("invalid", "gems", 100)
+                    CurrencyUtils.convertCurrency("invalid", "tickets", 100)
                 end).to.throw()
             end)
             
             it("should return 0 for zero amount", function()
-                local result = CurrencyUtils.convertCurrency("gold", "gems", 0)
+                local result = CurrencyUtils.convertCurrency("coins", "tickets", 0)
                 expect(result).to.equal(0)
             end)
         end)
@@ -395,6 +412,60 @@ However, once the prototype is validated, **refactor it with tests** before merg
 
 ---
 
+## Testing React UI
+
+The UI framework (`Client/UI/`) splits cleanly into two kinds of module, and each is tested — or
+not — for a concrete reason:
+
+- **Pure logic → specced normally.** The scene stack, the layer bookkeeping, the world-suppression
+  refcount, and every screen's **view-model** (the pure functions that derive displayed values from
+  atoms — filtering, sorting, formatting, "what's actionable") are plain Luau with no Instance or
+  React contact. They get ordinary `.spec.luau` siblings and are the primary test surface.
+- **Presentational components → exempt, verified visually.** Design tokens (`Tokens`), primitives
+  (`Button`, `Panel`), and screen components hold no business logic — they map props/state to
+  instances. A unit test would only assert "it rendered", which is low-value, and TestEZ has no
+  renderer besides a live Studio session. These are listed in `SpecRoots.EXEMPT_MODULES` with a
+  reason and verified at the visual checkpoints.
+
+**The rule that keeps the exemption honest:** logic must live in the view-model, not the component.
+A component that grows real branching logic is a smell — push that logic into its specced view-model.
+
+### Previewing UI without a Play session (UI Labs stories)
+
+Visual checkpoints do **not** require booting the game. Presentational components are previewed in
+Studio's **edit mode** with the [UI Labs](https://ui-labs.luau.page) plugin, which renders any
+`*.story.luau` ModuleScript and re-renders as Rojo syncs.
+
+**One-time setup:** install the *UI Labs* plugin from the Creator Store. The companion library is
+already a dev-dependency (`pepeeltoro41/ui-labs`, mounted at `ReplicatedStorage.DevPackages.UILabs`).
+
+**Writing one:** a story sits next to its component (`Button.story.luau` beside `Button.luau` is the
+base's reference example) and returns `UILabs.CreateReactStory({ react, reactRoblox, controls }, render)`.
+Control values arrive as `props.controls`; `UILabs.Choose({...})` gives a dropdown. When several stories
+need the same sample data, put it in one fixtures module beside them so stories stay about layout.
+
+`GameUI.storybook.luau` declares which folders UI Labs scans (`Primitives` and `Screens`, grouped).
+Without a storybook module UI Labs files everything under a catch-all **"Unknown Stories"** node, so
+that file is what gives the tree its shape — it only needs editing if a new top-level story location
+appears, not per story.
+
+`SpecRoots` skips `*.story` and `*.storybook` modules by name, exactly as it skips `*.spec` ones —
+**adding a story never means editing `SpecRoots`**, and a story is not a substitute for a view-model's
+spec.
+
+**What a story can't cover:** the scene stack, input capture, HUD suppression, and real synced data.
+Those still need a Play pass. Stories cover the visual loop — proportions, regions, colour, states that
+are hard to reach in-game (an empty state, every variant at once, a zero-item grid).
+
+**On mounted component tests (`ReactRoblox.createRoot` + `act`, or `jsdotlua/react-test-renderer`):**
+our suite runs in a real Studio runtime, so mounting a component in a spec is *possible* with no new
+dependency. We are **deliberately not building that harness yet** — the current primitives are
+logic-free, so a mounted test would assert nothing the visual checkpoint doesn't already cover. The
+harness gets built the first time a component has assertable interactive logic that *can't* be
+extracted into a pure view-model. Until then, mounting buys complexity without coverage.
+
+---
+
 ## Best Practices
 
 ### 1. Test One Thing Per Test
@@ -402,8 +473,8 @@ However, once the prototype is validated, **refactor it with tests** before merg
 ❌ **Bad:**
 ```lua
 it("should handle currency operations", function()
-    expect(CurrencyUtils.getCurrencyAmount(currency, "gold")).to.equal(100)
-    expect(CurrencyUtils.hasEnoughCurrency(currency, "gold", 50)).to.equal(true)
+    expect(CurrencyUtils.getCurrencyAmount(currency, "coins")).to.equal(100)
+    expect(CurrencyUtils.hasEnoughCurrency(currency, "coins", 50)).to.equal(true)
     expect(CurrencyUtils.formatCurrency(100)).to.equal("100")
 end)
 ```
@@ -411,11 +482,11 @@ end)
 ✅ **Good:**
 ```lua
 it("should return correct amount for valid currency", function()
-    expect(CurrencyUtils.getCurrencyAmount(currency, "gold")).to.equal(100)
+    expect(CurrencyUtils.getCurrencyAmount(currency, "coins")).to.equal(100)
 end)
 
 it("should return true when player has enough", function()
-    expect(CurrencyUtils.hasEnoughCurrency(currency, "gold", 50)).to.equal(true)
+    expect(CurrencyUtils.hasEnoughCurrency(currency, "coins", 50)).to.equal(true)
 end)
 
 it("should format amounts without commas for values < 1000", function()
@@ -444,12 +515,12 @@ Always test:
 ```lua
 describe("hasEnoughCurrency", function()
     it("should return false for nil currency table", function()
-        expect(CurrencyUtils.hasEnoughCurrency(nil, "gold", 10)).to.equal(false)
+        expect(CurrencyUtils.hasEnoughCurrency(nil, "coins", 10)).to.equal(false)
     end)
     
     it("should throw error for non-positive amount", function()
         expect(function()
-            CurrencyUtils.hasEnoughCurrency(currency, "gold", 0)
+            CurrencyUtils.hasEnoughCurrency(currency, "coins", 0)
         end).to.throw()
     end)
 end)
@@ -513,7 +584,7 @@ end)
 **Solution:** Ensure your test file's require paths match your project structure. Use absolute paths from `ReplicatedStorage`:
 
 ```lua
-local MyModule = require(ReplicatedStorage.Shared.Modules.MyModule)
+local MyModule = require(ReplicatedStorage.Shared.Features.MyFeature.Utils.MyFeatureUtils)
 ```
 
 ### Tests pass in Studio but fail in CI
@@ -554,10 +625,10 @@ end
 ```
 3. **Registering the Test**: TestEZ does **not** scan recursively from `src`. Both runners
    (`src/ServerScriptService/TestRunner.server.luau` and `tasks/runTests.luau`) pass an explicit
-   root list, shared via `ServerScriptService/Modules/SpecRoots.luau`:
-   `Shared/Modules`, `Shared/State`, `Client`, `ServerScriptService/Commands`, `Modules`,
-   `Services`, and `State`. A spec placed under any of these roots (any depth) is discovered
-   automatically. A spec placed **outside** them — e.g. under `Shared/Types` or `Shared/Events` —
+   root list, shared via `ServerScriptService/Core/Testing/SpecRoots.luau`:
+   `Shared/Core`, `Shared/Data`, `Shared/Features`, `Client`, `ServerScriptService/Commands`,
+   `Core`, and `Features`. A spec placed under any of these roots (any depth) is discovered
+   automatically. A spec placed **outside** them — e.g. under `Shared/CmdrTypes` —
    would not be, so both runners sweep the DataModel for `*.spec` ModuleScripts and **error on any
    spec outside the roots** rather than silently skipping it. If you legitimately need a new spec
    location, add the root to `SpecRoots.luau` (one edit covers Studio and CI). The runners also call

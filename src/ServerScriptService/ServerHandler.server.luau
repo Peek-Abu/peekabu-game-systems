@@ -3,12 +3,12 @@ local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local ServiceController = require(ReplicatedStorage.Shared.Modules.ServiceController)
-local PlayerDataConstants = require(ServerScriptService.Modules.Constants.PlayerDataConstants)
+local ServiceController = require(ReplicatedStorage.Shared.Core.ServiceController)
+local PlayerDataConstants = require(ServerScriptService.Features.PlayerData.Data.PlayerDataConstants)
 
--- Register all server services
-local Services = ServerScriptService.Services
-for _, ServerService in Services:GetDescendants() do
+-- Register all server services: every `*ServiceServer` at a feature root (docs/project-structure.md).
+local Features = ServerScriptService.Features
+for _, ServerService in Features:GetDescendants() do
 	if
 		ServerService:IsA("ModuleScript")
 		and ServerService.Name:match("Service")
@@ -18,7 +18,7 @@ for _, ServerService in Services:GetDescendants() do
 		-- resolve this require ("Unknown require: unsupported path"). Assert the honest type at
 		-- this dynamic-require boundary: every match here is a service ModuleScript, so its
 		-- return IS a ServiceModule. This keeps the file type-checked and types register()'s arg.
-		local module = require(ServerService) :: ServiceController.ServiceModule
+		local module = require(ServerService) :: ServiceController.ServiceModule -- dynamic-require boundary: the match above is a service ModuleScript
 		ServiceController:register(ServerService.Name, module)
 	elseif
 		ServerService:IsA("ModuleScript")
@@ -36,8 +36,8 @@ for _, ServerService in Services:GetDescendants() do
 end
 
 -- Initialize Game Data definitions
-local GameItems = require(ReplicatedStorage.Shared.Modules.GameItems)
-GameItems.init()
+local ItemContentRegistry = require(ReplicatedStorage.Shared.Features.Item.Data.ItemContentRegistry)
+ItemContentRegistry.init()
 
 -- Initialize services (PlayerDataServiceServer needs config, others don't)
 ServiceController:initService("PlayerDataServiceServer", {
@@ -58,7 +58,7 @@ ServiceController:startAll()
 	Legacy debug BindableFunctions have been removed in favor of this robust system.
 ]=]
 
-local Logger = require(ReplicatedStorage.Shared.Modules.Logger)
+local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local log = Logger.new("ServerHandler")
 
 -- Report actual boot health rather than an unconditional success line: initAll() errors on init

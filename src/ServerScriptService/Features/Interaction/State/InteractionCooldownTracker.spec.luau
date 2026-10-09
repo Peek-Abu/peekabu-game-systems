@@ -1,0 +1,32 @@
+local InteractionCooldownTracker = require(script.Parent.InteractionCooldownTracker)
+
+return function()
+	it("is ready before any use", function()
+		local tracker = InteractionCooldownTracker.new()
+		expect(tracker:remaining(1, 10, 100, 5)).to.equal(0)
+	end)
+
+	it("counts down after a use and is ready once it elapses", function()
+		local tracker = InteractionCooldownTracker.new()
+		tracker:mark(1, 10, 100)
+		expect(tracker:remaining(1, 10, 102, 5)).to.equal(3)
+		expect(tracker:remaining(1, 10, 105, 5)).to.equal(0)
+	end)
+
+	it("keeps players and objects apart", function()
+		local tracker = InteractionCooldownTracker.new()
+		tracker:mark(1, 10, 100)
+		expect(tracker:remaining(2, 10, 101, 5)).to.equal(0)
+		expect(tracker:remaining(1, 11, 101, 5)).to.equal(0)
+	end)
+
+	it("forgetPlayer and forgetTarget clear their uses", function()
+		local tracker = InteractionCooldownTracker.new()
+		tracker:mark(1, 10, 100)
+		tracker:mark(2, 11, 100)
+		tracker:forgetPlayer(1)
+		tracker:forgetTarget(11)
+		expect(tracker:remaining(1, 10, 101, 5)).to.equal(0)
+		expect(tracker:remaining(2, 11, 101, 5)).to.equal(0)
+	end)
+end

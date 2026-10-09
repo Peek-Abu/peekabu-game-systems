@@ -1,0 +1,33 @@
+local MarketplacePassTracker = require(script.Parent.MarketplacePassTracker)
+
+return function()
+	it("reports nothing owned for an unknown player", function()
+		local tracker = MarketplacePassTracker.new()
+		expect(tracker:owns(1, "vip")).to.equal(false)
+		expect(#tracker:ownedBy(1)).to.equal(0)
+	end)
+
+	it("grants a pass once, reporting whether it was new", function()
+		local tracker = MarketplacePassTracker.new()
+		expect(tracker:grant(1, "vip")).to.equal(true)
+		expect(tracker:grant(1, "vip")).to.equal(false)
+		expect(tracker:owns(1, "vip")).to.equal(true)
+		expect(tracker:owns(2, "vip")).to.equal(false)
+	end)
+
+	it("lists a player's passes sorted", function()
+		local tracker = MarketplacePassTracker.new()
+		tracker:grant(1, "vip")
+		tracker:grant(1, "double-coins")
+		local owned = tracker:ownedBy(1)
+		expect(owned[1]).to.equal("double-coins")
+		expect(owned[2]).to.equal("vip")
+	end)
+
+	it("forgets a player who leaves", function()
+		local tracker = MarketplacePassTracker.new()
+		tracker:grant(1, "vip")
+		tracker:forget(1)
+		expect(tracker:owns(1, "vip")).to.equal(false)
+	end)
+end

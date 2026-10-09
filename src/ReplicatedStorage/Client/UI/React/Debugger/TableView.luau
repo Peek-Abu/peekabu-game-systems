@@ -14,7 +14,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
-local theme = require(ReplicatedStorage.Client.UI.React.Debugger.theme)
+local DebuggerTheme = require(ReplicatedStorage.Client.UI.React.Debugger.DebuggerTheme)
 
 local e = React.createElement
 
@@ -40,17 +40,17 @@ export type Props = {
 ]=]
 local function renderValue(value: any): string
 	if typeof(value) ~= "table" then
-		return theme.serialize(value)
+		return DebuggerTheme.serialize(value)
 	end
 
 	local lines: { string } = {}
 	if #value > 0 then
 		for index, item in ipairs(value) do
-			table.insert(lines, `[{index}] = {theme.serialize(item)}`)
+			table.insert(lines, `[{index}] = {DebuggerTheme.serialize(item)}`)
 		end
 	else
 		for key, item in pairs(value) do
-			table.insert(lines, `{tostring(key)} = {theme.serialize(item)}`)
+			table.insert(lines, `{tostring(key)} = {DebuggerTheme.serialize(item)}`)
 		end
 		table.sort(lines)
 	end
@@ -73,7 +73,7 @@ local function gridRow(row: Row, order: number, striped: boolean): React.ReactNo
 		LayoutOrder = order,
 		Size = UDim2.fromScale(1, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
-		BackgroundColor3 = theme.ROW,
+		BackgroundColor3 = DebuggerTheme.ROW,
 		BackgroundTransparency = if striped then 0.5 else 0.8,
 		BorderSizePixel = 0,
 	}, {
@@ -82,7 +82,7 @@ local function gridRow(row: Row, order: number, striped: boolean): React.ReactNo
 			BackgroundTransparency = 1,
 			Font = Enum.Font.Code,
 			TextSize = 13,
-			TextColor3 = theme.ACCENT,
+			TextColor3 = DebuggerTheme.ACCENT,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextYAlignment = Enum.TextYAlignment.Top,
 			TextTruncate = Enum.TextTruncate.AtEnd,
@@ -95,7 +95,7 @@ local function gridRow(row: Row, order: number, striped: boolean): React.ReactNo
 			BackgroundTransparency = 1,
 			Font = Enum.Font.Code,
 			TextSize = 13,
-			TextColor3 = theme.TEXT,
+			TextColor3 = DebuggerTheme.TEXT,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextYAlignment = Enum.TextYAlignment.Top,
 			TextWrapped = true,
@@ -118,7 +118,7 @@ local function TableView(props: Props): React.ReactNode
 		header = e("Frame", {
 			LayoutOrder = 0,
 			Size = UDim2.new(1, 0, 0, 18),
-			BackgroundColor3 = theme.PANEL_LIGHT,
+			BackgroundColor3 = DebuggerTheme.PANEL_LIGHT,
 			BorderSizePixel = 0,
 		}, {
 			key = e("TextLabel", {
@@ -126,7 +126,7 @@ local function TableView(props: Props): React.ReactNode
 				BackgroundTransparency = 1,
 				Font = Enum.Font.GothamBold,
 				TextSize = 12,
-				TextColor3 = theme.TEXT,
+				TextColor3 = DebuggerTheme.TEXT,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				Text = ` {props.keyHeader}`,
 			}),
@@ -136,7 +136,7 @@ local function TableView(props: Props): React.ReactNode
 				BackgroundTransparency = 1,
 				Font = Enum.Font.GothamBold,
 				TextSize = 12,
-				TextColor3 = theme.TEXT,
+				TextColor3 = DebuggerTheme.TEXT,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				Text = props.valueHeader,
 			}),
@@ -147,7 +147,7 @@ local function TableView(props: Props): React.ReactNode
 		children[`row-{row.name}-{index}`] = gridRow(row, index, index % 2 == 0)
 	end
 	if #props.rows == 0 then
-		children["empty"] = theme.line("(empty)", theme.MUTED, 1)
+		children["empty"] = DebuggerTheme.line("(empty)", DebuggerTheme.MUTED, 1)
 	end
 
 	return e("Frame", {

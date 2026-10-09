@@ -1,7 +1,9 @@
 """Publishes a built place file to a Roblox place via Open Cloud (versionType=Published).
 
-Used by the deploy job. Reads ROBLOX_API_KEY / ROBLOX_UNIVERSE_ID / ROBLOX_PLACE_ID
-from the environment (scoped to the production GitHub Environment in CI).
+Not wired into CI: automated deploy was removed (production is published manually from Studio so
+artist-owned place content isn't overwritten by a code-only build — see docs/ci-cd.md). This helper
+is kept for a future fully-managed CD pipeline and for one-off manual publishes. Reads
+ROBLOX_API_KEY / ROBLOX_UNIVERSE_ID / ROBLOX_PLACE_ID from the environment.
 
 Usage: python3 scripts/python/publish_place.py <path-to-place-file>
 """

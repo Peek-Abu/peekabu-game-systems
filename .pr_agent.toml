@@ -1,0 +1,76 @@
+# Qodo Merge / PR-Agent configuration.
+#
+# Same format for the hosted Qodo GitHub App and the self-hosted OSS `pr-agent` action, so this
+# config carries over if we ever swap the backend (e.g. to a Groq-hosted OSS runner).
+#
+# The point of the instructions below: a generic reviewer will comment on style and miss the bugs
+# that actually bite THIS repo. Every instruction here is derived from a defect that really reached
+# review — see AGENTS.md and docs/superpowers/specs/ for the full rationale.
+
+[config]
+model = "claude-sonnet-4.5"
+# Deterministic gates already run in CI (selene, StyLua, luau-lsp, ruff, plus our own project-rules
+# and file-length checks). The bot should NOT re-litigate what a linter already enforces.
+publish_output = true
+
+[pr_reviewer]
+require_score_review = false
+require_tests_review = true
+require_security_review = true
+persistent_comment = true
+final_update_message = false
+extra_instructions = """
+This is a strongly-typed, SERVER-AUTHORITATIVE Roblox game (strict Luau, `--!strict`). Review against
+the project's real invariants, not generic style. Selene, StyLua, luau-lsp and Ruff already run in CI —
+do NOT report formatting, naming, or anything a linter catches. Spend your attention here instead:
+
+1. SILENT DATA CORRUPTION is the failure class that matters most. This codebase's data layer
+   (PlayerDataService) is the atomicity core: every write is snapshotted, validated, rolled back on
+   failure, and only then mirrored to clients. Flag anything that could persist a value that was meant
+   to roll back, or mirror state to a client the server never committed.
+
+2. TYPES: `any` and `::` casts are BANNED in production code. A cast is how a broken test fixture
+   previously hid from the type checker and crashed at runtime — twice. If a diff adds a cast to
+   non-spec code, say so. (Spec files are intentionally untyped; casts there are fine and idiomatic.)
+
+3. CLIENT TRUST: the client may only REQUEST; it never writes authoritative state. Flag any handler
+   that trusts a client-supplied amount, target, slot index, or multiplier without server validation.
+
+4. CHARACTER SLOTS: a player has 3 character slots nested in ONE ProfileStore key. Slot-scoped data
+   (currency, inventory, stats) is per-character; account-scoped data (entitlements, unlocked slots)
+   is shared. Flag anything that puts a QUANTITY or an item instance at the account level, or an
+   ENTITLEMENT at the slot level — that boundary is what makes duplication structurally impossible.
+
+5. VALIDATORS: a slice's invariant belongs in the data layer (registered with the slice), not in a
+   service method, so it holds for ANY path into the slice — including a raw transaction op. Flag a
+   new invariant that is only checked in a service method.
+
+6. TESTS: this repo is spec-first (TDD). A change to `src/` with no matching `.spec.luau` change is
+   worth flagging. There is NO headless test runner, so tests only run in CI — a spec fixture that
+   typechecks but would throw at runtime is a REAL bug and the single most valuable thing you can find.
+
+7. DERIVED VS STORED: level, unspent stat points, and combat stats are DERIVED from stored data, never
+   persisted. Flag any new stored field that duplicates something derivable — it can desync.
+
+Be concrete and specific. Prefer one real bug over ten style nits. If you find nothing substantive,
+say so plainly rather than padding.
+"""
+
+[pr_code_suggestions]
+num_code_suggestions = 4
+extra_instructions = """
+Suggest only changes that affect CORRECTNESS, SECURITY (client-trust boundaries), or a genuine
+data-layer invariant. Do NOT suggest formatting, renaming, comment rewording, or micro-optimisations —
+this codebase deliberately carries thorough WHY-comments and those are load-bearing, not clutter.
+"""
+
+[ignore]
+# Generated / vendored / non-source paths — reviewing these is pure noise.
+glob = [
+  "Packages/**",
+  "ServerPackages/**",
+  "DevPackages/**",
+  "sourcemap.json",
+  "*.rbxl",
+  "*.rbxlx",
+]

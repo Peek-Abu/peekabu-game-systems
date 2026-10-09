@@ -13,7 +13,7 @@
 	Selecting a player also highlights their character in-world.
 
 	Server context sources everything from the snapshot (all players); client context shows the local
-	player from ClientStore. Re-renders when context or snapshot changes.
+	player from StateSyncClientStore. Re-renders when context or snapshot changes.
 
 	@class StatePanel
 ]=]
@@ -23,10 +23,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
 local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
-local DebuggerEvents = require(ReplicatedStorage.Shared.Events.DebuggerEvents)
-local DebuggerState = require(ReplicatedStorage.Client.State.DebuggerState)
-local theme = require(ReplicatedStorage.Client.UI.React.Debugger.theme)
+local DebuggerEvents = require(ReplicatedStorage.Shared.Features.Debugger.Net.DebuggerEvents)
+local DebuggerStore = require(ReplicatedStorage.Client.Features.Debugger.State.DebuggerStore)
+local DebuggerTheme = require(ReplicatedStorage.Client.UI.React.Debugger.DebuggerTheme)
 local TableView = require(ReplicatedStorage.Client.UI.React.Debugger.TableView)
+local TreeView = require(ReplicatedStorage.Client.UI.React.Debugger.TreeView)
 local useDrag = require(ReplicatedStorage.Client.UI.React.Debugger.useDrag)
 
 local e = React.createElement
@@ -54,7 +55,7 @@ local function cellText(value: any): string
 	if value == nil then
 		return "—"
 	end
-	local text = theme.serialize(value)
+	local text = DebuggerTheme.serialize(value)
 	if #text > CELL_LIMIT then
 		return text:sub(1, CELL_LIMIT) .. "…"
 	end
@@ -102,7 +103,7 @@ local function rowCells(
 			BackgroundTransparency = 1,
 			Font = if isHeader then Enum.Font.GothamBold else Enum.Font.Code,
 			TextSize = if isHeader then 12 else 13,
-			TextColor3 = if isHeader then theme.TEXT else theme.TEXT,
+			TextColor3 = if isHeader then DebuggerTheme.TEXT else DebuggerTheme.TEXT,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextTruncate = Enum.TextTruncate.AtEnd,
 			Text = ` {cells[index] or ""}`,
@@ -118,13 +119,19 @@ end
 	@return React.ReactNode
 ]=]
 local function StatePanel(): React.ReactNode
-	local context = useAtom(DebuggerState.context)
-	local snapshot = useAtom(DebuggerState.serverSnapshot)
+	local context = useAtom(DebuggerStore.context)
+	local snapshot = useAtom(DebuggerStore.serverSnapshot)
+	-- Hooks must run unconditionally (React's rules of hooks), so this is read every render even
+	-- though it's only used in the "client" branch below — the same shape as `snapshot` above, which
+	-- likewise feeds only the "server" branch.
+	local clientAtoms = useAtom(DebuggerStore.clientAtoms)
 	local selectedUserId, setSelectedUserId = React.useState(nil :: number?)
 	local search, setSearch = React.useState("")
 	-- Disabled slice columns (default: all enabled). Stored inverted so a new slice is visible without
 	-- state migration.
-	local hiddenSlices, setHiddenSlices = React.useState({} :: { [string]: boolean })
+	-- Typed local (not a cast) pins useState's generic — the cast-free pattern TreeView established.
+	local initialHiddenSlices: { [string]: boolean } = {}
+	local hiddenSlices, setHiddenSlices = React.useState(initialHiddenSlices)
 
 	-- Floating detail window state: offset from its default bottom-left docking point, plus size.
 	local detailOffset, setDetailOffset = React.useState(Vector2.zero)
@@ -152,8 +159,8 @@ local function StatePanel(): React.ReactNode
 		atoms = if snapshot then snapshot.atoms else {}
 		rateLimits = if snapshot then snapshot.rateLimits else {}
 	else
-		players = DebuggerState.getClientPlayers()
-		atoms = DebuggerState.getClientAtoms()
+		players = DebuggerStore.getClientPlayers()
+		atoms = clientAtoms
 		rateLimits = {}
 	end
 
@@ -195,17 +202,17 @@ local function StatePanel(): React.ReactNode
 			return
 		end
 		local player = Players:GetPlayerByUserId(effectiveSelected)
-		local character = player and player.Character
+		local character = if player ~= nil then player.Character else nil
 		if not character then
-			-- No character yet (respawning / not spawned): skip. The effect keys only off the userId,
-			-- so a later spawn won't re-run it — reselecting the player reapplies the highlight, a fine
-			-- tradeoff for a debug overlay versus wiring up CharacterAdded listeners here.
+			-- Not spawned (or streamed out): skip. The effect keys only off the userId, so a later spawn
+			-- won't re-run it — reselecting reapplies the highlight, a fine tradeoff for a debug overlay
+			-- versus wiring up CharacterAdded listeners here.
 			return
 		end
 		local highlight = Instance.new("Highlight")
-		highlight.FillColor = theme.ACCENT
+		highlight.FillColor = DebuggerTheme.ACCENT
 		highlight.FillTransparency = 0.6
-		highlight.OutlineColor = theme.ACCENT
+		highlight.OutlineColor = DebuggerTheme.ACCENT
 		highlight.Adornee = character
 		highlight.Parent = character
 		return function()
@@ -219,7 +226,7 @@ local function StatePanel(): React.ReactNode
 			Padding = UDim.new(0, 3),
 			SortOrder = Enum.SortOrder.LayoutOrder,
 		}),
-		header = theme.line("SLICES", theme.MUTED, 0),
+		header = DebuggerTheme.line("SLICES", DebuggerTheme.MUTED, 0),
 	}
 	for index, slice in allSlices do
 		local enabled = not hiddenSlices[slice]
@@ -227,12 +234,12 @@ local function StatePanel(): React.ReactNode
 		sidebarRows[`s-{slice}`] = e("TextButton", {
 			LayoutOrder = index,
 			Size = UDim2.new(1, 0, 0, 22),
-			BackgroundColor3 = if enabled then theme.ROW_SELECTED else theme.ROW,
+			BackgroundColor3 = if enabled then DebuggerTheme.ROW_SELECTED else DebuggerTheme.ROW,
 			BackgroundTransparency = if enabled then 0 else 0.5,
 			BorderSizePixel = 0,
 			Font = Enum.Font.Code,
 			TextSize = 12,
-			TextColor3 = if enabled then theme.TEXT else theme.MUTED,
+			TextColor3 = if enabled then DebuggerTheme.TEXT else DebuggerTheme.MUTED,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextTruncate = Enum.TextTruncate.AtEnd,
 			Text = ` {sliceCounts[slice] or 0} · {slice}`,
@@ -246,7 +253,7 @@ local function StatePanel(): React.ReactNode
 		})
 	end
 	if #allSlices == 0 then
-		sidebarRows["empty"] = theme.line("(none)", theme.MUTED, 1)
+		sidebarRows["empty"] = DebuggerTheme.line("(none)", DebuggerTheme.MUTED, 1)
 	end
 
 	-- MAIN table rows: one per player passing the search filter.
@@ -276,7 +283,7 @@ local function StatePanel(): React.ReactNode
 			tableRows[`p-{userId}`] = e("TextButton", {
 				LayoutOrder = rowOrder,
 				Size = UDim2.new(1, 0, 0, ROW_HEIGHT),
-				BackgroundColor3 = if isSelected then theme.ROW_SELECTED else theme.ROW,
+				BackgroundColor3 = if isSelected then DebuggerTheme.ROW_SELECTED else DebuggerTheme.ROW,
 				BackgroundTransparency = if isSelected then 0 else (if rowOrder % 2 == 0 then 0.5 else 0.8),
 				BorderSizePixel = 0,
 				Text = "",
@@ -287,7 +294,8 @@ local function StatePanel(): React.ReactNode
 		end
 	end
 	if rowOrder == 0 then
-		tableRows["empty"] = theme.line(if #players == 0 then "no players" else "no matches", theme.MUTED, 0)
+		tableRows["empty"] =
+			DebuggerTheme.line(if #players == 0 then "no players" else "no matches", DebuggerTheme.MUTED, 0)
 	end
 
 	-- FLOATING detail window (Matter's "ENTITY n" panel): the selected player's slices as a
@@ -307,30 +315,40 @@ local function StatePanel(): React.ReactNode
 		}),
 	}
 	if effectiveSelected == nil then
-		detailChildren["none"] = theme.line("select a player", theme.MUTED, 0)
+		detailChildren["none"] = DebuggerTheme.line("select a player", DebuggerTheme.MUTED, 0)
 	else
-		local sliceRows: { TableView.Row } = {}
+		-- Slices as one collapsible tree (keyed by slice name) instead of TableView's one-level-deep
+		-- grid — a slice with nested/array data (e.g. an inventory) stays fully inspectable instead of
+		-- degrading into a truncated JSON blob past the first level.
+		-- Every known slice always gets a visible row, even if this player has no value for it yet —
+		-- `sliceData[slice] = values and values[effectiveSelected]` would drop the key entirely when
+		-- the value is nil, silently hiding a not-yet-synced slice. A sentinel string keeps "absent"
+		-- distinct from "nil", which matters for a debugger.
+		local sliceData: { [string]: any } = {}
 		for _, slice in allSlices do
 			local values = valueBySliceUser[slice]
-			table.insert(sliceRows, { name = slice, value = values and values[effectiveSelected] })
+			local value = values and values[effectiveSelected]
+			sliceData[slice] = if value ~= nil then value else DebuggerTheme.NIL_SENTINEL
 		end
-		detailChildren["slices"] = e(TableView, {
-			keyHeader = "Slice",
-			valueHeader = "Data",
-			rows = sliceRows,
+		detailChildren["slices"] = e(TreeView, {
+			value = sliceData,
 			layoutOrder = 1,
 		})
 
 		local rateRows: { TableView.Row } = {}
 		for _, entry in rateLimits do
 			if entry.userId == effectiveSelected then
-				table.insert(rateRows, { name = entry.action, value = `{entry.requestsInWindow} tracked` })
+				local tokensRemaining, capacity = entry.tokensRemaining, entry.capacity
+				local tokens = if tokensRemaining ~= nil and capacity ~= nil
+					then string.format("%.1f / %d tokens", tokensRemaining, capacity)
+					else "no limit"
+				table.insert(rateRows, { name = entry.action, value = `{tokens} · {entry.rejected} dropped` })
 			end
 		end
 		if #rateRows > 0 then
 			detailChildren["rates"] = e(TableView, {
 				keyHeader = "Rate limit",
-				valueHeader = "Requests",
+				valueHeader = "Bucket",
 				rows = rateRows,
 				layoutOrder = 2,
 			})
@@ -348,7 +366,7 @@ local function StatePanel(): React.ReactNode
 			CanvasSize = UDim2.new(0, 0, 0, 0),
 			AutomaticCanvasSize = Enum.AutomaticSize.Y,
 			ScrollBarThickness = 4,
-			ScrollBarImageColor3 = theme.MUTED,
+			ScrollBarImageColor3 = DebuggerTheme.MUTED,
 		}, sidebarRows),
 
 		-- The table now spans the full tab height; the detail window floats above it (like Matter).
@@ -359,13 +377,13 @@ local function StatePanel(): React.ReactNode
 		}, {
 			search = e("TextBox", {
 				Size = UDim2.new(1, 0, 0, 22),
-				BackgroundColor3 = theme.ROW,
+				BackgroundColor3 = DebuggerTheme.ROW,
 				BorderSizePixel = 0,
 				Font = Enum.Font.Code,
 				TextSize = 12,
-				TextColor3 = theme.TEXT,
+				TextColor3 = DebuggerTheme.TEXT,
 				PlaceholderText = "filter players…",
-				PlaceholderColor3 = theme.MUTED,
+				PlaceholderColor3 = DebuggerTheme.MUTED,
 				Text = search,
 				ClearTextOnFocus = false,
 				[React.Change.Text] = function(rbx: TextBox)
@@ -380,7 +398,7 @@ local function StatePanel(): React.ReactNode
 				{
 					Position = UDim2.fromOffset(0, 26),
 					Size = UDim2.new(1, 0, 0, 18),
-					BackgroundColor3 = theme.PANEL_LIGHT,
+					BackgroundColor3 = DebuggerTheme.PANEL_LIGHT,
 					BorderSizePixel = 0,
 				},
 				rowCells(
@@ -403,7 +421,7 @@ local function StatePanel(): React.ReactNode
 				CanvasSize = UDim2.new(0, 0, 0, 0),
 				AutomaticCanvasSize = Enum.AutomaticSize.Y,
 				ScrollBarThickness = 6,
-				ScrollBarImageColor3 = theme.MUTED,
+				ScrollBarImageColor3 = DebuggerTheme.MUTED,
 			}, tableRows),
 		}),
 
@@ -412,13 +430,13 @@ local function StatePanel(): React.ReactNode
 			AnchorPoint = Vector2.new(0, 1),
 			Position = UDim2.new(0, SIDEBAR_WIDTH + 8 + detailOffset.X, 1, detailOffset.Y),
 			Size = UDim2.fromOffset(detailSize.X, detailSize.Y),
-			BackgroundColor3 = theme.PANEL,
+			BackgroundColor3 = DebuggerTheme.PANEL,
 			BackgroundTransparency = 0.15,
 			BorderSizePixel = 0,
 			ZIndex = 5,
 		}, {
 			corner = e("UICorner", { CornerRadius = UDim.new(0, 6) }),
-			stroke = e("UIStroke", { Color = theme.PANEL_LIGHT, Thickness = 1 }),
+			stroke = e("UIStroke", { Color = DebuggerTheme.PANEL_LIGHT, Thickness = 1 }),
 			pad = e("UIPadding", {
 				PaddingTop = UDim.new(0, 6),
 				PaddingLeft = UDim.new(0, 6),
@@ -431,7 +449,7 @@ local function StatePanel(): React.ReactNode
 				BackgroundTransparency = 1,
 				Font = Enum.Font.GothamBold,
 				TextSize = 12,
-				TextColor3 = theme.ACCENT,
+				TextColor3 = DebuggerTheme.ACCENT,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				TextTruncate = Enum.TextTruncate.AtEnd,
 				Text = if effectiveSelected then `PLAYER {selectedName} ({effectiveSelected})   ⠿` else "PLAYER —",
@@ -447,9 +465,9 @@ local function StatePanel(): React.ReactNode
 				CanvasSize = UDim2.new(0, 0, 0, 0),
 				AutomaticCanvasSize = Enum.AutomaticSize.Y,
 				ScrollBarThickness = 4,
-				ScrollBarImageColor3 = theme.MUTED,
+				ScrollBarImageColor3 = DebuggerTheme.MUTED,
 			}, detailChildren),
-			grip = theme.resizeGrip(function(input: InputObject)
+			grip = DebuggerTheme.resizeGrip(function(input: InputObject)
 				beginDetailResize(input)
 			end),
 		}),

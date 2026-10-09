@@ -1,1 +1,1 @@
-rojo build -o peekabu-game-systems.rbxl default.project.json
+rojo build -o peekabu.rbxl default.project.json

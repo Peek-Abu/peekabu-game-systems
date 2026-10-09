@@ -1,0 +1,192 @@
+--!strict
+--[=[
+	StateSyncServiceServer: charm-sync transport for the server.
+
+	Owns the RemoteEvent that carries charm-sync payloads, registers each player's per-slice
+	getters (reading StateSyncServerStore) once the client signals it is ready, and tears the client
+	down on leave. Auto-discovered and booted by ServerHandler via the `*ServiceServer` suffix.
+
+	Transport note: this is a dedicated RemoteEvent, NOT a ByteNet packet — a documented exception
+	to the "events are ByteNet packets under Shared/Features/<Feature>/Net" rule. The charm-sync payload is
+	dynamically shaped, so no static ByteNet struct can describe it; `ByteNet.unknown` would ship
+	it via Roblox's default serializer anyway (no encoding benefit) while adding a coalescing frame
+	and coupling charm-sync to ByteNet.
+
+	Hydration handshake:
+	1. Client registers its setters, then fires the RemoteEvent (ready ping).
+	2. The ready handler (rate-limited via RequestHandler) marks the client's keys PENDING; the next
+	   flush sends a full "init" payload, and subsequent changes send "patch" deltas.
+	Registering only after the client is ready guarantees the client's setters exist before the
+	first payload arrives.
+
+	@class StateSyncServiceServer
+]=]
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
+
+local CharmSync = require(ReplicatedStorage.Packages.CharmSync)
+local Janitor = require(ReplicatedStorage.Packages.Janitor)
+local Observers = require(ReplicatedStorage.Packages.Observers)
+local Logger = require(ReplicatedStorage.Shared.Core.Logger)
+local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
+local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
+local StateSyncServerStore = require(ServerScriptService.Features.StateSync.State.StateSyncServerStore)
+local StateSyncPublicPlayerStore = require(ServerScriptService.Features.StateSync.State.StateSyncPublicPlayerStore)
+local StateSyncWorldStore = require(ServerScriptService.Features.StateSync.State.StateSyncWorldStore)
+
+local log = Logger.new("StateSyncServiceServer")
+
+-- Module-level state (not part of the service table). Session connections live on this janitor and
+-- are released in stop(); `remote` is lifted here so stop()/getState() can reach it.
+local janitor = Janitor.new()
+local remote: RemoteEvent? = nil
+
+-- The RequestHandler-wrapped ready handler, lifted here for the test seam below. Tests cannot fire
+-- OnServerEvent as a real client, so the spec invokes this directly with a shaped fake player.
+local readyHandler: ((data: unknown, player: Player) -> any)? = nil
+
+export type StateSyncServiceServer = {
+	dependencies: { string },
+	init: (self: StateSyncServiceServer) -> (),
+	stop: (self: StateSyncServiceServer) -> (),
+	getState: (self: StateSyncServiceServer) -> { [string]: any },
+	_simulateClientReadyForTesting: (self: StateSyncServiceServer, player: Player) -> (),
+}
+
+local StateSyncServiceServer: StateSyncServiceServer = {
+	dependencies = {},
+
+	--[=[
+		Creates (or reuses) the transport RemoteEvent, wires charm-sync's outbound callback to it,
+		and registers per-player getters when each client reports ready.
+		@param self StateSyncServiceServer -- The service instance
+	]=]
+	init = function(_self)
+		local server = CharmSync.server
+
+		-- Find-or-create the transport RemoteEvent so a re-init/hot-reload can't leave a duplicate.
+		local existing = ReplicatedStorage:FindFirstChild(StateSyncConstants.REMOTE_NAME)
+		local transport: RemoteEvent
+		if existing and existing:IsA("RemoteEvent") then
+			transport = existing
+		else
+			local created = Instance.new("RemoteEvent")
+			created.Name = StateSyncConstants.REMOTE_NAME
+			created.Parent = ReplicatedStorage
+			transport = created
+		end
+		remote = transport
+
+		-- charm-sync hands us (client, payloads) whenever a tracked slice changes; forward to the
+		-- owning client. The interval flush is driven internally on Heartbeat until disconnect().
+		server.connect(function(player, payloads)
+			-- Wire diagnostic (history-only debug): one line per outbound send, so the F4 Logs tab
+			-- shows whether a change actually produced a payload for this player and of which type.
+			local kinds = {}
+			for _, payload in payloads do
+				table.insert(kinds, tostring(payload.type))
+			end
+			log:debug("charm-sync ->", player.UserId, "payloads:", #payloads, table.concat(kinds, ","))
+			local ok, err = pcall(function()
+				transport:FireClient(player, payloads)
+			end)
+			if ok then
+				log:debug("charm-sync -> send OK")
+			else
+				log:error("charm-sync -> FireClient FAILED:", tostring(err))
+			end
+		end)
+
+		-- The client fires the ready ping once its setters are registered. Routed through
+		-- RequestHandler for per-player rate limiting (registration is idempotent, so this just caps
+		-- spam) and xpcall isolation. RemoteEvent hands us the Player first, so flip the argument
+		-- order into RequestHandler's (data, player) contract.
+		readyHandler = RequestHandler.wrap({
+			name = "CharmSyncReady",
+			rateLimit = { maxRequests = 5, windowSeconds = 10 },
+			handler = function(_data: unknown, player: Player)
+				-- Register one getter per synced slice, driven by StateSyncConstants.SLICES so this service
+				-- never names a slice. StateSyncServerStore owns the slice→atom mapping via getterFor.
+				local getters: { [string]: () -> unknown } = {}
+				for _, slice in StateSyncConstants.SLICES do
+					getters[StateSyncConstants.key(slice, player.UserId)] =
+						StateSyncServerStore.getterFor(slice, player.UserId)
+				end
+				-- The public slice: one key per client, holding the players relevant to it (StateSyncPublicPlayerStore;
+				-- every present player by default).
+				getters[StateSyncConstants.publicKey(player.UserId)] =
+					StateSyncPublicPlayerStore.getterFor(player.UserId)
+				-- The world slice: the same named entries for every client (StateSyncWorldStore).
+				getters[StateSyncConstants.worldKey(player.UserId)] = StateSyncWorldStore.getter()
+				server.addSignalsToClient(player, getters)
+				log:debug("Registered charm-sync signals for userId:", player.UserId)
+			end,
+		})
+		janitor:Add(
+			transport.OnServerEvent:Connect(function(player)
+				local handler = readyHandler
+				if handler then
+					handler(nil, player)
+				end
+			end),
+			"Disconnect"
+		)
+
+		-- Public-slice roster membership, and stop tracking/replicating to a client once they leave.
+		-- Routed through observePlayer like the data layer; StateSyncServerStore.remove is handled by
+		-- PlayerDataServiceServer's cleanup path.
+		janitor:Add(
+			Observers.observePlayer(function(player)
+				local userId = player.UserId
+				StateSyncPublicPlayerStore.join(userId)
+				return function()
+					server.removeClient(player)
+					StateSyncPublicPlayerStore.remove(userId)
+				end
+			end),
+			true
+		)
+	end,
+
+	--[=[
+		Stops the charm-sync interval, disconnects all session connections, and removes the transport.
+		@param self StateSyncServiceServer -- The service instance
+	]=]
+	stop = function(_self)
+		CharmSync.server.disconnect()
+		janitor:Cleanup()
+		readyHandler = nil
+		if remote then
+			remote:Destroy()
+			remote = nil
+		end
+		log:debug("Service stopped, connections cleaned up")
+	end,
+
+	--[=[
+		Returns the current state of the service for debugging.
+		@return { [string]: any } -- Service state
+	]=]
+	getState = function(_self)
+		return {
+			remoteReady = remote ~= nil,
+		}
+	end,
+
+	--[=[
+		TEST SEAM — not for use in game code (same convention as PlayerDataServiceServer's
+		`_setProfileForTesting`). Invokes the RequestHandler-wrapped ready handler directly, exactly
+		as the OnServerEvent connection would. Specs run without real player connections, so they
+		cannot fire the RemoteEvent as a client; this covers the handler logic and rate limiting —
+		the actual wire is only observable in Studio with a live client.
+		@param player Player -- The (possibly fake, UserId-shaped) player reporting ready
+	]=]
+	_simulateClientReadyForTesting = function(_self, player)
+		local handler = readyHandler
+		assert(handler, "StateSyncServiceServer.init must run before simulating a client ready ping")
+		handler(nil, player)
+	end,
+}
+
+return StateSyncServiceServer

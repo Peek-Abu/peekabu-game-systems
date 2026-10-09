@@ -32,3 +32,12 @@ globals:
     args: []
   SKIP:
     args: []
+  # Skip variants: the multi-slot specs alias these (`itMultiSlot`) so they skip while MAX_SLOTS = 1.
+  itSKIP:
+    args:
+      - type: string
+      - type: function
+  describeSKIP:
+    args:
+      - type: string
+      - type: function

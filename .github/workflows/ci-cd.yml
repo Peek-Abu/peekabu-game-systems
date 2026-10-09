@@ -77,15 +77,38 @@ jobs:
     name: Lint (Ruff, Open Cloud scripts)
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    # The Python scripts ARE the test-upload and deploy mechanism — an unguarded edit there used to
-    # fail only at runtime inside the test/deploy jobs. Lint them like first-party code. Ruff is
+    # The Python scripts ARE the test-upload mechanism (and the preserved manual/future publish
+    # helper) — an unguarded edit there used to fail only at runtime inside the test job. Lint them
+    # like first-party code. Ruff is
     # pinned for the same reason every action SHA and tool version here is: an unpinned linter can
     # change the rule surface (and break the gate) with no change in this repo.
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          # Full history so `check_pr_rules.py` can find the merge-base with main for a `...` diff.
+          # A shallow clone lacks the common ancestor and the diff aborts (exit 128).
+          fetch-depth: 0
       - name: Install Ruff
         run: pip install ruff==0.15.21
       - run: ruff check scripts/python
+      # The layout rules and the module-map generator are pure functions with unit tests; run them
+      # before the gates that use them.
+      - name: Python unit tests
+        run: python3 -m unittest discover -s scripts/python -p "test_*.py"
+      # Counts CODE lines only (doc comments are exempt — they explain WHY and have caught real bugs
+      # in review, so a raw line cap would reward deleting them). Spec files are exempt too: a spec is
+      # long because it lists cases, and capping it would push us toward fewer tests.
+      - name: File length (code lines per module)
+        run: python3 scripts/python/check_file_length.py
+      # docs/project-structure.md's module map is generated; a stale map means a module was added,
+      # moved or renamed without regenerating it.
+      - name: Module map
+        run: python3 scripts/python/module_map.py --check
+      # Rules that previously lived only in AGENTS.md and reviewers' memories: no `any` casts in
+      # production, no Co-Authored-By/Claude-Session commit trailers, no placeholder currencies.
+      # Judges only the lines a change ADDS, so it ratchets new work without re-litigating the past.
+      - name: Project rules (added lines)
+        run: python3 scripts/python/check_pr_rules.py origin/main
 
   test:
     name: Tests (Open Cloud Luau Execution)
@@ -98,7 +121,7 @@ jobs:
     # machinery should stop the run before it burns an Open Cloud slot.
     needs: [lint, format, typecheck, scripts-lint]
     # Tests hit Roblox Open Cloud (rate-limited, uploads a place version), so only run
-    # them where they gate a merge/deploy: PRs into main, and pushes to main.
+    # them where they gate a merge: PRs into main, and pushes to main.
     if: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/main' }}
     # Open Cloud Luau Execution allows only 2 concurrent runs per universe.
     # Serialize test runs across PRs/pushes so they don't fail each other.
@@ -121,47 +144,11 @@ jobs:
           ROBLOX_PLACE_ID: ${{ vars.ROBLOX_TEST_PLACE_ID }}
         run: python3 scripts/python/upload_and_run_task.py dist.rbxlx tasks/runTests.luau
 
-  deploy:
-    name: Deploy to Production
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    # `typecheck` and `scripts-lint` are listed explicitly (even though `test` already needs them)
-    # so neither gate can be silently lost if test's dependencies are ever edited — and because
-    # this job runs scripts/python (publish_place.py) itself.
-    needs: [lint, format, typecheck, scripts-lint, test]
-    # Only deploy on a push to main (not on PRs), and only after all checks pass.
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-    # The "production" GitHub Environment provides the manual-approval gate.
-    # Configure required reviewers on it (see docs/ci-cd.md) or deploys run unattended.
-    environment: production
-    # Serialize deploys so two rapid pushes to main can't publish out of order — without this,
-    # an OLDER run approved later would overwrite a newer build. cancel-in-progress stays false
-    # so an in-flight publish is never killed halfway.
-    concurrency:
-      group: production-deploy
-      cancel-in-progress: false
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-      - uses: CompeyDev/setup-rokit@1d9390883f7ebce19d48f5b8d006e11d387c92ab # v0.2.1
-        with:
-          cache: true
-      - name: Install Wally packages
-        run: wally install
-      - name: Strip test code from the production build
-        # production.project.json already omits DevPackages (TestEZ); Rojo has no glob-exclude, so
-        # spec files and the Studio test runner are deleted from the checkout before building. This
-        # only mutates the runner's workspace — nothing is committed.
-        run: |
-          find src -name '*.spec.luau' -delete
-          rm -f src/ServerScriptService/TestRunner.server.luau
-      - name: Build production place
-        run: rojo build production.project.json --output dist.rbxlx
-      - name: Publish to production place
-        env:
-          # Production-scoped key stored as a secret ON the `production` environment (not the
-          # repo), so only this environment-gated job can read it. The repo-level ROBLOX_API_KEY
-          # used by the test job is test-scoped and cannot publish here. See docs/ci-cd.md.
-          ROBLOX_API_KEY: ${{ secrets.ROBLOX_PROD_API_KEY }}
-          ROBLOX_UNIVERSE_ID: ${{ vars.ROBLOX_PRODUCTION_UNIVERSE_ID }}
-          ROBLOX_PLACE_ID: ${{ vars.ROBLOX_PRODUCTION_PLACE_ID }}
-        run: python3 scripts/python/publish_place.py dist.rbxlx
+  # NOTE: Automated production deploy (CD) is intentionally removed. This game's playable places
+  # carry artist-owned content (maps, terrain, decorated builds) edited live in Studio/Team Create,
+  # which is NOT in this repo — and a Roblox publish overwrites the WHOLE place, so an automated
+  # `rojo build` + publish of a code-only build would wipe that content. Deployment is manual:
+  # `rojo serve` code into the published place in Studio, then publish from there (art + code
+  # together). CI above stays fully automated for validation (lint/format/typecheck/test).
+  # The production.project.json build/strip recipe and publish_place.py are preserved for a future
+  # "fully managed" pipeline (Lune download-place for the map + a full-place publish) if CD returns.

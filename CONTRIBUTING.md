@@ -50,7 +50,7 @@ tautological. See [Test Coverage](docs/testing.md#test-coverage--whats-enforced)
 
 ### Adding a new service
 
-1. Create the module at `src/ServerScriptService/Services/<Name>/<Name>ServiceServer.luau` (or the
+1. Create the module at `src/ServerScriptService/Features/<Name>/<Name>ServiceServer.luau` (or the
    client path). The `*ServiceServer` / `*ServiceClient` suffix is how the boot loaders
    auto-discover it.
 2. Declare dependencies: `MyService.dependencies = { "PlayerDataServiceServer" } :: { string }`.
@@ -97,11 +97,13 @@ the full picture:
 
 - **Lint** (`selene src`) and **Format** (`stylua --check src`) on every push.
 - **Type-check** (`luau-lsp analyze` over `src` and `tasks/`) — a **blocking** gate that must pass
-  with zero errors. It also gates the test job, so a type error transitively blocks merges and deploys.
-- **Scripts lint** (`ruff check scripts/python`) — the Open Cloud upload/publish scripts are gated
-  like first-party code, since the test and deploy jobs execute them.
+  with zero errors. It also gates the test job, so a type error transitively blocks merges.
+- **Scripts lint** (`ruff check scripts/python`) — the Open Cloud upload script is gated like
+  first-party code, since the test job executes it.
 - **Test** (TestEZ on Open Cloud) — gates merges into `main`.
-- **Deploy** — on push to `main`, behind a manual-approval GitHub Environment.
+
+There is **no automated deploy**: production is published manually from Studio so artist-owned place
+content isn't overwritten by a code-only build (see [docs/ci-cd.md](docs/ci-cd.md#manual-deployment)).
 
 Your PR must be green on lint, format, type-check, and test. Zero type errors is a hard requirement,
 not a target.

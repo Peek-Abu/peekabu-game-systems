@@ -1,18 +1,18 @@
 --!strict
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local ServiceController = require(ReplicatedStorage.Shared.Modules.ServiceController)
+local ServiceController = require(ReplicatedStorage.Shared.Core.ServiceController)
 
--- Initialize Game Data definitions. ItemDefinitions is a runtime registry that lives in each
+-- Initialize Game Data definitions. ItemRegistry is a runtime registry that lives in each
 -- machine's memory, so the client must populate it too: when the server broadcasts an inventory
 -- delta the client applies it via InventoryUtils, which asserts the itemType is registered. Without
 -- this, every server-granted item throws `invalid item type` on the client after the server succeeds.
-local GameItems = require(ReplicatedStorage.Shared.Modules.GameItems)
-GameItems.init()
+local ItemContentRegistry = require(ReplicatedStorage.Shared.Features.Item.Data.ItemContentRegistry)
+ItemContentRegistry.init()
 
--- Register all client services
-local Services = ReplicatedStorage.Client.Services
-for _, ClientService in Services:GetDescendants() do
+-- Register all client services: every `*ServiceClient` at a feature root (docs/project-structure.md).
+local Features = ReplicatedStorage.Client.Features
+for _, ClientService in Features:GetDescendants() do
 	if
 		ClientService:IsA("ModuleScript")
 		and ClientService.Name:match("Service")
@@ -22,7 +22,7 @@ for _, ClientService in Services:GetDescendants() do
 		-- resolve this require ("Unknown require: unsupported path"). Assert the honest type at
 		-- this dynamic-require boundary: every match here is a service ModuleScript, so its
 		-- return IS a ServiceModule. This keeps the file type-checked and types register()'s arg.
-		local module = require(ClientService) :: ServiceController.ServiceModule
+		local module = require(ClientService) :: ServiceController.ServiceModule -- dynamic-require boundary: the match above is a service ModuleScript
 		ServiceController:register(ClientService.Name, module)
 	elseif
 		ClientService:IsA("ModuleScript")
@@ -47,7 +47,7 @@ ServiceController:startAll()
 
 -- Report actual boot health, mirroring ServerHandler: startAll() isolates a throwing start() to a
 -- warn, so sweep for recorded failures before declaring the client boot good.
-local Logger = require(ReplicatedStorage.Shared.Modules.Logger)
+local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local log = Logger.new("ClientHandler")
 local bootFailures = ServiceController:getBootFailures()
 if #bootFailures > 0 then
