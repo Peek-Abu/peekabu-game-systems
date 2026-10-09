@@ -136,6 +136,8 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Shared.Data.PlayerDataTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Data.PublicPlayerTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Client.Features.Input.Data.InputTypes"] = "type definitions only (no runtime logic)",
+	["ReplicatedStorage.Client.Features.Camera.Data.CameraTypes"] = "type definitions only (no runtime logic)",
+	["ReplicatedStorage.Client.Features.Camera.Data.CameraConstants"] = "static tuning values (no logic)",
 	["ReplicatedStorage.Shared.Features.Title.Net.TitleEvents"] = "ByteNet packet definitions (no logic)",
 	["ReplicatedStorage.Shared.Features.Debugger.Net.DebuggerEvents"] = "ByteNet packet definitions (no logic)",
 	["ReplicatedStorage.Shared.Features.Animation.Net.AnimationEvents"] = "ByteNet packet definitions (no logic)",
@@ -173,6 +175,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.Features.StateSync.StateSyncServiceClient"] = "network-bound client shell",
 	["ReplicatedStorage.Client.Features.Input.InputServiceClient"] = "UserInputService/UISuppression shell (rules and trackers are specced)",
 	["ReplicatedStorage.Client.Features.Input.Systems.InputControlsSystem"] = "runtime PlayerModule controls toggle (--!nocheck)",
+	["ReplicatedStorage.Client.Features.Camera.CameraServiceClient"] = "Camera/RunService shell (maths and stacks are specced)",
 
 	-- The Instance-touching half of animation playback: every verb needs a live Animator and real
 	-- animation assets, which TestEZ cannot fixture. The cache, bookkeeping, and stop-class rules
