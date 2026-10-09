@@ -21,16 +21,22 @@ local Charm = require(ReplicatedStorage.Packages.Charm)
 local PlayerDataTypes = require(ReplicatedStorage.Shared.Data.PlayerDataTypes)
 local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
 local PublicPlayerTypes = require(ReplicatedStorage.Shared.Data.PublicPlayerTypes)
+local WorldTypes = require(ReplicatedStorage.Shared.Data.WorldTypes)
 
 -- nil until the first init payload arrives, so the UI can show a loading state.
 local currency = Charm.atom(nil :: PlayerDataTypes.Currency?)
 local inventory = Charm.atom({ items = {} } :: PlayerDataTypes.Inventory)
 local titles = Charm.atom({ earned = {} } :: PlayerDataTypes.Titles) -- type the atom's initial value
 local equippedTitle = Charm.atom({} :: PlayerDataTypes.EquippedTitle) -- type the atom's initial value
+local premium = Charm.atom({ balance = 0 } :: PlayerDataTypes.Premium) -- type the atom's initial value
 -- The public slice: other players' public data, already filtered by the server to the players relevant
 -- to this client (plus this client itself). Not a profile slice; synced under StateSyncConstants.publicKey.
 local initialPublicPlayers: PublicPlayerTypes.PublicPlayerMap = {}
 local publicPlayers = Charm.atom(initialPublicPlayers)
+-- The world slice: named entries about the match or server that every client syncs (StateSyncWorldStore).
+-- Each owner's client decodes its own entry (e.g. RoundSnapshotUtils).
+local initialWorld: WorldTypes.WorldMap = {}
+local world = Charm.atom(initialWorld)
 
 -- A charm-sync setter over one slice's atom. Inbound payload values arrive untyped from the wire,
 -- so the setter surface is `unknown`; the atoms themselves (and every UI consumer) stay narrow.
@@ -41,7 +47,9 @@ local StateSyncClientStore = {
 	inventory = inventory,
 	titles = titles,
 	equippedTitle = equippedTitle,
+	premium = premium,
 	publicPlayers = publicPlayers,
+	world = world,
 }
 
 -- The slice registry: one entry per synced slice, the atom itself (a Charm atom is callable both
@@ -53,7 +61,9 @@ local atoms: { [string]: any } = {
 	inventory = inventory,
 	titles = titles,
 	equippedTitle = equippedTitle,
+	premium = premium,
 	publicPlayers = publicPlayers,
+	world = world,
 }
 
 -- Fail loudly at boot if the shared slice list (from StateSyncSliceRegistry) and this realm's registry ever

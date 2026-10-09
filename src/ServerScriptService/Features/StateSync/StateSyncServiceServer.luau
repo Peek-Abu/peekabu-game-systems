@@ -33,6 +33,7 @@ local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.D
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local StateSyncServerStore = require(ServerScriptService.Features.StateSync.State.StateSyncServerStore)
 local StateSyncPublicPlayerStore = require(ServerScriptService.Features.StateSync.State.StateSyncPublicPlayerStore)
+local StateSyncWorldStore = require(ServerScriptService.Features.StateSync.State.StateSyncWorldStore)
 
 local log = Logger.new("StateSyncServiceServer")
 
@@ -116,6 +117,8 @@ local StateSyncServiceServer: StateSyncServiceServer = {
 				-- every present player by default).
 				getters[StateSyncConstants.publicKey(player.UserId)] =
 					StateSyncPublicPlayerStore.getterFor(player.UserId)
+				-- The world slice: the same named entries for every client (StateSyncWorldStore).
+				getters[StateSyncConstants.worldKey(player.UserId)] = StateSyncWorldStore.getter()
 				server.addSignalsToClient(player, getters)
 				log:debug("Registered charm-sync signals for userId:", player.UserId)
 			end,

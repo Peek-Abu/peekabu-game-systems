@@ -49,6 +49,7 @@ local StateSyncServiceClient: StateSyncServiceClient = {
 			setters[StateSyncConstants.key(slice, userId)] = StateSyncClientStore.setterFor(slice)
 		end
 		setters[StateSyncConstants.publicKey(userId)] = StateSyncClientStore.setterFor(StateSyncConstants.PUBLIC_SLICE)
+		setters[StateSyncConstants.worldKey(userId)] = StateSyncClientStore.setterFor(StateSyncConstants.WORLD_SLICE)
 		client.addSignals(setters)
 
 		-- Instance-boundary narrowing: WaitForChild returns Instance, but the server creates this

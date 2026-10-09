@@ -53,6 +53,16 @@ function StateSyncConstants.publicKey(viewerUserId: number): string
 	return StateSyncConstants.key(StateSyncConstants.PUBLIC_SLICE, viewerUserId)
 end
 
+--[=[
+	The world slice (`StateSyncWorldStore` on the server, `StateSyncClientStore.world` on the client): named
+	entries about the match or the server that every client syncs. Not a profile slice, so not in `SLICES`.
+]=]
+StateSyncConstants.WORLD_SLICE = "world"
+
+function StateSyncConstants.worldKey(viewerUserId: number): string
+	return StateSyncConstants.key(StateSyncConstants.WORLD_SLICE, viewerUserId)
+end
+
 -- The public map's key for one player.
 function StateSyncConstants.publicEntryKey(userId: number): string
 	return tostring(userId)

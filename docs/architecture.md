@@ -289,6 +289,9 @@ for a lifetime-scoped hook).
 - **Other players' public facts** (a team, "carrying an egg", "is dead") ride the public slice
   (`StateSyncPublicPlayerStore` → `StateSyncClientStore.publicPlayers`): every player sees every present
   player by default; a game can narrow a viewer's set with `setRelevant`.
+- **Match / server state** (the round's phase and timer, a night clock, a facility's power) rides the
+  world slice: `StateSyncWorldStore.set(name, plainData)` on the server, read on every client from
+  `StateSyncClientStore.world` and decoded by the owner (`RoundSnapshotUtils` for the `round` entry).
 
 > A custom, client-built character replication stack (pooled puppets, bit-packed movement records,
 > per-viewer relevance) exists in `venture-game-systems`. It pays off only at high player counts with

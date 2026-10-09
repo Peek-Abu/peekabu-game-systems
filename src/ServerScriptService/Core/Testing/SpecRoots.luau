@@ -135,6 +135,7 @@ end
 local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Shared.Data.PlayerDataTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Data.PublicPlayerTypes"] = "type definitions only (no runtime logic)",
+	["ReplicatedStorage.Shared.Data.WorldTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Client.Features.Input.Data.InputTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Client.Features.Camera.Data.CameraTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Client.Features.Camera.Data.CameraConstants"] = "static tuning values (no logic)",
@@ -149,6 +150,10 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Shared.Features.Carry.Data.CarryTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants"] = "static names and tuning (no logic)",
 	["ReplicatedStorage.Shared.Features.Carry.Net.CarryEvents"] = "ByteNet packet definitions (no logic)",
+	["ReplicatedStorage.Shared.Features.Round.Data.RoundTypes"] = "type definitions only (no runtime logic)",
+	["ReplicatedStorage.Shared.Features.Round.Data.RoundConstants"] = "static names and defaults (no logic)",
+	["ReplicatedStorage.Shared.Features.Marketplace.Data.MarketplaceTypes"] = "type definitions only (no runtime logic)",
+	["ReplicatedStorage.Shared.Features.Marketplace.Data.MarketplaceConstants"] = "static limits and names (no logic)",
 	["ReplicatedStorage.Shared.Features.Title.Net.TitleEvents"] = "ByteNet packet definitions (no logic)",
 	["ReplicatedStorage.Shared.Features.Debugger.Net.DebuggerEvents"] = "ByteNet packet definitions (no logic)",
 	["ReplicatedStorage.Shared.Features.Animation.Net.AnimationEvents"] = "ByteNet packet definitions (no logic)",
@@ -195,6 +200,9 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.Features.Interaction.InteractionServiceClient"] = "prompt re-keying shell (copies Input bindings onto prompts)",
 	["ServerScriptService.Features.Carry.CarryServiceServer"] = "Instance/physics/ByteNet shell (registry, formulas and hold tracker are specced)",
 	["ReplicatedStorage.Client.Features.Carry.CarryServiceClient"] = "Input/ByteNet shell (the server decides)",
+	["ServerScriptService.Features.Round.RoundServiceServer"] = "Players/RunService/signal shell (phase rules, run tracker and container utils are specced)",
+	["ReplicatedStorage.Client.Features.Round.RoundServiceClient"] = "Charm read facade (decoding is specced in RoundSnapshotUtils)",
+	["ReplicatedStorage.Client.Features.Marketplace.MarketplaceServiceClient"] = "MarketplaceService prompt shell (the server grants; the registry is specced)",
 
 	-- The Instance-touching half of animation playback: every verb needs a live Animator and real
 	-- animation assets, which TestEZ cannot fixture. The cache, bookkeeping, and stop-class rules
@@ -232,6 +240,9 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Commands.TitleAward"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.TitleRevoke"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.TitleEquip"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.RoundStart"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.RoundEnd"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.MarketplacePremiumAdd"] = "Cmdr command definition (server impl is specced)",
 }
 
 --[=[

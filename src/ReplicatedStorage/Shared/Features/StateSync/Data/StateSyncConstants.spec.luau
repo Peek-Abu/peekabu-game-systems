@@ -49,4 +49,16 @@ return function()
 			expect(StateSyncConstants.publicEntryKey(456)).to.equal("456")
 		end)
 	end)
+
+	describe("world slice keys", function()
+		it("builds the per-viewer charm-sync key from the world slice name", function()
+			expect(StateSyncConstants.WORLD_SLICE).to.equal("world")
+			expect(StateSyncConstants.worldKey(123)).to.equal("world:123")
+		end)
+
+		it("never collides with a profile slice or the public slice", function()
+			expect(table.find(StateSyncConstants.SLICES, StateSyncConstants.WORLD_SLICE)).to.equal(nil)
+			expect(StateSyncConstants.WORLD_SLICE).never.to.equal(StateSyncConstants.PUBLIC_SLICE)
+		end)
+	end)
 end

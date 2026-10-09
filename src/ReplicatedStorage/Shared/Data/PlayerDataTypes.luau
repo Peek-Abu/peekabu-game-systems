@@ -73,6 +73,24 @@ export type Titles = {
 }
 
 --[=[
+	The account-wide premium currency (bought with Robux, so it must survive across every save slot). A
+	wrapper (not a bare number) because the data layer mutates tables in place. Validated by the data
+	layer: a whole number from 0 to MarketplaceConstants.MAX_PREMIUM.
+]=]
+export type Premium = {
+	balance: number,
+}
+
+--[=[
+	The account's recent developer-product purchase ids, oldest first, capped at
+	MarketplaceConstants.RECEIPT_HISTORY. Recorded in the same transaction as a purchase's grant, so a
+	receipt Roblox retries is recognised and never granted twice. Server-only (never replicated).
+]=]
+export type PurchaseReceipts = {
+	ids: { string },
+}
+
+--[=[
 	A slot's equipped-title wrapper: WHICH of the account's earned titles is shown. Wrapped in a table
 	(not a bare `equipped: string?` field) so a future field can be added without reshaping every
 	reader/writer. Absent `equipped` = wearing nothing.
@@ -105,6 +123,8 @@ export type PlayerSlot = {
 export type PlayerAccount = {
 	itemMint: ItemMint,
 	titles: Titles,
+	premium: Premium,
+	receipts: PurchaseReceipts,
 	-- Extend with other ACCOUNT-WIDE slices here (settings, entitlements, ...)
 }
 

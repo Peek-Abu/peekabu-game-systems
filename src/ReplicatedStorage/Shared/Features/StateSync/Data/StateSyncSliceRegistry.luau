@@ -55,6 +55,13 @@ local DEFINITIONS: { [string]: SliceDefinition } = {
 			return profile.account.titles
 		end,
 	},
+	-- ACCOUNT-WIDE: the premium balance (MarketplaceServiceServer). The `receipts` history is deliberately
+	-- NOT listed: it is server-only bookkeeping.
+	premium = {
+		read = function(profile)
+			return profile.account.premium
+		end,
+	},
 	-- SLOT-SCOPED: which title the active slot wears; inactive slots' choices never leave the server.
 	equippedTitle = {
 		read = function(profile)

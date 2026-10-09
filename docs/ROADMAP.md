@@ -27,7 +27,7 @@ Re-seeded from `venture-game-systems` (main at `bb33e81`), which itself began as
 |---|---|
 | Core | ServiceController (lifecycle, dependency sort), Guard, Logger, SignalTyped, RequestHandler (token-bucket rate limiting, validation, `xpcall` isolation), SpecRoots, ProfileStoreTyped |
 | PlayerData | ProfileStore profiles; `mutate` / multi-profile `transaction` with rollback; per-slice data-layer validators; account vs slot scope; dormant slots + epochs; schema migrations |
-| StateSync | Charm atoms mirrored to the owning client via charm-sync; the public-player slice (every player sees every player by default) |
+| StateSync | Charm atoms mirrored to the owning client via charm-sync; the public-player slice (every player sees every player by default); the world slice (named match / server entries every client syncs) |
 | Currency | Capped soft currencies (placeholder `coins`), shared validator, transaction ops |
 | Item + Inventory | Item registry (declared stackability), stacks + unique items with atomically minted uids, per-instance `attrs`, per-kind caps, reusable container rules for a second container |
 | Title | Earned (account) + equipped (slot) titles, registry composed per domain |
@@ -38,9 +38,11 @@ Re-seeded from `venture-game-systems` (main at `bb33e81`), which itself began as
 | VFX | Effect recipes over artist templates (with sound and distance-scaled shake), combined screen effects (blur, colour, depth of field) eased per frame, and atmosphere presets blended over Lighting, synced from the server |
 | Interaction | Tag + kind on world objects → engine ProximityPrompts; every trigger re-checked on the server (distance, enabled, cooldown) before the kind's handler; prompts follow the `interact` binding |
 | Carry | Pick up / drop / throw tagged world objects: one per player, welded to the character, weight slows you, published to everyone, dropped on death or leave |
+| Round | Lobby → countdown → run → results as a pure, configurable phase machine (inert until a game opts in); run-only participants, eliminations, team counters and targets, scores and run containers on the inventory rules; synced to every client through the StateSync world slice |
+| Marketplace | Exactly-once developer-product grants (purchase id recorded in the same persisted transaction as the grant), cached gamepass ownership published as a public field, and an account-scoped premium currency |
 | UI framework | React layers (respawn-safe), scene stack with Escape / gamepad-B pop and per-scene toggle keys, world-suppression contract, HUD widget registry, primitives + tokens, UI Labs stories |
 | Debugger | F4 overlay: logs, services, live state tree, animations, UI stack |
-| Admin | Cmdr with a fail-closed allowlist; currency, inventory, title and animation commands |
+| Admin | Cmdr with a fail-closed allowlist; currency, inventory, title, animation, round and premium commands |
 | Tooling | `--!strict`, selene, stylua, luau-lsp typecheck, layout rules + module map, file-length cap, cast/trailer/asset-id/UI CI gates, TestEZ on Open Cloud |
 
 ## Left in venture-game-systems (on purpose)
@@ -63,8 +65,8 @@ Ordered so each builds on the ones before it. Every one is a NEW, generic design
 | 4 | **VFX** ✅ built (`docs/superpowers/specs/2026-10-09-vfx-design.md`) | Split, not one blob: (a) effect *recipes* — named combinations of particles, beams, trails, highlights, light flicker, a sound and a camera-shake request, pooled, triggered by one typed packet to nearby players; (b) *screen effects* — blur, colour correction, vignette, depth of field as a refcounted stack (fills the UI `blur` seam); (c) *lighting / atmosphere presets* with blends (night, power outage), synced via StateSync when shared. UI motion stays in the UI framework. | all |
 | 5 | **Interaction** ✅ built (`docs/superpowers/specs/2026-10-09-interaction-design.md`) | Server-validated ProximityPrompt / click interactions: distance + rate checks through RequestHandler, per-object handlers, hold-to-interact. | all |
 | 6 | **Carry** ✅ built (`docs/superpowers/specs/2026-10-09-carry-design.md`; held *items* stay engine Tools) | Carry an object or hold an item (egg, flashlight, scrap) with weight, drop/throw, server-owned props with client-predicted grab, network-ownership rules. | all |
-| 7 | **Round / match lifecycle** | Lobby → run → results with non-persistent run state (run-scoped containers reusing the inventory container rules; a team quota / shared wallet). | 2, 3 (1 for events) |
-| 8 | **Marketplace** | `ProcessReceipt` that grants each purchase exactly once inside a profile transaction; gamepass ownership cache; a premium currency as its own ACCOUNT slice. | 1, 2 |
+| 7 | **Round / match lifecycle** ✅ built (`docs/superpowers/specs/2026-10-09-round-design.md`) | Lobby → run → results with non-persistent run state (run-scoped containers reusing the inventory container rules; a team quota / shared wallet). | 2, 3 (1 for events) |
+| 8 | **Marketplace** ✅ built (`docs/superpowers/specs/2026-10-09-marketplace-design.md`) | `ProcessReceipt` that grants each purchase exactly once inside a profile transaction; gamepass ownership cache; a premium currency as its own ACCOUNT slice. | 1, 2 |
 | 9 | **Entitlements** | Account-scoped "you own this" (`{ [category]: { [id]: true } }`): cosmetics, suits, pet skins, night unlocks; fed by Marketplace and gameplay. | all |
 | 10 | **Settings** | Account slice, client-writable through a validated request: volumes, sensitivity, keybinds, accessibility. | all |
 | 11 | **NPC / AI** | Server-owned NPCs with a simple behaviour layer (wander, chase, flee, patrol) and pathfinding; animated via `playOnRig`. | all |
