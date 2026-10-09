@@ -60,8 +60,13 @@ ASSET_ID_FEATURE_DATA = re.compile(r"^src/(?:ReplicatedStorage/(?:Shared|Client)
 UI_TREE = "src/ReplicatedStorage/Client/UI/"
 # The client services that OWN UI lifecycle (they acquire layer roots and mount the React trees) live
 # outside Client/UI/, so a gate scoped to that prefix alone cannot see the two modules best positioned
-# to commit the anti-pattern — they already hold the layer references.
-UI_LIFECYCLE_TREE = "src/ReplicatedStorage/Client/Features/"
+# to commit the anti-pattern — they already hold the layer references. Scoped to exactly those two
+# features: other client features (VFX emitters and lights, for one) toggle `.Enabled` on world
+# instances, which is not UI visibility.
+UI_LIFECYCLE_TREES = (
+    "src/ReplicatedStorage/Client/Features/UI/",
+    "src/ReplicatedStorage/Client/Features/Debugger/",
+)
 UI_REACT_TREE = "src/ReplicatedStorage/Client/UI/React/"
 # The single module allowed to new a ScreenGui and own layer-root instances: the layer factory shell.
 UI_LAYER_HOST = "src/ReplicatedStorage/Client/UI/Layers/UILayerHost.luau"
@@ -182,7 +187,7 @@ def screengui_outside_layers() -> list[str]:
 def imperative_visibility() -> list[str]:
     """Client/UI/: screen visibility is derived from state, not set with `.Enabled`/`.Visible`."""
     errors: list[str] = []
-    for path, line_no, text in _iter_luau((UI_TREE, UI_LIFECYCLE_TREE)):
+    for path, line_no, text in _iter_luau((UI_TREE, *UI_LIFECYCLE_TREES)):
         # UILayerHost owns layer-root instances; comment lines aren't code.
         if path == UI_LAYER_HOST or text.lstrip().startswith("--"):
             continue

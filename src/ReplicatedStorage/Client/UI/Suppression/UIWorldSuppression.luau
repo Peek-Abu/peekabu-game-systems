@@ -12,7 +12,7 @@
 	Injectable (`resolveScene`, `warn`) so it is fully testable with no Instances; the real handler —
 	just the mouse, touching UserInputService — lives in the exempt UISuppression shell. Every other
 	capability (blur/movement/cameraState) is handled by the system that owns it (Input registers
-	`movement`, Camera `cameraState`); one with no handler yet is logged ONCE, never silently dropped, until its owning system
+	`movement`, Camera `cameraState`, Vfx `blur`); one with no handler yet is logged ONCE, never silently dropped, until its owning system
 	registers one via `registerHandler`. That is the seam that keeps those systems slottable.
 
 	@class UIWorldSuppression

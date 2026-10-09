@@ -45,7 +45,7 @@ export type SceneScreen = {
 ]=]
 export type SuppressionRecord = {
 	mouse: boolean?, -- free the pointer for UI (ModalEnabled) — HANDLED this phase
-	blur: boolean?, -- a post-processing effect — seam; a future VFX/post-fx system handles it
+	blur: boolean?, -- blur the world behind the UI — handled by VfxServiceClient
 	movement: boolean?, -- freeze character movement + silence gameplay actions — handled by InputServiceClient
 	cameraState: string?, -- hold the view still — handled by CameraServiceClient (the value is reserved for named states)
 }

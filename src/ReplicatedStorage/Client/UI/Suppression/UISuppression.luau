@@ -9,7 +9,7 @@
 	**Everything else is a seam, not UI's job.** `blur` (a post-processing effect), `movement`
 	and `cameraState` are declared in the SuppressionRecord so scenes can ASK for
 	them, but this module registers no handler for them — the owning system registers one (Input
-	registers `movement`, Camera registers `cameraState`; VFX/post-fx will register `blur`). Until then a
+	registers `movement`, Camera `cameraState`, Vfx `blur`). Until then a
 	request is logged once and adopted the moment the handler arrives, with zero change to any scene
 	or to this module. That is the "is this slottable?" answer, made concrete: UI declares intent,
 	the specialist systems supply the mechanism.

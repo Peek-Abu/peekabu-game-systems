@@ -141,6 +141,9 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Shared.Features.Sound.Data.SoundTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Features.Sound.Data.SoundConstants"] = "static tuning values (no logic)",
 	["ReplicatedStorage.Shared.Features.Sound.Net.SoundEvents"] = "ByteNet packet definitions (no logic)",
+	["ReplicatedStorage.Shared.Features.Vfx.Data.VfxTypes"] = "type definitions only (no runtime logic)",
+	["ReplicatedStorage.Shared.Features.Vfx.Data.VfxConstants"] = "static tuning values (no logic)",
+	["ReplicatedStorage.Shared.Features.Vfx.Net.VfxEvents"] = "ByteNet packet definitions (no logic)",
 	["ReplicatedStorage.Shared.Features.Title.Net.TitleEvents"] = "ByteNet packet definitions (no logic)",
 	["ReplicatedStorage.Shared.Features.Debugger.Net.DebuggerEvents"] = "ByteNet packet definitions (no logic)",
 	["ReplicatedStorage.Shared.Features.Animation.Net.AnimationEvents"] = "ByteNet packet definitions (no logic)",
@@ -181,6 +184,8 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.Features.Camera.CameraServiceClient"] = "Camera/RunService shell (maths and stacks are specced)",
 	["ReplicatedStorage.Client.Features.Sound.SoundServiceClient"] = "Sound/TweenService/ByteNet shell (registry, formulas and voices are specced)",
 	["ServerScriptService.Features.Sound.SoundServiceServer"] = "Players/ByteNet shell (listener selection is specced in SoundFormulas)",
+	["ReplicatedStorage.Client.Features.Vfx.VfxServiceClient"] = "Instance/Lighting/RunService shell (formulas, registries and tracker are specced)",
+	["ServerScriptService.Features.Vfx.VfxServiceServer"] = "Players/ByteNet shell (listener selection is specced in SoundFormulas)",
 
 	-- The Instance-touching half of animation playback: every verb needs a live Animator and real
 	-- animation assets, which TestEZ cannot fixture. The cache, bookkeeping, and stop-class rules
