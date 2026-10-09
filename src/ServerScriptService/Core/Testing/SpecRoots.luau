@@ -144,6 +144,11 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Shared.Features.Vfx.Data.VfxTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Features.Vfx.Data.VfxConstants"] = "static tuning values (no logic)",
 	["ReplicatedStorage.Shared.Features.Vfx.Net.VfxEvents"] = "ByteNet packet definitions (no logic)",
+	["ReplicatedStorage.Shared.Features.Interaction.Data.InteractionTypes"] = "type definitions only (no runtime logic)",
+	["ReplicatedStorage.Shared.Features.Interaction.Data.InteractionConstants"] = "static names and tuning (no logic)",
+	["ReplicatedStorage.Shared.Features.Carry.Data.CarryTypes"] = "type definitions only (no runtime logic)",
+	["ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants"] = "static names and tuning (no logic)",
+	["ReplicatedStorage.Shared.Features.Carry.Net.CarryEvents"] = "ByteNet packet definitions (no logic)",
 	["ReplicatedStorage.Shared.Features.Title.Net.TitleEvents"] = "ByteNet packet definitions (no logic)",
 	["ReplicatedStorage.Shared.Features.Debugger.Net.DebuggerEvents"] = "ByteNet packet definitions (no logic)",
 	["ReplicatedStorage.Shared.Features.Animation.Net.AnimationEvents"] = "ByteNet packet definitions (no logic)",
@@ -186,6 +191,10 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Features.Sound.SoundServiceServer"] = "Players/ByteNet shell (listener selection is specced in SoundFormulas)",
 	["ReplicatedStorage.Client.Features.Vfx.VfxServiceClient"] = "Instance/Lighting/RunService shell (formulas, registries and tracker are specced)",
 	["ServerScriptService.Features.Vfx.VfxServiceServer"] = "Players/ByteNet shell (listener selection is specced in SoundFormulas)",
+	["ServerScriptService.Features.Interaction.InteractionServiceServer"] = "CollectionService/ProximityPrompt shell (InteractionRules and the cooldown tracker are specced)",
+	["ReplicatedStorage.Client.Features.Interaction.InteractionServiceClient"] = "prompt re-keying shell (copies Input bindings onto prompts)",
+	["ServerScriptService.Features.Carry.CarryServiceServer"] = "Instance/physics/ByteNet shell (registry, formulas and hold tracker are specced)",
+	["ReplicatedStorage.Client.Features.Carry.CarryServiceClient"] = "Input/ByteNet shell (the server decides)",
 
 	-- The Instance-touching half of animation playback: every verb needs a live Animator and real
 	-- animation assets, which TestEZ cannot fixture. The cache, bookkeeping, and stop-class rules

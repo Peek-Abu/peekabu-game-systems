@@ -148,7 +148,7 @@ subfolder. `<What>` is optional when the feature has only one module of that rol
 | `Testing/` | Harness | test tooling |
 | root | ServiceServer · ServiceClient | the feature's service |
 
-**Feature names** (singular, PascalCase): Admin, Animation, Camera, Currency, Debugger, Input, Inventory, Item
+**Feature names** (singular, PascalCase): Admin, Animation, Camera, Carry, Currency, Debugger, Input, Interaction, Inventory, Item
 (the item catalog), PlayerData, Sound, StateSync, Title, UI, Vfx. A game adds its own (Pet, Round, Shop, ...).
 
 **Networking stays on ByteNet.** Features use ByteNet's typed fields. A `Codec` (our own byte packing
