@@ -179,7 +179,9 @@ CarryServiceServer = {
 			stoppers,
 			Observers.observeTag(CarryConstants.TAG, function(target: Instance)
 				if kindOf(target) == nil then
-					log:warn(`{target:GetFullName()} is Carryable but has no registered {CarryConstants.KIND_ATTRIBUTE}`)
+					log:warn(
+						`{target:GetFullName()} is Carryable but has no registered {CarryConstants.KIND_ATTRIBUTE}`
+					)
 					return nil
 				end
 				nextObjectId += 1
