@@ -6,14 +6,15 @@ local function ensure(id, value)
 	end
 end
 
-local function refuses(id, value)
-	expect(function()
-		VfxAtmosphereRegistry.register(id, value)
-	end).to.throw()
-	expect(VfxAtmosphereRegistry.has(id)).to.equal(false)
-end
-
 return function()
+	-- Inside the returned function: TestEZ injects `expect` only into this scope.
+	local function refuses(id, value)
+		expect(function()
+			VfxAtmosphereRegistry.register(id, value)
+		end).to.throw()
+		expect(VfxAtmosphereRegistry.has(id)).to.equal(false)
+	end
+
 	it("registers and returns a preset", function()
 		ensure("spec-night", { clockTime = 0, brightness = 0.5, ambient = Color3.new(0.1, 0.1, 0.2) })
 		expect(VfxAtmosphereRegistry.get("spec-night").clockTime).to.equal(0)

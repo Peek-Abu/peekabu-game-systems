@@ -14,14 +14,15 @@ local function ensure(id, value)
 	end
 end
 
-local function refuses(id, value)
-	expect(function()
-		VfxRecipeRegistry.register(id, value)
-	end).to.throw()
-	expect(VfxRecipeRegistry.has(id)).to.equal(false)
-end
-
 return function()
+	-- Inside the returned function: TestEZ injects `expect` only into this scope.
+	local function refuses(id, value)
+		expect(function()
+			VfxRecipeRegistry.register(id, value)
+		end).to.throw()
+		expect(VfxRecipeRegistry.has(id)).to.equal(false)
+	end
+
 	it("registers and returns a recipe", function()
 		ensure("spec-spark", recipe({ sound = "spark", trauma = 0.3, shakeRadius = 40 }))
 		expect(VfxRecipeRegistry.get("spec-spark").template).to.equal("Spark")

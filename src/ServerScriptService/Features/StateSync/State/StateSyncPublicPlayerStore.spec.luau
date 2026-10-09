@@ -4,6 +4,16 @@ local StateSyncPublicPlayerStore = require(script.Parent.StateSyncPublicPlayerSt
 
 local VIEWER, A, B, C = 970001, 970002, 970003, 970004
 
+local function countOf(list, value)
+	local count = 0
+	for _, item in list do
+		if item == value then
+			count += 1
+		end
+	end
+	return count
+end
+
 return function()
 	afterEach(function()
 		for _, userId in { VIEWER, A, B, C } do
@@ -26,7 +36,9 @@ return function()
 			StateSyncPublicPlayerStore.set(A, { dead = true })
 			StateSyncPublicPlayerStore.join(A)
 			expect(StateSyncPublicPlayerStore.get(A).dead).to.equal(true)
-			expect(#StateSyncPublicPlayerStore.relevantOf(VIEWER)).to.equal(1)
+			-- The roster is live global state (a Play session's real players are in it too), so count
+			-- only this spec's ids.
+			expect(countOf(StateSyncPublicPlayerStore.relevantOf(VIEWER), A)).to.equal(1)
 		end)
 
 		it("drops a player who leaves", function()
@@ -64,7 +76,10 @@ return function()
 			StateSyncPublicPlayerStore.setRelevant(A, { A })
 			StateSyncPublicPlayerStore.remove(A)
 			StateSyncPublicPlayerStore.join(A)
-			expect(#StateSyncPublicPlayerStore.relevantOf(A)).to.equal(2)
+			-- Back on the roster (not the old { A } override): B is visible again.
+			local relevant = StateSyncPublicPlayerStore.relevantOf(A)
+			expect(table.find(relevant, A)).to.be.ok()
+			expect(table.find(relevant, B)).to.be.ok()
 		end)
 	end)
 

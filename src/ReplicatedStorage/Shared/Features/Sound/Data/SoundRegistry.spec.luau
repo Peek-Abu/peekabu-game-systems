@@ -19,14 +19,15 @@ local function ensure(id, value)
 	end
 end
 
-local function refuses(id, value)
-	expect(function()
-		SoundRegistry.register(id, value)
-	end).to.throw()
-	expect(SoundRegistry.has(id)).to.equal(false)
-end
-
 return function()
+	-- Inside the returned function: TestEZ injects `expect` only into this scope.
+	local function refuses(id, value)
+		expect(function()
+			SoundRegistry.register(id, value)
+		end).to.throw()
+		expect(SoundRegistry.has(id)).to.equal(false)
+	end
+
 	it("registers and returns a sound", function()
 		ensure("spec-click", def({ group = "UI" }))
 		expect(SoundRegistry.get("spec-click").group).to.equal("UI")

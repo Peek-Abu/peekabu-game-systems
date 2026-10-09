@@ -116,6 +116,14 @@ end
 
 **Important:** Test files must return a function that contains your test suite.
 
+**The injected globals exist only inside that returned function.** A helper declared at the top of the
+file (outside `return function()`) that calls `expect`, `it` or `describe` fails with "attempt to call a
+nil value". Declare such helpers inside the returned function; top-level helpers may only build data.
+
+**Live singletons carry real state in a Play session.** Specs run in a real server, so a global store
+(the public-player roster, a registry) can already hold real players or entries. Assert on the ids your
+spec created, not on total counts.
+
 ### Common Matchers
 
 TestEZ uses a chainable assertion API:
