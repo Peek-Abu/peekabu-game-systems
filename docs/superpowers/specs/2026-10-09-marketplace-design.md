@@ -67,6 +67,11 @@ end)
 MarketplaceRegistry.registerPass("vip", { passId = 7654321 })
 MarketplaceService:onPass("vip", function(player) grantVipPerks(player) end)
 
+-- a product that unlocks a cosmetic (Entitlements): the purchase and the unlock are one write
+MarketplaceService:onProduct("hazmat-suit", function(player)
+	return { EntitlementService:grantOp(player.UserId, "suit", "hazmat") }
+end)
+
 -- spend premium and grant an item in one atomic write
 PlayerDataService:transaction({
 	MarketplaceService:premiumOp(userId, function(p) if p.balance < 50 then return false end p.balance -= 50 return true end),

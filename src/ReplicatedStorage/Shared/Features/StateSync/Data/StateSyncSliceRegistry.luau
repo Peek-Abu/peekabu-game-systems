@@ -62,6 +62,18 @@ local DEFINITIONS: { [string]: SliceDefinition } = {
 			return profile.account.premium
 		end,
 	},
+	-- ACCOUNT-WIDE: what the player owns (EntitlementServiceServer).
+	entitlements = {
+		read = function(profile)
+			return profile.account.entitlements
+		end,
+	},
+	-- ACCOUNT-WIDE: the player's preferences (SettingServiceServer).
+	settings = {
+		read = function(profile)
+			return profile.account.settings
+		end,
+	},
 	-- SLOT-SCOPED: which title the active slot wears; inactive slots' choices never leave the server.
 	equippedTitle = {
 		read = function(profile)

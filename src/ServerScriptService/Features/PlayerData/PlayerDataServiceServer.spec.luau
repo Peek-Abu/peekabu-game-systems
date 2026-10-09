@@ -869,7 +869,7 @@ return function()
 			it("returns nil for an unloaded profile and for a missing account slice", function()
 				expect(PlayerDataService:_getAccountShell(404, "itemMint")).to.equal(nil)
 				seedSlotProfile(1, 100)
-				expect(PlayerDataService:_getAccountShell(1, "settings")).to.equal(nil)
+				expect(PlayerDataService:_getAccountShell(1, "no-such-slice")).to.equal(nil)
 			end)
 
 			it(

@@ -91,6 +91,25 @@ export type PurchaseReceipts = {
 }
 
 --[=[
+	The account-wide entitlements slice: what the player OWNS, by category then id, values always
+	`true`. Idempotent, so safe to share across slots. Ids are plain strings so retiring one stays
+	migration-free (the validator checks structure, not registration).
+]=]
+export type Entitlements = {
+	owned: { [string]: { [string]: boolean } },
+}
+
+-- A stored setting value; which one a setting holds is its registered kind (SettingTypes).
+export type SettingValue = number | boolean | string
+
+--[=[
+	The account-wide settings slice: only values that differ from their registered default are stored.
+]=]
+export type Settings = {
+	values: { [string]: SettingValue },
+}
+
+--[=[
 	A slot's equipped-title wrapper: WHICH of the account's earned titles is shown. Wrapped in a table
 	(not a bare `equipped: string?` field) so a future field can be added without reshaping every
 	reader/writer. Absent `equipped` = wearing nothing.
@@ -125,6 +144,8 @@ export type PlayerAccount = {
 	titles: Titles,
 	premium: Premium,
 	receipts: PurchaseReceipts,
+	entitlements: Entitlements,
+	settings: Settings,
 	-- Extend with other ACCOUNT-WIDE slices here (settings, entitlements, ...)
 }
 

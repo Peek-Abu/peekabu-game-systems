@@ -59,6 +59,8 @@ local changedSubject = false
 -- The smoothed CFrame a `follow` mode is easing.
 local followCFrame: CFrame? = nil
 local modifierErrors = 0
+-- Accessibility: scales every shake (Settings writes it through setShakeScale).
+local shakeScale = 1
 
 local function currentCamera(): Camera?
 	return Workspace.CurrentCamera
@@ -154,7 +156,7 @@ local function step(dt: number)
 
 	effects:step(dt)
 	local pitch, yaw, roll = CameraMotionFormulas.shakeAngles(effects:trauma(), clock, SHAKE_CONFIG)
-	local offset = CFrame.Angles(pitch, yaw, roll)
+	local offset = CFrame.Angles(pitch * shakeScale, yaw * shakeScale, roll * shakeScale)
 	for _, modifier in table.clone(modifiers) do
 		local ok, result = pcall(modifier, dt)
 		if ok then
@@ -181,6 +183,7 @@ export type CameraServiceClient = {
 	addTrauma: (self: CameraServiceClient, amount: number) -> (),
 	kickFov: (self: CameraServiceClient, amount: number, duration: number) -> (),
 	addModifier: (self: CameraServiceClient, modifier: Modifier) -> () -> (),
+	setShakeScale: (self: CameraServiceClient, scale: number) -> (),
 }
 
 local connections: { RBXScriptConnection } = {}
@@ -283,12 +286,20 @@ local CameraServiceClient: CameraServiceClient = {
 		end
 	end,
 
+	--[=[
+		Scales every shake (0 = off, 1 = full): the player's accessibility setting.
+	]=]
+	setShakeScale = function(_self, scale)
+		shakeScale = math.clamp(scale, 0, 1)
+	end,
+
 	getState = function(_self)
 		local top = modes:top()
 		return {
 			mode = if top ~= nil then top.def.kind else "engine",
 			modes = modes:count(),
 			trauma = effects:trauma(),
+			shakeScale = shakeScale,
 			fovKicks = effects:activeKicks(),
 			modifiers = #modifiers,
 			modifierErrors = modifierErrors,

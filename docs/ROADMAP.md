@@ -40,9 +40,11 @@ Re-seeded from `venture-game-systems` (main at `bb33e81`), which itself began as
 | Carry | Pick up / drop / throw tagged world objects: one per player, welded to the character, weight slows you, published to everyone, dropped on death or leave |
 | Round | Lobby → countdown → run → results as a pure, configurable phase machine (inert until a game opts in); run-only participants, eliminations, team counters and targets, scores and run containers on the inventory rules; synced to every client through the StateSync world slice |
 | Marketplace | Exactly-once developer-product grants (purchase id recorded in the same persisted transaction as the grant), cached gamepass ownership published as a public field, and an account-scoped premium currency |
+| Entitlements | Account-wide "you own this" by category and id (suits, skins, unlocks): registered catalogue, structure-validated slice replicated to the owner, `grantOp` so a purchase and its unlock are one atomic write |
+| Settings | A shared settings registry (number / boolean / choice / keybinds), an account slice storing only non-default values, one validated client request with local preview, and the base settings applied to Sound volumes, camera shake and Input rebinds |
 | UI framework | React layers (respawn-safe), scene stack with Escape / gamepad-B pop and per-scene toggle keys, world-suppression contract, HUD widget registry, primitives + tokens, UI Labs stories |
 | Debugger | F4 overlay: logs, services, live state tree, animations, UI stack |
-| Admin | Cmdr with a fail-closed allowlist; currency, inventory, title, animation, round and premium commands |
+| Admin | Cmdr with a fail-closed allowlist; currency, inventory, title, animation, round, premium and entitlement commands |
 | Tooling | `--!strict`, selene, stylua, luau-lsp typecheck, layout rules + module map, file-length cap, cast/trailer/asset-id/UI CI gates, TestEZ on Open Cloud |
 
 ## Left in venture-game-systems (on purpose)
@@ -67,8 +69,8 @@ Ordered so each builds on the ones before it. Every one is a NEW, generic design
 | 6 | **Carry** ✅ built (`docs/superpowers/specs/2026-10-09-carry-design.md`; held *items* stay engine Tools) | Carry an object or hold an item (egg, flashlight, scrap) with weight, drop/throw, server-owned props with client-predicted grab, network-ownership rules. | all |
 | 7 | **Round / match lifecycle** ✅ built (`docs/superpowers/specs/2026-10-09-round-design.md`) | Lobby → run → results with non-persistent run state (run-scoped containers reusing the inventory container rules; a team quota / shared wallet). | 2, 3 (1 for events) |
 | 8 | **Marketplace** ✅ built (`docs/superpowers/specs/2026-10-09-marketplace-design.md`) | `ProcessReceipt` that grants each purchase exactly once inside a profile transaction; gamepass ownership cache; a premium currency as its own ACCOUNT slice. | 1, 2 |
-| 9 | **Entitlements** | Account-scoped "you own this" (`{ [category]: { [id]: true } }`): cosmetics, suits, pet skins, night unlocks; fed by Marketplace and gameplay. | all |
-| 10 | **Settings** | Account slice, client-writable through a validated request: volumes, sensitivity, keybinds, accessibility. | all |
+| 9 | **Entitlements** ✅ built (`docs/superpowers/specs/2026-10-09-entitlement-design.md`) | Account-scoped "you own this" (`{ [category]: { [id]: true } }`): cosmetics, suits, pet skins, night unlocks; fed by Marketplace and gameplay. | all |
+| 10 | **Settings** ✅ built (`docs/superpowers/specs/2026-10-09-settings-design.md`) | Account slice, client-writable through a validated request: volumes, sensitivity, keybinds, accessibility. | all |
 | 11 | **NPC / AI** | Server-owned NPCs with a simple behaviour layer (wander, chase, flee, patrol) and pathfinding; animated via `playOnRig`. | all |
 | 12 | **Death, ragdoll, spectate** | Ragdoll on native Humanoids, death flow, spectate camera mode; hooks `AnimationServiceServer:stopAll`. | 2, 3 |
 | 13 | **Voice** | Audio-API proximity voice anchored to `Character.Head`, with routing (radio, dead-player channel). | 2 |

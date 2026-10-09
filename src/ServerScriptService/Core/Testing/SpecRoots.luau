@@ -154,6 +154,10 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Shared.Features.Round.Data.RoundConstants"] = "static names and defaults (no logic)",
 	["ReplicatedStorage.Shared.Features.Marketplace.Data.MarketplaceTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Features.Marketplace.Data.MarketplaceConstants"] = "static limits and names (no logic)",
+	["ReplicatedStorage.Shared.Features.Entitlement.Data.EntitlementTypes"] = "type definitions only (no runtime logic)",
+	["ReplicatedStorage.Shared.Features.Setting.Data.SettingTypes"] = "type definitions only (no runtime logic)",
+	["ReplicatedStorage.Shared.Features.Setting.Data.SettingConstants"] = "static definitions and limits (no logic)",
+	["ReplicatedStorage.Shared.Features.Setting.Net.SettingEvents"] = "ByteNet packet definitions (no logic)",
 	["ReplicatedStorage.Shared.Features.Title.Net.TitleEvents"] = "ByteNet packet definitions (no logic)",
 	["ReplicatedStorage.Shared.Features.Debugger.Net.DebuggerEvents"] = "ByteNet packet definitions (no logic)",
 	["ReplicatedStorage.Shared.Features.Animation.Net.AnimationEvents"] = "ByteNet packet definitions (no logic)",
@@ -202,6 +206,8 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.Features.Carry.CarryServiceClient"] = "Input/ByteNet shell (the server decides)",
 	["ServerScriptService.Features.Round.RoundServiceServer"] = "Players/RunService/signal shell (phase rules, run tracker and container utils are specced)",
 	["ReplicatedStorage.Client.Features.Round.RoundServiceClient"] = "Charm read facade (decoding is specced in RoundSnapshotUtils)",
+	["ReplicatedStorage.Client.Features.Entitlement.EntitlementServiceClient"] = "read facade over the replicated slice (EntitlementRules is specced)",
+	["ReplicatedStorage.Client.Features.Setting.SettingServiceClient"] = "Charm/timer/ByteNet shell applying settings to Sound, Camera and Input (rules, registry and keybind utils are specced)",
 	["ReplicatedStorage.Client.Features.Marketplace.MarketplaceServiceClient"] = "MarketplaceService prompt shell (the server grants; the registry is specced)",
 
 	-- The Instance-touching half of animation playback: every verb needs a live Animator and real
@@ -243,6 +249,8 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Commands.RoundStart"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.RoundEnd"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.MarketplacePremiumAdd"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.EntitlementGrant"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.EntitlementRevoke"] = "Cmdr command definition (server impl is specced)",
 }
 
 --[=[
