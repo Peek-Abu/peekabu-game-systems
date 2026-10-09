@@ -39,6 +39,7 @@ return function()
 					receipts = { ids = {} },
 					entitlements = { owned = {} },
 					settings = { values = {} },
+					dailyReward = { lastDay = 0, streak = 0 },
 				},
 				slots = { fakeSlot },
 			} :: any
@@ -48,7 +49,7 @@ return function()
 			-- wrong SCOPE (account data replicated as if it were per-slot, or vice versa) still
 			-- fails loudly here — that would silently replicate the wrong data.
 			local ACCOUNT_SCOPED: { [string]: boolean } =
-				{ titles = true, premium = true, entitlements = true, settings = true }
+				{ titles = true, premium = true, entitlements = true, settings = true, dailyReward = true }
 
 			for name, definition in StateSyncSliceRegistry.DEFINITIONS do
 				local value = definition.read(fakeProfile)
@@ -58,8 +59,16 @@ return function()
 		end)
 
 		it("declares exactly the replicated profile slices", function()
-			local expected =
-				{ "currency", "entitlements", "equippedTitle", "inventory", "premium", "settings", "titles" }
+			local expected = {
+				"currency",
+				"dailyReward",
+				"entitlements",
+				"equippedTitle",
+				"inventory",
+				"premium",
+				"settings",
+				"titles",
+			}
 			expect(#StateSyncSliceRegistry.NAMES).to.equal(#expected)
 			for i, name in expected do
 				expect(StateSyncSliceRegistry.NAMES[i]).to.equal(name)

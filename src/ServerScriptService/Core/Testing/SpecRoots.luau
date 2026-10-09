@@ -162,6 +162,11 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Shared.Features.Death.Data.DeathConstants"] = "static names, defaults and joint limits (no logic)",
 	["ServerScriptService.Features.Npc.Data.NpcTypes"] = "type definitions only (no runtime logic)",
 	["ServerScriptService.Features.Npc.Data.NpcConstants"] = "static names and tuning (no logic)",
+	["ReplicatedStorage.Shared.Features.Voice.Data.VoiceTypes"] = "type definitions only (no runtime logic)",
+	["ReplicatedStorage.Shared.Features.Voice.Data.VoiceConstants"] = "static names and tuning (no logic)",
+	["ReplicatedStorage.Shared.Features.DailyReward.Data.DailyRewardConstants"] = "static tuning (no logic)",
+	["ReplicatedStorage.Shared.Features.DailyReward.Net.DailyRewardEvents"] = "ByteNet packet definitions (no logic)",
+	["ReplicatedStorage.Shared.Features.Loot.Data.LootTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Features.Title.Net.TitleEvents"] = "ByteNet packet definitions (no logic)",
 	["ReplicatedStorage.Shared.Features.Debugger.Net.DebuggerEvents"] = "ByteNet packet definitions (no logic)",
 	["ReplicatedStorage.Shared.Features.Animation.Net.AnimationEvents"] = "ByteNet packet definitions (no logic)",
@@ -217,6 +222,12 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Features.Npc.NpcServiceServer"] = "Instance/physics/raycast shell (registry, sense, brain, path rules and roster are specced)",
 	["ServerScriptService.Features.Npc.Systems.NpcBehaviourSystem"] = "Players/raycast/Humanoid shell (every decision is a specced rule module)",
 	["ServerScriptService.Features.Npc.Systems.NpcMoverSystem"] = "PathfindingService/Humanoid shell (repath decisions are specced in NpcPathRules)",
+	["ServerScriptService.Features.Voice.VoiceServiceServer"] = "Players/audio Instance shell (routing is specced in VoiceRoutingRules)",
+	["ReplicatedStorage.Client.Features.Voice.VoiceServiceClient"] = "audio Instance shell (VoiceRoutingRules and VoiceWiringTracker are specced)",
+	["ServerScriptService.Features.Leaderstat.LeaderstatServiceServer"] = "Instance/Players shell (the column catalogue is specced)",
+	["ServerScriptService.Features.Badge.BadgeServiceServer"] = "BadgeService shell (BadgeAwardTracker and BadgeRegistry are specced)",
+	["ServerScriptService.Features.Analytics.AnalyticsServiceServer"] = "AnalyticsService shell (AnalyticsRules is specced)",
+	["ReplicatedStorage.Client.Features.DailyReward.DailyRewardServiceClient"] = "read facade and request sender (DailyRewardRules is specced)",
 	["ReplicatedStorage.Client.Features.Marketplace.MarketplaceServiceClient"] = "MarketplaceService prompt shell (the server grants; the registry is specced)",
 
 	-- The Instance-touching half of animation playback: every verb needs a live Animator and real
@@ -262,6 +273,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Commands.EntitlementRevoke"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.NpcSpawn"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.NpcClear"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.DailyRewardReset"] = "Cmdr command definition (server impl is specced)",
 }
 
 --[=[

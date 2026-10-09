@@ -76,6 +76,7 @@ local function makeProfileData(): PlayerDataTypes.PlayerProfile
 			receipts = { ids = {} },
 			entitlements = { owned = {} },
 			settings = { values = {} },
+			dailyReward = { lastDay = 0, streak = 0 },
 			titles = { earned = {} },
 		},
 		slots = slots,

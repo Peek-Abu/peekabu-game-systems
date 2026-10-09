@@ -74,6 +74,12 @@ local DEFINITIONS: { [string]: SliceDefinition } = {
 			return profile.account.settings
 		end,
 	},
+	-- ACCOUNT-WIDE: the daily reward streak (DailyRewardServiceServer).
+	dailyReward = {
+		read = function(profile)
+			return profile.account.dailyReward
+		end,
+	},
 	-- SLOT-SCOPED: which title the active slot wears; inactive slots' choices never leave the server.
 	equippedTitle = {
 		read = function(profile)

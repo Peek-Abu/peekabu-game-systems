@@ -115,7 +115,8 @@ There is **no headless test runner** — TestEZ needs a real Roblox runtime (Stu
 edited by builders in Team Create. Rojo must never be able to overwrite artist content.
 
 One sanctioned exception: **property-only service nodes** (`$properties` with NO `$path`, like
-`SoundService.RespectFilteringEnabled`). These manage exactly the listed properties and cannot create or
+`SoundService.RespectFilteringEnabled`, and `VoiceChatService.UseAudioApi = Enabled` /
+`EnableDefaultVoice = false`, which the Voice feature's Audio API wiring needs). These manage exactly the listed properties and cannot create or
 delete children, so artist content stays untouchable — a node with `$path` on an artist-owned service
 remains forbidden. A game sets its own place-level properties this way (for example
 `Workspace.Retargeting = Disabled` for a custom-proportioned rig).

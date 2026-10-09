@@ -62,6 +62,7 @@ local function makeProfileData()
 			receipts = { ids = {} },
 			entitlements = { owned = {} },
 			settings = { values = {} },
+			dailyReward = { lastDay = 0, streak = 0 },
 		},
 		slots = slots,
 	}

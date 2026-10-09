@@ -30,6 +30,12 @@
       "$properties": {
         "RespectFilteringEnabled": true
       }
+    },
+    "VoiceChatService": {
+      "$properties": {
+        "EnableDefaultVoice": false,
+        "UseAudioApi": "Enabled"
+      }
     }
   }
 }

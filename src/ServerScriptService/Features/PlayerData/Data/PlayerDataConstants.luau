@@ -43,7 +43,8 @@ end
 -- itemMint and titles are stamped with their full shape rather than `{}` because their types require
 -- those fields (an empty table would not typecheck). InventoryServiceServer still owns and validates
 -- "itemMint", TitleServiceServer owns "titles", MarketplaceServiceServer owns "premium" and
--- "receipts", EntitlementServiceServer owns "entitlements", and SettingServiceServer owns "settings".
+-- "receipts", EntitlementServiceServer owns "entitlements", SettingServiceServer owns "settings", and
+-- DailyRewardServiceServer owns "dailyReward".
 -- `nextUid` starts at 1, not 0: uid 0 would be indistinguishable from an absent/falsy value at any
 -- callsite that checks truthiness.
 local function emptyAccount(): PlayerDataTypes.PlayerAccount
@@ -54,6 +55,7 @@ local function emptyAccount(): PlayerDataTypes.PlayerAccount
 		receipts = { ids = {} },
 		entitlements = { owned = {} },
 		settings = { values = {} },
+		dailyReward = { lastDay = 0, streak = 0 },
 	}
 end
 

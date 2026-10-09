@@ -99,6 +99,15 @@ export type Entitlements = {
 	owned: { [string]: { [string]: boolean } },
 }
 
+--[=[
+	The account-wide daily reward slice: the UTC day index (days since the Unix epoch, shifted by
+	DailyRewardConstants.DAY_OFFSET_HOURS) of the last claim (0 = never) and the current streak.
+]=]
+export type DailyReward = {
+	lastDay: number,
+	streak: number,
+}
+
 -- A stored setting value; which one a setting holds is its registered kind (SettingTypes).
 export type SettingValue = number | boolean | string
 
@@ -146,6 +155,7 @@ export type PlayerAccount = {
 	receipts: PurchaseReceipts,
 	entitlements: Entitlements,
 	settings: Settings,
+	dailyReward: DailyReward,
 	-- Extend with other ACCOUNT-WIDE slices here (settings, entitlements, ...)
 }
 
