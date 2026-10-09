@@ -158,6 +158,10 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Shared.Features.Setting.Data.SettingTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Features.Setting.Data.SettingConstants"] = "static definitions and limits (no logic)",
 	["ReplicatedStorage.Shared.Features.Setting.Net.SettingEvents"] = "ByteNet packet definitions (no logic)",
+	["ReplicatedStorage.Shared.Features.Death.Data.DeathTypes"] = "type definitions only (no runtime logic)",
+	["ReplicatedStorage.Shared.Features.Death.Data.DeathConstants"] = "static names, defaults and joint limits (no logic)",
+	["ServerScriptService.Features.Npc.Data.NpcTypes"] = "type definitions only (no runtime logic)",
+	["ServerScriptService.Features.Npc.Data.NpcConstants"] = "static names and tuning (no logic)",
 	["ReplicatedStorage.Shared.Features.Title.Net.TitleEvents"] = "ByteNet packet definitions (no logic)",
 	["ReplicatedStorage.Shared.Features.Debugger.Net.DebuggerEvents"] = "ByteNet packet definitions (no logic)",
 	["ReplicatedStorage.Shared.Features.Animation.Net.AnimationEvents"] = "ByteNet packet definitions (no logic)",
@@ -208,6 +212,11 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.Features.Round.RoundServiceClient"] = "Charm read facade (decoding is specced in RoundSnapshotUtils)",
 	["ReplicatedStorage.Client.Features.Entitlement.EntitlementServiceClient"] = "read facade over the replicated slice (EntitlementRules is specced)",
 	["ReplicatedStorage.Client.Features.Setting.SettingServiceClient"] = "Charm/timer/ByteNet shell applying settings to Sound, Camera and Input (rules, registry and keybind utils are specced)",
+	["ServerScriptService.Features.Death.DeathServiceServer"] = "Humanoid/joint/Players shell (credit tracker, ragdoll limits and spectate rules are specced)",
+	["ReplicatedStorage.Client.Features.Death.DeathServiceClient"] = "Camera/Input/Charm spectate shell (DeathSpectateRules is specced)",
+	["ServerScriptService.Features.Npc.NpcServiceServer"] = "Instance/physics/raycast shell (registry, sense, brain, path rules and roster are specced)",
+	["ServerScriptService.Features.Npc.Systems.NpcBehaviourSystem"] = "Players/raycast/Humanoid shell (every decision is a specced rule module)",
+	["ServerScriptService.Features.Npc.Systems.NpcMoverSystem"] = "PathfindingService/Humanoid shell (repath decisions are specced in NpcPathRules)",
 	["ReplicatedStorage.Client.Features.Marketplace.MarketplaceServiceClient"] = "MarketplaceService prompt shell (the server grants; the registry is specced)",
 
 	-- The Instance-touching half of animation playback: every verb needs a live Animator and real
@@ -251,6 +260,8 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Commands.MarketplacePremiumAdd"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.EntitlementGrant"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.EntitlementRevoke"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.NpcSpawn"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.NpcClear"] = "Cmdr command definition (server impl is specced)",
 }
 
 --[=[
