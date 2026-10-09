@@ -32,6 +32,7 @@ Re-seeded from `venture-game-systems` (main at `bb33e81`), which itself began as
 | Item + Inventory | Item registry (declared stackability), stacks + unique items with atomically minted uids, per-instance `attrs`, per-kind caps, reusable container rules for a second container |
 | Title | Earned (account) + equipped (slot) titles, registry composed per domain |
 | Animation | One id registry (CI-enforced), one track owner per Animator, locomotion core replacing `Animate`, interruption classes, server-granted actions to the owning client, `playOnRig` for NPCs |
+| Input | Named actions with keyboard/mouse + gamepad bindings, a context stack (a menu silences gameplay actions), session rebinding overrides, and the UI `movement` suppression handler |
 | UI framework | React layers (respawn-safe), scene stack with Escape / gamepad-B pop and per-scene toggle keys, world-suppression contract, HUD widget registry, primitives + tokens, UI Labs stories |
 | Debugger | F4 overlay: logs, services, live state tree, animations, UI stack |
 | Admin | Cmdr with a fail-closed allowlist; currency, inventory, title and animation commands |
@@ -51,7 +52,7 @@ Ordered so each builds on the ones before it. Every one is a NEW, generic design
 
 | # | System | Scope | Games |
 |---|---|---|---|
-| 1 | **Input** | Named actions ("Interact", "Sprint", "Flashlight") with keyboard / gamepad / touch bindings, rebindable via Settings; a context stack (gameplay, menu, riding, spectating, cutscene) wired to the UI scene stack's `movement` suppression seam. Evaluate Roblox's Input Action System as the backend. | all |
+| 1 | **Input** ✅ built (`docs/superpowers/specs/2026-10-09-input-design.md`) | Named actions ("Interact", "Sprint", "Flashlight") with keyboard / gamepad / touch bindings, rebindable via Settings; a context stack (gameplay, menu, riding, spectating, cutscene) wired to the UI scene stack's `movement` suppression seam. Evaluate Roblox's Input Action System as the backend. | all |
 | 2 | **Camera** | A mode stack (third-person, locked first-person, ride/follow, spectate, cutscene/rail, CCTV/monitor view, fixed jumpscare) plus additive modifiers (trauma-based shake from many sources, FOV kicks, head bob, sway, lean). Fills the UI suppression `cameraState` seam. | all |
 | 3 | **Sound** | Sound registry (ids, groups Music/SFX/UI/Ambient, pitch variance, concurrency caps); pooled 2D + positional playback; music/ambience with crossfades; a typed server packet only for sounds a client cannot derive. Decide Sound instances vs the Audio API (filters, reverb, occlusion — strong for horror). | all |
 | 4 | **VFX** | Split, not one blob: (a) effect *recipes* — named combinations of particles, beams, trails, highlights, light flicker, a sound and a camera-shake request, pooled, triggered by one typed packet to nearby players; (b) *screen effects* — blur, colour correction, vignette, depth of field as a refcounted stack (fills the UI `blur` seam); (c) *lighting / atmosphere presets* with blends (night, power outage), synced via StateSync when shared. UI motion stays in the UI framework. | all |

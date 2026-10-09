@@ -46,7 +46,7 @@ export type SceneScreen = {
 export type SuppressionRecord = {
 	mouse: boolean?, -- free the pointer for UI (ModalEnabled) — HANDLED this phase
 	blur: boolean?, -- a post-processing effect — seam; a future VFX/post-fx system handles it
-	movement: boolean?, -- freeze character movement — seam; the Input phase handles it
+	movement: boolean?, -- freeze character movement + silence gameplay actions — handled by InputServiceClient
 	cameraState: string?, -- push a camera FSM state — seam; the Camera phase handles it
 }
 
