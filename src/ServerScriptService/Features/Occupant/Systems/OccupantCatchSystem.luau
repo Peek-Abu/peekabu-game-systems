@@ -7,7 +7,8 @@
 	and up; Carry drops their hands item and Cargo scatters their pockets as they die (M1), at the catch point
 	(the Died handlers run before the launch velocity moves the body). Death's spectate and respawn delay give
 	the ~8 s of watching, and `hooks.onCaught` does the rest (Shift's catch count, toasts). If the shift ended
-	meanwhile (`hooks.stillOn`), the player is just released.
+	meanwhile (`hooks.stillOn`), the player is just released. He plays his grab clip at the start and his throw clip at
+	the launch when they are uploaded (OccupantAssets).
 
 	The freeze is the anchored root, not PlatformStand, and Death's ragdoll swaps Motor6Ds for ball sockets
 	without PlatformStand either, so Cargo's client slip restore (PlatformStand = false after SLIP_SECONDS,
@@ -23,10 +24,13 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
+local AnimationRegistry = require(ReplicatedStorage.Shared.Features.Animation.Data.AnimationRegistry)
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local OccupantEvents = require(ReplicatedStorage.Shared.Features.Occupant.Net.OccupantEvents)
+local OccupantAnimationUtils = require(ReplicatedStorage.Shared.Features.Occupant.Utils.OccupantAnimationUtils)
 local OccupantCatchRules = require(ServerScriptService.Features.Occupant.Rules.OccupantCatchRules)
 local OccupantRigSystem = require(ServerScriptService.Features.Occupant.Systems.OccupantRigSystem)
+local AnimationServiceServer = require(ServerScriptService.Features.Animation.AnimationServiceServer)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
 
 export type Hooks = {
@@ -40,6 +44,18 @@ local FACE_DISTANCE = 2.5
 
 -- UserIds whose catch is running.
 local catching: { [number]: boolean } = {}
+
+local function registered(id: string): boolean
+	return AnimationRegistry.get(id) ~= nil
+end
+
+-- Plays one of his catch clips on the rig, when it is uploaded (nothing while pending).
+local function act(rig: OccupantRigSystem.Rig, id: string)
+	local clip = OccupantAnimationUtils.action(id, registered)
+	if clip ~= nil then
+		AnimationServiceServer:playOnRig(rig.model, clip)
+	end
+end
 
 local OccupantCatchSystem = {}
 
@@ -80,6 +96,7 @@ function OccupantCatchSystem.begin(rig: OccupantRigSystem.Rig, player: Player, h
 			OccupantConstants.LAUNCH_SPEED,
 			OccupantConstants.LAUNCH_UP
 		)
+		act(rig, "harlowThrow")
 		DeathServiceServer:kill(victim, "caught", { launch = velocity })
 		hooks.onCaught(player)
 	end)
@@ -92,6 +109,7 @@ function OccupantCatchSystem.begin(rig: OccupantRigSystem.Rig, player: Player, h
 	OccupantEvents.packets.CatchCam.sendTo(CFrame.lookAt(eye, face), player)
 	OccupantEvents.packets.LightsOut.sendToAll(harlow.Position)
 	OccupantRigSystem.say(rig, OccupantConstants.LINES.caught)
+	act(rig, "harlowGrab")
 	return true
 end
 

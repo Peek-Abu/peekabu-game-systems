@@ -129,4 +129,12 @@ return table.freeze({
 	STEP_MIN_SPEED = 2,
 	STEP_MIN = 0.28,
 	STEP_MAX = 0.8,
+	-- The catch scare's grin over his face (spec §4 "stretched-grin face"; kid-safe cartoon): its billboard,
+	-- size in studs, how wide the mouth stretches, teeth, colours (used while the grin image is pending).
+	GRIN_NAME = "OccupantGrin",
+	GRIN_SIZE = 3.2,
+	GRIN_STRETCH = 0.92,
+	GRIN_TEETH = 7,
+	GRIN_WHITE = Color3.fromRGB(250, 250, 240),
+	GRIN_INK = Color3.fromRGB(15, 10, 10),
 })

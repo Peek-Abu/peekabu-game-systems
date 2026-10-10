@@ -37,12 +37,14 @@ local OccupantShared = ReplicatedStorage.Shared.Features.Occupant
 local OccupantServer = ServerScriptService.Features.Occupant
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local Observers = require(ReplicatedStorage.Packages.Observers)
+local AnimationRegistry = require(ReplicatedStorage.Shared.Features.Animation.Data.AnimationRegistry)
 local NoiseRules = require(ReplicatedStorage.Shared.Features.Noise.Rules.NoiseRules)
 local NoiseTypes = require(ReplicatedStorage.Shared.Features.Noise.Data.NoiseTypes)
 local OccupantConstants = require(OccupantShared.Data.OccupantConstants)
 local OccupantTypes = require(OccupantShared.Data.OccupantTypes)
 local OccupantEvents = require(OccupantShared.Net.OccupantEvents)
 local OccupantTellRules = require(OccupantShared.Rules.OccupantTellRules)
+local OccupantAnimationUtils = require(OccupantShared.Utils.OccupantAnimationUtils)
 local OccupantFeedbackUtils = require(OccupantShared.Utils.OccupantFeedbackUtils)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
@@ -75,7 +77,10 @@ if not NpcRegistry.has(OccupantConstants.NPC_KIND) then
 		-- His attack is the catch (onAttack, Task 10); 0 keeps the base's default damage harmless.
 		attackDamage = 0,
 		attackCooldown = OccupantConstants.CATCH_COOLDOWN,
-		animations = { idle = "idle", walk = "walk", run = "run" },
+		-- His own clips where uploaded (lurch walk, look-around as his standing pose), else the base ones.
+		animations = OccupantAnimationUtils.poses(function(id: string): boolean
+			return AnimationRegistry.get(id) ~= nil
+		end),
 		pathCosts = { [OccupantConstants.SAFE_ZONE_LABEL] = math.huge },
 	})
 end
