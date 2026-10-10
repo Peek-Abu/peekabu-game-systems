@@ -33,7 +33,7 @@ function OccupantCatchRules.canCatch(input: OccupantTypes.CatchInput): (boolean,
 	if OccupantBrainRules.inZone(input.position, input.zone) then
 		return false, "safe zone"
 	end
-	if input.distance > OccupantConstants.CATCH_RANGE + OccupantConstants.CATCH_SLACK then
+	if not (input.distance <= OccupantConstants.CATCH_RANGE + OccupantConstants.CATCH_SLACK) then
 		return false, "too far"
 	end
 	return true, nil

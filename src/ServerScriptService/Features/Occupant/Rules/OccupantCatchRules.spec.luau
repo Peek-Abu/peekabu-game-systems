@@ -21,13 +21,13 @@ local function input(extra)
 	return value
 end
 
-local function refused(extra, expected)
-	local ok, reason = OccupantCatchRules.canCatch(input(extra))
-	expect(ok).to.equal(false)
-	expect(reason).to.equal(expected)
-end
-
 return function()
+	local function refused(extra, expected)
+		local ok, reason = OccupantCatchRules.canCatch(input(extra))
+		expect(ok).to.equal(false)
+		expect(reason).to.equal(expected)
+	end
+
 	describe("canCatch", function()
 		it("catches a living player within reach outside the loading bay", function()
 			expect(OccupantCatchRules.canCatch(input())).to.equal(true)
@@ -40,6 +40,10 @@ return function()
 
 		it("refuses a player out of reach", function()
 			refused({ distance = OccupantConstants.CATCH_RANGE + OccupantConstants.CATCH_SLACK + 0.1 }, "too far")
+		end)
+
+		it("refuses a NaN distance", function()
+			refused({ distance = 0 / 0 }, "too far")
 		end)
 
 		it("refuses a player in the safe zone, even at arm's length", function()
