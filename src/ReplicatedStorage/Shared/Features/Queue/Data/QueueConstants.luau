@@ -24,8 +24,9 @@ return table.freeze({
 	TICK_INTERVAL = 0.25,
 	-- Seconds before retry 1, 2 and 3. After the third retry fails the party is back on its pad.
 	RETRY_DELAYS = table.freeze({ 1, 2, 4 }),
-	-- Seconds a player may still be here after their teleport started before it counts as failed.
-	TELEPORT_WATCHDOG = 15,
+	-- Seconds a player may still be here after their teleport started before it counts as failed. Long
+	-- enough that a slow but healthy TeleportAsync (and ReserveServer) is not retried on top of itself.
+	TELEPORT_WATCHDOG = 30,
 	-- Seconds an arrival server waits for the expected party before starting with whoever arrived.
 	ARRIVAL_TIMEOUT = 20,
 	-- A role's PlaceId before its place exists; reached by a local move.

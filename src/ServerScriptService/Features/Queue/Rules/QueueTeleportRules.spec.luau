@@ -1,5 +1,7 @@
 local HttpService = game:GetService("HttpService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local QueueConstants = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueConstants)
 local QueueTeleportRules = require(script.Parent.QueueTeleportRules)
 
 local function ticket()
@@ -9,7 +11,7 @@ local function ticket()
 		role = "away",
 		party = { 7, 8 },
 		capacity = 4,
-		payload = { contract = "c-1", night = 2, hard = true },
+		payload = { matchId = "c-1", round = 2, hard = true },
 	}
 end
 
@@ -73,8 +75,8 @@ return function()
 			expect(decoded.role).to.equal("away")
 			expect(decoded.party[2]).to.equal(8)
 			expect(decoded.capacity).to.equal(4)
-			expect(decoded.payload.contract).to.equal("c-1")
-			expect(decoded.payload.night).to.equal(2)
+			expect(decoded.payload.matchId).to.equal("c-1")
+			expect(decoded.payload.round).to.equal(2)
 			expect(decoded.payload.hard).to.equal(true)
 		end)
 
@@ -125,6 +127,17 @@ return function()
 		it("rejects a party that lists a player twice", function()
 			local forged = wire(ticket())
 			forged.party = { 7, 8, 7 }
+			expect(QueueTeleportRules.decode(forged)).to.equal(nil)
+		end)
+
+		it("rejects a party larger than the player limit", function()
+			local forged = wire(ticket())
+			local party = {}
+			for id = 1, QueueConstants.MAX_CAPACITY + 1 do
+				party[id] = id
+			end
+			forged.party = party
+			forged.capacity = QueueConstants.MAX_CAPACITY
 			expect(QueueTeleportRules.decode(forged)).to.equal(nil)
 		end)
 

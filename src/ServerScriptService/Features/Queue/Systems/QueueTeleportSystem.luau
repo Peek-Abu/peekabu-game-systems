@@ -139,7 +139,11 @@ function QueueTeleportSystem.new(): QueueTeleportSystem
 				fail(id, present, `ReserveServer failed: {tostring(result)}`)
 				return
 			end
-			record.accessCode = result
+			-- ReserveServer yields: a slow call and its watchdog retry can both get here. Keep the first code so
+			-- the party never splits across two reserved servers.
+			if record.accessCode == nil then
+				record.accessCode = result
+			end
 		end
 		local options = Instance.new("TeleportOptions")
 		local code = record.accessCode

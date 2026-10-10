@@ -68,11 +68,12 @@ export type QueueConfigUpdate = {
 }
 
 -- Builds the payload for a departing party (a match id). An error or a payload over the limits
--- sends `{}` instead.
+-- sends `{}` instead. Runs inside the Heartbeat tick: it MUST NOT yield.
 export type DepartDataResolver = (pad: BasePart, party: { Player }) -> QueuePayload
 
 -- Where a player lands when a local move takes them to a role. `index` is their place in the party
--- (1-based), so a game can spread them out.
+-- (1-based), so a game can spread them out. Runs inside the Heartbeat tick: it MUST NOT yield. Returning
+-- nil for any player fails the whole party's local move (the party stays on its pad).
 export type ArrivalPoint = (player: Player, index: number) -> CFrame?
 
 return {}

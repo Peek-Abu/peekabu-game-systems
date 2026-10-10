@@ -101,6 +101,9 @@ local function userIds(value: WorldValue?): { number }?
 	for _ in value do
 		count += 1
 	end
+	if count > QueueConstants.MAX_CAPACITY then
+		return nil
+	end
 	-- Every key 1..count present and nothing else: a list, not a dictionary or a list with holes.
 	for index = 1, count do
 		local item = value[index]

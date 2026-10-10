@@ -28,7 +28,7 @@ local function QueuePadStatus(props: QueuePadStatusProps): React.ReactNode
 	local snapshot = ReactCharm.useAtom(QueueStore.snapshot)
 	local now, setNow = React.useState(workspace:GetServerTimeNow())
 	local _, pad = QueueSnapshotUtils.padOf(snapshot, Players.LocalPlayer.UserId)
-	local ticking = pad ~= nil and pad.endsAt ~= nil
+	local ticking = enabled and pad ~= nil and pad.endsAt ~= nil
 
 	React.useEffect(function(): () -> ()
 		local running = ticking

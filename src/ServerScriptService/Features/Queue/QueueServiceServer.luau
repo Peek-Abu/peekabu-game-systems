@@ -187,16 +187,17 @@ local function depart(pad: BasePart, padConfig: QueueTypes.PadConfig, party: { P
 		return
 	end
 	counters.departures += 1
-	departing:Fire(pad, party)
 	local payload = payloadFor(pad, party)
 	local destination = padConfig.destination
 	local route, reason = QueuePlaceRules.route(currentMode(), destination, QueueRegistry.roles())
 	if route ~= nil and route.kind == "teleport" then
+		departing:Fire(pad, party)
 		sendParty(pad, padConfig, party, payload, route.placeId)
 	elseif route == nil or not moveLocally(party, destination) then
 		-- Misconfigured (unregistered role, or no arrival point here): the party stays on its pad.
 		failDeparture(pad, party, reason or `no arrival point for "{destination}"`, not pads:firstMisroute(pad))
 	else
+		departing:Fire(pad, party)
 		pads:unlock(pad)
 		task.defer(function()
 			counters.arrivals += 1
@@ -285,6 +286,7 @@ export type QueueServiceServer = {
 	dependencies: { string },
 	arrived: SignalTyped.Signal<{ Player }, QueuePayload>,
 	joinedLate: SignalTyped.Signal<Player>,
+	-- The payload is client-forgeable (display only): never grant or persist anything from it.
 	returned: SignalTyped.Signal<Player, QueuePayload>,
 	departing: SignalTyped.Signal<BasePart, { Player }>,
 	departFailed: SignalTyped.Signal<BasePart, { Player }, string>,
@@ -341,6 +343,10 @@ local QueueServiceServer: QueueServiceServer = {
 		table.insert(
 			connections,
 			TeleportService.TeleportInitFailed:Connect(function(player, result, message)
+				-- IsTeleporting: an earlier attempt is still in progress, not a failure of this one.
+				if result == Enum.TeleportResult.IsTeleporting then
+					return
+				end
 				teleports:initFailed(player, `{result.Name}: {message}`)
 			end)
 		)
@@ -416,7 +422,9 @@ local QueueServiceServer: QueueServiceServer = {
 	--[=[
 		Sends `players` to any public server of `role` with `payload` (a result summary). False, with a
 		warning, for an empty or oversized party, a payload over the limits, an unregistered role, or a
-		local move with no arrival point for the role (the players stay where they are).
+		local move with no arrival point for the role (the players stay where they are). Live, each retry
+		joins any public server of the role, so a retried player can land in a different server than the
+		rest of the group.
 	]=]
 	returnParty = function(_self, players, role, payload)
 		local clean, reason = QueueTeleportRules.payload(payload)
@@ -465,6 +473,10 @@ local QueueServiceServer: QueueServiceServer = {
 		return true
 	end,
 
+	--[=[
+		The payload `player` arrived home with. Display only: the client controls its own teleport data, so
+		it is forgeable. Never grant or persist anything from it.
+	]=]
 	returnPayloadOf = function(_self, player)
 		return landing:payloadOf(player)
 	end,

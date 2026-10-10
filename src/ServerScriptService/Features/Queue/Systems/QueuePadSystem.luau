@@ -21,7 +21,6 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local Observers = require(ReplicatedStorage.Packages.Observers)
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
-local WorldTypes = require(ReplicatedStorage.Shared.Data.WorldTypes)
 local QueueConstants = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueConstants)
 local QueueTypes = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueTypes)
 local QueuePadRules = require(ServerScriptService.Features.Queue.Rules.QueuePadRules)
@@ -39,7 +38,6 @@ export type QueuePadSystem = {
 	forget: (self: QueuePadSystem, player: Player) -> (),
 	padOf: (self: QueuePadSystem, player: Player) -> BasePart?,
 	firstMisroute: (self: QueuePadSystem, pad: BasePart) -> boolean,
-	snapshot: (self: QueuePadSystem) -> WorldTypes.WorldTable,
 	count: (self: QueuePadSystem) -> number,
 }
 
@@ -233,10 +231,6 @@ function QueuePadSystem.new(onDue: OnDue): QueuePadSystem
 			end
 			misrouted[pad] = true
 			return true
-		end,
-
-		snapshot = function(_self)
-			return tracker:snapshot()
 		end,
 
 		count = function(_self)
