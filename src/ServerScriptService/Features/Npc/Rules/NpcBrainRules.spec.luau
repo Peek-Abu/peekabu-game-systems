@@ -58,4 +58,55 @@ return function()
 			expect(NpcBrainRules.poseFor(14, 8)).to.equal("run")
 		end)
 	end)
+
+	describe("choose", function()
+		local CONTEXT = { hasPatrol = true, position = Vector3.zero, now = 0 }
+		local NPC = Instance.new("Model")
+
+		it("uses the default brain when the kind has none", function()
+			expect(NpcBrainRules.choose(def({ attitude = "hostile" }), CONTEXT, NPC, nil).kind).to.equal("patrol")
+		end)
+
+		it("uses the game's intent when it answers", function()
+			local seen
+			local intent = NpcBrainRules.choose(def({}), CONTEXT, NPC, function(_def, _context, npc)
+				seen = npc
+				return { kind = "goTo", position = Vector3.new(1, 2, 3), run = true }
+			end)
+			expect(intent.kind).to.equal("goTo")
+			expect(intent.position).to.equal(Vector3.new(1, 2, 3))
+			expect(intent.run).to.equal(true)
+			expect(seen).to.equal(NPC)
+		end)
+
+		it("falls back to the default brain when the game's brain returns nil", function()
+			local intent = NpcBrainRules.choose(def({ attitude = "hostile" }), CONTEXT, NPC, function()
+				return nil
+			end)
+			expect(intent.kind).to.equal("patrol")
+		end)
+	end)
+
+	describe("tuned", function()
+		it("returns the kind's def unchanged without tuning", function()
+			local base = def({ walkSpeed = 8 })
+			expect(NpcBrainRules.tuned(base, nil)).to.equal(base)
+		end)
+
+		it("overrides only the given fields", function()
+			local result = NpcBrainRules.tuned(def({ walkSpeed = 8, runSpeed = 16, sightRange = 60 }), {
+				walkSpeed = 10,
+				sightRange = 72,
+			})
+			expect(result.walkSpeed).to.equal(10)
+			expect(result.runSpeed).to.equal(16)
+			expect(result.sightRange).to.equal(72)
+			expect(result.attitude).to.equal("passive")
+		end)
+
+		it("never lets runSpeed fall below walkSpeed", function()
+			local result = NpcBrainRules.tuned(def({ walkSpeed = 8, runSpeed = 16 }), { walkSpeed = 20 })
+			expect(result.runSpeed).to.equal(20)
+		end)
+	end)
 end

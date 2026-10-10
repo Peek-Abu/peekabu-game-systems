@@ -28,6 +28,7 @@ local AnimationServiceServer = require(ServerScriptService.Features.Animation.An
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
 
 type NpcDef = NpcTypes.NpcDef
+type Intent = NpcTypes.Intent
 export type AttackHandler = (npc: Model, target: Player) -> ()
 
 -- One live NPC's state, owned by NpcServiceServer.
@@ -36,6 +37,7 @@ export type Agent = {
 	model: Model,
 	kind: string,
 	def: NpcDef,
+	baseDef: NpcDef, -- the registered def; `def` is it with setTuning's overrides
 	humanoid: Humanoid,
 	root: BasePart,
 	mover: NpcMoverSystem.NpcMoverSystem,
@@ -56,6 +58,7 @@ type Candidate = { id: number, position: Vector3, player: Player, character: Mod
 -- What a think needs from the service: the game's attack overrides and target filter, and a counter.
 export type ThinkDeps = {
 	attackHandlers: { [string]: AttackHandler },
+	brains: { [string]: NpcTypes.Brain },
 	targetFilter: ((player: Player) -> boolean)?,
 	onAttack: () -> (),
 }
@@ -205,20 +208,43 @@ function NpcBehaviourSystem.think(agent: Agent, now: number, deps: ThinkDeps)
 		end
 	end
 
-	local intent = NpcBrainRules.decide(def, {
+	local context: NpcTypes.BrainContext = {
 		target = if target ~= nil
-			then { userId = target.id, distance = (target.position - position).Magnitude }
+			then {
+				userId = target.id,
+				distance = (target.position - position).Magnitude,
+				position = target.position,
+			}
 			else nil,
 		threat = threat,
 		hasPatrol = #agent.patrol > 0,
-	})
+		position = position,
+		now = now,
+	}
+	local chosen: Intent? = nil
+	local ok, err = pcall(function()
+		chosen = NpcBrainRules.choose(def, context, agent.model, deps.brains[agent.kind])
+	end)
+	if not ok then
+		log:error(`brain for "{agent.kind}" errored: {err}`)
+	end
+	local intent: Intent = chosen or NpcBrainRules.decide(def, context)
 
-	if intent.kind == "attack" and target ~= nil then
-		agent.humanoid.WalkSpeed = def.runSpeed
-		attack(agent, target, now, deps)
-	elseif intent.kind == "chase" and target ~= nil then
-		agent.humanoid.WalkSpeed = def.runSpeed
-		agent.mover:moveTo(target.position, now)
+	if intent.kind == "attack" then
+		local victim = findCandidate(list, intent.target)
+		if victim ~= nil then
+			agent.humanoid.WalkSpeed = def.runSpeed
+			attack(agent, victim, now, deps)
+		end
+	elseif intent.kind == "chase" then
+		local quarry = findCandidate(list, intent.target)
+		if quarry ~= nil then
+			agent.humanoid.WalkSpeed = def.runSpeed
+			agent.mover:moveTo(quarry.position, now)
+		end
+	elseif intent.kind == "goTo" then
+		agent.humanoid.WalkSpeed = if intent.run then def.runSpeed else def.walkSpeed
+		agent.mover:moveTo(intent.position, now)
 	elseif intent.kind == "flee" then
 		agent.humanoid.WalkSpeed = def.runSpeed
 		agent.mover:moveTo(NpcPathRules.fleeGoal(position, intent.from, def.fleeRange * 1.5), now)

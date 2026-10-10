@@ -12,6 +12,8 @@
 	- Attacks use the kind's cooldown and damage through DeathServiceServer:damage (credited to the kind),
 	  unless the game registered `onAttack(kind, fn)`.
 	- Poses play through AnimationServiceServer:playOnRig from the kind's `animations`.
+	- A game can replace a kind's decisions (`setBrain`), send it to a point (the `goTo` intent), tune one NPC at
+	  runtime (`setTuning`), and mark zones it avoids (`pathCosts`).
 
 	Spec-exempt shell (Instances, physics, raycasts, signals); the decisions are the specced NpcRegistry,
 	NpcSenseRules, NpcBrainRules, NpcPathRules and NpcRosterTracker.
@@ -34,6 +36,7 @@ local DeathTypes = require(ReplicatedStorage.Shared.Features.Death.Data.DeathTyp
 local NpcConstants = require(NpcServer.Data.NpcConstants)
 local NpcRegistry = require(NpcServer.Data.NpcRegistry)
 local NpcTypes = require(NpcServer.Data.NpcTypes)
+local NpcBrainRules = require(NpcServer.Rules.NpcBrainRules)
 local NpcRosterTracker = require(NpcServer.State.NpcRosterTracker)
 local NpcBehaviourSystem = require(NpcServer.Systems.NpcBehaviourSystem)
 local NpcMoverSystem = require(NpcServer.Systems.NpcMoverSystem)
@@ -52,12 +55,14 @@ local died: SignalTyped.Signal<Model, string, DeathTypes.DeathInfo> = SignalType
 local roster = NpcRosterTracker.new()
 local agents: { [number]: Agent } = {}
 local attackHandlers: { [string]: AttackHandler } = {}
+local brains: { [string]: NpcTypes.Brain } = {}
 local random = Random.new()
 local counters = { spawned = 0, died = 0, attacks = 0 }
 local stoppers: { () -> () } = {}
 
 local thinkDeps: NpcBehaviourSystem.ThinkDeps = {
 	attackHandlers = attackHandlers,
+	brains = brains,
 	targetFilter = nil,
 	onAttack = function()
 		counters.attacks += 1
@@ -142,9 +147,10 @@ local function adopt(instance: Instance): (() -> ())?
 		model = model,
 		kind = kind,
 		def = def,
+		baseDef = def,
 		humanoid = humanoid,
 		root = root,
-		mover = NpcMoverSystem.new(humanoid, root),
+		mover = NpcMoverSystem.new(humanoid, root, def.pathCosts),
 		home = root.Position,
 		patrol = patrolPoints(model),
 		patrolIndex = 1,
@@ -197,6 +203,8 @@ export type NpcServiceServer = {
 	onAttack: (self: NpcServiceServer, kind: string, handler: AttackHandler) -> (),
 	setTargetFilter: (self: NpcServiceServer, filter: ((player: Player) -> boolean)?) -> (),
 	setTarget: (self: NpcServiceServer, npc: Model, player: Player?) -> boolean,
+	setBrain: (self: NpcServiceServer, kind: string, brain: NpcTypes.Brain?) -> (),
+	setTuning: (self: NpcServiceServer, npc: Model, tuning: NpcTypes.NpcTuning?) -> boolean,
 }
 
 local NpcServiceServer: NpcServiceServer = {
@@ -343,6 +351,33 @@ local NpcServiceServer: NpcServiceServer = {
 		end
 		agent.targetUserId = if player ~= nil then player.UserId else nil
 		agent.lastSeenAt = if player ~= nil then os.clock() else nil
+		return true
+	end,
+
+	--[=[
+		Gives a kind the game's own brain (investigate a noise, freeze when watched). The brain runs every
+		think; returning nil uses the default brain for that tick. Nil removes it.
+	]=]
+	setBrain = function(_self, kind, brain)
+		assert(NpcRegistry.has(kind), `setBrain: "{kind}" is not a registered npc kind`)
+		if brain == nil then
+			brains[kind] = nil
+		else
+			brains[kind] = brain
+		end
+	end,
+
+	--[=[
+		Overrides one live NPC's speeds or sight (pressure tiers, party-size scaling); nil restores the
+		kind's values. False when `npc` is not a live NPC.
+	]=]
+	setTuning = function(_self, npc, tuning)
+		local id = roster:idOf(npc)
+		local agent = if id ~= nil then agents[id] else nil
+		if agent == nil then
+			return false
+		end
+		agent.def = NpcBrainRules.tuned(agent.baseDef, tuning)
 		return true
 	end,
 
