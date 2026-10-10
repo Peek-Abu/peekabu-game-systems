@@ -23,10 +23,19 @@ function ToastRules.normalize(
 	if text == "" then
 		return nil, "empty"
 	end
+	-- Cut at MAX_TEXT characters, never mid-character; invalid UTF-8 falls back to a byte cut.
+	if utf8.len(text) == nil then
+		text = string.sub(text, 1, ToastConstants.MAX_TEXT)
+	else
+		local cut = utf8.offset(text, ToastConstants.MAX_TEXT + 1)
+		if cut ~= nil then
+			text = string.sub(text, 1, cut - 1)
+		end
+	end
 	local style = request.style
 	local duration = request.duration or ToastConstants.DEFAULT_DURATION
 	return {
-		text = string.sub(text, 1, ToastConstants.MAX_TEXT),
+		text = text,
 		style = if style ~= nil and hasStyle(style) then style else ToastConstants.DEFAULT_STYLE,
 		duration = math.clamp(duration, ToastConstants.MIN_DURATION, ToastConstants.MAX_DURATION),
 	},
