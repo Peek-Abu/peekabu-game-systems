@@ -3,10 +3,12 @@
 	ShiftBankingSystem: the shift's banking handler for Cargo (Cleanup Crew spec §4 "Banking", §6.4). Trash adds
 	to Round's `clearance` counter, salvage (times the current multiplier: ×1.5 in overtime) to `bonus`, and the
 	banker's run in the roster. Every refusal is decided before the first counter write; once a counter moved it
-	returns true whatever else fails, or Cargo would release the claim and the same items would bank twice.
+	returns true whatever else fails, or Cargo would release the claim and the same items would bank twice. It
+	also returns the bonus it credited (after the multiplier), which Cargo's `Banked` floater shows (M3: the
+	"Loaded: …" toast is gone).
 
-	Moved out of ShiftServiceServer in M2 (the service was at the 400-line cap). Spec-exempt shell (Round,
-	Toast); the multiplier and the quota are the specced ShiftPhaseRules.
+	Moved out of ShiftServiceServer in M2 (the service was at the 400-line cap). Spec-exempt shell (Round); the
+	multiplier and the quota are the specced ShiftPhaseRules.
 
 	@class ShiftBankingSystem
 ]=]
@@ -19,7 +21,6 @@ local CargoTypes = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoTyp
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftRosterTracker = require(ServerScriptService.Features.Shift.State.ShiftRosterTracker)
 local RoundServiceServer = require(ServerScriptService.Features.Round.RoundServiceServer)
-local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
 
 export type Deps = {
 	roster: ShiftRosterTracker.ShiftRosterTracker,
@@ -43,9 +44,9 @@ end
 local ShiftBankingSystem = {}
 
 function ShiftBankingSystem.new(deps: Deps): CargoTypes.BankHandler
-	return function(player: Player, deposit: CargoTypes.Deposit): boolean
+	return function(player: Player, deposit: CargoTypes.Deposit): (boolean, number?)
 		if not deps.isOpen() then
-			return false
+			return false, nil
 		end
 		local multiplier = deps.multiplier()
 		local bonus = math.floor(deposit.bonus * multiplier + 0.5)
@@ -77,17 +78,11 @@ function ShiftBankingSystem.new(deps: Deps): CargoTypes.BankHandler
 			)
 		end)
 		if not ok and not wrote then
-			return false
+			return false, nil
 		end
-		-- The quota stamp and the publish come before the toast, each in its own guard: a throwing toast can
-		-- never skip them.
+		-- The quota stamp and the publish, in their own guard: a throwing follow-up never un-banks the deposit.
 		guarded("banking follow-up", deps.afterBank)
-		guarded("banking toast", function()
-			local overtime = if multiplier > 1 then ` (overtime x{multiplier})` else ""
-			local text = `Loaded: +{deposit.clearance} clearance, +{bonus} bonus{overtime}`
-			ToastServiceServer:send(player, { text = text, duration = 2 })
-		end)
-		return true
+		return true, bonus
 	end
 end
 

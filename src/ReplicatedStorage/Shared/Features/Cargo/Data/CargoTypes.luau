@@ -61,9 +61,10 @@ export type Deposit = {
 	items: { DepositItem },
 }
 
--- The game's banking callback (Shift): adds the deposit; false refuses it (no shift running). It must not
+-- The game's banking callback (Shift): adds the deposit and returns true plus the bonus it actually credited
+-- (after any overtime multiplier; absent = deposit.bonus), or false to refuse it (no shift running). It must not
 -- yield: claim, add and destroy run as one step.
-export type BankHandler = (player: Player, deposit: Deposit) -> boolean
+export type BankHandler = (player: Player, deposit: Deposit) -> (boolean, number?)
 
 export type SpawnOptions = {
 	-- Spawned invisible and un-interactable (under a pile) until revealed.

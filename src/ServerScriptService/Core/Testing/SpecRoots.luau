@@ -300,10 +300,12 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Shared.Features.Cargo.Net.CargoEvents"] = "ByteNet packet definitions (no logic)",
 	["ServerScriptService.Features.Cargo.Systems.CargoSpawnSystem"] = "Instance/raycast shell (CargoRegistry is specced)",
 	["ServerScriptService.Features.Cargo.Systems.CargoPocketSystem"] = "Carry/Instance/public-state/Heartbeat shell (pocket, swap and slot decisions are specced in CargoHandlingRules and CargoPocketTracker)",
-	["ServerScriptService.Features.Cargo.Systems.CargoTraitSystem"] = "Players/Carry/Instance shell (rattle and puddle decisions are specced in CargoHandlingRules)",
+	["ServerScriptService.Features.Cargo.Systems.CargoTraitSystem"] = "Players/Carry/Instance/Sound shell (rattle, puddle and sound decisions are specced in CargoHandlingRules and CargoFeedbackUtils)",
 	["ReplicatedStorage.Client.Features.Cargo.Systems.CargoSlipSystem"] = "Humanoid/physics shell (the slip decision CargoHandlingRules.slips is specced)",
 	["ServerScriptService.Features.Cargo.CargoServiceServer"] = "Instance/Players/ByteNet/signal shell (handling, bank rules, claim and pocket trackers are specced)",
 	["ReplicatedStorage.Client.Features.Cargo.CargoServiceClient"] = "Input/Camera/ByteNet shell (the server decides)",
+	["ReplicatedStorage.Shared.Features.Cargo.Data.CargoAssets"] = "asset id slots; registers the uploaded sounds at load (no decisions)",
+	["ReplicatedStorage.Client.Features.Cargo.Systems.CargoFeedbackSystem"] = "Instance/tween/ByteNet/Charm shell (choices and arc specced in CargoFeedbackUtils)",
 
 	-- Cleanup Crew: Vacuum
 	["ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants"] = "static tuning and names (no logic)",
@@ -340,7 +342,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants"] = "static pacing and names (no logic)",
 	["ReplicatedStorage.Shared.Features.Shift.Net.ShiftEvents"] = "ByteNet packet definitions (no logic)",
-	["ServerScriptService.Features.Shift.Systems.ShiftBankingSystem"] = "Round/Toast banking shell (salvage multiplier and quota are specced in ShiftPhaseRules)",
+	["ServerScriptService.Features.Shift.Systems.ShiftBankingSystem"] = "Round banking shell (salvage multiplier and quota are specced in ShiftPhaseRules)",
 	["ServerScriptService.Features.Shift.ShiftServiceServer"] = "Players/RunService/service-orchestration shell (phase, vote, results and snapshot rules are specced)",
 	["ServerScriptService.Features.Shift.Systems.ShiftTripSystem"] = "Players/Queue-signal/teleport shell (ShiftCrewTracker, ShiftCardUtils and DepotContractUtils are specced)",
 	["ReplicatedStorage.Client.Features.Shift.State.ShiftStore"] = "Charm computed facade over the shift world entry (decoding is specced in ShiftSnapshotUtils)",

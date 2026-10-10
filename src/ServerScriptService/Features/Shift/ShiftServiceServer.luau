@@ -235,7 +235,7 @@ local function onRoundPhase(roundState: RoundTypes.RoundState)
 end
 
 -- Cargo's banking handler (ShiftBankingSystem): salvage x1.5 in overtime; meeting the quota starts the break
--- (its notice comes from setState, ShiftNoticeUtils).
+-- (its notice comes from setState, ShiftNoticeUtils); returns the bonus credited, which Cargo's Banked floater shows.
 local onBanked = ShiftBankingSystem.new({
 	roster = roster,
 	isOpen = function(): boolean

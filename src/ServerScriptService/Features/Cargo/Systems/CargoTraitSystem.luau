@@ -5,8 +5,12 @@
 	the floor (players slip on it: CargoSlipSystem, client). Noise goes out through CargoServiceServer's
 	`noiseMade` (passed in), like every Cargo noise; Noise relays it. Puddles live in the shift's container, so
 	a reset clears them; each also expires after PUDDLE_SECONDS.
+	Feel (M3): `sound` plays a Cargo sound where something happened, for everyone near it (CargoServiceServer calls it
+	for each drop, which knows the item); rattles and searches are heard too, from `noiseMade`. Silent while an id
+	is pending (CargoAssets; requiring it registers the uploaded sounds on the server).
 
-	Spec-exempt shell (Players, Carry, Instances); the trait decisions are the specced CargoHandlingRules.
+	Spec-exempt shell (Players, Carry, Instances, Sound); the trait decisions are the specced CargoHandlingRules,
+	the sound choices CargoFeedbackUtils.
 
 	@class CargoTraitSystem
 ]=]
@@ -22,12 +26,16 @@ local CargoShared = ReplicatedStorage.Shared.Features.Cargo
 local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
 local CarryTypes = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryTypes)
+local CargoAssets = require(CargoShared.Data.CargoAssets)
 local CargoConstants = require(CargoShared.Data.CargoConstants)
 local CargoRegistry = require(CargoShared.Data.CargoRegistry)
 local CargoTypes = require(CargoShared.Data.CargoTypes)
 local CargoHandlingRules = require(CargoShared.Rules.CargoHandlingRules)
+local CargoFeedbackUtils = require(CargoShared.Utils.CargoFeedbackUtils)
+local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundRegistry)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
 local CargoSpawnSystem = require(ServerScriptService.Features.Cargo.Systems.CargoSpawnSystem)
+local SoundServiceServer = require(ServerScriptService.Features.Sound.SoundServiceServer)
 
 export type Deps = {
 	noiseMade: SignalTyped.Signal<Vector3, number, string>,
@@ -41,7 +49,15 @@ export type CargoTraitSystem = {
 	start: (self: CargoTraitSystem) -> (),
 	stop: (self: CargoTraitSystem) -> (),
 	puddles: (self: CargoTraitSystem) -> number,
+	sound: (self: CargoTraitSystem, position: Vector3, id: string) -> (),
 }
+
+-- A Cargo sound at a spot, for everyone near it; silent while its id is pending (CargoAssets).
+local function soundAt(position: Vector3, id: string)
+	if CargoAssets.SOUNDS[id] ~= nil and SoundRegistry.has(id) then
+		SoundServiceServer:playAt(position, id, CargoConstants.SOUND_RADIUS)
+	end
+end
 
 local function defOf(object: Instance): CargoTypes.ItemDef?
 	local kind = object:GetAttribute(CarryConstants.KIND_ATTRIBUTE)
@@ -53,6 +69,7 @@ local CargoTraitSystem = {}
 function CargoTraitSystem.new(deps: Deps): CargoTraitSystem
 	local heartbeat: RBXScriptConnection? = nil
 	local dropped: SignalTyped.Connection? = nil
+	local noises: SignalTyped.Connection? = nil
 	local made = 0
 
 	-- One rattle pulse from everyone carrying a rattly item.
@@ -111,6 +128,13 @@ function CargoTraitSystem.new(deps: Deps): CargoTraitSystem
 				end
 			end)
 			dropped = CarryServiceServer.dropped:Connect(onDropped)
+			-- Rattles and searches are heard as sounds too (drops are played by CargoServiceServer, which knows the item).
+			noises = deps.noiseMade:Connect(function(position: Vector3, _radius: number, source: string)
+				local id = CargoFeedbackUtils.noiseSound(source)
+				if id ~= nil then
+					soundAt(position, id)
+				end
+			end)
 		end,
 
 		stop = function(_self)
@@ -124,10 +148,19 @@ function CargoTraitSystem.new(deps: Deps): CargoTraitSystem
 				drops:Disconnect()
 				dropped = nil
 			end
+			local heard = noises
+			if heard ~= nil then
+				heard:Disconnect()
+				noises = nil
+			end
 		end,
 
 		puddles = function(_self)
 			return made
+		end,
+
+		sound = function(_self, position, id)
+			soundAt(position, id)
 		end,
 	}
 	return system

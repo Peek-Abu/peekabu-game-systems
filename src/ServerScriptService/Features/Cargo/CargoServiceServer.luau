@@ -12,6 +12,9 @@
 	- Search: desks and lockers stocked per shift (`stockSearchable`); a short hold gives what was rolled.
 	- Banking: the `cargo-load` interaction on the truck bed. Claim (CargoClaimTracker) → add (the game's
 	  `onBanked` handler) → destroy, in one synchronous step, so two Loads never count one item twice.
+	- Feel (M3): every Load is announced (`Banked`, built by CargoFeedbackUtils.banked: the client swoops the
+	  items into the truck, cha-chings and floats "+N"); drops (here), rattles and searches (CargoTraitSystem)
+	  play positional sounds, silent while their CargoAssets ids are pending.
 
 	Spec-exempt shell (Instances, Players, ByteNet, signals); the rules are the specced CargoHandlingRules,
 	CargoBankRules, CargoClaimTracker and CargoPocketTracker.
@@ -36,6 +39,7 @@ local CargoConstants = require(CargoShared.Data.CargoConstants)
 local CargoRegistry = require(CargoShared.Data.CargoRegistry)
 local CargoTypes = require(CargoShared.Data.CargoTypes)
 local CargoEvents = require(CargoShared.Net.CargoEvents)
+local CargoFeedbackUtils = require(CargoShared.Utils.CargoFeedbackUtils)
 local CargoBankRules = require(CargoShared.Rules.CargoBankRules)
 local CargoHandlingRules = require(CargoShared.Rules.CargoHandlingRules)
 local InteractionRegistry = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionRegistry)
@@ -174,6 +178,7 @@ local function onDropped(_player: Player, object: Instance, reason: CarryTypes.D
 	end
 	local position = object.Position
 	noiseMade:Fire(position, CargoHandlingRules.dropNoise(def), "drop")
+	traits:sound(position, CargoFeedbackUtils.dropSound(def))
 	if CargoHandlingRules.shouldSpill(def, reason) then
 		claims:claim(id)
 		local parent: Instance? = object.Parent
@@ -254,6 +259,7 @@ CargoServiceServer = {
 		"VacuumServiceServer",
 		"ToastServiceServer",
 		"StateSyncServiceServer",
+		"SoundServiceServer",
 	},
 	noiseMade = noiseMade,
 
@@ -396,6 +402,8 @@ CargoServiceServer = {
 		local item = CarryServiceServer:getCarried(player)
 		local hands = if item ~= nil then entryOf(item) else nil
 		local id = if item ~= nil then idOf(item) else nil
+		-- Where the swoop starts: the hands item, or the player (a pockets-only Load).
+		local from = if item ~= nil and item:IsA("BasePart") then item.Position else root.Position
 		local deposit, reason = CargoBankRules.deposit(hands, pocketSystem:list(player.UserId), CargoRegistry.get)
 		if deposit == nil then
 			return false, reason
@@ -403,7 +411,7 @@ CargoServiceServer = {
 		if hands ~= nil and (id == nil or not claims:claim(id)) then
 			return false, "already loaded"
 		end
-		local ok, accepted = pcall(handler, player, deposit)
+		local ok, accepted, credited = pcall(handler, player, deposit)
 		if not ok then
 			log:warn(`banking handler failed: {accepted}`)
 		end
@@ -418,6 +426,7 @@ CargoServiceServer = {
 			CarryServiceServer:forceDrop(player, "forced")
 			item:Destroy()
 		end
+		CargoEvents.packets.Banked.sendToAll(CargoFeedbackUtils.banked(deposit, from, bed.Position, bed.Size, credited))
 		counters.banked += 1
 		return true, nil
 	end,
