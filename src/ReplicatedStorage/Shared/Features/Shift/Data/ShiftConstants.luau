@@ -92,4 +92,15 @@ return table.freeze({
 	TOAST_STAMP = "stamp",
 	TOAST_STYLES = table.freeze(TOAST_STYLES),
 	STAMP_SECONDS = 3,
+	-- Feel (spec §7): the quota's FOV kick, the camera shake of a tier rise and of overtime, the overtime ticking
+	-- layer's ambience slot, and the clock-out countdown's louder last seconds. The client re-checks every
+	-- FEEDBACK_INTERVAL seconds.
+	QUOTA_FOV_KICK = 8,
+	QUOTA_FOV_SECONDS = 0.6,
+	TIER_TRAUMA = 0.2,
+	OVERTIME_TRAUMA = 0.3,
+	TICKING_LAYER = "shiftOvertime",
+	COUNTDOWN_LOUD = 3,
+	COUNTDOWN_LOUD_SCALE = 1.6,
+	FEEDBACK_INTERVAL = 0.1,
 })

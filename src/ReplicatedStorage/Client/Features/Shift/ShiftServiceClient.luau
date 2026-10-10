@@ -2,7 +2,8 @@
 --[=[
 	ShiftServiceClient: the shift on the client. Registers the placeholder Shift widgets in the HUD during init
 	(before the UI starts), and sends the local player's results vote whenever ShiftStore.myVote changes
-	(clearing it when results end). Reads go through ShiftStore.
+	(clearing it when results end). Starts ShiftFeedbackSystem (the shift's horns, stings, ticking layer and countdown) and
+	registers the sticky-note and stamp toast styles. Reads go through ShiftStore.
 
 	Spec-exempt shell (Charm subscriptions, ByteNet); decoding is the specced ShiftSnapshotUtils.
 
@@ -19,6 +20,7 @@ local ShiftEvents = require(ShiftShared.Net.ShiftEvents)
 local ToastRegistry = require(ReplicatedStorage.Shared.Features.Toast.Data.ToastRegistry)
 local VacuumServiceClient = require(ReplicatedStorage.Client.Features.Vacuum.VacuumServiceClient)
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
+local ShiftFeedbackSystem = require(ReplicatedStorage.Client.Features.Shift.Systems.ShiftFeedbackSystem)
 local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudRegistry)
 local ShiftHud = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHud)
 local ShiftMobileButtons = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftMobileButtons)
@@ -43,7 +45,13 @@ export type ShiftServiceClient = {
 }
 
 local ShiftServiceClient: ShiftServiceClient = {
-	dependencies = { "StateSyncServiceClient", "VacuumServiceClient", "CargoServiceClient" },
+	dependencies = {
+		"StateSyncServiceClient",
+		"VacuumServiceClient",
+		"CargoServiceClient",
+		"SoundServiceClient",
+		"CameraServiceClient",
+	},
 
 	init = function(_self)
 		if not HudRegistry.has("shiftHud") then
@@ -79,9 +87,11 @@ local ShiftServiceClient: ShiftServiceClient = {
 				end
 			end)
 		)
+		ShiftFeedbackSystem.start()
 	end,
 
 	stop = function(_self)
+		ShiftFeedbackSystem.stop()
 		for _, unsubscribe in unsubscribers do
 			unsubscribe()
 		end
