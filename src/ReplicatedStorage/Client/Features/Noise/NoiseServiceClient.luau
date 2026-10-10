@@ -1,24 +1,36 @@
 --!strict
 --[=[
 	NoiseServiceClient: the ripple ring (Cleanup Crew spec §7: "any noise: faint ripple ring on the floor at the
-	radius Harlow hears it"). Each `Ripple` becomes a flat neon disc on the floor under the noise that spreads
-	to the heard radius and fades. Client-local parts (never replicated). Placeholder look; M3 restyles it.
+	radius Harlow hears it"). Each `Ripple` becomes a thin, pale ring lying on the floor under the noise: a
+	CylinderHandleAdornment with an inner radius, on an invisible anchor, that spreads out to the heard radius,
+	thins and fades (NoiseRippleFormulas), driven every frame until it is gone. Ripples whose ring stays far from
+	the camera are not drawn. Client-local instances (never replicated).
 
-	Spec-exempt shell (Instances, tweens, raycasts).
+	Spec-exempt shell (Instances, raycasts, RunService); the ring's shape over time is the specced
+	NoiseRippleFormulas.
 
 	@class NoiseServiceClient
 ]=]
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local NoiseConstants = require(ReplicatedStorage.Shared.Features.Noise.Data.NoiseConstants)
 local NoiseEvents = require(ReplicatedStorage.Shared.Features.Noise.Net.NoiseEvents)
+local NoiseRippleFormulas = require(ReplicatedStorage.Client.Features.Noise.Utils.NoiseRippleFormulas)
 
+type Ripple = {
+	anchor: Part,
+	ring: CylinderHandleAdornment,
+	radius: number,
+	started: number,
+}
+
+local ripples: { Ripple } = {}
 local stoppers: { () -> () } = {}
-local drawn = 0
+local counters = { drawn = 0, skipped = 0 }
 
 -- The floor under a noise (characters and non-colliding parts ignored), or the noise itself.
 local function floorBelow(position: Vector3): Vector3
@@ -38,45 +50,70 @@ local function floorBelow(position: Vector3): Vector3
 	return if hit ~= nil then hit.Position else position
 end
 
-local function ripple(position: Vector3, radius: number)
-	if radius <= 0 then
+local function shape(ring: CylinderHandleAdornment, radius: number, alpha: number)
+	local frame = NoiseRippleFormulas.ring(radius, alpha)
+	-- Radius before InnerRadius when growing, so the inner never exceeds the outer for a frame.
+	ring.Radius = frame.outer
+	ring.InnerRadius = frame.inner
+	ring.Transparency = frame.transparency
+end
+
+local function draw(position: Vector3, radius: number)
+	local camera = Workspace.CurrentCamera
+	if camera == nil or not NoiseRippleFormulas.shown(camera.CFrame.Position, position, radius) then
+		counters.skipped += 1
 		return
 	end
-	local thickness = NoiseConstants.RIPPLE_THICKNESS
 	local floor = floorBelow(position)
-	local ring = Instance.new("Part")
-	ring.Name = NoiseConstants.RIPPLE_NAME
-	ring.Shape = Enum.PartType.Cylinder
-	ring.Anchored = true
-	ring.CanCollide = false
-	ring.CanQuery = false
-	ring.CanTouch = false
-	ring.CastShadow = false
-	ring.Material = Enum.Material.Neon
-	ring.Color = NoiseConstants.RIPPLE_COLOR
-	ring.Transparency = NoiseConstants.RIPPLE_TRANSPARENCY
-	ring.Size = Vector3.new(thickness, 1, 1)
-	-- A cylinder's axis is its X: roll it upright so the disc lies flat on the floor.
-	ring.CFrame = CFrame.new(floor + Vector3.new(0, thickness / 2, 0)) * CFrame.Angles(0, 0, math.rad(90))
-	ring.Parent = Workspace
-	local diameter = radius * 2
-	local tween = TweenService:Create(
-		ring,
-		TweenInfo.new(NoiseConstants.RIPPLE_SECONDS, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-		{ Size = Vector3.new(thickness, diameter, diameter), Transparency = 1 }
-	)
-	tween.Completed:Once(function()
-		ring:Destroy()
-	end)
-	tween:Play()
-	drawn += 1
+	local anchor = Instance.new("Part")
+	anchor.Name = NoiseConstants.RIPPLE_NAME
+	anchor.Anchored = true
+	anchor.CanCollide = false
+	anchor.CanQuery = false
+	anchor.CanTouch = false
+	anchor.CastShadow = false
+	anchor.Transparency = 1
+	anchor.Size = Vector3.new(0.2, 0.2, 0.2)
+	anchor.CFrame = CFrame.new(floor + Vector3.new(0, NoiseConstants.RIPPLE_LIFT, 0))
+	anchor.Parent = Workspace
+	local ring = Instance.new("CylinderHandleAdornment")
+	ring.Adornee = anchor
+	-- A handle cylinder's axis is its Z: tip it up so the ring lies flat on the floor.
+	ring.CFrame = CFrame.Angles(math.rad(90), 0, 0)
+	ring.Height = NoiseConstants.RIPPLE_HEIGHT
+	ring.Color3 = NoiseConstants.RIPPLE_COLOR
+	ring.AlwaysOnTop = false
+	shape(ring, radius, 0)
+	ring.Parent = anchor
+	table.insert(ripples, { anchor = anchor, ring = ring, radius = radius, started = os.clock() })
+	counters.drawn += 1
 end
+
+local function step()
+	local now = os.clock()
+	for index = #ripples, 1, -1 do
+		local ripple = ripples[index]
+		local alpha = (now - ripple.started) / NoiseConstants.RIPPLE_SECONDS
+		if alpha >= 1 then
+			ripple.anchor:Destroy()
+			table.remove(ripples, index)
+		else
+			shape(ripple.ring, ripple.radius, alpha)
+		end
+	end
+end
+
+export type NoiseClientState = {
+	live: number,
+	drawn: number,
+	skipped: number,
+}
 
 export type NoiseServiceClient = {
 	dependencies: { string },
 	start: (self: NoiseServiceClient) -> (),
 	stop: (self: NoiseServiceClient) -> (),
-	getState: (self: NoiseServiceClient) -> { [string]: any },
+	getState: (self: NoiseServiceClient) -> NoiseClientState,
 }
 
 local NoiseServiceClient: NoiseServiceClient = {
@@ -86,9 +123,15 @@ local NoiseServiceClient: NoiseServiceClient = {
 		table.insert(
 			stoppers,
 			NoiseEvents.packets.Ripple.listen(function(data)
-				ripple(data.position, data.radius)
+				draw(data.position, data.radius)
 			end)
 		)
+		local connection = RunService.RenderStepped:Connect(function(_deltaTime: number)
+			step()
+		end)
+		table.insert(stoppers, function()
+			connection:Disconnect()
+		end)
 	end,
 
 	stop = function(_self)
@@ -96,10 +139,14 @@ local NoiseServiceClient: NoiseServiceClient = {
 			stop()
 		end
 		table.clear(stoppers)
+		for _, ripple in ripples do
+			ripple.anchor:Destroy()
+		end
+		table.clear(ripples)
 	end,
 
 	getState = function(_self)
-		return { drawn = drawn }
+		return { live = #ripples, drawn = counters.drawn, skipped = counters.skipped }
 	end,
 }
 

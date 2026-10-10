@@ -317,7 +317,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Shared.Features.Noise.Data.NoiseConstants"] = "static ripple look (no logic)",
 	["ReplicatedStorage.Shared.Features.Noise.Net.NoiseEvents"] = "ByteNet packet definitions (no logic)",
 	["ServerScriptService.Features.Noise.NoiseServiceServer"] = "signal/ByteNet relay shell (the hearing rule NoiseRules is specced)",
-	["ReplicatedStorage.Client.Features.Noise.NoiseServiceClient"] = "Instance/tween/raycast shell (draws the ripple)",
+	["ReplicatedStorage.Client.Features.Noise.NoiseServiceClient"] = "Instance/raycast/RunService shell (the ring's shape is specced in NoiseRippleFormulas)",
 
 	-- Cleanup Crew: Office
 	["ServerScriptService.Features.Office.Data.OfficeTypes"] = "type definitions only (no runtime logic)",
