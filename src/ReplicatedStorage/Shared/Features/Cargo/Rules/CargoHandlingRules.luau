@@ -68,4 +68,26 @@ function CargoHandlingRules.dropNoise(def: ItemDef): number
 	return CargoConstants.DROP_NOISE[def.size] or 0
 end
 
+--[=[
+	What a swap request does (spec §6.3): with empty hands the newest pocketed item comes out ("unpocket"); with
+	a tiny item in hand it goes into the pockets and the oldest pocketed item comes out ("swap"). Nil with a
+	reason when the pockets are empty or the hands hold anything bigger (or not cargo).
+]=]
+function CargoHandlingRules.swapPlan(
+	holding: boolean,
+	def: ItemDef?,
+	pocketed: number
+): (CargoTypes.SwapAction?, string?)
+	if pocketed <= 0 then
+		return nil, "pockets empty"
+	end
+	if not holding then
+		return "unpocket", nil
+	end
+	if def == nil or def.size ~= CargoConstants.POCKET_SIZE then
+		return nil, "hands full"
+	end
+	return "swap", nil
+end
+
 return CargoHandlingRules

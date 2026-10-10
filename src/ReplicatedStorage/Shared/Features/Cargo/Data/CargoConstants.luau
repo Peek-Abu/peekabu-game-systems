@@ -33,6 +33,8 @@ return table.freeze({
 	PUBLIC_POCKET_FIELDS = table.freeze(PUBLIC_POCKET_FIELDS),
 	-- The Input action that pockets the hands item.
 	POCKET_ACTION = "pocket",
+	-- The Input action that swaps the hands item with a pocket, or unpockets into empty hands (M2).
+	SWAP_ACTION = "swap",
 	-- A bulky item is held far out in front (the cabinet cart).
 	BULKY_HOLD_OFFSET = CFrame.new(0, -1, -4.5),
 	-- Attributes on a spawned item, and its label's name.

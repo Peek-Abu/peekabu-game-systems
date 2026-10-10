@@ -3,8 +3,8 @@
 	CargoServiceServer: Cleanup Crew's cargo (spec §4 "Cargo and carrying", §6.4). Every catalog item is a
 	Carry kind (weight by size, the bulky cart held far out) spawned by CargoSpawnSystem. On top of Carry:
 
-	- Pockets: the `pocket` packet moves a tiny hands item into one of two pockets (CargoPocketTracker),
-	  published as the public `pocket1` / `pocket2` fields. Pockets scatter where their owner dies or leaves.
+	- Pockets (CargoPocketSystem): the `pocket` and `swap` packets; two tiny-only slots published as
+	  `pocket1` / `pocket2`; scattered where their owner dies or leaves.
 	- Handling (Carry's `dropped`, which SignalPlus delivers deferred): a fragile item loses a value tier per
 	  impact; a recycling box spills into a pile (VacuumServiceServer:spawnPile); every drop fires `noiseMade`
 	  (the M2 Noise seam).
@@ -41,14 +41,12 @@ local InteractionRegistry = require(ReplicatedStorage.Shared.Features.Interactio
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local CargoClaimTracker = require(CargoServer.State.CargoClaimTracker)
-local CargoPocketTracker = require(CargoServer.State.CargoPocketTracker)
 local CargoPocketSystem = require(CargoServer.Systems.CargoPocketSystem)
 local CargoSpawnSystem = require(CargoServer.Systems.CargoSpawnSystem)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
 local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
 local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
 local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
-local StateSyncPublicPlayerStore = require(ServerScriptService.Features.StateSync.State.StateSyncPublicPlayerStore)
 
 -- Registered at load, before any item spawns or any desk is tagged.
 for _, id in CargoRegistry.ids() do
@@ -81,13 +79,11 @@ type Stock = { kind: string?, searched: boolean }
 local noiseMade: SignalTyped.Signal<Vector3, number, string> = SignalTyped.new()
 local log = Logger.new("CargoServiceServer")
 local spawner = CargoSpawnSystem.new()
-local pocketSystem = CargoPocketSystem.new(spawner)
 local claims = CargoClaimTracker.new()
-local pockets = CargoPocketTracker.new()
 local stock: { [BasePart]: Stock } = {}
 local bankHandler: CargoTypes.BankHandler? = nil
 local container: Instance? = nil
-local counters = { banked = 0, pocketed = 0, spilled = 0, searched = 0, scattered = 0 }
+local counters = { banked = 0, spilled = 0, searched = 0 }
 local stoppers: { () -> () } = {}
 
 local function rootOf(player: Player): BasePart?
@@ -121,18 +117,6 @@ local function idOf(object: Instance): number?
 	return id
 end
 
-local function publishPockets(userId: number)
-	local list = pockets:list(userId)
-	for index, field in CargoConstants.PUBLIC_POCKET_FIELDS do
-		local entry = list[index]
-		if entry ~= nil then
-			StateSyncPublicPlayerStore.set(userId, { [field] = entry.kind })
-		else
-			StateSyncPublicPlayerStore.clearField(userId, field)
-		end
-	end
-end
-
 -- Everything a floor probe must look through: every character, plus `extra`.
 local function ignoreList(extra: Instance?): { Instance }
 	local list: { Instance } = {}
@@ -148,18 +132,18 @@ local function ignoreList(extra: Instance?): { Instance }
 	return list
 end
 
--- Drops a player's pocketed items around `origin` (default: where they are, were last seen, or the shift
--- container's centre). Nothing is taken unless it can be put back in the world.
-local function scatter(player: Player, origin: Vector3?)
-	local parent = container
-	local at = origin or pocketSystem:originOf(player, parent)
-	if at == nil or parent == nil or parent.Parent == nil then
-		return
-	end
-	local list = pockets:take(player.UserId)
-	publishPockets(player.UserId)
-	counters.scattered += pocketSystem:scatter(list, at, parent, ignoreList())
-end
+local pocketSystem = CargoPocketSystem.new({
+	claims = claims,
+	spawner = spawner,
+	container = function(): Instance?
+		return container
+	end,
+	ignore = function(): { Instance }
+		return ignoreList(nil)
+	end,
+	entryOf = entryOf,
+	idOf = idOf,
+})
 
 -- Carry's `dropped` (deferred): fragile tiers, spills and drop noise. Pocketing and banking claim the item
 -- before they force-drop it, so those never land here.
@@ -211,6 +195,7 @@ export type CargoServiceServer = {
 	stockSearchable: (self: CargoServiceServer, part: BasePart, kind: string?) -> (),
 	onBanked: (self: CargoServiceServer, handler: CargoTypes.BankHandler) -> (),
 	pocket: (self: CargoServiceServer, player: Player) -> (boolean, string?),
+	swap: (self: CargoServiceServer, player: Player) -> (boolean, string?),
 	load: (self: CargoServiceServer, player: Player, bed: BasePart) -> (boolean, string?),
 	search: (self: CargoServiceServer, player: Player, part: BasePart) -> (boolean, string?),
 	scatterPockets: (self: CargoServiceServer, player: Player, origin: CFrame) -> (),
@@ -235,6 +220,17 @@ local onPocket = RequestHandler.wrap({
 	end,
 })
 
+local onSwap = RequestHandler.wrap({
+	name = "CargoSwap",
+	rateLimit = { maxRequests = 6, windowSeconds = 5 },
+	handler = function(_data: unknown, player: Player)
+		local ok, reason = CargoServiceServer:swap(player)
+		if not ok and reason ~= nil then
+			tell(player, reason)
+		end
+	end,
+})
+
 CargoServiceServer = {
 	dependencies = {
 		"CarryServiceServer",
@@ -246,7 +242,7 @@ CargoServiceServer = {
 	noiseMade = noiseMade,
 
 	--[=[
-		Handles Load and Search, Carry's drops, Vacuum's dust bags and the pocket packet; scatters pockets on
+		Handles Load and Search, Carry's drops, Vacuum's dust bags and the pocket and swap packets; scatters pockets on
 		death and leave.
 	]=]
 	start = function(self)
@@ -271,7 +267,7 @@ CargoServiceServer = {
 			end
 		end)
 		local leaving = Players.PlayerRemoving:Connect(function(player)
-			scatter(player, nil)
+			pocketSystem:scatter(player, nil)
 			pocketSystem:forget(player.UserId)
 		end)
 		table.insert(stoppers, function()
@@ -290,11 +286,19 @@ CargoServiceServer = {
 		)
 		table.insert(
 			stoppers,
+			CargoEvents.packets.Swap.listen(function(data: boolean, player: Player?)
+				if player then
+					onSwap(data, player)
+				end
+			end)
+		)
+		table.insert(
+			stoppers,
 			Observers.observeCharacter(function(player: Player, character: Model)
 				local humanoid = character:FindFirstChildOfClass("Humanoid")
 				local died = if humanoid ~= nil
 					then humanoid.Died:Connect(function()
-						scatter(player, nil)
+						pocketSystem:scatter(player, nil)
 					end)
 					else nil
 				return function()
@@ -348,23 +352,14 @@ CargoServiceServer = {
 		Moves the hands item into a pocket: claim, record, release from Carry, destroy.
 	]=]
 	pocket = function(_self, player)
-		local item = CarryServiceServer:getCarried(player)
-		local entry = if item ~= nil then entryOf(item) else nil
-		local id = if item ~= nil then idOf(item) else nil
-		local def = if entry ~= nil then CargoRegistry.get(entry.kind) else nil
-		local ok, reason = CargoHandlingRules.canPocket(def, pockets:count(player.UserId))
-		if not ok then
-			return false, reason
-		end
-		if item == nil or entry == nil or id == nil or not claims:claim(id) then
-			return false, "nothing to pocket"
-		end
-		pockets:add(player.UserId, entry)
-		CarryServiceServer:forceDrop(player, "forced")
-		item:Destroy()
-		publishPockets(player.UserId)
-		counters.pocketed += 1
-		return true, nil
+		return pocketSystem:pocket(player)
+	end,
+
+	--[=[
+		Unpockets into empty hands, or trades a tiny hands item for the oldest pocketed one (spec §6.3).
+	]=]
+	swap = function(_self, player)
+		return pocketSystem:swap(player)
 	end,
 
 	--[=[
@@ -383,7 +378,7 @@ CargoServiceServer = {
 		local item = CarryServiceServer:getCarried(player)
 		local hands = if item ~= nil then entryOf(item) else nil
 		local id = if item ~= nil then idOf(item) else nil
-		local deposit, reason = CargoBankRules.deposit(hands, pockets:list(player.UserId), CargoRegistry.get)
+		local deposit, reason = CargoBankRules.deposit(hands, pocketSystem:list(player.UserId), CargoRegistry.get)
 		if deposit == nil then
 			return false, reason
 		end
@@ -400,8 +395,7 @@ CargoServiceServer = {
 			end
 			return false, "the truck is not taking cargo"
 		end
-		pockets:take(player.UserId)
-		publishPockets(player.UserId)
+		pocketSystem:take(player.UserId)
 		if item ~= nil and hands ~= nil then
 			CarryServiceServer:forceDrop(player, "forced")
 			item:Destroy()
@@ -439,11 +433,11 @@ CargoServiceServer = {
 		Drops a player's pockets around `origin` (M2's catch: where they land). Death and leaving use it too.
 	]=]
 	scatterPockets = function(_self, player, origin)
-		scatter(player, origin.Position)
+		pocketSystem:scatter(player, origin.Position)
 	end,
 
 	pocketsOf = function(_self, player)
-		return pockets:list(player.UserId)
+		return pocketSystem:list(player.UserId)
 	end,
 
 	--[=[
@@ -452,15 +446,12 @@ CargoServiceServer = {
 	]=]
 	reset = function(_self)
 		claims:clear()
-		pockets:clear()
+		pocketSystem:clear()
 		for part in stock do
 			InteractionServiceServer:setEnabled(part, false)
 		end
 		table.clear(stock)
 		container = nil
-		for _, player in Players:GetPlayers() do
-			publishPockets(player.UserId)
-		end
 	end,
 
 	getState = function(_self)
@@ -473,6 +464,7 @@ CargoServiceServer = {
 			hasContainer = container ~= nil,
 			hasBankHandler = bankHandler ~= nil,
 			counters = table.clone(counters),
+			pockets = pocketSystem:counts(),
 		}
 	end,
 }

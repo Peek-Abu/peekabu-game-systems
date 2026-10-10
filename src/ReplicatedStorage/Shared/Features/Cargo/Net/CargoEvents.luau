@@ -28,6 +28,11 @@ local CargoEvents = ByteNet.defineNamespace(NAMESPACE, function()
 				value = ByteNet.bool,
 				reliabilityType = "reliable",
 			}),
+			-- Swap the hands item with a pocket, or unpocket into empty hands (M2). Payload unused.
+			Swap = ByteNet.definePacket({
+				value = ByteNet.bool,
+				reliabilityType = "reliable",
+			}),
 		},
 		queries = {},
 		structs = {},

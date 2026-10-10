@@ -19,6 +19,7 @@ export type CargoPocketTracker = {
 	list: (self: CargoPocketTracker, userId: number) -> { CargoEntry },
 	count: (self: CargoPocketTracker, userId: number) -> number,
 	take: (self: CargoPocketTracker, userId: number) -> { CargoEntry },
+	remove: (self: CargoPocketTracker, userId: number, index: number) -> CargoEntry?,
 	clear: (self: CargoPocketTracker) -> (),
 }
 
@@ -64,6 +65,16 @@ function CargoPocketTracker.new(): CargoPocketTracker
 			local list = pockets[userId] or {}
 			pockets[userId] = nil
 			return copy(list)
+		end,
+
+		-- Takes the entry in slot `index` out (the slots after it move up); nil when that slot is empty.
+		remove = function(_self, userId, index)
+			local list = pockets[userId]
+			if list == nil or index < 1 or index > #list then
+				return nil
+			end
+			local entry = table.remove(list, index)
+			return if entry ~= nil then { kind = entry.kind, value = entry.value } else nil
 		end,
 
 		clear = function(_self)

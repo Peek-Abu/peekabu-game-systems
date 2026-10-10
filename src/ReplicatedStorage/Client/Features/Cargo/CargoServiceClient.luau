@@ -1,6 +1,6 @@
 --!strict
 --[=[
-	CargoServiceClient: the `pocket` Input action (Q / D-pad up), and button-friendly `pocket`, `drop` and
+	CargoServiceClient: the `pocket` (Q) and `swap` (X) Input actions, and button-friendly `pocket`, `drop` and
 	`throw` for the Shift HUD's touch buttons. Requests only; the server decides.
 
 	Drop and throw send Carry's own packets: CarryServiceClient binds them to G / F but has no callable API
@@ -29,6 +29,7 @@ export type CargoServiceClient = {
 	start: (self: CargoServiceClient) -> (),
 	stop: (self: CargoServiceClient) -> (),
 	pocket: (self: CargoServiceClient) -> (),
+	swap: (self: CargoServiceClient) -> (),
 	drop: (self: CargoServiceClient) -> (),
 	throw: (self: CargoServiceClient) -> (),
 }
@@ -44,6 +45,13 @@ local CargoServiceClient: CargoServiceClient = {
 				description = "Pocket a tiny item",
 			})
 		end
+		if not InputActionRegistry.has(CargoConstants.SWAP_ACTION) then
+			InputActionRegistry.register(CargoConstants.SWAP_ACTION, {
+				context = "gameplay",
+				bindings = { keyboard = { Enum.KeyCode.X }, gamepad = { Enum.KeyCode.ButtonY } },
+				description = "Swap with a pocket (or unpocket)",
+			})
+		end
 	end,
 
 	start = function(self)
@@ -52,6 +60,14 @@ local CargoServiceClient: CargoServiceClient = {
 			InputServiceClient:bind(CargoConstants.POCKET_ACTION, function(phase)
 				if phase == "begin" then
 					self:pocket()
+				end
+			end)
+		)
+		table.insert(
+			unbinders,
+			InputServiceClient:bind(CargoConstants.SWAP_ACTION, function(phase)
+				if phase == "begin" then
+					self:swap()
 				end
 			end)
 		)
@@ -68,6 +84,11 @@ local CargoServiceClient: CargoServiceClient = {
 		if CarryServiceClient:isCarrying() then
 			CargoEvents.packets.Pocket.send(true)
 		end
+	end,
+
+	-- Works with empty hands too (unpocket); the server decides.
+	swap = function(_self)
+		CargoEvents.packets.Swap.send(true)
 	end,
 
 	drop = function(_self)

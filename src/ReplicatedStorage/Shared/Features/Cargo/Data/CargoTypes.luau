@@ -72,4 +72,8 @@ export type SpawnOptions = {
 	value: number?,
 }
 
+-- What a swap request does (M2, spec §6.3): take the newest pocketed item into empty hands, or trade a tiny
+-- hands item for the oldest pocketed one.
+export type SwapAction = "unpocket" | "swap"
+
 return {}
