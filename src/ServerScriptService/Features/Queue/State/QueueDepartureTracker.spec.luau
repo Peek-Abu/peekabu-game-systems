@@ -56,6 +56,13 @@ return function()
 		expect(#tracker:finished(second).gaveUp).to.equal(0)
 	end)
 
+	it("starts nothing when nobody in the group is free to go", function()
+		local first = tracker:begin({ 7 })
+		expect(tracker:begin({ 7 })).to.equal(nil) -- 7 is already in flight with the first departure
+		expect(tracker:begin({})).to.equal(nil)
+		expect(tracker:departureOf(7)).to.equal(first)
+	end)
+
 	it("finds teleports that never resolved", function()
 		tracker:begin({ 7, 8 })
 		tracker:attempt(7, 100)

@@ -86,6 +86,27 @@ return function()
 		expect(tracker:ready(120)).to.equal(true)
 	end)
 
+	it("counts a party member who joined before their ticket was read", function()
+		local tracker = QueueArrivalTracker.new(20, 4)
+		expect(tracker:join(7, 100)).to.equal("crew") -- no ticket yet: boarded as a stranger
+		tracker:expect(ticket({ 7, 8 }, 3), 100)
+		expect(tracker:join(50, 101)).to.equal("crew") -- 3 seats - 1 crew - 1 coming = 1 (7 is not counted twice)
+		expect(tracker:join(8, 101)).to.equal("crew")
+		expect(tracker:ready(101)).to.equal(true) -- 7 does not block the start
+		expect(#tracker:close()).to.equal(3)
+	end)
+
+	it("never starts with nobody here", function()
+		local tracker = QueueArrivalTracker.new(20, 4)
+		tracker:expect(ticket({ 7, 8 }), 100)
+		tracker:join(7, 100)
+		tracker:leave(7)
+		expect(tracker:ready(130)).to.equal(false) -- the wait ran out with an empty crew: nothing happens
+		tracker:leave(8)
+		expect(tracker:ready(131)).to.equal(false) -- every expected player is accounted for, still nobody here
+		expect(tracker:isClosed()).to.equal(false)
+	end)
+
 	it("keeps the first ticket it saw", function()
 		local tracker = QueueArrivalTracker.new(20, 4)
 		tracker:expect(ticket({ 7 }), 100)

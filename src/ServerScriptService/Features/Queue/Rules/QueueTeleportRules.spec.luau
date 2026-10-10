@@ -121,5 +121,20 @@ return function()
 				expect(QueueTeleportRules.decode(forged)).to.equal(nil)
 			end
 		end)
+
+		it("rejects a party that lists a player twice", function()
+			local forged = wire(ticket())
+			forged.party = { 7, 8, 7 }
+			expect(QueueTeleportRules.decode(forged)).to.equal(nil)
+		end)
+
+		it("rejects a party that is not a list", function()
+			local keyed = wire(ticket())
+			keyed.party = { a = 7, b = 8 }
+			expect(QueueTeleportRules.decode(keyed)).to.equal(nil)
+			local holey = wire(ticket())
+			holey.party = { [1] = 7, [3] = 8, [5] = 9 }
+			expect(QueueTeleportRules.decode(holey)).to.equal(nil)
+		end)
 	end)
 end

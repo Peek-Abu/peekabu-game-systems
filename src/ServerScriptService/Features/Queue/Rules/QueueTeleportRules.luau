@@ -3,7 +3,7 @@
 	QueueTeleportRules: the retry schedule, the payload limits and the teleport ticket's wire format. Pure.
 
 	A ticket travels as JSON teleport data. It goes through the client on the way, so it carries only what
-	is harmless to forge (expected user ids, a contract id, a result card) and the arrival server decodes
+	is harmless to forge (expected user ids, a match id, a result summary) and the arrival server decodes
 	it as untrusted input. The reserved server's access code is what keeps strangers out.
 
 	@class QueueTeleportRules
@@ -88,7 +88,7 @@ local function kindOf(value: WorldValue?): QueueTypes.TicketKind?
 	return nil
 end
 
--- Positive whole user ids; absent decodes as empty.
+-- A list of distinct positive whole user ids; absent decodes as empty.
 local function userIds(value: WorldValue?): { number }?
 	local result: { number } = {}
 	if value == nil then
@@ -97,8 +97,14 @@ local function userIds(value: WorldValue?): { number }?
 	if type(value) ~= "table" then
 		return nil
 	end
-	for _, item in value do
-		if type(item) ~= "number" or item < 1 or item ~= math.floor(item) then
+	local count = 0
+	for _ in value do
+		count += 1
+	end
+	-- Every key 1..count present and nothing else: a list, not a dictionary or a list with holes.
+	for index = 1, count do
+		local item = value[index]
+		if type(item) ~= "number" or item < 1 or item ~= math.floor(item) or table.find(result, item) ~= nil then
 			return nil
 		end
 		table.insert(result, item)

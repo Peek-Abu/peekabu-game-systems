@@ -2,7 +2,7 @@
 --[=[
 	QueueArrivalTracker: an arrival server's party. Who is expected (from the first ticket seen), who has
 	arrived, and when the wait is over: once everyone expected has shown up, or `timeout` seconds after the
-	first arrival. Decides each joining player's admission. Plain bookkeeping keyed by UserIds;
+	first arrival, never while nobody is here. Decides each joining player's admission. Plain bookkeeping keyed by UserIds;
 	QueueArrivalSystem reads join data and does the teleports.
 
 	Seats are kept for expected players still on their way, so a stranger following a friend in never
@@ -67,9 +67,15 @@ function QueueArrivalTracker.new(timeout: number, defaultCapacity: number): Queu
 	local tracker: QueueArrivalTracker
 	tracker = {
 		-- The first ticket wins (one reserved server per departure); the wait starts at the first arrival.
+		-- A party member who boarded before any ticket was read (as a stranger) counts as arrived.
 		expect = function(_self, ticket, now)
 			if current == nil then
 				current = ticket
+				for _, userId in ticket.party do
+					if table.find(crew, userId) ~= nil then
+						seen[userId] = true
+					end
+				end
 			end
 			if startedAt == nil then
 				startedAt = now
@@ -112,7 +118,8 @@ function QueueArrivalTracker.new(timeout: number, defaultCapacity: number): Queu
 
 		ready = function(_self, now)
 			local began = startedAt
-			if closed or began == nil then
+			-- Never with an empty crew: nothing starts, and Roblox shuts an empty server down.
+			if closed or began == nil or #crew == 0 then
 				return false
 			end
 			if now - began >= timeout then

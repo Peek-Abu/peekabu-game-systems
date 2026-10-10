@@ -16,7 +16,7 @@ type Departure = { outstanding: number, gaveUp: { number }, reason: string? }
 export type Outcome = { gaveUp: { number }, reason: string? }
 
 export type QueueDepartureTracker = {
-	begin: (self: QueueDepartureTracker, userIds: { number }) -> number,
+	begin: (self: QueueDepartureTracker, userIds: { number }) -> number?,
 	departureOf: (self: QueueDepartureTracker, userId: number) -> number?,
 	attempt: (self: QueueDepartureTracker, userId: number, now: number) -> (),
 	fail: (self: QueueDepartureTracker, userId: number) -> number?,
@@ -49,16 +49,24 @@ function QueueDepartureTracker.new(): QueueDepartureTracker
 
 	local tracker: QueueDepartureTracker
 	tracker = {
-		-- A new departure for `userIds`; a player already in flight stays with their first departure.
+		--[=[
+			A new departure for `userIds`; a player already in flight stays with their first departure. Nil
+			when nobody is free to go: an empty departure would otherwise report a success nobody had.
+		]=]
 		begin = function(_self, userIds)
-			nextId += 1
-			local departure: Departure = { outstanding = 0, gaveUp = {}, reason = nil }
-			departures[nextId] = departure
+			local fresh: { number } = {}
 			for _, userId in userIds do
-				if members[userId] == nil then
-					members[userId] = { departure = nextId, failures = 0, since = nil }
-					departure.outstanding += 1
+				if members[userId] == nil and table.find(fresh, userId) == nil then
+					table.insert(fresh, userId)
 				end
+			end
+			if #fresh == 0 then
+				return nil
+			end
+			nextId += 1
+			departures[nextId] = { outstanding = #fresh, gaveUp = {}, reason = nil }
+			for _, userId in fresh do
+				members[userId] = { departure = nextId, failures = 0, since = nil }
 			end
 			return nextId
 		end,
