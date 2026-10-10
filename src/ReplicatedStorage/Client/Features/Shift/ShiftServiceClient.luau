@@ -16,6 +16,7 @@ local Charm = require(ReplicatedStorage.Packages.Charm)
 local ShiftConstants = require(ShiftShared.Data.ShiftConstants)
 local ShiftTypes = require(ShiftShared.Data.ShiftTypes)
 local ShiftEvents = require(ShiftShared.Net.ShiftEvents)
+local ToastRegistry = require(ReplicatedStorage.Shared.Features.Toast.Data.ToastRegistry)
 local VacuumServiceClient = require(ReplicatedStorage.Client.Features.Vacuum.VacuumServiceClient)
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
 local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudRegistry)
@@ -24,6 +25,13 @@ local ShiftMobileButtons = require(ReplicatedStorage.Client.UI.React.Screens.Shi
 local ShiftResults = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftResults)
 
 local unsubscribers: { () -> () } = {}
+
+-- Registered at load (before the first toast arrives) so ToastStack can draw them.
+for name, style in ShiftConstants.TOAST_STYLES do
+	if not ToastRegistry.has(name) then
+		ToastRegistry.register(name, style)
+	end
+end
 
 export type ShiftServiceClient = {
 	dependencies: { string },

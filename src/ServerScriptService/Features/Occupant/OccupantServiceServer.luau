@@ -43,6 +43,7 @@ local OccupantConstants = require(OccupantShared.Data.OccupantConstants)
 local OccupantTypes = require(OccupantShared.Data.OccupantTypes)
 local OccupantEvents = require(OccupantShared.Net.OccupantEvents)
 local OccupantTellRules = require(OccupantShared.Rules.OccupantTellRules)
+local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local NpcRegistry = require(ServerScriptService.Features.Npc.Data.NpcRegistry)
 local NpcTypes = require(ServerScriptService.Features.Npc.Data.NpcTypes)
@@ -229,6 +230,7 @@ local catchHooks: OccupantCatchSystem.Hooks = {
 		ShiftServiceServer:noteCatch(player)
 		ToastServiceServer:send("all", {
 			text = `{player.DisplayName} was caught by {OccupantConstants.DISPLAY_NAME}.`,
+			style = ShiftConstants.TOAST_STICKY,
 			duration = 4,
 		})
 	end,
@@ -399,7 +401,10 @@ local OccupantServiceServer: OccupantServiceServer = {
 			Observers.observeCharacter(function(player: Player, _character: Model)
 				if rehire[player.UserId] then
 					rehire[player.UserId] = nil
-					ToastServiceServer:send(player, { text = OccupantConstants.REHIRED_TEXT, duration = 3 })
+					ToastServiceServer:send(
+						player,
+						{ text = OccupantConstants.REHIRED_TEXT, style = ShiftConstants.TOAST_STICKY, duration = 3 }
+					)
 				end
 				return nil
 			end)

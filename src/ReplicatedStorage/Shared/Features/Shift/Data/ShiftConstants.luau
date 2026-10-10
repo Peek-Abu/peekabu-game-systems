@@ -10,8 +10,29 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
+local ToastTypes = require(ReplicatedStorage.Shared.Features.Toast.Data.ToastTypes)
 
 local VARIANT: ShiftTypes.Variant = "B"
+
+-- Cleanup Crew's two toast styles (spec §6.1 "sticky note" and "stamp"; §7 "sticky-note toasts, rubber-stamp
+-- announcements"). Look from the Figma style page, pending the developer's approval; each `sound` is a
+-- ShiftAssets slot (silent while pending).
+local TOAST_STYLES: { [string]: ToastTypes.ToastStyle } = {
+	sticky = {
+		background = Color3.fromRGB(255, 226, 102),
+		text = Color3.fromRGB(46, 38, 20),
+		accent = Color3.fromRGB(232, 160, 40),
+		font = Enum.Font.PermanentMarker,
+		sound = "shiftStickyNote",
+	},
+	stamp = {
+		background = Color3.fromRGB(244, 236, 216),
+		text = Color3.fromRGB(196, 38, 38),
+		accent = Color3.fromRGB(196, 38, 38),
+		font = Enum.Font.Oswald,
+		sound = "shiftStamp",
+	},
+}
 
 -- Seconds into the shift at which the pressure tier rises (2:00 and 4:00).
 local TIER_TIMES: { number } = { 120, 240 }
@@ -66,4 +87,9 @@ return table.freeze({
 	RETURN_WAIT_SECONDS = 130,
 	-- HUD widget order (the Toast stack draws above, at 1000).
 	HUD_ORDER = 10,
+	-- Toast styles (registered by both Shift services at load) and how long a stamp stays up.
+	TOAST_STICKY = "sticky",
+	TOAST_STAMP = "stamp",
+	TOAST_STYLES = table.freeze(TOAST_STYLES),
+	STAMP_SECONDS = 3,
 })

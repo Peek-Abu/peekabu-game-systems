@@ -39,6 +39,7 @@ local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local InteractionRegistry = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionRegistry)
 local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local RoundTypes = require(ReplicatedStorage.Shared.Features.Round.Data.RoundTypes)
+local ToastRegistry = require(ReplicatedStorage.Shared.Features.Toast.Data.ToastRegistry)
 local ShiftConstants = require(ShiftShared.Data.ShiftConstants)
 local ShiftTypes = require(ShiftShared.Data.ShiftTypes)
 local ShiftSnapshotUtils = require(ShiftShared.Utils.ShiftSnapshotUtils)
@@ -61,6 +62,13 @@ local StateSyncWorldStore = require(ServerScriptService.Features.StateSync.State
 -- Registered at load: the office's time clock carries this kind from the moment it is built.
 if not InteractionRegistry.has(ShiftConstants.CLOCK_OUT_KIND) then
 	InteractionRegistry.register(ShiftConstants.CLOCK_OUT_KIND, { actionText = "Clock out", objectText = "Time clock" })
+end
+
+-- Registered at load, before any toast names them (the server's ToastRules falls back to "info" otherwise).
+for name, style in ShiftConstants.TOAST_STYLES do
+	if not ToastRegistry.has(name) then
+		ToastRegistry.register(name, style)
+	end
 end
 
 local log = Logger.new("ShiftServiceServer")
@@ -175,6 +183,7 @@ local function beginRun()
 	end
 	ToastServiceServer:send("all", {
 		text = `Shift {state.shift}: clear {state.quota} of trash before the clock runs out. Load it on the truck.`,
+		style = ShiftConstants.TOAST_STICKY,
 		duration = 6,
 	})
 end
@@ -404,6 +413,7 @@ local ShiftServiceServer: ShiftServiceServer = {
 		local who = if player ~= nil then player.DisplayName else "Someone"
 		ToastServiceServer:send("all", {
 			text = `{who} clocked out. The shift ends in {ShiftConstants.CLOCK_OUT_SECONDS} s: cargo not on the truck is lost.`,
+			style = ShiftConstants.TOAST_STICKY,
 			duration = ShiftConstants.CLOCK_OUT_SECONDS,
 		})
 		return true
