@@ -348,6 +348,10 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftResultsPanel"] = "React UI component (placeholder; story in ShiftResultsPanel.story; strings specced in ShiftHudViewModel)",
 	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftResults"] = "React HUD widget wiring stores to ShiftResultsPanel (no logic)",
 	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftMobileButtons"] = "React touch buttons calling client services (no logic)",
+	-- Cleanup Crew: Depot
+	["ReplicatedStorage.Shared.Features.Depot.Data.DepotTypes"] = "type definitions only (no runtime logic)",
+	["ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants"] = "static names, place table, contracts and card texts (no logic)",
+	["ServerScriptService.Features.Depot.Data.DepotLayoutConstants"] = "authored layout data; validated by DepotLayoutRules.spec",
 }
 
 --[=[
