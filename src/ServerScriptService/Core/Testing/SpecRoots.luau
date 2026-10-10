@@ -289,6 +289,8 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Shared.Features.Cargo.Net.CargoEvents"] = "ByteNet packet definitions (no logic)",
 	["ServerScriptService.Features.Cargo.Systems.CargoSpawnSystem"] = "Instance/raycast shell (CargoRegistry is specced)",
 	["ServerScriptService.Features.Cargo.Systems.CargoPocketSystem"] = "Carry/Instance/public-state/Heartbeat shell (pocket, swap and slot decisions are specced in CargoHandlingRules and CargoPocketTracker)",
+	["ServerScriptService.Features.Cargo.Systems.CargoTraitSystem"] = "Players/Carry/Instance shell (rattle and puddle decisions are specced in CargoHandlingRules)",
+	["ReplicatedStorage.Client.Features.Cargo.Systems.CargoSlipSystem"] = "Humanoid/physics shell (the slip decision CargoHandlingRules.slips is specced)",
 	["ServerScriptService.Features.Cargo.CargoServiceServer"] = "Instance/Players/ByteNet/signal shell (handling, bank rules, claim and pocket trackers are specced)",
 	["ReplicatedStorage.Client.Features.Cargo.CargoServiceClient"] = "Input/Camera/ByteNet shell (the server decides)",
 

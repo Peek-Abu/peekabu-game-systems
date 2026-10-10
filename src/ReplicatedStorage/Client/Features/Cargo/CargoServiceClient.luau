@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	CargoServiceClient: the `pocket` (Q) and `swap` (X) Input actions, and button-friendly `pocket`, `drop` and
-	`throw` for the Shift HUD's touch buttons. Requests only; the server decides.
+	`throw` for the Shift HUD's touch buttons. Requests only; the server decides. M2: slipping on puddles (CargoSlipSystem).
 
 	Drop and throw send Carry's own packets: CarryServiceClient binds them to G / F but has no callable API
 	(an open question for the base).
@@ -15,6 +15,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants)
+local CargoSlipSystem = require(ReplicatedStorage.Client.Features.Cargo.Systems.CargoSlipSystem)
 local CargoEvents = require(ReplicatedStorage.Shared.Features.Cargo.Net.CargoEvents)
 local CarryEvents = require(ReplicatedStorage.Shared.Features.Carry.Net.CarryEvents)
 local CarryServiceClient = require(ReplicatedStorage.Client.Features.Carry.CarryServiceClient)
@@ -71,6 +72,7 @@ local CargoServiceClient: CargoServiceClient = {
 				end
 			end)
 		)
+		CargoSlipSystem.start()
 	end,
 
 	stop = function(_self)
@@ -78,6 +80,7 @@ local CargoServiceClient: CargoServiceClient = {
 			unbind()
 		end
 		table.clear(unbinders)
+		CargoSlipSystem.stop()
 	end,
 
 	pocket = function(_self)

@@ -8,6 +8,7 @@
 	- Handling (Carry's `dropped`, which SignalPlus delivers deferred): a fragile item loses a value tier per
 	  impact; a recycling box spills into a pile (VacuumServiceServer:spawnPile); every drop fires `noiseMade`
 	  (the M2 Noise seam).
+	- Traits (M2, CargoTraitSystem): rattly items pulse a noise while carried; the jug leaves a slippery puddle.
 	- Search: desks and lockers stocked per shift (`stockSearchable`); a short hold gives what was rolled.
 	- Banking: the `cargo-load` interaction on the truck bed. Claim (CargoClaimTracker) → add (the game's
 	  `onBanked` handler) → destroy, in one synchronous step, so two Loads never count one item twice.
@@ -43,6 +44,7 @@ local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local CargoClaimTracker = require(CargoServer.State.CargoClaimTracker)
 local CargoPocketSystem = require(CargoServer.Systems.CargoPocketSystem)
 local CargoSpawnSystem = require(CargoServer.Systems.CargoSpawnSystem)
+local CargoTraitSystem = require(CargoServer.Systems.CargoTraitSystem)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
 local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
 local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
@@ -131,6 +133,20 @@ local function ignoreList(extra: Instance?): { Instance }
 	end
 	return list
 end
+
+-- Rattles and puddles (M2). Claimed items (banked, pocketed) never splash.
+local traits = CargoTraitSystem.new({
+	noiseMade = noiseMade,
+	spawner = spawner,
+	container = function(): Instance?
+		return container
+	end,
+	ignore = ignoreList,
+	isClaimed = function(object: Instance): boolean
+		local id = idOf(object)
+		return id ~= nil and claims:isClaimed(id)
+	end,
+})
 
 local pocketSystem = CargoPocketSystem.new({
 	claims = claims,
@@ -276,6 +292,7 @@ CargoServiceServer = {
 			leaving:Disconnect()
 		end)
 		table.insert(stoppers, pocketSystem:start())
+		traits:start()
 		table.insert(
 			stoppers,
 			CargoEvents.packets.Pocket.listen(function(data: boolean, player: Player?)
@@ -311,6 +328,7 @@ CargoServiceServer = {
 	end,
 
 	stop = function(_self)
+		traits:stop()
 		for _, stop in stoppers do
 			stop()
 		end
@@ -465,6 +483,7 @@ CargoServiceServer = {
 			hasBankHandler = bankHandler ~= nil,
 			counters = table.clone(counters),
 			pockets = pocketSystem:counts(),
+			puddles = traits:puddles(),
 		}
 	end,
 }

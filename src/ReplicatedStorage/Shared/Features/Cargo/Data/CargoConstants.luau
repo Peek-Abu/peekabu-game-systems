@@ -52,7 +52,7 @@ return table.freeze({
 	-- The truck bed counts this far past its footprint, and this high above its top.
 	BED_TOLERANCE = 1.5,
 	BED_HEIGHT = 8,
-	-- Noise seams (M2): a jug's splash, a search, a rattle pulse.
+	-- Noise: a jug's splash, a search, a rattle pulse (every RATTLE_INTERVAL while carried).
 	SPLASH_NOISE = 70,
 	SEARCH_NOISE = 12,
 	RATTLE_NOISE = 12,
@@ -67,4 +67,17 @@ return table.freeze({
 	LABEL_DISTANCE = 24,
 	-- How far down the floor is looked for under a spill or a scattered item.
 	FLOOR_PROBE = 20,
+	-- M2 traits: the water jug's slippery puddle (lasts PUDDLE_SECONDS), and slipping on it: crossing at
+	-- SLIP_SPEED or faster, root within SLIP_HEIGHT of it, at most once per SLIP_COOLDOWN; a slip stands the
+	-- player down for SLIP_SECONDS and shoves them on (impulse SLIP_PUSH x mass). Checked every SLIP_CHECK.
+	PUDDLE_TAG = "CargoPuddle",
+	PUDDLE_SIZE = Vector3.new(7, 0.15, 7),
+	PUDDLE_COLOR = Color3.fromRGB(120, 180, 230),
+	PUDDLE_SECONDS = 25,
+	SLIP_SPEED = 8,
+	SLIP_HEIGHT = 5,
+	SLIP_COOLDOWN = 2,
+	SLIP_SECONDS = 0.9,
+	SLIP_PUSH = 25,
+	SLIP_CHECK = 0.1,
 })
