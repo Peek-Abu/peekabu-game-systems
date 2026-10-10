@@ -4,7 +4,7 @@
 	mouse, gamepad R2, or the Shift HUD's touch button through beginVacuum / endVacuum), it re-aims every
 	AIM_INTERVAL at the pile the player faces within range (VacuumAimUtils) and keeps Interaction's channel
 	on it; letting go stops the channel, and the pile keeps its progress. Nothing is sent while carrying.
-	The server decides everything.
+	The server decides everything. VacuumFeedbackSystem plays the suction, whine, pop and canister sounds.
 
 	Spec-exempt shell (Input, Camera, CollectionService); the aim is the specced VacuumAimUtils.
 
@@ -18,6 +18,7 @@ local Workspace = game:GetService("Workspace")
 
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local VacuumAimUtils = require(ReplicatedStorage.Client.Features.Vacuum.Utils.VacuumAimUtils)
+local VacuumFeedbackSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumFeedbackSystem)
 local CarryServiceClient = require(ReplicatedStorage.Client.Features.Carry.CarryServiceClient)
 local InputActionRegistry = require(ReplicatedStorage.Client.Features.Input.Data.InputActionRegistry)
 local InputServiceClient = require(ReplicatedStorage.Client.Features.Input.InputServiceClient)
@@ -68,7 +69,13 @@ export type VacuumServiceClient = {
 }
 
 local VacuumServiceClient: VacuumServiceClient = {
-	dependencies = { "InputServiceClient", "InteractionServiceClient", "CarryServiceClient" },
+	dependencies = {
+		"InputServiceClient",
+		"InteractionServiceClient",
+		"CarryServiceClient",
+		"SoundServiceClient",
+		"StateSyncServiceClient",
+	},
 
 	init = function(_self)
 		if InputActionRegistry.get(VacuumConstants.ACTION) == nil then
@@ -91,10 +98,12 @@ local VacuumServiceClient: VacuumServiceClient = {
 				end
 			end)
 		)
+		VacuumFeedbackSystem.start()
 	end,
 
 	stop = function(self)
 		self:endVacuum()
+		VacuumFeedbackSystem.stop()
 		for _, unbind in unbinders do
 			unbind()
 		end

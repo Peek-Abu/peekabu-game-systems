@@ -48,6 +48,26 @@ return table.freeze({
 	AIM_MIN_DOT = 0.35,
 	-- Where a dust bag lands, relative to the HumanoidRootPart (at the feet, a little ahead).
 	BAG_OFFSET = CFrame.new(0, -3, -2.5),
+	-- Feel (spec §7 "Vacuuming: suction particles into the nozzle, pile shrinks, rising whine, pop + sparkle,
+	-- canister fills"; "Canister full: chime, dust bag pops out"). The whine rises with the pile's progress.
+	WHINE_PITCH_MIN = 0.85,
+	WHINE_PITCH_MAX = 1.6,
+	WHINE_VOLUME_MIN = 0.6,
+	WHINE_VOLUME_MAX = 1.25,
+	-- A pile that disappears after being vacuumed past POP_PROGRESS within the last POP_WINDOW seconds was
+	-- cleared (pop + sparkle); anything else (a reset) vanishes quietly.
+	POP_PROGRESS = 0.5,
+	POP_WINDOW = 0.6,
+	-- How far from a pile its vacuumer's hand is looked for (a little past RANGE).
+	VACUUMER_RANGE = 10,
+	SUCTION_RATE = 40,
+	SUCTION_LIFETIME = 0.4,
+	SUCTION_SIZE = 0.35,
+	SUCTION_COLOR = Color3.fromRGB(190, 180, 160),
+	SPARKLE_COUNT = 24,
+	SPARKLE_LIFETIME = 0.6,
+	SPARKLE_SPEED = 10,
+	SPARKLE_COLOR = Color3.fromRGB(255, 240, 170),
 	PILE_KINDS = table.freeze(PILE_KINDS),
 	PILE_KIND_LIST = table.freeze(PILE_KIND_LIST),
 })
