@@ -306,6 +306,8 @@ local EXEMPT_MODULES: { [string]: string } = {
 	-- Cleanup Crew: Shift
 	["ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants"] = "static pacing and names (no logic)",
+	["ReplicatedStorage.Shared.Features.Shift.Net.ShiftEvents"] = "ByteNet packet definitions (no logic)",
+	["ServerScriptService.Features.Shift.ShiftServiceServer"] = "Players/RunService/service-orchestration shell (phase, vote, results and snapshot rules are specced)",
 }
 
 --[=[
