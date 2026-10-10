@@ -1,6 +1,6 @@
 --!strict
 --[=[
-	ShiftTypes: one Cleanup Crew shift's shapes (spec §3, §6.3, §6.5). Types only (spec-exempt).
+	ShiftTypes: one Cleanup Crew shift's shapes (spec §3, §4 "Pacing", §6.3, §6.5). Types only (spec-exempt).
 
 	@class ShiftTypes
 ]=]
@@ -8,8 +8,11 @@
 -- Mirrors Round's phases, except that Shift holds `results` itself until the crew votes.
 export type ShiftPhase = "lobby" | "starting" | "running" | "results"
 
--- What a running shift is doing. M2 adds "break" | "warning" | "overtime".
+-- The clock-out countdown. Independent of the pacing stage: a crew may clock out during the break or overtime.
 export type ShiftSub = "normal" | "clockout"
+
+-- Pacing after the quota (spec §4 "Pacing"): break (Harlow rests) → overtime warning → overtime.
+export type ShiftStage = "normal" | "break" | "warning" | "overtime"
 
 -- The A/B validation switch (spec §4): B hides some salvage under piles, A exposes it all.
 export type Variant = "A" | "B"
@@ -23,8 +26,15 @@ export type TickAction = "none" | "start" | "endShift" | "resolveVote"
 export type ShiftState = {
 	phase: ShiftPhase,
 	sub: ShiftSub,
+	stage: ShiftStage,
+	-- When the break or the warning ends; nil in the normal stage and in overtime.
+	stageEndsAt: number?,
+	-- Pressure tier: 0, +1 at each ShiftConstants.TIER_TIMES mark, the top tier in overtime.
+	tier: number,
 	-- Shifts started on this server (Round's run number).
 	shift: number,
+	-- running: when the shift began (the tiers count from here).
+	startedAt: number?,
 	-- starting: the arrival countdown's end; running: the shift's end.
 	endsAt: number?,
 	-- When the clock-out countdown ends the shift.
@@ -43,6 +53,8 @@ export type CrewStats = {
 	banked: number,
 	piles: number,
 	salvage: number,
+	-- Times Mr. Harlow caught them (M2); absent reads 0.
+	caught: number?,
 }
 
 export type CrewLine = {
@@ -57,7 +69,7 @@ export type Award = {
 	name: string,
 }
 
--- The performance review (plain in M1).
+-- The performance review (plain in M1-M2).
 export type ShiftResults = {
 	outcome: string,
 	quota: number,
@@ -66,6 +78,8 @@ export type ShiftResults = {
 	-- Salvage items loaded, and piles vacuumed, by the whole crew.
 	salvage: number,
 	piles: number,
+	-- Times Mr. Harlow caught someone this shift.
+	catches: number,
 	quotaMet: boolean,
 	crew: { CrewLine },
 	awards: { Award },
@@ -75,6 +89,9 @@ export type ShiftResults = {
 export type ShiftSnapshot = {
 	phase: ShiftPhase,
 	sub: ShiftSub,
+	stage: ShiftStage,
+	stageEndsAt: number?,
+	tier: number,
 	shift: number,
 	endsAt: number?,
 	clockOutAt: number?,

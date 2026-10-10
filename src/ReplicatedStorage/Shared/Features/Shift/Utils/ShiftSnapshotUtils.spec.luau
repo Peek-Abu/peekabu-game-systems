@@ -110,4 +110,39 @@ return function()
 		expect(ShiftSnapshotUtils.decode(with("endsAt", "soon"))).to.equal(nil)
 		expect(ShiftSnapshotUtils.decode(with("results", { outcome = "clockout" }))).to.equal(nil)
 	end)
+
+	it("round-trips the pacing stage, its deadline and the tier", function()
+		local snapshot = ShiftSnapshotUtils.decode(
+			ShiftSnapshotUtils.build(state({ stage = "warning", stageEndsAt = 640, tier = 2 }), 0, 0, 0, 0, nil)
+		)
+		expect(snapshot.stage).to.equal("warning")
+		expect(snapshot.stageEndsAt).to.equal(640)
+		expect(snapshot.tier).to.equal(2)
+	end)
+
+	it("reads an absent stage as normal and an absent tier as 0", function()
+		local snapshot = ShiftSnapshotUtils.decode(ShiftSnapshotUtils.build(state(), 0, 0, 0, 0, nil))
+		expect(snapshot.stage).to.equal("normal")
+		expect(snapshot.stageEndsAt).to.equal(nil)
+		expect(snapshot.tier).to.equal(0)
+	end)
+
+	it("rejects an unknown stage or a malformed stage deadline", function()
+		local good = ShiftSnapshotUtils.build(state(), 0, 0, 0, 0, nil)
+		local badStage = table.clone(good)
+		badStage.stage = "nap"
+		local badDeadline = table.clone(good)
+		badDeadline.stageEndsAt = "soon"
+		expect(ShiftSnapshotUtils.decode(badStage)).to.equal(nil)
+		expect(ShiftSnapshotUtils.decode(badDeadline)).to.equal(nil)
+	end)
+
+	it("round-trips Harlow's catch count in the results, absent reading 0", function()
+		local review = table.clone(RESULTS)
+		review.catches = 2
+		local value = ShiftSnapshotUtils.build(state({ phase = "results", voteEndsAt = 1000 }), 380, 95, 0, 0, review)
+		expect(ShiftSnapshotUtils.decode(value).results.catches).to.equal(2)
+		local plain = ShiftSnapshotUtils.build(state({ phase = "results", voteEndsAt = 1000 }), 380, 95, 0, 0, RESULTS)
+		expect(ShiftSnapshotUtils.decode(plain).results.catches).to.equal(0)
+	end)
 end

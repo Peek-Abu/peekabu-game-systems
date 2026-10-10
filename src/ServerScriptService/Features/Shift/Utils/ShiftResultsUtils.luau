@@ -34,6 +34,7 @@ function ShiftResultsUtils.bare(outcome: string, quota: number, quotaMet: boolea
 		bonus = 0,
 		salvage = 0,
 		piles = 0,
+		catches = 0,
 		quotaMet = quotaMet,
 		crew = {},
 		awards = {},
@@ -52,6 +53,7 @@ function ShiftResultsUtils.build(input: ResultsInput): ShiftTypes.ShiftResults
 	local lines: { ShiftTypes.CrewLine } = {}
 	local salvage = 0
 	local piles = 0
+	local catches = 0
 	for _, member in crew do
 		table.insert(
 			lines,
@@ -59,6 +61,7 @@ function ShiftResultsUtils.build(input: ResultsInput): ShiftTypes.ShiftResults
 		)
 		salvage += member.salvage
 		piles += member.piles
+		catches += member.caught or 0
 	end
 
 	local awards: { ShiftTypes.Award } = {}
@@ -93,6 +96,7 @@ function ShiftResultsUtils.build(input: ResultsInput): ShiftTypes.ShiftResults
 		bonus = input.bonus,
 		salvage = salvage,
 		piles = piles,
+		catches = catches,
 		quotaMet = input.quotaMet,
 		crew = lines,
 		awards = awards,

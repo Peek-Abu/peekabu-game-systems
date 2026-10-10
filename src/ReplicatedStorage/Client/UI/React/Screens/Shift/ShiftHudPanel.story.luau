@@ -35,6 +35,8 @@ return UILabs.CreateReactStory({
 	local snapshot: ShiftTypes.ShiftSnapshot = {
 		phase = "running",
 		sub = sub,
+		stage = "normal",
+		tier = 0,
 		shift = 1,
 		endsAt = controls.SecondsLeft,
 		clockOutAt = 7,

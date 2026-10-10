@@ -1,7 +1,8 @@
 --!strict
 --[=[
-	ShiftConstants: the shift's pacing and names (Cleanup Crew spec §3, §4 "Pacing"). Every number is a
-	tuning hypothesis. Static data (spec-exempt).
+	ShiftConstants: the shift's pacing and names (Cleanup Crew spec §3, §4 "Pacing": one constants module for
+	the shift clock, the pressure tiers and the party-size scaling). Every number is a tuning hypothesis.
+	Static data (spec-exempt).
 
 	@class ShiftConstants
 ]=]
@@ -11,6 +12,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 
 local VARIANT: ShiftTypes.Variant = "B"
+
+-- Seconds into the shift at which the pressure tier rises (2:00 and 4:00).
+local TIER_TIMES: { number } = { 120, 240 }
 
 return table.freeze({
 	-- The StateSyncWorldStore entry the snapshot is published under.
@@ -26,15 +30,27 @@ return table.freeze({
 	VOTE_SECONDS = 30,
 	MIN_PLAYERS = 1,
 	VARIANT = VARIANT,
-	-- Salvage multiplier now, and in overtime (M2).
+	-- Salvage multiplier normally, and in overtime.
 	SALVAGE_MULTIPLIER = 1,
 	OVERTIME_SALVAGE_MULTIPLIER = 1.5,
+	-- After the quota: Harlow's break, then the overtime warning, then overtime (until the shift ends).
+	BREAK_SECONDS = 30,
+	WARNING_SECONDS = 30,
+	-- Pressure tiers: each step multiplies Harlow's hearing and adds to his patrol speed; overtime is the top.
+	TIER_TIMES = table.freeze(TIER_TIMES),
+	TOP_TIER = 2,
+	TIER_HEARING = 1.2,
+	TIER_PATROL_SPEED = 1,
+	-- A solo player gets a gentler Harlow.
+	SOLO_HEARING = 0.75,
+	SOLO_CHASE_SPEED = -1,
 	-- Round team counters and per-player scores.
 	CLEARANCE = "clearance",
 	BONUS = "bonus",
 	SCORE_BANKED = "banked",
 	SCORE_PILES = "piles",
 	SCORE_SALVAGE = "salvage",
+	SCORE_CAUGHT = "caught",
 	-- The outcome a clock out ends the run with (Round sets "timeout" and "abandoned" itself).
 	OUTCOME_CLOCKOUT = "clockout",
 	-- The outcome a mid-shift reset (Studio test runs) ends the run with; no results are shown for it.
@@ -42,6 +58,8 @@ return table.freeze({
 	-- The interaction kind on the truck's time clock.
 	CLOCK_OUT_KIND = "shift-clockout",
 	TICK_INTERVAL = 0.25,
+	-- How long the pacing notices stay up.
+	NOTICE_SECONDS = 6,
 	-- HUD widget order (the Toast stack draws above, at 1000).
 	HUD_ORDER = 10,
 })

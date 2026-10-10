@@ -65,4 +65,16 @@ return function()
 		expect(#results.crew).to.equal(0)
 		expect(#results.awards).to.equal(0)
 	end)
+
+	it("sums the crew's catches, absent reading 0", function()
+		local crew = { table.clone(CREW[1]), table.clone(CREW[2]), CREW[3] }
+		crew[1].caught = 2
+		crew[2].caught = 1
+		expect(ShiftResultsUtils.build(input(crew)).catches).to.equal(3)
+		expect(ShiftResultsUtils.build(input(CREW)).catches).to.equal(0)
+	end)
+
+	it("builds a bare review with no catches", function()
+		expect(ShiftResultsUtils.bare("clockout", 350, true).catches).to.equal(0)
+	end)
 end

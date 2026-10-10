@@ -34,6 +34,7 @@ return UILabs.CreateReactStory({
 		bonus = 95,
 		salvage = 3,
 		piles = 12,
+		catches = 0,
 		quotaMet = controls.QuotaMet,
 		crew = {
 			{ name = "Ava", banked = 200, piles = 6, salvage = 2 },
@@ -44,6 +45,8 @@ return UILabs.CreateReactStory({
 	local snapshot: ShiftTypes.ShiftSnapshot = {
 		phase = "results",
 		sub = "normal",
+		stage = "normal",
+		tier = 0,
 		shift = 1,
 		voteEndsAt = 24,
 		quota = 350,

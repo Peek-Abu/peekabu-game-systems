@@ -39,6 +39,20 @@ local function subOf(value: WorldValue?): ShiftTypes.ShiftSub?
 	return nil
 end
 
+-- The pacing stage: absent reads "normal" (an older snapshot); anything unknown is malformed.
+local function stageOf(value: WorldValue?): ShiftTypes.ShiftStage?
+	if value == nil or value == "normal" then
+		return "normal"
+	elseif value == "break" then
+		return "break"
+	elseif value == "warning" then
+		return "warning"
+	elseif value == "overtime" then
+		return "overtime"
+	end
+	return nil
+end
+
 local function variantOf(value: WorldValue?): ShiftTypes.Variant?
 	if value == "A" then
 		return "A"
@@ -149,6 +163,7 @@ local function resultsOf(value: WorldValue?): (ShiftResults?, boolean)
 	local piles = numberField(value.piles)
 	local crew = crewOf(value.crew)
 	local awards = awardsOf(value.awards)
+	local catches, catchesOk = countOf(value.catches)
 	if type(outcome) ~= "string" or type(quotaMet) ~= "boolean" then
 		return nil, false
 	end
@@ -158,6 +173,9 @@ local function resultsOf(value: WorldValue?): (ShiftResults?, boolean)
 	if crew == nil or awards == nil then
 		return nil, false
 	end
+	if not catchesOk then
+		return nil, false
+	end
 	return {
 		outcome = outcome,
 		quota = quota,
@@ -165,6 +183,7 @@ local function resultsOf(value: WorldValue?): (ShiftResults?, boolean)
 		bonus = bonus,
 		salvage = salvage,
 		piles = piles,
+		catches = catches,
 		quotaMet = quotaMet,
 		crew = crew,
 		awards = awards,
@@ -188,6 +207,9 @@ function ShiftSnapshotUtils.build(
 	return {
 		phase = state.phase,
 		sub = state.sub,
+		stage = state.stage,
+		stageEndsAt = state.stageEndsAt,
+		tier = state.tier,
 		shift = state.shift,
 		endsAt = state.endsAt,
 		clockOutAt = state.clockOutAt,
@@ -215,7 +237,11 @@ function ShiftSnapshotUtils.decode(value: WorldValue?): ShiftSnapshot?
 	local phase: ShiftTypes.ShiftPhase? = phaseOf(value.phase)
 	local sub: ShiftTypes.ShiftSub? = subOf(value.sub)
 	local variant: ShiftTypes.Variant? = variantOf(value.variant)
+	local stage: ShiftTypes.ShiftStage? = stageOf(value.stage)
 	if not phase or not sub or not variant then
+		return nil
+	end
+	if not stage then
 		return nil
 	end
 	local quotaMet = value.quotaMet
@@ -235,12 +261,17 @@ function ShiftSnapshotUtils.decode(value: WorldValue?): ShiftSnapshot?
 	local votesAnother, anotherOk = countOf(value.votesAnother)
 	local votesDepot, depotOk = countOf(value.votesDepot)
 	local results, resultsOk = resultsOf(value.results)
-	if not (endsOk and clockOk and voteOk and anotherOk and depotOk and resultsOk) then
+	local stageEndsAt, stageEndsOk = optionalNumber(value.stageEndsAt)
+	local tier, tierOk = countOf(value.tier)
+	if not (endsOk and clockOk and voteOk and anotherOk and depotOk and resultsOk and stageEndsOk and tierOk) then
 		return nil
 	end
 	local snapshot: ShiftSnapshot = {
 		phase = phase,
 		sub = sub,
+		stage = stage,
+		stageEndsAt = stageEndsAt,
+		tier = tier,
 		shift = shift,
 		endsAt = endsAt,
 		clockOutAt = clockOutAt,

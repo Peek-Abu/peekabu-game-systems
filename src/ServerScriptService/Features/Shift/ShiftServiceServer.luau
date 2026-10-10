@@ -247,7 +247,7 @@ local function onBanked(player: Player, deposit: CargoTypes.Deposit): boolean
 	guarded("banking follow-up", function()
 		local text = `Loaded: +{deposit.clearance} clearance, +{bonus} bonus`
 		ToastServiceServer:send(player, { text = text, duration = 2 })
-		local met = ShiftPhaseRules.markQuota(state, RoundServiceServer:teamValue(ShiftConstants.CLEARANCE))
+		local met = ShiftPhaseRules.markQuota(state, RoundServiceServer:teamValue(ShiftConstants.CLEARANCE), now())
 		if met ~= nil then
 			setState(met)
 			ToastServiceServer:send("all", {
