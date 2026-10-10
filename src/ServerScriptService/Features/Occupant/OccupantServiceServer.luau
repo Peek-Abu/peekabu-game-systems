@@ -276,6 +276,7 @@ local function despawn()
 	mind = nil
 	pendingNoise = nil
 	lookBase = nil
+	table.clear(rehire)
 	if current ~= nil and current.model.Parent ~= nil then
 		NpcServiceServer:despawn(current.model)
 	end
@@ -428,6 +429,7 @@ local OccupantServiceServer: OccupantServiceServer = {
 		table.clear(stoppers)
 		OccupantCatchSystem.clear()
 		table.clear(rehire)
+		shift = nil
 		NpcServiceServer:setBrain(OccupantConstants.NPC_KIND, nil)
 		despawn()
 	end,

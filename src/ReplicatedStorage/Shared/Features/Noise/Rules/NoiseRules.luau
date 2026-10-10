@@ -10,6 +10,24 @@
 
 local NoiseRules = {}
 
+local function finite(value: number): boolean
+	return value == value and value > -math.huge and value < math.huge
+end
+
+--[=[
+	Whether a noise can be made: a finite position and a positive, finite radius.
+]=]
+function NoiseRules.valid(position: Vector3, radius: number): boolean
+	return finite(radius) and radius > 0 and finite(position.X) and finite(position.Y) and finite(position.Z)
+end
+
+--[=[
+	Whether `scale` is a usable hearing scale: finite and positive.
+]=]
+function NoiseRules.validScale(scale: number): boolean
+	return finite(scale) and scale > 0
+end
+
 --[=[
 	How far a noise of `radius` is heard by a listener with hearing `scale` (never negative).
 ]=]

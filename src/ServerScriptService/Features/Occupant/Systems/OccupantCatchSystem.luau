@@ -65,15 +65,7 @@ function OccupantCatchSystem.begin(rig: OccupantRigSystem.Rig, player: Player, h
 	local userId = player.UserId
 	catching[userId] = true
 
-	local harlow = rig.root
-	harlow.CFrame = CFrame.lookAt(harlow.Position, Vector3.new(root.Position.X, harlow.Position.Y, root.Position.Z))
-	root.Anchored = true
-	local face = rig.head.Position
-	local eye = face + harlow.CFrame.LookVector * FACE_DISTANCE
-	OccupantEvents.packets.CatchCam.sendTo(CFrame.lookAt(eye, face), player)
-	OccupantEvents.packets.LightsOut.sendToAll(harlow.Position)
-	OccupantRigSystem.say(rig, OccupantConstants.LINES.caught)
-
+	-- Scheduled first: whatever throws below, the player is still released.
 	task.delay(OccupantConstants.SNAP_SECONDS, function()
 		catching[userId] = nil
 		if root.Parent ~= nil then
@@ -83,7 +75,7 @@ function OccupantCatchSystem.begin(rig: OccupantRigSystem.Rig, player: Player, h
 			return
 		end
 		local velocity = OccupantCatchRules.launch(
-			harlow.Position,
+			rig.root.Position,
 			root.Position,
 			OccupantConstants.LAUNCH_SPEED,
 			OccupantConstants.LAUNCH_UP
@@ -91,6 +83,15 @@ function OccupantCatchSystem.begin(rig: OccupantRigSystem.Rig, player: Player, h
 		DeathServiceServer:kill(victim, "caught", { launch = velocity })
 		hooks.onCaught(player)
 	end)
+
+	local harlow = rig.root
+	harlow.CFrame = CFrame.lookAt(harlow.Position, Vector3.new(root.Position.X, harlow.Position.Y, root.Position.Z))
+	root.Anchored = true
+	local face = rig.head.Position
+	local eye = face + harlow.CFrame.LookVector * FACE_DISTANCE
+	OccupantEvents.packets.CatchCam.sendTo(CFrame.lookAt(eye, face), player)
+	OccupantEvents.packets.LightsOut.sendToAll(harlow.Position)
+	OccupantRigSystem.say(rig, OccupantConstants.LINES.caught)
 	return true
 end
 

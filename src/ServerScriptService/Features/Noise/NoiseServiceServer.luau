@@ -66,10 +66,10 @@ local NoiseServiceServer: NoiseServiceServer = {
 	end,
 
 	--[=[
-		One noise: fires `made` and draws a ripple for everyone. A noise with no radius is ignored.
+		One noise: fires `made` and draws a ripple for everyone. A noise with no usable radius or position is ignored.
 	]=]
 	emit = function(_self, position, radius, source)
-		if radius <= 0 then
+		if not NoiseRules.valid(position, radius) then
 			return
 		end
 		total += 1
@@ -86,7 +86,10 @@ local NoiseServiceServer: NoiseServiceServer = {
 		Harlow's hearing scale (OccupantServiceServer keeps it current); it sizes the ripples.
 	]=]
 	setHearingScale = function(_self, scale)
-		assert(scale > 0, "NoiseServiceServer:setHearingScale: the scale must be positive")
+		assert(
+			NoiseRules.validScale(scale),
+			"NoiseServiceServer:setHearingScale: the scale must be finite and positive"
+		)
 		hearingScale = scale
 	end,
 

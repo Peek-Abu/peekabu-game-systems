@@ -151,7 +151,7 @@ function OccupantBrainRules.visible(mind: Mind, senses: Senses): { Glimpse }
 end
 
 --[=[
-	The mind after he catches `userId`: standing over the catch, that player in their grace.
+	The mind after he catches `userId`: standing over the catch (targeting them), that player in their grace.
 ]=]
 function OccupantBrainRules.caught(mind: Mind, userId: number, now: number): Mind
 	local nextMind = enter(mind, "catch", now)
@@ -159,6 +159,8 @@ function OccupantBrainRules.caught(mind: Mind, userId: number, now: number): Min
 	grace[userId] = now + OccupantConstants.GRACE_SECONDS
 	nextMind.grace = grace
 	forget(nextMind)
+	-- He stands over them: the client's heartbeat reads the target to stay quiet on the caught player's own screen.
+	nextMind.target = userId
 	return nextMind
 end
 
@@ -197,6 +199,7 @@ function OccupantBrainRules.step(mind: Mind, senses: Senses): Step
 			return { mind = mind, intent = { kind = "idle" } }
 		end
 		current = enter(mind, "patrol", now)
+		current.target = nil
 		if #senses.route > 0 then
 			current.routeIndex = wrap(mind.routeIndex + mind.routeStep, #senses.route)
 		end
