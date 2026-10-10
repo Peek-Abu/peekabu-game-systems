@@ -17,7 +17,7 @@
 
 	It also gives Queue the loading bay as the shift's local-move arrival point and the depot as the home of
 	redirected strangers, and on a live PUBLIC server of the shift place (someone reached it without a
-	party; reserved servers are Queue's) it sends every player to the depot. ShiftServiceServer hands Round
+	party; reserved servers are Queue's) it sends every player to the depot (and kicks one still here after the leaving window). ShiftServiceServer hands Round
 	`eligible` (only the crew takes part) and Death `spawnFor` (crew in the loading bay; anyone else at the
 	depot where this server runs it, otherwise in the loading bay).
 
@@ -49,6 +49,7 @@ local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServi
 type QueuePayload = QueueTypes.QueuePayload
 
 local STUCK_TEXT = "The truck couldn't get back to the depot. Another shift it is."
+local STRANDED_TEXT = "This shift server is empty. Rejoin from the depot."
 local REFUSED_TEXT = "The truck can't leave right now. Starting another shift."
 
 export type ShiftTripSystem = {
@@ -178,6 +179,12 @@ function ShiftTripSystem.new(): ShiftTripSystem
 				log:warn("a public server of the shift place: every player is sent to the depot")
 				local function sendToDepot(player: Player)
 					QueueServiceServer:returnParty({ player }, DepotConstants.ROLE_DEPOT, {})
+					-- Still here after the window: the teleport failed; nothing else would ever remove them.
+					task.delay(ShiftConstants.RETURN_WAIT_SECONDS, function()
+						if player.Parent == Players then
+							player:Kick(STRANDED_TEXT)
+						end
+					end)
 				end
 				for _, player in Players:GetPlayers() do
 					sendToDepot(player)

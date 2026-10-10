@@ -49,6 +49,7 @@ local DepotServiceClient: DepotServiceClient = {
 				DepotStore.show(data.kind, data.title, data.body, os.clock())
 			end)
 		)
+		DepotEvents.packets.Ready.send(true)
 		local ticking = RunService.Heartbeat:Connect(function()
 			if DepotStore.card() ~= nil then
 				DepotStore.expire(os.clock())

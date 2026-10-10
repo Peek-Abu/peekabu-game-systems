@@ -5,7 +5,8 @@
 	them) and follows its phases through ShiftPhaseRules. Around them:
 
 	- run start: the clearance target, the office's spawns (OfficeServiceServer:beginShift), the crew moved
-	  to the loading bay, which is also where everyone respawns (DeathServiceServer:setSpawnPoint);
+	  to the loading bay, where the crew respawns (anyone else respawns at the depot where this server runs
+	  it; DeathServiceServer:setSpawnPoint);
 	- banking: Cargo's `onBanked` (ShiftBankingSystem) adds trash to Round's `clearance` counter and salvage
 	  to `bonus`, keeps per-player scores, and stamps QUOTA MET once;
 	- pacing (M2): meeting the quota starts Harlow's break; the clock steps break -> overtime warning ->
@@ -435,7 +436,7 @@ ShiftServiceServer = {
 		Records a results vote (replacing the player's earlier one) and resolves the vote if it is decided.
 	]=]
 	vote = function(_self, player, choice)
-		if state.phase ~= "results" then
+		if state.phase ~= "results" or not trip.eligible(player) then
 			return false
 		end
 		votes[player.UserId] = choice

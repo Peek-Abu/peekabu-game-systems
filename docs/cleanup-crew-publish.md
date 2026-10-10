@@ -47,8 +47,9 @@ For **each** place (depot first, then shift):
 1. Open the place in Studio.
 2. In the repo: `rojo serve` (if it is not already running). In Studio: Rojo plugin → **Connect**. Wait until
    the sync finishes (ReplicatedStorage, ServerScriptService, StarterPlayer filled in; no Rojo errors).
-3. Press **Play** once in Studio: Output should say `queue in local mode, role none` (Studio is always
-   local) and `depot built: 3 trucks, ...`. Stop.
+3. Press **Play** once in Studio: Output should say `depot built: 3 trucks, ...`. With the PlaceIds filled
+   in (section 2) the role is printed (`role depot` in the depot place, `role shift` in the shift place);
+   the mode is still `local` (Studio is always local). Stop.
 4. **File → Publish to Roblox**. Disconnect Rojo.
 
 Both places get the same code; the server decides at run time which role it plays. In a live server's
@@ -72,25 +73,30 @@ on the owner account for the logs named below.
       `Leaving in 15s`), and the countdown restarts when the second player steps in.
 - [ ] One presses **Depart now**: both see the drive card, then load into **one** reserved shift server
       together; the arrival card shows; a 5 s countdown; the shift starts in the loading bay.
-- [ ] **Verify: the arrival card is not missed.** The arrival card is sent when the party gathers in the
-      reserved server, possibly before a client is listening for it. Both players see it (this is being
-      fixed before the live test; confirm the fix holds on a slow-loading client).
+- [ ] **Verify: the arrival card is not missed.** The client now tells the server when it listens
+      (`DepotEvents.Ready`) and the server holds a card until then. Both players see the arrival card even
+      when one client loads slowly (throttle one client, or join it last), and a member who joins late sees
+      it too.
 - [ ] One account steps off the truck during the countdown: it leaves the party; the other departs alone.
-- [ ] Close one client mid-teleport: the other arrives; the shift starts after ~20 s.
+- [ ] Close one client mid-teleport: the other arrives; the shift starts after ~25 s (the 20 s arrival timeout, then the 5 s countdown).
 - [ ] A third account (or the second, rejoining) joins a crew member through their profile while the crew
-      is still arriving: seated if there is room; once the shift has started it is sent to a depot server.
+      is still arriving: a stranger following a friend into a reserved server is expected to be refused
+      (only the party's ticket holders are expected), so observe what they see and that they end up in a
+      depot server; once the shift has started a straggler from the party is seated in the loading bay.
 - [ ] Play to results, vote **Back to depot**: both land in a depot server (not necessarily the one you
       left), each sees **their** result card on the result board and the toast.
 - [ ] **Failed-return toasts.** If a return trip fails (Queue gives up after its retries), the player is
-      still in the shift server: each is told once ("The truck couldn't get back to the depot. Another
-      shift it is.") and the next shift can start after the 130 s leaving window. Not easy to force; if it
-      happens, check the toast text, the single send per player, and that the next shift starts.
+      still in the shift server and sees two toasts: Queue's "Couldn't travel. Try again in a moment."
+      right after the vote, then, 130 s after the vote (the leaving window), "The truck couldn't get back
+      to the depot. Another shift it is." once per player; the next shift can then start. Not easy to
+      force; if it happens, check both texts, the single send per player, and that the next shift starts.
 - [ ] Vote **Another shift**: a new shift starts in the same reserved server.
 - [ ] Everyone leaves a shift server: rejoining never puts you back in it (empty servers close).
 - [ ] **Stranded player on a public shift server.** If a player reaches a public server of the shift place
       (the log says `a public server of the shift place: every player is sent to the depot`), they are sent
-      to the depot through `returnParty`. If that teleport fails, they stay stranded there: note what they
-      see, whether Queue retries, and whether anything tells them (nothing in the code removes them).
+      to the depot through `returnParty`. If that teleport fails, they are kicked after the
+      130 s leaving window with "This shift server is empty. Rejoin from the depot." Not easy to force;
+      if it happens, check that the kick text shows and that rejoining lands in the depot.
 - [ ] Optional failure check: temporarily set `PLACE_IDS.shift` to a PlaceId of a place in **another**
       experience you own, publish the depot, depart: after 3 retries the party is back on the pad with
       "Couldn't leave. You're back on the pad." (with Queue's 30 s watchdog this can take up to two

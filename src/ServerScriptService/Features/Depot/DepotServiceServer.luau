@@ -12,8 +12,9 @@
 	  to those aboard).
 	- A departing party carries tonight's contract id (setDepartData) and gets the drive card; a local move
 	  to the depot lands on the spawn points (setArrivalPoint).
-	- An arriving party, wherever it lands, gets the arrival card for its contract (resolved from the
-	  untrusted payload).
+	- An arriving party (and a member who joins late), wherever it lands, gets the arrival card for its
+	  contract (resolved from the untrusted payload). A client says it listens (DepotEvents.Ready); a card
+	  sent before that is held and delivered then, so a slow-loading client does not miss it.
 	- A returning player (Queue `returned`) gets their result card (ShiftCardUtils.decode: teleport data is
 	  untrusted) pinned on the result board, visible to them only, and a toast.
 
@@ -42,6 +43,7 @@ local DepotContractUtils = require(DepotServer.Utils.DepotContractUtils)
 local DepotBuildSystem = require(DepotServer.Systems.DepotBuildSystem)
 local QueueRegistry = require(ServerScriptService.Features.Queue.Data.QueueRegistry)
 local QueueServiceServer = require(ServerScriptService.Features.Queue.QueueServiceServer)
+local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local ShiftCardUtils = require(ServerScriptService.Features.Shift.Utils.ShiftCardUtils)
 local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
 
@@ -58,18 +60,44 @@ local log = Logger.new("DepotServiceServer")
 
 local built: DepotBuildSystem.Built? = nil
 local contract: DepotTypes.Contract = DepotContractUtils.tonight(DepotConstants.CONTRACTS, os.time())
+-- The contract of the crew that last arrived here (a late member gets the same card).
+local crewContract: DepotTypes.Contract = contract
 local stoppers: { () -> () } = {}
 local cardsSent = 0
 local cardsPinned = 0
 
+-- Clients that said they listen for cards (DepotEvents.Ready); a card for anyone else waits in `held`.
+local ready: { [Player]: true } = {}
+local held: { [Player]: DepotTypes.CardMessage } = {}
+
 local function sendCard(players: { Player }, card: DepotTypes.CardMessage)
 	for _, player in players do
 		if player.Parent == Players then
-			DepotEvents.packets.Card.sendTo(card, player)
-			cardsSent += 1
+			if ready[player] then
+				DepotEvents.packets.Card.sendTo(card, player)
+				cardsSent += 1
+			else
+				held[player] = card
+			end
 		end
 	end
 end
+
+local onReady = RequestHandler.wrap({
+	name = "DepotReady",
+	rateLimit = { maxRequests = 5, windowSeconds = 5 },
+	handler = function(_data: unknown, player: Player)
+		if ready[player] then
+			return
+		end
+		ready[player] = true
+		local card = held[player]
+		if card ~= nil then
+			held[player] = nil
+			sendCard({ player }, card)
+		end
+	end,
+})
 
 local function padText(index: number, aboard: number, capacity: number): string
 	if aboard == 0 then
@@ -138,14 +166,29 @@ local DepotServiceServer: DepotServiceServer = {
 			sendCard(party, DepotContractUtils.driveCard(contract))
 		end)
 		local arrived = QueueServiceServer.arrived:Connect(function(party, payload)
-			local arriving = DepotContractUtils.resolve(DepotConstants.CONTRACTS, payload.contract)
-			sendCard(party, DepotContractUtils.arrivalCard(arriving, ShiftConstants.QUOTA))
+			crewContract = DepotContractUtils.resolve(DepotConstants.CONTRACTS, payload.contract)
+			sendCard(party, DepotContractUtils.arrivalCard(crewContract, ShiftConstants.QUOTA))
+		end)
+		local late = QueueServiceServer.joinedLate:Connect(function(player)
+			sendCard({ player }, DepotContractUtils.arrivalCard(crewContract, ShiftConstants.QUOTA))
 		end)
 		local returned = QueueServiceServer.returned:Connect(pinResultCard)
+		local listening = DepotEvents.packets.Ready.listen(function(data: boolean, player: Player?)
+			if player then
+				onReady(data, player)
+			end
+		end)
+		local leaving = Players.PlayerRemoving:Connect(function(player)
+			ready[player] = nil
+			held[player] = nil
+		end)
 		table.insert(stoppers, function()
 			departing:Disconnect()
 			arrived:Disconnect()
+			late:Disconnect()
 			returned:Disconnect()
+			listening()
+			leaving:Disconnect()
 		end)
 
 		if not QueueServiceServer:runsRole(DepotConstants.ROLE_DEPOT) then
@@ -179,6 +222,8 @@ local DepotServiceServer: DepotServiceServer = {
 			stopFn()
 		end
 		table.clear(stoppers)
+		table.clear(ready)
+		table.clear(held)
 		QueueServiceServer:setDepartData(nil)
 		QueueServiceServer:setArrivalPoint(DepotConstants.ROLE_DEPOT, nil)
 		local current = built
