@@ -289,6 +289,11 @@ local EXEMPT_MODULES: { [string]: string } = {
 
 	-- Cleanup Crew: Vacuum
 	["ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants"] = "static tuning and names (no logic)",
+
+	-- Cleanup Crew: Office
+	["ServerScriptService.Features.Office.Data.OfficeTypes"] = "type definitions only (no runtime logic)",
+	["ServerScriptService.Features.Office.Data.OfficeConstants"] = "static placement, sizes and roll knobs (no logic)",
+	["ServerScriptService.Features.Office.Data.OfficeLayoutConstants"] = "authored layout data; validated by OfficeLayoutRules.spec",
 }
 
 --[=[
