@@ -3,7 +3,8 @@
 	OccupantServiceClient: Mr. Harlow on the client. The catch (Cleanup Crew spec §4 "Catch" step 1): on
 	`CatchCam` the camera is held on his face for SNAP_SECONDS (a fixed camera mode above Death's spectate), with
 	a shake and a red, drained screen; then Death's spectate takes over. The stretched-grin face and the
-	distorted sting are M3. Task 11 adds the light and heartbeat tells (OccupantTellSystem).
+	distorted sting are M3. The light and heartbeat tells run in OccupantTellSystem (lights out on a catch, every light flickering on a
+	tier rise).
 
 	Spec-exempt shell (Camera, Vfx, ByteNet).
 
@@ -16,6 +17,7 @@ local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Dat
 local OccupantEvents = require(ReplicatedStorage.Shared.Features.Occupant.Net.OccupantEvents)
 local CameraServiceClient = require(ReplicatedStorage.Client.Features.Camera.CameraServiceClient)
 local VfxServiceClient = require(ReplicatedStorage.Client.Features.Vfx.VfxServiceClient)
+local OccupantTellSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantTellSystem)
 
 local stoppers: { () -> () } = {}
 local snaps = 0
@@ -52,6 +54,20 @@ local OccupantServiceClient: OccupantServiceClient = {
 				snap(cframe)
 			end)
 		)
+		table.insert(
+			stoppers,
+			OccupantEvents.packets.LightsOut.listen(function(position: Vector3)
+				OccupantTellSystem.lightsOut(position, os.clock())
+			end)
+		)
+		table.insert(
+			stoppers,
+			OccupantEvents.packets.Flicker.listen(function(_rose: boolean)
+				OccupantTellSystem.flickerAll(os.clock())
+			end)
+		)
+		OccupantTellSystem.start()
+		table.insert(stoppers, OccupantTellSystem.stop)
 	end,
 
 	stop = function(_self)

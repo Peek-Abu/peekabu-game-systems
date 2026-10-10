@@ -321,6 +321,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Features.Occupant.OccupantServiceServer"] = "NPC/raycast/signal shell (brain, tuning and tell decisions are specced in OccupantBrainRules, OccupantCatchRules, OccupantTuningFormulas, OccupantTellRules)",
 	["ServerScriptService.Features.Occupant.Systems.OccupantCatchSystem"] = "Instance/ByteNet/Death shell (catch decisions and the launch are specced in OccupantCatchRules)",
 	["ReplicatedStorage.Client.Features.Occupant.OccupantServiceClient"] = "Camera/Vfx/ByteNet shell (tell decisions are specced in OccupantTellRules)",
+	["ReplicatedStorage.Client.Features.Occupant.Systems.OccupantTellSystem"] = "Instance/Vfx shell (flicker, heartbeat and pulse decisions are specced in OccupantTellRules)",
 
 	-- Cleanup Crew: Shift
 	["ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes"] = "type definitions only (no runtime logic)",
