@@ -1,0 +1,77 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local NoiseRules = require(script.Parent.NoiseRules)
+local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants)
+local CargoRegistry = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoRegistry)
+local CargoHandlingRules = require(ReplicatedStorage.Shared.Features.Cargo.Rules.CargoHandlingRules)
+local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
+
+local ORIGIN = Vector3.new(0, 0, 0)
+
+local function at(distance)
+	return Vector3.new(distance, 0, 0)
+end
+
+return function()
+	describe("hears", function()
+		it("hears a noise within its radius, not beyond", function()
+			expect(NoiseRules.hears(at(39.9), ORIGIN, 40, 1)).to.equal(true)
+			expect(NoiseRules.hears(at(40), ORIGIN, 40, 1)).to.equal(true)
+			expect(NoiseRules.hears(at(40.1), ORIGIN, 40, 1)).to.equal(false)
+		end)
+
+		it("scales the radius by the hearing scale", function()
+			expect(NoiseRules.hears(at(47), ORIGIN, 40, 1.2)).to.equal(true)
+			expect(NoiseRules.hears(at(31), ORIGIN, 40, 0.75)).to.equal(false)
+		end)
+
+		it("counts height", function()
+			expect(NoiseRules.hears(Vector3.new(0, 30, 30), ORIGIN, 40, 1)).to.equal(false)
+		end)
+
+		it("never hears a silent noise or with no hearing", function()
+			expect(NoiseRules.hears(ORIGIN, ORIGIN, 0, 1)).to.equal(false)
+			expect(NoiseRules.hears(ORIGIN, ORIGIN, 40, 0)).to.equal(false)
+		end)
+	end)
+
+	describe("heardRadius", function()
+		it("is the radius times the scale, never negative", function()
+			expect(NoiseRules.heardRadius(40, 1.2)).to.be.near(48, 1e-6)
+			expect(NoiseRules.heardRadius(-5, 1)).to.equal(0)
+			expect(NoiseRules.heardRadius(40, -1)).to.equal(0)
+		end)
+	end)
+
+	describe("the spec's noise per action", function()
+		it("a vacuum pulse carries about 40 studs", function()
+			expect(VacuumConstants.NOISE_RADIUS).to.equal(40)
+			expect(VacuumConstants.NOISE_INTERVAL).to.equal(1)
+		end)
+
+		it("a drop is as loud as the item is heavy, and the jug's splash is loudest", function()
+			local plaque = CargoHandlingRules.dropNoise(CargoRegistry.get("plaque"))
+			local bag = CargoHandlingRules.dropNoise(CargoRegistry.get("rubbishBag"))
+			local monitor = CargoHandlingRules.dropNoise(CargoRegistry.get("monitor"))
+			local printer = CargoHandlingRules.dropNoise(CargoRegistry.get("printer"))
+			local cabinet = CargoHandlingRules.dropNoise(CargoRegistry.get("filingCabinet"))
+			local jug = CargoHandlingRules.dropNoise(CargoRegistry.get("waterJug"))
+			expect(plaque < bag and bag < monitor and monitor < printer and printer <= cabinet).to.equal(true)
+			expect(jug).to.equal(CargoConstants.SPLASH_NOISE)
+			expect(jug > VacuumConstants.NOISE_RADIUS).to.equal(true)
+		end)
+
+		it("a rattle and a search are small", function()
+			expect(CargoConstants.RATTLE_NOISE < VacuumConstants.NOISE_RADIUS).to.equal(true)
+			expect(CargoConstants.SEARCH_NOISE < VacuumConstants.NOISE_RADIUS).to.equal(true)
+			expect(CargoConstants.RATTLE_INTERVAL).to.equal(2)
+		end)
+
+		it("a dropped plaque goes unheard where a splash is heard", function()
+			local plaque = CargoHandlingRules.dropNoise(CargoRegistry.get("plaque"))
+			local jug = CargoHandlingRules.dropNoise(CargoRegistry.get("waterJug"))
+			expect(NoiseRules.hears(at(20), ORIGIN, plaque, 1)).to.equal(false)
+			expect(NoiseRules.hears(at(60), ORIGIN, jug, 1)).to.equal(true)
+		end)
+	end)
+end

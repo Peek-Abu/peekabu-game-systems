@@ -297,6 +297,13 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Features.Vacuum.VacuumServiceServer"] = "Instance/Players/RunService/signal shell (VacuumCanisterUtils is specced)",
 	["ReplicatedStorage.Client.Features.Vacuum.VacuumServiceClient"] = "Input/Camera shell (VacuumAimUtils is specced; the server decides)",
 
+	-- Cleanup Crew: Noise
+	["ReplicatedStorage.Shared.Features.Noise.Data.NoiseTypes"] = "type definitions only (no runtime logic)",
+	["ReplicatedStorage.Shared.Features.Noise.Data.NoiseConstants"] = "static ripple look (no logic)",
+	["ReplicatedStorage.Shared.Features.Noise.Net.NoiseEvents"] = "ByteNet packet definitions (no logic)",
+	["ServerScriptService.Features.Noise.NoiseServiceServer"] = "signal/ByteNet relay shell (the hearing rule NoiseRules is specced)",
+	["ReplicatedStorage.Client.Features.Noise.NoiseServiceClient"] = "Instance/tween/raycast shell (draws the ripple)",
+
 	-- Cleanup Crew: Office
 	["ServerScriptService.Features.Office.Data.OfficeTypes"] = "type definitions only (no runtime logic)",
 	["ServerScriptService.Features.Office.Data.OfficeConstants"] = "static placement, sizes and roll knobs (no logic)",
