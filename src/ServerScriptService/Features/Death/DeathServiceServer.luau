@@ -71,14 +71,20 @@ local function humanoidOf(model: Model): Humanoid?
 end
 
 -- Swaps every non-root Motor6D for a limited ball socket. False when already ragdolled.
+-- The engine itself disables the root Motor6D (Root / RootJoint) shortly after the Humanoid settles
+-- into Dead, which would drop the root part through the world; a WeldConstraint is not managed by the
+-- Humanoid, so the root is welded to the body with one instead.
 local function ragdollModel(model: Model): boolean
 	if model:GetAttribute(DeathConstants.RAGDOLL_NAME) == true then
 		return false
 	end
 	model:SetAttribute(DeathConstants.RAGDOLL_NAME, true)
 	local jointParts: { [BasePart]: true } = {}
+	local rootBody: BasePart? = nil
 	for _, descendant in model:GetDescendants() do
-		if descendant:IsA("Motor6D") and not DeathRagdollUtils.isRootJoint(descendant.Name) then
+		if descendant:IsA("Motor6D") and DeathRagdollUtils.isRootJoint(descendant.Name) then
+			rootBody = descendant.Part1
+		elseif descendant:IsA("Motor6D") then
 			local part0 = descendant.Part0
 			local part1 = descendant.Part1
 			if part0 ~= nil and part1 ~= nil then
@@ -115,6 +121,17 @@ local function ragdollModel(model: Model): boolean
 	if root ~= nil and root:IsA("BasePart") then
 		root.CanCollide = false
 		root.Massless = true
+		if rootBody == nil then
+			local torso = model:FindFirstChild("LowerTorso") or model:FindFirstChild("Torso")
+			rootBody = if torso ~= nil and torso:IsA("BasePart") then torso else nil
+		end
+		if rootBody ~= nil and rootBody ~= root then
+			local weld = Instance.new("WeldConstraint")
+			weld.Name = DeathConstants.RAGDOLL_NAME
+			weld.Part0 = root
+			weld.Part1 = rootBody
+			weld.Parent = root
+		end
 	end
 	counters.ragdolls += 1
 	return true
