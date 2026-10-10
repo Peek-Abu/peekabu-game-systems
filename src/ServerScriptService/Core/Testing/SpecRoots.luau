@@ -286,6 +286,9 @@ local EXEMPT_MODULES: { [string]: string } = {
 	-- Cleanup Crew: Cargo
 	["ReplicatedStorage.Shared.Features.Cargo.Data.CargoTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants"] = "static tuning and names (no logic)",
+
+	-- Cleanup Crew: Vacuum
+	["ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants"] = "static tuning and names (no logic)",
 }
 
 --[=[
