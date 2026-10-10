@@ -151,6 +151,7 @@ subfolder. `<What>` is optional when the feature has only one module of that rol
 **Feature names** (singular, PascalCase): Admin, Analytics, Animation, Badge, Camera, Carry, Currency, DailyReward, Death, Debugger, Entitlement, Input,
 Interaction, Inventory, Item (the item catalog), Leaderstat, Loot, Marketplace, Npc, PlayerData, Round, Setting,
 Sound, StateSync, Title, Toast, UI, Vfx, Voice. A game adds its own (Pet, Shop, ...).
+Cleanup Crew (branch `game/cleanup-crew`) adds Cargo, Office, Shift and Vacuum.
 
 **Networking stays on ByteNet.** Features use ByteNet's typed fields. A `Codec` (our own byte packing
 into `ByteNet.buff`) is written only for genuinely high-volume traffic (bit-packed per-frame records);

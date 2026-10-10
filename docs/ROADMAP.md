@@ -89,3 +89,12 @@ Party pads and reserved servers: a group gathers on a pad and is teleported toge
 
 Each game is its own repo or branch on top of this base and owns its systems (mounts and lassos, the
 egg/base steal loop, cleaning tools and monsters, the night clock and anomalies).
+
+## Games on this base
+
+| Game | Branch | Built so far |
+|---|---|---|
+| Cleanup Crew (cleaning sim × co-op horror) | `game/cleanup-crew` | M1 graybox loop: code-built office with seeded spawns and guarantees (Office), vacuum and canister (Vacuum), 13 cargo kinds with handling traits, pockets, search and banking (Cargo), Round-driven shift with quota, clock out, results and vote (Shift). Spec: `docs/superpowers/specs/2026-10-10-cleanup-crew-design.md`. |
+
+Game features live only on their game branch; nothing in this table belongs in the base unless a second
+game needs it unchanged (see the rule at the top).
