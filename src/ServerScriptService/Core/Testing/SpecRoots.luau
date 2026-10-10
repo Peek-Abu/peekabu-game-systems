@@ -282,6 +282,10 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Commands.NpcSpawn"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.NpcClear"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.DailyRewardReset"] = "Cmdr command definition (server impl is specced)",
+
+	-- Cleanup Crew: Cargo
+	["ReplicatedStorage.Shared.Features.Cargo.Data.CargoTypes"] = "type definitions only (no runtime logic)",
+	["ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants"] = "static tuning and names (no logic)",
 }
 
 --[=[

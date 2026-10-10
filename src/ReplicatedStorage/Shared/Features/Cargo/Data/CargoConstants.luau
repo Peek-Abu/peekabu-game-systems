@@ -1,0 +1,66 @@
+--!strict
+--[=[
+	CargoConstants: Cargo tuning and names (Cleanup Crew spec §4). Every number is a tuning hypothesis.
+	Static data (spec-exempt).
+
+	@class CargoConstants
+]=]
+
+-- Carry weight per size. Carry walks at CarryFormulas.walkSpeedFor(16, weight, 0.05, 0.4): tiny and light
+-- 14.8 (any carried item puts you under Harlow's chase speed of 15), medium 12.8, heavy 10.4, bulky 8 (half).
+local WEIGHT: { [string]: number } = { tiny = 1.5, light = 1.5, medium = 4, heavy = 7, bulky = 10 }
+
+-- Noise radius (studs) of a drop, by size. M2's Noise feature reads these through CargoHandlingRules.
+local DROP_NOISE: { [string]: number } = { tiny = 6, light = 14, medium = 24, heavy = 36, bulky = 40 }
+
+-- Sizes too heavy to sprint with. The base has no sprint yet: data for when it does.
+local NO_SPRINT: { [string]: boolean } = { heavy = true, bulky = true }
+
+-- A fragile item's value fraction after 0, 1, then 2 or more impacts.
+local FRAGILE_TIERS: { number } = { 1, 0.5, 0.25 }
+
+-- The public-player fields that name what is in each pocket (absent = empty).
+local PUBLIC_POCKET_FIELDS: { string } = { "pocket1", "pocket2" }
+
+return table.freeze({
+	WEIGHT = table.freeze(WEIGHT),
+	DROP_NOISE = table.freeze(DROP_NOISE),
+	NO_SPRINT = table.freeze(NO_SPRINT),
+	FRAGILE_TIERS = table.freeze(FRAGILE_TIERS),
+	-- Pockets: two slots, tiny items only.
+	POCKET_SLOTS = 2,
+	POCKET_SIZE = "tiny",
+	PUBLIC_POCKET_FIELDS = table.freeze(PUBLIC_POCKET_FIELDS),
+	-- The Input action that pockets the hands item.
+	POCKET_ACTION = "pocket",
+	-- A bulky item is held far out in front (the cabinet cart).
+	BULKY_HOLD_OFFSET = CFrame.new(0, -1, -4.5),
+	-- Attributes on a spawned item, and its label's name.
+	ID_ATTRIBUTE = "CargoId",
+	VALUE_ATTRIBUTE = "CargoValue",
+	IMPACTS_ATTRIBUTE = "CargoImpacts",
+	HIDDEN_ATTRIBUTE = "CargoHidden",
+	LABEL_NAME = "CargoLabel",
+	-- Interaction kinds Cargo registers (the truck bed and the desks / lockers carry them).
+	LOAD_KIND = "cargo-load",
+	SEARCH_KIND = "cargo-search",
+	LOAD_DISTANCE = 16,
+	SEARCH_DISTANCE = 8,
+	SEARCH_HOLD = 0.8,
+	-- The truck bed counts this far past its footprint, and this high above its top.
+	BED_TOLERANCE = 1.5,
+	BED_HEIGHT = 8,
+	-- Noise seams (M2): a jug's splash, a search, a rattle pulse.
+	SPLASH_NOISE = 70,
+	SEARCH_NOISE = 12,
+	RATTLE_NOISE = 12,
+	RATTLE_INTERVAL = 2,
+	-- Pocketed items scatter this far around where their owner died or left.
+	SCATTER_RADIUS = 4,
+	-- The pile a spilled recycling box becomes.
+	SPILL_PILE_KIND = "paper",
+	-- Graybox item labels are seen within this many studs.
+	LABEL_DISTANCE = 24,
+	-- How far down the floor is looked for under a spill or a scattered item.
+	FLOOR_PROBE = 20,
+})

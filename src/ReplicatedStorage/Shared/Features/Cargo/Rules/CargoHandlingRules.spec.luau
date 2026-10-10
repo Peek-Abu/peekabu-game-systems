@@ -1,0 +1,71 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local CargoHandlingRules = require(script.Parent.CargoHandlingRules)
+local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants)
+local CargoRegistry = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoRegistry)
+
+return function()
+	describe("canPocket", function()
+		it("takes a tiny item into a free pocket", function()
+			expect(CargoHandlingRules.canPocket(CargoRegistry.get("plaque"), 0)).to.equal(true)
+			expect(CargoHandlingRules.canPocket(CargoRegistry.get("goldenStapler"), 1)).to.equal(true)
+		end)
+
+		it("refuses anything bigger than tiny", function()
+			local ok, reason = CargoHandlingRules.canPocket(CargoRegistry.get("rubbishBag"), 0)
+			expect(ok).to.equal(false)
+			expect(reason).to.equal("too big for pockets")
+		end)
+
+		it("refuses a third item", function()
+			local ok, reason = CargoHandlingRules.canPocket(CargoRegistry.get("plaque"), 2)
+			expect(ok).to.equal(false)
+			expect(reason).to.equal("pockets full")
+		end)
+
+		it("refuses something that is not cargo", function()
+			local ok, reason = CargoHandlingRules.canPocket(nil, 0)
+			expect(ok).to.equal(false)
+			expect(reason).to.equal("not cargo")
+		end)
+	end)
+
+	describe("valueAfter", function()
+		it("drops a fragile item one tier per impact, then holds", function()
+			local monitor = CargoRegistry.get("monitor")
+			expect(CargoHandlingRules.valueAfter(monitor, 0)).to.equal(30)
+			expect(CargoHandlingRules.valueAfter(monitor, 1)).to.equal(15)
+			expect(CargoHandlingRules.valueAfter(monitor, 2)).to.equal(8)
+			expect(CargoHandlingRules.valueAfter(monitor, 7)).to.equal(8)
+		end)
+
+		it("leaves a sturdy item's value alone", function()
+			expect(CargoHandlingRules.valueAfter(CargoRegistry.get("printer"), 5)).to.equal(40)
+		end)
+	end)
+
+	describe("impacts and spills", function()
+		it("counts every drop reason except destruction as an impact", function()
+			for _, reason in { "drop", "throw", "forced", "death", "removed" } do
+				expect(CargoHandlingRules.isImpact(reason)).to.equal(true)
+			end
+			expect(CargoHandlingRules.isImpact("destroyed")).to.equal(false)
+		end)
+
+		it("spills only a spilling item, and only on an impact", function()
+			local box = CargoRegistry.get("recyclingBox")
+			expect(CargoHandlingRules.shouldSpill(box, "drop")).to.equal(true)
+			expect(CargoHandlingRules.shouldSpill(box, "destroyed")).to.equal(false)
+			expect(CargoHandlingRules.shouldSpill(CargoRegistry.get("rubbishBag"), "drop")).to.equal(false)
+		end)
+	end)
+
+	describe("dropNoise", function()
+		it("scales with size and splashes loudest", function()
+			expect(CargoHandlingRules.dropNoise(CargoRegistry.get("plaque"))).to.equal(CargoConstants.DROP_NOISE.tiny)
+			expect(CargoHandlingRules.dropNoise(CargoRegistry.get("printer"))).to.equal(CargoConstants.DROP_NOISE.heavy)
+			expect(CargoHandlingRules.dropNoise(CargoRegistry.get("waterJug"))).to.equal(CargoConstants.SPLASH_NOISE)
+			expect(CargoConstants.SPLASH_NOISE > CargoConstants.DROP_NOISE.bulky).to.equal(true)
+		end)
+	end)
+end
