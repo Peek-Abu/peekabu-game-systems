@@ -2,7 +2,7 @@
 --[=[
 	OfficeServiceServer: the Harlow & Finch office (Cleanup Crew spec §6.2 "Office", §6.5 "Reset"). At start
 	it validates the authored layout (OfficeLayoutRules; a broken layout is a boot error) and builds the
-	static graybox once (OfficeBuildSystem) at OfficeConstants.ORIGIN, far from the origin where M4's depot
+	static graybox once (OfficeBuildSystem), then its night decor (OfficeDecorSystem), at OfficeConstants.ORIGIN, far from the origin where M4's depot
 	goes. Each shift `beginShift` rolls the spawns (OfficeSpawnUtils, re-rolling with the next seed, up to
 	ROLL_ATTEMPTS times, if OfficeSpawnRules finds a broken guarantee; then it proceeds with the last roll) and places them in ONE per-shift folder owned by ONE Janitor:
 	piles (Vacuum), items (Cargo), hidden items under piles (revealed when the pile is cleared), and desk /
@@ -30,6 +30,7 @@ local OfficeSpawnRules = require(OfficeServer.Rules.OfficeSpawnRules)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
 local OfficeSpawnUtils = require(OfficeServer.Utils.OfficeSpawnUtils)
 local OfficeBuildSystem = require(OfficeServer.Systems.OfficeBuildSystem)
+local OfficeDecorSystem = require(OfficeServer.Systems.OfficeDecorSystem)
 local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
 local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
 
@@ -119,7 +120,10 @@ local OfficeServiceServer: OfficeServiceServer = {
 		assert(capacityOk, `office layout cannot hold a shift: {reason or "?"}`)
 		local routeOk, routeReason = OfficeLayoutRules.checkRoute(LAYOUT)
 		assert(routeOk, `office layout has no usable patrol route: {routeReason or "?"}`)
-		built = OfficeBuildSystem.build(LAYOUT, OfficeConstants.ORIGIN)
+		local current = OfficeBuildSystem.build(LAYOUT, OfficeConstants.ORIGIN)
+		built = current
+		-- The office at night (exit signs, blue monitors, the elevator, ambience emitters), once.
+		OfficeDecorSystem.build(LAYOUT, OfficeConstants.ORIGIN, current.model)
 		local cleared = VacuumServiceServer.pileCleared:Connect(function(pile)
 			local item: BasePart? = hidden[pile]
 			hidden[pile] = nil
