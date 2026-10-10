@@ -45,6 +45,7 @@ function NpcRegistry.register(kind: string, input: NpcTypes.NpcDefInput)
 		attackCooldown = input.attackCooldown or base.attackCooldown,
 		corpseTime = input.corpseTime or base.corpseTime,
 		animations = input.animations,
+		pathCosts = input.pathCosts,
 	}
 	for _, value in
 		{
@@ -64,6 +65,12 @@ function NpcRegistry.register(kind: string, input: NpcTypes.NpcDefInput)
 	end
 	assert(def.runSpeed >= def.walkSpeed, `npc kind "{kind}": runSpeed must be at least walkSpeed`)
 	assert(def.sightAngle >= 0 and def.sightAngle <= 360, `npc kind "{kind}": sightAngle must be 0-360`)
+	local costs = def.pathCosts
+	if costs ~= nil then
+		for label, cost in costs do
+			assert(cost >= 0, `npc kind "{kind}": path cost "{label}" must not be negative`)
+		end
+	end
 	defs[kind] = table.freeze(def)
 end
 

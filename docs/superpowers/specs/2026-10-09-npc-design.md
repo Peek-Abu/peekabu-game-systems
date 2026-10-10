@@ -56,3 +56,7 @@ Not now: group tactics, a hearing model, flying or swimming agents.
 | Npc | server | root | NpcServiceServer | Spawn / adopt, the tick, perception, attacks, animation |
 
 Plus admin commands `npcspawn <kind>` and `npcclear`.
+
+## 2026-10-10 additions
+
+A game can now replace what a kind decides. `NpcServiceServer:setBrain(kind, brain?)` swaps in a `Brain` for a registered kind (nil removes it; a brain that returns nil for a tick uses the default). A brain can return the new `goTo` intent, `{ kind = "goTo", position, run }`, to send an NPC to a point. `setTuning(npc, tuning?)` overrides an `NpcTuning` for one NPC at runtime and returns whether the NPC was found. A kind def may set `pathCosts` so pathfinding avoids marked zones.

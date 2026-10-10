@@ -35,4 +35,23 @@ return function()
 		refuses("spec-distance", { actionText = "Use", maxDistance = 0 })
 		refuses("spec-cooldown", { actionText = "Use", cooldown = -1 })
 	end)
+
+	describe("channels", function()
+		it("registers and returns a channel kind", function()
+			if not InteractionRegistry.hasChannel("spec-vacuum") then
+				InteractionRegistry.registerChannel("spec-vacuum", { duration = 2.5, maxDistance = 8 })
+			end
+			expect(InteractionRegistry.getChannel("spec-vacuum").duration).to.equal(2.5)
+		end)
+
+		it("refuses a non-positive duration or distance", function()
+			expect(function()
+				InteractionRegistry.registerChannel("spec-chan-zero", { duration = 0 })
+			end).to.throw()
+			expect(function()
+				InteractionRegistry.registerChannel("spec-chan-far", { duration = 1, maxDistance = 0 })
+			end).to.throw()
+			expect(InteractionRegistry.hasChannel("spec-chan-zero")).to.equal(false)
+		end)
+	end)
 end

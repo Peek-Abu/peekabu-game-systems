@@ -51,4 +51,38 @@ function NpcBrainRules.poseFor(speed: number, walkSpeed: number): NpcTypes.Pose
 	return "run"
 end
 
+--[=[
+	The intent for this tick: the game's brain when it has one and it answers, else `decide`.
+]=]
+function NpcBrainRules.choose(
+	def: NpcTypes.NpcDef,
+	context: NpcTypes.BrainContext,
+	npc: Model,
+	brain: NpcTypes.Brain?
+): Intent
+	if brain ~= nil then
+		local intent = brain(def, context, npc)
+		if intent ~= nil then
+			return intent
+		end
+	end
+	return NpcBrainRules.decide(def, context)
+end
+
+--[=[
+	The kind's def with one NPC's runtime overrides. runSpeed is raised to walkSpeed if an override
+	would put it below.
+]=]
+function NpcBrainRules.tuned(def: NpcTypes.NpcDef, tuning: NpcTypes.NpcTuning?): NpcTypes.NpcDef
+	if tuning == nil then
+		return def
+	end
+	local result = table.clone(def)
+	result.walkSpeed = tuning.walkSpeed or def.walkSpeed
+	result.runSpeed = math.max(tuning.runSpeed or def.runSpeed, result.walkSpeed)
+	result.sightRange = tuning.sightRange or def.sightRange
+	result.sightAngle = tuning.sightAngle or def.sightAngle
+	return table.freeze(result)
+end
+
 return NpcBrainRules

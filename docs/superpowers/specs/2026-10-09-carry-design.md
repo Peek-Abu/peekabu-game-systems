@@ -39,3 +39,7 @@ Backpack, which native characters keep; this system is for physical world object
 | Carry | server | State | CarryHoldTracker | Who holds what (one object per player) |
 | Carry | server | root | CarryServiceServer | Pick up, drop, throw, force-drop; the `carry` interaction |
 | Carry | client | root | CarryServiceClient | The drop / throw Input actions → packets |
+
+## 2026-10-10 additions
+
+Carry now tells a game when something is held or let go. `CarryServiceServer.pickedUp(player, object)` fires after a pickup. `CarryServiceServer.dropped(player, object, reason)` fires when the object is released. A `DropReason` is `"drop"`, `"throw"`, `"forced"`, `"death"`, `"removed"` or `"destroyed"`. `forceDrop(player, reason?)` takes the same reasons.

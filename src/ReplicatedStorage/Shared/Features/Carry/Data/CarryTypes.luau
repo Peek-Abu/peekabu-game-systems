@@ -16,4 +16,8 @@ export type CarryDef = {
 	holdOffset: CFrame?,
 }
 
+-- Why a hold ended: the player dropped or threw it, a game rule forced it, the carrier died, the
+-- carrier's character was removed (respawn or leaving), or the object was destroyed while held.
+export type DropReason = "drop" | "throw" | "forced" | "death" | "removed" | "destroyed"
+
 return {}

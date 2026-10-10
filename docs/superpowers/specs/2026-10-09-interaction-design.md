@@ -35,3 +35,7 @@ client — decides whether a press counts.
 | Interaction | server | State | InteractionCooldownTracker | Last use per player per object |
 | Interaction | server | root | InteractionServiceServer | Prompts on tagged objects, validated dispatch to handlers |
 | Interaction | client | root | InteractionServiceClient | Re-keys prompts to the `interact` Input binding |
+
+## 2026-10-10 additions
+
+Interaction now has channels: a continuous hold with progress kept on the server. A kind is declared with `InteractionRegistry.registerChannel(kind, { duration, maxDistance? })`, and `getChannel` and `hasChannel` read it back. A game sets the one handler with `InteractionServiceServer:channel(kind, { canChannel?, onComplete })`, and `resetChannel(target)` zeroes progress and ends everyone's channel on it. The client calls `startChannel(target)` and `stopChannel()`. Objects carry the `ChannelKind` attribute, and the server mirrors progress on `ChannelProgress` and `ChannelCount`, stepped every `CHANNEL_TICK`.

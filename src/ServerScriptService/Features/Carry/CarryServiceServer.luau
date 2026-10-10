@@ -9,6 +9,7 @@
 	by its weight, and is published (`CarriedBy` attribute, public `carrying` field). Drop / throw arrive
 	as validated packets; death, respawn and leaving drop it. `forceDrop` is the hook for game rules
 	(stealing an egg is forceDrop on the victim, then pickUp for the thief).
+	`pickedUp` / `dropped(player, object, reason)` signals let a game react (banking, noise, analytics).
 
 	Spec-exempt shell (Instances, physics, Players, ByteNet); the rules are the specced CarryRegistry,
 	CarryFormulas and CarryHoldTracker.
@@ -25,8 +26,10 @@ local CarryShared = ReplicatedStorage.Shared.Features.Carry
 local InteractionData = ReplicatedStorage.Shared.Features.Interaction.Data
 local Observers = require(ReplicatedStorage.Packages.Observers)
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
+local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local CarryConstants = require(CarryShared.Data.CarryConstants)
 local CarryRegistry = require(CarryShared.Data.CarryRegistry)
+local CarryTypes = require(CarryShared.Data.CarryTypes)
 local CarryFormulas = require(CarryShared.Utils.CarryFormulas)
 local CarryEvents = require(CarryShared.Net.CarryEvents)
 local InteractionConstants = require(InteractionData.InteractionConstants)
@@ -54,6 +57,9 @@ type Held = {
 }
 
 local log = Logger.new("CarryServiceServer")
+
+local pickedUp: SignalTyped.Signal<Player, Instance> = SignalTyped.new()
+local dropped: SignalTyped.Signal<Player, Instance, CarryTypes.DropReason> = SignalTyped.new()
 
 local holds = CarryHoldTracker.new()
 local objectIds: { [Instance]: number } = {}
@@ -128,13 +134,15 @@ end
 
 export type CarryServiceServer = {
 	dependencies: { string },
+	pickedUp: SignalTyped.Signal<Player, Instance>,
+	dropped: SignalTyped.Signal<Player, Instance, CarryTypes.DropReason>,
 	start: (self: CarryServiceServer) -> (),
 	stop: (self: CarryServiceServer) -> (),
 	getState: (self: CarryServiceServer) -> { [string]: any },
 	pickUp: (self: CarryServiceServer, player: Player, target: Instance) -> (boolean, string?),
 	drop: (self: CarryServiceServer, player: Player) -> boolean,
 	throw: (self: CarryServiceServer, player: Player, aim: Vector3) -> (boolean, string?),
-	forceDrop: (self: CarryServiceServer, player: Player) -> boolean,
+	forceDrop: (self: CarryServiceServer, player: Player, reason: CarryTypes.DropReason?) -> boolean,
 	getCarried: (self: CarryServiceServer, player: Player) -> Instance?,
 }
 
@@ -162,6 +170,8 @@ local onThrow = RequestHandler.wrap({
 
 CarryServiceServer = {
 	dependencies = { "InteractionServiceServer" },
+	pickedUp = pickedUp,
+	dropped = dropped,
 
 	--[=[
 		Makes tagged objects interactable, handles the `carry` interaction, drops on death / respawn /
@@ -195,6 +205,7 @@ CarryServiceServer = {
 					local player = if holder ~= nil then Players:GetPlayerByUserId(holder) else nil
 					if player ~= nil then
 						release(player)
+						dropped:Fire(player, target, "destroyed")
 					end
 					objectIds[target] = nil
 					objectsById[objectId] = nil
@@ -208,14 +219,14 @@ CarryServiceServer = {
 				local humanoid = character:FindFirstChildOfClass("Humanoid")
 				local died = if humanoid ~= nil
 					then humanoid.Died:Connect(function()
-						self:forceDrop(player)
+						self:forceDrop(player, "death")
 					end)
 					else nil
 				return function()
 					if died ~= nil then
 						died:Disconnect()
 					end
-					self:forceDrop(player)
+					self:forceDrop(player, "removed")
 				end
 			end)
 		)
@@ -307,6 +318,7 @@ CarryServiceServer = {
 		target:SetAttribute(InteractionConstants.ENABLED_ATTRIBUTE, false)
 		StateSyncPublicPlayerStore.set(player.UserId, { [CarryConstants.PUBLIC_FIELD] = kind })
 		counters.pickedUp += 1
+		pickedUp:Fire(player, target)
 		return true, nil
 	end,
 
@@ -321,6 +333,7 @@ CarryServiceServer = {
 		end
 		placeDropped(player, root, state.target)
 		counters.dropped += 1
+		dropped:Fire(player, state.target, "drop")
 		return true
 	end,
 
@@ -353,19 +366,23 @@ CarryServiceServer = {
 		placeDropped(player, root, state.target)
 		root.AssemblyLinearVelocity = velocity
 		counters.thrown += 1
+		dropped:Fire(player, state.target, "throw")
 		return true, nil
 	end,
 
 	--[=[
-		Drops whatever `player` carries, where it is (death, leaving, or a game rule). False when nothing.
+		Drops whatever `player` carries, where it is (death, leaving, or a game rule). `reason` is reported
+		on `dropped` (default "forced"). False when nothing.
 	]=]
-	forceDrop = function(_self, player)
+	forceDrop = function(_self, player, reason)
+		local state = held[player.UserId]
 		local root = release(player)
-		if root == nil then
+		if state == nil or root == nil then
 			return false
 		end
 		root.Anchored = false
 		counters.dropped += 1
+		dropped:Fire(player, state.target, reason or "forced")
 		return true
 	end,
 
