@@ -94,7 +94,7 @@ egg/base steal loop, cleaning tools and monsters, the night clock and anomalies)
 
 | Game | Branch | Built so far |
 |---|---|---|
-| Cleanup Crew (cleaning sim × co-op horror) | `game/cleanup-crew` | M1 graybox loop: code-built office with seeded spawns and guarantees (Office), vacuum and canister (Vacuum), 13 cargo kinds with handling traits, pockets, search and banking (Cargo), Round-driven shift with quota, clock out, results and vote (Shift). Spec: `docs/superpowers/specs/2026-10-10-cleanup-crew-design.md`. |
+| Cleanup Crew (cleaning sim × co-op horror) | `game/cleanup-crew` | M1 graybox loop: code-built office with seeded spawns and guarantees (Office), vacuum and canister (Vacuum), 13 cargo kinds with handling traits, pockets, search and banking (Cargo), Round-driven shift with quota, clock out, results and vote (Shift). M2 Mr. Harlow: the `harlow` NPC kind on the base brain/goTo/tuning/pathCosts hooks with a specced pure brain (patrol, investigate, chase, search, break, catch, grace, safe loading bay), one noise stream with a hearing rule and ripple rings (Noise), the catch (camera snap, lights out, ragdoll launch, spectate, "Rehired."), pressure tiers, quota → break → overtime warning → overtime (salvage ×1.5), rattle pulses, the jug's slippery puddle, swap/unpocket, placeholder tells (Occupant). Spec: `docs/superpowers/specs/2026-10-10-cleanup-crew-design.md`. |
 
 Game features live only on their game branch; nothing in this table belongs in the base unless a second
 game needs it unchanged (see the rule at the top).

@@ -67,12 +67,13 @@
 | Occupant | server | (root) | OccupantServiceServer | The `harlow` kind, brain, senses, tuning, spawn/despawn, catch wiring |
 | Occupant | client | Systems | OccupantTellSystem | Light flicker near Harlow, lights out, tier flicker, heartbeat pulse |
 | Occupant | client | (root) | OccupantServiceClient | Catch camera; routes the packets to the tell system |
-| Cargo | server | Systems | CargoPocketSystem | Pockets: pocket, swap / unpocket, scatter, publish (moved out of the service) |
+| Cargo | server | Systems | CargoPocketSystem | Pockets: pocket, swap / unpocket, scatter, publish (modified: existed from M1, extended in M2) |
 | Cargo | server | Systems | CargoTraitSystem | Rattle pulses while carried, splash puddles |
 | Cargo | client | Systems | CargoSlipSystem | Slipping on a puddle |
+| Shift | server | Systems | ShiftBankingSystem | Banking and clock-out moved out of the service |
 | Shift | server | Utils | ShiftNoticeUtils | Toasts for quota met (break), tier up, overtime warning, overtime |
 
-22 new modules. **No new subfolder kind, role word or second service.** Noise and Occupant are the spec's proposed feature names (§6.2, §11); Task 12 records them in `docs/project-structure.md`. Modified: Shift (Types, Constants, PhaseRules, ResultsUtils, SnapshotUtils, ServiceServer, HUD view model and panel, HUD story), Cargo (Types, Constants, HandlingRules, Events, PocketTracker, ServiceServer, ServiceClient), Office (Types, Constants, LayoutConstants, LayoutUtils, LayoutRules, BuildSystem, ServiceServer), `SpecRoots` (exemptions), `docs/project-structure.md`, `docs/ROADMAP.md`.
+23 new modules. **No new subfolder kind, role word or second service.** Noise and Occupant are the spec's proposed feature names (§6.2, §11); Task 12 records them in `docs/project-structure.md`. Modified: Shift (Types, Constants, PhaseRules, ResultsUtils, SnapshotUtils, ServiceServer, HUD view model and panel, HUD story), Cargo (Types, Constants, HandlingRules, Events, PocketTracker, ServiceServer, ServiceClient), Office (Types, Constants, LayoutConstants, LayoutUtils, LayoutRules, BuildSystem, ServiceServer), `SpecRoots` (exemptions), `docs/project-structure.md`, `docs/ROADMAP.md`.
 
 ## Open questions for the developer
 
