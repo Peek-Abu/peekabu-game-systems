@@ -211,6 +211,8 @@ local DeathServiceServer: DeathServiceServer = {
 								character:PivotTo(cframe)
 							end
 						end)
+					elseif cframe ~= nil then
+						log:warn(`spawn resolver for {player.Name} returned {typeof(cframe)}, not a CFrame`)
 					end
 				end
 				StateSyncPublicPlayerStore.clearField(player.UserId, DeathConstants.PUBLIC_FIELD)
