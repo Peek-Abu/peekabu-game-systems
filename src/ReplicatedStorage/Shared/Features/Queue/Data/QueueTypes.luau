@@ -14,7 +14,7 @@ export type PadConfig = {
 
 export type PadStatus = "open" | "departing"
 
--- Game data riding a teleport: a contract id on the way out, a result card on the way back. Flat and
+-- Game data riding a teleport: a match id on the way out, a summary on the way back. Flat and
 -- capped (QueueConstants.MAX_PAYLOAD_*). Never security data: teleport data travels through the client.
 export type QueuePayload = { [string]: string | number | boolean }
 
@@ -67,7 +67,7 @@ export type QueueConfigUpdate = {
 	forceLive: boolean?,
 }
 
--- Builds the payload for a departing party (a contract id). An error or a payload over the limits
+-- Builds the payload for a departing party (a match id). An error or a payload over the limits
 -- sends `{}` instead.
 export type DepartDataResolver = (pad: BasePart, party: { Player }) -> QueuePayload
 

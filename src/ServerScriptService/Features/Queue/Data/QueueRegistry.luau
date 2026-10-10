@@ -1,13 +1,13 @@
 --!strict
 --[=[
-	QueueRegistry: the place-role table. Which PlaceId plays which role (a game's "depot" and "shift",
+	QueueRegistry: the place-role table. Which PlaceId plays which role (a game's "lobby" and "match",
 	any strings). A game registers its roles at load, from server code; the base registers none.
 
 	A role whose place does not exist yet registers QueueConstants.PLACEHOLDER_PLACE_ID (0): it is
 	reached by a local move until the real PlaceId is filled in. Example, in a game's server Data:
 
-		QueueRegistry.register("depot", 1234567890)
-		QueueRegistry.register("shift", QueueConstants.PLACEHOLDER_PLACE_ID) -- PLACEHOLDER: create the place, then fill in its PlaceId
+		QueueRegistry.register("lobby", 1234567890)
+		QueueRegistry.register("match", QueueConstants.PLACEHOLDER_PLACE_ID) -- PLACEHOLDER: create the place, then fill in its PlaceId
 
 	@class QueueRegistry
 ]=]
