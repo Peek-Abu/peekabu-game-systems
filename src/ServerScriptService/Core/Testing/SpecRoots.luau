@@ -219,6 +219,17 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Features.Toast.ToastServiceServer"] = "ByteNet shell (ToastRules is specced)",
 	["ReplicatedStorage.Client.Features.Toast.ToastServiceClient"] = "ByteNet/RunService/Sound shell (ToastStore and ToastQueueUtils are specced)",
 	["ReplicatedStorage.Client.UI.React.Screens.Hud.ToastStack"] = "React UI component (rendered in-game; story in ToastStack.story)",
+	["ReplicatedStorage.Shared.Features.Queue.Data.QueueTypes"] = "type definitions only (no runtime logic)",
+	["ReplicatedStorage.Shared.Features.Queue.Data.QueueConstants"] = "static names, defaults and limits (no logic)",
+	["ReplicatedStorage.Shared.Features.Queue.Net.QueueEvents"] = "ByteNet packet definitions (no logic)",
+	["ServerScriptService.Features.Queue.Systems.QueuePadSystem"] = "CollectionService/character shell (QueuePadRules and QueuePadTracker are specced)",
+	["ServerScriptService.Features.Queue.Systems.QueueTeleportSystem"] = "TeleportService shell; teleports cannot run in Studio (QueueDepartureTracker and QueueTeleportRules are specced)",
+	["ServerScriptService.Features.Queue.Systems.QueueArrivalSystem"] = "Players/join-data shell; join data exists only after a live teleport (QueueArrivalTracker is specced)",
+	["ServerScriptService.Features.Queue.Systems.QueueLandingSystem"] = "character/Players/phase shell (QueueTeleportRules decodes the ticket)",
+	["ServerScriptService.Features.Queue.QueueServiceServer"] = "TeleportService/Players/HttpService/signal shell (rules and trackers are specced)",
+	["ReplicatedStorage.Client.Features.Queue.QueueServiceClient"] = "ByteNet/HUD registration shell (QueueStore and QueueSnapshotUtils are specced)",
+	["ReplicatedStorage.Client.UI.React.Screens.Hud.QueuePadStatus"] = "React UI component (rendered in-game; its panel has a story)",
+	["ReplicatedStorage.Client.UI.React.Screens.Hud.QueuePadPanel"] = "React UI component (presentational; story in QueuePadPanel.story)",
 	["ServerScriptService.Features.Carry.CarryServiceServer"] = "Instance/physics/ByteNet shell (registry, formulas and hold tracker are specced)",
 	["ReplicatedStorage.Client.Features.Carry.CarryServiceClient"] = "Input/ByteNet shell (the server decides)",
 	["ServerScriptService.Features.Round.RoundServiceServer"] = "Players/RunService/signal shell (phase rules, run tracker and container utils are specced)",
@@ -282,6 +293,72 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Commands.NpcSpawn"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.NpcClear"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.DailyRewardReset"] = "Cmdr command definition (server impl is specced)",
+
+	-- Cleanup Crew: Cargo
+	["ReplicatedStorage.Shared.Features.Cargo.Data.CargoTypes"] = "type definitions only (no runtime logic)",
+	["ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants"] = "static tuning and names (no logic)",
+	["ReplicatedStorage.Shared.Features.Cargo.Net.CargoEvents"] = "ByteNet packet definitions (no logic)",
+	["ServerScriptService.Features.Cargo.Systems.CargoSpawnSystem"] = "Instance/raycast shell (CargoRegistry is specced)",
+	["ServerScriptService.Features.Cargo.Systems.CargoPocketSystem"] = "Carry/Instance/public-state/Heartbeat shell (pocket, swap and slot decisions are specced in CargoHandlingRules and CargoPocketTracker)",
+	["ServerScriptService.Features.Cargo.Systems.CargoTraitSystem"] = "Players/Carry/Instance shell (rattle and puddle decisions are specced in CargoHandlingRules)",
+	["ReplicatedStorage.Client.Features.Cargo.Systems.CargoSlipSystem"] = "Humanoid/physics shell (the slip decision CargoHandlingRules.slips is specced)",
+	["ServerScriptService.Features.Cargo.CargoServiceServer"] = "Instance/Players/ByteNet/signal shell (handling, bank rules, claim and pocket trackers are specced)",
+	["ReplicatedStorage.Client.Features.Cargo.CargoServiceClient"] = "Input/Camera/ByteNet shell (the server decides)",
+
+	-- Cleanup Crew: Vacuum
+	["ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants"] = "static tuning and names (no logic)",
+	["ServerScriptService.Features.Vacuum.VacuumServiceServer"] = "Instance/Players/RunService/signal shell (VacuumCanisterUtils is specced)",
+	["ReplicatedStorage.Client.Features.Vacuum.VacuumServiceClient"] = "Input/Camera shell (VacuumAimUtils is specced; the server decides)",
+
+	-- Cleanup Crew: Noise
+	["ReplicatedStorage.Shared.Features.Noise.Data.NoiseTypes"] = "type definitions only (no runtime logic)",
+	["ReplicatedStorage.Shared.Features.Noise.Data.NoiseConstants"] = "static ripple look (no logic)",
+	["ReplicatedStorage.Shared.Features.Noise.Net.NoiseEvents"] = "ByteNet packet definitions (no logic)",
+	["ServerScriptService.Features.Noise.NoiseServiceServer"] = "signal/ByteNet relay shell (the hearing rule NoiseRules is specced)",
+	["ReplicatedStorage.Client.Features.Noise.NoiseServiceClient"] = "Instance/tween/raycast shell (draws the ripple)",
+
+	-- Cleanup Crew: Office
+	["ServerScriptService.Features.Office.Data.OfficeTypes"] = "type definitions only (no runtime logic)",
+	["ServerScriptService.Features.Office.Data.OfficeConstants"] = "static placement, sizes and roll knobs (no logic)",
+	["ServerScriptService.Features.Office.Data.OfficeLayoutConstants"] = "authored layout data; validated by OfficeLayoutRules.spec",
+	["ServerScriptService.Features.Office.Systems.OfficeBuildSystem"] = "Instance builder (the layout is validated by the specced OfficeLayoutRules)",
+	["ServerScriptService.Features.Office.OfficeServiceServer"] = "Instance/signal shell (layout rules, spawn roll and spawn rules are specced)",
+
+	-- Cleanup Crew: Occupant
+	["ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants"] = "static tuning, names and placeholder lines (no logic)",
+	["ReplicatedStorage.Shared.Features.Occupant.Data.OccupantTypes"] = "type definitions only (no runtime logic)",
+	["ReplicatedStorage.Shared.Features.Occupant.Net.OccupantEvents"] = "ByteNet packet definitions (no logic)",
+	["ServerScriptService.Features.Occupant.Systems.OccupantRigSystem"] = "Instance builder (HumanoidDescription rig, billboards)",
+	["ServerScriptService.Features.Occupant.OccupantServiceServer"] = "NPC/raycast/signal shell (brain, tuning and tell decisions are specced in OccupantBrainRules, OccupantCatchRules, OccupantTuningFormulas, OccupantTellRules)",
+	["ServerScriptService.Features.Occupant.Systems.OccupantCatchSystem"] = "Instance/ByteNet/Death shell (catch decisions and the launch are specced in OccupantCatchRules)",
+	["ReplicatedStorage.Client.Features.Occupant.OccupantServiceClient"] = "Camera/Vfx/ByteNet shell (tell decisions are specced in OccupantTellRules)",
+	["ReplicatedStorage.Client.Features.Occupant.Systems.OccupantTellSystem"] = "Instance/Vfx shell (flicker, heartbeat and pulse decisions are specced in OccupantTellRules)",
+
+	-- Cleanup Crew: Shift
+	["ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes"] = "type definitions only (no runtime logic)",
+	["ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants"] = "static pacing and names (no logic)",
+	["ReplicatedStorage.Shared.Features.Shift.Net.ShiftEvents"] = "ByteNet packet definitions (no logic)",
+	["ServerScriptService.Features.Shift.Systems.ShiftBankingSystem"] = "Round/Toast banking shell (salvage multiplier and quota are specced in ShiftPhaseRules)",
+	["ServerScriptService.Features.Shift.ShiftServiceServer"] = "Players/RunService/service-orchestration shell (phase, vote, results and snapshot rules are specced)",
+	["ServerScriptService.Features.Shift.Systems.ShiftTripSystem"] = "Players/Queue-signal/teleport shell (ShiftCrewTracker, ShiftCardUtils and DepotContractUtils are specced)",
+	["ReplicatedStorage.Client.Features.Shift.State.ShiftStore"] = "Charm computed facade over the shift world entry (decoding is specced in ShiftSnapshotUtils)",
+	["ReplicatedStorage.Client.Features.Shift.ShiftServiceClient"] = "HUD registration + Charm/ByteNet shell (the server decides)",
+	["ReplicatedStorage.Client.UI.React.Hooks.useServerClock"] = "React hook — re-renders on the server clock (no logic)",
+	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudPanel"] = "React UI component (placeholder; story in ShiftHudPanel.story; strings specced in ShiftHudViewModel)",
+	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHud"] = "React HUD widget wiring stores to ShiftHudPanel (no logic)",
+	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftResultsPanel"] = "React UI component (placeholder; story in ShiftResultsPanel.story; strings specced in ShiftHudViewModel)",
+	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftResults"] = "React HUD widget wiring stores to ShiftResultsPanel (no logic)",
+	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftMobileButtons"] = "React touch buttons calling client services (no logic)",
+	-- Cleanup Crew: Depot
+	["ReplicatedStorage.Shared.Features.Depot.Data.DepotTypes"] = "type definitions only (no runtime logic)",
+	["ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants"] = "static names, place table, contracts and card texts (no logic)",
+	["ServerScriptService.Features.Depot.Data.DepotLayoutConstants"] = "authored layout data; validated by DepotLayoutRules.spec",
+	["ReplicatedStorage.Shared.Features.Depot.Net.DepotEvents"] = "ByteNet packet definitions (no logic)",
+	["ServerScriptService.Features.Depot.Systems.DepotBuildSystem"] = "Instance builder (the layout is validated by the specced DepotLayoutRules)",
+	["ServerScriptService.Features.Depot.DepotServiceServer"] = "Players/RunService/ByteNet/Queue-signal shell (layout rules, contract utils and the result card are specced)",
+	["ReplicatedStorage.Client.Features.Depot.DepotServiceClient"] = "ByteNet/HUD registration/RunService shell (DepotStore is specced)",
+	["ReplicatedStorage.Client.UI.React.Screens.Depot.DepotCardPanel"] = "React UI component (placeholder; story in DepotCardPanel.story)",
+	["ReplicatedStorage.Client.UI.React.Screens.Depot.DepotCard"] = "React HUD widget wiring DepotStore to DepotCardPanel (no logic)",
 }
 
 --[=[

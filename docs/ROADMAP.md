@@ -48,6 +48,7 @@ Re-seeded from `venture-game-systems` (main at `bb33e81`), which itself began as
 | Small services | Leaderstats (registered player-list columns), Badges (award by key, cached, retried), Analytics (a safe AnalyticsService wrapper), Daily rewards (an account streak claimed in one transaction with its reward), weighted Loot tables (pure, seedable rolls and drop chances) |
 | UI framework | React layers (respawn-safe), scene stack with Escape / gamepad-B pop and per-scene toggle keys, world-suppression contract, HUD widget registry, primitives + tokens, UI Labs stories |
 | Toast | Server-sent toasts (`ToastServiceServer:send`) to one player or all, with registered styles (`info` ships), text cut at 140 characters, 1 to 15 seconds, and a HUD stack showing 4 at a time |
+| Queue | Party pads (`QueuePad` tag; capacity, countdown reset on join, Depart now) that move a party together to another place of the experience: a fresh reserved server, 3 backed-off retries then back on the pad with a toast; the arrival side waits for the expected party (20 s), seats strangers only where there is room and redirects the rest; a return trip carries a result payload; a place-role table (`QueueRegistry`) with placeholder PlaceIds, and a local mode in Studio / unknown places where a teleport becomes a move and `arrived` fires the same way |
 | Debugger | F4 overlay: logs, services, live state tree, animations, UI stack |
 | Admin | Cmdr with a fail-closed allowlist; currency, inventory, title, animation, round, premium, entitlement, NPC and daily-reward commands |
 | Tooling | `--!strict`, selene, stylua, luau-lsp typecheck, layout rules + module map, file-length cap, cast/trailer/asset-id/UI CI gates, TestEZ on Open Cloud |
@@ -81,11 +82,16 @@ Ordered so each builds on the ones before it. Every one is a NEW, generic design
 | 13 | **Voice** ✅ built (`docs/superpowers/specs/2026-10-09-voice-design.md`) | Audio-API proximity voice anchored to `Character.Head`, with routing (radio, dead-player channel). | 2 |
 | 14 | Leaderstats, badges, analytics, daily rewards, weighted loot tables ✅ built (`docs/superpowers/specs/2026-10-09-small-services-design.md`) | Small shared services. | as needed |
 
-## Queue — planned before Cleanup Crew M4
-
-Party pads and reserved servers: a group gathers on a pad and is teleported together into a reserved server. It follows the base game hooks in its own PR.
-
 ## Game demos
 
 Each game is its own repo or branch on top of this base and owns its systems (mounts and lassos, the
 egg/base steal loop, cleaning tools and monsters, the night clock and anomalies).
+
+## Games on this base
+
+| Game | Branch | Built so far |
+|---|---|---|
+| Cleanup Crew (cleaning sim × co-op horror) | `game/cleanup-crew` | M1 graybox loop: code-built office with seeded spawns and guarantees (Office), vacuum and canister (Vacuum), 13 cargo kinds with handling traits, pockets, search and banking (Cargo), Round-driven shift with quota, clock out, results and vote (Shift). M2 Mr. Harlow: the `harlow` NPC kind on the base brain/goTo/tuning/pathCosts hooks with a specced pure brain (patrol, investigate, chase, search, break, catch, grace, safe loading bay), one noise stream with a hearing rule and ripple rings (Noise), the catch (camera snap, lights out, ragdoll launch, spectate, "Rehired."), pressure tiers, quota → break → overtime warning → overtime (salvage ×1.5), rattle pulses, the jug's slippery puddle, swap/unpocket, placeholder tells (Occupant). M4 depot and trips: a code-built depot garage (Depot) with three truck queue pads (base Queue: 1-4 players, 15 s countdown, Depart now), tonight's contract board and a result board; drive and arrival cards; the crew is the party that arrived, the only players who start a shift, take part and vote; Back to depot rides Queue's return trip with the review as a result card pinned for each returning player; placeholder PlaceIds, so the whole loop plays in one Studio server (publish walkthrough: `docs/cleanup-crew-publish.md`). Spec: `docs/superpowers/specs/2026-10-10-cleanup-crew-design.md`. |
+
+Game features live only on their game branch; nothing in this table belongs in the base unless a second
+game needs it unchanged (see the rule at the top).

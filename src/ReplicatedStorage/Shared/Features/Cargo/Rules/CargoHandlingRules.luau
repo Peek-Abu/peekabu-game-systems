@@ -1,0 +1,129 @@
+--!strict
+--[=[
+	CargoHandlingRules: what handling does to cargo (Cleanup Crew spec §4). Pockets take tiny items only,
+	two at a time; a fragile item loses a value tier per impact; a recycling box spills into a pile; a drop
+	is as loud as the item is heavy, and the water jug splashes louder than anything. M2: rattles, puddles and
+	slipping. Pure.
+
+	@class CargoHandlingRules
+]=]
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local CarryTypes = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryTypes)
+local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants)
+local CargoTypes = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoTypes)
+
+type ItemDef = CargoTypes.ItemDef
+
+local CargoHandlingRules = {}
+
+--[=[
+	Whether the hands item fits a pocket, given how many are already pocketed.
+]=]
+function CargoHandlingRules.canPocket(def: ItemDef?, pocketed: number): (boolean, string?)
+	if def == nil then
+		return false, "not cargo"
+	end
+	if def.size ~= CargoConstants.POCKET_SIZE then
+		return false, "too big for pockets"
+	end
+	if pocketed >= CargoConstants.POCKET_SLOTS then
+		return false, "pockets full"
+	end
+	return true, nil
+end
+
+--[=[
+	An item's value after `impacts` drops or throws: unchanged unless fragile, else the catalog value times
+	the tier's fraction, rounded; past the last tier it stays there.
+]=]
+function CargoHandlingRules.valueAfter(def: ItemDef, impacts: number): number
+	if not def.fragile then
+		return def.value
+	end
+	local tiers = CargoConstants.FRAGILE_TIERS
+	local fraction = tiers[math.clamp(impacts + 1, 1, #tiers)]
+	return math.floor(def.value * fraction + 0.5)
+end
+
+--[=[
+	Whether a hold ending for `reason` hit the floor. Everything does except the object being destroyed while
+	held. (Cargo's own pocketing and banking claim the item first, so their forced drops never get here.)
+]=]
+function CargoHandlingRules.isImpact(reason: CarryTypes.DropReason): boolean
+	return reason ~= "destroyed"
+end
+
+function CargoHandlingRules.shouldSpill(def: ItemDef, reason: CarryTypes.DropReason): boolean
+	return def.spills and CargoHandlingRules.isImpact(reason)
+end
+
+--[=[
+	The radius (studs) a drop of this item is heard at (the M2 Noise seam).
+]=]
+function CargoHandlingRules.dropNoise(def: ItemDef): number
+	if def.splashes then
+		return CargoConstants.SPLASH_NOISE
+	end
+	return CargoConstants.DROP_NOISE[def.size] or 0
+end
+
+--[=[
+	What a swap request does (spec §6.3): with empty hands the newest pocketed item comes out ("unpocket"); with
+	a tiny item in hand it goes into the pockets and the oldest pocketed item comes out ("swap"). Nil with a
+	reason when the pockets are empty or the hands hold anything bigger (or not cargo).
+]=]
+function CargoHandlingRules.swapPlan(
+	holding: boolean,
+	def: ItemDef?,
+	pocketed: number
+): (CargoTypes.SwapAction?, string?)
+	if pocketed <= 0 then
+		return nil, "pockets empty"
+	end
+	if not holding then
+		return "unpocket", nil
+	end
+	if def == nil or def.size ~= CargoConstants.POCKET_SIZE then
+		return nil, "hands full"
+	end
+	return "swap", nil
+end
+
+--[=[
+	Whether a carried item pulses a rattle noise (M2: CargoTraitSystem, every RATTLE_INTERVAL).
+]=]
+function CargoHandlingRules.rattles(def: ItemDef): boolean
+	return def.rattly
+end
+
+--[=[
+	Whether a hold ending for `reason` leaves a slippery puddle: the jug, hitting the floor.
+]=]
+function CargoHandlingRules.leavesPuddle(def: ItemDef, reason: CarryTypes.DropReason): boolean
+	return def.splashes and CargoHandlingRules.isImpact(reason)
+end
+
+--[=[
+	Whether a player slips on a puddle: `localPoint` is their HumanoidRootPart in the puddle's object space,
+	`speed` their horizontal speed. Over its footprint, within SLIP_HEIGHT above it, at SLIP_SPEED or more, and
+	not within SLIP_COOLDOWN of the last slip.
+]=]
+function CargoHandlingRules.slips(
+	localPoint: Vector3,
+	size: Vector3,
+	speed: number,
+	now: number,
+	lastSlipAt: number
+): boolean
+	if speed < CargoConstants.SLIP_SPEED or now - lastSlipAt < CargoConstants.SLIP_COOLDOWN then
+		return false
+	end
+	return math.abs(localPoint.X) <= size.X / 2
+		and math.abs(localPoint.Z) <= size.Z / 2
+		and localPoint.Y >= -size.Y
+		and localPoint.Y <= CargoConstants.SLIP_HEIGHT
+end
+
+return CargoHandlingRules

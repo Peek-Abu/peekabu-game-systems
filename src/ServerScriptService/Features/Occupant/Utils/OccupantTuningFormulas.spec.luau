@@ -1,0 +1,85 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local OccupantTuningFormulas = require(script.Parent.OccupantTuningFormulas)
+local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants)
+local CargoRegistry = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoRegistry)
+local CargoHandlingRules = require(ReplicatedStorage.Shared.Features.Cargo.Rules.CargoHandlingRules)
+local NoiseRules = require(ReplicatedStorage.Shared.Features.Noise.Rules.NoiseRules)
+local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
+
+-- Whether Harlow hears a noise of `radius` from `distance` studs away at this tier and crew size.
+local function hears(distance, radius, tier, crew)
+	local scale = OccupantTuningFormulas.tuning(tier, crew).hearing
+	return NoiseRules.hears(Vector3.zero, Vector3.new(distance, 0, 0), radius, scale)
+end
+
+return function()
+	describe("tuning", function()
+		it("starts at patrol 10, chase 15 and plain hearing for a crew", function()
+			local tuning = OccupantTuningFormulas.tuning(0, 3)
+			expect(tuning.walkSpeed).to.equal(10)
+			expect(tuning.runSpeed).to.equal(15)
+			expect(tuning.hearing).to.equal(1)
+		end)
+
+		it("adds 1 patrol speed and ×1.2 hearing per tier", function()
+			local tier1 = OccupantTuningFormulas.tuning(1, 3)
+			expect(tier1.walkSpeed).to.equal(11)
+			expect(tier1.runSpeed).to.equal(15)
+			expect(tier1.hearing).to.be.near(1.2, 1e-6)
+			local tier2 = OccupantTuningFormulas.tuning(2, 4)
+			expect(tier2.walkSpeed).to.equal(12)
+			expect(tier2.hearing).to.be.near(1.44, 1e-6)
+		end)
+
+		it("goes easier on a solo player: hearing ×0.75, chase −1", function()
+			local solo = OccupantTuningFormulas.tuning(0, 1)
+			expect(solo.walkSpeed).to.equal(10)
+			expect(solo.runSpeed).to.equal(14)
+			expect(solo.hearing).to.be.near(0.75, 1e-6)
+			expect(OccupantTuningFormulas.tuning(2, 1).hearing).to.be.near(1.08, 1e-6)
+		end)
+
+		it("treats an empty crew as solo and caps the tier", function()
+			expect(OccupantTuningFormulas.tuning(0, 0).runSpeed).to.equal(14)
+			expect(OccupantTuningFormulas.tuning(5, 3).walkSpeed).to.equal(12)
+			expect(OccupantTuningFormulas.tuning(-1, 3).walkSpeed).to.equal(10)
+		end)
+
+		it("keeps an empty-handed player (16) faster than his chase, and any carry slower", function()
+			local chase = OccupantTuningFormulas.tuning(2, 4).runSpeed
+			expect(16 > chase).to.equal(true)
+			expect(16 * (1 - 0.05 * CargoConstants.WEIGHT.tiny) < chase).to.equal(true)
+		end)
+	end)
+
+	describe("who hears what", function()
+		it("hears a crew's vacuum within 40 studs at the start", function()
+			expect(hears(39, VacuumConstants.NOISE_RADIUS, 0, 3)).to.equal(true)
+			expect(hears(41, VacuumConstants.NOISE_RADIUS, 0, 3)).to.equal(false)
+		end)
+
+		it("hears further at each pressure tier", function()
+			expect(hears(47, VacuumConstants.NOISE_RADIUS, 1, 3)).to.equal(true)
+			expect(hears(49, VacuumConstants.NOISE_RADIUS, 1, 3)).to.equal(false)
+			expect(hears(57, VacuumConstants.NOISE_RADIUS, 2, 3)).to.equal(true)
+			expect(hears(58, VacuumConstants.NOISE_RADIUS, 2, 3)).to.equal(false)
+		end)
+
+		it("hears a solo player at three quarters of the radius", function()
+			expect(hears(29, VacuumConstants.NOISE_RADIUS, 0, 1)).to.equal(true)
+			expect(hears(31, VacuumConstants.NOISE_RADIUS, 0, 1)).to.equal(false)
+		end)
+
+		it("hears a heavy drop further than a light one, and the jug's splash across a room", function()
+			local bag = CargoHandlingRules.dropNoise(CargoRegistry.get("rubbishBag"))
+			local printer = CargoHandlingRules.dropNoise(CargoRegistry.get("printer"))
+			local jug = CargoHandlingRules.dropNoise(CargoRegistry.get("waterJug"))
+			expect(hears(20, bag, 0, 3)).to.equal(false)
+			expect(hears(20, printer, 0, 3)).to.equal(true)
+			expect(hears(65, jug, 0, 3)).to.equal(true)
+			expect(hears(15, CargoConstants.RATTLE_NOISE, 0, 3)).to.equal(false)
+			expect(hears(10, CargoConstants.RATTLE_NOISE, 0, 3)).to.equal(true)
+		end)
+	end)
+end
