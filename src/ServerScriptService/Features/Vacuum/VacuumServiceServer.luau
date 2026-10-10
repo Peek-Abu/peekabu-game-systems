@@ -79,6 +79,8 @@ local function clear(players: { Player }, target: Instance)
 		return
 	end
 	local parent = target.Parent
+	-- Where the pile's floor is, for a bag whose credited player has no root any more.
+	local pileFloor = CFrame.new(target.Position - Vector3.new(0, target.Size.Y / 2, 0))
 	-- Destroyed (not just forgotten) so a still-held channel cannot restart on this pile.
 	target:Destroy()
 	counters.cleared += 1
@@ -95,9 +97,13 @@ local function clear(players: { Player }, target: Instance)
 		fills[creditId] = fill
 		publish(creditId)
 		local root = rootOf(credited)
-		if popped and root ~= nil and parent ~= nil then
+		if popped and parent ~= nil then
 			counters.bags += 1
-			dustBagReady:Fire(credited, root.CFrame * VacuumConstants.BAG_OFFSET, parent)
+			dustBagReady:Fire(
+				credited,
+				if root ~= nil then root.CFrame * VacuumConstants.BAG_OFFSET else pileFloor,
+				parent
+			)
 		end
 	end
 	pileCleared:Fire(target, players)

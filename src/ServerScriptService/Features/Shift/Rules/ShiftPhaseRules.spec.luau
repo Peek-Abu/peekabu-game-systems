@@ -82,6 +82,12 @@ return function()
 			expect(ShiftPhaseRules.clockOut(state, 205)).to.equal(nil)
 		end)
 
+		it("clocks out from any running sub-state except an existing countdown", function()
+			local other = running()
+			other.sub = "overtime"
+			expect(ShiftPhaseRules.clockOut(other, 200).sub).to.equal("clockout")
+		end)
+
 		it("ignores a press outside a running shift", function()
 			expect(ShiftPhaseRules.clockOut(ShiftPhaseRules.initial(350, "B"), 0)).to.equal(nil)
 			expect(ShiftPhaseRules.clockOut(results(), 610)).to.equal(nil)

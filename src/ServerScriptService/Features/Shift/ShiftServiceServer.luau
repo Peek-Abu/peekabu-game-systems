@@ -41,6 +41,7 @@ local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local ShiftPhaseRules = require(ShiftServer.Rules.ShiftPhaseRules)
 local ShiftVoteRules = require(ShiftServer.Rules.ShiftVoteRules)
 local ShiftResultsUtils = require(ShiftServer.Utils.ShiftResultsUtils)
+local ShiftRosterTracker = require(ShiftServer.State.ShiftRosterTracker)
 local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
 local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
@@ -63,6 +64,8 @@ local results: ShiftTypes.ShiftResults? = nil
 local resetPending = false
 -- Set once the clock-out has ended Round's run: tick repeats `endShift` until Round leaves running.
 local endingRun = false
+-- Every crew member's run so far, kept past leaving so their work stays in the crew totals.
+local roster = ShiftRosterTracker.new()
 local rng = Random.new()
 local publishScheduled = false
 local stoppers: { () -> () } = {}
@@ -71,10 +74,13 @@ local function now(): number
 	return Workspace:GetServerTimeNow()
 end
 
-local function presentIds(): { number }
+-- UserIds in the server (`except`: one who is leaving; Players still lists them during PlayerRemoving).
+local function presentIds(except: number?): { number }
 	local ids: { number } = {}
 	for _, player in Players:GetPlayers() do
-		table.insert(ids, player.UserId)
+		if player.UserId ~= except then
+			table.insert(ids, player.UserId)
+		end
 	end
 	return ids
 end
@@ -104,33 +110,37 @@ local function setState(nextState: ShiftTypes.ShiftState)
 	publish()
 end
 
-local function crewStats(): { ShiftTypes.CrewStats }
-	local crew: { ShiftTypes.CrewStats } = {}
-	for _, player in RoundServiceServer:participants() do
-		table.insert(crew, {
-			userId = player.UserId,
-			name = player.DisplayName,
-			banked = RoundServiceServer:scoreOf(player, ShiftConstants.SCORE_BANKED),
-			piles = RoundServiceServer:scoreOf(player, ShiftConstants.SCORE_PILES),
-			salvage = RoundServiceServer:scoreOf(player, ShiftConstants.SCORE_SALVAGE),
-		})
-	end
-	return crew
+-- Runs one step; a throwing step is logged (not rethrown) and false is returned.
+local function guarded(label: string, step: () -> ()): boolean
+	return xpcall(step, function(err: unknown): unknown
+		log:error(`{label} failed: {err}`)
+		return err
+	end)
 end
 
--- Clears everything the shift made and waits in the lobby (the tick starts the next countdown).
+-- Clears everything the shift made and waits in the lobby (the tick starts the next countdown). Always
+-- reaches the lobby, even when a reset step throws.
 local function finishReset()
-	OfficeServiceServer:reset()
-	VacuumServiceServer:reset()
-	CargoServiceServer:reset()
+	guarded("office reset", function()
+		OfficeServiceServer:reset()
+	end)
+	guarded("vacuum reset", function()
+		VacuumServiceServer:reset()
+	end)
+	guarded("cargo reset", function()
+		CargoServiceServer:reset()
+	end)
 	table.clear(votes)
+	roster:clear()
 	results = nil
 	endingRun = false
+	resetPending = false
 	setState(ShiftPhaseRules.toLobby(state))
 end
 
 local function beginRun()
 	table.clear(votes)
+	roster:clear()
 	results = nil
 	endingRun = false
 	RoundServiceServer:setTarget(ShiftConstants.CLEARANCE, state.quota)
@@ -156,14 +166,28 @@ end
 
 -- The review, from Round's counters (they are cleared once Round returns to its lobby).
 local function buildResults(outcome: string): ShiftTypes.ShiftResults
+	-- Everyone taking part is listed, even with nothing done yet; leavers stay from the roster.
+	for _, player in RoundServiceServer:participants() do
+		roster:record(player.UserId, player.DisplayName, {})
+	end
 	return ShiftResultsUtils.build({
 		outcome = outcome,
 		quota = state.quota,
 		cleared = RoundServiceServer:teamValue(ShiftConstants.CLEARANCE),
 		bonus = RoundServiceServer:teamValue(ShiftConstants.BONUS),
 		quotaMet = state.quotaMet,
-		crew = crewStats(),
+		crew = roster:list(),
 	})
+end
+
+-- The review, or a bare one when building it throws: the shift must always be able to end.
+local function safeResults(outcome: string): ShiftTypes.ShiftResults
+	local ok, built = pcall(buildResults, outcome)
+	if ok then
+		return built
+	end
+	log:error(`building the results failed: {built}`)
+	return ShiftResultsUtils.bare(outcome, state.quota, state.quotaMet)
 end
 
 local function onRoundPhase(roundState: RoundTypes.RoundState)
@@ -173,13 +197,12 @@ local function onRoundPhase(roundState: RoundTypes.RoundState)
 		return
 	end
 	if nextState.phase == "results" and resetPending then
-		resetPending = false
 		finishReset()
 		return
 	end
 	-- A clock out built the review before ending the run; a timeout builds it here (counters still intact).
 	if nextState.phase == "results" and results == nil then
-		results = buildResults(roundState.outcome or "timeout")
+		results = safeResults(roundState.outcome or "timeout")
 	end
 	setState(nextState)
 	if nextState.phase == "running" and before ~= "running" then
@@ -187,9 +210,11 @@ local function onRoundPhase(roundState: RoundTypes.RoundState)
 	end
 end
 
--- Cargo's banking handler: synchronous (claim → add → destroy happens around it).
+-- Cargo's banking handler: synchronous (claim -> add -> destroy happens around it). Every refusal is decided
+-- before the first counter write; once the crew's counters moved it returns true whatever else fails, or
+-- Cargo would release the claim and the same items would bank twice.
 local function onBanked(player: Player, deposit: CargoTypes.Deposit): boolean
-	if state.phase ~= "running" then
+	if state.phase ~= "running" or endingRun then
 		return false
 	end
 	local bonus = math.floor(deposit.bonus * ShiftConstants.SALVAGE_MULTIPLIER + 0.5)
@@ -199,32 +224,45 @@ local function onBanked(player: Player, deposit: CargoTypes.Deposit): boolean
 			salvage += 1
 		end
 	end
-	if deposit.clearance > 0 then
-		RoundServiceServer:addTeam(ShiftConstants.CLEARANCE, deposit.clearance)
+	local wrote = false
+	local ok = guarded("banking", function()
+		if deposit.clearance > 0 then
+			RoundServiceServer:addTeam(ShiftConstants.CLEARANCE, deposit.clearance)
+			wrote = true
+		end
+		if bonus > 0 then
+			RoundServiceServer:addTeam(ShiftConstants.BONUS, bonus)
+			wrote = true
+		end
+		RoundServiceServer:addScore(player, ShiftConstants.SCORE_BANKED, deposit.clearance + bonus)
+		wrote = true
+		if salvage > 0 then
+			RoundServiceServer:addScore(player, ShiftConstants.SCORE_SALVAGE, salvage)
+		end
+		roster:record(player.UserId, player.DisplayName, { banked = deposit.clearance + bonus, salvage = salvage })
+	end)
+	if not ok and not wrote then
+		return false
 	end
-	if bonus > 0 then
-		RoundServiceServer:addTeam(ShiftConstants.BONUS, bonus)
-	end
-	RoundServiceServer:addScore(player, ShiftConstants.SCORE_BANKED, deposit.clearance + bonus)
-	if salvage > 0 then
-		RoundServiceServer:addScore(player, ShiftConstants.SCORE_SALVAGE, salvage)
-	end
-	ToastServiceServer:send(player, { text = `Loaded: +{deposit.clearance} clearance, +{bonus} bonus`, duration = 2 })
-	local met = ShiftPhaseRules.markQuota(state, RoundServiceServer:teamValue(ShiftConstants.CLEARANCE))
-	if met ~= nil then
-		setState(met)
-		ToastServiceServer:send("all", {
-			text = "QUOTA MET. Salvage is a bonus now: clock out at the truck when you're done.",
-			duration = 6,
-		})
-	else
-		publish()
-	end
+	guarded("banking follow-up", function()
+		local text = `Loaded: +{deposit.clearance} clearance, +{bonus} bonus`
+		ToastServiceServer:send(player, { text = text, duration = 2 })
+		local met = ShiftPhaseRules.markQuota(state, RoundServiceServer:teamValue(ShiftConstants.CLEARANCE))
+		if met ~= nil then
+			setState(met)
+			ToastServiceServer:send("all", {
+				text = "QUOTA MET. Salvage is a bonus now: clock out at the truck when you're done.",
+				duration = 6,
+			})
+		else
+			publish()
+		end
+	end)
 	return true
 end
 
-local function resolveVote(timedOut: boolean)
-	local decision = ShiftVoteRules.decide(votes, presentIds(), timedOut)
+local function resolveVote(timedOut: boolean, leaving: number?)
+	local decision = ShiftVoteRules.decide(votes, presentIds(leaving), timedOut)
 	if decision == nil then
 		return
 	end
@@ -245,9 +283,10 @@ local function step()
 		if endingRun then
 			return
 		end
+		-- Built before Round clears its counters; onRoundPhase keeps it. Never throws, so a bad build cannot
+		-- leave the shift unable to end.
+		results = safeResults(ShiftConstants.OUTCOME_CLOCKOUT)
 		endingRun = true
-		-- Built before Round clears its counters; onRoundPhase keeps it.
-		results = buildResults(ShiftConstants.OUTCOME_CLOCKOUT)
 		if not RoundServiceServer:endRound(ShiftConstants.OUTCOME_CLOCKOUT) then
 			results = nil
 			endingRun = false
@@ -328,12 +367,21 @@ ShiftServiceServer = {
 			for _, player in players do
 				if player.Parent ~= nil then
 					RoundServiceServer:addScore(player, ShiftConstants.SCORE_PILES, 1)
+					roster:record(player.UserId, player.DisplayName, { piles = 1 })
 				end
 			end
 		end)
 		local leaving = Players.PlayerRemoving:Connect(function(player)
 			votes[player.UserId] = nil
 			publish()
+			-- Their absence may decide the vote (everyone left has voted, or a majority now exists).
+			if state.phase == "results" then
+				task.defer(function()
+					if state.phase == "results" then
+						resolveVote(false, player.UserId)
+					end
+				end)
+			end
 		end)
 		local elapsed = 0
 		local ticking = RunService.Heartbeat:Connect(function(deltaTime)

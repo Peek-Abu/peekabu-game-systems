@@ -25,6 +25,21 @@ export type ResultsInput = {
 
 local ShiftResultsUtils = {}
 
+-- An empty review: what the shift falls back to when building the real one throws.
+function ShiftResultsUtils.bare(outcome: string, quota: number, quotaMet: boolean): ShiftTypes.ShiftResults
+	return {
+		outcome = outcome,
+		quota = quota,
+		cleared = 0,
+		bonus = 0,
+		salvage = 0,
+		piles = 0,
+		quotaMet = quotaMet,
+		crew = {},
+		awards = {},
+	}
+end
+
 function ShiftResultsUtils.build(input: ResultsInput): ShiftTypes.ShiftResults
 	local crew = table.clone(input.crew)
 	table.sort(crew, function(a, b)

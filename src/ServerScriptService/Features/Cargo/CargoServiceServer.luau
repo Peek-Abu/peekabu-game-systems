@@ -26,6 +26,7 @@ local CargoShared = ReplicatedStorage.Shared.Features.Cargo
 local CargoServer = ServerScriptService.Features.Cargo
 local CarryShared = ReplicatedStorage.Shared.Features.Carry
 local Observers = require(ReplicatedStorage.Packages.Observers)
+local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local CarryConstants = require(CarryShared.Data.CarryConstants)
 local CarryRegistry = require(CarryShared.Data.CarryRegistry)
@@ -41,6 +42,7 @@ local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.Va
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local CargoClaimTracker = require(CargoServer.State.CargoClaimTracker)
 local CargoPocketTracker = require(CargoServer.State.CargoPocketTracker)
+local CargoPocketSystem = require(CargoServer.Systems.CargoPocketSystem)
 local CargoSpawnSystem = require(CargoServer.Systems.CargoSpawnSystem)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
 local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
@@ -77,7 +79,9 @@ end
 type Stock = { kind: string?, searched: boolean }
 
 local noiseMade: SignalTyped.Signal<Vector3, number, string> = SignalTyped.new()
+local log = Logger.new("CargoServiceServer")
 local spawner = CargoSpawnSystem.new()
+local pocketSystem = CargoPocketSystem.new(spawner)
 local claims = CargoClaimTracker.new()
 local pockets = CargoPocketTracker.new()
 local stock: { [BasePart]: Stock } = {}
@@ -144,20 +148,17 @@ local function ignoreList(extra: Instance?): { Instance }
 	return list
 end
 
--- Drops a player's pocketed items around `origin` (where they died or left), inside the shift.
+-- Drops a player's pocketed items around `origin` (default: where they are, were last seen, or the shift
+-- container's centre). Nothing is taken unless it can be put back in the world.
 local function scatter(player: Player, origin: Vector3?)
-	local list = pockets:take(player.UserId)
-	publishPockets(player.UserId)
 	local parent = container
-	if origin == nil or parent == nil or parent.Parent == nil then
+	local at = origin or pocketSystem:originOf(player, parent)
+	if at == nil or parent == nil or parent.Parent == nil then
 		return
 	end
-	for index, entry in list do
-		local angle = index / #list * math.pi * 2
-		local offset = Vector3.new(math.cos(angle), 0, math.sin(angle)) * CargoConstants.SCATTER_RADIUS
-		spawner:spawn(entry.kind, spawner:floorUnder(origin + offset, ignoreList()), parent, { value = entry.value })
-		counters.scattered += 1
-	end
+	local list = pockets:take(player.UserId)
+	publishPockets(player.UserId)
+	counters.scattered += pocketSystem:scatter(list, at, parent, ignoreList())
 end
 
 -- Carry's `dropped` (deferred): fragile tiers, spills and drop noise. Pocketing and banking claim the item
@@ -212,6 +213,7 @@ export type CargoServiceServer = {
 	pocket: (self: CargoServiceServer, player: Player) -> (boolean, string?),
 	load: (self: CargoServiceServer, player: Player, bed: BasePart) -> (boolean, string?),
 	search: (self: CargoServiceServer, player: Player, part: BasePart) -> (boolean, string?),
+	scatterPockets: (self: CargoServiceServer, player: Player, origin: CFrame) -> (),
 	pocketsOf: (self: CargoServiceServer, player: Player) -> { CargoTypes.CargoEntry },
 	reset: (self: CargoServiceServer) -> (),
 }
@@ -269,14 +271,15 @@ CargoServiceServer = {
 			end
 		end)
 		local leaving = Players.PlayerRemoving:Connect(function(player)
-			local root = rootOf(player)
-			scatter(player, if root ~= nil then root.Position else nil)
+			scatter(player, nil)
+			pocketSystem:forget(player.UserId)
 		end)
 		table.insert(stoppers, function()
 			dropped:Disconnect()
 			bags:Disconnect()
 			leaving:Disconnect()
 		end)
+		table.insert(stoppers, pocketSystem:start())
 		table.insert(
 			stoppers,
 			CargoEvents.packets.Pocket.listen(function(data: boolean, player: Player?)
@@ -291,8 +294,7 @@ CargoServiceServer = {
 				local humanoid = character:FindFirstChildOfClass("Humanoid")
 				local died = if humanoid ~= nil
 					then humanoid.Died:Connect(function()
-						local root = rootOf(player)
-						scatter(player, if root ~= nil then root.Position else nil)
+						scatter(player, nil)
 					end)
 					else nil
 				return function()
@@ -389,6 +391,9 @@ CargoServiceServer = {
 			return false, "already loaded"
 		end
 		local ok, accepted = pcall(handler, player, deposit)
+		if not ok then
+			log:warn(`banking handler failed: {accepted}`)
+		end
 		if not ok or accepted ~= true then
 			if hands ~= nil and id ~= nil then
 				claims:release(id)
@@ -428,6 +433,13 @@ CargoServiceServer = {
 		spawner:spawn(kind, front, parent)
 		tell(player, `Found: {def.name}`)
 		return true, nil
+	end,
+
+	--[=[
+		Drops a player's pockets around `origin` (M2's catch: where they land). Death and leaving use it too.
+	]=]
+	scatterPockets = function(_self, player, origin)
+		scatter(player, origin.Position)
 	end,
 
 	pocketsOf = function(_self, player)

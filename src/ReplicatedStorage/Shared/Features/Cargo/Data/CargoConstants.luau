@@ -57,6 +57,8 @@ return table.freeze({
 	RATTLE_INTERVAL = 2,
 	-- Pocketed items scatter this far around where their owner died or left.
 	SCATTER_RADIUS = 4,
+	-- How often (seconds) each player's position is remembered, for scattering when their character is gone.
+	ROOT_SAMPLE_INTERVAL = 0.5,
 	-- The pile a spilled recycling box becomes.
 	SPILL_PILE_KIND = "paper",
 	-- Graybox item labels are seen within this many studs.

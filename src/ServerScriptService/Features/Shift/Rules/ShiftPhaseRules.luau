@@ -79,10 +79,11 @@ function ShiftPhaseRules.follow(state: ShiftState, round: RoundTypes.RoundState,
 end
 
 --[=[
-	Starts the clock-out countdown. Only while running and not already counting down.
+	Starts the clock-out countdown. Only while running and not already counting down (M2's break, warning
+	and overtime sub-states may all clock out).
 ]=]
 function ShiftPhaseRules.clockOut(state: ShiftState, now: number): ShiftState?
-	if state.phase ~= "running" or state.sub ~= "normal" then
+	if state.phase ~= "running" or state.sub == "clockout" then
 		return nil
 	end
 	local nextState = table.clone(state)

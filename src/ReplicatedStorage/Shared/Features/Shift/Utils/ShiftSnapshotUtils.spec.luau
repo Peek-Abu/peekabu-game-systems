@@ -70,6 +70,15 @@ return function()
 		expect(snapshot.results.awards[1].title).to.equal("Top Hauler")
 	end)
 
+	-- Every ShiftSub in ShiftTypes must survive build/decode: add the new value here when M2 extends the type.
+	it("round-trips every shift sub-state", function()
+		for _, sub in { "normal", "clockout" } do
+			local snapshot = ShiftSnapshotUtils.decode(ShiftSnapshotUtils.build(state({ sub = sub }), 0, 0, 0, 0, nil))
+			expect(snapshot).to.be.ok()
+			expect(snapshot.sub).to.equal(sub)
+		end
+	end)
+
 	it("defaults absent vote counts to zero", function()
 		local snapshot = ShiftSnapshotUtils.decode({
 			phase = "lobby",
