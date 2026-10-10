@@ -37,6 +37,16 @@ local LINES: { [string]: string } = {
 	resting = "Fifteen minutes. Union rules.",
 }
 
+-- His lines per cue (spec §4 "Voice": the speech bubble's line; the spec's three are kept). The server picks one
+-- per cue, never the same twice running (OccupantFeedbackUtils.pickLine); LINES stays the fallback.
+local LINE_VARIANTS: { [string]: { string } } = {
+	spotted = { "Those are COMPANY ASSETS.", "Put that BACK.", "This is THEFT.", "Who authorised this?!" },
+	curious = { "Per my last email…", "Who's there? Accounting?", "I heard that.", "Is someone in my office?" },
+	caught = { "You're FIRED!" },
+	giveUp = { "*sigh*" },
+	resting = { "Fifteen minutes. Union rules.", "Don't touch my stapler.", "Coffee. Then performance reviews." },
+}
+
 return table.freeze({
 	-- The NPC kind, and the tag the client's tells find him by.
 	NPC_KIND = "harlow",
@@ -106,4 +116,17 @@ return table.freeze({
 	REHIRED_TEXT = "Rehired.",
 	BODY = table.freeze(BODY),
 	LINES = table.freeze(LINES),
+	LINE_VARIANTS = table.freeze(LINE_VARIANTS),
+	-- His speech bubble as a memo (spec §7 "typewriter type"): paper, ink, a thin border; the client types each
+	-- line out at TYPE_RATE characters a second.
+	SPEECH_FONT = Enum.Font.SpecialElite,
+	SPEECH_PAPER = Color3.fromRGB(248, 243, 226),
+	SPEECH_INK = Color3.fromRGB(34, 30, 26),
+	SPEECH_BORDER = Color3.fromRGB(70, 60, 46),
+	TYPE_RATE = 28,
+	-- Footsteps: one per STRIDE studs walked, clamped to STEP_MIN..STEP_MAX seconds; none below STEP_MIN_SPEED.
+	STRIDE = 4.5,
+	STEP_MIN_SPEED = 2,
+	STEP_MIN = 0.28,
+	STEP_MAX = 0.8,
 })

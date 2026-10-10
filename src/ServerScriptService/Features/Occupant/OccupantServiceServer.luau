@@ -15,8 +15,8 @@
 	  his hearing scale (NoiseServiceServer:setHearingScale), refreshed every TUNING_INTERVAL; a tier rise
 	  flickers every light (OccupantEvents.Flicker).
 	- Tells: his mode and target as attributes (the client's heartbeat), a "?" / "!" cue and a speech bubble
-	  (OccupantRigSystem); while he looks around he turns his root through a sweep. Placeholders; M3 replaces
-	  them.
+	  (OccupantRigSystem, a paper memo; the line varies per cue, OccupantFeedbackUtils.pickLine); the client voices
+	  and types it (OccupantPresenceSystem); while he looks around he turns his root through a sweep.
 	- Catch: the kind's attack (onAttack) → OccupantCatchRules → OccupantCatchSystem: camera snap, lights out,
 	  ragdoll launch; ~8 s spectating (Death's respawn delay); "Rehired." on the respawn in the loading bay; the
 	  catch counts in Shift's review.
@@ -43,6 +43,7 @@ local OccupantConstants = require(OccupantShared.Data.OccupantConstants)
 local OccupantTypes = require(OccupantShared.Data.OccupantTypes)
 local OccupantEvents = require(OccupantShared.Net.OccupantEvents)
 local OccupantTellRules = require(OccupantShared.Rules.OccupantTellRules)
+local OccupantFeedbackUtils = require(OccupantShared.Utils.OccupantFeedbackUtils)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local NpcRegistry = require(ServerScriptService.Features.Npc.Data.NpcRegistry)
@@ -92,6 +93,7 @@ local pendingNoise: Vector3? = nil
 local lookBase: number? = nil
 local tuningElapsed = 0
 local rng = Random.new()
+local lastLine: string? = nil
 local counters = { spawned = 0, heard = 0, chases = 0, catches = 0 }
 -- UserIds caught this life: their next character gets the "Rehired." toast.
 local rehire: { [number]: boolean } = {}
@@ -129,8 +131,11 @@ end
 local function show(current: OccupantRigSystem.Rig, nextMind: OccupantTypes.Mind, cue: OccupantTypes.Cue?)
 	OccupantRigSystem.setMode(current, nextMind.mode, nextMind.target)
 	OccupantRigSystem.setCue(current, OccupantTellRules.cueFor(nextMind.mode))
-	local line = OccupantTellRules.lineFor(cue)
+	local variants = if cue ~= nil then OccupantConstants.LINE_VARIANTS[cue] else nil
+	local line = if variants ~= nil then OccupantFeedbackUtils.pickLine(variants, rng:NextNumber(), lastLine) else nil
+	line = line or OccupantTellRules.lineFor(cue)
 	if line ~= nil then
+		lastLine = line
 		OccupantRigSystem.say(current, line)
 	end
 end

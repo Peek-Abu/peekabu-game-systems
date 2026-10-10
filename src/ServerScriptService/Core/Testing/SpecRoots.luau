@@ -329,6 +329,8 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Features.Office.OfficeServiceServer"] = "Instance/signal shell (layout rules, spawn roll and spawn rules are specced)",
 
 	-- Cleanup Crew: Occupant
+	["ReplicatedStorage.Shared.Features.Occupant.Data.OccupantAssets"] = "asset id slots; registers the uploaded sounds at load (no decisions)",
+	["ReplicatedStorage.Client.Features.Occupant.Systems.OccupantPresenceSystem"] = "Sound/Instance/RunService shell (choices specced in OccupantFeedbackUtils, OccupantTellRules)",
 	["ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants"] = "static tuning, names and placeholder lines (no logic)",
 	["ReplicatedStorage.Shared.Features.Occupant.Data.OccupantTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Features.Occupant.Net.OccupantEvents"] = "ByteNet packet definitions (no logic)",

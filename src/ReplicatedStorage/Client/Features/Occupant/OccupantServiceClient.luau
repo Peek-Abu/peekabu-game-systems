@@ -4,7 +4,7 @@
 	`CatchCam` the camera is held on his face for SNAP_SECONDS (a fixed camera mode above Death's spectate), with
 	a shake and a red, drained screen; then Death's spectate takes over. The stretched-grin face and the
 	distorted sting are M3. The light and heartbeat tells run in OccupantTellSystem (lights out on a catch, every light flickering on a
-	tier rise).
+	tier rise). OccupantPresenceSystem plays his footsteps, mutter, cues, chase music, your heartbeat and his voice.
 
 	Spec-exempt shell (Camera, Vfx, ByteNet).
 
@@ -18,6 +18,7 @@ local OccupantEvents = require(ReplicatedStorage.Shared.Features.Occupant.Net.Oc
 local CameraServiceClient = require(ReplicatedStorage.Client.Features.Camera.CameraServiceClient)
 local VfxServiceClient = require(ReplicatedStorage.Client.Features.Vfx.VfxServiceClient)
 local OccupantTellSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantTellSystem)
+local OccupantPresenceSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantPresenceSystem)
 
 local stoppers: { () -> () } = {}
 local snaps = 0
@@ -45,7 +46,7 @@ export type OccupantServiceClient = {
 }
 
 local OccupantServiceClient: OccupantServiceClient = {
-	dependencies = { "CameraServiceClient", "VfxServiceClient" },
+	dependencies = { "CameraServiceClient", "VfxServiceClient", "SoundServiceClient" },
 
 	start = function(_self)
 		table.insert(
@@ -68,6 +69,8 @@ local OccupantServiceClient: OccupantServiceClient = {
 		)
 		OccupantTellSystem.start()
 		table.insert(stoppers, OccupantTellSystem.stop)
+		OccupantPresenceSystem.start()
+		table.insert(stoppers, OccupantPresenceSystem.stop)
 	end,
 
 	stop = function(_self)
@@ -78,7 +81,7 @@ local OccupantServiceClient: OccupantServiceClient = {
 	end,
 
 	getState = function(_self)
-		return { snaps = snaps }
+		return { snaps = snaps, presence = OccupantPresenceSystem.getState() }
 	end,
 }
 

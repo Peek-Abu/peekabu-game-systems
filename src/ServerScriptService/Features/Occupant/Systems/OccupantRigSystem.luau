@@ -6,7 +6,8 @@
 	plays his idle / walk / run), makes sure his Humanoid has an Animator (otherwise the base's pose code
 	waits for one inside the NPC think), adds a cue billboard ("?" / "!") and a plain speech bubble over his
 	head, tags him Occupant (the client's tells find him by it) and, last, Npc with his NpcKind so
-	NpcServiceServer adopts him. M3 replaces the cues and bubble with the final face, voice and art.
+	NpcServiceServer adopts him. The bubble is a typed paper memo (M3); the client voices and types each
+	line (OccupantPresenceSystem).
 
 	Spec-exempt shell (Instances).
 
@@ -92,11 +93,26 @@ local function tells(head: BasePart): (TextLabel, TextLabel, BillboardGui)
 	local bubble, speech =
 		billboard(OccupantConstants.SPEECH_NAME, UDim2.fromOffset(260, 56), Vector3.new(0, 4.5, 0), head)
 	bubble.Enabled = false
-	speech.BackgroundTransparency = 0.1
-	speech.BackgroundColor3 = Color3.new(1, 1, 1)
-	speech.TextColor3 = Color3.fromRGB(20, 20, 24)
+	-- A memo, typed (spec §7 "UI as office paperwork … typewriter type"); the client reveals it letter by letter.
+	speech.BackgroundTransparency = 0
+	speech.BackgroundColor3 = OccupantConstants.SPEECH_PAPER
+	speech.TextColor3 = OccupantConstants.SPEECH_INK
 	speech.TextStrokeTransparency = 1
-	speech.Font = Enum.Font.SourceSansSemibold
+	speech.Font = OccupantConstants.SPEECH_FONT
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 6)
+	corner.Parent = speech
+	local border = Instance.new("UIStroke")
+	border.Color = OccupantConstants.SPEECH_BORDER
+	border.Thickness = 2
+	border.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	border.Parent = speech
+	local padding = Instance.new("UIPadding")
+	padding.PaddingLeft = UDim.new(0, 8)
+	padding.PaddingRight = UDim.new(0, 8)
+	padding.PaddingTop = UDim.new(0, 4)
+	padding.PaddingBottom = UDim.new(0, 4)
+	padding.Parent = speech
 	return cue, speech, bubble
 end
 
@@ -160,6 +176,8 @@ function OccupantRigSystem.say(rig: Rig, line: string)
 	task.delay(OccupantConstants.SPEECH_SECONDS, function()
 		if speechTokens[rig.model] == token and rig.bubble.Parent ~= nil then
 			rig.bubble.Enabled = false
+			-- Cleared so the next identical line changes Text and the client types and voices it again.
+			rig.speech.Text = ""
 		end
 	end)
 end
