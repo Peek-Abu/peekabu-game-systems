@@ -61,52 +61,6 @@ local function folder(name: string, parent: Instance): Folder
 	return created
 end
 
--- Every room emits its own walls, so a wall two rooms share comes out twice (and rooms of different
--- lengths overlap only partly). Union the pieces per line so each stretch of wall is built exactly once.
-local function mergedWalls(layout: OfficeTypes.Layout): { OfficeTypes.Segment }
-	local lines: { [string]: { horizontal: boolean, fixed: number, spans: { { number } } } } = {}
-	for _, room in layout.rooms do
-		for _, segment in OfficeLayoutUtils.wallSegments(room, layout.doors) do
-			local horizontal = segment.z1 == segment.z2
-			local fixed = if horizontal then segment.z1 else segment.x1
-			local key = `{if horizontal then "h" else "v"}{fixed}`
-			local line = lines[key]
-			if line == nil then
-				line = { horizontal = horizontal, fixed = fixed, spans = {} }
-				lines[key] = line
-			end
-			local from = if horizontal then segment.x1 else segment.z1
-			local to = if horizontal then segment.x2 else segment.z2
-			table.insert(line.spans, { from, to })
-		end
-	end
-	local merged: { OfficeTypes.Segment } = {}
-	for _, line in lines do
-		table.sort(line.spans, function(a, b)
-			return a[1] < b[1]
-		end)
-		local from, to = line.spans[1][1], line.spans[1][2]
-		local function emit()
-			if line.horizontal then
-				table.insert(merged, { x1 = from, z1 = line.fixed, x2 = to, z2 = line.fixed })
-			else
-				table.insert(merged, { x1 = line.fixed, z1 = from, x2 = line.fixed, z2 = to })
-			end
-		end
-		for index = 2, #line.spans do
-			local span = line.spans[index]
-			if span[1] <= to + 1e-6 then
-				to = math.max(to, span[2])
-			else
-				emit()
-				from, to = span[1], span[2]
-			end
-		end
-		emit()
-	end
-	return merged
-end
-
 local OfficeBuildSystem = {}
 
 function OfficeBuildSystem.build(layout: OfficeTypes.Layout, origin: CFrame): Built
@@ -131,7 +85,7 @@ function OfficeBuildSystem.build(layout: OfficeTypes.Layout, origin: CFrame): Bu
 	end
 
 	local wallFolder = folder("Walls", model)
-	for _, segment in mergedWalls(layout) do
+	for _, segment in OfficeLayoutUtils.mergedWallSegments(layout) do
 		local horizontal = segment.z1 == segment.z2
 		local length = if horizontal then segment.x2 - segment.x1 else segment.z2 - segment.z1
 		local size = if horizontal

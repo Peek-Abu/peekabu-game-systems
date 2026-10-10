@@ -172,10 +172,12 @@ local OfficeServiceServer: OfficeServiceServer = {
 	end,
 
 	--[=[
-		Destroys everything the current shift spawned (the one folder) and forgets it.
+		Destroys everything the current shift spawned (the one folder) and forgets it. The caller (Shift) resets
+		Cargo and Vacuum alongside it.
 	]=]
 	reset = function(_self)
 		shiftJanitor:Cleanup()
+		CargoServiceServer:useContainer(nil)
 		shiftFolder = nil
 		table.clear(hidden)
 		lastPlan = nil

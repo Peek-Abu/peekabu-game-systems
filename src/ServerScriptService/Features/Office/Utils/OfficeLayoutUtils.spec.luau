@@ -69,6 +69,102 @@ return function()
 		end)
 	end)
 
+	describe("mergedWallSegments", function()
+		-- The merged spans on one wall line, as { from, to } pairs in order.
+		local function spans(segments, horizontal, fixed)
+			local found = {}
+			for _, segment in segments do
+				if horizontal and segment.z1 == segment.z2 and segment.z1 == fixed then
+					table.insert(found, { segment.x1, segment.x2 })
+				elseif not horizontal and segment.x1 == segment.x2 and segment.x1 == fixed then
+					table.insert(found, { segment.z1, segment.z2 })
+				end
+			end
+			table.sort(found, function(a, b)
+				return a[1] < b[1]
+			end)
+			return found
+		end
+
+		local function twoRooms(second)
+			return {
+				startRoom = "a",
+				rooms = {
+					{ id = "a", name = "A", minX = 0, minZ = 0, maxX = 10, maxZ = 10 },
+					second,
+				},
+				doors = {},
+				markers = {},
+				truck = TRUCK,
+			}
+		end
+
+		it("emits a wall two rooms share once", function()
+			local segments = OfficeLayoutUtils.mergedWallSegments(
+				twoRooms({ id = "b", name = "B", minX = 10, minZ = 0, maxX = 20, maxZ = 10 })
+			)
+			expect(#spans(segments, false, 10)).to.equal(1)
+			expect(#segments).to.equal(5)
+		end)
+
+		it("merges a partial overlap into one span", function()
+			local segments = OfficeLayoutUtils.mergedWallSegments(
+				twoRooms({ id = "b", name = "B", minX = 10, minZ = 5, maxX = 20, maxZ = 25 })
+			)
+			local line = spans(segments, false, 10)
+			expect(#line).to.equal(1)
+			expect(line[1][1]).to.equal(0)
+			expect(line[1][2]).to.equal(25)
+		end)
+
+		it("merges touching collinear spans", function()
+			local segments = OfficeLayoutUtils.mergedWallSegments(
+				twoRooms({ id = "b", name = "B", minX = 10, minZ = 20, maxX = 20, maxZ = 30 })
+			)
+			local line = spans(segments, false, 10)
+			expect(#line).to.equal(2)
+			local touching = OfficeLayoutUtils.mergedWallSegments(
+				twoRooms({ id = "b", name = "B", minX = 10, minZ = 10, maxX = 20, maxZ = 30 })
+			)
+			local joined = spans(touching, false, 10)
+			expect(#joined).to.equal(1)
+			expect(joined[1][2]).to.equal(30)
+		end)
+
+		it("keeps the real layout's door gaps", function()
+			local segments = OfficeLayoutUtils.mergedWallSegments(LAYOUT)
+			local line = spans(segments, true, 60)
+			expect(#line).to.equal(4)
+			expect(line[1][1]).to.equal(0)
+			expect(line[1][2]).to.equal(12)
+			expect(line[2][1]).to.equal(18)
+			expect(line[2][2]).to.equal(47)
+			expect(line[3][1]).to.equal(53)
+			expect(line[3][2]).to.equal(77)
+			expect(line[4][1]).to.equal(83)
+			expect(line[4][2]).to.equal(100)
+		end)
+
+		it("merges the bay and open-plan wall at x = 40 around both doors", function()
+			local line = spans(OfficeLayoutUtils.mergedWallSegments(LAYOUT), false, 40)
+			expect(#line).to.equal(3)
+			expect(line[1][2]).to.equal(11)
+			expect(line[2][1]).to.equal(19)
+			expect(line[2][2]).to.equal(41)
+			expect(line[3][1]).to.equal(49)
+		end)
+
+		it("builds the real layout from 18 pieces totalling 692 studs", function()
+			local segments = OfficeLayoutUtils.mergedWallSegments(LAYOUT)
+			local total = 0
+			for _, segment in segments do
+				total += (segment.x2 - segment.x1) + (segment.z2 - segment.z1)
+			end
+			expect(#segments).to.equal(18)
+			expect(total).to.equal(692)
+		end)
+	end)
+
 	describe("lookups", function()
 		it("finds rooms, markers and markers of a kind", function()
 			expect(OfficeLayoutUtils.room(LAYOUT, "archive").name).to.equal("Archive")
