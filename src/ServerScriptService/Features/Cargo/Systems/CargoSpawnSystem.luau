@@ -149,6 +149,8 @@ function CargoSpawnSystem.new(): CargoSpawnSystem
 			local params = RaycastParams.new()
 			params.FilterType = Enum.RaycastFilterType.Exclude
 			params.FilterDescendantsInstances = ignore
+			-- The office's safe-zone volume is queryable but not collidable: land on the real floor, not on it.
+			params.RespectCanCollide = true
 			local hit = Workspace:Raycast(position, Vector3.new(0, -CargoConstants.FLOOR_PROBE, 0), params)
 			return CFrame.new(if hit ~= nil then hit.Position else position - Vector3.new(0, 3, 0))
 		end,

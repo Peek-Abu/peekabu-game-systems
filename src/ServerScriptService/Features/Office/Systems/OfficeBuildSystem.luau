@@ -178,7 +178,9 @@ function OfficeBuildSystem.build(layout: OfficeTypes.Layout, origin: CFrame): Bu
 		)
 		zone.Transparency = 1
 		zone.CanCollide = false
-		zone.CanQuery = false
+		-- Queryable on purpose: PathfindingService ignores a PathfindingModifier on a CanQuery=false part. Downward
+		-- floor probes must set RespectCanCollide so they skip this non-colliding volume.
+		zone.CanQuery = true
 		zone.CanTouch = false
 		zone.CastShadow = false
 		local modifier = Instance.new("PathfindingModifier")
