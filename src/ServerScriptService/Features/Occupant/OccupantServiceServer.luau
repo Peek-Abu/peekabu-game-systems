@@ -17,9 +17,12 @@
 	- Tells: his mode and target as attributes (the client's heartbeat), a "?" / "!" cue and a speech bubble
 	  (OccupantRigSystem); while he looks around he turns his root through a sweep. Placeholders; M3 replaces
 	  them.
+	- Catch: the kind's attack (onAttack) → OccupantCatchRules → OccupantCatchSystem: camera snap, lights out,
+	  ragdoll launch; ~8 s spectating (Death's respawn delay); "Rehired." on the respawn in the loading bay; the
+	  catch counts in Shift's review.
 
 	Spec-exempt shell (Instances, raycasts, Players, signals); the decisions are the specced OccupantBrainRules,
-	OccupantTuningFormulas and OccupantTellRules.
+	OccupantCatchRules, OccupantTuningFormulas and OccupantTellRules.
 
 	@class OccupantServiceServer
 ]=]
@@ -33,6 +36,7 @@ local Workspace = game:GetService("Workspace")
 local OccupantShared = ReplicatedStorage.Shared.Features.Occupant
 local OccupantServer = ServerScriptService.Features.Occupant
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
+local Observers = require(ReplicatedStorage.Packages.Observers)
 local NoiseRules = require(ReplicatedStorage.Shared.Features.Noise.Rules.NoiseRules)
 local NoiseTypes = require(ReplicatedStorage.Shared.Features.Noise.Data.NoiseTypes)
 local OccupantConstants = require(OccupantShared.Data.OccupantConstants)
@@ -43,14 +47,17 @@ local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTyp
 local NpcRegistry = require(ServerScriptService.Features.Npc.Data.NpcRegistry)
 local NpcTypes = require(ServerScriptService.Features.Npc.Data.NpcTypes)
 local OccupantBrainRules = require(OccupantServer.Rules.OccupantBrainRules)
+local OccupantCatchRules = require(OccupantServer.Rules.OccupantCatchRules)
 local OccupantTuningFormulas = require(OccupantServer.Utils.OccupantTuningFormulas)
 local OccupantRigSystem = require(OccupantServer.Systems.OccupantRigSystem)
+local OccupantCatchSystem = require(OccupantServer.Systems.OccupantCatchSystem)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
 local NoiseServiceServer = require(ServerScriptService.Features.Noise.NoiseServiceServer)
 local NpcServiceServer = require(ServerScriptService.Features.Npc.NpcServiceServer)
 local OfficeServiceServer = require(ServerScriptService.Features.Office.OfficeServiceServer)
 local RoundServiceServer = require(ServerScriptService.Features.Round.RoundServiceServer)
 local ShiftServiceServer = require(ServerScriptService.Features.Shift.ShiftServiceServer)
+local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
 
 -- Registered at load so setBrain / onAttack (start) find the kind.
 if not NpcRegistry.has(OccupantConstants.NPC_KIND) then
@@ -85,6 +92,8 @@ local lookBase: number? = nil
 local tuningElapsed = 0
 local rng = Random.new()
 local counters = { spawned = 0, heard = 0, chases = 0, catches = 0 }
+-- UserIds caught this life: their next character gets the "Rehired." toast.
+local rehire: { [number]: boolean } = {}
 local stoppers: { () -> () } = {}
 
 local function rootOf(player: Player): BasePart?
@@ -144,7 +153,13 @@ local function glimpses(current: OccupantRigSystem.Rig, sightRange: number): { O
 	for _, player in RoundServiceServer:participants() do
 		local root = rootOf(player)
 		local humanoid = humanoidOf(player)
-		if root ~= nil and humanoid ~= nil and humanoid.Health > 0 and not DeathServiceServer:isDead(player) then
+		if
+			root ~= nil
+			and humanoid ~= nil
+			and humanoid.Health > 0
+			and not DeathServiceServer:isDead(player)
+			and not OccupantCatchSystem.isCatching(player.UserId)
+		then
 			local offset = root.Position - origin
 			local clear = offset.Magnitude <= sightRange and Workspace:Raycast(origin, offset, params) == nil
 			table.insert(list, { userId = player.UserId, position = root.Position, clear = clear })
@@ -202,6 +217,57 @@ local function onNoise(noise: NoiseTypes.NoiseEvent)
 		pendingNoise = noise.position
 		counters.heard += 1
 	end
+end
+
+local catchHooks: OccupantCatchSystem.Hooks = {
+	stillOn = function(): boolean
+		local state = shift
+		return rig ~= nil and state ~= nil and state.phase == "running"
+	end,
+	onCaught = function(player: Player)
+		rehire[player.UserId] = true
+		ShiftServiceServer:noteCatch(player)
+		ToastServiceServer:send("all", {
+			text = `{player.DisplayName} was caught by {OccupantConstants.DISPLAY_NAME}.`,
+			duration = 4,
+		})
+	end,
+}
+
+-- The kind's attack is the catch: re-checked on the server (OccupantCatchRules), then the sequence. Never yields.
+local function onCatch(npc: Model, player: Player)
+	local current = rig
+	local before = mind
+	local state = shift
+	if current == nil or before == nil or state == nil or npc ~= current.model then
+		return
+	end
+	local root = rootOf(player)
+	local humanoid = humanoidOf(player)
+	local now = os.clock()
+	local graceUntil = before.grace[player.UserId]
+	local ok, reason = OccupantCatchRules.canCatch({
+		-- 3D, the same distance the brain measures.
+		distance = if root ~= nil then (root.Position - current.root.Position).Magnitude else math.huge,
+		position = if root ~= nil then root.Position else current.root.Position,
+		alive = humanoid ~= nil and humanoid.Health > 0 and not DeathServiceServer:isDead(player),
+		catching = OccupantCatchSystem.isCatching(player.UserId),
+		inGrace = graceUntil ~= nil and now < graceUntil,
+		resting = state.stage == "break",
+		zone = zone,
+	})
+	if not ok then
+		log:debug(`catch of {player.Name} refused: {reason or "?"}`)
+		return
+	end
+	if not OccupantCatchSystem.begin(current, player, catchHooks) then
+		return
+	end
+	local nextMind = OccupantBrainRules.caught(before, player.UserId, now)
+	mind = nextMind
+	counters.catches += 1
+	-- The catch line comes from OccupantCatchSystem; this clears the "!" and publishes the mode.
+	show(current, nextMind, nil)
 end
 
 local function despawn()
@@ -316,6 +382,7 @@ local OccupantServiceServer: OccupantServiceServer = {
 		"NoiseServiceServer",
 		"DeathServiceServer",
 		"RoundServiceServer",
+		"ToastServiceServer",
 	},
 
 	--[=[
@@ -323,6 +390,25 @@ local OccupantServiceServer: OccupantServiceServer = {
 	]=]
 	start = function(_self)
 		NpcServiceServer:setBrain(OccupantConstants.NPC_KIND, brain)
+		NpcServiceServer:onAttack(OccupantConstants.NPC_KIND, onCatch)
+		-- ~8 s of spectating before the respawn (spec §4); Shift's resolver respawns in the loading bay.
+		DeathServiceServer:configure({ respawnDelay = OccupantConstants.SPECTATE_SECONDS })
+		table.insert(
+			stoppers,
+			Observers.observeCharacter(function(player: Player, _character: Model)
+				if rehire[player.UserId] then
+					rehire[player.UserId] = nil
+					ToastServiceServer:send(player, { text = OccupantConstants.REHIRED_TEXT, duration = 3 })
+				end
+				return nil
+			end)
+		)
+		local leaving = Players.PlayerRemoving:Connect(function(player: Player)
+			rehire[player.UserId] = nil
+		end)
+		table.insert(stoppers, function()
+			leaving:Disconnect()
+		end)
 		local changed = ShiftServiceServer.changed:Connect(onShift)
 		local noises = NoiseServiceServer.made:Connect(onNoise)
 		local heartbeat = RunService.Heartbeat:Connect(onHeartbeat)
@@ -340,6 +426,8 @@ local OccupantServiceServer: OccupantServiceServer = {
 			stop()
 		end
 		table.clear(stoppers)
+		OccupantCatchSystem.clear()
+		table.clear(rehire)
 		NpcServiceServer:setBrain(OccupantConstants.NPC_KIND, nil)
 		despawn()
 	end,

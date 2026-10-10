@@ -318,7 +318,9 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Shared.Features.Occupant.Data.OccupantTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Features.Occupant.Net.OccupantEvents"] = "ByteNet packet definitions (no logic)",
 	["ServerScriptService.Features.Occupant.Systems.OccupantRigSystem"] = "Instance builder (HumanoidDescription rig, billboards)",
-	["ServerScriptService.Features.Occupant.OccupantServiceServer"] = "NPC/raycast/signal shell (brain, tuning and tell decisions are specced in OccupantBrainRules, OccupantTuningFormulas, OccupantTellRules)",
+	["ServerScriptService.Features.Occupant.OccupantServiceServer"] = "NPC/raycast/signal shell (brain, tuning and tell decisions are specced in OccupantBrainRules, OccupantCatchRules, OccupantTuningFormulas, OccupantTellRules)",
+	["ServerScriptService.Features.Occupant.Systems.OccupantCatchSystem"] = "Instance/ByteNet/Death shell (catch decisions and the launch are specced in OccupantCatchRules)",
+	["ReplicatedStorage.Client.Features.Occupant.OccupantServiceClient"] = "Camera/Vfx/ByteNet shell (tell decisions are specced in OccupantTellRules)",
 
 	-- Cleanup Crew: Shift
 	["ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes"] = "type definitions only (no runtime logic)",
