@@ -13,16 +13,16 @@
 	  overtime (salvage x1.5) and raises the pressure tier at 2:00 and 4:00 (ShiftPhaseRules.advance), each
 	  change announced (ShiftNoticeUtils) and fired on `changed`;
 	- clock out: the time clock at the truck starts a 10 s countdown for everyone, then ends the run;
-	- results: ShiftResultsUtils builds the review; the crew votes Another shift / Back to depot (Back to depot
-	  sends the crew home through ShiftTripSystem with the review as its result card);
+	- results: ShiftResultsUtils builds the review; the crew votes Another shift / Back to depot (ShiftVoteSystem;
+	  Back to depot sends the crew home through ShiftTripSystem with the review as its result card);
 	- the crew (M4): a shift starts only for the party that arrived through the Queue (ShiftTripSystem); only
 	  the crew takes part in Round's run, votes and respawns in the loading bay;
 	- reset: Office, Vacuum and Cargo clear everything the shift made. `resetShift` mid-run (Studio test
 	  runs) ends Round's run first and skips the review.
 
 	State rides the `shift` world entry (ShiftSnapshotUtils). Spec-exempt shell (Players, RunService, the
-	services it drives); the decisions are the specced ShiftPhaseRules, ShiftVoteRules, ShiftResultsUtils and
-	ShiftSnapshotUtils.
+	services it drives); the decisions are the specced ShiftPhaseRules, ShiftVoteRules (through
+	ShiftVoteSystem), ShiftResultsUtils and ShiftSnapshotUtils.
 
 	@class ShiftServiceServer
 ]=]
@@ -41,16 +41,14 @@ local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local RoundTypes = require(ReplicatedStorage.Shared.Features.Round.Data.RoundTypes)
 local ShiftConstants = require(ShiftShared.Data.ShiftConstants)
 local ShiftTypes = require(ShiftShared.Data.ShiftTypes)
-local ShiftEvents = require(ShiftShared.Net.ShiftEvents)
 local ShiftSnapshotUtils = require(ShiftShared.Utils.ShiftSnapshotUtils)
-local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local ShiftPhaseRules = require(ShiftServer.Rules.ShiftPhaseRules)
-local ShiftVoteRules = require(ShiftServer.Rules.ShiftVoteRules)
 local ShiftNoticeUtils = require(ShiftServer.Utils.ShiftNoticeUtils)
 local ShiftResultsUtils = require(ShiftServer.Utils.ShiftResultsUtils)
 local ShiftRosterTracker = require(ShiftServer.State.ShiftRosterTracker)
 local ShiftBankingSystem = require(ShiftServer.Systems.ShiftBankingSystem)
 local ShiftTripSystem = require(ShiftServer.Systems.ShiftTripSystem)
+local ShiftVoteSystem = require(ShiftServer.Systems.ShiftVoteSystem)
 local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
 local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
@@ -68,7 +66,6 @@ end
 local log = Logger.new("ShiftServiceServer")
 
 local state: ShiftTypes.ShiftState = ShiftPhaseRules.initial(ShiftConstants.QUOTA, ShiftConstants.VARIANT)
-local votes: { [number]: ShiftTypes.Vote } = {}
 local results: ShiftTypes.ShiftResults? = nil
 local resetPending = false
 -- Set once the clock-out has ended Round's run: tick repeats `endShift` until Round leaves running.
@@ -77,6 +74,8 @@ local endingRun = false
 local roster = ShiftRosterTracker.new()
 -- The crew and the trips between the depot and the office (Queue); only the crew starts, takes part and votes.
 local trip = ShiftTripSystem.new()
+-- The results vote (ShiftVoteSystem); built below, once finishReset exists.
+local voting: ShiftVoteSystem.ShiftVoteSystem
 local rng = Random.new()
 local publishScheduled = false
 local stoppers: { () -> () } = {}
@@ -100,7 +99,7 @@ local function publish()
 	publishScheduled = true
 	task.defer(function()
 		publishScheduled = false
-		local another, depot = ShiftVoteRules.tally(votes, presentIds())
+		local another, depot = voting:tally()
 		local review = results
 		-- During results Round has already cleared its counters, so the review carries the totals.
 		local cleared = if review ~= nil then review.cleared else RoundServiceServer:teamValue(ShiftConstants.CLEARANCE)
@@ -146,7 +145,7 @@ local function finishReset()
 	guarded("cargo reset", function()
 		CargoServiceServer:reset()
 	end)
-	table.clear(votes)
+	voting:clear()
 	roster:clear()
 	results = nil
 	endingRun = false
@@ -155,7 +154,7 @@ local function finishReset()
 end
 
 local function beginRun()
-	table.clear(votes)
+	voting:clear()
 	roster:clear()
 	results = nil
 	endingRun = false
@@ -246,17 +245,21 @@ local onBanked = ShiftBankingSystem.new({
 	end,
 })
 
-local function resolveVote(timedOut: boolean, leaving: number?)
-	local decision = ShiftVoteRules.decide(votes, presentIds(leaving), timedOut)
-	if decision == nil then
-		return
-	end
+voting = ShiftVoteSystem.new({
+	isOpen = function(): boolean
+		return state.phase == "results"
+	end,
+	eligible = trip.eligible,
+	presentIds = presentIds,
+	publish = publish,
 	-- Back to depot: the crew rides home with the review; if the trip is refused, the reset is another shift.
-	if decision == "depot" then
-		trip:sendHome(results, state.shift, now())
-	end
-	finishReset()
-end
+	decided = function(depot: boolean)
+		if depot then
+			trip:sendHome(results, state.shift, now())
+		end
+		finishReset()
+	end,
+})
 
 local function step()
 	local advanced = ShiftPhaseRules.advance(state, now())
@@ -279,7 +282,7 @@ local function step()
 			endingRun = false
 		end
 	elseif action == "resolveVote" then
-		resolveVote(true)
+		voting:resolve(true)
 	end
 end
 
@@ -296,26 +299,7 @@ export type ShiftServiceServer = {
 	noteCatch: (self: ShiftServiceServer, player: Player) -> boolean,
 }
 
-local ShiftServiceServer: ShiftServiceServer
-
-local onVote = RequestHandler.wrap({
-	name = "ShiftVote",
-	rateLimit = { maxRequests = 6, windowSeconds = 5 },
-	validate = function(data: string, _player: Player): (boolean, string?, ShiftTypes.Vote?)
-		local choice: ShiftTypes.Vote? = ShiftVoteRules.parse(data)
-		if not choice then
-			return false, "unknown vote", nil
-		end
-		return true, nil, choice
-	end,
-	handler = function(_data: string, player: Player, choice: ShiftTypes.Vote?)
-		if choice ~= nil then
-			ShiftServiceServer:vote(player, choice)
-		end
-	end,
-})
-
-ShiftServiceServer = {
+local ShiftServiceServer: ShiftServiceServer = {
 	changed = changed,
 	dependencies = {
 		"RoundServiceServer",
@@ -364,13 +348,13 @@ ShiftServiceServer = {
 			end
 		end)
 		local leaving = Players.PlayerRemoving:Connect(function(player)
-			votes[player.UserId] = nil
+			voting:forget(player.UserId)
 			publish()
 			-- Their absence may decide the vote (everyone left has voted, or a majority now exists).
 			if state.phase == "results" then
 				task.defer(function()
 					if state.phase == "results" then
-						resolveVote(false, player.UserId)
+						voting:resolve(false, player.UserId)
 					end
 				end)
 			end
@@ -389,14 +373,7 @@ ShiftServiceServer = {
 			leaving:Disconnect()
 			ticking:Disconnect()
 		end)
-		table.insert(
-			stoppers,
-			ShiftEvents.packets.Vote.listen(function(data: string, player: Player?)
-				if player then
-					onVote(data, player)
-				end
-			end)
-		)
+		table.insert(stoppers, voting:start())
 		publish()
 	end,
 
@@ -436,13 +413,7 @@ ShiftServiceServer = {
 		Records a results vote (replacing the player's earlier one) and resolves the vote if it is decided.
 	]=]
 	vote = function(_self, player, choice)
-		if state.phase ~= "results" or not trip.eligible(player) then
-			return false
-		end
-		votes[player.UserId] = choice
-		publish()
-		resolveVote(false)
-		return true
+		return voting:vote(player, choice)
 	end,
 
 	--[=[
@@ -471,7 +442,7 @@ ShiftServiceServer = {
 	end,
 
 	getState = function(_self)
-		local another, depot = ShiftVoteRules.tally(votes, presentIds())
+		local another, depot = voting:tally()
 		return {
 			phase = state.phase,
 			sub = state.sub,
