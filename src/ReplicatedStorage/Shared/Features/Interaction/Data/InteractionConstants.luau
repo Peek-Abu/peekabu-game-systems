@@ -18,4 +18,11 @@ return table.freeze({
 	-- Extra studs the server allows on top of maxDistance: the player moved a little between pressing and
 	-- the server hearing it.
 	DISTANCE_TOLERANCE = 4,
+	-- String attribute naming an object's channel kind (InteractionRegistry.registerChannel).
+	CHANNEL_KIND_ATTRIBUTE = "ChannelKind",
+	-- Number attributes the server keeps on a channel target: progress 0-1, and players on it.
+	CHANNEL_PROGRESS_ATTRIBUTE = "ChannelProgress",
+	CHANNEL_COUNT_ATTRIBUTE = "ChannelCount",
+	-- Seconds between channel progress updates.
+	CHANNEL_TICK = 0.1,
 })

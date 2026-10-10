@@ -13,11 +13,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Observers = require(ReplicatedStorage.Packages.Observers)
 local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionConstants)
+local InteractionEvents = require(ReplicatedStorage.Shared.Features.Interaction.Net.InteractionEvents)
 local InputServiceClient = require(ReplicatedStorage.Client.Features.Input.InputServiceClient)
 
 local PROMPT_WAIT_SECONDS = 10
 
 local stopObserver: (() -> ())? = nil
+local channelTarget: Instance? = nil
 
 -- The first KeyCode in a binding list (a mouse button cannot key a prompt), or nil.
 local function firstKeyCode(list: { Enum.KeyCode | Enum.UserInputType }?): Enum.KeyCode?
@@ -51,6 +53,8 @@ export type InteractionServiceClient = {
 	dependencies: { string },
 	start: (self: InteractionServiceClient) -> (),
 	stop: (self: InteractionServiceClient) -> (),
+	startChannel: (self: InteractionServiceClient, target: Instance) -> (),
+	stopChannel: (self: InteractionServiceClient) -> (),
 }
 
 local InteractionServiceClient: InteractionServiceClient = {
@@ -75,6 +79,26 @@ local InteractionServiceClient: InteractionServiceClient = {
 				alive = false
 			end
 		end)
+	end,
+
+	--[=[
+		Starts channeling `target` (the game decides when: aim + hold). Repeats for the same target are
+		not re-sent.
+	]=]
+	startChannel = function(_self, target)
+		if channelTarget == target then
+			return
+		end
+		channelTarget = target
+		InteractionEvents.packets.ChannelStart.send(target)
+	end,
+
+	stopChannel = function(_self)
+		if channelTarget == nil then
+			return
+		end
+		channelTarget = nil
+		InteractionEvents.packets.ChannelStop.send(true)
 	end,
 
 	stop = function(_self)

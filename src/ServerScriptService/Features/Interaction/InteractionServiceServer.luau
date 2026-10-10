@@ -8,6 +8,9 @@
 	distance + tolerance, per-player-per-object cooldown) before the kind's handler runs. One handler per
 	kind: `onInteract(kind, function(player, target) ... end)`.
 
+	Channels: an object with a ChannelKind attribute can be held-to-work; progress lives on the server
+	(InteractionChannelSystem) and is mirrored on ChannelProgress / ChannelCount.
+
 	Spec-exempt shell (CollectionService, ProximityPrompts, Players); the decision is the specced
 	InteractionRules and InteractionCooldownTracker.
 
@@ -16,6 +19,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local InteractionData = ReplicatedStorage.Shared.Features.Interaction.Data
@@ -23,6 +27,9 @@ local Observers = require(ReplicatedStorage.Packages.Observers)
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local InteractionConstants = require(InteractionData.InteractionConstants)
 local InteractionRegistry = require(InteractionData.InteractionRegistry)
+local InteractionEvents = require(ReplicatedStorage.Shared.Features.Interaction.Net.InteractionEvents)
+local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
+local InteractionChannelSystem = require(ServerScriptService.Features.Interaction.Systems.InteractionChannelSystem)
 local InteractionRules = require(ServerScriptService.Features.Interaction.Rules.InteractionRules)
 local InteractionCooldownTracker = require(ServerScriptService.Features.Interaction.State.InteractionCooldownTracker)
 
@@ -31,6 +38,31 @@ export type Handler = (player: Player, target: Instance) -> ()
 local log = Logger.new("InteractionServiceServer")
 
 local handlers: { [string]: Handler } = {}
+local channelHandlers: { [string]: InteractionChannelSystem.ChannelHandler } = {}
+local channels = InteractionChannelSystem.new(channelHandlers)
+
+local onChannelStart = RequestHandler.wrap({
+	name = "InteractionChannelStart",
+	rateLimitKey = "InteractionChannel",
+	rateLimit = { maxRequests = 20, windowSeconds = 5 },
+	handler = function(data: unknown, player: Player)
+		if typeof(data) == "Instance" then
+			local ok, reason = channels:start(player, data)
+			if not ok then
+				log:debug(`channel refused for {player.Name}: {reason or "?"}`)
+			end
+		end
+	end,
+})
+
+local onChannelStop = RequestHandler.wrap({
+	name = "InteractionChannelStop",
+	rateLimitKey = "InteractionChannel",
+	rateLimit = { maxRequests = 20, windowSeconds = 5 },
+	handler = function(_data: unknown, player: Player)
+		channels:stop(player)
+	end,
+})
 local cooldowns = InteractionCooldownTracker.new()
 local targetIds: { [Instance]: number } = {}
 local nextTargetId = 0
@@ -140,6 +172,8 @@ export type InteractionServiceServer = {
 	getState: (self: InteractionServiceServer) -> { [string]: any },
 	onInteract: (self: InteractionServiceServer, kind: string, handler: Handler) -> (),
 	setEnabled: (self: InteractionServiceServer, target: Instance, enabled: boolean) -> (),
+	channel: (self: InteractionServiceServer, kind: string, handler: InteractionChannelSystem.ChannelHandler) -> (),
+	resetChannel: (self: InteractionServiceServer, target: Instance) -> (),
 }
 
 local InteractionServiceServer: InteractionServiceServer = {
@@ -152,9 +186,37 @@ local InteractionServiceServer: InteractionServiceServer = {
 		table.insert(stoppers, Observers.observeTag(InteractionConstants.TAG, observe))
 		local leaving = Players.PlayerRemoving:Connect(function(player)
 			cooldowns:forgetPlayer(player.UserId)
+			channels:stop(player)
 		end)
 		table.insert(stoppers, function()
 			leaving:Disconnect()
+		end)
+		table.insert(
+			stoppers,
+			InteractionEvents.packets.ChannelStart.listen(function(data: Instance, player: Player?)
+				if player then
+					onChannelStart(data, player)
+				end
+			end)
+		)
+		table.insert(
+			stoppers,
+			InteractionEvents.packets.ChannelStop.listen(function(data: boolean, player: Player?)
+				if player then
+					onChannelStop(data, player)
+				end
+			end)
+		)
+		local elapsed = 0
+		local ticking = RunService.Heartbeat:Connect(function(dt)
+			elapsed += dt
+			if elapsed >= InteractionConstants.CHANNEL_TICK then
+				channels:step(elapsed)
+				elapsed = 0
+			end
+		end)
+		table.insert(stoppers, function()
+			ticking:Disconnect()
 		end)
 	end,
 
@@ -179,6 +241,22 @@ local InteractionServiceServer: InteractionServiceServer = {
 	]=]
 	setEnabled = function(_self, target, enabled)
 		target:SetAttribute(InteractionConstants.ENABLED_ATTRIBUTE, enabled)
+	end,
+
+	--[=[
+		Sets THE handler for a registered channel kind. Errors on an unregistered kind or a second handler.
+	]=]
+	channel = function(_self, kind, handler)
+		assert(InteractionRegistry.hasChannel(kind), `channel kind "{kind}" is not registered`)
+		assert(channelHandlers[kind] == nil, `channel kind "{kind}" already has a handler`)
+		channelHandlers[kind] = handler
+	end,
+
+	--[=[
+		Zeroes a target's progress and ends everyone's channel on it (a pile respawned, a fault fixed).
+	]=]
+	resetChannel = function(_self, target)
+		channels:reset(target)
 	end,
 
 	getState = function(_self)
