@@ -9,6 +9,7 @@
 	@class InteractionServiceClient
 ]=]
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Observers = require(ReplicatedStorage.Packages.Observers)
@@ -19,7 +20,9 @@ local InputServiceClient = require(ReplicatedStorage.Client.Features.Input.Input
 local PROMPT_WAIT_SECONDS = 10
 
 local stopObserver: (() -> ())? = nil
+local stopCharacterWatch: (() -> ())? = nil
 local channelTarget: Instance? = nil
+local lastSentAt = 0
 
 -- The first KeyCode in a binding list (a mouse button cannot key a prompt), or nil.
 local function firstKeyCode(list: { Enum.KeyCode | Enum.UserInputType }?): Enum.KeyCode?
@@ -61,6 +64,13 @@ local InteractionServiceClient: InteractionServiceClient = {
 	dependencies = { "InputServiceClient" },
 
 	start = function(_self)
+		-- A new character ends any held channel (the server dropped it with the old one).
+		local characterAdded = Players.LocalPlayer.CharacterAdded:Connect(function()
+			channelTarget = nil
+		end)
+		stopCharacterWatch = function()
+			characterAdded:Disconnect()
+		end
 		stopObserver = Observers.observeTag(InteractionConstants.TAG, function(target: Instance)
 			local alive = true
 			task.spawn(function()
@@ -82,14 +92,17 @@ local InteractionServiceClient: InteractionServiceClient = {
 	end,
 
 	--[=[
-		Starts channeling `target` (the game decides when: aim + hold). Repeats for the same target are
-		not re-sent.
+		Starts channeling `target` (the game decides when: aim + hold). Call it every frame while
+		held: a repeat for the same target is re-sent at most every CHANNEL_RESEND_INTERVAL, so a channel the
+		server ended (complete, out of range, death, reset) resumes while the button is still held.
 	]=]
 	startChannel = function(_self, target)
-		if channelTarget == target then
+		local now = os.clock()
+		if channelTarget == target and now - lastSentAt < InteractionConstants.CHANNEL_RESEND_INTERVAL then
 			return
 		end
 		channelTarget = target
+		lastSentAt = now
 		InteractionEvents.packets.ChannelStart.send(target)
 	end,
 
@@ -106,6 +119,11 @@ local InteractionServiceClient: InteractionServiceClient = {
 		if stop ~= nil then
 			stop()
 			stopObserver = nil
+		end
+		local stopWatch = stopCharacterWatch
+		if stopWatch ~= nil then
+			stopWatch()
+			stopCharacterWatch = nil
 		end
 	end,
 }

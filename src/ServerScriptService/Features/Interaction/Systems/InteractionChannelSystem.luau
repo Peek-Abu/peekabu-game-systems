@@ -24,9 +24,10 @@ local InteractionRules = require(ServerScriptService.Features.Interaction.Rules.
 local InteractionChannelTracker = require(ServerScriptService.Features.Interaction.State.InteractionChannelTracker)
 
 export type ChannelHandler = {
-	-- Asked when a player starts and every tick after; false refuses or ends their channel.
+	-- Asked when a player starts and every tick after; false refuses or ends their channel. Must not yield.
 	canChannel: ((player: Player, target: Instance) -> boolean)?,
-	-- Once, when progress reaches full; `players` are everyone on the target at that moment.
+	-- Once, when progress reaches full; `players` are everyone on the target at that moment. Runs on its
+	-- own thread, so it may yield.
 	onComplete: (players: { Player }, target: Instance) -> (),
 }
 
@@ -69,8 +70,8 @@ function InteractionChannelSystem.new(handlers: { [string]: ChannelHandler }): I
 			nextId += 1
 			id = nextId
 			idOf[target] = id
-			targetById[id] = target
 		end
+		targetById[id] = target
 		return id
 	end
 
@@ -102,8 +103,15 @@ function InteractionChannelSystem.new(handlers: { [string]: ChannelHandler }): I
 			return false, reason
 		end
 		local canChannel = handler.canChannel
-		if canChannel ~= nil and not canChannel(player, target) then
-			return false, "refused by game"
+		if canChannel ~= nil then
+			local called, result = pcall(canChannel, player, target)
+			if not called then
+				log:error(`channel "{kind}" canChannel failed: {result}`)
+				return false, "refused by game"
+			end
+			if not result then
+				return false, "refused by game"
+			end
 		end
 		return true, nil
 	end
@@ -167,11 +175,19 @@ function InteractionChannelSystem.new(handlers: { [string]: ChannelHandler }): I
 					-- Destroyed or no longer a channel: forget it so the id map does not hold it.
 					tracker:reset(targetId)
 					targetById[targetId] = nil
+					if target ~= nil then
+						idOf[target] = nil
+						target:SetAttribute(InteractionConstants.CHANNEL_PROGRESS_ATTRIBUTE, nil)
+						target:SetAttribute(InteractionConstants.CHANNEL_COUNT_ATTRIBUTE, nil)
+					end
 					continue
 				end
 				local done = tracker:advance(targetId, dt, def.duration)
 				publish(targetId)
 				if done ~= nil then
+					-- Completed: forget the target (its progress is reset and published as nil).
+					targetById[targetId] = nil
+					idOf[target] = nil
 					local players: { Player } = {}
 					for _, userId in done do
 						local player = Players:GetPlayerByUserId(userId)
@@ -179,12 +195,14 @@ function InteractionChannelSystem.new(handlers: { [string]: ChannelHandler }): I
 							table.insert(players, player)
 						end
 					end
-					local ok, err = pcall(function()
-						handlers[kind].onComplete(players, target)
+					task.spawn(function()
+						local ok, err = pcall(function()
+							handlers[kind].onComplete(players, target)
+						end)
+						if not ok then
+							log:error(`channel "{kind}" onComplete failed: {err}`)
+						end
 					end)
-					if not ok then
-						log:error(`channel "{kind}" onComplete failed: {err}`)
-					end
 				end
 			end
 		end,

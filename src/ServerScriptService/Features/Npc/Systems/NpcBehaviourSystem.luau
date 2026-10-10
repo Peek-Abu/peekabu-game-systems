@@ -234,7 +234,12 @@ function NpcBehaviourSystem.think(agent: Agent, now: number, deps: ThinkDeps)
 		local victim = findCandidate(list, intent.target)
 		if victim ~= nil then
 			agent.humanoid.WalkSpeed = def.runSpeed
-			attack(agent, victim, now, deps)
+			-- A game's brain may name any victim: only attack within range (as the default brain does), else close in.
+			if (victim.position - position).Magnitude <= def.attackRange then
+				attack(agent, victim, now, deps)
+			else
+				agent.mover:moveTo(victim.position, now)
+			end
 		end
 	elseif intent.kind == "chase" then
 		local quarry = findCandidate(list, intent.target)

@@ -211,8 +211,9 @@ local InteractionServiceServer: InteractionServiceServer = {
 		local ticking = RunService.Heartbeat:Connect(function(dt)
 			elapsed += dt
 			if elapsed >= InteractionConstants.CHANNEL_TICK then
-				channels:step(elapsed)
+				local stepDt = elapsed
 				elapsed = 0
+				channels:step(stepDt)
 			end
 		end)
 		table.insert(stoppers, function()

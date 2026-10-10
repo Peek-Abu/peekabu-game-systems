@@ -25,4 +25,7 @@ return table.freeze({
 	CHANNEL_COUNT_ATTRIBUTE = "ChannelCount",
 	-- Seconds between channel progress updates.
 	CHANNEL_TICK = 0.1,
+	-- Seconds: a held channel re-sends its start this often, so a channel the server ended resumes while
+	-- the button is still held.
+	CHANNEL_RESEND_INTERVAL = 0.5,
 })

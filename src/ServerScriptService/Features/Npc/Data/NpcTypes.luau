@@ -33,6 +33,7 @@ export type NpcDef = {
 	corpseTime: number,
 	animations: NpcAnimations?,
 	-- PathfindingService costs by material/label name (math.huge = never enter). Absent = defaults.
+	-- With costs set, a goal the path can't reach because of them leaves the NPC standing (no straight-line walk).
 	pathCosts: { [string]: number }?,
 }
 
@@ -53,6 +54,7 @@ export type NpcDefInput = {
 	corpseTime: number?,
 	animations: NpcAnimations?,
 	-- PathfindingService costs by material/label name (math.huge = never enter). Absent = defaults.
+	-- With costs set, a goal the path can't reach because of them leaves the NPC standing (no straight-line walk).
 	pathCosts: { [string]: number }?,
 }
 
@@ -84,6 +86,7 @@ export type NpcTuning = {
 }
 
 -- A game's brain for one kind. Returning nil uses the default brain (NpcBrainRules.decide) this tick.
+-- Runs inside the NPC think loop: it must not yield.
 export type Brain = (def: NpcDef, context: BrainContext, npc: Model) -> Intent?
 
 export type Pose = "idle" | "walk" | "run"

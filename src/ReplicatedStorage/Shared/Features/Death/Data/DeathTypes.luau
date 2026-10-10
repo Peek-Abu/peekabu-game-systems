@@ -46,6 +46,7 @@ export type JointLimits = {
 }
 
 -- Where a player's next character appears; nil = where the engine put it (a SpawnLocation).
+-- Must not yield.
 export type SpawnResolver = (player: Player) -> CFrame?
 
 export type KillOptions = {
