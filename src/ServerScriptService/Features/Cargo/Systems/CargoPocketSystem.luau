@@ -22,6 +22,8 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local CargoShared = ReplicatedStorage.Shared.Features.Cargo
 local CargoServer = ServerScriptService.Features.Cargo
+local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
+local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionConstants)
 local CargoConstants = require(CargoShared.Data.CargoConstants)
 local CargoRegistry = require(CargoShared.Data.CargoRegistry)
 local CargoTypes = require(CargoShared.Data.CargoTypes)
@@ -30,6 +32,7 @@ local CargoClaimTracker = require(CargoServer.State.CargoClaimTracker)
 local CargoPocketTracker = require(CargoServer.State.CargoPocketTracker)
 local CargoSpawnSystem = require(CargoServer.Systems.CargoSpawnSystem)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
+local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
 local StateSyncPublicPlayerStore = require(ServerScriptService.Features.StateSync.State.StateSyncPublicPlayerStore)
 
 type CargoEntry = CargoTypes.CargoEntry
@@ -59,6 +62,9 @@ export type CargoPocketSystem = {
 	clear: (self: CargoPocketSystem) -> (),
 	counts: (self: CargoPocketSystem) -> Counts,
 }
+
+-- How long a pocketed item may take to reach the hands before it is left on the floor.
+local HAND_WAIT = 0.5
 
 local function rootOf(player: Player): BasePart?
 	local character = player.Character
@@ -97,14 +103,29 @@ function CargoPocketSystem.new(deps: Deps): CargoPocketSystem
 		end
 	end
 
-	-- Brings a pocketed entry back at the player's feet and into their hands a frame later (Carry adopts a new
-	-- item when its tag lands). If the hands filled meanwhile, it stays on the floor.
+	-- Brings a pocketed entry back at the player's feet and into their hands. Carry adopts the new item from its
+	-- tag observer, which can run a few frames later (it sets the interaction kind attribute when it has), so
+	-- wait for that, up to HAND_WAIT seconds. If the hands filled, the player or item is gone, or Carry never
+	-- adopted it, the item stays on the floor and the player is told.
 	local function intoHands(player: Player, entry: CargoEntry, root: BasePart, parent: Instance)
 		local floor = deps.spawner:floorUnder(root.Position, deps.ignore())
 		local part = deps.spawner:spawn(entry.kind, floor, parent, { value = entry.value })
-		task.defer(function()
-			if part.Parent ~= nil and player.Parent ~= nil and CarryServiceServer:getCarried(player) == nil then
-				CarryServiceServer:pickUp(player, part)
+		task.spawn(function()
+			local waited = 0
+			while part.Parent ~= nil and player.Parent ~= nil and waited <= HAND_WAIT do
+				if CarryServiceServer:getCarried(player) ~= nil then
+					return
+				end
+				if
+					part:GetAttribute(InteractionConstants.KIND_ATTRIBUTE) == CarryConstants.INTERACTION_KIND
+					and CarryServiceServer:pickUp(player, part)
+				then
+					return
+				end
+				waited += task.wait()
+			end
+			if part.Parent ~= nil and player.Parent ~= nil then
+				ToastServiceServer:send(player, { text = "Dropped at your feet", duration = 2 })
 			end
 		end)
 	end
@@ -155,7 +176,7 @@ function CargoPocketSystem.new(deps: Deps): CargoPocketSystem
 			return true, nil
 		end,
 
-		swap = function(self, player)
+		swap = function(_self, player)
 			local item = CarryServiceServer:getCarried(player)
 			local entry = if item ~= nil then deps.entryOf(item) else nil
 			local def = if entry ~= nil then CargoRegistry.get(entry.kind) else nil
@@ -169,19 +190,20 @@ function CargoPocketSystem.new(deps: Deps): CargoPocketSystem
 			if root == nil or parent == nil or parent.Parent == nil then
 				return false, "not now"
 			end
-			local out: CargoEntry? = nil
+			local out: CargoEntry?
 			if action == "unpocket" then
 				out = pockets:remove(player.UserId, pockets:count(player.UserId))
 			else
-				out = pockets:remove(player.UserId, 1)
-				local pocketed, why = self:pocket(player)
-				if not pocketed then
-					if out ~= nil then
-						pockets:add(player.UserId, out)
-					end
-					publish(player.UserId)
-					return false, why
+				-- The only step that can refuse is the claim, and it comes first, so a refused swap leaves the
+				-- pockets exactly as they were. Then the oldest comes out and the hands item goes in last.
+				local id = if item ~= nil then deps.idOf(item) else nil
+				if item == nil or entry == nil or id == nil or not deps.claims:claim(id) then
+					return false, "nothing to pocket"
 				end
+				out = pockets:remove(player.UserId, 1)
+				pockets:add(player.UserId, entry)
+				CarryServiceServer:forceDrop(player, "forced")
+				item:Destroy()
 			end
 			publish(player.UserId)
 			if out == nil then
