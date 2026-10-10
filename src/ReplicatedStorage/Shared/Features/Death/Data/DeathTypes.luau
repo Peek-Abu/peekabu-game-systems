@@ -45,4 +45,12 @@ export type JointLimits = {
 	twistUpper: number,
 }
 
+-- Where a player's next character appears; nil = where the engine put it (a SpawnLocation).
+export type SpawnResolver = (player: Player) -> CFrame?
+
+export type KillOptions = {
+	-- Velocity (studs/s) every body part gets at the moment of death: a throw, a blast.
+	launch: Vector3?,
+}
+
 return {}
