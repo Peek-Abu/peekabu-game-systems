@@ -112,23 +112,26 @@ local function publish()
 	end)
 end
 
--- The one way the state changes: tells the crew what the pacing did, tells listeners, republishes.
-local function setState(nextState: ShiftTypes.ShiftState)
-	local before = state
-	state = nextState
-	for _, notice in ShiftNoticeUtils.notices(before, nextState) do
-		ToastServiceServer:send("all", notice)
-	end
-	changed:Fire(table.clone(nextState))
-	publish()
-end
-
 -- Runs one step; a throwing step is logged (not rethrown) and false is returned.
 local function guarded(label: string, step: () -> ()): boolean
 	return xpcall(step, function(err: unknown): unknown
 		log:error(`{label} failed: {err}`)
 		return err
 	end)
+end
+
+-- The one way the state changes: tells the crew what the pacing did, tells listeners, republishes.
+local function setState(nextState: ShiftTypes.ShiftState)
+	local before = state
+	state = nextState
+	changed:Fire(table.clone(nextState))
+	publish()
+	-- Last, each in its own guard: a throwing toast cannot skip the signal or the publish.
+	for _, notice in ShiftNoticeUtils.notices(before, nextState) do
+		guarded("pacing notice", function()
+			ToastServiceServer:send("all", notice)
+		end)
+	end
 end
 
 -- Clears everything the shift made and waits in the lobby (the tick starts the next countdown). Always

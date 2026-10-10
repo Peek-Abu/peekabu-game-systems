@@ -70,7 +70,7 @@ return function()
 	end)
 
 	it("holds the tier note back during the warning", function()
-		local warning = ShiftPhaseRules.advance(ShiftPhaseRules.markQuota(running(), 350, 140), 170)
+		local warning = ShiftPhaseRules.advance(ShiftPhaseRules.markQuota(running(), 350, 170), 200)
 		local later = ShiftPhaseRules.advance(warning, 225)
 		expect(later.stage).to.equal("warning")
 		expect(later.tier).to.equal(1)
