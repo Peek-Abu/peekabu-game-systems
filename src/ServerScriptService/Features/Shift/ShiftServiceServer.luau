@@ -6,8 +6,11 @@
 
 	- run start: the clearance target, the office's spawns (OfficeServiceServer:beginShift), the crew moved
 	  to the loading bay, which is also where everyone respawns (DeathServiceServer:setSpawnPoint);
-	- banking: Cargo's `onBanked` adds trash to Round's `clearance` counter and salvage to `bonus`, keeps
-	  per-player scores, and stamps QUOTA MET once;
+	- banking: Cargo's `onBanked` (ShiftBankingSystem) adds trash to Round's `clearance` counter and salvage
+	  to `bonus`, keeps per-player scores, and stamps QUOTA MET once;
+	- pacing (M2): meeting the quota starts Harlow's break; the clock steps break -> overtime warning ->
+	  overtime (salvage x1.5) and raises the pressure tier at 2:00 and 4:00 (ShiftPhaseRules.advance), each
+	  change announced (ShiftNoticeUtils) and fired on `changed`;
 	- clock out: the time clock at the truck starts a 10 s countdown for everyone, then ends the run;
 	- results: ShiftResultsUtils builds the review; the crew votes Another shift / Back to depot (the depot is
 	  M4: until then both reset in this server);
@@ -30,8 +33,8 @@ local Workspace = game:GetService("Workspace")
 local ShiftShared = ReplicatedStorage.Shared.Features.Shift
 local ShiftServer = ServerScriptService.Features.Shift
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
-local CargoTypes = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoTypes)
 local InteractionRegistry = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionRegistry)
+local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local RoundTypes = require(ReplicatedStorage.Shared.Features.Round.Data.RoundTypes)
 local ShiftConstants = require(ShiftShared.Data.ShiftConstants)
 local ShiftTypes = require(ShiftShared.Data.ShiftTypes)
@@ -40,8 +43,10 @@ local ShiftSnapshotUtils = require(ShiftShared.Utils.ShiftSnapshotUtils)
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local ShiftPhaseRules = require(ShiftServer.Rules.ShiftPhaseRules)
 local ShiftVoteRules = require(ShiftServer.Rules.ShiftVoteRules)
+local ShiftNoticeUtils = require(ShiftServer.Utils.ShiftNoticeUtils)
 local ShiftResultsUtils = require(ShiftServer.Utils.ShiftResultsUtils)
 local ShiftRosterTracker = require(ShiftServer.State.ShiftRosterTracker)
+local ShiftBankingSystem = require(ShiftServer.Systems.ShiftBankingSystem)
 local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
 local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
@@ -69,6 +74,8 @@ local roster = ShiftRosterTracker.new()
 local rng = Random.new()
 local publishScheduled = false
 local stoppers: { () -> () } = {}
+-- Every state change (a copy), for Occupant (Harlow follows the run, its break and its tier).
+local changed: SignalTyped.Signal<ShiftTypes.ShiftState> = SignalTyped.new()
 
 local function now(): number
 	return Workspace:GetServerTimeNow()
@@ -105,8 +112,14 @@ local function publish()
 	end)
 end
 
+-- The one way the state changes: tells the crew what the pacing did, tells listeners, republishes.
 local function setState(nextState: ShiftTypes.ShiftState)
+	local before = state
 	state = nextState
+	for _, notice in ShiftNoticeUtils.notices(before, nextState) do
+		ToastServiceServer:send("all", notice)
+	end
+	changed:Fire(table.clone(nextState))
 	publish()
 end
 
@@ -210,56 +223,25 @@ local function onRoundPhase(roundState: RoundTypes.RoundState)
 	end
 end
 
--- Cargo's banking handler: synchronous (claim -> add -> destroy happens around it). Every refusal is decided
--- before the first counter write; once the crew's counters moved it returns true whatever else fails, or
--- Cargo would release the claim and the same items would bank twice.
-local function onBanked(player: Player, deposit: CargoTypes.Deposit): boolean
-	if state.phase ~= "running" or endingRun then
-		return false
-	end
-	local bonus = math.floor(deposit.bonus * ShiftConstants.SALVAGE_MULTIPLIER + 0.5)
-	local salvage = 0
-	for _, item in deposit.items do
-		if item.category == "salvage" then
-			salvage += 1
-		end
-	end
-	local wrote = false
-	local ok = guarded("banking", function()
-		if deposit.clearance > 0 then
-			RoundServiceServer:addTeam(ShiftConstants.CLEARANCE, deposit.clearance)
-			wrote = true
-		end
-		if bonus > 0 then
-			RoundServiceServer:addTeam(ShiftConstants.BONUS, bonus)
-			wrote = true
-		end
-		RoundServiceServer:addScore(player, ShiftConstants.SCORE_BANKED, deposit.clearance + bonus)
-		wrote = true
-		if salvage > 0 then
-			RoundServiceServer:addScore(player, ShiftConstants.SCORE_SALVAGE, salvage)
-		end
-		roster:record(player.UserId, player.DisplayName, { banked = deposit.clearance + bonus, salvage = salvage })
-	end)
-	if not ok and not wrote then
-		return false
-	end
-	guarded("banking follow-up", function()
-		local text = `Loaded: +{deposit.clearance} clearance, +{bonus} bonus`
-		ToastServiceServer:send(player, { text = text, duration = 2 })
+-- Cargo's banking handler (ShiftBankingSystem): salvage x1.5 in overtime; meeting the quota starts the break
+-- (its notice comes from setState, ShiftNoticeUtils).
+local onBanked = ShiftBankingSystem.new({
+	roster = roster,
+	isOpen = function(): boolean
+		return state.phase == "running" and not endingRun
+	end,
+	multiplier = function(): number
+		return ShiftPhaseRules.salvageMultiplier(state)
+	end,
+	afterBank = function()
 		local met = ShiftPhaseRules.markQuota(state, RoundServiceServer:teamValue(ShiftConstants.CLEARANCE), now())
 		if met ~= nil then
 			setState(met)
-			ToastServiceServer:send("all", {
-				text = "QUOTA MET. Salvage is a bonus now: clock out at the truck when you're done.",
-				duration = 6,
-			})
 		else
 			publish()
 		end
-	end)
-	return true
-end
+	end,
+})
 
 local function resolveVote(timedOut: boolean, leaving: number?)
 	local decision = ShiftVoteRules.decide(votes, presentIds(leaving), timedOut)
@@ -276,6 +258,10 @@ local function resolveVote(timedOut: boolean, leaving: number?)
 end
 
 local function step()
+	local advanced = ShiftPhaseRules.advance(state, now())
+	if advanced ~= nil then
+		setState(advanced)
+	end
 	local action = ShiftPhaseRules.tick(state, now(), #Players:GetPlayers())
 	if action == "start" then
 		RoundServiceServer:startCountdown()
@@ -298,6 +284,7 @@ end
 
 export type ShiftServiceServer = {
 	dependencies: { string },
+	changed: SignalTyped.Signal<ShiftTypes.ShiftState>,
 	start: (self: ShiftServiceServer) -> (),
 	stop: (self: ShiftServiceServer) -> (),
 	getState: (self: ShiftServiceServer) -> { [string]: any },
@@ -305,6 +292,7 @@ export type ShiftServiceServer = {
 	clockOut: (self: ShiftServiceServer, player: Player?) -> boolean,
 	vote: (self: ShiftServiceServer, player: Player, choice: ShiftTypes.Vote) -> boolean,
 	resetShift: (self: ShiftServiceServer) -> (),
+	noteCatch: (self: ShiftServiceServer, player: Player) -> boolean,
 }
 
 local ShiftServiceServer: ShiftServiceServer
@@ -327,6 +315,7 @@ local onVote = RequestHandler.wrap({
 })
 
 ShiftServiceServer = {
+	changed = changed,
 	dependencies = {
 		"RoundServiceServer",
 		"OfficeServiceServer",
@@ -465,6 +454,18 @@ ShiftServiceServer = {
 		finishReset()
 	end,
 
+	--[=[
+		Counts a catch by Mr. Harlow against the player (the review's roster). False outside a running shift.
+	]=]
+	noteCatch = function(_self, player)
+		if state.phase ~= "running" then
+			return false
+		end
+		roster:record(player.UserId, player.DisplayName, { caught = 1 })
+		publish()
+		return true
+	end,
+
 	getState = function(_self)
 		local another, depot = ShiftVoteRules.tally(votes, presentIds())
 		return {
@@ -473,6 +474,9 @@ ShiftServiceServer = {
 			shift = state.shift,
 			quota = state.quota,
 			quotaMet = state.quotaMet,
+			stage = state.stage,
+			stageEndsAt = state.stageEndsAt,
+			tier = state.tier,
 			variant = state.variant,
 			cleared = RoundServiceServer:teamValue(ShiftConstants.CLEARANCE),
 			bonus = RoundServiceServer:teamValue(ShiftConstants.BONUS),

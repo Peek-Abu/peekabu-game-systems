@@ -2,6 +2,7 @@
 --[=[
 	ShiftHudPanel: the M1 placeholder Shift HUD (spec §6.2: punch clock, clearance, bonus, canister, hands
 	and pockets): a plain Panel of text lines, top left, with a large clock-out countdown when one runs.
+	M2: a pacing line (break / overtime warning / overtime) under the pockets.
 	Presentational: it draws the HudView it is given.
 
 	@class ShiftHudPanel
@@ -53,9 +54,13 @@ local function ShiftHudPanel(props: ShiftHudPanelProps): React.ReactNode
 		hands = line(5, view.hands, Tokens.color.textMuted, body),
 		pockets = line(6, view.pockets, Tokens.color.textMuted, body),
 	}
+	local stage = view.stage
+	if stage ~= nil then
+		children.stage = line(7, stage, Tokens.color.warning, body)
+	end
 	local clockOut = view.clockOut
 	if clockOut ~= nil then
-		children.clockOut = line(7, clockOut, Tokens.color.danger, Tokens.textSize.xxl)
+		children.clockOut = line(8, clockOut, Tokens.color.danger, Tokens.textSize.xxl)
 	end
 	return e("Frame", {
 		Position = UDim2.fromOffset(Tokens.space.lg, Tokens.space.xxl * 2),

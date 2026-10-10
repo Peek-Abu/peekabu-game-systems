@@ -25,7 +25,8 @@ end
 local ShiftNoticeUtils = {}
 
 --[=[
-	The toasts for the step from `before` to `after` (both running; otherwise none), in the order they happen.
+	The toasts for the step from `before` to `after` (both running; otherwise none), in the order they happen. The tier note waits out the break and the warning
+	(the tier still advances; their own notices speak then).
 ]=]
 function ShiftNoticeUtils.notices(before: ShiftTypes.ShiftState, after: ShiftTypes.ShiftState): { ToastRequest }
 	local list: { ToastRequest } = {}
@@ -51,7 +52,7 @@ function ShiftNoticeUtils.notices(before: ShiftTypes.ShiftState, after: ShiftTyp
 			text = `OVERTIME. Salvage ×{multiplier} until the clock runs out. Harlow is back, and faster.`,
 			duration = duration,
 		})
-	elseif after.tier > before.tier then
+	elseif after.tier > before.tier and after.stage ~= "break" and after.stage ~= "warning" then
 		table.insert(list, { text = "You hear Harlow pacing faster…", duration = duration })
 	end
 	return list

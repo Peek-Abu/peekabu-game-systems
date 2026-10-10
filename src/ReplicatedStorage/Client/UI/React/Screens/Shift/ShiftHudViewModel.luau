@@ -13,6 +13,7 @@ local PublicPlayerTypes = require(ReplicatedStorage.Shared.Data.PublicPlayerType
 local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants)
 local CargoRegistry = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoRegistry)
 local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
+local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 
@@ -27,6 +28,8 @@ export type HudView = {
 	hands: string,
 	pockets: string,
 	clockOut: string?,
+	-- The pacing after the quota (break, overtime warning, overtime); nil in a normal shift.
+	stage: string?,
 }
 
 export type ResultsView = {
@@ -75,6 +78,16 @@ function ShiftHudViewModel.hud(snapshot: ShiftSnapshot?, me: PublicPlayerTypes.P
 	end
 	local endsAt = snapshot.endsAt
 	local clockOutAt = snapshot.clockOutAt
+	local stageEndsAt = snapshot.stageEndsAt
+	local stageLeft = if stageEndsAt ~= nil then stageEndsAt - now else 0
+	local stage: string? = nil
+	if snapshot.stage == "break" then
+		stage = `BREAK {ShiftHudViewModel.clock(stageLeft)}: Mr. Harlow is on his break`
+	elseif snapshot.stage == "warning" then
+		stage = `OVERTIME IN {ShiftHudViewModel.clock(stageLeft)}`
+	elseif snapshot.stage == "overtime" then
+		stage = `OVERTIME: salvage x{ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER}`
+	end
 	return {
 		timer = `Shift {snapshot.shift} | {ShiftHudViewModel.clock(if endsAt ~= nil then endsAt - now else 0)}`,
 		clearance = `Clearance {snapshot.cleared} / {snapshot.quota}`,
@@ -86,6 +99,7 @@ function ShiftHudViewModel.hud(snapshot: ShiftSnapshot?, me: PublicPlayerTypes.P
 		clockOut = if snapshot.sub == "clockout" and clockOutAt ~= nil
 			then `CLOCKING OUT {ShiftHudViewModel.clock(clockOutAt - now)}`
 			else nil,
+		stage = stage,
 	}
 end
 
@@ -112,6 +126,7 @@ function ShiftHudViewModel.results(snapshot: ShiftSnapshot?, now: number): Resul
 		for _, award in review.awards do
 			table.insert(lines, `{award.title}: {award.name}`)
 		end
+		table.insert(lines, `Caught by Mr. Harlow: {review.catches}`)
 	end
 	local voteEndsAt = snapshot.voteEndsAt
 	return {

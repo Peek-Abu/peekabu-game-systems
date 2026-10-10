@@ -27,6 +27,7 @@ local REVIEW = {
 	bonus = 95,
 	salvage = 3,
 	piles = 12,
+	catches = 0,
 	quotaMet = true,
 	crew = { { name = "Ava", banked = 200, piles = 6, salvage = 2 } },
 	awards = { { title = "Top Hauler", name = "Ava" } },
@@ -80,6 +81,28 @@ return function()
 		end)
 	end)
 
+	describe("pacing line", function()
+		it("counts down Harlow's break", function()
+			local view = ShiftHudViewModel.hud(snapshot({ stage = "break", stageEndsAt = 124 }), nil, 100)
+			expect(view.stage).to.equal("BREAK 0:24: Mr. Harlow is on his break")
+		end)
+
+		it("warns before overtime", function()
+			local view = ShiftHudViewModel.hud(snapshot({ stage = "warning", stageEndsAt = 112 }), nil, 100)
+			expect(view.stage).to.equal("OVERTIME IN 0:12")
+		end)
+
+		it("marks overtime with its multiplier", function()
+			local view = ShiftHudViewModel.hud(snapshot({ stage = "overtime" }), nil, 100)
+			expect(view.stage).to.equal("OVERTIME: salvage x1.5")
+		end)
+
+		it("shows no pacing line in a normal shift", function()
+			expect(ShiftHudViewModel.hud(snapshot({ stage = "normal" }), nil, 100).stage).to.equal(nil)
+			expect(ShiftHudViewModel.hud(snapshot(), nil, 100).stage).to.equal(nil)
+		end)
+	end)
+
 	describe("results", function()
 		it("shows nothing outside results", function()
 			expect(ShiftHudViewModel.results(snapshot(), 0)).to.equal(nil)
@@ -120,7 +143,16 @@ return function()
 			local view =
 				ShiftHudViewModel.results(snapshot({ phase = "results", voteEndsAt = 100, results = review }), 100)
 			expect(view.lines[5]).to.equal("Top Hauler: Ava")
-			expect(#view.lines).to.equal(5)
+			expect(view.lines[6]).to.equal("Caught by Mr. Harlow: 0")
+			expect(#view.lines).to.equal(6)
+		end)
+
+		it("ends the review with Harlow's catches", function()
+			local review = table.clone(REVIEW)
+			review.catches = 2
+			local view =
+				ShiftHudViewModel.results(snapshot({ phase = "results", voteEndsAt = 130, results = review }), 100)
+			expect(view.lines[#view.lines]).to.equal("Caught by Mr. Harlow: 2")
 		end)
 
 		it("still offers the vote when the review has not arrived", function()
