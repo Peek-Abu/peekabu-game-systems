@@ -286,6 +286,10 @@ local EXEMPT_MODULES: { [string]: string } = {
 	-- Cleanup Crew: Cargo
 	["ReplicatedStorage.Shared.Features.Cargo.Data.CargoTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants"] = "static tuning and names (no logic)",
+	["ReplicatedStorage.Shared.Features.Cargo.Net.CargoEvents"] = "ByteNet packet definitions (no logic)",
+	["ServerScriptService.Features.Cargo.Systems.CargoSpawnSystem"] = "Instance/raycast shell (CargoRegistry is specced)",
+	["ServerScriptService.Features.Cargo.CargoServiceServer"] = "Instance/Players/ByteNet/signal shell (handling, bank rules, claim and pocket trackers are specced)",
+	["ReplicatedStorage.Client.Features.Cargo.CargoServiceClient"] = "Input/Camera/ByteNet shell (the server decides)",
 
 	-- Cleanup Crew: Vacuum
 	["ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants"] = "static tuning and names (no logic)",

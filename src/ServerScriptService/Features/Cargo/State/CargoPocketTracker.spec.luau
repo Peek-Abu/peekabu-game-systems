@@ -1,0 +1,53 @@
+local CargoPocketTracker = require(script.Parent.CargoPocketTracker)
+
+local PLAQUE = { kind = "plaque", value = 25 }
+local STAPLER = { kind = "goldenStapler", value = 80 }
+
+return function()
+	it("holds two entries and refuses a third", function()
+		local pockets = CargoPocketTracker.new()
+		expect(pockets:add(1, PLAQUE)).to.equal(true)
+		expect(pockets:add(1, STAPLER)).to.equal(true)
+		expect(pockets:add(1, PLAQUE)).to.equal(false)
+		expect(pockets:count(1)).to.equal(2)
+	end)
+
+	it("lists copies, in pocketing order", function()
+		local pockets = CargoPocketTracker.new()
+		pockets:add(1, PLAQUE)
+		pockets:add(1, STAPLER)
+		local list = pockets:list(1)
+		expect(list[1].kind).to.equal("plaque")
+		expect(list[2].kind).to.equal("goldenStapler")
+		list[1].value = 0
+		table.clear(list)
+		expect(pockets:list(1)[1].value).to.equal(25)
+		expect(pockets:count(1)).to.equal(2)
+	end)
+
+	it("take empties the pockets and returns what was in them", function()
+		local pockets = CargoPocketTracker.new()
+		pockets:add(1, PLAQUE)
+		local taken = pockets:take(1)
+		expect(#taken).to.equal(1)
+		expect(taken[1].kind).to.equal("plaque")
+		expect(pockets:count(1)).to.equal(0)
+		expect(#pockets:take(1)).to.equal(0)
+	end)
+
+	it("keeps players apart", function()
+		local pockets = CargoPocketTracker.new()
+		pockets:add(1, PLAQUE)
+		expect(pockets:count(2)).to.equal(0)
+		expect(#pockets:list(2)).to.equal(0)
+	end)
+
+	it("clear empties everyone", function()
+		local pockets = CargoPocketTracker.new()
+		pockets:add(1, PLAQUE)
+		pockets:add(2, STAPLER)
+		pockets:clear()
+		expect(pockets:count(1)).to.equal(0)
+		expect(pockets:count(2)).to.equal(0)
+	end)
+end
