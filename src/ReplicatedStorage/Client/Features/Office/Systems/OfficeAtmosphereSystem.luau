@@ -94,7 +94,10 @@ local function lights(): { BasePart }
 end
 
 local function paint(light: BasePart, red: boolean)
-	local color = if red then OfficeAtmosphereConstants.OVERTIME_LIGHT_COLOR else baseOf(light).color
+	-- Capture the light's built look BEFORE painting it red: paint is the only Color writer here, so every later
+	-- baseOf (the restore at overtime's end, stepBroken) sees the built colour, never the overtime red.
+	local base = baseOf(light)
+	local color = if red then OfficeAtmosphereConstants.OVERTIME_LIGHT_COLOR else base.color
 	light.Color = color
 	local point = light:FindFirstChildOfClass("PointLight")
 	if point ~= nil then
