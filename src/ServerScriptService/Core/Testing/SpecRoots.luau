@@ -308,6 +308,14 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants"] = "static pacing and names (no logic)",
 	["ReplicatedStorage.Shared.Features.Shift.Net.ShiftEvents"] = "ByteNet packet definitions (no logic)",
 	["ServerScriptService.Features.Shift.ShiftServiceServer"] = "Players/RunService/service-orchestration shell (phase, vote, results and snapshot rules are specced)",
+	["ReplicatedStorage.Client.Features.Shift.State.ShiftStore"] = "Charm computed facade over the shift world entry (decoding is specced in ShiftSnapshotUtils)",
+	["ReplicatedStorage.Client.Features.Shift.ShiftServiceClient"] = "HUD registration + Charm/ByteNet shell (the server decides)",
+	["ReplicatedStorage.Client.UI.React.Hooks.useServerClock"] = "React hook — re-renders on the server clock (no logic)",
+	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudPanel"] = "React UI component (placeholder; story in ShiftHudPanel.story; strings specced in ShiftHudViewModel)",
+	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHud"] = "React HUD widget wiring stores to ShiftHudPanel (no logic)",
+	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftResultsPanel"] = "React UI component (placeholder; story in ShiftResultsPanel.story; strings specced in ShiftHudViewModel)",
+	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftResults"] = "React HUD widget wiring stores to ShiftResultsPanel (no logic)",
+	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftMobileButtons"] = "React touch buttons calling client services (no logic)",
 }
 
 --[=[
