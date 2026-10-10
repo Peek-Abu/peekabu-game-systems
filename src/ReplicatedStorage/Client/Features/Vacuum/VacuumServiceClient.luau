@@ -26,6 +26,8 @@ local InteractionServiceClient = require(ReplicatedStorage.Client.Features.Inter
 local holding = false
 -- N12 hysteresis: the last aimed pile and whether the aim already missed once this hold.
 local lastTarget: Instance? = nil
+-- Bumped by every beginVacuum so a stale aim loop from a quick release and re-press exits.
+local generation = 0
 local missed = false
 local unbinders: { () -> () } = {}
 
@@ -107,10 +109,12 @@ local VacuumServiceClient: VacuumServiceClient = {
 			return
 		end
 		holding = true
+		generation += 1
+		local mine = generation
 		lastTarget = nil
 		missed = false
 		task.spawn(function()
-			while holding do
+			while holding and mine == generation do
 				local target = if CarryServiceClient:isCarrying() then nil else aimedPile()
 				if target ~= nil then
 					lastTarget = target

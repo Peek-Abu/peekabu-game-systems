@@ -16,6 +16,7 @@ local Charm = require(ReplicatedStorage.Packages.Charm)
 local ShiftConstants = require(ShiftShared.Data.ShiftConstants)
 local ShiftTypes = require(ShiftShared.Data.ShiftTypes)
 local ShiftEvents = require(ShiftShared.Net.ShiftEvents)
+local VacuumServiceClient = require(ReplicatedStorage.Client.Features.Vacuum.VacuumServiceClient)
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
 local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudRegistry)
 local ShiftHud = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHud)
@@ -60,6 +61,10 @@ local ShiftServiceClient: ShiftServiceClient = {
 		table.insert(
 			unsubscribers,
 			Charm.subscribe(ShiftStore.snapshot, function(current: ShiftTypes.ShiftSnapshot?)
+				if current == nil or current.phase ~= "running" then
+					-- A held touch Vacuum button can be destroyed with the shift; never leave the hold on.
+					VacuumServiceClient:endVacuum()
+				end
 				local inResults = current ~= nil and current.phase == "results"
 				if not inResults and ShiftStore.myVote() ~= nil then
 					ShiftStore.myVote(nil)

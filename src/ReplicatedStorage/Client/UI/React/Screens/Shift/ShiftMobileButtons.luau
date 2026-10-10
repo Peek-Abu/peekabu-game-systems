@@ -31,6 +31,12 @@ end
 
 local function ShiftMobileButtons(): React.ReactNode
 	local snapshot = useAtom(ShiftStore.snapshot)
+	-- Unmounting destroys a held button before its InputEnded fires, so end the hold here.
+	React.useEffect(function()
+		return function()
+			VacuumServiceClient:endVacuum()
+		end
+	end, {})
 	if not UserInputService.TouchEnabled or snapshot == nil or snapshot.phase ~= "running" then
 		return nil
 	end
