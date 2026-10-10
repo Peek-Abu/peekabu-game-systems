@@ -32,7 +32,7 @@
 ## Review Focus
 
 1. **Forged or broken teleport data** (the result card or the contract id rides the client: wrong version, wrong types, NaN, huge or negative numbers, a crew count with missing lines, 5 000-character names, an unknown contract id) → the depot pins nothing or a clamped card, the arrival card falls back to the first contract, and no server errors. (Task 2 `ShiftCardUtils` spec "rejects a field of the wrong type", "rejects a crew count that doesn't match its lines", "clamps negative, fractional and huge numbers", "cuts a very long name"; Task 1 `DepotContractUtils` spec "falls back to the first contract…"; Task 3 Step 7 check "a forged card pins nothing".)
-2. **Back to depot, but the return trip fails** (live, after Queue's retries) → no new shift starts under the crew during the 40 s window; afterwards each player still here gets one toast and the next shift starts; a member who did reach the depot (or was moved there in Studio) has left the crew. (Task 2 `ShiftCrewTracker` spec "holds the next shift while the crew is on its way home", "lets the crew work again once the window has passed, and says so once"; Task 5 checklist item 9.)
+2. **Back to depot, but the return trip fails** (live, after Queue's retries) → no new shift starts under the crew during the 130 s window; afterwards each player still here gets one toast and the next shift starts; a member who did reach the depot (or was moved there in Studio) has left the crew. (Task 2 `ShiftCrewTracker` spec "holds the next shift while the crew is on its way home", "lets the crew work again once the window has passed, and says so once"; Task 5 checklist item 9.)
 3. **A second party arrives while a crew is already here** (Studio: two trucks in one server), or the previous crew has already gone → a crew still present is added to, never replaced; a crew that has left is replaced and its "leaving" window ends. (Task 2 `ShiftCrewTracker` spec "adds a second party to a crew still here", "replaces a crew that has left the server", "ends the window when a new party replaces the crew".)
 4. **A misconfigured depot layout**, above all a spawn point on or beside a truck bed (players would spawn straight into a queue), a truck whose cab leaves the floor, two trucks touching, a capacity of 0 / 5 / 2.5 → a boot error listing every problem, never a half-built depot. (Task 1 `DepotLayoutRules` spec, all cases; Task 3 Step 4 `assert`.)
 5. **Who is crew decides spawns, participation and votes:** a depot bystander (or a player before departing) spawns and respawns at the depot and is never a Round participant or voter; a crew member respawns in the loading bay; on a shift-only server everybody spawns in the loading bay. (Task 2 `ShiftCrewTracker` spec "counts only crew members who are here"; Task 5 Step 7 checks 2, 3, 6b and 8e.)
@@ -2669,15 +2669,16 @@ Studio verification checklist:
 **Interfaces:**
 - Consumes: Task 1 (`DepotConstants.ROLE_DEPOT / ROLE_SHIFT / CONTRACTS`, `DepotContractUtils.tonight / resolve`, `DepotTypes.Contract`), Task 2 (`ShiftCrewTracker`, `ShiftCardUtils.encode`), Task 3 (`DepotServiceServer:spawnCFrame`); Queue: `QueueServiceServer.arrived / joinedLate / returned`, `:configure({ homeRole })`, `:setArrivalPoint(role, resolver)`, `:returnParty(players, role, payload) -> boolean`, `:runsRole(role)`, `:mode()`, `:role()`, `QueuePlaceRules.isReservedServer(privateServerId, privateServerOwnerId)`; `OfficeServiceServer:spawnCFrame(index)`; `ToastServiceServer:send`; `RoundTypes.RoundConfig.eligible`.
 - Produces (ShiftTripSystem): `ShiftTripSystem.new() -> ShiftTripSystem` with plain function fields `eligible: (player: Player) -> boolean` and `spawnFor: (player: Player) -> CFrame?`, and methods `start(onChanged: () -> ())`, `stop()`, `crew() -> { Player }`, `crewIds(except: number?) -> { number }`, `startable(now: number) -> number`, `sendHome(results: ShiftTypes.ShiftResults?, shift: number, now: number) -> boolean`, `isLeaving(now: number) -> boolean`.
-- Produces (ShiftConstants): `RETURN_WAIT_SECONDS = 40`.
+- Produces (ShiftConstants): `RETURN_WAIT_SECONDS = 130`.
 - Produces (ShiftServiceServer): unchanged public API; `getState` gains `crew: number`, `leaving: boolean`. Behaviour: a shift starts only for a crew present; only crew members vote; Round participants are the crew; Back to depot sends the crew home with the result card; spawns follow `ShiftTripSystem.spawnFor`.
 
 - [ ] **Step 1: The constant.** In `src/ReplicatedStorage/Shared/Features/Shift/Data/ShiftConstants.luau`, inside the frozen table, immediately before the `-- HUD widget order` comment, add:
 
 ```lua
-	-- After Back to depot: how long the crew may still be here (Queue's return trip retries 1 + 2 + 4 s and
-	-- waits up to 15 s per try) before the trip counts as failed and the next shift may start.
-	RETURN_WAIT_SECONDS = 40,
+	-- After Back to depot: how long the crew may still be here before the trip counts as failed and the next
+	-- shift may start. Queue's return trip makes up to 4 tries, each watched for QueueConstants.TELEPORT_WATCHDOG
+	-- (30 s), with 1 + 2 + 4 s between them: 127 s at worst. Only a crew still here waits it out.
+	RETURN_WAIT_SECONDS = 130,
 ```
 
 - [ ] **Step 2: The trip system** `src/ServerScriptService/Features/Shift/Systems/ShiftTripSystem.luau`:
@@ -3277,7 +3278,7 @@ Milestone M4 of docs/superpowers/specs/2026-10-10-cleanup-crew-design.md (plan: 
 
 - Depot: a code-built garage at x = -1000 (the office is at x = 1000) with three truck queue pads (Queue: 1-4 players, 15 s countdown reset on join, Depart now), tonight's contract board (rotating by UTC day) and a result board; layout validated by the specced DepotLayoutRules (no spawn on a pad).
 - Trips: departing parties carry the contract id; drive and arrival cards (placeholder HUD widget); the crew is the party that arrived (ShiftCrewTracker): only the crew starts a shift, takes part in Round's run, votes and respawns in the loading bay; others spawn at the depot.
-- Back to depot: Queue's return trip carries the review as a flat result card (ShiftCardUtils, decoded as untrusted at the depot) pinned on the result board for each returning player; a failed trip falls back to another shift after 40 s.
+- Back to depot: Queue's return trip carries the review as a flat result card (ShiftCardUtils, decoded as untrusted at the depot) pinned on the result board for each returning player; a failed trip falls back to another shift after 130 s.
 - Places: placeholder PlaceIds (both 0), so the whole loop plays in one Studio server; `docs/cleanup-crew-publish.md` walks through creating the shift place, filling in the ids, publishing both places and the two-account test (which also covers the Queue PR's live-only checklist).
 
 Open questions for the developer: see the M4 plan's list (office built on the depot place too, loading-screen drive card, failed-return fallback, contracts, result-card form, Studio bystander HUD).
@@ -3296,7 +3297,7 @@ Designed around in this plan; none blocks M4. Every one is a reversible game-sid
 
 1. **The office graybox is also built on the live depot place** (static, empty, 2000 studs from the garage, behind walls). Gating it by role edits `OfficeServiceServer.start`, which M2 rewrites; it can be a one-line guard (`QueueServiceServer:runsRole("shift")`) after M2 lands, if you want it.
 2. **Drive card on the loading screen.** `TeleportService:SetTeleportGui` is typed `(gui: GuiObject)` in `globalTypes.d.luau` while Roblox's docs describe a ScreenGui, and `check_pr_rules` bans creating ScreenGuis outside `UILayerHost`. M4 shows the drive card on screen when the truck leaves (live, until the teleport takes over) and leaves the loading screen default. Worth a small base addition in M5 once verified live.
-3. **A failed return trip** (after Queue's 3 retries) keeps the crew in the shift server; 40 s after the vote each player still there is told and the next shift starts. Alternative: re-try the return trip, or kick to the depot.
+3. **A failed return trip** (after Queue's 3 retries) keeps the crew in the shift server; 130 s after the vote each player still there is told and the next shift starts. Alternative: re-try the return trip, or kick to the depot.
 4. **Contracts** are three flavour texts for Harlow & Finch rotating by UTC day; the quota stays `ShiftConstants.QUOTA` (350). A contract could later carry its own quota or variant.
 5. **The result card** is a world billboard on the result board that only the returning player sees (plus a toast), replaced at their next return; not a screen popup. It is placeholder until its Figma screen is approved.
 6. **Studio-only quirk:** with two Studio clients where one stays at the depot, that bystander also sees the Shift HUD and results panel (the `shift` world entry is server-wide); they cannot vote or take part. Live servers never mix the roles.

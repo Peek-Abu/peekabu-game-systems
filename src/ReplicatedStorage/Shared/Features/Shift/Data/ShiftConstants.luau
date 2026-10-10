@@ -60,6 +60,10 @@ return table.freeze({
 	TICK_INTERVAL = 0.25,
 	-- How long the pacing notices stay up.
 	NOTICE_SECONDS = 6,
+	-- After Back to depot: how long the crew may still be here before the trip counts as failed and the next
+	-- shift may start. Queue's return trip makes up to 4 tries, each watched for QueueConstants.TELEPORT_WATCHDOG
+	-- (30 s), with 1 + 2 + 4 s between them: 127 s at worst. Only a crew still here waits it out.
+	RETURN_WAIT_SECONDS = 130,
 	-- HUD widget order (the Toast stack draws above, at 1000).
 	HUD_ORDER = 10,
 })

@@ -12,8 +12,10 @@
 	  overtime (salvage x1.5) and raises the pressure tier at 2:00 and 4:00 (ShiftPhaseRules.advance), each
 	  change announced (ShiftNoticeUtils) and fired on `changed`;
 	- clock out: the time clock at the truck starts a 10 s countdown for everyone, then ends the run;
-	- results: ShiftResultsUtils builds the review; the crew votes Another shift / Back to depot (the depot is
-	  M4: until then both reset in this server);
+	- results: ShiftResultsUtils builds the review; the crew votes Another shift / Back to depot (Back to depot
+	  sends the crew home through ShiftTripSystem with the review as its result card);
+	- the crew (M4): a shift starts only for the party that arrived through the Queue (ShiftTripSystem); only
+	  the crew takes part in Round's run, votes and respawns in the loading bay;
 	- reset: Office, Vacuum and Cargo clear everything the shift made. `resetShift` mid-run (Studio test
 	  runs) ends Round's run first and skips the review.
 
@@ -47,6 +49,7 @@ local ShiftNoticeUtils = require(ShiftServer.Utils.ShiftNoticeUtils)
 local ShiftResultsUtils = require(ShiftServer.Utils.ShiftResultsUtils)
 local ShiftRosterTracker = require(ShiftServer.State.ShiftRosterTracker)
 local ShiftBankingSystem = require(ShiftServer.Systems.ShiftBankingSystem)
+local ShiftTripSystem = require(ShiftServer.Systems.ShiftTripSystem)
 local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
 local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
@@ -71,6 +74,8 @@ local resetPending = false
 local endingRun = false
 -- Every crew member's run so far, kept past leaving so their work stays in the crew totals.
 local roster = ShiftRosterTracker.new()
+-- The crew and the trips between the depot and the office (Queue); only the crew starts, takes part and votes.
+local trip = ShiftTripSystem.new()
 local rng = Random.new()
 local publishScheduled = false
 local stoppers: { () -> () } = {}
@@ -81,15 +86,9 @@ local function now(): number
 	return Workspace:GetServerTimeNow()
 end
 
--- UserIds in the server (`except`: one who is leaving; Players still lists them during PlayerRemoving).
+-- The crew members in the server (`except`: one who is leaving; Players still lists them during PlayerRemoving).
 local function presentIds(except: number?): { number }
-	local ids: { number } = {}
-	for _, player in Players:GetPlayers() do
-		if player.UserId ~= except then
-			table.insert(ids, player.UserId)
-		end
-	end
-	return ids
+	return trip:crewIds(except)
 end
 
 -- Republishes the `shift` world entry, coalesced to once per frame.
@@ -183,7 +182,7 @@ end
 -- The review, from Round's counters (they are cleared once Round returns to its lobby).
 local function buildResults(outcome: string): ShiftTypes.ShiftResults
 	-- Everyone taking part is listed, even with nothing done yet; leavers stay from the roster.
-	for _, player in RoundServiceServer:participants() do
+	for _, player in trip:crew() do
 		roster:record(player.UserId, player.DisplayName, {})
 	end
 	return ShiftResultsUtils.build({
@@ -251,11 +250,9 @@ local function resolveVote(timedOut: boolean, leaving: number?)
 	if decision == nil then
 		return
 	end
+	-- Back to depot: the crew rides home with the review; if the trip is refused, the reset is another shift.
 	if decision == "depot" then
-		ToastServiceServer:send(
-			"all",
-			{ text = "The depot opens in a later build. Starting another shift.", duration = 5 }
-		)
+		trip:sendHome(results, state.shift, now())
 	end
 	finishReset()
 end
@@ -265,7 +262,7 @@ local function step()
 	if advanced ~= nil then
 		setState(advanced)
 	end
-	local action = ShiftPhaseRules.tick(state, now(), #Players:GetPlayers())
+	local action = ShiftPhaseRules.tick(state, now(), trip:startable(now()))
 	if action == "start" then
 		RoundServiceServer:startCountdown()
 	elseif action == "endShift" then
@@ -328,6 +325,8 @@ ShiftServiceServer = {
 		"DeathServiceServer",
 		"InteractionServiceServer",
 		"StateSyncServiceServer",
+		"QueueServiceServer",
+		"DepotServiceServer",
 	},
 
 	--[=[
@@ -342,10 +341,10 @@ ShiftServiceServer = {
 			resultsDuration = 0,
 			autoStart = false,
 			lateJoin = true,
+			eligible = trip.eligible,
 		})
-		DeathServiceServer:setSpawnPoint(function(player)
-			return OfficeServiceServer:spawnCFrame(table.find(Players:GetPlayers(), player) or 1)
-		end)
+		DeathServiceServer:setSpawnPoint(trip.spawnFor)
+		trip:start(publish)
 		CargoServiceServer:onBanked(onBanked)
 		InteractionServiceServer:onInteract(ShiftConstants.CLOCK_OUT_KIND, function(player, _target)
 			self:clockOut(player)
@@ -405,6 +404,7 @@ ShiftServiceServer = {
 			stop()
 		end
 		table.clear(stoppers)
+		trip:stop()
 		DeathServiceServer:setSpawnPoint(nil)
 		StateSyncWorldStore.clear(ShiftConstants.WORLD_ENTRY)
 	end,
@@ -487,6 +487,8 @@ ShiftServiceServer = {
 			votesDepot = depot,
 			hasResults = results ~= nil,
 			resetPending = resetPending,
+			crew = #trip:crewIds(),
+			leaving = trip:isLeaving(now()),
 		}
 	end,
 }
