@@ -119,4 +119,57 @@ return function()
 			expect(string.find(reason, "pile markers", 1, true) ~= nil).to.equal(true)
 		end)
 	end)
+
+	describe("checkRoute", function()
+		local function routed()
+			local layout = fixture()
+			table.insert(layout.markers, { id = "b.patrol.1", room = "b", kind = "patrol", x = 25, z = 5 })
+			table.insert(layout.markers, { id = "b.patrol.2", room = "b", kind = "patrol", x = 35, z = 5 })
+			table.insert(layout.markers, { id = "b.patrol.3", room = "b", kind = "patrol", x = 35, z = 15 })
+			table.insert(layout.markers, { id = "b.rest.1", room = "b", kind = "rest", x = 25, z = 15 })
+			layout.route = { "b.patrol.1", "b.patrol.2", "b.patrol.3" }
+			layout.rest = "b.rest.1"
+			return layout
+		end
+
+		it("accepts the authored office's route", function()
+			local ok, reason = OfficeLayoutRules.checkRoute(OfficeLayoutConstants.LAYOUT)
+			expect(reason).to.equal(nil)
+			expect(ok).to.equal(true)
+		end)
+
+		it("accepts a small valid route", function()
+			expect(OfficeLayoutRules.checkRoute(routed())).to.equal(true)
+		end)
+
+		it("refuses a route that is too short", function()
+			local layout = routed()
+			layout.route = { "b.patrol.1", "b.patrol.2" }
+			local ok, reason = OfficeLayoutRules.checkRoute(layout)
+			expect(ok).to.equal(false)
+			expect(string.find(reason, "route", 1, true) ~= nil).to.equal(true)
+		end)
+
+		it("refuses a route point that is not a patrol marker", function()
+			local layout = routed()
+			layout.route[2] = "b.pile.1"
+			local _, reason = OfficeLayoutRules.checkRoute(layout)
+			expect(reason).to.equal('route point "b.pile.1" is not a patrol marker')
+		end)
+
+		it("refuses a route point in the safe start room", function()
+			local layout = routed()
+			table.insert(layout.markers, { id = "a.patrol.1", room = "a", kind = "patrol", x = 10, z = 10 })
+			layout.route[3] = "a.patrol.1"
+			local _, reason = OfficeLayoutRules.checkRoute(layout)
+			expect(reason).to.equal('route point "a.patrol.1" is in the safe start room')
+		end)
+
+		it("refuses a missing rest point", function()
+			local layout = routed()
+			layout.rest = "b.rest.9"
+			local _, reason = OfficeLayoutRules.checkRoute(layout)
+			expect(reason).to.equal('rest point "b.rest.9" is not a rest marker')
+		end)
+	end)
 end

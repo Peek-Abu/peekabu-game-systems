@@ -26,7 +26,8 @@ export type Door = {
 	width: number,
 }
 
-export type MarkerKind = "pile" | "item" | "desk" | "locker" | "spawn"
+-- patrol: a point on Mr. Harlow's route; rest: where he takes his break (M2).
+export type MarkerKind = "pile" | "item" | "desk" | "locker" | "spawn" | "patrol" | "rest"
 
 -- A place something can spawn (or a player appears): its id is "<room>.<kind>.<n>".
 export type Marker = {
@@ -53,6 +54,9 @@ export type Layout = {
 	doors: { Door },
 	markers: { Marker },
 	truck: Truck,
+	-- Mr. Harlow's patrol route: patrol marker ids in walking order (a loop), and his rest marker (M2).
+	route: { string },
+	rest: string,
 }
 
 export type Edge = "minX" | "maxX" | "minZ" | "maxZ"

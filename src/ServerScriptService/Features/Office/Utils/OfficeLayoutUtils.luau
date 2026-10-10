@@ -191,4 +191,32 @@ function OfficeLayoutUtils.mergedWallSegments(layout: Layout): { OfficeTypes.Seg
 	return merged
 end
 
+--[=[
+	Ceiling-light spots for a room ({ x, z }, office-local): an even grid of about `spacing` studs, at least one,
+	each in the middle of its cell.
+]=]
+function OfficeLayoutUtils.lightPoints(room: Room, spacing: number): { { number } }
+	local width = room.maxX - room.minX
+	local depth = room.maxZ - room.minZ
+	local across = math.max(1, math.floor(width / spacing))
+	local deep = math.max(1, math.floor(depth / spacing))
+	local points: { { number } } = {}
+	for column = 1, across do
+		for row = 1, deep do
+			table.insert(points, {
+				room.minX + width * (column - 0.5) / across,
+				room.minZ + depth * (row - 0.5) / deep,
+			})
+		end
+	end
+	return points
+end
+
+--[=[
+	The room's box, office-local: (min, max) from the floor to `height`.
+]=]
+function OfficeLayoutUtils.bounds(room: Room, height: number): (Vector3, Vector3)
+	return Vector3.new(room.minX, 0, room.minZ), Vector3.new(room.maxX, height, room.maxZ)
+end
+
 return OfficeLayoutUtils

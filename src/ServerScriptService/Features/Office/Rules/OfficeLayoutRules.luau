@@ -4,7 +4,7 @@
 	rooms, overlapping rooms, doors that name missing rooms, are too narrow or are not on a wall both rooms
 	share, rooms the start room cannot reach, markers outside their room (or within MARKER_MARGIN of a
 	wall), and a truck outside the start room. `checkCapacity` says whether the spawn roll has the markers
-	it needs. OfficeServiceServer refuses to build a layout that fails either. Pure.
+	it needs. `checkRoute` (M2) says whether Harlow's patrol route and rest point are usable. OfficeServiceServer refuses to build a layout that fails either. Pure.
 
 	@class OfficeLayoutRules
 ]=]
@@ -128,6 +128,37 @@ function OfficeLayoutRules.checkCapacity(layout: Layout): (boolean, string?)
 	end
 	if not deepSearch then
 		return false, "no deep desk or locker for a hidden greed target"
+	end
+	return true, nil
+end
+
+--[=[
+	Whether Mr. Harlow can patrol this layout (M2): at least ROUTE_MIN route points, each a patrol marker
+	outside the start room (the loading bay is his no-go safe zone), and a rest marker outside it too.
+]=]
+function OfficeLayoutRules.checkRoute(layout: Layout): (boolean, string?)
+	local byId: { [string]: OfficeTypes.Marker } = {}
+	for _, marker in layout.markers do
+		byId[marker.id] = marker
+	end
+	if #layout.route < OfficeConstants.ROUTE_MIN then
+		return false, `the patrol route has {#layout.route} points; it needs {OfficeConstants.ROUTE_MIN}`
+	end
+	for _, id in layout.route do
+		local marker = byId[id]
+		if marker == nil or marker.kind ~= "patrol" then
+			return false, `route point "{id}" is not a patrol marker`
+		end
+		if marker.room == layout.startRoom then
+			return false, `route point "{id}" is in the safe start room`
+		end
+	end
+	local rest = byId[layout.rest]
+	if rest == nil or rest.kind ~= "rest" then
+		return false, `rest point "{layout.rest}" is not a rest marker`
+	end
+	if rest.room == layout.startRoom then
+		return false, `rest point "{layout.rest}" is in the safe start room`
 	end
 	return true, nil
 end

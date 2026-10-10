@@ -8,6 +8,8 @@
 	piles (Vacuum), items (Cargo), hidden items under piles (revealed when the pile is cleared), and desk /
 	locker contents (Cargo). `reset` destroys that folder and forgets the shift.
 
+	M2: Harlow's route, rest point and the safe loading bay (`route`, `restPoint`, `safeZone`).
+
 	Spec-exempt shell (Instances, signals); the decisions are the specced OfficeLayoutRules, OfficeLayoutUtils,
 	OfficeSpawnUtils and OfficeSpawnRules.
 
@@ -56,6 +58,16 @@ local function floorAt(marker: Marker): CFrame
 	return OfficeConstants.ORIGIN * CFrame.new(marker.x, 0, marker.z)
 end
 
+-- Harlow's route in the world, in walking order, and his rest point (M2).
+local routePoints: { Vector3 } = {}
+for _, id in LAYOUT.route do
+	local marker = markerById[id]
+	if marker ~= nil then
+		table.insert(routePoints, floorAt(marker).Position)
+	end
+end
+local restMarker = markerById[LAYOUT.rest]
+
 local function rollPlan(options: { seed: number, variant: string, quota: number }): OfficeTypes.SpawnPlan
 	local rollOptions: OfficeTypes.RollOptions = {
 		quota = options.quota,
@@ -89,6 +101,9 @@ export type OfficeServiceServer = {
 	reset: (self: OfficeServiceServer) -> (),
 	spawnCFrame: (self: OfficeServiceServer, index: number) -> CFrame,
 	container: (self: OfficeServiceServer) -> Folder?,
+	route: (self: OfficeServiceServer) -> { Vector3 },
+	restPoint: (self: OfficeServiceServer) -> Vector3,
+	safeZone: (self: OfficeServiceServer) -> (Vector3, Vector3),
 }
 
 local OfficeServiceServer: OfficeServiceServer = {
@@ -102,6 +117,8 @@ local OfficeServiceServer: OfficeServiceServer = {
 		assert(ok, `office layout is invalid:\n{table.concat(errors, "\n")}`)
 		local capacityOk, reason = OfficeLayoutRules.checkCapacity(LAYOUT)
 		assert(capacityOk, `office layout cannot hold a shift: {reason or "?"}`)
+		local routeOk, routeReason = OfficeLayoutRules.checkRoute(LAYOUT)
+		assert(routeOk, `office layout has no usable patrol route: {routeReason or "?"}`)
 		built = OfficeBuildSystem.build(LAYOUT, OfficeConstants.ORIGIN)
 		local cleared = VacuumServiceServer.pileCleared:Connect(function(pile)
 			local item: BasePart? = hidden[pile]
@@ -195,6 +212,35 @@ local OfficeServiceServer: OfficeServiceServer = {
 		return shiftFolder
 	end,
 
+	--[=[
+		Harlow's patrol points in the world, in walking order (a loop).
+	]=]
+	route = function(_self)
+		return table.clone(routePoints)
+	end,
+
+	--[=[
+		Where Harlow takes his break (the break room).
+	]=]
+	restPoint = function(_self)
+		if restMarker == nil then
+			error("OfficeServiceServer:restPoint: the layout has no rest marker")
+		end
+		return floorAt(restMarker).Position
+	end,
+
+	--[=[
+		The loading bay in the world: its min and max corners, floor to wall top (Harlow's safe zone).
+	]=]
+	safeZone = function(_self)
+		local start = OfficeLayoutUtils.room(LAYOUT, LAYOUT.startRoom)
+		if start == nil then
+			error("OfficeServiceServer:safeZone: the layout has no start room")
+		end
+		local min, max = OfficeLayoutUtils.bounds(start, OfficeConstants.WALL_HEIGHT)
+		return OfficeConstants.ORIGIN:PointToWorldSpace(min), OfficeConstants.ORIGIN:PointToWorldSpace(max)
+	end,
+
 	getState = function(_self)
 		local plan = lastPlan
 		local hiddenCount = 0
@@ -209,6 +255,7 @@ local OfficeServiceServer: OfficeServiceServer = {
 			trashValue = if plan ~= nil then plan.trashValue else 0,
 			greed = if plan ~= nil and plan.greed ~= nil then `{plan.greed.kind} @ {plan.greed.marker}` else nil,
 			hiddenUnderPiles = hiddenCount,
+			routePoints = #routePoints,
 		}
 	end,
 }

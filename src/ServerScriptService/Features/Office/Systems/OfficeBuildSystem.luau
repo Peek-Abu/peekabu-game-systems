@@ -4,8 +4,9 @@
 	"polished feel on graybox", §5): a floor per room, walls broken around doors (OfficeLayoutUtils.
 	wallSegments, merged so a shared wall is built once), the truck (its bed is the banking zone and carries Cargo's Load prompt; a cab at its back, inside the bay),
 	the time clock (Shift's Clock out prompt), and a desk or locker on every desk / locker marker (Cargo's
-	Search prompt, off until Cargo stocks it). Everything is anchored under one Model in Workspace at the
-	layout's origin. No ceiling: the graybox keeps the camera free.
+	Search prompt, off until Cargo stocks it). M2: ceiling lights (tagged for Harlow's tells) and the loading bay's
+	PathfindingModifier volume (Harlow never paths into it). Everything is anchored under one Model in Workspace at
+	the layout's origin. No ceiling: the graybox keeps the camera free.
 
 	Spec-exempt shell (Instances); the layout is the one the specced OfficeLayoutRules validated.
 
@@ -19,6 +20,7 @@ local Workspace = game:GetService("Workspace")
 
 local OfficeServer = ServerScriptService.Features.Office
 local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants)
+local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionConstants)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local OfficeConstants = require(OfficeServer.Data.OfficeConstants)
@@ -82,6 +84,25 @@ function OfficeBuildSystem.build(layout: OfficeTypes.Layout, origin: CFrame): Bu
 			colors[(index - 1) % #colors + 1],
 			roomFolder
 		)
+		for _, point in OfficeLayoutUtils.lightPoints(room, OfficeConstants.LIGHT_SPACING) do
+			local size = OfficeConstants.LIGHT_SIZE
+			local fixture = block(
+				"Light",
+				size,
+				origin * CFrame.new(point[1], height - size.Y / 2, point[2]),
+				OfficeConstants.LIGHT_COLOR,
+				roomFolder
+			)
+			fixture.Material = Enum.Material.Neon
+			fixture.CanCollide = false
+			fixture.CanQuery = false
+			local light = Instance.new("PointLight")
+			light.Range = OfficeConstants.LIGHT_RANGE
+			light.Brightness = OfficeConstants.LIGHT_BRIGHTNESS
+			light.Color = OfficeConstants.LIGHT_COLOR
+			light.Parent = fixture
+			CollectionService:AddTag(fixture, OccupantConstants.LIGHT_TAG)
+		end
 	end
 
 	local wallFolder = folder("Walls", model)
@@ -142,6 +163,28 @@ function OfficeBuildSystem.build(layout: OfficeTypes.Layout, origin: CFrame): Bu
 			interactable(part, CargoConstants.SEARCH_KIND, false)
 			searchables[marker.id] = part
 		end
+	end
+
+	-- The loading bay is Harlow's no-go zone: a volume his paths cost math.huge (his kind's pathCosts).
+	local start = OfficeLayoutUtils.room(layout, layout.startRoom)
+	if start ~= nil then
+		local min, max = OfficeLayoutUtils.bounds(start, height)
+		local zone = block(
+			OfficeConstants.SAFE_ZONE_NAME,
+			max - min,
+			origin * CFrame.new((min + max) / 2),
+			OfficeConstants.WALL_COLOR,
+			model
+		)
+		zone.Transparency = 1
+		zone.CanCollide = false
+		zone.CanQuery = false
+		zone.CanTouch = false
+		zone.CastShadow = false
+		local modifier = Instance.new("PathfindingModifier")
+		modifier.Label = OccupantConstants.SAFE_ZONE_LABEL
+		modifier.PassThrough = false
+		modifier.Parent = zone
 	end
 
 	model.Parent = Workspace

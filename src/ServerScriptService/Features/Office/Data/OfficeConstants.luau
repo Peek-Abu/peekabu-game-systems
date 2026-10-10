@@ -60,4 +60,14 @@ return table.freeze({
 	TRUCK_COLOR = Color3.fromRGB(230, 230, 235),
 	BED_COLOR = Color3.fromRGB(60, 60, 64),
 	CLOCK_COLOR = Color3.fromRGB(200, 60, 50),
+	-- M2: a ceiling light about every LIGHT_SPACING studs in each room (Harlow's tells flicker them).
+	LIGHT_SPACING = 15,
+	LIGHT_SIZE = Vector3.new(3, 0.3, 1.2),
+	LIGHT_COLOR = Color3.fromRGB(235, 240, 255),
+	LIGHT_RANGE = 16,
+	LIGHT_BRIGHTNESS = 1.2,
+	-- M2: the invisible volume over the loading bay that Harlow's paths never enter.
+	SAFE_ZONE_NAME = "SafeZone",
+	-- M2: Harlow's route needs at least this many points.
+	ROUTE_MIN = 3,
 })

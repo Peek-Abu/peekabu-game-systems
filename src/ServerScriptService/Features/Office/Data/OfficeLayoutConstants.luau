@@ -5,6 +5,8 @@
 	in office-local studs (OfficeTypes). Geometry is built from this once (OfficeBuildSystem); each shift's
 	spawns are rolled onto its markers (OfficeSpawnUtils).
 
+	M2: Harlow's seven-point patrol route and his rest point in the break room.
+
 	Depths from the loading bay: Reception and the open-plan office 1; the break room, Mr. Harlow's office,
 	the server room and the archive 2 (deep).
 
@@ -119,6 +121,16 @@ add("archive", "item", { { 104, 4 }, { 114, 6 }, { 126, 8 }, { 108, 22 }, { 122,
 add("archive", "desk", { { 112, 30 } })
 add("archive", "locker", { { 127, 14 }, { 127, 26 } })
 
+-- Mr. Harlow's patrol points (none in the loading bay: it is the safe zone) and where he takes his break.
+-- Kept clear of desks and lockers so each is on the navmesh.
+add("lobby", "patrol", { { 12, 42 } })
+add("breakRoom", "patrol", { { 16, 74 } })
+add("manager", "patrol", { { 38, 76 } })
+add("server", "patrol", { { 76, 72 } })
+add("open", "patrol", { { 90, 40 }, { 56, 32 } })
+add("archive", "patrol", { { 116, 14 } })
+add("breakRoom", "rest", { { 24, 82 } })
+
 local LAYOUT: OfficeTypes.Layout = {
 	startRoom = "bay",
 	rooms = rooms,
@@ -126,6 +138,17 @@ local LAYOUT: OfficeTypes.Layout = {
 	markers = markers,
 	-- The bed (the banking zone) and the time clock, inside the loading bay.
 	truck = { minX = 4, minZ = 4, maxX = 16, maxZ = 20, clockX = 24, clockZ = 6 },
+	-- Walked as a loop from a random point in a random direction (Occupant rolls both each shift).
+	route = {
+		"lobby.patrol.1",
+		"breakRoom.patrol.1",
+		"manager.patrol.1",
+		"server.patrol.1",
+		"open.patrol.1",
+		"archive.patrol.1",
+		"open.patrol.2",
+	},
+	rest = "breakRoom.rest.1",
 }
 
 return table.freeze({
