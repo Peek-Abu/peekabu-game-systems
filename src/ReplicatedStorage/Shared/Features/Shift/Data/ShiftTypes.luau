@@ -17,6 +17,17 @@ export type ShiftStage = "normal" | "break" | "warning" | "overtime"
 -- The A/B validation switch (spec §4): B hides some salvage under piles, A exposes it all.
 export type Variant = "A" | "B"
 
+-- How each shift's variant is chosen (ShiftVariantRules): "alternate" flips A/B every shift from a per-server start;
+-- "fixed" always plays ShiftConstants.VARIANT.
+export type VariantMode = "alternate" | "fixed"
+
+-- Where a shift's variant came from: the alternation, the fixed default, or the developer's Workspace override.
+export type VariantSource = "alternate" | "fixed" | "override"
+
+-- The device a client reports for analytics (ShiftPlatformRules accepts only pc/phone/tablet/console from a client);
+-- "unknown" until a valid report arrives.
+export type Platform = "pc" | "phone" | "tablet" | "console" | "unknown"
+
 export type Vote = "another" | "depot"
 
 -- What the service should do on this clock step.
