@@ -47,6 +47,7 @@ return UILabs.CreateReactStory({
 		variant = "B",
 		votesAnother = 0,
 		votesDepot = 0,
+		crew = {},
 	}
 	local me: PublicPlayerTypes.PublicPlayer = { canister = 2, carrying = "monitor", pocket1 = "plaque" }
 	local view = ShiftHudViewModel.hud(snapshot, me, 0)

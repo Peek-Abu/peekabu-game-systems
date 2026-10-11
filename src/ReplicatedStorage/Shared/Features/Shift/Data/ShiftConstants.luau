@@ -39,6 +39,22 @@ local TOAST_STYLES: { [string]: ToastTypes.ToastStyle } = {
 -- Seconds into the shift at which the pressure tier rises (2:00 and 4:00).
 local TIER_TIMES: { number } = { 120, 240 }
 
+-- The review's rating stamp text (Figma 5a/5c) per ShiftTypes.Rating.
+local RATING_TEXT: { [string]: string } = {
+	needsImprovement = "NEEDS IMPROVEMENT",
+	satisfactory = "SATISFACTORY",
+	exceeds = "EXCEEDS EXPECTATIONS",
+}
+
+-- The joke awards' titles (Figma 5a/5c sticky notes).
+local AWARD_TITLES = {
+	employee = "EMPLOYEE OF THE NIGHT",
+	rehired = "MOST REHIRED",
+	butterfingers = "BUTTERFINGERS",
+	quietest = "QUIETEST FEET",
+	loudest = "LOUDEST VACUUM",
+}
+
 return table.freeze({
 	-- The StateSyncWorldStore entry the snapshot is published under.
 	WORLD_ENTRY = "shift",
@@ -100,6 +116,14 @@ return table.freeze({
 	TOAST_STAMP = "stamp",
 	TOAST_STYLES = table.freeze(TOAST_STYLES),
 	STAMP_SECONDS = 3,
+	-- The review's rating (Figma 35:1096): quota met and at least LOADED of every OF salvage offered was loaded ->
+	-- EXCEEDS EXPECTATIONS. Decided by the developer (the default share rule); integers so the comparison has no float edge.
+	RATING_EXCEEDS_LOADED = 2,
+	RATING_EXCEEDS_OF = 3,
+	RATING_TEXT = table.freeze(RATING_TEXT),
+	AWARD_TITLES = table.freeze(AWARD_TITLES),
+	-- The fourth award is LOUDEST VACUUM when someone's noise sent Harlow to investigate this many times, else QUIETEST FEET.
+	LOUDEST_MIN_WOKE = 3,
 	-- Feel (spec §7): the quota's FOV kick, the camera shake of a tier rise and of overtime, the overtime ticking
 	-- layer's ambience slot, and the clock-out countdown's louder last seconds. The client re-checks every
 	-- FEEDBACK_INTERVAL seconds.

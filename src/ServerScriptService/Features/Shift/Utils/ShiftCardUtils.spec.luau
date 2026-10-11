@@ -19,6 +19,7 @@ local function review(crewSize)
 		salvage = 3,
 		piles = 12,
 		catches = 1,
+		offered = 9,
 		quotaMet = true,
 		crew = crew,
 		awards = { { title = "Top Hauler", name = "Crew1" }, { title = "Dust Devil", name = "Crew2" } },
@@ -151,12 +152,13 @@ return function()
 			expect(lines[2]).to.equal("Clocked out")
 			expect(lines[3]).to.equal("Cleared 380 / 350 - QUOTA MET")
 			expect(lines[4]).to.equal("Finder's fee 95")
-			expect(lines[5]).to.equal("Salvage 3 | Piles 12 | Caught 1")
-			expect(lines[6]).to.equal("Crew1: banked 99")
-			expect(lines[7]).to.equal("Crew2: banked 98")
-			expect(lines[8]).to.equal("Top Hauler: Crew1")
-			expect(lines[9]).to.equal("Dust Devil: Crew2")
-			expect(#lines).to.equal(9)
+			expect(lines[5]).to.equal("Salvage 3 of 9 | Piles 12 | Caught 1")
+			expect(lines[6]).to.equal("Rating: SATISFACTORY")
+			expect(lines[7]).to.equal("Crew1: banked 99")
+			expect(lines[8]).to.equal("Crew2: banked 98")
+			expect(lines[9]).to.equal("Top Hauler: Crew1")
+			expect(lines[10]).to.equal("Dust Devil: Crew2")
+			expect(#lines).to.equal(10)
 		end)
 
 		it("says when the quota was missed, and keeps an unknown outcome as written", function()
@@ -170,6 +172,43 @@ return function()
 			odd.outcome = "weird"
 			local oddLines = ShiftCardUtils.lines(ShiftCardUtils.decode(wire(ShiftCardUtils.encode(odd, INFO))))
 			expect(oddLines[2]).to.equal("weird")
+		end)
+	end)
+
+	describe("M3 UI fields", function()
+		it("carries the salvage offered and derives the rating", function()
+			local fixture = review(2)
+			fixture.salvage = 6
+			fixture.offered = 9
+			fixture.quotaMet = true
+			local card = ShiftCardUtils.decode(ShiftCardUtils.encode(fixture, INFO))
+			expect(card.offered).to.equal(9)
+			expect(card.rating).to.equal("exceeds")
+		end)
+
+		it("re-derives the rating instead of trusting the card", function()
+			local card = ShiftCardUtils.encode(review(2), INFO)
+			card.met = false
+			card.rating = "exceeds"
+			expect(ShiftCardUtils.decode(card).rating).to.equal("needsImprovement")
+		end)
+
+		it("reads an absent salvage-offered as 0 and rejects a wrong type", function()
+			local card = ShiftCardUtils.encode(review(2), INFO)
+			card.offered = nil
+			expect(ShiftCardUtils.decode(card).offered).to.equal(0)
+			card.offered = "nine"
+			expect(ShiftCardUtils.decode(card)).to.equal(nil)
+		end)
+
+		it("shows salvage as N of M and the rating", function()
+			local fixture = review(2)
+			fixture.salvage = 2
+			fixture.offered = 9
+			local text =
+				table.concat(ShiftCardUtils.lines(ShiftCardUtils.decode(ShiftCardUtils.encode(fixture, INFO))), "\n")
+			expect(string.find(text, "Salvage 2 of 9", 1, true) ~= nil).to.equal(true)
+			expect(string.find(text, "Rating: ", 1, true) ~= nil).to.equal(true)
 		end)
 	end)
 end

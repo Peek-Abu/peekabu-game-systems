@@ -57,6 +57,9 @@ export type ShiftState = {
 	variant: Variant,
 }
 
+-- The performance review's overall stamp (Figma 35:1096): quota missed, met, or met with the salvage threshold.
+export type Rating = "needsImprovement" | "satisfactory" | "exceeds"
+
 -- One crew member's run, as the results builder reads it.
 export type CrewStats = {
 	userId: number,
@@ -66,18 +69,30 @@ export type CrewStats = {
 	salvage: number,
 	-- Times Mr. Harlow caught them (M2); absent reads 0.
 	caught: number?,
+	-- M3 UI (the joke awards): drops by hand (and throws of fragile items), noises made, times Harlow went to
+	-- investigate a noise they made, and the most valuable item they dropped (its kind and value then). Absent reads 0.
+	drops: number?,
+	noise: number?,
+	woke: number?,
+	dropKind: string?,
+	dropValue: number?,
 }
 
 export type CrewLine = {
+	userId: number,
 	name: string,
 	banked: number,
 	piles: number,
 	salvage: number,
+	caught: number,
 }
 
+-- A joke award: its title (upper case, as stamped), who won it and the one-line reason ("hauled 140").
 export type Award = {
 	title: string,
 	name: string,
+	userId: number,
+	detail: string,
 }
 
 -- The performance review (plain in M1-M2).
@@ -91,6 +106,9 @@ export type ShiftResults = {
 	piles: number,
 	-- Times Mr. Harlow caught someone this shift.
 	catches: number,
+	-- Salvage the shift's roll offered (open floor, under piles, in desks); `salvage` of `offered` were loaded.
+	offered: number,
+	rating: Rating,
 	quotaMet: boolean,
 	crew: { CrewLine },
 	awards: { Award },
@@ -115,6 +133,10 @@ export type ShiftSnapshot = {
 	votesAnother: number,
 	votesDepot: number,
 	results: ShiftResults?,
+	-- The crew's userIds (sorted), for the HUD's crew roster; empty in the lobby.
+	crew: { number },
+	-- The truck the crew came in (the depot's layout index), when the depart payload carried a valid one.
+	truck: number?,
 }
 
 return {}

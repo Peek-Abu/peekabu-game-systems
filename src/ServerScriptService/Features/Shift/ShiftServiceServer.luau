@@ -43,6 +43,7 @@ local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local RoundTypes = require(ReplicatedStorage.Shared.Features.Round.Data.RoundTypes)
 local ToastRegistry = require(ReplicatedStorage.Shared.Features.Toast.Data.ToastRegistry)
 local ShiftConstants = require(ShiftShared.Data.ShiftConstants)
+local CargoRegistry = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoRegistry)
 local ShiftTypes = require(ShiftShared.Data.ShiftTypes)
 local ShiftSnapshotUtils = require(ShiftShared.Utils.ShiftSnapshotUtils)
 local ShiftPhaseRules = require(ShiftServer.Rules.ShiftPhaseRules)
@@ -58,6 +59,7 @@ local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServi
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
 local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
 local OfficeServiceServer = require(ServerScriptService.Features.Office.OfficeServiceServer)
+local OfficeSpawnUtils = require(ServerScriptService.Features.Office.Utils.OfficeSpawnUtils)
 local RoundServiceServer = require(ServerScriptService.Features.Round.RoundServiceServer)
 local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
 local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
@@ -79,6 +81,8 @@ local log = Logger.new("ShiftServiceServer")
 
 local state: ShiftTypes.ShiftState = ShiftPhaseRules.initial(ShiftConstants.QUOTA, ShiftConstants.VARIANT)
 local results: ShiftTypes.ShiftResults? = nil
+-- Salvage this run's roll offered (the review's "salvage found N of M").
+local offered = 0
 local resetPending = false
 -- Set once the clock-out has ended Round's run: tick repeats `endShift` until Round leaves running.
 local endingRun = false
@@ -118,7 +122,7 @@ local function publish()
 		local bonus = if review ~= nil then review.bonus else RoundServiceServer:teamValue(ShiftConstants.BONUS)
 		StateSyncWorldStore.set(
 			ShiftConstants.WORLD_ENTRY,
-			ShiftSnapshotUtils.build(state, cleared, bonus, another, depot, review)
+			ShiftSnapshotUtils.build(state, cleared, bonus, another, depot, review, trip:crewIds())
 		)
 	end)
 end
@@ -176,6 +180,7 @@ local function beginRun()
 		variant = state.variant,
 		quota = state.quota,
 	})
+	offered = OfficeSpawnUtils.salvageCount(plan)
 	log:info(
 		`shift {state.shift} started: variant {state.variant}, greed {if plan.greed ~= nil then plan.greed.kind else "?"}`
 	)
@@ -205,6 +210,8 @@ local function buildResults(outcome: string): ShiftTypes.ShiftResults
 		bonus = RoundServiceServer:teamValue(ShiftConstants.BONUS),
 		quotaMet = state.quotaMet,
 		crew = roster:list(),
+		offered = offered,
+		lookup = CargoRegistry.get,
 	})
 end
 

@@ -145,4 +145,59 @@ return function()
 		local plain = ShiftSnapshotUtils.build(state({ phase = "results", voteEndsAt = 1000 }), 380, 95, 0, 0, RESULTS)
 		expect(ShiftSnapshotUtils.decode(plain).results.catches).to.equal(0)
 	end)
+
+	describe("M3 UI fields", function()
+		local FULL = {
+			outcome = "clockout",
+			quota = 350,
+			cleared = 380,
+			bonus = 95,
+			salvage = 6,
+			piles = 12,
+			catches = 3,
+			quotaMet = true,
+			offered = 9,
+			rating = "exceeds",
+			crew = { { userId = 7, name = "Ava", banked = 200, piles = 6, salvage = 2, caught = 1 } },
+			awards = { { title = "MOST REHIRED", name = "Ava", userId = 7, detail = "caught once" } },
+		}
+
+		it("carries the crew, the truck, the rating and the award details through build and decode", function()
+			local snapshot = ShiftSnapshotUtils.build(state({ phase = "results" }), 380, 95, 1, 0, FULL, { 7, 9 }, 2)
+			local decoded = ShiftSnapshotUtils.decode(snapshot)
+			expect(decoded.truck).to.equal(2)
+			expect(#decoded.crew).to.equal(2)
+			expect(decoded.results.offered).to.equal(9)
+			expect(decoded.results.rating).to.equal("exceeds")
+			expect(decoded.results.crew[1].userId).to.equal(7)
+			expect(decoded.results.crew[1].caught).to.equal(1)
+			expect(decoded.results.awards[1].userId).to.equal(7)
+			expect(decoded.results.awards[1].detail).to.equal("caught once")
+		end)
+
+		it("reads absent M3 fields as empty, zero or derived", function()
+			local decoded = ShiftSnapshotUtils.decode(ShiftSnapshotUtils.build(state(), 0, 0, 0, 0, nil))
+			expect(#decoded.crew).to.equal(0)
+			expect(decoded.truck).to.equal(nil)
+			local old =
+				ShiftSnapshotUtils.decode(ShiftSnapshotUtils.build(state({ phase = "results" }), 0, 0, 0, 0, RESULTS))
+			expect(old.results.offered).to.equal(0)
+			expect(old.results.rating).to.equal("satisfactory")
+			expect(old.results.crew[1].userId).to.equal(0)
+			expect(old.results.awards[1].detail).to.equal("")
+		end)
+
+		it("rejects an unknown rating, a crew list that is not numbers and a text truck", function()
+			local bad = table.clone(FULL)
+			bad.rating = "superb"
+			local results = ShiftSnapshotUtils.build(state({ phase = "results" }), 0, 0, 0, 0, bad)
+			expect(ShiftSnapshotUtils.decode(results)).to.equal(nil)
+			local snapshot = ShiftSnapshotUtils.build(state(), 0, 0, 0, 0, nil)
+			snapshot.crew = { "Ava" }
+			expect(ShiftSnapshotUtils.decode(snapshot)).to.equal(nil)
+			snapshot.crew = {}
+			snapshot.truck = "2"
+			expect(ShiftSnapshotUtils.decode(snapshot)).to.equal(nil)
+		end)
+	end)
 end

@@ -2,21 +2,24 @@
 --[=[
 	ShiftCardUtils: the result card that rides the return teleport to the depot (Cleanup Crew spec §3 steps 1
 	and 7, §6.5 "the depot result card comes through the return teleport"). `encode` flattens a performance
-	review into a Queue payload (flat keys, 27 at most, under Queue's 32); `decode` is the depot's trust
+	review into a Queue payload (flat keys, 28 at most, under Queue's 32); `decode` is the depot's trust
 	boundary: teleport data travels through the client, so a wrong version, a wrong type anywhere or a crew
 	count without its lines reads as no card, numbers are clamped to whole 0..MAX_NUMBER and text is cut to
 	MAX_TEXT characters; `lines` is what the depot's board shows. Pure.
 
-	Wire keys: v, client, shift, outcome, quota, cleared, bonus, salvage, piles, catches, met, crew, awards,
+	Wire keys: v, client, shift, outcome, quota, cleared, bonus, salvage, piles, catches, offered, met, crew, awards,
 	c<i>n / c<i>b (crew line i: name, banked; i <= 4), a<i>t / a<i>n (award i: title, name; i <= 3).
 
 	@class ShiftCardUtils
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
 
 local QueueTypes = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueTypes)
+local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
+local ShiftResultsUtils = require(ServerScriptService.Features.Shift.Utils.ShiftResultsUtils)
 
 type QueuePayload = QueueTypes.QueuePayload
 
@@ -35,6 +38,8 @@ export type ResultCard = {
 	salvage: number,
 	piles: number,
 	catches: number,
+	offered: number,
+	rating: ShiftTypes.Rating,
 	quotaMet: boolean,
 	crew: { CardLine },
 	awards: { ShiftTypes.Award },
@@ -99,6 +104,7 @@ function ShiftCardUtils.encode(results: ShiftTypes.ShiftResults, info: CardInfo)
 		salvage = results.salvage,
 		piles = results.piles,
 		catches = results.catches,
+		offered = results.offered,
 		met = results.quotaMet,
 	}
 	local crew = math.min(#results.crew, MAX_CREW)
@@ -137,6 +143,8 @@ function ShiftCardUtils.decode(payload: QueuePayload?): ResultCard?
 	local catches = count(payload.catches)
 	local crewCount = count(payload.crew)
 	local awardCount = count(payload.awards)
+	-- Absent on a card written before M3 UI.
+	local offered = if payload.offered == nil then 0 else count(payload.offered)
 	if
 		client == nil
 		or outcome == nil
@@ -149,6 +157,7 @@ function ShiftCardUtils.decode(payload: QueuePayload?): ResultCard?
 		or catches == nil
 		or crewCount == nil
 		or awardCount == nil
+		or offered == nil
 		or crewCount > MAX_CREW
 		or awardCount > MAX_AWARDS
 	then
@@ -170,7 +179,7 @@ function ShiftCardUtils.decode(payload: QueuePayload?): ResultCard?
 		if title == nil or name == nil then
 			return nil
 		end
-		table.insert(awards, { title = title, name = name })
+		table.insert(awards, { title = title, name = name, userId = 0, detail = "" })
 	end
 	return {
 		client = client,
@@ -182,6 +191,8 @@ function ShiftCardUtils.decode(payload: QueuePayload?): ResultCard?
 		salvage = salvage,
 		piles = piles,
 		catches = catches,
+		offered = offered,
+		rating = ShiftResultsUtils.rating(met, salvage, offered),
 		quotaMet = met,
 		crew = crew,
 		awards = awards,
@@ -194,7 +205,8 @@ function ShiftCardUtils.lines(card: ResultCard): { string }
 		OUTCOME_TEXT[card.outcome] or card.outcome,
 		`Cleared {card.cleared} / {card.quota} - {if card.quotaMet then "QUOTA MET" else "quota missed"}`,
 		`Finder's fee {card.bonus}`,
-		`Salvage {card.salvage} | Piles {card.piles} | Caught {card.catches}`,
+		`Salvage {card.salvage} of {card.offered} | Piles {card.piles} | Caught {card.catches}`,
+		`Rating: {ShiftConstants.RATING_TEXT[card.rating] or card.rating}`,
 	}
 	for _, line in card.crew do
 		table.insert(lines, `{line.name}: banked {line.banked}`)

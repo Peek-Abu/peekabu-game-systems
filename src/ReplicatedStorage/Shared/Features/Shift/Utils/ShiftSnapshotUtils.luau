@@ -3,7 +3,9 @@
 	ShiftSnapshotUtils: the `shift` world entry (spec §6.3). `build` turns the server's state plus the
 	counters, vote counts and results into the plain snapshot published through StateSyncWorldStore;
 	`decode` is the client's trust boundary for it (the RoundSnapshotUtils pattern): a wrong type anywhere
-	rejects the whole value; absent vote counts read 0.
+	rejects the whole value; absent vote counts read 0. It also carries the crew's userIds and the truck's layout
+	index, and a review's salvage offered and rating stamp (absent on a snapshot from before M3 UI: offered reads 0
+	and the rating is derived from the quota alone).
 
 	@class ShiftSnapshotUtils
 ]=]
@@ -84,6 +86,38 @@ local function countOf(value: WorldValue?): (number, boolean)
 	return 0, false
 end
 
+local function ratingOf(value: WorldValue?, quotaMet: boolean): ShiftTypes.Rating?
+	if value == nil then
+		-- A review from before M3 UI: derive what it can (no salvage share known).
+		return if quotaMet then "satisfactory" else "needsImprovement"
+	elseif value == "needsImprovement" then
+		return "needsImprovement"
+	elseif value == "satisfactory" then
+		return "satisfactory"
+	elseif value == "exceeds" then
+		return "exceeds"
+	end
+	return nil
+end
+
+-- A list of userIds: absent reads empty; anything but numbers is malformed.
+local function idsOf(value: WorldValue?): { number }?
+	local result: { number } = {}
+	if value == nil then
+		return result
+	end
+	if type(value) ~= "table" then
+		return nil
+	end
+	for _, item in value do
+		if type(item) ~= "number" then
+			return nil
+		end
+		table.insert(result, item)
+	end
+	return result
+end
+
 local function crewOf(value: WorldValue?): { ShiftTypes.CrewLine }?
 	local result: { ShiftTypes.CrewLine } = {}
 	if value == nil then
@@ -112,7 +146,15 @@ local function crewOf(value: WorldValue?): { ShiftTypes.CrewLine }?
 		if type(salvage) ~= "number" then
 			return nil
 		end
-		table.insert(result, { name = name, banked = banked, piles = piles, salvage = salvage })
+		local userId, userOk = countOf(item.userId)
+		local caught, caughtOk = countOf(item.caught)
+		if not userOk or not caughtOk then
+			return nil
+		end
+		table.insert(
+			result,
+			{ userId = userId, name = name, banked = banked, piles = piles, salvage = salvage, caught = caught }
+		)
 	end
 	return result
 end
@@ -137,7 +179,17 @@ local function awardsOf(value: WorldValue?): { ShiftTypes.Award }?
 		if type(name) ~= "string" then
 			return nil
 		end
-		table.insert(result, { title = title, name = name })
+		local userId, userOk = countOf(item.userId)
+		local detail = item.detail
+		if not userOk or (detail ~= nil and type(detail) ~= "string") then
+			return nil
+		end
+		table.insert(result, {
+			title = title,
+			name = name,
+			userId = userId,
+			detail = if type(detail) == "string" then detail else "",
+		})
 	end
 	return result
 end
@@ -176,6 +228,11 @@ local function resultsOf(value: WorldValue?): (ShiftResults?, boolean)
 	if not catchesOk then
 		return nil, false
 	end
+	local offered, offeredOk = countOf(value.offered)
+	local rating: ShiftTypes.Rating? = ratingOf(value.rating, quotaMet)
+	if not offeredOk or not rating then
+		return nil, false
+	end
 	return {
 		outcome = outcome,
 		quota = quota,
@@ -184,6 +241,8 @@ local function resultsOf(value: WorldValue?): (ShiftResults?, boolean)
 		salvage = salvage,
 		piles = piles,
 		catches = catches,
+		offered = offered,
+		rating = rating,
 		quotaMet = quotaMet,
 		crew = crew,
 		awards = awards,
@@ -202,7 +261,9 @@ function ShiftSnapshotUtils.build(
 	bonus: number,
 	votesAnother: number,
 	votesDepot: number,
-	results: ShiftResults?
+	results: ShiftResults?,
+	crew: { number }?,
+	truck: number?
 ): ShiftSnapshot
 	return {
 		phase = state.phase,
@@ -222,6 +283,8 @@ function ShiftSnapshotUtils.build(
 		votesAnother = votesAnother,
 		votesDepot = votesDepot,
 		results = results,
+		crew = if crew ~= nil then table.clone(crew) else {},
+		truck = truck,
 	}
 end
 
@@ -266,6 +329,11 @@ function ShiftSnapshotUtils.decode(value: WorldValue?): ShiftSnapshot?
 	if not (endsOk and clockOk and voteOk and anotherOk and depotOk and resultsOk and stageEndsOk and tierOk) then
 		return nil
 	end
+	local crew = idsOf(value.crew)
+	local truck, truckOk = optionalNumber(value.truck)
+	if crew == nil or not truckOk then
+		return nil
+	end
 	local snapshot: ShiftSnapshot = {
 		phase = phase,
 		sub = sub,
@@ -284,6 +352,8 @@ function ShiftSnapshotUtils.decode(value: WorldValue?): ShiftSnapshot?
 		votesAnother = votesAnother,
 		votesDepot = votesDepot,
 		results = results,
+		crew = crew,
+		truck = truck,
 	}
 	return snapshot
 end

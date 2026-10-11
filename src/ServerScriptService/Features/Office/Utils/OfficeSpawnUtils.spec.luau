@@ -126,4 +126,16 @@ return function()
 	it("lists every desk and locker, empty or not", function()
 		expect(#roll(3).searchables).to.equal(12)
 	end)
+
+	describe("salvageCount", function()
+		it("counts salvage on the floor, under piles and in desks, and nothing else", function()
+			local plan = {
+				items = { { marker = "a", kind = "monitor" }, { marker = "b", kind = "rubbishBag" } },
+				piles = { { marker = "c", kind = "paper", hides = "plaque" }, { marker = "d", kind = "paper" } },
+				searchables = { { marker = "e", kind = "goldenStapler" }, { marker = "f" } },
+				trashValue = 0,
+			}
+			expect(OfficeSpawnUtils.salvageCount(plan)).to.equal(3)
+		end)
+	end)
 end

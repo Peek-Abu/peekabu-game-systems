@@ -217,4 +217,28 @@ function OfficeSpawnUtils.roll(
 	}
 end
 
+--[=[
+	How many salvage items a plan offers: on the open floor, hidden under piles and in desks or lockers (the review's
+	"salvage found N of M"). The greed target is placed through one of those lists, so it is counted once.
+]=]
+function OfficeSpawnUtils.salvageCount(plan: OfficeTypes.SpawnPlan): number
+	local count = 0
+	local function add(kind: string?)
+		local def = if kind ~= nil then CargoRegistry.get(kind) else nil
+		if def ~= nil and def.category == "salvage" then
+			count += 1
+		end
+	end
+	for _, item in plan.items do
+		add(item.kind)
+	end
+	for _, pile in plan.piles do
+		add(pile.hides)
+	end
+	for _, search in plan.searchables do
+		add(search.kind)
+	end
+	return count
+end
+
 return OfficeSpawnUtils

@@ -68,4 +68,43 @@ return function()
 		roster:clear()
 		expect(#roster:list()).to.equal(0)
 	end)
+
+	describe("review stats", function()
+		it("counts noises made and times Harlow came to look", function()
+			local roster = ShiftRosterTracker.new()
+			roster:record(1, "Ava", { noise = 1 })
+			roster:record(1, "Ava", { noise = 1, woke = 1 })
+			local entry = roster:list()[1]
+			expect(entry.noise).to.equal(2)
+			expect(entry.woke).to.equal(1)
+		end)
+
+		it("counts drops and keeps the most valuable one", function()
+			local roster = ShiftRosterTracker.new()
+			roster:noteDrop(1, "Ava", "monitor", 30)
+			roster:noteDrop(1, "Ava", "fishTank", 70)
+			roster:noteDrop(1, "Ava", "rubbishBag", 10)
+			local entry = roster:list()[1]
+			expect(entry.drops).to.equal(3)
+			expect(entry.dropKind).to.equal("fishTank")
+			expect(entry.dropValue).to.equal(70)
+		end)
+
+		it("keeps the first of two drops worth the same", function()
+			local roster = ShiftRosterTracker.new()
+			roster:noteDrop(1, "Ava", "monitor", 30)
+			roster:noteDrop(1, "Ava", "waterJug", 30)
+			expect(roster:list()[1].dropKind).to.equal("monitor")
+		end)
+
+		it("starts a new member at zero for every stat", function()
+			local roster = ShiftRosterTracker.new()
+			roster:record(2, "Ben", {})
+			local entry = roster:list()[1]
+			expect(entry.drops).to.equal(0)
+			expect(entry.noise).to.equal(0)
+			expect(entry.woke).to.equal(0)
+			expect(entry.dropKind).to.equal(nil)
+		end)
+	end)
 end

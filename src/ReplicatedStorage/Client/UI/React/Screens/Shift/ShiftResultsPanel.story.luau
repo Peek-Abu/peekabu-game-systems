@@ -35,12 +35,17 @@ return UILabs.CreateReactStory({
 		salvage = 3,
 		piles = 12,
 		catches = 0,
+		offered = 9,
+		rating = if controls.QuotaMet then "satisfactory" else "needsImprovement",
 		quotaMet = controls.QuotaMet,
 		crew = {
-			{ name = "Ava", banked = 200, piles = 6, salvage = 2 },
-			{ name = "Ben", banked = 180, piles = 6, salvage = 1 },
+			{ userId = 1, name = "Ava", banked = 200, piles = 6, salvage = 2, caught = 0 },
+			{ userId = 2, name = "Ben", banked = 180, piles = 6, salvage = 1, caught = 0 },
 		},
-		awards = { { title = "Top Hauler", name = "Ava" }, { title = "Dust Devil", name = "Ava" } },
+		awards = {
+			{ title = "EMPLOYEE OF THE NIGHT", name = "Ava", userId = 1, detail = "hauled 200" },
+			{ title = "QUIETEST FEET", name = "Ben", userId = 2, detail = "never heard once" },
+		},
 	}
 	local snapshot: ShiftTypes.ShiftSnapshot = {
 		phase = "results",
@@ -57,6 +62,7 @@ return UILabs.CreateReactStory({
 		votesAnother = if controls.VotedAnother then 1 else 0,
 		votesDepot = 0,
 		results = review,
+		crew = { 1, 2 },
 	}
 	local view = ShiftHudViewModel.results(snapshot, 0)
 	return e("Frame", {
