@@ -57,7 +57,7 @@ local function OccupantMemo(props: OccupantMemoProps): React.ReactNode
 			BackgroundColor3 = COLOR.cream,
 			BorderSizePixel = 0,
 			ZIndex = 1,
-		}),
+		}, { texture = e(PaperTexture, { paper = COLOR.cream }) }),
 		paper = e("Frame", {
 			Size = UDim2.fromOffset(PAPER.X, PAPER.Y),
 			BackgroundColor3 = COLOR.cream,

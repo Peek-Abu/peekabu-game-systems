@@ -128,7 +128,7 @@ local function tornEdge(paper: Color3, width: number): React.ReactNode
 			Rotation = 45,
 			BackgroundColor3 = paper,
 			BorderSizePixel = 0,
-		})
+		}, { texture = e(PaperTexture, { paper = paper }) })
 	end
 	return e("Frame", {
 		Position = UDim2.new(0, 0, 1, -5),
