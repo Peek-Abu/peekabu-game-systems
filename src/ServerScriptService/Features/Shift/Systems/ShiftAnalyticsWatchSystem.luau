@@ -15,34 +15,49 @@
 	  player on the pile (and their cleaning count);
 	- Carry `pickedUp`: cargo_picked_up, and an optional-salvage attempt opens when ShiftAnalyticsUtils.isSalvageAttempt
 	  says so (after the quota, outside the loading bay); `dropped`: the item's attempt closes (dropped / thrown /
-	  caught / left) and cargo_dropped is sent. Pocketing, banking and resets ("forced", "destroyed") are not drops.
+	  caught / left) and cargo_dropped is sent. Pocketing, banking and resets ("forced", "destroyed") are not drops;
+	- Death `died` with Harlow's cause: the player's open attempts close as "caught", then player_caught;
+	- Mr. Harlow's mode/target attributes (the `Occupant` tag; read, never required, since Occupant requires Shift):
+	  noise_investigation for the crew, with the noise he most likely heard (Noise `made`, kept a few seconds), and
+	  chase_started for the chased player, with what they hold.
 	Gameplay events count only while the shift is running.
 
-	Spec-exempt shell (signals, attributes); the decisions are the specced ShiftAnalyticsUtils, ShiftAnalyticsTracker
-	and ShiftSalvageTracker.
+	Spec-exempt shell (signals, attributes, CollectionService); the decisions are the specced ShiftAnalyticsUtils,
+	ShiftAnalyticsTracker and ShiftSalvageTracker.
 
 	@class ShiftAnalyticsWatchSystem
 ]=]
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
+local ShiftServer = ServerScriptService.Features.Shift
+local Observers = require(ReplicatedStorage.Packages.Observers)
 local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants)
 local CargoRegistry = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoRegistry)
 local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
+local DeathTypes = require(ReplicatedStorage.Shared.Features.Death.Data.DeathTypes)
+local NoiseTypes = require(ReplicatedStorage.Shared.Features.Noise.Data.NoiseTypes)
+local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
+local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
+local NoiseServiceServer = require(ServerScriptService.Features.Noise.NoiseServiceServer)
 local OfficeServiceServer = require(ServerScriptService.Features.Office.OfficeServiceServer)
 local RoundServiceServer = require(ServerScriptService.Features.Round.RoundServiceServer)
 local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
-local ShiftAnalyticsSystem = require(ServerScriptService.Features.Shift.Systems.ShiftAnalyticsSystem)
-local ShiftAnalyticsUtils = require(ServerScriptService.Features.Shift.Utils.ShiftAnalyticsUtils)
-local ShiftTripSystem = require(ServerScriptService.Features.Shift.Systems.ShiftTripSystem)
+local ShiftAnalyticsConstants = require(ShiftServer.Data.ShiftAnalyticsConstants)
+local ShiftAnalyticsSystem = require(ShiftServer.Systems.ShiftAnalyticsSystem)
+local ShiftAnalyticsUtils = require(ShiftServer.Utils.ShiftAnalyticsUtils)
+local ShiftTripSystem = require(ShiftServer.Systems.ShiftTripSystem)
 
 -- The last shift state seen (the `changed` copies arrive in order).
 local before: ShiftTypes.ShiftState? = nil
+-- Mr. Harlow's last mode and target (nil until his model is seen).
+local harlow: ShiftAnalyticsUtils.Harlow? = nil
 
 local function running(): boolean
 	local state = ShiftAnalyticsSystem.shift()
@@ -79,6 +94,13 @@ local function inBay(player: Player): boolean
 	end
 	local low, high = OfficeServiceServer:safeZone()
 	return ShiftAnalyticsUtils.inBox(root.Position, low, high)
+end
+
+-- The kind in a player's hands, or "empty".
+local function held(player: Player): string
+	local carried = CarryServiceServer:getCarried(player)
+	local kind = if carried ~= nil then cargoOf(carried) else nil
+	return kind or "empty"
 end
 
 local function onChanged(state: ShiftTypes.ShiftState)
@@ -205,6 +227,94 @@ local function onDropped(player: Player, object: Instance, reason: string)
 	ShiftAnalyticsSystem.emit("cargo_dropped", player, { target = `{kind}:{source}`, outcome = outcome, value = value })
 end
 
+local function onDied(player: Player, info: DeathTypes.DeathInfo)
+	if info.cause ~= ShiftAnalyticsConstants.CATCH_CAUSE then
+		return
+	end
+	ShiftAnalyticsSystem.closeAttempts(ShiftAnalyticsSystem.salvage:resolvePlayer(player.UserId, "caught"))
+	if running() then
+		ShiftAnalyticsSystem.emit("player_caught", player, {
+			target = "harlow",
+			outcome = ShiftAnalyticsSystem.quotaTag(),
+			value = ShiftAnalyticsSystem.elapsed(),
+		})
+	end
+end
+
+local function onNoise(event: NoiseTypes.NoiseEvent)
+	ShiftAnalyticsSystem.tracker:noteNoise({
+		source = event.source,
+		position = event.position,
+		radius = event.radius,
+		at = os.clock(),
+	})
+end
+
+-- Reads Harlow's mode and target (OccupantRigSystem.setMode writes both) and sends what changed.
+local function readHarlow(model: Instance)
+	local mode = model:GetAttribute(OccupantConstants.MODE_ATTRIBUTE)
+	local target = model:GetAttribute(OccupantConstants.TARGET_ATTRIBUTE)
+	local now: ShiftAnalyticsUtils.Harlow = {
+		mode = if type(mode) == "string" then mode else "patrol",
+		target = if type(target) == "number" then target else 0,
+	}
+	local event = ShiftAnalyticsUtils.harlowChange(harlow, now)
+	harlow = now
+	if event == nil or not running() then
+		return
+	end
+	if event == "noise_investigation" then
+		local position = if model:IsA("PVInstance") then model:GetPivot().Position else Vector3.zero
+		local scale = NoiseServiceServer:getHearingScale()
+		ShiftAnalyticsSystem.emit("noise_investigation", "crew", {
+			target = ShiftAnalyticsUtils.heardSource(
+				ShiftAnalyticsSystem.tracker:noises(),
+				position,
+				scale,
+				os.clock()
+			),
+			outcome = ShiftAnalyticsSystem.quotaTag(),
+			value = ShiftAnalyticsSystem.elapsed(),
+		})
+		return
+	end
+	local victim = Players:GetPlayerByUserId(now.target)
+	if victim ~= nil then
+		ShiftAnalyticsSystem.emit("chase_started", victim, {
+			target = held(victim),
+			outcome = ShiftAnalyticsSystem.quotaTag(),
+			value = ShiftAnalyticsSystem.elapsed(),
+		})
+	end
+end
+
+-- Follows one Harlow model; both attributes change together, so one deferred read covers both.
+local function watchHarlow(model: Instance): () -> ()
+	harlow = nil
+	local pending = false
+	local function schedule()
+		if pending then
+			return
+		end
+		pending = true
+		task.defer(function()
+			pending = false
+			if model.Parent ~= nil then
+				readHarlow(model)
+			end
+		end)
+	end
+	local modeChanged = model:GetAttributeChangedSignal(OccupantConstants.MODE_ATTRIBUTE):Connect(schedule)
+	local targetChanged = model:GetAttributeChangedSignal(OccupantConstants.TARGET_ATTRIBUTE):Connect(schedule)
+	-- Attributes set before the model was seen raise no change: read his current mode once at start.
+	schedule()
+	return function()
+		modeChanged:Disconnect()
+		targetChanged:Disconnect()
+		harlow = nil
+	end
+end
+
 local ShiftAnalyticsWatchSystem = {}
 
 --[=[
@@ -246,11 +356,21 @@ function ShiftAnalyticsWatchSystem.start(
 	keep(function()
 		dropped:Disconnect()
 	end)
+	local died = DeathServiceServer.died:Connect(onDied)
+	keep(function()
+		died:Disconnect()
+	end)
+	local noise = NoiseServiceServer.made:Connect(onNoise)
+	keep(function()
+		noise:Disconnect()
+	end)
+	keep(Observers.observeTag(OccupantConstants.TAG, watchHarlow))
 	return function()
 		for _, stop in stops do
 			stop()
 		end
 		before = nil
+		harlow = nil
 		ShiftAnalyticsSystem.stop()
 	end
 end
