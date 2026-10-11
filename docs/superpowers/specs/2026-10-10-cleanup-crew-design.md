@@ -176,7 +176,7 @@ overlay, results scene, depot pad and contract board, arrival and drive cards.
 
 - **State in charm-sync:** `shift` world entry (phase, `endsAt`, quota, cleared, bonus, tier,
   overtime and clock-out deadlines, variant); per-player public fields (pockets, canister fill,
-  caught). Carry already publishes the hands item.
+  `inTruck`, `vacuuming`, `room`, `roomDepth`, `cam`, `caughtUntil`, and the depot `truck`). Carry already publishes the hands item.
 - **Events in ByteNet:** client→server vacuum start/stop (via Interaction channels), pocket, swap;
   server→client announcements (Toast), bank popup, catch sequence, Harlow cues. Inbound requests go
   through `RequestHandler.wrap`.
