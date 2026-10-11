@@ -164,6 +164,8 @@ function DepotBuildSystem.build(
 		boards
 	)
 	-- The board's prompt opens the work order (M3 UI): attributes first, then the tag (Interaction reads them on tag).
+	-- The sign draws the whole board; the part stays as its adornee, collision and prompt anchor but is not seen.
+	contractBoard.Transparency = 1
 	contractBoard:SetAttribute(InteractionConstants.KIND_ATTRIBUTE, DepotConstants.BOARD_KIND)
 	CollectionService:AddTag(contractBoard, InteractionConstants.TAG)
 	local contractSign =
@@ -181,6 +183,8 @@ function DepotBuildSystem.build(
 		DepotLayoutConstants.BOARD_COLOR,
 		boards
 	)
+	-- The sign draws the whole board; the part stays as its adornee but is not seen.
+	resultBoard.Transparency = 1
 	local resultSign =
 		shell("ResultSign", resultBoard, DepotConstants.BILLBOARD_PX.result, DepotLayoutConstants.RESULT_OFFSET)
 	CollectionService:AddTag(resultSign, DepotConstants.BILLBOARD_TAGS.result)

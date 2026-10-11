@@ -31,7 +31,7 @@ export type DepotResultBoardProps = {
 
 local COLOR = UIPaperConstants.COLOR
 local STICKY_AT: { Vector2 } = { Vector2.new(675, 96), Vector2.new(900, 110), Vector2.new(790, 262) }
-local STICKY_TILT: { number } = { -2, 3, -1 }
+local STICKY_TILT: { number } = { 3, -3, 1 }
 local ROW_HEIGHT = 42
 
 local function reviewCard(review: DepotWorldViewModel.ReviewView): React.ReactNode
