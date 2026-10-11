@@ -406,6 +406,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.UI.React.Screens.Paper.KeyChip"] = "presentational React component (story in PaperKit.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Paper.PaperButton"] = "presentational React component (story in PaperKit.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperLayout"] = "React hook over the viewport (the decision is the specced ShiftPlatformRules.detect)",
+	["ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperViewport"] = "React hook over the viewport (no logic)",
 	["ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperMotion"] = "React hook — RenderStepped easing over a binding (no logic)",
 	["ReplicatedStorage.Client.UI.React.Screens.Paper.PaperToastStack"] = "React HUD widget (layout specced in PaperToastViewModel; story in PaperToastStack.story)",
 	-- Cleanup Crew: catch screens (M3 UI)

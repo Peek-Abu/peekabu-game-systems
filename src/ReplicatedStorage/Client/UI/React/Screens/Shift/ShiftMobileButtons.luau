@@ -21,7 +21,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
-local Workspace = game:GetService("Workspace")
 
 local React = require(ReplicatedStorage.Packages.React)
 local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
@@ -33,6 +32,7 @@ local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftSt
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local VacuumServiceClient = require(ReplicatedStorage.Client.Features.Vacuum.VacuumServiceClient)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
+local usePaperViewport = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperViewport)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 
 local e = React.createElement
@@ -121,30 +121,6 @@ local function ActionButton(props: ButtonProps): React.ReactNode
 	})
 end
 
--- The viewport's shorter side, in px (the engine sizes its Jump button by it).
-local function readShortSide(): number
-	local camera = Workspace.CurrentCamera
-	local viewport = if camera ~= nil then camera.ViewportSize else Vector2.new(844, 390)
-	return math.min(viewport.X, viewport.Y)
-end
-
-local function useShortSide(): number
-	local shortSide, setShortSide = React.useState(readShortSide)
-	React.useEffect(function(): () -> ()
-		local camera = Workspace.CurrentCamera
-		if camera == nil then
-			return function() end
-		end
-		local connection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
-			setShortSide(readShortSide())
-		end)
-		return function()
-			connection:Disconnect()
-		end
-	end, {})
-	return shortSide
-end
-
 local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactNode
 	local snapshot = useAtom(ShiftStore.snapshot)
 	local publicPlayers = useAtom(StateSyncClientStore.publicPlayers)
@@ -160,7 +136,8 @@ local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactN
 		ShiftHudViewModel.hidden(me, scaring),
 		ShiftHudViewModel.loadReady(shownPrompt)
 	)
-	local arc = ShiftHudViewModel.arcFor(useShortSide())
+	local viewport = usePaperViewport()
+	local arc = ShiftHudViewModel.arcFor(math.min(viewport.X, viewport.Y))
 	local vacuuming = view ~= nil and view.primary == "VACUUM"
 	-- Whether this widget started a vacuum hold that has not ended yet.
 	local held = React.useRef(false)

@@ -9,7 +9,6 @@
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
 
 local React = require(ReplicatedStorage.Packages.React)
 local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
@@ -18,33 +17,12 @@ local DepotStore = require(ReplicatedStorage.Client.Features.Depot.State.DepotSt
 local SceneStack = require(ReplicatedStorage.Client.UI.Scenes.SceneStack)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local usePaperLayout = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperLayout)
+local usePaperViewport = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperViewport)
 local DepotBoardPanel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotBoardPanel)
 local DepotBoardViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotBoardViewModel)
 
 local e = React.createElement
 local useAtom = ReactCharm.useAtom
-
-local function readViewport(): Vector2
-	local camera = Workspace.CurrentCamera
-	return if camera ~= nil then camera.ViewportSize else Vector2.new(1920, 1080)
-end
-
-local function useViewport(): Vector2
-	local viewport, setViewport = React.useState(readViewport)
-	React.useEffect(function(): () -> ()
-		local camera = Workspace.CurrentCamera
-		if camera == nil then
-			return function() end
-		end
-		local connection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
-			setViewport(readViewport())
-		end)
-		return function()
-			connection:Disconnect()
-		end
-	end, {})
-	return viewport
-end
 
 local function close()
 	SceneStack.remove(DepotConstants.BOARD_SCENE)
@@ -54,7 +32,7 @@ local function DepotBoardScreen(): React.ReactNode
 	local board = useAtom(DepotStore.board)
 	local lastShift = useAtom(DepotStore.lastShift)
 	local layout: UIPaperConstants.Layout = usePaperLayout()
-	local viewport = useViewport()
+	local viewport = usePaperViewport()
 	local phone = layout == "phone"
 	local props: DepotBoardPanel.DepotBoardPanelProps = {
 		view = DepotBoardViewModel.board(board, lastShift, phone),
