@@ -258,6 +258,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	-- child, ResetOnSpawn=false) and the React root. Needs a live PlayerGui + renderer; the WHEN-to-
 	-- create/tear-down bookkeeping is the pure UILayers core, fully specced in UILayers.spec.
 	["ReplicatedStorage.Client.UI.Layers.UILayerHost"] = "Instance/ReactRoblox factory shell (UILayers core is specced)",
+	["ReplicatedStorage.Client.UI.Layers.UIBillboardHost"] = "Instance/ReactRoblox/CollectionService factory shell (the root bookkeeping UIBillboards core is specced)",
 	["ReplicatedStorage.Client.UI.Layers.UIRoot"] = "trivial shared-singleton wiring (UILayers core is specced)",
 	["ReplicatedStorage.Client.UI.Suppression.UISuppression"] = "world-suppression handler shell — the mouse handler touches UserInputService (UIWorldSuppression core is specced)",
 	["ReplicatedStorage.Client.Features.UI.UIServiceClient"] = "UI lifecycle shell — stack subscription, the Escape shim, and HUD mounting (the logic it drives is specced)",
