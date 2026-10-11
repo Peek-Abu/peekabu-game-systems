@@ -100,7 +100,7 @@ local function phoneSlip(left: string): React.ReactNode
 		BackgroundTransparency = 1,
 	}, {
 		sheet = e(PaperSheet, {
-			size = UDim2.fromScale(1, 1),
+			size = UDim2.fromOffset(PHONE_WIDTH, PHONE_HEIGHT),
 			paper = COLOR.cream,
 			torn = true,
 			padding = 0,
@@ -176,7 +176,7 @@ local function ShiftClockOutSlip(props: ShiftClockOutSlipProps): React.ReactNode
 		BackgroundTransparency = 1,
 	}, {
 		sheet = e(PaperSheet, {
-			size = UDim2.fromScale(1, 1),
+			size = UDim2.fromOffset(WIDTH, HEIGHT),
 			paper = COLOR.cream,
 			band = if truck ~= nil then `CLOCK-OUT SLIP — TRUCK {truck}` else "CLOCK-OUT SLIP",
 			torn = true,

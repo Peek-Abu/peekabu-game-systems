@@ -21,6 +21,7 @@ local e = React.createElement
 export type Fastener = "clip" | "pin" | "tape" | "staple"
 
 export type PaperSheetProps = {
+	-- A `torn` sheet needs an offset width (`size.X.Offset`): the torn edge lays out as many teeth as fit it.
 	size: UDim2,
 	position: UDim2?,
 	anchor: Vector2?,
@@ -108,8 +109,10 @@ local function fastenerOf(kind: Fastener?): React.ReactNode
 	return nil
 end
 
--- A torn bottom edge: paper-coloured squares turned 45° along the bottom, so the edge zigzags.
-local function tornEdge(paper: Color3): React.ReactNode
+-- A torn bottom edge: paper-coloured squares turned 45° along the bottom, so the edge zigzags. Only as many teeth as
+-- fit `width` (px) are laid out, 12 px apart (a 10 px tooth plus 2 px padding): the row must not rely on clipping,
+-- because Roblox ignores ClipsDescendants when the frame or an ancestor has a non-zero Rotation (the tilted slips).
+local function tornEdge(paper: Color3, width: number): React.ReactNode
 	local teeth: { [string]: React.ReactNode } = {
 		layout = e("UIListLayout", {
 			FillDirection = Enum.FillDirection.Horizontal,
@@ -117,7 +120,7 @@ local function tornEdge(paper: Color3): React.ReactNode
 			SortOrder = Enum.SortOrder.LayoutOrder,
 		}),
 	}
-	for index = 1, 48 do
+	for index = 1, math.max(1, math.floor((width + 2) / 12)) do
 		teeth[`t{index}`] = e("Frame", {
 			LayoutOrder = index,
 			Size = UDim2.fromOffset(10, 10),
@@ -130,7 +133,6 @@ local function tornEdge(paper: Color3): React.ReactNode
 		Position = UDim2.new(0, 0, 1, -5),
 		Size = UDim2.new(1, 0, 0, 10),
 		BackgroundTransparency = 1,
-		ClipsDescendants = true,
 		ZIndex = 3,
 	}, teeth)
 end
@@ -211,7 +213,7 @@ local function PaperSheet(props: PaperSheetProps): React.ReactNode
 		paperChildren.band = bandOf(band, props.bandColor or COLOR.stamp)
 	end
 	if props.torn == true then
-		paperChildren.torn = tornEdge(paper)
+		paperChildren.torn = tornEdge(paper, props.size.X.Offset)
 	end
 
 	local sheetChildren: { [string]: React.ReactNode } = {
