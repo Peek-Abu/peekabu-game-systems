@@ -12,11 +12,15 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage.Packages.React)
 local ReactRoblox = require(ReplicatedStorage.Packages.ReactRoblox)
 local UILabs = require(ReplicatedStorage.DevPackages.UILabs)
+local CorkBoard = require(ReplicatedStorage.Client.UI.React.Screens.Paper.CorkBoard)
 local KeyChip = require(ReplicatedStorage.Client.UI.React.Screens.Paper.KeyChip)
 local PaperButton = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperButton)
 local PaperLabel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperLabel)
 local PaperSheet = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperSheet)
 local PaperStamp = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperStamp)
+local PaperTexture = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperTexture)
+local PaperTag = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperTag)
+local PaperTextureViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperTextureViewModel)
 local StickyNote = require(ReplicatedStorage.Client.UI.React.Screens.Paper.StickyNote)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 
@@ -98,6 +102,52 @@ local function roleSheet(order: number): React.ReactNode
 	})
 end
 
+-- Six swatches, one per textured material, labelled "flat (PENDING)" or "textured" per PaperTextureViewModel.forPaper.
+local MATERIALS: { { name: string, paper: Color3 } } = {
+	{ name = "cream", paper = COLOR.cream },
+	{ name = "manila", paper = COLOR.manila },
+	{ name = "manilaDeep", paper = COLOR.manilaDeep },
+	{ name = "sticky", paper = COLOR.sticky },
+	{ name = "cork", paper = COLOR.cork },
+	{ name = "wood", paper = COLOR.wood },
+}
+
+local function swatches(order: number): React.ReactNode
+	local content: { [string]: React.ReactNode } = {
+		layout = e("UIListLayout", {
+			Padding = UDim.new(0, 6),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+		}),
+	}
+	for index, material in MATERIALS do
+		local state = if PaperTextureViewModel.forPaper(material.paper) ~= nil then "textured" else "flat (PENDING)"
+		content[material.name] = e("Frame", {
+			LayoutOrder = index,
+			Size = UDim2.fromOffset(260, 40),
+			BackgroundColor3 = material.paper,
+			BorderSizePixel = 0,
+		}, {
+			texture = e(PaperTexture, { paper = material.paper, zIndex = 1 }),
+			label = e(PaperLabel, {
+				text = `{material.name}: {state}`,
+				role = "medium",
+				size = TEXT.label,
+				color = if material.paper == COLOR.cork or material.paper == COLOR.wood then COLOR.cream else COLOR.ink,
+				position = UDim2.fromOffset(10, 0),
+				frame = UDim2.new(1, -20, 1, 0),
+				autoSize = false,
+				wrapped = false,
+				zIndex = 3,
+			}),
+		})
+	end
+	return e("Frame", {
+		LayoutOrder = order,
+		Size = UDim2.fromOffset(260, 6 * 46),
+		BackgroundTransparency = 1,
+	}, content)
+end
+
 return UILabs.CreateReactStory({
 	react = React,
 	reactRoblox = ReactRoblox,
@@ -110,6 +160,17 @@ return UILabs.CreateReactStory({
 	local tilt: number = props.controls.Tilt
 	-- A new key remounts the stamps and the wide note, so turning Pop on plays their motion again.
 	local stampKey = if pop then "popped" else "still"
+
+	local pinned: { [string]: React.ReactNode } = {
+		sheet = e(PaperSheet, {
+			position = UDim2.fromOffset(60, 70),
+			size = UDim2.fromOffset(300, 200),
+			fastener = "pin",
+			tilt = -1.5,
+		}, {
+			title = e(PaperLabel, { text = "Pinned notice", role = "heading", size = TEXT.value }),
+		}),
+	}
 
 	return e("Frame", {
 		Size = UDim2.fromScale(1, 1),
@@ -248,6 +309,30 @@ return UILabs.CreateReactStory({
 				}),
 			}),
 			roles = roleSheet(2),
+		}),
+		world = row(5, 420, {
+			board = e(CorkBoard, {
+				size = UDim2.fromOffset(600, 420),
+				layoutOrder = 1,
+				children = pinned,
+			}),
+			luggage = e(PaperTag, { size = Vector2.new(340, 250), paper = COLOR.manila, hole = "top" }, {
+				name = e(PaperLabel, {
+					text = "LUGGAGE TAG",
+					role = "heading",
+					size = TEXT.value,
+					position = UDim2.fromOffset(16, 56),
+				}),
+			}),
+			price = e(PaperTag, { size = Vector2.new(260, 70), paper = COLOR.cream, hole = "left" }, {
+				price = e(PaperLabel, {
+					text = "$12.00",
+					role = "number",
+					size = TEXT.value,
+					position = UDim2.fromOffset(12, 10),
+				}),
+			}),
+			swatches = swatches(4),
 		}),
 	})
 end)

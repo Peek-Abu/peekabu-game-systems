@@ -5,6 +5,7 @@
 	Fills its parent's width and grows to its text height by default; `frame` fixes the size, `autoSize = false`
 	stops the growth, and `fit` sizes it to the text on both axes (for chips, stamps and marks). `strike` crosses the
 	text out with rich text; the text is escaped first (`&`, `<`, `>`) because callers pass player display names.
+	`scaled` shrinks long text into the fixed `frame` (TextScaled with a UITextSizeConstraint from `minSize` to `size`).
 
 	@class PaperLabel
 ]=]
@@ -33,6 +34,10 @@ export type PaperLabelProps = {
 	-- Size to the text on both axes (AutomaticSize XY); wins over `frame` and `autoSize`.
 	fit: boolean?,
 	strike: boolean?,
+	-- Shrink long text into the fixed `frame` (TextScaled, between `minSize` and `size`); pair with autoSize = false.
+	scaled: boolean?,
+	-- The smallest scaled size in px (floor(size * 0.6) by default).
+	minSize: number?,
 	layoutOrder: number?,
 	zIndex: number?,
 }
@@ -48,6 +53,7 @@ local ESCAPES = table.freeze({ ["<"] = "&lt;", [">"] = "&gt;", ["&"] = "&amp;" }
 
 local function PaperLabel(props: PaperLabelProps): React.ReactNode
 	local strike = props.strike == true
+	local scaled = props.scaled == true
 	local text = props.text
 	if strike then
 		local escaped = string.gsub(text, "[<>&]", ESCAPES)
@@ -76,7 +82,15 @@ local function PaperLabel(props: PaperLabelProps): React.ReactNode
 		TextXAlignment = ALIGN[props.align or "left"],
 		TextWrapped = not fit and props.wrapped ~= false,
 		RichText = strike,
+		TextScaled = scaled,
 		Text = text,
+	}, {
+		limit = if scaled
+			then e("UITextSizeConstraint", {
+				MaxTextSize = props.size,
+				MinTextSize = props.minSize or math.floor(props.size * 0.6),
+			})
+			else nil,
 	})
 end
 

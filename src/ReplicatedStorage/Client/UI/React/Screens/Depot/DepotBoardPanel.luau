@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	DepotBoardPanel: the depot's contract board (Figma 2a desktop 31:458, 2b phone 31:516) on the paperwork look: a cork
-	pinboard over a dimmed depot with tonight's work order (folder tab, six rows on desktop and four on phone, the HAZARD
+	pinboard (CorkBoard: wood frame, cork) over a dimmed depot with tonight's work order (folder tab, six rows on desktop and four on phone, the HAZARD
 	row on a red wash, the APPROVED stamp and the night guard's sticky on desktop), the returning player's last-shift
 	card (omitted when the view has none), the pinned dispatch slip ("JOIN A SHIFT" over a green marker stroke) and
 	CLOSE. The board is drawn at its Figma size and positions and scaled by `scale` (DepotBoardViewModel.fit): centred
@@ -15,6 +15,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
+local CorkBoard = require(ReplicatedStorage.Client.UI.React.Screens.Paper.CorkBoard)
 local PaperButton = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperButton)
 local PaperLabel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperLabel)
 local PaperSheet = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperSheet)
@@ -271,14 +272,8 @@ local function DepotBoardPanel(props: DepotBoardPanelProps): React.ReactNode
 	local phone = layout == "phone"
 	local last = view.last
 
-	local board: { [string]: React.ReactNode } = {
-		corner = e("UICorner", { CornerRadius = UDim.new(0, 4) }),
-		border = e("UIStroke", {
-			Color = COLOR.ink,
-			Thickness = geometry.border,
-			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-		}),
-		scale = e("UIScale", { Scale = props.scale }),
+	-- Everything pinned on the board; the CorkBoard (wood frame and cork) sits under it, inside the scaled outer Frame.
+	local cards: { [string]: React.ReactNode } = {
 		workOrder = e("Frame", {
 			Size = UDim2.fromScale(1, 1),
 			BackgroundTransparency = 1,
@@ -306,8 +301,8 @@ local function DepotBoardPanel(props: DepotBoardPanelProps): React.ReactNode
 		}),
 	}
 	if not phone then
-		board.title = label(view.title, "heading", 30, COLOR.cream, 40, 24)
-		board.over = e("Frame", {
+		cards.title = label(view.title, "heading", 30, COLOR.cream, 40, 24)
+		cards.over = e("Frame", {
 			Size = UDim2.fromScale(1, 1),
 			BackgroundTransparency = 1,
 			ZIndex = Z_OVER,
@@ -341,9 +336,18 @@ local function DepotBoardPanel(props: DepotBoardPanelProps): React.ReactNode
 				then UDim2.new(0.5, 0, 1, -UIPaperConstants.SAFE.phone.bottom)
 				else UDim2.fromScale(0.5, 0.5),
 			Size = UDim2.fromOffset(geometry.board.X, geometry.board.Y),
-			BackgroundColor3 = COLOR.cork,
+			BackgroundTransparency = 1,
 			BorderSizePixel = 0,
-		}, board),
+		}, {
+			corner = e("UICorner", { CornerRadius = UDim.new(0, 4) }),
+			border = e("UIStroke", {
+				Color = COLOR.ink,
+				Thickness = geometry.border,
+				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+			}),
+			scale = e("UIScale", { Scale = props.scale }),
+			board = e(CorkBoard, { size = UDim2.fromScale(1, 1), frame = 12, children = cards }),
+		}),
 	})
 end
 
