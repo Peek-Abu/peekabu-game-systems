@@ -4,7 +4,8 @@
 	entry, the scare beat and the server clock, builds the HUD and crew roster views, and draws ShiftHudPanel while a
 	shift runs. The HUD goes dark (hidden by a prop, not unmounted) during the scare beat and while the local player is caught (the CCTV takes the
 	screen). On desktop with a keyboard it also passes the key hints row, read from the live Input bindings, and the
-	pocket key for the carry panel's caption.
+	pocket key for the carry panel's caption. On desktop the panel is drawn scaled to the window (PaperHudFrame) and its
+	layout rules read the window in HUD design px (usePaperHudScale).
 
 	@class ShiftHud
 ]=]
@@ -22,8 +23,8 @@ local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftSt
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local useServerClock = require(ReplicatedStorage.Client.UI.React.Hooks.useServerClock)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
-local usePaperLayout = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperLayout)
-local usePaperViewport = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperViewport)
+local PaperHudFrame = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudFrame)
+local usePaperHudScale = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperHudScale)
 local ShiftCrewViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftCrewViewModel)
 local ShiftHudPanel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudPanel)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
@@ -45,8 +46,10 @@ local function ShiftHud(): React.ReactNode
 	local snapshot = useAtom(ShiftStore.snapshot)
 	local publicPlayers = useAtom(StateSyncClientStore.publicPlayers)
 	local scaring = useAtom(OccupantCatchStore.scaring)
-	local layout: UIPaperConstants.Layout = usePaperLayout()
-	local viewport = usePaperViewport()
+	-- The desktop HUD is drawn scaled to the window; `viewport` is the window in HUD design px.
+	local hudScale = usePaperHudScale()
+	local layout: UIPaperConstants.Layout = hudScale.layout
+	local viewport = hudScale.viewport
 	local now = useServerClock()
 	local player = Players.LocalPlayer
 	local me = if player ~= nil then publicPlayers[StateSyncConstants.publicEntryKey(player.UserId)] else nil
@@ -83,7 +86,7 @@ local function ShiftHud(): React.ReactNode
 		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
 		Visible = not hidden,
-	}, { panel = panel })
+	}, { frame = e(PaperHudFrame, { scale = hudScale.scale, children = { panel = panel } }) })
 end
 
 return ShiftHud

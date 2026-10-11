@@ -16,6 +16,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage.Packages.React)
 local CatchViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Catch.CatchViewModel)
 local PaperLabel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperLabel)
+local PaperScaleContext = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperScaleContext)
 local PaperSheet = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperSheet)
 local PaperStamp = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperStamp)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
@@ -146,8 +147,10 @@ end
 local function CatchRehiredPanel(props: CatchRehiredPanelProps): React.ReactNode
 	local view = props.view
 	local spec = SPEC[props.layout]
-	-- The rows' measured height (0 until they are laid out); the card grows by what they take beyond the Figma's.
+	-- The rows' measured height in design px (0 until they are laid out); the card grows by what they take beyond the
+	-- Figma's. AbsoluteSize is real px, so it is divided by the scale the notice is drawn at (PaperHudFrame).
 	local measured, setMeasured = React.useState(0)
+	local drawnScale = React.useContext(PaperScaleContext.Context)
 	local grow = math.max(0, measured - spec.rowsHeight)
 
 	local rows: { [string]: React.ReactNode } = {
@@ -205,7 +208,7 @@ local function CatchRehiredPanel(props: CatchRehiredPanelProps): React.ReactNode
 			AutomaticSize = Enum.AutomaticSize.Y,
 			BackgroundTransparency = 1,
 			[React.Change.AbsoluteSize] = function(frame: Frame)
-				setMeasured(frame.AbsoluteSize.Y)
+				setMeasured(frame.AbsoluteSize.Y / drawnScale:getValue())
 			end,
 		}, rows),
 	}

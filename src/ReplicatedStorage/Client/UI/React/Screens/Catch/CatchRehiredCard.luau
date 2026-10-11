@@ -19,8 +19,9 @@ local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync
 local useServerClock = require(ReplicatedStorage.Client.UI.React.Hooks.useServerClock)
 local CatchRehiredPanel = require(ReplicatedStorage.Client.UI.React.Screens.Catch.CatchRehiredPanel)
 local CatchViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Catch.CatchViewModel)
+local PaperHudFrame = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudFrame)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
-local usePaperLayout = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperLayout)
+local usePaperHudScale = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperHudScale)
 
 local useAtom = ReactCharm.useAtom
 
@@ -28,7 +29,9 @@ local function CatchRehiredCard(): React.ReactNode
 	local report = useAtom(OccupantCatchStore.report)
 	local rehiredAt = useAtom(OccupantCatchStore.rehiredAt)
 	local publicPlayers = useAtom(StateSyncClientStore.publicPlayers)
-	local layout: UIPaperConstants.Layout = usePaperLayout()
+	-- Drawn scaled to the window on desktop (the 760x600 notice is taller than a short window), via PaperHudFrame.
+	local hudScale = usePaperHudScale()
+	local layout: UIPaperConstants.Layout = hudScale.layout
 	local now = useServerClock()
 	local player = Players.LocalPlayer
 	local view = CatchViewModel.rehired({
@@ -43,7 +46,10 @@ local function CatchRehiredCard(): React.ReactNode
 	if view == nil then
 		return nil
 	end
-	return React.createElement(CatchRehiredPanel, { view = view, layout = layout })
+	return React.createElement(PaperHudFrame, {
+		scale = hudScale.scale,
+		children = { panel = React.createElement(CatchRehiredPanel, { view = view, layout = layout }) },
+	})
 end
 
 return CatchRehiredCard

@@ -23,8 +23,9 @@ local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync
 local useServerClock = require(ReplicatedStorage.Client.UI.React.Hooks.useServerClock)
 local DepotPadPanel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotPadPanel)
 local DepotPadViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotPadViewModel)
+local PaperHudFrame = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudFrame)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
-local usePaperLayout = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperLayout)
+local usePaperHudScale = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperHudScale)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 
 local TICK_SECONDS = 0.2
@@ -43,7 +44,9 @@ end
 local function DepotPad(props: DepotPadProps): React.ReactNode
 	local snapshot = ReactCharm.useAtom(QueueStore.snapshot)
 	local publicPlayers = ReactCharm.useAtom(StateSyncClientStore.publicPlayers)
-	local layout: UIPaperConstants.Layout = usePaperLayout()
+	-- Drawn scaled to the window on desktop, with the rest of the HUD (PaperHudFrame).
+	local hudScale = usePaperHudScale()
+	local layout: UIPaperConstants.Layout = hudScale.layout
 	local now = useServerClock(TICK_SECONDS)
 	local player = Players.LocalPlayer
 	local _, pad = QueueSnapshotUtils.padOf(snapshot, player.UserId)
@@ -70,11 +73,16 @@ local function DepotPad(props: DepotPadProps): React.ReactNode
 	if view == nil then
 		return nil
 	end
-	return React.createElement(DepotPadPanel, {
-		view = view,
-		layout = layout,
-		onDepart = props.onDepart,
-		jump = ShiftHudViewModel.arcFor(shortSide()).jump,
+	return React.createElement(PaperHudFrame, {
+		scale = hudScale.scale,
+		children = {
+			panel = React.createElement(DepotPadPanel, {
+				view = view,
+				layout = layout,
+				onDepart = props.onDepart,
+				jump = ShiftHudViewModel.arcFor(shortSide()).jump,
+			}),
+		},
 	})
 end
 

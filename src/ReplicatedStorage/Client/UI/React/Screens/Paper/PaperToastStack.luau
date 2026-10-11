@@ -17,11 +17,12 @@ local React = require(ReplicatedStorage.Packages.React)
 local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
 local OccupantCatchStore = require(ReplicatedStorage.Client.Features.Occupant.State.OccupantCatchStore)
 local ToastStore = require(ReplicatedStorage.Client.Features.Toast.State.ToastStore)
+local PaperHudFrame = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudFrame)
 local PaperStamp = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperStamp)
 local PaperToastViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperToastViewModel)
 local StickyNote = require(ReplicatedStorage.Client.UI.React.Screens.Paper.StickyNote)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
-local usePaperLayout = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperLayout)
+local usePaperHudScale = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperHudScale)
 
 local e = React.createElement
 
@@ -80,7 +81,9 @@ end
 local function Widget(): React.ReactNode
 	local toasts = ReactCharm.useAtom(ToastStore.toasts)
 	local scaring = ReactCharm.useAtom(OccupantCatchStore.scaring)
-	local layout: UIPaperConstants.Layout = usePaperLayout()
+	-- Drawn scaled to the window on desktop, with the rest of the HUD (PaperHudFrame).
+	local hudScale = usePaperHudScale()
+	local layout: UIPaperConstants.Layout = hudScale.layout
 	-- Typed up front: inline in e() the Layout literal union widens to string.
 	local layerProps: LayerProps = {
 		view = PaperToastViewModel.layout(toasts, PaperToastViewModel.MAX_NOTES),
@@ -92,7 +95,7 @@ local function Widget(): React.ReactNode
 		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
 		Visible = not scaring,
-	}, { layer = e(Layer, layerProps) })
+	}, { frame = e(PaperHudFrame, { scale = hudScale.scale, children = { layer = e(Layer, layerProps) } }) })
 end
 
 return {

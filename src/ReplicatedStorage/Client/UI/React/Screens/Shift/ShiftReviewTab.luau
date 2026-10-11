@@ -17,8 +17,9 @@ local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftSt
 local SceneStack = require(ReplicatedStorage.Client.UI.Scenes.SceneStack)
 local UIStore = require(ReplicatedStorage.Client.UI.Scenes.UIStore)
 local PaperButton = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperButton)
+local PaperHudFrame = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudFrame)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
-local usePaperLayout = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperLayout)
+local usePaperHudScale = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperHudScale)
 local ShiftReviewViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftReviewViewModel)
 
 local e = React.createElement
@@ -37,13 +38,15 @@ end
 local function ShiftReviewTab(): React.ReactNode
 	local snapshot = useAtom(ShiftStore.snapshot)
 	local stack = useAtom(UIStore.sceneStack)
-	local layout: UIPaperConstants.Layout = usePaperLayout()
+	-- Drawn scaled to the window on desktop, with the rest of the HUD (PaperHudFrame).
+	local hudScale = usePaperHudScale()
+	local layout: UIPaperConstants.Layout = hudScale.layout
 	local text = ShiftReviewViewModel.reopen(snapshot, stack)
 	if text == nil then
 		return nil
 	end
 	local look = SIZE[layout]
-	return e(PaperButton, {
+	local button = e(PaperButton, {
 		text = text,
 		variant = "primary",
 		onActivated = reopen,
@@ -52,6 +55,7 @@ local function ShiftReviewTab(): React.ReactNode
 		size = UDim2.fromOffset(look.size.X, look.size.Y),
 		textSize = look.text,
 	})
+	return e(PaperHudFrame, { scale = hudScale.scale, children = { button = button } })
 end
 
 return ShiftReviewTab

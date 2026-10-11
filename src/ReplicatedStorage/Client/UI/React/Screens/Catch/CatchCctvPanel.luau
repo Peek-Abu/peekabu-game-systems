@@ -17,6 +17,7 @@ local React = require(ReplicatedStorage.Packages.React)
 local CatchViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Catch.CatchViewModel)
 local KeyChip = require(ReplicatedStorage.Client.UI.React.Screens.Paper.KeyChip)
 local PaperLabel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperLabel)
+local PaperScaleContext = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperScaleContext)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 
@@ -135,12 +136,16 @@ local BUTTON_ABOVE_JUMP = 28
 -- Enough lines to cover any viewport height.
 local SCAN_HEIGHT = 1600
 
-local function scanlines(gap: number): React.ReactNode
+-- `drawnScale` is the scale the panel is drawn at (PaperHudFrame): a line stays 1 real px thick when it is scaled down.
+local function scanlines(gap: number, drawnScale: React.Binding<number>): React.ReactNode
+	local thickness = drawnScale:map(function(value: number): UDim2
+		return UDim2.new(1, 0, 0, 1 / value)
+	end)
 	local lines: { [string]: React.ReactNode } = {}
 	for index = 0, SCAN_HEIGHT // gap do
 		lines[`l{index}`] = e("Frame", {
 			Position = UDim2.fromOffset(0, index * gap),
-			Size = UDim2.new(1, 0, 0, 1),
+			Size = thickness,
 			BackgroundColor3 = COLOR.fluorescent,
 			BackgroundTransparency = SCAN_TRANSPARENCY,
 			BorderSizePixel = 0,
@@ -311,10 +316,12 @@ local function CatchCctvPanel(props: CatchCctvPanelProps): React.ReactNode
 	local view = props.view
 	local phone = props.layout == "phone"
 	local spec = SPEC[props.layout]
-	-- The lines never change for a layout: memoised, so the countdown's re-renders skip them.
+	-- The lines change only with the layout and the drawn scale: memoised, so the countdown's re-renders skip them.
+	local drawnScale = React.useContext(PaperScaleContext.Context)
+	local linesDeps: { unknown } = { spec.scanGap, drawnScale }
 	local lines = React.useMemo(function(): React.ReactNode
-		return scanlines(spec.scanGap)
-	end, { spec.scanGap })
+		return scanlines(spec.scanGap, drawnScale)
+	end, linesDeps)
 
 	local children: { [string]: React.ReactNode } = {
 		scanlines = lines,

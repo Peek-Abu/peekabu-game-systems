@@ -419,7 +419,8 @@ end
 
 --[=[
 	How far (px) the centred pieces (time card, SALVAGE stamp, clock-out slip) move right so the widest of them, the
-	500 px slip, clears the left column (the folder and fee plate) by a 16 px gap; 0 on a wide screen.
+	500 px slip, clears the left column (the folder and fee plate) by a 16 px gap; 0 on a wide screen. Takes the width
+	in HUD design px (usePaperHudScale's virtual viewport), since the desktop HUD is drawn scaled to the window.
 ]=]
 function ShiftHudViewModel.centreShift(viewportWidth: number): number
 	local HUD = UIPaperConstants.HUD
@@ -429,7 +430,8 @@ end
 
 --[=[
 	The carry panel's left edge (px): the corner inset on a tall viewport; on a short one (a windowed laptop), right of
-	the crew roster column so a full roster (4 rows) is not covered.
+	the crew roster column so a full roster (4 rows) is not covered. Takes the viewport in HUD design px
+	(usePaperHudScale's virtual viewport), since the desktop HUD is drawn scaled to the window.
 ]=]
 function ShiftHudViewModel.carryLeft(viewport: Vector2): number
 	local HUD = UIPaperConstants.HUD

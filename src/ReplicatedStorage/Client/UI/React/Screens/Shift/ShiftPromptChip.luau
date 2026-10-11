@@ -31,10 +31,11 @@ local ShiftPromptStore = require(ReplicatedStorage.Client.Features.Shift.State.S
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local useServerClock = require(ReplicatedStorage.Client.UI.React.Hooks.useServerClock)
 local KeyChip = require(ReplicatedStorage.Client.UI.React.Screens.Paper.KeyChip)
+local PaperHudFrame = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudFrame)
 local PaperLabel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperLabel)
 local PaperSheet = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperSheet)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
-local usePaperLayout = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperLayout)
+local usePaperHudScale = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperHudScale)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 
 local e = React.createElement
@@ -101,7 +102,9 @@ local function ShiftPromptChip(props: ShiftPromptChipProps?): React.ReactNode
 	local shown = useAtom(ShiftPromptStore.shown)
 	local publicPlayers = useAtom(StateSyncClientStore.publicPlayers)
 	local scaring = useAtom(OccupantCatchStore.scaring)
-	local layout: UIPaperConstants.Layout = usePaperLayout()
+	-- The desktop chip is drawn scaled to the window, with the rest of the HUD (PaperHudFrame).
+	local hudScale = usePaperHudScale()
+	local layout: UIPaperConstants.Layout = hudScale.layout
 	local now = useServerClock(if shown ~= nil and shown.holdStartedAt ~= nil then HOLD_TICK else IDLE_TICK)
 	local onPress = if props ~= nil then props.onPress else nil
 	-- Whether this chip started a hold that has not been released yet.
@@ -169,14 +172,19 @@ local function ShiftPromptChip(props: ShiftPromptChipProps?): React.ReactNode
 	local size = UDim2.fromOffset(geometry.size.X, geometry.size.Y)
 	if not ShiftHudViewModel.promptTouchable(UserInputService.TouchEnabled, UserInputService.KeyboardEnabled) then
 		-- Not a button: a GuiButton would sink the mouse click under it (the vacuum is LMB).
-		return e("Frame", {
-			AnchorPoint = Vector2.new(0.5, 0),
-			Position = geometry.position,
-			Size = size,
-			BackgroundTransparency = 1,
-		}, { slip = slip })
+		return e(PaperHudFrame, {
+			scale = hudScale.scale,
+			children = {
+				chip = e("Frame", {
+					AnchorPoint = Vector2.new(0.5, 0),
+					Position = geometry.position,
+					Size = size,
+					BackgroundTransparency = 1,
+				}, { slip = slip }),
+			},
+		})
 	end
-	return e("TextButton", {
+	local button = e("TextButton", {
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = geometry.position,
 		Size = size,
@@ -197,6 +205,7 @@ local function ShiftPromptChip(props: ShiftPromptChipProps?): React.ReactNode
 			press(false)
 		end,
 	}, { slip = slip })
+	return e(PaperHudFrame, { scale = hudScale.scale, children = { chip = button } })
 end
 
 return ShiftPromptChip

@@ -143,6 +143,10 @@ local UIPaperConstants = {
 	TEXT = TEXT,
 	SAFE = SAFE,
 	MOTION = MOTION,
+	-- The screen every desktop px is designed for (the Figma desktop frames are 1920x1080).
+	REFERENCE = Vector2.new(1920, 1080),
+	-- The desktop HUD scales down with a smaller window (PaperHudScaleViewModel), never below this.
+	HUD_SCALE_MIN = 0.55,
 	-- Every tilt the kit uses, in degrees.
 	STAMP_TILT = -3,
 	STICKY_TILT = 2,

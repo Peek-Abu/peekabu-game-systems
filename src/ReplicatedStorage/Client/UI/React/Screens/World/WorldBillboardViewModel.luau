@@ -8,9 +8,13 @@
 	@class WorldBillboardViewModel
 ]=]
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
+
 local WorldBillboardViewModel = {}
 
-WorldBillboardViewModel.REFERENCE = Vector2.new(1920, 1080)
+WorldBillboardViewModel.REFERENCE = UIPaperConstants.REFERENCE
 WorldBillboardViewModel.MIN_SCREEN_SCALE = 0.6
 
 function WorldBillboardViewModel.fit(absolute: Vector2, design: Vector2): number

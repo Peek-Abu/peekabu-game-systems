@@ -26,8 +26,9 @@ local useServerClock = require(ReplicatedStorage.Client.UI.React.Hooks.useServer
 local CatchCctvPanel = require(ReplicatedStorage.Client.UI.React.Screens.Catch.CatchCctvPanel)
 local CatchViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Catch.CatchViewModel)
 local useSpectateTarget = require(ReplicatedStorage.Client.UI.React.Screens.Catch.useSpectateTarget)
+local PaperHudFrame = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudFrame)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
-local usePaperLayout = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperLayout)
+local usePaperHudScale = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperHudScale)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 
 local e = React.createElement
@@ -62,7 +63,9 @@ local function CatchOverlay(): React.ReactNode
 	local snapshot = useAtom(ShiftStore.snapshot)
 	local publicPlayers = useAtom(StateSyncClientStore.publicPlayers)
 	local report = useAtom(OccupantCatchStore.report)
-	local layout: UIPaperConstants.Layout = usePaperLayout()
+	-- Drawn scaled to the window on desktop (its corner pieces, countdown and slip are fixed px), via PaperHudFrame.
+	local hudScale = usePaperHudScale()
+	local layout: UIPaperConstants.Layout = hudScale.layout
 	local now = useServerClock()
 	local targetId = useSpectateTarget()
 	local player = Players.LocalPlayer
@@ -84,12 +87,17 @@ local function CatchOverlay(): React.ReactNode
 	if view == nil then
 		return nil
 	end
-	return e(CatchCctvPanel, {
-		view = view,
-		layout = layout,
-		onPrev = cyclePrev,
-		onNext = cycleNext,
-		jump = ShiftHudViewModel.arcFor(shortSide()).jump,
+	return e(PaperHudFrame, {
+		scale = hudScale.scale,
+		children = {
+			panel = e(CatchCctvPanel, {
+				view = view,
+				layout = layout,
+				onPrev = cyclePrev,
+				onNext = cycleNext,
+				jump = ShiftHudViewModel.arcFor(shortSide()).jump,
+			}),
+		},
 	})
 end
 
