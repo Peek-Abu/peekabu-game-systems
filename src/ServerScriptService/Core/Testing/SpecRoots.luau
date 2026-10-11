@@ -393,6 +393,8 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.UI.React.Screens.Depot.DepotBoardPanel"] = "presentational React component (board specced in DepotBoardViewModel; story in DepotBoardPanel.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Depot.DepotBoardScreen"] = "React scene screen wiring DepotStore to DepotBoardPanel (no logic)",
 	["ReplicatedStorage.Client.UI.React.Screens.Depot.DepotScene"] = "scene registration (declarative, no logic)",
+	["ReplicatedStorage.Client.UI.React.Screens.Depot.DepotPad"] = "React HUD widget wiring QueueStore to DepotPadPanel (card specced in DepotPadViewModel)",
+	["ReplicatedStorage.Client.UI.React.Screens.Depot.DepotPadPanel"] = "presentational React component (story in DepotPadPanel.story)",
 	-- Cleanup Crew: the paper UI kit (M3 UI)
 	["ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants"] = "static palette, fonts and sizes (no logic; inkColor is a frozen lookup)",
 	["ReplicatedStorage.Client.UI.React.Screens.Paper.PaperLabel"] = "presentational React component (story in PaperKit.story)",

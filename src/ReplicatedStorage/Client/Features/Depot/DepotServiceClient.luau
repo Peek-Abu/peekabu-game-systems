@@ -4,8 +4,8 @@
 	takes the server's cards (DepotEvents.Card) into DepotStore and moves the card on as its time runs out.
 	The board's prompt (DepotEvents.Board) opens the contract board scene (DepotScene, registered at require):
 	pushing it twice is a no-op, and once the scene leaves the stack (CLOSE or Escape) the store's board is cleared.
-	The pad countdown and Depart now are Queue's own placeholder widget; the boards and truck labels are
-	world billboards the server builds.
+	The truck queue pad card (DepotPad, with Depart now) replaces Queue's placeholder pad widget, which init hides
+	with QueueServiceClient:setDefaultWidget(false); the boards and truck labels are world billboards the server builds.
 
 	Spec-exempt shell (ByteNet, HUD registration, scene stack, RunService); the card queue is the specced DepotStore.
 
@@ -16,20 +16,24 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Charm = require(ReplicatedStorage.Packages.Charm)
+local React = require(ReplicatedStorage.Packages.React)
 
 local DepotShared = ReplicatedStorage.Shared.Features.Depot
 local DepotConstants = require(DepotShared.Data.DepotConstants)
 local DepotEvents = require(DepotShared.Net.DepotEvents)
 local DepotTypes = require(DepotShared.Data.DepotTypes)
 local DepotStore = require(ReplicatedStorage.Client.Features.Depot.State.DepotStore)
+local QueueServiceClient = require(ReplicatedStorage.Client.Features.Queue.QueueServiceClient)
 local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudRegistry)
 local DepotCard = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotCard)
+local DepotPad = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotPad)
 local SceneStack = require(ReplicatedStorage.Client.UI.Scenes.SceneStack)
 local UIStore = require(ReplicatedStorage.Client.UI.Scenes.UIStore)
 -- Registers the contract board scene at require.
 require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotScene)
 
 local HUD_KEY = "depotCard"
+local PAD_HUD_KEY = "depotPad"
 
 local stoppers: { () -> () } = {}
 
@@ -42,11 +46,22 @@ export type DepotServiceClient = {
 }
 
 local DepotServiceClient: DepotServiceClient = {
-	dependencies = {},
+	dependencies = { "QueueServiceClient" },
 
 	init = function(_self)
 		if not HudRegistry.has(HUD_KEY) then
 			HudRegistry.register(HUD_KEY, DepotCard, DepotConstants.HUD_ORDER)
+		end
+		-- The truck pad card replaces the base placeholder pad panel.
+		QueueServiceClient:setDefaultWidget(false)
+		if not HudRegistry.has(PAD_HUD_KEY) then
+			HudRegistry.register(PAD_HUD_KEY, function()
+				return React.createElement(DepotPad, {
+					onDepart = function()
+						QueueServiceClient:departNow()
+					end,
+				})
+			end, DepotConstants.HUD_ORDER - 1)
 		end
 	end,
 

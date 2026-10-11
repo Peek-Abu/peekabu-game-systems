@@ -1,0 +1,70 @@
+--!strict
+--[=[
+	DepotPadViewModel: the truck's queue card for a player standing in its bed (Figma 3a/3b): the truck and the job,
+	"3 / 4" aboard, a slot per seat (you marked, empty seats "open"), the departure countdown, and how to leave. Pure.
+
+	@class DepotPadViewModel
+]=]
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
+local QueueTypes = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueTypes)
+local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
+
+export type SlotView = { name: string, open: boolean, you: boolean }
+
+export type PadView = {
+	title: string,
+	count: string,
+	slots: { SlotView },
+	names: string,
+	departsIn: string?,
+	departing: boolean,
+	hint: string,
+}
+
+local DepotPadViewModel = {}
+
+function DepotPadViewModel.pad(
+	pad: QueueTypes.PadSnapshot?,
+	myId: number,
+	names: { [number]: string },
+	truck: number?,
+	now: number,
+	phone: boolean
+): PadView?
+	if pad == nil or table.find(pad.members, myId) == nil then
+		return nil
+	end
+	local slots: { SlotView } = {}
+	local listed: { string } = {}
+	for _, userId in pad.members do
+		local name = if userId == myId then "you" else names[userId] or "Crew"
+		table.insert(slots, { name = name, open = false, you = userId == myId })
+		table.insert(listed, name)
+	end
+	for _ = #pad.members + 1, pad.capacity do
+		table.insert(slots, { name = "open", open = true, you = false })
+	end
+	local endsAt = pad.endsAt
+	local title: string
+	if phone then
+		title = if truck ~= nil then `TRUCK {truck} · CREW` else "CREW"
+	else
+		title = if truck ~= nil then `TRUCK {truck} — {DepotConstants.JOB_TITLE}` else DepotConstants.JOB_TITLE
+	end
+	return {
+		title = title,
+		count = `{#pad.members} / {pad.capacity}`,
+		slots = slots,
+		names = table.concat(listed, " · "),
+		departsIn = if not pad.departing and endsAt ~= nil then ShiftHudViewModel.clock(endsAt - now) else nil,
+		departing = pad.departing,
+		hint = if phone
+			then "Step off the truck bed to leave"
+			else "Step off the bed to leave · timer resets when someone joins",
+	}
+end
+
+return DepotPadViewModel
