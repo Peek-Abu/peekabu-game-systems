@@ -47,7 +47,7 @@ return function()
 	end)
 
 	it("clears the room when the player is outside every room", function()
-		local change = ShiftCrewStatusUtils.changes(status(), status({ room = nil, roomDepth = nil, cam = nil }))
+		local change = ShiftCrewStatusUtils.changes(status(), { inTruck = false, vacuuming = false })
 		table.sort(change.clear)
 		expect(#change.clear).to.equal(3)
 		expect(change.clear[1]).to.equal("cam")
