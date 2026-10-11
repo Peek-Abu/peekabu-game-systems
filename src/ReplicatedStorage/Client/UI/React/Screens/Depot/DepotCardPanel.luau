@@ -60,6 +60,8 @@ local function label(
 		autoSize = false,
 		wrapped = scaled ~= true,
 		scaled = scaled,
+		-- Above the card's PaperTexture (ZIndex 0).
+		zIndex = 2,
 		-- The card is itself scaled (down to 0.6): a large absolute minimum would overflow the frame.
 		minSize = if scaled == true then 8 else nil,
 	})
@@ -119,7 +121,7 @@ local function driveCard(view: DepotCardViewModel.DriveView): React.ReactNode
 			ZIndex = 1,
 		}, {
 			corner = e("UICorner", { CornerRadius = UDim.new(0, 4) }),
-			texture = e(PaperTexture, { paper = COLOR.cream, corner = 4, zIndex = 1 }),
+			texture = e(PaperTexture, { paper = COLOR.cream, corner = 4 }),
 			band = e("Frame", {
 				Size = UDim2.new(1, 0, 0, BAND),
 				BackgroundColor3 = COLOR.ink,

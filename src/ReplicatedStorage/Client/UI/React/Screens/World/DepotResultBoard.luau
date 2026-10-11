@@ -125,7 +125,7 @@ local function DepotResultBoard(props: DepotResultBoardProps): React.ReactNode
 			ZIndex = 5,
 		}, {
 			corner = e("UICorner", { CornerRadius = UDim.new(0, 6) }),
-			texture = e(PaperTexture, { paper = COLOR.manilaDeep, corner = 6, zIndex = 1 }),
+			texture = e(PaperTexture, { paper = COLOR.manilaDeep, corner = 6 }),
 			label = e(PaperLabel, {
 				text = props.title,
 				role = "heading",

@@ -62,7 +62,7 @@ local function StickyNote(props: StickyNoteProps): React.ReactNode
 			BackgroundColor3 = COLOR.sticky,
 			BorderSizePixel = 0,
 		}, {
-			texture = e(PaperTexture, { paper = COLOR.sticky, zIndex = 1 }),
+			texture = e(PaperTexture, { paper = COLOR.sticky }),
 			-- Anchored at the top centre so a resized note keeps it centred (Figma CENTER constraint).
 			tape = e("Frame", {
 				AnchorPoint = Vector2.new(0.5, 0.5),

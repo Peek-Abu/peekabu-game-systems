@@ -127,7 +127,7 @@ local function swatches(order: number): React.ReactNode
 			BackgroundColor3 = material.paper,
 			BorderSizePixel = 0,
 		}, {
-			texture = e(PaperTexture, { paper = material.paper, zIndex = 1 }),
+			texture = e(PaperTexture, { paper = material.paper }),
 			label = e(PaperLabel, {
 				text = `{material.name}: {state}`,
 				role = "medium",

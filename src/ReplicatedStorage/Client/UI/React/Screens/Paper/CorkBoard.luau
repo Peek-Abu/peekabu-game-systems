@@ -39,7 +39,7 @@ local function CorkBoard(props: CorkBoardProps): React.ReactNode
 		BorderSizePixel = 0,
 	}, {
 		corner = e("UICorner", { CornerRadius = UDim.new(0, 4) }),
-		woodTexture = e(PaperTexture, { paper = COLOR.wood, corner = 4, zIndex = 1 }),
+		woodTexture = e(PaperTexture, { paper = COLOR.wood, corner = 4 }),
 		cork = e("Frame", {
 			Position = UDim2.fromOffset(frame, frame),
 			Size = UDim2.new(1, -2 * frame, 1, -2 * frame),
@@ -47,7 +47,7 @@ local function CorkBoard(props: CorkBoardProps): React.ReactNode
 			BorderSizePixel = 0,
 			ZIndex = 2,
 		}, {
-			texture = e(PaperTexture, { paper = COLOR.cork, zIndex = 1 }),
+			texture = e(PaperTexture, { paper = COLOR.cork }),
 			edge = e("UIStroke", {
 				Color = COLOR.night,
 				Thickness = 3,

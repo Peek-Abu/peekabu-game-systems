@@ -18,6 +18,7 @@ export type PaperTextureProps = {
 	paper: Color3,
 	-- The paper's corner radius in px, so the texture keeps its rounded corners (0: square).
 	corner: number?,
+	-- Defaults to 0: under every default-ZIndex sibling, so content can never be covered by the texture.
 	zIndex: number?,
 }
 
@@ -34,7 +35,7 @@ local function PaperTexture(props: PaperTextureProps): React.ReactNode
 		Image = layer.image,
 		ScaleType = Enum.ScaleType.Tile,
 		TileSize = UDim2.fromOffset(layer.tile.X, layer.tile.Y),
-		ZIndex = props.zIndex or 1,
+		ZIndex = props.zIndex or 0,
 	}, {
 		corner = if corner > 0 then e("UICorner", { CornerRadius = UDim.new(0, corner) }) else nil,
 	})

@@ -78,7 +78,7 @@ local function bodyOf(
 		ZIndex = 2,
 	}, {
 		corner = if corner > 0 then e("UICorner", { CornerRadius = UDim.new(0, corner) }) else nil,
-		texture = e(PaperTexture, { paper = paper, corner = corner, zIndex = 1 }),
+		texture = e(PaperTexture, { paper = paper, corner = corner }),
 		content = e("Frame", {
 			Size = UDim2.fromScale(1, 1),
 			BackgroundTransparency = 1,

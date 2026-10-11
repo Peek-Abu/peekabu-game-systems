@@ -148,7 +148,7 @@ local function tabOf(text: string, width: number, textSize: number): React.React
 		ZIndex = 1,
 	}, {
 		corner = e("UICorner", { CornerRadius = UDim.new(0, 4) }),
-		texture = e(PaperTexture, { paper = COLOR.manilaDeep, corner = 4, zIndex = 1 }),
+		texture = e(PaperTexture, { paper = COLOR.manilaDeep, corner = 4 }),
 		label = e(PaperLabel, {
 			zIndex = 2,
 			text = text,
@@ -199,7 +199,7 @@ local function PaperSheet(props: PaperSheetProps): React.ReactNode
 
 	local paperChildren: { [string]: React.ReactNode } = {
 		corner = e("UICorner", { CornerRadius = UDim.new(0, 4) }),
-		texture = e(PaperTexture, { paper = paper, corner = 4, zIndex = 1 }),
+		texture = e(PaperTexture, { paper = paper, corner = 4 }),
 		stroke = e("UIStroke", {
 			Color = COLOR.ink,
 			Thickness = 1,

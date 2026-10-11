@@ -62,7 +62,7 @@ local function OccupantMemo(props: OccupantMemoProps): React.ReactNode
 			BorderSizePixel = 0,
 			ZIndex = 2,
 		}, {
-			texture = e(PaperTexture, { paper = COLOR.cream, zIndex = 1 }),
+			texture = e(PaperTexture, { paper = COLOR.cream }),
 			band = e("Frame", {
 				Size = UDim2.new(1, 0, 0, BAND),
 				BackgroundColor3 = COLOR.stamp,
