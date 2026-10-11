@@ -33,12 +33,12 @@ function PaperToastViewModel.layout(toasts: { ToastTypes.Toast }, maxNotes: numb
 	local notes: { NoteView } = {}
 	for index = #toasts, 1, -1 do
 		local toast = toasts[index]
-		local tilt = if toast.id % 2 == 0 then UIPaperConstants.STICKY_TILT else -UIPaperConstants.STICKY_TILT
 		if toast.style == ShiftConstants.TOAST_STAMP then
 			if stamp == nil then
 				stamp = { id = toast.id, text = toast.text, tilt = UIPaperConstants.STAMP_TILT }
 			end
 		elseif #notes < maxNotes then
+			local tilt = if toast.id % 2 == 0 then UIPaperConstants.STICKY_TILT else -UIPaperConstants.STICKY_TILT
 			table.insert(notes, { id = toast.id, text = toast.text, tilt = tilt })
 		end
 	end

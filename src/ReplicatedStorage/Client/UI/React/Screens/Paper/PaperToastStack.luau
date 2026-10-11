@@ -38,7 +38,7 @@ local function Layer(props: LayerProps): React.ReactNode
 		list = e("UIListLayout", {
 			FillDirection = Enum.FillDirection.Vertical,
 			HorizontalAlignment = Enum.HorizontalAlignment.Right,
-			Padding = UDim.new(0, if phone then 8 else 16),
+			Padding = UDim.new(0, if phone then 14 else 28),
 			SortOrder = Enum.SortOrder.LayoutOrder,
 		}),
 	}

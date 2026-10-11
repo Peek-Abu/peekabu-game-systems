@@ -2,7 +2,7 @@
 --[=[
 	PaperStamp: a rubber stamp ("QUOTA MET"), an outlined Oswald Bold word in stamp red at a slight tilt. With `pop`
 	it drops in from 140% once on mount (UIPaperConstants.MOTION); remount it (change its key) to stamp again.
-	Presentational.
+	A size over 100 (Roblox caps TextSize there) is drawn at 100 and enlarged by a UIScale. Presentational.
 
 	@class PaperStamp
 ]=]
@@ -28,12 +28,16 @@ export type PaperStampProps = {
 }
 
 local MOTION = UIPaperConstants.MOTION
+-- Roblox clamps TextLabel.TextSize at 100; a bigger stamp is drawn at 100 and enlarged with its UIScale.
+local MAX_TEXT_SIZE = 100
 
 local function PaperStamp(props: PaperStampProps): React.ReactNode
 	-- Called unconditionally (hook order); only read when `pop` is set.
 	local alpha = usePaperMotion(MOTION.popSeconds)
 	local color = props.color or UIPaperConstants.COLOR.stamp
-	local size = props.size
+	-- Everything below is drawn at `size` (<= 100); `enlarge` scales the whole stamp up to the requested size.
+	local size = math.min(props.size, MAX_TEXT_SIZE)
+	local enlarge = props.size / size
 
 	local children: { [string]: React.ReactNode } = {
 		stroke = e("UIStroke", {
@@ -56,10 +60,12 @@ local function PaperStamp(props: PaperStampProps): React.ReactNode
 			fit = true,
 		}),
 	}
-	if props.pop == true then
+	if props.pop == true or enlarge ~= 1 then
+		-- One UIScale only (two on a frame do not stack): the enlargement times the pop.
 		children.scale = e("UIScale", {
 			Scale = alpha:map(function(value: number): number
-				return MOTION.popFrom + (1 - MOTION.popFrom) * value
+				local pop = if props.pop == true then MOTION.popFrom + (1 - MOTION.popFrom) * value else 1
+				return enlarge * pop
 			end),
 		})
 	end
