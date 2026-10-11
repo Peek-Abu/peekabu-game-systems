@@ -51,6 +51,8 @@ return table.freeze({
 	VOTE_SECONDS = 30,
 	MIN_PLAYERS = 1,
 	VARIANT = VARIANT,
+	-- Seconds after the client starts before it reports its platform (the viewport has its real size by then).
+	PLATFORM_REPORT_DELAY = 2,
 	-- Salvage multiplier normally, and in overtime.
 	SALVAGE_MULTIPLIER = 1,
 	OVERTIME_SALVAGE_MULTIPLIER = 1.5,
