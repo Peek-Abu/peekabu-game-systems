@@ -61,6 +61,8 @@ export type ShiftTripSystem = {
 	stop: (self: ShiftTripSystem) -> (),
 	crew: (self: ShiftTripSystem) -> { Player },
 	crewIds: (self: ShiftTripSystem, except: number?) -> { number },
+	-- The truck the crew rode (from the untrusted depart payload), nil when unknown.
+	truck: (self: ShiftTripSystem) -> number?,
 	startable: (self: ShiftTripSystem, now: number) -> number,
 	sendHome: (self: ShiftTripSystem, results: ShiftTypes.ShiftResults?, shift: number, now: number) -> boolean,
 	isLeaving: (self: ShiftTripSystem, now: number) -> boolean,
@@ -110,6 +112,7 @@ local ShiftTripSystem = {}
 function ShiftTripSystem.new(): ShiftTripSystem
 	local members = ShiftCrewTracker.new()
 	local contract: DepotTypes.Contract = DepotContractUtils.tonight(DepotConstants.CONTRACTS, os.time())
+	local truck: number? = nil
 	local changed: () -> () = function() end
 	local stoppers: { () -> () } = {}
 
@@ -150,6 +153,7 @@ function ShiftTripSystem.new(): ShiftTripSystem
 				end
 				members:join(idsOf(party), presentIds())
 				contract = DepotContractUtils.resolve(DepotConstants.CONTRACTS, payload.contract)
+				truck = DepotContractUtils.truckOf(payload.truck, DepotConstants.MAX_TRUCKS)
 				log:info(`a crew of {#party} arrived for {contract.id}`)
 				changed()
 			end)
@@ -203,6 +207,7 @@ function ShiftTripSystem.new(): ShiftTripSystem
 			table.clear(stoppers)
 			QueueServiceServer:setArrivalPoint(DepotConstants.ROLE_SHIFT, nil)
 			members:clear()
+			truck = nil
 		end,
 
 		crew = function(_self)
@@ -211,6 +216,10 @@ function ShiftTripSystem.new(): ShiftTripSystem
 
 		crewIds = function(_self, except)
 			return members:present(presentIds(except))
+		end,
+
+		truck = function(_self)
+			return truck
 		end,
 
 		startable = function(_self, now)
@@ -233,7 +242,7 @@ function ShiftTripSystem.new(): ShiftTripSystem
 			end
 			local payload: QueuePayload = {}
 			if results ~= nil then
-				payload = ShiftCardUtils.encode(results, { client = contract.client, shift = shift })
+				payload = ShiftCardUtils.encode(results, { client = contract.client, shift = shift, truck = truck })
 			end
 			if not QueueServiceServer:returnParty(players, DepotConstants.ROLE_DEPOT, payload) then
 				for _, player in players do

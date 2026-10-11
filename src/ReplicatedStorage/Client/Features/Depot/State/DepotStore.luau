@@ -4,7 +4,8 @@
 	the office; Cleanup Crew spec §3 steps 2-3). `card` is a Charm atom the HUD widget reads; `show` takes a
 	card from the server (DepotEvents.Card), checks its kind and queues it behind a card still on screen (at
 	most MAX_QUEUED_CARDS wait; the oldest is dropped); `expire` moves on once a card's time is up. Times are
-	os.clock(). A mirror of what the server sent; nothing here is sent back.
+	os.clock(). `board` / `lastShift` hold the contract board's open contract id and the player's last shift
+	(DepotEvents.Board / LastShift). A mirror of what the server sent; nothing here is sent back.
 
 	@class DepotStore
 ]=]
@@ -23,6 +24,10 @@ type Pending = {
 
 local initialCard: DepotTypes.ShownCard? = nil
 local card = Charm.atom(initialCard)
+local initialBoard: string? = nil
+local board = Charm.atom(initialBoard)
+local initialLast: DepotTypes.LastShift? = nil
+local lastShift = Charm.atom(initialLast)
 local pending: { Pending } = {}
 
 local function kindOf(value: string): DepotTypes.CardKind?
@@ -47,6 +52,9 @@ end
 
 local DepotStore = {
 	card = card,
+	-- The contract id of the open board (nil: closed), and the player's last shift for its card.
+	board = board,
+	lastShift = lastShift,
 }
 
 -- Shows (or queues) a card from the server. False, and nothing shown, for an unknown kind.
@@ -84,9 +92,27 @@ function DepotStore.expire(now: number)
 	end
 end
 
+-- Opens the board on a contract id from the server; an unknown id reads as the first contract. Returns the id shown.
+function DepotStore.openBoard(id: string): string
+	local shown = DepotConstants.CONTRACTS[1].id
+	for _, contract in DepotConstants.CONTRACTS do
+		if contract.id == id then
+			shown = id
+		end
+	end
+	board(shown)
+	return shown
+end
+
+function DepotStore.setLastShift(value: DepotTypes.LastShift)
+	lastShift(table.clone(value))
+end
+
 function DepotStore.clear()
 	table.clear(pending)
 	card(nil)
+	board(nil)
+	lastShift(nil)
 end
 
 return DepotStore

@@ -49,6 +49,18 @@ local DepotServiceClient: DepotServiceClient = {
 				DepotStore.show(data.kind, data.title, data.body, os.clock())
 			end)
 		)
+		table.insert(
+			stoppers,
+			DepotEvents.packets.Board.listen(function(id: string)
+				DepotStore.openBoard(id)
+			end)
+		)
+		table.insert(
+			stoppers,
+			DepotEvents.packets.LastShift.listen(function(data: DepotTypes.LastShift)
+				DepotStore.setLastShift(data)
+			end)
+		)
 		DepotEvents.packets.Ready.send(true)
 		local ticking = RunService.Heartbeat:Connect(function()
 			if DepotStore.card() ~= nil then

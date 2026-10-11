@@ -57,4 +57,32 @@ return function()
 		DepotStore.show("arrival", "new", "", DRIVE + 1)
 		expect(DepotStore.card().title).to.equal("new")
 	end)
+
+	describe("board and last shift", function()
+		it("opens the board on a known contract and falls back to the first for an unknown one", function()
+			local id = DepotConstants.CONTRACTS[2].id
+			expect(DepotStore.openBoard(id)).to.equal(id)
+			expect(DepotStore.board()).to.equal(id)
+			expect(DepotStore.openBoard("nope")).to.equal(DepotConstants.CONTRACTS[1].id)
+		end)
+
+		it("keeps the last shift until cleared", function()
+			local last = {
+				cleared = 362,
+				quota = 350,
+				bonus = 215,
+				catches = 2,
+				salvage = 6,
+				offered = 9,
+				quotaMet = true,
+				rating = "exceeds",
+				truck = 2,
+			}
+			DepotStore.setLastShift(last)
+			expect(DepotStore.lastShift().cleared).to.equal(362)
+			DepotStore.clear()
+			expect(DepotStore.lastShift()).to.equal(nil)
+			expect(DepotStore.board()).to.equal(nil)
+		end)
+	end)
 end

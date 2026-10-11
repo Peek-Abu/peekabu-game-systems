@@ -2,12 +2,12 @@
 --[=[
 	ShiftCardUtils: the result card that rides the return teleport to the depot (Cleanup Crew spec §3 steps 1
 	and 7, §6.5 "the depot result card comes through the return teleport"). `encode` flattens a performance
-	review into a Queue payload (flat keys, 28 at most, under Queue's 32); `decode` is the depot's trust
+	review into a Queue payload (flat keys, 29 at most, under Queue's 32); `decode` is the depot's trust
 	boundary: teleport data travels through the client, so a wrong version, a wrong type anywhere or a crew
 	count without its lines reads as no card, numbers are clamped to whole 0..MAX_NUMBER and text is cut to
 	MAX_TEXT characters; `lines` is what the depot's board shows. Pure.
 
-	Wire keys: v, client, shift, outcome, quota, cleared, bonus, salvage, piles, catches, offered, met, crew, awards,
+	Wire keys: v, client, shift, truck (absent when unknown), outcome, quota, cleared, bonus, salvage, piles, catches, offered, met, crew, awards,
 	c<i>n / c<i>b (crew line i: name, banked; i <= 4), a<i>t / a<i>n (award i: title, name; i <= 3).
 
 	@class ShiftCardUtils
@@ -16,9 +16,12 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
+local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
+local DepotTypes = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotTypes)
 local QueueTypes = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueTypes)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
+local DepotContractUtils = require(ServerScriptService.Features.Depot.Utils.DepotContractUtils)
 local ShiftResultsUtils = require(ServerScriptService.Features.Shift.Utils.ShiftResultsUtils)
 
 type QueuePayload = QueueTypes.QueuePayload
@@ -40,6 +43,8 @@ export type ResultCard = {
 	catches: number,
 	offered: number,
 	rating: ShiftTypes.Rating,
+	-- The truck the crew rode (1..DepotConstants.MAX_TRUCKS); nil when unknown or invalid.
+	truck: number?,
 	quotaMet: boolean,
 	crew: { CardLine },
 	awards: { ShiftTypes.Award },
@@ -49,6 +54,7 @@ export type ResultCard = {
 export type CardInfo = {
 	client: string,
 	shift: number,
+	truck: number?,
 }
 
 local VERSION = 1
@@ -107,6 +113,9 @@ function ShiftCardUtils.encode(results: ShiftTypes.ShiftResults, info: CardInfo)
 		offered = results.offered,
 		met = results.quotaMet,
 	}
+	if info.truck ~= nil then
+		payload.truck = info.truck
+	end
 	local crew = math.min(#results.crew, MAX_CREW)
 	payload.crew = crew
 	for index = 1, crew do
@@ -193,9 +202,28 @@ function ShiftCardUtils.decode(payload: QueuePayload?): ResultCard?
 		catches = catches,
 		offered = offered,
 		rating = ShiftResultsUtils.rating(met, salvage, offered),
+		-- A bad truck reads nil; it never rejects the card.
+		truck = DepotContractUtils.truckOf(payload.truck, DepotConstants.MAX_TRUCKS),
 		quotaMet = met,
 		crew = crew,
 		awards = awards,
+	}
+end
+
+--[=[
+	The card as the depot board shows it (DepotEvents.LastShift): the numbers, the rating word, the truck (0 = unknown).
+]=]
+function ShiftCardUtils.summary(card: ResultCard): DepotTypes.LastShift
+	return {
+		cleared = card.cleared,
+		quota = card.quota,
+		bonus = card.bonus,
+		catches = card.catches,
+		salvage = card.salvage,
+		offered = card.offered,
+		quotaMet = card.quotaMet,
+		rating = card.rating,
+		truck = card.truck or 0,
 	}
 end
 

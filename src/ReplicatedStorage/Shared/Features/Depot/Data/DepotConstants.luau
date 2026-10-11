@@ -13,6 +13,28 @@ local DepotTypes = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotTyp
 -- The place-role table, registered in Queue's QueueRegistry by DepotServiceServer at load. Keys are the
 -- role names below. 0 is Queue's placeholder PlaceId: that role is reached by a local move (both roles in
 -- one server) until its real PlaceId is filled in. See docs/cleanup-crew-publish.md.
+-- The contract board's work order (Figma 2a/2b). Quota and shift lines are filled from ShiftConstants by
+-- DepotBoardViewModel; NOTES is the contract's own note.
+local BOARD_COPY = table.freeze({
+	title = "TONIGHT'S JOB",
+	quota = "clearance (rubbish bags, dust bags, recycling)",
+	quotaPhone = "clearance",
+	shift = "on the clock. Clock out at the truck any time.",
+	shiftPhone = "clock out at the truck",
+	fee = "Salvage you load is auctioned. The crew keeps the fee.",
+	feePhone = "Salvage → finder's fee",
+	crew = "1–4 per truck.",
+	hazard = "Occupant on site. Hears vacuums and dropped items. Empty hands run faster.",
+	hazardPhone = "Occupant hears vacuums and drops",
+	sticky = "Lights on the 4th floor again?? — night guard",
+	approved = "APPROVED",
+	dispatchLabel = "DISPATCH · HOW TO START",
+	dispatchTitle = "JOIN A SHIFT",
+	dispatchSteps = "1.  Walk into a truck bed outside.\n2.  Anyone aboard presses DEPART NOW.",
+	dispatchPhone = "Walk into a truck bed outside.",
+	close = "CLOSE  [Esc]",
+})
+
 local PLACE_IDS: { [string]: number } = {
 	-- PLACEHOLDER: the depot place (the experience's start place).
 	depot = 0,
@@ -54,5 +76,15 @@ return table.freeze({
 	-- HUD widget order: above Queue's pad widget (900), under the toasts (1000).
 	HUD_ORDER = 950,
 	RESULT_BOARD_TITLE = "PERFORMANCE REVIEWS",
+	-- M3 UI. The most trucks a depot layout has (the truck number riding the teleport is checked against it).
+	MAX_TRUCKS = 4,
+	-- Public player field: the truck whose bed a player stands in (the queue pad card's "TRUCK 2").
+	PUBLIC_TRUCK = "truck",
+	-- The contract board's Interaction kind (its prompt opens the board scene).
+	BOARD_KIND = "depot-board",
+	-- Every contract is the same office (open question 8).
+	SITE = "4th floor offices",
+	JOB_TITLE = "HARLOW & FINCH JOB",
+	BOARD_COPY = BOARD_COPY,
 	RETURN_TEXT = "Back at the depot. Your performance review is pinned on the board.",
 })

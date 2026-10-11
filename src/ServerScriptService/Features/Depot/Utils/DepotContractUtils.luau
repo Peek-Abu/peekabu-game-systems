@@ -37,15 +37,22 @@ function DepotContractUtils.resolve(contracts: { Contract }, id: unknown): Contr
 	return contracts[1]
 end
 
-function DepotContractUtils.boardLines(contract: Contract, quota: number): { string }
-	return {
-		"TONIGHT'S CONTRACT",
-		contract.client,
-		contract.job,
-		`Load {quota} of trash on the truck. Salvage earns a finder's fee.`,
-		contract.note,
-		"Stand in a truck bed to join a crew (1-4 players).",
-	}
+--[=[
+	A truck number that rode a teleport (untrusted): a whole number 1..max, else nil.
+]=]
+function DepotContractUtils.truckOf(value: unknown, max: number): number?
+	if type(value) ~= "number" or value ~= value or value % 1 ~= 0 then
+		return nil
+	end
+	if value < 1 or value > max then
+		return nil
+	end
+	return value
+end
+
+-- The in-world contract board is a sign now; the work order itself is the board scene (M3 UI).
+function DepotContractUtils.boardLines(contract: Contract): { string }
+	return { "TONIGHT'S JOB", contract.client, "[Read the work order]" }
 end
 
 function DepotContractUtils.driveCard(contract: Contract): DepotTypes.CardMessage

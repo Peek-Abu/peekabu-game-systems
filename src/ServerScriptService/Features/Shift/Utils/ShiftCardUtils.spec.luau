@@ -211,4 +211,41 @@ return function()
 			expect(string.find(text, "Rating: ", 1, true) ~= nil).to.equal(true)
 		end)
 	end)
+
+	describe("truck and summary", function()
+		it("carries a valid truck and drops a bad one", function()
+			local info = { client = INFO.client, shift = INFO.shift, truck = 2 }
+			expect(ShiftCardUtils.decode(ShiftCardUtils.encode(review(2), info)).truck).to.equal(2)
+			local forged = ShiftCardUtils.encode(review(2), info)
+			forged.truck = 99
+			expect(ShiftCardUtils.decode(forged).truck).to.equal(nil)
+			forged.truck = nil
+			expect(ShiftCardUtils.decode(forged).truck).to.equal(nil)
+		end)
+
+		it("summarises the card for the depot board", function()
+			local fixture = review(2)
+			fixture.offered = 9
+			local card = ShiftCardUtils.decode(ShiftCardUtils.encode(fixture, { client = "H&F", shift = 1, truck = 3 }))
+			local summary = ShiftCardUtils.summary(card)
+			expect(summary.cleared).to.equal(card.cleared)
+			expect(summary.offered).to.equal(9)
+			expect(summary.rating).to.equal(card.rating)
+			expect(summary.truck).to.equal(3)
+		end)
+
+		it("writes truck 0 for an unknown truck", function()
+			local card = ShiftCardUtils.decode(ShiftCardUtils.encode(review(2), INFO))
+			expect(ShiftCardUtils.summary(card).truck).to.equal(0)
+		end)
+
+		it("keeps counts past 16 bits for the wire (uint32)", function()
+			local wide = ShiftCardUtils.encode(review(2), INFO)
+			wide.catches = 70000
+			wide.salvage = 70000
+			wide.offered = 70000
+			local summary = ShiftCardUtils.summary(ShiftCardUtils.decode(wide))
+			expect(summary.salvage).to.equal(70000)
+		end)
+	end)
 end

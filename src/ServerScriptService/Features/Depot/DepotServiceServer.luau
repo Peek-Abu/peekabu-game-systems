@@ -16,7 +16,11 @@
 	  contract (resolved from the untrusted payload). A client says it listens (DepotEvents.Ready); a card
 	  sent before that is held and delivered then, so a slow-loading client does not miss it.
 	- A returning player (Queue `returned`) gets their result card (ShiftCardUtils.decode: teleport data is
-	  untrusted) pinned on the result board, visible to them only, and a toast.
+	  untrusted) pinned on the result board, visible to them only, and a toast; the card's summary
+	  (DepotEvents.LastShift, held until Ready like cards) feeds the board's "last shift" card.
+	- The contract board's prompt (Interaction kind DepotConstants.BOARD_KIND) sends the player Board with
+	  tonight's contract id; the depart data carries the truck number (layout order) beside the contract id,
+	  and each player's public `truck` field (DepotConstants.PUBLIC_TRUCK) follows the truck bed they stand in.
 
 	Spec-exempt shell (Players, RunService, ByteNet, Queue signals); the decisions are the specced
 	DepotLayoutRules, DepotContractUtils and ShiftCardUtils.
@@ -35,15 +39,18 @@ local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local DepotConstants = require(DepotShared.Data.DepotConstants)
 local DepotTypes = require(DepotShared.Data.DepotTypes)
 local DepotEvents = require(DepotShared.Net.DepotEvents)
+local InteractionRegistry = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionRegistry)
 local QueueTypes = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueTypes)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local DepotLayoutConstants = require(DepotServer.Data.DepotLayoutConstants)
 local DepotLayoutRules = require(DepotServer.Rules.DepotLayoutRules)
 local DepotContractUtils = require(DepotServer.Utils.DepotContractUtils)
 local DepotBuildSystem = require(DepotServer.Systems.DepotBuildSystem)
+local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
 local QueueRegistry = require(ServerScriptService.Features.Queue.Data.QueueRegistry)
 local QueueServiceServer = require(ServerScriptService.Features.Queue.QueueServiceServer)
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
+local StateSyncPublicPlayerStore = require(ServerScriptService.Features.StateSync.State.StateSyncPublicPlayerStore)
 local ShiftCardUtils = require(ServerScriptService.Features.Shift.Utils.ShiftCardUtils)
 local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
 
@@ -52,6 +59,11 @@ for role, placeId in DepotConstants.PLACE_IDS do
 	if not QueueRegistry.has(role) then
 		QueueRegistry.register(role, placeId)
 	end
+end
+
+-- The contract board's prompt (M3 UI): registered at load, before the board is built and tagged.
+if not InteractionRegistry.has(DepotConstants.BOARD_KIND) then
+	InteractionRegistry.register(DepotConstants.BOARD_KIND, { actionText = "Read", objectText = "Work order" })
 end
 
 local LAYOUT = DepotLayoutConstants.LAYOUT
@@ -69,6 +81,23 @@ local cardsPinned = 0
 -- Clients that said they listen for cards (DepotEvents.Ready); a card for anyone else waits in `held`.
 local ready: { [Player]: true } = {}
 local held: { [Player]: DepotTypes.CardMessage } = {}
+local heldLast: { [Player]: DepotTypes.LastShift } = {}
+-- The truck each player's public field currently says (refreshLabels writes it on change).
+local truckOf: { [number]: number } = {}
+
+-- The truck number (layout order) of a pad, or nil before the garage is built.
+local function truckIndexOf(pad: BasePart): number?
+	local current = built
+	if current == nil then
+		return nil
+	end
+	for _, truck in current.trucks do
+		if truck.pad == pad then
+			return truck.index
+		end
+	end
+	return nil
+end
 
 local function sendCard(players: { Player }, card: DepotTypes.CardMessage)
 	for _, player in players do
@@ -80,6 +109,18 @@ local function sendCard(players: { Player }, card: DepotTypes.CardMessage)
 				held[player] = card
 			end
 		end
+	end
+end
+
+-- The last shift goes the same way: now when the client listens, else when it says so.
+local function sendLast(player: Player, summary: DepotTypes.LastShift)
+	if player.Parent ~= Players then
+		return
+	end
+	if ready[player] then
+		DepotEvents.packets.LastShift.sendTo(summary, player)
+	else
+		heldLast[player] = summary
 	end
 end
 
@@ -95,6 +136,11 @@ local onReady = RequestHandler.wrap({
 		if card ~= nil then
 			held[player] = nil
 			sendCard({ player }, card)
+		end
+		local last = heldLast[player]
+		if last ~= nil then
+			heldLast[player] = nil
+			sendLast(player, last)
 		end
 	end,
 })
@@ -118,6 +164,16 @@ local function refreshLabels()
 		if pad ~= nil then
 			aboard[pad] = (aboard[pad] or 0) + 1
 		end
+		local index = if pad ~= nil then truckIndexOf(pad) else nil
+		if index ~= truckOf[player.UserId] then
+			if index ~= nil then
+				truckOf[player.UserId] = index
+				StateSyncPublicPlayerStore.set(player.UserId, { [DepotConstants.PUBLIC_TRUCK] = index })
+			else
+				truckOf[player.UserId] = nil
+				StateSyncPublicPlayerStore.clearField(player.UserId, DepotConstants.PUBLIC_TRUCK)
+			end
+		end
 	end
 	for _, truck in current.trucks do
 		truck.label.Text = padText(truck.index, aboard[truck.pad] or 0, truck.capacity)
@@ -130,6 +186,7 @@ local function pinResultCard(player: Player, payload: QueueTypes.QueuePayload)
 	if current == nil or card == nil then
 		return
 	end
+	sendLast(player, ShiftCardUtils.summary(card))
 	local lines = ShiftCardUtils.lines(card)
 	task.spawn(function()
 		if DepotBuildSystem.pinCard(player, current.resultBoard, lines) then
@@ -149,15 +206,29 @@ export type DepotServiceServer = {
 }
 
 local DepotServiceServer: DepotServiceServer = {
-	dependencies = { "QueueServiceServer", "ToastServiceServer" },
+	dependencies = {
+		"QueueServiceServer",
+		"ToastServiceServer",
+		"InteractionServiceServer",
+		"StateSyncServiceServer",
+	},
 
 	--[=[
 		Hands Queue the depart data and the depot arrival point, sends travel cards and result cards, and builds
 		the garage where this server runs the depot role.
 	]=]
 	start = function(self)
-		QueueServiceServer:setDepartData(function(_pad, _party)
-			return { contract = contract.id }
+		QueueServiceServer:setDepartData(function(pad, _party)
+			local payload: QueueTypes.QueuePayload = { contract = contract.id }
+			-- The payload type allows no nil, so the key is only added for a known truck.
+			local index = truckIndexOf(pad)
+			if index ~= nil then
+				payload.truck = index
+			end
+			return payload
+		end)
+		InteractionServiceServer:onInteract(DepotConstants.BOARD_KIND, function(player, _target)
+			DepotEvents.packets.Board.sendTo(contract.id, player)
 		end)
 		QueueServiceServer:setArrivalPoint(DepotConstants.ROLE_DEPOT, function(_player, index)
 			return self:spawnCFrame(index)
@@ -181,6 +252,8 @@ local DepotServiceServer: DepotServiceServer = {
 		local leaving = Players.PlayerRemoving:Connect(function(player)
 			ready[player] = nil
 			held[player] = nil
+			heldLast[player] = nil
+			truckOf[player.UserId] = nil
 		end)
 		table.insert(stoppers, function()
 			departing:Disconnect()
@@ -197,11 +270,7 @@ local DepotServiceServer: DepotServiceServer = {
 		end
 		local ok, errors = DepotLayoutRules.validate(LAYOUT)
 		assert(ok, `depot layout is invalid:\n{table.concat(errors, "\n")}`)
-		built = DepotBuildSystem.build(
-			LAYOUT,
-			DepotLayoutConstants.ORIGIN,
-			DepotContractUtils.boardLines(contract, ShiftConstants.QUOTA)
-		)
+		built = DepotBuildSystem.build(LAYOUT, DepotLayoutConstants.ORIGIN, DepotContractUtils.boardLines(contract))
 		refreshLabels()
 		local elapsed = 0
 		local ticking = RunService.Heartbeat:Connect(function(deltaTime)
@@ -224,6 +293,8 @@ local DepotServiceServer: DepotServiceServer = {
 		table.clear(stoppers)
 		table.clear(ready)
 		table.clear(held)
+		table.clear(heldLast)
+		table.clear(truckOf)
 		QueueServiceServer:setDepartData(nil)
 		QueueServiceServer:setArrivalPoint(DepotConstants.ROLE_DEPOT, nil)
 		local current = built

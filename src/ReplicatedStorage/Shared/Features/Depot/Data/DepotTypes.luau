@@ -62,4 +62,18 @@ export type Layout = {
 	spawns: { Point },
 }
 
+-- The returning player's last shift on the client (DepotEvents.LastShift; the board's "YOUR LAST SHIFT" card).
+-- `rating` is a ShiftTypes.Rating word; `truck` 0 = unknown.
+export type LastShift = {
+	cleared: number,
+	quota: number,
+	bonus: number,
+	catches: number,
+	salvage: number,
+	offered: number,
+	quotaMet: boolean,
+	rating: string,
+	truck: number,
+}
+
 return {}

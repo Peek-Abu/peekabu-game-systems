@@ -129,7 +129,7 @@ local function publish()
 		local bonus = if review ~= nil then review.bonus else RoundServiceServer:teamValue(ShiftConstants.BONUS)
 		StateSyncWorldStore.set(
 			ShiftConstants.WORLD_ENTRY,
-			ShiftSnapshotUtils.build(state, cleared, bonus, another, depot, review, trip:crewIds())
+			ShiftSnapshotUtils.build(state, cleared, bonus, another, depot, review, trip:crewIds(), trip:truck())
 		)
 	end)
 end

@@ -20,6 +20,7 @@ local Workspace = game:GetService("Workspace")
 
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local DepotTypes = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotTypes)
+local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionConstants)
 local QueueConstants = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueConstants)
 local DepotLayoutConstants = require(ServerScriptService.Features.Depot.Data.DepotLayoutConstants)
 
@@ -36,6 +37,7 @@ export type Built = {
 	model: Model,
 	trucks: { BuiltTruck },
 	resultBoard: BasePart,
+	contractBoard: BasePart,
 }
 
 local function block(name: string, size: Vector3, cframe: CFrame, color: Color3, parent: Instance): Part
@@ -171,6 +173,9 @@ function DepotBuildSystem.build(layout: DepotTypes.Layout, origin: CFrame, board
 		DepotLayoutConstants.BOARD_COLOR,
 		boards
 	)
+	-- The board's prompt opens the work order (M3 UI): attributes first, then the tag (Interaction reads them on tag).
+	contractBoard:SetAttribute(InteractionConstants.KIND_ATTRIBUTE, DepotConstants.BOARD_KIND)
+	CollectionService:AddTag(contractBoard, InteractionConstants.TAG)
 	local contractGui = billboard(
 		"ContractText",
 		contractBoard,
@@ -197,7 +202,7 @@ function DepotBuildSystem.build(layout: DepotTypes.Layout, origin: CFrame, board
 	titleGui.Parent = boards
 
 	model.Parent = Workspace
-	return { model = model, trucks = trucks, resultBoard = resultBoard }
+	return { model = model, trucks = trucks, resultBoard = resultBoard, contractBoard = contractBoard }
 end
 
 --[=[

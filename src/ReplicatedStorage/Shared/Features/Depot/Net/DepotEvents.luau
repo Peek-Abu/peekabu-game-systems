@@ -2,7 +2,8 @@
 --[=[
 	DepotEvents: the Depot's ByteNet packets: Card (server → client), a travel card (the drive card when a
 	party's truck leaves, the arrival card when it reaches the office; the client checks the kind,
-	DepotStore.show), and Ready (client → server), sent once the client is listening for cards, so the server
+	DepotStore.show), Board (server → client: open the contract board) and LastShift (server → client: the
+	returning player's last shift, for the board's card), and Ready (client → server), sent once the client is listening for cards, so the server
 	holds a card until then (an arrival card can be sent before the client has loaded).
 
 	Boot-timing note (the CarryEvents precedent): the client waits for the per-namespace replicated value the
@@ -31,6 +32,27 @@ local DepotEvents = ByteNet.defineNamespace(NAMESPACE, function()
 					kind = ByteNet.string,
 					title = ByteNet.string,
 					body = ByteNet.string,
+				}),
+				reliabilityType = "reliable",
+			}),
+			-- To one player: open the contract board on this contract id (the board's prompt was used).
+			Board = ByteNet.definePacket({
+				value = ByteNet.string,
+				reliabilityType = "reliable",
+			}),
+			-- To a returning player: their last shift, for the board's card (held until Ready, like Card).
+			-- Counts are uint32: the card decode clamps them to 0..1,000,000, past what uint16 holds.
+			LastShift = ByteNet.definePacket({
+				value = ByteNet.struct({
+					cleared = ByteNet.uint32,
+					quota = ByteNet.uint32,
+					bonus = ByteNet.uint32,
+					catches = ByteNet.uint32,
+					salvage = ByteNet.uint32,
+					offered = ByteNet.uint32,
+					quotaMet = ByteNet.bool,
+					rating = ByteNet.string,
+					truck = ByteNet.uint8,
 				}),
 				reliabilityType = "reliable",
 			}),
