@@ -8,7 +8,7 @@
 	2. desks and lockers: each holds a desk-weighted item with SEARCH_FILL_CHANCE, else nothing;
 	3. the greed target (fish tank, filing cabinet or golden stapler), always in a deep room: a hidden one
 	   (the stapler) in a deep desk or locker (else under a deep pile), the others on a deep item marker;
-	4. salvage: a count in `options.salvage`; in variant "B" a hideable one may go under a free pile;
+	4. salvage: a count in `options.salvage`; in variant "B" a hideable one may go under a free pile (the hide roll is drawn in both variants, so a seed offers the same salvage in A and B);
 	5. trash on the remaining item markers until the floor's trash (plus the piles' dust bags) reaches
 	   TRASH_FACTOR × quota.
 
@@ -176,8 +176,11 @@ function OfficeSpawnUtils.roll(
 		if kind == nil or def == nil then
 			break
 		end
+		-- Drawn in both variants, so A and B consume `rng` alike: the same seed offers the same salvage and only
+		-- where it sits differs (spec §4: the variant never changes rewards).
+		local hideRoll = rng:NextNumber()
 		local hideable = options.variant == "B" and OfficeConstants.HIDEABLE[def.size] == true
-		local pile = if hideable and rng:NextNumber() < OfficeConstants.HIDE_CHANCE then freePile(false) else nil
+		local pile = if hideable and hideRoll < OfficeConstants.HIDE_CHANCE then freePile(false) else nil
 		if pile ~= nil then
 			pile.hides = kind
 		else

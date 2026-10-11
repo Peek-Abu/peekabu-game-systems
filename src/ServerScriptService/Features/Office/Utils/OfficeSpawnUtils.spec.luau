@@ -74,6 +74,31 @@ return function()
 		expect(hidden > 0).to.equal(true)
 	end)
 
+	it("offers the same salvage for the same seed in both variants (only where it sits differs)", function()
+		local function salvageOf(plan)
+			local kinds = {}
+			for _, item in plan.items do
+				if CargoRegistry.get(item.kind).category == "salvage" then
+					table.insert(kinds, item.kind)
+				end
+			end
+			for _, pile in plan.piles do
+				if pile.hides ~= nil then
+					table.insert(kinds, pile.hides)
+				end
+			end
+			table.sort(kinds)
+			return table.concat(kinds, ",")
+		end
+		for seed = 1, 30 do
+			local a = roll(seed, "A")
+			local b = roll(seed, "B")
+			expect(salvageOf(a)).to.equal(salvageOf(b))
+			expect(#a.piles).to.equal(#b.piles)
+			expect(a.greed.kind).to.equal(b.greed.kind)
+		end
+	end)
+
 	it("keeps a hidden greed target out of the open", function()
 		for seed = 1, 50 do
 			local plan = roll(seed)

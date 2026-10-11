@@ -13,6 +13,8 @@ local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTyp
 local ToastTypes = require(ReplicatedStorage.Shared.Features.Toast.Data.ToastTypes)
 
 local VARIANT: ShiftTypes.Variant = "B"
+-- How each shift's variant is chosen (ShiftVariantRules): "alternate" flips A/B per shift; "fixed" always plays VARIANT.
+local VARIANT_MODE: ShiftTypes.VariantMode = "alternate"
 
 -- Cleanup Crew's two toast styles (spec §6.1 "sticky note" and "stamp"; §7 "sticky-note toasts, rubber-stamp
 -- announcements"). Look from the Figma style page, pending the developer's approval; each `sound` is a
@@ -53,6 +55,10 @@ return table.freeze({
 	VARIANT = VARIANT,
 	-- Seconds after the client starts before it reports its platform (the viewport has its real size by then).
 	PLATFORM_REPORT_DELAY = 2,
+	VARIANT_MODE = VARIANT_MODE,
+	-- The Workspace attribute a developer sets to "A" or "B" to force the next shifts' variant (testing only;
+	-- remove it before publishing: Workspace is the place's, so a saved attribute ships).
+	VARIANT_ATTRIBUTE = "CleanupCrewVariant",
 	-- Salvage multiplier normally, and in overtime.
 	SALVAGE_MULTIPLIER = 1,
 	OVERTIME_SALVAGE_MULTIPLIER = 1.5,
