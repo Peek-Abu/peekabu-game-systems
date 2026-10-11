@@ -5,7 +5,9 @@
 	every real name stays whole), the price ("$45" for salvage, "+10" clearance for trash) and the mark: "FRAGILE" for an
 	undamaged fragile item, "CRACKED −50%" / "CRACKED −75%" from CargoConstants.FRAGILE_TIERS once it took impacts
 	(the price turns red), else none. `mounted`: a tag mounts within LABEL_DISTANCE of the camera and stays until
-	LABEL_KEEP_DISTANCE, and never while the item is hidden under a pile. Pure.
+	LABEL_KEEP_DISTANCE, and never while the item is hidden under a pile.
+	The load floaters (W6): clearance pops as the number over CLEARED, the finder's fee as a "+40 BONUS" stamp (the
+	approved frame's copy). Pure.
 
 	@class CargoWorldViewModel
 ]=]
@@ -13,6 +15,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants)
+local CargoFeedbackUtils = require(ReplicatedStorage.Shared.Features.Cargo.Utils.CargoFeedbackUtils)
 local WorldBillboardViewModel = require(ReplicatedStorage.Client.UI.React.Screens.World.WorldBillboardViewModel)
 
 export type PriceTagView = {
@@ -21,6 +24,13 @@ export type PriceTagView = {
 	-- A fragile item that took impacts: the price is drawn in stamp red.
 	cracked: boolean,
 	mark: string?,
+}
+
+export type FloaterView = {
+	-- The finder's fee: drawn as the blue stamp.
+	bonus: boolean,
+	text: string,
+	caption: string?,
 }
 
 local CargoWorldViewModel = {}
@@ -67,6 +77,13 @@ function CargoWorldViewModel.mounted(distance: number, mountedNow: boolean, hidd
 		return distance <= CargoConstants.LABEL_KEEP_DISTANCE
 	end
 	return distance <= CargoConstants.LABEL_DISTANCE
+end
+
+function CargoWorldViewModel.floater(item: CargoFeedbackUtils.Floater): FloaterView
+	if item.tone == "bonus" then
+		return { bonus = true, text = `{item.text} BONUS`, caption = nil }
+	end
+	return { bonus = false, text = item.text, caption = "CLEARED" }
 end
 
 return CargoWorldViewModel

@@ -107,14 +107,12 @@ return table.freeze({
 	SWOOP_HEIGHT = 6,
 	SWOOP_STAGGER = 0.12,
 	SWOOP_END_SCALE = 0.35,
-	-- The "+N" floaters: life, rise, spacing between two, draw distance, look.
+	-- The load floaters: life, rise, spacing between two, draw distance, design size in px (CargoLoadFloater).
 	FLOATER_SECONDS = 1.4,
 	FLOATER_RISE = 4,
 	FLOATER_SPACING = 1.3,
 	FLOATER_DISTANCE = 150,
-	FLOATER_FONT = Enum.Font.Oswald,
-	CLEARANCE_COLOR = Color3.fromRGB(110, 210, 120),
-	BONUS_COLOR = Color3.fromRGB(100, 175, 255),
+	FLOATER_PX = Vector2.new(340, 130),
 	LEAF_SIZE = Vector3.new(1.4, 0.05, 0.7),
 	LEAF_COLORS = table.freeze(LEAF_COLORS),
 	LEAF_OFFSETS = table.freeze(LEAF_OFFSETS),

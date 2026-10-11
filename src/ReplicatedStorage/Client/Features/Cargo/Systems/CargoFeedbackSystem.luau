@@ -3,8 +3,9 @@
 	CargoFeedbackSystem: how cargo feels on this client (Cleanup Crew spec §7 "Banking: item swoops into the
 	truck, cha-ching, '+15' floater, clearance bar fills"; §4 "Office plant: leaves partly block your view").
 	- `Banked` (server → all): a ghost of each loaded item swoops on an arc into the truck bed, shrinking and
-	  spinning (CargoFeedbackUtils.arc); when the last lands, a cha-ching at the bed and a rising "+N" per amount
-	  (clearance green, bonus blue; CargoFeedbackUtils.floaters). The clearance bar is the HUD's.
+	  spinning (CargoFeedbackUtils.arc); when the last lands, a cha-ching at the bed and a rising, fading load floater
+	  per amount, drawn with the paper kit (CargoLoadFloater: "+15 CLEARED", the "+40 BONUS" stamp;
+	  CargoWorldViewModel.floater; CargoFeedbackUtils.floaters). The clearance bar is the HUD's.
 	- Your public fields: a pickup sound when something new comes into your hands, a pocket sound when a pocket
 	  fills, and plant leaves in front of your camera while your hands hold a blocksView item.
 	Drop, rattle and search sounds are the server's (CargoServiceServer). Client-local instances; pending sounds
@@ -24,6 +25,7 @@ local Workspace = game:GetService("Workspace")
 
 local CargoShared = ReplicatedStorage.Shared.Features.Cargo
 local Charm = require(ReplicatedStorage.Packages.Charm)
+local React = require(ReplicatedStorage.Packages.React)
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local PublicPlayerTypes = require(ReplicatedStorage.Shared.Data.PublicPlayerTypes)
 local CargoAssets = require(CargoShared.Data.CargoAssets)
@@ -37,6 +39,13 @@ local SoundTypes = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundTyp
 local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
 local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
+local UIBillboardHost = require(ReplicatedStorage.Client.UI.Layers.UIBillboardHost)
+local UIBillboards = require(ReplicatedStorage.Client.UI.Layers.UIBillboards)
+local CargoLoadFloater = require(ReplicatedStorage.Client.UI.React.Screens.World.CargoLoadFloater)
+local CargoWorldViewModel = require(ReplicatedStorage.Client.UI.React.Screens.World.CargoWorldViewModel)
+local WorldBillboard = require(ReplicatedStorage.Client.UI.React.Screens.World.WorldBillboard)
+
+local e = React.createElement
 
 type Swoop = {
 	part: Part,
@@ -46,8 +55,15 @@ type Swoop = {
 	started: number,
 }
 
+-- A floater on screen: its anchor (which holds the BillboardGui and the fade value) and its React root.
+type Floating = {
+	anchor: Attachment,
+	root: UIBillboards.BillboardHandle,
+}
+
 export type CargoFeedbackState = {
 	swooping: number,
+	floating: number,
 	leaves: number,
 	counters: { [string]: number },
 }
@@ -55,6 +71,7 @@ export type CargoFeedbackState = {
 local log = Logger.new("CargoFeedbackSystem")
 
 local swoops: { Swoop } = {}
+local floating: { Floating } = {}
 local leaves: { BasePart } = {}
 local lastHands: string? = nil
 local lastPockets = 0
@@ -74,34 +91,51 @@ local function play(id: string, options: SoundTypes.PlayOptions?)
 	SoundServiceClient:play(id, options)
 end
 
+-- Unmounts a floater's root, then destroys its anchor (and with it the BillboardGui). Once per floater.
+local function release(entry: Floating)
+	local index = table.find(floating, entry)
+	if index == nil then
+		return
+	end
+	table.remove(floating, index)
+	entry.root.unmount()
+	entry.root.destroy()
+	entry.anchor:Destroy()
+end
+
 local function floater(at: Vector3, index: number, item: CargoFeedbackUtils.Floater)
 	local anchor = Instance.new("Attachment")
 	anchor.Name = "CargoFloater"
 	anchor.Parent = Workspace.Terrain
 	anchor.WorldPosition = at + Vector3.new(0, 1 + index * CargoConstants.FLOATER_SPACING, 0)
+	local size = CargoConstants.FLOATER_PX
 	local gui = Instance.new("BillboardGui")
-	gui.Size = UDim2.fromOffset(140, 48)
+	gui.Size = UDim2.fromOffset(size.X, size.Y)
 	gui.AlwaysOnTop = true
 	gui.LightInfluence = 0
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	gui.MaxDistance = CargoConstants.FLOATER_DISTANCE
 	gui.Adornee = anchor
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.fromScale(1, 1)
-	label.BackgroundTransparency = 1
-	label.Font = CargoConstants.FLOATER_FONT
-	label.TextScaled = true
-	label.Text = item.text
-	label.TextColor3 = if item.tone == "bonus" then CargoConstants.BONUS_COLOR else CargoConstants.CLEARANCE_COLOR
-	label.TextStrokeTransparency = 0.2
-	label.Parent = gui
 	gui.Parent = anchor
+	local fade, setFade = React.createBinding(0)
+	local entry: Floating = { anchor = anchor, root = UIBillboardHost.factory(gui) }
+	table.insert(floating, entry)
+	entry.root.render(e(WorldBillboard, { design = size, sizing = "pixels" }, {
+		floater = e(CargoLoadFloater, { view = CargoWorldViewModel.floater(item), fade = fade }),
+	}))
 	local info = TweenInfo.new(CargoConstants.FLOATER_SECONDS, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 	TweenService:Create(gui, info, { StudsOffset = Vector3.new(0, CargoConstants.FLOATER_RISE, 0) }):Play()
-	local fade = TweenService:Create(label, info, { TextTransparency = 1, TextStrokeTransparency = 1 })
-	fade.Completed:Once(function()
-		anchor:Destroy()
+	-- The fade tweens a value that drives the floater's transparency binding; the React tree itself is never tweened.
+	local alpha = Instance.new("NumberValue")
+	alpha.Parent = anchor
+	alpha.Changed:Connect(function(value: number)
+		setFade(value)
 	end)
-	fade:Play()
+	local fadeOut = TweenService:Create(alpha, info, { Value = 1 })
+	fadeOut.Completed:Once(function()
+		release(entry)
+	end)
+	fadeOut:Play()
 	counters.floaters += 1
 end
 
@@ -261,13 +295,16 @@ function CargoFeedbackSystem.stop()
 		item.part:Destroy()
 	end
 	table.clear(swoops)
+	while #floating > 0 do
+		release(floating[1])
+	end
 	showLeaves(false)
 	lastHands = nil
 	lastPockets = 0
 end
 
 function CargoFeedbackSystem.getState(): CargoFeedbackState
-	return { swooping = #swoops, leaves = #leaves, counters = table.clone(counters) }
+	return { swooping = #swoops, floating = #floating, leaves = #leaves, counters = table.clone(counters) }
 end
 
 return CargoFeedbackSystem

@@ -2,7 +2,7 @@
 --[=[
 	CargoWorld.story: the on-shift cargo signs (Figma World UI 2b) over the dark office, in Studio's edit mode (UI
 	Labs). Price tags for a salvage item, a trash item, the longest catalog name and the fish tank after `Impacts` drops
-	(0 FRAGILE, 1 CRACKED −50%, 2+ CRACKED −75%). Drawn through WorldBillboard as on a pixel-sized shell, so the
+	(0 FRAGILE, 1 CRACKED −50%, 2+ CRACKED −75%), and the two load floaters (`Fade` 0..1 previews the fade). Drawn through WorldBillboard as on a pixel-sized shell, so the
 	scale follows this viewport (min(w/1920, h/1080), 0.6 to 1).
 
 	@class CargoWorld.story
@@ -17,6 +17,7 @@ local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.Carg
 local CargoRegistry = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoRegistry)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local CargoPriceTag = require(ReplicatedStorage.Client.UI.React.Screens.World.CargoPriceTag)
+local CargoLoadFloater = require(ReplicatedStorage.Client.UI.React.Screens.World.CargoLoadFloater)
 local CargoWorldViewModel = require(ReplicatedStorage.Client.UI.React.Screens.World.CargoWorldViewModel)
 local WorldBillboard = require(ReplicatedStorage.Client.UI.React.Screens.World.WorldBillboard)
 
@@ -53,6 +54,24 @@ local function priceTag(order: number, kind: string, impacts: number): React.Rea
 	})
 end
 
+-- A load floater at fade `fade` (a fixed binding: the story needs no hook).
+local function floaterSign(order: number, text: string, tone: "clearance" | "bonus", fade: number): React.ReactNode
+	local size = CargoConstants.FLOATER_PX
+	local binding = React.createBinding(fade)
+	return e("Frame", {
+		LayoutOrder = order,
+		Size = UDim2.fromOffset(size.X, size.Y),
+		BackgroundTransparency = 1,
+	}, {
+		billboard = e(WorldBillboard, { design = size, sizing = "pixels" }, {
+			floater = e(CargoLoadFloater, {
+				view = CargoWorldViewModel.floater({ text = text, tone = tone }),
+				fade = binding,
+			}),
+		}),
+	})
+end
+
 local function row(order: number, children: { [string]: React.ReactNode }): React.ReactNode
 	local content: { [string]: React.ReactNode } = {
 		layout = e("UIListLayout", {
@@ -78,6 +97,7 @@ return UILabs.CreateReactStory({
 	reactRoblox = ReactRoblox,
 	controls = {
 		Impacts = 1,
+		Fade = 0,
 	},
 }, function(props)
 	local impacts: number = math.max(0, math.floor(props.controls.Impacts))
@@ -101,6 +121,10 @@ return UILabs.CreateReactStory({
 			plaque = priceTag(3, "plaque", 0),
 			monitor = priceTag(4, "monitor", 0),
 			fishTank = priceTag(5, "fishTank", impacts),
+		}),
+		floaters = row(2, {
+			clearance = floaterSign(1, "+15", "clearance", math.clamp(props.controls.Fade, 0, 1)),
+			bonus = floaterSign(2, "+40", "bonus", math.clamp(props.controls.Fade, 0, 1)),
 		}),
 	})
 end)
