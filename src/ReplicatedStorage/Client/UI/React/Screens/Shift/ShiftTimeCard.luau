@@ -28,8 +28,10 @@ export type ShiftTimeCardProps = {
 local COLOR = UIPaperConstants.COLOR
 local TEXT = UIPaperConstants.TEXT.desktop
 -- Figma 1a: the card's top edge, and the overtime stamp's top edge (1c "Stamp" at y 166).
+-- Both are anchored to the top centre: the card spans x 780-1140 (centred on 1920), the stamp's centre is 6 px right.
 local CARD_TOP = 20
 local STAMP_TOP = 166
+local STAMP_CENTRE_OFFSET = 6
 -- Content positions are Figma's minus the 26 px band (PaperSheet insets the content by the band).
 local HOLE_TOP = 12
 local HOLE_STEP = 18
@@ -124,7 +126,7 @@ local function ShiftTimeCard(props: ShiftTimeCardProps): React.ReactNode
 				tilt = UIPaperConstants.STAMP_TILT,
 				pop = true,
 				anchor = Vector2.new(0.5, 0),
-				position = UDim2.new(0.5, 0, 0, STAMP_TOP),
+				position = UDim2.new(0.5, STAMP_CENTRE_OFFSET, 0, STAMP_TOP),
 			})
 			else nil,
 	})

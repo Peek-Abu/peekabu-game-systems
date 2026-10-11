@@ -1,10 +1,10 @@
 --!strict
 --[=[
 	ShiftCrewRoster: the clipped crew roster card (Figma 35:1100 / 35:1119 / 35:1137, 1a-1c "Crew strip"): a cream sheet
-	under a binder clip, "CREW ROSTER · TRUCK 2", and a row per crew member: a drawn tick box (a green tick, or a marker
-	"X" in red when struck), the name (struck through when caught or not aboard) and the status in its ink. No glyph
-	ticks: the tick is two thin Frames. Presentational: the statuses, inks and strikes come from ShiftCrewViewModel
-	(desktop; the phone's two lines are Task 10).
+	under a binder clip, "CREW ROSTER · TRUCK 2", and a row per crew member: a drawn tick box (a green tick for crew at
+	or in the truck, a red marker "X" when struck, empty otherwise), the name (struck through when caught or not aboard)
+	and the status in its ink. No glyph ticks: the tick is two thin Frames. Presentational: the statuses, inks, strikes
+	and box states come from ShiftCrewViewModel (desktop; the phone's two lines are Task 10).
 
 	@class ShiftCrewRoster
 ]=]
@@ -88,7 +88,7 @@ local function row(index: number, member: ShiftCrewViewModel.MemberView): React.
 				Thickness = 1.5,
 				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 			}),
-			mark = if member.struck
+			mark = if member.box == "x"
 				then e(PaperLabel, {
 					text = "X",
 					role = "marker",
@@ -98,7 +98,8 @@ local function row(index: number, member: ShiftCrewViewModel.MemberView): React.
 					position = UDim2.fromScale(0.5, 0.5),
 					fit = true,
 				})
-				else tick(),
+				elseif member.box == "tick" then tick()
+				else nil,
 		}),
 		-- Long display names and statuses are clipped to their columns (Figma's columns are fixed).
 		name = e("Frame", {

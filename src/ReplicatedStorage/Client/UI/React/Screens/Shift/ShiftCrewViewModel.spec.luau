@@ -91,6 +91,50 @@ return function()
 		expect(statusOf(normal, 3).status).to.equal("vacuuming")
 	end)
 
+	it("keeps CAUGHT above aboard / NOT ABOARD while clocking out", function()
+		local view = ShiftCrewViewModel.roster(
+			{ 2 },
+			players({
+				[2] = { caughtUntil = 106, dead = true, inTruck = true },
+			}),
+			NAMES,
+			nil,
+			true,
+			100
+		)
+		local alex = statusOf(view, 2)
+		expect(alex.status).to.equal("CAUGHT · back 0:06")
+		expect(alex.tone).to.equal("danger")
+		expect(alex.struck).to.equal(true)
+	end)
+
+	it("reads a dead player with no back-in time as plain CAUGHT", function()
+		local view = ShiftCrewViewModel.roster({ 2 }, players({ [2] = { dead = true } }), NAMES, nil, false, 100)
+		local alex = statusOf(view, 2)
+		expect(alex.status).to.equal("CAUGHT")
+		expect(alex.tone).to.equal("danger")
+		expect(alex.struck).to.equal(true)
+	end)
+
+	it("ticks only crew in the truck bed or at the truck", function()
+		local crew = players({
+			[1] = { carrying = "printer", inTruck = true },
+			[2] = { caughtUntil = 106, dead = true },
+			[3] = { vacuuming = true },
+		})
+		local normal = ShiftCrewViewModel.roster({ 1, 2, 3 }, crew, NAMES, nil, false, 100)
+		expect(statusOf(normal, 1).box).to.equal("empty")
+		expect(statusOf(normal, 2).box).to.equal("x")
+		expect(statusOf(normal, 3).box).to.equal("empty")
+		local atTruck = ShiftCrewViewModel.roster({ 1 }, players({ [1] = { inTruck = true } }), NAMES, nil, false, 0)
+		expect(statusOf(atTruck, 1).box).to.equal("tick")
+		local room = ShiftCrewViewModel.roster({ 1 }, players({ [1] = { room = "Archive" } }), NAMES, nil, false, 0)
+		expect(statusOf(room, 1).box).to.equal("empty")
+		local out = ShiftCrewViewModel.roster({ 1, 3 }, crew, NAMES, nil, true, 100)
+		expect(statusOf(out, 1).box).to.equal("tick")
+		expect(statusOf(out, 3).box).to.equal("x")
+	end)
+
 	it("falls back to the room, then to on shift", function()
 		local view = ShiftCrewViewModel.roster({ 1, 2 }, players({ [1] = { room = "Archive" } }), NAMES, nil, false, 0)
 		expect(statusOf(view, 1).status).to.equal("Archive")

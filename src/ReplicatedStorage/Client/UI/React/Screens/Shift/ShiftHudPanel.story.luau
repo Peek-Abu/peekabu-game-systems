@@ -1,6 +1,7 @@
 --!strict
 --[=[
-	ShiftHudPanel.story: the Shift HUD at 1920x1080 on the dark office, in Studio's edit mode (UI Labs), for the
+	ShiftHudPanel.story: the Shift HUD filling the viewport on the dark office (each piece anchors to its screen edge, so
+	resize the viewport to check 1366x768), in Studio's edit mode (UI Labs), for the
 	side-by-side check against Figma 1a (6:2), 1b (6:67) and 1c (6:136). `Variant` picks the frame, `SecondsLeft` sets
 	the clock (story time is 0) and `Phone` switches to the phone layout (empty until Task 10).
 
@@ -65,7 +66,7 @@ return UILabs.CreateReactStory({
 	)
 	local layout: UIPaperConstants.Layout = if phone then "phone" else "desktop"
 	return e("Frame", {
-		Size = UDim2.fromOffset(1920, 1080),
+		Size = UDim2.fromScale(1, 1),
 		BackgroundColor3 = UIPaperConstants.COLOR.office,
 		BorderSizePixel = 0,
 	}, {

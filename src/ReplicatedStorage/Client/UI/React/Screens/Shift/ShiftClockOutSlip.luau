@@ -27,6 +27,14 @@ local COLOR = UIPaperConstants.COLOR
 local TEXT = UIPaperConstants.TEXT.desktop
 -- Figma 1c: the slip's top edge (y 262); content positions are Figma's minus the 26 px band.
 local TOP = 262
+-- Figma 1c: the slip spans x 710-1210, centred on the 1920 screen.
+local CENTRE_OFFSET = 0
+local WIDTH = 500
+local HEIGHT = 128
+local TILT = -1
+-- Right of the longest title ("CLOCK-OUT SLIP — TRUCK 2" ends near x 280), clear of the text.
+local STAPLE_LEFT = 420
+local STAPLE_COLOR = Color3.fromHex("B0B4BA")
 local HOLES = 5
 
 local function ShiftClockOutSlip(props: ShiftClockOutSlipProps): React.ReactNode
@@ -75,17 +83,31 @@ local function ShiftClockOutSlip(props: ShiftClockOutSlipProps): React.ReactNode
 			BorderSizePixel = 0,
 		}, { corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }) })
 	end
-	return e(PaperSheet, {
-		anchor = Vector2.new(0.5, 0),
-		position = UDim2.new(0.5, 0, 0, TOP),
-		size = UDim2.fromOffset(500, 128),
-		paper = COLOR.cream,
-		band = if truck ~= nil then `CLOCK-OUT SLIP — TRUCK {truck}` else "CLOCK-OUT SLIP",
-		fastener = "staple",
-		torn = true,
-		tilt = -1,
-		padding = 0,
-		children = children,
+	-- The slip and its own staple share a tilted holder, so the staple sits right of the band's title (the kit's
+	-- staple is fixed at the top-left corner, over the "CLOCK-OUT SLIP" text).
+	return e("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, CENTRE_OFFSET, 0, TOP),
+		Size = UDim2.fromOffset(WIDTH, HEIGHT),
+		Rotation = TILT,
+		BackgroundTransparency = 1,
+	}, {
+		sheet = e(PaperSheet, {
+			size = UDim2.fromScale(1, 1),
+			paper = COLOR.cream,
+			band = if truck ~= nil then `CLOCK-OUT SLIP — TRUCK {truck}` else "CLOCK-OUT SLIP",
+			torn = true,
+			padding = 0,
+			children = children,
+		}),
+		staple = e("Frame", {
+			Position = UDim2.fromOffset(STAPLE_LEFT, -2),
+			Size = UDim2.fromOffset(28, 4),
+			Rotation = -8,
+			BackgroundColor3 = STAPLE_COLOR,
+			BorderSizePixel = 0,
+			ZIndex = 2,
+		}),
 	})
 end
 
