@@ -112,7 +112,7 @@ local function PaperTag(props: PaperTagProps): React.ReactNode
 				Rotation = 45,
 				BackgroundColor3 = paper,
 				BorderSizePixel = 0,
-				ZIndex = 2,
+				ZIndex = 1,
 			}),
 			body = bodyOf(paper, UDim2.fromOffset(half, 0), UDim2.new(1, -half, 1, 0), 0, props.children),
 			hole = holeOf(LEFT_HOLE, Vector2.new(LEFT_HOLE_X, half), false),
