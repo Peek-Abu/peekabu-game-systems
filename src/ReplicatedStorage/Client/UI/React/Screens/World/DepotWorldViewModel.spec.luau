@@ -2,6 +2,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local DepotWorldViewModel = require(script.Parent.DepotWorldViewModel)
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
+local DepotBoardViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotBoardViewModel)
+local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
+local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 
 local NOW = 1000
 
@@ -116,6 +119,151 @@ return function()
 			expect(DepotWorldViewModel.sameTag(nil, a)).to.equal(false)
 			expect(DepotWorldViewModel.sameTag(a, nil)).to.equal(false)
 			expect(DepotWorldViewModel.sameTag(nil, nil)).to.equal(true)
+		end)
+	end)
+
+	describe("workOrder", function()
+		local keys = DepotConstants.CONTRACT_KEYS
+
+		local function board(client)
+			return {
+				[keys.id] = "harlow-finch-1",
+				[keys.client] = client or "Harlow & Finch Ltd.",
+				[keys.job] = "Clear the office before the sale.",
+			}
+		end
+
+		it("reads tonight's contract off the board's attributes", function()
+			local view = DepotWorldViewModel.workOrder(board())
+			expect(view.number).to.equal(`WORK ORDER {DepotBoardViewModel.workOrder("harlow-finch-1")}`)
+			expect(view.kicker).to.equal("TONIGHT'S JOB")
+			expect(view.client).to.equal("Harlow & Finch Ltd.")
+			expect(view.job).to.equal("Clear the office before the sale.")
+			expect(view.clear).to.equal(`CLEAR {ShiftConstants.QUOTA}`)
+			expect(view.before).to.equal(`of trash before {ShiftHudViewModel.clock(ShiftConstants.SHIFT_SECONDS)}`)
+			expect(view.key).to.equal("E")
+			expect(view.action).to.equal("Read the work order")
+		end)
+
+		it("cuts a long client name", function()
+			local view = DepotWorldViewModel.workOrder(board(string.rep("Pemberton ", 6)))
+			expect(utf8.len(view.client)).to.equal(DepotWorldViewModel.WORK_CLIENT_MAX)
+			expect(string.sub(view.client, -3)).to.equal("…")
+		end)
+
+		it("draws nothing for a board without its contract", function()
+			expect(DepotWorldViewModel.workOrder({})).to.equal(nil)
+			local bad = board()
+			bad[keys.client] = 5
+			expect(DepotWorldViewModel.workOrder(bad)).to.equal(nil)
+		end)
+	end)
+
+	describe("review", function()
+		local keys = DepotConstants.REVIEW_KEYS
+		local quotes = ShiftConstants.REVIEW_QUOTES
+
+		local function card()
+			return {
+				[keys.client] = "Pemberton Dental",
+				[keys.cleared] = 362,
+				[keys.quota] = 350,
+				[keys.bonus] = 215,
+				[keys.catches] = 3,
+				[keys.salvage] = 5,
+				[keys.offered] = 9,
+				[keys.met] = true,
+				[keys.rating] = "exceeds",
+				[keys.truck] = 2,
+				[`{keys.crew}1`] = "Sam",
+				[`{keys.crew}2`] = "Alex",
+				[`{keys.crew}3`] = "Jo",
+				[`{keys.awardTitle}1`] = "EMPLOYEE OF THE NIGHT",
+				[`{keys.awardName}1`] = "Sam",
+				[`{keys.awardTitle}2`] = "BUTTERFINGERS",
+				[`{keys.awardName}2`] = "Jo",
+			}
+		end
+
+		it("lays the card out like the review", function()
+			local view = DepotWorldViewModel.review(card())
+			expect(view.band).to.equal("SHIFT REVIEW · PEMBERTON DENTAL")
+			expect(view.rows[1].label).to.equal("CLEARED")
+			expect(view.rows[1].value).to.equal("362 / 350")
+			expect(view.rows[2].label).to.equal("FINDER'S FEE")
+			expect(view.rows[2].value).to.equal("+215")
+			expect(view.rows[3].label).to.equal("TIMES CAUGHT")
+			expect(view.rows[3].value).to.equal("3")
+			expect(view.rows[4].label).to.equal("SALVAGE")
+			expect(view.rows[4].value).to.equal("5 of 9")
+			expect(view.headline).to.equal("QUOTA MET")
+			expect(view.met).to.equal(true)
+			expect(view.rating).to.equal("EXCEEDS EXPECTATIONS")
+			expect(view.crew).to.equal("Crew: Sam · Alex · Jo")
+			expect(view.quote).to.equal(`{quotes.met.line} {quotes.met.by}`)
+			expect(#view.stickies).to.equal(2)
+			expect(view.stickies[1].title).to.equal("EMPLOYEE OF THE NIGHT")
+			expect(view.stickies[1].name).to.equal("Sam")
+			expect(view.stickies[2].title).to.equal("BUTTERFINGERS")
+			expect(view.stickies[2].name).to.equal("Jo")
+		end)
+
+		it("stamps a missed quota and never rates it above NEEDS IMPROVEMENT", function()
+			local missed = card()
+			missed[keys.met] = false
+			local view = DepotWorldViewModel.review(missed)
+			expect(view.headline).to.equal("QUOTA MISSED")
+			expect(view.met).to.equal(false)
+			expect(view.rating).to.equal("NEEDS IMPROVEMENT")
+			expect(view.quote).to.equal(`{quotes.missed.line} {quotes.missed.by}`)
+		end)
+
+		it("reads an unknown rating as NEEDS IMPROVEMENT", function()
+			local odd = card()
+			odd[keys.rating] = "legendary"
+			expect(DepotWorldViewModel.review(odd).rating).to.equal("NEEDS IMPROVEMENT")
+		end)
+
+		it("cuts a long client name in the band", function()
+			local long = card()
+			long[keys.client] = string.rep("Pemberton ", 6)
+			local view = DepotWorldViewModel.review(long)
+			local clipped = string.sub(view.band, #"SHIFT REVIEW · " + 1)
+			expect(utf8.len(clipped)).to.equal(DepotWorldViewModel.BAND_CLIENT_MAX)
+			expect(string.sub(clipped, -3)).to.equal("…")
+		end)
+
+		it("lists at most four crew and three awards, stopping at the first gap", function()
+			local many = card()
+			many[`{keys.crew}4`] = "Kim"
+			many[`{keys.crew}5`] = "Extra"
+			many[`{keys.awardTitle}3`] = "QUIETEST FEET"
+			many[`{keys.awardName}3`] = "Alex"
+			many[`{keys.awardTitle}4`] = "LOUDEST VACUUM"
+			many[`{keys.awardName}4`] = "Kim"
+			local view = DepotWorldViewModel.review(many)
+			expect(view.crew).to.equal("Crew: Sam · Alex · Jo · Kim")
+			expect(#view.stickies).to.equal(3)
+			local gap = card()
+			gap[`{keys.crew}2`] = nil
+			expect(DepotWorldViewModel.review(gap).crew).to.equal("Crew: Sam")
+		end)
+
+		it("draws no card from attributes that are not a card", function()
+			expect(DepotWorldViewModel.review({})).to.equal(nil)
+			local bad = card()
+			bad[keys.met] = "yes"
+			expect(DepotWorldViewModel.review(bad)).to.equal(nil)
+			local noCount = card()
+			noCount[keys.cleared] = "lots"
+			expect(DepotWorldViewModel.review(noCount)).to.equal(nil)
+		end)
+	end)
+
+	describe("drawsSharedBoard", function()
+		it("draws the shared result board only while this client has no review shell", function()
+			expect(DepotWorldViewModel.drawsSharedBoard(false)).to.equal(true)
+			expect(DepotWorldViewModel.drawsSharedBoard(true)).to.equal(false)
 		end)
 	end)
 end

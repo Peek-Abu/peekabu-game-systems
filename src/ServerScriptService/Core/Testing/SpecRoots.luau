@@ -399,6 +399,8 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.UI.React.Screens.Depot.DepotPad"] = "React HUD widget wiring QueueStore to DepotPadPanel (card specced in DepotPadViewModel)",
 	["ReplicatedStorage.Client.Features.Depot.Systems.DepotBillboardSystem"] = "CollectionService/RunService/React-root shell (signs specced in DepotWorldViewModel; roots in UIBillboards)",
 	["ReplicatedStorage.Client.UI.React.Screens.World.DepotTruckTag"] = "presentational React component (tag specced in DepotWorldViewModel; story in DepotWorld.story)",
+	["ReplicatedStorage.Client.UI.React.Screens.World.DepotWorkOrderBoard"] = "presentational React component (work order specced in DepotWorldViewModel; story in DepotWorld.story)",
+	["ReplicatedStorage.Client.UI.React.Screens.World.DepotResultBoard"] = "presentational React component (review card specced in DepotWorldViewModel; story in DepotWorld.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Depot.DepotPadPanel"] = "presentational React component (story in DepotPadPanel.story)",
 	-- Cleanup Crew: the paper UI kit (M3 UI)
 	["ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants"] = "static palette, fonts and sizes (no logic; inkColor is a frozen lookup)",

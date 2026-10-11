@@ -3,10 +3,10 @@
 	DepotBuildSystem: builds the depot's static graybox once (Cleanup Crew spec §1 "polished feel on
 	graybox", §3 step 1, §5): a floor and four walls; per truck a bed that is a Queue pad (QueueCapacity,
 	QueueCountdown and QueueDestination set BEFORE the QueuePad tag, because Queue reads them once when the
-	pad is tagged), a cab behind it and an empty truck tag shell above it (tagged, its truck number and seats as attributes; the client draws it); the contract board with tonight's contract; the
-	result board, where `pinCard` hangs a returning player's card that only they see (a BillboardGui in their
-	PlayerGui, kept across respawns). Plain placeholder look on purpose: the final boards and labels wait for
-	the developer's Figma approval (spec §7). Everything is anchored under one Model in Workspace.
+	pad is tagged), a cab behind it and an empty truck tag shell above it (tagged, its truck number and seats as attributes; the client draws it); the contract board's sign shell with tonight's
+	contract as attributes; the result board's sign shell, and `pinCard`, which hangs a returning player's review shell
+	that only they see (in their PlayerGui, kept across respawns). Every sign is an empty tagged BillboardGui the client
+	draws (Figma World UI 2a, DepotBillboardSystem). Everything is anchored under one Model in Workspace.
 
 	Spec-exempt shell (Instances); the layout is the one the specced DepotLayoutRules validated.
 
@@ -76,40 +76,13 @@ local function shell(name: string, adornee: BasePart, design: Vector2, offset: V
 	return gui
 end
 
--- A plain text billboard over `adornee` (size in studs). Returned unparented with its label.
-local function billboard(
-	name: string,
-	adornee: BasePart,
-	size: Vector2,
-	offset: Vector3,
-	text: string
-): (BillboardGui, TextLabel)
-	local gui = Instance.new("BillboardGui")
-	gui.Name = name
-	gui.Adornee = adornee
-	gui.Size = UDim2.fromScale(size.X, size.Y)
-	gui.StudsOffset = offset
-	gui.MaxDistance = DepotLayoutConstants.LABEL_MAX_DISTANCE
-	gui.LightInfluence = 0
-	local label = Instance.new("TextLabel")
-	label.Name = "Text"
-	label.Size = UDim2.fromScale(1, 1)
-	label.BackgroundColor3 = DepotLayoutConstants.LABEL_BACKGROUND
-	label.BackgroundTransparency = 0.1
-	label.TextColor3 = DepotLayoutConstants.LABEL_TEXT
-	label.Font = Enum.Font.SourceSansSemibold
-	label.TextScaled = true
-	label.TextWrapped = true
-	-- Card text is decoded teleport data (client-forgeable): never markup.
-	label.RichText = false
-	label.Text = text
-	label.Parent = gui
-	return gui, label
-end
-
 local DepotBuildSystem = {}
 
-function DepotBuildSystem.build(layout: DepotTypes.Layout, origin: CFrame, boardLines: { string }): Built
+function DepotBuildSystem.build(
+	layout: DepotTypes.Layout,
+	origin: CFrame,
+	contractAttributes: { [string]: string }
+): Built
 	local model = Instance.new("Model")
 	model.Name = DepotLayoutConstants.MODEL_NAME
 	local floor = layout.floor
@@ -193,14 +166,13 @@ function DepotBuildSystem.build(layout: DepotTypes.Layout, origin: CFrame, board
 	-- The board's prompt opens the work order (M3 UI): attributes first, then the tag (Interaction reads them on tag).
 	contractBoard:SetAttribute(InteractionConstants.KIND_ATTRIBUTE, DepotConstants.BOARD_KIND)
 	CollectionService:AddTag(contractBoard, InteractionConstants.TAG)
-	local contractGui = billboard(
-		"ContractText",
-		contractBoard,
-		DepotLayoutConstants.BOARD_LABEL_SIZE,
-		DepotLayoutConstants.BOARD_LABEL_OFFSET,
-		table.concat(boardLines, "\n")
-	)
-	contractGui.Parent = boards
+	local contractSign =
+		shell("ContractSign", contractBoard, DepotConstants.BILLBOARD_PX.contract, DepotLayoutConstants.CONTRACT_OFFSET)
+	for key, value in contractAttributes do
+		contractSign:SetAttribute(key, value)
+	end
+	CollectionService:AddTag(contractSign, DepotConstants.BILLBOARD_TAGS.contract)
+	contractSign.Parent = boards
 	local resultPoint = layout.resultBoard
 	local resultBoard = block(
 		"ResultBoard",
@@ -209,25 +181,26 @@ function DepotBuildSystem.build(layout: DepotTypes.Layout, origin: CFrame, board
 		DepotLayoutConstants.BOARD_COLOR,
 		boards
 	)
-	local titleGui = billboard(
-		"ResultTitle",
-		resultBoard,
-		DepotLayoutConstants.TITLE_LABEL_SIZE,
-		DepotLayoutConstants.TITLE_LABEL_OFFSET,
-		DepotConstants.RESULT_BOARD_TITLE
-	)
-	titleGui.Parent = boards
+	local resultSign =
+		shell("ResultSign", resultBoard, DepotConstants.BILLBOARD_PX.result, DepotLayoutConstants.RESULT_OFFSET)
+	CollectionService:AddTag(resultSign, DepotConstants.BILLBOARD_TAGS.result)
+	resultSign.Parent = boards
 
 	model.Parent = Workspace
 	return { model = model, trucks = trucks, resultBoard = resultBoard, contractBoard = contractBoard }
 end
 
 --[=[
-	Hangs `lines` on the result board for `player` only: a BillboardGui in their PlayerGui (replacing their
-	last card, kept across respawns). Yields up to PLAYER_GUI_WAIT seconds for the PlayerGui; false when it
-	never appears or the player left.
+	Pins `attributes` (ShiftCardUtils.attributes) on the result board for `player` only: a review shell in their
+	PlayerGui (replacing their last card, kept across respawns) at the board's spot and size, which their client draws as
+	the whole board with the card on it (DepotBillboardSystem). Yields up to PLAYER_GUI_WAIT seconds for the PlayerGui;
+	false when it never appears or the player left.
 ]=]
-function DepotBuildSystem.pinCard(player: Player, board: BasePart, lines: { string }): boolean
+function DepotBuildSystem.pinCard(
+	player: Player,
+	board: BasePart,
+	attributes: { [string]: string | number | boolean }
+): boolean
 	local found = player:WaitForChild("PlayerGui", DepotLayoutConstants.PLAYER_GUI_WAIT)
 	if found == nil or not found:IsA("PlayerGui") or player.Parent == nil then
 		return false
@@ -236,15 +209,18 @@ function DepotBuildSystem.pinCard(player: Player, board: BasePart, lines: { stri
 	if old ~= nil then
 		old:Destroy()
 	end
-	local gui = billboard(
+	local card = shell(
 		DepotLayoutConstants.CARD_NAME,
 		board,
-		DepotLayoutConstants.CARD_LABEL_SIZE,
-		DepotLayoutConstants.CARD_LABEL_OFFSET,
-		table.concat(lines, "\n")
+		DepotConstants.BILLBOARD_PX.result,
+		DepotLayoutConstants.RESULT_OFFSET
 	)
-	gui.ResetOnSpawn = false
-	gui.Parent = found
+	for key, value in attributes do
+		card:SetAttribute(key, value)
+	end
+	CollectionService:AddTag(card, DepotConstants.BILLBOARD_TAGS.review)
+	card.ResetOnSpawn = false
+	card.Parent = found
 	return true
 end
 

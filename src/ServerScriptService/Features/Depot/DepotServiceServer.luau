@@ -173,9 +173,9 @@ local function pinResultCard(player: Player, payload: QueueTypes.QueuePayload)
 		return
 	end
 	sendLast(player, ShiftCardUtils.summary(card))
-	local lines = ShiftCardUtils.lines(card)
+	local attributes = ShiftCardUtils.attributes(card)
 	task.spawn(function()
-		if DepotBuildSystem.pinCard(player, current.resultBoard, lines) then
+		if DepotBuildSystem.pinCard(player, current.resultBoard, attributes) then
 			cardsPinned += 1
 			ToastServiceServer:send(player, { text = DepotConstants.RETURN_TEXT, duration = 6 })
 		end
@@ -256,7 +256,8 @@ local DepotServiceServer: DepotServiceServer = {
 		end
 		local ok, errors = DepotLayoutRules.validate(LAYOUT)
 		assert(ok, `depot layout is invalid:\n{table.concat(errors, "\n")}`)
-		built = DepotBuildSystem.build(LAYOUT, DepotLayoutConstants.ORIGIN, DepotContractUtils.boardLines(contract))
+		built =
+			DepotBuildSystem.build(LAYOUT, DepotLayoutConstants.ORIGIN, DepotContractUtils.boardAttributes(contract))
 		refreshTrucks()
 		local elapsed = 0
 		local ticking = RunService.Heartbeat:Connect(function(deltaTime)

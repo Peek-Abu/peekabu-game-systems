@@ -60,12 +60,8 @@ return table.freeze({
 	TRUCK_INTERVAL = 0.5,
 	-- World sign shells are sized from their design (DepotConstants.BILLBOARD_PX); offsets from the part's centre.
 	PAD_TAG_OFFSET = Vector3.new(0, 8, 0),
-	BOARD_LABEL_SIZE = Vector2.new(12, 8),
-	BOARD_LABEL_OFFSET = Vector3.new(0, 1, 0),
-	TITLE_LABEL_SIZE = Vector2.new(10, 1.5),
-	TITLE_LABEL_OFFSET = Vector3.new(0, 6, 0),
-	CARD_LABEL_SIZE = Vector2.new(12, 9),
-	CARD_LABEL_OFFSET = Vector3.new(0, 0.5, 0),
+	CONTRACT_OFFSET = Vector3.new(0, 2, 0),
+	RESULT_OFFSET = Vector3.new(0, 2.5, 0),
 	LABEL_MAX_DISTANCE = 120,
 	-- The returning player's card, in their PlayerGui.
 	CARD_NAME = "DepotResultCard",
@@ -75,6 +71,4 @@ return table.freeze({
 	BED_COLOR = Color3.fromRGB(60, 60, 64),
 	TRUCK_COLOR = Color3.fromRGB(230, 230, 235),
 	BOARD_COLOR = Color3.fromRGB(120, 95, 60),
-	LABEL_BACKGROUND = Color3.fromRGB(245, 235, 200),
-	LABEL_TEXT = Color3.fromRGB(30, 30, 30),
 })

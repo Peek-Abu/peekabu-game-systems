@@ -50,11 +50,12 @@ return function()
 	end)
 
 	describe("words", function()
-		it("keeps the in-world board to a sign", function()
-			local lines = DepotContractUtils.boardLines(CONTRACTS[2])
-			expect(lines[1]).to.equal("TONIGHT'S JOB")
-			expect(lines[2]).to.equal(CONTRACTS[2].client)
-			expect(#lines).to.equal(3)
+		it("puts tonight's contract on the board's attributes", function()
+			local keys = DepotConstants.CONTRACT_KEYS
+			local attributes = DepotContractUtils.boardAttributes(CONTRACTS[2])
+			expect(attributes[keys.id]).to.equal("b")
+			expect(attributes[keys.client]).to.equal("Beta Ltd.")
+			expect(attributes[keys.job]).to.equal("Clear more.")
 		end)
 
 		it("builds the drive card", function()

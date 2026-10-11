@@ -109,4 +109,28 @@ return table.freeze({
 	CAPACITY_ATTRIBUTE = "DepotCapacity",
 	-- A truck tag's line 3 turns red ("Leaving in 0:08") when the truck is full or this many seconds or fewer remain.
 	TAG_WARN_SECONDS = 10,
+	-- The contract board shell's attributes (DepotContractUtils.boardAttributes -> DepotWorldViewModel.workOrder).
+	CONTRACT_KEYS = table.freeze({
+		id = "ContractId",
+		client = "ContractClient",
+		job = "ContractJob",
+	}),
+	-- Your review card shell's attributes (ShiftCardUtils.attributes -> DepotWorldViewModel.review). `crew`,
+	-- `awardTitle` and `awardName` are prefixes: crew line i is "ReviewCrew<i>", award i "ReviewAwardTitle<i>" and
+	-- "ReviewAwardName<i>".
+	REVIEW_KEYS = table.freeze({
+		client = "ReviewClient",
+		cleared = "ReviewCleared",
+		quota = "ReviewQuota",
+		bonus = "ReviewBonus",
+		catches = "ReviewCatches",
+		salvage = "ReviewSalvage",
+		offered = "ReviewOffered",
+		met = "ReviewMet",
+		rating = "ReviewRating",
+		truck = "ReviewTruck",
+		crew = "ReviewCrew",
+		awardTitle = "ReviewAwardTitle",
+		awardName = "ReviewAwardName",
+	}),
 })

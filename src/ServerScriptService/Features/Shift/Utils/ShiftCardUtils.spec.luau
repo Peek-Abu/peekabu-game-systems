@@ -1,7 +1,9 @@
 local HttpService = game:GetService("HttpService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local ShiftCardUtils = require(script.Parent.ShiftCardUtils)
+local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local QueueTeleportRules = require(ServerScriptService.Features.Queue.Rules.QueueTeleportRules)
 
 local INFO = { client = "Harlow & Finch Ltd.", shift = 2 }
@@ -145,33 +147,45 @@ return function()
 		end)
 	end)
 
-	describe("lines", function()
-		it("reads like the review", function()
-			local lines = ShiftCardUtils.lines(ShiftCardUtils.decode(payload()))
-			expect(lines[1]).to.equal("Harlow & Finch Ltd. - shift 2")
-			expect(lines[2]).to.equal("Clocked out")
-			expect(lines[3]).to.equal("Cleared 380 / 350 - QUOTA MET")
-			expect(lines[4]).to.equal("Finder's fee 95")
-			expect(lines[5]).to.equal("Salvage 3 of 9 | Piles 12 | Caught 1")
-			expect(lines[6]).to.equal("Rating: SATISFACTORY")
-			expect(lines[7]).to.equal("Crew1: banked 99")
-			expect(lines[8]).to.equal("Crew2: banked 98")
-			expect(lines[9]).to.equal("Top Hauler: Crew1")
-			expect(lines[10]).to.equal("Dust Devil: Crew2")
-			expect(#lines).to.equal(10)
+	describe("attributes", function()
+		local keys = DepotConstants.REVIEW_KEYS
+
+		it("writes the card under the board's keys", function()
+			local attributes = ShiftCardUtils.attributes(ShiftCardUtils.decode(payload()))
+			expect(attributes[keys.client]).to.equal("Harlow & Finch Ltd.")
+			expect(attributes[keys.cleared]).to.equal(380)
+			expect(attributes[keys.quota]).to.equal(350)
+			expect(attributes[keys.bonus]).to.equal(95)
+			expect(attributes[keys.catches]).to.equal(1)
+			expect(attributes[keys.salvage]).to.equal(3)
+			expect(attributes[keys.offered]).to.equal(9)
+			expect(attributes[keys.met]).to.equal(true)
+			expect(attributes[keys.rating]).to.equal("satisfactory")
+			expect(attributes[keys.truck]).to.equal(0)
 		end)
 
-		it("says when the quota was missed, and keeps an unknown outcome as written", function()
-			local missed = review(1)
-			missed.quotaMet = false
-			missed.outcome = "abandoned"
-			local lines = ShiftCardUtils.lines(ShiftCardUtils.decode(wire(ShiftCardUtils.encode(missed, INFO))))
-			expect(lines[2]).to.equal("Everyone left")
-			expect(lines[3]).to.equal("Cleared 380 / 350 - quota missed")
-			local odd = review(1)
-			odd.outcome = "weird"
-			local oddLines = ShiftCardUtils.lines(ShiftCardUtils.decode(wire(ShiftCardUtils.encode(odd, INFO))))
-			expect(oddLines[2]).to.equal("weird")
+		it("numbers the crew lines and the awards", function()
+			local attributes = ShiftCardUtils.attributes(ShiftCardUtils.decode(payload()))
+			expect(attributes[`{keys.crew}1`]).to.equal("Crew1")
+			expect(attributes[`{keys.crew}2`]).to.equal("Crew2")
+			expect(attributes[`{keys.crew}3`]).to.equal(nil)
+			expect(attributes[`{keys.awardTitle}1`]).to.equal("Top Hauler")
+			expect(attributes[`{keys.awardName}2`]).to.equal("Crew2")
+			expect(attributes[`{keys.awardTitle}3`]).to.equal(nil)
+		end)
+
+		it("writes the truck when it is known", function()
+			local card = ShiftCardUtils.decode(
+				wire(ShiftCardUtils.encode(review(2), { client = INFO.client, shift = INFO.shift, truck = 3 }))
+			)
+			expect(ShiftCardUtils.attributes(card)[keys.truck]).to.equal(3)
+		end)
+
+		it("keeps only values an attribute can hold", function()
+			for _, value in ShiftCardUtils.attributes(ShiftCardUtils.decode(payload())) do
+				local kind = type(value)
+				expect(kind == "string" or kind == "number" or kind == "boolean").to.equal(true)
+			end
 		end)
 	end)
 
@@ -201,14 +215,15 @@ return function()
 			expect(ShiftCardUtils.decode(card)).to.equal(nil)
 		end)
 
-		it("shows salvage as N of M and the rating", function()
+		it("hands the board the salvage found, the salvage offered and the rating", function()
 			local fixture = review(2)
 			fixture.salvage = 2
 			fixture.offered = 9
-			local text =
-				table.concat(ShiftCardUtils.lines(ShiftCardUtils.decode(ShiftCardUtils.encode(fixture, INFO))), "\n")
-			expect(string.find(text, "Salvage 2 of 9", 1, true) ~= nil).to.equal(true)
-			expect(string.find(text, "Rating: ", 1, true) ~= nil).to.equal(true)
+			local keys = DepotConstants.REVIEW_KEYS
+			local attributes = ShiftCardUtils.attributes(ShiftCardUtils.decode(ShiftCardUtils.encode(fixture, INFO)))
+			expect(attributes[keys.salvage]).to.equal(2)
+			expect(attributes[keys.offered]).to.equal(9)
+			expect(type(attributes[keys.rating])).to.equal("string")
 		end)
 	end)
 

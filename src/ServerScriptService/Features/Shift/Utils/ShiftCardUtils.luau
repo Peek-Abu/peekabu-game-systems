@@ -5,7 +5,7 @@
 	review into a Queue payload (flat keys, 29 at most, under Queue's 32); `decode` is the depot's trust
 	boundary: teleport data travels through the client, so a wrong version, a wrong type anywhere or a crew
 	count without its lines reads as no card, numbers are clamped to whole 0..MAX_NUMBER and text is cut to
-	MAX_TEXT characters; `lines` is what the depot's board shows. Pure.
+	MAX_TEXT characters; `attributes` is what the depot's result board draws (DepotConstants.REVIEW_KEYS). Pure.
 
 	Wire keys: v, client, shift, truck (absent when unknown), outcome, quota, cleared, bonus, salvage, piles, catches, offered, met, crew, awards,
 	c<i>n / c<i>b (crew line i: name, banked; i <= 4), a<i>t / a<i>n (award i: title, name; i <= 3).
@@ -19,7 +19,6 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local DepotTypes = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotTypes)
 local QueueTypes = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueTypes)
-local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local DepotContractUtils = require(ServerScriptService.Features.Depot.Utils.DepotContractUtils)
 local ShiftResultsUtils = require(ServerScriptService.Features.Shift.Utils.ShiftResultsUtils)
@@ -62,12 +61,6 @@ local MAX_CREW = 4
 local MAX_AWARDS = 3
 local MAX_TEXT = 40
 local MAX_NUMBER = 1000000
-
-local OUTCOME_TEXT: { [string]: string } = {
-	clockout = "Clocked out",
-	timeout = "Time's up",
-	abandoned = "Everyone left",
-}
 
 -- At most MAX_TEXT characters, cut on a character boundary; invalid UTF-8 reads "?".
 local function cut(value: string): string
@@ -227,22 +220,33 @@ function ShiftCardUtils.summary(card: ResultCard): DepotTypes.LastShift
 	}
 end
 
-function ShiftCardUtils.lines(card: ResultCard): { string }
-	local lines: { string } = {
-		`{card.client} - shift {card.shift}`,
-		OUTCOME_TEXT[card.outcome] or card.outcome,
-		`Cleared {card.cleared} / {card.quota} - {if card.quotaMet then "QUOTA MET" else "quota missed"}`,
-		`Finder's fee {card.bonus}`,
-		`Salvage {card.salvage} of {card.offered} | Piles {card.piles} | Caught {card.catches}`,
-		`Rating: {ShiftConstants.RATING_TEXT[card.rating] or card.rating}`,
+--[=[
+	The card as your review card's shell attributes (DepotConstants.REVIEW_KEYS; the client draws it,
+	DepotWorldViewModel.review): the numbers, met, the rating word, the truck (0 = unknown), crew names and awards
+	numbered from 1. Every value is a string, a number or a boolean, as an attribute must be.
+]=]
+function ShiftCardUtils.attributes(card: ResultCard): { [string]: string | number | boolean }
+	local keys = DepotConstants.REVIEW_KEYS
+	local attributes: { [string]: string | number | boolean } = {
+		[keys.client] = card.client,
+		[keys.cleared] = card.cleared,
+		[keys.quota] = card.quota,
+		[keys.bonus] = card.bonus,
+		[keys.catches] = card.catches,
+		[keys.salvage] = card.salvage,
+		[keys.offered] = card.offered,
+		[keys.met] = card.quotaMet,
+		[keys.rating] = card.rating,
+		[keys.truck] = card.truck or 0,
 	}
-	for _, line in card.crew do
-		table.insert(lines, `{line.name}: banked {line.banked}`)
+	for index, line in card.crew do
+		attributes[`{keys.crew}{index}`] = line.name
 	end
-	for _, award in card.awards do
-		table.insert(lines, `{award.title}: {award.name}`)
+	for index, award in card.awards do
+		attributes[`{keys.awardTitle}{index}`] = award.title
+		attributes[`{keys.awardName}{index}`] = award.name
 	end
-	return lines
+	return attributes
 end
 
 return ShiftCardUtils

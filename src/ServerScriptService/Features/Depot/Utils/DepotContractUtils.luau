@@ -3,7 +3,7 @@
 	DepotContractUtils: tonight's contract and the words around it (Cleanup Crew spec §2, §3 steps 1-3).
 	`tonight` picks the contract for the current UTC day, so every depot server shows the same job all day;
 	`resolve` turns a contract id that rode a teleport (untrusted: teleport data travels through the client)
-	back into a contract, falling back to the first; the rest build the contract board's lines and the drive
+	back into a contract, falling back to the first; the rest build the contract board's attributes and the drive
 	and arrival cards. Pure.
 
 	@class DepotContractUtils
@@ -11,6 +11,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local DepotTypes = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotTypes)
 
 type Contract = DepotTypes.Contract
@@ -50,9 +51,14 @@ function DepotContractUtils.truckOf(value: unknown, max: number): number?
 	return value
 end
 
--- The in-world contract board is a sign now; the work order itself is the board scene (M3 UI).
-function DepotContractUtils.boardLines(contract: Contract): { string }
-	return { "TONIGHT'S JOB", contract.client, "[Read the work order]" }
+-- The contract board's shell attributes (M3b world UI): the client draws the work order from them.
+function DepotContractUtils.boardAttributes(contract: Contract): { [string]: string }
+	local keys = DepotConstants.CONTRACT_KEYS
+	return {
+		[keys.id] = contract.id,
+		[keys.client] = contract.client,
+		[keys.job] = contract.job,
+	}
 end
 
 function DepotContractUtils.driveCard(contract: Contract): DepotTypes.CardMessage
