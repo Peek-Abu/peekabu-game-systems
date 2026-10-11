@@ -6,7 +6,8 @@
 	hold prompt fills an ink-green strip under the words while it is held. On phone (Figma 1d) it is a narrower slip
 	high in the screen, without the key (there is no keyboard).
 
-	The whole slip is a touch button: a touch holds the prompt and lifting (or sliding off) lets go, through the
+	On a touch device without a keyboard the whole slip is a touch button (elsewhere a plain Frame, so it never sinks a
+	mouse click): a touch holds the prompt and lifting (or sliding off) lets go, through the
 	`onPress` prop (ShiftServiceClient registers this widget with ShiftPromptSystem.press: a prop, so this module never
 	requires the service that registers it). Mouse clicks pass through (LMB is the vacuum); a keyboard key goes to the
 	engine directly.
@@ -19,6 +20,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local React = require(ReplicatedStorage.Packages.React)
 local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
@@ -156,10 +158,28 @@ local function ShiftPromptChip(props: ShiftPromptChipProps?): React.ReactNode
 	if fill ~= nil then
 		content.strip = strip(fill, textInset)
 	end
+	local slip = e(PaperSheet, {
+		size = UDim2.fromScale(1, 1),
+		paper = COLOR.cream,
+		tilt = -1,
+		fastener = "tape",
+		padding = geometry.padding,
+		children = content,
+	})
+	local size = UDim2.fromOffset(geometry.size.X, geometry.size.Y)
+	if not ShiftHudViewModel.promptTouchable(UserInputService.TouchEnabled, UserInputService.KeyboardEnabled) then
+		-- Not a button: a GuiButton would sink the mouse click under it (the vacuum is LMB).
+		return e("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0),
+			Position = geometry.position,
+			Size = size,
+			BackgroundTransparency = 1,
+		}, { slip = slip })
+	end
 	return e("TextButton", {
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = geometry.position,
-		Size = UDim2.fromOffset(geometry.size.X, geometry.size.Y),
+		Size = size,
 		BackgroundTransparency = 1,
 		AutoButtonColor = false,
 		Text = "",
@@ -176,16 +196,7 @@ local function ShiftPromptChip(props: ShiftPromptChipProps?): React.ReactNode
 		[React.Event.MouseLeave] = function()
 			press(false)
 		end,
-	}, {
-		slip = e(PaperSheet, {
-			size = UDim2.fromScale(1, 1),
-			paper = COLOR.cream,
-			tilt = -1,
-			fastener = "tape",
-			padding = geometry.padding,
-			children = content,
-		}),
-	})
+	}, { slip = slip })
 end
 
 return ShiftPromptChip

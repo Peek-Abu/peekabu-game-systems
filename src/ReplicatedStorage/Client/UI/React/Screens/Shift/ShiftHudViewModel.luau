@@ -440,6 +440,14 @@ function ShiftHudViewModel.carryLeft(viewport: Vector2): number
 	return HUD.ROSTER_LEFT + HUD.ROSTER_WIDTH + HUD.GAP
 end
 
+--[=[
+	Whether the prompt chip is a touch button: only on a touch device without a keyboard. Anywhere else the chip is a
+	plain Frame, because a GuiButton under the cursor sinks the mouse click (the vacuum is LMB) even when it ignores it.
+]=]
+function ShiftHudViewModel.promptTouchable(touch: boolean, keyboard: boolean): boolean
+	return touch and not keyboard
+end
+
 -- The hint row is drawn on desktop with a keyboard only.
 function ShiftHudViewModel.showHints(layout: UIPaperConstants.Layout, keyboard: boolean): boolean
 	return layout == "desktop" and keyboard

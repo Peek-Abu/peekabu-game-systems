@@ -420,4 +420,13 @@ return function()
 			expect(ShiftHudViewModel.carryLeft(Vector2.new(1366, 690)) + 640 <= 1366).to.equal(true)
 		end)
 	end)
+
+	describe("promptTouchable", function()
+		it("is a button only on a touch device without a keyboard", function()
+			expect(ShiftHudViewModel.promptTouchable(true, false)).to.equal(true)
+			expect(ShiftHudViewModel.promptTouchable(true, true)).to.equal(false)
+			expect(ShiftHudViewModel.promptTouchable(false, true)).to.equal(false)
+			expect(ShiftHudViewModel.promptTouchable(false, false)).to.equal(false)
+		end)
+	end)
 end
