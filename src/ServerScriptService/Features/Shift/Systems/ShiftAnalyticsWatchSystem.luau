@@ -8,7 +8,9 @@
 	  that run is not the server's first (an Another shift), quota_met when the quota is met;
 	- Round `runEnded`: open optional-salvage attempts close as "unbanked", then shift_ended for each crew member (value
 	  = their attempts this shift, target = their cleaning bucket, outcome = how the run ended : whether the quota was
-	  met).
+	  met). The crew is the trip's (`start`'s `trip`): the signal is deferred and Round has already cleared its
+	  participants by then; the outcome is the signal's argument and the quota comes from the last running copy, so
+	  neither depends on Round's cleanup.
 
 	Spec-exempt shell (signals); the decisions are the specced ShiftAnalyticsUtils, ShiftAnalyticsTracker and
 	ShiftSalvageTracker.
@@ -24,6 +26,7 @@ local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTyp
 local RoundServiceServer = require(ServerScriptService.Features.Round.RoundServiceServer)
 local ShiftAnalyticsSystem = require(ServerScriptService.Features.Shift.Systems.ShiftAnalyticsSystem)
 local ShiftAnalyticsUtils = require(ServerScriptService.Features.Shift.Utils.ShiftAnalyticsUtils)
+local ShiftTripSystem = require(ServerScriptService.Features.Shift.Systems.ShiftTripSystem)
 
 -- The last shift state seen (the `changed` copies arrive in order).
 local before: ShiftTypes.ShiftState? = nil
@@ -74,10 +77,16 @@ end
 local ShiftAnalyticsWatchSystem = {}
 
 --[=[
-	Starts ShiftAnalyticsSystem and subscribes to the features. Returns the function that undoes both.
+	Starts ShiftAnalyticsSystem (its crew = `trip`'s) and subscribes to the features. Returns the function that undoes
+	both.
 ]=]
-function ShiftAnalyticsWatchSystem.start(changed: SignalTyped.Signal<ShiftTypes.ShiftState>): () -> ()
-	ShiftAnalyticsSystem.start()
+function ShiftAnalyticsWatchSystem.start(
+	changed: SignalTyped.Signal<ShiftTypes.ShiftState>,
+	trip: ShiftTripSystem.ShiftTripSystem
+): () -> ()
+	ShiftAnalyticsSystem.start(function()
+		return trip:crew()
+	end)
 	local stops: { () -> () } = {}
 	local function keep(stop: () -> ())
 		table.insert(stops, stop)

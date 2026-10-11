@@ -348,7 +348,7 @@ local ShiftServiceServer: ShiftServiceServer = {
 		DeathServiceServer:setSpawnPoint(trip.spawnFor)
 		trip:start(publish)
 		CargoServiceServer:onBanked(onBanked)
-		table.insert(stoppers, ShiftAnalyticsWatchSystem.start(changed))
+		table.insert(stoppers, ShiftAnalyticsWatchSystem.start(changed, trip))
 		InteractionServiceServer:onInteract(ShiftConstants.CLOCK_OUT_KIND, function(player, _target)
 			self:clockOut(player)
 		end)

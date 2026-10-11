@@ -8,7 +8,9 @@
 	  fields, so field 1 packs "variant|platform|party|build" (AnalyticsServiceServer sends nothing in Studio);
 	- the server log, key events at info and the rest at debug, with the session id (JobId) the engine fields leave out;
 	- a ring of recent records and any `listen` callbacks (the Studio test sink).
-	"crew" events go once to each crew member (Round participants still in the server).
+	"crew" events go once to each crew member still in the server: the shift's crew (ShiftTripSystem, handed to
+	`start`), not Round's participants, which Round clears on its way back to the lobby before its deferred
+	`runEnded` reaches the watch (Shift runs Round with no results time), so shift_ended would find nobody.
 
 	It also keeps the experiment context: the session, the build (BUILD_LABEL + PlaceVersion), each shift's variant
 	(`pickVariant`: ShiftVariantRules over the Workspace override, ShiftConstants.VARIANT_MODE and the JobId, logged at
@@ -61,16 +63,20 @@ local variant: ShiftTypes.Variant = ShiftConstants.VARIANT
 local variantSource: ShiftTypes.VariantSource = "fixed"
 local shiftState: ShiftTypes.ShiftState? = nil
 local stoppers: { () -> () } = {}
+-- The shift's crew (set by `start`); before that, Round's participants.
+local crewSource: (() -> { Player })? = nil
 
 local ShiftAnalyticsSystem = {}
 
 ShiftAnalyticsSystem.tracker = tracker
 ShiftAnalyticsSystem.salvage = salvage
 
--- Crew members still in the server (Round's participants).
+-- Crew members still in the server.
 function ShiftAnalyticsSystem.crew(): { Player }
 	local list: { Player } = {}
-	for _, player in RoundServiceServer:participants() do
+	local source = crewSource
+	local members: { Player } = if source ~= nil then source() else RoundServiceServer:participants()
+	for _, player in members do
 		if player.Parent ~= nil then
 			table.insert(list, player)
 		end
@@ -264,8 +270,10 @@ local onPlatform = RequestHandler.wrap({
 
 --[=[
 	Takes platform reports; a leaving player's open attempts close as "left" and their bookkeeping is forgotten.
+	`crew` lists the shift's crew (ShiftTripSystem), which outlives Round's post-run cleanup.
 ]=]
-function ShiftAnalyticsSystem.start()
+function ShiftAnalyticsSystem.start(crew: () -> { Player })
+	crewSource = crew
 	table.insert(
 		stoppers,
 		ShiftEvents.packets.Platform.listen(function(data: number, player: Player?)
@@ -289,6 +297,7 @@ function ShiftAnalyticsSystem.stop()
 	end
 	table.clear(stoppers)
 	shiftState = nil
+	crewSource = nil
 end
 
 function ShiftAnalyticsSystem.getState(): { [string]: string | number }
