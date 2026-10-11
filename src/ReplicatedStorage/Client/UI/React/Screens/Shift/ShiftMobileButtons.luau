@@ -9,8 +9,11 @@
 	A HUD widget: it reads the shift snapshot, the local player's public entry, the scare beat and the touch flag, and
 	draws what ShiftHudViewModel.mobileButtons decides (whether the arc shows, VACUUM or LOAD, which buttons are
 	available or lit). The base Input feature has no touch bindings, so the buttons call the Vacuum and Cargo client
-	services directly. The big button keeps the hold semantics for VACUUM; as LOAD it is drawn but inert until Task 11
-	passes `onLoad` (and `loadReady`) in.
+	services directly. The big button keeps the hold semantics for VACUUM. As LOAD it is usable (and lit) only while the
+	truck's Load prompt is shown (ShiftPromptStore, ShiftHudViewModel.loadReady: the engine takes a touch hold only on
+	a shown prompt); pressing holds that prompt and releasing lets go, through the `onPrompt` prop (ShiftServiceClient
+	registers this widget with ShiftPromptSystem.press, so this module never requires the service that registers it).
+	Otherwise LOAD is drawn at half opacity and ignores input.
 
 	@class ShiftMobileButtons
 ]=]
@@ -25,6 +28,7 @@ local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
 local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
 local CargoServiceClient = require(ReplicatedStorage.Client.Features.Cargo.CargoServiceClient)
 local OccupantCatchStore = require(ReplicatedStorage.Client.Features.Occupant.State.OccupantCatchStore)
+local ShiftPromptStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftPromptStore)
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local VacuumServiceClient = require(ReplicatedStorage.Client.Features.Vacuum.VacuumServiceClient)
@@ -34,10 +38,9 @@ local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shif
 local e = React.createElement
 local useAtom = ReactCharm.useAtom
 
--- The phone LOAD seam (Task 11): whether the truck's Load prompt is up, and what pressing LOAD does.
+-- What pressing (true) and releasing (false) LOAD does: holds and lets go of the shown prompt.
 export type ShiftMobileButtonsProps = {
-	loadReady: boolean?,
-	onLoad: (() -> ())?,
+	onPrompt: ((down: boolean) -> ())?,
 }
 
 type ButtonProps = {
@@ -146,16 +149,16 @@ local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactN
 	local snapshot = useAtom(ShiftStore.snapshot)
 	local publicPlayers = useAtom(StateSyncClientStore.publicPlayers)
 	local scaring = useAtom(OccupantCatchStore.scaring)
+	local shownPrompt = useAtom(ShiftPromptStore.shown)
 	local player = Players.LocalPlayer
 	local me = if player ~= nil then publicPlayers[StateSyncConstants.publicEntryKey(player.UserId)] else nil
-	local loadReady = props ~= nil and props.loadReady == true
-	local onLoad = if props ~= nil then props.onLoad else nil
+	local onPrompt = if props ~= nil then props.onPrompt else nil
 	local view = ShiftHudViewModel.mobileButtons(
 		snapshot,
 		me,
 		UserInputService.TouchEnabled,
 		ShiftHudViewModel.hidden(me, scaring),
-		loadReady
+		ShiftHudViewModel.loadReady(shownPrompt)
 	)
 	local arc = ShiftHudViewModel.arcFor(useShortSide())
 	local vacuuming = view ~= nil and view.primary == "VACUUM"
@@ -171,10 +174,27 @@ local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactN
 			VacuumServiceClient:endVacuum()
 		end
 	end, {})
-	-- A held VACUUM ends when the big button turns into LOAD or the arc goes away (unmounting destroys a held
-	-- button before its InputEnded fires).
+	-- Whether this widget is holding the shown prompt through LOAD.
+	local loading = React.useRef(false)
+	local beginLoad = React.useCallback(function()
+		if onPrompt ~= nil and not loading.current then
+			loading.current = true
+			onPrompt(true)
+		end
+	end, { onPrompt })
+	local endLoad = React.useCallback(function()
+		if onPrompt ~= nil and loading.current then
+			loading.current = false
+			onPrompt(false)
+		end
+	end, { onPrompt })
+	-- A held VACUUM or LOAD ends when the big button turns into the other (a load empties the hands) or the arc goes
+	-- away (unmounting destroys a held button before its InputEnded fires), so a held prompt is always let go.
 	React.useEffect(function()
-		return endVacuum
+		return function()
+			endVacuum()
+			endLoad()
+		end
 	end, { vacuuming })
 	if view == nil then
 		return nil
@@ -189,11 +209,11 @@ local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactN
 			label = primaryLabel,
 			spot = arc.primary,
 			large = true,
-			available = true,
+			available = view.primaryAvailable,
 			ready = view.primaryReady,
-			onActivated = if vacuuming then nil else onLoad,
-			onHoldBegin = if vacuuming then beginVacuum else nil,
-			onHoldEnd = if vacuuming then endVacuum else nil,
+			-- LOAD's release always goes through, so a hold that began while lit lets go even if the prompt hid.
+			onHoldBegin = if not view.primaryAvailable then nil elseif vacuuming then beginVacuum else beginLoad,
+			onHoldEnd = if vacuuming then endVacuum else endLoad,
 		}),
 		drop = e(ActionButton, {
 			label = "DROP",

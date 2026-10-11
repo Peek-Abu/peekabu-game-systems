@@ -5,8 +5,8 @@
 	the empty one dashed) and CANISTER (three cells filled up to the canister, "2 / 3", "full = dust bag").
 	On phone (Figma 1d/1e "Carry (compact)", 224x92 at the top right, since the thumbstick owns the bottom left): the
 	hands slot (HANDS, the name, the short value in red when fragile), two 56 px pocket slots, and CAN with three small
-	cells and "2/3". Presentational: it draws the HudView it is given. The "Q pocket" caption is plain text until the
-	pocket binding lands (Task 11).
+	cells and "2/3". Presentational: it draws the HudView it is given. The desktop "Q pocket" caption names the pocket
+	action's live key (`pocketKey`, from ShiftHudViewModel.pocketKey; Q when not given).
 
 	@class ShiftCarryPanel
 ]=]
@@ -23,6 +23,7 @@ local e = React.createElement
 export type ShiftCarryPanelProps = {
 	view: ShiftHudViewModel.HudView,
 	layout: UIPaperConstants.Layout,
+	pocketKey: string?,
 }
 
 local COLOR = UIPaperConstants.COLOR
@@ -405,7 +406,7 @@ local function ShiftCarryPanel(props: ShiftCarryPanelProps): React.ReactNode
 		handsTitle = title("HANDS", 20),
 		hands = hands(view),
 		pocketsTitle = title("POCKETS", 244),
-		pocketCaption = caption("Q pocket", 244, 132),
+		pocketCaption = caption(`{props.pocketKey or "Q"} pocket`, 244, 132),
 		canisterTitle = title("CANISTER", 440),
 		canister = canister(view),
 		count = e(PaperLabel, {

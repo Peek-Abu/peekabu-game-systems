@@ -281,6 +281,12 @@ return function()
 			expect(view.primary).to.equal("VACUUM")
 			expect(view.primaryReady).to.equal(false)
 		end)
+
+		it("keeps VACUUM usable and LOAD usable only while the Load prompt is up", function()
+			expect(ShiftHudViewModel.buttons(nil, false).primaryAvailable).to.equal(true)
+			expect(ShiftHudViewModel.buttons({ carrying = "monitor" }, false).primaryAvailable).to.equal(false)
+			expect(ShiftHudViewModel.buttons({ carrying = "monitor" }, true).primaryAvailable).to.equal(true)
+		end)
 	end)
 
 	describe("mobile buttons", function()
@@ -343,6 +349,103 @@ return function()
 			-- Portrait, and the smallest screen that gets the large Jump button.
 			expect(arcFailures(arc, 768)).to.equal("")
 			expect(arcFailures(ShiftHudViewModel.arcFor(501), 501)).to.equal("")
+		end)
+	end)
+
+	describe("prompt chip", function()
+		local function prompt(extra)
+			local value = { id = 1, action = "Load", object = "Truck", key = "E", hold = 0, kind = "cargo-load" }
+			for key, item in extra or {} do
+				value[key] = item
+			end
+			return value
+		end
+
+		it("says what a Load does with the item in hand", function()
+			local chip = ShiftHudViewModel.prompt(prompt(), "monitor", 0)
+			expect(chip.key).to.equal("E")
+			expect(chip.text).to.equal("LOAD monitor onto the truck")
+		end)
+
+		it("falls back to the prompt's own words", function()
+			local chip = ShiftHudViewModel.prompt(
+				prompt({ kind = "shift-clockout", action = "Clock out", object = "Time clock" }),
+				nil,
+				0
+			)
+			expect(chip.text).to.equal("CLOCK OUT time clock")
+		end)
+
+		it("fills a hold prompt while it is held", function()
+			local chip = ShiftHudViewModel.prompt(
+				prompt({ kind = "cargo-search", action = "Search", object = "Desk", hold = 2, holdStartedAt = 10 }),
+				nil,
+				11
+			)
+			expect(chip.fill).to.equal(0.5)
+			expect(ShiftHudViewModel.prompt(prompt({ hold = 2 }), nil, 11).fill).to.equal(0)
+			expect(ShiftHudViewModel.prompt(prompt(), nil, 11).fill).to.equal(nil)
+		end)
+
+		it("shows nothing without a prompt", function()
+			expect(ShiftHudViewModel.prompt(nil, "monitor", 0)).to.equal(nil)
+		end)
+
+		it("shows nothing while the HUD is hidden", function()
+			expect(ShiftHudViewModel.prompt(prompt(), "monitor", 0, true)).to.equal(nil)
+			expect(ShiftHudViewModel.prompt(prompt(), "monitor", 0, false).text).to.equal("LOAD monitor onto the truck")
+		end)
+
+		it("lights LOAD only while the truck's Load prompt is shown", function()
+			expect(ShiftHudViewModel.loadReady(prompt())).to.equal(true)
+			expect(ShiftHudViewModel.loadReady(prompt({ kind = "shift-clockout" }))).to.equal(false)
+			expect(ShiftHudViewModel.loadReady(nil)).to.equal(false)
+		end)
+	end)
+
+	describe("key hints", function()
+		it("names keys and mouse buttons the way the HUD prints them", function()
+			expect(ShiftHudViewModel.keyName(Enum.KeyCode.G)).to.equal("G")
+			expect(ShiftHudViewModel.keyName(Enum.UserInputType.MouseButton1)).to.equal("LMB")
+			expect(ShiftHudViewModel.keyName(Enum.KeyCode.Left)).to.equal("←")
+		end)
+
+		it("lists the five actions in Figma's order with each first keyboard binding", function()
+			local hints = ShiftHudViewModel.keyHints({
+				vacuum = { Enum.UserInputType.MouseButton1 },
+				drop = { Enum.KeyCode.G },
+				throw = { Enum.KeyCode.F },
+				pocket = { Enum.KeyCode.Q },
+				interact = { Enum.KeyCode.E },
+			})
+			expect(#hints).to.equal(5)
+			expect(hints[1].prefix).to.equal("Hold")
+			expect(hints[1].key).to.equal("LMB")
+			expect(hints[1].label).to.equal("vacuum")
+			expect(hints[5].key).to.equal("E")
+			expect(hints[5].label).to.equal("load / search")
+		end)
+
+		it("skips an action with no binding", function()
+			expect(#ShiftHudViewModel.keyHints({ drop = { Enum.KeyCode.G } })).to.equal(1)
+		end)
+
+		it("names the hint actions it reads bindings for", function()
+			local actions = ShiftHudViewModel.HINT_ACTIONS
+			expect(#actions).to.equal(5)
+			expect(actions[1]).to.equal("vacuum")
+			expect(actions[5]).to.equal("interact")
+		end)
+
+		it("draws the hint row on desktop with a keyboard only", function()
+			expect(ShiftHudViewModel.showHints("desktop", true)).to.equal(true)
+			expect(ShiftHudViewModel.showHints("desktop", false)).to.equal(false)
+			expect(ShiftHudViewModel.showHints("phone", true)).to.equal(false)
+		end)
+
+		it("reads the pocket key for the carry caption, Q when unbound", function()
+			expect(ShiftHudViewModel.pocketKey({ pocket = { Enum.KeyCode.R } })).to.equal("R")
+			expect(ShiftHudViewModel.pocketKey({})).to.equal("Q")
 		end)
 	end)
 end

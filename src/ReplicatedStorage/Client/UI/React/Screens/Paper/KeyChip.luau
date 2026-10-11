@@ -1,7 +1,8 @@
 --!strict
 --[=[
 	KeyChip: a keyboard key cap ("E", "LMB", "←"): cream, at least square, growing sideways with its legend. The
-	prop is `label` because React reserves `key` (it never reaches the component). Presentational.
+	prop is `label` because React reserves `key` (it never reaches the component). `transparency` fades the whole cap
+	(the desktop key hints sit at MOTION.hintTransparency). Presentational.
 
 	@class KeyChip
 ]=]
@@ -18,17 +19,20 @@ export type KeyChipProps = {
 	label: string,
 	size: number,
 	layoutOrder: number?,
+	transparency: number?,
 }
 
 local COLOR = UIPaperConstants.COLOR
 
 local function KeyChip(props: KeyChipProps): React.ReactNode
 	local side = props.size + 10
+	local transparency = props.transparency or 0
 	return e("Frame", {
 		LayoutOrder = props.layoutOrder,
 		Size = UDim2.fromOffset(0, side),
 		AutomaticSize = Enum.AutomaticSize.X,
 		BackgroundColor3 = COLOR.cream,
+		BackgroundTransparency = transparency,
 		BorderSizePixel = 0,
 	}, {
 		minimum = e("UISizeConstraint", { MinSize = Vector2.new(side, side) }),
@@ -36,7 +40,7 @@ local function KeyChip(props: KeyChipProps): React.ReactNode
 		stroke = e("UIStroke", {
 			Color = COLOR.ink,
 			Thickness = 1,
-			Transparency = 0.6,
+			Transparency = 1 - (1 - 0.6) * (1 - transparency),
 			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 		}),
 		padding = e("UIPadding", {
@@ -54,6 +58,7 @@ local function KeyChip(props: KeyChipProps): React.ReactNode
 			role = "heading",
 			size = props.size,
 			color = COLOR.ink,
+			transparency = transparency,
 			fit = true,
 		}),
 	})

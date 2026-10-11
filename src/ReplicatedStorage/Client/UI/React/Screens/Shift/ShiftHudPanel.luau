@@ -5,8 +5,9 @@
 	panel and, while the crew clocks out, the stapled clock-out slip under the time card. Full-screen and transparent;
 	each piece places itself at its Figma position, anchored to its screen edge. On phone (Figma 1d, 1e; 844x390) every
 	piece draws its compact form inside the phone safe area, clear of the thumbstick (bottom left) and the Jump button
-	(bottom right); the action buttons are ShiftMobileButtons, a separate HUD widget. Presentational: it draws the
-	views it is given.
+	(bottom right); the action buttons are ShiftMobileButtons, a separate HUD widget. The desktop key hints row
+	(ShiftKeyHints) is drawn when `hints` is given (ShiftHud passes it on desktop with a keyboard only), and the carry
+	panel's pocket caption names `pocketKey`. Presentational: it draws the views it is given.
 
 	@class ShiftHudPanel
 ]=]
@@ -21,6 +22,7 @@ local ShiftClockOutSlip = require(ReplicatedStorage.Client.UI.React.Screens.Shif
 local ShiftCrewRoster = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftCrewRoster)
 local ShiftCrewViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftCrewViewModel)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
+local ShiftKeyHints = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftKeyHints)
 local ShiftTimeCard = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftTimeCard)
 
 local e = React.createElement
@@ -29,6 +31,9 @@ export type ShiftHudPanelProps = {
 	view: ShiftHudViewModel.HudView,
 	roster: ShiftCrewViewModel.RosterView?,
 	layout: UIPaperConstants.Layout,
+	-- The desktop key hints row; nil draws none.
+	hints: { ShiftHudViewModel.HintView }?,
+	pocketKey: string?,
 }
 
 local function ShiftHudPanel(props: ShiftHudPanelProps): React.ReactNode
@@ -36,6 +41,7 @@ local function ShiftHudPanel(props: ShiftHudPanelProps): React.ReactNode
 	local layout: UIPaperConstants.Layout = props.layout
 	local roster = props.roster
 	local clockOut = view.clockOut
+	local hints = props.hints
 	return e("Frame", {
 		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
@@ -43,10 +49,11 @@ local function ShiftHudPanel(props: ShiftHudPanelProps): React.ReactNode
 		clearance = e(ShiftClearancePanel, { view = view, layout = layout }),
 		roster = if roster ~= nil then e(ShiftCrewRoster, { roster = roster, layout = layout }) else nil,
 		timeCard = e(ShiftTimeCard, { view = view, layout = layout }),
-		carry = e(ShiftCarryPanel, { view = view, layout = layout }),
+		carry = e(ShiftCarryPanel, { view = view, layout = layout, pocketKey = props.pocketKey }),
 		clockOut = if clockOut ~= nil
 			then e(ShiftClockOutSlip, { left = clockOut, truck = view.truck, layout = layout })
 			else nil,
+		hints = if hints ~= nil then e(ShiftKeyHints, { hints = hints }) else nil,
 	})
 end
 

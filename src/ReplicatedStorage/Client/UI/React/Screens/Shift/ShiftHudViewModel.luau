@@ -3,7 +3,9 @@
 	ShiftHudViewModel: what the approved Shift HUD (Figma 1a-1c: the time card, the clearance folder and finder's fee
 	plate, the carry panel and the clock-out slip) shows, as display-ready fields per piece, from the shift snapshot and
 	the local player's public entry; the phone's action-button arc (Figma 1d/1e: which buttons show, which are lit);
-	and the results panel's strings (its final screen is Task 15). Pure (specced); the
+	the paper interaction prompt chip and the phone LOAD button's readiness (from ShiftPromptStore); the desktop key
+	hints row (Figma 1a) from the live Input bindings; and the results panel's strings (its final screen is Task 15).
+	Pure (specced); the
 	components only lay the fields out. The crew roster has its own view model (ShiftCrewViewModel).
 
 	@class ShiftHudViewModel
@@ -21,6 +23,8 @@ local DeathConstants = require(ReplicatedStorage.Shared.Features.Death.Data.Deat
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
+local ShiftPromptStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftPromptStore)
+local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 
 type ShiftSnapshot = ShiftTypes.ShiftSnapshot
 
@@ -71,6 +75,8 @@ export type HudView = {
 export type ButtonsView = {
 	primary: "VACUUM" | "LOAD",
 	primaryReady: boolean,
+	-- VACUUM is always usable; LOAD only while lit (a touch hold reaches only a prompt that is shown).
+	primaryAvailable: boolean,
 	drop: boolean,
 	throw: boolean,
 	pocket: boolean,
@@ -93,6 +99,22 @@ export type ArcView = {
 	-- The engine's Jump button the arc keeps clear of.
 	jump: ArcSpot,
 }
+
+export type PromptChipView = {
+	key: string,
+	text: string,
+	-- 0-1 while a hold prompt is held; 0 for a hold prompt not yet held; nil for a press prompt.
+	fill: number?,
+}
+
+export type HintView = {
+	prefix: string?,
+	key: string,
+	label: string,
+}
+
+-- A device's keyboard bindings per action id (InputServiceClient:bindingsFor(id).keyboard).
+export type KeyBindings = { [string]: { Enum.KeyCode | Enum.UserInputType }? }
 
 export type ResultsView = {
 	title: string,
@@ -245,6 +267,7 @@ function ShiftHudViewModel.buttons(me: PublicPlayerTypes.PublicPlayer?, loadRead
 	return {
 		primary = primary,
 		primaryReady = holding and loadReady,
+		primaryAvailable = not holding or loadReady,
 		drop = holding,
 		throw = def ~= nil and def.throwable,
 		pocket = tiny or filled > 0,
@@ -312,6 +335,104 @@ function ShiftHudViewModel.mobileButtons(
 		return nil
 	end
 	return ShiftHudViewModel.buttons(me, loadReady)
+end
+
+--[=[
+	The paper prompt chip (Figma 1a: "[E] LOAD monitor onto the truck"): a Load names the item in hand; anything else
+	is the prompt's action in capitals and its object in lower case. Nil without a prompt, and nil while `hidden` (the
+	scare beat, or the local player is caught). `now` and the view's `holdStartedAt` are both on the server clock.
+]=]
+function ShiftHudViewModel.prompt(
+	view: ShiftPromptStore.PromptView?,
+	carrying: PublicPlayerTypes.PublicValue?,
+	now: number,
+	hidden: boolean?
+): PromptChipView?
+	if view == nil or hidden == true then
+		return nil
+	end
+	local text = `{string.upper(view.action)} {string.lower(view.object)}`
+	if view.kind == CargoConstants.LOAD_KIND and type(carrying) == "string" then
+		local def = CargoRegistry.get(carrying)
+		text = `LOAD {string.lower(if def ~= nil then def.name else carrying)} onto the truck`
+	end
+	local fill: number? = nil
+	if view.hold > 0 then
+		local started = view.holdStartedAt
+		fill = if started ~= nil then math.clamp((now - started) / view.hold, 0, 1) else 0
+	end
+	return { key = view.key, text = text, fill = fill }
+end
+
+--[=[
+	Whether the phone's big button can LOAD: only while the truck's Load prompt is the one shown (the engine takes a
+	touch hold on a prompt only while that prompt is shown on this client).
+]=]
+function ShiftHudViewModel.loadReady(view: ShiftPromptStore.PromptView?): boolean
+	return view ~= nil and view.kind == CargoConstants.LOAD_KIND
+end
+
+local KEY_NAMES: { [string]: string } = {
+	MouseButton1 = "LMB",
+	MouseButton2 = "RMB",
+	Left = "←",
+	Right = "→",
+	LeftShift = "Shift",
+}
+
+-- A key's legend as the HUD prints it on a KeyChip.
+function ShiftHudViewModel.keyName(input: Enum.KeyCode | Enum.UserInputType): string
+	return KEY_NAMES[input.Name] or input.Name
+end
+
+-- Figma 1a's hint row, in order: the action id, how to say it, and whether it is held.
+local HINTS: { { action: string, label: string, hold: boolean } } = {
+	{ action = VacuumConstants.ACTION, label = "vacuum", hold = true },
+	{ action = "drop", label = "drop", hold = false },
+	{ action = "throw", label = "throw", hold = false },
+	{ action = CargoConstants.POCKET_ACTION, label = "pocket", hold = false },
+	{ action = "interact", label = "load / search", hold = false },
+}
+
+local hintActions: { string } = {}
+for _, hint in HINTS do
+	table.insert(hintActions, hint.action)
+end
+-- The action ids the hint row reads bindings for (ShiftHud asks InputServiceClient for each).
+ShiftHudViewModel.HINT_ACTIONS = table.freeze(hintActions)
+
+local function firstKey(bindings: KeyBindings, action: string): (Enum.KeyCode | Enum.UserInputType)?
+	local list = bindings[action]
+	return if list ~= nil then list[1] else nil
+end
+
+--[=[
+	The desktop key hints row (Figma 1a), one per action with a keyboard binding: "Hold LMB vacuum", "G drop", ...
+]=]
+function ShiftHudViewModel.keyHints(bindings: KeyBindings): { HintView }
+	local hints: { HintView } = {}
+	for _, hint in HINTS do
+		local first = firstKey(bindings, hint.action)
+		if first ~= nil then
+			table.insert(hints, {
+				prefix = if hint.hold then "Hold" else nil,
+				key = ShiftHudViewModel.keyName(first),
+				label = hint.label,
+			})
+		end
+	end
+	return hints
+end
+
+-- The hint row is drawn on desktop with a keyboard only.
+function ShiftHudViewModel.showHints(layout: UIPaperConstants.Layout, keyboard: boolean): boolean
+	return layout == "desktop" and keyboard
+end
+
+-- The carry panel's "Q pocket" caption key: the pocket action's first keyboard binding, Q when it has none.
+function ShiftHudViewModel.pocketKey(bindings: KeyBindings): string
+	local first = firstKey(bindings, CargoConstants.POCKET_ACTION)
+	return if first ~= nil then ShiftHudViewModel.keyName(first) else "Q"
 end
 
 --[=[

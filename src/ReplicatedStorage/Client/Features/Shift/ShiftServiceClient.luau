@@ -4,8 +4,10 @@
 	(before the UI starts), and sends the local player's results vote whenever ShiftStore.myVote changes
 	(clearing it when results end). It also reports this device's platform once (ShiftPlatformRules, analytics only). Starts ShiftFeedbackSystem (the shift's horns, stings, ticking layer and countdown) and
 	registers the sticky-note and stamp toast styles, and swaps the base toast stack for the paper one
-	(PaperToastStack: sticky notes top-right, stamps centre; ToastServiceClient:setDefaultWidget(false)). Reads go
-	through ShiftStore.
+	(PaperToastStack: sticky notes top-right, stamps centre; ToastServiceClient:setDefaultWidget(false)). Starts
+	ShiftPromptSystem (the Interaction prompts drawn on paper) and registers the prompt chip; the chip and the phone
+	action arc are registered wrapped with ShiftPromptSystem.press as a prop, so neither component requires this
+	service (which requires them). Reads go through ShiftStore.
 
 	Spec-exempt shell (Charm subscriptions, ByteNet); decoding is the specced ShiftSnapshotUtils.
 
@@ -19,6 +21,7 @@ local Workspace = game:GetService("Workspace")
 
 local ShiftShared = ReplicatedStorage.Shared.Features.Shift
 local Charm = require(ReplicatedStorage.Packages.Charm)
+local React = require(ReplicatedStorage.Packages.React)
 local ShiftConstants = require(ShiftShared.Data.ShiftConstants)
 local ShiftTypes = require(ShiftShared.Data.ShiftTypes)
 local ShiftEvents = require(ShiftShared.Net.ShiftEvents)
@@ -27,14 +30,25 @@ local ToastRegistry = require(ReplicatedStorage.Shared.Features.Toast.Data.Toast
 local VacuumServiceClient = require(ReplicatedStorage.Client.Features.Vacuum.VacuumServiceClient)
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
 local ShiftFeedbackSystem = require(ReplicatedStorage.Client.Features.Shift.Systems.ShiftFeedbackSystem)
+local ShiftPromptSystem = require(ReplicatedStorage.Client.Features.Shift.Systems.ShiftPromptSystem)
 local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudRegistry)
 local ShiftHud = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHud)
 local ShiftMobileButtons = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftMobileButtons)
+local ShiftPromptChip = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftPromptChip)
 local ShiftResults = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftResults)
 local PaperToastStack = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperToastStack)
 local ToastServiceClient = require(ReplicatedStorage.Client.Features.Toast.ToastServiceClient)
 
 local unsubscribers: { () -> () } = {}
+
+-- The HUD widgets that press the shown prompt, given the press as a prop (module-level, so their identity is stable).
+local function PromptChipWidget(): React.ReactNode
+	return React.createElement(ShiftPromptChip, { onPress = ShiftPromptSystem.press })
+end
+
+local function MobileButtonsWidget(): React.ReactNode
+	return React.createElement(ShiftMobileButtons, { onPrompt = ShiftPromptSystem.press })
+end
 
 -- Tells the server this device's platform once (analytics only; the server accepts ShiftPlatformRules' codes).
 local function reportPlatform()
@@ -92,7 +106,10 @@ local ShiftServiceClient: ShiftServiceClient = {
 			HudRegistry.register("shiftResults", ShiftResults, ShiftConstants.HUD_ORDER + 1)
 		end
 		if not HudRegistry.has("shiftMobile") then
-			HudRegistry.register("shiftMobile", ShiftMobileButtons, ShiftConstants.HUD_ORDER + 2)
+			HudRegistry.register("shiftMobile", MobileButtonsWidget, ShiftConstants.HUD_ORDER + 2)
+		end
+		if not HudRegistry.has("shiftPrompt") then
+			HudRegistry.register("shiftPrompt", PromptChipWidget, ShiftConstants.HUD_ORDER + 3)
 		end
 	end,
 
@@ -120,6 +137,7 @@ local ShiftServiceClient: ShiftServiceClient = {
 			end)
 		)
 		ShiftFeedbackSystem.start()
+		table.insert(unsubscribers, ShiftPromptSystem.start())
 	end,
 
 	stop = function(_self)
