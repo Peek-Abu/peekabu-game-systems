@@ -8,7 +8,7 @@
 	  it, so no light stays dark);
 	- while he is within HEARTBEAT_RANGE and not chasing you (OccupantTellRules.heartbeat), the screen pulses
 	  red with the beat (OccupantTellRules.pulse), faster the closer he is; it is silent while he is catching
-	  you. Placeholder for the heartbeat sound (M3).
+	  you. The heartbeat sound itself is OccupantPresenceSystem's.
 	A light is "off" when its neon turns to plastic and its PointLight is disabled. Client-local changes only.
 
 	Spec-exempt shell (Instances, Vfx); the decisions are the specced OccupantTellRules.

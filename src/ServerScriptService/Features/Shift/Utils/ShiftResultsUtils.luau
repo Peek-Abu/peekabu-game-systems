@@ -1,7 +1,7 @@
 --!strict
 --[=[
-	ShiftResultsUtils: builds the end-of-shift performance review (spec §3 step 7; plain in M1, the joke
-	awards grow in M3): the shift's totals, the crew ordered by what they banked, and an award per category
+	ShiftResultsUtils: builds the end-of-shift performance review (spec §3 step 7; plain for now; the joke
+	awards grow when the Figma-gated results screen lands): the shift's totals, the crew ordered by what they banked, and an award per category
 	(most banked, most piles, most salvage) for whoever leads it with more than zero. Ties go to whoever is
 	listed first (more banked, then name). Pure.
 

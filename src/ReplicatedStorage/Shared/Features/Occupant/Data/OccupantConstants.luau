@@ -28,7 +28,8 @@ local BODY: Body = {
 	skin = Color3.fromRGB(214, 200, 180),
 }
 
--- Placeholder speech-bubble lines by OccupantTypes.Cue (spec §4 "Voice"; M3 adds the gibberish voice).
+-- The fallback speech-bubble line per OccupantTypes.Cue (spec §4 "Voice"); LINE_VARIANTS holds the variants, and the
+-- gibberish voice is played by the client OccupantPresenceSystem.
 local LINES: { [string]: string } = {
 	spotted = "Those are COMPANY ASSETS.",
 	curious = "Per my last email…",

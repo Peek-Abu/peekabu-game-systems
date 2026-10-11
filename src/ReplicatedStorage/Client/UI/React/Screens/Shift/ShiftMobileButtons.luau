@@ -3,7 +3,8 @@
 	ShiftMobileButtons: touch controls while a shift runs (spec §4 "mobile: hold the Vacuum button"):
 	a hold-to-vacuum button, then Pocket, Drop and Throw. Shown only on touch devices. The base Input feature
 	has no touch bindings yet, so these call the Vacuum and Cargo client services directly (an open question
-	for the base). Placeholder look (M3 replaces it).
+	for the base). Placeholder look: the final HUD and buttons
+	are Figma-gated and not built yet.
 
 	@class ShiftMobileButtons
 ]=]

@@ -17,6 +17,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
+export type ShiftFeedbackState = {
+	ticking: boolean,
+	counters: { [string]: number },
+}
+
 local ShiftShared = ReplicatedStorage.Shared.Features.Shift
 local Charm = require(ReplicatedStorage.Packages.Charm)
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
@@ -136,7 +141,7 @@ function ShiftFeedbackSystem.stop()
 	lastSecond = nil
 end
 
-function ShiftFeedbackSystem.getState(): { [string]: any }
+function ShiftFeedbackSystem.getState(): ShiftFeedbackState
 	return { ticking = ticking, counters = table.clone(counters) }
 end
 
