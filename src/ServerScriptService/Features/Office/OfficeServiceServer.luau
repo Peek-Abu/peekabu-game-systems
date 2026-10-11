@@ -37,6 +37,7 @@ local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumSe
 type Marker = OfficeTypes.Marker
 
 local LAYOUT = OfficeLayoutConstants.LAYOUT
+local depths = OfficeLayoutUtils.depths(LAYOUT)
 
 local log = Logger.new("OfficeServiceServer")
 
@@ -105,6 +106,8 @@ export type OfficeServiceServer = {
 	route: (self: OfficeServiceServer) -> { Vector3 },
 	restPoint: (self: OfficeServiceServer) -> Vector3,
 	safeZone: (self: OfficeServiceServer) -> (Vector3, Vector3),
+	whereIs: (self: OfficeServiceServer, position: Vector3) -> (string?, number?, number?),
+	truckBed: (self: OfficeServiceServer) -> BasePart?,
 }
 
 local OfficeServiceServer: OfficeServiceServer = {
@@ -243,6 +246,27 @@ local OfficeServiceServer: OfficeServiceServer = {
 		end
 		local min, max = OfficeLayoutUtils.bounds(start, OfficeConstants.WALL_HEIGHT)
 		return OfficeConstants.ORIGIN:PointToWorldSpace(min), OfficeConstants.ORIGIN:PointToWorldSpace(max)
+	end,
+
+	--[=[
+		The room a world position stands in: its name, how many rooms from the loading bay, and its camera number (its
+		index in the layout). Nothing outside the office.
+	]=]
+	whereIs = function(_self, position)
+		local localPoint = OfficeConstants.ORIGIN:PointToObjectSpace(position)
+		local room, index = OfficeLayoutUtils.roomAt(LAYOUT, localPoint.X, localPoint.Z)
+		if room == nil then
+			return nil, nil, nil
+		end
+		return room.name, depths[room.id], index
+	end,
+
+	--[=[
+		The truck bed in the loading bay (Cargo's Load zone), once the office is built.
+	]=]
+	truckBed = function(_self)
+		local current = built
+		return if current ~= nil then current.bed else nil
 	end,
 
 	getState = function(_self)

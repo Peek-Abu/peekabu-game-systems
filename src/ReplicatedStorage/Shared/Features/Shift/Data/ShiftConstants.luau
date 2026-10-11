@@ -135,4 +135,12 @@ return table.freeze({
 	COUNTDOWN_LOUD = 3,
 	COUNTDOWN_LOUD_SCALE = 1.6,
 	FEEDBACK_INTERVAL = 0.1,
+	-- Crew status public fields (M3 UI: the crew roster and the CCTV), published by ShiftCrewStatusSystem every
+	-- CREW_STATUS_INTERVAL seconds while a shift runs. Flags are present only while true.
+	PUBLIC_IN_TRUCK = "inTruck",
+	PUBLIC_VACUUMING = "vacuuming",
+	PUBLIC_ROOM = "room",
+	PUBLIC_ROOM_DEPTH = "roomDepth",
+	PUBLIC_CAM = "cam",
+	CREW_STATUS_INTERVAL = 0.25,
 })

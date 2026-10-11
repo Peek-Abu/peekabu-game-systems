@@ -219,4 +219,17 @@ function OfficeLayoutUtils.bounds(room: Room, height: number): (Vector3, Vector3
 	return Vector3.new(room.minX, 0, room.minZ), Vector3.new(room.maxX, height, room.maxZ)
 end
 
+--[=[
+	The room a floor point (office-local studs) stands in, and its 1-based index in `layout.rooms` (the CCTV's camera
+	number); a point on a shared wall belongs to the first room listed. Nothing outside every room.
+]=]
+function OfficeLayoutUtils.roomAt(layout: Layout, x: number, z: number): (Room?, number?)
+	for index, room in layout.rooms do
+		if x >= room.minX and x <= room.maxX and z >= room.minZ and z <= room.maxZ then
+			return room, index
+		end
+	end
+	return nil, nil
+end
+
 return OfficeLayoutUtils
