@@ -209,10 +209,8 @@ function DepotBuildSystem.pinCard(
 	if found == nil or not found:IsA("PlayerGui") or player.Parent == nil then
 		return false
 	end
+	-- The old card goes after the new one is parented, so a client's review set never drops to 0 in between.
 	local old = found:FindFirstChild(DepotLayoutConstants.CARD_NAME)
-	if old ~= nil then
-		old:Destroy()
-	end
 	local card = shell(
 		DepotLayoutConstants.CARD_NAME,
 		board,
@@ -225,6 +223,9 @@ function DepotBuildSystem.pinCard(
 	CollectionService:AddTag(card, DepotConstants.BILLBOARD_TAGS.review)
 	card.ResetOnSpawn = false
 	card.Parent = found
+	if old ~= nil then
+		old:Destroy()
+	end
 	return true
 end
 
