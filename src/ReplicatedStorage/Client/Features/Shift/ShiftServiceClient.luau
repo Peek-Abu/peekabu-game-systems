@@ -3,7 +3,9 @@
 	ShiftServiceClient: the shift on the client. Registers the placeholder Shift widgets in the HUD during init
 	(before the UI starts), and sends the local player's results vote whenever ShiftStore.myVote changes
 	(clearing it when results end). It also reports this device's platform once (ShiftPlatformRules, analytics only). Starts ShiftFeedbackSystem (the shift's horns, stings, ticking layer and countdown) and
-	registers the sticky-note and stamp toast styles. Reads go through ShiftStore.
+	registers the sticky-note and stamp toast styles, and swaps the base toast stack for the paper one
+	(PaperToastStack: sticky notes top-right, stamps centre; ToastServiceClient:setDefaultWidget(false)). Reads go
+	through ShiftStore.
 
 	Spec-exempt shell (Charm subscriptions, ByteNet); decoding is the specced ShiftSnapshotUtils.
 
@@ -29,6 +31,8 @@ local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudReg
 local ShiftHud = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHud)
 local ShiftMobileButtons = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftMobileButtons)
 local ShiftResults = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftResults)
+local PaperToastStack = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperToastStack)
+local ToastServiceClient = require(ReplicatedStorage.Client.Features.Toast.ToastServiceClient)
 
 local unsubscribers: { () -> () } = {}
 
@@ -72,9 +76,15 @@ local ShiftServiceClient: ShiftServiceClient = {
 		"CargoServiceClient",
 		"SoundServiceClient",
 		"CameraServiceClient",
+		"ToastServiceClient",
 	},
 
 	init = function(_self)
+		-- The paper toasts replace the base rounded stack (Figma 1f).
+		ToastServiceClient:setDefaultWidget(false)
+		if not HudRegistry.has("paperToasts") then
+			HudRegistry.register("paperToasts", PaperToastStack.Widget, 1000)
+		end
 		if not HudRegistry.has("shiftHud") then
 			HudRegistry.register("shiftHud", ShiftHud, ShiftConstants.HUD_ORDER)
 		end
