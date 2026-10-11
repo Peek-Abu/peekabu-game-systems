@@ -406,6 +406,12 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperLayout"] = "React hook over the viewport (the decision is the specced ShiftPlatformRules.detect)",
 	["ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperMotion"] = "React hook — RenderStepped easing over a binding (no logic)",
 	["ReplicatedStorage.Client.UI.React.Screens.Paper.PaperToastStack"] = "React HUD widget (layout specced in PaperToastViewModel; story in PaperToastStack.story)",
+	-- Cleanup Crew: catch screens (M3 UI)
+	["ReplicatedStorage.Client.UI.React.Screens.Catch.CatchOverlay"] = "React HUD widget (CCTV lines specced in CatchViewModel)",
+	["ReplicatedStorage.Client.UI.React.Screens.Catch.CatchCctvPanel"] = "presentational React component (story in CatchCctvPanel.story)",
+	["ReplicatedStorage.Client.UI.React.Screens.Catch.CatchRehiredCard"] = "React HUD widget (notice specced in CatchViewModel)",
+	["ReplicatedStorage.Client.UI.React.Screens.Catch.CatchRehiredPanel"] = "presentational React component (story in CatchRehiredPanel.story)",
+	["ReplicatedStorage.Client.UI.React.Screens.Catch.useSpectateTarget"] = "React hook polling DeathServiceClient:spectating() (no logic)",
 }
 
 --[=[

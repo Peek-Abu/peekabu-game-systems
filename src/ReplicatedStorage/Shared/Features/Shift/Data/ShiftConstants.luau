@@ -143,4 +143,7 @@ return table.freeze({
 	PUBLIC_ROOM_DEPTH = "roomDepth",
 	PUBLIC_CAM = "cam",
 	CREW_STATUS_INTERVAL = 0.25,
+	-- The CCTV's fictional night clock (Figma 4b "THU 03:44:12"): 03:00:00 at the shift's start.
+	NIGHT_CLOCK_START = 3 * 3600,
+	NIGHT_DAY = "THU",
 })
