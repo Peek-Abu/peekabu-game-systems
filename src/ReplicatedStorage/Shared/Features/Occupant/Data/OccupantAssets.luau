@@ -38,20 +38,27 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 		rollOffMaxDistance = 70,
 		maxConcurrent = 2,
 	},
-	-- Low muttering under his breath (looped on his head).
-	harlowMutter = { assetId = PENDING, group = "SFX", volume = 0.35, looped = true, rollOffMaxDistance = 55 },
+	-- His tell: a pen tapping on his clipboard (looped on his head, heard through walls).
+	harlowMutter = {
+		assetId = "rbxassetid://135690215756036",
+		group = "SFX",
+		volume = 0.35,
+		looped = true,
+		rollOffMaxDistance = 55,
+	},
 	-- Your heartbeat while he is near and has not seen you (2D).
 	harlowHeartbeat = { assetId = "rbxassetid://123214528916758", group = "SFX", volume = 0.8 },
-	-- A suspicious "hm?" when he goes to investigate.
-	harlowCurious = { assetId = PENDING, group = "SFX", volume = 0.8, rollOffMaxDistance = 80 },
+	-- He heard something: one deliberate pen click (the tapping cue for "?").
+	harlowCurious = { assetId = "rbxassetid://95530818541505", group = "SFX", volume = 0.8, rollOffMaxDistance = 80 },
 	-- The "!" sting (2D for the one he spotted, positional for everyone else).
 	harlowSpotted = { assetId = "rbxassetid://71081947321557", group = "SFX", volume = 1, rollOffMaxDistance = 90 },
 	-- Chase music for the chased player (looped).
 	harlowChase = { assetId = PENDING, group = "Music", volume = 0.6, looped = true },
-	harlowSigh = { assetId = PENDING, group = "SFX", volume = 0.8, rollOffMaxDistance = 80 },
-	-- Pitched, distorted office gibberish (Stable Audio), one clip per line (OccupantFeedbackUtils.clipFor).
+	harlowSigh = { assetId = "rbxassetid://126145488520317", group = "SFX", volume = 0.8, rollOffMaxDistance = 80 },
+	-- His 'voice': him scribbling you up on his clipboard, one clip per line (OccupantFeedbackUtils.clipFor picks among
+	-- the uploaded ones, so one clip covers every line until more are added).
 	harlowGibberish1 = {
-		assetId = PENDING,
+		assetId = "rbxassetid://112161993953770",
 		group = "SFX",
 		volume = 0.9,
 		pitch = { min = 0.92, max = 1.12 },
