@@ -177,7 +177,9 @@ function OfficeSpawnUtils.roll(
 			break
 		end
 		-- Drawn in both variants, so A and B consume `rng` alike: the same seed offers the same salvage and only
-		-- where it sits differs (spec §4: the variant never changes rewards).
+		-- where it sits differs (spec §4: the variant never changes rewards). This assumes enough free item markers:
+		-- A needs a marker for every salvage, so if the pool runs out A stops here while B (hiding the item under a
+		-- pile) carries on and can roll more salvage, and A then less trash. The current layout has enough markers.
 		local hideRoll = rng:NextNumber()
 		local hideable = options.variant == "B" and OfficeConstants.HIDEABLE[def.size] == true
 		local pile = if hideable and hideRoll < OfficeConstants.HIDE_CHANCE then freePile(false) else nil

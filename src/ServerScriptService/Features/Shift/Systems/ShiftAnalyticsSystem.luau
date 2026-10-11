@@ -104,21 +104,24 @@ local function send(event: string, player: Player, party: number, details: Detai
 	else
 		log:debug(line)
 	end
+	-- Each listener runs on its own thread: it runs at once (records still reach it in order), but a listener that
+	-- yields can never hold the caller open (Cargo's Load claims, adds and destroys in one synchronous step), and an
+	-- error stays in its thread.
 	for _, listener in table.clone(listeners) do
-		local ok, err = pcall(function()
-			listener(record)
+		task.spawn(function()
+			local ok, err = pcall(function()
+				listener(record)
+			end)
+			if not ok then
+				log:warn(`analytics listener failed: {err}`)
+			end
 		end)
-		if not ok then
-			log:warn(`analytics listener failed: {err}`)
-		end
 	end
 end
 
---[=[
-	Sends `event` to one player, or to each crew member for "crew". Returns how many records went out (0 for an unknown
-	event, which is dropped and counted).
-]=]
-function ShiftAnalyticsSystem.emit(event: string, scope: Scope, details: Details): number
+-- `emit` for one known event. `leaving` lets a Player that is on its way out through (PlayerRemoving): under deferred
+-- signals its Parent may already be nil when the handler runs, and its records would otherwise be lost.
+local function emitTo(event: string, scope: Scope, details: Details, leaving: boolean): number
 	if not ShiftAnalyticsUtils.isEvent(event) then
 		counters.unknown += 1
 		log:warn(`unknown analytics event "{event}" dropped`)
@@ -126,7 +129,7 @@ function ShiftAnalyticsSystem.emit(event: string, scope: Scope, details: Details
 	end
 	local members = ShiftAnalyticsSystem.crew()
 	if typeof(scope) == "Instance" then
-		if scope.Parent == nil then
+		if scope.Parent == nil and not leaving then
 			return 0
 		end
 		send(event, scope, math.max(#members, 1), details)
@@ -136,6 +139,14 @@ function ShiftAnalyticsSystem.emit(event: string, scope: Scope, details: Details
 		send(event, player, #members, details)
 	end
 	return #members
+end
+
+--[=[
+	Sends `event` to one player, or to each crew member for "crew". Returns how many records went out (0 for an unknown
+	event, which is dropped and counted).
+]=]
+function ShiftAnalyticsSystem.emit(event: string, scope: Scope, details: Details): number
+	return emitTo(event, scope, details, false)
 end
 
 --[=[
@@ -198,20 +209,23 @@ function ShiftAnalyticsSystem.sinceQuota(): number
 end
 
 --[=[
-	optional_salvage_attempted for each closed attempt whose player is still here.
+	optional_salvage_attempted for each closed attempt whose player is still here, or is `leaving` (the PlayerRemoving
+	path hands its Player straight in: by then GetPlayerByUserId may no longer find them, nor their Parent be set).
+	The attempts are already closed (taken from the tracker), so each is reported at most once.
 ]=]
-function ShiftAnalyticsSystem.closeAttempts(attempts: { ShiftSalvageTracker.Attempt })
+function ShiftAnalyticsSystem.closeAttempts(attempts: { ShiftSalvageTracker.Attempt }, leaving: Player?)
 	for _, attempt in attempts do
-		local player = Players:GetPlayerByUserId(attempt.userId)
+		local isLeaver = leaving ~= nil and leaving.UserId == attempt.userId
+		local player = if isLeaver then leaving else Players:GetPlayerByUserId(attempt.userId)
 		if player ~= nil then
 			local outcome = attempt.outcome or "unbanked"
 			local banked = outcome == "banked"
-			ShiftAnalyticsSystem.emit("optional_salvage_attempted", player, {
+			emitTo("optional_salvage_attempted", player, {
 				target = `{attempt.kind}:{attempt.source}`,
 				outcome = if banked then "banked" else "failed",
 				reason = if banked then nil else outcome,
 				value = attempt.sinceQuota,
-			})
+			}, isLeaver)
 		end
 	end
 end
@@ -236,6 +250,8 @@ function ShiftAnalyticsSystem.banked(player: Player, deposit: CargoTypes.Deposit
 	ShiftAnalyticsSystem.closeAttempts(salvage:resolveBanked(player.UserId, salvageKinds))
 end
 
+-- Adds a listener (the Studio test sink). It is called on its own thread per record, so it may yield or throw
+-- without affecting the event's caller.
 function ShiftAnalyticsSystem.listen(listener: (Record) -> ()): () -> ()
 	table.insert(listeners, listener)
 	return function()
@@ -254,6 +270,8 @@ end
 local onPlatform = RequestHandler.wrap({
 	name = "ShiftPlatform",
 	rateLimit = { maxRequests = 3, windowSeconds = 10 },
+	-- Count, don't warn: the default warn line carries the sender's UserId, and no analytics path logs one.
+	onReject = "count",
 	validate = function(data: number, _player: Player): (boolean, string?, ShiftTypes.Platform?)
 		local platform: ShiftTypes.Platform? = ShiftPlatformRules.parse(data)
 		if platform == nil then
@@ -283,7 +301,7 @@ function ShiftAnalyticsSystem.start(crew: () -> { Player })
 		end)
 	)
 	local leaving = Players.PlayerRemoving:Connect(function(player: Player)
-		ShiftAnalyticsSystem.closeAttempts(salvage:resolvePlayer(player.UserId, "left"))
+		ShiftAnalyticsSystem.closeAttempts(salvage:resolvePlayer(player.UserId, "left"), player)
 		tracker:forget(player.UserId)
 	end)
 	table.insert(stoppers, function()

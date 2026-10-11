@@ -7,10 +7,11 @@
 	- Shift `changed`: contract_started when a run starts (target = how the variant was chosen), replay_started when
 	  that run is not the server's first (an Another shift), quota_met when the quota is met;
 	- Round `runEnded`: open optional-salvage attempts close as "unbanked", then shift_ended for each crew member (value
-	  = their attempts this shift, target = their cleaning bucket, outcome = how the run ended : whether the quota was
-	  met). The crew is the trip's (`start`'s `trip`): the signal is deferred and Round has already cleared its
-	  participants by then; the outcome is the signal's argument and the quota comes from the last running copy, so
-	  neither depends on Round's cleanup;
+	  = their attempts this shift, target = their cleaning bucket, outcome = how the run ended, reason = whether the
+	  quota was met). The crew is the trip's (`start`'s `trip`): the signal is deferred and Round has already cleared its
+	  participants by then. The outcome is the signal's argument and the quota comes from the last `changed` copy (the
+	  results copy on a normal end), so neither depends on Round's cleanup. After a Studio mid-run reset that last copy
+	  is the lobby one (quotaMet = false), so the reason there always reads quota_missed;
 	- Vacuum `vacuumStarted`: first_cleanup_started (once per player per shift); `pileCleared`: pile_cleared for each
 	  player on the pile (and their cleaning count);
 	- Carry `pickedUp`: cargo_picked_up, and an optional-salvage attempt opens when ShiftAnalyticsUtils.isSalvageAttempt
@@ -56,8 +57,6 @@ local ShiftTripSystem = require(ShiftServer.Systems.ShiftTripSystem)
 
 -- The last shift state seen (the `changed` copies arrive in order).
 local before: ShiftTypes.ShiftState? = nil
--- Mr. Harlow's last mode and target (nil until his model is seen).
-local harlow: ShiftAnalyticsUtils.Harlow? = nil
 
 local function running(): boolean
 	local state = ShiftAnalyticsSystem.shift()
@@ -250,18 +249,18 @@ local function onNoise(event: NoiseTypes.NoiseEvent)
 	})
 end
 
--- Reads Harlow's mode and target (OccupantRigSystem.setMode writes both) and sends what changed.
-local function readHarlow(model: Instance)
+-- Reads Harlow's mode and target (OccupantRigSystem.setMode writes both), sends what changed since `last` (this
+-- model's previous read, nil at first) and returns the new reading.
+local function readHarlow(model: Instance, last: ShiftAnalyticsUtils.Harlow?): ShiftAnalyticsUtils.Harlow
 	local mode = model:GetAttribute(OccupantConstants.MODE_ATTRIBUTE)
 	local target = model:GetAttribute(OccupantConstants.TARGET_ATTRIBUTE)
 	local now: ShiftAnalyticsUtils.Harlow = {
 		mode = if type(mode) == "string" then mode else "patrol",
 		target = if type(target) == "number" then target else 0,
 	}
-	local event = ShiftAnalyticsUtils.harlowChange(harlow, now)
-	harlow = now
+	local event = ShiftAnalyticsUtils.harlowChange(last, now)
 	if event == nil or not running() then
-		return
+		return now
 	end
 	if event == "noise_investigation" then
 		local position = if model:IsA("PVInstance") then model:GetPivot().Position else Vector3.zero
@@ -276,7 +275,7 @@ local function readHarlow(model: Instance)
 			outcome = ShiftAnalyticsSystem.quotaTag(),
 			value = ShiftAnalyticsSystem.elapsed(),
 		})
-		return
+		return now
 	end
 	local victim = Players:GetPlayerByUserId(now.target)
 	if victim ~= nil then
@@ -286,11 +285,13 @@ local function readHarlow(model: Instance)
 			value = ShiftAnalyticsSystem.elapsed(),
 		})
 	end
+	return now
 end
 
--- Follows one Harlow model; both attributes change together, so one deferred read covers both.
+-- Follows one Harlow model; both attributes change together, so one deferred read covers both. The last reading is
+-- this model's own, so an old model's late cleanup cannot reset a new model's state.
 local function watchHarlow(model: Instance): () -> ()
-	harlow = nil
+	local last: ShiftAnalyticsUtils.Harlow? = nil
 	local pending = false
 	local function schedule()
 		if pending then
@@ -300,7 +301,7 @@ local function watchHarlow(model: Instance): () -> ()
 		task.defer(function()
 			pending = false
 			if model.Parent ~= nil then
-				readHarlow(model)
+				last = readHarlow(model, last)
 			end
 		end)
 	end
@@ -311,7 +312,6 @@ local function watchHarlow(model: Instance): () -> ()
 	return function()
 		modeChanged:Disconnect()
 		targetChanged:Disconnect()
-		harlow = nil
 	end
 end
 
@@ -370,7 +370,6 @@ function ShiftAnalyticsWatchSystem.start(
 			stop()
 		end
 		before = nil
-		harlow = nil
 		ShiftAnalyticsSystem.stop()
 	end
 end

@@ -5,8 +5,8 @@
 	order:
 	1. the developer's Workspace override ("A" or "B", any case) wins: source "override";
 	2. "fixed" mode always plays the fixed variant (B): source "fixed";
-	3. "alternate" mode plays a start variant on the server's first shift and flips it every shift after: B in Studio
-	   (no JobId: the default), else djb2(JobId) even → B, odd → A, so live servers counterbalance the order. The same
+	3. "alternate" mode plays a start variant on the server's first shift and flips it every shift after: the fixed
+	   variant (B) in Studio (no JobId), else djb2(JobId) even → B, odd → A, so live servers counterbalance the order. The same
 	   crew plays both arms in one session. Source "alternate".
 	The variant only decides where salvage spawns (OfficeSpawnUtils); no value, multiplier or quota reads it. Pure.
 

@@ -24,7 +24,11 @@ Plan: `docs/superpowers/plans/2026-10-10-m5-cleanup-crew-analytics.md`.
 "Crew" events are sent once to each member of the shift's own crew (the players who rode the truck, from
 `ShiftTripSystem`), so divide by party size for per-shift counts. The crew is the trip's, not Round's participants:
 Round clears those before its deferred `runEnded` arrives, so `shift_ended` would otherwise find nobody. "s" = seconds
-since the shift started. `quota` = `before_quota` / `after_quota`.
+since the shift started. `quota` = `before_quota` / `after_quota`. For `cargo_banked` it is the tag from before that
+Load's own effect: the Load that meets the quota still reads `before_quota`.
+
+Any target or outcome can also read `unknown` (a pile with no kind attribute) or `other` (a value outside the
+vocabulary): these are the token fallbacks, never personal data.
 
 | Event | When | To | value | target | outcome[:reason] |
 |---|---|---|---|---|---|
@@ -38,8 +42,8 @@ since the shift started. `quota` = `before_quota` / `after_quota`.
 | chase_started | Harlow starts chasing someone | that player | s | held kind or `empty` | quota |
 | player_caught | Harlow catches someone | that player | s | `harlow` | quota |
 | quota_met | clearance reaches the quota | crew | s | `clearance` | `met` |
-| optional_salvage_attempted | an attempt closes | attempter | s from quota to pick-up | `kind:source` | `banked` / `failed:dropped|thrown|caught|left|unbanked` |
-| shift_ended | the run ends | each crew member | that player's attempts | `piles_0` / `piles_1_2` / `piles_3_5` / `piles_6_plus` | `clockout|timeout|…` `:quota_met|quota_missed` |
+| optional_salvage_attempted | an attempt closes | attempter | s from quota to pick-up | `kind:source` | `banked`, or `failed:` + `dropped` / `thrown` / `caught` / `left` / `unbanked` |
+| shift_ended | the run ends | each crew member | that player's attempts | `piles_0` / `piles_1_2` / `piles_3_5` / `piles_6_plus` | how the run ended (`clockout` / `timeout` / …) + `:quota_met` / `:quota_missed` |
 | replay_started | an Another shift starts | crew | shift # | `another_shift` | `same_server` |
 
 Item sources: `open` (on the floor), `pile` (uncovered by vacuuming), `desk` (searched), `scatter` (dropped from a
@@ -53,14 +57,24 @@ clock-out countdown runs; it closes once, as `banked` or failed with a reason.
 - **Pocket round-trip (N4).** Pocketing an item and taking it out again makes its source read `open`, whatever it was
   before. Unpocketing inside the loading bay keeps the optional-salvage attempt open until the item is banked (or the
   run ends and it closes as `unbanked`).
+- **Two salvage of the same kind (M2).** If a player pockets salvage K (attempt open) and then picks up a second K,
+  the attempt moves to the second item and still counts as one. Dropping that second item closes it as
+  `failed:dropped` while the first is still pocketed, and banking the first later closes nothing: a slight undercount
+  and a wrong outcome, only when one player holds two salvage of the same kind. The real fix needs the same Cargo
+  extraction as N4.
 - **`caught` includes any death (N5).** A `caught` drop or attempt failure comes from the death that follows the
   catch, so it also counts a reset button or a fall, not only Mr. Harlow. (`player_caught` itself is Harlow-only: it
   checks his catch cause.)
-- **`cargo_dropped … left` is effectively never sent.** The deferred Carry "removed" signal for a leaving player fires
-  after the player has gone, so the record has no recipient. The attempt still closes, once, as `left`
-  (`optional_salvage_attempted`).
+- **`cargo_dropped … left` is effectively never sent for a leaving player.** The deferred Carry "removed" signal for a
+  leaving player fires after the player has gone, so the record has no recipient. (It is sent on a non-death respawn,
+  below.)
+- **A leaving player's attempts** close once, as `left`, in the `PlayerRemoving` handler, which hands the leaving
+  Player straight to `optional_salvage_attempted` (no lookup, no Parent check), so the record is sent even when the
+  deferred handler runs after the Player is unparented. Not yet verified live that Roblox's dashboard keeps a custom
+  event logged for a player who is leaving; the server log line is written either way.
 - **A non-death respawn** (`LoadCharacter`) closes held attempts as `left`.
-- **Studio's mid-run reset** sends `shift_ended` with outcome `cancelled`.
+- **Studio's mid-run reset** sends `shift_ended` with outcome `cancelled`, and its reason always reads `quota_missed`
+  (the reset sets the lobby state before the deferred run end is handled), even if the quota was met.
 - **The build label (N6).** In Studio the build reads `m5-dev`, or `m5-v<N>` if a published place version is open
   (`ShiftAnalyticsUtils.build`: `-v<PlaceVersion>` when the version is above 0).
 
