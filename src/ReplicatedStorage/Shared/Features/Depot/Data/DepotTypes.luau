@@ -17,18 +17,25 @@ export type Contract = {
 
 export type CardKind = "drive" | "arrival"
 
--- A travel card on the wire (DepotEvents.Card). `kind` is checked on the client (DepotStore.show).
+-- A travel card on the wire (DepotEvents.Card): the contract's words, the quota (0 on the drive card) and the truck
+-- (0 = unknown). `kind` is checked on the client (DepotStore.show); the client writes every line (DepotCardViewModel).
 export type CardMessage = {
 	kind: string,
-	title: string,
-	body: string,
+	client: string,
+	job: string,
+	note: string,
+	quota: number,
+	truck: number,
 }
 
 -- The card on screen; `expiresAt` is os.clock() on the client.
 export type ShownCard = {
 	kind: CardKind,
-	title: string,
-	body: string,
+	client: string,
+	job: string,
+	note: string,
+	quota: number,
+	truck: number,
 	expiresAt: number,
 }
 

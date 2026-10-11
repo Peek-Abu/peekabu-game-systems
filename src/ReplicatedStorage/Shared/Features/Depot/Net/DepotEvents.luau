@@ -1,6 +1,6 @@
 --!strict
 --[=[
-	DepotEvents: the Depot's ByteNet packets: Card (server → client), a travel card (the drive card when a
+	DepotEvents: the Depot's ByteNet packets: Card (server → client), a travel card with the contract's words, the quota and the truck number (the drive card when a
 	party's truck leaves, the arrival card when it reaches the office; the client checks the kind,
 	DepotStore.show), Board (server → client: open the contract board) and LastShift (server → client: the
 	returning player's last shift, for the board's card), and Ready (client → server), sent once the client is listening for cards, so the server
@@ -30,8 +30,12 @@ local DepotEvents = ByteNet.defineNamespace(NAMESPACE, function()
 			Card = ByteNet.definePacket({
 				value = ByteNet.struct({
 					kind = ByteNet.string,
-					title = ByteNet.string,
-					body = ByteNet.string,
+					client = ByteNet.string,
+					job = ByteNet.string,
+					note = ByteNet.string,
+					-- ShiftConstants.QUOTA (350) and a layout truck (1..DepotConstants.MAX_TRUCKS, 0 = unknown).
+					quota = ByteNet.uint16,
+					truck = ByteNet.uint8,
 				}),
 				reliabilityType = "reliable",
 			}),

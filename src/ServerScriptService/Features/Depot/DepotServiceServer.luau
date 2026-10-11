@@ -13,7 +13,7 @@
 	- A departing party carries tonight's contract id (setDepartData) and gets the drive card; a local move
 	  to the depot lands on the spawn points (setArrivalPoint).
 	- An arriving party (and a member who joins late), wherever it lands, gets the arrival card for its
-	  contract (resolved from the untrusted payload). A client says it listens (DepotEvents.Ready); a card
+	  contract (resolved from the untrusted payload), with the truck it rode (DepotContractUtils.truckOf); the drive card names the departing truck. A client says it listens (DepotEvents.Ready); a card
 	  sent before that is held and delivered then, so a slow-loading client does not miss it.
 	- A returning player (Queue `returned`) gets their result card (ShiftCardUtils.decode: teleport data is
 	  untrusted) pinned on the result board, visible to them only, and a toast; the card's summary
@@ -74,6 +74,8 @@ local built: DepotBuildSystem.Built? = nil
 local contract: DepotTypes.Contract = DepotContractUtils.tonight(DepotConstants.CONTRACTS, os.time())
 -- The contract of the crew that last arrived here (a late member gets the same card).
 local crewContract: DepotTypes.Contract = contract
+-- The truck that crew rode (from the untrusted payload; nil when unknown).
+local crewTruck: number? = nil
 local stoppers: { () -> () } = {}
 local cardsSent = 0
 local cardsPinned = 0
@@ -219,15 +221,16 @@ local DepotServiceServer: DepotServiceServer = {
 		QueueServiceServer:setArrivalPoint(DepotConstants.ROLE_DEPOT, function(_player, index)
 			return self:spawnCFrame(index)
 		end)
-		local departing = QueueServiceServer.departing:Connect(function(_pad, party)
-			sendCard(party, DepotContractUtils.driveCard(contract))
+		local departing = QueueServiceServer.departing:Connect(function(pad, party)
+			sendCard(party, DepotContractUtils.driveCard(contract, truckIndexOf(pad)))
 		end)
 		local arrived = QueueServiceServer.arrived:Connect(function(party, payload)
 			crewContract = DepotContractUtils.resolve(DepotConstants.CONTRACTS, payload.contract)
-			sendCard(party, DepotContractUtils.arrivalCard(crewContract, ShiftConstants.QUOTA))
+			crewTruck = DepotContractUtils.truckOf(payload.truck, DepotConstants.MAX_TRUCKS)
+			sendCard(party, DepotContractUtils.arrivalCard(crewContract, ShiftConstants.QUOTA, crewTruck))
 		end)
 		local late = QueueServiceServer.joinedLate:Connect(function(player)
-			sendCard({ player }, DepotContractUtils.arrivalCard(crewContract, ShiftConstants.QUOTA))
+			sendCard({ player }, DepotContractUtils.arrivalCard(crewContract, ShiftConstants.QUOTA, crewTruck))
 		end)
 		local returned = QueueServiceServer.returned:Connect(pinResultCard)
 		local listening = DepotEvents.packets.Ready.listen(function(data: boolean, player: Player?)

@@ -70,7 +70,7 @@ local DepotServiceClient: DepotServiceClient = {
 		table.insert(
 			stoppers,
 			DepotEvents.packets.Card.listen(function(data: DepotTypes.CardMessage)
-				DepotStore.show(data.kind, data.title, data.body, os.clock())
+				DepotStore.show(data, os.clock())
 			end)
 		)
 		table.insert(

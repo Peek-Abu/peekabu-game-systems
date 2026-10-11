@@ -61,15 +61,27 @@ function DepotContractUtils.boardAttributes(contract: Contract): { [string]: str
 	}
 end
 
-function DepotContractUtils.driveCard(contract: Contract): DepotTypes.CardMessage
-	return { kind = "drive", title = "On the road", body = `Heading to {contract.client}` }
+-- The drive card: tonight's contract and the truck that left (nil: unknown, sent as 0).
+function DepotContractUtils.driveCard(contract: Contract, truck: number?): DepotTypes.CardMessage
+	return {
+		kind = "drive",
+		client = contract.client,
+		job = contract.job,
+		note = contract.note,
+		quota = 0,
+		truck = truck or 0,
+	}
 end
 
-function DepotContractUtils.arrivalCard(contract: Contract, quota: number): DepotTypes.CardMessage
+-- The arrival card: the crew's contract, the quota to clear and the truck they rode (nil: unknown, sent as 0).
+function DepotContractUtils.arrivalCard(contract: Contract, quota: number, truck: number?): DepotTypes.CardMessage
 	return {
 		kind = "arrival",
-		title = contract.client,
-		body = `{contract.job} Clear {quota} of trash. {contract.note}`,
+		client = contract.client,
+		job = contract.job,
+		note = contract.note,
+		quota = quota,
+		truck = truck or 0,
 	}
 end
 

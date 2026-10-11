@@ -18,8 +18,11 @@ local DepotTypes = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotTyp
 
 type Pending = {
 	kind: DepotTypes.CardKind,
-	title: string,
-	body: string,
+	client: string,
+	job: string,
+	note: string,
+	quota: number,
+	truck: number,
 }
 
 local initialCard: DepotTypes.ShownCard? = nil
@@ -47,7 +50,15 @@ local function secondsFor(kind: DepotTypes.CardKind): number
 end
 
 local function present(entry: Pending, now: number)
-	card({ kind = entry.kind, title = entry.title, body = entry.body, expiresAt = now + secondsFor(entry.kind) })
+	card({
+		kind = entry.kind,
+		client = entry.client,
+		job = entry.job,
+		note = entry.note,
+		quota = entry.quota,
+		truck = entry.truck,
+		expiresAt = now + secondsFor(entry.kind),
+	})
 end
 
 local DepotStore = {
@@ -58,14 +69,21 @@ local DepotStore = {
 }
 
 -- Shows (or queues) a card from the server. False, and nothing shown, for an unknown kind.
-function DepotStore.show(kind: string, title: string, body: string, now: number): boolean
+function DepotStore.show(message: DepotTypes.CardMessage, now: number): boolean
 	-- Annotated and tested with `not` (the RoundSnapshotUtils note): comparing an optional singleton union
 	-- against nil widens it back to string.
-	local parsed: DepotTypes.CardKind? = kindOf(kind)
+	local parsed: DepotTypes.CardKind? = kindOf(message.kind)
 	if not parsed then
 		return false
 	end
-	local entry: Pending = { kind = parsed, title = title, body = body }
+	local entry: Pending = {
+		kind = parsed,
+		client = message.client,
+		job = message.job,
+		note = message.note,
+		quota = message.quota,
+		truck = message.truck,
+	}
 	local current = card()
 	if current == nil or now >= current.expiresAt then
 		present(entry, now)
