@@ -40,15 +40,27 @@ end
 
 local BUTTONS = { "primary", "drop", "throw", "pocket" }
 
-local function expectClear(arc, width)
+-- Every gap the arc must keep, as a list of the ones it breaks (empty when clear): >= 16 px from the Jump button and
+-- between buttons, and right of the thumbstick zone (the left 40% of a `width` px screen). Pure, so it can live
+-- outside the spec body; the `it` blocks assert the result with `expect`.
+local function arcFailures(arc, width)
+	local failures = {}
 	for index, first in BUTTONS do
-		expect(rectGap(arc[first], arc.jump) >= 16).to.equal(true)
-		-- Clear of the thumbstick zone, the left 40% of the screen.
-		expect(width + arc[first].x >= width * 0.4).to.equal(true)
+		local jumpGap = rectGap(arc[first], arc.jump)
+		if jumpGap < 16 then
+			table.insert(failures, `{first}-jump {jumpGap}`)
+		end
+		if width + arc[first].x < width * 0.4 then
+			table.insert(failures, `{first} in the thumbstick zone at width {width}`)
+		end
 		for _, second in table.move(BUTTONS, index + 1, #BUTTONS, 1, {}) do
-			expect(circleGap(arc[first], arc[second]) >= 16).to.equal(true)
+			local gap = circleGap(arc[first], arc[second])
+			if gap < 16 then
+				table.insert(failures, `{first}-{second} {gap}`)
+			end
 		end
 	end
+	return table.concat(failures, "; ")
 end
 
 local REVIEW = {
@@ -318,7 +330,7 @@ return function()
 			expect(arc.drop.x).to.equal(-332)
 			expect(arc.throw.y).to.equal(-196)
 			expect(arc.pocket.x).to.equal(-193)
-			expectClear(arc, 844)
+			expect(arcFailures(arc, 844)).to.equal("")
 			expect(ShiftHudViewModel.arcFor(500).jump.size).to.equal(70)
 		end)
 
@@ -327,10 +339,10 @@ return function()
 			expect(arc.jump.size).to.equal(120)
 			expect(arc.jump.x).to.equal(-170)
 			expect(arc.jump.y).to.equal(-210)
-			expectClear(arc, 1024)
+			expect(arcFailures(arc, 1024)).to.equal("")
 			-- Portrait, and the smallest screen that gets the large Jump button.
-			expectClear(arc, 768)
-			expectClear(ShiftHudViewModel.arcFor(501), 501)
+			expect(arcFailures(arc, 768)).to.equal("")
+			expect(arcFailures(ShiftHudViewModel.arcFor(501), 501)).to.equal("")
 		end)
 	end)
 end
