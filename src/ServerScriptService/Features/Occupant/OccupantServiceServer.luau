@@ -18,7 +18,7 @@
 	  (OccupantRigSystem, a paper memo; the line varies per cue, OccupantFeedbackUtils.pickLine); the client voices
 	  and types it (OccupantPresenceSystem); while he looks around he turns his root through a sweep.
 	- Catch: the kind's attack (onAttack) → OccupantCatchRules → OccupantCatchSystem: camera snap, lights out,
-	  ragdoll launch; ~8 s spectating (Death's respawn delay); "Rehired." on the respawn in the loading bay; the
+	  ragdoll launch; ~8 s spectating (Death's respawn delay); the Rehired notice on the respawn in the loading bay; the
 	  catch counts in Shift's review.
 
 	Spec-exempt shell (Instances, raycasts, Players, signals); the decisions are the specced OccupantBrainRules,
@@ -100,7 +100,7 @@ local tuningElapsed = 0
 local rng = Random.new()
 local lastLine: string? = nil
 local counters = { spawned = 0, heard = 0, chases = 0, catches = 0 }
--- UserIds caught this life: their next character gets the "Rehired." toast.
+-- UserIds caught this life: their next character gets the Rehired notice.
 local rehire: { [number]: boolean } = {}
 local stoppers: { () -> () } = {}
 
@@ -239,7 +239,7 @@ local catchHooks: OccupantCatchSystem.Hooks = {
 		rehire[player.UserId] = true
 		ShiftServiceServer:noteCatch(player)
 		ToastServiceServer:send("all", {
-			text = `{player.DisplayName} was caught by {OccupantConstants.DISPLAY_NAME}.`,
+			text = OccupantFeedbackUtils.caughtText(player.DisplayName, OccupantConstants.SPECTATE_SECONDS),
 			style = ShiftConstants.TOAST_STICKY,
 			duration = 4,
 		})
@@ -288,6 +288,10 @@ local function despawn()
 	mind = nil
 	pendingNoise = nil
 	lookBase = nil
+	-- A catch in the last seconds: the next shift must not show a stale deadline.
+	for userId in rehire do
+		OccupantCatchSystem.clearDeadline(userId)
+	end
 	table.clear(rehire)
 	if current ~= nil and current.model.Parent ~= nil then
 		NpcServiceServer:despawn(current.model)
@@ -411,10 +415,7 @@ local OccupantServiceServer: OccupantServiceServer = {
 			Observers.observeCharacter(function(player: Player, _character: Model)
 				if rehire[player.UserId] then
 					rehire[player.UserId] = nil
-					ToastServiceServer:send(
-						player,
-						{ text = OccupantConstants.REHIRED_TEXT, style = ShiftConstants.TOAST_STICKY, duration = 3 }
-					)
+					OccupantCatchSystem.rehired(player)
 				end
 				return nil
 			end)
@@ -443,7 +444,6 @@ local OccupantServiceServer: OccupantServiceServer = {
 		end
 		table.clear(stoppers)
 		OccupantCatchSystem.clear()
-		table.clear(rehire)
 		shift = nil
 		NpcServiceServer:setBrain(OccupantConstants.NPC_KIND, nil)
 		despawn()

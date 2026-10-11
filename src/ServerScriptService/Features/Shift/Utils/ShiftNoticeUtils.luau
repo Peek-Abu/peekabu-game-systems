@@ -47,7 +47,11 @@ function ShiftNoticeUtils.notices(before: ShiftTypes.ShiftState, after: ShiftTyp
 		table.insert(list, stamp("QUOTA MET"))
 		table.insert(
 			list,
-			note(`Mr. Harlow is on his break for {clock(ShiftConstants.BREAK_SECONDS)}. Regroup and bank.`)
+			note(
+				`Quota met! Clock out at the truck any time, or stay: salvage ×{multiplier} in {clock(
+					ShiftConstants.BREAK_SECONDS + ShiftConstants.WARNING_SECONDS
+				)}.`
+			)
 		)
 	end
 	if after.stage == "warning" and before.stage ~= "warning" then

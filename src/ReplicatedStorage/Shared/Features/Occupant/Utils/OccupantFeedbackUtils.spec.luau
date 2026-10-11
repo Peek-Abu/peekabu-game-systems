@@ -127,4 +127,26 @@ return function()
 			expect(OccupantFeedbackUtils.footstepInterval(1)).to.equal(nil)
 		end)
 	end)
+
+	describe("catch copy", function()
+		local CargoRegistry = require(game:GetService("ReplicatedStorage").Shared.Features.Cargo.Data.CargoRegistry)
+
+		it("lists the hands item, then the pockets, by name", function()
+			local names = OccupantFeedbackUtils.droppedNames("monitor", { "plaque" }, CargoRegistry.get)
+			expect(#names).to.equal(2)
+			expect(names[1]).to.equal("Monitor")
+			expect(names[2]).to.equal("Employee of the Month plaque")
+		end)
+
+		it("skips empty hands and unknown kinds", function()
+			local names = OccupantFeedbackUtils.droppedNames(nil, { "nope", "goldenStapler" }, CargoRegistry.get)
+			expect(#names).to.equal(1)
+			expect(names[1]).to.equal("Golden stapler")
+		end)
+
+		it("writes the caught toast with the respawn time", function()
+			expect(OccupantFeedbackUtils.caughtText("Alex", 8)).to.equal("Alex was caught! Back in 0:08.")
+			expect(OccupantFeedbackUtils.caughtText("Alex", 61)).to.equal("Alex was caught! Back in 1:01.")
+		end)
+	end)
 end

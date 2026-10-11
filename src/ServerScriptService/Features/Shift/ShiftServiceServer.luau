@@ -425,7 +425,7 @@ local ShiftServiceServer: ShiftServiceServer = {
 		setState(nextState)
 		local who = if player ~= nil then player.DisplayName else "Someone"
 		ToastServiceServer:send("all", {
-			text = `{who} clocked out. The shift ends in {ShiftConstants.CLOCK_OUT_SECONDS} s: cargo not on the truck is lost.`,
+			text = `{who} is clocking out!`,
 			style = ShiftConstants.TOAST_STICKY,
 			duration = ShiftConstants.CLOCK_OUT_SECONDS,
 		})

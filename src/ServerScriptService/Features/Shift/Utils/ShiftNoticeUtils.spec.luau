@@ -33,7 +33,7 @@ return function()
 		expect(list[1].style).to.equal(ShiftConstants.TOAST_STAMP)
 		expect(list[1].duration).to.equal(ShiftConstants.STAMP_SECONDS)
 		expect(list[2].style).to.equal(ShiftConstants.TOAST_STICKY)
-		expect(list[2].text).to.equal("Mr. Harlow is on his break for 0:30. Regroup and bank.")
+		expect(list[2].text).to.equal("Quota met! Clock out at the truck any time, or stay: salvage ×1.5 in 1:00.")
 		expect(list[2].duration).to.equal(ShiftConstants.NOTICE_SECONDS)
 	end)
 

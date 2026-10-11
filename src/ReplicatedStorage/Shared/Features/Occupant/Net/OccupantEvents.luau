@@ -40,6 +40,21 @@ local OccupantEvents = ByteNet.defineNamespace(NAMESPACE, function()
 				value = ByteNet.bool,
 				reliabilityType = "reliable",
 			}),
+			-- To the caught player, at the throw: their incident report.
+			CatchReport = ByteNet.definePacket({
+				value = ByteNet.struct({
+					room = ByteNet.string,
+					clock = ByteNet.float32,
+					backAt = ByteNet.float64,
+					dropped = ByteNet.array(ByteNet.string),
+				}),
+				reliabilityType = "reliable",
+			}),
+			-- To a caught player whose new character spawned: back on the clock (the Rehired card).
+			Rehired = ByteNet.definePacket({
+				value = ByteNet.bool,
+				reliabilityType = "reliable",
+			}),
 		},
 		queries = {},
 		structs = {},

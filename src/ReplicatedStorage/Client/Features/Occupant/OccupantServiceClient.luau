@@ -14,9 +14,11 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
+local OccupantTypes = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantTypes)
 local OccupantEvents = require(ReplicatedStorage.Shared.Features.Occupant.Net.OccupantEvents)
 local CameraServiceClient = require(ReplicatedStorage.Client.Features.Camera.CameraServiceClient)
 local VfxServiceClient = require(ReplicatedStorage.Client.Features.Vfx.VfxServiceClient)
+local OccupantCatchStore = require(ReplicatedStorage.Client.Features.Occupant.State.OccupantCatchStore)
 local OccupantTellSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantTellSystem)
 local OccupantPresenceSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantPresenceSystem)
 local OccupantScareSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantScareSystem)
@@ -55,6 +57,20 @@ local OccupantServiceClient: OccupantServiceClient = {
 			OccupantEvents.packets.CatchCam.listen(function(cframe: CFrame)
 				snap(cframe)
 				OccupantScareSystem.snap()
+				OccupantCatchStore.snap()
+				task.delay(OccupantConstants.SNAP_SECONDS, OccupantCatchStore.endSnap)
+			end)
+		)
+		table.insert(
+			stoppers,
+			OccupantEvents.packets.CatchReport.listen(function(data: OccupantTypes.CatchReport)
+				OccupantCatchStore.setReport(data)
+			end)
+		)
+		table.insert(
+			stoppers,
+			OccupantEvents.packets.Rehired.listen(function(_back: boolean)
+				OccupantCatchStore.rehired(os.clock())
 			end)
 		)
 		table.insert(
@@ -81,6 +97,7 @@ local OccupantServiceClient: OccupantServiceClient = {
 			stop()
 		end
 		table.clear(stoppers)
+		OccupantCatchStore.clear()
 	end,
 
 	getState = function(_self)

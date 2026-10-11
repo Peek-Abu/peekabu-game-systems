@@ -2,11 +2,14 @@
 --[=[
 	OccupantCatchSystem: the catch sequence (Cleanup Crew spec §4 "Catch"). `begin` turns Harlow to face the
 	player, freezes them (their root anchored), points their camera at his face (OccupantEvents.CatchCam),
-	kills the lights around him for everyone (OccupantEvents.LightsOut) and has him say "You're FIRED!". After
+	kills the lights around him for everyone (OccupantEvents.LightsOut). After
 	SNAP_SECONDS the player is released and killed with a launch (base Death: ragdoll + velocity), away from him
 	and up; Carry drops their hands item and Cargo scatters their pockets as they die (M1), at the catch point
 	(the Died handlers run before the launch velocity moves the body). Death's spectate and respawn delay give
-	the ~8 s of watching, and `hooks.onCaught` does the rest (Shift's catch count, toasts). If the shift ended
+	the ~8 s of watching, and `hooks.onCaught` does the rest (Shift's catch count, toasts). At the throw he says the
+	line ("You're FIRED!", not during the scare), the caught player's public deadline (`caughtUntil`) is published
+	for the roster and their private incident report (room, shift clock, what they dropped) is sent
+	(OccupantEvents.CatchReport); `rehired` clears the deadline and sends the Rehired notice. If the shift ended
 	meanwhile (`hooks.stillOn`), the player is just released. He plays his grab clip at the start and his throw clip at
 	the launch when they are uploaded (OccupantAssets).
 
@@ -23,15 +26,25 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
+local Workspace = game:GetService("Workspace")
 
 local AnimationRegistry = require(ReplicatedStorage.Shared.Features.Animation.Data.AnimationRegistry)
+local CargoRegistry = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoRegistry)
+local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
+local OccupantTypes = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantTypes)
 local OccupantEvents = require(ReplicatedStorage.Shared.Features.Occupant.Net.OccupantEvents)
 local OccupantAnimationUtils = require(ReplicatedStorage.Shared.Features.Occupant.Utils.OccupantAnimationUtils)
+local OccupantFeedbackUtils = require(ReplicatedStorage.Shared.Features.Occupant.Utils.OccupantFeedbackUtils)
 local OccupantCatchRules = require(ServerScriptService.Features.Occupant.Rules.OccupantCatchRules)
 local OccupantRigSystem = require(ServerScriptService.Features.Occupant.Systems.OccupantRigSystem)
 local AnimationServiceServer = require(ServerScriptService.Features.Animation.AnimationServiceServer)
+local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
+local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
+local OfficeServiceServer = require(ServerScriptService.Features.Office.OfficeServiceServer)
+local ShiftServiceServer = require(ServerScriptService.Features.Shift.ShiftServiceServer)
+local StateSyncPublicPlayerStore = require(ServerScriptService.Features.StateSync.State.StateSyncPublicPlayerStore)
 
 export type Hooks = {
 	-- Whether the catch may still finish (a shift is still running and Harlow is still there).
@@ -55,6 +68,29 @@ local function act(rig: OccupantRigSystem.Rig, id: string)
 	if clip ~= nil then
 		AnimationServiceServer:playOnRig(rig.model, clip)
 	end
+end
+
+-- The caught player's incident report, read before the kill drops what they carry.
+local function reportFor(player: Player, position: Vector3): OccupantTypes.CatchReport
+	local carried = CarryServiceServer:getCarried(player)
+	local hands = if carried ~= nil then carried:GetAttribute(CarryConstants.KIND_ATTRIBUTE) else nil
+	local pockets: { string } = {}
+	for _, entry in CargoServiceServer:pocketsOf(player) do
+		table.insert(pockets, entry.kind)
+	end
+	local room = OfficeServiceServer:whereIs(position)
+	local endsAt = ShiftServiceServer:getShift().endsAt
+	local now = Workspace:GetServerTimeNow()
+	return {
+		room = room or OccupantConstants.CATCH_ROOM_FALLBACK,
+		clock = if endsAt ~= nil then math.max(0, endsAt - now) else 0,
+		backAt = now + OccupantConstants.SPECTATE_SECONDS,
+		dropped = OccupantFeedbackUtils.droppedNames(
+			if type(hands) == "string" then hands else nil,
+			pockets,
+			CargoRegistry.get
+		),
+	}
 end
 
 local OccupantCatchSystem = {}
@@ -90,6 +126,7 @@ function OccupantCatchSystem.begin(rig: OccupantRigSystem.Rig, player: Player, h
 		if not hooks.stillOn() or victim.Parent == nil or victim.Health <= 0 then
 			return
 		end
+		local report = reportFor(player, root.Position)
 		local velocity = OccupantCatchRules.launch(
 			rig.root.Position,
 			root.Position,
@@ -98,6 +135,10 @@ function OccupantCatchSystem.begin(rig: OccupantRigSystem.Rig, player: Player, h
 		)
 		act(rig, "harlowThrow")
 		DeathServiceServer:kill(victim, "caught", { launch = velocity })
+		-- Figma 4a: the line comes with the throw, not the scare.
+		OccupantRigSystem.say(rig, OccupantConstants.LINES.caught)
+		StateSyncPublicPlayerStore.set(userId, { [OccupantConstants.PUBLIC_CAUGHT_UNTIL] = report.backAt })
+		OccupantEvents.packets.CatchReport.sendTo(report, player)
 		hooks.onCaught(player)
 	end)
 
@@ -108,9 +149,23 @@ function OccupantCatchSystem.begin(rig: OccupantRigSystem.Rig, player: Player, h
 	local eye = face + harlow.CFrame.LookVector * FACE_DISTANCE
 	OccupantEvents.packets.CatchCam.sendTo(CFrame.lookAt(eye, face), player)
 	OccupantEvents.packets.LightsOut.sendToAll(harlow.Position)
-	OccupantRigSystem.say(rig, OccupantConstants.LINES.caught)
 	act(rig, "harlowGrab")
 	return true
+end
+
+--[=[
+	Clears a player's public deadline without the Rehired notice (the shift ended before they respawned).
+]=]
+function OccupantCatchSystem.clearDeadline(userId: number)
+	StateSyncPublicPlayerStore.clearField(userId, OccupantConstants.PUBLIC_CAUGHT_UNTIL)
+end
+
+--[=[
+	A caught player's new character spawned: clears their public deadline and tells them they are back (the Rehired card).
+]=]
+function OccupantCatchSystem.rehired(player: Player)
+	OccupantCatchSystem.clearDeadline(player.UserId)
+	OccupantEvents.packets.Rehired.sendTo(true, player)
 end
 
 --[=[

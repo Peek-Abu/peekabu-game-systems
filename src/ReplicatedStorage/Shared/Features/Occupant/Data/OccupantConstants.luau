@@ -114,7 +114,14 @@ return table.freeze({
 	CUE_NAME = "OccupantCue",
 	SPEECH_NAME = "OccupantSpeech",
 	DISPLAY_NAME = "Mr. Harlow",
-	REHIRED_TEXT = "Rehired.",
+	-- M3 UI. Public field: the server time a caught player is back on the clock (the roster's "CAUGHT · back 0:06");
+	-- cleared on the respawn.
+	PUBLIC_CAUGHT_UNTIL = "caughtUntil",
+	-- The Rehired card shows from REHIRED_LEAD seconds before the respawn until REHIRED_HOLD seconds after it.
+	REHIRED_LEAD = 1.5,
+	REHIRED_HOLD = 3,
+	-- The incident report's room when the catch happened outside every room.
+	CATCH_ROOM_FALLBACK = "the office",
 	BODY = table.freeze(BODY),
 	LINES = table.freeze(LINES),
 	LINE_VARIANTS = table.freeze(LINE_VARIANTS),

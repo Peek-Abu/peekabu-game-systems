@@ -75,4 +75,13 @@ export type CatchInput = {
 	zone: Zone,
 }
 
+-- What the caught player is told (OccupantEvents.CatchReport, M3 UI incident report): the room, the shift clock's
+-- seconds left at the catch, the server time they are back, and the names of the items they dropped.
+export type CatchReport = {
+	room: string,
+	clock: number,
+	backAt: number,
+	dropped: { string },
+}
+
 return {}

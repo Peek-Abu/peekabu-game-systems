@@ -12,6 +12,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local CargoTypes = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoTypes)
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 
 export type PresenceCue = "curious" | "spotted" | "giveUp" | "chaseStart" | "chaseEnd"
@@ -107,6 +108,35 @@ function OccupantFeedbackUtils.footstepInterval(speed: number): number?
 		return nil
 	end
 	return math.clamp(OccupantConstants.STRIDE / speed, OccupantConstants.STEP_MIN, OccupantConstants.STEP_MAX)
+end
+
+--[=[
+	The names of what a caught player dropped: the hands item, then the pockets; empty hands and unknown kinds skipped.
+]=]
+function OccupantFeedbackUtils.droppedNames(
+	hands: string?,
+	pockets: { string },
+	lookup: (kind: string) -> CargoTypes.ItemDef?
+): { string }
+	local names: { string } = {}
+	local function add(kind: string?)
+		local def = if kind ~= nil then lookup(kind) else nil
+		if def ~= nil then
+			table.insert(names, def.name)
+		end
+	end
+	add(hands)
+	for _, kind in pockets do
+		add(kind)
+	end
+	return names
+end
+
+-- The crew's toast when someone is caught (Figma 1f): "Alex was caught! Back in 0:08." The m:ss formatting is a
+-- third copy (Shift's notices and the client's clock have theirs); Shared cannot require the client one.
+function OccupantFeedbackUtils.caughtText(name: string, seconds: number): string
+	local whole = math.max(0, math.ceil(seconds))
+	return `{name} was caught! Back in {string.format("%d:%02d", whole // 60, whole % 60)}.`
 end
 
 return OccupantFeedbackUtils
