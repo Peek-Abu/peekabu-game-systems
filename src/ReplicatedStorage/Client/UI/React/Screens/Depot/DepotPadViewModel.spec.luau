@@ -32,6 +32,12 @@ return function()
 		expect(view.slots[4].name).to.equal("open")
 	end)
 
+	it("calls a member with no name Crew", function()
+		local view = DepotPadViewModel.pad(pad({ members = { 1, 9, 3 } }), 3, NAMES, 2, 100, true)
+		expect(view.slots[2].name).to.equal("Crew")
+		expect(view.names).to.equal("Sam · Crew · you")
+	end)
+
 	it("lists names for the phone", function()
 		expect(DepotPadViewModel.pad(pad(), 3, NAMES, 2, 100, true).names).to.equal("Sam · Alex · you")
 	end)

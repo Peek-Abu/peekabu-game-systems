@@ -2,7 +2,7 @@
 --[=[
 	DepotPad: the truck queue pad HUD widget (registered by DepotServiceClient). While the local player is aboard a pad
 	it reads the queue snapshot, their public truck number, the server clock and the device layout, and draws
-	DepotPadPanel (which replaces the base placeholder pad panel). Names are the crew display names; the card only
+	DepotPadPanel (which replaces the base placeholder pad panel). Names are the crew display names (the view model names an unknown member "Crew"); the card only
 	displays, the server decides who is aboard and when the truck leaves. Depart now is the `onDepart` the service
 	passes in (components never talk to the server).
 
@@ -53,7 +53,9 @@ local function DepotPad(props: DepotPadProps): React.ReactNode
 	local names: { [number]: string } = {}
 	for _, userId in pad.members do
 		local member = Players:GetPlayerByUserId(userId)
-		names[userId] = if member ~= nil then member.DisplayName else "player"
+		if member ~= nil then
+			names[userId] = member.DisplayName
+		end
 	end
 	local me = publicPlayers[StateSyncConstants.publicEntryKey(player.UserId)]
 	local truck = if me ~= nil then me[DepotConstants.PUBLIC_TRUCK] else nil

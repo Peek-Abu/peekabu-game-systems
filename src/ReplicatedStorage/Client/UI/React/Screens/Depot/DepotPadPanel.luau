@@ -39,6 +39,7 @@ local DASH_THICKNESS = 3
 local JUMP_GAP = 16
 local PHONE_BOTTOM = 20
 local PHONE_BUTTON_HEIGHT = 56
+local PHONE_CARD_WIDTH = 420
 
 -- An outline of dashes around a side x side box (a Frame cannot dash its stroke).
 local function dashedBorder(side: number): { [string]: React.ReactNode }
@@ -217,7 +218,7 @@ local function phone(props: DepotPadPanelProps): React.ReactNode
 			text = view.names,
 			role = "body",
 			size = 14,
-			frame = UDim2.new(1, -270, 0, 16),
+			frame = UDim2.fromOffset(150, 16),
 			autoSize = false,
 			wrapped = false,
 			position = UDim2.fromOffset(130, 78),
@@ -239,9 +240,10 @@ local function phone(props: DepotPadPanelProps): React.ReactNode
 	end
 	return e(React.Fragment, nil, {
 		card = e("Frame", {
-			-- Figma 3b: the strip spans from x 234 to the right safe margin, at the top safe margin.
-			Position = UDim2.fromOffset(234, UIPaperConstants.SAFE.phone.top),
-			Size = UDim2.new(1, -(234 + UIPaperConstants.SAFE.phone.right), 0, 104),
+			-- Figma 3b: a fixed 420x104 card centred at the top, at the top safe margin.
+			AnchorPoint = Vector2.new(0.5, 0),
+			Position = UDim2.new(0.5, 0, 0, UIPaperConstants.SAFE.phone.top),
+			Size = UDim2.fromOffset(PHONE_CARD_WIDTH, 104),
 			BackgroundTransparency = 1,
 		}, {
 			sheet = e(PaperSheet, {
@@ -251,17 +253,30 @@ local function phone(props: DepotPadPanelProps): React.ReactNode
 				children = children,
 			}),
 		}),
-		hint = e(PaperLabel, {
-			text = view.hint,
-			role = "body",
-			size = 14,
-			color = COLOR.cream,
-			align = "right",
-			frame = UDim2.fromOffset(260, 18),
-			autoSize = false,
-			wrapped = false,
-			anchor = Vector2.new(1, 1),
-			position = UDim2.new(1, buttonRight, 1, -(PHONE_BOTTOM + PHONE_BUTTON_HEIGHT + 8)),
+		-- The hint is cream text over the world, so it sits on a small dark plate.
+		hint = e("Frame", {
+			AnchorPoint = Vector2.new(1, 1),
+			Position = UDim2.new(1, buttonRight, 1, -(PHONE_BOTTOM + PHONE_BUTTON_HEIGHT + 8)),
+			Size = UDim2.fromOffset(0, 0),
+			AutomaticSize = Enum.AutomaticSize.XY,
+			BackgroundColor3 = COLOR.night,
+			BackgroundTransparency = 0.25,
+			BorderSizePixel = 0,
+		}, {
+			corner = e("UICorner", { CornerRadius = UDim.new(0, 4) }),
+			padding = e("UIPadding", {
+				PaddingLeft = UDim.new(0, 8),
+				PaddingRight = UDim.new(0, 8),
+				PaddingTop = UDim.new(0, 4),
+				PaddingBottom = UDim.new(0, 4),
+			}),
+			text = e(PaperLabel, {
+				text = view.hint,
+				role = "body",
+				size = 14,
+				color = COLOR.cream,
+				fit = true,
+			}),
 		}),
 		button = e(PaperButton, {
 			text = "DEPART NOW",
