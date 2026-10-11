@@ -8,7 +8,8 @@
 	"Loaded: …" toast is gone).
 
 	Moved out of ShiftServiceServer in M2 (the service was at the 400-line cap). Spec-exempt shell (Round); the
-	multiplier and the quota are the specced ShiftPhaseRules.
+	multiplier and the quota are the specced ShiftPhaseRules. Each accepted Load is reported to ShiftAnalyticsSystem
+	(cargo_banked, optional-salvage attempts).
 
 	@class ShiftBankingSystem
 ]=]
@@ -20,6 +21,7 @@ local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local CargoTypes = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoTypes)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftRosterTracker = require(ServerScriptService.Features.Shift.State.ShiftRosterTracker)
+local ShiftAnalyticsSystem = require(ServerScriptService.Features.Shift.Systems.ShiftAnalyticsSystem)
 local RoundServiceServer = require(ServerScriptService.Features.Round.RoundServiceServer)
 
 export type Deps = {
@@ -80,6 +82,10 @@ function ShiftBankingSystem.new(deps: Deps): CargoTypes.BankHandler
 		if not ok and not wrote then
 			return false, nil
 		end
+		-- Analytics (M5): cargo_banked per item, at the quota tag before this Load; closes the loader's attempts.
+		guarded("banking analytics", function()
+			ShiftAnalyticsSystem.banked(player, deposit, multiplier)
+		end)
 		-- The quota stamp and the publish, in their own guard: a throwing follow-up never un-banks the deposit.
 		guarded("banking follow-up", deps.afterBank)
 		return true, bonus

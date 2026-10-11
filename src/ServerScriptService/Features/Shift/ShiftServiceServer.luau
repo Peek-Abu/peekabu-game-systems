@@ -13,6 +13,8 @@
 	  overtime (salvage x1.5) and raises the pressure tier at 2:00 and 4:00 (ShiftPhaseRules.advance), each
 	  change announced (ShiftNoticeUtils) and fired on `changed`;
 	- clock out: the time clock at the truck starts a 10 s countdown for everyone, then ends the run;
+	- analytics and the A/B variant (M5): each run's variant comes from ShiftAnalyticsSystem.pickVariant;
+	  ShiftAnalyticsWatchSystem turns the shift's and the other features' signals into the spec §6.6 events;
 	- results: ShiftResultsUtils builds the review; the crew votes Another shift / Back to depot (ShiftVoteSystem;
 	  Back to depot sends the crew home through ShiftTripSystem with the review as its result card);
 	- the crew (M4): a shift starts only for the party that arrived through the Queue (ShiftTripSystem); only
@@ -50,6 +52,8 @@ local ShiftRosterTracker = require(ShiftServer.State.ShiftRosterTracker)
 local ShiftBankingSystem = require(ShiftServer.Systems.ShiftBankingSystem)
 local ShiftTripSystem = require(ShiftServer.Systems.ShiftTripSystem)
 local ShiftVoteSystem = require(ShiftServer.Systems.ShiftVoteSystem)
+local ShiftAnalyticsSystem = require(ShiftServer.Systems.ShiftAnalyticsSystem)
+local ShiftAnalyticsWatchSystem = require(ShiftServer.Systems.ShiftAnalyticsWatchSystem)
 local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
 local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
@@ -228,6 +232,10 @@ local function onRoundPhase(roundState: RoundTypes.RoundState)
 	if nextState.phase == "results" and results == nil then
 		results = safeResults(roundState.outcome or "timeout")
 	end
+	if nextState.phase == "running" and before ~= "running" then
+		-- Each run's A/B variant (spec §4; rewards never read it), chosen before anyone hears of the run.
+		nextState.variant = ShiftAnalyticsSystem.pickVariant(nextState.shift)
+	end
 	setState(nextState)
 	if nextState.phase == "running" and before ~= "running" then
 		beginRun()
@@ -340,6 +348,7 @@ local ShiftServiceServer: ShiftServiceServer = {
 		DeathServiceServer:setSpawnPoint(trip.spawnFor)
 		trip:start(publish)
 		CargoServiceServer:onBanked(onBanked)
+		table.insert(stoppers, ShiftAnalyticsWatchSystem.start(changed))
 		InteractionServiceServer:onInteract(ShiftConstants.CLOCK_OUT_KIND, function(player, _target)
 			self:clockOut(player)
 		end)
