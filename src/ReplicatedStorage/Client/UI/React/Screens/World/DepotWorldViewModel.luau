@@ -59,10 +59,11 @@ local LEAVING_NOW = "Leaving now"
 
 local DepotWorldViewModel = {}
 
--- Character limits: the work order's client line, the review band's client, a sticky's line.
+-- Character limits: the work order's client line, the review band's client, a sticky's line, a crew name.
 DepotWorldViewModel.WORK_CLIENT_MAX = 24
 DepotWorldViewModel.BAND_CLIENT_MAX = 22
 DepotWorldViewModel.STICKY_MAX = 24
+DepotWorldViewModel.CREW_NAME_MAX = 16
 -- The most crew lines and award stickies a card shows (ShiftCardUtils keeps the same caps).
 DepotWorldViewModel.MAX_CREW = 4
 DepotWorldViewModel.MAX_AWARDS = 3
@@ -193,7 +194,7 @@ function DepotWorldViewModel.review(attributes: { [string]: unknown }): ReviewVi
 		if type(name) ~= "string" then
 			break
 		end
-		table.insert(names, name)
+		table.insert(names, WorldBillboardViewModel.clip(name, DepotWorldViewModel.CREW_NAME_MAX))
 	end
 	local stickies: { StickyView } = {}
 	for index = 1, DepotWorldViewModel.MAX_AWARDS do
