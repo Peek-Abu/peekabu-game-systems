@@ -19,7 +19,13 @@ local PENDING = ""
 
 local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- A vacuum motor's whine (looped at the pile; its pitch rises with the pile's progress).
-	vacuumWhine = { assetId = PENDING, group = "SFX", volume = 0.45, looped = true, rollOffMaxDistance = 60 },
+	vacuumWhine = {
+		assetId = "rbxassetid://107917509032443",
+		group = "SFX",
+		volume = 0.45,
+		looped = true,
+		rollOffMaxDistance = 60,
+	},
 	-- The motor winding down when the whine stops (started at the whine's pitch).
 	vacuumStop = { assetId = "rbxassetid://77219631283212", group = "SFX", volume = 0.45, rollOffMaxDistance = 60 },
 	-- The pile's last bit going up the hose: a soft pop.
