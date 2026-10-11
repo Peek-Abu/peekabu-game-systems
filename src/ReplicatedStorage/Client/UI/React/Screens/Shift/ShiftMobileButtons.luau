@@ -188,14 +188,17 @@ local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactN
 			onPrompt(false)
 		end
 	end, { onPrompt })
-	-- A held VACUUM or LOAD ends when the big button turns into the other (a load empties the hands) or the arc goes
-	-- away (unmounting destroys a held button before its InputEnded fires), so a held prompt is always let go.
+	-- A held VACUUM ends when the big button turns into LOAD or the arc goes away (unmounting destroys a held button
+	-- before its InputEnded fires).
 	React.useEffect(function()
-		return function()
-			endVacuum()
-			endLoad()
-		end
+		return endVacuum
 	end, { vacuuming })
+	-- A held LOAD lets go of its prompt whenever LOAD stops being pressable: the prompt hid, the load emptied the
+	-- hands (VACUUM again), the HUD hid or the arc went away. Returning nil keeps this widget mounted, so this is
+	-- keyed on the state, not on unmount.
+	React.useEffect(function()
+		return endLoad
+	end, { ShiftHudViewModel.loadLive(view) })
 	if view == nil then
 		return nil
 	end

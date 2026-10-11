@@ -4,11 +4,16 @@
 	(the ProximityPrompt named InteractionConstants.PROMPT_NAME that the base Interaction feature creates under an
 	object tagged InteractionConstants.TAG) is switched to the Custom style on this client: a local property write, so
 	the engine stops drawing its own card while its key (and the server's trigger) still work. Prompts created later
-	(a newly tagged object, a respawned one, a prompt rebuilt under a tagged object) are switched as they appear; no
-	other prompt is touched. The engine's Shown / Hidden / hold events keep ShiftPromptStore current; `press` holds or
-	releases the shown prompt for touch (the chip and the phone LOAD button get it as a prop). The engine accepts
+	(a newly tagged object, a respawned one, a prompt rebuilt under a tagged object) are switched as they appear, and a
+	prompt shown before it was switched is switched when it shows; no other prompt is touched. The engine's Shown /
+	Hidden / hold events keep ShiftPromptStore current; `press` holds or releases the shown prompt for touch (the chip
+	and the phone LOAD button get it as a prop). A held prompt is let go when it hides or is removed. The engine accepts
 	InputHoldBegin only on a prompt shown on this client, and the server still validates every trigger
 	(InteractionServiceServer).
+
+	The bookkeeping tables are keyed by Instance with STRONG keys, and entries are removed explicitly when a prompt
+	leaves the game or its object is untagged: never weak Instance keys, because the engine can collect and recreate
+	an Instance's Lua wrapper while the Instance lives, which silently drops a weak key.
 
 	Spec-exempt shell (ProximityPromptService, Instances); the chip's words are the specced ShiftHudViewModel.prompt and
 	the bookkeeping the specced ShiftPromptStore.
@@ -26,25 +31,25 @@ local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interacti
 local ShiftPromptStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftPromptStore)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 
--- Weak keys: a destroyed prompt drops out of both tables on its own (objects are rebuilt every shift).
+-- Adopted prompts, each with the watch that forgets it when it leaves the game.
+local watches: { [ProximityPrompt]: RBXScriptConnection? } = {}
+-- The store id of each adopted prompt that has been shown.
 local ids: { [ProximityPrompt]: number } = {}
-local ours: { [ProximityPrompt]: boolean } = {}
-setmetatable(ids, { __mode = "k" })
-setmetatable(ours, { __mode = "k" })
 local nextId = 0
--- The prompt shown now, and the prompt `press(true)` is holding (released even if it was hidden meanwhile).
+-- The prompt shown now, and the prompt `press(true)` is holding.
 local current: ProximityPrompt? = nil
 local held: ProximityPrompt? = nil
-local currentGone: RBXScriptConnection? = nil
 
-local function idOf(prompt: ProximityPrompt): number
-	local id = ids[prompt]
-	if id == nil then
-		nextId += 1
-		id = nextId
-		ids[prompt] = id
+-- Whether an instance sits under an object tagged InteractionConstants.TAG.
+local function underTagged(instance: Instance): boolean
+	local node: Instance? = instance.Parent
+	while node ~= nil do
+		if node:HasTag(InteractionConstants.TAG) then
+			return true
+		end
+		node = node.Parent
 	end
-	return id
+	return false
 end
 
 -- The Interaction kind of the object a prompt belongs to (the tagged ancestor's attribute).
@@ -60,37 +65,66 @@ local function kindOf(prompt: ProximityPrompt): string?
 	return nil
 end
 
--- Switches an Interaction prompt to the Custom style; any other instance is left alone.
-local function adopt(instance: Instance)
-	if instance:IsA("ProximityPrompt") and instance.Name == InteractionConstants.PROMPT_NAME then
-		ours[instance] = true
-		instance.Style = Enum.ProximityPromptStyle.Custom
+local function release()
+	local prompt = held
+	held = nil
+	if prompt ~= nil and prompt.Parent ~= nil then
+		prompt:InputHoldEnd()
 	end
 end
 
-local function forgetCurrent()
-	current = nil
-	local gone = currentGone
-	if gone ~= nil then
-		gone:Disconnect()
-		currentGone = nil
+-- Drops a prompt from the bookkeeping: lets go of it, takes it off the chip, forgets its id and its watch.
+local function forget(prompt: ProximityPrompt)
+	if held == prompt then
+		release()
+	end
+	if current == prompt then
+		current = nil
+	end
+	local id = ids[prompt]
+	if id ~= nil then
+		ShiftPromptStore.hide(id)
+		ids[prompt] = nil
+	end
+	local watch: RBXScriptConnection? = watches[prompt]
+	if watch ~= nil then
+		watch:Disconnect()
+		watches[prompt] = nil
+	end
+end
+
+-- Switches an Interaction prompt to the Custom style and (once) watches for it leaving the game.
+local function adopt(prompt: ProximityPrompt)
+	prompt.Style = Enum.ProximityPromptStyle.Custom
+	if watches[prompt] ~= nil then
+		return
+	end
+	watches[prompt] = prompt.AncestryChanged:Connect(function()
+		if not prompt:IsDescendantOf(game) then
+			forget(prompt)
+		end
+	end)
+end
+
+local function adoptIfOurs(instance: Instance)
+	if instance:IsA("ProximityPrompt") and instance.Name == InteractionConstants.PROMPT_NAME then
+		adopt(instance)
 	end
 end
 
 local function onShown(prompt: ProximityPrompt)
-	if not ours[prompt] then
+	if prompt.Name ~= InteractionConstants.PROMPT_NAME or not underTagged(prompt) then
 		return
 	end
-	forgetCurrent()
+	-- Shown before the tag observer reached it: adopt it now.
+	adopt(prompt)
+	local id = ids[prompt]
+	if id == nil then
+		nextId += 1
+		id = nextId
+		ids[prompt] = id
+	end
 	current = prompt
-	local id = idOf(prompt)
-	-- A prompt destroyed while shown may never fire Hidden; drop it from the chip either way.
-	currentGone = prompt.Destroying:Connect(function()
-		if current == prompt then
-			forgetCurrent()
-		end
-		ShiftPromptStore.hide(id)
-	end)
 	ShiftPromptStore.show({
 		id = id,
 		action = prompt.ActionText,
@@ -102,13 +136,16 @@ local function onShown(prompt: ProximityPrompt)
 end
 
 local function onHidden(prompt: ProximityPrompt)
-	if not ours[prompt] then
-		return
+	if held == prompt then
+		release()
 	end
 	if current == prompt then
-		forgetCurrent()
+		current = nil
 	end
-	ShiftPromptStore.hide(idOf(prompt))
+	local id = ids[prompt]
+	if id ~= nil then
+		ShiftPromptStore.hide(id)
+	end
 end
 
 local ShiftPromptSystem = {}
@@ -118,11 +155,21 @@ function ShiftPromptSystem.start(): () -> ()
 	local stopObserver = Observers.observeTag(InteractionConstants.TAG, function(target: Instance)
 		-- The server parents the prompt under the object's root part; it may replicate after the tag does.
 		for _, descendant in target:GetDescendants() do
-			adopt(descendant)
+			adoptIfOurs(descendant)
 		end
-		local added = target.DescendantAdded:Connect(adopt)
+		local added = target.DescendantAdded:Connect(adoptIfOurs)
 		return function()
 			added:Disconnect()
+			-- Untagged: its prompts are no longer Interaction prompts.
+			local gone: { ProximityPrompt } = {}
+			for prompt in watches do
+				if prompt:IsDescendantOf(target) then
+					table.insert(gone, prompt)
+				end
+			end
+			for _, prompt in gone do
+				forget(prompt)
+			end
 		end
 	end)
 	table.insert(connections, ProximityPromptService.PromptShown:Connect(onShown))
@@ -130,17 +177,19 @@ function ShiftPromptSystem.start(): () -> ()
 	table.insert(
 		connections,
 		ProximityPromptService.PromptButtonHoldBegan:Connect(function(prompt: ProximityPrompt, player: Player)
-			if ours[prompt] and player == Players.LocalPlayer then
+			local id = ids[prompt]
+			if id ~= nil and player == Players.LocalPlayer then
 				-- The server clock, as useServerClock reads it, so the chip's fill compares like with like.
-				ShiftPromptStore.holdBegan(idOf(prompt), Workspace:GetServerTimeNow())
+				ShiftPromptStore.holdBegan(id, Workspace:GetServerTimeNow())
 			end
 		end)
 	)
 	table.insert(
 		connections,
 		ProximityPromptService.PromptButtonHoldEnded:Connect(function(prompt: ProximityPrompt, player: Player)
-			if ours[prompt] and player == Players.LocalPlayer then
-				ShiftPromptStore.holdEnded(idOf(prompt))
+			local id = ids[prompt]
+			if id ~= nil and player == Players.LocalPlayer then
+				ShiftPromptStore.holdEnded(id)
 			end
 		end)
 	)
@@ -149,8 +198,15 @@ function ShiftPromptSystem.start(): () -> ()
 		for _, connection in connections do
 			connection:Disconnect()
 		end
-		ShiftPromptSystem.press(false)
-		forgetCurrent()
+		release()
+		current = nil
+		for _, watch in watches do
+			if watch ~= nil then
+				watch:Disconnect()
+			end
+		end
+		table.clear(watches)
+		table.clear(ids)
 		ShiftPromptStore.clear()
 	end
 end
@@ -160,20 +216,16 @@ end
 	to the prompt this held, even if it has been hidden since; a release without a hold does nothing.
 ]=]
 function ShiftPromptSystem.press(down: boolean)
-	if down then
-		local prompt = current
-		if prompt == nil or prompt.Parent == nil or held ~= nil then
-			return
-		end
-		held = prompt
-		prompt:InputHoldBegin()
-	else
-		local prompt = held
-		held = nil
-		if prompt ~= nil and prompt.Parent ~= nil then
-			prompt:InputHoldEnd()
-		end
+	if not down then
+		release()
+		return
 	end
+	local prompt = current
+	if prompt == nil or prompt.Parent == nil or held ~= nil then
+		return
+	end
+	held = prompt
+	prompt:InputHoldBegin()
 end
 
 return ShiftPromptSystem

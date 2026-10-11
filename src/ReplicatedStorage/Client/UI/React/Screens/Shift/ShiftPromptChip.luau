@@ -6,9 +6,10 @@
 	hold prompt fills an ink-green strip under the words while it is held. On phone (Figma 1d) it is a narrower slip
 	high in the screen, without the key (there is no keyboard).
 
-	The whole slip is a button: pressing it holds the prompt and releasing (or sliding off) lets go, through the
+	The whole slip is a touch button: a touch holds the prompt and lifting (or sliding off) lets go, through the
 	`onPress` prop (ShiftServiceClient registers this widget with ShiftPromptSystem.press: a prop, so this module never
-	requires the service that registers it). That is the touch path; a keyboard key goes to the engine directly.
+	requires the service that registers it). Mouse clicks pass through (LMB is the vacuum); a keyboard key goes to the
+	engine directly.
 
 	A HUD widget: it reads the stores and draws what ShiftHudViewModel.prompt decides (nil when nothing is shown, or
 	while the HUD is hidden).
@@ -72,8 +73,9 @@ local STRIP_HEIGHT = 4
 local HOLD_TICK = 0.05
 local IDLE_TICK = 0.25
 
+-- Only a touch presses the slip: a mouse button is the vacuum (LMB) and a keyboard player presses the prompt's key.
 local function isPress(input: InputObject): boolean
-	return input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1
+	return input.UserInputType == Enum.UserInputType.Touch
 end
 
 -- The hold strip: a faint ink track with the ink-green fill, just under the words.
@@ -109,17 +111,19 @@ local function ShiftPromptChip(props: ShiftPromptChipProps?): React.ReactNode
 		pressing.current = down
 		onPress(down)
 	end, { onPress })
-	-- A chip that goes away mid-press (the prompt hid) never sees its InputEnded: let go here.
-	React.useEffect(function()
-		return function()
-			press(false)
-		end
-	end, { press })
 
 	local player = Players.LocalPlayer
 	local me = if player ~= nil then publicPlayers[StateSyncConstants.publicEntryKey(player.UserId)] else nil
 	local carrying = if me ~= nil then me[CarryConstants.PUBLIC_FIELD] else nil
 	local chip = ShiftHudViewModel.prompt(shown, carrying, now, ShiftHudViewModel.hidden(me, scaring))
+	-- The prompt the slip is drawn for (0: none). Returning nil keeps this widget mounted, so a slip that goes away
+	-- mid-press (the prompt hid, a newer one showed, the HUD hid) never sees its InputEnded: let go when it changes.
+	local drawnId = if chip ~= nil and shown ~= nil then shown.id else 0
+	React.useEffect(function()
+		return function()
+			press(false)
+		end
+	end, { drawnId })
 	if chip == nil then
 		return nil
 	end

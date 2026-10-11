@@ -275,6 +275,14 @@ function ShiftHudViewModel.buttons(me: PublicPlayerTypes.PublicPlayer?, loadRead
 	}
 end
 
+--[=[
+	Whether the big button is a pressable LOAD right now (the arc shows, it reads LOAD and the Load prompt is up). A
+	held LOAD is let go the moment this turns false.
+]=]
+function ShiftHudViewModel.loadLive(view: ButtonsView?): boolean
+	return view ~= nil and view.primary == "LOAD" and view.primaryAvailable
+end
+
 -- The engine's TouchGui switches to the large Jump button above this short side (px).
 ShiftHudViewModel.SMALL_JUMP_SHORT_SIDE = 500
 

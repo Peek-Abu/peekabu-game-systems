@@ -287,6 +287,15 @@ return function()
 			expect(ShiftHudViewModel.buttons({ carrying = "monitor" }, false).primaryAvailable).to.equal(false)
 			expect(ShiftHudViewModel.buttons({ carrying = "monitor" }, true).primaryAvailable).to.equal(true)
 		end)
+
+		it("calls LOAD live only while it shows, reads LOAD and its prompt is up", function()
+			expect(ShiftHudViewModel.loadLive(ShiftHudViewModel.buttons({ carrying = "monitor" }, true))).to.equal(true)
+			expect(ShiftHudViewModel.loadLive(ShiftHudViewModel.buttons({ carrying = "monitor" }, false))).to.equal(
+				false
+			)
+			expect(ShiftHudViewModel.loadLive(ShiftHudViewModel.buttons(nil, true))).to.equal(false)
+			expect(ShiftHudViewModel.loadLive(nil)).to.equal(false)
+		end)
 	end)
 
 	describe("mobile buttons", function()
