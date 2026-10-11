@@ -89,4 +89,24 @@ return table.freeze({
 	JOB_TITLE = "HARLOW & FINCH JOB",
 	BOARD_COPY = BOARD_COPY,
 	RETURN_TEXT = "Back at the depot. Your performance review is pinned on the board.",
+	-- M3b world UI. The depot's signs are drawn at Figma's "1 px ≈ 1/40 stud": a shell's size in studs is its design
+	-- size in px times STUDS_PER_PX. BILLBOARD_PX is each sign's design size (the truck tag includes its 60 px wire).
+	STUDS_PER_PX = 1 / 40,
+	BILLBOARD_PX = table.freeze({
+		truck = Vector2.new(340, 310),
+		contract = Vector2.new(600, 420),
+		result = Vector2.new(1140, 446),
+	}),
+	-- The tags the client finds each kind of depot shell by (DepotBillboardSystem); `review` is your own card's shell.
+	BILLBOARD_TAGS = table.freeze({
+		truck = "DepotTruckTag",
+		contract = "DepotContractBoard",
+		result = "DepotResultBoard",
+		review = "DepotReviewCard",
+	}),
+	-- A truck tag shell's truck number and seats, written once by the server.
+	TRUCK_ATTRIBUTE = "DepotTruck",
+	CAPACITY_ATTRIBUTE = "DepotCapacity",
+	-- A truck tag's line 3 turns red ("Leaving in 0:08") when the truck is full or this many seconds or fewer remain.
+	TAG_WARN_SECONDS = 10,
 })

@@ -56,11 +56,10 @@ return table.freeze({
 	MAX_COUNTDOWN = 60,
 	-- Players appear this high above a spawn point.
 	SPAWN_HEIGHT = 3,
-	-- How often the pad labels recount who is aboard (seconds).
-	LABEL_INTERVAL = 0.5,
-	-- Billboard sizes are in studs (BillboardGui scale); offsets from the part's centre.
-	PAD_LABEL_SIZE = Vector2.new(8, 3),
-	PAD_LABEL_OFFSET = Vector3.new(0, 7, 0),
+	-- How often each player's public `truck` field is checked against the bed they stand in (seconds).
+	TRUCK_INTERVAL = 0.5,
+	-- World sign shells are sized from their design (DepotConstants.BILLBOARD_PX); offsets from the part's centre.
+	PAD_TAG_OFFSET = Vector3.new(0, 8, 0),
 	BOARD_LABEL_SIZE = Vector2.new(12, 8),
 	BOARD_LABEL_OFFSET = Vector3.new(0, 1, 0),
 	TITLE_LABEL_SIZE = Vector2.new(10, 1.5),

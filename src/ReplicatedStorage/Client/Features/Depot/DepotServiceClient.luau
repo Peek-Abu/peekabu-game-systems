@@ -5,7 +5,7 @@
 	The board's prompt (DepotEvents.Board) opens the contract board scene (DepotScene, registered at require):
 	pushing it twice is a no-op, and once the scene leaves the stack (CLOSE or Escape) the store's board is cleared.
 	The truck queue pad card (DepotPad, with Depart now) replaces Queue's placeholder pad widget, which init hides
-	with QueueServiceClient:setDefaultWidget(false); the boards and truck labels are world billboards the server builds.
+	with QueueServiceClient:setDefaultWidget(false); the depot's world signs (truck tags, the boards) are drawn by DepotBillboardSystem into the shells the server builds.
 
 	Spec-exempt shell (ByteNet, HUD registration, scene stack, RunService); the card queue is the specced DepotStore.
 
@@ -22,6 +22,7 @@ local DepotShared = ReplicatedStorage.Shared.Features.Depot
 local DepotConstants = require(DepotShared.Data.DepotConstants)
 local DepotEvents = require(DepotShared.Net.DepotEvents)
 local DepotTypes = require(DepotShared.Data.DepotTypes)
+local DepotBillboardSystem = require(ReplicatedStorage.Client.Features.Depot.Systems.DepotBillboardSystem)
 local DepotStore = require(ReplicatedStorage.Client.Features.Depot.State.DepotStore)
 local QueueServiceClient = require(ReplicatedStorage.Client.Features.Queue.QueueServiceClient)
 local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudRegistry)
@@ -46,7 +47,7 @@ export type DepotServiceClient = {
 }
 
 local DepotServiceClient: DepotServiceClient = {
-	dependencies = { "QueueServiceClient" },
+	dependencies = { "QueueServiceClient", "StateSyncServiceClient" },
 
 	init = function(_self)
 		if not HudRegistry.has(HUD_KEY) then
@@ -102,9 +103,11 @@ local DepotServiceClient: DepotServiceClient = {
 		table.insert(stoppers, function()
 			ticking:Disconnect()
 		end)
+		DepotBillboardSystem.start()
 	end,
 
 	stop = function(_self)
+		DepotBillboardSystem.stop()
 		for _, stopFn in stoppers do
 			stopFn()
 		end
@@ -115,7 +118,7 @@ local DepotServiceClient: DepotServiceClient = {
 
 	getState = function(_self)
 		local card = DepotStore.card()
-		return { card = if card ~= nil then card.kind else "none" }
+		return { card = if card ~= nil then card.kind else "none", signs = DepotBillboardSystem.getState().mounted }
 	end,
 }
 

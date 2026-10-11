@@ -7,9 +7,9 @@
 	- Where this server runs the depot role (the depot place; in Studio every role runs in one server) it
 	  builds the graybox garage at DepotLayoutConstants.ORIGIN, validated by DepotLayoutRules (a broken
 	  layout is a boot error): truck beds tagged QueuePad (Queue holds the parties, runs the countdown and
-	  Depart now), tonight's contract board (DepotContractUtils.tonight), the result board, and a label over
-	  each truck counting who is aboard (QueueServiceServer:padOf; Queue's own HUD widget shows the countdown
-	  to those aboard).
+	  Depart now), tonight's contract board (DepotContractUtils.tonight), the result board, and a tag shell over each
+	  truck that every client draws from Queue's state sync and the public `truck` field this service keeps
+	  (DepotBillboardSystem).
 	- A departing party carries tonight's contract id (setDepartData) and gets the drive card; a local move
 	  to the depot lands on the spawn points (setArrivalPoint).
 	- An arriving party (and a member who joins late), wherever it lands, gets the arrival card for its
@@ -82,7 +82,7 @@ local cardsPinned = 0
 local ready: { [Player]: true } = {}
 local held: { [Player]: DepotTypes.CardMessage } = {}
 local heldLast: { [Player]: DepotTypes.LastShift } = {}
--- The truck each player's public field currently says (refreshLabels writes it on change).
+-- The truck each player's public field currently says (refreshTrucks writes it on change).
 local truckOf: { [number]: number } = {}
 
 -- The truck number (layout order) of a pad, or nil before the garage is built.
@@ -145,25 +145,14 @@ local onReady = RequestHandler.wrap({
 	end,
 })
 
-local function padText(index: number, aboard: number, capacity: number): string
-	if aboard == 0 then
-		return `TRUCK {index}\n0/{capacity} aboard\nStand in the bed to join`
-	end
-	return `TRUCK {index}\n{aboard}/{capacity} aboard`
-end
-
--- Recounts who stands in each truck bed (Queue's membership) and rewrites the labels.
-local function refreshLabels()
-	local current = built
-	if current == nil then
+-- Keeps each player's public `truck` field on the truck bed they stand in (Queue's membership); written on change.
+-- The truck tags themselves are drawn by the client from Queue's state sync and these fields (DepotBillboardSystem).
+local function refreshTrucks()
+	if built == nil then
 		return
 	end
-	local aboard: { [BasePart]: number } = {}
 	for _, player in Players:GetPlayers() do
 		local pad = QueueServiceServer:padOf(player)
-		if pad ~= nil then
-			aboard[pad] = (aboard[pad] or 0) + 1
-		end
 		local index = if pad ~= nil then truckIndexOf(pad) else nil
 		if index ~= truckOf[player.UserId] then
 			if index ~= nil then
@@ -174,9 +163,6 @@ local function refreshLabels()
 				StateSyncPublicPlayerStore.clearField(player.UserId, DepotConstants.PUBLIC_TRUCK)
 			end
 		end
-	end
-	for _, truck in current.trucks do
-		truck.label.Text = padText(truck.index, aboard[truck.pad] or 0, truck.capacity)
 	end
 end
 
@@ -271,13 +257,13 @@ local DepotServiceServer: DepotServiceServer = {
 		local ok, errors = DepotLayoutRules.validate(LAYOUT)
 		assert(ok, `depot layout is invalid:\n{table.concat(errors, "\n")}`)
 		built = DepotBuildSystem.build(LAYOUT, DepotLayoutConstants.ORIGIN, DepotContractUtils.boardLines(contract))
-		refreshLabels()
+		refreshTrucks()
 		local elapsed = 0
 		local ticking = RunService.Heartbeat:Connect(function(deltaTime)
 			elapsed += deltaTime
-			if elapsed >= DepotLayoutConstants.LABEL_INTERVAL then
+			if elapsed >= DepotLayoutConstants.TRUCK_INTERVAL then
 				elapsed = 0
-				refreshLabels()
+				refreshTrucks()
 			end
 		end)
 		table.insert(stoppers, function()

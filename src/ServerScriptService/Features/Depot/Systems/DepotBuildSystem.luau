@@ -3,7 +3,7 @@
 	DepotBuildSystem: builds the depot's static graybox once (Cleanup Crew spec §1 "polished feel on
 	graybox", §3 step 1, §5): a floor and four walls; per truck a bed that is a Queue pad (QueueCapacity,
 	QueueCountdown and QueueDestination set BEFORE the QueuePad tag, because Queue reads them once when the
-	pad is tagged), a cab behind it and a label above it; the contract board with tonight's contract; the
+	pad is tagged), a cab behind it and an empty truck tag shell above it (tagged, its truck number and seats as attributes; the client draws it); the contract board with tonight's contract; the
 	result board, where `pinCard` hangs a returning player's card that only they see (a BillboardGui in their
 	PlayerGui, kept across respawns). Plain placeholder look on purpose: the final boards and labels wait for
 	the developer's Figma approval (spec §7). Everything is anchored under one Model in Workspace.
@@ -30,7 +30,6 @@ export type BuiltTruck = {
 	index: number,
 	capacity: number,
 	pad: BasePart,
-	label: TextLabel,
 }
 
 export type Built = {
@@ -59,6 +58,22 @@ local function folder(name: string, parent: Instance): Folder
 	created.Name = name
 	created.Parent = parent
 	return created
+end
+
+-- An empty world-sign shell over `adornee` (M3b world UI), sized in studs from its Figma design (`design` px times
+-- DepotConstants.STUDS_PER_PX). The client draws into it (DepotBillboardSystem). The caller writes its attributes, then
+-- tags and parents it. Returned unparented.
+local function shell(name: string, adornee: BasePart, design: Vector2, offset: Vector3): BillboardGui
+	local gui = Instance.new("BillboardGui")
+	gui.Name = name
+	gui.Adornee = adornee
+	local studs = design * DepotConstants.STUDS_PER_PX
+	gui.Size = UDim2.fromScale(studs.X, studs.Y)
+	gui.StudsOffset = offset
+	gui.MaxDistance = DepotLayoutConstants.LABEL_MAX_DISTANCE
+	gui.LightInfluence = 0
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	return gui
 end
 
 -- A plain text billboard over `adornee` (size in studs). Returned unparented with its label.
@@ -157,10 +172,12 @@ function DepotBuildSystem.build(layout: DepotTypes.Layout, origin: CFrame, board
 			DepotLayoutConstants.TRUCK_COLOR,
 			truckFolder
 		)
-		local gui, label =
-			billboard("PadLabel", pad, DepotLayoutConstants.PAD_LABEL_SIZE, DepotLayoutConstants.PAD_LABEL_OFFSET, "")
-		gui.Parent = truckFolder
-		table.insert(trucks, { id = truck.id, index = index, capacity = truck.capacity, pad = pad, label = label })
+		local tag = shell("PadTag", pad, DepotConstants.BILLBOARD_PX.truck, DepotLayoutConstants.PAD_TAG_OFFSET)
+		tag:SetAttribute(DepotConstants.TRUCK_ATTRIBUTE, index)
+		tag:SetAttribute(DepotConstants.CAPACITY_ATTRIBUTE, truck.capacity)
+		CollectionService:AddTag(tag, DepotConstants.BILLBOARD_TAGS.truck)
+		tag.Parent = truckFolder
+		table.insert(trucks, { id = truck.id, index = index, capacity = truck.capacity, pad = pad })
 	end
 
 	local boards = folder("Boards", model)
