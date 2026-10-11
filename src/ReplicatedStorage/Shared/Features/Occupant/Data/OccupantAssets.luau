@@ -81,7 +81,7 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- The catch: a distorted sting for the caught player, the lights' power-down and his grab for everyone near.
 	harlowCatchSting = { assetId = "rbxassetid://88133727845312", group = "SFX", volume = 1 },
 	harlowPowerDown = { assetId = "rbxassetid://95527531363916", group = "SFX", volume = 0.9, rollOffMaxDistance = 90 },
-	harlowGrab = { assetId = PENDING, group = "SFX", volume = 0.9, rollOffMaxDistance = 60 },
+	harlowGrab = { assetId = "rbxassetid://9113482942", group = "SFX", volume = 0.9, rollOffMaxDistance = 60 },
 }
 
 local GIBBERISH: { string } = { "harlowGibberish1", "harlowGibberish2", "harlowGibberish3", "harlowGibberish4" }
@@ -109,7 +109,7 @@ local ANIMATIONS: { [string]: AnimationSlot } = {
 	harlowLook = { assetId = PENDING, looped = true, priority = Enum.AnimationPriority.Idle, interruption = "ambient" },
 	-- The catch: grab, then throw.
 	harlowGrab = {
-		assetId = PENDING,
+		assetId = "rbxassetid://9113482942",
 		looped = false,
 		priority = Enum.AnimationPriority.Action,
 		interruption = "protected",

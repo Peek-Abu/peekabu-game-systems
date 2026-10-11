@@ -21,10 +21,10 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- A vacuum motor's whine (looped at the pile; its pitch rises with the pile's progress).
 	vacuumWhine = { assetId = PENDING, group = "SFX", volume = 0.45, looped = true, rollOffMaxDistance = 60 },
 	-- The motor winding down when the whine stops (started at the whine's pitch).
-	vacuumStop = { assetId = PENDING, group = "SFX", volume = 0.45, rollOffMaxDistance = 60 },
+	vacuumStop = { assetId = "rbxassetid://77219631283212", group = "SFX", volume = 0.45, rollOffMaxDistance = 60 },
 	-- The pile's last bit going up the hose: a soft pop.
 	vacuumPop = {
-		assetId = PENDING,
+		assetId = "rbxassetid://91652457132086",
 		group = "SFX",
 		volume = 0.8,
 		pitch = { min = 0.95, max = 1.1 },
@@ -32,9 +32,9 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	},
 	-- Your canister taking a pile, and the chime when it is full.
 	canisterTick = { assetId = "rbxassetid://112926891018046", group = "UI", volume = 0.5 },
-	canisterChime = { assetId = PENDING, group = "UI", volume = 0.8 },
+	canisterChime = { assetId = "rbxassetid://134210659787428", group = "UI", volume = 0.8 },
 	-- The dust bag popping out at your feet.
-	dustBagPop = { assetId = PENDING, group = "SFX", volume = 0.8, rollOffMaxDistance = 40 },
+	dustBagPop = { assetId = "rbxassetid://93403654054032", group = "SFX", volume = 0.8, rollOffMaxDistance = 40 },
 }
 
 for id, def in SOUNDS do

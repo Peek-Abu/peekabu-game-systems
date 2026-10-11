@@ -36,7 +36,7 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	shiftCountdownTick = { assetId = "rbxassetid://135218748578686", group = "UI", volume = 0.6, maxConcurrent = 2 },
 	-- The toast styles' sounds (ShiftConstants.TOAST_STYLES): a paper rustle and a rubber stamp.
 	shiftStickyNote = { assetId = "rbxassetid://99429190384090", group = "UI", volume = 0.6 },
-	shiftStamp = { assetId = PENDING, group = "UI", volume = 0.9 },
+	shiftStamp = { assetId = "rbxassetid://121483921177102", group = "UI", volume = 0.9 },
 }
 
 local CUE_SOUNDS: { [string]: string } = {

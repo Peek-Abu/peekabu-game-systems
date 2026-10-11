@@ -22,7 +22,13 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- Buzzing fluorescent tubes under everything (looped ambience).
 	officeHum = { assetId = "rbxassetid://95556373984410", group = "Ambient", volume = 0.35, looped = true },
 	-- A broken tube's electric zap as it blinks.
-	officeLightZap = { assetId = PENDING, group = "SFX", volume = 0.4, rollOffMaxDistance = 30, maxConcurrent = 2 },
+	officeLightZap = {
+		assetId = "rbxassetid://84566428590094",
+		group = "SFX",
+		volume = 0.4,
+		rollOffMaxDistance = 30,
+		maxConcurrent = 2,
+	},
 	-- An old office phone ringing in an empty room.
 	officePhoneRing = {
 		assetId = "rbxassetid://137552094086969",
