@@ -341,11 +341,15 @@ local EXEMPT_MODULES: { [string]: string } = {
 
 	-- Cleanup Crew: Occupant
 	["ReplicatedStorage.Shared.Features.Occupant.Data.OccupantAssets"] = "asset id slots; registers the uploaded sounds at load (no decisions)",
-	["ReplicatedStorage.Client.Features.Occupant.Systems.OccupantPresenceSystem"] = "Sound/Instance/RunService shell (choices specced in OccupantFeedbackUtils, OccupantTellRules)",
+	["ReplicatedStorage.Client.Features.Occupant.Systems.OccupantPresenceSystem"] = "Sound/Instance/RunService shell (choices specced in OccupantFeedbackUtils, OccupantTellRules; the memo is OccupantWorldViewModel's)",
+	["ReplicatedStorage.Client.Features.Occupant.Systems.OccupantBillboardSystem"] = "CollectionService/React-root shell (cue and memo specced in OccupantWorldViewModel; roots in UIBillboards)",
+	["ReplicatedStorage.Client.UI.React.Screens.World.OccupantCueDisc"] = "presentational React component (cue specced in OccupantWorldViewModel; story in OccupantWorld.story)",
+	["ReplicatedStorage.Client.UI.React.Screens.World.OccupantMemo"] = "presentational React component (memo and shout specced in OccupantWorldViewModel; story in OccupantWorld.story)",
+	["ReplicatedStorage.Client.UI.React.Screens.World.useTypedGraphemes"] = "React hook over RenderStepped (the reveal maths is the specced OccupantFeedbackUtils.reveal)",
 	["ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants"] = "static tuning, names and placeholder lines (no logic)",
 	["ReplicatedStorage.Shared.Features.Occupant.Data.OccupantTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Features.Occupant.Net.OccupantEvents"] = "ByteNet packet definitions (no logic)",
-	["ServerScriptService.Features.Occupant.Systems.OccupantRigSystem"] = "Instance builder (HumanoidDescription rig, billboards)",
+	["ServerScriptService.Features.Occupant.Systems.OccupantRigSystem"] = "Instance builder (HumanoidDescription rig, billboard shells and their attributes)",
 	["ServerScriptService.Features.Occupant.OccupantServiceServer"] = "NPC/raycast/signal shell (brain, tuning and tell decisions are specced in OccupantBrainRules, OccupantCatchRules, OccupantTuningFormulas, OccupantTellRules)",
 	["ServerScriptService.Features.Occupant.Systems.OccupantCatchSystem"] = "Instance/ByteNet/Death shell (catch decisions and the launch are specced in OccupantCatchRules)",
 	["ReplicatedStorage.Client.Features.Occupant.OccupantServiceClient"] = "Camera/Vfx/ByteNet shell (tell decisions are specced in OccupantTellRules)",

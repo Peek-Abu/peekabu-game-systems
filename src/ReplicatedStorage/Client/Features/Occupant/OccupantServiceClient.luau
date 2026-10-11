@@ -5,7 +5,7 @@
 	a shake and a red, drained screen; then Death's spectate takes over. The sting and the stretched grin are
 	OccupantScareSystem's. At init it registers the catch's HUD widgets: the CCTV overlay while caught (CatchOverlay) and
 	the HR "Rehired." card around the respawn (CatchRehiredCard). The light and heartbeat tells run in OccupantTellSystem (lights out on a catch, every light flickering on a
-	tier rise). OccupantPresenceSystem plays his footsteps, mutter, cues, chase music, your heartbeat and his voice.
+	tier rise). OccupantBillboardSystem draws his cue disc and typed memo. OccupantPresenceSystem plays his footsteps, mutter, cues, chase music, your heartbeat and his voice.
 
 	Spec-exempt shell (Camera, Vfx, ByteNet).
 
@@ -23,6 +23,7 @@ local VfxServiceClient = require(ReplicatedStorage.Client.Features.Vfx.VfxServic
 local OccupantCatchStore = require(ReplicatedStorage.Client.Features.Occupant.State.OccupantCatchStore)
 local OccupantTellSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantTellSystem)
 local OccupantPresenceSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantPresenceSystem)
+local OccupantBillboardSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantBillboardSystem)
 local OccupantScareSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantScareSystem)
 local CatchOverlay = require(ReplicatedStorage.Client.UI.React.Screens.Catch.CatchOverlay)
 local CatchRehiredCard = require(ReplicatedStorage.Client.UI.React.Screens.Catch.CatchRehiredCard)
@@ -105,6 +106,8 @@ local OccupantServiceClient: OccupantServiceClient = {
 		table.insert(stoppers, OccupantTellSystem.stop)
 		OccupantPresenceSystem.start()
 		table.insert(stoppers, OccupantPresenceSystem.stop)
+		OccupantBillboardSystem.start()
+		table.insert(stoppers, OccupantBillboardSystem.stop)
 	end,
 
 	stop = function(_self)
@@ -116,7 +119,12 @@ local OccupantServiceClient: OccupantServiceClient = {
 	end,
 
 	getState = function(_self)
-		return { snaps = snaps, presence = OccupantPresenceSystem.getState(), scare = OccupantScareSystem.getState() }
+		return {
+			snaps = snaps,
+			presence = OccupantPresenceSystem.getState(),
+			scare = OccupantScareSystem.getState(),
+			billboards = OccupantBillboardSystem.getState(),
+		}
 	end,
 }
 

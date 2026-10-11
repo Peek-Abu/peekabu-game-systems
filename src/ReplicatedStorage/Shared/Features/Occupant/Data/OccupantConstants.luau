@@ -110,9 +110,18 @@ return table.freeze({
 	-- the tag on the office's ceiling lights (Office builds them; the tells flicker them).
 	SAFE_ZONE_LABEL = "SafeZone",
 	LIGHT_TAG = "OfficeLight",
-	-- His billboards (placeholders).
+	-- His two billboard shells on his head (M3b world UI): empty, tagged, drawn by the client (OccupantBillboardSystem);
+	-- the server writes only their attributes ("?" / "!" / "" and the line, "" when none). The cue shell is CUE_STUDS
+	-- square (design CUE_PX); the memo shell is MEMO_PX px (the 520x140 memo, its 24 px tail and a margin).
 	CUE_NAME = "OccupantCue",
 	SPEECH_NAME = "OccupantSpeech",
+	CUE_TAG = "OccupantCueBillboard",
+	SPEECH_TAG = "OccupantSpeechBillboard",
+	CUE_ATTRIBUTE = "OccupantCue",
+	LINE_ATTRIBUTE = "OccupantLine",
+	CUE_STUDS = 2.5,
+	CUE_PX = Vector2.new(140, 140),
+	MEMO_PX = Vector2.new(520, 166),
 	DISPLAY_NAME = "Mr. Harlow",
 	-- M3 UI. Public field: the server time a caught player is back on the clock (the roster's "CAUGHT · back 0:06");
 	-- cleared on the respawn.
@@ -125,12 +134,7 @@ return table.freeze({
 	BODY = table.freeze(BODY),
 	LINES = table.freeze(LINES),
 	LINE_VARIANTS = table.freeze(LINE_VARIANTS),
-	-- His speech bubble as a memo (spec §7 "typewriter type"): paper, ink, a thin border; the client types each
-	-- line out at TYPE_RATE characters a second.
-	SPEECH_FONT = Enum.Font.SpecialElite,
-	SPEECH_PAPER = Color3.fromRGB(248, 243, 226),
-	SPEECH_INK = Color3.fromRGB(34, 30, 26),
-	SPEECH_BORDER = Color3.fromRGB(70, 60, 46),
+	-- His memo types each line out at TYPE_RATE characters a second (spec §7 "typewriter type"; useTypedGraphemes).
 	TYPE_RATE = 28,
 	-- Footsteps: one per STRIDE studs walked, clamped to STEP_MIN..STEP_MAX seconds; none below STEP_MIN_SPEED.
 	STRIDE = 4.5,

@@ -7,9 +7,10 @@
 	- His mode changes (OccupantFeedbackUtils.cues): a "hm?" when he investigates, the sting when he spots someone
 	  (2D when it is you, positional otherwise), the chase music while he chases you, a sigh when he gives up.
 	- Your heartbeat, on the beat OccupantTellRules sets (the same rule as M2's red pulse).
-	- His voice: each new bubble line types out (MaxVisibleGraphemes, OccupantFeedbackUtils.reveal) and plays one
-	  uploaded gibberish clip chosen per line (OccupantFeedbackUtils.clipFor); "*sigh*" is not voiced.
-	Reads only replicated state: his tagged model, its mode/target attributes, his speech billboard. Pending sounds
+	- His voice: each new line on his memo shell (OccupantConstants.LINE_ATTRIBUTE) plays one uploaded gibberish clip
+	  chosen per line (OccupantFeedbackUtils.clipFor); "*sigh*" is not voiced. The memo itself, typed out, is
+	  OccupantBillboardSystem's.
+	Reads only replicated state: his tagged model, its mode/target attributes, his memo shell's line attribute. Pending sounds
 	(OccupantAssets) are skipped silently and counted.
 
 	Spec-exempt shell (Sound, Instances, RunService); the choices are the specced OccupantFeedbackUtils and
@@ -37,7 +38,7 @@ type Harlow = {
 	model: Model,
 	root: BasePart,
 	head: BasePart,
-	speech: TextLabel?,
+	speech: BillboardGui?,
 }
 
 export type OccupantPresenceState = {
@@ -59,9 +60,6 @@ local lastMine = false
 local ownsMusic = false
 local stepClock = 0
 local beatClock = 0
-local revealText = ""
-local revealStarted = 0
-local revealing = false
 local counters = { steps = 0, beats = 0, lines = 0, cues = 0, played = 0, pending = 0 }
 
 local function play(id: string, options: SoundTypes.PlayOptions?): SoundServiceClient.SoundHandle?
@@ -83,9 +81,9 @@ local function find(): Harlow?
 			local root = instance:FindFirstChild("HumanoidRootPart")
 			local head = instance:FindFirstChild("Head")
 			if root ~= nil and root:IsA("BasePart") and head ~= nil and head:IsA("BasePart") then
-				local bubble = head:FindFirstChild(OccupantConstants.SPEECH_NAME)
-				local label = if bubble ~= nil then bubble:FindFirstChildOfClass("TextLabel") else nil
-				return { model = instance, root = root, head = head, speech = label }
+				local shell = head:FindFirstChild(OccupantConstants.SPEECH_NAME)
+				local speech = if shell ~= nil and shell:IsA("BillboardGui") then shell else nil
+				return { model = instance, root = root, head = head, speech = speech }
 			end
 		end
 	end
@@ -106,17 +104,15 @@ local function setMusic(on: boolean)
 	end
 end
 
-local function onSpeech(label: TextLabel)
-	local text = label.Text
+-- A new line on his memo shell: counted and, when it is words, voiced with one gibberish clip. The memo types itself
+-- out (OccupantMemo); a cleared line ("") does nothing.
+local function onSpeech(shell: BillboardGui)
+	local value = shell:GetAttribute(OccupantConstants.LINE_ATTRIBUTE)
+	local text = if type(value) == "string" then value else ""
 	if text == "" then
-		revealing = false
 		return
 	end
 	counters.lines += 1
-	revealText = text
-	revealStarted = os.clock()
-	revealing = true
-	label.MaxVisibleGraphemes = 0
 	local harlow = current
 	if harlow == nil or not OccupantFeedbackUtils.voiced(text) then
 		return
@@ -141,10 +137,10 @@ local function attach(harlow: Harlow)
 	lastMine = false
 	stepClock = 0
 	mutter = play("harlowMutter", { at = harlow.head })
-	local label = harlow.speech
-	if label ~= nil then
-		speechConnection = label:GetPropertyChangedSignal("Text"):Connect(function()
-			onSpeech(label)
+	local shell = harlow.speech
+	if shell ~= nil then
+		speechConnection = shell:GetAttributeChangedSignal(OccupantConstants.LINE_ATTRIBUTE):Connect(function()
+			onSpeech(shell)
 		end)
 	end
 end
@@ -161,7 +157,6 @@ local function detach()
 	end
 	speechConnection = nil
 	current = nil
-	revealing = false
 	lastMode = nil
 	lastMine = false
 	setMusic(false)
@@ -223,21 +218,6 @@ local function stepHeartbeat(harlow: Harlow, mode: string?, mine: boolean, delta
 	end
 end
 
-local function stepReveal(harlow: Harlow)
-	local label = harlow.speech
-	if not revealing or label == nil then
-		return
-	end
-	local total = utf8.len(revealText) or #revealText
-	local shown = OccupantFeedbackUtils.reveal(total, os.clock() - revealStarted, OccupantConstants.TYPE_RATE)
-	if shown >= total then
-		label.MaxVisibleGraphemes = -1
-		revealing = false
-	else
-		label.MaxVisibleGraphemes = shown
-	end
-end
-
 -- The Harlow this client follows: the attached one while his model exists, else a freshly found one (attached).
 local function ensure(): Harlow?
 	local attached = current
@@ -270,7 +250,6 @@ local function step(deltaTime: number)
 	lastMine = mine
 	stepFootsteps(harlow, deltaTime)
 	stepHeartbeat(harlow, mode, mine, deltaTime)
-	stepReveal(harlow)
 end
 
 local OccupantPresenceSystem = {}

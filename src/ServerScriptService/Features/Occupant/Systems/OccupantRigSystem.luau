@@ -4,10 +4,10 @@
 	suited R15 rig built from a HumanoidDescription in code, so no place art is needed"). `build` makes the rig
 	(Players:CreateHumanoidModelFromDescription, which may yield), removes any Animate script (the base Npc
 	plays his idle / walk / run), makes sure his Humanoid has an Animator (otherwise the base's pose code
-	waits for one inside the NPC think), adds a cue billboard ("?" / "!") and a plain speech bubble over his
-	head, tags him Occupant (the client's tells find him by it) and, last, Npc with his NpcKind so
-	NpcServiceServer adopts him. The bubble is a typed paper memo (M3); the client voices and types each
-	line (OccupantPresenceSystem).
+	waits for one inside the NPC think), adds two empty tagged shells over his head (his cue and his memo; the
+	server writes only their attributes, the client draws them: OccupantBillboardSystem, and voices each line:
+	OccupantPresenceSystem), tags him Occupant (the client's tells find him by it) and, last, Npc with his NpcKind so
+	NpcServiceServer adopts him.
 
 	Spec-exempt shell (Instances).
 
@@ -28,38 +28,13 @@ export type Rig = {
 	humanoid: Humanoid,
 	root: BasePart,
 	head: BasePart,
-	cue: TextLabel,
-	speech: TextLabel,
-	bubble: BillboardGui,
+	cue: BillboardGui,
+	speech: BillboardGui,
 }
-
-local CUE_COLOR = Color3.fromRGB(255, 220, 90)
-local SPOTTED_COLOR = Color3.fromRGB(255, 70, 60)
 
 -- The latest line per rig, so an older line's timer never hides a newer one. Weak keys.
 local speechTokens: { [Model]: number } = {}
 setmetatable(speechTokens, { __mode = "k" })
-
-local function billboard(name: string, size: UDim2, offset: Vector3, parent: Instance): (BillboardGui, TextLabel)
-	local gui = Instance.new("BillboardGui")
-	gui.Name = name
-	gui.Size = size
-	gui.StudsOffset = offset
-	gui.AlwaysOnTop = true
-	gui.MaxDistance = 90
-	gui.LightInfluence = 0
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.fromScale(1, 1)
-	label.BackgroundTransparency = 1
-	label.TextScaled = true
-	label.Font = Enum.Font.GothamBlack
-	label.TextColor3 = CUE_COLOR
-	label.TextStrokeTransparency = 0.3
-	label.Text = ""
-	label.Parent = gui
-	gui.Parent = parent
-	return gui, label
-end
 
 -- The generated model, its description set from OccupantConstants.BODY. Yields.
 local function generate(): Model
@@ -87,33 +62,51 @@ local function generate(): Model
 	return model
 end
 
--- His cue and speech billboards on his head (the bubble starts hidden).
-local function tells(head: BasePart): (TextLabel, TextLabel, BillboardGui)
-	local _, cue = billboard(OccupantConstants.CUE_NAME, UDim2.fromScale(2.5, 2.5), Vector3.new(0, 2.5, 0), head)
-	local bubble, speech =
-		billboard(OccupantConstants.SPEECH_NAME, UDim2.fromOffset(260, 56), Vector3.new(0, 4.5, 0), head)
-	bubble.Enabled = false
-	-- A memo, typed (spec §7 "UI as office paperwork … typewriter type"); the client reveals it letter by letter.
-	speech.BackgroundTransparency = 0
-	speech.BackgroundColor3 = OccupantConstants.SPEECH_PAPER
-	speech.TextColor3 = OccupantConstants.SPEECH_INK
-	speech.TextStrokeTransparency = 1
-	speech.Font = OccupantConstants.SPEECH_FONT
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 6)
-	corner.Parent = speech
-	local border = Instance.new("UIStroke")
-	border.Color = OccupantConstants.SPEECH_BORDER
-	border.Thickness = 2
-	border.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	border.Parent = speech
-	local padding = Instance.new("UIPadding")
-	padding.PaddingLeft = UDim.new(0, 8)
-	padding.PaddingRight = UDim.new(0, 8)
-	padding.PaddingTop = UDim.new(0, 4)
-	padding.PaddingBottom = UDim.new(0, 4)
-	padding.Parent = speech
-	return cue, speech, bubble
+-- An empty shell over his head for the client to draw into (OccupantBillboardSystem): its attribute starts "", then
+-- the tag, then the parent.
+local function shell(
+	name: string,
+	size: UDim2,
+	offset: Vector3,
+	tag: string,
+	attribute: string,
+	head: BasePart
+): BillboardGui
+	local gui = Instance.new("BillboardGui")
+	gui.Name = name
+	gui.Size = size
+	gui.StudsOffset = offset
+	gui.AlwaysOnTop = true
+	gui.MaxDistance = 90
+	gui.LightInfluence = 0
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	gui:SetAttribute(attribute, "")
+	CollectionService:AddTag(gui, tag)
+	gui.Parent = head
+	return gui
+end
+
+-- His cue disc and memo shells on his head.
+local function tells(head: BasePart): (BillboardGui, BillboardGui)
+	local studs = OccupantConstants.CUE_STUDS
+	local memo = OccupantConstants.MEMO_PX
+	local cue = shell(
+		OccupantConstants.CUE_NAME,
+		UDim2.fromScale(studs, studs),
+		Vector3.new(0, 2.5, 0),
+		OccupantConstants.CUE_TAG,
+		OccupantConstants.CUE_ATTRIBUTE,
+		head
+	)
+	local speech = shell(
+		OccupantConstants.SPEECH_NAME,
+		UDim2.fromOffset(memo.X, memo.Y),
+		Vector3.new(0, 4.5, 0),
+		OccupantConstants.SPEECH_TAG,
+		OccupantConstants.LINE_ATTRIBUTE,
+		head
+	)
+	return cue, speech
 end
 
 local OccupantRigSystem = {}
@@ -134,7 +127,7 @@ function OccupantRigSystem.build(at: CFrame, parent: Instance): Rig
 		if humanoid:FindFirstChildOfClass("Animator") == nil then
 			Instance.new("Animator").Parent = humanoid
 		end
-		local cue, speech, bubble = tells(head)
+		local cue, speech = tells(head)
 		model:SetAttribute(OccupantConstants.MODE_ATTRIBUTE, "patrol")
 		model:SetAttribute(OccupantConstants.TARGET_ATTRIBUTE, 0)
 		model:SetAttribute(NpcConstants.KIND_ATTRIBUTE, OccupantConstants.NPC_KIND)
@@ -150,7 +143,6 @@ function OccupantRigSystem.build(at: CFrame, parent: Instance): Rig
 			head = head,
 			cue = cue,
 			speech = speech,
-			bubble = bubble,
 		}
 	end
 	model:Destroy()
@@ -158,26 +150,24 @@ function OccupantRigSystem.build(at: CFrame, parent: Instance): Rig
 end
 
 --[=[
-	The text over his head ("?", "!" or nothing).
+	The cue over his head ("?", "!" or ""), as the cue shell's attribute; the client draws the disc.
 ]=]
 function OccupantRigSystem.setCue(rig: Rig, text: string)
-	rig.cue.Text = text
-	rig.cue.TextColor3 = if text == "!" then SPOTTED_COLOR else CUE_COLOR
+	rig.cue:SetAttribute(OccupantConstants.CUE_ATTRIBUTE, text)
 end
 
 --[=[
-	Shows a line in his speech bubble for SPEECH_SECONDS (a newer line replaces it).
+	Puts a line on his memo for SPEECH_SECONDS (a newer line replaces it), as the speech shell's attribute; the client
+	types and voices it.
 ]=]
 function OccupantRigSystem.say(rig: Rig, line: string)
 	local token = (speechTokens[rig.model] or 0) + 1
 	speechTokens[rig.model] = token
-	rig.speech.Text = line
-	rig.bubble.Enabled = true
+	rig.speech:SetAttribute(OccupantConstants.LINE_ATTRIBUTE, line)
 	task.delay(OccupantConstants.SPEECH_SECONDS, function()
-		if speechTokens[rig.model] == token and rig.bubble.Parent ~= nil then
-			rig.bubble.Enabled = false
-			-- Cleared so the next identical line changes Text and the client types and voices it again.
-			rig.speech.Text = ""
+		if speechTokens[rig.model] == token and rig.speech.Parent ~= nil then
+			-- Cleared so the next identical line changes the attribute and the client types and voices it again.
+			rig.speech:SetAttribute(OccupantConstants.LINE_ATTRIBUTE, "")
 		end
 	end)
 end
