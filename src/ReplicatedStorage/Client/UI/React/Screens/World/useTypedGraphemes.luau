@@ -2,7 +2,8 @@
 --[=[
 	useTypedGraphemes: a MaxVisibleGraphemes binding that types `text` out at `rate` characters a second, from when the
 	text appears (OccupantFeedbackUtils.reveal), and reads -1 once the whole line is out. It restarts only when `text`
-	or `rate` changes, so a re-render with the same line never retypes it. Writes the binding only, on RenderStepped.
+	or `rate` changes, so a re-render with the same line never retypes it. A layout effect, so a new line resets to 0
+	before it paints (no one-frame flash of the whole line). Writes the binding only, on RenderStepped.
 	React hook (exempt: needs a renderer and RunService); the reveal maths is the specced OccupantFeedbackUtils.reveal.
 
 	@class useTypedGraphemes
@@ -16,7 +17,7 @@ local OccupantFeedbackUtils = require(ReplicatedStorage.Shared.Features.Occupant
 
 local function useTypedGraphemes(text: string, rate: number): React.Binding<number>
 	local shown, setShown = React.useBinding(0)
-	React.useEffect(function(): () -> ()
+	React.useLayoutEffect(function(): () -> ()
 		local total = utf8.len(text) or #text
 		local started = os.clock()
 		setShown(0)
