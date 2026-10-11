@@ -5,7 +5,8 @@
 	Fills its parent's width and grows to its text height by default; `frame` fixes the size, `autoSize = false`
 	stops the growth, and `fit` sizes it to the text on both axes (for chips, stamps and marks). `strike` crosses the
 	text out with rich text; the text is escaped first (`&`, `<`, `>`) because callers pass player display names.
-	`scaled` shrinks long text into the fixed `frame` (TextScaled with a UITextSizeConstraint from `minSize` to `size`).
+	`scaled` shrinks long text into the fixed `frame` (TextScaled with a UITextSizeConstraint from `minSize` to `size`,
+	times the sign's scale from PaperScaleContext, because the constraint counts screen px); it never auto-sizes.
 
 	@class PaperLabel
 ]=]
@@ -13,6 +14,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
+local PaperScaleContext = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperScaleContext)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 
 local e = React.createElement
@@ -36,7 +38,7 @@ export type PaperLabelProps = {
 	strike: boolean?,
 	-- Shrink long text into the fixed `frame` (TextScaled, between `minSize` and `size`); pair with autoSize = false.
 	scaled: boolean?,
-	-- The smallest scaled size in px (floor(size * 0.6) by default).
+	-- The smallest scaled size in design px (floor(size * 0.6) by default).
 	minSize: number?,
 	layoutOrder: number?,
 	zIndex: number?,
@@ -53,6 +55,7 @@ local ESCAPES = table.freeze({ ["<"] = "&lt;", [">"] = "&gt;", ["&"] = "&amp;" }
 
 local function PaperLabel(props: PaperLabelProps): React.ReactNode
 	local strike = props.strike == true
+	local signScale = React.useContext(PaperScaleContext.Context)
 	local scaled = props.scaled == true
 	local text = props.text
 	if strike then
@@ -64,7 +67,7 @@ local function PaperLabel(props: PaperLabelProps): React.ReactNode
 	local size = if fit then UDim2.fromOffset(0, 0) else props.frame or UDim2.fromScale(1, 0)
 	local autoSize = if fit
 		then Enum.AutomaticSize.XY
-		elseif props.autoSize == false then Enum.AutomaticSize.None
+		elseif scaled or props.autoSize == false then Enum.AutomaticSize.None
 		else Enum.AutomaticSize.Y
 
 	return e("TextLabel", {
@@ -87,8 +90,12 @@ local function PaperLabel(props: PaperLabelProps): React.ReactNode
 	}, {
 		limit = if scaled
 			then e("UITextSizeConstraint", {
-				MaxTextSize = props.size,
-				MinTextSize = props.minSize or math.floor(props.size * 0.6),
+				MaxTextSize = signScale:map(function(scale: number): number
+					return PaperScaleContext.limit(props.size, scale)
+				end),
+				MinTextSize = signScale:map(function(scale: number): number
+					return PaperScaleContext.limit(props.minSize or math.floor(props.size * 0.6), scale)
+				end),
 			})
 			else nil,
 	})

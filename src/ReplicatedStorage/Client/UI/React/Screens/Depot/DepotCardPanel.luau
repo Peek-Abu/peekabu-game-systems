@@ -16,6 +16,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage.Packages.React)
 local DepotCardViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotCardViewModel)
 local PaperLabel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperLabel)
+local PaperScaleContext = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperScaleContext)
 local PaperSheet = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperSheet)
 local PaperTexture = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperTexture)
 local StickyNote = require(ReplicatedStorage.Client.UI.React.Screens.Paper.StickyNote)
@@ -62,8 +63,6 @@ local function label(
 		scaled = scaled,
 		-- Above the card's PaperTexture (ZIndex 0).
 		zIndex = 2,
-		-- The card is itself scaled (down to 0.6): a large absolute minimum would overflow the frame.
-		minSize = if scaled == true then 8 else nil,
 	})
 end
 
@@ -220,20 +219,27 @@ local function DepotCardPanel(props: DepotCardPanelProps): React.ReactNode
 	local arrival = props.arrival
 	local drive = props.drive
 	local size = if arrival ~= nil then ARRIVAL else DRIVE
+	-- PaperLabel's shrink-to-fit limits follow the card's scale (see PaperScaleContext).
+	local scale = React.useMemo(function(): React.Binding<number>
+		local binding = React.createBinding(props.scale)
+		return binding
+	end, { tostring(props.scale) })
 	local card: React.ReactNode = nil
 	if arrival ~= nil then
 		card = arrivalCard(arrival)
 	elseif drive ~= nil then
 		card = driveCard(drive)
 	end
-	return e("Frame", {
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.4),
-		Size = UDim2.fromOffset(size.X, size.Y),
-		BackgroundTransparency = 1,
-	}, {
-		scale = e("UIScale", { Scale = props.scale }),
-		card = card,
+	return e(PaperScaleContext.Context.Provider, { value = scale }, {
+		root = e("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.4),
+			Size = UDim2.fromOffset(size.X, size.Y),
+			BackgroundTransparency = 1,
+		}, {
+			scale = e("UIScale", { Scale = props.scale }),
+			card = card,
+		}),
 	})
 end
 

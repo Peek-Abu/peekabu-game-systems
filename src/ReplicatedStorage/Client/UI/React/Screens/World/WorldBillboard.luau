@@ -16,6 +16,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
+local PaperScaleContext = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperScaleContext)
 local usePaperViewport = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperViewport)
 local WorldBillboardViewModel = require(ReplicatedStorage.Client.UI.React.Screens.World.WorldBillboardViewModel)
 
@@ -35,35 +36,41 @@ local function WorldBillboard(props: WorldBillboardProps): React.ReactNode
 	local viewport = usePaperViewport()
 	local absolute, setAbsolute = React.useBinding(design)
 
-	local scale: React.Binding<number> | number
-	if props.sizing == "studs" then
-		scale = absolute:map(function(size: Vector2): number
-			return WorldBillboardViewModel.fit(size, design)
-		end)
-	else
-		scale = WorldBillboardViewModel.screenScale(viewport)
-	end
+	local screen = WorldBillboardViewModel.screenScale(viewport)
+	local sizing = props.sizing
+	-- One binding per sizing/screen/design (it is also the PaperScaleContext value, so it must keep its identity).
+	local scale = React.useMemo(function(): React.Binding<number>
+		if sizing == "studs" then
+			return absolute:map(function(size: Vector2): number
+				return WorldBillboardViewModel.fit(size, design)
+			end)
+		end
+		local binding = React.createBinding(screen)
+		return binding
+	end, { `{sizing}:{screen}:{design.X}x{design.Y}` })
 
-	return e("Frame", {
-		Size = UDim2.fromScale(1, 1),
-		BackgroundTransparency = 1,
-		[React.Change.AbsoluteSize] = if props.sizing == "studs"
-			then function(rbx: Frame)
-				setAbsolute(rbx.AbsoluteSize)
-			end
-			else nil,
-	}, {
-		design = e("Frame", {
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromScale(0.5, 0.5),
-			Size = UDim2.fromOffset(design.X, design.Y),
+	return e(PaperScaleContext.Context.Provider, { value = scale }, {
+		root = e("Frame", {
+			Size = UDim2.fromScale(1, 1),
 			BackgroundTransparency = 1,
+			[React.Change.AbsoluteSize] = if props.sizing == "studs"
+				then function(rbx: Frame)
+					setAbsolute(rbx.AbsoluteSize)
+				end
+				else nil,
 		}, {
-			scale = e("UIScale", { Scale = scale }),
-			content = e("Frame", {
-				Size = UDim2.fromScale(1, 1),
+			design = e("Frame", {
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.5),
+				Size = UDim2.fromOffset(design.X, design.Y),
 				BackgroundTransparency = 1,
-			}, props.children),
+			}, {
+				scale = e("UIScale", { Scale = scale }),
+				content = e("Frame", {
+					Size = UDim2.fromScale(1, 1),
+					BackgroundTransparency = 1,
+				}, props.children),
+			}),
 		}),
 	})
 end

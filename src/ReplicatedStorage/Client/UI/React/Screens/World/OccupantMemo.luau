@@ -13,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
+local PaperScaleContext = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperScaleContext)
 local PaperLabel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperLabel)
 local PaperTexture = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperTexture)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
@@ -33,6 +34,7 @@ local TAIL_X = 90
 
 local function OccupantMemo(props: OccupantMemoProps): React.ReactNode
 	local view = props.view
+	local signScale = React.useContext(PaperScaleContext.Context)
 	local shown = useTypedGraphemes(view.text, OccupantConstants.TYPE_RATE)
 	return e("Frame", {
 		Size = UDim2.fromOffset(PAPER.X, OccupantConstants.MEMO_PX.Y),
@@ -95,7 +97,14 @@ local function OccupantMemo(props: OccupantMemoProps): React.ReactNode
 				MaxVisibleGraphemes = shown,
 				ZIndex = 2,
 			}, {
-				limit = e("UITextSizeConstraint", { MaxTextSize = view.size, MinTextSize = 12 }),
+				limit = e("UITextSizeConstraint", {
+					MaxTextSize = signScale:map(function(scale: number): number
+						return PaperScaleContext.limit(view.size, scale)
+					end),
+					MinTextSize = signScale:map(function(scale: number): number
+						return PaperScaleContext.limit(12, scale)
+					end),
+				}),
 			}),
 		}),
 	})

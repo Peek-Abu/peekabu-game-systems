@@ -58,7 +58,6 @@ local function reviewCard(review: DepotWorldViewModel.ReviewView): React.ReactNo
 			autoSize = false,
 			wrapped = false,
 			scaled = true,
-			minSize = 8,
 		})
 		content[`rule{index}`] = e("Frame", {
 			Position = UDim2.fromOffset(0, y + ROW_HEIGHT - 2),
@@ -91,7 +90,6 @@ local function reviewCard(review: DepotWorldViewModel.ReviewView): React.ReactNo
 		autoSize = false,
 		wrapped = false,
 		scaled = true,
-		minSize = 8,
 	})
 	content.quote = e(PaperLabel, {
 		text = review.quote,

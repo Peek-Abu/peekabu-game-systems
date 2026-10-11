@@ -45,7 +45,6 @@ local function label(
 		frame = UDim2.new(1, 0, 0, height),
 		autoSize = false,
 		scaled = scaled,
-		minSize = if scaled == true then 8 else nil,
 	})
 end
 
