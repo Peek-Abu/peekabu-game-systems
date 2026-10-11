@@ -31,7 +31,7 @@ local PENDING = ""
 local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- His heavy, uneven step (one per stride, positional, through walls).
 	harlowFootstep = {
-		assetId = PENDING,
+		assetId = "rbxassetid://119846856442242",
 		group = "SFX",
 		volume = 0.7,
 		pitch = { min = 0.9, max = 1.05 },
@@ -41,11 +41,11 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- Low muttering under his breath (looped on his head).
 	harlowMutter = { assetId = PENDING, group = "SFX", volume = 0.35, looped = true, rollOffMaxDistance = 55 },
 	-- Your heartbeat while he is near and has not seen you (2D).
-	harlowHeartbeat = { assetId = PENDING, group = "SFX", volume = 0.8 },
+	harlowHeartbeat = { assetId = "rbxassetid://123214528916758", group = "SFX", volume = 0.8 },
 	-- A suspicious "hm?" when he goes to investigate.
 	harlowCurious = { assetId = PENDING, group = "SFX", volume = 0.8, rollOffMaxDistance = 80 },
 	-- The "!" sting (2D for the one he spotted, positional for everyone else).
-	harlowSpotted = { assetId = PENDING, group = "SFX", volume = 1, rollOffMaxDistance = 90 },
+	harlowSpotted = { assetId = "rbxassetid://71081947321557", group = "SFX", volume = 1, rollOffMaxDistance = 90 },
 	-- Chase music for the chased player (looped).
 	harlowChase = { assetId = PENDING, group = "Music", volume = 0.6, looped = true },
 	harlowSigh = { assetId = PENDING, group = "SFX", volume = 0.8, rollOffMaxDistance = 80 },
@@ -79,8 +79,8 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 		rollOffMaxDistance = 90,
 	},
 	-- The catch: a distorted sting for the caught player, the lights' power-down and his grab for everyone near.
-	harlowCatchSting = { assetId = PENDING, group = "SFX", volume = 1 },
-	harlowPowerDown = { assetId = PENDING, group = "SFX", volume = 0.9, rollOffMaxDistance = 90 },
+	harlowCatchSting = { assetId = "rbxassetid://88133727845312", group = "SFX", volume = 1 },
+	harlowPowerDown = { assetId = "rbxassetid://95527531363916", group = "SFX", volume = 0.9, rollOffMaxDistance = 90 },
 	harlowGrab = { assetId = PENDING, group = "SFX", volume = 0.9, rollOffMaxDistance = 60 },
 }
 

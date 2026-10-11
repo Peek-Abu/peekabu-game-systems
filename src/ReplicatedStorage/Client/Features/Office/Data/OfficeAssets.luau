@@ -20,21 +20,33 @@ local PENDING = ""
 
 local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- Buzzing fluorescent tubes under everything (looped ambience).
-	officeHum = { assetId = PENDING, group = "Ambient", volume = 0.35, looped = true },
+	officeHum = { assetId = "rbxassetid://95556373984410", group = "Ambient", volume = 0.35, looped = true },
 	-- A broken tube's electric zap as it blinks.
 	officeLightZap = { assetId = PENDING, group = "SFX", volume = 0.4, rollOffMaxDistance = 30, maxConcurrent = 2 },
 	-- An old office phone ringing in an empty room.
-	officePhoneRing = { assetId = PENDING, group = "Ambient", volume = 0.7, rollOffMaxDistance = 70, maxConcurrent = 1 },
+	officePhoneRing = {
+		assetId = "rbxassetid://137552094086969",
+		group = "Ambient",
+		volume = 0.7,
+		rollOffMaxDistance = 70,
+		maxConcurrent = 1,
+	},
 	-- An elevator's ding, nobody inside.
 	officeElevatorDing = {
-		assetId = PENDING,
+		assetId = "rbxassetid://128966492979709",
 		group = "Ambient",
 		volume = 0.7,
 		rollOffMaxDistance = 90,
 		maxConcurrent = 1,
 	},
 	-- Someone typing (looped); it stops when you come close.
-	officeTyping = { assetId = PENDING, group = "Ambient", volume = 0.5, looped = true, rollOffMaxDistance = 35 },
+	officeTyping = {
+		assetId = "rbxassetid://71155319819913",
+		group = "Ambient",
+		volume = 0.5,
+		looped = true,
+		rollOffMaxDistance = 35,
+	},
 }
 
 for id, def in SOUNDS do

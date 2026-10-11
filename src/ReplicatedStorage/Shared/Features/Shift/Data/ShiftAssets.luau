@@ -21,21 +21,21 @@ local PENDING = ""
 
 local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- A punch-clock "ka-chunk" when the shift starts.
-	shiftPunchIn = { assetId = PENDING, group = "SFX", volume = 0.8 },
+	shiftPunchIn = { assetId = "rbxassetid://109228401071501", group = "SFX", volume = 0.8 },
 	-- The truck's horn: quota met, and the shift's end.
-	shiftTruckHorn = { assetId = PENDING, group = "SFX", volume = 1 },
+	shiftTruckHorn = { assetId = "rbxassetid://79879032987879", group = "SFX", volume = 1 },
 	-- A low brass sting when the pressure tier rises.
-	shiftTierSting = { assetId = PENDING, group = "SFX", volume = 0.7 },
+	shiftTierSting = { assetId = "rbxassetid://136159590763818", group = "SFX", volume = 0.7 },
 	-- An office PA chime before overtime.
-	shiftWarningChime = { assetId = PENDING, group = "UI", volume = 0.8 },
-	shiftOvertimeSting = { assetId = PENDING, group = "SFX", volume = 0.9 },
+	shiftWarningChime = { assetId = "rbxassetid://126147740959997", group = "UI", volume = 0.8 },
+	shiftOvertimeSting = { assetId = "rbxassetid://95766845390235", group = "SFX", volume = 0.9 },
 	-- The overtime layer: a clock ticking under everything (looped).
-	shiftTicking = { assetId = PENDING, group = "Music", volume = 0.5, looped = true },
+	shiftTicking = { assetId = "rbxassetid://118452299844030", group = "Music", volume = 0.5, looped = true },
 	-- Two honks: someone clocked out.
-	shiftClockOutHorn = { assetId = PENDING, group = "SFX", volume = 1 },
-	shiftCountdownTick = { assetId = PENDING, group = "UI", volume = 0.6, maxConcurrent = 2 },
+	shiftClockOutHorn = { assetId = "rbxassetid://121905159563801", group = "SFX", volume = 1 },
+	shiftCountdownTick = { assetId = "rbxassetid://135218748578686", group = "UI", volume = 0.6, maxConcurrent = 2 },
 	-- The toast styles' sounds (ShiftConstants.TOAST_STYLES): a paper rustle and a rubber stamp.
-	shiftStickyNote = { assetId = PENDING, group = "UI", volume = 0.6 },
+	shiftStickyNote = { assetId = "rbxassetid://99429190384090", group = "UI", volume = 0.6 },
 	shiftStamp = { assetId = PENDING, group = "UI", volume = 0.9 },
 }
 

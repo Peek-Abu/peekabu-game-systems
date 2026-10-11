@@ -29,7 +29,7 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 		rollOffMaxDistance = 60,
 	},
 	-- Your canister taking a pile, and the chime when it is full.
-	canisterTick = { assetId = PENDING, group = "UI", volume = 0.5 },
+	canisterTick = { assetId = "rbxassetid://112926891018046", group = "UI", volume = 0.5 },
 	canisterChime = { assetId = PENDING, group = "UI", volume = 0.8 },
 	-- The dust bag popping out at your feet.
 	dustBagPop = { assetId = PENDING, group = "SFX", volume = 0.8, rollOffMaxDistance = 40 },
