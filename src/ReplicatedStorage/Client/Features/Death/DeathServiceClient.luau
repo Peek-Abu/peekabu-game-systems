@@ -4,7 +4,7 @@
 	docs/superpowers/specs/2026-10-09-death-design.md).
 
 	While the local player's public `dead` field is set, the camera follows a living player through a
-	CameraServiceClient `default` mode with `subject`. `spectateNext` / `spectatePrev` cycle; a target who
+	CameraServiceClient `default` mode with `subject`. `spectateNext` / `spectatePrev` or `cycleSpectate` cycle; a target who
 	dies or leaves is replaced; respawning (the field clearing) ends it. Candidates and cycling are the
 	pure DeathSpectateRules.
 
@@ -108,6 +108,7 @@ export type DeathServiceClient = {
 	spectating: (self: DeathServiceClient) -> number?,
 	setSpectateEnabled: (self: DeathServiceClient, on: boolean) -> (),
 	setSpectateFilter: (self: DeathServiceClient, filter: ((userId: number) -> boolean)?) -> (),
+	cycleSpectate: (self: DeathServiceClient, direction: number) -> (),
 	getState: (self: DeathServiceClient) -> { [string]: any },
 }
 
@@ -195,6 +196,14 @@ local DeathServiceClient: DeathServiceClient = {
 	setSpectateFilter = function(_self, nextFilter)
 		filter = nextFilter
 		refresh(0)
+	end,
+
+	--[=[
+		Cycles the spectated player: 1 next, -1 previous. The touch twin of the spectate Input actions (a phone has no
+		key to press); does nothing unless the local player is dead.
+	]=]
+	cycleSpectate = function(_self, direction)
+		refresh(if direction < 0 then -1 else 1)
 	end,
 
 	getState = function(_self)
