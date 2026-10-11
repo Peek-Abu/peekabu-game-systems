@@ -11,6 +11,8 @@ export type NoiseEvent = {
 	position: Vector3,
 	radius: number,
 	source: string,
+	-- Who made it (userIds): the vacuumers on the pile, the dropper, the carrier, the searcher; empty when unknown.
+	makers: { number },
 }
 
 return {}

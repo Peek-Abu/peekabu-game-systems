@@ -19,6 +19,7 @@
 	  Back to depot sends the crew home through ShiftTripSystem with the review as its result card);
 	- the crew (M4): a shift starts only for the party that arrived through the Queue (ShiftTripSystem); only
 	  the crew takes part in Round's run, votes and respawns in the loading bay;
+	- the review (M3 UI): ShiftReviewSystem counts piles, drops, noise and times heard for the review;
 	- reset: Office, Vacuum and Cargo clear everything the shift made. `resetShift` mid-run (Studio test
 	  runs) ends Round's run first and skips the review.
 
@@ -55,6 +56,7 @@ local ShiftTripSystem = require(ShiftServer.Systems.ShiftTripSystem)
 local ShiftVoteSystem = require(ShiftServer.Systems.ShiftVoteSystem)
 local ShiftAnalyticsSystem = require(ShiftServer.Systems.ShiftAnalyticsSystem)
 local ShiftAnalyticsWatchSystem = require(ShiftServer.Systems.ShiftAnalyticsWatchSystem)
+local ShiftReviewSystem = require(ShiftServer.Systems.ShiftReviewSystem)
 local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
 local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
@@ -100,6 +102,10 @@ local changed: SignalTyped.Signal<ShiftTypes.ShiftState> = SignalTyped.new()
 
 local function now(): number
 	return Workspace:GetServerTimeNow()
+end
+
+local function isRunning(): boolean
+	return state.phase == "running"
 end
 
 -- The crew members in the server (`except`: one who is leaving; Players still lists them during PlayerRemoving).
@@ -339,7 +345,7 @@ local ShiftServiceServer: ShiftServiceServer = {
 	},
 
 	--[=[
-		Configures Round and Death, takes over banking and the time clock, follows Round, counts piles,
+		Configures Round and Death, takes over banking and the time clock, follows Round,
 		listens for votes and starts the clock.
 	]=]
 	start = function(self)
@@ -356,22 +362,12 @@ local ShiftServiceServer: ShiftServiceServer = {
 		trip:start(publish)
 		CargoServiceServer:onBanked(onBanked)
 		table.insert(stoppers, ShiftAnalyticsWatchSystem.start(changed, trip))
+		table.insert(stoppers, ShiftReviewSystem.start(roster, isRunning))
 		InteractionServiceServer:onInteract(ShiftConstants.CLOCK_OUT_KIND, function(player, _target)
 			self:clockOut(player)
 		end)
 
 		local phases = RoundServiceServer.phaseChanged:Connect(onRoundPhase)
-		local piles = VacuumServiceServer.pileCleared:Connect(function(_pile, players)
-			if state.phase ~= "running" then
-				return
-			end
-			for _, player in players do
-				if player.Parent ~= nil then
-					RoundServiceServer:addScore(player, ShiftConstants.SCORE_PILES, 1)
-					roster:record(player.UserId, player.DisplayName, { piles = 1 })
-				end
-			end
-		end)
 		local leaving = Players.PlayerRemoving:Connect(function(player)
 			voting:forget(player.UserId)
 			publish()
@@ -394,7 +390,6 @@ local ShiftServiceServer: ShiftServiceServer = {
 		end)
 		table.insert(stoppers, function()
 			phases:Disconnect()
-			piles:Disconnect()
 			leaving:Disconnect()
 			ticking:Disconnect()
 		end)

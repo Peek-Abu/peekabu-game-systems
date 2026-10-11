@@ -71,6 +71,7 @@ export type Noise = {
 	position: Vector3,
 	radius: number,
 	at: number,
+	makers: { number },
 }
 
 -- Mr. Harlow's published mode and target (OccupantConstants.MODE_ATTRIBUTE / TARGET_ATTRIBUTE; 0 = nobody).
@@ -256,18 +257,26 @@ function ShiftAnalyticsUtils.harlowChange(before: Harlow?, after: Harlow): strin
 end
 
 --[=[
-	The source of the newest noise within NOISE_MEMORY seconds whose heard radius (radius × scale) reached `listener`;
-	"unknown" when none did.
+	The noise Harlow most likely heard: the newest one within NOISE_MEMORY whose heard radius (radius × scale) reached
+	`listener`; nil if none.
 ]=]
-function ShiftAnalyticsUtils.heardSource(noises: { Noise }, listener: Vector3, scale: number, now: number): string
+function ShiftAnalyticsUtils.heardNoise(noises: { Noise }, listener: Vector3, scale: number, now: number): Noise?
 	for index = #noises, 1, -1 do
 		local noise = noises[index]
 		local recent = now - noise.at <= ShiftAnalyticsConstants.NOISE_MEMORY
 		if recent and (listener - noise.position).Magnitude <= noise.radius * scale then
-			return noise.source
+			return noise
 		end
 	end
-	return "unknown"
+	return nil
+end
+
+--[=[
+	The source of the noise Harlow most likely heard (heardNoise); "unknown" when none.
+]=]
+function ShiftAnalyticsUtils.heardSource(noises: { Noise }, listener: Vector3, scale: number, now: number): string
+	local noise = ShiftAnalyticsUtils.heardNoise(noises, listener, scale, now)
+	return if noise ~= nil then noise.source else "unknown"
 end
 
 return ShiftAnalyticsUtils

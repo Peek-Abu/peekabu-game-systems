@@ -30,6 +30,7 @@ local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interacti
 local InteractionRegistry = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionRegistry)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local VacuumCanisterUtils = require(ServerScriptService.Features.Vacuum.Utils.VacuumCanisterUtils)
+local VacuumChannelTracker = require(ServerScriptService.Features.Vacuum.State.VacuumChannelTracker)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
 local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
 local StateSyncPublicPlayerStore = require(ServerScriptService.Features.StateSync.State.StateSyncPublicPlayerStore)
@@ -44,12 +45,12 @@ end
 
 local pileCleared: SignalTyped.Signal<BasePart, { Player }> = SignalTyped.new()
 local dustBagReady: SignalTyped.Signal<Player, CFrame, Instance> = SignalTyped.new()
-local noiseMade: SignalTyped.Signal<Vector3, number, string> = SignalTyped.new()
+local noiseMade: SignalTyped.Signal<Vector3, number, string, { number }> = SignalTyped.new()
 local vacuumStarted: SignalTyped.Signal<Player, BasePart> = SignalTyped.new()
 
 local fills: { [number]: number } = {}
--- The pile each player was last allowed to vacuum (vacuumStarted fires when it changes).
-local vacuuming: { [number]: Instance } = {}
+-- Who is vacuuming which pile (vacuumStarted fires when a player's pile changes; the makers of each noise pulse).
+local channels = VacuumChannelTracker.new(VacuumConstants.MAKER_WINDOW)
 local counters = { spawned = 0, cleared = 0, bags = 0 }
 local stoppers: { () -> () } = {}
 
@@ -118,7 +119,7 @@ local function pulse()
 	for _, pile in CollectionService:GetTagged(VacuumConstants.PILE_TAG) do
 		local count = pile:GetAttribute(InteractionConstants.CHANNEL_COUNT_ATTRIBUTE)
 		if pile:IsA("BasePart") and type(count) == "number" and count > 0 then
-			noiseMade:Fire(pile.Position, VacuumConstants.NOISE_RADIUS, "vacuum")
+			noiseMade:Fire(pile.Position, VacuumConstants.NOISE_RADIUS, "vacuum", channels:makersOn(pile, os.clock()))
 		end
 	end
 end
@@ -127,13 +128,14 @@ export type VacuumServiceServer = {
 	dependencies: { string },
 	pileCleared: SignalTyped.Signal<BasePart, { Player }>,
 	dustBagReady: SignalTyped.Signal<Player, CFrame, Instance>,
-	noiseMade: SignalTyped.Signal<Vector3, number, string>,
+	noiseMade: SignalTyped.Signal<Vector3, number, string, { number }>,
 	vacuumStarted: SignalTyped.Signal<Player, BasePart>,
 	start: (self: VacuumServiceServer) -> (),
 	stop: (self: VacuumServiceServer) -> (),
 	getState: (self: VacuumServiceServer) -> { [string]: any },
 	spawnPile: (self: VacuumServiceServer, kind: string, floor: CFrame, parent: Instance) -> BasePart,
 	fillOf: (self: VacuumServiceServer, player: Player) -> number,
+	isVacuuming: (self: VacuumServiceServer, player: Player) -> boolean,
 	reset: (self: VacuumServiceServer) -> (),
 }
 
@@ -155,8 +157,7 @@ local VacuumServiceServer: VacuumServiceServer = {
 					return false
 				end
 				-- Asked at the start and every tick: the first allowed ask on a new pile is a start (never yields).
-				if vacuuming[player.UserId] ~= target and target:IsA("BasePart") then
-					vacuuming[player.UserId] = target
+				if channels:note(player.UserId, target, os.clock()) and target:IsA("BasePart") then
 					vacuumStarted:Fire(player, target)
 				end
 				return true
@@ -190,7 +191,7 @@ local VacuumServiceServer: VacuumServiceServer = {
 		end)
 		local leaving = Players.PlayerRemoving:Connect(function(player)
 			fills[player.UserId] = nil
-			vacuuming[player.UserId] = nil
+			channels:forget(player.UserId)
 		end)
 		table.insert(stoppers, function()
 			ticking:Disconnect()
@@ -236,11 +237,18 @@ local VacuumServiceServer: VacuumServiceServer = {
 	end,
 
 	--[=[
+		Whether `player` is vacuuming a pile right now (their channel asked within MAKER_WINDOW).
+	]=]
+	isVacuuming = function(_self, player)
+		return channels:isActive(player.UserId, os.clock())
+	end,
+
+	--[=[
 		Empties every canister (a new shift). Piles go with the shift's container (Office).
 	]=]
 	reset = function(_self)
 		table.clear(fills)
-		table.clear(vacuuming)
+		channels:clear()
 		for _, player in Players:GetPlayers() do
 			publish(player.UserId)
 		end

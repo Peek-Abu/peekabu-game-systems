@@ -39,6 +39,8 @@ return table.freeze({
 	PUBLIC_FIELD = "canister",
 	-- Noise seam (M2): a pulse every NOISE_INTERVAL seconds while a pile is being vacuumed.
 	NOISE_INTERVAL = 1,
+	-- Seconds a vacuuming player stays counted after their channel's last tick (the channel asks every 0.1 s).
+	MAKER_WINDOW = 0.5,
 	NOISE_RADIUS = 40,
 	-- A pile shrinks to this fraction of its size as progress reaches full.
 	MIN_SCALE = 0.35,

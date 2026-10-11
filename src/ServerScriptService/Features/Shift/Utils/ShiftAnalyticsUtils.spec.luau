@@ -215,23 +215,49 @@ return function()
 
 		it("picks the newest recent noise that reached him", function()
 			local noises = {
-				{ source = "vacuum", position = Vector3.new(30, 0, 0), radius = 40, at = 99 },
-				{ source = "drop", position = Vector3.new(10, 0, 0), radius = 14, at = 99.5 },
+				{ source = "vacuum", position = Vector3.new(30, 0, 0), radius = 40, at = 99, makers = {} },
+				{ source = "drop", position = Vector3.new(10, 0, 0), radius = 14, at = 99.5, makers = {} },
 			}
 			expect(ShiftAnalyticsUtils.heardSource(noises, HARLOW, 1, 100)).to.equal("drop")
 		end)
 
 		it("skips a noise that did not reach him, scaled by his hearing", function()
-			local noises = { { source = "search", position = Vector3.new(14, 0, 0), radius = 12, at = 100 } }
+			local noises =
+				{ { source = "search", position = Vector3.new(14, 0, 0), radius = 12, at = 100, makers = {} } }
 			expect(ShiftAnalyticsUtils.heardSource(noises, HARLOW, 1, 100)).to.equal("unknown")
 			expect(ShiftAnalyticsUtils.heardSource(noises, HARLOW, 1.2, 100)).to.equal("search")
 		end)
 
 		it("forgets noises older than the memory", function()
-			local noises = { { source = "vacuum", position = HARLOW, radius = 40, at = 90 } }
+			local noises = { { source = "vacuum", position = HARLOW, radius = 40, at = 90, makers = {} } }
 			local late = 90 + ShiftAnalyticsConstants.NOISE_MEMORY + 0.1
 			expect(ShiftAnalyticsUtils.heardSource(noises, HARLOW, 1, late)).to.equal("unknown")
 			expect(ShiftAnalyticsUtils.heardSource({}, HARLOW, 1, 100)).to.equal("unknown")
+		end)
+	end)
+
+	describe("heardNoise", function()
+		local function noise(source, x, radius, at, makers)
+			return { source = source, position = Vector3.new(x, 0, 0), radius = radius, at = at, makers = makers or {} }
+		end
+
+		it("returns the makers of the noise he most likely heard", function()
+			local noises = { noise("drop", 0, 40, 9, { 2 }), noise("vacuum", 5, 40, 9.5, { 1, 3 }) }
+			local heard = ShiftAnalyticsUtils.heardNoise(noises, Vector3.new(10, 0, 0), 1, 10)
+			expect(heard.source).to.equal("vacuum")
+			expect(#heard.makers).to.equal(2)
+		end)
+
+		it("skips a noise that could not reach him, and returns nil when none did", function()
+			local noises = { noise("drop", 0, 40, 9, { 2 }), noise("vacuum", 200, 40, 9.5, { 1 }) }
+			expect(ShiftAnalyticsUtils.heardNoise(noises, Vector3.new(10, 0, 0), 1, 10).source).to.equal("drop")
+			expect(ShiftAnalyticsUtils.heardNoise({}, Vector3.zero, 1, 10)).to.equal(nil)
+		end)
+
+		it("keeps heardSource answering with the source word", function()
+			local noises = { noise("search", 0, 40, 9, { 4 }) }
+			expect(ShiftAnalyticsUtils.heardSource(noises, Vector3.new(1, 0, 0), 1, 10)).to.equal("search")
+			expect(ShiftAnalyticsUtils.heardSource({}, Vector3.zero, 1, 10)).to.equal("unknown")
 		end)
 	end)
 end

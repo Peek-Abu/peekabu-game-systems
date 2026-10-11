@@ -33,7 +33,7 @@ export type NoiseServiceServer = {
 	start: (self: NoiseServiceServer) -> (),
 	stop: (self: NoiseServiceServer) -> (),
 	getState: (self: NoiseServiceServer) -> { [string]: any },
-	emit: (self: NoiseServiceServer, position: Vector3, radius: number, source: string) -> (),
+	emit: (self: NoiseServiceServer, position: Vector3, radius: number, source: string, makers: { number }?) -> (),
 	setHearingScale: (self: NoiseServiceServer, scale: number) -> (),
 	getHearingScale: (self: NoiseServiceServer) -> number,
 }
@@ -46,12 +46,16 @@ local NoiseServiceServer: NoiseServiceServer = {
 		Relays Vacuum's and Cargo's noise.
 	]=]
 	start = function(self)
-		local vacuum = VacuumServiceServer.noiseMade:Connect(function(position: Vector3, radius: number, source: string)
-			self:emit(position, radius, source)
-		end)
-		local cargo = CargoServiceServer.noiseMade:Connect(function(position: Vector3, radius: number, source: string)
-			self:emit(position, radius, source)
-		end)
+		local vacuum = VacuumServiceServer.noiseMade:Connect(
+			function(position: Vector3, radius: number, source: string, makers: { number })
+				self:emit(position, radius, source, makers)
+			end
+		)
+		local cargo = CargoServiceServer.noiseMade:Connect(
+			function(position: Vector3, radius: number, source: string, makers: { number })
+				self:emit(position, radius, source, makers)
+			end
+		)
 		table.insert(stoppers, function()
 			vacuum:Disconnect()
 			cargo:Disconnect()
@@ -68,13 +72,14 @@ local NoiseServiceServer: NoiseServiceServer = {
 	--[=[
 		One noise: fires `made` and draws a ripple for everyone. A noise with no usable radius or position is ignored.
 	]=]
-	emit = function(_self, position, radius, source)
+	emit = function(_self, position, radius, source, makers)
 		if not NoiseRules.valid(position, radius) then
 			return
 		end
 		total += 1
 		bySource[source] = (bySource[source] or 0) + 1
-		local event: NoiseTypes.NoiseEvent = { position = position, radius = radius, source = source }
+		local event: NoiseTypes.NoiseEvent =
+			{ position = position, radius = radius, source = source, makers = makers or {} }
 		made:Fire(event)
 		NoiseEvents.packets.Ripple.sendToAll({
 			position = position,

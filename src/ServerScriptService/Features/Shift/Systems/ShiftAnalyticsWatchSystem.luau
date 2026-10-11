@@ -20,7 +20,8 @@
 	- Death `died` with Harlow's cause: the player's open attempts close as "caught", then player_caught;
 	- Mr. Harlow's mode/target attributes (the `Occupant` tag; read, never required, since Occupant requires Shift):
 	  noise_investigation for the crew, with the noise he most likely heard (Noise `made`, kept a few seconds), and
-	  chase_started for the chased player, with what they hold.
+	  chase_started for the chased player, with what they hold. `investigated` tells the review who woke him
+	  (ShiftReviewSystem).
 	Gameplay events count only while the shift is running.
 
 	Spec-exempt shell (signals, attributes, CollectionService); the decisions are the specced ShiftAnalyticsUtils,
@@ -54,6 +55,9 @@ local ShiftAnalyticsConstants = require(ShiftServer.Data.ShiftAnalyticsConstants
 local ShiftAnalyticsSystem = require(ShiftServer.Systems.ShiftAnalyticsSystem)
 local ShiftAnalyticsUtils = require(ShiftServer.Utils.ShiftAnalyticsUtils)
 local ShiftTripSystem = require(ShiftServer.Systems.ShiftTripSystem)
+
+-- The makers of the noise Harlow went to investigate (ShiftReviewSystem credits each with waking him).
+local investigated: SignalTyped.Signal<{ number }> = SignalTyped.new()
 
 -- The last shift state seen (the `changed` copies arrive in order).
 local before: ShiftTypes.ShiftState? = nil
@@ -246,6 +250,7 @@ local function onNoise(event: NoiseTypes.NoiseEvent)
 		position = event.position,
 		radius = event.radius,
 		at = os.clock(),
+		makers = table.clone(event.makers),
 	})
 end
 
@@ -265,16 +270,15 @@ local function readHarlow(model: Instance, last: ShiftAnalyticsUtils.Harlow?): S
 	if event == "noise_investigation" then
 		local position = if model:IsA("PVInstance") then model:GetPivot().Position else Vector3.zero
 		local scale = NoiseServiceServer:getHearingScale()
+		local noise = ShiftAnalyticsUtils.heardNoise(ShiftAnalyticsSystem.tracker:noises(), position, scale, os.clock())
 		ShiftAnalyticsSystem.emit("noise_investigation", "crew", {
-			target = ShiftAnalyticsUtils.heardSource(
-				ShiftAnalyticsSystem.tracker:noises(),
-				position,
-				scale,
-				os.clock()
-			),
+			target = if noise ~= nil then noise.source else "unknown",
 			outcome = ShiftAnalyticsSystem.quotaTag(),
 			value = ShiftAnalyticsSystem.elapsed(),
 		})
+		if noise ~= nil and #noise.makers > 0 then
+			investigated:Fire(table.clone(noise.makers))
+		end
 		return now
 	end
 	local victim = Players:GetPlayerByUserId(now.target)
@@ -316,6 +320,7 @@ local function watchHarlow(model: Instance): () -> ()
 end
 
 local ShiftAnalyticsWatchSystem = {}
+ShiftAnalyticsWatchSystem.investigated = investigated
 
 --[=[
 	Starts ShiftAnalyticsSystem (its crew = `trip`'s) and subscribes to the features. Returns the function that undoes

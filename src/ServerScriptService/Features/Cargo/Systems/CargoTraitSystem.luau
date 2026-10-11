@@ -38,7 +38,7 @@ local CargoSpawnSystem = require(ServerScriptService.Features.Cargo.Systems.Carg
 local SoundServiceServer = require(ServerScriptService.Features.Sound.SoundServiceServer)
 
 export type Deps = {
-	noiseMade: SignalTyped.Signal<Vector3, number, string>,
+	noiseMade: SignalTyped.Signal<Vector3, number, string, { number }>,
 	spawner: CargoSpawnSystem.CargoSpawnSystem,
 	container: () -> Instance?,
 	ignore: (extra: Instance?) -> { Instance },
@@ -80,7 +80,7 @@ function CargoTraitSystem.new(deps: Deps): CargoTraitSystem
 			local character = player.Character
 			local root = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil
 			if def ~= nil and CargoHandlingRules.rattles(def) and root ~= nil and root:IsA("BasePart") then
-				deps.noiseMade:Fire(root.Position, CargoConstants.RATTLE_NOISE, "rattle")
+				deps.noiseMade:Fire(root.Position, CargoConstants.RATTLE_NOISE, "rattle", { player.UserId })
 			end
 		end
 	end

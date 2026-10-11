@@ -352,6 +352,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants"] = "static pacing and names (no logic)",
 	["ReplicatedStorage.Shared.Features.Shift.Net.ShiftEvents"] = "ByteNet packet definitions (no logic)",
+	["ServerScriptService.Features.Shift.Systems.ShiftReviewSystem"] = "signal subscription shell (counting specced in ShiftRosterTracker, awards in ShiftResultsUtils)",
 	["ServerScriptService.Features.Shift.Systems.ShiftBankingSystem"] = "Round banking shell (salvage multiplier and quota are specced in ShiftPhaseRules)",
 	["ServerScriptService.Features.Shift.Data.ShiftAnalyticsConstants"] = "static analytics vocabulary and limits (no logic; exercised by ShiftAnalyticsUtils.spec)",
 	["ServerScriptService.Features.Shift.Systems.ShiftAnalyticsSystem"] = "AnalyticsService/Players/ByteNet/Workspace shell (payloads, tokens, variant, platform and attempts are specced)",

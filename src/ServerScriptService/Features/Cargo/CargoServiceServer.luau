@@ -82,7 +82,7 @@ end
 
 type Stock = { kind: string?, searched: boolean }
 
-local noiseMade: SignalTyped.Signal<Vector3, number, string> = SignalTyped.new()
+local noiseMade: SignalTyped.Signal<Vector3, number, string, { number }> = SignalTyped.new()
 local log = Logger.new("CargoServiceServer")
 local spawner = CargoSpawnSystem.new()
 local claims = CargoClaimTracker.new()
@@ -167,7 +167,7 @@ local pocketSystem = CargoPocketSystem.new({
 
 -- Carry's `dropped` (deferred): fragile tiers, spills and drop noise. Pocketing and banking claim the item
 -- before they force-drop it, so those never land here.
-local function onDropped(_player: Player, object: Instance, reason: CarryTypes.DropReason)
+local function onDropped(player: Player, object: Instance, reason: CarryTypes.DropReason)
 	local kind, id = cargoOf(object)
 	if kind == nil or id == nil or claims:isClaimed(id) or not CargoHandlingRules.isImpact(reason) then
 		return
@@ -177,7 +177,7 @@ local function onDropped(_player: Player, object: Instance, reason: CarryTypes.D
 		return
 	end
 	local position = object.Position
-	noiseMade:Fire(position, CargoHandlingRules.dropNoise(def), "drop")
+	noiseMade:Fire(position, CargoHandlingRules.dropNoise(def), "drop", { player.UserId })
 	traits:sound(position, CargoFeedbackUtils.dropSound(def))
 	if CargoHandlingRules.shouldSpill(def, reason) then
 		claims:claim(id)
@@ -200,7 +200,7 @@ end
 
 export type CargoServiceServer = {
 	dependencies: { string },
-	noiseMade: SignalTyped.Signal<Vector3, number, string>,
+	noiseMade: SignalTyped.Signal<Vector3, number, string, { number }>,
 	start: (self: CargoServiceServer) -> (),
 	stop: (self: CargoServiceServer) -> (),
 	getState: (self: CargoServiceServer) -> { [string]: any },
@@ -442,7 +442,7 @@ CargoServiceServer = {
 		stocked.searched = true
 		InteractionServiceServer:setEnabled(part, false)
 		counters.searched += 1
-		noiseMade:Fire(part.Position, CargoConstants.SEARCH_NOISE, "search")
+		noiseMade:Fire(part.Position, CargoConstants.SEARCH_NOISE, "search", { player.UserId })
 		local kind = stocked.kind
 		local parent = container
 		local def = if kind ~= nil then CargoRegistry.get(kind) else nil
