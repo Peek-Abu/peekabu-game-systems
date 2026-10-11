@@ -81,15 +81,18 @@ local function Widget(): React.ReactNode
 	local toasts = ReactCharm.useAtom(ToastStore.toasts)
 	local scaring = ReactCharm.useAtom(OccupantCatchStore.scaring)
 	local layout: UIPaperConstants.Layout = usePaperLayout()
-	if scaring then
-		return nil -- Figma 4a: no HUD and no text during the scare beat
-	end
 	-- Typed up front: inline in e() the Layout literal union widens to string.
 	local layerProps: LayerProps = {
 		view = PaperToastViewModel.layout(toasts, PaperToastViewModel.MAX_NOTES),
 		layout = layout,
 	}
-	return e(Layer, layerProps)
+	-- Figma 4a: no HUD and no text during the scare beat. The layer stays mounted and is hidden with a prop, so the
+	-- notes and the stamp do not remount (and replay their entrance) when the beat ends.
+	return e("Frame", {
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		Visible = not scaring,
+	}, { layer = e(Layer, layerProps) })
 end
 
 return {
