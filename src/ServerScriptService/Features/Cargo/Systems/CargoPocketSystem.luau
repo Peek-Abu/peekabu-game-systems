@@ -241,6 +241,7 @@ function CargoPocketSystem.new(deps: Deps): CargoPocketSystem
 				local offset = Vector3.new(math.cos(angle), 0, math.sin(angle)) * CargoConstants.SCATTER_RADIUS
 				deps.spawner:spawn(entry.kind, deps.spawner:floorUnder(at + offset, deps.ignore()), parent, {
 					value = entry.value,
+					source = "scatter",
 				})
 				counts.scattered += 1
 			end

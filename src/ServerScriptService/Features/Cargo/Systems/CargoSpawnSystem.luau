@@ -100,6 +100,11 @@ function CargoSpawnSystem.new(): CargoSpawnSystem
 			part:SetAttribute(CargoConstants.ID_ATTRIBUTE, nextId)
 			part:SetAttribute(CargoConstants.VALUE_ATTRIBUTE, value)
 			part:SetAttribute(CargoConstants.IMPACTS_ATTRIBUTE, 0)
+			local source = if options ~= nil and options.source ~= nil
+				then options.source
+				elseif hidden then "pile"
+				else "open"
+			part:SetAttribute(CargoConstants.SOURCE_ATTRIBUTE, source)
 			if hidden then
 				part:SetAttribute(CargoConstants.HIDDEN_ATTRIBUTE, true)
 				part:SetAttribute(InteractionConstants.ENABLED_ATTRIBUTE, false)

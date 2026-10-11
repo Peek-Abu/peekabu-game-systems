@@ -57,6 +57,8 @@ return table.freeze({
 	VALUE_ATTRIBUTE = "CargoValue",
 	IMPACTS_ATTRIBUTE = "CargoImpacts",
 	HIDDEN_ATTRIBUTE = "CargoHidden",
+	-- Where an item came from, for analytics: "open", "pile" (uncovered by vacuuming), "desk" (searched), "scatter".
+	SOURCE_ATTRIBUTE = "CargoSource",
 	LABEL_NAME = "CargoLabel",
 	-- Interaction kinds Cargo registers (the truck bed and the desks / lockers carry them).
 	LOAD_KIND = "cargo-load",

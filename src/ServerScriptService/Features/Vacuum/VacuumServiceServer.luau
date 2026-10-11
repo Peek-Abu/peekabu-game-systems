@@ -10,6 +10,7 @@
 	  publishes the public `canister` field, and on overflow fires `dustBagReady` (Cargo spawns the bag);
 	- fires `pileCleared` (Office reveals what was hidden under it; Shift counts piles) and, every second a
 	  pile is being vacuumed, `noiseMade` (the M2 Noise seam; nothing listens in M1).
+	- fires `vacuumStarted(player, pile)` when a player starts vacuuming a pile (Shift's analytics: first_cleanup_started);
 
 	Spec-exempt shell (Instances, Players, RunService, signals); the maths is the specced
 	VacuumCanisterUtils.
@@ -44,8 +45,11 @@ end
 local pileCleared: SignalTyped.Signal<BasePart, { Player }> = SignalTyped.new()
 local dustBagReady: SignalTyped.Signal<Player, CFrame, Instance> = SignalTyped.new()
 local noiseMade: SignalTyped.Signal<Vector3, number, string> = SignalTyped.new()
+local vacuumStarted: SignalTyped.Signal<Player, BasePart> = SignalTyped.new()
 
 local fills: { [number]: number } = {}
+-- The pile each player was last allowed to vacuum (vacuumStarted fires when it changes).
+local vacuuming: { [number]: Instance } = {}
 local counters = { spawned = 0, cleared = 0, bags = 0 }
 local stoppers: { () -> () } = {}
 
@@ -124,6 +128,7 @@ export type VacuumServiceServer = {
 	pileCleared: SignalTyped.Signal<BasePart, { Player }>,
 	dustBagReady: SignalTyped.Signal<Player, CFrame, Instance>,
 	noiseMade: SignalTyped.Signal<Vector3, number, string>,
+	vacuumStarted: SignalTyped.Signal<Player, BasePart>,
 	start: (self: VacuumServiceServer) -> (),
 	stop: (self: VacuumServiceServer) -> (),
 	getState: (self: VacuumServiceServer) -> { [string]: any },
@@ -137,6 +142,7 @@ local VacuumServiceServer: VacuumServiceServer = {
 	pileCleared = pileCleared,
 	dustBagReady = dustBagReady,
 	noiseMade = noiseMade,
+	vacuumStarted = vacuumStarted,
 
 	--[=[
 		Handles the pile channel, shrinks piles as they progress, pulses vacuum noise, forgets leavers.
@@ -144,8 +150,16 @@ local VacuumServiceServer: VacuumServiceServer = {
 	start = function(_self)
 		InteractionServiceServer:channel(VacuumConstants.CHANNEL_KIND, {
 			-- Spec §4: you can't vacuum while your hands hold an item.
-			canChannel = function(player, _target)
-				return CarryServiceServer:getCarried(player) == nil
+			canChannel = function(player, target)
+				if CarryServiceServer:getCarried(player) ~= nil then
+					return false
+				end
+				-- Asked at the start and every tick: the first allowed ask on a new pile is a start (never yields).
+				if vacuuming[player.UserId] ~= target and target:IsA("BasePart") then
+					vacuuming[player.UserId] = target
+					vacuumStarted:Fire(player, target)
+				end
+				return true
 			end,
 			onComplete = clear,
 		})
@@ -176,6 +190,7 @@ local VacuumServiceServer: VacuumServiceServer = {
 		end)
 		local leaving = Players.PlayerRemoving:Connect(function(player)
 			fills[player.UserId] = nil
+			vacuuming[player.UserId] = nil
 		end)
 		table.insert(stoppers, function()
 			ticking:Disconnect()
@@ -225,6 +240,7 @@ local VacuumServiceServer: VacuumServiceServer = {
 	]=]
 	reset = function(_self)
 		table.clear(fills)
+		table.clear(vacuuming)
 		for _, player in Players:GetPlayers() do
 			publish(player.UserId)
 		end

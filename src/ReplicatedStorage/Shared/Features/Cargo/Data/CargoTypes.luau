@@ -71,6 +71,9 @@ export type SpawnOptions = {
 	hidden: boolean?,
 	-- The value it carries (a scattered pocket item keeps its own); absent = the catalog value.
 	value: number?,
+	-- Where it came from, for analytics: "desk" (searched) or "scatter" (a caught or leaving player's pockets);
+	-- absent = "pile" when hidden, else "open".
+	source: string?,
 }
 
 -- What a swap request does (M2, spec §6.3): take the newest pocketed item into empty hands, or trade a tiny

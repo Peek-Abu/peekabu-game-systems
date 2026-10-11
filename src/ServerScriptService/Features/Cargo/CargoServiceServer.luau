@@ -451,7 +451,7 @@ CargoServiceServer = {
 			return true, nil
 		end
 		local front = part.CFrame * CFrame.new(0, -part.Size.Y / 2, -(part.Size.Z / 2 + 1.5))
-		spawner:spawn(kind, front, parent)
+		spawner:spawn(kind, front, parent, { source = "desk" })
 		tell(player, `Found: {def.name}`)
 		return true, nil
 	end,
