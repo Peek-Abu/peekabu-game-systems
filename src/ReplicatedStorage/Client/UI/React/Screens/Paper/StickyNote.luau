@@ -14,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
 local PaperLabel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperLabel)
+local PaperTexture = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperTexture)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local usePaperMotion = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperMotion)
 
@@ -61,6 +62,7 @@ local function StickyNote(props: StickyNoteProps): React.ReactNode
 			BackgroundColor3 = COLOR.sticky,
 			BorderSizePixel = 0,
 		}, {
+			texture = e(PaperTexture, { paper = COLOR.sticky, zIndex = 1 }),
 			-- Anchored at the top centre so a resized note keeps it centred (Figma CENTER constraint).
 			tape = e("Frame", {
 				AnchorPoint = Vector2.new(0.5, 0.5),

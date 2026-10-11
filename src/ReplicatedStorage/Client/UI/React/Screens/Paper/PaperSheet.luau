@@ -1,8 +1,8 @@
 --!strict
 --[=[
 	PaperSheet: a sheet of paper (manila by default) with an optional drop shadow, folder tab, coloured band, torn
-	bottom edge and fastener (binder clip, push pin, tape or staple). Every visual is a plain Frame (no images, so it
-	draws flat colours until the art pass). Presentational.
+	bottom edge and fastener (binder clip, push pin, tape or staple). Every visual is a plain Frame plus, once
+	uploaded, the paper's tiled texture (PaperTexture; flat colour while PENDING). Presentational.
 
 	The content region is inset by `padding` (20 by default) and by the band, and imposes no layout: like the base
 	Panel, the caller's `children` bring their own UIListLayout or absolute positions.
@@ -14,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
 local PaperLabel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperLabel)
+local PaperTexture = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperTexture)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 
 local e = React.createElement
@@ -147,7 +148,9 @@ local function tabOf(text: string, width: number, textSize: number): React.React
 		ZIndex = 1,
 	}, {
 		corner = e("UICorner", { CornerRadius = UDim.new(0, 4) }),
+		texture = e(PaperTexture, { paper = COLOR.manilaDeep, corner = 4, zIndex = 1 }),
 		label = e(PaperLabel, {
+			zIndex = 2,
 			text = text,
 			role = "heading",
 			size = textSize,
@@ -196,6 +199,7 @@ local function PaperSheet(props: PaperSheetProps): React.ReactNode
 
 	local paperChildren: { [string]: React.ReactNode } = {
 		corner = e("UICorner", { CornerRadius = UDim.new(0, 4) }),
+		texture = e(PaperTexture, { paper = paper, corner = 4, zIndex = 1 }),
 		stroke = e("UIStroke", {
 			Color = COLOR.ink,
 			Thickness = 1,

@@ -34,6 +34,8 @@ local COLOR = table.freeze({
 	inkRed = Color3.fromHex("C8202F"),
 	-- Not on the Style page: the depot pinboard's cork and the empty pocket label (Components 5:2).
 	cork = Color3.fromHex("6B4A2B"),
+	-- The cork board's wood frame (Figma World UI 2a; picked from the export).
+	wood = Color3.fromHex("4A2E1A"),
 	slotEmpty = Color3.fromHex("8A8F98"),
 })
 

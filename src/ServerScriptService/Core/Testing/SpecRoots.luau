@@ -400,6 +400,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	-- Cleanup Crew: the paper UI kit (M3 UI)
 	["ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants"] = "static palette, fonts and sizes (no logic; inkColor is a frozen lookup)",
 	["ReplicatedStorage.Client.UI.React.Screens.Paper.PaperLabel"] = "presentational React component (story in PaperKit.story)",
+	["ReplicatedStorage.Client.UI.React.Screens.Paper.PaperTexture"] = "presentational React component (the texture choice is specced in PaperTextureViewModel)",
 	["ReplicatedStorage.Client.UI.React.Screens.Paper.PaperSheet"] = "presentational React component (story in PaperKit.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Paper.PaperStamp"] = "presentational React component (story in PaperKit.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Paper.StickyNote"] = "presentational React component (story in PaperKit.story)",
