@@ -28,14 +28,18 @@ export type StickyNoteProps = {
 	position: UDim2?,
 	anchor: Vector2?,
 	layoutOrder: number?,
+	-- The tape strip's size (110x26 by default).
+	tape: Vector2?,
 }
 
 local COLOR = UIPaperConstants.COLOR
 local MOTION = UIPaperConstants.MOTION
+local DEFAULT_TAPE = Vector2.new(110, 26)
 
 local function StickyNote(props: StickyNoteProps): React.ReactNode
 	-- Called unconditionally (hook order); the slide reads it, a still note stays at 0.
 	local alpha = usePaperMotion(MOTION.slideSeconds)
+	local tape = props.tape or DEFAULT_TAPE
 	local slideFrom = if props.slide == true then MOTION.slideFrom else 0
 	local offset = alpha:map(function(value: number): UDim2
 		return UDim2.fromOffset(slideFrom * (1 - value), 0)
@@ -61,7 +65,7 @@ local function StickyNote(props: StickyNoteProps): React.ReactNode
 			tape = e("Frame", {
 				AnchorPoint = Vector2.new(0.5, 0.5),
 				Position = UDim2.fromScale(0.5, 0),
-				Size = UDim2.fromOffset(110, 26),
+				Size = UDim2.fromOffset(tape.X, tape.Y),
 				BackgroundColor3 = COLOR.cream,
 				BackgroundTransparency = 0.35,
 				BorderSizePixel = 0,

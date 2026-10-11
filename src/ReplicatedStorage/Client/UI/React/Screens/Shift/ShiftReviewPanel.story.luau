@@ -32,7 +32,12 @@ local ME = 4
 -- Story time; the vote closes 20 s later.
 local NOW = 0
 
-local function results(met: boolean): ShiftTypes.ShiftResults
+-- The rating shown when the quota is met (a missed quota is always NEEDS IMPROVEMENT); EXCEEDS is the longest text.
+local function ratingOf(choice: string): ShiftTypes.Rating
+	return if choice == "exceeds" then "exceeds" else "satisfactory"
+end
+
+local function results(met: boolean, rating: ShiftTypes.Rating): ShiftTypes.ShiftResults
 	local titles = ShiftConstants.AWARD_TITLES
 	return {
 		outcome = if met then "clockout" else "timeout",
@@ -43,7 +48,7 @@ local function results(met: boolean): ShiftTypes.ShiftResults
 		piles = 12,
 		catches = if met then 3 else 5,
 		offered = 9,
-		rating = if met then "satisfactory" else "needsImprovement",
+		rating = if met then rating else "needsImprovement",
 		quotaMet = met,
 		crew = {},
 		awards = if met
@@ -70,6 +75,7 @@ return UILabs.CreateReactStory({
 		Phone = false,
 		MyVote = UILabs.Choose({ "another", "depot", "none" }),
 		Small = false,
+		Rating = UILabs.Choose({ "satisfactory", "exceeds" }),
 	},
 }, function(props)
 	local met = props.controls.Variant ~= MISSED
@@ -81,7 +87,7 @@ return UILabs.CreateReactStory({
 	snapshot.voteEndsAt = NOW + 20
 	snapshot.votesAnother = 2
 	snapshot.votesDepot = 1
-	snapshot.results = results(met)
+	snapshot.results = results(met, ratingOf(props.controls.Rating))
 	local screen = if phone then PHONE elseif small then SMALL else DESKTOP
 	local layout: UIPaperConstants.Layout = if phone then "phone" else "desktop"
 	local view = ShiftReviewViewModel.review(snapshot, if choice == "none" then nil else choice, ME, NOW, phone)

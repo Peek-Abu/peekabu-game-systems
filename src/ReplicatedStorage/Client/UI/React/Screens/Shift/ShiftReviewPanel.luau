@@ -48,13 +48,20 @@ local PHONE = Vector2.new(748, 358)
 local DESKTOP_STICKIES = { Vector2.new(848, 90), Vector2.new(1218, 90), Vector2.new(848, 280), Vector2.new(1218, 280) }
 -- Phone notes start 20 px under the stat cards (cards end at y 206), so their tape clears them.
 local PHONE_STICKIES = { Vector2.new(16, 226), Vector2.new(204, 226) }
+-- A smaller strip of tape for the 176 px phone notes, so it clears the stat cards above them.
+local PHONE_TAPE = Vector2.new(80, 18)
 local DOT = 26
 -- The folder tab (Figma 5a: 399 wide) and its label size. Roblox fits Oswald's tall line box into TextSize, so a
 -- Figma size is drawn about 1.4x larger to match its glyphs (and >= 20 px on desktop).
 local TAB_WIDTH = 399
 local TAB_TEXT = 28
 -- The QUOTA MET / MISSED hero stamp (Figma 5a/5c 395-499 px wide at fs64; 5b 177 px at fs22), sized to match.
-local HEADLINE_DESKTOP = 110
+local HEADLINE_DESKTOP = 96
+-- The overall-rating stamp (Figma about 44 / 24), left-anchored after its label so the longest text (EXCEEDS
+-- EXPECTATIONS, about 390 px wide at 44) grows to the right instead of over "Overall rating:".
+local RATING_DESKTOP = 44
+local RATING_PHONE = 24
+local LEFT_CENTRE = Vector2.new(0, 0.5)
 local HEADLINE_PHONE = 38
 -- "your vote" in marker ink: above the legibility floors (desktop >= 20, phone >= 14) as drawn.
 local MARK_DESKTOP = 28
@@ -92,12 +99,12 @@ local function rule(x: number, y: number, width: number, height: number): React.
 	})
 end
 
-local function stamp(text: string, size: number, tilt: number, x: number, y: number): React.ReactNode
+local function stamp(text: string, size: number, tilt: number, x: number, y: number, anchor: Vector2?): React.ReactNode
 	return e(PaperStamp, {
 		text = text,
 		size = size,
 		tilt = tilt,
-		anchor = Vector2.new(0.5, 0.5),
+		anchor = anchor or Vector2.new(0.5, 0.5),
 		position = at(x, y),
 	})
 end
@@ -107,6 +114,7 @@ local function stickiesOf(
 	spots: { Vector2 },
 	width: number,
 	size: number,
+	tape: Vector2?,
 	into: Nodes
 )
 	for index, spot in spots do
@@ -116,6 +124,7 @@ local function stickiesOf(
 				text = `{award.title}\n{award.line}`,
 				width = width,
 				size = size,
+				tape = tape,
 				tilt = if index % 2 == 1 then -2 else 2,
 				position = at(spot.X, spot.Y),
 			})
@@ -154,9 +163,9 @@ local function desktopOf(props: ShiftReviewPanelProps): Nodes
 	local view = props.view
 	local nodes: Nodes = {
 		subtitle = label(view.subtitle, "body", 22, 48, 30, 700),
-		headline = stamp(view.headline, HEADLINE_DESKTOP, 3, 246, 138),
+		headline = stamp(view.headline, HEADLINE_DESKTOP, 2, 246, 140),
 		ratingLabel = label(view.ratingLabel, "body", 24, 48, 590),
-		rating = stamp(view.rating, 30, 2, 391, 609),
+		rating = stamp(view.rating, RATING_DESKTOP, 2, 284, 604, LEFT_CENTRE),
 		quote = label(`{view.quote}\n{view.quoteBy}`, "body", 22, 48, 700, 700),
 		fold = rule(800, 30, 2, 840),
 		awardsTitle = label("AWARDS", "heading", 26, 848, 36),
@@ -179,7 +188,7 @@ local function desktopOf(props: ShiftReviewPanelProps): Nodes
 			wrapped = false,
 		})
 	end
-	stickiesOf(view.awards, DESKTOP_STICKIES, 340, 24, nodes)
+	stickiesOf(view.awards, DESKTOP_STICKIES, 340, 24, nil, nodes)
 	local votes: { { key: string, vote: ShiftReviewViewModel.VoteView, choice: ShiftTypes.Vote, y: number } } = {
 		{ key = "another", vote = view.another, choice = "another", y = 580 },
 		{ key = "depot", vote = view.depot, choice = "depot", y = 680 },
@@ -243,7 +252,7 @@ local function phoneOf(props: ShiftReviewPanelProps, expanded: boolean, toggle: 
 		voteTitle = label(view.voteTitle, "heading", 16, 404, 14),
 		footer = label(view.footer, "body", 14, 404, 240, 320),
 		ratingLabel = label(view.ratingLabel, "body", 15, 404, 306),
-		rating = stamp(view.rating, 16, 2, 555, 315),
+		rating = stamp(view.rating, RATING_PHONE, 2, 476, 315, LEFT_CENTRE),
 	}
 	for index, row in view.rows do
 		local x = if index % 2 == 1 then 16 else 202
@@ -261,7 +270,7 @@ local function phoneOf(props: ShiftReviewPanelProps, expanded: boolean, toggle: 
 	end
 	local more = view.moreAwards
 	local less = view.lessAwards
-	stickiesOf(if expanded then view.extraAwards else view.awards, PHONE_STICKIES, 176, 16, nodes)
+	stickiesOf(if expanded then view.extraAwards else view.awards, PHONE_STICKIES, 176, 16, PHONE_TAPE, nodes)
 	if more ~= nil and less ~= nil then
 		nodes.toggle = toggleOf(if expanded then less else more, toggle)
 	end
