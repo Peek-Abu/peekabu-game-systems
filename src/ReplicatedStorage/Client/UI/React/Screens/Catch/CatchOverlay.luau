@@ -3,7 +3,7 @@
 	CatchOverlay: the CCTV HUD widget (registered by OccupantServiceClient). Reads the shift snapshot, every player's
 	public entry, the incident report, the server clock and who Death is spectating, builds CatchViewModel.cctv and draws
 	CatchCctvPanel while the local player is caught; nothing otherwise (the scare beat stays bare: the local player is not
-	`dead` until the throw). The key chips show the live spectate bindings (the arrow keys by default); the phone's
+	`dead`, with a `caughtUntil`, until the throw; a plain death shows nothing). The key chips show the live spectate bindings (the arrow keys by default); the phone's
 	"<" / ">" buttons call DeathServiceClient:cycleSpectate.
 
 	@class CatchOverlay
@@ -33,12 +33,14 @@ local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shif
 local e = React.createElement
 local useAtom = ReactCharm.useAtom
 
--- An action's first keyboard binding as a key-cap legend, `fallback` when it has none.
-local function keyFor(action: string, fallback: string): string
-	local found = InputServiceClient:bindingsFor(action)
-	local keyboard = if found ~= nil then found.keyboard else nil
-	local first = if keyboard ~= nil then keyboard[1] else nil
-	return if first ~= nil then ShiftHudViewModel.keyName(first) else fallback
+-- The spectate actions' keyboard bindings, read fresh so a rebind shows on the next render.
+local function spectateBindings(): ShiftHudViewModel.KeyBindings
+	local bindings: ShiftHudViewModel.KeyBindings = {}
+	for _, action in { DeathConstants.SPECTATE_PREV, DeathConstants.SPECTATE_NEXT } do
+		local found = InputServiceClient:bindingsFor(action)
+		bindings[action] = if found ~= nil then found.keyboard else nil
+	end
+	return bindings
 end
 
 -- The viewport's shorter side, in px (the engine sizes its Jump button by it; the widget re-renders on the clock tick).
@@ -67,6 +69,7 @@ local function CatchOverlay(): React.ReactNode
 	local me = publicPlayers[StateSyncConstants.publicEntryKey(player.UserId)]
 	local target = if targetId ~= nil then publicPlayers[StateSyncConstants.publicEntryKey(targetId)] else nil
 	local targetPlayer = if targetId ~= nil then Players:GetPlayerByUserId(targetId) else nil
+	local prevKey, nextKey = CatchViewModel.spectateKeys(spectateBindings())
 	local view = CatchViewModel.cctv({
 		snapshot = snapshot,
 		me = me,
@@ -74,8 +77,8 @@ local function CatchOverlay(): React.ReactNode
 		targetName = if targetPlayer ~= nil then targetPlayer.DisplayName else nil,
 		target = target,
 		now = now,
-		prevKey = keyFor(DeathConstants.SPECTATE_PREV, "←"),
-		nextKey = keyFor(DeathConstants.SPECTATE_NEXT, "→"),
+		prevKey = prevKey,
+		nextKey = nextKey,
 		phone = layout == "phone",
 	})
 	if view == nil then

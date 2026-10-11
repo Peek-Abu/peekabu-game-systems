@@ -102,6 +102,18 @@ return function()
 			expect(phone.details).to.equal("carrying: Printer")
 		end)
 
+		it("dead but not caught shows no CCTV", function()
+			expect(CatchViewModel.cctv(input({ me = { dead = true } }))).to.equal(nil)
+		end)
+
+		it("a stale report is not shown", function()
+			local stale = table.clone(REPORT)
+			stale.backAt = 50
+			local view = CatchViewModel.cctv(input({ report = stale }))
+			expect(#view.incident).to.equal(0)
+			expect(view.back).to.equal("BACK ON THE CLOCK IN 0:06")
+		end)
+
 		it("phrases a possessive room without 'the'", function()
 			expect(CatchViewModel.roomPhrase("Mr. Harlow's office")).to.equal("Mr. Harlow's office")
 			expect(CatchViewModel.roomPhrase("Break room")).to.equal("the break room")
@@ -151,10 +163,33 @@ return function()
 			expect(view.footer).to.equal("Respawning at the loading bay…")
 		end)
 
+		it("ignores a stale report before the respawn", function()
+			local stale = table.clone(REPORT)
+			stale.backAt = 50
+			expect(CatchViewModel.rehired(rehiredInput({ report = stale }))).to.equal(nil)
+		end)
+
 		it("says nothing was dropped", function()
 			local empty = table.clone(REPORT)
 			empty.dropped = {}
 			expect(CatchViewModel.rehired(rehiredInput({ report = empty })).rows[4]).to.equal("Dropped: nothing.")
+		end)
+	end)
+
+	describe("spectateKeys", function()
+		it("prints the first keyboard binding of each spectate action", function()
+			local prev, nextKey = CatchViewModel.spectateKeys({
+				spectatePrev = { Enum.KeyCode.Left },
+				spectateNext = { Enum.KeyCode.E },
+			})
+			expect(prev).to.equal("←")
+			expect(nextKey).to.equal("E")
+		end)
+
+		it("falls back to the arrow keys without bindings", function()
+			local prev, nextKey = CatchViewModel.spectateKeys({})
+			expect(prev).to.equal("←")
+			expect(nextKey).to.equal("→")
 		end)
 	end)
 end

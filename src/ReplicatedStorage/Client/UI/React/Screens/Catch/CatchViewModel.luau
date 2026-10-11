@@ -3,7 +3,9 @@
 	CatchViewModel: the catch's screens (Figma 4b/4d CCTV, 4c/4e Rehired card). `cctv`: while the local player is down
 	in a running shift, the feed of the teammate Death is spectating (camera number, room, what they carry, rooms from
 	the truck), a fictional night clock, the respawn countdown (never below 0:00), the spectate key legends and the
-	incident report. `rehired`: the HR notice from REHIRED_LEAD seconds before the respawn until REHIRED_HOLD seconds
+	incident report. Only a real catch shows it: the local player is `dead` AND has a numeric `caughtUntil` (a plain
+	death, e.g. a reset, shows nothing), and a report left over from an earlier catch (its `backAt` before this
+	catch's deadline) is ignored. `spectateKeys`: the key-cap legends for the spectate actions. `rehired`: the HR notice from REHIRED_LEAD seconds before the respawn until REHIRED_HOLD seconds
 	after it. Pure; the components only lay the fields out.
 
 	@class CatchViewModel
@@ -68,6 +70,12 @@ export type RehiredView = {
 
 -- The approved headline (Figma 4c/4e).
 local REHIRED_TITLE = "Rehired."
+-- A report whose `backAt` is more than this before the current deadline belongs to an earlier catch (the server sends
+-- the same number for both; the slack only absorbs serialisation rounding).
+local STALE_SLACK = 1
+-- The spectate keys' legends when an action has no keyboard binding (DeathServiceClient's defaults).
+local PREV_FALLBACK = "←"
+local NEXT_FALLBACK = "→"
 local DAY_SECONDS = 86400
 
 local CatchViewModel = {}
@@ -84,6 +92,29 @@ end
 function CatchViewModel.nightClock(elapsed: number): string
 	local total = (ShiftConstants.NIGHT_CLOCK_START + math.max(0, math.floor(elapsed))) % DAY_SECONDS
 	return string.format("%02d:%02d:%02d", total // 3600, (total // 60) % 60, total % 60)
+end
+
+-- The report of the catch whose deadline is `caughtUntil`, or nil when there is none or it is an earlier catch's.
+local function currentReport(report: OccupantTypes.CatchReport?, caughtUntil: number): OccupantTypes.CatchReport?
+	if report == nil or report.backAt + STALE_SLACK < caughtUntil then
+		return nil
+	end
+	return report
+end
+
+local function firstKey(bindings: ShiftHudViewModel.KeyBindings, action: string, fallback: string): string
+	local list = bindings[action]
+	local first = if list ~= nil then list[1] else nil
+	return if first ~= nil then ShiftHudViewModel.keyName(first) else fallback
+end
+
+--[=[
+	The previous / next teammate key legends: each spectate action's first keyboard binding (DeathConstants.SPECTATE_PREV
+	/ SPECTATE_NEXT), the arrow keys when it has none.
+]=]
+function CatchViewModel.spectateKeys(bindings: ShiftHudViewModel.KeyBindings): (string, string)
+	return firstKey(bindings, DeathConstants.SPECTATE_PREV, PREV_FALLBACK),
+		firstKey(bindings, DeathConstants.SPECTATE_NEXT, NEXT_FALLBACK)
 end
 
 local function depthText(depth: PublicPlayerTypes.PublicValue?): string?
@@ -130,6 +161,10 @@ function CatchViewModel.cctv(input: CctvInput): CctvView?
 	if snapshot == nil or snapshot.phase ~= "running" or me == nil or me[DeathConstants.PUBLIC_FIELD] ~= true then
 		return nil
 	end
+	local caughtUntil = me[OccupantConstants.PUBLIC_CAUGHT_UNTIL]
+	if type(caughtUntil) ~= "number" then
+		return nil
+	end
 	local rec, watching, details = "REC   CAM -- · NO SIGNAL", "NO SIGNAL", "Nobody to watch."
 	local target, name = input.target, input.targetName
 	if target ~= nil and name ~= nil then
@@ -137,19 +172,14 @@ function CatchViewModel.cctv(input: CctvInput): CctvView?
 	end
 	local endsAt = snapshot.endsAt
 	local elapsed = ShiftConstants.SHIFT_SECONDS - (if endsAt ~= nil then endsAt - input.now else 0)
-	local report = input.report
-	local caughtUntil = me[OccupantConstants.PUBLIC_CAUGHT_UNTIL]
-	local backAt = if type(caughtUntil) == "number"
-		then caughtUntil
-		elseif report ~= nil then report.backAt
-		else input.now
+	local report = currentReport(input.report, caughtUntil)
 	return {
 		rec = rec,
 		watching = watching,
 		details = details,
 		stamp = `{ShiftConstants.NIGHT_DAY} {CatchViewModel.nightClock(elapsed)}`,
 		-- ShiftHudViewModel.clock clamps at 0:00.
-		back = `BACK ON THE CLOCK IN {ShiftHudViewModel.clock(backAt - input.now)}`,
+		back = `BACK ON THE CLOCK IN {ShiftHudViewModel.clock(caughtUntil - input.now)}`,
 		incidentTitle = if input.phone then "INCIDENT REPORT" else "INCIDENT REPORT · YOU",
 		incident = incidentOf(report, input.phone),
 		prevKey = input.prevKey,
@@ -164,7 +194,10 @@ function CatchViewModel.rehired(input: RehiredInput): RehiredView?
 	end
 	local caughtUntil = if input.me ~= nil then input.me[OccupantConstants.PUBLIC_CAUGHT_UNTIL] else nil
 	local rehiredAt = input.rehiredAt
-	local before = type(caughtUntil) == "number" and caughtUntil - input.nowServer <= OccupantConstants.REHIRED_LEAD
+	-- Before the respawn: this catch's deadline is near and the report is this catch's.
+	local before = type(caughtUntil) == "number"
+		and currentReport(report, caughtUntil) ~= nil
+		and caughtUntil - input.nowServer <= OccupantConstants.REHIRED_LEAD
 	local after = rehiredAt ~= nil and input.nowClock - rehiredAt <= OccupantConstants.REHIRED_HOLD
 	if not before and not after then
 		return nil

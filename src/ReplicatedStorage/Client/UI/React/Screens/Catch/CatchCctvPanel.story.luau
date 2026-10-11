@@ -18,6 +18,7 @@ local PublicPlayerTypes = require(ReplicatedStorage.Shared.Data.PublicPlayerType
 local CatchCctvPanel = require(ReplicatedStorage.Client.UI.React.Screens.Catch.CatchCctvPanel)
 local CatchViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Catch.CatchViewModel)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
+local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 local ShiftStoryFixtures = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftStoryFixtures)
 
 local e = React.createElement
@@ -72,6 +73,7 @@ return UILabs.CreateReactStory({
 			onNext = function()
 				print("CatchCctvPanel.story: next teammate")
 			end,
+			jump = ShiftHudViewModel.arcFor(PHONE_HEIGHT).jump,
 		})
 		else nil
 	return e("Frame", {

@@ -3,8 +3,10 @@
 	CatchRehiredPanel: the HR "Rehired." notice around the respawn (Figma 4c desktop 22:263, 4e phone 22:299). A dark
 	scrim, and centred on it a cream sheet: the ink "HARLOW & FINCH — HUMAN RESOURCES" header band, "NOTICE OF
 	RE-EMPLOYMENT", the big typewriter "Rehired.", the ruled rows, a red REHIRED stamp in the empty lower-right area (clear
-	of the headline) and "Respawning at the loading bay…". Every string comes from the specced CatchViewModel.rehired.
-	Presentational.
+	of the headline) and "Respawning at the loading bay…". The rows wrap and stack by their real height (a long "Dropped:"
+	row takes two lines); the card grows by whatever the rows take beyond the Figma's one-line rows, so the stamp and the
+	footer (placed from the card's bottom) stay below the last row. Every string comes from the specced
+	CatchViewModel.rehired. Presentational.
 
 	@class CatchRehiredPanel
 ]=]
@@ -25,7 +27,8 @@ export type CatchRehiredPanelProps = {
 	layout: UIPaperConstants.Layout,
 }
 
--- Every measurement per layout, in px, from the Figma frames (positions are inside the card).
+-- Every measurement per layout, in px, from the Figma frames (positions are inside the card; the card's height is its
+-- height with one-line rows).
 type Spec = {
 	card: Vector2,
 	band: number,
@@ -36,14 +39,18 @@ type Spec = {
 	titleAt: Vector2,
 	titleSize: number,
 	rowsAt: Vector2,
-	rowStep: number,
 	rowSize: number,
-	-- How far below a row's top its rule sits, and the rule's width.
-	ruleBelow: number,
+	-- The gap from a row's text to its rule, from a rule to the next row, and the rules' width.
+	ruleGap: number,
+	rowGap: number,
 	ruleWidth: number,
+	-- The rows' height in the Figma (one line each): the card grows by anything beyond it.
+	rowsHeight: number,
+	-- The stamp's centre (x from the left, y from the bottom) and the footer's top (from the bottom).
 	stampCentre: Vector2,
 	stampSize: number,
-	footerAt: Vector2,
+	footerX: number,
+	footerFromBottom: number,
 	footerSize: number,
 }
 
@@ -58,13 +65,15 @@ local SPEC: { [UIPaperConstants.Layout]: Spec } = {
 		titleAt = Vector2.new(36, 108),
 		titleSize = 104,
 		rowsAt = Vector2.new(40, 270),
-		rowStep = 44,
 		rowSize = 22,
-		ruleBelow = 34,
+		ruleGap = 12,
+		rowGap = 9,
 		ruleWidth = 680,
-		stampCentre = Vector2.new(555, 525),
+		rowsHeight = 167,
+		stampCentre = Vector2.new(555, 75),
 		stampSize = 60,
-		footerAt = Vector2.new(40, 550),
+		footerX = 40,
+		footerFromBottom = 50,
 		footerSize = 20,
 	},
 	phone = {
@@ -77,13 +86,15 @@ local SPEC: { [UIPaperConstants.Layout]: Spec } = {
 		titleAt = Vector2.new(21, 63),
 		titleSize = 56,
 		rowsAt = Vector2.new(23, 145),
-		rowStep = 24,
 		rowSize = 15,
-		ruleBelow = 20,
+		ruleGap = 5,
+		rowGap = 3,
 		ruleWidth = 394,
-		stampCentre = Vector2.new(319, 253),
+		rowsHeight = 45,
+		stampCentre = Vector2.new(319, 94),
 		stampSize = 30,
-		footerAt = Vector2.new(23, 313),
+		footerX = 23,
+		footerFromBottom = 34,
 		footerSize = 14,
 	},
 }
@@ -113,9 +124,38 @@ local function headline(text: string, spec: Spec): React.ReactNode
 	})
 end
 
+-- One row: its wrapped text, then its rule.
+local function row(text: string, order: number, spec: Spec): React.ReactNode
+	return e("Frame", {
+		LayoutOrder = order,
+		Size = UDim2.fromScale(1, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundTransparency = 1,
+	}, {
+		layout = e("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, spec.ruleGap) }),
+		text = e(PaperLabel, { text = text, role = "body", size = spec.rowSize, color = COLOR.ink, layoutOrder = 1 }),
+		rule = e("Frame", {
+			LayoutOrder = 2,
+			Size = UDim2.new(1, 0, 0, 1),
+			BackgroundColor3 = RULE,
+			BorderSizePixel = 0,
+		}),
+	})
+end
+
 local function CatchRehiredPanel(props: CatchRehiredPanelProps): React.ReactNode
 	local view = props.view
 	local spec = SPEC[props.layout]
+	-- The rows' measured height (0 until they are laid out); the card grows by what they take beyond the Figma's.
+	local measured, setMeasured = React.useState(0)
+	local grow = math.max(0, measured - spec.rowsHeight)
+
+	local rows: { [string]: React.ReactNode } = {
+		layout = e("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, spec.rowGap) }),
+	}
+	for index, text in view.rows do
+		rows[`row{index}`] = row(text, index, spec)
+	end
 
 	local content: { [string]: React.ReactNode } = {
 		band = e("Frame", {
@@ -149,35 +189,26 @@ local function CatchRehiredPanel(props: CatchRehiredPanelProps): React.ReactNode
 			tilt = STAMP_TILT,
 			pop = true,
 			anchor = Vector2.new(0.5, 0.5),
-			position = UDim2.fromOffset(spec.stampCentre.X, spec.stampCentre.Y),
+			position = UDim2.new(0, spec.stampCentre.X, 1, -spec.stampCentre.Y),
 		}),
 		footer = e(PaperLabel, {
 			text = view.footer,
 			role = "body",
 			size = spec.footerSize,
 			color = FOOTER_INK,
-			position = UDim2.fromOffset(spec.footerAt.X, spec.footerAt.Y),
+			position = UDim2.new(0, spec.footerX, 1, -spec.footerFromBottom),
 			fit = true,
 		}),
+		rows = e("Frame", {
+			Position = UDim2.fromOffset(spec.rowsAt.X, spec.rowsAt.Y),
+			Size = UDim2.fromOffset(spec.ruleWidth, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundTransparency = 1,
+			[React.Change.AbsoluteSize] = function(frame: Frame)
+				setMeasured(frame.AbsoluteSize.Y)
+			end,
+		}, rows),
 	}
-	for index, row in view.rows do
-		local top = spec.rowsAt.Y + (index - 1) * spec.rowStep
-		content[`row{index}`] = e(PaperLabel, {
-			text = row,
-			role = "body",
-			size = spec.rowSize,
-			color = COLOR.ink,
-			position = UDim2.fromOffset(spec.rowsAt.X, top),
-			frame = UDim2.fromOffset(spec.ruleWidth, 0),
-			wrapped = false,
-		})
-		content[`rule{index}`] = e("Frame", {
-			Position = UDim2.fromOffset(spec.rowsAt.X, top + spec.ruleBelow),
-			Size = UDim2.fromOffset(spec.ruleWidth, 1),
-			BackgroundColor3 = RULE,
-			BorderSizePixel = 0,
-		})
-	end
 
 	return e("Frame", {
 		Size = UDim2.fromScale(1, 1),
@@ -186,7 +217,7 @@ local function CatchRehiredPanel(props: CatchRehiredPanelProps): React.ReactNode
 		BorderSizePixel = 0,
 	}, {
 		card = e(PaperSheet, {
-			size = UDim2.fromOffset(spec.card.X, spec.card.Y),
+			size = UDim2.fromOffset(spec.card.X, spec.card.Y + grow),
 			position = UDim2.fromScale(0.5, 0.5),
 			anchor = Vector2.new(0.5, 0.5),
 			paper = COLOR.cream,

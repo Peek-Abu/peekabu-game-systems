@@ -5,7 +5,7 @@
 	red REC dot with "REC   CAM 04 · ROOM", "WATCHING  NAME" and the carrying line, top-right the night-clock timestamp,
 	bottom-centre "BACK ON THE CLOCK IN 0:06", and the cream INCIDENT REPORT slip (a red band, tilted). Desktop draws
 	the previous / next teammate key chips under the countdown; the phone draws two round "<" / ">" buttons at the sides
-	instead (only when `onPrev` / `onNext` are given), clear of the engine's Jump button (`jump`). Every string comes
+	instead (`onPrev` / `onNext`), clear of the engine's Jump button (`jump`, from ShiftHudViewModel.arcFor). Every string comes
 	from the specced CatchViewModel. Presentational.
 
 	@class CatchCctvPanel
@@ -25,10 +25,10 @@ local e = React.createElement
 export type CatchCctvPanelProps = {
 	view: CatchViewModel.CctvView,
 	layout: UIPaperConstants.Layout,
-	onPrev: (() -> ())?,
-	onNext: (() -> ())?,
+	onPrev: () -> (),
+	onNext: () -> (),
 	-- The engine's Jump button (offsets from the bottom-right corner); the phone buttons sit above its top.
-	jump: ShiftHudViewModel.ArcSpot?,
+	jump: ShiftHudViewModel.ArcSpot,
 }
 
 -- Every measurement per layout, in px, from the Figma frames (1920x1080 and 844x390).
@@ -50,9 +50,11 @@ type Spec = {
 	-- The countdown's top, from the bottom edge.
 	backBottom: number,
 	backSize: number,
-	-- The slip: unrotated size and centre (desktop from the bottom-right corner, phone from the top-right).
+	-- The slip: its width and least height (it grows with its text), and the corner it hangs from (desktop: its
+	-- bottom-right, growing up; phone: its top-right below the timestamp, growing down).
 	slipSize: Vector2,
-	slipCentre: UDim2,
+	slipAnchor: Vector2,
+	slipAt: UDim2,
 	slipBand: number,
 	slipTitle: number,
 	slipText: number,
@@ -78,7 +80,8 @@ local SPEC: { [UIPaperConstants.Layout]: Spec } = {
 		backBottom = 150,
 		backSize = 28,
 		slipSize = Vector2.new(430, 128),
-		slipCentre = UDim2.new(1, -310, 1, -158),
+		slipAnchor = Vector2.new(1, 1),
+		slipAt = UDim2.new(1, -95, 1, -90),
 		slipBand = 39,
 		slipTitle = 20,
 		slipText = 20,
@@ -102,7 +105,8 @@ local SPEC: { [UIPaperConstants.Layout]: Spec } = {
 		backBottom = 56,
 		backSize = 16,
 		slipSize = Vector2.new(250, 60),
-		slipCentre = UDim2.new(1, -186, 0, 124),
+		slipAnchor = Vector2.new(1, 0),
+		slipAt = UDim2.new(1, -61, 0, 94),
 		slipBand = 21,
 		slipTitle = 12,
 		slipText = 14,
@@ -189,13 +193,16 @@ local function incidentSlip(view: CatchViewModel.CctvView, spec: Spec): React.Re
 		})
 	end
 	return e("Frame", {
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = spec.slipCentre,
-		Size = UDim2.fromOffset(spec.slipSize.X, spec.slipSize.Y),
+		AnchorPoint = spec.slipAnchor,
+		Position = spec.slipAt,
+		Size = UDim2.fromOffset(spec.slipSize.X, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
 		Rotation = SLIP_TILT,
 		BackgroundColor3 = COLOR.cream,
 		BorderSizePixel = 0,
 	}, {
+		least = e("UISizeConstraint", { MinSize = spec.slipSize }),
+		padding = e("UIPadding", { PaddingBottom = UDim.new(0, spec.slipPad) }),
 		band = e("Frame", {
 			Size = UDim2.new(1, 0, 0, spec.slipBand),
 			BackgroundColor3 = COLOR.stamp,
@@ -214,7 +221,8 @@ local function incidentSlip(view: CatchViewModel.CctvView, spec: Spec): React.Re
 		}),
 		body = e("Frame", {
 			Position = UDim2.fromOffset(spec.slipPad, spec.slipBand + 4),
-			Size = UDim2.new(1, -2 * spec.slipPad, 1, -spec.slipBand - 4),
+			Size = UDim2.new(1, -2 * spec.slipPad, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
 			BackgroundTransparency = 1,
 		}, lines),
 	})
@@ -366,10 +374,8 @@ local function CatchCctvPanel(props: CatchCctvPanelProps): React.ReactNode
 		incident = if #view.incident > 0 then incidentSlip(view, spec) else nil,
 	}
 	if phone then
-		local jump = props.jump or ShiftHudViewModel.arcFor(0).jump
-		local onPrev, onNext = props.onPrev, props.onNext
-		children.prevButton = if onPrev ~= nil then roundButton("<", 0, spec, jump, onPrev) else nil
-		children.nextButton = if onNext ~= nil then roundButton(">", 1, spec, jump, onNext) else nil
+		children.prevButton = roundButton("<", 0, spec, props.jump, props.onPrev)
+		children.nextButton = roundButton(">", 1, spec, props.jump, props.onNext)
 	else
 		children.hints = keyHints(view, spec)
 	end
