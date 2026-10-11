@@ -20,6 +20,8 @@ local PENDING = ""
 local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- A vacuum motor's whine (looped at the pile; its pitch rises with the pile's progress).
 	vacuumWhine = { assetId = PENDING, group = "SFX", volume = 0.45, looped = true, rollOffMaxDistance = 60 },
+	-- The motor winding down when the whine stops (started at the whine's pitch).
+	vacuumStop = { assetId = PENDING, group = "SFX", volume = 0.45, rollOffMaxDistance = 60 },
 	-- The pile's last bit going up the hose: a soft pop.
 	vacuumPop = {
 		assetId = PENDING,
@@ -46,4 +48,5 @@ return table.freeze({
 	SOUNDS = table.freeze(SOUNDS),
 	WHINE = "vacuumWhine",
 	POP = "vacuumPop",
+	STOP = "vacuumStop",
 })

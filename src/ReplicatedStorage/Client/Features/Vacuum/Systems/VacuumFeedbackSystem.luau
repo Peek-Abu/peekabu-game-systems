@@ -5,7 +5,7 @@
 	pops out"). For every pile (Observers on PILE_TAG):
 	- while anyone channels it (ChannelCount > 0): dust particles stream from the pile to the nearest vacuumer's
 	  hand (re-aimed every frame) and a whine loops at the pile, its pitch and volume rising with ChannelProgress
-	  (VacuumFeedbackFormulas.whine);
+	  (VacuumFeedbackFormulas.whine), winding down (vacuumStop) when the channel stops;
 	- when it disappears after being vacuumed (VacuumFeedbackFormulas.cleared on its peak progress): a pop and a
 	  sparkle burst where it was. The pile's shrinking is the server's (M1).
 	Your own canister field ticks as it fills and chimes, with a pop at your feet, when it empties into a dust bag
@@ -133,6 +133,11 @@ local function stopSuction(feel: PileFeel)
 	feel.emitter = nil
 	local whine = feel.whine
 	if whine ~= nil then
+		-- The motor winds down from wherever the whine had climbed to.
+		local windDown = play(VacuumAssets.STOP, { at = feel.position })
+		if windDown ~= nil then
+			windDown.sound.PlaybackSpeed = whine.sound.PlaybackSpeed
+		end
 		whine:stop(0.15)
 	end
 	feel.whine = nil
