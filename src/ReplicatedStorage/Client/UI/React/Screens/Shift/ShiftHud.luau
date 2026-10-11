@@ -1,7 +1,9 @@
 --!strict
 --[=[
-	ShiftHud: the Shift HUD widget (registered by ShiftServiceClient). Reads the shift snapshot, the local
-	player's public entry and the server clock, and draws ShiftHudPanel while a shift runs.
+	ShiftHud: the Shift HUD widget (registered by ShiftServiceClient). Reads the shift snapshot, every player's public
+	entry, the scare beat and the server clock, builds the HUD and crew roster views, and draws ShiftHudPanel while a
+	shift runs. The HUD goes dark during the scare beat and while the local player is caught (the CCTV takes the
+	screen).
 
 	@class ShiftHud
 ]=]
@@ -11,10 +13,15 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
 local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
+local DeathConstants = require(ReplicatedStorage.Shared.Features.Death.Data.DeathConstants)
 local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
+local OccupantCatchStore = require(ReplicatedStorage.Client.Features.Occupant.State.OccupantCatchStore)
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local useServerClock = require(ReplicatedStorage.Client.UI.React.Hooks.useServerClock)
+local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
+local usePaperLayout = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperLayout)
+local ShiftCrewViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftCrewViewModel)
 local ShiftHudPanel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudPanel)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 
@@ -24,14 +31,26 @@ local useAtom = ReactCharm.useAtom
 local function ShiftHud(): React.ReactNode
 	local snapshot = useAtom(ShiftStore.snapshot)
 	local publicPlayers = useAtom(StateSyncClientStore.publicPlayers)
+	local scaring = useAtom(OccupantCatchStore.scaring)
+	local layout: UIPaperConstants.Layout = usePaperLayout()
 	local now = useServerClock()
 	local player = Players.LocalPlayer
 	local me = if player ~= nil then publicPlayers[StateSyncConstants.publicEntryKey(player.UserId)] else nil
-	local view = ShiftHudViewModel.hud(snapshot, me, now)
-	if view == nil then
+	local dead = me ~= nil and me[DeathConstants.PUBLIC_FIELD] == true
+	local view = ShiftHudViewModel.hud(snapshot, me, now, scaring or dead)
+	if view == nil or snapshot == nil then
 		return nil
 	end
-	return e(ShiftHudPanel, { view = view })
+	local names: { [number]: string } = {}
+	for _, userId in snapshot.crew do
+		local member = Players:GetPlayerByUserId(userId)
+		if member ~= nil then
+			names[userId] = member.DisplayName
+		end
+	end
+	local roster =
+		ShiftCrewViewModel.roster(snapshot.crew, publicPlayers, names, snapshot.truck, snapshot.sub == "clockout", now)
+	return e(ShiftHudPanel, { view = view, roster = roster, layout = layout })
 end
 
 return ShiftHud

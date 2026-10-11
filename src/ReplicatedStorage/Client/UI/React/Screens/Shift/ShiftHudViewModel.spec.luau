@@ -13,6 +13,9 @@ local function snapshot(extra)
 		variant = "B",
 		votesAnother = 0,
 		votesDepot = 0,
+		stage = "normal",
+		tier = 0,
+		crew = {},
 	}
 	for key, item in extra or {} do
 		value[key] = item
@@ -45,61 +48,86 @@ return function()
 	end)
 
 	describe("hud", function()
-		it("shows nothing outside a running shift", function()
-			expect(ShiftHudViewModel.hud(nil, nil, 0)).to.equal(nil)
-			expect(ShiftHudViewModel.hud(snapshot({ phase = "results" }), nil, 0)).to.equal(nil)
+		it("shows nothing outside a running shift, or while hidden", function()
+			expect(ShiftHudViewModel.hud(nil, nil, 0, false)).to.equal(nil)
+			expect(ShiftHudViewModel.hud(snapshot({ phase = "results" }), nil, 0, false)).to.equal(nil)
+			expect(ShiftHudViewModel.hud(snapshot(), nil, 0, true)).to.equal(nil)
 		end)
 
-		it("shows the timer, clearance, bonus and canister", function()
-			local view = ShiftHudViewModel.hud(snapshot(), { canister = 2 }, 580)
-			expect(view.timer).to.equal("Shift 1 | 7:00")
-			expect(view.clearance).to.equal("Clearance 120 / 350")
-			expect(view.bonus).to.equal("Bonus 40")
-			expect(view.canister).to.equal("Canister 2 / 3")
-			expect(view.quotaMet).to.equal(false)
-			expect(view.clockOut).to.equal(nil)
+		it("fills the clearance folder and the fee plate", function()
+			local view = ShiftHudViewModel.hud(snapshot(), nil, 580, false)
+			expect(view.cleared).to.equal("120")
+			expect(view.quotaText).to.equal("/ 350 cleared")
+			expect(view.clearedShort).to.equal("120 / 350")
+			expect(math.abs(view.fill - 120 / 350) < 1e-6).to.equal(true)
+			expect(view.fee).to.equal("+40")
+			expect(view.feeBoost).to.equal(nil)
 		end)
 
-		it("names the hands item and the pockets, an empty one as a dash", function()
-			local view = ShiftHudViewModel.hud(snapshot(), { carrying = "monitor", pocket1 = "plaque" }, 0)
-			expect(view.hands).to.equal("Hands: Monitor")
-			expect(view.pockets).to.equal("Pockets: Employee of the Month plaque | -")
-		end)
-
-		it("reads an absent canister and empty hands", function()
-			local view = ShiftHudViewModel.hud(snapshot(), nil, 0)
-			expect(view.canister).to.equal("Canister 0 / 3")
-			expect(view.hands).to.equal("Hands: -")
-			expect(view.pockets).to.equal("Pockets: - | -")
-		end)
-
-		it("shows the clock-out countdown and the quota flag", function()
-			local view =
-				ShiftHudViewModel.hud(snapshot({ sub = "clockout", clockOutAt = 107, quotaMet = true }), nil, 100)
-			expect(view.clockOut).to.equal("CLOCKING OUT 0:07")
+		it("caps the clearance bar at full", function()
+			local view = ShiftHudViewModel.hud(snapshot({ cleared = 400, quotaMet = true }), nil, 0, false)
+			expect(view.fill).to.equal(1)
 			expect(view.quotaMet).to.equal(true)
 		end)
-	end)
 
-	describe("pacing line", function()
-		it("counts down Harlow's break", function()
-			local view = ShiftHudViewModel.hud(snapshot({ stage = "break", stageEndsAt = 124 }), nil, 100)
-			expect(view.stage).to.equal("BREAK 0:24: Mr. Harlow is on his break")
+		it("punches the time card as the shift goes and lights a pip per tier", function()
+			-- endsAt 1000: at now 580 there are 420 s left (nothing punched); at 832, 168 s left (3 of 5 punched).
+			expect(ShiftHudViewModel.hud(snapshot(), nil, 580, false).punched).to.equal(0)
+			expect(ShiftHudViewModel.hud(snapshot(), nil, 832, false).punched).to.equal(3)
+			expect(ShiftHudViewModel.hud(snapshot({ tier = 0 }), nil, 600, false).pressure).to.equal(1)
+			expect(ShiftHudViewModel.hud(snapshot({ tier = 2 }), nil, 600, false).pressure).to.equal(3)
 		end)
 
-		it("warns before overtime", function()
-			local view = ShiftHudViewModel.hud(snapshot({ stage = "warning", stageEndsAt = 112 }), nil, 100)
-			expect(view.stage).to.equal("OVERTIME IN 0:12")
+		it("reads the time, OUT and the stage label", function()
+			local view = ShiftHudViewModel.hud(snapshot(), nil, 748, false)
+			expect(view.time).to.equal("4:12")
+			expect(view.outText).to.equal("OUT 7:00")
+			expect(view.clockLabel).to.equal("SHIFT")
+			expect(view.overtime).to.equal(false)
 		end)
 
-		it("marks overtime with its multiplier", function()
-			local view = ShiftHudViewModel.hud(snapshot({ stage = "overtime" }), nil, 100)
-			expect(view.stage).to.equal("OVERTIME: salvage x1.5")
+		it("labels the break, the warning and overtime", function()
+			expect(ShiftHudViewModel.hud(snapshot({ stage = "break", stageEndsAt = 124 }), nil, 100, false).clockLabel).to.equal(
+				"HARLOW ON BREAK 0:24"
+			)
+			expect(
+				ShiftHudViewModel.hud(snapshot({ stage = "warning", stageEndsAt = 112 }), nil, 100, false).clockLabel
+			).to.equal("OVERTIME IN 0:12")
+			local overtime = ShiftHudViewModel.hud(snapshot({ stage = "overtime" }), nil, 100, false)
+			expect(overtime.clockLabel).to.equal("OVERTIME")
+			expect(overtime.overtime).to.equal(true)
+			expect(overtime.feeBoost).to.equal("×1.5 now")
 		end)
 
-		it("shows no pacing line in a normal shift", function()
-			expect(ShiftHudViewModel.hud(snapshot({ stage = "normal" }), nil, 100).stage).to.equal(nil)
-			expect(ShiftHudViewModel.hud(snapshot(), nil, 100).stage).to.equal(nil)
+		it("describes the hands item with its value and traits", function()
+			local view = ShiftHudViewModel.hud(snapshot(), { carrying = "monitor" }, 0, false)
+			expect(view.hands.name).to.equal("Monitor")
+			expect(view.hands.value).to.equal("+30")
+			expect(view.hands.traits).to.equal("medium · FRAGILE")
+			expect(view.hands.short).to.equal("+30 fragile")
+			expect(view.hands.fragile).to.equal(true)
+		end)
+
+		it("shows empty hands, empty pockets and an absent canister", function()
+			local view = ShiftHudViewModel.hud(snapshot(), nil, 0, false)
+			expect(view.hands).to.equal(nil)
+			expect(view.pockets[1].empty).to.equal(true)
+			expect(view.pockets[1].name).to.equal("empty")
+			expect(view.canister).to.equal(0)
+			expect(view.canisterMax).to.equal(3)
+		end)
+
+		it("names a pocketed item", function()
+			local view = ShiftHudViewModel.hud(snapshot(), { pocket2 = "plaque" }, 0, false)
+			expect(view.pockets[2].name).to.equal("Employee of the Month plaque")
+			expect(view.pockets[2].empty).to.equal(false)
+		end)
+
+		it("counts the clock-out down and carries the truck", function()
+			local view =
+				ShiftHudViewModel.hud(snapshot({ sub = "clockout", clockOutAt = 107, truck = 2 }), nil, 100, false)
+			expect(view.clockOut).to.equal("0:07")
+			expect(view.truck).to.equal(2)
 		end)
 	end)
 

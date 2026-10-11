@@ -1,9 +1,10 @@
 --!strict
 --[=[
-	ShiftHudPanel: the M1 placeholder Shift HUD (spec §6.2: punch clock, clearance, bonus, canister, hands
-	and pockets): a plain Panel of text lines, top left, with a large clock-out countdown when one runs.
-	M2: a pacing line (break / overtime warning / overtime) under the pockets.
-	Presentational: it draws the HudView it is given.
+	ShiftHudPanel: the approved Shift HUD (Figma 1a normal, 1b quota met, 1c overtime + clock-out) on the paperwork
+	look: the clearance folder and finder's fee plate, the clipped crew roster, the punch-clock time card, the carry
+	panel and, while the crew clocks out, the stapled clock-out slip under the time card. Full-screen and transparent;
+	each piece places itself at its Figma position. Presentational: it draws the views it is given (desktop; the phone
+	layout is Task 10 and draws nothing until then).
 
 	@class ShiftHudPanel
 ]=]
@@ -11,64 +12,42 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
-local Tokens = require(ReplicatedStorage.Client.UI.React.Tokens)
-local Panel = require(ReplicatedStorage.Client.UI.React.Primitives.Panel)
+local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
+local ShiftCarryPanel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftCarryPanel)
+local ShiftClearancePanel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftClearancePanel)
+local ShiftClockOutSlip = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftClockOutSlip)
+local ShiftCrewRoster = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftCrewRoster)
+local ShiftCrewViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftCrewViewModel)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
+local ShiftTimeCard = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftTimeCard)
 
 local e = React.createElement
 
-local WIDTH = 280
-
 export type ShiftHudPanelProps = {
 	view: ShiftHudViewModel.HudView,
+	roster: ShiftCrewViewModel.RosterView?,
+	layout: UIPaperConstants.Layout,
 }
 
-local function line(order: number, text: string, color: Color3, size: number): React.ReactNode
-	return e("TextLabel", {
-		LayoutOrder = order,
-		Size = UDim2.fromScale(1, 0),
-		AutomaticSize = Enum.AutomaticSize.Y,
-		BackgroundTransparency = 1,
-		Font = Tokens.font.medium,
-		TextSize = size,
-		TextColor3 = color,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		TextWrapped = true,
-		Text = text,
-	})
-end
-
 local function ShiftHudPanel(props: ShiftHudPanelProps): React.ReactNode
+	if props.layout == "phone" then
+		return nil
+	end
 	local view = props.view
-	local body = Tokens.textSize.lg
-	local children: { [string]: React.ReactNode } = {
-		layout = e("UIListLayout", {
-			FillDirection = Enum.FillDirection.Vertical,
-			Padding = UDim.new(0, Tokens.space.xs),
-			SortOrder = Enum.SortOrder.LayoutOrder,
-		}),
-		timer = line(1, view.timer, Tokens.color.text, Tokens.textSize.xl),
-		clearance = line(2, view.clearance, if view.quotaMet then Tokens.color.success else Tokens.color.text, body),
-		bonus = line(3, view.bonus, Tokens.color.warning, body),
-		canister = line(4, view.canister, Tokens.color.text, body),
-		hands = line(5, view.hands, Tokens.color.textMuted, body),
-		pockets = line(6, view.pockets, Tokens.color.textMuted, body),
-	}
-	local stage = view.stage
-	if stage ~= nil then
-		children.stage = line(7, stage, Tokens.color.warning, body)
-	end
+	local layout: UIPaperConstants.Layout = props.layout
+	local roster = props.roster
 	local clockOut = view.clockOut
-	if clockOut ~= nil then
-		children.clockOut = line(8, clockOut, Tokens.color.danger, Tokens.textSize.xxl)
-	end
 	return e("Frame", {
-		Position = UDim2.fromOffset(Tokens.space.lg, Tokens.space.xxl * 2),
-		Size = UDim2.fromOffset(WIDTH, 0),
-		AutomaticSize = Enum.AutomaticSize.Y,
+		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
 	}, {
-		panel = e(Panel, { width = WIDTH, children = children }),
+		clearance = e(ShiftClearancePanel, { view = view, layout = layout }),
+		roster = if roster ~= nil then e(ShiftCrewRoster, { roster = roster, layout = layout }) else nil,
+		timeCard = e(ShiftTimeCard, { view = view, layout = layout }),
+		carry = e(ShiftCarryPanel, { view = view, layout = layout }),
+		clockOut = if clockOut ~= nil
+			then e(ShiftClockOutSlip, { left = clockOut, truck = view.truck, layout = layout })
+			else nil,
 	})
 end
 

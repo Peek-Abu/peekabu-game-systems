@@ -1,8 +1,9 @@
 --!strict
 --[=[
-	ShiftHudViewModel: the strings the M1 placeholder Shift HUD and results panel show, from the shift
-	snapshot and the local player's public entry. Pure (specced); the components only lay them out. Final
-	screens replace these components after the developer's Figma approval (M3); the view model can stay.
+	ShiftHudViewModel: what the approved Shift HUD (Figma 1a-1c: the time card, the clearance folder and finder's fee
+	plate, the carry panel and the clock-out slip) shows, as display-ready fields per piece, from the shift snapshot and
+	the local player's public entry; and the results panel's strings (its final screen is Task 15). Pure (specced); the
+	components only lay the fields out. The crew roster has its own view model (ShiftCrewViewModel).
 
 	@class ShiftHudViewModel
 ]=]
@@ -10,8 +11,10 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PublicPlayerTypes = require(ReplicatedStorage.Shared.Data.PublicPlayerTypes)
-local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants)
-local CargoRegistry = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoRegistry)
+local CargoShared = ReplicatedStorage.Shared.Features.Cargo
+local CargoConstants = require(CargoShared.Data.CargoConstants)
+local CargoRegistry = require(CargoShared.Data.CargoRegistry)
+local CargoTypes = require(CargoShared.Data.CargoTypes)
 local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
@@ -19,17 +22,44 @@ local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.Va
 
 type ShiftSnapshot = ShiftTypes.ShiftSnapshot
 
+export type HandsView = {
+	name: string,
+	value: string,
+	traits: string,
+	short: string,
+	-- Whether the traits are written in red (a FRAGILE item).
+	fragile: boolean,
+}
+
+export type PocketView = {
+	name: string,
+	empty: boolean,
+}
+
 export type HudView = {
-	timer: string,
-	clearance: string,
+	-- The time card.
+	clockLabel: string,
+	time: string,
+	outText: string,
+	overtime: boolean,
+	punched: number,
+	pressure: number,
+	-- The clearance folder and the finder's fee plate.
+	cleared: string,
+	quotaText: string,
+	clearedShort: string,
+	fill: number,
 	quotaMet: boolean,
-	bonus: string,
-	canister: string,
-	hands: string,
-	pockets: string,
+	fee: string,
+	feeBoost: string?,
+	-- The carry panel.
+	hands: HandsView?,
+	pockets: { PocketView },
+	canister: number,
+	canisterMax: number,
+	-- The clock-out slip's countdown, while one runs.
 	clockOut: string?,
-	-- The pacing after the quota (break, overtime warning, overtime); nil in a normal shift.
-	stage: string?,
+	truck: number?,
 }
 
 export type ResultsView = {
@@ -40,20 +70,11 @@ export type ResultsView = {
 	countdown: string,
 }
 
-local EMPTY = "-"
 local OUTCOME_TEXT: { [string]: string } = {
 	clockout = "Clocked out",
 	timeout = "Time's up",
 	abandoned = "Everyone left",
 }
-
-local function nameOf(kind: PublicPlayerTypes.PublicValue?): string
-	if type(kind) ~= "string" then
-		return EMPTY
-	end
-	local def = CargoRegistry.get(kind)
-	return if def ~= nil then def.name else kind
-end
 
 local ShiftHudViewModel = {}
 
@@ -63,43 +84,106 @@ function ShiftHudViewModel.clock(seconds: number): string
 	return string.format("%d:%02d", whole // 60, whole % 60)
 end
 
+ShiftHudViewModel.PUNCH_HOLES = 5
+ShiftHudViewModel.PRESSURE_PIPS = 3
+
+local function traitsOf(def: CargoTypes.ItemDef): string
+	local parts: { string } = { def.size }
+	if def.fragile then
+		table.insert(parts, "FRAGILE")
+	end
+	if def.rattly then
+		table.insert(parts, "RATTLY")
+	end
+	return table.concat(parts, " · ")
+end
+
+local function handsOf(kind: PublicPlayerTypes.PublicValue?): HandsView?
+	if type(kind) ~= "string" then
+		return nil
+	end
+	local def = CargoRegistry.get(kind)
+	if def == nil then
+		return { name = kind, value = "", traits = "", short = "", fragile = false }
+	end
+	return {
+		name = def.name,
+		value = `+{def.value}`,
+		traits = traitsOf(def),
+		short = `+{def.value}{if def.fragile then " fragile" else ""}`,
+		fragile = def.fragile,
+	}
+end
+
+local function stageLabel(snapshot: ShiftSnapshot, now: number): string
+	local stageEndsAt = snapshot.stageEndsAt
+	local left = if stageEndsAt ~= nil then stageEndsAt - now else 0
+	if snapshot.stage == "break" then
+		return `HARLOW ON BREAK {ShiftHudViewModel.clock(left)}`
+	elseif snapshot.stage == "warning" then
+		return `OVERTIME IN {ShiftHudViewModel.clock(left)}`
+	elseif snapshot.stage == "overtime" then
+		return "OVERTIME"
+	end
+	return "SHIFT"
+end
+
 --[=[
-	The HUD's lines while a shift runs; nil otherwise. `me` is the local player's public entry.
+	The HUD's pieces while a shift runs; nil otherwise, and nil while `hidden` (the scare beat, or the local player is
+	caught: the CCTV takes the screen). `me` is the local player's public entry.
 ]=]
-function ShiftHudViewModel.hud(snapshot: ShiftSnapshot?, me: PublicPlayerTypes.PublicPlayer?, now: number): HudView?
-	if snapshot == nil or snapshot.phase ~= "running" then
+function ShiftHudViewModel.hud(
+	snapshot: ShiftSnapshot?,
+	me: PublicPlayerTypes.PublicPlayer?,
+	now: number,
+	hidden: boolean
+): HudView?
+	if hidden or snapshot == nil or snapshot.phase ~= "running" then
 		return nil
 	end
 	local entry: PublicPlayerTypes.PublicPlayer = me or {}
-	local fill = entry[VacuumConstants.PUBLIC_FIELD]
-	local pockets: { string } = {}
-	for _, field in CargoConstants.PUBLIC_POCKET_FIELDS do
-		table.insert(pockets, nameOf(entry[field]))
-	end
 	local endsAt = snapshot.endsAt
-	local clockOutAt = snapshot.clockOutAt
-	local stageEndsAt = snapshot.stageEndsAt
-	local stageLeft = if stageEndsAt ~= nil then stageEndsAt - now else 0
-	local stage: string? = nil
-	if snapshot.stage == "break" then
-		stage = `BREAK {ShiftHudViewModel.clock(stageLeft)}: Mr. Harlow is on his break`
-	elseif snapshot.stage == "warning" then
-		stage = `OVERTIME IN {ShiftHudViewModel.clock(stageLeft)}`
-	elseif snapshot.stage == "overtime" then
-		stage = `OVERTIME: salvage x{ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER}`
+	local left = if endsAt ~= nil then endsAt - now else 0
+	local total = ShiftConstants.SHIFT_SECONDS
+	local elapsed = math.clamp(total - left, 0, total)
+	local pockets: { PocketView } = {}
+	for _, field in CargoConstants.PUBLIC_POCKET_FIELDS do
+		local kind = entry[field]
+		local def = if type(kind) == "string" then CargoRegistry.get(kind) else nil
+		table.insert(pockets, {
+			name = if def ~= nil then def.name elseif type(kind) == "string" then kind else "empty",
+			empty = type(kind) ~= "string",
+		})
 	end
+	local fill = entry[VacuumConstants.PUBLIC_FIELD]
+	local clockOutAt = snapshot.clockOutAt
+	local overtime = snapshot.stage == "overtime"
 	return {
-		timer = `Shift {snapshot.shift} | {ShiftHudViewModel.clock(if endsAt ~= nil then endsAt - now else 0)}`,
-		clearance = `Clearance {snapshot.cleared} / {snapshot.quota}`,
+		clockLabel = stageLabel(snapshot, now),
+		time = ShiftHudViewModel.clock(left),
+		outText = `OUT {ShiftHudViewModel.clock(total)}`,
+		overtime = overtime,
+		punched = math.clamp(
+			math.floor(elapsed / total * ShiftHudViewModel.PUNCH_HOLES),
+			0,
+			ShiftHudViewModel.PUNCH_HOLES
+		),
+		pressure = math.clamp(snapshot.tier + 1, 1, ShiftHudViewModel.PRESSURE_PIPS),
+		cleared = tostring(snapshot.cleared),
+		quotaText = `/ {snapshot.quota} cleared`,
+		clearedShort = `{snapshot.cleared} / {snapshot.quota}`,
+		fill = if snapshot.quota > 0 then math.clamp(snapshot.cleared / snapshot.quota, 0, 1) else 1,
 		quotaMet = snapshot.quotaMet,
-		bonus = `Bonus {snapshot.bonus}`,
-		canister = `Canister {if type(fill) == "number" then fill else 0} / {VacuumConstants.CANISTER_CAPACITY}`,
-		hands = `Hands: {nameOf(entry[CarryConstants.PUBLIC_FIELD])}`,
-		pockets = `Pockets: {table.concat(pockets, " | ")}`,
+		fee = `+{snapshot.bonus}`,
+		feeBoost = if overtime then `×{ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER} now` else nil,
+		hands = handsOf(entry[CarryConstants.PUBLIC_FIELD]),
+		pockets = pockets,
+		canister = if type(fill) == "number" then fill else 0,
+		canisterMax = VacuumConstants.CANISTER_CAPACITY,
 		clockOut = if snapshot.sub == "clockout" and clockOutAt ~= nil
-			then `CLOCKING OUT {ShiftHudViewModel.clock(clockOutAt - now)}`
+			then ShiftHudViewModel.clock(clockOutAt - now)
 			else nil,
-		stage = stage,
+		truck = snapshot.truck,
 	}
 end
 
