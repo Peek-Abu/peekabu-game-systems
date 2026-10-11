@@ -63,19 +63,6 @@ local function arcFailures(arc, width)
 	return table.concat(failures, "; ")
 end
 
-local REVIEW = {
-	outcome = "clockout",
-	quota = 350,
-	cleared = 380,
-	bonus = 95,
-	salvage = 3,
-	piles = 12,
-	catches = 0,
-	quotaMet = true,
-	crew = { { name = "Ava", banked = 200, piles = 6, salvage = 2 } },
-	awards = { { title = "Top Hauler", name = "Ava" } },
-}
-
 return function()
 	describe("clock", function()
 		it("formats minutes and seconds, rounding up and never negative", function()
@@ -170,68 +157,6 @@ return function()
 				ShiftHudViewModel.hud(snapshot({ sub = "clockout", clockOutAt = 107, truck = 2 }), nil, 100, false)
 			expect(view.clockOut).to.equal("0:07")
 			expect(view.truck).to.equal(2)
-		end)
-	end)
-
-	describe("results", function()
-		it("shows nothing outside results", function()
-			expect(ShiftHudViewModel.results(snapshot(), 0)).to.equal(nil)
-			expect(ShiftHudViewModel.results(nil, 0)).to.equal(nil)
-		end)
-
-		it("lists the review and the vote", function()
-			local view = ShiftHudViewModel.results(
-				snapshot({ phase = "results", voteEndsAt = 130, votesAnother = 2, votesDepot = 1, results = REVIEW }),
-				100
-			)
-			expect(view.title).to.equal("Shift 1 performance review")
-			expect(view.lines[1]).to.equal("Clocked out")
-			expect(view.lines[2]).to.equal("Cleared 380 / 350 - QUOTA MET")
-			expect(view.lines[3]).to.equal("Bonus 95")
-			expect(view.lines[4]).to.equal("Salvage found 3 | Piles vacuumed 12")
-			expect(view.lines[5]).to.equal("Ava: banked 200, piles 6")
-			expect(view.lines[6]).to.equal("Top Hauler: Ava")
-			expect(view.another).to.equal("Another shift (2)")
-			expect(view.depot).to.equal("Back to depot (1)")
-			expect(view.countdown).to.equal("Deciding in 0:30")
-		end)
-
-		it("says when the quota was missed and the time ran out", function()
-			local review = table.clone(REVIEW)
-			review.outcome = "timeout"
-			review.cleared = 200
-			review.quotaMet = false
-			local view =
-				ShiftHudViewModel.results(snapshot({ phase = "results", voteEndsAt = 100, results = review }), 100)
-			expect(view.lines[1]).to.equal("Time's up")
-			expect(view.lines[2]).to.equal("Cleared 200 / 350 - quota missed")
-		end)
-
-		it("handles an empty crew", function()
-			local review = table.clone(REVIEW)
-			review.crew = {}
-			local view =
-				ShiftHudViewModel.results(snapshot({ phase = "results", voteEndsAt = 100, results = review }), 100)
-			expect(view.lines[5]).to.equal("Top Hauler: Ava")
-			expect(view.lines[6]).to.equal("Caught by Mr. Harlow: 0")
-			expect(#view.lines).to.equal(6)
-		end)
-
-		it("ends the review with Harlow's catches", function()
-			local review = table.clone(REVIEW)
-			review.catches = 2
-			local view =
-				ShiftHudViewModel.results(snapshot({ phase = "results", voteEndsAt = 130, results = review }), 100)
-			expect(view.lines[#view.lines]).to.equal("Caught by Mr. Harlow: 2")
-		end)
-
-		it("still offers the vote when the review has not arrived", function()
-			local view = ShiftHudViewModel.results(snapshot({ phase = "results", voteEndsAt = 130 }), 100)
-			expect(#view.lines).to.equal(0)
-			expect(view.title).to.equal("Shift 1 performance review")
-			expect(view.another).to.equal("Another shift (0)")
-			expect(view.depot).to.equal("Back to depot (0)")
-			expect(view.countdown).to.equal("Deciding in 0:30")
 		end)
 	end)
 

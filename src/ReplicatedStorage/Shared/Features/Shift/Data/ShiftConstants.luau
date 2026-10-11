@@ -55,6 +55,12 @@ local AWARD_TITLES = {
 	loudest = "LOUDEST VACUUM",
 }
 
+-- The review's closing line (Figma 5a met / 5c missed).
+local REVIEW_QUOTES = {
+	met = { line = '"Those were COMPANY ASSETS."', by = "— H. Harlow, Manager" },
+	missed = { line = '"We will discuss this on Monday."', by = "— Harlow & Finch, Human Resources" },
+}
+
 return table.freeze({
 	-- The StateSyncWorldStore entry the snapshot is published under.
 	WORLD_ENTRY = "shift",
@@ -124,6 +130,9 @@ return table.freeze({
 	AWARD_TITLES = table.freeze(AWARD_TITLES),
 	-- The fourth award is LOUDEST VACUUM when someone's noise sent Harlow to investigate this many times, else QUIETEST FEET.
 	LOUDEST_MIN_WOKE = 3,
+	REVIEW_QUOTES = table.freeze(REVIEW_QUOTES),
+	-- The performance review scene (ShiftScene): pushed when results begin, removed when they end.
+	REVIEW_SCENE = "shift.Review",
 	-- Feel (spec §7): the quota's FOV kick, the camera shake of a tier rise and of overtime, the overtime ticking
 	-- layer's ambience slot, and the clock-out countdown's louder last seconds. The client re-checks every
 	-- FEEDBACK_INTERVAL seconds.

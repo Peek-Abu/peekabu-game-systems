@@ -1,8 +1,9 @@
 --!strict
 --[=[
-	ShiftServiceClient: the shift on the client. Registers the placeholder Shift widgets in the HUD during init
-	(before the UI starts), and sends the local player's results vote whenever ShiftStore.myVote changes
-	(clearing it when results end). It also reports this device's platform once (ShiftPlatformRules, analytics only). Starts ShiftFeedbackSystem (the shift's horns, stings, ticking layer and countdown) and
+	ShiftServiceClient: the shift on the client. Registers the Shift widgets in the HUD during init (before the UI
+	starts), and sends the local player's results vote whenever ShiftStore.myVote changes (clearing it when results
+	end). Pushes the performance review scene (ShiftScene) when results begin and removes it when they end; the
+	ShiftReviewTab widget reopens it after Escape while the vote runs. It also reports this device's platform once (ShiftPlatformRules, analytics only). Starts ShiftFeedbackSystem (the shift's horns, stings, ticking layer and countdown) and
 	registers the sticky-note and stamp toast styles, and swaps the base toast stack for the paper one
 	(PaperToastStack: sticky notes top-right, stamps centre; ToastServiceClient:setDefaultWidget(false)). Starts
 	ShiftPromptSystem (the Interaction prompts drawn on paper) and registers the prompt chip; the chip and the phone
@@ -35,11 +36,16 @@ local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudReg
 local ShiftHud = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHud)
 local ShiftMobileButtons = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftMobileButtons)
 local ShiftPromptChip = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftPromptChip)
-local ShiftResults = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftResults)
+local ShiftReviewTab = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftReviewTab)
+local SceneStack = require(ReplicatedStorage.Client.UI.Scenes.SceneStack)
+-- Registers the review scene at load.
+require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftScene)
 local PaperToastStack = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperToastStack)
 local ToastServiceClient = require(ReplicatedStorage.Client.Features.Toast.ToastServiceClient)
 
 local unsubscribers: { () -> () } = {}
+-- Whether this client is in a shift's results (the review scene was pushed for them).
+local reviewing = false
 
 -- The HUD widgets that press the shown prompt, given the press as a prop (module-level, so their identity is stable).
 local function PromptChipWidget(): React.ReactNode
@@ -102,8 +108,8 @@ local ShiftServiceClient: ShiftServiceClient = {
 		if not HudRegistry.has("shiftHud") then
 			HudRegistry.register("shiftHud", ShiftHud, ShiftConstants.HUD_ORDER)
 		end
-		if not HudRegistry.has("shiftResults") then
-			HudRegistry.register("shiftResults", ShiftResults, ShiftConstants.HUD_ORDER + 1)
+		if not HudRegistry.has("shiftReviewTab") then
+			HudRegistry.register("shiftReviewTab", ShiftReviewTab, ShiftConstants.HUD_ORDER + 1)
 		end
 		if not HudRegistry.has("shiftMobile") then
 			HudRegistry.register("shiftMobile", MobileButtonsWidget, ShiftConstants.HUD_ORDER + 2)
@@ -134,6 +140,12 @@ local ShiftServiceClient: ShiftServiceClient = {
 				if not inResults and ShiftStore.myVote() ~= nil then
 					ShiftStore.myVote(nil)
 				end
+				if inResults and not reviewing then
+					SceneStack.push(ShiftConstants.REVIEW_SCENE)
+				elseif not inResults and reviewing then
+					SceneStack.remove(ShiftConstants.REVIEW_SCENE)
+				end
+				reviewing = inResults
 			end)
 		)
 		ShiftFeedbackSystem.start()
@@ -146,6 +158,8 @@ local ShiftServiceClient: ShiftServiceClient = {
 			unsubscribe()
 		end
 		table.clear(unsubscribers)
+		SceneStack.remove(ShiftConstants.REVIEW_SCENE)
+		reviewing = false
 	end,
 
 	get = function(_self)

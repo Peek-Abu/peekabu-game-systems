@@ -4,9 +4,8 @@
 	plate, the carry panel and the clock-out slip) shows, as display-ready fields per piece, from the shift snapshot and
 	the local player's public entry; the phone's action-button arc (Figma 1d/1e: which buttons show, which are lit);
 	the paper interaction prompt chip and the phone LOAD button's readiness (from ShiftPromptStore); the desktop key
-	hints row (Figma 1a) from the live Input bindings; and the results panel's strings (its final screen is Task 15).
-	Pure (specced); the
-	components only lay the fields out. The crew roster has its own view model (ShiftCrewViewModel).
+	hints row (Figma 1a) from the live Input bindings. Pure (specced); the components only lay the fields out. The
+	crew roster has its own view model (ShiftCrewViewModel); the performance review has ShiftReviewViewModel.
 
 	@class ShiftHudViewModel
 ]=]
@@ -115,20 +114,6 @@ export type HintView = {
 
 -- A device's keyboard bindings per action id (InputServiceClient:bindingsFor(id).keyboard).
 export type KeyBindings = { [string]: { Enum.KeyCode | Enum.UserInputType }? }
-
-export type ResultsView = {
-	title: string,
-	lines: { string },
-	another: string,
-	depot: string,
-	countdown: string,
-}
-
-local OUTCOME_TEXT: { [string]: string } = {
-	clockout = "Clocked out",
-	timeout = "Time's up",
-	abandoned = "Everyone left",
-}
 
 local ShiftHudViewModel = {}
 
@@ -441,41 +426,6 @@ end
 function ShiftHudViewModel.pocketKey(bindings: KeyBindings): string
 	local first = firstKey(bindings, CargoConstants.POCKET_ACTION)
 	return if first ~= nil then ShiftHudViewModel.keyName(first) else "Q"
-end
-
---[=[
-	The results panel's lines while the crew votes; nil otherwise.
-]=]
-function ShiftHudViewModel.results(snapshot: ShiftSnapshot?, now: number): ResultsView?
-	if snapshot == nil or snapshot.phase ~= "results" then
-		return nil
-	end
-	local lines: { string } = {}
-	local review = snapshot.results
-	if review ~= nil then
-		table.insert(lines, OUTCOME_TEXT[review.outcome] or review.outcome)
-		table.insert(
-			lines,
-			`Cleared {review.cleared} / {review.quota} - {if review.quotaMet then "QUOTA MET" else "quota missed"}`
-		)
-		table.insert(lines, `Bonus {review.bonus}`)
-		table.insert(lines, `Salvage found {review.salvage} | Piles vacuumed {review.piles}`)
-		for _, member in review.crew do
-			table.insert(lines, `{member.name}: banked {member.banked}, piles {member.piles}`)
-		end
-		for _, award in review.awards do
-			table.insert(lines, `{award.title}: {award.name}`)
-		end
-		table.insert(lines, `Caught by Mr. Harlow: {review.catches}`)
-	end
-	local voteEndsAt = snapshot.voteEndsAt
-	return {
-		title = `Shift {snapshot.shift} performance review`,
-		lines = lines,
-		another = `Another shift ({snapshot.votesAnother})`,
-		depot = `Back to depot ({snapshot.votesDepot})`,
-		countdown = `Deciding in {ShiftHudViewModel.clock(if voteEndsAt ~= nil then voteEndsAt - now else 0)}`,
-	}
 end
 
 return ShiftHudViewModel
