@@ -80,8 +80,23 @@ return table.freeze({
 	ROOT_SAMPLE_INTERVAL = 0.5,
 	-- The pile a spilled recycling box becomes.
 	SPILL_PILE_KIND = "paper",
-	-- Graybox item labels are seen within this many studs.
+	-- An item's price tag (M3b world UI, W5): its shell's tag and attributes (the client draws it,
+	-- CargoBillboardSystem), its design size in px, and when it is drawn: seen within LABEL_DISTANCE studs (the
+	-- shell's MaxDistance), mounted on a client within LABEL_DISTANCE of the camera and kept until LABEL_KEEP_DISTANCE
+	-- (no flicker at the edge), checked every LABEL_CHECK seconds.
+	LABEL_TAG = "CargoPriceTag",
+	LABEL_KEYS = table.freeze({
+		name = "CargoTagName",
+		category = "CargoTagCategory",
+		value = "CargoTagValue",
+		fragile = "CargoTagFragile",
+		impacts = "CargoTagImpacts",
+		hidden = "CargoTagHidden",
+	}),
+	LABEL_PX = Vector2.new(260, 70),
 	LABEL_DISTANCE = 24,
+	LABEL_KEEP_DISTANCE = 28,
+	LABEL_CHECK = 0.2,
 	-- How far down the floor is looked for under a spill or a scattered item.
 	FLOOR_PROBE = 20,
 	-- Feel (spec §7 "Banking: item swoops into the truck, cha-ching, '+15' floater"). Positional Cargo sounds the

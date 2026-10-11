@@ -2,7 +2,8 @@
 --[=[
 	CargoServiceClient: the `pocket` (Q) and `swap` (X) Input actions, and button-friendly `pocket`, `drop` and
 	`throw` for the Shift HUD's touch buttons. Requests only; the server decides. M2: slipping on puddles (CargoSlipSystem).
-	CargoFeedbackSystem plays the banking swoop and floaters, the pickup and pocket sounds, and the plant's leaves.
+	CargoFeedbackSystem plays the banking swoop and floaters, the pickup and pocket sounds, and the plant's leaves;
+	CargoBillboardSystem draws the price tags near the camera.
 
 	Drop and throw send Carry's own packets: CarryServiceClient binds them to G / F but has no callable API
 	(an open question for the base).
@@ -20,6 +21,7 @@ local CargoSlipSystem = require(ReplicatedStorage.Client.Features.Cargo.Systems.
 local CargoEvents = require(ReplicatedStorage.Shared.Features.Cargo.Net.CargoEvents)
 local CarryEvents = require(ReplicatedStorage.Shared.Features.Carry.Net.CarryEvents)
 local CarryServiceClient = require(ReplicatedStorage.Client.Features.Carry.CarryServiceClient)
+local CargoBillboardSystem = require(ReplicatedStorage.Client.Features.Cargo.Systems.CargoBillboardSystem)
 local CargoFeedbackSystem = require(ReplicatedStorage.Client.Features.Cargo.Systems.CargoFeedbackSystem)
 local InputActionRegistry = require(ReplicatedStorage.Client.Features.Input.Data.InputActionRegistry)
 local InputServiceClient = require(ReplicatedStorage.Client.Features.Input.InputServiceClient)
@@ -76,9 +78,11 @@ local CargoServiceClient: CargoServiceClient = {
 		)
 		CargoSlipSystem.start()
 		CargoFeedbackSystem.start()
+		CargoBillboardSystem.start()
 	end,
 
 	stop = function(_self)
+		CargoBillboardSystem.stop()
 		CargoFeedbackSystem.stop()
 		for _, unbind in unbinders do
 			unbind()

@@ -1,8 +1,8 @@
 --!strict
 --[=[
 	CargoSpawnSystem: puts graybox cargo in the world. One anchored Part per item, sized and coloured from
-	CargoRegistry, carrying its CarryKind / CargoId / CargoValue / CargoImpacts attributes and a name-and-value
-	label, then tagged Carryable so Carry (and through it Interaction's "Pick up" prompt) takes over. A hidden
+	CargoRegistry, carrying its CarryKind / CargoId / CargoValue / CargoImpacts attributes and an empty price tag
+	shell (its display data as attributes, tagged CargoPriceTag; the client draws it), then tagged Carryable so Carry (and through it Interaction's "Pick up" prompt) takes over. A hidden
 	item (under a pile) is invisible, lets players through, is skipped by raycasts and has its prompt off
 	until `reveal`.
 
@@ -35,37 +35,35 @@ export type CargoSpawnSystem = {
 	floorUnder: (self: CargoSpawnSystem, position: Vector3, ignore: { Instance }) -> CFrame,
 }
 
-local function labelText(kind: string, value: number): string
-	local def = CargoRegistry.get(kind)
-	return `{if def ~= nil then def.name else kind} ({value})`
-end
-
-local function labelOf(item: Instance): (BillboardGui?, TextLabel?)
-	local billboard = item:FindFirstChild(CargoConstants.LABEL_NAME)
-	if billboard == nil or not billboard:IsA("BillboardGui") then
-		return nil, nil
+local function tagOf(item: Instance): BillboardGui?
+	local shell = item:FindFirstChild(CargoConstants.LABEL_NAME)
+	if shell == nil or not shell:IsA("BillboardGui") then
+		return nil
 	end
-	local text = billboard:FindFirstChildOfClass("TextLabel")
-	return billboard, text
+	return shell
 end
 
-local function makeLabel(part: BasePart, text: string, visible: boolean)
-	local billboard = Instance.new("BillboardGui")
-	billboard.Name = CargoConstants.LABEL_NAME
-	billboard.Size = UDim2.fromOffset(200, 30)
-	billboard.StudsOffset = Vector3.new(0, part.Size.Y / 2 + 1.5, 0)
-	billboard.MaxDistance = CargoConstants.LABEL_DISTANCE
-	billboard.Enabled = visible
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.fromScale(1, 1)
-	label.BackgroundTransparency = 1
-	label.TextColor3 = Color3.new(1, 1, 1)
-	label.TextStrokeTransparency = 0.4
-	label.Font = Enum.Font.SourceSansSemibold
-	label.TextScaled = true
-	label.Text = text
-	label.Parent = billboard
-	billboard.Parent = part
+-- The item's price tag shell (W5): empty and offset-sized at the tag's design size, the item's display data as
+-- attributes (CargoConstants.LABEL_KEYS), tagged LABEL_TAG last; CargoBillboardSystem draws it on clients near it. Off
+-- while the item is hidden under a pile.
+local function makeTag(part: BasePart, def: CargoTypes.ItemDef, value: number, hidden: boolean)
+	local keys = CargoConstants.LABEL_KEYS
+	local shell = Instance.new("BillboardGui")
+	shell.Name = CargoConstants.LABEL_NAME
+	shell.Size = UDim2.fromOffset(CargoConstants.LABEL_PX.X, CargoConstants.LABEL_PX.Y)
+	shell.StudsOffset = Vector3.new(0, part.Size.Y / 2 + 1.5, 0)
+	shell.MaxDistance = CargoConstants.LABEL_DISTANCE
+	shell.LightInfluence = 0
+	shell.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	shell.Enabled = not hidden
+	shell:SetAttribute(keys.name, def.name)
+	shell:SetAttribute(keys.category, def.category)
+	shell:SetAttribute(keys.value, value)
+	shell:SetAttribute(keys.fragile, def.fragile)
+	shell:SetAttribute(keys.impacts, 0)
+	shell:SetAttribute(keys.hidden, hidden)
+	CollectionService:AddTag(shell, CargoConstants.LABEL_TAG)
+	shell.Parent = part
 end
 
 local CargoSpawnSystem = {}
@@ -109,7 +107,7 @@ function CargoSpawnSystem.new(): CargoSpawnSystem
 				part:SetAttribute(CargoConstants.HIDDEN_ATTRIBUTE, true)
 				part:SetAttribute(InteractionConstants.ENABLED_ATTRIBUTE, false)
 			end
-			makeLabel(part, labelText(kind, value), not hidden)
+			makeTag(part, def, value, hidden)
 			part.Parent = parent
 			-- Last: Carry reads the kind, and Interaction the enabled flag, when the tag lands.
 			CollectionService:AddTag(part, CarryConstants.TAG)
@@ -129,21 +127,23 @@ function CargoSpawnSystem.new(): CargoSpawnSystem
 			item.CanCollide = true
 			item.CanQuery = true
 			item:SetAttribute(InteractionConstants.ENABLED_ATTRIBUTE, nil)
-			local billboard = labelOf(item)
-			if billboard ~= nil then
-				billboard.Enabled = true
+			local shell = tagOf(item)
+			if shell ~= nil then
+				shell.Enabled = true
+				shell:SetAttribute(CargoConstants.LABEL_KEYS.hidden, false)
 			end
 		end,
 
 		--[=[
-			Sets an item's value (a fragile item dropped a tier) and its label.
+			Sets an item's value (a fragile item dropped a tier) and copies it, with the item's impacts, onto its tag.
 		]=]
 		setValue = function(_self, item, value)
 			item:SetAttribute(CargoConstants.VALUE_ATTRIBUTE, value)
-			local kind = item:GetAttribute(CarryConstants.KIND_ATTRIBUTE)
-			local _, text = labelOf(item)
-			if text ~= nil and type(kind) == "string" then
-				text.Text = labelText(kind, value)
+			local shell = tagOf(item)
+			if shell ~= nil then
+				local impacts = item:GetAttribute(CargoConstants.IMPACTS_ATTRIBUTE)
+				shell:SetAttribute(CargoConstants.LABEL_KEYS.value, value)
+				shell:SetAttribute(CargoConstants.LABEL_KEYS.impacts, if type(impacts) == "number" then impacts else 0)
 			end
 		end,
 
