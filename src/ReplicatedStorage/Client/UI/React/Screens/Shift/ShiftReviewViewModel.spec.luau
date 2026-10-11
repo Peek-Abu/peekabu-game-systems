@@ -153,6 +153,15 @@ return function()
 			expect(view.footer).to.equal("Majority decides · auto-picks in 0:20 · a tie means Another shift")
 		end)
 
+		it("keeps the vote open until it closes at 0:00", function()
+			expect(ShiftReviewViewModel.review(snapshot(), nil, 4, 100, false).voteOpen).to.equal(true)
+			expect(ShiftReviewViewModel.review(snapshot(), nil, 4, 120, false).voteOpen).to.equal(false)
+			expect(ShiftReviewViewModel.review(snapshot(), nil, 4, 130, false).voteOpen).to.equal(false)
+			local value = snapshot()
+			value.voteEndsAt = nil
+			expect(ShiftReviewViewModel.review(value, nil, 4, 100, false).voteOpen).to.equal(true)
+		end)
+
 		it("marks nothing before you vote", function()
 			local view = ShiftReviewViewModel.review(snapshot(), nil, 4, 100, false)
 			expect(view.another.mine).to.equal(false)

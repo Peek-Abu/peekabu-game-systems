@@ -33,6 +33,8 @@ export type PaperSheetProps = {
 	tab: string?,
 	-- The tab's width (251 by default; the review's longer "PERFORMANCE REVIEW — NIGHT SHIFT" tab is 399).
 	tabWidth: number?,
+	-- The tab label's text size (20 by default).
+	tabTextSize: number?,
 	shadow: boolean?,
 	padding: number?,
 	layoutOrder: number?,
@@ -134,7 +136,7 @@ local function tornEdge(paper: Color3): React.ReactNode
 end
 
 -- A manila folder tab above the top-left corner; the paper covers its foot.
-local function tabOf(text: string, width: number): React.ReactNode
+local function tabOf(text: string, width: number, textSize: number): React.ReactNode
 	return e("Frame", {
 		Position = UDim2.fromOffset(0, TAB_TUCK - TAB_HEIGHT),
 		Size = UDim2.fromOffset(width, TAB_HEIGHT),
@@ -146,7 +148,7 @@ local function tabOf(text: string, width: number): React.ReactNode
 		label = e(PaperLabel, {
 			text = text,
 			role = "heading",
-			size = 20,
+			size = textSize,
 			color = COLOR.ink,
 			position = UDim2.fromOffset(16, 0),
 			frame = UDim2.new(1, -32, 1, -TAB_TUCK),
@@ -232,7 +234,7 @@ local function PaperSheet(props: PaperSheetProps): React.ReactNode
 		}, { corner = e("UICorner", { CornerRadius = UDim.new(0, 4) }) })
 	end
 	if props.tab ~= nil then
-		sheetChildren.tab = tabOf(props.tab, props.tabWidth or TAB_WIDTH)
+		sheetChildren.tab = tabOf(props.tab, props.tabWidth or TAB_WIDTH, props.tabTextSize or 20)
 	end
 
 	return e("Frame", {

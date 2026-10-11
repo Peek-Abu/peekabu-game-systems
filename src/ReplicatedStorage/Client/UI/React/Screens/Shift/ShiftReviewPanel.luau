@@ -46,8 +46,19 @@ local DESKTOP = Vector2.new(1600, 900)
 local PHONE = Vector2.new(748, 358)
 -- Desktop sticky-note grid (340 wide), alternate tilts; phone pair (176 wide).
 local DESKTOP_STICKIES = { Vector2.new(848, 90), Vector2.new(1218, 90), Vector2.new(848, 280), Vector2.new(1218, 280) }
-local PHONE_STICKIES = { Vector2.new(16, 240), Vector2.new(204, 240) }
+-- Phone notes start 20 px under the stat cards (cards end at y 206), so their tape clears them.
+local PHONE_STICKIES = { Vector2.new(16, 226), Vector2.new(204, 226) }
 local DOT = 26
+-- The folder tab (Figma 5a: 399 wide) and its label size. Roblox fits Oswald's tall line box into TextSize, so a
+-- Figma size is drawn about 1.4x larger to match its glyphs (and >= 20 px on desktop).
+local TAB_WIDTH = 399
+local TAB_TEXT = 28
+-- The QUOTA MET / MISSED hero stamp (Figma 5a/5c 395-499 px wide at fs64; 5b 177 px at fs22), sized to match.
+local HEADLINE_DESKTOP = 110
+local HEADLINE_PHONE = 38
+-- "your vote" in marker ink: above the legibility floors (desktop >= 20, phone >= 14) as drawn.
+local MARK_DESKTOP = 28
+local MARK_PHONE = 18
 local DOT_STEP = 32
 
 local function at(x: number, y: number): UDim2
@@ -143,7 +154,7 @@ local function desktopOf(props: ShiftReviewPanelProps): Nodes
 	local view = props.view
 	local nodes: Nodes = {
 		subtitle = label(view.subtitle, "body", 22, 48, 30, 700),
-		headline = stamp(view.headline, 64, 3, 246, 138),
+		headline = stamp(view.headline, HEADLINE_DESKTOP, 3, 246, 138),
 		ratingLabel = label(view.ratingLabel, "body", 24, 48, 590),
 		rating = stamp(view.rating, 30, 2, 391, 609),
 		quote = label(`{view.quote}\n{view.quoteBy}`, "body", 22, 48, 700, 700),
@@ -179,6 +190,7 @@ local function desktopOf(props: ShiftReviewPanelProps): Nodes
 			text = vote.label,
 			variant = if entry.choice == "another" then "go" else "secondary",
 			onPaper = true,
+			disabled = not view.voteOpen,
 			onActivated = function()
 				props.onVote(entry.choice)
 			end,
@@ -192,7 +204,7 @@ local function desktopOf(props: ShiftReviewPanelProps): Nodes
 			nodes[`{entry.key}Mark`] = e(PaperLabel, {
 				text = mark,
 				role = "marker",
-				size = 22,
+				size = MARK_DESKTOP,
 				anchor = Vector2.new(0, 0.5),
 				position = at(1180 + vote.total * DOT_STEP + 14, entry.y + 34),
 				fit = true,
@@ -227,24 +239,24 @@ local function phoneOf(props: ShiftReviewPanelProps, expanded: boolean, toggle: 
 	local view = props.view
 	local nodes: Nodes = {
 		title = label(view.tab, "heading", 20, 16, 10),
-		headline = stamp(view.headline, 22, 3, 105, 70),
+		headline = stamp(view.headline, HEADLINE_PHONE, 3, 105, 70),
 		voteTitle = label(view.voteTitle, "heading", 16, 404, 14),
-		footer = label(view.footer, "body", 14, 404, 226, 320),
+		footer = label(view.footer, "body", 14, 404, 240, 320),
 		ratingLabel = label(view.ratingLabel, "body", 15, 404, 306),
 		rating = stamp(view.rating, 16, 2, 555, 315),
 	}
 	for index, row in view.rows do
 		local x = if index % 2 == 1 then 16 else 202
-		local y = if index <= 2 then 102 else 168
+		local y = if index <= 2 then 100 else 156
 		nodes[`row{index}`] = e("Frame", {
 			Position = at(x, y),
-			Size = UDim2.fromOffset(174, 58),
+			Size = UDim2.fromOffset(174, 50),
 			BackgroundColor3 = COLOR.cream,
 			BackgroundTransparency = 0.4,
 			BorderSizePixel = 0,
 		}, {
 			label = label(row.label, "heading", 14, 10, 3),
-			value = label(row.value, "number", 24, 10, 21),
+			value = label(row.value, "number", 24, 10, 19),
 		})
 	end
 	local more = view.moreAwards
@@ -255,7 +267,7 @@ local function phoneOf(props: ShiftReviewPanelProps, expanded: boolean, toggle: 
 	end
 	local votes: { { key: string, vote: ShiftReviewViewModel.VoteView, choice: ShiftTypes.Vote, y: number } } = {
 		{ key = "another", vote = view.another, choice = "another", y = 44 },
-		{ key = "depot", vote = view.depot, choice = "depot", y = 134 },
+		{ key = "depot", vote = view.depot, choice = "depot", y = 144 },
 	}
 	for _, entry in votes do
 		local vote = entry.vote
@@ -263,6 +275,7 @@ local function phoneOf(props: ShiftReviewPanelProps, expanded: boolean, toggle: 
 			text = vote.text,
 			variant = if entry.choice == "another" then "go" else "secondary",
 			onPaper = true,
+			disabled = not view.voteOpen,
 			onActivated = function()
 				props.onVote(entry.choice)
 			end,
@@ -272,7 +285,7 @@ local function phoneOf(props: ShiftReviewPanelProps, expanded: boolean, toggle: 
 		})
 		local mark = vote.mark
 		if mark ~= nil then
-			nodes[`{entry.key}Mark`] = label(mark, "marker", 14, 404, entry.y + 66)
+			nodes[`{entry.key}Mark`] = label(mark, "marker", MARK_PHONE, 404, entry.y + 64)
 		end
 	end
 	return nodes
@@ -307,7 +320,8 @@ local function ShiftReviewPanel(props: ShiftReviewPanelProps): React.ReactNode
 				position = at(0, top),
 				size = UDim2.fromOffset(sheet.X, sheet.Y),
 				tab = if phone then nil else props.view.tab,
-				tabWidth = 399,
+				tabWidth = TAB_WIDTH,
+				tabTextSize = TAB_TEXT,
 				padding = 0,
 			}, content),
 		}),

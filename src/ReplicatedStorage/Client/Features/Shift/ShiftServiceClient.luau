@@ -73,6 +73,25 @@ local function reportPlatform()
 	end
 end
 
+-- Ends a touch vacuum hold outside a running shift, clears the vote after results, and pushes the review scene when
+-- results begin (removing it when they end).
+local function onSnapshot(current: ShiftTypes.ShiftSnapshot?)
+	if current == nil or current.phase ~= "running" then
+		-- A held touch Vacuum button can be destroyed with the shift; never leave the hold on.
+		VacuumServiceClient:endVacuum()
+	end
+	local inResults = current ~= nil and current.phase == "results"
+	if not inResults and ShiftStore.myVote() ~= nil then
+		ShiftStore.myVote(nil)
+	end
+	if inResults and not reviewing then
+		SceneStack.push(ShiftConstants.REVIEW_SCENE)
+	elseif not inResults and reviewing then
+		SceneStack.remove(ShiftConstants.REVIEW_SCENE)
+	end
+	reviewing = inResults
+end
+
 -- Registered at load (before the first toast arrives) so ToastStack can draw them.
 for name, style in ShiftConstants.TOAST_STYLES do
 	if not ToastRegistry.has(name) then
@@ -129,25 +148,9 @@ local ShiftServiceClient: ShiftServiceClient = {
 				end
 			end)
 		)
-		table.insert(
-			unsubscribers,
-			Charm.subscribe(ShiftStore.snapshot, function(current: ShiftTypes.ShiftSnapshot?)
-				if current == nil or current.phase ~= "running" then
-					-- A held touch Vacuum button can be destroyed with the shift; never leave the hold on.
-					VacuumServiceClient:endVacuum()
-				end
-				local inResults = current ~= nil and current.phase == "results"
-				if not inResults and ShiftStore.myVote() ~= nil then
-					ShiftStore.myVote(nil)
-				end
-				if inResults and not reviewing then
-					SceneStack.push(ShiftConstants.REVIEW_SCENE)
-				elseif not inResults and reviewing then
-					SceneStack.remove(ShiftConstants.REVIEW_SCENE)
-				end
-				reviewing = inResults
-			end)
-		)
+		-- Run once with the current snapshot too, so a client that starts during results still gets the review.
+		table.insert(unsubscribers, Charm.subscribe(ShiftStore.snapshot, onSnapshot))
+		onSnapshot(ShiftStore.snapshot())
 		ShiftFeedbackSystem.start()
 		table.insert(unsubscribers, ShiftPromptSystem.start())
 	end,

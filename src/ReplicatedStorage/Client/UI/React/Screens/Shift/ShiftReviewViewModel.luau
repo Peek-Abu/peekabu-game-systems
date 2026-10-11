@@ -47,6 +47,8 @@ export type ReviewView = {
 	moreAwards: string?,
 	lessAwards: string?,
 	voteTitle: string,
+	-- Whether a vote can still be cast (until the vote closes at 0:00); the buttons are disabled after.
+	voteOpen: boolean,
 	another: VoteView,
 	depot: VoteView,
 	footer: string,
@@ -113,7 +115,7 @@ function ShiftReviewViewModel.review(
 	end
 	local met = results.quotaMet
 	local quote = if met then ShiftConstants.REVIEW_QUOTES.met else ShiftConstants.REVIEW_QUOTES.missed
-	local rating: string = if met then results.rating else "needsImprovement"
+	local rating: ShiftTypes.Rating = if met then results.rating else "needsImprovement"
 	local awards: { AwardView } = {}
 	local extraAwards: { AwardView } = {}
 	for index, award in results.awards do
@@ -138,13 +140,14 @@ function ShiftReviewViewModel.review(
 			{ label = "SALVAGE FOUND", value = `{results.salvage} of {results.offered}` },
 		},
 		ratingLabel = if phone then "Rating:" else "Overall rating:",
-		rating = ShiftConstants.RATING_TEXT[rating] or rating,
+		rating = ShiftConstants.RATING_TEXT[rating] or ShiftConstants.RATING_TEXT.needsImprovement,
 		quote = quote.line,
 		quoteBy = quote.by,
 		awards = awards,
 		extraAwards = extraAwards,
 		moreAwards = if extra > 0 then `+{extra} MORE AWARDS` else nil,
 		lessAwards = if extra > 0 then `FIRST {PHONE_AWARDS} AWARDS` else nil,
+		voteOpen = voteEndsAt == nil or now < voteEndsAt,
 		voteTitle = if phone then "WHAT NEXT?" else "WHAT NEXT? (crew vote)",
 		another = vote("ANOTHER SHIFT", snapshot.votesAnother, total, myVote == "another"),
 		depot = vote("BACK TO DEPOT", snapshot.votesDepot, total, myVote == "depot"),
