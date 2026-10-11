@@ -17,6 +17,7 @@ local CargoConstants = require(CargoShared.Data.CargoConstants)
 local CargoRegistry = require(CargoShared.Data.CargoRegistry)
 local CargoTypes = require(CargoShared.Data.CargoTypes)
 local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
+local DeathConstants = require(ReplicatedStorage.Shared.Features.Death.Data.DeathConstants)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
@@ -55,6 +56,8 @@ export type HudView = {
 	quotaMet: boolean,
 	fee: string,
 	feeBoost: string?,
+	-- The phone plate's shorter boost (Figma 1e "+140 ×1.5").
+	feeBoostShort: string?,
 	-- The carry panel.
 	hands: HandsView?,
 	pockets: { PocketView },
@@ -72,6 +75,23 @@ export type ButtonsView = {
 	throw: boolean,
 	pocket: boolean,
 	pocketReady: boolean,
+}
+
+-- A round button (or the Jump button's square) as its top-left corner's offset from the screen's bottom-right corner
+-- and its diameter, in px.
+export type ArcSpot = {
+	x: number,
+	y: number,
+	size: number,
+}
+
+export type ArcView = {
+	primary: ArcSpot,
+	drop: ArcSpot,
+	throw: ArcSpot,
+	pocket: ArcSpot,
+	-- The engine's Jump button the arc keeps clear of.
+	jump: ArcSpot,
 }
 
 export type ResultsView = {
@@ -189,6 +209,7 @@ function ShiftHudViewModel.hud(
 		quotaMet = snapshot.quotaMet,
 		fee = `+{snapshot.bonus}`,
 		feeBoost = if overtime then `×{ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER} now` else nil,
+		feeBoostShort = if overtime then `×{ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER}` else nil,
 		hands = handsOf(entry[CarryConstants.PUBLIC_FIELD]),
 		pockets = pockets,
 		canister = if type(fill) == "number" then fill else 0,
@@ -229,6 +250,51 @@ function ShiftHudViewModel.buttons(me: PublicPlayerTypes.PublicPlayer?, loadRead
 		pocket = tiny or filled > 0,
 		pocketReady = tiny and free > 0,
 	}
+end
+
+-- The engine's TouchGui switches to the large Jump button above this short side (px).
+ShiftHudViewModel.SMALL_JUMP_SHORT_SIDE = 500
+
+local function spot(x: number, y: number, size: number): ArcSpot
+	return table.freeze({ x = x, y = y, size = size })
+end
+
+-- Figma 1d (844x390): the Jump button is 70 px at (1,-95,1,-90); LOAD/VACUUM 104 px at (608, 266), DROP (512, 282),
+-- THROW (555, 194), POCKET (651, 173), 72 px each, as offsets from the bottom-right corner.
+local PHONE_ARC: ArcView = table.freeze({
+	primary = spot(-236, -124, 104),
+	drop = spot(-332, -108, 72),
+	throw = spot(-289, -196, 72),
+	pocket = spot(-193, -217, 72),
+	jump = spot(-95, -90, 70),
+})
+
+-- A larger touch screen: the Jump button is 120 px at (1,-170,1,-210). The big button sits left of it, DROP and THROW
+-- stack above the big button, POCKET sits above the Jump button; every gap is >= 16 px, and the arc's left edge
+-- (292 px in) stays right of the bottom-left 40% on any screen past 500 px, and right of the desktop carry panel on
+-- a 1024 px wide tablet.
+local TABLET_ARC: ArcView = table.freeze({
+	primary = spot(-292, -132, 104),
+	drop = spot(-262, -224, 72),
+	throw = spot(-262, -316, 72),
+	pocket = spot(-146, -302, 72),
+	jump = spot(-170, -210, 120),
+})
+
+--[=[
+	Where the action buttons sit for a touch screen whose shorter side is `shortSide` px: around the engine's small
+	Jump button at 500 px or less (phones), clear of its large Jump button above that.
+]=]
+function ShiftHudViewModel.arcFor(shortSide: number): ArcView
+	return if shortSide <= ShiftHudViewModel.SMALL_JUMP_SHORT_SIDE then PHONE_ARC else TABLET_ARC
+end
+
+--[=[
+	Whether the shift HUD and the action arc are hidden: during the scare beat (`scaring`), and while the local player
+	(`me`) is caught, when the CCTV takes the screen.
+]=]
+function ShiftHudViewModel.hidden(me: PublicPlayerTypes.PublicPlayer?, scaring: boolean): boolean
+	return scaring or (me ~= nil and me[DeathConstants.PUBLIC_FIELD] == true)
 end
 
 --[=[

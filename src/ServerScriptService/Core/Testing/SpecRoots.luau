@@ -375,7 +375,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftStoryFixtures"] = "story fixtures (static sample data)",
 	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftResultsPanel"] = "React UI component (placeholder; story in ShiftResultsPanel.story; strings specced in ShiftHudViewModel)",
 	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftResults"] = "React HUD widget wiring stores to ShiftResultsPanel (no logic)",
-	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftMobileButtons"] = "React HUD widget: stores to the touch arc and client-service calls (show/hide, VACUUM/LOAD and lit buttons specced in ShiftHudViewModel.mobileButtons)",
+	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftMobileButtons"] = "React HUD widget: stores to the touch arc and client-service calls (show/hide, VACUUM/LOAD, lit buttons and the phone/tablet arc specced in ShiftHudViewModel.mobileButtons / hidden / arcFor)",
 	["ServerScriptService.Features.Shift.Systems.ShiftVoteSystem"] = "RequestHandler/ByteNet vote shell (the vote decisions are specced in ShiftVoteRules)",
 	-- Cleanup Crew: Depot
 	["ReplicatedStorage.Shared.Features.Depot.Data.DepotTypes"] = "type definitions only (no runtime logic)",

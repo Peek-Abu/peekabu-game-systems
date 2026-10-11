@@ -3,7 +3,8 @@
 	ShiftMobileButtons: the phone's arc of round action buttons around the big VACUUM / LOAD button (Figma 1d 9:61,
 	1e 9:116): DROP, THROW and POCKET at 72 px, the big button at 104 px, with >= 16 px between circles, all clear of
 	the Roblox Jump button (bottom right) and the thumbstick zone (bottom-left 40%). Offsets are from the bottom-right
-	corner, so the arc tracks the Jump button on any phone.
+	corner, so the arc tracks the Jump button; on a larger touch screen the engine's Jump button is bigger, so the arc
+	moves clear of it (ShiftHudViewModel.arcFor picks the arc from the viewport's short side).
 
 	A HUD widget: it reads the shift snapshot, the local player's public entry, the scare beat and the touch flag, and
 	draws what ShiftHudViewModel.mobileButtons decides (whether the arc shows, VACUUM or LOAD, which buttons are
@@ -17,10 +18,10 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
 
 local React = require(ReplicatedStorage.Packages.React)
 local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
-local DeathConstants = require(ReplicatedStorage.Shared.Features.Death.Data.DeathConstants)
 local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
 local CargoServiceClient = require(ReplicatedStorage.Client.Features.Cargo.CargoServiceClient)
 local OccupantCatchStore = require(ReplicatedStorage.Client.Features.Occupant.State.OccupantCatchStore)
@@ -41,7 +42,7 @@ export type ShiftMobileButtonsProps = {
 
 type ButtonProps = {
 	label: string,
-	position: UDim2,
+	spot: ShiftHudViewModel.ArcSpot,
 	large: boolean,
 	available: boolean,
 	ready: boolean,
@@ -51,16 +52,6 @@ type ButtonProps = {
 }
 
 local COLOR = UIPaperConstants.COLOR
-local SMALL = UIPaperConstants.BUTTON_SMALL
-local LARGE = UIPaperConstants.BUTTON_LARGE
--- Figma 1d top-left corners in the 844x390 frame: LOAD/VACUUM 104 px at (608, 266); DROP (512, 282), THROW (555, 194),
--- POCKET (651, 173), 72 px each. Converted to offsets from the bottom-right corner (x - 844, y - 390).
-local ARC = table.freeze({
-	primary = UDim2.new(1, -236, 1, -124),
-	drop = UDim2.new(1, -332, 1, -108),
-	throw = UDim2.new(1, -289, 1, -196),
-	pocket = UDim2.new(1, -193, 1, -217),
-})
 -- Figma "Mobile button": night at 72%, a 3 px fluorescent ring at 85%; a ready one is exit green at 95%.
 local FILL_TRANSPARENCY = 0.28
 local READY_TRANSPARENCY = 0.05
@@ -82,10 +73,10 @@ local function ActionButton(props: ButtonProps): React.ReactNode
 	local onHoldBegin = props.onHoldBegin
 	local onHoldEnd = props.onHoldEnd
 	local onActivated = props.onActivated
-	local size = if props.large then LARGE else SMALL
+	local spot = props.spot
 	return e("TextButton", {
-		Position = props.position,
-		Size = UDim2.fromOffset(size, size),
+		Position = UDim2.new(1, spot.x, 1, spot.y),
+		Size = UDim2.fromOffset(spot.size, spot.size),
 		AutoButtonColor = false,
 		Active = props.available,
 		BackgroundColor3 = if props.ready then COLOR.exitGreen else COLOR.night,
@@ -127,17 +118,46 @@ local function ActionButton(props: ButtonProps): React.ReactNode
 	})
 end
 
+-- The viewport's shorter side, in px (the engine sizes its Jump button by it).
+local function readShortSide(): number
+	local camera = Workspace.CurrentCamera
+	local viewport = if camera ~= nil then camera.ViewportSize else Vector2.new(844, 390)
+	return math.min(viewport.X, viewport.Y)
+end
+
+local function useShortSide(): number
+	local shortSide, setShortSide = React.useState(readShortSide)
+	React.useEffect(function(): () -> ()
+		local camera = Workspace.CurrentCamera
+		if camera == nil then
+			return function() end
+		end
+		local connection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+			setShortSide(readShortSide())
+		end)
+		return function()
+			connection:Disconnect()
+		end
+	end, {})
+	return shortSide
+end
+
 local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactNode
 	local snapshot = useAtom(ShiftStore.snapshot)
 	local publicPlayers = useAtom(StateSyncClientStore.publicPlayers)
 	local scaring = useAtom(OccupantCatchStore.scaring)
 	local player = Players.LocalPlayer
 	local me = if player ~= nil then publicPlayers[StateSyncConstants.publicEntryKey(player.UserId)] else nil
-	local dead = me ~= nil and me[DeathConstants.PUBLIC_FIELD] == true
 	local loadReady = props ~= nil and props.loadReady == true
 	local onLoad = if props ~= nil then props.onLoad else nil
-	local view =
-		ShiftHudViewModel.mobileButtons(snapshot, me, UserInputService.TouchEnabled, scaring or dead, loadReady)
+	local view = ShiftHudViewModel.mobileButtons(
+		snapshot,
+		me,
+		UserInputService.TouchEnabled,
+		ShiftHudViewModel.hidden(me, scaring),
+		loadReady
+	)
+	local arc = ShiftHudViewModel.arcFor(useShortSide())
 	local vacuuming = view ~= nil and view.primary == "VACUUM"
 	-- Whether this widget started a vacuum hold that has not ended yet.
 	local held = React.useRef(false)
@@ -167,7 +187,7 @@ local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactN
 	}, {
 		primary = e(ActionButton, {
 			label = primaryLabel,
-			position = ARC.primary,
+			spot = arc.primary,
 			large = true,
 			available = true,
 			ready = view.primaryReady,
@@ -177,7 +197,7 @@ local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactN
 		}),
 		drop = e(ActionButton, {
 			label = "DROP",
-			position = ARC.drop,
+			spot = arc.drop,
 			large = false,
 			available = view.drop,
 			ready = false,
@@ -187,7 +207,7 @@ local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactN
 		}),
 		throw = e(ActionButton, {
 			label = "THROW",
-			position = ARC.throw,
+			spot = arc.throw,
 			large = false,
 			available = view.throw,
 			ready = false,
@@ -197,7 +217,7 @@ local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactN
 		}),
 		pocket = e(ActionButton, {
 			label = "POCKET",
-			position = ARC.pocket,
+			spot = arc.pocket,
 			large = false,
 			available = view.pocket,
 			ready = view.pocketReady,

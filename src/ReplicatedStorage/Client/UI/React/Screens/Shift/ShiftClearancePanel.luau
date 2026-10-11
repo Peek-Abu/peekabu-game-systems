@@ -205,7 +205,7 @@ local function phoneFolder(view: ShiftHudViewModel.HudView): React.ReactNode
 end
 
 local function phoneFee(view: ShiftHudViewModel.HudView): React.ReactNode
-	local feeBoost = view.feeBoost
+	local feeBoost = view.feeBoostShort
 	return e("Frame", {
 		Position = UDim2.fromOffset(PHONE_LEFT, PHONE_FEE_TOP),
 		Size = UDim2.fromOffset(PHONE_WIDTH, 34),

@@ -13,7 +13,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
 local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
-local DeathConstants = require(ReplicatedStorage.Shared.Features.Death.Data.DeathConstants)
 local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
 local OccupantCatchStore = require(ReplicatedStorage.Client.Features.Occupant.State.OccupantCatchStore)
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
@@ -36,8 +35,7 @@ local function ShiftHud(): React.ReactNode
 	local now = useServerClock()
 	local player = Players.LocalPlayer
 	local me = if player ~= nil then publicPlayers[StateSyncConstants.publicEntryKey(player.UserId)] else nil
-	local dead = me ~= nil and me[DeathConstants.PUBLIC_FIELD] == true
-	local view = ShiftHudViewModel.hud(snapshot, me, now, scaring or dead)
+	local view = ShiftHudViewModel.hud(snapshot, me, now, ShiftHudViewModel.hidden(me, scaring))
 	if view == nil or snapshot == nil then
 		return nil
 	end

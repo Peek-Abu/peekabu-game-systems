@@ -23,6 +23,34 @@ local function snapshot(extra)
 	return value
 end
 
+-- The gap between two round buttons (a spot is a top-left offset and a diameter): centre distance minus both radii.
+local function circleGap(a, b)
+	local ax, ay = a.x + a.size / 2, a.y + a.size / 2
+	local bx, by = b.x + b.size / 2, b.y + b.size / 2
+	return math.sqrt((ax - bx) ^ 2 + (ay - by) ^ 2) - a.size / 2 - b.size / 2
+end
+
+-- The gap between a round button and the Jump button's rectangle (a square spot).
+local function rectGap(button, rect)
+	local cx, cy = button.x + button.size / 2, button.y + button.size / 2
+	local dx = math.max(rect.x - cx, 0, cx - (rect.x + rect.size))
+	local dy = math.max(rect.y - cy, 0, cy - (rect.y + rect.size))
+	return math.sqrt(dx * dx + dy * dy) - button.size / 2
+end
+
+local BUTTONS = { "primary", "drop", "throw", "pocket" }
+
+local function expectClear(arc, width)
+	for index, first in BUTTONS do
+		expect(rectGap(arc[first], arc.jump) >= 16).to.equal(true)
+		-- Clear of the thumbstick zone, the left 40% of the screen.
+		expect(width + arc[first].x >= width * 0.4).to.equal(true)
+		for _, second in table.move(BUTTONS, index + 1, #BUTTONS, 1, {}) do
+			expect(circleGap(arc[first], arc[second]) >= 16).to.equal(true)
+		end
+	end
+end
+
 local REVIEW = {
 	outcome = "clockout",
 	quota = 350,
@@ -62,6 +90,7 @@ return function()
 			expect(math.abs(view.fill - 120 / 350) < 1e-6).to.equal(true)
 			expect(view.fee).to.equal("+40")
 			expect(view.feeBoost).to.equal(nil)
+			expect(view.feeBoostShort).to.equal(nil)
 		end)
 
 		it("caps the clearance bar at full", function()
@@ -97,6 +126,7 @@ return function()
 			expect(overtime.clockLabel).to.equal("OVERTIME")
 			expect(overtime.overtime).to.equal(true)
 			expect(overtime.feeBoost).to.equal("×1.5 now")
+			expect(overtime.feeBoostShort).to.equal("×1.5")
 		end)
 
 		it("describes the hands item with its value and traits", function()
@@ -266,6 +296,41 @@ return function()
 			expect(ShiftHudViewModel.hud(snapshot({ stage = "overtime" }), nil, 0, false).compactSub).to.equal(
 				"OVERTIME"
 			)
+		end)
+	end)
+
+	describe("hidden", function()
+		it("hides the HUD during the scare beat and while the local player is caught", function()
+			expect(ShiftHudViewModel.hidden(nil, false)).to.equal(false)
+			expect(ShiftHudViewModel.hidden({ carrying = "monitor" }, false)).to.equal(false)
+			expect(ShiftHudViewModel.hidden(nil, true)).to.equal(true)
+			expect(ShiftHudViewModel.hidden({ dead = true }, false)).to.equal(true)
+		end)
+	end)
+
+	describe("action arc", function()
+		it("keeps the phone arc around the 70 px phone Jump button", function()
+			local arc = ShiftHudViewModel.arcFor(390)
+			expect(arc.jump.size).to.equal(70)
+			expect(arc.primary.size).to.equal(104)
+			expect(arc.primary.x).to.equal(-236)
+			expect(arc.primary.y).to.equal(-124)
+			expect(arc.drop.x).to.equal(-332)
+			expect(arc.throw.y).to.equal(-196)
+			expect(arc.pocket.x).to.equal(-193)
+			expectClear(arc, 844)
+			expect(ShiftHudViewModel.arcFor(500).jump.size).to.equal(70)
+		end)
+
+		it("moves the arc clear of the 120 px Jump button on a larger touch screen", function()
+			local arc = ShiftHudViewModel.arcFor(768)
+			expect(arc.jump.size).to.equal(120)
+			expect(arc.jump.x).to.equal(-170)
+			expect(arc.jump.y).to.equal(-210)
+			expectClear(arc, 1024)
+			-- Portrait, and the smallest screen that gets the large Jump button.
+			expectClear(arc, 768)
+			expectClear(ShiftHudViewModel.arcFor(501), 501)
 		end)
 	end)
 end
