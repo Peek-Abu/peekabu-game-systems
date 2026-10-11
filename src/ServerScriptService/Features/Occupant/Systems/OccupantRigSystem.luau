@@ -70,12 +70,14 @@ local function shell(
 	offset: Vector3,
 	tag: string,
 	attribute: string,
-	head: BasePart
+	head: BasePart,
+	sizeOffset: Vector2
 ): BillboardGui
 	local gui = Instance.new("BillboardGui")
 	gui.Name = name
 	gui.Size = size
 	gui.StudsOffset = offset
+	gui.SizeOffset = sizeOffset
 	gui.AlwaysOnTop = true
 	gui.MaxDistance = 90
 	gui.LightInfluence = 0
@@ -96,15 +98,19 @@ local function tells(head: BasePart): (BillboardGui, BillboardGui)
 		Vector3.new(0, 2.5, 0),
 		OccupantConstants.CUE_TAG,
 		OccupantConstants.CUE_ATTRIBUTE,
-		head
+		head,
+		Vector2.zero
 	)
 	local speech = shell(
 		OccupantConstants.SPEECH_NAME,
 		UDim2.fromOffset(memo.X, memo.Y),
-		Vector3.new(0, 4.5, 0),
+		-- Its bottom edge sits on the cue disc's top edge (SizeOffset lifts the shell by half its own height), so the
+		-- fixed-px memo can never cover the "!" however far away it draws.
+		Vector3.new(0, 2.5 + studs / 2, 0),
 		OccupantConstants.SPEECH_TAG,
 		OccupantConstants.LINE_ATTRIBUTE,
-		head
+		head,
+		Vector2.new(0, 0.5)
 	)
 	return cue, speech
 end
