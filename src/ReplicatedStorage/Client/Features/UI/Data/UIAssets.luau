@@ -18,4 +18,13 @@
 
 local UIAssets = {}
 
+-- Cleanup Crew paper textures (M3 UI). PENDING: empty until the art pass uploads them; every paper component draws
+-- flat colours while a slot is "".
+UIAssets.paper = table.freeze({
+	manila = "",
+	cream = "",
+	cork = "",
+	scanlines = "",
+})
+
 return UIAssets

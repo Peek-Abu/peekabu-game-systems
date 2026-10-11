@@ -381,6 +381,16 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.Features.Depot.DepotServiceClient"] = "ByteNet/HUD registration/RunService shell (DepotStore is specced)",
 	["ReplicatedStorage.Client.UI.React.Screens.Depot.DepotCardPanel"] = "React UI component (placeholder; story in DepotCardPanel.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Depot.DepotCard"] = "React HUD widget wiring DepotStore to DepotCardPanel (no logic)",
+	-- Cleanup Crew: the paper UI kit (M3 UI)
+	["ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants"] = "static palette, fonts and sizes (no logic; inkColor is a frozen lookup)",
+	["ReplicatedStorage.Client.UI.React.Screens.Paper.PaperLabel"] = "presentational React component (story in PaperKit.story)",
+	["ReplicatedStorage.Client.UI.React.Screens.Paper.PaperSheet"] = "presentational React component (story in PaperKit.story)",
+	["ReplicatedStorage.Client.UI.React.Screens.Paper.PaperStamp"] = "presentational React component (story in PaperKit.story)",
+	["ReplicatedStorage.Client.UI.React.Screens.Paper.StickyNote"] = "presentational React component (story in PaperKit.story)",
+	["ReplicatedStorage.Client.UI.React.Screens.Paper.KeyChip"] = "presentational React component (story in PaperKit.story)",
+	["ReplicatedStorage.Client.UI.React.Screens.Paper.PaperButton"] = "presentational React component (story in PaperKit.story)",
+	["ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperLayout"] = "React hook over the viewport (the decision is the specced ShiftPlatformRules.detect)",
+	["ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperMotion"] = "React hook — RenderStepped easing over a binding (no logic)",
 }
 
 --[=[
