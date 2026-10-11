@@ -20,6 +20,10 @@ local WIDTH = 360
 
 local function ToastStack(): React.ReactNode
 	local toasts = ReactCharm.useAtom(ToastStore.toasts)
+	local enabled = ReactCharm.useAtom(ToastStore.widgetEnabled)
+	if not enabled then
+		return nil
+	end
 	local children: { [string]: React.ReactNode } = {
 		layout = e("UIListLayout", {
 			FillDirection = Enum.FillDirection.Vertical,

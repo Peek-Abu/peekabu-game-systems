@@ -31,6 +31,7 @@ export type ToastServiceClient = {
 	init: (self: ToastServiceClient) -> (),
 	start: (self: ToastServiceClient) -> (),
 	stop: (self: ToastServiceClient) -> (),
+	setDefaultWidget: (self: ToastServiceClient, enabled: boolean) -> (),
 }
 
 local ToastServiceClient: ToastServiceClient = {
@@ -65,6 +66,13 @@ local ToastServiceClient: ToastServiceClient = {
 		table.insert(stoppers, function()
 			ticking:Disconnect()
 		end)
+	end,
+
+	--[=[
+		Shows or hides the base toast stack (a game with its own approved toast look turns it off and reads ToastStore).
+	]=]
+	setDefaultWidget = function(_self, enabled)
+		ToastStore.widgetEnabled(enabled)
 	end,
 
 	stop = function(_self)

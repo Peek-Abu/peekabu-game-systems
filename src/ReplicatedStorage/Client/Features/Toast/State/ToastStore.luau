@@ -1,7 +1,8 @@
 --!strict
 --[=[
 	ToastStore: the toasts on screen, as one Charm atom the HUD reads (ToastStack). Written only by
-	ToastServiceClient.
+	ToastServiceClient. `widgetEnabled` lets a game hide the base ToastStack and draw its own (the QueueStore
+	precedent).
 
 	@class ToastStore
 ]=]
@@ -15,10 +16,12 @@ local ToastQueueUtils = require(ReplicatedStorage.Shared.Features.Toast.Utils.To
 
 local initial: { ToastTypes.Toast } = {}
 local toasts = Charm.atom(initial)
+local widgetEnabled = Charm.atom(true)
 local nextId = 0
 
 local ToastStore = {
 	toasts = toasts,
+	widgetEnabled = widgetEnabled,
 }
 
 function ToastStore.push(text: string, style: string, duration: number, now: number)

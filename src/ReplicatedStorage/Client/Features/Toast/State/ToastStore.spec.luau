@@ -21,4 +21,13 @@ return function()
 		ToastStore.expire(105)
 		expect(#ToastStore.toasts()).to.equal(0)
 	end)
+
+	describe("widgetEnabled", function()
+		it("shows the base widget until a game turns it off", function()
+			expect(ToastStore.widgetEnabled()).to.equal(true)
+			ToastStore.widgetEnabled(false)
+			expect(ToastStore.widgetEnabled()).to.equal(false)
+			ToastStore.widgetEnabled(true)
+		end)
+	end)
 end
