@@ -22,6 +22,8 @@ export type ShiftClockOutSlipProps = {
 	left: string,
 	truck: number?,
 	layout: UIPaperConstants.Layout,
+	-- How far the desktop slip moves right (ShiftHudViewModel.centreShift); 0 when nil.
+	centreShift: number?,
 }
 
 local COLOR = UIPaperConstants.COLOR
@@ -168,7 +170,7 @@ local function ShiftClockOutSlip(props: ShiftClockOutSlipProps): React.ReactNode
 	-- staple is fixed at the top-left corner, over the "CLOCK-OUT SLIP" text).
 	return e("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, CENTRE_OFFSET, 0, TOP),
+		Position = UDim2.new(0.5, CENTRE_OFFSET + (props.centreShift or 0), 0, TOP),
 		Size = UDim2.fromOffset(WIDTH, HEIGHT),
 		Rotation = TILT,
 		BackgroundTransparency = 1,

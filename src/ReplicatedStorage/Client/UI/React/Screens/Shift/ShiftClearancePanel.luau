@@ -29,8 +29,8 @@ local COLOR = UIPaperConstants.COLOR
 local TEXT = UIPaperConstants.TEXT.desktop
 local PHONE_TEXT = UIPaperConstants.TEXT.phone
 -- Figma 1a: "Clearance body" (48, 120) 470x118 under its tab, "Finder's fee" (48, 250) 470x58.
-local LEFT = 48
-local WIDTH = 470
+local LEFT = UIPaperConstants.HUD.LEFT
+local WIDTH = UIPaperConstants.HUD.FOLDER_WIDTH
 local FOLDER_TOP = 120
 local FEE_TOP = 250
 

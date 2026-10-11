@@ -69,7 +69,17 @@ return UILabs.CreateReactStory({
 		0
 	)
 	local layout: UIPaperConstants.Layout = if phone then "phone" else "desktop"
-	local hud = if view ~= nil then e(ShiftHudPanel, { view = view, roster = roster, layout = layout }) else nil
+	-- The screen frame's real size drives the same layout rules the live HUD uses (resize the viewport to check them).
+	local screenSize, setScreenSize = React.useState(Vector2.new(1920, 1080))
+	local hud = if view ~= nil
+		then e(ShiftHudPanel, {
+			view = view,
+			roster = roster,
+			layout = layout,
+			centreShift = if phone then 0 else ShiftHudViewModel.centreShift(screenSize.X),
+			carryLeft = if phone then nil else ShiftHudViewModel.carryLeft(screenSize),
+		})
+		else nil
 	return e("Frame", {
 		Size = UDim2.fromScale(1, 1),
 		BackgroundColor3 = if phone then UIPaperConstants.COLOR.night else UIPaperConstants.COLOR.office,
@@ -83,6 +93,9 @@ return UILabs.CreateReactStory({
 			BackgroundColor3 = UIPaperConstants.COLOR.office,
 			BorderSizePixel = 0,
 			ClipsDescendants = phone,
+			[React.Change.AbsoluteSize] = function(frame: Frame)
+				setScreenSize(frame.AbsoluteSize)
+			end,
 		}, { hud = hud }),
 	})
 end)

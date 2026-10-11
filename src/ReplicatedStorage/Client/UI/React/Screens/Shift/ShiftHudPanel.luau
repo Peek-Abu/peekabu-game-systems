@@ -34,6 +34,10 @@ export type ShiftHudPanelProps = {
 	-- The desktop key hints row; nil draws none.
 	hints: { ShiftHudViewModel.HintView }?,
 	pocketKey: string?,
+	-- How far the centred pieces move right of the left column (ShiftHudViewModel.centreShift); 0 when nil.
+	centreShift: number?,
+	-- The desktop carry panel's left edge (ShiftHudViewModel.carryLeft); the corner inset when nil.
+	carryLeft: number?,
 }
 
 local function ShiftHudPanel(props: ShiftHudPanelProps): React.ReactNode
@@ -48,10 +52,18 @@ local function ShiftHudPanel(props: ShiftHudPanelProps): React.ReactNode
 	}, {
 		clearance = e(ShiftClearancePanel, { view = view, layout = layout }),
 		roster = if roster ~= nil then e(ShiftCrewRoster, { roster = roster, layout = layout }) else nil,
-		timeCard = e(ShiftTimeCard, { view = view, layout = layout }),
-		carry = e(ShiftCarryPanel, { view = view, layout = layout, pocketKey = props.pocketKey }),
+		timeCard = e(ShiftTimeCard, { view = view, layout = layout, centreShift = props.centreShift }),
+		carry = e(
+			ShiftCarryPanel,
+			{ view = view, layout = layout, pocketKey = props.pocketKey, left = props.carryLeft }
+		),
 		clockOut = if clockOut ~= nil
-			then e(ShiftClockOutSlip, { left = clockOut, truck = view.truck, layout = layout })
+			then e(ShiftClockOutSlip, {
+				left = clockOut,
+				truck = view.truck,
+				layout = layout,
+				centreShift = props.centreShift,
+			})
 			else nil,
 		hints = if hints ~= nil then e(ShiftKeyHints, { hints = hints }) else nil,
 	})

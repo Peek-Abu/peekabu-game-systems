@@ -382,4 +382,42 @@ return function()
 			expect(ShiftHudViewModel.pocketKey({})).to.equal("Q")
 		end)
 	end)
+
+	describe("centreShift", function()
+		it("is 0 on a wide screen", function()
+			expect(ShiftHudViewModel.centreShift(1920)).to.equal(0)
+		end)
+
+		it("moves the centred pieces right of the left column on a laptop", function()
+			expect(ShiftHudViewModel.centreShift(1366)).to.equal(101)
+			expect(ShiftHudViewModel.centreShift(1280)).to.equal(144)
+		end)
+
+		it("never goes below 0", function()
+			expect(ShiftHudViewModel.centreShift(5000)).to.equal(0)
+			expect(ShiftHudViewModel.centreShift(1568)).to.equal(0)
+		end)
+
+		it("clears the left column by the gap exactly where it starts to apply", function()
+			local width = 1366
+			local slipLeft = width / 2 - 250 + ShiftHudViewModel.centreShift(width)
+			expect(slipLeft).to.equal(518 + 16)
+		end)
+	end)
+
+	describe("carryLeft", function()
+		it("keeps the carry panel at the left inset on a tall viewport", function()
+			expect(ShiftHudViewModel.carryLeft(Vector2.new(1920, 1080))).to.equal(48)
+			expect(ShiftHudViewModel.carryLeft(Vector2.new(1366, 780))).to.equal(48)
+		end)
+
+		it("moves it right of the roster column on a short viewport", function()
+			expect(ShiftHudViewModel.carryLeft(Vector2.new(1366, 690))).to.equal(418)
+			expect(ShiftHudViewModel.carryLeft(Vector2.new(1366, 779))).to.equal(418)
+		end)
+
+		it("fits inside a 1366 px screen when moved", function()
+			expect(ShiftHudViewModel.carryLeft(Vector2.new(1366, 690)) + 640 <= 1366).to.equal(true)
+		end)
+	end)
 end

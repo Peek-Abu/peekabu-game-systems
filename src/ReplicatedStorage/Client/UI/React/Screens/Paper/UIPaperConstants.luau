@@ -110,7 +110,32 @@ local function inkColor(ink: Ink): Color3
 	return INK_COLOR[ink]
 end
 
+-- The desktop Shift HUD's left column and carry panel geometry (Figma 1a), shared by the panels and the layout rules
+-- (ShiftHudViewModel.centreShift / carryLeft) so one number drives both.
+local HUD = table.freeze({
+	-- The clearance folder and finder's fee plate: x 48, 470 wide.
+	LEFT = 48,
+	FOLDER_WIDTH = 470,
+	-- The crew roster: x 52, 350 wide, y 330, a 46 px header and 36 px per row.
+	ROSTER_LEFT = 52,
+	ROSTER_WIDTH = 350,
+	ROSTER_TOP = 330,
+	ROSTER_HEADER = 46,
+	ROSTER_ROW = 36,
+	-- The carry panel: 640x196, inset 48 px from the bottom-left corner.
+	CARRY_WIDTH = 640,
+	CARRY_HEIGHT = 196,
+	CARRY_INSET = 48,
+	-- The empty strip kept between neighbouring columns.
+	GAP = 16,
+	-- The crew roster's most rows (the shift's crew cap).
+	ROSTER_MAX_ROWS = 4,
+	-- The widest centred piece, the clock-out slip.
+	SLIP_WIDTH = 500,
+})
+
 local UIPaperConstants = {
+	HUD = HUD,
 	COLOR = COLOR,
 	FONT = FONT,
 	TEXT = TEXT,

@@ -24,13 +24,14 @@ export type ShiftCarryPanelProps = {
 	view: ShiftHudViewModel.HudView,
 	layout: UIPaperConstants.Layout,
 	pocketKey: string?,
+	-- The desktop panel's left edge (ShiftHudViewModel.carryLeft); the corner inset when nil.
+	left: number?,
 }
 
 local COLOR = UIPaperConstants.COLOR
 local TEXT = UIPaperConstants.TEXT.desktop
 local PHONE_TEXT = UIPaperConstants.TEXT.phone
 -- Figma 1a "Carry": (48, 836) 640x196 on a 1080 screen, i.e. 48 px in from the left and the bottom.
-local INSET = 48
 local SLOT = 76
 local DASH = 6
 local GAP = 4
@@ -426,8 +427,8 @@ local function ShiftCarryPanel(props: ShiftCarryPanelProps): React.ReactNode
 	end
 	return e("Frame", {
 		AnchorPoint = Vector2.new(0, 1),
-		Position = UDim2.new(0, INSET, 1, -INSET),
-		Size = UDim2.fromOffset(640, 196),
+		Position = UDim2.new(0, props.left or UIPaperConstants.HUD.CARRY_INSET, 1, -UIPaperConstants.HUD.CARRY_INSET),
+		Size = UDim2.fromOffset(UIPaperConstants.HUD.CARRY_WIDTH, UIPaperConstants.HUD.CARRY_HEIGHT),
 		BackgroundColor3 = COLOR.night,
 		BackgroundTransparency = 0.15,
 		BorderSizePixel = 0,

@@ -2,7 +2,7 @@
 --[=[
 	ShiftHud: the Shift HUD widget (registered by ShiftServiceClient). Reads the shift snapshot, every player's public
 	entry, the scare beat and the server clock, builds the HUD and crew roster views, and draws ShiftHudPanel while a
-	shift runs. The HUD goes dark during the scare beat and while the local player is caught (the CCTV takes the
+	shift runs. The HUD goes dark (hidden by a prop, not unmounted) during the scare beat and while the local player is caught (the CCTV takes the
 	screen). On desktop with a keyboard it also passes the key hints row, read from the live Input bindings, and the
 	pocket key for the carry panel's caption.
 
@@ -23,6 +23,7 @@ local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync
 local useServerClock = require(ReplicatedStorage.Client.UI.React.Hooks.useServerClock)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local usePaperLayout = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperLayout)
+local usePaperViewport = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperViewport)
 local ShiftCrewViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftCrewViewModel)
 local ShiftHudPanel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudPanel)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
@@ -45,10 +46,14 @@ local function ShiftHud(): React.ReactNode
 	local publicPlayers = useAtom(StateSyncClientStore.publicPlayers)
 	local scaring = useAtom(OccupantCatchStore.scaring)
 	local layout: UIPaperConstants.Layout = usePaperLayout()
+	local viewport = usePaperViewport()
 	local now = useServerClock()
 	local player = Players.LocalPlayer
 	local me = if player ~= nil then publicPlayers[StateSyncConstants.publicEntryKey(player.UserId)] else nil
-	local view = ShiftHudViewModel.hud(snapshot, me, now, ShiftHudViewModel.hidden(me, scaring))
+	-- The panel is drawn (and hidden with a prop) rather than unmounted while hidden, so its stamps keep their state
+	-- and do not pop again when the scare beat or the catch ends.
+	local hidden = ShiftHudViewModel.hidden(me, scaring)
+	local view = ShiftHudViewModel.hud(snapshot, me, now, false)
 	if view == nil or snapshot == nil then
 		return nil
 	end
@@ -62,7 +67,8 @@ local function ShiftHud(): React.ReactNode
 	local roster =
 		ShiftCrewViewModel.roster(snapshot.crew, publicPlayers, names, snapshot.truck, snapshot.sub == "clockout", now)
 	local bindings = keyBindings()
-	return e(ShiftHudPanel, {
+	local desktop = layout == "desktop"
+	local panel = e(ShiftHudPanel, {
 		view = view,
 		roster = roster,
 		layout = layout,
@@ -70,7 +76,14 @@ local function ShiftHud(): React.ReactNode
 			then ShiftHudViewModel.keyHints(bindings)
 			else nil,
 		pocketKey = ShiftHudViewModel.pocketKey(bindings),
+		centreShift = if desktop then ShiftHudViewModel.centreShift(viewport.X) else 0,
+		carryLeft = if desktop then ShiftHudViewModel.carryLeft(viewport) else nil,
 	})
+	return e("Frame", {
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		Visible = not hidden,
+	}, { panel = panel })
 end
 
 return ShiftHud

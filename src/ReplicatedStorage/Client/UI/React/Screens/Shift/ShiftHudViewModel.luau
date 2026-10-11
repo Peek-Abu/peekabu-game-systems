@@ -417,6 +417,29 @@ function ShiftHudViewModel.keyHints(bindings: KeyBindings): { HintView }
 	return hints
 end
 
+--[=[
+	How far (px) the centred pieces (time card, SALVAGE stamp, clock-out slip) move right so the widest of them, the
+	500 px slip, clears the left column (the folder and fee plate) by a 16 px gap; 0 on a wide screen.
+]=]
+function ShiftHudViewModel.centreShift(viewportWidth: number): number
+	local HUD = UIPaperConstants.HUD
+	local leftColumnRight = HUD.LEFT + HUD.FOLDER_WIDTH
+	return math.max(0, (leftColumnRight + HUD.GAP) - (viewportWidth / 2 - HUD.SLIP_WIDTH / 2))
+end
+
+--[=[
+	The carry panel's left edge (px): the corner inset on a tall viewport; on a short one (a windowed laptop), right of
+	the crew roster column so a full roster (4 rows) is not covered.
+]=]
+function ShiftHudViewModel.carryLeft(viewport: Vector2): number
+	local HUD = UIPaperConstants.HUD
+	local rosterBottom = HUD.ROSTER_TOP + HUD.ROSTER_HEADER + HUD.ROSTER_MAX_ROWS * HUD.ROSTER_ROW
+	if viewport.Y >= rosterBottom + HUD.GAP + HUD.CARRY_HEIGHT + HUD.CARRY_INSET then
+		return HUD.CARRY_INSET
+	end
+	return HUD.ROSTER_LEFT + HUD.ROSTER_WIDTH + HUD.GAP
+end
+
 -- The hint row is drawn on desktop with a keyboard only.
 function ShiftHudViewModel.showHints(layout: UIPaperConstants.Layout, keyboard: boolean): boolean
 	return layout == "desktop" and keyboard

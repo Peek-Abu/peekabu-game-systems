@@ -25,6 +25,8 @@ local e = React.createElement
 export type ShiftTimeCardProps = {
 	view: ShiftHudViewModel.HudView,
 	layout: UIPaperConstants.Layout,
+	-- How far the centred card and stamp move right (ShiftHudViewModel.centreShift); 0 when nil.
+	centreShift: number?,
 }
 
 local COLOR = UIPaperConstants.COLOR
@@ -40,7 +42,7 @@ local HOLE_TOP = 12
 local HOLE_STEP = 18
 local PIP_STEP = 32
 
-local function card(view: ShiftHudViewModel.HudView): React.ReactNode
+local function card(view: ShiftHudViewModel.HudView, shift: number): React.ReactNode
 	local holes: { [string]: React.ReactNode } = {}
 	for index = 1, ShiftHudViewModel.PUNCH_HOLES do
 		-- A punched hole is a dark slot; an unpunched one is a faint outline (shift progress, 1/5 each).
@@ -105,7 +107,7 @@ local function card(view: ShiftHudViewModel.HudView): React.ReactNode
 	}
 	return e(PaperSheet, {
 		anchor = Vector2.new(0.5, 0),
-		position = UDim2.new(0.5, 0, 0, CARD_TOP),
+		position = UDim2.new(0.5, shift, 0, CARD_TOP),
 		size = UDim2.fromOffset(360, 132),
 		paper = COLOR.cream,
 		band = "HARLOW & FINCH — TIME CARD",
@@ -174,11 +176,12 @@ local function ShiftTimeCard(props: ShiftTimeCardProps): React.ReactNode
 			BackgroundTransparency = 1,
 		}, { card = phoneCard(view) })
 	end
+	local shift = props.centreShift or 0
 	return e("Frame", {
 		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
 	}, {
-		card = card(view),
+		card = card(view, shift),
 		-- Mounted only in overtime, so it drops in (pop) once as overtime begins.
 		stamp = if view.overtime
 			then e(PaperStamp, {
@@ -187,7 +190,7 @@ local function ShiftTimeCard(props: ShiftTimeCardProps): React.ReactNode
 				tilt = UIPaperConstants.STAMP_TILT,
 				pop = true,
 				anchor = Vector2.new(0.5, 0),
-				position = UDim2.new(0.5, STAMP_CENTRE_OFFSET, 0, STAMP_TOP),
+				position = UDim2.new(0.5, STAMP_CENTRE_OFFSET + shift, 0, STAMP_TOP),
 			})
 			else nil,
 	})

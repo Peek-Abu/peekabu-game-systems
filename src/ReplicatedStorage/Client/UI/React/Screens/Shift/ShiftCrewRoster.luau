@@ -29,11 +29,12 @@ local COLOR = UIPaperConstants.COLOR
 local TEXT = UIPaperConstants.TEXT.desktop
 local PHONE_TEXT = UIPaperConstants.TEXT.phone
 -- Figma 1a "Crew strip": (52, 330), 350 wide, 46 px of title plus 36 px per row; rows start at y 49.
-local LEFT = 52
-local TOP = 330
-local WIDTH = 350
-local HEADER = 46
-local ROW = 36
+local HUD = UIPaperConstants.HUD
+local LEFT = HUD.ROSTER_LEFT
+local TOP = HUD.ROSTER_TOP
+local WIDTH = HUD.ROSTER_WIDTH
+local HEADER = HUD.ROSTER_HEADER
+local ROW = HUD.ROSTER_ROW
 local ROW_TOP = 46
 local BOX = 16
 local NAME_LEFT = 44
