@@ -66,6 +66,25 @@ return function()
 			expect(DepotStore.openBoard("nope")).to.equal(DepotConstants.CONTRACTS[1].id)
 		end)
 
+		it("closes the board without forgetting the last shift", function()
+			DepotStore.openBoard(DepotConstants.CONTRACTS[1].id)
+			DepotStore.setLastShift({
+				cleared = 1,
+				quota = 350,
+				bonus = 0,
+				catches = 0,
+				salvage = 0,
+				offered = 0,
+				quotaMet = false,
+				rating = "needsImprovement",
+				truck = 1,
+			})
+			DepotStore.closeBoard()
+			expect(DepotStore.board()).to.equal(nil)
+			expect(DepotStore.lastShift().cleared).to.equal(1)
+			DepotStore.clear()
+		end)
+
 		it("keeps the last shift until cleared", function()
 			local last = {
 				cleared = 362,

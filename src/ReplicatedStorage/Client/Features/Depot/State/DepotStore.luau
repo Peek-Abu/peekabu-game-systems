@@ -104,6 +104,11 @@ function DepotStore.openBoard(id: string): string
 	return shown
 end
 
+-- Closes the board (the board scene left the stack); the last shift stays for the next opening.
+function DepotStore.closeBoard()
+	board(nil)
+end
+
 function DepotStore.setLastShift(value: DepotTypes.LastShift)
 	lastShift(table.clone(value))
 end

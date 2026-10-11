@@ -82,6 +82,8 @@ return table.freeze({
 	PUBLIC_TRUCK = "truck",
 	-- The contract board's Interaction kind (its prompt opens the board scene).
 	BOARD_KIND = "depot-board",
+	-- The contract board's scene (DepotScene registers it; DepotBoardScreen's CLOSE removes it).
+	BOARD_SCENE = "depot.Board",
 	-- Every contract is the same office (open question 8).
 	SITE = "4th floor offices",
 	JOB_TITLE = "HARLOW & FINCH JOB",
