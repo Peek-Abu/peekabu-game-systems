@@ -40,6 +40,8 @@ export type RosterView = {
 	title: string,
 	members: { MemberView },
 	compact: { string },
+	-- Parallel to `compact`: whether that line is the trouble line (written in red ink on the phone).
+	compactDanger: { boolean },
 }
 
 local ShiftCrewViewModel = {}
@@ -149,17 +151,21 @@ function ShiftCrewViewModel.roster(
 		table.insert(if view.tone == "danger" then trouble else fine, view)
 	end
 	local compact: { string } = {}
+	local compactDanger: { boolean } = {}
 	local first, second = line(fine), line(trouble)
 	if first ~= nil then
 		table.insert(compact, first)
+		table.insert(compactDanger, false)
 	end
 	if second ~= nil then
 		table.insert(compact, second)
+		table.insert(compactDanger, true)
 	end
 	return {
 		title = if truck ~= nil then `CREW ROSTER · TRUCK {truck}` else "CREW ROSTER",
 		members = members,
 		compact = compact,
+		compactDanger = compactDanger,
 	}
 end
 

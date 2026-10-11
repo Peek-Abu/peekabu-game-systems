@@ -1,106 +1,208 @@
 --!strict
 --[=[
-	ShiftMobileButtons: touch controls while a shift runs (spec §4 "mobile: hold the Vacuum button"):
-	a hold-to-vacuum button, then Pocket, Drop and Throw. Shown only on touch devices. The base Input feature
-	has no touch bindings yet, so these call the Vacuum and Cargo client services directly (an open question
-	for the base). Placeholder look: the final HUD and buttons
-	are Figma-gated and not built yet.
+	ShiftMobileButtons: the phone's arc of round action buttons around the big VACUUM / LOAD button (Figma 1d 9:61,
+	1e 9:116): DROP, THROW and POCKET at 72 px, the big button at 104 px, with >= 16 px between circles, all clear of
+	the Roblox Jump button (bottom right) and the thumbstick zone (bottom-left 40%). Offsets are from the bottom-right
+	corner, so the arc tracks the Jump button on any phone.
+
+	A HUD widget: it reads the shift snapshot, the local player's public entry, the scare beat and the touch flag, and
+	draws what ShiftHudViewModel.mobileButtons decides (whether the arc shows, VACUUM or LOAD, which buttons are
+	available or lit). The base Input feature has no touch bindings, so the buttons call the Vacuum and Cargo client
+	services directly. The big button keeps the hold semantics for VACUUM; as LOAD it is drawn but inert until Task 11
+	passes `onLoad` (and `loadReady`) in.
 
 	@class ShiftMobileButtons
 ]=]
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local React = require(ReplicatedStorage.Packages.React)
 local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
+local DeathConstants = require(ReplicatedStorage.Shared.Features.Death.Data.DeathConstants)
+local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
 local CargoServiceClient = require(ReplicatedStorage.Client.Features.Cargo.CargoServiceClient)
+local OccupantCatchStore = require(ReplicatedStorage.Client.Features.Occupant.State.OccupantCatchStore)
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
+local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local VacuumServiceClient = require(ReplicatedStorage.Client.Features.Vacuum.VacuumServiceClient)
-local Tokens = require(ReplicatedStorage.Client.UI.React.Tokens)
-local Button = require(ReplicatedStorage.Client.UI.React.Primitives.Button)
+local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
+local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 
 local e = React.createElement
 local useAtom = ReactCharm.useAtom
 
-local BUTTON_WIDTH = 130
-local VACUUM_HEIGHT = 60
+-- The phone LOAD seam (Task 11): whether the truck's Load prompt is up, and what pressing LOAD does.
+export type ShiftMobileButtonsProps = {
+	loadReady: boolean?,
+	onLoad: (() -> ())?,
+}
+
+type ButtonProps = {
+	label: string,
+	position: UDim2,
+	large: boolean,
+	available: boolean,
+	ready: boolean,
+	onActivated: (() -> ())?,
+	onHoldBegin: (() -> ())?,
+	onHoldEnd: (() -> ())?,
+}
+
+local COLOR = UIPaperConstants.COLOR
+local SMALL = UIPaperConstants.BUTTON_SMALL
+local LARGE = UIPaperConstants.BUTTON_LARGE
+-- Figma 1d top-left corners in the 844x390 frame: LOAD/VACUUM 104 px at (608, 266); DROP (512, 282), THROW (555, 194),
+-- POCKET (651, 173), 72 px each. Converted to offsets from the bottom-right corner (x - 844, y - 390).
+local ARC = table.freeze({
+	primary = UDim2.new(1, -236, 1, -124),
+	drop = UDim2.new(1, -332, 1, -108),
+	throw = UDim2.new(1, -289, 1, -196),
+	pocket = UDim2.new(1, -193, 1, -217),
+})
+-- Figma "Mobile button": night at 72%, a 3 px fluorescent ring at 85%; a ready one is exit green at 95%.
+local FILL_TRANSPARENCY = 0.28
+local READY_TRANSPARENCY = 0.05
+local STROKE_TRANSPARENCY = 0.15
+-- An unavailable button draws at half opacity (Figma 0.45) and ignores input.
+local DIM = 0.5
+
+-- `transparency` drawn at `opacity` overall.
+local function faded(transparency: number, opacity: number): number
+	return 1 - (1 - transparency) * opacity
+end
 
 local function isPress(input: InputObject): boolean
 	return input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1
 end
 
-local function ShiftMobileButtons(): React.ReactNode
+local function ActionButton(props: ButtonProps): React.ReactNode
+	local opacity = if props.available then 1 else DIM
+	local onHoldBegin = props.onHoldBegin
+	local onHoldEnd = props.onHoldEnd
+	local onActivated = props.onActivated
+	local size = if props.large then LARGE else SMALL
+	return e("TextButton", {
+		Position = props.position,
+		Size = UDim2.fromOffset(size, size),
+		AutoButtonColor = false,
+		Active = props.available,
+		BackgroundColor3 = if props.ready then COLOR.exitGreen else COLOR.night,
+		BackgroundTransparency = faded(if props.ready then READY_TRANSPARENCY else FILL_TRANSPARENCY, opacity),
+		BorderSizePixel = 0,
+		FontFace = UIPaperConstants.FONT.heading,
+		TextSize = if props.large then 20 else 15,
+		TextColor3 = if props.ready then COLOR.night else COLOR.fluorescent,
+		TextTransparency = faded(0, opacity),
+		Text = props.label,
+		[React.Event.InputBegan] = function(_button: TextButton, input: InputObject)
+			if onHoldBegin ~= nil and isPress(input) then
+				onHoldBegin()
+			end
+		end,
+		[React.Event.InputEnded] = function(_button: TextButton, input: InputObject)
+			if onHoldEnd ~= nil and isPress(input) then
+				onHoldEnd()
+			end
+		end,
+		[React.Event.Activated] = function()
+			if props.available and onActivated ~= nil then
+				onActivated()
+			end
+		end,
+		[React.Event.MouseLeave] = function()
+			if onHoldEnd ~= nil then
+				onHoldEnd()
+			end
+		end,
+	}, {
+		corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }),
+		stroke = e("UIStroke", {
+			Color = COLOR.fluorescent,
+			Thickness = 3,
+			Transparency = faded(if props.ready then 0 else STROKE_TRANSPARENCY, opacity),
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+		}),
+	})
+end
+
+local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactNode
 	local snapshot = useAtom(ShiftStore.snapshot)
-	-- Unmounting destroys a held button before its InputEnded fires, so end the hold here.
-	React.useEffect(function()
-		return function()
+	local publicPlayers = useAtom(StateSyncClientStore.publicPlayers)
+	local scaring = useAtom(OccupantCatchStore.scaring)
+	local player = Players.LocalPlayer
+	local me = if player ~= nil then publicPlayers[StateSyncConstants.publicEntryKey(player.UserId)] else nil
+	local dead = me ~= nil and me[DeathConstants.PUBLIC_FIELD] == true
+	local loadReady = props ~= nil and props.loadReady == true
+	local onLoad = if props ~= nil then props.onLoad else nil
+	local view =
+		ShiftHudViewModel.mobileButtons(snapshot, me, UserInputService.TouchEnabled, scaring or dead, loadReady)
+	local vacuuming = view ~= nil and view.primary == "VACUUM"
+	-- Whether this widget started a vacuum hold that has not ended yet.
+	local held = React.useRef(false)
+	local beginVacuum = React.useCallback(function()
+		held.current = true
+		VacuumServiceClient:beginVacuum()
+	end, {})
+	local endVacuum = React.useCallback(function()
+		if held.current then
+			held.current = false
 			VacuumServiceClient:endVacuum()
 		end
 	end, {})
-	if not UserInputService.TouchEnabled or snapshot == nil or snapshot.phase ~= "running" then
+	-- A held VACUUM ends when the big button turns into LOAD or the arc goes away (unmounting destroys a held
+	-- button before its InputEnded fires).
+	React.useEffect(function()
+		return endVacuum
+	end, { vacuuming })
+	if view == nil then
 		return nil
 	end
+	-- The big button's label is the view's VACUUM / LOAD, read as plain text.
+	local primaryLabel: string = view.primary
 	return e("Frame", {
-		AnchorPoint = Vector2.new(1, 1),
-		-- Above the engine's jump button in the bottom-right corner.
-		Position = UDim2.new(1, -Tokens.space.lg, 1, -Tokens.space.xxl * 5),
-		Size = UDim2.fromOffset(BUTTON_WIDTH, 0),
-		AutomaticSize = Enum.AutomaticSize.Y,
+		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
 	}, {
-		layout = e("UIListLayout", {
-			FillDirection = Enum.FillDirection.Vertical,
-			Padding = UDim.new(0, Tokens.space.sm),
-			SortOrder = Enum.SortOrder.LayoutOrder,
+		primary = e(ActionButton, {
+			label = primaryLabel,
+			position = ARC.primary,
+			large = true,
+			available = true,
+			ready = view.primaryReady,
+			onActivated = if vacuuming then nil else onLoad,
+			onHoldBegin = if vacuuming then beginVacuum else nil,
+			onHoldEnd = if vacuuming then endVacuum else nil,
 		}),
-		vacuum = e("TextButton", {
-			LayoutOrder = 1,
-			Size = UDim2.fromOffset(BUTTON_WIDTH, VACUUM_HEIGHT),
-			BackgroundColor3 = Tokens.color.accent,
-			BorderSizePixel = 0,
-			Font = Tokens.font.bold,
-			TextSize = Tokens.textSize.lg,
-			TextColor3 = Tokens.color.onAccent,
-			Text = "Hold: Vacuum",
-			[React.Event.InputBegan] = function(_button: TextButton, input: InputObject)
-				if isPress(input) then
-					VacuumServiceClient:beginVacuum()
-				end
-			end,
-			[React.Event.InputEnded] = function(_button: TextButton, input: InputObject)
-				if isPress(input) then
-					VacuumServiceClient:endVacuum()
-				end
-			end,
-			[React.Event.MouseLeave] = function()
-				VacuumServiceClient:endVacuum()
-			end,
-		}, {
-			corner = e("UICorner", { CornerRadius = UDim.new(0, Tokens.radius.md) }),
-		}),
-		pocket = e(Button, {
-			text = "Pocket",
-			width = BUTTON_WIDTH,
-			layoutOrder = 2,
-			onActivated = function()
-				CargoServiceClient:pocket()
-			end,
-		}),
-		drop = e(Button, {
-			text = "Drop",
-			width = BUTTON_WIDTH,
-			layoutOrder = 3,
+		drop = e(ActionButton, {
+			label = "DROP",
+			position = ARC.drop,
+			large = false,
+			available = view.drop,
+			ready = false,
 			onActivated = function()
 				CargoServiceClient:drop()
 			end,
 		}),
-		throw = e(Button, {
-			text = "Throw",
-			width = BUTTON_WIDTH,
-			layoutOrder = 4,
+		throw = e(ActionButton, {
+			label = "THROW",
+			position = ARC.throw,
+			large = false,
+			available = view.throw,
+			ready = false,
 			onActivated = function()
 				CargoServiceClient:throw()
+			end,
+		}),
+		pocket = e(ActionButton, {
+			label = "POCKET",
+			position = ARC.pocket,
+			large = false,
+			available = view.pocket,
+			ready = view.pocketReady,
+			onActivated = function()
+				CargoServiceClient:pocket()
 			end,
 		}),
 	})

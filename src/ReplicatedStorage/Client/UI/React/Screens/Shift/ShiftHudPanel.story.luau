@@ -3,7 +3,8 @@
 	ShiftHudPanel.story: the Shift HUD filling the viewport on the dark office (each piece anchors to its screen edge, so
 	resize the viewport to check 1366x768), in Studio's edit mode (UI Labs), for the
 	side-by-side check against Figma 1a (6:2), 1b (6:67) and 1c (6:136). `Variant` picks the frame, `SecondsLeft` sets
-	the clock (story time is 0) and `Phone` switches to the phone layout (empty until Task 10).
+	the clock (story time is 0) and `Phone` switches to the phone layout drawn in an 844x390 landscape-phone frame
+	(Figma 1d 9:61 and 1e 9:116; the action buttons are a live HUD widget, checked in Play with the device emulator).
 
 	@class ShiftHudPanel.story
 ]=]
@@ -24,6 +25,9 @@ local e = React.createElement
 local NORMAL = "1a normal"
 local QUOTA_MET = "1b quota met"
 local OVERTIME = "1c overtime + clock-out"
+-- Figma 1d / 1e: a landscape phone (iPhone 14).
+local PHONE_WIDTH = 844
+local PHONE_HEIGHT = 390
 
 local function changesFor(variant: string, secondsLeft: number): ShiftStoryFixtures.SnapshotChanges
 	if variant == QUOTA_MET then
@@ -65,11 +69,20 @@ return UILabs.CreateReactStory({
 		0
 	)
 	local layout: UIPaperConstants.Layout = if phone then "phone" else "desktop"
+	local hud = if view ~= nil then e(ShiftHudPanel, { view = view, roster = roster, layout = layout }) else nil
 	return e("Frame", {
 		Size = UDim2.fromScale(1, 1),
-		BackgroundColor3 = UIPaperConstants.COLOR.office,
+		BackgroundColor3 = if phone then UIPaperConstants.COLOR.night else UIPaperConstants.COLOR.office,
 		BorderSizePixel = 0,
 	}, {
-		hud = if view ~= nil then e(ShiftHudPanel, { view = view, roster = roster, layout = layout }) else nil,
+		-- On phone, a landscape phone screen centred in the viewport; on desktop, the viewport itself.
+		screen = e("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5),
+			Size = if phone then UDim2.fromOffset(PHONE_WIDTH, PHONE_HEIGHT) else UDim2.fromScale(1, 1),
+			BackgroundColor3 = UIPaperConstants.COLOR.office,
+			BorderSizePixel = 0,
+			ClipsDescendants = phone,
+		}, { hud = hud }),
 	})
 end)

@@ -192,4 +192,80 @@ return function()
 			expect(view.countdown).to.equal("Deciding in 0:30")
 		end)
 	end)
+
+	describe("phone buttons", function()
+		it("offers VACUUM with empty hands, and nothing to drop or throw", function()
+			local view = ShiftHudViewModel.buttons(nil, false)
+			expect(view.primary).to.equal("VACUUM")
+			expect(view.primaryReady).to.equal(false)
+			expect(view.drop).to.equal(false)
+			expect(view.throw).to.equal(false)
+		end)
+
+		it("switches to LOAD while holding something, lit only at the truck", function()
+			expect(ShiftHudViewModel.buttons({ carrying = "monitor" }, false).primary).to.equal("LOAD")
+			expect(ShiftHudViewModel.buttons({ carrying = "monitor" }, false).primaryReady).to.equal(false)
+			expect(ShiftHudViewModel.buttons({ carrying = "monitor" }, true).primaryReady).to.equal(true)
+		end)
+
+		it("allows a throw only for a throwable item", function()
+			expect(ShiftHudViewModel.buttons({ carrying = "rubbishBag" }, false).throw).to.equal(true)
+			expect(ShiftHudViewModel.buttons({ carrying = "printer" }, false).throw).to.equal(false)
+		end)
+
+		it("lights POCKET for a tiny item and a free pocket", function()
+			local tiny = ShiftHudViewModel.buttons({ carrying = "plaque" }, false)
+			expect(tiny.pocket).to.equal(true)
+			expect(tiny.pocketReady).to.equal(true)
+			local full =
+				ShiftHudViewModel.buttons({ carrying = "plaque", pocket1 = "plaque", pocket2 = "goldenStapler" }, false)
+			expect(full.pocketReady).to.equal(false)
+		end)
+
+		it("keeps POCKET usable to take something out with empty hands", function()
+			local view = ShiftHudViewModel.buttons({ pocket1 = "plaque" }, false)
+			expect(view.pocket).to.equal(true)
+			expect(view.pocketReady).to.equal(false)
+		end)
+
+		it("leaves POCKET dark for a non-tiny item with empty pockets", function()
+			local view = ShiftHudViewModel.buttons({ carrying = "monitor" }, false)
+			expect(view.pocket).to.equal(false)
+			expect(view.pocketReady).to.equal(false)
+		end)
+
+		it("never lights LOAD with empty hands, even at the truck", function()
+			local view = ShiftHudViewModel.buttons(nil, true)
+			expect(view.primary).to.equal("VACUUM")
+			expect(view.primaryReady).to.equal(false)
+		end)
+	end)
+
+	describe("mobile buttons", function()
+		it("shows the arc only on a touch device while a shift runs and the HUD is up", function()
+			local me = { carrying = "monitor" }
+			expect(ShiftHudViewModel.mobileButtons(snapshot(), me, true, false, false)).never.to.equal(nil)
+			expect(ShiftHudViewModel.mobileButtons(snapshot(), me, false, false, false)).to.equal(nil)
+			expect(ShiftHudViewModel.mobileButtons(nil, me, true, false, false)).to.equal(nil)
+			expect(ShiftHudViewModel.mobileButtons(snapshot({ phase = "results" }), me, true, false, false)).to.equal(
+				nil
+			)
+			expect(ShiftHudViewModel.mobileButtons(snapshot(), me, true, true, false)).to.equal(nil)
+		end)
+
+		it("passes the hands and the truck's Load prompt through to the buttons", function()
+			local view = ShiftHudViewModel.mobileButtons(snapshot(), { carrying = "monitor" }, true, false, true)
+			expect(view.primary).to.equal("LOAD")
+			expect(view.primaryReady).to.equal(true)
+		end)
+	end)
+
+	describe("phone time card", function()
+		it("reads OUT on the compact card until overtime, then OVERTIME", function()
+			expect(ShiftHudViewModel.hud(snapshot(), nil, 0, false).compactSub).to.equal("OUT 7:00")
+			expect(ShiftHudViewModel.hud(snapshot({ stage = "overtime" }), nil, 0, false).compactSub).to.equal(
+				"OVERTIME"
+			)
+		end)
+	end)
 end

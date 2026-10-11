@@ -175,6 +175,29 @@ return function()
 		expect(view.compact[2]).to.equal("Jo: NOT ABOARD")
 	end)
 
+	it("marks which phone line is trouble, even when it is the only line", function()
+		local mixed = ShiftCrewViewModel.roster(
+			{ 1, 2 },
+			players({ [1] = { carrying = "printer" }, [2] = { caughtUntil = 106, dead = true } }),
+			NAMES,
+			nil,
+			false,
+			100
+		)
+		expect(mixed.compactDanger[1]).to.equal(false)
+		expect(mixed.compactDanger[2]).to.equal(true)
+		local allCaught = ShiftCrewViewModel.roster(
+			{ 2 },
+			players({ [2] = { caughtUntil = 106, dead = true } }),
+			NAMES,
+			nil,
+			false,
+			100
+		)
+		expect(#allCaught.compact).to.equal(1)
+		expect(allCaught.compactDanger[1]).to.equal(true)
+	end)
+
 	it("names an unknown player Crew", function()
 		local view = ShiftCrewViewModel.roster({ 9 }, players({}), NAMES, nil, false, 0)
 		expect(view.members[1].name).to.equal("Crew")

@@ -3,8 +3,10 @@
 	ShiftHudPanel: the approved Shift HUD (Figma 1a normal, 1b quota met, 1c overtime + clock-out) on the paperwork
 	look: the clearance folder and finder's fee plate, the clipped crew roster, the punch-clock time card, the carry
 	panel and, while the crew clocks out, the stapled clock-out slip under the time card. Full-screen and transparent;
-	each piece places itself at its Figma position. Presentational: it draws the views it is given (desktop; the phone
-	layout is Task 10 and draws nothing until then).
+	each piece places itself at its Figma position, anchored to its screen edge. On phone (Figma 1d, 1e; 844x390) every
+	piece draws its compact form inside the phone safe area, clear of the thumbstick (bottom left) and the Jump button
+	(bottom right); the action buttons are ShiftMobileButtons, a separate HUD widget. Presentational: it draws the
+	views it is given.
 
 	@class ShiftHudPanel
 ]=]
@@ -30,9 +32,6 @@ export type ShiftHudPanelProps = {
 }
 
 local function ShiftHudPanel(props: ShiftHudPanelProps): React.ReactNode
-	if props.layout == "phone" then
-		return nil
-	end
 	local view = props.view
 	local layout: UIPaperConstants.Layout = props.layout
 	local roster = props.roster

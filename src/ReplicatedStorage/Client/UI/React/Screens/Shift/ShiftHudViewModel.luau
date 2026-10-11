@@ -2,7 +2,8 @@
 --[=[
 	ShiftHudViewModel: what the approved Shift HUD (Figma 1a-1c: the time card, the clearance folder and finder's fee
 	plate, the carry panel and the clock-out slip) shows, as display-ready fields per piece, from the shift snapshot and
-	the local player's public entry; and the results panel's strings (its final screen is Task 15). Pure (specced); the
+	the local player's public entry; the phone's action-button arc (Figma 1d/1e: which buttons show, which are lit);
+	and the results panel's strings (its final screen is Task 15). Pure (specced); the
 	components only lay the fields out. The crew roster has its own view model (ShiftCrewViewModel).
 
 	@class ShiftHudViewModel
@@ -41,6 +42,8 @@ export type HudView = {
 	clockLabel: string,
 	time: string,
 	outText: string,
+	-- The phone's compact card has one line beside the clock: OUT until overtime, then OVERTIME (Figma 1d/1e).
+	compactSub: string,
 	overtime: boolean,
 	punched: number,
 	pressure: number,
@@ -60,6 +63,15 @@ export type HudView = {
 	-- The clock-out slip's countdown, while one runs.
 	clockOut: string?,
 	truck: number?,
+}
+
+export type ButtonsView = {
+	primary: "VACUUM" | "LOAD",
+	primaryReady: boolean,
+	drop: boolean,
+	throw: boolean,
+	pocket: boolean,
+	pocketReady: boolean,
 }
 
 export type ResultsView = {
@@ -162,6 +174,7 @@ function ShiftHudViewModel.hud(
 		clockLabel = stageLabel(snapshot, now),
 		time = ShiftHudViewModel.clock(left),
 		outText = `OUT {ShiftHudViewModel.clock(total)}`,
+		compactSub = if overtime then "OVERTIME" else `OUT {ShiftHudViewModel.clock(total)}`,
 		overtime = overtime,
 		punched = math.clamp(
 			math.floor(elapsed / total * ShiftHudViewModel.PUNCH_HOLES),
@@ -185,6 +198,54 @@ function ShiftHudViewModel.hud(
 			else nil,
 		truck = snapshot.truck,
 	}
+end
+
+--[=[
+	The phone's action buttons (Figma 1d/1e): one big button that is VACUUM with empty hands and LOAD while holding
+	something (lit green when the truck's Load prompt is up, `loadReady`); DROP / THROW only with something in hand
+	(THROW only for a throwable item); POCKET usable with a tiny item or something pocketed, lit when a tiny item can
+	go in a free pocket.
+]=]
+function ShiftHudViewModel.buttons(me: PublicPlayerTypes.PublicPlayer?, loadReady: boolean): ButtonsView
+	local entry: PublicPlayerTypes.PublicPlayer = me or {}
+	local kind = entry[CarryConstants.PUBLIC_FIELD]
+	local def = if type(kind) == "string" then CargoRegistry.get(kind) else nil
+	local holding = type(kind) == "string"
+	local filled, free = 0, 0
+	for _, field in CargoConstants.PUBLIC_POCKET_FIELDS do
+		if type(entry[field]) == "string" then
+			filled += 1
+		else
+			free += 1
+		end
+	end
+	local tiny = def ~= nil and def.size == "tiny"
+	local primary: "VACUUM" | "LOAD" = if holding then "LOAD" else "VACUUM"
+	return {
+		primary = primary,
+		primaryReady = holding and loadReady,
+		drop = holding,
+		throw = def ~= nil and def.throwable,
+		pocket = tiny or filled > 0,
+		pocketReady = tiny and free > 0,
+	}
+end
+
+--[=[
+	The phone's action-button arc, or nil when it is not drawn: only on a touch device (`touch`), while a shift runs,
+	and not while the HUD is `hidden` (the scare beat, or the local player is caught). See `buttons` for the buttons.
+]=]
+function ShiftHudViewModel.mobileButtons(
+	snapshot: ShiftSnapshot?,
+	me: PublicPlayerTypes.PublicPlayer?,
+	touch: boolean,
+	hidden: boolean,
+	loadReady: boolean
+): ButtonsView?
+	if not touch or hidden or snapshot == nil or snapshot.phase ~= "running" then
+		return nil
+	end
+	return ShiftHudViewModel.buttons(me, loadReady)
 end
 
 --[=[

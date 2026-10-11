@@ -3,7 +3,9 @@
 	ShiftTimeCard: the punch-clock time card (Figma 1a-1c "Punch clock", 360x132, top centre): the red "HARLOW & FINCH —
 	TIME CARD" band, five punch holes down the left edge (shift progress), the stage label, the Roboto Mono clock (red
 	in overtime), OUT and the pressure pips; in overtime a "SALVAGE ×1.5" rubber stamp drops in under the card.
-	Presentational: it draws the HudView it is given (desktop; the phone card is Task 10).
+	On phone (Figma 1d/1e "Punch clock (compact)", 210x58 at top centre y 8) the card drops the band, the holes and the
+	stamp: a red left edge, the clock and one line (OUT, or OVERTIME in red) over the three pips. Presentational: it
+	draws the HudView it is given.
 
 	@class ShiftTimeCard
 ]=]
@@ -27,6 +29,7 @@ export type ShiftTimeCardProps = {
 
 local COLOR = UIPaperConstants.COLOR
 local TEXT = UIPaperConstants.TEXT.desktop
+local PHONE_TEXT = UIPaperConstants.TEXT.phone
 -- Figma 1a: the card's top edge, and the overtime stamp's top edge (1c "Stamp" at y 166).
 -- Both are anchored to the top centre: the card spans x 780-1140 (centred on 1920), the stamp's centre is 6 px right.
 local CARD_TOP = 20
@@ -111,8 +114,66 @@ local function card(view: ShiftHudViewModel.HudView): React.ReactNode
 	})
 end
 
+-- Figma 1d "Punch clock (compact)": (317, 8) 210x58 on 844, centred; an 8 px red edge instead of the band.
+local PHONE_TOP = 8
+local PHONE_EDGE = 8
+local PHONE_PIP_LEFT = 122
+local PHONE_PIP_STEP = 24
+
+local function phoneCard(view: ShiftHudViewModel.HudView): React.ReactNode
+	local children: { [string]: React.ReactNode } = {
+		edge = e("Frame", {
+			Size = UDim2.new(0, PHONE_EDGE, 1, 0),
+			BackgroundColor3 = COLOR.stamp,
+			BorderSizePixel = 0,
+		}),
+		time = e(PaperLabel, {
+			text = view.time,
+			role = "timer",
+			size = PHONE_TEXT.timer,
+			position = UDim2.fromOffset(18, 6),
+			frame = UDim2.fromOffset(100, 42),
+			autoSize = false,
+			wrapped = false,
+		}),
+		sub = e(PaperLabel, {
+			text = view.compactSub,
+			role = "heading",
+			size = PHONE_TEXT.label,
+			color = if view.overtime then COLOR.stamp else COLOR.ink,
+			position = UDim2.fromOffset(PHONE_PIP_LEFT, 6),
+			frame = UDim2.fromOffset(84, 21),
+			autoSize = false,
+			wrapped = false,
+		}),
+	}
+	for index = 1, ShiftHudViewModel.PRESSURE_PIPS do
+		children[`pip{index}`] = e("Frame", {
+			Position = UDim2.fromOffset(PHONE_PIP_LEFT + (index - 1) * PHONE_PIP_STEP, 34),
+			Size = UDim2.fromOffset(18, 10),
+			BackgroundColor3 = COLOR.stamp,
+			BackgroundTransparency = if index <= view.pressure then 0 else 0.8,
+			BorderSizePixel = 0,
+		})
+	end
+	return e(PaperSheet, {
+		anchor = Vector2.new(0.5, 0),
+		position = UDim2.new(0.5, 0, 0, PHONE_TOP),
+		size = UDim2.fromOffset(210, 58),
+		paper = COLOR.cream,
+		padding = 0,
+		children = children,
+	})
+end
+
 local function ShiftTimeCard(props: ShiftTimeCardProps): React.ReactNode
 	local view = props.view
+	if props.layout == "phone" then
+		return e("Frame", {
+			Size = UDim2.fromScale(1, 1),
+			BackgroundTransparency = 1,
+		}, { card = phoneCard(view) })
+	end
 	return e("Frame", {
 		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,

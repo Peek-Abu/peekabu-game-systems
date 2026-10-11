@@ -4,7 +4,8 @@
 	under a binder clip, "CREW ROSTER · TRUCK 2", and a row per crew member: a drawn tick box (a green tick for crew at
 	or in the truck, a red marker "X" when struck, empty otherwise), the name (struck through when caught or not aboard)
 	and the status in its ink. No glyph ticks: the tick is two thin Frames. Presentational: the statuses, inks, strikes
-	and box states come from ShiftCrewViewModel (desktop; the phone's two lines are Task 10).
+	and box states come from ShiftCrewViewModel. On phone (Figma 1d/1e "Crew strip", 232 wide at (50, 174)) the card is a
+	clipped cream slip with the view model's two condensed lines in Oswald Medium 15, the trouble line in red ink.
 
 	@class ShiftCrewRoster
 ]=]
@@ -26,6 +27,7 @@ export type ShiftCrewRosterProps = {
 
 local COLOR = UIPaperConstants.COLOR
 local TEXT = UIPaperConstants.TEXT.desktop
+local PHONE_TEXT = UIPaperConstants.TEXT.phone
 -- Figma 1a "Crew strip": (52, 330), 350 wide, 46 px of title plus 36 px per row; rows start at y 49.
 local LEFT = 52
 local TOP = 330
@@ -137,8 +139,61 @@ local function row(index: number, member: ShiftCrewViewModel.MemberView): React.
 	})
 end
 
+-- Figma 1d "Crew strip": (50, 174) 232x56, tilted -1°, two 22 px lines 24 px apart under a binder clip.
+local PHONE_LEFT = 50
+local PHONE_TOP = 174
+local PHONE_WIDTH = 232
+local PHONE_TILT = -1
+local PHONE_LINE = 24
+local PHONE_PAD = 8
+
+local function phoneSlip(roster: ShiftCrewViewModel.RosterView): React.ReactNode
+	local children: { [string]: React.ReactNode } = {}
+	for index, text in roster.compact do
+		local top = PHONE_PAD - 2 + (index - 1) * PHONE_LINE
+		children[`line{index}`] = e(PaperLabel, {
+			text = text,
+			role = "medium",
+			size = PHONE_TEXT.body,
+			color = if roster.compactDanger[index] then COLOR.inkRed else COLOR.ink,
+			position = UDim2.fromOffset(10, top),
+			frame = UDim2.new(1, -20, 0, 22),
+			autoSize = false,
+			wrapped = false,
+		})
+		if index > 1 then
+			children[`rule{index}`] = e("Frame", {
+				Position = UDim2.fromOffset(9, top - 1),
+				Size = UDim2.new(1, -20, 0, 1),
+				BackgroundColor3 = COLOR.manilaDeep,
+				BorderSizePixel = 0,
+			})
+		end
+	end
+	local content: { [string]: React.ReactNode } = {
+		-- Long lines are clipped to the slip, not shrunk below 15 px.
+		clip = e("Frame", {
+			Size = UDim2.fromScale(1, 1),
+			BackgroundTransparency = 1,
+			ClipsDescendants = true,
+		}, children),
+	}
+	return e(PaperSheet, {
+		position = UDim2.fromOffset(PHONE_LEFT, PHONE_TOP),
+		size = UDim2.fromOffset(PHONE_WIDTH, PHONE_PAD + PHONE_LINE * math.max(#roster.compact, 1)),
+		paper = COLOR.cream,
+		tilt = PHONE_TILT,
+		fastener = "clip",
+		padding = 0,
+		children = content,
+	})
+end
+
 local function ShiftCrewRoster(props: ShiftCrewRosterProps): React.ReactNode
 	local roster = props.roster
+	if props.layout == "phone" then
+		return phoneSlip(roster)
+	end
 	local children: { [string]: React.ReactNode } = {
 		title = e(PaperLabel, {
 			text = roster.title,

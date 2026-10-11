@@ -3,8 +3,10 @@
 	ShiftCarryPanel: the carry panel (Figma 1a-1c "Carry", 640x196, bottom left): Figma's dark tray for live state (no
 	paper), with HANDS (an art slot, the item's name, its value and its traits, red when FRAGILE), POCKETS (two slots,
 	the empty one dashed) and CANISTER (three cells filled up to the canister, "2 / 3", "full = dust bag").
-	Presentational: it draws the HudView it is given (desktop; phone is Task 10). The "Q pocket" caption is plain text
-	until the pocket binding lands (Task 11).
+	On phone (Figma 1d/1e "Carry (compact)", 224x92 at the top right, since the thumbstick owns the bottom left): the
+	hands slot (HANDS, the name, the short value in red when fragile), two 56 px pocket slots, and CAN with three small
+	cells and "2/3". Presentational: it draws the HudView it is given. The "Q pocket" caption is plain text until the
+	pocket binding lands (Task 11).
 
 	@class ShiftCarryPanel
 ]=]
@@ -25,6 +27,7 @@ export type ShiftCarryPanelProps = {
 
 local COLOR = UIPaperConstants.COLOR
 local TEXT = UIPaperConstants.TEXT.desktop
+local PHONE_TEXT = UIPaperConstants.TEXT.phone
 -- Figma 1a "Carry": (48, 836) 640x196 on a 1080 screen, i.e. 48 px in from the left and the bottom.
 local INSET = 48
 local SLOT = 76
@@ -233,8 +236,165 @@ local function canister(view: ShiftHudViewModel.HudView): React.ReactNode
 	}, cells)
 end
 
+-- Figma 1d "Carry (compact)": (572, 66) 224x92 on 844, i.e. 48 px in from the right (the phone safe area).
+local PHONE_RIGHT = UIPaperConstants.SAFE.phone.right
+local PHONE_TOP = 66
+local PHONE_SLOT = 56
+local PHONE_POCKET_LEFT = 108
+local PHONE_CELL = 14
+local PHONE_CELL_STEP = 18
+
+local function phoneText(
+	text: string,
+	role: PaperLabel.Role,
+	size: number,
+	color: Color3,
+	position: UDim2,
+	frame: UDim2
+): React.ReactNode
+	return e(PaperLabel, {
+		text = text,
+		role = role,
+		size = size,
+		color = color,
+		position = position,
+		frame = frame,
+		autoSize = false,
+		wrapped = false,
+	})
+end
+
+-- A grey 14 px caption (Figma #AEB3BA: the fluorescent white, faded).
+local function phoneCaption(text: string, position: UDim2, frame: UDim2): React.ReactNode
+	return e(PaperLabel, {
+		text = text,
+		role = "heading",
+		size = PHONE_TEXT.label,
+		color = COLOR.fluorescent,
+		transparency = CAPTION_TRANSPARENCY,
+		position = position,
+		frame = frame,
+		autoSize = false,
+		wrapped = false,
+	})
+end
+
+local function phoneHands(view: ShiftHudViewModel.HudView): React.ReactNode
+	local held = view.hands
+	return e("Frame", {
+		Position = UDim2.fromOffset(8, 8),
+		Size = UDim2.fromOffset(92, 76),
+		BackgroundColor3 = COLOR.office,
+		BorderSizePixel = 0,
+		ClipsDescendants = true,
+	}, {
+		corner = e("UICorner", { CornerRadius = UDim.new(0, 6) }),
+		stroke = e("UIStroke", {
+			Color = COLOR.fluorescent,
+			Thickness = 2,
+			Transparency = 0.1,
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+		}),
+		title = phoneCaption("HANDS", UDim2.fromOffset(8, 4), UDim2.fromOffset(76, 21)),
+		name = phoneText(
+			if held ~= nil then held.name else "—",
+			"heading",
+			PHONE_TEXT.value,
+			if held ~= nil then COLOR.fluorescent else COLOR.slotEmpty,
+			UDim2.fromOffset(8, 24),
+			UDim2.fromOffset(76, 27)
+		),
+		short = if held ~= nil
+			then phoneText(
+				held.short,
+				"medium",
+				PHONE_TEXT.label,
+				if held.fragile then COLOR.exitRed else COLOR.fluorescent,
+				UDim2.fromOffset(8, 50),
+				UDim2.fromOffset(76, 21)
+			)
+			else nil,
+	})
+end
+
+local function phonePocket(index: number, item: ShiftHudViewModel.PocketView): React.ReactNode
+	return e("Frame", {
+		Position = UDim2.fromOffset(PHONE_POCKET_LEFT + (index - 1) * PHONE_SLOT, 8),
+		Size = UDim2.fromOffset(PHONE_SLOT, PHONE_SLOT),
+		BackgroundColor3 = COLOR.night,
+		BackgroundTransparency = 0.2,
+		BorderSizePixel = 0,
+		ClipsDescendants = true,
+	}, {
+		corner = e("UICorner", { CornerRadius = UDim.new(0, 8) }),
+		stroke = e("UIStroke", {
+			Color = COLOR.fluorescent,
+			Thickness = 2,
+			Transparency = if item.empty then 0.65 else 0.1,
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+		}),
+		label = e(PaperLabel, {
+			text = item.name,
+			role = "medium",
+			size = PHONE_TEXT.body,
+			color = if item.empty then COLOR.slotEmpty else COLOR.fluorescent,
+			align = "center",
+			position = UDim2.fromOffset(4, 0),
+			frame = UDim2.new(1, -8, 1, 0),
+			autoSize = false,
+		}),
+	})
+end
+
+local function phonePanel(view: ShiftHudViewModel.HudView): React.ReactNode
+	local canLeft = PHONE_POCKET_LEFT + 32
+	local children: { [string]: React.ReactNode } = {
+		corner = e("UICorner", { CornerRadius = UDim.new(0, 8) }),
+		hands = phoneHands(view),
+		can = phoneCaption("CAN", UDim2.fromOffset(PHONE_POCKET_LEFT, 64), UDim2.fromOffset(30, 21)),
+		count = phoneText(
+			`{view.canister}/{view.canisterMax}`,
+			"heading",
+			PHONE_TEXT.label,
+			COLOR.fluorescent,
+			UDim2.fromOffset(canLeft + PHONE_CELL_STEP * view.canisterMax + 2, 64),
+			UDim2.fromOffset(30, 21)
+		),
+	}
+	for index, item in view.pockets do
+		children[`pocket{index}`] = phonePocket(index, item)
+	end
+	for index = 1, view.canisterMax do
+		children[`cell{index}`] = e("Frame", {
+			Position = UDim2.fromOffset(canLeft + (index - 1) * PHONE_CELL_STEP, 68),
+			Size = UDim2.fromOffset(PHONE_CELL, PHONE_CELL),
+			BackgroundColor3 = if index <= view.canister then COLOR.fluorGlow else COLOR.office,
+			BorderSizePixel = 0,
+		}, {
+			corner = e("UICorner", { CornerRadius = UDim.new(0, 2) }),
+			stroke = e("UIStroke", {
+				Color = COLOR.fluorescent,
+				Thickness = 1,
+				Transparency = 0.4,
+				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+			}),
+		})
+	end
+	return e("Frame", {
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -PHONE_RIGHT, 0, PHONE_TOP),
+		Size = UDim2.fromOffset(224, 92),
+		BackgroundColor3 = COLOR.night,
+		BackgroundTransparency = 0.18,
+		BorderSizePixel = 0,
+	}, children)
+end
+
 local function ShiftCarryPanel(props: ShiftCarryPanelProps): React.ReactNode
 	local view = props.view
+	if props.layout == "phone" then
+		return phonePanel(view)
+	end
 	local children: { [string]: React.ReactNode } = {
 		stroke = e("UIStroke", {
 			Color = COLOR.fluorescent,
