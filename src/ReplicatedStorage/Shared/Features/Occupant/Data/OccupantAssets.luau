@@ -116,7 +116,7 @@ local ANIMATIONS: { [string]: AnimationSlot } = {
 	harlowLook = { assetId = PENDING, looped = true, priority = Enum.AnimationPriority.Idle, interruption = "ambient" },
 	-- The catch: grab, then throw.
 	harlowGrab = {
-		assetId = "rbxassetid://9113482942",
+		assetId = PENDING,
 		looped = false,
 		priority = Enum.AnimationPriority.Action,
 		interruption = "protected",
