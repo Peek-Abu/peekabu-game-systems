@@ -44,16 +44,16 @@ local PX = DepotConstants.BILLBOARD_PX
 local TICK_SECONDS = 0.25
 
 local roots = UIBillboards.new(UIBillboardHost.factory)
-local trucks: { [BillboardGui]: true } = {}
+local trucks: { [UIBillboards.WorldShell]: true } = {}
 -- The tag each truck shell last rendered, so an unchanged tag is skipped.
-local drawn: { [BillboardGui]: DepotWorldViewModel.TruckTagView } = {}
+local drawn: { [UIBillboards.WorldShell]: DepotWorldViewModel.TruckTagView } = {}
 local stoppers: { () -> () } = {}
 
 local function sign(design: Vector2, child: React.ReactNode): React.ReactNode
 	return e(WorldBillboard, { design = design, sizing = "studs" }, { sign = child })
 end
 
-local function drawTruck(shell: BillboardGui)
+local function drawTruck(shell: UIBillboards.WorldShell)
 	local truck = shell:GetAttribute(DepotConstants.TRUCK_ATTRIBUTE)
 	local capacity = shell:GetAttribute(DepotConstants.CAPACITY_ATTRIBUTE)
 	if type(truck) ~= "number" or type(capacity) ~= "number" then
@@ -68,8 +68,8 @@ local function drawTruck(shell: BillboardGui)
 	roots.show(shell, sign(PX.truck, e(DepotTruckTag, { view = view })))
 end
 
-local results: { [BillboardGui]: true } = {}
-local reviews: { [BillboardGui]: true } = {}
+local results: { [UIBillboards.WorldShell]: true } = {}
+local reviews: { [UIBillboards.WorldShell]: true } = {}
 
 -- Your review shell (PlayerGui, the same spot and size) draws the whole result board with your card on it; while you
 -- have one, the shared board's shell draws nothing, so two signs never z-fight. Without one: the bare board.
@@ -84,7 +84,7 @@ local function drawResults()
 	end
 end
 
-local function drawReview(shell: BillboardGui)
+local function drawReview(shell: UIBillboards.WorldShell)
 	local review = DepotWorldViewModel.review(shell:GetAttributes())
 	roots.show(
 		shell,
@@ -92,12 +92,12 @@ local function drawReview(shell: BillboardGui)
 	)
 end
 
-local function drawContract(shell: BillboardGui)
+local function drawContract(shell: UIBillboards.WorldShell)
 	local view = DepotWorldViewModel.workOrder(shell:GetAttributes())
 	roots.show(shell, if view ~= nil then sign(PX.contract, e(DepotWorkOrderBoard, { view = view })) else nil)
 end
 
-local function count(set: { [BillboardGui]: true }): number
+local function count(set: { [UIBillboards.WorldShell]: true }): number
 	local total = 0
 	for _ in set do
 		total += 1
@@ -105,7 +105,11 @@ local function count(set: { [BillboardGui]: true }): number
 	return total
 end
 
-local function watch(tag: string, refresh: (shell: BillboardGui) -> (), removed: ((shell: BillboardGui) -> ())?)
+local function watch(
+	tag: string,
+	refresh: (shell: UIBillboards.WorldShell) -> (),
+	removed: ((shell: UIBillboards.WorldShell) -> ())?
+)
 	table.insert(stoppers, UIBillboardHost.watch({ tag = tag, roots = roots, refresh = refresh, removed = removed }))
 end
 

@@ -1,14 +1,14 @@
 --!strict
 --[=[
-	OfficeBuildSystem: builds the office's static graybox from a layout, once (Cleanup Crew spec §1
+	OfficeBuildSystem: builds the office's graybox from the current seeded layout (Cleanup Crew spec §1
 	"polished feel on graybox", §5): a floor per room, walls broken around doors (OfficeLayoutUtils.
 	wallSegments, merged so a shared wall is built once), the truck (its bed is the banking zone and carries Cargo's Load prompt; a cab at its back, inside the bay),
 	the time clock (Shift's Clock out prompt), and a desk or locker on every desk / locker marker (Cargo's
 	Search prompt, off until Cargo stocks it). M2: ceiling lights (tagged for Harlow's tells) and the loading bay's
 	PathfindingModifier volume (Harlow never paths into it). Everything is anchored under one Model in Workspace at
-	the layout's origin. No ceiling: the graybox keeps the camera free.
+	the layout's origin. Physical per-room ceilings enclose the camera.
 
-	Spec-exempt shell (Instances); the layout is the one the specced OfficeLayoutRules validated.
+	Instance shell; specs cover ceilings, and OfficeLayoutRules validates the layout.
 
 	@class OfficeBuildSystem
 ]=]
@@ -63,6 +63,9 @@ local function folder(name: string, parent: Instance): Folder
 	return created
 end
 
+local TruckVisual = require(ServerScriptService.Features.Depot.Systems.DepotTruckVisualSystem)
+local DeskVisual = require(script.Parent.OfficeDeskVisualSystem)
+
 local OfficeBuildSystem = {}
 
 function OfficeBuildSystem.build(layout: OfficeTypes.Layout, origin: CFrame): Built
@@ -84,6 +87,14 @@ function OfficeBuildSystem.build(layout: OfficeTypes.Layout, origin: CFrame): Bu
 			colors[(index - 1) % #colors + 1],
 			roomFolder
 		)
+		block(
+			"Ceiling",
+			Vector3.new(width + thickness, 1, depth + thickness),
+			origin * CFrame.new(room.minX + width / 2, height + 0.5, room.minZ + depth / 2),
+			OfficeConstants.WALL_COLOR,
+			roomFolder
+		)
+
 		for _, point in OfficeLayoutUtils.lightPoints(room, OfficeConstants.LIGHT_SPACING) do
 			local size = OfficeConstants.LIGHT_SIZE
 			local fixture = block(
@@ -129,14 +140,7 @@ function OfficeBuildSystem.build(layout: OfficeTypes.Layout, origin: CFrame): Bu
 		truckFolder
 	)
 	interactable(bed, CargoConstants.LOAD_KIND, true)
-	local cab = OfficeConstants.CAB_SIZE
-	block(
-		"TruckCab",
-		cab,
-		origin * CFrame.new(truck.minX + bedWidth / 2, cab.Y / 2, truck.maxZ + cab.Z / 2),
-		OfficeConstants.TRUCK_COLOR,
-		truckFolder
-	)
+	TruckVisual.build(bed, truckFolder)
 	local clockSize = OfficeConstants.CLOCK_SIZE
 	local clock = block(
 		"TimeClock",
@@ -160,6 +164,9 @@ function OfficeBuildSystem.build(layout: OfficeTypes.Layout, origin: CFrame): Bu
 				if isDesk then OfficeConstants.DESK_COLOR else OfficeConstants.LOCKER_COLOR,
 				furniture
 			)
+			if isDesk then
+				DeskVisual.build(part)
+			end
 			interactable(part, CargoConstants.SEARCH_KIND, false)
 			searchables[marker.id] = part
 		end

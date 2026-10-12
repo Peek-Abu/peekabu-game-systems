@@ -5,10 +5,10 @@
 	QueueCountdown and QueueDestination set BEFORE the QueuePad tag, because Queue reads them once when the
 	pad is tagged), a cab behind it and an empty truck tag shell above it (tagged, its truck number and seats as attributes; the client draws it); the contract board's sign shell with tonight's
 	contract as attributes; the result board's sign shell, and `pinCard`, which hangs a returning player's review shell
-	that only they see (in their PlayerGui, kept across respawns). Every sign is an empty tagged BillboardGui the client
+	that only they see (in their PlayerGui, kept across respawns). Physical boards are SurfaceGui; truck tags are BillboardGui. The client
 	draws (Figma World UI 2a, DepotBillboardSystem). Everything is anchored under one Model in Workspace.
 
-	Spec-exempt shell (Instances); the layout is the one the specced DepotLayoutRules validated.
+	Instance shell; specs cover enclosure/surfaces, and DepotLayoutRules validates the layout.
 
 	@class DepotBuildSystem
 ]=]
@@ -76,6 +76,22 @@ local function shell(name: string, adornee: BasePart, design: Vector2, offset: V
 	return gui
 end
 
+local function surface(name: string, adornee: BasePart, design: Vector2): SurfaceGui
+	local gui = Instance.new("SurfaceGui")
+	gui.Name = name
+	gui.Adornee = adornee
+	gui.Face = Enum.NormalId.Back
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.FixedSize
+	gui.CanvasSize = design
+	gui.AlwaysOnTop = false
+	gui.LightInfluence = 0
+	gui.MaxDistance = DepotLayoutConstants.LABEL_MAX_DISTANCE
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	return gui
+end
+
+local TruckVisual = require(ServerScriptService.Features.Depot.Systems.DepotTruckVisualSystem)
+
 local DepotBuildSystem = {}
 
 function DepotBuildSystem.build(
@@ -121,8 +137,31 @@ function DepotBuildSystem.build(
 		)
 	end
 
+	block(
+		"Ceiling",
+		Vector3.new(width + thickness, 1, depth + thickness),
+		origin * CFrame.new(centreX, height + 0.5, centreZ),
+		DepotLayoutConstants.WALL_COLOR,
+		model
+	)
+	for _, x in { 20, 48, 76 } do
+		local fixture = block(
+			"GarageLight",
+			Vector3.new(8, 0.3, 2),
+			origin * CFrame.new(x, height - 0.2, 36),
+			Color3.fromRGB(245, 240, 220),
+			model
+		)
+		fixture.Material = Enum.Material.Neon
+		fixture.CanCollide = false
+		local light = Instance.new("PointLight")
+		light.Range = 45
+		light.Brightness = 1.5
+		light.Color = fixture.Color
+		light.Parent = fixture
+	end
+
 	local bed = DepotLayoutConstants.BED_SIZE
-	local cab = DepotLayoutConstants.CAB_SIZE
 	local trucks: { BuiltTruck } = {}
 	for index, truck in layout.trucks do
 		local truckFolder = folder(truck.id, model)
@@ -138,13 +177,7 @@ function DepotBuildSystem.build(
 		pad:SetAttribute(QueueConstants.COUNTDOWN_ATTRIBUTE, truck.countdown)
 		pad:SetAttribute(QueueConstants.DESTINATION_ATTRIBUTE, DepotConstants.ROLE_SHIFT)
 		CollectionService:AddTag(pad, QueueConstants.TAG)
-		block(
-			"TruckCab",
-			cab,
-			origin * CFrame.new(truck.x, cab.Y / 2, truck.z + bed.Z / 2 + cab.Z / 2),
-			DepotLayoutConstants.TRUCK_COLOR,
-			truckFolder
-		)
+		TruckVisual.build(pad, truckFolder)
 		local tag = shell("PadTag", pad, DepotConstants.BILLBOARD_PX.truck, DepotLayoutConstants.PAD_TAG_OFFSET)
 		tag:SetAttribute(DepotConstants.TRUCK_ATTRIBUTE, index)
 		tag:SetAttribute(DepotConstants.CAPACITY_ATTRIBUTE, truck.capacity)
@@ -168,8 +201,7 @@ function DepotBuildSystem.build(
 	contractBoard.Transparency = 1
 	contractBoard:SetAttribute(InteractionConstants.KIND_ATTRIBUTE, DepotConstants.BOARD_KIND)
 	CollectionService:AddTag(contractBoard, InteractionConstants.TAG)
-	local contractSign =
-		shell("ContractSign", contractBoard, DepotConstants.BILLBOARD_PX.contract, DepotLayoutConstants.CONTRACT_OFFSET)
+	local contractSign = surface("ContractSign", contractBoard, DepotConstants.BILLBOARD_PX.contract)
 	for key, value in contractAttributes do
 		contractSign:SetAttribute(key, value)
 	end
@@ -184,9 +216,10 @@ function DepotBuildSystem.build(
 		boards
 	)
 	-- The sign draws the whole board; the part stays as its adornee but is not seen.
-	resultBoard.Transparency = 1
-	local resultSign =
-		shell("ResultSign", resultBoard, DepotConstants.BILLBOARD_PX.result, DepotLayoutConstants.RESULT_OFFSET)
+	resultBoard.Size =
+		Vector3.new(DepotConstants.BILLBOARD_PX.result.X / 80, DepotConstants.BILLBOARD_PX.result.Y / 80, 1)
+	resultBoard.CFrame = origin * CFrame.new(resultPoint.x, resultBoard.Size.Y / 2, resultPoint.z)
+	local resultSign = surface("ResultSign", resultBoard, DepotConstants.BILLBOARD_PX.result)
 	CollectionService:AddTag(resultSign, DepotConstants.BILLBOARD_TAGS.result)
 	resultSign.Parent = boards
 
@@ -211,12 +244,7 @@ function DepotBuildSystem.pinCard(
 	end
 	-- The old card goes after the new one is parented, so a client's review set never drops to 0 in between.
 	local old = found:FindFirstChild(DepotLayoutConstants.CARD_NAME)
-	local card = shell(
-		DepotLayoutConstants.CARD_NAME,
-		board,
-		DepotConstants.BILLBOARD_PX.result,
-		DepotLayoutConstants.RESULT_OFFSET
-	)
+	local card = surface(DepotLayoutConstants.CARD_NAME, board, DepotConstants.BILLBOARD_PX.result)
 	for key, value in attributes do
 		card:SetAttribute(key, value)
 	end

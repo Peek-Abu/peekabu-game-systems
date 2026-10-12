@@ -14,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
 local CorkBoard = require(ReplicatedStorage.Client.UI.React.Screens.Paper.CorkBoard)
+local PaperAwardIcon = require(script.Parent.Parent.Paper.PaperAwardIcon)
 local PaperLabel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperLabel)
 local PaperSheet = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperSheet)
 local PaperStamp = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperStamp)
@@ -33,6 +34,10 @@ local COLOR = UIPaperConstants.COLOR
 local STICKY_AT: { Vector2 } = { Vector2.new(675, 96), Vector2.new(900, 110), Vector2.new(790, 262) }
 local STICKY_TILT: { number } = { 3, -3, 1 }
 local ROW_HEIGHT = 42
+
+local function badge(title: string): React.ReactNode
+	return e(PaperAwardIcon, { title = title })
+end
 
 local function reviewCard(review: DepotWorldViewModel.ReviewView): React.ReactNode
 	local content: { [string]: React.ReactNode } = {}
@@ -106,7 +111,7 @@ local function reviewCard(review: DepotWorldViewModel.ReviewView): React.ReactNo
 		paper = COLOR.cream,
 		tilt = -1.5,
 		band = review.band,
-		bandColor = COLOR.ink,
+		bandColor = COLOR.companyTeal,
 		fastener = "pin",
 		padding = 20,
 	}, content)
@@ -155,7 +160,9 @@ local function DepotResultBoard(props: DepotResultBoardProps): React.ReactNode
 					ZIndex = 4,
 				}, {
 					note = e(StickyNote, {
-						text = `{sticky.title}\n\n{sticky.name}`,
+						text = `{sticky.title}\n{sticky.name}`,
+						badge = badge(sticky.title),
+						badgeSize = 24,
 						width = 200,
 						size = 18,
 						tilt = STICKY_TILT[index],

@@ -30,6 +30,7 @@ local COLOR = table.freeze({
 	monitorDeep = Color3.fromHex("12305C"),
 	-- Ink on paper.
 	inkBlue = Color3.fromHex("1F4E9A"),
+	companyTeal = Color3.fromHex("356D61"), -- Shared equipment/award illustration ink.
 	inkGreen = Color3.fromHex("1E7A46"),
 	inkRed = Color3.fromHex("C8202F"),
 	-- Not on the Style page: the depot pinboard's cork and the empty pocket label (Components 5:2).

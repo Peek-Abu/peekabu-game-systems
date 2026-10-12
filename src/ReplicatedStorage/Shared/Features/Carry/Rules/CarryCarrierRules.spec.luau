@@ -1,0 +1,12 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Rules = require(ReplicatedStorage.Shared.Features.Carry.Rules.CarryCarrierRules)
+return function()
+	it("requires an alive humanoid, rather than granting from a character root alone", function()
+		expect(Rules.isAlive(nil)).to.equal(false)
+		expect(Rules.isAlive(0)).to.equal(false)
+		expect(Rules.isAlive(-1)).to.equal(false)
+		expect(Rules.isAlive(0 / 0)).to.equal(false)
+		expect(Rules.isAlive(0.01)).to.equal(true)
+		expect(Rules.isAlive(100)).to.equal(true)
+	end)
+end

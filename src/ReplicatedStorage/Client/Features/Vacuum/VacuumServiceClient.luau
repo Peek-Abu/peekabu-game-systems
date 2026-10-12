@@ -58,6 +58,27 @@ local function aimedPile(): Instance?
 	return if index ~= nil then piles[index] else nil
 end
 
+local function localTool(): Tool?
+	local player = Players.LocalPlayer
+	local character = player.Character
+	local backpack = player:FindFirstChildOfClass("Backpack")
+	local candidate = if character ~= nil then character:FindFirstChild(VacuumConstants.TOOL_NAME) else nil
+	if candidate == nil and backpack ~= nil then
+		candidate = backpack:FindFirstChild(VacuumConstants.TOOL_NAME)
+	end
+	return if candidate ~= nil
+			and candidate:IsA("Tool")
+			and candidate:GetAttribute(VacuumConstants.TOOL_ATTRIBUTE) == true
+		then candidate
+		else nil
+end
+
+local function selected(): boolean
+	local tool = localTool()
+	local character = Players.LocalPlayer.Character
+	return tool ~= nil and character ~= nil and tool.Parent == character
+end
+
 export type VacuumServiceClient = {
 	dependencies: { string },
 	init: (self: VacuumServiceClient) -> (),
@@ -66,6 +87,8 @@ export type VacuumServiceClient = {
 	beginVacuum: (self: VacuumServiceClient) -> (),
 	endVacuum: (self: VacuumServiceClient) -> (),
 	isVacuuming: (self: VacuumServiceClient) -> boolean,
+	equipVacuum: (self: VacuumServiceClient) -> boolean,
+	toggleTool: (self: VacuumServiceClient) -> (),
 }
 
 local VacuumServiceClient: VacuumServiceClient = {
@@ -114,7 +137,7 @@ local VacuumServiceClient: VacuumServiceClient = {
 		Starts vacuuming whatever pile the player faces, re-aiming until endVacuum.
 	]=]
 	beginVacuum = function(_self)
-		if holding then
+		if holding or not selected() then
 			return
 		end
 		holding = true
@@ -124,7 +147,7 @@ local VacuumServiceClient: VacuumServiceClient = {
 		missed = false
 		task.spawn(function()
 			while holding and mine == generation do
-				local target = if CarryServiceClient:isCarrying() then nil else aimedPile()
+				local target = if CarryServiceClient:isCarrying() or not selected() then nil else aimedPile()
 				if target ~= nil then
 					lastTarget = target
 					missed = false
@@ -134,6 +157,7 @@ local VacuumServiceClient: VacuumServiceClient = {
 					and lastTarget.Parent ~= nil
 					and not missed
 					and not CarryServiceClient:isCarrying()
+					and selected()
 				then
 					-- Aim dropped: keep the channel one more interval so edge flapping does not burn the rate limit.
 					missed = true
@@ -151,6 +175,33 @@ local VacuumServiceClient: VacuumServiceClient = {
 	endVacuum = function(_self)
 		holding = false
 		InteractionServiceClient:stopChannel()
+	end,
+
+	equipVacuum = function(_self)
+		if CarryServiceClient:isCarrying() then
+			return false
+		end
+		local character = Players.LocalPlayer.Character
+		local humanoid = if character ~= nil then character:FindFirstChildOfClass("Humanoid") else nil
+		local tool = localTool()
+		if humanoid == nil or humanoid.Health <= 0 or tool == nil then
+			return false
+		end
+		humanoid:EquipTool(tool)
+		return selected()
+	end,
+
+	toggleTool = function(self)
+		if selected() then
+			self:endVacuum()
+			local character = Players.LocalPlayer.Character
+			local humanoid = if character ~= nil then character:FindFirstChildOfClass("Humanoid") else nil
+			if humanoid ~= nil then
+				humanoid:UnequipTools()
+			end
+		else
+			self:equipVacuum()
+		end
 	end,
 
 	isVacuuming = function(_self)

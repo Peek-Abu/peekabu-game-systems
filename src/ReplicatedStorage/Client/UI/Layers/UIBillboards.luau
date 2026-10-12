@@ -26,11 +26,13 @@ export type BillboardHandle = {
 	destroy: () -> (),
 }
 
-export type BillboardFactory = (shell: BillboardGui) -> BillboardHandle
+export type WorldShell = BillboardGui | SurfaceGui
+
+export type BillboardFactory = (shell: WorldShell) -> BillboardHandle
 
 export type UIBillboardsCore = {
-	show: (shell: BillboardGui, element: React.ReactNode) -> (),
-	hide: (shell: BillboardGui) -> (),
+	show: (shell: WorldShell, element: React.ReactNode) -> (),
+	hide: (shell: WorldShell) -> (),
 	teardown: () -> (),
 	count: () -> number,
 }
@@ -38,11 +40,11 @@ export type UIBillboardsCore = {
 local UIBillboards = {}
 
 function UIBillboards.new(factory: BillboardFactory): UIBillboardsCore
-	local handles: { [BillboardGui]: BillboardHandle } = {}
+	local handles: { [WorldShell]: BillboardHandle } = {}
 	-- Creation order, so teardown is deterministic.
-	local order: { BillboardGui } = {}
+	local order: { WorldShell } = {}
 
-	local function show(shell: BillboardGui, element: React.ReactNode)
+	local function show(shell: WorldShell, element: React.ReactNode)
 		local handle = handles[shell]
 		if handle == nil then
 			handle = factory(shell)
@@ -52,7 +54,7 @@ function UIBillboards.new(factory: BillboardFactory): UIBillboardsCore
 		handle.render(element)
 	end
 
-	local function hide(shell: BillboardGui)
+	local function hide(shell: WorldShell)
 		local handle = handles[shell]
 		if handle == nil then
 			return

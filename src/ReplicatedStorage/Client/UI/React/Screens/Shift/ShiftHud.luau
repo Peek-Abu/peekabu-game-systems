@@ -1,13 +1,8 @@
 --!strict
 --[=[
-	ShiftHud: the Shift HUD widget (registered by ShiftServiceClient). Reads the shift snapshot, every player's public
-	entry, the scare beat and the server clock, builds the HUD and crew roster views, and draws ShiftHudPanel while a
-	shift runs. The HUD goes dark (hidden by a prop, not unmounted) during the scare beat and while the local player is caught (the CCTV takes the
-	screen). On desktop with a keyboard it also passes the key hints row, read from the live Input bindings, and the
-	pocket key for the carry panel's caption. On desktop the panel is drawn scaled to the window (PaperHudFrame) and its
-	layout rules read the window in HUD design px (usePaperHudScale).
-
-	@class ShiftHud
+    ShiftHud: reads authoritative shift/public state and renders the approved compact paperwork HUD.
+    Crew details are disclosed on demand. Physical-pixel sizes preserve readable text in short windows;
+    the layout hook selects the phone arrangement. Catch/scare suppression stays on the outer frame.
 ]=]
 
 local Players = game:GetService("Players")
@@ -23,10 +18,11 @@ local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftSt
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local useServerClock = require(ReplicatedStorage.Client.UI.React.Hooks.useServerClock)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
-local PaperHudFrame = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudFrame)
 local usePaperHudScale = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperHudScale)
 local ShiftCrewViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftCrewViewModel)
-local ShiftHudPanel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudPanel)
+local ShiftCompactHudPanel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftCompactHudPanel)
+local VacuumServiceClient = require(ReplicatedStorage.Client.Features.Vacuum.VacuumServiceClient)
+local usePaperViewport = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperViewport)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 
 local e = React.createElement
@@ -48,8 +44,12 @@ local function ShiftHud(): React.ReactNode
 	local scaring = useAtom(OccupantCatchStore.scaring)
 	-- The desktop HUD is drawn scaled to the window; `viewport` is the window in HUD design px.
 	local hudScale = usePaperHudScale()
+	local actualViewport = usePaperViewport()
+	local crewOpen, setCrewOpen = React.useState(false)
+	React.useEffect(function()
+		setCrewOpen(false)
+	end, { if snapshot ~= nil then snapshot.shift else 0 })
 	local layout: UIPaperConstants.Layout = hudScale.layout
-	local viewport = hudScale.viewport
 	local now = useServerClock()
 	local player = Players.LocalPlayer
 	local me = if player ~= nil then publicPlayers[StateSyncConstants.publicEntryKey(player.UserId)] else nil
@@ -70,23 +70,27 @@ local function ShiftHud(): React.ReactNode
 	local roster =
 		ShiftCrewViewModel.roster(snapshot.crew, publicPlayers, names, snapshot.truck, snapshot.sub == "clockout", now)
 	local bindings = keyBindings()
-	local desktop = layout == "desktop"
-	local panel = e(ShiftHudPanel, {
+	local panel = e(ShiftCompactHudPanel, {
 		view = view,
 		roster = roster,
 		layout = layout,
-		hints = if ShiftHudViewModel.showHints(layout, UserInputService.KeyboardEnabled)
-			then ShiftHudViewModel.keyHints(bindings)
-			else nil,
-		pocketKey = ShiftHudViewModel.pocketKey(bindings),
-		centreShift = if desktop then ShiftHudViewModel.centreShift(viewport.X) else 0,
-		carryLeft = if desktop then ShiftHudViewModel.carryLeft(viewport) else nil,
+		viewport = actualViewport,
+		bindings = if UserInputService.KeyboardEnabled then bindings else {},
+		crewOpen = crewOpen,
+		onCrewToggle = function()
+			setCrewOpen(function(open: boolean)
+				return not open
+			end)
+		end,
+		onToolToggle = function()
+			VacuumServiceClient:toggleTool()
+		end,
 	})
 	return e("Frame", {
 		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
 		Visible = not hidden,
-	}, { frame = e(PaperHudFrame, { scale = hudScale.scale, children = { panel = panel } }) })
+	}, { panel = panel })
 end
 
 return ShiftHud

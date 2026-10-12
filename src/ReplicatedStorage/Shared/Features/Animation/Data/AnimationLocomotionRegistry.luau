@@ -4,8 +4,8 @@
 
 	Seeded 2026-07-20 from the ids the old game's RUNNING `Animate` fork actually played — its
 	`Animation` config-children in `StarterCharacterScripts`, the live truth — NOT its stale internal
-	tables or the `RS.Modules.Animate` copy. Every id here is provisional until the developer's V5
-	feel/id sign-off checkpoint; replacing one is a one-line edit.
+	tables or the `RS.Modules.Animate` copy. The native R15 idle was corrected on 2026-10-11 after a
+	same-rig comparison; the remaining inherited clips are provisional until their feel/id sign-off.
 
 	Census oddities deliberately NOT carried over (flagged for V5): the fork's `walk` set contained a
 	second id that is the STOCK CHEER emote, and `toolslash`/`toollunge` both pointed at the death
@@ -41,7 +41,8 @@ end
 
 local AnimationLocomotionRegistry: AnimationDomain = table.freeze({
 	-- CORE poses (the AnimationLocomotionSystem contract).
-	idle = entry("rbxassetid://11526063910", true),
+	-- Stock R15 idle: the inherited Venture clip raised both arms on native engine avatars.
+	idle = entry("rbxassetid://507766666", true),
 	walk = entry("rbxassetid://11257118786", true),
 	run = entry("rbxassetid://11525748624", true),
 	jump = entry("rbxassetid://9126863232", false),

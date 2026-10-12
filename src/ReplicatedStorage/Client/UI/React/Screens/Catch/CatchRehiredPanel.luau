@@ -163,7 +163,7 @@ local function CatchRehiredPanel(props: CatchRehiredPanelProps): React.ReactNode
 	local content: { [string]: React.ReactNode } = {
 		band = e("Frame", {
 			Size = UDim2.new(1, 0, 0, spec.band),
-			BackgroundColor3 = COLOR.ink,
+			BackgroundColor3 = COLOR.companyTeal,
 			BorderSizePixel = 0,
 		}, {
 			header = e(PaperLabel, {

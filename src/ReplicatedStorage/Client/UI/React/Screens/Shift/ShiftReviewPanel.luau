@@ -18,6 +18,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage.Packages.React)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local PaperButton = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperButton)
+local PaperAwardIcon = require(script.Parent.Parent.Paper.PaperAwardIcon)
+local PaperPortrait = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperPortrait)
 local PaperLabel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperLabel)
 local PaperSheet = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperSheet)
 local PaperStamp = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperStamp)
@@ -94,7 +96,7 @@ local function rule(x: number, y: number, width: number, height: number): React.
 	return e("Frame", {
 		Position = at(x, y),
 		Size = UDim2.fromOffset(width, height),
-		BackgroundColor3 = COLOR.manilaDeep,
+		BackgroundColor3 = COLOR.companyTeal,
 		BorderSizePixel = 0,
 	})
 end
@@ -107,6 +109,15 @@ local function stamp(text: string, size: number, tilt: number, x: number, y: num
 		anchor = anchor or Vector2.new(0.5, 0.5),
 		position = at(x, y),
 	})
+end
+
+local function portrait(userId: number): React.ReactNode
+	return e(PaperPortrait, { userId = userId })
+end
+
+-- Dedicated award art; original SVG reviews share these exact 64 px shape definitions.
+local function awardBadge(title: string): React.ReactNode
+	return e(PaperAwardIcon, { title = title })
 end
 
 local function stickiesOf(
@@ -122,6 +133,9 @@ local function stickiesOf(
 		if award ~= nil then
 			into[`award{index}`] = e(StickyNote, {
 				text = `{award.title}\n{award.line}`,
+				badge = if award.symbol ~= nil then awardBadge(award.title) else nil,
+				badgeSize = if width < 200 then 24 else 40,
+				portrait = if width >= 200 and award.userId ~= nil then portrait(award.userId) else nil,
 				width = width,
 				size = size,
 				tape = tape,
@@ -162,13 +176,18 @@ end
 local function desktopOf(props: ShiftReviewPanelProps): Nodes
 	local view = props.view
 	local nodes: Nodes = {
+		companyStrip = e(
+			"Frame",
+			{ Size = UDim2.new(1, 0, 0, 7), BackgroundColor3 = COLOR.companyTeal, BorderSizePixel = 0 }
+		),
+		copyNumber = label("CC / RECEIPT • SHIFT CLEARANCE", "heading", 18, 48, 852, 650),
 		subtitle = label(view.subtitle, "body", 22, 48, 30, 700),
 		headline = stamp(view.headline, HEADLINE_DESKTOP, 2, 246, 140),
 		ratingLabel = label(view.ratingLabel, "body", 24, 48, 590),
 		rating = stamp(view.rating, RATING_DESKTOP, 2, 284, 604, LEFT_CENTRE),
 		quote = label(`{view.quote}\n{view.quoteBy}`, "body", 22, 48, 700, 700),
 		fold = rule(800, 30, 2, 840),
-		awardsTitle = label("AWARDS", "heading", 26, 848, 36),
+		awardsTitle = label("CREW CLOCKS OFF", "heading", 26, 848, 36),
 		voteRule = rule(848, 500, 704, 2),
 		voteTitle = label(view.voteTitle, "heading", 26, 848, 526),
 		footer = label(view.footer, "body", 20, 848, 790, 704),
@@ -225,22 +244,14 @@ end
 
 -- The phone's award toggle: a transparent 48 px tall touch target around "+2 MORE AWARDS".
 local function toggleOf(text: string, onActivated: () -> ()): React.ReactNode
-	return e("TextButton", {
-		AnchorPoint = Vector2.new(0, 0.5),
-		Position = at(8, 339),
-		Size = UDim2.fromOffset(220, 48),
-		BackgroundTransparency = 1,
-		Text = "",
-		[React.Event.Activated] = onActivated,
-	}, {
-		label = e(PaperLabel, {
-			text = text,
-			role = "heading",
-			size = 15,
-			anchor = Vector2.new(0, 0.5),
-			position = UDim2.new(0, 8, 0.5, 0),
-			fit = true,
-		}),
+	return e(PaperButton, {
+		text = text,
+		variant = "surface",
+		position = at(8, 339),
+		anchor = Vector2.new(0, 0.5),
+		size = UDim2.fromOffset(220, 48),
+		textSize = 15,
+		onActivated = onActivated,
 	})
 end
 
@@ -332,6 +343,8 @@ local function ShiftReviewPanel(props: ShiftReviewPanelProps): React.ReactNode
 				tabWidth = TAB_WIDTH,
 				tabTextSize = TAB_TEXT,
 				padding = 0,
+				paper = COLOR.cream,
+				fastener = "clip",
 			}, content),
 		}),
 	})

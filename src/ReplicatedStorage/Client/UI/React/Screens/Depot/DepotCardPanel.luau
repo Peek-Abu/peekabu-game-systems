@@ -123,7 +123,7 @@ local function driveCard(view: DepotCardViewModel.DriveView): React.ReactNode
 			texture = e(PaperTexture, { paper = COLOR.cream, corner = 4 }),
 			band = e("Frame", {
 				Size = UDim2.new(1, 0, 0, BAND),
-				BackgroundColor3 = COLOR.ink,
+				BackgroundColor3 = COLOR.companyTeal,
 				BorderSizePixel = 0,
 				ZIndex = 2,
 			}, {
@@ -195,6 +195,7 @@ local function arrivalCard(view: DepotCardViewModel.ArrivalView): React.ReactNod
 			paper = COLOR.cream,
 			tilt = 1.5,
 			band = view.slip,
+			bandColor = COLOR.companyTeal,
 			padding = 16,
 		}, slip),
 		sticky = e(StickyNote, {

@@ -31,11 +31,13 @@ local CarryConstants = require(CarryShared.Data.CarryConstants)
 local CarryRegistry = require(CarryShared.Data.CarryRegistry)
 local CarryTypes = require(CarryShared.Data.CarryTypes)
 local CarryFormulas = require(CarryShared.Utils.CarryFormulas)
+local CarryCarrierRules = require(CarryShared.Rules.CarryCarrierRules)
 local CarryEvents = require(CarryShared.Net.CarryEvents)
 local InteractionConstants = require(InteractionData.InteractionConstants)
 local InteractionRegistry = require(InteractionData.InteractionRegistry)
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local CarryHoldTracker = require(ServerScriptService.Features.Carry.State.CarryHoldTracker)
+local AnimationCarrySystem = require(ServerScriptService.Features.Animation.Systems.AnimationCarrySystem)
 local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
 local StateSyncPublicPlayerStore = require(ServerScriptService.Features.StateSync.State.StateSyncPublicPlayerStore)
 
@@ -51,6 +53,7 @@ type Held = {
 	root: BasePart,
 	kind: string,
 	weld: WeldConstraint,
+	contact: AnimationCarrySystem.Controller?,
 	saved: { SavedPart },
 	humanoid: Humanoid?,
 	savedWalkSpeed: number?,
@@ -106,6 +109,9 @@ local function release(player: Player): BasePart?
 		return nil
 	end
 	held[player.UserId] = nil
+	if state.contact ~= nil then
+		state.contact.destroy()
+	end
 	state.weld:Destroy()
 	for _, saved in state.saved do
 		saved.part.Massless = saved.massless
@@ -271,7 +277,13 @@ CarryServiceServer = {
 		local def = CarryRegistry.get(kind)
 		local character = player.Character
 		local playerRoot = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil
-		if def == nil or playerRoot == nil or not playerRoot:IsA("BasePart") then
+		local humanoid = if character ~= nil then character:FindFirstChildOfClass("Humanoid") else nil
+		if
+			def == nil
+			or playerRoot == nil
+			or not playerRoot:IsA("BasePart")
+			or not CarryCarrierRules.isAlive(if humanoid ~= nil then humanoid.Health else nil)
+		then
 			counters.refused += 1
 			return false, "no character"
 		end
@@ -287,14 +299,30 @@ CarryServiceServer = {
 			part.CanCollide = false
 		end
 		root.Anchored = false
-		target:PivotTo(playerRoot.CFrame * (def.holdOffset or CarryConstants.DEFAULT_HOLD_OFFSET))
+		local prepared = if character ~= nil
+			then AnimationCarrySystem.prepare(character, target, kind, def.holdOffset)
+			else nil
+		target:PivotTo(
+			if prepared ~= nil
+				then prepared.pivot
+				else playerRoot.CFrame * (def.holdOffset or CarryConstants.DEFAULT_HOLD_OFFSET)
+		)
+		local contact: AnimationCarrySystem.Controller? = nil
+		if prepared ~= nil and character ~= nil then
+			local boxFrame = if target:IsA("Model") then target:GetBoundingBox() else root.CFrame
+			local boxFromRoot = root.CFrame:ToObjectSpace(boxFrame)
+			contact = AnimationCarrySystem.bind(character, root, {
+				offset = prepared.layout.offset,
+				right = boxFromRoot * prepared.layout.right,
+				left = if prepared.layout.left ~= nil then boxFromRoot * prepared.layout.left else nil,
+			})
+		end
 		local weld = Instance.new("WeldConstraint")
 		weld.Name = "CarryWeld"
 		weld.Part0 = playerRoot
 		weld.Part1 = root
 		weld.Parent = root
 
-		local humanoid = if character ~= nil then character:FindFirstChildOfClass("Humanoid") else nil
 		local savedWalkSpeed = if humanoid ~= nil then humanoid.WalkSpeed else nil
 		if humanoid ~= nil and savedWalkSpeed ~= nil then
 			humanoid.WalkSpeed = CarryFormulas.walkSpeedFor(
@@ -309,6 +337,7 @@ CarryServiceServer = {
 			root = root,
 			kind = kind,
 			weld = weld,
+			contact = contact,
 			saved = saved,
 			humanoid = humanoid,
 			savedWalkSpeed = savedWalkSpeed,

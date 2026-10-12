@@ -2,8 +2,8 @@
 --[=[
 	CargoBillboardSystem: draws cargo price tags on this client (Figma World UI 2b, W5). It watches the items' tag
 	shells (UIBillboardHost.watch, tag CargoConstants.LABEL_TAG) and every LABEL_CHECK seconds mounts a tag for each
-	item near the camera and unmounts the rest (CargoWorldViewModel.mounted: within 24 studs, kept until 28, never while
-	hidden under a pile), so only a handful of React roots live at once. A mounted tag re-renders in place when the
+	selected nearby item and unmounts the rest (ShiftPromptStore selects by character reach, never while
+	hidden under a pile), so at most one cargo price root lives at once. A mounted tag re-renders in place when the
 	server changes its attributes (a fragile item cracked); a banked, destroyed or streamed-out item loses its root once.
 
 	Spec-exempt shell (CollectionService, Camera, RunService, React roots); the decisions are the specced
@@ -14,7 +14,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
 
 local React = require(ReplicatedStorage.Packages.React)
 local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants)
@@ -31,6 +31,8 @@ export type CargoBillboardState = {
 }
 
 local e = React.createElement
+
+local ShiftPromptStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftPromptStore)
 
 local roots = UIBillboards.new(UIBillboardHost.factory)
 local shells: { [BillboardGui]: true } = {}
@@ -59,15 +61,17 @@ local function distanceTo(shell: BillboardGui, from: Vector3): number
 end
 
 local function step()
-	local camera = Workspace.CurrentCamera
-	if camera == nil then
-		return
-	end
-	local from = camera.CFrame.Position
+	local character = Players.LocalPlayer.Character
+	local root = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil
+	local shown = ShiftPromptStore.shown()
+	local selected = if shown ~= nil then shown.target else nil
+	local from = if root ~= nil and root:IsA("BasePart") then root.Position else Vector3.new(math.huge, 0, 0)
 	for shell in shells do
 		local now = mounted[shell] == true
 		local hidden = shell:GetAttribute(CargoConstants.LABEL_KEYS.hidden) == true
-		local want = CargoWorldViewModel.mounted(distanceTo(shell, from), now, hidden)
+		local want = selected ~= nil
+			and (shell.Parent == selected or shell:IsDescendantOf(selected))
+			and CargoWorldViewModel.mounted(distanceTo(shell, from), now, hidden)
 		if want and not now then
 			mounted[shell] = true
 			counters.mounts += 1
@@ -92,6 +96,9 @@ function CargoBillboardSystem.start()
 			tag = CargoConstants.LABEL_TAG,
 			roots = roots,
 			refresh = function(shell)
+				if not shell:IsA("BillboardGui") then
+					return
+				end
 				shells[shell] = true
 				-- A mounted tag re-renders in place; an unmounted one waits for the next check.
 				if mounted[shell] then
@@ -99,6 +106,9 @@ function CargoBillboardSystem.start()
 				end
 			end,
 			removed = function(shell)
+				if not shell:IsA("BillboardGui") then
+					return
+				end
 				shells[shell] = nil
 				mounted[shell] = nil
 			end,

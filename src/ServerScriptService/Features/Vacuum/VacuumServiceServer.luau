@@ -25,12 +25,17 @@ local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local Observers = require(ReplicatedStorage.Packages.Observers)
+local AnimationRegistry = require(ReplicatedStorage.Shared.Features.Animation.Data.AnimationRegistry)
+local AnimationServiceServer = require(ServerScriptService.Features.Animation.AnimationServiceServer)
+local AnimationVacuumSystem = require(ServerScriptService.Features.Animation.Systems.AnimationVacuumSystem)
 local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionConstants)
 local InteractionRegistry = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionRegistry)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local VacuumCanisterUtils = require(ServerScriptService.Features.Vacuum.Utils.VacuumCanisterUtils)
 local VacuumChannelTracker = require(ServerScriptService.Features.Vacuum.State.VacuumChannelTracker)
+local VacuumToolSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumToolSystem)
+local VacuumEquipmentRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumEquipmentRules)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
 local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
 local StateSyncPublicPlayerStore = require(ServerScriptService.Features.StateSync.State.StateSyncPublicPlayerStore)
@@ -49,6 +54,9 @@ local noiseMade: SignalTyped.Signal<Vector3, number, string, { number }> = Signa
 local vacuumStarted: SignalTyped.Signal<Player, BasePart> = SignalTyped.new()
 
 local fills: { [number]: number } = {}
+local tools: { [Player]: VacuumToolSystem.Controller } = {}
+local equipped: { [Player]: boolean } = {}
+local animations: { [Player]: AnimationVacuumSystem.Controller } = {}
 -- Who is vacuuming which pile (vacuumStarted fires when a player's pile changes; the makers of each noise pulse).
 local channels = VacuumChannelTracker.new(VacuumConstants.MAKER_WINDOW)
 local counters = { spawned = 0, cleared = 0, bags = 0 }
@@ -137,10 +145,16 @@ export type VacuumServiceServer = {
 	fillOf: (self: VacuumServiceServer, player: Player) -> number,
 	isVacuuming: (self: VacuumServiceServer, player: Player) -> boolean,
 	reset: (self: VacuumServiceServer) -> (),
+	setCrew: (self: VacuumServiceServer, crew: { Player }) -> (),
 }
 
 local VacuumServiceServer: VacuumServiceServer = {
-	dependencies = { "InteractionServiceServer", "CarryServiceServer", "StateSyncServiceServer" },
+	dependencies = {
+		"InteractionServiceServer",
+		"CarryServiceServer",
+		"StateSyncServiceServer",
+		"AnimationServiceServer",
+	},
 	pileCleared = pileCleared,
 	dustBagReady = dustBagReady,
 	noiseMade = noiseMade,
@@ -153,7 +167,16 @@ local VacuumServiceServer: VacuumServiceServer = {
 		InteractionServiceServer:channel(VacuumConstants.CHANNEL_KIND, {
 			-- Spec §4: you can't vacuum while your hands hold an item.
 			canChannel = function(player, target)
-				if CarryServiceServer:getCarried(player) ~= nil then
+				local character = player.Character
+				local humanoid = if character ~= nil then character:FindFirstChildOfClass("Humanoid") else nil
+				if
+					not VacuumEquipmentRules.canVacuum(
+						tools[player] ~= nil,
+						VacuumToolSystem.isEquipped(character),
+						CarryServiceServer:getCarried(player) ~= nil,
+						humanoid ~= nil and humanoid.Health > 0
+					)
+				then
 					return false
 				end
 				-- Asked at the start and every tick: the first allowed ask on a new pile is a start (never yields).
@@ -182,14 +205,54 @@ local VacuumServiceServer: VacuumServiceServer = {
 		)
 
 		local elapsed = 0
+		local equipmentElapsed = 0
 		local ticking = RunService.Heartbeat:Connect(function(deltaTime)
 			elapsed += deltaTime
+			equipmentElapsed += deltaTime
+			if equipmentElapsed >= VacuumConstants.TOOL_REFRESH_INTERVAL then
+				equipmentElapsed = 0
+				for player, controller in tools do
+					local carrying = CarryServiceServer:getCarried(player) ~= nil
+					local selected = controller.refresh(carrying)
+					local character = player.Character
+					local humanoid = if character ~= nil then character:FindFirstChildOfClass("Humanoid") else nil
+					local animation = animations[player]
+					if animation ~= nil then
+						animation.update({
+							character = character,
+							equipped = selected,
+							carrying = carrying,
+							active = channels:isActive(player.UserId, os.clock()),
+							alive = humanoid ~= nil and humanoid.Health > 0,
+							authorized = true,
+						}, os.clock())
+					end
+					if equipped[player] ~= selected then
+						equipped[player] = selected
+						StateSyncPublicPlayerStore.set(
+							player.UserId,
+							{ [VacuumConstants.PUBLIC_EQUIPPED_FIELD] = selected }
+						)
+					end
+				end
+			end
 			if elapsed >= VacuumConstants.NOISE_INTERVAL then
 				elapsed = 0
 				pulse()
 			end
 		end)
 		local leaving = Players.PlayerRemoving:Connect(function(player)
+			local controller = tools[player]
+			if controller ~= nil then
+				controller.destroy()
+				local animation = animations[player]
+				if animation ~= nil then
+					animation.stop()
+					animations[player] = nil
+				end
+				tools[player] = nil
+			end
+			equipped[player] = nil
 			fills[player.UserId] = nil
 			channels:forget(player.UserId)
 		end)
@@ -199,7 +262,8 @@ local VacuumServiceServer: VacuumServiceServer = {
 		end)
 	end,
 
-	stop = function(_self)
+	stop = function(self)
+		self:setCrew({})
 		for _, stop in stoppers do
 			stop()
 		end
@@ -246,11 +310,49 @@ local VacuumServiceServer: VacuumServiceServer = {
 	--[=[
 		Empties every canister (a new shift). Piles go with the shift's container (Office).
 	]=]
-	reset = function(_self)
+	reset = function(self)
+		self:setCrew({})
 		table.clear(fills)
 		channels:clear()
 		for _, player in Players:GetPlayers() do
 			publish(player.UserId)
+		end
+	end,
+
+	setCrew = function(_self, crew)
+		local wanted: { [Player]: boolean } = {}
+		for _, player in crew do
+			wanted[player] = true
+		end
+		for player, controller in tools do
+			if not wanted[player] then
+				controller.destroy()
+				local animation = animations[player]
+				if animation ~= nil then
+					animation.stop()
+					animations[player] = nil
+				end
+				tools[player] = nil
+				equipped[player] = nil
+				StateSyncPublicPlayerStore.set(player.UserId, { [VacuumConstants.PUBLIC_EQUIPPED_FIELD] = false })
+			end
+		end
+		for player in wanted do
+			if tools[player] == nil then
+				tools[player] = VacuumToolSystem.new(player)
+				animations[player] = AnimationVacuumSystem.new({
+					available = function(id)
+						return AnimationRegistry.get(id) ~= nil
+					end,
+					play = function(id)
+						local ok = AnimationServiceServer:play(player, id)
+						return ok
+					end,
+					stop = function(id)
+						AnimationServiceServer:stop(player, id)
+					end,
+				})
+			end
 		end
 	end,
 

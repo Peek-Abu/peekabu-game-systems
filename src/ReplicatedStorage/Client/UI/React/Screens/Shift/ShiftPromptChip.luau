@@ -57,19 +57,19 @@ local COLOR = UIPaperConstants.COLOR
 -- Figma 1a "Prompt": 460x64, centred, top at 0.6 of the screen; 1d: 280 wide at y 236 on phone.
 local GEOMETRY: { [UIPaperConstants.Layout]: Geometry } = table.freeze({
 	desktop = table.freeze({
-		position = UDim2.fromScale(0.5, 0.6),
-		size = Vector2.new(460, 64),
+		position = UDim2.new(0.5, 0, 1, -122),
+		size = Vector2.new(360, 46),
 		padding = 12,
-		text = UIPaperConstants.TEXT.desktop.body,
+		text = 14,
 	}),
 	phone = table.freeze({
 		position = UDim2.new(0.5, 0, 0, 236),
-		size = Vector2.new(280, 44),
+		size = Vector2.new(240, 56),
 		padding = 8,
 		text = UIPaperConstants.TEXT.phone.body,
 	}),
 })
-local KEY_SIZE = 24
+local KEY_SIZE = 16
 local KEY_GAP = 12
 local STRIP_HEIGHT = 4
 -- The server clock ticks fast only while a hold fills the strip.
@@ -92,13 +92,14 @@ local function strip(fill: number, inset: number): React.ReactNode
 	}, {
 		fill = e("Frame", {
 			Size = UDim2.fromScale(fill, 1),
-			BackgroundColor3 = COLOR.inkGreen,
+			BackgroundColor3 = COLOR.companyTeal,
 			BorderSizePixel = 0,
 		}),
 	})
 end
 
 local function ShiftPromptChip(props: ShiftPromptChipProps?): React.ReactNode
+	local keyWidth, setKeyWidth = React.useState(KEY_SIZE + 26)
 	local shown = useAtom(ShiftPromptStore.shown)
 	local publicPlayers = useAtom(StateSyncClientStore.publicPlayers)
 	local scaring = useAtom(OccupantCatchStore.scaring)
@@ -134,7 +135,7 @@ local function ShiftPromptChip(props: ShiftPromptChipProps?): React.ReactNode
 	end
 	local geometry = GEOMETRY[layout]
 	local desktop = layout == "desktop"
-	local textInset = if desktop then KEY_SIZE + 10 + KEY_GAP else 0
+	local textInset = if desktop then keyWidth + KEY_GAP else 0
 	local fill = chip.fill
 	local content: { [string]: React.ReactNode } = {
 		text = e(PaperLabel, {
@@ -146,7 +147,7 @@ local function ShiftPromptChip(props: ShiftPromptChipProps?): React.ReactNode
 			frame = UDim2.new(1, -textInset, 1, 0),
 			align = if desktop then "left" else "center",
 			autoSize = false,
-			wrapped = false,
+			wrapped = not desktop,
 		}),
 	}
 	if desktop then
@@ -155,6 +156,9 @@ local function ShiftPromptChip(props: ShiftPromptChipProps?): React.ReactNode
 			Position = UDim2.fromScale(0, 0.5),
 			Size = UDim2.fromOffset(0, KEY_SIZE + 10),
 			AutomaticSize = Enum.AutomaticSize.X,
+			[React.Change.AbsoluteSize] = function(frame: Frame)
+				setKeyWidth(frame.AbsoluteSize.X)
+			end,
 			BackgroundTransparency = 1,
 		}, { chip = e(KeyChip, { label = chip.key, size = KEY_SIZE }) })
 	end
@@ -163,7 +167,7 @@ local function ShiftPromptChip(props: ShiftPromptChipProps?): React.ReactNode
 	end
 	local slip = e(PaperSheet, {
 		size = UDim2.fromScale(1, 1),
-		paper = COLOR.cream,
+		paper = if shown ~= nil and shown.holdStartedAt ~= nil then COLOR.manila else COLOR.cream,
 		tilt = -1,
 		fastener = "tape",
 		padding = geometry.padding,
@@ -173,7 +177,7 @@ local function ShiftPromptChip(props: ShiftPromptChipProps?): React.ReactNode
 	if not ShiftHudViewModel.promptTouchable(UserInputService.TouchEnabled, UserInputService.KeyboardEnabled) then
 		-- Not a button: a GuiButton would sink the mouse click under it (the vacuum is LMB).
 		return e(PaperHudFrame, {
-			scale = hudScale.scale,
+			scale = 1,
 			children = {
 				chip = e("Frame", {
 					AnchorPoint = Vector2.new(0.5, 0),
@@ -205,7 +209,7 @@ local function ShiftPromptChip(props: ShiftPromptChipProps?): React.ReactNode
 			press(false)
 		end,
 	}, { slip = slip })
-	return e(PaperHudFrame, { scale = hudScale.scale, children = { chip = button } })
+	return e(PaperHudFrame, { scale = 1, children = { chip = button } })
 end
 
 return ShiftPromptChip

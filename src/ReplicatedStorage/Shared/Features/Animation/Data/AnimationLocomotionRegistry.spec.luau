@@ -32,6 +32,13 @@ return function()
 		end)
 	end)
 
+	describe("native R15 idle", function()
+		it("uses the engine R15 idle rather than the inherited custom-rig clip", function()
+			-- Verified on the same native avatar: the inherited clip raises both arms; this stock clip does not.
+			expect(AnimationLocomotionRegistry.idle.assetId).to.equal("rbxassetid://507766666")
+		end)
+	end)
+
 	describe("entry well-formedness", function()
 		it("gives every entry a canonical asset id, valid class, and boolean looped", function()
 			for _key, def in AnimationLocomotionRegistry do

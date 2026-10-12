@@ -1,0 +1,25 @@
+local Rules = require(script.Parent.ShiftPromptRules)
+local function candidate(id, distance, dot, enabled)
+	return { id = id, distance = distance, dot = dot, range = 6, visible = true, enabled = enabled ~= false }
+end
+return function()
+	describe("nearby selection", function()
+		it("rejects far, hidden, behind-camera and disabled targets", function()
+			local a = candidate(1, 7, 1)
+			local b = candidate(2, 2, 1, false)
+			local c = candidate(3, 2, 1)
+			c.visible = false
+			expect(Rules.choose({ a, b, c, candidate(4, 2, -1) }, nil)).to.equal(nil)
+		end)
+		it("selects one close target and prefers aim for similar distances", function()
+			expect(Rules.choose({ candidate(1, 4, 0.1), candidate(2, 4, 0.95) }, nil)).to.equal(2)
+		end)
+		it("keeps close ties stable but yields to a materially better target", function()
+			expect(Rules.choose({ candidate(1, 3, 1), candidate(2, 3.4, 1) }, 2)).to.equal(2)
+			expect(Rules.choose({ candidate(1, 1, 1), candidate(2, 4, 1) }, 2)).to.equal(1)
+		end)
+		it("resolves equal scores by stable id, independent of iteration order", function()
+			expect(Rules.choose({ candidate(4, 3, 1), candidate(2, 3, 1) }, nil)).to.equal(2)
+		end)
+	end)
+end

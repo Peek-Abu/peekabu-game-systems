@@ -18,7 +18,17 @@ local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTyp
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 
 export type RowView = { label: string, value: string }
-export type AwardView = { title: string, line: string }
+export type AwardSymbol = "medal" | "punchCard" | "droppedMug" | "quietShoe" | "noisyVacuum"
+export type AwardShape = {
+	x: number,
+	y: number,
+	w: number,
+	h: number,
+	rotation: number,
+	round: number,
+	color: "companyTeal" | "manila" | "cream" | "ink" | "stamp",
+}
+export type AwardView = { title: string, line: string, symbol: AwardSymbol?, userId: number? }
 export type VoteView = {
 	label: string,
 	count: number,
@@ -89,10 +99,95 @@ local function vote(label: string, count: number, total: number, mine: boolean):
 	}
 end
 
+function ShiftReviewViewModel.awardSymbol(title: string): AwardSymbol?
+	local titles = ShiftConstants.AWARD_TITLES
+	if title == titles.employee then
+		return "medal"
+	elseif title == titles.rehired then
+		return "punchCard"
+	elseif title == titles.butterfingers then
+		return "droppedMug"
+	elseif title == titles.quietest then
+		return "quietShoe"
+	elseif title == titles.loudest then
+		return "noisyVacuum"
+	end
+	return nil
+end
+local AWARD_SHAPES: { [AwardSymbol]: { AwardShape } } = {
+	medal = {
+		{ x = 17, y = 30, w = 13, h = 27, color = "companyTeal", rotation = 17, round = 0 },
+		{ x = 34, y = 30, w = 13, h = 27, color = "companyTeal", rotation = -17, round = 0 },
+		{ x = 11, y = 7, w = 42, h = 42, color = "ink", rotation = 0, round = 1 },
+		{ x = 14, y = 10, w = 36, h = 36, color = "manila", rotation = 0, round = 1 },
+		{ x = 21, y = 17, w = 22, h = 22, color = "cream", rotation = 0, round = 1 },
+		{ x = 26, y = 22, w = 12, h = 12, color = "companyTeal", rotation = 45, round = 0 },
+	},
+	punchCard = {
+		{ x = 12, y = 6, w = 40, h = 52, color = "ink", rotation = -4, round = 0 },
+		{ x = 15, y = 9, w = 34, h = 46, color = "cream", rotation = -4, round = 0 },
+		{ x = 17, y = 14, w = 30, h = 9, color = "companyTeal", rotation = -4, round = 0 },
+		{ x = 20, y = 29, w = 5, h = 5, color = "manila", rotation = 0, round = 1 },
+		{ x = 30, y = 29, w = 5, h = 5, color = "manila", rotation = 0, round = 1 },
+		{ x = 40, y = 29, w = 5, h = 5, color = "stamp", rotation = 0, round = 1 },
+		{ x = 20, y = 41, w = 5, h = 5, color = "manila", rotation = 0, round = 1 },
+		{ x = 30, y = 41, w = 5, h = 5, color = "stamp", rotation = 0, round = 1 },
+		{ x = 39, y = 42, w = 13, h = 6, color = "companyTeal", rotation = -25, round = 0 },
+	},
+	droppedMug = {
+		{ x = 37, y = 18, w = 19, h = 22, color = "ink", rotation = 12, round = 1 },
+		{ x = 40, y = 21, w = 13, h = 16, color = "cream", rotation = 12, round = 1 },
+		{ x = 11, y = 15, w = 18, h = 31, color = "ink", rotation = -12, round = 0 },
+		{ x = 13, y = 17, w = 14, h = 27, color = "cream", rotation = -12, round = 0 },
+		{ x = 29, y = 19, w = 12, h = 28, color = "ink", rotation = 13, round = 0 },
+		{ x = 31, y = 21, w = 8, h = 24, color = "cream", rotation = 13, round = 0 },
+		{ x = 9, y = 49, w = 14, h = 5, color = "companyTeal", rotation = 10, round = 0 },
+		{ x = 27, y = 52, w = 12, h = 5, color = "companyTeal", rotation = -10, round = 0 },
+		{ x = 43, y = 48, w = 6, h = 7, color = "cream", rotation = 30, round = 0 },
+	},
+	quietShoe = {
+		{ x = 15, y = 12, w = 17, h = 25, color = "ink", rotation = -8, round = 0 },
+		{ x = 17, y = 14, w = 13, h = 22, color = "cream", rotation = -8, round = 0 },
+		{ x = 11, y = 33, w = 39, h = 15, color = "ink", rotation = -5, round = 1 },
+		{ x = 14, y = 33, w = 34, h = 10, color = "companyTeal", rotation = -5, round = 1 },
+		{ x = 11, y = 46, w = 42, h = 6, color = "manila", rotation = -5, round = 1 },
+		{ x = 19, y = 34, w = 3, h = 7, color = "cream", rotation = -25, round = 0 },
+		{ x = 26, y = 33, w = 3, h = 7, color = "cream", rotation = -25, round = 0 },
+		{ x = 46, y = 15, w = 9, h = 3, color = "companyTeal", rotation = -25, round = 0 },
+		{ x = 50, y = 23, w = 9, h = 3, color = "companyTeal", rotation = -25, round = 0 },
+	},
+	noisyVacuum = {
+		{ x = 13, y = 9, w = 22, h = 5, color = "ink", rotation = 0, round = 0 },
+		{ x = 13, y = 9, w = 5, h = 12, color = "ink", rotation = 0, round = 0 },
+		{ x = 30, y = 9, w = 5, h = 12, color = "ink", rotation = 0, round = 0 },
+		{ x = 10, y = 20, w = 29, h = 26, color = "ink", rotation = 0, round = 0.2 },
+		{ x = 12, y = 22, w = 25, h = 22, color = "companyTeal", rotation = 0, round = 0.2 },
+		{ x = 18, y = 28, w = 13, h = 7, color = "cream", rotation = 0, round = 0 },
+		{ x = 12, y = 44, w = 6, h = 12, color = "manila", rotation = 20, round = 0 },
+		{ x = 7, y = 53, w = 28, h = 5, color = "ink", rotation = 0, round = 0 },
+		{ x = 44, y = 17, w = 12, h = 4, color = "manila", rotation = -30, round = 0 },
+		{ x = 46, y = 30, w = 14, h = 4, color = "manila", rotation = 0, round = 0 },
+		{ x = 44, y = 43, w = 12, h = 4, color = "manila", rotation = 30, round = 0 },
+	},
+}
+function ShiftReviewViewModel.awardShapes(symbol: AwardSymbol): { AwardShape }
+	return AWARD_SHAPES[symbol]
+end
+
+function ShiftReviewViewModel.shapesForAward(title: string): { AwardShape }
+	local symbol: AwardSymbol? = ShiftReviewViewModel.awardSymbol(title)
+	return if symbol ~= nil then ShiftReviewViewModel.awardShapes(symbol) else {}
+end
+
 local function awardOf(award: ShiftTypes.Award, myUserId: number, phone: boolean): AwardView
 	local name = if myUserId ~= 0 and award.userId == myUserId then "you" else award.name
 	local line = if phone or award.detail == "" then name else `{name} — {award.detail}`
-	return { title = award.title, line = line }
+	return {
+		title = award.title,
+		line = line,
+		symbol = ShiftReviewViewModel.awardSymbol(award.title),
+		userId = if award.userId > 0 then award.userId else nil,
+	}
 end
 
 --[=[

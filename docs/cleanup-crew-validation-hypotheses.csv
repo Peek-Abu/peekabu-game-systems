@@ -1,0 +1,7 @@
+id,hypothesis,metrics,provisional_gate_or_power,control,variant,interpretation,status
+H1,First minute is understandable,Median meaningful action; first bank/all entrants,<=90s median; >=70% bank by5min,Qualitative baseline,Contextual bank route/first pile,Directional only,Not tested
+H2,Players want another shift,Replay among finishers AND among all entrants,>=35% finishers replay; all-entry rate reported,Same loop,Minimal earned goal,Directional only,Not tested
+H3,Visible next goal improves return,D1 eligible new-player cohort,Hypothetical20->25%; ~1094/arm independent,Same rewards no target emphasis,Visible passport/locker target,Pre-register; account assignment; crew interference,Not tested
+H4,Persistent collection or mastery sustains interest,D7 exact-day cohort; seven-day playtime,Hypothetical8->11%; ~1499/arm independent,Same progression,"Casebook OR mastery, separately",Wait for matured cohort; cluster-aware if crew,Not tested
+H5,Contract variation reduces repeated-run boredom,D7; repeat shift behavior; variant recall,Baseline-dependent,Current office objectives,One meaningful contract modifier,Test separately from rewards/art,Not tested
+H6,Players buy customization without retention harm,Receipt-granted conversion; net revenue/user; D7,Price/catalogue and acquisition-cost dependent,Same free progression,Finished guaranteed style catalogue,No fake purchase events; low payer sample uncertainty,Not tested

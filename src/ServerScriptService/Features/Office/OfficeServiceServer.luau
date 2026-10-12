@@ -1,8 +1,8 @@
 --!strict
 --[=[
-	OfficeServiceServer: the Harlow & Finch office (Cleanup Crew spec §6.2 "Office", §6.5 "Reset"). At start
+	OfficeServiceServer: the Harlow & Finch office (Cleanup Crew spec Â§6.2 "Office", Â§6.5 "Reset"). At start
 	it validates the authored layout (OfficeLayoutRules; a broken layout is a boot error) and builds the
-	static graybox once (OfficeBuildSystem), then its night decor (OfficeDecorSystem), at OfficeConstants.ORIGIN, far from the origin where M4's depot
+	authored core at start; seeded modular geometry each shift (OfficeBuildSystem), then its night decor (OfficeDecorSystem), at OfficeConstants.ORIGIN, far from the origin where M4's depot
 	goes. Each shift `beginShift` rolls the spawns (OfficeSpawnUtils, re-rolling with the next seed, up to
 	ROLL_ATTEMPTS times, if OfficeSpawnRules finds a broken guarantee; then it proceeds with the last roll) and places them in ONE per-shift folder owned by ONE Janitor:
 	piles (Vacuum), items (Cargo), hidden items under piles (revealed when the pile is cleared), and desk /
@@ -28,6 +28,7 @@ local OfficeTypes = require(OfficeServer.Data.OfficeTypes)
 local OfficeLayoutRules = require(OfficeServer.Rules.OfficeLayoutRules)
 local OfficeSpawnRules = require(OfficeServer.Rules.OfficeSpawnRules)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
+local OfficeLayoutGenerationUtils = require(OfficeServer.Utils.OfficeLayoutGenerationUtils)
 local OfficeSpawnUtils = require(OfficeServer.Utils.OfficeSpawnUtils)
 local OfficeBuildSystem = require(OfficeServer.Systems.OfficeBuildSystem)
 local OfficeDecorSystem = require(OfficeServer.Systems.OfficeDecorSystem)
@@ -50,7 +51,7 @@ local spawnMarkers = OfficeLayoutUtils.markersOf(LAYOUT, "spawn")
 local built: OfficeBuildSystem.Built? = nil
 local shiftJanitor = Janitor.new()
 local shiftFolder: Folder? = nil
--- pile → the item hidden under it, for this shift.
+-- pile â†’ the item hidden under it, for this shift.
 local hidden: { [BasePart]: BasePart } = {}
 local lastPlan: OfficeTypes.SpawnPlan? = nil
 local stoppers: { () -> () } = {}
@@ -69,6 +70,39 @@ for _, id in LAYOUT.route do
 	end
 end
 local restMarker = markerById[LAYOUT.rest]
+
+local function rebuild(seed: number)
+	local layout = OfficeLayoutGenerationUtils.generate(OfficeLayoutConstants.LAYOUT, seed)
+	local ok, errors = OfficeLayoutRules.validate(layout)
+	assert(ok, `generated office layout is invalid: {table.concat(errors, "; ")}`)
+	local capacity, reason = OfficeLayoutRules.checkCapacity(layout)
+	assert(capacity, reason or "generated layout capacity")
+	local routeOk, routeReason = OfficeLayoutRules.checkRoute(layout)
+	assert(routeOk, routeReason or "generated layout route")
+	LAYOUT = layout
+	depths = OfficeLayoutUtils.depths(layout)
+	table.clear(markerById)
+	for _, marker in layout.markers do
+		markerById[marker.id] = marker
+	end
+	spawnMarkers = OfficeLayoutUtils.markersOf(layout, "spawn")
+	table.clear(routePoints)
+	for _, id in layout.route do
+		local marker = markerById[id]
+		if marker ~= nil then
+			table.insert(routePoints, floorAt(marker).Position)
+		end
+	end
+	restMarker = markerById[layout.rest]
+	local old = built
+	if old ~= nil then
+		old.model:Destroy()
+	end
+	local current = OfficeBuildSystem.build(layout, OfficeConstants.ORIGIN)
+	current.model:SetAttribute("LayoutSeed", seed)
+	built = current
+	OfficeDecorSystem.build(layout, OfficeConstants.ORIGIN, current.model)
+end
 
 local function rollPlan(options: { seed: number, variant: string, quota: number }): OfficeTypes.SpawnPlan
 	local rollOptions: OfficeTypes.RollOptions = {
@@ -157,6 +191,8 @@ local OfficeServiceServer: OfficeServiceServer = {
 	]=]
 	beginShift = function(self, options)
 		self:reset()
+		assert(built ~= nil, "OfficeServiceServer:beginShift before start")
+		rebuild(options.seed)
 		local current = built
 		assert(current ~= nil, "OfficeServiceServer:beginShift before start")
 		local plan = rollPlan(options)

@@ -15,6 +15,7 @@ local Charm = require(ReplicatedStorage.Packages.Charm)
 
 export type PromptView = {
 	id: number,
+	target: Instance?,
 	action: string,
 	object: string,
 	key: string,

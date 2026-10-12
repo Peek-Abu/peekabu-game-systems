@@ -3,7 +3,7 @@
 	CameraServiceClient: the one owner of the local camera (design:
 	docs/superpowers/specs/2026-10-09-camera-design.md).
 
-	Systems push MODES (`pushMode` → token; the highest priority wins, the latest wins ties) and add
+	Systems push MODES (`pushMode` â†’ token; the highest priority wins, the latest wins ties) and add
 	EFFECTS (`addTrauma`, `kickFov`, `addModifier`). Every frame, just after the engine camera updates,
 	it applies the top mode, then layers the shake, the custom modifiers and the FOV on top. It owns
 	`FieldOfView` outright (written absolutely each frame: the mode's FOV or the base FOV, plus kicks).
@@ -42,6 +42,10 @@ local SHAKE_CONFIG: CameraMotionFormulas.ShakeConfig = {
 	maxRoll = CameraConstants.SHAKE_MAX_ROLL,
 	frequency = CameraConstants.SHAKE_FREQUENCY,
 }
+
+local previousMaxZoom: number? = nil
+local previousMinZoom: number? = nil
+local previousOcclusion: Enum.DevCameraOcclusionMode? = nil
 
 local log = Logger.new("CameraServiceClient")
 
@@ -197,6 +201,13 @@ local CameraServiceClient: CameraServiceClient = {
 		over the UI's `cameraState` seam.
 	]=]
 	start = function(self)
+		local player = Players.LocalPlayer
+		previousMaxZoom = player.CameraMaxZoomDistance
+		previousMinZoom = player.CameraMinZoomDistance
+		previousOcclusion = player.DevCameraOcclusionMode
+		player.CameraMinZoomDistance = CameraConstants.MIN_ZOOM_DISTANCE
+		player.CameraMaxZoomDistance = CameraConstants.MAX_ZOOM_DISTANCE
+		player.DevCameraOcclusionMode = Enum.DevCameraOcclusionMode.Zoom
 		local camera = currentCamera()
 		if camera ~= nil then
 			baseFov = camera.FieldOfView
@@ -233,6 +244,19 @@ local CameraServiceClient: CameraServiceClient = {
 	end,
 
 	stop = function(_self)
+		local player = Players.LocalPlayer
+		if previousMaxZoom ~= nil then
+			player.CameraMaxZoomDistance = previousMaxZoom
+		end
+		if previousMinZoom ~= nil then
+			player.CameraMinZoomDistance = previousMinZoom
+		end
+		if previousOcclusion ~= nil then
+			player.DevCameraOcclusionMode = previousOcclusion
+		end
+		previousMaxZoom = nil
+		previousMinZoom = nil
+		previousOcclusion = nil
 		RunService:UnbindFromRenderStep(CameraConstants.RENDER_STEP_NAME)
 		for _, connection in connections do
 			connection:Disconnect()

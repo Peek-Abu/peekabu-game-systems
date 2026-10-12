@@ -1,0 +1,38 @@
+local System = require(script.Parent.VacuumToolSystem)
+local Constants = require(game.ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
+return function()
+	describe("vacuum Tool", function()
+		it("creates a visible, non-droppable Tool without gameplay scripts", function()
+			local tool = System.create()
+			expect(tool:IsA("Tool")).to.equal(true)
+			expect(tool.CanBeDropped).to.equal(false)
+			expect(tool.RequiresHandle).to.equal(true)
+			expect(tool:GetAttribute(Constants.TOOL_ATTRIBUTE)).to.equal(true)
+			local handle = tool:FindFirstChild("Handle")
+			expect(handle:IsA("BasePart")).to.equal(true)
+			for _, child in tool:GetDescendants() do
+				if child:IsA("BasePart") then
+					expect(child.Massless).to.equal(true)
+					expect(child.CanCollide).to.equal(false)
+				end
+				expect(child:IsA("LuaSourceContainer")).to.equal(false)
+			end
+			tool:Destroy()
+		end)
+		it("does not treat a backpack Tool or an unrelated namesake as equipped", function()
+			local character = Instance.new("Model")
+			local tool = Instance.new("Tool")
+			tool.Name = Constants.TOOL_NAME
+			tool.Parent = character
+			expect(System.isEquipped(character)).to.equal(false)
+			tool:Destroy()
+			local vacuum = System.create()
+			expect(System.isEquipped(character)).to.equal(false)
+			vacuum.Parent = character
+			expect(System.isEquipped(character)).to.equal(true)
+			vacuum:Destroy()
+			character:Destroy()
+			expect(System.isEquipped(nil)).to.equal(false)
+		end)
+	end)
+end

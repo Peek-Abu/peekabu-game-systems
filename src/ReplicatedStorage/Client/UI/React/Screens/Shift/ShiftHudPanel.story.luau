@@ -1,22 +1,19 @@
 --!strict
 --[=[
-	ShiftHudPanel.story: the Shift HUD filling the viewport on the dark office (each piece anchors to its screen edge, so
-	resize the viewport to check 1366x768), in Studio's edit mode (UI Labs), for the
-	side-by-side check against Figma 1a (6:2), 1b (6:67) and 1c (6:136). `Variant` picks the frame, `SecondsLeft` sets
-	the clock (story time is 0) and `Phone` switches to the phone layout drawn in an 844x390 landscape-phone frame
-	(Figma 1d 9:61 and 1e 9:116; the action buttons are a live HUD widget, checked in Play with the device emulator).
-
-	@class ShiftHudPanel.story
+    ShiftHudPanel.story: approved compact HUD in UI Labs. EmptyHands, Equipped and CrewOpen expose
+    equipment/disclosure states; Variant exposes quota/overtime/clock-out, and Phone uses an 844x390 frame.
+    Compare with Figma 75:2732; real touch input is verified separately from this visual story.
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local PublicPlayerTypes = require(ReplicatedStorage.Shared.Data.PublicPlayerTypes)
 local React = require(ReplicatedStorage.Packages.React)
 local ReactRoblox = require(ReplicatedStorage.Packages.ReactRoblox)
 local UILabs = require(ReplicatedStorage.DevPackages.UILabs)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local ShiftCrewViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftCrewViewModel)
-local ShiftHudPanel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudPanel)
+local ShiftHudPanel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftCompactHudPanel)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 local ShiftStoryFixtures = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftStoryFixtures)
 
@@ -52,6 +49,9 @@ return UILabs.CreateReactStory({
 	controls = {
 		Variant = UILabs.Choose({ NORMAL, QUOTA_MET, OVERTIME }),
 		Phone = false,
+		EmptyHands = true,
+		Equipped = true,
+		CrewOpen = false,
 		SecondsLeft = 252,
 	},
 }, function(props)
@@ -59,7 +59,14 @@ return UILabs.CreateReactStory({
 	local phone: boolean = props.controls.Phone
 	local secondsLeft: number = props.controls.SecondsLeft
 	local snapshot = ShiftStoryFixtures.snapshot(changesFor(variant, secondsLeft))
-	local view = ShiftHudViewModel.hud(snapshot, ShiftStoryFixtures.me, 0, false)
+	local me: PublicPlayerTypes.PublicPlayer = {}
+	for key, value in ShiftStoryFixtures.me do
+		if not props.controls.EmptyHands or (key ~= "carrying" and key ~= "pocket1" and key ~= "pocket2") then
+			me[key] = value
+		end
+	end
+	me.vacuumEquipped = props.controls.Equipped
+	local view = ShiftHudViewModel.hud(snapshot, me, 0, false)
 	local roster = ShiftCrewViewModel.roster(
 		snapshot.crew,
 		ShiftStoryFixtures.players,
@@ -76,8 +83,8 @@ return UILabs.CreateReactStory({
 			view = view,
 			roster = roster,
 			layout = layout,
-			centreShift = if phone then 0 else ShiftHudViewModel.centreShift(screenSize.X),
-			carryLeft = if phone then nil else ShiftHudViewModel.carryLeft(screenSize),
+			viewport = if phone then Vector2.new(PHONE_WIDTH, PHONE_HEIGHT) else screenSize,
+			crewOpen = props.controls.CrewOpen,
 		})
 		else nil
 	return e("Frame", {

@@ -31,7 +31,7 @@ local e = React.createElement
 local roots = UIBillboards.new(UIBillboardHost.factory)
 local stoppers: { () -> () } = {}
 
-local function drawCue(shell: BillboardGui)
+local function drawCue(shell: UIBillboards.WorldShell)
 	local view = OccupantWorldViewModel.cue(shell:GetAttribute(OccupantConstants.CUE_ATTRIBUTE))
 	roots.show(
 		shell,
@@ -43,7 +43,7 @@ local function drawCue(shell: BillboardGui)
 	)
 end
 
-local function drawMemo(shell: BillboardGui)
+local function drawMemo(shell: UIBillboards.WorldShell)
 	local view = OccupantWorldViewModel.memo(shell:GetAttribute(OccupantConstants.LINE_ATTRIBUTE))
 	roots.show(
 		shell,

@@ -16,6 +16,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage.Packages.React)
 local CatchViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Catch.CatchViewModel)
 local KeyChip = require(ReplicatedStorage.Client.UI.React.Screens.Paper.KeyChip)
+local PaperButton = require(script.Parent.Parent.Paper.PaperButton)
 local PaperLabel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperLabel)
 local PaperScaleContext = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperScaleContext)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
@@ -286,21 +287,11 @@ local function roundButton(
 	onPress: () -> ()
 ): React.ReactNode
 	local edge = if side == 0 then spec.inset.left else -spec.inset.right
-	return e("TextButton", {
-		AnchorPoint = Vector2.new(side, 1),
-		Position = UDim2.new(side, edge, 1, jump.y - BUTTON_ABOVE_JUMP),
-		Size = UDim2.fromOffset(BUTTON_SIZE, BUTTON_SIZE),
-		AutoButtonColor = false,
+	local content: React.ReactNode = e("Frame", {
+		Size = UDim2.fromScale(1, 1),
 		BackgroundColor3 = COLOR.night,
 		BackgroundTransparency = BUTTON_FILL_TRANSPARENCY,
 		BorderSizePixel = 0,
-		FontFace = UIPaperConstants.FONT.heading,
-		TextSize = BUTTON_TEXT,
-		TextColor3 = COLOR.fluorescent,
-		Text = text,
-		[React.Event.Activated] = function()
-			onPress()
-		end,
 	}, {
 		corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }),
 		stroke = e("UIStroke", {
@@ -309,6 +300,26 @@ local function roundButton(
 			Transparency = BUTTON_STROKE_TRANSPARENCY,
 			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 		}),
+		label = e(PaperLabel, {
+			text = text,
+			role = "heading",
+			size = BUTTON_TEXT,
+			color = COLOR.fluorescent,
+			align = "center",
+			frame = UDim2.fromScale(1, 1),
+			autoSize = false,
+			wrapped = false,
+		}),
+	})
+	return e(PaperButton, {
+		text = "",
+		variant = "surface",
+		content = content,
+		anchor = Vector2.new(side, 1),
+		position = UDim2.new(side, edge, 1, jump.y - BUTTON_ABOVE_JUMP),
+		size = UDim2.fromOffset(BUTTON_SIZE, BUTTON_SIZE),
+		textSize = BUTTON_TEXT,
+		onActivated = onPress,
 	})
 end
 

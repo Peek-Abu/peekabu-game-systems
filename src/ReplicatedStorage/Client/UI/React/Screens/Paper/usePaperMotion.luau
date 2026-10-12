@@ -9,6 +9,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local GuiService = game:GetService("GuiService")
 
 local React = require(ReplicatedStorage.Packages.React)
 
@@ -17,6 +18,10 @@ local function usePaperMotion(seconds: number): React.Binding<number>
 
 	React.useEffect(function(): () -> ()
 		local elapsed = 0
+		if GuiService.ReducedMotionEnabled then
+			setAlpha(1)
+			return function() end
+		end
 		local connection: RBXScriptConnection? = nil
 		connection = RunService.RenderStepped:Connect(function(deltaTime: number)
 			elapsed += deltaTime
@@ -26,7 +31,16 @@ local function usePaperMotion(seconds: number): React.Binding<number>
 				connection:Disconnect()
 			end
 		end)
+		local preference = GuiService:GetPropertyChangedSignal("ReducedMotionEnabled"):Connect(function()
+			if GuiService.ReducedMotionEnabled then
+				setAlpha(1)
+				if connection ~= nil then
+					connection:Disconnect()
+				end
+			end
+		end)
 		return function()
+			preference:Disconnect()
 			if connection ~= nil then
 				connection:Disconnect()
 			end

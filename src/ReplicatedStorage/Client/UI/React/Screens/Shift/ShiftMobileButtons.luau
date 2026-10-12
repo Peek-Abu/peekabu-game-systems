@@ -143,6 +143,7 @@ local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactN
 	local held = React.useRef(false)
 	local beginVacuum = React.useCallback(function()
 		held.current = true
+		VacuumServiceClient:equipVacuum()
 		VacuumServiceClient:beginVacuum()
 	end, {})
 	local endVacuum = React.useCallback(function()
@@ -181,6 +182,36 @@ local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactN
 	end
 	-- The big button's label is the view's VACUUM / LOAD, read as plain text.
 	local primaryLabel: string = view.primary
+	local dropProps: ButtonProps = {
+		label = "DROP",
+		spot = arc.drop,
+		large = false,
+		available = view.drop,
+		ready = false,
+		onActivated = function()
+			CargoServiceClient:drop()
+		end,
+	}
+	local throwProps: ButtonProps = {
+		label = "THROW",
+		spot = arc.throw,
+		large = false,
+		available = view.throw,
+		ready = false,
+		onActivated = function()
+			CargoServiceClient:throw()
+		end,
+	}
+	local pocketProps: ButtonProps = {
+		label = "POCKET",
+		spot = arc.pocket,
+		large = false,
+		available = view.pocket,
+		ready = view.pocketReady,
+		onActivated = function()
+			CargoServiceClient:pocket()
+		end,
+	}
 	return e("Frame", {
 		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
@@ -195,36 +226,9 @@ local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactN
 			onHoldBegin = if not view.primaryAvailable then nil elseif vacuuming then beginVacuum else beginLoad,
 			onHoldEnd = if vacuuming then endVacuum else endLoad,
 		}),
-		drop = e(ActionButton, {
-			label = "DROP",
-			spot = arc.drop,
-			large = false,
-			available = view.drop,
-			ready = false,
-			onActivated = function()
-				CargoServiceClient:drop()
-			end,
-		}),
-		throw = e(ActionButton, {
-			label = "THROW",
-			spot = arc.throw,
-			large = false,
-			available = view.throw,
-			ready = false,
-			onActivated = function()
-				CargoServiceClient:throw()
-			end,
-		}),
-		pocket = e(ActionButton, {
-			label = "POCKET",
-			spot = arc.pocket,
-			large = false,
-			available = view.pocket,
-			ready = view.pocketReady,
-			onActivated = function()
-				CargoServiceClient:pocket()
-			end,
-		}),
+		drop = if view.drop then e(ActionButton, dropProps) else nil,
+		throw = if view.throw then e(ActionButton, throwProps) else nil,
+		pocket = if view.pocket then e(ActionButton, pocketProps) else nil,
 	})
 end
 

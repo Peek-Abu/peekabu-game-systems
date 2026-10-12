@@ -22,6 +22,9 @@ local e = React.createElement
 
 export type StickyNoteProps = {
 	text: string,
+	badge: React.ReactNode?,
+	badgeSize: number?,
+	portrait: React.ReactNode?,
 	width: number,
 	size: number,
 	tilt: number?,
@@ -41,10 +44,22 @@ local function StickyNote(props: StickyNoteProps): React.ReactNode
 	-- Called unconditionally (hook order); the slide reads it, a still note stays at 0.
 	local alpha = usePaperMotion(MOTION.slideSeconds)
 	local tape = props.tape or DEFAULT_TAPE
+	local badgeSize = if props.badge ~= nil then (props.badgeSize or 40) else 0
 	local slideFrom = if props.slide == true then MOTION.slideFrom else 0
 	local offset = alpha:map(function(value: number): UDim2
 		return UDim2.fromOffset(slideFrom * (1 - value), 0)
 	end)
+
+	local portrait: React.ReactNode = nil
+	if props.portrait ~= nil then
+		local frameProps = {
+			Position = UDim2.fromOffset(12, 20),
+			Size = UDim2.fromOffset(40, 40),
+			BackgroundTransparency = 1,
+			ZIndex = 4,
+		}
+		portrait = e("Frame", frameProps, { image = props.portrait })
+	end
 
 	return e("Frame", {
 		LayoutOrder = props.layoutOrder,
@@ -63,6 +78,15 @@ local function StickyNote(props: StickyNoteProps): React.ReactNode
 			BorderSizePixel = 0,
 		}, {
 			texture = e(PaperTexture, { paper = COLOR.sticky }),
+			badge = if props.badge ~= nil
+				then e("Frame", {
+					Position = UDim2.new(1, -24 - badgeSize, 0, 18),
+					Size = UDim2.fromOffset(badgeSize, badgeSize),
+					BackgroundTransparency = 1,
+					ZIndex = 3,
+				}, { art = props.badge })
+				else nil,
+			portrait = portrait,
 			-- Anchored at the top centre so a resized note keeps it centred (Figma CENTER constraint).
 			tape = e("Frame", {
 				AnchorPoint = Vector2.new(0.5, 0.5),
@@ -80,8 +104,8 @@ local function StickyNote(props: StickyNoteProps): React.ReactNode
 				ZIndex = 2,
 			}, {
 				padding = e("UIPadding", {
-					PaddingLeft = UDim.new(0, 24),
-					PaddingRight = UDim.new(0, 24),
+					PaddingLeft = UDim.new(0, if props.portrait ~= nil then 60 else 24),
+					PaddingRight = UDim.new(0, 24 + (if badgeSize > 0 then badgeSize + 8 else 0)),
 					PaddingTop = UDim.new(0, 18),
 					PaddingBottom = UDim.new(0, 18),
 				}),

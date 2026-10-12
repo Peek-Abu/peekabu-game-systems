@@ -5,7 +5,7 @@
 	object tagged InteractionConstants.TAG) is switched to the Custom style on this client: a local property write, so
 	the engine stops drawing its own card while its key (and the server's trigger) still work. Prompts created later
 	(a newly tagged object, a respawned one, a prompt rebuilt under a tagged object) are switched as they appear, and a
-	prompt shown before it was switched is switched when it shows; no other prompt is touched. The engine's Shown /
+	prompt shown before it was switched is switched when it shows; no other prompt is touched. Nearby selection controls native activation range; the engine's Shown /
 	Hidden / hold events keep ShiftPromptStore current; `press` holds or releases the shown prompt for touch (the chip
 	and the phone LOAD button get it as a prop). A held prompt is let go when it hides or is removed. The engine accepts
 	InputHoldBegin only on a prompt shown on this client, and the server still validates every trigger
@@ -24,6 +24,7 @@
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local Observers = require(ReplicatedStorage.Packages.Observers)
@@ -35,6 +36,11 @@ local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shif
 local watches: { [ProximityPrompt]: RBXScriptConnection? } = {}
 -- The store id of each adopted prompt that has been shown.
 local ids: { [ProximityPrompt]: number } = {}
+local CarryServiceClient = require(ReplicatedStorage.Client.Features.Carry.CarryServiceClient)
+local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
+local Rules = require(ReplicatedStorage.Client.Features.Shift.Rules.ShiftPromptRules)
+local ranges: { [ProximityPrompt]: number } = {}
+local chosen: ProximityPrompt? = nil
 local nextId = 0
 -- The prompt shown now, and the prompt `press(true)` is holding.
 local current: ProximityPrompt? = nil
@@ -53,6 +59,17 @@ local function underTagged(instance: Instance): boolean
 end
 
 -- The Interaction kind of the object a prompt belongs to (the tagged ancestor's attribute).
+local function targetOf(prompt: ProximityPrompt): Instance?
+	local node: Instance? = prompt.Parent
+	while node ~= nil do
+		if node:HasTag(InteractionConstants.TAG) then
+			return node
+		end
+		node = node.Parent
+	end
+	return nil
+end
+
 local function kindOf(prompt: ProximityPrompt): string?
 	local node: Instance? = prompt.Parent
 	while node ~= nil do
@@ -81,6 +98,14 @@ local function forget(prompt: ProximityPrompt)
 	if current == prompt then
 		current = nil
 	end
+	if chosen == prompt then
+		chosen = nil
+	end
+	local range = ranges[prompt]
+	if range ~= nil and prompt.Parent ~= nil then
+		prompt.MaxActivationDistance = range
+	end
+	ranges[prompt] = nil
 	local id = ids[prompt]
 	if id ~= nil then
 		ShiftPromptStore.hide(id)
@@ -99,6 +124,10 @@ local function adopt(prompt: ProximityPrompt)
 	if watches[prompt] ~= nil then
 		return
 	end
+	ranges[prompt] = prompt.MaxActivationDistance
+	nextId += 1
+	ids[prompt] = nextId
+	prompt.MaxActivationDistance = 0
 	watches[prompt] = prompt.AncestryChanged:Connect(function()
 		if not prompt:IsDescendantOf(game) then
 			forget(prompt)
@@ -113,7 +142,7 @@ local function adoptIfOurs(instance: Instance)
 end
 
 local function onShown(prompt: ProximityPrompt)
-	if prompt.Name ~= InteractionConstants.PROMPT_NAME or not underTagged(prompt) then
+	if prompt ~= chosen or prompt.Name ~= InteractionConstants.PROMPT_NAME or not underTagged(prompt) then
 		return
 	end
 	-- Shown before the tag observer reached it: adopt it now.
@@ -127,6 +156,7 @@ local function onShown(prompt: ProximityPrompt)
 	current = prompt
 	ShiftPromptStore.show({
 		id = id,
+		target = targetOf(prompt),
 		action = prompt.ActionText,
 		object = prompt.ObjectText,
 		key = ShiftHudViewModel.keyName(prompt.KeyboardKeyCode),
@@ -148,10 +178,90 @@ local function onHidden(prompt: ProximityPrompt)
 	end
 end
 
+-- The engine's native input only sees the chosen prompt in range. Others get a local zero range;
+-- authoritative reach/enabled checks still run on the server. Never mutate the object's attributes.
+local function selectNearby()
+	local character = Players.LocalPlayer.Character
+	local root = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil
+	local humanoid = if character ~= nil then character:FindFirstChildOfClass("Humanoid") else nil
+	local camera = Workspace.CurrentCamera
+	local candidates: { Rules.Candidate } = {}
+	local byId: { [number]: ProximityPrompt } = {}
+	if root ~= nil and root:IsA("BasePart") and humanoid ~= nil and humanoid.Health > 0 and camera ~= nil then
+		local ray = RaycastParams.new()
+		ray.FilterType = Enum.RaycastFilterType.Exclude
+		ray.FilterDescendantsInstances = if character ~= nil then { character } else {}
+		for prompt, id in ids do
+			local target = targetOf(prompt)
+			local parent = prompt.Parent
+			local position: Vector3? = nil
+			if parent ~= nil and parent:IsA("BasePart") then
+				position = parent.Position
+			elseif parent ~= nil and parent:IsA("Attachment") then
+				position = parent.WorldPosition
+			end
+			if target ~= nil and position ~= nil then
+				local offset = position - root.Position
+				local distance = offset.Magnitude
+				local screen, onScreen = camera:WorldToViewportPoint(position)
+				local result = Workspace:Raycast(camera.CFrame.Position, position - camera.CFrame.Position, ray)
+				local visible = onScreen
+					and screen.Z > 0
+					and (result == nil or result.Instance == target or result.Instance:IsDescendantOf(target))
+				local range = math.min(ranges[prompt] or 0, if kindOf(prompt) == "carry" then 6 else 8)
+				table.insert(candidates, {
+					id = id,
+					distance = distance,
+					dot = if distance > 0 then camera.CFrame.LookVector:Dot(offset.Unit) else 1,
+					range = range,
+					visible = visible,
+					enabled = target:GetAttribute(InteractionConstants.ENABLED_ATTRIBUTE) ~= false
+						and (
+							kindOf(prompt) ~= "carry"
+							or (
+								not CarryServiceClient:isCarrying()
+								and target:GetAttribute(CarryConstants.CARRIED_BY_ATTRIBUTE) == nil
+							)
+						),
+				})
+				byId[id] = prompt
+			end
+		end
+	end
+	local selected = Rules.choose(candidates, if chosen ~= nil then ids[chosen] else nil)
+	local nextPrompt = if selected ~= nil then byId[selected] else nil
+	if nextPrompt ~= chosen then
+		release()
+		if current ~= nil then
+			onHidden(current)
+		end
+		chosen = nextPrompt
+	end
+	for prompt in ranges do
+		local want = if prompt == chosen
+			then math.min(ranges[prompt] or 0, if kindOf(prompt) == "carry" then 6 else 8)
+			else 0
+		if prompt.MaxActivationDistance ~= want then
+			prompt.MaxActivationDistance = want
+		end
+	end
+end
+
 local ShiftPromptSystem = {}
 
 function ShiftPromptSystem.start(): () -> ()
 	local connections: { RBXScriptConnection } = {}
+	local elapsed = 0
+	table.insert(
+		connections,
+		RunService.Heartbeat:Connect(function(dt: number)
+			elapsed += dt
+			if elapsed >= 0.1 then
+				elapsed = 0
+				selectNearby()
+			end
+		end)
+	)
 	local stopObserver = Observers.observeTag(InteractionConstants.TAG, function(target: Instance)
 		-- The server parents the prompt under the object's root part; it may replicate after the tag does.
 		for _, descendant in target:GetDescendants() do
@@ -205,6 +315,13 @@ function ShiftPromptSystem.start(): () -> ()
 				watch:Disconnect()
 			end
 		end
+		for prompt, range in ranges do
+			if prompt.Parent ~= nil then
+				prompt.MaxActivationDistance = range
+			end
+		end
+		table.clear(ranges)
+		chosen = nil
 		table.clear(watches)
 		table.clear(ids)
 		ShiftPromptStore.clear()

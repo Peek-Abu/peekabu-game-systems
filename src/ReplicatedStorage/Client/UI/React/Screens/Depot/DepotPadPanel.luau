@@ -182,7 +182,7 @@ local function desktop(props: DepotPadPanelProps): React.ReactNode
 			size = UDim2.fromScale(1, 1),
 			paper = COLOR.cream,
 			band = view.title,
-			bandColor = COLOR.stamp,
+			bandColor = COLOR.companyTeal,
 			padding = 0,
 			children = children,
 		}),
@@ -197,7 +197,7 @@ local function phone(props: DepotPadPanelProps): React.ReactNode
 	local children: { [string]: React.ReactNode } = {
 		bar = e("Frame", {
 			Size = UDim2.new(0, 8, 1, 0),
-			BackgroundColor3 = COLOR.stamp,
+			BackgroundColor3 = COLOR.companyTeal,
 			BorderSizePixel = 0,
 		}),
 		title = e(PaperLabel, {

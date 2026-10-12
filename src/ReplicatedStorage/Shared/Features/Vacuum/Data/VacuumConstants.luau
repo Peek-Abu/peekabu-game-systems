@@ -23,6 +23,10 @@ local PILE_KINDS: { [string]: PileStyle } = {
 local PILE_KIND_LIST: { string } = { "paper", "debris", "cables" }
 
 return table.freeze({
+	TOOL_NAME = "Vacuum",
+	TOOL_ATTRIBUTE = "CleanupCrewVacuum",
+	PUBLIC_EQUIPPED_FIELD = "vacuumEquipped",
+	TOOL_REFRESH_INTERVAL = 0.1,
 	-- The Interaction channel kind a pile carries (its ChannelKind attribute).
 	CHANNEL_KIND = "pile",
 	-- CollectionService tag on every pile (the client's aim and the shrink follow it).

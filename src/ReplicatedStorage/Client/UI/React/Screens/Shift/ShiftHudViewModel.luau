@@ -28,6 +28,7 @@ local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper
 type ShiftSnapshot = ShiftTypes.ShiftSnapshot
 
 export type HandsView = {
+	kind: string,
 	name: string,
 	value: string,
 	traits: string,
@@ -42,6 +43,7 @@ export type PocketView = {
 }
 
 export type HudView = {
+	vacuumEquipped: boolean,
 	-- The time card.
 	clockLabel: string,
 	time: string,
@@ -143,9 +145,10 @@ local function handsOf(kind: PublicPlayerTypes.PublicValue?): HandsView?
 	end
 	local def = CargoRegistry.get(kind)
 	if def == nil then
-		return { name = kind, value = "", traits = "", short = "", fragile = false }
+		return { kind = kind, name = kind, value = "", traits = "", short = "", fragile = false }
 	end
 	return {
+		kind = kind,
 		name = def.name,
 		value = `+{def.value}`,
 		traits = traitsOf(def),
@@ -198,6 +201,7 @@ function ShiftHudViewModel.hud(
 	local clockOutAt = snapshot.clockOutAt
 	local overtime = snapshot.stage == "overtime"
 	return {
+		vacuumEquipped = entry[VacuumConstants.PUBLIC_EQUIPPED_FIELD] == true,
 		clockLabel = stageLabel(snapshot, now),
 		time = ShiftHudViewModel.clock(left),
 		outText = `OUT {ShiftHudViewModel.clock(total)}`,
@@ -448,6 +452,53 @@ end
 ]=]
 function ShiftHudViewModel.promptTouchable(touch: boolean, keyboard: boolean): boolean
 	return touch and not keyboard
+end
+
+export type CompactView = {
+	cargoValue: string?,
+	equipped: boolean,
+	pocketCount: number,
+	actions: { HintView },
+}
+
+function ShiftHudViewModel.compact(view: HudView, bindings: KeyBindings): CompactView
+	local occupied = 0
+	for _, pocket in view.pockets do
+		if not pocket.empty then
+			occupied += 1
+		end
+	end
+	local actions: { HintView } = {}
+	if view.hands ~= nil then
+		local def = CargoRegistry.get(view.hands.kind)
+		for _, hint in ShiftHudViewModel.keyHints(bindings) do
+			if
+				hint.label == "drop"
+				or (hint.label == "throw" and def ~= nil and def.throwable)
+				or (hint.label == "pocket" and def ~= nil and def.size == "tiny" and occupied < #view.pockets)
+			then
+				table.insert(actions, hint)
+			end
+		end
+	elseif occupied > 0 then
+		local key = firstKey(bindings, CargoConstants.POCKET_ACTION)
+		if key ~= nil then
+			table.insert(actions, { key = ShiftHudViewModel.keyName(key), label = "unpocket" })
+		end
+	end
+	local hands = view.hands
+	local def = if hands ~= nil then CargoRegistry.get(hands.kind) else nil
+	return {
+		equipped = view.vacuumEquipped,
+		pocketCount = occupied,
+		actions = actions,
+		cargoValue = if hands ~= nil
+			then `{hands.value} {if def == nil
+				then "value"
+				elseif def.category == "trash" then "clearance"
+				else "salvage"}`
+			else nil,
+	}
 end
 
 -- The hint row is drawn on desktop with a keyboard only.

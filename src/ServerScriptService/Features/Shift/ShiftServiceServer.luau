@@ -191,6 +191,7 @@ local function beginRun()
 	log:info(
 		`shift {state.shift} started: variant {state.variant}, greed {if plan.greed ~= nil then plan.greed.kind else "?"}`
 	)
+	VacuumServiceServer:setCrew(RoundServiceServer:participants())
 	for index, player in RoundServiceServer:participants() do
 		local character = player.Character
 		if character ~= nil then
@@ -249,6 +250,9 @@ local function onRoundPhase(roundState: RoundTypes.RoundState)
 	if nextState.phase == "running" and before ~= "running" then
 		-- Each run's A/B variant (spec §4; rewards never read it), chosen before anyone hears of the run.
 		nextState.variant = ShiftAnalyticsSystem.pickVariant(nextState.shift)
+	end
+	if before == "running" and nextState.phase ~= "running" then
+		VacuumServiceServer:setCrew({})
 	end
 	setState(nextState)
 	if nextState.phase == "running" and before ~= "running" then

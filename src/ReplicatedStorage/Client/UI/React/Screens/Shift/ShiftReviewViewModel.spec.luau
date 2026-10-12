@@ -52,6 +52,39 @@ local function snapshot(extra, results)
 end
 
 return function()
+	describe("award art by actual title", function()
+		it("does not invent art for unknown awards", function()
+			expect(#ShiftReviewViewModel.shapesForAward("UNKNOWN")).to.equal(0)
+			expect(#ShiftReviewViewModel.shapesForAward("EMPLOYEE OF THE NIGHT") > 0).to.equal(true)
+		end)
+	end)
+	describe("award symbols", function()
+		it("maps each real award to its own silhouette", function()
+			local expected = {
+				["EMPLOYEE OF THE NIGHT"] = "medal",
+				["MOST REHIRED"] = "punchCard",
+				["BUTTERFINGERS"] = "droppedMug",
+				["QUIETEST FEET"] = "quietShoe",
+				["LOUDEST VACUUM"] = "noisyVacuum",
+			}
+			for title, symbol in expected do
+				expect(ShiftReviewViewModel.awardSymbol(title)).to.equal(symbol)
+			end
+		end)
+		it("keeps every badge part inside its 64 px canvas", function()
+			for _, symbol in { "medal", "punchCard", "droppedMug", "quietShoe", "noisyVacuum" } do
+				local shapes = ShiftReviewViewModel.awardShapes(symbol)
+				expect(#shapes > 3).to.equal(true)
+				for _, shape in shapes do
+					expect(shape.x >= 0 and shape.y >= 0).to.equal(true)
+					expect(shape.x + shape.w <= 64 and shape.y + shape.h <= 64).to.equal(true)
+				end
+			end
+		end)
+		it("does not invent a symbol for an unknown award", function()
+			expect(ShiftReviewViewModel.awardSymbol("future award")).to.equal(nil)
+		end)
+	end)
 	describe("review", function()
 		it("shows nothing outside results or without a review", function()
 			expect(ShiftReviewViewModel.review(snapshot({ phase = "running" }), nil, 4, 100, false)).to.equal(nil)
@@ -120,6 +153,7 @@ return function()
 			local view = ShiftReviewViewModel.review(snapshot({}, results), nil, 4, 100, false)
 			expect(#view.awards).to.equal(4)
 			expect(view.awards[1].title).to.equal("EMPLOYEE OF THE NIGHT")
+			expect(view.awards[1].userId).to.equal(1)
 			expect(view.awards[1].line).to.equal("Me — hauled 140")
 			expect(view.awards[4].line).to.equal("you — never heard once")
 			expect(view.moreAwards).to.equal(nil)

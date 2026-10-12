@@ -14,6 +14,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
 
 local Charm = require(ReplicatedStorage.Packages.Charm)
 local React = require(ReplicatedStorage.Packages.React)
@@ -24,6 +25,7 @@ local DepotEvents = require(DepotShared.Net.DepotEvents)
 local DepotTypes = require(DepotShared.Data.DepotTypes)
 local DepotBillboardSystem = require(ReplicatedStorage.Client.Features.Depot.Systems.DepotBillboardSystem)
 local DepotStore = require(ReplicatedStorage.Client.Features.Depot.State.DepotStore)
+local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
 local QueueServiceClient = require(ReplicatedStorage.Client.Features.Queue.QueueServiceClient)
 local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudRegistry)
 local DepotCard = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotCard)
@@ -35,6 +37,9 @@ require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotScene)
 
 local HUD_KEY = "depotCard"
 local PAD_HUD_KEY = "depotPad"
+local DepotHub = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotHub)
+local DepotHubViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotHubViewModel)
+require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotHubScene)
 
 local stoppers: { () -> () } = {}
 
@@ -50,6 +55,9 @@ local DepotServiceClient: DepotServiceClient = {
 	dependencies = { "QueueServiceClient", "StateSyncServiceClient" },
 
 	init = function(_self)
+		if not HudRegistry.has("depotHub") then
+			HudRegistry.register("depotHub", DepotHub, DepotConstants.HUD_ORDER - 2)
+		end
 		if not HudRegistry.has(HUD_KEY) then
 			HudRegistry.register(HUD_KEY, DepotCard, DepotConstants.HUD_ORDER)
 		end
@@ -67,6 +75,17 @@ local DepotServiceClient: DepotServiceClient = {
 	end,
 
 	start = function(_self)
+		table.insert(
+			stoppers,
+			Charm.subscribe(ShiftStore.snapshot, function(snapshot)
+				if not DepotHubViewModel.visible(snapshot, Players.LocalPlayer.UserId) then
+					SceneStack.remove(DepotConstants.BOARD_SCENE)
+					SceneStack.remove(DepotHubViewModel.scene("guide"))
+					SceneStack.remove(DepotHubViewModel.scene("gear"))
+					SceneStack.remove(DepotHubViewModel.scene("settings"))
+				end
+			end)
+		)
 		table.insert(
 			stoppers,
 			DepotEvents.packets.Card.listen(function(data: DepotTypes.CardMessage)
@@ -113,6 +132,9 @@ local DepotServiceClient: DepotServiceClient = {
 		end
 		table.clear(stoppers)
 		SceneStack.remove(DepotConstants.BOARD_SCENE)
+		SceneStack.remove(DepotHubViewModel.scene("guide"))
+		SceneStack.remove(DepotHubViewModel.scene("gear"))
+		SceneStack.remove(DepotHubViewModel.scene("settings"))
 		DepotStore.clear()
 	end,
 

@@ -29,16 +29,16 @@ export type WatchOptions = {
 	tag: string,
 	roots: UIBillboards.UIBillboardsCore,
 	-- Draws (or re-draws) one shell: when it is first seen and whenever one of its attributes changes.
-	refresh: (shell: BillboardGui) -> (),
+	refresh: (shell: UIBillboards.WorldShell) -> (),
 	-- After a shell left and its root was hidden.
-	removed: ((shell: BillboardGui) -> ())?,
+	removed: ((shell: UIBillboards.WorldShell) -> ())?,
 }
 
 local ROOT_NAME = "WorldRoot"
 
 local UIBillboardHost = {}
 
-function UIBillboardHost.factory(shell: BillboardGui): UIBillboards.BillboardHandle
+function UIBillboardHost.factory(shell: UIBillboards.WorldShell): UIBillboards.BillboardHandle
 	local container = Instance.new("Frame")
 	container.Name = ROOT_NAME
 	container.Size = UDim2.fromScale(1, 1)
@@ -60,9 +60,9 @@ function UIBillboardHost.factory(shell: BillboardGui): UIBillboards.BillboardHan
 end
 
 function UIBillboardHost.watch(options: WatchOptions): () -> ()
-	local watched: { [BillboardGui]: { RBXScriptConnection } } = {}
+	local watched: { [UIBillboards.WorldShell]: { RBXScriptConnection } } = {}
 
-	local function drop(shell: BillboardGui)
+	local function drop(shell: UIBillboards.WorldShell)
 		local connections = watched[shell]
 		if connections == nil then
 			return
@@ -79,10 +79,10 @@ function UIBillboardHost.watch(options: WatchOptions): () -> ()
 	end
 
 	local function add(instance: Instance)
-		if not instance:IsA("BillboardGui") then
+		if not instance:IsA("BillboardGui") and not instance:IsA("SurfaceGui") then
 			return
 		end
-		local shell: BillboardGui = instance
+		local shell: UIBillboards.WorldShell = instance
 		if watched[shell] ~= nil then
 			return
 		end
@@ -104,7 +104,7 @@ function UIBillboardHost.watch(options: WatchOptions): () -> ()
 
 	local added = CollectionService:GetInstanceAddedSignal(options.tag):Connect(add)
 	local removedSignal = CollectionService:GetInstanceRemovedSignal(options.tag):Connect(function(instance: Instance)
-		if instance:IsA("BillboardGui") then
+		if instance:IsA("BillboardGui") or instance:IsA("SurfaceGui") then
 			drop(instance)
 		end
 	end)
@@ -115,7 +115,7 @@ function UIBillboardHost.watch(options: WatchOptions): () -> ()
 	return function()
 		added:Disconnect()
 		removedSignal:Disconnect()
-		local shells: { BillboardGui } = {}
+		local shells: { UIBillboards.WorldShell } = {}
 		for shell in watched do
 			table.insert(shells, shell)
 		end

@@ -27,6 +27,8 @@ local usePaperHudScale = require(ReplicatedStorage.Client.UI.React.Screens.Paper
 local e = React.createElement
 
 export type LayerProps = {
+	-- Design-pixel inset; the live widget converts the compact time card clearance from screen pixels.
+	top: number?,
 	view: PaperToastViewModel.ToastView,
 	layout: UIPaperConstants.Layout,
 }
@@ -57,7 +59,7 @@ local function Layer(props: LayerProps): React.ReactNode
 		notes = e("Frame", {
 			-- Desktop: top-right under the top bar (1a/1b at x 1520, y 80). Phone: centre-top (1d at x 304, y 86).
 			AnchorPoint = if phone then Vector2.new(0.5, 0) else Vector2.new(1, 0),
-			Position = if phone then UDim2.new(0.5, 0, 0, 86) else UDim2.new(1, -60, 0, 80),
+			Position = if phone then UDim2.new(0.5, 0, 0, 86) else UDim2.new(1, -60, 0, props.top or 80),
 			Size = UDim2.fromOffset(if phone then 250 else 340, 0),
 			AutomaticSize = Enum.AutomaticSize.Y,
 			BackgroundTransparency = 1,
@@ -88,6 +90,7 @@ local function Widget(): React.ReactNode
 	local layerProps: LayerProps = {
 		view = PaperToastViewModel.layout(toasts, PaperToastViewModel.MAX_NOTES),
 		layout = layout,
+		top = if layout == "desktop" then 128 / hudScale.scale else nil,
 	}
 	-- Figma 4a: no HUD and no text during the scare beat. The layer stays mounted and is hidden with a prop, so the
 	-- notes and the stamp do not remount (and replay their entrance) when the beat ends.

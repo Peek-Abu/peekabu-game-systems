@@ -6,6 +6,9 @@
 ]=]
 
 return table.freeze({
+	-- Cleanup Crew interior camera: native Zoom occlusion plus bounded orbit.
+	MAX_ZOOM_DISTANCE = 16,
+	MIN_ZOOM_DISTANCE = 0.5,
 	-- Shake: the largest rotation offset at full trauma, in radians (pitch, yaw, roll).
 	SHAKE_MAX_PITCH = math.rad(6),
 	SHAKE_MAX_YAW = math.rad(6),

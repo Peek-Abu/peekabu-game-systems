@@ -17,6 +17,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage.Packages.React)
 local CorkBoard = require(ReplicatedStorage.Client.UI.React.Screens.Paper.CorkBoard)
 local PaperButton = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperButton)
+local PaperPropIcon = require(script.Parent.Parent.Paper.PaperPropIcon)
 local PaperLabel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperLabel)
 local PaperSheet = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperSheet)
 local PaperStamp = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperStamp)
@@ -171,13 +172,20 @@ local function workOrderOf(view: DepotBoardViewModel.BoardView, layout: UIPaperC
 		content.number = label(view.workOrder, "heading", 16, LABEL_INK, 14, 8)
 		content.headline = label(view.subline, "heading", 20, COLOR.ink, 14, 30, 424)
 	else
-		content.headline = label(view.headline, "heading", 34, COLOR.ink, 36, 28)
+		content.prop = e(
+			"Frame",
+			{ Position = UDim2.fromOffset(24, 18), Size = UDim2.fromOffset(62, 62), BackgroundTransparency = 1 },
+			{ art = e(PaperPropIcon, { kind = "jobs" }) }
+		)
+		content.headline = label(view.headline, "heading", 34, COLOR.ink, 104, 28)
 		content.subline = label(view.subline, "body", 22, COLOR.ink, 36, 80, 800)
 	end
 	return e(PaperSheet, {
 		position = at(geometry.sheet.pos),
 		size = UDim2.fromOffset(geometry.sheet.size.X, geometry.sheet.size.Y),
 		tab = if phone then nil else view.workOrder,
+		paper = COLOR.cream,
+		fastener = if phone then nil else "clip",
 		padding = 0,
 	}, content)
 end
