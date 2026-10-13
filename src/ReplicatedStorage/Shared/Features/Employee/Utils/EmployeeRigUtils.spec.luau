@@ -72,7 +72,8 @@ return function()
 		end)
 
 		it("mirrors for a T-posed left hand", function()
-			local grip = EmployeeRigUtils.gripAttachment("Left", Vector3.new(0.54, 0.43, 0.78), CFrame.new(0.23, 0, 0.087))
+			local grip =
+				EmployeeRigUtils.gripAttachment("Left", Vector3.new(0.54, 0.43, 0.78), CFrame.new(0.23, 0, 0.087))
 			expect(grip.name).to.equal("LeftGripAttachment")
 			expect(math.abs(grip.cframe.Position.X + 0.27) < 1e-4).to.equal(true)
 		end)

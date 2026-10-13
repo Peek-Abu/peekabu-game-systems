@@ -1,11 +1,13 @@
 --!strict
 --[=[
-	EmployeeExpressionSystem: the server's per-player expression pass. Each tick it reads the Manager's mind and
-	position (through `sources`) and each subject's busy flag, decides the face (EmployeeFaceRules) and writes it
-	to the character's EmployeeFace attribute, which replicates; every client then shows it (EmployeeFaceSystem).
-	Only employee characters (with an EmployeeName attribute) are touched; an unchanged face is not rewritten.
+	EmployeeExpressionSystem: the server's per-player expression pass. Each tick it reads the Manager's mind
+	and position (through `sources`) and each subject's activity, decides the gameplay state
+	(EmployeeFaceRules.stateOf), looks up that employee's face for it (EmployeeRegistry `expressions`) and
+	writes it to the character's EmployeeFace attribute, which replicates; every client then shows it
+	(EmployeeFaceSystem). Only characters naming a registered employee (EmployeeName attribute) are
+	touched; an unchanged face is not rewritten.
 
-	Remembers, per UserId, when the player was last busy (for the Happy linger).
+	Remembers, per UserId, when the player last vacuumed (for the short cleaning tail).
 
 	@class EmployeeExpressionSystem
 ]=]
@@ -26,8 +28,10 @@ export type Sources = {
 export type Subject = {
 	userId: number,
 	character: Model,
-	-- Vacuuming, carrying, or holding pocketed cargo right now.
-	busy: boolean,
+	-- Vacuuming right now.
+	vacuuming: boolean,
+	-- Something in the hands (Carry) or cargo in the pockets (Cargo) right now.
+	carrying: boolean,
 }
 
 export type EmployeeExpressionState = {
@@ -44,7 +48,7 @@ export type EmployeeExpressionSystem = {
 local EmployeeExpressionSystem = {}
 
 function EmployeeExpressionSystem.new(sources: Sources): EmployeeExpressionSystem
-	local lastBusyAt: { [number]: number } = {}
+	local lastVacuumAt: { [number]: number } = {}
 	local shown: { [number]: EmployeeRegistry.Face } = {}
 
 	return {
@@ -54,19 +58,23 @@ function EmployeeExpressionSystem.new(sources: Sources): EmployeeExpressionSyste
 			local now = sources.now()
 			for _, subject in subjects do
 				local character = subject.character
-				if character:GetAttribute(EmployeeConstants.NAME_ATTRIBUTE) == nil then
+				local name = character:GetAttribute(EmployeeConstants.NAME_ATTRIBUTE)
+				local def = if type(name) == "string" then EmployeeRegistry.get(name) else nil
+				if def == nil then
 					continue
 				end
-				if subject.busy then
-					lastBusyAt[subject.userId] = now
+				if subject.vacuuming then
+					lastVacuumAt[subject.userId] = now
 				end
 				local distance: number? = if manager ~= nil
 					then (character:GetPivot().Position - manager).Magnitude
 					else nil
 				local threatened = mind ~= nil
 					and EmployeeFaceRules.isThreatened(mind.mode, mind.target == subject.userId, distance)
-				local face: EmployeeRegistry.Face =
-					EmployeeFaceRules.decide(threatened, subject.busy, now, lastBusyAt[subject.userId])
+				local cleaning = EmployeeFaceRules.isCleaning(subject.vacuuming, now, lastVacuumAt[subject.userId])
+				local state: EmployeeRegistry.GameplayState =
+					EmployeeFaceRules.stateOf(threatened, cleaning, subject.carrying)
+				local face: EmployeeRegistry.Face = EmployeeFaceRules.faceFor(def, state)
 				shown[subject.userId] = face
 				if character:GetAttribute(EmployeeConstants.FACE_ATTRIBUTE) ~= face then
 					character:SetAttribute(EmployeeConstants.FACE_ATTRIBUTE, face)
@@ -75,7 +83,7 @@ function EmployeeExpressionSystem.new(sources: Sources): EmployeeExpressionSyste
 		end,
 
 		forget = function(userId)
-			lastBusyAt[userId] = nil
+			lastVacuumAt[userId] = nil
 			shown[userId] = nil
 		end,
 

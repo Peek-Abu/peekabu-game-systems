@@ -17,6 +17,7 @@ return function()
 			local state = EmployeeServiceServer:getState()
 			expect(state.employee).to.be.a("string")
 			expect(state.installed).to.be.a("boolean")
+			expect(state.skinned).to.be.a("number")
 		end)
 	end)
 end

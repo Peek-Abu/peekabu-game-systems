@@ -1,14 +1,16 @@
 --!strict
 --[=[
-	EmployeeFaceRules: which expression an employee shows, from what the server knows.
+	EmployeeFaceRules: which expression an employee shows, in two steps.
 
-	- Worried: the Manager is chasing (or catching) this player, at any distance; or he is within
-	  WORRIED_RADIUS and alert (investigating a noise, chasing someone, searching, catching). Being worried
-	  beats everything.
-	- Happy: vacuuming, carrying something in the hands, or holding cargo in the pockets; and for
-	  HAPPY_LINGER seconds after the last of those (so banking a haul, which empties the pockets, still
-	  reads as a happy moment).
-	- Content: otherwise.
+	1. The gameplay state, from what the server knows (`stateOf`):
+	   - threatened: the Manager is chasing (or catching) this player, at any distance; or he is within
+	     WORRIED_RADIUS and alert (investigating a noise, chasing someone, searching, catching). Beats
+	     everything.
+	   - cleaning: vacuuming, plus a CLEANING_LINGER tail so gaps between sweeps do not flicker.
+	   - carrying: something in the hands, or cargo in the pockets.
+	   - idle: otherwise.
+	2. The face, from the employee's own mapping (`faceFor`, EmployeeRegistry `expressions`): employees
+	   differ, so no state is hard-wired to an expression here.
 
 	@class EmployeeFaceRules
 ]=]
@@ -24,6 +26,11 @@ local ALERT_MODES: { [OccupantTypes.Mode]: boolean } = {
 	chase = true,
 	search = true,
 	catch = true,
+}
+
+-- The mapping `faceFor` reads (an EmployeeDef has it).
+export type Expressive = {
+	expressions: { [EmployeeRegistry.GameplayState]: EmployeeRegistry.Face },
 }
 
 local EmployeeFaceRules = {}
@@ -44,16 +51,35 @@ function EmployeeFaceRules.isThreatened(mode: OccupantTypes.Mode?, targetsMe: bo
 end
 
 --[=[
-	@param lastBusyAt When the player was last busy (same clock as `now`), nil if never.
+	Vacuuming now, or within CLEANING_LINGER of the last moment the vacuum ran.
+	@param lastVacuumAt When the player last vacuumed (same clock as `now`), nil if never.
 ]=]
-function EmployeeFaceRules.decide(threatened: boolean, busy: boolean, now: number, lastBusyAt: number?): EmployeeRegistry.Face
+function EmployeeFaceRules.isCleaning(vacuuming: boolean, now: number, lastVacuumAt: number?): boolean
+	return vacuuming or (lastVacuumAt ~= nil and now - lastVacuumAt <= EmployeeConstants.CLEANING_LINGER)
+end
+
+--[=[
+	The gameplay state a face is chosen for. Threatened beats cleaning beats carrying.
+	@param carrying Cargo in the hands (Carry) or in the pockets (Cargo).
+]=]
+function EmployeeFaceRules.stateOf(
+	threatened: boolean,
+	cleaning: boolean,
+	carrying: boolean
+): EmployeeRegistry.GameplayState
 	if threatened then
-		return "Worried"
+		return "threatened"
+	elseif cleaning then
+		return "cleaning"
+	elseif carrying then
+		return "carrying"
 	end
-	if busy or (lastBusyAt ~= nil and now - lastBusyAt <= EmployeeConstants.HAPPY_LINGER) then
-		return "Happy"
-	end
-	return "Content"
+	return "idle"
+end
+
+-- The face this employee shows in `state` (its own mapping, EmployeeRegistry `expressions`).
+function EmployeeFaceRules.faceFor(def: Expressive, state: EmployeeRegistry.GameplayState): EmployeeRegistry.Face
+	return def.expressions[state]
 end
 
 return EmployeeFaceRules

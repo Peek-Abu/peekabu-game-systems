@@ -4,9 +4,11 @@ local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Dat
 local EmployeeExpressionSystem = require(script.Parent.EmployeeExpressionSystem)
 
 return function()
-	local function makeEmployee(position)
+	local FACE = EmployeeConstants.FACE_ATTRIBUTE
+
+	local function makeEmployee(position, name)
 		local model = Instance.new("Model")
-		model:SetAttribute(EmployeeConstants.NAME_ATTRIBUTE, "Pippa")
+		model:SetAttribute(EmployeeConstants.NAME_ATTRIBUTE, name or "Pippa")
 		local root = Instance.new("Part")
 		root.Name = "HumanoidRootPart"
 		root.Anchored = true
@@ -34,28 +36,45 @@ return function()
 		return { mode = mode, since = 0, routeIndex = 1, routeStep = 1, target = target, grace = {} }
 	end
 
+	local function subject(userId, character, vacuuming, carrying)
+		return { userId = userId, character = character, vacuuming = vacuuming, carrying = carrying }
+	end
+
 	describe("tick", function()
-		it("is Content with no Manager around and nothing to do", function()
+		it("shows Pippa's idle face with no Manager around and nothing to do", function()
 			local state = { now = 0 }
 			local system = EmployeeExpressionSystem.new(sources(state))
 			local employee = makeEmployee(Vector3.new())
-			system.tick({ { userId = 1, character = employee, busy = false } })
-			expect(employee:GetAttribute(EmployeeConstants.FACE_ATTRIBUTE)).to.equal("Content")
+			system.tick({ subject(1, employee, false, false) })
+			expect(employee:GetAttribute(FACE)).to.equal("Content")
 			employee:Destroy()
 		end)
 
-		it("is Happy while busy and for the linger window after", function()
+		it("shows Pippa's cleaning face while vacuuming and for the short tail after", function()
 			local state = { now = 0 }
 			local system = EmployeeExpressionSystem.new(sources(state))
 			local employee = makeEmployee(Vector3.new())
-			system.tick({ { userId = 1, character = employee, busy = true } })
-			expect(employee:GetAttribute(EmployeeConstants.FACE_ATTRIBUTE)).to.equal("Happy")
-			state.now = EmployeeConstants.HAPPY_LINGER / 2
-			system.tick({ { userId = 1, character = employee, busy = false } })
-			expect(employee:GetAttribute(EmployeeConstants.FACE_ATTRIBUTE)).to.equal("Happy")
-			state.now = EmployeeConstants.HAPPY_LINGER + 1
-			system.tick({ { userId = 1, character = employee, busy = false } })
-			expect(employee:GetAttribute(EmployeeConstants.FACE_ATTRIBUTE)).to.equal("Content")
+			system.tick({ subject(1, employee, true, false) })
+			expect(employee:GetAttribute(FACE)).to.equal("Happy")
+			state.now = EmployeeConstants.CLEANING_LINGER / 2
+			system.tick({ subject(1, employee, false, false) })
+			expect(employee:GetAttribute(FACE)).to.equal("Happy")
+			state.now = EmployeeConstants.CLEANING_LINGER + 1
+			system.tick({ subject(1, employee, false, false) })
+			expect(employee:GetAttribute(FACE)).to.equal("Content")
+			employee:Destroy()
+		end)
+
+		it("does not make carrying cargo Happy for Pippa", function()
+			local state = { now = 0 }
+			local system = EmployeeExpressionSystem.new(sources(state))
+			local employee = makeEmployee(Vector3.new())
+			system.tick({ subject(1, employee, false, true) })
+			expect(employee:GetAttribute(FACE)).to.equal("Content")
+			-- Banking (the pockets empty) is not a happy moment either.
+			state.now = 1
+			system.tick({ subject(1, employee, false, false) })
+			expect(employee:GetAttribute(FACE)).to.equal("Content")
 			employee:Destroy()
 		end)
 
@@ -66,35 +85,38 @@ return function()
 			local near = makeEmployee(Vector3.new(EmployeeConstants.WORRIED_RADIUS - 5, 0, 0))
 			local far = makeEmployee(Vector3.new(0, 0, EmployeeConstants.WORRIED_RADIUS + 50))
 			system.tick({
-				{ userId = 7, character = chased, busy = true },
-				{ userId = 8, character = near, busy = false },
-				{ userId = 9, character = far, busy = false },
+				subject(7, chased, true, true),
+				subject(8, near, false, false),
+				subject(9, far, false, false),
 			})
-			expect(chased:GetAttribute(EmployeeConstants.FACE_ATTRIBUTE)).to.equal("Worried")
-			expect(near:GetAttribute(EmployeeConstants.FACE_ATTRIBUTE)).to.equal("Worried")
-			expect(far:GetAttribute(EmployeeConstants.FACE_ATTRIBUTE)).to.equal("Content")
+			expect(chased:GetAttribute(FACE)).to.equal("Worried")
+			expect(near:GetAttribute(FACE)).to.equal("Worried")
+			expect(far:GetAttribute(FACE)).to.equal("Content")
 			chased:Destroy()
 			near:Destroy()
 			far:Destroy()
 		end)
 
-		it("leaves non-employee characters alone", function()
+		it("leaves non-employee characters and unknown employees alone", function()
 			local state = { now = 0 }
 			local system = EmployeeExpressionSystem.new(sources(state))
 			local plain = Instance.new("Model")
-			system.tick({ { userId = 1, character = plain, busy = true } })
-			expect(plain:GetAttribute(EmployeeConstants.FACE_ATTRIBUTE)).never.to.be.ok()
+			local stranger = makeEmployee(Vector3.new(), "Nobody")
+			system.tick({ subject(1, plain, true, false), subject(2, stranger, true, false) })
+			expect(plain:GetAttribute(FACE)).never.to.be.ok()
+			expect(stranger:GetAttribute(FACE)).never.to.be.ok()
 			plain:Destroy()
+			stranger:Destroy()
 		end)
 
-		it("forgets a player's busy history", function()
+		it("forgets a player's cleaning history", function()
 			local state = { now = 0 }
 			local system = EmployeeExpressionSystem.new(sources(state))
 			local employee = makeEmployee(Vector3.new())
-			system.tick({ { userId = 1, character = employee, busy = true } })
+			system.tick({ subject(1, employee, true, false) })
 			system.forget(1)
-			system.tick({ { userId = 1, character = employee, busy = false } })
-			expect(employee:GetAttribute(EmployeeConstants.FACE_ATTRIBUTE)).to.equal("Content")
+			system.tick({ subject(1, employee, false, false) })
+			expect(employee:GetAttribute(FACE)).to.equal("Content")
 			expect(system.getState().faces.Content).to.equal(1)
 			employee:Destroy()
 		end)

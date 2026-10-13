@@ -19,7 +19,8 @@ local EAR_JOINTS: { EarJoint } = {
 }
 
 local EmployeeConstants = {
-	-- On the character model (authored on the template, copied to every spawn).
+	-- On the character model: which EmployeeRegistry entry it is. Stamped by the server's install
+	-- (EmployeeSpawnSystem) from the registry, so the template's own attribute is informational.
 	NAME_ATTRIBUTE = "EmployeeName",
 	-- On the character model, written by the server: the expression to show (an EmployeeRegistry.Face).
 	-- Also stamped on the FacePlate's SurfaceAppearance by the client, to know what is showing.
@@ -28,12 +29,15 @@ local EmployeeConstants = {
 	FACE_PLATE = "FacePlate",
 	FACE_APPEARANCE = "Face",
 	FACES_FOLDER = "Faces",
+	-- Under ReplicatedStorage: art-owned Accessory instances a skin can name (EmployeeSkinSystem).
+	ACCESSORIES_PATH = { "Assets", "CleanupCrew", "Accessories" },
 
 	-- Expression rule (EmployeeFaceRules).
 	-- An investigating / chasing / searching Manager this close (studs) worries everyone.
 	WORRIED_RADIUS = 30,
-	-- Seconds an employee stays Happy after it stops vacuuming, carrying or holding cargo (covers banking).
-	HAPPY_LINGER = 3,
+	-- Seconds an employee still counts as cleaning after the vacuum stops (bridges short gaps in suction,
+	-- so the face does not flicker between sweeps).
+	CLEANING_LINGER = 1,
 	-- Seconds between server expression passes.
 	EXPRESSION_INTERVAL = 0.25,
 

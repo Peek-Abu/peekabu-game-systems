@@ -73,14 +73,44 @@ return function()
 			local model, plate = makeEmployee()
 			model:SetAttribute(EmployeeConstants.FACE_ATTRIBUTE, "Happy")
 			local release = EmployeeFaceSystem.bind(model)
-			expect(plate[EmployeeConstants.FACE_APPEARANCE]:GetAttribute(EmployeeConstants.FACE_ATTRIBUTE)).to.equal("Happy")
+			expect(plate[EmployeeConstants.FACE_APPEARANCE]:GetAttribute(EmployeeConstants.FACE_ATTRIBUTE)).to.equal(
+				"Happy"
+			)
 			model:SetAttribute(EmployeeConstants.FACE_ATTRIBUTE, "Worried")
 			task.wait()
-			expect(plate[EmployeeConstants.FACE_APPEARANCE]:GetAttribute(EmployeeConstants.FACE_ATTRIBUTE)).to.equal("Worried")
+			expect(plate[EmployeeConstants.FACE_APPEARANCE]:GetAttribute(EmployeeConstants.FACE_ATTRIBUTE)).to.equal(
+				"Worried"
+			)
 			release()
 			model:SetAttribute(EmployeeConstants.FACE_ATTRIBUTE, "Content")
 			task.wait()
-			expect(plate[EmployeeConstants.FACE_APPEARANCE]:GetAttribute(EmployeeConstants.FACE_ATTRIBUTE)).to.equal("Worried")
+			expect(plate[EmployeeConstants.FACE_APPEARANCE]:GetAttribute(EmployeeConstants.FACE_ATTRIBUTE)).to.equal(
+				"Worried"
+			)
+			model:Destroy()
+		end)
+
+		it("re-shows the current face from a face set the server swapped in", function()
+			local model, plate = makeEmployee()
+			model:SetAttribute(EmployeeConstants.FACE_ATTRIBUTE, "Happy")
+			local release = EmployeeFaceSystem.bind(model)
+			local before = plate[EmployeeConstants.FACE_APPEARANCE]
+			model[EmployeeConstants.FACES_FOLDER]:Destroy()
+			local swapped = Instance.new("Folder")
+			for _, face in { "Happy", "Worried", "Content" } do
+				local appearance = Instance.new("SurfaceAppearance")
+				appearance.Name = face
+				appearance:SetAttribute("Skin", "Special")
+				appearance.Parent = swapped
+			end
+			swapped.Name = EmployeeConstants.FACES_FOLDER
+			swapped.Parent = model
+			task.wait()
+			local after = plate[EmployeeConstants.FACE_APPEARANCE]
+			expect(after).never.to.equal(before)
+			expect(after:GetAttribute("Skin")).to.equal("Special")
+			expect(after:GetAttribute(EmployeeConstants.FACE_ATTRIBUTE)).to.equal("Happy")
+			release()
 			model:Destroy()
 		end)
 

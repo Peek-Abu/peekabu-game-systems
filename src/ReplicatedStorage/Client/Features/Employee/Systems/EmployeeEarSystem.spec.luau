@@ -103,6 +103,8 @@ return function()
 			for side, motor in motors do
 				motor.Parent = parents[side]
 			end
+			-- DescendantAdded fires deferred (Workspace.SignalBehavior): let it run before stepping.
+			task.wait()
 			ears.step(1 / 60, Vector3.new(0, 0, 10), 0)
 			root.CFrame = CFrame.new(0, 0, -0.3)
 			ears.step(1 / 60, Vector3.new(0, 0, 10), 1 / 60)

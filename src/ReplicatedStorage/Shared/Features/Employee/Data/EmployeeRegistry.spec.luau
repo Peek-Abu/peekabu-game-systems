@@ -22,9 +22,46 @@ return function()
 			end
 		end)
 
+		it("maps every gameplay state to a face the employee owns", function()
+			for _, name in EmployeeRegistry.names() do
+				local def = EmployeeRegistry.get(name)
+				for _, state in EmployeeRegistry.STATES do
+					local face = def.expressions[state]
+					expect(face).to.be.ok()
+					expect(table.find(def.faces, face)).to.be.ok()
+				end
+			end
+		end)
+
+		it("gives every employee its default skin, every skin named by its key", function()
+			for _, name in EmployeeRegistry.names() do
+				local def = EmployeeRegistry.get(name)
+				expect(def.skins[def.defaultSkin]).to.be.ok()
+				for key, skin in def.skins do
+					expect(skin.name).to.equal(key)
+					expect(skin.accessories).to.be.a("table")
+				end
+			end
+		end)
+
 		it("points Pippa at the art asset in ReplicatedStorage.Assets", function()
 			local def = EmployeeRegistry.get("Pippa")
 			expect(table.concat(def.templatePath, ".")).to.equal("Assets.CleanupCrew.Characters.Pippa")
+		end)
+
+		it("gives Pippa her approved expressions: carrying is Content, not Happy", function()
+			local def = EmployeeRegistry.get("Pippa")
+			expect(def.expressions.threatened).to.equal("Worried")
+			expect(def.expressions.cleaning).to.equal("Happy")
+			expect(def.expressions.carrying).to.equal("Content")
+			expect(def.expressions.idle).to.equal("Content")
+		end)
+
+		it("gives Pippa a Default skin with her palette and an OwnerSpecial skin", function()
+			local def = EmployeeRegistry.get("Pippa")
+			expect(def.defaultSkin).to.equal("Default")
+			expect(def.skins.Default.paletteTextureId).to.equal("rbxassetid://123317546570312")
+			expect(def.skins.OwnerSpecial).to.be.ok()
 		end)
 	end)
 

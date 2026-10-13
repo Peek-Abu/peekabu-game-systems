@@ -75,7 +75,8 @@ return function()
 		end)
 
 		it("droops outward on the way up and presses in on the way down", function()
-			local _, rising = EmployeeEarFormulas.targets({ forward = 0, lateral = 0, vertical = 30, yawRate = 0 }, 1, 0, 0)
+			local _, rising =
+				EmployeeEarFormulas.targets({ forward = 0, lateral = 0, vertical = 30, yawRate = 0 }, 1, 0, 0)
 			local _, falling =
 				EmployeeEarFormulas.targets({ forward = 0, lateral = 0, vertical = -30, yawRate = 0 }, 1, 0, 0)
 			expect(rising > 0).to.equal(true)
@@ -140,7 +141,9 @@ return function()
 		end)
 
 		it("tips a positive pitch backwards (+Z, the character faces -Z)", function()
-			expect(EmployeeEarFormulas.transform(0.3, 0, 1):VectorToWorldSpace(Vector3.new(0, 1, 0)).Z > 0).to.equal(true)
+			expect(EmployeeEarFormulas.transform(0.3, 0, 1):VectorToWorldSpace(Vector3.new(0, 1, 0)).Z > 0).to.equal(
+				true
+			)
 		end)
 
 		it("clamps to the ear limit", function()

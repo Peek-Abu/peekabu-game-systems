@@ -78,7 +78,11 @@ function EmployeeSpawnSystem.prepare(model: Model): number
 	for _, side: EmployeeRigUtils.Side in GRIP_SIDES do
 		local hand = basePart(model, side .. "Hand")
 		local wrist: Motor6D? = wrists[side .. "Wrist"]
-		if hand ~= nil and wrist ~= nil and place(model, EmployeeRigUtils.gripAttachment(side, hand.Size, wrist.C1)) then
+		if
+			hand ~= nil
+			and wrist ~= nil
+			and place(model, EmployeeRigUtils.gripAttachment(side, hand.Size, wrist.C1))
+		then
 			added += 1
 		end
 	end
@@ -107,7 +111,11 @@ end
 	@param source Where the template path starts (ReplicatedStorage in the game).
 	@return (ok, reason?)
 ]=]
-function EmployeeSpawnSystem.install(def: EmployeeRegistry.EmployeeDef, source: Instance, target: Instance): (boolean, string?)
+function EmployeeSpawnSystem.install(
+	def: EmployeeRegistry.EmployeeDef,
+	source: Instance,
+	target: Instance
+): (boolean, string?)
 	local template = resolve(source, def.templatePath)
 	if template == nil or not template:IsA("Model") then
 		return false, `employee template {table.concat(def.templatePath, ".")} is missing or not a Model`

@@ -120,7 +120,8 @@ function EmployeeEarSystem.new(): EmployeeEarSystem
 			local pitchTarget, outwardTarget = EmployeeEarFormulas.targets(motion, ear.side, now, employee.phase)
 			ear.outwardVelocity += kick
 			ear.pitch, ear.pitchVelocity = EmployeeEarFormulas.step(ear.pitch, ear.pitchVelocity, pitchTarget, dt)
-			ear.outward, ear.outwardVelocity = EmployeeEarFormulas.step(ear.outward, ear.outwardVelocity, outwardTarget, dt)
+			ear.outward, ear.outwardVelocity =
+				EmployeeEarFormulas.step(ear.outward, ear.outwardVelocity, outwardTarget, dt)
 			ear.motor.Transform = EmployeeEarFormulas.transform(ear.pitch, ear.outward, ear.side)
 		end
 	end
@@ -155,7 +156,11 @@ function EmployeeEarSystem.new(): EmployeeEarSystem
 		step = function(dt, focus, now)
 			for model, employee in employees do
 				local root = rootOf(model)
-				if #employee.ears > 0 and root ~= nil and (root.Position - focus).Magnitude <= EmployeeConstants.EAR_RADIUS then
+				if
+					#employee.ears > 0
+					and root ~= nil
+					and (root.Position - focus).Magnitude <= EmployeeConstants.EAR_RADIUS
+				then
 					employee.active = true
 					stepEmployee(employee, root, dt, now)
 				elseif employee.active then

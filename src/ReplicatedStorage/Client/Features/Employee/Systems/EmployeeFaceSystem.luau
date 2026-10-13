@@ -23,8 +23,9 @@ local EmployeeFaceSystem = {}
 
 --[=[
 	Puts `face` on the character's FacePlate. False when the plate or that face is missing.
+	@param force Rebuild even when that face is already showing (the face set changed under it).
 ]=]
-function EmployeeFaceSystem.apply(character: Model, face: EmployeeRegistry.Face): boolean
+function EmployeeFaceSystem.apply(character: Model, face: EmployeeRegistry.Face, force: boolean?): boolean
 	local plate = character:FindFirstChild(EmployeeConstants.FACE_PLATE)
 	local faces = character:FindFirstChild(EmployeeConstants.FACES_FOLDER)
 	if plate == nil or not plate:IsA("BasePart") or faces == nil then
@@ -35,7 +36,7 @@ function EmployeeFaceSystem.apply(character: Model, face: EmployeeRegistry.Face)
 		return false
 	end
 	local current = plate:FindFirstChild(EmployeeConstants.FACE_APPEARANCE)
-	if current ~= nil and current:GetAttribute(EmployeeConstants.FACE_ATTRIBUTE) == face then
+	if force ~= true and current ~= nil and current:GetAttribute(EmployeeConstants.FACE_ATTRIBUTE) == face then
 		return true
 	end
 	local copy = source:Clone()
@@ -52,22 +53,32 @@ function EmployeeFaceSystem.apply(character: Model, face: EmployeeRegistry.Face)
 end
 
 --[=[
-	Shows the character's EmployeeFace attribute now and whenever it changes. Unknown values are ignored
-	(the authored face stays).
+	Shows the character's EmployeeFace attribute now and whenever it changes, and again from the new set
+	when a skin swaps the `Faces` folder (EmployeeSkinSystem). Unknown values are ignored (the authored
+	face stays).
 	@return () -> () -- stops following
 ]=]
 function EmployeeFaceSystem.bind(character: Model): () -> ()
 	local released = false
-	local function refresh()
+	local function show(force: boolean)
 		if released then
 			return
 		end
-		local face: EmployeeRegistry.Face? = EmployeeRegistry.toFace(character:GetAttribute(EmployeeConstants.FACE_ATTRIBUTE))
+		local face: EmployeeRegistry.Face? =
+			EmployeeRegistry.toFace(character:GetAttribute(EmployeeConstants.FACE_ATTRIBUTE))
 		if face ~= nil then
-			EmployeeFaceSystem.apply(character, face)
+			EmployeeFaceSystem.apply(character, face, force)
 		end
 	end
+	local function refresh()
+		show(false)
+	end
 	local connection = character:GetAttributeChangedSignal(EmployeeConstants.FACE_ATTRIBUTE):Connect(refresh)
+	local swapped = character.ChildAdded:Connect(function(child: Instance)
+		if child.Name == EmployeeConstants.FACES_FOLDER then
+			show(true)
+		end
+	end)
 	if
 		character:FindFirstChild(EmployeeConstants.FACE_PLATE) ~= nil
 		and character:FindFirstChild(EmployeeConstants.FACES_FOLDER) ~= nil
@@ -84,6 +95,7 @@ function EmployeeFaceSystem.bind(character: Model): () -> ()
 	return function()
 		released = true
 		connection:Disconnect()
+		swapped:Disconnect()
 	end
 end
 

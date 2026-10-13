@@ -40,23 +40,51 @@ return function()
 		end)
 	end)
 
-	describe("decide", function()
-		it("is Worried whenever threatened, even while busy", function()
-			expect(EmployeeFaceRules.decide(true, true, 10, 10)).to.equal("Worried")
+	describe("isCleaning", function()
+		it("is cleaning while vacuuming", function()
+			expect(EmployeeFaceRules.isCleaning(true, 10, nil)).to.equal(true)
 		end)
 
-		it("is Happy while busy", function()
-			expect(EmployeeFaceRules.decide(false, true, 10, nil)).to.equal("Happy")
-		end)
-
-		it("stays Happy for the linger window after the last busy moment", function()
+		it("keeps cleaning for the short tail after the vacuum stops, then not", function()
 			local now = 100
-			expect(EmployeeFaceRules.decide(false, false, now, now - EmployeeConstants.HAPPY_LINGER + 0.1)).to.equal("Happy")
-			expect(EmployeeFaceRules.decide(false, false, now, now - EmployeeConstants.HAPPY_LINGER - 0.1)).to.equal("Content")
+			local tail = EmployeeConstants.CLEANING_LINGER
+			expect(EmployeeFaceRules.isCleaning(false, now, now - tail + 0.1)).to.equal(true)
+			expect(EmployeeFaceRules.isCleaning(false, now, now - tail - 0.1)).to.equal(false)
 		end)
 
-		it("is Content otherwise", function()
-			expect(EmployeeFaceRules.decide(false, false, 10, nil)).to.equal("Content")
+		it("is not cleaning when the player never vacuumed", function()
+			expect(EmployeeFaceRules.isCleaning(false, 10, nil)).to.equal(false)
+		end)
+	end)
+
+	describe("stateOf", function()
+		it("puts threatened above everything", function()
+			expect(EmployeeFaceRules.stateOf(true, true, true)).to.equal("threatened")
+		end)
+
+		it("puts cleaning above carrying", function()
+			expect(EmployeeFaceRules.stateOf(false, true, true)).to.equal("cleaning")
+		end)
+
+		it("is carrying with cargo in the hands or pockets", function()
+			expect(EmployeeFaceRules.stateOf(false, false, true)).to.equal("carrying")
+		end)
+
+		it("is idle otherwise", function()
+			expect(EmployeeFaceRules.stateOf(false, false, false)).to.equal("idle")
+		end)
+	end)
+
+	describe("faceFor", function()
+		local moody = {
+			expressions = { threatened = "Worried", cleaning = "Content", carrying = "Happy", idle = "Worried" },
+		}
+
+		it("reads the face from the employee's own mapping", function()
+			expect(EmployeeFaceRules.faceFor(moody, "threatened")).to.equal("Worried")
+			expect(EmployeeFaceRules.faceFor(moody, "cleaning")).to.equal("Content")
+			expect(EmployeeFaceRules.faceFor(moody, "carrying")).to.equal("Happy")
+			expect(EmployeeFaceRules.faceFor(moody, "idle")).to.equal("Worried")
 		end)
 	end)
 end
