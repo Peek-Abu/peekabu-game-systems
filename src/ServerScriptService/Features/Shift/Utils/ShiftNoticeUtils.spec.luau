@@ -56,7 +56,7 @@ return function()
 	it("notes each pressure tier on a sticky note", function()
 		local list = ShiftNoticeUtils.notices(running(), ShiftPhaseRules.advance(running(), 220))
 		expect(#list).to.equal(1)
-		expect(list[1].text).to.equal("You hear Harlow pacing faster…")
+		expect(list[1].text).to.equal("You hear the Manager pacing faster…")
 		expect(list[1].style).to.equal(ShiftConstants.TOAST_STICKY)
 	end)
 

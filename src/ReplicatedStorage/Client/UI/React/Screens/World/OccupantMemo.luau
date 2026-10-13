@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	OccupantMemo: Harlow's speech (Figma World UI 2b, W8) at its 520x166 design size: a 520x140 cream memo (textured once
-	uploaded) under a 30 px stamp-red letterhead "MEMO — FROM THE DESK OF H. HARLOW" (Oswald 18, cream), the line in
+	uploaded) under a 30 px stamp-red letterhead "MEMO — FROM THE DESK OF THE MANAGER" (Oswald 18, cream), the line in
 	Special Elite (30 ink, or 38 red when shouted, shrinking to fit two lines), typed out letter by letter
 	(useTypedGraphemes at OccupantConstants.TYPE_RATE), and a 24 px tail at x 90 pointing down at his head.
 	Presentational; the words and the shout are OccupantWorldViewModel.memo.

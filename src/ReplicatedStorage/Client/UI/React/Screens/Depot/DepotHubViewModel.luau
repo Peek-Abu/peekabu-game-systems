@@ -30,7 +30,7 @@ function VM.copy(
 	if page == "guide" then
 		return {
 			title = "FIELD GUIDE",
-			subtitle = "CLEANUP CREW / NEW STARTER BRIEFING",
+			subtitle = "MORROW & MORROW CLEARANCE / NEW ASSOCIATE BRIEFING",
 			sections = {
 				{
 					title = "01 / GET THE JOB",
@@ -38,11 +38,11 @@ function VM.copy(
 				},
 				{
 					title = "02 / CLEAR & BANK",
-					body = `Equip your vacuum. {cleanControl or "Hold the cleaning action near dust."} Full canisters produce dust bags. Load dust bags, rubbish and salvage at the truck.`,
+					body = `Equip your vacuum. {cleanControl or "Hold the cleaning action near dust."} Full canisters produce dust bags. Bank dust bags, rubbish and Recoverable Assets at the truck (the Mobile Recovery Unit).`,
 				},
 				{
 					title = "03 / WATCH YOUR NOISE",
-					body = "The occupant hears vacuums and dropped cargo. Put things down carefully. Empty hands let you run faster.",
+					body = "The Manager hears vacuums and dropped cargo. Put things down carefully. Empty hands let you run faster.",
 				},
 				{
 					title = "04 / CLOCK OFF",
@@ -61,15 +61,15 @@ function VM.copy(
 			},
 			{
 				title = "FULL CANISTER → DUST BAG",
-				body = "A full canister automatically produces a dust bag and resets, so you can keep cleaning. Carry the bag to the truck and load it to bank clearance.",
+				body = "A full canister automatically produces a dust bag and resets, so you can keep cleaning. Carry the bag to the truck and bank it for clearance.",
 			},
 			{
 				title = "HANDS & LOAD",
-				body = "Bulky salvage needs both hands. Your vacuum stows while you carry it; put the load down to use your equipment again.",
+				body = "Bulky assets need both hands. Your vacuum stows while you carry it; put the load down to use your equipment again.",
 			},
 			{
 				title = "TRAVEL LIGHT",
-				body = "Heavy cargo slows you down. Bank valuable salvage, keep a clear escape route, and help crew members get back.",
+				body = "Heavy cargo slows you down. Bank Recoverable Assets early, keep a clear escape route, and help crew members get back.",
 			},
 		},
 	}

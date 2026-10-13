@@ -20,7 +20,7 @@ return UILabs.CreateReactStory({
 	react = React,
 	reactRoblox = ReactRoblox,
 	controls = {
-		Text = "You hear Harlow pacing faster…",
+		Text = "You hear the Manager pacing faster…",
 		Count = 2,
 	},
 }, function(props)

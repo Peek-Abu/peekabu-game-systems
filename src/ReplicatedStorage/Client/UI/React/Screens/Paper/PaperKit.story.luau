@@ -205,7 +205,7 @@ return UILabs.CreateReactStory({
 			cream = e(PaperSheet, {
 				size = UDim2.fromOffset(340, 200),
 				paper = COLOR.cream,
-				band = "HARLOW & FINCH — TIME CARD",
+				band = "MORROW & MORROW — TIME CARD",
 				fastener = "pin",
 				torn = true,
 				layoutOrder = 2,
@@ -228,7 +228,7 @@ return UILabs.CreateReactStory({
 		}),
 		notes = row(2, 200, {
 			[`wide{stampKey}`] = e(StickyNote, {
-				text = "You hear Harlow pacing faster…",
+				text = "You hear the Manager pacing faster…",
 				width = 340,
 				size = TEXT.sticky,
 				tilt = tilt,
@@ -236,7 +236,7 @@ return UILabs.CreateReactStory({
 				layoutOrder = 1,
 			}),
 			narrow = e(StickyNote, {
-				text = "You hear Harlow pacing faster…",
+				text = "You hear the Manager pacing faster…",
 				width = 250,
 				size = UIPaperConstants.TEXT.phone.sticky,
 				tilt = -tilt,

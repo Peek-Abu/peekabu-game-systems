@@ -36,7 +36,7 @@ local OccupantWorldViewModel = {}
 
 OccupantWorldViewModel.LINE_MAX = 80
 OccupantWorldViewModel.MIN_SHOUT_LETTERS = 3
-OccupantWorldViewModel.MEMO_BAND = "MEMO — FROM THE DESK OF H. HARLOW"
+OccupantWorldViewModel.MEMO_BAND = "MEMO — FROM THE DESK OF THE MANAGER"
 
 function OccupantWorldViewModel.shouted(line: string): boolean
 	local trimmed = string.match(line, "^%s*(.-)%s*$") or ""

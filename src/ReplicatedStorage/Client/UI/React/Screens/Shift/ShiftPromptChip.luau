@@ -1,6 +1,6 @@
 --!strict
 --[=[
-	ShiftPromptChip: the paper interaction prompt (Figma 1a "Prompt": "[E] LOAD monitor onto the truck"), drawn for the
+	ShiftPromptChip: the paper interaction prompt (Figma 1a "Prompt": "[E] BANK monitor"), drawn for the
 	Interaction prompt the engine is showing (ShiftPromptStore; the engine's own card is off, see ShiftPromptSystem). A
 	cream slip taped on at a slight tilt, centred below the crosshair: a KeyChip with the prompt's key and the words; a
 	hold prompt fills an ink-green strip under the words while it is held. On phone (Figma 1d) it is a narrower slip

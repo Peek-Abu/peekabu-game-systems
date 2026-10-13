@@ -25,7 +25,7 @@ local rooms: { OfficeTypes.Room } = {
 	{ id = "lobby", name = "Reception", minX = 0, minZ = 30, maxX = 40, maxZ = 60 },
 	{ id = "open", name = "Open-plan office", minX = 40, minZ = 0, maxX = 100, maxZ = 60 },
 	{ id = "breakRoom", name = "Break room", minX = 0, minZ = 60, maxX = 30, maxZ = 90 },
-	{ id = "manager", name = "Mr. Harlow's office", minX = 30, minZ = 60, maxX = 60, maxZ = 90 },
+	{ id = "manager", name = "Manager's office", minX = 30, minZ = 60, maxX = 60, maxZ = 90 },
 	{ id = "server", name = "Server room", minX = 60, minZ = 60, maxX = 100, maxZ = 90 },
 	{ id = "archive", name = "Archive", minX = 100, minZ = 0, maxX = 130, maxZ = 40 },
 }

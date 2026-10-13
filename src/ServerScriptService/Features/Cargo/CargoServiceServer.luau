@@ -67,8 +67,8 @@ for _, id in CargoRegistry.ids() do
 end
 if not InteractionRegistry.has(CargoConstants.LOAD_KIND) then
 	InteractionRegistry.register(CargoConstants.LOAD_KIND, {
-		actionText = "Load",
-		objectText = "Truck",
+		actionText = "Bank cargo",
+		objectText = "Recovery Unit",
 		maxDistance = CargoConstants.LOAD_DISTANCE,
 	})
 end

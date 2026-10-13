@@ -80,11 +80,8 @@ local DAY_SECONDS = 86400
 
 local CatchViewModel = {}
 
--- "the archive", but "Mr. Harlow's office" (a possessive name takes no article).
+-- "the archive", "the manager's office": every room name is a common noun, so it takes "the".
 function CatchViewModel.roomPhrase(room: string): string
-	if string.find(room, "'s ", 1, true) ~= nil then
-		return room
-	end
 	return `the {string.lower(room)}`
 end
 
@@ -147,10 +144,10 @@ local function incidentOf(report: OccupantTypes.CatchReport?, phone: boolean): {
 	local lost = #report.dropped > 0
 	local where = CatchViewModel.roomPhrase(report.room)
 	if phone then
-		return { "Caught by Mr. Harlow.", if lost then `Cargo dropped in {where}.` else "Nothing dropped." }
+		return { "Caught by the Manager.", if lost then `Cargo dropped in {where}.` else "Nothing dropped." }
 	end
 	return {
-		`Caught by Mr. Harlow at {ShiftHudViewModel.clock(report.clock)}.`,
+		`Caught by the Manager at {ShiftHudViewModel.clock(report.clock)}.`,
 		if lost then `Your cargo dropped in {where}.` else "You were carrying nothing.",
 	}
 end
@@ -208,15 +205,15 @@ function CatchViewModel.rehired(input: RehiredInput): RehiredView?
 		then `Dropped: {table.concat(report.dropped, ", ")}. Go back for them!`
 		else "Dropped: nothing."
 	local rows: { string } = if input.phone
-		then { `Caught at {ended} by Mr. Harlow`, dropped }
+		then { `Caught at {ended} by the Manager`, dropped }
 		else {
 			`Name: {input.name}`,
-			`Employment ended: {ended} (caught by Mr. Harlow)`,
+			`Employment ended: {ended} (caught by the Manager)`,
 			`Re-hired: {back}, no questions asked`,
 			dropped,
 		}
 	return {
-		header = "HARLOW & FINCH — HUMAN RESOURCES",
+		header = `{ShiftConstants.EMPLOYER_BAND} — HUMAN RESOURCES`,
 		notice = "NOTICE OF RE-EMPLOYMENT",
 		title = REHIRED_TITLE,
 		rows = rows,

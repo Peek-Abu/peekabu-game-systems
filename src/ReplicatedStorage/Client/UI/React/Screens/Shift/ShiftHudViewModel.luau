@@ -74,7 +74,7 @@ export type HudView = {
 }
 
 export type ButtonsView = {
-	primary: "VACUUM" | "LOAD",
+	primary: "VACUUM" | "BANK",
 	primaryReady: boolean,
 	-- VACUUM is always usable; LOAD only while lit (a touch hold reaches only a prompt that is shown).
 	primaryAvailable: boolean,
@@ -161,7 +161,7 @@ local function stageLabel(snapshot: ShiftSnapshot, now: number): string
 	local stageEndsAt = snapshot.stageEndsAt
 	local left = if stageEndsAt ~= nil then stageEndsAt - now else 0
 	if snapshot.stage == "break" then
-		return `HARLOW ON BREAK {ShiftHudViewModel.clock(left)}`
+		return `MANAGER ON BREAK {ShiftHudViewModel.clock(left)}`
 	elseif snapshot.stage == "warning" then
 		return `OVERTIME IN {ShiftHudViewModel.clock(left)}`
 	elseif snapshot.stage == "overtime" then
@@ -252,7 +252,7 @@ function ShiftHudViewModel.buttons(me: PublicPlayerTypes.PublicPlayer?, loadRead
 		end
 	end
 	local tiny = def ~= nil and def.size == "tiny"
-	local primary: "VACUUM" | "LOAD" = if holding then "LOAD" else "VACUUM"
+	local primary: "VACUUM" | "BANK" = if holding then "BANK" else "VACUUM"
 	return {
 		primary = primary,
 		primaryReady = holding and loadReady,
@@ -269,7 +269,7 @@ end
 	held LOAD is let go the moment this turns false.
 ]=]
 function ShiftHudViewModel.loadLive(view: ButtonsView?): boolean
-	return view ~= nil and view.primary == "LOAD" and view.primaryAvailable
+	return view ~= nil and view.primary == "BANK" and view.primaryAvailable
 end
 
 -- The engine's TouchGui switches to the large Jump button above this short side (px).
@@ -335,7 +335,7 @@ function ShiftHudViewModel.mobileButtons(
 end
 
 --[=[
-	The paper prompt chip (Figma 1a: "[E] LOAD monitor onto the truck"): a Load names the item in hand; anything else
+	The paper prompt chip (Figma 1a: "[E] BANK monitor"): the truck's Bank prompt names the item in hand; anything else
 	is the prompt's action in capitals and its object in lower case. Nil without a prompt, and nil while `hidden` (the
 	scare beat, or the local player is caught). `now` and the view's `holdStartedAt` are both on the server clock.
 ]=]
@@ -351,7 +351,7 @@ function ShiftHudViewModel.prompt(
 	local text = `{string.upper(view.action)} {string.lower(view.object)}`
 	if view.kind == CargoConstants.LOAD_KIND and type(carrying) == "string" then
 		local def = CargoRegistry.get(carrying)
-		text = `LOAD {string.lower(if def ~= nil then def.name else carrying)} onto the truck`
+		text = `BANK {string.lower(if def ~= nil then def.name else carrying)}`
 	end
 	local fill: number? = nil
 	if view.hold > 0 then
@@ -388,7 +388,7 @@ local HINTS: { { action: string, label: string, hold: boolean } } = {
 	{ action = "drop", label = "drop", hold = false },
 	{ action = "throw", label = "throw", hold = false },
 	{ action = CargoConstants.POCKET_ACTION, label = "pocket", hold = false },
-	{ action = "interact", label = "load / search", hold = false },
+	{ action = "interact", label = "bank / search", hold = false },
 }
 
 local hintActions: { string } = {}

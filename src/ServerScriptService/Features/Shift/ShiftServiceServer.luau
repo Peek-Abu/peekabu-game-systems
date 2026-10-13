@@ -199,7 +199,7 @@ local function beginRun()
 		end
 	end
 	ToastServiceServer:send("all", {
-		text = `Shift {state.shift}: clear {state.quota} of trash before the clock runs out. Load it on the truck.`,
+		text = `Shift {state.shift}: clear {state.quota} of site buildup before the clock runs out. Bank it at the truck.`,
 		style = ShiftConstants.TOAST_STICKY,
 		duration = 6,
 	})

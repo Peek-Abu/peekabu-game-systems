@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	CatchRehiredPanel: the HR "Rehired." notice around the respawn (Figma 4c desktop 22:263, 4e phone 22:299). A dark
-	scrim, and centred on it a cream sheet: the ink "HARLOW & FINCH — HUMAN RESOURCES" header band, "NOTICE OF
+	scrim, and centred on it a cream sheet: the ink "MORROW & MORROW — HUMAN RESOURCES" header band, "NOTICE OF
 	RE-EMPLOYMENT", the big typewriter "Rehired.", the ruled rows, a red REHIRED stamp in the empty lower-right area (clear
 	of the headline) and "Respawning at the loading bay…". The rows wrap and stack by their real height (a long "Dropped:"
 	row takes two lines); the card grows by whatever the rows take beyond the Figma's one-line rows, so the stamp and the

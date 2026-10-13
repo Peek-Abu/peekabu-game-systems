@@ -158,7 +158,7 @@ function DepotWorldViewModel.workOrder(attributes: { [string]: unknown }): WorkO
 		client = WorldBillboardViewModel.clip(client, DepotWorldViewModel.WORK_CLIENT_MAX),
 		job = job,
 		clear = `CLEAR {ShiftConstants.QUOTA}`,
-		before = `of trash before {ShiftHudViewModel.clock(ShiftConstants.SHIFT_SECONDS)}`,
+		before = `of site buildup before {ShiftHudViewModel.clock(ShiftConstants.SHIFT_SECONDS)}`,
 		key = "E",
 		action = "Read the work order",
 	}

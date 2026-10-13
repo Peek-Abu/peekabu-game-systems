@@ -122,7 +122,8 @@ return table.freeze({
 	CUE_STUDS = 2.5,
 	CUE_PX = Vector2.new(140, 140),
 	MEMO_PX = Vector2.new(520, 166),
-	DISPLAY_NAME = "Mr. Harlow",
+	-- Player-facing name (the Residual company paperwork calls the "Site Supervisor Proxy"); the internals keep `harlow`.
+	DISPLAY_NAME = "The Manager",
 	-- M3 UI. Public field: the server time a caught player is back on the clock (the roster's "CAUGHT · back 0:06");
 	-- cleared on the respawn.
 	PUBLIC_CAUGHT_UNTIL = "caughtUntil",

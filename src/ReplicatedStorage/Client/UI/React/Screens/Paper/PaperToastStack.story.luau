@@ -23,7 +23,7 @@ local e = React.createElement
 
 local SAMPLE_TEXT = {
 	"Shift started. Clear 350 of trash.",
-	"You hear Harlow pacing faster…",
+	"You hear the Manager pacing faster…",
 	"Quota met. Keep going or clock out.",
 }
 

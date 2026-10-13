@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	ShiftKeyHints: the desktop key hints row along the bottom of the screen (Figma 1a "key hints", y 1030), just under
-	the carry panel: "Hold [LMB] vacuum   [G] drop   [F] throw   [Q] pocket   [E] load / search", each key drawn as a
+	the carry panel: "Hold [LMB] vacuum   [G] drop   [F] throw   [Q] pocket   [E] bank / search", each key drawn as a
 	KeyChip, in the fluorescent white at 80% opacity, 32 px between hints. Presentational: it draws the hints it is
 	given (ShiftHudViewModel.keyHints, from the live bindings); ShiftHudPanel draws it on desktop with a keyboard only.
 

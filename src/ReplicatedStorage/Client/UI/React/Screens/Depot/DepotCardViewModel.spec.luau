@@ -9,7 +9,7 @@ local function card(kind, client, truck)
 	return {
 		kind = kind,
 		client = client or "Pemberton Dental",
-		job = "4th floor offices. Harlow is in tonight.",
+		job = "4th floor offices. The manager is in tonight.",
 		note = "Watch the fish tank. Fragile!",
 		quota = 350,
 		truck = truck or 0,
@@ -21,7 +21,7 @@ return function()
 	describe("drive", function()
 		it("writes the dispatch ticket", function()
 			local view = DepotCardViewModel.drive(card("drive", nil, 2))
-			expect(view.band).to.equal("HARLOW & FINCH — DISPATCH")
+			expect(view.band).to.equal("MORROW & MORROW — DISPATCH")
 			expect(view.truck).to.equal("TRUCK 2")
 			expect(view.title).to.equal("ON THE ROAD")
 			expect(view.heading).to.equal("Heading to Pemberton Dental")
@@ -38,10 +38,12 @@ return function()
 			local view = DepotCardViewModel.arrival(card("arrival"))
 			expect(view.tab).to.equal("ARRIVAL")
 			expect(view.client).to.equal("Pemberton Dental")
-			expect(view.job).to.equal("4th floor offices. Harlow is in tonight.")
+			expect(view.job).to.equal("4th floor offices. The manager is in tonight.")
 			expect(view.slip).to.equal("CLEARANCE CONTRACT")
 			expect(view.clear).to.equal("CLEAR 350")
-			expect(view.before).to.equal(`of trash before {ShiftHudViewModel.clock(ShiftConstants.SHIFT_SECONDS)}`)
+			expect(view.before).to.equal(
+				`of site buildup before {ShiftHudViewModel.clock(ShiftConstants.SHIFT_SECONDS)}`
+			)
 			expect(view.note).to.equal("Watch the fish tank. Fragile!")
 		end)
 	end)

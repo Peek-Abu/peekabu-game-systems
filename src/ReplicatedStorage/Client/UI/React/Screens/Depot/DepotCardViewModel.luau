@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	DepotCardViewModel: the travel cards' lines (Figma World UI 2c, S1). The drive card is a dispatch ticket: the
-	"HARLOW & FINCH — DISPATCH" letterhead, "TRUCK n" (none when unknown), ON THE ROAD and where the truck is heading,
+	"MORROW & MORROW — DISPATCH" letterhead, "TRUCK n" (none when unknown), ON THE ROAD and where the truck is heading,
 	shown for DepotConstants.DRIVE_CARD_SECONDS (the truck crosses the road in that time). The arrival card is the job
 	folder: the ARRIVAL tab, the client as headline, the job line, the clearance-contract slip ("CLEAR 350 / of trash
 	before 7:00") and the contract's note. A client name is cut at CLIENT_MAX on both (it rides the teleport). Pure.
@@ -42,7 +42,7 @@ DepotCardViewModel.CLIENT_MAX = 30
 
 function DepotCardViewModel.drive(card: DepotTypes.ShownCard): DriveView
 	return {
-		band = "HARLOW & FINCH — DISPATCH",
+		band = `{ShiftConstants.EMPLOYER_BAND} — DISPATCH`,
 		truck = if card.truck > 0 then `TRUCK {card.truck}` else nil,
 		title = "ON THE ROAD",
 		heading = `Heading to {WorldBillboardViewModel.clip(card.client, DepotCardViewModel.CLIENT_MAX)}`,
@@ -57,7 +57,7 @@ function DepotCardViewModel.arrival(card: DepotTypes.ShownCard): ArrivalView
 		job = card.job,
 		slip = "CLEARANCE CONTRACT",
 		clear = `CLEAR {card.quota}`,
-		before = `of trash before {ShiftHudViewModel.clock(ShiftConstants.SHIFT_SECONDS)}`,
+		before = `of site buildup before {ShiftHudViewModel.clock(ShiftConstants.SHIFT_SECONDS)}`,
 		note = card.note,
 	}
 end

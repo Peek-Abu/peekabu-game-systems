@@ -59,9 +59,9 @@ function ShiftNoticeUtils.notices(before: ShiftTypes.ShiftState, after: ShiftTyp
 	end
 	if after.stage == "overtime" and before.stage ~= "overtime" then
 		table.insert(list, stamp("OVERTIME"))
-		table.insert(list, note(`Salvage ×{multiplier} until the clock runs out. Harlow is back, and faster.`))
+		table.insert(list, note(`Salvage ×{multiplier} until the clock runs out. The Manager is back, and faster.`))
 	elseif after.tier > before.tier and after.stage ~= "break" and after.stage ~= "warning" then
-		table.insert(list, note("You hear Harlow pacing faster…"))
+		table.insert(list, note("You hear the Manager pacing faster…"))
 	end
 	return list
 end

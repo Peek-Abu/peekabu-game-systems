@@ -1,6 +1,6 @@
 --!strict
 --[=[
-	ShiftTimeCard: the punch-clock time card (Figma 1a-1c "Punch clock", 360x132, top centre): the red "HARLOW & FINCH —
+	ShiftTimeCard: the punch-clock time card (Figma 1a-1c "Punch clock", 360x132, top centre): the red "MORROW & MORROW —
 	TIME CARD" band, five punch holes down the left edge (shift progress), the stage label, the Roboto Mono clock (red
 	in overtime), OUT and the pressure pips; in overtime a "SALVAGE ×1.5" rubber stamp drops in under the card.
 	On phone (Figma 1d/1e "Punch clock (compact)", 210x58 at top centre y 8) the card drops the band, the holes and the
@@ -110,7 +110,7 @@ local function card(view: ShiftHudViewModel.HudView, shift: number): React.React
 		position = UDim2.new(0.5, shift, 0, CARD_TOP),
 		size = UDim2.fromOffset(360, 132),
 		paper = COLOR.cream,
-		band = "HARLOW & FINCH — TIME CARD",
+		band = `{ShiftConstants.EMPLOYER_BAND} — TIME CARD`,
 		padding = 0,
 		children = children,
 	})

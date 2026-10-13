@@ -57,11 +57,16 @@ local AWARD_TITLES = {
 
 -- The review's closing line (Figma 5a met / 5c missed).
 local REVIEW_QUOTES = {
-	met = { line = '"Those were COMPANY ASSETS."', by = "— H. Harlow, Manager" },
-	missed = { line = '"We will discuss this on Monday."', by = "— Harlow & Finch, Human Resources" },
+	met = { line = '"Those were COMPANY ASSETS."', by = "— The Manager, Site Supervisor Proxy" },
+	missed = { line = '"We will discuss this on Monday."', by = "— Morrow & Morrow, Human Resources" },
 }
 
 return table.freeze({
+	-- The crew's employer (docs/cleanup-crew-lore.md): its name, the letterhead form on every company paper (time
+	-- card, dispatch, HR) and its slogan. The client whose site is cleared is the contract's (DepotConstants.CONTRACTS).
+	EMPLOYER = "Morrow & Morrow Clearance",
+	EMPLOYER_BAND = "MORROW & MORROW",
+	EMPLOYER_SLOGAN = "A clean site is a compliant site.",
 	-- The StateSyncWorldStore entry the snapshot is published under.
 	WORLD_ENTRY = "shift",
 	-- Clearance (trash value) the crew must load.

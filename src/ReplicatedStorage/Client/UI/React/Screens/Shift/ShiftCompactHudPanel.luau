@@ -7,6 +7,7 @@ local PaperPropIcon = require(script.Parent.Parent.Paper.PaperPropIcon)
 local PaperLabel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperLabel)
 local PaperSheet = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperSheet)
 local Constants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
+local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local VM = require(script.Parent.ShiftHudViewModel)
 local CrewVM = require(script.Parent.ShiftCrewViewModel)
 local e = React.createElement
@@ -130,7 +131,7 @@ local function ShiftCompactHudPanel(props: Props): React.ReactNode
 			Size = UDim2.new(1, 24, 0, 19),
 			BackgroundColor3 = C.stamp,
 			BorderSizePixel = 0,
-		}, { title = label("HARLOW & FINCH", 8, 0, clockWidth - 16, 11, "heading", C.cream) }),
+		}, { title = label(ShiftConstants.EMPLOYER_BAND, 8, 0, clockWidth - 16, 11, "heading", C.cream) }),
 		time = label(view.time, 0, 12, clockWidth - 24, if phone then 24 else 27, "timer"),
 		stage = label(if view.overtime then "OVERTIME" else "SHIFT", 0, 42, clockWidth - 24, 10, "heading"),
 	})

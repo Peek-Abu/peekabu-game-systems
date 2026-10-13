@@ -140,7 +140,9 @@ return function()
 			expect(view.client).to.equal("Harlow & Finch Ltd.")
 			expect(view.job).to.equal("Clear the office before the sale.")
 			expect(view.clear).to.equal(`CLEAR {ShiftConstants.QUOTA}`)
-			expect(view.before).to.equal(`of trash before {ShiftHudViewModel.clock(ShiftConstants.SHIFT_SECONDS)}`)
+			expect(view.before).to.equal(
+				`of site buildup before {ShiftHudViewModel.clock(ShiftConstants.SHIFT_SECONDS)}`
+			)
 			expect(view.key).to.equal("E")
 			expect(view.action).to.equal("Read the work order")
 		end)

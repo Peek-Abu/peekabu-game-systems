@@ -144,7 +144,7 @@ return function()
 
 		it("labels the break, the warning and overtime", function()
 			expect(ShiftHudViewModel.hud(snapshot({ stage = "break", stageEndsAt = 124 }), nil, 100, false).clockLabel).to.equal(
-				"HARLOW ON BREAK 0:24"
+				"MANAGER ON BREAK 0:24"
 			)
 			expect(
 				ShiftHudViewModel.hud(snapshot({ stage = "warning", stageEndsAt = 112 }), nil, 100, false).clockLabel
@@ -198,7 +198,7 @@ return function()
 		end)
 
 		it("switches to LOAD while holding something, lit only at the truck", function()
-			expect(ShiftHudViewModel.buttons({ carrying = "monitor" }, false).primary).to.equal("LOAD")
+			expect(ShiftHudViewModel.buttons({ carrying = "monitor" }, false).primary).to.equal("BANK")
 			expect(ShiftHudViewModel.buttons({ carrying = "monitor" }, false).primaryReady).to.equal(false)
 			expect(ShiftHudViewModel.buttons({ carrying = "monitor" }, true).primaryReady).to.equal(true)
 		end)
@@ -265,7 +265,7 @@ return function()
 
 		it("passes the hands and the truck's Load prompt through to the buttons", function()
 			local view = ShiftHudViewModel.mobileButtons(snapshot(), { carrying = "monitor" }, true, false, true)
-			expect(view.primary).to.equal("LOAD")
+			expect(view.primary).to.equal("BANK")
 			expect(view.primaryReady).to.equal(true)
 		end)
 	end)
@@ -316,17 +316,18 @@ return function()
 
 	describe("prompt chip", function()
 		local function prompt(extra)
-			local value = { id = 1, action = "Load", object = "Truck", key = "E", hold = 0, kind = "cargo-load" }
+			local value =
+				{ id = 1, action = "Bank cargo", object = "Recovery Unit", key = "E", hold = 0, kind = "cargo-load" }
 			for key, item in extra or {} do
 				value[key] = item
 			end
 			return value
 		end
 
-		it("says what a Load does with the item in hand", function()
+		it("says what banking does with the item in hand", function()
 			local chip = ShiftHudViewModel.prompt(prompt(), "monitor", 0)
 			expect(chip.key).to.equal("E")
-			expect(chip.text).to.equal("LOAD monitor onto the truck")
+			expect(chip.text).to.equal("BANK monitor")
 		end)
 
 		it("falls back to the prompt's own words", function()
@@ -355,7 +356,7 @@ return function()
 
 		it("shows nothing while the HUD is hidden", function()
 			expect(ShiftHudViewModel.prompt(prompt(), "monitor", 0, true)).to.equal(nil)
-			expect(ShiftHudViewModel.prompt(prompt(), "monitor", 0, false).text).to.equal("LOAD monitor onto the truck")
+			expect(ShiftHudViewModel.prompt(prompt(), "monitor", 0, false).text).to.equal("BANK monitor")
 		end)
 
 		it("lights LOAD only while the truck's Load prompt is shown", function()
@@ -385,7 +386,7 @@ return function()
 			expect(hints[1].key).to.equal("LMB")
 			expect(hints[1].label).to.equal("vacuum")
 			expect(hints[5].key).to.equal("E")
-			expect(hints[5].label).to.equal("load / search")
+			expect(hints[5].label).to.equal("bank / search")
 		end)
 
 		it("skips an action with no binding", function()

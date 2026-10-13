@@ -1,19 +1,19 @@
 --!strict
 --[=[
-	ShiftMobileButtons: the phone's arc of round action buttons around the big VACUUM / LOAD button (Figma 1d 9:61,
+	ShiftMobileButtons: the phone's arc of round action buttons around the big VACUUM / BANK button (Figma 1d 9:61,
 	1e 9:116): DROP, THROW and POCKET at 72 px, the big button at 104 px, with >= 16 px between circles, all clear of
 	the Roblox Jump button (bottom right) and the thumbstick zone (bottom-left 40%). Offsets are from the bottom-right
 	corner, so the arc tracks the Jump button; on a larger touch screen the engine's Jump button is bigger, so the arc
 	moves clear of it (ShiftHudViewModel.arcFor picks the arc from the viewport's short side).
 
 	A HUD widget: it reads the shift snapshot, the local player's public entry, the scare beat and the touch flag, and
-	draws what ShiftHudViewModel.mobileButtons decides (whether the arc shows, VACUUM or LOAD, which buttons are
+	draws what ShiftHudViewModel.mobileButtons decides (whether the arc shows, VACUUM or BANK, which buttons are
 	available or lit). The base Input feature has no touch bindings, so the buttons call the Vacuum and Cargo client
-	services directly. The big button keeps the hold semantics for VACUUM. As LOAD it is usable (and lit) only while the
+	services directly. The big button keeps the hold semantics for VACUUM. As BANK it is usable (and lit) only while the
 	truck's Load prompt is shown (ShiftPromptStore, ShiftHudViewModel.loadReady: the engine takes a touch hold only on
 	a shown prompt); pressing holds that prompt and releasing lets go, through the `onPrompt` prop (ShiftServiceClient
 	registers this widget with ShiftPromptSystem.press, so this module never requires the service that registers it).
-	Otherwise LOAD is drawn at half opacity and ignores input.
+	Otherwise BANK is drawn at half opacity and ignores input.
 
 	@class ShiftMobileButtons
 ]=]
@@ -38,7 +38,7 @@ local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shif
 local e = React.createElement
 local useAtom = ReactCharm.useAtom
 
--- What pressing (true) and releasing (false) LOAD does: holds and lets go of the shown prompt.
+-- What pressing (true) and releasing (false) BANK does: holds and lets go of the shown prompt.
 export type ShiftMobileButtonsProps = {
 	onPrompt: ((down: boolean) -> ())?,
 }
@@ -152,7 +152,7 @@ local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactN
 			VacuumServiceClient:endVacuum()
 		end
 	end, {})
-	-- Whether this widget is holding the shown prompt through LOAD.
+	-- Whether this widget is holding the shown prompt through BANK.
 	local loading = React.useRef(false)
 	local beginLoad = React.useCallback(function()
 		if onPrompt ~= nil and not loading.current then
@@ -166,12 +166,12 @@ local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactN
 			onPrompt(false)
 		end
 	end, { onPrompt })
-	-- A held VACUUM ends when the big button turns into LOAD or the arc goes away (unmounting destroys a held button
+	-- A held VACUUM ends when the big button turns into BANK or the arc goes away (unmounting destroys a held button
 	-- before its InputEnded fires).
 	React.useEffect(function()
 		return endVacuum
 	end, { vacuuming })
-	-- A held LOAD lets go of its prompt whenever LOAD stops being pressable: the prompt hid, the load emptied the
+	-- A held BANK lets go of its prompt whenever BANK stops being pressable: the prompt hid, the load emptied the
 	-- hands (VACUUM again), the HUD hid or the arc went away. Returning nil keeps this widget mounted, so this is
 	-- keyed on the state, not on unmount.
 	React.useEffect(function()
@@ -180,7 +180,7 @@ local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactN
 	if view == nil then
 		return nil
 	end
-	-- The big button's label is the view's VACUUM / LOAD, read as plain text.
+	-- The big button's label is the view's VACUUM / BANK, read as plain text.
 	local primaryLabel: string = view.primary
 	local dropProps: ButtonProps = {
 		label = "DROP",
@@ -222,7 +222,7 @@ local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactN
 			large = true,
 			available = view.primaryAvailable,
 			ready = view.primaryReady,
-			-- LOAD's release always goes through, so a hold that began while lit lets go even if the prompt hid.
+			-- BANK's release always goes through, so a hold that began while lit lets go even if the prompt hid.
 			onHoldBegin = if not view.primaryAvailable then nil elseif vacuuming then beginVacuum else beginLoad,
 			onHoldEnd = if vacuuming then endVacuum else endLoad,
 		}),
