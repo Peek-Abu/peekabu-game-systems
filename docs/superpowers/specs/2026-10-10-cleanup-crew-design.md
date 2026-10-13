@@ -3,6 +3,14 @@
 Date: 2026-10-10. Source briefs: `MVP_Demo_Pack/cleanup_crew_01_design.md`, `_02_implementation.md`,
 `_03_validation.md` (kept outside the repo). This spec records where we deliberately differ from them.
 
+> **Canon update, 2026-10-13.** The fiction now follows [the lore reference](../../cleanup-crew-lore.md):
+> the player is a Clearance Associate of **Morrow & Morrow Clearance** ("A clean site is a compliant site."),
+> the closed office belongs to the client **Harlow & Finch Ltd.**, the monster is **the Manager** (a Residual;
+> company paperwork says "Site Supervisor Proxy"), the truck is the **Mobile Recovery Unit** in flavour text,
+> valuables are **Recoverable Assets** paid in company **Scrip**, and **overtime is opt-in**. Sections 2–4
+> below are updated; elsewhere "Harlow" and "salvage" survive as code names (the `harlow` NPC kind, the
+> `salvage` cargo category) and are never shown to players.
+
 ## 1. Goal and success
 
 A published, playable demo of Cleanup Crew that the developer tests with two siblings (3 players) to
@@ -31,12 +39,15 @@ success RNG, no complex physics carrying, no two-player carrying.
 
 ## 2. Fiction
 
-Harlow & Finch went bust overnight. The bank hired **your liquidation crew to clear the building**
-before the sale. Every bag of trash and every full dust canister counts toward the **clearance
-contract**. Salvage you load onto the truck is auctioned and the crew earns a **finder's fee**: the
-optional greed. **Mr. Harlow**, the last manager, never left. Nobody told him the company is gone; he
-still works late, still does performance reviews, and treats you as intruders stealing COMPANY
-ASSETS. Tone: horror-comedy, kid-safe.
+Harlow & Finch Ltd. closed its offices overnight, and the building did not empty. **Morrow & Morrow
+Clearance** sends its cheerful, underpaid **Clearance Associates** (your crew) to clear the site: every
+bag of rubbish and every full dust canister of **site buildup** counts toward the **clearance quota**,
+banked in the truck, the company's **Mobile Recovery Unit**. **Recoverable Assets** you bank pay the
+crew in company **Scrip**: the optional greed. **The Manager**, a Residual (hostile site activity the
+company calls "noncompliant site activity"), still works late, still does performance reviews, and
+treats you as unauthorized staff stealing COMPANY ASSETS. It is not tied to one person, so later
+buildings can have their own Manager. Tone: horror-comedy, kid-safe. Full canon:
+[cleanup-crew-lore.md](../../cleanup-crew-lore.md).
 
 The depot contract board and a one-card arrival screen carry this; no tutorial narration.
 
@@ -49,13 +60,16 @@ The depot contract board and a one-card arrival screen carry this; no tutorial n
 2. **Teleport** the party to a fresh **reserved shift server** (drive card on the loading screen).
 3. **Shift server waits** up to ~20 s for the expected party, then starts with whoever arrived.
    Arrival card, then the loading bay.
-4. **Shift (~7 min).** Vacuum piles → canister fills → pop dust bags → haul trash and salvage to the
-   truck → **Load**. Harlow patrols; pressure tiers step up at 2:00 and 4:00.
-5. **Quota met.** Stamp + horn → Harlow walks to the break room for ~30 s (regroup and bank) →
-   "**Overtime in 0:30, salvage ×1.5**" warning → overtime at the top tier until the timer ends.
+4. **Shift (~7 min).** Vacuum piles → canister fills → pop dust bags → haul trash and assets to the
+   truck → **Bank cargo**. The Manager patrols; pressure tiers step up at 2:00 and 4:00.
+5. **Quota met.** Stamp + horn + "Clearance threshold reached. Optional recovery remains available.
+   Extended-site coverage is not guaranteed." The Manager takes a ~30 s break (regroup and bank), then
+   returns at the normal tier. **Overtime is opt-in:** any crew member holds **Start overtime** on the
+   overtime sheet beside the time clock → "**Overtime in 0:30: assets ×1.5. Bank your cargo and
+   regroup.**" → overtime at the top tier until the timer ends. The clock alone never starts it.
 6. **Clock out** at the truck any time: anyone presses it, a 10 s countdown is announced to all;
    unbanked cargo is lost from this run only. Timer expiry also ends the shift with what is banked.
-7. **Results:** Harlow's "performance review" (cleared, bonus, catches, salvage found, joke awards).
+7. **Results:** the "performance review" (cleared, Scrip earned, catches, assets recovered, joke awards).
    Party vote: **Another shift** (reset in the same server) or **Back to depot** (teleport).
 
 ## 4. Mechanics (all numbers are tuning hypotheses, kept in Data constants)
@@ -99,13 +113,14 @@ searchable desk/locker.
 
 - **Search** desks and lockers: short hold, small noise, may yield a small or tiny item. Contents are
   rolled at shift start, not at search time.
-- **Banking:** stand in the truck bed, **Load** your hands item (pockets unload with it). Trash adds to
-  clearance, salvage adds to bonus (×1.5 during overtime). Banked is safe forever.
+- **Banking:** stand in the truck bed, **Bank cargo** with your hands item (pockets unload with it). Trash
+  adds to clearance, Recoverable Assets add Scrip (×1.5 during overtime). Banked is safe forever. Scrip
+  is display-only in the demo (no saved balance); its name is one constant, `ShiftConstants.CURRENCY_NAME`.
 - **Quota** ~350 clearance. Spawn guarantees: total trash value ≥ 1.5× quota (counting canister
   output from the piles spawned), and at least one greed target (fish tank, cabinet or golden
   stapler), placed deep.
 
-### Mr. Harlow (the occupant)
+### The Manager (the occupant; code name `harlow`)
 - States: **patrol** (authored route, random start and order) → **investigate** (walk to the last
   heard noise, look around ~4 s) → **chase** (sight ~60 studs, 100° cone, line of sight) → **search**
   (last-seen point, ~6 s) → patrol.
@@ -126,9 +141,13 @@ searchable desk/locker.
 
 ### Pacing (one constants module)
 - Shift 7:00. Pressure tiers at 2:00 and 4:00: hearing radius ×1.2 and patrol speed +1 per tier,
-  announced by a flicker and a sticky note ("You hear Harlow pacing faster…").
+  announced by a flicker and a sticky note ("You hear the Manager pacing faster…").
 - Party size: solo gets hearing ×0.75 and chase speed −1.
-- Quota met → break 30 s → overtime warning 30 s → overtime at the top tier.
+- Quota met → the Manager's break 30 s → normal stage. Overtime only by choice: a crew member holds the
+  overtime sheet's **Start overtime** prompt (1.5 s hold, shown only while overtime may start; any one
+  member decides for the crew, like the clock out, and is named in a toast) → overtime warning 30 s →
+  overtime at the top tier. Clocking out stays possible throughout (`ShiftPhaseRules.startOvertime`,
+  `ShiftOvertimeSystem`).
 - No threat budget, no extra entities. Add only if the simple knobs fail to pace well.
 
 ## 5. Places and roles
@@ -262,7 +281,7 @@ Asset id literals live only in each feature's `Data/<Feature>Assets`.
 
 - **Spec-first.** Pure rules get specs before code: vacuum progress and stacking; canister and dust
   bag; hands and pocket limits; fragile tiers and spill; bank claim (no double count); shift phase
-  transitions (quota → break → warning → overtime, clock out, timer); pressure tiers and party-size
+  transitions (quota → break → normal; Start overtime → warning → overtime; clock out, timer); pressure tiers and party-size
   scaling; Harlow's brain decisions incl. grace and safe zone; noise radius per action; spawn roll
   guarantees; office layout validation (rooms connected, markers inside rooms); queue pad and party
   rules; place-role resolution.
