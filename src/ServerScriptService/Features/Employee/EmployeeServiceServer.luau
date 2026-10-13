@@ -1,12 +1,12 @@
 --!strict
 --[=[
-	ToonServiceServer: the crew are toons. At init it installs the default toon as StarterPlayer's
-	StarterCharacter (ToonSpawnSystem), before any service starts loading characters; at start it respawns
+	EmployeeServiceServer: the crew are employees. At init it installs the default employee as StarterPlayer's
+	StarterCharacter (EmployeeSpawnSystem), before any service starts loading characters; at start it respawns
 	anyone whose character loaded before that (a player who joined during boot), then runs the expression
-	pass (ToonExpressionSystem) every EXPRESSION_INTERVAL from the Manager's mind (Occupant) and each
+	pass (EmployeeExpressionSystem) every EXPRESSION_INTERVAL from the Manager's mind (Occupant) and each
 	player's activity (Vacuum, Carry, Cargo pockets).
 
-	@class ToonServiceServer
+	@class EmployeeServiceServer
 ]=]
 
 local Players = game:GetService("Players")
@@ -16,23 +16,23 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local StarterPlayer = game:GetService("StarterPlayer")
 
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
-local ToonConstants = require(ReplicatedStorage.Shared.Features.Toon.Data.ToonConstants)
-local ToonRegistry = require(ReplicatedStorage.Shared.Features.Toon.Data.ToonRegistry)
+local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
+local EmployeeRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeRegistry)
 local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
 local OccupantServiceServer = require(ServerScriptService.Features.Occupant.OccupantServiceServer)
-local ToonExpressionSystem = require(ServerScriptService.Features.Toon.Systems.ToonExpressionSystem)
-local ToonSpawnSystem = require(ServerScriptService.Features.Toon.Systems.ToonSpawnSystem)
+local EmployeeExpressionSystem = require(ServerScriptService.Features.Employee.Systems.EmployeeExpressionSystem)
+local EmployeeSpawnSystem = require(ServerScriptService.Features.Employee.Systems.EmployeeSpawnSystem)
 local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
 
-local log = Logger.new("ToonServiceServer")
+local log = Logger.new("EmployeeServiceServer")
 
 local installed = false
 local installError: string? = nil
 local respawned = 0
 local connections: { RBXScriptConnection } = {}
 
-local expressions = ToonExpressionSystem.new({
+local expressions = EmployeeExpressionSystem.new({
 	mind = function()
 		return OccupantServiceServer:getMind()
 	end,
@@ -49,8 +49,8 @@ local function isBusy(player: Player): boolean
 		or #CargoServiceServer:pocketsOf(player) > 0
 end
 
-local function subjects(): { ToonExpressionSystem.Subject }
-	local list: { ToonExpressionSystem.Subject } = {}
+local function subjects(): { EmployeeExpressionSystem.Subject }
+	local list: { EmployeeExpressionSystem.Subject } = {}
 	for _, player in Players:GetPlayers() do
 		local character = player.Character
 		if character ~= nil and character.Parent ~= nil then
@@ -60,23 +60,23 @@ local function subjects(): { ToonExpressionSystem.Subject }
 	return list
 end
 
-export type ToonServiceServer = {
+export type EmployeeServiceServer = {
 	dependencies: { string },
-	init: (self: ToonServiceServer) -> (),
-	start: (self: ToonServiceServer) -> (),
-	stop: (self: ToonServiceServer) -> (),
-	getState: (self: ToonServiceServer) -> { [string]: unknown },
+	init: (self: EmployeeServiceServer) -> (),
+	start: (self: EmployeeServiceServer) -> (),
+	stop: (self: EmployeeServiceServer) -> (),
+	getState: (self: EmployeeServiceServer) -> { [string]: unknown },
 }
 
-local ToonServiceServer: ToonServiceServer = {
+local EmployeeServiceServer: EmployeeServiceServer = {
 	dependencies = { "OccupantServiceServer", "VacuumServiceServer", "CarryServiceServer", "CargoServiceServer" },
 
 	init = function(_self)
-		local def = ToonRegistry.get(ToonRegistry.DEFAULT)
+		local def = EmployeeRegistry.get(EmployeeRegistry.DEFAULT)
 		if def == nil then
-			installError = `unknown default toon {ToonRegistry.DEFAULT}`
+			installError = `unknown default employee {EmployeeRegistry.DEFAULT}`
 		else
-			local ok, reason = ToonSpawnSystem.install(def, ReplicatedStorage, StarterPlayer)
+			local ok, reason = EmployeeSpawnSystem.install(def, ReplicatedStorage, StarterPlayer)
 			installed = ok
 			installError = reason
 		end
@@ -87,10 +87,10 @@ local ToonServiceServer: ToonServiceServer = {
 
 	start = function(_self)
 		if installed then
-			-- Anyone who spawned before the install (joined during boot) gets the toon now.
+			-- Anyone who spawned before the install (joined during boot) gets the employee now.
 			for _, player in Players:GetPlayers() do
 				local character = player.Character
-				if character ~= nil and character:GetAttribute(ToonConstants.NAME_ATTRIBUTE) == nil then
+				if character ~= nil and character:GetAttribute(EmployeeConstants.NAME_ATTRIBUTE) == nil then
 					respawned += 1
 					task.spawn(function()
 						player:LoadCharacterAsync()
@@ -103,7 +103,7 @@ local ToonServiceServer: ToonServiceServer = {
 			connections,
 			RunService.Heartbeat:Connect(function(dt: number)
 				elapsed += dt
-				if elapsed < ToonConstants.EXPRESSION_INTERVAL then
+				if elapsed < EmployeeConstants.EXPRESSION_INTERVAL then
 					return
 				end
 				elapsed = 0
@@ -127,7 +127,7 @@ local ToonServiceServer: ToonServiceServer = {
 
 	getState = function(_self)
 		return {
-			toon = ToonRegistry.DEFAULT,
+			employee = EmployeeRegistry.DEFAULT,
 			installed = installed,
 			installError = installError,
 			respawned = respawned,
@@ -136,4 +136,4 @@ local ToonServiceServer: ToonServiceServer = {
 	end,
 }
 
-return ToonServiceServer
+return EmployeeServiceServer

@@ -1,9 +1,9 @@
 --!strict
 --[=[
-	ToonConstants: names the toon contract uses on the character model, and the tuning for the expression
+	EmployeeConstants: names the employee contract uses on the character model, and the tuning for the expression
 	rule and the ear springs.
 
-	@class ToonConstants
+	@class EmployeeConstants
 ]=]
 
 export type EarJoint = {
@@ -18,28 +18,28 @@ local EAR_JOINTS: { EarJoint } = {
 	{ name = "RightEarBase", side = 1 },
 }
 
-local ToonConstants = {
+local EmployeeConstants = {
 	-- On the character model (authored on the template, copied to every spawn).
-	NAME_ATTRIBUTE = "ToonName",
-	-- On the character model, written by the server: the expression to show (a ToonRegistry.Face).
+	NAME_ATTRIBUTE = "EmployeeName",
+	-- On the character model, written by the server: the expression to show (an EmployeeRegistry.Face).
 	-- Also stamped on the FacePlate's SurfaceAppearance by the client, to know what is showing.
-	FACE_ATTRIBUTE = "ToonFace",
+	FACE_ATTRIBUTE = "EmployeeFace",
 	STARTER_CHARACTER_NAME = "StarterCharacter",
 	FACE_PLATE = "FacePlate",
 	FACE_APPEARANCE = "Face",
 	FACES_FOLDER = "Faces",
 
-	-- Expression rule (ToonFaceRules).
+	-- Expression rule (EmployeeFaceRules).
 	-- An investigating / chasing / searching Manager this close (studs) worries everyone.
 	WORRIED_RADIUS = 30,
-	-- Seconds a toon stays Happy after it stops vacuuming, carrying or holding cargo (covers banking).
+	-- Seconds an employee stays Happy after it stops vacuuming, carrying or holding cargo (covers banking).
 	HAPPY_LINGER = 3,
 	-- Seconds between server expression passes.
 	EXPRESSION_INTERVAL = 0.25,
 
-	-- Ear springs (client cosmetic; ToonEarFormulas).
+	-- Ear springs (client cosmetic; EmployeeEarFormulas).
 	EAR_JOINTS = EAR_JOINTS,
-	-- Toons farther than this (studs) from the camera keep their ears at rest.
+	-- Employees farther than this (studs) from the camera keep their ears at rest.
 	EAR_RADIUS = 100,
 	-- The ears are rigid one-piece meshes: past this the bend reads as broken.
 	EAR_MAX_ANGLE = math.rad(30),
@@ -68,4 +68,4 @@ local ToonConstants = {
 	EAR_SWAY_RATE = 1.7,
 }
 
-return ToonConstants
+return EmployeeConstants

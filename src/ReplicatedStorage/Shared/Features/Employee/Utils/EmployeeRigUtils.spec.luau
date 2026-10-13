@@ -1,4 +1,4 @@
-local ToonRigUtils = require(script.Parent.ToonRigUtils)
+local EmployeeRigUtils = require(script.Parent.EmployeeRigUtils)
 
 return function()
 	local function near(a, b)
@@ -18,7 +18,7 @@ return function()
 
 	describe("rigAttachments", function()
 		it("places a matching R15 rig attachment on both sides of each joint, at the joint's C0 and C1", function()
-			local placements = ToonRigUtils.rigAttachments({
+			local placements = EmployeeRigUtils.rigAttachments({
 				{
 					name = "Neck",
 					part0 = "UpperTorso",
@@ -37,7 +37,7 @@ return function()
 		end)
 
 		it("covers custom joints by the same naming rule (BuildRigFromAttachments round-trips it)", function()
-			local placements = ToonRigUtils.rigAttachments({
+			local placements = EmployeeRigUtils.rigAttachments({
 				{ name = "LeftEarBase", part0 = "Head", part1 = "LeftEar", c0 = CFrame.new(), c1 = CFrame.new() },
 			})
 			expect(find(placements, "Head", "LeftEarBaseRigAttachment")).to.be.ok()
@@ -47,13 +47,13 @@ return function()
 		it("does not place the same attachment twice", function()
 			local joint =
 				{ name = "Waist", part0 = "LowerTorso", part1 = "UpperTorso", c0 = CFrame.new(), c1 = CFrame.new() }
-			expect(#ToonRigUtils.rigAttachments({ joint, joint })).to.equal(2)
+			expect(#EmployeeRigUtils.rigAttachments({ joint, joint })).to.equal(2)
 		end)
 	end)
 
 	describe("gripAttachment", function()
 		it("matches the stock R15 RightGripAttachment for an arms-down hand", function()
-			local grip = ToonRigUtils.gripAttachment("Right", Vector3.new(1, 0.3, 1), CFrame.new(0, 0.125, 0))
+			local grip = EmployeeRigUtils.gripAttachment("Right", Vector3.new(1, 0.3, 1), CFrame.new(0, 0.125, 0))
 			expect(grip.part).to.equal("RightHand")
 			expect(grip.name).to.equal("RightGripAttachment")
 			expect(near(grip.cframe, CFrame.new(0, -0.15, 0) * CFrame.Angles(-math.pi / 2, 0, 0))).to.equal(true)
@@ -62,7 +62,7 @@ return function()
 		it("follows a T-posed right hand: the grip sits at the hand's end along +X", function()
 			local size = Vector3.new(0.54, 0.43, 0.78)
 			-- Pippa's RightWrist C1: the wrist pivot sits on the hand's -X side, so the arm runs along +X.
-			local grip = ToonRigUtils.gripAttachment("Right", size, CFrame.new(-0.23, 0, 0.087))
+			local grip = EmployeeRigUtils.gripAttachment("Right", size, CFrame.new(-0.23, 0, 0.087))
 			expect(math.abs(grip.cframe.Position.X - 0.27) < 1e-4).to.equal(true)
 			-- The stock grip frame is rotated so that "down the arm" (stock -Y) becomes +X.
 			local downArm = grip.cframe:VectorToWorldSpace(
@@ -72,13 +72,13 @@ return function()
 		end)
 
 		it("mirrors for a T-posed left hand", function()
-			local grip = ToonRigUtils.gripAttachment("Left", Vector3.new(0.54, 0.43, 0.78), CFrame.new(0.23, 0, 0.087))
+			local grip = EmployeeRigUtils.gripAttachment("Left", Vector3.new(0.54, 0.43, 0.78), CFrame.new(0.23, 0, 0.087))
 			expect(grip.name).to.equal("LeftGripAttachment")
 			expect(math.abs(grip.cframe.Position.X + 0.27) < 1e-4).to.equal(true)
 		end)
 
 		it("handles a hand whose arm runs up its +Y", function()
-			local grip = ToonRigUtils.gripAttachment("Right", Vector3.new(1, 0.3, 1), CFrame.new(0, -0.125, 0))
+			local grip = EmployeeRigUtils.gripAttachment("Right", Vector3.new(1, 0.3, 1), CFrame.new(0, -0.125, 0))
 			expect(math.abs(grip.cframe.Position.Y - 0.15) < 1e-4).to.equal(true)
 		end)
 	end)

@@ -1,10 +1,10 @@
 --!strict
 --[=[
-	ToonServiceClient: toon presentation on this client. For every toon character (a ToonName attribute) it
-	shows the server's chosen face (ToonFaceSystem) and drives the springy ears (ToonEarSystem) once per
+	EmployeeServiceClient: employee presentation on this client. For every employee character (an EmployeeName attribute) it
+	shows the server's chosen face (EmployeeFaceSystem) and drives the springy ears (EmployeeEarSystem) once per
 	frame in RunService.PreSimulation, after the frame's animations are applied.
 
-	@class ToonServiceClient
+	@class EmployeeServiceClient
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -12,38 +12,38 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local Observers = require(ReplicatedStorage.Packages.Observers)
-local ToonConstants = require(ReplicatedStorage.Shared.Features.Toon.Data.ToonConstants)
-local ToonEarSystem = require(ReplicatedStorage.Client.Features.Toon.Systems.ToonEarSystem)
-local ToonFaceSystem = require(ReplicatedStorage.Client.Features.Toon.Systems.ToonFaceSystem)
+local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
+local EmployeeEarSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeeEarSystem)
+local EmployeeFaceSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeeFaceSystem)
 
-local ears = ToonEarSystem.new()
+local ears = EmployeeEarSystem.new()
 local stoppers: { () -> () } = {}
 local faces = 0
 
-export type ToonClientState = {
+export type EmployeeClientState = {
 	faces: number,
-	ears: ToonEarSystem.ToonEarState,
+	ears: EmployeeEarSystem.EmployeeEarState,
 }
 
-export type ToonServiceClient = {
+export type EmployeeServiceClient = {
 	dependencies: { string },
-	start: (self: ToonServiceClient) -> (),
-	stop: (self: ToonServiceClient) -> (),
-	getState: (self: ToonServiceClient) -> ToonClientState,
+	start: (self: EmployeeServiceClient) -> (),
+	stop: (self: EmployeeServiceClient) -> (),
+	getState: (self: EmployeeServiceClient) -> EmployeeClientState,
 }
 
-local ToonServiceClient: ToonServiceClient = {
+local EmployeeServiceClient: EmployeeServiceClient = {
 	dependencies = {},
 
 	start = function(_self)
 		table.insert(
 			stoppers,
 			Observers.observeCharacter(function(_player: Player, character: Model)
-				if character:GetAttribute(ToonConstants.NAME_ATTRIBUTE) == nil then
+				if character:GetAttribute(EmployeeConstants.NAME_ATTRIBUTE) == nil then
 					return nil
 				end
 				faces += 1
-				local releaseFace = ToonFaceSystem.bind(character)
+				local releaseFace = EmployeeFaceSystem.bind(character)
 				local releaseEars = ears.track(character)
 				return function()
 					faces -= 1
@@ -75,4 +75,4 @@ local ToonServiceClient: ToonServiceClient = {
 	end,
 }
 
-return ToonServiceClient
+return EmployeeServiceClient

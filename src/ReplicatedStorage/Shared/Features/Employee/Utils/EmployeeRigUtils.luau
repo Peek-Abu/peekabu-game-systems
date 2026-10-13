@@ -1,10 +1,10 @@
 --!strict
 --[=[
-	ToonRigUtils: plans the attachments a stock R15 avatar carries but an exported toon rig lacks.
+	EmployeeRigUtils: plans the attachments a stock R15 avatar carries but an exported employee rig lacks.
 
 	Engine and game code find a character's joints and hands through attachments, not Motor6Ds: the
 	R15 `<Joint>RigAttachment` pairs (Humanoid:BuildRigFromAttachments, the carry IK's arm reach) and the
-	`RightGripAttachment` a Tool's handle is welded to. A toon exported with only Motor6Ds gets them
+	`RightGripAttachment` a Tool's handle is welded to. An employee exported with only Motor6Ds gets them
 	generated from its joints instead, so the art never has to author them:
 
 	- Rig attachments: one `<Joint>RigAttachment` on each side of every Motor6D, at its C0 (in Part0) and
@@ -13,12 +13,12 @@
 	- Grip attachments: the stock R15 grip sits at the end of the hand, down the arm, rotated -90 degrees
 	  about X. "Down the arm" is read from the wrist instead of assumed to be -Y: the wrist pivot (the
 	  Motor6D's C1, in hand space) sits at the arm end of the hand, so the arm runs from it through the hand's
-	  centre. A T-posed toon's right arm runs along +X, and its grip turns with it, so a Tool sits in the
+	  centre. A T-posed employee's right arm runs along +X, and its grip turns with it, so a Tool sits in the
 	  hand the same way it would on an arms-down rig once animation retargeting brings the arm down.
 
 	Pure: plans from joint descriptions, never touches Instances.
 
-	@class ToonRigUtils
+	@class EmployeeRigUtils
 ]=]
 
 export type Joint = {
@@ -41,9 +41,9 @@ local STOCK_DOWN = Vector3.new(0, -1, 0)
 -- The stock R15 grip frame relative to "the hand, arms down".
 local STOCK_GRIP_TURN = CFrame.Angles(-math.pi / 2, 0, 0)
 
-local ToonRigUtils = {}
+local EmployeeRigUtils = {}
 
-function ToonRigUtils.rigAttachments(joints: { Joint }): { Placement }
+function EmployeeRigUtils.rigAttachments(joints: { Joint }): { Placement }
 	local placements: { Placement } = {}
 	local seen: { [string]: true } = {}
 	local function add(part: string, name: string, cframe: CFrame)
@@ -88,7 +88,7 @@ local function turnOnto(axis: Vector3): CFrame
 	return CFrame.fromAxisAngle(STOCK_DOWN:Cross(axis).Unit, math.acos(dot))
 end
 
-function ToonRigUtils.gripAttachment(side: Side, handSize: Vector3, wristC1: CFrame): Placement
+function EmployeeRigUtils.gripAttachment(side: Side, handSize: Vector3, wristC1: CFrame): Placement
 	local axis = armAxis(wristC1)
 	local extent = math.abs(handSize:Dot(axis)) / 2
 	return {
@@ -98,4 +98,4 @@ function ToonRigUtils.gripAttachment(side: Side, handSize: Vector3, wristC1: CFr
 	}
 end
 
-return ToonRigUtils
+return EmployeeRigUtils

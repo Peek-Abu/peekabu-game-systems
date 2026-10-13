@@ -1,10 +1,10 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local ToonConstants = require(ReplicatedStorage.Shared.Features.Toon.Data.ToonConstants)
-local ToonEarSystem = require(script.Parent.ToonEarSystem)
+local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
+local EmployeeEarSystem = require(script.Parent.EmployeeEarSystem)
 
 return function()
-	local function makeToon(position)
+	local function makeEmployee(position)
 		local model = Instance.new("Model")
 		local root = Instance.new("Part")
 		root.Name = "HumanoidRootPart"
@@ -16,7 +16,7 @@ return function()
 		head.Name = "Head"
 		head.Parent = model
 		local motors = {}
-		for _, joint in ToonConstants.EAR_JOINTS do
+		for _, joint in EmployeeConstants.EAR_JOINTS do
 			local ear = Instance.new("Part")
 			ear.Name = joint.name .. "Part"
 			ear.Parent = model
@@ -35,9 +35,9 @@ return function()
 	end
 
 	describe("step", function()
-		it("drives both ear joints of a nearby toon", function()
-			local ears = ToonEarSystem.new()
-			local model, root, motors = makeToon(Vector3.new(0, 0, 0))
+		it("drives both ear joints of a nearby employee", function()
+			local ears = EmployeeEarSystem.new()
+			local model, root, motors = makeEmployee(Vector3.new(0, 0, 0))
 			local untrack = ears.track(model)
 			ears.step(1 / 60, Vector3.new(0, 0, 10), 0)
 			root.CFrame = CFrame.new(0, 0, -0.3)
@@ -51,11 +51,11 @@ return function()
 			model:Destroy()
 		end)
 
-		it("leaves far toons at rest", function()
-			local ears = ToonEarSystem.new()
-			local model, _, motors = makeToon(Vector3.new(0, 0, 0))
+		it("leaves far employees at rest", function()
+			local ears = EmployeeEarSystem.new()
+			local model, _, motors = makeEmployee(Vector3.new(0, 0, 0))
 			local untrack = ears.track(model)
-			local far = Vector3.new(ToonConstants.EAR_RADIUS + 50, 0, 0)
+			local far = Vector3.new(EmployeeConstants.EAR_RADIUS + 50, 0, 0)
 			for i = 1, 10 do
 				ears.step(1 / 60, far, i / 60)
 			end
@@ -65,9 +65,9 @@ return function()
 			model:Destroy()
 		end)
 
-		it("puts the ears back to rest and forgets the toon when untracked", function()
-			local ears = ToonEarSystem.new()
-			local model, root, motors = makeToon(Vector3.new(0, 0, 0))
+		it("puts the ears back to rest and forgets the employee when untracked", function()
+			local ears = EmployeeEarSystem.new()
+			local model, root, motors = makeEmployee(Vector3.new(0, 0, 0))
 			local untrack = ears.track(model)
 			ears.step(1 / 60, Vector3.new(0, 0, 10), 0)
 			root.CFrame = CFrame.new(3, 0, 0)
@@ -79,7 +79,7 @@ return function()
 		end)
 
 		it("tracks a model without ear joints harmlessly", function()
-			local ears = ToonEarSystem.new()
+			local ears = EmployeeEarSystem.new()
 			local model = Instance.new("Model")
 			local untrack = ears.track(model)
 			ears.step(1 / 60, Vector3.new(), 0)
@@ -90,8 +90,8 @@ return function()
 		end)
 
 		it("picks up ear joints that arrive after tracking (replication order)", function()
-			local ears = ToonEarSystem.new()
-			local model, root, motors = makeToon(Vector3.new(0, 0, 0))
+			local ears = EmployeeEarSystem.new()
+			local model, root, motors = makeEmployee(Vector3.new(0, 0, 0))
 			local parents = {}
 			for side, motor in motors do
 				parents[side] = motor.Parent

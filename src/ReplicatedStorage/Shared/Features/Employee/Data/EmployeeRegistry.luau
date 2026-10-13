@@ -1,18 +1,18 @@
 --!strict
 --[=[
-	ToonRegistry: the playable toon employees, by name. A toon is an art-owned character model in the place
+	EmployeeRegistry: the playable employees, by name. An employee is an art-owned character model in the place
 	(never in the source tree: ReplicatedStorage keeps `$ignoreUnknownInstances`, so Rojo leaves it alone)
 	plus the expressions its `Faces` folder holds. Adding an employee is one entry here and one model in
 	the place: R15 MeshParts with standard joint names, a FacePlate with a "Face" SurfaceAppearance, and a
 	`Faces` folder with one SurfaceAppearance per expression. The rig attachments are generated
-	(ToonSpawnSystem), so the model does not need them.
+	(EmployeeSpawnSystem), so the model does not need them.
 
-	@class ToonRegistry
+	@class EmployeeRegistry
 ]=]
 
 export type Face = "Happy" | "Worried" | "Content"
 
-export type ToonDef = {
+export type EmployeeDef = {
 	name: string,
 	-- Path under ReplicatedStorage to the template model.
 	templatePath: { string },
@@ -24,7 +24,7 @@ export type ToonDef = {
 
 local FACES: { Face } = { "Happy", "Worried", "Content" }
 
-local TOONS: { [string]: ToonDef } = {
+local EMPLOYEES: { [string]: EmployeeDef } = {
 	Pippa = {
 		name = "Pippa",
 		templatePath = { "Assets", "CleanupCrew", "Characters", "Pippa" },
@@ -33,19 +33,19 @@ local TOONS: { [string]: ToonDef } = {
 	},
 }
 
-local ToonRegistry = {
-	-- The toon every player spawns as (one StarterCharacter serves the whole server).
+local EmployeeRegistry = {
+	-- The employee every player spawns as (one StarterCharacter serves the whole server).
 	DEFAULT = "Pippa",
 	FACES = FACES,
 }
 
-function ToonRegistry.get(name: string): ToonDef?
-	return TOONS[name]
+function EmployeeRegistry.get(name: string): EmployeeDef?
+	return EMPLOYEES[name]
 end
 
-function ToonRegistry.names(): { string }
+function EmployeeRegistry.names(): { string }
 	local names = {}
-	for name in TOONS do
+	for name in EMPLOYEES do
 		table.insert(names, name)
 	end
 	table.sort(names)
@@ -53,7 +53,7 @@ function ToonRegistry.names(): { string }
 end
 
 -- Narrows an untrusted value (a replicated attribute) to a Face.
-function ToonRegistry.toFace(value: unknown): Face?
+function EmployeeRegistry.toFace(value: unknown): Face?
 	if value == "Happy" then
 		return "Happy"
 	elseif value == "Worried" then
@@ -64,4 +64,4 @@ function ToonRegistry.toFace(value: unknown): Face?
 	return nil
 end
 
-return ToonRegistry
+return EmployeeRegistry
