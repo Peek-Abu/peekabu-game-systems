@@ -1,4 +1,5 @@
 local ShiftHudViewModel = require(script.Parent.ShiftHudViewModel)
+local ShiftConstants = require(game:GetService("ReplicatedStorage").Shared.Features.Shift.Data.ShiftConstants)
 
 local function snapshot(extra)
 	local value = {
@@ -84,7 +85,7 @@ return function()
 			local trash = ShiftHudViewModel.hud(snapshot(), { carrying = "rubbishBag" }, 0, false)
 			local salvage = ShiftHudViewModel.hud(snapshot(), { carrying = "monitor" }, 0, false)
 			expect(ShiftHudViewModel.compact(trash, {}).cargoValue).to.equal("+10 clearance")
-			expect(ShiftHudViewModel.compact(salvage, {}).cargoValue).to.equal("+30 salvage")
+			expect(ShiftHudViewModel.compact(salvage, {}).cargoValue).to.equal(`+30 {ShiftConstants.CURRENCY_NAME}`)
 		end)
 		it("reveals occupied pockets even with empty hands", function()
 			local view = ShiftHudViewModel.hud(snapshot(), { pocket1 = "plaque" }, 0, false)

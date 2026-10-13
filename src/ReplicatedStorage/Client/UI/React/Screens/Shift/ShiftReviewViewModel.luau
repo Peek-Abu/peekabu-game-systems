@@ -15,6 +15,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
+local ShiftCurrencyUtils = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftCurrencyUtils)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 
 export type RowView = { label: string, value: string }
@@ -230,9 +231,12 @@ function ShiftReviewViewModel.review(
 		met = met,
 		rows = {
 			{ label = "CLEARED", value = `{results.cleared} / {results.quota}` },
-			{ label = if met then "FINDER'S FEE" else "FINDER'S FEE (banked)", value = `+{results.bonus}` },
+			{
+				label = if met then ShiftCurrencyUtils.earnedLabel() else `{ShiftCurrencyUtils.earnedLabel()} (banked)`,
+				value = `+{results.bonus}`,
+			},
 			{ label = "TIMES CAUGHT", value = tostring(results.catches) },
-			{ label = "SALVAGE FOUND", value = `{results.salvage} of {results.offered}` },
+			{ label = "ASSETS RECOVERED", value = `{results.salvage} of {results.offered}` },
 		},
 		ratingLabel = if phone then "Rating:" else "Overall rating:",
 		rating = ShiftConstants.RATING_TEXT[rating] or ShiftConstants.RATING_TEXT.needsImprovement,

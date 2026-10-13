@@ -17,6 +17,7 @@ local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.Depo
 local QueueTypes = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueTypes)
 local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
+local ShiftCurrencyUtils = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftCurrencyUtils)
 local DepotBoardViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotBoardViewModel)
 local WorldBillboardViewModel = require(ReplicatedStorage.Client.UI.React.Screens.World.WorldBillboardViewModel)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
@@ -217,9 +218,9 @@ function DepotWorldViewModel.review(attributes: { [string]: unknown }): ReviewVi
 		band = `SHIFT REVIEW · {band}`,
 		rows = {
 			{ label = "CLEARED", value = `{cleared} / {quota}` },
-			{ label = "FINDER'S FEE", value = `+{bonus}` },
+			{ label = ShiftCurrencyUtils.earnedLabel(), value = `+{bonus}` },
 			{ label = "TIMES CAUGHT", value = tostring(catches) },
-			{ label = "SALVAGE", value = `{salvage} of {offered}` },
+			{ label = "ASSETS", value = `{salvage} of {offered}` },
 		},
 		headline = if met then "QUOTA MET" else "QUOTA MISSED",
 		met = met,

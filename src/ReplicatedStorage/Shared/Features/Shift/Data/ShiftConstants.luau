@@ -67,6 +67,9 @@ return table.freeze({
 	EMPLOYER = "Morrow & Morrow Clearance",
 	EMPLOYER_BAND = "MORROW & MORROW",
 	EMPLOYER_SLOGAN = "A clean site is a compliant site.",
+	-- The company scrip associates are paid in for banked Recoverable Assets. Display only (no saved balance yet):
+	-- rename it here and every price tag, floater, plate and review follows (ShiftCurrencyUtils).
+	CURRENCY_NAME = "Scrip",
 	-- The StateSyncWorldStore entry the snapshot is published under.
 	WORLD_ENTRY = "shift",
 	-- Clearance (trash value) the crew must load.

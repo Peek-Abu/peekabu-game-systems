@@ -3,7 +3,7 @@
 	ShiftClearancePanel: the clearance folder and the finder's fee plate (Figma 1a-1c, top left). The folder is a manila
 	sheet with a "CLEARANCE CONTRACT" tab: the cleared number, "/ 350 cleared", MET in green ink once the quota is met
 	and the green clearance bar. Under it the fee plate is a dark strip, not paper (Figma's dark plate = a live number):
-	"FINDER'S FEE", the fee and, in overtime, the "×1.5 now" boost. On phone (Figma 1d/1e "Clearance (compact)" and
+	the scrip earned (ShiftHudViewModel's `feeLabel`), the fee and, in overtime, the "×1.5 now" boost. On phone (Figma 1d/1e "Clearance (compact)" and
 	"Finder's fee (compact)", 236 wide at (48, 66) / (48, 130)) the folder loses its tab: "CLEARANCE", "212 / 350" and a
 	14 px bar, and the plate is 34 px tall. Presentational.
 
@@ -107,7 +107,7 @@ local function feePlate(view: ShiftHudViewModel.HudView): React.ReactNode
 		BorderSizePixel = 0,
 	}, {
 		title = e(PaperLabel, {
-			text = "FINDER'S FEE",
+			text = view.feeLabel,
 			role = "body",
 			size = TEXT.label,
 			color = COLOR.monitor,
@@ -215,7 +215,7 @@ local function phoneFee(view: ShiftHudViewModel.HudView): React.ReactNode
 	}, {
 		corner = e("UICorner", { CornerRadius = UDim.new(0, 6) }),
 		title = e(PaperLabel, {
-			text = "FINDER'S FEE",
+			text = view.feeLabel,
 			role = "body",
 			size = PHONE_TEXT.label,
 			color = PHONE_FEE_TITLE,

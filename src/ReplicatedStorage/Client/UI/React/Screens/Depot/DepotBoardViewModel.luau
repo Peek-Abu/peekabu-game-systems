@@ -13,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local DepotTypes = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotTypes)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
+local ShiftCurrencyUtils = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftCurrencyUtils)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 
 export type RowView = { label: string, text: string, hazard: boolean }
@@ -89,15 +90,15 @@ local function lastOf(last: DepotTypes.LastShift, phone: boolean): LastView
 		title = title,
 		rows = {
 			{ label = "Cleared", value = `{last.cleared} / {last.quota}` },
-			{ label = "Finder's fee", value = `+{last.bonus}` },
+			{ label = `{ShiftConstants.CURRENCY_NAME} earned`, value = `+{last.bonus}` },
 			{ label = "Times rehired", value = tostring(last.catches) },
-			{ label = "Salvage found", value = `{last.salvage} of {last.offered}` },
+			{ label = "Assets recovered", value = `{last.salvage} of {last.offered}` },
 		},
 		stamp = stamp,
 		met = last.quotaMet,
 		lines = {
-			`Cleared {last.cleared}/{last.quota}  ·  Fee +{last.bonus}`,
-			`Rehired {last.catches}  ·  Salvage {last.salvage} of {last.offered}`,
+			`Cleared {last.cleared}/{last.quota}  ·  {ShiftCurrencyUtils.gain(last.bonus)}`,
+			`Rehired {last.catches}  ·  Assets {last.salvage} of {last.offered}`,
 		},
 	}
 end
@@ -112,14 +113,18 @@ function DepotBoardViewModel.board(id: string?, last: DepotTypes.LastShift?, pho
 		rows = {
 			{ label = "QUOTA", text = `{quota} {copy.quotaPhone}`, hazard = false },
 			{ label = "SHIFT", text = `{shift} · {copy.shiftPhone}`, hazard = false },
-			{ label = "FEE", text = copy.feePhone, hazard = false },
+			{ label = "PAY", text = `Assets → {ShiftConstants.CURRENCY_NAME}`, hazard = false },
 			{ label = "HAZARD", text = copy.hazardPhone, hazard = true },
 		}
 	else
 		rows = {
 			{ label = "QUOTA", text = `{quota} {copy.quota}`, hazard = false },
 			{ label = "SHIFT", text = `{shift} {copy.shift}`, hazard = false },
-			{ label = "FINDER'S FEE", text = copy.fee, hazard = false },
+			{
+				label = "PAY",
+				text = `Recoverable Assets you bank pay the crew in company {ShiftConstants.CURRENCY_NAME}.`,
+				hazard = false,
+			},
 			{ label = "CREW", text = copy.crew, hazard = false },
 			{ label = "HAZARD", text = copy.hazard, hazard = true },
 			{ label = "NOTES", text = contract.note, hazard = false },

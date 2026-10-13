@@ -138,7 +138,7 @@ return function()
 			expect(awardOf(results, "QUIETEST FEET")).to.equal(nil)
 			local award = awardOf(results, "LOUDEST VACUUM")
 			expect(award.name).to.equal("Ava")
-			expect(award.detail).to.equal("woke him 4 times")
+			expect(award.detail).to.equal("woke the Manager 4 times")
 		end)
 
 		it("hands a tie to crew order (more banked, then name)", function()

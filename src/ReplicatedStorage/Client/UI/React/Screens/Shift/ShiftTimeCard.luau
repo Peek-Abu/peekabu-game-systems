@@ -2,7 +2,7 @@
 --[=[
 	ShiftTimeCard: the punch-clock time card (Figma 1a-1c "Punch clock", 360x132, top centre): the red "MORROW & MORROW —
 	TIME CARD" band, five punch holes down the left edge (shift progress), the stage label, the Roboto Mono clock (red
-	in overtime), OUT and the pressure pips; in overtime a "SALVAGE ×1.5" rubber stamp drops in under the card.
+	in overtime), OUT and the pressure pips; in overtime an "ASSETS ×1.5" rubber stamp drops in under the card.
 	On phone (Figma 1d/1e "Punch clock (compact)", 210x58 at top centre y 8) the card drops the band, the holes and the
 	stamp: a red left edge, the clock and one line (OUT, or OVERTIME in red) over the three pips. Presentational: it
 	draws the HudView it is given.
@@ -185,7 +185,7 @@ local function ShiftTimeCard(props: ShiftTimeCardProps): React.ReactNode
 		-- Mounted only in overtime, so it drops in (pop) once as overtime begins.
 		stamp = if view.overtime
 			then e(PaperStamp, {
-				text = `SALVAGE ×{ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER}`,
+				text = `ASSETS ×{ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER}`,
 				size = 30,
 				tilt = UIPaperConstants.STAMP_TILT,
 				pop = true,

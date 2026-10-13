@@ -35,7 +35,8 @@ local function CargoPriceTag(props: CargoPriceTagProps): React.ReactNode
 			scaled = true,
 			color = COLOR.ink,
 			position = UDim2.fromOffset(12, 6),
-			frame = UDim2.fromOffset(150, 30),
+			-- Narrower than the approved 150 so "45 Scrip" fits beside it (the currency's name is longer than "$").
+			frame = UDim2.fromOffset(132, 30),
 			autoSize = false,
 		}),
 		price = e(PaperLabel, {
@@ -45,8 +46,8 @@ local function CargoPriceTag(props: CargoPriceTagProps): React.ReactNode
 			scaled = true,
 			color = if view.cracked then COLOR.stamp else COLOR.ink,
 			align = "right",
-			position = UDim2.new(1, -72, 0, 6),
-			frame = UDim2.fromOffset(60, 30),
+			position = UDim2.new(1, -102, 0, 6),
+			frame = UDim2.fromOffset(90, 30),
 			autoSize = false,
 			wrapped = false,
 		}),

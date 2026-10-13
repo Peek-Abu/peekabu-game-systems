@@ -21,6 +21,7 @@ local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.Carr
 local DeathConstants = require(ReplicatedStorage.Shared.Features.Death.Data.DeathConstants)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
+local ShiftCurrencyUtils = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftCurrencyUtils)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local ShiftPromptStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftPromptStore)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
@@ -59,6 +60,8 @@ export type HudView = {
 	clearedShort: string,
 	fill: number,
 	quotaMet: boolean,
+	-- The plate's label ("SCRIP EARNED", ShiftCurrencyUtils) over the crew's running total.
+	feeLabel: string,
 	fee: string,
 	feeBoost: string?,
 	-- The phone plate's shorter boost (Figma 1e "+140 ×1.5").
@@ -218,6 +221,7 @@ function ShiftHudViewModel.hud(
 		clearedShort = `{snapshot.cleared} / {snapshot.quota}`,
 		fill = if snapshot.quota > 0 then math.clamp(snapshot.cleared / snapshot.quota, 0, 1) else 1,
 		quotaMet = snapshot.quotaMet,
+		feeLabel = ShiftCurrencyUtils.earnedLabel(),
 		fee = `+{snapshot.bonus}`,
 		feeBoost = if overtime then `×{ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER} now` else nil,
 		feeBoostShort = if overtime then `×{ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER}` else nil,
@@ -422,7 +426,7 @@ function ShiftHudViewModel.keyHints(bindings: KeyBindings): { HintView }
 end
 
 --[=[
-	How far (px) the centred pieces (time card, SALVAGE stamp, clock-out slip) move right so the widest of them, the
+	How far (px) the centred pieces (time card, ASSETS stamp, clock-out slip) move right so the widest of them, the
 	500 px slip, clears the left column (the folder and fee plate) by a 16 px gap; 0 on a wide screen. Takes the width
 	in HUD design px (usePaperHudScale's virtual viewport), since the desktop HUD is drawn scaled to the window.
 ]=]
@@ -496,7 +500,7 @@ function ShiftHudViewModel.compact(view: HudView, bindings: KeyBindings): Compac
 			then `{hands.value} {if def == nil
 				then "value"
 				elseif def.category == "trash" then "clearance"
-				else "salvage"}`
+				else ShiftConstants.CURRENCY_NAME}`
 			else nil,
 	}
 end

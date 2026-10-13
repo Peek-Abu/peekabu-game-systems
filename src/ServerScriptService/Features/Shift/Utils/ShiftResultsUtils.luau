@@ -127,7 +127,7 @@ function ShiftResultsUtils.awards(crew: { CrewStats }, lookup: Lookup): { ShiftT
 		return member.woke or 0
 	end)
 	if loudest ~= nil and woke >= ShiftConstants.LOUDEST_MIN_WOKE then
-		add(titles.loudest, loudest, `woke him {ShiftResultsUtils.times(woke)}`)
+		add(titles.loudest, loudest, `woke the Manager {ShiftResultsUtils.times(woke)}`)
 	else
 		local quiet = quietest(crew)
 		if quiet ~= nil then

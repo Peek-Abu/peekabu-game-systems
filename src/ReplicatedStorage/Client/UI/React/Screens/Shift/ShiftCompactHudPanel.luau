@@ -233,7 +233,7 @@ local function ShiftCompactHudPanel(props: Props): React.ReactNode
 			end
 			local cargoChildren: { [string]: React.ReactNode } = {
 				title = label(
-					if hands ~= nil then `CARRYING {string.upper(hands.name)}` else "POCKETED SALVAGE",
+					if hands ~= nil then `CARRYING {string.upper(hands.name)}` else "POCKETED ASSETS",
 					0,
 					-4,
 					cargoWidth - 24,
@@ -243,7 +243,7 @@ local function ShiftCompactHudPanel(props: Props): React.ReactNode
 				value = label(
 					if hands ~= nil
 						then `{compact.cargoValue or hands.value}{if hands.fragile then " / fragile" else ""}`
-						else `FINDER'S FEE {view.fee}`,
+						else `{view.feeLabel} {view.fee}`,
 					0,
 					22,
 					cargoWidth - 24,

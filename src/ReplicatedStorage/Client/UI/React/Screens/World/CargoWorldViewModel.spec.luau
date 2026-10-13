@@ -3,6 +3,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CargoWorldViewModel = require(script.Parent.CargoWorldViewModel)
 local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants)
 local CargoRegistry = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoRegistry)
+local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
+
+local SCRIP = ShiftConstants.CURRENCY_NAME
 
 local KEYS = CargoConstants.LABEL_KEYS
 
@@ -20,10 +23,10 @@ end
 
 return function()
 	describe("priceTag", function()
-		it("prices salvage in dollars", function()
+		it("prices a Recoverable Asset in company scrip", function()
 			local view = CargoWorldViewModel.priceTag(tag("Printer", "salvage", 40))
 			expect(view.name).to.equal("Printer")
-			expect(view.price).to.equal("$40")
+			expect(view.price).to.equal(`40 {SCRIP}`)
 			expect(view.cracked).to.equal(false)
 			expect(view.mark).to.equal(nil)
 		end)
@@ -44,7 +47,7 @@ return function()
 			expect(once.mark).to.equal(`CRACKED −{math.floor((1 - tiers[2]) * 100 + 0.5)}%`)
 			expect(once.mark).to.equal("CRACKED −50%")
 			expect(once.cracked).to.equal(true)
-			expect(once.price).to.equal("$35")
+			expect(once.price).to.equal(`35 {SCRIP}`)
 			local twice = CargoWorldViewModel.priceTag(tag("Fish tank", "salvage", 18, true, 2))
 			expect(twice.mark).to.equal("CRACKED −75%")
 			local many = CargoWorldViewModel.priceTag(tag("Fish tank", "salvage", 18, true, 9))
@@ -58,7 +61,7 @@ return function()
 		end)
 
 		it("rounds a value to a whole price", function()
-			expect(CargoWorldViewModel.priceTag(tag("Monitor", "salvage", 14.6)).price).to.equal("$15")
+			expect(CargoWorldViewModel.priceTag(tag("Monitor", "salvage", 14.6)).price).to.equal(`15 {SCRIP}`)
 		end)
 
 		it("keeps the longest catalog name whole", function()
@@ -99,10 +102,10 @@ return function()
 			expect(view.caption).to.equal("CLEARED")
 		end)
 
-		it("stamps the finder's fee as a BONUS with no caption", function()
+		it("stamps the scrip earned with no caption", function()
 			local view = CargoWorldViewModel.floater({ text = "+40", tone = "bonus" })
 			expect(view.bonus).to.equal(true)
-			expect(view.text).to.equal("+40 BONUS")
+			expect(view.text).to.equal(`+40 {string.upper(SCRIP)}`)
 			expect(view.caption).to.equal(nil)
 		end)
 	end)
