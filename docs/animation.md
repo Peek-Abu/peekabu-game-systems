@@ -158,6 +158,14 @@ animations to standard proportions, which visibly wrecks every pose on such a ri
 property-only `Workspace` node in that game's `default.project.json`, so a Rojo-synced place is always
 correct; a place copy that was never synced will show exactly "all animations look broken".
 
+**The exception: a rig whose rest pose is not the stock one.** Retargeting maps a clip through the
+rig's own rest pose, so a rig authored in a T-pose (arms along ±X) NEEDS it. Cleanup Crew's toons
+(Pippa) are exactly that, and were tested both ways in Studio (2026-10-13) with the stock idle and
+walk: with `Default` (retargeting on) the arms hang and swing normally (the shoulder gets about −70°
+of roll on top of the clip); with `Disabled` the clip plays its raw joint rotations on the T-pose and
+the arms stay straight out. So that game leaves `Retargeting` at `Default` (ideally pinned to
+`Enabled` with a property-only `Workspace` node). Check the rig's rest pose before choosing.
+
 ## Verification tools
 
 | Tool | What it answers |
