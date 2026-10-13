@@ -3,7 +3,8 @@
 	OfficeBuildSystem: builds the office's graybox from the current seeded layout (Cleanup Crew spec §1
 	"polished feel on graybox", §5): a floor per room, walls broken around doors (OfficeLayoutUtils.
 	wallSegments, merged so a shared wall is built once), the truck (its bed is the banking zone and carries Cargo's Load prompt; a cab at its back, inside the bay),
-	the time clock (Shift's Clock out prompt), and a desk or locker on every desk / locker marker (Cargo's
+	the time clock (Shift's Clock out prompt), the overtime sheet beside it (Shift's Start overtime prompt, off until
+	Shift opens it once the quota is met), and a desk or locker on every desk / locker marker (Cargo's
 	Search prompt, off until Cargo stocks it). M2: ceiling lights (tagged for Harlow's tells) and the loading bay's
 	PathfindingModifier volume (Harlow never paths into it). Everything is anchored under one Model in Workspace at
 	the layout's origin. Physical per-room ceilings enclose the camera.
@@ -31,6 +32,7 @@ export type Built = {
 	model: Model,
 	bed: BasePart,
 	clock: BasePart,
+	overtime: BasePart,
 	searchables: { [string]: BasePart },
 }
 
@@ -150,6 +152,16 @@ function OfficeBuildSystem.build(layout: OfficeTypes.Layout, origin: CFrame): Bu
 		truckFolder
 	)
 	interactable(clock, ShiftConstants.CLOCK_OUT_KIND, true)
+	local overtimeSize = OfficeConstants.OVERTIME_SIZE
+	local overtimeOffset = OfficeConstants.OVERTIME_OFFSET
+	local overtime = block(
+		"OvertimeSheet",
+		overtimeSize,
+		origin * CFrame.new(truck.clockX + overtimeOffset.X, overtimeSize.Y / 2, truck.clockZ + overtimeOffset.Z),
+		OfficeConstants.OVERTIME_COLOR,
+		truckFolder
+	)
+	interactable(overtime, ShiftConstants.OVERTIME_KIND, false)
 
 	local furniture = folder("Furniture", model)
 	local searchables: { [string]: BasePart } = {}
@@ -197,7 +209,7 @@ function OfficeBuildSystem.build(layout: OfficeTypes.Layout, origin: CFrame): Bu
 	end
 
 	model.Parent = Workspace
-	return { model = model, bed = bed, clock = clock, searchables = searchables }
+	return { model = model, bed = bed, clock = clock, overtime = overtime, searchables = searchables }
 end
 
 return OfficeBuildSystem

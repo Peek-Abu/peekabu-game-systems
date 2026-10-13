@@ -142,6 +142,7 @@ export type OfficeServiceServer = {
 	safeZone: (self: OfficeServiceServer) -> (Vector3, Vector3),
 	whereIs: (self: OfficeServiceServer, position: Vector3) -> (string?, number?, number?),
 	truckBed: (self: OfficeServiceServer) -> BasePart?,
+	overtimeSheet: (self: OfficeServiceServer) -> BasePart?,
 }
 
 local OfficeServiceServer: OfficeServiceServer = {
@@ -303,6 +304,14 @@ local OfficeServiceServer: OfficeServiceServer = {
 	truckBed = function(_self)
 		local current = built
 		return if current ~= nil then current.bed else nil
+	end,
+
+	--[=[
+		The overtime sheet beside the time clock (Shift's Start overtime prompt), once the office is built.
+	]=]
+	overtimeSheet = function(_self)
+		local current = built
+		return if current ~= nil then current.overtime else nil
 	end,
 
 	getState = function(_self)

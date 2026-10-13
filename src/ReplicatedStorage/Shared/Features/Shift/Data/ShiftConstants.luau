@@ -92,7 +92,9 @@ return table.freeze({
 	-- Salvage multiplier normally, and in overtime.
 	SALVAGE_MULTIPLIER = 1,
 	OVERTIME_SALVAGE_MULTIPLIER = 1.5,
-	-- After the quota: Harlow's break, then the overtime warning, then overtime (until the shift ends).
+	-- After the quota: the Manager's break (time to bank and regroup), then the normal stage again. Overtime is opt-in:
+	-- a crew member holds the truck's Start overtime prompt (OVERTIME_KIND, OVERTIME_HOLD seconds), the overtime warning
+	-- runs WARNING_SECONDS, then overtime lasts until the shift ends.
 	BREAK_SECONDS = 30,
 	WARNING_SECONDS = 30,
 	-- Pressure tiers: each step multiplies Harlow's hearing and adds to his patrol speed; overtime is the top.
@@ -116,6 +118,10 @@ return table.freeze({
 	OUTCOME_RESET = "reset",
 	-- The interaction kind on the truck's time clock.
 	CLOCK_OUT_KIND = "shift-clockout",
+	-- The interaction kind on the truck's overtime sheet (beside the time clock), and how long its prompt is held: a
+	-- deliberate choice, never a stray key press.
+	OVERTIME_KIND = "shift-overtime",
+	OVERTIME_HOLD = 1.5,
 	TICK_INTERVAL = 0.25,
 	-- How long the pacing notices stay up.
 	NOTICE_SECONDS = 6,

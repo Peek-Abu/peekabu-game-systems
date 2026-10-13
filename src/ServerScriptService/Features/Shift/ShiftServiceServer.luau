@@ -9,9 +9,11 @@
 	  it; DeathServiceServer:setSpawnPoint);
 	- banking: Cargo's `onBanked` (ShiftBankingSystem) adds trash to Round's `clearance` counter and salvage
 	  to `bonus`, keeps per-player scores, and stamps QUOTA MET once;
-	- pacing (M2): meeting the quota starts Harlow's break; the clock steps break -> overtime warning ->
-	  overtime (salvage x1.5) and raises the pressure tier at 2:00 and 4:00 (ShiftPhaseRules.advance), each
-	  change announced (ShiftNoticeUtils) and fired on `changed`;
+	- pacing (M2): meeting the quota starts the Manager's break, which the clock ends; overtime is opt-in: any
+	  crew member holding the overtime sheet's Start overtime prompt at the truck starts the overtime warning for
+	  the whole crew, then overtime (assets x1.5, the top tier). The sheet's prompt shows only while overtime may
+	  start (ShiftPhaseRules.canStartOvertime). The clock raises the pressure tier at 2:00 and 4:00
+	  (ShiftPhaseRules.advance); each change is announced (ShiftNoticeUtils) and fired on `changed`;
 	- clock out: the time clock at the truck starts a 10 s countdown for everyone, then ends the run;
 	- analytics and the A/B variant (M5): each run's variant comes from ShiftAnalyticsSystem.pickVariant;
 	  ShiftAnalyticsWatchSystem turns the shift's and the other features' signals into the spec §6.6 events;
@@ -54,6 +56,7 @@ local ShiftRosterTracker = require(ShiftServer.State.ShiftRosterTracker)
 local ShiftBankingSystem = require(ShiftServer.Systems.ShiftBankingSystem)
 local ShiftTripSystem = require(ShiftServer.Systems.ShiftTripSystem)
 local ShiftVoteSystem = require(ShiftServer.Systems.ShiftVoteSystem)
+local ShiftOvertimeSystem = require(ShiftServer.Systems.ShiftOvertimeSystem)
 local ShiftAnalyticsSystem = require(ShiftServer.Systems.ShiftAnalyticsSystem)
 local ShiftAnalyticsWatchSystem = require(ShiftServer.Systems.ShiftAnalyticsWatchSystem)
 local ShiftReviewSystem = require(ShiftServer.Systems.ShiftReviewSystem)
@@ -260,7 +263,7 @@ local function onRoundPhase(roundState: RoundTypes.RoundState)
 	end
 end
 
--- Cargo's banking handler (ShiftBankingSystem): salvage x1.5 in overtime; meeting the quota starts the break
+-- Cargo's banking handler (ShiftBankingSystem): assets x1.5 in overtime; meeting the quota starts the break
 -- (its notice comes from setState, ShiftNoticeUtils); returns the bonus credited, which Cargo's Banked floater shows.
 local onBanked = ShiftBankingSystem.new({
 	roster = roster,
@@ -278,6 +281,16 @@ local onBanked = ShiftBankingSystem.new({
 			publish()
 		end
 	end,
+})
+
+local overtime = ShiftOvertimeSystem.new({
+	getState = function(): ShiftTypes.ShiftState
+		return state
+	end,
+	setState = setState,
+	eligible = trip.eligible,
+	now = now,
+	changed = changed,
 })
 
 voting = ShiftVoteSystem.new({
@@ -372,6 +385,7 @@ local ShiftServiceServer: ShiftServiceServer = {
 		InteractionServiceServer:onInteract(ShiftConstants.CLOCK_OUT_KIND, function(player, _target)
 			self:clockOut(player)
 		end)
+		table.insert(stoppers, overtime.start())
 
 		local phases = RoundServiceServer.phaseChanged:Connect(onRoundPhase)
 		local leaving = Players.PlayerRemoving:Connect(function(player)
@@ -457,7 +471,7 @@ local ShiftServiceServer: ShiftServiceServer = {
 	end,
 
 	--[=[
-		Counts a catch by Mr. Harlow against the player (the review's roster). False outside a running shift.
+		Counts a catch by the Manager against the player (the review's roster). False outside a running shift.
 	]=]
 	noteCatch = function(_self, player)
 		if state.phase ~= "running" then
@@ -476,6 +490,7 @@ local ShiftServiceServer: ShiftServiceServer = {
 			shift = state.shift,
 			quota = state.quota,
 			quotaMet = state.quotaMet,
+			overtimeOpen = ShiftPhaseRules.canStartOvertime(state),
 			stage = state.stage,
 			stageEndsAt = state.stageEndsAt,
 			tier = state.tier,

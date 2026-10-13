@@ -20,9 +20,19 @@ local function results()
 	return ShiftPhaseRules.follow(running(), round("results", { outcome = "timeout" }), 600)
 end
 
--- Quota met at 150: break until 180, warning until 210, then overtime.
+-- Quota met at 150: the Manager's break until 180. Overtime starts only when the crew asks for it.
 local function onBreak()
 	return ShiftPhaseRules.markQuota(running(), 350, 150)
+end
+
+-- The crew starts overtime at 160 (during the break): the warning runs until 160 + WARNING_SECONDS.
+local function warned()
+	return ShiftPhaseRules.startOvertime(onBreak(), 160)
+end
+
+-- Overtime proper, five seconds after the warning ran out.
+local function overtime()
+	return ShiftPhaseRules.advance(warned(), 165 + ShiftConstants.WARNING_SECONDS)
 end
 
 return function()
@@ -59,7 +69,7 @@ return function()
 		end)
 
 		it("holds results with a vote deadline when Round shows results, pacing cleared", function()
-			local state = ShiftPhaseRules.follow(ShiftPhaseRules.advance(onBreak(), 215), round("results"), 600)
+			local state = ShiftPhaseRules.follow(overtime(), round("results"), 600)
 			expect(state.phase).to.equal("results")
 			expect(state.voteEndsAt).to.equal(600 + ShiftConstants.VOTE_SECONDS)
 			expect(state.endsAt).to.equal(nil)
@@ -103,8 +113,7 @@ return function()
 		end)
 
 		it("keeps the overtime stage through a clock out", function()
-			local overtime = ShiftPhaseRules.advance(onBreak(), 215)
-			local state = ShiftPhaseRules.clockOut(overtime, 220)
+			local state = ShiftPhaseRules.clockOut(overtime(), 220)
 			expect(state.sub).to.equal("clockout")
 			expect(state.stage).to.equal("overtime")
 			expect(ShiftPhaseRules.salvageMultiplier(state)).to.equal(ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER)
@@ -126,23 +135,68 @@ return function()
 		end)
 	end)
 
+	describe("startOvertime", function()
+		it("is refused until the quota is met", function()
+			expect(ShiftPhaseRules.canStartOvertime(running())).to.equal(false)
+			expect(ShiftPhaseRules.startOvertime(running(), 120)).to.equal(nil)
+		end)
+
+		it("starts the overtime warning during the break", function()
+			expect(ShiftPhaseRules.canStartOvertime(onBreak())).to.equal(true)
+			local state = warned()
+			expect(state.stage).to.equal("warning")
+			expect(state.stageEndsAt).to.equal(160 + ShiftConstants.WARNING_SECONDS)
+			expect(state.quotaMet).to.equal(true)
+		end)
+
+		it("can still be started after the break is over", function()
+			local back = ShiftPhaseRules.advance(onBreak(), 200)
+			expect(ShiftPhaseRules.canStartOvertime(back)).to.equal(true)
+			local state = ShiftPhaseRules.startOvertime(back, 300)
+			expect(state.stage).to.equal("warning")
+			expect(state.stageEndsAt).to.equal(300 + ShiftConstants.WARNING_SECONDS)
+		end)
+
+		it("is started once: refused during the warning and in overtime", function()
+			expect(ShiftPhaseRules.canStartOvertime(warned())).to.equal(false)
+			expect(ShiftPhaseRules.startOvertime(warned(), 170)).to.equal(nil)
+			expect(ShiftPhaseRules.canStartOvertime(overtime())).to.equal(false)
+			expect(ShiftPhaseRules.startOvertime(overtime(), 220)).to.equal(nil)
+		end)
+
+		it("is refused once the crew is clocking out, and outside a running shift", function()
+			local leaving = ShiftPhaseRules.clockOut(onBreak(), 155)
+			expect(ShiftPhaseRules.canStartOvertime(leaving)).to.equal(false)
+			expect(ShiftPhaseRules.startOvertime(leaving, 156)).to.equal(nil)
+			expect(ShiftPhaseRules.startOvertime(ShiftPhaseRules.initial(350, "B"), 0)).to.equal(nil)
+			expect(ShiftPhaseRules.startOvertime(results(), 610)).to.equal(nil)
+		end)
+	end)
+
 	describe("advance", function()
-		it("steps the break into the warning, then overtime", function()
+		it("ends the break at its deadline without starting overtime", function()
 			expect(ShiftPhaseRules.advance(onBreak(), 179)).to.equal(nil)
-			local warning = ShiftPhaseRules.advance(onBreak(), 180)
-			expect(warning.stage).to.equal("warning")
-			expect(warning.stageEndsAt).to.equal(180 + ShiftConstants.WARNING_SECONDS)
-			expect(ShiftPhaseRules.advance(warning, 209)).to.equal(nil)
-			local overtime = ShiftPhaseRules.advance(warning, 210)
-			expect(overtime.stage).to.equal("overtime")
-			expect(overtime.stageEndsAt).to.equal(nil)
+			local back = ShiftPhaseRules.advance(onBreak(), 180)
+			expect(back.stage).to.equal("normal")
+			expect(back.stageEndsAt).to.equal(nil)
+			expect(back.quotaMet).to.equal(true)
+			-- However long the crew stays, the clock alone never starts overtime.
+			expect(ShiftPhaseRules.advance(back, 519).stage).to.equal("normal")
+		end)
+
+		it("steps the warning into overtime at its deadline", function()
+			local deadline = 160 + ShiftConstants.WARNING_SECONDS
+			expect(ShiftPhaseRules.advance(warned(), deadline - 1)).to.equal(nil)
+			local state = ShiftPhaseRules.advance(warned(), deadline)
+			expect(state.stage).to.equal("overtime")
+			expect(state.stageEndsAt).to.equal(nil)
 		end)
 
 		it("puts overtime at the top tier", function()
-			local overtime = ShiftPhaseRules.advance(onBreak(), 215)
-			expect(overtime.stage).to.equal("overtime")
-			expect(overtime.tier).to.equal(ShiftConstants.TOP_TIER)
-			expect(ShiftPhaseRules.advance(overtime, 216)).to.equal(nil)
+			local state = overtime()
+			expect(state.stage).to.equal("overtime")
+			expect(state.tier).to.equal(ShiftConstants.TOP_TIER)
+			expect(ShiftPhaseRules.advance(state, 216)).to.equal(nil)
 		end)
 
 		it("raises the tier at 2:00 and 4:00 into the shift, and never past the top", function()
@@ -176,7 +230,8 @@ return function()
 			expect(ShiftPhaseRules.salvageMultiplier(ShiftPhaseRules.advance(onBreak(), 180))).to.equal(
 				ShiftConstants.SALVAGE_MULTIPLIER
 			)
-			expect(ShiftPhaseRules.salvageMultiplier(ShiftPhaseRules.advance(onBreak(), 215))).to.equal(1.5)
+			expect(ShiftPhaseRules.salvageMultiplier(warned())).to.equal(ShiftConstants.SALVAGE_MULTIPLIER)
+			expect(ShiftPhaseRules.salvageMultiplier(overtime())).to.equal(1.5)
 		end)
 	end)
 

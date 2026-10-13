@@ -51,6 +51,10 @@ return table.freeze({
 	BED_HEIGHT = 3,
 	CAB_SIZE = Vector3.new(12, 8, 6),
 	CLOCK_SIZE = Vector3.new(1.5, 4, 1.5),
+	-- Shift's overtime sheet: a post this size, OVERTIME_OFFSET (layout space) from the time clock. -X keeps it off the
+	-- bay's spawn markers and the truck bed on every generated side.
+	OVERTIME_SIZE = Vector3.new(1.5, 4, 1.5),
+	OVERTIME_OFFSET = Vector3.new(-4, 0, 0),
 	-- Players appear this high above a spawn marker.
 	SPAWN_HEIGHT = 3,
 	FLOOR_COLORS = table.freeze(FLOOR_COLORS),
@@ -60,6 +64,7 @@ return table.freeze({
 	TRUCK_COLOR = Color3.fromRGB(230, 230, 235),
 	BED_COLOR = Color3.fromRGB(60, 60, 64),
 	CLOCK_COLOR = Color3.fromRGB(200, 60, 50),
+	OVERTIME_COLOR = Color3.fromRGB(230, 170, 40),
 	-- M2: a ceiling light about every LIGHT_SPACING studs in each room (Harlow's tells flicker them).
 	LIGHT_SPACING = 15,
 	LIGHT_SIZE = Vector3.new(3, 0.3, 1.2),

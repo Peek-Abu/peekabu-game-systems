@@ -46,7 +46,7 @@ function VM.copy(
 				},
 				{
 					title = "04 / CLOCK OFF",
-					body = "Meet the clearance quota, then clock out at the truck. Review your crew's awards and vote for another shift or the depot.",
+					body = "Meet the clearance quota, then choose: clock out at the truck, or sign the overtime sheet beside it for ×1.5 assets and a faster Manager. Review your crew's awards and vote for another shift or the depot.",
 				},
 			},
 		}

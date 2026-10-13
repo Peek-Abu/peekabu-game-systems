@@ -11,7 +11,8 @@ export type ShiftPhase = "lobby" | "starting" | "running" | "results"
 -- The clock-out countdown. Independent of the pacing stage: a crew may clock out during the break or overtime.
 export type ShiftSub = "normal" | "clockout"
 
--- Pacing after the quota (spec §4 "Pacing"): break (Harlow rests) → overtime warning → overtime.
+-- Pacing after the quota (spec §4 "Pacing", opt-in per docs/cleanup-crew-lore.md): break (the Manager rests) → normal;
+-- only a crew member's Start overtime leads on to the overtime warning → overtime.
 export type ShiftStage = "normal" | "break" | "warning" | "overtime"
 
 -- The A/B validation switch (spec §4): B hides some salvage under piles, A exposes it all.

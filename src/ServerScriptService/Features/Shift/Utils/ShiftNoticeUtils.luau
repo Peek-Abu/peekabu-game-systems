@@ -1,10 +1,12 @@
 --!strict
 --[=[
-	ShiftNoticeUtils: what the crew is told when the pacing moves (Cleanup Crew spec §3 step 5, §4 "Pacing", §7):
-	the quota met and Harlow's break; "Overtime in 0:30, salvage ×1.5"; overtime itself; and each pressure tier
-	("You hear Harlow pacing faster…"). The two big moments are a rubber stamp (QUOTA MET, OVERTIME) followed by a
-	sticky note with the detail; the rest are sticky notes (spec §6.1, §7 "sticky-note toasts, rubber-stamp
-	announcements"). Pure: the service sends what this returns.
+	ShiftNoticeUtils: what the crew is told when the pacing moves (Cleanup Crew spec §3 step 5, §4 "Pacing", §7, and the
+	opt-in overtime of docs/cleanup-crew-lore.md "Contract sequence"): the quota met, with the company's notice
+	(COMPANY_THRESHOLD) and the choice (clock out, or start overtime at the truck); the end of the Manager's break;
+	the overtime warning once a crew member starts it; overtime itself; and each pressure tier ("You hear the Manager
+	pacing faster…"). The two big moments are a rubber stamp (QUOTA MET, OVERTIME) followed by sticky notes with the
+	detail; the rest are sticky notes (spec §6.1, §7 "sticky-note toasts, rubber-stamp announcements"). Pure: the
+	service sends what this returns.
 
 	@class ShiftNoticeUtils
 ]=]
@@ -16,6 +18,10 @@ local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTyp
 local ToastTypes = require(ReplicatedStorage.Shared.Features.Toast.Data.ToastTypes)
 
 type ToastRequest = ToastTypes.ToastRequest
+
+-- Morrow & Morrow's announcement when the clearance quota is met (docs/cleanup-crew-lore.md).
+local COMPANY_THRESHOLD =
+	"Clearance threshold reached. Optional recovery remains available. Extended-site coverage is not guaranteed."
 
 -- "m:ss", seconds rounded up.
 local function clock(seconds: number): string
@@ -35,7 +41,8 @@ local ShiftNoticeUtils = {}
 
 --[=[
 	The toasts for the step from `before` to `after` (both running; otherwise none), in the order they happen. The
-	tier note waits out the break and the warning (the tier still advances; their own notices speak then).
+	tier note waits out the break and the warning, and gives way to the break's end (the tier still advances; their
+	own notices speak then).
 ]=]
 function ShiftNoticeUtils.notices(before: ShiftTypes.ShiftState, after: ShiftTypes.ShiftState): { ToastRequest }
 	local list: { ToastRequest } = {}
@@ -45,22 +52,30 @@ function ShiftNoticeUtils.notices(before: ShiftTypes.ShiftState, after: ShiftTyp
 	local multiplier = ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER
 	if after.quotaMet and not before.quotaMet then
 		table.insert(list, stamp("QUOTA MET"))
+		table.insert(list, note(COMPANY_THRESHOLD))
 		table.insert(
 			list,
 			note(
-				`Quota met! Clock out at the truck any time, or stay: salvage ×{multiplier} in {clock(
-					ShiftConstants.BREAK_SECONDS + ShiftConstants.WARNING_SECONDS
-				)}.`
+				`The Manager is on break. Clock out at the truck to leave, or start overtime there: assets ×{multiplier}, faster Manager.`
 			)
 		)
 	end
+	local breakOver = before.stage == "break" and after.stage == "normal"
+	if breakOver then
+		table.insert(list, note("Break's over: the Manager is back on the floor. Overtime is still your call."))
+	end
 	if after.stage == "warning" and before.stage ~= "warning" then
-		table.insert(list, note(`Overtime in {clock(ShiftConstants.WARNING_SECONDS)}, salvage ×{multiplier}`))
+		table.insert(
+			list,
+			note(
+				`Overtime in {clock(ShiftConstants.WARNING_SECONDS)}: assets ×{multiplier}. Bank your cargo and regroup.`
+			)
+		)
 	end
 	if after.stage == "overtime" and before.stage ~= "overtime" then
 		table.insert(list, stamp("OVERTIME"))
-		table.insert(list, note(`Salvage ×{multiplier} until the clock runs out. The Manager is back, and faster.`))
-	elseif after.tier > before.tier and after.stage ~= "break" and after.stage ~= "warning" then
+		table.insert(list, note(`Assets ×{multiplier} until the clock runs out. The Manager is faster now.`))
+	elseif after.tier > before.tier and after.stage ~= "break" and after.stage ~= "warning" and not breakOver then
 		table.insert(list, note("You hear the Manager pacing faster…"))
 	end
 	return list

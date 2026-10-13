@@ -5,9 +5,11 @@
 	crew votes: Round is configured to leave results at once (it cannot be held or cut short).
 
 	While running, two things move independently: the clock-out countdown (`sub`) and the pacing `stage`.
-	Meeting the quota starts Harlow's break; `advance` steps break → overtime warning → overtime at their
-	deadlines, and keeps the pressure tier current (one more at each TIER_TIMES mark from the shift's start;
-	overtime is the top tier).
+	Meeting the quota starts the Manager's break (a regroup window); `advance` ends it at its deadline, back to the
+	normal stage. Overtime is opt-in (docs/cleanup-crew-lore.md "Contract sequence"): only `startOvertime`, a crew
+	member's deliberate action at the truck, begins the overtime warning, which `advance` turns into overtime at its
+	deadline. The clock alone never starts overtime. `advance` also keeps the pressure tier current (one more at each
+	TIER_TIMES mark from the shift's start; overtime is the top tier).
 
 	Every function returns the NEXT state, or nil when nothing changes; `tick` returns what the service should
 	do on this clock step.
@@ -132,7 +134,7 @@ function ShiftPhaseRules.clockOut(state: ShiftState, now: number): ShiftState?
 end
 
 --[=[
-	Marks the quota met the first time clearance reaches it during a running shift, and starts Harlow's
+	Marks the quota met the first time clearance reaches it during a running shift, and starts the Manager's
 	break (BREAK_SECONDS from `now`).
 ]=]
 function ShiftPhaseRules.markQuota(state: ShiftState, cleared: number, now: number): ShiftState?
@@ -149,8 +151,34 @@ function ShiftPhaseRules.markQuota(state: ShiftState, cleared: number, now: numb
 end
 
 --[=[
-	Moves the pacing on to `now`: break → warning (WARNING_SECONDS) → overtime at their deadlines, and the
-	tier. Nil when nothing changed or the shift is not running.
+	Whether the crew may start overtime now: a running shift whose quota is met, not clocking out, and not already
+	in the overtime warning or overtime (during the break, or after it).
+]=]
+function ShiftPhaseRules.canStartOvertime(state: ShiftState): boolean
+	return state.phase == "running"
+		and state.quotaMet
+		and state.sub ~= "clockout"
+		and (state.stage == "break" or state.stage == "normal")
+end
+
+--[=[
+	A crew member chose overtime (the truck's Start overtime prompt): the overtime warning starts now and overtime
+	follows WARNING_SECONDS later, time to bank and regroup. Ends the break early. Nil when it cannot start
+	(`canStartOvertime`).
+]=]
+function ShiftPhaseRules.startOvertime(state: ShiftState, now: number): ShiftState?
+	if not ShiftPhaseRules.canStartOvertime(state) then
+		return nil
+	end
+	local nextState = table.clone(state)
+	nextState.stage = "warning"
+	nextState.stageEndsAt = now + ShiftConstants.WARNING_SECONDS
+	return nextState
+end
+
+--[=[
+	Moves the pacing on to `now`: the break ends at its deadline (back to normal, never into overtime), the
+	warning becomes overtime at its deadline, and the tier. Nil when nothing changed or the shift is not running.
 ]=]
 function ShiftPhaseRules.advance(state: ShiftState, now: number): ShiftState?
 	if state.phase ~= "running" then
@@ -159,8 +187,8 @@ function ShiftPhaseRules.advance(state: ShiftState, now: number): ShiftState?
 	local stage: ShiftStage = state.stage
 	local stageEndsAt = state.stageEndsAt
 	if stage == "break" and stageEndsAt ~= nil and now >= stageEndsAt then
-		stage = "warning"
-		stageEndsAt = stageEndsAt + ShiftConstants.WARNING_SECONDS
+		stage = "normal"
+		stageEndsAt = nil
 	end
 	if stage == "warning" and stageEndsAt ~= nil and now >= stageEndsAt then
 		stage = "overtime"

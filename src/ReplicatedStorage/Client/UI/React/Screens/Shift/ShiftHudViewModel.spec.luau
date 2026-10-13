@@ -157,6 +157,13 @@ return function()
 			expect(overtime.feeBoostShort).to.equal("×1.5")
 		end)
 
+		it("offers overtime once the quota is met and the break is over", function()
+			local open = ShiftHudViewModel.hud(snapshot({ quotaMet = true, stage = "normal" }), nil, 100, false)
+			expect(open.clockLabel).to.equal("OVERTIME OPTIONAL")
+			expect(open.overtime).to.equal(false)
+			expect(open.feeBoost).to.equal(nil)
+		end)
+
 		it("describes the hands item with its value and traits", function()
 			local view = ShiftHudViewModel.hud(snapshot(), { carrying = "monitor" }, 0, false)
 			expect(view.hands.name).to.equal("Monitor")

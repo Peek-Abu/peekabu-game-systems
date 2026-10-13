@@ -169,6 +169,9 @@ local function stageLabel(snapshot: ShiftSnapshot, now: number): string
 		return `OVERTIME IN {ShiftHudViewModel.clock(left)}`
 	elseif snapshot.stage == "overtime" then
 		return "OVERTIME"
+	elseif snapshot.quotaMet then
+		-- Quota met, the break over: overtime waits on the crew's choice at the truck.
+		return "OVERTIME OPTIONAL"
 	end
 	return "SHIFT"
 end
