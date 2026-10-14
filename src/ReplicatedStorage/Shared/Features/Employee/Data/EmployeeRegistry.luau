@@ -159,9 +159,10 @@ local EMPLOYEES: { [string]: EmployeeDef } = {
 			walkMaxRate = 2.5,
 			runMaxRate = 2.2,
 		},
-		-- High on the back, between the head's overhang and the tail (the pack was modelled on her).
+		-- High on the back, between the head's overhang and the tail (the pack was modelled on her), its pad on
+		-- the hi-vis vest's back (outer surface 0.505 there, characters/identity/README.md).
 		backpack = {
-			mount = CFrame.new(0, 0.16, 0.453),
+			mount = CFrame.new(0, 0.16, 0.51),
 			size = 1,
 			strapOffset = CFrame.identity,
 			strapStretch = Vector3.one,
