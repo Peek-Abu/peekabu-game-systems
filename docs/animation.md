@@ -161,6 +161,12 @@ fades). Two things to know:
   Studio 2026-10-13), so the planted speeds are multiplied by it (Pippa at 1.25: 1.59 / 1.9). At WalkSpeed 16 both are at their cap, so the feet slide (accepted for the MVP: her 0.68-stud
   legs cannot plant at 16 st/s at any sane cadence). The walk/run switch stays the 18 st/s threshold,
   so with no sprint in the game yet her run only shows above WalkSpeed 18.
+- **Jump and fall clips must suit a native Humanoid.** `Jumping` fires at takeoff (the character is already
+  rising), and landing switches straight to `running`, so a jump clip must not open on a ground crouch and a
+  fall clip must not drop the hips: the inherited custom-controller clips did both (hips 0.6-0.9 studs down),
+  which crouched in mid-air and drove the feet through the floor on every landing (fixed 2026-10-13 with the
+  stock R15 jump 507765000 and fall 507767968). A replacement clip is checked the same way: feet never below
+  the floor through a jump, measured on the rig.
 - **Kill switch:** set the Workspace attribute `LocomotionEnabled = false` and every locomotion
   track stops — instantly answers "is the weirdness on screen ours?". `true` recovers, no respawn.
 

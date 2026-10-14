@@ -39,6 +39,18 @@ return function()
 		end)
 	end)
 
+	describe("native R15 jump and fall", function()
+		it("uses the engine R15 jump and fall rather than the inherited custom-controller clips", function()
+			-- The inherited jump opens on a ground crouch (hips 0.6-0.9 studs down, knees bent ~90 degrees) and the
+			-- inherited fall holds a deep tuck with the hips 0.89 down: on a native Humanoid, whose Jumping fires at
+			-- takeoff, that crouch plays in the air and the tuck drives the feet through the floor on landing.
+			expect(AnimationLocomotionRegistry.jump.assetId).to.equal("rbxassetid://507765000")
+			expect(AnimationLocomotionRegistry.fall.assetId).to.equal("rbxassetid://507767968")
+			expect(AnimationLocomotionRegistry.jump.looped).to.equal(false)
+			expect(AnimationLocomotionRegistry.fall.looped).to.equal(true)
+		end)
+	end)
+
 	describe("entry well-formedness", function()
 		it("gives every entry a canonical asset id, valid class, and boolean looped", function()
 			for _key, def in AnimationLocomotionRegistry do
