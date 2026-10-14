@@ -1,7 +1,8 @@
 --!strict
 --[=[
 	CarryServiceClient: the `drop` and `throw` Input actions. While the local player carries something
-	(their public `carrying` field), pressing them sends one request to the server, which decides.
+	(their public `carrying` field), pressing them sends one request to the server, which decides. It also runs
+	the cosmetic pickup every client shows for every carrier (AnimationCarryGrabSystem).
 
 	Spec-exempt shell (Input, Camera, ByteNet); the rules are on the server.
 
@@ -19,6 +20,7 @@ local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.D
 local InputActionRegistry = require(ReplicatedStorage.Client.Features.Input.Data.InputActionRegistry)
 local InputServiceClient = require(ReplicatedStorage.Client.Features.Input.InputServiceClient)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
+local AnimationCarryGrabSystem = require(ReplicatedStorage.Client.Features.Animation.Systems.AnimationCarryGrabSystem)
 
 local unbinders: { () -> () } = {}
 
@@ -59,6 +61,7 @@ local CarryServiceClient: CarryServiceClient = {
 	end,
 
 	start = function(_self)
+		table.insert(unbinders, AnimationCarryGrabSystem.start())
 		table.insert(
 			unbinders,
 			InputServiceClient:bind("drop", function(phase)
