@@ -71,8 +71,8 @@ local function RankNameTag(props: RankNameTagProps): React.ReactNode
 			BackgroundTransparency = 1,
 		}, {
 			paper = e(PaperTag, { size = CARD, paper = COLOR.cream, hole = "top" }, {
-				name = line(view.name, "heading", 22, COLOR.ink, 34, 26),
-				rank = line(`{view.level}  {view.rank}`, "body", 15, COLOR.ink, 60, 18),
+				name = line(view.name, "heading", 22, COLOR.ink, 38, 24),
+				rank = line(`{view.level}  {view.rank}`, "body", 15, COLOR.ink, 63, 17),
 				band = e("Frame", {
 					Position = UDim2.new(0, 0, 1, -BAND),
 					Size = UDim2.new(1, 0, 0, BAND),

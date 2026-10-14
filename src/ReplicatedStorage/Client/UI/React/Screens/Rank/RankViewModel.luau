@@ -103,7 +103,7 @@ function RankViewModel.slip(
 			table.insert(parts, `{line.label} +{line.xp}`)
 		end
 		view.gain = `+{award.total} XP this shift`
-		view.breakdown = table.concat(parts, "  ·  ")
+		view.breakdown = table.concat(parts, " · ")
 		view.incident = if award.incident then RankConstants.INCIDENT_LINE else nil
 		view.promoted = award.total > 0
 			and rank.xp - rank.prevXp == award.total

@@ -93,7 +93,7 @@ local function desktopOf(view: RankViewModel.SlipView): Nodes
 	local breakdown = view.breakdown
 	local incident = view.incident
 	if breakdown ~= nil then
-		nodes.breakdown = text(breakdown, "body", 16, 0, 114, if incident ~= nil then 500 else width)
+		nodes.breakdown = text(breakdown, "body", 15, 0, 114, if incident ~= nil then 500 else width)
 	end
 	if incident ~= nil then
 		nodes.incident = text(incident, "heading", 18, 510, 112, width - 510, COLOR.stamp, "right")
