@@ -36,8 +36,14 @@ return function()
 		return { mode = mode, since = 0, routeIndex = 1, routeStep = 1, target = target, grace = {} }
 	end
 
-	local function subject(userId, character, vacuuming, carrying)
-		return { userId = userId, character = character, vacuuming = vacuuming, carrying = carrying }
+	local function subject(userId, character, vacuuming, carrying, knockedOut)
+		return {
+			userId = userId,
+			character = character,
+			vacuuming = vacuuming,
+			carrying = carrying,
+			knockedOut = knockedOut == true,
+		}
 	end
 
 	describe("tick", function()
@@ -95,6 +101,16 @@ return function()
 			chased:Destroy()
 			near:Destroy()
 			far:Destroy()
+		end)
+
+		it("shows Pippa dazed when knocked out, even while the Manager is still on her", function()
+			local state = { now = 0, mind = mind("catch", 7), manager = Vector3.new(0, 0, 0) }
+			local system = EmployeeExpressionSystem.new(sources(state))
+			local employee = makeEmployee(Vector3.new(2, 0, 0))
+			system.tick({ subject(7, employee, false, true, true) })
+			expect(employee:GetAttribute(FACE)).to.equal("Dazed")
+			expect(system.getState().faces.Dazed).to.equal(1)
+			employee:Destroy()
 		end)
 
 		it("leaves non-employee characters and unknown employees alone", function()

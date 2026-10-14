@@ -4,7 +4,7 @@
 	StarterCharacter (EmployeeSpawnSystem), before any service starts loading characters; at start it respawns
 	anyone whose character loaded before that (a player who joined during boot), then runs the expression
 	pass (EmployeeExpressionSystem) every EXPRESSION_INTERVAL from the Manager's mind (Occupant) and each
-	player's activity (Vacuum, Carry, Cargo pockets). Every employee character that spawns is dressed in
+	player's activity (Vacuum, Carry, Cargo pockets) and condition (dead or ragdolled: Death). Every employee character that spawns is dressed in
 	its player's skin (EmployeeSkinSystem; who wears what is EmployeeSkinRegistry, MVP only).
 
 	@class EmployeeServiceServer
@@ -17,9 +17,11 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local StarterPlayer = game:GetService("StarterPlayer")
 
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
+local DeathConstants = require(ReplicatedStorage.Shared.Features.Death.Data.DeathConstants)
 local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
 local EmployeeRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeRegistry)
 local EmployeeSkinRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeSkinRegistry)
+local EmployeeFaceRules = require(ReplicatedStorage.Shared.Features.Employee.Rules.EmployeeFaceRules)
 local EmployeeSkinRules = require(ReplicatedStorage.Shared.Features.Employee.Rules.EmployeeSkinRules)
 local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
@@ -54,6 +56,12 @@ local function isCarrying(player: Player): boolean
 	return CarryServiceServer:getCarried(player) ~= nil or #CargoServiceServer:pocketsOf(player) > 0
 end
 
+local function isKnockedOut(character: Model): boolean
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	local health = if humanoid ~= nil then humanoid.Health else 0
+	return EmployeeFaceRules.isKnockedOut(health, character:GetAttribute(DeathConstants.RAGDOLL_NAME) == true)
+end
+
 local function subjects(): { EmployeeExpressionSystem.Subject }
 	local list: { EmployeeExpressionSystem.Subject } = {}
 	for _, player in Players:GetPlayers() do
@@ -64,6 +72,7 @@ local function subjects(): { EmployeeExpressionSystem.Subject }
 				character = character,
 				vacuuming = VacuumServiceServer:isVacuuming(player),
 				carrying = isCarrying(player),
+				knockedOut = isKnockedOut(character),
 			})
 		end
 	end

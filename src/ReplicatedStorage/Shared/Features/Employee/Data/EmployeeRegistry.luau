@@ -20,10 +20,10 @@
 	@class EmployeeRegistry
 ]=]
 
-export type Face = "Happy" | "Worried" | "Content"
+export type Face = "Happy" | "Worried" | "Content" | "Dazed"
 
 -- What the employee is doing, as far as its face is concerned (EmployeeFaceRules.stateOf).
-export type GameplayState = "threatened" | "cleaning" | "carrying" | "idle"
+export type GameplayState = "knockedOut" | "threatened" | "cleaning" | "carrying" | "idle"
 
 export type SkinDef = {
 	-- Its key in the employee's `skins`.
@@ -79,8 +79,8 @@ export type EmployeeDef = {
 	locomotion: LocomotionDef?,
 }
 
-local FACES: { Face } = { "Happy", "Worried", "Content" }
-local STATES: { GameplayState } = { "threatened", "cleaning", "carrying", "idle" }
+local FACES: { Face } = { "Happy", "Worried", "Content", "Dazed" }
+local STATES: { GameplayState } = { "knockedOut", "threatened", "cleaning", "carrying", "idle" }
 
 local EMPLOYEES: { [string]: EmployeeDef } = {
 	Pippa = {
@@ -93,6 +93,8 @@ local EMPLOYEES: { [string]: EmployeeDef } = {
 		faces = FACES,
 		defaultFace = "Happy",
 		expressions = {
+			-- Ragdolled or dead (a catch ends in the throw, which is both): the knocked-out face.
+			knockedOut = "Dazed",
 			threatened = "Worried",
 			cleaning = "Happy",
 			carrying = "Content",
@@ -157,6 +159,8 @@ function EmployeeRegistry.toFace(value: unknown): Face?
 		return "Worried"
 	elseif value == "Content" then
 		return "Content"
+	elseif value == "Dazed" then
+		return "Dazed"
 	end
 	return nil
 end

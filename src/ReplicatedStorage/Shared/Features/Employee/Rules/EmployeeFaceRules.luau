@@ -3,9 +3,11 @@
 	EmployeeFaceRules: which expression an employee shows, in two steps.
 
 	1. The gameplay state, from what the server knows (`stateOf`):
+	   - knockedOut: dead or ragdolled (Death's ragdoll; a Manager catch ends in the throw, which is both).
+	     Beats everything: a body on the floor does not look worried.
 	   - threatened: the Manager is chasing (or catching) this player, at any distance; or he is within
 	     WORRIED_RADIUS and alert (investigating a noise, chasing someone, searching, catching). Beats
-	     everything.
+	     everything else (the frozen scare beat of a catch, before the throw, is threatened).
 	   - cleaning: vacuuming, plus a CLEANING_LINGER tail so gaps between sweeps do not flicker.
 	   - carrying: something in the hands, or cargo in the pockets.
 	   - idle: otherwise.
@@ -59,15 +61,27 @@ function EmployeeFaceRules.isCleaning(vacuuming: boolean, now: number, lastVacuu
 end
 
 --[=[
-	The gameplay state a face is chosen for. Threatened beats cleaning beats carrying.
+	Knocked out: dead (no health left) or ragdolled (Death's ragdoll marks the character).
+	@param health The Humanoid's Health.
+	@param ragdolled Whether the character carries Death's ragdoll marker.
+]=]
+function EmployeeFaceRules.isKnockedOut(health: number, ragdolled: boolean): boolean
+	return ragdolled or health <= 0
+end
+
+--[=[
+	The gameplay state a face is chosen for. Knocked out beats threatened beats cleaning beats carrying.
 	@param carrying Cargo in the hands (Carry) or in the pockets (Cargo).
 ]=]
 function EmployeeFaceRules.stateOf(
+	knockedOut: boolean,
 	threatened: boolean,
 	cleaning: boolean,
 	carrying: boolean
 ): EmployeeRegistry.GameplayState
-	if threatened then
+	if knockedOut then
+		return "knockedOut"
+	elseif threatened then
 		return "threatened"
 	elseif cleaning then
 		return "cleaning"

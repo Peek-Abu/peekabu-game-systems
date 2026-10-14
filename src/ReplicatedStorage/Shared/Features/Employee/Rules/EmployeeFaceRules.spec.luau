@@ -57,27 +57,51 @@ return function()
 		end)
 	end)
 
+	describe("isKnockedOut", function()
+		it("is knocked out when dead or ragdolled", function()
+			expect(EmployeeFaceRules.isKnockedOut(0, false)).to.equal(true)
+			expect(EmployeeFaceRules.isKnockedOut(100, true)).to.equal(true)
+			expect(EmployeeFaceRules.isKnockedOut(-5, true)).to.equal(true)
+		end)
+
+		it("is not knocked out while alive and standing", function()
+			expect(EmployeeFaceRules.isKnockedOut(100, false)).to.equal(false)
+			expect(EmployeeFaceRules.isKnockedOut(0.5, false)).to.equal(false)
+		end)
+	end)
+
 	describe("stateOf", function()
-		it("puts threatened above everything", function()
-			expect(EmployeeFaceRules.stateOf(true, true, true)).to.equal("threatened")
+		it("puts knocked out above everything, even a Manager still after this player", function()
+			expect(EmployeeFaceRules.stateOf(true, true, true, true)).to.equal("knockedOut")
+			expect(EmployeeFaceRules.stateOf(true, false, false, false)).to.equal("knockedOut")
+		end)
+
+		it("puts threatened above cleaning and carrying", function()
+			expect(EmployeeFaceRules.stateOf(false, true, true, true)).to.equal("threatened")
 		end)
 
 		it("puts cleaning above carrying", function()
-			expect(EmployeeFaceRules.stateOf(false, true, true)).to.equal("cleaning")
+			expect(EmployeeFaceRules.stateOf(false, false, true, true)).to.equal("cleaning")
 		end)
 
 		it("is carrying with cargo in the hands or pockets", function()
-			expect(EmployeeFaceRules.stateOf(false, false, true)).to.equal("carrying")
+			expect(EmployeeFaceRules.stateOf(false, false, false, true)).to.equal("carrying")
 		end)
 
 		it("is idle otherwise", function()
-			expect(EmployeeFaceRules.stateOf(false, false, false)).to.equal("idle")
+			expect(EmployeeFaceRules.stateOf(false, false, false, false)).to.equal("idle")
 		end)
 	end)
 
 	describe("faceFor", function()
 		local moody = {
-			expressions = { threatened = "Worried", cleaning = "Content", carrying = "Happy", idle = "Worried" },
+			expressions = {
+				knockedOut = "Dazed",
+				threatened = "Worried",
+				cleaning = "Content",
+				carrying = "Happy",
+				idle = "Worried",
+			},
 		}
 
 		it("reads the face from the employee's own mapping", function()
@@ -85,6 +109,7 @@ return function()
 			expect(EmployeeFaceRules.faceFor(moody, "cleaning")).to.equal("Content")
 			expect(EmployeeFaceRules.faceFor(moody, "carrying")).to.equal("Happy")
 			expect(EmployeeFaceRules.faceFor(moody, "idle")).to.equal("Worried")
+			expect(EmployeeFaceRules.faceFor(moody, "knockedOut")).to.equal("Dazed")
 		end)
 	end)
 end

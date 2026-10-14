@@ -32,6 +32,8 @@ export type Subject = {
 	vacuuming: boolean,
 	-- Something in the hands (Carry) or cargo in the pockets (Cargo) right now.
 	carrying: boolean,
+	-- Dead or ragdolled right now (EmployeeFaceRules.isKnockedOut).
+	knockedOut: boolean,
 }
 
 export type EmployeeExpressionState = {
@@ -73,7 +75,7 @@ function EmployeeExpressionSystem.new(sources: Sources): EmployeeExpressionSyste
 					and EmployeeFaceRules.isThreatened(mind.mode, mind.target == subject.userId, distance)
 				local cleaning = EmployeeFaceRules.isCleaning(subject.vacuuming, now, lastVacuumAt[subject.userId])
 				local state: EmployeeRegistry.GameplayState =
-					EmployeeFaceRules.stateOf(threatened, cleaning, subject.carrying)
+					EmployeeFaceRules.stateOf(subject.knockedOut, threatened, cleaning, subject.carrying)
 				local face: EmployeeRegistry.Face = EmployeeFaceRules.faceFor(def, state)
 				shown[subject.userId] = face
 				if character:GetAttribute(EmployeeConstants.FACE_ATTRIBUTE) ~= face then
@@ -88,7 +90,7 @@ function EmployeeExpressionSystem.new(sources: Sources): EmployeeExpressionSyste
 		end,
 
 		getState = function()
-			local faces: { [EmployeeRegistry.Face]: number } = { Happy = 0, Worried = 0, Content = 0 }
+			local faces: { [EmployeeRegistry.Face]: number } = { Happy = 0, Worried = 0, Content = 0, Dazed = 0 }
 			local tracked = 0
 			for _, face: EmployeeRegistry.Face in shown do
 				faces[face] += 1
