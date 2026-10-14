@@ -3,17 +3,19 @@
 	VacuumVisualSystem: composes the vacuum Tool's visual (the original native source shapes, or a validated
 	artist-owned template once imported) around one invisible grip handle.
 
-	The vacuum is an upright canister carried by its top handle: at full size its floor head hangs about two studs
-	below the grip, which is where a stock R15 avatar's hanging hand holds it. A shorter holder (a chibi employee)
-	would bury it in the floor, so `build` fits it to the holder: `hangHeight` measures how high the holder's
-	hanging right arm holds the grip above the floor (from its rig attachments, so it does not depend on the pose
-	it happens to be in), and `holdScale` shrinks the vacuum about the grip just enough to clear the floor
-	(never enlarged; a stock avatar keeps it at full size).
+	The vacuum is an upright canister carried by its top handle: its floor head hangs about two studs below the
+	grip, which is where a stock R15 avatar's hanging hand holds it. It is the same size for everyone. A shorter
+	holder (a chibi employee) would bury it in the floor, so `build` fits the hold, not the vacuum: `hangHeight`
+	measures how high the holder's hanging right arm holds the grip above the floor (from its rig attachments, so
+	it does not depend on the pose it happens to be in), and VacuumHoldFormulas.fit gives the tilt about the grip
+	(front up, applied here) and the hand lift (applied by AnimationVacuumHoldSystem while it is equipped) that
+	rest the floor head on the floor. A stock avatar gets neither.
 
 	@class VacuumVisualSystem
 ]=]
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Constants = require(script.Parent.Parent.Data.VacuumVisualConstants)
+local VacuumHoldFormulas = require(script.Parent.Parent.Utils.VacuumHoldFormulas)
 local Visual = {}
 
 local function prepare(part: BasePart)
@@ -31,20 +33,20 @@ local function weldToGrip(part: BasePart, handle: BasePart)
 	weld.Parent = part
 end
 
--- How far (studs) the lowest corner of `parts` sits below the grip origin (the handle is at the origin, +Y up).
-local function dropBelowGrip(parts: { BasePart }): number
-	local low = 0
+-- Every corner of `parts`, in grip space (the handle is at the origin, +Y up, -Z front).
+local function cornersOf(parts: { BasePart }): { Vector3 }
+	local corners: { Vector3 } = {}
 	for _, part in parts do
 		local half = part.Size / 2
 		for _, x in { -1, 1 } do
 			for _, y in { -1, 1 } do
 				for _, z in { -1, 1 } do
-					low = math.min(low, (part.CFrame * Vector3.new(x * half.X, y * half.Y, z * half.Z)).Y)
+					table.insert(corners, part.CFrame * Vector3.new(x * half.X, y * half.Y, z * half.Z))
 				end
 			end
 		end
 	end
-	return -low
+	return corners
 end
 
 local function attachment(model: Model, partName: string, name: string): Attachment?
@@ -85,19 +87,9 @@ function Visual.hangHeight(character: Model): number?
 end
 
 --[=[
-	The scale the vacuum is built at for a holder whose grip hangs `hang` studs above the floor, when at full size
-	its lowest point is `drop` studs below the grip: 1 when it already clears the floor (or nothing is known),
-	otherwise just small enough to clear it by `holdClearance`, floored at `minHoldScale`.
-]=]
-function Visual.holdScale(hang: number?, drop: number): number
-	if hang == nil or drop <= 0 then
-		return 1
-	end
-	return math.clamp((hang - Constants.holdClearance) / drop, Constants.minHoldScale, 1)
-end
-
---[=[
-	Builds the vacuum visual into `tool`, fitted to `holder` when given (see `holdScale`), and returns its handle.
+	Builds the full-size vacuum visual into `tool`, its hold fitted to `holder` when given, and returns its handle.
+	Records the fit on the tool: `VacuumHoldTilt` (degrees, front up), `VacuumHoldLift` (studs the hand is lifted)
+	and `VacuumHoldHalfWidth` (studs, for keeping a lifted vacuum clear of the holder's body).
 ]=]
 function Visual.build(tool: Tool, holder: Model?): BasePart
 	local handle = Instance.new("Part")
@@ -114,7 +106,14 @@ function Visual.build(tool: Tool, holder: Model?): BasePart
 	local company = if assets ~= nil then assets:FindFirstChild("CleanupCrew") else nil
 	local template = if company ~= nil then company:FindFirstChild("Vacuum") else nil
 	local parts: { BasePart } = {}
-	local scale = 1
+	local tilt, lift, halfWidth = 0, 0, 0
+	local function fit()
+		local corners = cornersOf(parts)
+		tilt, lift = VacuumHoldFormulas.fit(corners, hang, Constants.holdClearance, Constants.maxHoldTilt)
+		for _, corner in corners do
+			halfWidth = math.max(halfWidth, math.abs(corner.X))
+		end
+	end
 	if template ~= nil and template:IsA("Model") and template:GetAttribute("RuntimeApproved") == true then
 		local model = template:Clone()
 		model:PivotTo(CFrame.new())
@@ -123,11 +122,9 @@ function Visual.build(tool: Tool, holder: Model?): BasePart
 				table.insert(parts, part)
 			end
 		end
-		scale = Visual.holdScale(hang, dropBelowGrip(parts))
-		if scale < 1 then
-			-- Scales about the pivot, which is the grip.
-			model:ScaleTo(model:GetScale() * scale)
-		end
+		fit()
+		-- Turns about the pivot, which is the grip.
+		model:PivotTo(CFrame.Angles(tilt, 0, 0))
 		model.Parent = tool
 		tool:SetAttribute("VacuumVisualKind", "approved-mesh")
 	else
@@ -141,12 +138,10 @@ function Visual.build(tool: Tool, holder: Model?): BasePart
 			part.Material = if source.metal then Enum.Material.Metal else Enum.Material.SmoothPlastic
 			table.insert(parts, part)
 		end
-		scale = Visual.holdScale(hang, dropBelowGrip(parts))
+		fit()
+		local turn = CFrame.Angles(tilt, 0, 0)
 		for _, part in parts do
-			if scale < 1 then
-				part.Size *= scale
-				part.CFrame = CFrame.new(part.CFrame.Position * scale) * part.CFrame.Rotation
-			end
+			part.CFrame = turn * part.CFrame
 			part.Parent = tool
 		end
 		tool:SetAttribute("VacuumVisualKind", "native-source")
@@ -155,7 +150,9 @@ function Visual.build(tool: Tool, holder: Model?): BasePart
 		prepare(part)
 		weldToGrip(part, handle)
 	end
-	tool:SetAttribute("VacuumHoldScale", scale)
+	tool:SetAttribute("VacuumHoldTilt", math.deg(tilt))
+	tool:SetAttribute("VacuumHoldLift", lift)
+	tool:SetAttribute("VacuumHoldHalfWidth", halfWidth)
 	local mark = Instance.new("Attachment")
 	mark.Name = "GripReference"
 	mark.Parent = handle

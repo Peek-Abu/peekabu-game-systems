@@ -367,8 +367,8 @@ local parts: { VisualPart } = {
 return table.freeze({
 	parts = parts,
 	grip = CFrame.Angles(-math.pi / 2, 0, 0),
-	-- Fitting a short holder (VacuumVisualSystem.holdScale): studs kept between the floor head and the floor under
-	-- a straight hanging arm (the walk swing lifts it further), and the smallest the vacuum is ever built.
+	-- Fitting a short holder's hold (VacuumHoldFormulas.fit): studs kept between the vacuum's lowest point and the
+	-- floor, and the most it is tilted about the grip (front up) before the hand is lifted instead.
 	holdClearance = 0.08,
-	minHoldScale = 0.35,
+	maxHoldTilt = math.rad(25),
 })

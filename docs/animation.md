@@ -186,6 +186,13 @@ Only arm chains are driven; no joint, attachment or Transform is written.
   torso and her palms with it: the arms read as hanging at her sides with the box floating at her hip.
   Every cargo kind is held with two hands on both her and a stock R15 rig (spec'd). A caller-owned
   `holdOffset` (the bulky cart) is kept, and gets no hands when they cannot reach it.
+- **The vacuum** (`VacuumHoldFormulas`, `AnimationVacuumHoldSystem`): the same full-size vacuum for
+  everyone. Its body hangs ~1.5 studs and its floor head ~1.9 below the grip, where a stock avatar's
+  hanging hand holds it upright. For a shorter holder the hold is fitted, not the vacuum: it is tilted
+  front-up about the grip, as little as clears the floor, up to 25 degrees; past that, the right hand is
+  lifted by an arm IK (target on the root, beside the torso, oriented so the vacuum stands upright) for
+  the rest. Pippa (hang 0.86) gets 6.75 degrees and a 0.89-stud lift; the lowest point stays 0.04-0.11
+  studs above the floor at idle, walk and run. No IK smoothing: 0.1 s let the walk bob dip it 0.15 below.
 
 ## Retargeting (check this FIRST if poses ever look wrong)
 

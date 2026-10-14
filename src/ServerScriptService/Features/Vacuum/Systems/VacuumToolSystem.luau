@@ -3,10 +3,13 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Constants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local Rules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumEquipmentRules)
+local ServerScriptService = game:GetService("ServerScriptService")
 local Visual = require(script.Parent.VacuumVisualSystem)
+local AnimationVacuumHoldSystem = require(ServerScriptService.Features.Animation.Systems.AnimationVacuumHoldSystem)
 local VacuumToolSystem = {}
 
--- `holder` is the character it is made for: the visual is fitted to its hanging hand (VacuumVisualSystem).
+-- `holder` is the character it is made for: the hold is fitted to its hanging hand (VacuumVisualSystem). While
+-- equipped by a holder whose hand must be lifted, AnimationVacuumHoldSystem holds its arm up.
 function VacuumToolSystem.create(holder: Model?): Tool
 	local tool = Instance.new("Tool")
 	tool.Name = Constants.TOOL_NAME
@@ -15,6 +18,31 @@ function VacuumToolSystem.create(holder: Model?): Tool
 	tool.RequiresHandle = true
 	tool:SetAttribute(Constants.TOOL_ATTRIBUTE, true)
 	Visual.build(tool, holder)
+	local hold: AnimationVacuumHoldSystem.Controller? = nil
+	tool:GetPropertyChangedSignal("Parent"):Connect(function()
+		if hold ~= nil then
+			hold.destroy()
+			hold = nil
+		end
+		local character = tool.Parent
+		local lift = tool:GetAttribute("VacuumHoldLift")
+		local halfWidth = tool:GetAttribute("VacuumHoldHalfWidth")
+		if
+			character ~= nil
+			and character:IsA("Model")
+			and character:FindFirstChildOfClass("Humanoid") ~= nil
+			and type(lift) == "number"
+			and type(halfWidth) == "number"
+		then
+			hold = AnimationVacuumHoldSystem.hold(character, tool.Grip, lift, halfWidth)
+		end
+	end)
+	tool.Destroying:Connect(function()
+		if hold ~= nil then
+			hold.destroy()
+			hold = nil
+		end
+	end)
 	return tool
 end
 
