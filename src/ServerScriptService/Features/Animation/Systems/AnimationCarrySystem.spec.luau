@@ -80,6 +80,33 @@ return function()
 		expect(System.measure(model)).to.equal(nil)
 		model:Destroy()
 	end)
+	it("measures the torso and head at the rig's rest pose, not at whatever frame its idle is on", function()
+		local model = measuredRig()
+		-- The rest pose, as the rig's joints define it: root -> LowerTorso -> UpperTorso -> Head.
+		local function motor(name, part0, part1)
+			local joint = Instance.new("Motor6D")
+			joint.Name = name
+			joint.Part0 = part0
+			joint.Part1 = part1
+			joint.C0 = part0.CFrame:ToObjectSpace(part1.CFrame)
+			joint.C1 = CFrame.identity
+			joint.Parent = part1
+		end
+		motor("Root", model.HumanoidRootPart, model.LowerTorso)
+		motor("Waist", model.LowerTorso, model.UpperTorso)
+		motor("Neck", model.UpperTorso, model.Head)
+		local rest = System.measure(model)
+		-- The idle nods the head forward and leans the torso: the live parts move, the rest pose does not.
+		model.Head.CFrame = CFrame.new(0, 1.9, -0.25) * CFrame.Angles(math.rad(-20), 0, 0)
+		model.UpperTorso.CFrame = CFrame.new(0, 0.6, -0.2) * CFrame.Angles(math.rad(-8), 0, 0)
+		local nodding = System.measure(model)
+		expect(nodding.headFront).to.be.near(rest.headFront, 1e-3)
+		expect(nodding.headBottom).to.be.near(rest.headBottom, 1e-3)
+		expect(nodding.front).to.be.near(rest.front, 1e-3)
+		expect(rest.headFront).to.be.near(-0.8, 1e-3)
+		expect(rest.headBottom).to.be.near(1.3, 1e-3)
+		model:Destroy()
+	end)
 	-- Cargo as CargoSpawnSystem + ArtVisualSystem build it: an invisible 2x2x2 proxy (the size class) with the
 	-- art welded inside, uniformly fitted and standing on the proxy's floor, so it is smaller and lower.
 	local function cargo(at)
@@ -122,14 +149,16 @@ return function()
 		expect((right.Position - Vector3.new(0, -0.3, 0)).Magnitude < 1e-3).to.equal(true)
 		model:Destroy()
 	end)
-	it("plans the hold on the visible art: its near face at the belly, the palms up under its bottom", function()
+	it("plans the hold on the visible art: its near face clear of the head, the palms up under its bottom", function()
 		local model = measuredRig()
 		local proxy = cargo(CFrame.new(5, 1, -3))
 		local prepared = System.prepare(model, proxy, "recyclingBox", nil)
 		expect(prepared).to.be.ok()
 		local box = prepared.pivot * prepared.box
-		-- The root sits at the origin facing -Z: the art's near face is just in front of the torso (-0.7).
-		expect(box.Position.Z + 1.4 / 2).to.be.near(-0.7 - 0.08, 1e-3)
+		-- The root sits at the origin facing -Z. The art (1.6 tall) would reach the head (bottom 1.3) at the belly,
+		-- so its near face goes just past the head's front (-0.8), not into it.
+		expect(box.Position.Z + 1.4 / 2).to.be.near(-0.8 - 0.05, 1e-3)
+		expect(box.Position.Y + 1.6 / 2 > 1.3).to.equal(true)
 		expect(prepared.layout.under).to.equal(true)
 		for _, contact in { prepared.layout.right, prepared.layout.left } do
 			expect(contact.Position.Y).to.be.near(-0.8, 1e-3)

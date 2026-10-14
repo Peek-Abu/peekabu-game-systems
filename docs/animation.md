@@ -178,12 +178,15 @@ Only arm chains are driven; no joint, attachment or Transform is written.
 
 - **Carried cargo** (`AnimationCarrySystem`, planned by `AnimationCarryContactUtils`): `measure` reads the
   carrier from its rig in root space (shoulders, reach to the hand's end and to the palm's centre, the hand's
-  length, torso front, head front and bottom, floor). **The item is carried on the forearms** (2026-10-14):
+  length, torso front, head front and bottom, floor), **at the rig's rest pose** (its Motor6D chain), not the
+  frame the idle is on: Pippa's idle nods her head ~0.15 stud forward and back, and measuring it live moved
+  the hold with the moment of the pick-up (a tall item went out past her face or into it). **The item is carried on the forearms** (2026-10-14):
   both palms up under its visible bottom face, shoulder-width apart (brought in under a narrow item; a big
   item wider than the carrier is fine), fingers forward and rolled ~12 degrees inward, the elbows bent down
   toward a pole below, behind and just outside each shoulder, the item resting on the palms with its near face
   against the belly. The palms sit about an upper arm (0.55 reach) below the shoulders, lower for a taller
-  item (up to 0.75), stepping lower or out past the face when it would hit the head. Short arms that cannot
+  item (up to 0.75), stepping lower or out past the face when it would hit the head; when the arms cannot
+  reach that far out either, as far out as they do reach, so as little of the item as possible is in the face. Short arms that cannot
   reach that low around a round belly (Pippa at 1.25x: shoulders 0.75 behind her belly front, ~1.4 studs to
   the palm) hold it as high as they need to, never higher than a quarter reach below the shoulders. The earlier
   hold, hands reaching to the item's near corners and sides, read as stiff arms with twisted wrists.
@@ -191,7 +194,14 @@ Only arm chains are driven; no joint, attachment or Transform is written.
   fingers run from the wrist to the hand's grip attachment, and the palm is the side that faces the body at
   rest (down on Pippa's T-posed rig, inward on stock R15), so the IK end effector is the palm's face, oriented.
   A caller-owned `holdOffset` (the bulky cart, pushed ahead) keeps its old hold: hands on its near side or
-  face, none when they cannot reach it.
+  face, none when they cannot reach it, which is the case for the filing-cabinet cart (its near face 2.75
+  studs out): it is pushed hands-free.
+  **Pippa in practice** (Studio, 2026-10-14; `characters/pippa/qa/carry-v3/`): her arms are ~1 stud to the
+  wrist and her belly is ~0.8 in front of her shoulders, so the hands under an item in front of the belly are
+  at full reach: her arms are straight, angled down and forward, for every item (stock R15 keeps bent elbows,
+  0.66-0.76 of its reach). An item taller than ~1 stud cannot sit at her belly under her head and her hands
+  cannot reach under it any lower, so it rides out past her face at waist height, covering the face from the
+  front. That is the geometry, not a tuning gap.
   **The hold is planned on what can be seen** (`AnimationCarrySystem.visibleBox`: the item's parts with
   Transparency below 1, boxed in its pivot frame). Cargo is an invisible size-class proxy (`CargoRegistry`
   partSize, 2-3 studs) with its art welded inside it, uniformly fitted and standing on its floor, so the art

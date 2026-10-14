@@ -20,14 +20,14 @@ local function attachment(bodyPart: BasePart, name: string): Attachment?
 	local found = bodyPart:FindFirstChild(name)
 	return if found ~= nil and found:IsA("Attachment") then found else nil
 end
--- The part's rest orientation relative to the root: its Motor6D chain (C0 * C1:Inverse()) without the
--- animation's Transforms. Identity when the chain does not reach the root.
-local function restOf(bodyPart: BasePart, root: BasePart): CFrame
+-- The part's rest frame relative to the root: its Motor6D chain (C0 * C1:Inverse()) without the animation's
+-- Transforms. Nil when the chain does not reach the root.
+local function restFrameOf(bodyPart: BasePart, root: BasePart): CFrame?
 	local rest = CFrame.identity
 	local current = bodyPart
 	for _ = 1, 8 do
 		if current == root then
-			return rest.Rotation
+			return rest
 		end
 		local motor: Motor6D? = nil
 		for _, child in current:GetChildren() do
@@ -37,12 +37,23 @@ local function restOf(bodyPart: BasePart, root: BasePart): CFrame
 			end
 		end
 		if motor == nil or motor.Part0 == nil then
-			return CFrame.identity
+			return nil
 		end
 		rest = motor.C0 * motor.C1:Inverse() * rest
 		current = motor.Part0
 	end
-	return CFrame.identity
+	return nil
+end
+-- The part's rest orientation relative to the root; identity when the chain does not reach the root.
+local function restOf(bodyPart: BasePart, root: BasePart): CFrame
+	local rest = restFrameOf(bodyPart, root)
+	return if rest ~= nil then rest.Rotation else CFrame.identity
+end
+-- Where the part sits relative to the root at rest, or where it is now when it has no joint chain to the root.
+-- The torso and head are measured at rest: an idle that nods the head or leans the torso would otherwise move
+-- the hold with whatever frame the pick-up landed on.
+local function frameOf(bodyPart: BasePart, root: BasePart): CFrame
+	return restFrameOf(bodyPart, root) or root.CFrame:ToObjectSpace(bodyPart.CFrame)
 end
 --[=[
 	`side`'s palm frame in its hand's space (AnimationCarryContactUtils.palmFrame): the fingers point from the
@@ -97,9 +108,9 @@ local function arm(character: Model, side: string, root: BasePart): (Vector3?, n
 		spans + (palmFrame.Position - handWrist.Position).Magnitude,
 		math.abs(along.X) * hand.Size.X + math.abs(along.Y) * hand.Size.Y + math.abs(along.Z) * hand.Size.Z
 end
--- The most extreme corner of `bodyPart` along root-space `axis` (min when `sign` is -1).
+-- The most extreme corner of `bodyPart` (at rest) along root-space `axis` (min when `sign` is -1).
 local function extreme(root: BasePart, bodyPart: BasePart, axis: Vector3, sign: number): number
-	local frame = root.CFrame:ToObjectSpace(bodyPart.CFrame)
+	local frame = frameOf(bodyPart, root)
 	local half = bodyPart.Size / 2
 	local best = -sign * math.huge
 	for _, x in { -1, 1 } do

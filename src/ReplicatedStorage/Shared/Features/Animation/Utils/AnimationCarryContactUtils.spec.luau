@@ -135,6 +135,20 @@ return function()
 		expect(math.abs(narrow.left.Position.X) <= 0.3).to.equal(true)
 	end)
 
+	it("holds an item that cannot clear the head as far out as the arms allow, not against the belly", function()
+		-- Pippa with her head nodded forward past where her arms can hold a tall item out: nothing clears it.
+		local nodding = table.clone(pippa)
+		nodding.headFront = -1.3
+		local size = Vector3.new(3, 2.98, 2.24)
+		local plan = Contact.plan(size, nodding, "twoHand")
+		expect(plan).to.be.ok()
+		local near = plan.offset:PointToWorldSpace(Vector3.new(0, 0, size.Z / 2)).Z
+		-- Well out past the belly (front - gap = -0.81), as far as the arms reach under it.
+		expect(near < -1).to.equal(true)
+		local right = plan.offset:PointToWorldSpace(plan.right.Position)
+		expect((right - nodding.rightShoulder).Magnitude <= nodding.rightPalmReach).to.equal(true)
+	end)
+
 	it("lifts the item for short arms that cannot reach low enough around a round belly", function()
 		local plan = Contact.plan(Vector3.new(1, 0.6, 0.8), pippa, "small")
 		expect(plan).to.be.ok()
@@ -143,12 +157,11 @@ return function()
 		expect((hand - pippa.rightShoulder).Magnitude <= pippa.rightPalmReach * 0.95 + 1e-3).to.equal(true)
 	end)
 
-	it("keeps the bulky cart's caller-owned offset and its hands on the cart's near side", function()
+	it("leaves the bulky cart hands-free: its caller-owned offset is out of every arm's reach", function()
+		-- The cart's near face is 2.75 studs out; the caller then places it at its offset with no hold.
 		local size = Cargo.get("filingCabinet").partSize
-		local plan = Contact.plan(size, stock, "twoHand", CargoConstants.BULKY_HOLD_OFFSET)
-		expect(plan).to.be.ok()
-		expect(plan.offset).to.equal(CargoConstants.BULKY_HOLD_OFFSET)
-		expect(plan.under).to.equal(nil)
+		expect(Contact.plan(size, stock, "twoHand", CargoConstants.BULKY_HOLD_OFFSET)).to.equal(nil)
+		expect(Contact.plan(size, pippa, "twoHand", CargoConstants.BULKY_HOLD_OFFSET)).to.equal(nil)
 	end)
 
 	it("does not stretch a short arm to an unreachable caller-owned offset", function()

@@ -65,6 +65,9 @@ local UNDER_DROP_LOWER = { 0, 0.12, 0.24 }
 local REACH_COMFORT = 0.85
 -- The palms never come higher than this below the shoulders (arms held out level).
 local UNDER_DROP_MIN = 0.25
+-- When nothing clears the head, the item is held as far out as the arms allow: the depths tried, from out past
+-- the face back to the belly, in this many steps.
+local CLIP_STEPS = 8
 -- How far in from the near edge the palms' centres go, in hand lengths (at most half the item's depth).
 local UNDER_INSET = 0.5
 -- Palm up, fingers forward (-Z), rolled a little in so the wrists do not read as fully turned out.
@@ -257,14 +260,29 @@ function AnimationCarryContactUtils.plan(
 		end
 		return supports(size, rig, CFrame.new(0, centreY, nearZ - bodyZ), bodyZ, palmInset)
 	end
+	-- Where the item's near face may go: against the belly, then out past the face. When neither clears the head,
+	-- as far out as the arms reach, so as little of the item as possible is in the face.
+	local function depths(anyHead: boolean): { number }
+		if not anyHead then
+			return { near, pastFace }
+		end
+		local list: { number } = {}
+		for step = 0, CLIP_STEPS do
+			table.insert(list, pastFace + (near - pastFace) * step / CLIP_STEPS)
+		end
+		return list
+	end
 	-- Elbows bent before arms stretched; against the belly, then lower, then out past the face; the palms well
-	-- in under it, then barely in from the edge; and for an item too big for all of those, held at the body in
-	-- front of the face.
+	-- in under it, then barely in from the edge; and for an item too big for all of those, held as far out in
+	-- front of the face as the arms allow.
 	for _, anyHead in { false, true } do
-		for _, use in { REACH_COMFORT, REACH_USE } do
-			for _, palmInset in { inset, math.min(inset, 0.1) } do
+		-- Past the head the arms reach as far as they safely can, the palms just in from the near edge.
+		local uses: { number } = if anyHead then { REACH_USE } else { REACH_COMFORT, REACH_USE }
+		local insets: { number } = if anyHead then { math.min(inset, 0.1) } else { inset, math.min(inset, 0.1) }
+		for _, use in uses do
+			for _, palmInset in insets do
 				for _, lower in UNDER_DROP_LOWER do
-					for _, nearZ in { near, pastFace } do
+					for _, nearZ in depths(anyHead) do
 						local layout = attempt(lower, nearZ, palmInset, anyHead, use)
 						if layout ~= nil then
 							return layout
