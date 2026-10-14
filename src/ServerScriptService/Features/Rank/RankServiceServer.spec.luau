@@ -95,6 +95,20 @@ end
 return function()
 	describe("RankServiceServer", function()
 		local seeded = {}
+		local realMutate = PlayerDataService.mutate
+
+		-- Counts every PlayerDataService:mutate call on the rank slice (the slice accessor looks `mutate` up at
+		-- call time), still running the real one.
+		local function spyRankMutates()
+			local calls = { count = 0 }
+			PlayerDataService.mutate = function(self, userId, path, mutator)
+				if path == "account.rank" then
+					calls.count += 1
+				end
+				return realMutate(self, userId, path, mutator)
+			end
+			return calls
+		end
 
 		local function seed(userId, rank)
 			local profile = makeFakeProfile(makeProfileData(rank))
@@ -104,6 +118,7 @@ return function()
 		end
 
 		afterEach(function()
+			PlayerDataService.mutate = realMutate
 			RankService:_setPersist(nil)
 			RankService:_setSeason(nil)
 			for userId in seeded do
@@ -127,6 +142,27 @@ return function()
 			local again = RankService:awardShift(901, "srv:1", facts())
 			expect(again).to.equal(false)
 			expect(profile.Data.account.rank.xp).to.equal(39)
+		end)
+
+		it("writes nothing for a run already paid: no mutate, so no save and no audit line", function()
+			local profile = seed(910)
+			RankService:load(910)
+			RankService:awardShift(910, "srv:1", facts())
+			local calls = spyRankMutates()
+			local ok = RankService:awardShift(910, "srv:1", facts())
+			expect(ok).to.equal(false)
+			expect(calls.count).to.equal(0)
+			expect(profile.Data.account.rank.xp).to.equal(39)
+			expect(RankService:awardShift(910, "srv:2", facts())).to.equal(true)
+			expect(calls.count).to.equal(1)
+		end)
+
+		it("writes nothing when a profile loads with a rank already in the current season", function()
+			seed(911)
+			local calls = spyRankMutates()
+			expect(RankService:load(911)).to.equal(true)
+			expect(calls.count).to.equal(0)
+			expect(publicXp(911)).to.equal(0)
 		end)
 
 		it("levels up from 1 to 2 when the XP crosses the threshold", function()

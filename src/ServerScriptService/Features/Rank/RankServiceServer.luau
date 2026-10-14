@@ -7,7 +7,8 @@
 	  true; a session-only copy in server memory (RankTracker) when it is false, never written to the profile.
 	- Season: on load a rank from another season (RankConstants.RANK_SEASON) resets to level 1 / 0 XP.
 	- Award: RankShiftSystem pays each crew member once per shift run when the shift reaches its review (RankFormulas);
-	  RankRules.applyAward refuses a run already paid (`lastAwardedRunId`).
+	  a run already paid (`lastAwardedRunId`, RankRules.canAward) is refused before any write, so it costs no mutate
+	  and no audit line; RankRules.applyAward refuses it again inside the write.
 	- Announce: `changed` fires with the player's id whenever their rank is published (load, award, reset), so
 	  server-side looks that show the rank (the employee's lanyard, EmployeeServiceServer) repaint at once.
 	- Display: every client reads a player's XP from their public entry (RankConstants.PUBLIC_XP_FIELD), which works
@@ -158,12 +159,16 @@ RankServiceServer = {
 	]=]
 	load = function(_self, userId)
 		if persist then
-			if rankSlice.get(userId) == nil then
+			local current = rankSlice.get(userId)
+			if current == nil then
 				return false
 			end
-			rankSlice.mutate(userId, function(state)
-				return RankRules.reconcileSeason(state, season)
-			end)
+			-- Only a rank from another season is written; a current one costs no mutate (and no audit line).
+			if current.season ~= season then
+				rankSlice.mutate(userId, function(state)
+					return RankRules.reconcileSeason(state, season)
+				end)
+			end
 		else
 			local current = sessionRanks:get(userId)
 			if current == nil or current.season ~= season then
@@ -194,6 +199,12 @@ RankServiceServer = {
 	awardShift = function(_self, userId, runId, facts)
 		local award = RankFormulas.award(facts)
 		if award.total <= 0 then
+			return false, award
+		end
+		-- Decide "already paid" (or not loaded) before opening a write: a refused award must cost no profile
+		-- mutate, so it leaves no audit line and nothing for the next save.
+		local current = read(userId)
+		if current == nil or not RankRules.canAward(current, runId, award.total) then
 			return false, award
 		end
 		local before = 0

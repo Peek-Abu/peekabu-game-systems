@@ -4,7 +4,8 @@
 	is handed, so the same rules drive the profile slice (through PlayerDataService's mutate) and the session copy.
 
 	- `reconcileSeason`: a rank from another season resets to level 1 / 0 XP (RankConstants.RANK_SEASON).
-	- `applyAward`: adds a shift's XP once per run id (`lastAwardedRunId`); XP never goes down, so neither does rank.
+	- `canAward` / `applyAward`: adds a shift's XP once per run id (`lastAwardedRunId`); XP never goes down, so neither
+	  does rank. `canAward` is the read-only check, for deciding before a write.
 	- `validate`: the slice's data-layer validator.
 
 	@class RankRules
@@ -40,11 +41,19 @@ function RankRules.reconcileSeason(state: RankState, season: string): boolean
 end
 
 --[=[
-	Adds `gain` XP for run `runId` (in place), capped at MAX_XP. False (and no change) when the run already paid out,
-	the run id is empty, or the gain is not a whole number >= 0.
+	Whether `applyAward(state, runId, gain)` would change `state`, without changing it: false when the run already
+	paid out, the run id is empty, or the gain is not a whole number >= 0. Callers check this before opening a
+	profile write, so a refused award costs no mutate (and no audit line).
+]=]
+function RankRules.canAward(state: RankState, runId: string, gain: number): boolean
+	return runId ~= "" and runId ~= state.lastAwardedRunId and isWhole(gain)
+end
+
+--[=[
+	Adds `gain` XP for run `runId` (in place), capped at MAX_XP. False (and no change) when `canAward` refuses it.
 ]=]
 function RankRules.applyAward(state: RankState, runId: string, gain: number): boolean
-	if runId == "" or runId == state.lastAwardedRunId or not isWhole(gain) then
+	if not RankRules.canAward(state, runId, gain) then
 		return false
 	end
 	state.xp = math.min(RankConstants.MAX_XP, state.xp + gain)

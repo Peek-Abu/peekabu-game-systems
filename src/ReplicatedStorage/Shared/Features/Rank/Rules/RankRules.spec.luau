@@ -29,6 +29,23 @@ return function()
 		end)
 	end)
 
+	describe("canAward", function()
+		it("is true for a new run with a whole gain, without touching the state", function()
+			local state = RankRules.fresh("s1")
+			expect(RankRules.canAward(state, "srv:1", 35)).to.equal(true)
+			expect(state.xp).to.equal(0)
+			expect(state.lastAwardedRunId).to.equal("")
+		end)
+
+		it("is false for the run already paid, an empty run id, or a negative / fractional gain", function()
+			local state = { season = "s1", xp = 10, lastAwardedRunId = "srv:1" }
+			expect(RankRules.canAward(state, "srv:1", 35)).to.equal(false)
+			expect(RankRules.canAward(state, "", 5)).to.equal(false)
+			expect(RankRules.canAward(state, "srv:2", -5)).to.equal(false)
+			expect(RankRules.canAward(state, "srv:2", 1.5)).to.equal(false)
+		end)
+	end)
+
 	describe("applyAward", function()
 		it("adds the gain once per run", function()
 			local state = RankRules.fresh("s1")
