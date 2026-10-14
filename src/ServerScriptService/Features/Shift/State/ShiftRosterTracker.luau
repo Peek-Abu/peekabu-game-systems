@@ -17,6 +17,9 @@ export type Delta = {
 	caught: number?,
 	noise: number?,
 	woke: number?,
+	-- Cargo items banked, and salvage banked during overtime (ShiftReviewSystem, from each accepted Load).
+	items: number?,
+	overtimeSalvage: number?,
 }
 
 export type ShiftRosterTracker = {
@@ -46,6 +49,8 @@ function ShiftRosterTracker.new(): ShiftRosterTracker
 				drops = 0,
 				noise = 0,
 				woke = 0,
+				items = 0,
+				overtimeSalvage = 0,
 			}
 			roster[userId] = entry
 		end
@@ -61,6 +66,8 @@ function ShiftRosterTracker.new(): ShiftRosterTracker
 			entry.caught = (entry.caught or 0) + (delta.caught or 0)
 			entry.noise = (entry.noise or 0) + (delta.noise or 0)
 			entry.woke = (entry.woke or 0) + (delta.woke or 0)
+			entry.items = (entry.items or 0) + (delta.items or 0)
+			entry.overtimeSalvage = (entry.overtimeSalvage or 0) + (delta.overtimeSalvage or 0)
 		end,
 
 		noteDrop = function(_self, userId, name, kind, value)

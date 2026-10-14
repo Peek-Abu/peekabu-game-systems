@@ -44,7 +44,8 @@ end
 -- those fields (an empty table would not typecheck). InventoryServiceServer still owns and validates
 -- "itemMint", TitleServiceServer owns "titles", MarketplaceServiceServer owns "premium" and
 -- "receipts", EntitlementServiceServer owns "entitlements", SettingServiceServer owns "settings", and
--- DailyRewardServiceServer owns "dailyReward".
+-- DailyRewardServiceServer owns "dailyReward", and RankServiceServer owns "rank" (its season string is stamped
+-- by the registration; the empty season here is only the skeleton).
 -- `nextUid` starts at 1, not 0: uid 0 would be indistinguishable from an absent/falsy value at any
 -- callsite that checks truthiness.
 local function emptyAccount(): PlayerDataTypes.PlayerAccount
@@ -56,6 +57,7 @@ local function emptyAccount(): PlayerDataTypes.PlayerAccount
 		entitlements = { owned = {} },
 		settings = { values = {} },
 		dailyReward = { lastDay = 0, streak = 0 },
+		rank = { season = "", xp = 0, lastAwardedRunId = "" },
 	}
 end
 

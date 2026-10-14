@@ -55,6 +55,7 @@ return function()
 					entitlements = { owned = {} },
 					settings = { values = {} },
 					dailyReward = { lastDay = 0, streak = 0 },
+					rank = { season = "mvp-1", xp = 0, lastAwardedRunId = "" },
 					titles = { earned = {} },
 				},
 				slots = {
@@ -82,6 +83,7 @@ return function()
 					entitlements = { owned = {} },
 					settings = { values = {} },
 					dailyReward = { lastDay = 0, streak = 0 },
+					rank = { season = "mvp-1", xp = 0, lastAwardedRunId = "" },
 					titles = { earned = {} },
 				},
 				slots = {
@@ -115,6 +117,7 @@ return function()
 					entitlements = { owned = {} },
 					settings = { values = {} },
 					dailyReward = { lastDay = 0, streak = 0 },
+					rank = { season = "mvp-1", xp = 0, lastAwardedRunId = "" },
 					titles = { earned = {} },
 				},
 				slots = {

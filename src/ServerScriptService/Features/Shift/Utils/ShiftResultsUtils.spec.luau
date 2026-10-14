@@ -64,6 +64,17 @@ return function()
 			expect(results.crew[2].caught).to.equal(2)
 		end)
 
+		it("carries each crew member's cargo items and overtime salvage (absent = 0) for the rank award", function()
+			local results = ShiftResultsUtils.build(input({
+				member(1, "Ava", { banked = 50, items = 6, overtimeSalvage = 2 }),
+				member(2, "Ben"),
+			}))
+			expect(results.crew[1].items).to.equal(6)
+			expect(results.crew[1].overtimeSalvage).to.equal(2)
+			expect(results.crew[2].items).to.equal(0)
+			expect(results.crew[2].overtimeSalvage).to.equal(0)
+		end)
+
 		it("builds a bare review for when the real one cannot be built", function()
 			local results = ShiftResultsUtils.bare("clockout", 350, true)
 			expect(results.cleared).to.equal(0)

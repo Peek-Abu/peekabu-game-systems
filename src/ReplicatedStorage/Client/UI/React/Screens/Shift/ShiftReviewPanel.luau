@@ -6,7 +6,9 @@
 	crew vote (ANOTHER SHIFT / BACK TO DEPOT with vote dots on desktop, counts on the phone, "your vote" in marker ink
 	beside the local player's choice) and its footer. The folder is drawn at its Figma size and positions and scaled
 	by `scale` (ShiftReviewViewModel.fit), centred. On the phone "+2 MORE AWARDS" swaps the two stickies for the
-	folded ones (UI-only state). Presentational: it draws the view it is given.
+	folded ones (UI-only state). With a `rank` view, the company rank's slip (RankSlip: level, XP bar, "Next: ...",
+	this shift's XP) is typed under the overall rating on desktop (Harlow's line moves down to make room) and along
+	the foot of the right column on the phone. Presentational: it draws the view it is given.
 
 	Tilts are the Figma rotations with the sign flipped (Figma turns counter-clockwise, Roblox clockwise).
 
@@ -23,6 +25,8 @@ local PaperPortrait = require(ReplicatedStorage.Client.UI.React.Screens.Paper.Pa
 local PaperLabel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperLabel)
 local PaperSheet = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperSheet)
 local PaperStamp = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperStamp)
+local RankSlip = require(ReplicatedStorage.Client.UI.React.Screens.Rank.RankSlip)
+local RankViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Rank.RankViewModel)
 local StickyNote = require(ReplicatedStorage.Client.UI.React.Screens.Paper.StickyNote)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local ShiftReviewViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftReviewViewModel)
@@ -35,6 +39,8 @@ export type ShiftReviewPanelProps = {
 	-- The folder's scale on this screen (ShiftReviewViewModel.fit).
 	scale: number,
 	onVote: (choice: ShiftTypes.Vote) -> (),
+	-- The local player's company rank (RankViewModel.slip); absent until the server publishes it.
+	rank: RankViewModel.SlipView?,
 }
 
 type Nodes = { [string]: React.ReactNode }
@@ -69,6 +75,12 @@ local HEADLINE_PHONE = 38
 local MARK_DESKTOP = 28
 local MARK_PHONE = 18
 local DOT_STEP = 32
+-- The rank slip (desktop: under the overall rating, Harlow's line moved down to QUOTE_WITH_RANK; phone: the right
+-- column's foot).
+local RANK_DESKTOP = Vector2.new(48, 640)
+local QUOTE_DESKTOP = 700
+local QUOTE_WITH_RANK = 790
+local RANK_PHONE = Vector2.new(404, 330)
 
 local function at(x: number, y: number): UDim2
 	return UDim2.fromOffset(x, y)
@@ -185,7 +197,14 @@ local function desktopOf(props: ShiftReviewPanelProps): Nodes
 		headline = stamp(view.headline, HEADLINE_DESKTOP, 2, 246, 140),
 		ratingLabel = label(view.ratingLabel, "body", 24, 48, 590),
 		rating = stamp(view.rating, RATING_DESKTOP, 2, 284, 604, LEFT_CENTRE),
-		quote = label(`{view.quote}\n{view.quoteBy}`, "body", 22, 48, 700, 700),
+		quote = label(
+			`{view.quote}\n{view.quoteBy}`,
+			"body",
+			22,
+			48,
+			if props.rank ~= nil then QUOTE_WITH_RANK else QUOTE_DESKTOP,
+			700
+		),
 		fold = rule(800, 30, 2, 840),
 		awardsTitle = label("CREW CLOCKS OFF", "heading", 26, 848, 36),
 		voteRule = rule(848, 500, 704, 2),
@@ -206,6 +225,10 @@ local function desktopOf(props: ShiftReviewPanelProps): Nodes
 			autoSize = false,
 			wrapped = false,
 		})
+	end
+	local rank = props.rank
+	if rank ~= nil then
+		nodes.rank = e(RankSlip, { view = rank, layout = "desktop", position = at(RANK_DESKTOP.X, RANK_DESKTOP.Y) })
 	end
 	stickiesOf(view.awards, DESKTOP_STICKIES, 340, 24, nil, nodes)
 	local votes: { { key: string, vote: ShiftReviewViewModel.VoteView, choice: ShiftTypes.Vote, y: number } } = {
@@ -278,6 +301,10 @@ local function phoneOf(props: ShiftReviewPanelProps, expanded: boolean, toggle: 
 			label = label(row.label, "heading", 14, 10, 3),
 			value = label(row.value, "number", 24, 10, 19),
 		})
+	end
+	local rank = props.rank
+	if rank ~= nil then
+		nodes.rank = e(RankSlip, { view = rank, layout = "phone", position = at(RANK_PHONE.X, RANK_PHONE.Y) })
 	end
 	local more = view.moreAwards
 	local less = view.lessAwards

@@ -4,7 +4,9 @@
 	side-by-side check against Figma 5a (31:557), 5c (31:611) and 5b (31:665). The review is drawn in a fixed
 	screen-sized frame centred in the viewport: `Variant` picks quota met (5a) or missed (5c), `Phone` switches to the
 	844x390 landscape phone (5b), `MyVote` marks the local player's vote (or none) and `Small` draws desktop at
-	1366x768 (the folder scales down to fit). Crew Sam, Alex, Jo and you (userId 4); 20 s left on the vote.
+	1366x768 (the folder scales down to fit). Crew Sam, Alex, Jo and you (userId 4); 20 s left on the vote. `Rank` draws
+	the company rank slip: none (not published yet), a first shift at level 1, a promotion to level 2 that has
+	landed, or a caught shift with its incident line.
 
 	@class ShiftReviewPanel.story
 ]=]
@@ -20,6 +22,7 @@ local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper
 local ShiftReviewPanel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftReviewPanel)
 local ShiftReviewViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftReviewViewModel)
 local ShiftStoryFixtures = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftStoryFixtures)
+local RankViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Rank.RankViewModel)
 
 local e = React.createElement
 
@@ -76,6 +79,7 @@ return UILabs.CreateReactStory({
 		MyVote = UILabs.Choose({ "another", "depot", "none" }),
 		Small = false,
 		Rating = UILabs.Choose({ "satisfactory", "exceeds" }),
+		Rank = UILabs.Choose({ "promoted", "first shift", "caught", "none" }),
 	},
 }, function(props)
 	local met = props.controls.Variant ~= MISSED
@@ -88,6 +92,26 @@ return UILabs.CreateReactStory({
 	snapshot.votesAnother = 2
 	snapshot.votesDepot = 1
 	snapshot.results = results(met, ratingOf(props.controls.Rating))
+	-- The rank slip reads its own one-line review for you (the panel's review keeps its crew list empty).
+	local rankChoice: string = props.controls.Rank
+	local mine: ShiftTypes.CrewLine = {
+		userId = ME,
+		name = "Me",
+		banked = 60,
+		piles = 3,
+		salvage = 1,
+		caught = if rankChoice == "caught" then 1 else 0,
+		items = 4,
+		overtimeSalvage = 0,
+	}
+	local rankReview = results(met, ratingOf(props.controls.Rating))
+	rankReview.crew = { mine }
+	local rankState: RankViewModel.Rank? = if rankChoice == "promoted"
+		then { xp = 55, prevXp = 16 }
+		elseif rankChoice == "first shift" then { xp = 39, prevXp = 0 }
+		elseif rankChoice == "caught" then { xp = 29, prevXp = 0 }
+		else nil
+	local rank = RankViewModel.slip(rankState, rankReview, { ME }, ME)
 	local screen = if phone then PHONE elseif small then SMALL else DESKTOP
 	local layout: UIPaperConstants.Layout = if phone then "phone" else "desktop"
 	local view = ShiftReviewViewModel.review(snapshot, if choice == "none" then nil else choice, ME, NOW, phone)
@@ -99,6 +123,7 @@ return UILabs.CreateReactStory({
 			onVote = function(vote: ShiftTypes.Vote)
 				print(`ShiftReviewPanel.story: vote {vote}`)
 			end,
+			rank = rank,
 		})
 		else nil
 	return e("Frame", {

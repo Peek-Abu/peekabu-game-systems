@@ -148,13 +148,21 @@ local function crewOf(value: WorldValue?): { ShiftTypes.CrewLine }?
 		end
 		local userId, userOk = countOf(item.userId)
 		local caught, caughtOk = countOf(item.caught)
-		if not userOk or not caughtOk then
+		local items, itemsOk = countOf(item.items)
+		local overtimeSalvage, overtimeOk = countOf(item.overtimeSalvage)
+		if not userOk or not caughtOk or not itemsOk or not overtimeOk then
 			return nil
 		end
-		table.insert(
-			result,
-			{ userId = userId, name = name, banked = banked, piles = piles, salvage = salvage, caught = caught }
-		)
+		table.insert(result, {
+			userId = userId,
+			name = name,
+			banked = banked,
+			piles = piles,
+			salvage = salvage,
+			caught = caught,
+			items = items,
+			overtimeSalvage = overtimeSalvage,
+		})
 	end
 	return result
 end

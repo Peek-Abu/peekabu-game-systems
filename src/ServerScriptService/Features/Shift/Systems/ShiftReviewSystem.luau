@@ -7,7 +7,12 @@
 	- Carry `dropped`: a drop by hand, or a throw of a fragile item (a break), with the item's kind and value then.
 	  Catch drops ("death"), pocketing and banking ("forced") and resets never count;
 	- Noise `made`: one noise for each maker;
-	- ShiftAnalyticsWatchSystem `investigated`: Harlow went to investigate a noise; each of its makers woke him once.
+	- ShiftAnalyticsWatchSystem `investigated`: Harlow went to investigate a noise; each of its makers woke him once;
+	- ShiftAnalyticsSystem `loaded`: each accepted Load's cargo items, and its salvage when the shift is in overtime
+	  (the company rank's award reads both off the review; RankFormulas).
+
+	`crew()` reads the running roster back (copies) for the company rank's award at the end of the shift
+	(RankShiftSystem); empty when the system is not running.
 
 	Spec-exempt shell (signals, Players); the counting is the specced ShiftRosterTracker, the awards the specced
 	ShiftResultsUtils.
@@ -25,11 +30,13 @@ local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.Carr
 local CarryTypes = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryTypes)
 local NoiseTypes = require(ReplicatedStorage.Shared.Features.Noise.Data.NoiseTypes)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
+local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
 local NoiseServiceServer = require(ServerScriptService.Features.Noise.NoiseServiceServer)
 local RoundServiceServer = require(ServerScriptService.Features.Round.RoundServiceServer)
 local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
 local ShiftRosterTracker = require(ServerScriptService.Features.Shift.State.ShiftRosterTracker)
+local ShiftAnalyticsSystem = require(ServerScriptService.Features.Shift.Systems.ShiftAnalyticsSystem)
 local ShiftAnalyticsWatchSystem = require(ServerScriptService.Features.Shift.Systems.ShiftAnalyticsWatchSystem)
 
 local function nameOf(userId: number): string?
@@ -37,9 +44,19 @@ local function nameOf(userId: number): string?
 	return if player ~= nil then player.DisplayName else nil
 end
 
+-- The roster the running system writes (nil when stopped).
+local current: ShiftRosterTracker.ShiftRosterTracker? = nil
+
 local ShiftReviewSystem = {}
 
+-- Every crew member's run this shift (copies; ShiftRosterTracker.list), or empty when the system is not running.
+function ShiftReviewSystem.crew(): { ShiftTypes.CrewStats }
+	local roster = current
+	return if roster ~= nil then roster:list() else {}
+end
+
 function ShiftReviewSystem.start(roster: ShiftRosterTracker.ShiftRosterTracker, running: () -> boolean): () -> ()
+	current = roster
 	local function each(makers: { number }, delta: ShiftRosterTracker.Delta)
 		if not running() then
 			return
@@ -91,7 +108,23 @@ function ShiftReviewSystem.start(roster: ShiftRosterTracker.ShiftRosterTracker, 
 		each(makers, { woke = 1 })
 	end)
 
+	local loads = ShiftAnalyticsSystem.loaded:Connect(
+		function(player: Player, items: number, salvage: number, overtime: boolean)
+			if not running() or player.Parent == nil then
+				return
+			end
+			roster:record(player.UserId, player.DisplayName, {
+				items = items,
+				overtimeSalvage = if overtime then salvage else 0,
+			})
+		end
+	)
+
 	return function()
+		if current == roster then
+			current = nil
+		end
+		loads:Disconnect()
 		piles:Disconnect()
 		drops:Disconnect()
 		noises:Disconnect()

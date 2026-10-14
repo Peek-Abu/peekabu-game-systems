@@ -175,6 +175,36 @@ return function()
 			expect(decoded.results.awards[1].detail).to.equal("caught once")
 		end)
 
+		it("carries each crew member's cargo items and overtime salvage, absent reading 0", function()
+			local withCargo = table.clone(FULL)
+			withCargo.crew = {
+				{
+					userId = 7,
+					name = "Ava",
+					banked = 200,
+					piles = 6,
+					salvage = 2,
+					caught = 0,
+					items = 4,
+					overtimeSalvage = 1,
+				},
+			}
+			local decoded = ShiftSnapshotUtils.decode(
+				ShiftSnapshotUtils.build(state({ phase = "results" }), 0, 0, 0, 0, withCargo, { 7 })
+			)
+			expect(decoded.results.crew[1].items).to.equal(4)
+			expect(decoded.results.crew[1].overtimeSalvage).to.equal(1)
+			local plain =
+				ShiftSnapshotUtils.decode(ShiftSnapshotUtils.build(state({ phase = "results" }), 0, 0, 0, 0, FULL))
+			expect(plain.results.crew[1].items).to.equal(0)
+			expect(plain.results.crew[1].overtimeSalvage).to.equal(0)
+			local bad = table.clone(FULL)
+			bad.crew = { { userId = 7, name = "Ava", banked = 0, piles = 0, salvage = 0, items = "4" } }
+			expect(ShiftSnapshotUtils.decode(ShiftSnapshotUtils.build(state({ phase = "results" }), 0, 0, 0, 0, bad))).to.equal(
+				nil
+			)
+		end)
+
 		it("reads absent M3 fields as empty, zero or derived", function()
 			local decoded = ShiftSnapshotUtils.decode(ShiftSnapshotUtils.build(state(), 0, 0, 0, 0, nil))
 			expect(#decoded.crew).to.equal(0)

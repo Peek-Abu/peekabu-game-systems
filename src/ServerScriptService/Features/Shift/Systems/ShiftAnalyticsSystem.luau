@@ -16,7 +16,9 @@
 	(`pickVariant`: ShiftVariantRules over the Workspace override, ShiftConstants.VARIANT_MODE and the JobId, logged at
 	info), each player's platform (the `Platform` packet, parsed by ShiftPlatformRules, first report wins) and the shift
 	state the watch hands it. `banked` (ShiftBankingSystem) sends cargo_banked per item and closes the loader's
-	optional-salvage attempts; `closeAttempts` sends optional_salvage_attempted for each closed attempt.
+	optional-salvage attempts; `closeAttempts` sends optional_salvage_attempted for each closed attempt. `banked` also
+	fires `loaded` (the loader, the items and salvage items in the Load, and whether the shift is in overtime), which
+	ShiftReviewSystem counts into the roster for the company rank's award.
 
 	Spec-exempt shell (AnalyticsService, Players, ByteNet, a Workspace attribute); payloads, tokens, variant, platform
 	and attempts are the specced ShiftAnalyticsUtils, ShiftVariantRules, ShiftPlatformRules, ShiftAnalyticsTracker and
@@ -33,6 +35,7 @@ local Workspace = game:GetService("Workspace")
 local ShiftShared = ReplicatedStorage.Shared.Features.Shift
 local ShiftServer = ServerScriptService.Features.Shift
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
+local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local CargoTypes = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoTypes)
 local ShiftConstants = require(ShiftShared.Data.ShiftConstants)
 local ShiftTypes = require(ShiftShared.Data.ShiftTypes)
@@ -66,9 +69,13 @@ local stoppers: { () -> () } = {}
 -- The shift's crew (set by `start`); before that, Round's participants.
 local crewSource: (() -> { Player })? = nil
 
+-- Every accepted Load: the loader, its item count, its salvage count, and whether the shift was in overtime.
+local loaded: SignalTyped.Signal<Player, number, number, boolean> = SignalTyped.new()
+
 local ShiftAnalyticsSystem = {}
 
 ShiftAnalyticsSystem.tracker = tracker
+ShiftAnalyticsSystem.loaded = loaded
 ShiftAnalyticsSystem.salvage = salvage
 
 -- Crew members still in the server.
@@ -237,6 +244,14 @@ end
 function ShiftAnalyticsSystem.banked(player: Player, deposit: CargoTypes.Deposit, multiplier: number)
 	local tag = ShiftAnalyticsSystem.quotaTag()
 	local salvageKinds: { string } = {}
+	local state = shiftState
+	local salvageCount = 0
+	for _, item in deposit.items do
+		if item.category == "salvage" then
+			salvageCount += 1
+		end
+	end
+	loaded:Fire(player, #deposit.items, salvageCount, state ~= nil and state.stage == "overtime")
 	for _, item in deposit.items do
 		ShiftAnalyticsSystem.emit("cargo_banked", player, {
 			target = item.kind,

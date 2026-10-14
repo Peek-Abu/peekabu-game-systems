@@ -178,6 +178,8 @@ function ShiftResultsUtils.build(input: ResultsInput): ShiftTypes.ShiftResults
 			piles = member.piles,
 			salvage = member.salvage,
 			caught = member.caught or 0,
+			items = member.items or 0,
+			overtimeSalvage = member.overtimeSalvage or 0,
 		})
 		salvage += member.salvage
 		piles += member.piles
