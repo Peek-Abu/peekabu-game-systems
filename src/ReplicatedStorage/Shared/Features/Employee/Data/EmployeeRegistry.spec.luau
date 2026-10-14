@@ -85,6 +85,30 @@ return function()
 		end)
 	end)
 
+	describe("backpack", function()
+		it("fits any backpack with a sane mount behind the torso and positive sizes", function()
+			for _, name in EmployeeRegistry.names() do
+				local fit = EmployeeRegistry.get(name).backpack
+				if fit ~= nil then
+					-- Behind the UpperTorso's centre (+Z is back), not far from it.
+					expect(fit.mount.Position.Z > 0).to.equal(true)
+					expect(fit.mount.Position.Magnitude < 2).to.equal(true)
+					expect(fit.size > 0.25 and fit.size <= 2).to.equal(true)
+					expect(fit.strapStretch.X > 0 and fit.strapStretch.Y > 0 and fit.strapStretch.Z > 0).to.equal(true)
+				end
+			end
+		end)
+
+		it("wears Pippa's backpack high on her back, clear of her tail, as it was modelled on her", function()
+			local fit = EmployeeRegistry.get("Pippa").backpack
+			expect(fit).to.be.ok()
+			-- Above the UpperTorso's centre: the tail sits below the waist.
+			expect(fit.mount.Position.Y > 0).to.equal(true)
+			expect(fit.size).to.equal(1)
+			expect(fit.strapStretch).to.equal(Vector3.one)
+		end)
+	end)
+
 	describe("locomotion", function()
 		it("names only looped clips the animation registry knows, with positive speeds and caps", function()
 			for _, name in EmployeeRegistry.names() do

@@ -16,6 +16,9 @@
 	- `locomotion` is the employee's own idle/walk/run (keys in the animation registry's `employee`
 	  domain) and how fast its feet plant in each; the character's Animate script plays them instead of
 	  the stock set. nil = the stock locomotion.
+	- `backpack` is where back-worn equipment (the vacuum's canister backpack) sits on this employee, so a
+	  body with another shape (a skin, an outfit, a legendary body) can be fitted. nil = fitted from the
+	  UpperTorso's size, as for a stock avatar.
 
 	@class EmployeeRegistry
 ]=]
@@ -58,6 +61,23 @@ export type LocomotionDef = {
 	runMaxRate: number,
 }
 
+--[=[
+	Where a backpack sits on an employee, in the template's authored studs (the employee's `scale` is applied on
+	top). The backpack was modelled on Pippa (characters/vacuum/build_backpack_vacuum.py), so her fit is the
+	identity apart from its mount.
+]=]
+export type BackpackFit = {
+	-- The pack's mount (the middle of its harness pad, where it meets the back) relative to the UpperTorso's
+	-- CFrame: +Y up, +Z back.
+	mount: CFrame,
+	-- The pack's size relative to as modelled.
+	size: number,
+	-- The straps' frame relative to the UpperTorso, and how far they are stretched (x across, y up, z through
+	-- the torso) relative to as modelled on Pippa: a wider or deeper torso widens the loops.
+	strapOffset: CFrame,
+	strapStretch: Vector3,
+}
+
 export type EmployeeDef = {
 	name: string,
 	-- Path under ReplicatedStorage to the template model.
@@ -77,6 +97,8 @@ export type EmployeeDef = {
 	defaultSkin: string,
 	-- Its own idle/walk/run; nil = the stock locomotion.
 	locomotion: LocomotionDef?,
+	-- Where the vacuum's backpack sits; nil = fitted from the torso's size.
+	backpack: BackpackFit?,
 }
 
 local FACES: { Face } = { "Happy", "Worried", "Content", "Dazed" }
@@ -127,6 +149,13 @@ local EMPLOYEES: { [string]: EmployeeDef } = {
 			minRate = 0.6,
 			walkMaxRate = 2.5,
 			runMaxRate = 2.2,
+		},
+		-- High on the back, between the head's overhang and the tail (the pack was modelled on her).
+		backpack = {
+			mount = CFrame.new(0, 0.16, 0.453),
+			size = 1,
+			strapOffset = CFrame.identity,
+			strapStretch = Vector3.one,
 		},
 	},
 }
