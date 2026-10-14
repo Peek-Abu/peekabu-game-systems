@@ -37,6 +37,7 @@ local VacuumChannelTracker = require(ServerScriptService.Features.Vacuum.State.V
 local VacuumToolSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumToolSystem)
 local VacuumEquipmentRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumEquipmentRules)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
+local CarryPlacementSystem = require(ServerScriptService.Features.Carry.Systems.CarryPlacementSystem)
 local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
 local StateSyncPublicPlayerStore = require(ServerScriptService.Features.StateSync.State.StateSyncPublicPlayerStore)
 
@@ -86,6 +87,22 @@ local function shrink(pile: BasePart)
 	pile.Position = Vector3.new(pile.Position.X, bottom + pile.Size.Y / 2, pile.Position.Z)
 end
 
+-- Where a popped dust bag lands for `player`: ahead of them on their own floor, never through a wall.
+local function bagFloor(root: BasePart): CFrame
+	local ignore: { Instance } = {}
+	for _, other in Players:GetPlayers() do
+		if other.Character ~= nil then
+			table.insert(ignore, other.Character)
+		end
+	end
+	return CarryPlacementSystem.floorNear(
+		root.Position,
+		(root.CFrame * VacuumConstants.BAG_OFFSET).Position,
+		ignore,
+		VacuumConstants.BAG_WALL_MARGIN
+	)
+end
+
 -- The channel's completion: the pile is cleared once, for everyone on it.
 local function clear(players: { Player }, target: Instance)
 	if not target:IsA("BasePart") then
@@ -112,11 +129,7 @@ local function clear(players: { Player }, target: Instance)
 		local root = rootOf(credited)
 		if popped and parent ~= nil then
 			counters.bags += 1
-			dustBagReady:Fire(
-				credited,
-				if root ~= nil then root.CFrame * VacuumConstants.BAG_OFFSET else pileFloor,
-				parent
-			)
+			dustBagReady:Fire(credited, if root ~= nil then bagFloor(root) else pileFloor, parent)
 		end
 	end
 	pileCleared:Fire(target, players)

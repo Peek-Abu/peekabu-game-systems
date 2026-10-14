@@ -52,8 +52,11 @@ return table.freeze({
 	ACTION = "vacuum",
 	AIM_INTERVAL = 0.1,
 	AIM_MIN_DOT = 0.35,
-	-- Where a dust bag lands, relative to the HumanoidRootPart (at the feet, a little ahead).
-	BAG_OFFSET = CFrame.new(0, -3, -2.5),
+	-- Where a dust bag lands: this far ahead of the HumanoidRootPart, on the floor under that point, kept inside
+	-- (CarryPlacementSystem.floorNear from the root, so never through a wall); and how far its centre stays from
+	-- a wall (the bag is 2 studs wide).
+	BAG_OFFSET = CFrame.new(0, 0, -2.5),
+	BAG_WALL_MARGIN = 1.15,
 	-- Feel (spec §7 "Vacuuming: suction particles into the nozzle, pile shrinks, rising whine, pop + sparkle,
 	-- canister fills"; "Canister full: chime, dust bag pops out"). The whine rises with the pile's progress.
 	WHINE_PITCH_MIN = 0.85,

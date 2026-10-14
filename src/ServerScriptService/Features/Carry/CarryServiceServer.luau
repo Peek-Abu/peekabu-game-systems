@@ -7,8 +7,10 @@
 	interaction kind, so picking up goes through Interaction's prompt and checks. A held object is welded
 	in front of the carrier's HumanoidRootPart (massless and non-colliding while held), slows the carrier
 	by its weight, and is published (`CarriedBy` attribute, public `carrying` field). Drop / throw arrive
-	as validated packets; death, respawn and leaving drop it. `forceDrop` is the hook for game rules
-	(stealing an egg is forceDrop on the victim, then pickUp for the thief).
+	as validated packets; death, respawn and leaving drop it. Whatever is put down or thrown stays inside
+	the building (CarryPlacementSystem: no placement through a wall or off the carrier's floor, no
+	tunnelling). `forceDrop` is the hook for game rules (stealing an egg is forceDrop on the victim, then
+	pickUp for the thief).
 	`pickedUp` / `dropped(player, object, reason)` signals let a game react (banking, noise, analytics).
 
 	Spec-exempt shell (Instances, physics, Players, ByteNet); the rules are the specced CarryRegistry,
@@ -37,6 +39,7 @@ local InteractionConstants = require(InteractionData.InteractionConstants)
 local InteractionRegistry = require(InteractionData.InteractionRegistry)
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local CarryHoldTracker = require(ServerScriptService.Features.Carry.State.CarryHoldTracker)
+local CarryPlacementSystem = require(ServerScriptService.Features.Carry.Systems.CarryPlacementSystem)
 local AnimationCarrySystem = require(ServerScriptService.Features.Animation.Systems.AnimationCarrySystem)
 local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
 local StateSyncPublicPlayerStore = require(ServerScriptService.Features.StateSync.State.StateSyncPublicPlayerStore)
@@ -128,12 +131,55 @@ local function release(player: Player): BasePart?
 	return state.root
 end
 
--- Places a released object in front of where the player stands (or leaves it where it is).
-local function placeDropped(player: Player, root: BasePart, target: PVInstance)
+local function playerRootOf(player: Player): BasePart?
 	local character = player.Character
 	local playerRoot = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil
-	if playerRoot ~= nil and playerRoot:IsA("BasePart") then
-		target:PivotTo(playerRoot.CFrame * CarryConstants.DROP_OFFSET)
+	return if playerRoot ~= nil and playerRoot:IsA("BasePart") then playerRoot else nil
+end
+
+-- What placement rays look through: every character, and the object being placed.
+local function placementIgnore(target: Instance): { Instance }
+	local ignore: { Instance } = { target }
+	for _, other in Players:GetPlayers() do
+		if other.Character ~= nil then
+			table.insert(ignore, other.Character)
+		end
+	end
+	return ignore
+end
+
+-- How far a placed object's centre stays from a wall: its horizontal half-extent plus the wall margin.
+local function wallMargin(target: PVInstance): number
+	local size = if target:IsA("Model")
+		then target:GetExtentsSize()
+		elseif target:IsA("BasePart") then target.Size
+		else Vector3.zero
+	return math.max(size.X, size.Z) / 2 + CarryConstants.WALL_MARGIN
+end
+
+-- Moves `target` (pivot at `desired`) to the nearest point on the way out from the player's root that stays
+-- inside: never through a wall, always over the player's own floor (CarryPlacementSystem).
+local function placeInside(player: Player, target: PVInstance, desired: CFrame)
+	local playerRoot = playerRootOf(player)
+	if playerRoot == nil then
+		return
+	end
+	local point = CarryPlacementSystem.safePoint(
+		playerRoot.Position,
+		desired.Position,
+		placementIgnore(target),
+		wallMargin(target)
+	)
+	if (target:GetPivot().Position - point).Magnitude > 1e-3 then
+		target:PivotTo(desired.Rotation + point)
+	end
+end
+
+-- Places a released object in front of where the player stands (or leaves it where it is).
+local function placeDropped(player: Player, root: BasePart, target: PVInstance)
+	local playerRoot = playerRootOf(player)
+	if playerRoot ~= nil then
+		placeInside(player, target, playerRoot.CFrame * CarryConstants.DROP_OFFSET)
 	end
 	root.Anchored = false
 end
@@ -394,6 +440,13 @@ CarryServiceServer = {
 		end
 		placeDropped(player, root, state.target)
 		root.AssemblyLinearVelocity = velocity
+		-- However fast it flies, it cannot tunnel out of the building.
+		CarryPlacementSystem.watch(
+			root,
+			placementIgnore(state.target),
+			wallMargin(state.target),
+			CarryConstants.THROW_GUARD_SECONDS
+		)
 		counters.thrown += 1
 		dropped:Fire(player, state.target, "throw")
 		return true, nil
@@ -408,6 +461,12 @@ CarryServiceServer = {
 		local root = release(player)
 		if state == nil or root == nil then
 			return false
+		end
+		-- Where it was held, unless that was through a wall the carrier stood against (judged from the carrier's
+		-- own body: not from a respawned one).
+		local humanoid = state.humanoid
+		if humanoid ~= nil and player.Character ~= nil and humanoid.Parent == player.Character then
+			placeInside(player, state.target, state.target:GetPivot())
 		end
 		root.Anchored = false
 		counters.dropped += 1

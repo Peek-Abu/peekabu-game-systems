@@ -22,6 +22,14 @@ return table.freeze({
 	DEFAULT_HOLD_OFFSET = CFrame.new(0, 0.5, -2.5),
 	-- Where a dropped object is placed, relative to the HumanoidRootPart.
 	DROP_OFFSET = CFrame.new(0, 0, -3),
+	-- Keeping placements inside (CarryPlacementSystem): studs kept between a placed object and a wall, beyond
+	-- its own half-width; how far above a point the floor probe starts and how far down it reaches; how far a
+	-- placement's floor may sit above or below the floor under the safe origin; how long a throw is watched.
+	WALL_MARGIN = 0.15,
+	FLOOR_PROBE_LIFT = 0.5,
+	FLOOR_PROBE = 20,
+	FLOOR_STEP = 1.5,
+	THROW_GUARD_SECONDS = 4,
 	DEFAULT_THROW_SPEED = 45,
 	-- Upward speed added to a throw so it arcs.
 	THROW_LIFT = 12,
