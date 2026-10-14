@@ -1,3 +1,6 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local AnimationRegistry = require(ReplicatedStorage.Shared.Features.Animation.Data.AnimationRegistry)
 local EmployeeRegistry = require(script.Parent.EmployeeRegistry)
 
 return function()
@@ -62,6 +65,36 @@ return function()
 			expect(def.defaultSkin).to.equal("Default")
 			expect(def.skins.Default.paletteTextureId).to.equal("rbxassetid://123317546570312")
 			expect(def.skins.OwnerSpecial).to.be.ok()
+		end)
+	end)
+
+	describe("locomotion", function()
+		it("names only looped clips the animation registry knows, with positive speeds and caps", function()
+			for _, name in EmployeeRegistry.names() do
+				local locomotion = EmployeeRegistry.get(name).locomotion
+				if locomotion ~= nil then
+					for _, key in { locomotion.idle, locomotion.walk, locomotion.run } do
+						local def = AnimationRegistry.get(key)
+						expect(def).to.be.ok()
+						expect(def.looped).to.equal(true)
+					end
+					expect(locomotion.walkPlantedSpeed > 0).to.equal(true)
+					expect(locomotion.runPlantedSpeed > 0).to.equal(true)
+					expect(locomotion.minRate > 0).to.equal(true)
+					expect(locomotion.walkMaxRate >= locomotion.minRate).to.equal(true)
+					expect(locomotion.runMaxRate >= locomotion.minRate).to.equal(true)
+				end
+			end
+		end)
+
+		it("gives Pippa her own idle, walk and run with their measured planted speeds", function()
+			local locomotion = EmployeeRegistry.get("Pippa").locomotion
+			expect(locomotion).to.be.ok()
+			expect(locomotion.idle).to.equal("pippaidle")
+			expect(locomotion.walk).to.equal("pippawalk")
+			expect(locomotion.run).to.equal("pipparun")
+			expect(locomotion.walkPlantedSpeed).to.be.near(1.27, 1e-6)
+			expect(locomotion.runPlantedSpeed).to.be.near(1.52, 1e-6)
 		end)
 	end)
 

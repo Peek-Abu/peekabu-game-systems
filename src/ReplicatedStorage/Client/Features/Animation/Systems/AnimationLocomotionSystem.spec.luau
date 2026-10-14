@@ -231,11 +231,71 @@ return function()
 			expect(lastPlay(fake).opts.speed).to.be.near(0.25, 1e-6)
 		end)
 
+		it("caps walk and run separately when per-pose maximums are set", function()
+			local fake = makeFakePlayer()
+			local animator = makeAnimator(fake, {
+				walkRunThreshold = 18,
+				walkScale = 1.27,
+				runScale = 1.52,
+				minRate = 0.6,
+				maxRate = 9,
+				walkMaxRate = 2.5,
+				runMaxRate = 3,
+			})
+			animator:handleEvent("running", 16, 0)
+			expect(lastPlay(fake).opts.speed).to.be.near(2.5, 1e-6)
+			animator:handleEvent("running", 24, 1)
+			expect(lastPlay(fake).opts.speed).to.be.near(3, 1e-6)
+			animator:handleEvent("running", 2, 2)
+			expect(lastPlay(fake).opts.speed).to.be.near(2 / 1.27, 1e-6)
+		end)
+
 		it("does not clamp climbing", function()
 			local fake = makeFakePlayer()
 			local animator = makeAnimator(fake, { climbScale = 5, minRate = 0.7, maxRate = 1.4 })
 			animator:handleEvent("climbing", 1, 0)
 			expect(lastPlay(fake).opts.speed).to.be.near(0.2, 1e-6)
+		end)
+	end)
+
+	describe("pose ids (per-character clip sets)", function()
+		local POSE_IDS = { idle = "pippaidle", walk = "pippawalk", run = "pipparun" }
+
+		it("plays the mapped registry ids while reporting the logical pose", function()
+			local fake = makeFakePlayer()
+			local animator = makeAnimator(fake, { walkRunThreshold = 18, poseIds = POSE_IDS })
+			animator:handleEvent("running", 0, 0)
+			expect(animator:currentPose()).to.equal("idle")
+			expect(lastPlay(fake).id).to.equal("pippaidle")
+			animator:handleEvent("running", 10, 1)
+			expect(animator:currentPose()).to.equal("walk")
+			expect(lastPlay(fake).id).to.equal("pippawalk")
+			expect(fake.stops[#fake.stops].id).to.equal("pippaidle")
+			animator:handleEvent("running", 20, 2)
+			expect(lastPlay(fake).id).to.equal("pipparun")
+			expect(fake.stops[#fake.stops].id).to.equal("pippawalk")
+		end)
+
+		it("keeps the stock id for poses the map leaves out", function()
+			local fake = makeFakePlayer()
+			local animator = makeAnimator(fake, { poseIds = POSE_IDS })
+			animator:handleEvent("jumping", nil, 0)
+			expect(lastPlay(fake).id).to.equal("jump")
+			expect(fake.stops[#fake.stops]).to.equal(nil)
+		end)
+
+		it("stops the mapped id on died and on destroy", function()
+			local fake = makeFakePlayer()
+			local animator = makeAnimator(fake, { poseIds = POSE_IDS })
+			animator:handleEvent("running", 10, 0)
+			animator:handleEvent("died", nil, 1)
+			expect(fake.stops[#fake.stops].id).to.equal("pippawalk")
+
+			local fake2 = makeFakePlayer()
+			local animator2 = makeAnimator(fake2, { poseIds = POSE_IDS })
+			animator2:handleEvent("running", 0, 0)
+			animator2:destroy()
+			expect(fake2.stops[#fake2.stops].id).to.equal("pippaidle")
 		end)
 	end)
 

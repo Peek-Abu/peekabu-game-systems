@@ -16,6 +16,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local AnimationLocomotionHumanoidSystem =
 	require(ReplicatedStorage.Client.Features.Animation.Systems.AnimationLocomotionHumanoidSystem)
+local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
+local EmployeeLocomotionUtils = require(ReplicatedStorage.Client.Features.Employee.Utils.EmployeeLocomotionUtils)
 
 local character = script.Parent
 assert(character ~= nil and character:IsA("Model"), "[Animate] script must be a direct child of a character Model")
@@ -23,7 +25,10 @@ assert(character ~= nil and character:IsA("Model"), "[Animate] script must be a 
 -- The Humanoid may replicate a frame after this script starts.
 character:WaitForChild("Humanoid")
 
-local unbind = AnimationLocomotionHumanoidSystem.bind(character)
+-- An employee character (Cleanup Crew) plays its own idle/walk/run when its EmployeeRegistry entry has
+-- them; the server stamps the attribute on the StarterCharacter template, so it is here at spawn.
+local config = EmployeeLocomotionUtils.forName(character:GetAttribute(EmployeeConstants.NAME_ATTRIBUTE))
+local unbind = AnimationLocomotionHumanoidSystem.bind(character, config)
 if unbind ~= nil then
 	local release = unbind
 	character.Destroying:Connect(release)

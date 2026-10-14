@@ -147,6 +147,18 @@ fades). Two things to know:
   sprint system replaces the threshold with its sprint flag, and adds special poses (riding,
   carrying, crouching) through `setPoseOverride`/`clearPoseOverride` — nobody edits the Animate
   script itself (forks of it are how animation code rots).
+- **A character's own clip set:** the core's `poseIds` config maps a logical pose to a registry id
+  (`{ idle = "pippaidle", walk = "pippawalk", run = "pipparun" }`); poses it leaves out play the stock
+  entry. `Animate.client.luau` passes it to `AnimationLocomotionHumanoidSystem.bind(character, config)`.
+  Cleanup Crew: an employee's `EmployeeRegistry` entry carries `locomotion` (registry keys in the
+  `employee` domain plus planted speeds and rate caps); `EmployeeLocomotionUtils.forName` turns the
+  character's `EmployeeName` attribute into the config, and an employee without one keeps the stock set.
+- **Speed matching:** for such a set, `walkScale` / `runScale` are the clips' planted speeds (studs/s at
+  which the feet do not slide at 1x), so a stride plays at `clamp(speed / plantedSpeed, minRate,
+  walkMaxRate | runMaxRate)`. Pippa: walk 1.27 st/s capped at 2.5x, run 1.52 st/s capped at 2.2x, floor
+  0.6x. At WalkSpeed 16 both are at their cap, so the feet slide (accepted for the MVP: her 0.68-stud
+  legs cannot plant at 16 st/s at any sane cadence). The walk/run switch stays the 18 st/s threshold,
+  so with no sprint in the game yet her run only shows above WalkSpeed 18.
 - **Kill switch:** set the Workspace attribute `LocomotionEnabled = false` and every locomotion
   track stops — instantly answers "is the weirdness on screen ours?". `true` recovers, no respawn.
 

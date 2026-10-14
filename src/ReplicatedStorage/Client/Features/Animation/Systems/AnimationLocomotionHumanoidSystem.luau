@@ -37,7 +37,14 @@ local function isEnabled(): boolean
 	return Workspace:GetAttribute(ENABLED_ATTRIBUTE) ~= false
 end
 
-function AnimationLocomotionHumanoidSystem.bind(character: Model): (() -> ())?
+--[=[
+	Binds locomotion to `character`'s Humanoid. `config` tunes the core (a character's own clip set via
+	`poseIds`, its stride scales and caps); nil = the stock set and tuning.
+]=]
+function AnimationLocomotionHumanoidSystem.bind(
+	character: Model,
+	config: AnimationLocomotionSystem.Config?
+): (() -> ())?
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	if humanoid == nil or not humanoid:IsA("Humanoid") then
 		log:warn(`{character.Name} has no Humanoid; locomotion animations disabled for it`)
@@ -48,13 +55,23 @@ function AnimationLocomotionHumanoidSystem.bind(character: Model): (() -> ())?
 		log:warn("no Animator found; locomotion animations disabled for this rig")
 		return nil
 	end
-	local animator = AnimationLocomotionSystem.new(player)
+	local animator = AnimationLocomotionSystem.new(player, config)
+	local poseIds = if config ~= nil then config.poseIds else nil
 
 	-- Warm the locomotion set up front (spec Decision 6): a pose's first play must be a cache hit.
 	task.spawn(function()
 		local locomotion = AnimationRegistry.domain("locomotion")
 		if locomotion == nil then
 			return
+		end
+		-- The character's own clips first (its idle plays immediately), then the stock set.
+		if poseIds ~= nil then
+			if poseIds.idle ~= nil then
+				player:warm(poseIds.idle)
+			end
+			for _, id in poseIds do
+				player:warm(id)
+			end
 		end
 		player:warm("idle")
 		for id in locomotion do

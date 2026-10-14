@@ -23,6 +23,7 @@ local AnimationLocomotionRegistry = require(AnimationShared.Data.AnimationLocomo
 local AnimationActionRegistry = require(AnimationShared.Data.AnimationActionRegistry)
 local AnimationOccupantRegistry = require(AnimationShared.Data.AnimationOccupantRegistry)
 local AnimationVacuumRegistry = require(AnimationShared.Data.AnimationVacuumRegistry)
+local AnimationEmployeeRegistry = require(AnimationShared.Data.AnimationEmployeeRegistry)
 
 type AnimationDef = AnimationTypes.AnimationDef
 type AnimationDomain = AnimationTypes.AnimationDomain
@@ -46,6 +47,7 @@ local DOMAIN_MODULES: { [string]: AnimationDomain } = table.freeze({
 	actions = AnimationActionRegistry,
 	occupant = AnimationOccupantRegistry,
 	vacuum = AnimationVacuumRegistry,
+	employee = AnimationEmployeeRegistry,
 })
 
 -- The replicated-action fields (R3): a replicable entry carries a unique wire id and a layer, and a

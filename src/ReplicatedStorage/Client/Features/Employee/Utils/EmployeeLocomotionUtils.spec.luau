@@ -1,0 +1,57 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local EmployeeRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeRegistry)
+local EmployeeLocomotionUtils = require(script.Parent.EmployeeLocomotionUtils)
+
+local function defWith(locomotion)
+	local base = EmployeeRegistry.get("Pippa")
+	local copy = table.clone(base)
+	copy.locomotion = locomotion
+	return copy
+end
+
+return function()
+	describe("fromDef", function()
+		it("maps idle/walk/run to the employee's clips and scales strides by their planted speeds", function()
+			local config = EmployeeLocomotionUtils.fromDef(defWith({
+				idle = "a",
+				walk = "b",
+				run = "c",
+				walkPlantedSpeed = 1.5,
+				runPlantedSpeed = 2,
+				minRate = 0.5,
+				walkMaxRate = 2.5,
+				runMaxRate = 3,
+			}))
+			expect(config).to.be.ok()
+			expect(config.poseIds.idle).to.equal("a")
+			expect(config.poseIds.walk).to.equal("b")
+			expect(config.poseIds.run).to.equal("c")
+			expect(config.walkScale).to.equal(1.5)
+			expect(config.runScale).to.equal(2)
+			expect(config.minRate).to.equal(0.5)
+			expect(config.walkMaxRate).to.equal(2.5)
+			expect(config.runMaxRate).to.equal(3)
+			-- The walk/run switch stays the base's (no override).
+			expect(config.walkRunThreshold).to.equal(nil)
+		end)
+
+		it("returns nil for an employee without its own locomotion (stock clips)", function()
+			expect(EmployeeLocomotionUtils.fromDef(defWith(nil))).to.equal(nil)
+		end)
+	end)
+
+	describe("forName", function()
+		it("resolves Pippa's set from the character attribute value", function()
+			local config = EmployeeLocomotionUtils.forName("Pippa")
+			expect(config).to.be.ok()
+			expect(config.poseIds.walk).to.equal("pippawalk")
+		end)
+
+		it("returns nil for a missing, unknown or non-string name", function()
+			expect(EmployeeLocomotionUtils.forName(nil)).to.equal(nil)
+			expect(EmployeeLocomotionUtils.forName("Nobody")).to.equal(nil)
+			expect(EmployeeLocomotionUtils.forName(7)).to.equal(nil)
+		end)
+	end)
+end

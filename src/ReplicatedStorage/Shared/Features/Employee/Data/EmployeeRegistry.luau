@@ -13,6 +13,9 @@
 	  hauling cargo is just the job.
 	- `skins` are looks for the same rig: a palette image (every MeshPart but the FacePlate shares one
 	  palette texture), an optional face set, and accessories (EmployeeSkinSystem applies one).
+	- `locomotion` is the employee's own idle/walk/run (keys in the animation registry's `employee`
+	  domain) and how fast its feet plant in each; the character's Animate script plays them instead of
+	  the stock set. nil = the stock locomotion.
 
 	@class EmployeeRegistry
 ]=]
@@ -35,6 +38,26 @@ export type SkinDef = {
 	accessories: { string },
 }
 
+--[=[
+	An employee's own locomotion clips and stride tuning. A stride plays at
+	`clamp(horizontal speed / plantedSpeed, minRate, maxRate)`: at its planted speed the feet do not slide;
+	faster than `plantedSpeed * maxRate` they slide (accepted: a 0.68-stud-legged toon cannot plant at
+	WalkSpeed 16 at any sane cadence). The walk/run switch is the base's threshold (run at >= 18 st/s).
+]=]
+export type LocomotionDef = {
+	-- AnimationRegistry keys.
+	idle: string,
+	walk: string,
+	run: string,
+	-- Studs/s at which the clip's feet stay planted at 1x playback (measured on the rig).
+	walkPlantedSpeed: number,
+	runPlantedSpeed: number,
+	-- Play-rate floor (both strides) and per-stride caps.
+	minRate: number,
+	walkMaxRate: number,
+	runMaxRate: number,
+}
+
 export type EmployeeDef = {
 	name: string,
 	-- Path under ReplicatedStorage to the template model.
@@ -48,6 +71,8 @@ export type EmployeeDef = {
 	-- The looks this employee can wear, by name, and the one everyone gets by default.
 	skins: { [string]: SkinDef },
 	defaultSkin: string,
+	-- Its own idle/walk/run; nil = the stock locomotion.
+	locomotion: LocomotionDef?,
 }
 
 local FACES: { Face } = { "Happy", "Worried", "Content" }
@@ -82,6 +107,17 @@ local EMPLOYEES: { [string]: EmployeeDef } = {
 			},
 		},
 		defaultSkin = "Default",
+		-- Pippa v1 clips (characters/pippa/anim). Caps tuned by eye in Studio: lively, not frantic.
+		locomotion = {
+			idle = "pippaidle",
+			walk = "pippawalk",
+			run = "pipparun",
+			walkPlantedSpeed = 1.27,
+			runPlantedSpeed = 1.52,
+			minRate = 0.6,
+			walkMaxRate = 2.5,
+			runMaxRate = 2.2,
+		},
 	},
 }
 

@@ -53,6 +53,14 @@ export type Config = {
 	-- Unset = unclamped (the local character).
 	minRate: number?,
 	maxRate: number?,
+	-- Per-pose caps on the walk / run play rate, tighter than `maxRate` (a small rig whose feet plant at
+	-- ~1.3 st/s would otherwise play its walk 12x at WalkSpeed 16). Unset = `maxRate`.
+	walkMaxRate: number?,
+	runMaxRate: number?,
+	-- Logical pose -> registry id to play for it (a character's own clip set, e.g. an employee's
+	-- `{ idle = "pippaidle", walk = "pippawalk", run = "pipparun" }`). Poses it leaves out play the
+	-- registry entry named after the pose. `currentPose` still reports the logical pose.
+	poseIds: { [string]: string }?,
 }
 
 export type LocomotionEvent =
@@ -134,14 +142,22 @@ function LocomotionAnimatorModule.new(player: PosePlayer, config: Config?): Anim
 		else DEFAULTS.jumpDuration
 	local minRate = if config ~= nil then config.minRate else nil
 	local maxRate = if config ~= nil then config.maxRate else nil
+	local walkMaxRate = if config ~= nil and config.walkMaxRate ~= nil then config.walkMaxRate else maxRate
+	local runMaxRate = if config ~= nil and config.runMaxRate ~= nil then config.runMaxRate else maxRate
+	local poseIds: { [string]: string } = if config ~= nil and config.poseIds ~= nil then config.poseIds else {}
 
-	-- A stride's play rate, inside the configured clamp.
-	local function strideRate(rate: number): number
+	-- The registry id a logical pose plays.
+	local function idOf(logicalPose: string): string
+		return poseIds[logicalPose] or logicalPose
+	end
+
+	-- A stride's play rate, inside the configured clamp (`cap` is the pose's own maximum).
+	local function strideRate(rate: number, cap: number?): number
 		if minRate ~= nil and rate < minRate then
 			return minRate
 		end
-		if maxRate ~= nil and rate > maxRate then
-			return maxRate
+		if cap ~= nil and rate > cap then
+			return cap
 		end
 		return rate
 	end
@@ -169,9 +185,9 @@ function LocomotionAnimatorModule.new(player: PosePlayer, config: Config?): Anim
 		end
 		local fade = FADE_BY_POSE[nextPose] or DEFAULT_FADE
 		if pose ~= nil then
-			player:stop(pose, fade)
+			player:stop(idOf(pose), fade)
 		end
-		local nextHandle = player:play(nextPose, { fadeTime = fade, speed = trackSpeed })
+		local nextHandle = player:play(idOf(nextPose), { fadeTime = fade, speed = trackSpeed })
 		-- A refused pose (dead id mid-tuning) leaves NO pose rather than a stale one; the next
 		-- state event retries. The player already logged the reason.
 		pose = if nextHandle ~= nil then nextPose else nil
@@ -180,7 +196,7 @@ function LocomotionAnimatorModule.new(player: PosePlayer, config: Config?): Anim
 
 	local function stopPose(fadeTime: number?)
 		if pose ~= nil then
-			player:stop(pose, fadeTime)
+			player:stop(idOf(pose), fadeTime)
 			pose = nil
 			handle = nil
 		end
@@ -220,9 +236,9 @@ function LocomotionAnimatorModule.new(player: PosePlayer, config: Config?): Anim
 				if moveSpeed <= IDLE_SPEED then
 					setPose("idle")
 				elseif moveSpeed < walkRunThreshold then
-					setPose("walk", strideRate(moveSpeed / walkScale))
+					setPose("walk", strideRate(moveSpeed / walkScale, walkMaxRate))
 				else
-					setPose("run", strideRate(moveSpeed / runScale))
+					setPose("run", strideRate(moveSpeed / runScale, runMaxRate))
 				end
 			elseif event == "jumping" then
 				jumpUntil = now + jumpDuration
