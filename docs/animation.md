@@ -186,6 +186,14 @@ Only arm chains are driven; no joint, attachment or Transform is written.
   torso and her palms with it: the arms read as hanging at her sides with the box floating at her hip.
   Every cargo kind is held with two hands on both her and a stock R15 rig (spec'd). A caller-owned
   `holdOffset` (the bulky cart) is kept, and gets no hands when they cannot reach it.
+  **The hold is planned on what can be seen** (`AnimationCarrySystem.visibleBox`: the item's parts with
+  Transparency below 1, boxed in its pivot frame). Cargo is an invisible size-class proxy (`CargoRegistry`
+  partSize, 2-3 studs) with its art welded inside it, uniformly fitted and standing on its floor, so the art
+  is smaller than the proxy on two axes: up to 0.86 studs shallower (monitor), 1.5 shorter (printer), 0.67
+  narrower (plaque). Planning on the proxy put the palms 0.15-0.86 studs off the art, in the air, and the art
+  up to 0.96 studs out from the belly. Measured in play on Pippa (2026-10-14): palms within 0.01 (recycling
+  box) to 0.14 studs (water jug, held out past her face) of their targets at idle, 0.12-0.24 walking. `CarryGripRight` / `CarryGripLeft` attachments on a template still
+  override the box contacts when reachable.
 - **The vacuum** (`VacuumHoldFormulas`, `AnimationVacuumHoldSystem`): the same full-size vacuum for
   everyone. Its body hangs ~1.5 studs and its floor head ~1.9 below the grip, where a stock avatar's
   hanging hand holds it upright. For a shorter holder the hold is fitted, not the vacuum: it is tilted

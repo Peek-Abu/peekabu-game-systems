@@ -6,7 +6,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local AnimationCarryRegistry = require(ReplicatedStorage.Shared.Features.Animation.Data.AnimationCarryRegistry)
 local AnimationCarryContactUtils = require(ReplicatedStorage.Shared.Features.Animation.Utils.AnimationCarryContactUtils)
 export type Controller = { destroy: () -> () }
-export type Prepared = { pivot: CFrame, layout: AnimationCarryContactUtils.Layout }
+-- `box` is the visible box relative to the item's pivot; `layout`'s contacts are relative to it.
+export type Prepared = { pivot: CFrame, box: CFrame, layout: AnimationCarryContactUtils.Layout }
 local AnimationCarrySystem = {}
 local function part(character: Model, name: string): BasePart?
 	local found = character:FindFirstChild(name)
@@ -87,6 +88,55 @@ function AnimationCarrySystem.measure(character: Model): AnimationCarryContactUt
 		floor = -root.Size.Y / 2 - humanoid.HipHeight,
 	}
 end
+-- The box around `parts`, axis-aligned in `frame`: its centre (in `frame`) and size. Nil for no parts.
+local function boundsIn(frame: CFrame, parts: { BasePart }): (Vector3?, Vector3?)
+	local low = Vector3.one * math.huge
+	local high = -Vector3.one * math.huge
+	for _, bodyPart in parts do
+		local relative = frame:ToObjectSpace(bodyPart.CFrame)
+		local half = bodyPart.Size / 2
+		for _, x in { -1, 1 } do
+			for _, y in { -1, 1 } do
+				for _, z in { -1, 1 } do
+					local corner = relative * Vector3.new(x * half.X, y * half.Y, z * half.Z)
+					low = low:Min(corner)
+					high = high:Max(corner)
+				end
+			end
+		end
+	end
+	if #parts == 0 then
+		return nil, nil
+	end
+	return (low + high) / 2, high - low
+end
+--[=[
+	The box a carrier's hands go around: the item's VISIBLE parts (Transparency below 1), axis-aligned in the
+	item's pivot frame, as (box relative to the pivot, size). Cargo is an invisible size-class proxy with its art
+	(ArtVisualSystem's `ArtVisual`) uniformly fitted inside it and standing on its floor, so the art is up to
+	1.5 studs shorter and 0.9 shallower than the proxy; planning on the proxy put the hands in empty air and the
+	art out of reach of the belly. With nothing visible (a hidden item), the whole item.
+]=]
+function AnimationCarrySystem.visibleBox(target: PVInstance): (CFrame, Vector3)
+	local pivot = target:GetPivot()
+	local all: { BasePart } = {}
+	local visible: { BasePart } = {}
+	local candidates: { Instance } = target:GetDescendants()
+	table.insert(candidates, target)
+	for _, candidate in candidates do
+		if candidate:IsA("BasePart") then
+			table.insert(all, candidate)
+			if candidate.Transparency < 1 then
+				table.insert(visible, candidate)
+			end
+		end
+	end
+	local centre, size = boundsIn(pivot, if #visible > 0 then visible else all)
+	if centre == nil or size == nil then
+		return CFrame.identity, Vector3.zero
+	end
+	return CFrame.new(centre), size
+end
 function AnimationCarrySystem.prepare(
 	character: Model,
 	target: PVInstance,
@@ -98,16 +148,8 @@ function AnimationCarrySystem.prepare(
 	if root == nil or rig == nil then
 		return nil
 	end
-	local boxFrame: CFrame
-	local size: Vector3
-	if target:IsA("Model") then
-		boxFrame, size = target:GetBoundingBox()
-	elseif target:IsA("BasePart") then
-		boxFrame, size = target.CFrame, target.Size
-	else
-		return nil
-	end
-	local boxFromPivot = target:GetPivot():ToObjectSpace(boxFrame)
+	local boxFromPivot, size = AnimationCarrySystem.visibleBox(target)
+	local boxFrame = target:GetPivot() * boxFromPivot
 	local requestedBox = if requestedOffset ~= nil then requestedOffset * boxFromPivot else nil
 	local plan = AnimationCarryContactUtils.plan(size, rig, AnimationCarryRegistry.get(kind), requestedBox)
 	if plan == nil then
@@ -127,10 +169,10 @@ function AnimationCarrySystem.prepare(
 		end
 	end
 	local pivot = root.CFrame * plan.offset * boxFromPivot:Inverse()
-	return { pivot = pivot, layout = plan }
+	return { pivot = pivot, box = boxFromPivot, layout = plan }
 end
--- layout contacts are relative to the carried bounding box. Caller converts them
--- to cargo-root coordinates after PivotTo; the physics weld remains server-owned.
+-- layout contacts are relative to the visible box (`Prepared.box`, from the item's pivot). Caller converts
+-- them to cargo-root coordinates after PivotTo; the physics weld remains server-owned.
 function AnimationCarrySystem.bind(
 	character: Model,
 	cargoRoot: BasePart,

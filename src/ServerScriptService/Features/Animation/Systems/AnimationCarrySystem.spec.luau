@@ -76,6 +76,57 @@ return function()
 		expect(System.measure(model)).to.equal(nil)
 		model:Destroy()
 	end)
+	-- Cargo as CargoSpawnSystem + ArtVisualSystem build it: an invisible 2x2x2 proxy (the size class) with the
+	-- art welded inside, uniformly fitted and standing on the proxy's floor, so it is smaller and lower.
+	local function cargo(at)
+		local proxy = Instance.new("Part")
+		proxy.Anchored = true
+		proxy.Size = Vector3.new(2, 2, 2)
+		proxy.Transparency = 1
+		proxy.CFrame = at
+		local art = Instance.new("Model")
+		art.Name = "ArtVisual"
+		local mesh = Instance.new("Part")
+		mesh.Anchored = true
+		mesh.Size = Vector3.new(2, 1.6, 1.4)
+		mesh.CFrame = at * CFrame.new(0, -0.2, 0)
+		mesh.Parent = art
+		art.Parent = proxy
+		return proxy
+	end
+	it("bounds a carried item by what can be seen, not its invisible proxy", function()
+		local at = CFrame.new(5, 1, -3) * CFrame.Angles(0, math.pi / 2, 0)
+		local proxy = cargo(at)
+		local box, size = System.visibleBox(proxy)
+		expect((size - Vector3.new(2, 1.6, 1.4)).Magnitude < 1e-3).to.equal(true)
+		-- Relative to the item's pivot, so it follows the item wherever it is moved.
+		expect((box.Position - Vector3.new(0, -0.2, 0)).Magnitude < 1e-3).to.equal(true)
+		-- Nothing visible (a hidden item, or art that never attached): the whole item.
+		proxy.ArtVisual.Part.Transparency = 1
+		local _, whole = System.visibleBox(proxy)
+		expect((whole - Vector3.new(2, 2, 2)).Magnitude < 1e-3).to.equal(true)
+		proxy:Destroy()
+	end)
+	it("plans the hold on the visible art: its near face at the belly, the hands on its surface", function()
+		local model = measuredRig()
+		local proxy = cargo(CFrame.new(5, 1, -3))
+		local prepared = System.prepare(model, proxy, "recyclingBox", nil)
+		expect(prepared).to.be.ok()
+		local box = prepared.pivot * prepared.box
+		-- The root sits at the origin facing -Z: the art's near face is just in front of the torso (-0.7).
+		expect(box.Position.Z + 1.4 / 2).to.be.near(-0.7 - 0.08, 1e-3)
+		for _, contact in { prepared.layout.right, prepared.layout.left } do
+			local p = contact.Position
+			local onSurface = math.abs(math.abs(p.X) - 1) < 1e-3
+				or math.abs(math.abs(p.Y) - 0.8) < 1e-3
+				or math.abs(math.abs(p.Z) - 0.7) < 1e-3
+			expect(onSurface).to.equal(true)
+		end
+		-- The hands straddle the art's centre.
+		expect(prepared.layout.right.Position.X).to.be.near(-prepared.layout.left.Position.X, 1e-3)
+		model:Destroy()
+		proxy:Destroy()
+	end)
 	it("binds only arm chains to real cargo attachments and destroys owned controls idempotently", function()
 		local model, humanoid = fixture()
 		local root = Instance.new("Part")

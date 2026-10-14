@@ -355,8 +355,8 @@ CarryServiceServer = {
 		)
 		local contact: AnimationCarrySystem.Controller? = nil
 		if prepared ~= nil and character ~= nil then
-			local boxFrame = if target:IsA("Model") then target:GetBoundingBox() else root.CFrame
-			local boxFromRoot = root.CFrame:ToObjectSpace(boxFrame)
+			-- The contacts are on the item's visible art, not its invisible proxy (AnimationCarrySystem.visibleBox).
+			local boxFromRoot = root.CFrame:ToObjectSpace(target:GetPivot() * prepared.box)
 			contact = AnimationCarrySystem.bind(character, root, {
 				offset = prepared.layout.offset,
 				right = boxFromRoot * prepared.layout.right,
