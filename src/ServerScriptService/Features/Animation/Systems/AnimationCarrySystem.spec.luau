@@ -68,6 +68,10 @@ return function()
 		expect((rig.leftShoulder - Vector3.new(-0.6, 1, 0)).Magnitude < 1e-3).to.equal(true)
 		-- 0.6 + 0.6 of arm, then wrist (-0.2, 0, 0) to the palm (0, -0.3, 0) in the hand.
 		expect(rig.rightReach).to.be.near(1.2 + math.sqrt(0.2 ^ 2 + 0.3 ^ 2), 1e-3)
+		-- T-posed with no grip: the fingers point out along +X from the wrist, the palm faces down (its centre on
+		-- the hand's -Y face, 0.3 below the middle), the hand 0.4 long along the fingers.
+		expect(rig.rightPalmReach).to.be.near(1.2 + math.sqrt(0.2 ^ 2 + 0.3 ^ 2), 1e-3)
+		expect(rig.handLength).to.be.near(0.4, 1e-3)
 		expect(rig.front).to.be.near(-0.7, 1e-3)
 		expect(rig.headFront).to.be.near(-0.8, 1e-3)
 		expect(rig.headBottom).to.be.near(1.3, 1e-3)
@@ -107,7 +111,18 @@ return function()
 		expect((whole - Vector3.new(2, 2, 2)).Magnitude < 1e-3).to.equal(true)
 		proxy:Destroy()
 	end)
-	it("plans the hold on the visible art: its near face at the belly, the hands on its surface", function()
+	it("finds each palm frame from the rig: palm down at rest in a T pose, fingers along the arm", function()
+		local model = measuredRig()
+		local right = System.palmOf(model, "Right")
+		local left = System.palmOf(model, "Left")
+		expect((right.LookVector - Vector3.xAxis).Magnitude < 1e-3).to.equal(true)
+		expect((left.LookVector + Vector3.xAxis).Magnitude < 1e-3).to.equal(true)
+		expect((right.UpVector + Vector3.yAxis).Magnitude < 1e-3).to.equal(true)
+		expect((left.UpVector + Vector3.yAxis).Magnitude < 1e-3).to.equal(true)
+		expect((right.Position - Vector3.new(0, -0.3, 0)).Magnitude < 1e-3).to.equal(true)
+		model:Destroy()
+	end)
+	it("plans the hold on the visible art: its near face at the belly, the palms up under its bottom", function()
 		local model = measuredRig()
 		local proxy = cargo(CFrame.new(5, 1, -3))
 		local prepared = System.prepare(model, proxy, "recyclingBox", nil)
@@ -115,22 +130,19 @@ return function()
 		local box = prepared.pivot * prepared.box
 		-- The root sits at the origin facing -Z: the art's near face is just in front of the torso (-0.7).
 		expect(box.Position.Z + 1.4 / 2).to.be.near(-0.7 - 0.08, 1e-3)
+		expect(prepared.layout.under).to.equal(true)
 		for _, contact in { prepared.layout.right, prepared.layout.left } do
-			local p = contact.Position
-			local onSurface = math.abs(math.abs(p.X) - 1) < 1e-3
-				or math.abs(math.abs(p.Y) - 0.8) < 1e-3
-				or math.abs(math.abs(p.Z) - 0.7) < 1e-3
-			expect(onSurface).to.equal(true)
+			expect(contact.Position.Y).to.be.near(-0.8, 1e-3)
+			expect(contact.UpVector.Y > 0.9).to.equal(true)
 		end
 		-- The hands straddle the art's centre.
 		expect(prepared.layout.right.Position.X).to.be.near(-prepared.layout.left.Position.X, 1e-3)
 		model:Destroy()
 		proxy:Destroy()
 	end)
-	it("puts the hands on authored grips and holds the item at their height", function()
+	it("no longer reads authored rim grips: the palms still go under the item", function()
 		local model = measuredRig()
 		local proxy = cargo(CFrame.new(5, 1, -3))
-		-- Low on the art's near face, like a pot's rim under a plant.
 		for side, x in { Right = 0.5, Left = -0.5 } do
 			local grip = Instance.new("Attachment")
 			grip.Name = "CarryGrip" .. side
@@ -139,17 +151,8 @@ return function()
 		end
 		local prepared = System.prepare(model, proxy, "officePlant", nil)
 		expect(prepared).to.be.ok()
-		expect((prepared.layout.right.Position - Vector3.new(0.5, -0.4, 0.7)).Magnitude < 1e-3).to.equal(true)
-		expect((prepared.layout.left.Position - Vector3.new(-0.5, -0.4, 0.7)).Magnitude < 1e-3).to.equal(true)
-		-- The grips are at hand height: half an arm (1.2 + the wrist-to-palm 0.36) below the shoulders (1).
-		local reach = 1.2 + math.sqrt(0.2 ^ 2 + 0.3 ^ 2)
-		local grip = (prepared.pivot * prepared.box * prepared.layout.right).Position
-		expect(grip.Y).to.be.near(1 - reach * 0.5, 1e-3)
-		-- Out of reach: the box contacts instead, not no hands at all.
-		proxy.ArtVisual.Part.CarryGripRight.Position = Vector3.new(0.5, -0.4, -40)
-		local fallback = System.prepare(model, proxy, "officePlant", nil)
-		expect(fallback).to.be.ok()
-		expect(fallback.layout.right.Position.Z > -1).to.equal(true)
+		expect(prepared.layout.under).to.equal(true)
+		expect(prepared.layout.right.Position.Y).to.be.near(-0.8, 1e-3)
 		model:Destroy()
 		proxy:Destroy()
 	end)
@@ -162,6 +165,8 @@ return function()
 		front.Parent = proxy.ArtVisual.Part
 		local prepared = System.prepare(model, proxy, "recyclingBox", nil)
 		expect(prepared).to.be.ok()
+		-- The palms go in from the body front, not from the art's near face.
+		expect(prepared.layout.right.Position.Z < 0.3).to.equal(true)
 		-- The torso front is -0.7; the body gap 0.08.
 		expect((prepared.pivot * prepared.box).Position.Z + 0.3).to.be.near(-0.78, 1e-3)
 		model:Destroy()
@@ -187,6 +192,27 @@ return function()
 		controller.destroy()
 		expect(#root:GetChildren()).to.equal(0)
 		expect(humanoid:FindFirstChildWhichIsA("IKControl")).to.equal(nil)
+		model:Destroy()
+		root:Destroy()
+	end)
+	it("drives each palm, palm up, under the item and bends the elbows down toward a pole by the sides", function()
+		local model = measuredRig()
+		local root = Instance.new("Part")
+		local layout =
+			{ offset = CFrame.new(), right = CFrame.new(0.6, 0, -1), left = CFrame.new(-0.6, 0, -1), under = true }
+		local controller = System.bind(model, root, layout)
+		expect(controller).to.be.ok()
+		local control = model.Humanoid:FindFirstChild("CleanupCarryIKRight")
+		expect(control.EndEffectorOffset).to.equal(System.palmOf(model, "Right"))
+		expect(control.Pole).to.be.ok()
+		expect(control.Pole.Parent).to.equal(root)
+		-- Below the shoulder (y 1), behind it and outward.
+		local pole = control.Pole.WorldPosition
+		expect(pole.Y < 1).to.equal(true)
+		expect(pole.Z > 0).to.equal(true)
+		expect(pole.X > 0.6).to.equal(true)
+		controller.destroy()
+		expect(#root:GetChildren()).to.equal(0)
 		model:Destroy()
 		root:Destroy()
 	end)

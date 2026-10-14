@@ -332,6 +332,7 @@ CarryServiceServer = {
 				offset = prepared.layout.offset,
 				right = boxFromRoot * prepared.layout.right,
 				left = if prepared.layout.left ~= nil then boxFromRoot * prepared.layout.left else nil,
+				under = prepared.layout.under,
 			})
 		end
 		local weld = Instance.new("WeldConstraint")

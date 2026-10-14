@@ -177,28 +177,28 @@ them), weight 1 over whatever locomotion clip plays, so idle, walk and run all k
 Only arm chains are driven; no joint, attachment or Transform is written.
 
 - **Carried cargo** (`AnimationCarrySystem`, planned by `AnimationCarryContactUtils`): `measure` reads the
-  carrier from its rig in root space (shoulders, reach from shoulder to the palm point the IK drives, torso
-  front, head front and bottom, floor). The item sits just in front of the torso at chest/belly height (half
-  an arm below the shoulders), under the head or, when too tall, out past the face, never into the floor.
-  Each hand takes the first reachable contact on the item: its side near the body, the near vertical edge,
-  then flat on the near face. Pippa at 1.25x (arms ~1 stud, a round torso, a head hanging just above the
-  shoulders) used to get the old fixed 0.44-stud near distance, which put the box's near face inside her
-  torso and her palms with it: the arms read as hanging at her sides with the box floating at her hip.
-  Every cargo kind is held with two hands on both her and a stock R15 rig (spec'd). A caller-owned
-  `holdOffset` (the bulky cart) is kept, and gets no hands when they cannot reach it.
+  carrier from its rig in root space (shoulders, reach to the hand's end and to the palm's centre, the hand's
+  length, torso front, head front and bottom, floor). **The item is carried on the forearms** (2026-10-14):
+  both palms up under its visible bottom face, shoulder-width apart (brought in under a narrow item; a big
+  item wider than the carrier is fine), fingers forward and rolled ~12 degrees inward, the elbows bent down
+  toward a pole below, behind and just outside each shoulder, the item resting on the palms with its near face
+  against the belly. The palms sit about an upper arm (0.55 reach) below the shoulders, lower for a taller
+  item (up to 0.75), stepping lower or out past the face when it would hit the head. Short arms that cannot
+  reach that low around a round belly (Pippa at 1.25x: shoulders 0.75 behind her belly front, ~1.4 studs to
+  the palm) hold it as high as they need to, never higher than a quarter reach below the shoulders. The earlier
+  hold, hands reaching to the item's near corners and sides, read as stiff arms with twisted wrists.
+  The palm is found from the rig, not assumed (`palmOf` / `AnimationCarryContactUtils.palmFrame`): the
+  fingers run from the wrist to the hand's grip attachment, and the palm is the side that faces the body at
+  rest (down on Pippa's T-posed rig, inward on stock R15), so the IK end effector is the palm's face, oriented.
+  A caller-owned `holdOffset` (the bulky cart, pushed ahead) keeps its old hold: hands on its near side or
+  face, none when they cannot reach it.
   **The hold is planned on what can be seen** (`AnimationCarrySystem.visibleBox`: the item's parts with
   Transparency below 1, boxed in its pivot frame). Cargo is an invisible size-class proxy (`CargoRegistry`
   partSize, 2-3 studs) with its art welded inside it, uniformly fitted and standing on its floor, so the art
-  is smaller than the proxy on two axes: up to 0.86 studs shallower (monitor), 1.5 shorter (printer), 0.67
-  narrower (plaque). Planning on the proxy put the palms 0.15-0.86 studs off the art, in the air, and the art
-  up to 0.96 studs out from the belly. Measured in play on Pippa (2026-10-14): palms within 0.01 (recycling
-  box) to 0.14 studs (water jug, held out past her face) of their targets at idle, 0.12-0.24 walking. A box is still wrong for art that is not
-  boxy, so a template can author its hold with attachments on the mesh: `CarryGripRight` / `CarryGripLeft`
-  (the hands go there, palm along the attachment's -Y, and the item is held at their height) and
-  `CarryBodyFront` (the point rested against the body, in place of the box's near face). Grips the arms
-  cannot reach fall back to the box contacts. The office plant has them (2026-10-14): on the pot's rim and
-  front, since its box is set by leaves wider than the pot, which left the hands closing on air in front of
-  the foliage with the pot hanging below; she now hugs the pot to her belly, leaves past her face.
+  is smaller than the proxy on two axes; planning on the proxy put the hands in the air. A template can author
+  `CarryBodyFront` on the art (the point rested against the body, in place of the box's near face; the palms
+  go in from it): the office plant has it on its pot, since its box is set by leaves wider than the pot.
+  `CarryGripRight` / `CarryGripLeft` (handles on the pot's rim, for the old edge hold) are no longer read.
 - **The vacuum** (`VacuumHoldFormulas`, `AnimationVacuumHoldSystem`): the same full-size vacuum for
   everyone. Its body hangs ~1.5 studs and its floor head ~1.9 below the grip, where a stock avatar's
   hanging hand holds it upright. For a shorter holder the hold is fitted, not the vacuum: it is tilted
