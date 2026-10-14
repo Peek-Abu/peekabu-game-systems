@@ -233,7 +233,7 @@ function ShiftReviewViewModel.review(
 			{ label = "CLEARED", value = `{results.cleared} / {results.quota}` },
 			{
 				label = if met then ShiftCurrencyUtils.earnedLabel() else `{ShiftCurrencyUtils.earnedLabel()} (banked)`,
-				value = `+{results.bonus}`,
+				value = ShiftCurrencyUtils.amount(results.bonus),
 			},
 			{ label = "TIMES CAUGHT", value = tostring(results.catches) },
 			{ label = "ASSETS RECOVERED", value = `{results.salvage} of {results.offered}` },

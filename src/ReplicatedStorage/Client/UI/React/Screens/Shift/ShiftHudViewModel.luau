@@ -60,7 +60,7 @@ export type HudView = {
 	clearedShort: string,
 	fill: number,
 	quotaMet: boolean,
-	-- The plate's label ("SCRIP EARNED", ShiftCurrencyUtils) over the crew's running total.
+	-- The plate's label ("EARNED", ShiftCurrencyUtils) over the crew's running total ("$240").
 	feeLabel: string,
 	fee: string,
 	feeBoost: string?,
@@ -225,7 +225,7 @@ function ShiftHudViewModel.hud(
 		fill = if snapshot.quota > 0 then math.clamp(snapshot.cleared / snapshot.quota, 0, 1) else 1,
 		quotaMet = snapshot.quotaMet,
 		feeLabel = ShiftCurrencyUtils.earnedLabel(),
-		fee = `+{snapshot.bonus}`,
+		fee = ShiftCurrencyUtils.amount(snapshot.bonus),
 		feeBoost = if overtime then `×{ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER} now` else nil,
 		feeBoostShort = if overtime then `×{ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER}` else nil,
 		hands = handsOf(entry[CarryConstants.PUBLIC_FIELD]),
@@ -500,10 +500,9 @@ function ShiftHudViewModel.compact(view: HudView, bindings: KeyBindings): Compac
 		pocketCount = occupied,
 		actions = actions,
 		cargoValue = if hands ~= nil
-			then `{hands.value} {if def == nil
-				then "value"
-				elseif def.category == "trash" then "clearance"
-				else ShiftConstants.CURRENCY_NAME}`
+			then if def ~= nil and def.category ~= "trash"
+				then ShiftCurrencyUtils.signed(hands.value)
+				else `{hands.value} {if def == nil then "value" else "clearance"}`
 			else nil,
 	}
 end

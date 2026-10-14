@@ -90,7 +90,7 @@ local function lastOf(last: DepotTypes.LastShift, phone: boolean): LastView
 		title = title,
 		rows = {
 			{ label = "Cleared", value = `{last.cleared} / {last.quota}` },
-			{ label = `{ShiftConstants.CURRENCY_NAME} earned`, value = `+{last.bonus}` },
+			{ label = "Earned", value = ShiftCurrencyUtils.amount(last.bonus) },
 			{ label = "Times rehired", value = tostring(last.catches) },
 			{ label = "Assets recovered", value = `{last.salvage} of {last.offered}` },
 		},
@@ -113,7 +113,7 @@ function DepotBoardViewModel.board(id: string?, last: DepotTypes.LastShift?, pho
 		rows = {
 			{ label = "QUOTA", text = `{quota} {copy.quotaPhone}`, hazard = false },
 			{ label = "SHIFT", text = `{shift} · {copy.shiftPhone}`, hazard = false },
-			{ label = "PAY", text = `Assets → {ShiftConstants.CURRENCY_NAME}`, hazard = false },
+			{ label = "PAY", text = `Assets → {ShiftCurrencyUtils.SYMBOL}`, hazard = false },
 			{ label = "HAZARD", text = copy.hazardPhone, hazard = true },
 		}
 	else
@@ -122,7 +122,7 @@ function DepotBoardViewModel.board(id: string?, last: DepotTypes.LastShift?, pho
 			{ label = "SHIFT", text = `{shift} {copy.shift}`, hazard = false },
 			{
 				label = "PAY",
-				text = `Recoverable Assets you bank pay the crew in company {ShiftConstants.CURRENCY_NAME}.`,
+				text = "Every Recoverable Asset you bank pays the crew its assessed value in dollars.",
 				hazard = false,
 			},
 			{ label = "CREW", text = copy.crew, hazard = false },

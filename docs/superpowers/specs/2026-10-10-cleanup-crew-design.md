@@ -7,7 +7,7 @@ Date: 2026-10-10. Source briefs: `MVP_Demo_Pack/cleanup_crew_01_design.md`, `_02
 > the player is a Clearance Associate of **Morrow & Morrow Clearance** ("A clean site is a compliant site."),
 > the closed office belongs to the client **Harlow & Finch Ltd.**, the monster is **the Manager** (a Residual;
 > company paperwork says "Site Supervisor Proxy"), the truck is the **Mobile Recovery Unit** in flavour text,
-> valuables are **Recoverable Assets** paid in company **Scrip**, and **overtime is opt-in**. Sections 2–4
+> valuables are **Recoverable Assets** paid in dollars (**Recovery pay**), and **overtime is opt-in**. Sections 2–4
 > below are updated; elsewhere "Harlow" and "salvage" survive as code names (the `harlow` NPC kind, the
 > `salvage` cargo category) and are never shown to players.
 
@@ -43,7 +43,7 @@ Harlow & Finch Ltd. closed its offices overnight, and the building did not empty
 Clearance** sends its cheerful, underpaid **Clearance Associates** (your crew) to clear the site: every
 bag of rubbish and every full dust canister of **site buildup** counts toward the **clearance quota**,
 banked in the truck, the company's **Mobile Recovery Unit**. **Recoverable Assets** you bank pay the
-crew in company **Scrip**: the optional greed. **The Manager**, a Residual (hostile site activity the
+crew their assessed value in dollars, Morrow & Morrow's hazard-pay **Recovery pay**: the optional greed. **The Manager**, a Residual (hostile site activity the
 company calls "noncompliant site activity"), still works late, still does performance reviews, and
 treats you as unauthorized staff stealing COMPANY ASSETS. It is not tied to one person, so later
 buildings can have their own Manager. Tone: horror-comedy, kid-safe. Full canon:
@@ -69,7 +69,7 @@ The depot contract board and a one-card arrival screen carry this; no tutorial n
    regroup.**" → overtime at the top tier until the timer ends. The clock alone never starts it.
 6. **Clock out** at the truck any time: anyone presses it, a 10 s countdown is announced to all;
    unbanked cargo is lost from this run only. Timer expiry also ends the shift with what is banked.
-7. **Results:** the "performance review" (cleared, Scrip earned, catches, assets recovered, joke awards).
+7. **Results:** the "performance review" (cleared, dollars earned, catches, assets recovered, joke awards).
    Party vote: **Another shift** (reset in the same server) or **Back to depot** (teleport).
 
 ## 4. Mechanics (all numbers are tuning hypotheses, kept in Data constants)
@@ -114,8 +114,8 @@ searchable desk/locker.
 - **Search** desks and lockers: short hold, small noise, may yield a small or tiny item. Contents are
   rolled at shift start, not at search time.
 - **Banking:** stand in the truck bed, **Bank cargo** with your hands item (pockets unload with it). Trash
-  adds to clearance, Recoverable Assets add Scrip (×1.5 during overtime). Banked is safe forever. Scrip
-  is display-only in the demo (no saved balance); its name is one constant, `ShiftConstants.CURRENCY_NAME`.
+  adds to clearance, Recoverable Assets add dollars (×1.5 during overtime). Banked is safe forever. Pay
+  is display-only in the demo (no saved balance); how an amount reads lives in one place, `ShiftCurrencyUtils`.
 - **Quota** ~350 clearance. Spawn guarantees: total trash value ≥ 1.5× quota (counting canister
   output from the piles spawned), and at least one greed target (fish tank, cabinet or golden
   stapler), placed deep.

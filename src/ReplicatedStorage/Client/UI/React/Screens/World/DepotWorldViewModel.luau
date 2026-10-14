@@ -218,7 +218,7 @@ function DepotWorldViewModel.review(attributes: { [string]: unknown }): ReviewVi
 		band = `SHIFT REVIEW · {band}`,
 		rows = {
 			{ label = "CLEARED", value = `{cleared} / {quota}` },
-			{ label = ShiftCurrencyUtils.earnedLabel(), value = `+{bonus}` },
+			{ label = ShiftCurrencyUtils.earnedLabel(), value = ShiftCurrencyUtils.amount(bonus) },
 			{ label = "TIMES CAUGHT", value = tostring(catches) },
 			{ label = "ASSETS", value = `{salvage} of {offered}` },
 		},

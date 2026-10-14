@@ -1,41 +1,43 @@
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
 local ShiftCurrencyUtils = require(script.Parent.ShiftCurrencyUtils)
-local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 
 return function()
-	local NAME = ShiftConstants.CURRENCY_NAME
-
-	it("pays associates in company Scrip", function()
-		expect(NAME).to.equal("Scrip")
+	it("pays associates in dollars", function()
+		expect(ShiftCurrencyUtils.SYMBOL).to.equal("$")
 	end)
 
 	describe("amount", function()
-		it("writes a whole amount followed by the currency's name", function()
-			expect(ShiftCurrencyUtils.amount(45)).to.equal(`45 {NAME}`)
+		it("writes a whole dollar amount", function()
+			expect(ShiftCurrencyUtils.amount(45)).to.equal("$45")
 		end)
 
 		it("rounds to a whole amount and never reads below zero", function()
-			expect(ShiftCurrencyUtils.amount(14.6)).to.equal(`15 {NAME}`)
-			expect(ShiftCurrencyUtils.amount(-3)).to.equal(`0 {NAME}`)
-			expect(ShiftCurrencyUtils.amount(0 / 0)).to.equal(`0 {NAME}`)
+			expect(ShiftCurrencyUtils.amount(14.6)).to.equal("$15")
+			expect(ShiftCurrencyUtils.amount(-3)).to.equal("$0")
+			expect(ShiftCurrencyUtils.amount(0 / 0)).to.equal("$0")
 		end)
 	end)
 
 	describe("gain", function()
 		it("signs what was just earned", function()
-			expect(ShiftCurrencyUtils.gain(40)).to.equal(`+40 {NAME}`)
-			expect(ShiftCurrencyUtils.gain(0)).to.equal(`+0 {NAME}`)
+			expect(ShiftCurrencyUtils.gain(40)).to.equal("+$40")
+			expect(ShiftCurrencyUtils.gain(0)).to.equal("+$0")
+		end)
+	end)
+
+	describe("signed", function()
+		it("puts the dollar sign after an already-formatted sign", function()
+			expect(ShiftCurrencyUtils.signed("+40")).to.equal("+$40")
+			expect(ShiftCurrencyUtils.signed("-5")).to.equal("-$5")
+		end)
+
+		it("prefixes an unsigned amount", function()
+			expect(ShiftCurrencyUtils.signed("40")).to.equal("$40")
 		end)
 	end)
 
 	describe("labels", function()
 		it("names the earned total in capitals for the plates and the review", function()
-			expect(ShiftCurrencyUtils.earnedLabel()).to.equal(`{string.upper(NAME)} EARNED`)
-		end)
-
-		it("stamps an earned amount in capitals", function()
-			expect(ShiftCurrencyUtils.stamp("+40")).to.equal(`+40 {string.upper(NAME)}`)
+			expect(ShiftCurrencyUtils.earnedLabel()).to.equal("EARNED")
 		end)
 	end)
 end

@@ -1,16 +1,13 @@
 --!strict
 --[=[
-	ShiftCurrencyUtils: how an amount of company scrip reads (docs/cleanup-crew-lore.md: Morrow & Morrow pays its
-	Clearance Associates in company scrip for the Recoverable Assets they bank). Every price tag, load floater, fee plate,
-	review and board row writes its amounts through here, so the currency is renamed by changing
-	ShiftConstants.CURRENCY_NAME alone. Display only: the amount is the shift's `bonus` counter, not a saved balance. Pure.
+	ShiftCurrencyUtils: how an amount of pay reads (docs/cleanup-crew-lore.md: Morrow & Morrow pays its Clearance
+	Associates a hazard-pay bonus in dollars, "Recovery pay", on the assessed value of the Recoverable Assets they
+	bank). Every price tag, load floater, fee plate, review and board row writes its amounts through here, so this is
+	the one place the currency's look lives. Display only: the amount is the shift's `bonus` counter, not a saved
+	balance. Pure.
 
 	@class ShiftCurrencyUtils
 ]=]
-
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 
 -- A whole, non-negative amount (NaN reads 0).
 local function whole(value: number): number
@@ -20,34 +17,42 @@ local function whole(value: number): number
 	return math.max(0, math.floor(value + 0.5))
 end
 
-local ShiftCurrencyUtils = {}
+local ShiftCurrencyUtils = {
+	-- The currency's sign, written before the number.
+	SYMBOL = "$",
+}
 
 --[=[
-	"45 Scrip": `value` rounded to a whole amount, never below zero.
+	"$45": `value` rounded to a whole amount, never below zero.
 ]=]
 function ShiftCurrencyUtils.amount(value: number): string
-	return `{whole(value)} {ShiftConstants.CURRENCY_NAME}`
+	return `{ShiftCurrencyUtils.SYMBOL}{whole(value)}`
 end
 
 --[=[
-	"+40 Scrip": an amount just earned.
+	"+$40": an amount just earned.
 ]=]
 function ShiftCurrencyUtils.gain(value: number): string
 	return `+{ShiftCurrencyUtils.amount(value)}`
 end
 
 --[=[
-	"SCRIP EARNED": the label over the crew's running total (the fee plate, the review, the depot boards).
+	"+$40": an already-formatted number (`text`, e.g. "+40") with the sign kept in front of the "$".
 ]=]
-function ShiftCurrencyUtils.earnedLabel(): string
-	return `{string.upper(ShiftConstants.CURRENCY_NAME)} EARNED`
+function ShiftCurrencyUtils.signed(text: string): string
+	local sign = string.sub(text, 1, 1)
+	if sign == "+" or sign == "-" then
+		return `{sign}{ShiftCurrencyUtils.SYMBOL}{string.sub(text, 2)}`
+	end
+	return `{ShiftCurrencyUtils.SYMBOL}{text}`
 end
 
 --[=[
-	"+40 SCRIP": an already-formatted gain (`text`, e.g. "+40") as a rubber stamp reads it.
+	"EARNED": the label over the crew's running total (the fee plate, the review, the depot boards), which reads
+	"EARNED $240" beside the amount.
 ]=]
-function ShiftCurrencyUtils.stamp(text: string): string
-	return `{text} {string.upper(ShiftConstants.CURRENCY_NAME)}`
+function ShiftCurrencyUtils.earnedLabel(): string
+	return "EARNED"
 end
 
 return ShiftCurrencyUtils

@@ -2,11 +2,11 @@
 --[=[
 	CargoWorldViewModel: what a cargo item's price tag says and when it is drawn (Figma World UI 2b, W5). The tag reads
 	the item's shell attributes (CargoConstants.LABEL_KEYS): the name (cut at NAME_MAX, the longest catalog name, so
-	every real name stays whole), the price ("45 Scrip" for a Recoverable Asset, ShiftCurrencyUtils; "+10" clearance for trash) and the mark: "FRAGILE" for an
+	every real name stays whole), the price ("$45" for a Recoverable Asset, ShiftCurrencyUtils; "+10" clearance for trash) and the mark: "FRAGILE" for an
 	undamaged fragile item, "CRACKED −50%" / "CRACKED −75%" from CargoConstants.FRAGILE_TIERS once it took impacts
 	(the price turns red), else none. `mounted`: a tag mounts within LABEL_DISTANCE of the camera and stays until
 	LABEL_KEEP_DISTANCE, and never while the item is hidden under a pile.
-	The load floaters (W6): clearance pops as the number over CLEARED, the scrip earned as a "+40 SCRIP" stamp (the
+	The load floaters (W6): clearance pops as the number over CLEARED, the pay earned as a "+$40" stamp (the
 	approved frame's layout). Pure.
 
 	@class CargoWorldViewModel
@@ -28,7 +28,7 @@ export type PriceTagView = {
 }
 
 export type FloaterView = {
-	-- The scrip earned: drawn as the blue stamp.
+	-- The pay earned: drawn as the blue stamp.
 	bonus: boolean,
 	text: string,
 	caption: string?,
@@ -82,7 +82,7 @@ end
 
 function CargoWorldViewModel.floater(item: CargoFeedbackUtils.Floater): FloaterView
 	if item.tone == "bonus" then
-		return { bonus = true, text = ShiftCurrencyUtils.stamp(item.text), caption = nil }
+		return { bonus = true, text = ShiftCurrencyUtils.signed(item.text), caption = nil }
 	end
 	return { bonus = false, text = item.text, caption = "CLEARED" }
 end

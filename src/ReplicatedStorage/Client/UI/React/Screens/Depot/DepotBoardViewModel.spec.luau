@@ -2,7 +2,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local DepotBoardViewModel = require(script.Parent.DepotBoardViewModel)
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
-local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 
 local LAST = {
 	cleared = 362,
@@ -55,7 +54,7 @@ return function()
 		local view = DepotBoardViewModel.board(nil, nil, true)
 		expect(#view.rows).to.equal(4)
 		expect(rowOf(view, "QUOTA").text).to.equal("350 clearance")
-		expect(rowOf(view, "PAY").text).to.equal(`Assets → {ShiftConstants.CURRENCY_NAME}`)
+		expect(rowOf(view, "PAY").text).to.equal("Assets → $")
 	end)
 
 	it("reads the first contract when none is open", function()
@@ -70,7 +69,7 @@ return function()
 		local last = DepotBoardViewModel.board(nil, LAST, false).last
 		expect(last.title).to.equal("YOUR LAST SHIFT — TRUCK 2")
 		expect(last.rows[1].value).to.equal("362 / 350")
-		expect(last.rows[2].value).to.equal("+215")
+		expect(last.rows[2].value).to.equal("$215")
 		expect(last.rows[3].value).to.equal("2")
 		expect(last.rows[4].value).to.equal("6 of 9")
 		expect(last.stamp).to.equal("QUOTA MET")
@@ -89,7 +88,7 @@ return function()
 	it("writes the phone's two last-shift lines", function()
 		local last = DepotBoardViewModel.board(nil, LAST, true).last
 		expect(last.title).to.equal("LAST SHIFT")
-		expect(last.lines[1]).to.equal(`Cleared 362/350  ·  +215 {ShiftConstants.CURRENCY_NAME}`)
+		expect(last.lines[1]).to.equal("Cleared 362/350  ·  +$215")
 		expect(last.lines[2]).to.equal("Rehired 2  ·  Assets 6 of 9")
 	end)
 

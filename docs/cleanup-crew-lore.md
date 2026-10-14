@@ -3,8 +3,10 @@
 > **Canonical reference.** Copied from the developer's `cleanup_crew_lore_economy_foundation.md` on
 > 2026-10-13; edit it here. Approved project decisions on top of the text below:
 >
-> - The demo's earned currency is company **Scrip** (`ShiftConstants.CURRENCY_NAME`), not "Recovery Credits".
->   It is display-only for now: no saved balance yet.
+> - The demo pays in plain **dollars** ("$45", "+$40", "EARNED $240"), not "Recovery Credits" (2026-10-14; the
+>   short-lived company "Scrip" was dropped). Lore: Morrow & Morrow pays its associates a hazard-pay bonus in
+>   dollars, **Recovery pay**, on the assessed value of every Recoverable Asset they bring back. The look of an
+>   amount lives in one place, `ShiftCurrencyUtils`. It is display-only for now: no saved balance yet.
 > - The monster is **the Manager** in every player-facing string; code internals keep the `harlow` NPC kind.
 > - Overtime is opt-in: a crew member signs the overtime sheet beside the time clock at the truck
 >   (`docs/superpowers/specs/2026-10-10-cleanup-crew-design.md` §4 "Pacing").
