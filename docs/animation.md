@@ -170,6 +170,23 @@ fades). Two things to know:
 - **Kill switch:** set the Workspace attribute `LocomotionEnabled = false` and every locomotion
   track stops — instantly answers "is the weirdness on screen ours?". `true` recovers, no respawn.
 
+## Holding things (IK over locomotion)
+
+Holds are native `IKControl`s the server creates under the holder's Humanoid (every client's Animator solves
+them), weight 1 over whatever locomotion clip plays, so idle, walk and run all keep the hands on the object.
+Only arm chains are driven; no joint, attachment or Transform is written.
+
+- **Carried cargo** (`AnimationCarrySystem`, planned by `AnimationCarryContactUtils`): `measure` reads the
+  carrier from its rig in root space (shoulders, reach from shoulder to the palm point the IK drives, torso
+  front, head front and bottom, floor). The item sits just in front of the torso at chest/belly height (half
+  an arm below the shoulders), under the head or, when too tall, out past the face, never into the floor.
+  Each hand takes the first reachable contact on the item: its side near the body, the near vertical edge,
+  then flat on the near face. Pippa at 1.25x (arms ~1 stud, a round torso, a head hanging just above the
+  shoulders) used to get the old fixed 0.44-stud near distance, which put the box's near face inside her
+  torso and her palms with it: the arms read as hanging at her sides with the box floating at her hip.
+  Every cargo kind is held with two hands on both her and a stock R15 rig (spec'd). A caller-owned
+  `holdOffset` (the bulky cart) is kept, and gets no hands when they cannot reach it.
+
 ## Retargeting (check this FIRST if poses ever look wrong)
 
 `Workspace.Retargeting` is a per-place setting this base leaves at its default. A game whose rig is

@@ -16,22 +16,76 @@ local function attachment(bodyPart: BasePart, name: string): Attachment?
 	local found = bodyPart:FindFirstChild(name)
 	return if found ~= nil and found:IsA("Attachment") then found else nil
 end
+-- Shoulder (root space) and reach from the shoulder to the palm point the IK end effector drives (the arm's
+-- two spans plus wrist to palm), read from the rig attachments so any scale or proportion is measured.
 local function arm(character: Model, side: string, root: BasePart): (Vector3?, number?)
 	local upper = part(character, side .. "UpperArm")
 	local lower = part(character, side .. "LowerArm")
-	if upper == nil or lower == nil then
+	local hand = part(character, side .. "Hand")
+	if upper == nil or lower == nil or hand == nil then
 		return nil, nil
 	end
 	local shoulder = attachment(upper, side .. "ShoulderRigAttachment")
 	local elbow = attachment(upper, side .. "ElbowRigAttachment")
 	local lowerElbow = attachment(lower, side .. "ElbowRigAttachment")
 	local wrist = attachment(lower, side .. "WristRigAttachment")
-	if shoulder == nil or elbow == nil or lowerElbow == nil or wrist == nil then
+	local handWrist = attachment(hand, side .. "WristRigAttachment")
+	if shoulder == nil or elbow == nil or lowerElbow == nil or wrist == nil or handWrist == nil then
 		return nil, nil
 	end
+	local palm = (Vector3.new(0, -hand.Size.Y / 2, 0) - handWrist.Position).Magnitude
 	return root.CFrame:PointToObjectSpace(shoulder.WorldPosition),
 		(shoulder.WorldPosition - elbow.WorldPosition).Magnitude
 			+ (lowerElbow.WorldPosition - wrist.WorldPosition).Magnitude
+			+ palm
+end
+-- The most extreme corner of `bodyPart` along root-space `axis` (min when `sign` is -1).
+local function extreme(root: BasePart, bodyPart: BasePart, axis: Vector3, sign: number): number
+	local frame = root.CFrame:ToObjectSpace(bodyPart.CFrame)
+	local half = bodyPart.Size / 2
+	local best = -sign * math.huge
+	for _, x in { -1, 1 } do
+		for _, y in { -1, 1 } do
+			for _, z in { -1, 1 } do
+				local along = (frame * Vector3.new(x * half.X, y * half.Y, z * half.Z)):Dot(axis)
+				best = if sign < 0 then math.min(best, along) else math.max(best, along)
+			end
+		end
+	end
+	return best
+end
+--[=[
+	The carrier as AnimationCarryContactUtils sees it, in HumanoidRootPart space: shoulders and reaches, the
+	torso front, the head's front and bottom, and the floor. Nil for a rig without native R15 arms, torso and head.
+]=]
+function AnimationCarrySystem.measure(character: Model): AnimationCarryContactUtils.Rig?
+	local root = part(character, "HumanoidRootPart")
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	local upperTorso = part(character, "UpperTorso")
+	local head = part(character, "Head")
+	if root == nil or humanoid == nil or upperTorso == nil or head == nil then
+		return nil
+	end
+	local left, leftReach = arm(character, "Left", root)
+	local right, rightReach = arm(character, "Right", root)
+	if left == nil or leftReach == nil or right == nil or rightReach == nil then
+		return nil
+	end
+	local front = extreme(root, upperTorso, Vector3.zAxis, -1)
+	local lowerTorso = part(character, "LowerTorso")
+	if lowerTorso ~= nil then
+		front = math.min(front, extreme(root, lowerTorso, Vector3.zAxis, -1))
+	end
+	return {
+		leftShoulder = left,
+		rightShoulder = right,
+		leftReach = leftReach,
+		rightReach = rightReach,
+		front = front,
+		headFront = extreme(root, head, Vector3.zAxis, -1),
+		headBottom = extreme(root, head, Vector3.yAxis, -1),
+		floor = -root.Size.Y / 2 - humanoid.HipHeight,
+	}
 end
 function AnimationCarrySystem.prepare(
 	character: Model,
@@ -40,12 +94,8 @@ function AnimationCarrySystem.prepare(
 	requestedOffset: CFrame?
 ): Prepared?
 	local root = part(character, "HumanoidRootPart")
-	if root == nil then
-		return nil
-	end
-	local left, leftReach = arm(character, "Left", root)
-	local right, rightReach = arm(character, "Right", root)
-	if left == nil or leftReach == nil or right == nil or rightReach == nil then
+	local rig = AnimationCarrySystem.measure(character)
+	if root == nil or rig == nil then
 		return nil
 	end
 	local boxFrame: CFrame
@@ -59,15 +109,7 @@ function AnimationCarrySystem.prepare(
 	end
 	local boxFromPivot = target:GetPivot():ToObjectSpace(boxFrame)
 	local requestedBox = if requestedOffset ~= nil then requestedOffset * boxFromPivot else nil
-	local plan = AnimationCarryContactUtils.plan(
-		size,
-		left,
-		right,
-		leftReach,
-		rightReach,
-		AnimationCarryRegistry.get(kind),
-		requestedBox
-	)
+	local plan = AnimationCarryContactUtils.plan(size, rig, AnimationCarryRegistry.get(kind), requestedBox)
 	if plan == nil then
 		return nil
 	end
@@ -78,10 +120,7 @@ function AnimationCarrySystem.prepare(
 			plan,
 			boxFrame:ToObjectSpace(rightGrip.WorldCFrame),
 			if leftGrip ~= nil and leftGrip:IsA("Attachment") then boxFrame:ToObjectSpace(leftGrip.WorldCFrame) else nil,
-			left,
-			right,
-			leftReach,
-			rightReach
+			rig
 		)
 		if plan == nil then
 			return nil
