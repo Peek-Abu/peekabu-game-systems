@@ -104,6 +104,33 @@ return function()
 		expect(Contact.plan(Vector3.new(2, 2, 2), broken, "twoHand")).to.equal(nil)
 	end)
 
+	it("raises an authored grip height to the hands: a pot rim low on a tall plant", function()
+		-- Pippa's hands go half an arm below her shoulders.
+		local handY = 1.11 - 1.43 * 0.5
+		local size = Vector3.new(1.5, 2.5, 1.5)
+		local plan = Contact.plan(size, pippa, "twoHand", nil, { gripY = -0.4 })
+		expect(plan).to.be.ok()
+		expect(plan.offset.Position.Y - 0.4).to.be.near(handY, 1e-3)
+		-- Too tall to fit under her head, it is still held against her body at the grips' height (lowering it
+		-- or pushing it out past her face would take the grips out of her reach).
+		expect(plan.offset.Position.Z + size.Z / 2).to.be.near(pippa.front - 0.08, 1e-3)
+		-- Without one, the box's middle is at the hands.
+		expect(Contact.plan(Vector3.new(1, 1, 1), pippa, "twoHand").offset.Position.Y).to.be.near(handY, 1e-3)
+		-- Never into the floor.
+		local low = Contact.plan(size, pippa, "twoHand", nil, { gripY = 1.2 })
+		expect(low.offset.Position.Y - size.Y / 2 >= pippa.floor).to.equal(true)
+		expect(Contact.plan(size, pippa, "twoHand", nil, { gripY = 0 / 0 })).to.equal(nil)
+	end)
+
+	it("rests the authored body front against the torso, not the box's near face (a pot under wide leaves)", function()
+		local size = Vector3.new(1.5, 2.5, 1.5)
+		local plan = Contact.plan(size, pippa, "twoHand", nil, { gripY = -0.4, bodyZ = 0.55 })
+		expect(plan).to.be.ok()
+		expect(plan.offset.Position.Z + 0.55).to.be.near(pippa.front - 0.08, 1e-3)
+		-- A body front outside the box is malformed.
+		expect(Contact.plan(size, pippa, "twoHand", nil, { bodyZ = 2 })).to.equal(nil)
+	end)
+
 	it("authored handle targets override box grips only when the arms can reach them", function()
 		local plan = Contact.plan(Vector3.new(2, 2, 2), stock, "twoHand")
 		local custom = Contact.withGrips(plan, CFrame.new(0.8, 0.2, 1), nil, stock)

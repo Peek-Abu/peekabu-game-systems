@@ -127,6 +127,46 @@ return function()
 		model:Destroy()
 		proxy:Destroy()
 	end)
+	it("puts the hands on authored grips and holds the item at their height", function()
+		local model = measuredRig()
+		local proxy = cargo(CFrame.new(5, 1, -3))
+		-- Low on the art's near face, like a pot's rim under a plant.
+		for side, x in { Right = 0.5, Left = -0.5 } do
+			local grip = Instance.new("Attachment")
+			grip.Name = "CarryGrip" .. side
+			grip.CFrame = CFrame.new(x, -0.4, 0.7) * CFrame.Angles(math.pi / 2, 0, 0)
+			grip.Parent = proxy.ArtVisual.Part
+		end
+		local prepared = System.prepare(model, proxy, "officePlant", nil)
+		expect(prepared).to.be.ok()
+		expect((prepared.layout.right.Position - Vector3.new(0.5, -0.4, 0.7)).Magnitude < 1e-3).to.equal(true)
+		expect((prepared.layout.left.Position - Vector3.new(-0.5, -0.4, 0.7)).Magnitude < 1e-3).to.equal(true)
+		-- The grips are at hand height: half an arm (1.2 + the wrist-to-palm 0.36) below the shoulders (1).
+		local reach = 1.2 + math.sqrt(0.2 ^ 2 + 0.3 ^ 2)
+		local grip = (prepared.pivot * prepared.box * prepared.layout.right).Position
+		expect(grip.Y).to.be.near(1 - reach * 0.5, 1e-3)
+		-- Out of reach: the box contacts instead, not no hands at all.
+		proxy.ArtVisual.Part.CarryGripRight.Position = Vector3.new(0.5, -0.4, -40)
+		local fallback = System.prepare(model, proxy, "officePlant", nil)
+		expect(fallback).to.be.ok()
+		expect(fallback.layout.right.Position.Z > -1).to.equal(true)
+		model:Destroy()
+		proxy:Destroy()
+	end)
+	it("rests an authored body front against the torso instead of the art's near face", function()
+		local model = measuredRig()
+		local proxy = cargo(CFrame.new(5, 1, -3))
+		local front = Instance.new("Attachment")
+		front.Name = "CarryBodyFront"
+		front.Position = Vector3.new(0, -0.4, 0.3)
+		front.Parent = proxy.ArtVisual.Part
+		local prepared = System.prepare(model, proxy, "recyclingBox", nil)
+		expect(prepared).to.be.ok()
+		-- The torso front is -0.7; the body gap 0.08.
+		expect((prepared.pivot * prepared.box).Position.Z + 0.3).to.be.near(-0.78, 1e-3)
+		model:Destroy()
+		proxy:Destroy()
+	end)
 	it("binds only arm chains to real cargo attachments and destroys owned controls idempotently", function()
 		local model, humanoid = fixture()
 		local root = Instance.new("Part")

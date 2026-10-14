@@ -151,22 +151,33 @@ function AnimationCarrySystem.prepare(
 	local boxFromPivot, size = AnimationCarrySystem.visibleBox(target)
 	local boxFrame = target:GetPivot() * boxFromPivot
 	local requestedBox = if requestedOffset ~= nil then requestedOffset * boxFromPivot else nil
-	local plan = AnimationCarryContactUtils.plan(size, rig, AnimationCarryRegistry.get(kind), requestedBox)
+	-- Authored on the art: handles (CarryGripRight / CarryGripLeft) the hands go to, the item held at their
+	-- height, when the arms reach them (otherwise the box contacts); and the point held against the body
+	-- (CarryBodyFront: a pot's front under leaves wider than it), in place of the box's near face.
+	local rightGrip = target:FindFirstChild("CarryGripRight", true)
+	local leftGrip = target:FindFirstChild("CarryGripLeft", true)
+	local bodyFront = target:FindFirstChild("CarryBodyFront", true)
+	local right = if rightGrip ~= nil and rightGrip:IsA("Attachment")
+		then boxFrame:ToObjectSpace(rightGrip.WorldCFrame)
+		else nil
+	local left = if right ~= nil
+			and leftGrip ~= nil
+			and leftGrip:IsA("Attachment")
+		then boxFrame:ToObjectSpace(leftGrip.WorldCFrame)
+		else nil
+	local authored: AnimationCarryContactUtils.Authored = {
+		gripY = if right ~= nil and left ~= nil then (right.Y + left.Y) / 2 elseif right ~= nil then right.Y else nil,
+		bodyZ = if bodyFront ~= nil and bodyFront:IsA("Attachment")
+			then boxFrame:PointToObjectSpace(bodyFront.WorldPosition).Z
+			else nil,
+	}
+	local style: AnimationCarryRegistry.Style = AnimationCarryRegistry.get(kind)
+	local plan = AnimationCarryContactUtils.plan(size, rig, style, requestedBox, authored)
 	if plan == nil then
 		return nil
 	end
-	local rightGrip = target:FindFirstChild("CarryGripRight", true)
-	local leftGrip = target:FindFirstChild("CarryGripLeft", true)
-	if rightGrip ~= nil and rightGrip:IsA("Attachment") then
-		plan = AnimationCarryContactUtils.withGrips(
-			plan,
-			boxFrame:ToObjectSpace(rightGrip.WorldCFrame),
-			if leftGrip ~= nil and leftGrip:IsA("Attachment") then boxFrame:ToObjectSpace(leftGrip.WorldCFrame) else nil,
-			rig
-		)
-		if plan == nil then
-			return nil
-		end
+	if right ~= nil then
+		plan = AnimationCarryContactUtils.withGrips(plan, right, left, rig) or plan
 	end
 	local pivot = root.CFrame * plan.offset * boxFromPivot:Inverse()
 	return { pivot = pivot, box = boxFromPivot, layout = plan }

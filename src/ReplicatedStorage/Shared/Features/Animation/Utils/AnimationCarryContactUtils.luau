@@ -15,6 +15,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local AnimationCarryRegistry = require(ReplicatedStorage.Shared.Features.Animation.Data.AnimationCarryRegistry)
 
 export type Layout = { offset: CFrame, right: CFrame, left: CFrame? }
+-- Hold geometry authored on the art, in box space (see `plan`).
+export type Authored = { gripY: number?, bodyZ: number? }
 
 --[=[
 	@interface Rig
@@ -121,16 +123,26 @@ end
 --[=[
 	Plans the hold of an item of bounding `size` for `rig`. `requestedOffset` (a caller-owned placement, the box
 	in root space) is kept as given; nil when the arms cannot reach it. Two hands always when both reach; a
-	"small" or "handle" item settles for the right hand alone. Nil for a malformed size or rig.
+	"small" or "handle" item settles for the right hand alone. `authored` (box space, from the art's
+	attachments) overrides the box: `gripY` is the height its grips hold it at (a pot's rim low on a tall
+	plant), put at hand height instead of the box's middle, and `bodyZ` the depth of the part held against the
+	body (the pot's front, not the leaves' box), so the item comes in that close and stays there even when it
+	rises past the face. Nil for a malformed size, rig or authored value.
 ]=]
 function AnimationCarryContactUtils.plan(
 	size: Vector3,
 	rig: Rig,
 	style: AnimationCarryRegistry.Style,
-	requestedOffset: CFrame?
+	requestedOffset: CFrame?,
+	authored: Authored?
 ): Layout?
+	local gripY = if authored ~= nil then authored.gripY else nil
+	local bodyZ = if authored ~= nil and authored.bodyZ ~= nil then authored.bodyZ else size.Z / 2
 	if
-		not valid(size.X)
+		(gripY ~= nil and not finite(gripY))
+		or not finite(bodyZ)
+		or math.abs(bodyZ) > size.Z / 2 + 1e-3
+		or not valid(size.X)
 		or not valid(size.Y)
 		or not valid(size.Z)
 		or not valid(rig.rightReach)
@@ -155,19 +167,21 @@ function AnimationCarryContactUtils.plan(
 	end
 	local lowest = rig.floor + FLOOR_GAP + size.Y / 2
 	local underHead = rig.headBottom - HEAD_GAP - size.Y / 2
-	local centreY = math.max(handY, lowest)
+	local centreY = math.max(handY - (gripY or 0), lowest)
 	local near = rig.front - BODY_GAP
 	local placements: { { y: number, near: number } } = {}
-	if centreY <= underHead or near <= rig.headFront - HEAD_GAP then
+	-- Authored grips define the hold: the item comes to the body at their height even when its upper part (a
+	-- plant's leaves) rises past the face, since lowering or pushing it out would put them out of reach.
+	if centreY <= underHead or near <= rig.headFront - HEAD_GAP or gripY ~= nil then
 		table.insert(placements, { y = centreY, near = near })
-	elseif underHead >= lowest then
+	elseif underHead >= lowest and gripY == nil then
 		-- Lowered to slip under the head.
 		table.insert(placements, { y = underHead, near = near })
 	end
 	-- Too tall for that: held out past the face.
 	table.insert(placements, { y = centreY, near = math.min(near, rig.headFront - HEAD_GAP) })
 	for _, placement in placements do
-		local offset = CFrame.new(0, placement.y, placement.near - size.Z / 2)
+		local offset = CFrame.new(0, placement.y, placement.near - bodyZ)
 		local layout = contacts(size, rig, style, offset, gripYFor(placement.y))
 		if layout ~= nil then
 			return layout

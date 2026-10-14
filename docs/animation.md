@@ -192,8 +192,13 @@ Only arm chains are driven; no joint, attachment or Transform is written.
   is smaller than the proxy on two axes: up to 0.86 studs shallower (monitor), 1.5 shorter (printer), 0.67
   narrower (plaque). Planning on the proxy put the palms 0.15-0.86 studs off the art, in the air, and the art
   up to 0.96 studs out from the belly. Measured in play on Pippa (2026-10-14): palms within 0.01 (recycling
-  box) to 0.14 studs (water jug, held out past her face) of their targets at idle, 0.12-0.24 walking. `CarryGripRight` / `CarryGripLeft` attachments on a template still
-  override the box contacts when reachable.
+  box) to 0.14 studs (water jug, held out past her face) of their targets at idle, 0.12-0.24 walking. A box is still wrong for art that is not
+  boxy, so a template can author its hold with attachments on the mesh: `CarryGripRight` / `CarryGripLeft`
+  (the hands go there, palm along the attachment's -Y, and the item is held at their height) and
+  `CarryBodyFront` (the point rested against the body, in place of the box's near face). Grips the arms
+  cannot reach fall back to the box contacts. The office plant has them (2026-10-14): on the pot's rim and
+  front, since its box is set by leaves wider than the pot, which left the hands closing on air in front of
+  the foliage with the pot hanging below; she now hugs the pot to her belly, leaves past her face.
 - **The vacuum** (`VacuumHoldFormulas`, `AnimationVacuumHoldSystem`): the same full-size vacuum for
   everyone. Its body hangs ~1.5 studs and its floor head ~1.9 below the grip, where a stock avatar's
   hanging hand holds it upright. For a shorter holder the hold is fitted, not the vacuum: it is tilted
