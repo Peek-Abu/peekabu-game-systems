@@ -20,12 +20,12 @@ local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.Depo
 
 -- How far from the banked point a scanner may be to answer it (the bed's top to its arch light is ~10 studs).
 local RANGE = 25
-local LIT = Color3.fromRGB(170, 255, 200)
+local LIT = Color3.fromRGB(80, 255, 150)
 local GLOW = 4
 local HOLD = 0.3
 local FADE = 0.55
 local SWEEP_SECONDS = 0.45
-local SWEEP_THICKNESS = Vector3.new(0, 0.12, 0.9)
+local SWEEP_THICKNESS = Vector3.new(0, 0.3, 0.9)
 -- An existing short tick (ShiftAssets), played twice at the arch as its beep.
 local BEEP = "shiftCountdownTick"
 local BEEP_GAP = 0.14
