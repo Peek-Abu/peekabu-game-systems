@@ -12,6 +12,7 @@
 	@class CarryPlacementSystem
 ]=]
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -94,6 +95,47 @@ function CarryPlacementSystem.floorNear(origin: Vector3, target: Vector3, ignore
 	local point = CarryPlacementSystem.safePoint(origin, target, ignore, margin)
 	local floor = floorAt(point, params) or floorAt(origin, params)
 	return CFrame.new(if floor ~= nil then floor.Position else origin)
+end
+
+--[=[
+	What placement rays look through when placing `target`: the object itself and every character.
+]=]
+function CarryPlacementSystem.ignoreFor(target: Instance): { Instance }
+	local ignore: { Instance } = { target }
+	for _, other in Players:GetPlayers() do
+		if other.Character ~= nil then
+			table.insert(ignore, other.Character)
+		end
+	end
+	return ignore
+end
+
+--[=[
+	How far a placed object's centre stays from a wall: its horizontal half-extent plus the wall margin.
+]=]
+function CarryPlacementSystem.marginFor(target: PVInstance): number
+	local size = if target:IsA("Model")
+		then target:GetExtentsSize()
+		elseif target:IsA("BasePart") then target.Size
+		else Vector3.zero
+	return math.max(size.X, size.Z) / 2 + CarryConstants.WALL_MARGIN
+end
+
+--[=[
+	Moves `target` (pivot at `desired`) to the nearest point on the way out from `origin` (a safe interior point,
+	the carrier's root) that stays inside: never through a wall, always over the origin's own floor. Keeps
+	`desired`'s rotation; leaves `target` alone when it is already there.
+]=]
+function CarryPlacementSystem.placeInside(origin: Vector3, target: PVInstance, desired: CFrame)
+	local point = CarryPlacementSystem.safePoint(
+		origin,
+		desired.Position,
+		CarryPlacementSystem.ignoreFor(target),
+		CarryPlacementSystem.marginFor(target)
+	)
+	if (target:GetPivot().Position - point).Magnitude > 1e-3 then
+		target:PivotTo(desired.Rotation + point)
+	end
 end
 
 --[=[

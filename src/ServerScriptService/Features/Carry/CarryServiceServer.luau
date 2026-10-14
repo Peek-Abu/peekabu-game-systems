@@ -137,41 +137,12 @@ local function playerRootOf(player: Player): BasePart?
 	return if playerRoot ~= nil and playerRoot:IsA("BasePart") then playerRoot else nil
 end
 
--- What placement rays look through: every character, and the object being placed.
-local function placementIgnore(target: Instance): { Instance }
-	local ignore: { Instance } = { target }
-	for _, other in Players:GetPlayers() do
-		if other.Character ~= nil then
-			table.insert(ignore, other.Character)
-		end
-	end
-	return ignore
-end
-
--- How far a placed object's centre stays from a wall: its horizontal half-extent plus the wall margin.
-local function wallMargin(target: PVInstance): number
-	local size = if target:IsA("Model")
-		then target:GetExtentsSize()
-		elseif target:IsA("BasePart") then target.Size
-		else Vector3.zero
-	return math.max(size.X, size.Z) / 2 + CarryConstants.WALL_MARGIN
-end
-
 -- Moves `target` (pivot at `desired`) to the nearest point on the way out from the player's root that stays
--- inside: never through a wall, always over the player's own floor (CarryPlacementSystem).
+-- inside (CarryPlacementSystem.placeInside).
 local function placeInside(player: Player, target: PVInstance, desired: CFrame)
 	local playerRoot = playerRootOf(player)
-	if playerRoot == nil then
-		return
-	end
-	local point = CarryPlacementSystem.safePoint(
-		playerRoot.Position,
-		desired.Position,
-		placementIgnore(target),
-		wallMargin(target)
-	)
-	if (target:GetPivot().Position - point).Magnitude > 1e-3 then
-		target:PivotTo(desired.Rotation + point)
+	if playerRoot ~= nil then
+		CarryPlacementSystem.placeInside(playerRoot.Position, target, desired)
 	end
 end
 
@@ -443,8 +414,8 @@ CarryServiceServer = {
 		-- However fast it flies, it cannot tunnel out of the building.
 		CarryPlacementSystem.watch(
 			root,
-			placementIgnore(state.target),
-			wallMargin(state.target),
+			CarryPlacementSystem.ignoreFor(state.target),
+			CarryPlacementSystem.marginFor(state.target),
 			CarryConstants.THROW_GUARD_SECONDS
 		)
 		counters.thrown += 1
