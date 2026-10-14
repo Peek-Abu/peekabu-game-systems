@@ -141,12 +141,20 @@ an estimated speed rather than a local Humanoid.
 (with a window before fall) / fall / climb / swim / swimidle / sit. On death it plays NOTHING —
 it stops its tracks and latches until respawn (what
 death looks like belongs to a game's death/ragdoll system). Tuning knobs sit at the top of the module (`walkRunThreshold`, per-pose speed scales,
-fades). Two things to know:
+fades). Three things to know:
 
 - **Walk vs run is a speed threshold** (default WalkSpeed 16 = walk; >18 = run). A game with a
   sprint system replaces the threshold with its sprint flag, and adds special poses (riding,
   carrying, crouching) through `setPoseOverride`/`clearPoseOverride` — nobody edits the Animate
   script itself (forks of it are how animation code rots).
+- **Jump and fall clips must suit a native Humanoid.** `Jumping` fires at takeoff (the character is already
+  rising), and landing switches straight to `running`, so a jump clip must not open on a ground crouch and a
+  fall clip must not drop the hips. The clips inherited from Venture's custom controller did both (hips
+  0.6-0.9 studs down), which crouched in mid-air and drove the feet through the floor on every landing
+  (measured on a stock R15 rig: feet 0.28 studs below the floor line). Fixed 2026-10-13 with the stock R15
+  jump 507765000 and fall 507767968, and `Jumping`/`FreeFalling` only drive a pose on state entry (both also
+  fire with `false` on exit). A replacement clip is checked the same way: feet never below the floor
+  through a jump, measured on the rig.
 - **Kill switch:** set the Workspace attribute `LocomotionEnabled = false` and every locomotion
   track stops — instantly answers "is the weirdness on screen ours?". `true` recovers, no respawn.
 
