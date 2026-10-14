@@ -77,6 +77,20 @@ return table.freeze({
 	SPARKLE_LIFETIME = 0.6,
 	SPARKLE_SPEED = 10,
 	SPARKLE_COLOR = Color3.fromRGB(255, 240, 170),
+	-- The backpack (VacuumVisualSystem): the model on the character, the canister gauge's dust insert (resized
+	-- by each client from its owner's public `canister` fill, its Weld moved so its bottom stays put), the lamp
+	-- that lights when the canister is full, and the wand's floor head (where suction streams to).
+	BACKPACK_NAME = "VacuumBackpack",
+	GAUGE_FILL_NAME = "GaugeFill",
+	GAUGE_WELD_NAME = "GaugeWeld",
+	LAMP_NAME = "FullLamp",
+	FLOOR_HEAD_NAME = "FloorHead",
+	-- The gauge eases toward its fill at this rate (1/s); a full canister shows full, lamp lit, this many seconds
+	-- before the dust bag pops out and it drains.
+	GAUGE_RATE = 6,
+	GAUGE_FULL_HOLD = 1.2,
+	LAMP_ON_COLOR = Color3.fromRGB(255, 196, 64),
+	LAMP_OFF_COLOR = Color3.fromRGB(120, 92, 40),
 	PILE_KINDS = table.freeze(PILE_KINDS),
 	PILE_KIND_LIST = table.freeze(PILE_KIND_LIST),
 })

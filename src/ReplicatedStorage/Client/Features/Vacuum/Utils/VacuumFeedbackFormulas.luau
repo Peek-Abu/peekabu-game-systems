@@ -5,7 +5,8 @@
 	if it was vacuumed past POP_PROGRESS within POP_WINDOW seconds, judged on its peak progress because the
 	Interaction system clears the progress attribute in the same frame it completes the pile; the canister ticks
 	as it fills and chimes when its last pile pops a dust bag, never outside a running shift (a reset empties it);
-	the vacuumer is the nearest hand within range. Pure.
+	the vacuumer is the nearest hand within range; the backpack's gauge eases toward each canister's fill and
+	holds full a moment when it fills. Pure.
 
 	@class VacuumFeedbackFormulas
 ]=]
@@ -57,6 +58,37 @@ function VacuumFeedbackFormulas.canisterCue(
 		return "full"
 	end
 	return nil
+end
+
+--[=[
+	The gauge's fill fraction for a canister holding `fill` of `capacity` piles; full until `fullUntil` (a
+	canister that just filled shows full, lamp lit, before it drains into its dust bag).
+]=]
+function VacuumFeedbackFormulas.gaugeTarget(fill: number, capacity: number, fullUntil: number, now: number): number
+	if now < fullUntil then
+		return 1
+	end
+	return math.clamp(fill / capacity, 0, 1)
+end
+
+--[=[
+	The shown fraction eased from `shown` toward `target` over `deltaTime` at `rate` (1/s); snaps when close.
+]=]
+function VacuumFeedbackFormulas.gaugeStep(shown: number, target: number, deltaTime: number, rate: number): number
+	local nextShown = target + (shown - target) * math.exp(-rate * deltaTime)
+	if math.abs(nextShown - target) < 0.002 then
+		return target
+	end
+	return nextShown
+end
+
+--[=[
+	The dust insert's height for a gauge `fullHeight` tall at `fraction` (clamped), and how far its centre drops
+	from the full insert's so its bottom stays put.
+]=]
+function VacuumFeedbackFormulas.gaugeFill(fullHeight: number, fraction: number): (number, number)
+	local height = fullHeight * math.clamp(fraction, 0, 1)
+	return height, (fullHeight - height) / 2
 end
 
 --[=[

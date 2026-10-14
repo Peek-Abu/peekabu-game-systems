@@ -4,12 +4,15 @@
 	into the nozzle, pile shrinks, rising whine, pop + sparkle, canister fills"; "Canister full: chime, dust bag
 	pops out"). For every pile (Observers on PILE_TAG):
 	- while anyone channels it (ChannelCount > 0): dust particles stream from the pile to the nearest vacuumer's
-	  hand (re-aimed every frame) and a whine loops at the pile, its pitch and volume rising with ChannelProgress
+	  floor head (else hand; re-aimed every frame) and a whine loops at the pile, its pitch and volume rising with ChannelProgress
 	  (VacuumFeedbackFormulas.whine), winding down (vacuumStop) when the channel stops;
 	- when it disappears after being vacuumed (VacuumFeedbackFormulas.cleared on its peak progress): a pop and a
 	  sparkle burst where it was. The pile's shrinking is the server's (M1).
 	Your own canister field ticks as it fills and chimes, with a pop at your feet, when it empties into a dust bag
-	(VacuumFeedbackFormulas.canisterCue; only while a shift runs). Client-local instances; pending sounds
+	(VacuumFeedbackFormulas.canisterCue; only while a shift runs). Every player's backpack gauge (its dust insert
+	behind the window, VacuumVisualSystem on the server) eases toward that player's public canister fill; when
+	it fills it shows full with its lamp lit for GAUGE_FULL_HOLD seconds, then drains. The insert is resized and
+	its Weld moved locally (never replicated) from the full size and offset the server recorded on them. Client-local instances; pending sounds
 	(VacuumAssets) are skipped silently and counted.
 
 	Spec-exempt shell (Instances, particles, Sound, Charm, RunService); the decisions are the specced
@@ -50,6 +53,8 @@ type PileFeel = {
 	emitter: ParticleEmitter?,
 }
 
+type Gauge = { fill: number, shown: number, fullUntil: number, drawn: number, part: BasePart? }
+
 export type VacuumFeedbackState = {
 	piles: number,
 	counters: { [string]: number },
@@ -61,6 +66,7 @@ local active: { [BasePart]: PileFeel } = {}
 local counters = { pops = 0, fills = 0, fulls = 0, played = 0, pending = 0 }
 local stoppers: { () -> () } = {}
 local lastFill: number? = nil
+local gauges: { [number]: Gauge } = {}
 
 local function play(id: string, options: SoundTypes.PlayOptions?): SoundServiceClient.SoundHandle?
 	if VacuumAssets.SOUNDS[id] == nil then
@@ -80,14 +86,19 @@ local function readNumber(instance: Instance, name: string): number
 	return if type(value) == "number" then value else 0
 end
 
--- The nearest vacuumer's hand (or root) to a pile, or nil.
+-- Where a character's suction ends: its held vacuum's floor head, else its hand, else its root.
+local function nozzleOf(character: Model): Instance?
+	local tool = character:FindFirstChild(VacuumConstants.TOOL_NAME)
+	local head = if tool ~= nil then tool:FindFirstChild(VacuumConstants.FLOOR_HEAD_NAME) else nil
+	return head or character:FindFirstChild("RightHand") or character:FindFirstChild("HumanoidRootPart")
+end
+
+-- The nearest vacuumer's floor head (or hand, or root) to a pile, or nil.
 local function vacuumerPoint(origin: Vector3): Vector3?
 	local points: { Vector3 } = {}
 	for _, player in Players:GetPlayers() do
 		local character = player.Character
-		local hand = if character ~= nil
-			then character:FindFirstChild("RightHand") or character:FindFirstChild("HumanoidRootPart")
-			else nil
+		local hand = if character ~= nil then nozzleOf(character) else nil
 		if hand ~= nil and hand:IsA("BasePart") then
 			table.insert(points, hand.Position)
 		end
@@ -239,21 +250,95 @@ local function aim()
 	end
 end
 
-local function myFill(map: PublicPlayerTypes.PublicPlayerMap): number
-	local me = map[StateSyncConstants.publicEntryKey(Players.LocalPlayer.UserId)]
-	local value = if me ~= nil then me[VacuumConstants.PUBLIC_FIELD] else nil
+local function fillOf(map: PublicPlayerTypes.PublicPlayerMap, userId: number): number
+	local entry = map[StateSyncConstants.publicEntryKey(userId)]
+	local value = if entry ~= nil then entry[VacuumConstants.PUBLIC_FIELD] else nil
 	return if type(value) == "number" then value else 0
 end
 
+local function myFill(map: PublicPlayerTypes.PublicPlayerMap): number
+	return fillOf(map, Players.LocalPlayer.UserId)
+end
+
+-- Every player's gauge follows their canister; one that just filled holds full a moment.
+local function followGauges(map: PublicPlayerTypes.PublicPlayerMap, running: boolean)
+	local now = os.clock()
+	for _, player in Players:GetPlayers() do
+		local fill = fillOf(map, player.UserId)
+		local gauge = gauges[player.UserId]
+		if gauge == nil then
+			local shown = math.clamp(fill / VacuumConstants.CANISTER_CAPACITY, 0, 1)
+			gauges[player.UserId] = { fill = fill, shown = shown, fullUntil = 0, drawn = -1, part = nil }
+		else
+			if
+				VacuumFeedbackFormulas.canisterCue(gauge.fill, fill, VacuumConstants.CANISTER_CAPACITY, running)
+				== "full"
+			then
+				gauge.fullUntil = now + VacuumConstants.GAUGE_FULL_HOLD
+			end
+			gauge.fill = fill
+		end
+	end
+end
+
+-- Sizes a backpack's dust insert to `shown` and lights its lamp when full. False when it has no gauge.
+local function drawGauge(gauge: Gauge, character: Model?): boolean
+	local backpack = if character ~= nil then character:FindFirstChild(VacuumConstants.BACKPACK_NAME) else nil
+	local fill = if backpack ~= nil then backpack:FindFirstChild(VacuumConstants.GAUGE_FILL_NAME, true) else nil
+	local weld = if fill ~= nil then fill:FindFirstChild(VacuumConstants.GAUGE_WELD_NAME) else nil
+	if fill == nil or not fill:IsA("BasePart") or weld == nil or not weld:IsA("Weld") then
+		return false
+	end
+	if gauge.part == fill and math.abs(gauge.drawn - gauge.shown) < 1e-4 then
+		return true
+	end
+	local fullSize = fill:GetAttribute("GaugeFullSize")
+	local fullC0 = weld:GetAttribute("GaugeFullC0")
+	if typeof(fullSize) ~= "Vector3" or typeof(fullC0) ~= "CFrame" then
+		return false
+	end
+	local height, drop = VacuumFeedbackFormulas.gaugeFill(fullSize.Y, gauge.shown)
+	fill.Size = Vector3.new(fullSize.X, math.max(height, 0.001), fullSize.Z)
+	fill.Transparency = if height < 0.005 then 1 else 0
+	weld.C0 = fullC0 * CFrame.new(0, -drop, 0)
+	local lamp = if backpack ~= nil then backpack:FindFirstChild(VacuumConstants.LAMP_NAME, true) else nil
+	if lamp ~= nil and lamp:IsA("BasePart") then
+		local lit = gauge.shown >= 0.98
+		lamp.Material = if lit then Enum.Material.Neon else Enum.Material.SmoothPlastic
+		lamp.Color = if lit then VacuumConstants.LAMP_ON_COLOR else VacuumConstants.LAMP_OFF_COLOR
+	end
+	gauge.part = fill
+	gauge.drawn = gauge.shown
+	return true
+end
+
+local function drawGauges(deltaTime: number)
+	local now = os.clock()
+	for userId, gauge in gauges do
+		local player = Players:GetPlayerByUserId(userId)
+		if player == nil then
+			gauges[userId] = nil
+			continue
+		end
+		local target =
+			VacuumFeedbackFormulas.gaugeTarget(gauge.fill, VacuumConstants.CANISTER_CAPACITY, gauge.fullUntil, now)
+		gauge.shown = VacuumFeedbackFormulas.gaugeStep(gauge.shown, target, deltaTime, VacuumConstants.GAUGE_RATE)
+		if not drawGauge(gauge, player.Character) then
+			gauge.part = nil
+		end
+	end
+end
+
 local function onPublic(map: PublicPlayerTypes.PublicPlayerMap)
+	local snapshot = ShiftStore.snapshot()
+	local running = snapshot ~= nil and snapshot.phase == "running"
+	followGauges(map, running)
 	local fill = myFill(map)
 	local before = lastFill
 	lastFill = fill
 	if before == nil then
 		return
 	end
-	local snapshot = ShiftStore.snapshot()
-	local running = snapshot ~= nil and snapshot.phase == "running"
 	local cue = VacuumFeedbackFormulas.canisterCue(before, fill, VacuumConstants.CANISTER_CAPACITY, running)
 	if cue == "fill" then
 		counters.fills += 1
@@ -277,8 +362,12 @@ function VacuumFeedbackSystem.start()
 	end
 	table.insert(stoppers, Observers.observeTag(VacuumConstants.PILE_TAG, observePile))
 	lastFill = myFill(StateSyncClientStore.publicPlayers())
+	followGauges(StateSyncClientStore.publicPlayers(), false)
 	table.insert(stoppers, Charm.subscribe(StateSyncClientStore.publicPlayers, onPublic))
-	local connection = RunService.RenderStepped:Connect(aim)
+	local connection = RunService.RenderStepped:Connect(function(deltaTime)
+		aim()
+		drawGauges(deltaTime)
+	end)
 	table.insert(stoppers, function()
 		connection:Disconnect()
 	end)
@@ -293,6 +382,7 @@ function VacuumFeedbackSystem.stop()
 		stopSuction(feel)
 	end
 	table.clear(active)
+	table.clear(gauges)
 	lastFill = nil
 end
 

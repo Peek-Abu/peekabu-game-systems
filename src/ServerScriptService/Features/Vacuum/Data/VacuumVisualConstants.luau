@@ -1,374 +1,132 @@
 --!strict
--- Original source geometry: +Y up, -Z front, grip at origin.
-export type VisualPart = {
+--[=[
+	VacuumVisualConstants: the backpack vacuum's geometry and hold tuning. The art is the uploaded template
+	(ReplicatedStorage.Assets.CleanupCrew.Vacuum, built by characters/vacuum/build_backpack_vacuum.py); the pieces
+	here are its graybox fallback with the same names and sizes, used when the template is missing.
+
+	Pack pieces are in mount space: the mount is the middle of the harness pad, where the pack meets the back; +Y
+	up, +Z back, +X the wearer's right. Wand pieces are placed per holder by VacuumHoldFormulas.wand (their frame
+	here is only used for a static piece's offset from its parent piece). All studs as modelled on Pippa's
+	authored rig; the wearer's fit scales them. Static data (spec-exempt beyond its sanity spec).
+
+	@class VacuumVisualConstants
+]=]
+
+export type Piece = {
 	name: string,
 	shape: Enum.PartType,
 	size: Vector3,
 	frame: CFrame,
 	color: Color3,
-	metal: boolean,
+	material: Enum.Material,
+	transparency: number,
 }
-local function entry(
+
+local TEAL = Color3.fromRGB(45, 145, 135)
+local TEAL_DARK = Color3.fromRGB(31, 110, 102)
+local IVORY = Color3.fromRGB(229, 221, 197)
+local GRAPHITE = Color3.fromRGB(46, 53, 54)
+local STEEL = Color3.fromRGB(175, 187, 187)
+local AMBER = Color3.fromRGB(246, 192, 72)
+local DUST = Color3.fromRGB(107, 94, 78)
+local GLASS = Color3.fromRGB(207, 230, 232)
+
+-- A vertical cylinder (a Part cylinder's axis is X).
+local UPRIGHT = CFrame.Angles(0, 0, math.pi / 2)
+
+local function piece(
 	name: string,
 	shape: Enum.PartType,
 	size: Vector3,
 	frame: CFrame,
 	color: Color3,
-	metal: boolean?
-): VisualPart
-	return { name = name, shape = shape, size = size, frame = frame, color = color, metal = metal == true }
+	material: Enum.Material?,
+	transparency: number?
+): Piece
+	return {
+		name = name,
+		shape = shape,
+		size = size,
+		frame = frame,
+		color = color,
+		material = material or Enum.Material.SmoothPlastic,
+		transparency = transparency or 0,
+	}
 end
-local parts: { VisualPart } = {
-	entry(
-		"Motor housing",
-		Enum.PartType.Block,
-		Vector3.new(1.05, 0.98, 1.12),
-		CFrame.new(0, -0.9400001, 0, -1, 0, 0, 0, 0, 1, 0, 1, 0),
-		Color3.new(0.260067, 0.516881, 0.484529)
+
+local CYL = Enum.PartType.Cylinder
+local BLOCK = Enum.PartType.Block
+local BALL = Enum.PartType.Ball
+
+local backpack: { Piece } = {
+	piece("CanisterBody", CYL, Vector3.new(0.56, 0.5, 0.5), CFrame.new(0, -0.02, 0.32) * UPRIGHT, TEAL),
+	piece("CanisterBand", CYL, Vector3.new(0.05, 0.524, 0.524), CFrame.new(0, 0.2, 0.32) * UPRIGHT, GRAPHITE),
+	piece("CanisterLid", CYL, Vector3.new(0.14, 0.48, 0.48), CFrame.new(0, 0.33, 0.32) * UPRIGHT, TEAL_DARK),
+	piece("CanisterBase", CYL, Vector3.new(0.11, 0.516, 0.516), CFrame.new(0, -0.345, 0.32) * UPRIGHT, GRAPHITE),
+	piece("BackPad", BLOCK, Vector3.new(0.4, 0.56, 0.08), CFrame.new(0, 0, 0.035), IVORY),
+	piece("GaugeFrame", BLOCK, Vector3.new(0.17, 0.49, 0.05), CFrame.new(0, -0.03, 0.57), IVORY),
+	piece("GaugeFill", BLOCK, Vector3.new(0.11, 0.42, 0.02), CFrame.new(0, -0.03, 0.602), DUST),
+	piece(
+		"GaugeWindow",
+		BLOCK,
+		Vector3.new(0.125, 0.43, 0.012),
+		CFrame.new(0, -0.03, 0.62),
+		GLASS,
+		Enum.Material.Glass,
+		0.6
 	),
-	entry(
-		"Lower impact bumper",
-		Enum.PartType.Block,
-		Vector3.new(1.13, 1.03, 0.14),
-		CFrame.new(0, -1.49, 0, -1, 0, 0, 0, 0, 1, 0, 1, 0),
-		Color3.new(0.179236, 0.205984, 0.212098)
-	),
-	entry(
-		"Detachable dust canister",
-		Enum.PartType.Block,
-		Vector3.new(0.89, 0.66, 0.97),
-		CFrame.new(0, -1.07, 0.73, -1, 0, 0, 0, 0, 1, 0, 1, 0),
-		Color3.new(0.896244, 0.865042, 0.773573)
-	),
-	entry(
-		"Canister seal",
-		Enum.PartType.Block,
-		Vector3.new(0.94, 0.1, 1),
-		CFrame.new(0, -1.07, 0.43, -1, 0, 0, 0, 0, 1, 0, 1, 0),
-		Color3.new(0.179236, 0.205984, 0.212098)
-	),
-	entry(
-		"Canister lid",
-		Enum.PartType.Block,
-		Vector3.new(0.94, 0.72, 0.12),
-		CFrame.new(0, -0.5600001, 0.75, -1, 0, 0, 0, 0, 1, 0, 1, 0),
-		Color3.new(0.260067, 0.516881, 0.484529)
-	),
-	entry(
-		"Rear release latch",
-		Enum.PartType.Block,
-		Vector3.new(0.28, 0.06, 0.23),
-		CFrame.new(0, -0.78, 1.1, -1, 0, 0, 0, 0, 1, 0, 1, 0),
-		Color3.new(0.963976, 0.754781, 0.282779)
-	),
-	entry(
-		"Handle support",
-		Enum.PartType.Cylinder,
-		Vector3.new(0.39, 0.146, 0.146),
-		CFrame.new(0, -0.1949999, -0.35, 0, -1.509958e-07, -1, 1, 0, -0, 0, -1, 1.509958e-07),
-		Color3.new(0.687217, 0.735357, 0.735357)
-	),
-	entry(
-		"Handle support.001",
-		Enum.PartType.Cylinder,
-		Vector3.new(0.39, 0.146, 0.146),
-		CFrame.new(0, -0.1949999, 0.35, 0, -1.509958e-07, -1, 1, 0, -0, 0, -1, 1.509958e-07),
-		Color3.new(0.687217, 0.735357, 0.735357)
-	),
-	entry(
-		"Carry grip",
-		Enum.PartType.Cylinder,
-		Vector3.new(0.72, 0.23, 0.23),
-		CFrame.new(0, 0, 0, 1.139987e-14, -1.509958e-07, -1, -7.54979e-08, 1, -1.509958e-07, 1, 7.54979e-08, -0),
-		Color3.new(0.179236, 0.205984, 0.212098)
-	),
-	entry(
-		"Grip rib",
-		Enum.PartType.Cylinder,
-		Vector3.new(0.02200001, 0.248, 0.248),
-		CFrame.new(
-			0,
-			0,
-			-0.269,
-			-8.742278e-08,
-			-8.742279e-08,
-			-1,
-			7.54979e-08,
-			1,
-			-8.74228e-08,
-			1,
-			-7.549791e-08,
-			-8.742278e-08
-		),
-		Color3.new(0.179236, 0.205984, 0.212098)
-	),
-	entry(
-		"Grip rib.001",
-		Enum.PartType.Cylinder,
-		Vector3.new(0.022, 0.248, 0.248),
-		CFrame.new(
-			0,
-			0,
-			-0.169,
-			-8.742278e-08,
-			-8.742279e-08,
-			-1,
-			7.54979e-08,
-			1,
-			-8.74228e-08,
-			1,
-			-7.549791e-08,
-			-8.742278e-08
-		),
-		Color3.new(0.179236, 0.205984, 0.212098)
-	),
-	entry(
-		"Grip rib.002",
-		Enum.PartType.Cylinder,
-		Vector3.new(0.022, 0.248, 0.248),
-		CFrame.new(
-			0,
-			0,
-			-0.069,
-			-8.742278e-08,
-			-8.742279e-08,
-			-1,
-			7.54979e-08,
-			1,
-			-8.74228e-08,
-			1,
-			-7.549791e-08,
-			-8.742278e-08
-		),
-		Color3.new(0.179236, 0.205984, 0.212098)
-	),
-	entry(
-		"Grip rib.003",
-		Enum.PartType.Cylinder,
-		Vector3.new(0.022, 0.248, 0.248),
-		CFrame.new(
-			0,
-			0,
-			0.031,
-			-8.742278e-08,
-			-8.742279e-08,
-			-1,
-			7.54979e-08,
-			1,
-			-8.74228e-08,
-			1,
-			-7.549791e-08,
-			-8.742278e-08
-		),
-		Color3.new(0.179236, 0.205984, 0.212098)
-	),
-	entry(
-		"Grip rib.004",
-		Enum.PartType.Cylinder,
-		Vector3.new(0.02200001, 0.248, 0.248),
-		CFrame.new(
-			0,
-			0,
-			0.131,
-			-8.742278e-08,
-			-8.742279e-08,
-			-1,
-			7.54979e-08,
-			1,
-			-8.74228e-08,
-			1,
-			-7.549791e-08,
-			-8.742278e-08
-		),
-		Color3.new(0.179236, 0.205984, 0.212098)
-	),
-	entry(
-		"Grip rib.005",
-		Enum.PartType.Cylinder,
-		Vector3.new(0.022, 0.248, 0.248),
-		CFrame.new(
-			0,
-			0,
-			0.231,
-			-8.742278e-08,
-			-8.742279e-08,
-			-1,
-			7.54979e-08,
-			1,
-			-8.74228e-08,
-			1,
-			-7.549791e-08,
-			-8.742278e-08
-		),
-		Color3.new(0.179236, 0.205984, 0.212098)
-	),
-	entry(
-		"Trigger",
-		Enum.PartType.Block,
-		Vector3.new(0.17, 0.14, 0.12),
-		CFrame.new(0, -0.16, -0.42, -1, 0, 0, 0, 0, 1, 0, 1, 0),
-		Color3.new(0.963976, 0.754781, 0.282779)
-	),
-	entry(
-		"Tube collar",
-		Enum.PartType.Cylinder,
-		Vector3.new(0.2137756, 0.33, 0.33),
-		CFrame.new(0, -1.26, -0.585, 0, 0, 1, -0.1871122, 0.9823385, -0, -0.9823385, -0.1871122, -0),
-		Color3.new(0.179236, 0.205984, 0.212098)
-	),
-	entry(
-		"Suction wand",
-		Enum.PartType.Cylinder,
-		Vector3.new(1.505722, 0.206, 0.206),
-		CFrame.new(0, -1.49, -1.33, 0, 0, 1, -0.2922185, 0.9563516, -0, -0.9563516, -0.2922185, -0),
-		Color3.new(0.687217, 0.735357, 0.735357)
-	),
-	entry(
-		"Nozzle neck",
-		Enum.PartType.Cylinder,
-		Vector3.new(0.245153, 0.29, 0.29),
-		CFrame.new(0, -1.715, -2.11, 0, 0, 1, -0.2039544, 0.9789804, -0, -0.9789804, -0.2039544, -0),
-		Color3.new(0.260067, 0.516881, 0.484529)
-	),
-	entry(
-		"Wide floor head",
-		Enum.PartType.Block,
-		Vector3.new(1.4, 0.58, 0.29),
-		CFrame.new(0, -1.75, -2.35, -1, 0, 0, 0, 0, 1, 0, 1, 0),
-		Color3.new(0.260067, 0.516881, 0.484529)
-	),
-	entry(
-		"Floor contact gasket",
-		Enum.PartType.Block,
-		Vector3.new(1.43, 0.58, 0.07),
-		CFrame.new(0, -1.885, -2.35, -1, 0, 0, 0, 0, 1, 0, 1, 0),
-		Color3.new(0.179236, 0.205984, 0.212098)
-	),
-	entry(
-		"Nozzle safety insert",
-		Enum.PartType.Block,
-		Vector3.new(0.53, 0.08, 0.08),
-		CFrame.new(0, -1.69, -2.52, -1, 0, 0, 0, 0, 1, 0, 1, 0),
-		Color3.new(0.963976, 0.754781, 0.282779)
-	),
-	entry(
-		"Head bumper",
-		Enum.PartType.Block,
-		Vector3.new(0.12, 0.6, 0.19),
-		CFrame.new(0.55, -1.77, -2.35, -1, 0, 0, 0, 0, 1, 0, 1, 0),
-		Color3.new(0.179236, 0.205984, 0.212098)
-	),
-	entry(
-		"Head bumper.001",
-		Enum.PartType.Block,
-		Vector3.new(0.12, 0.6, 0.19),
-		CFrame.new(-0.55, -1.77, -2.35, -1, 0, 0, 0, 0, 1, 0, 1, 0),
-		Color3.new(0.179236, 0.205984, 0.212098)
-	),
-	entry(
-		"Motor ventilation slot",
-		Enum.PartType.Block,
-		Vector3.new(0.015, 0.055, 0.28),
-		CFrame.new(-0.533, -0.64, -0.28, -1, 0, 0, 0, 0, 1, 0, 1, 0),
-		Color3.new(0.179236, 0.205984, 0.212098)
-	),
-	entry(
-		"Motor ventilation slot.001",
-		Enum.PartType.Block,
-		Vector3.new(0.015, 0.055, 0.28),
-		CFrame.new(-0.533, -0.64, -0.16, -1, 0, 0, 0, 0, 1, 0, 1, 0),
-		Color3.new(0.179236, 0.205984, 0.212098)
-	),
-	entry(
-		"Motor ventilation slot.002",
-		Enum.PartType.Block,
-		Vector3.new(0.015, 0.055, 0.28),
-		CFrame.new(-0.533, -0.64, -0.04, -1, 0, 0, 0, 0, 1, 0, 1, 0),
-		Color3.new(0.179236, 0.205984, 0.212098)
-	),
-	entry(
-		"Motor ventilation slot.003",
-		Enum.PartType.Block,
-		Vector3.new(0.015, 0.055, 0.28),
-		CFrame.new(-0.533, -0.64, 0.08, -1, 0, 0, 0, 0, 1, 0, 1, 0),
-		Color3.new(0.179236, 0.205984, 0.212098)
-	),
-	entry(
-		"Motor ventilation slot.004",
-		Enum.PartType.Block,
-		Vector3.new(0.015, 0.055, 0.28),
-		CFrame.new(-0.533, -0.64, 0.2, -1, 0, 0, 0, 0, 1, 0, 1, 0),
-		Color3.new(0.179236, 0.205984, 0.212098)
-	),
-	entry(
-		"Service label",
-		Enum.PartType.Block,
-		Vector3.new(0.72, 0.018, 0.29),
-		CFrame.new(0, -0.87, -0.503, -1, 0, 0, 0, 0, 1, 0, 1, 0),
-		Color3.new(0.935741, 0.921191, 0.870345)
-	),
-	entry(
-		"Service screw",
-		Enum.PartType.Cylinder,
-		Vector3.new(0.02499998, 0.052, 0.052),
-		CFrame.new(0.39, -1.34, -0.5125, 0, 0, 1, -1.629207e-07, 1, -0, -1, -1.629207e-07, -0),
-		Color3.new(0.687217, 0.735357, 0.735357)
-	),
-	entry(
-		"Service screw.001",
-		Enum.PartType.Cylinder,
-		Vector3.new(0.02499998, 0.052, 0.052),
-		CFrame.new(0.39, -0.49, -0.5125, 0, 0, 1, -1.629207e-07, 1, -0, -1, -1.629207e-07, -0),
-		Color3.new(0.687217, 0.735357, 0.735357)
-	),
-	entry(
-		"Service screw.002",
-		Enum.PartType.Cylinder,
-		Vector3.new(0.02499998, 0.052, 0.052),
-		CFrame.new(-0.39, -1.34, -0.5125, 0, 0, 1, -1.629207e-07, 1, -0, -1, -1.629207e-07, -0),
-		Color3.new(0.687217, 0.735357, 0.735357)
-	),
-	entry(
-		"Service screw.003",
-		Enum.PartType.Cylinder,
-		Vector3.new(0.02499998, 0.052, 0.052),
-		CFrame.new(-0.39, -0.49, -0.5125, 0, 0, 1, -1.629207e-07, 1, -0, -1, -1.629207e-07, -0),
-		Color3.new(0.687217, 0.735357, 0.735357)
-	),
-	entry(
-		"Canister gauge recess",
-		Enum.PartType.Block,
-		Vector3.new(0.025, 0.32, 0.42),
-		CFrame.new(-0.45, -1.02, 0.73, -1, 0, 0, 0, 0, 1, 0, 1, 0),
-		Color3.new(0.179236, 0.205984, 0.212098)
-	),
-	entry(
-		"Capacity marker",
-		Enum.PartType.Block,
-		Vector3.new(0.02, 0.21, 0.065),
-		CFrame.new(-0.467, -1.16, 0.73, -1, 0, 0, 0, 0, 1, 0, 1, 0),
-		Color3.new(0.963976, 0.754781, 0.282779)
-	),
-	entry(
-		"Capacity marker.001",
-		Enum.PartType.Block,
-		Vector3.new(0.02, 0.21, 0.065),
-		CFrame.new(-0.467, -1.02, 0.73, -1, 0, 0, 0, 0, 1, 0, 1, 0),
-		Color3.new(0.963976, 0.754781, 0.282779)
-	),
-	entry(
-		"Capacity marker.002",
-		Enum.PartType.Block,
-		Vector3.new(0.02, 0.21, 0.065),
-		CFrame.new(-0.467, -0.88, 0.73, -1, 0, 0, 0, 0, 1, 0, 1, 0),
-		Color3.new(0.963976, 0.754781, 0.282779)
-	),
+	piece("FullLamp", BALL, Vector3.new(0.084, 0.084, 0.084), CFrame.new(0, 0.265, 0.56), AMBER),
+	piece("HoseOutlet", CYL, Vector3.new(0.12, 0.12, 0.12), CFrame.new(0.27, -0.24, 0.32), GRAPHITE),
+	piece("WandHolster", BLOCK, Vector3.new(0.07, 0.12, 0.15), CFrame.new(0.285, 0.12, 0.32), GRAPHITE),
 }
+
+local wand: { Piece } = {
+	piece("WandGrip", BLOCK, Vector3.new(0.124, 0.4, 0.124), CFrame.identity, GRAPHITE),
+	piece("WandInlet", BLOCK, Vector3.new(0.148, 0.09, 0.148), CFrame.identity, TEAL_DARK),
+	piece("WandTube", BLOCK, Vector3.new(0.08, 1, 0.08), CFrame.identity, STEEL, Enum.Material.Metal),
+	piece("WandSwivel", BALL, Vector3.new(0.12, 0.12, 0.12), CFrame.identity, GRAPHITE),
+	piece("FloorHead", BLOCK, Vector3.new(0.62, 0.085, 0.21), CFrame.identity, GRAPHITE),
+	-- Relative to the floor head (its front lip).
+	piece("FloorHeadLip", BLOCK, Vector3.new(0.58, 0.03, 0.035), CFrame.new(0, 0.015, -0.115), TEAL),
+}
+
 return table.freeze({
-	parts = parts,
-	grip = CFrame.Angles(-math.pi / 2, 0, 0),
-	-- Fitting a short holder's hold (VacuumHoldFormulas.fit): studs kept between the vacuum's lowest point and the
-	-- floor, and the most it is tilted about the grip (front up) before the hand is lifted instead.
-	holdClearance = 0.08,
-	maxHoldTilt = math.rad(25),
+	TEMPLATE_PATH = table.freeze({ "Assets", "CleanupCrew", "Vacuum" }),
+	backpack = table.freeze(backpack),
+	wand = table.freeze(wand),
+	-- Where the hose leaves the pack (mount space; its X axis points out of the outlet) and where the stowed
+	-- wand's grip clips on (its tube telescoped to STOWED_TUBE, its floor head turned along the pack's side,
+	-- above the tail).
+	outlet = CFrame.fromMatrix(
+		Vector3.new(0.316, -0.279, 0.32),
+		Vector3.new(math.cos(math.rad(40)), -math.sin(math.rad(40)), 0),
+		Vector3.new(math.sin(math.rad(40)), math.cos(math.rad(40)), 0)
+	),
+	holster = CFrame.new(0.38, 0.12, 0.32),
+	STOWED_TUBE = 0.1,
+	-- The hold (VacuumHoldFormulas.Tuning, studs as modelled where not a fraction of the reach): the grip
+	-- 0.6 reach down, 0.5 forward and 0.08 out from the shoulder (about 0.78 of the reach away, so the elbow
+	-- bends); the wand leaning 35 degrees forward; the floor head 0.06 over the floor; the left hand 0.3 up
+	-- the wand.
+	hold = table.freeze({
+		down = 0.6,
+		forward = 0.5,
+		out = 0.08,
+		angle = math.rad(35),
+		clearance = 0.06,
+		minTube = 0.3,
+		leftUp = 0.3,
+	}),
+	-- The hose Beam (studs as modelled): width, how far it bulges out of the outlet and into the wand, its
+	-- segments, and one texture tile's length (8 ribs).
+	hose = table.freeze({ width = 0.13, curve0 = 0.3, curve1 = 0.35, segments = 16, tile = 0.5 }),
+	-- A stock avatar's pack size (it was modelled on Pippa's authored rig, worn at 1.25x), Pippa's authored
+	-- UpperTorso (the straps were modelled round it) and how deep the strap loops are.
+	GENERIC_SIZE = 1.25,
+	REFERENCE_TORSO = Vector3.new(0.955, 1.96, 1.006),
+	STRAP_DEPTH = 0.84,
+	-- Studs of tube when no holder could be measured.
+	DEFAULT_TUBE = 1.2,
+	-- The Tool's Grip with no measured hold: a hanging hand holds the handle square to the root.
+	DEFAULT_GRIP = CFrame.Angles(-math.pi / 2, 0, 0),
 })

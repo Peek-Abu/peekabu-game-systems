@@ -51,6 +51,8 @@ end
 
 return table.freeze({
 	PENDING = PENDING,
+	-- The backpack hose's corrugated strip (a Beam texture; characters/vacuum/make_hose_texture.py, Icey Labs).
+	HOSE_TEXTURE = "rbxassetid://82530981101419",
 	SOUNDS = table.freeze(SOUNDS),
 	WHINE = "vacuumWhine",
 	POP = "vacuumPop",

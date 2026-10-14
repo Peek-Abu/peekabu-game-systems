@@ -1,75 +1,156 @@
-local Formulas = require(script.Parent.VacuumHoldFormulas)
+local VacuumHoldFormulas = require(script.Parent.VacuumHoldFormulas)
+
 return function()
-	-- A vacuum in grip space (+Y up, -Z front): a body hanging 1.5 below the grip and a floor head 2 ahead and
-	-- 1.9 below it, like the real one.
-	local corners = {
-		Vector3.new(-0.5, -1.5, -0.5),
-		Vector3.new(0.5, -1.5, 0.5),
-		Vector3.new(-0.7, -1.9, -2.4),
-		Vector3.new(0.7, -1.9, -2.2),
+	-- A Pippa-like holder at 1.25x, root space: right shoulder 1.15 up and 0.45 right, arm 0.525 + 1.1 to the
+	-- grip, floor 1.375 below the root.
+	local RIGHT = { shoulder = Vector3.new(0.45, 1.15, 0), upper = 0.525, lower = 1.1 }
+	local LEFT = { shoulder = Vector3.new(-0.45, 1.15, 0), upper = 0.525, lower = 1.1 }
+	local FLOOR = -1.375
+	local WAND = { gripHalf = 0.25, inlet = 0.1125, swivel = 0.075, head = 0.106 }
+	local TUNING = {
+		down = 0.6,
+		forward = 0.5,
+		out = 0.08,
+		angle = math.rad(35),
+		clearance = 0.06,
+		minTube = 0.3,
+		leftUp = 0.3,
 	}
 
-	describe("depth", function()
-		it("is how far the lowest corner sits below the grip", function()
-			expect(Formulas.depth(corners, 0)).to.be.near(1.9, 1e-6)
+	describe("elbow", function()
+		it("puts the elbow one upper arm from the shoulder and one forearm from the target", function()
+			local shoulder, target = Vector3.new(0, 0, 0), Vector3.new(0, -0.8, -0.8)
+			local elbow = VacuumHoldFormulas.elbow(shoulder, target, 0.6, 0.7, Vector3.new(1, -0.5, 0.5))
+			expect((elbow - shoulder).Magnitude).to.be.near(0.6, 1e-4)
+			expect((target - elbow).Magnitude).to.be.near(0.7, 1e-4)
 		end)
 
-		it("tilting the front up raises the floor head and lowers the back", function()
-			local tilt = math.rad(10)
-			expect(Formulas.depth({ Vector3.new(0, -1.9, -2.4) }, tilt) < 1.9).to.equal(true)
-			expect(Formulas.depth({ Vector3.new(0, -1.5, 0.5) }, tilt) > 1.5).to.equal(true)
-		end)
-	end)
-
-	describe("fit", function()
-		local clearance, maxTilt = 0.08, math.rad(25)
-		it("leaves a stock avatar's vacuum upright and unlifted", function()
-			local tilt, lift = Formulas.fit(corners, 2.11, clearance, maxTilt)
-			expect(tilt).to.equal(0)
-			expect(lift).to.equal(0)
+		it("bends toward the pole", function()
+			local elbow = VacuumHoldFormulas.elbow(Vector3.zero, Vector3.new(0, -1, 0), 0.6, 0.6, Vector3.new(1, 0, 0))
+			expect(elbow.X > 0.2).to.equal(true)
 		end)
 
-		it("leaves it unchanged when the hand height is unknown", function()
-			local tilt, lift = Formulas.fit(corners, nil, clearance, maxTilt)
-			expect(tilt).to.equal(0)
-			expect(lift).to.equal(0)
-		end)
-
-		it("only tilts a slightly short holder: the floor head rests just above the floor", function()
-			local tilt, lift = Formulas.fit(corners, 1.85, clearance, maxTilt)
-			expect(tilt > 0).to.equal(true)
-			expect(tilt <= maxTilt).to.equal(true)
-			expect(lift).to.equal(0)
-			expect(Formulas.depth(corners, tilt) + clearance <= 1.85 + 1e-6).to.equal(true)
-			-- The smallest tilt that does it.
-			expect(Formulas.depth(corners, tilt - math.rad(1)) + clearance > 1.85).to.equal(true)
-		end)
-
-		it("tilts a much shorter holder no further than the limit, and lifts the hand for the rest", function()
-			local tilt, lift = Formulas.fit(corners, 0.86, clearance, maxTilt)
-			expect(tilt <= maxTilt + 1e-6).to.equal(true)
-			expect(lift > 0).to.equal(true)
-			-- With the hand lifted, the lowest point clears the floor by exactly the clearance.
-			expect(0.86 + lift - Formulas.depth(corners, tilt)).to.be.near(clearance, 1e-6)
+		it("straightens the arm toward a target out of reach", function()
+			local elbow = VacuumHoldFormulas.elbow(Vector3.zero, Vector3.new(0, -5, 0), 0.6, 0.6, Vector3.xAxis)
+			expect(elbow.Y).to.be.near(-0.6, 1e-4)
+			expect(math.abs(elbow.X) < 1e-4).to.equal(true)
 		end)
 	end)
 
-	describe("liftTarget", function()
-		-- Shoulder 1.1 above the root, arm 1.3 to the grip, torso 0.6 half-wide, vacuum 0.7 half-wide.
-		local shoulder = Vector3.new(0.45, 1.1, 0)
-		it("raises the grip by the lift, beside the torso, within the arm's reach", function()
-			local target = Formulas.liftTarget(shoulder, 1.3, 0.9, 0.6 + 0.7)
-			expect(target.Y).to.be.near(1.1 - 1.3 + 0.9, 1e-6)
-			expect(target.X >= 0.45).to.equal(true)
-			expect((target - shoulder).Magnitude <= 1.3).to.equal(true)
-			-- Held out in front, not behind.
-			expect(target.Z <= 0).to.equal(true)
+	describe("tube", function()
+		it("is long enough that the floor head rests on the floor", function()
+			local tube = VacuumHoldFormulas.tube(1.5, WAND, TUNING.angle, TUNING.clearance, TUNING.minTube)
+			-- Grip 1.5 above the floor: grip half + tube + half the swivel along the wand, then the swivel and head.
+			local drop = (WAND.gripHalf + tube + WAND.swivel) * math.cos(TUNING.angle) + WAND.swivel + WAND.head
+			expect(drop).to.be.near(1.5 - TUNING.clearance, 1e-4)
 		end)
 
-		it("keeps the grip on the shoulder's side when the clearance is out of reach", function()
-			local target = Formulas.liftTarget(shoulder, 1.3, 0.9, 5)
-			expect((target - shoulder).Magnitude <= 1.3).to.equal(true)
-			expect(target.X >= 0.45).to.equal(true)
+		it("never goes below its shortest", function()
+			expect(VacuumHoldFormulas.tube(0.4, WAND, TUNING.angle, TUNING.clearance, TUNING.minTube)).to.equal(0.3)
+		end)
+	end)
+
+	describe("hold", function()
+		local hold = VacuumHoldFormulas.hold(RIGHT, LEFT, FLOOR, WAND, TUNING)
+
+		it("holds the grip in front of and below the shoulder, inside the arm's reach so the elbow bends", function()
+			local grip = hold.grip.Position
+			local reach = RIGHT.upper + RIGHT.lower
+			expect(grip.Z < -0.5).to.equal(true)
+			expect(grip.Y < RIGHT.shoulder.Y).to.equal(true)
+			local distance = (grip - RIGHT.shoulder).Magnitude
+			expect(distance < 0.85 * reach).to.equal(true)
+			expect(distance > 0.6 * reach).to.equal(true)
+		end)
+
+		it("turns the hand so the forearm runs down into it (no wrist-only bend)", function()
+			local elbow = VacuumHoldFormulas.elbow(
+				RIGHT.shoulder,
+				hold.grip.Position,
+				RIGHT.upper,
+				RIGHT.lower,
+				hold.rightPole - RIGHT.shoulder
+			)
+			local forearm = (hold.grip.Position - elbow).Unit
+			-- The grip attachment is the stock hand turned -90 degrees about X; the stock hand's -Y runs down the arm.
+			local hand = hold.grip * CFrame.Angles(math.pi / 2, 0, 0)
+			expect((-hand.UpVector):Dot(forearm)).to.be.near(1, 1e-3)
+		end)
+
+		it("gives a Tool.Grip that keeps the handle square to the root at the grip", function()
+			-- handle = gripAttachment * Grip:Inverse()
+			local handle = hold.grip * hold.toolGrip:Inverse()
+			expect((handle.Position - hold.grip.Position).Magnitude < 1e-4).to.equal(true)
+			expect(handle.LookVector:Dot(Vector3.new(0, 0, -1))).to.be.near(1, 1e-4)
+			expect(handle.UpVector:Dot(Vector3.yAxis)).to.be.near(1, 1e-4)
+		end)
+
+		it("sizes the tube from the grip's height so the head rests on the floor", function()
+			local height = hold.grip.Position.Y - FLOOR
+			expect(hold.tube).to.be.near(
+				VacuumHoldFormulas.tube(height, WAND, TUNING.angle, TUNING.clearance, TUNING.minTube),
+				1e-6
+			)
+			expect(hold.height).to.be.near(height, 1e-6)
+		end)
+
+		it("puts the left hand on the wand above the right one when it reaches", function()
+			expect(hold.left).to.be.ok()
+			local left = hold.left.Position
+			expect(left.Y > hold.grip.Position.Y).to.equal(true)
+			expect((left - LEFT.shoulder).Magnitude <= 0.95 * (LEFT.upper + LEFT.lower) + 1e-6).to.equal(true)
+			-- Turned along its forearm too (a Transform target).
+			local elbow =
+				VacuumHoldFormulas.elbow(LEFT.shoulder, left, LEFT.upper, LEFT.lower, hold.leftPole - LEFT.shoulder)
+			local hand = hold.left * CFrame.Angles(math.pi / 2, 0, 0)
+			expect((-hand.UpVector):Dot((left - elbow).Unit)).to.be.near(1, 1e-3)
+		end)
+
+		it("leaves the left hand alone when it cannot reach, or there is no left arm", function()
+			local short = { shoulder = Vector3.new(-0.45, 1.15, 0), upper = 0.2, lower = 0.2 }
+			expect(VacuumHoldFormulas.hold(RIGHT, short, FLOOR, WAND, TUNING).left).to.equal(nil)
+			expect(VacuumHoldFormulas.hold(RIGHT, nil, FLOOR, WAND, TUNING).left).to.equal(nil)
+		end)
+
+		it("points the elbows outward and down", function()
+			expect(hold.rightPole.X > RIGHT.shoulder.X).to.equal(true)
+			expect(hold.rightPole.Y < RIGHT.shoulder.Y).to.equal(true)
+			expect(hold.leftPole.X < LEFT.shoulder.X).to.equal(true)
+		end)
+	end)
+
+	describe("wand", function()
+		it("lays the grip, tube and swivel along the wand and the floor head flat at its end", function()
+			local frames = VacuumHoldFormulas.wand(WAND, 1.2, math.rad(35))
+			local along = Vector3.new(0, -math.cos(math.rad(35)), -math.sin(math.rad(35)))
+			expect(frames.grip.Position.Magnitude < 1e-6).to.equal(true)
+			expect((-frames.grip.UpVector):Dot(along)).to.be.near(1, 1e-4)
+			expect(frames.tube.Position:Dot(along)).to.be.near(WAND.gripHalf + 0.6, 1e-4)
+			expect(frames.swivel.Position:Dot(along)).to.be.near(WAND.gripHalf + 1.2 + WAND.swivel, 1e-4)
+			expect(frames.head.UpVector:Dot(Vector3.yAxis)).to.be.near(1, 1e-6)
+			expect(frames.head.Position.Y).to.be.near(frames.swivel.Position.Y - WAND.swivel - WAND.head / 2, 1e-4)
+			-- The hose comes off the top of the grip.
+			expect(frames.inlet.Position:Dot(along) < 0).to.equal(true)
+		end)
+
+		it("stands upright at no angle (stowed on the pack)", function()
+			local frames = VacuumHoldFormulas.wand(WAND, 0.4, 0)
+			expect(frames.tube.Position.X).to.be.near(0, 1e-6)
+			expect(frames.tube.Position.Z).to.be.near(0, 1e-6)
+			expect(frames.head.Position.Y < frames.tube.Position.Y).to.equal(true)
+		end)
+	end)
+
+	describe("generic backpack fit", function()
+		it("mounts on the back face of a box torso, a little above its middle", function()
+			local fit =
+				VacuumHoldFormulas.genericFit(Vector3.new(2, 1.6, 1), Vector3.new(0.955, 1.96, 1.006), 0.84, 1.25)
+			expect(fit.mount.Position.Z).to.be.near(0.5, 1e-6)
+			expect(fit.mount.Position.Y > 0).to.equal(true)
+			expect(fit.size).to.equal(1.25)
+			-- Loops around a deeper torso than Pippa's are deeper, never inside it.
+			expect(fit.strapStretch.Z * 0.84 > 1).to.equal(true)
+			expect(fit.strapStretch.X).to.be.near(2 / 0.955, 1e-6)
 		end)
 	end)
 end

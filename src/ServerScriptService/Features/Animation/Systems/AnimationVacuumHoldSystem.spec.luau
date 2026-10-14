@@ -1,7 +1,7 @@
 local ServerScriptService = game:GetService("ServerScriptService")
 local System = require(ServerScriptService.Features.Animation.Systems.AnimationVacuumHoldSystem)
 return function()
-	-- A T-posed right arm: root at the origin, shoulder at (0.5, 1, 0), 0.4 + 0.4 + 0.3 to the grip.
+	-- Two T-posed arms: root at the origin, shoulders at (+-0.5, 1, 0).
 	local function rig()
 		local model = Instance.new("Model")
 		local function block(name, position, size)
@@ -22,49 +22,76 @@ return function()
 		end
 		block("HumanoidRootPart", Vector3.zero, Vector3.new(2, 2, 1))
 		block("UpperTorso", Vector3.new(0, 0.5, 0), Vector3.new(1.2, 1.4, 1))
-		local upper = block("RightUpperArm", Vector3.new(0.7, 1, 0), Vector3.new(0.4, 0.3, 0.3))
-		attach(upper, "RightShoulderRigAttachment", Vector3.new(-0.2, 0, 0))
-		attach(upper, "RightElbowRigAttachment", Vector3.new(0.2, 0, 0))
-		local lower = block("RightLowerArm", Vector3.new(1.1, 1, 0), Vector3.new(0.4, 0.3, 0.3))
-		attach(lower, "RightElbowRigAttachment", Vector3.new(-0.2, 0, 0))
-		attach(lower, "RightWristRigAttachment", Vector3.new(0.2, 0, 0))
-		local hand = block("RightHand", Vector3.new(1.45, 1, 0), Vector3.new(0.3, 0.3, 0.3))
-		attach(hand, "RightWristRigAttachment", Vector3.new(-0.15, 0, 0))
-		attach(hand, "RightGripAttachment", Vector3.new(0.15, 0, 0))
+		for _, side in { { "Right", 1 }, { "Left", -1 } } do
+			local name, sx = side[1], side[2]
+			block(name .. "UpperArm", Vector3.new(0.7 * sx, 1, 0), Vector3.new(0.4, 0.3, 0.3))
+			block(name .. "LowerArm", Vector3.new(1.1 * sx, 1, 0), Vector3.new(0.4, 0.3, 0.3))
+			local hand = block(name .. "Hand", Vector3.new(1.45 * sx, 1, 0), Vector3.new(0.3, 0.3, 0.3))
+			attach(hand, name .. "GripAttachment", Vector3.new(0.15 * sx, 0, 0))
+		end
 		local humanoid = Instance.new("Humanoid")
 		humanoid.Parent = model
 		return model, humanoid
 	end
-	local grip = CFrame.Angles(-math.pi / 2, 0, 0)
 
-	it("drives only the right arm's grip to a lifted target fixed to the root", function()
+	local hold = {
+		grip = CFrame.new(0.6, 0.2, -0.7) * CFrame.Angles(-1, 0, 0),
+		toolGrip = CFrame.Angles(-1, 0, 0),
+		rightPole = Vector3.new(1.5, 0.4, 0.5),
+		leftPole = Vector3.new(-1.5, 0.4, 0.5),
+		left = CFrame.new(0.6, 0.45, -0.55) * CFrame.Angles(-1.2, 0.3, 0),
+		tube = 1,
+		height = 1.5,
+	}
+
+	local function controls(humanoid)
+		local found = {}
+		for _, child in humanoid:GetChildren() do
+			if child:IsA("IKControl") then
+				found[child.ChainRoot.Name] = child
+			end
+		end
+		return found
+	end
+
+	it("drives the right grip to the hold's frame and the left hand onto the wand, both fixed to the root", function()
 		local model, humanoid = rig()
-		local controller = System.hold(model, grip, 0.5, 0.6)
+		local controller = System.hold(model, hold)
 		expect(controller).to.be.ok()
-		local control = humanoid:FindFirstChildWhichIsA("IKControl")
-		expect(control.ChainRoot.Name).to.equal("RightUpperArm")
-		expect(control.EndEffector.Name).to.equal("RightGripAttachment")
-		local target = control.Target
-		expect(target.Parent.Name).to.equal("HumanoidRootPart")
-		-- Hanging, the grip is 1.1 below the shoulder; lifted 0.5, it is 0.6 below.
-		expect(target.Position.Y).to.be.near(1 - 1.1 + 0.5, 1e-3)
-		-- Beside the torso (0.6 half-wide) by the vacuum's half-width, as far as the arm reaches.
-		expect(target.Position.X > 0.5).to.equal(true)
-		-- Oriented so the handle (target * grip⁻¹) stands upright.
-		local handle = target.CFrame * grip:Inverse()
-		expect(handle.UpVector:Dot(Vector3.yAxis)).to.be.near(1, 1e-3)
+		local found = controls(humanoid)
+		local right, left = found.RightUpperArm, found.LeftUpperArm
+		expect(right.EndEffector.Name).to.equal("RightGripAttachment")
+		expect(right.Type).to.equal(Enum.IKControlType.Transform)
+		expect(right.Target.Parent.Name).to.equal("HumanoidRootPart")
+		expect(right.Target.CFrame).to.equal(hold.grip)
+		expect(right.Pole.Position).to.equal(hold.rightPole)
+		expect(right.SmoothTime).to.equal(0)
+		expect(left.EndEffector.Name).to.equal("LeftGripAttachment")
+		expect(left.Type).to.equal(Enum.IKControlType.Transform)
+		expect(left.Target.CFrame).to.equal(hold.left)
 		controller.destroy()
 		controller.destroy()
 		expect(humanoid:FindFirstChildWhichIsA("IKControl")).to.equal(nil)
-		expect(model.HumanoidRootPart:FindFirstChild("VacuumHoldTarget")).to.equal(nil)
+		expect(#model.HumanoidRootPart:GetChildren()).to.equal(0)
 		model:Destroy()
 	end)
 
-	it("creates nothing when there is nothing to lift, or no native right arm", function()
+	it("holds with the right hand alone when the left cannot reach", function()
+		local single = table.clone(hold)
+		single.left = nil
 		local model, humanoid = rig()
-		expect(System.hold(model, grip, 0, 0.6)).to.equal(nil)
+		local controller = System.hold(model, single)
+		local found = controls(humanoid)
+		expect(found.RightUpperArm).to.be.ok()
+		expect(found.LeftUpperArm).to.equal(nil)
+		controller.destroy()
+		model:Destroy()
+	end)
+
+	it("creates nothing without a native right arm", function()
+		local model, humanoid = rig()
 		model.RightHand.RightGripAttachment:Destroy()
-		expect(System.hold(model, grip, 0.5, 0.6)).to.equal(nil)
+		expect(System.hold(model, hold)).to.equal(nil)
 		expect(humanoid:FindFirstChildWhichIsA("IKControl")).to.equal(nil)
 		model:Destroy()
 	end)

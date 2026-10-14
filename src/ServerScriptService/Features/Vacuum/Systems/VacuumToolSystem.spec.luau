@@ -19,18 +19,40 @@ return function()
 			end
 			tool:Destroy()
 		end)
-		it("records an upright, unlifted hold with no holder or an unmeasurable one", function()
+		it("builds the hand wand with a hose inlet, held as a hanging hand holds it when unmeasured", function()
 			local tool = System.create()
-			expect(tool:GetAttribute("VacuumHoldTilt")).to.equal(0)
-			expect(tool:GetAttribute("VacuumHoldLift")).to.equal(0)
+			expect(tool:FindFirstChild("FloorHead")).to.be.ok()
+			expect(tool.Handle:FindFirstChild("HoseInlet")).to.be.ok()
+			expect(tool.Grip).to.equal(CFrame.Angles(-math.pi / 2, 0, 0))
 			local stranger = Instance.new("Model")
 			local fitted = System.create(stranger)
-			-- A rig without arm attachments cannot be measured, so it holds the vacuum as a stock avatar does.
-			expect(fitted:GetAttribute("VacuumHoldTilt")).to.equal(0)
-			expect(fitted:GetAttribute("VacuumHoldLift")).to.equal(0)
+			expect(fitted.Grip).to.equal(CFrame.Angles(-math.pi / 2, 0, 0))
 			tool:Destroy()
 			fitted:Destroy()
 			stranger:Destroy()
+		end)
+		it("runs the backpack's hose to the wand while a character holds it, and stows it after", function()
+			local calls = {}
+			local backpack = {
+				model = Instance.new("Model"),
+				setHeld = function(inlet)
+					table.insert(calls, inlet or "stowed")
+				end,
+				destroy = function() end,
+			}
+			local tool = System.create(nil, backpack)
+			local character = Instance.new("Model")
+			Instance.new("Humanoid").Parent = character
+			-- Parent-changed handlers run deferred.
+			tool.Parent = character
+			task.wait()
+			expect(calls[#calls]).to.equal(tool.Handle.HoseInlet)
+			tool.Parent = nil
+			task.wait()
+			expect(calls[#calls]).to.equal("stowed")
+			expect(#calls).to.equal(2)
+			tool:Destroy()
+			character:Destroy()
 		end)
 		it("does not treat a backpack Tool or an unrelated namesake as equipped", function()
 			local character = Instance.new("Model")

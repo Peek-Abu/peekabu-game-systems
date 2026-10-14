@@ -1,4 +1,10 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
+
 local Visual = require(script.Parent.VacuumVisualSystem)
+local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
+local VisualConstants = require(ServerScriptService.Features.Vacuum.Data.VacuumVisualConstants)
+
 return function()
 	local function addPart(model, name, cframe, size)
 		local p = Instance.new("Part")
@@ -18,7 +24,7 @@ return function()
 		return a
 	end
 
-	-- A right arm in a T-pose: floor at y = 0, shoulder 2 studs up, arm 0.4 + 0.4 + 0.3 = 1.1 studs to the grip.
+	-- Two T-posed arms: floor at y = 0, root at y = 1 (hip 0.5), shoulders 2 up, arm 0.4 + 0.4 + 0.3 to the grip.
 	local function makeHolder()
 		local model = Instance.new("Model")
 		local humanoid = Instance.new("Humanoid")
@@ -26,123 +32,165 @@ return function()
 		humanoid.Parent = model
 		local root = addPart(model, "HumanoidRootPart", CFrame.new(0, 1, 0), Vector3.new(1, 1, 1))
 		model.PrimaryPart = root
-		local torso = addPart(model, "UpperTorso", CFrame.new(0, 1.8, 0))
-		attach(torso, "RightShoulderRigAttachment", Vector3.new(0.5, 0.2, 0))
-		local upper = addPart(model, "RightUpperArm", CFrame.new(0.7, 2, 0))
-		attach(upper, "RightShoulderRigAttachment", Vector3.new(-0.2, 0, 0))
-		attach(upper, "RightElbowRigAttachment", Vector3.new(0.2, 0, 0))
-		local lower = addPart(model, "RightLowerArm", CFrame.new(1.1, 2, 0))
-		attach(lower, "RightElbowRigAttachment", Vector3.new(-0.2, 0, 0))
-		attach(lower, "RightWristRigAttachment", Vector3.new(0.2, 0, 0))
-		local hand = addPart(model, "RightHand", CFrame.new(1.45, 2, 0))
-		attach(hand, "RightWristRigAttachment", Vector3.new(-0.15, 0, 0))
-		attach(hand, "RightGripAttachment", Vector3.new(0.15, 0, 0))
+		local torso = addPart(model, "UpperTorso", CFrame.new(0, 1.8, 0), Vector3.new(1, 1.2, 0.8))
+		for _, side in { { "Right", 1 }, { "Left", -1 } } do
+			local name, sx = side[1], side[2]
+			attach(torso, name .. "ShoulderRigAttachment", Vector3.new(0.5 * sx, 0.2, 0))
+			local upper = addPart(model, name .. "UpperArm", CFrame.new(0.7 * sx, 2, 0))
+			attach(upper, name .. "ShoulderRigAttachment", Vector3.new(-0.2 * sx, 0, 0))
+			attach(upper, name .. "ElbowRigAttachment", Vector3.new(0.2 * sx, 0, 0))
+			local lower = addPart(model, name .. "LowerArm", CFrame.new(1.1 * sx, 2, 0))
+			attach(lower, name .. "ElbowRigAttachment", Vector3.new(-0.2 * sx, 0, 0))
+			attach(lower, name .. "WristRigAttachment", Vector3.new(0.2 * sx, 0, 0))
+			local hand = addPart(model, name .. "Hand", CFrame.new(1.45 * sx, 2, 0))
+			attach(hand, name .. "WristRigAttachment", Vector3.new(-0.15 * sx, 0, 0))
+			attach(hand, name .. "GripAttachment", Vector3.new(0.15 * sx, 0, 0))
+		end
 		return model
 	end
 
-	local function lowest(tool)
-		local handle = tool.Handle
-		local low = math.huge
-		for _, p in tool:GetDescendants() do
-			if p:IsA("BasePart") and p ~= handle then
-				local local_ = handle.CFrame:ToObjectSpace(p.CFrame)
-				local half = p.Size / 2
-				for _, x in { -1, 1 } do
-					for _, y in { -1, 1 } do
-						for _, z in { -1, 1 } do
-							low = math.min(low, (local_ * Vector3.new(x * half.X, y * half.Y, z * half.Z)).Y)
-						end
-					end
-				end
-			end
-		end
-		return low
+	local function find(container, name)
+		return container:FindFirstChild(name, true)
 	end
 
-	describe("vacuum visual assembly", function()
-		it("builds original source around one invisible grip handle without collisions", function()
+	describe("measure", function()
+		it("reads an arm's shoulder (root space) and lengths from its rig attachments", function()
+			local holder = makeHolder()
+			local arm = Visual.arm(holder, "Right")
+			expect(arm.shoulder.X).to.be.near(0.5, 1e-4)
+			expect(arm.shoulder.Y).to.be.near(1, 1e-4)
+			expect(arm.upper).to.be.near(0.4, 1e-4)
+			expect(arm.lower).to.be.near(0.7, 1e-4)
+			holder:Destroy()
+		end)
+
+		it("has no arm for a rig without the attachments", function()
+			local model = Instance.new("Model")
+			Instance.new("Humanoid").Parent = model
+			expect(Visual.arm(model, "Right")).to.equal(nil)
+			model:Destroy()
+		end)
+	end)
+
+	describe("the wand in the hand", function()
+		it("builds the wand round one invisible handle, welded, without collisions, with a hose inlet", function()
 			local tool = Instance.new("Tool")
 			local handle = Visual.build(tool)
 			expect(handle.Name).to.equal("Handle")
 			expect(handle.Transparency).to.equal(1)
-			expect(tool:FindFirstChild("Wide floor head", true) ~= nil).to.equal(true)
+			expect(find(tool, VacuumConstants.FLOOR_HEAD_NAME)).to.be.ok()
+			expect(handle:FindFirstChild("HoseInlet")).to.be.ok()
+			local welds = 0
 			for _, part in tool:GetDescendants() do
 				if part:IsA("BasePart") then
 					expect(part.Massless).to.equal(true)
 					expect(part.CanCollide or part.CanQuery or part.CanTouch).to.equal(false)
+				elseif part:IsA("WeldConstraint") then
+					welds += 1
+					expect(part.Part0).to.equal(handle)
 				end
 			end
+			expect(welds >= 5).to.equal(true)
+			expect(tool.Grip).to.equal(VisualConstants.DEFAULT_GRIP)
 			tool:Destroy()
 		end)
-		it("welds every visible part to the single grip root", function()
+
+		it("fits a measured holder: the hold's grip, and a tube that rests the floor head on the floor", function()
+			local holder = makeHolder()
 			local tool = Instance.new("Tool")
-			local handle = Visual.build(tool)
-			local count = 0
-			for _, weld in tool:GetDescendants() do
-				if weld:IsA("WeldConstraint") then
-					count += 1
-					expect(weld.Part0).to.equal(handle)
-				end
-			end
-			expect(count >= 38).to.equal(true)
+			local handle, hold = Visual.build(tool, holder)
+			expect(hold).to.be.ok()
+			expect(tool.Grip).to.equal(hold.toolGrip)
+			local tube = find(tool, "WandTube")
+			expect(tube.Size.Y).to.be.near(hold.tube, 1e-4)
+			-- The handle sits square to the root at the grip, hold.height above the floor.
+			local head = find(tool, VacuumConstants.FLOOR_HEAD_NAME)
+			local bottom = handle.CFrame:PointToObjectSpace(head.Position).Y - head.Size.Y / 2
+			local size = VisualConstants.GENERIC_SIZE
+			expect(hold.height + bottom).to.be.near(VisualConstants.hold.clearance * size, 1e-3)
+			-- The head is out in front of the grip.
+			expect(handle.CFrame:PointToObjectSpace(head.Position).Z < 0).to.equal(true)
 			tool:Destroy()
+			holder:Destroy()
 		end)
 	end)
 
-	describe("fitting the holder", function()
-		it("measures how high a hanging arm holds the grip above the floor", function()
+	describe("the backpack", function()
+		it("is worn on the UpperTorso's back, welded, with a gauge, a lamp, a stowed wand and a hose", function()
 			local holder = makeHolder()
-			-- Shoulder at 2, arm 1.1 long: the grip hangs 0.9 above the floor.
-			expect(Visual.hangHeight(holder)).to.be.near(0.9, 1e-3)
+			local backpack = Visual.wear(holder)
+			expect(backpack).to.be.ok()
+			local model = holder:FindFirstChild(VacuumConstants.BACKPACK_NAME)
+			expect(model).to.equal(backpack.model)
+			local torso = holder.UpperTorso
+			for _, part in model:GetDescendants() do
+				if part:IsA("BasePart") then
+					expect(part.Massless).to.equal(true)
+					expect(part.CanCollide or part.CanQuery or part.CanTouch).to.equal(false)
+					local weld = part:FindFirstChildWhichIsA("Weld")
+					expect(weld).to.be.ok()
+					expect(weld.Part0).to.equal(torso)
+				end
+			end
+			local body = find(model, "CanisterBody")
+			-- Behind the torso (+Z is back).
+			expect(torso.CFrame:PointToObjectSpace(body.Position).Z > 0.4).to.equal(true)
+			local fill = find(model, VacuumConstants.GAUGE_FILL_NAME)
+			expect(fill:GetAttribute("GaugeFullSize")).to.equal(fill.Size)
+			local gaugeWeld = fill:FindFirstChild(VacuumConstants.GAUGE_WELD_NAME)
+			expect(gaugeWeld:GetAttribute("GaugeFullC0")).to.equal(gaugeWeld.C0)
+			expect(find(model, VacuumConstants.LAMP_NAME)).to.be.ok()
+			local hose = find(model, "VacuumHose")
+			expect(hose:IsA("Beam")).to.equal(true)
+			expect(hose.Attachment0).to.be.ok()
+			expect(hose.Attachment1:IsDescendantOf(model.StowedWand)).to.equal(true)
+			backpack.destroy()
+			expect(holder:FindFirstChild(VacuumConstants.BACKPACK_NAME)).to.equal(nil)
 			holder:Destroy()
 		end)
-		it("has no hang height for a rig without the arm attachments", function()
+
+		it("unclips the stowed wand and runs the hose to the held one, and back", function()
+			local holder = makeHolder()
+			local backpack = Visual.wear(holder)
+			local model = backpack.model
+			local stowed = model.StowedWand
+			local tool = Instance.new("Tool")
+			local handle = Visual.build(tool, holder)
+			local inlet = handle.HoseInlet
+			backpack.setHeld(inlet)
+			expect(stowed.Parent).to.equal(nil)
+			expect(find(model, "VacuumHose").Attachment1).to.equal(inlet)
+			backpack.setHeld(nil)
+			expect(stowed.Parent).to.equal(model)
+			expect(find(model, "VacuumHose").Attachment1:IsDescendantOf(stowed)).to.equal(true)
+			backpack.destroy()
+			tool:Destroy()
+			holder:Destroy()
+		end)
+
+		it("is not worn by a body without an UpperTorso", function()
 			local model = Instance.new("Model")
-			Instance.new("Humanoid").Parent = model
-			expect(Visual.hangHeight(model)).to.equal(nil)
+			expect(Visual.wear(model)).to.equal(nil)
 			model:Destroy()
 		end)
-		it("builds the same full-size vacuum for every holder", function()
+	end)
+
+	describe("fit", function()
+		it("uses the employee's registry fit at its scale", function()
 			local holder = makeHolder()
-			local full = Instance.new("Tool")
-			Visual.build(full)
-			local fitted = Instance.new("Tool")
-			Visual.build(fitted, holder)
-			local a = full:FindFirstChild("Wide floor head", true)
-			local b = fitted:FindFirstChild("Wide floor head", true)
-			expect(a.Size).to.equal(b.Size)
-			full:Destroy()
-			fitted:Destroy()
+			holder:SetAttribute("EmployeeName", "Pippa")
+			local fit, scale = Visual.fitOf(holder)
+			expect(scale).to.be.near(1.25, 1e-6)
+			expect(fit.mount.Position.Y > 0).to.equal(true)
 			holder:Destroy()
 		end)
-		it("holds it upright and unlifted for an unknown or tall holder", function()
-			local tool = Instance.new("Tool")
-			Visual.build(tool)
-			expect(tool:GetAttribute("VacuumHoldTilt")).to.equal(0)
-			expect(tool:GetAttribute("VacuumHoldLift")).to.equal(0)
-			expect(tool:GetAttribute("VacuumHoldHalfWidth") > 0.5).to.equal(true)
-			tool:Destroy()
-		end)
-		it("tilts a short holder's vacuum front-up about the grip and lifts the hand for the rest", function()
+
+		it("fits anyone else from their UpperTorso's size", function()
 			local holder = makeHolder()
-			local full = Instance.new("Tool")
-			Visual.build(full)
-			local fitted = Instance.new("Tool")
-			Visual.build(fitted, holder)
-			local tilt = fitted:GetAttribute("VacuumHoldTilt")
-			local lift = fitted:GetAttribute("VacuumHoldLift")
-			expect(tilt > 0).to.equal(true)
-			expect(tilt <= 25 + 1e-6).to.equal(true)
-			expect(lift > 0).to.equal(true)
-			-- The grip hangs 0.9 above the floor: lifted, the lowest point clears it (by the 0.08 clearance).
-			expect(0.9 + lift + lowest(fitted)).to.be.near(0.08, 1e-3)
-			-- Front up: the floor head is higher under the grip than when upright.
-			local function headY(tool)
-				return tool.Handle.CFrame:PointToObjectSpace(tool:FindFirstChild("Wide floor head", true).Position).Y
-			end
-			expect(headY(fitted) > headY(full)).to.equal(true)
-			full:Destroy()
-			fitted:Destroy()
+			local fit, scale = Visual.fitOf(holder)
+			expect(scale).to.equal(1)
+			expect(fit.mount.Position.Z).to.be.near(0.4, 1e-6)
+			expect(fit.size).to.equal(VisualConstants.GENERIC_SIZE)
 			holder:Destroy()
 		end)
 	end)

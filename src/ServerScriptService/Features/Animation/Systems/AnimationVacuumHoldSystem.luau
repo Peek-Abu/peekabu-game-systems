@@ -1,13 +1,15 @@
 --!strict
 --[=[
-	AnimationVacuumHoldSystem: lifts a short holder's right hand to where the full-size vacuum rests on the floor
-	(VacuumHoldFormulas: the vacuum's tilt is built into it, the remaining lift is this arm pose).
+	AnimationVacuumHoldSystem: holds the backpack vacuum's wand with the arms (VacuumHoldFormulas.hold).
 
-	While the vacuum is equipped by a holder that needs a lift, one native IKControl (server-created, so every
-	client's Animator solves it, like the carry contacts) drives the RightUpperArm → RightHand chain so the hand's
-	RightGripAttachment sits at a target fixed to the HumanoidRootPart: lifted from the hang, beside the torso so
-	the vacuum's body misses it, oriented so the vacuum stands as it does in a stock avatar's hanging hand. Only
-	the right arm is touched; no joint, attachment or Transform is written.
+	While the wand is equipped, native IKControls (server-created, so every client's Animator solves them, like
+	the carry contacts) drive the arms to targets fixed to the HumanoidRootPart: the right arm's
+	RightGripAttachment to the hold's grip frame (Transform: position and the hand turned along the forearm, so
+	the elbow bends and the wrist does not), the left hand onto the wand above it when it reaches (Transform too:
+	a Position-only solve left Pippa's left hand ~0.75 studs off its target in Studio).
+	Poles bend the elbows outward and down. Fixed to the root (which does not bob), the floor head glides at a
+	constant height while the legs walk. No smoothing: a lagging hand lets the floor head dip into the floor.
+	No joint, attachment or Transform of the rig is written.
 
 	@class AnimationVacuumHoldSystem
 ]=]
@@ -20,8 +22,7 @@ export type Controller = { destroy: () -> () }
 
 local AnimationVacuumHoldSystem = {}
 
-local TARGET_NAME = "VacuumHoldTarget"
-local IK_NAME = "VacuumHoldIK"
+local PRIORITY = 10
 
 local function part(character: Model, name: string): BasePart?
 	local found = character:FindFirstChild(name)
@@ -33,78 +34,69 @@ local function attachment(bodyPart: BasePart?, name: string): Attachment?
 	return if found ~= nil and found:IsA("Attachment") then found else nil
 end
 
-local function between(a: Attachment?, b: Attachment?): number?
-	return if a ~= nil and b ~= nil then (a.Position - b.Position).Magnitude else nil
-end
-
 --[=[
-	Holds `character`'s right hand `lift` studs above its hang for a vacuum held by `grip` (the Tool's Grip) and
-	`halfWidth` studs wide. Nil (nothing created) when there is nothing to lift or the rig lacks a native R15 right
-	arm with its grip attachment.
+	Holds `character`'s arms to `hold`. Nil (nothing created) when it is dead or lacks a native R15 right arm
+	with its grip attachment.
 ]=]
-function AnimationVacuumHoldSystem.hold(character: Model, grip: CFrame, lift: number, halfWidth: number): Controller?
+function AnimationVacuumHoldSystem.hold(character: Model, hold: VacuumHoldFormulas.Hold): Controller?
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	local root = part(character, "HumanoidRootPart")
-	local torso = part(character, "UpperTorso")
-	local upper = part(character, "RightUpperArm")
-	local lower = part(character, "RightLowerArm")
-	local hand = part(character, "RightHand")
-	local gripAttachment = attachment(hand, "RightGripAttachment")
-	local shoulder = attachment(upper, "RightShoulderRigAttachment")
-	local upperSpan = between(shoulder, attachment(upper, "RightElbowRigAttachment"))
-	local lowerSpan =
-		between(attachment(lower, "RightElbowRigAttachment"), attachment(lower, "RightWristRigAttachment"))
-	local handSpan = between(attachment(hand, "RightWristRigAttachment"), gripAttachment)
-	if
-		not (lift > 0)
-		or humanoid == nil
-		or humanoid.Health <= 0
-		or root == nil
-		or torso == nil
-		or upper == nil
-		or hand == nil
-		or gripAttachment == nil
-		or shoulder == nil
-		or upperSpan == nil
-		or lowerSpan == nil
-		or handSpan == nil
-	then
+	local rightUpper = part(character, "RightUpperArm")
+	local rightGrip = attachment(part(character, "RightHand"), "RightGripAttachment")
+	if humanoid == nil or humanoid.Health <= 0 or root == nil or rightUpper == nil or rightGrip == nil then
 		return nil
 	end
-	-- The torso's half-width in root space (its widest corner).
-	local torsoFrame = root.CFrame:ToObjectSpace(torso.CFrame)
-	local torsoHalf = 0
-	for _, x in { -1, 1 } do
-		for _, y in { -1, 1 } do
-			for _, z in { -1, 1 } do
-				local corner = torsoFrame * (Vector3.new(x * torso.Size.X, y * torso.Size.Y, z * torso.Size.Z) / 2)
-				torsoHalf = math.max(torsoHalf, corner.X)
-			end
-		end
+	local created: { Instance } = {}
+	local function marker(name: string, frame: CFrame): Attachment
+		local target = Instance.new("Attachment")
+		target.Name = name
+		target.CFrame = frame
+		target.Parent = root
+		table.insert(created, target)
+		return target
 	end
-	local position = VacuumHoldFormulas.liftTarget(
-		root.CFrame:PointToObjectSpace(shoulder.WorldPosition),
-		upperSpan + lowerSpan + handSpan,
-		lift,
-		torsoHalf + halfWidth
+	local function control(
+		name: string,
+		kind: Enum.IKControlType,
+		chainRoot: BasePart,
+		effector: Attachment,
+		target: Attachment,
+		pole: Attachment
 	)
-	local target = Instance.new("Attachment")
-	target.Name = TARGET_NAME
-	-- The hand's grip attachment meets the handle at `grip`: an upright handle means this frame.
-	target.CFrame = CFrame.new(position) * grip
-	target.Parent = root
-	local control = Instance.new("IKControl")
-	control.Name = IK_NAME
-	control.Type = Enum.IKControlType.Transform
-	control.ChainRoot = upper
-	control.EndEffector = gripAttachment
-	control.Target = target
-	-- No smoothing: a lagging hand lets the walk bob dip the floor head through the floor (measured on Pippa:
-	-- 0.1 s smoothing dipped it 0.15 studs below the floor at walk speed; none keeps it 0.08-0.11 above).
-	control.SmoothTime = 0
-	control.Weight = 1
-	control.Priority = 10
-	control.Parent = humanoid
+		local ik = Instance.new("IKControl")
+		ik.Name = name
+		ik.Type = kind
+		ik.ChainRoot = chainRoot
+		ik.EndEffector = effector
+		ik.Target = target
+		ik.Pole = pole
+		ik.SmoothTime = 0
+		ik.Weight = 1
+		ik.Priority = PRIORITY
+		ik.Parent = humanoid
+		table.insert(created, ik)
+	end
+	control(
+		"VacuumHoldIK",
+		Enum.IKControlType.Transform,
+		rightUpper,
+		rightGrip,
+		marker("VacuumHoldTarget", hold.grip),
+		marker("VacuumHoldPole", CFrame.new(hold.rightPole))
+	)
+	local leftUpper = part(character, "LeftUpperArm")
+	local leftGrip = attachment(part(character, "LeftHand"), "LeftGripAttachment")
+	local left = hold.left
+	if left ~= nil and leftUpper ~= nil and leftGrip ~= nil then
+		control(
+			"VacuumSupportIK",
+			Enum.IKControlType.Transform,
+			leftUpper,
+			leftGrip,
+			marker("VacuumSupportTarget", left),
+			marker("VacuumSupportPole", CFrame.new(hold.leftPole))
+		)
+	end
 
 	local connections: { RBXScriptConnection } = {}
 	local destroyed = false
@@ -119,8 +111,10 @@ function AnimationVacuumHoldSystem.hold(character: Model, grip: CFrame, lift: nu
 				connection:Disconnect()
 			end
 			table.clear(connections)
-			control:Destroy()
-			target:Destroy()
+			for _, instance in created do
+				instance:Destroy()
+			end
+			table.clear(created)
 		end,
 	}
 	table.insert(connections, humanoid.Died:Connect(controller.destroy))
