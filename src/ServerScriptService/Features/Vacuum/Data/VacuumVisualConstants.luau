@@ -364,4 +364,11 @@ local parts: { VisualPart } = {
 		Color3.new(0.963976, 0.754781, 0.282779)
 	),
 }
-return table.freeze({ parts = parts, grip = CFrame.Angles(-math.pi / 2, 0, 0) })
+return table.freeze({
+	parts = parts,
+	grip = CFrame.Angles(-math.pi / 2, 0, 0),
+	-- Fitting a short holder (VacuumVisualSystem.holdScale): studs kept between the floor head and the floor under
+	-- a straight hanging arm (the walk swing lifts it further), and the smallest the vacuum is ever built.
+	holdClearance = 0.08,
+	minHoldScale = 0.35,
+})

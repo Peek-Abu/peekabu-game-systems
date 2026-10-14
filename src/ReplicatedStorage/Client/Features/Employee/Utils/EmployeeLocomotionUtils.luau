@@ -28,8 +28,9 @@ function EmployeeLocomotionUtils.fromDef(def: EmployeeRegistry.EmployeeDef): Con
 	end
 	local config: Config = {
 		poseIds = { idle = locomotion.idle, walk = locomotion.walk, run = locomotion.run },
-		walkScale = locomotion.walkPlantedSpeed,
-		runScale = locomotion.runPlantedSpeed,
+		-- Planted speeds are measured on the template; a scaled rig's stride covers `scale` times the ground.
+		walkScale = locomotion.walkPlantedSpeed * def.scale,
+		runScale = locomotion.runPlantedSpeed * def.scale,
 		minRate = locomotion.minRate,
 		walkMaxRate = locomotion.walkMaxRate,
 		runMaxRate = locomotion.runMaxRate,

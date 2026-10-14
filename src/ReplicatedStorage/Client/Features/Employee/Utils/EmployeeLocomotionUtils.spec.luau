@@ -3,10 +3,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local EmployeeRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeRegistry)
 local EmployeeLocomotionUtils = require(script.Parent.EmployeeLocomotionUtils)
 
-local function defWith(locomotion)
+local function defWith(locomotion, scale)
 	local base = EmployeeRegistry.get("Pippa")
 	local copy = table.clone(base)
 	copy.locomotion = locomotion
+	copy.scale = scale or 1
 	return copy
 end
 
@@ -34,6 +35,21 @@ return function()
 			expect(config.runMaxRate).to.equal(3)
 			-- The walk/run switch stays the base's (no override).
 			expect(config.walkRunThreshold).to.equal(nil)
+		end)
+
+		it("plants the strides at the employee's scale (longer legs cover more ground per step)", function()
+			local config = EmployeeLocomotionUtils.fromDef(defWith({
+				idle = "a",
+				walk = "b",
+				run = "c",
+				walkPlantedSpeed = 1.2,
+				runPlantedSpeed = 1.6,
+				minRate = 0.5,
+				walkMaxRate = 2.5,
+				runMaxRate = 3,
+			}, 1.25))
+			expect(config.walkScale).to.be.near(1.5, 1e-6)
+			expect(config.runScale).to.be.near(2, 1e-6)
 		end)
 
 		it("returns nil for an employee without its own locomotion (stock clips)", function()

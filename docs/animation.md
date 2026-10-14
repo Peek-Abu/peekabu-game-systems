@@ -156,7 +156,9 @@ fades). Two things to know:
 - **Speed matching:** for such a set, `walkScale` / `runScale` are the clips' planted speeds (studs/s at
   which the feet do not slide at 1x), so a stride plays at `clamp(speed / plantedSpeed, minRate,
   walkMaxRate | runMaxRate)`. Pippa: walk 1.27 st/s capped at 2.5x, run 1.52 st/s capped at 2.2x, floor
-  0.6x. At WalkSpeed 16 both are at their cap, so the feet slide (accepted for the MVP: her 0.68-stud
+  0.6x. Those are measured on the template; an employee spawns at its registry `scale` (Model:ScaleTo at
+  install: joints, attachments and HipHeight scale, and clips play scaled on the scaled rig, verified in
+  Studio 2026-10-13), so the planted speeds are multiplied by it (Pippa at 1.25: 1.59 / 1.9). At WalkSpeed 16 both are at their cap, so the feet slide (accepted for the MVP: her 0.68-stud
   legs cannot plant at 16 st/s at any sane cadence). The walk/run switch stays the 18 st/s threshold,
   so with no sprint in the game yet her run only shows above WalkSpeed 18.
 - **Kill switch:** set the Workspace attribute `LocomotionEnabled = false` and every locomotion

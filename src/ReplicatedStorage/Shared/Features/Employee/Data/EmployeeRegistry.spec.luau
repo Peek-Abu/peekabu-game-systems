@@ -47,6 +47,17 @@ return function()
 			end
 		end)
 
+		it("gives every employee a positive, sane scale", function()
+			for _, name in EmployeeRegistry.names() do
+				local def = EmployeeRegistry.get(name)
+				expect(def.scale > 0.5 and def.scale <= 2).to.equal(true)
+			end
+		end)
+
+		it("spawns Pippa at 1.25x her authored size (head about 4.9 studs, like a stock avatar's 5)", function()
+			expect(EmployeeRegistry.get("Pippa").scale).to.be.near(1.25, 1e-6)
+		end)
+
 		it("points Pippa at the art asset in ReplicatedStorage.Assets", function()
 			local def = EmployeeRegistry.get("Pippa")
 			expect(table.concat(def.templatePath, ".")).to.equal("Assets.CleanupCrew.Characters.Pippa")

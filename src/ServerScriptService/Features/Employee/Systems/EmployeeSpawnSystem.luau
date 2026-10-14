@@ -5,7 +5,8 @@
 	working unchanged).
 
 	`install` copies the employee's art template (ReplicatedStorage, art-owned, never in the source tree) into
-	StarterPlayer as `StarterCharacter` at server boot, and turns off LoadCharacterAppearance so the engine
+	StarterPlayer as `StarterCharacter` at server boot, scaled to the employee's registry `scale` (Model:ScaleTo:
+	parts, Motor6Ds, attachments and HipHeight; animations play scaled on a scaled model), and turns off LoadCharacterAppearance so the engine
 	does not dress it in the player's avatar. This is runtime-only: Rojo never owns StarterCharacter or that
 	property (StarterPlayer's node only mounts the two script folders and DevCameraOcclusionMode), so a sync
 	cannot fight it and a published place does not need it saved in.
@@ -128,6 +129,21 @@ function EmployeeSpawnSystem.install(
 	starter.Name = EmployeeConstants.STARTER_CHARACTER_NAME
 	starter:SetAttribute(EmployeeConstants.NAME_ATTRIBUTE, def.name)
 	EmployeeSpawnSystem.prepare(starter)
+	if def.scale ~= 1 then
+		-- After prepare, so the generated rig and grip attachments scale with the joints. ScaleTo also scales the
+		-- Humanoid's movement (WalkSpeed, JumpHeight, JumpPower); size is cosmetic, so those are put back: the
+		-- crew's speed and jump are gameplay tuning (the Manager's chase is balanced against them).
+		local humanoid = starter:FindFirstChildOfClass("Humanoid")
+		local walkSpeed = if humanoid ~= nil then humanoid.WalkSpeed else nil
+		local jumpHeight = if humanoid ~= nil then humanoid.JumpHeight else nil
+		local jumpPower = if humanoid ~= nil then humanoid.JumpPower else nil
+		starter:ScaleTo(starter:GetScale() * def.scale)
+		if humanoid ~= nil and walkSpeed ~= nil and jumpHeight ~= nil and jumpPower ~= nil then
+			humanoid.WalkSpeed = walkSpeed
+			humanoid.JumpHeight = jumpHeight
+			humanoid.JumpPower = jumpPower
+		end
+	end
 	if existing ~= nil then
 		existing:Destroy()
 	end

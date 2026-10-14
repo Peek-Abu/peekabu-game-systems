@@ -106,6 +106,7 @@ return function()
 			templatePath = { "Assets", "CleanupCrew", "Characters", "Pippa" },
 			faces = { "Happy", "Worried", "Content" },
 			defaultFace = "Happy",
+			scale = 1,
 		}
 
 		it("puts a prepared copy of the template in as the StarterCharacter, leaving the template alone", function()
@@ -122,6 +123,35 @@ return function()
 			source:Destroy()
 			target:Destroy()
 		end)
+
+		it(
+			"scales the StarterCharacter (joints, attachments and hip height) by the employee's scale, not the template",
+			function()
+				local template = makeTemplate()
+				template.Humanoid.HipHeight = 0.3
+				template.Humanoid.WalkSpeed = 16
+				template.Humanoid.JumpHeight = 7.2
+				local source = makeSource(template)
+				local target = Instance.new("Folder")
+				local big = table.clone(def)
+				big.scale = 1.25
+				expect(EmployeeSpawnSystem.install(big, source, target)).to.equal(true)
+				local starter = target[EmployeeConstants.STARTER_CHARACTER_NAME]
+				expect(starter:GetScale()).to.be.near(1.25, 1e-4)
+				expect(starter.Humanoid.HipHeight).to.be.near(0.375, 1e-4)
+				-- Size is cosmetic: the crew's speed and jump stay the gameplay tuning.
+				expect(starter.Humanoid.WalkSpeed).to.be.near(16, 1e-4)
+				expect(starter.Humanoid.JumpHeight).to.be.near(7.2, 1e-4)
+				expect(starter.Head.Size.X).to.be.near(1.25, 1e-4)
+				local shoulder = starter.UpperTorso.RightShoulderRigAttachment
+				expect((shoulder.Position - Vector3.new(0.36, 0.26, 0.08) * 1.25).Magnitude < 1e-3).to.equal(true)
+				expect(starter.RightHand:FindFirstChild("RightGripAttachment")).to.be.ok()
+				expect(template:GetScale()).to.be.near(1, 1e-6)
+				expect(template.Head.Size.X).to.be.near(1, 1e-6)
+				source:Destroy()
+				target:Destroy()
+			end
+		)
 
 		it("replaces an employee StarterCharacter from an earlier install", function()
 			local source = makeSource(makeTemplate())

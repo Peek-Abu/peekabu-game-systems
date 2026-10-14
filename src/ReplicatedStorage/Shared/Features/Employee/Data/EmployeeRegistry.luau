@@ -62,6 +62,10 @@ export type EmployeeDef = {
 	name: string,
 	-- Path under ReplicatedStorage to the template model.
 	templatePath: { string },
+	-- The size every player spawns at, relative to the template as authored (Model:ScaleTo at install, so the
+	-- joints, rig and grip attachments, HipHeight and animations all follow). Tools and props were sized for a
+	-- stock avatar (head ~5 studs); a chibi is scaled up toward that rather than every prop down to it.
+	scale: number,
 	-- The expressions the model's `Faces` folder must hold.
 	faces: { Face },
 	-- What the model shows before the server has decided anything.
@@ -82,6 +86,10 @@ local EMPLOYEES: { [string]: EmployeeDef } = {
 	Pippa = {
 		name = "Pippa",
 		templatePath = { "Assets", "CleanupCrew", "Characters", "Pippa" },
+		-- Authored at 3.9 studs to the head top (5.4 with ears); 1.25 puts the head at ~4.9, a stock avatar's
+		-- height, so the crew reads at eye level with props and the Manager. Tunable: everything follows it
+		-- (strides, hip height, carry reach, the vacuum's fit).
+		scale = 1.25,
 		faces = FACES,
 		defaultFace = "Happy",
 		expressions = {

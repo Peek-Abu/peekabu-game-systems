@@ -6,14 +6,15 @@ local Rules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumEquip
 local Visual = require(script.Parent.VacuumVisualSystem)
 local VacuumToolSystem = {}
 
-function VacuumToolSystem.create(): Tool
+-- `holder` is the character it is made for: the visual is fitted to its hanging hand (VacuumVisualSystem).
+function VacuumToolSystem.create(holder: Model?): Tool
 	local tool = Instance.new("Tool")
 	tool.Name = Constants.TOOL_NAME
 	tool.ToolTip = "Hold to vacuum. Your canister stays with you when stowed."
 	tool.CanBeDropped = false
 	tool.RequiresHandle = true
 	tool:SetAttribute(Constants.TOOL_ATTRIBUTE, true)
-	Visual.build(tool)
+	Visual.build(tool, holder)
 	return tool
 end
 
@@ -61,7 +62,7 @@ function VacuumToolSystem.new(player: Player): Controller
 				if tool ~= nil then
 					tool:Destroy()
 				end
-				local created = VacuumToolSystem.create()
+				local created = VacuumToolSystem.create(current)
 				tool = created
 				created.Parent = backpack
 				resume = true
