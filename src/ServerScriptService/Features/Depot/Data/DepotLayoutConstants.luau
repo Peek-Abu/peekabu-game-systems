@@ -35,12 +35,17 @@ return table.freeze({
 	ORIGIN = CFrame.new(-1000, 0, 0),
 	MODEL_NAME = "CleanupCrewDepot",
 	LAYOUT = LAYOUT,
-	WALL_HEIGHT = 14,
+	-- Tall enough for a truck's tag sign above the box (the truck is ~11.7 studs high on its 3-stud bed).
+	WALL_HEIGHT = 22,
 	WALL_THICKNESS = 1,
 	FLOOR_THICKNESS = 1,
-	-- A truck's bed (the queue pad: low enough to step onto) and the cab behind it.
-	BED_SIZE = Vector3.new(12, 1, 16),
-	CAB_SIZE = Vector3.new(12, 8, 6),
+	-- A truck's bed (the queue pad, boarded up the ramp; the same height as the office truck's, so one truck art
+	-- fits both), the cab behind it (+z), the ramp and scanner arch in front of it (-z), and the truck's full width
+	-- (DepotTruckVisualConstants checks its art fits these).
+	BED_SIZE = Vector3.new(12, 3, 16),
+	CAB_SIZE = Vector3.new(12, 10, 7),
+	RAMP_DEPTH = 4.5,
+	TRUCK_WIDTH = 15,
 	BOARD_SIZE = Vector3.new(12, 8, 1),
 	-- Trucks, boards and spawns keep this far inside the walls.
 	MARGIN = 3,
@@ -59,7 +64,8 @@ return table.freeze({
 	-- How often each player's public `truck` field is checked against the bed they stand in (seconds).
 	TRUCK_INTERVAL = 0.5,
 	-- World sign shells are sized from their design (DepotConstants.BILLBOARD_PX); offsets from the part's centre.
-	PAD_TAG_OFFSET = Vector3.new(0, 8, 0),
+	-- The truck tag floats over the box: its wire's tip clears the arch (DepotTruckVisualConstants.TOP above the bed).
+	PAD_TAG_OFFSET = Vector3.new(0, 14.5, 0),
 	CONTRACT_OFFSET = Vector3.new(0, 2, 0),
 	RESULT_OFFSET = Vector3.new(0, 2.5, 0),
 	LABEL_MAX_DISTANCE = 120,

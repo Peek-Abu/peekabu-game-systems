@@ -5,7 +5,8 @@
 	The board's prompt (DepotEvents.Board) opens the contract board scene (DepotScene, registered at require):
 	pushing it twice is a no-op, and once the scene leaves the stack (CLOSE or Escape) the store's board is cleared.
 	The truck queue pad card (DepotPad, with Depart now) replaces Queue's placeholder pad widget, which init hides
-	with QueueServiceClient:setDefaultWidget(false); the depot's world signs (truck tags, the boards) are drawn by DepotBillboardSystem into the shells the server builds.
+	with QueueServiceClient:setDefaultWidget(false); the depot's world signs (truck tags, the boards) are drawn by DepotBillboardSystem into the shells the server builds;
+	the trucks' scanner arches flash on each bank (DepotTruckScannerSystem).
 
 	Spec-exempt shell (ByteNet, HUD registration, scene stack, RunService); the card queue is the specced DepotStore.
 
@@ -24,6 +25,7 @@ local DepotConstants = require(DepotShared.Data.DepotConstants)
 local DepotEvents = require(DepotShared.Net.DepotEvents)
 local DepotTypes = require(DepotShared.Data.DepotTypes)
 local DepotBillboardSystem = require(ReplicatedStorage.Client.Features.Depot.Systems.DepotBillboardSystem)
+local DepotTruckScannerSystem = require(ReplicatedStorage.Client.Features.Depot.Systems.DepotTruckScannerSystem)
 local DepotStore = require(ReplicatedStorage.Client.Features.Depot.State.DepotStore)
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
 local QueueServiceClient = require(ReplicatedStorage.Client.Features.Queue.QueueServiceClient)
@@ -123,6 +125,7 @@ local DepotServiceClient: DepotServiceClient = {
 			ticking:Disconnect()
 		end)
 		DepotBillboardSystem.start()
+		table.insert(stoppers, DepotTruckScannerSystem.start())
 	end,
 
 	stop = function(_self)

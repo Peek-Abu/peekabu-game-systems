@@ -105,6 +105,14 @@ return table.freeze({
 	-- A truck tag shell's truck number and seats, written once by the server.
 	TRUCK_ATTRIBUTE = "DepotTruck",
 	CAPACITY_ATTRIBUTE = "DepotCapacity",
+	-- The truck's scanner arch light (DepotTruckVisualSystem tags it; DepotTruckScannerSystem flashes it on a bank):
+	-- its sweep runs from the SCANNER_SWEEP_TOP attachment down to SCANNER_SWEEP_BOTTOM, SCANNER_WIDTH wide, and it
+	-- settles back to its SCANNER_IDLE colour.
+	SCANNER_TAG = "DepotTruckScanner",
+	SCANNER_SWEEP_TOP = "ScanSweepTop",
+	SCANNER_SWEEP_BOTTOM = "ScanSweepBottom",
+	SCANNER_WIDTH_ATTRIBUTE = "ScanSweepWidth",
+	SCANNER_IDLE_ATTRIBUTE = "ScanIdleColor",
 	-- A truck tag's line 3 turns red ("Leaving in 0:08") when the truck is full or this many seconds or fewer remain.
 	TAG_WARN_SECONDS = 10,
 	-- The contract board shell's attributes (DepotContractUtils.boardAttributes -> DepotWorldViewModel.workOrder).

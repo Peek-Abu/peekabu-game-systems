@@ -116,6 +116,14 @@ return function()
 			expect(hasError(errors, 'trucks "t1" and "t2"')).to.equal(true)
 		end)
 
+		it("keeps spawns off the ramp in front of a truck's bed", function()
+			local layout = fixture()
+			layout.spawns[1] = { x = 20, z = 34 }
+			local ok, errors = DepotLayoutRules.validate(layout)
+			expect(ok).to.equal(false)
+			expect(hasError(errors, 'of truck "t1"')).to.equal(true)
+		end)
+
 		it("refuses a board outside the floor or standing on a truck", function()
 			local layout = fixture()
 			layout.contractBoard = { x = 20, z = 48 }

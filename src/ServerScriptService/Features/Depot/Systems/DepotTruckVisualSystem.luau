@@ -1,119 +1,193 @@
 --!strict
--- Original company truck; gameplay bed stays authoritative and keeps its full boarding footprint.
-local TEAL = Color3.fromRGB(28, 88, 76)
-local IVORY = Color3.fromRGB(220, 210, 180)
-local RUBBER = Color3.fromRGB(28, 35, 37)
-local STEEL = Color3.fromRGB(130, 146, 147)
-local AMBER = Color3.fromRGB(230, 169, 55)
+--[=[
+	DepotTruckVisualSystem: the Morrow & Morrow "Mobile Recovery Unit" (truck design A) round a truck bed, for the
+	depot's queue trucks and the office's loading-bay truck. The bed part stays the authority (queue pad, banking
+	bed, load prompt) at its full size; this only adds round it, in DepotTruckVisualConstants' deck space:
+
+	- the art: a clone of the approved template (ReplicatedStorage.Assets.CleanupCrew.Truck, RuntimeApproved,
+	  pivoted at the middle of the bed's top face, cab toward +Z) or the graybox fallback. Every art part is
+	  anchored and inert (no collision, query or touch); the bed is hidden under the art's floor;
+	- invisible native collision, parented to the bed: box walls, roof, arch posts, cab and the loading ramp (a
+	  wedge from the ground to the bed's back edge). Collidable parts are always queryable; as the bed's
+	  descendants they count as the bed for the load prompt's sight check, so the prompt is seen through the box;
+	- the box-side livery (a SurfaceGui per side), a warm lamp under the roof, and the scanner arch light tagged
+	  for the client's bank flash (DepotTruckScannerSystem) with its sweep path.
+
+	@class DepotTruckVisualSystem
+]=]
+
+local CollectionService = game:GetService("CollectionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
+
+local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
+local Constants = require(ServerScriptService.Features.Depot.Data.DepotTruckVisualConstants)
+
+type Shape = Constants.Shape
+
 local DepotTruckVisualSystem = {}
-function DepotTruckVisualSystem.build(bed: BasePart, parent: Instance)
-	local top = bed.Size.Y / 2
-	local halfDepth = bed.Size.Z / 2
-	local width = math.min(9.6, bed.Size.X * 0.8)
-	local function part(name: string, size: Vector3, position: Vector3, color: Color3): Part
-		local p = Instance.new("Part")
-		p.Name = name
-		p.Size = size
-		p.CFrame = bed.CFrame * CFrame.new(position)
-		p.Color = color
-		p.Anchored = true
-		p.CanCollide = false
-		p.CanTouch = false
-		p.CanQuery = false
-		p.Material = Enum.Material.SmoothPlastic
-		p.TopSurface = Enum.SurfaceType.Smooth
-		p.BottomSurface = Enum.SurfaceType.Smooth
-		p.Parent = parent
-		return p
+
+local function shaped(shape: Shape): BasePart
+	if shape == "Wedge" then
+		return Instance.new("WedgePart")
 	end
-	-- Solid cabin outside the queue footprint; bonnet gives a distinct front silhouette.
-	local cab = part("TruckCab", Vector3.new(width, 4.5, 4.5), Vector3.new(0, top + 2.25, halfDepth + 2.25), IVORY)
-	cab.CanCollide = true
-	cab.CanQuery = true
-	part("CabRoof", Vector3.new(width + 0.3, 0.3, 4.7), Vector3.new(0, top + 4.65, halfDepth + 2.25), TEAL)
-	part("Bonnet", Vector3.new(width, 1.3, 1.5), Vector3.new(0, top + 0.8, halfDepth + 5.25), TEAL)
-	part(
-		"Windshield",
-		Vector3.new(width - 0.8, 1.65, 0.06),
-		Vector3.new(0, top + 3.3, halfDepth + 4.52),
-		Color3.fromRGB(38, 65, 74)
-	)
-	part("Bumper", Vector3.new(width + 0.4, 0.4, 0.45), Vector3.new(0, top + 0.1, halfDepth + 6.2), STEEL)
-	part("Grille", Vector3.new(3.2, 0.45, 0.07), Vector3.new(0, top + 0.85, halfDepth + 6.04), RUBBER)
-	for _, side in { -1, 1 } do
-		part(
-			"Headlamp",
-			Vector3.new(1.3, 0.5, 0.1),
-			Vector3.new(side * (width / 2 - 1), top + 1.05, halfDepth + 6.04),
-			IVORY
-		)
-		part(
-			"SideWindow",
-			Vector3.new(0.06, 1.6, 3),
-			Vector3.new(side * (width / 2 + 0.02), top + 3.3, halfDepth + 2.25),
-			Color3.fromRGB(38, 65, 74)
-		)
-		part(
-			"DoorStripe",
-			Vector3.new(0.06, 0.6, 3.8),
-			Vector3.new(side * (width / 2 + 0.03), top + 1.7, halfDepth + 2.25),
-			TEAL
-		)
-		part(
-			"Mirror",
-			Vector3.new(0.3, 0.7, 0.5),
-			Vector3.new(side * (width / 2 + 0.5), top + 3.3, halfDepth + 3.9),
-			RUBBER
-		)
-		part(
-			"DoorHandle",
-			Vector3.new(0.12, 0.12, 0.6),
-			Vector3.new(side * (width / 2 + 0.08), top + 2.45, halfDepth + 0.9),
-			STEEL
-		)
-		part(
-			"BedRail",
-			Vector3.new(0.25, 0.7, bed.Size.Z),
-			Vector3.new(side * (bed.Size.X / 2 + 0.15), top + 0.45, 0),
-			IVORY
-		)
-		for _, z in { -halfDepth + 3, halfDepth + 2.6 } do
-			local x = side * (if z > halfDepth then width / 2 + 0.1 else bed.Size.X / 2 + 0.45)
-			local wheel = part("Tire", Vector3.new(2.3, 0.65, 2.3), Vector3.new(x, 1.15 - bed.Size.Y / 2, z), RUBBER)
-			-- Roblox cylinders use local X as the axle; all offsets are relative to the bed.
-			wheel.Shape = Enum.PartType.Cylinder
-			wheel.Size = Vector3.new(0.65, 2.3, 2.3)
-			part("WheelArch", Vector3.new(0.85, 0.35, 3), Vector3.new(x, 2.6 - bed.Size.Y / 2, z), TEAL)
-			for _, endSign in { -1, 1 } do
-				local shoulder = part(
-					"WheelArchShoulder",
-					Vector3.new(0.85, 0.3, 0.9),
-					Vector3.new(x, 2.2 - bed.Size.Y / 2, z + endSign * 1.2),
-					TEAL
-				)
-				shoulder.CFrame *= CFrame.Angles(math.rad(endSign * 50), 0, 0)
-			end
-			local hub = part(
-				"WheelHub",
-				Vector3.new(0.07, 1.15, 1.15),
-				Vector3.new(x + side * 0.36, 1.15 - bed.Size.Y / 2, z),
-				STEEL
-			)
-			hub.Shape = Enum.PartType.Cylinder
+	local part = Instance.new("Part")
+	if shape == "Cylinder" then
+		part.Shape = Enum.PartType.Cylinder
+	end
+	return part
+end
+
+local function inert(part: BasePart)
+	part.Anchored = true
+	part.CanCollide = false
+	part.CanQuery = false
+	part.CanTouch = false
+end
+
+-- The approved art in ReplicatedStorage, or nil (the graybox is used).
+function DepotTruckVisualSystem.template(): Model?
+	local current: Instance? = ReplicatedStorage
+	for _, name in Constants.TEMPLATE_PATH do
+		current = if current ~= nil then current:FindFirstChild(name) else nil
+	end
+	return if current ~= nil and current:IsA("Model") then current else nil
+end
+
+local function art(deck: CFrame, source: Model?): Model
+	local model: Model
+	if source ~= nil and source:GetAttribute(Constants.APPROVED_ATTRIBUTE) == true then
+		model = source:Clone()
+		model:PivotTo(deck)
+		model:SetAttribute(Constants.ART_KIND_ATTRIBUTE, "approved-mesh")
+	else
+		model = Instance.new("Model")
+		for _, piece in Constants.GRAYBOX do
+			local part = shaped(piece.shape)
+			part.Name = piece.name
+			part.Size = piece.size
+			part.CFrame = deck * CFrame.new(piece.centre)
+			part.Color = piece.color
+			part.Material = piece.material
+			part.TopSurface = Enum.SurfaceType.Smooth
+			part.BottomSurface = Enum.SurfaceType.Smooth
+			part.Parent = model
+		end
+		model.WorldPivot = deck
+		model:SetAttribute(Constants.ART_KIND_ATTRIBUTE, "graybox")
+	end
+	model.Name = Constants.ART_NAME
+	model:SetAttribute(Constants.APPROVED_ATTRIBUTE, nil)
+	for _, descendant in model:GetDescendants() do
+		if descendant:IsA("BasePart") then
+			inert(descendant)
 		end
 	end
-	-- Two shallow physical treads support the office's higher banking deck; neither is tagged as queue space.
-	for step = 1, 2 do
-		local treadHeight = bed.Size.Y * (3 - step) / 3
-		local tread = part(
-			"BoardingStep",
-			Vector3.new(7, treadHeight, 1),
-			Vector3.new(0, treadHeight / 2 - bed.Size.Y / 2, -halfDepth - 0.5 - (step - 1)),
-			STEEL
-		)
-		tread.CanCollide = true
-		tread.CanQuery = true
-	end
-	part("TailSafetyStripe", Vector3.new(7, 0.07, 0.12), Vector3.new(0, top + 0.04, -halfDepth + 0.1), AMBER)
+	return model
 end
+
+local function livery(model: Model)
+	for _, target in Constants.LIVERY_FACES do
+		local part = model:FindFirstChild(target.piece)
+		if part ~= nil and part:IsA("BasePart") then
+			local gui = Instance.new("SurfaceGui")
+			gui.Name = "Livery"
+			gui.Face = target.face
+			gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+			gui.PixelsPerStud = Constants.LIVERY_PIXELS_PER_STUD
+			gui.LightInfluence = 1
+			gui.MaxDistance = 250
+			local image = Instance.new("ImageLabel")
+			image.Name = "Livery"
+			image.BackgroundTransparency = 1
+			image.Size = UDim2.fromScale(1, 1)
+			image.Image = Constants.LIVERY_IMAGE
+			image.ScaleType = Enum.ScaleType.Stretch
+			image.Parent = gui
+			gui.Parent = part
+		end
+	end
+end
+
+local function lamp(model: Model)
+	local roof = model:FindFirstChild(Constants.ROOF_PIECE)
+	if roof ~= nil and roof:IsA("BasePart") then
+		local light = Instance.new("SurfaceLight")
+		light.Face = Enum.NormalId.Bottom
+		light.Color = Constants.LAMP_COLOR
+		light.Brightness = Constants.LAMP_BRIGHTNESS
+		light.Range = Constants.LAMP_RANGE
+		light.Angle = 120
+		light.Shadows = false
+		light.Parent = roof
+	end
+end
+
+local function scanner(model: Model, deck: CFrame)
+	local light = model:FindFirstChild(Constants.SCANNER_PIECE)
+	if light == nil or not light:IsA("BasePart") then
+		return
+	end
+	light.Material = Enum.Material.Neon
+	light.Color = Constants.SCANNER_IDLE
+	light:SetAttribute(DepotConstants.SCANNER_IDLE_ATTRIBUTE, Constants.SCANNER_IDLE)
+	light:SetAttribute(DepotConstants.SCANNER_WIDTH_ATTRIBUTE, Constants.SWEEP_WIDTH)
+	for name, point in
+		{
+			[DepotConstants.SCANNER_SWEEP_TOP] = Constants.SWEEP_TOP,
+			[DepotConstants.SCANNER_SWEEP_BOTTOM] = Constants.SWEEP_BOTTOM,
+		}
+	do
+		local attachment = Instance.new("Attachment")
+		attachment.Name = name
+		attachment.CFrame = light.CFrame:ToObjectSpace(deck * CFrame.new(point))
+		attachment.Parent = light
+	end
+	local glow = Instance.new("PointLight")
+	glow.Name = Constants.SCANNER_GLOW_NAME
+	glow.Color = Constants.SCANNER_IDLE
+	glow.Brightness = 0
+	glow.Range = Constants.SCANNER_GLOW_RANGE
+	glow.Shadows = false
+	glow.Parent = light
+	CollectionService:AddTag(light, DepotConstants.SCANNER_TAG)
+end
+
+local function collision(deck: CFrame, bed: BasePart)
+	for _, entry in Constants.COLLISION do
+		local part = shaped(entry.shape)
+		part.Name = entry.name
+		part.Size = entry.size
+		part.CFrame = deck * CFrame.new(entry.centre)
+		part.Transparency = 1
+		part.Anchored = true
+		part.CanCollide = true
+		part.CanQuery = true
+		part.CanTouch = false
+		part.Material = Enum.Material.SmoothPlastic
+		part.Parent = bed
+	end
+end
+
+--[=[
+	Builds the truck round `bed` into `parent` from `source` (an approved template, or nil for the graybox) and
+	returns the art model. The bed keeps its size and place.
+]=]
+function DepotTruckVisualSystem.buildWith(bed: BasePart, parent: Instance, source: Model?): Model
+	local deck = bed.CFrame * CFrame.new(0, bed.Size.Y / 2, 0)
+	local model = art(deck, source)
+	livery(model)
+	lamp(model)
+	scanner(model, deck)
+	bed.Transparency = Constants.BED_TRANSPARENCY
+	collision(deck, bed)
+	model.Parent = parent
+	return model
+end
+
+-- Builds the truck round `bed` from the approved template when the place has one, else the graybox.
+function DepotTruckVisualSystem.build(bed: BasePart, parent: Instance): Model
+	return DepotTruckVisualSystem.buildWith(bed, parent, DepotTruckVisualSystem.template())
+end
+
 return DepotTruckVisualSystem

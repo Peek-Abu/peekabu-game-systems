@@ -39,13 +39,14 @@ local function overlaps(a: Rect, b: Rect): boolean
 	return a.minX < b.maxX and b.minX < a.maxX and a.minZ < b.maxZ and b.minZ < a.maxZ
 end
 
--- The bed and the cab behind it (+z).
+-- The whole truck: the bed, the cab behind it (+z), and the ramp and scanner arch in front of it (-z).
 local function footprint(truck: Truck): Rect
 	local bed = DepotLayoutConstants.BED_SIZE
+	local halfWidth = math.max(bed.X, DepotLayoutConstants.TRUCK_WIDTH) / 2
 	return {
-		minX = truck.x - bed.X / 2,
-		maxX = truck.x + bed.X / 2,
-		minZ = truck.z - bed.Z / 2,
+		minX = truck.x - halfWidth,
+		maxX = truck.x + halfWidth,
+		minZ = truck.z - bed.Z / 2 - DepotLayoutConstants.RAMP_DEPTH,
 		maxZ = truck.z + bed.Z / 2 + DepotLayoutConstants.CAB_SIZE.Z,
 	}
 end
