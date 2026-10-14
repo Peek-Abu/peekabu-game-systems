@@ -31,6 +31,16 @@ local EmployeeConstants = {
 	FACES_FOLDER = "Faces",
 	-- Under ReplicatedStorage: art-owned Accessory instances a skin can name (EmployeeSkinSystem).
 	ACCESSORIES_PATH = { "Assets", "CleanupCrew", "Accessories" },
+	-- On a fitted-gear Model there (EmployeeGearSystem): the name of the body part it sits on. The Model's WorldPivot
+	-- is that part's frame at the template's authored size.
+	GEAR_MOUNT_ATTRIBUTE = "MountPart",
+	-- In the company lanyard (EmployeeGearSystem.badge): the strap part painted in the rank colour, and the ID card's
+	-- SurfaceGui elements (the holder's name, their title, the rank-colour band and its text).
+	LANYARD_STRAP = "LanyardStrap",
+	BADGE_HOLDER = "IdCardHolder",
+	BADGE_TITLE = "IdCardTitle",
+	BADGE_BAND = "IdCardBand",
+	BADGE_BAND_TEXT = "IdCardBandText",
 
 	-- Expression rule (EmployeeFaceRules).
 	-- An investigating / chasing / searching Manager this close (studs) worries everyone.

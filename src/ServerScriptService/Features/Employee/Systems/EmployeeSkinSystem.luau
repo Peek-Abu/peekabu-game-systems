@@ -8,8 +8,9 @@
 	  no palette yet (art pending) or a malformed id leaves the model's own palette alone.
 	- Faces: when the skin names a face set and the character carries that folder, it replaces `Faces`
 	  (the client re-shows the current face from it, EmployeeFaceSystem).
-	- Accessories: each named Accessory found under `accessorySource` is cloned onto the Humanoid; missing
-	  ones are skipped.
+	- Accessories: each named Accessory found under `accessorySource` is cloned onto the Humanoid; a named
+	  fitted-gear Model is fitted onto its mount part instead (EmployeeGearSystem: scaled with the character, which an
+	  Accessory is not); missing ones are skipped.
 
 	Every part is optional: a skin that names nothing changes nothing.
 
@@ -17,10 +18,12 @@
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
 
 local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
 local EmployeeRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeRegistry)
 local EmployeeSkinRules = require(ReplicatedStorage.Shared.Features.Employee.Rules.EmployeeSkinRules)
+local EmployeeGearSystem = require(ServerScriptService.Features.Employee.Systems.EmployeeGearSystem)
 
 export type SkinResult = {
 	-- MeshParts given the skin's palette.
@@ -81,6 +84,8 @@ function EmployeeSkinSystem.apply(
 			local source = accessorySource:FindFirstChild(name)
 			if source ~= nil and source:IsA("Accessory") then
 				humanoid:AddAccessory(source:Clone())
+				result.accessories += 1
+			elseif source ~= nil and source:IsA("Model") and EmployeeGearSystem.fit(character, source) ~= nil then
 				result.accessories += 1
 			end
 		end

@@ -83,6 +83,28 @@ return function()
 			expect(def.skins.Default.paletteTextureId).to.equal("rbxassetid://123317546570312")
 			expect(def.skins.OwnerSpecial).to.be.ok()
 		end)
+
+		it("dresses the owner's skin in the lavender palette and the round glasses, with Pippa's own faces", function()
+			local owner = EmployeeRegistry.get("Pippa").skins.OwnerSpecial
+			expect(owner.paletteTextureId).to.be.ok()
+			expect(string.match(owner.paletteTextureId, "^rbxassetid://%d+$")).to.be.ok()
+			expect(owner.paletteTextureId).never.to.equal(EmployeeRegistry.get("Pippa").skins.Default.paletteTextureId)
+			expect(owner.facesFolder).never.to.be.ok()
+			expect(table.find(owner.accessories, "PippaRoundGlasses")).to.be.ok()
+		end)
+
+		it("puts every employee in a uniform of named gear, Pippa in her vest and lanyard", function()
+			for _, name in EmployeeRegistry.names() do
+				local uniform = EmployeeRegistry.get(name).uniform
+				expect(uniform).to.be.a("table")
+				for _, gear in uniform do
+					expect(gear).to.be.a("string")
+				end
+			end
+			local uniform = EmployeeRegistry.get("Pippa").uniform
+			expect(table.find(uniform, "PippaVest")).to.be.ok()
+			expect(table.find(uniform, "PippaLanyard")).to.be.ok()
+		end)
 	end)
 
 	describe("backpack", function()

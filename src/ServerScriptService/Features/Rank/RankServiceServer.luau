@@ -8,6 +8,8 @@
 	- Season: on load a rank from another season (RankConstants.RANK_SEASON) resets to level 1 / 0 XP.
 	- Award: RankShiftSystem pays each crew member once per shift run when the shift reaches its review (RankFormulas);
 	  RankRules.applyAward refuses a run already paid (`lastAwardedRunId`).
+	- Announce: `changed` fires with the player's id whenever their rank is published (load, award, reset), so
+	  server-side looks that show the rank (the employee's lanyard, EmployeeServiceServer) repaint at once.
 	- Display: every client reads a player's XP from their public entry (RankConstants.PUBLIC_XP_FIELD), which works
 	  the same in both storage modes and for other players' name tags. The `rank` slice is therefore deliberately NOT
 	  in StateSyncSliceRegistry (the same server-side-only precedent as `receipts`).
@@ -24,6 +26,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local RankShared = ReplicatedStorage.Shared.Features.Rank
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
+local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local RankConstants = require(RankShared.Data.RankConstants)
 local RankTypes = require(RankShared.Data.RankTypes)
 local RankRules = require(RankShared.Rules.RankRules)
@@ -51,6 +54,8 @@ local sessionRanks = RankTracker.new()
 local persist = RankConstants.RANK_PERSIST
 local season = RankConstants.RANK_SEASON
 local stoppers: { () -> () } = {}
+-- The player whose rank was just published.
+local rankChanged: SignalTyped.Signal<number> = SignalTyped.new()
 
 -- `before`: the XP before the latest award (the XP itself after a load or a reset).
 local function publish(userId: number, xp: number, before: number)
@@ -58,6 +63,7 @@ local function publish(userId: number, xp: number, before: number)
 		[RankConstants.PUBLIC_XP_FIELD] = xp,
 		[RankConstants.PUBLIC_PREV_XP_FIELD] = before,
 	})
+	rankChanged:Fire(userId)
 end
 
 local function read(userId: number): RankState?
@@ -80,6 +86,7 @@ local function write(userId: number, fn: (state: RankState) -> boolean): boolean
 end
 
 export type RankServiceServer = {
+	changed: SignalTyped.Signal<number>,
 	dependencies: { string },
 	start: (self: RankServiceServer) -> (),
 	stop: (self: RankServiceServer) -> (),
@@ -102,6 +109,7 @@ export type RankServiceServer = {
 
 local RankServiceServer: RankServiceServer
 RankServiceServer = {
+	changed = rankChanged,
 	dependencies = { "PlayerDataServiceServer", "StateSyncServiceServer", "ShiftServiceServer" },
 
 	--[=[

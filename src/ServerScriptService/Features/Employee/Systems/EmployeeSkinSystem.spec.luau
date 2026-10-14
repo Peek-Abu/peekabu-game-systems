@@ -99,5 +99,25 @@ return function()
 			model:Destroy()
 			source:Destroy()
 		end)
+
+		it("fits a fitted-gear Model accessory onto its mount part (glasses on the head)", function()
+			local model, head = makeCharacter()
+			head.Anchored = true
+			local source = Instance.new("Folder")
+			local glasses = Instance.new("Model")
+			glasses.Name = "Glasses"
+			local frame = Instance.new("Part")
+			frame.Name = "Frame"
+			frame.Parent = glasses
+			glasses:SetAttribute(EmployeeConstants.GEAR_MOUNT_ATTRIBUTE, "Head")
+			glasses.Parent = source
+			local result = EmployeeSkinSystem.apply(model, skin(nil, nil, { "Glasses" }), source)
+			expect(result.accessories).to.equal(1)
+			local fitted = model:FindFirstChild("Glasses")
+			expect(fitted).to.be.ok()
+			expect(fitted.Frame:FindFirstChildOfClass("WeldConstraint").Part0).to.equal(head)
+			model:Destroy()
+			source:Destroy()
+		end)
 	end)
 end

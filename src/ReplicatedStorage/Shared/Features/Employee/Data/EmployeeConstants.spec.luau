@@ -16,6 +16,23 @@ return function()
 			expect(sides[1]).to.equal("RightEarBase")
 		end)
 
+		it("names the fitted-gear mount attribute and distinct lanyard/badge elements", function()
+			expect(EmployeeConstants.GEAR_MOUNT_ATTRIBUTE).to.equal("MountPart")
+			local seen = {}
+			for _, name in
+				{
+					EmployeeConstants.LANYARD_STRAP,
+					EmployeeConstants.BADGE_HOLDER,
+					EmployeeConstants.BADGE_TITLE,
+					EmployeeConstants.BADGE_BAND,
+					EmployeeConstants.BADGE_BAND_TEXT,
+				}
+			do
+				expect(seen[name]).never.to.be.ok()
+				seen[name] = true
+			end
+		end)
+
 		it("uses positive radii, intervals and spring gains", function()
 			expect(EmployeeConstants.WORRIED_RADIUS > 0).to.equal(true)
 			expect(EmployeeConstants.EAR_RADIUS > 0).to.equal(true)

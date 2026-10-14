@@ -10,6 +10,10 @@ return function()
 			end
 		end)
 
+		it("depends on Rank, whose level colours the uniform's lanyard", function()
+			expect(table.find(EmployeeServiceServer.dependencies, "RankServiceServer")).to.be.ok()
+		end)
+
 		it("exposes the lifecycle and a debugger snapshot", function()
 			expect(EmployeeServiceServer.init).to.be.a("function")
 			expect(EmployeeServiceServer.start).to.be.a("function")
@@ -18,6 +22,7 @@ return function()
 			expect(state.employee).to.be.a("string")
 			expect(state.installed).to.be.a("boolean")
 			expect(state.skinned).to.be.a("number")
+			expect(state.uniformed).to.be.a("number")
 		end)
 	end)
 end

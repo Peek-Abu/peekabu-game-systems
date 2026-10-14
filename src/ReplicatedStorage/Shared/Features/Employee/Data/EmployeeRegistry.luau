@@ -13,6 +13,8 @@
 	  hauling cargo is just the job.
 	- `skins` are looks for the same rig: a palette image (every MeshPart but the FacePlate shares one
 	  palette texture), an optional face set, and accessories (EmployeeSkinSystem applies one).
+	- `uniform` is the company gear fitted over any skin (the hi-vis vest and the rank lanyard + ID card), as
+	  fitted-gear names (EmployeeGearSystem); the lanyard is painted in the wearer's rank colour.
 	- `locomotion` is the employee's own idle/walk/run (keys in the animation registry's `employee`
 	  domain) and how fast its feet plant in each; the character's Animate script plays them instead of
 	  the stock set. nil = the stock locomotion.
@@ -37,7 +39,8 @@ export type SkinDef = {
 	-- The name of a Folder on the model (beside `Faces`) holding this skin's face SurfaceAppearances, one
 	-- per Face; it replaces `Faces` on the character. nil keeps the employee's own faces.
 	facesFolder: string?,
-	-- Names of Accessory instances under EmployeeConstants.ACCESSORIES_PATH to put on the character.
+	-- Names of Accessory instances, or fitted-gear Models (EmployeeGearSystem), under
+	-- EmployeeConstants.ACCESSORIES_PATH to put on the character.
 	accessories: { string },
 }
 
@@ -99,6 +102,9 @@ export type EmployeeDef = {
 	locomotion: LocomotionDef?,
 	-- Where the vacuum's backpack sits; nil = fitted from the torso's size.
 	backpack: BackpackFit?,
+	-- The company uniform it wears over every skin: names of fitted-gear Models under
+	-- EmployeeConstants.ACCESSORIES_PATH, modelled for THIS employee's body (another torso supplies its own pieces).
+	uniform: { string },
 }
 
 local FACES: { Face } = { "Happy", "Worried", "Content", "Dazed" }
@@ -130,15 +136,18 @@ local EMPLOYEES: { [string]: EmployeeDef } = {
 				facesFolder = nil,
 				accessories = {},
 			},
-			-- The owner's personal skin (see EmployeeSkinRegistry). Art pending: put its palette image id here.
+			-- The owner's personal skin (see EmployeeSkinRegistry): lavender fur and round tortoiseshell glasses
+			-- (characters/pippa/skins/owner-lavender). Pippa's own faces.
 			OwnerSpecial = {
 				name = "OwnerSpecial",
-				paletteTextureId = nil,
+				paletteTextureId = "rbxassetid://96382499106680",
 				facesFolder = nil,
-				accessories = {},
+				accessories = { "PippaRoundGlasses" },
 			},
 		},
 		defaultSkin = "Default",
+		-- Fitted to Pippa v10's torso (characters/identity).
+		uniform = { "PippaVest", "PippaLanyard" },
 		-- Pippa v1 clips (characters/pippa/anim). Caps tuned by eye in Studio: lively, not frantic.
 		locomotion = {
 			idle = "pippaidle",
