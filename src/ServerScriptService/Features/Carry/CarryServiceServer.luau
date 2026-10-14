@@ -123,7 +123,6 @@ local function release(player: Player): BasePart?
 		humanoid.WalkSpeed = speed
 	end
 	state.target:SetAttribute(CarryConstants.CARRIED_BY_ATTRIBUTE, nil)
-	state.target:SetAttribute(CarryConstants.CARRY_FROM_ATTRIBUTE, nil)
 	state.target:SetAttribute(InteractionConstants.ENABLED_ATTRIBUTE, nil)
 	StateSyncPublicPlayerStore.clearField(player.UserId, CarryConstants.PUBLIC_FIELD)
 	return state.root
@@ -299,8 +298,6 @@ CarryServiceServer = {
 			part.Massless = true
 			part.CanCollide = false
 		end
-		-- Where it lay, for the clients' cosmetic pickup (AnimationCarryGrabSystem).
-		target:SetAttribute(CarryConstants.CARRY_FROM_ATTRIBUTE, target:GetPivot())
 		root.Anchored = false
 		local prepared = if character ~= nil
 			then AnimationCarrySystem.prepare(character, target, kind, def.holdOffset)

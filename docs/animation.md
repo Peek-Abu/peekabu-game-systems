@@ -170,19 +170,6 @@ fades). Two things to know:
 - **Kill switch:** set the Workspace attribute `LocomotionEnabled = false` and every locomotion
   track stops — instantly answers "is the weirdness on screen ours?". `true` recovers, no respawn.
 
-## Carrying (procedural arms, no clips)
-
-Carrying uses no animation clips. The server (`AnimationCarrySystem`, bound by `CarryServiceServer` on pickup)
-welds the object into the hands and puts an `IKControl` per arm (`CleanupCarryIK<Side>`, UpperArm → Hand) on the
-Humanoid, targeting grip attachments on the object; every client evaluates them. The pickup itself is instant
-and authoritative, so on its own it reads as a teleport. `AnimationCarryGrabSystem` (client, started by
-`CarryServiceClient`) replays it on every client from the `CarryFrom` attribute the server stamps (where the
-object lay): a local ghost shown there while the held object is hidden, the server IK pointed at the ghost with
-its chain rooted at the LowerTorso (the waist bend is the crouch), then the ghost scooping into the hold
-(`AnimationCarryGrabFormulas`: 0.12 s reach + 0.2 s lift), after which the IK is handed back unchanged. All
-local property writes; nothing replicates. Studio (2026-10-13, Pippa 1.25x, box on the floor): the hands go
-from 1.6 to 0.1 studs above the floor with the torso bent ~60 degrees, then rise to the 2.0-stud hold in 0.32 s.
-
 ## Retargeting (check this FIRST if poses ever look wrong)
 
 `Workspace.Retargeting` is a per-place setting this base leaves at its default. A game whose rig is

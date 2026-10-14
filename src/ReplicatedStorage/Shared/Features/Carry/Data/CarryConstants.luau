@@ -12,9 +12,6 @@ return table.freeze({
 	KIND_ATTRIBUTE = "CarryKind",
 	-- Number attribute set on a held object: the carrier's UserId (absent when not held).
 	CARRIED_BY_ATTRIBUTE = "CarriedBy",
-	-- CFrame attribute set on a held object: its pivot just before it was picked up (absent when not held). Clients
-	-- replay the pickup from it (AnimationCarryGrabSystem); nothing authoritative reads it.
-	CARRY_FROM_ATTRIBUTE = "CarryFrom",
 	-- The public-player field naming what a player carries.
 	PUBLIC_FIELD = "carrying",
 	-- The interaction kind the Carry server registers for pick-up.
