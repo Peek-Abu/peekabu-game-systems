@@ -26,6 +26,9 @@ local e = React.createElement
 export type CatchRehiredPanelProps = {
 	view: CatchViewModel.RehiredView,
 	layout: UIPaperConstants.Layout,
+	-- Design px the scrim reaches above the panel's top so it covers the whole screen when the panel is drawn in a
+	-- shifted PaperHudFrame (PaperHudScaleViewModel.bleed). nil = 0 (a story, or an unshifted frame).
+	bleedTop: number?,
 }
 
 -- Every measurement per layout, in px, from the Figma frames (positions are inside the card; the card's height is its
@@ -213,12 +216,21 @@ local function CatchRehiredPanel(props: CatchRehiredPanelProps): React.ReactNode
 		}, rows),
 	}
 
+	local bleed = props.bleedTop or 0
 	return e("Frame", {
 		Size = UDim2.fromScale(1, 1),
-		BackgroundColor3 = SCRIM,
-		BackgroundTransparency = SCRIM_TRANSPARENCY,
-		BorderSizePixel = 0,
+		BackgroundTransparency = 1,
 	}, {
+		-- The scrim covers the whole screen, top bar included: it reaches `bleed` above the panel. The card is its
+		-- sibling, so it stays centred in the panel.
+		scrim = e("Frame", {
+			Position = UDim2.fromOffset(0, -bleed),
+			Size = UDim2.new(1, 0, 1, bleed),
+			ZIndex = 0,
+			BackgroundColor3 = SCRIM,
+			BackgroundTransparency = SCRIM_TRANSPARENCY,
+			BorderSizePixel = 0,
+		}),
 		card = e(PaperSheet, {
 			size = UDim2.fromOffset(spec.card.X, spec.card.Y + grow),
 			position = UDim2.fromScale(0.5, 0.5),

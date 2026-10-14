@@ -20,6 +20,7 @@ local useServerClock = require(ReplicatedStorage.Client.UI.React.Hooks.useServer
 local CatchRehiredPanel = require(ReplicatedStorage.Client.UI.React.Screens.Catch.CatchRehiredPanel)
 local CatchViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Catch.CatchViewModel)
 local PaperHudFrame = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudFrame)
+local PaperHudScaleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudScaleViewModel)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local usePaperHudScale = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperHudScale)
 
@@ -48,7 +49,14 @@ local function CatchRehiredCard(): React.ReactNode
 	end
 	return React.createElement(PaperHudFrame, {
 		scale = hudScale.scale,
-		children = { panel = React.createElement(CatchRehiredPanel, { view = view, layout = layout }) },
+		children = {
+			panel = React.createElement(CatchRehiredPanel, {
+				view = view,
+				layout = layout,
+				-- The frame starts below the top bar when scaled; the scrim reaches back up over it.
+				bleedTop = PaperHudScaleViewModel.bleed(hudScale.scale),
+			}),
+		},
 	})
 end
 

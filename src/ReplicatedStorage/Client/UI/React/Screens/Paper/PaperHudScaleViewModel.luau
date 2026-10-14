@@ -31,6 +31,13 @@ function PaperHudScaleViewModel.topShift(scale: number): number
 	return UIPaperConstants.SAFE.desktop.topBar * (1 - scale)
 end
 
+-- How far (design px) a full-screen backdrop inside the scaled HUD must reach above the frame's top to cover the real
+-- screen from its top edge: the top shift, in design px. A wash or scrim drawn at the frame's size alone leaves a
+-- strip of the world uncovered across the top bar.
+function PaperHudScaleViewModel.bleed(scale: number): number
+	return PaperHudScaleViewModel.topShift(scale) / scale
+end
+
 function PaperHudScaleViewModel.virtual(viewport: Vector2, scale: number): Vector2
 	return viewport / scale
 end

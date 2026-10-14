@@ -31,6 +31,9 @@ export type CatchCctvPanelProps = {
 	onNext: () -> (),
 	-- The engine's Jump button (offsets from the bottom-right corner); the phone buttons sit above its top.
 	jump: ShiftHudViewModel.ArcSpot,
+	-- Design px the night wash reaches above the panel's top so it covers the whole screen when the panel is drawn in
+	-- a shifted PaperHudFrame (PaperHudScaleViewModel.bleed). nil = 0 (a story, or an unshifted frame).
+	bleedTop: number?,
 }
 
 -- Every measurement per layout, in px, from the Figma frames (1920x1080 and 844x390).
@@ -138,7 +141,7 @@ local BUTTON_ABOVE_JUMP = 28
 local SCAN_HEIGHT = 1600
 
 -- `drawnScale` is the scale the panel is drawn at (PaperHudFrame): a line stays 1 real px thick when it is scaled down.
-local function scanlines(gap: number, drawnScale: React.Binding<number>): React.ReactNode
+local function scanlines(gap: number, drawnScale: React.Binding<number>, bleed: number): React.ReactNode
 	local thickness = drawnScale:map(function(value: number): UDim2
 		return UDim2.new(1, 0, 0, 1 / value)
 	end)
@@ -153,7 +156,10 @@ local function scanlines(gap: number, drawnScale: React.Binding<number>): React.
 		})
 	end
 	return e("Frame", {
-		Size = UDim2.fromScale(1, 1),
+		-- The wash covers the whole screen, top bar included: it reaches `bleed` above the panel.
+		Position = UDim2.fromOffset(0, -bleed),
+		Size = UDim2.new(1, 0, 1, bleed),
+		ZIndex = 0,
 		BackgroundColor3 = COLOR.night,
 		BackgroundTransparency = WASH_TRANSPARENCY,
 		BorderSizePixel = 0,
@@ -329,9 +335,10 @@ local function CatchCctvPanel(props: CatchCctvPanelProps): React.ReactNode
 	local spec = SPEC[props.layout]
 	-- The lines change only with the layout and the drawn scale: memoised, so the countdown's re-renders skip them.
 	local drawnScale = React.useContext(PaperScaleContext.Context)
-	local linesDeps: { unknown } = { spec.scanGap, drawnScale }
+	local bleed = props.bleedTop or 0
+	local linesDeps: { unknown } = { spec.scanGap, drawnScale, bleed }
 	local lines = React.useMemo(function(): React.ReactNode
-		return scanlines(spec.scanGap, drawnScale)
+		return scanlines(spec.scanGap, drawnScale, bleed)
 	end, linesDeps)
 
 	local children: { [string]: React.ReactNode } = {

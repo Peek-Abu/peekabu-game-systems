@@ -42,6 +42,20 @@ return function()
 		end)
 	end)
 
+	describe("bleed", function()
+		it("is 0 at scale 1 (the frame already starts at the screen top)", function()
+			expect(PaperHudScaleViewModel.bleed(1)).to.equal(0)
+		end)
+
+		it("reaches from the scaled frame's top up to the real screen top, in design px", function()
+			local scale = 0.55
+			-- Drawn at `scale`, the bleed covers exactly the real px the frame was shifted down.
+			expect(near(PaperHudScaleViewModel.bleed(scale) * scale, PaperHudScaleViewModel.topShift(scale))).to.equal(
+				true
+			)
+		end)
+	end)
+
 	describe("virtual", function()
 		it("is the screen in HUD design px", function()
 			local virtual = PaperHudScaleViewModel.virtual(Vector2.new(1188, 588), 0.55)

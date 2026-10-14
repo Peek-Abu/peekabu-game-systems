@@ -27,6 +27,7 @@ local CatchCctvPanel = require(ReplicatedStorage.Client.UI.React.Screens.Catch.C
 local CatchViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Catch.CatchViewModel)
 local useSpectateTarget = require(ReplicatedStorage.Client.UI.React.Screens.Catch.useSpectateTarget)
 local PaperHudFrame = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudFrame)
+local PaperHudScaleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudScaleViewModel)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local usePaperHudScale = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperHudScale)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
@@ -96,6 +97,8 @@ local function CatchOverlay(): React.ReactNode
 				onPrev = cyclePrev,
 				onNext = cycleNext,
 				jump = ShiftHudViewModel.arcFor(shortSide()).jump,
+				-- The frame starts below the top bar when scaled; the wash reaches back up over it.
+				bleedTop = PaperHudScaleViewModel.bleed(hudScale.scale),
 			}),
 		},
 	})
