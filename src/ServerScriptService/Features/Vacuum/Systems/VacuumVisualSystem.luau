@@ -313,7 +313,7 @@ local function hose(texture: string, size: number): Beam
 	beam.TextureSpeed = 0
 	beam.Width0 = tuning.width * size
 	beam.Width1 = tuning.width * size
-	beam.CurveSize0 = tuning.curve0 * size
+	beam.CurveSize0 = tuning.curveStowed * size
 	beam.CurveSize1 = tuning.curve1 * size
 	beam.Segments = tuning.segments
 	beam.FaceCamera = true
@@ -403,9 +403,11 @@ function Visual.wear(character: Model): WornBackpack?
 			if inlet ~= nil then
 				stowed.Parent = nil
 				beam.Attachment1 = inlet
+				beam.CurveSize0 = Constants.hose.curveHeld * size
 			else
 				stowed.Parent = model
 				beam.Attachment1 = stowedInlet
+				beam.CurveSize0 = Constants.hose.curveStowed * size
 			end
 		end,
 		destroy = function()

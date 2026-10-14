@@ -28,7 +28,7 @@ local IVORY = Color3.fromRGB(229, 221, 197)
 local GRAPHITE = Color3.fromRGB(46, 53, 54)
 local STEEL = Color3.fromRGB(175, 187, 187)
 local AMBER = Color3.fromRGB(246, 192, 72)
-local DUST = Color3.fromRGB(107, 94, 78)
+local DUST = Color3.fromRGB(78, 62, 48)
 local GLASS = Color3.fromRGB(207, 230, 232)
 
 -- A vertical cylinder (a Part cylinder's axis is X).
@@ -73,7 +73,7 @@ local backpack: { Piece } = {
 		CFrame.new(0, -0.03, 0.62),
 		GLASS,
 		Enum.Material.Glass,
-		0.6
+		0.8
 	),
 	piece("FullLamp", BALL, Vector3.new(0.084, 0.084, 0.084), CFrame.new(0, 0.265, 0.56), AMBER),
 	piece("HoseOutlet", CYL, Vector3.new(0.12, 0.12, 0.12), CFrame.new(0.27, -0.24, 0.32), GRAPHITE),
@@ -90,6 +90,10 @@ local wand: { Piece } = {
 	piece("FloorHeadLip", BLOCK, Vector3.new(0.58, 0.03, 0.035), CFrame.new(0, 0.015, -0.115), TEAL),
 }
 
+-- The hose leaves the outlet outward (+X), a little down and back.
+local OUTLET_AXIS = Vector3.new(0.95, -0.3, 0.1).Unit
+local OUTLET_UP = (Vector3.new(0, 1, 0) - OUTLET_AXIS * OUTLET_AXIS.Y).Unit
+
 return table.freeze({
 	TEMPLATE_PATH = table.freeze({ "Assets", "CleanupCrew", "Vacuum" }),
 	backpack = table.freeze(backpack),
@@ -97,11 +101,7 @@ return table.freeze({
 	-- Where the hose leaves the pack (mount space; its X axis points out of the outlet) and where the stowed
 	-- wand's grip clips on (its tube telescoped to STOWED_TUBE, its floor head turned along the pack's side,
 	-- above the tail).
-	outlet = CFrame.fromMatrix(
-		Vector3.new(0.316, -0.279, 0.32),
-		Vector3.new(math.cos(math.rad(40)), -math.sin(math.rad(40)), 0),
-		Vector3.new(math.sin(math.rad(40)), math.cos(math.rad(40)), 0)
-	),
+	outlet = CFrame.fromMatrix(Vector3.new(0.316, -0.279, 0.32), OUTLET_AXIS, OUTLET_UP),
 	holster = CFrame.new(0.38, 0.12, 0.32),
 	STOWED_TUBE = 0.1,
 	-- The hold (VacuumHoldFormulas.Tuning, studs as modelled where not a fraction of the reach): the grip
@@ -117,9 +117,10 @@ return table.freeze({
 		minTube = 0.3,
 		leftUp = 0.3,
 	}),
-	-- The hose Beam (studs as modelled): width, how far it bulges out of the outlet and into the wand, its
-	-- segments, and one texture tile's length (8 ribs).
-	hose = table.freeze({ width = 0.13, curve0 = 0.3, curve1 = 0.35, segments = 16, tile = 0.5 }),
+	-- The hose Beam (studs as modelled): width; how far it bulges out of the outlet (wide while the wand is in
+	-- the hand, so it loops out round the arm instead of through it; short to the stowed wand) and into the
+	-- wand; its segments; and one texture tile's length (8 ribs).
+	hose = table.freeze({ width = 0.13, curveHeld = 0.8, curveStowed = 0.3, curve1 = 0.24, segments = 16, tile = 0.5 }),
 	-- A stock avatar's pack size (it was modelled on Pippa's authored rig, worn at 1.25x), Pippa's authored
 	-- UpperTorso (the straps were modelled round it) and how deep the strap loops are.
 	GENERIC_SIZE = 1.25,

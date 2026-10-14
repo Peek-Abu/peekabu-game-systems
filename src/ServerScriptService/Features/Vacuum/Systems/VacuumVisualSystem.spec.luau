@@ -157,11 +157,16 @@ return function()
 			local tool = Instance.new("Tool")
 			local handle = Visual.build(tool, holder)
 			local inlet = handle.HoseInlet
+			local hose = find(model, "VacuumHose")
+			local stowedCurve = hose.CurveSize0
 			backpack.setHeld(inlet)
 			expect(stowed.Parent).to.equal(nil)
-			expect(find(model, "VacuumHose").Attachment1).to.equal(inlet)
+			expect(hose.Attachment1).to.equal(inlet)
+			-- Held, the hose loops wide out of the outlet, round the arm.
+			expect(hose.CurveSize0 > stowedCurve).to.equal(true)
 			backpack.setHeld(nil)
 			expect(stowed.Parent).to.equal(model)
+			expect(hose.CurveSize0).to.equal(stowedCurve)
 			expect(find(model, "VacuumHose").Attachment1:IsDescendantOf(stowed)).to.equal(true)
 			backpack.destroy()
 			tool:Destroy()
