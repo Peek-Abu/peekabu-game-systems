@@ -113,6 +113,42 @@ return function()
 			tool:Destroy()
 			holder:Destroy()
 		end)
+
+		it("carries the grip contract: GripUpper on the grip in the right hand, GripLower down the tube", function()
+			local holder = makeHolder()
+			local tool = Instance.new("Tool")
+			local handle, hold = Visual.build(tool, holder)
+			local upper = find(tool, "WandGrip"):FindFirstChild("GripUpper")
+			local lower = find(tool, "WandTube"):FindFirstChild("GripLower")
+			expect(upper:IsA("Attachment")).to.equal(true)
+			expect(lower:IsA("Attachment")).to.equal(true)
+			-- handle = rightGrip * Tool.Grip:Inverse(), so the right hand's grip is at Tool.Grip in handle space.
+			local inHandle = handle.CFrame:PointToObjectSpace(upper.WorldPosition)
+			expect((inHandle - hold.toolGrip.Position).Magnitude < 1e-3).to.equal(true)
+			-- GripLower stays its modelled distance below the tube's top, however long the tube telescopes, and
+			-- lies below and in front of GripUpper.
+			local tube = find(tool, "WandTube")
+			local size = VisualConstants.GENERIC_SIZE
+			local below = (0.5 - VisualConstants.grips.lower.position.Y) * size
+			expect(tube.Size.Y / 2 - lower.Position.Y).to.be.near(below, 1e-4)
+			local lowerInHandle = handle.CFrame:PointToObjectSpace(lower.WorldPosition)
+			expect(lowerInHandle.Y < inHandle.Y - 0.3).to.equal(true)
+			expect(lowerInHandle.Z < inHandle.Z).to.equal(true)
+			-- Both grips' +Y run up the wand.
+			expect(upper.WorldCFrame.UpVector:Dot(lower.WorldCFrame.UpVector)).to.be.near(1, 1e-4)
+			tool:Destroy()
+			holder:Destroy()
+		end)
+
+		it("has a wide floor head, square to the holder", function()
+			local tool = Instance.new("Tool")
+			local handle = Visual.build(tool)
+			local head = find(tool, VacuumConstants.FLOOR_HEAD_NAME)
+			-- 1.6x+ the first cut's 0.62 studs as modelled, at the stock size.
+			expect(head.Size.X >= 0.62 * 1.6 * VisualConstants.GENERIC_SIZE).to.equal(true)
+			expect(head.CFrame.RightVector:Dot(handle.CFrame.RightVector)).to.be.near(1, 1e-4)
+			tool:Destroy()
+		end)
 	end)
 
 	describe("the backpack", function()
@@ -137,6 +173,8 @@ return function()
 			expect(torso.CFrame:PointToObjectSpace(body.Position).Z > 0.4).to.equal(true)
 			local fill = find(model, VacuumConstants.GAUGE_FILL_NAME)
 			expect(fill:GetAttribute("GaugeFullSize")).to.equal(fill.Size)
+			-- Empty (hidden) until a client draws its owner's fill: no dust in the depot.
+			expect(fill.Transparency).to.equal(1)
 			local gaugeWeld = fill:FindFirstChild(VacuumConstants.GAUGE_WELD_NAME)
 			expect(gaugeWeld:GetAttribute("GaugeFullC0")).to.equal(gaugeWeld.C0)
 			expect(find(model, VacuumConstants.LAMP_NAME)).to.be.ok()

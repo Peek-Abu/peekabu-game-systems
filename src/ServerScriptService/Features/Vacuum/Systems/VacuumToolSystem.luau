@@ -1,6 +1,7 @@
 --!strict
--- Owns a shift's server-created Tool (the hand wand) and the canister backpack worn with it. Refresh tolerates
--- delayed characters/backpacks and preserves manual stow.
+-- Owns a shift's server-created Tool (the hand wand). The canister backpack is not its own: every employee wears
+-- one all the time (VacuumServiceServer); the Tool takes the wand off the wearer's pack while it is held and
+-- clips it back when stowed or gone. Refresh tolerates delayed characters/backpacks and preserves manual stow.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Constants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local Rules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumEquipmentRules)
@@ -65,21 +66,18 @@ export type Controller = {
 	destroy: () -> (),
 }
 
-function VacuumToolSystem.new(player: Player): Controller
+-- `wornFor` gives the canister backpack a character wears (putting it on if it has none yet; nil when it cannot
+-- wear one). The pack outlives this controller: clearing it only puts the wand back.
+function VacuumToolSystem.new(player: Player, wornFor: (character: Model) -> Visual.WornBackpack?): Controller
 	local character: Model? = nil
 	local tool: Tool? = nil
-	local worn: Visual.WornBackpack? = nil
 	local wasCarrying = false
 	local resume = false
 	local function clear()
 		if tool ~= nil then
 			tool:Destroy()
 		end
-		if worn ~= nil then
-			worn.destroy()
-		end
 		tool = nil
-		worn = nil
 		character = nil
 		wasCarrying = false
 		resume = false
@@ -96,19 +94,12 @@ function VacuumToolSystem.new(player: Player): Controller
 			if current == nil or humanoid == nil or humanoid.Health <= 0 or backpack == nil then
 				return false
 			end
-			-- Worn for as long as the player has the vacuum, stowed or held.
-			if worn == nil or worn.model.Parent ~= current then
-				if worn ~= nil then
-					worn.destroy()
-				end
-				worn = Visual.wear(current)
-			end
 			local first = tool == nil or tool.Parent == nil
 			if first then
 				if tool ~= nil then
 					tool:Destroy()
 				end
-				local created = VacuumToolSystem.create(current, worn)
+				local created = VacuumToolSystem.create(current, wornFor(current))
 				tool = created
 				created.Parent = backpack
 				resume = true

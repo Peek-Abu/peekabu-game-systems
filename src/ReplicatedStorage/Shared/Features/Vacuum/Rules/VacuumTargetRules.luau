@@ -4,7 +4,9 @@
 	are one rule. Pure.
 
 	A pile is in reach when it is on the vacuumer's floor (within `height` up or down) and
-	- its rim is within `head` studs (flat) of the wand's floor head, whatever way the body or camera faces; or
+	- its rim is within `head` studs (flat) of the wand's floor head, whatever way the body or camera faces. The
+	  floor head is measured as the line across its width (`Head`), so a wide head reaches as far from its ends
+	  as from its middle; or
 	- the vacuumer stands on it (its rim within `underfoot` of the root, flat); or
 	- its rim is within `range` of the root and it lies in a cone (`minDot`) around the body's facing.
 	The camera never counts: where the character and the wand are decide it. Distances are to a pile's rim (a
@@ -17,6 +19,8 @@
 ]=]
 
 export type Pile = { position: Vector3, radius: number }
+-- The wand's floor head: its centre and the half of its width (a vector across it, from the centre to one end).
+export type Head = { centre: Vector3, half: Vector3 }
 export type Reach = { head: number, underfoot: number, range: number, minDot: number, height: number }
 
 local VacuumTargetRules = {}
@@ -33,15 +37,34 @@ local function rim(from: Vector3, pile: Pile): number
 	return flat(pile.position - from).Magnitude - pile.radius
 end
 
+-- Flat distance from the floor head's width (the line from one end to the other) to the pile's rim.
+local function rimFromHead(head: Head, pile: Pile): number
+	local across = flat(head.half)
+	local offset = flat(pile.position - head.centre)
+	local length = across.Magnitude
+	if length < 1e-6 then
+		return offset.Magnitude - pile.radius
+	end
+	local along = math.clamp(offset:Dot(across) / length, -length, length)
+	return (offset - across.Unit * along).Magnitude - pile.radius
+end
+
 --[=[
-	Whether `pile` is in reach of a vacuumer whose root is at `root`, facing `facing`, with its floor head at
+	The floor head of a part at `frame` this `size` (its width along its X axis).
+]=]
+function VacuumTargetRules.head(frame: CFrame, size: Vector3): Head
+	return { centre = frame.Position, half = frame.RightVector * (size.X / 2) }
+end
+
+--[=[
+	Whether `pile` is in reach of a vacuumer whose root is at `root`, facing `facing`, with its floor head
 	`head` (nil: no floor head to measure from).
 ]=]
-function VacuumTargetRules.reaches(root: Vector3, facing: Vector3, head: Vector3?, pile: Pile, reach: Reach): boolean
+function VacuumTargetRules.reaches(root: Vector3, facing: Vector3, head: Head?, pile: Pile, reach: Reach): boolean
 	if math.abs(pile.position.Y - root.Y) > reach.height then
 		return false
 	end
-	if head ~= nil and rim(head, pile) <= reach.head then
+	if head ~= nil and rimFromHead(head, pile) <= reach.head then
 		return true
 	end
 	local fromRoot = rim(root, pile)
@@ -66,7 +89,7 @@ end
 function VacuumTargetRules.pick(
 	root: Vector3,
 	facing: Vector3,
-	head: Vector3?,
+	head: Head?,
 	piles: { Pile },
 	reach: Reach,
 	current: number?
@@ -77,12 +100,11 @@ function VacuumTargetRules.pick(
 			return current
 		end
 	end
-	local from = head or root
 	local best: number? = nil
 	local bestDistance = math.huge
 	for index, pile in piles do
 		if VacuumTargetRules.reaches(root, facing, head, pile, reach) then
-			local distance = rim(from, pile)
+			local distance = if head ~= nil then rimFromHead(head, pile) else rim(root, pile)
 			if distance < bestDistance then
 				best = index
 				bestDistance = distance

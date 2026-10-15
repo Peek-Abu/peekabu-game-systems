@@ -85,10 +85,20 @@ local wand: { Piece } = {
 	piece("WandInlet", BLOCK, Vector3.new(0.148, 0.09, 0.148), CFrame.identity, TEAL_DARK),
 	piece("WandTube", BLOCK, Vector3.new(0.08, 1, 0.08), CFrame.identity, STEEL, Enum.Material.Metal),
 	piece("WandSwivel", BALL, Vector3.new(0.12, 0.12, 0.12), CFrame.identity, GRAPHITE),
-	piece("FloorHead", BLOCK, Vector3.new(0.62, 0.085, 0.21), CFrame.identity, GRAPHITE),
+	-- A wide floor nozzle (1.75x the first cut's 0.62, characters/vacuum v4).
+	piece("FloorHead", BLOCK, Vector3.new(1.08, 0.085, 0.21), CFrame.identity, GRAPHITE),
 	-- Relative to the floor head (its front lip).
-	piece("FloorHeadLip", BLOCK, Vector3.new(0.58, 0.03, 0.035), CFrame.new(0, 0.015, -0.115), TEAL),
+	piece("FloorHeadLip", BLOCK, Vector3.new(1.04, 0.03, 0.035), CFrame.new(0, 0.015, -0.115), TEAL),
 }
+
+-- The graybox wand's grips (the grip contract, characters/vacuum/README.md), in their piece's space: GripUpper
+-- on WandGrip 0.1 up from its centre, just under the hose inlet (the right hand); GripLower on the unit-long
+-- WandTube 0.35 down from its top (the left hand): a clear hand-span apart, as Pippa's big round hands touched
+-- (and read as one clap) 0.15 down. Identity rotation: +Y up the wand.
+local grips = table.freeze({
+	upper = table.freeze({ piece = "WandGrip", name = "GripUpper", position = Vector3.new(0, 0.1, 0) }),
+	lower = table.freeze({ piece = "WandTube", name = "GripLower", position = Vector3.new(0, 0.15, 0) }),
+})
 
 -- The hose leaves the outlet outward (+X), a little down and back.
 local OUTLET_AXIS = Vector3.new(0.95, -0.3, 0.1).Unit
@@ -98,25 +108,29 @@ return table.freeze({
 	TEMPLATE_PATH = table.freeze({ "Assets", "CleanupCrew", "Vacuum" }),
 	backpack = table.freeze(backpack),
 	wand = table.freeze(wand),
+	grips = grips,
 	-- Where the hose leaves the pack (mount space; its X axis points out of the outlet) and where the stowed
 	-- wand's grip clips on (the wand as long as in the hand, hanging upright down the pack's side beside the
 	-- tail, its floor head turned along the side).
 	outlet = CFrame.fromMatrix(Vector3.new(0.316, -0.279, 0.32), OUTLET_AXIS, OUTLET_UP),
 	holster = CFrame.new(0.38, 0.12, 0.32),
-	-- The hold (VacuumHoldFormulas.Tuning, studs as modelled where not a fraction of the reach): the grip
-	-- 0.2 reach down, 0.75 forward and 0.2 in toward the middle from the right shoulder (0.8 of the reach
-	-- away, so the elbow still bends), the left hand 0.12 up the wand beside it. Both hands are held well out
-	-- in front of the belly: lower and nearer, the left forearm, reaching across to the wand, ran through
-	-- Pippa's torso and vest (measured on her meshes in the live pose, characters/qa/vacuum-v2). The wand
-	-- leans 35 degrees forward; the floor head rides 0.06 over the floor.
+	-- The hold (VacuumHoldFormulas.Tuning, fractions of the arm's reach): the right hand on GripUpper 0.05 reach
+	-- down, 0.6 forward and 0.05 out from the right shoulder (~0.6 of the reach away: the elbow bends), out in
+	-- front of the chest on the right (nearer or more inward, the wrist lay on Pippa's vest). The wand leans 50
+	-- degrees forward and turns 65 degrees in toward the middle, so GripLower (the left hand, ~0.8
+	-- studs lower down the wand on Pippa) lies in front of the body's
+	-- middle where the left arm reaches it with its elbow out and forward. Two hands together on the grip read
+	-- as a clap (user feedback); the left forearm reaching across to the right hip ran through Pippa's torso and
+	-- vest (characters/qa/vacuum-v2). Measured on her meshes in the live pose: characters/qa/vacuum-v3. The
+	-- floor head rides 0.06 (studs as modelled) over the floor.
 	hold = table.freeze({
-		down = 0.2,
-		forward = 0.75,
-		out = -0.2,
-		angle = math.rad(35),
+		down = 0.05,
+		forward = 0.6,
+		out = 0.05,
+		angle = math.rad(50),
+		yaw = math.rad(65),
 		clearance = 0.06,
 		minTube = 0.3,
-		leftUp = 0.12,
 	}),
 	-- The hose Beam (studs as modelled): width; how far it bulges out of the outlet (wide while the wand is in
 	-- the hand, so it loops out round the arm instead of through it; short to the stowed wand) and into the

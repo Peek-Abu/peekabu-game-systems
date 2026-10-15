@@ -4,7 +4,8 @@ return function()
 	-- The holder stands at the origin facing -Z, its root 1.4 above the floor; the floor head rests 2.2 ahead.
 	local ROOT = Vector3.new(0, 1.4, 0)
 	local FACING = Vector3.new(0, 0, -1)
-	local HEAD = Vector3.new(0.3, 0.05, -2.2)
+	-- A floor head 1.4 wide, square to the facing.
+	local HEAD = { centre = Vector3.new(0.3, 0.05, -2.2), half = Vector3.new(0.7, 0, 0) }
 	local REACH = { head = 2, underfoot = 1, range = 5, minDot = 0.5, height = 6 }
 
 	local function pile(x: number, z: number, radius: number?, y: number?)
@@ -13,8 +14,8 @@ return function()
 
 	describe("reaches", function()
 		it("takes a pile the floor head is on or near, whatever the facing", function()
-			-- Rim 1.8 from the floor head, but behind the body's facing (it faces +Z here).
-			local beside = pile(-3.5, -2.2)
+			-- Rim 1.8 from the floor head's left end, but behind the body's facing (it faces +Z here).
+			local beside = pile(-4.2, -2.2)
 			expect(VacuumTargetRules.reaches(ROOT, Vector3.new(0, 0, 1), HEAD, beside, REACH)).to.equal(true)
 			expect(VacuumTargetRules.reaches(ROOT, Vector3.new(0, 0, 1), nil, beside, REACH)).to.equal(false)
 		end)
@@ -50,6 +51,30 @@ return function()
 
 		it("refuses a pile on another floor", function()
 			expect(VacuumTargetRules.reaches(ROOT, FACING, HEAD, pile(0, -2.2, 2, 12), REACH)).to.equal(false)
+		end)
+	end)
+
+	describe("the floor head's width", function()
+		it("reaches as far from the head's ends as from its middle", function()
+			-- 1.8 out past the right end (x 1.0) along the head's line: in reach; the same distance from a
+			-- narrow head's centre would not be.
+			local side = pile(4.8, -2.2)
+			local back = Vector3.new(0, 0, 1)
+			expect(VacuumTargetRules.reaches(ROOT, back, HEAD, side, REACH)).to.equal(true)
+			local narrow = { centre = HEAD.centre, half = Vector3.zero }
+			expect(VacuumTargetRules.reaches(ROOT, back, narrow, side, REACH)).to.equal(false)
+		end)
+
+		it("measures a turned head along its own width, flat", function()
+			-- Turned 90 degrees, the head's width runs along Z: a pile beside its end is near, one off its side is not.
+			local turned = VacuumTargetRules.head(
+				CFrame.new(0.3, 0.05, -2.2) * CFrame.Angles(0, math.pi / 2, 0),
+				Vector3.new(1.4, 0.1, 0.3)
+			)
+			expect(turned.half.Magnitude).to.be.near(0.7, 1e-4)
+			local back = Vector3.new(0, 0, 1)
+			expect(VacuumTargetRules.reaches(ROOT, back, turned, pile(0.3, -6.7, 2), REACH)).to.equal(true)
+			expect(VacuumTargetRules.reaches(ROOT, back, turned, pile(4.6, -2.2, 2), REACH)).to.equal(false)
 		end)
 	end)
 
@@ -94,9 +119,8 @@ return function()
 			expect(wide.height).to.equal(REACH.height)
 			-- A pile the client picked a moment ago is still accepted after a step away.
 			local stepped = Vector3.new(0, 1.4, 1.5)
-			expect(VacuumTargetRules.reaches(stepped, FACING, HEAD + Vector3.new(0, 0, 1.5), pile(0, -6.5), wide)).to.equal(
-				true
-			)
+			local moved = { centre = HEAD.centre + Vector3.new(0, 0, 1.5), half = HEAD.half }
+			expect(VacuumTargetRules.reaches(stepped, FACING, moved, pile(0, -6.5), wide)).to.equal(true)
 		end)
 	end)
 end

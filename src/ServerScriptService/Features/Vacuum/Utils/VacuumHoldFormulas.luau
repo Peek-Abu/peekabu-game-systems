@@ -2,13 +2,18 @@
 --[=[
 	VacuumHoldFormulas: how a holder holds the backpack vacuum's wand, and how the wand is laid out. Pure.
 
-	The canister rides on the back; the hands hold only a light wand with a floor head. The right hand's grip is
-	planned in HumanoidRootPart space (+Y up, -Z front): well in front of the belly, below the shoulder and a
-	little in toward the middle, inside the arm's reach so the elbow bends (the hand is turned so the forearm
-	runs straight into it: no wrist-only bend), the left hand on the wand just above it when it reaches, its
-	elbow out and forward so the forearm passes in front of the body. The wand leans forward from the grip at a fixed
-	angle and telescopes: its tube is as long as rests the floor head flat on the floor from that grip's height,
-	so a short chibi and a tall stock avatar both clean with the head on the floor and nothing in it.
+	The canister rides on the back; the hands hold only a light wand with a floor head, as a real vacuum's wand is
+	held: the right hand on the upper grip by the hose joint, the left hand lower down the wand. Each wand skin
+	says where with two Attachments (the grip contract, characters/vacuum/README.md): `GripUpper` on `WandGrip`
+	(the right hand) and `GripLower` on `WandTube` (the left hand); `WandDims.upper` / `lower` are read from them.
+
+	The right hand is planned in HumanoidRootPart space (+Y up, -Z front): in front of the belly on the right,
+	a little below the shoulder, inside the arm's reach so the elbow bends (the hand is turned so the forearm runs
+	straight into it: no wrist-only bend). The wand runs from it forward and down at a fixed lean, turned in
+	toward the middle (`yaw`), so its lower grip lies in front of the body where the left hand reaches it with
+	its elbow out and forward (the forearm passes in front of the belly, not through it). The wand telescopes:
+	its tube is as long as rests the floor head flat on the floor from the grip's height, so a short chibi and a
+	tall stock avatar both clean with the head on the floor and nothing in it.
 
 	@class VacuumHoldFormulas
 ]=]
@@ -21,32 +26,41 @@ local EmployeeRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data
 export type Arm = { shoulder: Vector3, upper: number, lower: number }
 
 -- The wand's measurements (studs, as built): half the grip's length, the hose inlet's height above it, the
--- swivel's radius and the floor head's height.
-export type WandDims = { gripHalf: number, inlet: number, swivel: number, head: number }
+-- swivel's radius and the floor head's height; and the grips: how far up the wand from the grip's centre the
+-- right hand holds (`GripUpper`), and how far down the tube from its top the left hand holds (`GripLower`).
+export type WandDims = {
+	gripHalf: number,
+	inlet: number,
+	swivel: number,
+	head: number,
+	upper: number,
+	lower: number,
+}
 
--- The hold's tuning (VacuumVisualConstants.hold): where the grip sits as fractions of the arm's reach
--- (down, forward, out; a negative `out` is in toward the middle), the wand's lean from vertical (radians), the head's clearance over the floor, the
--- shortest tube, and how far up the wand the left hand holds.
+-- The hold's tuning (VacuumVisualConstants.hold): where the right hand sits as fractions of the arm's reach
+-- (down, forward, out; a negative `out` is in toward the middle), the wand's lean from vertical and its turn
+-- in toward the middle (radians), the head's clearance over the floor and the shortest tube.
 export type Tuning = {
 	down: number,
 	forward: number,
 	out: number,
 	angle: number,
+	yaw: number,
 	clearance: number,
 	minTube: number,
-	leftUp: number,
 }
 
 export type Hold = {
-	-- Root-space frame for the right RightGripAttachment (an IK target).
+	-- Root-space frame for the RightGripAttachment (an IK target): the hand on the wand's GripUpper.
 	grip: CFrame,
-	-- The Tool's Grip: with the hand there, the handle sits square to the root at the grip.
+	-- The Tool's Grip: with the hand there, the handle (the WandGrip's centre) sits square to the root, GripUpper
+	-- in the hand.
 	toolGrip: CFrame,
 	-- Root-space points the elbows bend toward.
 	rightPole: Vector3,
 	leftPole: Vector3,
-	-- Root-space frame for the LeftGripAttachment on the wand (its hand turned along its forearm, like the
-	-- right), nil when the left arm cannot reach the wand.
+	-- Root-space frame for the LeftGripAttachment on the wand's GripLower (its hand turned along its forearm, like
+	-- the right), nil when the left arm cannot reach it.
 	left: CFrame?,
 	-- The wand tube's length, and the grip's height above the floor.
 	tube: number,
@@ -68,14 +82,23 @@ local VacuumHoldFormulas = {}
 
 -- The stock RightGripAttachment's turn in its hand (EmployeeRigUtils gives a generated one the same).
 local STOCK_GRIP_TURN = CFrame.Angles(-math.pi / 2, 0, 0)
--- The right elbow bends outward, down and a little back. The left hand reaches across to the wand in front of
--- the right side, so its elbow bends outward and FORWARD: the forearm then comes in round the front of a round
--- chibi belly instead of through it (bent down and back, the forearm ran through Pippa's torso and vest).
-local RIGHT_POLE = Vector3.new(1, -0.6, 0.5).Unit
-local LEFT_POLE = Vector3.new(-1, 0, -0.6).Unit
+-- The right elbow bends outward and a little down and forward: its forearm then reaches the grip from the side,
+-- clear of the chest (bent down and back, it lay along Pippa's vest). The left hand reaches forward to the wand in
+-- front of the body, so its elbow bends outward and well FORWARD: the forearm then comes in round the front of a
+-- round chibi belly instead of through it (bent down and back, the forearm ran through Pippa's torso and vest).
+local RIGHT_POLE = Vector3.new(1, -0.3, -0.3).Unit
+local LEFT_POLE = Vector3.new(-1, 0, -1).Unit
 -- Never plan the left hand at the arm's full stretch.
 local REACH_USE = 0.95
 local X_AXIS = Vector3.new(1, 0, 0)
+
+--[=[
+	The wand's axis in root space, from the grip toward the floor head, leaning `angle` forward from vertical and
+	turned `yaw` about the vertical (a positive yaw swings its lower end toward -X, the wearer's left).
+]=]
+function VacuumHoldFormulas.axis(angle: number, yaw: number): Vector3
+	return Vector3.new(-math.sin(angle) * math.sin(yaw), -math.cos(angle), -math.sin(angle) * math.cos(yaw))
+end
 
 --[=[
 	Where an arm's elbow is when its hand is at `target`: `upper` from the shoulder, `lower` from the target,
@@ -142,13 +165,16 @@ function VacuumHoldFormulas.hold(right: Arm, left: Arm?, floorY: number, wand: W
 	local rightPole = right.shoulder + RIGHT_POLE * reach
 	local grip =
 		gripFrame(target, VacuumHoldFormulas.elbow(right.shoulder, target, right.upper, right.lower, RIGHT_POLE))
-	local height = target.Y - floorY
-	local up = Vector3.new(0, math.cos(tuning.angle), math.sin(tuning.angle))
+	local along = VacuumHoldFormulas.axis(tuning.angle, tuning.yaw)
+	-- The handle (the grip's centre) is `upper` down the wand from the right hand.
+	local handle = target + along * wand.upper
+	local height = handle.Y - floorY
+	local tube = VacuumHoldFormulas.tube(height, wand, tuning.angle, tuning.clearance, tuning.minTube)
 	local leftTarget: CFrame? = nil
 	local leftPole = right.shoulder * Vector3.new(-1, 1, 1) + LEFT_POLE * reach
 	if left ~= nil then
 		leftPole = left.shoulder + LEFT_POLE * (left.upper + left.lower)
-		local candidate = target + up * tuning.leftUp
+		local candidate = handle + along * (wand.gripHalf + math.min(wand.lower, tube))
 		if (candidate - left.shoulder).Magnitude <= REACH_USE * (left.upper + left.lower) then
 			-- A Transform target: the engine's Position-only solve left this hand ~0.75 studs off (Studio).
 			leftTarget = gripFrame(
@@ -159,25 +185,35 @@ function VacuumHoldFormulas.hold(right: Arm, left: Arm?, floorY: number, wand: W
 	end
 	return {
 		grip = grip,
-		toolGrip = grip.Rotation,
+		-- handle = grip * toolGrip:Inverse(): square to the root, `upper` down the wand from the hand.
+		toolGrip = CFrame.new(-along * wand.upper) * grip.Rotation,
 		rightPole = rightPole,
 		leftPole = leftPole,
 		left = leftTarget,
-		tube = VacuumHoldFormulas.tube(height, wand, tuning.angle, tuning.clearance, tuning.minTube),
+		tube = tube,
 		height = height,
 	}
 end
 
 --[=[
-	The wand's pieces in handle space for a `tube` this long leaning `angle` forward from vertical: the grip at
-	the handle, the inlet on top of it, the tube and swivel down the wand, and the floor head flat (turned
-	`headYaw` about the vertical) under the swivel.
+	The wand's pieces in handle space for a `tube` this long leaning `angle` forward from vertical and turned
+	`yaw` in (VacuumHoldFormulas.axis): the grip at the handle, the inlet on top of it, the tube and swivel down
+	the wand, and the floor head flat and square to the handle (turned `headYaw` about the vertical) under the
+	swivel. Every piece on the wand's axis has its +Y up the wand.
 ]=]
-function VacuumHoldFormulas.wand(wand: WandDims, tube: number, angle: number, headYaw: number?): WandFrames
-	local along = Vector3.new(0, -math.cos(angle), -math.sin(angle))
+function VacuumHoldFormulas.wand(
+	wand: WandDims,
+	tube: number,
+	angle: number,
+	headYaw: number?,
+	yaw: number?
+): WandFrames
+	local turn = yaw or 0
+	local along = VacuumHoldFormulas.axis(angle, turn)
 	local up = -along
+	local across = Vector3.new(math.cos(turn), 0, -math.sin(turn))
 	local function onAxis(at: Vector3): CFrame
-		return CFrame.fromMatrix(at, Vector3.xAxis, up)
+		return CFrame.fromMatrix(at, across, up)
 	end
 	local swivel = along * (wand.gripHalf + tube + wand.swivel)
 	local top = up * (wand.gripHalf + wand.inlet)
@@ -187,7 +223,7 @@ function VacuumHoldFormulas.wand(wand: WandDims, tube: number, angle: number, he
 		tube = onAxis(along * (wand.gripHalf + tube / 2)),
 		swivel = CFrame.new(swivel),
 		head = CFrame.new(swivel - Vector3.new(0, wand.swivel + wand.head / 2, 0)) * CFrame.Angles(0, headYaw or 0, 0),
-		hose = CFrame.fromMatrix(top, along, Vector3.xAxis),
+		hose = CFrame.fromMatrix(top, along, across),
 	}
 end
 

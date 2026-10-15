@@ -6,16 +6,22 @@ return function()
 	local RIGHT = { shoulder = Vector3.new(0.45, 1.15, 0), upper = 0.525, lower = 1.1 }
 	local LEFT = { shoulder = Vector3.new(-0.45, 1.15, 0), upper = 0.525, lower = 1.1 }
 	local FLOOR = -1.375
-	local WAND = { gripHalf = 0.25, inlet = 0.1125, swivel = 0.075, head = 0.106 }
+	-- GripUpper 0.125 up the grip from its centre, GripLower 0.4375 down the tube from its top.
+	local WAND = { gripHalf = 0.25, inlet = 0.1125, swivel = 0.075, head = 0.106, upper = 0.125, lower = 0.4375 }
 	local TUNING = {
-		down = 0.2,
-		forward = 0.75,
-		out = -0.2,
-		angle = math.rad(35),
+		down = 0.05,
+		forward = 0.6,
+		out = 0.05,
+		angle = math.rad(50),
+		yaw = math.rad(65),
 		clearance = 0.06,
 		minTube = 0.3,
-		leftUp = 0.15,
 	}
+	local ALONG = Vector3.new(
+		-math.sin(TUNING.angle) * math.sin(TUNING.yaw),
+		-math.cos(TUNING.angle),
+		-math.sin(TUNING.angle) * math.cos(TUNING.yaw)
+	)
 
 	describe("elbow", function()
 		it("puts the elbow one upper arm from the shoulder and one forearm from the target", function()
@@ -53,15 +59,20 @@ return function()
 	describe("hold", function()
 		local hold = VacuumHoldFormulas.hold(RIGHT, LEFT, FLOOR, WAND, TUNING)
 
-		it("holds the grip in front of and below the shoulder, inside the arm's reach so the elbow bends", function()
-			local grip = hold.grip.Position
-			local reach = RIGHT.upper + RIGHT.lower
-			expect(grip.Z < -0.5).to.equal(true)
-			expect(grip.Y < RIGHT.shoulder.Y).to.equal(true)
-			local distance = (grip - RIGHT.shoulder).Magnitude
-			expect(distance < 0.85 * reach).to.equal(true)
-			expect(distance > 0.6 * reach).to.equal(true)
-		end)
+		it(
+			"holds the right hand in front of and below the shoulder, inside the arm's reach so the elbow bends",
+			function()
+				local grip = hold.grip.Position
+				local reach = RIGHT.upper + RIGHT.lower
+				expect(grip.Z < -0.5).to.equal(true)
+				expect(grip.Y < RIGHT.shoulder.Y).to.equal(true)
+				-- On the right of the body, not in the middle.
+				expect(grip.X > 0.15).to.equal(true)
+				local distance = (grip - RIGHT.shoulder).Magnitude
+				expect(distance < 0.85 * reach).to.equal(true)
+				expect(distance > 0.4 * reach).to.equal(true)
+			end
+		)
 
 		it("turns the hand so the forearm runs down into it (no wrist-only bend)", function()
 			local elbow = VacuumHoldFormulas.elbow(
@@ -77,16 +88,17 @@ return function()
 			expect((-hand.UpVector):Dot(forearm)).to.be.near(1, 1e-3)
 		end)
 
-		it("gives a Tool.Grip that keeps the handle square to the root at the grip", function()
+		it("gives a Tool.Grip that puts GripUpper in the hand, the handle square to the root below it", function()
 			-- handle = gripAttachment * Grip:Inverse()
 			local handle = hold.grip * hold.toolGrip:Inverse()
-			expect((handle.Position - hold.grip.Position).Magnitude < 1e-4).to.equal(true)
+			-- The grip's centre is `upper` down the wand from the hand.
+			expect((handle.Position - (hold.grip.Position + ALONG * WAND.upper)).Magnitude < 1e-4).to.equal(true)
 			expect(handle.LookVector:Dot(Vector3.new(0, 0, -1))).to.be.near(1, 1e-4)
 			expect(handle.UpVector:Dot(Vector3.yAxis)).to.be.near(1, 1e-4)
 		end)
 
 		it("sizes the tube from the grip's height so the head rests on the floor", function()
-			local height = hold.grip.Position.Y - FLOOR
+			local height = (hold.grip.Position + ALONG * WAND.upper).Y - FLOOR
 			expect(hold.tube).to.be.near(
 				VacuumHoldFormulas.tube(height, WAND, TUNING.angle, TUNING.clearance, TUNING.minTube),
 				1e-6
@@ -94,10 +106,18 @@ return function()
 			expect(hold.height).to.be.near(height, 1e-6)
 		end)
 
-		it("puts the left hand on the wand above the right one when it reaches", function()
+		it("puts the left hand lower down the wand, on GripLower, when it reaches (not beside the right)", function()
 			expect(hold.left).to.be.ok()
 			local left = hold.left.Position
-			expect(left.Y > hold.grip.Position.Y).to.equal(true)
+			-- On the wand's axis, upper + grip half + lower below the right hand.
+			local expected = hold.grip.Position + ALONG * (WAND.upper + WAND.gripHalf + WAND.lower)
+			expect((left - expected).Magnitude < 1e-4).to.equal(true)
+			-- A clear hand-span apart (Pippa's big round hands touched, a "clap", 0.5 apart).
+			expect((left - hold.grip.Position).Magnitude > 0.8).to.equal(true)
+			expect(hold.grip.Position.Y - left.Y > 0.5).to.equal(true)
+			-- In front of the middle of the body, further out than the right hand.
+			expect(math.abs(left.X) < 0.25).to.equal(true)
+			expect(left.Z < hold.grip.Position.Z).to.equal(true)
 			expect((left - LEFT.shoulder).Magnitude <= 0.95 * (LEFT.upper + LEFT.lower) + 1e-6).to.equal(true)
 			-- Turned along its forearm too (a Transform target).
 			local elbow =
@@ -141,6 +161,16 @@ return function()
 		end)
 	end)
 
+	describe("axis", function()
+		it("leans forward by the angle and turns its lower end toward the left by the yaw", function()
+			local axis = VacuumHoldFormulas.axis(math.rad(35), math.rad(40))
+			expect(axis.Magnitude).to.be.near(1, 1e-6)
+			expect(axis.Y).to.be.near(-math.cos(math.rad(35)), 1e-6)
+			expect(axis.X < 0 and axis.Z < 0).to.equal(true)
+			expect(VacuumHoldFormulas.axis(math.rad(35), 0).X).to.be.near(0, 1e-6)
+		end)
+	end)
+
 	describe("wand", function()
 		it("lays the grip, tube and swivel along the wand and the floor head flat at its end", function()
 			local frames = VacuumHoldFormulas.wand(WAND, 1.2, math.rad(35))
@@ -154,6 +184,21 @@ return function()
 			-- The hose comes off the top of the grip.
 			expect(frames.inlet.Position:Dot(along) < 0).to.equal(true)
 		end)
+
+		it(
+			"turns along its yaw, the floor head staying square to the handle and every piece's +Y up the wand",
+			function()
+				local yaw = math.rad(40)
+				local frames = VacuumHoldFormulas.wand(WAND, 1.2, math.rad(35), nil, yaw)
+				local along = VacuumHoldFormulas.axis(math.rad(35), yaw)
+				expect(frames.tube.Position.Unit:Dot(along)).to.be.near(1, 1e-4)
+				expect(frames.grip.UpVector:Dot(-along)).to.be.near(1, 1e-4)
+				expect(frames.tube.UpVector:Dot(-along)).to.be.near(1, 1e-4)
+				expect(frames.head.RightVector:Dot(Vector3.xAxis)).to.be.near(1, 1e-6)
+				-- The hose frame stays orthonormal (its X into the wand).
+				expect(frames.hose.RightVector:Dot(along)).to.be.near(1, 1e-4)
+			end
+		)
 
 		it("stands upright at no angle (stowed on the pack)", function()
 			local frames = VacuumHoldFormulas.wand(WAND, 0.4, 0)

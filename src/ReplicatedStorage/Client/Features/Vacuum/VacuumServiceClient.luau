@@ -60,7 +60,7 @@ local function aimedPile(current: Instance?): Instance?
 	local index = VacuumTargetRules.pick(
 		root.Position,
 		root.CFrame.LookVector,
-		if head ~= nil and head:IsA("BasePart") then head.Position else nil,
+		if head ~= nil and head:IsA("BasePart") then VacuumTargetRules.head(head.CFrame, head.Size) else nil,
 		piles,
 		VacuumConstants.TARGET,
 		currentIndex

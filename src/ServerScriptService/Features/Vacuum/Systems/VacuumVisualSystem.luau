@@ -4,18 +4,26 @@
 	(ReplicatedStorage.Assets.CleanupCrew.Vacuum: `Backpack` pivoted at its mount, `Straps` pivoted at the torso
 	they were modelled round, `Wand` pieces) or, when it is missing, VacuumVisualConstants' graybox pieces.
 
+	The grip contract (characters/vacuum/README.md): a wand skin is complete only with two Attachments that say
+	where the hands go: `GripUpper` on `WandGrip` (the right hand, on the upper grip by the hose joint) and
+	`GripLower` on `WandTube` (the left hand, lower down the wand), each with +Y up the wand. GripUpper's offset
+	is in the grip's studs; the tube is modelled one stud long and telescoped per holder, so GripLower's distance
+	below the tube's top is kept (in studs as modelled) and the attachment is moved with the tube. The hold reads
+	both (VacuumHoldFormulas: `upper` / `lower`), and the built wand carries them where the hands are.
+
 	- `wear` puts the canister backpack on a character: welded to the UpperTorso at the employee's registry fit
 	  (EmployeeRegistry.backpack, at the employee's scale; anyone else is fitted from their torso's size), straps
 	  over the vest, the wand clipped upright to the pack's right side (the same wand as in the hand, its tube as
   long), and a hose (a textured, camera-facing Beam) from the
 	  pack's outlet to the wand. `setHeld` unclips the stowed wand and runs the hose to the wand in the hand. The
-	  gauge's dust insert carries its full size and Weld offset as attributes; each client sizes it to the
-	  owner's canister (VacuumFeedbackSystem).
+	  gauge's dust insert carries its full size and Weld offset as attributes and starts empty (hidden); each
+	  client sizes it to the owner's canister (VacuumFeedbackSystem).
 	- `build` makes the hand wand inside the Tool: the grip at the handle, the wand leaning forward and its tube
 	  telescoped so the floor head rests flat on the floor from the holder's grip (VacuumHoldFormulas.hold, read
 	  from the holder's rig attachments). The hold it returns drives the arms (AnimationVacuumHoldSystem).
 
-	The backpack is worn for as long as a crew member has the vacuum (the whole shift), stowed or held.
+	Every employee wears the backpack as part of their look, in the depot as on a shift (VacuumServiceServer
+	puts it on each character as it spawns); the shift's Tool only takes the wand off it and puts it back.
 
 	@class VacuumVisualSystem
 ]=]
@@ -41,6 +49,7 @@ type Piece = Constants.Piece
 type Kit = { pack: Model, straps: Model?, wand: { [string]: BasePart }, kind: string }
 
 local WAND_PIECES = { "WandGrip", "WandInlet", "WandTube", "WandSwivel", "FloorHead", "FloorHeadLip" }
+local GRIPS = { Constants.grips.upper, Constants.grips.lower }
 
 local Visual = {}
 
@@ -114,6 +123,12 @@ local function kit(): Kit
 			local found: BasePart? = wand[name]
 			complete = complete and found ~= nil
 		end
+		-- The grip contract: a wand without both grips is not a complete skin.
+		for _, grip in GRIPS do
+			local holder: BasePart? = wand[grip.piece]
+			local found = if holder ~= nil then holder:FindFirstChild(grip.name) else nil
+			complete = complete and found ~= nil and found:IsA("Attachment")
+		end
 		if pack ~= nil and pack:IsA("Model") and complete then
 			pack.Parent = nil
 			local strapModel = if straps ~= nil and straps:IsA("Model") then straps else nil
@@ -138,39 +153,64 @@ local function kit(): Kit
 	for _, piece in Constants.wand do
 		wand[piece.name] = fromPiece(piece)
 	end
+	for _, grip in GRIPS do
+		local attachment = Instance.new("Attachment")
+		attachment.Name = grip.name
+		attachment.Position = grip.position
+		attachment.Parent = wand[grip.piece]
+	end
 	return { pack = pack, straps = nil, wand = wand, kind = "native-source" }
 end
 
--- The wand's pieces scaled to `size`, and their measurements. The lip keeps its place on the floor head.
+-- A grip Attachment of a complete kit (see `kit`).
+local function gripOf(parts: { [string]: BasePart }, grip: { piece: string, name: string }): Attachment
+	local found = parts[grip.piece]:FindFirstChild(grip.name)
+	assert(found ~= nil and found:IsA("Attachment"), `wand has no {grip.name}`)
+	return found
+end
+
+-- The wand's pieces scaled to `size` (their grips with them), and their measurements. The lip keeps its place
+-- on the floor head.
 local function wandAt(kit_: Kit, size: number): ({ [string]: BasePart }, VacuumHoldFormulas.WandDims, CFrame)
 	local parts = kit_.wand
 	local head, lip = parts.FloorHead, parts.FloorHeadLip
 	local rel = head.CFrame:ToObjectSpace(lip.CFrame)
+	local upper, lower = gripOf(parts, Constants.grips.upper), gripOf(parts, Constants.grips.lower)
+	-- GripLower's distance below the tube's top, as modelled.
+	local belowTop = parts.WandTube.Size.Y / 2 - lower.Position.Y
 	for _, part in parts do
 		part.Size *= size
 	end
+	upper.Position *= size
+	lower.Position *= size
 	local dims: VacuumHoldFormulas.WandDims = {
 		gripHalf = parts.WandGrip.Size.Y / 2,
 		inlet = parts.WandInlet.Size.Y,
 		swivel = parts.WandSwivel.Size.Y / 2,
 		head = head.Size.Y,
+		upper = upper.Position.Y,
+		lower = belowTop * size,
 	}
 	return parts, dims, CFrame.new(rel.Position * size) * rel.Rotation
 end
 
--- Lays the wand's pieces out from `origin` (the grip) with a `tube` this long.
+-- Lays the wand's pieces out from `origin` (the grip) with a `tube` this long; GripLower stays `dims.lower` below
+-- the tube's top (at most the whole tube).
 local function layWand(
 	parts: { [string]: BasePart },
 	frames: VacuumHoldFormulas.WandFrames,
 	lipOffset: CFrame,
 	origin: CFrame,
-	tube: number
+	tube: number,
+	dims: VacuumHoldFormulas.WandDims
 )
 	parts.WandGrip.CFrame = origin * frames.grip
 	parts.WandInlet.CFrame = origin * frames.inlet
 	local tubePart = parts.WandTube
 	tubePart.Size = Vector3.new(tubePart.Size.X, tube, tubePart.Size.Z)
 	tubePart.CFrame = origin * frames.tube
+	local lower = gripOf(parts, Constants.grips.lower)
+	lower.Position = Vector3.new(lower.Position.X, tube / 2 - math.min(dims.lower, tube), lower.Position.Z)
 	parts.WandSwivel.CFrame = origin * frames.swivel
 	parts.FloorHead.CFrame = origin * frames.head
 	parts.FloorHeadLip.CFrame = parts.FloorHead.CFrame * lipOffset
@@ -242,9 +282,9 @@ local function holdFor(holder: Model, dims: VacuumHoldFormulas.WandDims, size: n
 		forward = tuning.forward,
 		out = tuning.out,
 		angle = tuning.angle,
+		yaw = tuning.yaw,
 		clearance = tuning.clearance * size,
 		minTube = tuning.minTube * size,
-		leftUp = tuning.leftUp * size,
 	})
 end
 
@@ -266,7 +306,8 @@ function Visual.build(tool: Tool, holder: Model?): (BasePart, VacuumHoldFormulas
 	local parts, dims, lipOffset = wandAt(art, size)
 	local hold = if holder ~= nil then holdFor(holder, dims, size) else nil
 	local tube = if hold ~= nil then hold.tube else Constants.DEFAULT_TUBE * size
-	layWand(parts, VacuumHoldFormulas.wand(dims, tube, Constants.hold.angle), lipOffset, CFrame.identity, tube)
+	local frames = VacuumHoldFormulas.wand(dims, tube, Constants.hold.angle, nil, Constants.hold.yaw)
+	layWand(parts, frames, lipOffset, CFrame.identity, tube, dims)
 	for _, part in parts do
 		prepare(part)
 		local weld = Instance.new("WeldConstraint")
@@ -277,7 +318,7 @@ function Visual.build(tool: Tool, holder: Model?): (BasePart, VacuumHoldFormulas
 	end
 	local inlet = Instance.new("Attachment")
 	inlet.Name = "HoseInlet"
-	inlet.CFrame = VacuumHoldFormulas.wand(dims, tube, Constants.hold.angle).hose
+	inlet.CFrame = frames.hose
 	inlet.Parent = handle
 	art.pack:Destroy()
 	if art.straps ~= nil then
@@ -360,7 +401,7 @@ function Visual.wear(character: Model): WornBackpack?
 	local stowHold = holdFor(character, dims, size)
 	local stowTube = if stowHold ~= nil then stowHold.tube else Constants.DEFAULT_TUBE * size
 	local frames = VacuumHoldFormulas.wand(dims, stowTube, 0, math.pi / 2)
-	layWand(parts, frames, lipOffset, holster, stowTube)
+	layWand(parts, frames, lipOffset, holster, stowTube, dims)
 	for _, part in parts do
 		part.Parent = stowed
 	end
@@ -390,6 +431,9 @@ function Visual.wear(character: Model): WornBackpack?
 	end
 	local fill = partOf(pack, VacuumConstants.GAUGE_FILL_NAME)
 	if fill ~= nil then
+		-- Empty until a client draws its owner's fill (no dust in a fresh canister, in the depot or before the
+		-- first pile).
+		fill.Transparency = 1
 		fill:SetAttribute("GaugeFullSize", fill.Size)
 		local weld = fill:FindFirstChild(VacuumConstants.GAUGE_WELD_NAME)
 		if weld ~= nil and weld:IsA("Weld") then

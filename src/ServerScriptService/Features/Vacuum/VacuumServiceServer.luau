@@ -12,6 +12,9 @@
 	- fires `pileCleared` (Office reveals what was hidden under it; Shift counts piles) and, every second a
 	  pile is being vacuumed, `noiseMade` (the M2 Noise seam; nothing listens in M1).
 	- fires `vacuumStarted(player, pile)` when a player starts vacuuming a pile (Shift's analytics: first_cleanup_started);
+	- dresses every character in the canister backpack as it spawns (VacuumVisualSystem.wear), in the depot as on
+	  a shift: it is part of the employee's look, its wand clipped on. A shift's crew are given the vacuum Tool
+	  (VacuumToolSystem), which takes the wand off that same pack while held (never a second pack).
 
 	Spec-exempt shell (Instances, Players, RunService, signals); the maths is the specced
 	VacuumCanisterUtils.
@@ -36,6 +39,7 @@ local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.Va
 local VacuumCanisterUtils = require(ServerScriptService.Features.Vacuum.Utils.VacuumCanisterUtils)
 local VacuumChannelTracker = require(ServerScriptService.Features.Vacuum.State.VacuumChannelTracker)
 local VacuumToolSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumToolSystem)
+local VacuumVisualSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumVisualSystem)
 local VacuumEquipmentRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumEquipmentRules)
 local VacuumTargetRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumTargetRules)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
@@ -64,6 +68,25 @@ local animations: { [Player]: AnimationVacuumSystem.Controller } = {}
 local channels = VacuumChannelTracker.new(VacuumConstants.MAKER_WINDOW)
 local counters = { spawned = 0, cleared = 0, bags = 0 }
 local stoppers: { () -> () } = {}
+-- The canister backpack each character wears.
+local worn: { [Model]: VacuumVisualSystem.WornBackpack } = {}
+
+-- `character`'s backpack, put on now if it has none (nil when it cannot wear one: no UpperTorso yet).
+local function wornFor(character: Model): VacuumVisualSystem.WornBackpack?
+	local current = worn[character]
+	if current ~= nil and current.model.Parent == character then
+		return current
+	end
+	if current ~= nil then
+		current.destroy()
+		worn[character] = nil
+	end
+	local backpack = VacuumVisualSystem.wear(character)
+	if backpack ~= nil then
+		worn[character] = backpack
+	end
+	return backpack
+end
 
 local function publish(userId: number)
 	StateSyncPublicPlayerStore.set(userId, { [VacuumConstants.PUBLIC_FIELD] = fills[userId] or 0 })
@@ -89,7 +112,7 @@ local function inReach(player: Player, pile: Instance): boolean
 	return VacuumTargetRules.reaches(
 		root.Position,
 		root.CFrame.LookVector,
-		if head ~= nil and head:IsA("BasePart") then head.Position else nil,
+		if head ~= nil and head:IsA("BasePart") then VacuumTargetRules.head(head.CFrame, head.Size) else nil,
 		{
 			position = pile.Position,
 			radius = VacuumTargetRules.radius(pile.Size, pile:GetAttribute(VacuumConstants.BASE_SIZE_ATTRIBUTE)),
@@ -225,6 +248,21 @@ local VacuumServiceServer: VacuumServiceServer = {
 			end,
 			onComplete = clear,
 		})
+
+		-- Every employee wears the pack, in the depot too (the wand clipped on until a shift's Tool takes it).
+		table.insert(
+			stoppers,
+			Observers.observeCharacter(function(_player: Player, character: Model)
+				wornFor(character)
+				return function()
+					local backpack = worn[character]
+					worn[character] = nil
+					if backpack ~= nil then
+						backpack.destroy()
+					end
+				end
+			end)
+		)
 
 		table.insert(
 			stoppers,
@@ -377,7 +415,7 @@ local VacuumServiceServer: VacuumServiceServer = {
 		end
 		for player in wanted do
 			if tools[player] == nil then
-				tools[player] = VacuumToolSystem.new(player)
+				tools[player] = VacuumToolSystem.new(player, wornFor)
 				animations[player] = AnimationVacuumSystem.new({
 					available = function(id)
 						return AnimationRegistry.get(id) ~= nil
@@ -399,8 +437,15 @@ local VacuumServiceServer: VacuumServiceServer = {
 		for userId, fill in fills do
 			canisters[tostring(userId)] = fill
 		end
+		local wearing = 0
+		for character in worn do
+			if character.Parent ~= nil then
+				wearing += 1
+			end
+		end
 		return {
 			piles = #CollectionService:GetTagged(VacuumConstants.PILE_TAG),
+			wearing = wearing,
 			canisters = canisters,
 			counters = table.clone(counters),
 		}

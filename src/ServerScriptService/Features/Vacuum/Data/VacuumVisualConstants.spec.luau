@@ -31,6 +31,17 @@ return function()
 			expect(C.hold.angle > 0 and C.hold.angle < math.rad(60)).to.equal(true)
 			expect(C.hold.clearance > 0).to.equal(true)
 			expect(C.hold.down > 0 and C.hold.forward > 0).to.equal(true)
+			-- Turned in toward the middle, so the left hand reaches the lower grip in front of the body.
+			expect(C.hold.yaw > 0 and C.hold.yaw < math.rad(75)).to.equal(true)
+		end)
+
+		it("puts the graybox grips on the grip (upper, near the hose) and down the unit tube (lower)", function()
+			expect(C.grips.upper.piece).to.equal("WandGrip")
+			expect(C.grips.upper.name).to.equal("GripUpper")
+			expect(C.grips.upper.position.Y > 0).to.equal(true)
+			expect(C.grips.lower.piece).to.equal("WandTube")
+			expect(C.grips.lower.name).to.equal("GripLower")
+			expect(math.abs(C.grips.lower.position.Y) < 0.5).to.equal(true)
 		end)
 	end)
 end

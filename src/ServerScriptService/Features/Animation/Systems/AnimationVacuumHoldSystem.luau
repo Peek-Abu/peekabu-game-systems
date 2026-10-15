@@ -4,9 +4,12 @@
 
 	While the wand is equipped, native IKControls (server-created, so every client's Animator solves them, like
 	the carry contacts) drive the arms to targets fixed to the HumanoidRootPart: the right arm's
-	RightGripAttachment to the hold's grip frame (Transform: position and the hand turned along the forearm, so
-	the elbow bends and the wrist does not), the left hand onto the wand above it when it reaches (Transform too:
-	a Position-only solve left Pippa's left hand ~0.75 studs off its target in Studio).
+	RightGripAttachment to the hold's grip frame on the wand's GripUpper (Transform: position and the hand turned
+	along the forearm, so the elbow bends and the wrist does not), the LeftGripAttachment onto the wand's
+	GripLower, lower down the wand, when it reaches (Transform too: a Position-only solve left Pippa's left hand
+	~0.75 studs off its target in Studio). The targets are where the wand skin's grip Attachments are (the grip
+	contract, VacuumVisualSystem), planned once per holder; they are not the attachments themselves, since the
+	wand is welded to the right hand it would be steering.
 	Poles bend the elbows outward and down. Fixed to the root (which does not bob), the floor head glides at a
 	constant height while the legs walk. No smoothing: a lagging hand lets the floor head dip into the floor.
 	No joint, attachment or Transform of the rig is written.
