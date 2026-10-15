@@ -6,7 +6,8 @@
 
 	- `wear` puts the canister backpack on a character: welded to the UpperTorso at the employee's registry fit
 	  (EmployeeRegistry.backpack, at the employee's scale; anyone else is fitted from their torso's size), straps
-	  over the vest, the wand clipped to the pack's right side, and a hose (a textured, camera-facing Beam) from the
+	  over the vest, the wand clipped upright to the pack's right side (the same wand as in the hand, its tube as
+  long), and a hose (a textured, camera-facing Beam) from the
 	  pack's outlet to the wand. `setHeld` unclips the stowed wand and runs the hose to the wand in the hand. The
 	  gauge's dust insert carries its full size and Weld offset as attributes; each client sizes it to the
 	  owner's canister (VacuumFeedbackSystem).
@@ -348,12 +349,16 @@ function Visual.wear(character: Model): WornBackpack?
 		straps:PivotTo(torso.CFrame * scaled(fit.strapOffset, scale))
 		straps.Parent = model
 	end
-	-- The wand on its holster: telescoped short, its head turned along the pack's side.
+	-- The wand on its holster: the same wand as in the hand (as big, its tube as long as this wearer's hold
+	-- telescopes it), hanging upright down the pack's right side, its head turned along the side.
 	local stowed = Instance.new("Model")
 	stowed.Name = "StowedWand"
 	local parts, dims, lipOffset = wandAt(art, size)
-	local holster = mount * scaled(Constants.holster, size)
-	local stowTube = Constants.STOWED_TUBE * size
+	-- The grip's lower end sits in the holster clip, so the long wand hangs as high as it can: its floor head
+	-- stays off the floor and clear of the feet.
+	local holster = mount * scaled(Constants.holster, size) * CFrame.new(0, dims.gripHalf, 0)
+	local stowHold = holdFor(character, dims, size)
+	local stowTube = if stowHold ~= nil then stowHold.tube else Constants.DEFAULT_TUBE * size
 	local frames = VacuumHoldFormulas.wand(dims, stowTube, 0, math.pi / 2)
 	layWand(parts, frames, lipOffset, holster, stowTube)
 	for _, part in parts do

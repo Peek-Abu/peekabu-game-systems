@@ -173,6 +173,33 @@ return function()
 			holder:Destroy()
 		end)
 
+		it(
+			"stows the same wand that is held: as big, its tube as long, standing upright on the pack's right",
+			function()
+				local holder = makeHolder()
+				local backpack = Visual.wear(holder)
+				local stowed = backpack.model.StowedWand
+				local tool = Instance.new("Tool")
+				local _, hold = Visual.build(tool, holder)
+				expect(hold).to.be.ok()
+				for _, name in { "WandGrip", "WandInlet", "WandTube", "WandSwivel", "FloorHead", "FloorHeadLip" } do
+					local held, onPack = find(tool, name), find(stowed, name)
+					expect((held.Size - onPack.Size).Magnitude < 1e-4).to.equal(true)
+				end
+				expect(find(stowed, "WandTube").Size.Y).to.be.near(hold.tube, 1e-4)
+				local torso = holder.UpperTorso
+				local tube = find(stowed, "WandTube")
+				expect(tube.CFrame.UpVector:Dot(torso.CFrame.UpVector)).to.be.near(1, 1e-4)
+				local grip = torso.CFrame:PointToObjectSpace(find(stowed, "WandGrip").Position)
+				local head = torso.CFrame:PointToObjectSpace(find(stowed, VacuumConstants.FLOOR_HEAD_NAME).Position)
+				expect(grip.Y > head.Y).to.equal(true)
+				expect(grip.X > 0 and grip.Z > 0).to.equal(true)
+				backpack.destroy()
+				tool:Destroy()
+				holder:Destroy()
+			end
+		)
+
 		it("is not worn by a body without an UpperTorso", function()
 			local model = Instance.new("Model")
 			expect(Visual.wear(model)).to.equal(nil)

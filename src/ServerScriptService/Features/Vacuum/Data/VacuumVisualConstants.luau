@@ -99,23 +99,24 @@ return table.freeze({
 	backpack = table.freeze(backpack),
 	wand = table.freeze(wand),
 	-- Where the hose leaves the pack (mount space; its X axis points out of the outlet) and where the stowed
-	-- wand's grip clips on (its tube telescoped to STOWED_TUBE, its floor head turned along the pack's side,
-	-- above the tail).
+	-- wand's grip clips on (the wand as long as in the hand, hanging upright down the pack's side beside the
+	-- tail, its floor head turned along the side).
 	outlet = CFrame.fromMatrix(Vector3.new(0.316, -0.279, 0.32), OUTLET_AXIS, OUTLET_UP),
 	holster = CFrame.new(0.38, 0.12, 0.32),
-	STOWED_TUBE = 0.1,
 	-- The hold (VacuumHoldFormulas.Tuning, studs as modelled where not a fraction of the reach): the grip
-	-- 0.6 reach down, 0.5 forward and 0.08 out from the shoulder (about 0.78 of the reach away, so the elbow
-	-- bends); the wand leaning 35 degrees forward; the floor head 0.06 over the floor; the left hand 0.3 up
-	-- the wand.
+	-- 0.2 reach down, 0.75 forward and 0.2 in toward the middle from the right shoulder (0.8 of the reach
+	-- away, so the elbow still bends), the left hand 0.12 up the wand beside it. Both hands are held well out
+	-- in front of the belly: lower and nearer, the left forearm, reaching across to the wand, ran through
+	-- Pippa's torso and vest (measured on her meshes in the live pose, characters/qa/vacuum-v2). The wand
+	-- leans 35 degrees forward; the floor head rides 0.06 over the floor.
 	hold = table.freeze({
-		down = 0.6,
-		forward = 0.5,
-		out = 0.08,
+		down = 0.2,
+		forward = 0.75,
+		out = -0.2,
 		angle = math.rad(35),
 		clearance = 0.06,
 		minTube = 0.3,
-		leftUp = 0.3,
+		leftUp = 0.12,
 	}),
 	-- The hose Beam (studs as modelled): width; how far it bulges out of the outlet (wide while the wand is in
 	-- the hand, so it loops out round the arm instead of through it; short to the stowed wand) and into the

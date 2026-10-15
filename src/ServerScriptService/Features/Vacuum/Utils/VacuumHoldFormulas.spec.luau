@@ -8,13 +8,13 @@ return function()
 	local FLOOR = -1.375
 	local WAND = { gripHalf = 0.25, inlet = 0.1125, swivel = 0.075, head = 0.106 }
 	local TUNING = {
-		down = 0.6,
-		forward = 0.5,
-		out = 0.08,
+		down = 0.2,
+		forward = 0.75,
+		out = -0.2,
 		angle = math.rad(35),
 		clearance = 0.06,
 		minTube = 0.3,
-		leftUp = 0.3,
+		leftUp = 0.15,
 	}
 
 	describe("elbow", function()
@@ -112,10 +112,32 @@ return function()
 			expect(VacuumHoldFormulas.hold(RIGHT, nil, FLOOR, WAND, TUNING).left).to.equal(nil)
 		end)
 
-		it("points the elbows outward and down", function()
+		it("points the right elbow outward and down, the left one outward and forward", function()
 			expect(hold.rightPole.X > RIGHT.shoulder.X).to.equal(true)
 			expect(hold.rightPole.Y < RIGHT.shoulder.Y).to.equal(true)
 			expect(hold.leftPole.X < LEFT.shoulder.X).to.equal(true)
+			expect(hold.leftPole.Z < LEFT.shoulder.Z).to.equal(true)
+		end)
+
+		it("keeps both arms out of a chibi's round belly (the left one crosses in front of it)", function()
+			-- Pippa's torso + hi-vis vest at 1.25x as an ellipsoid (root space), and the arms' half thickness.
+			local centre, half, thickness = Vector3.new(0, 0.6, -0.03), Vector3.new(0.58, 1, 0.56), 0.08
+			local function clear(point: Vector3): boolean
+				local d = (point - centre) / (half + Vector3.one * thickness)
+				return d.Magnitude > 1
+			end
+			for _, arm in { { RIGHT, hold.grip.Position, hold.rightPole }, { LEFT, hold.left.Position, hold.leftPole } } do
+				local side, target, pole = arm[1], arm[2], arm[3]
+				local elbow =
+					VacuumHoldFormulas.elbow(side.shoulder, target, side.upper, side.lower, pole - side.shoulder)
+				-- The upper arm from where it leaves the shoulder (the shoulder joint itself is inside the body).
+				for i = 7, 10 do
+					expect(clear(side.shoulder:Lerp(elbow, i / 10))).to.equal(true)
+				end
+				for i = 0, 10 do
+					expect(clear(elbow:Lerp(target, i / 10))).to.equal(true)
+				end
+			end
 		end)
 	end)
 

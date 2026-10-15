@@ -3,9 +3,10 @@
 	VacuumHoldFormulas: how a holder holds the backpack vacuum's wand, and how the wand is laid out. Pure.
 
 	The canister rides on the back; the hands hold only a light wand with a floor head. The right hand's grip is
-	planned in HumanoidRootPart space (+Y up, -Z front): in front of and below the shoulder, well inside the
-	arm's reach so the elbow bends (the hand is turned so the forearm runs straight into it: no wrist-only bend),
-	the left hand on the wand just above it when it reaches. The wand leans forward from the grip at a fixed
+	planned in HumanoidRootPart space (+Y up, -Z front): well in front of the belly, below the shoulder and a
+	little in toward the middle, inside the arm's reach so the elbow bends (the hand is turned so the forearm
+	runs straight into it: no wrist-only bend), the left hand on the wand just above it when it reaches, its
+	elbow out and forward so the forearm passes in front of the body. The wand leans forward from the grip at a fixed
 	angle and telescopes: its tube is as long as rests the floor head flat on the floor from that grip's height,
 	so a short chibi and a tall stock avatar both clean with the head on the floor and nothing in it.
 
@@ -24,7 +25,7 @@ export type Arm = { shoulder: Vector3, upper: number, lower: number }
 export type WandDims = { gripHalf: number, inlet: number, swivel: number, head: number }
 
 -- The hold's tuning (VacuumVisualConstants.hold): where the grip sits as fractions of the arm's reach
--- (down, forward, out), the wand's lean from vertical (radians), the head's clearance over the floor, the
+-- (down, forward, out; a negative `out` is in toward the middle), the wand's lean from vertical (radians), the head's clearance over the floor, the
 -- shortest tube, and how far up the wand the left hand holds.
 export type Tuning = {
 	down: number,
@@ -67,9 +68,11 @@ local VacuumHoldFormulas = {}
 
 -- The stock RightGripAttachment's turn in its hand (EmployeeRigUtils gives a generated one the same).
 local STOCK_GRIP_TURN = CFrame.Angles(-math.pi / 2, 0, 0)
--- Elbows bend outward, down and a little back.
+-- The right elbow bends outward, down and a little back. The left hand reaches across to the wand in front of
+-- the right side, so its elbow bends outward and FORWARD: the forearm then comes in round the front of a round
+-- chibi belly instead of through it (bent down and back, the forearm ran through Pippa's torso and vest).
 local RIGHT_POLE = Vector3.new(1, -0.6, 0.5).Unit
-local LEFT_POLE = Vector3.new(-1, -0.6, 0.5).Unit
+local LEFT_POLE = Vector3.new(-1, 0, -0.6).Unit
 -- Never plan the left hand at the arm's full stretch.
 local REACH_USE = 0.95
 local X_AXIS = Vector3.new(1, 0, 0)
