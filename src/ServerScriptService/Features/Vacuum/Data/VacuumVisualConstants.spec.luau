@@ -35,6 +35,12 @@ return function()
 			expect(C.hold.yaw > 0 and C.hold.yaw < math.rad(75)).to.equal(true)
 		end)
 
+		it("stows the wand leaning gently out to the right and back, away from the tail in the middle", function()
+			expect(C.stow.lean > 0 and C.stow.lean < math.rad(35)).to.equal(true)
+			-- VacuumHoldFormulas.axis' yaw: past a half turn the lower end goes to +X (right) and +Z (back).
+			expect(-math.sin(C.stow.turn) > 0.5 and -math.cos(C.stow.turn) > 0.5).to.equal(true)
+		end)
+
 		it("puts the graybox grips on the grip (upper, near the hose) and down the unit tube (lower)", function()
 			expect(C.grips.upper.piece).to.equal("WandGrip")
 			expect(C.grips.upper.name).to.equal("GripUpper")

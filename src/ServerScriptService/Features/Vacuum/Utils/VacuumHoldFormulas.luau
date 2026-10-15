@@ -157,6 +157,22 @@ function VacuumHoldFormulas.tube(
 end
 
 --[=[
+	The stowed wand's tube (studs): telescoped so that, hanging from its grip on the pack at `lean` from vertical,
+	the floor head's bottom is level with the hip joint `gripAboveHip` below the grip's centre. Hip height keeps
+	it clear of the floor through the walk, the run's lean and a landing's crouch, and above the feet. Never
+	longer than the held tube (`maxTube`) nor shorter than `minTube`.
+]=]
+function VacuumHoldFormulas.stowTube(
+	gripAboveHip: number,
+	wand: WandDims,
+	lean: number,
+	minTube: number,
+	maxTube: number
+): number
+	return math.min(maxTube, VacuumHoldFormulas.tube(gripAboveHip, wand, lean, 0, minTube))
+end
+
+--[=[
 	The hold for a holder's arms (root space) over a floor `floorY` below the root.
 ]=]
 function VacuumHoldFormulas.hold(right: Arm, left: Arm?, floorY: number, wand: WandDims, tuning: Tuning): Hold

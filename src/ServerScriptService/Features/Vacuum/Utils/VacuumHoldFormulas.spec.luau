@@ -56,6 +56,21 @@ return function()
 		end)
 	end)
 
+	describe("stowTube", function()
+		it("telescopes the stowed wand so its floor head's bottom hangs at the hip, at its lean", function()
+			local lean = math.rad(22)
+			-- The grip's centre 1.5 above the hip joint.
+			local tube = VacuumHoldFormulas.stowTube(1.5, WAND, lean, 0.3, 3)
+			local drop = (WAND.gripHalf + tube + WAND.swivel) * math.cos(lean) + WAND.swivel + WAND.head
+			expect(drop).to.be.near(1.5, 1e-4)
+		end)
+
+		it("is never longer than the held tube nor shorter than the shortest", function()
+			expect(VacuumHoldFormulas.stowTube(5, WAND, 0, 0.3, 1.2)).to.equal(1.2)
+			expect(VacuumHoldFormulas.stowTube(0.2, WAND, 0, 0.3, 1.2)).to.equal(0.3)
+		end)
+	end)
+
 	describe("hold", function()
 		local hold = VacuumHoldFormulas.hold(RIGHT, LEFT, FLOOR, WAND, TUNING)
 
@@ -205,6 +220,19 @@ return function()
 			expect(frames.tube.Position.X).to.be.near(0, 1e-6)
 			expect(frames.tube.Position.Z).to.be.near(0, 1e-6)
 			expect(frames.head.Position.Y < frames.tube.Position.Y).to.equal(true)
+		end)
+
+		it("leans out and back along the pack when stowed, its floor head square to the lean and flat", function()
+			-- A yaw past a half turn swings the lower end to +X (out on the right) and +Z (behind).
+			local lean, turn = math.rad(22), math.rad(-130)
+			local frames = VacuumHoldFormulas.wand(WAND, 1, lean, turn, turn)
+			local along = VacuumHoldFormulas.axis(lean, turn)
+			expect(along.X > 0 and along.Z > 0 and along.Y < 0).to.equal(true)
+			expect(frames.swivel.Position.Unit:Dot(along)).to.be.near(1, 1e-4)
+			-- Square to the lean: the head's long side runs across it, level.
+			local flat = Vector3.new(along.X, 0, along.Z).Unit
+			expect(math.abs(frames.head.RightVector:Dot(flat)) < 1e-4).to.equal(true)
+			expect(frames.head.UpVector:Dot(Vector3.yAxis)).to.be.near(1, 1e-6)
 		end)
 	end)
 

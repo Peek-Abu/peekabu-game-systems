@@ -211,32 +211,62 @@ return function()
 			holder:Destroy()
 		end)
 
-		it(
-			"stows the same wand that is held: as big, its tube as long, standing upright on the pack's right",
-			function()
-				local holder = makeHolder()
-				local backpack = Visual.wear(holder)
-				local stowed = backpack.model.StowedWand
-				local tool = Instance.new("Tool")
-				local _, hold = Visual.build(tool, holder)
-				expect(hold).to.be.ok()
-				for _, name in { "WandGrip", "WandInlet", "WandTube", "WandSwivel", "FloorHead", "FloorHeadLip" } do
-					local held, onPack = find(tool, name), find(stowed, name)
-					expect((held.Size - onPack.Size).Magnitude < 1e-4).to.equal(true)
-				end
-				expect(find(stowed, "WandTube").Size.Y).to.be.near(hold.tube, 1e-4)
-				local torso = holder.UpperTorso
-				local tube = find(stowed, "WandTube")
-				expect(tube.CFrame.UpVector:Dot(torso.CFrame.UpVector)).to.be.near(1, 1e-4)
-				local grip = torso.CFrame:PointToObjectSpace(find(stowed, "WandGrip").Position)
-				local head = torso.CFrame:PointToObjectSpace(find(stowed, VacuumConstants.FLOOR_HEAD_NAME).Position)
-				expect(grip.Y > head.Y).to.equal(true)
-				expect(grip.X > 0 and grip.Z > 0).to.equal(true)
-				backpack.destroy()
-				tool:Destroy()
-				holder:Destroy()
+		-- The holder with a LowerTorso on a Waist joint and its right hip joint 0.8 above the floor (world).
+		local function withHips()
+			local holder = makeHolder()
+			local lower = addPart(holder, "LowerTorso", CFrame.new(0, 1.1, 0), Vector3.new(1, 0.6, 0.8))
+			attach(lower, "RightHipRigAttachment", Vector3.new(0.25, -0.3, 0))
+			local waist = Instance.new("Motor6D")
+			waist.Name = "Waist"
+			waist.Part0 = lower
+			waist.Part1 = holder.UpperTorso
+			waist.C0 = CFrame.new(0, 0.4, 0)
+			waist.C1 = CFrame.new(0, -0.3, 0)
+			waist.Parent = holder.UpperTorso
+			return holder
+		end
+
+		it("stows the held wand telescoped, leaning out and back along the pack, its floor head at the hip", function()
+			local holder = withHips()
+			local backpack = Visual.wear(holder)
+			local stowed = backpack.model.StowedWand
+			local tool = Instance.new("Tool")
+			local _, hold = Visual.build(tool, holder)
+			expect(hold).to.be.ok()
+			-- The same wand (every piece as big) with its tube pushed in.
+			for _, name in { "WandGrip", "WandInlet", "WandSwivel", "FloorHead", "FloorHeadLip" } do
+				local held, onPack = find(tool, name), find(stowed, name)
+				expect((held.Size - onPack.Size).Magnitude < 1e-4).to.equal(true)
 			end
-		)
+			local tube = find(stowed, "WandTube")
+			expect(tube.Size.Y < hold.tube).to.equal(true)
+			-- The floor head's bottom hangs at the hip joint (0.8 up), well clear of the floor (0).
+			local head = find(stowed, VacuumConstants.FLOOR_HEAD_NAME)
+			expect(head.Position.Y - head.Size.Y / 2).to.be.near(0.8, 1e-3)
+			-- From the grip on the pack's right, the wand leans out to the right and back, away from the tail
+			-- between the legs; the head lies flat.
+			local torso = holder.UpperTorso
+			local grip = torso.CFrame:PointToObjectSpace(find(stowed, "WandGrip").Position)
+			local low = torso.CFrame:PointToObjectSpace(head.Position)
+			expect(grip.X > 0 and grip.Z > 0).to.equal(true)
+			expect(low.X > grip.X and low.Z > grip.Z and low.Y < grip.Y).to.equal(true)
+			-- Every piece's +Y runs up the wand: the tube leans the stow's lean from the torso's up.
+			local lean = math.acos(math.clamp(tube.CFrame.UpVector:Dot(torso.CFrame.UpVector), -1, 1))
+			expect(lean).to.be.near(VisualConstants.stow.lean, 1e-3)
+			expect(head.CFrame.UpVector:Dot(Vector3.yAxis)).to.be.near(1, 1e-4)
+			backpack.destroy()
+			tool:Destroy()
+			holder:Destroy()
+		end)
+
+		it("hangs the stowed floor head at the root's centre when the rig has no hip joint", function()
+			local holder = makeHolder()
+			local backpack = Visual.wear(holder)
+			local head = find(backpack.model.StowedWand, VacuumConstants.FLOOR_HEAD_NAME)
+			expect(head.Position.Y - head.Size.Y / 2).to.be.near(holder.HumanoidRootPart.Position.Y, 1e-3)
+			backpack.destroy()
+			holder:Destroy()
+		end)
 
 		it("is not worn by a body without an UpperTorso", function()
 			local model = Instance.new("Model")

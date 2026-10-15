@@ -110,10 +110,17 @@ return table.freeze({
 	wand = table.freeze(wand),
 	grips = grips,
 	-- Where the hose leaves the pack (mount space; its X axis points out of the outlet) and where the stowed
-	-- wand's grip clips on (the wand as long as in the hand, hanging upright down the pack's side beside the
-	-- tail, its floor head turned along the side).
+	-- wand's grip clips on, on the pack's right side.
 	outlet = CFrame.fromMatrix(Vector3.new(0.316, -0.279, 0.32), OUTLET_AXIS, OUTLET_UP),
 	holster = CFrame.new(0.38, 0.12, 0.32),
+	-- The stowed wand (VacuumHoldFormulas.wand / stowTube): it leans `lean` from the torso's up, its lower end
+	-- turned out to the right and back (`turn`, VacuumHoldFormulas.axis' yaw: 50 degrees from straight back toward
+	-- the right), diagonally along the pack; its tube telescoped so the floor head hangs at hip height, square to
+	-- the lean. Hung straight down at the held length it went 0.7 studs into the floor at idle and 1.3 in the run
+	-- (Pippa, characters/qa/holds-v2); straight down at hip height its 1.35-wide head ran into her thigh, hand
+	-- and round seat. This lean keeps the head out behind the right hand and beside the tail (measured over
+	-- idle, walk, run and jump frames, the same folder).
+	stow = table.freeze({ lean = math.rad(22), turn = math.rad(-130) }),
 	-- The hold (VacuumHoldFormulas.Tuning, fractions of the arm's reach): the right hand on GripUpper 0.05 reach
 	-- down, 0.6 forward and 0.05 out from the right shoulder (~0.6 of the reach away: the elbow bends), out in
 	-- front of the chest on the right (nearer or more inward, the wrist lay on Pippa's vest). The wand leans 50
