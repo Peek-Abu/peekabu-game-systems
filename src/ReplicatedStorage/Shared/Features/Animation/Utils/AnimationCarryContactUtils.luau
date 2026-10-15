@@ -9,6 +9,8 @@
 	of the belly (lower for a big item; under the head, or out past its face when it is too tall to fit under
 	it, never into the floor). Reaching for the item's edges read as stiff, twisted wrists, so it is not done.
 	A caller-owned placement (the bulky cart pushed ahead) keeps the old hold on the item's near side or face.
+	`elbow` picks where each elbow bends so the arm stays outside the carrier's body (a small item brings the palms
+	together in front of a round belly: the elbows swing out, the forearms come back in).
 
 	@class AnimationCarryContactUtils
 ]=]
@@ -20,6 +22,8 @@ local AnimationCarryRegistry = require(ReplicatedStorage.Shared.Features.Animati
 export type Layout = { offset: CFrame, right: CFrame, left: CFrame?, under: boolean? }
 -- Hold geometry authored on the art, in box space (see `plan`).
 export type Authored = { bodyZ: number? }
+-- A body part the arms keep out of, as an ellipsoid in root space (`elbow`).
+export type Body = { centre: Vector3, radii: Vector3 }
 
 --[=[
 	@interface Rig
@@ -34,6 +38,7 @@ export type Authored = { bodyZ: number? }
 	.leftPalmReach number -- shoulder to the palm's centre (`palmFrame`), arm straight
 	.rightPalmReach number
 	.handLength number -- the hand along its fingers
+	.torsoHalfWidth number? -- the torso's half width at rest (X); a shoulder inside it is a round body's (Pippa)
 ]=]
 export type Rig = {
 	leftShoulder: Vector3,
@@ -47,6 +52,7 @@ export type Rig = {
 	leftPalmReach: number,
 	rightPalmReach: number,
 	handLength: number,
+	torsoHalfWidth: number?,
 }
 
 -- Studs kept between the item and the torso front / the head / the floor.
@@ -70,10 +76,47 @@ local UNDER_DROP_MIN = 0.25
 local CLIP_STEPS = 8
 -- How far in from the near edge the palms' centres go, in hand lengths (at most half the item's depth).
 local UNDER_INSET = 0.5
+-- `elbow`: the bend directions tried round the shoulder-wrist axis, and the stretches of each bone checked against
+-- the body (fractions from the shoulder to the elbow, the elbow to the wrist). The upper arm's root is the shoulder
+-- joint, inside the torso on a round body, and the hand rests against the item at the belly, so neither end counts.
+local ELBOW_STEPS = 72
+local UPPER_SPAN = { 0.5, 1 }
+local FORE_SPAN = { 0, 0.7 }
+local SPAN_SAMPLES = 8
+-- A narrow item on a round body (shoulders inside the torso, palms pulled in under the item by more than NARROW_IN
+-- from them) is held up at the chest, UNDER_DROP_NARROW below the shoulders (stepping lower when it would reach the
+-- head), cupped at its edges with the fingers turned in by NARROW_YAW: the wrists then sit out toward the shoulders
+-- and near enough for the arms to bend, so the elbows go out to the sides instead of the arms running straight
+-- through the body to the middle (AnimationCarrySystem bends them out with `elbow`). Held at the belly, Pippa's
+-- 1-stud arms are straight to reach past it and there is no bend to turn outward.
+local NARROW_IN = 0.15
+local UNDER_DROP_NARROW = 0.14
+local NARROW_YAW = math.rad(45)
+local NARROW_EDGE = 0.02
+-- On a round body the palms go this far outside the torso's half width (inside the item's footprint), so the arms
+-- angle out from the shoulders past the torso instead of running down through its sides.
+local ROUND_OUT = 0.12
+-- A round body: the shoulder joints at least this far inside the torso's half width (Pippa ~0.15; a stock R15's
+-- shoulders sit on its torso's edge).
+local ROUND_INSIDE = 0.1
+
+local function round(rig: Rig, shoulderX: number): boolean
+	return rig.torsoHalfWidth ~= nil and math.abs(shoulderX) < rig.torsoHalfWidth - ROUND_INSIDE
+end
 -- Palm up, fingers forward (-Z), rolled a little in so the wrists do not read as fully turned out.
 local PALM_ROLL = math.rad(12)
 local function palmUp(side: number): CFrame
 	return CFrame.Angles(0, 0, side * PALM_ROLL)
+end
+
+-- Where `side`'s palm centre goes across a box of `size` (box X = root X: the box is never turned): in front of the
+-- shoulder, or out past a round torso's side; always inside the item's footprint, right at its edges for a narrow
+-- item on a round body (the palms cup it from below, the wrists as far out as it allows).
+local function palmX(size: Vector3, rig: Rig, side: number, shoulderX: number, narrow: boolean): number
+	local margin = if narrow then math.min(NARROW_EDGE, size.X / 4) else math.min(0.15, size.X / 4)
+	local half = rig.torsoHalfWidth
+	local wanted = if half ~= nil and round(rig, shoulderX) then side * (half + ROUND_OUT) else shoulderX
+	return math.clamp(wanted, -size.X / 2 + margin, size.X / 2 - margin)
 end
 
 -- The signed unit axis nearest `vector`.
@@ -88,6 +131,14 @@ local function snap(vector: Vector3): Vector3
 end
 
 local AnimationCarryContactUtils = {}
+
+--[=[
+	Whether `rig` is round-bodied: both shoulder joints inside its torso's half width (Pippa), so its arms need the
+	round-body hold and `elbow`'s bend. A stock R15's shoulders sit on its torso's edge: false.
+]=]
+function AnimationCarryContactUtils.roundBody(rig: Rig): boolean
+	return round(rig, rig.leftShoulder.X) and round(rig, rig.rightShoulder.X)
+end
 
 local function valid(value: number): boolean
 	return value == value and value > 0 and value < math.huge
@@ -161,15 +212,16 @@ local function contacts(
 end
 
 -- The palm-up supports under a box of `size` at `offset` whose near face is at box Z `nearZ`: shoulder-width
--- apart, brought in under a narrow item, `inset` in from the near edge. Nil when an arm cannot reach.
-local function supports(size: Vector3, rig: Rig, offset: CFrame, nearZ: number, inset: number): Layout?
-	local margin = math.min(0.15, size.X / 4)
+-- apart, brought in under a narrow item, `inset` in from the near edge, fingers turned in when `narrow`. Nil when
+-- an arm cannot reach.
+local function supports(size: Vector3, rig: Rig, offset: CFrame, nearZ: number, inset: number, narrow: boolean): Layout?
 	local hands: { [number]: CFrame } = {}
 	for _, side in { 1, -1 } do
 		local shoulder = if side > 0 then rig.rightShoulder else rig.leftShoulder
 		local reach = if side > 0 then rig.rightPalmReach else rig.leftPalmReach
-		local x = math.clamp(offset:PointToObjectSpace(shoulder).X, -size.X / 2 + margin, size.X / 2 - margin)
-		local palm = CFrame.new(x, -size.Y / 2, nearZ - inset) * palmUp(side)
+		local x = palmX(size, rig, side, offset:PointToObjectSpace(shoulder).X, narrow)
+		local turn = if narrow then CFrame.Angles(0, side * NARROW_YAW, 0) else CFrame.identity
+		local palm = CFrame.new(x, -size.Y / 2, nearZ - inset) * turn * palmUp(side)
 		if not reachable(palm, offset, shoulder, reach) then
 			return nil
 		end
@@ -223,7 +275,9 @@ function AnimationCarryContactUtils.plan(
 		return contacts(size, rig, style, requestedOffset, gripY)
 	end
 	local tall = math.clamp((size.Y - 1) / 2, 0, 1)
-	local drop = UNDER_DROP + (UNDER_DROP_TALL - UNDER_DROP) * tall
+	local shoulderX = math.min(math.abs(rig.leftShoulder.X), math.abs(rig.rightShoulder.X))
+	local narrow = round(rig, shoulderX) and size.X / 2 - math.min(0.15, size.X / 4) < shoulderX - NARROW_IN
+	local drop = if narrow then UNDER_DROP_NARROW else UNDER_DROP + (UNDER_DROP_TALL - UNDER_DROP) * tall
 	local depth = bodyZ + size.Z / 2
 	local inset = math.min(rig.handLength * UNDER_INSET, depth / 2)
 	local near = rig.front - BODY_GAP
@@ -235,18 +289,14 @@ function AnimationCarryContactUtils.plan(
 		for _, side in { 1, -1 } do
 			local shoulder = if side > 0 then rig.rightShoulder else rig.leftShoulder
 			local palmReach = (if side > 0 then rig.rightPalmReach else rig.leftPalmReach) * use
-			local x = math.clamp(
-				shoulder.X,
-				-size.X / 2 + math.min(0.15, size.X / 4),
-				size.X / 2 - math.min(0.15, size.X / 4)
-			)
+			local x = palmX(size, rig, side, shoulder.X, narrow)
 			local level = palmReach ^ 2 - (x - shoulder.X) ^ 2 - (nearZ - palmInset - shoulder.Z) ^ 2
 			if level <= 0 then
 				return nil
 			end
 			bottom = math.max(bottom, shoulder.Y - math.sqrt(level) + 1e-3)
 		end
-		if bottom > shoulderY - reach * UNDER_DROP_MIN then
+		if bottom > shoulderY - reach * (if narrow then UNDER_DROP_NARROW else UNDER_DROP_MIN) then
 			return nil
 		end
 		local centreY = bottom + size.Y / 2
@@ -258,7 +308,7 @@ function AnimationCarryContactUtils.plan(
 		if not (clearsHead or anyHead or (authored ~= nil and authored.bodyZ ~= nil and nearZ == near)) then
 			return nil
 		end
-		return supports(size, rig, CFrame.new(0, centreY, nearZ - bodyZ), bodyZ, palmInset)
+		return supports(size, rig, CFrame.new(0, centreY, nearZ - bodyZ), bodyZ, palmInset, narrow)
 	end
 	-- Where the item's near face may go: against the belly, then out past the face. When neither clears the head,
 	-- as far out as the arms reach, so as little of the item as possible is in the face.
@@ -278,7 +328,10 @@ function AnimationCarryContactUtils.plan(
 	for _, anyHead in { false, true } do
 		-- Past the head the arms reach as far as they safely can, the palms just in from the near edge.
 		local uses: { number } = if anyHead then { REACH_USE } else { REACH_COMFORT, REACH_USE }
-		local insets: { number } = if anyHead then { math.min(inset, 0.1) } else { inset, math.min(inset, 0.1) }
+		-- A narrow item is cupped near its near edge too, so the wrists stay close enough to bend.
+		local insets: { number } = if anyHead or narrow
+			then { math.min(inset, 0.1) }
+			else { inset, math.min(inset, 0.1) }
 		for _, use in uses do
 			for _, palmInset in insets do
 				for _, lower in UNDER_DROP_LOWER do
@@ -293,6 +346,80 @@ function AnimationCarryContactUtils.plan(
 		end
 	end
 	return nil
+end
+
+-- How deep `point` is inside the bodies, each grown by `pad` (0 outside; up to 1 at a centre).
+local function depthIn(point: Vector3, body: { Body }, pad: number): number
+	local deepest = 0
+	for _, shape in body do
+		local d = ((point - shape.centre) / (shape.radii + Vector3.one * pad)).Magnitude
+		deepest = math.max(deepest, 1 - d)
+	end
+	return deepest
+end
+
+-- How much of the arm (shoulder -> elbow -> wrist, each bone's checked stretch) is inside the body.
+local function overlap(shoulder: Vector3, elbow: Vector3, wrist: Vector3, body: { Body }, pad: number): number
+	local total = 0
+	for k = 0, SPAN_SAMPLES do
+		local t = k / SPAN_SAMPLES
+		total += depthIn(shoulder:Lerp(elbow, UPPER_SPAN[1] + (UPPER_SPAN[2] - UPPER_SPAN[1]) * t), body, pad)
+		total += depthIn(elbow:Lerp(wrist, FORE_SPAN[1] + (FORE_SPAN[2] - FORE_SPAN[1]) * t), body, pad)
+	end
+	return total
+end
+
+--[=[
+	Where a two-bone arm (`upper`, `lower` long) from `shoulder` to `wrist` bends its elbow, all in root space. It
+	bends toward `pole` (a direction from the shoulder, authored for the right arm: X outward; `side` 1 right, -1
+	left) when that keeps the arm out of `body` (ellipsoids, grown by `pad`: worn gear); otherwise toward the bend that is
+	least inside it, the nearest such to `pole`, which on a round body swings the elbow out to the side so the upper
+	arm angles away from the torso and the forearm comes back in to the item. An out-of-reach wrist straightens the
+	arm toward it.
+]=]
+function AnimationCarryContactUtils.elbow(
+	shoulder: Vector3,
+	wrist: Vector3,
+	upper: number,
+	lower: number,
+	side: number,
+	pole: Vector3,
+	body: { Body },
+	pad: number
+): Vector3
+	local toWrist = wrist - shoulder
+	local axis = if toWrist.Magnitude > 1e-6 then toWrist.Unit else -Vector3.yAxis
+	local span = math.clamp(toWrist.Magnitude, math.abs(upper - lower) + 1e-4, upper + lower - 1e-4)
+	-- The elbow's circle: centred on the axis `along` from the shoulder, `radius` round it.
+	local along = (upper * upper - lower * lower + span * span) / (2 * span)
+	local radius = math.sqrt(math.max(0, upper * upper - along * along))
+	local centre = shoulder + axis * along
+	local wanted = pole * Vector3.new(side, 1, 1)
+	local bend = wanted - axis * wanted:Dot(axis)
+	if bend.Magnitude < 1e-6 then
+		bend = Vector3.new(0, 1, 0):Cross(axis)
+	end
+	local u = bend.Unit
+	local v = axis:Cross(u)
+	local reached = shoulder + axis * span
+	local function at(angle: number): (Vector3, number)
+		local elbow = centre + (u * math.cos(angle) + v * math.sin(angle)) * radius
+		return elbow, overlap(shoulder, elbow, reached, body, pad)
+	end
+	local best, bestOverlap = at(0)
+	if bestOverlap <= 0 then
+		return best
+	end
+	-- Nearest to the pole first (0, +step, -step, ...), so a tie keeps the bend closest to it.
+	for k = 1, ELBOW_STEPS // 2 do
+		for _, sign in { 1, -1 } do
+			local elbow, inside = at(sign * k * 2 * math.pi / ELBOW_STEPS)
+			if inside < bestOverlap - 1e-6 then
+				best, bestOverlap = elbow, inside
+			end
+		end
+	end
+	return best
 end
 
 --[=[

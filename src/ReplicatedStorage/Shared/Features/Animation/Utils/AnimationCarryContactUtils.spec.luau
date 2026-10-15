@@ -208,4 +208,122 @@ return function()
 			expect((left.UpVector - Vector3.xAxis).Magnitude < 1e-3).to.equal(true)
 		end)
 	end)
+
+	describe("a round body (shoulders inside the torso)", function()
+		local round = table.clone(pippa)
+		round.torsoHalfWidth = 0.6
+		local plaque = Vector3.new(0.36, 0.4, 0.16)
+
+		it("holds a narrow item higher, the fingers turned in so the wrists sit out toward the shoulders", function()
+			local flat = Contact.plan(plaque, pippa, "small")
+			local plan = Contact.plan(plaque, round, "small")
+			expect(plan).to.be.ok()
+			local _, _, bottom = bounds(plan, plaque)
+			local _, _, flatBottom = bounds(flat, plaque)
+			expect(bottom > flatBottom + 0.1).to.equal(true)
+			for _, pair in { { plan.right, 1 }, { plan.left, -1 } } do
+				local look = plan.offset:VectorToWorldSpace(pair[1].LookVector)
+				-- Fingers forward and inward, about 45 degrees.
+				expect(look.X * pair[2] < -0.5).to.equal(true)
+				expect(look.Z < -0.5).to.equal(true)
+			end
+		end)
+
+		it("puts the palms out past the torso's sides under a wide item", function()
+			local size = Vector3.new(2, 1.6, 1.6)
+			local plan = Contact.plan(size, round, "handle")
+			expect(plan).to.be.ok()
+			expect(world(plan, plan.right).X > round.torsoHalfWidth).to.equal(true)
+			expect(world(plan, plan.left).X < -round.torsoHalfWidth).to.equal(true)
+		end)
+
+		it("leaves a stock R15 (shoulders on its torso's edge) exactly as before", function()
+			local edged = table.clone(stock)
+			edged.torsoHalfWidth = 1
+			for _, size in { plaque, Vector3.new(2, 1.6, 1.6), Vector3.new(1, 1, 1) } do
+				local before = Contact.plan(size, stock, "twoHand")
+				local after = Contact.plan(size, edged, "twoHand")
+				expect(after.offset).to.equal(before.offset)
+				expect(after.right).to.equal(before.right)
+				expect(after.left).to.equal(before.left)
+			end
+		end)
+	end)
+
+	describe("elbow", function()
+		-- The default pole for an under-the-item hold: down, a little out and behind the shoulder.
+		local POLE = Vector3.new(0.4, -2, 1)
+		-- Points along a segment (fractions from a to b).
+		local function along(a, b, from, to)
+			local points = {}
+			for k = 0, 8 do
+				table.insert(points, a:Lerp(b, from + (to - from) * k / 8))
+			end
+			return points
+		end
+		local function inside(point, body, pad)
+			for _, shape in body do
+				local d = (point - shape.centre) / (shape.radii + Vector3.one * pad)
+				if d.Magnitude < 1 then
+					return true
+				end
+			end
+			return false
+		end
+
+		it("keeps the two bones' lengths and reaches the wrist", function()
+			local shoulder, wrist = Vector3.new(0.45, 1.1, 0), Vector3.new(0.2, 0.4, -0.7)
+			local elbow = Contact.elbow(shoulder, wrist, 0.6, 0.6, 1, POLE, {}, 0.08)
+			expect((elbow - shoulder).Magnitude).to.be.near(0.6, 1e-3)
+			expect((wrist - elbow).Magnitude).to.be.near(0.6, 1e-3)
+		end)
+
+		it("bends toward the default pole when that already clears the body", function()
+			-- Shoulders on the torso's edge with the arms hanging outside it, as a stock R15's.
+			local body = { { centre = Vector3.new(0, 0.6, 0), radii = Vector3.new(0.7, 0.8, 0.5) } }
+			local shoulder, wrist = Vector3.new(1, 1.2, 0), Vector3.new(0.6, 0.1, -1)
+			local elbow = Contact.elbow(shoulder, wrist, 0.9, 0.9, 1, POLE, body, 0.08)
+			local free = Contact.elbow(shoulder, wrist, 0.9, 0.9, 1, POLE, {}, 0.08)
+			expect((elbow - free).Magnitude).to.be.near(0, 1e-3)
+		end)
+
+		it("swings the elbows out of a round body: Pippa holding the plaque", function()
+			-- Pippa at 1.25x, her torso's part boxes as ellipsoids (root space), the plaque's wrists (measured in
+			-- Studio 2026-10-14): the shoulder joints are inside the torso, the wrists in front of the belly.
+			local body = {
+				{ centre = Vector3.new(0, 0.825, -0.1), radii = Vector3.new(0.597, 1.225, 0.629) },
+				{ centre = Vector3.new(0, 0, 0.214), radii = Vector3.new(0.6, 0.475, 0.76) },
+			}
+			local function count(points)
+				local n = 0
+				for _, point in points do
+					if inside(point, body, 0.08) then
+						n += 1
+					end
+				end
+				return n
+			end
+			for _, side in { 1, -1 } do
+				local shoulder = Vector3.new(side * 0.47, 1.1, 0)
+				local wrist = Vector3.new(side * 0.41, 0.65, -0.72)
+				local default = Contact.elbow(shoulder, wrist, 0.525, 0.475, side, POLE, {}, 0.08)
+				local elbow = Contact.elbow(shoulder, wrist, 0.525, 0.475, side, POLE, body, 0.08)
+				-- The default bend (down, behind) sinks the elbow into the torso; the chosen one is outside it, out
+				-- from the shoulder, with less of the upper arm and none of the forearm inside.
+				expect(inside(default, body, 0.08)).to.equal(true)
+				expect(inside(elbow, body, 0.08)).to.equal(false)
+				expect(elbow.X * side > shoulder.X * side + 0.15).to.equal(true)
+				expect(count(along(shoulder, elbow, 0.5, 1)) < count(along(shoulder, default, 0.5, 1))).to.equal(true)
+				expect(count(along(elbow, wrist, 0, 0.7))).to.equal(0)
+				expect((elbow - shoulder).Magnitude).to.be.near(0.525, 1e-3)
+				expect((wrist - elbow).Magnitude).to.be.near(0.475, 1e-3)
+			end
+		end)
+
+		it("stretches straight at a wrist out of reach", function()
+			local shoulder, wrist = Vector3.zero, Vector3.new(0, 0, -3)
+			local elbow = Contact.elbow(shoulder, wrist, 0.6, 0.6, 1, POLE, {}, 0.2)
+			expect((elbow - Vector3.new(0, 0, -0.6)).Magnitude < 0.05).to.equal(true)
+		end)
+	end)
 end

@@ -10,8 +10,11 @@ export type Controller = { destroy: () -> () }
 export type Prepared = { pivot: CFrame, box: CFrame, layout: AnimationCarryContactUtils.Layout }
 local AnimationCarrySystem = {}
 -- Where an under-the-item hold bends each elbow toward, from its shoulder in root space, in upper arms (X is
--- outward): down, a little out and behind.
+-- outward): down, a little out and behind. On a round body that would run the arm through the torso, the elbow
+-- swings out instead (AnimationCarryContactUtils.elbow, round bodies only), clear of the torso grown by BODY_PAD (the
+-- uniform vest).
 local POLE = Vector3.new(0.4, -2, 1)
+local BODY_PAD = 0.08
 local function part(character: Model, name: string): BasePart?
 	local found = character:FindFirstChild(name)
 	return if found ~= nil and found:IsA("BasePart") then found else nil
@@ -150,9 +153,16 @@ function AnimationCarrySystem.measure(character: Model): AnimationCarryContactUt
 		return nil
 	end
 	local front = extreme(root, upperTorso, Vector3.zAxis, -1)
+	local halfWidth =
+		math.max(-extreme(root, upperTorso, Vector3.xAxis, -1), extreme(root, upperTorso, Vector3.xAxis, 1))
 	local lowerTorso = part(character, "LowerTorso")
 	if lowerTorso ~= nil then
 		front = math.min(front, extreme(root, lowerTorso, Vector3.zAxis, -1))
+		halfWidth = math.max(
+			halfWidth,
+			-extreme(root, lowerTorso, Vector3.xAxis, -1),
+			extreme(root, lowerTorso, Vector3.xAxis, 1)
+		)
 	end
 	return {
 		leftShoulder = left,
@@ -166,7 +176,29 @@ function AnimationCarrySystem.measure(character: Model): AnimationCarryContactUt
 		leftPalmReach = leftPalm,
 		rightPalmReach = rightPalm,
 		handLength = math.min(leftHand, rightHand),
+		torsoHalfWidth = halfWidth,
 	}
+end
+-- The torso (UpperTorso, LowerTorso) at rest as ellipsoids in root space, from each part's box.
+local function bodyOf(character: Model, root: BasePart): { AnimationCarryContactUtils.Body }
+	local body: { AnimationCarryContactUtils.Body } = {}
+	for _, name in { "UpperTorso", "LowerTorso" } do
+		local bodyPart = part(character, name)
+		if bodyPart ~= nil then
+			local low = Vector3.new(
+				extreme(root, bodyPart, Vector3.xAxis, -1),
+				extreme(root, bodyPart, Vector3.yAxis, -1),
+				extreme(root, bodyPart, Vector3.zAxis, -1)
+			)
+			local high = Vector3.new(
+				extreme(root, bodyPart, Vector3.xAxis, 1),
+				extreme(root, bodyPart, Vector3.yAxis, 1),
+				extreme(root, bodyPart, Vector3.zAxis, 1)
+			)
+			table.insert(body, { centre = (low + high) / 2, radii = (high - low) / 2 })
+		end
+	end
+	return body
 end
 -- The box around `parts`, axis-aligned in `frame`: its centre (in `frame`) and size. Nil for no parts.
 local function boundsIn(frame: CFrame, parts: { BasePart }): (Vector3?, Vector3?)
@@ -272,6 +304,9 @@ function AnimationCarrySystem.bind(
 	local connections: { RBXScriptConnection } = {}
 	local destroyed = false
 	local root = part(character, "HumanoidRootPart")
+	-- Only a round body's elbows are bent out (AnimationCarryContactUtils.elbow); a stock R15 keeps the default pole.
+	local measured = if layout.under then AnimationCarrySystem.measure(character) else nil
+	local roundBody = measured ~= nil and AnimationCarryContactUtils.roundBody(measured)
 	local function add(side: string, upper: BasePart, hand: BasePart, contact: CFrame)
 		local target = Instance.new("Attachment")
 		target.Name = "CleanupCarryGrip" .. side
@@ -291,15 +326,42 @@ function AnimationCarrySystem.bind(
 		control.Target = target
 		local shoulder = attachment(upper, side .. "ShoulderRigAttachment")
 		local elbow = attachment(upper, side .. "ElbowRigAttachment")
+		local lower = part(character, side .. "LowerArm")
+		local lowerElbow = if lower ~= nil then attachment(lower, side .. "ElbowRigAttachment") else nil
+		local lowerWrist = if lower ~= nil then attachment(lower, side .. "WristRigAttachment") else nil
+		local handWrist = attachment(hand, side .. "WristRigAttachment")
 		if layout.under and root ~= nil and shoulder ~= nil and elbow ~= nil then
-			-- The elbows bend down and back by the sides, not out like wings.
+			-- The elbows bend down and back by the sides, not out like wings, unless that runs the arm through a
+			-- round body: then out to the side, the forearm coming back in to the item.
 			local upperArm = (shoulder.WorldPosition - elbow.WorldPosition).Magnitude
+			local from = root.CFrame:PointToObjectSpace(shoulder.WorldPosition)
+			local poleAt = from + POLE * Vector3.new(sign, 1, 1) * upperArm
+			if roundBody and palm ~= nil and lowerElbow ~= nil and lowerWrist ~= nil and handWrist ~= nil then
+				local handFrame = cargoRoot.CFrame * contact * palm:Inverse()
+				local wrist = root.CFrame:PointToObjectSpace(handFrame:PointToWorldSpace(handWrist.Position))
+				local bend = AnimationCarryContactUtils.elbow(
+					from,
+					wrist,
+					upperArm,
+					(lowerElbow.WorldPosition - lowerWrist.WorldPosition).Magnitude,
+					sign,
+					POLE,
+					bodyOf(character, root),
+					BODY_PAD
+				)
+				-- The pole goes on past the elbow, square off the shoulder-wrist line; an arm stretched straight has
+				-- no bend to point, so it keeps the default.
+				local reach = wrist - from
+				local offAxis = bend - from
+				if reach.Magnitude > 1e-3 then
+					offAxis -= reach.Unit * offAxis:Dot(reach.Unit)
+				end
+				poleAt = if offAxis.Magnitude > 0.02 then bend + offAxis.Unit * upperArm else poleAt
+			end
 			local pole = Instance.new("Attachment")
 			pole.Name = "CleanupCarryPole" .. side
 			pole.Parent = cargoRoot
-			pole.WorldPosition = root.CFrame:PointToWorldSpace(
-				root.CFrame:PointToObjectSpace(shoulder.WorldPosition) + POLE * Vector3.new(sign, 1, 1) * upperArm
-			)
+			pole.WorldPosition = root.CFrame:PointToWorldSpace(poleAt)
 			table.insert(targets, pole)
 			control.Pole = pole
 		end

@@ -76,6 +76,8 @@ return function()
 		expect(rig.headFront).to.be.near(-0.8, 1e-3)
 		expect(rig.headBottom).to.be.near(1.3, 1e-3)
 		expect(rig.floor).to.be.near(-2, 1e-3)
+		-- The torso's half width (UpperTorso 1 wide, LowerTorso 1 wide).
+		expect(rig.torsoHalfWidth).to.be.near(0.5, 1e-3)
 		model.Head:Destroy()
 		expect(System.measure(model)).to.equal(nil)
 		model:Destroy()
@@ -242,6 +244,30 @@ return function()
 		expect(pole.X > 0.6).to.equal(true)
 		controller.destroy()
 		expect(#root:GetChildren()).to.equal(0)
+		model:Destroy()
+		root:Destroy()
+	end)
+	it("swings the elbows out to the sides on a round body with the palms close together in front", function()
+		local model = measuredRig()
+		-- A round torso round the shoulders (x +-0.6): the shoulder joints are inside it, as on Pippa.
+		model.UpperTorso.Size = Vector3.new(1.8, 1.6, 1.2)
+		model.LowerTorso.Size = Vector3.new(1.8, 0.6, 1.4)
+		local root = Instance.new("Part")
+		local layout = {
+			offset = CFrame.new(),
+			right = CFrame.new(0.3, 0.7, -0.7),
+			left = CFrame.new(-0.3, 0.7, -0.7),
+			under = true,
+		}
+		local controller = System.bind(model, root, layout)
+		expect(controller).to.be.ok()
+		for _, side in { "Right", "Left" } do
+			local sign = if side == "Right" then 1 else -1
+			local pole = model.Humanoid:FindFirstChild("CleanupCarryIK" .. side).Pole.WorldPosition
+			-- Out past the torso's side, not down and behind inside it.
+			expect(pole.X * sign > 0.9).to.equal(true)
+		end
+		controller.destroy()
 		model:Destroy()
 		root:Destroy()
 	end)

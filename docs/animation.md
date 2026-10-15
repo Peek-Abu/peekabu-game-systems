@@ -202,6 +202,18 @@ Only arm chains are driven; no joint, attachment or Transform is written.
   0.66-0.76 of its reach). An item taller than ~1 stud cannot sit at her belly under her head and her hands
   cannot reach under it any lower, so it rides out past her face at waist height, covering the face from the
   front. That is the geometry, not a tuning gap.
+  **Arms outside a round body** (playtest 2026-10-14: on small items "your arms clip through the body"; QA in
+  `characters/pippa/qa/carry-v4/`). Pippa's shoulder joints are inside her round torso, so a straight arm from
+  them to hands meeting in front of the belly runs through the torso and the vest. `measure` now reads the
+  torso's half width (`torsoHalfWidth`); when the shoulders are inside it the plan (a) puts the palms
+  `ROUND_OUT` past the torso's side when the item is wide enough, and (b) holds a narrow item (palms pulled in
+  more than `NARROW_IN` from the shoulders: the plaque, the golden stapler) higher (`UNDER_DROP_NARROW`) with
+  the fingers turned in 45 degrees, so the wrists sit out toward the shoulders and the arms bend. `bind` then
+  places each elbow's pole with `AnimationCarryContactUtils.elbow`: the default pole (down, behind, just out)
+  when it keeps the arm (the upper arm's outer half, the forearm's first 70%) outside the torso ellipsoids
+  (grown by the vest's thickness), else the bend least inside them nearest to it, which on Pippa swings the
+  elbows out to the sides with the forearms coming back in to the item. Stock R15 (shoulders at the torso's
+  edge) is unchanged: the default pole already keeps its arms clear and no `torsoHalfWidth` rule applies.
   **The hold is planned on what can be seen** (`AnimationCarrySystem.visibleBox`: the item's parts with
   Transparency below 1, boxed in its pivot frame). Cargo is an invisible size-class proxy (`CargoRegistry`
   partSize, 2-3 studs) with its art welded inside it, uniformly fitted and standing on its floor, so the art
