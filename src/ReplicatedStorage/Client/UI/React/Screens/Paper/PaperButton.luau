@@ -9,6 +9,7 @@
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 local GuiService = game:GetService("GuiService")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -89,7 +90,7 @@ local function PaperButton(props: PaperButtonProps): React.ReactNode
 			connection = RunService.RenderStepped:Connect(function(dt: number)
 				elapsed += dt
 				local progress = math.clamp(elapsed / duration, 0, 1)
-				local eased = 1 - (1 - progress) ^ 3
+				local eased = TweenService:GetValue(progress, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out)
 				setPose({
 					scale = initial.scale + (target.scale - initial.scale) * eased,
 					tilt = initial.tilt + (target.tilt - initial.tilt) * eased,

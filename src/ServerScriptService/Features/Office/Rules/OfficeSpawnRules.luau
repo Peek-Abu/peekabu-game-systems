@@ -21,6 +21,42 @@ type SpawnPlan = OfficeTypes.SpawnPlan
 
 local OfficeSpawnRules = {}
 
+-- Loot that belongs on furniture, by surface marker kind: appliances live on kitchen counters,
+-- meeting-table monitors and plaques on tables, plaques on cabinet tops instead of the floor.
+-- Anything absent here sits on the floor; `check` refuses the rest.
+local SURFACE_KINDS: { [string]: { string } } = {
+	counter = { "coffeeMachine", "waterJug", "fishTank" },
+	table = { "plaque", "monitor", "coffeeMachine", "waterJug" },
+	cabinet = { "plaque" },
+}
+
+-- Canonical preference order for items allowed on several surfaces.
+local SURFACE_ORDER: { string } = { "counter", "table", "cabinet" }
+
+--[=[
+	Untouched appliance dressing requires a top. Search reveals and dropped cargo use their separate floor policy.
+]=]
+function OfficeSpawnRules.requiresSurface(itemId: string): boolean
+	return itemId == "coffeeMachine" or itemId == "waterJug"
+end
+
+function OfficeSpawnRules.surfaceKinds(): { [string]: { string } }
+	return SURFACE_KINDS
+end
+
+--[=[
+	The surface marker kinds `itemId` may sit on, in preference order; empty for floor loot.
+]=]
+function OfficeSpawnRules.surfaceKindsFor(itemId: string): { string }
+	local kinds: { string } = {}
+	for _, kind in SURFACE_ORDER do
+		if table.find(SURFACE_KINDS[kind], itemId) ~= nil then
+			table.insert(kinds, kind)
+		end
+	end
+	return kinds
+end
+
 --[=[
 	The trash the dust bags of `pileCount` piles come to: one bag per full canister.
 ]=]
@@ -59,6 +95,18 @@ function OfficeSpawnRules.check(plan: SpawnPlan, layout: OfficeTypes.Layout, quo
 			return false, `unknown cargo "{item.kind}"`
 		end
 		table.insert(markers, item.marker)
+	end
+	for _, item in plan.items do
+		local spot = OfficeLayoutUtils.marker(layout, item.marker)
+		if spot ~= nil and spot.kind == "item" and OfficeSpawnRules.requiresSurface(item.kind) then
+			return false, `"{item.kind}" requires a furniture surface`
+		end
+		if spot ~= nil and OfficeLayoutUtils.surfaceTopY(spot.kind) ~= nil then
+			local allowed = OfficeSpawnRules.surfaceKinds()[spot.kind]
+			if allowed == nil or table.find(allowed, item.kind) == nil then
+				return false, `"{item.kind}" does not belong on a {spot.kind}`
+			end
+		end
 	end
 	for _, marker in markers do
 		if used[marker] then

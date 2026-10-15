@@ -1,0 +1,120 @@
+local CollectionService = game:GetService("CollectionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Cargo = ReplicatedStorage.Shared.Features.Cargo.Data
+local Registry = require(Cargo.CargoRegistry)
+local Constants = require(Cargo.CargoConstants)
+local Carry = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
+local Interaction = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionConstants)
+local Spawn = require(script.Parent.CargoSpawnSystem)
+local Visuals = require(game:GetService("ServerScriptService").Features.Art.Systems.ArtVisualSystem)
+return function()
+	local parent
+	local assets
+	local art
+	beforeEach(function()
+		assets = Instance.new("Folder")
+		art = Visuals.new(assets)
+		parent = Instance.new("Model")
+		parent:SetAttribute("ArtKitId", "missing-test-kit")
+	end)
+	afterEach(function()
+		parent:Destroy()
+		assets:Destroy()
+	end)
+	local function kit(id)
+		local folder = Instance.new("Folder")
+		folder.Name = id
+		folder.Parent = assets
+		local cargo = Instance.new("Folder")
+		cargo.Name = "cargo"
+		cargo.Parent = folder
+		for _, key in Registry.ids() do
+			local template = Instance.new("Model")
+			template.Name = key
+			template:SetAttribute("RuntimeApproved", true)
+			template:SetAttribute("BaseSize", Vector3.new(1, 1, 1))
+			local body = Instance.new("Part")
+			body.Name = "Body"
+			body.Size = Vector3.new(1, 1, 1)
+			body.CFrame = CFrame.new(0, 0.5, 0)
+			body.Transparency = 0.25
+			body.Parent = template
+			template.WorldPivot = CFrame.identity
+			template.Parent = cargo
+		end
+	end
+	describe("cargo art authority and fallback", function()
+		it("preserves every registry kind's proxy dimensions, values, tags and floor", function()
+			local spawn = Spawn.new(art)
+			for _, id in Registry.ids() do
+				local def = Registry.get(id)
+				local floor = CFrame.new(30000, 20, 0)
+				local item = spawn:spawn(id, floor, parent)
+				expect(item.Size).to.equal(def.partSize)
+				expect(item.CFrame).to.equal(floor * CFrame.new(0, def.partSize.Y / 2, 0))
+				expect(item:GetAttribute(Carry.KIND_ATTRIBUTE)).to.equal(id)
+				expect(item:GetAttribute(Constants.VALUE_ATTRIBUTE)).to.equal(def.value)
+				expect(CollectionService:HasTag(item, Carry.TAG)).to.equal(true)
+				expect(item.Transparency).to.equal(0)
+				expect(item.CanCollide).to.equal(false)
+				expect(item.CanQuery).to.equal(true)
+			end
+		end)
+		it("attaches all twelve visuals and honors ancestry and spawn overrides", function()
+			kit("test-map-a")
+			kit("test-map-b")
+			parent:SetAttribute("ArtKitId", "test-map-a")
+			local spawn = Spawn.new(art)
+			for _, id in Registry.ids() do
+				local item = spawn:spawn(id, CFrame.new(), parent)
+				local visual = item:FindFirstChild("ArtVisual")
+				expect(visual ~= nil).to.equal(true)
+				expect(visual:GetAttribute("ArtKitId")).to.equal("test-map-a")
+				expect(item.Size).to.equal(Registry.get(id).partSize)
+				expect(item.Transparency).to.equal(1)
+				expect(item:GetAttribute(Constants.VALUE_ATTRIBUTE)).to.equal(Registry.get(id).value)
+				expect(CollectionService:HasTag(item, Carry.TAG)).to.equal(true)
+				local other = spawn:spawn(id, CFrame.new(), parent, { artKit = "test-map-b" })
+				expect(other:FindFirstChild("ArtVisual"):GetAttribute("ArtKitId")).to.equal("test-map-b")
+			end
+		end)
+		it("reveals the approved visual while its authoritative proxy remains invisible and welded", function()
+			kit("test-map-a")
+			parent:SetAttribute("ArtKitId", "test-map-a")
+			local spawn = Spawn.new(art)
+			local item = spawn:spawn("goldenStapler", CFrame.new(), parent, { hidden = true })
+			local body = item:FindFirstChild("ArtVisual"):FindFirstChild("Body")
+			expect(body.Transparency).to.equal(1)
+			spawn:reveal(item)
+			expect(item.Transparency).to.equal(1)
+			expect(body.Transparency).to.equal(0.25)
+			expect(item.CanCollide).to.equal(false)
+			expect(item.CanQuery).to.equal(true)
+			expect(body.CanCollide).to.equal(false)
+			expect(body.CanQuery).to.equal(false)
+			expect(body.CanTouch).to.equal(false)
+			expect(body.Massless).to.equal(true)
+			expect(body:FindFirstChildOfClass("WeldConstraint") ~= nil).to.equal(true)
+			item.Anchored = false
+			task.wait()
+			expect(body.Anchored).to.equal(false)
+		end)
+		it("reveals a missing-template hidden item with its label and prompt", function()
+			local spawn = Spawn.new(art)
+			local item = spawn:spawn("goldenStapler", CFrame.new(), parent, { hidden = true })
+			local label = item:FindFirstChild(Constants.LABEL_NAME)
+			expect(item.Transparency).to.equal(1)
+			expect(item.CanCollide).to.equal(false)
+			expect(item.CanQuery).to.equal(false)
+			expect(label.Enabled).to.equal(false)
+			expect(item:GetAttribute(Interaction.ENABLED_ATTRIBUTE)).to.equal(false)
+			spawn:reveal(item)
+			expect(item.Transparency).to.equal(0)
+			expect(item.CanCollide).to.equal(false)
+			expect(item.CanQuery).to.equal(true)
+			expect(label.Enabled).to.equal(true)
+			expect(item:GetAttribute(Interaction.ENABLED_ATTRIBUTE)).to.equal(nil)
+			expect(item:GetAttribute(Constants.HIDDEN_ATTRIBUTE)).to.equal(nil)
+		end)
+	end)
+end

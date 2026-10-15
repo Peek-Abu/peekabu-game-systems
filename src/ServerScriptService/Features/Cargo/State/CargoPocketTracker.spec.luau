@@ -25,6 +25,20 @@ return function()
 		expect(pockets:count(1)).to.equal(2)
 	end)
 
+	it("preserves item kit and proxy identity across add/list/remove without aliasing callers", function()
+		local pockets = CargoPocketTracker.new()
+		local identity = { kitId = "company-b", proxySize = Vector3.new(2, 3, 4), rotation = CFrame.Angles(0, 0.7, 0) }
+		pockets:add(1, { kind = "plaque", value = 25, visual = identity })
+		identity.kitId = "mutated-input"
+		local listed = pockets:list(1)
+		expect(listed[1].visual.kitId).to.equal("company-b")
+		listed[1].visual.kitId = "mutated-output"
+		expect(pockets:list(1)[1].visual.kitId).to.equal("company-b")
+		local removed = pockets:remove(1, 1)
+		expect(removed.visual.proxySize).to.equal(Vector3.new(2, 3, 4))
+		expect(removed.visual.rotation).to.equal(CFrame.Angles(0, 0.7, 0))
+	end)
+
 	it("take empties the pockets and returns what was in them", function()
 		local pockets = CargoPocketTracker.new()
 		pockets:add(1, PLAQUE)

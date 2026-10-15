@@ -34,11 +34,14 @@ local CargoEvents = ByteNet.defineNamespace(NAMESPACE, function()
 				reliabilityType = "reliable",
 			}),
 			-- Server → all: a Load landed (spec §7 "item swoops into the truck, cha-ching, '+15' floater"). The
-			-- kinds loaded, where the swoop starts (the hands item, or the player), the bed's top, and the amounts
+			-- kinds loaded and aligned kit/proxy-size/rotation snapshots, where the swoop starts (the hands item, or the player), the bed's top, and the amounts
 			-- credited (clearance, then the bonus after any overtime multiplier).
 			Banked = ByteNet.definePacket({
 				value = ByteNet.struct({
 					kinds = ByteNet.array(ByteNet.string),
+					visuals = ByteNet.array(
+						ByteNet.struct({ kitId = ByteNet.string, proxySize = ByteNet.vec3, rotation = ByteNet.cframe })
+					),
 					from = ByteNet.vec3,
 					to = ByteNet.vec3,
 					clearance = ByteNet.uint16,

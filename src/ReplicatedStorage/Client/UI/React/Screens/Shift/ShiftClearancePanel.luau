@@ -18,6 +18,8 @@ local PaperSheet = require(ReplicatedStorage.Client.UI.React.Screens.Paper.Paper
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 
+local useProgressTween = require(ReplicatedStorage.Client.UI.React.Hooks.useProgressTween)
+
 local e = React.createElement
 
 export type ShiftClearancePanelProps = {
@@ -34,7 +36,7 @@ local WIDTH = UIPaperConstants.HUD.FOLDER_WIDTH
 local FOLDER_TOP = 120
 local FEE_TOP = 250
 
-local function folder(view: ShiftHudViewModel.HudView): React.ReactNode
+local function folder(view: ShiftHudViewModel.HudView, progress: React.Binding<number>): React.ReactNode
 	local children: { [string]: React.ReactNode } = {
 		-- "362 / 350 cleared": the number and the quota sit on one baseline, the quota after the number.
 		count = e("Frame", {
@@ -83,7 +85,9 @@ local function folder(view: ShiftHudViewModel.HudView): React.ReactNode
 			BorderSizePixel = 0,
 		}, {
 			fill = e("Frame", {
-				Size = UDim2.fromScale(view.fill, 1),
+				Size = progress:map(function(fill: number): UDim2
+					return UDim2.fromScale(fill, 1)
+				end),
 				BackgroundColor3 = COLOR.exitGreen,
 				BorderSizePixel = 0,
 			}),
@@ -159,7 +163,7 @@ local PHONE_INSET = 12
 -- Figma's fee title is a light monitor blue (#9CC7FF), the palette's monitor lifted towards white.
 local PHONE_FEE_TITLE = COLOR.monitor:Lerp(COLOR.fluorescent, 0.5)
 
-local function phoneFolder(view: ShiftHudViewModel.HudView): React.ReactNode
+local function phoneFolder(view: ShiftHudViewModel.HudView, progress: React.Binding<number>): React.ReactNode
 	local inner = PHONE_WIDTH - 2 * PHONE_INSET
 	local children: { [string]: React.ReactNode } = {
 		title = e(PaperLabel, {
@@ -190,7 +194,9 @@ local function phoneFolder(view: ShiftHudViewModel.HudView): React.ReactNode
 		}, {
 			corner = e("UICorner", { CornerRadius = UDim.new(0, 3) }),
 			fill = e("Frame", {
-				Size = UDim2.fromScale(view.fill, 1),
+				Size = progress:map(function(fill: number): UDim2
+					return UDim2.fromScale(fill, 1)
+				end),
 				BackgroundColor3 = COLOR.exitGreen,
 				BorderSizePixel = 0,
 			}, { corner = e("UICorner", { CornerRadius = UDim.new(0, 3) }) }),
@@ -259,12 +265,13 @@ local function phoneFee(view: ShiftHudViewModel.HudView): React.ReactNode
 end
 
 local function ShiftClearancePanel(props: ShiftClearancePanelProps): React.ReactNode
+	local progress = useProgressTween(props.view.fill, 0.22, nil, true)
 	if props.layout == "phone" then
 		return e("Frame", {
 			Size = UDim2.fromScale(1, 1),
 			BackgroundTransparency = 1,
 		}, {
-			folder = phoneFolder(props.view),
+			folder = phoneFolder(props.view, progress),
 			fee = phoneFee(props.view),
 		})
 	end
@@ -272,7 +279,7 @@ local function ShiftClearancePanel(props: ShiftClearancePanelProps): React.React
 		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
 	}, {
-		folder = folder(props.view),
+		folder = folder(props.view, progress),
 		fee = feePlate(props.view),
 	})
 end

@@ -38,12 +38,18 @@ local NpcConstants = {
 	-- Where spawned NPCs are parented in Workspace (created at runtime).
 	WORKSPACE_FOLDER = "Npcs",
 	-- Seconds between one NPC's thinks.
-	THINK_INTERVAL = 0.25,
+	THINK_INTERVAL = 0.15,
 	-- Re-path when the goal moved this far, or the path is this old (seconds).
-	REPATH_DISTANCE = 4,
-	REPATH_MAX_AGE = 2,
+	REPATH_DISTANCE = 2,
+	REPATH_MAX_AGE = 1,
+	REPATH_MIN_INTERVAL = 0.15,
+	PATH_ADOPTION_CORRIDOR = 3,
 	-- Close enough to a waypoint or goal to count as reached.
 	REACHED_DISTANCE = 3,
+	-- Tight corner waypoints, distinct from the looser final arrival radius.
+	WAYPOINT_REACHED_DISTANCE = 1,
+	STUCK_SECONDS = 1.5,
+	STUCK_PROGRESS = 1,
 	-- Pause between wander legs (seconds, min and max).
 	WANDER_PAUSE = { 2, 5 },
 	-- Below this horizontal speed the NPC counts as standing.

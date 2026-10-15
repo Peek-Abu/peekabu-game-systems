@@ -1,0 +1,41 @@
+// 5 · Results "performance review" (desktop + phone). Block Y = 8400.
+for (const n of [...page.children]) if (/^5[ab] ·/.test(n.name) || (n.type==='TEXT' && /^5[ab] ·/.test(n.characters))) n.remove();
+const Y=8400;
+const stats=[['CLEARED','362 / 350'],['FINDER\'S FEE','+215'],['TIMES CAUGHT','3'],['SALVAGE FOUND','6 of 9']];
+const awards=['EMPLOYEE OF THE NIGHT\nSam — hauled 140','MOST REHIRED\nAlex — caught twice','BUTTERFINGERS\nJo — dropped the fish tank','QUIETEST FEET\nyou — never heard once'];
+const voteDots=(p,x,y,n,of,d)=>{ for(let i=0;i<of;i++) E(p,x+i*(d+6),y,d,i<n?'#24211C':null,{stroke:'#24211C',sw:2}); };
+{ const W=1920,H=1080; const f=G(page,'5a · Performance review — desktop',0,Y+80,W,H,'#0E1116',{clip:true}); frames.push(f.id);
+  scene(f,W,H,''); topbar(f); R(f,0,0,W,H,'#050506',{op:0.8,name:'scrim'});
+  const tab=cTab.createInstance(); f.appendChild(tab); tab.x=160; tab.y=70; setText(tab,'label','PERFORMANCE REVIEW — NIGHT SHIFT');
+  const fo=G(f,'Review folder',160,114,1600,900,'#E8C98A',{r:8,fx:sh(10,30,0.6)}); fo.topLeftRadius=0;
+  R(fo,800,30,2,840,'#C9A564',{name:'folder fold'});
+  T(fo,'Crew of Truck 2 · Harlow & Finch Ltd.','type',24,'#5B4A2E',48,36);
+  stats.forEach((s,i)=>{ const y=96+i*112; R(fo,48,y,700,2,'#C9A564'); T(fo,s[0],'cond',24,'#5B4A2E',48,y+18,{ls:6}); T(fo,s[1],'cond',60,'#24211C',360,y+8,{w:380,align:'RIGHT'}); });
+  stamp(fo,'QUOTA MET',40,500,92,-6);
+  T(fo,'Overall rating:','type',24,'#24211C',48,560); stamp(fo,'NEEDS IMPROVEMENT',36,48,600,-3);
+  T(fo,'"Those were COMPANY ASSETS."\n— H. Harlow, Manager','type',22,'#5B4A2E',48,720,{w:700,lh:140});
+  T(fo,'AWARDS','cond',26,'#5B4A2E',848,36,{ls:8});
+  awards.forEach((a,i)=>{ const st=sticky(fo,a,848+(i%2)*370,90+Math.floor(i/2)*190,(i%2?-2:2)); st.resize(340,st.height); });
+  R(fo,848,500,704,2,'#C9A564');
+  T(fo,'WHAT NEXT? (crew vote)','cond',26,'#5B4A2E',848,526,{ls:6});
+  btn(fo,'Primary','ANOTHER SHIFT',848,580,30).fills=fill('#2FD27A'); voteDots(fo,1180,600,2,3,26);
+  btn(fo,'Secondary','BACK TO DEPOT',848,680,30).strokes=fill('#24211C');
+  const sec=fo.children[fo.children.length-1]; const st=sec.findOne(n=>n.type==='TEXT'); st.fills=fill('#24211C'); voteDots(fo,1180,700,1,3,26);
+  T(fo,'Majority decides · auto-picks in 0:20 · a tie means Another shift','type',20,'#5B4A2E',848,790,{w:700});
+  label('5a · Performance review — desktop',0,Y);
+}
+{ const W=844,H=390,PY=Y+80+1080+140; const f=G(page,'5b · Performance review — phone',0,PY,W,H,'#0E1116',{clip:true}); frames.push(f.id);
+  scene(f,W,H,''); R(f,0,0,W,H,'#050506',{op:0.8,name:'scrim'});
+  const fo=G(f,'Review folder',48,12,W-96,H-32,'#E8C98A',{r:8});
+  T(fo,'PERFORMANCE REVIEW','cond',20,'#5B4A2E',16,8,{ls:6});
+  stats.forEach((s,i)=>{ const x=16+(i%2)*186, y=44+Math.floor(i/2)*70; R(fo,x,y,174,62,'#F4ECD6',{r:4,op:0.6}); T(fo,s[0],'cond',14,'#5B4A2E',x+10,y+4,{ls:4}); T(fo,s[1],'cond',26,'#24211C',x+10,y+22); });
+  stamp(fo,'QUOTA MET',22,440,4,-4);
+  const a1=sticky(fo,'EMPLOYEE OF THE NIGHT\nSam',16,200,2,true); a1.resize(176,a1.height);
+  const a2=sticky(fo,'MOST REHIRED\nAlex ×2',204,200,-2,true); a2.resize(176,a2.height);
+  T(fo,'+2 more awards','type',14,'#5B4A2E',16,320);
+  const b1=btn(fo,'Primary','ANOTHER SHIFT  2/3',400,60,20); b1.fills=fill('#2FD27A');
+  const b2=btn(fo,'Secondary','BACK TO DEPOT  1/3',400,150,20); b2.strokes=fill('#24211C'); b2.findOne(n=>n.type==='TEXT').fills=fill('#24211C');
+  T(fo,'Auto-picks in 0:20','type',15,'#5B4A2E',400,240);
+  label('5b · Performance review — phone',0,PY-60,true);
+}
+return {frames};

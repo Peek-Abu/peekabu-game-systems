@@ -73,7 +73,7 @@ export type Intent =
 	| { kind: "wander" }
 	| { kind: "patrol" }
 	| { kind: "chase", target: number }
-	| { kind: "attack", target: number }
+	| { kind: "attack", target: number, verticalReach: number? }
 	| { kind: "flee", from: Vector3 }
 	| { kind: "goTo", position: Vector3, run: boolean }
 

@@ -78,7 +78,7 @@ local function shell(
 	gui.Size = size
 	gui.StudsOffset = offset
 	gui.SizeOffset = sizeOffset
-	gui.AlwaysOnTop = true
+	gui.AlwaysOnTop = false
 	gui.MaxDistance = 90
 	gui.LightInfluence = 0
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling

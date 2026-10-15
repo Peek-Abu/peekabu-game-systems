@@ -19,6 +19,13 @@ type Intent = NpcTypes.Intent
 local WALK_TOLERANCE = 0.5
 
 local NpcBrainRules = {}
+function NpcBrainRules.inAttackRange(actor: Vector3, target: Vector3, range: number, verticalReach: number?): boolean
+	local delta = target - actor
+	if verticalReach == nil then
+		return delta.Magnitude <= range
+	end
+	return math.abs(delta.Y) <= verticalReach and Vector3.new(delta.X, 0, delta.Z).Magnitude <= range
+end
 
 function NpcBrainRules.decide(def: NpcTypes.NpcDef, context: NpcTypes.BrainContext): Intent
 	local target = context.target

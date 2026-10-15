@@ -68,6 +68,12 @@ return table.freeze({
 	SEARCH_HOLD = 0.8,
 	-- The truck bed counts this far past its footprint, and this high above its top.
 	BED_TOLERANCE = 1.5,
+	LOAD_REACH = 4,
+	LANDING_TOLERANCE = 0.5,
+	REST_SPEED = 1,
+	REST_SECONDS = 0.3,
+	THROW_MIN_FLIGHT = 0.35,
+	THROW_MAX_FLIGHT = 8,
 	BED_HEIGHT = 8,
 	-- Noise: a jug's splash, a search, a rattle pulse (every RATTLE_INTERVAL while carried).
 	SPLASH_NOISE = 70,

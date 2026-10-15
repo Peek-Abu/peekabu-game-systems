@@ -1,0 +1,12 @@
+# cargo gates
+
+- [x] G1: Item model identity/kit during loading arc with safe lifetime
+  EVIDENCE: Source implemented: CargoSwoopSystem creates actual approved kit geometry via the migrated shared ArtVisualSystem, clones the completed assembly to remove live fit callbacks, then uniformly scales/pivots its independent ghost. Server snapshots kit/proxySize/rotation before Destroy through shared entryOf, deposit and Banked.visuals; pocket metadata copies preserve item kit across swap/scatter/load. Template/source geometry remains untouched; missing/legacy identity uses catalog fallback; delayed effects carry a session generation so stop/restart cannot resurrect them. Parent actual-client visual/cleanup verification outstanding.
+- [x] G2: Meaningful specs/static clean
+  CHECK: selene src/ReplicatedStorage/Shared/Features/Art/Systems src/ServerScriptService/Features/Art/Systems src/ReplicatedStorage/Client/Features/Cargo src/ReplicatedStorage/Shared/Features/Cargo src/ServerScriptService/Features/Cargo
+  EXPECT: exits 0
+  EVIDENCE: Scoped Selene0 errors/0 warnings/0 parse errors; StyLua --check0; Luau-LSP analyze all touched Cargo/Art realms0 using sourcemap.cargo-repair.json/globalTypes.d.luau without package regeneration. Measured modules under400 (CargoService394, Feedback274, Swoop76, FeedbackUtils136, shared ArtVisual234/server wrapper4). Global cap temporarily fails unrelated parent-owned OccupantService424; parent integration must rerun. Specs cover actual non-box geometry, simultaneous distinct kits, source immutability, actual yaw/front, whole-model shrink, safe collision flags, idempotent destruction, missing/unknown fallbacks, pocket/packet deep-copy identity and snapshot-before-destruction. Native TestEZ execution delegated parent.
+
+Four passes: complete shared renderer reuse/metadata/client integration; domain review preserved SupportSurfaceY/rearOffset/source guards and pocket identities; defect hunt added immutable metadata copies and stop/restart delayed-generation invalidation; polish updated metadata docs and reran scoped static checks. Final source reread found no further required change. Parent owns module-map update and Studio/TestEZ/actual-client model arc evidence.
+
+Parent native evidence: actual recycling-box bank arc contained the approved MeshPart, hidden proxy, and was cleaned within one second; source banked successfully. Full TestEZ 2328/0 and global static checks pass. See docs/cleanup-crew-jump-door-layout-verification-2026-10-13.md.

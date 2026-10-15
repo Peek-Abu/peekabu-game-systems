@@ -1,5 +1,7 @@
 # Cleanup Crew: from functional UI to finished art
 
+Current clarification (2026-10-12): office/client props and player cleaning-company equipment have separate palettes. Read [two-company art contract](cleanup-crew-two-company-art-contract.md); the office is not crew-branded. Preserve the shared stylization and existing UI kit.
+
 2026-10-11. The user rejected the word-led and monoline icon hub studies as too generic/basic. This pass studies shipped game interfaces, establishes a shared visual direction, and starts real production-art work. It does not claim the new studies are final launch art. Existing functional layout, state, server authority and interaction fixes stay intact.
 
 ## Reference tools actually checked

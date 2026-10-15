@@ -10,6 +10,8 @@ local Constants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPape
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local VM = require(script.Parent.ShiftHudViewModel)
 local CrewVM = require(script.Parent.ShiftCrewViewModel)
+local useProgressTween = require(ReplicatedStorage.Client.UI.React.Hooks.useProgressTween)
+
 local e = React.createElement
 local C = Constants.COLOR
 
@@ -97,6 +99,18 @@ local function button(
 	return e(CompactButton, { position = position, anchor = anchor, size = size, content = content, onPress = onPress })
 end
 
+-- Keep the layout panel pure; only the renderer-owned fill component runs animation hooks.
+local function ClearanceFill(props: { target: number }): React.ReactNode
+	local progress = useProgressTween(props.target, 0.22, nil, true)
+	return e("Frame", {
+		Size = progress:map(function(fill: number): UDim2
+			return UDim2.fromScale(fill, 1)
+		end),
+		BackgroundColor3 = C.inkGreen,
+		BorderSizePixel = 0,
+	})
+end
+
 local function ShiftCompactHudPanel(props: Props): React.ReactNode
 	local view = props.view
 	local phone = props.layout == "phone"
@@ -117,10 +131,7 @@ local function ShiftCompactHudPanel(props: Props): React.ReactNode
 			BackgroundColor3 = C.manilaDeep,
 			BorderSizePixel = 0,
 		}, {
-			fill = e(
-				"Frame",
-				{ Size = UDim2.fromScale(view.fill, 1), BackgroundColor3 = C.inkGreen, BorderSizePixel = 0 }
-			),
+			fill = e(ClearanceFill, { target = view.fill }),
 		}),
 	}
 	local clockWidth = if phone then 116 else 148

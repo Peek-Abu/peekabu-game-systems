@@ -1,0 +1,12 @@
+# layout gates
+
+- [x] G1: Real mixed direct-room/corridor connections and smaller varied rooms
+  CHECK: "C:/Users/Bruk Abu/.rokit/tool-storage/lune-org/lune/0.10.5/lune.exe" run gates/gameplay-procedural/source-probe.luau
+  EXPECT: Supplemental source specs: 9/9 passed
+  EVIDENCE: Spec-first new geometry/compact tests failed on old layout (source6/9). Final source9/9passed. Sixty seeds require every map to have direct work-room links whose rectangle boundaries coincide, plus positive-area hallway links; no removed-hall empty gaps. Five variable column widths30–40 and row depths28–38, boundary gaps0 or10–22; selected graph forces both connection kinds every seed. Work-room counts16–24, cycles, physical10stud ports/cardinal degree<=4 unchanged. Axis dimensions are drawn without replacement, so every occupied work room has its own distinct width/depth pair. Stronger regression failed8/9before this fix,9/9after.
+- [x] G2: Seed/furniture/spawn/capacity/door/route guarantees and source checks
+  EVIDENCE: Source9/9passed using explicitly substitute RNG (not native Studio). Geometry/door/furniture/chair/greed/A-B/quota350/trash/route matrix60seeds; graph100seeds; room archetype240size/seed combinations plus40minimum30x28 seeds. Guaranteed>=16counters,64flooritemmarkers,32pilemarkers,16searchdesks; optional fixtures added only when real footprints fit, every desk chair reserved. Full10stud center cross remains empty; floorcargo avoids actual10stud apertures; furniture/chairs retain additional2stud door approach buffers. Bounds and pairwise>=0.25spacing verified. Strict luau-lsp0diagnostics,Selene0errors/warnings,StyLua check clean for final ownedfiles. Native direct/hall path and visual certification belongs parent integration gate.
+
+Four passes: implemented genuine variable-boundary adjacency; domain review kept guaranteed appliance/search/pile/cargo capacity while making optional fixture inventories depend on available space; defect hunt fixed compact plant validator inset and reserved optional desk chairs; polish retained scheduler slices and numerical tolerance for cardinal rotation footprint comparisons. No new modules, casts, arbitrary artist scaling, Build/Art/NPC/Studio changes.
+
+Final adversarial polish: fixed accidental dimension-repeat degeneracy with uniform dimension sampling without replacement; no unbounded retry loops. Each of five columns/rows gets a distinct approved-range dimension, so all16–24 occupied work-room size pairs differ.

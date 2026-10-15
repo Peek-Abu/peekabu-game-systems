@@ -261,6 +261,7 @@ end
 -- (its notice comes from setState, ShiftNoticeUtils); returns the bonus credited, which Cargo's Banked floater shows.
 local onBanked = ShiftBankingSystem.new({
 	roster = roster,
+	canBank = trip.eligible,
 	isOpen = function(): boolean
 		return state.phase == "running" and not endingRun
 	end,

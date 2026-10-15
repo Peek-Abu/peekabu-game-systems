@@ -110,7 +110,12 @@ function CargoPocketSystem.new(deps: Deps): CargoPocketSystem
 	-- adopted it, the item stays on the floor and the player is told.
 	local function intoHands(player: Player, entry: CargoEntry, root: BasePart, parent: Instance)
 		local floor = deps.spawner:floorUnder(root.Position, deps.ignore())
-		local part = deps.spawner:spawn(entry.kind, floor, parent, { value = entry.value })
+		local part = deps.spawner:spawn(
+			entry.kind,
+			floor,
+			parent,
+			{ value = entry.value, artKit = if entry.visual ~= nil then entry.visual.kitId else nil }
+		)
 		task.spawn(function()
 			local waited = 0
 			while part.Parent ~= nil and player.Parent ~= nil and waited <= HAND_WAIT do
@@ -247,6 +252,7 @@ function CargoPocketSystem.new(deps: Deps): CargoPocketSystem
 				local landing = CarryPlacementSystem.floorNear(at, at + offset, deps.ignore(), margin)
 				deps.spawner:spawn(entry.kind, landing, parent, {
 					value = entry.value,
+					artKit = if entry.visual ~= nil then entry.visual.kitId else nil,
 					source = "scatter",
 				})
 				counts.scattered += 1

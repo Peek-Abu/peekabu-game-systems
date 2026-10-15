@@ -14,6 +14,15 @@ end
 local THREAT = { position = Vector3.new(5, 0, 0), distance = 5 }
 
 return function()
+	describe("attack reach policies", function()
+		it("preserves spherical defaults and permits bounded custom grab height", function()
+			expect(NpcBrainRules.inAttackRange(Vector3.zero, Vector3.new(2, 6, 0), 3, nil)).to.equal(false)
+			expect(NpcBrainRules.inAttackRange(Vector3.zero, Vector3.new(2, 6, 0), 3, 8)).to.equal(true)
+			expect(NpcBrainRules.inAttackRange(Vector3.zero, Vector3.new(2, 12, 0), 3, 8)).to.equal(false)
+			expect(NpcBrainRules.inAttackRange(Vector3.zero, Vector3.new(4, 6, 0), 3, 8)).to.equal(false)
+		end)
+	end)
+
 	describe("decide", function()
 		it("a hostile NPC attacks in range and chases otherwise", function()
 			local hostile = def({ attitude = "hostile", attackRange = 5 })

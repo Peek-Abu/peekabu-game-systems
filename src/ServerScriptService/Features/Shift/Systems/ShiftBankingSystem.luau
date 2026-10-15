@@ -28,6 +28,8 @@ export type Deps = {
 	roster: ShiftRosterTracker.ShiftRosterTracker,
 	-- False refuses every deposit (no shift running, or the run is ending).
 	isOpen: () -> boolean,
+	-- Current authoritative crew eligibility, shared by explicit and automatic cargo loads.
+	canBank: (Player) -> boolean,
 	-- What salvage is multiplied by right now (ShiftPhaseRules.salvageMultiplier).
 	multiplier: () -> number,
 	-- After the counters moved: re-check the quota and republish (the service's state machine).
@@ -47,7 +49,7 @@ local ShiftBankingSystem = {}
 
 function ShiftBankingSystem.new(deps: Deps): CargoTypes.BankHandler
 	return function(player: Player, deposit: CargoTypes.Deposit): (boolean, number?)
-		if not deps.isOpen() then
+		if not deps.isOpen() or not deps.canBank(player) then
 			return false, nil
 		end
 		local multiplier = deps.multiplier()

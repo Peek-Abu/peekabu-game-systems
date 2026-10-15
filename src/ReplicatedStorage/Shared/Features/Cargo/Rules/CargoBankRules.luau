@@ -31,6 +31,23 @@ function CargoBankRules.onBed(localPoint: Vector3, bedSize: Vector3): boolean
 		and localPoint.Y <= half.Y + CargoConstants.BED_HEIGHT
 end
 
+-- Server-side reach to the nearest point on the bed footprint, including the corners.
+function CargoBankRules.canLoad(localPoint: Vector3, bedSize: Vector3): boolean
+	local half = bedSize / 2
+	local dx = math.max(0, math.abs(localPoint.X) - half.X)
+	local dz = math.max(0, math.abs(localPoint.Z) - half.Z)
+	return dx * dx + dz * dz <= CargoConstants.LOAD_REACH * CargoConstants.LOAD_REACH
+		and localPoint.Y >= -half.Y - CargoConstants.BED_TOLERANCE
+		and localPoint.Y <= half.Y + CargoConstants.BED_HEIGHT
+end
+
+-- Automatic deposits require a bottom resting on the bed, not a flight over it.
+function CargoBankRules.landedOnBed(localPoint: Vector3, itemSize: Vector3, bedSize: Vector3): boolean
+	return math.abs(localPoint.X) <= bedSize.X / 2
+		and math.abs(localPoint.Z) <= bedSize.Z / 2
+		and math.abs(localPoint.Y - itemSize.Y / 2 - bedSize.Y / 2) <= CargoConstants.LANDING_TOLERANCE
+end
+
 --[=[
 	What loading `hands` (may be nil) and `pockets` is worth. Nil with a reason for an empty load or a kind
 	the catalog does not know.
@@ -59,7 +76,10 @@ function CargoBankRules.deposit(
 		else
 			deposit.bonus += value
 		end
-		table.insert(deposit.items, { kind = entry.kind, category = def.category, value = value })
+		table.insert(
+			deposit.items,
+			{ kind = entry.kind, category = def.category, value = value, visual = entry.visual }
+		)
 	end
 	if #deposit.items == 0 then
 		return nil, "nothing to load"

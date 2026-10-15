@@ -30,15 +30,17 @@ local OfficeSpawnRules = require(OfficeServer.Rules.OfficeSpawnRules)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
 local OfficeLayoutGenerationUtils = require(OfficeServer.Utils.OfficeLayoutGenerationUtils)
 local OfficeLoadingBayUtils = require(OfficeServer.Utils.OfficeLoadingBayUtils)
+local OfficeFurniturePlacementUtils = require(OfficeServer.Utils.OfficeFurniturePlacementUtils)
 local OfficeSpawnUtils = require(OfficeServer.Utils.OfficeSpawnUtils)
 local OfficeBuildSystem = require(OfficeServer.Systems.OfficeBuildSystem)
 local OfficeDecorSystem = require(OfficeServer.Systems.OfficeDecorSystem)
+local OfficeSearchedDressingSystem = require(OfficeServer.Systems.OfficeSearchedDressingSystem)
 local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
 local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
 
 type Marker = OfficeTypes.Marker
 
-local LAYOUT = OfficeLayoutConstants.LAYOUT
+local LAYOUT = OfficeFurniturePlacementUtils.normalize(OfficeLayoutConstants.LAYOUT)
 local depths = OfficeLayoutUtils.depths(LAYOUT)
 
 local log = Logger.new("OfficeServiceServer")
@@ -51,6 +53,7 @@ end
 local built: OfficeBuildSystem.Built? = nil
 local shiftJanitor = Janitor.new()
 local shiftFolder: Folder? = nil
+local dressing = OfficeSearchedDressingSystem.new()
 -- pile â†’ the item hidden under it, for this shift.
 local hidden: { [BasePart]: BasePart } = {}
 local lastPlan: OfficeTypes.SpawnPlan? = nil
@@ -59,6 +62,32 @@ local stoppers: { () -> () } = {}
 -- The floor point under a marker, in the world.
 local function floorAt(marker: Marker): CFrame
 	return OfficeConstants.ORIGIN * CFrame.new(marker.x, 0, marker.z)
+end
+
+-- Where an item stands: furniture tops for surface markers, the floor otherwise.
+local function spotFrame(marker: Marker): CFrame
+	local top = OfficeLayoutUtils.surfaceTopY(marker.kind)
+	if top ~= nil then
+		local current = built
+		if current ~= nil then
+			for _, part in current.model:GetDescendants() do
+				if
+					part:IsA("BasePart")
+					and (
+						part:GetAttribute("OfficeMarkerId") == marker.id
+						or part:GetAttribute("OfficeDeskMarker") == marker.id
+					)
+				then
+					local support = part:GetAttribute("ArtSupportSurfaceY")
+					if type(support) == "number" then
+						return part.CFrame * CFrame.new(0, support - part.Size.Y / 2, 0)
+					end
+				end
+			end
+		end
+		return OfficeConstants.ORIGIN * CFrame.new(marker.x, top, marker.z)
+	end
+	return floorAt(marker)
 end
 
 -- Harlow's route in the world, in walking order, and his rest point (M2).
@@ -72,7 +101,9 @@ end
 local restMarker = markerById[LAYOUT.rest]
 
 local function rebuild(seed: number)
-	local layout = OfficeLayoutGenerationUtils.generate(OfficeLayoutConstants.LAYOUT, seed)
+	local layout = OfficeFurniturePlacementUtils.normalize(
+		OfficeLayoutGenerationUtils.generate(OfficeLayoutConstants.LAYOUT, seed)
+	)
 	local ok, errors = OfficeLayoutRules.validate(layout)
 	assert(ok, `generated office layout is invalid: {table.concat(errors, "; ")}`)
 	local capacity, reason = OfficeLayoutRules.checkCapacity(layout)
@@ -171,6 +202,17 @@ local OfficeServiceServer: OfficeServiceServer = {
 		table.insert(stoppers, function()
 			cleared:Disconnect()
 		end)
+		-- Searched desks and lockers stay visibly open until the shift ends.
+		local dressed = CargoServiceServer.searched:Connect(function(part)
+			if part.Name == "Desk" then
+				dressing.apply(part, "desk")
+			elseif part.Name == "Locker" then
+				dressing.apply(part, "locker")
+			end
+		end)
+		table.insert(stoppers, function()
+			dressed:Disconnect()
+		end)
 	end,
 
 	stop = function(self)
@@ -217,7 +259,7 @@ local OfficeServiceServer: OfficeServiceServer = {
 		for _, itemPlan in plan.items do
 			local marker = markerById[itemPlan.marker]
 			if marker ~= nil then
-				CargoServiceServer:spawnItem(itemPlan.kind, floorAt(marker), folder)
+				CargoServiceServer:spawnItem(itemPlan.kind, spotFrame(marker), folder)
 			end
 		end
 		for _, search in plan.searchables do
@@ -241,6 +283,7 @@ local OfficeServiceServer: OfficeServiceServer = {
 		shiftFolder = nil
 		table.clear(hidden)
 		lastPlan = nil
+		dressing.clear()
 	end,
 
 	--[=[

@@ -17,6 +17,29 @@ end
 function VM.cardSize(phone: boolean): Vector2
 	return if phone then Vector2.new(62, 72) else Vector2.new(86, 106)
 end
+export type PanelLayout = {
+	width: number,
+	height: number,
+	compact: boolean,
+	padding: number,
+	titleWidth: number,
+	bodyWidth: number,
+	headerHeight: number,
+}
+function VM.panelLayout(viewport: Vector2, phone: boolean): PanelLayout
+	local width = math.min(if phone then 690 else 860, math.max(0, viewport.X - 32))
+	local compact = width < 560
+	local padding = if compact then 20 else 32
+	return {
+		width = width,
+		height = math.min(660, math.max(0, viewport.Y - 48)),
+		compact = compact,
+		padding = padding,
+		titleWidth = width - (if compact then 148 else 280),
+		bodyWidth = width - 2 * padding - 12,
+		headerHeight = if compact then 140 else 110,
+	}
+end
 function VM.adjust(current: number, direction: number): number
 	return math.clamp(math.round((current + direction * 0.1) * 100) / 100, 0, 1)
 end

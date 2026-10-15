@@ -14,6 +14,16 @@ local PILES: OfficeTypes.Range = { min = 18, max = 24 }
 local SALVAGE: OfficeTypes.Range = { min = 6, max = 9 }
 -- Sizes small enough to hide under a pile (variant B).
 local HIDEABLE: { [string]: boolean } = { tiny = true, medium = true }
+-- Original catalog dimensions, rounded upward for visual fit without shrinking readable props.
+local DESK_PROP_SIZES: { [string]: Vector3 } = {
+	mug = Vector3.new(0.685, 0.56, 0.48),
+	paperTray = Vector3.new(1.075, 0.54, 1.355),
+	folder = Vector3.new(1.15, 0.104, 1.495),
+	paperStack = Vector3.new(0.987, 0.131, 1.294),
+	bookStack = Vector3.new(1.007, 0.465, 1.14),
+	deskCalendar = Vector3.new(0.78, 0.597, 0.445),
+	stationeryCup = Vector3.new(0.34, 0.721, 0.34),
+}
 local FLOOR_COLORS: { Color3 } = {
 	Color3.fromRGB(96, 92, 86),
 	Color3.fromRGB(70, 82, 96),
@@ -23,8 +33,27 @@ local FLOOR_COLORS: { Color3 } = {
 
 return table.freeze({
 	-- Where the office's local 0, 0 sits in the world: far from the origin, where M4 builds the depot.
-	ORIGIN = CFrame.new(1000, 0, 0),
+	-- One-stud foundation clears the artist-owned baseplate top at Y=0.
+	ORIGIN = CFrame.new(1000, 1, 0),
 	MODEL_NAME = "CleanupCrewOffice",
+	ART_KIT_ID = "client-office-slate",
+	DESK_PROP_SIZES = table.freeze(DESK_PROP_SIZES),
+	OFFICE_CHAIR_SIZE = Vector3.new(2.27, 3.562, 2.26),
+	DECOR_KEYBOARD_SIZE = Vector3.new(1.8, 0.212, 0.8),
+	DECOR_MOUSE_SIZE = Vector3.new(0.35, 0.258, 0.53),
+	SHELF_SIZE = Vector3.new(5, 6, 2),
+	COUNTER_SIZE = Vector3.new(6, 3, 2.5),
+	PLANT_SIZE = Vector3.new(2, 4, 2),
+	BOARD_SIZE = Vector3.new(5, 4, 0.3),
+	BOARD_CENTER_HEIGHT = 6,
+	-- Corner filing cabinets and meeting/break tables: art-sized proxies with lootable tops.
+	CABINET_SIZE = Vector3.new(1.9, 4.2, 2),
+	TABLE_SIZE = Vector3.new(5, 3.1, 3),
+	-- Loot (bulkiest kind is 3.5 wide) never spawns clipped into surface furniture.
+	SURFACE_ITEM_CLEAR = 1.8,
+	-- Visual-only monitor/elevator envelopes include the authored stand/surround depth.
+	DECOR_MONITOR_SIZE = Vector3.new(2.25, 1.845, 0.7),
+	ELEVATOR_FRONT_SIZE = Vector3.new(6, 8, 0.5),
 	SHIFT_FOLDER_NAME = "Shift",
 	WALL_HEIGHT = 12,
 	WALL_THICKNESS = 1,
@@ -89,8 +118,8 @@ return table.freeze({
 	LIGHT_SPACING = 15,
 	LIGHT_SIZE = Vector3.new(3, 0.3, 1.2),
 	LIGHT_COLOR = Color3.fromRGB(235, 240, 255),
-	LIGHT_RANGE = 16,
-	LIGHT_BRIGHTNESS = 1.2,
+	LIGHT_RANGE = 22,
+	LIGHT_BRIGHTNESS = 0.7,
 	-- M2: the invisible volume over the loading bay that Harlow's paths never enter.
 	SAFE_ZONE_NAME = "SafeZone",
 	-- M2: Harlow's route needs at least this many points.

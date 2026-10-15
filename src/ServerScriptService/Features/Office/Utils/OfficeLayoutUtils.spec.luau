@@ -2,6 +2,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local OfficeLayoutUtils = require(script.Parent.OfficeLayoutUtils)
 local OfficeLayoutConstants = require(ServerScriptService.Features.Office.Data.OfficeLayoutConstants)
+local OfficeConstants = require(ServerScriptService.Features.Office.Data.OfficeConstants)
 
 local LAYOUT = OfficeLayoutConstants.LAYOUT
 local ROOM = { id = "r", name = "R", minX = 0, minZ = 0, maxX = 20, maxZ = 10 }
@@ -30,6 +31,17 @@ return function()
 			})
 			expect(depths.b).to.equal(1)
 			expect(depths.c).to.equal(nil)
+		end)
+	end)
+
+	describe("surfaceTopY", function()
+		it("reports the furniture top for surface spots and nil for floor spots", function()
+			expect(OfficeLayoutUtils.surfaceTopY("counter")).to.equal(OfficeConstants.COUNTER_SIZE.Y)
+			expect(OfficeLayoutUtils.surfaceTopY("table")).to.equal(OfficeConstants.TABLE_SIZE.Y)
+			expect(OfficeLayoutUtils.surfaceTopY("cabinet")).to.equal(OfficeConstants.CABINET_SIZE.Y)
+			expect(OfficeLayoutUtils.surfaceTopY("item")).to.equal(nil)
+			expect(OfficeLayoutUtils.surfaceTopY("desk")).to.equal(nil)
+			expect(OfficeLayoutUtils.surfaceTopY("pile")).to.equal(nil)
 		end)
 	end)
 

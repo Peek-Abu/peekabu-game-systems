@@ -45,7 +45,6 @@ local SHAKE_CONFIG: CameraMotionFormulas.ShakeConfig = {
 
 local previousMaxZoom: number? = nil
 local previousMinZoom: number? = nil
-local previousOcclusion: Enum.DevCameraOcclusionMode? = nil
 
 local log = Logger.new("CameraServiceClient")
 
@@ -204,10 +203,8 @@ local CameraServiceClient: CameraServiceClient = {
 		local player = Players.LocalPlayer
 		previousMaxZoom = player.CameraMaxZoomDistance
 		previousMinZoom = player.CameraMinZoomDistance
-		previousOcclusion = player.DevCameraOcclusionMode
 		player.CameraMinZoomDistance = CameraConstants.MIN_ZOOM_DISTANCE
 		player.CameraMaxZoomDistance = CameraConstants.MAX_ZOOM_DISTANCE
-		player.DevCameraOcclusionMode = Enum.DevCameraOcclusionMode.Zoom
 		local camera = currentCamera()
 		if camera ~= nil then
 			baseFov = camera.FieldOfView
@@ -251,12 +248,8 @@ local CameraServiceClient: CameraServiceClient = {
 		if previousMinZoom ~= nil then
 			player.CameraMinZoomDistance = previousMinZoom
 		end
-		if previousOcclusion ~= nil then
-			player.DevCameraOcclusionMode = previousOcclusion
-		end
 		previousMaxZoom = nil
 		previousMinZoom = nil
-		previousOcclusion = nil
 		RunService:UnbindFromRenderStep(CameraConstants.RENDER_STEP_NAME)
 		for _, connection in connections do
 			connection:Disconnect()

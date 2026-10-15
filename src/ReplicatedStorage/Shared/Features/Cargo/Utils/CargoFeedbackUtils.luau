@@ -5,7 +5,7 @@
 	leaves). The floater lines for a Load (clearance, then the bonus actually credited; zero omitted; rounded
 	like the review), the `Banked` announcement the server sends for a Load, the swoop's arc (a quadratic curve
 	lifted `height` at its control point), which sound a drop or a noise makes, and the hands/pocket cues read
-	from the public fields. Pure.
+	from the public fields. Also snapshots server-owned item attributes before banking destroys it.
 
 	@class CargoFeedbackUtils
 ]=]
@@ -13,6 +13,9 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CargoRegistry = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoRegistry)
+local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants)
+local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
+local ArtVisualSystem = require(ReplicatedStorage.Shared.Features.Art.Systems.ArtVisualSystem)
 local CargoTypes = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoTypes)
 
 export type Tone = "clearance" | "bonus"
@@ -25,6 +28,17 @@ export type Floater = {
 -- What the server announces for one Load (CargoEvents.packets.Banked).
 export type BankedMessage = {
 	kinds: { string },
+	visuals: { CargoTypes.VisualIdentity },
+	from: Vector3,
+	to: Vector3,
+	clearance: number,
+	bonus: number,
+}
+
+-- Older callers/recorded messages may have no visual metadata; the client uses the catalog fallback.
+export type ReceivedBankedMessage = {
+	kinds: { string },
+	visuals: { CargoTypes.VisualIdentity }?,
 	from: Vector3,
 	to: Vector3,
 	clearance: number,
@@ -39,6 +53,25 @@ local function round(value: number): number
 end
 
 local CargoFeedbackUtils = {}
+
+function CargoFeedbackUtils.entryOf(object: Instance): CargoTypes.CargoEntry?
+	local kind = object:GetAttribute(CarryConstants.KIND_ATTRIBUTE)
+	local id = object:GetAttribute(CargoConstants.ID_ATTRIBUTE)
+	local value = object:GetAttribute(CargoConstants.VALUE_ATTRIBUTE)
+	if type(kind) ~= "string" or not CargoRegistry.has(kind) or type(id) ~= "number" or type(value) ~= "number" then
+		return nil
+	end
+	local visual: CargoTypes.VisualIdentity? = nil
+	if object:IsA("BasePart") then
+		local model = object:FindFirstChild("ArtVisual")
+		visual = {
+			kitId = ArtVisualSystem.resolveKit(model or object),
+			proxySize = object.Size,
+			rotation = object.CFrame.Rotation,
+		}
+	end
+	return { kind = kind, value = value, visual = visual }
+end
 
 function CargoFeedbackUtils.floaters(clearance: number, bonus: number): { Floater }
 	local list: { Floater } = {}
@@ -66,11 +99,24 @@ function CargoFeedbackUtils.banked(
 	credited: number?
 ): BankedMessage
 	local kinds: { string } = {}
+	local visuals: { CargoTypes.VisualIdentity } = {}
 	for _, item in deposit.items do
 		table.insert(kinds, item.kind)
+		local def = CargoRegistry.get(item.kind)
+		table.insert(
+			visuals,
+			if item.visual ~= nil
+				then table.clone(item.visual)
+				else {
+					kitId = "",
+					proxySize = if def ~= nil then def.partSize else Vector3.one,
+					rotation = CFrame.identity,
+				}
+		)
 	end
 	return {
 		kinds = kinds,
+		visuals = visuals,
 		from = from,
 		to = bed + Vector3.new(0, bedSize.Y / 2, 0),
 		clearance = math.clamp(round(deposit.clearance), 0, MAX_AMOUNT),

@@ -1,0 +1,61 @@
+{
+  "kit": "client-office-slate",
+  "families": {
+    "building": [
+      "wallSolid",
+      "wallDoorway",
+      "wallCorner",
+      "doorLeaf",
+      "ceilingTile",
+      "floorTile",
+      "skirting",
+      "window",
+      "fluorescent",
+      "exitSign",
+      "pillar",
+      "garageDoor"
+    ],
+    "furniture": [
+      "desk",
+      "officeChair",
+      "locker",
+      "shelf",
+      "corkboard",
+      "filingDrawer",
+      "wasteBin",
+      "wallClock",
+      "breakTable",
+      "kitchenCounter",
+      "elevatorFront",
+      "pipeSet",
+      "cableSet"
+    ],
+    "cargo": [
+      "rubbishBag",
+      "dustBag",
+      "recyclingBox",
+      "bottleBag",
+      "officePlant",
+      "plaque",
+      "monitor",
+      "waterJug",
+      "printer",
+      "coffeeMachine",
+      "fishTank",
+      "goldenStapler",
+      "filingCabinet"
+    ],
+    "props": [
+      "keyboard",
+      "mug",
+      "paperTray",
+      "folder",
+      "paperStack",
+      "mouse",
+      "bookStack",
+      "deskCalendar",
+      "stationeryCup"
+    ]
+  },
+  "logical_keys": 47
+}

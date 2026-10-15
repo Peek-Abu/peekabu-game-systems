@@ -70,17 +70,33 @@ local function SettingsRows(props: { width: number, phone: boolean, preview: boo
 	end, {})
 	local nodes: { [string]: React.ReactNode } = {}
 	for index, setting in VM.SETTINGS do
-		local y = (index - 1) * 68
+		local compact = props.width < 440
+		local rowHeight = if compact then 88 else 68
+		local y = (index - 1) * rowHeight
+		local controlsY = y + (if compact then 32 else 7)
 		local value = values[setting.id]
-		nodes[`label{index}`] = label(setting.label, if props.phone then 16 else 22, 0, y + 16, props.width - 190, true)
-		nodes[`value{index}`] =
-			label(if value ~= nil then `{math.round(value * 100)}%` else "…", 20, props.width - 128, y + 15, 70, true)
+		nodes[`label{index}`] = label(
+			setting.label,
+			if props.phone then 16 else 22,
+			0,
+			y + (if compact then 0 else 16),
+			if compact then props.width else props.width - 190,
+			true
+		)
+		nodes[`value{index}`] = label(
+			if value ~= nil then `{math.round(value * 100)}%` else "…",
+			20,
+			props.width - 128,
+			controlsY + 8,
+			70,
+			true
+		)
 		for _, direction in { -1, 1 } do
 			nodes[`{index}/{direction}`] = e(PaperButton, {
 				text = if direction < 0 then "−" else "+",
 				variant = "secondary",
 				onPaper = true,
-				position = UDim2.fromOffset(if direction < 0 then props.width - 185 else props.width - 54, y + 7),
+				position = UDim2.fromOffset(if direction < 0 then props.width - 185 else props.width - 54, controlsY),
 				size = UDim2.fromOffset(48, 48),
 				textSize = 28,
 				disabled = value == nil or (if direction < 0 then value == 0 else value == 1),
@@ -99,7 +115,7 @@ local function SettingsRows(props: { width: number, phone: boolean, preview: boo
 			})
 		end
 		nodes[`line{index}`] = e("Frame", {
-			Position = UDim2.fromOffset(0, y + 63),
+			Position = UDim2.fromOffset(0, y + rowHeight - 5),
 			Size = UDim2.fromOffset(props.width, 1),
 			BackgroundColor3 = COLOR.manilaDeep,
 			BorderSizePixel = 0,
@@ -110,7 +126,7 @@ local function SettingsRows(props: { width: number, phone: boolean, preview: boo
 		variant = "secondary",
 		onPaper = true,
 		size = UDim2.fromOffset(210, 48),
-		position = UDim2.fromOffset(0, 352),
+		position = UDim2.fromOffset(0, if props.width < 440 then 452 else 352),
 		textSize = 18,
 		onActivated = function()
 			if props.preview then
@@ -133,10 +149,14 @@ local function SettingsRows(props: { width: number, phone: boolean, preview: boo
 		"Motion follows Roblox's Reduce Motion setting. Key bindings remain managed by your saved input settings.",
 		if props.phone then 14 else 18,
 		0,
-		414,
+		if props.width < 440 then 514 else 414,
 		props.width
 	)
-	return e("Frame", { Size = UDim2.fromOffset(props.width, 480), BackgroundTransparency = 1 }, nodes)
+	return e(
+		"Frame",
+		{ Size = UDim2.fromOffset(props.width, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1 },
+		nodes
+	)
 end
 local function DepotHubScreen(
 	props: { page: VM.Page, preview: boolean?, viewport: Vector2?, phone: boolean? }
@@ -145,8 +165,8 @@ local function DepotHubScreen(
 	local livePhone = usePaperLayout() == "phone"
 	local viewport = props.viewport or liveViewport
 	local phone = if props.phone ~= nil then props.phone else livePhone
-	local width = math.max(260, math.min(if phone then 690 else 860, viewport.X - 96))
-	local height = math.max(230, math.min(660, viewport.Y - 92))
+	local layout = VM.panelLayout(viewport, phone)
+	local width, height = layout.width, layout.height
 	local bindings = InputServiceClient:bindingsFor(VacuumConstants.ACTION)
 	local input = UserInputService:GetLastInputType()
 	local control = "Hold the cleaning action near dust."
@@ -162,13 +182,35 @@ local function DepotHubScreen(
 	local title = if props.page == "settings" then "PERSONAL SETTINGS" else copy.title
 	local body: { [string]: React.ReactNode } = {}
 	if props.page == "settings" then
-		body.settings = e(SettingsRows, { width = width - 64, phone = phone, preview = props.preview })
+		body.settings = e(SettingsRows, { width = layout.bodyWidth, phone = phone, preview = props.preview })
 	else
-		local y = 0
+		body.list = e("UIListLayout", {
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			Padding = UDim.new(0, 24),
+		})
 		for index, section in copy.sections do
-			body[`title{index}`] = label(section.title, if phone then 18 else 24, 0, y, width - 76, true)
-			body[`body{index}`] = label(section.body, if phone then 16 else 21, 0, y + 32, width - 76)
-			y += if phone then 106 else 118
+			body[`section{index}`] = e("Frame", {
+				LayoutOrder = index,
+				Size = UDim2.fromScale(1, 0),
+				AutomaticSize = Enum.AutomaticSize.Y,
+				BackgroundTransparency = 1,
+			}, {
+				list = e("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 8) }),
+				title = e(PaperLabel, {
+					text = section.title,
+					role = "heading",
+					size = if phone then 18 else 24,
+					frame = UDim2.fromScale(1, 0),
+					layoutOrder = 1,
+				}),
+				body = e(PaperLabel, {
+					text = section.body,
+					role = "body",
+					size = if phone then 16 else 21,
+					frame = UDim2.fromScale(1, 0),
+					layoutOrder = 2,
+				}),
+			})
 		end
 	end
 	return e("Frame", {
@@ -188,35 +230,42 @@ local function DepotHubScreen(
 				"Frame",
 				{ Size = UDim2.new(1, 0, 0, 7), BackgroundColor3 = COLOR.companyTeal, BorderSizePixel = 0 }
 			),
-			icon = e(
-				"Frame",
-				{ Position = UDim2.fromOffset(24, 22), Size = UDim2.fromOffset(58, 58), BackgroundTransparency = 1 },
-				{ art = e(PaperPropIcon, { kind = props.page }) }
+			icon = e("Frame", {
+				Position = UDim2.fromOffset(layout.padding, 22),
+				Size = UDim2.fromOffset(if layout.compact then 36 else 58, if layout.compact then 36 else 58),
+				BackgroundTransparency = 1,
+			}, { art = e(PaperPropIcon, { kind = props.page }) }),
+			title = label(
+				title,
+				if phone then 24 else 34,
+				if layout.compact then 64 else 96,
+				20,
+				layout.titleWidth,
+				true
 			),
-			title = label(title, if phone then 24 else 34, 96, 20, width - 280, true),
 			subtitle = label(
 				if props.page == "settings"
 					then (if props.preview then "LOCAL PREVIEW / DOES NOT SAVE" else "SAVED TO YOUR ACCOUNT")
 					else copy.subtitle,
 				if phone then 14 else 17,
-				96,
-				62,
-				width - 280
+				if layout.compact then layout.padding else 96,
+				if layout.compact then 80 else 62,
+				if layout.compact then width - 2 * layout.padding else layout.titleWidth
 			),
 			close = e(PaperButton, {
 				text = "CLOSE",
 				variant = "secondary",
 				onPaper = true,
-				size = UDim2.fromOffset(106, 48),
-				position = UDim2.fromOffset(width - 130, 28),
-				textSize = 20,
+				size = UDim2.fromOffset(if layout.compact then 68 else 106, 48),
+				position = UDim2.fromOffset(width - (if layout.compact then 88 else 130), 28),
+				textSize = if layout.compact then 16 else 20,
 				onActivated = function()
 					SceneStack.remove(VM.scene(props.page))
 				end,
 			}),
 			scroll = e("ScrollingFrame", {
-				Position = UDim2.fromOffset(32, 110),
-				Size = UDim2.new(1, -64, 1, -130),
+				Position = UDim2.fromOffset(layout.padding, layout.headerHeight),
+				Size = UDim2.new(1, -2 * layout.padding, 1, -layout.headerHeight - 20),
 				BackgroundTransparency = 1,
 				BorderSizePixel = 0,
 				CanvasSize = UDim2.fromOffset(0, 0),
@@ -226,7 +275,8 @@ local function DepotHubScreen(
 				ScrollBarImageColor3 = COLOR.companyTeal,
 			}, {
 				content = e("Frame", {
-					Size = UDim2.new(1, -12, 0, if props.page == "settings" then 490 elseif phone then 444 else 490),
+					Size = UDim2.new(1, -12, 0, 0),
+					AutomaticSize = Enum.AutomaticSize.Y,
 					BackgroundTransparency = 1,
 				}, body),
 			}),

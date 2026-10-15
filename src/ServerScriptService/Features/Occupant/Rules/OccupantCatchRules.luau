@@ -33,6 +33,12 @@ function OccupantCatchRules.canCatch(input: OccupantTypes.CatchInput): (boolean,
 	if OccupantBrainRules.inZone(input.position, input.zone) then
 		return false, "safe zone"
 	end
+	if input.reachable == false then
+		return false, "outside grab volume"
+	end
+	if input.clear == false then
+		return false, "blocked"
+	end
 	if not (input.distance <= OccupantConstants.CATCH_RANGE + OccupantConstants.CATCH_SLACK) then
 		return false, "too far"
 	end

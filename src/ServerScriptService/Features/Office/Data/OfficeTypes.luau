@@ -1,13 +1,16 @@
 --!strict
 --[=[
 	OfficeTypes: the Office feature's shapes. Layout coordinates are office-local studs on the floor plane:
-	x across, z deep, the loading bay's corner at 0, 0 (OfficeConstants.ORIGIN places it in the world).
+	x across, z deep (OfficeConstants.ORIGIN places it in the world). Generated maps may have negative
+	coordinates; the loading bay attaches to any exterior side rather than anchoring the map at 0, 0.
 	Types only (spec-exempt).
 
 	@class OfficeTypes
 ]=]
 
--- An axis-aligned rectangular room.
+-- An axis-aligned nonoverlapping floor rectangle. Functional workplaces use archetype zones;
+-- hallway rectangles are physical corridor links and are excluded from semantic work-room counts.
+-- A nil zone remains valid for authored layouts.
 export type Room = {
 	id: string,
 	name: string,
@@ -15,6 +18,7 @@ export type Room = {
 	minZ: number,
 	maxX: number,
 	maxZ: number,
+	zone: string?,
 }
 
 -- A doorway centred at (x, z) on the wall rooms `a` and `b` share.
@@ -27,7 +31,22 @@ export type Door = {
 }
 
 -- patrol: a point on Mr. Harlow's route; rest: where he takes his break (M2).
-export type MarkerKind = "pile" | "item" | "desk" | "locker" | "spawn" | "patrol" | "rest"
+-- shelf/counter/plant/board are visual-only dressing markers for zone kits (ignored by spawn rolls).
+-- cabinet/table are art-only furniture with lootable tops (plaque, meeting-table monitors).
+export type MarkerKind =
+	"pile"
+	| "item"
+	| "desk"
+	| "locker"
+	| "spawn"
+	| "patrol"
+	| "rest"
+	| "shelf"
+	| "counter"
+	| "plant"
+	| "board"
+	| "cabinet"
+	| "table"
 
 -- A place something can spawn (or a player appears): its id is "<room>.<kind>.<n>".
 export type Marker = {
@@ -36,6 +55,8 @@ export type Marker = {
 	kind: MarkerKind,
 	x: number,
 	z: number,
+	-- Yaw in radians. The marker faces local -Z; absent means zero.
+	rotation: number?,
 }
 
 -- The truck bed's footprint (the banking zone) and the time clock beside it, inside the start room.
@@ -49,6 +70,8 @@ export type Truck = {
 }
 
 export type Layout = {
+	-- Visual kit selected by this map; absent uses OfficeConstants.ART_KIT_ID.
+	artKit: string?,
 	startRoom: string,
 	rooms: { Room },
 	doors: { Door },

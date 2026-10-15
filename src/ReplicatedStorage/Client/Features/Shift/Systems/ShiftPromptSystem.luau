@@ -38,6 +38,8 @@ local watches: { [ProximityPrompt]: RBXScriptConnection? } = {}
 local ids: { [ProximityPrompt]: number } = {}
 local CarryServiceClient = require(ReplicatedStorage.Client.Features.Carry.CarryServiceClient)
 local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
+local CargoBankRules = require(ReplicatedStorage.Shared.Features.Cargo.Rules.CargoBankRules)
+local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants)
 local Rules = require(ReplicatedStorage.Client.Features.Shift.Rules.ShiftPromptRules)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTimeClockRules = require(ReplicatedStorage.Shared.Features.Shift.Rules.ShiftTimeClockRules)
@@ -226,13 +228,19 @@ local function selectNearby()
 					and screen.Z > 0
 					and (result == nil or result.Instance == target or result.Instance:IsDescendantOf(target))
 				local range = math.min(ranges[prompt] or 0, if kindOf(prompt) == "carry" then 6 else 8)
+				local loadReach = true
+				if kindOf(prompt) == CargoConstants.LOAD_KIND and target:IsA("BasePart") then
+					loadReach = CargoBankRules.canLoad(target.CFrame:PointToObjectSpace(root.Position), target.Size)
+					range = ranges[prompt] or 0
+				end
 				table.insert(candidates, {
 					id = id,
 					distance = distance,
 					dot = if distance > 0 then camera.CFrame.LookVector:Dot(offset.Unit) else 1,
 					range = range,
 					visible = visible,
-					enabled = target:GetAttribute(InteractionConstants.ENABLED_ATTRIBUTE) ~= false
+					enabled = loadReach
+						and target:GetAttribute(InteractionConstants.ENABLED_ATTRIBUTE) ~= false
 						and (
 							kindOf(prompt) ~= "carry"
 							or (
@@ -256,7 +264,9 @@ local function selectNearby()
 	end
 	for prompt in ranges do
 		local want = if prompt == chosen
-			then math.min(ranges[prompt] or 0, if kindOf(prompt) == "carry" then 6 else 8)
+			then (if kindOf(prompt) == CargoConstants.LOAD_KIND
+				then ranges[prompt] or 0
+				else math.min(ranges[prompt] or 0, if kindOf(prompt) == "carry" then 6 else 8))
 			else 0
 		if prompt.MaxActivationDistance ~= want then
 			prompt.MaxActivationDistance = want

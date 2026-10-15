@@ -64,3 +64,7 @@ This implements shared buttons and awards in the current UI; new hub screens/nav
 ## Retention/business scope — 2026-10-12
 
 User rejected proof keyboard/truck proportions and requested an unbiased retention/monetization/persistent-goal assessment. No public-player test exists (user confirmed). Researched brief and six-hypothesis validation matrix are saved in docs/cleanup-crew-retention-and-monetization-2026-10-12.md and docs/cleanup-crew-validation-hypotheses.csv. Recommend a minimal passport/locker/earned-style/next-goal test, then casebook and meaningful contracts; developer products focus on guaranteed cosmetic choice. Existing shift analytics help but persistence/onboarding/goal/shop exposure and durable reward instrumentation are missing. Proposed numerical gates are assumptions, not validated retention. No economy or products implemented, no publishing/acquisition performed. Keyboard/truck are explicitly unapproved and their root geometry issues are recorded.
+
+## Reconciled latest status / 2026-10-12
+
+Earlier rows are historical. Current complete remaining-work inventory is in docs/cleanup-crew-remaining-work-2026-10-12.md. Native imported kit exists; same-key split drawer/door prototypes animate without overlays. Search loot lands on clear floor. Core proportions and staff-room links now vary; wide hallway access verified. Manager follows a real corner and catches. Final isolated suite2,247/0; broad co-op/device/public balance remains open.

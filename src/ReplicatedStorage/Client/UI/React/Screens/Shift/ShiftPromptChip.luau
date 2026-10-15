@@ -38,6 +38,8 @@ local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper
 local usePaperHudScale = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperHudScale)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 
+local useProgressTween = require(ReplicatedStorage.Client.UI.React.Hooks.useProgressTween)
+
 local e = React.createElement
 local useAtom = ReactCharm.useAtom
 
@@ -82,7 +84,7 @@ local function isPress(input: InputObject): boolean
 end
 
 -- The hold strip: a faint ink track with the ink-green fill, just under the words.
-local function strip(fill: number, inset: number): React.ReactNode
+local function strip(fill: React.Binding<number>, inset: number): React.ReactNode
 	return e("Frame", {
 		Position = UDim2.new(0, inset, 1, 2),
 		Size = UDim2.new(1, -inset, 0, STRIP_HEIGHT),
@@ -91,7 +93,9 @@ local function strip(fill: number, inset: number): React.ReactNode
 		BorderSizePixel = 0,
 	}, {
 		fill = e("Frame", {
-			Size = UDim2.fromScale(fill, 1),
+			Size = fill:map(function(fraction: number): UDim2
+				return UDim2.fromScale(fraction, 1)
+			end),
 			BackgroundColor3 = COLOR.companyTeal,
 			BorderSizePixel = 0,
 		}),
@@ -130,6 +134,9 @@ local function ShiftPromptChip(props: ShiftPromptChipProps?): React.ReactNode
 			press(false)
 		end
 	end, { drawnId })
+	local holdStart = if shown ~= nil then shown.holdStartedAt else nil
+	local progress =
+		useProgressTween(if chip ~= nil then chip.fill or 0 else 0, HOLD_TICK, `{drawnId}/{holdStart or 0}`, true)
 	if chip == nil then
 		return nil
 	end
@@ -163,7 +170,7 @@ local function ShiftPromptChip(props: ShiftPromptChipProps?): React.ReactNode
 		}, { chip = e(KeyChip, { label = chip.key, size = KEY_SIZE }) })
 	end
 	if fill ~= nil then
-		content.strip = strip(fill, textInset)
+		content.strip = strip(progress, textInset)
 	end
 	local slip = e(PaperSheet, {
 		size = UDim2.fromScale(1, 1),

@@ -52,9 +52,12 @@ return function()
 			expect(CargoHandlingRules.isImpact("destroyed")).to.equal(false)
 		end)
 
-		it("spills only a spilling item, and only on an impact", function()
+		it("preserves recycling identity on ordinary release and spills only a deliberate throw", function()
 			local box = CargoRegistry.get("recyclingBox")
-			expect(CargoHandlingRules.shouldSpill(box, "drop")).to.equal(true)
+			for _, reason in { "drop", "forced", "death", "removed", "destroyed" } do
+				expect(CargoHandlingRules.shouldSpill(box, reason)).to.equal(false)
+			end
+			expect(CargoHandlingRules.shouldSpill(box, "throw")).to.equal(true)
 			expect(CargoHandlingRules.shouldSpill(box, "destroyed")).to.equal(false)
 			expect(CargoHandlingRules.shouldSpill(CargoRegistry.get("rubbishBag"), "drop")).to.equal(false)
 		end)

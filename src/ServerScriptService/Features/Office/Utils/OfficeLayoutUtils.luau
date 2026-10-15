@@ -10,6 +10,7 @@
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local OfficeTypes = require(ServerScriptService.Features.Office.Data.OfficeTypes)
+local OfficeConstants = require(ServerScriptService.Features.Office.Data.OfficeConstants)
 
 type Layout = OfficeTypes.Layout
 type Room = OfficeTypes.Room
@@ -32,6 +33,19 @@ function OfficeLayoutUtils.marker(layout: Layout, id: string): OfficeTypes.Marke
 		if marker.id == id then
 			return marker
 		end
+	end
+	return nil
+end
+
+-- The furniture top a surface spot stands on (office-local studs), or nil for floor spots.
+-- Only marker kinds the spawn policy seats loot on report a height.
+function OfficeLayoutUtils.surfaceTopY(kind: OfficeTypes.MarkerKind): number?
+	if kind == "counter" then
+		return OfficeConstants.COUNTER_SIZE.Y
+	elseif kind == "table" then
+		return OfficeConstants.TABLE_SIZE.Y
+	elseif kind == "cabinet" then
+		return OfficeConstants.CABINET_SIZE.Y
 	end
 	return nil
 end

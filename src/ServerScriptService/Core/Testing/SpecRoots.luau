@@ -190,6 +190,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.UI.React.Primitives.Panel"] = "presentational React primitive (no logic)",
 	["ReplicatedStorage.Client.UI.React.Primitives.ClippedBar"] = "presentational React primitive — the clip-technique sprite bar (no logic)",
 	["ReplicatedStorage.Client.UI.React.Primitives.FadeGroup"] = "presentational React primitive — CanvasGroup fade; its easing step TrailEasingUtils is specced",
+	["ReplicatedStorage.Client.UI.React.Hooks.useProgressTween"] = "React/TweenService binding shell; normalization and interruption policy covered by ProgressTweenUtils.spec",
 	["ReplicatedStorage.Client.UI.React.Hooks.useEasedTrail"] = "React hook — Heartbeat easing over bindings; its pure step TrailEasingUtils is specced",
 	["ReplicatedStorage.Client.UI.React.SceneHost"] = "React layer view — renders the stack's screens (selection specced in SceneStack.screensFor)",
 	["ReplicatedStorage.Client.UI.React.Debugger.DebugPanelScreen"] = "throwaway harness screen proving the SceneHost render path (no logic)",
@@ -296,10 +297,10 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Commands.DailyRewardReset"] = "Cmdr command definition (server impl is specced)",
 
 	-- Cleanup Crew: Cargo
+	["ReplicatedStorage.Shared.Features.Art.Data.ArtTypes"] = "type-only kit/family contracts; behavior covered by ArtKitRegistry, ArtKitRules and ArtVisualSystem specs",
 	["ReplicatedStorage.Shared.Features.Cargo.Data.CargoTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants"] = "static tuning and names (no logic)",
 	["ReplicatedStorage.Shared.Features.Cargo.Net.CargoEvents"] = "ByteNet packet definitions (no logic)",
-	["ServerScriptService.Features.Cargo.Systems.CargoSpawnSystem"] = "Instance/raycast shell (CargoRegistry is specced)",
 	["ServerScriptService.Features.Cargo.Systems.CargoPocketSystem"] = "Carry/Instance/public-state/Heartbeat shell (pocket, swap and slot decisions are specced in CargoHandlingRules and CargoPocketTracker)",
 	["ServerScriptService.Features.Cargo.Systems.CargoTraitSystem"] = "Players/Carry/Instance/Sound shell (rattle, puddle and sound decisions are specced in CargoHandlingRules and CargoFeedbackUtils)",
 	["ReplicatedStorage.Client.Features.Cargo.Systems.CargoSlipSystem"] = "Humanoid/physics shell (the slip decision CargoHandlingRules.slips is specced)",
@@ -332,7 +333,6 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Features.Office.Systems.OfficeBuildSystem"] = "Instance builder (the layout is validated by the specced OfficeLayoutRules)",
 	["ServerScriptService.Features.Office.OfficeServiceServer"] = "Instance/signal shell (layout rules, spawn roll and spawn rules are specced)",
 	["ReplicatedStorage.Shared.Features.Office.Data.OfficeDecorConstants"] = "static decor look and emitter names (no logic)",
-	["ServerScriptService.Features.Office.Systems.OfficeDecorSystem"] = "Instance builder (night decor and ambience emitters from the validated layout)",
 	["ReplicatedStorage.Client.Features.Office.OfficeServiceClient"] = "client service shell (starts the atmosphere and ambience systems)",
 	["ReplicatedStorage.Client.Features.Office.Data.OfficeAssets"] = "asset id slots; registers the uploaded sounds at load (no decisions)",
 	["ReplicatedStorage.Client.Features.Office.Data.OfficeAtmosphereConstants"] = "static presets and timing (no logic)",
@@ -354,7 +354,6 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Features.Occupant.Systems.OccupantCatchSystem"] = "Instance/ByteNet/Death shell (catch decisions and the launch are specced in OccupantCatchRules)",
 	["ReplicatedStorage.Client.Features.Occupant.OccupantServiceClient"] = "Camera/Vfx/ByteNet shell (tell decisions are specced in OccupantTellRules)",
 	["ReplicatedStorage.Client.Features.Occupant.Systems.OccupantScareSystem"] = "Instance/tween/Sound shell (the scare beat; no decisions)",
-	["ReplicatedStorage.Client.Features.Occupant.Systems.OccupantTellSystem"] = "Instance/Vfx shell (flicker, heartbeat and pulse decisions are specced in OccupantTellRules)",
 
 	-- Cleanup Crew: Shift
 	["ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes"] = "type definitions only (no runtime logic)",

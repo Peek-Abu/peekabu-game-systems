@@ -65,6 +65,7 @@ add("lobby", "item", {
 	{ 28, 46 },
 })
 add("lobby", "desk", { { 22, 44 } })
+add("lobby", "cabinet", { { 37, 57 } })
 
 add("open", "pile", {
 	{ 48, 8 },
@@ -103,10 +104,13 @@ add("open", "item", {
 	{ 66, 10 },
 })
 add("open", "desk", { { 50, 18 }, { 68, 28 }, { 86, 26 }, { 60, 46 }, { 80, 46 } })
+add("open", "cabinet", { { 97, 3 } })
+add("open", "table", { { 62, 20 } })
 
 add("breakRoom", "pile", { { 6, 66 }, { 20, 80 } })
 add("breakRoom", "item", { { 4, 64 }, { 14, 70 }, { 26, 66 }, { 8, 84 }, { 24, 86 }, { 16, 87 } })
 add("breakRoom", "locker", { { 4, 78 } })
+add("breakRoom", "table", { { 13, 81 } })
 
 add("manager", "pile", { { 40, 70 }, { 52, 84 } })
 add("manager", "item", { { 34, 64 }, { 46, 66 }, { 56, 72 }, { 36, 84 }, { 48, 86 }, { 56, 64 } })
@@ -120,6 +124,7 @@ add("archive", "pile", { { 106, 8 }, { 118, 20 }, { 124, 34 } })
 add("archive", "item", { { 104, 4 }, { 114, 6 }, { 126, 8 }, { 108, 22 }, { 122, 28 }, { 110, 36 }, { 126, 38 } })
 add("archive", "desk", { { 112, 30 } })
 add("archive", "locker", { { 127, 14 }, { 127, 26 } })
+add("archive", "cabinet", { { 127, 3 }, { 103, 37 } })
 
 -- Mr. Harlow's patrol points (none in the loading bay: it is the safe zone) and where he takes his break.
 -- Kept clear of desks and lockers so each is on the navmesh.

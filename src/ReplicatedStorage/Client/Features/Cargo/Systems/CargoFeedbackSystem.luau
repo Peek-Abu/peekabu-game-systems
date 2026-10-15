@@ -30,9 +30,10 @@ local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local PublicPlayerTypes = require(ReplicatedStorage.Shared.Data.PublicPlayerTypes)
 local CargoAssets = require(CargoShared.Data.CargoAssets)
 local CargoConstants = require(CargoShared.Data.CargoConstants)
-local CargoRegistry = require(CargoShared.Data.CargoRegistry)
 local CargoEvents = require(CargoShared.Net.CargoEvents)
 local CargoFeedbackUtils = require(CargoShared.Utils.CargoFeedbackUtils)
+local CargoTypes = require(CargoShared.Data.CargoTypes)
+local CargoSwoopSystem = require(ReplicatedStorage.Client.Features.Cargo.Systems.CargoSwoopSystem)
 local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
 local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundRegistry)
 local SoundTypes = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundTypes)
@@ -48,10 +49,10 @@ local WorldBillboard = require(ReplicatedStorage.Client.UI.React.Screens.World.W
 local e = React.createElement
 
 type Swoop = {
-	part: Part,
+	ghost: CargoSwoopSystem.Ghost,
 	from: Vector3,
 	to: Vector3,
-	size: Vector3,
+	rotation: CFrame,
 	started: number,
 }
 
@@ -70,6 +71,8 @@ export type CargoFeedbackState = {
 
 local log = Logger.new("CargoFeedbackSystem")
 
+local ghosts = CargoSwoopSystem.new()
+local session = 0
 local swoops: { Swoop } = {}
 local floating: { Floating } = {}
 local leaves: { BasePart } = {}
@@ -139,40 +142,43 @@ local function floater(at: Vector3, index: number, item: CargoFeedbackUtils.Floa
 	counters.floaters += 1
 end
 
-local function swoop(kind: string, from: Vector3, to: Vector3)
-	-- A delayed swoop that lands after stop() would leak a part nothing steps or cleans up.
-	if #stoppers == 0 then
+local function swoop(
+	kind: string,
+	from: Vector3,
+	to: Vector3,
+	identity: CargoTypes.VisualIdentity?,
+	expectedSession: number
+)
+	if #stoppers == 0 or session ~= expectedSession then
 		return
 	end
-	local def = CargoRegistry.get(kind)
-	if def == nil then
+	local rotation = if identity ~= nil then identity.rotation else CFrame.identity
+	local ghost = ghosts:spawn(kind, CFrame.new(from) * rotation, identity)
+	if ghost == nil then
 		return
 	end
-	local part = Instance.new("Part")
-	part.Name = "CargoSwoop"
-	part.Size = def.partSize
-	part.Color = def.color
-	part.Material = Enum.Material.SmoothPlastic
-	part.Anchored = true
-	part.CanCollide = false
-	part.CanQuery = false
-	part.CanTouch = false
-	part.CastShadow = false
-	part.CFrame = CFrame.new(from)
-	part.Parent = Workspace
-	table.insert(swoops, { part = part, from = from, to = to, size = def.partSize, started = os.clock() })
+	table.insert(swoops, { ghost = ghost, from = from, to = to, rotation = rotation, started = os.clock() })
 	counters.swoops += 1
 end
 
-local function onBanked(data: CargoFeedbackUtils.BankedMessage)
+local function onBanked(data: CargoFeedbackUtils.ReceivedBankedMessage)
+	local expectedSession = session
 	counters.banked += 1
 	play("cargoSwoosh", { at = data.from })
 	for index, kind in data.kinds do
-		task.delay((index - 1) * CargoConstants.SWOOP_STAGGER, swoop, kind, data.from, data.to)
+		task.delay(
+			(index - 1) * CargoConstants.SWOOP_STAGGER,
+			swoop,
+			kind,
+			data.from,
+			data.to,
+			if data.visuals ~= nil then data.visuals[index] else nil,
+			expectedSession
+		)
 	end
 	local landing = math.max(0, #data.kinds - 1) * CargoConstants.SWOOP_STAGGER + CargoConstants.SWOOP_SECONDS
 	task.delay(landing, function()
-		if #stoppers == 0 then
+		if #stoppers == 0 or session ~= expectedSession then
 			return
 		end
 		play("cargoChaChing", { at = data.to })
@@ -217,14 +223,16 @@ local function step()
 		local item = swoops[index]
 		local alpha = (now - item.started) / CargoConstants.SWOOP_SECONDS
 		if alpha >= 1 then
-			item.part:Destroy()
+			item.ghost:destroy()
 			table.remove(swoops, index)
 		else
 			local scale = 1 + (CargoConstants.SWOOP_END_SCALE - 1) * alpha
-			item.part.Size = item.size * scale
-			item.part.CFrame = CFrame.new(
-				CargoFeedbackUtils.arc(item.from, item.to, alpha, CargoConstants.SWOOP_HEIGHT)
-			) * CFrame.Angles(0, alpha * math.pi * 2, 0)
+			item.ghost:update(
+				CFrame.new(CargoFeedbackUtils.arc(item.from, item.to, alpha, CargoConstants.SWOOP_HEIGHT))
+					* item.rotation
+					* CFrame.Angles(0, alpha * math.pi * 2, 0),
+				scale
+			)
 		end
 	end
 	local camera = Workspace.CurrentCamera
@@ -273,6 +281,7 @@ function CargoFeedbackSystem.start()
 	if #stoppers > 0 then
 		return
 	end
+	session += 1
 	-- The current fields are the baseline: no pickup sound for what you already hold.
 	lastHands, lastPockets = readMine(StateSyncClientStore.publicPlayers())
 	showLeaves(CargoFeedbackUtils.blocksView(lastHands))
@@ -287,12 +296,13 @@ function CargoFeedbackSystem.start()
 end
 
 function CargoFeedbackSystem.stop()
+	session += 1
 	for _, stop in stoppers do
 		stop()
 	end
 	table.clear(stoppers)
 	for _, item in swoops do
-		item.part:Destroy()
+		item.ghost:destroy()
 	end
 	table.clear(swoops)
 	while #floating > 0 do

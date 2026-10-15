@@ -23,7 +23,7 @@ export type ItemDef = {
 	fragile: boolean,
 	-- Pulses a small noise every CargoConstants.RATTLE_INTERVAL while carried (M2: Noise).
 	rattly: boolean,
-	-- Becomes a pile when dropped (the recycling box).
+	-- Becomes a pile after a deliberate throw lands off the truck (the recycling box).
 	spills: boolean,
 	-- A very loud drop (the water jug; its slippery puddle is M2).
 	splashes: boolean,
@@ -42,16 +42,21 @@ export type ItemDef = {
 	color: Color3,
 }
 
+-- Visual-only server snapshot; never consulted for authoritative category or value.
+export type VisualIdentity = { kitId: string, proxySize: Vector3, rotation: CFrame }
+
 -- A carried or pocketed item as banking sees it: its kind and its value now (after any damage).
 export type CargoEntry = {
 	kind: string,
 	value: number,
+	visual: VisualIdentity?,
 }
 
 export type DepositItem = {
 	kind: string,
 	category: Category,
 	value: number,
+	visual: VisualIdentity?,
 }
 
 -- What one Load is worth: trash adds to clearance, salvage to bonus (before any overtime multiplier).
@@ -67,6 +72,8 @@ export type Deposit = {
 export type BankHandler = (player: Player, deposit: Deposit) -> (boolean, number?)
 
 export type SpawnOptions = {
+	-- Visual-only override; otherwise inherited from the spawn parent ArtKitId ancestry.
+	artKit: string?,
 	-- Spawned invisible and un-interactable (under a pile) until revealed.
 	hidden: boolean?,
 	-- The value it carries (a scattered pocket item keeps its own); absent = the catalog value.

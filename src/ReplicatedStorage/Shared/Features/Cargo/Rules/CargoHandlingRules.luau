@@ -56,7 +56,8 @@ function CargoHandlingRules.isImpact(reason: CarryTypes.DropReason): boolean
 end
 
 function CargoHandlingRules.shouldSpill(def: ItemDef, reason: CarryTypes.DropReason): boolean
-	return def.spills and CargoHandlingRules.isImpact(reason)
+	-- Setting cargo down preserves its identity; only a deliberate throw spills it.
+	return def.spills and reason == "throw"
 end
 
 --[=[

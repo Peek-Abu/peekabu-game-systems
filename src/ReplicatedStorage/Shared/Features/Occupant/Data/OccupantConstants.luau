@@ -55,16 +55,19 @@ return table.freeze({
 	-- Replicated attributes on his model: his mode, and the UserId he is chasing (0 = nobody).
 	MODE_ATTRIBUTE = "OccupantMode",
 	TARGET_ATTRIBUTE = "OccupantTarget",
-	-- Speeds (spec: patrol 10, chase 15); tiers and party size adjust them (OccupantTuningFormulas).
+	-- Pursuit tuning: patrol 10, chase 20; tiers and party size adjust them (OccupantTuningFormulas).
 	PATROL_SPEED = 10,
-	CHASE_SPEED = 15,
+	CHASE_SPEED = 20,
 	-- Sight: ~60 studs, a 100° cone, line of sight.
 	SIGHT_RANGE = 60,
 	SIGHT_ANGLE = 100,
-	-- Investigate: look around ~4 s at the noise; search: ~6 s at the last-seen point; either gives up after
+	-- Investigate scans for 4 s; search scans for 2 s at last-seen and nearby authored points. Investigate gives up after
 	-- GIVE_UP_SECONDS (an unreachable point).
 	LOOK_SECONDS = 4,
-	SEARCH_SECONDS = 6,
+	SEARCH_SECONDS = 2,
+	SEARCH_MAX_SECONDS = 32,
+	SEARCH_RADIUS = 36,
+	SEARCH_PROBES = 2,
 	GIVE_UP_SECONDS = 20,
 	-- Close enough to a point to count as there (flat studs).
 	REACHED_DISTANCE = 3,

@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	CargoPocketTracker: what each player has in their pockets (Cleanup Crew spec §4: two slots). A pocketed
-	item is no longer an Instance, only its kind and value; it becomes one again when it is scattered. Lists
+	item is no longer an Instance, only its kind, value and immutable visual snapshot; it becomes one again when it is scattered. Lists
 	are handed out as copies.
 
 	@class CargoPocketTracker
@@ -28,7 +28,11 @@ local CargoPocketTracker = {}
 local function copy(list: { CargoEntry }): { CargoEntry }
 	local result: { CargoEntry } = {}
 	for _, entry in list do
-		table.insert(result, { kind = entry.kind, value = entry.value })
+		table.insert(result, {
+			kind = entry.kind,
+			value = entry.value,
+			visual = if entry.visual ~= nil then table.clone(entry.visual) else nil,
+		})
 	end
 	return result
 end
@@ -47,7 +51,11 @@ function CargoPocketTracker.new(): CargoPocketTracker
 			if #list >= CargoConstants.POCKET_SLOTS then
 				return false
 			end
-			table.insert(list, { kind = entry.kind, value = entry.value })
+			table.insert(list, {
+				kind = entry.kind,
+				value = entry.value,
+				visual = if entry.visual ~= nil then table.clone(entry.visual) else nil,
+			})
 			return true
 		end,
 
@@ -74,7 +82,13 @@ function CargoPocketTracker.new(): CargoPocketTracker
 				return nil
 			end
 			local entry = table.remove(list, index)
-			return if entry ~= nil then { kind = entry.kind, value = entry.value } else nil
+			return if entry ~= nil
+				then {
+					kind = entry.kind,
+					value = entry.value,
+					visual = if entry.visual ~= nil then table.clone(entry.visual) else nil,
+				}
+				else nil
 		end,
 
 		clear = function(_self)

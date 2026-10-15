@@ -1,6 +1,20 @@
 local VM = require(script.Parent.DepotHubViewModel)
 return function()
 	describe("hub", function()
+		it("fits the guide header and scroll body in portrait and short landscape", function()
+			for _, viewport in { Vector2.new(390, 844), Vector2.new(844, 390), Vector2.new(1366, 768) } do
+				local layout = VM.panelLayout(viewport, viewport.X < 900)
+				expect(layout.width <= viewport.X - 32).to.equal(true)
+				expect(layout.height <= viewport.Y - 32).to.equal(true)
+				expect(layout.titleWidth >= 140).to.equal(true)
+				expect(layout.bodyWidth > 250).to.equal(true)
+				expect(layout.height - layout.headerHeight - 20 >= 120).to.equal(true)
+			end
+		end)
+		it("stacks narrow settings while keeping wide headers compact", function()
+			expect(VM.panelLayout(Vector2.new(390, 844), true).compact).to.equal(true)
+			expect(VM.panelLayout(Vector2.new(844, 390), true).compact).to.equal(false)
+		end)
 		it("teaches the real dust-bag cycle without inventing an empty action", function()
 			for _, page in { "guide", "gear" } do
 				local copy = VM.copy(page)

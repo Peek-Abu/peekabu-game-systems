@@ -9,9 +9,9 @@
 	- while he is within HEARTBEAT_RANGE and not chasing you (OccupantTellRules.heartbeat), the screen pulses
 	  red with the beat (OccupantTellRules.pulse), faster the closer he is; it is silent while he is catching
 	  you. The heartbeat sound itself is OccupantPresenceSystem's.
-	A light is "off" when its neon turns to plastic and its PointLight is disabled. Client-local changes only.
+	Real light brightness and visible emitter colour fade together; fixture housings retain their authored material. Client-local only.
 
-	Spec-exempt shell (Instances, Vfx); the decisions are the specced OccupantTellRules.
+	Instance specs cover flicker restoration/cancellation; OccupantTellRules covers decisions and emitter selection.
 
 	@class OccupantTellSystem
 ]=]
@@ -20,37 +20,173 @@ local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local OccupantTellRules = require(ReplicatedStorage.Shared.Features.Occupant.Rules.OccupantTellRules)
 local VfxServiceClient = require(ReplicatedStorage.Client.Features.Vfx.VfxServiceClient)
 
 local connection: RBXScriptConnection? = nil
--- Each light's state as this client last set it (weak keys: lights go with the office).
-local lit: { [BasePart]: boolean } = {}
-setmetatable(lit, { __mode = "k" })
+type Fade = { tween: Tween?, completion: RBXScriptConnection? }
+type Panel = { color: Color3, material: Enum.Material, fade: Fade, destroying: RBXScriptConnection? }
+type Lamp = { brightness: number, enabled: boolean, fade: Fade, destroying: RBXScriptConnection? }
+type Fixture =
+	{ on: boolean, panels: { [BasePart]: Panel }, lamps: { [Light]: Lamp }, destroying: RBXScriptConnection? }
+export type LightController = { setLit: (root: BasePart, on: boolean) -> (), clear: () -> () }
 local outAt: Vector3? = nil
 local outUntil = 0
 local flickerUntil = 0
 local screenToken: number? = nil
 local beatStarted = 0
 
-local function setLit(light: BasePart, on: boolean)
-	local previous = lit[light]
-	if previous == on then
-		return
+local function cancel(fade: Fade)
+	if fade.completion ~= nil then
+		fade.completion:Disconnect()
+		fade.completion = nil
 	end
-	lit[light] = on
-	if previous == nil and on then
-		-- Never touched and still lit: leave the builder's material alone.
-		return
-	end
-	light.Material = if on then Enum.Material.Neon else Enum.Material.SmoothPlastic
-	local point = light:FindFirstChildOfClass("PointLight")
-	if point ~= nil then
-		point.Enabled = on
+	if fade.tween ~= nil then
+		fade.tween:Cancel()
+		fade.tween = nil
 	end
 end
+local function newLightController(duration: number?): LightController
+	local seconds = if duration ~= nil then math.max(0, duration) else 0.07
+	local records: { [BasePart]: Fixture } = {}
+	local function dispose(root: BasePart, restore: boolean)
+		local record = records[root]
+		if record == nil then
+			return
+		end
+		records[root] = nil
+		if record.destroying ~= nil then
+			record.destroying:Disconnect()
+		end
+		for panel, saved in record.panels do
+			cancel(saved.fade)
+			if saved.destroying ~= nil then
+				saved.destroying:Disconnect()
+			end
+			if restore and panel.Parent ~= nil then
+				panel.Color, panel.Material = saved.color, saved.material
+			end
+		end
+		for lamp, saved in record.lamps do
+			cancel(saved.fade)
+			if saved.destroying ~= nil then
+				saved.destroying:Disconnect()
+			end
+			if restore and lamp.Parent ~= nil then
+				lamp.Brightness, lamp.Enabled = saved.brightness, saved.enabled
+			end
+		end
+	end
+	local function fade(target: Instance, saved: Fade, goals: { [string]: number | Color3 }, done: () -> ())
+		cancel(saved)
+		if seconds <= 0 then
+			done()
+			return
+		end
+		local tween = TweenService:Create(target, TweenInfo.new(seconds, Enum.EasingStyle.Linear), goals)
+		saved.tween = tween
+		saved.completion = tween.Completed:Connect(function()
+			if saved.tween ~= tween then
+				return
+			end
+			cancel(saved)
+			if target.Parent ~= nil then
+				done()
+			end
+		end)
+		tween:Play()
+	end
+	return {
+		setLit = function(root, on)
+			if root.Parent == nil then
+				dispose(root, false)
+				return
+			end
+			local record = records[root]
+			if record == nil then
+				-- An untouched lit fixture retains exactly the artist's state.
+				if on then
+					return
+				end
+				record = { on = true, panels = {}, lamps = {} }
+				local function capture(instance: Instance)
+					if instance:IsA("Light") then
+						local saved: Lamp = { brightness = instance.Brightness, enabled = instance.Enabled, fade = {} }
+						record.lamps[instance] = saved
+						saved.destroying = instance.Destroying:Connect(function()
+							cancel(saved.fade)
+							if saved.destroying ~= nil then
+								saved.destroying:Disconnect()
+							end
+							record.lamps[instance] = nil
+						end)
+					elseif
+						instance:IsA("BasePart")
+						and OccupantTellRules.isEmitter(
+							instance.Material,
+							instance:GetAttribute("OfficeLightEmitter") == true
+						)
+					then
+						local saved: Panel = { color = instance.Color, material = instance.Material, fade = {} }
+						record.panels[instance] = saved
+						saved.destroying = instance.Destroying:Connect(function()
+							cancel(saved.fade)
+							if saved.destroying ~= nil then
+								saved.destroying:Disconnect()
+							end
+							record.panels[instance] = nil
+						end)
+					end
+				end
+				capture(root)
+				for _, instance in root:GetDescendants() do
+					capture(instance)
+				end
+				records[root] = record
+				record.destroying = root.Destroying:Connect(function()
+					dispose(root, false)
+				end)
+			end
+			if record.on == on then
+				return
+			end
+			record.on = on
+			for panel, saved in record.panels do
+				if panel.Parent == nil then
+					cancel(saved.fade)
+					record.panels[panel] = nil
+					continue
+				end
+				local color = if on then saved.color else saved.color:Lerp(Color3.new(0, 0, 0), 0.94)
+				panel.Material = if on then saved.material else Enum.Material.SmoothPlastic
+				fade(panel, saved.fade, { Color = color }, function()
+					panel.Color = color
+				end)
+			end
+			for lamp, saved in record.lamps do
+				if lamp.Parent == nil then
+					cancel(saved.fade)
+					record.lamps[lamp] = nil
+					continue
+				end
+				local brightness = if on then saved.brightness else 0
+				lamp.Enabled = saved.enabled
+				fade(lamp, saved.fade, { Brightness = brightness }, function()
+					lamp.Brightness, lamp.Enabled = brightness, on and saved.enabled
+				end)
+			end
+		end,
+		clear = function()
+			for root in records do
+				dispose(root, true)
+			end
+		end,
+	}
+end
+local lights = newLightController(nil)
 
 -- A stable per-light seed so lights near him flicker out of step.
 local function seedOf(light: BasePart): number
@@ -90,7 +226,7 @@ local function updateLights(now: number, harlow: BasePart?)
 			then
 				on = false
 			end
-			setLit(instance, on)
+			lights.setLit(instance, on)
 		end
 	end
 end
@@ -137,7 +273,7 @@ local function updateHeartbeat(now: number, harlow: BasePart?)
 	})
 end
 
-local OccupantTellSystem = {}
+local OccupantTellSystem = { newLightController = newLightController }
 
 function OccupantTellSystem.start()
 	if connection ~= nil then
@@ -171,9 +307,7 @@ function OccupantTellSystem.stop()
 	outAt = nil
 	outUntil = 0
 	flickerUntil = 0
-	for light in pairs(lit) do
-		setLit(light, true)
-	end
+	lights.clear()
 end
 
 --[=[

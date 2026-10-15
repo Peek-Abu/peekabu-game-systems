@@ -67,6 +67,43 @@ return function()
 		end)
 	end)
 
+	describe("visual identity", function()
+		it("snapshots actual kit, proxy size and rotation before the source is destroyed", function()
+			local part = Instance.new("Part")
+			part.Size = Vector3.new(3, 4, 5)
+			part.CFrame = CFrame.new(20, 9, 30) * CFrame.Angles(0, 0.7, 0)
+			part:SetAttribute("CarryKind", "recyclingBox")
+			part:SetAttribute("CargoId", 17)
+			part:SetAttribute("CargoValue", 20)
+			local art = Instance.new("Model")
+			art.Name = "ArtVisual"
+			art:SetAttribute("ArtKitId", "item-override")
+			art.Parent = part
+			local entry = CargoFeedbackUtils.entryOf(part)
+			expect(entry.visual.kitId).to.equal("item-override")
+			expect(entry.visual.proxySize).to.equal(part.Size)
+			expect(entry.visual.rotation).to.equal(part.CFrame.Rotation)
+			part:Destroy()
+			expect(entry.visual.kitId).to.equal("item-override")
+		end)
+		it("preserves per-item identities in packet order without changing authoritative values", function()
+			local visual =
+				{ kitId = "second-company", proxySize = Vector3.new(2, 3, 4), rotation = CFrame.Angles(0, 0.5, 0) }
+			local deposit = {
+				clearance = 20,
+				bonus = 0,
+				items = { { kind = "recyclingBox", category = "trash", value = 20, visual = visual } },
+			}
+			local packet = CargoFeedbackUtils.banked(deposit, Vector3.zero, Vector3.zero, Vector3.one, nil)
+			expect(packet.visuals[1].kitId).to.equal("second-company")
+			expect(packet.visuals[1].proxySize).to.equal(visual.proxySize)
+			expect(packet.visuals[1].rotation).to.equal(visual.rotation)
+			expect(packet.clearance).to.equal(20)
+			packet.visuals[1].kitId = "mutated-output"
+			expect(visual.kitId).to.equal("second-company")
+		end)
+	end)
+
 	describe("arc", function()
 		it("starts at the item and ends in the truck", function()
 			local from, to = Vector3.new(0, 0, 0), Vector3.new(10, 0, 0)

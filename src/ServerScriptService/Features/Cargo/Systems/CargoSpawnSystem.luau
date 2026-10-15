@@ -6,7 +6,7 @@
 	item (under a pile) is invisible, lets players through, is skipped by raycasts and has its prompt off
 	until `reveal`.
 
-	Spec-exempt shell (Instances, raycasts); the catalog is the specced CargoRegistry.
+	Instance specs cover catalog authority, kit selection, fallback and reveal lifecycle.
 
 	@class CargoSpawnSystem
 ]=]
@@ -14,6 +14,9 @@
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
+local ServerScriptService = game:GetService("ServerScriptService")
+
+local ArtVisualSystem = require(ServerScriptService.Features.Art.Systems.ArtVisualSystem)
 
 local CargoShared = ReplicatedStorage.Shared.Features.Cargo
 local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
@@ -68,7 +71,8 @@ end
 
 local CargoSpawnSystem = {}
 
-function CargoSpawnSystem.new(): CargoSpawnSystem
+function CargoSpawnSystem.new(visuals: ArtVisualSystem.Controller?): CargoSpawnSystem
+	local art = visuals or ArtVisualSystem
 	local nextId = 0
 
 	local system: CargoSpawnSystem = {
@@ -89,7 +93,7 @@ function CargoSpawnSystem.new(): CargoSpawnSystem
 			part.TopSurface = Enum.SurfaceType.Smooth
 			part.BottomSurface = Enum.SurfaceType.Smooth
 			part.Anchored = true
-			part.CanCollide = not hidden
+			part.CanCollide = false
 			-- A hidden item must not catch floor probes meant for the pile above it.
 			part.CanQuery = not hidden
 			part.Transparency = if hidden then 1 else 0
@@ -109,13 +113,15 @@ function CargoSpawnSystem.new(): CargoSpawnSystem
 			end
 			makeTag(part, def, value, hidden)
 			part.Parent = parent
+			local kitId = if options ~= nil then options.artKit else nil
+			art.attach(part, "cargo", kind, kitId, hidden)
 			-- Last: Carry reads the kind, and Interaction the enabled flag, when the tag lands.
 			CollectionService:AddTag(part, CarryConstants.TAG)
 			return part
 		end,
 
 		--[=[
-			Uncovers a hidden item: visible, solid, queryable, labelled and pickable. A no-op for one already
+			Uncovers a hidden item: visible, queryable, labelled and pickable. A no-op for one already
 			visible.
 		]=]
 		reveal = function(_self, item)
@@ -124,7 +130,8 @@ function CargoSpawnSystem.new(): CargoSpawnSystem
 			end
 			item:SetAttribute(CargoConstants.HIDDEN_ATTRIBUTE, nil)
 			item.Transparency = 0
-			item.CanCollide = true
+			art.setHidden(item, false)
+			item.CanCollide = false
 			item.CanQuery = true
 			item:SetAttribute(InteractionConstants.ENABLED_ATTRIBUTE, nil)
 			local shell = tagOf(item)

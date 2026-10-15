@@ -1,0 +1,19 @@
+# Production style review — 2026-10-12
+
+**Superseded ownership recommendation:** user clarified that the client office belongs to a different company. Use `cleanup-crew-two-company-art-contract.md` as the current direction. Shared modelling style does not imply shared brand colours. The original review below is retained as context; equipment should not be chosen to match the office branding.
+
+Reviewed alternative Figma Desktop Bridge file PYtXsNlpV1MW2nOVx0wXl4, comparison board 105:3388 and full-size office lived bullpen 105:3410. Concepts and Blender proof builds are visibly different completion levels; do not confuse concept fidelity with approved production assets. Studio Place1 read-only state/screenshot: Edit, baseplate only. No Play session started, assets changed or published in this review.
+
+Recommendation (judgment, not user approval): lived-in stylized company office as the master, readable block forms with restrained bevels. Warm wood, muted deep teal, cream/grey paperwork/metal, small amber equipment accents. Matte surfaces and deliberate material contrast. Use bullpen for rooms, hallway spine for architectural kit, cargo catalog for prop family. Keep clutter believable but gameplay paths/cleanable surfaces clear. In Roblox, detail hierarchy must survive avatar scale and ordinary game lighting; do not target the concept's offline lighting or microdetail as a performance specification.
+
+Truck: T1 chunky cab-over is the closest family match for square lockers, desks and native block avatars. T2 narrow long-nose is a valid grounded alternative (board label says PICKED; that label is not fresh user approval). If retaining T2, finish its proportions/materials to this same master. T3 toy is too rounded relative to the chosen office. Do not rebuild another agent's truck from this recommendation.
+
+Vacuum: Bulky-B is the better base company-issued silhouette/palette; model handle, body and hose at actual Roblox grip/carry scale before locking it. Pro-A can be a later distinct equipment variant with reduced gloss and matching material language. Cosmetic skins must keep functional cues readable and not alter gameplay sound/noise radius or collision by accident.
+
+Harlow: preserve the office-worker identity, tie, clipboard and silhouette; current lanky concept needs a native avatar-scale and animation proof. Hands/face detail and human proportions should not be blindly transplanted to Roblox rigs.
+
+Future cosmetics hypotheses: vacuum body/trim/nozzle/sticker variants, avatar-preserving company vests and badges, clipboard skins, earned rank marks, crew truck liveries (shared vehicle ownership/display policy needed), personal locker/desk dressing if later supported. Build shared UV/material regions/attachment sockets now; do not implement the shop or promise conversion. Distinct silhouette/material editions have more identity than colour-only variants. Keep company default attractive. No public test exists, so monetization demand is unvalidated.
+
+Permanent skins can be granted as persistent inventory items; choose purchase mechanism around ownership and repeatability. Roblox developer products support repeat purchases; passes suit one-time entitlements. Sources: https://create.roblox.com/docs/production/monetization/developer-products and https://create.roblox.com/docs/production/monetization/passes . No randomized sales or paid advantage recommended here.
+
+Next production gate: one bullpen bay with wall/door/ceiling, desk/chair/monitor, mug/papers/bin and vacuum, plus one native R15 avatar, in Studio gameplay lighting. Inspect desktop and phone from gameplay camera; verify task/clutter distinction, route width, avatar/grip scale and dark-shift readability. Complete that representative slice before all-room asset production. This memo is a proposed direction for the art owner, not permission to overwrite their work.

@@ -31,6 +31,9 @@ export type Mind = {
 	target: number?,
 	-- Where he last saw his target (always outside the loading bay).
 	lastSeen: Vector3?,
+	-- Bounded, authored nearby locations checked after the last sighting; never live hidden positions.
+	searchPoints: { Vector3 }?,
+	searchIndex: number?,
 	-- The noise he is investigating.
 	noise: Vector3?,
 	-- When he reached the investigate / search point (looking around since).
@@ -41,6 +44,7 @@ export type Mind = {
 
 -- One crew member as the service saw them this think; `clear` is the line-of-sight ray's verdict.
 export type Glimpse = {
+	feetY: number?,
 	userId: number,
 	position: Vector3,
 	clear: boolean,
@@ -48,6 +52,7 @@ export type Glimpse = {
 
 -- Everything the brain decides from, gathered by OccupantServiceServer each think.
 export type Senses = {
+	reachTopY: number?,
 	position: Vector3,
 	look: Vector3,
 	now: number,
@@ -65,6 +70,8 @@ export type Senses = {
 
 -- What the catch rule needs about a would-be catch.
 export type CatchInput = {
+	reachable: boolean?,
+	clear: boolean?,
 	distance: number,
 	position: Vector3,
 	alive: boolean,

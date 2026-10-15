@@ -24,6 +24,9 @@
       },
       "StarterCharacterScripts": {
         "$path": "src/StarterPlayer/StarterCharacterScripts"
+      },
+      "$properties": {
+        "DevCameraOcclusionMode": "Zoom"
       }
     },
     "SoundService": {

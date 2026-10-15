@@ -39,6 +39,40 @@ end
 local AHEAD = Vector3.new(80, 3, 60)
 
 return function()
+	describe("airborne grab", function()
+		it("attacks a visible jumping victim whose feet remain reachable", function()
+			local result = OccupantBrainRules.step(
+				fresh(),
+				senses({
+					players = { { userId = 7, position = Vector3.new(62, 9, 60), feetY = 6, clear = true } },
+					reachTopY = 6,
+				})
+			)
+			expect(result.intent.kind).to.equal("attack")
+			expect(result.intent.verticalReach).to.equal(8)
+		end)
+		it("keeps the sight radius three dimensional even with a horizontal cone", function()
+			local seen = OccupantBrainRules.visible(
+				fresh(),
+				senses({
+					players = { player(7, Vector3.new(62, 103, 60)) },
+					sightRange = 40,
+				})
+			)
+			expect(#seen).to.equal(0)
+		end)
+		it("does not grab a player above a genuinely separate ledge", function()
+			local result = OccupantBrainRules.step(
+				fresh(),
+				senses({
+					players = { { userId = 7, position = Vector3.new(62, 15, 60), feetY = 12, clear = true } },
+					reachTopY = 6,
+				})
+			)
+			expect(result.intent.kind).to.equal("goTo")
+		end)
+	end)
+
 	describe("newMind", function()
 		it("starts patrolling at the given point and direction", function()
 			local mind = OccupantBrainRules.newMind(3, -1, 5)
@@ -174,12 +208,12 @@ return function()
 			expect(second.cue).to.equal(nil)
 		end)
 
-		it("searches the last place he saw them, then gives up", function()
+		it("searches the last place he saw them, then gives up without nearby route probes", function()
 			local seenAt = Vector3.new(90, 3, 60)
 			local chase = OccupantBrainRules.step(fresh(), senses({ players = { player(7, seenAt) } }))
-			local lost = OccupantBrainRules.step(chase.mind, senses({ now = 101 }))
+			local lost = OccupantBrainRules.step(chase.mind, senses({ now = 101, route = {} }))
 			expect(lost.mind.mode).to.equal("search")
-			expect(lost.mind.target).to.equal(nil)
+			expect(lost.mind.target).to.equal(7)
 			expect(lost.intent.kind).to.equal("goTo")
 			expect(lost.intent.position).to.equal(seenAt)
 			expect(lost.intent.run).to.equal(true)
@@ -230,6 +264,90 @@ return function()
 				})
 			)
 			expect(step.mind.mode).to.equal("patrol")
+		end)
+	end)
+
+	describe("persistent pursuit", function()
+		it("keeps a visible known target outside the patrol cone while requiring sight", function()
+			local chase = OccupantBrainRules.step(fresh(), senses({ players = { player(7, AHEAD) } }))
+			local behind = Vector3.new(50, 3, 60)
+			local kept = OccupantBrainRules.step(chase.mind, senses({ now = 101, players = { player(7, behind) } }))
+			expect(kept.mind.mode).to.equal("chase")
+			expect(kept.mind.lastSeen).to.equal(behind)
+			local hidden = OccupantBrainRules.step(
+				kept.mind,
+				senses({ now = 102, players = { player(7, Vector3.new(40, 3, 70), false) } })
+			)
+			expect(hidden.mind.mode).to.equal("search")
+			expect(hidden.intent.position).to.equal(behind)
+		end)
+
+		it("follows successive visible runner samples and freezes memory after a wall", function()
+			local mind = fresh()
+			local last = AHEAD
+			for tick = 1, 12 do
+				last = AHEAD + Vector3.new(tick * 2, 0, 0)
+				local result =
+					OccupantBrainRules.step(mind, senses({ now = 100 + tick * 0.25, players = { player(7, last) } }))
+				expect(result.mind.mode).to.equal("chase")
+				expect(result.intent.position).to.equal(last)
+				mind = result.mind
+			end
+			for tick = 1, 4 do
+				local result = OccupantBrainRules.step(
+					mind,
+					senses({ now = 103 + tick * 0.25, players = { player(7, Vector3.new(300 + tick, 3, 300), false) } })
+				)
+				expect(result.mind.mode).to.equal("search")
+				expect(result.mind.lastSeen).to.equal(last)
+				expect(result.intent.position).to.equal(last)
+				mind = result.mind
+			end
+		end)
+
+		it("checks nearby authored route points instead of instantly relaxing at a corner", function()
+			local route = { AHEAD + Vector3.new(12, 0, 0), AHEAD + Vector3.new(12, 0, 12), Vector3.new(300, 3, 300) }
+			local chase = OccupantBrainRules.step(fresh(), senses({ players = { player(7, AHEAD) } }))
+			local lost = OccupantBrainRules.step(chase.mind, senses({ now = 101, route = route }))
+			local arrived = OccupantBrainRules.step(lost.mind, senses({ now = 102, position = AHEAD }))
+			local probe = OccupantBrainRules.step(
+				arrived.mind,
+				senses({ now = 102 + OccupantConstants.SEARCH_SECONDS, position = AHEAD })
+			)
+			expect(probe.mind.mode).to.equal("search")
+			expect(probe.intent.kind).to.equal("goTo")
+			expect(probe.intent.run).to.equal(true)
+			expect(probe.intent.position).to.equal(route[1])
+			expect(lost.mind.searchIndex).to.equal(1)
+		end)
+
+		it("keeps a search urgent when hearing noise without tracking the hidden player", function()
+			local chase = OccupantBrainRules.step(fresh(), senses({ players = { player(7, AHEAD) } }))
+			local lost = OccupantBrainRules.step(chase.mind, senses({ now = 101 }))
+			local noise = Vector3.new(88, 3, 80)
+			local heard = OccupantBrainRules.step(
+				lost.mind,
+				senses({ now = 103, heard = noise, players = { player(7, Vector3.new(120, 3, 120), false) } })
+			)
+			expect(heard.mind.mode).to.equal("search")
+			expect(heard.intent.position).to.equal(noise)
+			expect(heard.intent.run).to.equal(true)
+			expect(heard.mind.lastSeen).to.equal(AHEAD)
+			expect(heard.mind.since).to.equal(101)
+		end)
+
+		it("bounds the search even with repeated noises and never probes the safe bay", function()
+			local chase = OccupantBrainRules.step(fresh(), senses({ players = { player(7, AHEAD) } }))
+			local lost = OccupantBrainRules.step(chase.mind, senses({ now = 101, route = { Vector3.new(35, 3, 20) } }))
+			for _, point in lost.mind.searchPoints do
+				expect(OccupantBrainRules.inZone(point, ZONE)).to.equal(false)
+			end
+			local done = OccupantBrainRules.step(
+				lost.mind,
+				senses({ now = 101 + OccupantConstants.SEARCH_MAX_SECONDS, heard = AHEAD + Vector3.new(1, 0, 0) })
+			)
+			expect(done.mind.mode).to.equal("patrol")
+			expect(done.mind.target).to.equal(nil)
 		end)
 	end)
 

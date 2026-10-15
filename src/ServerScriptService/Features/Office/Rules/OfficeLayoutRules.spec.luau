@@ -67,11 +67,58 @@ return function()
 			expect(hasError(errors, 'marker "b.pile.1" is not inside room "b"')).to.equal(true)
 		end)
 
+		it("accepts flush rotated furniture but rejects footprints through walls", function()
+			local layout = fixture()
+			layout.markers[2] =
+				{ id = "b.counter", room = "b", kind = "counter", x = 21.75, z = 10, rotation = -math.pi / 2 }
+			local ok, errors = OfficeLayoutRules.validate(layout)
+			if not ok then
+				error(table.concat(errors, "; "))
+			end
+			expect(ok).to.equal(true)
+			layout.markers[2].x = 20.5
+			local _, invalid = OfficeLayoutRules.validate(layout)
+			expect(hasError(invalid, 'marker "b.counter" is not inside')).to.equal(true)
+		end)
+
+		it("keeps ordinary loot away from walls even with an explicit rotation", function()
+			local layout = fixture()
+			layout.markers[2] = { id = "b.item", room = "b", kind = "item", x = 20.8, z = 10, rotation = 0 }
+			local _, errors = OfficeLayoutRules.validate(layout)
+			expect(hasError(errors, 'marker "b.item" is not inside')).to.equal(true)
+		end)
+
 		it("reports a marker naming a missing room", function()
 			local layout = fixture()
 			layout.markers[2].room = "z"
 			local _, errors = OfficeLayoutRules.validate(layout)
 			expect(hasError(errors, 'marker "b.pile.1" names a missing room')).to.equal(true)
+		end)
+
+		it("reports surface furniture crowded by a floor loot spot", function()
+			local layout = fixture()
+			table.insert(layout.markers, { id = "b.table.1", room = "b", kind = "table", x = 30, z = 14 })
+			table.insert(layout.markers, { id = "b.item.1", room = "b", kind = "item", x = 31, z = 15 })
+			local _, errors = OfficeLayoutRules.validate(layout)
+			expect(hasError(errors, 'surface marker "b.table.1" crowds item marker "b.item.1"')).to.equal(true)
+		end)
+
+		it("uses rotated furniture footprints for item clearance", function()
+			local layout = fixture()
+			layout.markers = {
+				{ id = "b.counter", room = "b", kind = "counter", x = 30, z = 10, rotation = math.pi / 2 },
+				{ id = "b.item", room = "b", kind = "item", x = 30, z = 13, rotation = 0 },
+			}
+			local _, errors = OfficeLayoutRules.validate(layout)
+			expect(hasError(errors, 'surface marker "b.counter" crowds')).to.equal(true)
+		end)
+
+		it("reports surface furniture overlapping a desk", function()
+			local layout = fixture()
+			table.insert(layout.markers, { id = "b.desk.1", room = "b", kind = "desk", x = 30, z = 10 })
+			table.insert(layout.markers, { id = "b.cabinet.1", room = "b", kind = "cabinet", x = 31, z = 10 })
+			local _, errors = OfficeLayoutRules.validate(layout)
+			expect(hasError(errors, 'surface marker "b.cabinet.1" overlaps "b.desk.1"')).to.equal(true)
 		end)
 
 		it("reports a door that is not on a wall both rooms share", function()

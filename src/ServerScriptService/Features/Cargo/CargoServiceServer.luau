@@ -6,10 +6,11 @@
 	- Pockets (CargoPocketSystem): the `pocket` and `swap` packets; two tiny-only slots published as
 	  `pocket1` / `pocket2`; scattered where their owner dies or leaves.
 	- Handling (Carry's `dropped`, which SignalPlus delivers deferred): a fragile item loses a value tier per
-	  impact; a recycling box spills into a pile (VacuumServiceServer:spawnPile); every drop fires `noiseMade`
+	  impact; a thrown recycling box spills only after an off-truck landing; every drop fires `noiseMade`
 	  (the M2 Noise seam).
 	- Traits (M2, CargoTraitSystem): rattly items pulse a noise while carried; the jug leaves a slippery puddle.
 	- Search: desks and lockers stocked per shift (`stockSearchable`); a short hold gives what was rolled.
+	  Every completed search fires `searched` with the container (the Office dresses it open).
 	- Banking: the `cargo-load` interaction on the truck bed. Claim (CargoClaimTracker) → add (the game's
 	  `onBanked` handler) → destroy, in one synchronous step, so two Loads never count one item twice.
 	- Feel (M3): every Load is announced (`Banked`, built by CargoFeedbackUtils.banked: the client swoops the
@@ -30,7 +31,6 @@ local CargoShared = ReplicatedStorage.Shared.Features.Cargo
 local CargoServer = ServerScriptService.Features.Cargo
 local CarryShared = ReplicatedStorage.Shared.Features.Carry
 local Observers = require(ReplicatedStorage.Packages.Observers)
-local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local CarryConstants = require(CarryShared.Data.CarryConstants)
 local CarryRegistry = require(CarryShared.Data.CarryRegistry)
@@ -40,7 +40,6 @@ local CargoRegistry = require(CargoShared.Data.CargoRegistry)
 local CargoTypes = require(CargoShared.Data.CargoTypes)
 local CargoEvents = require(CargoShared.Net.CargoEvents)
 local CargoFeedbackUtils = require(CargoShared.Utils.CargoFeedbackUtils)
-local CargoBankRules = require(CargoShared.Rules.CargoBankRules)
 local CargoHandlingRules = require(CargoShared.Rules.CargoHandlingRules)
 local InteractionRegistry = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionRegistry)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
@@ -48,6 +47,8 @@ local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local CargoClaimTracker = require(CargoServer.State.CargoClaimTracker)
 local CargoPocketSystem = require(CargoServer.Systems.CargoPocketSystem)
 local CargoSpawnSystem = require(CargoServer.Systems.CargoSpawnSystem)
+local CargoGroundSystem = require(CargoServer.Systems.CargoGroundSystem)
+local CargoLoadSystem = require(CargoServer.Systems.CargoLoadSystem)
 local CargoTraitSystem = require(CargoServer.Systems.CargoTraitSystem)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
 local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
@@ -83,7 +84,7 @@ end
 type Stock = { kind: string?, searched: boolean }
 
 local noiseMade: SignalTyped.Signal<Vector3, number, string, { number }> = SignalTyped.new()
-local log = Logger.new("CargoServiceServer")
+local searched: SignalTyped.Signal<BasePart> = SignalTyped.new()
 local spawner = CargoSpawnSystem.new()
 local claims = CargoClaimTracker.new()
 local stock: { [BasePart]: Stock } = {}
@@ -91,12 +92,6 @@ local bankHandler: CargoTypes.BankHandler? = nil
 local container: Instance? = nil
 local counters = { banked = 0, spilled = 0, searched = 0 }
 local stoppers: { () -> () } = {}
-
-local function rootOf(player: Player): BasePart?
-	local character = player.Character
-	local root = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil
-	return if root ~= nil and root:IsA("BasePart") then root else nil
-end
 
 -- An object's cargo kind and id, or nil when it is not cargo.
 local function cargoOf(object: Instance): (string?, number?)
@@ -109,14 +104,7 @@ local function cargoOf(object: Instance): (string?, number?)
 end
 
 -- A cargo item as banking sees it, read from the attributes the server stamped on it (never client data).
-local function entryOf(object: Instance): CargoTypes.CargoEntry?
-	local kind = cargoOf(object)
-	local value = object:GetAttribute(CargoConstants.VALUE_ATTRIBUTE)
-	if kind == nil or type(value) ~= "number" then
-		return nil
-	end
-	return { kind = kind, value = value }
-end
+local entryOf = CargoFeedbackUtils.entryOf
 
 local function idOf(object: Instance): number?
 	local _, id = cargoOf(object)
@@ -165,6 +153,59 @@ local pocketSystem = CargoPocketSystem.new({
 	idOf = idOf,
 })
 
+local loader = CargoLoadSystem.new({
+	claims = claims,
+	entryOf = entryOf,
+	idOf = idOf,
+	handler = function()
+		return bankHandler
+	end,
+	container = function()
+		return container
+	end,
+	isPresent = function(player)
+		return player.Parent == Players
+	end,
+	getCarried = function(player)
+		return CarryServiceServer:getCarried(player)
+	end,
+	forceDrop = function(player)
+		CarryServiceServer:forceDrop(player, "forced")
+	end,
+	pockets = {
+		list = function(userId)
+			return pocketSystem:list(userId)
+		end,
+		take = function(userId)
+			pocketSystem:take(userId)
+		end,
+	},
+	tell = function(player, text)
+		ToastServiceServer:send(player, { text = text, duration = 2 })
+	end,
+	announce = function(deposit, from, bed, credited)
+		CargoEvents.packets.Banked.sendToAll(CargoFeedbackUtils.banked(deposit, from, bed.Position, bed.Size, credited))
+		counters.banked += 1
+	end,
+})
+
+local ground = CargoGroundSystem.new(spawner, ignoreList, function(player, object, reason, landed)
+	if not landed or loader:settled(player, object) then
+		return
+	end
+	local kind, id = cargoOf(object)
+	local def = if kind ~= nil then CargoRegistry.get(kind) else nil
+	if def ~= nil and id ~= nil and CargoHandlingRules.shouldSpill(def, reason) and claims:claim(id) then
+		local parent = object.Parent
+		local floor = spawner:floorUnder(object.Position, ignoreList(object))
+		object:Destroy()
+		if parent ~= nil then
+			VacuumServiceServer:spawnPile(CargoConstants.SPILL_PILE_KIND, floor, parent)
+		end
+		counters.spilled += 1
+	end
+end)
+
 -- Carry's `dropped` (deferred): fragile tiers, spills and drop noise. Pocketing and banking claim the item
 -- before they force-drop it, so those never land here.
 local function onDropped(player: Player, object: Instance, reason: CarryTypes.DropReason)
@@ -179,31 +220,22 @@ local function onDropped(player: Player, object: Instance, reason: CarryTypes.Dr
 	local position = object.Position
 	noiseMade:Fire(position, CargoHandlingRules.dropNoise(def), "drop", { player.UserId })
 	traits:sound(position, CargoFeedbackUtils.dropSound(def))
-	if CargoHandlingRules.shouldSpill(def, reason) then
-		claims:claim(id)
-		local parent: Instance? = object.Parent
-		local floor = spawner:floorUnder(position, ignoreList(object))
-		object:Destroy()
-		if parent ~= nil then
-			VacuumServiceServer:spawnPile(CargoConstants.SPILL_PILE_KIND, floor, parent)
-		end
-		counters.spilled += 1
-		return
-	end
 	if def.fragile then
 		local impacts = object:GetAttribute(CargoConstants.IMPACTS_ATTRIBUTE)
 		local count = (if type(impacts) == "number" then impacts else 0) + 1
 		object:SetAttribute(CargoConstants.IMPACTS_ATTRIBUTE, count)
 		spawner:setValue(object, CargoHandlingRules.valueAfter(def, count))
 	end
+	ground:release(object, reason, player)
 end
 
 export type CargoServiceServer = {
 	dependencies: { string },
 	noiseMade: SignalTyped.Signal<Vector3, number, string, { number }>,
+	searched: SignalTyped.Signal<BasePart>,
 	start: (self: CargoServiceServer) -> (),
 	stop: (self: CargoServiceServer) -> (),
-	getState: (self: CargoServiceServer) -> { [string]: any },
+	getState: (self: CargoServiceServer) -> { [string]: unknown },
 	spawnItem: (
 		self: CargoServiceServer,
 		kind: string,
@@ -224,6 +256,7 @@ export type CargoServiceServer = {
 	reset: (self: CargoServiceServer) -> (),
 }
 
+local SearchPlacement = require(CargoServer.Systems.CargoSearchPlacementSystem)
 local CargoServiceServer: CargoServiceServer
 
 local function tell(player: Player, text: string)
@@ -262,6 +295,7 @@ CargoServiceServer = {
 		"SoundServiceServer",
 	},
 	noiseMade = noiseMade,
+	searched = searched,
 
 	--[=[
 		Handles Load and Search, Carry's drops, Vacuum's dust bags and the pocket and swap packets; scatters pockets on
@@ -335,6 +369,7 @@ CargoServiceServer = {
 
 	stop = function(_self)
 		traits:stop()
+		ground:stop()
 		for _, stop in stoppers do
 			stop()
 		end
@@ -391,44 +426,7 @@ CargoServiceServer = {
 		banking handler adds the deposit → destroy. A refused deposit leaves everything as it was.
 	]=]
 	load = function(_self, player, bed)
-		local handler = bankHandler
-		local root = rootOf(player)
-		if handler == nil then
-			return false, "the truck is not taking cargo"
-		end
-		if root == nil or not CargoBankRules.onBed(bed.CFrame:PointToObjectSpace(root.Position), bed.Size) then
-			return false, "stand in the truck bed to load"
-		end
-		local item = CarryServiceServer:getCarried(player)
-		local hands = if item ~= nil then entryOf(item) else nil
-		local id = if item ~= nil then idOf(item) else nil
-		-- Where the swoop starts: the hands item, or the player (a pockets-only Load).
-		local from = if item ~= nil and item:IsA("BasePart") then item.Position else root.Position
-		local deposit, reason = CargoBankRules.deposit(hands, pocketSystem:list(player.UserId), CargoRegistry.get)
-		if deposit == nil then
-			return false, reason
-		end
-		if hands ~= nil and (id == nil or not claims:claim(id)) then
-			return false, "already loaded"
-		end
-		local ok, accepted, credited = pcall(handler, player, deposit)
-		if not ok then
-			log:warn(`banking handler failed: {accepted}`)
-		end
-		if not ok or accepted ~= true then
-			if hands ~= nil and id ~= nil then
-				claims:release(id)
-			end
-			return false, "the truck is not taking cargo"
-		end
-		pocketSystem:take(player.UserId)
-		if item ~= nil and hands ~= nil then
-			CarryServiceServer:forceDrop(player, "forced")
-			item:Destroy()
-		end
-		CargoEvents.packets.Banked.sendToAll(CargoFeedbackUtils.banked(deposit, from, bed.Position, bed.Size, credited))
-		counters.banked += 1
-		return true, nil
+		return loader:load(player, bed)
 	end,
 
 	--[=[
@@ -439,20 +437,16 @@ CargoServiceServer = {
 		if stocked == nil or stocked.searched then
 			return false, "already searched"
 		end
+		local landing, reason = SearchPlacement.forSearch(part, stocked.kind, container)
+		if reason ~= nil then
+			return false, reason
+		end
 		stocked.searched = true
 		InteractionServiceServer:setEnabled(part, false)
 		counters.searched += 1
+		searched:Fire(part)
 		noiseMade:Fire(part.Position, CargoConstants.SEARCH_NOISE, "search", { player.UserId })
-		local kind = stocked.kind
-		local parent = container
-		local def = if kind ~= nil then CargoRegistry.get(kind) else nil
-		if kind == nil or def == nil or parent == nil then
-			tell(player, "Nothing useful in here.")
-			return true, nil
-		end
-		local front = part.CFrame * CFrame.new(0, -part.Size.Y / 2, -(part.Size.Z / 2 + 1.5))
-		spawner:spawn(kind, front, parent, { source = "desk" })
-		tell(player, `Found: {def.name}`)
+		tell(player, SearchPlacement.deliver(stocked.kind, container, landing, spawner))
 		return true, nil
 	end,
 
@@ -472,6 +466,7 @@ CargoServiceServer = {
 		items themselves go with the shift's container (Office).
 	]=]
 	reset = function(_self)
+		ground:stop()
 		claims:clear()
 		pocketSystem:clear()
 		for part in stock do

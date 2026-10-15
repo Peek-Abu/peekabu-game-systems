@@ -31,7 +31,6 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
-local Workspace = game:GetService("Workspace")
 
 local OccupantShared = ReplicatedStorage.Shared.Features.Occupant
 local OccupantServer = ServerScriptService.Features.Occupant
@@ -51,6 +50,8 @@ local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTyp
 local NpcRegistry = require(ServerScriptService.Features.Npc.Data.NpcRegistry)
 local NpcTypes = require(ServerScriptService.Features.Npc.Data.NpcTypes)
 local OccupantBrainRules = require(OccupantServer.Rules.OccupantBrainRules)
+local Sense = require(OccupantServer.Systems.OccupantSenseSystem)
+local Reach = require(OccupantServer.Rules.OccupantReachRules)
 local OccupantCatchRules = require(OccupantServer.Rules.OccupantCatchRules)
 local OccupantTuningFormulas = require(OccupantServer.Utils.OccupantTuningFormulas)
 local OccupantRigSystem = require(OccupantServer.Systems.OccupantRigSystem)
@@ -147,36 +148,9 @@ end
 
 -- Every crew member he could see this think, each with one line-of-sight ray from his head.
 local function glimpses(current: OccupantRigSystem.Rig, sightRange: number): { OccupantTypes.Glimpse }
-	local list: { OccupantTypes.Glimpse } = {}
-	local origin = current.head.Position
-	local exclude: { Instance } = { current.model }
-	for _, player in Players:GetPlayers() do
-		local character = player.Character
-		if character ~= nil then
-			table.insert(exclude, character)
-		end
-	end
-	local params = RaycastParams.new()
-	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = exclude
-	-- Carried items, piles, lights and the safe-zone volume do not collide, so they never hide anyone.
-	params.RespectCanCollide = true
-	for _, player in RoundServiceServer:participants() do
-		local root = rootOf(player)
-		local humanoid = humanoidOf(player)
-		if
-			root ~= nil
-			and humanoid ~= nil
-			and humanoid.Health > 0
-			and not DeathServiceServer:isDead(player)
-			and not OccupantCatchSystem.isCatching(player.UserId)
-		then
-			local offset = root.Position - origin
-			local clear = offset.Magnitude <= sightRange and Workspace:Raycast(origin, offset, params) == nil
-			table.insert(list, { userId = player.UserId, position = root.Position, clear = clear })
-		end
-	end
-	return list
+	return Sense.glimpses(current, sightRange, RoundServiceServer:participants(), function(player)
+		return not DeathServiceServer:isDead(player) and not OccupantCatchSystem.isCatching(player.UserId)
+	end)
 end
 
 -- The `harlow` brain: senses → OccupantBrainRules.step → intent. Never yields.
@@ -188,6 +162,7 @@ local function brain(def: NpcTypes.NpcDef, context: NpcTypes.BrainContext, npc: 
 	end
 	local senses: OccupantTypes.Senses = {
 		position = context.position,
+		reachTopY = current.head.Position.Y + current.head.Size.Y / 2,
 		look = current.root.CFrame.LookVector,
 		now = context.now,
 		sightRange = def.sightRange,
@@ -259,8 +234,25 @@ local function onCatch(npc: Model, player: Player)
 	local now = os.clock()
 	local graceUntil = before.grace[player.UserId]
 	local ok, reason = OccupantCatchRules.canCatch({
-		-- 3D, the same distance the brain measures.
-		distance = if root ~= nil then (root.Position - current.root.Position).Magnitude else math.huge,
+		-- Horizontal reach plus a separate body-height and line-of-sight recheck.
+		distance = if root ~= nil
+			then Vector3.new(root.Position.X - current.root.Position.X, 0, root.Position.Z - current.root.Position.Z).Magnitude
+			else math.huge,
+		reachable = root ~= nil and humanoid ~= nil and Reach.canReach(
+			current.root.Position,
+			root.Position,
+			Sense.feetY(root, humanoid),
+			current.head.Position.Y + current.head.Size.Y / 2,
+			OccupantConstants.CATCH_RANGE + OccupantConstants.CATCH_SLACK
+		),
+		clear = (function(): boolean
+			for _, glimpse in glimpses(current, math.huge) do
+				if glimpse.userId == player.UserId then
+					return glimpse.clear
+				end
+			end
+			return false
+		end)(),
 		position = if root ~= nil then root.Position else current.root.Position,
 		alive = humanoid ~= nil and humanoid.Health > 0 and not DeathServiceServer:isDead(player),
 		catching = OccupantCatchSystem.isCatching(player.UserId),

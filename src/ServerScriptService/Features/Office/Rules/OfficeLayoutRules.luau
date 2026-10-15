@@ -3,18 +3,21 @@
 	OfficeLayoutRules: is a layout buildable and playable? `validate` lists every problem: duplicate or empty
 	rooms, overlapping rooms, doors that name missing rooms, are too narrow or are not on a wall both rooms
 	share, rooms the start room cannot reach, markers outside their room (or within MARKER_MARGIN of a
-	wall), and a truck outside the start room. `checkCapacity` says whether the spawn roll has the markers
+	wall), surface furniture (counters, tables, cabinets) crowded by floor loot spots or overlapping desks,
+	lockers or piles, and a truck outside the start room. `checkCapacity` says whether the spawn roll has the markers
 	it needs. `checkRoute` (M2) says whether Harlow's patrol route and rest point are usable. OfficeServiceServer refuses to build a layout that fails either. Pure.
 
 	@class OfficeLayoutRules
 ]=]
 
 local ServerScriptService = game:GetService("ServerScriptService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local OfficeServer = ServerScriptService.Features.Office
 local OfficeConstants = require(OfficeServer.Data.OfficeConstants)
 local OfficeTypes = require(OfficeServer.Data.OfficeTypes)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
+local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 
 type Layout = OfficeTypes.Layout
 type Room = OfficeTypes.Room
@@ -23,6 +26,30 @@ local OfficeLayoutRules = {}
 
 local function inside(room: Room, x: number, z: number, margin: number): boolean
 	return x >= room.minX + margin and x <= room.maxX - margin and z >= room.minZ + margin and z <= room.maxZ - margin
+end
+
+local function markerInside(room: Room, marker: OfficeTypes.Marker): boolean
+	local sizes: { [string]: Vector3 } = {
+		counter = OfficeConstants.COUNTER_SIZE,
+		table = OfficeConstants.TABLE_SIZE,
+		cabinet = OfficeConstants.CABINET_SIZE,
+		desk = OfficeConstants.DESK_SIZE,
+		locker = OfficeConstants.LOCKER_SIZE,
+		shelf = OfficeConstants.SHELF_SIZE,
+		board = OfficeConstants.BOARD_SIZE,
+	}
+	local size: Vector3? = sizes[marker.kind]
+	if size == nil or marker.rotation == nil then
+		return inside(room, marker.x, marker.z, OfficeConstants.MARKER_MARGIN)
+	end
+	local cosine, sine = math.abs(math.cos(marker.rotation)), math.abs(math.sin(marker.rotation))
+	local halfX = (size.X * cosine + size.Z * sine) / 2
+	local halfZ = (size.X * sine + size.Z * cosine) / 2
+	local wall = OfficeConstants.WALL_THICKNESS / 2
+	return marker.x - halfX >= room.minX + wall - 0.001
+		and marker.x + halfX <= room.maxX - wall + 0.001
+		and marker.z - halfZ >= room.minZ + wall - 0.001
+		and marker.z + halfZ <= room.maxZ - wall + 0.001
 end
 
 --[=[
@@ -81,8 +108,72 @@ function OfficeLayoutRules.validate(layout: Layout): (boolean, { string })
 		local room = roomsById[marker.room]
 		if room == nil then
 			table.insert(errors, `marker "{marker.id}" names a missing room`)
-		elseif not inside(room, marker.x, marker.z, OfficeConstants.MARKER_MARGIN) then
+		elseif not markerInside(room, marker) then
 			table.insert(errors, `marker "{marker.id}" is not inside room "{room.id}"`)
+		end
+	end
+
+	-- Surface furniture stands clear: loot never clips into it and it never swallows gameplay volumes.
+	local PILE_HALF = 0
+	for _, style in VacuumConstants.PILE_KINDS do
+		PILE_HALF = math.max(PILE_HALF, style.size.X / 2, style.size.Z / 2)
+	end
+	local function halfExtents(kind: OfficeTypes.MarkerKind): Vector2?
+		if kind == "counter" then
+			return Vector2.new(OfficeConstants.COUNTER_SIZE.X / 2, OfficeConstants.COUNTER_SIZE.Z / 2)
+		elseif kind == "table" then
+			return Vector2.new(OfficeConstants.TABLE_SIZE.X / 2, OfficeConstants.TABLE_SIZE.Z / 2)
+		elseif kind == "cabinet" then
+			return Vector2.new(OfficeConstants.CABINET_SIZE.X / 2, OfficeConstants.CABINET_SIZE.Z / 2)
+		elseif kind == "desk" then
+			return Vector2.new(OfficeConstants.DESK_SIZE.X / 2, OfficeConstants.DESK_SIZE.Z / 2)
+		elseif kind == "locker" then
+			return Vector2.new(OfficeConstants.LOCKER_SIZE.X / 2, OfficeConstants.LOCKER_SIZE.Z / 2)
+		end
+		return nil
+	end
+	local function rotatedHalf(marker: OfficeTypes.Marker): Vector2?
+		local half = halfExtents(marker.kind)
+		if half == nil then
+			return nil
+		end
+		local angle = marker.rotation or 0
+		local c, s = math.abs(math.cos(angle)), math.abs(math.sin(angle))
+		return Vector2.new(half.X * c + half.Y * s, half.X * s + half.Y * c)
+	end
+	for _, marker in layout.markers do
+		if OfficeLayoutUtils.surfaceTopY(marker.kind) ~= nil then
+			local half = rotatedHalf(marker)
+			assert(half ~= nil, `surface marker "{marker.id}" has no footprint`)
+			for _, other in layout.markers do
+				if other.id ~= marker.id then
+					if other.kind == "item" then
+						local clear = OfficeConstants.SURFACE_ITEM_CLEAR
+						if
+							math.abs(other.x - marker.x) < half.X + clear
+							and math.abs(other.z - marker.z) < half.Y + clear
+						then
+							table.insert(errors, `surface marker "{marker.id}" crowds item marker "{other.id}"`)
+						end
+					elseif other.kind == "desk" or other.kind == "locker" then
+						local ohalf = rotatedHalf(other)
+						if
+							ohalf ~= nil
+							and math.abs(other.x - marker.x) < half.X + ohalf.X
+							and math.abs(other.z - marker.z) < half.Y + ohalf.Y
+						then
+							table.insert(errors, `surface marker "{marker.id}" overlaps "{other.id}"`)
+						end
+					elseif other.kind == "pile" then
+						if
+							math.abs(other.x - marker.x) < half.X + PILE_HALF
+							and math.abs(other.z - marker.z) < half.Y + PILE_HALF
+						then
+							table.insert(errors, `surface marker "{marker.id}" overlaps "{other.id}"`)
+						end
+					end
+				end
+			end
 		end
 	end
 

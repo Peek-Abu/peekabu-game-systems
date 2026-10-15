@@ -27,7 +27,9 @@ function OccupantTuningFormulas.tuning(tier: number, crew: number): Tuning
 	local solo = crew <= 1
 	return {
 		walkSpeed = OccupantConstants.PATROL_SPEED + level * ShiftConstants.TIER_PATROL_SPEED,
-		runSpeed = OccupantConstants.CHASE_SPEED + (if solo then ShiftConstants.SOLO_CHASE_SPEED else 0),
+		runSpeed = OccupantConstants.CHASE_SPEED + level * ShiftConstants.TIER_CHASE_SPEED + (if solo
+			then ShiftConstants.SOLO_CHASE_SPEED
+			else 0),
 		hearing = ShiftConstants.TIER_HEARING ^ level * (if solo then ShiftConstants.SOLO_HEARING else 1),
 	}
 end

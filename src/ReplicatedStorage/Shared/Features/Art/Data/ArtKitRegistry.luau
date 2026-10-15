@@ -1,0 +1,79 @@
+--!strict
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ArtTypes = require(ReplicatedStorage.Shared.Features.Art.Data.ArtTypes)
+
+local ArtKitRegistry = {}
+ArtKitRegistry.DEFAULT_KIT = "client-office-slate"
+local kits: { [string]: ArtTypes.Kit } = {
+	["client-office-slate"] = { id = "client-office-slate", name = "Client office slate" },
+}
+local keys: { [ArtTypes.Family]: { string } } = {
+	building = {
+		"wallSolid",
+		"wallDoorway",
+		"wallCorner",
+		"doorLeaf",
+		"ceilingTile",
+		"floorTile",
+		"skirting",
+		"window",
+		"fluorescent",
+		"exitSign",
+		"pillar",
+		"garageDoor",
+	},
+	furniture = {
+		"desk",
+		"officeChair",
+		"locker",
+		"shelf",
+		"corkboard",
+		"filingDrawer",
+		"wasteBin",
+		"wallClock",
+		"breakTable",
+		"kitchenCounter",
+		"elevatorFront",
+		"pipeSet",
+		"cableSet",
+	},
+	cargo = {
+		"rubbishBag",
+		"dustBag",
+		"recyclingBox",
+		"bottleBag",
+		"officePlant",
+		"plaque",
+		"monitor",
+		"waterJug",
+		"coffeeMachine",
+		"fishTank",
+		"goldenStapler",
+		"filingCabinet",
+	},
+	props = {
+		"keyboard",
+		"mug",
+		"paperTray",
+		"folder",
+		"paperStack",
+		"mouse",
+		"bookStack",
+		"deskCalendar",
+		"stationeryCup",
+	},
+	-- Equipment is an extension family: company equipment has its own visual systems.
+	equipment = {},
+}
+for _, familyKeys in keys do
+	table.freeze(familyKeys)
+end
+for _, kit in kits do
+	table.freeze(kit)
+end
+ArtKitRegistry.kits = table.freeze(kits)
+ArtKitRegistry.keys = table.freeze(keys)
+function ArtKitRegistry.contains(family: ArtTypes.Family, key: string): boolean
+	return table.find(ArtKitRegistry.keys[family], key) ~= nil
+end
+return table.freeze(ArtKitRegistry)

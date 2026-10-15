@@ -29,6 +29,10 @@ return function()
 	end
 
 	describe("canCatch", function()
+		it("requires body reach and clear sight for airborne catches", function()
+			refused({ reachable = false }, "outside grab volume")
+			refused({ clear = false }, "blocked")
+		end)
 		it("catches a living player within reach outside the loading bay", function()
 			expect(OccupantCatchRules.canCatch(input())).to.equal(true)
 			expect(

@@ -82,6 +82,11 @@ local function deskWeight(def: ItemDef): number
 	return if def.greed then 0 else def.deskWeight
 end
 
+-- The surface marker kinds loot of this def belongs on, in preference order; empty for the floor.
+local function surfaceFor(def: ItemDef): { string }
+	return OfficeSpawnRules.surfaceKindsFor(def.id)
+end
+
 local OfficeSpawnUtils = {}
 
 function OfficeSpawnUtils.roll(
@@ -136,6 +141,29 @@ function OfficeSpawnUtils.roll(
 		return nil
 	end
 
+	-- Surface tops: one reservation per piece, preferred kind first. Floor-capable loot can overflow;
+	-- appliances are excluded from the draw when no eligible top remains.
+	local surfaces = {}
+	for _, marker in layout.markers do
+		if OfficeLayoutUtils.surfaceTopY(marker.kind) ~= nil then
+			table.insert(surfaces, marker)
+		end
+	end
+	local function surfaceIndex(itemId: string, deepOnly: boolean): number?
+		for _, wanted in OfficeSpawnRules.surfaceKindsFor(itemId) do
+			for index, marker in surfaces do
+				if marker.kind == wanted and (not deepOnly or isDeep(marker)) then
+					return index
+				end
+			end
+		end
+		return nil
+	end
+	local function takeSurface(itemId: string, deepOnly: boolean): Marker?
+		local index = surfaceIndex(itemId, deepOnly)
+		return if index ~= nil then table.remove(surfaces, index) else nil
+	end
+
 	-- 3. The greed target, deep.
 	local greedIds = CargoRegistry.greedIds()
 	local greedKind = greedIds[rng:NextInteger(1, #greedIds)]
@@ -160,9 +188,20 @@ function OfficeSpawnUtils.roll(
 			end
 		end
 	else
-		local marker = takeMarker(true)
-		if marker ~= nil then
-			local placed: OfficeTypes.ItemPlan = { marker = marker.id, kind = greedKind }
+		local placed: OfficeTypes.ItemPlan? = nil
+		if greedDef ~= nil and #surfaceFor(greedDef) > 0 then
+			local surface = takeSurface(greedKind, true)
+			if surface ~= nil then
+				placed = { marker = surface.id, kind = greedKind }
+			end
+		end
+		if placed == nil then
+			local marker = takeMarker(true)
+			if marker ~= nil then
+				placed = { marker = marker.id, kind = greedKind }
+			end
+		end
+		if placed ~= nil then
 			greed = placed
 			table.insert(items, placed)
 		end
@@ -171,7 +210,12 @@ function OfficeSpawnUtils.roll(
 	-- 4. Salvage.
 	local salvageCount = rng:NextInteger(options.salvage.min, options.salvage.max)
 	for _ = 1, salvageCount do
-		local kind = pickWeighted(salvageWeight, rng)
+		local kind = pickWeighted(function(def)
+			-- Re-roll from eligible salvage using the same single weighted draw, never dump appliances on the floor.
+			return if OfficeSpawnRules.requiresSurface(def.id) and surfaceIndex(def.id, false) == nil
+				then 0
+				else salvageWeight(def)
+		end, rng)
 		local def = if kind ~= nil then CargoRegistry.get(kind) else nil
 		if kind == nil or def == nil then
 			break
@@ -183,14 +227,20 @@ function OfficeSpawnUtils.roll(
 		local hideRoll = rng:NextNumber()
 		local hideable = options.variant == "B" and OfficeConstants.HIDEABLE[def.size] == true
 		local pile = if hideable and hideRoll < OfficeConstants.HIDE_CHANCE then freePile(false) else nil
+		-- Reserve the same top in A/B even when B hides the item, keeping future weighted draws identical.
+		local surface = if #surfaceFor(def) > 0 then takeSurface(kind, false) else nil
 		if pile ~= nil then
 			pile.hides = kind
 		else
-			local marker = takeMarker(false)
-			if marker == nil then
-				break
+			if surface ~= nil then
+				table.insert(items, { marker = surface.id, kind = kind })
+			else
+				local marker = takeMarker(false)
+				if marker == nil then
+					break
+				end
+				table.insert(items, { marker = marker.id, kind = kind })
 			end
-			table.insert(items, { marker = marker.id, kind = kind })
 		end
 	end
 

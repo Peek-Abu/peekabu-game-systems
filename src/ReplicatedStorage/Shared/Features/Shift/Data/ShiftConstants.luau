@@ -102,9 +102,10 @@ return table.freeze({
 	TOP_TIER = 2,
 	TIER_HEARING = 1.2,
 	TIER_PATROL_SPEED = 1,
+	TIER_CHASE_SPEED = 0.5,
 	-- A solo player gets a gentler Harlow.
 	SOLO_HEARING = 0.75,
-	SOLO_CHASE_SPEED = -1,
+	SOLO_CHASE_SPEED = -0.5,
 	-- Round team counters and per-player scores.
 	CLEARANCE = "clearance",
 	BONUS = "bonus",

@@ -65,6 +65,8 @@ local function forget(mind: Mind)
 	mind.target = nil
 	mind.lastSeen = nil
 	mind.noise = nil
+	mind.searchPoints = nil
+	mind.searchIndex = nil
 end
 
 -- Walks the route: on reaching the current point, heads for the next one in his direction.
@@ -91,6 +93,7 @@ local function giveUp(mind: Mind, senses: Senses): Step
 	return patrol(nextMind, senses, "giveUp")
 end
 
+local Reach = require(script.Parent.OccupantReachRules)
 local OccupantBrainRules = {}
 
 --[=[
@@ -127,13 +130,16 @@ function OccupantBrainRules.visible(mind: Mind, senses: Senses): { Glimpse }
 		if
 			glimpse.clear
 			and not graced
+			and (glimpse.position - senses.position).Magnitude <= senses.sightRange
 			and not OccupantBrainRules.inZone(glimpse.position, senses.zone)
 			and NpcSenseRules.inSight(
 				senses.position,
 				senses.look,
-				glimpse.position,
+				Vector3.new(glimpse.position.X, senses.position.Y, glimpse.position.Z),
 				senses.sightRange,
-				senses.sightAngle
+				if glimpse.userId == mind.target and (mind.mode == "chase" or mind.mode == "search")
+					then 360
+					else senses.sightAngle
 			)
 		then
 			table.insert(list, glimpse)
@@ -169,6 +175,47 @@ end
 ]=]
 function OccupantBrainRules.lookYaw(elapsed: number): number
 	return math.rad(OccupantConstants.LOOK_SWEEP) * math.sin(elapsed * OccupantConstants.LOOK_RATE)
+end
+
+-- Last-seen first, then at most two nearby authored route points. No hidden player sampling.
+local function searchPoints(point: Vector3, senses: Senses): { Vector3 }
+	local candidates: { Vector3 } = {}
+	for _, candidate in senses.route do
+		local distance = flatDistance(point, candidate)
+		if
+			distance > OccupantConstants.REACHED_DISTANCE
+			and distance <= OccupantConstants.SEARCH_RADIUS
+			and not OccupantBrainRules.inZone(candidate, senses.zone)
+		then
+			table.insert(candidates, candidate)
+		end
+	end
+	table.sort(candidates, function(a, b)
+		local da, db = flatDistance(point, a), flatDistance(point, b)
+		if da ~= db then
+			return da < db
+		end
+		if a.X ~= b.X then
+			return a.X < b.X
+		end
+		return a.Z < b.Z
+	end)
+	local points = { point }
+	for _, candidate in candidates do
+		local duplicate = false
+		for _, existing in points do
+			if flatDistance(existing, candidate) <= OccupantConstants.REACHED_DISTANCE then
+				duplicate = true
+			end
+		end
+		if not duplicate then
+			table.insert(points, candidate)
+		end
+		if #points >= OccupantConstants.SEARCH_PROBES + 1 then
+			break
+		end
+	end
+	return points
 end
 
 --[=[
@@ -221,9 +268,19 @@ function OccupantBrainRules.step(mind: Mind, senses: Senses): Step
 		nextMind.target = pick.userId
 		nextMind.lastSeen = pick.position
 		nextMind.noise = nil
+		nextMind.searchPoints = nil
+		nextMind.searchIndex = nil
 		local cue: Cue? = if chasing then nil else "spotted"
-		if (pick.position - senses.position).Magnitude <= OccupantConstants.CATCH_RANGE then
-			return { mind = nextMind, intent = { kind = "attack", target = pick.userId }, cue = cue }
+		if
+			Reach.canReach(
+				senses.position,
+				pick.position,
+				pick.feetY or pick.position.Y - 3,
+				senses.reachTopY or senses.position.Y + 2.5,
+				OccupantConstants.CATCH_RANGE
+			)
+		then
+			return { mind = nextMind, intent = { kind = "attack", target = pick.userId, verticalReach = 8 }, cue = cue }
 		end
 		return { mind = nextMind, intent = { kind = "goTo", position = pick.position, run = true }, cue = cue }
 	end
@@ -231,17 +288,30 @@ function OccupantBrainRules.step(mind: Mind, senses: Senses): Step
 	-- Lost them: search where he last saw them.
 	if current.mode == "chase" then
 		local nextMind = enter(current, "search", now)
-		nextMind.target = nil
 		local lastSeen = nextMind.lastSeen
 		if lastSeen == nil then
 			return giveUp(nextMind, senses)
 		end
+		nextMind.searchPoints = searchPoints(lastSeen, senses)
+		nextMind.searchIndex = 1
 		return { mind = nextMind, intent = { kind = "goTo", position = lastSeen, run = true } }
+	end
+
+	-- Continuous noise cannot renew a lost-target search indefinitely.
+	if current.mode == "search" and now - current.since >= OccupantConstants.SEARCH_MAX_SECONDS then
+		return giveUp(current, senses)
 	end
 
 	-- A noise (outside the safe zone).
 	local heard = senses.heard
 	if heard ~= nil and not OccupantBrainRules.inZone(heard, senses.zone) then
+		if current.mode == "search" then
+			local nextMind = table.clone(current)
+			nextMind.searchPoints = searchPoints(heard, senses)
+			nextMind.searchIndex = 1
+			nextMind.arrivedAt = nil
+			return { mind = nextMind, intent = { kind = "goTo", position = heard, run = true } }
+		end
 		local nextMind = enter(current, "investigate", now)
 		nextMind.noise = heard
 		local cue: Cue? = if current.mode == "investigate" then nil else "curious"
@@ -250,10 +320,14 @@ function OccupantBrainRules.step(mind: Mind, senses: Senses): Step
 
 	-- Walking to the noise / last-seen point, looking around, giving up.
 	if current.mode == "investigate" or current.mode == "search" then
-		local searching = current.mode == "search"
-		local point = if searching then current.lastSeen else current.noise
+		local searching: boolean = current.mode == "search"
+		local points = current.searchPoints
+		local point = if searching and points ~= nil
+			then points[current.searchIndex or 1]
+			elseif searching then current.lastSeen
+			else current.noise
 		local hold = if searching then OccupantConstants.SEARCH_SECONDS else OccupantConstants.LOOK_SECONDS
-		if point == nil or now - current.since >= OccupantConstants.GIVE_UP_SECONDS then
+		if point == nil or (not searching and now - current.since >= OccupantConstants.GIVE_UP_SECONDS) then
 			return giveUp(current, senses)
 		end
 		local arrivedAt = current.arrivedAt
@@ -263,9 +337,19 @@ function OccupantBrainRules.step(mind: Mind, senses: Senses): Step
 				nextMind.arrivedAt = now
 				return { mind = nextMind, intent = { kind = "idle" } }
 			end
-			return { mind = current, intent = { kind = "goTo", position = point, run = searching } }
+			if searching then
+				return { mind = current, intent = { kind = "goTo", position = point, run = true } }
+			end
+			return { mind = current, intent = { kind = "goTo", position = point, run = false } }
 		end
 		if now - arrivedAt >= hold then
+			local index = (current.searchIndex or 1) + 1
+			if searching and points ~= nil and index <= #points then
+				local nextMind = table.clone(current)
+				nextMind.searchIndex = index
+				nextMind.arrivedAt = nil
+				return { mind = nextMind, intent = { kind = "goTo", position = points[index], run = true } }
+			end
 			return giveUp(current, senses)
 		end
 		return { mind = current, intent = { kind = "idle" } }

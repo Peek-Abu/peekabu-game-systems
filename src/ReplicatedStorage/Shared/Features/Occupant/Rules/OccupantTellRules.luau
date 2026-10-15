@@ -75,4 +75,9 @@ function OccupantTellRules.flicker(distance: number, now: number, seed: number):
 	return math.noise(now * FLICKER_RATE, seed) > FLICKER_THRESHOLD
 end
 
+-- Only actual luminous panels or explicitly marked emitter geometry change, never the fixture housing.
+function OccupantTellRules.isEmitter(material: Enum.Material, explicit: boolean): boolean
+	return explicit or material == Enum.Material.Neon
+end
+
 return OccupantTellRules
