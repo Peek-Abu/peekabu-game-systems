@@ -48,10 +48,15 @@ return table.freeze({
 	NOISE_RADIUS = 40,
 	-- A pile shrinks to this fraction of its size as progress reaches full.
 	MIN_SCALE = 0.35,
-	-- The hold-to-vacuum Input action, how often the client re-aims, and how squarely it must face a pile.
+	-- The hold-to-vacuum Input action and how often the client re-aims.
 	ACTION = "vacuum",
 	AIM_INTERVAL = 0.1,
-	AIM_MIN_DOT = 0.35,
+	-- Which pile is being cleaned (VacuumTargetRules, studs flat to a pile's rim): within 2 of the floor head,
+	-- or 1 of the feet, or 5 of the feet inside a cone (dot 0.5, 60 degrees each side) round the body's facing;
+	-- never one more than 6 up or down. The server re-checks every tick with TARGET_SLACK more studs, as it
+	-- sees the vacuumer a moment later than the client that picked the pile.
+	TARGET = table.freeze({ head = 2, underfoot = 1, range = 5, minDot = 0.5, height = 6 }),
+	TARGET_SLACK = 2,
 	-- Where a dust bag lands: this far ahead of the HumanoidRootPart, on the floor under that point, kept inside
 	-- (CarryPlacementSystem.floorNear from the root, so never through a wall); and how far its centre stays from
 	-- a wall (the bag is 2 studs wide).

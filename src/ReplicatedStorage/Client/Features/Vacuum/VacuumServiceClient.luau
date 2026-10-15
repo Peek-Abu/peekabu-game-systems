@@ -2,11 +2,12 @@
 --[=[
 	VacuumServiceClient: hold to vacuum (Cleanup Crew spec §4). While the `vacuum` action is held (left
 	mouse, gamepad R2, or the Shift HUD's touch button through beginVacuum / endVacuum), it re-aims every
-	AIM_INTERVAL at the pile the player faces within range (VacuumAimUtils) and keeps Interaction's channel
+	AIM_INTERVAL at the pile the vacuum is on (VacuumTargetRules: the wand's floor head and the body's facing,
+	not the camera; the pile already being cleaned is kept while it is in reach) and keeps Interaction's channel
 	on it; letting go stops the channel, and the pile keeps its progress. Nothing is sent while carrying.
 	The server decides everything. VacuumFeedbackSystem plays the suction, whine, pop and canister sounds.
 
-	Spec-exempt shell (Input, Camera, CollectionService); the aim is the specced VacuumAimUtils.
+	Spec-exempt shell (Input, CollectionService); the aim is the specced VacuumTargetRules.
 
 	@class VacuumServiceClient
 ]=]
@@ -14,10 +15,9 @@
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
 
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
-local VacuumAimUtils = require(ReplicatedStorage.Client.Features.Vacuum.Utils.VacuumAimUtils)
+local VacuumTargetRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumTargetRules)
 local VacuumFeedbackSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumFeedbackSystem)
 local CarryServiceClient = require(ReplicatedStorage.Client.Features.Carry.CarryServiceClient)
 local InputActionRegistry = require(ReplicatedStorage.Client.Features.Input.Data.InputActionRegistry)
@@ -32,30 +32,40 @@ local generation = 0
 local missed = false
 local unbinders: { () -> () } = {}
 
--- The pile the local player is facing within range, or nil.
-local function aimedPile(): Instance?
+-- The pile the local player's vacuum is on (VacuumTargetRules: near the wand's floor head, underfoot, or in
+-- front of the body; never the camera), keeping `current` while it is in reach; nil when none is.
+local function aimedPile(current: Instance?): Instance?
 	local character = Players.LocalPlayer.Character
 	local root = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil
-	local camera = Workspace.CurrentCamera
-	if root == nil or not root:IsA("BasePart") or camera == nil then
+	if character == nil or root == nil or not root:IsA("BasePart") then
 		return nil
 	end
-	local piles: { BasePart } = {}
-	local positions: { Vector3 } = {}
+	local tool = character:FindFirstChild(VacuumConstants.TOOL_NAME)
+	local head = if tool ~= nil then tool:FindFirstChild(VacuumConstants.FLOOR_HEAD_NAME) else nil
+	local parts: { BasePart } = {}
+	local piles: { VacuumTargetRules.Pile } = {}
+	local currentIndex: number? = nil
 	for _, pile in CollectionService:GetTagged(VacuumConstants.PILE_TAG) do
 		if pile:IsA("BasePart") then
-			table.insert(piles, pile)
-			table.insert(positions, pile.Position)
+			table.insert(parts, pile)
+			table.insert(piles, {
+				position = pile.Position,
+				radius = VacuumTargetRules.radius(pile.Size, pile:GetAttribute(VacuumConstants.BASE_SIZE_ATTRIBUTE)),
+			})
+			if pile == current then
+				currentIndex = #parts
+			end
 		end
 	end
-	local index = VacuumAimUtils.pick(
+	local index = VacuumTargetRules.pick(
 		root.Position,
-		camera.CFrame.LookVector,
-		positions,
-		VacuumConstants.RANGE,
-		VacuumConstants.AIM_MIN_DOT
+		root.CFrame.LookVector,
+		if head ~= nil and head:IsA("BasePart") then head.Position else nil,
+		piles,
+		VacuumConstants.TARGET,
+		currentIndex
 	)
-	return if index ~= nil then piles[index] else nil
+	return if index ~= nil then parts[index] else nil
 end
 
 local function localTool(): Tool?
@@ -147,7 +157,7 @@ local VacuumServiceClient: VacuumServiceClient = {
 		missed = false
 		task.spawn(function()
 			while holding and mine == generation do
-				local target = if CarryServiceClient:isCarrying() or not selected() then nil else aimedPile()
+				local target = if CarryServiceClient:isCarrying() or not selected() then nil else aimedPile(lastTarget)
 				if target ~= nil then
 					lastTarget = target
 					missed = false

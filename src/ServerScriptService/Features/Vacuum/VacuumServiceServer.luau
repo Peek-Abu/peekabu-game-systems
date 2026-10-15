@@ -4,7 +4,8 @@
 	part carrying the `pile` Interaction channel kind, so holding the vacuum on it is Interaction's channel:
 	progress accumulates on the server, is kept on release, and several players' rates add. This service:
 
-	- registers the channel (8 studs, 2.5 s) and refuses it to a player whose hands hold an item;
+	- registers the channel (8 studs, 2.5 s) and refuses it to a player whose hands hold an item, or whose
+	  vacuum is not on that pile (VacuumTargetRules, the client's own pick with slack; re-checked every tick);
 	- shrinks a pile as its ChannelProgress rises;
 	- on completion destroys the pile, adds it to the credited channeler's canister (VacuumCanisterUtils),
 	  publishes the public `canister` field, and on overflow fires `dustBagReady` (Cargo spawns the bag);
@@ -36,6 +37,7 @@ local VacuumCanisterUtils = require(ServerScriptService.Features.Vacuum.Utils.Va
 local VacuumChannelTracker = require(ServerScriptService.Features.Vacuum.State.VacuumChannelTracker)
 local VacuumToolSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumToolSystem)
 local VacuumEquipmentRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumEquipmentRules)
+local VacuumTargetRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumTargetRules)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
 local CarryPlacementSystem = require(ServerScriptService.Features.Carry.Systems.CarryPlacementSystem)
 local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
@@ -71,6 +73,29 @@ local function rootOf(player: Player): BasePart?
 	local character = player.Character
 	local root = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil
 	return if root ~= nil and root:IsA("BasePart") then root else nil
+end
+
+-- The client's pick re-checked (VacuumTargetRules, with TARGET_SLACK): `pile` is near the held wand's floor
+-- head, underfoot, or in front of the body.
+local SERVER_REACH = VacuumTargetRules.widened(VacuumConstants.TARGET, VacuumConstants.TARGET_SLACK)
+local function inReach(player: Player, pile: Instance): boolean
+	local root = rootOf(player)
+	if root == nil or not pile:IsA("BasePart") then
+		return false
+	end
+	local character = player.Character
+	local tool = if character ~= nil then character:FindFirstChild(VacuumConstants.TOOL_NAME) else nil
+	local head = if tool ~= nil then tool:FindFirstChild(VacuumConstants.FLOOR_HEAD_NAME) else nil
+	return VacuumTargetRules.reaches(
+		root.Position,
+		root.CFrame.LookVector,
+		if head ~= nil and head:IsA("BasePart") then head.Position else nil,
+		{
+			position = pile.Position,
+			radius = VacuumTargetRules.radius(pile.Size, pile:GetAttribute(VacuumConstants.BASE_SIZE_ATTRIBUTE)),
+		},
+		SERVER_REACH
+	)
 end
 
 -- Scales a pile down with its progress, keeping it on the floor.
@@ -188,7 +213,7 @@ local VacuumServiceServer: VacuumServiceServer = {
 						VacuumToolSystem.isEquipped(character),
 						CarryServiceServer:getCarried(player) ~= nil,
 						humanoid ~= nil and humanoid.Health > 0
-					)
+					) or not inReach(player, target)
 				then
 					return false
 				end
