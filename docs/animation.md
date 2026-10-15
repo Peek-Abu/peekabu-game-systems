@@ -257,7 +257,10 @@ Only arm joints are driven; no rig joint's C0/C1 or attachment is written.
 
   **The validator** (`AnimationCarryHarness`, carriers from `AnimationCarryRigHarness`): every template in the cargo
   folder, on Pippa (built from her art as EmployeeSpawnSystem installs her) and a stock R15, planned and LIVE (the
-  engine's IK over each carrier's own idle and two walk frames), judged by the same rules, plus the contract. Its spec
+  engine's IK over each carrier's own idle and two walk frames), judged by the same rules, plus the contract. A frame
+  is sampled only after its clip has loaded and is checked shown at its time and full weight: a track's `Length` is 0
+  until the asset arrives and a `TimePosition` set before then is lost, so the first hold of a session once judged
+  frame 0 or the rest pose and the result depended on suite order. Its spec
   runs in the TestEZ suite (`Workspace.RunTests = true`) and prints a report; from a server Script in play:
   `print(Harness.format(Harness.run({})))` (`{ record = true }` keeps every live pose). A template, rig or rule change
   that would show a hold wrong fails it.
