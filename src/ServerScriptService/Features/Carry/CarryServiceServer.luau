@@ -5,8 +5,8 @@
 
 	Objects tagged `Carryable` (with a registered `CarryKind`) are made interactable with the `carry`
 	interaction kind, so picking up goes through Interaction's prompt and checks. A held object is welded
-	to the carrier's body where its hold puts it (AnimationCarrySystem.mount: the UpperTorso for an item on the
-	forearms, the right hand for a hanging bag, the HumanoidRootPart for a cart), so it moves with the idle, walk and
+	to the carrier's body where its hold puts it (AnimationCarrySystem.mount: the UpperTorso for an item held up on
+	the palms, the right hand for one hanging from it, the HumanoidRootPart for one pushed), so it moves with the idle, walk and
 	run like part of the character (massless and non-colliding while held: no physics fight), slows the carrier
 	by its weight, and is published (`CarriedBy` attribute, public `carrying` field). Drop / throw arrive
 	as validated packets; death, respawn and leaving drop it. Whatever is put down or thrown stays inside
@@ -52,6 +52,9 @@ if not InteractionRegistry.has(CarryConstants.INTERACTION_KIND) then
 end
 
 type SavedPart = { part: BasePart, massless: boolean, canCollide: boolean }
+
+-- The tag each moving joint gets, for the client that moves it (CarrySwaySystem, CarryPushSystem).
+local JOINT_TAGS: { [string]: string } = { swing = CarryConstants.HANG_TAG, follow = CarryConstants.PUSH_TAG }
 
 type Held = {
 	target: PVInstance,
@@ -319,7 +322,7 @@ CarryServiceServer = {
 		end
 		root.Anchored = false
 		local prepared = if character ~= nil
-			then AnimationCarrySystem.prepare(character, target, kind, def.holdOffset)
+			then AnimationCarrySystem.prepare(character, target, kind, def.weight)
 			else nil
 		target:PivotTo(
 			if prepared ~= nil
@@ -331,35 +334,33 @@ CarryServiceServer = {
 			part = playerRoot,
 			c0 = playerRoot.CFrame:ToObjectSpace(root.CFrame),
 			c1 = CFrame.identity,
-			swings = false,
+			joint = "weld",
 		}
 		if prepared ~= nil and character ~= nil then
+			local broken = table.concat(prepared.report.violations, "; ")
+			if broken ~= "" then
+				log:warn(`{kind} held by {player.Name} breaks the carry rules: {broken}`)
+			end
 			-- The contacts are on the item's visible art, not its invisible proxy (AnimationCarrySystem.visibleBox).
-			local boxFromRoot = root.CFrame:ToObjectSpace(target:GetPivot() * prepared.box)
-			local layout: AnimationCarrySystem.Layout = {
-				offset = prepared.layout.offset,
-				right = boxFromRoot * prepared.layout.right,
-				left = if prepared.layout.left ~= nil then boxFromRoot * prepared.layout.left else nil,
-				under = prepared.layout.under,
-				hang = prepared.layout.hang,
-				hug = prepared.layout.hug,
-				mount = prepared.layout.mount,
-			}
-			contact = AnimationCarrySystem.bind(character, root, layout)
-			joint = AnimationCarrySystem.mount(character, root, layout) or joint
+			local boxInRoot = root.CFrame:ToObjectSpace(target:GetPivot() * prepared.box)
+			contact = AnimationCarrySystem.bind(character, root, prepared.hold)
+			joint = AnimationCarrySystem.mount(character, root, prepared.hold, boxInRoot) or joint
 		end
 		-- Part of the character's assembly while held, on the body part its hold rides (so it inherits the animation).
-		-- A hanging bag's joint is a Motor6D at its handle: every client swings it there (CarrySwaySystem); the server
-		-- never moves it, so its physics stay those of a weld.
-		local weld: JointInstance = if joint.swings then Instance.new("Motor6D") else Instance.new("Weld")
+		-- A hanging bag's joint is a Motor6D at its handle: every client swings it there (CarrySwaySystem); a pushed
+		-- item's is a Motor6D every client slides after the torso (CarryPushSystem). The server never moves either, so
+		-- their physics stay those of a weld.
+		local weld: JointInstance = if joint.joint ~= "weld" then Instance.new("Motor6D") else Instance.new("Weld")
 		weld.Name = "CarryWeld"
 		weld.Part0 = joint.part
 		weld.Part1 = root
 		weld.C0 = joint.c0
 		weld.C1 = joint.c1
+		weld:SetAttribute(CarryConstants.TORSO_REST_ATTRIBUTE, joint.torsoRest)
 		weld.Parent = root
-		if joint.swings then
-			CollectionService:AddTag(weld, CarryConstants.HANG_TAG)
+		local tag = JOINT_TAGS[joint.joint]
+		if tag ~= nil then
+			CollectionService:AddTag(weld, tag)
 		end
 
 		local savedWalkSpeed = if humanoid ~= nil then humanoid.WalkSpeed else nil

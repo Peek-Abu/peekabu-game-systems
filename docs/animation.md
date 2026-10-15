@@ -174,97 +174,93 @@ fades). Two things to know:
 
 Holds are native `IKControl`s the server creates under the holder's Humanoid (every client's Animator solves
 them), weight 1 over whatever locomotion clip plays, so idle, walk and run all keep the hands on the object.
-Only arm chains are driven; no joint, attachment or Transform is written.
+Only arm joints are driven; no rig joint's C0/C1 or attachment is written.
 
-- **Carried cargo** (`AnimationCarrySystem`, planned by `AnimationCarryContactUtils`): `measure` reads the
-  carrier from its rig in root space (shoulders, reach to the hand's end and to the palm's centre, the hand's
-  length, torso front, head front and bottom, floor), **at the rig's rest pose** (its Motor6D chain), not the
-  frame the idle is on: Pippa's idle nods her head ~0.15 stud forward and back, and measuring it live moved
-  the hold with the moment of the pick-up (a tall item went out past her face or into it). **The item is carried on the forearms** (2026-10-14):
-  both palms up under its visible bottom face, shoulder-width apart (brought in under a narrow item; a big
-  item wider than the carrier is fine), fingers forward and rolled ~12 degrees inward, the elbows bent down
-  toward a pole below, behind and just outside each shoulder, the item resting on the palms with its near face
-  against the belly. The palms sit about an upper arm (0.55 reach) below the shoulders, lower for a taller
-  item (up to 0.75), stepping lower or out past the face when it would hit the head; when the arms cannot
-  reach that far out either, as far out as they do reach, so as little of the item as possible is in the face. Short arms that cannot
-  reach that low around a round belly (Pippa at 1.25x: shoulders 0.75 behind her belly front, ~1.4 studs to
-  the palm) hold it as high as they need to, never higher than a quarter reach below the shoulders. The earlier
-  hold, hands reaching to the item's near corners and sides, read as stiff arms with twisted wrists.
-  The palm is found from the rig, not assumed (`palmOf` / `AnimationCarryContactUtils.palmFrame`): the
-  fingers run from the wrist to the hand's grip attachment, and the palm is the side that faces the body at
-  rest (down on Pippa's T-posed rig, inward on stock R15), so the IK end effector is the palm's face, oriented.
-  A caller-owned `holdOffset` (the bulky cart, pushed ahead) keeps its old hold: hands on its near side or
-  face, none when they cannot reach it, which is the case for the filing-cabinet cart (its near face 2.75
-  studs out): it is pushed hands-free.
-  **Pippa in practice** (Studio, 2026-10-14; `characters/pippa/qa/carry-v3/`): her arms are ~1 stud to the
-  wrist and her belly is ~0.8 in front of her shoulders, so the hands under an item in front of the belly are
-  at full reach: her arms are straight, angled down and forward, for every item (stock R15 keeps bent elbows,
-  0.66-0.76 of its reach). An item taller than ~1 stud cannot sit at her belly under her head and her hands
-  cannot reach under it any lower, so it rides out past her face at waist height, covering the face from the
-  front. That is the geometry, not a tuning gap.
-  **Arms outside a round body** (playtest 2026-10-14: on small items "your arms clip through the body"; QA in
-  `characters/pippa/qa/carry-v4/`). Pippa's shoulder joints are inside her round torso, so a straight arm from
-  them to hands meeting in front of the belly runs through the torso and the vest. `measure` now reads the
-  torso's half width (`torsoHalfWidth`); when the shoulders are inside it the plan (a) puts the palms
-  `ROUND_OUT` past the torso's side when the item is wide enough, and (b) holds a narrow item (palms pulled in
-  more than `NARROW_IN` from the shoulders: the plaque, the golden stapler) higher (`UNDER_DROP_NARROW`) with
-  the fingers turned in 45 degrees, so the wrists sit out toward the shoulders and the arms bend. `bind` then
-  places each elbow's pole with `AnimationCarryContactUtils.elbow`: the default pole (down, behind, just out)
-  when it keeps the arm (the upper arm's outer half, the forearm's first 70%) outside the torso ellipsoids
-  (grown by the vest's thickness), else the bend least inside them nearest to it, which on Pippa swings the
-  elbows out to the sides with the forearms coming back in to the item. Stock R15 (shoulders at the torso's
-  edge) is unchanged: the default pole already keeps its arms clear and no `torsoHalfWidth` rule applies.
-  **The hold is planned on what can be seen** (`AnimationCarrySystem.visibleBox`: the item's parts with
-  Transparency below 1, boxed in its pivot frame). Cargo is an invisible size-class proxy (`CargoRegistry`
-  partSize, 2-3 studs) with its art welded inside it, uniformly fitted and standing on its floor, so the art
-  is smaller than the proxy on two axes; planning on the proxy put the hands in the air. A template can author
-  `CarryBodyFront` on the art (the point rested against the body, in place of the box's near face; the palms
-  go in from it): the office plant has it on its pot, since its box is set by leaves wider than the pot.
-  `CarryGripRight` / `CarryGripLeft` (handles on the pot's rim, for the old edge hold) are no longer read.
-  **Held items are part of the body** (playtest 2026-10-15: "items you are holding don't sway along with your
-  animations"; QA in `characters/pippa/qa/carry-v5/`). The item used to be welded to the HumanoidRootPart, which no
-  animation moves, so it stayed rigid while the torso and arms bobbed. `AnimationCarrySystem.mount` now picks the body
-  part per hold and CarryServiceServer joins the item to it (massless, non-colliding, part of the character's
-  assembly until it is released): the **UpperTorso** for an item on the forearms (the joint's C0 is taken from the
-  torso's REST frame, so the item sits where it was planned and then bobs, leans and turns with the idle, walk and
-  run; the IK'd hands, targeting the item, follow it: Pippa's box bobs 0.17-0.21 stud against the root and 0 against
-  the torso, palms within 0.013 of their contacts); the **RightHand** for a hanging bag; the **root** for the cart.
-  The shoulders are measured at rest too, and the plan checks the WRIST against the arm's reach, not just the palm
-  (the palm is rigidly offset from the wrist, so a palm held palm-up was planned up to 0.34 stud out of reach and the
-  hands floated under the box).
-  **Wrists stay neutral in every hold.** Each carry IK chain is the shoulder and elbow only (`ChainRoot` the
-  UpperArm, `EndEffector` the LowerArm, offset to the palm through the wrist joint at rest:
-  `AnimationCarrySystem.palmInLowerOf`). `bind` picks the elbow (`AnimationCarryContactUtils.elbow`) and turns the
-  planned palm into the frame that arm reaches exactly (`AnimationCarryContactUtils.neutralPalm`: the forearm laid
-  toward the contact, rolled so the palm faces as near the planned way as it can), with the pole past that elbow.
-  The hand was the end effector before, so the solver bent the wrist to aim it (the playtest's "the wrist bends
-  unnaturally"); now the wrist plays only the animation (Pippa's clips do not key it: 0 degrees measured). Studio,
-  every kind on Pippa: palms within 0.022 stud and 0.8 degrees of their targets.
-  **The hold rules** (`AnimationCarryRegistry` per kind, thresholds measured on the carrier in
-  `AnimationCarryContactUtils.plan`):
-  - **One hand** (`oneHandHang`; only light kinds, the cargo `tiny` / `light` size classes: the dust, rubbish and
-    bottle bags, the plaque, the golden stapler). It hangs from the RELAXED right hand: the arm down by the side, 8
-    degrees forward and 10-30 out (out only as far as clears the body's side by 0.08), the elbow just soft (0.92 of
-    the reach), never raised to lift it. It is turned so its longer level side runs front to back through the fist
-    (a bag's handle runs across its width, so a bag turns a quarter round; the stapler does not), by its handle (the
-    art's `CarryHandle`: the dust bag's tie loop, the rubbish bag's knot, the crate's arch; the top's centre without
-    one). It must then hang 0.22 off the floor; if not, or if no relaxed angle clears the body, it is too big for one
-    hand. The hand's IK target rides the UpperTorso (on the item it would chase itself), and the item is joined to
-    the hand by a Motor6D at the handle (tagged `CarryHang`) that `CarrySwaySystem` swings on every client: a damped
-    pendulum (`CarryFormulas.swayStep`) the handle's acceleration drives, the item always hanging plumb under it. The
-    server never writes its Transform. On Pippa (relaxed hand ~1.2 stud off the floor) the plaque and the stapler go
-    in one hand; a stock R15 also hangs the dust and rubbish bags.
-  - **Two-arm hug** (a one-hand kind too big for one hand and at least shoulder-wide: on Pippa every bag). Its near
-    face against the belly, the palms on its sides cupped 25 degrees up, fingers forward, as low as the arms reach
-    (0.95), the item centred on them but its top kept under the chin and its bottom 0.15 off the floor; of the depths
-    along its sides the one holding it lowest wins. Joined to the UpperTorso like the forearm hold. Pippa: the dust bag
-    0.59-2.64 above the floor (chin 2.78), the arms ~50 degrees from straight down. The old one-hand hang lifted her
-    arm until the bag cleared the floor: the hand ~0.4 below the shoulder, the arm out ~60 degrees, the wrist bent.
-    Narrower than the shoulders, it goes on the forearms instead.
-  - **Forearms** (`twoHandSupport`: rigid or heavier kinds, always two hands): the palms-up hold above. `chest` (a
-    small item cupped up at the chest) is still planned but no kind uses it now: small items go in one hand.
-  - **Cart** (`cart`: the filing cabinet), pushed hands-free at its offset.
-  Evidence: `characters/qa/holds-v2` (Studio captures, before / after contact sheet).
+- **Carried cargo**: one system decides and shows every hold, for any item, with no per-item tuning. A new prop
+  needs only a template that keeps the contract below; the validator then proves it on both test carriers.
+
+  **The pipeline** (all in the carrier's HumanoidRootPart space at the rig's REST pose):
+  1. `AnimationCarryMeasureSystem.measure` reads the carrier from its rig: each arm bone by bone (joint pivots,
+     rest frames, the palm from the hand and its grip), through Motor6Ds or the upgraded avatar joints'
+     AnimationConstraints (a stock R15 built in this place has those, with BallSocketConstraint limits); the torso and
+     head as stacked slices of their REAL surface (rays at eight heights; a round body is narrow at the shoulders and
+     wide at the belly, and its box's ellipsoid put Pippa's arms "into" a chest she does not have); the floor.
+  2. `AnimationCarrySurfaceSystem` probes the item's VISIBLE surface (rays against its parts with Transparency below
+     1, made queryable only while planning). The hold is planned on that surface, never on a box round it.
+  3. `AnimationCarryHoldRules.choose` picks the styles to try from the item's visible size, carry weight and handle,
+     against this carrier's arms and head (below).
+  4. `AnimationCarryContactUtils.plan` places the item and finds each palm's contact on the real surface
+     (`AnimationCarrySurfaceUtils`: under the bottom, cupping a lower side, flat on a face, the top), solves both arms
+     in full (`AnimationCarryArmUtils.solve`) and judges every candidate with `AnimationCarryPoseRules`; the first
+     that passes is the hold (else the least bad, which the validator then fails).
+  5. `AnimationCarrySystem.mount` joins the item to the body part its hold rides; `bind` drives the arms.
+
+  **The hold rules** (`AnimationCarryHoldRules`; thresholds there and in `AnimationCarryContactUtils`):
+  - **push** only, for anything as heavy as furniture (weight >= 10: the filing cabinet). It stands on the floor in
+    front, its near face just off the belly (and clear of the head, judged on the head's real surface), both palms
+    flat on that face a little below the shoulders, fingers up and turned in, elbows bent.
+  - **hand** first, for a light item (weight <= 1.5) a hand can close round: a `CarryHandle`, or a level side no
+    wider than 1.6 hand lengths (the plaque, the stapler). It hangs from the relaxed right arm (10-30 degrees out,
+    8 forward, never raised) with its handle in the fist (the hand's GripAttachment), turned so its longer level side
+    runs front to back, and swings (CarrySwaySystem). Not offered when it would not clear the floor and the body from
+    a relaxed arm: on Pippa every 2-stud bag goes on to `under`; a stock R15 hangs them.
+  - **under** for everything else: the recycling-box hold. The near side against the belly, the palms on the real
+    bottom (palm up, a little in from the near edge, wide first so a round body's arms angle out round the belly),
+    as low as the arms comfortably reach; where no bottom is in reach or flat enough (a 2-stud sack on 1-stud arms, a
+    pot narrower than the shoulders) the palms cup the item's lower sides instead, so it rides lower.
+  - **push** before **under** for a heavy item (weight >= 7) whose top would rise past the middle of the carrier's
+    head if lifted (the water jug and the coffee machine): it would hide the carrier's eyes. Push is always the last
+    resort.
+  - An art can pin its own (`CarryHold` attribute on the template: "hand", "under" or "push"), tried first;
+    `AnimationCarryRegistry` can pin a kind the same way (empty: no kind needs it).
+  - **Too big for the arms**: nothing is scaled. A lifted item may cover the face, and press into the face of a toon
+    whose head overhangs its belly by up to 0.2 stud: Pippa's face plate is 0.45 in front of her belly, so a box taller
+    than ~1 stud held at her belly meets her muzzle 0.13-0.18 deep (the recycling box the playtest approved does; her
+    1-stud arms cannot hold it lower or further out). A heavy item that would hide the eyes is pushed instead when the
+    arms can reach its face (not the fish tank: its face is below her reach). Scaling an item down while it is held
+    would clear the face; it is not done (it changes how big the item looks in the hands).
+
+  **Joint safety** (`AnimationCarryArmUtils`, limits in `LIMITS`): the elbow is a hinge fixed in the upper arm
+  (square to the forearm and forward at rest), so the upper arm is turned to carry the bend in that hinge and it
+  never bends sideways; the forearm then rolls within pronation 85 / supination 95 of the palm-in neutral; the wrist
+  bends (flexion / extension only) up to 65 for what the forearm could not turn (palms flat on a pushed face, or
+  under a tray on straight arms). `AnimationCarryPoseRules` checks elbow flexion (-5..150) and side bend (15),
+  forearm roll, wrist (70, 15 sideways, 10 twist), the upper arm (35 above level, 45 behind, no forward-pointing
+  elbow), the palm ON the visible surface (0.06 stud, 45 degrees; one hand: the fist 0.06 from the handle), the arm
+  out of the torso (0.15 of the way into a slice; Pippa's own idle reaches 0.12) and the item, the item out of the
+  torso (0.06) and head (0.2 lifted, 0.03 pushed, measured as how far the body's surface is sunk into the item; the
+  head includes everything joined to it: face plate, ears, glasses), and off the floor (0.1; pushed: on it).
+
+  **Driving the arms (IK research and decision, 2026-10-15).** The engine's `IKControl` stays the solver: it
+  replicates, every client's Animator solves it over whatever locomotion plays, and it reaches a 6-DoF target to
+  0.0001 stud. What it cannot do is pick anatomy: a two-bone 6-DoF chain keeps the animation's upper-arm roll, which
+  bent Pippa's elbows ~50 degrees out of their hinge with the forearm twisted ~86 (measured live). So the anatomy is
+  solved analytically (`AnimationCarryArmUtils.solve`) and each joint gets its own single-joint Transform control
+  (`bind`: shoulder, elbow, wrist; priorities 20-23 resolve in that order), so the solver has nothing left to choose.
+  The targets ride the UpperTorso at their rest-pose place (an item on the torso or the hand never chases itself);
+  a pushed item's ride the item, with a two-bone re-reach onto it after the torso's bob, and CarryPushSystem slides
+  the item level after the torso (a stock walk leans the torso a stud forward of the root). Findings that shaped
+  this: an end effector AT its joint's pivot (a stock R15 hand's WristRigAttachment) has no lever and returns NaN,
+  so the hand is driven by its grip; IKControl honours BallSocketConstraint / HingeConstraint limits in its model
+  (the IK joint-constraint feature), and against the upgraded avatar joints' ball sockets a single-joint 6-DoF
+  control returns NaN, so `bind` lifts those limits while the arm is driven (the planned pose is already inside
+  anatomical limits) and puts them back on release; `SmoothTime` is 0: a 0.08 s spring trailed the hands behind a
+  walking torso. Hinge constraints were not used for the elbow: a pure hinge forbids the forearm roll a carry needs.
+
+  **The template contract** (cargo kits: `ReplicatedStorage.Assets.CleanupCrew.ArtKits.<kit>.cargo.<kind>`):
+  - Every visible MeshPart uses `CollisionFidelity = PreciseConvexDecomposition`: its collision is the "visible
+    surface" the palms go on (Default was measured up to 0.44 stud off it: the monitor; 0.36 the coffee machine).
+  - `FrontAxis` as ArtVisualSystem expects; nothing invisible needs authoring.
+  - Optional, only where automation cannot decide: `CarryHandle` (Attachment: the point a fist holds it by; else the
+    top of its surface), `CarryBodyFront` (Attachment: the depth held against the body, a pot under wider leaves),
+    `CarryHold` (attribute on the template model). `CarryGripLeft` / `CarryGripRight` are not read.
+
+  **The validator** (`AnimationCarryHarness`, carriers from `AnimationCarryRigHarness`): every template in the cargo
+  folder, on Pippa (built from her art as EmployeeSpawnSystem installs her) and a stock R15, planned and LIVE (the
+  engine's IK over each carrier's own idle and two walk frames), judged by the same rules, plus the contract. Its spec
+  runs in the TestEZ suite (`Workspace.RunTests = true`) and prints a report; from a server Script in play:
+  `print(Harness.format(Harness.run({})))` (`{ record = true }` keeps every live pose). A template, rig or rule change
+  that would show a hold wrong fails it.
 - **The vacuum** (`VacuumHoldFormulas`, `AnimationVacuumHoldSystem`): the same full-size vacuum for
   everyone. Its body hangs ~1.5 studs and its floor head ~1.9 below the grip, where a stock avatar's
   hanging hand holds it upright. For a shorter holder the hold is fitted, not the vacuum: it is tilted
@@ -299,6 +295,7 @@ the arms stay straight out. So that game leaves `Retargeting` at `Default` (idea
 | `animationtracks` | Dump my client's live bookkeeping to the client log |
 | `animationreport` | Registry census + probe every asset id, dead ones named by registry key |
 | `LocomotionEnabled=false` | Is what I'm seeing ours at all? |
+| Carry validator (`AnimationCarryHarness`, in the TestEZ suite) | Does every carry template show right on Pippa and a stock R15, planned and live, idle and walking? Prints a per-hold report |
 
 ## What this system deliberately does NOT do (yet)
 

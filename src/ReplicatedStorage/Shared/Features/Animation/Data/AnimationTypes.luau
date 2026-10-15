@@ -152,4 +152,129 @@ function AnimationTypes.layerAt(index: number): AnimationLayer?
 	return ANIMATION_LAYERS[index]
 end
 
+-- ===================================================================================================
+-- Carrying (AnimationCarryArmUtils, AnimationCarryHoldRules, AnimationCarryContactUtils,
+-- AnimationCarryPoseRules, AnimationCarrySystem). Everything is in the carrier's HumanoidRootPart space at the rig's
+-- rest pose unless it says otherwise. The contract is in docs/animation.md ("Holding things").
+-- ===================================================================================================
+
+--[=[
+	How an item is held: `hand` (one hand, hanging from the relaxed right hand by its handle and swinging),
+	`under` (both hands under it, palms up on its real bottom surface, riding the upper torso) or `push` (it stands on
+	the floor in front, both palms flat on its near face, riding the root).
+	@type CarryStyle "hand" | "under" | "push"
+]=]
+export type CarryStyle = "hand" | "under" | "push"
+
+-- The body part a held item is joined to: the root (pushed), the UpperTorso (under) or the RightHand (hand).
+export type CarryMount = "root" | "torso" | "rightHand"
+
+--[=[
+	One arm of a carrier, read from its rig at rest (AnimationCarryArmUtils).
+	@interface CarryArm
+	.side number -- 1 right, -1 left
+	.shoulder Vector3 -- the shoulder joint
+	.upperRest CFrame -- the UpperArm, LowerArm and Hand part frames
+	.lowerRest CFrame
+	.handRest CFrame
+	.shoulderInUpper Vector3 -- joint pivots in their parts' space
+	.elbowInUpper Vector3
+	.elbowInLower Vector3
+	.wristInLower Vector3
+	.wristInHand Vector3
+	.palmInHand CFrame -- the palm: LookVector along the fingers, UpVector out of the palm
+	.gripInHand CFrame -- where a closed hand holds a handle (its GripAttachment), turned as the palm
+	.handLength number -- the hand along its fingers
+]=]
+export type CarryArm = {
+	side: number,
+	shoulder: Vector3,
+	upperRest: CFrame,
+	lowerRest: CFrame,
+	handRest: CFrame,
+	shoulderInUpper: Vector3,
+	elbowInUpper: Vector3,
+	elbowInLower: Vector3,
+	wristInLower: Vector3,
+	wristInHand: Vector3,
+	palmInHand: CFrame,
+	gripInHand: CFrame,
+	handLength: number,
+}
+
+-- An arm's three part frames.
+export type CarryPose = { upper: CFrame, lower: CFrame, hand: CFrame }
+
+-- A body part, or one slice of it, as an ellipsoid.
+export type CarryBody = { centre: Vector3, radii: Vector3 }
+
+--[=[
+	The carrier as the carry planner sees it.
+	@interface CarryRig
+	.right CarryArm
+	.left CarryArm
+	.front number -- the torso's front (most negative Z)
+	.headFront number -- the head's front (most negative Z)
+	.headBottom number -- the head's lowest and highest points (Y)
+	.headTop number
+	.floor number -- the floor under the feet (Y)
+	.torsoHalfWidth number -- the torso's half width (X): a shoulder inside it is a round body's (Pippa)
+	.body { CarryBody } -- the torso (UpperTorso, LowerTorso) the arms keep out of, as stacked slices of its real
+	surface
+	.head { CarryBody } -- the head an item keeps out of, the same way
+]=]
+export type CarryRig = {
+	right: CarryArm,
+	left: CarryArm,
+	front: number,
+	headFront: number,
+	headBottom: number,
+	headTop: number,
+	floor: number,
+	torsoHalfWidth: number,
+	body: { CarryBody },
+	head: { CarryBody },
+}
+
+--[=[
+	A ray against an item's VISIBLE surface, in its box space (the box around its visible parts, centred on the
+	origin): from `from` along `along` (its length is the reach). Returns the first hit and the surface's outward
+	normal there, or nil.
+	@type CarryProbe (from: Vector3, along: Vector3) -> (Vector3?, Vector3?)
+]=]
+export type CarryProbe = (from: Vector3, along: Vector3) -> (Vector3?, Vector3?)
+
+--[=[
+	An item to hold, in its box space: the size of the box around its visible parts, a probe of their real surface,
+	and what its art authors (`CarryHandle`: the point a hand holds it by; `CarryBodyFront`: the depth held against
+	the body).
+	@interface CarryItem
+	.size Vector3
+	.probe CarryProbe
+	.handle Vector3?
+	.bodyZ number?
+]=]
+export type CarryItem = { size: Vector3, probe: CarryProbe, handle: Vector3?, bodyZ: number? }
+
+--[=[
+	A planned hold (AnimationCarryContactUtils.plan).
+	@interface CarryHold
+	.style CarryStyle
+	.offset CFrame -- the item's box in root space
+	.right CFrame -- the right palm's contact, box space (a palm frame: UpVector into the item)
+	.left CFrame? -- the left palm's (nil for one hand)
+	.rightPose CarryPose -- the arms' poses that reach them (root space)
+	.leftPose CarryPose?
+	.mount CarryMount
+]=]
+export type CarryHold = {
+	style: CarryStyle,
+	offset: CFrame,
+	right: CFrame,
+	left: CFrame?,
+	rightPose: CarryPose,
+	leftPose: CarryPose?,
+	mount: CarryMount,
+}
+
 return AnimationTypes

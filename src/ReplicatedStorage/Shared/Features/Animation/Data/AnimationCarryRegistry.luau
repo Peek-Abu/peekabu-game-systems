@@ -1,43 +1,27 @@
 --!strict
 --[=[
-	AnimationCarryRegistry: how each cargo kind is held (static data, per kind; never inferred from price or icon).
+	AnimationCarryRegistry: per-kind OVERRIDES of how a carried kind is held. Empty by design.
 
-	The hold rules (AnimationCarryContactUtils.plan; every hold keeps the wrists neutral, only the shoulders and
-	elbows aim the hands):
-
-	- `oneHandHang`: may be held in ONE hand: only light kinds (the cargo `tiny` and `light` size classes), soft bags
-	  and small items. It hangs from the relaxed right hand (the arm down by the side, 10-30 degrees out, 8 forward)
-	  by its tie or handle (`CarryHandle` on the art; else its top) and swings from it, when it then clears the
-	  floor and the body's side. Too big for that on this carrier (Pippa's relaxed hand is ~1.2 studs off the floor:
-	  every bag), it is hugged with both arms instead (palms on its sides, low in front, under the chin), or carried
-	  on the forearms when it is narrower than the shoulders.
-	- `twoHandSupport`: rigid or heavier things, always two hands: on both forearms, palms up under its bottom, the
-	  item riding on the upper torso.
-	- `chest`: a small item cupped up at the chest from below, elbows out on a round-bodied carrier (no kind uses it
-	  now: small items go in one hand).
-	- `cart`: pushed ahead at its caller-owned offset, on the root (it does not bob with the walk).
+	Holds are chosen automatically from what can be seen of the item and its weight against the carrier's body
+	(AnimationCarryHoldRules) and planned on its real surface (AnimationCarryContactUtils), so a new prop needs no
+	entry here. Pin a kind only when a game design wants a hold the rules would not pick; the art can also pin its
+	own (`CarryHold` attribute on the template). An override is tried first; the rules' order follows it.
 
 	@class AnimationCarryRegistry
 ]=]
-export type Style = "twoHandSupport" | "chest" | "oneHandHang" | "cart"
-local styles: { [string]: Style } = {
-	rubbishBag = "oneHandHang",
-	dustBag = "oneHandHang",
-	bottleBag = "oneHandHang",
-	recyclingBox = "twoHandSupport",
-	officePlant = "twoHandSupport",
-	plaque = "oneHandHang",
-	monitor = "twoHandSupport",
-	waterJug = "twoHandSupport",
-	printer = "twoHandSupport",
-	coffeeMachine = "twoHandSupport",
-	fishTank = "twoHandSupport",
-	goldenStapler = "oneHandHang",
-	filingCabinet = "cart",
-}
-table.freeze(styles)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local AnimationTypes = require(ReplicatedStorage.Shared.Features.Animation.Data.AnimationTypes)
+
+local overrides: { [string]: AnimationTypes.CarryStyle } = {}
+table.freeze(overrides)
+
 local AnimationCarryRegistry = {}
-function AnimationCarryRegistry.get(kind: string): Style
-	return styles[kind] or "twoHandSupport"
+
+--[=[
+	The hold pinned for `kind`, or nil when the rules decide.
+]=]
+function AnimationCarryRegistry.get(kind: string): AnimationTypes.CarryStyle?
+	return overrides[kind]
 end
+
 return table.freeze(AnimationCarryRegistry)

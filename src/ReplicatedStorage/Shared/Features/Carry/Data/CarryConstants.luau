@@ -36,6 +36,11 @@ return table.freeze({
 	-- The tag on the joint a hanging bag swings from (a Motor6D at its handle; CarrySwaySystem drives it on clients),
 	-- the swing's tuning (CarryFormulas.swayStep) and the largest hand acceleration it reacts to (studs/s²).
 	HANG_TAG = "CarryHang",
+	-- The tag on the joint a pushed item rides the root by (a Motor6D; CarryPushSystem slides it on clients to keep its
+	-- place in front of the carrier's chest as the walk moves the torso), and the joint's attribute holding where the
+	-- carrier's UpperTorso is at rest (a Vector3 in root space) that the slide is measured from.
+	PUSH_TAG = "CarryPush",
+	TORSO_REST_ATTRIBUTE = "CarryTorsoRest",
 	SWAY = table.freeze({ omega = 7, damping = 0.35, maxTilt = math.rad(25) }),
 	SWAY_ACCEL_MAX = 120,
 })

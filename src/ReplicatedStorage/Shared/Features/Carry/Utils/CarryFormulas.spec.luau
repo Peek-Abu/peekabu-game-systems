@@ -110,4 +110,16 @@ return function()
 			expect(longRate.X == longRate.X).to.equal(true)
 		end)
 	end)
+
+	describe("pushFollow", function()
+		it("slides a pushed item level after the torso, in the joint's frame", function()
+			local slide = CarryFormulas.pushFollow(Vector3.new(0.2, -0.3, -1), CFrame.identity)
+			expect(slide.Position:FuzzyEq(Vector3.new(0.2, 0, -1), 1e-6)).to.equal(true)
+			expect(slide.Rotation:FuzzyEq(CFrame.identity, 1e-6)).to.equal(true)
+			-- A joint turned a quarter round: the same root-space slide, in its own axes.
+			local turned = CFrame.Angles(0, math.rad(90), 0)
+			local local_ = CarryFormulas.pushFollow(Vector3.new(0, 0, -1), turned)
+			expect(turned:VectorToWorldSpace(local_.Position):FuzzyEq(Vector3.new(0, 0, -1), 1e-6)).to.equal(true)
+		end)
+	end)
 end

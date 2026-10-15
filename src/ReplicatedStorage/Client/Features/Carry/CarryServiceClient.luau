@@ -2,7 +2,8 @@
 --[=[
 	CarryServiceClient: the `drop` and `throw` Input actions. While the local player carries something
 	(their public `carrying` field), pressing them sends one request to the server, which decides. Every bag hanging
-	from anyone's hand swings from it (CarrySwaySystem, stepped after each frame's animation).
+	from anyone's hand swings from it (CarrySwaySystem, stepped after each frame's animation), and every pushed item
+	keeps its place in front of its pusher's chest (CarryPushSystem, stepped before each frame's animation and IK).
 
 	Spec-exempt shell (Input, Camera, ByteNet); the rules are on the server.
 
@@ -22,6 +23,7 @@ local InputActionRegistry = require(ReplicatedStorage.Client.Features.Input.Data
 local InputServiceClient = require(ReplicatedStorage.Client.Features.Input.InputServiceClient)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local CarrySwaySystem = require(ReplicatedStorage.Client.Features.Carry.Systems.CarrySwaySystem)
+local CarryPushSystem = require(ReplicatedStorage.Client.Features.Carry.Systems.CarryPushSystem)
 local Observers = require(ReplicatedStorage.Packages.Observers)
 
 local unbinders: { () -> () } = {}
@@ -73,6 +75,17 @@ local CarryServiceClient: CarryServiceClient = {
 		local swaying = RunService.PreSimulation:Connect(sway.step)
 		table.insert(unbinders, function()
 			swaying:Disconnect()
+		end)
+		local push = CarryPushSystem.new()
+		table.insert(
+			unbinders,
+			Observers.observeTag(CarryConstants.PUSH_TAG, function(joint: Instance)
+				return if joint:IsA("Motor6D") then push.track(joint) else nil
+			end)
+		)
+		local pushing = RunService.PreAnimation:Connect(push.step)
+		table.insert(unbinders, function()
+			pushing:Disconnect()
 		end)
 		table.insert(
 			unbinders,

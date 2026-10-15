@@ -78,6 +78,15 @@ export type SwayTuning = {
 	maxTilt: number,
 }
 
+--[=[
+	The slide (a joint Transform, in the frame of the joint's `c0` on the carrier's root) that keeps a pushed item in
+	the same place in front of the carrier's chest: the UpperTorso has moved `torsoOffset` (root space) from where it is
+	at rest, and the item follows it level, along the floor, never up or down or tilted.
+]=]
+function CarryFormulas.pushFollow(torsoOffset: Vector3, c0: CFrame): CFrame
+	return CFrame.new(c0:VectorToObjectSpace(Vector3.new(torsoOffset.X, 0, torsoOffset.Z)))
+end
+
 -- The longest step integrated at once; a longer frame is split.
 local SWAY_SUBSTEP = 1 / 120
 
