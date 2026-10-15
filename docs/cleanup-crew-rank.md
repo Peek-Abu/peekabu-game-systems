@@ -14,7 +14,7 @@ player is labelled, not what they can do. Rank only goes up (XP is never taken a
 The ladder is data: one row per level in `RankRegistry` (`ReplicatedStorage/Shared/Features/Rank/Data/`). Levels 4
 ("Senior Clearance Associate", 300) and 5 ("Regional Clearance Lead", 600) are added later as two more rows; nothing
 else changes. The registry checks the ladder at load (level n is row n, level 1 needs 0 XP, thresholds strictly rise).
-Lanyard colours are data only for now; the overhead badge draws them as a strap and a band.
+The lanyard colour paints the uniform's lanyard strap and the ID card's band.
 
 ## XP per shift
 
@@ -64,8 +64,9 @@ a Studio session in either mode; persistence happens only on published servers.
   - Results card (`ShiftReviewPanel`, `RankSlip`): "CLEARANCE LEVEL n · RANK", the XP bar in the lanyard colour,
     "n / next XP", "Next: <rank> (<colour> lanyard) at <XP>", this shift's "+N XP" and breakdown, PROMOTED once a
     level-up lands, and the incident line for a caught player.
-  - Overhead badge (`RankTagSystem`, `RankNameTag`): a paper ID card with the name, "CL-n <rank>" and the lanyard
-    colour, over every character (including your own, `TAG_SHOW_OWN`). It replaces the engine's name label locally.
+  - The lanyard's ID card (`EmployeeGearSystem.badge`, server-painted so everyone sees it): the name, the rank, the
+    band and strap in the lanyard colour, and the wearer's skin portrait. There is no overhead badge (it was removed
+    after playtest: the card replaces it); the engine's own name label shows over each character.
 
 ## Testing hooks
 

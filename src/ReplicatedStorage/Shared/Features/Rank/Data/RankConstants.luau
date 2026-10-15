@@ -48,7 +48,7 @@ local RankConstants = {
 	}),
 	INCIDENT_LINE = "Incident Report filed",
 
-	-- The public-entry fields every client reads a player's rank from (name tags, the results card): the XP now, and
+	-- The public-entry fields every client reads a player's rank from (the results card): the XP now, and
 	-- the XP before the latest award (equal to it after a load), which tells the card a promotion has landed.
 	PUBLIC_XP_FIELD = "rankXp",
 	PUBLIC_PREV_XP_FIELD = "rankPrevXp",
@@ -57,14 +57,6 @@ local RankConstants = {
 	MAX_XP = 10000000,
 	MAX_SEASON_LENGTH = 32,
 	MAX_RUN_ID_LENGTH = 64,
-
-	-- The overhead name tag (RankTagSystem): shown on the local player too, and within this many studs.
-	TAG_SHOW_OWN = true,
-	TAG_MAX_DISTANCE = 60,
-	-- The gap between the character's top (ears and hats included) and the badge's foot, in studs.
-	TAG_HEIGHT = 0.2,
-	-- The badge's design size in px (RankNameTag), drawn pixel-sized (WorldBillboard "pixels").
-	TAG_PX = Vector2.new(200, 112),
 }
 
 return table.freeze(RankConstants)

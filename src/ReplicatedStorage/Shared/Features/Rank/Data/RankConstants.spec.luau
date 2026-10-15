@@ -20,9 +20,8 @@ return function()
 			expect(xp.crewExtracted).to.equal(5)
 		end)
 
-		it("sizes the name tag", function()
-			expect(RankConstants.TAG_PX.X > 0 and RankConstants.TAG_PX.Y > 22).to.equal(true)
-			expect(RankConstants.TAG_MAX_DISTANCE > 0).to.equal(true)
+		it("has no overhead name tag (the lanyard's ID card shows the rank)", function()
+			expect(RankConstants.TAG_PX).to.equal(nil)
 		end)
 
 		it("labels every award line", function()

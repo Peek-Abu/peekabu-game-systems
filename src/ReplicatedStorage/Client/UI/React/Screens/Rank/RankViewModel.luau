@@ -4,7 +4,6 @@
 
 	- `rankOf`: a player's XP (and the XP before their latest award) off the public entries
 	  (RankConstants.PUBLIC_XP_FIELD / PUBLIC_PREV_XP_FIELD); nil until the server has published it.
-	- `tag`: the overhead name tag (RankNameTag): the name, the rank, the level code and the lanyard colour.
 	- `slip`: the results card's rank slip (RankSlip): level, bar, XP, "Next: ...", this shift's XP breakdown (the
 	  shared RankFormulas over the published review, the same numbers the server paid), the incident line for a
 	  caught player, and PROMOTED once an award that crossed a level has landed.
@@ -22,14 +21,6 @@ local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTyp
 export type Rank = {
 	xp: number,
 	prevXp: number,
-}
-
-export type TagView = {
-	name: string,
-	rank: string,
-	-- The level code on the badge ("CL-2").
-	level: string,
-	lanyard: Color3,
 }
 
 export type SlipView = {
@@ -60,14 +51,6 @@ function RankViewModel.rankOf(publicPlayers: PublicPlayerTypes.PublicPlayerMap, 
 	end
 	local prev = entry[RankConstants.PUBLIC_PREV_XP_FIELD]
 	return { xp = xp, prevXp = if type(prev) == "number" then prev else xp }
-end
-
-function RankViewModel.tag(rank: Rank?, name: string): TagView?
-	if rank == nil then
-		return nil
-	end
-	local level = RankFormulas.levelFor(rank.xp)
-	return { name = name, rank = level.name, level = `CL-{level.level}`, lanyard = level.lanyard }
 end
 
 function RankViewModel.slip(
