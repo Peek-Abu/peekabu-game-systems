@@ -64,11 +64,54 @@ return function()
 			end
 		end)
 
+		it("hides every camera shell core inside its art piece, clear of the piece's faces", function()
+			for _, core in Constants.SHELL do
+				local outer = nil
+				for _, entry in Constants.GRAYBOX do
+					if entry.name == core.inside then
+						outer = entry
+					end
+				end
+				expect(outer).to.be.ok()
+				for _, axis in { "X", "Y", "Z" } do
+					expect(extent(core, axis, -1) > extent(outer, axis, -1)).to.equal(true)
+					expect(extent(core, axis, 1) < extent(outer, axis, 1)).to.equal(true)
+				end
+			end
+		end)
+
+		it("lays the floor's core over the deck, so the camera meets it before the invisible bed", function()
+			for _, core in Constants.SHELL do
+				if core.inside == "BoxFloor" then
+					expect(extent(core, "Y", -1) > 0).to.equal(true)
+					expect(core.size.X >= Constants.BED_SIZE.X - 0.5).to.equal(true)
+					expect(core.size.Z >= Constants.BED_SIZE.Z - 0.5).to.equal(true)
+				end
+			end
+		end)
+
+		it("hangs the clock and the overtime sheet inside the box on its front wall, apart and in reach", function()
+			local front = solid("TruckWallFront")
+			local wall = extent(front, "Z", -1)
+			local frames = { Constants.PAPERWORK.clock, Constants.PAPERWORK.sheet }
+			for _, frame in frames do
+				expect(extent(frame, "Z", 1) <= wall).to.equal(true)
+				expect(extent(frame, "Z", 1) > wall - 1).to.equal(true)
+				expect(math.abs(frame.centre.X) + frame.size.X / 2 < Constants.BED_SIZE.X / 2).to.equal(true)
+				expect(extent(frame, "Y", -1) > 2).to.equal(true)
+				expect(extent(frame, "Y", 1) < extent(solid("TruckRoof"), "Y", -1)).to.equal(true)
+			end
+			expect(extent(frames[1], "X", 1) < extent(frames[2], "X", -1)).to.equal(true)
+			expect(Constants.CLOCK_MOUNT.Z).to.be.near(wall - 0.06, 1e-6)
+		end)
+
 		it("gives every graybox piece a name, a size and a known shape", function()
-			for _, entry in Constants.GRAYBOX do
-				expect(#entry.name > 0).to.equal(true)
-				expect(entry.size.X > 0 and entry.size.Y > 0 and entry.size.Z > 0).to.equal(true)
-				expect(entry.shape == "Block" or entry.shape == "Cylinder" or entry.shape == "Wedge").to.equal(true)
+			for _, list in { Constants.GRAYBOX, Constants.CLOCK_GRAYBOX } do
+				for _, entry in list do
+					expect(#entry.name > 0).to.equal(true)
+					expect(entry.size.X > 0 and entry.size.Y > 0 and entry.size.Z > 0).to.equal(true)
+					expect(entry.shape == "Block" or entry.shape == "Cylinder" or entry.shape == "Wedge").to.equal(true)
+				end
 			end
 		end)
 	end)

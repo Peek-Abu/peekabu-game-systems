@@ -3,7 +3,8 @@
 	OfficeBuildSystem: builds the office's graybox from the current seeded layout (Cleanup Crew spec §1
 	"polished feel on graybox", §5): a floor per room, walls broken around doors (OfficeLayoutUtils.
 	wallSegments, merged so a shared wall is built once), the truck (its bed is the banking zone and carries Cargo's Load prompt; a cab at its back, inside the bay),
-	the time clock (Shift's Clock out prompt), the overtime sheet beside it (Shift's Start overtime prompt, off until
+	the time clock inside the truck's box (Shift's Clock out prompt), the overtime sheet beside it on the box's front
+	wall (Shift's Start overtime prompt, off until
 	Shift opens it once the quota is met), and a desk or locker on every desk / locker marker (Cargo's
 	Search prompt, off until Cargo stocks it). M2: ceiling lights (tagged for Harlow's tells) and the loading bay's
 	PathfindingModifier volume (Harlow never paths into it). Everything is anchored under one Model in Workspace at
@@ -143,24 +144,18 @@ function OfficeBuildSystem.build(layout: OfficeTypes.Layout, origin: CFrame): Bu
 	)
 	interactable(bed, CargoConstants.LOAD_KIND, true)
 	TruckVisual.build(bed, truckFolder)
-	local clockSize = OfficeConstants.CLOCK_SIZE
-	local clock = block(
-		"TimeClock",
-		clockSize,
-		origin * CFrame.new(truck.clockX, clockSize.Y / 2, truck.clockZ),
-		OfficeConstants.CLOCK_COLOR,
-		truckFolder
-	)
+	-- The paperwork hangs inside the box on its front wall: the time clock's art is the truck's, this is its
+	-- invisible hit box (queryable, so the prompt's sight check finds it); the overtime sheet is a clipboard.
+	local clockFrame, clockSize = TruckVisual.paperwork(bed, "clock")
+	local clock = block("TimeClock", clockSize, clockFrame, OfficeConstants.CLOCK_COLOR, truckFolder)
+	clock.Transparency = 1
+	clock.CanCollide = false
+	clock.CanTouch = false
 	interactable(clock, ShiftConstants.CLOCK_OUT_KIND, true)
-	local overtimeSize = OfficeConstants.OVERTIME_SIZE
-	local overtimeOffset = OfficeConstants.OVERTIME_OFFSET
-	local overtime = block(
-		"OvertimeSheet",
-		overtimeSize,
-		origin * CFrame.new(truck.clockX + overtimeOffset.X, overtimeSize.Y / 2, truck.clockZ + overtimeOffset.Z),
-		OfficeConstants.OVERTIME_COLOR,
-		truckFolder
-	)
+	local sheetFrame, sheetSize = TruckVisual.paperwork(bed, "sheet")
+	local overtime = block("OvertimeSheet", sheetSize, sheetFrame, OfficeConstants.OVERTIME_COLOR, truckFolder)
+	overtime.CanCollide = false
+	overtime.CanTouch = false
 	interactable(overtime, ShiftConstants.OVERTIME_KIND, false)
 
 	local furniture = folder("Furniture", model)

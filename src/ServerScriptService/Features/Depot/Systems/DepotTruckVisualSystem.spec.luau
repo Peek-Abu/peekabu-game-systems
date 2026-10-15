@@ -94,6 +94,67 @@ return function()
 			end
 		)
 
+		it("builds an opaque camera shell under the bed, which the default camera stops at", function()
+			Visual.buildWith(bed, folder, nil)
+			for _, entry in Constants.SHELL do
+				local part = bed:FindFirstChild(entry.name)
+				expect(part).to.be.ok()
+				-- Popper's occluders: opaque and collidable; queryable so its rays and the prompt's sight check hit it.
+				expect(part.Transparency).to.equal(0)
+				expect(part.CanCollide).to.equal(true)
+				expect(part.CanQuery).to.equal(true)
+				expect(part.CanTouch).to.equal(false)
+				expect(part.CastShadow).to.equal(false)
+				expect(part.Anchored).to.equal(true)
+				expect((deckPoint(bed, part.Position) - entry.centre).Magnitude < 1e-3).to.equal(true)
+				expect(part.Size).to.equal(entry.size)
+			end
+		end)
+
+		it("hangs the graybox time clock on the inside of the front wall, inert", function()
+			local art = Visual.buildWith(bed, folder, nil)
+			local clock = art:FindFirstChild(Constants.CLOCK_NAME)
+			expect(clock).to.be.ok()
+			expect((deckPoint(bed, clock:GetPivot().Position) - Constants.CLOCK_MOUNT).Magnitude < 1e-3).to.equal(true)
+			for _, part in clock:GetDescendants() do
+				if part:IsA("BasePart") then
+					expect(part.CanCollide).to.equal(false)
+					expect(part.CanQuery).to.equal(false)
+				end
+			end
+		end)
+
+		it("uses an approved clock template, pivoted at its mount", function()
+			local template = Instance.new("Model")
+			template:SetAttribute(Constants.APPROVED_ATTRIBUTE, true)
+			local body = Instance.new("Part")
+			body.Name = "ClockBody"
+			body.CFrame = CFrame.new(0, 0, -0.3)
+			body.CanCollide = true
+			body.Parent = template
+			template.WorldPivot = CFrame.identity
+			local art = Visual.buildWith(bed, folder, nil, template)
+			local clock = art:FindFirstChild(Constants.CLOCK_NAME)
+			local placed = clock:FindFirstChild("ClockBody")
+			expect(
+				(deckPoint(bed, placed.Position) - (Constants.CLOCK_MOUNT + Vector3.new(0, 0, -0.3))).Magnitude < 1e-3
+			).to.equal(true)
+			expect(placed.CanCollide).to.equal(false)
+			expect(clock:GetAttribute(Constants.ART_KIND_ATTRIBUTE)).to.equal("approved-mesh")
+		end)
+
+		it("frames the clock and the overtime sheet on the bed, facing the open back", function()
+			for _, which in { "clock", "sheet" } do
+				local frame, size = Visual.paperwork(bed, which)
+				local expected = Constants.PAPERWORK[which]
+				expect((deckPoint(bed, frame.Position) - expected.centre).Magnitude < 1e-3).to.equal(true)
+				expect(size).to.equal(expected.size)
+				-- The face looks out of the wall toward the open back (deck -Z).
+				local outBack = bed.CFrame:VectorToWorldSpace(Vector3.new(0, 0, -1))
+				expect(frame.LookVector:Dot(outBack) > 0.99).to.equal(true)
+			end
+		end)
+
 		it("rises the ramp from the ground behind the truck to the bed's back edge", function()
 			Visual.buildWith(bed, folder, nil)
 			local ramp = bed:FindFirstChild("TruckRamp")

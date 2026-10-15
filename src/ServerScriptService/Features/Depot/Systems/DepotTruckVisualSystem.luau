@@ -10,6 +10,12 @@
 	- invisible native collision, parented to the bed: box walls, roof, arch posts, cab and the loading ramp (a
 	  wedge from the ground to the bed's back edge). Collidable parts are always queryable; as the bed's
 	  descendants they count as the bed for the load prompt's sight check, so the prompt is seen through the box;
+	- an opaque camera shell, parented to the bed: cores hidden inside the art's walls, roof and floor, so the
+	  default camera (Popper, which ignores the inert meshes and the invisible collision) pops in at the box's
+	  walls instead of seeing through the truck. The floor core sits over the deck, so a camera ray meets it
+	  before the invisible bed (Popper drops a part it passes through together with all its descendants);
+	- the time clock on the inside of the front wall (template CLOCK_TEMPLATE_PATH or a graybox). The office's
+	  Clock out and Start overtime parts go at `paperwork(bed, which)`;
 	- the box-side livery (a SurfaceGui per side), a warm lamp under the roof, and the scanner arch light tagged
 	  for the client's bank flash (DepotTruckScannerSystem) with its sweep path.
 
@@ -45,39 +51,56 @@ local function inert(part: BasePart)
 	part.CanTouch = false
 end
 
--- The approved art in ReplicatedStorage, or nil (the graybox is used).
-function DepotTruckVisualSystem.template(): Model?
+local function find(path: { string }): Model?
 	local current: Instance? = ReplicatedStorage
-	for _, name in Constants.TEMPLATE_PATH do
+	for _, name in path do
 		current = if current ~= nil then current:FindFirstChild(name) else nil
 	end
 	return if current ~= nil and current:IsA("Model") then current else nil
 end
 
-local function art(deck: CFrame, source: Model?): Model
+-- The approved art in ReplicatedStorage, or nil (the graybox is used).
+function DepotTruckVisualSystem.template(): Model?
+	return find(Constants.TEMPLATE_PATH)
+end
+
+-- The approved time clock art in ReplicatedStorage, or nil (its graybox is used).
+function DepotTruckVisualSystem.clockTemplate(): Model?
+	return find(Constants.CLOCK_TEMPLATE_PATH)
+end
+
+-- A clone of an approved `source` pivoted at `at`, else `graybox` built there; named `name`, not yet inert.
+local function placed(name: string, at: CFrame, source: Model?, graybox: { Constants.Piece }): Model
 	local model: Model
 	if source ~= nil and source:GetAttribute(Constants.APPROVED_ATTRIBUTE) == true then
 		model = source:Clone()
-		model:PivotTo(deck)
+		model:PivotTo(at)
 		model:SetAttribute(Constants.ART_KIND_ATTRIBUTE, "approved-mesh")
 	else
 		model = Instance.new("Model")
-		for _, piece in Constants.GRAYBOX do
+		for _, piece in graybox do
 			local part = shaped(piece.shape)
 			part.Name = piece.name
 			part.Size = piece.size
-			part.CFrame = deck * CFrame.new(piece.centre)
+			part.CFrame = at * CFrame.new(piece.centre)
 			part.Color = piece.color
 			part.Material = piece.material
 			part.TopSurface = Enum.SurfaceType.Smooth
 			part.BottomSurface = Enum.SurfaceType.Smooth
 			part.Parent = model
 		end
-		model.WorldPivot = deck
+		model.WorldPivot = at
 		model:SetAttribute(Constants.ART_KIND_ATTRIBUTE, "graybox")
 	end
-	model.Name = Constants.ART_NAME
+	model.Name = name
 	model:SetAttribute(Constants.APPROVED_ATTRIBUTE, nil)
+	return model
+end
+
+local function art(deck: CFrame, source: Model?, clockSource: Model?): Model
+	local model = placed(Constants.ART_NAME, deck, source, Constants.GRAYBOX)
+	placed(Constants.CLOCK_NAME, deck * CFrame.new(Constants.CLOCK_MOUNT), clockSource, Constants.CLOCK_GRAYBOX).Parent =
+		model
 	for _, descendant in model:GetDescendants() do
 		if descendant:IsA("BasePart") then
 			inert(descendant)
@@ -153,6 +176,24 @@ local function scanner(model: Model, deck: CFrame)
 	CollectionService:AddTag(light, DepotConstants.SCANNER_TAG)
 end
 
+local function shell(deck: CFrame, bed: BasePart)
+	for _, entry in Constants.SHELL do
+		local part = Instance.new("Part")
+		part.Name = entry.name
+		part.Size = entry.size
+		part.CFrame = deck * CFrame.new(entry.centre)
+		part.Color = Constants.IVORY
+		part.Material = Enum.Material.SmoothPlastic
+		part.Transparency = 0
+		part.CastShadow = false
+		part.Anchored = true
+		part.CanCollide = true
+		part.CanQuery = true
+		part.CanTouch = false
+		part.Parent = bed
+	end
+end
+
 local function collision(deck: CFrame, bed: BasePart)
 	for _, entry in Constants.COLLISION do
 		local part = shaped(entry.shape)
@@ -171,23 +212,38 @@ end
 
 --[=[
 	Builds the truck round `bed` into `parent` from `source` (an approved template, or nil for the graybox) and
-	returns the art model. The bed keeps its size and place.
+	`clockSource` (the time clock's, or nil) and returns the art model. The bed keeps its size and place.
 ]=]
-function DepotTruckVisualSystem.buildWith(bed: BasePart, parent: Instance, source: Model?): Model
+function DepotTruckVisualSystem.buildWith(bed: BasePart, parent: Instance, source: Model?, clockSource: Model?): Model
 	local deck = bed.CFrame * CFrame.new(0, bed.Size.Y / 2, 0)
-	local model = art(deck, source)
+	local model = art(deck, source, clockSource)
 	livery(model)
 	lamp(model)
 	scanner(model, deck)
 	bed.Transparency = Constants.BED_TRANSPARENCY
 	collision(deck, bed)
+	shell(deck, bed)
 	model.Parent = parent
 	return model
 end
 
--- Builds the truck round `bed` from the approved template when the place has one, else the graybox.
+-- Builds the truck round `bed` from the approved templates when the place has them, else the graybox.
 function DepotTruckVisualSystem.build(bed: BasePart, parent: Instance): Model
-	return DepotTruckVisualSystem.buildWith(bed, parent, DepotTruckVisualSystem.template())
+	return DepotTruckVisualSystem.buildWith(
+		bed,
+		parent,
+		DepotTruckVisualSystem.template(),
+		DepotTruckVisualSystem.clockTemplate()
+	)
+end
+
+--[=[
+	Where the truck on `bed` keeps its paperwork: the frame (facing out of the front wall, toward the open back) and
+	size of the time clock's hit box round its art, or of the overtime sheet.
+]=]
+function DepotTruckVisualSystem.paperwork(bed: BasePart, which: Constants.Paperwork): (CFrame, Vector3)
+	local frame = Constants.PAPERWORK[which]
+	return bed.CFrame * CFrame.new(0, bed.Size.Y / 2, 0) * CFrame.new(frame.centre), frame.size
 end
 
 return DepotTruckVisualSystem

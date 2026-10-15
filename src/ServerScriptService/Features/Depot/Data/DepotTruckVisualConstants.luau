@@ -9,6 +9,14 @@
 	  the ground to the bed's back edge). A collidable part is always queryable, so they are parented to the bed:
 	  the load prompt's sight check (a ray to the bed that may hit the bed or its descendants) still sees the bed
 	  through the box.
+	- SHELL: the camera's walls. The default camera (Popper) only stops at opaque, collidable parts, and every hit
+	  part it cannot stop at is ignored WITH its descendants for the rest of that ray: the meshes never collide and
+	  the collision is invisible, so the camera used to pass straight through the box. Each shell part is an opaque
+	  core hidden inside its art piece (clear of its bevels) (`inside`, a GRAYBOX name; the mesh pieces share its outline), with
+	  the floor's core over the deck so a ray meets it before the invisible bed. Parented to the bed like COLLISION.
+	- CLOCK: the time clock (characters/truck/build_timeclock.py, template CLOCK_TEMPLATE_PATH) hangs on the inside
+	  of the front wall at CLOCK_MOUNT (its back centre, facing the open back); PAPERWORK frames the office's
+	  interactable parts there: the clock's hit box round the art, and the overtime sheet on the other side.
 	- GRAYBOX: the fallback look when the approved template (TEMPLATE_PATH, RuntimeApproved) is missing.
 
 	Static data (checked by DepotTruckVisualConstants.spec).
@@ -102,6 +110,61 @@ local COLLISION: { Solid } = {
 	solid("TruckRamp", Vector3.new(0, -1.5, -10), Vector3.new(7, 3, 4), "Wedge"),
 }
 
+-- A camera shell core: always a block, inside the GRAYBOX piece named `inside`.
+export type ShellCore = { name: string, centre: Vector3, size: Vector3, inside: string }
+
+-- Wall cores sit 0.12 in from every face of their 0.12-bevelled piece, the roof's 0.3 in from its 0.3 bevel.
+local SHELL: { ShellCore } = {
+	{
+		name = "TruckShellLeft",
+		centre = Vector3.new(-6.25, 3.8, 0.3),
+		size = Vector3.new(0.26, 7.36, 16.16),
+		inside = "BoxSideLeft",
+	},
+	{
+		name = "TruckShellRight",
+		centre = Vector3.new(6.25, 3.8, 0.3),
+		size = Vector3.new(0.26, 7.36, 16.16),
+		inside = "BoxSideRight",
+	},
+	{
+		name = "TruckShellFront",
+		centre = Vector3.new(0, 3.8, 8.25),
+		size = Vector3.new(12.76, 7.36, 0.26),
+		inside = "BoxFront",
+	},
+	{
+		name = "TruckShellRoof",
+		centre = Vector3.new(0, 7.35, 0.3),
+		size = Vector3.new(12.8, 0.15, 16.3),
+		inside = "BoxRoof",
+	},
+	{
+		name = "TruckShellFloor",
+		centre = Vector3.new(0, 0.03, 0),
+		size = Vector3.new(11.8, 0.03, 15.8),
+		inside = "BoxFloor",
+	},
+}
+
+export type Paperwork = "clock" | "sheet"
+export type Frame = { centre: Vector3, size: Vector3 }
+
+-- The clock's back centre on the front wall's lining (z 7.94), facing the open back (deck space, unrotated).
+local CLOCK_MOUNT = Vector3.new(-2.2, 3.6, 7.94)
+local PAPERWORK: { [Paperwork]: Frame } = {
+	-- The clock's hit box round the housing and its card rack (clock space x -0.65..1.55, y -0.85..1.2).
+	clock = { centre = CLOCK_MOUNT + Vector3.new(0.45, 0.15, -0.45), size = Vector3.new(2.4, 2.1, 0.8) },
+	-- The overtime sheet: a clipboard on the wall across the doorway's middle from the clock.
+	sheet = { centre = Vector3.new(2.4, 3.8, 7.88), size = Vector3.new(1.2, 1.6, 0.12) },
+}
+
+local CLOCK_GRAYBOX: { Piece } = {
+	piece("ClockBody", Vector3.new(0, 0, -0.3), Vector3.new(1.3, 1.7, 0.6), TEAL),
+	piece("ClockFace", Vector3.new(0, 0.3, -0.625), Vector3.new(0.9, 0.9, 0.05), IVORY),
+	piece("ClockCards", Vector3.new(1.2, -0.15, -0.15), Vector3.new(0.7, 1.2, 0.3), TEAL),
+}
+
 local LIVERY_FACES: { LiveryFace } = {
 	{ piece = "BoxShell", face = Enum.NormalId.Left },
 	{ piece = "BoxShell", face = Enum.NormalId.Right },
@@ -129,6 +192,13 @@ return table.freeze({
 	DOOR_HEIGHT = 6.1,
 	GRAYBOX = table.freeze(GRAYBOX),
 	COLLISION = table.freeze(COLLISION),
+	SHELL = table.freeze(SHELL),
+	-- The time clock's approved art (Model, RuntimeApproved, pivoted at its back centre, facing -Z) and fallback.
+	CLOCK_TEMPLATE_PATH = table.freeze({ "Assets", "CleanupCrew", "TimeClock" }),
+	CLOCK_NAME = "TimeClockArt",
+	CLOCK_MOUNT = CLOCK_MOUNT,
+	CLOCK_GRAYBOX = table.freeze(CLOCK_GRAYBOX),
+	PAPERWORK = table.freeze(PAPERWORK),
 	-- The box-side livery (characters/truck/truck_livery.png; Icey Labs decal 116426639844539 -> this image).
 	LIVERY_IMAGE = "rbxassetid://133126605608436",
 	LIVERY_FACES = table.freeze(LIVERY_FACES),
