@@ -44,4 +44,21 @@ return function()
 			expect(EmployeeSkinRules.palette(skin("Bad", "http://example.com/x.png"))).never.to.be.ok()
 		end)
 	end)
+
+	describe("portrait", function()
+		local employee = { portrait = "rbxassetid://10" }
+
+		it("uses the skin's own portrait", function()
+			local own = skin("Own", "rbxassetid://2")
+			own.portrait = "rbxassetid://11"
+			expect(EmployeeSkinRules.portrait(employee, own)).to.equal("rbxassetid://11")
+		end)
+
+		it("falls back to the employee's portrait without one, or for a malformed one", function()
+			expect(EmployeeSkinRules.portrait(employee, skin("None", "rbxassetid://2"))).to.equal("rbxassetid://10")
+			local bad = skin("Bad", "rbxassetid://2")
+			bad.portrait = "rbxassetid://TBD"
+			expect(EmployeeSkinRules.portrait(employee, bad)).to.equal("rbxassetid://10")
+		end)
+	end)
 end

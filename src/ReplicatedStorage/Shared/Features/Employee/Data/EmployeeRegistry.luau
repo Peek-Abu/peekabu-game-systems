@@ -12,7 +12,8 @@
 	  face this employee shows in it. Not every employee is cheerful at work: Pippa enjoys cleaning, but
 	  hauling cargo is just the job.
 	- `skins` are looks for the same rig: a palette image (every MeshPart but the FacePlate shares one
-	  palette texture), an optional face set, and accessories (EmployeeSkinSystem applies one).
+	  palette texture), an optional face set, accessories (EmployeeSkinSystem applies one), and the ID-card photo
+	  of that look (`portrait`; the employee's own `portrait` when a skin has none).
 	- `uniform` is the company gear fitted over any skin (the hi-vis vest and the rank lanyard + ID card), as
 	  fitted-gear names (EmployeeGearSystem); the lanyard is painted in the wearer's rank colour.
 	- `locomotion` is the employee's own idle/walk/run (keys in the animation registry's `employee`
@@ -42,6 +43,9 @@ export type SkinDef = {
 	-- Names of Accessory instances, or fitted-gear Models (EmployeeGearSystem), under
 	-- EmployeeConstants.ACCESSORIES_PATH to put on the character.
 	accessories: { string },
+	-- "rbxassetid://<image id>" of this look's ID-card photo (a headshot rendered in Blender,
+	-- characters/identity/render_portraits.py). nil = the employee's `portrait`.
+	portrait: string?,
 }
 
 --[=[
@@ -97,6 +101,8 @@ export type EmployeeDef = {
 	expressions: { [GameplayState]: Face },
 	-- The looks this employee can wear, by name, and the one everyone gets by default.
 	skins: { [string]: SkinDef },
+	-- "rbxassetid://<image id>" of the ID-card photo for a skin without its own (the default look's headshot).
+	portrait: string,
 	defaultSkin: string,
 	-- Its own idle/walk/run; nil = the stock locomotion.
 	locomotion: LocomotionDef?,
@@ -135,6 +141,8 @@ local EMPLOYEES: { [string]: EmployeeDef } = {
 				paletteTextureId = "rbxassetid://123317546570312",
 				facesFolder = nil,
 				accessories = {},
+				-- CC ID Portrait Pippa Default v1 (decal 110853442477171).
+				portrait = "rbxassetid://114200006283845",
 			},
 			-- The owner's personal skin (see EmployeeSkinRegistry): lavender fur and round tortoiseshell glasses
 			-- (characters/pippa/skins/owner-lavender). Pippa's own faces.
@@ -143,9 +151,12 @@ local EMPLOYEES: { [string]: EmployeeDef } = {
 				paletteTextureId = "rbxassetid://96382499106680",
 				facesFolder = nil,
 				accessories = { "PippaRoundGlasses" },
+				-- CC ID Portrait Pippa Owner Lavender v1 (decal 106237445017897): lavender, glasses on.
+				portrait = "rbxassetid://73949141158412",
 			},
 		},
 		defaultSkin = "Default",
+		portrait = "rbxassetid://114200006283845",
 		-- Fitted to Pippa v10's torso (characters/identity).
 		uniform = { "PippaVest", "PippaLanyard" },
 		-- Pippa v1 clips (characters/pippa/anim). Caps tuned by eye in Studio: lively, not frantic.

@@ -105,6 +105,23 @@ return function()
 			expect(table.find(uniform, "PippaVest")).to.be.ok()
 			expect(table.find(uniform, "PippaLanyard")).to.be.ok()
 		end)
+
+		it("gives every employee an ID-card portrait, and each skin that has its own a well-formed one", function()
+			local pattern = "^rbxassetid://%d+$"
+			for _, name in EmployeeRegistry.names() do
+				local def = EmployeeRegistry.get(name)
+				expect(string.match(def.portrait, pattern)).to.be.ok()
+				for _, skin in def.skins do
+					if skin.portrait ~= nil then
+						expect(string.match(skin.portrait, pattern)).to.be.ok()
+					end
+				end
+			end
+			-- The owner's lavender skin has its own photo (lavender, glasses), not the coral default.
+			local pippa = EmployeeRegistry.get("Pippa")
+			expect(pippa.skins.OwnerSpecial.portrait).to.be.ok()
+			expect(pippa.skins.OwnerSpecial.portrait).never.to.equal(pippa.portrait)
+		end)
 	end)
 
 	describe("backpack", function()

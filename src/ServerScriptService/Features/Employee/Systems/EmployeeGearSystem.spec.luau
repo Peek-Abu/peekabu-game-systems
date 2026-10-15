@@ -122,6 +122,9 @@ return function()
 				label.Name = name
 				label.Parent = if name == EmployeeConstants.BADGE_BAND_TEXT then band else gui
 			end
+			local photo = Instance.new("ImageLabel")
+			photo.Name = EmployeeConstants.BADGE_PHOTO
+			photo.Parent = gui
 		end
 
 		it("paints the strap and band in the rank colour and writes the holder and title", function()
@@ -133,8 +136,9 @@ return function()
 				title = "Probationary Associate",
 				band = "RANK: PROBATIONARY ASSOCIATE",
 				colour = colour,
+				photo = "rbxassetid://42",
 			})
-			expect(painted).to.equal(5)
+			expect(painted).to.equal(6)
 			local fitted = character.Lanyard
 			expect(fitted[EmployeeConstants.LANYARD_STRAP].Color).to.equal(colour)
 			local gui = fitted.IdCard.SurfaceGui
@@ -144,6 +148,7 @@ return function()
 			expect(gui[EmployeeConstants.BADGE_BAND][EmployeeConstants.BADGE_BAND_TEXT].Text).to.equal(
 				"RANK: PROBATIONARY ASSOCIATE"
 			)
+			expect(gui[EmployeeConstants.BADGE_PHOTO].Image).to.equal("rbxassetid://42")
 			character:Destroy()
 		end)
 
@@ -151,7 +156,13 @@ return function()
 			local character = makeCharacter(1)
 			local painted = EmployeeGearSystem.badge(
 				character,
-				{ holder = "Pip", title = "Intern", band = "RANK", colour = Color3.new(1, 1, 1) }
+				{
+					holder = "Pip",
+					title = "Intern",
+					band = "RANK",
+					colour = Color3.new(1, 1, 1),
+					photo = "rbxassetid://1",
+				}
 			)
 			expect(painted).to.equal(0)
 			character:Destroy()

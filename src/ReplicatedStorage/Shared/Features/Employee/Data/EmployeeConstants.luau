@@ -35,12 +35,14 @@ local EmployeeConstants = {
 	-- is that part's frame at the template's authored size.
 	GEAR_MOUNT_ATTRIBUTE = "MountPart",
 	-- In the company lanyard (EmployeeGearSystem.badge): the strap part painted in the rank colour, and the ID card's
-	-- SurfaceGui elements (the holder's name, their title, the rank-colour band and its text).
+	-- SurfaceGui elements (the holder's name, their title, the rank-colour band and its text, and the photo: the
+	-- wearer's skin portrait).
 	LANYARD_STRAP = "LanyardStrap",
 	BADGE_HOLDER = "IdCardHolder",
 	BADGE_TITLE = "IdCardTitle",
 	BADGE_BAND = "IdCardBand",
 	BADGE_BAND_TEXT = "IdCardBandText",
+	BADGE_PHOTO = "IdCardPhoto",
 
 	-- Expression rule (EmployeeFaceRules).
 	-- An investigating / chasing / searching Manager this close (studs) worries everyone.
