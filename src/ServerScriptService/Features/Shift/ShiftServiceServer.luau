@@ -41,7 +41,6 @@ local Workspace = game:GetService("Workspace")
 local ShiftShared = ReplicatedStorage.Shared.Features.Shift
 local ShiftServer = ServerScriptService.Features.Shift
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
-local InteractionRegistry = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionRegistry)
 local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local RoundTypes = require(ReplicatedStorage.Shared.Features.Round.Data.RoundTypes)
 local ToastRegistry = require(ReplicatedStorage.Shared.Features.Toast.Data.ToastRegistry)
@@ -57,24 +56,19 @@ local ShiftBankingSystem = require(ShiftServer.Systems.ShiftBankingSystem)
 local ShiftTripSystem = require(ShiftServer.Systems.ShiftTripSystem)
 local ShiftVoteSystem = require(ShiftServer.Systems.ShiftVoteSystem)
 local ShiftOvertimeSystem = require(ShiftServer.Systems.ShiftOvertimeSystem)
+local ShiftTimeClockSystem = require(ShiftServer.Systems.ShiftTimeClockSystem)
 local ShiftAnalyticsSystem = require(ShiftServer.Systems.ShiftAnalyticsSystem)
 local ShiftAnalyticsWatchSystem = require(ShiftServer.Systems.ShiftAnalyticsWatchSystem)
 local ShiftReviewSystem = require(ShiftServer.Systems.ShiftReviewSystem)
 local ShiftCrewStatusSystem = require(ShiftServer.Systems.ShiftCrewStatusSystem)
 local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
-local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
 local OfficeServiceServer = require(ServerScriptService.Features.Office.OfficeServiceServer)
 local OfficeSpawnUtils = require(ServerScriptService.Features.Office.Utils.OfficeSpawnUtils)
 local RoundServiceServer = require(ServerScriptService.Features.Round.RoundServiceServer)
 local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
 local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
 local StateSyncWorldStore = require(ServerScriptService.Features.StateSync.State.StateSyncWorldStore)
-
--- Registered at load: the office's time clock carries this kind from the moment it is built.
-if not InteractionRegistry.has(ShiftConstants.CLOCK_OUT_KIND) then
-	InteractionRegistry.register(ShiftConstants.CLOCK_OUT_KIND, { actionText = "Clock out", objectText = "Time clock" })
-end
 
 -- Registered at load, before any toast names them (the server's ToastRules falls back to "info" otherwise).
 for name, style in ShiftConstants.TOAST_STYLES do
@@ -382,9 +376,10 @@ local ShiftServiceServer: ShiftServiceServer = {
 		table.insert(stoppers, ShiftAnalyticsWatchSystem.start(changed, trip))
 		table.insert(stoppers, ShiftReviewSystem.start(roster, isRunning))
 		table.insert(stoppers, ShiftCrewStatusSystem.start(trip, isRunning))
-		InteractionServiceServer:onInteract(ShiftConstants.CLOCK_OUT_KIND, function(player, _target)
+		local function clockOutBy(player: Player)
 			self:clockOut(player)
-		end)
+		end
+		table.insert(stoppers, ShiftTimeClockSystem.new({ clockOut = clockOutBy }).start())
 		table.insert(stoppers, overtime.start())
 
 		local phases = RoundServiceServer.phaseChanged:Connect(onRoundPhase)

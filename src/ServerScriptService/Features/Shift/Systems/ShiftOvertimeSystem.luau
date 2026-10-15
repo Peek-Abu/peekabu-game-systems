@@ -2,8 +2,9 @@
 --[=[
 	ShiftOvertimeSystem: opt-in overtime (docs/cleanup-crew-lore.md "Contract sequence": once the quota is met the
 	crew chooses to leave or to begin optional overtime recovery; staying is a deliberate choice). The truck's
-	overtime sheet, beside the time clock, carries the OVERTIME_KIND prompt ("Start overtime", held OVERTIME_HOLD
-	seconds). Any one crew member signing starts the overtime warning for the whole crew, the same any-player rule as
+	overtime sheet, beside the time clock inside the box, carries the OVERTIME_KIND prompt ("Start overtime", held
+	OVERTIME_HOLD seconds); like the clock, it counts only from an empty-handed crew member standing in front of it
+	(ShiftTimeClockSystem.reaches). Any one crew member signing starts the overtime warning for the whole crew, the same any-player rule as
 	the clock out, and is announced by name so nobody is surprised; anyone may still clock out during the warning or in
 	overtime. `sync` shows the prompt exactly while ShiftPhaseRules.canStartOvertime holds; `start` runs it on every
 	shift state change and takes the prompt's triggers.
@@ -23,6 +24,8 @@ local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.Shif
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local ShiftPhaseRules = require(ServerScriptService.Features.Shift.Rules.ShiftPhaseRules)
+local ShiftTimeClockSystem = require(ServerScriptService.Features.Shift.Systems.ShiftTimeClockSystem)
+local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
 local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
 local OfficeServiceServer = require(ServerScriptService.Features.Office.OfficeServiceServer)
 local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
@@ -33,6 +36,7 @@ if not InteractionRegistry.has(ShiftConstants.OVERTIME_KIND) then
 		actionText = "Start overtime",
 		objectText = "Optional recovery",
 		holdDuration = ShiftConstants.OVERTIME_HOLD,
+		maxDistance = ShiftConstants.PAPERWORK_DISTANCE,
 	})
 end
 
@@ -51,6 +55,8 @@ export type Deps = {
 	sheet: (() -> BasePart?)?,
 	setEnabled: ((target: BasePart, enabled: boolean) -> ())?,
 	announce: ((text: string) -> ())?,
+	-- Whether a player may use the sheet now (empty hands, in front of it in the box); absent = the time clock's rule.
+	reaches: ((player: Player, target: Instance) -> boolean)?,
 }
 
 export type ShiftOvertimeSystem = {
@@ -60,6 +66,8 @@ export type ShiftOvertimeSystem = {
 	sync: () -> (),
 	-- `player` signed the sheet (nil: a developer's call). Starts the overtime warning; false when refused.
 	begin: (player: Player?) -> boolean,
+	-- `player` held Start overtime on `target`: begins when they reach it. False when refused.
+	sign: (player: Player, target: Instance) -> boolean,
 }
 
 -- The real effects (Deps' absent fields).
@@ -69,6 +77,10 @@ end
 
 local function realSetEnabled(target: BasePart, enabled: boolean)
 	InteractionServiceServer:setEnabled(target, enabled)
+end
+
+local function realReaches(player: Player, target: Instance): boolean
+	return ShiftTimeClockSystem.reaches(player, target, CarryServiceServer:getCarried(player) ~= nil)
 end
 
 local function realAnnounce(text: string)
@@ -85,12 +97,13 @@ function ShiftOvertimeSystem.new(deps: Deps): ShiftOvertimeSystem
 	local sheet: () -> BasePart? = deps.sheet or realSheet
 	local setEnabled: (BasePart, boolean) -> () = deps.setEnabled or realSetEnabled
 	local announce: (string) -> () = deps.announce or realAnnounce
+	local reaches: (Player, Instance) -> boolean = deps.reaches or realReaches
 
 	local system: ShiftOvertimeSystem
 	system = {
 		start = function()
-			InteractionServiceServer:onInteract(ShiftConstants.OVERTIME_KIND, function(player, _target)
-				system.begin(player)
+			InteractionServiceServer:onInteract(ShiftConstants.OVERTIME_KIND, function(player, target)
+				system.sign(player, target)
 			end)
 			local following = deps.changed:Connect(function()
 				system.sync()
@@ -106,6 +119,10 @@ function ShiftOvertimeSystem.new(deps: Deps): ShiftOvertimeSystem
 			if target ~= nil then
 				setEnabled(target, ShiftPhaseRules.canStartOvertime(deps.getState()))
 			end
+		end,
+
+		sign = function(player, target)
+			return reaches(player, target) and system.begin(player)
 		end,
 
 		begin = function(player)

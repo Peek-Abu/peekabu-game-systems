@@ -17,7 +17,7 @@ local function running()
 end
 
 -- A system over a fake shift: `state` is what getState returns; every setState is recorded.
-local function harness(state, eligible)
+local function harness(state, eligible, reaches)
 	local log = { state = state, sets = {}, announced = {}, enabled = {} }
 	local sheet = Instance.new("Part")
 	log.system = ShiftOvertimeSystem.new({
@@ -44,6 +44,9 @@ local function harness(state, eligible)
 		announce = function(text)
 			table.insert(log.announced, text)
 		end,
+		reaches = function()
+			return reaches ~= false
+		end,
 	})
 	log.sheet = sheet
 	return log
@@ -56,6 +59,22 @@ return function()
 		expect(def.actionText).to.equal("Start overtime")
 		expect(def.holdDuration).to.equal(ShiftConstants.OVERTIME_HOLD)
 		expect(ShiftConstants.OVERTIME_HOLD > 0).to.equal(true)
+		expect(def.maxDistance).to.equal(ShiftConstants.PAPERWORK_DISTANCE)
+	end)
+
+	describe("sign", function()
+		it("begins overtime for a crew member who reaches the sheet", function()
+			local log = harness(ShiftPhaseRules.markQuota(running(), 350, 150))
+			expect(log.system.sign(PLAYER, log.sheet)).to.equal(true)
+			expect(log.state.stage).to.equal("warning")
+		end)
+
+		it("refuses a crew member who cannot reach it (carrying, or outside the box)", function()
+			local log = harness(ShiftPhaseRules.markQuota(running(), 350, 150), true, false)
+			expect(log.system.sign(PLAYER, log.sheet)).to.equal(false)
+			expect(#log.sets).to.equal(0)
+			expect(#log.announced).to.equal(0)
+		end)
 	end)
 
 	describe("begin", function()

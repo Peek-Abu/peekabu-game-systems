@@ -122,6 +122,13 @@ return table.freeze({
 	-- deliberate choice, never a stray key press.
 	OVERTIME_KIND = "shift-overtime",
 	OVERTIME_HOLD = 1.5,
+	-- The truck's paperwork (the time clock and the overtime sheet) hangs inside the box on its front wall. Clock out
+	-- is held CLOCK_OUT_HOLD seconds; both prompts show within PAPERWORK_DISTANCE studs, and only to an empty-handed
+	-- crew member standing in front of the item inside the box (ShiftTimeClockRules: PAPERWORK_REACH, studs in the
+	-- item's own space, -Z out of the wall), so neither ever competes with Bank cargo.
+	CLOCK_OUT_HOLD = 1.5,
+	PAPERWORK_DISTANCE = 7,
+	PAPERWORK_REACH = table.freeze({ depth = 6, halfWidth = 4.5, below = 3, above = 1.5 }),
 	TICK_INTERVAL = 0.25,
 	-- How long the pacing notices stay up.
 	NOTICE_SECONDS = 6,
