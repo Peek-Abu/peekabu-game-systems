@@ -3,11 +3,12 @@
 	OfficeAtmosphereSystem: the office's light and air on this client (Cleanup Crew spec §7 "The office at night:
 	dim, buzzing fluorescents (some flickering)"; "Overtime: lighting shifts dim red"). Follows ShiftStore's
 	snapshot: blends Lighting to OfficeAtmosphereUtils.preset (night, darker per tier, lighter on Harlow's break,
-	dim red in overtime; the place's own lighting outside a shift); in overtime a red screen tint and red ceiling
-	lights; the fluorescent hum while the office is in a shift. Every ATMOSPHERE_INTERVAL the broken lights near the
+	dim red in overtime; the depot's warm evening while the local player is in the hub); in overtime a red screen
+	tint and red ceiling lights; the fluorescent hum while the local player's crew is in a shift. It is the one owner
+	of Lighting, so the hub and the office never fight over it. Every ATMOSPHERE_INTERVAL the broken lights near the
 	camera (OfficeLightUtils) blink, with a zap as each dims. It changes only a light's Color, Transparency and
 	PointLight Color/Brightness; M2's OccupantTellSystem owns Material and PointLight.Enabled, so the two compose.
-	Registers the office presets with Vfx at load. Pending sounds (OfficeAssets) are silent.
+	Registers the office and depot presets with Vfx at load. Pending sounds (OfficeAssets) are silent.
 
 	Spec-exempt shell (Lighting via Vfx, Instances, Sound, Charm, RunService); the choices are the specced
 	OfficeAtmosphereUtils and OfficeLightUtils.
@@ -16,12 +17,14 @@
 ]=]
 
 local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local OfficeClient = ReplicatedStorage.Client.Features.Office
 local Charm = require(ReplicatedStorage.Packages.Charm)
+local DepotAtmosphereConstants = require(ReplicatedStorage.Client.Features.Depot.Data.DepotAtmosphereConstants)
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundRegistry)
@@ -35,9 +38,11 @@ local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.Sound
 local VfxServiceClient = require(ReplicatedStorage.Client.Features.Vfx.VfxServiceClient)
 
 -- Registered at load: setAtmosphere refuses an unknown preset.
-for id, preset in OfficeAtmosphereConstants.PRESETS do
-	if not VfxAtmosphereRegistry.has(id) then
-		VfxAtmosphereRegistry.register(id, preset)
+for _, presets in { OfficeAtmosphereConstants.PRESETS, DepotAtmosphereConstants.PRESETS } do
+	for id, preset in presets do
+		if not VfxAtmosphereRegistry.has(id) then
+			VfxAtmosphereRegistry.register(id, preset)
+		end
 	end
 end
 
@@ -140,15 +145,16 @@ local function setHum(on: boolean)
 end
 
 local function onSnapshot(snapshot: ShiftTypes.ShiftSnapshot?)
-	local preset = OfficeAtmosphereUtils.preset(snapshot)
+	local userId = Players.LocalPlayer.UserId
+	local preset = OfficeAtmosphereUtils.preset(snapshot, userId)
 	if not applied or preset ~= currentPreset then
 		applied = true
 		currentPreset = preset
 		counters.presets += 1
 		VfxServiceClient:setAtmosphere(preset, OfficeAtmosphereConstants.FADE)
 	end
-	setOvertime(OfficeAtmosphereUtils.overtime(snapshot))
-	setHum(OfficeAtmosphereUtils.hum(snapshot))
+	setOvertime(OfficeAtmosphereUtils.overtime(snapshot, userId))
+	setHum(OfficeAtmosphereUtils.hum(snapshot, userId))
 end
 
 local function restore(light: BasePart)

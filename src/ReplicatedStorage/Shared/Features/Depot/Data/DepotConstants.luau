@@ -28,8 +28,8 @@ local BOARD_COPY = table.freeze({
 	approved = "APPROVED",
 	dispatchLabel = "DISPATCH · HOW TO START",
 	dispatchTitle = "JOIN A SHIFT",
-	dispatchSteps = "1.  Walk into a truck bed outside.\n2.  Anyone aboard presses DEPART NOW.",
-	dispatchPhone = "Walk into a truck bed outside.",
+	dispatchSteps = "1.  Walk up a truck ramp in any bay.\n2.  Anyone aboard presses DEPART NOW.",
+	dispatchPhone = "Walk up a truck ramp in any bay.",
 	close = "CLOSE  [Esc]",
 })
 

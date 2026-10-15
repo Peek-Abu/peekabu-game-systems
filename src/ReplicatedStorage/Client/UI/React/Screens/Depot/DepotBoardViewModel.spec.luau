@@ -85,6 +85,17 @@ return function()
 		expect(last.met).to.equal(false)
 	end)
 
+	it("sends new crew to the trucks in the garage bays, never outside", function()
+		local desktop = DepotBoardViewModel.board(nil, nil, false)
+		local phone = DepotBoardViewModel.board(nil, nil, true)
+		expect(desktop.dispatchSteps).to.equal(
+			"1.  Walk up a truck ramp in any bay.\n2.  Anyone aboard presses DEPART NOW."
+		)
+		expect(phone.dispatchSteps).to.equal("Walk up a truck ramp in any bay.")
+		expect(string.find(desktop.dispatchSteps, "outside", 1, true)).to.equal(nil)
+		expect(string.find(phone.dispatchSteps, "outside", 1, true)).to.equal(nil)
+	end)
+
 	it("writes the phone's two last-shift lines", function()
 		local last = DepotBoardViewModel.board(nil, LAST, true).last
 		expect(last.title).to.equal("LAST SHIFT")

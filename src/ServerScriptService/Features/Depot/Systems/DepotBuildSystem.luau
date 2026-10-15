@@ -8,7 +8,11 @@
 	that only they see (in their PlayerGui, kept across respawns). Physical boards are SurfaceGui; truck tags are BillboardGui. The client
 	draws (Figma World UI 2a, DepotBillboardSystem). Everything is anchored under one Model in Workspace.
 
-	Instance shell; specs cover enclosure/surfaces, and DepotLayoutRules validates the layout.
+	Hub v1: warm ceiling strips over the trucks and over each board, and the floor paint DepotMarkingUtils plans
+	(bays, ramp hazard bands, lanes, BAY n stencils) as thin non-colliding parts.
+
+	Instance shell; specs cover enclosure/surfaces, the lights and the floor paint, and DepotLayoutRules validates the
+	layout.
 
 	@class DepotBuildSystem
 ]=]
@@ -23,6 +27,7 @@ local DepotTypes = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotTyp
 local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionConstants)
 local QueueConstants = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueConstants)
 local DepotLayoutConstants = require(ServerScriptService.Features.Depot.Data.DepotLayoutConstants)
+local DepotMarkingUtils = require(ServerScriptService.Features.Depot.Utils.DepotMarkingUtils)
 
 export type BuiltTruck = {
 	id: string,
@@ -92,6 +97,54 @@ end
 
 local TruckVisual = require(ServerScriptService.Features.Depot.Systems.DepotTruckVisualSystem)
 
+-- Floor paint is a decal-thin layer: nothing collides with, raycasts against, touches or shadows it.
+local function decalPart(name: string, size: Vector3, cframe: CFrame, parent: Instance): Part
+	local part = block(name, size, cframe, DepotLayoutConstants.FLOOR_COLOR, parent)
+	part.CanCollide = false
+	part.CanQuery = false
+	part.CanTouch = false
+	part.CastShadow = false
+	return part
+end
+
+-- The bays, ramp hazard bands, lanes and BAY n stencils (DepotMarkingUtils' plan), in the depot's space.
+local function paintFloor(layout: DepotTypes.Layout, origin: CFrame, model: Model)
+	local markings = folder("FloorMarkings", model)
+	local plan = DepotMarkingUtils.plan(layout)
+	for _, piece in plan.paints do
+		local part = decalPart(piece.name, piece.size, origin * CFrame.new(piece.position), markings)
+		part.Color = piece.color
+	end
+	for _, label in plan.labels do
+		-- A Top-face SurfaceGui's width runs along the part's -Z: a quarter turn (and the size swapped to match) lays
+		-- the text along -X, so it reads left to right, upright, for someone walking from the spawns toward the
+		-- truck (+Z). The footprint is unchanged.
+		local part = decalPart(
+			label.name,
+			Vector3.new(label.size.Z, label.size.Y, label.size.X),
+			origin * CFrame.new(label.position) * CFrame.Angles(0, math.pi / 2, 0),
+			markings
+		)
+		part.Transparency = 1
+		local gui = Instance.new("SurfaceGui")
+		gui.Name = "Stencil"
+		gui.Face = Enum.NormalId.Top
+		gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		gui.PixelsPerStud = DepotLayoutConstants.STENCIL_PIXELS_PER_STUD
+		gui.LightInfluence = 1
+		gui.Parent = part
+		local text = Instance.new("TextLabel")
+		text.Name = "Text"
+		text.BackgroundTransparency = 1
+		text.Size = UDim2.fromScale(1, 1)
+		text.Text = label.text
+		text.TextScaled = true
+		text.FontFace = Font.new(Font.fromEnum(Enum.Font.Oswald).Family, Enum.FontWeight.Bold)
+		text.TextColor3 = DepotLayoutConstants.MARKING.YELLOW
+		text.Parent = gui
+	end
+end
+
 local DepotBuildSystem = {}
 
 function DepotBuildSystem.build(
@@ -144,22 +197,44 @@ function DepotBuildSystem.build(
 		DepotLayoutConstants.WALL_COLOR,
 		model
 	)
-	for _, x in { 20, 48, 76 } do
-		local fixture = block(
-			"GarageLight",
-			Vector3.new(8, 0.3, 2),
-			origin * CFrame.new(x, height - 0.2, 36),
-			Color3.fromRGB(245, 240, 220),
-			model
-		)
-		fixture.Material = Enum.Material.Neon
-		fixture.CanCollide = false
+	-- Warm tungsten strips over the trucks, and a brighter one over each board (hub v1).
+	local lights = folder("Lights", model)
+	local function fixture(name: string, x: number, z: number, color: Color3, range: number, brightness: number)
+		local strip =
+			block(name, DepotLayoutConstants.LIGHT_SIZE, origin * CFrame.new(x, height - 0.2, z), color, lights)
+		strip.Material = Enum.Material.Neon
+		strip.CanCollide = false
+		strip.CanQuery = false
+		strip.CanTouch = false
+		strip.CastShadow = false
 		local light = Instance.new("PointLight")
-		light.Range = 45
-		light.Brightness = 1.5
-		light.Color = fixture.Color
-		light.Parent = fixture
+		light.Range = range
+		light.Brightness = brightness
+		light.Color = color
+		light.Parent = strip
 	end
+	for _, x in DepotLayoutConstants.LIGHT_XS do
+		fixture(
+			"GarageLight",
+			x,
+			DepotLayoutConstants.LIGHT_Z,
+			DepotLayoutConstants.LIGHT_COLOR,
+			DepotLayoutConstants.LIGHT_RANGE,
+			DepotLayoutConstants.LIGHT_BRIGHTNESS
+		)
+	end
+	for _, board in { layout.contractBoard, layout.resultBoard } do
+		fixture(
+			"BoardLight",
+			board.x,
+			board.z + DepotLayoutConstants.BOARD_LIGHT_SETBACK,
+			DepotLayoutConstants.BOARD_LIGHT_COLOR,
+			DepotLayoutConstants.BOARD_LIGHT_RANGE,
+			DepotLayoutConstants.BOARD_LIGHT_BRIGHTNESS
+		)
+	end
+
+	paintFloor(layout, origin, model)
 
 	local bed = DepotLayoutConstants.BED_SIZE
 	local trucks: { BuiltTruck } = {}

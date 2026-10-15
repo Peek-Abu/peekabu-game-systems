@@ -72,6 +72,42 @@ return table.freeze({
 	-- The returning player's card, in their PlayerGui.
 	CARD_NAME = "DepotResultCard",
 	PLAYER_GUI_WAIT = 10,
+	-- Hub v1 lighting: warm tungsten ceiling strips over the trucks (LIGHT_XS at LIGHT_Z), and a brighter, slightly
+	-- whiter strip over each board, BOARD_LIGHT_SETBACK in front of it, so the reading wall is the best-lit spot.
+	LIGHT_XS = table.freeze({ 20, 48, 76 }),
+	LIGHT_Z = 36,
+	LIGHT_SIZE = Vector3.new(8, 0.3, 2),
+	LIGHT_COLOR = Color3.fromRGB(255, 206, 148),
+	LIGHT_RANGE = 45,
+	LIGHT_BRIGHTNESS = 1.6,
+	BOARD_LIGHT_SETBACK = 5,
+	BOARD_LIGHT_COLOR = Color3.fromRGB(255, 228, 188),
+	BOARD_LIGHT_RANGE = 32,
+	BOARD_LIGHT_BRIGHTNESS = 2,
+	-- Hub v1 floor paint (DepotMarkingUtils plans it, DepotBuildSystem lays it): thin, non-colliding parts LIFT above the
+	-- floor. Per truck: a "BAY n" stencil in front of the ramp, a hazard band of STRIPE-wide yellow/black stripes across
+	-- the ramp's foot, two side lines BAY_HALF_WIDTH from the truck's centre from the bay's front to BAY_BACK_GAP short
+	-- of the back wall, and a dashed lane from LANE_START_Z (behind the spawn strip) to the bay's front.
+	MARKING = table.freeze({
+		YELLOW = Color3.fromRGB(240, 190, 40),
+		BLACK = Color3.fromRGB(26, 26, 28),
+		THICKNESS = 0.04,
+		LIFT = 0.01,
+		LINE_WIDTH = 0.5,
+		BAY_HALF_WIDTH = 9,
+		BAY_BACK_GAP = 1,
+		-- The bay's front: this far in front of the ramp's foot (the stencil sits in between).
+		BAY_FRONT = 6,
+		LABEL_SIZE = Vector2.new(10, 4.5),
+		HAZARD_WIDTH = 9,
+		HAZARD_DEPTH = 1.5,
+		STRIPE = 1,
+		LANE_START_Z = 18,
+		DASH = 2,
+		GAP = 1.5,
+	}),
+	-- The BAY n stencil's text resolution on the floor: low enough that TextScaled's 100 px cap still fills the stencil.
+	STENCIL_PIXELS_PER_STUD = 20,
 	FLOOR_COLOR = Color3.fromRGB(84, 86, 90),
 	WALL_COLOR = Color3.fromRGB(150, 140, 120),
 	BED_COLOR = Color3.fromRGB(60, 60, 64),

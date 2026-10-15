@@ -28,4 +28,52 @@ return function()
 			expect(built.model:FindFirstChild("PadTag", true):IsA("BillboardGui")).to.equal(true)
 		end)
 	end)
+	describe("hub lighting", function()
+		it("hangs a lit strip over each board as well as over the trucks", function()
+			built = Build.build(Layout, CFrame.new(50000, 0, 0), {})
+			local lights = built.model:FindFirstChild("Lights")
+			expect(lights ~= nil).to.equal(true)
+			local boardLights = 0
+			for _, fixture in lights:GetChildren() do
+				expect(fixture:FindFirstChildOfClass("PointLight") ~= nil).to.equal(true)
+				expect(fixture.CanCollide).to.equal(false)
+				if fixture.Name == "BoardLight" then
+					boardLights += 1
+					local lamp = fixture.Position - CFrame.new(50000, 0, 0).Position
+					local near = math.abs(lamp.X - Layout.contractBoard.x) < 1
+						or math.abs(lamp.X - Layout.resultBoard.x) < 1
+					expect(near).to.equal(true)
+				end
+			end
+			expect(boardLights).to.equal(2)
+		end)
+	end)
+	describe("floor bays", function()
+		it("paints thin, non-colliding bays, ramp hazard bands and lanes, with a BAY n stencil per truck", function()
+			built = Build.build(Layout, CFrame.new(50000, 0, 0), {})
+			local markings = built.model:FindFirstChild("FloorMarkings")
+			expect(markings ~= nil).to.equal(true)
+			local texts = {}
+			local parts = 0
+			for _, part in markings:GetChildren() do
+				expect(part:IsA("BasePart")).to.equal(true)
+				parts += 1
+				expect(part.CanCollide).to.equal(false)
+				expect(part.CanQuery).to.equal(false)
+				expect(part.CanTouch).to.equal(false)
+				expect(part.Anchored).to.equal(true)
+				expect(part.Size.Y <= 0.06).to.equal(true)
+				local gui = part:FindFirstChildOfClass("SurfaceGui")
+				if gui ~= nil then
+					expect(gui.Face).to.equal(Enum.NormalId.Top)
+					table.insert(texts, gui:FindFirstChildOfClass("TextLabel").Text)
+				end
+			end
+			table.sort(texts)
+			expect(#texts).to.equal(#Layout.trucks)
+			expect(texts[1]).to.equal("BAY 1")
+			expect(texts[#texts]).to.equal(`BAY {#Layout.trucks}`)
+			expect(parts > #Layout.trucks * 10).to.equal(true)
+		end)
+	end)
 end
