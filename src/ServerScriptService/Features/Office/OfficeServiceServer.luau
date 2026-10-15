@@ -5,8 +5,9 @@
 	authored core at start; seeded modular geometry each shift (OfficeBuildSystem), then its night decor (OfficeDecorSystem), at OfficeConstants.ORIGIN, far from the origin where M4's depot
 	goes. Each shift `beginShift` rolls the spawns (OfficeSpawnUtils, re-rolling with the next seed, up to
 	ROLL_ATTEMPTS times, if OfficeSpawnRules finds a broken guarantee; then it proceeds with the last roll) and places them in ONE per-shift folder owned by ONE Janitor:
-	piles (Vacuum), items (Cargo), hidden items under piles (revealed when the pile is cleared), and desk /
-	locker contents (Cargo). `reset` destroys that folder and forgets the shift.
+	piles (Vacuum), items (Cargo), hidden items under piles (revealed when the pile is cleared; the pile is marked
+	CargoConstants.BURIED_ATTRIBUTE, its glint), and desk / locker contents (Cargo). Every valuable spawns with the
+	appraisal the roll gave it, fully grimy (the loot loop). `reset` destroys that folder and forgets the shift.
 
 	M2: Harlow's route, rest point and the safe loading bay (`route`, `restPoint`, `safeZone`).
 
@@ -21,6 +22,9 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local OfficeServer = ServerScriptService.Features.Office
 local Janitor = require(ReplicatedStorage.Packages.Janitor)
+local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants)
+local CargoTypes = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoTypes)
+local CargoAppraisalFormulas = require(ReplicatedStorage.Shared.Features.Cargo.Utils.CargoAppraisalFormulas)
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local OfficeConstants = require(OfficeServer.Data.OfficeConstants)
 local OfficeLayoutConstants = require(OfficeServer.Data.OfficeLayoutConstants)
@@ -134,12 +138,17 @@ local function rebuild(seed: number)
 	OfficeDecorSystem.build(layout, OfficeConstants.ORIGIN, current.model)
 end
 
+-- A rolled valuable as it spawns (fully grimy, unappraised); nil for trash.
+local function fresh(roll: CargoTypes.AppraisalRoll?): CargoTypes.Appraisal?
+	return if roll ~= nil then CargoAppraisalFormulas.fresh(roll) else nil
+end
+
 local function rollPlan(options: { seed: number, variant: string, quota: number }): OfficeTypes.SpawnPlan
 	local rollOptions: OfficeTypes.RollOptions = {
 		quota = options.quota,
 		variant = options.variant,
 		piles = OfficeConstants.PILES,
-		salvage = OfficeConstants.SALVAGE,
+		valuables = OfficeConstants.VALUABLES,
 	}
 	local plan: OfficeTypes.SpawnPlan
 	for attempt = 0, OfficeConstants.ROLL_ATTEMPTS - 1 do
@@ -252,24 +261,35 @@ local OfficeServiceServer: OfficeServiceServer = {
 				local pile = VacuumServiceServer:spawnPile(pilePlan.kind, floor, folder)
 				local hides = pilePlan.hides
 				if hides ~= nil then
-					hidden[pile] = CargoServiceServer:spawnItem(hides, floor, folder, { hidden = true })
+					hidden[pile] = CargoServiceServer:spawnItem(
+						hides,
+						floor,
+						folder,
+						{ hidden = true, appraisal = fresh(pilePlan.appraisal) }
+					)
+					pile:SetAttribute(CargoConstants.BURIED_ATTRIBUTE, true)
 				end
 			end
 		end
 		for _, itemPlan in plan.items do
 			local marker = markerById[itemPlan.marker]
 			if marker ~= nil then
-				CargoServiceServer:spawnItem(itemPlan.kind, spotFrame(marker), folder)
+				CargoServiceServer:spawnItem(
+					itemPlan.kind,
+					spotFrame(marker),
+					folder,
+					{ appraisal = fresh(itemPlan.appraisal) }
+				)
 			end
 		end
 		for _, search in plan.searchables do
 			local part: BasePart? = current.searchables[search.marker]
 			if part ~= nil then
-				CargoServiceServer:stockSearchable(part, search.kind)
+				CargoServiceServer:stockSearchable(part, search.kind, fresh(search.appraisal))
 			end
 		end
 		lastPlan = plan
-		log:info(`shift spawns: {#plan.piles} piles, {#plan.items} items, {plan.trashValue} trash`)
+		log:info(`shift spawns: {#plan.piles} piles, {#plan.items} items, worth {plan.value} clean`)
 		return plan
 	end,
 
@@ -367,7 +387,7 @@ local OfficeServiceServer: OfficeServiceServer = {
 			shift = shiftFolder ~= nil,
 			piles = if plan ~= nil then #plan.piles else 0,
 			items = if plan ~= nil then #plan.items else 0,
-			trashValue = if plan ~= nil then plan.trashValue else 0,
+			value = if plan ~= nil then plan.value else 0,
 			greed = if plan ~= nil and plan.greed ~= nil then `{plan.greed.kind} @ {plan.greed.marker}` else nil,
 			hiddenUnderPiles = hiddenCount,
 			routePoints = #routePoints,

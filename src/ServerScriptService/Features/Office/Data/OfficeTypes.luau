@@ -8,6 +8,10 @@
 	@class OfficeTypes
 ]=]
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local CargoTypes = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoTypes)
+
 -- An axis-aligned nonoverlapping floor rectangle. Functional workplaces use archetype zones;
 -- hallway rectangles are physical corridor links and are excluded from semantic work-room counts.
 -- A nil zone remains valid for authored layouts.
@@ -98,39 +102,44 @@ export type Range = {
 }
 
 export type RollOptions = {
+	-- The run's quota: the map is topped up until it can meet it (OfficeLootUtils.shortfall).
 	quota: number,
-	-- "B" hides some salvage under piles; "A" exposes it all.
+	-- The shift's A/B variant. Kept for analytics; since the loot loop it no longer changes the roll.
 	variant: string,
 	piles: Range,
-	salvage: Range,
+	valuables: Range,
 }
 
--- A pile on a marker, possibly with a cargo item hidden under it.
+-- A pile on a marker, possibly with a cargo item buried under it (and that valuable's rolled appraisal).
 export type PilePlan = {
 	marker: string,
 	kind: string,
 	hides: string?,
+	appraisal: CargoTypes.AppraisalRoll?,
 }
 
+-- An item on a marker; a valuable carries its rolled appraisal.
 export type ItemPlan = {
 	marker: string,
 	kind: string,
+	appraisal: CargoTypes.AppraisalRoll?,
 }
 
--- A desk or locker and what it holds (nil = empty).
+-- A desk or locker and what it holds (nil = empty), a valuable with its rolled appraisal.
 export type SearchPlan = {
 	marker: string,
 	kind: string?,
+	appraisal: CargoTypes.AppraisalRoll?,
 }
 
 -- One shift's spawns. `greed` records where the guaranteed greed target went (an item, pile or desk
--- marker); `trashValue` is the open-floor trash plus the dust bags the piles make.
+-- marker); `value` is everything at full cleanliness, valuables at their plain base (OfficeLootUtils.valueOf).
 export type SpawnPlan = {
 	piles: { PilePlan },
 	items: { ItemPlan },
 	searchables: { SearchPlan },
 	greed: ItemPlan?,
-	trashValue: number,
+	value: number,
 }
 
 return {}

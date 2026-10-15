@@ -25,14 +25,20 @@ export type CargoPocketTracker = {
 
 local CargoPocketTracker = {}
 
+-- A detached copy of one entry, its visual and appraisal included (a pocketed valuable keeps its grime).
+local function clone(entry: CargoEntry): CargoEntry
+	return {
+		kind = entry.kind,
+		value = entry.value,
+		visual = if entry.visual ~= nil then table.clone(entry.visual) else nil,
+		appraisal = if entry.appraisal ~= nil then table.clone(entry.appraisal) else nil,
+	}
+end
+
 local function copy(list: { CargoEntry }): { CargoEntry }
 	local result: { CargoEntry } = {}
 	for _, entry in list do
-		table.insert(result, {
-			kind = entry.kind,
-			value = entry.value,
-			visual = if entry.visual ~= nil then table.clone(entry.visual) else nil,
-		})
+		table.insert(result, clone(entry))
 	end
 	return result
 end
@@ -51,11 +57,7 @@ function CargoPocketTracker.new(): CargoPocketTracker
 			if #list >= CargoConstants.POCKET_SLOTS then
 				return false
 			end
-			table.insert(list, {
-				kind = entry.kind,
-				value = entry.value,
-				visual = if entry.visual ~= nil then table.clone(entry.visual) else nil,
-			})
+			table.insert(list, clone(entry))
 			return true
 		end,
 
@@ -82,13 +84,7 @@ function CargoPocketTracker.new(): CargoPocketTracker
 				return nil
 			end
 			local entry = table.remove(list, index)
-			return if entry ~= nil
-				then {
-					kind = entry.kind,
-					value = entry.value,
-					visual = if entry.visual ~= nil then table.clone(entry.visual) else nil,
-				}
-				else nil
+			return if entry ~= nil then clone(entry) else nil
 		end,
 
 		clear = function(_self)

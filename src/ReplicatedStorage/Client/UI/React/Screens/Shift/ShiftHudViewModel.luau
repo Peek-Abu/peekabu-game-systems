@@ -150,12 +150,14 @@ local function handsOf(kind: PublicPlayerTypes.PublicValue?): HandsView?
 	if def == nil then
 		return { kind = kind, name = kind, value = "", traits = "", short = "", fragile = false }
 	end
+	-- A valuable's worth is rolled, scaled and grimy: "$???" here, its real number on its tag (the loot loop).
+	local value = if def.grimy then `{ShiftCurrencyUtils.SYMBOL}???` else `+{def.value}`
 	return {
 		kind = kind,
 		name = def.name,
-		value = `+{def.value}`,
+		value = value,
 		traits = traitsOf(def),
-		short = `+{def.value}{if def.fragile then " fragile" else ""}`,
+		short = `{value}{if def.fragile then " fragile" else ""}`,
 		fragile = def.fragile,
 	}
 end
@@ -500,8 +502,9 @@ function ShiftHudViewModel.compact(view: HudView, bindings: KeyBindings): Compac
 		pocketCount = occupied,
 		actions = actions,
 		cargoValue = if hands ~= nil
-			then if def ~= nil and def.category ~= "trash"
-				then ShiftCurrencyUtils.signed(hands.value)
+			then if def ~= nil and def.grimy
+				then hands.value
+				elseif def ~= nil and def.category ~= "trash" then ShiftCurrencyUtils.signed(hands.value)
 				else `{hands.value} {if def == nil then "value" else "clearance"}`
 			else nil,
 	}

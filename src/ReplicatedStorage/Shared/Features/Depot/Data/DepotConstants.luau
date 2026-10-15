@@ -17,8 +17,9 @@ local DepotTypes = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotTyp
 -- DepotBoardViewModel; NOTES is the contract's own note.
 local BOARD_COPY = table.freeze({
 	title = "TONIGHT'S JOB",
-	quota = "clearance (rubbish bags, dust bags, recycling)",
-	quotaPhone = "clearance",
+	-- The quota counts everything banked (the loot loop, docs/superpowers/specs/2026-10-15-cleanup-crew-loot-loop-design.md).
+	quota = "of site value for a crew of two (everything banked counts; clean it first)",
+	quotaPhone = "site value",
 	shift = "on the clock. Clock out at the truck any time.",
 	shiftPhone = "clock out at the truck",
 	crew = "1–4 per truck.",

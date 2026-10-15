@@ -49,7 +49,12 @@ return function()
 			expect(message.kinds[2]).to.equal("plaque")
 			expect((message.from - Vector3.new(1, 2, 3)).Magnitude).to.be.near(0, 1e-6)
 			expect((message.to - Vector3.new(10, 2.5, 0)).Magnitude).to.be.near(0, 1e-6)
-			expect(message.clearance).to.equal(10)
+		end)
+
+		it("clears everything banked at x1: trash and valuables both count toward the quota", function()
+			local size = Vector3.new(1, 1, 1)
+			expect(CargoFeedbackUtils.banked(deposit, Vector3.zero, Vector3.zero, size, nil).clearance).to.equal(35)
+			expect(CargoFeedbackUtils.banked(deposit, Vector3.zero, Vector3.zero, size, 37.5).clearance).to.equal(35)
 		end)
 
 		it("carries the credited bonus, else the deposit's, rounded like the review", function()
@@ -64,6 +69,56 @@ return function()
 			expect(message.clearance).to.equal(65535)
 			expect(message.bonus).to.equal(0)
 			expect(#message.kinds).to.equal(0)
+		end)
+	end)
+
+	describe("appraisal", function()
+		it("reads a valuable's appraisal from its attributes", function()
+			local part = Instance.new("Part")
+			part:SetAttribute("CarryKind", "monitor")
+			part:SetAttribute("CargoId", 3)
+			part:SetAttribute("CargoValue", 65)
+			part:SetAttribute("CargoBaseValue", 100)
+			part:SetAttribute("CargoClean", 0.5)
+			part:SetAttribute("CargoAppraised", false)
+			part:SetAttribute("CargoVariant", "Gold-trim")
+			local entry = CargoFeedbackUtils.entryOf(part)
+			expect(entry.value).to.equal(65)
+			expect(entry.appraisal.base).to.equal(100)
+			expect(entry.appraisal.clean).to.equal(0.5)
+			expect(entry.appraisal.appraised).to.equal(false)
+			expect(entry.appraisal.variant).to.equal("Gold-trim")
+			part:Destroy()
+		end)
+
+		it("gives trash no appraisal", function()
+			local part = Instance.new("Part")
+			part:SetAttribute("CarryKind", "rubbishBag")
+			part:SetAttribute("CargoId", 4)
+			part:SetAttribute("CargoValue", 10)
+			expect(CargoFeedbackUtils.entryOf(part).appraisal).to.equal(nil)
+			part:Destroy()
+		end)
+	end)
+
+	describe("appraisalText", function()
+		it("stamps the shown name and the value, a jackpot by its variant", function()
+			expect(CargoFeedbackUtils.appraisalText("monitor", "Gold-trim", 250, false)).to.equal(
+				"APPRAISED · Gold-trim monitor $250"
+			)
+			expect(CargoFeedbackUtils.appraisalText("plaque", nil, 41.6, false)).to.equal(
+				"APPRAISED · Employee of the Month plaque $42"
+			)
+		end)
+
+		it("says when the truck appraised it", function()
+			expect(CargoFeedbackUtils.appraisalText("monitor", nil, 36, true)).to.equal(
+				"APPRAISED AT THE TRUCK · Monitor $36"
+			)
+		end)
+
+		it("falls back to the kind for an unknown item", function()
+			expect(CargoFeedbackUtils.appraisalText("spaceship", nil, 5, false)).to.equal("APPRAISED · spaceship $5")
 		end)
 	end)
 

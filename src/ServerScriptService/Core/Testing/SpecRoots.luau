@@ -311,6 +311,8 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.UI.React.Screens.World.CargoLoadFloater"] = "presentational React component (floater specced in CargoWorldViewModel; story in CargoWorld.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.World.CargoPriceTag"] = "presentational React component (tag specced in CargoWorldViewModel; story in CargoWorld.story)",
 	["ReplicatedStorage.Client.Features.Cargo.Systems.CargoFeedbackSystem"] = "Instance/tween/ByteNet/Charm/React-root shell (choices and arc specced in CargoFeedbackUtils; floater words in CargoWorldViewModel)",
+	["ReplicatedStorage.Client.Features.Cargo.Systems.CargoGrimeVisualSystem"] = "Highlight/particle/RunService shell (grime look and draw distance specced in CargoLootFeedbackFormulas)",
+	["ReplicatedStorage.Client.Features.Cargo.Systems.CargoLootFeedbackSystem"] = "particles/Sound/RunService shell (glint schedule, glint range and stamp freshness specced in CargoLootFeedbackFormulas)",
 
 	-- Cleanup Crew: Vacuum
 	["ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants"] = "static tuning and names (no logic)",

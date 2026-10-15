@@ -3,7 +3,9 @@
 	CargoPriceTag: a cargo item's price tag (Figma World UI 2b, W5) at its 260x70 design size: a cream price tag with a
 	pointed left end and a string hole (PaperTag), the name (Oswald 24, shrinking to fit the plaque's long name) and the
 	price (Oswald 24, stamp red once cracked) on top, and the mark (Oswald 14 in a 2 px stamp-red outline) under the name.
-	The name and price shrink to fit in design px (PaperLabel multiplies the limits by the billboard's scale). Presentational; the words are CargoWorldViewModel.priceTag.
+	The name and price shrink to fit in design px (PaperLabel multiplies the limits by the billboard's scale). An appraised
+	valuable wears a small tilted APPRAISED rubber stamp (PaperStamp) at the tag's lower right, popping in when the
+	appraisal is fresh. Presentational; the words are CargoWorldViewModel.priceTag.
 
 	@class CargoPriceTag
 ]=]
@@ -13,6 +15,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage.Packages.React)
 local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants)
 local PaperLabel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperLabel)
+local PaperStamp = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperStamp)
 local PaperTag = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperTag)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local CargoWorldViewModel = require(ReplicatedStorage.Client.UI.React.Screens.World.CargoWorldViewModel)
@@ -71,6 +74,16 @@ local function CargoPriceTag(props: CargoPriceTagProps): React.ReactNode
 				PaddingBottom = UDim.new(0, 1),
 			}),
 			label = e(PaperLabel, { text = mark, role = "heading", size = 14, color = COLOR.stamp, fit = true }),
+		})
+	end
+	if view.appraised then
+		-- Keyed by `pop` so a fresh appraisal mounts a new stamp (PaperStamp pops once on mount).
+		body[if view.pop then "appraisedFresh" else "appraised"] = e(PaperStamp, {
+			text = "APPRAISED",
+			size = 13,
+			pop = view.pop,
+			anchor = Vector2.new(1, 1),
+			position = UDim2.new(1, -10, 1, -4),
 		})
 	end
 	return e(PaperTag, { size = CargoConstants.LABEL_PX, paper = COLOR.cream, hole = "left" }, body)

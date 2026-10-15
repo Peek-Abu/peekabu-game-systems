@@ -74,6 +74,17 @@ return function()
 			expect(deposit.bonus).to.equal(15)
 		end)
 
+		it("keeps each valuable's appraisal on its deposit line", function()
+			local appraisal = { base = 100, clean = 0.2, appraised = false }
+			local deposit = CargoBankRules.deposit(
+				{ kind = "monitor", value = 44, appraisal = appraisal },
+				{ { kind = "dustBag", value = 15 } },
+				CargoRegistry.get
+			)
+			expect(deposit.items[1].appraisal).to.equal(appraisal)
+			expect(deposit.items[2].appraisal).to.equal(nil)
+		end)
+
 		it("refuses an empty load", function()
 			local deposit, reason = CargoBankRules.deposit(nil, {}, CargoRegistry.get)
 			expect(deposit).to.equal(nil)

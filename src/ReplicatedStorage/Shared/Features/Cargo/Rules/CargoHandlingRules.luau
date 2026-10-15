@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	CargoHandlingRules: what handling does to cargo (Cleanup Crew spec §4). Pockets take tiny items only,
-	two at a time; a fragile item loses a value tier per impact; a recycling box spills into a pile; a drop
+	two at a time (a fragile item's value tier per impact is CargoAppraisalFormulas.value); a recycling box spills into a pile; a drop
 	is as loud as the item is heavy, and the water jug splashes louder than anything. M2: rattles, puddles and
 	slipping. Pure.
 
@@ -32,19 +32,6 @@ function CargoHandlingRules.canPocket(def: ItemDef?, pocketed: number): (boolean
 		return false, "pockets full"
 	end
 	return true, nil
-end
-
---[=[
-	An item's value after `impacts` drops or throws: unchanged unless fragile, else the catalog value times
-	the tier's fraction, rounded; past the last tier it stays there.
-]=]
-function CargoHandlingRules.valueAfter(def: ItemDef, impacts: number): number
-	if not def.fragile then
-		return def.value
-	end
-	local tiers = CargoConstants.FRAGILE_TIERS
-	local fraction = tiers[math.clamp(impacts + 1, 1, #tiers)]
-	return math.floor(def.value * fraction + 0.5)
 end
 
 --[=[

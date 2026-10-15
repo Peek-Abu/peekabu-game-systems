@@ -2,8 +2,9 @@
 --[=[
 	CargoBillboardSystem: draws cargo price tags on this client (Figma World UI 2b, W5). It watches the items' tag
 	shells (UIBillboardHost.watch, tag CargoConstants.LABEL_TAG) and every LABEL_CHECK seconds mounts a tag for each
-	selected nearby item and unmounts the rest (ShiftPromptStore selects by character reach, never while
-	hidden under a pile), so at most one cargo price root lives at once. A mounted tag re-renders in place when the
+	selected nearby item, and for each valuable someone is cleaning right now (its ChannelCount, the loot loop: watch its
+	percentage climb), and unmounts the rest (ShiftPromptStore selects by character reach, never while hidden under a
+	pile). A mounted tag re-renders in place when the
 	server changes its attributes (a fragile item cracked); a banked, destroyed or streamed-out item loses its root once.
 
 	Spec-exempt shell (CollectionService, Camera, RunService, React roots); the decisions are the specced
@@ -15,9 +16,11 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
 
 local React = require(ReplicatedStorage.Packages.React)
 local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants)
+local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionConstants)
 local UIBillboardHost = require(ReplicatedStorage.Client.UI.Layers.UIBillboardHost)
 local UIBillboards = require(ReplicatedStorage.Client.UI.Layers.UIBillboards)
 local CargoPriceTag = require(ReplicatedStorage.Client.UI.React.Screens.World.CargoPriceTag)
@@ -41,7 +44,7 @@ local counters = { mounts = 0, unmounts = 0 }
 local stoppers: { () -> () } = {}
 
 local function draw(shell: BillboardGui)
-	local view = CargoWorldViewModel.priceTag(shell:GetAttributes())
+	local view = CargoWorldViewModel.priceTag(shell:GetAttributes(), Workspace:GetServerTimeNow())
 	roots.show(
 		shell,
 		if view ~= nil
@@ -69,9 +72,11 @@ local function step()
 	for shell in shells do
 		local now = mounted[shell] == true
 		local hidden = shell:GetAttribute(CargoConstants.LABEL_KEYS.hidden) == true
-		local want = selected ~= nil
-			and (shell.Parent == selected or shell:IsDescendantOf(selected))
-			and CargoWorldViewModel.mounted(distanceTo(shell, from), now, hidden)
+		local item = shell.Parent
+		local count = if item ~= nil then item:GetAttribute(InteractionConstants.CHANNEL_COUNT_ATTRIBUTE) else nil
+		local cleaning = type(count) == "number" and count > 0
+		local chosen = selected ~= nil and (shell.Parent == selected or shell:IsDescendantOf(selected))
+		local want = (chosen or cleaning) and CargoWorldViewModel.mounted(distanceTo(shell, from), now, hidden)
 		if want and not now then
 			mounted[shell] = true
 			counters.mounts += 1

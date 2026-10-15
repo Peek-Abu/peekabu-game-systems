@@ -7,13 +7,44 @@ local OfficeLayoutConstants = require(ServerScriptService.Features.Office.Data.O
 local OfficeLayoutGenerationUtils = require(ServerScriptService.Features.Office.Utils.OfficeLayoutGenerationUtils)
 local OfficeLayoutUtils = require(ServerScriptService.Features.Office.Utils.OfficeLayoutUtils)
 local OfficeSpawnRules = require(ServerScriptService.Features.Office.Rules.OfficeSpawnRules)
+local OfficeLootUtils = require(ServerScriptService.Features.Office.Utils.OfficeLootUtils)
 local CargoRegistry = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoRegistry)
+local CargoAppraisalFormulas = require(ReplicatedStorage.Shared.Features.Cargo.Utils.CargoAppraisalFormulas)
+local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 
 local LAYOUT = OfficeLayoutConstants.LAYOUT
-local QUOTA = 350
+-- The biggest crew's quota: every roll on a generated office (what a shift plays) must be able to meet it. The authored
+-- base layout is two rooms deep and never played as is; its rolls are checked for placement with no quota.
+local QUOTA = ShiftConstants.QUOTA_BY_CREW[#ShiftConstants.QUOTA_BY_CREW]
 
-local function options(variant)
-	return { quota = QUOTA, variant = variant, piles = OfficeConstants.PILES, salvage = OfficeConstants.SALVAGE }
+local function options(variant, quota)
+	return {
+		quota = quota or 0,
+		variant = variant,
+		piles = OfficeConstants.PILES,
+		valuables = OfficeConstants.VALUABLES,
+	}
+end
+
+-- Every valuable in a plan with its marker id and appraisal: open, buried and in desks.
+local function valuablesOf(plan)
+	local list = {}
+	local function add(kind, marker, appraisal)
+		local def = if kind ~= nil then CargoRegistry.get(kind) else nil
+		if def ~= nil and def.grimy then
+			table.insert(list, { kind = kind, marker = marker, appraisal = appraisal, def = def })
+		end
+	end
+	for _, item in plan.items do
+		add(item.kind, item.marker, item.appraisal)
+	end
+	for _, pile in plan.piles do
+		add(pile.hides, pile.marker, pile.appraisal)
+	end
+	for _, search in plan.searchables do
+		add(search.kind, search.marker, search.appraisal)
+	end
+	return list
 end
 
 local function roll(seed, variant)
@@ -21,14 +52,42 @@ local function roll(seed, variant)
 end
 
 return function()
-	it("meets every guarantee for fifty seeds in both variants", function()
+	it("meets every guarantee on the base layout without a quota, for fifty seeds in both variants", function()
 		for seed = 1, 50 do
 			for _, variant in { "A", "B" } do
-				local ok, reason = OfficeSpawnRules.check(roll(seed, variant), LAYOUT, QUOTA)
+				local ok, reason = OfficeSpawnRules.check(roll(seed, variant), LAYOUT, 0)
 				if not ok then
 					error(`seed {seed} variant {variant}: {reason}`)
 				end
 			end
+		end
+	end)
+
+	it("meets every guarantee, the biggest crew's quota included, on generated offices", function()
+		for seed = 1, 30 do
+			if seed % 5 == 0 then
+				task.wait()
+			end
+			local layout = OfficeLayoutGenerationUtils.generate(LAYOUT, seed)
+			local plan = OfficeSpawnUtils.roll(layout, options("B", QUOTA), Random.new(seed))
+			local ok, reason = OfficeSpawnRules.check(plan, layout, QUOTA)
+			if not ok then
+				error(`seed {seed}: {reason}`)
+			end
+		end
+	end)
+
+	it("keeps at most DESK_VALUABLES_MAX valuables in desks, besides a desk greed target", function()
+		for seed = 1, 20 do
+			local layout = OfficeLayoutGenerationUtils.generate(LAYOUT, seed)
+			local plan = OfficeSpawnUtils.roll(layout, options("B"), Random.new(seed))
+			local count = 0
+			for _, search in plan.searchables do
+				if search.appraisal ~= nil and search.kind ~= "goldenStapler" then
+					count += 1
+				end
+			end
+			expect(count <= OfficeConstants.DESK_VALUABLES_MAX).to.equal(true)
 		end
 	end)
 
@@ -56,24 +115,85 @@ return function()
 		end
 	end)
 
-	it("hides nothing under piles in variant A", function()
+	it("buries loot in both variants, the same way (the variant no longer changes the roll)", function()
 		for seed = 1, 20 do
-			for _, pile in roll(seed, "A").piles do
-				expect(pile.hides).to.equal(nil)
+			local a, b = roll(seed, "A"), roll(seed, "B")
+			for index, pile in a.piles do
+				expect(pile.hides).to.equal(b.piles[index].hides)
 			end
 		end
 	end)
 
-	it("hides some salvage under piles in variant B", function()
-		local hidden = 0
-		for seed = 1, 20 do
-			for _, pile in roll(seed, "B").piles do
+	it("buries a valuable under roughly a third of the piles, only buriable kinds or the stapler", function()
+		local piles, buried = 0, 0
+		for seed = 1, 60 do
+			for _, pile in roll(seed).piles do
+				piles += 1
 				if pile.hides ~= nil then
-					hidden += 1
+					buried += 1
+					local def = CargoRegistry.get(pile.hides)
+					expect(def.buriable or def.id == "goldenStapler").to.equal(true)
+					expect(pile.appraisal ~= nil).to.equal(true)
 				end
 			end
 		end
-		expect(hidden > 0).to.equal(true)
+		local share = buried / piles
+		expect(share > 0.2 and share < 0.42).to.equal(true)
+	end)
+
+	it("offers 10-14 valuables, a few more when topped up, and puts no trash on the open floor", function()
+		for seed = 1, 50 do
+			local plan = roll(seed)
+			local count = #valuablesOf(plan)
+			expect(count >= OfficeConstants.VALUABLES.min).to.equal(true)
+			expect(count <= OfficeConstants.VALUABLES.max + OfficeConstants.TOP_UP_MAX).to.equal(true)
+			for _, item in plan.items do
+				expect(CargoRegistry.get(item.kind).category).to.equal("salvage")
+			end
+		end
+	end)
+
+	it("appraises every valuable inside its range scaled by depth (and jackpot), and no trash", function()
+		local depths = OfficeLayoutUtils.depths(LAYOUT)
+		for seed = 1, 30 do
+			local plan = roll(seed)
+			for _, entry in valuablesOf(plan) do
+				local appraisal = entry.appraisal
+				expect(appraisal ~= nil).to.equal(true)
+				local marker = OfficeLayoutUtils.marker(LAYOUT, entry.marker)
+				local scale = CargoAppraisalFormulas.depthMultiplier(depths[marker.room] or 0)
+				local jackpot = if appraisal.variant ~= nil then entry.def.jackpot.multiplier else 1
+				expect(appraisal.base >= math.floor(entry.def.valueMin * scale * jackpot)).to.equal(true)
+				expect(appraisal.base <= math.ceil(entry.def.valueMax * scale * jackpot)).to.equal(true)
+			end
+			for _, search in plan.searchables do
+				if search.kind ~= nil and not CargoRegistry.get(search.kind).grimy then
+					expect(search.appraisal).to.equal(nil)
+				end
+			end
+		end
+	end)
+
+	it("pays more for valuables found deeper (generated offices)", function()
+		local shallow, shallowCount, deep, deepCount = 0, 0, 0, 0
+		for seed = 1, 30 do
+			local layout = OfficeLayoutGenerationUtils.generate(LAYOUT, seed)
+			local depths = OfficeLayoutUtils.depths(layout)
+			for _, entry in valuablesOf(OfficeSpawnUtils.roll(layout, options("B"), Random.new(seed))) do
+				local marker = OfficeLayoutUtils.marker(layout, entry.marker)
+				local depth = depths[marker.room] or 0
+				local ratio = entry.appraisal.base / entry.def.value
+				if depth <= 1 then
+					shallow += ratio
+					shallowCount += 1
+				elseif depth >= 3 then
+					deep += ratio
+					deepCount += 1
+				end
+			end
+		end
+		expect(shallowCount > 0 and deepCount > 0).to.equal(true)
+		expect(deep / deepCount > shallow / shallowCount).to.equal(true)
 	end)
 
 	it("offers the same salvage for the same seed in both variants (only where it sits differs)", function()
@@ -117,11 +237,22 @@ return function()
 		end
 	end)
 
-	it("reports the trash total it rolled, counting canister output", function()
-		for seed = 1, 10 do
+	it("reports the value it rolled", function()
+		for seed = 1, 30 do
 			local plan = roll(seed)
-			expect(plan.trashValue).to.equal(OfficeSpawnRules.trashValue(plan))
-			expect(plan.trashValue >= QUOTA * OfficeConstants.TRASH_FACTOR).to.equal(true)
+			expect(plan.value).to.equal(OfficeLootUtils.valueOf(plan).full)
+		end
+	end)
+
+	it("tops a poor map up with open valuables for a big quota, at most TOP_UP_MAX", function()
+		for seed = 1, 20 do
+			local plain = roll(seed)
+			local topped = OfficeSpawnUtils.roll(LAYOUT, options("B", QUOTA), Random.new(seed))
+			local extra = #topped.items - #plain.items
+			expect(extra >= 0 and extra <= OfficeConstants.TOP_UP_MAX).to.equal(true)
+			if not OfficeLootUtils.shortfall(plain, QUOTA) then
+				expect(extra).to.equal(0)
+			end
 		end
 	end)
 
@@ -138,7 +269,7 @@ return function()
 		it("sits appliances on kitchen counters, at most one per counter", function()
 			for seed = 1, 30 do
 				local layout, plan = generated(seed)
-				local ok, reason = OfficeSpawnRules.check(plan, layout, QUOTA)
+				local ok, reason = OfficeSpawnRules.check(plan, layout, 0)
 				expect(ok).to.equal(true)
 				if not ok then
 					error(`seed {seed}: {reason}`)
@@ -184,7 +315,7 @@ return function()
 			for seed = 1, 30 do
 				local layout = OfficeLayoutGenerationUtils.generate(LAYOUT, seed)
 				local plan = OfficeSpawnUtils.roll(layout, options("B"), Random.new(seed))
-				local ok, reason = OfficeSpawnRules.check(plan, layout, QUOTA)
+				local ok, reason = OfficeSpawnRules.check(plan, layout, 0)
 				expect(ok).to.equal(true)
 				if not ok then
 					error(`seed {seed}: {reason}`)
@@ -239,7 +370,7 @@ return function()
 				items = { { marker = "a", kind = "monitor" }, { marker = "b", kind = "rubbishBag" } },
 				piles = { { marker = "c", kind = "paper", hides = "plaque" }, { marker = "d", kind = "paper" } },
 				searchables = { { marker = "e", kind = "goldenStapler" }, { marker = "f" } },
-				trashValue = 0,
+				value = 0,
 			}
 			expect(OfficeSpawnUtils.salvageCount(plan)).to.equal(3)
 		end)

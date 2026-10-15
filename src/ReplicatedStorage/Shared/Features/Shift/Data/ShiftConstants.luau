@@ -72,8 +72,13 @@ return table.freeze({
 	CURRENCY_NAME = "Scrip",
 	-- The StateSyncWorldStore entry the snapshot is published under.
 	WORLD_ENTRY = "shift",
-	-- Clearance (trash value) the crew must load.
-	QUOTA = 350,
+	-- The quota: everything banked counts toward it at x1 (docs/superpowers/specs/2026-10-15-cleanup-crew-loot-loop-design.md
+	-- §3.6). By crew size 1-4: a generated map is worth about 1,850 fully clean and 1,280 at average cleanliness
+	-- (measured over 30 seeds, 2026-10-15), so these ask about 60 / 65 / 68 / 70% of it (solo makes fewer trips; four
+	-- players are capped because the map does not grow with them). QUOTA is the two-player figure, the quota the depot
+	-- posts; a run uses QUOTA_BY_CREW (ShiftQuotaFormulas).
+	QUOTA = 830,
+	QUOTA_BY_CREW = table.freeze({ 770, 830, 870, 900 }),
 	-- 7:00 on the clock.
 	SHIFT_SECONDS = 420,
 	-- The arrival card (Round's countdown).

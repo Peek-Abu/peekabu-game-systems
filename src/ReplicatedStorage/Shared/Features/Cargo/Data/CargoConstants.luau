@@ -98,11 +98,65 @@ return table.freeze({
 		fragile = "CargoTagFragile",
 		impacts = "CargoTagImpacts",
 		hidden = "CargoTagHidden",
+		-- A valuable's grime (0-1), whether it is appraised, its jackpot name, and when it was appraised (server
+		-- time, so a fresh appraisal's stamp pops). Absent on trash.
+		grimy = "CargoTagGrimy",
+		clean = "CargoTagClean",
+		appraised = "CargoTagAppraised",
+		variant = "CargoTagVariant",
+		appraisedAt = "CargoTagAppraisedAt",
 	}),
 	LABEL_PX = Vector2.new(260, 70),
 	LABEL_DISTANCE = 24,
 	LABEL_KEEP_DISTANCE = 28,
 	LABEL_CHECK = 0.2,
+	-- The loot loop (docs/superpowers/specs/2026-10-15-cleanup-crew-loot-loop-design.md §3). A valuable pays
+	-- base x fragile tier x grime factor, the grime factor GRIME_FLOOR + (1 - GRIME_FLOOR) x cleanliness: 30% of its
+	-- value at full grime, all of it clean. It is appraised (its "$???" revealed) once cleanliness first reaches
+	-- APPRAISE_AT, and stays appraised.
+	GRIME_FLOOR = 0.3,
+	APPRAISE_AT = 0.65,
+	-- Depth: x(1 + DEPTH_VALUE_STEP x (rooms from the bay - 1)), never below 1 or above DEPTH_VALUE_MAX (the next room
+	-- pays x1, the far rooms x1.45-1.6).
+	DEPTH_VALUE_STEP = 0.15,
+	DEPTH_VALUE_MAX = 1.6,
+	-- A valuable's server-owned state: its base (true) value, cleanliness, appraisal, jackpot name, and when it was
+	-- appraised (server time).
+	BASE_VALUE_ATTRIBUTE = "CargoBaseValue",
+	CLEAN_ATTRIBUTE = "CargoClean",
+	APPRAISED_ATTRIBUTE = "CargoAppraised",
+	VARIANT_ATTRIBUTE = "CargoVariant",
+	APPRAISED_AT_ATTRIBUTE = "CargoAppraisedAt",
+	-- Set on a dust pile that hides an item (Office): its glint.
+	BURIED_ATTRIBUTE = "CargoBuried",
+	-- An appraisal is stamped (a toast in Shift's "stamp" style) to every crew member this close, and its tag's stamp
+	-- pops when it is younger than STAMP_FRESH_SECONDS.
+	APPRAISAL_TELL_DISTANCE = 30,
+	APPRAISAL_TOAST_STYLE = "stamp",
+	APPRAISAL_TOAST_SECONDS = 3,
+	STAMP_FRESH_SECONDS = 2,
+	-- The grime look (client): a Highlight in GRIME_COLOR, fill transparency GRIME_FILL_TRANSPARENCY at full grime
+	-- easing to 1 when clean, and dust motes at up to GRIME_MOTE_RATE per second, drawn within GRIME_VISUAL_DISTANCE
+	-- of the camera (Highlights are capped per client).
+	GRIME_COLOR = Color3.fromRGB(64, 48, 30),
+	GRIME_FILL_TRANSPARENCY = 0.35,
+	GRIME_MOTE_RATE = 4,
+	GRIME_MOTE_COLOR = Color3.fromRGB(150, 132, 104),
+	GRIME_VISUAL_DISTANCE = 70,
+	GRIME_VISUAL_CHECK = 0.25,
+	-- The buried pile's glint: a few sparkles every GLINT_INTERVAL_MIN..MAX seconds, seen within GLINT_DISTANCE.
+	GLINT_DISTANCE = 20,
+	GLINT_INTERVAL_MIN = 3,
+	GLINT_INTERVAL_MAX = 5.5,
+	GLINT_COUNT = 3,
+	GLINT_SIZE = 0.35,
+	GLINT_LIFETIME = 0.45,
+	GLINT_COLOR = Color3.fromRGB(255, 244, 196),
+	-- A buried item's reveal (gold burst) and an appraisal (paper flecks).
+	REVEAL_COUNT = 32,
+	REVEAL_COLOR = Color3.fromRGB(255, 205, 70),
+	APPRAISE_COUNT = 14,
+	APPRAISE_COLOR = Color3.fromRGB(244, 236, 216),
 	-- How far down the floor is looked for under a spill or a scattered item.
 	FLOOR_PROBE = 20,
 	-- Feel (spec §7 "Banking: item swoops into the truck, cha-ching, '+15' floater"). Positional Cargo sounds the

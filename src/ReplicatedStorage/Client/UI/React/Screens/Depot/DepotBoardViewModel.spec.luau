@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local DepotBoardViewModel = require(script.Parent.DepotBoardViewModel)
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
+local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 
 local LAST = {
 	cleared = 362,
@@ -43,7 +44,7 @@ return function()
 		local contract = DepotConstants.CONTRACTS[2]
 		local view = DepotBoardViewModel.board(contract.id, nil, false)
 		expect(#view.rows).to.equal(6)
-		expect(rowOf(view, "QUOTA").text).to.equal("350 clearance (rubbish bags, dust bags, recycling)")
+		expect(rowOf(view, "QUOTA").text).to.equal(`{ShiftConstants.QUOTA} {DepotConstants.BOARD_COPY.quota}`)
 		expect(rowOf(view, "SHIFT").text).to.equal("7:00 on the clock. Clock out at the truck any time.")
 		expect(rowOf(view, "HAZARD").hazard).to.equal(true)
 		expect(rowOf(view, "QUOTA").hazard).to.equal(false)
@@ -53,7 +54,7 @@ return function()
 	it("keeps the phone to four short rows", function()
 		local view = DepotBoardViewModel.board(nil, nil, true)
 		expect(#view.rows).to.equal(4)
-		expect(rowOf(view, "QUOTA").text).to.equal("350 clearance")
+		expect(rowOf(view, "QUOTA").text).to.equal(`{ShiftConstants.QUOTA} site value`)
 		expect(rowOf(view, "PAY").text).to.equal("Assets → $")
 	end)
 

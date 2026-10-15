@@ -15,8 +15,18 @@ export type ItemDef = {
 	id: string,
 	name: string,
 	category: Category,
-	-- Clearance (trash) or bonus (salvage) when loaded undamaged.
+	-- The reference price: a trash item's fixed value, a valuable's typical (mid-range) value. A valuable's real
+	-- value is rolled from valueMin..valueMax (CargoAppraisalFormulas) and scaled by depth, jackpot, damage and grime.
 	value: number,
+	-- A valuable's base range before depth (trash: both equal `value`).
+	valueMin: number,
+	valueMax: number,
+	-- A rare richer variant of this kind (nil = none).
+	jackpot: Jackpot?,
+	-- Spawns grimy: pays a fraction of its value until vacuumed clean, and reads "$???" until appraised.
+	grimy: boolean,
+	-- Small enough to hide under a dust pile (buried loot).
+	buriable: boolean,
 	size: Size,
 	throwable: boolean,
 	-- Loses one value tier per impact (CargoConstants.FRAGILE_TIERS).
@@ -42,6 +52,18 @@ export type ItemDef = {
 	color: Color3,
 }
 
+-- A valuable's rare variant: its name prefix once appraised ("Gold-trim"), how often it is rolled, and its value
+-- multiplier.
+export type Jackpot = { name: string, chance: number, multiplier: number }
+
+-- A rolled valuable before it is in the world: its base (true) value, after depth and any jackpot, and the jackpot's
+-- name when it hit.
+export type AppraisalRoll = { base: number, variant: string? }
+
+-- A valuable's grime and appraisal state, as the item's attributes carry it (and a pocket entry keeps it):
+-- `clean` 0 (fully grimy) to 1, `appraised` once its value is revealed (sticky).
+export type Appraisal = { base: number, variant: string?, clean: number, appraised: boolean }
+
 -- Visual-only server snapshot; never consulted for authoritative category or value.
 export type VisualIdentity = { kitId: string, proxySize: Vector3, rotation: CFrame }
 
@@ -50,6 +72,8 @@ export type CargoEntry = {
 	kind: string,
 	value: number,
 	visual: VisualIdentity?,
+	-- A valuable's grime and appraisal (nil for trash).
+	appraisal: Appraisal?,
 }
 
 export type DepositItem = {
@@ -57,6 +81,7 @@ export type DepositItem = {
 	category: Category,
 	value: number,
 	visual: VisualIdentity?,
+	appraisal: Appraisal?,
 }
 
 -- What one Load is worth: trash adds to clearance, salvage to bonus (before any overtime multiplier).
@@ -76,8 +101,12 @@ export type SpawnOptions = {
 	artKit: string?,
 	-- Spawned invisible and un-interactable (under a pile) until revealed.
 	hidden: boolean?,
-	-- The value it carries (a scattered pocket item keeps its own); absent = the catalog value.
+	-- The value it carries (a scattered pocket item keeps its own); absent = the catalog value. Ignored for a grimy
+	-- kind, whose value always follows its appraisal.
 	value: number?,
+	-- A grimy kind's base value and state (a planned roll, or a pocketed item's own); absent = a fresh, fully grimy
+	-- item at the catalog value.
+	appraisal: Appraisal?,
 	-- Where it came from, for analytics: "desk" (searched) or "scatter" (a caught or leaving player's pockets);
 	-- absent = "pile" when hidden, else "open".
 	source: string?,

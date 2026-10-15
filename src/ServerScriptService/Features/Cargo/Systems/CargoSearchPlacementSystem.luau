@@ -3,6 +3,7 @@
 local Workspace = game:GetService("Workspace")
 local SpawnSystem = require(script.Parent.CargoSpawnSystem)
 local Registry = require(game:GetService("ReplicatedStorage").Shared.Features.Cargo.Data.CargoRegistry)
+local CargoTypes = require(game:GetService("ReplicatedStorage").Shared.Features.Cargo.Data.CargoTypes)
 local CarryConstants = require(game:GetService("ReplicatedStorage").Shared.Features.Carry.Data.CarryConstants)
 local CarryPlacementSystem = require(game:GetService("ServerScriptService").Features.Carry.Systems.CarryPlacementSystem)
 -- The sight line from the furniture to a landing runs this high over the floor, under desk tops and shelves.
@@ -107,13 +108,14 @@ function Placement.deliver(
 	kind: string?,
 	parent: Instance?,
 	floor: CFrame?,
-	spawner: SpawnSystem.CargoSpawnSystem
+	spawner: SpawnSystem.CargoSpawnSystem,
+	appraisal: CargoTypes.Appraisal?
 ): string
 	local def = if kind ~= nil then Registry.get(kind) else nil
 	if kind == nil or def == nil or parent == nil or floor == nil then
 		return "Nothing useful in here."
 	end
-	spawner:spawn(kind, floor, parent, { source = "desk" })
+	spawner:spawn(kind, floor, parent, { source = "desk", appraisal = appraisal })
 	return `Found: {def.name}`
 end
 return Placement

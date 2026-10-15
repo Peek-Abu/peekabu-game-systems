@@ -64,8 +64,9 @@ return function()
 					error("automatic deposit must not take pockets")
 				end,
 			},
-			announce = function()
+			announce = function(_deposit, _from, _bed, _credited, banker)
 				announced += 1
+				expect(banker).to.equal(player)
 			end,
 		}
 		system = Load.new(deps)

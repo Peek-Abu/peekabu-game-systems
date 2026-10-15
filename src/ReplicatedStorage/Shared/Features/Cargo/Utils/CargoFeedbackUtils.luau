@@ -17,6 +17,8 @@ local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.Carg
 local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
 local ArtVisualSystem = require(ReplicatedStorage.Shared.Features.Art.Systems.ArtVisualSystem)
 local CargoTypes = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoTypes)
+local CargoAppraisalFormulas = require(ReplicatedStorage.Shared.Features.Cargo.Utils.CargoAppraisalFormulas)
+local ShiftCurrencyUtils = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftCurrencyUtils)
 
 export type Tone = "clearance" | "bonus"
 
@@ -70,7 +72,19 @@ function CargoFeedbackUtils.entryOf(object: Instance): CargoTypes.CargoEntry?
 			rotation = object.CFrame.Rotation,
 		}
 	end
-	return { kind = kind, value = value, visual = visual }
+	local appraisal: CargoTypes.Appraisal? = nil
+	local base = object:GetAttribute(CargoConstants.BASE_VALUE_ATTRIBUTE)
+	local clean = object:GetAttribute(CargoConstants.CLEAN_ATTRIBUTE)
+	if type(base) == "number" and type(clean) == "number" then
+		local variant = object:GetAttribute(CargoConstants.VARIANT_ATTRIBUTE)
+		appraisal = {
+			base = base,
+			clean = clean,
+			appraised = object:GetAttribute(CargoConstants.APPRAISED_ATTRIBUTE) == true,
+			variant = if type(variant) == "string" then variant else nil,
+		}
+	end
+	return { kind = kind, value = value, visual = visual, appraisal = appraisal }
 end
 
 function CargoFeedbackUtils.floaters(clearance: number, bonus: number): { Floater }
@@ -88,7 +102,8 @@ end
 
 --[=[
 	The `Banked` announcement for a Load: the kinds loaded, the swoop from `from` to the top of the bed (centre
-	`bed`, size `bedSize`), and the amounts credited, rounded like the review and clamped to the packet's range.
+	`bed`, size `bedSize`), and the amounts credited (cleared: everything at x1; pay: the bonus), rounded like the
+	review and clamped to the packet's range.
 	`credited` is the banking handler's second value (the bonus after any overtime multiplier); nil = the deposit's.
 ]=]
 function CargoFeedbackUtils.banked(
@@ -119,9 +134,22 @@ function CargoFeedbackUtils.banked(
 		visuals = visuals,
 		from = from,
 		to = bed + Vector3.new(0, bedSize.Y / 2, 0),
-		clearance = math.clamp(round(deposit.clearance), 0, MAX_AMOUNT),
+		-- Everything banked counts toward the quota at x1 (docs/superpowers/specs/2026-10-15-cleanup-crew-loot-loop-design.md
+		-- §3.6; ShiftQuotaFormulas.credit): the CLEARED floater shows trash plus valuables.
+		clearance = math.clamp(round(deposit.clearance + deposit.bonus), 0, MAX_AMOUNT),
 		bonus = math.clamp(round(credited or deposit.bonus), 0, MAX_AMOUNT),
 	}
+end
+
+--[=[
+	The appraisal stamp's words (docs/superpowers/specs/2026-10-15-cleanup-crew-loot-loop-design.md §3.3): the item's
+	shown name (a jackpot by its variant) and what it pays now; `atTruck` when banking revealed it.
+]=]
+function CargoFeedbackUtils.appraisalText(kind: string, variant: string?, value: number, atTruck: boolean): string
+	local def = CargoRegistry.get(kind)
+	local name = if def ~= nil then CargoAppraisalFormulas.displayName(def, variant, true) else kind
+	local head = if atTruck then "APPRAISED AT THE TRUCK" else "APPRAISED"
+	return `{head} · {name} {ShiftCurrencyUtils.amount(value)}`
 end
 
 function CargoFeedbackUtils.arc(from: Vector3, to: Vector3, alpha: number, height: number): Vector3

@@ -19,6 +19,17 @@ local PILE_KINDS: { [string]: PileStyle } = {
 	cables = { size = Vector3.new(3, 0.8, 3), color = Color3.fromRGB(25, 25, 25), material = Enum.Material.Plastic },
 }
 
+-- Cleaning a grimy valuable (docs/superpowers/specs/2026-10-15-cleanup-crew-loot-loop-design.md §3.2): one Interaction
+-- channel kind per cargo size, and the seconds one player takes to clean it fully (rates add across players).
+local GRIME_KINDS: { [string]: string } = {
+	tiny = "grime-tiny",
+	light = "grime-light",
+	medium = "grime-medium",
+	heavy = "grime-heavy",
+	bulky = "grime-bulky",
+}
+local GRIME_SECONDS: { [string]: number } = { tiny = 3, light = 3.5, medium = 5, heavy = 7, bulky = 9 }
+
 -- Ordered, so a seeded roll picks the same kinds.
 local PILE_KIND_LIST: { string } = { "paper", "debris", "cables" }
 
@@ -32,6 +43,11 @@ return table.freeze({
 	-- CollectionService tag on every pile (the client's aim and the shrink follow it).
 	PILE_TAG = "VacuumPile",
 	PILE_KIND_ATTRIBUTE = "PileKind",
+	-- CollectionService tag on a grimy valuable while it can be cleaned (Cargo tags it; the aim, the channel's
+	-- re-check and the noise follow it), and its channel kinds and clean-up times by cargo size.
+	GRIME_TAG = "VacuumGrime",
+	GRIME_KINDS = table.freeze(GRIME_KINDS),
+	GRIME_SECONDS = table.freeze(GRIME_SECONDS),
 	BASE_SIZE_ATTRIBUTE = "PileBaseSize",
 	-- Aim at a pile within this many studs; one player clears it in DURATION seconds.
 	RANGE = 8,

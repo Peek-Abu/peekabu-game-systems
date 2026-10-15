@@ -76,10 +76,13 @@ function CargoBankRules.deposit(
 		else
 			deposit.bonus += value
 		end
-		table.insert(
-			deposit.items,
-			{ kind = entry.kind, category = def.category, value = value, visual = entry.visual }
-		)
+		table.insert(deposit.items, {
+			kind = entry.kind,
+			category = def.category,
+			value = value,
+			visual = entry.visual,
+			appraisal = entry.appraisal,
+		})
 	end
 	if #deposit.items == 0 then
 		return nil, "nothing to load"

@@ -195,10 +195,10 @@ return function()
 				for _, variant in { "A", "B" } do
 					local plan = Spawn.roll(
 						layout,
-						{ quota = 350, variant = variant, piles = Constants.PILES, salvage = Constants.SALVAGE },
+						{ quota = 900, variant = variant, piles = Constants.PILES, valuables = Constants.VALUABLES },
 						Random.new(seed)
 					)
-					local ok, reason = SpawnRules.check(plan, layout, 350)
+					local ok, reason = SpawnRules.check(plan, layout, 900)
 					if not ok then
 						error(reason)
 					end

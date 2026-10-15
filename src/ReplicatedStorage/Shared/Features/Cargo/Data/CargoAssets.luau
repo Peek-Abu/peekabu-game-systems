@@ -66,6 +66,18 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 		rollOffMaxDistance = 40,
 		maxConcurrent = 4,
 	},
+	-- The loot loop (docs/superpowers/specs/2026-10-15-cleanup-crew-loot-loop-design.md §5). A buried item popping out
+	-- of its pile: a PLACEHOLDER (the canister chime's upload) until a reveal sting is sourced. An appraisal: pending (the
+	-- appraisal's stamp toast already plays Shift's stamp to the crew near it). A buried pile's glint twinkle: pending.
+	cargoReveal = {
+		assetId = "rbxassetid://134210659787428",
+		group = "SFX",
+		volume = 0.7,
+		pitch = { min = 1.1, max = 1.2 },
+		rollOffMaxDistance = 50,
+	},
+	cargoAppraise = { assetId = PENDING, group = "SFX", volume = 0.8, rollOffMaxDistance = 40 },
+	cargoGlint = { assetId = PENDING, group = "SFX", volume = 0.3, rollOffMaxDistance = 20, maxConcurrent = 2 },
 	cargoRummage = {
 		assetId = "rbxassetid://9114061295",
 		group = "SFX",

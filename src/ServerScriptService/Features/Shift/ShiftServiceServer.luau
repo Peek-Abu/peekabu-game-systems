@@ -65,6 +65,7 @@ local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServi
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
 local OfficeServiceServer = require(ServerScriptService.Features.Office.OfficeServiceServer)
 local OfficeSpawnUtils = require(ServerScriptService.Features.Office.Utils.OfficeSpawnUtils)
+local ShiftQuotaFormulas = require(ShiftServer.Utils.ShiftQuotaFormulas)
 local RoundServiceServer = require(ServerScriptService.Features.Round.RoundServiceServer)
 local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
 local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
@@ -196,7 +197,7 @@ local function beginRun()
 		end
 	end
 	ToastServiceServer:send("all", {
-		text = `Shift {state.shift}: clear {state.quota} of site buildup before the clock runs out. Bank it at the truck.`,
+		text = `Shift {state.shift}: bank {state.quota} of site value before the clock runs out. Clean what you find: it is worth more.`,
 		style = ShiftConstants.TOAST_STICKY,
 		duration = 6,
 	})
@@ -247,6 +248,8 @@ local function onRoundPhase(roundState: RoundTypes.RoundState)
 	if nextState.phase == "running" and before ~= "running" then
 		-- Each run's A/B variant (spec §4; rewards never read it), chosen before anyone hears of the run.
 		nextState.variant = ShiftAnalyticsSystem.pickVariant(nextState.shift)
+		-- The quota scales with the crew (ShiftQuotaFormulas); everything banked counts toward it.
+		nextState.quota = ShiftQuotaFormulas.quota(#RoundServiceServer:participants())
 	end
 	if before == "running" and nextState.phase ~= "running" then
 		VacuumServiceServer:setCrew({})

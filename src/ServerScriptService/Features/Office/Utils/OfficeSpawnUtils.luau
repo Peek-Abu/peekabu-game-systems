@@ -1,17 +1,23 @@
 --!strict
 --[=[
 	OfficeSpawnUtils: rolls one shift's spawns onto the layout's markers (Cleanup Crew spec §4 "Spawn
-	guarantees", §1 "randomised spawns"). Deterministic for a given Random: the catalog is walked in sorted
-	order and `rng` is consumed in a fixed sequence:
+	guarantees", §1 "randomised spawns"; the loot loop, docs/superpowers/specs/2026-10-15-cleanup-crew-loot-loop-design.md
+	§3.5). Deterministic for a given Random: the catalog is walked in sorted order and `rng` is consumed in a fixed
+	sequence:
 
 	1. piles: a count in `options.piles`, on shuffled pile markers, each a random pile kind;
-	2. desks and lockers: each holds a desk-weighted item with SEARCH_FILL_CHANCE, else nothing;
+	2. desks and lockers: each holds a desk-weighted item with SEARCH_FILL_CHANCE, else nothing; after
+	   DESK_VALUABLES_MAX valuables, only desk trash;
 	3. the greed target (fish tank, filing cabinet or golden stapler), always in a deep room: a hidden one
 	   (the stapler) in a deep desk or locker (else under a deep pile), the others on a deep item marker;
-	4. salvage: a count in `options.salvage`; in variant "B" a hideable one may go under a free pile (the hide roll is drawn in both variants, so a seed offers the same salvage in A and B);
-	5. trash on the remaining item markers until the floor's trash (plus the piles' dust bags) reaches
-	   TRASH_FACTOR × quota.
+	4. the valuables budget, a count in `options.valuables` that the greed target and desk valuables count toward;
+	5. buried loot: one BURY_CHANCE draw per pile (OfficeLootUtils.buried), each hit burying a buriable valuable,
+	   capped so MIN_OPEN of the budget is left for the open;
+	6. the rest of the budget in the open (on item markers, or the furniture tops their kind belongs on);
+	7. the top-up: open valuables, at most TOP_UP_MAX, while the map is too poor for `options.quota`.
 
+	Every valuable is appraised as it is placed (CargoAppraisalFormulas.roll, scaled by its marker's depth). There is
+	no trash padding: trash is the piles' dust bags and the odd desk. The A/B variant no longer changes the roll.
 	OfficeSpawnRules.check verifies the result. Pure.
 
 	@class OfficeSpawnUtils
@@ -23,10 +29,12 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local OfficeServer = ServerScriptService.Features.Office
 local CargoRegistry = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoRegistry)
 local CargoTypes = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoTypes)
+local CargoAppraisalFormulas = require(ReplicatedStorage.Shared.Features.Cargo.Utils.CargoAppraisalFormulas)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local OfficeConstants = require(OfficeServer.Data.OfficeConstants)
 local OfficeTypes = require(OfficeServer.Data.OfficeTypes)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
+local OfficeLootUtils = require(OfficeServer.Utils.OfficeLootUtils)
 local OfficeSpawnRules = require(OfficeServer.Rules.OfficeSpawnRules)
 
 type Marker = OfficeTypes.Marker
@@ -70,16 +78,20 @@ local function pickWeighted(weightOf: (def: ItemDef) -> number, rng: Random): st
 	return last
 end
 
-local function trashWeight(def: ItemDef): number
-	return if def.category == "trash" then def.spawnWeight else 0
-end
-
 local function salvageWeight(def: ItemDef): number
 	return if def.category == "salvage" and not def.greed and not def.hidden then def.spawnWeight else 0
 end
 
+local function buriedWeight(def: ItemDef): number
+	return if def.buriable then def.spawnWeight else 0
+end
+
 local function deskWeight(def: ItemDef): number
 	return if def.greed then 0 else def.deskWeight
+end
+
+local function deskTrashWeight(def: ItemDef): number
+	return if def.grimy then 0 else def.deskWeight
 end
 
 -- The surface marker kinds loot of this def belongs on, in preference order; empty for the floor.
@@ -95,8 +107,20 @@ function OfficeSpawnUtils.roll(
 	rng: Random
 ): OfficeTypes.SpawnPlan
 	local depths = OfficeLayoutUtils.depths(layout)
+	local function depthOf(marker: Marker): number
+		return depths[marker.room] or 0
+	end
 	local function isDeep(marker: Marker): boolean
-		return (depths[marker.room] or 0) >= OfficeConstants.DEEP_DEPTH
+		return depthOf(marker) >= OfficeConstants.DEEP_DEPTH
+	end
+	-- A valuable's rolled appraisal where `marker` stands (nil for trash: it has a fixed price).
+	local function appraise(kind: string?, marker: Marker): CargoTypes.AppraisalRoll?
+		local def = if kind ~= nil then CargoRegistry.get(kind) else nil
+		if def == nil or not def.grimy then
+			return nil
+		end
+		local roll = CargoAppraisalFormulas.roll(def, depthOf(marker), rng)
+		return roll
 	end
 
 	-- 1. Piles.
@@ -107,10 +131,10 @@ function OfficeSpawnUtils.roll(
 	for index = 1, pileCount do
 		table.insert(piles, { marker = pileMarkers[index].id, kind = kinds[rng:NextInteger(1, #kinds)] })
 	end
-	local function freePile(deepOnly: boolean): OfficeTypes.PilePlan?
+	local function freePile(deepOnly: boolean): number?
 		for index, pile in piles do
 			if pile.hides == nil and (not deepOnly or isDeep(pileMarkers[index])) then
-				return pile
+				return index
 			end
 		end
 		return nil
@@ -122,11 +146,17 @@ function OfficeSpawnUtils.roll(
 		table.insert(searchMarkers, marker)
 	end
 	local searchables: { OfficeTypes.SearchPlan } = {}
+	local deskValuables = 0
 	for _, marker in searchMarkers do
+		local full = deskValuables >= OfficeConstants.DESK_VALUABLES_MAX
 		local kind = if rng:NextNumber() < OfficeConstants.SEARCH_FILL_CHANCE
-			then pickWeighted(deskWeight, rng)
+			then pickWeighted(if full then deskTrashWeight else deskWeight, rng)
 			else nil
-		table.insert(searchables, { marker = marker.id, kind = kind })
+		local appraisal = appraise(kind, marker)
+		if appraisal ~= nil then
+			deskValuables += 1
+		end
+		table.insert(searchables, { marker = marker.id, kind = kind, appraisal = appraisal })
 	end
 
 	local itemPool = shuffled(OfficeLayoutUtils.markersOf(layout, "item"), rng)
@@ -178,28 +208,32 @@ function OfficeSpawnUtils.roll(
 		end
 		if #deepSearch > 0 then
 			local index = deepSearch[rng:NextInteger(1, #deepSearch)]
-			searchables[index].kind = greedKind
+			local search = searchables[index]
+			if search.appraisal ~= nil then
+				deskValuables -= 1
+			end
+			search.kind = greedKind
+			search.appraisal = appraise(greedKind, searchMarkers[index])
 			greed = { marker = searchMarkers[index].id, kind = greedKind }
 		else
-			local pile = freePile(true)
-			if pile ~= nil then
-				pile.hides = greedKind
-				greed = { marker = pile.marker, kind = greedKind }
+			local index = freePile(true)
+			if index ~= nil then
+				piles[index].hides = greedKind
+				piles[index].appraisal = appraise(greedKind, pileMarkers[index])
+				greed = { marker = piles[index].marker, kind = greedKind }
 			end
 		end
 	else
 		local placed: OfficeTypes.ItemPlan? = nil
+		local spot: Marker? = nil
 		if greedDef ~= nil and #surfaceFor(greedDef) > 0 then
-			local surface = takeSurface(greedKind, true)
-			if surface ~= nil then
-				placed = { marker = surface.id, kind = greedKind }
-			end
+			spot = takeSurface(greedKind, true)
 		end
-		if placed == nil then
-			local marker = takeMarker(true)
-			if marker ~= nil then
-				placed = { marker = marker.id, kind = greedKind }
-			end
+		if spot == nil then
+			spot = takeMarker(true)
+		end
+		if spot ~= nil then
+			placed = { marker = spot.id, kind = greedKind, appraisal = appraise(greedKind, spot) }
 		end
 		if placed ~= nil then
 			greed = placed
@@ -207,64 +241,63 @@ function OfficeSpawnUtils.roll(
 		end
 	end
 
-	-- 4. Salvage.
-	local salvageCount = rng:NextInteger(options.salvage.min, options.salvage.max)
-	for _ = 1, salvageCount do
+	-- 4. The valuables budget: the greed target and the desks' valuables count toward it.
+	local budget = rng:NextInteger(options.valuables.min, options.valuables.max)
+	local placedCount = (if greed ~= nil then 1 else 0) + deskValuables
+
+	-- 5. Buried loot: a buriable valuable under each pile whose draw hits, leaving MIN_OPEN for the open.
+	local room = math.max(0, budget - placedCount - OfficeConstants.MIN_OPEN)
+	for _, index in OfficeLootUtils.buried(pileCount, room, rng) do
+		local pile = piles[index]
+		local kind = pickWeighted(buriedWeight, rng)
+		if pile.hides == nil and kind ~= nil then
+			pile.hides = kind
+			pile.appraisal = appraise(kind, pileMarkers[index])
+			placedCount += 1
+		end
+	end
+
+	-- 6. One valuable in the open: a weighted kind, on a top its kind belongs on, else an item marker. False when the
+	-- markers ran out.
+	local function placeOpen(): boolean
 		local kind = pickWeighted(function(def)
-			-- Re-roll from eligible salvage using the same single weighted draw, never dump appliances on the floor.
+			-- Re-roll from eligible valuables with the same single weighted draw: never dump appliances on the floor.
 			return if OfficeSpawnRules.requiresSurface(def.id) and surfaceIndex(def.id, false) == nil
 				then 0
 				else salvageWeight(def)
 		end, rng)
 		local def = if kind ~= nil then CargoRegistry.get(kind) else nil
 		if kind == nil or def == nil then
-			break
+			return false
 		end
-		-- Drawn in both variants, so A and B consume `rng` alike: the same seed offers the same salvage and only
-		-- where it sits differs (spec §4: the variant never changes rewards). This assumes enough free item markers:
-		-- A needs a marker for every salvage, so if the pool runs out A stops here while B (hiding the item under a
-		-- pile) carries on and can roll more salvage, and A then less trash. The current layout has enough markers.
-		local hideRoll = rng:NextNumber()
-		local hideable = options.variant == "B" and OfficeConstants.HIDEABLE[def.size] == true
-		local pile = if hideable and hideRoll < OfficeConstants.HIDE_CHANCE then freePile(false) else nil
-		-- Reserve the same top in A/B even when B hides the item, keeping future weighted draws identical.
-		local surface = if #surfaceFor(def) > 0 then takeSurface(kind, false) else nil
-		if pile ~= nil then
-			pile.hides = kind
-		else
-			if surface ~= nil then
-				table.insert(items, { marker = surface.id, kind = kind })
-			else
-				local marker = takeMarker(false)
-				if marker == nil then
-					break
-				end
-				table.insert(items, { marker = marker.id, kind = kind })
-			end
+		local spot = if #surfaceFor(def) > 0 then takeSurface(kind, false) else nil
+		if spot == nil then
+			spot = takeMarker(false)
 		end
+		if spot == nil then
+			return false
+		end
+		table.insert(items, { marker = spot.id, kind = kind, appraisal = appraise(kind, spot) })
+		return true
+	end
+	while placedCount < budget and placeOpen() do
+		placedCount += 1
 	end
 
-	-- 5. Trash until the guarantee.
-	local trashValue = OfficeSpawnRules.pileTrash(pileCount)
-	local target = options.quota * OfficeConstants.TRASH_FACTOR
-	while trashValue < target do
-		local kind = pickWeighted(trashWeight, rng)
-		local def = if kind ~= nil then CargoRegistry.get(kind) else nil
-		local marker = takeMarker(false)
-		if kind == nil or def == nil or marker == nil then
-			break
-		end
-		table.insert(items, { marker = marker.id, kind = kind })
-		trashValue += def.value
-	end
-
-	return {
+	local plan: OfficeTypes.SpawnPlan = {
 		piles = piles,
 		items = items,
 		searchables = searchables,
 		greed = greed,
-		trashValue = trashValue,
+		value = 0,
 	}
+	-- 7. The top-up: a map too poor for the quota gets a few more valuables in the open.
+	local topped = 0
+	while topped < OfficeConstants.TOP_UP_MAX and OfficeLootUtils.shortfall(plan, options.quota) and placeOpen() do
+		topped += 1
+	end
+	plan.value = OfficeLootUtils.valueOf(plan).full
+	return plan
 end
 
 --[=[

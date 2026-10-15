@@ -2,7 +2,7 @@
 --[=[
 	VacuumFeedbackSystem: how vacuuming feels on this client (Cleanup Crew spec §7 "Vacuuming: suction particles
 	into the nozzle, pile shrinks, rising whine, pop + sparkle, canister fills"; "Canister full: chime, dust bag
-	pops out"). For every pile (Observers on PILE_TAG):
+	pops out"). For every pile, and every grimy valuable being cleaned (Observers on PILE_TAG and GRIME_TAG):
 	- while anyone channels it (ChannelCount > 0): dust particles stream from the pile to the nearest vacuumer's
 	  floor head (else hand; re-aimed every frame) and a whine loops at the pile, its pitch and volume rising with ChannelProgress
 	  (VacuumFeedbackFormulas.whine), winding down (vacuumStop) when the channel stops;
@@ -361,6 +361,8 @@ function VacuumFeedbackSystem.start()
 		return
 	end
 	table.insert(stoppers, Observers.observeTag(VacuumConstants.PILE_TAG, observePile))
+	-- A grimy valuable being cleaned feels like a pile being vacuumed; it pops when it comes up spotless.
+	table.insert(stoppers, Observers.observeTag(VacuumConstants.GRIME_TAG, observePile))
 	lastFill = myFill(StateSyncClientStore.publicPlayers())
 	followGauges(StateSyncClientStore.publicPlayers(), false)
 	table.insert(stoppers, Charm.subscribe(StateSyncClientStore.publicPlayers, onPublic))

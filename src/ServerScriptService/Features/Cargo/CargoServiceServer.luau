@@ -13,6 +13,10 @@
 	  Every completed search fires `searched` with the container (the Office dresses it open).
 	- Banking: the `cargo-load` interaction on the truck bed. Claim (CargoClaimTracker) → add (the game's
 	  `onBanked` handler) → destroy, in one synchronous step, so two Loads never count one item twice.
+	- Grime (the loot loop, docs/superpowers/specs/2026-10-15-cleanup-crew-loot-loop-design.md, CargoGrimeSystem):
+	  valuables spawn grimy; vacuuming one (Vacuum's grime channel) cleans it, raises its value and appraises it at
+	  65% (a stamp toast to the crew near it); an unappraised valuable banked is appraised at the truck (a stamp
+	  toast to the banker).
 	- Feel (M3): every Load is announced (`Banked`, built by CargoFeedbackUtils.banked: the client swoops the
 	  items into the truck, cha-chings and floats "+N"); drops (here), rattles and searches (CargoTraitSystem)
 	  play positional sounds, silent while their CargoAssets ids are pending.
@@ -26,6 +30,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
+local Workspace = game:GetService("Workspace")
 
 local CargoShared = ReplicatedStorage.Shared.Features.Cargo
 local CargoServer = ServerScriptService.Features.Cargo
@@ -43,11 +48,11 @@ local CargoFeedbackUtils = require(CargoShared.Utils.CargoFeedbackUtils)
 local CargoHandlingRules = require(CargoShared.Rules.CargoHandlingRules)
 local InteractionRegistry = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionRegistry)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
-local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local CargoClaimTracker = require(CargoServer.State.CargoClaimTracker)
 local CargoPocketSystem = require(CargoServer.Systems.CargoPocketSystem)
 local CargoSpawnSystem = require(CargoServer.Systems.CargoSpawnSystem)
 local CargoGroundSystem = require(CargoServer.Systems.CargoGroundSystem)
+local CargoGrimeSystem = require(CargoServer.Systems.CargoGrimeSystem)
 local CargoLoadSystem = require(CargoServer.Systems.CargoLoadSystem)
 local CargoTraitSystem = require(CargoServer.Systems.CargoTraitSystem)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
@@ -81,7 +86,7 @@ if not InteractionRegistry.has(CargoConstants.SEARCH_KIND) then
 	})
 end
 
-type Stock = { kind: string?, searched: boolean }
+type Stock = { kind: string?, appraisal: CargoTypes.Appraisal?, searched: boolean }
 
 local noiseMade: SignalTyped.Signal<Vector3, number, string, { number }> = SignalTyped.new()
 local searched: SignalTyped.Signal<BasePart> = SignalTyped.new()
@@ -140,6 +145,17 @@ local traits = CargoTraitSystem.new({
 	end,
 })
 
+-- Cleaning grimy valuables (the loot loop): appraisals are stamped to the crew near them, or to the banker at the truck.
+local grime = CargoGrimeSystem.new({
+	spawner = spawner,
+	now = function(): number
+		return Workspace:GetServerTimeNow()
+	end,
+	sound = function(position: Vector3, id: string)
+		traits:sound(position, id)
+	end,
+})
+
 local pocketSystem = CargoPocketSystem.new({
 	claims = claims,
 	spawner = spawner,
@@ -183,9 +199,10 @@ local loader = CargoLoadSystem.new({
 	tell = function(player, text)
 		ToastServiceServer:send(player, { text = text, duration = 2 })
 	end,
-	announce = function(deposit, from, bed, credited)
+	announce = function(deposit, from, bed, credited, banker)
 		CargoEvents.packets.Banked.sendToAll(CargoFeedbackUtils.banked(deposit, from, bed.Position, bed.Size, credited))
 		counters.banked += 1
+		grime:banked(deposit, banker)
 	end,
 })
 
@@ -224,7 +241,7 @@ local function onDropped(player: Player, object: Instance, reason: CarryTypes.Dr
 		local impacts = object:GetAttribute(CargoConstants.IMPACTS_ATTRIBUTE)
 		local count = (if type(impacts) == "number" then impacts else 0) + 1
 		object:SetAttribute(CargoConstants.IMPACTS_ATTRIBUTE, count)
-		spawner:setValue(object, CargoHandlingRules.valueAfter(def, count))
+		spawner:reprice(object)
 	end
 	ground:release(object, reason, player)
 end
@@ -245,7 +262,7 @@ export type CargoServiceServer = {
 	) -> BasePart,
 	reveal: (self: CargoServiceServer, item: Instance) -> (),
 	useContainer: (self: CargoServiceServer, parent: Instance?) -> (),
-	stockSearchable: (self: CargoServiceServer, part: BasePart, kind: string?) -> (),
+	stockSearchable: (self: CargoServiceServer, part: BasePart, kind: string?, appraisal: CargoTypes.Appraisal?) -> (),
 	onBanked: (self: CargoServiceServer, handler: CargoTypes.BankHandler) -> (),
 	pocket: (self: CargoServiceServer, player: Player) -> (boolean, string?),
 	swap: (self: CargoServiceServer, player: Player) -> (boolean, string?),
@@ -262,28 +279,6 @@ local CargoServiceServer: CargoServiceServer
 local function tell(player: Player, text: string)
 	ToastServiceServer:send(player, { text = text, duration = 2 })
 end
-
-local onPocket = RequestHandler.wrap({
-	name = "CargoPocket",
-	rateLimit = { maxRequests = 6, windowSeconds = 5 },
-	handler = function(_data: unknown, player: Player)
-		local ok, reason = CargoServiceServer:pocket(player)
-		if not ok and reason ~= nil then
-			tell(player, reason)
-		end
-	end,
-})
-
-local onSwap = RequestHandler.wrap({
-	name = "CargoSwap",
-	rateLimit = { maxRequests = 6, windowSeconds = 5 },
-	handler = function(_data: unknown, player: Player)
-		local ok, reason = CargoServiceServer:swap(player)
-		if not ok and reason ~= nil then
-			tell(player, reason)
-		end
-	end,
-})
 
 CargoServiceServer = {
 	dependencies = {
@@ -322,6 +317,7 @@ CargoServiceServer = {
 				spawner:spawn(VacuumConstants.DUST_BAG_KIND, floor, parent)
 			end
 		end)
+		table.insert(stoppers, grime:start())
 		local leaving = Players.PlayerRemoving:Connect(function(player)
 			pocketSystem:scatter(player, nil)
 			pocketSystem:forget(player.UserId)
@@ -333,22 +329,6 @@ CargoServiceServer = {
 		end)
 		table.insert(stoppers, pocketSystem:start())
 		traits:start()
-		table.insert(
-			stoppers,
-			CargoEvents.packets.Pocket.listen(function(data: boolean, player: Player?)
-				if player then
-					onPocket(data, player)
-				end
-			end)
-		)
-		table.insert(
-			stoppers,
-			CargoEvents.packets.Swap.listen(function(data: boolean, player: Player?)
-				if player then
-					onSwap(data, player)
-				end
-			end)
-		)
 		table.insert(
 			stoppers,
 			Observers.observeCharacter(function(player: Player, character: Model)
@@ -392,10 +372,11 @@ CargoServiceServer = {
 	end,
 
 	--[=[
-		Gives a desk or locker its contents for this shift (nil = empty) and turns its Search prompt on.
+		Gives a desk or locker its contents for this shift (nil = empty; a valuable with its appraisal) and turns its
+		Search prompt on.
 	]=]
-	stockSearchable = function(_self, part, kind)
-		stock[part] = { kind = kind, searched = false }
+	stockSearchable = function(_self, part, kind, appraisal)
+		stock[part] = { kind = kind, appraisal = appraisal, searched = false }
 		InteractionServiceServer:setEnabled(part, true)
 	end,
 
@@ -446,7 +427,7 @@ CargoServiceServer = {
 		counters.searched += 1
 		searched:Fire(part)
 		noiseMade:Fire(part.Position, CargoConstants.SEARCH_NOISE, "search", { player.UserId })
-		tell(player, SearchPlacement.deliver(stocked.kind, container, landing, spawner))
+		tell(player, SearchPlacement.deliver(stocked.kind, container, landing, spawner, stocked.appraisal))
 		return true, nil
 	end,
 

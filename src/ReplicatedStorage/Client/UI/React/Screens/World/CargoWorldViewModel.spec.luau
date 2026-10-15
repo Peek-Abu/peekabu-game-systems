@@ -77,6 +77,55 @@ return function()
 		end)
 	end)
 
+	describe("grime and appraisal", function()
+		-- A valuable's tag: cleanliness 0-1, appraised or not, appraised at a server time.
+		local function grimy(value, clean, appraised, appraisedAt, fragile, impacts)
+			local attributes = tag("Monitor", "salvage", value, fragile, impacts)
+			attributes[KEYS.grimy] = true
+			attributes[KEYS.clean] = clean
+			attributes[KEYS.appraised] = appraised
+			attributes[KEYS.appraisedAt] = appraisedAt
+			return attributes
+		end
+
+		it("hides an unappraised valuable's price and shows how clean it is", function()
+			local view = CargoWorldViewModel.priceTag(grimy(30, 0, false), 0)
+			expect(view.price).to.equal("$???")
+			expect(view.mark).to.equal("0% CLEAN")
+			expect(view.appraised).to.equal(false)
+			expect(view.pop).to.equal(false)
+		end)
+
+		it("shows the value once appraised, and rounds the cleanliness down", function()
+			local view = CargoWorldViewModel.priceTag(grimy(76, 0.669, true, 10), 100)
+			expect(view.price).to.equal("$76")
+			expect(view.mark).to.equal("66% CLEAN")
+			expect(view.appraised).to.equal(true)
+			expect(view.pop).to.equal(false)
+		end)
+
+		it("pops the APPRAISED stamp while the appraisal is fresh", function()
+			expect(CargoWorldViewModel.priceTag(grimy(76, 0.7, true, 10), 11).pop).to.equal(true)
+		end)
+
+		it("drops the cleanliness from the mark once spotless", function()
+			local view = CargoWorldViewModel.priceTag(grimy(100, 1, true, 10), 100)
+			expect(view.mark).to.equal(nil)
+		end)
+
+		it("joins grime and the fragile mark", function()
+			local view = CargoWorldViewModel.priceTag(grimy(20, 0.4, true, 1, true, 1), 100)
+			expect(view.mark).to.equal("40% CLEAN · CRACKED −50%")
+			expect(view.cracked).to.equal(true)
+		end)
+
+		it("leaves trash tags as they were", function()
+			local view = CargoWorldViewModel.priceTag(tag("Rubbish bag", "trash", 10), 0)
+			expect(view.appraised).to.equal(false)
+			expect(view.mark).to.equal(nil)
+		end)
+	end)
+
 	describe("mounted", function()
 		it("mounts only within 24 studs, keeps until 28, never under a pile", function()
 			expect(CargoConstants.LABEL_DISTANCE).to.equal(24)

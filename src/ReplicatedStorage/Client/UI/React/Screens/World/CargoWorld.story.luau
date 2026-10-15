@@ -2,7 +2,8 @@
 --[=[
 	CargoWorld.story: the on-shift cargo signs (Figma World UI 2b) over the dark office, in Studio's edit mode (UI
 	Labs). Price tags for a salvage item, a trash item, the longest catalog name and the fish tank after `Impacts` drops
-	(0 FRAGILE, 1 CRACKED −50%, 2+ CRACKED −75%), and the two load floaters (`Fade` 0..1 previews the fade). Drawn through WorldBillboard as on a pixel-sized shell, so the
+	(0 FRAGILE, 1 CRACKED −50%, 2+ CRACKED −75%), a grimy valuable at `Clean` (0..1: "$???" until 0.65, then appraised,
+	its stamp popping while `Fresh` is on) beside a spotless Gold-trim monitor, and the two load floaters (`Fade` 0..1 previews the fade). Drawn through WorldBillboard as on a pixel-sized shell, so the
 	scale follows this viewport (min(w/1920, h/1080), 0.6 to 1).
 
 	@class CargoWorld.story
@@ -39,6 +40,37 @@ local function priceTag(order: number, kind: string, impacts: number): React.Rea
 		[KEYS.impacts] = impacts,
 		[KEYS.hidden] = false,
 	})
+	if view == nil then
+		return nil
+	end
+	local size = CargoConstants.LABEL_PX
+	return e("Frame", {
+		LayoutOrder = order,
+		Size = UDim2.fromOffset(size.X, size.Y),
+		BackgroundTransparency = 1,
+	}, {
+		billboard = e(WorldBillboard, { design = size, sizing = "pixels" }, {
+			tag = e(CargoPriceTag, { view = view }),
+		}),
+	})
+end
+
+-- A grimy valuable's tag: a monitor of base `base` at cleanliness `clean`, appraised past the threshold.
+local function grimyTag(order: number, name: string, base: number, clean: number, fresh: boolean): React.ReactNode
+	local appraised = clean >= CargoConstants.APPRAISE_AT
+	local factor = CargoConstants.GRIME_FLOOR + (1 - CargoConstants.GRIME_FLOOR) * clean
+	local view = CargoWorldViewModel.priceTag({
+		[KEYS.name] = name,
+		[KEYS.category] = "salvage",
+		[KEYS.value] = base * factor,
+		[KEYS.fragile] = true,
+		[KEYS.impacts] = 0,
+		[KEYS.hidden] = false,
+		[KEYS.grimy] = true,
+		[KEYS.clean] = clean,
+		[KEYS.appraised] = appraised,
+		[KEYS.appraisedAt] = if appraised then (if fresh then 100 else 0) else nil,
+	}, 100)
 	if view == nil then
 		return nil
 	end
@@ -98,6 +130,8 @@ return UILabs.CreateReactStory({
 	controls = {
 		Impacts = 1,
 		Fade = 0,
+		Clean = 0.4,
+		Fresh = true,
 	},
 }, function(props)
 	local impacts: number = math.max(0, math.floor(props.controls.Impacts))
@@ -122,7 +156,11 @@ return UILabs.CreateReactStory({
 			monitor = priceTag(4, "monitor", 0),
 			fishTank = priceTag(5, "fishTank", impacts),
 		}),
-		floaters = row(2, {
+		grime = row(2, {
+			grimy = grimyTag(1, "Monitor", 100, math.clamp(props.controls.Clean, 0, 1), props.controls.Fresh == true),
+			spotless = grimyTag(2, "Gold-trim monitor", 250, 1, false),
+		}),
+		floaters = row(3, {
 			clearance = floaterSign(1, "+15", "clearance", math.clamp(props.controls.Fade, 0, 1)),
 			bonus = floaterSign(2, "+40", "bonus", math.clamp(props.controls.Fade, 0, 1)),
 		}),

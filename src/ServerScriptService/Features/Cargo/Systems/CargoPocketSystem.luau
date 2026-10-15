@@ -9,7 +9,8 @@
 	published as the public `pocket1` / `pocket2` fields.
 
 	M1 final review: the scatter fallback. M2: the pocket list and requests moved here from CargoServiceServer
-	(the service was at the 400-line cap). Spec-exempt shell (Carry, Instances, Players, Heartbeat); the
+	(the service was at the 400-line cap); the loot loop moved the `Pocket` / `Swap` packet listeners here too
+	(`start`). Spec-exempt shell (Carry, Instances, Players, Heartbeat); the
 	decisions are the specced CargoHandlingRules and CargoPocketTracker.
 
 	@class CargoPocketSystem
@@ -27,6 +28,7 @@ local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interacti
 local CargoConstants = require(CargoShared.Data.CargoConstants)
 local CargoRegistry = require(CargoShared.Data.CargoRegistry)
 local CargoTypes = require(CargoShared.Data.CargoTypes)
+local CargoEvents = require(CargoShared.Net.CargoEvents)
 local CargoHandlingRules = require(CargoShared.Rules.CargoHandlingRules)
 local CargoClaimTracker = require(CargoServer.State.CargoClaimTracker)
 local CargoPocketTracker = require(CargoServer.State.CargoPocketTracker)
@@ -34,6 +36,7 @@ local CargoSpawnSystem = require(CargoServer.Systems.CargoSpawnSystem)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
 local CarryPlacementSystem = require(ServerScriptService.Features.Carry.Systems.CarryPlacementSystem)
 local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
+local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local StateSyncPublicPlayerStore = require(ServerScriptService.Features.StateSync.State.StateSyncPublicPlayerStore)
 
 type CargoEntry = CargoTypes.CargoEntry
@@ -52,7 +55,7 @@ export type Deps = {
 export type Counts = { pocketed: number, swapped: number, scattered: number }
 
 export type CargoPocketSystem = {
-	-- Samples every character's position now and then; returns the disconnect.
+	-- Samples every character's position now and then and answers the pocket and swap packets; returns the stopper.
 	start: (self: CargoPocketSystem) -> () -> (),
 	forget: (self: CargoPocketSystem, userId: number) -> (),
 	pocket: (self: CargoPocketSystem, player: Player) -> (boolean, string?),
@@ -110,12 +113,11 @@ function CargoPocketSystem.new(deps: Deps): CargoPocketSystem
 	-- adopted it, the item stays on the floor and the player is told.
 	local function intoHands(player: Player, entry: CargoEntry, root: BasePart, parent: Instance)
 		local floor = deps.spawner:floorUnder(root.Position, deps.ignore())
-		local part = deps.spawner:spawn(
-			entry.kind,
-			floor,
-			parent,
-			{ value = entry.value, artKit = if entry.visual ~= nil then entry.visual.kitId else nil }
-		)
+		local part = deps.spawner:spawn(entry.kind, floor, parent, {
+			value = entry.value,
+			appraisal = entry.appraisal,
+			artKit = if entry.visual ~= nil then entry.visual.kitId else nil,
+		})
 		task.spawn(function()
 			local waited = 0
 			while part.Parent ~= nil and player.Parent ~= nil and waited <= HAND_WAIT do
@@ -138,7 +140,37 @@ function CargoPocketSystem.new(deps: Deps): CargoPocketSystem
 
 	local system: CargoPocketSystem
 	system = {
-		start = function(_self)
+		start = function(self)
+			-- A refused request is explained to its sender.
+			local function answer(player: Player, ok: boolean, reason: string?)
+				if not ok and reason ~= nil then
+					ToastServiceServer:send(player, { text = reason, duration = 2 })
+				end
+			end
+			local onPocket = RequestHandler.wrap({
+				name = "CargoPocket",
+				rateLimit = { maxRequests = 6, windowSeconds = 5 },
+				handler = function(_data: unknown, player: Player)
+					answer(player, self:pocket(player))
+				end,
+			})
+			local onSwap = RequestHandler.wrap({
+				name = "CargoSwap",
+				rateLimit = { maxRequests = 6, windowSeconds = 5 },
+				handler = function(_data: unknown, player: Player)
+					answer(player, self:swap(player))
+				end,
+			})
+			local stopPocket = CargoEvents.packets.Pocket.listen(function(data: boolean, player: Player?)
+				if player then
+					onPocket(data, player)
+				end
+			end)
+			local stopSwap = CargoEvents.packets.Swap.listen(function(data: boolean, player: Player?)
+				if player then
+					onSwap(data, player)
+				end
+			end)
 			local elapsed = 0
 			local connection = RunService.Heartbeat:Connect(function(deltaTime)
 				elapsed += deltaTime
@@ -155,6 +187,8 @@ function CargoPocketSystem.new(deps: Deps): CargoPocketSystem
 			end)
 			return function()
 				connection:Disconnect()
+				stopPocket()
+				stopSwap()
 			end
 		end,
 
@@ -252,6 +286,7 @@ function CargoPocketSystem.new(deps: Deps): CargoPocketSystem
 				local landing = CarryPlacementSystem.floorNear(at, at + offset, deps.ignore(), margin)
 				deps.spawner:spawn(entry.kind, landing, parent, {
 					value = entry.value,
+					appraisal = entry.appraisal,
 					artKit = if entry.visual ~= nil then entry.visual.kitId else nil,
 					source = "scatter",
 				})

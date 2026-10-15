@@ -39,6 +39,19 @@ return function()
 		expect(removed.visual.rotation).to.equal(CFrame.Angles(0, 0.7, 0))
 	end)
 
+	it("keeps a valuable's appraisal across add/list/remove without aliasing callers", function()
+		local tracker = CargoPocketTracker.new()
+		local appraisal = { base = 90, clean = 0.4, appraised = false, variant = "Solid brass" }
+		tracker:add(1, { kind = "plaque", value = 51, appraisal = appraisal })
+		appraisal.clean = 1
+		local listed = tracker:list(1)[1]
+		expect(listed.appraisal.clean).to.equal(0.4)
+		expect(listed.appraisal.variant).to.equal("Solid brass")
+		listed.appraisal.base = 1
+		local removed = tracker:remove(1, 1)
+		expect(removed.appraisal.base).to.equal(90)
+	end)
+
 	it("take empties the pockets and returns what was in them", function()
 		local pockets = CargoPocketTracker.new()
 		pockets:add(1, PLAQUE)

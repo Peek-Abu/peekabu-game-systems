@@ -5,7 +5,8 @@ local OfficeLayoutConstants = require(ServerScriptService.Features.Office.Data.O
 
 local LAYOUT = OfficeLayoutConstants.LAYOUT
 
--- Three piles make one dust bag (15); quota 20 needs 30 trash.
+-- Three piles make one dust bag (15); with two rubbish bags (20) and the fish tank (260 at full, 169 at average
+-- cleanliness) the map is worth 204 at average: enough for a quota up to 153.
 local function plan()
 	return {
 		piles = {
@@ -16,11 +17,11 @@ local function plan()
 		items = {
 			{ marker = "lobby.item.1", kind = "rubbishBag" },
 			{ marker = "lobby.item.2", kind = "rubbishBag" },
-			{ marker = "archive.item.1", kind = "fishTank" },
+			{ marker = "archive.item.1", kind = "fishTank", appraisal = { base = 260 } },
 		},
 		searchables = {},
 		greed = { marker = "archive.item.1", kind = "fishTank" },
-		trashValue = 35,
+		value = 295,
 	}
 end
 
@@ -31,22 +32,10 @@ return function()
 		expect(ok).to.equal(true)
 	end)
 
-	it("counts the dust bags the piles make", function()
-		expect(OfficeSpawnRules.trashValue(plan())).to.equal(35)
-	end)
-
-	it("makes one dust bag per full canister of piles", function()
-		expect(OfficeSpawnRules.pileTrash(2)).to.equal(0)
-		expect(OfficeSpawnRules.pileTrash(3)).to.equal(15)
-		expect(OfficeSpawnRules.pileTrash(7)).to.equal(30)
-	end)
-
-	it("refuses too little trash", function()
-		local short = plan()
-		table.remove(short.items, 2)
-		local ok, reason = OfficeSpawnRules.check(short, LAYOUT, 20)
+	it("refuses a map too poor for the quota at average cleanliness", function()
+		local ok, reason = OfficeSpawnRules.check(plan(), LAYOUT, 200)
 		expect(ok).to.equal(false)
-		expect(reason).to.equal("only 25 trash for a quota of 20")
+		expect(reason).to.equal("only 204 of a needed 267 value for a quota of 200")
 	end)
 
 	it("refuses a missing greed target", function()

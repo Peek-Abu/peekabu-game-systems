@@ -4,7 +4,9 @@
 	mouse, gamepad R2, or the Shift HUD's touch button through beginVacuum / endVacuum), it re-aims every
 	AIM_INTERVAL at the pile the vacuum is on (VacuumTargetRules: the wand's floor head and the body's facing,
 	not the camera; the pile already being cleaned is kept while it is in reach) and keeps Interaction's channel
-	on it; letting go stops the channel, and the pile keeps its progress. Nothing is sent while carrying.
+	on it; letting go stops the channel, and the pile keeps its progress. Nothing is sent while carrying. A grimy
+	valuable lying in the open (VacuumConstants.GRIME_TAG, not buried and not held) is aimed at exactly like a pile:
+	vacuuming it cleans it (the loot loop).
 	The server decides everything. VacuumFeedbackSystem plays the suction, whine, pop and canister sounds.
 
 	Spec-exempt shell (Input, CollectionService); the aim is the specced VacuumTargetRules.
@@ -16,6 +18,8 @@ local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants)
+local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local VacuumTargetRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumTargetRules)
 local VacuumFeedbackSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumFeedbackSystem)
@@ -45,16 +49,31 @@ local function aimedPile(current: Instance?): Instance?
 	local parts: { BasePart } = {}
 	local piles: { VacuumTargetRules.Pile } = {}
 	local currentIndex: number? = nil
-	for _, pile in CollectionService:GetTagged(VacuumConstants.PILE_TAG) do
-		if pile:IsA("BasePart") then
-			table.insert(parts, pile)
+	local function consider(target: Instance)
+		if target:IsA("BasePart") then
+			table.insert(parts, target)
 			table.insert(piles, {
-				position = pile.Position,
-				radius = VacuumTargetRules.radius(pile.Size, pile:GetAttribute(VacuumConstants.BASE_SIZE_ATTRIBUTE)),
+				position = target.Position,
+				radius = VacuumTargetRules.radius(
+					target.Size,
+					target:GetAttribute(VacuumConstants.BASE_SIZE_ATTRIBUTE)
+				),
 			})
-			if pile == current then
+			if target == current then
 				currentIndex = #parts
 			end
+		end
+	end
+	for _, pile in CollectionService:GetTagged(VacuumConstants.PILE_TAG) do
+		consider(pile)
+	end
+	-- Grimy valuables: only one lying in the open (not buried under a pile, not in anyone's hands).
+	for _, item in CollectionService:GetTagged(VacuumConstants.GRIME_TAG) do
+		if
+			item:GetAttribute(CargoConstants.HIDDEN_ATTRIBUTE) ~= true
+			and item:GetAttribute(CarryConstants.CARRIED_BY_ATTRIBUTE) == nil
+		then
+			consider(item)
 		end
 	end
 	local index = VacuumTargetRules.pick(

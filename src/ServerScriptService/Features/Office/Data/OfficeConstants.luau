@@ -10,10 +10,10 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local OfficeTypes = require(ServerScriptService.Features.Office.Data.OfficeTypes)
 
-local PILES: OfficeTypes.Range = { min = 18, max = 24 }
-local SALVAGE: OfficeTypes.Range = { min = 6, max = 9 }
--- Sizes small enough to hide under a pile (variant B).
-local HIDEABLE: { [string]: boolean } = { tiny = true, medium = true }
+-- The loot loop (docs/superpowers/specs/2026-10-15-cleanup-crew-loot-loop-design.md §3.5): fewer piles, about a
+-- third of them burying a valuable, and 10-14 valuables a map in all (open, buried and in desks).
+local PILES: OfficeTypes.Range = { min = 14, max = 18 }
+local VALUABLES: OfficeTypes.Range = { min = 10, max = 14 }
 -- Original catalog dimensions, rounded upward for visual fit without shrinking readable props.
 local DESK_PROP_SIZES: { [string]: Vector3 } = {
 	mug = Vector3.new(0.685, 0.56, 0.48),
@@ -63,15 +63,23 @@ return table.freeze({
 	DOOR_MIN_WIDTH = 4,
 	-- Rooms this many doors from the loading bay, or more, are "deep" (where the greed target goes).
 	DEEP_DEPTH = 2,
-	-- Trash on the floor, counting the piles' dust bags, is at least this times the quota.
-	TRASH_FACTOR = 1.5,
 	PILES = table.freeze(PILES),
-	SALVAGE = table.freeze(SALVAGE),
-	-- Chance a desk or locker holds something.
+	-- How many valuables a map offers, counting the greed target, desk valuables and buried ones (no trash padding:
+	-- trash is the piles' dust bags and the odd desk).
+	VALUABLES = table.freeze(VALUABLES),
+	-- Chance a desk or locker holds something; once DESK_VALUABLES_MAX of them hold a valuable, the rest hold trash or
+	-- nothing (a generated office has dozens of desks: uncapped, they would eat the whole valuables budget).
 	SEARCH_FILL_CHANCE = 0.5,
-	-- Variant B: chance a hideable salvage item goes under a pile instead of in the open.
-	HIDE_CHANCE = 0.35,
-	HIDEABLE = table.freeze(HIDEABLE),
+	DESK_VALUABLES_MAX = 3,
+	-- Chance each pile buries a valuable (a buriable kind, CargoRegistry), capped so at least MIN_OPEN valuables of
+	-- the budget still lie in the open.
+	BURY_CHANCE = 0.35,
+	MIN_OPEN = 2,
+	-- The quota guarantee: a map's value at average cleanliness LOOT_AVERAGE_CLEAN (a grime factor of 0.65) must be
+	-- at least quota / LOOT_QUOTA_SHARE_MAX; a poorer roll adds up to TOP_UP_MAX open valuables.
+	LOOT_AVERAGE_CLEAN = 0.5,
+	LOOT_QUOTA_SHARE_MAX = 0.75,
+	TOP_UP_MAX = 4,
 	-- Seeds tried (seed, seed + 1, ...) before a roll that misses a guarantee is an error.
 	ROLL_ATTEMPTS = 5,
 	DESK_SIZE = Vector3.new(5, 3, 3),

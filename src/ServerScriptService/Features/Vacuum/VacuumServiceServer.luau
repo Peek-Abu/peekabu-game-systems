@@ -12,6 +12,9 @@
 	- fires `pileCleared` (Office reveals what was hidden under it; Shift counts piles) and, every second a
 	  pile is being vacuumed, `noiseMade` (the M2 Noise seam; nothing listens in M1).
 	- fires `vacuumStarted(player, pile)` when a player starts vacuuming a pile (Shift's analytics: first_cleanup_started);
+	- answers `canVacuum` for Cargo's grime channels (the loot loop, docs/superpowers/specs/
+	  2026-10-15-cleanup-crew-loot-loop-design.md §3.2: a grimy valuable, tagged GRIME_TAG, is vacuumed exactly like a
+	  pile; Cargo's CargoGrimeSystem owns the channel and the cleanliness), and pulses the same noise for it;
 	- dresses every character in the canister backpack as it spawns (VacuumVisualSystem.wear), in the depot as on
 	  a shift: it is part of the employee's look, its wand clipped on. A shift's crew are given the vacuum Tool
 	  (VacuumToolSystem), which takes the wand off that same pack while held (never a second pack).
@@ -183,14 +186,42 @@ local function clear(players: { Player }, target: Instance)
 	pileCleared:Fire(target, players)
 end
 
--- One noise pulse per pile someone is vacuuming right now.
+-- One noise pulse per pile (or grimy item) someone is vacuuming right now.
 local function pulse()
-	for _, pile in CollectionService:GetTagged(VacuumConstants.PILE_TAG) do
-		local count = pile:GetAttribute(InteractionConstants.CHANNEL_COUNT_ATTRIBUTE)
-		if pile:IsA("BasePart") and type(count) == "number" and count > 0 then
-			noiseMade:Fire(pile.Position, VacuumConstants.NOISE_RADIUS, "vacuum", channels:makersOn(pile, os.clock()))
+	for _, tag in { VacuumConstants.PILE_TAG, VacuumConstants.GRIME_TAG } do
+		for _, target in CollectionService:GetTagged(tag) do
+			local count = target:GetAttribute(InteractionConstants.CHANNEL_COUNT_ATTRIBUTE)
+			if target:IsA("BasePart") and type(count) == "number" and count > 0 then
+				noiseMade:Fire(
+					target.Position,
+					VacuumConstants.NOISE_RADIUS,
+					"vacuum",
+					channels:makersOn(target, os.clock())
+				)
+			end
 		end
 	end
+end
+
+-- Whether `player` may vacuum `target` now (asked at the start and every tick): spec §4, you can't vacuum while your
+-- hands hold an item; the vacuum must be on the target. A start on a new target fires `vacuumStarted`. Never yields.
+local function canVacuum(player: Player, target: Instance): boolean
+	local character = player.Character
+	local humanoid = if character ~= nil then character:FindFirstChildOfClass("Humanoid") else nil
+	if
+		not VacuumEquipmentRules.canVacuum(
+			tools[player] ~= nil,
+			VacuumToolSystem.isEquipped(character),
+			CarryServiceServer:getCarried(player) ~= nil,
+			humanoid ~= nil and humanoid.Health > 0
+		) or not inReach(player, target)
+	then
+		return false
+	end
+	if channels:note(player.UserId, target, os.clock()) and target:IsA("BasePart") then
+		vacuumStarted:Fire(player, target)
+	end
+	return true
 end
 
 export type VacuumServiceServer = {
@@ -200,6 +231,7 @@ export type VacuumServiceServer = {
 	noiseMade: SignalTyped.Signal<Vector3, number, string, { number }>,
 	vacuumStarted: SignalTyped.Signal<Player, BasePart>,
 	start: (self: VacuumServiceServer) -> (),
+	canVacuum: (self: VacuumServiceServer, player: Player, target: Instance) -> boolean,
 	stop: (self: VacuumServiceServer) -> (),
 	getState: (self: VacuumServiceServer) -> { [string]: any },
 	spawnPile: (self: VacuumServiceServer, kind: string, floor: CFrame, parent: Instance) -> BasePart,
@@ -226,26 +258,7 @@ local VacuumServiceServer: VacuumServiceServer = {
 	]=]
 	start = function(_self)
 		InteractionServiceServer:channel(VacuumConstants.CHANNEL_KIND, {
-			-- Spec §4: you can't vacuum while your hands hold an item.
-			canChannel = function(player, target)
-				local character = player.Character
-				local humanoid = if character ~= nil then character:FindFirstChildOfClass("Humanoid") else nil
-				if
-					not VacuumEquipmentRules.canVacuum(
-						tools[player] ~= nil,
-						VacuumToolSystem.isEquipped(character),
-						CarryServiceServer:getCarried(player) ~= nil,
-						humanoid ~= nil and humanoid.Health > 0
-					) or not inReach(player, target)
-				then
-					return false
-				end
-				-- Asked at the start and every tick: the first allowed ask on a new pile is a start (never yields).
-				if channels:note(player.UserId, target, os.clock()) and target:IsA("BasePart") then
-					vacuumStarted:Fire(player, target)
-				end
-				return true
-			end,
+			canChannel = canVacuum,
 			onComplete = clear,
 		})
 
@@ -370,6 +383,14 @@ local VacuumServiceServer: VacuumServiceServer = {
 		CollectionService:AddTag(pile, VacuumConstants.PILE_TAG)
 		counters.spawned += 1
 		return pile
+	end,
+
+	--[=[
+		Whether `player` may vacuum `target` now: equipped, empty hands, alive, the wand on it (Cargo's grime channels
+		ask this every tick). Never yields.
+	]=]
+	canVacuum = function(_self, player, target)
+		return canVacuum(player, target)
 	end,
 
 	fillOf = function(_self, player)

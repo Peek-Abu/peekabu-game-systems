@@ -30,20 +30,6 @@ return function()
 		end)
 	end)
 
-	describe("valueAfter", function()
-		it("drops a fragile item one tier per impact, then holds", function()
-			local monitor = CargoRegistry.get("monitor")
-			expect(CargoHandlingRules.valueAfter(monitor, 0)).to.equal(30)
-			expect(CargoHandlingRules.valueAfter(monitor, 1)).to.equal(15)
-			expect(CargoHandlingRules.valueAfter(monitor, 2)).to.equal(8)
-			expect(CargoHandlingRules.valueAfter(monitor, 7)).to.equal(8)
-		end)
-
-		it("leaves a sturdy item's value alone", function()
-			expect(CargoHandlingRules.valueAfter(CargoRegistry.get("coffeeMachine"), 5)).to.equal(50)
-		end)
-	end)
-
 	describe("impacts and spills", function()
 		it("counts every drop reason except destruction as an impact", function()
 			for _, reason in { "drop", "throw", "forced", "death", "removed" } do

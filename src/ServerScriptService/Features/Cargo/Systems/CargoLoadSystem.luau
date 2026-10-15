@@ -25,7 +25,8 @@ export type Deps = {
 		list: (number) -> { CargoTypes.CargoEntry },
 		take: (number) -> (),
 	},
-	announce: (CargoTypes.Deposit, Vector3, BasePart, number?) -> (),
+	-- After a Load: the deposit, where its swoop starts, the bed, the bonus credited, and who banked it.
+	announce: (CargoTypes.Deposit, Vector3, BasePart, number?, Player) -> (),
 	tell: ((Player, string) -> ())?,
 }
 export type Controller = {
@@ -87,7 +88,7 @@ function CargoLoadSystem.new(deps: Deps): Controller
 			end
 			item:Destroy()
 		end
-		deps.announce(deposit, from, bed, credited)
+		deps.announce(deposit, from, bed, credited, player)
 		return true, nil
 	end
 	local system: Controller = {

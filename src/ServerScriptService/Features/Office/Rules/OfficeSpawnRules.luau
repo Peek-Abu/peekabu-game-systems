@@ -1,8 +1,9 @@
 --!strict
 --[=[
-	OfficeSpawnRules: does one shift's spawn plan keep the spec's promises (§4 "Spawn guarantees")? Trash on
-	the floor, counting the dust bags the piles make, is at least TRASH_FACTOR × the quota; one greed target
-	sits in a deep room; no marker holds two things. Pure.
+	OfficeSpawnRules: does one shift's spawn plan keep the spec's promises (§4 "Spawn guarantees")? The quota needs
+	no more than LOOT_QUOTA_SHARE_MAX of the map's value at average cleanliness (OfficeLootUtils, docs/superpowers/
+	specs/2026-10-15-cleanup-crew-loot-loop-design.md §3.5); one greed target sits in a deep room; no marker holds
+	two things; loot sits on furniture it belongs on. Pure.
 
 	@class OfficeSpawnRules
 ]=]
@@ -12,10 +13,10 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local OfficeServer = ServerScriptService.Features.Office
 local CargoRegistry = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoRegistry)
-local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local OfficeConstants = require(OfficeServer.Data.OfficeConstants)
 local OfficeTypes = require(OfficeServer.Data.OfficeTypes)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
+local OfficeLootUtils = require(OfficeServer.Utils.OfficeLootUtils)
 
 type SpawnPlan = OfficeTypes.SpawnPlan
 
@@ -58,30 +59,6 @@ function OfficeSpawnRules.surfaceKindsFor(itemId: string): { string }
 end
 
 --[=[
-	The trash the dust bags of `pileCount` piles come to: one bag per full canister.
-]=]
-function OfficeSpawnRules.pileTrash(pileCount: number): number
-	local dustBag = CargoRegistry.get(VacuumConstants.DUST_BAG_KIND)
-	local bags = math.floor(pileCount / VacuumConstants.CANISTER_CAPACITY)
-	return bags * (if dustBag ~= nil then dustBag.value else 0)
-end
-
---[=[
-	The clearance a plan puts on the floor: open-floor trash items plus one dust bag per full canister of
-	piles. Unknown kinds count nothing (`check` refuses them).
-]=]
-function OfficeSpawnRules.trashValue(plan: SpawnPlan): number
-	local total = OfficeSpawnRules.pileTrash(#plan.piles)
-	for _, item in plan.items do
-		local def = CargoRegistry.get(item.kind)
-		if def ~= nil and def.category == "trash" then
-			total += def.value
-		end
-	end
-	return total
-end
-
---[=[
 	Ok when `plan` meets every guarantee for `quota`; otherwise the first broken one.
 ]=]
 function OfficeSpawnRules.check(plan: SpawnPlan, layout: OfficeTypes.Layout, quota: number): (boolean, string?)
@@ -115,9 +92,10 @@ function OfficeSpawnRules.check(plan: SpawnPlan, layout: OfficeTypes.Layout, quo
 		used[marker] = true
 	end
 
-	local trash = OfficeSpawnRules.trashValue(plan)
-	if trash < quota * OfficeConstants.TRASH_FACTOR then
-		return false, `only {trash} trash for a quota of {quota}`
+	if OfficeLootUtils.shortfall(plan, quota) then
+		local have = math.floor(OfficeLootUtils.valueOf(plan).average + 0.5)
+		local need = math.ceil(quota / OfficeConstants.LOOT_QUOTA_SHARE_MAX)
+		return false, `only {have} of a needed {need} value for a quota of {quota}`
 	end
 
 	local greed = plan.greed
