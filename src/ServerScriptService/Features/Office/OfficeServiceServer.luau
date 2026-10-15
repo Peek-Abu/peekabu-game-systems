@@ -29,6 +29,7 @@ local OfficeLayoutRules = require(OfficeServer.Rules.OfficeLayoutRules)
 local OfficeSpawnRules = require(OfficeServer.Rules.OfficeSpawnRules)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
 local OfficeLayoutGenerationUtils = require(OfficeServer.Utils.OfficeLayoutGenerationUtils)
+local OfficeLoadingBayUtils = require(OfficeServer.Utils.OfficeLoadingBayUtils)
 local OfficeSpawnUtils = require(OfficeServer.Utils.OfficeSpawnUtils)
 local OfficeBuildSystem = require(OfficeServer.Systems.OfficeBuildSystem)
 local OfficeDecorSystem = require(OfficeServer.Systems.OfficeDecorSystem)
@@ -46,7 +47,6 @@ local markerById: { [string]: Marker } = {}
 for _, marker in LAYOUT.markers do
 	markerById[marker.id] = marker
 end
-local spawnMarkers = OfficeLayoutUtils.markersOf(LAYOUT, "spawn")
 
 local built: OfficeBuildSystem.Built? = nil
 local shiftJanitor = Janitor.new()
@@ -85,7 +85,6 @@ local function rebuild(seed: number)
 	for _, marker in layout.markers do
 		markerById[marker.id] = marker
 	end
-	spawnMarkers = OfficeLayoutUtils.markersOf(layout, "spawn")
 	table.clear(routePoints)
 	for _, id in layout.route do
 		local marker = markerById[id]
@@ -245,11 +244,11 @@ local OfficeServiceServer: OfficeServiceServer = {
 	end,
 
 	--[=[
-		Where the `index`-th crew member appears in the loading bay (wrapping over the spawn markers).
+		Where the `index`-th crew member appears: in the truck's bed, facing out of its open back and down the ramp
+		(OfficeLoadingBayUtils.arrivalFrame). Shift arrivals, the shift start and crew respawns all land here.
 	]=]
 	spawnCFrame = function(_self, index)
-		local marker = spawnMarkers[(math.max(index, 1) - 1) % #spawnMarkers + 1]
-		return OfficeConstants.ORIGIN * CFrame.new(marker.x, OfficeConstants.SPAWN_HEIGHT, marker.z)
+		return OfficeConstants.ORIGIN * OfficeLoadingBayUtils.arrivalFrame(LAYOUT.truck, index)
 	end,
 
 	container = function(_self)
