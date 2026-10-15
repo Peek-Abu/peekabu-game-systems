@@ -10,10 +10,11 @@
 	- invisible native collision, parented to the bed: box walls, roof, arch posts, cab and the loading ramp (a
 	  wedge from the ground to the bed's back edge). Collidable parts are always queryable; as the bed's
 	  descendants they count as the bed for the load prompt's sight check, so the prompt is seen through the box;
-	- an opaque camera shell, parented to the bed: cores hidden inside the art's walls, roof and floor, so the
-	  default camera (Popper, which ignores the inert meshes and the invisible collision) pops in at the box's
-	  walls instead of seeing through the truck. The floor core sits over the deck, so a camera ray meets it
-	  before the invisible bed (Popper drops a part it passes through together with all its descendants);
+	- an opaque camera shell, parented to the bed: cores hidden inside the art's walls, roof, door drum, arch
+	  posts, clock and floor, so the default camera (Popper, which ignores the inert meshes and the invisible
+	  collision) pops in at the box's walls instead of seeing through the truck. The floor core sits over the
+	  deck, so a camera ray meets it before the invisible bed (Popper drops a part it passes through together
+	  with all its descendants);
 	- the time clock on the inside of the front wall (template CLOCK_TEMPLATE_PATH or a graybox). The office's
 	  Clock out and Start overtime parts go at `paperwork(bed, which)`;
 	- the box-side livery (a SurfaceGui per side), a warm lamp under the roof, and the scanner arch light tagged
@@ -99,8 +100,9 @@ end
 
 local function art(deck: CFrame, source: Model?, clockSource: Model?): Model
 	local model = placed(Constants.ART_NAME, deck, source, Constants.GRAYBOX)
-	placed(Constants.CLOCK_NAME, deck * CFrame.new(Constants.CLOCK_MOUNT), clockSource, Constants.CLOCK_GRAYBOX).Parent =
-		model
+	local clock =
+		placed(Constants.CLOCK_NAME, deck * CFrame.new(Constants.CLOCK_MOUNT), clockSource, Constants.CLOCK_GRAYBOX)
+	clock.Parent = model
 	for _, descendant in model:GetDescendants() do
 		if descendant:IsA("BasePart") then
 			inert(descendant)

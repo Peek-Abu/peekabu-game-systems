@@ -25,6 +25,7 @@ return function()
 	describe("truck paperwork", function()
 		local Truck = require(game:GetService("ServerScriptService").Features.Depot.Data.DepotTruckVisualConstants)
 
+		-- Studs from the deck; the build sits 50000 studs out, so float32 positions are good to ~0.005.
 		local function deckPoint(bed, point)
 			return (bed.CFrame * CFrame.new(0, bed.Size.Y / 2, 0)):PointToObjectSpace(point)
 		end
@@ -37,7 +38,7 @@ return function()
 			expect(clock.Transparency).to.equal(1)
 			expect(clock.CanCollide).to.equal(false)
 			expect(clock.CanQuery).to.equal(true)
-			expect((deckPoint(built.bed, clock.Position) - Truck.PAPERWORK.clock.centre).Magnitude < 1e-3).to.equal(
+			expect((deckPoint(built.bed, clock.Position) - Truck.PAPERWORK.clock.centre).Magnitude < 0.01).to.equal(
 				true
 			)
 		end)
@@ -50,7 +51,7 @@ return function()
 			expect(sheet:GetAttribute(Interaction.ENABLED_ATTRIBUTE)).to.equal(false)
 			expect(CollectionService:HasTag(sheet, Interaction.TAG)).to.equal(true)
 			expect(sheet.CanCollide).to.equal(false)
-			expect((deckPoint(built.bed, sheet.Position) - Truck.PAPERWORK.sheet.centre).Magnitude < 1e-3).to.equal(
+			expect((deckPoint(built.bed, sheet.Position) - Truck.PAPERWORK.sheet.centre).Magnitude < 0.01).to.equal(
 				true
 			)
 		end)

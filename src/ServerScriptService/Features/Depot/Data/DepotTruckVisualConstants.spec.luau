@@ -72,6 +72,12 @@ return function()
 						outer = entry
 					end
 				end
+				for _, entry in Constants.CLOCK_GRAYBOX do
+					if entry.name == core.inside then
+						-- The clock's pieces are in clock space, mounted at CLOCK_MOUNT.
+						outer = { centre = Constants.CLOCK_MOUNT + entry.centre, size = entry.size }
+					end
+				end
 				expect(outer).to.be.ok()
 				for _, axis in { "X", "Y", "Z" } do
 					expect(extent(core, axis, -1) > extent(outer, axis, -1)).to.equal(true)

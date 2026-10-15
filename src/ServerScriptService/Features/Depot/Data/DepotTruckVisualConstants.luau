@@ -9,10 +9,12 @@
 	  the ground to the bed's back edge). A collidable part is always queryable, so they are parented to the bed:
 	  the load prompt's sight check (a ray to the bed that may hit the bed or its descendants) still sees the bed
 	  through the box.
-	- SHELL: the camera's walls. The default camera (Popper) only stops at opaque, collidable parts, and every hit
+	- SHELL: the camera's walls. The default camera (Popper) only stops at opaque parts (older clients: also
+	  collidable ones), and every hit
 	  part it cannot stop at is ignored WITH its descendants for the rest of that ray: the meshes never collide and
 	  the collision is invisible, so the camera used to pass straight through the box. Each shell part is an opaque
-	  core hidden inside its art piece (clear of its bevels) (`inside`, a GRAYBOX name; the mesh pieces share its outline), with
+	  core inside its art piece (`inside`, a GRAYBOX name; the mesh pieces share its outline) with its inner face
+	  just behind the visible lining, so the camera stops in front of the lining; and
 	  the floor's core over the deck so a ray meets it before the invisible bed. Parented to the bed like COLLISION.
 	- CLOCK: the time clock (characters/truck/build_timeclock.py, template CLOCK_TEMPLATE_PATH) hangs on the inside
 	  of the front wall at CLOCK_MOUNT (its back centre, facing the open back); PAPERWORK frames the office's
@@ -71,11 +73,12 @@ local function piece(
 end
 
 local GRAYBOX: { Piece } = {
-	piece("BoxSideLeft", Vector3.new(-6.25, 3.65, 0.3), Vector3.new(0.5, 7.9, 16.4), IVORY),
-	piece("BoxSideRight", Vector3.new(6.25, 3.65, 0.3), Vector3.new(0.5, 7.9, 16.4), IVORY),
-	piece("BoxFront", Vector3.new(0, 3.65, 8.25), Vector3.new(13, 7.9, 0.5), IVORY),
-	piece("BoxRoof", Vector3.new(0, 7.35, 0.3), Vector3.new(13.4, 0.75, 16.9), TEAL),
+	piece("BoxSideLeft", Vector3.new(-6.215, 3.65, 0.3), Vector3.new(0.57, 7.9, 16.4), IVORY),
+	piece("BoxSideRight", Vector3.new(6.215, 3.65, 0.3), Vector3.new(0.57, 7.9, 16.4), IVORY),
+	piece("BoxFront", Vector3.new(0, 3.65, 8.22), Vector3.new(13, 7.9, 0.56), IVORY),
+	piece("BoxRoof", Vector3.new(0, 7.3275, 0.3), Vector3.new(13.4, 0.795, 16.9), TEAL),
 	piece("BoxFloor", Vector3.new(0, 0.03, 0), Vector3.new(11.9, 0.06, 15.9), FLOOR),
+	piece("RollDrum", Vector3.new(0, 6.55, -7.45), Vector3.new(11.8, 0.9, 0.9), GRAPHITE, nil, "Cylinder"),
 	piece("ScannerPostLeft", Vector3.new(-6.6, 3.2, -8.3), Vector3.new(1.2, 7.6, 1.3), TEAL),
 	piece("ScannerPostRight", Vector3.new(6.6, 3.2, -8.3), Vector3.new(1.2, 7.6, 1.3), TEAL),
 	piece("ScannerBeam", Vector3.new(0, 7.85, -8.3), Vector3.new(14.4, 1.7, 1.5), TEAL),
@@ -110,34 +113,66 @@ local COLLISION: { Solid } = {
 	solid("TruckRamp", Vector3.new(0, -1.5, -10), Vector3.new(7, 3, 4), "Wedge"),
 }
 
--- A camera shell core: always a block, inside the GRAYBOX piece named `inside`.
+-- A camera shell core: always a block, inside the GRAYBOX (or, for the clock, CLOCK_GRAYBOX) piece named `inside`.
+-- The clock's back centre on the front wall's lining (z 7.94), facing the open back (deck space, unrotated).
+local CLOCK_MOUNT = Vector3.new(-2.2, 3.6, 7.94)
+
 export type ShellCore = { name: string, centre: Vector3, size: Vector3, inside: string }
 
--- Wall cores sit 0.12 in from every face of their 0.12-bevelled piece, the roof's 0.3 in from its 0.3 bevel.
+-- Each core's inner face sits just behind the visible inner surface (the mesh's lining: x +-5.93, z 7.94, y 6.93), so
+-- the camera stops in front of the lining, not inside the wall; the walls reach below the deck so no ray slips
+-- through the seam with the floor; the rest stays clear of the outer faces' bevels.
 local SHELL: { ShellCore } = {
 	{
 		name = "TruckShellLeft",
-		centre = Vector3.new(-6.25, 3.8, 0.3),
-		size = Vector3.new(0.26, 7.36, 16.16),
+		centre = Vector3.new(-6.165, 3.64, 0.25),
+		size = Vector3.new(0.43, 7.68, 16.26),
 		inside = "BoxSideLeft",
 	},
 	{
 		name = "TruckShellRight",
-		centre = Vector3.new(6.25, 3.8, 0.3),
-		size = Vector3.new(0.26, 7.36, 16.16),
+		centre = Vector3.new(6.165, 3.64, 0.25),
+		size = Vector3.new(0.43, 7.68, 16.26),
 		inside = "BoxSideRight",
 	},
 	{
 		name = "TruckShellFront",
-		centre = Vector3.new(0, 3.8, 8.25),
-		size = Vector3.new(12.76, 7.36, 0.26),
+		centre = Vector3.new(0, 3.64, 8.165),
+		size = Vector3.new(12.76, 7.68, 0.43),
 		inside = "BoxFront",
 	},
 	{
 		name = "TruckShellRoof",
-		centre = Vector3.new(0, 7.35, 0.3),
-		size = Vector3.new(12.8, 0.15, 16.3),
+		centre = Vector3.new(0, 7.1875, 0.3),
+		size = Vector3.new(12.8, 0.475, 16.3),
 		inside = "BoxRoof",
+	},
+	-- The scanner arch's posts at the open back's corners: without them the camera peeks round the walls' ends.
+	{
+		name = "TruckShellPostLeft",
+		centre = Vector3.new(-6.6, 3.2, -8.3),
+		size = Vector3.new(0.48, 6.88, 0.58),
+		inside = "ScannerPostLeft",
+	},
+	{
+		name = "TruckShellPostRight",
+		centre = Vector3.new(6.6, 3.2, -8.3),
+		size = Vector3.new(0.48, 6.88, 0.58),
+		inside = "ScannerPostRight",
+	},
+	-- The roll-up door's drum over the doorway: a block inscribed in it, so the camera cannot slip out above the door.
+	{
+		name = "TruckShellDrum",
+		centre = Vector3.new(0, 6.55, -7.45),
+		size = Vector3.new(11.6, 0.6, 0.6),
+		inside = "RollDrum",
+	},
+	-- The time clock's housing stands 0.6 off the wall: a core inside it (CLOCK_GRAYBOX's ClockBody, clock space).
+	{
+		name = "TruckShellClock",
+		centre = CLOCK_MOUNT + Vector3.new(0, 0, -0.3),
+		size = Vector3.new(1.1, 1.5, 0.45),
+		inside = "ClockBody",
 	},
 	{
 		name = "TruckShellFloor",
@@ -150,8 +185,6 @@ local SHELL: { ShellCore } = {
 export type Paperwork = "clock" | "sheet"
 export type Frame = { centre: Vector3, size: Vector3 }
 
--- The clock's back centre on the front wall's lining (z 7.94), facing the open back (deck space, unrotated).
-local CLOCK_MOUNT = Vector3.new(-2.2, 3.6, 7.94)
 local PAPERWORK: { [Paperwork]: Frame } = {
 	-- The clock's hit box round the housing and its card rack (clock space x -0.65..1.55, y -0.85..1.2).
 	clock = { centre = CLOCK_MOUNT + Vector3.new(0.45, 0.15, -0.45), size = Vector3.new(2.4, 2.1, 0.8) },
