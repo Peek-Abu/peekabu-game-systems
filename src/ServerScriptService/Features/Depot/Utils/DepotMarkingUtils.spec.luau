@@ -100,6 +100,22 @@ return function()
 		end
 	end)
 
+	it("drops a couple of faint, round oil stains in front of the bays", function()
+		local stains = named(plan.paints, "Stain")
+		expect(#stains >= 2).to.equal(true)
+		for _, stain in stains do
+			expect(stain.round).to.equal(true)
+			expect(stain.transparency >= 0.3 and stain.transparency <= 0.85).to.equal(true)
+			expect(stain.size.X).to.be.near(stain.size.Z, 1e-6)
+		end
+		for _, piece in plan.paints do
+			if string.sub(piece.name, 1, 5) ~= "Stain" then
+				expect(piece.round).to.equal(false)
+				expect(piece.transparency).to.equal(0)
+			end
+		end
+	end)
+
 	it("keeps every piece thin, just above the floor, and inside it", function()
 		local floor = LAYOUT.floor
 		for _, piece in all do
@@ -121,5 +137,66 @@ return function()
 				end
 			end
 		end
+	end)
+
+	-- Vector3 holds 32-bit floats: slab sums are checked to a thousandth of a stud.
+	describe("slabs", function()
+		local floor = LAYOUT.floor
+		local slabs = DepotMarkingUtils.slabs(floor)
+
+		it("lays concrete slabs, SLAB studs a side, over the whole floor", function()
+			local columns = math.ceil((floor.maxX - floor.minX) / MARKING.SLAB)
+			local rows = math.ceil((floor.maxZ - floor.minZ) / MARKING.SLAB)
+			expect(#slabs).to.equal(columns * rows)
+			-- Across a row, the slabs and the joints between them span the floor exactly.
+			local across = 0
+			for column = 1, columns do
+				across += slabs[column].size.X
+			end
+			expect(across + (columns - 1) * MARKING.JOINT).to.be.near(floor.maxX - floor.minX, 1e-3)
+		end)
+
+		it("tops every slab at the floor plane, with the joint depth below it", function()
+			for _, slab in slabs do
+				expect(slab.position.Y + slab.size.Y / 2).to.be.near(0, 1e-3)
+				expect(slab.size.Y).to.be.near(MARKING.JOINT_DEPTH, 1e-3)
+			end
+		end)
+
+		it("leaves a JOINT-wide expansion joint between neighbours and none at the walls", function()
+			for i = 1, #slabs do
+				local minX, maxX, minZ, maxZ = footprint(slabs[i])
+				expect(minX >= floor.minX - 1e-6 and maxX <= floor.maxX + 1e-3).to.equal(true)
+				expect(minZ >= floor.minZ - 1e-6 and maxZ <= floor.maxZ + 1e-3).to.equal(true)
+				for j = i + 1, #slabs do
+					if overlaps(slabs[i], slabs[j]) then
+						error(`slab {i} overlaps slab {j}`)
+					end
+				end
+			end
+			local first = slabs[1]
+			local minX, _, minZ = footprint(first)
+			expect(minX).to.be.near(floor.minX, 1e-3)
+			expect(minZ).to.be.near(floor.minZ, 1e-3)
+			-- Slabs run across x first: the second is the first's neighbour along x.
+			local _, firstMaxX = footprint(first)
+			local secondMinX = footprint(slabs[2])
+			expect(secondMinX - firstMaxX).to.be.near(MARKING.JOINT, 1e-3)
+		end)
+
+		it("varies the concrete between a few warm greys", function()
+			local seen = {}
+			local kinds = 0
+			for _, slab in slabs do
+				local color = slab.color
+				expect(color.R >= color.B).to.equal(true)
+				local key = color:ToHex()
+				if not seen[key] then
+					seen[key] = true
+					kinds += 1
+				end
+			end
+			expect(kinds >= 2).to.equal(true)
+		end)
 	end)
 end

@@ -28,6 +28,55 @@ return function()
 			expect(built.model:FindFirstChild("PadTag", true):IsA("BillboardGui")).to.equal(true)
 		end)
 	end)
+	describe("garage floor", function()
+		it("stands clear of the place's Baseplate (top at y = 0), so the two never z-fight", function()
+			local Constants = require(Server.Data.DepotLayoutConstants)
+			-- The depot's real origin, moved far along z so the spec never meets a live depot.
+			local origin = CFrame.new(0, 0, 50000) * Constants.ORIGIN
+			built = Build.build(Layout, origin, {})
+			local lowest = math.huge
+			for _, part in built.model.Floor:GetDescendants() do
+				if part:IsA("BasePart") then
+					lowest = math.min(lowest, part.Position.Y - part.Size.Y / 2)
+				end
+			end
+			expect(lowest > 0).to.equal(true)
+		end)
+		it("lays collidable concrete slabs in warm greys over a darker joint bed", function()
+			built = Build.build(Layout, CFrame.new(50000, 0, 0), {})
+			local floor = built.model:FindFirstChild("Floor")
+			expect(floor ~= nil).to.equal(true)
+			local base = floor:FindFirstChild("Base")
+			local slabs = floor:FindFirstChild("Slabs"):GetChildren()
+			expect(#slabs > 20).to.equal(true)
+			local brightest = 0
+			for _, slab in slabs do
+				expect(slab.Material).to.equal(Enum.Material.Concrete)
+				expect(slab.CanCollide).to.equal(true)
+				expect(slab.Color.R >= slab.Color.B).to.equal(true)
+				-- Every slab tops out at the floor plane (y = 0 in the depot's space).
+				expect(slab.Position.Y + slab.Size.Y / 2).to.be.near(0, 1e-3)
+				brightest = math.max(brightest, slab.Color.R + slab.Color.G + slab.Color.B)
+			end
+			expect(base.CanCollide).to.equal(true)
+			expect(base.Position.Y + base.Size.Y / 2 < 0).to.equal(true)
+			expect(base.Color.R + base.Color.G + base.Color.B < brightest).to.equal(true)
+		end)
+		it("paints the round oil stains as flat, non-colliding discs", function()
+			built = Build.build(Layout, CFrame.new(50000, 0, 0), {})
+			local stains = 0
+			for _, part in built.model.FloorMarkings:GetChildren() do
+				if string.sub(part.Name, 1, 5) == "Stain" then
+					stains += 1
+					expect(part.Shape).to.equal(Enum.PartType.Cylinder)
+					expect(part.Transparency > 0).to.equal(true)
+					-- A cylinder's axis is its X: laid flat, that axis points up.
+					expect(math.abs(part.CFrame.RightVector.Y)).to.be.near(1, 1e-3)
+				end
+			end
+			expect(stains >= 2).to.equal(true)
+		end)
+	end)
 	describe("hub lighting", function()
 		it("hangs a lit strip over each board as well as over the trucks", function()
 			built = Build.build(Layout, CFrame.new(50000, 0, 0), {})
@@ -62,7 +111,8 @@ return function()
 				expect(part.CanQuery).to.equal(false)
 				expect(part.CanTouch).to.equal(false)
 				expect(part.Anchored).to.equal(true)
-				expect(part.Size.Y <= 0.06).to.equal(true)
+				-- Thin along its shortest side (a laid-flat disc's thickness is its X).
+				expect(math.min(part.Size.X, part.Size.Y, part.Size.Z) <= 0.06).to.equal(true)
 				local gui = part:FindFirstChildOfClass("SurfaceGui")
 				if gui ~= nil then
 					expect(gui.Face).to.equal(Enum.NormalId.Top)

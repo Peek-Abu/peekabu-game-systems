@@ -8,8 +8,9 @@
 	that only they see (in their PlayerGui, kept across respawns). Physical boards are SurfaceGui; truck tags are BillboardGui. The client
 	draws (Figma World UI 2a, DepotBillboardSystem). Everything is anchored under one Model in Workspace.
 
-	Hub v1: warm ceiling strips over the trucks and over each board, and the floor paint DepotMarkingUtils plans
-	(bays, ramp hazard bands, lanes, BAY n stencils) as thin non-colliding parts.
+	Hub v1: a concrete slab floor with real expansion joints, warm ceiling strips over the trucks and over each
+	board, and the floor paint DepotMarkingUtils plans (bays, ramp hazard bands, lanes, oil stains, BAY n stencils)
+	as thin non-colliding parts on top.
 
 	Instance shell; specs cover enclosure/surfaces, the lights and the floor paint, and DepotLayoutRules validates the
 	layout.
@@ -107,13 +108,48 @@ local function decalPart(name: string, size: Vector3, cframe: CFrame, parent: In
 	return part
 end
 
--- The bays, ramp hazard bands, lanes and BAY n stencils (DepotMarkingUtils' plan), in the depot's space.
+-- The garage floor: concrete slabs (DepotMarkingUtils.slabs) on a darker joint bed that shows only in the expansion
+-- joints between them. The slabs top out at the floor plane; the bed sits a joint's depth below.
+local function layFloor(layout: DepotTypes.Layout, origin: CFrame, model: Model)
+	local floor = layout.floor
+	local width = floor.maxX - floor.minX
+	local depth = floor.maxZ - floor.minZ
+	local thickness = DepotLayoutConstants.FLOOR_THICKNESS
+	local below = DepotLayoutConstants.MARKING.JOINT_DEPTH
+	local container = folder("Floor", model)
+	local base = block(
+		"Base",
+		Vector3.new(width, thickness, depth),
+		origin * CFrame.new(floor.minX + width / 2, -below - thickness / 2, floor.minZ + depth / 2),
+		DepotLayoutConstants.FLOOR_COLOR,
+		container
+	)
+	base.Material = Enum.Material.Concrete
+	local slabs = folder("Slabs", container)
+	for index, slab in DepotMarkingUtils.slabs(floor) do
+		local part = block(`Slab{index}`, slab.size, origin * CFrame.new(slab.position), slab.color, slabs)
+		part.Material = Enum.Material.Concrete
+	end
+end
+
+-- The bays, ramp hazard bands, lanes, oil stains and BAY n stencils (DepotMarkingUtils' plan), in the depot's space.
 local function paintFloor(layout: DepotTypes.Layout, origin: CFrame, model: Model)
 	local markings = folder("FloorMarkings", model)
 	local plan = DepotMarkingUtils.plan(layout)
 	for _, piece in plan.paints do
-		local part = decalPart(piece.name, piece.size, origin * CFrame.new(piece.position), markings)
+		local at = origin * CFrame.new(piece.position)
+		local size = piece.size
+		if piece.round then
+			-- A cylinder's axis is its X: a quarter turn about Z lays the disc flat.
+			at *= CFrame.Angles(0, 0, math.pi / 2)
+			size = Vector3.new(size.Y, size.X, size.Z)
+		end
+		local part = decalPart(piece.name, size, at, markings)
+		if piece.round then
+			part.Shape = Enum.PartType.Cylinder
+		end
 		part.Color = piece.color
+		part.Transparency = piece.transparency
 	end
 	for _, label in plan.labels do
 		-- A Top-face SurfaceGui's width runs along the part's -Z: a quarter turn (and the size swapped to match) lays
@@ -159,14 +195,7 @@ function DepotBuildSystem.build(
 	local depth = floor.maxZ - floor.minZ
 	local centreX = floor.minX + width / 2
 	local centreZ = floor.minZ + depth / 2
-	local floorThickness = DepotLayoutConstants.FLOOR_THICKNESS
-	block(
-		"Floor",
-		Vector3.new(width, floorThickness, depth),
-		origin * CFrame.new(centreX, -floorThickness / 2, centreZ),
-		DepotLayoutConstants.FLOOR_COLOR,
-		model
-	)
+	layFloor(layout, origin, model)
 
 	local height = DepotLayoutConstants.WALL_HEIGHT
 	local thickness = DepotLayoutConstants.WALL_THICKNESS

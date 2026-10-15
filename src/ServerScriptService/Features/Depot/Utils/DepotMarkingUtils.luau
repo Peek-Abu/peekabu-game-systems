@@ -1,11 +1,12 @@
 --!strict
 --[=[
-	DepotMarkingUtils: plans the depot's floor paint from its layout (hub v1: "kids find their truck without reading
-	the floating tag"). Per truck, in layout order: a "BAY n" stencil in front of the ramp, a yellow-and-black hazard
-	band across the ramp's foot, two yellow side lines framing the bay clear of the truck, and a dashed yellow lane
-	from behind the spawn strip to the bay's front. Every piece is a thin slab in the depot's local space (y up from
-	the floor's top) and no two overlap, so nothing z-fights. DepotBuildSystem lays the plan as non-colliding parts.
-	Pure.
+	DepotMarkingUtils: plans the depot's garage floor from its layout (hub v1: "kids find their truck without reading
+	the floating tag"; "a proper garage floor"). `plan`: per truck, in layout order, a "BAY n" stencil in front of
+	the ramp, a yellow-and-black hazard band across the ramp's foot, two yellow side lines framing the bay clear of
+	the truck, a dashed yellow lane from behind the spawn strip to the bay's front, and a few faint oil stains. Every
+	piece is a thin slab in the depot's local space (y up from the floor's top) and no two overlap, so nothing
+	z-fights. `slabs`: the concrete slabs the paint lies on, with real expansion-joint gaps between them.
+	DepotBuildSystem lays both. Pure.
 
 	@class DepotMarkingUtils
 ]=]
@@ -17,9 +18,18 @@ local DepotTypes = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotTyp
 local DepotLayoutConstants = require(ServerScriptService.Features.Depot.Data.DepotLayoutConstants)
 local DepotTruckVisualConstants = require(ServerScriptService.Features.Depot.Data.DepotTruckVisualConstants)
 
--- A flat painted slab.
+-- A flat painted slab (`round`: a disc `size.X` across).
 export type Paint = {
 	name: string,
+	size: Vector3,
+	position: Vector3,
+	color: Color3,
+	round: boolean,
+	transparency: number,
+}
+
+-- One concrete slab.
+export type Slab = {
 	size: Vector3,
 	position: Vector3,
 	color: Color3,
@@ -47,7 +57,10 @@ end
 
 local function paint(paints: { Paint }, name: string, sizeX: number, sizeZ: number, x: number, z: number, color: Color3)
 	local size, position = slab(sizeX, sizeZ, x, z)
-	table.insert(paints, { name = name, size = size, position = position, color = color })
+	table.insert(
+		paints,
+		{ name = name, size = size, position = position, color = color, round = false, transparency = 0 }
+	)
 end
 
 local DepotMarkingUtils = {}
@@ -98,7 +111,54 @@ function DepotMarkingUtils.plan(layout: DepotTypes.Layout): Plan
 			z += MARKING.DASH + MARKING.GAP
 		end
 	end
+	for index, stain in MARKING.STAINS do
+		local truck = layout.trucks[stain.truck]
+		if truck ~= nil then
+			local bayFront = truck.z - DepotTruckVisualConstants.BACK - MARKING.BAY_FRONT
+			local size, position = slab(stain.diameter, stain.diameter, truck.x + stain.dx, bayFront + stain.dz)
+			table.insert(paints, {
+				name = `Stain{index}`,
+				size = size,
+				position = position,
+				color = MARKING.STAIN_COLOR,
+				round = true,
+				transparency = MARKING.STAIN_TRANSPARENCY,
+			})
+		end
+	end
 	return { paints = paints, labels = labels }
+end
+
+-- The edges of grid cell `index` (1-based) of `size` studs from `min` to `max`: an inner edge gives up half a joint.
+local function span(min: number, max: number, index: number, size: number): (number, number)
+	local low = min + (index - 1) * size
+	local high = math.min(low + size, max)
+	local half = MARKING.JOINT / 2
+	return if index > 1 then low + half else low, if high < max then high - half else high
+end
+
+--[=[
+	The concrete slabs over `floor`, across x first then down z: SLAB studs a side (the last row and column take what
+	is left), JOINT apart, JOINT_DEPTH thick, topped at the floor plane, each one of SLAB_COLORS in a fixed pattern.
+]=]
+function DepotMarkingUtils.slabs(floor: DepotTypes.Rect): { Slab }
+	local slabs: { Slab } = {}
+	local size = MARKING.SLAB
+	local columns = math.ceil((floor.maxX - floor.minX) / size)
+	local rows = math.ceil((floor.maxZ - floor.minZ) / size)
+	local colors = MARKING.SLAB_COLORS
+	for row = 1, rows do
+		local minZ, maxZ = span(floor.minZ, floor.maxZ, row, size)
+		for column = 1, columns do
+			local minX, maxX = span(floor.minX, floor.maxX, column, size)
+			table.insert(slabs, {
+				size = Vector3.new(maxX - minX, MARKING.JOINT_DEPTH, maxZ - minZ),
+				position = Vector3.new((minX + maxX) / 2, -MARKING.JOINT_DEPTH / 2, (minZ + maxZ) / 2),
+				color = colors[(column * 2 + row * 3) % #colors + 1],
+			})
+		end
+	end
+	return slabs
 end
 
 return DepotMarkingUtils

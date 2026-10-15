@@ -31,8 +31,10 @@ local LAYOUT: DepotTypes.Layout = {
 
 return table.freeze({
 	-- Where the depot's local 0, 0 sits in the world. The office is at x = 1000 (OfficeConstants.ORIGIN), so in
-	-- Studio, where one server plays both roles, the two never meet.
-	ORIGIN = CFrame.new(-1000, 0, 0),
+	-- Studio, where one server plays both roles, the two never meet. Lifted (like the office) so the whole floor,
+	-- joint bed included, stands clear of the place's Baseplate, whose top is at y = 0 under the depot: a floor
+	-- flush with it z-fights and shows the Baseplate's grid through.
+	ORIGIN = CFrame.new(-1000, 1.25, 0),
 	MODEL_NAME = "CleanupCrewDepot",
 	LAYOUT = LAYOUT,
 	-- Tall enough for a truck's tag sign above the box (the truck is ~11.7 studs high on its 3-stud bed).
@@ -105,10 +107,28 @@ return table.freeze({
 		LANE_START_Z = 18,
 		DASH = 2,
 		GAP = 1.5,
+		-- The concrete floor: SLAB-stud slabs JOINT_DEPTH thick on the darker joint bed (FLOOR_COLOR), JOINT apart,
+		-- so the expansion joints are real gaps, not paint, and nothing lies flush on anything else.
+		SLAB = 12,
+		JOINT = 0.15,
+		JOINT_DEPTH = 0.1,
+		SLAB_COLORS = table.freeze({
+			Color3.fromRGB(118, 111, 102),
+			Color3.fromRGB(112, 106, 98),
+			Color3.fromRGB(124, 116, 106),
+		}),
+		-- Faint oil stains just in front of some bays: which truck, the offset from the bay front's centre, the size.
+		STAIN_COLOR = Color3.fromRGB(52, 42, 34),
+		STAIN_TRANSPARENCY = 0.7,
+		STAINS = table.freeze({
+			table.freeze({ truck = 1, dx = -3, dz = -1.8, diameter = 2.4 }),
+			table.freeze({ truck = 3, dx = 2.6, dz = -1.4, diameter = 2 }),
+		}),
 	}),
 	-- The BAY n stencil's text resolution on the floor: low enough that TextScaled's 100 px cap still fills the stencil.
 	STENCIL_PIXELS_PER_STUD = 20,
-	FLOOR_COLOR = Color3.fromRGB(84, 86, 90),
+	-- The joint bed under the concrete slabs (seen only in the expansion joints).
+	FLOOR_COLOR = Color3.fromRGB(58, 54, 50),
 	WALL_COLOR = Color3.fromRGB(150, 140, 120),
 	BED_COLOR = Color3.fromRGB(60, 60, 64),
 	TRUCK_COLOR = Color3.fromRGB(230, 230, 235),
