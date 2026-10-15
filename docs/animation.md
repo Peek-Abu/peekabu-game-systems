@@ -232,18 +232,39 @@ Only arm chains are driven; no joint, attachment or Transform is written.
   The shoulders are measured at rest too, and the plan checks the WRIST against the arm's reach, not just the palm
   (the palm is rigidly offset from the wrist, so a palm held palm-up was planned up to 0.34 stud out of reach and the
   hands floated under the box).
-  **Hold styles are data** (`AnimationCarryRegistry`): `twoHandSupport` (the forearm hold above), `chest` (a small
-  item cupped up at the chest, elbows out on a round body: the plaque, the golden stapler), `oneHandHang` (the dust
-  bag, the rubbish bag, the bottle bag) and `cart` (the filing cabinet, pushed hands-free at its offset). A hanging bag
-  hangs from the right hand by its handle (the art's `CarryHandle` attachment: the dust bag's tie loop, the rubbish
-  bag's knot, the crate's arch; the top's centre without one), turned a quarter round so the handle runs front to back
-  through the fist, the arm down and out past the body, as low as it reaches and lifted only until the bag clears the
-  floor by 0.22 (Pippa's 2-stud bags and 1-stud arms put her hand ~0.45 below the shoulder, the arm angled out; a
-  stock R15 hangs it at full stretch). The hand's IK target rides the UpperTorso (on the bag it would chase itself),
-  and the bag is joined to the hand by a Motor6D at the handle (tagged `CarryHang`) that `CarrySwaySystem` swings on
-  every client: a damped pendulum (`CarryFormulas.swayStep`) the handle's acceleration drives, the bag always hanging
-  plumb under it. The server never writes its Transform. A bag too long to hang clear of the floor is carried on the
-  forearms like a box.
+  **Wrists stay neutral in every hold.** Each carry IK chain is the shoulder and elbow only (`ChainRoot` the
+  UpperArm, `EndEffector` the LowerArm, offset to the palm through the wrist joint at rest:
+  `AnimationCarrySystem.palmInLowerOf`). `bind` picks the elbow (`AnimationCarryContactUtils.elbow`) and turns the
+  planned palm into the frame that arm reaches exactly (`AnimationCarryContactUtils.neutralPalm`: the forearm laid
+  toward the contact, rolled so the palm faces as near the planned way as it can), with the pole past that elbow.
+  The hand was the end effector before, so the solver bent the wrist to aim it (the playtest's "the wrist bends
+  unnaturally"); now the wrist plays only the animation (Pippa's clips do not key it: 0 degrees measured). Studio,
+  every kind on Pippa: palms within 0.022 stud and 0.8 degrees of their targets.
+  **The hold rules** (`AnimationCarryRegistry` per kind, thresholds measured on the carrier in
+  `AnimationCarryContactUtils.plan`):
+  - **One hand** (`oneHandHang`; only light kinds, the cargo `tiny` / `light` size classes: the dust, rubbish and
+    bottle bags, the plaque, the golden stapler). It hangs from the RELAXED right hand: the arm down by the side, 8
+    degrees forward and 10-30 out (out only as far as clears the body's side by 0.08), the elbow just soft (0.92 of
+    the reach), never raised to lift it. It is turned so its longer level side runs front to back through the fist
+    (a bag's handle runs across its width, so a bag turns a quarter round; the stapler does not), by its handle (the
+    art's `CarryHandle`: the dust bag's tie loop, the rubbish bag's knot, the crate's arch; the top's centre without
+    one). It must then hang 0.22 off the floor; if not, or if no relaxed angle clears the body, it is too big for one
+    hand. The hand's IK target rides the UpperTorso (on the item it would chase itself), and the item is joined to
+    the hand by a Motor6D at the handle (tagged `CarryHang`) that `CarrySwaySystem` swings on every client: a damped
+    pendulum (`CarryFormulas.swayStep`) the handle's acceleration drives, the item always hanging plumb under it. The
+    server never writes its Transform. On Pippa (relaxed hand ~1.2 stud off the floor) the plaque and the stapler go
+    in one hand; a stock R15 also hangs the dust and rubbish bags.
+  - **Two-arm hug** (a one-hand kind too big for one hand and at least shoulder-wide: on Pippa every bag). Its near
+    face against the belly, the palms on its sides cupped 25 degrees up, fingers forward, as low as the arms reach
+    (0.95), the item centred on them but its top kept under the chin and its bottom 0.15 off the floor; of the depths
+    along its sides the one holding it lowest wins. Joined to the UpperTorso like the forearm hold. Pippa: the dust bag
+    0.59-2.64 above the floor (chin 2.78), the arms ~50 degrees from straight down. The old one-hand hang lifted her
+    arm until the bag cleared the floor: the hand ~0.4 below the shoulder, the arm out ~60 degrees, the wrist bent.
+    Narrower than the shoulders, it goes on the forearms instead.
+  - **Forearms** (`twoHandSupport`: rigid or heavier kinds, always two hands): the palms-up hold above. `chest` (a
+    small item cupped up at the chest) is still planned but no kind uses it now: small items go in one hand.
+  - **Cart** (`cart`: the filing cabinet), pushed hands-free at its offset.
+  Evidence: `characters/qa/holds-v2` (Studio captures, before / after contact sheet).
 - **The vacuum** (`VacuumHoldFormulas`, `AnimationVacuumHoldSystem`): the same full-size vacuum for
   everyone. Its body hangs ~1.5 studs and its floor head ~1.9 below the grip, where a stock avatar's
   hanging hand holds it upright. For a shorter holder the hold is fitted, not the vacuum: it is tilted

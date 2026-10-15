@@ -9,13 +9,19 @@ return function()
 		end
 		expect(Registry.get("unknown")).to.equal("twoHandSupport")
 	end)
-	it("hangs the soft bags from one hand, holds the small items at the chest and pushes the cart", function()
-		for _, id in { "dustBag", "rubbishBag", "bottleBag" } do
+	it("lets the soft bags and the small items go in one hand, and pushes the cart", function()
+		for _, id in { "dustBag", "rubbishBag", "bottleBag", "plaque", "goldenStapler" } do
 			expect(Registry.get(id)).to.equal("oneHandHang")
 		end
-		expect(Registry.get("plaque")).to.equal("chest")
-		expect(Registry.get("goldenStapler")).to.equal("chest")
 		expect(Registry.get("filingCabinet")).to.equal("cart")
 		expect(Registry.get("recyclingBox")).to.equal("twoHandSupport")
+	end)
+	it("lets only light kinds (the tiny and light size classes) be held in one hand", function()
+		for _, id in Cargo.ids() do
+			if Registry.get(id) == "oneHandHang" then
+				local size = Cargo.get(id).size
+				expect(size == "tiny" or size == "light").to.equal(true)
+			end
+		end
 	end)
 end

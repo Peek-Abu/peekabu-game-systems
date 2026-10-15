@@ -114,7 +114,8 @@ return function()
 	end)
 	-- Cargo as CargoSpawnSystem + ArtVisualSystem build it: an invisible 2x2x2 proxy (the size class) with the
 	-- art welded inside, uniformly fitted and standing on the proxy's floor, so it is smaller and lower.
-	local function cargo(at)
+	local function cargo(at, artSize)
+		local size = artSize or Vector3.new(2, 1.6, 1.4)
 		local proxy = Instance.new("Part")
 		proxy.Anchored = true
 		proxy.Size = Vector3.new(2, 2, 2)
@@ -124,8 +125,8 @@ return function()
 		art.Name = "ArtVisual"
 		local mesh = Instance.new("Part")
 		mesh.Anchored = true
-		mesh.Size = Vector3.new(2, 1.6, 1.4)
-		mesh.CFrame = at * CFrame.new(0, -0.2, 0)
+		mesh.Size = size
+		mesh.CFrame = at * CFrame.new(0, size.Y / 2 - 1, 0)
 		mesh.Parent = art
 		art.Parent = proxy
 		return proxy
@@ -206,12 +207,12 @@ return function()
 		model:Destroy()
 		proxy:Destroy()
 	end)
-	it("hangs a soft bag from the right hand by its authored CarryHandle", function()
+	it("hangs a small soft bag from the right hand by its authored CarryHandle", function()
 		local model = measuredRig()
-		local proxy = cargo(CFrame.new(5, 1, -3))
+		local proxy = cargo(CFrame.new(5, 1, -3), Vector3.new(1, 1, 0.8))
 		local handle = Instance.new("Attachment")
 		handle.Name = "CarryHandle"
-		handle.Position = Vector3.new(0.1, 0.8, 0)
+		handle.Position = Vector3.new(0.1, 0.4, 0)
 		handle.Parent = proxy.ArtVisual.Part
 		local inPivot = proxy.CFrame:PointToObjectSpace(handle.WorldPosition)
 		local prepared = System.prepare(model, proxy, "dustBag", nil)
@@ -224,6 +225,42 @@ return function()
 		expect((prepared.pivot:PointToWorldSpace(inPivot) - palm).Magnitude < 1e-3).to.equal(true)
 		model:Destroy()
 		proxy:Destroy()
+	end)
+	it("hugs a soft bag too long to hang from a relaxed arm: both palms on its sides, on the torso", function()
+		local model = measuredRig()
+		-- 1.6 tall: hung from this rig's relaxed hand (~0.35 below the root) it would reach the floor (-2).
+		local proxy = cargo(CFrame.new(5, 1, -3))
+		local prepared = System.prepare(model, proxy, "dustBag", nil)
+		expect(prepared).to.be.ok()
+		expect(prepared.layout.hug).to.equal(true)
+		expect(prepared.layout.mount).to.equal("torso")
+		expect(prepared.layout.right.Position.X).to.be.near(1, 1e-3)
+		expect(prepared.layout.left.Position.X).to.be.near(-1, 1e-3)
+		model:Destroy()
+		proxy:Destroy()
+	end)
+	it("finds each palm in its lower arm's space with the wrist at rest", function()
+		local model = measuredRig()
+		-- The hand hangs off the lower arm's wrist (0.3 out) by its own wrist (0.2 in): its middle 0.5 out, the palm
+		-- 0.3 under that, fingers along the arm.
+		local right = System.palmInLowerOf(model, "Right")
+		expect((right.Position - Vector3.new(0.5, -0.3, 0)).Magnitude < 1e-3).to.equal(true)
+		expect((right.LookVector - Vector3.xAxis).Magnitude < 1e-3).to.equal(true)
+		expect((right.UpVector + Vector3.yAxis).Magnitude < 1e-3).to.equal(true)
+		local left = System.palmInLowerOf(model, "Left")
+		expect((left.Position - Vector3.new(-0.5, -0.3, 0)).Magnitude < 1e-3).to.equal(true)
+		-- A wrist joint, when there is one, is read at rest (its C0 / C1), not from the attachments.
+		local wrist = Instance.new("Motor6D")
+		wrist.Name = "RightWrist"
+		wrist.Part0 = model.RightLowerArm
+		wrist.Part1 = model.RightHand
+		wrist.C0 = CFrame.new(0.3, 0, 0)
+		wrist.C1 = CFrame.new(-0.25, 0, 0)
+		wrist.Parent = model.RightHand
+		expect((System.palmInLowerOf(model, "Right").Position - Vector3.new(0.55, -0.3, 0)).Magnitude < 1e-3).to.equal(
+			true
+		)
+		model:Destroy()
 	end)
 	describe("mount", function()
 		local function placed(joint)
@@ -262,6 +299,38 @@ return function()
 			root:Destroy()
 		end)
 	end)
+	-- The lower arm a control's target implies (its end effector is the lower arm, offset to the palm), and whether its
+	-- elbow joint is an upper arm (0.6) from the shoulder: only then do the shoulder and elbow reach it with no wrist.
+	local function lowerArmOf(control)
+		return control.Target.WorldCFrame * control.EndEffectorOffset:Inverse()
+	end
+	local function elbowFits(model, control, side)
+		local shoulder = model[side .. "UpperArm"][side .. "ShoulderRigAttachment"].WorldPosition
+		local elbow = lowerArmOf(control) * model[side .. "LowerArm"][side .. "ElbowRigAttachment"].Position
+		return math.abs((elbow - shoulder).Magnitude - 0.6) < 1e-3
+	end
+	it("never puts a wrist in a carry chain: the shoulder and elbow alone carry the hand to its contact", function()
+		local model = measuredRig()
+		local root = Instance.new("Part")
+		local layout =
+			{ offset = CFrame.new(), right = CFrame.new(0.6, 0, -1), left = CFrame.new(-0.6, 0, -1), under = true }
+		local controller = System.bind(model, root, layout)
+		for _, side in { "Right", "Left" } do
+			local control = model.Humanoid:FindFirstChild("CleanupCarryIK" .. side)
+			expect(control.ChainRoot).to.equal(model[side .. "UpperArm"])
+			expect(control.EndEffector).to.equal(model[side .. "LowerArm"])
+			expect(control.EndEffectorOffset).to.equal(System.palmInLowerOf(model, side))
+			-- The palm on the contact, its lower arm's elbow where the upper arm ends.
+			local contact = if side == "Right" then layout.right else layout.left
+			expect((control.Target.WorldPosition - (root.CFrame * contact).Position).Magnitude < 1e-3).to.equal(true)
+			expect(elbowFits(model, control, side)).to.equal(true)
+			-- Palm turned up under the item, as far as the forearm's line allows.
+			expect(control.Target.WorldCFrame.UpVector.Y > 0).to.equal(true)
+		end
+		controller.destroy()
+		model:Destroy()
+		root:Destroy()
+	end)
 	it("drives the right palm to a hanging bag's handle from a target on the upper torso, not the bag", function()
 		local model = measuredRig()
 		local root = Instance.new("Part")
@@ -272,9 +341,12 @@ return function()
 		expect(controller).to.be.ok()
 		local control = model.Humanoid:FindFirstChild("CleanupCarryIKRight")
 		expect(model.Humanoid:FindFirstChild("CleanupCarryIKLeft")).to.equal(nil)
-		expect(control.EndEffectorOffset).to.equal(System.palmOf(model, "Right"))
+		expect(control.EndEffector).to.equal(model.RightLowerArm)
+		expect(control.EndEffectorOffset).to.equal(System.palmInLowerOf(model, "Right"))
 		expect(control.Target.Parent).to.equal(model.UpperTorso)
-		expect(control.Target.WorldCFrame:FuzzyEq(root.CFrame * contact, 1e-4)).to.equal(true)
+		-- The palm at the handle; the hand turned only by the arm.
+		expect((control.Target.WorldPosition - (root.CFrame * contact).Position).Magnitude < 1e-3).to.equal(true)
+		expect(elbowFits(model, control, "Right")).to.equal(true)
 		expect(control.Pole.Parent).to.equal(model.UpperTorso)
 		expect(#root:GetChildren()).to.equal(0)
 		controller.destroy()
@@ -293,7 +365,8 @@ return function()
 			if child:IsA("IKControl") then
 				count += 1
 				expect(child.ChainRoot.Name:find("UpperArm") ~= nil).to.equal(true)
-				expect(child.EndEffector.Name:find("Hand") ~= nil).to.equal(true)
+				-- The chain ends at the lower arm: the wrist is never bent to aim the hand.
+				expect(child.EndEffector.Name:find("LowerArm") ~= nil).to.equal(true)
 				expect(child.Target.Parent).to.equal(root)
 			end
 		end
@@ -313,7 +386,7 @@ return function()
 		local controller = System.bind(model, root, layout)
 		expect(controller).to.be.ok()
 		local control = model.Humanoid:FindFirstChild("CleanupCarryIKRight")
-		expect(control.EndEffectorOffset).to.equal(System.palmOf(model, "Right"))
+		expect(control.EndEffectorOffset).to.equal(System.palmInLowerOf(model, "Right"))
 		expect(control.Pole).to.be.ok()
 		expect(control.Pole.Parent).to.equal(root)
 		-- Below the shoulder (y 1), behind it and outward.

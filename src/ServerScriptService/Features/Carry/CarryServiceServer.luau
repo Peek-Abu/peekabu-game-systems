@@ -342,6 +342,7 @@ CarryServiceServer = {
 				left = if prepared.layout.left ~= nil then boxFromRoot * prepared.layout.left else nil,
 				under = prepared.layout.under,
 				hang = prepared.layout.hang,
+				hug = prepared.layout.hug,
 				mount = prepared.layout.mount,
 			}
 			contact = AnimationCarrySystem.bind(character, root, layout)

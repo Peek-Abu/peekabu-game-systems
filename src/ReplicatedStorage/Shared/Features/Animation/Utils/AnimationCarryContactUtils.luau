@@ -11,8 +11,12 @@
 	A caller-owned placement (the bulky cart pushed ahead) keeps the old hold on the item's near side or face.
 	`elbow` picks where each elbow bends so the arm stays outside the carrier's body (a small item brings the palms
 	together in front of a round belly: the elbows swing out, the forearms come back in).
-	A soft bag (`oneHandHang`) hangs from the right hand by its handle instead: the arm down and out at the side, as
-	low as it reaches, lifted just enough for the bag to clear the floor and outside the body.
+	A light item allowed in one hand (`oneHandHang`) hangs from the relaxed right hand by its handle: the arm down by
+	the side, a little out and forward, never raised to lift it. When it would not then clear the floor and the
+	body's side it is too big for one hand: a soft bag is hugged with both arms (palms on its sides, low in front,
+	under the chin), or carried on the forearms when narrower than the shoulders.
+	Wrists stay neutral in every hold: `neutralPalm` turns a planned palm into the frame the shoulder and elbow alone
+	reach, the hand carried on the forearm at its rest angle (AnimationCarrySystem ends the IK chain at the lower arm).
 	Each layout names its `mount`, the body part the item is welded to so it moves with the animation: the upper
 	torso for a supported item, the right hand for a hanging bag, the root for a cart pushed ahead.
 
@@ -26,8 +30,17 @@ local AnimationCarryRegistry = require(ReplicatedStorage.Shared.Features.Animati
 export type Mount = "root" | "torso" | "rightHand"
 -- `under`: the contacts are palm frames (`palmFrame`: LookVector along the fingers, UpVector out of the palm) on
 -- the item's bottom face, palms up. `hang`: `right` is the right palm's frame at the bag's handle (fingers along the
--- arm, palm in). Otherwise the hand's end point on the item's side or face (the cart).
-export type Layout = { offset: CFrame, right: CFrame, left: CFrame?, under: boolean?, hang: boolean?, mount: Mount }
+-- arm, palm in). `hug`: palm frames on the item's sides, palms in, fingers forward. Otherwise the hand's end point on
+-- the item's side or face (the cart).
+export type Layout = {
+	offset: CFrame,
+	right: CFrame,
+	left: CFrame?,
+	under: boolean?,
+	hang: boolean?,
+	hug: boolean?,
+	mount: Mount,
+}
 -- Hold geometry authored on the art, in box space (see `plan`).
 export type Authored = { bodyZ: number?, handle: Vector3? }
 -- A body part the arms keep out of, as an ellipsoid in root space (`elbow`).
@@ -112,17 +125,27 @@ local ROUND_OUT = 0.12
 -- A round body: the shoulder joints at least this far inside the torso's half width (Pippa ~0.15; a stock R15's
 -- shoulders sit on its torso's edge).
 local ROUND_INSIDE = 0.1
--- A hanging bag: how far in front of the shoulder the hand hangs (clear of the legs' swing), and the gap kept between
--- the bag and the body's side.
-local HANG_FORWARD = 0.1
+-- One hand (`hang`): the arm hangs relaxed by the side, never raised to lift the item. It points RELAX_FORWARD
+-- forward of straight down and out from RELAX_OUT_MIN up to RELAX_OUT_MAX (in RELAX_OUT_STEP steps) until the item
+-- clears the body's side by HANG_GAP; the palm is RELAX_REACH of the arm's reach out (the elbow just soft). The item
+-- must then hang HANG_FLOOR_GAP off the floor at rest (it rides the hand through the walk's bob); if it cannot, it is
+-- too big for one hand and goes to two.
+local RELAX_FORWARD = math.rad(8)
+local RELAX_OUT_MIN = math.rad(10)
+local RELAX_OUT_MAX = math.rad(30)
+local RELAX_OUT_STEP = math.rad(2)
+local RELAX_REACH = 0.92
 local HANG_GAP = 0.08
-local HANG_STEP = 0.02
--- A hanging bag rides the hand, which rides the torso's bob and the walk: it is kept this far off the floor at rest.
 local HANG_FLOOR_GAP = 0.22
--- A bag's handle (a tie loop, a crate's arch) runs across its width (the art's X); a fist closes round a bar that runs
--- front to back, so the bag hangs turned a quarter round, its handle through the fist and its narrower depth (the art's
--- Z) toward the body.
+-- A fist closes round a bar that runs front to back: an item hangs turned so its longer level side runs front to back
+-- through the fist (a bag's handle runs across its width, the art's X, so a bag is turned a quarter round; the stapler
+-- is long front to back already), its narrower side toward the body.
 local HANG_TURN = CFrame.Angles(0, math.pi / 2, 0)
+-- Two arms round a soft bag too big for one hand (`hug`): the palms on its sides, cupped HUG_CUP up from facing straight
+-- in, as low as the arms reach (the bag low in the arms, its top under the chin); at least shoulder-wide. The palms go
+-- in along its sides from the near edge: the depths tried, as fractions of its depth.
+local HUG_CUP = math.rad(25)
+local HUG_INSETS = { 0.5, 0.33, 0.15 }
 
 local function round(rig: Rig, shoulderX: number): boolean
 	return rig.torsoHalfWidth ~= nil and math.abs(shoulderX) < rig.torsoHalfWidth - ROUND_INSIDE
@@ -270,45 +293,88 @@ local function supports(size: Vector3, rig: Rig, offset: CFrame, nearZ: number, 
 	return { offset = offset, right = hands[1], left = hands[-1], under = true, mount = "torso" }
 end
 
--- A bag of `size` hanging from the right hand by `handle` (box space): the hand out at the side, the bag's near side
--- HANG_GAP outside the body (the torso's half width, or the shoulder on a stock rig), the arm hanging as low as it
--- reaches but lifted until the bag clears the floor, never above UNDER_DROP_MIN below the shoulder. The bag hangs
--- upright, turned HANG_TURN; the palm faces in, the fingers along the arm. Nil when the arm cannot hold it clear of the
--- floor.
+-- An item of `size` hanging from the relaxed right hand by `handle` (box space; see RELAX_*): turned so its longer
+-- level side runs front to back, its near side HANG_GAP outside the body (the torso's half width, or the shoulder on a
+-- stock rig), upright under the hand. The palm faces in, the fingers along the arm. Nil when it cannot hang clear of
+-- the body from a relaxed arm, or hangs lower than HANG_FLOOR_GAP off the floor: too big for one hand.
 local function hang(size: Vector3, rig: Rig, handle: Vector3): Layout?
 	local shoulder = rig.rightShoulder
-	local reach = rig.rightPalmReach * REACH_USE
+	local reach = rig.rightPalmReach * RELAX_REACH
+	local turn = if size.X > size.Z then HANG_TURN else CFrame.identity
+	-- The handle and the item's extent across the body (root X) once turned.
+	local held = turn:VectorToWorldSpace(handle)
+	local across = math.min(size.X, size.Z) / 2
 	local edge = math.max(math.abs(shoulder.X), rig.torsoHalfWidth or 0) + HANG_GAP
-	local x = edge + HANG_TURN:VectorToWorldSpace(handle).X + size.Z / 2
-	local z = shoulder.Z - HANG_FORWARD
-	local level = reach ^ 2 - (x - shoulder.X) ^ 2 - (z - shoulder.Z) ^ 2
-	if level <= 0 then
-		return nil
-	end
-	local highest = shoulder.Y - math.min(rig.rightReach, rig.leftReach) * UNDER_DROP_MIN
-	local y = math.max(shoulder.Y - math.sqrt(level), rig.floor + HANG_FLOOR_GAP + handle.Y + size.Y / 2)
-	-- Lifted a step at a time until the wrist, not just the palm, is within the arm's reach.
-	while y <= highest do
-		local hand = Vector3.new(x, y, z)
-		local along = (hand - shoulder).Unit
-		local palm = along:Cross(Vector3.zAxis)
-		if palm.Magnitude < 1e-3 then
-			return nil
-		end
-		palm = palm.Unit
-		local rotation = CFrame.fromMatrix(Vector3.zero, palm:Cross(-along), palm, -along)
-		local centre, wristReach = palmSphere(rig, 1, rotation)
-		if (hand - centre).Magnitude <= wristReach * REACH_USE + 1e-6 then
+	local out = RELAX_OUT_MIN
+	while out <= RELAX_OUT_MAX + 1e-6 do
+		local hand = shoulder + Vector3.new(math.tan(out), -1, -math.tan(RELAX_FORWARD)).Unit * reach
+		local centre = hand - held
+		if centre.X - across >= edge then
+			if centre.Y - size.Y / 2 < rig.floor + HANG_FLOOR_GAP then
+				return nil
+			end
+			local along = (hand - shoulder).Unit
+			local palm = along:Cross(Vector3.zAxis).Unit
+			local rotation = CFrame.fromMatrix(Vector3.zero, palm:Cross(-along), palm, -along)
 			return {
-				offset = CFrame.new(hand) * HANG_TURN * CFrame.new(-handle),
-				right = CFrame.new(handle) * HANG_TURN:Inverse() * rotation,
+				offset = CFrame.new(hand) * turn * CFrame.new(-handle),
+				right = CFrame.new(handle) * turn:Inverse() * rotation,
 				hang = true,
 				mount = "rightHand",
 			}
 		end
-		y += HANG_STEP
+		out += RELAX_OUT_STEP
 	end
 	return nil
+end
+
+-- Both arms round a soft item of `size` too big for one hand (see HUG_*): its near face against the belly, the palms
+-- on its sides as low as the arms reach (REACH_USE: the elbows just soft), the item centred on them but kept under the
+-- chin and off the floor. Nil when it is narrower than the shoulders (the forearms carry that) or the arms cannot
+-- reach its sides.
+local function hug(size: Vector3, rig: Rig): Layout?
+	if size.X / 2 < math.max(math.abs(rig.rightShoulder.X), math.abs(rig.leftShoulder.X)) then
+		return nil
+	end
+	local nearZ = rig.front - BODY_GAP
+	local margin = math.min(0.15, size.Y / 4)
+	local lowest = rig.floor + FLOOR_GAP + size.Y / 2
+	local highest = math.max(lowest, rig.headBottom - HEAD_GAP - size.Y / 2)
+	local hands: { [number]: CFrame } = {}
+	for _, side in { 1, -1 } do
+		local normal = Vector3.new(-side * math.cos(HUG_CUP), math.sin(HUG_CUP), 0)
+		hands[side] = CFrame.fromMatrix(Vector3.zero, normal:Cross(Vector3.zAxis), normal, Vector3.zAxis)
+	end
+	-- The wrist is neutral (`neutralPalm`): the palm turns with the forearm, so its reach is the straight arm's to the
+	-- palm, whatever way it faces. Of the depths along the sides, the one that holds the item lowest wins (the
+	-- deeper on a tie).
+	local best: Layout? = nil
+	local bestY = math.huge
+	for _, fraction in HUG_INSETS do
+		local inset = size.Z * fraction
+		local palmY = -math.huge
+		for _, side in { 1, -1 } do
+			local shoulder = if side > 0 then rig.rightShoulder else rig.leftShoulder
+			local reach = (if side > 0 then rig.rightPalmReach else rig.leftPalmReach) * REACH_USE
+			local level = reach ^ 2 - (side * size.X / 2 - shoulder.X) ^ 2 - (nearZ - inset - shoulder.Z) ^ 2
+			palmY = if level > 0 then math.max(palmY, shoulder.Y - math.sqrt(level) + 1e-3) else math.huge
+		end
+		if palmY < math.huge then
+			local centreY = math.clamp(palmY, lowest, highest)
+			local inBox = math.max(palmY - centreY, -size.Y / 2 + margin)
+			if inBox <= size.Y / 2 - margin and centreY < bestY - 1e-6 then
+				bestY = centreY
+				best = {
+					offset = CFrame.new(0, centreY, nearZ - size.Z / 2),
+					right = CFrame.new(size.X / 2, inBox, size.Z / 2 - inset) * hands[1],
+					left = CFrame.new(-size.X / 2, inBox, size.Z / 2 - inset) * hands[-1],
+					hug = true,
+					mount = "torso",
+				}
+			end
+		end
+	end
+	return best
 end
 
 --[=[
@@ -365,10 +431,11 @@ function AnimationCarryContactUtils.plan(
 		return contacts(size, rig, style, requestedOffset, gripY)
 	end
 	if style == "oneHandHang" then
-		-- A bag too long to hang clear of the floor from this arm is carried on the forearms like a box.
-		local hung = hang(size, rig, handle)
-		if hung ~= nil then
-			return hung
+		-- One hand when it hangs clear from a relaxed arm; else hugged with both arms; a narrow one too big for one
+		-- hand goes on the forearms like a box.
+		local held = hang(size, rig, handle) or hug(size, rig)
+		if held ~= nil then
+			return held
 		end
 	end
 	local tall = math.clamp((size.Y - 1) / 2, 0, 1)
@@ -520,6 +587,44 @@ function AnimationCarryContactUtils.elbow(
 		end
 	end
 	return best
+end
+
+--[=[
+	The palm frame (root space) an arm reaches with its WRIST NEUTRAL: the hand carried rigidly on the forearm at its
+	rest angle (`palmInLower`: the palm's frame in the lower arm's space with the wrist at rest; `elbowInLower`: the
+	elbow joint in it), so only the shoulder and elbow move. The forearm runs from `elbow` toward `palm`, the palm at
+	its far end (short of `palm` when that is out of the forearm's reach), and the forearm is rolled about its own
+	line so the palm faces as near `facing` as it can. The lower arm this implies has its elbow joint exactly at
+	`elbow`, so a shoulder + elbow IK chain reaches it exactly: no wrist bend is ever needed to aim the hand.
+]=]
+function AnimationCarryContactUtils.neutralPalm(
+	elbow: Vector3,
+	palm: Vector3,
+	facing: Vector3,
+	elbowInLower: Vector3,
+	palmInLower: CFrame
+): CFrame
+	local forearm = palmInLower.Position - elbowInLower
+	local toPalm = palm - elbow
+	local wanted = if toPalm.Magnitude > 1e-6 then toPalm.Unit else -Vector3.yAxis
+	local from = forearm.Unit
+	-- The shortest turn laying the forearm along `wanted`.
+	local axis = from:Cross(wanted)
+	local turn = if axis.Magnitude > 1e-6
+		then CFrame.fromAxisAngle(axis.Unit, math.atan2(axis.Magnitude, from:Dot(wanted)))
+		elseif from:Dot(wanted) > 0 then CFrame.identity
+		else CFrame.fromAxisAngle(
+			if math.abs(from.X) < 0.9 then from:Cross(Vector3.xAxis).Unit else from:Cross(Vector3.yAxis).Unit,
+			math.pi
+		)
+	-- Then the roll about the forearm that brings the palm round toward `facing`.
+	local normal = turn:VectorToWorldSpace(palmInLower.UpVector)
+	local n = normal - wanted * normal:Dot(wanted)
+	local f = facing - wanted * facing:Dot(wanted)
+	local roll = if n.Magnitude > 1e-6 and f.Magnitude > 1e-6 then math.atan2(wanted:Dot(n:Cross(f)), n:Dot(f)) else 0
+	local rotation = CFrame.fromAxisAngle(wanted, roll) * turn
+	local lower = CFrame.new(elbow) * rotation * CFrame.new(-elbowInLower)
+	return lower * palmInLower
 end
 
 --[=[

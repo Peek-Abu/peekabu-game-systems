@@ -86,6 +86,30 @@ function AnimationCarrySystem.palmOf(character: Model, side: string): CFrame?
 		hand.Size
 	)
 end
+--[=[
+	`side`'s palm frame (`palmOf`) in its LowerArm's space with the wrist at rest: through the wrist joint's C0 / C1
+	(its rest pose, never an animated Transform), or the lower arm's and hand's WristRigAttachments without one. The
+	carry IK ends at the lower arm with this offset, so the wrist is never bent to aim the hand. Nil without the arm.
+]=]
+function AnimationCarrySystem.palmInLowerOf(character: Model, side: string): CFrame?
+	local lower = part(character, side .. "LowerArm")
+	local hand = part(character, side .. "Hand")
+	local palm = AnimationCarrySystem.palmOf(character, side)
+	if lower == nil or hand == nil or palm == nil then
+		return nil
+	end
+	for _, child in hand:GetChildren() do
+		if child:IsA("Motor6D") and child.Part0 == lower and child.Part1 == hand then
+			return child.C0 * child.C1:Inverse() * palm
+		end
+	end
+	local lowerWrist = attachment(lower, side .. "WristRigAttachment")
+	local handWrist = attachment(hand, side .. "WristRigAttachment")
+	if lowerWrist == nil or handWrist == nil then
+		return nil
+	end
+	return lowerWrist.CFrame * handWrist.CFrame:Inverse() * palm
+end
 -- Shoulder (root space, at the rig's rest pose: the hold rides the rest-posed torso), reach from the shoulder to the
 -- hand's end (the arm's two spans plus wrist to the end), to the palm's centre, the hand's length along its fingers,
 -- and the wrist in the palm's frame, read from the rig so any scale or proportion is measured.
@@ -357,63 +381,76 @@ function AnimationCarrySystem.bind(
 	local destroyed = false
 	local root = part(character, "HumanoidRootPart")
 	-- Only a round body's elbows are bent out (AnimationCarryContactUtils.elbow); a stock R15 keeps the default pole.
-	local measured = if layout.under then AnimationCarrySystem.measure(character) else nil
+	local measured = if layout.under or layout.hug then AnimationCarrySystem.measure(character) else nil
 	local roundBody = measured ~= nil and AnimationCarryContactUtils.roundBody(measured)
+	local body = if roundBody and root ~= nil then bodyOf(character, root) else {}
 	-- What the targets ride: the item, or for a hanging bag the UpperTorso (its rest frame).
 	local torso = part(character, "UpperTorso")
 	local on = if layout.hang and torso ~= nil and root ~= nil then torso else cargoRoot
 	local onFrame = if on ~= cargoRoot and root ~= nil then restWorldOf(on, root) else cargoRoot.CFrame
+	local palms = layout.under or layout.hang or layout.hug
 	local function add(side: string, upper: BasePart, hand: BasePart, contact: CFrame)
 		local target = Instance.new("Attachment")
 		target.Name = "CleanupCarryGrip" .. side
-		target.CFrame = if on == cargoRoot then contact else onFrame:ToObjectSpace(cargoRoot.CFrame * contact)
 		target.Parent = on
 		table.insert(targets, target)
 		local control = Instance.new("IKControl")
 		control.Name = "CleanupCarryIK" .. side
 		control.Type = Enum.IKControlType.Transform
 		control.ChainRoot = upper
-		control.EndEffector = hand
 		local sign = if side == "Right" then 1 else -1
-		-- Under the item, the palm frame goes to the contact (palm up, fingers forward); on the cart, the hand's
-		-- end.
-		local palm = if layout.under or layout.hang then AnimationCarrySystem.palmOf(character, side) else nil
-		control.EndEffectorOffset = if palm ~= nil then palm else CFrame.new(0, -hand.Size.Y / 2, 0)
-		control.Target = target
-		local shoulder = attachment(upper, side .. "ShoulderRigAttachment")
-		local elbow = attachment(upper, side .. "ElbowRigAttachment")
+		-- Wrists stay neutral: the chain is the shoulder and elbow only, ending at the lower arm with the palm carried
+		-- on it at the wrist's rest angle. The hand is never bent to aim it.
 		local lower = part(character, side .. "LowerArm")
+		control.EndEffector = lower or hand
+		local palmInLower = AnimationCarrySystem.palmInLowerOf(character, side)
+		local shoulder = attachment(upper, side .. "ShoulderRigAttachment")
+		local upperElbow = attachment(upper, side .. "ElbowRigAttachment")
 		local lowerElbow = if lower ~= nil then attachment(lower, side .. "ElbowRigAttachment") else nil
-		local lowerWrist = if lower ~= nil then attachment(lower, side .. "WristRigAttachment") else nil
-		local handWrist = attachment(hand, side .. "WristRigAttachment")
-		if (layout.under or on ~= cargoRoot) and root ~= nil and shoulder ~= nil and elbow ~= nil then
-			-- The elbows bend down and back by the sides, not out like wings, unless that runs the arm through a
-			-- round body: then out to the side, the forearm coming back in to the item.
-			local upperArm = (shoulder.WorldPosition - elbow.WorldPosition).Magnitude
-			local from = root.CFrame:PointToObjectSpace(shoulder.WorldPosition)
-			local poleAt = from + POLE * Vector3.new(sign, 1, 1) * upperArm
-			if roundBody and palm ~= nil and lowerElbow ~= nil and lowerWrist ~= nil and handWrist ~= nil then
-				local handFrame = cargoRoot.CFrame * contact * palm:Inverse()
-				local wrist = root.CFrame:PointToObjectSpace(handFrame:PointToWorldSpace(handWrist.Position))
-				local bend = AnimationCarryContactUtils.elbow(
-					from,
-					wrist,
-					upperArm,
-					(lowerElbow.WorldPosition - lowerWrist.WorldPosition).Magnitude,
-					sign,
-					POLE,
-					bodyOf(character, root),
-					BODY_PAD
-				)
-				-- The pole goes on past the elbow, square off the shoulder-wrist line; an arm stretched straight has
-				-- no bend to point, so it keeps the default.
-				local reach = wrist - from
-				local offAxis = bend - from
-				if reach.Magnitude > 1e-3 then
-					offAxis -= reach.Unit * offAxis:Dot(reach.Unit)
-				end
-				poleAt = if offAxis.Magnitude > 0.02 then bend + offAxis.Unit * upperArm else poleAt
+		local contactWorld = cargoRoot.CFrame * contact
+		local targetWorld = contactWorld
+		if
+			root ~= nil
+			and lower ~= nil
+			and palmInLower ~= nil
+			and shoulder ~= nil
+			and upperElbow ~= nil
+			and lowerElbow ~= nil
+		then
+			control.EndEffectorOffset = palmInLower
+			-- The contact as a palm frame: the palm faces its UpVector (`palms` layouts); on the cart the hand's -Y
+			-- pointed into the item, so the palm faces that way.
+			local facing = if palms then contactWorld.UpVector else -contactWorld.UpVector
+			local upperArm = (shoulder.WorldPosition - upperElbow.WorldPosition).Magnitude
+			local forearm = (palmInLower.Position - lowerElbow.Position).Magnitude
+			-- The shoulder where the hold was planned: at rest on the torso (the hanging bag's targets ride it), else
+			-- where it is.
+			local upperRest = restFrameOf(upper, root)
+			local from = if upperRest ~= nil
+				then upperRest * shoulder.Position
+				else root.CFrame:PointToObjectSpace(shoulder.WorldPosition)
+			local palmAt = root.CFrame:PointToObjectSpace(contactWorld.Position)
+			-- The elbows bend down and back by the sides, not out like wings, unless that runs the arm through a round
+			-- body: then out to the side, the forearm coming back in to the item.
+			local bend = AnimationCarryContactUtils.elbow(from, palmAt, upperArm, forearm, sign, POLE, body, BODY_PAD)
+			local palmFrame = AnimationCarryContactUtils.neutralPalm(
+				bend,
+				palmAt,
+				root.CFrame:VectorToObjectSpace(facing),
+				lowerElbow.Position,
+				palmInLower
+			)
+			targetWorld = root.CFrame * palmFrame
+			-- The pole goes on past the elbow, square off the shoulder-palm line, so the engine bends it the same way;
+			-- an arm stretched straight has no bend to point, so it keeps the default.
+			local reach = palmAt - from
+			local offAxis = bend - from
+			if reach.Magnitude > 1e-3 then
+				offAxis -= reach.Unit * offAxis:Dot(reach.Unit)
 			end
+			local poleAt = if offAxis.Magnitude > 0.02
+				then bend + offAxis.Unit * upperArm
+				else from + POLE * Vector3.new(sign, 1, 1) * upperArm
 			local pole = Instance.new("Attachment")
 			pole.Name = "CleanupCarryPole" .. side
 			pole.Position = onFrame:PointToObjectSpace(root.CFrame:PointToWorldSpace(poleAt))
@@ -421,6 +458,8 @@ function AnimationCarrySystem.bind(
 			table.insert(targets, pole)
 			control.Pole = pole
 		end
+		target.CFrame = onFrame:ToObjectSpace(targetWorld)
+		control.Target = target
 		control.SmoothTime = 0.08
 		control.Weight = 1
 		control.Priority = 20
