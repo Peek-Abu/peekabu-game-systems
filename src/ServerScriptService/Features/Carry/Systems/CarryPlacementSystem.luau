@@ -87,6 +87,15 @@ function CarryPlacementSystem.safePoint(origin: Vector3, target: Vector3, ignore
 end
 
 --[=[
+	Whether `target` is placeable as it is from `origin` (a safe interior point): `safePoint` keeps it unmoved, so
+	no wall lies within `margin` past it on the way and it stands over the origin's own floor. For callers that
+	try several candidate spots (searched loot) and want the first one that is really inside.
+]=]
+function CarryPlacementSystem.reaches(origin: Vector3, target: Vector3, ignore: { Instance }, margin: number): boolean
+	return (CarryPlacementSystem.safePoint(origin, target, ignore, margin) - target).Magnitude < 1e-3
+end
+
+--[=[
 	The floor point under `safePoint(origin, target, ignore, margin)`: where an object spawned near a player
 	(a dust bag) stands. The origin's floor when that point has none; `origin` itself when neither does.
 ]=]

@@ -56,6 +56,22 @@ return function()
 		end)
 	end)
 
+	describe("reaches", function()
+		local origin = BASE + Vector3.new(0, 1.5, 0)
+		it("accepts a target in clear sight over the origin's floor", function()
+			expect(Placement.reaches(origin, BASE + Vector3.new(3, 1.5, -2), {}, 0.5)).to.equal(true)
+		end)
+
+		it("refuses a target past the wall, or within the margin of it", function()
+			expect(Placement.reaches(origin, BASE + Vector3.new(0, 1.5, -8), {}, 0.5)).to.equal(false)
+			expect(Placement.reaches(origin, BASE + Vector3.new(0, 1.5, -4.2), {}, 0.5)).to.equal(false)
+		end)
+
+		it("refuses a target off the origin's building floor", function()
+			expect(Placement.reaches(origin, BASE + Vector3.new(14, 1.5, 0), {}, 0.5)).to.equal(false)
+		end)
+	end)
+
 	describe("floorNear", function()
 		it("stands a spawned object on the building's floor, never beyond the wall", function()
 			local floor = Placement.floorNear(BASE + Vector3.new(0, 1.5, -3), BASE + Vector3.new(0, 1.5, -7), {}, 0.6)

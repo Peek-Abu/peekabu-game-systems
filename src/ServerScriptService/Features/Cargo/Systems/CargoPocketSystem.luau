@@ -32,6 +32,7 @@ local CargoClaimTracker = require(CargoServer.State.CargoClaimTracker)
 local CargoPocketTracker = require(CargoServer.State.CargoPocketTracker)
 local CargoSpawnSystem = require(CargoServer.Systems.CargoSpawnSystem)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
+local CarryPlacementSystem = require(ServerScriptService.Features.Carry.Systems.CarryPlacementSystem)
 local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
 local StateSyncPublicPlayerStore = require(ServerScriptService.Features.StateSync.State.StateSyncPublicPlayerStore)
 
@@ -239,7 +240,12 @@ function CargoPocketSystem.new(deps: Deps): CargoPocketSystem
 			for index, entry in list do
 				local angle = index / #list * math.pi * 2
 				local offset = Vector3.new(math.cos(angle), 0, math.sin(angle)) * CargoConstants.SCATTER_RADIUS
-				deps.spawner:spawn(entry.kind, deps.spawner:floorUnder(at + offset, deps.ignore()), parent, {
+				-- From where they stood, never through a wall or off the building's floor (CarryPlacementSystem).
+				local def = CargoRegistry.get(entry.kind)
+				local margin = (if def ~= nil then math.max(def.partSize.X, def.partSize.Z) / 2 else 0)
+					+ CarryConstants.WALL_MARGIN
+				local landing = CarryPlacementSystem.floorNear(at, at + offset, deps.ignore(), margin)
+				deps.spawner:spawn(entry.kind, landing, parent, {
 					value = entry.value,
 					source = "scatter",
 				})
