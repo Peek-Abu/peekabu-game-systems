@@ -77,4 +77,37 @@ return function()
 			)
 		end)
 	end)
+
+	describe("swayStep", function()
+		local tuning = { omega = 7, damping = 0.35, maxTilt = math.rad(25) }
+		local function run(tilt, rate, accel, seconds)
+			for _ = 1, math.floor(seconds * 60) do
+				tilt, rate = CarryFormulas.swayStep(tilt, rate, accel, 1 / 60, 1, tuning)
+			end
+			return tilt, rate
+		end
+
+		it("rests hanging plumb when the hand holds still", function()
+			local tilt, rate = run(Vector2.zero, Vector2.zero, Vector2.zero, 1)
+			expect(tilt.Magnitude).to.equal(0)
+			expect(rate.Magnitude).to.equal(0)
+		end)
+
+		it("swings back against the hand's acceleration, then settles plumb", function()
+			-- The hand speeds up forward (+X): the bag's bottom trails behind (-X).
+			local tilt = run(Vector2.zero, Vector2.zero, Vector2.new(20, 0), 0.1)
+			expect(tilt.X < 0).to.equal(true)
+			expect(math.abs(tilt.Y) < 1e-9).to.equal(true)
+			local settled = run(tilt, Vector2.zero, Vector2.zero, 3)
+			expect(settled.Magnitude < 0.01).to.equal(true)
+		end)
+
+		it("never swings past the largest tilt, and stays finite on a long frame", function()
+			local tilt, rate = run(Vector2.zero, Vector2.zero, Vector2.new(0, 5000), 0.5)
+			expect(tilt.Magnitude <= math.rad(25) + 1e-6).to.equal(true)
+			local long, longRate = CarryFormulas.swayStep(tilt, rate, Vector2.new(5000, 0), 2, 1, tuning)
+			expect(long.Magnitude <= math.rad(25) + 1e-6).to.equal(true)
+			expect(longRate.X == longRate.X).to.equal(true)
+		end)
+	end)
 end

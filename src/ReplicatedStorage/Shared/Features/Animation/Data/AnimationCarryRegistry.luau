@@ -1,25 +1,33 @@
 --!strict
--- Grasp intent is per cargo, not inferred from its price or an unrelated icon. Every style holds with two
--- hands when both reach (AnimationCarryContactUtils); "handle" and "small" items settle for one.
-export type Style = "handle" | "small" | "twoHand"
+--[=[
+	AnimationCarryRegistry: how each cargo kind is held (static data, per kind; never inferred from price or icon).
+
+	- `twoHandSupport`: on both forearms, palms up under its bottom, the item riding on the upper torso.
+	- `chest`: a small item cupped up at the chest from below, elbows out on a round-bodied carrier.
+	- `oneHandHang`: a soft bag hanging from one hand by its tie or handle (`CarryHandle` on the art), on that hand.
+	- `cart`: pushed ahead at its caller-owned offset, on the root (it does not bob with the walk).
+
+	@class AnimationCarryRegistry
+]=]
+export type Style = "twoHandSupport" | "chest" | "oneHandHang" | "cart"
 local styles: { [string]: Style } = {
-	rubbishBag = "handle",
-	dustBag = "handle",
-	bottleBag = "handle",
-	recyclingBox = "twoHand",
-	officePlant = "twoHand",
-	plaque = "small",
-	monitor = "twoHand",
-	waterJug = "twoHand",
-	printer = "twoHand",
-	coffeeMachine = "twoHand",
-	fishTank = "twoHand",
-	goldenStapler = "small",
-	filingCabinet = "twoHand",
+	rubbishBag = "oneHandHang",
+	dustBag = "oneHandHang",
+	bottleBag = "oneHandHang",
+	recyclingBox = "twoHandSupport",
+	officePlant = "twoHandSupport",
+	plaque = "chest",
+	monitor = "twoHandSupport",
+	waterJug = "twoHandSupport",
+	printer = "twoHandSupport",
+	coffeeMachine = "twoHandSupport",
+	fishTank = "twoHandSupport",
+	goldenStapler = "chest",
+	filingCabinet = "cart",
 }
 table.freeze(styles)
 local AnimationCarryRegistry = {}
 function AnimationCarryRegistry.get(kind: string): Style
-	return styles[kind] or "twoHand"
+	return styles[kind] or "twoHandSupport"
 end
 return table.freeze(AnimationCarryRegistry)

@@ -36,6 +36,18 @@ return function()
 	local function world(plan, contact)
 		return plan.offset:PointToWorldSpace(contact.Position)
 	end
+	-- The box's least X in root space (a hanging bag's side toward the body).
+	local function innerX(plan, size)
+		local least = math.huge
+		for _, x in { -1, 1 } do
+			for _, y in { -1, 1 } do
+				for _, z in { -1, 1 } do
+					least = math.min(least, plan.offset:PointToWorldSpace(Vector3.new(x, y, z) * size / 2).X)
+				end
+			end
+		end
+		return least
+	end
 	-- The box's near face, top and bottom in root space.
 	local function bounds(plan, size)
 		local near = plan.offset:PointToWorldSpace(Vector3.new(0, 0, size.Z / 2)).Z
@@ -50,13 +62,40 @@ return function()
 
 	for name, rig in { stock = stock, pippa = pippa } do
 		describe(`the {name} rig`, function()
-			it("carries every hand-held cargo kind on both palms, under its bottom, within reach", function()
+			it("hangs every soft bag from the right hand, clear of the floor and the body, within reach", function()
 				for _, id in Cargo.ids() do
-					if carried(id) then
+					-- The bag's art is fitted inside its proxy: at most the proxy's size, here 90% of it.
+					if Styles.get(id) == "oneHandHang" then
+						local size = Cargo.get(id).partSize * 0.9
+						local plan = Contact.plan(size, rig, "oneHandHang")
+						expect(plan).to.be.ok()
+						expect(plan.hang).to.equal(true)
+						expect(plan.mount).to.equal("rightHand")
+						expect(plan.left).to.equal(nil)
+						local hand = world(plan, plan.right)
+						expect((hand - rig.rightShoulder).Magnitude <= rig.rightPalmReach * 0.95 + 1e-3).to.equal(true)
+						-- Below the shoulder, out at the right side.
+						expect(hand.Y < rig.rightShoulder.Y).to.equal(true)
+						expect(hand.X > rig.rightShoulder.X).to.equal(true)
+						local near, top, bottom = bounds(plan, size)
+						expect(bottom >= rig.floor + 0.22 - 1e-3).to.equal(true)
+						-- The handle (no authored one: the top's centre) is in the hand.
+						expect(top).to.be.near(hand.Y, 1e-3)
+						-- The bag's near side is clear of the body's side.
+						expect(innerX(plan, size) >= math.abs(rig.rightShoulder.X) - 1e-3).to.equal(true)
+						expect(near).to.be.ok()
+					end
+				end
+			end)
+
+			it("carries every other hand-held cargo kind on both palms, under its bottom, within reach", function()
+				for _, id in Cargo.ids() do
+					if carried(id) and Styles.get(id) ~= "oneHandHang" then
 						local size = Cargo.get(id).partSize
 						local plan = Contact.plan(size, rig, Styles.get(id))
 						expect(plan).to.be.ok()
 						expect(plan.under).to.equal(true)
+						expect(plan.mount).to.equal("torso")
 						expect(plan.left).to.be.ok()
 						for _, contact in { plan.right, plan.left } do
 							local p = contact.Position
@@ -74,7 +113,7 @@ return function()
 			end)
 
 			it("turns the palms up with the fingers forward, rolled only a little inward", function()
-				local plan = Contact.plan(Vector3.new(2, 1, 1.4), rig, "twoHand")
+				local plan = Contact.plan(Vector3.new(2, 1, 1.4), rig, "twoHandSupport")
 				for _, pair in { { plan.right, 1 }, { plan.left, -1 } } do
 					local contact, side = pair[1], pair[2]
 					local up = plan.offset:VectorToWorldSpace(contact.UpVector)
@@ -92,7 +131,8 @@ return function()
 						local size = Cargo.get(id).partSize
 						local plan = Contact.plan(size, rig, Styles.get(id))
 						local near, top, bottom = bounds(plan, size)
-						expect(near <= rig.front).to.equal(true)
+						-- A hanging bag is at the side (checked above); a proxy-sized one may be held in front.
+						expect(near <= rig.front or plan.hang == true).to.equal(true)
 						expect(bottom >= rig.floor).to.equal(true)
 						expect(top <= rig.headBottom or near <= rig.headFront).to.equal(true)
 					end
@@ -100,8 +140,8 @@ return function()
 			end)
 
 			it("rests the item on the palms below the shoulders and above the hips", function()
-				local small = Contact.plan(Vector3.new(1, 0.6, 0.8), rig, "small")
-				local big = Contact.plan(Vector3.new(2, 2, 2), rig, "twoHand")
+				local small = Contact.plan(Vector3.new(1, 0.6, 0.8), rig, "chest")
+				local big = Contact.plan(Vector3.new(2, 2, 2), rig, "twoHandSupport")
 				local shoulderY = rig.rightShoulder.Y
 				for _, plan in { small, big } do
 					local hand = world(plan, plan.right)
@@ -113,24 +153,24 @@ return function()
 	end
 
 	it("carries a big item lower than a small one", function()
-		local small = Contact.plan(Vector3.new(1, 0.6, 0.8), stock, "small")
-		local big = Contact.plan(Vector3.new(2, 2, 2), stock, "twoHand")
+		local small = Contact.plan(Vector3.new(1, 0.6, 0.8), stock, "chest")
+		local big = Contact.plan(Vector3.new(2, 2, 2), stock, "twoHandSupport")
 		expect(world(big, big.right).Y < world(small, small.right).Y).to.equal(true)
 	end)
 
 	it("holds a small item at the belly with the elbows bent: palms about an upper arm below the shoulders", function()
 		local size = Vector3.new(1, 0.6, 0.8)
-		local plan = Contact.plan(size, stock, "small")
+		local plan = Contact.plan(size, stock, "chest")
 		expect(world(plan, plan.right).Y).to.be.near(1.2 - 1.85 * 0.55, 1e-3)
 		-- The near face against the belly.
 		expect((bounds(plan, size))).to.be.near(stock.front - 0.08, 1e-3)
 	end)
 
 	it("puts the hands shoulder-width apart under a wide item, and in under a narrow one", function()
-		local wide = Contact.plan(Vector3.new(3, 1, 1.4), stock, "twoHand")
+		local wide = Contact.plan(Vector3.new(3, 1, 1.4), stock, "twoHandSupport")
 		expect(world(wide, wide.right).X).to.be.near(stock.rightShoulder.X, 1e-3)
 		expect(world(wide, wide.left).X).to.be.near(stock.leftShoulder.X, 1e-3)
-		local narrow = Contact.plan(Vector3.new(0.6, 0.4, 0.6), stock, "small")
+		local narrow = Contact.plan(Vector3.new(0.6, 0.4, 0.6), stock, "chest")
 		expect(math.abs(narrow.right.Position.X) <= 0.3).to.equal(true)
 		expect(math.abs(narrow.left.Position.X) <= 0.3).to.equal(true)
 	end)
@@ -140,7 +180,7 @@ return function()
 		local nodding = table.clone(pippa)
 		nodding.headFront = -1.3
 		local size = Vector3.new(3, 2.98, 2.24)
-		local plan = Contact.plan(size, nodding, "twoHand")
+		local plan = Contact.plan(size, nodding, "twoHandSupport")
 		expect(plan).to.be.ok()
 		local near = plan.offset:PointToWorldSpace(Vector3.new(0, 0, size.Z / 2)).Z
 		-- Well out past the belly (front - gap = -0.81), as far as the arms reach under it.
@@ -150,7 +190,7 @@ return function()
 	end)
 
 	it("lifts the item for short arms that cannot reach low enough around a round belly", function()
-		local plan = Contact.plan(Vector3.new(1, 0.6, 0.8), pippa, "small")
+		local plan = Contact.plan(Vector3.new(1, 0.6, 0.8), pippa, "chest")
 		expect(plan).to.be.ok()
 		local hand = world(plan, plan.right)
 		expect(hand.Y > 1.11 - 1.43 * 0.55).to.equal(true)
@@ -160,32 +200,94 @@ return function()
 	it("leaves the bulky cart hands-free: its caller-owned offset is out of every arm's reach", function()
 		-- The cart's near face is 2.75 studs out; the caller then places it at its offset with no hold.
 		local size = Cargo.get("filingCabinet").partSize
-		expect(Contact.plan(size, stock, "twoHand", CargoConstants.BULKY_HOLD_OFFSET)).to.equal(nil)
-		expect(Contact.plan(size, pippa, "twoHand", CargoConstants.BULKY_HOLD_OFFSET)).to.equal(nil)
+		expect(Contact.plan(size, stock, "twoHandSupport", CargoConstants.BULKY_HOLD_OFFSET)).to.equal(nil)
+		expect(Contact.plan(size, pippa, "twoHandSupport", CargoConstants.BULKY_HOLD_OFFSET)).to.equal(nil)
 	end)
 
 	it("does not stretch a short arm to an unreachable caller-owned offset", function()
-		expect(Contact.plan(Vector3.new(2, 2, 2), pippa, "twoHand", CFrame.new(0, -1, -4.5))).to.equal(nil)
+		expect(Contact.plan(Vector3.new(2, 2, 2), pippa, "twoHandSupport", CFrame.new(0, -1, -4.5))).to.equal(nil)
 	end)
 
 	it("honors a reachable explicit offset and rejects invalid sizes or reaches", function()
 		local offset = CFrame.new(0, 0.3, -1.6)
-		local plan = Contact.plan(Vector3.new(2, 2, 2), stock, "twoHand", offset)
+		local plan = Contact.plan(Vector3.new(2, 2, 2), stock, "twoHandSupport", offset)
 		expect(plan.offset).to.equal(offset)
-		expect(Contact.plan(Vector3.new(0, 2, 2), stock, "twoHand")).to.equal(nil)
+		expect(Contact.plan(Vector3.new(0, 2, 2), stock, "twoHandSupport")).to.equal(nil)
 		local broken = table.clone(stock)
 		broken.rightPalmReach = 0 / 0
-		expect(Contact.plan(Vector3.new(2, 2, 2), broken, "twoHand")).to.equal(nil)
+		expect(Contact.plan(Vector3.new(2, 2, 2), broken, "twoHandSupport")).to.equal(nil)
 	end)
 
 	it("rests the authored body front against the torso and puts the palms in from it (a pot under leaves)", function()
 		local size = Vector3.new(1.5, 2.5, 1.5)
-		local plan = Contact.plan(size, pippa, "twoHand", nil, { bodyZ = 0.55 })
+		local plan = Contact.plan(size, pippa, "twoHandSupport", nil, { bodyZ = 0.55 })
 		expect(plan).to.be.ok()
 		expect(plan.offset.Position.Z + 0.55).to.be.near(pippa.front - 0.08, 1e-3)
 		expect(plan.right.Position.Z < 0.55).to.equal(true)
 		-- A body front outside the box is malformed.
-		expect(Contact.plan(size, pippa, "twoHand", nil, { bodyZ = 2 })).to.equal(nil)
+		expect(Contact.plan(size, pippa, "twoHandSupport", nil, { bodyZ = 2 })).to.equal(nil)
+	end)
+
+	describe("a bag hanging from one hand", function()
+		local round = table.clone(pippa)
+		round.torsoHalfWidth = 0.6
+		local bag = Vector3.new(1.45, 1.8, 1.07)
+
+		it("hangs the bag from its authored handle, upright, with the hand at the handle", function()
+			local handle = Vector3.new(0.05, 0.7, 0)
+			local plan = Contact.plan(bag, round, "oneHandHang", nil, { handle = handle })
+			expect(plan).to.be.ok()
+			expect(plan.hang).to.equal(true)
+			expect((plan.offset:PointToWorldSpace(handle) - world(plan, plan.right)).Magnitude).to.be.near(0, 1e-3)
+			-- The bag hangs upright, turned a quarter round so its handle runs front to back through the fist.
+			expect(plan.offset.UpVector:Dot(Vector3.yAxis)).to.be.near(1, 1e-6)
+			expect(math.abs(plan.offset.RightVector.Z)).to.be.near(1, 1e-6)
+			local _, _, bottom = bounds(plan, bag)
+			expect(bottom >= round.floor + 0.22 - 1e-3).to.equal(true)
+		end)
+
+		it("keeps the bag outside a round torso and points the fingers along the arm, palm in", function()
+			local plan = Contact.plan(bag, round, "oneHandHang")
+			expect(plan).to.be.ok()
+			expect(innerX(plan, bag) >= round.torsoHalfWidth - 1e-3).to.equal(true)
+			local hand = world(plan, plan.right)
+			local along = (hand - round.rightShoulder).Unit
+			local look = plan.offset:VectorToWorldSpace(plan.right.LookVector)
+			local palm = plan.offset:VectorToWorldSpace(plan.right.UpVector)
+			expect(look:Dot(along)).to.be.near(1, 1e-3)
+			-- The palm faces in toward the body and down, never out.
+			expect(palm.X < 0).to.equal(true)
+			expect(palm.Y <= 1e-3).to.equal(true)
+		end)
+
+		it("lets a long arm hang as low as it reaches, and lifts a short one just clear of the floor", function()
+			local long = Contact.plan(bag, stock, "oneHandHang")
+			local _, _, longBottom = bounds(long, bag)
+			expect(longBottom > stock.floor + 0.22).to.equal(true)
+			local hand = world(long, long.right)
+			expect((hand - stock.rightShoulder).Magnitude).to.be.near(stock.rightPalmReach * 0.95, 1e-3)
+			local short = Contact.plan(bag, round, "oneHandHang")
+			local _, _, shortBottom = bounds(short, bag)
+			expect(shortBottom).to.be.near(round.floor + 0.22, 1e-3)
+		end)
+
+		it("carries a bag too long to hang clear of the floor on both palms instead", function()
+			local plan = Contact.plan(Vector3.new(1.4, 2.6, 1), round, "oneHandHang")
+			expect(plan).to.be.ok()
+			expect(plan.hang).to.equal(nil)
+			expect(plan.under).to.equal(true)
+			expect(plan.mount).to.equal("torso")
+		end)
+
+		it("rejects an authored handle outside the bag", function()
+			expect(Contact.plan(bag, round, "oneHandHang", nil, { handle = Vector3.new(0, 3, 0) })).to.equal(nil)
+		end)
+	end)
+
+	it("mounts a caller-placed cart on the root, not the bobbing torso", function()
+		local plan = Contact.plan(Vector3.new(2, 2, 2), stock, "cart", CFrame.new(0, 0.3, -1.6))
+		expect(plan).to.be.ok()
+		expect(plan.mount).to.equal("root")
 	end)
 
 	describe("palmFrame", function()
@@ -215,8 +317,8 @@ return function()
 		local plaque = Vector3.new(0.36, 0.4, 0.16)
 
 		it("holds a narrow item higher, the fingers turned in so the wrists sit out toward the shoulders", function()
-			local flat = Contact.plan(plaque, pippa, "small")
-			local plan = Contact.plan(plaque, round, "small")
+			local flat = Contact.plan(plaque, pippa, "chest")
+			local plan = Contact.plan(plaque, round, "chest")
 			expect(plan).to.be.ok()
 			local _, _, bottom = bounds(plan, plaque)
 			local _, _, flatBottom = bounds(flat, plaque)
@@ -229,9 +331,32 @@ return function()
 			end
 		end)
 
+		it("keeps the wrist, not just the palm, within the arm's reach (the palm is rigidly offset from it)", function()
+			local wristed = table.clone(round)
+			-- Pippa's palm: the wrist ~0.29 back along the fingers and ~0.27 behind the palm's face.
+			wristed.rightWristInPalm = Vector3.new(0, -0.27, 0.29)
+			wristed.leftWristInPalm = Vector3.new(0, -0.27, 0.29)
+			local spans = wristed.rightPalmReach - wristed.rightWristInPalm.Magnitude
+			local cases = {
+				{ Vector3.new(2, 1.6, 1.6), "twoHandSupport" },
+				{ plaque, "chest" },
+				{ Vector3.new(1.45, 1.8, 1.07), "oneHandHang" },
+			}
+			for _, case in cases do
+				local plan = Contact.plan(case[1], wristed, case[2])
+				expect(plan).to.be.ok()
+				for _, pair in { { plan.right, wristed.rightShoulder }, { plan.left, wristed.leftShoulder } } do
+					if pair[1] ~= nil then
+						local wrist = plan.offset * pair[1] * wristed.rightWristInPalm
+						expect((wrist - pair[2]).Magnitude <= spans * 0.95 + 1e-3).to.equal(true)
+					end
+				end
+			end
+		end)
+
 		it("puts the palms out past the torso's sides under a wide item", function()
 			local size = Vector3.new(2, 1.6, 1.6)
-			local plan = Contact.plan(size, round, "handle")
+			local plan = Contact.plan(size, round, "twoHandSupport")
 			expect(plan).to.be.ok()
 			expect(world(plan, plan.right).X > round.torsoHalfWidth).to.equal(true)
 			expect(world(plan, plan.left).X < -round.torsoHalfWidth).to.equal(true)
@@ -241,8 +366,8 @@ return function()
 			local edged = table.clone(stock)
 			edged.torsoHalfWidth = 1
 			for _, size in { plaque, Vector3.new(2, 1.6, 1.6), Vector3.new(1, 1, 1) } do
-				local before = Contact.plan(size, stock, "twoHand")
-				local after = Contact.plan(size, edged, "twoHand")
+				local before = Contact.plan(size, stock, "twoHandSupport")
+				local after = Contact.plan(size, edged, "twoHandSupport")
 				expect(after.offset).to.equal(before.offset)
 				expect(after.right).to.equal(before.right)
 				expect(after.left).to.equal(before.left)

@@ -33,4 +33,9 @@ return table.freeze({
 	DEFAULT_THROW_SPEED = 45,
 	-- Upward speed added to a throw so it arcs.
 	THROW_LIFT = 12,
+	-- The tag on the joint a hanging bag swings from (a Motor6D at its handle; CarrySwaySystem drives it on clients),
+	-- the swing's tuning (CarryFormulas.swayStep) and the largest hand acceleration it reacts to (studs/s²).
+	HANG_TAG = "CarryHang",
+	SWAY = table.freeze({ omega = 7, damping = 0.35, maxTilt = math.rad(25) }),
+	SWAY_ACCEL_MAX = 120,
 })

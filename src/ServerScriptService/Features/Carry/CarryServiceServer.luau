@@ -5,7 +5,9 @@
 
 	Objects tagged `Carryable` (with a registered `CarryKind`) are made interactable with the `carry`
 	interaction kind, so picking up goes through Interaction's prompt and checks. A held object is welded
-	in front of the carrier's HumanoidRootPart (massless and non-colliding while held), slows the carrier
+	to the carrier's body where its hold puts it (AnimationCarrySystem.mount: the UpperTorso for an item on the
+	forearms, the right hand for a hanging bag, the HumanoidRootPart for a cart), so it moves with the idle, walk and
+	run like part of the character (massless and non-colliding while held: no physics fight), slows the carrier
 	by its weight, and is published (`CarriedBy` attribute, public `carrying` field). Drop / throw arrive
 	as validated packets; death, respawn and leaving drop it. Whatever is put down or thrown stays inside
 	the building (CarryPlacementSystem: no placement through a wall or off the carrier's floor, no
@@ -55,7 +57,7 @@ type Held = {
 	target: PVInstance,
 	root: BasePart,
 	kind: string,
-	weld: WeldConstraint,
+	weld: JointInstance,
 	contact: AnimationCarrySystem.Controller?,
 	saved: { SavedPart },
 	humanoid: Humanoid?,
@@ -325,21 +327,39 @@ CarryServiceServer = {
 				else playerRoot.CFrame * (def.holdOffset or CarryConstants.DEFAULT_HOLD_OFFSET)
 		)
 		local contact: AnimationCarrySystem.Controller? = nil
+		local joint: AnimationCarrySystem.Mount = {
+			part = playerRoot,
+			c0 = playerRoot.CFrame:ToObjectSpace(root.CFrame),
+			c1 = CFrame.identity,
+			swings = false,
+		}
 		if prepared ~= nil and character ~= nil then
 			-- The contacts are on the item's visible art, not its invisible proxy (AnimationCarrySystem.visibleBox).
 			local boxFromRoot = root.CFrame:ToObjectSpace(target:GetPivot() * prepared.box)
-			contact = AnimationCarrySystem.bind(character, root, {
+			local layout: AnimationCarrySystem.Layout = {
 				offset = prepared.layout.offset,
 				right = boxFromRoot * prepared.layout.right,
 				left = if prepared.layout.left ~= nil then boxFromRoot * prepared.layout.left else nil,
 				under = prepared.layout.under,
-			})
+				hang = prepared.layout.hang,
+				mount = prepared.layout.mount,
+			}
+			contact = AnimationCarrySystem.bind(character, root, layout)
+			joint = AnimationCarrySystem.mount(character, root, layout) or joint
 		end
-		local weld = Instance.new("WeldConstraint")
+		-- Part of the character's assembly while held, on the body part its hold rides (so it inherits the animation).
+		-- A hanging bag's joint is a Motor6D at its handle: every client swings it there (CarrySwaySystem); the server
+		-- never moves it, so its physics stay those of a weld.
+		local weld: JointInstance = if joint.swings then Instance.new("Motor6D") else Instance.new("Weld")
 		weld.Name = "CarryWeld"
-		weld.Part0 = playerRoot
+		weld.Part0 = joint.part
 		weld.Part1 = root
+		weld.C0 = joint.c0
+		weld.C1 = joint.c1
 		weld.Parent = root
+		if joint.swings then
+			CollectionService:AddTag(weld, CarryConstants.HANG_TAG)
+		end
 
 		local savedWalkSpeed = if humanoid ~= nil then humanoid.WalkSpeed else nil
 		if humanoid ~= nil and savedWalkSpeed ~= nil then

@@ -1,13 +1,15 @@
 --!strict
 -- Server-created native IK targets replicate; each Animator evaluates only arm chains.
 -- Native AnimationConstraint support verified in Studio: 2-chain,1.643stud span,
--- hand target error .000127stud. No C0/C1/RigAttachment/Transform writes occur here.
+-- hand target error .000127stud. No rig C0/C1/RigAttachment/Transform writes occur here; `mount` only computes
+-- the frame the carry weld (made by CarryServiceServer) holds the item at on a body part.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local AnimationCarryRegistry = require(ReplicatedStorage.Shared.Features.Animation.Data.AnimationCarryRegistry)
 local AnimationCarryContactUtils = require(ReplicatedStorage.Shared.Features.Animation.Utils.AnimationCarryContactUtils)
 export type Controller = { destroy: () -> () }
 -- `box` is the visible box relative to the item's pivot; `layout`'s contacts are relative to it.
 export type Prepared = { pivot: CFrame, box: CFrame, layout: AnimationCarryContactUtils.Layout }
+export type Layout = AnimationCarryContactUtils.Layout
 local AnimationCarrySystem = {}
 -- Where an under-the-item hold bends each elbow toward, from its shoulder in root space, in upper arms (X is
 -- outward): down, a little out and behind. On a round body that would run the arm through the torso, the elbow
@@ -84,15 +86,15 @@ function AnimationCarrySystem.palmOf(character: Model, side: string): CFrame?
 		hand.Size
 	)
 end
--- Shoulder (root space), reach from the shoulder to the hand's end (the arm's two spans plus wrist to the end),
--- to the palm's centre, and the hand's length along its fingers, read from the rig so any scale or proportion
--- is measured.
-local function arm(character: Model, side: string, root: BasePart): (Vector3?, number?, number?, number?)
+-- Shoulder (root space, at the rig's rest pose: the hold rides the rest-posed torso), reach from the shoulder to the
+-- hand's end (the arm's two spans plus wrist to the end), to the palm's centre, the hand's length along its fingers,
+-- and the wrist in the palm's frame, read from the rig so any scale or proportion is measured.
+local function arm(character: Model, side: string, root: BasePart): (Vector3?, number?, number?, number?, Vector3?)
 	local upper = part(character, side .. "UpperArm")
 	local lower = part(character, side .. "LowerArm")
 	local hand = part(character, side .. "Hand")
 	if upper == nil or lower == nil or hand == nil then
-		return nil, nil, nil, nil
+		return nil, nil, nil, nil, nil
 	end
 	local shoulder = attachment(upper, side .. "ShoulderRigAttachment")
 	local elbow = attachment(upper, side .. "ElbowRigAttachment")
@@ -101,15 +103,17 @@ local function arm(character: Model, side: string, root: BasePart): (Vector3?, n
 	local handWrist = attachment(hand, side .. "WristRigAttachment")
 	local palmFrame = AnimationCarrySystem.palmOf(character, side)
 	if shoulder == nil or elbow == nil or lowerElbow == nil or wrist == nil or handWrist == nil or palmFrame == nil then
-		return nil, nil, nil, nil
+		return nil, nil, nil, nil, nil
 	end
 	local spans = (shoulder.WorldPosition - elbow.WorldPosition).Magnitude
 		+ (lowerElbow.WorldPosition - wrist.WorldPosition).Magnitude
 	local along = palmFrame.LookVector
-	return root.CFrame:PointToObjectSpace(shoulder.WorldPosition),
+	local rest = restFrameOf(upper, root)
+	return if rest ~= nil then rest * shoulder.Position else root.CFrame:PointToObjectSpace(shoulder.WorldPosition),
 		spans + (Vector3.new(0, -hand.Size.Y / 2, 0) - handWrist.Position).Magnitude,
 		spans + (palmFrame.Position - handWrist.Position).Magnitude,
-		math.abs(along.X) * hand.Size.X + math.abs(along.Y) * hand.Size.Y + math.abs(along.Z) * hand.Size.Z
+		math.abs(along.X) * hand.Size.X + math.abs(along.Y) * hand.Size.Y + math.abs(along.Z) * hand.Size.Z,
+		palmFrame:PointToObjectSpace(handWrist.Position)
 end
 -- The most extreme corner of `bodyPart` (at rest) along root-space `axis` (min when `sign` is -1).
 local function extreme(root: BasePart, bodyPart: BasePart, axis: Vector3, sign: number): number
@@ -138,8 +142,8 @@ function AnimationCarrySystem.measure(character: Model): AnimationCarryContactUt
 	if root == nil or humanoid == nil or upperTorso == nil or head == nil then
 		return nil
 	end
-	local left, leftReach, leftPalm, leftHand = arm(character, "Left", root)
-	local right, rightReach, rightPalm, rightHand = arm(character, "Right", root)
+	local left, leftReach, leftPalm, leftHand, leftWrist = arm(character, "Left", root)
+	local right, rightReach, rightPalm, rightHand, rightWrist = arm(character, "Right", root)
 	if
 		left == nil
 		or leftReach == nil
@@ -177,6 +181,8 @@ function AnimationCarrySystem.measure(character: Model): AnimationCarryContactUt
 		rightPalmReach = rightPalm,
 		handLength = math.min(leftHand, rightHand),
 		torsoHalfWidth = halfWidth,
+		rightWristInPalm = rightWrist,
+		leftWristInPalm = leftWrist,
 	}
 end
 -- The torso (UpperTorso, LowerTorso) at rest as ellipsoids in root space, from each part's box.
@@ -267,9 +273,14 @@ function AnimationCarrySystem.prepare(
 	-- than it), in place of the box's near face. CarryGripRight / CarryGripLeft (handles on a pot's rim) are no
 	-- longer read: the hands go under the item's bottom instead.
 	local bodyFront = target:FindFirstChild("CarryBodyFront", true)
+	-- Authored on a bag's art: the point its tie or handle is held by (CarryHandle), for a one-hand hang.
+	local handle = target:FindFirstChild("CarryHandle", true)
 	local authored: AnimationCarryContactUtils.Authored = {
 		bodyZ = if bodyFront ~= nil and bodyFront:IsA("Attachment")
 			then boxFrame:PointToObjectSpace(bodyFront.WorldPosition).Z
+			else nil,
+		handle = if handle ~= nil and handle:IsA("Attachment")
+			then boxFrame:PointToObjectSpace(handle.WorldPosition)
 			else nil,
 	}
 	local style: AnimationCarryRegistry.Style = AnimationCarryRegistry.get(kind)
@@ -280,8 +291,49 @@ function AnimationCarrySystem.prepare(
 	local pivot = root.CFrame * plan.offset * boxFromPivot:Inverse()
 	return { pivot = pivot, box = boxFromPivot, layout = plan }
 end
+-- Where `bodyPart` is in world space with the rig at rest (its live frame when it has no joint chain to the root).
+local function restWorldOf(bodyPart: BasePart, root: BasePart): CFrame
+	return root.CFrame * frameOf(bodyPart, root)
+end
+--[=[
+	The joint holding a held item to the carrier's body for `layout` (its contacts relative to `cargoRoot`, which has
+	been moved to its planned place): `part` is the Part0, `c0` / `c1` the joint's frames on it and on the item. The
+	root for a cart; the UpperTorso for an item on the forearms (from the torso's REST frame, so the item sits where it
+	was planned and then bobs, leans and turns with the torso's animation; the IK'd hands follow it); the RightHand for
+	a hanging bag, jointed at its handle (the palm's frame on the hand, the handle contact on the bag) so it goes
+	wherever the hand goes and `swings` from it (CarrySwaySystem). Falls back to the root when the body part is
+	missing. Nil without a HumanoidRootPart.
+]=]
+export type Mount = { part: BasePart, c0: CFrame, c1: CFrame, swings: boolean }
+function AnimationCarrySystem.mount(
+	character: Model,
+	cargoRoot: BasePart,
+	layout: AnimationCarryContactUtils.Layout
+): Mount?
+	local root = part(character, "HumanoidRootPart")
+	if root == nil then
+		return nil
+	end
+	local hand = part(character, "RightHand")
+	local palm = AnimationCarrySystem.palmOf(character, "Right")
+	if layout.mount == "rightHand" and hand ~= nil and palm ~= nil then
+		return { part = hand, c0 = palm, c1 = layout.right, swings = true }
+	end
+	local torso = part(character, "UpperTorso")
+	if layout.mount ~= "root" and torso ~= nil then
+		return {
+			part = torso,
+			c0 = restWorldOf(torso, root):ToObjectSpace(cargoRoot.CFrame),
+			c1 = CFrame.identity,
+			swings = false,
+		}
+	end
+	return { part = root, c0 = root.CFrame:ToObjectSpace(cargoRoot.CFrame), c1 = CFrame.identity, swings = false }
+end
 -- layout contacts are relative to the visible box (`Prepared.box`, from the item's pivot). Caller converts
--- them to cargo-root coordinates after PivotTo; the physics weld remains server-owned.
+-- them to cargo-root coordinates after PivotTo; the physics weld remains server-owned. A hanging bag's target (and
+-- pole) go on the UpperTorso, at their rest-pose place: the bag is welded to the hand, so a target on it would chase
+-- itself.
 function AnimationCarrySystem.bind(
 	character: Model,
 	cargoRoot: BasePart,
@@ -307,11 +359,15 @@ function AnimationCarrySystem.bind(
 	-- Only a round body's elbows are bent out (AnimationCarryContactUtils.elbow); a stock R15 keeps the default pole.
 	local measured = if layout.under then AnimationCarrySystem.measure(character) else nil
 	local roundBody = measured ~= nil and AnimationCarryContactUtils.roundBody(measured)
+	-- What the targets ride: the item, or for a hanging bag the UpperTorso (its rest frame).
+	local torso = part(character, "UpperTorso")
+	local on = if layout.hang and torso ~= nil and root ~= nil then torso else cargoRoot
+	local onFrame = if on ~= cargoRoot and root ~= nil then restWorldOf(on, root) else cargoRoot.CFrame
 	local function add(side: string, upper: BasePart, hand: BasePart, contact: CFrame)
 		local target = Instance.new("Attachment")
 		target.Name = "CleanupCarryGrip" .. side
-		target.CFrame = contact
-		target.Parent = cargoRoot
+		target.CFrame = if on == cargoRoot then contact else onFrame:ToObjectSpace(cargoRoot.CFrame * contact)
+		target.Parent = on
 		table.insert(targets, target)
 		local control = Instance.new("IKControl")
 		control.Name = "CleanupCarryIK" .. side
@@ -321,7 +377,7 @@ function AnimationCarrySystem.bind(
 		local sign = if side == "Right" then 1 else -1
 		-- Under the item, the palm frame goes to the contact (palm up, fingers forward); on the cart, the hand's
 		-- end.
-		local palm = if layout.under then AnimationCarrySystem.palmOf(character, side) else nil
+		local palm = if layout.under or layout.hang then AnimationCarrySystem.palmOf(character, side) else nil
 		control.EndEffectorOffset = if palm ~= nil then palm else CFrame.new(0, -hand.Size.Y / 2, 0)
 		control.Target = target
 		local shoulder = attachment(upper, side .. "ShoulderRigAttachment")
@@ -330,7 +386,7 @@ function AnimationCarrySystem.bind(
 		local lowerElbow = if lower ~= nil then attachment(lower, side .. "ElbowRigAttachment") else nil
 		local lowerWrist = if lower ~= nil then attachment(lower, side .. "WristRigAttachment") else nil
 		local handWrist = attachment(hand, side .. "WristRigAttachment")
-		if layout.under and root ~= nil and shoulder ~= nil and elbow ~= nil then
+		if (layout.under or on ~= cargoRoot) and root ~= nil and shoulder ~= nil and elbow ~= nil then
 			-- The elbows bend down and back by the sides, not out like wings, unless that runs the arm through a
 			-- round body: then out to the side, the forearm coming back in to the item.
 			local upperArm = (shoulder.WorldPosition - elbow.WorldPosition).Magnitude
@@ -360,8 +416,8 @@ function AnimationCarrySystem.bind(
 			end
 			local pole = Instance.new("Attachment")
 			pole.Name = "CleanupCarryPole" .. side
-			pole.Parent = cargoRoot
-			pole.WorldPosition = root.CFrame:PointToWorldSpace(poleAt)
+			pole.Position = onFrame:PointToObjectSpace(root.CFrame:PointToWorldSpace(poleAt))
+			pole.Parent = on
 			table.insert(targets, pole)
 			control.Pole = pole
 		end

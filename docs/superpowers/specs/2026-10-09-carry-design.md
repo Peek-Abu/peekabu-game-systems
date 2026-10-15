@@ -43,3 +43,15 @@ Backpack, which native characters keep; this system is for physical world object
 ## 2026-10-10 additions
 
 Carry now tells a game when something is held or let go. `CarryServiceServer.pickedUp(player, object)` fires after a pickup. `CarryServiceServer.dropped(player, object, reason)` fires when the object is released. A `DropReason` is `"drop"`, `"throw"`, `"forced"`, `"death"`, `"removed"` or `"destroyed"`. `forceDrop(player, reason?)` takes the same reasons.
+
+## 2026-10-15: held items ride the body
+
+Decision 3's weld in front of the HumanoidRootPart is replaced: a held object is joined to the body part its hold
+rides (`AnimationCarrySystem.mount`: the UpperTorso for an item on the forearms, the right hand for a hanging bag, the
+root for a cart), still massless and non-colliding and still server-owned, so it inherits the idle, walk and run. Each
+cargo kind's hold style is data (`AnimationCarryRegistry`); a hanging bag swings from its handle on every client
+(`CarrySwaySystem`, cosmetic). Details: docs/animation.md, "Holding things".
+
+| Feature | Realm | Subfolder | Name | Job (one line) |
+|---|---|---|---|---|
+| Carry | client | Systems | CarrySwaySystem | Swings each hanging bag from its handle on every client (cosmetic Motor6D.Transform) |

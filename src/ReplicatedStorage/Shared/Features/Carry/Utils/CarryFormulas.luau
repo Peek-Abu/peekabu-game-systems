@@ -71,4 +71,46 @@ function CarryFormulas.pullBack(from: Vector3, hit: Vector3, margin: number): Ve
 	return CarryFormulas.clampAlong(from, hit, (hit - from).Magnitude, margin)
 end
 
+export type SwayTuning = {
+	-- The swing's natural frequency (rad/s), its damping ratio, and the largest tilt (radians).
+	omega: number,
+	damping: number,
+	maxTilt: number,
+}
+
+-- The longest step integrated at once; a longer frame is split.
+local SWAY_SUBSTEP = 1 / 120
+
+--[=[
+	One step of a bag hanging from a hand, as a damped pendulum: `tilt` is how far its bottom has swung from plumb
+	(radians, along world X and Z), `rate` how fast. The hand's horizontal acceleration `accel` (studs/s², world X and
+	Z) swings the bottom the other way, by `length` (studs from the hand to the bag's middle). Returns the new tilt and
+	rate, the tilt never past `tuning.maxTilt`.
+]=]
+function CarryFormulas.swayStep(
+	tilt: Vector2,
+	rate: Vector2,
+	accel: Vector2,
+	dt: number,
+	length: number,
+	tuning: SwayTuning
+): (Vector2, Vector2)
+	local remaining = math.clamp(dt, 0, 0.25)
+	local push = accel / math.max(length, 0.1)
+	while remaining > 1e-9 do
+		local h = math.min(remaining, SWAY_SUBSTEP)
+		remaining -= h
+		local pull = -tilt * tuning.omega ^ 2 - rate * (2 * tuning.damping * tuning.omega) - push
+		rate += pull * h
+		tilt += rate * h
+		if tilt.Magnitude > tuning.maxTilt then
+			tilt = tilt.Unit * tuning.maxTilt
+			-- At the stop the swing outward is spent.
+			local outward = tilt.Unit
+			rate -= outward * math.max(0, rate:Dot(outward))
+		end
+	end
+	return tilt, rate
+end
+
 return CarryFormulas

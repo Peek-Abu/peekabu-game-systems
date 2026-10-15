@@ -221,6 +221,29 @@ Only arm chains are driven; no joint, attachment or Transform is written.
   `CarryBodyFront` on the art (the point rested against the body, in place of the box's near face; the palms
   go in from it): the office plant has it on its pot, since its box is set by leaves wider than the pot.
   `CarryGripRight` / `CarryGripLeft` (handles on the pot's rim, for the old edge hold) are no longer read.
+  **Held items are part of the body** (playtest 2026-10-15: "items you are holding don't sway along with your
+  animations"; QA in `characters/pippa/qa/carry-v5/`). The item used to be welded to the HumanoidRootPart, which no
+  animation moves, so it stayed rigid while the torso and arms bobbed. `AnimationCarrySystem.mount` now picks the body
+  part per hold and CarryServiceServer joins the item to it (massless, non-colliding, part of the character's
+  assembly until it is released): the **UpperTorso** for an item on the forearms (the joint's C0 is taken from the
+  torso's REST frame, so the item sits where it was planned and then bobs, leans and turns with the idle, walk and
+  run; the IK'd hands, targeting the item, follow it: Pippa's box bobs 0.17-0.21 stud against the root and 0 against
+  the torso, palms within 0.013 of their contacts); the **RightHand** for a hanging bag; the **root** for the cart.
+  The shoulders are measured at rest too, and the plan checks the WRIST against the arm's reach, not just the palm
+  (the palm is rigidly offset from the wrist, so a palm held palm-up was planned up to 0.34 stud out of reach and the
+  hands floated under the box).
+  **Hold styles are data** (`AnimationCarryRegistry`): `twoHandSupport` (the forearm hold above), `chest` (a small
+  item cupped up at the chest, elbows out on a round body: the plaque, the golden stapler), `oneHandHang` (the dust
+  bag, the rubbish bag, the bottle bag) and `cart` (the filing cabinet, pushed hands-free at its offset). A hanging bag
+  hangs from the right hand by its handle (the art's `CarryHandle` attachment: the dust bag's tie loop, the rubbish
+  bag's knot, the crate's arch; the top's centre without one), turned a quarter round so the handle runs front to back
+  through the fist, the arm down and out past the body, as low as it reaches and lifted only until the bag clears the
+  floor by 0.22 (Pippa's 2-stud bags and 1-stud arms put her hand ~0.45 below the shoulder, the arm angled out; a
+  stock R15 hangs it at full stretch). The hand's IK target rides the UpperTorso (on the bag it would chase itself),
+  and the bag is joined to the hand by a Motor6D at the handle (tagged `CarryHang`) that `CarrySwaySystem` swings on
+  every client: a damped pendulum (`CarryFormulas.swayStep`) the handle's acceleration drives, the bag always hanging
+  plumb under it. The server never writes its Transform. A bag too long to hang clear of the floor is carried on the
+  forearms like a box.
 - **The vacuum** (`VacuumHoldFormulas`, `AnimationVacuumHoldSystem`): the same full-size vacuum for
   everyone. Its body hangs ~1.5 studs and its floor head ~1.9 below the grip, where a stock avatar's
   hanging hand holds it upright. For a shorter holder the hold is fitted, not the vacuum: it is tilted
