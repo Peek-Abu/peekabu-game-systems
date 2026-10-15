@@ -35,7 +35,7 @@ return function()
 		local view = ShiftCrewViewModel.roster(
 			{ 1, 2, 3 },
 			players({
-				[1] = { carrying = "printer", vacuuming = true },
+				[1] = { carrying = "coffeeMachine", vacuuming = true },
 				[2] = { vacuuming = true, inTruck = true },
 				[3] = { inTruck = true, room = "Loading bay" },
 			}),
@@ -44,7 +44,7 @@ return function()
 			false,
 			0
 		)
-		expect(statusOf(view, 1).status).to.equal("carrying Printer")
+		expect(statusOf(view, 1).status).to.equal("carrying Coffee machine")
 		expect(statusOf(view, 1).tone).to.equal("busy")
 		expect(statusOf(view, 2).status).to.equal("vacuuming")
 		expect(statusOf(view, 2).tone).to.equal("ok")
@@ -55,7 +55,7 @@ return function()
 		local view = ShiftCrewViewModel.roster(
 			{ 2 },
 			players({
-				[2] = { caughtUntil = 106, carrying = "printer", dead = true },
+				[2] = { caughtUntil = 106, carrying = "coffeeMachine", dead = true },
 			}),
 			NAMES,
 			nil,
@@ -81,13 +81,13 @@ return function()
 	end)
 
 	it("shows aboard / NOT ABOARD only while clocking out", function()
-		local crew = players({ [1] = { inTruck = true, carrying = "printer" }, [3] = { vacuuming = true } })
+		local crew = players({ [1] = { inTruck = true, carrying = "coffeeMachine" }, [3] = { vacuuming = true } })
 		local out = ShiftCrewViewModel.roster({ 1, 3 }, crew, NAMES, 2, true, 0)
 		expect(statusOf(out, 1).status).to.equal("in the truck bed")
 		expect(statusOf(out, 3).status).to.equal("NOT ABOARD")
 		expect(statusOf(out, 3).struck).to.equal(true)
 		local normal = ShiftCrewViewModel.roster({ 1, 3 }, crew, NAMES, 2, false, 0)
-		expect(statusOf(normal, 1).status).to.equal("carrying Printer")
+		expect(statusOf(normal, 1).status).to.equal("carrying Coffee machine")
 		expect(statusOf(normal, 3).status).to.equal("vacuuming")
 	end)
 
@@ -118,7 +118,7 @@ return function()
 
 	it("ticks only crew in the truck bed or at the truck", function()
 		local crew = players({
-			[1] = { carrying = "printer", inTruck = true },
+			[1] = { carrying = "coffeeMachine", inTruck = true },
 			[2] = { caughtUntil = 106, dead = true },
 			[3] = { vacuuming = true },
 		})
@@ -146,7 +146,7 @@ return function()
 		local view = ShiftCrewViewModel.roster(
 			{ 1, 2, 3 },
 			players({
-				[1] = { carrying = "printer" },
+				[1] = { carrying = "coffeeMachine" },
 				[2] = { caughtUntil = 106, dead = true },
 				[3] = { vacuuming = true },
 			}),
@@ -178,7 +178,7 @@ return function()
 	it("marks which phone line is trouble, even when it is the only line", function()
 		local mixed = ShiftCrewViewModel.roster(
 			{ 1, 2 },
-			players({ [1] = { carrying = "printer" }, [2] = { caughtUntil = 106, dead = true } }),
+			players({ [1] = { carrying = "coffeeMachine" }, [2] = { caughtUntil = 106, dead = true } }),
 			NAMES,
 			nil,
 			false,

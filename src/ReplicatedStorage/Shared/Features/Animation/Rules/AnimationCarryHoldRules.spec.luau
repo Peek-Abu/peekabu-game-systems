@@ -59,7 +59,7 @@ return function()
 		-- Carried with the palms ~0.78 below the shoulders: a 3-stud jug's top at ~3.35, past the head's middle (2.45).
 		expect(Rules.choose(item(Vector3.new(3, 3, 2.2), 7), rig)[1]).to.equal("push")
 		expect(Rules.choose(item(Vector3.new(3, 3, 2.2), 7), rig)[2]).to.equal("under")
-		-- A 1.5-stud printer rides lower than that: lifted.
+		-- A 1.5-stud-tall item rides lower than that: lifted.
 		expect(Rules.choose(item(Vector3.new(2.9, 1.5, 3), 7), rig)[1]).to.equal("under")
 	end)
 

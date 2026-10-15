@@ -116,7 +116,7 @@ return UILabs.CreateReactStory({
 			SortOrder = Enum.SortOrder.LayoutOrder,
 		}),
 		tags = row(1, {
-			printer = priceTag(1, "printer", 0),
+			coffeeMachine = priceTag(1, "coffeeMachine", 0),
 			bag = priceTag(2, "rubbishBag", 0),
 			plaque = priceTag(3, "plaque", 0),
 			monitor = priceTag(4, "monitor", 0),

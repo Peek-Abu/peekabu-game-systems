@@ -212,7 +212,7 @@ return function()
 
 		it("allows a throw only for a throwable item", function()
 			expect(ShiftHudViewModel.buttons({ carrying = "rubbishBag" }, false).throw).to.equal(true)
-			expect(ShiftHudViewModel.buttons({ carrying = "printer" }, false).throw).to.equal(false)
+			expect(ShiftHudViewModel.buttons({ carrying = "coffeeMachine" }, false).throw).to.equal(false)
 		end)
 
 		it("lights POCKET for a tiny item and a free pocket", function()

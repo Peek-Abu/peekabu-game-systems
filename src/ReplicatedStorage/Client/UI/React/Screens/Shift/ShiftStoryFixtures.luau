@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	ShiftStoryFixtures: static sample data for the Shift stories (UI Labs): a running shift for crew Sam, Alex and Jo
-	in truck 2, their public entries (Sam carrying a printer, Alex caught and back in 6 s, Jo vacuuming) and the local
+	in truck 2, their public entries (Sam carrying a coffee machine, Alex caught and back in 6 s, Jo vacuuming) and the local
 	player's entry (a monitor in hands, a plaque pocketed, the canister at 2 of 3). Story time is 0. No logic.
 
 	@class ShiftStoryFixtures
@@ -26,7 +26,7 @@ export type SnapshotChanges = {
 local NAMES: { [number]: string } = { [1] = "Sam", [2] = "Alex", [3] = "Jo" }
 
 local PLAYERS: PublicPlayerTypes.PublicPlayerMap = {
-	["1"] = { carrying = "printer", inTruck = true },
+	["1"] = { carrying = "coffeeMachine", inTruck = true },
 	["2"] = { caughtUntil = 6, dead = true },
 	["3"] = { vacuuming = true, room = "Archive" },
 }

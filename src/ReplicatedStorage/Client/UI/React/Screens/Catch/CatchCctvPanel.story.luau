@@ -2,7 +2,7 @@
 --[=[
 	CatchCctvPanel.story: the CCTV spectating overlay in Studio's edit mode (UI Labs), for the side-by-side check against
 	Figma 4b (22:249, desktop) and 4d (22:285, phone). `Phone` switches to the phone layout drawn in an 844x390
-	landscape-phone frame (with the "<" / ">" buttons, which print when pressed), `Target` picks Sam carrying a printer
+	landscape-phone frame (with the "<" / ">" buttons, which print when pressed), `Target` picks Sam carrying a coffee machine
 	two rooms from the truck or NO SIGNAL (nobody to watch), and `Dropped` whether the incident report says cargo was
 	dropped. Built from CatchViewModel.cctv with fixture inputs, so it never touches the stores.
 
@@ -45,7 +45,8 @@ return UILabs.CreateReactStory({
 	local dropped: boolean = props.controls.Dropped
 	local watching = target == SAM
 	local me: PublicPlayerTypes.PublicPlayer = { dead = true, caughtUntil = NOW + 6 }
-	local feed: PublicPlayerTypes.PublicPlayer = { carrying = "printer", room = "Copy room", roomDepth = 2, cam = 4 }
+	local feed: PublicPlayerTypes.PublicPlayer =
+		{ carrying = "coffeeMachine", room = "Copy room", roomDepth = 2, cam = 4 }
 	local view = CatchViewModel.cctv({
 		snapshot = ShiftStoryFixtures.snapshot({ endsAt = 168 }),
 		me = me,
@@ -53,7 +54,7 @@ return UILabs.CreateReactStory({
 			room = "Copy room",
 			clock = 222,
 			backAt = NOW + 6,
-			dropped = if dropped then { "Printer" } else {},
+			dropped = if dropped then { "Coffee machine" } else {},
 		},
 		targetName = if watching then "Sam" else nil,
 		target = if watching then feed else nil,

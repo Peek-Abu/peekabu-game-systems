@@ -30,7 +30,7 @@ Dressed art is a later decision, taken only if the demo earns it.
 |---|---|---|
 | Value quota | **Clearance quota counts trash only**; salvage is a separate bonus | Makes cleaning the core job (developer request); sharpens the "go back for salvage" question |
 | One office, fixed items | Authored geometry, **randomised spawns** (piles, items, desk contents, occupant start) with guarantees | Replay value; the brief's "no procedural geometry" still holds |
-| 3 pile visuals, printer, cabinet | 3 pile visuals, **12 cargo items with handling traits** | Variety the developer asked for, each item changes how you carry |
+| 3 pile visuals, printer, cabinet | 3 pile visuals, **11 cargo items with handling traits** (the printer was dropped 2026-10-15) | Variety the developer asked for, each item changes how you carry |
 | Caught: drop cargo, respawn | Caught: **scare + ragdoll launch + spectate + respawn** | Tension and light horror (kid-safe, no gore) |
 | One server session | **Depot lobby place + reserved shift servers** with queue pads | Roblox servers are public; parties must queue together |
 
@@ -100,7 +100,6 @@ The depot contract board and a one-card arrival screen carry this; no tutorial n
 | Employee of the Month plaque | salvage | 25 | tiny |
 | Monitor | salvage | 30 | medium, **fragile** |
 | Water cooler jug | salvage | 30 | heavy; dropped = **very loud splash + slippery puddle** |
-| Printer | salvage | 40 | heavy |
 | Coffee machine | salvage | 50 | heavy, rattly |
 | Fish tank | salvage | 70 | heavy, fragile, rattly |
 | Golden stapler | salvage | 80 | tiny, hidden, rare |

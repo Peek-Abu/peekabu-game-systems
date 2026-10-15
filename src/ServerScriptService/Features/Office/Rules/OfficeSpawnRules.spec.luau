@@ -68,10 +68,10 @@ return function()
 
 	it("refuses a greed record naming a non-greed item", function()
 		local wrong = plan()
-		wrong.greed.kind = "printer"
+		wrong.greed.kind = "coffeeMachine"
 		local ok, reason = OfficeSpawnRules.check(wrong, LAYOUT, 20)
 		expect(ok).to.equal(false)
-		expect(reason).to.equal('"printer" is not a greed target')
+		expect(reason).to.equal('"coffeeMachine" is not a greed target')
 	end)
 
 	it("refuses a marker used twice", function()

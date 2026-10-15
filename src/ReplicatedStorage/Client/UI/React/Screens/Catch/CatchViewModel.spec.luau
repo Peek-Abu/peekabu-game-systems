@@ -31,7 +31,7 @@ local function input(extra)
 		me = { dead = true, caughtUntil = 106 },
 		report = REPORT,
 		targetName = "Sam",
-		target = { carrying = "printer", room = "Server room", roomDepth = 2, cam = 6 },
+		target = { carrying = "coffeeMachine", room = "Server room", roomDepth = 2, cam = 6 },
 		now = 100,
 		prevKey = "←",
 		nextKey = "→",
@@ -55,7 +55,7 @@ return function()
 			local view = CatchViewModel.cctv(input())
 			expect(view.rec).to.equal("REC   CAM 06 · SERVER ROOM")
 			expect(view.watching).to.equal("WATCHING  SAM")
-			expect(view.details).to.equal("carrying: Printer · 2 rooms from the truck")
+			expect(view.details).to.equal("carrying: Coffee machine · 2 rooms from the truck")
 		end)
 
 		it("says one room, and the loading bay, in words", function()
@@ -99,7 +99,7 @@ return function()
 			local phone = CatchViewModel.cctv(input({ phone = true }))
 			expect(phone.incidentTitle).to.equal("INCIDENT REPORT")
 			expect(phone.incident[1]).to.equal("Caught by the Manager.")
-			expect(phone.details).to.equal("carrying: Printer")
+			expect(phone.details).to.equal("carrying: Coffee machine")
 		end)
 
 		it("dead but not caught shows no CCTV", function()

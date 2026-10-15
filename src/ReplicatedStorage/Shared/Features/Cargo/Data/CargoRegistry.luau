@@ -1,6 +1,6 @@
 --!strict
 --[=[
-	CargoRegistry: the cargo catalog (Cleanup Crew spec §4 table): twelve items found in the office plus the
+	CargoRegistry: the cargo catalog (Cleanup Crew spec §4 table): eleven items found in the office plus the
 	dust bag the vacuum makes. Built here at load and frozen; `ids()` is sorted so a roll that walks the
 	catalog picks the same items for the same seed.
 
@@ -107,7 +107,6 @@ define("waterJug", "Water cooler jug", "salvage", 30, "heavy", Color3.fromRGB(12
 	splashes = true,
 	spawnWeight = 2,
 })
-define("printer", "Printer", "salvage", 40, "heavy", Color3.fromRGB(210, 210, 200), { spawnWeight = 2 })
 define("coffeeMachine", "Coffee machine", "salvage", 50, "heavy", Color3.fromRGB(110, 70, 50), {
 	rattly = true,
 	spawnWeight = 1,

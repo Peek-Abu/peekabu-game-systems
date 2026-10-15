@@ -64,7 +64,7 @@ local function results(met: boolean, rating: ShiftTypes.Rating): ShiftTypes.Shif
 			else {
 				{ title = titles.employee, name = "Jo", userId = 3, detail = "hauled 120" },
 				{ title = titles.rehired, name = "Alex", userId = 2, detail = "caught 3 times" },
-				{ title = titles.butterfingers, name = "Sam", userId = 1, detail = "dropped the printer" },
+				{ title = titles.butterfingers, name = "Sam", userId = 1, detail = "dropped the coffee machine" },
 				{ title = titles.loudest, name = "Me", userId = ME, detail = "woke the Manager 4 times" },
 			},
 	}

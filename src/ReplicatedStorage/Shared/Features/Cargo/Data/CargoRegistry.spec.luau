@@ -9,7 +9,6 @@ local EXPECTED = {
 	{ "plaque", "salvage", 25 },
 	{ "monitor", "salvage", 30 },
 	{ "waterJug", "salvage", 30 },
-	{ "printer", "salvage", 40 },
 	{ "coffeeMachine", "salvage", 50 },
 	{ "fishTank", "salvage", 70 },
 	{ "goldenStapler", "salvage", 80 },
@@ -17,8 +16,8 @@ local EXPECTED = {
 }
 
 return function()
-	it("holds the twelve office items and the dust bag", function()
-		expect(#CargoRegistry.ids()).to.equal(13)
+	it("holds the eleven office items and the dust bag", function()
+		expect(#CargoRegistry.ids()).to.equal(12)
 	end)
 
 	it("matches the spec's kinds and values", function()
@@ -54,7 +53,6 @@ return function()
 		expect(CargoRegistry.get("plaque").size).to.equal("tiny")
 		expect(CargoRegistry.get("monitor").fragile).to.equal(true)
 		expect(CargoRegistry.get("waterJug").splashes).to.equal(true)
-		expect(CargoRegistry.get("printer").size).to.equal("heavy")
 		expect(CargoRegistry.get("coffeeMachine").rattly).to.equal(true)
 		local tank = CargoRegistry.get("fishTank")
 		expect(tank.fragile and tank.rattly and tank.size == "heavy").to.equal(true)
