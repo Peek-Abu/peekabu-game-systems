@@ -1,8 +1,9 @@
 --!strict
 --[=[
 	OccupantAssets: every asset id Mr. Harlow uses (Cleanup Crew spec §7: "Asset id literals live only in each
-	feature's Data/<Feature>Assets"): his sounds, his grin image, and his animation slots ("lurch walk,
-	look-around, grab and throw", from Kimodo/MoMask). An id is PENDING ("") until the developer uploads the
+	feature's Data/<Feature>Assets"): his sounds, his grin image, his animation slots, and his body: the art-owned
+	"A - Smile Mask" template in the place (characters/manager: a very tall porcelain-faced manager in a too-small
+	suit, a long neck the head turns on, one SurfaceAppearance per painted face in its `Faces` folder). An id is PENDING ("") until the developer uploads the
 	staged file (the M3 plan's "Asset staging" appendix). A pending sound is never registered (silent); a pending
 	grin falls back to a grin built from frames (OccupantScareSystem); a pending animation is left out of the
 	`occupant` animation domain, so he keeps the base clips (OccupantAnimationUtils). Registers the uploaded sounds
@@ -26,7 +27,15 @@ export type AnimationSlot = {
 	interruption: AnimationTypes.InterruptionClass,
 }
 
+-- The painted faces his template's `Faces` folder holds (OccupantFaceUtils picks one per mode).
+export type Face = "Calm" | "Noticing" | "Hunting"
+
 local PENDING = ""
+
+-- His body: a Model under ReplicatedStorage (art-owned, never in the source tree; built by
+-- characters/manager/assemble_manager.luau). Missing (a bare test place) = the generated fallback body.
+local TEMPLATE_PATH: { string } = { "Assets", "CleanupCrew", "Characters", "Manager" }
+local FACES: { Face } = { "Calm", "Noticing", "Hunting" }
 
 local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- His heavy, uneven step (one per stride, positional, through walls).
@@ -99,21 +108,35 @@ local IMAGES: { grin: string } = {
 }
 
 local ANIMATIONS: { [string]: AnimationSlot } = {
-	-- Lurch walk (patrol), and a run if one is made (else the base run).
+	-- CC Manager Walk v1 / Run v1 (Icey Labs): a stiff, too-upright patrol walk planted at 10 studs/s and a
+	-- long-striding chase run planted at 20 studs/s, keyed for the Smile Mask rig (characters/manager).
 	harlowWalk = {
-		assetId = PENDING,
+		assetId = "rbxassetid://81109952331244",
 		looped = true,
 		priority = Enum.AnimationPriority.Movement,
 		interruption = "ambient",
 	},
 	harlowRun = {
-		assetId = PENDING,
+		assetId = "rbxassetid://81160103762255",
 		looped = true,
 		priority = Enum.AnimationPriority.Movement,
 		interruption = "ambient",
 	},
-	-- Look-around: his standing clip (investigating, searching, on break, over a catch).
-	harlowLook = { assetId = PENDING, looped = true, priority = Enum.AnimationPriority.Idle, interruption = "ambient" },
+	-- CC Manager Idle v1. His standing clip (investigating, searching, on break, over a catch): bolt upright, a slow doll tilt of the head.
+	harlowLook = {
+		assetId = "rbxassetid://77327530987223",
+		looped = true,
+		priority = Enum.AnimationPriority.Idle,
+		interruption = "ambient",
+	},
+	-- CC Manager Head Turn v1: the head swivels 180 degrees on the long neck and back (keys only the Neck, so it
+	-- layers over a walk). Registered for the game to play; nothing plays it yet.
+	harlowHeadTurn = {
+		assetId = "rbxassetid://127323899647722",
+		looped = false,
+		priority = Enum.AnimationPriority.Action,
+		interruption = "protected",
+	},
 	-- The catch: grab, then throw.
 	harlowGrab = {
 		assetId = PENDING,
@@ -137,6 +160,14 @@ end
 
 return table.freeze({
 	PENDING = PENDING,
+	TEMPLATE_PATH = table.freeze(TEMPLATE_PATH),
+	FACES = table.freeze(FACES),
+	-- On the template: the face plate (welded to the Head), the SurfaceAppearance on it, the attribute naming the
+	-- face it shows, and the folder of faces.
+	FACE_PLATE = "FacePlate",
+	FACE_APPEARANCE = "Face",
+	FACE_ATTRIBUTE = "ManagerFace",
+	FACES_FOLDER = "Faces",
 	SOUNDS = table.freeze(SOUNDS),
 	GIBBERISH = table.freeze(GIBBERISH),
 	IMAGES = table.freeze(IMAGES),
