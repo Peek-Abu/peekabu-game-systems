@@ -46,6 +46,17 @@ return function()
 				expect(placeId >= 0 and placeId == math.floor(placeId)).to.equal(true)
 			end
 		end)
+
+		-- Measured live (hub lighting fix): five strips at 1.6 / 2 under the Soft lighting style washed every character
+		-- to white with a bloom halo; with them off the same scene read true. A strip stays a fill, not a floodlight.
+		it("lights the garage without blowing characters out", function()
+			local cap = 0.75
+			expect(DepotLayoutConstants.LIGHT_BRIGHTNESS > 0).to.equal(true)
+			expect(DepotLayoutConstants.LIGHT_BRIGHTNESS <= cap).to.equal(true)
+			expect(DepotLayoutConstants.BOARD_LIGHT_BRIGHTNESS <= cap).to.equal(true)
+			-- The reading wall is still the best-lit spot.
+			expect(DepotLayoutConstants.BOARD_LIGHT_BRIGHTNESS >= DepotLayoutConstants.LIGHT_BRIGHTNESS).to.equal(true)
+		end)
 	end)
 
 	describe("validate", function()

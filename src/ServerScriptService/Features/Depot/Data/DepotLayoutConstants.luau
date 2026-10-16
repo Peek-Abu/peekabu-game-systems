@@ -76,16 +76,17 @@ return table.freeze({
 	PLAYER_GUI_WAIT = 10,
 	-- Hub v1 lighting: warm tungsten ceiling strips over the trucks (LIGHT_XS at LIGHT_Z), and a brighter, slightly
 	-- whiter strip over each board, BOARD_LIGHT_SETBACK in front of it, so the reading wall is the best-lit spot.
+	-- They are fills: under the place's Soft lighting style 1.6 / 2 blew every character out to a glowing white.
 	LIGHT_XS = table.freeze({ 20, 48, 76 }),
 	LIGHT_Z = 36,
 	LIGHT_SIZE = Vector3.new(8, 0.3, 2),
 	LIGHT_COLOR = Color3.fromRGB(255, 206, 148),
 	LIGHT_RANGE = 45,
-	LIGHT_BRIGHTNESS = 1.6,
+	LIGHT_BRIGHTNESS = 0.35,
 	BOARD_LIGHT_SETBACK = 5,
 	BOARD_LIGHT_COLOR = Color3.fromRGB(255, 228, 188),
 	BOARD_LIGHT_RANGE = 32,
-	BOARD_LIGHT_BRIGHTNESS = 2,
+	BOARD_LIGHT_BRIGHTNESS = 0.45,
 	-- Hub v1 floor paint (DepotMarkingUtils plans it, DepotBuildSystem lays it): thin, non-colliding parts LIFT above the
 	-- floor. Per truck: a "BAY n" stencil in front of the ramp, a hazard band of STRIPE-wide yellow/black stripes across
 	-- the ramp's foot, two side lines BAY_HALF_WIDTH from the truck's centre from the bay's front to BAY_BACK_GAP short

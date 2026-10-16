@@ -19,9 +19,10 @@ local PRESETS: { [string]: VfxTypes.Atmosphere } = {
 		clockTime = 18.3,
 		brightness = 1.4,
 		exposure = 0,
-		-- The garage is lit by its own warm lamps; the ambient keeps every corner readable.
-		ambient = Color3.fromRGB(138, 104, 76),
-		outdoorAmbient = Color3.fromRGB(118, 90, 70),
+		-- The garage is lit by its own warm lamps; the ambient keeps every corner readable. A soft warm fill, not a
+		-- tint: (138, 104, 76) washed characters' own colours out, so it leans orange only a little.
+		ambient = Color3.fromRGB(120, 98, 80),
+		outdoorAmbient = Color3.fromRGB(100, 84, 72),
 		fogColor = Color3.fromRGB(96, 66, 46),
 		fogStart = 160,
 		fogEnd = 600,

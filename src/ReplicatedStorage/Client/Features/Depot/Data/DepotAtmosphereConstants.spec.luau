@@ -41,4 +41,12 @@ return function()
 		-- The garage is 96 x 72: no wall is lost in fog from anywhere inside it.
 		expect(evening.fogStart >= 120).to.equal(true)
 	end)
+
+	it("is a warm fill, not a tint: characters keep their own colours", function()
+		-- Measured live: (138, 104, 76) on top of the strips washed a lavender skin pink-white. The ambient stays
+		-- below this brightness and leans orange only a little.
+		expect(luma(evening.ambient) <= 0.41).to.equal(true)
+		expect(evening.ambient.R - evening.ambient.B <= 0.18).to.equal(true)
+		expect(luma(evening.outdoorAmbient) <= luma(evening.ambient)).to.equal(true)
+	end)
 end
