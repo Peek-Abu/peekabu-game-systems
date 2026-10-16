@@ -21,7 +21,7 @@ return function()
 			now = function()
 				return clock
 			end,
-			-- Each appraisal by cleaning plays cargoAppraise at the item (and stamps the crew near it: nobody here).
+			-- Each appraisal by cleaning plays cargoAppraise at the item (and slips the crew near it: nobody here).
 			sound = function(position, id)
 				if id == "cargoAppraise" then
 					table.insert(appraisals, position)

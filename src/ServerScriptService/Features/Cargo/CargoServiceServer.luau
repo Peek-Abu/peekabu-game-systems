@@ -15,8 +15,8 @@
 	  `onBanked` handler) → destroy, in one synchronous step, so two Loads never count one item twice.
 	- Grime (the loot loop, docs/superpowers/specs/2026-10-15-cleanup-crew-loot-loop-design.md, CargoGrimeSystem):
 	  valuables spawn grimy; vacuuming one (Vacuum's grime channel) cleans it, raises its value and appraises it at
-	  65% (a stamp toast to the crew near it); an unappraised valuable banked is appraised at the truck (a stamp
-	  toast to the banker).
+	  65% (a small sticky slip to the crew near it); an unappraised valuable banked is appraised at the truck (a
+	  slip to the banker).
 	- Feel (M3): every Load is announced (`Banked`, built by CargoFeedbackUtils.banked: the client swoops the
 	  items into the truck, cha-chings and floats "+N"); drops (here), rattles and searches (CargoTraitSystem)
 	  play positional sounds, silent while their CargoAssets ids are pending.

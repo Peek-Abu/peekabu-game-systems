@@ -4,6 +4,7 @@ local DepotWorldViewModel = require(script.Parent.DepotWorldViewModel)
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local DepotBoardViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotBoardViewModel)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
+local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 
 local NOW = 1000
@@ -139,12 +140,24 @@ return function()
 			expect(view.kicker).to.equal("TONIGHT'S JOB")
 			expect(view.client).to.equal("Harlow & Finch Ltd.")
 			expect(view.job).to.equal("Clear the office before the sale.")
-			expect(view.clear).to.equal(`CLEAR {ShiftConstants.QUOTA}`)
-			expect(view.before).to.equal(
-				`of site buildup before {ShiftHudViewModel.clock(ShiftConstants.SHIFT_SECONDS)}`
-			)
+			local clock = ShiftHudViewModel.clock(ShiftConstants.SHIFT_SECONDS)
+			-- Not in a truck: the range by crew size.
+			local low = ShiftQuotaFormulas.quota(1)
+			local high = ShiftQuotaFormulas.quota(#ShiftConstants.QUOTA_BY_CREW)
+			expect(view.clear).to.equal(`CLEAR {low}–{high}`)
+			expect(view.before).to.equal(`more crew, more to clear · {clock} on the clock`)
 			expect(view.key).to.equal("E")
 			expect(view.action).to.equal("Read the work order")
+		end)
+
+		it("posts the quota for the crew in your truck", function()
+			local clock = ShiftHudViewModel.clock(ShiftConstants.SHIFT_SECONDS)
+			local three = DepotWorldViewModel.workOrder(board(), 3)
+			expect(three.clear).to.equal(`CLEAR {ShiftQuotaFormulas.quota(3)}`)
+			expect(three.before).to.equal(`for a crew of 3 · {clock} on the clock`)
+			local solo = DepotWorldViewModel.workOrder(board(), 1)
+			expect(solo.clear).to.equal(`CLEAR {ShiftQuotaFormulas.quota(1)}`)
+			expect(solo.before).to.equal(`for one player · {clock} on the clock`)
 		end)
 
 		it("cuts a long client name", function()

@@ -16,9 +16,12 @@ local VARIANT: ShiftTypes.Variant = "B"
 -- How each shift's variant is chosen (ShiftVariantRules): "alternate" flips A/B per shift; "fixed" always plays VARIANT.
 local VARIANT_MODE: ShiftTypes.VariantMode = "alternate"
 
--- Cleanup Crew's two toast styles (spec §6.1 "sticky note" and "stamp"; §7 "sticky-note toasts, rubber-stamp
+-- Cleanup Crew's toast styles. The first two (spec §6.1 "sticky note" and "stamp"; §7 "sticky-note toasts, rubber-stamp
 -- announcements"). Look from the Figma style page, pending the developer's approval; each `sound` is a
 -- ShiftAssets slot (silent while pending).
+-- The two slip styles (an appraisal: the item and its value, a jackpot marked) are small sticky slips stacked
+-- off-centre (PaperToastStack), and silent: the item's own `cargoAppraise` sound is the cue, so mid-shift UI stays
+-- quiet. Their colours only serve the base ToastStack fallback.
 local TOAST_STYLES: { [string]: ToastTypes.ToastStyle } = {
 	sticky = {
 		background = Color3.fromRGB(255, 226, 102),
@@ -33,6 +36,18 @@ local TOAST_STYLES: { [string]: ToastTypes.ToastStyle } = {
 		accent = Color3.fromRGB(196, 38, 38),
 		font = Enum.Font.Oswald,
 		sound = "shiftStamp",
+	},
+	slip = {
+		background = Color3.fromRGB(255, 228, 92),
+		text = Color3.fromRGB(36, 33, 28),
+		accent = Color3.fromRGB(232, 160, 40),
+		font = Enum.Font.PermanentMarker,
+	},
+	slipJackpot = {
+		background = Color3.fromRGB(255, 228, 92),
+		text = Color3.fromRGB(36, 33, 28),
+		accent = Color3.fromRGB(200, 32, 47),
+		font = Enum.Font.PermanentMarker,
 	},
 }
 
@@ -75,8 +90,8 @@ return table.freeze({
 	-- The quota: everything banked counts toward it at x1 (docs/superpowers/specs/2026-10-15-cleanup-crew-loot-loop-design.md
 	-- §3.6). By crew size 1-4: a generated map is worth about 1,850 fully clean and 1,280 at average cleanliness
 	-- (measured over 30 seeds, 2026-10-15), so these ask about 60 / 65 / 68 / 70% of it (solo makes fewer trips; four
-	-- players are capped because the map does not grow with them). QUOTA is the two-player figure, the quota the depot
-	-- posts; a run uses QUOTA_BY_CREW (ShiftQuotaFormulas).
+	-- players are capped because the map does not grow with them). QUOTA is the two-player figure (the fallback before a
+	-- run sets its own); a run and the depot's signs use QUOTA_BY_CREW for the crew (ShiftQuotaFormulas).
 	QUOTA = 830,
 	QUOTA_BY_CREW = table.freeze({ 770, 830, 870, 900 }),
 	-- 7:00 on the clock.
@@ -147,6 +162,8 @@ return table.freeze({
 	-- Toast styles (registered by both Shift services at load) and how long a stamp stays up.
 	TOAST_STICKY = "sticky",
 	TOAST_STAMP = "stamp",
+	TOAST_SLIP = "slip",
+	TOAST_SLIP_JACKPOT = "slipJackpot",
 	TOAST_STYLES = table.freeze(TOAST_STYLES),
 	STAMP_SECONDS = 3,
 	-- The review's rating (Figma 35:1096): quota met and at least LOADED of every OF salvage offered was loaded ->

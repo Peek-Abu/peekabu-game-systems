@@ -1,7 +1,8 @@
 --!strict
 --[=[
 	DepotBoardViewModel: the depot's contract board (Figma 2a/2b): tonight's work order (numbered from the contract id,
-	the same everywhere), its rows (desktop six, phone four; the HAZARD row marked), the night guard's sticky, the
+	the same everywhere), its rows (desktop six, phone four; the HAZARD row marked; the QUOTA row for the crew in the
+	reader's truck, `crewOf`, else the range by crew size), the night guard's sticky, the
 	returning player's last-shift card (none for a player who has not played) and the dispatch slip; and `fit`, the
 	scale that keeps the board on a smaller screen. Pure.
 
@@ -13,7 +14,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local DepotTypes = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotTypes)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
+local QueueSnapshotUtils = require(ReplicatedStorage.Shared.Features.Queue.Utils.QueueSnapshotUtils)
+local QueueTypes = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueTypes)
 local ShiftCurrencyUtils = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftCurrencyUtils)
+local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 
 export type RowView = { label: string, text: string, hazard: boolean }
@@ -103,22 +107,44 @@ local function lastOf(last: DepotTypes.LastShift, phone: boolean): LastView
 	}
 end
 
-function DepotBoardViewModel.board(id: string?, last: DepotTypes.LastShift?, phone: boolean): BoardView
+-- The size of the crew `userId` is queued with (their truck's pad in the queue snapshot); nil when not in a truck.
+function DepotBoardViewModel.crewOf(snapshot: QueueTypes.QueueSnapshot?, userId: number): number?
+	local _, pad = QueueSnapshotUtils.padOf(snapshot, userId)
+	return if pad ~= nil then #pad.members else nil
+end
+
+-- The QUOTA row: the quota for a crew of `crew`, or the range by crew size when there is no crew yet.
+local function quotaText(crew: number?, phone: boolean): string
+	local copy = DepotConstants.BOARD_COPY
+	if crew == nil then
+		local low = ShiftQuotaFormulas.quota(1)
+		local high = ShiftQuotaFormulas.quota(#ShiftConstants.QUOTA_BY_CREW)
+		return string.format(if phone then copy.quotaPhoneRange else copy.quotaRange, low, high)
+	end
+	local quota = ShiftQuotaFormulas.quota(crew)
+	if phone then
+		return string.format(copy.quotaPhoneCrew, quota)
+	end
+	return if crew <= 1 then string.format(copy.quotaSolo, quota) else string.format(copy.quotaCrew, quota, crew)
+end
+
+-- `crew`: the size of the reader's truck crew (crewOf); nil when they are not in a truck.
+function DepotBoardViewModel.board(id: string?, last: DepotTypes.LastShift?, phone: boolean, crew: number?): BoardView
 	local contract = contractOf(id)
 	local copy = DepotConstants.BOARD_COPY
-	local quota = ShiftConstants.QUOTA
+	local quota = quotaText(crew, phone)
 	local shift = ShiftHudViewModel.clock(ShiftConstants.SHIFT_SECONDS)
 	local rows: { RowView }
 	if phone then
 		rows = {
-			{ label = "QUOTA", text = `{quota} {copy.quotaPhone}`, hazard = false },
+			{ label = "QUOTA", text = quota, hazard = false },
 			{ label = "SHIFT", text = `{shift} · {copy.shiftPhone}`, hazard = false },
 			{ label = "PAY", text = `Assets → {ShiftCurrencyUtils.SYMBOL}`, hazard = false },
 			{ label = "HAZARD", text = copy.hazardPhone, hazard = true },
 		}
 	else
 		rows = {
-			{ label = "QUOTA", text = `{quota} {copy.quota}`, hazard = false },
+			{ label = "QUOTA", text = quota, hazard = false },
 			{ label = "SHIFT", text = `{shift} {copy.shift}`, hazard = false },
 			{
 				label = "PAY",

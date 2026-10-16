@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DepotBoardViewModel = require(script.Parent.DepotBoardViewModel)
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
+local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
 
 local LAST = {
 	cleared = 362,
@@ -44,7 +45,6 @@ return function()
 		local contract = DepotConstants.CONTRACTS[2]
 		local view = DepotBoardViewModel.board(contract.id, nil, false)
 		expect(#view.rows).to.equal(6)
-		expect(rowOf(view, "QUOTA").text).to.equal(`{ShiftConstants.QUOTA} {DepotConstants.BOARD_COPY.quota}`)
 		expect(rowOf(view, "SHIFT").text).to.equal("7:00 on the clock. Clock out at the truck any time.")
 		expect(rowOf(view, "HAZARD").hazard).to.equal(true)
 		expect(rowOf(view, "QUOTA").hazard).to.equal(false)
@@ -54,8 +54,63 @@ return function()
 	it("keeps the phone to four short rows", function()
 		local view = DepotBoardViewModel.board(nil, nil, true)
 		expect(#view.rows).to.equal(4)
-		expect(rowOf(view, "QUOTA").text).to.equal(`{ShiftConstants.QUOTA} site value`)
 		expect(rowOf(view, "PAY").text).to.equal("Assets → $")
+	end)
+
+	describe("quota", function()
+		local low = ShiftQuotaFormulas.quota(1)
+		local high = ShiftQuotaFormulas.quota(#ShiftConstants.QUOTA_BY_CREW)
+
+		it("posts the quota for the crew in your truck", function()
+			local view = DepotBoardViewModel.board(nil, nil, false, 3)
+			expect(rowOf(view, "QUOTA").text).to.equal(
+				`{ShiftQuotaFormulas.quota(3)} for your crew of 3. Everything you bank counts, and clean things count more.`
+			)
+			expect(rowOf(DepotBoardViewModel.board(nil, nil, true, 3), "QUOTA").text).to.equal(
+				`{ShiftQuotaFormulas.quota(3)} for your crew`
+			)
+		end)
+
+		it("speaks to a solo player", function()
+			local view = DepotBoardViewModel.board(nil, nil, false, 1)
+			expect(rowOf(view, "QUOTA").text).to.equal(
+				`{low} for you on your own. Everything you bank counts, and clean things count more.`
+			)
+		end)
+
+		it("shows the range by crew size when you are not in a truck", function()
+			local view = DepotBoardViewModel.board(nil, nil, false)
+			expect(rowOf(view, "QUOTA").text).to.equal(
+				`{low} for one player, up to {high} for four. Everything you bank counts, and clean things count more.`
+			)
+			expect(rowOf(DepotBoardViewModel.board(nil, nil, true), "QUOTA").text).to.equal(
+				`{low}–{high}, by crew size`
+			)
+		end)
+
+		it("never posts the two-player figure to anyone else", function()
+			expect(
+				string.find(
+					rowOf(DepotBoardViewModel.board(nil, nil, false, 4), "QUOTA").text,
+					tostring(ShiftConstants.QUOTA),
+					1,
+					true
+				)
+			).to.equal(nil)
+		end)
+
+		it("reads the crew off your truck in the queue snapshot", function()
+			local snapshot = {
+				pads = {
+					a = { members = { 1, 2 }, capacity = 4, destination = "shift", departing = false },
+					b = { members = { 3, 4, 5 }, capacity = 4, destination = "shift", departing = false },
+				},
+			}
+			expect(DepotBoardViewModel.crewOf(snapshot, 4)).to.equal(3)
+			expect(DepotBoardViewModel.crewOf(snapshot, 1)).to.equal(2)
+			expect(DepotBoardViewModel.crewOf(snapshot, 9)).to.equal(nil)
+			expect(DepotBoardViewModel.crewOf(nil, 4)).to.equal(nil)
+		end)
 	end)
 
 	it("reads the first contract when none is open", function()

@@ -9,8 +9,8 @@
 	cleanliness reached. Each change goes through the spawner's `setClean` (value, tag, appraisal, and no vacuum target
 	once spotless); the channel's completion makes it spotless (`finish`).
 
-	The first appraisal of an item is stamped (a toast in Shift's stamp style) to every crew member within
-	APPRAISAL_TELL_DISTANCE, with the `cargoAppraise` sound at the item; a valuable banked unappraised is stamped to its
+	The first appraisal of an item is told (a small sticky slip, Shift's slip toast style) to every crew member within
+	APPRAISAL_TELL_DISTANCE, with the `cargoAppraise` sound at the item; a valuable banked unappraised is told to its
 	banker (`banked`: the truck reveals it, as grimy as it is).
 
 	`start` registers the channels and observes every item tagged VacuumConstants.GRIME_TAG; `update`, `finish` and
@@ -67,10 +67,11 @@ local function cleanOf(item: Instance): number
 	return if type(clean) == "number" then clean else 0
 end
 
-local function stamp(player: Player, text: string)
+-- An appraisal's small slip (a jackpot slip for a jackpot), off-centre and brief: never the big shift stamp.
+local function slip(player: Player, text: string, variant: string?)
 	ToastServiceServer:send(player, {
 		text = text,
-		style = CargoConstants.APPRAISAL_TOAST_STYLE,
+		style = CargoFeedbackUtils.appraisalStyle(variant),
 		duration = CargoConstants.APPRAISAL_TOAST_SECONDS,
 	})
 end
@@ -83,7 +84,7 @@ function CargoGrimeSystem.new(deps: Deps): CargoGrimeSystem
 	setmetatable(starts, { __mode = "k" })
 	local registered = false
 
-	-- Just appraised by cleaning: the sound at the item and the stamp to the crew near it.
+	-- Just appraised by cleaning: the sound at the item and the slip to the crew near it.
 	local function announce(item: Instance)
 		local entry = CargoFeedbackUtils.entryOf(item)
 		if entry == nil or not item:IsA("BasePart") then
@@ -101,7 +102,7 @@ function CargoGrimeSystem.new(deps: Deps): CargoGrimeSystem
 				and root:IsA("BasePart")
 				and (root.Position - item.Position).Magnitude <= CargoConstants.APPRAISAL_TELL_DISTANCE
 			then
-				stamp(player, text)
+				slip(player, text, variant)
 			end
 		end
 	end
@@ -147,13 +148,17 @@ function CargoGrimeSystem.new(deps: Deps): CargoGrimeSystem
 		end,
 
 		--[=[
-			A Load landed: every valuable in it that nobody appraised is appraised at the truck, stamped to the banker.
+			A Load landed: every valuable in it that nobody appraised is appraised at the truck, a slip to the banker.
 		]=]
 		banked = function(_self, deposit, banker)
 			for _, item in deposit.items do
 				local appraisal = item.appraisal
 				if appraisal ~= nil and not appraisal.appraised then
-					stamp(banker, CargoFeedbackUtils.appraisalText(item.kind, appraisal.variant, item.value, true))
+					slip(
+						banker,
+						CargoFeedbackUtils.appraisalText(item.kind, appraisal.variant, item.value, true),
+						appraisal.variant
+					)
 				end
 			end
 		end,

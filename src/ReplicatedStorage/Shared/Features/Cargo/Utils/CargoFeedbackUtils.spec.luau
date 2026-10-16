@@ -2,7 +2,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CargoFeedbackUtils = require(script.Parent.CargoFeedbackUtils)
 local CargoAssets = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoAssets)
+local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants)
 local CargoRegistry = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoRegistry)
+local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 
 return function()
 	describe("floaters", function()
@@ -102,23 +104,35 @@ return function()
 	end)
 
 	describe("appraisalText", function()
-		it("stamps the shown name and the value, a jackpot by its variant", function()
+		it("writes the shown name over what it pays, a jackpot by its variant", function()
 			expect(CargoFeedbackUtils.appraisalText("monitor", "Gold-trim", 250, false)).to.equal(
-				"APPRAISED · Gold-trim monitor $250"
+				"Gold-trim monitor\n$250"
 			)
 			expect(CargoFeedbackUtils.appraisalText("plaque", nil, 41.6, false)).to.equal(
-				"APPRAISED · Employee of the Month plaque $42"
+				"Employee of the Month plaque\n$42"
 			)
 		end)
 
 		it("says when the truck appraised it", function()
-			expect(CargoFeedbackUtils.appraisalText("monitor", nil, 36, true)).to.equal(
-				"APPRAISED AT THE TRUCK · Monitor $36"
-			)
+			expect(CargoFeedbackUtils.appraisalText("monitor", nil, 36, true)).to.equal("Monitor\n$36 at the truck")
 		end)
 
 		it("falls back to the kind for an unknown item", function()
-			expect(CargoFeedbackUtils.appraisalText("spaceship", nil, 5, false)).to.equal("APPRAISED · spaceship $5")
+			expect(CargoFeedbackUtils.appraisalText("spaceship", nil, 5, false)).to.equal("spaceship\n$5")
+		end)
+	end)
+
+	describe("appraisalStyle", function()
+		it("is a small slip, a jackpot slip for a jackpot", function()
+			expect(CargoFeedbackUtils.appraisalStyle(nil)).to.equal(CargoConstants.APPRAISAL_TOAST_STYLE)
+			expect(CargoFeedbackUtils.appraisalStyle("Gold-trim")).to.equal(CargoConstants.APPRAISAL_JACKPOT_STYLE)
+		end)
+
+		it("names Shift's slip styles, never the big stamp", function()
+			expect(CargoConstants.APPRAISAL_TOAST_STYLE).to.equal(ShiftConstants.TOAST_SLIP)
+			expect(CargoConstants.APPRAISAL_JACKPOT_STYLE).to.equal(ShiftConstants.TOAST_SLIP_JACKPOT)
+			expect(ShiftConstants.TOAST_STYLES[ShiftConstants.TOAST_SLIP]).to.be.ok()
+			expect(ShiftConstants.TOAST_STYLES[ShiftConstants.TOAST_SLIP_JACKPOT]).to.be.ok()
 		end)
 	end)
 

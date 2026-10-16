@@ -3,7 +3,8 @@
 	ShiftQuotaFormulas: the shift's quota and what a Load is worth to it (docs/superpowers/specs/
 	2026-10-15-cleanup-crew-loot-loop-design.md §3.6). The quota scales with the crew (ShiftConstants.QUOTA_BY_CREW);
 	everything banked counts toward it at x1 (trash plus valuables at their current, grime-scaled value), while the
-	pay (Recovery pay, the `bonus` counter) is valuables only, times the salvage multiplier (x1.5 in overtime). Pure.
+	pay (Recovery pay, the `bonus` counter) is valuables only, times the salvage multiplier (x1.5 in overtime). Shared:
+	the run sets its quota with it and the depot posts the quota for a truck's crew. Pure.
 
 	@class ShiftQuotaFormulas
 ]=]

@@ -142,14 +142,22 @@ function CargoFeedbackUtils.banked(
 end
 
 --[=[
-	The appraisal stamp's words (docs/superpowers/specs/2026-10-15-cleanup-crew-loot-loop-design.md §3.3): the item's
-	shown name (a jackpot by its variant) and what it pays now; `atTruck` when banking revealed it.
+	The appraisal slip's words (docs/superpowers/specs/2026-10-15-cleanup-crew-loot-loop-design.md §3.3): the item's
+	shown name (a jackpot by its variant) over what it pays now; `atTruck` when banking revealed it.
 ]=]
 function CargoFeedbackUtils.appraisalText(kind: string, variant: string?, value: number, atTruck: boolean): string
 	local def = CargoRegistry.get(kind)
 	local name = if def ~= nil then CargoAppraisalFormulas.displayName(def, variant, true) else kind
-	local head = if atTruck then "APPRAISED AT THE TRUCK" else "APPRAISED"
-	return `{head} · {name} {ShiftCurrencyUtils.amount(value)}`
+	local where = if atTruck then " at the truck" else ""
+	return `{name}\n{ShiftCurrencyUtils.amount(value)}{where}`
+end
+
+--[=[
+	The appraisal's toast style: a small slip (CargoConstants.APPRAISAL_TOAST_STYLE), the jackpot slip when the valuable
+	rolled a jackpot (it has a variant).
+]=]
+function CargoFeedbackUtils.appraisalStyle(variant: string?): string
+	return if variant ~= nil then CargoConstants.APPRAISAL_JACKPOT_STYLE else CargoConstants.APPRAISAL_TOAST_STYLE
 end
 
 function CargoFeedbackUtils.arc(from: Vector3, to: Vector3, alpha: number, height: number): Vector3

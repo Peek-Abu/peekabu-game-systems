@@ -14,12 +14,17 @@ local DepotTypes = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotTyp
 -- role names below. 0 is Queue's placeholder PlaceId: that role is reached by a local move (both roles in
 -- one server) until its real PlaceId is filled in. See docs/cleanup-crew-publish.md.
 -- The contract board's work order (Figma 2a/2b). Quota and shift lines are filled from ShiftConstants by
--- DepotBoardViewModel; NOTES is the contract's own note.
+-- DepotBoardViewModel; NOTES is the contract's own note. The quota line is for the crew in the reader's truck
+-- (ShiftQuotaFormulas), or the range by crew size when they are not in one; worded for young players.
 local BOARD_COPY = table.freeze({
 	title = "TONIGHT'S JOB",
 	-- The quota counts everything banked (the loot loop, docs/superpowers/specs/2026-10-15-cleanup-crew-loot-loop-design.md).
-	quota = "of site value for a crew of two (everything banked counts; clean it first)",
-	quotaPhone = "site value",
+	-- string.format patterns: the quota, then the crew size (or the largest crew's quota).
+	quotaCrew = "%d for your crew of %d. Everything you bank counts, and clean things count more.",
+	quotaSolo = "%d for you on your own. Everything you bank counts, and clean things count more.",
+	quotaRange = "%d for one player, up to %d for four. Everything you bank counts, and clean things count more.",
+	quotaPhoneCrew = "%d for your crew",
+	quotaPhoneRange = "%d–%d, by crew size",
 	shift = "on the clock. Clock out at the truck any time.",
 	shiftPhone = "clock out at the truck",
 	crew = "1–4 per truck.",

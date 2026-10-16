@@ -22,7 +22,7 @@ local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local CargoTypes = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoTypes)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftRosterTracker = require(ServerScriptService.Features.Shift.State.ShiftRosterTracker)
-local ShiftQuotaFormulas = require(ServerScriptService.Features.Shift.Utils.ShiftQuotaFormulas)
+local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
 local ShiftAnalyticsSystem = require(ServerScriptService.Features.Shift.Systems.ShiftAnalyticsSystem)
 local RoundServiceServer = require(ServerScriptService.Features.Round.RoundServiceServer)
 

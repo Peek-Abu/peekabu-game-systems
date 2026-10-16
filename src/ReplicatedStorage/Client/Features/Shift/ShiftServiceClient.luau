@@ -4,8 +4,8 @@
 	starts), and sends the local player's results vote whenever ShiftStore.myVote changes (clearing it when results
 	end). Pushes the performance review scene (ShiftScene) when results begin and removes it when they end; the
 	ShiftReviewTab widget reopens it after Escape while the vote runs. It also reports this device's platform once (ShiftPlatformRules, analytics only). Starts ShiftFeedbackSystem (the shift's horns, stings, ticking layer and countdown) and
-	registers the sticky-note and stamp toast styles, and swaps the base toast stack for the paper one
-	(PaperToastStack: sticky notes top-right, stamps centre; ToastServiceClient:setDefaultWidget(false)). Starts
+	registers the sticky-note, stamp and slip toast styles, and swaps the base toast stack for the paper one
+	(PaperToastStack: sticky notes top-right, stamps centre, appraisal slips bottom-right; ToastServiceClient:setDefaultWidget(false)). Starts
 	ShiftPromptSystem (the Interaction prompts drawn on paper) and registers the prompt chip; the chip and the phone
 	action arc are registered wrapped with ShiftPromptSystem.press as a prop, so neither component requires this
 	service (which requires them). Reads go through ShiftStore.

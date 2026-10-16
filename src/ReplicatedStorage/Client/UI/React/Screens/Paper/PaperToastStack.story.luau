@@ -2,7 +2,8 @@
 --[=[
 	PaperToastStack.story: the paper toast layer on the dark office, in Studio's edit mode (UI Labs), for the check
 	against Figma 1f. `Notes` is how many sticky notes are stacked (the stack shows at most three), `Stamp` shows the
-	centre QUOTA MET stamp and `Phone` switches to the phone layout (250 px notes, 40 px stamp). It builds its own
+	centre QUOTA MET stamp, `Slips` how many appraisal slips are stacked bottom-right (the newest a jackpot when
+	`Jackpot` is on) and `Phone` switches to the phone layout (250 px notes, 40 px stamp). It builds its own
 	toast list and renders PaperToastStack.Layer, so it never touches the stores.
 
 	@class PaperToastStack.story
@@ -27,18 +28,28 @@ local SAMPLE_TEXT = {
 	"Quota met. Keep going or clock out.",
 }
 
+local SAMPLE_SLIPS = {
+	"Desk lamp\n$18",
+	"Employee of the Month plaque\n$42 at the truck",
+	"Monitor\n$36",
+}
+
 return UILabs.CreateReactStory({
 	react = React,
 	reactRoblox = ReactRoblox,
 	controls = {
 		Notes = 3,
 		Stamp = true,
+		Slips = 2,
+		Jackpot = true,
 		Phone = false,
 	},
 }, function(props)
 	local noteCount: number = props.controls.Notes
 	local stamp: boolean = props.controls.Stamp
 	local phone: boolean = props.controls.Phone
+	local slipCount: number = props.controls.Slips
+	local jackpot: boolean = props.controls.Jackpot
 
 	-- Oldest first, like ToastStore; the view model flips it.
 	local toasts: { ToastTypes.Toast } = {}
@@ -55,6 +66,18 @@ return UILabs.CreateReactStory({
 			id = noteCount + 1,
 			text = "QUOTA MET",
 			style = ShiftConstants.TOAST_STAMP,
+			expiresAt = 0,
+		})
+	end
+
+	for index = 1, slipCount do
+		local last = index == slipCount
+		table.insert(toasts, {
+			id = noteCount + 1 + index,
+			text = if last and jackpot
+				then "Gold-trim monitor\n$250"
+				else SAMPLE_SLIPS[(index - 1) % #SAMPLE_SLIPS + 1],
+			style = if last and jackpot then ShiftConstants.TOAST_SLIP_JACKPOT else ShiftConstants.TOAST_SLIP,
 			expiresAt = 0,
 		})
 	end

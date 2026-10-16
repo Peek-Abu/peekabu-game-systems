@@ -33,7 +33,7 @@ local DepotEvents = ByteNet.defineNamespace(NAMESPACE, function()
 					client = ByteNet.string,
 					job = ByteNet.string,
 					note = ByteNet.string,
-					-- ShiftConstants.QUOTA (350) and a layout truck (1..DepotConstants.MAX_TRUCKS, 0 = unknown).
+					-- The crew's quota (ShiftQuotaFormulas; 0 on the drive card) and a layout truck (1..DepotConstants.MAX_TRUCKS, 0 = unknown).
 					quota = ByteNet.uint16,
 					truck = ByteNet.uint8,
 				}),

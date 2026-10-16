@@ -8,7 +8,7 @@
 	  GLINT_DISTANCE: a hint easy to miss;
 	- the reveal: a cargo item that was hidden under a pile pops out with a gold burst and `cargoReveal`;
 	- the appraisal: a valuable appraised a moment ago (CargoAppraisedAt, fresh by CargoLootFeedbackFormulas.stampFresh)
-	  bursts paper flecks with `cargoAppraise` (its stamp toast and its tag's stamp are the server's and the tag's).
+	  bursts paper flecks with `cargoAppraise` (its sticky slip and its tag's stamp are the server's and the tag's).
 
 	Client-local instances; pending sounds (CargoAssets) are skipped silently.
 

@@ -5,7 +5,8 @@
 	per shell (UIBillboards). Truck tags (W1): the crew and the countdown come from Queue's state-synced snapshot and each
 	player's public `truck` field; every TICK_SECONDS each tag is rebuilt (DepotWorldViewModel.truckTag) and rendered
 	only when a drawn line changed (`sameTag`), so the countdown re-renders once a second and nothing remounts. The contract
-	board (W2) and the result board (W3) draw from their shells' attributes; your review card's shell (W4, in your
+	board (W2) draws from its shell's attributes and the local player's truck crew (its CLEAR line is that crew's quota),
+	redrawn on the same tick when the crew changes; the result board (W3) draws from its shell's attributes; your review card's shell (W4, in your
 	PlayerGui) draws the whole result board with your card and award stickies, and while it exists the shared board draws
 	nothing (DepotWorldViewModel.drawsSharedBoard).
 
@@ -15,6 +16,7 @@
 	@class DepotBillboardSystem
 ]=]
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -26,6 +28,7 @@ local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync
 local UIBillboardHost = require(ReplicatedStorage.Client.UI.Layers.UIBillboardHost)
 local UIBillboards = require(ReplicatedStorage.Client.UI.Layers.UIBillboards)
 local DepotResultBoard = require(ReplicatedStorage.Client.UI.React.Screens.World.DepotResultBoard)
+local DepotBoardViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotBoardViewModel)
 local DepotTruckTag = require(ReplicatedStorage.Client.UI.React.Screens.World.DepotTruckTag)
 local DepotWorkOrderBoard = require(ReplicatedStorage.Client.UI.React.Screens.World.DepotWorkOrderBoard)
 local DepotWorldViewModel = require(ReplicatedStorage.Client.UI.React.Screens.World.DepotWorldViewModel)
@@ -92,8 +95,18 @@ local function drawReview(shell: UIBillboards.WorldShell)
 	)
 end
 
+local contracts: { [UIBillboards.WorldShell]: true } = {}
+-- The local player's truck crew the contract boards last drew (nil: not in a truck; 0 before the first draw).
+local drawnCrew: number? = 0
+
+local function myCrew(): number?
+	return DepotBoardViewModel.crewOf(QueueStore.snapshot(), Players.LocalPlayer.UserId)
+end
+
 local function drawContract(shell: UIBillboards.WorldShell)
-	local view = DepotWorldViewModel.workOrder(shell:GetAttributes())
+	local crew = myCrew()
+	drawnCrew = crew
+	local view = DepotWorldViewModel.workOrder(shell:GetAttributes(), crew)
 	roots.show(shell, if view ~= nil then sign(PX.contract, e(DepotWorkOrderBoard, { view = view })) else nil)
 end
 
@@ -128,7 +141,12 @@ function DepotBillboardSystem.start()
 		trucks[shell] = nil
 		drawn[shell] = nil
 	end)
-	watch(TAGS.contract, drawContract)
+	watch(TAGS.contract, function(shell)
+		contracts[shell] = true
+		drawContract(shell)
+	end, function(shell)
+		contracts[shell] = nil
+	end)
 	watch(TAGS.result, function(shell)
 		results[shell] = true
 		drawResults()
@@ -153,6 +171,11 @@ function DepotBillboardSystem.start()
 		for shell in trucks do
 			drawTruck(shell)
 		end
+		if myCrew() ~= drawnCrew then
+			for shell in contracts do
+				drawContract(shell)
+			end
+		end
 	end)
 	table.insert(stoppers, function()
 		ticking:Disconnect()
@@ -169,6 +192,8 @@ function DepotBillboardSystem.stop()
 	table.clear(results)
 	table.clear(reviews)
 	table.clear(drawn)
+	table.clear(contracts)
+	drawnCrew = 0
 end
 
 function DepotBillboardSystem.getState(): DepotBillboardState

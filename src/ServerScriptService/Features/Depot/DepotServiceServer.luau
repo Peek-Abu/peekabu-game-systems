@@ -13,7 +13,9 @@
 	- A departing party carries tonight's contract id (setDepartData) and gets the drive card; a local move
 	  to the depot lands on the spawn points (setArrivalPoint).
 	- An arriving party (and a member who joins late), wherever it lands, gets the arrival card for its
-	  contract (resolved from the untrusted payload), with the truck it rode (DepotContractUtils.truckOf); the drive card names the departing truck. A client says it listens (DepotEvents.Ready); a card
+	  contract (resolved from the untrusted payload), with the truck it rode (DepotContractUtils.truckOf) and the quota for the
+	  crew that arrived (ShiftQuotaFormulas, the crew size the run's quota is set from; a late member gets the same card);
+	  the drive card names the departing truck. A client says it listens (DepotEvents.Ready); a card
 	  sent before that is held and delivered then, so a slow-loading client does not miss it.
 	- A returning player (Queue `returned`) gets their result card (ShiftCardUtils.decode: teleport data is
 	  untrusted) pinned on the result board, visible to them only, and a toast; the card's summary
@@ -41,7 +43,7 @@ local DepotTypes = require(DepotShared.Data.DepotTypes)
 local DepotEvents = require(DepotShared.Net.DepotEvents)
 local InteractionRegistry = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionRegistry)
 local QueueTypes = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueTypes)
-local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
+local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
 local DepotLayoutConstants = require(DepotServer.Data.DepotLayoutConstants)
 local DepotLayoutRules = require(DepotServer.Rules.DepotLayoutRules)
 local DepotContractUtils = require(DepotServer.Utils.DepotContractUtils)
@@ -76,6 +78,8 @@ local contract: DepotTypes.Contract = DepotContractUtils.tonight(DepotConstants.
 local crewContract: DepotTypes.Contract = contract
 -- The truck that crew rode (from the untrusted payload; nil when unknown).
 local crewTruck: number? = nil
+-- That crew's quota (ShiftQuotaFormulas, by how many arrived); a late member is told the same one.
+local crewQuota: number = ShiftQuotaFormulas.quota(1)
 local stoppers: { () -> () } = {}
 local cardsSent = 0
 local cardsPinned = 0
@@ -227,10 +231,11 @@ local DepotServiceServer: DepotServiceServer = {
 		local arrived = QueueServiceServer.arrived:Connect(function(party, payload)
 			crewContract = DepotContractUtils.resolve(DepotConstants.CONTRACTS, payload.contract)
 			crewTruck = DepotContractUtils.truckOf(payload.truck, DepotConstants.MAX_TRUCKS)
-			sendCard(party, DepotContractUtils.arrivalCard(crewContract, ShiftConstants.QUOTA, crewTruck))
+			crewQuota = ShiftQuotaFormulas.quota(#party)
+			sendCard(party, DepotContractUtils.arrivalCard(crewContract, crewQuota, crewTruck))
 		end)
 		local late = QueueServiceServer.joinedLate:Connect(function(player)
-			sendCard({ player }, DepotContractUtils.arrivalCard(crewContract, ShiftConstants.QUOTA, crewTruck))
+			sendCard({ player }, DepotContractUtils.arrivalCard(crewContract, crewQuota, crewTruck))
 		end)
 		local returned = QueueServiceServer.returned:Connect(pinResultCard)
 		local listening = DepotEvents.packets.Ready.listen(function(data: boolean, player: Player?)

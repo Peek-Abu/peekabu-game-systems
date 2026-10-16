@@ -4,7 +4,8 @@
 	per place (filled = aboard), "n / 4 ABOARD" and line 3: the red "Leaving in m:ss" when the truck is full or
 	DepotConstants.TAG_WARN_SECONDS or fewer remain, "Leaving now" while it departs, else how to join. `padFor` finds the
 	Queue pad whose crew stand in a truck (by their public `truck` field); `sameTag` says whether two tags draw the same,
-	so an unchanged tag is not re-rendered. The contract board (W2): the work order from the board's attributes. Your review
+	so an unchanged tag is not re-rendered. The contract board (W2): the work order from the board's attributes, its CLEAR
+	line for the crew in the viewer's truck (else the range by crew size). Your review
 	card (W4): the card from its attributes, with the award stickies; nil for anything that is not a card. Pure.
 
 	@class DepotWorldViewModel
@@ -18,6 +19,7 @@ local QueueTypes = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueTyp
 local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftCurrencyUtils = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftCurrencyUtils)
+local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
 local DepotBoardViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotBoardViewModel)
 local WorldBillboardViewModel = require(ReplicatedStorage.Client.UI.React.Screens.World.WorldBillboardViewModel)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
@@ -145,7 +147,8 @@ function DepotWorldViewModel.sameTag(a: TruckTagView?, b: TruckTagView?): boolea
 	return true
 end
 
-function DepotWorldViewModel.workOrder(attributes: { [string]: unknown }): WorkOrderView?
+-- `crew`: the size of the viewer's truck crew (DepotBoardViewModel.crewOf); nil when they are not in a truck.
+function DepotWorldViewModel.workOrder(attributes: { [string]: unknown }, crew: number?): WorkOrderView?
 	local keys = DepotConstants.CONTRACT_KEYS
 	local id = attributes[keys.id]
 	local client = attributes[keys.client]
@@ -153,13 +156,22 @@ function DepotWorldViewModel.workOrder(attributes: { [string]: unknown }): WorkO
 	if type(id) ~= "string" or type(client) ~= "string" or type(job) ~= "string" then
 		return nil
 	end
+	local clear: string
+	local who: string
+	if crew == nil then
+		clear = `CLEAR {ShiftQuotaFormulas.quota(1)}–{ShiftQuotaFormulas.quota(#ShiftConstants.QUOTA_BY_CREW)}`
+		who = "more crew, more to clear"
+	else
+		clear = `CLEAR {ShiftQuotaFormulas.quota(crew)}`
+		who = if crew <= 1 then "for one player" else `for a crew of {crew}`
+	end
 	return {
 		number = `WORK ORDER {DepotBoardViewModel.workOrder(id)}`,
 		kicker = DepotConstants.BOARD_COPY.title,
 		client = WorldBillboardViewModel.clip(client, DepotWorldViewModel.WORK_CLIENT_MAX),
 		job = job,
-		clear = `CLEAR {ShiftConstants.QUOTA}`,
-		before = `of site buildup before {ShiftHudViewModel.clock(ShiftConstants.SHIFT_SECONDS)}`,
+		clear = clear,
+		before = `{who} · {ShiftHudViewModel.clock(ShiftConstants.SHIFT_SECONDS)} on the clock`,
 		key = "E",
 		action = "Read the work order",
 	}

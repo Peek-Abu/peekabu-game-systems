@@ -1,4 +1,5 @@
 local DepotPadViewModel = require(script.Parent.DepotPadViewModel)
+local ShiftQuotaFormulas = require(game:GetService("ReplicatedStorage").Shared.Features.Shift.Utils.ShiftQuotaFormulas)
 
 local NAMES = { [1] = "Sam", [2] = "Alex", [3] = "Me" }
 
@@ -16,10 +17,20 @@ return function()
 		expect(DepotPadViewModel.pad(pad({ members = { 1 } }), 3, NAMES, 2, 100, false)).to.equal(nil)
 	end)
 
-	it("titles the card with the truck and the job", function()
-		expect(DepotPadViewModel.pad(pad(), 3, NAMES, 2, 100, false).title).to.equal("TRUCK 2 — HARLOW & FINCH JOB")
-		expect(DepotPadViewModel.pad(pad(), 3, NAMES, nil, 100, false).title).to.equal("HARLOW & FINCH JOB")
-		expect(DepotPadViewModel.pad(pad(), 3, NAMES, 2, 100, true).title).to.equal("TRUCK 2 · CREW")
+	it("titles the card with the truck, the job and this crew's quota", function()
+		local three = ShiftQuotaFormulas.quota(3)
+		expect(DepotPadViewModel.pad(pad(), 3, NAMES, 2, 100, false).title).to.equal(
+			`TRUCK 2 — HARLOW & FINCH JOB · QUOTA {three}`
+		)
+		expect(DepotPadViewModel.pad(pad(), 3, NAMES, nil, 100, false).title).to.equal(
+			`HARLOW & FINCH JOB · QUOTA {three}`
+		)
+		expect(DepotPadViewModel.pad(pad(), 3, NAMES, 2, 100, true).title).to.equal(`TRUCK 2 · CREW · QUOTA {three}`)
+	end)
+
+	it("follows the crew aboard: a solo truck posts the solo quota", function()
+		local view = DepotPadViewModel.pad(pad({ members = { 3 } }), 3, NAMES, 1, 100, true)
+		expect(view.title).to.equal(`TRUCK 1 · CREW · QUOTA {ShiftQuotaFormulas.quota(1)}`)
 	end)
 
 	it("counts the crew and fills open slots up to capacity, you marked", function()

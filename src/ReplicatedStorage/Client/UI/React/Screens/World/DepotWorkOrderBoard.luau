@@ -61,7 +61,7 @@ local function DepotWorkOrderBoard(props: DepotWorkOrderBoardProps): React.React
 			BorderSizePixel = 0,
 		}),
 		clear = label(view.clear, "heading", 40, COLOR.stamp, 134, 46, true),
-		before = label(view.before, "body", 18, COLOR.ink, 180, 24),
+		before = label(view.before, "body", 18, COLOR.ink, 180, 24, true),
 		prompt = e("Frame", {
 			Position = UDim2.fromOffset(0, 228),
 			Size = UDim2.fromOffset(0, 34),

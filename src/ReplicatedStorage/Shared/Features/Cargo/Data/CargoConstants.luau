@@ -129,11 +129,13 @@ return table.freeze({
 	APPRAISED_AT_ATTRIBUTE = "CargoAppraisedAt",
 	-- Set on a dust pile that hides an item (Office): its glint.
 	BURIED_ATTRIBUTE = "CargoBuried",
-	-- An appraisal is stamped (a toast in Shift's "stamp" style) to every crew member this close, and its tag's stamp
-	-- pops when it is younger than STAMP_FRESH_SECONDS.
+	-- An appraisal is told (a small sticky slip off-centre, Shift's "slip" toast style, "slipJackpot" for a jackpot;
+	-- never the big centre stamp, which is kept for shift milestones) to every crew member this close, briefly; its
+	-- tag's own APPRAISED stamp pops when it is younger than STAMP_FRESH_SECONDS.
 	APPRAISAL_TELL_DISTANCE = 30,
-	APPRAISAL_TOAST_STYLE = "stamp",
-	APPRAISAL_TOAST_SECONDS = 3,
+	APPRAISAL_TOAST_STYLE = "slip",
+	APPRAISAL_JACKPOT_STYLE = "slipJackpot",
+	APPRAISAL_TOAST_SECONDS = 2.5,
 	STAMP_FRESH_SECONDS = 2,
 	-- The grime look (client): a Highlight in GRIME_COLOR, fill transparency GRIME_FILL_TRANSPARENCY at full grime
 	-- easing to 1 when clean, and dust motes at up to GRIME_MOTE_RATE per second, drawn within GRIME_VISUAL_DISTANCE

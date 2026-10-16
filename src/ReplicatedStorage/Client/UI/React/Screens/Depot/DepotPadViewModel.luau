@@ -1,7 +1,7 @@
 --!strict
 --[=[
-	DepotPadViewModel: the truck's queue card for a player standing in its bed (Figma 3a/3b): the truck and the job,
-	"3 / 4" aboard, a slot per seat (you marked, empty seats "open"), the departure countdown, and how to leave. Pure.
+	DepotPadViewModel: the truck's queue card for a player standing in its bed (Figma 3a/3b): the truck and the job
+	with the quota for the crew aboard (ShiftQuotaFormulas), "3 / 4" aboard, a slot per seat (you marked, empty seats "open"), the departure countdown, and how to leave. Pure.
 
 	@class DepotPadViewModel
 ]=]
@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local QueueTypes = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueTypes)
+local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 
 export type SlotView = { name: string, open: boolean, you: boolean }
@@ -54,6 +55,7 @@ function DepotPadViewModel.pad(
 	else
 		title = if truck ~= nil then `TRUCK {truck} — {DepotConstants.JOB_TITLE}` else DepotConstants.JOB_TITLE
 	end
+	title = `{title} · QUOTA {ShiftQuotaFormulas.quota(#pad.members)}`
 	return {
 		title = title,
 		count = `{#pad.members} / {pad.capacity}`,

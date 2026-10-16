@@ -28,7 +28,7 @@ items** on the map, so every find feels like a find and every trip carries more 
 2. Vacuum. A pile clears in 2.5 s and pays canister fill, which still makes a dust bag. A buried pile **pops** its item
    out. A grimy item gets cleaner, rises in value and is **appraised** at 65%.
 3. Choose. Cleaning takes time and is loud: it draws the Manager. You can clean it now, or grab it dirty for less.
-4. Bank it at the truck. An item that was never appraised is appraised there, with the same stamp.
+4. Bank it at the truck. An item that was never appraised is appraised there, with the same slip.
 
 ## 3. Rules and numbers
 
@@ -78,11 +78,15 @@ richer loot, a longer walk, more time near the Manager.
 
 - The tag shows **"$???"** until the item is **appraised**. That happens when cleanliness first reaches **65%**, and
   it sticks.
-- When it happens: the tag's APPRAISED stamp pops in. A stamp toast goes to every crew member within 30 studs:
-  "APPRAISED · Gold-trim monitor $250". There is a sound hook (`cargoAppraise`, pending) and a small paper burst.
+- When it happens: the tag's APPRAISED stamp pops in. A **small sticky slip** goes to every crew member within 30
+  studs, for 2.5 s: the item's name over its value ("Gold-trim monitor / $250"). It sits bottom-right, just above the
+  hands and tool cards (phone: right side, under the tool card), stacks if several land together (3 on desktop, 2 on
+  phone), drifts in quietly and is silent. A jackpot slip carries a small red JACKPOT stamp and its value in red.
+  The big centre stamp is kept for shift milestones (QUOTA MET, OVERTIME): the game is a horror game first, so
+  mid-shift UI stays quiet and diegetic. There is a sound hook (`cargoAppraise`, pending) and a small paper burst.
 - A jackpot item shows its variant name only once it is appraised ("Gold-trim monitor"). Until then it reads like any
   other monitor.
-- **Banking an unappraised item** appraises it at the truck. The banker gets the same stamp toast, and the item pays
+- **Banking an unappraised item** appraises it at the truck. The banker gets the same slip ("Monitor / $36 at the truck"), and the item pays
   its value as it is (its grime factor still applies: banking does not clean it).
 
 ### 3.4 Buried loot
@@ -119,8 +123,11 @@ richer loot, a longer walk, more time near the Manager.
 - **Quota by crew size: 770 / 830 / 870 / 900** for 1 / 2 / 3 / 4 players. Measured over 30 generated offices, a
   map is worth about 1,850 fully clean and about 1,280 at average cleanliness (minimum 1,000, before any top-up), so
   the quota needs roughly 60 / 65 / 68 / 70% of it. Solo gets the smallest share, because one carrier makes fewer
-  trips. A crew of four is capped near 70%, because the map does not grow with the crew. `ShiftConstants.QUOTA` (830,
-  the two-player figure) stays as the quota posted at the depot; the depot board's copy now reads "of site value".
+  trips. A crew of four is capped near 70%, because the map does not grow with the crew. The depot posts the quota for the crew
+  actually in the reader's truck (`ShiftQuotaFormulas`, now shared): the contract board's QUOTA row ("870 for your
+  crew of 3. Everything you bank counts, and clean things count more."), the work-order sign's CLEAR line, the truck
+  card's band ("QUOTA 870") and the arrival card (the crew that arrived). A player not in a truck sees the range
+  ("770 for one player, up to 900 for four"). `ShiftConstants.QUOTA` (830) is only the fallback before a run sets its own.
 - **Cleared (the quota)** counts every banked item at ×1: trash value plus valuables' current value.
 - **Earned (Recovery pay)** counts valuables only, × the salvage multiplier: ×1 normally, **×1.5 in overtime**. Trash
   never pays, as before.
@@ -136,11 +143,11 @@ richer loot, a longer walk, more time near the Manager.
 | Cleaning while someone holds it | Not allowed (as above). If someone picks up an item mid-clean, the cleaners' channels end on the next tick. Progress is kept. |
 | A catch drops it | Same as a drop: forced drops keep the item and its state. Pocketed items scatter with their appraisal (base, cleanliness, appraised, variant) intact. |
 | Pocketing a tiny grimy item | Allowed. The pocket entry carries the appraisal. You can't clean in a pocket. Unpocketing or a scatter respawns it as it was. |
-| Multiplayer cleaning | Channel rates add up. Everyone on the item at the appraisal moment, plus anyone within 30 studs, gets the stamp. Noise is credited to every cleaner. |
+| Multiplayer cleaning | Channel rates add up. Everyone on the item at the appraisal moment, plus anyone within 30 studs, gets the slip. Noise is credited to every cleaner. |
 | Vacuuming a pile next to an item | The aim picks the target nearest the wand's floor head, and keeps the current one while it stays in reach. Piles and items share one pick. |
 | Overtime ×1.5 | It applies to the valuables' pay, at their current (grime-scaled) value, at the moment they are banked. Cleared counts ×1. |
 | Dust-bag canister | Unchanged: 3 piles make a 15 dust bag. Cleaning an item does not fill the canister, because only cleared piles do. |
-| Banking an unappraised item | It is appraised at the truck, with the stamp toast to the banker. It pays at its current cleanliness. |
+| Banking an unappraised item | It is appraised at the truck, with the slip to the banker. It pays at its current cleanliness. |
 | A buried item and the greed target | The stapler still prefers a deep desk; if none exists it goes under a deep pile. Buried greed glints like any buried pile. |
 | Results screen | CLEARED shows every banked value against the quota. EARNED shows Recovery pay (valuables, overtime ×1.5). ASSETS RECOVERED shows valuables banked out of valuables offered, counting open, buried and desk ones. The EXCEEDS rating rule is unchanged (2 of every 3 offered). |
 | The HUD's hands line | A held valuable reads "$???". Its real number is on its tag. |
@@ -165,12 +172,12 @@ richer loot, a longer walk, more time near the Manager.
 | Feature | Realm | Subfolder | Name | Job |
 |---|---|---|---|---|
 | Cargo | shared | Utils | CargoAppraisalFormulas | The value maths: the range and jackpot roll, the depth multiplier, the grime factor, the appraisal threshold, an item's current value, cleanliness from channel progress |
-| Cargo | server | Systems | CargoGrimeSystem | Mirrors grime channel progress into cleanliness, re-prices, appraises (stamp toast and sound), finishes cleaning, appraises at the truck |
+| Cargo | server | Systems | CargoGrimeSystem | Mirrors grime channel progress into cleanliness, re-prices, appraises (slip toast and sound), finishes cleaning, appraises at the truck |
 | Cargo | client | Systems | CargoGrimeVisualSystem | The darkening highlight and dust motes, fading with `CargoClean` |
 | Cargo | client | Systems | CargoLootFeedbackSystem | The glint on buried piles, the reveal pop, the appraisal burst and sounds |
 | Cargo | client | Utils | CargoLootFeedbackFormulas | The grime look (fill, motes, draw distance), the glint schedule and range, and stamp freshness |
 | Office | server | Utils | OfficeLootUtils | Rolls the map's valuables: the budget, buried piles, open placement, depth-scaled appraisals, the top-up |
-| Shift | server | Utils | ShiftQuotaFormulas | The quota for a crew size, and what one deposit adds to cleared and earned |
+| Shift | shared | Utils | ShiftQuotaFormulas | The quota for a crew size, and what one deposit adds to cleared and earned |
 
 Changed: `CargoRegistry` (ranges, jackpots, buriable, grimy), `CargoTypes`, `CargoConstants`, `CargoSpawnSystem`
 (appraisal attributes, `reprice`), `CargoFeedbackUtils.entryOf`, `CargoBankRules`, the pocket respawns,
