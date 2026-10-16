@@ -88,14 +88,14 @@ local function pileKindOf(pile: Instance): string
 	return if type(kind) == "string" then kind else "unknown"
 end
 
--- Standing in the loading bay (Mr. Harlow's safe zone)?
+-- Standing in the loading bay (where the truck is; only its box is safe from Mr. Harlow)?
 local function inBay(player: Player): boolean
 	local character = player.Character
 	local root = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil
 	if root == nil or not root:IsA("BasePart") then
 		return false
 	end
-	local low, high = OfficeServiceServer:safeZone()
+	local low, high = OfficeServiceServer:loadingBay()
 	return ShiftAnalyticsUtils.inBox(root.Position, low, high)
 end
 

@@ -8,9 +8,12 @@
 	  shift's container, so a reset removes him too.
 	- Senses, gathered in the brain each think and handed to the pure OccupantBrainRules: each crew member's
 	  position with one synchronous line-of-sight ray (Workspace:Raycast never yields; at most one ray per
-	  crew member per 0.25 s think, the base's own cost), the latest noise he heard outside the loading bay
-	  (NoiseServiceServer through NoiseRules and the hearing scale), the shift's break, the route, the rest
-	  point and the safe loading bay.
+	  crew member per 0.25 s think, the base's own cost) and whether they hide (Hide: and whether he saw them go
+	  in), the latest noise he heard outside the truck's box (NoiseServiceServer through NoiseRules and the
+	  hearing scale), the shift's break, the route, the rest point, the safe truck box and the loading bay he may
+	  walk but never lingers in.
+	- Hiding: he is Hide's witness (`setWitness`): a player who goes into a spot while he sees them (or while he
+	  chases them) is "seen entering", and he knows where they are; a catch drags them out first (`evict`).
 	- Pacing: OccupantTuningFormulas turns the shift's tier and the crew size into his speeds (setTuning) and
 	  his hearing scale (NoiseServiceServer:setHearingScale), refreshed every TUNING_INTERVAL; a tier rise
 	  flickers every light (OccupantEvents.Flicker).
@@ -57,6 +60,7 @@ local OccupantTuningFormulas = require(OccupantServer.Utils.OccupantTuningFormul
 local OccupantRigSystem = require(OccupantServer.Systems.OccupantRigSystem)
 local OccupantCatchSystem = require(OccupantServer.Systems.OccupantCatchSystem)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
+local HideServiceServer = require(ServerScriptService.Features.Hide.HideServiceServer)
 local NoiseServiceServer = require(ServerScriptService.Features.Noise.NoiseServiceServer)
 local NpcServiceServer = require(ServerScriptService.Features.Npc.NpcServiceServer)
 local OfficeServiceServer = require(ServerScriptService.Features.Office.OfficeServiceServer)
@@ -95,6 +99,7 @@ local shift: ShiftTypes.ShiftState? = nil
 local route: { Vector3 } = {}
 local restPoint = Vector3.zero
 local zone: OccupantTypes.Zone = { min = Vector3.zero, max = Vector3.zero }
+local bay: OccupantTypes.Zone? = nil
 local pendingNoise: Vector3? = nil
 local lookBase: number? = nil
 local tuningElapsed = 0
@@ -146,11 +151,34 @@ local function show(current: OccupantRigSystem.Rig, nextMind: OccupantTypes.Mind
 	end
 end
 
--- Every crew member he could see this think, each with one line-of-sight ray from his head.
+-- Every crew member he could see this think, each with one line-of-sight ray from his head, and whether they hide
+-- (and he saw them go in).
 local function glimpses(current: OccupantRigSystem.Rig, sightRange: number): { OccupantTypes.Glimpse }
-	return Sense.glimpses(current, sightRange, RoundServiceServer:participants(), function(player)
+	local list = Sense.glimpses(current, sightRange, RoundServiceServer:participants(), function(player)
 		return not DeathServiceServer:isDead(player) and not OccupantCatchSystem.isCatching(player.UserId)
 	end)
+	return Sense.markHidden(list)
+end
+
+local function world(): Sense.World
+	return { resting = resting(), route = route, restPoint = restPoint, zone = zone, bay = bay }
+end
+
+-- Hide's witness: whether he sees `player` right now as they go into a spot (or is chasing them). Never yields.
+local function witness(player: Player): boolean
+	local current, currentMind = rig, mind
+	local def = NpcRegistry.get(OccupantConstants.NPC_KIND)
+	if current == nil or currentMind == nil or def == nil then
+		return false
+	end
+	local seen = Sense.glimpses(current, def.sightRange, { player }, function(): boolean
+		return true
+	end)
+	return OccupantBrainRules.witnessed(
+		currentMind,
+		Sense.senses(current, def, os.clock(), seen, world()),
+		player.UserId
+	)
 end
 
 -- The `harlow` brain: senses → OccupantBrainRules.step → intent. Never yields.
@@ -160,20 +188,9 @@ local function brain(def: NpcTypes.NpcDef, context: NpcTypes.BrainContext, npc: 
 	if current == nil or before == nil or npc ~= current.model then
 		return { kind = "idle" }
 	end
-	local senses: OccupantTypes.Senses = {
-		position = context.position,
-		reachTopY = current.head.Position.Y + current.head.Size.Y / 2,
-		look = current.root.CFrame.LookVector,
-		now = context.now,
-		sightRange = def.sightRange,
-		sightAngle = def.sightAngle,
-		players = glimpses(current, def.sightRange),
-		heard = pendingNoise,
-		resting = resting(),
-		route = route,
-		restPoint = restPoint,
-		zone = zone,
-	}
+	local senses = Sense.senses(current, def, context.now, glimpses(current, def.sightRange), world())
+	senses.position = context.position
+	senses.heard = pendingNoise
 	pendingNoise = nil
 	local result = OccupantBrainRules.step(before, senses)
 	mind = result.mind
@@ -187,8 +204,8 @@ local function brain(def: NpcTypes.NpcDef, context: NpcTypes.BrainContext, npc: 
 end
 
 -- A noise: remembered for the next think if he hears it (not while resting or standing over a catch). A noise
--- inside the loading bay is dropped here, before it can replace an earlier valid one: `Senses.heard` carries
--- one point, so the one passed is the latest heard noise OUTSIDE the bay.
+-- inside the truck's box is dropped here, before it can replace an earlier valid one: `Senses.heard` carries
+-- one point, so the one passed is the latest heard noise OUTSIDE the box.
 local function onNoise(noise: NoiseTypes.NoiseEvent)
 	local current = rig
 	local currentMind = mind
@@ -245,14 +262,9 @@ local function onCatch(npc: Model, player: Player)
 			current.head.Position.Y + current.head.Size.Y / 2,
 			OccupantConstants.CATCH_RANGE + OccupantConstants.CATCH_SLACK
 		),
-		clear = (function(): boolean
-			for _, glimpse in glimpses(current, math.huge) do
-				if glimpse.userId == player.UserId then
-					return glimpse.clear
-				end
-			end
-			return false
-		end)(),
+		-- A player he saw go into a hiding spot is in plain view to him (he knows where they are).
+		clear = Sense.inView(glimpses(current, math.huge), player.UserId),
+		hidden = HideServiceServer:isHidden(player) and not HideServiceServer:seenEntering(player),
 		position = if root ~= nil then root.Position else current.root.Position,
 		alive = humanoid ~= nil and humanoid.Health > 0 and not DeathServiceServer:isDead(player),
 		catching = OccupantCatchSystem.isCatching(player.UserId),
@@ -264,6 +276,8 @@ local function onCatch(npc: Model, player: Player)
 		log:debug(`catch of {player.Name} refused: {reason or "?"}`)
 		return
 	end
+	-- Dragged out of the spot he saw them go into, then caught.
+	HideServiceServer:evict(player, "evicted")
 	if not OccupantCatchSystem.begin(current, player, catchHooks) then
 		return
 	end
@@ -320,6 +334,8 @@ local function spawnHarlow()
 	restPoint = OfficeServiceServer:restPoint()
 	local min, max = OfficeServiceServer:safeZone()
 	zone = { min = min, max = max }
+	local bayMin, bayMax = OfficeServiceServer:loadingBay()
+	bay = { min = bayMin, max = bayMax }
 	local fresh = OccupantBrainRules.newMind(start, direction, os.clock())
 	rig = built
 	mind = fresh
@@ -392,6 +408,7 @@ local OccupantServiceServer: OccupantServiceServer = {
 		"DeathServiceServer",
 		"RoundServiceServer",
 		"ToastServiceServer",
+		"HideServiceServer",
 	},
 
 	--[=[
@@ -399,6 +416,7 @@ local OccupantServiceServer: OccupantServiceServer = {
 	]=]
 	start = function(_self)
 		NpcServiceServer:setBrain(OccupantConstants.NPC_KIND, brain)
+		HideServiceServer:setWitness(witness)
 		NpcServiceServer:onAttack(OccupantConstants.NPC_KIND, onCatch)
 		-- ~8 s of spectating before the respawn (spec §4); Shift's resolver respawns in the loading bay.
 		DeathServiceServer:configure({ respawnDelay = OccupantConstants.SPECTATE_SECONDS })
@@ -438,6 +456,7 @@ local OccupantServiceServer: OccupantServiceServer = {
 		OccupantCatchSystem.clear()
 		shift = nil
 		NpcServiceServer:setBrain(OccupantConstants.NPC_KIND, nil)
+		HideServiceServer:setWitness(nil)
 		despawn()
 	end,
 

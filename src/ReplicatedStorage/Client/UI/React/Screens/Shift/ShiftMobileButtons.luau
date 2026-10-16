@@ -8,7 +8,8 @@
 
 	A HUD widget: it reads the shift snapshot, the local player's public entry, the scare beat and the touch flag, and
 	draws what ShiftHudViewModel.mobileButtons decides (whether the arc shows, VACUUM or BANK, which buttons are
-	available or lit). The base Input feature has no touch bindings, so the buttons call the Vacuum and Cargo client
+	available or lit). SPRINT (held, empty hands only, not while hiding) takes DROP's spot, which only shows while
+	holding something; it holds the sprint through SprintServiceClient. The base Input feature has no touch bindings, so the buttons call the Vacuum and Cargo client
 	services directly. The big button keeps the hold semantics for VACUUM. As BANK it is usable (and lit) only while the
 	truck's Load prompt is shown (ShiftPromptStore, ShiftHudViewModel.loadReady: the engine takes a touch hold only on
 	a shown prompt); pressing holds that prompt and releasing lets go, through the `onPrompt` prop (ShiftServiceClient
@@ -31,6 +32,8 @@ local ShiftPromptStore = require(ReplicatedStorage.Client.Features.Shift.State.S
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local VacuumServiceClient = require(ReplicatedStorage.Client.Features.Vacuum.VacuumServiceClient)
+local HideStore = require(ReplicatedStorage.Client.Features.Hide.State.HideStore)
+local SprintServiceClient = require(ReplicatedStorage.Client.Features.Sprint.SprintServiceClient)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local usePaperViewport = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperViewport)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
@@ -126,6 +129,7 @@ local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactN
 	local publicPlayers = useAtom(StateSyncClientStore.publicPlayers)
 	local scaring = useAtom(OccupantCatchStore.scaring)
 	local shownPrompt = useAtom(ShiftPromptStore.shown)
+	local hiding = useAtom(HideStore.hidden) ~= nil
 	local player = Players.LocalPlayer
 	local me = if player ~= nil then publicPlayers[StateSyncConstants.publicEntryKey(player.UserId)] else nil
 	local onPrompt = if props ~= nil then props.onPrompt else nil
@@ -134,7 +138,8 @@ local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactN
 		me,
 		UserInputService.TouchEnabled,
 		ShiftHudViewModel.hidden(me, scaring),
-		ShiftHudViewModel.loadReady(shownPrompt)
+		ShiftHudViewModel.loadReady(shownPrompt),
+		hiding
 	)
 	local viewport = usePaperViewport()
 	local arc = ShiftHudViewModel.arcFor(math.min(viewport.X, viewport.Y))
@@ -177,6 +182,13 @@ local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactN
 	React.useEffect(function()
 		return endLoad
 	end, { ShiftHudViewModel.loadLive(view) })
+	local sprintable = view ~= nil and view.sprint
+	-- A held SPRINT lets go whenever the button goes away (unmounting skips its InputEnded).
+	React.useEffect(function()
+		return function()
+			SprintServiceClient:setHeld(false)
+		end
+	end, { sprintable })
 	if view == nil then
 		return nil
 	end
@@ -229,6 +241,21 @@ local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactN
 		drop = if view.drop then e(ActionButton, dropProps) else nil,
 		throw = if view.throw then e(ActionButton, throwProps) else nil,
 		pocket = if view.pocket then e(ActionButton, pocketProps) else nil,
+		sprint = if view.sprint
+			then e(ActionButton, {
+				label = "SPRINT",
+				spot = arc.drop,
+				large = false,
+				available = true,
+				ready = false,
+				onHoldBegin = function()
+					SprintServiceClient:setHeld(true)
+				end,
+				onHoldEnd = function()
+					SprintServiceClient:setHeld(false)
+				end,
+			})
+			else nil,
 	})
 end
 

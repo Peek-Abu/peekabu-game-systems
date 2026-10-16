@@ -2,8 +2,8 @@
 --[=[
 	OccupantCatchRules: whether Harlow may catch a player right now (Cleanup Crew spec §4 "Catch", "Grace",
 	§6.4 "Catches are decided on the server tick"): alive, not already being caught, not on his break, not in
-	their grace, outside the loading bay, and within reach (CATCH_RANGE plus CATCH_SLACK, since the base checks
-	the range a moment earlier). `launch` is the throw: away from him, flat, plus an upward kick. Pure.
+	their grace, outside the truck's box, not hidden where he did not see them go in, and within reach (CATCH_RANGE
+	plus CATCH_SLACK, since the base checks the range a moment earlier). `launch` is the throw: away from him, flat, plus an upward kick. Pure.
 
 	@class OccupantCatchRules
 ]=]
@@ -32,6 +32,9 @@ function OccupantCatchRules.canCatch(input: OccupantTypes.CatchInput): (boolean,
 	end
 	if OccupantBrainRules.inZone(input.position, input.zone) then
 		return false, "safe zone"
+	end
+	if input.hidden == true then
+		return false, "hidden"
 	end
 	if input.reachable == false then
 		return false, "outside grab volume"

@@ -204,12 +204,29 @@ return function()
 			expect(reason).to.equal('route point "b.pile.1" is not a patrol marker')
 		end)
 
-		it("refuses a route point in the safe start room", function()
+		it("accepts a route point in the loading bay, clear of the truck", function()
 			local layout = routed()
-			table.insert(layout.markers, { id = "a.patrol.1", room = "a", kind = "patrol", x = 10, z = 10 })
+			table.insert(layout.markers, { id = "a.patrol.1", room = "a", kind = "patrol", x = 15, z = 5 })
+			layout.route[3] = "a.patrol.1"
+			local ok, reason = OfficeLayoutRules.checkRoute(layout)
+			expect(reason).to.equal(nil)
+			expect(ok).to.equal(true)
+		end)
+
+		it("refuses a route point on the truck (the safe box)", function()
+			local layout = routed()
+			table.insert(layout.markers, { id = "a.patrol.1", room = "a", kind = "patrol", x = 5, z = 14 })
 			layout.route[3] = "a.patrol.1"
 			local _, reason = OfficeLayoutRules.checkRoute(layout)
-			expect(reason).to.equal('route point "a.patrol.1" is in the safe start room')
+			expect(reason).to.equal('route point "a.patrol.1" is on the truck')
+		end)
+
+		it("refuses a rest point in the loading bay", function()
+			local layout = routed()
+			table.insert(layout.markers, { id = "a.rest.1", room = "a", kind = "rest", x = 15, z = 5 })
+			layout.rest = "a.rest.1"
+			local _, reason = OfficeLayoutRules.checkRoute(layout)
+			expect(reason).to.equal('rest point "a.rest.1" is in the loading bay')
 		end)
 
 		it("refuses a missing rest point", function()

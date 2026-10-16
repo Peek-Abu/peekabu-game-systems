@@ -225,6 +225,13 @@ return function()
 			expect(full.pocketReady).to.equal(false)
 		end)
 
+		it("offers SPRINT only with empty hands and out of hiding", function()
+			expect(ShiftHudViewModel.buttons(nil, false).sprint).to.equal(true)
+			expect(ShiftHudViewModel.buttons({ pocket1 = "plaque" }, false).sprint).to.equal(true)
+			expect(ShiftHudViewModel.buttons({ carrying = "plaque" }, false).sprint).to.equal(false)
+			expect(ShiftHudViewModel.buttons(nil, false, true).sprint).to.equal(false)
+		end)
+
 		it("keeps POCKET usable to take something out with empty hands", function()
 			local view = ShiftHudViewModel.buttons({ pocket1 = "plaque" }, false)
 			expect(view.pocket).to.equal(true)
@@ -403,9 +410,10 @@ return function()
 
 		it("names the hint actions it reads bindings for", function()
 			local actions = ShiftHudViewModel.HINT_ACTIONS
-			expect(#actions).to.equal(5)
+			expect(#actions).to.equal(6)
 			expect(actions[1]).to.equal("vacuum")
 			expect(actions[5]).to.equal("interact")
+			expect(actions[6]).to.equal("sprint")
 		end)
 
 		it("draws the hint row on desktop with a keyboard only", function()

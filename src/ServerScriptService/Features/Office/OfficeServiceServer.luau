@@ -9,7 +9,8 @@
 	CargoConstants.BURIED_ATTRIBUTE, its glint), and desk / locker contents (Cargo). Every valuable spawns with the
 	appraisal the roll gave it, fully grimy (the loot loop). `reset` destroys that folder and forgets the shift.
 
-	M2: Harlow's route, rest point and the safe loading bay (`route`, `restPoint`, `safeZone`).
+	M2: Harlow's route, rest point, the loading bay he may walk (`loadingBay`) and the one safe place, the truck's box
+	(`safeZone`).
 
 	Spec-exempt shell (Instances, signals); the decisions are the specced OfficeLayoutRules, OfficeLayoutUtils,
 	OfficeSpawnUtils and OfficeSpawnRules.
@@ -179,6 +180,7 @@ export type OfficeServiceServer = {
 	route: (self: OfficeServiceServer) -> { Vector3 },
 	restPoint: (self: OfficeServiceServer) -> Vector3,
 	safeZone: (self: OfficeServiceServer) -> (Vector3, Vector3),
+	loadingBay: (self: OfficeServiceServer) -> (Vector3, Vector3),
 	whereIs: (self: OfficeServiceServer, position: Vector3) -> (string?, number?, number?),
 	truckBed: (self: OfficeServiceServer) -> BasePart?,
 	overtimeSheet: (self: OfficeServiceServer) -> BasePart?,
@@ -336,12 +338,23 @@ local OfficeServiceServer: OfficeServiceServer = {
 	end,
 
 	--[=[
-		The loading bay in the world: its min and max corners, floor to wall top (Harlow's safe zone).
+		The inside of the truck's box in the world, min and max corners: the one place Harlow never sees, hears, catches
+		or walks into.
 	]=]
 	safeZone = function(_self)
+		local min, max = OfficeLoadingBayUtils.truckBox(LAYOUT.truck)
+		local low = OfficeConstants.ORIGIN:PointToWorldSpace(min)
+		local high = OfficeConstants.ORIGIN:PointToWorldSpace(max)
+		return low:Min(high), low:Max(high)
+	end,
+
+	--[=[
+		The loading bay in the world: its min and max corners, floor to wall top. Harlow may walk it, but never lingers.
+	]=]
+	loadingBay = function(_self)
 		local start = OfficeLayoutUtils.room(LAYOUT, LAYOUT.startRoom)
 		if start == nil then
-			error("OfficeServiceServer:safeZone: the layout has no start room")
+			error("OfficeServiceServer:loadingBay: the layout has no start room")
 		end
 		local min, max = OfficeLayoutUtils.bounds(start, OfficeConstants.WALL_HEIGHT)
 		return OfficeConstants.ORIGIN:PointToWorldSpace(min), OfficeConstants.ORIGIN:PointToWorldSpace(max)

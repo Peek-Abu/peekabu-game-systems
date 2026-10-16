@@ -13,7 +13,9 @@
 	the building (CarryPlacementSystem: no placement through a wall or off the carrier's floor, no
 	tunnelling). `forceDrop` is the hook for game rules (stealing an egg is forceDrop on the victim, then
 	pickUp for the thief).
-	`pickedUp` / `dropped(player, object, reason)` signals let a game react (banking, noise, analytics).
+	`pickedUp` / `dropped(player, object, reason)` signals let a game react (banking, noise, analytics). A game that
+	boosts WalkSpeed itself (a sprint) names the carrier's unboosted speed through `setSpeedBase`, so the carry slow
+	and its restore start from that, never from a boost that happened to be on at the pick-up.
 
 	Spec-exempt shell (Instances, physics, Players, ByteNet); the rules are the specced CarryRegistry,
 	CarryFormulas and CarryHoldTracker.
@@ -78,6 +80,8 @@ local objectsById: { [number]: Instance } = {}
 local nextObjectId = 0
 local held: { [number]: Held } = {} -- by UserId
 local counters = { pickedUp = 0, dropped = 0, thrown = 0, refused = 0 }
+-- The game's unboosted speed for a carrier (nil = the humanoid's WalkSpeed as it is).
+local speedBase: ((player: Player) -> number?)? = nil
 local stoppers: { () -> () } = {}
 
 local function rootPartOf(target: Instance): BasePart?
@@ -172,6 +176,7 @@ export type CarryServiceServer = {
 	throw: (self: CarryServiceServer, player: Player, aim: Vector3) -> (boolean, string?),
 	forceDrop: (self: CarryServiceServer, player: Player, reason: CarryTypes.DropReason?) -> boolean,
 	getCarried: (self: CarryServiceServer, player: Player) -> Instance?,
+	setSpeedBase: (self: CarryServiceServer, source: ((player: Player) -> number?)?) -> (),
 }
 
 local CarryServiceServer: CarryServiceServer
@@ -363,14 +368,12 @@ CarryServiceServer = {
 			CollectionService:AddTag(weld, tag)
 		end
 
-		local savedWalkSpeed = if humanoid ~= nil then humanoid.WalkSpeed else nil
+		local base = speedBase
+		local savedWalkSpeed = if humanoid ~= nil
+			then (if base ~= nil then base(player) else nil) or humanoid.WalkSpeed
+			else nil
 		if humanoid ~= nil and savedWalkSpeed ~= nil then
-			humanoid.WalkSpeed = CarryFormulas.walkSpeedFor(
-				savedWalkSpeed,
-				def.weight,
-				CarryConstants.SLOW_PER_WEIGHT,
-				CarryConstants.MIN_SPEED_MULTIPLIER
-			)
+			humanoid.WalkSpeed = CarryFormulas.carrierSpeed(savedWalkSpeed, def.weight)
 		end
 		held[player.UserId] = {
 			target = target,
@@ -471,6 +474,14 @@ CarryServiceServer = {
 	getCarried = function(_self, player)
 		local state = held[player.UserId]
 		return if state ~= nil then state.target else nil
+	end,
+
+	--[=[
+		Sets THE source of a carrier's unboosted speed (a game's sprint); nil = the humanoid's WalkSpeed as it is. It
+		must not yield.
+	]=]
+	setSpeedBase = function(_self, source)
+		speedBase = source
 	end,
 
 	getState = function(_self)

@@ -13,7 +13,7 @@ export type Mode = "patrol" | "investigate" | "chase" | "search" | "rest" | "cat
 -- A moment worth a speech bubble (OccupantConstants.LINES).
 export type Cue = "spotted" | "curious" | "giveUp" | "resting" | "caught"
 
--- An axis-aligned box in the world (the loading bay).
+-- An axis-aligned box in the world (the truck's box, the one safe place; or the loading bay around it).
 export type Zone = {
 	min: Vector3,
 	max: Vector3,
@@ -29,7 +29,7 @@ export type Mind = {
 	routeStep: number,
 	-- The UserId he is chasing.
 	target: number?,
-	-- Where he last saw his target (always outside the loading bay).
+	-- Where he last saw his target (always outside the truck's box).
 	lastSeen: Vector3?,
 	-- Bounded, authored nearby locations checked after the last sighting; never live hidden positions.
 	searchPoints: { Vector3 }?,
@@ -40,6 +40,10 @@ export type Mind = {
 	arrivedAt: number?,
 	-- UserId → the os.clock() until which he ignores them (after a catch).
 	grace: { [number]: number },
+	-- When he walked into the loading bay (nil while outside it), and until when he keeps out of it after lingering
+	-- there BAY_LINGER_SECONDS (he never body-blocks the truck's ramp).
+	bayAt: number?,
+	bayBarredUntil: number?,
 }
 
 -- One crew member as the service saw them this think; `clear` is the line-of-sight ray's verdict.
@@ -48,6 +52,10 @@ export type Glimpse = {
 	userId: number,
 	position: Vector3,
 	clear: boolean,
+	-- In a hiding spot (Hide), and whether he saw them go in: unseen, he cannot see them at all; seen, he knows exactly
+	-- where they are (through the furniture).
+	hidden: boolean?,
+	seen: boolean?,
 }
 
 -- Everything the brain decides from, gathered by OccupantServiceServer each think.
@@ -65,7 +73,10 @@ export type Senses = {
 	resting: boolean,
 	route: { Vector3 },
 	restPoint: Vector3,
+	-- The truck's box: nobody inside it is seen, no noise inside it is followed.
 	zone: Zone,
+	-- The loading bay around the truck: he may walk it, but never lingers (absent = no bay rule).
+	bay: Zone?,
 }
 
 -- What the catch rule needs about a would-be catch.
@@ -80,6 +91,8 @@ export type CatchInput = {
 	inGrace: boolean,
 	resting: boolean,
 	zone: Zone,
+	-- In a hiding spot he did not see them go in (one he did see is fair game).
+	hidden: boolean?,
 }
 
 -- What the caught player is told (OccupantEvents.CatchReport, M3 UI incident report): the room, the shift clock's

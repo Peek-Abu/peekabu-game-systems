@@ -192,6 +192,18 @@ function Utils.generate(base: Types.Layout, seed: number): Types.Layout
 		end
 	end
 	walk(1)
+	-- Harlow walks into the loading bay and back once a loop (only the truck's box is safe): from the room its door
+	-- opens into, on the first visit there.
+	local patrol = Bay.patrolPoint(bay, side)
+	table.insert(
+		layout.markers,
+		{ id = "bay.patrol.1", room = "bay", kind = "patrol", x = patrol.X, z = patrol.Y, rotation = 0 }
+	)
+	local entry = table.find(layout.route, `{target.id}.patrol.1`)
+	if entry ~= nil then
+		table.insert(layout.route, entry + 1, "bay.patrol.1")
+		table.insert(layout.route, entry + 2, `{target.id}.patrol.1`)
+	end
 	local restRoom = work[rng:NextInteger(1, #work)]
 	layout.rest = `{restRoom.id}.rest.1`
 	table.insert(layout.markers, {

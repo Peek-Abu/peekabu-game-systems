@@ -3,7 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local OccupantBrainRules = require(script.Parent.OccupantBrainRules)
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 
--- The loading bay (safe), a three-point route and the break room's rest point.
+-- The truck's box (the safe zone), a three-point route and the break room's rest point.
 local ZONE = { min = Vector3.new(0, -5, 0), max = Vector3.new(40, 20, 30) }
 local ROUTE = { Vector3.new(100, 0, 100), Vector3.new(150, 0, 100), Vector3.new(150, 0, 150) }
 local REST = Vector3.new(200, 0, 200)
@@ -436,6 +436,108 @@ return function()
 			for index = 0, 80 do
 				expect(math.abs(OccupantBrainRules.lookYaw(index * 0.1)) <= limit).to.equal(true)
 			end
+		end)
+	end)
+
+	describe("the loading bay (only the truck's box is safe)", function()
+		-- The bay around the box; a route whose second point is in the bay.
+		local BAY = { min = Vector3.new(-20, -5, -20), max = Vector3.new(70, 20, 50) }
+		local BAY_ROUTE = { Vector3.new(100, 0, 100), Vector3.new(55, 0, 40), Vector3.new(150, 0, 150) }
+		local IN_BAY = Vector3.new(55, 3, 40)
+
+		local function bay(extra)
+			local value = senses({ bay = BAY, route = BAY_ROUTE, position = IN_BAY, look = Vector3.new(-1, 0, 0) })
+			for key, item in extra or {} do
+				value[key] = item
+			end
+			return value
+		end
+
+		it("sees and chases a player in the bay outside the box", function()
+			local step = OccupantBrainRules.step(fresh(), bay({ players = { player(7, Vector3.new(45, 3, 40)) } }))
+			expect(step.mind.mode).to.equal("chase")
+		end)
+
+		it("follows a noise in the bay, but never one inside the box", function()
+			local bayNoise = OccupantBrainRules.step(fresh(), bay({ heard = Vector3.new(50, 0, 45) }))
+			expect(bayNoise.mind.mode).to.equal("investigate")
+			local boxNoise = OccupantBrainRules.step(fresh(), bay({ heard = Vector3.new(20, 0, 15) }))
+			expect(boxNoise.mind.mode).to.equal("patrol")
+		end)
+
+		it("leaves after BAY_LINGER_SECONDS with nobody in sight, for a route point outside the bay", function()
+			local first = OccupantBrainRules.step(fresh(), bay({ heard = Vector3.new(50, 0, 45) }))
+			expect(first.mind.bayAt).to.equal(100)
+			local later = OccupantBrainRules.step(first.mind, bay({ now = 100 + OccupantConstants.BAY_LINGER_SECONDS }))
+			expect(later.mind.mode).to.equal("patrol")
+			expect(later.cue).to.equal("giveUp")
+			expect(later.intent.kind).to.equal("goTo")
+			expect(OccupantBrainRules.inZone(later.intent.position, BAY)).to.equal(false)
+			expect(later.mind.bayBarredUntil).to.equal(
+				100 + OccupantConstants.BAY_LINGER_SECONDS + OccupantConstants.BAY_COOLDOWN_SECONDS
+			)
+		end)
+
+		it("ignores bay noises and skips bay route points while barred", function()
+			local mind = fresh()
+			mind.bayBarredUntil = 130
+			mind.routeIndex = 1
+			local outside = Vector3.new(100, 3, 100)
+			local heard = OccupantBrainRules.step(mind, bay({ position = outside, heard = Vector3.new(50, 0, 45) }))
+			expect(heard.mind.mode).to.equal("patrol")
+			-- Reaching point 1, the next is point 2 in the bay: skipped for point 3.
+			expect(heard.intent.position).to.equal(BAY_ROUTE[3])
+			local free = OccupantBrainRules.step(mind, bay({ position = outside, now = 131 }))
+			expect(free.intent.position).to.equal(BAY_ROUTE[2])
+		end)
+
+		it("keeps chasing a player he sees in the bay past the linger time", function()
+			local mind = fresh()
+			mind.bayAt = 50
+			local step = OccupantBrainRules.step(mind, bay({ players = { player(7, Vector3.new(45, 3, 40)) } }))
+			expect(step.mind.mode).to.equal("chase")
+		end)
+
+		it("forgets when he entered the bay once he is out of it", function()
+			local mind = fresh()
+			mind.bayAt = 90
+			local step = OccupantBrainRules.step(mind, bay({ position = Vector3.new(100, 3, 100) }))
+			expect(step.mind.bayAt).to.equal(nil)
+		end)
+	end)
+
+	describe("hiding players", function()
+		it("never sees a hidden player he did not see go in", function()
+			local seen = OccupantBrainRules.visible(
+				fresh(),
+				senses({ players = { { userId = 7, position = AHEAD, clear = true, hidden = true } } })
+			)
+			expect(#seen).to.equal(0)
+		end)
+
+		it("witnesses a player going in when he sees them, or while he chases them; never on his break", function()
+			local seenNow = senses({ players = { player(7, AHEAD) } })
+			expect(OccupantBrainRules.witnessed(fresh(), seenNow, 7)).to.equal(true)
+			expect(OccupantBrainRules.witnessed(fresh(), senses({ players = { player(7, AHEAD, false) } }), 7)).to.equal(
+				false
+			)
+			local chasing = fresh()
+			chasing.mode = "chase"
+			chasing.target = 7
+			expect(OccupantBrainRules.witnessed(chasing, senses(), 7)).to.equal(true)
+			expect(OccupantBrainRules.witnessed(chasing, senses(), 8)).to.equal(false)
+			expect(OccupantBrainRules.witnessed(fresh(), senses({ resting = true, players = { player(7, AHEAD) } }), 7)).to.equal(
+				false
+			)
+		end)
+
+		it("knows where a player he saw go in is, through the furniture", function()
+			local step = OccupantBrainRules.step(
+				fresh(),
+				senses({ players = { { userId = 7, position = AHEAD, clear = false, hidden = true, seen = true } } })
+			)
+			expect(step.mind.mode).to.equal("chase")
+			expect(step.mind.target).to.equal(7)
 		end)
 	end)
 end

@@ -69,6 +69,11 @@ return table.freeze({
 	SEARCH_RADIUS = 36,
 	SEARCH_PROBES = 2,
 	GIVE_UP_SECONDS = 20,
+	-- The loading bay is no longer safe (only the truck's box is): he may patrol, chase and investigate in it, but after
+	-- BAY_LINGER_SECONDS there with nobody in sight he walks out and keeps out of it BAY_COOLDOWN_SECONDS, so he never
+	-- body-blocks the truck's ramp.
+	BAY_LINGER_SECONDS = 8,
+	BAY_COOLDOWN_SECONDS = 20,
 	-- Close enough to a point to count as there (flat studs).
 	REACHED_DISTANCE = 3,
 	-- While looking around he sweeps ±LOOK_SWEEP degrees at LOOK_RATE radians of phase per second.
@@ -109,7 +114,7 @@ return table.freeze({
 	CATCH_TRAUMA = 0.6,
 	CATCH_TINT = Color3.fromRGB(255, 120, 120),
 	HEARTBEAT_TINT = Color3.fromRGB(255, 150, 150),
-	-- The loading bay's PathfindingModifier label (Office builds it; his kind's pathCosts never enter it), and
+	-- The truck box's PathfindingModifier label (Office builds it; his kind's pathCosts never enter it), and
 	-- the tag on the office's ceiling lights (Office builds them; the tells flicker them).
 	SAFE_ZONE_LABEL = "SafeZone",
 	LIGHT_TAG = "OfficeLight",

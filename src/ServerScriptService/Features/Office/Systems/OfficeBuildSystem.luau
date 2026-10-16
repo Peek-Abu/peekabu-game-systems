@@ -6,8 +6,8 @@
 	the time clock inside the truck's box (Shift's Clock out prompt), the overtime sheet beside it on the box's front
 	wall (Shift's Start overtime prompt, off until
 	Shift opens it once the quota is met), and a desk or locker on every desk / locker marker (Cargo's
-	Search prompt, off until Cargo stocks it). M2: ceiling lights (tagged for Harlow's tells) and the loading bay's
-	PathfindingModifier volume (Harlow never paths into it). Everything is anchored under one Model in Workspace at
+	Search prompt, off until Cargo stocks it; also a hiding spot, tagged for Hide). M2: ceiling lights (tagged for Harlow's tells) and the truck box's
+	PathfindingModifier volume (Harlow walks the loading bay but never paths into the truck's box). Everything is anchored under one Model in Workspace at
 	the layout's origin. Physical per-room ceilings enclose the camera.
 
 	Instance shell; specs cover ceilings, and OfficeLayoutRules validates the layout.
@@ -25,11 +25,13 @@ local ArtVisualSystem = require(ServerScriptService.Features.Art.Systems.ArtVisu
 local OfficeServer = ServerScriptService.Features.Office
 local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants)
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
+local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideConstants)
 local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionConstants)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local OfficeConstants = require(OfficeServer.Data.OfficeConstants)
 local OfficeTypes = require(OfficeServer.Data.OfficeTypes)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
+local OfficeLoadingBayUtils = require(OfficeServer.Utils.OfficeLoadingBayUtils)
 
 export type Built = {
 	model: Model,
@@ -292,6 +294,9 @@ function OfficeBuildSystem.build(
 			part:SetAttribute("OfficeMarkerId", marker.id)
 			part:SetAttribute("ArtWallMounted", true)
 			interactable(part, CargoConstants.SEARCH_KIND, false)
+			-- A hiding spot too: under the desk, inside the locker (Hide).
+			part:SetAttribute(HideConstants.FURNITURE_KIND_ATTRIBUTE, if isDesk then "desk" else "locker")
+			CollectionService:AddTag(part, HideConstants.FURNITURE_TAG)
 			searchables[marker.id] = part
 		elseif
 			marker.kind == "shelf"
@@ -353,10 +358,10 @@ function OfficeBuildSystem.build(
 		end
 	end
 
-	-- The loading bay is Harlow's no-go zone: a volume his paths cost math.huge (his kind's pathCosts).
-	local start = OfficeLayoutUtils.room(layout, layout.startRoom)
-	if start ~= nil then
-		local min, max = OfficeLayoutUtils.bounds(start, height)
+	-- The truck's box is Harlow's no-go zone (he may walk the rest of the bay): a volume his paths cost math.huge
+	-- (his kind's pathCosts).
+	do
+		local min, max = OfficeLoadingBayUtils.truckBox(layout.truck)
 		local zone = block(
 			OfficeConstants.SAFE_ZONE_NAME,
 			max - min,

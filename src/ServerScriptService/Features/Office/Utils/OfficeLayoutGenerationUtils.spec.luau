@@ -207,6 +207,32 @@ return function()
 				expect(Spawn.salvageCount(plans.A)).to.equal(Spawn.salvageCount(plans.B))
 			end
 		end)
+		it("routes the patrol through the loading bay once, from and back to the room it opens into", function()
+			for seed = 1, 20 do
+				local layout = Gen.generate(Base, seed)
+				local bayDoor = layout.doors[#layout.doors]
+				expect(bayDoor.a).to.equal("bay")
+				local entry = `{bayDoor.b}.patrol.1`
+				local visits = 0
+				for index, id in layout.route do
+					if id == "bay.patrol.1" then
+						visits += 1
+						expect(layout.route[index - 1]).to.equal(entry)
+						expect(layout.route[index + 1]).to.equal(entry)
+					end
+				end
+				expect(visits).to.equal(1)
+				local marker = nil
+				for _, candidate in layout.markers do
+					if candidate.id == "bay.patrol.1" then
+						marker = candidate
+					end
+				end
+				expect(marker.kind).to.equal("patrol")
+				expect(marker.room).to.equal("bay")
+			end
+		end)
+
 		it("keeps input immutable and map kits local to the selected map", function()
 			local selected = table.clone(Base)
 			selected.artKit = "alternate-office-kit"

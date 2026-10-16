@@ -5,6 +5,10 @@
 	@class CarryFormulas
 ]=]
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
+
 local CarryFormulas = {}
 
 --[=[
@@ -12,6 +16,14 @@ local CarryFormulas = {}
 ]=]
 function CarryFormulas.walkSpeedFor(base: number, weight: number, slowPerWeight: number, minMultiplier: number): number
 	return base * math.max(minMultiplier, 1 - weight * slowPerWeight)
+end
+
+--[=[
+	A carrier's walk speed with the carry tuning (CarryConstants SLOW_PER_WEIGHT, MIN_SPEED_MULTIPLIER): `base` is the
+	carrier's unboosted speed.
+]=]
+function CarryFormulas.carrierSpeed(base: number, weight: number): number
+	return CarryFormulas.walkSpeedFor(base, weight, CarryConstants.SLOW_PER_WEIGHT, CarryConstants.MIN_SPEED_MULTIPLIER)
 end
 
 local function isFinite(value: number): boolean

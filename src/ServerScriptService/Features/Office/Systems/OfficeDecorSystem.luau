@@ -5,7 +5,8 @@
 	glowing green EXIT sign over each doorway out of the loading bay, a monitor glowing blue on every desk, the
 	elevator's doors and floor lamp in reception, and the invisible sound emitters the client's ambience plays from
 	(tag OfficeAmbient, attribute AmbientKind: a phone on every desk, a typist at every other desk, the elevator).
-	Props and chairs are non-colliding; table/cabinet proxies support their loot physically. The flickering and
+	Props and chairs are non-colliding; table/cabinet proxies support their loot physically, and are tagged as hiding
+	spots (Hide). The flickering and
 	sounds are client side.
 
 	Instance specs cover kit dressing, fallback, tabletop bounds and preserved ambiance; OfficeLayoutRules validates placement.
@@ -23,9 +24,13 @@ local ArtTypes = require(ReplicatedStorage.Shared.Features.Art.Data.ArtTypes)
 
 local OfficeServer = ServerScriptService.Features.Office
 local OfficeDecorConstants = require(ReplicatedStorage.Shared.Features.Office.Data.OfficeDecorConstants)
+local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideConstants)
 local OfficeConstants = require(OfficeServer.Data.OfficeConstants)
 local OfficeTypes = require(OfficeServer.Data.OfficeTypes)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
+
+-- Art-only furniture that is also a hiding spot, by its art key.
+local HIDE_KINDS: { [string]: HideConstants.FurnitureKind } = { filingCabinet = "cabinet", breakTable = "table" }
 
 local function part(name: string, size: Vector3, cframe: CFrame, color: Color3, parent: Instance): Part
 	local created = Instance.new("Part")
@@ -166,6 +171,13 @@ local function artOnly(
 	root:SetAttribute("OfficeDeskMarker", deskId)
 	if art.attach(root, family, key) == nil then
 		root:Destroy()
+		return
+	end
+	-- The filing cabinet and the table are hiding spots (Hide): inside one, under the other.
+	local hideKind = HIDE_KINDS[key]
+	if hideKind ~= nil then
+		root:SetAttribute(HideConstants.FURNITURE_KIND_ATTRIBUTE, hideKind)
+		CollectionService:AddTag(root, HideConstants.FURNITURE_TAG)
 	end
 end
 

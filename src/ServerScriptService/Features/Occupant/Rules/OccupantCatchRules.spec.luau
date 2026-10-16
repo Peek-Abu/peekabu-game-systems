@@ -33,7 +33,11 @@ return function()
 			refused({ reachable = false }, "outside grab volume")
 			refused({ clear = false }, "blocked")
 		end)
-		it("catches a living player within reach outside the loading bay", function()
+		it("refuses a hidden player he did not see go in", function()
+			refused({ hidden = true }, "hidden")
+		end)
+
+		it("catches a living player within reach outside the truck's box", function()
 			expect(OccupantCatchRules.canCatch(input())).to.equal(true)
 			expect(
 				OccupantCatchRules.canCatch(

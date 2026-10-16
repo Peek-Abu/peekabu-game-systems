@@ -94,8 +94,9 @@ return table.freeze({
 	OVERTIME_OFFSET = Vector3.new(-4, 0, 0),
 	-- Players appear this high above a spawn marker (and above the truck bed's top, where a shift starts).
 	SPAWN_HEIGHT = 3,
-	-- The loading bay (the start room, Harlow's safe zone), studs along X and Z (OfficeLoadingBayUtils). The truck
-	-- runs along Z, cab toward +Z: the depth fits the whole truck plus RAMP_CLEARANCE of floor behind its ramp.
+	-- The loading bay (the start room; Harlow may walk it, only the truck's box is safe), studs along X and Z
+	-- (OfficeLoadingBayUtils). The truck runs along Z, cab toward +Z: the depth fits the whole truck plus
+	-- RAMP_CLEARANCE of floor behind its ramp.
 	BAY_WIDTH = 44,
 	BAY_DEPTH = 42,
 	RAMP_CLEARANCE = 12,
@@ -128,8 +129,10 @@ return table.freeze({
 	LIGHT_COLOR = Color3.fromRGB(235, 240, 255),
 	LIGHT_RANGE = 22,
 	LIGHT_BRIGHTNESS = 0.7,
-	-- M2: the invisible volume over the loading bay that Harlow's paths never enter.
+	-- The invisible volume over the truck's box (the one safe place) that Harlow's paths never enter.
 	SAFE_ZONE_NAME = "SafeZone",
 	-- M2: Harlow's route needs at least this many points.
 	ROUTE_MIN = 3,
+	-- A route point in the loading bay keeps this far off the truck's bed and ramp (he walks the bay, never the box).
+	TRUCK_ROUTE_CLEAR = 2,
 })

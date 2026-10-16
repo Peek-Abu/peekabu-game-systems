@@ -127,4 +127,42 @@ return function()
 			expect(OfficeLoadingBayUtils.arrivalFrame(truck, 0).Position).to.equal(first.Position)
 		end)
 	end)
+
+	describe("truckBox", function()
+		it("is the bed's footprint from the bed's top to the truck's top: the one safe place", function()
+			local truck = { minX = 0, maxX = 12, minZ = 0, maxZ = 16, clockX = 20, clockZ = 0 }
+			local min, max = OfficeLoadingBayUtils.truckBox(truck)
+			expect(min).to.equal(Vector3.new(0, OfficeConstants.BED_HEIGHT, 0))
+			expect(max).to.equal(Vector3.new(12, OfficeConstants.BED_HEIGHT + TruckVisual.TOP, 16))
+		end)
+
+		it("holds every arrival point (a respawn lands safe) and leaves the ramp outside", function()
+			local bay = OfficeLoadingBayUtils.bay(2, TARGET)
+			local truck = OfficeLoadingBayUtils.truck(bay, 2)
+			local min, max = OfficeLoadingBayUtils.truckBox(truck)
+			for index = 1, 4 do
+				local at = OfficeLoadingBayUtils.arrivalFrame(truck, index).Position - Vector3.new(0, 1, 0)
+				expect(at.X >= min.X and at.X <= max.X and at.Z >= min.Z and at.Z <= max.Z).to.equal(true)
+				expect(at.Y >= min.Y and at.Y <= max.Y).to.equal(true)
+			end
+			local cz = (truck.minZ + truck.maxZ) / 2
+			expect(cz - TruckVisual.BACK < min.Z).to.equal(true)
+		end)
+	end)
+
+	describe("patrolPoint", function()
+		it("stands in the bay, on the open side away from the truck and its ramp", function()
+			for side = 1, 4 do
+				local bay = OfficeLoadingBayUtils.bay(side, TARGET)
+				local truck = OfficeLoadingBayUtils.truck(bay, side)
+				local point = OfficeLoadingBayUtils.patrolPoint(bay, side)
+				expect(point.X > bay.minX + OfficeConstants.MARKER_MARGIN).to.equal(true)
+				expect(point.X < bay.maxX - OfficeConstants.MARKER_MARGIN).to.equal(true)
+				expect(point.Y > bay.minZ + OfficeConstants.MARKER_MARGIN).to.equal(true)
+				expect(point.Y < bay.maxZ - OfficeConstants.MARKER_MARGIN).to.equal(true)
+				local cx = (truck.minX + truck.maxX) / 2
+				expect(math.abs(point.X - cx) >= TruckVisual.HALF_WIDTH + 6).to.equal(true)
+			end
+		end)
+	end)
 end

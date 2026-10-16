@@ -18,6 +18,7 @@ local OfficeConstants = require(OfficeServer.Data.OfficeConstants)
 local OfficeTypes = require(OfficeServer.Data.OfficeTypes)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
+local TruckVisual = require(ServerScriptService.Features.Depot.Data.DepotTruckVisualConstants)
 
 type Layout = OfficeTypes.Layout
 type Room = OfficeTypes.Room
@@ -224,9 +225,19 @@ function OfficeLayoutRules.checkCapacity(layout: Layout): (boolean, string?)
 end
 
 --[=[
-	Whether Mr. Harlow can patrol this layout (M2): at least ROUTE_MIN route points, each a patrol marker
-	outside the start room (the loading bay is his no-go safe zone), and a rest marker outside it too.
+	Whether Mr. Harlow can patrol this layout (M2): at least ROUTE_MIN route points, each a patrol marker off the truck
+	(he may walk the loading bay; the truck's box is the safe place), and a rest marker outside the loading bay (his
+	break never parks him by the truck).
 ]=]
+-- On the truck or its ramp: the bed's footprint grown by TRUCK_ROUTE_CLEAR, and the ramp's length behind it.
+local function onTruck(truck: OfficeTypes.Truck, marker: OfficeTypes.Marker): boolean
+	local clear = OfficeConstants.TRUCK_ROUTE_CLEAR
+	return marker.x >= truck.minX - clear
+		and marker.x <= truck.maxX + clear
+		and marker.z >= truck.minZ - TruckVisual.RAMP_LENGTH - clear
+		and marker.z <= truck.maxZ + clear
+end
+
 function OfficeLayoutRules.checkRoute(layout: Layout): (boolean, string?)
 	local byId: { [string]: OfficeTypes.Marker } = {}
 	for _, marker in layout.markers do
@@ -240,8 +251,8 @@ function OfficeLayoutRules.checkRoute(layout: Layout): (boolean, string?)
 		if marker == nil or marker.kind ~= "patrol" then
 			return false, `route point "{id}" is not a patrol marker`
 		end
-		if marker.room == layout.startRoom then
-			return false, `route point "{id}" is in the safe start room`
+		if marker.room == layout.startRoom and onTruck(layout.truck, marker) then
+			return false, `route point "{id}" is on the truck`
 		end
 	end
 	local rest = byId[layout.rest]
@@ -249,7 +260,7 @@ function OfficeLayoutRules.checkRoute(layout: Layout): (boolean, string?)
 		return false, `rest point "{layout.rest}" is not a rest marker`
 	end
 	if rest.room == layout.startRoom then
-		return false, `rest point "{layout.rest}" is in the safe start room`
+		return false, `rest point "{layout.rest}" is in the loading bay`
 	end
 	return true, nil
 end

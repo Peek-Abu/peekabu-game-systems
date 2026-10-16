@@ -1,6 +1,7 @@
 --!strict
 --[=[
-	OfficeLoadingBayUtils: the loading bay's geometry (the start room, Harlow's safe zone), in layout space.
+	OfficeLoadingBayUtils: the loading bay's geometry (the start room), in layout space. Harlow may walk the bay; only
+	the truck's box is safe (`truckBox`).
 
 	- `bay(side, target)`: the BAY_WIDTH x BAY_DEPTH room on one exterior side of `target` (1 -X, 2 +X, 3 -Z,
 	  4 +Z) and the 10-stud door between them, centred on their shared wall.
@@ -9,6 +10,9 @@
 	  stands to the side away from a side door, or beside (not in front of) a door in a Z wall.
 	- `arrivals(truck)` / `arrivalFrame(truck, index)`: where the crew stands on the bed at the start of a shift,
 	  facing the open back and the ramp.
+	- `truckBox(truck)`: the inside of the truck's box (the bed's footprint, from its top to the truck's top): the one
+	  place Harlow never sees, hears, catches or walks into.
+	- `patrolPoint(bay, side)`: the point his patrol route visits in the bay, on its open side, clear of the truck.
 
 	@class OfficeLoadingBayUtils
 ]=]
@@ -92,6 +96,26 @@ function OfficeLoadingBayUtils.arrivalFrame(truck: OfficeTypes.Truck, index: num
 	local point = points[(math.max(index, 1) - 1) % #points + 1]
 	local at = Vector3.new(point.X, OfficeConstants.BED_HEIGHT + OfficeConstants.SPAWN_HEIGHT, point.Z)
 	return CFrame.lookAt(at, at - Vector3.zAxis)
+end
+
+--[=[
+	The inside of the truck's box (layout space, min and max corners): the bed's footprint, from the bed's top to the
+	truck's top. The ramp and the bay floor around it are outside.
+]=]
+function OfficeLoadingBayUtils.truckBox(truck: OfficeTypes.Truck): (Vector3, Vector3)
+	local deck = OfficeConstants.BED_HEIGHT
+	return Vector3.new(truck.minX, deck, truck.minZ), Vector3.new(truck.maxX, deck + TruckVisual.TOP, truck.maxZ)
+end
+
+--[=[
+	Where Harlow's patrol route visits the bay (layout x as X, z as Y): its centre line across, TRUCK_SIDE_INSET from
+	the side wall away from the truck (the open side, by the door into the office).
+]=]
+function OfficeLoadingBayUtils.patrolPoint(bay: OfficeTypes.Room, side: number): Vector2
+	local x = if side == 2
+		then bay.minX + OfficeConstants.TRUCK_SIDE_INSET
+		else bay.maxX - OfficeConstants.TRUCK_SIDE_INSET
+	return Vector2.new(x, (bay.minZ + bay.maxZ) / 2)
 end
 
 return OfficeLoadingBayUtils

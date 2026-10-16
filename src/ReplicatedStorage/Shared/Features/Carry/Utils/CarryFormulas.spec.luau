@@ -15,6 +15,13 @@ return function()
 		end)
 	end)
 
+	describe("carrierSpeed", function()
+		it("slows the unboosted speed by the carry tuning's weight rule", function()
+			expect(CarryFormulas.carrierSpeed(16, 4)).to.be.near(16 * (1 - 4 * 0.05))
+			expect(CarryFormulas.carrierSpeed(16, 100)).to.be.near(16 * 0.4)
+		end)
+	end)
+
 	describe("throwVelocity", function()
 		it("throws along the normalized aim at the given speed, plus lift", function()
 			local velocity = CarryFormulas.throwVelocity(Vector3.new(0, 0, -10), 30, 5)

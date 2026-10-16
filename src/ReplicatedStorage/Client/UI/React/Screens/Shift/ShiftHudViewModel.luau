@@ -22,6 +22,7 @@ local DeathConstants = require(ReplicatedStorage.Shared.Features.Death.Data.Deat
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local ShiftCurrencyUtils = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftCurrencyUtils)
+local SprintRules = require(ReplicatedStorage.Shared.Features.Sprint.Rules.SprintRules)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local ShiftPromptStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftPromptStore)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
@@ -85,6 +86,8 @@ export type ButtonsView = {
 	throw: boolean,
 	pocket: boolean,
 	pocketReady: boolean,
+	-- SPRINT (held): only with empty hands and out of hiding; it takes DROP's spot, which shows only while holding.
+	sprint: boolean,
 }
 
 -- A round button (or the Jump button's square) as its top-left corner's offset from the screen's bottom-right corner
@@ -245,9 +248,13 @@ end
 	The phone's action buttons (Figma 1d/1e): one big button that is VACUUM with empty hands and LOAD while holding
 	something (lit green when the truck's Load prompt is up, `loadReady`); DROP / THROW only with something in hand
 	(THROW only for a throwable item); POCKET usable with a tiny item or something pocketed, lit when a tiny item can
-	go in a free pocket.
+	go in a free pocket; SPRINT with empty hands while not `hiding`.
 ]=]
-function ShiftHudViewModel.buttons(me: PublicPlayerTypes.PublicPlayer?, loadReady: boolean): ButtonsView
+function ShiftHudViewModel.buttons(
+	me: PublicPlayerTypes.PublicPlayer?,
+	loadReady: boolean,
+	hiding: boolean?
+): ButtonsView
 	local entry: PublicPlayerTypes.PublicPlayer = me or {}
 	local kind = entry[CarryConstants.PUBLIC_FIELD]
 	local def = if type(kind) == "string" then CargoRegistry.get(kind) else nil
@@ -270,6 +277,7 @@ function ShiftHudViewModel.buttons(me: PublicPlayerTypes.PublicPlayer?, loadRead
 		throw = def ~= nil and def.throwable,
 		pocket = tiny or filled > 0,
 		pocketReady = tiny and free > 0,
+		sprint = SprintRules.offered(holding, hiding == true),
 	}
 end
 
@@ -335,12 +343,13 @@ function ShiftHudViewModel.mobileButtons(
 	me: PublicPlayerTypes.PublicPlayer?,
 	touch: boolean,
 	hidden: boolean,
-	loadReady: boolean
+	loadReady: boolean,
+	hiding: boolean?
 ): ButtonsView?
 	if not touch or hidden or snapshot == nil or snapshot.phase ~= "running" then
 		return nil
 	end
-	return ShiftHudViewModel.buttons(me, loadReady)
+	return ShiftHudViewModel.buttons(me, loadReady, hiding)
 end
 
 --[=[
@@ -398,6 +407,7 @@ local HINTS: { { action: string, label: string, hold: boolean } } = {
 	{ action = "throw", label = "throw", hold = false },
 	{ action = CargoConstants.POCKET_ACTION, label = "pocket", hold = false },
 	{ action = "interact", label = "bank / search", hold = false },
+	{ action = "sprint", label = "sprint", hold = true },
 }
 
 local hintActions: { string } = {}

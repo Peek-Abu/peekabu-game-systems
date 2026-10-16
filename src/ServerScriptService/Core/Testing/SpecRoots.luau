@@ -357,6 +357,21 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.Features.Occupant.OccupantServiceClient"] = "Camera/Vfx/ByteNet shell (tell decisions are specced in OccupantTellRules)",
 	["ReplicatedStorage.Client.Features.Occupant.Systems.OccupantScareSystem"] = "Instance/tween/Sound shell (the scare beat; no decisions)",
 
+	-- Cleanup Crew: Hide (hiding spots)
+	["ReplicatedStorage.Shared.Features.Hide.Data.HideConstants"] = "static tuning and names (no logic)",
+	["ReplicatedStorage.Shared.Features.Hide.Data.HideTypes"] = "type definitions only (no runtime logic)",
+	["ReplicatedStorage.Shared.Features.Hide.Net.HideEvents"] = "ByteNet packet definitions (no logic)",
+	["ServerScriptService.Features.Hide.Systems.HideSpotSystem"] = "CollectionService/ProximityPrompt builder (spot frames specced in HideSpotUtils)",
+	["ServerScriptService.Features.Hide.HideServiceServer"] = "Instance/Players/ByteNet/signal shell (entry, camping and frames specced in HideRules, HideSpotUtils, HideOccupancyTracker)",
+	["ReplicatedStorage.Client.Features.Hide.HideServiceClient"] = "ProximityPrompt/Camera/PlayerModule/ByteNet shell (words specced in HideViewModel, state in HideStore)",
+	["ReplicatedStorage.Client.UI.React.Screens.Hide.HideChip"] = "presentational React component (words specced in HideViewModel)",
+	["ReplicatedStorage.Client.UI.React.Screens.Hide.HidePeekOverlay"] = "presentational React component (overlay choice specced in HideViewModel)",
+	-- Cleanup Crew: Sprint
+	["ReplicatedStorage.Shared.Features.Sprint.Data.SprintConstants"] = "static tuning and names (no logic)",
+	["ReplicatedStorage.Shared.Features.Sprint.Net.SprintEvents"] = "ByteNet packet definitions (no logic)",
+	["ServerScriptService.Features.Sprint.SprintServiceServer"] = "Humanoid/Players/ByteNet/RunService shell (decisions specced in SprintRules and SprintStaminaFormulas)",
+	["ReplicatedStorage.Client.Features.Sprint.SprintServiceClient"] = "Input/ByteNet/attribute shell (the server decides; the bar is specced in SprintViewModel)",
+	["ReplicatedStorage.Client.UI.React.Screens.Sprint.SprintStaminaBar"] = "presentational React component (bar specced in SprintViewModel)",
 	-- Cleanup Crew: Shift
 	["ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants"] = "static pacing and names (no logic)",
