@@ -371,7 +371,8 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Shared.Features.Sprint.Net.SprintEvents"] = "ByteNet packet definitions (no logic)",
 	["ServerScriptService.Features.Sprint.SprintServiceServer"] = "Humanoid/Players/ByteNet/RunService shell (decisions specced in SprintRules and SprintStaminaFormulas)",
 	["ReplicatedStorage.Client.Features.Sprint.SprintServiceClient"] = "Input/ByteNet/attribute shell (the server decides; the bar is specced in SprintViewModel)",
-	["ReplicatedStorage.Client.UI.React.Screens.Sprint.SprintStaminaBar"] = "presentational React component (bar specced in SprintViewModel)",
+	["ReplicatedStorage.Client.UI.React.Screens.Sprint.SprintStaminaSlip"] = "presentational React component (bar specced in SprintViewModel)",
+	["ReplicatedStorage.Client.Features.Hide.Systems.HidePoseSystem"] = "Players/Motor6D/RunService shell (the pose and its easing are specced in HidePoseFormulas)",
 	-- Cleanup Crew: Shift
 	["ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants"] = "static pacing and names (no logic)",

@@ -13,9 +13,6 @@ local WEIGHT: { [string]: number } = { tiny = 1.5, light = 1.5, medium = 4, heav
 -- Noise radius (studs) of a drop, by size. M2's Noise feature reads these through CargoHandlingRules.
 local DROP_NOISE: { [string]: number } = { tiny = 6, light = 14, medium = 24, heavy = 36, bulky = 40 }
 
--- Sizes too heavy to sprint with. The base has no sprint yet: data for when it does.
-local NO_SPRINT: { [string]: boolean } = { heavy = true, bulky = true }
-
 -- A fragile item's value fraction after 0, 1, then 2 or more impacts.
 local FRAGILE_TIERS: { number } = { 1, 0.5, 0.25 }
 
@@ -40,7 +37,6 @@ local LEAF_COLORS: { Color3 } = {
 return table.freeze({
 	WEIGHT = table.freeze(WEIGHT),
 	DROP_NOISE = table.freeze(DROP_NOISE),
-	NO_SPRINT = table.freeze(NO_SPRINT),
 	FRAGILE_TIERS = table.freeze(FRAGILE_TIERS),
 	-- Pockets: two slots, tiny items only.
 	POCKET_SLOTS = 2,

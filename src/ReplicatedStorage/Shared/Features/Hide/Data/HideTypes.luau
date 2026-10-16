@@ -6,8 +6,8 @@
 	@class HideTypes
 ]=]
 
--- Under a desk or table, or inside a locker or cabinet.
-export type SpotKind = "under" | "inside"
+-- Under a desk or table (the only kind today; kept named for the behaviours to come).
+export type SpotKind = "under"
 
 -- Where a spot puts things (world space): the hiding root, the peek camera, and the exits to try in order.
 export type SpotFrames = {
@@ -22,9 +22,11 @@ export type SpotFrames = {
 export type Spot = {
 	id: string,
 	kind: SpotKind,
-	-- "desk", "table", "locker", "cabinet".
+	-- "desk" or "table".
 	noun: string,
 	furniture: BasePart,
+	-- The spot's frame: the furniture's, turned to face the room (HideSpotUtils.spotFrame).
+	frame: CFrame,
 	-- The prompt's attachment.
 	anchor: Attachment,
 }
@@ -49,6 +51,8 @@ export type EnterInput = {
 	heldSize: string?,
 	occupied: boolean,
 	cooling: boolean,
+	-- REENTER_SECONDS have passed since their last stay ended.
+	rested: boolean,
 	distance: number,
 }
 

@@ -2,17 +2,18 @@
 --[=[
 	SprintServiceServer: sprinting with stamina (docs/superpowers/specs/2026-10-15-cleanup-crew-chase-kit-design.md §3),
 	server-authoritative: the client only says whether its sprint key is held (SprintEvents.Sprint, rate limited); every
-	TICK the server decides (SprintRules: alive, not frozen in a catch, not hiding, empty hands, the bar allows) and owns
-	the speed, SPRINT_SPEED while sprinting and the player's own speed otherwise. The bar (SprintStaminaFormulas) drains
+	TICK the server decides (SprintRules: alive, not frozen in a catch, not hiding, the bar allows) and owns the speed
+	while sprinting: SPRINT_SPEED slowed by the load exactly as the walk is (SprintSpeedFormulas, through Carry's own
+	formula: empty 23, light 21.3, medium 18.4, heavy 15, bulky 11.5), and the player's own (carried) walk otherwise. The bar (SprintStaminaFormulas) drains
 	only while they move at a sprint and is published as the Player's SprintStamina / Sprinting attributes (the HUD's
 	bar). Sprinting feet are heard: a small noise every SPRINT_NOISE_INTERVAL while moving at a sprint (NoiseServiceServer;
 	walking stays silent).
 
-	Carrying never sprints. Carry is told the unboosted speed (CarryServiceServer:setSpeedBase), so an item picked up
-	mid-sprint slows the walk speed, never the sprint, and dropping it restores the walk; the sprint then just ends.
+	Carry is told the unboosted walk (CarryServiceServer:setSpeedBase), so an item picked up or dropped mid-sprint
+	leaves Carry's walk speed right; each tick the sprint speed is set again for whatever is in the hands now.
 
-	Spec-exempt shell (Humanoids, Players, ByteNet, RunService); the decisions are the specced SprintRules and
-	SprintStaminaFormulas.
+	Spec-exempt shell (Humanoids, Players, ByteNet, RunService); the decisions are the specced SprintRules,
+	SprintSpeedFormulas and SprintStaminaFormulas.
 
 	@class SprintServiceServer
 ]=]
@@ -28,6 +29,10 @@ local SprintConstants = require(SprintShared.Data.SprintConstants)
 local SprintEvents = require(SprintShared.Net.SprintEvents)
 local SprintRules = require(SprintShared.Rules.SprintRules)
 local SprintStaminaFormulas = require(SprintShared.Utils.SprintStaminaFormulas)
+local SprintSpeedFormulas = require(SprintShared.Utils.SprintSpeedFormulas)
+local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
+local CarryRegistry = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryRegistry)
+local CarryFormulas = require(ReplicatedStorage.Shared.Features.Carry.Utils.CarryFormulas)
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
@@ -69,14 +74,22 @@ local function runnerOf(player: Player): Runner
 	return runner
 end
 
--- Ends a boost: the humanoid gets its own speed back, unless Carry owns the speed now (it was given the base).
+-- The weight of what the player carries (0 with empty hands).
+local function weightOf(player: Player): number
+	local carried = CarryServiceServer:getCarried(player)
+	local kind = if carried ~= nil then carried:GetAttribute(CarryConstants.KIND_ATTRIBUTE) else nil
+	local def = if type(kind) == "string" then CarryRegistry.get(kind) else nil
+	return if def ~= nil then def.weight else 0
+end
+
+-- Ends a boost: the humanoid walks again, at its own speed slowed by whatever it carries (Carry's formula).
 local function unboost(player: Player, runner: Runner)
 	local humanoid = runner.boosted
 	local base = runner.base
 	runner.boosted = nil
 	runner.base = nil
-	if humanoid ~= nil and base ~= nil and humanoid.Parent ~= nil and CarryServiceServer:getCarried(player) == nil then
-		humanoid.WalkSpeed = base
+	if humanoid ~= nil and base ~= nil and humanoid.Parent ~= nil then
+		humanoid.WalkSpeed = CarryFormulas.carrierSpeed(base, weightOf(player))
 	end
 	player:SetAttribute(SprintConstants.SPRINTING_ATTRIBUTE, nil)
 end
@@ -102,20 +115,25 @@ local function stepOne(player: Player, runner: Runner, dt: number)
 		alive = alive,
 		frozen = root ~= nil and root:IsA("BasePart") and root.Anchored,
 		hidden = HideServiceServer:isHidden(player),
-		carrying = CarryServiceServer:getCarried(player) ~= nil,
 		stamina = SprintStaminaFormulas.canStart(runner.bar),
 	})
 	if runner.boosted ~= nil and (not ok or runner.boosted ~= humanoid) then
 		unboost(player, runner)
 	end
+	local weight = weightOf(player)
 	if ok and humanoid ~= nil and runner.boosted == nil then
 		runner.boosted = humanoid
-		runner.base = humanoid.WalkSpeed
-		humanoid.WalkSpeed = SprintConstants.SPRINT_SPEED
+		-- The unloaded walk: the walk now, un-slowed by the load (Carry's slow is a plain factor).
+		runner.base = humanoid.WalkSpeed / CarryFormulas.carrierSpeed(1, weight)
 		player:SetAttribute(SprintConstants.SPRINTING_ATTRIBUTE, true)
 		counters.sprints += 1
 	elseif not ok and runner.requested then
 		counters.refused += 1
+	end
+	-- While sprinting, the speed follows the load in the hands every tick (a pick-up or drop mid-sprint included).
+	local sprintSpeed = SprintSpeedFormulas.speed(weight)
+	if runner.boosted ~= nil and humanoid ~= nil and humanoid.WalkSpeed ~= sprintSpeed then
+		humanoid.WalkSpeed = sprintSpeed
 	end
 	-- Moving: the body really goes somewhere across the floor since the last tick, measured from its positions (the
 	-- client owns its physics, so its velocity is not trusted here). Pushing against a wall spends nothing.

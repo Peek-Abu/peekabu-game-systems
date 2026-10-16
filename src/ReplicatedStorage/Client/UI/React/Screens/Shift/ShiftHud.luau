@@ -24,6 +24,8 @@ local ShiftCompactHudPanel = require(ReplicatedStorage.Client.UI.React.Screens.S
 local VacuumServiceClient = require(ReplicatedStorage.Client.Features.Vacuum.VacuumServiceClient)
 local usePaperViewport = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperViewport)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
+local SprintStore = require(ReplicatedStorage.Client.Features.Sprint.State.SprintStore)
+local SprintViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Sprint.SprintViewModel)
 
 local e = React.createElement
 local useAtom = ReactCharm.useAtom
@@ -42,6 +44,7 @@ local function ShiftHud(): React.ReactNode
 	local snapshot = useAtom(ShiftStore.snapshot)
 	local publicPlayers = useAtom(StateSyncClientStore.publicPlayers)
 	local scaring = useAtom(OccupantCatchStore.scaring)
+	local stamina = useAtom(SprintStore.stamina)
 	-- The desktop HUD is drawn scaled to the window; `viewport` is the window in HUD design px.
 	local hudScale = usePaperHudScale()
 	local actualViewport = usePaperViewport()
@@ -76,6 +79,7 @@ local function ShiftHud(): React.ReactNode
 		layout = layout,
 		viewport = actualViewport,
 		bindings = if UserInputService.KeyboardEnabled then bindings else {},
+		stamina = SprintViewModel.bar(stamina, false),
 		crewOpen = crewOpen,
 		onCrewToggle = function()
 			setCrewOpen(function(open: boolean)

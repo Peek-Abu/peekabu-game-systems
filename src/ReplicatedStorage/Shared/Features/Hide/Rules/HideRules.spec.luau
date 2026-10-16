@@ -11,6 +11,7 @@ local function input(extra)
 		heldSize = nil,
 		occupied = false,
 		cooling = false,
+		rested = true,
 		distance = 3,
 	}
 	for key, item in extra or {} do
@@ -43,6 +44,7 @@ return function()
 			refused({ hidden = true }, "already hidden")
 			refused({ occupied = true }, "taken")
 			refused({ cooling = true }, "cramped")
+			refused({ rested = false }, "too soon")
 		end)
 
 		it("refuses from too far, with the tolerance on top of the prompt's range", function()
@@ -51,6 +53,14 @@ return function()
 			)
 			refused({ distance = HideConstants.ENTER_RANGE + HideConstants.RANGE_TOLERANCE + 0.1 }, "too far")
 			refused({ distance = 0 / 0 }, "too far")
+		end)
+	end)
+
+	describe("canLeave", function()
+		it("keeps a tap in for at least MIN_STAY_SECONDS before a tap out", function()
+			expect(HideRules.canLeave(0)).to.equal(false)
+			expect(HideRules.canLeave(HideConstants.MIN_STAY_SECONDS - 0.01)).to.equal(false)
+			expect(HideRules.canLeave(HideConstants.MIN_STAY_SECONDS)).to.equal(true)
 		end)
 	end)
 

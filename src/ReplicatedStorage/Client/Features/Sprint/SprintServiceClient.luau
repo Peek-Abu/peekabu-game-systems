@@ -3,7 +3,8 @@
 	SprintServiceClient: the local side of sprinting (docs/superpowers/specs/2026-10-15-cleanup-crew-chase-kit-design.md
 	§3). Holding the base Input action `sprint` (Shift / L3), or the phone's SPRINT button (`setHeld`), tells the server
 	the key is held; the server decides whether that sprints and sets the speed. The Player's SprintStamina / Sprinting
-	attributes feed SprintStore, and the stamina bar is a HUD widget (SprintStaminaBar).
+	attributes feed SprintStore; the shift HUD draws the stamina slip from it (SprintStaminaSlip, tucked against the
+	equipment cards).
 
 	Spec-exempt shell (Input, ByteNet, attributes); the decisions are the server's specced SprintRules and
 	SprintStaminaFormulas, the bar's the specced SprintViewModel.
@@ -18,8 +19,6 @@ local SprintConstants = require(ReplicatedStorage.Shared.Features.Sprint.Data.Sp
 local SprintEvents = require(ReplicatedStorage.Shared.Features.Sprint.Net.SprintEvents)
 local InputServiceClient = require(ReplicatedStorage.Client.Features.Input.InputServiceClient)
 local SprintStore = require(ReplicatedStorage.Client.Features.Sprint.State.SprintStore)
-local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudRegistry)
-local SprintStaminaBar = require(ReplicatedStorage.Client.UI.React.Screens.Sprint.SprintStaminaBar)
 
 local player = Players.LocalPlayer
 local stoppers: { () -> () } = {}
@@ -55,11 +54,7 @@ export type SprintServiceClient = {
 local SprintServiceClient: SprintServiceClient = {
 	dependencies = { "InputServiceClient" },
 
-	init = function(_self)
-		if not HudRegistry.has("sprintStamina") then
-			HudRegistry.register("sprintStamina", SprintStaminaBar, 1005)
-		end
-	end,
+	init = function(_self) end,
 
 	start = function(_self)
 		local unbind = InputServiceClient:bind(SprintConstants.ACTION, function(phase)

@@ -38,7 +38,7 @@ local function rectGap(button, rect)
 	return math.sqrt(dx * dx + dy * dy) - button.size / 2
 end
 
-local BUTTONS = { "primary", "drop", "throw", "pocket" }
+local BUTTONS = { "primary", "drop", "throw", "pocket", "sprint" }
 
 -- Every gap the arc must keep, as a list of the ones it breaks (empty when clear): >= 16 px from the Jump button and
 -- between buttons, and right of the thumbstick zone (the left 40% of a `width` px screen). Pure, so it can live
@@ -225,11 +225,14 @@ return function()
 			expect(full.pocketReady).to.equal(false)
 		end)
 
-		it("offers SPRINT only with empty hands and out of hiding", function()
+		it("offers SPRINT with or without a load, never while hiding", function()
 			expect(ShiftHudViewModel.buttons(nil, false).sprint).to.equal(true)
-			expect(ShiftHudViewModel.buttons({ pocket1 = "plaque" }, false).sprint).to.equal(true)
-			expect(ShiftHudViewModel.buttons({ carrying = "plaque" }, false).sprint).to.equal(false)
+			expect(ShiftHudViewModel.buttons({ carrying = "coffeeMachine" }, false).sprint).to.equal(true)
 			expect(ShiftHudViewModel.buttons(nil, false, true).sprint).to.equal(false)
+		end)
+
+		it("keeps SPRINT clear of the other buttons on a narrow phone too", function()
+			expect(arcFailures(ShiftHudViewModel.arcFor(375), 667)).to.equal("")
 		end)
 
 		it("keeps POCKET usable to take something out with empty hands", function()

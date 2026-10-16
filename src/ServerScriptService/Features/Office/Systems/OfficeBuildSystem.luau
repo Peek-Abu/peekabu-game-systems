@@ -6,7 +6,7 @@
 	the time clock inside the truck's box (Shift's Clock out prompt), the overtime sheet beside it on the box's front
 	wall (Shift's Start overtime prompt, off until
 	Shift opens it once the quota is met), and a desk or locker on every desk / locker marker (Cargo's
-	Search prompt, off until Cargo stocks it; also a hiding spot, tagged for Hide). M2: ceiling lights (tagged for Harlow's tells) and the truck box's
+	Search prompt, off until Cargo stocks it; a desk is also a hiding spot, tagged for Hide). M2: ceiling lights (tagged for Harlow's tells) and the truck box's
 	PathfindingModifier volume (Harlow walks the loading bay but never paths into the truck's box). Everything is anchored under one Model in Workspace at
 	the layout's origin. Physical per-room ceilings enclose the camera.
 
@@ -294,9 +294,11 @@ function OfficeBuildSystem.build(
 			part:SetAttribute("OfficeMarkerId", marker.id)
 			part:SetAttribute("ArtWallMounted", true)
 			interactable(part, CargoConstants.SEARCH_KIND, false)
-			-- A hiding spot too: under the desk, inside the locker (Hide).
-			part:SetAttribute(HideConstants.FURNITURE_KIND_ATTRIBUTE, if isDesk then "desk" else "locker")
-			CollectionService:AddTag(part, HideConstants.FURNITURE_TAG)
+			-- A desk is a hiding spot too: under it (Hide). Lockers are not (their open and closed states).
+			if isDesk then
+				part:SetAttribute(HideConstants.FURNITURE_KIND_ATTRIBUTE, "desk")
+				CollectionService:AddTag(part, HideConstants.FURNITURE_TAG)
+			end
 			searchables[marker.id] = part
 		elseif
 			marker.kind == "shelf"

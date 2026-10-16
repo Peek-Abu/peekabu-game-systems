@@ -11,6 +11,8 @@ local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.Shif
 local VM = require(script.Parent.ShiftHudViewModel)
 local CrewVM = require(script.Parent.ShiftCrewViewModel)
 local useProgressTween = require(ReplicatedStorage.Client.UI.React.Hooks.useProgressTween)
+local SprintStaminaSlip = require(ReplicatedStorage.Client.UI.React.Screens.Sprint.SprintStaminaSlip)
+local SprintViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Sprint.SprintViewModel)
 
 local e = React.createElement
 local C = Constants.COLOR
@@ -24,6 +26,8 @@ export type Props = {
 	onCrewToggle: (() -> ())?,
 	onToolToggle: (() -> ())?,
 	bindings: VM.KeyBindings?,
+	-- The sprint's stamina while it is not full (Sprint): a small slip tucked against the equipment cards.
+	stamina: SprintViewModel.BarView?,
 }
 
 local function label(
@@ -302,8 +306,24 @@ local function ShiftCompactHudPanel(props: Props): React.ReactNode
 			end
 		end
 	end
+	-- The stamina slip: on desktop just above the bottom-right card stack (the tool card, the cargo slip, or both); on
+	-- phone under the top-right tool card (or in its place when the hands are full).
+	local stamina: React.ReactNode = nil
+	local staminaView = props.stamina
+	if staminaView ~= nil then
+		local stack = if view.hands ~= nil then 116 elseif compact.pocketCount > 0 then 116 + 12 + 82 else 82
+		stamina = e(SprintStaminaSlip, {
+			view = staminaView,
+			size = if phone then Vector2.new(150, 28) else Vector2.new(176, 30),
+			position = if phone
+				then UDim2.new(1, -inset, 0, if view.hands == nil then 100 + 62 + 8 else 100)
+				else UDim2.new(1, -inset, 1, -inset - stack - 8),
+			anchor = if phone then Vector2.new(1, 0) else Vector2.new(1, 1),
+		})
+	end
 	local countdown = view.clockOut
 	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, {
+		stamina = stamina,
 		clearance = sheet(
 			Vector2.new(quotaWidth, quotaHeight),
 			UDim2.fromOffset(inset, quotaTop),

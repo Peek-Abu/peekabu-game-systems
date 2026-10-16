@@ -8,8 +8,8 @@
 
 	A HUD widget: it reads the shift snapshot, the local player's public entry, the scare beat and the touch flag, and
 	draws what ShiftHudViewModel.mobileButtons decides (whether the arc shows, VACUUM or BANK, which buttons are
-	available or lit). SPRINT (held, empty hands only, not while hiding) takes DROP's spot, which only shows while
-	holding something; it holds the sprint through SprintServiceClient. The base Input feature has no touch bindings, so the buttons call the Vacuum and Cargo client
+	available or lit). SPRINT (held, any time but while hiding; a load slows it) sits up and left of DROP; it
+	holds the sprint through SprintServiceClient. The base Input feature has no touch bindings, so the buttons call the Vacuum and Cargo client
 	services directly. The big button keeps the hold semantics for VACUUM. As BANK it is usable (and lit) only while the
 	truck's Load prompt is shown (ShiftPromptStore, ShiftHudViewModel.loadReady: the engine takes a touch hold only on
 	a shown prompt); pressing holds that prompt and releasing lets go, through the `onPrompt` prop (ShiftServiceClient
@@ -244,7 +244,7 @@ local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactN
 		sprint = if view.sprint
 			then e(ActionButton, {
 				label = "SPRINT",
-				spot = arc.drop,
+				spot = arc.sprint,
 				large = false,
 				available = true,
 				ready = false,

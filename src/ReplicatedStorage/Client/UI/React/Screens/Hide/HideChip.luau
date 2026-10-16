@@ -2,10 +2,10 @@
 --[=[
 	HideChip: the hiding spot's paper prompt (docs/superpowers/specs/2026-10-15-cleanup-crew-chase-kit-design.md §4),
 	the same taped cream slip as the interaction chip, one slot above it so both can show ("[E] SEARCH desk" and
-	"[C] HIDE UNDER desk"). Entering fills an ink strip while C is held; inside a spot it is the way out ("[C] LEAVE
-	locker"), a manila warning once the stay is cramped. On a touch screen the slip is the button: holding it holds the
-	prompt, tapping it while hidden leaves (the `onPress` / `onLeave` props, from HideServiceClient, so this module never
-	requires the service that registers it).
+	"[C] HIDE UNDER desk"). Going in is a single press; inside a spot the chip is the way out ("[C] LEAVE desk"), a
+	manila warning once the stay is cramped. On a touch screen the slip is the button: a tap presses the prompt, or
+	leaves while hidden (the `onPress` / `onLeave` props, from HideServiceClient, so this module never requires the
+	service that registers it).
 
 	A HUD widget: it reads HideStore and draws what HideViewModel.chip decides.
 

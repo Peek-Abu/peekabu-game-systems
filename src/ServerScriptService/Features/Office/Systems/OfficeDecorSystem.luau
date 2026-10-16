@@ -5,8 +5,8 @@
 	glowing green EXIT sign over each doorway out of the loading bay, a monitor glowing blue on every desk, the
 	elevator's doors and floor lamp in reception, and the invisible sound emitters the client's ambience plays from
 	(tag OfficeAmbient, attribute AmbientKind: a phone on every desk, a typist at every other desk, the elevator).
-	Props and chairs are non-colliding; table/cabinet proxies support their loot physically, and are tagged as hiding
-	spots (Hide). The flickering and
+	Props and chairs are non-colliding; table/cabinet proxies support their loot physically; the table is tagged as a
+	hiding spot (Hide). The flickering and
 	sounds are client side.
 
 	Instance specs cover kit dressing, fallback, tabletop bounds and preserved ambiance; OfficeLayoutRules validates placement.
@@ -30,7 +30,7 @@ local OfficeTypes = require(OfficeServer.Data.OfficeTypes)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
 
 -- Art-only furniture that is also a hiding spot, by its art key.
-local HIDE_KINDS: { [string]: HideConstants.FurnitureKind } = { filingCabinet = "cabinet", breakTable = "table" }
+local HIDE_KINDS: { [string]: HideConstants.FurnitureKind } = { breakTable = "table" }
 
 local function part(name: string, size: Vector3, cframe: CFrame, color: Color3, parent: Instance): Part
 	local created = Instance.new("Part")
@@ -173,7 +173,7 @@ local function artOnly(
 		root:Destroy()
 		return
 	end
-	-- The filing cabinet and the table are hiding spots (Hide): inside one, under the other.
+	-- The table is a hiding spot (Hide): under it.
 	local hideKind = HIDE_KINDS[key]
 	if hideKind ~= nil then
 		root:SetAttribute(HideConstants.FURNITURE_KIND_ATTRIBUTE, hideKind)

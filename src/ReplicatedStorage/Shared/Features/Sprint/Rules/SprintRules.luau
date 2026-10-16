@@ -1,9 +1,9 @@
 --!strict
 --[=[
 	SprintRules: whether a player sprints right now (docs/superpowers/specs/2026-10-15-cleanup-crew-chase-kit-design.md
-	§3): they ask (the key is held), they are alive and free (not frozen in a catch, not hiding), their hands are empty
-	(carrying anything never sprints, pockets are fine) and the bar allows it. Shared: the phone's SPRINT button shows
-	by the same hands rule. Pure.
+	§3): they ask (the key is held), they are alive and free (not frozen in a catch, not hiding) and the bar allows it.
+	Carrying is allowed: the load slows the sprint as it slows the walk (SprintSpeedFormulas). Shared: the phone's
+	SPRINT button shows by the same rule. Pure.
 
 	@class SprintRules
 ]=]
@@ -13,7 +13,6 @@ export type Input = {
 	alive: boolean,
 	frozen: boolean,
 	hidden: boolean,
-	carrying: boolean,
 	-- SprintStaminaFormulas.canStart for the bar now.
 	stamina: boolean,
 }
@@ -33,9 +32,6 @@ function SprintRules.canSprint(input: Input): (boolean, string?)
 	if input.hidden then
 		return false, "hidden"
 	end
-	if input.carrying then
-		return false, "hands full"
-	end
 	if not input.stamina then
 		return false, "winded"
 	end
@@ -43,10 +39,10 @@ function SprintRules.canSprint(input: Input): (boolean, string?)
 end
 
 --[=[
-	Whether the phone's SPRINT button is offered: with empty hands, not hiding.
+	Whether the phone's SPRINT button is offered: whenever the player is not hiding.
 ]=]
-function SprintRules.offered(carrying: boolean, hidden: boolean): boolean
-	return not carrying and not hidden
+function SprintRules.offered(hidden: boolean): boolean
+	return not hidden
 end
 
 return SprintRules

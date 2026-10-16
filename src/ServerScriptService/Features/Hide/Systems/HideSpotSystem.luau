@@ -2,9 +2,10 @@
 --[=[
 	HideSpotSystem: turns the office's furniture into hiding spots (docs/superpowers/specs/
 	2026-10-15-cleanup-crew-chase-kit-design.md §4). Every BasePart tagged HideConstants.FURNITURE_TAG (Office tags its
-	desks, tables, lockers and filing cabinets, naming the kind) gets one spot: an Attachment on its front face, tagged
-	SPOT_TAG, carrying the spot's id, kind, noun and peek camera, and holding a hold-to-enter ProximityPrompt on its own
-	key (C / L1, so it never takes E from the furniture's Search). A trigger goes to `onTrigger`; the server re-checks
+	desks and tables, naming the kind) gets one spot: an Attachment on its front face, tagged
+	SPOT_TAG, carrying the spot's id, kind, noun and peek camera, and holding a press-to-enter ProximityPrompt on its own
+	key (C / L1, so it never takes E from the furniture's Search). The spot faces whichever side of the furniture has
+	more open floor (HideSpotUtils.spotFrame), so the peek and the way in and out face the room. A trigger goes to `onTrigger`; the server re-checks
 	everything there (HideServiceServer, HideRules). When the furniture goes (the office is rebuilt each shift) the
 	spot goes with it and `onRemoved` hears of it first.
 
@@ -15,6 +16,7 @@
 
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
 local Observers = require(ReplicatedStorage.Packages.Observers)
 local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideConstants)
@@ -56,10 +58,22 @@ function HideSpotSystem.new(hooks: Hooks): HideSpotSystem
 		if spots[id] ~= nil then
 			id = `{id}.{nextId}`
 		end
-		local frames = HideSpotUtils.frames(spotKind, furniture.CFrame, furniture.Size, PEEK_STAND)
+		-- Face the room: how far the floor is open in front of the furniture and behind it.
+		local function clearance(direction: Vector3): number
+			local params = RaycastParams.new()
+			params.FilterType = Enum.RaycastFilterType.Exclude
+			params.FilterDescendantsInstances = { furniture }
+			params.RespectCanCollide = true
+			local from = (furniture.CFrame * CFrame.new(0, -furniture.Size.Y / 2 + 1.5, 0)).Position
+			local hit = Workspace:Raycast(from, direction * HideConstants.OPEN_PROBE, params)
+			return if hit ~= nil then hit.Distance else HideConstants.OPEN_PROBE
+		end
+		local look = furniture.CFrame.LookVector
+		local frame = HideSpotUtils.spotFrame(def.noun, furniture.CFrame, clearance(look), clearance(-look))
+		local frames = HideSpotUtils.frames(def.noun, frame, furniture.Size, PEEK_STAND)
 		local anchor = Instance.new("Attachment")
 		anchor.Name = HideConstants.SPOT_NAME
-		anchor.Position = frames.prompt
+		anchor.Position = furniture.CFrame:PointToObjectSpace(frame:PointToWorldSpace(frames.prompt))
 		anchor:SetAttribute(HideConstants.SPOT_ID_ATTRIBUTE, id)
 		anchor:SetAttribute(HideConstants.SPOT_KIND_ATTRIBUTE, spotKind)
 		anchor:SetAttribute(HideConstants.SPOT_NOUN_ATTRIBUTE, def.noun)
@@ -79,7 +93,7 @@ function HideSpotSystem.new(hooks: Hooks): HideSpotSystem
 		anchor.Parent = furniture
 		CollectionService:AddTag(anchor, HideConstants.SPOT_TAG)
 		local spot: HideTypes.Spot =
-			{ id = id, kind = spotKind, noun = def.noun, furniture = furniture, anchor = anchor }
+			{ id = id, kind = spotKind, noun = def.noun, furniture = furniture, frame = frame, anchor = anchor }
 		spots[id] = spot
 		prompts[id] = prompt
 		local triggered = prompt.Triggered:Connect(function(player: Player)

@@ -86,7 +86,7 @@ export type ButtonsView = {
 	throw: boolean,
 	pocket: boolean,
 	pocketReady: boolean,
-	-- SPRINT (held): only with empty hands and out of hiding; it takes DROP's spot, which shows only while holding.
+	-- SPRINT (held): whenever the player is not hiding (a load slows it, it never forbids it).
 	sprint: boolean,
 }
 
@@ -103,6 +103,7 @@ export type ArcView = {
 	drop: ArcSpot,
 	throw: ArcSpot,
 	pocket: ArcSpot,
+	sprint: ArcSpot,
 	-- The engine's Jump button the arc keeps clear of.
 	jump: ArcSpot,
 }
@@ -248,7 +249,7 @@ end
 	The phone's action buttons (Figma 1d/1e): one big button that is VACUUM with empty hands and LOAD while holding
 	something (lit green when the truck's Load prompt is up, `loadReady`); DROP / THROW only with something in hand
 	(THROW only for a throwable item); POCKET usable with a tiny item or something pocketed, lit when a tiny item can
-	go in a free pocket; SPRINT with empty hands while not `hiding`.
+	go in a free pocket; SPRINT whenever not `hiding`.
 ]=]
 function ShiftHudViewModel.buttons(
 	me: PublicPlayerTypes.PublicPlayer?,
@@ -277,7 +278,7 @@ function ShiftHudViewModel.buttons(
 		throw = def ~= nil and def.throwable,
 		pocket = tiny or filled > 0,
 		pocketReady = tiny and free > 0,
-		sprint = SprintRules.offered(holding, hiding == true),
+		sprint = SprintRules.offered(hiding == true),
 	}
 end
 
@@ -303,6 +304,8 @@ local PHONE_ARC: ArcView = table.freeze({
 	drop = spot(-332, -108, 72),
 	throw = spot(-289, -196, 72),
 	pocket = spot(-193, -217, 72),
+	-- SPRINT: up and left of DROP, clear of THROW and of the thumbstick zone on the narrowest landscape phones.
+	sprint = spot(-380, -196, 72),
 	jump = spot(-95, -90, 70),
 })
 
@@ -315,6 +318,8 @@ local TABLET_ARC: ArcView = table.freeze({
 	drop = spot(-262, -224, 72),
 	throw = spot(-262, -316, 72),
 	pocket = spot(-146, -302, 72),
+	-- SPRINT: above THROW (the arc's left edge stays inside the right 60% down to 501 px).
+	sprint = spot(-262, -408, 72),
 	jump = spot(-170, -210, 120),
 })
 

@@ -2,9 +2,10 @@
 --[=[
 	HideRules: who may go into a hiding spot, and how long they may stay (docs/superpowers/specs/
 	2026-10-15-cleanup-crew-chase-kit-design.md §4). In: alive, not being caught, not already hidden, the spot free and
-	not cooling off for them, within the prompt's range (plus RANGE_TOLERANCE), and empty-handed or holding a pocketable
-	tiny item. Stay: fine until CAMP_WARN_SECONDS, cramped until CAMP_SECONDS, then pushed out. Shared: the client's chip
-	counts down with the same rule. Pure.
+	not cooling off for them, rested since their last stay (REENTER_SECONDS), within the prompt's range (plus
+	RANGE_TOLERANCE), and empty-handed or holding a pocketable tiny item. Out: not before MIN_STAY_SECONDS (a tap in and
+	out cannot spam). Stay: fine until CAMP_WARN_SECONDS, cramped until CAMP_SECONDS, then pushed out. Shared: the
+	client's chip counts down with the same rule. Pure.
 
 	@class HideRules
 ]=]
@@ -38,10 +39,20 @@ function HideRules.canEnter(input: HideTypes.EnterInput): (boolean, string?)
 	if input.cooling then
 		return false, "cramped"
 	end
+	if not input.rested then
+		return false, "too soon"
+	end
 	if not (input.distance <= HideConstants.ENTER_RANGE + HideConstants.RANGE_TOLERANCE) then
 		return false, "too far"
 	end
 	return true, nil
+end
+
+--[=[
+	Whether a player who went in `stayed` seconds ago may come out on their own (a rule may always force them out).
+]=]
+function HideRules.canLeave(stayed: number): boolean
+	return stayed >= HideConstants.MIN_STAY_SECONDS
 end
 
 --[=[

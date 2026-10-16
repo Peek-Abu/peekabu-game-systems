@@ -4,13 +4,14 @@
 	The server decides everything; this client:
 
 	- draws the hiding spots' prompts on paper (HideChip: the engine's own card is switched off with the Custom style)
-	  and keeps HideStore.prompt current from the engine's Shown / Hidden / hold events; a touch on the chip holds the
-	  prompt (`press`);
+	  and keeps HideStore.prompt current from the engine's Shown / Hidden events; a single press of C / L1, or a tap on
+	  the chip (`press`), goes in;
 	- offers no spot while the hands hold something too big to hide with, or while already hidden (a local zero range;
 	  the server re-checks);
 	- while the Player's HideSpotId attribute says it hides: the peek camera (the spot's HidePeek frame, looking about
 	  with the mouse), its own body hidden from itself, the controls off, every other prompt off, the peek overlay; and
-	  the `hide` action (C / L1), Jump or the chip's tap asks to come out (HideEvents.Exit).
+	  a tap of the `hide` action (C / L1), E, Jump or the chip asks to come out (HideEvents.Exit);
+	- every hiding player's tucked pose, for everyone (HidePoseSystem).
 
 	Spec-exempt shell (ProximityPrompts, Camera, PlayerModule, ByteNet); the words are the specced HideViewModel and the
 	state the specced HideStore.
@@ -36,6 +37,7 @@ local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.D
 local CameraTypes = require(ReplicatedStorage.Client.Features.Camera.Data.CameraTypes)
 local CameraServiceClient = require(ReplicatedStorage.Client.Features.Camera.CameraServiceClient)
 local HideStore = require(ReplicatedStorage.Client.Features.Hide.State.HideStore)
+local HidePoseSystem = require(ReplicatedStorage.Client.Features.Hide.Systems.HidePoseSystem)
 local InputActionRegistry = require(ReplicatedStorage.Client.Features.Input.Data.InputActionRegistry)
 local InputServiceClient = require(ReplicatedStorage.Client.Features.Input.InputServiceClient)
 local InputControlsSystem = require(ReplicatedStorage.Client.Features.Input.Systems.InputControlsSystem)
@@ -374,6 +376,7 @@ local HideServiceClient: HideServiceClient = {
 			ranges:Disconnect()
 			respawned:Disconnect()
 		end)
+		table.insert(stoppers, HidePoseSystem.start())
 		onHiddenChanged()
 	end,
 

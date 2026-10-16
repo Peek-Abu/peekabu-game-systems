@@ -1,15 +1,16 @@
 --!strict
 --[=[
 	HideServiceServer: hiding spots (docs/superpowers/specs/2026-10-15-cleanup-crew-chase-kit-design.md §4). Players hide
-	under desks and tables and inside lockers and filing cabinets (HideSpotSystem makes a spot of every piece Office
-	tags). Server-authoritative throughout:
+	under desks and tables (HideSpotSystem makes a spot of every piece Office tags). Server-authoritative throughout:
 
-	- In: the spot's hold-to-enter prompt (C / L1). Re-checked here (HideRules: alive, not frozen in a catch, not hidden,
-	  the spot free and not cooling off for them, in range, empty-handed or holding a pocketable tiny item). The root is
-	  anchored at the spot's hiding frame (HideSpotUtils), the spot's prompt closes, and the Player's HideSpotId /
-	  HideSince attributes tell the client (its peek camera). Whether the Manager saw them go in is asked of the
+	- In: a single press of the spot's prompt (C / L1, or a tap on the phone's chip). Re-checked here (HideRules: alive,
+	  not frozen in a catch, not hidden, the spot free and not cooling off for them, rested REENTER_SECONDS since their
+	  last stay, in range, empty-handed or holding a pocketable tiny item). The root is anchored and slides into the
+	  spot's hiding frame in TUCK_SECONDS (HideSpotUtils), the spot's prompt closes, and the Player's HideSpotId /
+	  HideSince attributes tell every client (the peek camera on theirs, the tucked pose on everyone's,
+	  HidePoseSystem). Whether the Manager saw them go in is asked of the
 	  witness (`setWitness`, OccupantServiceServer) at that moment and kept for the stay (`seenEntering`).
-	- Out: the client's Exit request, or a rule: after CAMP_SECONDS in one spot they are pushed out ("cramped") and that
+	- Out: the client's Exit request (a tap, not before MIN_STAY_SECONDS), or a rule: after CAMP_SECONDS in one spot they are pushed out ("cramped") and that
 	  spot refuses them SPOT_COOLDOWN_SECONDS; `evict` (the Manager's catch, the behaviours to come); their character
 	  dying or going; the furniture going (the office rebuilds each shift); picking up something too big. The body comes
 	  out at the first clear exit (in front, behind, either side).
@@ -26,6 +27,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local ServerScriptService = game:GetService("ServerScriptService")
 local Workspace = game:GetService("Workspace")
 
@@ -62,7 +64,9 @@ local witness: Witness? = nil
 local counters: { [string]: number } =
 	{ entered = 0, seen = 0, left = 0, cramped = 0, evicted = 0, gone = 0, refused = 0 }
 -- The body each hiding player went in with (a respawn's new character is never moved by an old stay).
-local bodies: { [number]: { root: BasePart, humanoid: Humanoid, entry: CFrame } } = {}
+local bodies: { [number]: { root: BasePart, humanoid: Humanoid, entry: CFrame, tween: Tween } } = {}
+-- When each player's last stay ended (os.clock), for the re-entry rest.
+local lastLeft: { [number]: number } = {}
 local stoppers: { () -> () } = {}
 local campElapsed = 0
 
@@ -114,8 +118,7 @@ end
 
 -- The first exit with room for a body (nothing collidable but the furniture's own parts), else the front one.
 local function exitFrame(spot: Spot, root: BasePart, humanoid: Humanoid, entry: CFrame?): CFrame
-	local frames =
-		HideSpotUtils.frames(spot.kind, spot.furniture.CFrame, spot.furniture.Size, standHeight(root, humanoid))
+	local frames = HideSpotUtils.frames(spot.noun, spot.frame, spot.furniture.Size, standHeight(root, humanoid))
 	local exclude: { Instance } = { spot.furniture }
 	for _, other in Players:GetPlayers() do
 		if other.Character ~= nil then
@@ -132,7 +135,7 @@ local function exitFrame(spot: Spot, root: BasePart, humanoid: Humanoid, entry: 
 	rays.RespectCanCollide = true
 	-- The front of the furniture at waist height: an exit must be reachable from it with no wall between.
 	local size = spot.furniture.Size
-	local mouth = (spot.furniture.CFrame * CFrame.new(0, -size.Y / 2 + 2, -size.Z / 2)).Position
+	local mouth = (spot.frame * CFrame.new(0, -size.Y / 2 + 2, -size.Z / 2)).Position
 	local function usable(frame: CFrame): boolean
 		local at = frame.Position
 		-- Room for a body (clear of the floor and its carpet skin), a floor under it, and no wall in the way.
@@ -156,10 +159,15 @@ end
 
 -- Ends a stay: the body comes out (unless its character is gone), the spot reopens, the attributes clear.
 local function leave(player: Player, reason: ExitReason): boolean
+	local current = tracker:of(player.UserId)
+	if current == nil or (reason == "left" and not HideRules.canLeave(os.clock() - current.since)) then
+		return false
+	end
 	local stay = tracker:leave(player.UserId)
 	if stay == nil then
 		return false
 	end
+	lastLeft[player.UserId] = os.clock()
 	player:SetAttribute(HideConstants.PLAYER_SPOT_ATTRIBUTE, nil)
 	player:SetAttribute(HideConstants.PLAYER_SINCE_ATTRIBUTE, nil)
 	local spot = spotSystem:get(stay.spotId)
@@ -168,6 +176,9 @@ local function leave(player: Player, reason: ExitReason): boolean
 	end
 	local body = bodies[player.UserId]
 	bodies[player.UserId] = nil
+	if body ~= nil then
+		body.tween:Cancel()
+	end
 	if body ~= nil and body.root.Parent ~= nil then
 		-- A living body comes out at an exit (also when the furniture went with them in it); a dead one just drops.
 		if spot ~= nil and body.humanoid.Health > 0 then
@@ -201,6 +212,7 @@ local function enter(player: Player, spot: Spot): (boolean, string?)
 		heldSize = heldSize(player),
 		occupied = tracker:occupant(spot.id) ~= nil,
 		cooling = tracker:cooling(player.UserId, spot.id, now),
+		rested = now - (lastLeft[player.UserId] or -math.huge) >= HideConstants.REENTER_SECONDS,
 		distance = if root ~= nil then (root.Position - spot.anchor.WorldPosition).Magnitude else math.huge,
 	})
 	if not ok or root == nil or humanoid == nil then
@@ -210,12 +222,17 @@ local function enter(player: Player, spot: Spot): (boolean, string?)
 	local check = witness
 	local seen = check ~= nil and check(player)
 	tracker:enter(player.UserId, spot.id, now, seen)
-	local frames =
-		HideSpotUtils.frames(spot.kind, spot.furniture.CFrame, spot.furniture.Size, standHeight(root, humanoid))
-	bodies[player.UserId] = { root = root, humanoid = humanoid, entry = root.CFrame }
+	local frames = HideSpotUtils.frames(spot.noun, spot.frame, spot.furniture.Size, standHeight(root, humanoid))
+	-- A quick slide in, not a teleport.
+	local tween = TweenService:Create(
+		root,
+		TweenInfo.new(HideConstants.TUCK_SECONDS, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		{ CFrame = frames.hide }
+	)
+	bodies[player.UserId] = { root = root, humanoid = humanoid, entry = root.CFrame, tween = tween }
 	root.Anchored = true
 	root.AssemblyLinearVelocity = Vector3.zero
-	root.CFrame = frames.hide
+	tween:Play()
 	spotSystem:setOpen(spot.id, false)
 	player:SetAttribute(HideConstants.PLAYER_SPOT_ATTRIBUTE, spot.id)
 	player:SetAttribute(HideConstants.PLAYER_SINCE_ATTRIBUTE, Workspace:GetServerTimeNow())
@@ -336,6 +353,7 @@ local HideServiceServer: HideServiceServer = {
 		local leaving = Players.PlayerRemoving:Connect(function(player: Player)
 			tracker:leave(player.UserId)
 			bodies[player.UserId] = nil
+			lastLeft[player.UserId] = nil
 		end)
 		local heartbeat = RunService.Heartbeat:Connect(onHeartbeat)
 		table.insert(stoppers, function()
@@ -355,6 +373,7 @@ local HideServiceServer: HideServiceServer = {
 		table.clear(stoppers)
 		tracker:clear()
 		table.clear(bodies)
+		table.clear(lastLeft)
 	end,
 
 	isHidden = function(_self, player)

@@ -3,21 +3,22 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HideViewModel = require(script.Parent.HideViewModel)
 local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideConstants)
 
-local PROMPT = { id = 1, action = "Hide under", noun = "Desk", key = "C", hold = 0.6 }
-local HIDDEN = { spotId = "locker.a", kind = "inside", noun = "locker", since = 100 }
+local PROMPT = { id = 1, action = "Hide under", noun = "Desk", key = "C", hold = 0 }
+local HELD = { id = 1, action = "Hide under", noun = "Desk", key = "C", hold = 0.6 }
+local HIDDEN = { spotId = "table.a", kind = "under", noun = "table", since = 100 }
 
 return function()
 	describe("chip", function()
-		it("reads the spot's prompt with an empty hold strip", function()
+		it("reads the spot's single-press prompt, with no hold strip", function()
 			local view = HideViewModel.chip(PROMPT, nil, "C", 100, false)
 			expect(view.text).to.equal("HIDE UNDER desk")
 			expect(view.key).to.equal("C")
-			expect(view.fill).to.equal(0)
+			expect(view.fill).to.equal(nil)
 			expect(view.warn).to.equal(false)
 		end)
 
 		it("fills the strip while the key is held", function()
-			local held = table.clone(PROMPT)
+			local held = table.clone(HELD)
 			held.holdStartedAt = 100
 			expect(HideViewModel.chip(held, nil, "C", 100.3, false).fill).to.be.near(0.5, 1e-6)
 			expect(HideViewModel.chip(held, nil, "C", 105, false).fill).to.equal(1)
@@ -25,7 +26,7 @@ return function()
 
 		it("offers the way out while hiding, over any prompt", function()
 			local view = HideViewModel.chip(PROMPT, HIDDEN, "C", 105, false)
-			expect(view.text).to.equal("LEAVE locker")
+			expect(view.text).to.equal("LEAVE table")
 			expect(view.fill).to.equal(nil)
 		end)
 
@@ -45,11 +46,8 @@ return function()
 	end)
 
 	describe("overlay", function()
-		it("frames a locker's slits inside and the underside under a desk", function()
-			expect(HideViewModel.overlay(HIDDEN)).to.equal("inside")
-			expect(HideViewModel.overlay({ spotId = "desk.a", kind = "under", noun = "desk", since = 0 })).to.equal(
-				"under"
-			)
+		it("frames the furniture's underside while hiding, nothing otherwise", function()
+			expect(HideViewModel.overlay(HIDDEN)).to.equal("under")
 			expect(HideViewModel.overlay(nil)).to.equal(nil)
 		end)
 	end)

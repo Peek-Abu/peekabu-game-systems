@@ -1,7 +1,7 @@
 local SprintRules = require(script.Parent.SprintRules)
 
 local function input(extra)
-	local value = { requested = true, alive = true, frozen = false, hidden = false, carrying = false, stamina = true }
+	local value = { requested = true, alive = true, frozen = false, hidden = false, stamina = true }
 	for key, item in extra or {} do
 		value[key] = item
 	end
@@ -16,12 +16,8 @@ return function()
 			expect(reason).to.equal(expected)
 		end
 
-		it("sprints an empty-handed, living, free player who asks and has the stamina", function()
+		it("sprints a living, free player who asks and has the stamina", function()
 			expect(SprintRules.canSprint(input())).to.equal(true)
-		end)
-
-		it("never sprints while carrying anything", function()
-			refused({ carrying = true }, "hands full")
 		end)
 
 		it("refuses without asking, dead, frozen, hidden or winded", function()
@@ -34,10 +30,9 @@ return function()
 	end)
 
 	describe("offered", function()
-		it("offers the button only with empty hands and out of hiding", function()
-			expect(SprintRules.offered(false, false)).to.equal(true)
-			expect(SprintRules.offered(true, false)).to.equal(false)
-			expect(SprintRules.offered(false, true)).to.equal(false)
+		it("offers the button whenever the player is not hiding, hands full or not", function()
+			expect(SprintRules.offered(false)).to.equal(true)
+			expect(SprintRules.offered(true)).to.equal(false)
 		end)
 	end)
 end
