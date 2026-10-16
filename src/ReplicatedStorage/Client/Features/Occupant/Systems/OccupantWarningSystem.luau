@@ -5,14 +5,12 @@
 	local player's distance to him:
 
 	- far: a pen click from him every PEN_CLICK seconds (his footsteps carry this far too: OccupantPresenceSystem);
-	- mid: the lights near him flicker (OccupantTellSystem), and every PA_GAP seconds a PA_CHANCE roll plays the PA
-	  chime with a corporate line on the paper subtitle (OccupantPaStore; per client, like the office's ambience);
+	- mid: the lights near him flicker (OccupantTellSystem);
 	- near: the dread swell, louder the closer he is (pending slot; the heartbeat is OccupantPresenceSystem's);
-	- chase: the sting and the chase music (OccupantPresenceSystem).
+	- chase: the sting, the chase bed and the chase pulse (OccupantPresenceSystem, OccupantTellSystem).
 
 	Also his typing while he sits at a desk (OccupantTellRules.typing: a loop on his head that stops dead the moment it
-	ends, e.g. in the ambush, whose own sound plays then), and the server's PA call-out (`callout`: the chime and the
-	named line, for everyone). And the hider's reveal: while he looks under their spot or tips his head under their
+	ends, e.g. in the ambush, whose own sound plays then). No PA since 2026-10-16. And the hider's reveal: while he looks under their spot or tips his head under their
 	desk, their camera draws back into the spot and follows his face (OccupantTellRules.revealed). Reads only
 	replicated state. Pending sounds are skipped silently and counted.
 
@@ -28,10 +26,8 @@ local RunService = game:GetService("RunService")
 
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local OccupantTellRules = require(ReplicatedStorage.Shared.Features.Occupant.Rules.OccupantTellRules)
-local ShiftAssets = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftAssets)
 local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundRegistry)
 local SoundTypes = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundTypes)
-local OccupantPaStore = require(ReplicatedStorage.Client.Features.Occupant.State.OccupantPaStore)
 local CameraServiceClient = require(ReplicatedStorage.Client.Features.Camera.CameraServiceClient)
 local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideConstants)
 local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
@@ -41,9 +37,6 @@ export type OccupantWarningState = {
 	typing: boolean,
 	counters: { [string]: number },
 }
-
--- The PA chime (Shift's overtime warning chime: the office PA).
-local CHIME = ShiftAssets.CUE_SOUNDS.warning
 
 local rng = Random.new()
 local connection: RBXScriptConnection? = nil
@@ -55,11 +48,9 @@ local dreadAsked = false
 local lastPhase = ""
 local stage: string = "none"
 local nextClick = 0
-local nextPa = 0
 -- The hider's reveal camera while it shows (CameraServiceClient's token).
 local reveal: number? = nil
-local counters =
-	{ reveals = 0, clicks = 0, pa = 0, callouts = 0, typingStarts = 0, typingStops = 0, ambushes = 0, pending = 0 }
+local counters = { reveals = 0, clicks = 0, typingStarts = 0, typingStops = 0, ambushes = 0, pending = 0 }
 
 local function play(id: string, options: SoundTypes.PlayOptions?): SoundServiceClient.SoundHandle?
 	if not SoundRegistry.has(id) then
@@ -137,16 +128,8 @@ local function setReveal(head: BasePart?, on: boolean)
 	end
 end
 
-local function paLine(now: number)
-	local lines = OccupantConstants.PA_LINES
-	counters.pa += 1
-	play(CHIME)
-	OccupantPaStore.show(lines[rng:NextInteger(1, #lines)], false, now + OccupantConstants.PA_SECONDS)
-end
-
 local function step()
 	local now = os.clock()
-	OccupantPaStore.expire(now)
 	local model, head = harlow()
 	if model == nil or head == nil then
 		setReveal(nil, false)
@@ -201,12 +184,6 @@ local function step()
 		counters.clicks += 1
 		play("harlowCurious", { at = head, volumeScale = 0.7 })
 	end
-	if stage == "mid" and now >= nextPa then
-		nextPa = now + within(OccupantConstants.PA_GAP)
-		if rng:NextNumber() < OccupantConstants.PA_CHANCE then
-			paLine(now)
-		end
-	end
 	setDread(if stage == "near" then 1 - distance / OccupantConstants.STAGE_NEAR else nil)
 end
 
@@ -216,7 +193,6 @@ function OccupantWarningSystem.start()
 	if connection ~= nil then
 		return
 	end
-	nextPa = os.clock() + within(OccupantConstants.PA_GAP) / 2
 	local elapsed = 0
 	connection = RunService.Heartbeat:Connect(function(deltaTime: number)
 		elapsed += deltaTime
@@ -236,18 +212,8 @@ function OccupantWarningSystem.stop()
 	stopTyping()
 	setDread(nil)
 	setReveal(nil, false)
-	OccupantPaStore.clear()
 	lastPhase = ""
 	stage = "none"
-end
-
---[=[
-	The server's PA call-out: the chime and the named line on the subtitle.
-]=]
-function OccupantWarningSystem.callout(line: string)
-	counters.callouts += 1
-	play(CHIME)
-	OccupantPaStore.show(line, true, os.clock() + OccupantConstants.PA_SECONDS)
 end
 
 function OccupantWarningSystem.getState(): OccupantWarningState

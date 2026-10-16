@@ -95,6 +95,41 @@ return function()
 			expect(lost[1]).to.equal("chaseEnd")
 		end)
 
+		it("stings you whenever a chase on you starts, by every way in (2026-10-16: no silent chase)", function()
+			-- Direct or long sight from patrol, an investigate or search, the ambush from his desk, a hider
+			-- bolting from a stare, a re-spot after he lost you, and a first frame with no mode yet.
+			for _, before in { "patrol", "investigate", "search", "work", "stare", "catch", "rest" } do
+				local list = OccupantFeedbackUtils.cues(before, "chase", false, true)
+				expect(#list).to.equal(2)
+				expect(list[1]).to.equal("spotted")
+				expect(list[2]).to.equal("chaseStart")
+			end
+			local first = OccupantFeedbackUtils.cues(nil, "chase", false, true)
+			expect(first[1]).to.equal("spotted")
+			expect(first[2]).to.equal("chaseStart")
+		end)
+
+		it("stings you when he switches his chase from a crewmate onto you", function()
+			local list = OccupantFeedbackUtils.cues("chase", "chase", false, true)
+			expect(#list).to.equal(2)
+			expect(list[1]).to.equal("spotted")
+			expect(list[2]).to.equal("chaseStart")
+		end)
+
+		it("does not sting again while the same chase on you carries on", function()
+			expect(#OccupantFeedbackUtils.cues("chase", "chase", true, true)).to.equal(0)
+		end)
+
+		it("has a chase bed to play (a placeholder until the real music is chosen)", function()
+			local OccupantAssets =
+				require(game:GetService("ReplicatedStorage").Shared.Features.Occupant.Data.OccupantAssets)
+			local SoundRegistry = require(game:GetService("ReplicatedStorage").Shared.Features.Sound.Data.SoundRegistry)
+			expect(OccupantAssets.SOUNDS.harlowChase.assetId).never.to.equal(OccupantAssets.PENDING)
+			expect(OccupantAssets.SOUNDS.harlowChase.looped).to.equal(true)
+			expect(SoundRegistry.has("harlowChase")).to.equal(true)
+			expect(SoundRegistry.has("harlowSpotted")).to.equal(true)
+		end)
+
 		it("sighs when he gives up, and only then", function()
 			expect(OccupantFeedbackUtils.cues("search", "patrol", false, false)[1]).to.equal("giveUp")
 			expect(OccupantFeedbackUtils.cues("investigate", "patrol", false, false)[1]).to.equal("giveUp")
@@ -116,6 +151,20 @@ return function()
 		it("is silent standing still", function()
 			expect(OccupantFeedbackUtils.footstepInterval(0)).to.equal(nil)
 			expect(OccupantFeedbackUtils.footstepInterval(1)).to.equal(nil)
+		end)
+
+		it("lands louder when he runs, so the crew hears a chase", function()
+			expect(OccupantFeedbackUtils.footstepVolume(5)).to.equal(1)
+			expect(OccupantFeedbackUtils.footstepVolume(OccupantConstants.STEP_WALK_SPEED)).to.equal(1)
+			expect(OccupantFeedbackUtils.footstepVolume(OccupantConstants.STEP_RUN_SPEED)).to.be.near(
+				OccupantConstants.STEP_RUN_VOLUME,
+				1e-6
+			)
+			expect(OccupantFeedbackUtils.footstepVolume(100)).to.be.near(OccupantConstants.STEP_RUN_VOLUME, 1e-6)
+			local between = OccupantFeedbackUtils.footstepVolume(
+				(OccupantConstants.STEP_WALK_SPEED + OccupantConstants.STEP_RUN_SPEED) / 2
+			)
+			expect(between > 1 and between < OccupantConstants.STEP_RUN_VOLUME).to.equal(true)
 		end)
 	end)
 

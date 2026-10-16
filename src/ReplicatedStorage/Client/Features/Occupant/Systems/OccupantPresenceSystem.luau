@@ -3,10 +3,16 @@
 	OccupantPresenceSystem: how Mr. Harlow sounds on this client (Cleanup Crew spec §4 "Tells": "heartbeat when he
 	is near but hasn't seen you; 3D footsteps and muttering through walls; '!' + sting + chase music when he spots
 	you; a sigh when he gives up"; "Voice": "pitched, distorted gibberish plus a speech bubble with the line").
-	- His footsteps, paced by his speed (OccupantFeedbackUtils.footstepInterval), and a muttering loop on his head.
-	- His mode changes (OccupantFeedbackUtils.cues): a "hm?" when he investigates, the sting when he spots someone
-	  (2D when it is you, positional otherwise), the chase music while he chases you, a sigh when he gives up.
-	- Your heartbeat, on the beat OccupantTellRules sets (the same rule as M2's red pulse).
+	- His footsteps, paced and made louder by his speed (OccupantFeedbackUtils.footstepInterval / footstepVolume: the
+	  crew near a chase hears him running), and a muttering loop on his head.
+	- His mode changes (OccupantFeedbackUtils.cues): a "hm?" when he investigates, the sting whenever a chase starts
+	  (2D when it is on you, however it started, positional otherwise), the chase bed (the `harlowChase` music slot)
+	  while he chases you, a sigh when he gives up.
+	- Your heartbeat, on the beat OccupantTellRules.beatPeriod sets: the near heartbeat, and racing at CHASE_BEAT for as
+	  long as he chases you (the chase bed's beat; OccupantTellSystem pulses the screen with it).
+	- The chase sounds are kept warm while this client runs: one silent, never-played Sound per chase cue stays in
+	  SoundService (preloaded through ContentProvider), so a fresh play is loaded at once. Measured 2026-10-16: a cold
+	  sting took 0.23 s to load (0.88 s long, so a quarter of it was lost), a warm one 0.
 	- His voice: each new line on his model (OccupantConstants.LINE_ATTRIBUTE) plays one uploaded gibberish clip chosen
 	  per line (OccupantFeedbackUtils.clipFor); "*sigh*" is not voiced. The words are never shown: no text over his head
 	  (2026-10-16: the tells stay diegetic).
@@ -20,9 +26,11 @@
 ]=]
 
 local CollectionService = game:GetService("CollectionService")
+local ContentProvider = game:GetService("ContentProvider")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local SoundService = game:GetService("SoundService")
 
 local OccupantShared = ReplicatedStorage.Shared.Features.Occupant
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
@@ -59,7 +67,10 @@ local lastMine = false
 local ownsMusic = false
 local stepClock = 0
 local beatClock = 0
-local counters = { steps = 0, beats = 0, lines = 0, cues = 0, played = 0, pending = 0 }
+local counters = { steps = 0, beats = 0, lines = 0, cues = 0, played = 0, pending = 0, stings = 0, preloaded = 0 }
+-- The sounds a chase depends on, kept loaded (`warm`) so none starts late.
+local PRELOAD: { string } = { "harlowSpotted", "harlowChase", "harlowHeartbeat", "harlowFootstep" }
+local warm: { Sound } = {}
 
 local function play(id: string, options: SoundTypes.PlayOptions?): SoundServiceClient.SoundHandle?
 	if OccupantAssets.SOUNDS[id] == nil then
@@ -128,7 +139,42 @@ local function onSpeech(model: Model)
 	play(uploaded[index], { at = harlow.head })
 end
 
+local function preload()
+	if #warm > 0 then
+		return
+	end
+	local sounds: { Instance } = {}
+	for _, id in PRELOAD do
+		local def = OccupantAssets.SOUNDS[id]
+		if def ~= nil and def.assetId ~= OccupantAssets.PENDING then
+			-- Silent and never played: it only holds the asset in memory.
+			local sound = Instance.new("Sound")
+			sound.Name = `{id}Warm`
+			sound.SoundId = def.assetId
+			sound.Volume = 0
+			sound.Parent = SoundService
+			table.insert(warm, sound)
+			table.insert(sounds, sound)
+		end
+	end
+	task.spawn(function()
+		ContentProvider:PreloadAsync(sounds, function(_contentId: string, status: Enum.AssetFetchStatus)
+			if status == Enum.AssetFetchStatus.Success then
+				counters.preloaded += 1
+			end
+		end)
+	end)
+end
+
+local function release()
+	for _, sound in warm do
+		sound:Destroy()
+	end
+	table.clear(warm)
+end
+
 local function attach(harlow: Harlow)
+	preload()
 	current = harlow
 	lastMode = nil
 	lastMine = false
@@ -163,6 +209,7 @@ local function onCue(cue: string, harlow: Harlow, mine: boolean)
 	if cue == "curious" then
 		play("harlowCurious", { at = harlow.head })
 	elseif cue == "spotted" then
+		counters.stings += 1
 		if mine then
 			play("harlowSpotted")
 		else
@@ -179,7 +226,8 @@ end
 
 local function stepFootsteps(harlow: Harlow, deltaTime: number)
 	local velocity = harlow.root.AssemblyLinearVelocity
-	local interval = OccupantFeedbackUtils.footstepInterval(Vector3.new(velocity.X, 0, velocity.Z).Magnitude)
+	local speed = Vector3.new(velocity.X, 0, velocity.Z).Magnitude
+	local interval = OccupantFeedbackUtils.footstepInterval(speed)
 	if interval == nil then
 		stepClock = 0
 		return
@@ -188,7 +236,7 @@ local function stepFootsteps(harlow: Harlow, deltaTime: number)
 	if stepClock >= interval then
 		stepClock = 0
 		counters.steps += 1
-		play("harlowFootstep", { at = harlow.root })
+		play("harlowFootstep", { at = harlow.root, volumeScale = OccupantFeedbackUtils.footstepVolume(speed) })
 	end
 end
 
@@ -200,15 +248,16 @@ local function stepHeartbeat(harlow: Harlow, mode: string?, mine: boolean, delta
 		return
 	end
 	local distance = (root.Position - harlow.root.Position).Magnitude
-	if not OccupantTellRules.heartbeat(distance, mode, mine) then
+	local period = OccupantTellRules.beatPeriod(distance, mode, mine)
+	if period == nil then
 		beatClock = 0
 		return
 	end
 	beatClock += deltaTime
-	if beatClock >= OccupantTellRules.period(distance) then
+	if beatClock >= period then
 		beatClock = 0
 		counters.beats += 1
-		local closeness = 1 - math.clamp(distance / OccupantConstants.HEARTBEAT_RANGE, 0, 1)
+		local closeness = if mine then 1 else 1 - math.clamp(distance / OccupantConstants.HEARTBEAT_RANGE, 0, 1)
 		play("harlowHeartbeat", { volumeScale = 0.6 + 0.6 * closeness })
 	end
 end
@@ -263,6 +312,7 @@ function OccupantPresenceSystem.stop()
 		connection = nil
 	end
 	detach()
+	release()
 end
 
 function OccupantPresenceSystem.getState(): OccupantPresenceState

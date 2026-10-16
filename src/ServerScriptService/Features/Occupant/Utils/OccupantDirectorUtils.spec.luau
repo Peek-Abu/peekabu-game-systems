@@ -38,20 +38,6 @@ return function()
 		end)
 	end)
 
-	describe("farthest", function()
-		it("names the crew member farthest from him", function()
-			local userId = OccupantDirectorUtils.farthest(Vector3.zero, {
-				{ userId = 1, position = Vector3.new(10, 0, 0) },
-				{ userId = 2, position = Vector3.new(50, 0, 0) },
-				{ userId = 3, position = Vector3.new(20, 0, 0) },
-			})
-			expect(userId).to.equal(2)
-		end)
-		it("is nil for nobody", function()
-			expect(OccupantDirectorUtils.farthest(Vector3.zero, {})).to.equal(nil)
-		end)
-	end)
-
 	describe("pick", function()
 		it("picks by roll, clamped", function()
 			expect(OccupantDirectorUtils.pick(3, 0)).to.equal(1)

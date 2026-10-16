@@ -81,13 +81,12 @@ The stages run on each client (`OccupantTellRules.stage`) by the distance to him
 | Stage | Distance | Tells |
 |---|---|---|
 | far | 45–85 | his footsteps (heard to 85), a pen click every 9–16 s |
-| mid | 25–45 | lights within 26 studs of him flicker; now and then a PA chime and a short corporate line on a paper subtitle (each client, 50–100 s apart, 40% chance) |
+| mid | 25–45 | lights within 26 studs of him flicker (the PA lines were removed 2026-10-16) |
 | near | under 25 | the heartbeat (now 25 studs, was 40), his footsteps, a dread swell that grows as he nears |
-| chase | his chase on you | the sting, then the chase music |
+| chase | his chase on you | the sting (every chase start), the chase bed with a racing heartbeat, a soft red screen pulse (2026-10-16) |
 
-- **The PA call-out** (server, everyone hears it): first after 75 s, then every 120–210 s, never in a breather. It
-  names the crew member farthest from him ("Pippa. My office."). His next steer, 4 s later, aims at that player's area
-  (6–10 studs off).
+- **The PA is removed (2026-10-16 playtest).** There is no PA call-out, no ambient PA line, no PA chime from him and no
+  PA subtitle strip; the director's steers aim at a random crew member's area only. See the chase-tuning design §9.
 
 ## 6. The catch jumpscare
 
@@ -104,18 +103,18 @@ The stages run on each client (`OccupantTellRules.stage`) by the distance to him
 |---|---|---|---|---|
 | Occupant | server | Rules | OccupantStareRules | The stare mode: how long a stare lasts, whether it ends in a check, the sit-in roll |
 | Occupant | server | Rules | OccupantWorkRules | The work mode: desk breaks, typing, the ambush, the sit-in's phases |
-| Occupant | server | Rules | OccupantDirectorRules | Steering toward the crew, the PA call-out, the breather; tracking sight and the menace gauge |
+| Occupant | server | Rules | OccupantDirectorRules | Steering toward the crew, the breather; tracking sight and the menace gauge |
 | Occupant | server | Utils | OccupantMindUtils | The shared pieces of his thinking (mode copies, lookups, sight, patrol, chase, stare and work starts) |
 | Occupant | server | Utils | OccupantDeskUtils | Which desk he works at, its seat frame, a spot's stand point |
-| Occupant | server | Utils | OccupantDirectorUtils | Where to steer him (the crew's area), the far point for a breather, the call-out pick |
+| Occupant | server | Utils | OccupantDirectorUtils | Where to steer him (the crew's area), the far point for a breather |
 | Occupant | server | Utils | OccupantMenaceFormulas | The menace gauge, breather lengths, steer intervals |
 | Occupant | server | Systems | OccupantSeatSystem | Seats him on a chair and stands him up (anchor, clipboard, clips) |
-| Occupant | server | Systems | OccupantEffectSystem | Carries out a think's effects (body, Hide's seen and hold, catch, PA call-out) |
+| Occupant | server | Systems | OccupantEffectSystem | Carries out a think's effects (body, Hide's seen and hold, catch, cabinet door) |
 | Occupant | shared | Utils | OccupantGestureFormulas | The procedural head and waist gestures (swivel, peek, under, tilt) |
 | Occupant | client | Systems | OccupantGestureSystem | Lays his gestures over his joints on every client |
-| Occupant | client | Systems | OccupantWarningSystem | The staged far and mid tells, his seated typing, the PA lines and call-outs |
-| Occupant | client | State | OccupantPaStore | The PA subtitle on screen |
-| UI | client | Screens/World | OccupantPaSubtitle, OccupantPaViewModel | The paper PA subtitle |
+| Occupant | client | Systems | OccupantWarningSystem | The staged far and near tells, his seated typing |
+
+Removed 2026-10-16 with the PA: `OccupantPaStore`, `OccupantPaSubtitle`, `OccupantPaViewModel`, `OccupantEvents.Pa`.
 
 Changed: `OccupantBrainRules` (now the orchestrator over the Work, Stare and Director rules; the body's settling), `OccupantTypes`,
 `OccupantConstants`, `OccupantAssets` (typing, priorities), `OccupantEvents` (`Pa`), `OccupantFaceUtils` (per phase),
@@ -125,7 +124,8 @@ Changed: `OccupantBrainRules` (now the orchestrator over the Work, Stare and Dir
 
 ## 8. Placeholder sounds still needed
 
-- `harlowChase`: the chase music (pending since M3).
+- `harlowChase`: the chase music. Since 2026-10-16 a PLACEHOLDER bed (the overtime ticking at 1.6x) until the real
+  music is chosen.
 - `harlowDread`: the near-stage dread swell (a low, slow loop).
 - `harlowAmbush`: a short sharp intake for the ambush swivel. Silent until uploaded; the sting covers it.
-- PA voice lines are text only (chime and subtitle). Recorded lines could replace them later.
+- The PA was removed (2026-10-16), so it needs no voice lines.

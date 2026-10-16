@@ -4,8 +4,8 @@
 	over his head: no "?" / "!" and no speech text, the tells are diegetic): a voiced line per cue; a heartbeat while he is within
 	HEARTBEAT_RANGE and not chasing you, beating faster the closer he is; lights within FLICKER_RADIUS of him
 	flicker (deterministic noise per light, mostly on). The behaviour set (docs/superpowers/specs/2026-10-15-cleanup-
-	crew-manager-behaviours-design.md §5): his typing plays while he sits typing; the warning stage by distance (far: footsteps and a pen click; mid: flicker and the PA; near: the
-	heartbeat and the dread swell; chase: his chase on you); a PA line with the called-out name. Shared: the server uses the cues and lines, the client
+	crew-manager-behaviours-design.md §5): his typing plays while he sits typing; the warning stage by distance (far: footsteps and a pen click; mid: flicker; near: the
+	heartbeat and the dread swell; chase: his chase on you; no PA since 2026-10-16). Shared: the server uses the cues and lines, the client
 	the heartbeat and flicker. Pure.
 
 	@class OccupantTellRules
@@ -113,16 +113,6 @@ function OccupantTellRules.stage(distance: number, mode: string?, huntingMe: boo
 end
 
 --[=[
-	A PA line with "{name}" replaced by `name`.
-]=]
-function OccupantTellRules.paLine(template: string, name: string): string
-	local line = string.gsub(template, "{name}", function()
-		return name
-	end)
-	return line
-end
-
---[=[
 	Whether your heartbeat sounds: he is within HEARTBEAT_RANGE and not chasing you.
 ]=]
 function OccupantTellRules.heartbeat(distance: number, mode: string?, huntingMe: boolean): boolean
@@ -148,6 +138,34 @@ function OccupantTellRules.pulse(elapsed: number, distance: number): number
 	local period = OccupantTellRules.period(distance)
 	local phase = (elapsed % period) / period
 	return math.clamp(1 - phase * 3, 0, 1)
+end
+
+--[=[
+	Seconds per heartbeat for a player `distance` studs from him (nil: no heartbeat): CHASE_BEAT while he chases you
+	(the chase bed's beat, however far he is), else the near heartbeat's `period` within HEARTBEAT_RANGE.
+]=]
+function OccupantTellRules.beatPeriod(distance: number, mode: string?, huntingMe: boolean): number?
+	if mode == "chase" and huntingMe then
+		return OccupantConstants.CHASE_BEAT
+	end
+	if not OccupantTellRules.heartbeat(distance, mode, huntingMe) then
+		return nil
+	end
+	return OccupantTellRules.period(distance)
+end
+
+--[=[
+	The chase pulse on the chased player's screen (0..1), `elapsed` seconds into the chase and `ended` seconds after it
+	ended (nil while it lasts): up over CHASE_RISE, full on each CHASE_BEAT and never below CHASE_FLOOR between beats,
+	gone CHASE_FADE seconds after the end.
+]=]
+function OccupantTellRules.chasePulse(elapsed: number, ended: number?): number
+	local rise = math.clamp(elapsed / OccupantConstants.CHASE_RISE, 0, 1)
+	local fade = if ended ~= nil then 1 - math.clamp(ended / OccupantConstants.CHASE_FADE, 0, 1) else 1
+	local phase = (elapsed % OccupantConstants.CHASE_BEAT) / OccupantConstants.CHASE_BEAT
+	local beat = math.clamp(1 - phase * 3, 0, 1)
+	local floor = OccupantConstants.CHASE_FLOOR
+	return rise * fade * (floor + (1 - floor) * beat)
 end
 
 --[=[

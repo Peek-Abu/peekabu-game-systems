@@ -16,7 +16,7 @@
 	  FURNITURE_REFRESH), who hides where, the pacing (tier, crew size, overtime) and a few random rolls.
 	- The brain's effects (OccupantEffectSystem): his body (OccupantSeatSystem: sitting at a desk, standing up, planted still at a spot,
 	  let go), whether he knows a hider (Hide's `setSeen`), holding a hider's camping push-out while he is at their
-	  spot (`hold`), a catch of a found hider, and the PA call-out (OccupantEvents.Pa, to everyone).
+	  spot (`hold`), and a catch of a found hider.
 	- Hiding: he is Hide's witness (`setWitness`): a player who goes into a spot while he sees them (or while he
 	  chases them) is "seen entering"; the brain stares them down. A catch drags them out first (`evict`).
 	- Pacing: OccupantTuningFormulas turns the shift's tier and the crew size into his speeds (setTuning) and

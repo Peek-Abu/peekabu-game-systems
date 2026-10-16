@@ -8,7 +8,10 @@
 	  it, so no light stays dark);
 	- while he is within HEARTBEAT_RANGE and not chasing you (OccupantTellRules.heartbeat), the screen pulses
 	  red with the beat (OccupantTellRules.pulse), faster the closer he is; it is silent while he is catching
-	  you. The heartbeat sound itself is OccupantPresenceSystem's.
+	  you. The heartbeat sound itself is OccupantPresenceSystem's;
+	- while he chases you, the chase pulse instead (OccupantTellRules.chasePulse): a soft red, slightly drained
+	  screen that throbs with the racing CHASE_BEAT heartbeat and fades out over CHASE_FADE when the chase ends. No
+	  icons and no text: with the overhead "!" gone (2026-10-16) this and the sounds are how a chase reads.
 	Real light brightness and visible emitter colour fade together; fixture housings retain their authored material. Client-local only.
 
 	Instance specs cover flicker restoration/cancellation; OccupantTellRules covers decisions and emitter selection.
@@ -38,6 +41,10 @@ local outUntil = 0
 local flickerUntil = 0
 local screenToken: number? = nil
 local beatStarted = 0
+-- The chase on you: when it started, and when it ended (its pulse fades from then).
+local chaseStarted: number? = nil
+local chaseEnded: number? = nil
+local chasePulses = 0
 
 local function cancel(fade: Fade)
 	if fade.completion ~= nil then
@@ -253,6 +260,38 @@ local function updateHeartbeat(now: number, harlow: BasePart?)
 	local modeName = if type(mode) == "string" then mode else nil
 	local onMe = target == localPlayer.UserId
 	local distance = (root.Position - harlow.Position).Magnitude
+	local chasedNow = modeName == "chase" and onMe
+	if chasedNow and (chaseStarted == nil or chaseEnded ~= nil) then
+		chaseStarted = now
+		chaseEnded = nil
+		chasePulses += 1
+	elseif not chasedNow and chaseStarted ~= nil and chaseEnded == nil then
+		chaseEnded = now
+	end
+	local started = chaseStarted
+	local ended = chaseEnded
+	if started ~= nil and not (modeName == "catch" and onMe) then
+		local sinceEnd = if ended ~= nil then now - ended else nil
+		if sinceEnd == nil or sinceEnd < OccupantConstants.CHASE_FADE then
+			local strength = OccupantTellRules.chasePulse(now - started, sinceEnd)
+			local token = screenToken or VfxServiceClient:requestScreen({})
+			screenToken = token
+			VfxServiceClient:updateScreen(token, {
+				tint = Color3.new(1, 1, 1):Lerp(OccupantConstants.CHASE_TINT, strength),
+				saturation = -0.3 * strength,
+				contrast = 0.08 * strength,
+			})
+			return
+		end
+	end
+	if ended ~= nil then
+		-- Faded out (or caught): the chase pulse is over; the near heartbeat may take over below.
+		chaseStarted = nil
+		chaseEnded = nil
+		if screenToken ~= nil then
+			stopBeat()
+		end
+	end
 	-- Silent while he chases you (the rule) and while he is catching you.
 	local beating = OccupantTellRules.heartbeat(distance, modeName, onMe) and not (modeName == "catch" and onMe)
 	if not beating then
@@ -274,6 +313,13 @@ local function updateHeartbeat(now: number, harlow: BasePart?)
 end
 
 local OccupantTellSystem = { newLightController = newLightController }
+
+--[=[
+	The chase pulse for the debugger and live checks: whether it shows, and how many chases on you it has pulsed for.
+]=]
+function OccupantTellSystem.getState(): { chasing: boolean, pulses: number }
+	return { chasing = chaseStarted ~= nil and chaseEnded == nil, pulses = chasePulses }
+end
 
 function OccupantTellSystem.start()
 	if connection ~= nil then
@@ -304,6 +350,8 @@ function OccupantTellSystem.stop()
 		connection = nil
 	end
 	stopBeat()
+	chaseStarted = nil
+	chaseEnded = nil
 	outAt = nil
 	outUntil = 0
 	flickerUntil = 0

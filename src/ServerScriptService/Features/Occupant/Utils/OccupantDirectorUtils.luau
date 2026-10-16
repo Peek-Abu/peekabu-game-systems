@@ -4,8 +4,7 @@
 	design.md §4). Like Alien: Isolation's director it knows roughly where the crew is, never exactly: `steerPoint` aims a
 	spread of studs off a crew member in a rolled direction and takes the walkable point nearest that aim, but never one
 	within `minDistance` of them. `farPoint` is where a breather takes him (the route point farthest from every crew
-	member); `farthest` is who the PA calls out (the crew member farthest from him, so he drifts across the office).
-	Distances are flat (X/Z). Pure.
+	member). Distances are flat (X/Z). Pure.
 
 	@class OccupantDirectorUtils
 ]=]
@@ -63,22 +62,6 @@ function OccupantDirectorUtils.farPoint(route: { Vector3 }, crew: { Vector3 }): 
 		if nearest > bestScore then
 			best = point
 			bestScore = nearest
-		end
-	end
-	return best
-end
-
---[=[
-	The UserId of the crew member farthest from `from`.
-]=]
-function OccupantDirectorUtils.farthest(from: Vector3, crew: { Member }): number?
-	local best: number? = nil
-	local bestDistance = -math.huge
-	for _, member in crew do
-		local distance = flat(from, member.position)
-		if distance > bestDistance then
-			best = member.userId
-			bestDistance = distance
 		end
 	end
 	return best

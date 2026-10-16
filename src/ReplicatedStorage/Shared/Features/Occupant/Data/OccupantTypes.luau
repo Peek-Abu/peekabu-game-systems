@@ -69,7 +69,6 @@ export type Effect =
 	| { kind: "seen", userId: number, seen: boolean }
 	| { kind: "holdCamp", userId: number, untilTime: number }
 	| { kind: "catch", userId: number }
-	| { kind: "callout", userId: number }
 	| { kind: "door", spotId: string, open: boolean }
 
 -- How the director paces him (from the shift and the crew).
@@ -146,16 +145,14 @@ export type Mind = {
 	-- The routine: when the next work break is due, and the last desk he used.
 	nextWorkAt: number,
 	lastDesk: string?,
-	-- The director: the next steer, the point he is steered to, the player the PA called out, the menace gauge, the
-	-- breather, sit-ins this shift and the last one, the next PA call-out, and the last think (for the gauge's rate).
+	-- The director: the next steer, the point he is steered to, the menace gauge, the breather, sit-ins this shift and
+	-- the last one, and the last think (for the gauge's rate).
 	nextSteerAt: number,
 	steer: Vector3?,
-	focus: number?,
 	menace: number,
 	breatherUntil: number?,
 	sitIns: number,
 	lastSitInAt: number?,
-	nextCalloutAt: number,
 	lastThink: number?,
 }
 

@@ -103,13 +103,6 @@ return function()
 		end)
 	end)
 
-	describe("paLine", function()
-		it("names the called-out player", function()
-			expect(OccupantTellRules.paLine("{name}. My office.", "Pippa")).to.equal("Pippa. My office.")
-			expect(OccupantTellRules.paLine("All staff.", "Pippa")).to.equal("All staff.")
-		end)
-	end)
-
 	describe("heartbeat", function()
 		it("beats when he is near and has not seen you", function()
 			expect(OccupantTellRules.heartbeat(20, "patrol", false)).to.equal(true)
@@ -141,6 +134,44 @@ return function()
 				local value = OccupantTellRules.pulse(index * 0.07, 15)
 				expect(value >= 0 and value <= 1).to.equal(true)
 			end
+		end)
+	end)
+
+	describe("beatPeriod", function()
+		it("races at CHASE_BEAT while he chases you, however far he is", function()
+			expect(OccupantTellRules.beatPeriod(5, "chase", true)).to.equal(OccupantConstants.CHASE_BEAT)
+			expect(OccupantTellRules.beatPeriod(200, "chase", true)).to.equal(OccupantConstants.CHASE_BEAT)
+			expect(OccupantConstants.CHASE_BEAT < OccupantConstants.BEAT_FAST).to.equal(true)
+		end)
+
+		it("follows the near heartbeat otherwise, and is silent out of range", function()
+			expect(OccupantTellRules.beatPeriod(10, "patrol", false)).to.equal(OccupantTellRules.period(10))
+			expect(OccupantTellRules.beatPeriod(10, "chase", false)).to.equal(OccupantTellRules.period(10))
+			expect(OccupantTellRules.beatPeriod(OccupantConstants.HEARTBEAT_RANGE + 1, "patrol", false)).to.equal(nil)
+		end)
+	end)
+
+	describe("chasePulse", function()
+		it("comes up quickly at the chase start and stays visible on every beat", function()
+			expect(OccupantTellRules.chasePulse(0, nil)).to.equal(0)
+			local settled = OccupantConstants.CHASE_RISE
+			for index = 0, 40 do
+				local value = OccupantTellRules.chasePulse(settled + index * 0.05, nil)
+				expect(value >= OccupantConstants.CHASE_FLOOR - 1e-6 and value <= 1).to.equal(true)
+			end
+			-- Full on the beat.
+			local beat = math.ceil(settled / OccupantConstants.CHASE_BEAT) * OccupantConstants.CHASE_BEAT
+			expect(OccupantTellRules.chasePulse(beat, nil)).to.be.near(1, 1e-6)
+		end)
+
+		it("fades out over CHASE_FADE once the chase ends", function()
+			local at = 3 * OccupantConstants.CHASE_BEAT
+			local held = OccupantTellRules.chasePulse(at, nil)
+			local fading = OccupantTellRules.chasePulse(at, OccupantConstants.CHASE_FADE / 2)
+			expect(fading < held).to.equal(true)
+			expect(fading > 0).to.equal(true)
+			expect(OccupantTellRules.chasePulse(at, OccupantConstants.CHASE_FADE)).to.equal(0)
+			expect(OccupantTellRules.chasePulse(at, 99)).to.equal(0)
 		end)
 	end)
 

@@ -2,8 +2,8 @@
 --[=[
 	HidePeekOverlay: the frame round the peek view while hiding (docs/superpowers/specs/
 	2026-10-15-cleanup-crew-chase-kit-design.md §4). Under a desk or table the dark underside hangs over the top of the
-	view and the floor shadow darkens its foot. Inside a supply cabinet the view is cut into thin bright slits between
-	the louvres of its closed door, the rest of it the dark inside of the door. Drawn behind the HUD, never takes input.
+	view and the floor shadow darkens its foot. Inside a supply cabinet the view is cut into bright slits (over half the
+	screen open since 2026-10-16) between the louvres of its closed door, the rest of it the dark inside of the door. Drawn behind the HUD, never takes input.
 
 	A HUD widget: it reads HideStore and draws what HideViewModel.overlay decides.
 
@@ -23,17 +23,16 @@ local useAtom = ReactCharm.useAtom
 -- The furniture's underside, nearly black in the dark office.
 local SHADE = Color3.fromRGB(18, 20, 24)
 
--- The louvres: SLATS dark slats down the view, each SLAT_FILL of its band, the slits between them open.
-local SLATS = 9
-local SLAT_FILL = 0.62
+-- The louvres (HideViewModel.LOUVRE): dark slats down the view, the slits between them open.
+local LOUVRE = HideViewModel.LOUVRE
 
 local function slats(): React.ReactNode
 	local children: { [string]: React.ReactNode } = {}
-	local band = 1 / SLATS
-	for index = 1, SLATS do
+	local band = 1 / LOUVRE.slats
+	for index = 1, LOUVRE.slats do
 		children[`slat{index}`] = e("Frame", {
 			Position = UDim2.fromScale(0, (index - 1) * band),
-			Size = UDim2.fromScale(1, band * SLAT_FILL),
+			Size = UDim2.fromScale(1, band * LOUVRE.fill),
 			BackgroundColor3 = SHADE,
 			BorderSizePixel = 0,
 		}, {
@@ -51,10 +50,10 @@ local function slats(): React.ReactNode
 		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
 	}, {
-		left = e("Frame", { Size = UDim2.fromScale(0.08, 1), BackgroundColor3 = SHADE, BorderSizePixel = 0 }),
+		left = e("Frame", { Size = UDim2.fromScale(LOUVRE.side, 1), BackgroundColor3 = SHADE, BorderSizePixel = 0 }),
 		right = e("Frame", {
-			Position = UDim2.fromScale(0.92, 0),
-			Size = UDim2.fromScale(0.08, 1),
+			Position = UDim2.fromScale(1 - LOUVRE.side, 0),
+			Size = UDim2.fromScale(LOUVRE.side, 1),
 			BackgroundColor3 = SHADE,
 			BorderSizePixel = 0,
 		}),

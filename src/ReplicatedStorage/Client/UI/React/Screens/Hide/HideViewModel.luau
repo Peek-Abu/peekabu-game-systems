@@ -27,6 +27,21 @@ export type Overlay = "under" | "slats"
 
 local HideViewModel = {}
 
+--[=[
+	A supply cabinet's louvred door as the peek sees it: `slats` dark slats down the view, each `fill` of its band, the
+	slits between them open, and a dark `side` strip of the door frame at either edge. 2026-10-16 playtest: wider
+	slits (was 9 slats at 0.62, sides 0.08: a third of the screen open) so more of the room shows.
+]=]
+HideViewModel.LOUVRE = table.freeze({ slats = 7, fill = 0.42, side = 0.05 })
+
+--[=[
+	The share of the screen the louvred door leaves open.
+]=]
+function HideViewModel.openShare(): number
+	local louvre = HideViewModel.LOUVRE
+	return (1 - louvre.fill) * (1 - 2 * louvre.side)
+end
+
 function HideViewModel.chip(
 	prompt: HideStore.PromptView?,
 	hidden: HideStore.HiddenView?,

@@ -79,7 +79,6 @@ function OccupantBrainRules.newMind(routeIndex: number, routeStep: number, now: 
 		cleared = {},
 		nextWorkAt = now + M.within(OccupantConstants.WORK_FIRST, value),
 		nextSteerAt = now + M.within(OccupantConstants.STEER_FIRST, value),
-		nextCalloutAt = now + OccupantConstants.CALLOUT_FIRST,
 		menace = 0,
 		sitIns = 0,
 	}

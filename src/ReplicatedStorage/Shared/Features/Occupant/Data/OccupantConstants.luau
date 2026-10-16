@@ -52,18 +52,6 @@ local LINE_VARIANTS: { [string]: { string } } = {
 	sitIn = { "Now… where was I.", "Just a few more reports." },
 }
 
--- The PA (behaviour set §5; 2026-10-16 tuning: abstract, never naming him, so other anomalies can share it): a rare
--- building announcement while he is in the mid stage, and the rarer call-out naming a crew member ("{name}" is
--- replaced) before he drifts toward them.
-local PA_LINES: { string } = {
-	"Reminder: company property must not leave the building.",
-	"Productivity is being monitored.",
-	"Please remain at your workstation.",
-	"All staff: performance reviews are ongoing.",
-	"Lost and found is closed. Permanently.",
-}
-local PA_CALLOUTS: { string } = { "{name}, please report to the office.", "{name}, a word, please." }
-
 -- A procedural gesture laid over his animation (OccupantGestureFormulas): how long it takes to settle, and each
 -- joint's extra rotation in degrees (X pitch, Y yaw, Z roll; negative X bends forward).
 export type Gesture = { seconds: number, joints: { [string]: Vector3 } }
@@ -157,6 +145,15 @@ return table.freeze({
 	CATCH_TRAUMA = 0.6,
 	CATCH_TINT = Color3.fromRGB(255, 120, 120),
 	HEARTBEAT_TINT = Color3.fromRGB(255, 150, 150),
+	-- The chase on you (2026-10-16: with no "!" over his head the chase must be unmissable by sound and screen alone):
+	-- your heartbeat races at one beat per CHASE_BEAT seconds however far he is, and the screen pulses with it, soft
+	-- red (CHASE_TINT): up over CHASE_RISE seconds, never below CHASE_FLOOR of full between beats, fading out over
+	-- CHASE_FADE seconds once the chase ends (OccupantTellRules.chasePulse). Kept subtle (kid-friendly).
+	CHASE_BEAT = 0.36,
+	CHASE_RISE = 0.2,
+	CHASE_FLOOR = 0.35,
+	CHASE_FADE = 1.5,
+	CHASE_TINT = Color3.fromRGB(255, 165, 165),
 	-- The truck box's PathfindingModifier label (Office builds it; his kind's pathCosts never enter it), and
 	-- the tag on the office's ceiling lights (Office builds them; the tells flicker them).
 	SAFE_ZONE_LABEL = "SafeZone",
@@ -174,8 +171,6 @@ return table.freeze({
 	-- The incident report's room when the catch happened outside every room.
 	CATCH_ROOM_FALLBACK = "the office",
 	BODY = table.freeze(BODY),
-	PA_LINES = table.freeze(PA_LINES),
-	PA_CALLOUTS = table.freeze(PA_CALLOUTS),
 	-- Behaviour set (docs/superpowers/specs/2026-10-15-cleanup-crew-manager-behaviours-design.md). Ranges are seconds
 	-- (or studs) rolled per use.
 	-- §1 Desk work: the first break after he clocks in, the gap between breaks, how long he types; the desk "near the
@@ -259,7 +254,6 @@ return table.freeze({
 	STEER_OVERTIME_SOLO = 22,
 	STEER_FIRST = range(15, 30),
 	STEER_SPREAD = range(12, 20),
-	STEER_FOCUS_SPREAD = range(6, 10),
 	STEER_MIN = 8,
 	BREATHER_CREW = range(30, 60),
 	BREATHER_SOLO = range(40, 60),
@@ -274,18 +268,11 @@ return table.freeze({
 	MENACE_SPOTTED = 15,
 	MENACE_CATCH = 45,
 	MENACE_DECAY = 2,
-	-- §5 The PA call-out (server; rare since 2026-10-16): the first, the gap, the steer delay after it.
-	CALLOUT_FIRST = 150,
-	CALLOUT_GAP = range(240, 360),
-	CALLOUT_STEER_DELAY = 4,
-	-- §5 The staged tells (client): stage bands, the far pen click, the mid PA lines, the near dread swell.
+	-- §5 The staged tells (client): stage bands, the far pen click, the near dread swell (no PA since 2026-10-16).
 	STAGE_FAR = 85,
 	STAGE_MID = 45,
 	STAGE_NEAR = 25,
 	PEN_CLICK = range(9, 16),
-	PA_GAP = range(90, 160),
-	PA_CHANCE = 0.25,
-	PA_SECONDS = 4,
 	DREAD_FADE = 1.5,
 	-- Model attributes the client reads: his phase, his gesture and its target, and the catch tilt.
 	PHASE_ATTRIBUTE = "OccupantPhase",
@@ -313,6 +300,11 @@ return table.freeze({
 	STEP_MIN_SPEED = 2,
 	STEP_MIN = 0.28,
 	STEP_MAX = 0.8,
+	-- His footsteps land louder as he speeds up: x1 at his walk (STEP_WALK_SPEED) up to STEP_RUN_VOLUME at his chase run
+	-- (STEP_RUN_SPEED), so the crew near a chase hears him running (OccupantFeedbackUtils.footstepVolume).
+	STEP_WALK_SPEED = 10,
+	STEP_RUN_SPEED = 20,
+	STEP_RUN_VOLUME = 1.6,
 	-- The catch scare's grin over his face (spec §4 "stretched-grin face"; kid-safe cartoon): its billboard,
 	-- size in studs, how wide the mouth stretches, teeth, colours (used while the grin image is pending).
 	GRIN_NAME = "OccupantGrin",

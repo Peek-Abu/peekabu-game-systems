@@ -82,9 +82,7 @@ Data constants module.
   sting and music, and now the head turn when he notices you far off.
 - Pacing notices speak of **site activity**, never the Manager ("Site activity is picking up…"), so another anomaly can
   share them.
-- The PA stays, rarer and abstract: corporate lines never name him; the call-out is "{name}, please report to the
-  office." First call-out at 150 s (was 75), then every 240-360 s (was 120-210); a mid-stage line 25% of the time every
-  90-160 s (was 40%, 50-100 s). The strip sits above the whole bottom stack (hotbar, holding slip, chips).
+- The PA was kept here, rarer and abstract, but was removed entirely the same evening (§9).
 
 ## 7. The play-again freeze
 
@@ -132,3 +130,62 @@ effect's desk), `OfficeLayoutGenerationUtils` (`CLOSET_EVERY`: one cabinet in th
 `HideServiceServer` (`setDoor`), `HidePoseSystem`, `HideServiceClient`, `HideViewModel`, `HidePeekOverlay`,
 `OfficeTypes`, `OfficeConstants`, `OfficeLayoutRoomUtils`, `OfficeFurniturePlacementUtils`, `OfficeLayoutRules`,
 `OfficeDecorSystem`, `ArtKitRegistry`, `ShiftNoticeUtils`.
+
+## 9. Playtest follow-ups (2026-10-16, evening)
+
+### Silent chases
+
+**Symptom:** "Sometimes I don't hear the 'detected' sound even when he's behind me. I get caught without ever knowing
+he was chasing me." With the overhead "!" gone, sound and screen are the only chase signals.
+
+**Root causes** (code read, then measured live):
+
+1. **The chase itself was the quietest state.** `harlowChase` had no asset (silent), and for the chased player the
+   heartbeat sound and its red pulse switch off by rule (`OccupantTellRules.heartbeat`: "not chasing you"). So once
+   the 0.88 s sting was over, a chase on you made *less* noise than him walking near you.
+2. **A chase switched onto you never stung.** `OccupantFeedbackUtils.cues` stung only on a *mode* change into chase;
+   when he dropped a crewmate (hidden, out of sight) and picked you up, the mode stayed `chase` and only the silent
+   music cue fired. The server's `M.chase` likewise gives no `spotted` cue when he is already chasing.
+3. **The sting could start late.** Every play builds a fresh Sound; with nothing holding the asset, the first play after
+   a while took **0.23 s** to load (measured), a quarter of the 0.88 s sting.
+
+Not causes: the sting is 2D for the chased player (no distance gate), Volume 1 in SFX (group 1), no cooldown; the
+server publishes mode and target in the same frame.
+
+**Fix:**
+
+- Every chase start on you stings, however it starts, including a switch from a crewmate (`cues`: `spotted` with
+  every `chaseStart`). A chase carrying on does not re-sting; a re-spot (search to chase) does.
+- **The chase bed** for as long as the chase on you lasts: `harlowChase` is a PLACEHOLDER loop, the overtime ticking
+  at 1.6x (not one of the rejected round-1 chase candidates), under your heartbeat racing at `CHASE_BEAT` 0.36 s
+  (`OccupantTellRules.beatPeriod`).
+- **The chase pulse**: the chased player's screen throbs soft red and slightly drained with that beat (never below 35%
+  between beats), and fades out over 1.5 s when the chase ends (`OccupantTellRules.chasePulse`, `OccupantTellSystem`).
+  No icons, no text.
+- **Warm sounds**: the sting, bed, heartbeat and footstep assets stay held by silent Sounds while the client runs, so
+  every play is loaded at once (live: `IsLoaded` true at the play frame, audible within 0.02 s).
+- **Running footsteps**: his steps land louder with speed, x1 at his walk to x1.6 at his 20 studs/s run
+  (`OccupantFeedbackUtils.footstepVolume`), so the crew near a chase hears him running (live: 0.70 at patrol, 1.10 at
+  his 19.5 studs/s chase).
+
+**Verified live** (one player, a real shift, a probe on the client): direct sight (sting, bed at 1.6x, pulse); long
+sight at 72 studs after the notice beat (sting, bed, pulse); the desk ambush (work, ambush, investigate, chase: the
+sting at the chase); a re-spot (chase, search, chase: a second sting); every sting 2D, loaded and playing. A chase
+switched from a crewmate, a crewmate's view and the stare tap-out need a second player or a witnessed hide that did not
+reproduce in the time box; they are covered by the specs (the client keys only off the mode and target attributes).
+
+### The PA removed
+
+The PA call-out ("{name}, please report to the office."), the ambient PA lines, the PA chime from him and the PA
+subtitle strip are gone with their code and tuning: `OccupantPaStore`, `OccupantPaSubtitle`, `OccupantPaViewModel`,
+`OccupantEvents.Pa`, the `callout` effect, `focus` / `nextCalloutAt`, `OccupantDirectorUtils.farthest`,
+`OccupantTellRules.paLine`, `PA_LINES`, `PA_CALLOUTS`, `PA_GAP`, `PA_CHANCE`, `PA_SECONDS`, `CALLOUT_*`,
+`STEER_FOCUS_SPREAD`. The other warning stages stay: footsteps, pen click, typing, flicker, heartbeat, music. Shift's
+own overtime warning chime is a shift notice, not his PA, and stays.
+
+### Supply cabinet: wider slits
+
+The peek camera sits just outside the door's face and the overlay draws the louvres, so the model is unchanged (no
+re-upload). The louvres (`HideViewModel.LOUVRE`) go from 9 slats at 62% with 8% sides (32% of the screen open) to 7
+slats at 42% with 5% sides (52% open). Screenshots: `characters/qa/manager-v3/cabinet-peek-before.jpg` and
+`cabinet-peek-after.jpg`.

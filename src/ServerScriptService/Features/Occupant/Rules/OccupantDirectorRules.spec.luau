@@ -38,7 +38,6 @@ local UNSEEN = { userId = 7, position = Vector3.new(150, 3, 110), clear = false 
 
 local function mind(extra)
 	local value = OccupantBrainRules.newMind(1, 1, 0)
-	value.nextCalloutAt = 1000
 	for key, item in extra or {} do
 		value[key] = item
 	end
@@ -70,23 +69,20 @@ return function()
 		end)
 	end)
 
-	describe("the PA call-out", function()
-		it("calls out the crew member farthest from him, then steers to them soon", function()
-			local near = { userId = 8, position = Vector3.new(70, 3, 75), clear = false }
-			local step = OccupantBrainRules.step(mind({ nextCalloutAt = 50 }), senses({ players = { UNSEEN, near } }))
-			expect(step.effects[1].kind).to.equal("callout")
-			expect(step.effects[1].userId).to.equal(7)
-			expect(step.mind.focus).to.equal(7)
-			expect(step.mind.nextSteerAt).to.equal(100 + C.CALLOUT_STEER_DELAY)
-			local steer = OccupantBrainRules.step(
-				step.mind,
-				senses({ now = 100 + C.CALLOUT_STEER_DELAY, players = { UNSEEN, near } })
-			)
-			expect(steer.mind.steer).to.be.ok()
-			expect((steer.mind.steer - UNSEEN.position).Magnitude < (steer.mind.steer - near.position).Magnitude).to.equal(
-				true
-			)
-			expect(steer.mind.focus).to.equal(nil)
+	describe("no PA (removed 2026-10-16)", function()
+		it("never calls anyone out over a long patrol, and keeps no PA state", function()
+			local current = mind()
+			for second = 0, 600, 5 do
+				local step = OccupantBrainRules.step(current, senses({ now = 100 + second, players = { UNSEEN } }))
+				for _, effect in step.effects or {} do
+					expect(effect.kind).never.to.equal("callout")
+				end
+				current = step.mind
+			end
+			expect(current.nextCalloutAt).to.equal(nil)
+			expect(current.focus).to.equal(nil)
+			expect(C.PA_LINES).to.equal(nil)
+			expect(C.PA_CALLOUTS).to.equal(nil)
 		end)
 	end)
 

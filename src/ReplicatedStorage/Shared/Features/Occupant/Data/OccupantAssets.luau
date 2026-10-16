@@ -74,10 +74,19 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	harlowDread = { assetId = PENDING, group = "Ambient", volume = 0.5, looped = true },
 	-- The ambush: a sharp intake as his head swivels round from the desk (positional). PLACEHOLDER slot: pending.
 	harlowAmbush = { assetId = PENDING, group = "SFX", volume = 0.9, rollOffMaxDistance = 60 },
-	-- The "!" sting (2D for the one he spotted, positional for everyone else).
+	-- The "spotted" sting at every chase start (2D for the one he chases, positional for everyone else).
 	harlowSpotted = { assetId = "rbxassetid://71081947321557", group = "SFX", volume = 1, rollOffMaxDistance = 90 },
-	-- Chase music for the chased player (looped).
-	harlowChase = { assetId = PENDING, group = "Music", volume = 0.6, looped = true },
+	-- The chase bed for the chased player (looped, 2D, for as long as the chase on you lasts), under your racing
+	-- heartbeat (OccupantPresenceSystem beats it at CHASE_BEAT). PLACEHOLDER (2026-10-16) until the real chase music is
+	-- chosen: the overtime ticking (ShiftAssets shiftTicking's upload) sped up to 1.6x. Not a round-1 chase candidate
+	-- (those were rejected). Replace the id and drop `pitch` when the music lands.
+	harlowChase = {
+		assetId = "rbxassetid://118452299844030",
+		group = "Music",
+		volume = 0.9,
+		pitch = { min = 1.6, max = 1.6 },
+		looped = true,
+	},
 	harlowSigh = { assetId = "rbxassetid://126145488520317", group = "SFX", volume = 0.8, rollOffMaxDistance = 80 },
 	-- His 'voice': him scribbling you up on his clipboard, one clip per line (OccupantFeedbackUtils.clipFor picks among
 	-- the uploaded ones, so one clip covers every line until more are added).

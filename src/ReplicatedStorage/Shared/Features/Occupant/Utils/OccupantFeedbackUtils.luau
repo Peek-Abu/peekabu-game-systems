@@ -4,8 +4,9 @@
 	"Voice"). Which line he says for a cue (never the same twice running), which gibberish clip voices a line
 	(a stable hash, so a line always sounds the same), whether a line is spoken at all ("*sigh*" is an action),
 	which sounds his mode changes make for this client (a "hm?" when he
-	investigates, a sting when he spots someone, the chase music while he chases you, a sigh when he gives up),
-	and how often his footsteps fall. Pure.
+	investigates, a sting when he spots someone, the chase bed while he chases you, a sigh when he gives up),
+	and how often and how loud his footsteps fall. Every chase on you starts with the sting, however it starts
+	(2026-10-16: a chase switched from a crewmate onto you used to start silently). Pure.
 
 	@class OccupantFeedbackUtils
 ]=]
@@ -73,16 +74,17 @@ function OccupantFeedbackUtils.cues(
 	isMine: boolean
 ): { PresenceCue }
 	local list: { PresenceCue } = {}
-	if afterMode ~= beforeMode then
-		if afterMode == "investigate" then
-			table.insert(list, "curious")
-		elseif afterMode == "chase" then
-			table.insert(list, "spotted")
-		elseif afterMode == "patrol" and (beforeMode == "search" or beforeMode == "investigate") then
-			table.insert(list, "giveUp")
-		end
+	local changed = afterMode ~= beforeMode
+	-- A chase starting on you always stings, even when he was already chasing someone else.
+	local onYou = isMine and not wasMine
+	if afterMode == "chase" and (changed or onYou) then
+		table.insert(list, "spotted")
+	elseif changed and afterMode == "investigate" then
+		table.insert(list, "curious")
+	elseif changed and afterMode == "patrol" and (beforeMode == "search" or beforeMode == "investigate") then
+		table.insert(list, "giveUp")
 	end
-	if isMine and not wasMine then
+	if onYou then
 		table.insert(list, "chaseStart")
 	elseif wasMine and not isMine then
 		table.insert(list, "chaseEnd")
@@ -98,6 +100,15 @@ function OccupantFeedbackUtils.footstepInterval(speed: number): number?
 		return nil
 	end
 	return math.clamp(OccupantConstants.STRIDE / speed, OccupantConstants.STEP_MIN, OccupantConstants.STEP_MAX)
+end
+
+--[=[
+	How loud (x the registered volume) a footstep lands at `speed`: 1 at his walk, rising to STEP_RUN_VOLUME at his run.
+]=]
+function OccupantFeedbackUtils.footstepVolume(speed: number): number
+	local walk, run = OccupantConstants.STEP_WALK_SPEED, OccupantConstants.STEP_RUN_SPEED
+	local t = math.clamp((speed - walk) / (run - walk), 0, 1)
+	return 1 + (OccupantConstants.STEP_RUN_VOLUME - 1) * t
 end
 
 --[=[

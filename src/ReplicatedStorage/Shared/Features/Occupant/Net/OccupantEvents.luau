@@ -1,8 +1,8 @@
 --!strict
 --[=[
 	OccupantEvents: Mr. Harlow's ByteNet packets (server → clients only): the caught player's camera snap to his
-	face, the lights dying around a catch, every light flickering when a pressure tier rises, and the PA calling a crew
-	member out. Everything
+	face, the lights dying around a catch, every light flickering when a pressure tier rises, the incident report and
+	the Rehired card. Everything
 	else (his "?" / "!", his speech bubble, his mode for the heartbeat) rides replicated Instances and
 	attributes.
 
@@ -48,14 +48,6 @@ local OccupantEvents = ByteNet.defineNamespace(NAMESPACE, function()
 					clock = ByteNet.float32,
 					backAt = ByteNet.float64,
 					dropped = ByteNet.array(ByteNet.string),
-				}),
-				reliabilityType = "reliable",
-			}),
-			-- To everyone: the PA calls a crew member out ("Pippa. My office."): the line, and whom it names.
-			Pa = ByteNet.definePacket({
-				value = ByteNet.struct({
-					line = ByteNet.string,
-					userId = ByteNet.float64,
 				}),
 				reliabilityType = "reliable",
 			}),

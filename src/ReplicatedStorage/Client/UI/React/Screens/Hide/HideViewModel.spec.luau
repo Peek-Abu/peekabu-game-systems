@@ -56,5 +56,15 @@ return function()
 			inside.noun = "cabinet"
 			expect(HideViewModel.overlay(inside)).to.equal("slats")
 		end)
+		it("leaves over half the cabinet view open between the louvres, still clearly a door", function()
+			local louvre = HideViewModel.LOUVRE
+			local open = HideViewModel.openShare()
+			-- Was 0.38 x 0.84 = 0.32 of the screen (9 slats at 0.62, 0.08 sides): the playtest asked for more.
+			expect(open >= 0.5).to.equal(true)
+			expect(open <= 0.65).to.equal(true)
+			expect(louvre.slats >= 5).to.equal(true)
+			expect(louvre.side > 0).to.equal(true)
+			expect(open).to.be.near((1 - louvre.fill) * (1 - 2 * louvre.side), 1e-6)
+		end)
 	end)
 end

@@ -6,9 +6,7 @@
 
 	- `direct`: a breather when the menace gauge is full (MENACE_MAX: he walks to the route point farthest from the
 	  crew, OccupantDirectorUtils.farPoint, and for OccupantMenaceFormulas.breather seconds neither steers nor follows a
-	  noise further than BREATHER_HEARING; work breaks still happen, at the far desks); the PA call-out (CALLOUT_FIRST,
-	  then CALLOUT_GAP: a `callout` effect naming the crew member farthest from him, whose area his next steer, in
-	  CALLOUT_STEER_DELAY, aims at within STEER_FOCUS_SPREAD); and every steer interval
+	  noise further than BREATHER_HEARING; work breaks still happen, at the far desks); and every steer interval
 	  (OccupantMenaceFormulas.steerInterval) a steer toward a random crew member's general area (STEER_SPREAD off them,
 	  never within STEER_MIN).
 	- `track`: after every think, the seconds he had each player in sight (rising while seen, decaying WATCH_DECAY a
@@ -35,7 +33,7 @@ type Mind = OccupantTypes.Mind
 type Senses = OccupantTypes.Senses
 type Step = M.Step
 
--- A steer toward a crew member's area (the PA's called-out player when there is one).
+-- A steer toward a random crew member's area.
 local function steer(
 	current: Mind,
 	senses: Senses,
@@ -44,25 +42,13 @@ local function steer(
 ): Step
 	local nextMind = table.clone(current)
 	nextMind.nextSteerAt = senses.now + OccupantMenaceFormulas.steerInterval(pacing)
-	local target: OccupantDirectorUtils.Member? = nil
-	for _, member in members do
-		if member.userId == current.focus then
-			target = member
-		end
-	end
-	local spread = OccupantConstants.STEER_SPREAD
-	if target ~= nil then
-		spread = OccupantConstants.STEER_FOCUS_SPREAD
-	else
-		local index = OccupantDirectorUtils.pick(#members, M.roll(senses, 3))
-		target = if index ~= nil then members[index] else nil
-	end
-	nextMind.focus = nil
+	local index = OccupantDirectorUtils.pick(#members, M.roll(senses, 3))
+	local target = if index ~= nil then members[index] else nil
 	if target ~= nil then
 		nextMind.steer = OccupantDirectorUtils.steerPoint(
 			target.position,
 			senses.route,
-			spread,
+			OccupantConstants.STEER_SPREAD,
 			M.roll(senses, 1),
 			M.roll(senses, 2),
 			OccupantConstants.STEER_MIN
@@ -95,22 +81,10 @@ function OccupantDirectorRules.direct(current: Mind, senses: Senses): Step?
 		nextMind.menace = 0
 		nextMind.breatherUntil = now + OccupantMenaceFormulas.breather(pacing, M.roll(senses, 4))
 		nextMind.steer = OccupantDirectorUtils.farPoint(senses.route, M.positions(members))
-		nextMind.focus = nil
 		return M.patrol(nextMind, senses, nil)
 	end
 	if #members == 0 then
 		return nil
-	end
-	if now >= current.nextCalloutAt then
-		local nextMind = table.clone(current)
-		nextMind.nextCalloutAt = now + M.within(OccupantConstants.CALLOUT_GAP, M.roll(senses, 4))
-		local userId = OccupantDirectorUtils.farthest(senses.position, members)
-		if userId == nil then
-			return M.patrol(nextMind, senses, nil)
-		end
-		nextMind.focus = userId
-		nextMind.nextSteerAt = now + OccupantConstants.CALLOUT_STEER_DELAY
-		return M.addEffect(M.patrol(nextMind, senses, nil), { kind = "callout", userId = userId })
 	end
 	if now >= current.nextSteerAt then
 		return steer(current, senses, pacing, members)
