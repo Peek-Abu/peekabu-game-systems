@@ -118,6 +118,14 @@ return function()
 			)
 			expect(later.mind.mode).to.equal("patrol")
 			expect(later.mind.steer).to.equal(nil)
+			-- Even a sighting on the breather leaves the gauge at 0.
+			local seen = { userId = 7, position = Vector3.new(320, 3, 300), clear = true }
+			local spotted = OccupantBrainRules.step(
+				later.mind,
+				senses({ now = 121, position = Vector3.new(300, 3, 300), players = { seen } })
+			)
+			expect(spotted.mind.mode).to.equal("chase")
+			expect(spotted.mind.menace).to.equal(0)
 		end)
 	end)
 

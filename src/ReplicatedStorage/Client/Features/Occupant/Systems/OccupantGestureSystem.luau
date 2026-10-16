@@ -26,6 +26,7 @@ type Body = {
 	model: Model,
 	torso: BasePart?,
 	joints: { [string]: Motor6D },
+	complete: boolean,
 	gesture: string,
 	since: number,
 	-- The offsets shown when the gesture changed (the blend starts from them), and the last ones shown.
@@ -36,7 +37,7 @@ type Body = {
 	written: { [Motor6D]: { value: CFrame, offset: CFrame } },
 }
 
-export type OccupantGestureState = { bodies: number, gestures: { [string]: number } }
+export type OccupantGestureState = { bodies: number, joints: number, written: number, gestures: { [string]: number } }
 
 local POSED = { "Neck", "Waist" }
 
@@ -44,22 +45,35 @@ local bodies: { [Model]: Body } = {}
 local connection: RBXScriptConnection? = nil
 local counters: { [string]: number } = {}
 
+-- Finds his posed joints and his torso (again until all have streamed in: a model arrives part by part).
+local function scan(body: Body)
+	local joints: { [string]: Motor6D } = {}
+	local found = 0
+	for _, item in body.model:GetDescendants() do
+		if item:IsA("Motor6D") and table.find(POSED, item.Name) ~= nil then
+			joints[item.Name] = item
+			found += 1
+		end
+	end
+	body.joints = joints
+	body.complete = found >= #POSED
+	local torso = body.model:FindFirstChild("UpperTorso")
+	body.torso = if torso ~= nil and torso:IsA("BasePart") then torso else nil
+end
+
 local function bodyOf(model: Model): Body
 	local existing = bodies[model]
 	if existing ~= nil then
+		if not existing.complete or existing.torso == nil then
+			scan(existing)
+		end
 		return existing
 	end
-	local joints: { [string]: Motor6D } = {}
-	for _, item in model:GetDescendants() do
-		if item:IsA("Motor6D") and table.find(POSED, item.Name) ~= nil then
-			joints[item.Name] = item
-		end
-	end
-	local torso = model:FindFirstChild("UpperTorso")
 	local body: Body = {
 		model = model,
-		torso = if torso ~= nil and torso:IsA("BasePart") then torso else nil,
-		joints = joints,
+		torso = nil,
+		joints = {},
+		complete = false,
 		gesture = "",
 		since = os.clock(),
 		from = {},
@@ -67,6 +81,7 @@ local function bodyOf(model: Model): Body
 		tiltSince = nil,
 		written = {},
 	}
+	scan(body)
 	bodies[model] = body
 	return body
 end
@@ -142,11 +157,17 @@ function OccupantGestureSystem.stop()
 end
 
 function OccupantGestureSystem.getState(): OccupantGestureState
-	local count = 0
-	for _ in bodies do
+	local count, joints, written = 0, 0, 0
+	for _, body in bodies do
 		count += 1
+		for _ in body.joints do
+			joints += 1
+		end
+		for _ in body.written do
+			written += 1
+		end
 	end
-	return { bodies = count, gestures = table.clone(counters) }
+	return { bodies = count, joints = joints, written = written, gestures = table.clone(counters) }
 end
 
 return OccupantGestureSystem

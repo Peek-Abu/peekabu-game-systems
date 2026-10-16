@@ -10,7 +10,8 @@
 	- `seatFrame`: where his root goes on a chair (OccupantAssets.SEAT: over the chair's centre at standing height,
 	  facing the desk) and whether the chair is on the desk's knee-hole side (the desk's -Z, its front); `fallbackChair`
 	  is where the chair stands without its art (3.05 studs in front, Office's chair rule).
-	- `standPoint`: where he stands to stare at a hiding spot (STARE_GAP off its front edge, on the floor).
+	- `standPoint`: where he stands to stare at a hiding spot (STARE_GAP off its front edge, STARE_SIDE beside the chair,
+	  on the floor).
 	- `sitBack`: a seat moved back, away from the desk (a sit-in clears the hider's huddle).
 	- `facing`: a frame at a point looking at a target at the same height.
 
@@ -138,10 +139,11 @@ function OccupantDeskUtils.fallbackChair(desk: CFrame): Vector3
 end
 
 --[=[
-	Where he stands to stare at the spot whose frame is `spotFrame` (front = its -Z) on furniture of `size`.
+	Where he stands to stare at the spot whose frame is `spotFrame` (front = its -Z) on furniture of `size`: `gap` off
+	the front edge and `side` to its right (beside a desk's chair, which stands on the centre line).
 ]=]
-function OccupantDeskUtils.standPoint(spotFrame: CFrame, size: Vector3, gap: number): Vector3
-	return (spotFrame * CFrame.new(0, -size.Y / 2, -(size.Z / 2 + gap))).Position
+function OccupantDeskUtils.standPoint(spotFrame: CFrame, size: Vector3, gap: number, side: number): Vector3
+	return (spotFrame * CFrame.new(side, -size.Y / 2, -(size.Z / 2 + gap))).Position
 end
 
 function OccupantDeskUtils.sitBack(seat: CFrame, back: number): CFrame

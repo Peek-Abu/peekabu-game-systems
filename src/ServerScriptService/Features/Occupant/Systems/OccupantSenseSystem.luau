@@ -161,7 +161,12 @@ function System.furniture(spots: { HideTypes.Spot }, standHeight: number): ({ Ty
 		table.insert(views, {
 			id = spot.id,
 			center = part.Position,
-			stand = OccupantDeskUtils.standPoint(spot.frame, part.Size, OccupantConstants.STARE_GAP),
+			stand = OccupantDeskUtils.standPoint(
+				spot.frame,
+				part.Size,
+				OccupantConstants.STARE_GAP,
+				OccupantConstants.STARE_SIDE
+			),
 			deskId = deskId,
 		})
 		if deskId ~= nil then

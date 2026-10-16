@@ -82,9 +82,9 @@ return function()
 	end)
 
 	describe("standPoint", function()
-		it("is the gap off the front edge, on the floor", function()
-			local point = OccupantDeskUtils.standPoint(CFrame.new(0, 1.5, 0), Vector3.new(5, 3, 3), 1.6)
-			expect((point - Vector3.new(0, 0, -3.1)).Magnitude < 1e-4).to.equal(true)
+		it("is the gap off the front edge and to the side, on the floor", function()
+			local point = OccupantDeskUtils.standPoint(CFrame.new(0, 1.5, 0), Vector3.new(5, 3, 3), 1.6, 1.9)
+			expect((point - Vector3.new(1.9, 0, -3.1)).Magnitude < 1e-4).to.equal(true)
 		end)
 	end)
 

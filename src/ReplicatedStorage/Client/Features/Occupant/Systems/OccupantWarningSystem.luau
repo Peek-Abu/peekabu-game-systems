@@ -12,7 +12,9 @@
 
 	Also his typing while he sits at a desk (OccupantTellRules.typing: a loop on his head that stops dead the moment it
 	ends, e.g. in the ambush, whose own sound plays then), and the server's PA call-out (`callout`: the chime and the
-	named line, for everyone). Reads only replicated state. Pending sounds are skipped silently and counted.
+	named line, for everyone). And the hider's reveal: while he looks under their spot or tips his head under their
+	desk, their camera draws back into the spot and follows his face (OccupantTellRules.revealed). Reads only
+	replicated state. Pending sounds are skipped silently and counted.
 
 	Spec-exempt shell (Sound, Instances, RunService); the choices are the specced OccupantTellRules.
 
@@ -30,6 +32,8 @@ local ShiftAssets = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftAs
 local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundRegistry)
 local SoundTypes = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundTypes)
 local OccupantPaStore = require(ReplicatedStorage.Client.Features.Occupant.State.OccupantPaStore)
+local CameraServiceClient = require(ReplicatedStorage.Client.Features.Camera.CameraServiceClient)
+local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideConstants)
 local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
 
 export type OccupantWarningState = {
@@ -46,11 +50,16 @@ local connection: RBXScriptConnection? = nil
 local typing: SoundServiceClient.SoundHandle? = nil
 local dread: SoundServiceClient.SoundHandle? = nil
 local dreadBase = 0
+-- The dread swell was asked for this near stage (a pending slot is asked once, not every tick).
+local dreadAsked = false
 local lastPhase = ""
 local stage: string = "none"
 local nextClick = 0
 local nextPa = 0
-local counters = { clicks = 0, pa = 0, callouts = 0, typingStarts = 0, typingStops = 0, ambushes = 0, pending = 0 }
+-- The hider's reveal camera while it shows (CameraServiceClient's token).
+local reveal: number? = nil
+local counters =
+	{ reveals = 0, clicks = 0, pa = 0, callouts = 0, typingStarts = 0, typingStops = 0, ambushes = 0, pending = 0 }
 
 local function play(id: string, options: SoundTypes.PlayOptions?): SoundServiceClient.SoundHandle?
 	if not SoundRegistry.has(id) then
@@ -87,19 +96,40 @@ end
 local function setDread(closeness: number?)
 	local loop = dread
 	if closeness == nil then
+		dreadAsked = false
 		if loop ~= nil then
 			loop:stop(OccupantConstants.DREAD_FADE)
 			dread = nil
 		end
 		return
 	end
-	if loop == nil then
+	if loop == nil and not dreadAsked then
+		dreadAsked = true
 		loop = play("harlowDread")
 		dread = loop
 		dreadBase = if loop ~= nil then loop.sound.Volume else 0
 	end
 	if loop ~= nil then
 		loop.sound.Volume = dreadBase * (0.3 + 0.7 * math.clamp(closeness, 0, 1))
+	end
+end
+
+-- The hider's reveal: from just behind where their peek camera is, it follows his face (OccupantTellRules.revealed).
+local function setReveal(head: BasePart?, on: boolean)
+	local token = reveal
+	if on and token == nil and head ~= nil then
+		local camera = workspace.CurrentCamera
+		local eye = camera.CFrame.Position - camera.CFrame.LookVector * OccupantConstants.REVEAL_BACK
+		counters.reveals += 1
+		reveal = CameraServiceClient:pushMode({
+			kind = "custom",
+			update = function(_dt: number): (CFrame, number?)
+				return CFrame.lookAt(eye, head.Position), OccupantConstants.REVEAL_FOV
+			end,
+		}, OccupantConstants.REVEAL_PRIORITY)
+	elseif not on and token ~= nil then
+		CameraServiceClient:removeMode(token)
+		reveal = nil
 	end
 end
 
@@ -115,6 +145,7 @@ local function step()
 	OccupantPaStore.expire(now)
 	local model, head = harlow()
 	if model == nil or head == nil then
+		setReveal(nil, false)
 		stopTyping()
 		setDread(nil)
 		lastPhase = ""
@@ -141,6 +172,10 @@ local function step()
 		play("harlowAmbush", { at = head })
 	end
 	lastPhase = phase
+	local me = Players.LocalPlayer
+	local hiding = type(me:GetAttribute(HideConstants.PLAYER_SPOT_ATTRIBUTE)) == "string"
+	local onMe = model:GetAttribute(OccupantConstants.TARGET_ATTRIBUTE) == me.UserId
+	setReveal(head, OccupantTellRules.revealed(mode, phase, onMe, hiding))
 	-- The stage for this player.
 	local character = Players.LocalPlayer.Character
 	local root = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil
@@ -154,7 +189,8 @@ local function step()
 	local nextStage = OccupantTellRules.stage(distance, mode, mine)
 	if nextStage ~= stage then
 		stage = nextStage
-		nextClick = now + within(OccupantConstants.PEN_CLICK) / 2
+		-- The first pen click comes soon after he is within earshot, then every PEN_CLICK.
+		nextClick = now + rng:NextNumber(1, 3)
 	end
 	if stage == "far" and now >= nextClick then
 		nextClick = now + within(OccupantConstants.PEN_CLICK)
@@ -195,6 +231,7 @@ function OccupantWarningSystem.stop()
 	end
 	stopTyping()
 	setDread(nil)
+	setReveal(nil, false)
 	OccupantPaStore.clear()
 	lastPhase = ""
 	stage = "none"

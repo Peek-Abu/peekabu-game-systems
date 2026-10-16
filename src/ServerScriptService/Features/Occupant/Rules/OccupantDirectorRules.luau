@@ -14,7 +14,7 @@
 	- `track`: after every think, the seconds he had each player in sight (rising while seen, decaying WATCH_DECAY a
 	  second otherwise, kept for whoever hides), whether each hider went in close to him (kept only while they hide),
 	  and the menace gauge (OccupantMenaceFormulas.step: chasing, staring or sitting over a hider, someone within
-	  MENACE_NEAR_RADIUS; it does not move on a breather).
+	  MENACE_NEAR_RADIUS; it stays at 0 on a breather).
 
 	Pure (see OccupantMindUtils).
 
@@ -157,7 +157,10 @@ function OccupantDirectorRules.track(before: Mind, result: Step, senses: Senses)
 		end
 	end
 	mind.close = close
-	if senses.pacing ~= nil and not M.breathing(mind, now) then
+	if senses.pacing ~= nil and M.breathing(mind, now) then
+		-- A breather is a clean slate: even a catch on it does not fill the gauge back up.
+		mind.menace = 0
+	elseif senses.pacing ~= nil then
 		local nearest = M.nearestNoticed(mind, senses)
 		mind.menace = OccupantMenaceFormulas.step(mind.menace, dt, {
 			chasing = mind.mode == "chase",

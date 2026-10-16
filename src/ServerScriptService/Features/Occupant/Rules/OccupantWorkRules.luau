@@ -72,7 +72,13 @@ local function toDesk(current: Mind, senses: Senses, seen: { Glimpse }, heard: V
 		local step: Step = { mind = nextMind, intent = IDLE, cue = if current.sitIn then "sitIn" else nil }
 		step = M.addEffect(step, { kind = "sit", seat = seat })
 		if current.sitIn and quarry ~= nil then
-			local tail = OccupantConstants.TIP_SECONDS + OccupantConstants.TIP_HOLD + 4
+			-- Held until he has stood up and walked off, so being cramped never throws them into his lap.
+			local tail = OccupantConstants.TIP_SECONDS
+				+ OccupantConstants.TIP_HOLD
+				+ OccupantConstants.TIP_BACK
+				+ OccupantConstants.TYPE_MORE
+				+ OccupantConstants.STAND_SECONDS
+				+ 5
 			step = M.addEffect(step, { kind = "holdCamp", userId = quarry, untilTime = now + hold + tail })
 		end
 		return step
@@ -101,7 +107,9 @@ local function rise(current: Mind, senses: Senses, seen: { Glimpse }): Step
 		nextMind.noise = current.point or senses.position
 		step = { mind = nextMind, intent = IDLE, cue = "curious" }
 	end
+	-- His head stays turned to the point while he stands up.
 	local nextMind = table.clone(step.mind)
+	nextMind.point = current.point
 	nextMind.swivelUntil = now + OccupantConstants.STAND_SECONDS / OccupantConstants.AMBUSH_STAND_SPEED
 	return { mind = nextMind, intent = IDLE, cue = step.cue, effects = step.effects }
 end

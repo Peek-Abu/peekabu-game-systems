@@ -26,12 +26,15 @@ crew, staged warning signs, and a new catch jumpscare. They replace the chase ki
 ## 2. The stare-down
 
 - **Known hider.** He saw you go in (Hide's witness: you were in sight, or you were his chase target). He walks
-  (runs, from a chase) to the spot's front, **1.6 studs** off its edge, faces it and **stands still for 4–10 s**
+  (runs, from a chase) to the spot's front, **1.6 studs** off its edge and **1.9 studs** to the side (beside the
+  desk's chair, not in it), faces it and **stands still for 4–10 s**
   (Noticing face, no cue disc, no line).
 - **Then he checks or leaves** (`OccupantStareRules.checks`). The chance to check is
   `0.25 + 0.08 × seconds he had eyes on you`, plus **0.3 if you went in within 12 studs of him**, capped at 0.9.
   A noise within **10 studs** of the spot during the stare makes it certain.
-  - **Check:** he bends down to look under (waist and neck gesture, 1.1 s, Hunting face), then the catch.
+  - **Check:** he folds double to look under (waist and neck gesture, 1.1 s, Hunting face), then the catch.
+    The hider's camera draws back into the spot and turns to his face for it (he is too tall for his head to
+    reach the peek camera's own view).
   - **Leave:** he straightens and walks on. He forgets you (`setSeen(false)`) and leaves that spot alone for 25 s.
 - **Learnable:** break line of sight early and far, and he likely walks away; duck under a desk right in front of him
   after a long chase and he looks. Keep the crew quiet around you.
@@ -39,7 +42,8 @@ crew, staged warning signs, and a new catch jumpscare. They replace the chase ki
   you get away if you go at once. That includes tapping out during the bend.
 - **Suspicion.** When he arrives at a noise and a hiding spot lies within **10 studs** of it, he walks to the nearest
   spot and stares for **2–4 s**, then moves on. A noise during that stare makes him look.
-- While he stands at your spot, the camping push-out (30 s) is held, so it never throws you into his lap.
+- While he stands at your spot or sits over you, the camping push-out (30 s) is held until he has walked off, so it
+  never throws you into his lap.
 
 ## 3. Sitting at the desk you are under
 
@@ -49,8 +53,9 @@ crew, staged warning signs, and a new catch jumpscare. They replace the chase ki
   - He sits **0.7 studs further back** than at work, so his knees stop at the desk's edge instead of 0.45 into the
     knee-hole (the overlap with the hider's huddle). His shins and shoes fill the hider's peek view.
   - He types for **7–11 s** (the typing is right above you).
-  - His head slowly tips down into view under the desk, upside down, still smiling (2.6 s: Calm, then Hunting for
-    the last 0.9 s). It holds **1.4 s**.
+  - He folds forward over his knees and his head slowly comes in under the desk's lip, upside down, still smiling
+    (2.6 s: Calm, then Hunting for the last 0.9 s). It holds **1.4 s**. The hider's camera draws back and turns to
+    his face, the same reveal as the stare's check.
   - Then: **50%** he catches you (certain if there was a noise), else his head rises (1 s), he types 2 s more, stands
     and leaves.
 - **Tapping out** during it is the escape: he has to stand up first (1.2 s).
@@ -67,7 +72,7 @@ crew, staged warning signs, and a new catch jumpscare. They replace the chase ki
   - Otherwise it falls 2/s.
 - **At 100 he takes a breather:** he walks to the route point farthest from the crew. For **30–60 s** (40–60 solo,
   5 s less per tier, 15–25 in overtime) he does not steer, ignores noises more than 20 studs from him and works at the
-  far desks. He still sees. Then the gauge resets. So busy and calm phases alternate.
+  far desks. He still sees. The gauge stays at 0 through it, even after a catch on it. So busy and calm phases alternate.
 
 ## 5. Warning signs in stages
 

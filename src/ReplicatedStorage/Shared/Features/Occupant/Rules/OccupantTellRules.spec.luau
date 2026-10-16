@@ -66,6 +66,26 @@ return function()
 			expect(view.target).to.equal(7)
 			expect(OccupantTellRules.view(mind({ mode = "catch", since = 10 }), 20).tilt).to.equal(false)
 		end)
+		it("names the hider he is at as his target", function()
+			expect(OccupantTellRules.view(mind({ mode = "stare", phase = "hold", quarry = 9 }), 1).target).to.equal(9)
+		end)
+	end)
+
+	describe("revealed", function()
+		it(
+			"turns a hider's camera to his face while he looks under their spot or tips his head under their desk",
+			function()
+				expect(OccupantTellRules.revealed("stare", "check", true, true)).to.equal(true)
+				expect(OccupantTellRules.revealed("work", "tip", true, true)).to.equal(true)
+				expect(OccupantTellRules.revealed("work", "tipHold", true, true)).to.equal(true)
+			end
+		)
+		it("never for someone else, someone not hiding, or another moment", function()
+			expect(OccupantTellRules.revealed("stare", "check", false, true)).to.equal(false)
+			expect(OccupantTellRules.revealed("stare", "check", true, false)).to.equal(false)
+			expect(OccupantTellRules.revealed("stare", "hold", true, true)).to.equal(false)
+			expect(OccupantTellRules.revealed("work", "type", true, true)).to.equal(false)
+		end)
 	end)
 
 	describe("typing", function()

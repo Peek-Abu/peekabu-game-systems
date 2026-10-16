@@ -72,10 +72,12 @@ export type Gesture = { seconds: number, joints: { [string]: Vector3 } }
 local GESTURES: { [string]: Gesture } = {
 	-- The ambush: the head snaps round to the point on the long neck (the yaw is aimed live; this is its timing).
 	swivel = { seconds = 0.35, joints = {} },
-	-- The stare's check: he bends down from the waist and tips his head sideways to look under the furniture.
-	peek = { seconds = 1, joints = { Waist = Vector3.new(-52, 0, 16), Neck = Vector3.new(-28, 0, 62) } },
-	-- The sit-in: from the chair his body folds down beside his knees and the head turns upside down under the desk.
-	under = { seconds = 2.6, joints = { Waist = Vector3.new(-48, 0, 34), Neck = Vector3.new(-62, 0, 150) } },
+	-- The stare's check: he folds double at the waist (he is far too tall to stoop) and his head hangs down, tipped
+	-- sideways, at the mouth of the spot (tuned live against the built desk).
+	peek = { seconds = 0.9, joints = { Waist = Vector3.new(-150, 0, 0), Neck = Vector3.new(150, 0, 90) } },
+	-- The sit-in: from the chair he folds forward over his knees and his head comes in under the desk's lip, upside
+	-- down and facing the hider (tuned live: the head ends 0.6 studs under the front edge, just off the floor).
+	under = { seconds = 2.6, joints = { Waist = Vector3.new(-98, 0, 0), Neck = Vector3.new(98, 0, 180) } },
 }
 
 export type Range = { min: number, max: number }
@@ -202,6 +204,8 @@ return table.freeze({
 	-- the check's odds, the bend before the catch, the startle, the noise radius around the spot, the suspicion radius
 	-- around a heard noise, how long a spot is left alone after he walks away.
 	STARE_GAP = 1.6,
+	-- ...and that far to the side of the spot's centre line, beside the desk's chair rather than in it.
+	STARE_SIDE = 1.9,
 	STARE_SECONDS = range(4, 10),
 	SUSPECT_SECONDS = range(2, 4),
 	CHECK_BASE = 0.25,
@@ -274,6 +278,12 @@ return table.freeze({
 	-- §6 The jumpscare camera: in front of his face plate, its FOV, the head tilt.
 	JUMPSCARE_DISTANCE = 1.9,
 	JUMPSCARE_FOV = 38,
+	-- The hider's reveal: while he bends to look under their spot (or tips his head under the desk they hide under),
+	-- their peek camera draws back REVEAL_BACK studs into the spot and turns to his face (above the peek camera, below
+	-- the catch's jumpscare).
+	REVEAL_BACK = 1.4,
+	REVEAL_FOV = 55,
+	REVEAL_PRIORITY = 60,
 	-- The gestures, how fast one lets go, and the catch's head tilt (degrees of roll, seconds, shiver).
 	GESTURES = table.freeze(GESTURES),
 	GESTURE_RELEASE = 0.4,

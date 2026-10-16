@@ -114,6 +114,8 @@ local pendingNoise: Vector3? = nil
 local lookBase: number? = nil
 local tuningElapsed = 0
 local rng = Random.new()
+-- A QA seam (`_setRolls`): fixed rolls for the brain instead of random ones (nil = random).
+local fixedRolls: { number }? = nil
 local lastLine: string? = nil
 local counters = { spawned = 0, heard = 0, chases = 0, catches = 0 }
 -- UserIds caught this life: their next character gets the Rehired notice.
@@ -247,7 +249,7 @@ local function brain(def: NpcTypes.NpcDef, context: NpcTypes.BrainContext, npc: 
 	local senses = Sense.senses(current, def, context.now, glimpses(current, def.sightRange), world())
 	senses.position = context.position
 	senses.heard = pendingNoise
-	senses.rolls = { rng:NextNumber(), rng:NextNumber(), rng:NextNumber(), rng:NextNumber() }
+	senses.rolls = fixedRolls or { rng:NextNumber(), rng:NextNumber(), rng:NextNumber(), rng:NextNumber() }
 	senses.desks = desks
 	senses.spots = spots
 	senses.hiders = Sense.hiders(participants)
@@ -399,6 +401,7 @@ export type OccupantServiceServer = {
 	getState: (self: OccupantServiceServer) -> { [string]: any },
 	getHarlow: (self: OccupantServiceServer) -> Model?,
 	getMind: (self: OccupantServiceServer) -> OccupantTypes.Mind?,
+	_setRolls: (self: OccupantServiceServer, rolls: { number }?) -> (),
 }
 
 local OccupantServiceServer: OccupantServiceServer = {
@@ -461,8 +464,12 @@ local OccupantServiceServer: OccupantServiceServer = {
 	end,
 
 	getHarlow = function(_self)
-		local current = rig
-		return if current ~= nil then current.model else nil
+		return if rig ~= nil then rig.model else nil
+	end,
+
+	-- QA seam (live verification only): every think uses these rolls (OccupantTypes.Senses.rolls) until cleared.
+	_setRolls = function(_self, rolls)
+		fixedRolls = if rolls ~= nil then table.clone(rolls) else nil
 	end,
 
 	getMind = function(_self)
@@ -478,12 +485,10 @@ local OccupantServiceServer: OccupantServiceServer = {
 			phase = if current ~= nil then current.phase else nil,
 			target = if current ~= nil then current.target else nil,
 			routeIndex = if current ~= nil then current.routeIndex else nil,
-			routeStep = if current ~= nil then current.routeStep else nil,
 			menace = if current ~= nil then current.menace else nil,
 			breatherUntil = if current ~= nil then current.breatherUntil else nil,
 			sitIns = if current ~= nil then current.sitIns else nil,
 			desks = #desks,
-			spots = #spots,
 			hearing = NoiseServiceServer:getHearingScale(),
 			counters = table.clone(counters),
 			effects = OccupantEffectSystem.getState(),

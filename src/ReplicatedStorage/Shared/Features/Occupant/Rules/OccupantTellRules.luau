@@ -72,7 +72,8 @@ function OccupantTellRules.view(mind: OccupantTypes.Mind, now: number): View
 	local swivelling = swivelUntil ~= nil and now < swivelUntil and mind.point ~= nil
 	return {
 		mode = mind.mode,
-		target = mind.target or 0,
+		-- His chase target, or the hider he is at (a stare's or a sit-in's quarry: their client's reveal camera).
+		target = mind.target or mind.quarry or 0,
 		phase = mind.phase or "",
 		cue = OccupantTellRules.cueFor(mind.mode, mind.phase),
 		face = OccupantFaceUtils.faceFor(mind.mode, mind.phase, if phaseAt ~= nil then now - phaseAt else 0),
@@ -86,6 +87,17 @@ function OccupantTellRules.view(mind: OccupantTypes.Mind, now: number): View
 		gestureTarget = if swivelling then mind.point else nil,
 		tilt = mind.mode == "catch" and now - mind.since < OccupantConstants.SNAP_SECONDS + 0.5,
 	}
+end
+
+--[=[
+	Whether a hider's camera turns to his face: he is at their spot (`targetsMe`) bending down to look under it, or
+	tipping his head under the desk they hide under, and they are hiding.
+]=]
+function OccupantTellRules.revealed(mode: string?, phase: string?, targetsMe: boolean, hiding: boolean): boolean
+	if not targetsMe or not hiding then
+		return false
+	end
+	return (mode == "stare" and phase == "check") or (mode == "work" and (phase == "tip" or phase == "tipHold"))
 end
 
 --[=[
