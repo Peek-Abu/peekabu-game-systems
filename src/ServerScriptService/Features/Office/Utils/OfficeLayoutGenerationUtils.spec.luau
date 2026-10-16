@@ -233,6 +233,27 @@ return function()
 			end
 		end)
 
+		it("stands a few supply cabinets, sparse: about one in three rooms, never two in a room", function()
+			for seed = 1, 20 do
+				if seed % 5 == 0 then
+					task.wait()
+				end
+				local layout = Gen.generate(Base, seed)
+				local rooms, perRoom, total = 0, {}, 0
+				for _, room in layout.rooms do
+					if room.zone ~= "hallway" and room.id ~= "bay" then
+						rooms += 1
+					end
+				end
+				for _, marker in Utils.markersOf(layout, "closet") do
+					total += 1
+					perRoom[marker.room] = (perRoom[marker.room] or 0) + 1
+					expect(perRoom[marker.room]).to.equal(1)
+				end
+				expect(total >= 2).to.equal(true)
+				expect(total <= math.ceil(rooms / Constants.CLOSET_EVERY)).to.equal(true)
+			end
+		end)
 		it("keeps input immutable and map kits local to the selected map", function()
 			local selected = table.clone(Base)
 			selected.artKit = "alternate-office-kit"

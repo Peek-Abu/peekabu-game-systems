@@ -37,6 +37,7 @@ export type Door = {
 -- patrol: a point on Mr. Harlow's route; rest: where he takes his break (M2).
 -- shelf/counter/plant/board are visual-only dressing markers for zone kits (ignored by spawn rolls).
 -- cabinet/table are art-only furniture with lootable tops (plaque, meeting-table monitors).
+-- closet: a tall supply cabinet against a wall, art-only, a secure hiding spot (Hide's "inside" kind).
 export type MarkerKind =
 	"pile"
 	| "item"
@@ -51,6 +52,7 @@ export type MarkerKind =
 	| "board"
 	| "cabinet"
 	| "table"
+	| "closet"
 
 -- A place something can spawn (or a player appears): its id is "<room>.<kind>.<n>".
 export type Marker = {

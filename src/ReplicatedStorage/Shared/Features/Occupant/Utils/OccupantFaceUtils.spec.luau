@@ -41,6 +41,7 @@ return function()
 		it("notices while he stares and hunts when he bends to look", function()
 			expect(OccupantFaceUtils.faceFor("stare", "hold", 3)).to.equal("Noticing")
 			expect(OccupantFaceUtils.faceFor("stare", "check", 0)).to.equal("Hunting")
+			expect(OccupantFaceUtils.faceFor("stare", "open", 0)).to.equal("Hunting")
 		end)
 
 		it("only ever names a face the template ships", function()

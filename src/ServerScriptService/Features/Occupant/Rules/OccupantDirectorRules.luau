@@ -150,13 +150,13 @@ function OccupantDirectorRules.track(before: Mind, result: Step, senses: Senses)
 		watched[userId] = (before.watched[userId] or 0) + dt
 	end
 	mind.watched = watched
-	local close: { [number]: boolean } = {}
-	for userId, value in mind.close do
+	local entered: { [number]: number } = {}
+	for userId, value in mind.entered do
 		if hiding[userId] then
-			close[userId] = value
+			entered[userId] = value
 		end
 	end
-	mind.close = close
+	mind.entered = entered
 	if senses.pacing ~= nil and M.breathing(mind, now) then
 		-- A breather is a clean slate: even a catch on it does not fill the gauge back up.
 		mind.menace = 0

@@ -515,17 +515,27 @@ return function()
 			expect(#seen).to.equal(0)
 		end)
 
-		it("witnesses a player going in when he sees them, or while he chases them; never on his break", function()
+		it("witnesses a player going in only when he sees them right then; never on his break", function()
 			local seenNow = senses({ players = { player(7, AHEAD) } })
 			expect(OccupantBrainRules.witnessed(fresh(), seenNow, 7)).to.equal(true)
 			expect(OccupantBrainRules.witnessed(fresh(), senses({ players = { player(7, AHEAD, false) } }), 7)).to.equal(
 				false
 			)
+			-- A chase alone is not enough: break his line of sight first and he did not see where you went.
 			local chasing = fresh()
 			chasing.mode = "chase"
 			chasing.target = 7
-			expect(OccupantBrainRules.witnessed(chasing, senses(), 7)).to.equal(true)
-			expect(OccupantBrainRules.witnessed(chasing, senses(), 8)).to.equal(false)
+			expect(OccupantBrainRules.witnessed(chasing, senses(), 7)).to.equal(false)
+			expect(OccupantBrainRules.witnessed(chasing, senses({ players = { player(7, AHEAD, false) } }), 7)).to.equal(
+				false
+			)
+			-- Far down a clear line, in his narrow long cone, he sees you go in too (from far: only a suspicion later).
+			local far = senses({
+				longRange = OccupantConstants.LONG_SIGHT_RANGE,
+				longAngle = OccupantConstants.LONG_SIGHT_ANGLE,
+				players = { player(7, Vector3.new(170, 3, 60)) },
+			})
+			expect(OccupantBrainRules.witnessed(fresh(), far, 7)).to.equal(true)
 			expect(OccupantBrainRules.witnessed(fresh(), senses({ resting = true, players = { player(7, AHEAD) } }), 7)).to.equal(
 				false
 			)
@@ -752,5 +762,240 @@ return function()
 			)
 			expect(planted_.mind.hold).to.equal(OccupantConstants.SUSPECT_SECONDS.max)
 		end)
+	end)
+	describe("long sight", function()
+		local FAR = Vector3.new(170, 3, 60)
+		local function long(extra)
+			local value = senses({
+				longRange = OccupantConstants.LONG_SIGHT_RANGE,
+				longAngle = OccupantConstants.LONG_SIGHT_ANGLE,
+			})
+			for key, item in extra or {} do
+				value[key] = item
+			end
+			return value
+		end
+
+		it("needs a beat to notice someone far down a clear line: he stops and turns his head to them", function()
+			local step = OccupantBrainRules.step(fresh(), long({ players = { player(7, FAR) } }))
+			expect(step.mind.mode).to.equal("patrol")
+			expect(step.mind.noticeId).to.equal(7)
+			expect(step.intent.kind).to.equal("idle")
+			expect(step.mind.point).to.equal(FAR)
+			expect(step.mind.swivelUntil > 100).to.equal(true)
+		end)
+
+		it("chases once the notice delay for the distance has passed", function()
+			local mind = fresh()
+			local now = 100
+			local result
+			repeat
+				result = OccupantBrainRules.step(mind, long({ now = now, players = { player(7, FAR) } }))
+				mind = result.mind
+				now += 0.25
+			until result.mind.mode == "chase" or now > 104
+			expect(result.mind.mode).to.equal("chase")
+			expect(result.cue).to.equal("spotted")
+			-- 110 studs away: most of the way to the slowest notice.
+			expect(now - 100 >= OccupantConstants.NOTICE_SECONDS.min + 0.5).to.equal(true)
+			expect(now - 100 <= OccupantConstants.NOTICE_SECONDS.max + 0.5).to.equal(true)
+		end)
+
+		it("sees at once within his near sight, as before", function()
+			local step = OccupantBrainRules.step(fresh(), long({ players = { player(7, AHEAD) } }))
+			expect(step.mind.mode).to.equal("chase")
+		end)
+
+		it("never notices far off to the side, behind a wall, or past his long range", function()
+			for _, glimpse in
+				{
+					player(7, Vector3.new(150, 3, 120)),
+					player(7, FAR, false),
+					player(7, Vector3.new(60 + OccupantConstants.LONG_SIGHT_RANGE + 5, 3, 60)),
+				}
+			do
+				local step = OccupantBrainRules.step(fresh(), long({ players = { glimpse } }))
+				expect(step.mind.mode).to.equal("patrol")
+				expect(step.mind.noticeId).to.equal(nil)
+			end
+		end)
+
+		it("lets a noticing fade once the line is broken, and walks on", function()
+			local first = OccupantBrainRules.step(fresh(), long({ players = { player(7, FAR) } }))
+			local second = OccupantBrainRules.step(first.mind, long({ now = 100.5, players = { player(7, FAR) } }))
+			expect(second.mind.noticeSeconds).to.be.near(0.5)
+			local lost =
+				OccupantBrainRules.step(second.mind, long({ now = 100.75, players = { player(7, FAR, false) } }))
+			expect(lost.mind.mode).to.equal("patrol")
+			expect(lost.intent.kind).to.equal("goTo")
+			expect(lost.mind.noticeSeconds).to.be.near(0)
+		end)
+
+		it("keeps his chase target in sight far down a straight line, in his long cone", function()
+			local chase = OccupantBrainRules.step(fresh(), long({ players = { player(7, AHEAD) } }))
+			local kept = OccupantBrainRules.step(chase.mind, long({ now = 101, players = { player(7, FAR) } }))
+			expect(kept.mind.mode).to.equal("chase")
+			expect(kept.mind.lastSeen).to.equal(FAR)
+		end)
+	end)
+
+	describe("hiding during a chase", function()
+		local CENTER = Vector3.new(80, 1.5, 60)
+		local STAND = Vector3.new(76.4, 0, 60)
+		local AT_STAND = Vector3.new(76.4, 4.6, 60)
+		local SPOT = { id = "s1", center = CENTER, stand = STAND }
+
+		local function kinds(step)
+			local list = {}
+			for _, effect in step.effects or {} do
+				table.insert(list, effect.kind)
+			end
+			return table.concat(list, ",")
+		end
+
+		it("searching where he lost them, he stares a moment at a spot there on a hunch", function()
+			local seenAt = Vector3.new(84, 3, 60)
+			local chase = OccupantBrainRules.step(fresh(), senses({ players = { player(7, seenAt) } }))
+			local lost = OccupantBrainRules.step(chase.mind, senses({ now = 101, spots = { SPOT } }))
+			expect(lost.mind.mode).to.equal("search")
+			local arrived = OccupantBrainRules.step(
+				lost.mind,
+				senses({ now = 102, position = Vector3.new(84, 3, 61), spots = { SPOT } })
+			)
+			expect(arrived.mind.mode).to.equal("stare")
+			expect(arrived.mind.quarry).to.equal(nil)
+			expect(arrived.mind.hunch).to.equal(true)
+		end)
+
+		it("a hunch looks only on a low roll, even with someone under there", function()
+			local hidden = { userId = 7, position = CENTER, clear = false, hidden = true, seen = false }
+			local mind = fresh()
+			mind.mode = "stare"
+			mind.phase = "hold"
+			mind.phaseAt = 100
+			mind.hold = 2
+			mind.spot = SPOT
+			mind.hunch = true
+			mind.planted = true
+			local hiders = { { userId = 7, spotId = "s1", seen = false } }
+			local function decide(roll)
+				return OccupantBrainRules.step(
+					mind,
+					senses({
+						now = 102,
+						position = AT_STAND,
+						players = { hidden },
+						spots = { SPOT },
+						hiders = hiders,
+						rolls = { 0.5, roll, 0.99 },
+					})
+				)
+			end
+			expect(decide(OccupantConstants.HUNCH_CHECK - 0.01).mind.phase).to.equal("check")
+			expect(decide(OccupantConstants.HUNCH_CHECK + 0.01).mind.mode).to.equal("patrol")
+		end)
+
+		it("watched you crawl in from far off: only a short suspicion stare", function()
+			local far = Vector3.new(60 + OccupantConstants.CHECK_FAR + 5, 1.5, 60)
+			local spot = { id = "s2", center = far, stand = far - Vector3.new(3.6, 1.5, 0) }
+			local hidden = { userId = 7, position = far, clear = false, hidden = true, seen = true }
+			local hiders = { { userId = 7, spotId = "s2", seen = true } }
+			local walking =
+				OccupantBrainRules.step(fresh(), senses({ players = { hidden }, spots = { spot }, hiders = hiders }))
+			expect(walking.mind.entered[7] >= OccupantConstants.CHECK_FAR).to.equal(true)
+			local planted = OccupantBrainRules.step(
+				walking.mind,
+				senses({
+					now = 105,
+					position = spot.stand + Vector3.new(0, 4.6, 0),
+					players = { hidden },
+					spots = { spot },
+					hiders = hiders,
+					rolls = { 1 },
+				})
+			)
+			expect(planted.mind.hold).to.equal(OccupantConstants.SUSPECT_SECONDS.max)
+		end)
+
+		it("plants near a stand point the path cannot quite reach instead of circling it", function()
+			local hidden = { userId = 7, position = CENTER, clear = false, hidden = true, seen = true }
+			local hiders = { { userId = 7, spotId = "s1", seen = true } }
+			local near = STAND + Vector3.new(-4.5, 4.6, 0)
+			local walking =
+				OccupantBrainRules.step(fresh(), senses({ players = { hidden }, spots = { SPOT }, hiders = hiders }))
+			local close = OccupantBrainRules.step(
+				walking.mind,
+				senses({ now = 101, position = near, players = { hidden }, spots = { SPOT }, hiders = hiders })
+			)
+			expect(close.mind.phase).to.equal("approach")
+			local settled = OccupantBrainRules.step(
+				close.mind,
+				senses({
+					now = 101 + OccupantConstants.STAND_SETTLE + 0.01,
+					position = near,
+					players = { hidden },
+					spots = { SPOT },
+					hiders = hiders,
+				})
+			)
+			expect(settled.mind.phase).to.equal("hold")
+			expect(kinds(settled)).to.equal("plant,holdCamp")
+		end)
+	end)
+
+	describe("a secure supply cabinet", function()
+		local function cabinet(at)
+			return { id = "c1", center = at, stand = at - Vector3.new(3.6, 1.5, 0), secure = true }
+		end
+		local function kinds(step)
+			local list = {}
+			for _, effect in step.effects or {} do
+				table.insert(list, effect.kind)
+			end
+			return table.concat(list, ",")
+		end
+		local function staredAt(spot, rolls)
+			local hidden = { userId = 7, position = spot.center, clear = false, hidden = true, seen = true }
+			local hiders = { { userId = 7, spotId = "c1", seen = true } }
+			local function at(now, extra)
+				local value = senses({
+					now = now,
+					position = spot.stand + Vector3.new(0, 4.6, 0),
+					players = { hidden },
+					spots = { spot },
+					hiders = hiders,
+					rolls = rolls,
+				})
+				for key, item in extra or {} do
+					value[key] = item
+				end
+				return value
+			end
+			local walking = OccupantBrainRules.step(fresh(), at(100, { position = Vector3.new(60, 3, 60) }))
+			local planted = OccupantBrainRules.step(walking.mind, at(101))
+			return OccupantBrainRules.step(planted.mind, at(101 + planted.mind.hold)), at
+		end
+
+		it("he opens it (slow and telegraphed) when he watched you get in up close, then catches you", function()
+			local spot = cabinet(Vector3.new(70, 1.5, 60))
+			local opening, at = staredAt(spot, { 0, 0, 0.99 })
+			expect(opening.mind.phase).to.equal("open")
+			expect(kinds(opening)).to.equal("seen,holdCamp,door")
+			local mid =
+				OccupantBrainRules.step(opening.mind, at(opening.mind.phaseAt + OccupantConstants.OPEN_SECONDS - 0.1))
+			expect(mid.mind.phase).to.equal("open")
+			local caught =
+				OccupantBrainRules.step(opening.mind, at(opening.mind.phaseAt + OccupantConstants.OPEN_SECONDS))
+			expect(kinds(caught)).to.equal("catch,door,release")
+		end)
+
+		it(
+			"he never looks in casually: from further than OPEN_RADIUS he stares and walks on, whatever the roll",
+			function()
+				local spot = cabinet(Vector3.new(60 + OccupantConstants.OPEN_RADIUS + 6, 1.5, 60))
+				local leave = staredAt(spot, { 0, 0, 0 })
+				expect(leave.mind.mode).to.equal("patrol")
+			end
+		)
 	end)
 end

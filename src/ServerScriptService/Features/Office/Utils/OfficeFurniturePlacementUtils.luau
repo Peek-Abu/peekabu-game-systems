@@ -18,6 +18,7 @@ local FLOOR_SIZES: { [string]: Vector3? } = {
 	shelf = Constants.SHELF_SIZE,
 	counter = Constants.COUNTER_SIZE,
 	cabinet = Constants.CABINET_SIZE,
+	closet = Constants.CLOSET_SIZE,
 	table = Constants.TABLE_SIZE,
 	plant = Constants.PLANT_SIZE,
 	-- Preserve authoritative cargo/pile positions and walkable player/NPC route points.

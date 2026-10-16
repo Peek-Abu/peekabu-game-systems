@@ -34,6 +34,7 @@ local function markerInside(room: Room, marker: OfficeTypes.Marker): boolean
 		counter = OfficeConstants.COUNTER_SIZE,
 		table = OfficeConstants.TABLE_SIZE,
 		cabinet = OfficeConstants.CABINET_SIZE,
+		closet = OfficeConstants.CLOSET_SIZE,
 		desk = OfficeConstants.DESK_SIZE,
 		locker = OfficeConstants.LOCKER_SIZE,
 		shelf = OfficeConstants.SHELF_SIZE,

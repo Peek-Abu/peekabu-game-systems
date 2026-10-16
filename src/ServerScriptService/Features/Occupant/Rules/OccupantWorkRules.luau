@@ -70,7 +70,7 @@ local function toDesk(current: Mind, senses: Senses, seen: { Glimpse }, heard: V
 		local nextMind = M.inPhase(current, "type", now, hold)
 		nextMind.seated = true
 		local step: Step = { mind = nextMind, intent = IDLE, cue = if current.sitIn then "sitIn" else nil }
-		step = M.addEffect(step, { kind = "sit", seat = seat })
+		step = M.addEffect(step, { kind = "sit", seat = seat, desk = desk.frame, deskSize = desk.size })
 		if current.sitIn and quarry ~= nil then
 			-- Held until he has stood up and walked off, so being cramped never throws them into his lap.
 			local tail = OccupantConstants.TIP_SECONDS

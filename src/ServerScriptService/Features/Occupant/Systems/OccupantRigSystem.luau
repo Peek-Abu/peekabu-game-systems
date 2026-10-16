@@ -6,9 +6,9 @@
 	§7: "a tall, too-thin suited R15 rig built from a HumanoidDescription in code";
 	Players:CreateHumanoidModelFromDescription, which may yield). It removes any Animate script (the base Npc
 	plays his idle / walk / run), makes sure his Humanoid has an Animator (otherwise the base's pose code
-	waits for one inside the NPC think), adds two empty tagged shells over his head (his cue and his memo; the
-	server writes only their attributes, the client draws them: OccupantBillboardSystem, and voices each line:
-	OccupantPresenceSystem), tags him Occupant (the client's tells find him by it) and, last, Npc with his NpcKind so
+	waits for one inside the NPC think), gives him an empty line attribute (nothing is drawn over his head since
+	2026-10-16: his lines are only voiced, OccupantPresenceSystem), tags him Occupant (the client's tells find him by
+	it) and, last, Npc with his NpcKind so
 	NpcServiceServer adopts him. `present` publishes what he shows and puts the painted face on his mask.
 
 	Spec-exempt shell (Instances).
@@ -32,8 +32,6 @@ export type Rig = {
 	humanoid: Humanoid,
 	root: BasePart,
 	head: BasePart,
-	cue: BillboardGui,
-	speech: BillboardGui,
 }
 
 -- The latest line per rig, so an older line's timer never hides a newer one. Weak keys.
@@ -82,59 +80,6 @@ local function body(): Model
 	return model
 end
 
--- An empty shell over his head for the client to draw into (OccupantBillboardSystem): its attribute starts "", then
--- the tag, then the parent.
-local function shell(
-	name: string,
-	size: UDim2,
-	offset: Vector3,
-	tag: string,
-	attribute: string,
-	head: BasePart,
-	sizeOffset: Vector2
-): BillboardGui
-	local gui = Instance.new("BillboardGui")
-	gui.Name = name
-	gui.Size = size
-	gui.StudsOffset = offset
-	gui.SizeOffset = sizeOffset
-	gui.AlwaysOnTop = false
-	gui.MaxDistance = 90
-	gui.LightInfluence = 0
-	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-	gui:SetAttribute(attribute, "")
-	CollectionService:AddTag(gui, tag)
-	gui.Parent = head
-	return gui
-end
-
--- His cue disc and memo shells on his head.
-local function tells(head: BasePart): (BillboardGui, BillboardGui)
-	local studs = OccupantConstants.CUE_STUDS
-	local memo = OccupantConstants.MEMO_PX
-	local cue = shell(
-		OccupantConstants.CUE_NAME,
-		UDim2.fromScale(studs, studs),
-		Vector3.new(0, 2.5, 0),
-		OccupantConstants.CUE_TAG,
-		OccupantConstants.CUE_ATTRIBUTE,
-		head,
-		Vector2.zero
-	)
-	local speech = shell(
-		OccupantConstants.SPEECH_NAME,
-		UDim2.fromOffset(memo.X, memo.Y),
-		-- Its bottom edge sits on the cue disc's top edge (SizeOffset lifts the shell by half its own height), so the
-		-- fixed-px memo can never cover the "!" however far away it draws.
-		Vector3.new(0, 2.5 + studs / 2, 0),
-		OccupantConstants.SPEECH_TAG,
-		OccupantConstants.LINE_ATTRIBUTE,
-		head,
-		Vector2.new(0, 0.5)
-	)
-	return cue, speech
-end
-
 local function set(instance: Instance, name: string, value: string | number | boolean | Vector3)
 	if instance:GetAttribute(name) ~= value then
 		instance:SetAttribute(name, value)
@@ -159,7 +104,7 @@ function OccupantRigSystem.build(at: CFrame, parent: Instance): Rig
 		if humanoid:FindFirstChildOfClass("Animator") == nil then
 			Instance.new("Animator").Parent = humanoid
 		end
-		local cue, speech = tells(head)
+		model:SetAttribute(OccupantConstants.LINE_ATTRIBUTE, "")
 		model:SetAttribute(OccupantConstants.MODE_ATTRIBUTE, "patrol")
 		OccupantRigSystem.setFace(model, OccupantFaceUtils.faceFor("patrol"))
 		model:SetAttribute(OccupantConstants.TARGET_ATTRIBUTE, 0)
@@ -174,8 +119,6 @@ function OccupantRigSystem.build(at: CFrame, parent: Instance): Rig
 			humanoid = humanoid,
 			root = root,
 			head = head,
-			cue = cue,
-			speech = speech,
 		}
 	end
 	model:Destroy()
@@ -183,24 +126,17 @@ function OccupantRigSystem.build(at: CFrame, parent: Instance): Rig
 end
 
 --[=[
-	The cue over his head ("?", "!" or ""), as the cue shell's attribute; the client draws the disc.
-]=]
-function OccupantRigSystem.setCue(rig: Rig, text: string)
-	set(rig.cue, OccupantConstants.CUE_ATTRIBUTE, text)
-end
-
---[=[
-	Puts a line on his memo for SPEECH_SECONDS (a newer line replaces it), as the speech shell's attribute; the client
-	types and voices it.
+	Gives him a line for SPEECH_SECONDS (a newer line replaces it), as his model's attribute; the client voices it (the
+	words are never shown).
 ]=]
 function OccupantRigSystem.say(rig: Rig, line: string)
 	local token = (speechTokens[rig.model] or 0) + 1
 	speechTokens[rig.model] = token
-	rig.speech:SetAttribute(OccupantConstants.LINE_ATTRIBUTE, line)
+	rig.model:SetAttribute(OccupantConstants.LINE_ATTRIBUTE, line)
 	task.delay(OccupantConstants.SPEECH_SECONDS, function()
-		if speechTokens[rig.model] == token and rig.speech.Parent ~= nil then
-			-- Cleared so the next identical line changes the attribute and the client types and voices it again.
-			rig.speech:SetAttribute(OccupantConstants.LINE_ATTRIBUTE, "")
+		if speechTokens[rig.model] == token and rig.model.Parent ~= nil then
+			-- Cleared so the next identical line changes the attribute and the client voices it again.
+			rig.model:SetAttribute(OccupantConstants.LINE_ATTRIBUTE, "")
 		end
 	end)
 end
@@ -233,8 +169,8 @@ end
 
 --[=[
 	Publishes what he shows (OccupantTellRules.view) as attributes: his mode and target (the client's heartbeat, the
-	crew's faces, analytics), his phase (the typing), the cue disc, the gesture and its point and the catch tilt (the
-	client's OccupantGestureSystem), and puts the face on his mask. Only what changed is written.
+	crew's faces, analytics), his phase (the typing), the gesture and its point and the catch tilt (the client's
+	OccupantGestureSystem), and puts the face on his mask. Only what changed is written.
 ]=]
 function OccupantRigSystem.present(rig: Rig, view: OccupantTellRules.View)
 	local model = rig.model
@@ -247,7 +183,6 @@ function OccupantRigSystem.present(rig: Rig, view: OccupantTellRules.View)
 	if point ~= nil then
 		set(model, OccupantConstants.GESTURE_TARGET_ATTRIBUTE, point)
 	end
-	OccupantRigSystem.setCue(rig, view.cue)
 	OccupantRigSystem.setFace(model, view.face)
 end
 

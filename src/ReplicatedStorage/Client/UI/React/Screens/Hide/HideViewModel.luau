@@ -4,7 +4,7 @@
 	2026-10-15-cleanup-crew-chase-kit-design.md §4). Outside a spot, the chip is the spot's prompt ("[C] HIDE UNDER
 	desk"; a hold strip only for a prompt that has a hold); inside, it is the way out ("[C] LEAVE desk"), turning into a
 	warning once the stay is cramped ("CRAMPED · out in 6s", HideRules). The overlay frames the peek: the underside of
-	the furniture above you. Nil while the HUD is hidden (the scare beat, or caught). Pure.
+	the furniture above you, or the louvred door of the supply cabinet you stand in. Nil while the HUD is hidden (the scare beat, or caught). Pure.
 
 	@class HideViewModel
 ]=]
@@ -23,7 +23,7 @@ export type ChipView = {
 	warn: boolean,
 }
 
-export type Overlay = "under"
+export type Overlay = "under" | "slats"
 
 local HideViewModel = {}
 
@@ -61,13 +61,14 @@ function HideViewModel.chip(
 end
 
 --[=[
-	The peek overlay for the spot the player hides in, or nil when not hiding.
+	The peek overlay for the spot the player hides in, or nil when not hiding: the furniture's underside, or a supply
+	cabinet's louvred door ("slats").
 ]=]
 function HideViewModel.overlay(hidden: HideStore.HiddenView?): Overlay?
 	if hidden == nil then
 		return nil
 	end
-	return "under"
+	return if hidden.kind == "inside" then "slats" else "under"
 end
 
 return HideViewModel

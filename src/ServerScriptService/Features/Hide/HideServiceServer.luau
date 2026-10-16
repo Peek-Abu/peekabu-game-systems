@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	HideServiceServer: hiding spots (docs/superpowers/specs/2026-10-15-cleanup-crew-chase-kit-design.md §4). Players hide
-	under desks and tables (HideSpotSystem makes a spot of every piece Office tags). Server-authoritative throughout:
+	under desks and tables and inside the tall supply cabinets (HideSpotSystem makes a spot of every piece Office tags). Server-authoritative throughout:
 
 	- In: a single press of the spot's prompt (C / L1, or a tap on the phone's chip). Re-checked here (HideRules: alive,
 	  not frozen in a catch, not hidden, the spot free and not cooling off for them, rested REENTER_SECONDS since their
@@ -16,7 +16,8 @@
 	  out at the first clear exit (in front, behind, either side).
 	- API for the Manager's behaviours (the stare-down, sitting at the desk you are under):
 	  `isHidden`, `spotOf`, `seenEntering`, `setSeen`, `evict`, `spots`, `occupantOf`, `hold` (the camping push-out
-	  waits while he is at your spot), and the `entered` / `exited` signals.
+	  waits while he is at your spot), `setDoor` (he swings a cabinet's door open to check it: every client draws the
+	  swing, HideDoorSystem), and the `entered` / `exited` signals.
 
 	Spec-exempt shell (Instances, Players, ByteNet, signals); the decisions are the specced HideRules, HideSpotUtils and
 	HideOccupancyTracker.
@@ -311,6 +312,7 @@ export type HideServiceServer = {
 	occupantOf: (self: HideServiceServer, spotId: string) -> Player?,
 	setWitness: (self: HideServiceServer, check: Witness?) -> (),
 	hold: (self: HideServiceServer, player: Player, untilTime: number) -> boolean,
+	setDoor: (self: HideServiceServer, spotId: string, open: boolean) -> boolean,
 }
 
 local HideServiceServer: HideServiceServer = {
@@ -456,6 +458,19 @@ local HideServiceServer: HideServiceServer = {
 			return false
 		end
 		holds[player.UserId] = math.max(holds[player.UserId] or 0, untilTime)
+		return true
+	end,
+
+	--[=[
+		Swings a supply cabinet's door open (or shut) for every client: the furniture's DOOR_OPEN_ATTRIBUTE. Visual
+		only (the cabinet's collision never changes). False when there is no such spot or it is not a cabinet.
+	]=]
+	setDoor = function(_self, spotId, open)
+		local spot = spotSystem:get(spotId)
+		if spot == nil or spot.kind ~= "inside" then
+			return false
+		end
+		spot.furniture:SetAttribute(HideConstants.DOOR_OPEN_ATTRIBUTE, open)
 		return true
 	end,
 

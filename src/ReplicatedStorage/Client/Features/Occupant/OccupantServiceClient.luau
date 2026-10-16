@@ -8,7 +8,7 @@
 	(OccupantGestureSystem, the server's tilt). The sting and the stretched grin are
 	OccupantScareSystem's. At init it registers the catch's HUD widgets: the CCTV overlay while caught (CatchOverlay) and
 	the HR "Rehired." card around the respawn (CatchRehiredCard). The light and heartbeat tells run in OccupantTellSystem (lights out on a catch, every light flickering on a
-	tier rise). OccupantBillboardSystem draws his cue disc and typed memo. OccupantPresenceSystem plays his footsteps, mutter, cues, chase music, your heartbeat and his voice. OccupantGestureSystem
+	tier rise). OccupantPresenceSystem plays his footsteps, mutter, cues, chase music, your heartbeat and his voice. OccupantGestureSystem
 	lays his gestures over his joints; OccupantWarningSystem plays the staged warnings, his typing and the PA (its
 	subtitle: OccupantPaSubtitle, registered here; the server's call-out arrives as `Pa`).
 
@@ -29,7 +29,6 @@ local VfxServiceClient = require(ReplicatedStorage.Client.Features.Vfx.VfxServic
 local OccupantCatchStore = require(ReplicatedStorage.Client.Features.Occupant.State.OccupantCatchStore)
 local OccupantTellSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantTellSystem)
 local OccupantPresenceSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantPresenceSystem)
-local OccupantBillboardSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantBillboardSystem)
 local OccupantScareSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantScareSystem)
 local OccupantGestureSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantGestureSystem)
 local OccupantWarningSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantWarningSystem)
@@ -143,8 +142,6 @@ local OccupantServiceClient: OccupantServiceClient = {
 		table.insert(stoppers, OccupantTellSystem.stop)
 		OccupantPresenceSystem.start()
 		table.insert(stoppers, OccupantPresenceSystem.stop)
-		OccupantBillboardSystem.start()
-		table.insert(stoppers, OccupantBillboardSystem.stop)
 		OccupantGestureSystem.start()
 		table.insert(stoppers, OccupantGestureSystem.stop)
 		OccupantWarningSystem.start()
@@ -164,7 +161,6 @@ local OccupantServiceClient: OccupantServiceClient = {
 			snaps = snaps,
 			presence = OccupantPresenceSystem.getState(),
 			scare = OccupantScareSystem.getState(),
-			billboards = OccupantBillboardSystem.getState(),
 			gestures = OccupantGestureSystem.getState(),
 			warnings = OccupantWarningSystem.getState(),
 		}

@@ -1,11 +1,10 @@
 --!strict
 --[=[
-	OccupantTellRules: what Harlow's tells show (Cleanup Crew spec §4 "Tells", §7): "?" over his head while he
-	investigates or searches, "!" while he chases; a speech-bubble line per cue; a heartbeat while he is within
+	OccupantTellRules: what Harlow's tells show (Cleanup Crew spec §4 "Tells", §7; since 2026-10-16 nothing is drawn
+	over his head: no "?" / "!" and no speech text, the tells are diegetic): a voiced line per cue; a heartbeat while he is within
 	HEARTBEAT_RANGE and not chasing you, beating faster the closer he is; lights within FLICKER_RADIUS of him
 	flicker (deterministic noise per light, mostly on). The behaviour set (docs/superpowers/specs/2026-10-15-cleanup-
-	crew-manager-behaviours-design.md §5): no cue while he works or stares, "?" in the ambush; his typing plays while he
-	sits typing; the warning stage by distance (far: footsteps and a pen click; mid: flicker and the PA; near: the
+	crew-manager-behaviours-design.md §5): his typing plays while he sits typing; the warning stage by distance (far: footsteps and a pen click; mid: flicker and the PA; near: the
 	heartbeat and the dread swell; chase: his chase on you); a PA line with the called-out name. Shared: the server uses the cues and lines, the client
 	the heartbeat and flicker. Pure.
 
@@ -30,31 +29,17 @@ local OccupantTellRules = {}
 
 export type Stage = "none" | "far" | "mid" | "near" | "chase"
 
--- What his model shows for a mind (the server publishes it as attributes): his mode and target, the phase, the cue
--- disc, the painted face, the gesture (and the point a swivel turns to) and the catch's head tilt.
+-- What his model shows for a mind (the server publishes it as attributes): his mode and target, the phase, the painted
+-- face, the gesture (and the point a swivel turns to) and the catch's head tilt.
 export type View = {
 	mode: OccupantTypes.Mode,
 	target: number,
 	phase: string,
-	cue: string,
 	face: OccupantAssets.Face,
 	gesture: string,
 	gestureTarget: Vector3?,
 	tilt: boolean,
 }
-
-function OccupantTellRules.cueFor(mode: string?, phase: string?): string
-	if mode == "work" then
-		return if phase == "ambush" then "?" else ""
-	end
-	if mode == "investigate" or mode == "search" then
-		return "?"
-	end
-	if mode == "chase" then
-		return "!"
-	end
-	return ""
-end
 
 function OccupantTellRules.lineFor(cue: string?): string?
 	if cue == nil then
@@ -75,7 +60,6 @@ function OccupantTellRules.view(mind: OccupantTypes.Mind, now: number): View
 		-- His chase target, or the hider he is at (a stare's or a sit-in's quarry: their client's reveal camera).
 		target = mind.target or mind.quarry or 0,
 		phase = mind.phase or "",
-		cue = OccupantTellRules.cueFor(mind.mode, mind.phase),
 		face = OccupantFaceUtils.faceFor(mind.mode, mind.phase, if phaseAt ~= nil then now - phaseAt else 0),
 		gesture = OccupantGestureFormulas.gestureFor(
 			mind.mode,
@@ -90,14 +74,15 @@ function OccupantTellRules.view(mind: OccupantTypes.Mind, now: number): View
 end
 
 --[=[
-	Whether a hider's camera turns to his face: he is at their spot (`targetsMe`) bending down to look under it, or
-	tipping his head under the desk they hide under, and they are hiding.
+	Whether a hider's camera turns to his face: he is at their spot (`targetsMe`) bending down to look under it, opening
+	the supply cabinet they hide in, or tipping his head under the desk they hide under, and they are hiding.
 ]=]
 function OccupantTellRules.revealed(mode: string?, phase: string?, targetsMe: boolean, hiding: boolean): boolean
 	if not targetsMe or not hiding then
 		return false
 	end
-	return (mode == "stare" and phase == "check") or (mode == "work" and (phase == "tip" or phase == "tipHold"))
+	return (mode == "stare" and (phase == "check" or phase == "open"))
+		or (mode == "work" and (phase == "tip" or phase == "tipHold"))
 end
 
 --[=[

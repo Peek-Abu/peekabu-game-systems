@@ -50,5 +50,11 @@ return function()
 			expect(HideViewModel.overlay(HIDDEN)).to.equal("under")
 			expect(HideViewModel.overlay(nil)).to.equal(nil)
 		end)
+		it("frames the louvred door from inside a supply cabinet", function()
+			local inside = table.clone(HIDDEN)
+			inside.kind = "inside"
+			inside.noun = "cabinet"
+			expect(HideViewModel.overlay(inside)).to.equal("slats")
+		end)
 	end)
 end

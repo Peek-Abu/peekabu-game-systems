@@ -23,6 +23,42 @@ return function()
 				expect(counts.counter >= 1 and counts.desk >= 1).to.equal(true)
 			end
 		end)
+		it(
+			"stands at most one supply cabinet per room, against a wall, its door to the room; most rooms get one",
+			function()
+				local Constants = require(game:GetService("ServerScriptService").Features.Office.Data.OfficeConstants)
+				local wall = Constants.WALL_THICKNESS / 2
+				local rooms, withCloset = 0, 0
+				for seed = 1, 40 do
+					if seed % 5 == 0 then
+						task.wait()
+					end
+					local maxX, maxZ = 30 + seed % 11, 28 + seed * 3 % 11
+					local room =
+						{ id = "work", name = "Work", minX = 0, minZ = 0, maxX = maxX, maxZ = maxZ, zone = "office" }
+					local closets = {}
+					for _, marker in RoomUtils.markers(room, Random.new(seed)) do
+						if marker.kind == "closet" then
+							table.insert(closets, marker)
+						end
+					end
+					rooms += 1
+					expect(#closets <= 1).to.equal(true)
+					local closet = closets[1]
+					if closet ~= nil then
+						withCloset += 1
+						-- Its back to the nearest wall, its front (local -Z) toward the room's centre.
+						local frame = CFrame.new(closet.x, 0, closet.z) * CFrame.Angles(0, closet.rotation, 0)
+						local back = frame:PointToWorldSpace(Vector3.new(0, 0, Constants.CLOSET_SIZE.Z / 2))
+						local toWall = math.min(back.X, maxX - back.X, back.Z, maxZ - back.Z)
+						expect(math.abs(toWall - wall) < 0.05).to.equal(true)
+						local toCentre = Vector3.new(maxX / 2 - closet.x, 0, maxZ / 2 - closet.z)
+						expect(frame.LookVector:Dot(toCentre) > 0).to.equal(true)
+					end
+				end
+				expect(withCloset >= rooms / 2).to.equal(true)
+			end
+		)
 		it("varies functional furniture inventories and keeps all occupied footprints separated", function()
 			local Constants = require(game:GetService("ServerScriptService").Features.Office.Data.OfficeConstants)
 			local sizes = {
@@ -32,6 +68,7 @@ return function()
 				counter = Constants.COUNTER_SIZE,
 				table = Constants.TABLE_SIZE,
 				cabinet = Constants.CABINET_SIZE,
+				closet = Constants.CLOSET_SIZE,
 				plant = Constants.PLANT_SIZE,
 				pile = Vector3.new(4, 1, 4),
 				item = Vector3.new(3.6, 1, 3.6),

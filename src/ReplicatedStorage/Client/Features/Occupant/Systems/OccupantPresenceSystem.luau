@@ -7,10 +7,10 @@
 	- His mode changes (OccupantFeedbackUtils.cues): a "hm?" when he investigates, the sting when he spots someone
 	  (2D when it is you, positional otherwise), the chase music while he chases you, a sigh when he gives up.
 	- Your heartbeat, on the beat OccupantTellRules sets (the same rule as M2's red pulse).
-	- His voice: each new line on his memo shell (OccupantConstants.LINE_ATTRIBUTE) plays one uploaded gibberish clip
-	  chosen per line (OccupantFeedbackUtils.clipFor); "*sigh*" is not voiced. The memo itself, typed out, is
-	  OccupantBillboardSystem's.
-	Reads only replicated state: his tagged model, its mode/target attributes, his memo shell's line attribute. Pending sounds
+	- His voice: each new line on his model (OccupantConstants.LINE_ATTRIBUTE) plays one uploaded gibberish clip chosen
+	  per line (OccupantFeedbackUtils.clipFor); "*sigh*" is not voiced. The words are never shown: no text over his head
+	  (2026-10-16: the tells stay diegetic).
+	Reads only replicated state: his tagged model, its mode/target and line attributes. Pending sounds
 	(OccupantAssets) are skipped silently and counted.
 
 	Spec-exempt shell (Sound, Instances, RunService); the choices are the specced OccupantFeedbackUtils and
@@ -38,7 +38,6 @@ type Harlow = {
 	model: Model,
 	root: BasePart,
 	head: BasePart,
-	speech: BillboardGui?,
 }
 
 export type OccupantPresenceState = {
@@ -81,9 +80,7 @@ local function find(): Harlow?
 			local root = instance:FindFirstChild("HumanoidRootPart")
 			local head = instance:FindFirstChild("Head")
 			if root ~= nil and root:IsA("BasePart") and head ~= nil and head:IsA("BasePart") then
-				local shell = head:FindFirstChild(OccupantConstants.SPEECH_NAME)
-				local speech = if shell ~= nil and shell:IsA("BillboardGui") then shell else nil
-				return { model = instance, root = root, head = head, speech = speech }
+				return { model = instance, root = root, head = head }
 			end
 		end
 	end
@@ -104,10 +101,10 @@ local function setMusic(on: boolean)
 	end
 end
 
--- A new line on his memo shell: counted and, when it is words, voiced with one gibberish clip. The memo types itself
--- out (OccupantMemo); a cleared line ("") does nothing.
-local function onSpeech(shell: BillboardGui)
-	local value = shell:GetAttribute(OccupantConstants.LINE_ATTRIBUTE)
+-- A new line on his model: counted and, when it is words, voiced with one gibberish clip (never shown); a cleared
+-- line ("") does nothing.
+local function onSpeech(model: Model)
+	local value = model:GetAttribute(OccupantConstants.LINE_ATTRIBUTE)
 	local text = if type(value) == "string" then value else ""
 	if text == "" then
 		return
@@ -137,12 +134,10 @@ local function attach(harlow: Harlow)
 	lastMine = false
 	stepClock = 0
 	mutter = play("harlowMutter", { at = harlow.head })
-	local shell = harlow.speech
-	if shell ~= nil then
-		speechConnection = shell:GetAttributeChangedSignal(OccupantConstants.LINE_ATTRIBUTE):Connect(function()
-			onSpeech(shell)
-		end)
-	end
+	local model = harlow.model
+	speechConnection = model:GetAttributeChangedSignal(OccupantConstants.LINE_ATTRIBUTE):Connect(function()
+		onSpeech(model)
+	end)
 end
 
 local function detach()

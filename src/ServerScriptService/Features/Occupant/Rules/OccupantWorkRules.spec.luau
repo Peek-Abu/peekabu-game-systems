@@ -8,7 +8,9 @@ local ZONE = { min = Vector3.new(0, -5, 0), max = Vector3.new(40, 20, 30) }
 local ROUTE = { Vector3.new(100, 0, 100), Vector3.new(150, 0, 100), Vector3.new(150, 0, 150) }
 -- A desk whose seat looks along -X (toward the desk) at (90, 4.6, 60); its spot "s1" in front of it.
 local SEAT = CFrame.lookAt(Vector3.new(90, 4.6, 60), Vector3.new(87, 4.6, 60))
-local DESK = { id = "d1", seat = SEAT, front = true, spotId = "s1" }
+local DESK_FRAME = CFrame.new(80, 1.5, 60)
+local DESK_SIZE = Vector3.new(5, 3, 3)
+local DESK = { id = "d1", seat = SEAT, front = true, spotId = "s1", frame = DESK_FRAME, size = DESK_SIZE }
 local SPOT = { id = "s1", center = Vector3.new(87, 1.5, 60), stand = Vector3.new(90.6, 0, 60), deskId = "d1" }
 local AT_SEAT = Vector3.new(90, 4.6, 60)
 
@@ -89,6 +91,9 @@ return function()
 			expect(sat.mind.hold).to.equal(C.WORK_SECONDS.min)
 			expect(kinds(sat)).to.equal("sit")
 			expect(sat.effects[1].seat).to.equal(SEAT)
+			-- The desk goes with the seat, so standing up ends clear of it (OccupantDeskUtils.standUp).
+			expect(sat.effects[1].desk).to.equal(DESK_FRAME)
+			expect(sat.effects[1].deskSize).to.equal(DESK_SIZE)
 			expect(sat.intent.kind).to.equal("idle")
 		end)
 

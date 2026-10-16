@@ -6,7 +6,7 @@
 	elevator's doors and floor lamp in reception, and the invisible sound emitters the client's ambience plays from
 	(tag OfficeAmbient, attribute AmbientKind: a phone on every desk, a typist at every other desk, the elevator).
 	Props and chairs are non-colliding; table/cabinet proxies support their loot physically; the table is tagged as a
-	hiding spot (Hide). The flickering and
+	hiding spot (Hide), and so is each tall supply cabinet (solid; a secure spot, inside it). The flickering and
 	sounds are client side.
 
 	Instance specs cover kit dressing, fallback, tabletop bounds and preserved ambiance; OfficeLayoutRules validates placement.
@@ -29,8 +29,10 @@ local OfficeConstants = require(OfficeServer.Data.OfficeConstants)
 local OfficeTypes = require(OfficeServer.Data.OfficeTypes)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
 
--- Art-only furniture that is also a hiding spot, by its art key.
-local HIDE_KINDS: { [string]: HideConstants.FurnitureKind } = { breakTable = "table" }
+-- Art-only furniture that is also a hiding spot, by its art key (under a table; inside a supply cabinet).
+local HIDE_KINDS: { [string]: HideConstants.FurnitureKind } = { breakTable = "table", supplyCabinet = "cabinet" }
+-- Art-only furniture that stands solid (the rest are see-through props).
+local SOLID: { [string]: boolean } = { filingCabinet = true, breakTable = true, supplyCabinet = true }
 
 local function part(name: string, size: Vector3, cframe: CFrame, color: Color3, parent: Instance): Part
 	local created = Instance.new("Part")
@@ -165,7 +167,7 @@ local function artOnly(
 )
 	local root = part(key, size, floor * CFrame.new(0, size.Y / 2, 0), OfficeConstants.DESK_COLOR, parent)
 	root.Transparency = 1
-	root.CanCollide = key == "filingCabinet" or key == "breakTable"
+	root.CanCollide = SOLID[key] == true
 	root.CanQuery = root.CanCollide
 	root:SetAttribute("OfficeArtKey", key)
 	root:SetAttribute("OfficeDeskMarker", deskId)
@@ -173,7 +175,7 @@ local function artOnly(
 		root:Destroy()
 		return
 	end
-	-- The table is a hiding spot (Hide): under it.
+	-- The table is a hiding spot (Hide): under it; the supply cabinet too: inside it.
 	local hideKind = HIDE_KINDS[key]
 	if hideKind ~= nil then
 		root:SetAttribute(HideConstants.FURNITURE_KIND_ATTRIBUTE, hideKind)
@@ -234,6 +236,7 @@ local function chairAt(layout: OfficeTypes.Layout, desk: OfficeTypes.Marker, ori
 		counter = OfficeConstants.COUNTER_SIZE,
 		table = OfficeConstants.TABLE_SIZE,
 		cabinet = OfficeConstants.CABINET_SIZE,
+		closet = OfficeConstants.CLOSET_SIZE,
 	}
 	for _, candidate in candidates do
 		local offset = CFrame.Angles(0, desk.rotation or 0, 0)
@@ -378,6 +381,18 @@ function OfficeDecorSystem.build(
 			"filingCabinet",
 			"cargo",
 			OfficeConstants.CABINET_SIZE,
+			origin * CFrame.new(marker.x, 0, marker.z) * CFrame.Angles(0, marker.rotation or 0, 0),
+			marker.id,
+			folder,
+			art
+		)
+	end
+	-- The tall supply cabinets: solid, and a secure hiding spot (Hide). No art, no cabinet (`artOnly`).
+	for _, marker in OfficeLayoutUtils.markersOf(layout, "closet") do
+		artOnly(
+			"supplyCabinet",
+			"furniture",
+			OfficeConstants.CLOSET_SIZE,
 			origin * CFrame.new(marker.x, 0, marker.z) * CFrame.Angles(0, marker.rotation or 0, 0),
 			marker.id,
 			folder,

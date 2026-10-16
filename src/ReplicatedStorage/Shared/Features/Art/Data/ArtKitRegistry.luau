@@ -36,6 +36,7 @@ local keys: { [ArtTypes.Family]: { string } } = {
 		"elevatorFront",
 		"pipeSet",
 		"cableSet",
+		"supplyCabinet",
 	},
 	cargo = {
 		"rubbishBag",

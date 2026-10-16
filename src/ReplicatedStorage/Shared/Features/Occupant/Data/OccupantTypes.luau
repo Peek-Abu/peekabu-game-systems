@@ -14,7 +14,7 @@ export type Mode = "patrol" | "investigate" | "chase" | "search" | "rest" | "cat
 -- Where he is inside a mode (published as an attribute; the client's typing, face and gestures follow it):
 -- work: walking to the desk, typing, the ambush (stopped dead, head swivelled); a sit-in also tips his head down under
 -- the desk, holds it there and brings it back up, then types a little more; stare: walking to the spot, holding still,
--- bending down to look under.
+-- bending down to look under (a desk or table), or opening the door (a secure supply cabinet: slower, telegraphed).
 export type Phase =
 	"toDesk"
 	| "type"
@@ -26,6 +26,7 @@ export type Phase =
 	| "approach"
 	| "hold"
 	| "check"
+	| "open"
 
 -- A moment worth a speech bubble (OccupantConstants.LINES).
 export type Cue = "spotted" | "curious" | "giveUp" | "resting" | "caught" | "ambush" | "sitIn"
@@ -37,14 +38,19 @@ export type Desk = {
 	seat: CFrame,
 	front: boolean,
 	spotId: string?,
+	-- The desk itself (its frame and size): standing up must end clear of it (OccupantDeskUtils.standUp).
+	frame: CFrame?,
+	size: Vector3?,
 }
 
--- A hiding spot as he knows it: its centre, where he stands to stare at it, and its desk (nil for a table).
+-- A hiding spot as he knows it: its centre, where he stands to stare at it, its desk (nil for a table or cabinet), and
+-- whether it is secure (a closed supply cabinet: he cannot look in casually, he must open it).
 export type Spot = {
 	id: string,
 	center: Vector3,
 	stand: Vector3,
 	deskId: string?,
+	secure: boolean?,
 }
 
 -- A crew member hiding: in which spot, and whether he knows (Hide's seenEntering).
@@ -56,7 +62,7 @@ export type Hider = {
 
 -- Something the brain asks the service to do this think (beyond the NPC intent).
 export type Effect =
-	{ kind: "sit", seat: CFrame }
+	{ kind: "sit", seat: CFrame, desk: CFrame?, deskSize: Vector3? }
 	| { kind: "stand", speed: number }
 	| { kind: "plant", frame: CFrame }
 	| { kind: "release" }
@@ -64,6 +70,7 @@ export type Effect =
 	| { kind: "holdCamp", userId: number, untilTime: number }
 	| { kind: "catch", userId: number }
 	| { kind: "callout", userId: number }
+	| { kind: "door", spotId: string, open: boolean }
 
 -- How the director paces him (from the shift and the crew).
 export type Pacing = {
@@ -108,12 +115,15 @@ export type Mind = {
 	phaseAt: number?,
 	hold: number?,
 	-- The desk he works at (or sits at over a hider), the spot he stares at and the hider in it (nil for a suspicion
-	-- stare), whether this is a sit-in, and whether a noise came from near the spot meanwhile.
+	-- stare), whether this is a sit-in, whether a noise came from near the spot meanwhile, whether the stare is a hunch
+	-- (he lost his chase near the spot and did not see where they went), and when he got near its stand point.
 	desk: Desk?,
 	spot: Spot?,
 	quarry: number?,
 	sitIn: boolean?,
 	noisy: boolean?,
+	hunch: boolean?,
+	nearAt: number?,
 	-- The point the ambush turned to; until when his head stays swivelled to it.
 	point: Vector3?,
 	swivelUntil: number?,
@@ -123,9 +133,14 @@ export type Mind = {
 	-- Standing up from a chair, or startled (a hider bolting): no move before these.
 	standUntil: number?,
 	reactUntil: number?,
-	-- Seconds he had each player in sight (decaying), and whether he saw them go into their spot from close by.
+	-- Seconds he had each player in sight (decaying), and how far from him (flat studs) he saw each hider go into their
+	-- spot.
 	watched: { [number]: number },
-	close: { [number]: boolean },
+	entered: { [number]: number },
+	-- A crew member far down a clear line (LONG_SIGHT_RANGE, the narrow cone) he is noticing: who, and for how many
+	-- seconds; he chases once that reaches the notice delay for the distance.
+	noticeId: number?,
+	noticeSeconds: number?,
 	-- Spot id → until when he leaves that spot alone (after a stare that ended in him walking away).
 	cleared: { [string]: number },
 	-- The routine: when the next work break is due, and the last desk he used.
@@ -164,6 +179,9 @@ export type Senses = {
 	now: number,
 	sightRange: number,
 	sightAngle: number,
+	-- His long sight straight ahead (absent = none): out to longRange in the narrow longAngle cone, noticed over a beat.
+	longRange: number?,
+	longAngle: number?,
 	players: { Glimpse },
 	-- The last noise he heard since the previous think (already through NoiseRules).
 	heard: Vector3?,

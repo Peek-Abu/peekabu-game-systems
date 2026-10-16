@@ -7,7 +7,9 @@
 	  (over the chair at standing height, facing the desk), the clipboard hidden, the sit-and-type clip (at Action
 	  priority, over the base NPC's idle pose).
 	- `stand`: the stand-up clip at `speed` (Action2, over the sit clip it fades from); when it ends, the root moves
-	  SEAT.standOffset (where the clip ended him) and is let go, the clipboard back. Without the clip: at once.
+	  SEAT.standOffset (where the clip ended him), pulled back clear of the desk he sat at (OccupantDeskUtils.standUp,
+	  STAND_CLEAR: never inside or behind it, where no path exists), and is let go, the clipboard back. Without the
+	  clip: at once.
 	- `plant`: anchored and slid onto a frame (staring at a spot, perfectly still); `release` lets go.
 	- Let go always hands his root back to the server's physics (SetNetworkOwner(nil)).
 
@@ -25,6 +27,7 @@ local AnimationPlayerSystem = require(ReplicatedStorage.Shared.Features.Animatio
 local OccupantAssets = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantAssets)
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local OccupantRigSystem = require(ServerScriptService.Features.Occupant.Systems.OccupantRigSystem)
+local OccupantDeskUtils = require(ServerScriptService.Features.Occupant.Utils.OccupantDeskUtils)
 local AnimationServiceServer = require(ServerScriptService.Features.Animation.AnimationServiceServer)
 
 type Rig = OccupantRigSystem.Rig
@@ -34,6 +37,10 @@ type Body = {
 	sitting: AnimationPlayerSystem.PlayHandle?,
 	tween: Tween?,
 	clipboard: number?,
+	-- The seat he sits on and its desk (frame and size), for where standing up ends.
+	seat: CFrame?,
+	desk: CFrame?,
+	deskSize: Vector3?,
 }
 
 -- He slides onto a seat or a stare's spot (the last stride the path left him short) at SLIDE_SPEED studs a second,
@@ -111,9 +118,12 @@ end
 
 local OccupantSeatSystem = {}
 
-function OccupantSeatSystem.sit(rig: Rig, seat: CFrame)
+function OccupantSeatSystem.sit(rig: Rig, seat: CFrame, desk: CFrame?, deskSize: Vector3?)
 	local body = bodyOf(rig)
 	body.token += 1
+	body.seat = seat
+	body.desk = desk
+	body.deskSize = deskSize
 	slide(rig, body, seat)
 	showClipboard(rig, body, false)
 	stopSitting(body, 0)
@@ -134,7 +144,14 @@ function OccupantSeatSystem.stand(rig: Rig, speed: number)
 		if body.token ~= token or rig.model.Parent == nil then
 			return
 		end
-		rig.root.CFrame = rig.root.CFrame * CFrame.new(OccupantAssets.SEAT.standOffset)
+		local seat, desk, deskSize = body.seat, body.desk, body.deskSize
+		local offset = OccupantAssets.SEAT.standOffset
+		rig.root.CFrame = if seat ~= nil
+				and desk ~= nil
+				and deskSize ~= nil
+			then OccupantDeskUtils.standUp(seat, offset, desk, deskSize, OccupantConstants.STAND_CLEAR)
+			else rig.root.CFrame * CFrame.new(offset)
+		body.seat = nil
 		showClipboard(rig, body, true)
 		letGo(rig, body)
 	end

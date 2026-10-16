@@ -2,9 +2,9 @@
 --[=[
 	ShiftNoticeUtils: what the crew is told when the pacing moves (Cleanup Crew spec §3 step 5, §4 "Pacing", §7, and the
 	opt-in overtime of docs/cleanup-crew-lore.md "Contract sequence"): the quota met, with the company's notice
-	(COMPANY_THRESHOLD) and the choice (clock out, or start overtime at the truck); the end of the Manager's break;
-	the overtime warning once a crew member starts it; overtime itself; and each pressure tier ("You hear the Manager
-	pacing faster…"). The two big moments are a rubber stamp (QUOTA MET, OVERTIME) followed by sticky notes with the
+	(COMPANY_THRESHOLD) and the choice (clock out, or start overtime at the truck); the end of the break; the overtime
+	warning once a crew member starts it; overtime itself; and each pressure tier ("Site activity is picking up…").
+	Since 2026-10-16 they speak of "site activity", never of the Manager, so any anomaly on site can share them. The two big moments are a rubber stamp (QUOTA MET, OVERTIME) followed by sticky notes with the
 	detail; the rest are sticky notes (spec §6.1, §7 "sticky-note toasts, rubber-stamp announcements"). Pure: the
 	service sends what this returns.
 
@@ -51,18 +51,18 @@ function ShiftNoticeUtils.notices(before: ShiftTypes.ShiftState, after: ShiftTyp
 	end
 	local multiplier = ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER
 	if after.quotaMet and not before.quotaMet then
-		table.insert(list, stamp("QUOTA MET"))
+		table.insert(list, stamp("CONTRACT MET"))
 		table.insert(list, note(COMPANY_THRESHOLD))
 		table.insert(
 			list,
 			note(
-				`The Manager is on break. Clock out at the truck to leave, or start overtime there: assets ×{multiplier}, faster Manager.`
+				`Site activity has settled for now. Clock out at the truck to leave, or start overtime there: assets ×{multiplier}, more activity.`
 			)
 		)
 	end
 	local breakOver = before.stage == "break" and after.stage == "normal"
 	if breakOver then
-		table.insert(list, note("Break's over: the Manager is back on the floor. Overtime is still your call."))
+		table.insert(list, note("Site activity is picking up again. Overtime is still your call."))
 	end
 	if after.stage == "warning" and before.stage ~= "warning" then
 		table.insert(
@@ -74,9 +74,9 @@ function ShiftNoticeUtils.notices(before: ShiftTypes.ShiftState, after: ShiftTyp
 	end
 	if after.stage == "overtime" and before.stage ~= "overtime" then
 		table.insert(list, stamp("OVERTIME"))
-		table.insert(list, note(`Assets ×{multiplier} until the clock runs out. The Manager is faster now.`))
+		table.insert(list, note(`Assets ×{multiplier} until the clock runs out. Site activity is heavier now.`))
 	elseif after.tier > before.tier and after.stage ~= "break" and after.stage ~= "warning" and not breakOver then
-		table.insert(list, note("You hear the Manager pacing faster…"))
+		table.insert(list, note("Site activity is picking up…"))
 	end
 	return list
 end

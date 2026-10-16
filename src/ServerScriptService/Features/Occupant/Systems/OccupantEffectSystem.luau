@@ -3,7 +3,8 @@
 	OccupantEffectSystem: carries out what a think of the Manager's brain asks beyond the NPC intent
 	(OccupantTypes.Effect; docs/superpowers/specs/2026-10-15-cleanup-crew-manager-behaviours-design.md): his body
 	(OccupantSeatSystem: sit, stand, plant, release), whether he knows a hider (Hide's `setSeen`), holding a hider's
-	camping push-out while he is at their spot (Hide's `hold`), a catch (the service's `catch`, re-checked there), and
+	camping push-out while he is at their spot (Hide's `hold`), a supply cabinet's door swinging open as he checks it
+	(Hide's `setDoor`), a catch (the service's `catch`, re-checked there), and
 	the PA call-out naming a crew member (OccupantEvents.Pa to everyone, a line from PA_CALLOUTS). Effects naming a
 	player who left are skipped. Never yields.
 
@@ -26,7 +27,7 @@ local OccupantSeatSystem = require(ServerScriptService.Features.Occupant.Systems
 local HideServiceServer = require(ServerScriptService.Features.Hide.HideServiceServer)
 
 local rng = Random.new()
-local counters = { sits = 0, stands = 0, stares = 0, seen = 0, holds = 0, catches = 0, callouts = 0 }
+local counters = { sits = 0, stands = 0, stares = 0, seen = 0, holds = 0, catches = 0, callouts = 0, doors = 0 }
 
 local OccupantEffectSystem = {}
 
@@ -38,7 +39,7 @@ function OccupantEffectSystem.apply(
 	for _, effect in effects do
 		if effect.kind == "sit" then
 			counters.sits += 1
-			OccupantSeatSystem.sit(rig, effect.seat)
+			OccupantSeatSystem.sit(rig, effect.seat, effect.desk, effect.deskSize)
 		elseif effect.kind == "stand" then
 			counters.stands += 1
 			OccupantSeatSystem.stand(rig, effect.speed)
@@ -47,6 +48,9 @@ function OccupantEffectSystem.apply(
 			OccupantSeatSystem.plant(rig, effect.frame)
 		elseif effect.kind == "release" then
 			OccupantSeatSystem.release(rig)
+		elseif effect.kind == "door" then
+			counters.doors += 1
+			HideServiceServer:setDoor(effect.spotId, effect.open)
 		else
 			local player = Players:GetPlayerByUserId(effect.userId)
 			if player == nil then

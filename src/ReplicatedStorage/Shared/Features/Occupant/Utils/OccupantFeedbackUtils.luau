@@ -3,7 +3,7 @@
 	OccupantFeedbackUtils: the decisions behind Mr. Harlow's voice and presence (Cleanup Crew spec §4 "Tells" and
 	"Voice"). Which line he says for a cue (never the same twice running), which gibberish clip voices a line
 	(a stable hash, so a line always sounds the same), whether a line is spoken at all ("*sigh*" is an action),
-	how much of a line the typewriter shows, which sounds his mode changes make for this client (a "hm?" when he
+	which sounds his mode changes make for this client (a "hm?" when he
 	investigates, a sting when he spots someone, the chase music while he chases you, a sigh when he gives up),
 	and how often his footsteps fall. Pure.
 
@@ -61,16 +61,6 @@ function OccupantFeedbackUtils.voiced(line: string): boolean
 		return false
 	end
 	return not (string.sub(line, 1, 1) == "*" and string.sub(line, -1) == "*")
-end
-
---[=[
-	How many of a line's `total` characters the typewriter shows `elapsed` seconds in at `rate` per second.
-]=]
-function OccupantFeedbackUtils.reveal(total: number, elapsed: number, rate: number): number
-	if rate <= 0 then
-		return total
-	end
-	return math.clamp(math.floor(elapsed * rate), 0, total)
 end
 
 --[=[

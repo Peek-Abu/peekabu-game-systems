@@ -11,8 +11,13 @@
 	  facing the desk) and whether the chair is on the desk's knee-hole side (the desk's -Z, its front); `fallbackChair`
 	  is where the chair stands without its art (3.05 studs in front, Office's chair rule).
 	- `standPoint`: where he stands to stare at a hiding spot (STARE_GAP off its front edge, STARE_SIDE beside the chair,
-	  on the floor).
+	  on the floor); `standPoints` the candidates in order (that side, the other side, straight out further).
 	- `sitBack`: a seat moved back, away from the desk (a sit-in clears the hider's huddle).
+	- `standUp`: where his root ends when he stands up from a seat: the stand-up clip's offset, pulled straight back
+	  from the desk until his body clears its footprint. (2026-10-16, the play-again freeze: the clip's 1.1-stud step
+	  forward put his root inside the desk; physics shoved him out behind it, wedged against the wall where no path
+	  exists, and the costed NPC mover never steers without a path, so he stood still and never turned, even in a
+	  chase.)
 	- `facing`: a frame at a point looking at a target at the same height.
 
 	Distances are flat (X/Z). Pure.
@@ -146,8 +151,47 @@ function OccupantDeskUtils.standPoint(spotFrame: CFrame, size: Vector3, gap: num
 	return (spotFrame * CFrame.new(side, -size.Y / 2, -(size.Z / 2 + gap))).Position
 end
 
+--[=[
+	Where he may stand to stare at the spot, best first: `standPoint` beside it, then the other side, then straight out
+	from its front, STAND_OUT further. The caller takes the first one clear of furniture.
+]=]
+function OccupantDeskUtils.standPoints(spotFrame: CFrame, size: Vector3, gap: number, side: number): { Vector3 }
+	return {
+		OccupantDeskUtils.standPoint(spotFrame, size, gap, side),
+		OccupantDeskUtils.standPoint(spotFrame, size, gap, -side),
+		OccupantDeskUtils.standPoint(spotFrame, size, gap + OccupantConstants.STAND_OUT, 0),
+	}
+end
+
 function OccupantDeskUtils.sitBack(seat: CFrame, back: number): CFrame
 	return seat * CFrame.new(0, 0, back)
+end
+
+-- Flat studs from `point` to the footprint of the desk at `desk` of `size` (0 inside it).
+local function clearanceOf(point: Vector3, desk: CFrame, size: Vector3): number
+	local inDesk = desk:PointToObjectSpace(point)
+	local dx = math.max(math.abs(inDesk.X) - size.X / 2, 0)
+	local dz = math.max(math.abs(inDesk.Z) - size.Z / 2, 0)
+	return math.sqrt(dx * dx + dz * dz)
+end
+
+-- How far (studs) he may be pulled back, and the step.
+local STAND_PULL_MAX = 4
+local STAND_PULL_STEP = 0.05
+
+--[=[
+	Where his root ends standing up from `seat` (facing the desk): `seat` moved by the stand-up clip's `offset`, pulled
+	straight back (away from the desk, along the seat's back) until it is `radius` flat studs clear of the footprint of
+	the desk at `desk` of `size`, at most STAND_PULL_MAX. Unchanged when it is already clear.
+]=]
+function OccupantDeskUtils.standUp(seat: CFrame, offset: Vector3, desk: CFrame, size: Vector3, radius: number): CFrame
+	local stood = seat * CFrame.new(offset)
+	local pulled = 0
+	while clearanceOf(stood.Position, desk, size) < radius and pulled < STAND_PULL_MAX do
+		pulled += STAND_PULL_STEP
+		stood = seat * CFrame.new(offset) * CFrame.new(0, 0, pulled)
+	end
+	return stood
 end
 
 return OccupantDeskUtils

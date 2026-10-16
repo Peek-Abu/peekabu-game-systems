@@ -11,7 +11,8 @@
 	- while the Player's HideSpotId attribute says it hides: the peek camera (the spot's HidePeek frame, looking about
 	  with the mouse), its own body hidden from itself, the controls off, every other prompt off, the peek overlay; and
 	  a tap of the `hide` action (C / L1), E, Jump or the chip asks to come out (HideEvents.Exit);
-	- every hiding player's tucked pose, for everyone (HidePoseSystem).
+	- every hiding player's tucked pose, for everyone (HidePoseSystem), and a supply cabinet's door swinging open when
+	  the Manager checks it (HideDoorSystem).
 
 	Spec-exempt shell (ProximityPrompts, Camera, PlayerModule, ByteNet); the words are the specced HideViewModel and the
 	state the specced HideStore.
@@ -37,6 +38,7 @@ local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.D
 local CameraTypes = require(ReplicatedStorage.Client.Features.Camera.Data.CameraTypes)
 local CameraServiceClient = require(ReplicatedStorage.Client.Features.Camera.CameraServiceClient)
 local HideStore = require(ReplicatedStorage.Client.Features.Hide.State.HideStore)
+local HideDoorSystem = require(ReplicatedStorage.Client.Features.Hide.Systems.HideDoorSystem)
 local HidePoseSystem = require(ReplicatedStorage.Client.Features.Hide.Systems.HidePoseSystem)
 local InputActionRegistry = require(ReplicatedStorage.Client.Features.Input.Data.InputActionRegistry)
 local InputServiceClient = require(ReplicatedStorage.Client.Features.Input.InputServiceClient)
@@ -377,6 +379,7 @@ local HideServiceClient: HideServiceClient = {
 			respawned:Disconnect()
 		end)
 		table.insert(stoppers, HidePoseSystem.start())
+		table.insert(stoppers, HideDoorSystem.start())
 		onHiddenChanged()
 	end,
 

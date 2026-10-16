@@ -5,6 +5,7 @@ local Types = require(Server.Data.OfficeTypes)
 local Graph = require(Server.Rules.OfficeLayoutGraphRules)
 local Rooms = require(script.Parent.OfficeLayoutRoomUtils)
 local Bay = require(script.Parent.OfficeLoadingBayUtils)
+local Constants = require(Server.Data.OfficeConstants)
 local Utils = {}
 function Utils.generate(base: Types.Layout, seed: number): Types.Layout
 	local rng = Random.new(seed)
@@ -65,6 +66,8 @@ function Utils.generate(base: Types.Layout, seed: number): Types.Layout
 	end
 	local xs, zs = starts(widths, xGaps), starts(depths, zGaps)
 	local work: { Types.Room } = {}
+	-- Supply cabinets are sparse: only every CLOSET_EVERY-th room that can take one keeps it.
+	local closets = 0
 	local zones = { "meeting", "kitchenette", "training", "storage", "office", "records", "laboratory", "breakRoom" }
 	for index, node in graph.nodes do
 		local width, depth = widths[node.col], depths[node.row]
@@ -82,6 +85,12 @@ function Utils.generate(base: Types.Layout, seed: number): Types.Layout
 		table.insert(work, room)
 		table.insert(layout.rooms, room)
 		for _, marker in Rooms.markers(room, rng) do
+			if marker.kind == "closet" then
+				closets += 1
+				if closets % Constants.CLOSET_EVERY ~= 1 then
+					continue
+				end
+			end
 			table.insert(layout.markers, marker)
 		end
 	end

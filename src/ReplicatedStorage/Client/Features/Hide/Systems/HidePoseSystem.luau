@@ -3,7 +3,7 @@
 	HidePoseSystem: every hiding player shows the tucked huddle on this client (docs/superpowers/specs/
 	2026-10-15-cleanup-crew-chase-kit-design.md §4), so crewmates see them crouched under the desk rather than standing
 	through it. A player whose HideSpotId attribute is set folds in over TUCK_SECONDS; when it clears they unfold over
-	UNTUCK_SECONDS. Every step (RunService.PreSimulation, the slot the engine documents for overriding Motor6D.Transform)
+	UNTUCK_SECONDS. Someone inside a supply cabinet just stands there (the closed cabinet hides them). Every step (RunService.PreSimulation, the slot the engine documents for overriding Motor6D.Transform)
 	the pose is laid over the animation on each posed joint (HidePoseFormulas.blend). The local player's own body is
 	hidden from their peek camera (HideServiceClient), so this is what everyone else sees.
 
@@ -12,6 +12,7 @@
 	@class HidePoseSystem
 ]=]
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -24,6 +25,17 @@ type Fold = { tucking: boolean, since: number, character: Model?, joints: { Pose
 
 local HidePoseSystem = {}
 
+-- The kind of the spot `spotId` ("under" / "inside"), from its tagged attachment; "under" when it is not found.
+local function kindOf(spotId: string): string
+	for _, tagged in CollectionService:GetTagged(HideConstants.SPOT_TAG) do
+		if tagged:GetAttribute(HideConstants.SPOT_ID_ATTRIBUTE) == spotId then
+			local kind = tagged:GetAttribute(HideConstants.SPOT_KIND_ATTRIBUTE)
+			return if type(kind) == "string" then kind else "under"
+		end
+	end
+	return "under"
+end
+
 function HidePoseSystem.start(): () -> ()
 	local targets = HidePoseFormulas.targets()
 	local folds: { [Player]: Fold } = {}
@@ -31,7 +43,8 @@ function HidePoseSystem.start(): () -> ()
 
 	local function follow(player: Player)
 		local function update()
-			local hiding = type(player:GetAttribute(HideConstants.PLAYER_SPOT_ATTRIBUTE)) == "string"
+			local spotId = player:GetAttribute(HideConstants.PLAYER_SPOT_ATTRIBUTE)
+			local hiding = type(spotId) == "string" and kindOf(spotId) ~= "inside"
 			local current = folds[player]
 			if hiding and (current == nil or not current.tucking) then
 				folds[player] = { tucking = true, since = os.clock(), character = nil, joints = {} }

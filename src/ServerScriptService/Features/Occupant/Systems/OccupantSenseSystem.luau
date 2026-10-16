@@ -3,13 +3,15 @@
 	OccupantSenseSystem: what the Manager senses, read from the world for OccupantServiceServer: each crew member's
 	glimpse (one line-of-sight ray each), who hides and whether he saw them go in, and (the behaviour set,
 	docs/superpowers/specs/2026-10-15-cleanup-crew-manager-behaviours-design.md) the office's furniture as he knows it:
-	every hiding spot (`furniture`: its centre and where he stands to stare at it) and every desk with its seat frame
+	every hiding spot (`furniture`: its centre, where he stands to stare at it, and whether it is a secure supply
+	cabinet) and every desk with its seat frame
 	(over its art chair, OfficeDecorSystem's officeChair marked with the desk's id, else where the chair rule puts it),
 	and the hiders in their spots (`hiders`).
 
 	@class OccupantSenseSystem
 ]=]
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -26,6 +28,9 @@ local MARKER_ATTRIBUTE = "OfficeMarkerId"
 local ART_KEY_ATTRIBUTE = "OfficeArtKey"
 local CHAIR_DESK_ATTRIBUTE = "OfficeDeskMarker"
 local CHAIR_KEY = "officeChair"
+
+-- The body box checked at a stand point (wide and deep as his body, waist to head over the floor).
+local STAND_BOX = Vector3.new(2, 4, 1.6)
 
 local System = {}
 function System.feetY(root: BasePart, humanoid: Humanoid): number
@@ -97,7 +102,12 @@ function System.inView(list: { Types.Glimpse }, userId: number): boolean
 	end
 	return false
 end
--- What he senses now (no noise yet): from his root and head, his sight, the glimpses and the world he walks.
+-- How far his line-of-sight rays reach: his near sight or his long sight straight ahead, whichever is longer.
+function System.rayRange(sightRange: number): number
+	return math.max(sightRange, OccupantConstants.LONG_SIGHT_RANGE)
+end
+-- What he senses now (no noise yet): from his root and head, his sight (near, and long straight ahead), the glimpses and
+-- the world he walks.
 function System.senses(
 	rig: { root: BasePart, head: BasePart },
 	sight: { sightRange: number, sightAngle: number },
@@ -112,6 +122,8 @@ function System.senses(
 		now = now,
 		sightRange = sight.sightRange,
 		sightAngle = sight.sightAngle,
+		longRange = OccupantConstants.LONG_SIGHT_RANGE,
+		longAngle = OccupantConstants.LONG_SIGHT_ANGLE,
 		players = players,
 		heard = nil,
 		resting = world.resting,
@@ -147,10 +159,46 @@ local function chairs(office: Instance?): { [string]: BasePart }
 	return found
 end
 
+-- Whether a body could stand at the floor point `point` (nothing collidable there but characters and NPCs).
+local function standable(point: Vector3): boolean
+	local params = OverlapParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	local ignore: { Instance } = {}
+	for _, player in Players:GetPlayers() do
+		if player.Character ~= nil then
+			table.insert(ignore, player.Character)
+		end
+	end
+	for _, npc in CollectionService:GetTagged(OccupantConstants.TAG) do
+		table.insert(ignore, npc)
+	end
+	params.FilterDescendantsInstances = ignore
+	params.RespectCanCollide = true
+	return #Workspace:GetPartBoundsInBox(CFrame.new(point + Vector3.new(0, 3, 0)), STAND_BOX, params) == 0
+end
+
+-- The first stand point a body fits at (the beside-the-chair one when none does).
+local function standAt(frame: CFrame, size: Vector3, fits: (point: Vector3) -> boolean): Vector3
+	local points = OccupantDeskUtils.standPoints(frame, size, OccupantConstants.STARE_GAP, OccupantConstants.STARE_SIDE)
+	for _, point in points do
+		if fits(point) then
+			return point
+		end
+	end
+	return points[1]
+end
+
 --[=[
 	The hiding spots and the desks he can sit at, from Hide's spots. `standHeight` is his root's height over his feet.
+	Each spot's stand point is the first of OccupantDeskUtils.standPoints a body fits at (`fits`, default a world
+	check), so a stare never slides him into furniture (where no path exists and he would never move again).
 ]=]
-function System.furniture(spots: { HideTypes.Spot }, standHeight: number): ({ Types.Desk }, { Types.Spot })
+function System.furniture(
+	spots: { HideTypes.Spot },
+	standHeight: number,
+	fits: ((point: Vector3) -> boolean)?
+): ({ Types.Desk }, { Types.Spot })
+	local clear = fits or standable
 	local desks: { Types.Desk } = {}
 	local views: { Types.Spot } = {}
 	local byDesk = chairs(if #spots > 0 then officeOf(spots[1].furniture) else nil)
@@ -161,20 +209,20 @@ function System.furniture(spots: { HideTypes.Spot }, standHeight: number): ({ Ty
 		table.insert(views, {
 			id = spot.id,
 			center = part.Position,
-			stand = OccupantDeskUtils.standPoint(
-				spot.frame,
-				part.Size,
-				OccupantConstants.STARE_GAP,
-				OccupantConstants.STARE_SIDE
-			),
+			stand = standAt(spot.frame, part.Size, clear),
 			deskId = deskId,
+			-- A closed supply cabinet (Hide's "inside" spot) is secure: he must open it to look.
+			secure = spot.kind == "inside",
 		})
 		if deskId ~= nil then
 			local chair: BasePart? = byDesk[deskId]
 			local floorY = part.Position.Y - part.Size.Y / 2
 			local at = if chair ~= nil then chair.Position else OccupantDeskUtils.fallbackChair(spot.frame)
 			local seat, front = OccupantDeskUtils.seatFrame(at, spot.frame, floorY, standHeight)
-			table.insert(desks, { id = deskId, seat = seat, front = front, spotId = spot.id })
+			table.insert(
+				desks,
+				{ id = deskId, seat = seat, front = front, spotId = spot.id, frame = part.CFrame, size = part.Size }
+			)
 		end
 	end
 	return desks, views
@@ -191,7 +239,7 @@ function System.witness(
 	world: World,
 	player: Player
 ): boolean
-	local seen = System.glimpses(rig, sight.sightRange, { player }, function(): boolean
+	local seen = System.glimpses(rig, System.rayRange(sight.sightRange), { player }, function(): boolean
 		return true
 	end)
 	return OccupantBrainRules.witnessed(mind, System.senses(rig, sight, os.clock(), seen, world), player.UserId)

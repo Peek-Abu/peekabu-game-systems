@@ -246,7 +246,7 @@ local function brain(def: NpcTypes.NpcDef, context: NpcTypes.BrainContext, npc: 
 	end
 	furniture(current, context.now)
 	local participants = RoundServiceServer:participants()
-	local senses = Sense.senses(current, def, context.now, glimpses(current, def.sightRange), world())
+	local senses = Sense.senses(current, def, context.now, glimpses(current, Sense.rayRange(def.sightRange)), world())
 	senses.position = context.position
 	senses.heard = pendingNoise
 	senses.rolls = fixedRolls or { rng:NextNumber(), rng:NextNumber(), rng:NextNumber(), rng:NextNumber() }

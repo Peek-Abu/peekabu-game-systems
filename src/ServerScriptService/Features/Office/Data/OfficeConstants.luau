@@ -48,6 +48,10 @@ return table.freeze({
 	BOARD_CENTER_HEIGHT = 6,
 	-- Corner filing cabinets and meeting/break tables: art-sized proxies with lootable tops.
 	CABINET_SIZE = Vector3.new(1.9, 4.2, 2),
+	-- The tall supply cabinet (a secure hiding spot): the supplyCabinet art's own bounds, room inside for a crew member.
+	CLOSET_SIZE = Vector3.new(4.32, 8, 3.45),
+	-- Sparse: of the rooms with room for one, every CLOSET_EVERY-th (in the layout's own room order) keeps its cabinet.
+	CLOSET_EVERY = 3,
 	TABLE_SIZE = Vector3.new(5, 3.1, 3),
 	-- Loot (bulkiest kind is 3.5 wide) never spawns clipped into surface furniture.
 	SURFACE_ITEM_CLEAR = 1.8,

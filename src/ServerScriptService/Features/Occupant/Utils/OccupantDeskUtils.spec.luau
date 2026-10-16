@@ -1,4 +1,5 @@
 local OccupantDeskUtils = require(script.Parent.OccupantDeskUtils)
+local C = require(game:GetService("ReplicatedStorage").Shared.Features.Occupant.Data.OccupantConstants)
 
 local function desk(id, x, z, spotId)
 	return { id = id, seat = CFrame.new(x, 4.6, z), front = true, spotId = spotId }
@@ -88,11 +89,56 @@ return function()
 		end)
 	end)
 
+	describe("standPoints", function()
+		it("tries beside the spot, then the other side, then straight out further", function()
+			local points = OccupantDeskUtils.standPoints(CFrame.new(0, 1.5, 0), Vector3.new(5, 3, 3), 1.6, 1.9)
+			expect(#points).to.equal(3)
+			expect((points[1] - Vector3.new(1.9, 0, -3.1)).Magnitude < 1e-4).to.equal(true)
+			expect((points[2] - Vector3.new(-1.9, 0, -3.1)).Magnitude < 1e-4).to.equal(true)
+			expect((points[3] - Vector3.new(0, 0, -(1.5 + 1.6 + C.STAND_OUT))).Magnitude < 1e-4).to.equal(true)
+		end)
+	end)
+
 	describe("sitBack", function()
 		it("moves the seat back, away from the desk", function()
 			local seat = CFrame.lookAt(Vector3.new(0, 4.6, 0), Vector3.new(0, 4.6, -5))
 			local back = OccupantDeskUtils.sitBack(seat, 0.7)
 			expect((back.Position - Vector3.new(0, 4.6, 0.7)).Magnitude < 1e-4).to.equal(true)
+		end)
+	end)
+
+	describe("standUp", function()
+		-- A 5 x 3 x 3 desk at the origin facing -Z; its chair 3.05 in front, his seat facing the desk.
+		local DESK = CFrame.new(0, 1.5, 0)
+		local SIZE = Vector3.new(5, 3, 3)
+		local SEAT = CFrame.lookAt(Vector3.new(0, 4.6, -2.5), Vector3.new(0, 4.6, 0))
+		local function clearance(frame)
+			local p = DESK:PointToObjectSpace(frame.Position)
+			local dx = math.max(math.abs(p.X) - SIZE.X / 2, 0)
+			local dz = math.max(math.abs(p.Z) - SIZE.Z / 2, 0)
+			return math.sqrt(dx * dx + dz * dz)
+		end
+
+		it(
+			"never ends him inside the desk: the clip's forward step is pulled back to clear it (the play-again freeze)",
+			function()
+				-- The stand-up clip ends him 1.1 forward, into the desk; physics then wedged him between desk and wall.
+				local raw = SEAT * CFrame.new(0, 0, -1.1)
+				expect(clearance(raw) < 1.4).to.equal(true)
+				local stood = OccupantDeskUtils.standUp(SEAT, Vector3.new(0, 0, -1.1), DESK, SIZE, 1.4)
+				expect(clearance(stood) >= 1.4 - 1e-3).to.equal(true)
+				-- Pulled straight back, on the chair side, at standing height, still facing the desk.
+				expect(stood.Position.Z < SEAT.Position.Z + 1e-3).to.equal(true)
+				expect(math.abs(stood.Position.X) < 1e-3).to.equal(true)
+				expect(stood.Position.Y).to.be.near(4.6)
+				expect(stood.LookVector:Dot(SEAT.LookVector)).to.be.near(1)
+			end
+		)
+
+		it("keeps a stand-up that already clears the desk", function()
+			local roomy = CFrame.lookAt(Vector3.new(0, 4.6, -6), Vector3.new(0, 4.6, 0))
+			local stood = OccupantDeskUtils.standUp(roomy, Vector3.new(0, 0, -1.1), DESK, SIZE, 1.4)
+			expect((stood.Position - (roomy * CFrame.new(0, 0, -1.1)).Position).Magnitude < 1e-4).to.equal(true)
 		end)
 	end)
 

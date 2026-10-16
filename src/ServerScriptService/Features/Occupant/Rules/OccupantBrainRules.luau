@@ -9,8 +9,11 @@
 	- investigate: walk to the last noise heard, look around LOOK_SECONDS, sigh, patrol; a noise by the hiding spots
 	  ends in a short suspicion stare at the nearest (OccupantStareRules);
 	- chase: anyone within sightRange, inside the sightAngle cone, with a clear line of sight; a target he can
-	  still see is kept over a nearer player; within CATCH_RANGE the intent is `attack` (the catch);
-	- search: lost sight → run to where he last saw them, look around SEARCH_SECONDS, sigh, patrol;
+	  still see is kept over a nearer player; within CATCH_RANGE the intent is `attack` (the catch). Far down a clear
+	  line (longRange, the narrow longAngle cone) he first stops and turns his head to look for a notice beat that
+	  grows with the distance (OccupantMindUtils.noticeDelay), then chases; his target stays seen down that cone;
+	- search: lost sight → run to where he last saw them, look around SEARCH_SECONDS, sigh, patrol; a hiding spot
+	  right there gets a short hunch stare (he did not see where they went: OccupantStareRules, HUNCH_CHECK);
 	- rest: the shift's break → walk to the rest point and ignore everyone and everything;
 	- catch: stand CATCH_HOLD seconds, then walk on to his next route point, ignoring the caught player for
 	  GRACE_SECONDS;
@@ -72,7 +75,7 @@ function OccupantBrainRules.newMind(routeIndex: number, routeStep: number, now: 
 		routeStep = if routeStep < 0 then -1 else 1,
 		grace = {},
 		watched = {},
-		close = {},
+		entered = {},
 		cleared = {},
 		nextWorkAt = now + M.within(OccupantConstants.WORK_FIRST, value),
 		nextSteerAt = now + M.within(OccupantConstants.STEER_FIRST, value),
@@ -132,22 +135,15 @@ function OccupantBrainRules.settleBody(result: Step, now: number): Step
 end
 
 --[=[
-	Whether he witnesses `userId` now (Hide asks as they go into a spot): he is chasing them, or sees them this think.
-	Never on his break.
+	Whether he witnesses `userId` now (Hide asks as they go into a spot): he sees them right then, near or far down his
+	long cone (a chase alone is not enough: break his line of sight first and he did not see where you went). Never on
+	his break.
 ]=]
 function OccupantBrainRules.witnessed(mind: Mind, senses: Senses, userId: number): boolean
 	if senses.resting or mind.mode == "rest" then
 		return false
 	end
-	if mind.mode == "chase" and mind.target == userId then
-		return true
-	end
-	for _, glimpse in M.visible(mind, senses) do
-		if glimpse.userId == userId then
-			return true
-		end
-	end
-	return false
+	return M.sees(mind, senses, userId)
 end
 
 --[=[
@@ -215,9 +211,13 @@ local function lookAround(current: Mind, senses: Senses): Step
 	local arrivedAt = current.arrivedAt
 	if arrivedAt == nil then
 		if M.flat(senses.position, point) <= OccupantConstants.REACHED_DISTANCE then
-			local spot = if not searching then OccupantStareRules.suspect(current, senses, point) else nil
+			-- A noise by the spots, or the place he lost his chase: a moment's stare at the nearest spot there.
+			local firstProbe = searching and (current.searchIndex or 1) == 1
+			local spot = if not searching or firstProbe then OccupantStareRules.suspect(current, senses, point) else nil
 			if spot ~= nil then
-				return M.beginStare(current, senses, spot, nil)
+				local step = M.beginStare(current, senses, spot, nil)
+				step.mind.hunch = searching
+				return step
 			end
 			local nextMind = table.clone(current)
 			nextMind.arrivedAt = now
@@ -239,6 +239,55 @@ local function lookAround(current: Mind, senses: Senses): Step
 		return M.giveUp(current, senses)
 	end
 	return { mind = current, intent = IDLE }
+end
+
+-- The modes in which he looks down his long cone (not at a desk, at a spot, on his break or over a catch).
+local LOOKING_FAR: { [string]: boolean } = { patrol = true, investigate = true, search = true }
+
+-- Seconds since the last think (the notice beat's clock), like the director's.
+local function tick(mind: Mind, senses: Senses): number
+	return math.clamp(senses.now - (mind.lastThink or senses.now), 0, 0.5)
+end
+
+-- Someone far down his long cone: count the beat up (a step that stops him, head turned to them) or, once it is long
+-- enough for the distance, chase them. Nil when there is no one there (or he is busy).
+local function notice(current: Mind, senses: Senses): Step?
+	if not LOOKING_FAR[current.mode] then
+		return nil
+	end
+	local glimpse = M.distant(current, senses)[1]
+	if glimpse == nil then
+		return nil
+	end
+	local carried = if current.noticeId == glimpse.userId then current.noticeSeconds or 0 else 0
+	local seconds = carried + tick(current, senses)
+	if seconds >= M.noticeDelay((glimpse.position - senses.position).Magnitude) then
+		local step = M.chase(current, senses, glimpse, false)
+		step.mind.noticeId = nil
+		step.mind.noticeSeconds = nil
+		return step
+	end
+	local nextMind = table.clone(current)
+	nextMind.noticeId = glimpse.userId
+	nextMind.noticeSeconds = seconds
+	nextMind.point = glimpse.position
+	nextMind.swivelUntil = senses.now + 0.3
+	return { mind = nextMind, intent = IDLE }
+end
+
+-- Nobody far down his cone this think: a noticing in progress falls back (NOTICE_DECAY a second) and is dropped at 0.
+local function fade(current: Mind, senses: Senses): Mind
+	local seconds = current.noticeSeconds
+	if seconds == nil then
+		return current
+	end
+	local nextMind = table.clone(current)
+	local left = seconds - tick(current, senses) * OccupantConstants.NOTICE_DECAY
+	nextMind.noticeSeconds = if left > 0 then left else 0
+	if left <= 0 then
+		nextMind.noticeId = nil
+	end
+	return nextMind
 end
 
 local function think(mind: Mind, senses: Senses): Step
@@ -301,6 +350,13 @@ local function think(mind: Mind, senses: Senses): Step
 		end
 		return M.chase(current, senses, pick, false)
 	end
+
+	-- Far down a clear line: a beat to notice (he stops, his head turned to them), then the chase.
+	local noticing = notice(current, senses)
+	if noticing ~= nil then
+		return noticing
+	end
+	current = fade(current, senses)
 
 	-- Someone he saw go into a hiding spot (or tracked there): the stare-down.
 	local hider, hiderSpot = OccupantStareRules.known(current, senses)

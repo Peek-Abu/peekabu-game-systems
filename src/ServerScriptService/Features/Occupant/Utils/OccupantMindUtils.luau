@@ -18,8 +18,8 @@ local OccupantServer = ServerScriptService.Features.Occupant
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local OccupantTypes = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantTypes)
 local NpcTypes = require(ServerScriptService.Features.Npc.Data.NpcTypes)
-local NpcSenseRules = require(ServerScriptService.Features.Npc.Rules.NpcSenseRules)
 local Reach = require(OccupantServer.Rules.OccupantReachRules)
+local Sight = require(OccupantServer.Utils.OccupantSightUtils)
 local OccupantDirectorUtils = require(OccupantServer.Utils.OccupantDirectorUtils)
 local OccupantMenaceFormulas = require(OccupantServer.Utils.OccupantMenaceFormulas)
 
@@ -84,6 +84,8 @@ function M.settle(mind: Mind)
 	mind.sitIn = nil
 	mind.noisy = nil
 	mind.point = nil
+	mind.hunch = nil
+	mind.nearAt = nil
 end
 
 -- Fills in a copy: forgets who he chased and what he heard.
@@ -233,43 +235,14 @@ function M.rejoin(mind: Mind, senses: Senses)
 	end
 end
 
---[=[
-	The players he sees this think, nearest first: a clear ray, in range and cone, outside the safe zone, not in
-	their grace, not hiding (a hider he saw go in is stared at instead: Senses.hiders). His chase or search target is
-	seen all round.
-]=]
-function M.visible(mind: Mind, senses: Senses): { Glimpse }
-	local list: { Glimpse } = {}
-	for _, glimpse in senses.players do
-		if
-			glimpse.clear
-			and glimpse.hidden ~= true
-			and not M.graced(mind, glimpse.userId, senses.now)
-			and (glimpse.position - senses.position).Magnitude <= senses.sightRange
-			and not M.inZone(glimpse.position, senses.zone)
-			and NpcSenseRules.inSight(
-				senses.position,
-				senses.look,
-				Vector3.new(glimpse.position.X, senses.position.Y, glimpse.position.Z),
-				senses.sightRange,
-				if glimpse.userId == mind.target and (mind.mode == "chase" or mind.mode == "search")
-					then 360
-					else senses.sightAngle
-			)
-		then
-			table.insert(list, glimpse)
-		end
-	end
-	table.sort(list, function(a, b)
-		local distanceA = (a.position - senses.position).Magnitude
-		local distanceB = (b.position - senses.position).Magnitude
-		if distanceA ~= distanceB then
-			return distanceA < distanceB
-		end
-		return a.userId < b.userId
-	end)
-	return list
-end
+export type Sight = Sight.Sight
+
+-- What he sees (OccupantSightUtils): near and far, the players he sees, those far off to notice, the notice delay.
+M.sightOf = Sight.sightOf
+M.visible = Sight.visible
+M.distant = Sight.distant
+M.sees = Sight.sees
+M.noticeDelay = Sight.noticeDelay
 
 --[=[
 	The nearest crew member he could notice from where he is, seen or not (not hiding, not in the box, not in their
@@ -446,8 +419,8 @@ function M.chase(current: Mind, senses: Senses, glimpse: Glimpse, startled: bool
 end
 
 --[=[
-	To `spot` to stare at it: `quarry` is the hider he knows is there (nil: he only suspects). Remembers whether they
-	went in close to him.
+	To `spot` to stare at it: `quarry` is the hider he knows is there (nil: he only suspects). Remembers how far from him
+	they went in.
 ]=]
 function M.beginStare(current: Mind, senses: Senses, spot: Spot, quarry: number?): Step
 	local nextMind = M.enter(current, "stare", senses.now)
@@ -461,11 +434,12 @@ function M.beginStare(current: Mind, senses: Senses, spot: Spot, quarry: number?
 	if quarry ~= nil then
 		-- Who he stares for: the chase target he lost under there (the stand point is walked in a hurry).
 		nextMind.target = if current.mode == "chase" or current.mode == "search" then quarry else nil
-		local close = table.clone(current.close)
-		if close[quarry] == nil then
-			close[quarry] = M.flat(senses.position, spot.center) <= OccupantConstants.CHECK_CLOSE_RADIUS
+		-- How far away he was as they went in (this think follows Hide's witness by a beat at most).
+		local entered = table.clone(current.entered)
+		if entered[quarry] == nil then
+			entered[quarry] = M.flat(senses.position, spot.center)
 		end
-		nextMind.close = close
+		nextMind.entered = entered
 	end
 	return { mind = nextMind, intent = { kind = "goTo", position = spot.stand, run = nextMind.target ~= nil } }
 end

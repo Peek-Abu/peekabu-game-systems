@@ -1,21 +1,24 @@
 --!strict
 --[=[
 	HideConstants: hiding spots (docs/superpowers/specs/2026-10-15-cleanup-crew-chase-kit-design.md §4). Players hide
-	under desks and tables: the office's own furniture, tagged by Office as it builds it. Every number is a tuning hypothesis. Static data (spec-exempt).
+	under desks and tables, and inside the tall supply cabinets (2026-10-16: always closed, so no open/closed state; the
+	secure spot the Manager must open): the office's own furniture, tagged by Office as it builds it. Every number is a tuning hypothesis. Static data (spec-exempt).
 
 	@class HideConstants
 ]=]
 
-export type FurnitureKind = "desk" | "table"
+export type FurnitureKind = "desk" | "table" | "cabinet"
 
 -- Where the tucked body lies under a piece of furniture (its spot's frame): the root `along` its length (+X) and
 -- `back` (+Z) from its centre, turned `yaw` degrees from facing out of the front.
 export type Tuck = { along: number, back: number, yaw: number }
 
--- What each piece of furniture offers: hiding under it (desks and tables only: a locker's or cabinet's open and closed
--- states made them unreliable), the prompt's verb and noun, where the body lies, and whether the spot may face the
--- furniture's back when that is the more open side (a table; a desk's knee-hole is always its front).
-export type FurnitureDef = { spot: "under", action: string, noun: string, tuck: Tuck, turnable: boolean }
+-- What each piece of furniture offers: hiding under it (desks and tables) or inside it (the tall supply cabinet, always
+-- closed; lockers and filing cabinets stay out: a locker's open and closed states made it unreliable, a filing cabinet
+-- is too small), the prompt's verb and noun, where the body lies (or stands), and whether the spot may face the
+-- furniture's back when that is the more open side (a table; a desk's knee-hole and a cabinet's door are always its
+-- front).
+export type FurnitureDef = { spot: "under" | "inside", action: string, noun: string, tuck: Tuck, turnable: boolean }
 
 -- One joint of the tucked pose: its Motor6D's name, the rotation (degrees about the joint's X, Y, Z) and an offset.
 export type PoseJoint = { joint: string, rotation: Vector3, offset: Vector3 }
@@ -26,12 +29,20 @@ local function furniture(noun: string, tuck: Tuck, turnable: boolean): Furniture
 	return table.freeze(def)
 end
 
+local function closet(noun: string, tuck: Tuck): FurnitureDef
+	local def: FurnitureDef =
+		{ spot = "inside", action = "Hide in", noun = noun, tuck = table.freeze(tuck), turnable = false }
+	return table.freeze(def)
+end
+
 local FURNITURE: { [string]: FurnitureDef } = {
 	-- A desk's drawer pedestal fills its +X end: the curled body lies corner to corner across the knee-hole (about
 	-- 3.5 by 3), head toward the front-left corner.
 	desk = furniture("desk", { along = -0.1, back = 0.55, yaw = 49 }, false),
 	-- A table is open underneath: the body lies along its length.
 	table = furniture("table", { along = 1.1, back = 0.2, yaw = 90 }, true),
+	-- The tall supply cabinet: standing upright in the middle, a little back from the door, facing out of it.
+	cabinet = closet("cabinet", { along = 0, back = 0.25, yaw = 0 }),
 }
 
 local function pose(joint: string, rotation: Vector3, offset: Vector3?): PoseJoint
@@ -114,8 +125,17 @@ return table.freeze({
 	PEEK_FOV = 62,
 	PEEK_YAW = 35,
 	PEEK_PITCH = 12,
-	-- The peek view's height: low by the furniture's front edge.
+	-- The peek view's height: low by the furniture's front edge; inside a cabinet, at the door's louvre band (the
+	-- supplyCabinet art: louvres 5.0-6.2 over its floor).
 	UNDER_EYE = 1.3,
+	INSIDE_EYE = 5.55,
+	-- A cabinet's door, swung open by the Manager when he checks it (HideServiceServer:setDoor): the furniture's
+	-- attribute, the art's door part, how far it swings (degrees) and how long; a DOOR_RATTLE second rattle first.
+	DOOR_OPEN_ATTRIBUTE = "HideDoorOpen",
+	DOOR_PART = "Door",
+	DOOR_SWING = 105,
+	DOOR_SECONDS = 0.5,
+	DOOR_RATTLE = 0.9,
 	-- Exit requests are rate limited.
 	EXIT_RATE = table.freeze({ maxRequests = 10, windowSeconds = 5 }),
 })

@@ -12,6 +12,7 @@ local SIZES: { [Types.MarkerKind]: Vector3? } = {
 	counter = Constants.COUNTER_SIZE,
 	table = Constants.TABLE_SIZE,
 	cabinet = Constants.CABINET_SIZE,
+	closet = Constants.CLOSET_SIZE,
 	plant = Constants.PLANT_SIZE,
 	pile = Vector3.new(4, 1, 4),
 	item = Vector3.new(3.6, 1, 3.6),
@@ -111,6 +112,29 @@ function Utils.markers(room: Types.Room, rng: Random): { Types.Marker }
 	for _, x in { -hx + 6, hx - 6 } do
 		for _, z in { -hz + 8, hz - 8 } do
 			add("item", x, z, 0)
+		end
+	end
+	-- One tall supply cabinet (a secure hiding spot) against a wall, its door to the room, where the room has a clear
+	-- stretch of wall for it away from the doors, the piles and the furniture; a small room has none. Sparse: at most
+	-- one per room. Placed last, in the space the room has left, so it never displaces anything else.
+	local inset = Constants.CLOSET_SIZE.Z / 2 + wall
+	local closets: { { number } } = {}
+	for _, along in { hx - 7, hx - 9, 10 } do
+		-- Not under the notice board (the far wall's -flip end): it has no floor footprint to be kept clear by.
+		table.insert(closets, { flip * along, hz - inset, 0 })
+		for _, side in { flip, -flip } do
+			table.insert(closets, { side * along, -hz + inset, math.pi })
+		end
+	end
+	for _, along in { hz - 7, hz - 9, 10 } do
+		for _, side in { 1, -1 } do
+			table.insert(closets, { hx - inset, side * along, math.pi / 2 })
+			table.insert(closets, { -hx + inset, side * along, -math.pi / 2 })
+		end
+	end
+	for _, candidate in closets do
+		if add("closet", candidate[1], candidate[2], candidate[3]) then
+			break
 		end
 	end
 	add("patrol", 0, 0, 0)

@@ -38,7 +38,7 @@ function OccupantFaceUtils.faceFor(
 		end
 		return "Calm"
 	elseif mode == "stare" then
-		return if phase == "check" then "Hunting" else "Noticing"
+		return if phase == "check" or phase == "open" then "Hunting" else "Noticing"
 	elseif mode == "investigate" or mode == "search" then
 		return "Noticing"
 	elseif mode == "chase" or mode == "catch" then

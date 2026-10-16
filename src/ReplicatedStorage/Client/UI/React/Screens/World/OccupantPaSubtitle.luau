@@ -24,8 +24,9 @@ local e = React.createElement
 
 local WIDTH = 680
 local HEIGHT = 104
--- How far above the screen's foot the strip sits (clear of the bottom cards, below the hide chip).
-local LIFT = 140
+-- How far above the screen's foot the strip sits: clear of the whole bottom stack (the hotbar, the holding slip, the
+-- interaction chip and the hide chip above it, whose top is at 1,-218).
+local LIFT = 236
 
 local function OccupantPaSubtitle(): React.ReactNode
 	local notice = ReactCharm.useAtom(OccupantPaStore.notice)

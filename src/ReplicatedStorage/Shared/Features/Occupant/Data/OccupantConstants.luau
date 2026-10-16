@@ -28,8 +28,8 @@ local BODY: Body = {
 	skin = Color3.fromRGB(214, 200, 180),
 }
 
--- The fallback speech-bubble line per OccupantTypes.Cue (spec §4 "Voice"); LINE_VARIANTS holds the variants, and the
--- gibberish voice is played by the client OccupantPresenceSystem.
+-- The fallback line per OccupantTypes.Cue (spec §4 "Voice"; never shown since 2026-10-16, it picks his gibberish clip);
+-- LINE_VARIANTS holds the variants, and the voice is played by the client OccupantPresenceSystem.
 local LINES: { [string]: string } = {
 	spotted = "Those are COMPANY ASSETS.",
 	curious = "Per my last email…",
@@ -52,18 +52,17 @@ local LINE_VARIANTS: { [string]: { string } } = {
 	sitIn = { "Now… where was I.", "Just a few more reports." },
 }
 
--- The PA (behaviour set §5): a corporate line now and then while he is in the mid stage, and the call-out naming a
--- crew member ("{name}" is replaced) before he drifts toward them.
+-- The PA (behaviour set §5; 2026-10-16 tuning: abstract, never naming him, so other anomalies can share it): a rare
+-- building announcement while he is in the mid stage, and the rarer call-out naming a crew member ("{name}" is
+-- replaced) before he drifts toward them.
 local PA_LINES: { string } = {
-	"The Manager will see you now.",
 	"Reminder: company property must not leave the building.",
 	"Productivity is being monitored.",
 	"Please remain at your workstation.",
 	"All staff: performance reviews are ongoing.",
 	"Lost and found is closed. Permanently.",
 }
-local PA_CALLOUTS: { string } =
-	{ "{name}. My office.", "{name}, a word.", "Would {name} please report to the Manager." }
+local PA_CALLOUTS: { string } = { "{name}, please report to the office.", "{name}, a word, please." }
 
 -- A procedural gesture laid over his animation (OccupantGestureFormulas): how long it takes to settle, and each
 -- joint's extra rotation in degrees (X pitch, Y yaw, Z roll; negative X bends forward).
@@ -95,9 +94,16 @@ return table.freeze({
 	-- Pursuit tuning: patrol 10, chase 20; tiers and party size adjust them (OccupantTuningFormulas).
 	PATROL_SPEED = 10,
 	CHASE_SPEED = 20,
-	-- Sight: ~60 studs, a 100° cone, line of sight.
+	-- Sight: ~60 studs, a 100° cone, line of sight (seen at once). Straight ahead he also sees far down a clear line:
+	-- out to LONG_SIGHT_RANGE in a LONG_SIGHT_ANGLE cone, noticed over NOTICE_SECONDS (min at SIGHT_RANGE, max at
+	-- LONG_SIGHT_RANGE) while he stops and turns his head to look; then the chase. A noticing that loses its player falls
+	-- back NOTICE_DECAY seconds a second. So a chase can start far away, with room to run or hide.
 	SIGHT_RANGE = 60,
 	SIGHT_ANGLE = 100,
+	LONG_SIGHT_RANGE = 125,
+	LONG_SIGHT_ANGLE = 40,
+	NOTICE_SECONDS = range(0.35, 1.4),
+	NOTICE_DECAY = 2,
 	-- Investigate scans for 4 s; search scans for 2 s at last-seen and nearby authored points. Investigate gives up after
 	-- GIVE_UP_SECONDS (an unreachable point).
 	LOOK_SECONDS = 4,
@@ -155,18 +161,8 @@ return table.freeze({
 	-- the tag on the office's ceiling lights (Office builds them; the tells flicker them).
 	SAFE_ZONE_LABEL = "SafeZone",
 	LIGHT_TAG = "OfficeLight",
-	-- His two billboard shells on his head (M3b world UI): empty, tagged, drawn by the client (OccupantBillboardSystem);
-	-- the server writes only their attributes ("?" / "!" / "" and the line, "" when none). The cue shell is CUE_STUDS
-	-- square (design CUE_PX); the memo shell is MEMO_PX px (the 520x140 memo, its 24 px tail and a margin).
-	CUE_NAME = "OccupantCue",
-	SPEECH_NAME = "OccupantSpeech",
-	CUE_TAG = "OccupantCueBillboard",
-	SPEECH_TAG = "OccupantSpeechBillboard",
-	CUE_ATTRIBUTE = "OccupantCue",
+	-- His voiced line (a model attribute: "" when none). Never drawn: since 2026-10-16 nothing shows over his head.
 	LINE_ATTRIBUTE = "OccupantLine",
-	CUE_STUDS = 2.5,
-	CUE_PX = Vector2.new(140, 140),
-	MEMO_PX = Vector2.new(520, 166),
 	-- Player-facing name (the Residual company paperwork calls the "Site Supervisor Proxy"); the internals keep `harlow`.
 	DISPLAY_NAME = "The Manager",
 	-- M3 UI. Public field: the server time a caught player is back on the clock (the roster's "CAUGHT · back 0:06");
@@ -200,20 +196,41 @@ return table.freeze({
 	AMBUSH_HOLD = 1.1,
 	AMBUSH_STAND_SPEED = 1.5,
 	STAND_SECONDS = 1.8,
+	-- Standing up, his root ends at least this far (flat studs) from the desk's footprint (OccupantDeskUtils.standUp):
+	-- his body's half-width and a margin, so he is never left inside or behind the desk.
+	STAND_CLEAR = 1.6,
 	-- §2 The stare-down: the gap from the spot's front edge to where he stands, how long he stares (known / suspected),
 	-- the check's odds, the bend before the catch, the startle, the noise radius around the spot, the suspicion radius
-	-- around a heard noise, how long a spot is left alone after he walks away.
+	-- around a heard noise, how long a spot is left alone after he walks away. The check's odds follow how far away he
+	-- was when he saw you go in (2026-10-16): CHECK_NEAR_CHANCE within CHECK_NEAR studs, falling to CHECK_FAR_CHANCE at
+	-- CHECK_FAR and beyond (there it is only a suspicion: a short stare), plus CHECK_PER_SECOND per second he had eyes on
+	-- you (fading out with the distance), capped at CHECK_MAX. HUNCH_CHECK: he lost his chase near a spot without seeing
+	-- where you went, stares at it a moment, and looks on this roll.
 	STARE_GAP = 1.6,
-	-- ...and that far to the side of the spot's centre line, beside the desk's chair rather than in it.
+	-- ...and that far to the side of the spot's centre line, beside the desk's chair rather than in it. When furniture
+	-- stands there (a table beside a supply cabinet), the other side, else straight out STARE_GAP + STAND_OUT
+	-- (OccupantDeskUtils.standPoints; the first clear one, OccupantSenseSystem): he is never slid into furniture.
 	STARE_SIDE = 1.9,
+	STAND_OUT = 1.5,
 	STARE_SECONDS = range(4, 10),
 	SUSPECT_SECONDS = range(2, 4),
-	CHECK_BASE = 0.25,
-	CHECK_PER_SECOND = 0.08,
-	CHECK_CLOSE = 0.3,
-	CHECK_CLOSE_RADIUS = 12,
+	CHECK_NEAR = 12,
+	CHECK_FAR = 40,
+	CHECK_NEAR_CHANCE = 0.8,
+	CHECK_FAR_CHANCE = 0.1,
+	CHECK_PER_SECOND = 0.03,
 	CHECK_MAX = 0.9,
+	HUNCH_CHECK = 0.12,
 	CHECK_SECONDS = 1.1,
+	-- A secure supply cabinet: he cannot look in casually. He opens it (OPEN_SECONDS: the handle, then the door) only
+	-- after a noise at it, or when he saw you go in within OPEN_RADIUS (and the check roll says so); otherwise he stares
+	-- a moment and leaves. Never on a hunch.
+	OPEN_SECONDS = 2.2,
+	OPEN_RADIUS = 14,
+	-- On the way to a spot's stand point: once within STAND_NEAR studs for STAND_SETTLE seconds he plants there (the
+	-- slide does the rest) instead of circling a stand point the path cannot quite reach.
+	STAND_NEAR = 6,
+	STAND_SETTLE = 0.8,
 	STARTLE_SECONDS = 0.7,
 	STARE_NOISE_RADIUS = 10,
 	SUSPECT_RADIUS = 10,
@@ -257,17 +274,17 @@ return table.freeze({
 	MENACE_SPOTTED = 15,
 	MENACE_CATCH = 45,
 	MENACE_DECAY = 2,
-	-- §5 The PA call-out (server): the first, the gap, the steer delay after it.
-	CALLOUT_FIRST = 75,
-	CALLOUT_GAP = range(120, 210),
+	-- §5 The PA call-out (server; rare since 2026-10-16): the first, the gap, the steer delay after it.
+	CALLOUT_FIRST = 150,
+	CALLOUT_GAP = range(240, 360),
 	CALLOUT_STEER_DELAY = 4,
 	-- §5 The staged tells (client): stage bands, the far pen click, the mid PA lines, the near dread swell.
 	STAGE_FAR = 85,
 	STAGE_MID = 45,
 	STAGE_NEAR = 25,
 	PEN_CLICK = range(9, 16),
-	PA_GAP = range(50, 100),
-	PA_CHANCE = 0.4,
+	PA_GAP = range(90, 160),
+	PA_CHANCE = 0.25,
 	PA_SECONDS = 4,
 	DREAD_FADE = 1.5,
 	-- Model attributes the client reads: his phase, his gesture and its target, and the catch tilt.
@@ -291,8 +308,6 @@ return table.freeze({
 	TILT_SHIVER = 2.5,
 	LINES = table.freeze(LINES),
 	LINE_VARIANTS = table.freeze(LINE_VARIANTS),
-	-- His memo types each line out at TYPE_RATE characters a second (spec §7 "typewriter type"; useTypedGraphemes).
-	TYPE_RATE = 28,
 	-- Footsteps: one per STRIDE studs walked, clamped to STEP_MIN..STEP_MAX seconds; none below STEP_MIN_SPEED.
 	STRIDE = 4.5,
 	STEP_MIN_SPEED = 2,
