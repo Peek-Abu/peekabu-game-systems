@@ -14,15 +14,14 @@
 	   report;
 	3. mounts and binds it as CarryServiceServer does, lets the engine's Animator solve the IK over the carrier's own
 	   idle and walk clips (two walk frames), and judges the LIVE pose with the same rules. Each frame is sampled only
-	   once its clip has loaded and is confirmed shown at its time and full weight (`show`, `shown`); a frame that
-	   cannot be shown fails the entry instead of judging frame 0 or the rest pose.
+	   once its clip has loaded and is confirmed shown at its time and full weight (AnimationCarryClipHarness); a frame
+	   that cannot be shown fails the entry instead of judging frame 0 or the rest pose.
 	`format` prints the report; the spec asserts it. Needs a real runtime (TestEZ in Studio): run it with
 	`Workspace.RunTests = true`, or from a server Script: `print(Harness.format(Harness.run({})))`.
 
 	@class AnimationCarryHarness
 ]=]
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local Shared = ReplicatedStorage.Shared.Features
@@ -35,6 +34,7 @@ local CargoRegistry = require(Shared.Cargo.Data.CargoRegistry)
 local CarryFormulas = require(Shared.Carry.Utils.CarryFormulas)
 local AnimationCarrySystem = require(ServerScriptService.Features.Animation.Systems.AnimationCarrySystem)
 local AnimationCarrySurfaceSystem = require(ServerScriptService.Features.Animation.Systems.AnimationCarrySurfaceSystem)
+local AnimationCarryClipHarness = require(ServerScriptService.Features.Animation.Testing.AnimationCarryClipHarness)
 local AnimationCarryRigHarness = require(ServerScriptService.Features.Animation.Testing.AnimationCarryRigHarness)
 
 type Report = AnimationCarryPoseRules.Report
@@ -158,61 +158,6 @@ function AnimationCarryHarness.item(kind: string, carrier: Model): (BasePart?, n
 	return proxy, weight
 end
 
--- How long a clip may take to load before its frame is reported unshown.
-local CLIP_LOAD_TIMEOUT = 10
--- How far the shown frame may sit from the sampled one (seconds, and track weight).
-local SHOWN_TIME_TOLERANCE = 1 / 60
-local SHOWN_WEIGHT_TOLERANCE = 0.01
-
---[=[
-	Plays the clip `id` on `animatorOf` frozen at `at` (a fraction of its length), once the clip has loaded: a
-	track's Length is 0 until its asset arrives, and a TimePosition set before that is lost, so the first sample of
-	a clip not yet loaded in this session would show its frame 0, or the rest pose, instead of the frame asked for.
-	Nil and the reason when the clip does not load within `timeout` seconds (default CLIP_LOAD_TIMEOUT).
-]=]
-function AnimationCarryHarness.show(
-	animatorOf: Animator,
-	id: string,
-	at: number,
-	timeout: number?
-): (AnimationTrack?, string?)
-	local animation = Instance.new("Animation")
-	animation.AnimationId = id
-	local track = animatorOf:LoadAnimation(animation)
-	local deadline = os.clock() + (timeout or CLIP_LOAD_TIMEOUT)
-	while track.Length <= 0 and os.clock() < deadline do
-		RunService.Heartbeat:Wait()
-	end
-	if track.Length <= 0 then
-		track:Destroy()
-		return nil, `clip {id} did not load within {timeout or CLIP_LOAD_TIMEOUT} s`
-	end
-	track:Play(0)
-	track:AdjustSpeed(0)
-	track.TimePosition = track.Length * at
-	return track, nil
-end
-
---[=[
-	Nil when `track` shows the frame at `at` of its length at full weight; otherwise what it shows instead.
-]=]
-function AnimationCarryHarness.shown(track: AnimationTrack, at: number): string?
-	local wanted = track.Length * at
-	if
-		not track.IsPlaying
-		or math.abs(track.TimePosition - wanted) > SHOWN_TIME_TOLERANCE
-		or math.abs(track.WeightCurrent - 1) > SHOWN_WEIGHT_TOLERANCE
-	then
-		return string.format(
-			"clip shows %.3f s at weight %.2f, not %.3f s at full weight",
-			track.TimePosition,
-			track.WeightCurrent,
-			wanted
-		)
-	end
-	return nil
-end
-
 -- The live hold: the planned one with the arms and the item where the engine shows them now.
 local function liveHold(carrier: Model, hold: Hold, target: PVInstance, box: CFrame): Hold?
 	local space = AnimationCarrySystem.liveSpace(carrier, hold)
@@ -331,7 +276,7 @@ local function hold(carrier: Carrier, kind: string, live: boolean, record: boole
 			end
 			local problem: string? = nil
 			if id ~= nil and animatorOf ~= nil then
-				local shown, why = AnimationCarryHarness.show(animatorOf, id, at or 0)
+				local shown, why = AnimationCarryClipHarness.show(animatorOf, id, at or 0)
 				track = shown
 				problem = why
 			end
@@ -339,7 +284,7 @@ local function hold(carrier: Carrier, kind: string, live: boolean, record: boole
 			slide()
 			settle(SETTLE)
 			if problem == nil and track ~= nil then
-				problem = AnimationCarryHarness.shown(track, at or 0)
+				problem = AnimationCarryClipHarness.shown(track, at or 0)
 			end
 			return problem
 		end

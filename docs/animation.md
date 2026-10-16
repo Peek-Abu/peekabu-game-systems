@@ -255,7 +255,8 @@ Only arm joints are driven; no rig joint's C0/C1 or attachment is written.
     top of its surface), `CarryBodyFront` (Attachment: the depth held against the body, a pot under wider leaves),
     `CarryHold` (attribute on the template model). `CarryGripLeft` / `CarryGripRight` are not read.
 
-  **The validator** (`AnimationCarryHarness`, carriers from `AnimationCarryRigHarness`): every template in the cargo
+  **The validator** (`AnimationCarryHarness`, carriers from `AnimationCarryRigHarness`, clips from
+  `AnimationCarryClipHarness`): every template in the cargo
   folder, on Pippa (built from her art as EmployeeSpawnSystem installs her) and a stock R15, planned and LIVE (the
   engine's IK over each carrier's own idle and two walk frames), judged by the same rules, plus the contract. A frame
   is sampled only after its clip has loaded and is checked shown at its time and full weight: a track's `Length` is 0

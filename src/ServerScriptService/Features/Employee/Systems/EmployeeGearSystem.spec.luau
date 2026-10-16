@@ -154,16 +154,13 @@ return function()
 
 		it("paints nothing on a character without a lanyard", function()
 			local character = makeCharacter(1)
-			local painted = EmployeeGearSystem.badge(
-				character,
-				{
-					holder = "Pip",
-					title = "Intern",
-					band = "RANK",
-					colour = Color3.new(1, 1, 1),
-					photo = "rbxassetid://1",
-				}
-			)
+			local painted = EmployeeGearSystem.badge(character, {
+				holder = "Pip",
+				title = "Intern",
+				band = "RANK",
+				colour = Color3.new(1, 1, 1),
+				photo = "rbxassetid://1",
+			})
 			expect(painted).to.equal(0)
 			character:Destroy()
 		end)

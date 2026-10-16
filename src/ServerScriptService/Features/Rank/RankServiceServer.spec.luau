@@ -230,22 +230,25 @@ return function()
 			expect(publicXp(908)).to.equal(0)
 		end)
 
-		it("announces every published rank on `changed` (load, award, reset; deferred), with the player's id", function()
-			seed(909)
-			local heard = {}
-			local connection = RankService.changed:Connect(function(userId)
-				table.insert(heard, userId)
-			end)
-			RankService:load(909)
-			RankService:awardShift(909, "srv:1", facts())
-			RankService:awardShift(909, "srv:1", facts())
-			RankService:reset(909)
-			task.wait() -- SignalPlus defers its handlers
-			connection:Disconnect()
-			expect(#heard).to.equal(3)
-			for _, userId in heard do
-				expect(userId).to.equal(909)
+		it(
+			"announces every published rank on `changed` (load, award, reset; deferred), with the player's id",
+			function()
+				seed(909)
+				local heard = {}
+				local connection = RankService.changed:Connect(function(userId)
+					table.insert(heard, userId)
+				end)
+				RankService:load(909)
+				RankService:awardShift(909, "srv:1", facts())
+				RankService:awardShift(909, "srv:1", facts())
+				RankService:reset(909)
+				task.wait() -- SignalPlus defers its handlers
+				connection:Disconnect()
+				expect(#heard).to.equal(3)
+				for _, userId in heard do
+					expect(userId).to.equal(909)
+				end
 			end
-		end)
+		)
 	end)
 end

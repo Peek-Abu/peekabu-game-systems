@@ -27,27 +27,6 @@ return function()
 		rig:Destroy()
 	end)
 
-	it("shows a live frame only once its clip has loaded, at the sampled time and full weight", function()
-		local rig = RigHarness.stockR15(Vector3.new(0, 3000, -640))
-		local carriers = RigHarness.carriers({ "StockR15" })
-		local walk = carriers[1].walk
-		carriers[1].model:Destroy()
-		-- A clip id that never loads is reported, not sampled as the rest pose.
-		local missing, why = Harness.show(RigHarness.animator(rig), "rbxassetid://0", 0.6, 1)
-		expect(missing).to.equal(nil)
-		expect(why).to.be.ok()
-		if walk ~= nil then
-			local track, problem = Harness.show(RigHarness.animator(rig), walk, 0.6)
-			expect(problem).to.equal(nil)
-			expect(track.Length > 0).to.equal(true)
-			RigHarness.settle(4)
-			expect(Harness.shown(track, 0.6)).to.equal(nil)
-			track:Stop(0)
-			track:Destroy()
-		end
-		rig:Destroy()
-	end)
-
 	it("validates every carry template in the place on Pippa and a stock R15", function()
 		if #Harness.kinds() == 0 then
 			expect(#result.skipped > 0).to.equal(true)

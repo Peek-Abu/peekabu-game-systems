@@ -247,6 +247,17 @@ function AnimationCarryMeasureSystem.slices(
 	return found
 end
 
+-- The two parts a joint (a Motor6D or Weld, or a WeldConstraint) joins; nil, nil for anything else.
+local function jointEnds(instance: Instance): (BasePart?, BasePart?)
+	if instance:IsA("JointInstance") then
+		return instance.Part0, instance.Part1
+	end
+	if instance:IsA("WeldConstraint") then
+		return instance.Part0, instance.Part1
+	end
+	return nil, nil
+end
+
 --[=[
 	The visible parts of `character` joined straight to `bodyPart` by a Motor6D, a Weld or a WeldConstraint, except
 	the joint that holds `bodyPart` itself to the body (the head's neck).
@@ -255,13 +266,7 @@ function AnimationCarryMeasureSystem.joinedTo(bodyPart: BasePart, character: Mod
 	local above = jointOf(bodyPart)
 	local found: { BasePart } = {}
 	for _, descendant in character:GetDescendants() do
-		local a: BasePart? = nil
-		local b: BasePart? = nil
-		if descendant:IsA("JointInstance") then
-			a, b = descendant.Part0, descendant.Part1
-		elseif descendant:IsA("WeldConstraint") then
-			a, b = descendant.Part0, descendant.Part1
-		end
+		local a, b = jointEnds(descendant)
 		local other = if a == bodyPart then b elseif b == bodyPart then a else nil
 		if
 			other ~= nil
