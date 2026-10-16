@@ -318,7 +318,6 @@ return function()
 			coffeeMug = true,
 			deskClock = true,
 			snowGlobe = true,
-			deskPhone = true,
 		}
 		it("sits plaques and monitors on tables and cabinets, at most one piece each", function()
 			for seed = 1, 30 do

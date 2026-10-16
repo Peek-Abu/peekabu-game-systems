@@ -1,7 +1,7 @@
 --!strict
 --[=[
-	CargoRegistry: the cargo catalog (Cleanup Crew spec §4 table): seventeen items found in the office plus the
-	dust bag the vacuum makes. Six of them are the small pocketable valuables the hotbar inventory was made for
+	CargoRegistry: the cargo catalog (Cleanup Crew spec §4 table): sixteen items found in the office plus the
+	dust bag the vacuum makes. Five of them are the small pocketable valuables the hotbar inventory was made for
 	(docs/superpowers/specs/2026-10-16-cleanup-crew-hotbar-inventory-design.md §5): rolled often, so a trip fills two to
 	four item slots. Built here at load and frozen; `ids()` is sorted so a roll that walks the
 	catalog picks the same items for the same seed.
@@ -185,7 +185,7 @@ define("coffeeMug", "Coffee mug", "salvage", "tiny", Color3.fromRGB(235, 232, 22
 	partSize = Vector3.new(1, 1, 0.8),
 })
 define("wristwatch", "Wristwatch", "salvage", "tiny", Color3.fromRGB(70, 70, 80), {
-	spawnWeight = 2,
+	spawnWeight = 3,
 	deskWeight = 4,
 	range = { min = 90, max = 170 },
 	jackpot = { name = "Gold", chance = 0.08, multiplier = 2.5 },
@@ -193,7 +193,7 @@ define("wristwatch", "Wristwatch", "salvage", "tiny", Color3.fromRGB(70, 70, 80)
 	partSize = Vector3.new(0.65, 0.22, 0.8),
 })
 define("deskClock", "Desk clock", "salvage", "tiny", Color3.fromRGB(150, 95, 55), {
-	spawnWeight = 3,
+	spawnWeight = 4,
 	deskWeight = 2,
 	range = { min = 55, max = 95 },
 	jackpot = { name = "Brass carriage", chance = 0.1, multiplier = 2 },
@@ -201,17 +201,11 @@ define("deskClock", "Desk clock", "salvage", "tiny", Color3.fromRGB(150, 95, 55)
 })
 define("snowGlobe", "Snow globe", "salvage", "tiny", Color3.fromRGB(170, 215, 235), {
 	fragile = true,
-	spawnWeight = 2,
+	spawnWeight = 3,
 	deskWeight = 3,
 	range = { min = 60, max = 110 },
 	jackpot = { name = "Musical", chance = 0.12, multiplier = 2 },
 	partSize = Vector3.new(1.1, 1.3, 1.1),
-})
-define("deskPhone", "Desk phone", "salvage", "light", Color3.fromRGB(45, 48, 55), {
-	spawnWeight = 3,
-	deskWeight = 1,
-	range = { min = 50, max = 90 },
-	partSize = Vector3.new(1.6, 0.8, 1.3),
 })
 define("keyring", "Keyring", "salvage", "tiny", Color3.fromRGB(205, 175, 90), {
 	rattly = true,

@@ -54,7 +54,6 @@ local keys: { [ArtTypes.Family]: { string } } = {
 		"wristwatch",
 		"deskClock",
 		"snowGlobe",
-		"deskPhone",
 		"keyring",
 	},
 	props = {

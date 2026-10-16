@@ -13,7 +13,7 @@ requests in §6. The rules are the user's.
   - A **big item** (`medium`, `heavy`, `bulky`) also takes the first free item slot, but it goes into **both hands**.
     The small hands item goes back into its own slot first, and the vacuum is put away. It comes back by itself when
     the big item is dropped, if it was out when the big item was picked up.
-- **Choosing a slot** (keys 1-5, the mouse wheel, d-pad left / right, or a tap or click on the hotbar) holds that
+- **Choosing a slot** (keys 1-5, d-pad left / right, or a tap or click on the hotbar) holds that
   slot's small item in one hand. Choosing slot 1 takes the vacuum out. Choosing the slot already chosen puts its
   item away (the vacuum away, or the hands item back into its slot). Choosing an empty item slot leaves the hands
   empty.
@@ -61,7 +61,7 @@ and re-applies it whenever it changes (`CarrySpeedSystem.apply`), and Sprint rea
 ## 3. Server
 
 - `CargoInventoryRules` (shared, pure, specced) decides what E does (`pickUpPlan`), what choosing a slot does
-  (`selectPlan`), the wheel's step (`step`), whether the hands leave pick-ups open (`handsFree`) and the load
+  (`selectPlan`), the d-pad's step (`step`), whether the hands leave pick-ups open (`handsFree`) and the load
   (`load`).
 - `CargoInventoryTracker` (server State, specced) stores the four slots per player, the slot whose item is in the
   hands, and the slot chosen with empty hands. A pocketed item is an entry (kind, value, visual, appraisal). The hands
@@ -85,8 +85,15 @@ The engine's Backpack hotbar is turned off, because it can't be styled. The Shif
 cream index cards with the key number in the corner. Each card shows:
 
 - the vacuum (slot 1): its drawing and the canister fill;
-- an item: its own art in a small viewport, its name typed under it, and its tag. The tag is `$???` until the item is
-  appraised, then its value (with the jackpot name in the item's name). Trash shows `+N`. A fragile item's tag is red.
+- an item: its own art in a small viewport and its tag. The tag is `$???` until the item is appraised, then its value
+  (the HOLDING slip names the hands item, with the jackpot name). Trash shows `+N`. A fragile item's tag is red.
+
+**Sizes** (`ShiftHotbarViewModel.metrics`, follow-up the same day: the user found the first cards too big). Desktop
+cards are half the first ones: 48 x 56 px (were 96 x 112), 24 px art, 5 px gaps and lift, so the bar is 260 px wide.
+The text stays readable rather than halving: the key and tag at 12 px, the HANDS FULL stamp at 11 px on two lines.
+A 48 px card can't fit the item's name at a readable size, so the name is left to the art. Phone cards stay 44 x 48
+px (were 62 x 70): half would be 31 x 35, under a thumb's 44 px tap target, so they are about 70% of before, with
+11 px text.
 
 The chosen card is lifted and pinned. A big item's card gets a red **HANDS FULL** stamp, and the other cards fade
 while it locks them. Above the desktop hotbar a slip names the hands item, its worth and its keys ("HOLDING MONITOR
@@ -99,36 +106,39 @@ the Q (pocket) and X (swap) actions.
 
 ## 5. The small pocketable valuables
 
-Six new small valuables, all grimy (appraised by vacuuming, `$???` until then). Their art is in the client-office-slate
+Five new small valuables, all grimy (appraised by vacuuming, `$???` until then). Their art is in the client-office-slate
 kit's chunky parts style (`design/production-art/map-kits/client-office-slate/build_small_valuables.py`), uploaded to
 the Icey Labs group, at `ReplicatedStorage.Assets.CleanupCrew.ArtKits["client-office-slate"].cargo.<key>`.
 
 | Key | Name | Size | Base value | Jackpot | Traits | Open / desk weight |
 |---|---|---|---|---|---|---|
 | coffeeMug | Coffee mug | tiny | 40-70 | World's Best Boss, 10%, ×3 | fragile, buriable | 4 / 3 |
-| wristwatch | Wristwatch | tiny | 90-170 | Gold, 8%, ×2.5 | buriable | 2 / 4 |
-| deskClock | Desk clock | tiny | 55-95 | Brass carriage, 10%, ×2 | | 3 / 2 |
-| snowGlobe | Snow globe | tiny | 60-110 | Musical, 12%, ×2 | fragile | 2 / 3 |
-| deskPhone | Desk phone | light | 50-90 | none | | 3 / 1 |
+| wristwatch | Wristwatch | tiny | 90-170 | Gold, 8%, ×2.5 | buriable | 3 / 4 |
+| deskClock | Desk clock | tiny | 55-95 | Brass carriage, 10%, ×2 | | 4 / 2 |
+| snowGlobe | Snow globe | tiny | 60-110 | Musical, 12%, ×2 | fragile | 3 / 3 |
 | keyring | Keyring | tiny | 30-60 | Master, 10%, ×3 | rattly (jingles in the hand), buriable | 2 / 4 |
 
 - **More small items:** the plaque's open-floor weight goes from 2 to 3. Small kinds are now about 68% of the
-  open-floor valuable roll, so a trip naturally fills 2-4 slots.
+  open-floor valuable roll (19 of 28), so a trip naturally fills 2-4 slots.
+- **No desk phone** (cut by the user the same day). A sixth item, the desk phone (light, 50-90, open 3 / desk 1), was
+  removed from the registry, the spawn tables, the art kit keys and the place's templates. Its open-floor weight went
+  to the watch (2 → 3), the clock (3 → 4) and the globe (2 → 3), which keeps the small share at 68% and raises the
+  average open valuable a little (the phone was below average).
 - **Values:** a small item is worth about what the big one it replaces in the roll was worth. That way a map full of
   them still pays the biggest crew's quota (the office-generation guarantee, 1200 value for a quota of 900).
-- **Placement:** the mug, clock, globe and phone can sit on tables, and the clock and globe on cabinet tops
+- **Placement:** the mug, clock and globe can sit on tables, and the clock and globe on cabinet tops
   (`OfficeSpawnRules`).
 - **Proxy boxes:** each new item has its own proxy box (`partSize`), which the art is fitted into.
 - **Hold poses:** the carry validator (`AnimationCarryHarness`) passes every new template on Pippa and a stock R15. On
-  Pippa the hold rules pick the two-palm `under` hold for the mug, clock, phone and globe, and the one-hand `hand` hold
+  Pippa the hold rules pick the two-palm `under` hold for the mug, clock and globe, and the one-hand `hand` hold
   for the keyring and watch. For the keyring and watch to pass, their templates author a `CarryHandle` at an edge (the
   keyring's ring end, the watch's side). Held from their middle, the planner can't place Pippa's fist on these very
   thin items (it is 0.15 stud off), even though the live pose reaches.
 
 ## 6. Open questions for the user
 
-- **The mouse wheel steps the hotbar** and no longer zooms the camera during play (I / O still zoom). Keep it, or
-  limit the wheel to the hotbar only while it is hovered?
+- ~~The mouse wheel steps the hotbar~~ Answered: the wheel zooms the camera again (the engine's zoom, like I / O);
+  the hotbar is keys 1-5, a click or tap, and the d-pad.
 - **Pocket-sized items mostly use two palms on Pippa** (the `under` hold), because the automatic hold rules choose by
   shape and weight. Should small items always hang from one hand?
 - **The Manager's PA "staff notice" strip** is drawn over the bottom-centre hotbar. One of them needs to move.

@@ -19,15 +19,14 @@ local EXPECTED = {
 	{ "wristwatch", "salvage", 130, 90, 170 },
 	{ "deskClock", "salvage", 75, 55, 95 },
 	{ "snowGlobe", "salvage", 85, 60, 110 },
-	{ "deskPhone", "salvage", 70, 50, 90 },
 	{ "keyring", "salvage", 45, 30, 60 },
 }
 
-local SMALL_VALUABLES = { "coffeeMug", "wristwatch", "deskClock", "snowGlobe", "deskPhone", "keyring" }
+local SMALL_VALUABLES = { "coffeeMug", "wristwatch", "deskClock", "snowGlobe", "keyring" }
 
 return function()
-	it("holds the seventeen office items and the dust bag", function()
-		expect(#CargoRegistry.ids()).to.equal(18)
+	it("holds the sixteen office items and the dust bag", function()
+		expect(#CargoRegistry.ids()).to.equal(17)
 	end)
 
 	it("matches the spec's kinds, reference values and ranges", function()
@@ -119,16 +118,15 @@ return function()
 	end)
 
 	describe("small pocketable valuables", function()
-		it("are small (tiny, or light for the desk phone), grimy, on the open floor and in desks", function()
+		it("are tiny, grimy, on the open floor and in desks", function()
 			for _, id in SMALL_VALUABLES do
 				local def = CargoRegistry.get(id)
-				expect(def.size == "tiny" or def.size == "light").to.equal(true)
+				expect(def.size).to.equal("tiny")
 				expect(def.grimy).to.equal(true)
 				expect(def.greed).to.equal(false)
 				expect(def.spawnWeight > 0).to.equal(true)
 				expect(def.deskWeight > 0).to.equal(true)
 			end
-			expect(CargoRegistry.get("deskPhone").size).to.equal("light")
 		end)
 
 		it("carry their own proxy boxes, small enough to hold in one hand", function()
@@ -140,7 +138,7 @@ return function()
 			expect(CargoRegistry.get("plaque").partSize).to.equal(Vector3.new(1, 0.4, 0.8))
 		end)
 
-		it("make the small kinds most of the open-floor valuables roll", function()
+		it("make the small kinds about two thirds of the open-floor valuables roll", function()
 			local small, big = 0, 0
 			for _, id in CargoRegistry.ids() do
 				local def = CargoRegistry.get(id)
@@ -152,7 +150,11 @@ return function()
 					end
 				end
 			end
-			expect(small / (small + big) >= 0.6).to.equal(true)
+			expect(small / (small + big) >= 0.65).to.equal(true)
+		end)
+
+		it("has no desk phone (cut by the user)", function()
+			expect(CargoRegistry.has("deskPhone")).to.equal(false)
 		end)
 
 		it("keeps the mug and the snow globe fragile and the keyring rattly", function()
