@@ -54,6 +54,9 @@ local NpcConstants = {
 	WANDER_PAUSE = { 2, 5 },
 	-- Below this horizontal speed the NPC counts as standing.
 	IDLE_SPEED = 0.5,
+	-- A walk / run clip with a planted speed plays at speed / plantedSpeed, within these (NpcStrideFormulas).
+	STRIDE_MIN_RATE = 0.5,
+	STRIDE_MAX_RATE = 2.5,
 }
 
 return NpcConstants

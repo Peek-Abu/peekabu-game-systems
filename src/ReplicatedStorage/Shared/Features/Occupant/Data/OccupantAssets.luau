@@ -129,6 +129,21 @@ local ANIMATIONS: { [string]: AnimationSlot } = {
 		priority = Enum.AnimationPriority.Idle,
 		interruption = "ambient",
 	},
+	-- CC Manager Sit Type v1: at a desk, stiffly typing with his long fingers (his pelvis on the seat through the Root
+	-- joint; see SEAT for where the game puts him). The head turn layers over it.
+	harlowSitType = {
+		assetId = "rbxassetid://110578500987193",
+		looped = true,
+		priority = Enum.AnimationPriority.Idle,
+		interruption = "ambient",
+	},
+	-- CC Manager Stand Up v1: from the seated pose (hands still) up to standing, ending SEAT.standOffset from the seat.
+	harlowStandUp = {
+		assetId = "rbxassetid://133807355222245",
+		looped = false,
+		priority = Enum.AnimationPriority.Action,
+		interruption = "protected",
+	},
 	-- CC Manager Head Turn v1: the head swivels 180 degrees on the long neck and back (keys only the Neck, so it
 	-- layers over a walk). Registered for the game to play; nothing plays it yet.
 	harlowHeadTurn = {
@@ -168,6 +183,16 @@ return table.freeze({
 	FACE_APPEARANCE = "Face",
 	FACE_ATTRIBUTE = "ManagerFace",
 	FACES_FOLDER = "Faces",
+	-- The studs/s his walk and run clips plant their feet at when played at 1x (the Npc base plays them at his speed
+	-- / that, so his feet stay planted at every tier).
+	PLANTED_SPEEDS = table.freeze({ harlowWalk = 10, harlowRun = 20 }),
+	-- His clipboard: its own part on the template (Motor6D ClipboardGrip on the RightHand), hidden while he types.
+	CLIPBOARD = "Clipboard",
+	-- Sitting at an office desk (harlowSitType / harlowStandUp, measured against the built desk and chair): anchor his
+	-- HumanoidRootPart at the chair's centre, at the height it has standing on that floor, facing the desk; the clips
+	-- lower his pelvis onto the seat. harlowStandUp ends standing standOffset away (root space, -Z toward the desk):
+	-- move the root there when it ends.
+	SEAT = table.freeze({ standOffset = Vector3.new(0, 0, -1.1) }),
 	SOUNDS = table.freeze(SOUNDS),
 	GIBBERISH = table.freeze(GIBBERISH),
 	IMAGES = table.freeze(IMAGES),

@@ -9,12 +9,16 @@
 -- passive ignores players; hostile chases and attacks what it sees; timid flees from players in range.
 export type Attitude = "passive" | "hostile" | "timid"
 
--- Animation registry ids per pose (AnimationServiceServer:playOnRig). All optional.
+-- Animation registry ids per pose (AnimationServiceServer:playOnRig). All optional. A walk / run clip may name the
+-- speed (studs/s) its feet plant at when played at 1x: it then plays at the NPC's speed / that (NpcStrideFormulas),
+-- so the feet stay planted at any speed. Unset = 1x.
 export type NpcAnimations = {
 	idle: string?,
 	walk: string?,
 	run: string?,
 	attack: string?,
+	walkPlantedSpeed: number?,
+	runPlantedSpeed: number?,
 }
 
 export type NpcDef = {

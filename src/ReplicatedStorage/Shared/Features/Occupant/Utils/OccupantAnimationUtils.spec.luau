@@ -1,4 +1,7 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local OccupantAnimationUtils = require(script.Parent.OccupantAnimationUtils)
+local OccupantAssets = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantAssets)
 
 local function slot(assetId, looped)
 	return {
@@ -50,6 +53,18 @@ return function()
 			expect(poses.run).to.equal("run")
 			expect(OccupantAnimationUtils.poses(hasOnly({ "harlowRun" })).run).to.equal("harlowRun")
 		end)
+
+		it(
+			"names his own clips' planted speeds, so the base plays them at his speed; none for the base clips",
+			function()
+				local own = OccupantAnimationUtils.poses(hasOnly({ "harlowWalk", "harlowRun" }))
+				expect(own.walkPlantedSpeed).to.equal(OccupantAssets.PLANTED_SPEEDS.harlowWalk)
+				expect(own.runPlantedSpeed).to.equal(OccupantAssets.PLANTED_SPEEDS.harlowRun)
+				local base = OccupantAnimationUtils.poses(hasOnly({ "walk", "run" }))
+				expect(base.walkPlantedSpeed).to.equal(nil)
+				expect(base.runPlantedSpeed).to.equal(nil)
+			end
+		)
 	end)
 
 	describe("action", function()

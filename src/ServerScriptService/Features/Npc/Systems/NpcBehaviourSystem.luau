@@ -23,6 +23,7 @@ local NpcTypes = require(NpcServer.Data.NpcTypes)
 local NpcBrainRules = require(NpcServer.Rules.NpcBrainRules)
 local NpcPathRules = require(NpcServer.Rules.NpcPathRules)
 local NpcSenseRules = require(NpcServer.Rules.NpcSenseRules)
+local NpcStrideFormulas = require(NpcServer.Utils.NpcStrideFormulas)
 local NpcMoverSystem = require(NpcServer.Systems.NpcMoverSystem)
 local AnimationServiceServer = require(ServerScriptService.Features.Animation.AnimationServiceServer)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
@@ -123,16 +124,23 @@ local function updatePose(agent: Agent)
 	local pose: NpcTypes.Pose = NpcBrainRules.poseFor(speed, agent.def.walkSpeed)
 	-- Annotated, and compared through a local: both keep the pose literal from widening to `string`.
 	local unchanged = pose == agent.pose
-	if unchanged then
-		return
+	if not unchanged then
+		agent.pose = pose
+		local previous = agent.poseHandle
+		if previous ~= nil then
+			previous:stop()
+		end
+		local id = if pose == "idle" then animations.idle elseif pose == "walk" then animations.walk else animations.run
+		agent.poseHandle = if id ~= nil then AnimationServiceServer:playOnRig(agent.model, id) else nil
 	end
-	agent.pose = pose
-	local previous = agent.poseHandle
-	if previous ~= nil then
-		previous:stop()
+	-- The stride follows the speed every think, so the feet stay planted (a clip without a planted speed stays 1x).
+	local handle = agent.poseHandle
+	if handle ~= nil and pose ~= "idle" then
+		local planted = if pose == "walk" then animations.walkPlantedSpeed else animations.runPlantedSpeed
+		if planted ~= nil then
+			handle:adjustSpeed(NpcStrideFormulas.rate(speed, planted))
+		end
 	end
-	local id = if pose == "idle" then animations.idle elseif pose == "walk" then animations.walk else animations.run
-	agent.poseHandle = if id ~= nil then AnimationServiceServer:playOnRig(agent.model, id) else nil
 end
 
 local function attack(agent: Agent, target: Candidate, now: number, deps: ThinkDeps)
