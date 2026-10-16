@@ -1,27 +1,25 @@
 --!strict
 --[=[
 	CargoServiceClient: the hotbar inventory's input (docs/superpowers/specs/2026-10-16-cleanup-crew-hotbar-inventory-design.md):
-	keys 1-5 choose a hotbar slot (1 the vacuum, 2-5 the item slots), the mouse wheel and the gamepad's d-pad left /
-	right step through them, and the Shift HUD's hotbar taps call `select`. The engine's own Backpack hotbar is turned
+	keys 1-5 choose a hotbar slot (1 the vacuum, 2-5 the item slots), the gamepad's d-pad left / right step through
+	them, and the Shift HUD's hotbar taps and clicks call `select`. The engine's own Backpack hotbar is turned
 	off (it cannot be styled; the Shift HUD draws the paper one, ShiftHotbar). Button-friendly `drop` and `throw` for the
 	touch buttons. Requests only; the server decides. M2: slipping on puddles (CargoSlipSystem).
 	CargoFeedbackSystem plays the banking swoop and floaters, the pickup and pocket sounds, and the plant's leaves;
 	CargoBillboardSystem draws the price tags near the camera; CargoGrimeVisualSystem dirties grimy valuables and
 	CargoLootFeedbackSystem plays the glint, reveal and appraisal moments (the loot loop).
 
-	The wheel is sunk while a shift's hotbar is up (bound above the camera's own wheel zoom), so it steps the hotbar
-	instead of zooming; I / O still zoom.
+	The mouse wheel is deliberately left unbound: it zooms the camera (the engine's own zoom, as I / O do).
 
 	Drop and throw send Carry's own packets: CarryServiceClient binds them to G / F but has no callable API
 	(an open question for the base).
 
-	Spec-exempt shell (Input, ContextActionService, StarterGui, Camera, ByteNet); the stepping is the specced
+	Spec-exempt shell (Input, StarterGui, Camera, ByteNet); the stepping is the specced
 	CargoInventoryRules.step.
 
 	@class CargoServiceClient
 ]=]
 
-local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterGui = game:GetService("StarterGui")
@@ -45,9 +43,6 @@ local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync
 
 local unbinders: { () -> () } = {}
 
--- The wheel's ContextActionService binding: above the camera's wheel zoom (Medium), so a wheel step is sunk here.
-local WHEEL_ACTION = "CargoHotbarWheel"
-local WHEEL_PRIORITY = Enum.ContextActionPriority.High.Value + 1
 -- How often (seconds) and how many times turning the engine Backpack off is retried while the CoreGui loads.
 local BACKPACK_RETRY = 0.5
 local BACKPACK_TRIES = 20
@@ -157,23 +152,6 @@ local CargoServiceClient: CargoServiceClient = {
 				end
 			end)
 		)
-		ContextActionService:BindActionAtPriority(
-			WHEEL_ACTION,
-			function(_name: string, state: Enum.UserInputState, input: InputObject): Enum.ContextActionResult
-				if state ~= Enum.UserInputState.Change or input.Position.Z == 0 then
-					return Enum.ContextActionResult.Pass
-				end
-				-- Wheel down (towards you) steps right, as Roblox's and most games' hotbars do.
-				self:step(if input.Position.Z < 0 then 1 else -1)
-				return Enum.ContextActionResult.Sink
-			end,
-			false,
-			WHEEL_PRIORITY,
-			Enum.UserInputType.MouseWheel
-		)
-		table.insert(unbinders, function()
-			ContextActionService:UnbindAction(WHEEL_ACTION)
-		end)
 		CargoSlipSystem.start()
 		CargoFeedbackSystem.start()
 		CargoBillboardSystem.start()

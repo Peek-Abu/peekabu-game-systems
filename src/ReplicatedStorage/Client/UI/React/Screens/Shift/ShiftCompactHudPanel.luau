@@ -12,6 +12,7 @@ local Constants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPape
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local VM = require(script.Parent.ShiftHudViewModel)
 local ShiftHotbar = require(script.Parent.ShiftHotbar)
+local ShiftHotbarViewModel = require(script.Parent.ShiftHotbarViewModel)
 local CrewVM = require(script.Parent.ShiftCrewViewModel)
 local useProgressTween = require(ReplicatedStorage.Client.UI.React.Hooks.useProgressTween)
 local SprintStaminaSlip = require(ReplicatedStorage.Client.UI.React.Screens.Sprint.SprintStaminaSlip)
@@ -227,7 +228,7 @@ local function ShiftCompactHudPanel(props: Props): React.ReactNode
 			else ""}`
 		holding = sheet(
 			Vector2.new(slipWidth, if #actions > 0 then 58 else 40),
-			UDim2.new(0.5, 0, 1, -inset - 122 - 8),
+			UDim2.new(0.5, 0, 1, -inset - ShiftHotbarViewModel.barSize(false, #view.hotbar.slots).Y - 8),
 			Vector2.new(0.5, 1),
 			C.cream,
 			{

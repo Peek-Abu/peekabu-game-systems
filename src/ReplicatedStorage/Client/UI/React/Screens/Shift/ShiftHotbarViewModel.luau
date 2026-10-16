@@ -50,7 +50,70 @@ export type HotbarView = {
 	selected: number,
 }
 
+-- A hotbar card's measurements in HUD design px (docs/superpowers/specs/2026-10-16-cleanup-crew-hotbar-inventory-design.md
+-- §4): the card, the gap between cards, how far the chosen card lifts, the sheet's padding, the art's size and top,
+-- and the text sizes (key number, item name, tag, HANDS FULL stamp). A name size of 0 draws no name.
+export type Metrics = {
+	width: number,
+	height: number,
+	gap: number,
+	lift: number,
+	padding: number,
+	icon: number,
+	iconTop: number,
+	key: number,
+	name: number,
+	tag: number,
+	stamp: number,
+}
+
+-- Half the first hotbar's cards (96 x 112): the text stays at 12 px, readable, and the item name, which a 48 px card
+-- cannot fit at a readable size, is left to the art (the HOLDING slip names the hands item).
+local DESKTOP: Metrics = table.freeze({
+	width = 48,
+	height = 56,
+	gap = 5,
+	lift = 5,
+	padding = 3,
+	icon = 24,
+	iconTop = 2,
+	key = 12,
+	name = 0,
+	tag = 12,
+	stamp = 11,
+})
+-- Half the first phone cards (62 x 70) would be 31 x 35, under a thumb's 44 px tap target, so a phone card stays
+-- 44 px wide (and 48 tall): about 70% of before.
+local PHONE: Metrics = table.freeze({
+	width = 44,
+	height = 48,
+	gap = 4,
+	lift = 5,
+	padding = 3,
+	icon = 22,
+	iconTop = 2,
+	key = 11,
+	name = 0,
+	tag = 11,
+	stamp = 10,
+})
+
 local ShiftHotbarViewModel = {}
+
+--[=[
+	The hotbar card's measurements on phone or desktop (HUD design px).
+]=]
+function ShiftHotbarViewModel.metrics(phone: boolean): Metrics
+	return if phone then PHONE else DESKTOP
+end
+
+--[=[
+	The whole bar's size: `count` cards and the gaps between them wide, a card and its lift tall.
+]=]
+function ShiftHotbarViewModel.barSize(phone: boolean, count: number): Vector2
+	local size = ShiftHotbarViewModel.metrics(phone)
+	return Vector2.new(count * size.width + math.max(count - 1, 0) * size.gap, size.height + size.lift)
+end
 
 -- The hotbar slot chosen now: the hands item's, else the vacuum's when it is out, else the empty-hands choice.
 local function chosenSlot(entry: PublicPlayerTypes.PublicPlayer): number

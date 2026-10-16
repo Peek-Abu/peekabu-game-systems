@@ -70,7 +70,7 @@ return table.freeze({
 	PUBLIC_HANDS_FIELD = "invHands",
 	PUBLIC_SELECTED_FIELD = "invSelected",
 	SLOT_ACTIONS = table.freeze(SLOT_ACTIONS),
-	-- The gamepad's previous / next slot actions (the mouse wheel steps them too).
+	-- The gamepad's previous / next slot actions (d-pad left / right; the mouse wheel stays the camera zoom).
 	PREVIOUS_SLOT_ACTION = "hotbarPrevious",
 	NEXT_SLOT_ACTION = "hotbarNext",
 	-- A bulky item is held far out in front (the cabinet cart).

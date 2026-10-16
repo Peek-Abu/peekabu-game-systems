@@ -59,4 +59,45 @@ return function()
 			expect(ShiftHotbarViewModel.hotbar({}).selected).to.equal(0)
 		end)
 	end)
+	describe("metrics", function()
+		-- The first hotbar's cards (96 x 112 desktop, 62 x 70 phone): the user asked for them half the size.
+		local desktop = ShiftHotbarViewModel.metrics(false)
+		local phone = ShiftHotbarViewModel.metrics(true)
+
+		it("draws the desktop cards and their art at half the first hotbar's size", function()
+			expect(desktop.width).to.equal(48)
+			expect(desktop.height).to.equal(56)
+			expect(desktop.icon).to.equal(24)
+			expect(desktop.gap).to.equal(5)
+			expect(desktop.lift).to.equal(5)
+		end)
+
+		it("keeps every desktop text at 11 px or more, and drops the name a half-size card cannot fit", function()
+			expect(desktop.key >= 11).to.equal(true)
+			expect(desktop.tag >= 11).to.equal(true)
+			expect(desktop.stamp >= 11).to.equal(true)
+			expect(desktop.name).to.equal(0)
+		end)
+
+		it("keeps a 44 px tap target on phone, smaller than before", function()
+			expect(phone.width >= 44).to.equal(true)
+			expect(phone.height + phone.lift >= 44).to.equal(true)
+			expect(phone.width < 62 and phone.height < 70).to.equal(true)
+			expect(phone.key >= 10 and phone.tag >= 10 and phone.stamp >= 10).to.equal(true)
+		end)
+
+		it("fits the art and the tag inside each card", function()
+			for _, size in { desktop, phone } do
+				local inner = size.height - 2 * size.padding
+				expect(size.iconTop + size.icon <= inner - (size.tag + 6)).to.equal(true)
+				expect(size.icon <= size.width - 2 * size.padding).to.equal(true)
+			end
+		end)
+
+		it("measures the whole bar: five cards and four gaps wide, a card and its lift tall", function()
+			local bar = ShiftHotbarViewModel.barSize(false, 5)
+			expect(bar.X).to.equal(5 * 48 + 4 * 5)
+			expect(bar.Y).to.equal(56 + 5)
+		end)
+	end)
 end

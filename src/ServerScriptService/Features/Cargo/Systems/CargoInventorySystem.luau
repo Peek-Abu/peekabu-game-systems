@@ -8,7 +8,7 @@
 	  and the hands stay as they were; a big item takes the first free slot and both hands (Carry), the small hands
 	  item going back into its own slot first and the vacuum away (it comes back by itself after the drop).
 	  CargoInventoryRules.pickUpPlan decides.
-	- `select` (the `Select` packet: keys 1-5, the wheel, a hotbar tap): CargoInventoryRules.selectPlan. The small hands
+	- `select` (the `Select` packet: keys 1-5, the d-pad, a hotbar tap or click): CargoInventoryRules.selectPlan. The small hands
 	  item goes back into its slot (`stash`: claim, record, release from Carry, destroy), a filled slot's item is drawn
 	  into one hand (respawned at the feet and handed to Carry once Carry has adopted it, within HAND_WAIT, else put back
 	  in its slot), and the vacuum comes out or goes away (VacuumServiceServer:setEquipped). A big item in the hands

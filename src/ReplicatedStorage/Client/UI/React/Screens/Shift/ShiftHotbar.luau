@@ -2,8 +2,9 @@
 --[=[
 	ShiftHotbar: the hotbar inventory on paper (docs/superpowers/specs/2026-10-16-cleanup-crew-hotbar-inventory-design.md §4).
 	Five cream index cards in a row, each with its key number in the corner: slot 1 the vacuum (its drawing and its
-	canister), slots 2-5 the item slots (the item's own art in a little viewport, its name typed under it and its tag:
-	"$???" until appraised, its value after, "+N" for trash, in red for a FRAGILE item). The chosen card is lifted and
+	canister), slots 2-5 the item slots (the item's own art in a little viewport and its tag: "$???" until appraised,
+	its value after, "+N" for trash, in red for a FRAGILE item; its name too when the card is big enough). The cards'
+	measurements are ShiftHotbarViewModel.metrics. The chosen card is lifted and
 	pinned; a big item's card is stamped HANDS FULL and the other cards fade while it locks them. Tapping or clicking a
 	card asks for that slot (`onSelect`). Presentational: it draws the HotbarView it is given.
 
@@ -32,10 +33,6 @@ export type Props = {
 	onSelect: ((slot: number) -> ())?,
 }
 
--- Card sizes and the gap between cards, in px; the chosen card lifts by LIFT.
-local DESKTOP = table.freeze({ width = 96, height = 112, gap = 10, icon = 46, key = 18, name = 12, tag = 17 })
-local PHONE = table.freeze({ width = 62, height = 70, gap = 6, icon = 30, key = 13, name = 0, tag = 12 })
-local LIFT = 10
 -- A locked hotbar fades the cards it locks this much.
 local LOCKED_FADE = 0.55
 
@@ -96,23 +93,23 @@ type CardProps = {
 
 local function Card(props: CardProps): React.ReactNode
 	local slot = props.slot
-	local size = if props.phone then PHONE else DESKTOP
+	local size = ShiftHotbarViewModel.metrics(props.phone)
 	-- Every card but the big item's own fades while a big item locks the hotbar.
 	local faded = props.locked and not slot.locked
 	local fade = if faded then LOCKED_FADE else 0
-	local inner = size.width - 12
+	local inner = size.width - 2 * size.padding
 	local content: { [string]: React.ReactNode } = {
 		key = e(PaperLabel, {
 			text = slot.key,
 			role = "heading",
 			size = size.key,
 			color = if slot.selected then C.stamp else C.ink,
-			position = UDim2.fromOffset(-4, -6),
+			position = UDim2.fromOffset(-1, -3),
 			transparency = fade,
 			fit = true,
 		}),
 	}
-	local iconTop = if props.phone then 2 else 4
+	local iconTop = size.iconTop
 	if slot.vacuum then
 		content.icon = e("Frame", {
 			AnchorPoint = Vector2.new(0.5, 0),
@@ -158,18 +155,19 @@ local function Card(props: CardProps): React.ReactNode
 	end
 	if slot.locked then
 		content.stamp = e(PaperStamp, {
-			text = "HANDS FULL",
-			size = if props.phone then 10 else 15,
+			-- Two lines, so the stamp stays about a card wide at a readable size.
+			text = "HANDS\nFULL",
+			size = size.stamp,
 			anchor = Vector2.new(0.5, 0.5),
 			position = UDim2.fromScale(0.5, 0.5),
 			tilt = -12,
 		})
 	end
-	local lift = if slot.selected then LIFT else 0
+	local lift = if slot.selected then size.lift else 0
 	local tilt = if slot.selected then 0 elseif props.index % 2 == 0 then 1.5 else -1.5
 	return e("TextButton", {
 		LayoutOrder = props.index,
-		Size = UDim2.fromOffset(size.width, size.height + LIFT),
+		Size = UDim2.fromOffset(size.width, size.height + size.lift),
 		BackgroundTransparency = 1,
 		Text = "",
 		AutoButtonColor = false,
@@ -182,19 +180,19 @@ local function Card(props: CardProps): React.ReactNode
 	}, {
 		card = e(PaperSheet, {
 			size = UDim2.fromOffset(size.width, size.height),
-			position = UDim2.fromOffset(0, LIFT - lift),
+			position = UDim2.fromOffset(0, size.lift - lift),
 			paper = if slot.empty then C.manila else C.cream,
 			tilt = tilt,
 			fastener = if slot.selected then "pin" else nil,
 			shadow = slot.selected,
-			padding = 6,
+			padding = size.padding,
 			children = content,
 		}),
 	})
 end
 
 local function ShiftHotbar(props: Props): React.ReactNode
-	local size = if props.phone then PHONE else DESKTOP
+	local size = ShiftHotbarViewModel.metrics(props.phone)
 	local cards: { [string]: React.ReactNode } = {
 		layout = e("UIListLayout", {
 			FillDirection = Enum.FillDirection.Horizontal,
@@ -212,11 +210,11 @@ local function ShiftHotbar(props: Props): React.ReactNode
 			onSelect = props.onSelect,
 		})
 	end
-	local count = #props.view.slots
+	local bar = ShiftHotbarViewModel.barSize(props.phone, #props.view.slots)
 	return e("Frame", {
 		AnchorPoint = props.anchor,
 		Position = props.position,
-		Size = UDim2.fromOffset(count * size.width + (count - 1) * size.gap, size.height + LIFT),
+		Size = UDim2.fromOffset(bar.X, bar.Y),
 		BackgroundTransparency = 1,
 	}, cards)
 end
