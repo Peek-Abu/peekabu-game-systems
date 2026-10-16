@@ -21,7 +21,7 @@ local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper
 local usePaperHudScale = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperHudScale)
 local ShiftCrewViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftCrewViewModel)
 local ShiftCompactHudPanel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftCompactHudPanel)
-local VacuumServiceClient = require(ReplicatedStorage.Client.Features.Vacuum.VacuumServiceClient)
+local CargoServiceClient = require(ReplicatedStorage.Client.Features.Cargo.CargoServiceClient)
 local usePaperViewport = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperViewport)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 local SprintStore = require(ReplicatedStorage.Client.Features.Sprint.State.SprintStore)
@@ -86,8 +86,8 @@ local function ShiftHud(): React.ReactNode
 				return not open
 			end)
 		end,
-		onToolToggle = function()
-			VacuumServiceClient:toggleTool()
+		onSelect = function(slot: number)
+			CargoServiceClient:select(slot)
 		end,
 	})
 	return e("Frame", {

@@ -86,8 +86,11 @@ The depot contract board and a one-card arrival screen carry this; no tutorial n
   spawns hidden under piles; **A** all salvage spawns exposed.
 
 ### Cargo and carrying
-- **Hands:** one item of any kind. **Pockets:** 2 slots, tiny items only, shown on the HUD.
-- Drop (G), throw (F, throwable items only), pocket (tiny items).
+- **Superseded 2026-10-16 by the [hotbar inventory](2026-10-16-cleanup-crew-hotbar-inventory-design.md):** five
+  hotbar slots (1 the vacuum, 2-5 items); E pockets a small item straight into a slot, a big item takes a slot and
+  both hands and locks the hotbar. The original rule was: **Hands:** one item of any kind. **Pockets:** 2 slots, tiny
+  items only, shown on the HUD.
+- Drop (G), throw (F, throwable items only). (Pocket (Q) and swap (X) are gone with the hotbar.)
 - **Dropping makes noise** scaled by weight. Dropping is the escape tool: empty-handed you outrun Harlow.
 
 | Item | Kind | Value | Traits |
@@ -195,7 +198,8 @@ overlay, results scene, depot pad and contract board, arrival and drive cards.
 - **State in charm-sync:** `shift` world entry (phase, `endsAt`, quota, cleared, bonus, tier,
   overtime and clock-out deadlines, variant); per-player public fields (pockets, canister fill,
   `inTruck`, `vacuuming`, `room`, `roomDepth`, `cam`, `caughtUntil`, and the depot `truck`). Carry already publishes the hands item.
-- **Events in ByteNet:** client→server vacuum start/stop (via Interaction channels), pocket, swap;
+- **Events in ByteNet:** client→server vacuum start/stop (via Interaction channels), hotbar slot select (was: pocket,
+  swap);
   server→client announcements (Toast), bank popup, catch sequence, Harlow cues. Inbound requests go
   through `RequestHandler.wrap`.
 - **Interactions:** Load, Search, Clock out, vote buttons on the results scene.

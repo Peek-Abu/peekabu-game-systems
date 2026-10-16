@@ -6,8 +6,8 @@
 	  spinning (CargoFeedbackUtils.arc); when the last lands, a cha-ching at the bed and a rising, fading load floater
 	  per amount, drawn with the paper kit (CargoLoadFloater: "+15 CLEARED", the "+40 BONUS" stamp;
 	  CargoWorldViewModel.floater; CargoFeedbackUtils.floaters). The clearance bar is the HUD's.
-	- Your public fields: a pickup sound when something new comes into your hands, a pocket sound when a pocket
-	  fills, and plant leaves in front of your camera while your hands hold a blocksView item.
+	- Your public fields: a pickup sound when something new comes into your hands, a pocket sound when an item
+	  slot fills, and plant leaves in front of your camera while your hands hold a blocksView item.
 	Drop, rattle and search sounds are the server's (CargoServiceServer). Client-local instances; pending sounds
 	(CargoAssets) are skipped silently and counted.
 
@@ -244,7 +244,7 @@ local function step()
 	end
 end
 
--- The local player's hands kind and pocket count, from the public fields.
+-- The local player's hands kind and how many item slots hold something, from the public fields.
 local function readMine(map: PublicPlayerTypes.PublicPlayerMap): (string?, number)
 	local me = map[StateSyncConstants.publicEntryKey(Players.LocalPlayer.UserId)]
 	if me == nil then
@@ -252,8 +252,8 @@ local function readMine(map: PublicPlayerTypes.PublicPlayerMap): (string?, numbe
 	end
 	local hands = me[CarryConstants.PUBLIC_FIELD]
 	local pockets = 0
-	for _, field in CargoConstants.PUBLIC_POCKET_FIELDS do
-		if me[field] ~= nil then
+	for _, fields in CargoConstants.SLOT_FIELDS do
+		if me[fields.kind] ~= nil then
 			pockets += 1
 		end
 	end

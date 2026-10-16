@@ -117,7 +117,6 @@ export type VacuumServiceClient = {
 	endVacuum: (self: VacuumServiceClient) -> (),
 	isVacuuming: (self: VacuumServiceClient) -> boolean,
 	equipVacuum: (self: VacuumServiceClient) -> boolean,
-	toggleTool: (self: VacuumServiceClient) -> (),
 }
 
 local VacuumServiceClient: VacuumServiceClient = {
@@ -218,19 +217,6 @@ local VacuumServiceClient: VacuumServiceClient = {
 		end
 		humanoid:EquipTool(tool)
 		return selected()
-	end,
-
-	toggleTool = function(self)
-		if selected() then
-			self:endVacuum()
-			local character = Players.LocalPlayer.Character
-			local humanoid = if character ~= nil then character:FindFirstChildOfClass("Humanoid") else nil
-			if humanoid ~= nil then
-				humanoid:UnequipTools()
-			end
-		else
-			self:equipVacuum()
-		end
 	end,
 
 	isVacuuming = function(_self)

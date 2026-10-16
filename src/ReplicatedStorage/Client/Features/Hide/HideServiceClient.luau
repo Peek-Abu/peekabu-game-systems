@@ -108,10 +108,10 @@ local function forget(prompt: ProximityPrompt)
 	end
 end
 
--- A spot is offered only with empty hands or a pocketable item, and never while hiding.
+-- A spot is offered only with empty hands or a small item, and never while hiding.
 local function settleRanges()
 	local size = heldSize()
-	local open = hiddenSpot == nil and (size == nil or size == HideConstants.POCKETABLE_SIZE)
+	local open = hiddenSpot == nil and (size == nil or HideConstants.POCKETABLE_SIZES[size] == true)
 	local now = os.clock()
 	for prompt in ids do
 		local parent = prompt.Parent

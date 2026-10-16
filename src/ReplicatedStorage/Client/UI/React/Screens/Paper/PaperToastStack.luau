@@ -239,9 +239,9 @@ local function Widget(): React.ReactNode
 		),
 		layout = layout,
 		top = if layout == "desktop" then 128 / scale else nil,
-		-- The compact HUD (ShiftCompactHudPanel) draws in screen px: on desktop its hands, pocket and tool cards reach
-		-- SLIP_CLEAR_DESKTOP px up from the bottom-right at the most; on phone the tool card ends SLIP_CLEAR_PHONE px
-		-- down. The slips sit just past them, converted to this frame's design px.
+		-- The compact HUD (ShiftCompactHudPanel) draws in screen px: on desktop nothing of it on the right reaches
+		-- SLIP_CLEAR_DESKTOP px up from the bottom-right (its hotbar is centred); on phone the time card and the stamina
+		-- slip end above SLIP_CLEAR_PHONE px down. The slips sit just past them, converted to this frame's design px.
 		slipBottom = if layout == "desktop" then SLIP_CLEAR_DESKTOP / scale else nil,
 		slipRight = (if layout == "desktop" then 24 else 12) / scale,
 		slipTop = if layout == "phone" then SLIP_CLEAR_PHONE / scale else nil,

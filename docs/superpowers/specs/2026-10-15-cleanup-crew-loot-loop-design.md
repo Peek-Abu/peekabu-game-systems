@@ -160,7 +160,7 @@ safe place, see the chase-kit design) and cleaned it there risk-free, which took
 | Dropping or throwing it | It lands with its cleanliness, still locked: it can never be cleaned again. A fragile item's crack and its grime multiply. |
 | Cleaning while someone holds it | Not allowed (as above). If someone picks up an item mid-clean, the cleaners' channels end on the next tick and its grime locks at the cleanliness reached. |
 | A catch drops it | Same as a drop: forced drops keep the item and its state. Pocketed items scatter with their appraisal (base, cleanliness, appraised, variant) intact. |
-| Pocketing a tiny grimy item | Allowed (you pick it up first, which locks it). The pocket entry carries the appraisal and the lock. You can't clean in a pocket. Unpocketing or a scatter respawns it as it was, still locked. |
+| Pocketing a tiny grimy item | Allowed (you pick it up first, which locks it). The pocket entry carries the appraisal and the lock. You can't clean in a pocket. Unpocketing or a scatter respawns it as it was, still locked. 2026-10-16, the [hotbar inventory](2026-10-16-cleanup-crew-hotbar-inventory-design.md): E pockets a small item directly; that counts as its first pick-up (the lock), and drawing it from its slot respawns it as it was. |
 | Multiplayer cleaning | Channel rates add up. Everyone on the item at the appraisal moment, plus anyone within 30 studs, gets the slip. Noise is credited to every cleaner. |
 | Vacuuming a pile next to an item | The aim picks the target nearest the wand's floor head, and keeps the current one while it stays in reach. Piles and items share one pick. |
 | Overtime ×1.5 | It applies to the valuables' pay, at their current (grime-scaled) value, at the moment they are banked. Cleared counts ×1. |

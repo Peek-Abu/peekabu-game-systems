@@ -8,7 +8,7 @@
 
 export type Category = "trash" | "salvage"
 
--- How big an item is: its carry weight, its drop noise, and whether it fits a pocket.
+-- How big an item is: its carry weight, its drop noise, and whether it is small (tiny / light: pocketed on pick-up).
 export type Size = "tiny" | "light" | "medium" | "heavy" | "bulky"
 
 export type ItemDef = {
@@ -47,7 +47,7 @@ export type ItemDef = {
 	spawnWeight: number,
 	-- Relative chance as desk / locker contents (0 = never).
 	deskWeight: number,
-	-- Graybox look.
+	-- The gameplay proxy (graybox) box the art is fitted into: its size class's, unless the catalog gives its own.
 	partSize: Vector3,
 	color: Color3,
 }
@@ -60,7 +60,7 @@ export type Jackpot = { name: string, chance: number, multiplier: number }
 -- name when it hit.
 export type AppraisalRoll = { base: number, variant: string? }
 
--- A valuable's grime and appraisal state, as the item's attributes carry it (and a pocket entry keeps it):
+-- A valuable's grime and appraisal state, as the item's attributes carry it (and an inventory entry keeps it):
 -- `clean` 0 (fully grimy) to 1, `appraised` once its value is revealed (sticky), `sealed` once its grime is locked
 -- (picked up while dirty: never cleaned again; absent = not sealed).
 export type Appraisal = { base: number, variant: string?, clean: number, appraised: boolean, sealed: boolean? }
@@ -68,7 +68,7 @@ export type Appraisal = { base: number, variant: string?, clean: number, apprais
 -- Visual-only server snapshot; never consulted for authoritative category or value.
 export type VisualIdentity = { kitId: string, proxySize: Vector3, rotation: CFrame }
 
--- A carried or pocketed item as banking sees it: its kind and its value now (after any damage).
+-- A carried or pocketed (inventory) item as banking sees it: its kind and its value now (after any damage).
 export type CargoEntry = {
 	kind: string,
 	value: number,
@@ -102,19 +102,34 @@ export type SpawnOptions = {
 	artKit: string?,
 	-- Spawned invisible and un-interactable (under a pile) until revealed.
 	hidden: boolean?,
-	-- The value it carries (a scattered pocket item keeps its own); absent = the catalog value. Ignored for a grimy
+	-- The value it carries (a scattered or drawn inventory item keeps its own); absent = the catalog value. Ignored for a grimy
 	-- kind, whose value always follows its appraisal.
 	value: number?,
-	-- A grimy kind's base value and state (a planned roll, or a pocketed item's own); absent = a fresh, fully grimy
+	-- A grimy kind's base value and state (a planned roll, or an inventory item's own); absent = a fresh, fully grimy
 	-- item at the catalog value.
 	appraisal: Appraisal?,
-	-- Where it came from, for analytics: "desk" (searched) or "scatter" (a caught or leaving player's pockets);
+	-- Where it came from, for analytics: "desk" (searched), "scatter" (a caught or leaving player's inventory) or
+	-- "hotbar" (drawn from an item slot into the hands);
 	-- absent = "pile" when hidden, else "open".
 	source: string?,
 }
 
--- What a swap request does (M2, spec §6.3): take the newest pocketed item into empty hands, or trade a tiny
--- hands item for the oldest pocketed one.
-export type SwapAction = "unpocket" | "swap"
+-- What pressing E on a cargo item does (CargoInventoryRules.pickUpPlan): a small item goes into a free item slot
+-- ("pocket"), a big one into a free slot and both hands ("hold").
+export type PickUpPlan = "pocket" | "hold"
+
+-- The hotbar as a slot choice sees it: the hotbar slot chosen now (0 = none), the item slot whose item is in the hands
+-- (nil = none), whether that item is big (the hands are locked), and which item slots (1-4) hold something.
+export type HotbarState = {
+	selected: number,
+	hands: number?,
+	handsBig: boolean,
+	filled: { [number]: boolean },
+}
+
+-- What choosing a hotbar slot does (CargoInventoryRules.selectPlan): put the hands item back in its slot (`stash`),
+-- draw item slot `draw` into one hand, take the vacuum out (true) or put it away (false), and the slot now chosen
+-- (0 = none).
+export type SelectPlan = { stash: boolean, draw: number?, vacuum: boolean, selected: number }
 
 return {}

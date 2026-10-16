@@ -98,7 +98,7 @@ made them risky); hidden players stay visible to their crew, in a clear tucked p
   - the spot is free and not cooling off for you;
   - at least **1 s** has passed since your last stay ended;
   - you are in range;
-  - your hands are empty, or hold a pocketable tiny item.
+  - your hands are empty, or hold a small (tiny or light) item (2026-10-16: the hotbar inventory's small sizes).
 
   Anything bigger stops you, and picking one up while hidden pushes you out.
 - **The body, and what the crew sees:**

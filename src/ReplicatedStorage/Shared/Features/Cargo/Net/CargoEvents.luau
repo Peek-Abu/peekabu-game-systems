@@ -23,14 +23,10 @@ end
 local CargoEvents = ByteNet.defineNamespace(NAMESPACE, function()
 	return {
 		packets = {
-			-- Pocket the hands item. Payload unused; the packet is the request.
-			Pocket = ByteNet.definePacket({
-				value = ByteNet.bool,
-				reliabilityType = "reliable",
-			}),
-			-- Swap the hands item with a pocket, or unpocket into empty hands (M2). Payload unused.
-			Swap = ByteNet.definePacket({
-				value = ByteNet.bool,
+			-- Choose a hotbar slot (1 = the vacuum, 2-5 the item slots); the server checks it and decides
+			-- (CargoInventoryRules.selectPlan).
+			Select = ByteNet.definePacket({
+				value = ByteNet.uint8,
 				reliabilityType = "reliable",
 			}),
 			-- Server → all: a Load landed (spec §7 "item swoops into the truck, cha-ching, '+15' floater"). The

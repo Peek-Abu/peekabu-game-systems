@@ -3,7 +3,7 @@
 	HideRules: who may go into a hiding spot, and how long they may stay (docs/superpowers/specs/
 	2026-10-15-cleanup-crew-chase-kit-design.md §4). In: alive, not being caught, not already hidden, the spot free and
 	not cooling off for them, rested since their last stay (REENTER_SECONDS), within the prompt's range (plus
-	RANGE_TOLERANCE), and empty-handed or holding a pocketable tiny item. Out: not before MIN_STAY_SECONDS (a tap in and
+	RANGE_TOLERANCE), and empty-handed or holding a small (tiny or light) item. Out: not before MIN_STAY_SECONDS (a tap in and
 	out cannot spam). Stay: fine until CAMP_WARN_SECONDS, cramped until CAMP_SECONDS, then pushed out. Shared: the
 	client's chip counts down with the same rule. Pure.
 
@@ -30,7 +30,7 @@ function HideRules.canEnter(input: HideTypes.EnterInput): (boolean, string?)
 		return false, "already hidden"
 	end
 	local held = input.heldSize
-	if held ~= nil and held ~= HideConstants.POCKETABLE_SIZE then
+	if held ~= nil and HideConstants.POCKETABLE_SIZES[held] ~= true then
 		return false, "hands full"
 	end
 	if input.occupied then

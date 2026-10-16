@@ -310,7 +310,16 @@ return function()
 	end)
 
 	describe("table and cabinet surfaces", function()
-		local TABLETOP = { plaque = true, monitor = true, coffeeMachine = true, waterJug = true }
+		local TABLETOP = {
+			plaque = true,
+			monitor = true,
+			coffeeMachine = true,
+			waterJug = true,
+			coffeeMug = true,
+			deskClock = true,
+			snowGlobe = true,
+			deskPhone = true,
+		}
 		it("sits plaques and monitors on tables and cabinets, at most one piece each", function()
 			for seed = 1, 30 do
 				local layout = OfficeLayoutGenerationUtils.generate(LAYOUT, seed)

@@ -14,9 +14,10 @@
 	  is the lobby one (quotaMet = false), so the reason there always reads quota_missed;
 	- Vacuum `vacuumStarted`: first_cleanup_started (once per player per shift); `pileCleared`: pile_cleared for each
 	  player on the pile (and their cleaning count);
-	- Carry `pickedUp`: cargo_picked_up, and an optional-salvage attempt opens when ShiftAnalyticsUtils.isSalvageAttempt
+	- Carry `pickedUp` and Cargo `collected` (a small item pocketed straight into the hotbar): cargo_picked_up, and an optional-salvage attempt opens when ShiftAnalyticsUtils.isSalvageAttempt
 	  says so (after the quota, outside the loading bay); `dropped`: the item's attempt closes (dropped / thrown /
-	  caught / left) and cargo_dropped is sent. Pocketing, banking and resets ("forced", "destroyed") are not drops;
+	  caught / left) and cargo_dropped is sent. Stashing into a slot, banking and resets ("forced", "destroyed") are not
+	  drops;
 	- Death `died` with Harlow's cause: the player's open attempts close as "caught", then player_caught;
 	- Mr. Harlow's mode/target attributes (the `Occupant` tag; read, never required, since Occupant requires Shift):
 	  noise_investigation for the crew, with the noise he most likely heard (Noise `made`, kept a few seconds), and
@@ -45,6 +46,7 @@ local NoiseTypes = require(ReplicatedStorage.Shared.Features.Noise.Data.NoiseTyp
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
+local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
 local NoiseServiceServer = require(ServerScriptService.Features.Noise.NoiseServiceServer)
@@ -356,6 +358,11 @@ function ShiftAnalyticsWatchSystem.start(
 	local picked = CarryServiceServer.pickedUp:Connect(onPickedUp)
 	keep(function()
 		picked:Disconnect()
+	end)
+	-- A small item pocketed straight from the world (the hotbar inventory) is a pick-up too.
+	local pocketed = CargoServiceServer.collected:Connect(onPickedUp)
+	keep(function()
+		pocketed:Disconnect()
 	end)
 	local dropped = CarryServiceServer.dropped:Connect(onDropped)
 	keep(function()

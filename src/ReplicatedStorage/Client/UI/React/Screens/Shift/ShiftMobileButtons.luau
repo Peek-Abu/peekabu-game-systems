@@ -1,8 +1,9 @@
 --!strict
 --[=[
 	ShiftMobileButtons: the phone's arc of round action buttons around the big VACUUM / BANK button (Figma 1d 9:61,
-	1e 9:116): DROP, THROW and POCKET at 72 px, the big button at 104 px, with >= 16 px between circles, all clear of
-	the Roblox Jump button (bottom right) and the thumbstick zone (bottom-left 40%). Offsets are from the bottom-right
+	1e 9:116): DROP and THROW at 72 px, the big button at 104 px, with >= 16 px between circles, all clear of
+	the Roblox Jump button (bottom right) and the thumbstick zone (bottom-left 40%); the hotbar slots are tapped on the
+	hotbar (ShiftHotbar). Offsets are from the bottom-right
 	corner, so the arc tracks the Jump button; on a larger touch screen the engine's Jump button is bigger, so the arc
 	moves clear of it (ShiftHudViewModel.arcFor picks the arc from the viewport's short side).
 
@@ -214,16 +215,6 @@ local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactN
 			CargoServiceClient:throw()
 		end,
 	}
-	local pocketProps: ButtonProps = {
-		label = "POCKET",
-		spot = arc.pocket,
-		large = false,
-		available = view.pocket,
-		ready = view.pocketReady,
-		onActivated = function()
-			CargoServiceClient:pocket()
-		end,
-	}
 	return e("Frame", {
 		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
@@ -240,7 +231,6 @@ local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactN
 		}),
 		drop = if view.drop then e(ActionButton, dropProps) else nil,
 		throw = if view.throw then e(ActionButton, throwProps) else nil,
-		pocket = if view.pocket then e(ActionButton, pocketProps) else nil,
 		sprint = if view.sprint
 			then e(ActionButton, {
 				label = "SPRINT",

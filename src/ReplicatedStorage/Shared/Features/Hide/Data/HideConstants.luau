@@ -96,8 +96,8 @@ return table.freeze({
 	CAMP_WARN_SECONDS = 20,
 	CAMP_SECONDS = 30,
 	SPOT_COOLDOWN_SECONDS = 10,
-	-- A hand item small enough to hide with (a pocketable tiny item); anything bigger stops you.
-	POCKETABLE_SIZE = "tiny",
+	-- The hand items small enough to hide with (the hotbar's small sizes: tiny and light); a big item stops you.
+	POCKETABLE_SIZES = table.freeze({ tiny = true, light = true }),
 	-- The body under the furniture: the root stands where a standing root would (the pose folds the body down), placed
 	-- by its FurnitureDef's tuck (TUCK_POSE).
 	TUCK_POSE = table.freeze(TUCK_POSE),

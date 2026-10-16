@@ -15,7 +15,10 @@
 	pickUp for the thief).
 	`pickedUp` / `dropped(player, object, reason)` signals let a game react (banking, noise, analytics). A game that
 	boosts WalkSpeed itself (a sprint) names the carrier's unboosted speed through `setSpeedBase`, so the carry slow
-	and its restore start from that, never from a boost that happened to be on at the pick-up.
+	and its restore start from that, never from a boost that happened to be on at the pick-up. The slow itself is
+	CarrySpeedSystem's, which a game whose players carry more than the hands item (an inventory) can give their whole
+	load. A game that decides itself what the pick-up prompt does for some objects (an inventory that pockets small
+	items) sets `setPickUpRoute`.
 
 	Spec-exempt shell (Instances, physics, Players, ByteNet); the rules are the specced CarryRegistry,
 	CarryFormulas and CarryHoldTracker.
@@ -44,6 +47,7 @@ local InteractionRegistry = require(InteractionData.InteractionRegistry)
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local CarryHoldTracker = require(ServerScriptService.Features.Carry.State.CarryHoldTracker)
 local CarryPlacementSystem = require(ServerScriptService.Features.Carry.Systems.CarryPlacementSystem)
+local CarrySpeedSystem = require(ServerScriptService.Features.Carry.Systems.CarrySpeedSystem)
 local AnimationCarrySystem = require(ServerScriptService.Features.Animation.Systems.AnimationCarrySystem)
 local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
 local StateSyncPublicPlayerStore = require(ServerScriptService.Features.StateSync.State.StateSyncPublicPlayerStore)
@@ -66,7 +70,6 @@ type Held = {
 	contact: AnimationCarrySystem.Controller?,
 	saved: { SavedPart },
 	humanoid: Humanoid?,
-	savedWalkSpeed: number?,
 }
 
 local log = Logger.new("CarryServiceServer")
@@ -80,8 +83,8 @@ local objectsById: { [number]: Instance } = {}
 local nextObjectId = 0
 local held: { [number]: Held } = {} -- by UserId
 local counters = { pickedUp = 0, dropped = 0, thrown = 0, refused = 0 }
--- The game's unboosted speed for a carrier (nil = the humanoid's WalkSpeed as it is).
-local speedBase: ((player: Player) -> number?)? = nil
+-- The game's handler for the pick-up prompt: true when it dealt with the object (nil = Carry picks everything up).
+local pickUpRoute: ((player: Player, target: Instance) -> boolean)? = nil
 local stoppers: { () -> () } = {}
 
 local function rootPartOf(target: Instance): BasePart?
@@ -112,8 +115,8 @@ local function partsOf(target: Instance): { BasePart }
 	return parts
 end
 
--- Ends a hold: unwelds and restores the object, restores the carrier's speed, clears the published
--- state. Returns the object's root part (so a throw can launch it), or nil when nothing was held.
+-- Ends a hold: unwelds and restores the object, re-applies the carrier's walk for what is left of their load
+-- (CarrySpeedSystem), clears the published state. Returns the object's root part (so a throw can launch it), or nil when nothing was held.
 local function release(player: Player): BasePart?
 	local state = held[player.UserId]
 	holds:release(player.UserId)
@@ -129,11 +132,8 @@ local function release(player: Player): BasePart?
 		saved.part.Massless = saved.massless
 		saved.part.CanCollide = saved.canCollide
 	end
-	local humanoid = state.humanoid
-	local speed = state.savedWalkSpeed
-	if humanoid ~= nil and speed ~= nil and humanoid.Parent ~= nil then
-		humanoid.WalkSpeed = speed
-	end
+	CarrySpeedSystem.setHeld(player.UserId, nil)
+	CarrySpeedSystem.apply(player)
 	state.target:SetAttribute(CarryConstants.CARRIED_BY_ATTRIBUTE, nil)
 	state.target:SetAttribute(InteractionConstants.ENABLED_ATTRIBUTE, nil)
 	StateSyncPublicPlayerStore.clearField(player.UserId, CarryConstants.PUBLIC_FIELD)
@@ -177,6 +177,7 @@ export type CarryServiceServer = {
 	forceDrop: (self: CarryServiceServer, player: Player, reason: CarryTypes.DropReason?) -> boolean,
 	getCarried: (self: CarryServiceServer, player: Player) -> Instance?,
 	setSpeedBase: (self: CarryServiceServer, source: ((player: Player) -> number?)?) -> (),
+	setPickUpRoute: (self: CarryServiceServer, route: ((player: Player, target: Instance) -> boolean)?) -> (),
 }
 
 local CarryServiceServer: CarryServiceServer
@@ -212,6 +213,10 @@ CarryServiceServer = {
 	]=]
 	start = function(self)
 		InteractionServiceServer:onInteract(CarryConstants.INTERACTION_KIND, function(player, target)
+			local route = pickUpRoute
+			if route ~= nil and route(player, target) then
+				return
+			end
 			local ok, reason = self:pickUp(player, target)
 			if not ok then
 				log:debug(`pick-up refused for {player.Name}: {reason or "?"}`)
@@ -368,13 +373,6 @@ CarryServiceServer = {
 			CollectionService:AddTag(weld, tag)
 		end
 
-		local base = speedBase
-		local savedWalkSpeed = if humanoid ~= nil
-			then (if base ~= nil then base(player) else nil) or humanoid.WalkSpeed
-			else nil
-		if humanoid ~= nil and savedWalkSpeed ~= nil then
-			humanoid.WalkSpeed = CarryFormulas.carrierSpeed(savedWalkSpeed, def.weight)
-		end
 		held[player.UserId] = {
 			target = target,
 			root = root,
@@ -383,8 +381,9 @@ CarryServiceServer = {
 			contact = contact,
 			saved = saved,
 			humanoid = humanoid,
-			savedWalkSpeed = savedWalkSpeed,
 		}
+		CarrySpeedSystem.setHeld(player.UserId, def.weight)
+		CarrySpeedSystem.apply(player)
 		target:SetAttribute(CarryConstants.CARRIED_BY_ATTRIBUTE, player.UserId)
 		-- Nobody can pick up what someone is already holding.
 		target:SetAttribute(InteractionConstants.ENABLED_ATTRIBUTE, false)
@@ -481,7 +480,15 @@ CarryServiceServer = {
 		must not yield.
 	]=]
 	setSpeedBase = function(_self, source)
-		speedBase = source
+		CarrySpeedSystem.setSpeedBase(source)
+	end,
+
+	--[=[
+		Sets THE handler of the pick-up prompt: it is asked first and returns true when it dealt with the object
+		(nil = Carry picks everything up itself). It must not yield.
+	]=]
+	setPickUpRoute = function(_self, route)
+		pickUpRoute = route
 	end,
 
 	getState = function(_self)

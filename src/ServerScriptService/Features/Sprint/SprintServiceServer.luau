@@ -4,7 +4,8 @@
 	server-authoritative: the client only says whether its sprint key is held (SprintEvents.Sprint, rate limited); every
 	TICK the server decides (SprintRules: alive, not frozen in a catch, not hiding, the bar allows) and owns the speed
 	while sprinting: SPRINT_SPEED slowed by the load exactly as the walk is (SprintSpeedFormulas, through Carry's own
-	formula: empty 23, light 21.3, medium 18.4, heavy 15, bulky 11.5), and the player's own (carried) walk otherwise. The bar (SprintStaminaFormulas) drains
+	formula and Carry's whole load, the hotbar inventory included: empty 23, four small items 20.7, medium 18.4, heavy 15,
+	bulky 11.5), and the player's own (carried) walk otherwise. The bar (SprintStaminaFormulas) drains
 	only while they move at a sprint and is published as the Player's SprintStamina / Sprinting attributes (the HUD's
 	bar). Sprinting feet are heard: a small noise every SPRINT_NOISE_INTERVAL while moving at a sprint (NoiseServiceServer;
 	walking stays silent).
@@ -30,11 +31,10 @@ local SprintEvents = require(SprintShared.Net.SprintEvents)
 local SprintRules = require(SprintShared.Rules.SprintRules)
 local SprintStaminaFormulas = require(SprintShared.Utils.SprintStaminaFormulas)
 local SprintSpeedFormulas = require(SprintShared.Utils.SprintSpeedFormulas)
-local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
-local CarryRegistry = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryRegistry)
 local CarryFormulas = require(ReplicatedStorage.Shared.Features.Carry.Utils.CarryFormulas)
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
+local CarrySpeedSystem = require(ServerScriptService.Features.Carry.Systems.CarrySpeedSystem)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
 local HideServiceServer = require(ServerScriptService.Features.Hide.HideServiceServer)
 local NoiseServiceServer = require(ServerScriptService.Features.Noise.NoiseServiceServer)
@@ -74,12 +74,9 @@ local function runnerOf(player: Player): Runner
 	return runner
 end
 
--- The weight of what the player carries (0 with empty hands).
+-- The load the player carries (Carry's CarrySpeedSystem: the game's whole inventory load, else the hands item).
 local function weightOf(player: Player): number
-	local carried = CarryServiceServer:getCarried(player)
-	local kind = if carried ~= nil then carried:GetAttribute(CarryConstants.KIND_ATTRIBUTE) else nil
-	local def = if type(kind) == "string" then CarryRegistry.get(kind) else nil
-	return if def ~= nil then def.weight else 0
+	return CarrySpeedSystem.weightFor(player)
 end
 
 -- Ends a boost: the humanoid walks again, at its own speed slowed by whatever it carries (Carry's formula).
@@ -130,7 +127,7 @@ local function stepOne(player: Player, runner: Runner, dt: number)
 	elseif not ok and runner.requested then
 		counters.refused += 1
 	end
-	-- While sprinting, the speed follows the load in the hands every tick (a pick-up or drop mid-sprint included).
+	-- While sprinting, the speed follows the load every tick (a pick-up, a pocketing or a drop mid-sprint included).
 	local sprintSpeed = SprintSpeedFormulas.speed(weight)
 	if runner.boosted ~= nil and humanoid ~= nil and humanoid.WalkSpeed ~= sprintSpeed then
 		humanoid.WalkSpeed = sprintSpeed

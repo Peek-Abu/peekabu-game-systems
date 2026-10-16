@@ -50,6 +50,12 @@ local keys: { [ArtTypes.Family]: { string } } = {
 		"fishTank",
 		"goldenStapler",
 		"filingCabinet",
+		"coffeeMug",
+		"wristwatch",
+		"deskClock",
+		"snowGlobe",
+		"deskPhone",
+		"keyring",
 	},
 	props = {
 		"keyboard",

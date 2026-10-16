@@ -6,18 +6,35 @@
 	@class CargoConstants
 ]=]
 
--- Carry weight per size. Carry walks at CarryFormulas.walkSpeedFor(16, weight, 0.05, 0.4): tiny and light
--- 14.8 (any carried item puts you under Harlow's chase speed of 15), medium 12.8, heavy 10.4, bulky 8 (half).
+-- Carry weight per size: what Carry registers for each kind (its hold pose is planned against it). The walk while
+-- loaded is CarryFormulas.carrierSpeed(16, load) = 16 x max(0.4, 1 - 0.05 x load), the sprint 23 x the same factor.
+-- A big item (medium / heavy / bulky) in the hands loads its WEIGHT: medium 12.8 walk, heavy 10.4, bulky 8.
 local WEIGHT: { [string]: number } = { tiny = 1.5, light = 1.5, medium = 4, heavy = 7, bulky = 10 }
+
+-- The hotbar inventory (docs/superpowers/specs/2026-10-16-cleanup-crew-hotbar-inventory-design.md). Small sizes go
+-- straight into a free item slot on pick-up (E) and can be drawn into one hand; anything else is a big item, held in
+-- both hands, which locks the hotbar until it is dropped.
+local SMALL_SIZES: { [string]: boolean } = { tiny = true, light = true }
+
+-- The public-player fields that publish each item slot (1-4, the hotbar's 2-5): its kind, its value when it is known
+-- (trash always; a valuable once appraised; absent = "$???"), and an appraised jackpot's name.
+export type SlotFields = { kind: string, value: string, variant: string }
+local SLOT_FIELDS: { SlotFields } = {}
+for index = 1, 4 do
+	table.insert(
+		SLOT_FIELDS,
+		table.freeze({ kind = `inv{index}`, value = `inv{index}Value`, variant = `inv{index}Variant` })
+	)
+end
+
+-- The Input actions that select hotbar slots 1-5 (1 = the vacuum), keyboard 1-5 and gamepad none (scroll / LB-RB).
+local SLOT_ACTIONS: { string } = { "hotbar1", "hotbar2", "hotbar3", "hotbar4", "hotbar5" }
 
 -- Noise radius (studs) of a drop, by size. M2's Noise feature reads these through CargoHandlingRules.
 local DROP_NOISE: { [string]: number } = { tiny = 6, light = 14, medium = 24, heavy = 36, bulky = 40 }
 
 -- A fragile item's value fraction after 0, 1, then 2 or more impacts.
 local FRAGILE_TIERS: { number } = { 1, 0.5, 0.25 }
-
--- The public-player fields that name what is in each pocket (absent = empty).
-local PUBLIC_POCKET_FIELDS: { string } = { "pocket1", "pocket2" }
 
 -- The office plant's leaves in front of the camera while you carry it (spec §4: "leaves partly block your
 -- view"): camera-space offsets (x right, y up, -z forward), a few greens, one thin leaf size.
@@ -38,14 +55,24 @@ return table.freeze({
 	WEIGHT = table.freeze(WEIGHT),
 	DROP_NOISE = table.freeze(DROP_NOISE),
 	FRAGILE_TIERS = table.freeze(FRAGILE_TIERS),
-	-- Pockets: two slots, tiny items only.
-	POCKET_SLOTS = 2,
-	POCKET_SIZE = "tiny",
-	PUBLIC_POCKET_FIELDS = table.freeze(PUBLIC_POCKET_FIELDS),
-	-- The Input action that pockets the hands item.
-	POCKET_ACTION = "pocket",
-	-- The Input action that swaps the hands item with a pocket, or unpockets into empty hands (M2).
-	SWAP_ACTION = "swap",
+	-- The hotbar: HOTBAR_SLOTS slots, VACUUM_SLOT the vacuum, the rest ITEM_SLOTS item slots (hotbar slot = item
+	-- slot + 1). A small item carried (pocketed or in one hand) loads SMALL_LOAD: 1 item walks 15.6 / sprints 22.4,
+	-- 2 15.2 / 21.9, 3 14.8 / 21.3, 4 14.4 / 20.7 (still a hair past the Manager's chase of 20). A big item adds its
+	-- WEIGHT on top: a monitor with 3 small items walks 11.6 / sprints 16.7.
+	HOTBAR_SLOTS = 5,
+	VACUUM_SLOT = 1,
+	ITEM_SLOTS = 4,
+	SMALL_SIZES = table.freeze(SMALL_SIZES),
+	SMALL_LOAD = 0.5,
+	SLOT_FIELDS = table.freeze(SLOT_FIELDS),
+	-- The public fields naming the item slot whose item is in the hands (absent = none) and the hotbar slot chosen
+	-- with empty hands (absent = none; the vacuum's own public `vacuumEquipped` says when slot 1 is out).
+	PUBLIC_HANDS_FIELD = "invHands",
+	PUBLIC_SELECTED_FIELD = "invSelected",
+	SLOT_ACTIONS = table.freeze(SLOT_ACTIONS),
+	-- The gamepad's previous / next slot actions (the mouse wheel steps them too).
+	PREVIOUS_SLOT_ACTION = "hotbarPrevious",
+	NEXT_SLOT_ACTION = "hotbarNext",
 	-- A bulky item is held far out in front (the cabinet cart).
 	BULKY_HOLD_OFFSET = CFrame.new(0, -1, -4.5),
 	-- Attributes on a spawned item, and its label's name.
@@ -76,7 +103,7 @@ return table.freeze({
 	SEARCH_NOISE = 12,
 	RATTLE_NOISE = 12,
 	RATTLE_INTERVAL = 2,
-	-- Pocketed items scatter this far around where their owner died or left.
+	-- A caught, dead or leaving player's pocketed items scatter this far around where they were.
 	SCATTER_RADIUS = 4,
 	-- How often (seconds) each player's position is remembered, for scattering when their character is gone.
 	ROOT_SAMPLE_INTERVAL = 0.5,

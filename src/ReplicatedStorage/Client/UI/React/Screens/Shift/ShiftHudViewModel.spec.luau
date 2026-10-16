@@ -38,7 +38,7 @@ local function rectGap(button, rect)
 	return math.sqrt(dx * dx + dy * dy) - button.size / 2
 end
 
-local BUTTONS = { "primary", "drop", "throw", "pocket", "sprint" }
+local BUTTONS = { "primary", "drop", "throw", "sprint" }
 
 -- Every gap the arc must keep, as a list of the ones it breaks (empty when clear): >= 16 px from the Jump button and
 -- between buttons, and right of the thumbstick zone (the left 40% of a `width` px screen). Pure, so it can live
@@ -65,10 +65,10 @@ end
 
 return function()
 	describe("compact HUD policy", function()
-		it("does not show empty pockets or unavailable carry actions", function()
+		it("counts no items and offers no carry actions with an empty inventory", function()
 			local view = ShiftHudViewModel.hud(snapshot(), {}, 0, false)
 			local compact = ShiftHudViewModel.compact(view, {})
-			expect(compact.pocketCount).to.equal(0)
+			expect(compact.itemCount).to.equal(0)
 			expect(#compact.actions).to.equal(0)
 			expect(compact.equipped).to.equal(false)
 		end)
@@ -87,9 +87,9 @@ return function()
 			-- A valuable's worth is a mystery until appraised (its tag shows it): the HUD never guesses.
 			expect(ShiftHudViewModel.compact(salvage, {}).cargoValue).to.equal("$???")
 		end)
-		it("reveals occupied pockets even with empty hands", function()
-			local view = ShiftHudViewModel.hud(snapshot(), { pocket1 = "plaque" }, 0, false)
-			expect(ShiftHudViewModel.compact(view, {}).pocketCount).to.equal(1)
+		it("counts pocketed items even with empty hands", function()
+			local view = ShiftHudViewModel.hud(snapshot(), { inv1 = "plaque", inv3 = "keyring" }, 0, false)
+			expect(ShiftHudViewModel.compact(view, {}).itemCount).to.equal(2)
 		end)
 	end)
 
@@ -173,19 +173,20 @@ return function()
 			expect(view.hands.fragile).to.equal(true)
 		end)
 
-		it("shows empty hands, empty pockets and an absent canister", function()
+		it("shows empty hands, an empty hotbar and an absent canister", function()
 			local view = ShiftHudViewModel.hud(snapshot(), nil, 0, false)
 			expect(view.hands).to.equal(nil)
-			expect(view.pockets[1].empty).to.equal(true)
-			expect(view.pockets[1].name).to.equal("empty")
+			expect(#view.hotbar.slots).to.equal(5)
+			expect(view.hotbar.slots[2].empty).to.equal(true)
+			expect(view.hotbar.slots[2].name).to.equal("")
 			expect(view.canister).to.equal(0)
 			expect(view.canisterMax).to.equal(3)
 		end)
 
-		it("names a pocketed item", function()
-			local view = ShiftHudViewModel.hud(snapshot(), { pocket2 = "plaque" }, 0, false)
-			expect(view.pockets[2].name).to.equal("Employee of the Month plaque")
-			expect(view.pockets[2].empty).to.equal(false)
+		it("names a pocketed item in its hotbar slot", function()
+			local view = ShiftHudViewModel.hud(snapshot(), { inv2 = "plaque" }, 0, false)
+			expect(view.hotbar.slots[3].name).to.equal("Employee of the Month plaque")
+			expect(view.hotbar.slots[3].empty).to.equal(false)
 		end)
 
 		it("counts the clock-out down and carries the truck", function()
@@ -216,15 +217,6 @@ return function()
 			expect(ShiftHudViewModel.buttons({ carrying = "coffeeMachine" }, false).throw).to.equal(false)
 		end)
 
-		it("lights POCKET for a tiny item and a free pocket", function()
-			local tiny = ShiftHudViewModel.buttons({ carrying = "plaque" }, false)
-			expect(tiny.pocket).to.equal(true)
-			expect(tiny.pocketReady).to.equal(true)
-			local full =
-				ShiftHudViewModel.buttons({ carrying = "plaque", pocket1 = "plaque", pocket2 = "goldenStapler" }, false)
-			expect(full.pocketReady).to.equal(false)
-		end)
-
 		it("offers SPRINT with or without a load, never while hiding", function()
 			expect(ShiftHudViewModel.buttons(nil, false).sprint).to.equal(true)
 			expect(ShiftHudViewModel.buttons({ carrying = "coffeeMachine" }, false).sprint).to.equal(true)
@@ -233,18 +225,6 @@ return function()
 
 		it("keeps SPRINT clear of the other buttons on a narrow phone too", function()
 			expect(arcFailures(ShiftHudViewModel.arcFor(375), 667)).to.equal("")
-		end)
-
-		it("keeps POCKET usable to take something out with empty hands", function()
-			local view = ShiftHudViewModel.buttons({ pocket1 = "plaque" }, false)
-			expect(view.pocket).to.equal(true)
-			expect(view.pocketReady).to.equal(false)
-		end)
-
-		it("leaves POCKET dark for a non-tiny item with empty pockets", function()
-			local view = ShiftHudViewModel.buttons({ carrying = "monitor" }, false)
-			expect(view.pocket).to.equal(false)
-			expect(view.pocketReady).to.equal(false)
 		end)
 
 		it("never lights LOAD with empty hands, even at the truck", function()
@@ -315,7 +295,6 @@ return function()
 			expect(arc.primary.y).to.equal(-124)
 			expect(arc.drop.x).to.equal(-332)
 			expect(arc.throw.y).to.equal(-196)
-			expect(arc.pocket.x).to.equal(-193)
 			expect(arcFailures(arc, 844)).to.equal("")
 			expect(ShiftHudViewModel.arcFor(500).jump.size).to.equal(70)
 		end)
@@ -391,20 +370,19 @@ return function()
 			expect(ShiftHudViewModel.keyName(Enum.KeyCode.Left)).to.equal("←")
 		end)
 
-		it("lists the five actions in Figma's order with each first keyboard binding", function()
+		it("lists the actions in Figma's order with each first keyboard binding", function()
 			local hints = ShiftHudViewModel.keyHints({
 				vacuum = { Enum.UserInputType.MouseButton1 },
 				drop = { Enum.KeyCode.G },
 				throw = { Enum.KeyCode.F },
-				pocket = { Enum.KeyCode.Q },
 				interact = { Enum.KeyCode.E },
 			})
-			expect(#hints).to.equal(5)
+			expect(#hints).to.equal(4)
 			expect(hints[1].prefix).to.equal("Hold")
 			expect(hints[1].key).to.equal("LMB")
 			expect(hints[1].label).to.equal("vacuum")
-			expect(hints[5].key).to.equal("E")
-			expect(hints[5].label).to.equal("bank / search")
+			expect(hints[4].key).to.equal("E")
+			expect(hints[4].label).to.equal("bank / search")
 		end)
 
 		it("skips an action with no binding", function()
@@ -413,21 +391,16 @@ return function()
 
 		it("names the hint actions it reads bindings for", function()
 			local actions = ShiftHudViewModel.HINT_ACTIONS
-			expect(#actions).to.equal(6)
+			expect(#actions).to.equal(5)
 			expect(actions[1]).to.equal("vacuum")
-			expect(actions[5]).to.equal("interact")
-			expect(actions[6]).to.equal("sprint")
+			expect(actions[4]).to.equal("interact")
+			expect(actions[5]).to.equal("sprint")
 		end)
 
 		it("draws the hint row on desktop with a keyboard only", function()
 			expect(ShiftHudViewModel.showHints("desktop", true)).to.equal(true)
 			expect(ShiftHudViewModel.showHints("desktop", false)).to.equal(false)
 			expect(ShiftHudViewModel.showHints("phone", true)).to.equal(false)
-		end)
-
-		it("reads the pocket key for the carry caption, Q when unbound", function()
-			expect(ShiftHudViewModel.pocketKey({ pocket = { Enum.KeyCode.R } })).to.equal("R")
-			expect(ShiftHudViewModel.pocketKey({})).to.equal("Q")
 		end)
 	end)
 

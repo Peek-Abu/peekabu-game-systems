@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	ShiftHudViewModel: what the approved Shift HUD (Figma 1a-1c: the time card, the clearance folder and finder's fee
-	plate, the carry panel and the clock-out slip) shows, as display-ready fields per piece, from the shift snapshot and
+	plate, the hands item and the clock-out slip; the hotbar is ShiftHotbarViewModel's) shows, as display-ready fields per piece, from the shift snapshot and
 	the local player's public entry; the phone's action-button arc (Figma 1d/1e: which buttons show, which are lit);
 	the paper interaction prompt chip and the phone LOAD button's readiness (from ShiftPromptStore); the desktop key
 	hints row (Figma 1a) from the live Input bindings. Pure (specced); the components only lay the fields out. The
@@ -26,6 +26,7 @@ local SprintRules = require(ReplicatedStorage.Shared.Features.Sprint.Rules.Sprin
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local ShiftPromptStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftPromptStore)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
+local ShiftHotbarViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHotbarViewModel)
 
 type ShiftSnapshot = ShiftTypes.ShiftSnapshot
 
@@ -37,11 +38,6 @@ export type HandsView = {
 	short: string,
 	-- Whether the traits are written in red (a FRAGILE item).
 	fragile: boolean,
-}
-
-export type PocketView = {
-	name: string,
-	empty: boolean,
 }
 
 export type HudView = {
@@ -67,9 +63,9 @@ export type HudView = {
 	feeBoost: string?,
 	-- The phone plate's shorter boost (Figma 1e "+140 ×1.5").
 	feeBoostShort: string?,
-	-- The carry panel.
+	-- The hands item and the hotbar.
 	hands: HandsView?,
-	pockets: { PocketView },
+	hotbar: ShiftHotbarViewModel.HotbarView,
 	canister: number,
 	canisterMax: number,
 	-- The clock-out slip's countdown, while one runs.
@@ -84,8 +80,6 @@ export type ButtonsView = {
 	primaryAvailable: boolean,
 	drop: boolean,
 	throw: boolean,
-	pocket: boolean,
-	pocketReady: boolean,
 	-- SPRINT (held): whenever the player is not hiding (a load slows it, it never forbids it).
 	sprint: boolean,
 }
@@ -102,7 +96,6 @@ export type ArcView = {
 	primary: ArcSpot,
 	drop: ArcSpot,
 	throw: ArcSpot,
-	pocket: ArcSpot,
 	sprint: ArcSpot,
 	-- The engine's Jump button the arc keeps clear of.
 	jump: ArcSpot,
@@ -200,15 +193,6 @@ function ShiftHudViewModel.hud(
 	local left = if endsAt ~= nil then endsAt - now else 0
 	local total = ShiftConstants.SHIFT_SECONDS
 	local elapsed = math.clamp(total - left, 0, total)
-	local pockets: { PocketView } = {}
-	for _, field in CargoConstants.PUBLIC_POCKET_FIELDS do
-		local kind = entry[field]
-		local def = if type(kind) == "string" then CargoRegistry.get(kind) else nil
-		table.insert(pockets, {
-			name = if def ~= nil then def.name elseif type(kind) == "string" then kind else "empty",
-			empty = type(kind) ~= "string",
-		})
-	end
 	local fill = entry[VacuumConstants.PUBLIC_FIELD]
 	local clockOutAt = snapshot.clockOutAt
 	local overtime = snapshot.stage == "overtime"
@@ -235,7 +219,7 @@ function ShiftHudViewModel.hud(
 		feeBoost = if overtime then `×{ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER} now` else nil,
 		feeBoostShort = if overtime then `×{ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER}` else nil,
 		hands = handsOf(entry[CarryConstants.PUBLIC_FIELD]),
-		pockets = pockets,
+		hotbar = ShiftHotbarViewModel.hotbar(entry),
 		canister = if type(fill) == "number" then fill else 0,
 		canisterMax = VacuumConstants.CANISTER_CAPACITY,
 		clockOut = if snapshot.sub == "clockout" and clockOutAt ~= nil
@@ -248,8 +232,8 @@ end
 --[=[
 	The phone's action buttons (Figma 1d/1e): one big button that is VACUUM with empty hands and LOAD while holding
 	something (lit green when the truck's Load prompt is up, `loadReady`); DROP / THROW only with something in hand
-	(THROW only for a throwable item); POCKET usable with a tiny item or something pocketed, lit when a tiny item can
-	go in a free pocket; SPRINT whenever not `hiding`.
+	(THROW only for a throwable item); SPRINT whenever not `hiding`. The hotbar's slots are tapped on the hotbar
+	itself.
 ]=]
 function ShiftHudViewModel.buttons(
 	me: PublicPlayerTypes.PublicPlayer?,
@@ -260,15 +244,6 @@ function ShiftHudViewModel.buttons(
 	local kind = entry[CarryConstants.PUBLIC_FIELD]
 	local def = if type(kind) == "string" then CargoRegistry.get(kind) else nil
 	local holding = type(kind) == "string"
-	local filled, free = 0, 0
-	for _, field in CargoConstants.PUBLIC_POCKET_FIELDS do
-		if type(entry[field]) == "string" then
-			filled += 1
-		else
-			free += 1
-		end
-	end
-	local tiny = def ~= nil and def.size == "tiny"
 	local primary: "VACUUM" | "BANK" = if holding then "BANK" else "VACUUM"
 	return {
 		primary = primary,
@@ -276,8 +251,6 @@ function ShiftHudViewModel.buttons(
 		primaryAvailable = not holding or loadReady,
 		drop = holding,
 		throw = def ~= nil and def.throwable,
-		pocket = tiny or filled > 0,
-		pocketReady = tiny and free > 0,
 		sprint = SprintRules.offered(hiding == true),
 	}
 end
@@ -298,26 +271,24 @@ local function spot(x: number, y: number, size: number): ArcSpot
 end
 
 -- Figma 1d (844x390): the Jump button is 70 px at (1,-95,1,-90); LOAD/VACUUM 104 px at (608, 266), DROP (512, 282),
--- THROW (555, 194), POCKET (651, 173), 72 px each, as offsets from the bottom-right corner.
+-- THROW (555, 194), 72 px each, as offsets from the bottom-right corner.
 local PHONE_ARC: ArcView = table.freeze({
 	primary = spot(-236, -124, 104),
 	drop = spot(-332, -108, 72),
 	throw = spot(-289, -196, 72),
-	pocket = spot(-193, -217, 72),
 	-- SPRINT: up and left of DROP, clear of THROW and of the thumbstick zone on the narrowest landscape phones.
 	sprint = spot(-380, -196, 72),
 	jump = spot(-95, -90, 70),
 })
 
 -- A larger touch screen: the Jump button is 120 px at (1,-170,1,-210). The big button sits left of it, DROP and THROW
--- stack above the big button, POCKET sits above the Jump button; every gap is >= 16 px, and the arc's left edge
+-- stack above the big button; every gap is >= 16 px, and the arc's left edge
 -- (292 px in) stays right of the bottom-left 40% on any screen past 500 px, and right of the desktop carry panel on
 -- a 1024 px wide tablet.
 local TABLET_ARC: ArcView = table.freeze({
 	primary = spot(-292, -132, 104),
 	drop = spot(-262, -224, 72),
 	throw = spot(-262, -316, 72),
-	pocket = spot(-146, -302, 72),
 	-- SPRINT: above THROW (the arc's left edge stays inside the right 60% down to 501 px).
 	sprint = spot(-262, -408, 72),
 	jump = spot(-170, -210, 120),
@@ -410,7 +381,6 @@ local HINTS: { { action: string, label: string, hold: boolean } } = {
 	{ action = VacuumConstants.ACTION, label = "vacuum", hold = true },
 	{ action = "drop", label = "drop", hold = false },
 	{ action = "throw", label = "throw", hold = false },
-	{ action = CargoConstants.POCKET_ACTION, label = "pocket", hold = false },
 	{ action = "interact", label = "bank / search", hold = false },
 	{ action = "sprint", label = "sprint", hold = true },
 }
@@ -481,14 +451,15 @@ end
 export type CompactView = {
 	cargoValue: string?,
 	equipped: boolean,
-	pocketCount: number,
+	-- How many item slots hold something.
+	itemCount: number,
 	actions: { HintView },
 }
 
 function ShiftHudViewModel.compact(view: HudView, bindings: KeyBindings): CompactView
 	local occupied = 0
-	for _, pocket in view.pockets do
-		if not pocket.empty then
+	for _, slot in view.hotbar.slots do
+		if not slot.vacuum and not slot.empty then
 			occupied += 1
 		end
 	end
@@ -496,25 +467,16 @@ function ShiftHudViewModel.compact(view: HudView, bindings: KeyBindings): Compac
 	if view.hands ~= nil then
 		local def = CargoRegistry.get(view.hands.kind)
 		for _, hint in ShiftHudViewModel.keyHints(bindings) do
-			if
-				hint.label == "drop"
-				or (hint.label == "throw" and def ~= nil and def.throwable)
-				or (hint.label == "pocket" and def ~= nil and def.size == "tiny" and occupied < #view.pockets)
-			then
+			if hint.label == "drop" or (hint.label == "throw" and def ~= nil and def.throwable) then
 				table.insert(actions, hint)
 			end
-		end
-	elseif occupied > 0 then
-		local key = firstKey(bindings, CargoConstants.POCKET_ACTION)
-		if key ~= nil then
-			table.insert(actions, { key = ShiftHudViewModel.keyName(key), label = "unpocket" })
 		end
 	end
 	local hands = view.hands
 	local def = if hands ~= nil then CargoRegistry.get(hands.kind) else nil
 	return {
 		equipped = view.vacuumEquipped,
-		pocketCount = occupied,
+		itemCount = occupied,
 		actions = actions,
 		cargoValue = if hands ~= nil
 			then if def ~= nil and def.grimy
@@ -528,12 +490,6 @@ end
 -- The hint row is drawn on desktop with a keyboard only.
 function ShiftHudViewModel.showHints(layout: UIPaperConstants.Layout, keyboard: boolean): boolean
 	return layout == "desktop" and keyboard
-end
-
--- The carry panel's "Q pocket" caption key: the pocket action's first keyboard binding, Q when it has none.
-function ShiftHudViewModel.pocketKey(bindings: KeyBindings): string
-	local first = firstKey(bindings, CargoConstants.POCKET_ACTION)
-	return if first ~= nil then ShiftHudViewModel.keyName(first) else "Q"
 end
 
 return ShiftHudViewModel

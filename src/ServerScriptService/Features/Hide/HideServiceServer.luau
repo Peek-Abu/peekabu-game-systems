@@ -5,7 +5,7 @@
 
 	- In: a single press of the spot's prompt (C / L1, or a tap on the phone's chip). Re-checked here (HideRules: alive,
 	  not frozen in a catch, not hidden, the spot free and not cooling off for them, rested REENTER_SECONDS since their
-	  last stay, in range, empty-handed or holding a pocketable tiny item). The root is anchored and slides into the
+	  last stay, in range, empty-handed or holding a small (tiny or light) item). The root is anchored and slides into the
 	  spot's hiding frame in TUCK_SECONDS (HideSpotUtils), the spot's prompt closes, and the Player's HideSpotId /
 	  HideSince attributes tell every client (the peek camera on theirs, the tucked pose on everyone's,
 	  HidePoseSystem). Whether the Manager saw them go in is asked of the
@@ -350,7 +350,8 @@ local HideServiceServer: HideServiceServer = {
 			end)
 		)
 		local lifted = CarryServiceServer.pickedUp:Connect(function(player: Player)
-			if tracker:of(player.UserId) ~= nil and heldSize(player) ~= HideConstants.POCKETABLE_SIZE then
+			local size = heldSize(player)
+			if tracker:of(player.UserId) ~= nil and (size == nil or HideConstants.POCKETABLE_SIZES[size] ~= true) then
 				leave(player, "evicted")
 			end
 		end)

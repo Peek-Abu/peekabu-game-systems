@@ -40,6 +40,9 @@ local CarryServiceClient = require(ReplicatedStorage.Client.Features.Carry.Carry
 local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
 local CargoBankRules = require(ReplicatedStorage.Shared.Features.Cargo.Rules.CargoBankRules)
 local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants)
+local CargoInventoryRules = require(ReplicatedStorage.Shared.Features.Cargo.Rules.CargoInventoryRules)
+local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
+local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local Rules = require(ReplicatedStorage.Client.Features.Shift.Rules.ShiftPromptRules)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTimeClockRules = require(ReplicatedStorage.Shared.Features.Shift.Rules.ShiftTimeClockRules)
@@ -49,6 +52,13 @@ local nextId = 0
 -- The prompt shown now, and the prompt `press(true)` is holding.
 local current: ProximityPrompt? = nil
 local held: ProximityPrompt? = nil
+
+-- The kind the local player holds (their public `carrying` field; nil with empty hands).
+local function heldKind(): string?
+	local entry = StateSyncClientStore.publicPlayers()[StateSyncConstants.publicEntryKey(Players.LocalPlayer.UserId)]
+	local kind = if entry ~= nil then entry[CarryConstants.PUBLIC_FIELD] else nil
+	return if type(kind) == "string" then kind else nil
+end
 
 -- Whether an instance sits under an object tagged InteractionConstants.TAG.
 local function underTagged(instance: Instance): boolean
@@ -244,7 +254,8 @@ local function selectNearby()
 						and (
 							kindOf(prompt) ~= "carry"
 							or (
-								not CarryServiceClient:isCarrying()
+																-- The hotbar: a small item in one hand still lets E pocket another.
+CargoInventoryRules.handsFree(heldKind())
 								and target:GetAttribute(CarryConstants.CARRIED_BY_ATTRIBUTE) == nil
 							)
 						),

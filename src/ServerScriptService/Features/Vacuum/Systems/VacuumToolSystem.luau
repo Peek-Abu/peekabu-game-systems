@@ -64,6 +64,9 @@ end
 
 export type Controller = {
 	refresh: (carrying: boolean) -> boolean,
+	-- Takes the wand out (true) or puts it away (false) now (the hotbar's slot 1). Put away with `resume`, it comes
+	-- back by itself when the carry that is about to start ends (a big item picked up with the wand out).
+	setEquipped: (on: boolean, resume: boolean?) -> boolean,
 	destroy: () -> (),
 }
 
@@ -74,6 +77,8 @@ function VacuumToolSystem.new(player: Player, wornFor: (character: Model) -> Vis
 	local tool: Tool? = nil
 	local wasCarrying = false
 	local resume = false
+	-- Set by setEquipped(false, true): the next carry's start keeps `resume` although the wand is already away.
+	local pendingResume = false
 	local function clear()
 		if tool ~= nil then
 			tool:Destroy()
@@ -82,6 +87,7 @@ function VacuumToolSystem.new(player: Player, wornFor: (character: Model) -> Vis
 		character = nil
 		wasCarrying = false
 		resume = false
+		pendingResume = false
 	end
 	return {
 		refresh = function(carrying)
@@ -110,7 +116,8 @@ function VacuumToolSystem.new(player: Player, wornFor: (character: Model) -> Vis
 				return false
 			end
 			if carrying and not wasCarrying then
-				resume = first or owned.Parent == current
+				resume = first or owned.Parent == current or pendingResume
+				pendingResume = false
 				if owned.Parent == current then
 					humanoid:UnequipTools()
 				end
@@ -123,6 +130,29 @@ function VacuumToolSystem.new(player: Player, wornFor: (character: Model) -> Vis
 			end
 			wasCarrying = carrying
 			return owned.Parent == current
+		end,
+		setEquipped = function(on, keepResume)
+			local current = character
+			local humanoid = if current ~= nil then current:FindFirstChildOfClass("Humanoid") else nil
+			local owned = tool
+			if current == nil or humanoid == nil or owned == nil or owned.Parent == nil then
+				return false
+			end
+			if on then
+				resume = false
+				pendingResume = false
+				if owned.Parent ~= current then
+					humanoid:EquipTool(owned)
+				end
+				return owned.Parent == current
+			end
+			local wasOut = owned.Parent == current
+			resume = false
+			pendingResume = keepResume == true and wasOut
+			if wasOut then
+				humanoid:UnequipTools()
+			end
+			return true
 		end,
 		destroy = clear,
 	}

@@ -61,7 +61,7 @@ return UILabs.CreateReactStory({
 	local snapshot = ShiftStoryFixtures.snapshot(changesFor(variant, secondsLeft))
 	local me: PublicPlayerTypes.PublicPlayer = {}
 	for key, value in ShiftStoryFixtures.me do
-		if not props.controls.EmptyHands or (key ~= "carrying" and key ~= "pocket1" and key ~= "pocket2") then
+		if not props.controls.EmptyHands or (key ~= "carrying" and key ~= "inv3" and key ~= "invHands") then
 			me[key] = value
 		end
 	end

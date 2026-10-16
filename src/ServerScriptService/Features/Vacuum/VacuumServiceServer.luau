@@ -76,6 +76,14 @@ local stoppers: { () -> () } = {}
 -- The canister backpack each character wears.
 local worn: { [Model]: VacuumVisualSystem.WornBackpack } = {}
 
+-- Publishes whether `player`'s vacuum is out, when that changed.
+local function publishEquipped(player: Player, selected: boolean)
+	if equipped[player] ~= selected then
+		equipped[player] = selected
+		StateSyncPublicPlayerStore.set(player.UserId, { [VacuumConstants.PUBLIC_EQUIPPED_FIELD] = selected })
+	end
+end
+
 -- `character`'s backpack, put on now if it has none (nil when it cannot wear one: no UpperTorso yet).
 local function wornFor(character: Model): VacuumVisualSystem.WornBackpack?
 	local current = worn[character]
@@ -244,6 +252,7 @@ export type VacuumServiceServer = {
 	isVacuuming: (self: VacuumServiceServer, player: Player) -> boolean,
 	reset: (self: VacuumServiceServer) -> (),
 	setCrew: (self: VacuumServiceServer, crew: { Player }) -> (),
+	setEquipped: (self: VacuumServiceServer, player: Player, on: boolean, resume: boolean?) -> boolean,
 }
 
 local VacuumServiceServer: VacuumServiceServer = {
@@ -321,13 +330,7 @@ local VacuumServiceServer: VacuumServiceServer = {
 							authorized = true,
 						}, os.clock())
 					end
-					if equipped[player] ~= selected then
-						equipped[player] = selected
-						StateSyncPublicPlayerStore.set(
-							player.UserId,
-							{ [VacuumConstants.PUBLIC_EQUIPPED_FIELD] = selected }
-						)
-					end
+					publishEquipped(player, selected)
 				end
 			end
 			if elapsed >= VacuumConstants.NOISE_INTERVAL then
@@ -419,6 +422,18 @@ local VacuumServiceServer: VacuumServiceServer = {
 		for _, player in Players:GetPlayers() do
 			publish(player.UserId)
 		end
+	end,
+
+	--[=[
+		Takes `player`'s vacuum out (true) or puts it away (false) now: the hotbar's slot 1 (Cargo's inventory). Put away
+		with `resume`, it comes back by itself when the carry about to start ends. False when they have no vacuum (not on a
+		shift's crew, no living character) or it could not be taken out. Never yields.
+	]=]
+	setEquipped = function(_self, player, on, resume)
+		local controller = tools[player]
+		local ok = controller ~= nil and controller.setEquipped(on, resume)
+		publishEquipped(player, on and ok)
+		return ok
 	end,
 
 	setCrew = function(_self, crew)

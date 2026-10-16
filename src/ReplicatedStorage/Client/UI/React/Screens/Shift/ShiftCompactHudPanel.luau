@@ -1,14 +1,17 @@
 --!strict
 -- Approved gameplay-backed compact HUD (Figma 75:2732). Physical pixels preserve readability in short windows.
+-- The equipment is the paper hotbar (ShiftHotbar; docs/superpowers/specs/2026-10-16-cleanup-crew-hotbar-inventory-design.md
+-- §4): bottom centre on desktop with a "HOLDING ..." slip above it while the hands hold something, top centre on
+-- phone between the crew button and the time card.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage.Packages.React)
 local PaperButton = require(script.Parent.Parent.Paper.PaperButton)
-local PaperPropIcon = require(script.Parent.Parent.Paper.PaperPropIcon)
 local PaperLabel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperLabel)
 local PaperSheet = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperSheet)
 local Constants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local VM = require(script.Parent.ShiftHudViewModel)
+local ShiftHotbar = require(script.Parent.ShiftHotbar)
 local CrewVM = require(script.Parent.ShiftCrewViewModel)
 local useProgressTween = require(ReplicatedStorage.Client.UI.React.Hooks.useProgressTween)
 local SprintStaminaSlip = require(ReplicatedStorage.Client.UI.React.Screens.Sprint.SprintStaminaSlip)
@@ -24,7 +27,8 @@ export type Props = {
 	viewport: Vector2,
 	crewOpen: boolean?,
 	onCrewToggle: (() -> ())?,
-	onToolToggle: (() -> ())?,
+	-- A hotbar card was tapped or clicked: ask for that slot.
+	onSelect: ((slot: number) -> ())?,
 	bindings: VM.KeyBindings?,
 	-- The sprint's stamina while it is not full (Sprint): a small slip tucked against the equipment cards.
 	stamina: SprintViewModel.BarView?,
@@ -193,131 +197,53 @@ local function ShiftCompactHudPanel(props: Props): React.ReactNode
 			rows
 		)
 	end
-	local tool: React.ReactNode = nil
-	local cargo: React.ReactNode = nil
-	if not phone or not props.crewOpen then
-		local equipmentWidth = if phone then 164 else 248
-		if view.hands == nil then
-			local toolSize = Vector2.new(equipmentWidth, if phone then 62 else 82)
-			local toolPosition = if phone then UDim2.new(1, -inset, 0, 100) else UDim2.new(1, -inset, 1, -inset)
-			local toolAnchor = if phone then Vector2.new(1, 0) else Vector2.new(1, 1)
-			local illustration: React.ReactNode = nil
-			if not phone then
-				illustration = e(
-					"Frame",
-					{ Position = UDim2.new(1, -43, 0, 0), Size = UDim2.fromOffset(39, 39), BackgroundTransparency = 1 },
-					{ art = e(PaperPropIcon, { kind = "vacuum" }) }
-				)
-			end
-			local toolContent: { [string]: React.ReactNode } = {
-				illustration = illustration,
-				title = label(
-					if compact.equipped then "1  VACUUM" else "1  VACUUM STOWED",
-					0,
-					-4,
-					equipmentWidth - (if phone then 24 else 64),
-					if phone then 14 else 17,
-					"heading"
-				),
-				canister = label(`CANISTER  {view.canister} / {view.canisterMax}`, 0, 20, equipmentWidth - 24, 14),
-				hint = if phone
-					then nil
-					else label(
-						if compact.equipped then "Hold to clean" else "Press 1 or tap to equip",
-						0,
-						44,
-						equipmentWidth - 24,
-						12
-					),
-			}
-			tool = button(
-				toolPosition,
-				toolAnchor,
-				toolSize,
-				sheet(toolSize, UDim2.fromScale(0, 0), Vector2.zero, C.cream, toolContent),
-				props.onToolToggle
-			)
-		end
-		if view.hands ~= nil or compact.pocketCount > 0 then
-			local hands = view.hands
-			local cargoWidth = if phone then 230 else 248
-			local cargoHeight = if phone then 86 else 116
-			local actions: { string } = {}
-			for _, hint in compact.actions do
-				table.insert(actions, `{hint.key} {hint.label}`)
-			end
-			local cargoChildren: { [string]: React.ReactNode } = {
-				title = label(
-					if hands ~= nil then `CARRYING {string.upper(hands.name)}` else "POCKETED ASSETS",
-					0,
-					-4,
-					cargoWidth - 24,
-					16,
-					"heading"
-				),
-				value = label(
-					if hands ~= nil
-						then `{compact.cargoValue or hands.value}{if hands.fragile then " / fragile" else ""}`
-						else `{view.feeLabel} {view.fee}`,
-					0,
-					22,
-					cargoWidth - 24,
-					14
-				),
-				pockets = if compact.pocketCount > 0
-					then label(`POCKETS {compact.pocketCount} / {#view.pockets}`, 0, 46, cargoWidth - 24, 13)
-					else nil,
-				actions = if phone or #actions == 0
-					then nil
-					else label(table.concat(actions, "   "), 0, 72, cargoWidth - 24, 12),
-			}
-			cargo = sheet(
-				Vector2.new(cargoWidth, cargoHeight),
-				if phone then UDim2.fromOffset(inset, 142) else UDim2.new(1, -inset, 1, -inset),
-				if phone then Vector2.zero else Vector2.new(1, 1),
-				C.cream,
-				cargoChildren
-			)
-			-- Occupied pockets with empty hands keep canister info above the pocket slip.
-			if hands == nil and not phone then
-				tool = button(
-					UDim2.new(1, -inset, 1, -inset - cargoHeight - 12),
-					Vector2.new(1, 1),
-					Vector2.new(equipmentWidth, 82),
-					sheet(Vector2.new(equipmentWidth, 82), UDim2.fromScale(0, 0), Vector2.zero, C.cream, {
-						title = label(
-							if compact.equipped then "1  VACUUM" else "1  VACUUM STOWED",
-							0,
-							-4,
-							equipmentWidth - 24,
-							17,
-							"heading"
-						),
-						canister = label(
-							`CANISTER {view.canister} / {view.canisterMax}`,
-							0,
-							22,
-							equipmentWidth - 24,
-							14
-						),
-					}),
-					props.onToolToggle
-				)
-			end
-		end
+	-- The hotbar: bottom centre on desktop; on phone at the top, centred between the crew button and the time card.
+	local hotbarPosition = UDim2.new(0.5, 0, 1, -inset)
+	local hotbarAnchor = Vector2.new(0.5, 1)
+	if phone then
+		local left = inset + quotaWidth + 12 + crewSize.X + 12
+		local right = props.viewport.X - inset - clockWidth - 12
+		hotbarPosition = UDim2.fromOffset((left + right) / 2, 24)
+		hotbarAnchor = Vector2.new(0.5, 0)
 	end
-	-- The stamina slip: on desktop just above the bottom-right card stack (the tool card, the cargo slip, or both); on
-	-- phone under the top-right tool card (or in its place when the hands are full).
+	local hotbar = e(ShiftHotbar, {
+		view = view.hotbar,
+		phone = phone,
+		position = hotbarPosition,
+		anchor = hotbarAnchor,
+		onSelect = props.onSelect,
+	})
+	-- What the hands hold, its worth and its keys: a slip above the desktop hotbar (phone has its DROP / THROW buttons).
+	local holding: React.ReactNode = nil
+	local hands = view.hands
+	if hands ~= nil and not phone then
+		local actions: { string } = {}
+		for _, hint in compact.actions do
+			table.insert(actions, `{hint.key} {hint.label}`)
+		end
+		local slipWidth = 420
+		local line = `HOLDING {string.upper(hands.name)}   {compact.cargoValue or hands.value}{if hands.fragile
+			then " / fragile"
+			else ""}`
+		holding = sheet(
+			Vector2.new(slipWidth, if #actions > 0 then 58 else 40),
+			UDim2.new(0.5, 0, 1, -inset - 122 - 8),
+			Vector2.new(0.5, 1),
+			C.cream,
+			{
+				title = label(line, 0, -4, slipWidth - 24, 15, "heading", if view.hotbar.locked then C.inkRed else nil),
+				actions = if #actions > 0 then label(table.concat(actions, "   "), 0, 20, slipWidth - 24, 12) else nil,
+			}
+		)
+	end
+	-- The stamina slip: bottom right on desktop; on phone under the time card.
 	local stamina: React.ReactNode = nil
 	local staminaView = props.stamina
 	if staminaView ~= nil then
-		local stack = if view.hands ~= nil then 116 elseif compact.pocketCount > 0 then 116 + 12 + 82 else 82
 		stamina = e(SprintStaminaSlip, {
 			view = staminaView,
 			size = if phone then Vector2.new(150, 28) else Vector2.new(176, 30),
-			position = if phone
-				then UDim2.new(1, -inset, 0, if view.hands == nil then 100 + 62 + 8 else 100)
-				else UDim2.new(1, -inset, 1, -inset - stack - 8),
+			position = if phone then UDim2.new(1, -inset, 0, 24 + clockHeight + 8) else UDim2.new(1, -inset, 1, -inset),
 			anchor = if phone then Vector2.new(1, 0) else Vector2.new(1, 1),
 		})
 	end
@@ -334,8 +260,8 @@ local function ShiftCompactHudPanel(props: Props): React.ReactNode
 		time = clock,
 		crew = crewButton,
 		roster = roster,
-		tool = tool,
-		cargo = cargo,
+		hotbar = hotbar,
+		holding = holding,
 		clockOut = if countdown ~= nil
 			then sheet(
 				Vector2.new(if phone then 260 else 300, 46),

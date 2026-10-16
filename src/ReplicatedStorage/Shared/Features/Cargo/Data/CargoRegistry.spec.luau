@@ -14,11 +14,20 @@ local EXPECTED = {
 	{ "fishTank", "salvage", 260, 200, 320 },
 	{ "goldenStapler", "salvage", 240, 180, 300 },
 	{ "filingCabinet", "salvage", 340, 260, 420 },
+	-- The small pocketable valuables (docs/superpowers/specs/2026-10-16-cleanup-crew-hotbar-inventory-design.md §5).
+	{ "coffeeMug", "salvage", 55, 40, 70 },
+	{ "wristwatch", "salvage", 130, 90, 170 },
+	{ "deskClock", "salvage", 75, 55, 95 },
+	{ "snowGlobe", "salvage", 85, 60, 110 },
+	{ "deskPhone", "salvage", 70, 50, 90 },
+	{ "keyring", "salvage", 45, 30, 60 },
 }
 
+local SMALL_VALUABLES = { "coffeeMug", "wristwatch", "deskClock", "snowGlobe", "deskPhone", "keyring" }
+
 return function()
-	it("holds the eleven office items and the dust bag", function()
-		expect(#CargoRegistry.ids()).to.equal(12)
+	it("holds the seventeen office items and the dust bag", function()
+		expect(#CargoRegistry.ids()).to.equal(18)
 	end)
 
 	it("matches the spec's kinds, reference values and ranges", function()
@@ -39,7 +48,7 @@ return function()
 		end
 	end)
 
-	it("lets only small non-greed valuables be buried", function()
+	it("lets only tiny or medium non-greed valuables be buried", function()
 		local buriable = {}
 		for _, id in CargoRegistry.ids() do
 			local def = CargoRegistry.get(id)
@@ -50,10 +59,10 @@ return function()
 				table.insert(buriable, id)
 			end
 		end
-		expect(table.concat(buriable, ",")).to.equal("monitor,officePlant,plaque")
+		expect(table.concat(buriable, ",")).to.equal("coffeeMug,keyring,monitor,officePlant,plaque,wristwatch")
 	end)
 
-	it("gives jackpots to the monitor, plaque, coffee machine and golden stapler only", function()
+	it("gives jackpots to the monitor, plaque, coffee machine, golden stapler and five small valuables", function()
 		local jackpots = {}
 		for _, id in CargoRegistry.ids() do
 			local jackpot = CargoRegistry.get(id).jackpot
@@ -64,7 +73,9 @@ return function()
 				table.insert(jackpots, id)
 			end
 		end
-		expect(table.concat(jackpots, ",")).to.equal("coffeeMachine,goldenStapler,monitor,plaque")
+		expect(table.concat(jackpots, ",")).to.equal(
+			"coffeeMachine,coffeeMug,deskClock,goldenStapler,keyring,monitor,plaque,snowGlobe,wristwatch"
+		)
 		expect(CargoRegistry.get("monitor").jackpot.name).to.equal("Gold-trim")
 	end)
 
@@ -105,6 +116,50 @@ return function()
 		for _, id in CargoRegistry.greedIds() do
 			expect(CargoRegistry.get(id).spawnWeight).to.equal(0)
 		end
+	end)
+
+	describe("small pocketable valuables", function()
+		it("are small (tiny, or light for the desk phone), grimy, on the open floor and in desks", function()
+			for _, id in SMALL_VALUABLES do
+				local def = CargoRegistry.get(id)
+				expect(def.size == "tiny" or def.size == "light").to.equal(true)
+				expect(def.grimy).to.equal(true)
+				expect(def.greed).to.equal(false)
+				expect(def.spawnWeight > 0).to.equal(true)
+				expect(def.deskWeight > 0).to.equal(true)
+			end
+			expect(CargoRegistry.get("deskPhone").size).to.equal("light")
+		end)
+
+		it("carry their own proxy boxes, small enough to hold in one hand", function()
+			for _, id in SMALL_VALUABLES do
+				local size = CargoRegistry.get(id).partSize
+				expect(math.max(size.X, size.Y, size.Z) < 1.65).to.equal(true)
+			end
+			expect(CargoRegistry.get("coffeeMug").partSize).to.equal(Vector3.new(1, 1, 0.8))
+			expect(CargoRegistry.get("plaque").partSize).to.equal(Vector3.new(1, 0.4, 0.8))
+		end)
+
+		it("make the small kinds most of the open-floor valuables roll", function()
+			local small, big = 0, 0
+			for _, id in CargoRegistry.ids() do
+				local def = CargoRegistry.get(id)
+				if def.category == "salvage" and not def.greed and not def.hidden then
+					if def.size == "tiny" or def.size == "light" then
+						small += def.spawnWeight
+					else
+						big += def.spawnWeight
+					end
+				end
+			end
+			expect(small / (small + big) >= 0.6).to.equal(true)
+		end)
+
+		it("keeps the mug and the snow globe fragile and the keyring rattly", function()
+			expect(CargoRegistry.get("coffeeMug").fragile).to.equal(true)
+			expect(CargoRegistry.get("snowGlobe").fragile).to.equal(true)
+			expect(CargoRegistry.get("keyring").rattly).to.equal(true)
+		end)
 	end)
 
 	it("returns nil for an unknown id", function()

@@ -1,7 +1,9 @@
 --!strict
 --[=[
-	CargoRegistry: the cargo catalog (Cleanup Crew spec §4 table): eleven items found in the office plus the
-	dust bag the vacuum makes. Built here at load and frozen; `ids()` is sorted so a roll that walks the
+	CargoRegistry: the cargo catalog (Cleanup Crew spec §4 table): seventeen items found in the office plus the
+	dust bag the vacuum makes. Six of them are the small pocketable valuables the hotbar inventory was made for
+	(docs/superpowers/specs/2026-10-16-cleanup-crew-hotbar-inventory-design.md §5): rolled often, so a trip fills two to
+	four item slots. Built here at load and frozen; `ids()` is sorted so a roll that walks the
 	catalog picks the same items for the same seed.
 
 	Trash has a fixed price. A valuable (salvage) has a base RANGE, rolled once per shift and scaled by depth
@@ -38,6 +40,8 @@ type Traits = {
 	jackpot: CargoTypes.Jackpot?,
 	-- Fits under a dust pile (buried loot): small, non-greed valuables.
 	buriable: boolean?,
+	-- Its own proxy box (the art is fitted into it); absent = its size class's.
+	partSize: Vector3?,
 }
 
 local PART_SIZE: { [string]: Vector3 } = {
@@ -97,7 +101,7 @@ local function define(
 		greed = traits.greed == true,
 		spawnWeight = spawnWeight,
 		deskWeight = deskWeight,
-		partSize = PART_SIZE[size],
+		partSize = traits.partSize or PART_SIZE[size],
 		color = color,
 	}
 	items[id] = table.freeze(def)
@@ -128,7 +132,7 @@ define("officePlant", "Office plant", "salvage", "medium", Color3.fromRGB(50, 14
 	buriable = true,
 })
 define("plaque", "Employee of the Month plaque", "salvage", "tiny", Color3.fromRGB(190, 150, 70), {
-	spawnWeight = 2,
+	spawnWeight = 3,
 	deskWeight = 3,
 	range = { min = 50, max = 100 },
 	jackpot = { name = "Solid brass", chance = 0.08, multiplier = 2.5 },
@@ -167,6 +171,56 @@ define("goldenStapler", "Golden stapler", "salvage", "tiny", Color3.fromRGB(255,
 define("filingCabinet", "Filing cabinet on cart", "salvage", "bulky", Color3.fromRGB(120, 125, 135), {
 	greed = true,
 	range = { min = 260, max = 420 },
+})
+
+-- The small pocketable valuables: common on the open floor and in desks, and worth about what the big ones they
+-- displace in the roll were (so a map dense with them still pays a full crew's quota).
+define("coffeeMug", "Coffee mug", "salvage", "tiny", Color3.fromRGB(235, 232, 222), {
+	fragile = true,
+	spawnWeight = 4,
+	deskWeight = 3,
+	range = { min = 40, max = 70 },
+	jackpot = { name = "World's Best Boss", chance = 0.1, multiplier = 3 },
+	buriable = true,
+	partSize = Vector3.new(1, 1, 0.8),
+})
+define("wristwatch", "Wristwatch", "salvage", "tiny", Color3.fromRGB(70, 70, 80), {
+	spawnWeight = 2,
+	deskWeight = 4,
+	range = { min = 90, max = 170 },
+	jackpot = { name = "Gold", chance = 0.08, multiplier = 2.5 },
+	buriable = true,
+	partSize = Vector3.new(0.65, 0.22, 0.8),
+})
+define("deskClock", "Desk clock", "salvage", "tiny", Color3.fromRGB(150, 95, 55), {
+	spawnWeight = 3,
+	deskWeight = 2,
+	range = { min = 55, max = 95 },
+	jackpot = { name = "Brass carriage", chance = 0.1, multiplier = 2 },
+	partSize = Vector3.new(1.2, 1.2, 0.6),
+})
+define("snowGlobe", "Snow globe", "salvage", "tiny", Color3.fromRGB(170, 215, 235), {
+	fragile = true,
+	spawnWeight = 2,
+	deskWeight = 3,
+	range = { min = 60, max = 110 },
+	jackpot = { name = "Musical", chance = 0.12, multiplier = 2 },
+	partSize = Vector3.new(1.1, 1.3, 1.1),
+})
+define("deskPhone", "Desk phone", "salvage", "light", Color3.fromRGB(45, 48, 55), {
+	spawnWeight = 3,
+	deskWeight = 1,
+	range = { min = 50, max = 90 },
+	partSize = Vector3.new(1.6, 0.8, 1.3),
+})
+define("keyring", "Keyring", "salvage", "tiny", Color3.fromRGB(205, 175, 90), {
+	rattly = true,
+	spawnWeight = 2,
+	deskWeight = 4,
+	range = { min = 30, max = 60 },
+	jackpot = { name = "Master", chance = 0.1, multiplier = 3 },
+	buriable = true,
+	partSize = Vector3.new(0.75, 0.19, 0.6),
 })
 
 local sortedIds: { string } = {}

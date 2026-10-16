@@ -12,7 +12,9 @@ return function()
 					count += 1
 				end
 			end
-			expect(count).to.equal(46)
+			-- 46 office pieces plus the six small pocketable valuables (the hotbar inventory).
+			expect(count).to.equal(52)
+			expect(Registry.contains("cargo", "keyring")).to.equal(true)
 			expect(Registry.contains("cargo", "printer")).to.equal(false)
 			expect(Registry.contains("equipment", "vacuum")).to.equal(false)
 		end)

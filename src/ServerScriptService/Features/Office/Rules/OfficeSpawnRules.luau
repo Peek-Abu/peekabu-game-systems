@@ -23,12 +23,13 @@ type SpawnPlan = OfficeTypes.SpawnPlan
 local OfficeSpawnRules = {}
 
 -- Loot that belongs on furniture, by surface marker kind: appliances live on kitchen counters,
--- meeting-table monitors and plaques on tables, plaques on cabinet tops instead of the floor.
+-- meeting-table monitors, plaques and the small desk valuables (mug, clock, snow globe, phone) on tables, plaques,
+-- clocks and snow globes on cabinet tops instead of the floor.
 -- Anything absent here sits on the floor; `check` refuses the rest.
 local SURFACE_KINDS: { [string]: { string } } = {
 	counter = { "coffeeMachine", "waterJug", "fishTank" },
-	table = { "plaque", "monitor", "coffeeMachine", "waterJug" },
-	cabinet = { "plaque" },
+	table = { "plaque", "monitor", "coffeeMachine", "waterJug", "coffeeMug", "deskClock", "snowGlobe", "deskPhone" },
+	cabinet = { "plaque", "deskClock", "snowGlobe" },
 }
 
 -- Canonical preference order for items allowed on several surfaces.
