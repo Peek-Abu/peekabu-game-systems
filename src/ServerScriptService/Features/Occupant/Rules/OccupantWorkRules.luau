@@ -59,7 +59,7 @@ local function toDesk(current: Mind, senses: Senses, seen: { Glimpse }, heard: V
 	if current.sitIn and (current.spot == nil or quarry == nil or M.hiderOf(senses, quarry) == nil) then
 		return M.walkOn(current, senses, nil)
 	end
-	if M.flat(senses.position, desk.seat.Position) <= M.ARRIVE then
+	if M.flat(senses.position, desk.seat.Position) <= M.ARRIVE_SEAT then
 		local seat = if current.sitIn
 			then OccupantDeskUtils.sitBack(desk.seat, OccupantConstants.SIT_IN_BACK)
 			else desk.seat

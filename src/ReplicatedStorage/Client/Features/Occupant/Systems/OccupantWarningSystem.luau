@@ -114,12 +114,16 @@ local function setDread(closeness: number?)
 	end
 end
 
--- The hider's reveal: from just behind where their peek camera is, it follows his face (OccupantTellRules.revealed).
+-- The hider's reveal: from where they huddle (their root, deeper in the spot than the peek camera), it follows his face
+-- (OccupantTellRules.revealed).
 local function setReveal(head: BasePart?, on: boolean)
 	local token = reveal
 	if on and token == nil and head ~= nil then
-		local camera = workspace.CurrentCamera
-		local eye = camera.CFrame.Position - camera.CFrame.LookVector * OccupantConstants.REVEAL_BACK
+		local character = Players.LocalPlayer.Character
+		local root = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil
+		local eye = if root ~= nil and root:IsA("BasePart")
+			then root.Position
+			else workspace.CurrentCamera.CFrame.Position
 		counters.reveals += 1
 		reveal = CameraServiceClient:pushMode({
 			kind = "custom",

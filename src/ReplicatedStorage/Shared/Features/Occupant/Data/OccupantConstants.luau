@@ -279,9 +279,8 @@ return table.freeze({
 	JUMPSCARE_DISTANCE = 1.9,
 	JUMPSCARE_FOV = 38,
 	-- The hider's reveal: while he bends to look under their spot (or tips his head under the desk they hide under),
-	-- their peek camera draws back REVEAL_BACK studs into the spot and turns to his face (above the peek camera, below
-	-- the catch's jumpscare).
-	REVEAL_BACK = 1.4,
+	-- their camera draws back into the spot (to their own huddled body, hidden from them) and turns to his face (above
+	-- the peek camera, below the catch's jumpscare).
 	REVEAL_FOV = 55,
 	REVEAL_PRIORITY = 60,
 	-- The gestures, how fast one lets go, and the catch's head tilt (degrees of roll, seconds, shiver).

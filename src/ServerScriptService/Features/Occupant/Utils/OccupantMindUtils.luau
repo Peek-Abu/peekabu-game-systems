@@ -45,8 +45,10 @@ local IDLE: NpcTypes.Intent = { kind = "idle" }
 
 local M = {
 	IDLE = IDLE,
-	-- Close enough to a chair or a stare's stand point to settle there (the service slides him the rest).
+	-- Close enough to a stare's stand point, or to a chair (the path often ends short of it, beside the desk), to settle
+	-- there; the service slides him the rest.
 	ARRIVE = 3.5,
+	ARRIVE_SEAT = 5,
 }
 
 function M.flat(a: Vector3, b: Vector3): number

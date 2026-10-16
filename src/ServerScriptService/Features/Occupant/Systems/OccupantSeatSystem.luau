@@ -36,8 +36,10 @@ type Body = {
 	clipboard: number?,
 }
 
--- How long he slides onto a seat or a stare's spot (the last stride the path left him short).
+-- He slides onto a seat or a stare's spot (the last stride the path left him short) at SLIDE_SPEED studs a second,
+-- taking at least SLIDE_SECONDS.
 local SLIDE_SECONDS = 0.35
+local SLIDE_SPEED = 8
 
 local bodies: { [Model]: Body } = {}
 setmetatable(bodies, { __mode = "k" })
@@ -77,9 +79,10 @@ local function slide(rig: Rig, body: Body, frame: CFrame)
 	end
 	rig.root.Anchored = true
 	rig.root.AssemblyLinearVelocity = Vector3.zero
+	local seconds = math.max(SLIDE_SECONDS, (frame.Position - rig.root.Position).Magnitude / SLIDE_SPEED)
 	local tween = TweenService:Create(
 		rig.root,
-		TweenInfo.new(SLIDE_SECONDS, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		TweenInfo.new(seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 		{ CFrame = frame }
 	)
 	body.tween = tween
