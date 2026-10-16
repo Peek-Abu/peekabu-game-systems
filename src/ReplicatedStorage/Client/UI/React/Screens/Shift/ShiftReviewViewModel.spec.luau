@@ -5,6 +5,7 @@ local function review(extra)
 		outcome = "clockout",
 		quota = 350,
 		cleared = 362,
+		dust = 280,
 		bonus = 215,
 		salvage = 6,
 		piles = 12,
@@ -94,16 +95,17 @@ return function()
 			expect(ShiftReviewViewModel.review(bare, nil, 4, 100, false)).to.equal(nil)
 		end)
 
-		it("stamps QUOTA MET and lists the four rows", function()
+		it("stamps CONTRACT MET and lists the four rows", function()
 			local view = ShiftReviewViewModel.review(snapshot(), nil, 4, 100, false)
-			expect(view.headline).to.equal("QUOTA MET")
+			expect(view.headline).to.equal("CONTRACT MET")
 			expect(view.met).to.equal(true)
 			expect(view.tab).to.equal("PERFORMANCE REVIEW — NIGHT SHIFT")
 			expect(view.subtitle).to.equal("Crew of Truck 2 · Harlow & Finch Ltd. · 4th floor offices")
-			expect(view.rows[1].label).to.equal("CLEARED")
+			expect(view.rows[1].label).to.equal("GLOOM REMOVED")
 			expect(view.rows[1].value).to.equal("362 / 350")
 			expect(view.rows[2].label).to.equal("EARNED")
-			expect(view.rows[2].value).to.equal("$215")
+			-- 362 Gloom at 1 Gleam each, plus 215 Gleam of valuables.
+			expect(view.rows[2].value).to.equal("577 Gleam")
 			expect(view.rows[3].label).to.equal("TIMES CAUGHT")
 			expect(view.rows[3].value).to.equal("3")
 			expect(view.rows[4].label).to.equal("ASSETS RECOVERED")
@@ -115,7 +117,14 @@ return function()
 			expect(view.voteTitle).to.equal("WHAT NEXT? (crew vote)")
 		end)
 
-		it("stamps QUOTA MISSED with the banked fee and HR's line", function()
+		it("breaks the Gloom removed and the Gleam earned down into dust, item cleaning and valuables", function()
+			local view = ShiftReviewViewModel.review(snapshot(), nil, 4, 100, false)
+			expect(view.rows[1].detail).to.equal("Dust 280 · Item cleaning 82")
+			expect(view.rows[2].detail).to.equal("Dust 280 · Cleaning 82 · Valuables 215")
+			expect(view.rows[3].detail).to.equal(nil)
+		end)
+
+		it("stamps CONTRACT MISSED, still pays what was done, and HR's line", function()
 			local view = ShiftReviewViewModel.review(
 				snapshot({}, review({ quotaMet = false, rating = "needsImprovement" })),
 				nil,
@@ -123,9 +132,10 @@ return function()
 				100,
 				false
 			)
-			expect(view.headline).to.equal("QUOTA MISSED")
+			expect(view.headline).to.equal("CONTRACT MISSED")
 			expect(view.met).to.equal(false)
-			expect(view.rows[2].label).to.equal("EARNED (banked)")
+			expect(view.rows[2].label).to.equal("EARNED")
+			expect(view.rows[2].value).to.equal("577 Gleam")
 			expect(view.rating).to.equal("NEEDS IMPROVEMENT")
 			expect(view.quote).to.equal('"We will discuss this on Monday."')
 			expect(view.quoteBy).to.equal("— Morrow & Morrow, Human Resources")

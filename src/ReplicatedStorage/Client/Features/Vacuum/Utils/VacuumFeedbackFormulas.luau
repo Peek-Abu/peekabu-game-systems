@@ -4,9 +4,9 @@
 	whine's pitch and volume rise with the pile's progress; a pile that vanished was cleared (pop + sparkle) only
 	if it was vacuumed past POP_PROGRESS within POP_WINDOW seconds, judged on its peak progress because the
 	Interaction system clears the progress attribute in the same frame it completes the pile; the canister ticks
-	as it fills and chimes when its last pile pops a dust bag, never outside a running shift (a reset empties it);
-	the vacuumer is the nearest hand within range; the backpack's gauge eases toward each canister's fill and
-	holds full a moment when it fills. Pure.
+	when the crew's Gloom rises, never outside a running shift; the vacuumer is the nearest hand within range; the
+	backpack's gauge is a live Gloom gauge (docs/superpowers/specs/2026-10-16-cleanup-crew-gloom-gleam-economy-design.md
+	§3.1): it eases toward the crew's Gloom removed as a share of the contract, full once it is met. Pure.
 
 	@class VacuumFeedbackFormulas
 ]=]
@@ -14,8 +14,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
-
-export type CanisterCue = "fill" | "full"
 
 local VacuumFeedbackFormulas = {}
 
@@ -39,36 +37,27 @@ function VacuumFeedbackFormulas.cleared(peakProgress: number, secondsSinceActive
 end
 
 --[=[
-	The canister sound for a fill change: "fill" when it rose, "full" when its last pile popped a dust bag
-	(capacity - 1 → 0), nil otherwise or outside a running shift.
+	Whether the canister ticks: the crew's Gloom rose from `before` to `after` during a running shift, and the last
+	tick (at `lastTick`) was at least GLOOM_TICK_GAP seconds before `now`.
 ]=]
-function VacuumFeedbackFormulas.canisterCue(
+function VacuumFeedbackFormulas.gloomTick(
 	before: number,
 	after: number,
-	capacity: number,
-	running: boolean
-): CanisterCue?
-	if not running then
-		return nil
-	end
-	if after > before then
-		return "fill"
-	end
-	if after == 0 and before == capacity - 1 then
-		return "full"
-	end
-	return nil
+	running: boolean,
+	now: number,
+	lastTick: number
+): boolean
+	return running and after > before and now - lastTick >= VacuumConstants.GLOOM_TICK_GAP
 end
 
 --[=[
-	The gauge's fill fraction for a canister holding `fill` of `capacity` piles; full until `fullUntil` (a
-	canister that just filled shows full, lamp lit, before it drains into its dust bag).
+	The gauge's fill fraction: `gloom` removed of the `contract` (0 without a contract), full once it is met.
 ]=]
-function VacuumFeedbackFormulas.gaugeTarget(fill: number, capacity: number, fullUntil: number, now: number): number
-	if now < fullUntil then
-		return 1
+function VacuumFeedbackFormulas.gaugeTarget(gloom: number, contract: number): number
+	if contract <= 0 then
+		return 0
 	end
-	return math.clamp(fill / capacity, 0, 1)
+	return math.clamp(gloom / contract, 0, 1)
 end
 
 --[=[

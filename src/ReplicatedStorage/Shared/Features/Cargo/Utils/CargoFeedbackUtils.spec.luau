@@ -53,10 +53,11 @@ return function()
 			expect((message.to - Vector3.new(10, 2.5, 0)).Magnitude).to.be.near(0, 1e-6)
 		end)
 
-		it("clears everything banked at x1: trash and valuables both count toward the quota", function()
+		it("clears no Gloom by banking: valuables only pay (only stray trash still shows its own number)", function()
 			local size = Vector3.new(1, 1, 1)
-			expect(CargoFeedbackUtils.banked(deposit, Vector3.zero, Vector3.zero, size, nil).clearance).to.equal(35)
-			expect(CargoFeedbackUtils.banked(deposit, Vector3.zero, Vector3.zero, size, 37.5).clearance).to.equal(35)
+			expect(CargoFeedbackUtils.banked(deposit, Vector3.zero, Vector3.zero, size, nil).clearance).to.equal(10)
+			local valuables = { clearance = 0, bonus = 25, items = { deposit.items[2] } }
+			expect(CargoFeedbackUtils.banked(valuables, Vector3.zero, Vector3.zero, size, 37.5).clearance).to.equal(0)
 		end)
 
 		it("carries the credited bonus, else the deposit's, rounded like the review", function()
@@ -109,19 +110,21 @@ return function()
 	describe("appraisalText", function()
 		it("writes the shown name over what it pays, a jackpot by its variant", function()
 			expect(CargoFeedbackUtils.appraisalText("monitor", "Gold-trim", 250, false)).to.equal(
-				"Gold-trim monitor\n$250"
+				"Gold-trim monitor\n250 Gleam"
 			)
 			expect(CargoFeedbackUtils.appraisalText("plaque", nil, 41.6, false)).to.equal(
-				"Employee of the Month plaque\n$42"
+				"Employee of the Month plaque\n42 Gleam"
 			)
 		end)
 
 		it("says when the truck appraised it", function()
-			expect(CargoFeedbackUtils.appraisalText("monitor", nil, 36, true)).to.equal("Monitor\n$36 at the truck")
+			expect(CargoFeedbackUtils.appraisalText("monitor", nil, 36, true)).to.equal(
+				"Monitor\n36 Gleam at the truck"
+			)
 		end)
 
 		it("falls back to the kind for an unknown item", function()
-			expect(CargoFeedbackUtils.appraisalText("spaceship", nil, 5, false)).to.equal("spaceship\n$5")
+			expect(CargoFeedbackUtils.appraisalText("spaceship", nil, 5, false)).to.equal("spaceship\n5 Gleam")
 		end)
 	end)
 

@@ -2,7 +2,7 @@
 --[=[
 	ShiftStoryFixtures: static sample data for the Shift stories (UI Labs): a running shift for crew Sam, Alex and Jo
 	in truck 2, their public entries (Sam carrying a coffee machine, Alex caught and back in 6 s, Jo vacuuming) and the local
-	player's entry (a monitor in both hands from hotbar slot 4, a plaque and an appraised coffee mug pocketed, the canister at 2 of 3). Story time is 0. No logic.
+	player's entry (a monitor in both hands from hotbar slot 4, a plaque and an appraised coffee mug pocketed, the canister gauge on the contract's Gloom). Story time is 0. No logic.
 
 	@class ShiftStoryFixtures
 ]=]
@@ -32,7 +32,6 @@ local PLAYERS: PublicPlayerTypes.PublicPlayerMap = {
 }
 
 local ME: PublicPlayerTypes.PublicPlayer = {
-	canister = 2,
 	carrying = "monitor",
 	inv1 = "plaque",
 	inv2 = "coffeeMug",

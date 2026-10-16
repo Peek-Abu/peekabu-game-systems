@@ -1,10 +1,13 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local OfficeLootUtils = require(script.Parent.OfficeLootUtils)
 local OfficeConstants = require(ServerScriptService.Features.Office.Data.OfficeConstants)
+local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 
--- 3 piles (one dust bag, 15), a rubbish bag on the floor (10), a desk bottle bag (15), and three valuables: a monitor
--- (base 100), a buried plaque (a "Solid brass" jackpot, base 200 = plain 80) and a desk plaque (base 60).
+-- 3 piles (60 Gloom), a rubbish bag on the floor and a desk bottle bag (old fixtures: trash carries no Gloom and no
+-- value), and three valuables: a monitor (base 100, medium: 15 Gloom), a buried plaque (a "Solid brass" jackpot, base
+-- 200 = plain 80, tiny: 5) and a desk plaque (base 60, tiny: 5).
 local function plan()
 	return {
 		piles = {
@@ -31,34 +34,34 @@ local function plan()
 end
 
 return function()
-	describe("pileTrash", function()
-		it("makes one dust bag per full canister of piles", function()
-			expect(OfficeLootUtils.pileTrash(2)).to.equal(0)
-			expect(OfficeLootUtils.pileTrash(3)).to.equal(15)
-			expect(OfficeLootUtils.pileTrash(7)).to.equal(30)
+	describe("gloomOf", function()
+		it("counts every pile's Gloom and every valuable's grime, by size, at full grime", function()
+			local gloom = OfficeLootUtils.gloomOf(plan())
+			expect(gloom.dust).to.equal(3 * VacuumConstants.PILE_GLOOM)
+			expect(gloom.grime).to.equal(15 + 5 + 5)
+			expect(gloom.total).to.equal(3 * VacuumConstants.PILE_GLOOM + 25)
 		end)
 	end)
 
 	describe("valueOf", function()
-		it("counts valuables at their plain (no-jackpot) base, trash and the piles' dust bags", function()
+		it("counts valuables at their plain (no-jackpot) base; trash is worth nothing", function()
 			local value = OfficeLootUtils.valueOf(plan())
 			expect(value.valuables).to.equal(3)
-			expect(value.trash).to.equal(40)
-			expect(value.full).to.equal(240 + 40)
+			expect(value.full).to.equal(240)
 		end)
 
-		it("prices the valuables at average cleanliness for the guarantee", function()
-			local value = OfficeLootUtils.valueOf(plan())
-			-- 240 x (0.3 + 0.7 x 0.5) = 156, plus 40 trash.
-			expect(value.average).to.be.near(196, 1e-6)
+		it("prices the valuables at average cleanliness", function()
+			-- 240 x (0.3 + 0.7 x 0.5) = 156.
+			expect(OfficeLootUtils.valueOf(plan()).average).to.be.near(156, 1e-6)
 		end)
 	end)
 
 	describe("shortfall", function()
-		it("is short when the quota needs more than the max share of the average value", function()
-			-- 196 x 0.75 = 147.
-			expect(OfficeLootUtils.shortfall(plan(), 146)).to.equal(false)
-			expect(OfficeLootUtils.shortfall(plan(), 148)).to.equal(true)
+		it("is short when the contract needs more than the max share of the site's Gloom", function()
+			local total = 3 * VacuumConstants.PILE_GLOOM + 25
+			local most = math.floor(total * OfficeConstants.CONTRACT_SHARE_MAX)
+			expect(OfficeLootUtils.shortfall(plan(), most)).to.equal(false)
+			expect(OfficeLootUtils.shortfall(plan(), most + 1)).to.equal(true)
 		end)
 	end)
 

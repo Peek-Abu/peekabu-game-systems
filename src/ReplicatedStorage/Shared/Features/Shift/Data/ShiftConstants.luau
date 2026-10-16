@@ -82,18 +82,24 @@ return table.freeze({
 	EMPLOYER = "Morrow & Morrow Clearance",
 	EMPLOYER_BAND = "MORROW & MORROW",
 	EMPLOYER_SLOGAN = "A clean site is a compliant site.",
-	-- The company scrip associates are paid in for banked Recoverable Assets. Display only (no saved balance yet):
-	-- rename it here and every price tag, floater, plate and review follows (ShiftCurrencyUtils).
-	CURRENCY_NAME = "Scrip",
+	-- The economy (docs/superpowers/specs/2026-10-16-cleanup-crew-gloom-gleam-economy-design.md): the contract is
+	-- counted in Gloom (the anomaly's residue: the dust, and the grime on valuables), and the company pays in Gleam
+	-- (refined Gloom), the one currency players see. Display only (no saved balance yet): rename them here and every
+	-- price tag, floater, plate and review follows (ShiftCurrencyUtils).
+	CURRENCY_NAME = "Gleam",
+	CONTRACT_UNIT = "Gloom",
+	-- The pay for each Gloom removed (dust and item cleaning), paid at clock-out; overtime never multiplies it.
+	GLEAM_PER_GLOOM = 1,
 	-- The StateSyncWorldStore entry the snapshot is published under.
 	WORLD_ENTRY = "shift",
-	-- The quota: everything banked counts toward it at x1 (docs/superpowers/specs/2026-10-15-cleanup-crew-loot-loop-design.md
-	-- §3.6). By crew size 1-4: a generated map is worth about 1,850 fully clean and 1,280 at average cleanliness
-	-- (measured over 30 seeds, 2026-10-15), so these ask about 60 / 65 / 68 / 70% of it (solo makes fewer trips; four
-	-- players are capped because the map does not grow with them). QUOTA is the two-player figure (the fallback before a
-	-- run sets its own); a run and the depot's signs use QUOTA_BY_CREW for the crew (ShiftQuotaFormulas).
-	QUOTA = 830,
-	QUOTA_BY_CREW = table.freeze({ 770, 830, 870, 900 }),
+	-- The contract ("quota" in code): Gloom to remove (economy design §3.4). Piles count the instant they are vacuumed,
+	-- valuables only for the grime cleaned off them; banking adds none. By crew size 1-4: a generated site holds about
+	-- 435 Gloom (350-530; 16 piles x 20 plus about 107 of grime, measured over 30 seeds, 2026-10-16), so these ask
+	-- about 60 / 64 / 69 / 74% of it (the site does not grow with the crew; OfficeSpawnUtils tops a thin one up with
+	-- piles so the contract never needs more than 80%). QUOTA is the two-player figure (the fallback before a run sets
+	-- its own); a run and the depot's signs use QUOTA_BY_CREW for the crew (ShiftQuotaFormulas).
+	QUOTA = 280,
+	QUOTA_BY_CREW = table.freeze({ 260, 280, 300, 320 }),
 	-- 7:00 on the clock.
 	SHIFT_SECONDS = 420,
 	-- Round's countdown, configured but unused: a shift starts with Round's startNow once its transit settles.
@@ -131,7 +137,7 @@ return table.freeze({
 	-- The Workspace attribute a developer sets to "A" or "B" to force the next shifts' variant (testing only;
 	-- remove it before publishing: Workspace is the place's, so a saved attribute ships).
 	VARIANT_ATTRIBUTE = "CleanupCrewVariant",
-	-- Salvage multiplier normally, and in overtime.
+	-- The banked valuables' multiplier normally, and in overtime (Gloom pay is never multiplied).
 	SALVAGE_MULTIPLIER = 1,
 	OVERTIME_SALVAGE_MULTIPLIER = 1.5,
 	-- After the quota: the Manager's break (time to bank and regroup), then the normal stage again. Overtime is opt-in:
@@ -148,8 +154,10 @@ return table.freeze({
 	-- A solo player gets a gentler Harlow.
 	SOLO_HEARING = 0.75,
 	SOLO_CHASE_SPEED = -0.5,
-	-- Round team counters and per-player scores.
+	-- Round team counters and per-player scores. CLEARANCE is the Gloom removed (the contract's progress, Round's
+	-- target), DUST the part of it from piles (the rest is item cleaning), BONUS the Gleam for banked valuables.
 	CLEARANCE = "clearance",
+	DUST = "dust",
 	BONUS = "bonus",
 	SCORE_BANKED = "banked",
 	SCORE_PILES = "piles",

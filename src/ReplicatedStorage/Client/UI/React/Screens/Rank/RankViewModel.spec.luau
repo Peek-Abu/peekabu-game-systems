@@ -67,7 +67,9 @@ return function()
 			local review = results({ line(1, { items = 3 }) }, true)
 			local view = RankViewModel.slip({ xp = 38, prevXp = 0 }, review, { 1 }, 1)
 			expect(view.gain).to.equal("+38 XP this shift")
-			expect(view.breakdown).to.equal("Shift +10 · Quota +15 · Cargo +3 · Clocked out +5 · Whole crew out +5")
+			expect(view.breakdown).to.equal(
+				"Shift +10 · Contract +15 · Cargo +3 · Clocked out +5 · Whole crew out +5"
+			)
 			expect(view.incident).to.equal(nil)
 		end)
 

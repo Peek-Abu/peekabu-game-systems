@@ -4,6 +4,10 @@ Date: 2026-10-16. Status: built on `game/cleanup-crew`, ready for the user to ch
 the [Cleanup Crew design](2026-10-10-cleanup-crew-design.md) §4 ("Hands" and "Pockets") and the pocket and swap
 requests in §6. The rules are the user's.
 
+> **Economy update, 2026-10-16:** [the Gloom and Gleam economy](2026-10-16-cleanup-crew-gloom-gleam-economy-design.md). The vacuum's card (slot 1) shows the
+> crew's contract ("340/500" Gloom) instead of the canister fill; item tags read in Gleam ("120 Gleam", "??? Gleam"
+> until appraised); trash and dust bags no longer spawn; and §5's quota guarantee is now a Gloom guarantee.
+
 ## 1. The rules
 
 - **Five hotbar slots**, like the Roblox HUD: **slot 1 is the vacuum**, **slots 2-5 are four item slots**.

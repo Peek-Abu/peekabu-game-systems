@@ -15,14 +15,16 @@ return function()
 			expect(VM.panelLayout(Vector2.new(390, 844), true).compact).to.equal(true)
 			expect(VM.panelLayout(Vector2.new(844, 390), true).compact).to.equal(false)
 		end)
-		it("teaches the real dust-bag cycle without inventing an empty action", function()
+		it("teaches that Gloom counts on the spot, with no dust bag to carry and no empty action", function()
 			for _, page in { "guide", "gear" } do
 				local copy = VM.copy(page)
 				local text = ""
 				for _, section in copy.sections do
 					text ..= string.lower(section.title .. " " .. section.body) .. " "
 				end
-				expect(string.find(text, "dust bag", 1, true) ~= nil).to.equal(true)
+				expect(string.find(text, "gloom", 1, true) ~= nil).to.equal(true)
+				expect(string.find(text, "bank dust bags", 1, true)).to.equal(nil)
+				expect(string.find(text, "produce dust bags", 1, true)).to.equal(nil)
 				expect(string.find(text, "empty your vacuum", 1, true)).to.equal(nil)
 				expect(string.find(text, "stops collecting", 1, true)).to.equal(nil)
 				expect(string.find(text, "empty at the truck", 1, true)).to.equal(nil)

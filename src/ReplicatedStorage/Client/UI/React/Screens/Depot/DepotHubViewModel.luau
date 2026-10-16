@@ -60,8 +60,8 @@ function VM.copy(
 					body = "Walk into a company truck bed. Bring up to three friends; anyone aboard can depart.",
 				},
 				{
-					title = "02 / CLEAR & BANK",
-					body = `Equip your vacuum. {cleanControl or "Hold the cleaning action near dust."} Full canisters produce dust bags. Bank dust bags, rubbish and Recoverable Assets at the truck (the Mobile Recovery Unit).`,
+					title = "02 / VACUUM & BANK",
+					body = `Equip your vacuum. {cleanControl or "Hold the cleaning action near dust."} Every pile you vacuum removes Gloom toward the contract on the spot, and so does cleaning the grime off a valuable. Bank the valuables at the truck (the Mobile Recovery Unit) for Gleam.`,
 				},
 				{
 					title = "03 / WATCH YOUR NOISE",
@@ -69,7 +69,7 @@ function VM.copy(
 				},
 				{
 					title = "04 / CLOCK OFF",
-					body = "Meet the clearance quota, then choose: clock out at the truck, or sign the overtime sheet beside it for ×1.5 assets and a faster Manager. Review your crew's awards and vote for another shift or the depot.",
+					body = "Remove the contract's Gloom, then choose: clock out at the truck, or sign the overtime sheet beside it for ×1.5 on valuables and a faster Manager. Every Gloom removed pays 1 Gleam at clock-out. Review your crew's awards and vote for another shift or the depot.",
 				},
 			},
 		}
@@ -80,11 +80,11 @@ function VM.copy(
 		sections = {
 			{
 				title = "STANDARD VACUUM",
-				body = "Your vacuum is issued when a shift starts. Equip it through the Roblox hotbar; cleaning fills the canister.",
+				body = "Your vacuum is issued when a shift starts. Equip it from slot 1 of your hotbar; its canister gauge shows the crew's Gloom against the contract.",
 			},
 			{
-				title = "FULL CANISTER → DUST BAG",
-				body = "A full canister automatically produces a dust bag and resets, so you can keep cleaning. Carry the bag to the truck and bank it for clearance.",
+				title = "NO DUST BAGS",
+				body = "The canister never fills up and there is nothing to carry back: the Gloom counts the moment it is vacuumed. Clean a valuable before you lift it; once lifted, its grime locks.",
 			},
 			{
 				title = "HANDS & LOAD",

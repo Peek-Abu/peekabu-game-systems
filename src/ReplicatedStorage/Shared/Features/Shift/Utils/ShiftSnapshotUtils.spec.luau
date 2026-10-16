@@ -146,6 +146,22 @@ return function()
 		expect(ShiftSnapshotUtils.decode(plain).results.catches).to.equal(0)
 	end)
 
+	it("round-trips the Gloom from piles in the results, absent reading 0, text refused", function()
+		local review = table.clone(RESULTS)
+		review.dust = 260
+		local value = ShiftSnapshotUtils.build(state({ phase = "results", voteEndsAt = 1000 }), 380, 95, 0, 0, review)
+		expect(ShiftSnapshotUtils.decode(value).results.dust).to.equal(260)
+		local plain = ShiftSnapshotUtils.build(state({ phase = "results", voteEndsAt = 1000 }), 380, 95, 0, 0, RESULTS)
+		expect(ShiftSnapshotUtils.decode(plain).results.dust).to.equal(0)
+		local bad = table.clone(RESULTS)
+		bad.dust = "260"
+		expect(
+			ShiftSnapshotUtils.decode(
+				ShiftSnapshotUtils.build(state({ phase = "results", voteEndsAt = 1000 }), 380, 95, 0, 0, bad)
+			)
+		).to.equal(nil)
+	end)
+
 	describe("M3 UI fields", function()
 		local FULL = {
 			outcome = "clockout",

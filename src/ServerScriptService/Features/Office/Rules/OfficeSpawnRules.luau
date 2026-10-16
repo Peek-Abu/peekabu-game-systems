@@ -1,8 +1,8 @@
 --!strict
 --[=[
-	OfficeSpawnRules: does one shift's spawn plan keep the spec's promises (§4 "Spawn guarantees")? The quota needs
-	no more than LOOT_QUOTA_SHARE_MAX of the map's value at average cleanliness (OfficeLootUtils, docs/superpowers/
-	specs/2026-10-15-cleanup-crew-loot-loop-design.md §3.5); one greed target sits in a deep room; no marker holds
+	OfficeSpawnRules: does one shift's spawn plan keep the spec's promises (§4 "Spawn guarantees")? The contract
+	needs no more than CONTRACT_SHARE_MAX of the site's Gloom (OfficeLootUtils, docs/superpowers/specs/
+	2026-10-16-cleanup-crew-gloom-gleam-economy-design.md §3.4); one greed target sits in a deep room; no marker holds
 	two things; loot sits on furniture it belongs on. Pure.
 
 	@class OfficeSpawnRules
@@ -60,7 +60,7 @@ function OfficeSpawnRules.surfaceKindsFor(itemId: string): { string }
 end
 
 --[=[
-	Ok when `plan` meets every guarantee for `quota`; otherwise the first broken one.
+	Ok when `plan` meets every guarantee for the contract `quota` (Gloom); otherwise the first broken one.
 ]=]
 function OfficeSpawnRules.check(plan: SpawnPlan, layout: OfficeTypes.Layout, quota: number): (boolean, string?)
 	local used: { [string]: boolean } = {}
@@ -94,9 +94,9 @@ function OfficeSpawnRules.check(plan: SpawnPlan, layout: OfficeTypes.Layout, quo
 	end
 
 	if OfficeLootUtils.shortfall(plan, quota) then
-		local have = math.floor(OfficeLootUtils.valueOf(plan).average + 0.5)
-		local need = math.ceil(quota / OfficeConstants.LOOT_QUOTA_SHARE_MAX)
-		return false, `only {have} of a needed {need} value for a quota of {quota}`
+		local have = OfficeLootUtils.gloomOf(plan).total
+		local need = math.ceil(quota / OfficeConstants.CONTRACT_SHARE_MAX)
+		return false, `only {have} of a needed {need} Gloom for a contract of {quota}`
 	end
 
 	local greed = plan.greed

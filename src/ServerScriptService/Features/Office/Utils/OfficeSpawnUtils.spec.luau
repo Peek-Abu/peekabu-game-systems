@@ -13,8 +13,8 @@ local CargoAppraisalFormulas = require(ReplicatedStorage.Shared.Features.Cargo.U
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 
 local LAYOUT = OfficeLayoutConstants.LAYOUT
--- The biggest crew's quota: every roll on a generated office (what a shift plays) must be able to meet it. The authored
--- base layout is two rooms deep and never played as is; its rolls are checked for placement with no quota.
+-- The biggest crew's contract (Gloom): every roll on a generated office (what a shift plays) must be able to meet it.
+-- The authored base layout is two rooms deep and never played as is; its rolls are checked for placement with none.
 local QUOTA = ShiftConstants.QUOTA_BY_CREW[#ShiftConstants.QUOTA_BY_CREW]
 
 local function options(variant, quota)
@@ -244,16 +244,51 @@ return function()
 		end
 	end)
 
-	it("tops a poor map up with open valuables for a big quota, at most TOP_UP_MAX", function()
+	it("tops a thin site up with plain piles for a big contract, at most TOP_UP_MAX", function()
+		local big = QUOTA * 2
 		for seed = 1, 20 do
 			local plain = roll(seed)
-			local topped = OfficeSpawnUtils.roll(LAYOUT, options("B", QUOTA), Random.new(seed))
-			local extra = #topped.items - #plain.items
+			local topped = OfficeSpawnUtils.roll(LAYOUT, options("B", big), Random.new(seed))
+			local extra = #topped.piles - #plain.piles
 			expect(extra >= 0 and extra <= OfficeConstants.TOP_UP_MAX).to.equal(true)
-			if not OfficeLootUtils.shortfall(plain, QUOTA) then
+			expect(#topped.items).to.equal(#plain.items)
+			for index = #plain.piles + 1, #topped.piles do
+				expect(topped.piles[index].hides).to.equal(nil)
+			end
+			if not OfficeLootUtils.shortfall(plain, big) then
 				expect(extra).to.equal(0)
 			end
 		end
+	end)
+
+	it("never rolls trash into a desk or onto the floor", function()
+		for seed = 1, 30 do
+			local plan = roll(seed)
+			for _, item in plan.items do
+				expect(CargoRegistry.get(item.kind).category).to.equal("salvage")
+			end
+			for _, search in plan.searchables do
+				if search.kind ~= nil then
+					expect(CargoRegistry.get(search.kind).category).to.equal("salvage")
+				end
+			end
+		end
+	end)
+
+	it("offers a generated site enough Gloom that the biggest crew's contract is about 70% of it", function()
+		local sum = 0
+		for seed = 1, 30 do
+			if seed % 5 == 0 then
+				task.wait()
+			end
+			local layout = OfficeLayoutGenerationUtils.generate(LAYOUT, seed)
+			local plan = OfficeSpawnUtils.roll(layout, options("B", QUOTA), Random.new(seed))
+			local gloom = OfficeLootUtils.gloomOf(plan).total
+			expect(QUOTA <= gloom * OfficeConstants.CONTRACT_SHARE_MAX).to.equal(true)
+			sum += gloom
+		end
+		local share = QUOTA / (sum / 30)
+		expect(share > 0.62 and share < 0.78).to.equal(true)
 	end)
 
 	it("lists every desk and locker, empty or not", function()

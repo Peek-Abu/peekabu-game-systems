@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CargoAppraisalFormulas = require(script.Parent.CargoAppraisalFormulas)
+local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants)
 local CargoRegistry = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoRegistry)
 
 -- A Random stand-in that returns scripted draws.
@@ -133,6 +134,58 @@ return function()
 			expect(CargoAppraisalFormulas.cleanAt(0.5, 0)).to.be.near(0.5, 1e-9)
 			expect(CargoAppraisalFormulas.cleanAt(0.2, 1)).to.be.near(1, 1e-9)
 			expect(CargoAppraisalFormulas.cleanAt(0.2, 3)).to.be.near(1, 1e-9)
+		end)
+	end)
+
+	describe("gloomLeft", function()
+		it("carries its size's Gloom at full grime, scaled by the grime left", function()
+			local plaque = CargoRegistry.get("plaque")
+			local monitor = CargoRegistry.get("monitor")
+			expect(CargoAppraisalFormulas.gloomLeft(plaque, 0)).to.equal(CargoConstants.GLOOM_BY_SIZE.tiny)
+			expect(CargoAppraisalFormulas.gloomLeft(monitor, 0)).to.equal(CargoConstants.GLOOM_BY_SIZE.medium)
+			expect(CargoAppraisalFormulas.gloomLeft(monitor, 0.5)).to.equal(8)
+			expect(CargoAppraisalFormulas.gloomLeft(monitor, 1)).to.equal(0)
+			expect(CargoAppraisalFormulas.gloomLeft(monitor, 3)).to.equal(0)
+		end)
+
+		it("grows with size", function()
+			local sizes = { "tiny", "light", "medium", "heavy", "bulky" }
+			for index = 2, #sizes do
+				expect(CargoConstants.GLOOM_BY_SIZE[sizes[index]] > CargoConstants.GLOOM_BY_SIZE[sizes[index - 1]]).to.equal(
+					true
+				)
+			end
+		end)
+
+		it("carries none on trash", function()
+			expect(CargoAppraisalFormulas.gloomLeft(CargoRegistry.get("rubbishBag"), 0)).to.equal(0)
+		end)
+	end)
+
+	describe("gloomRemoved", function()
+		it("adds up to exactly the item's Gloom however the cleaning is split", function()
+			local monitor = CargoRegistry.get("monitor")
+			local total, clean = 0, 0
+			for _ = 1, 37 do
+				local nextClean = math.min(1, clean + 0.031)
+				total += CargoAppraisalFormulas.gloomRemoved(monitor, clean, nextClean)
+				clean = nextClean
+			end
+			total += CargoAppraisalFormulas.gloomRemoved(monitor, clean, 1)
+			expect(total).to.equal(CargoConstants.GLOOM_BY_SIZE.medium)
+		end)
+
+		it("never goes negative and gives nothing for no change", function()
+			local monitor = CargoRegistry.get("monitor")
+			expect(CargoAppraisalFormulas.gloomRemoved(monitor, 0.6, 0.6)).to.equal(0)
+			expect(CargoAppraisalFormulas.gloomRemoved(monitor, 0.6, 0.2)).to.equal(0)
+		end)
+
+		it("keeps what an item grabbed dirty never gave", function()
+			local monitor = CargoRegistry.get("monitor")
+			-- Cleaned to 40%, then picked up: its grime locks, so the rest is never removed.
+			expect(CargoAppraisalFormulas.gloomRemoved(monitor, 0, 0.4)).to.equal(6)
+			expect(CargoAppraisalFormulas.gloomLeft(monitor, 0.4)).to.equal(9)
 		end)
 	end)
 

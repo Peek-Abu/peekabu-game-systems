@@ -132,8 +132,8 @@ local function ShiftCompactHudPanel(props: Props): React.ReactNode
 	local valueSize = if phone then 18 else 22
 	local barTop = if phone then 42 else 54
 	local quotaChildren: { [string]: React.ReactNode } = {
-		heading = label("CLEARANCE CONTRACT", 0, -4, quotaWidth - 24, if phone then 11 else 13, "heading"),
-		value = label(`{view.clearedShort} cleared`, 0, if phone then 17 else 23, quotaWidth - 24, valueSize, "timer"),
+		heading = label("SITE CONTRACT", 0, -4, quotaWidth - 24, if phone then 11 else 13, "heading"),
+		value = label(view.clearedShort, 0, if phone then 17 else 23, quotaWidth - 24, valueSize, "timer"),
 		bar = e("Frame", {
 			Position = UDim2.fromOffset(0, barTop),
 			Size = UDim2.new(1, 0, 0, 5),

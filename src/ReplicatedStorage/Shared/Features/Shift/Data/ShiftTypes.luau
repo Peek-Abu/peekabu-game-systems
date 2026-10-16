@@ -106,8 +106,11 @@ export type Award = {
 -- The performance review (plain in M1-M2).
 export type ShiftResults = {
 	outcome: string,
+	-- The contract and the Gloom removed (docs/superpowers/specs/2026-10-16-cleanup-crew-gloom-gleam-economy-design.md),
+	-- `dust` of it from piles (the rest cleaned off valuables; absent reads 0), and the Gleam for banked valuables.
 	quota: number,
 	cleared: number,
+	dust: number?,
 	bonus: number,
 	-- Salvage items loaded, and piles vacuumed, by the whole crew.
 	salvage: number,

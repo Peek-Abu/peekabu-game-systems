@@ -68,21 +68,23 @@ return table.freeze({
 	-- Rooms this many doors from the loading bay, or more, are "deep" (where the greed target goes).
 	DEEP_DEPTH = 2,
 	PILES = table.freeze(PILES),
-	-- How many valuables a map offers, counting the greed target, desk valuables and buried ones (no trash padding:
-	-- trash is the piles' dust bags and the odd desk).
+	-- How many valuables a map offers, counting the greed target, desk valuables and buried ones (no trash: the Gloom
+	-- economy rolls none).
 	VALUABLES = table.freeze(VALUABLES),
-	-- Chance a desk or locker holds something; once DESK_VALUABLES_MAX of them hold a valuable, the rest hold trash or
-	-- nothing (a generated office has dozens of desks: uncapped, they would eat the whole valuables budget).
+	-- Chance a desk or locker holds a valuable; once DESK_VALUABLES_MAX of them hold one, the rest hold nothing (a
+	-- generated office has dozens of desks: uncapped, they would eat the whole valuables budget).
 	SEARCH_FILL_CHANCE = 0.5,
 	DESK_VALUABLES_MAX = 3,
 	-- Chance each pile buries a valuable (a buriable kind, CargoRegistry), capped so at least MIN_OPEN valuables of
 	-- the budget still lie in the open.
 	BURY_CHANCE = 0.35,
 	MIN_OPEN = 2,
-	-- The quota guarantee: a map's value at average cleanliness LOOT_AVERAGE_CLEAN (a grime factor of 0.65) must be
-	-- at least quota / LOOT_QUOTA_SHARE_MAX; a poorer roll adds up to TOP_UP_MAX open valuables.
+	-- The cleanliness a map's valuables are priced at for the logs (a grime factor of 0.65).
 	LOOT_AVERAGE_CLEAN = 0.5,
-	LOOT_QUOTA_SHARE_MAX = 0.75,
+	-- The contract guarantee (docs/superpowers/specs/2026-10-16-cleanup-crew-gloom-gleam-economy-design.md §3.4): the
+	-- contract may ask at most CONTRACT_SHARE_MAX of the site's Gloom (piles plus valuables' grime); a thinner roll
+	-- adds up to TOP_UP_MAX more piles on free pile markers (plain, burying nothing).
+	CONTRACT_SHARE_MAX = 0.8,
 	TOP_UP_MAX = 4,
 	-- Seeds tried (seed, seed + 1, ...) before a roll that misses a guarantee is an error.
 	ROLL_ATTEMPTS = 5,

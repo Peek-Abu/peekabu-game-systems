@@ -1,10 +1,11 @@
 --!strict
 --[=[
 	ShiftClearancePanel: the clearance folder and the finder's fee plate (Figma 1a-1c, top left). The folder is a manila
-	sheet with a "CLEARANCE CONTRACT" tab: the cleared number, "/ 350 cleared", MET in green ink once the quota is met
-	and the green clearance bar. Under it the fee plate is a dark strip, not paper (Figma's dark plate = a live number):
-	the scrip earned (ShiftHudViewModel's `feeLabel`), the fee and, in overtime, the "×1.5 now" boost. On phone (Figma 1d/1e "Clearance (compact)" and
-	"Finder's fee (compact)", 236 wide at (48, 66) / (48, 130)) the folder loses its tab: "CLEARANCE", "212 / 350" and a
+	sheet with a "SITE CONTRACT" tab: the Gloom removed, "/ 500 Gloom", MET in green ink once the contract is met
+	and the green bar. Under it the fee plate is a dark strip, not paper (Figma's dark plate = a live number):
+	the Gleam earned so far (ShiftHudViewModel's `feeLabel`), the fee and, in overtime, the "×1.5 now" boost. On phone
+	(Figma 1d/1e "Clearance (compact)" and "Finder's fee (compact)", 236 wide at (48, 66) / (48, 130)) the folder loses
+	its tab: "CONTRACT", "Gloom 212 / 500" and a
 	14 px bar, and the plate is 34 px tall. Presentational.
 
 	@class ShiftClearancePanel
@@ -96,7 +97,7 @@ local function folder(view: ShiftHudViewModel.HudView, progress: React.Binding<n
 	return e(PaperSheet, {
 		position = UDim2.fromOffset(LEFT, FOLDER_TOP),
 		size = UDim2.fromOffset(WIDTH, 118),
-		tab = "CLEARANCE CONTRACT",
+		tab = "SITE CONTRACT",
 		padding = 0,
 		children = children,
 	})
@@ -167,7 +168,7 @@ local function phoneFolder(view: ShiftHudViewModel.HudView, progress: React.Bind
 	local inner = PHONE_WIDTH - 2 * PHONE_INSET
 	local children: { [string]: React.ReactNode } = {
 		title = e(PaperLabel, {
-			text = "CLEARANCE",
+			text = "CONTRACT",
 			role = "heading",
 			size = PHONE_TEXT.label,
 			position = UDim2.fromOffset(PHONE_INSET, 4),

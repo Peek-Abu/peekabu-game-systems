@@ -1,17 +1,17 @@
 --!strict
 --[=[
 	VacuumFeedbackSystem: how vacuuming feels on this client (Cleanup Crew spec §7 "Vacuuming: suction particles
-	into the nozzle, pile shrinks, rising whine, pop + sparkle, canister fills"; "Canister full: chime, dust bag
-	pops out"). For every pile, and every grimy valuable being cleaned (Observers on PILE_TAG and GRIME_TAG):
+	into the nozzle, pile shrinks, rising whine, pop + sparkle, canister fills"). For every pile, and every grimy valuable being cleaned (Observers on PILE_TAG and GRIME_TAG):
 	- while anyone channels it (ChannelCount > 0): dust particles stream from the pile to the nearest vacuumer's
 	  floor head (else hand; re-aimed every frame) and a whine loops at the pile, its pitch and volume rising with ChannelProgress
 	  (VacuumFeedbackFormulas.whine), winding down (vacuumStop) when the channel stops;
 	- when it disappears after being vacuumed (VacuumFeedbackFormulas.cleared on its peak progress): a pop and a
 	  sparkle burst where it was. The pile's shrinking is the server's (M1).
-	Your own canister field ticks as it fills and chimes, with a pop at your feet, when it empties into a dust bag
-	(VacuumFeedbackFormulas.canisterCue; only while a shift runs). Every player's backpack gauge (its dust insert
-	behind the window, VacuumVisualSystem on the server) eases toward that player's public canister fill; when
-	it fills it shows full with its lamp lit for GAUGE_FULL_HOLD seconds, then drains. The insert is resized and
+	The canister is a live Gloom gauge (docs/superpowers/specs/2026-10-16-cleanup-crew-gloom-gleam-economy-design.md
+	§3.1: no capacity, no dust bags): every backpack's gauge (its dust insert behind the window, VacuumVisualSystem on
+	the server) eases toward the crew's Gloom removed as a share of the contract (the shift snapshot's cleared / quota,
+	VacuumFeedbackFormulas.gaugeTarget), its lamp lit once the contract is met; the canister ticks as the Gloom rises
+	(VacuumFeedbackFormulas.gloomTick; only while a shift runs) and chimes once when the contract is met. The insert is resized and
 	its Weld moved locally (never replicated) from the full size and offset the server recorded on them. Client-local instances; pending sounds
 	(VacuumAssets) are skipped silently and counted.
 
@@ -30,16 +30,14 @@ local Charm = require(ReplicatedStorage.Packages.Charm)
 local Observers = require(ReplicatedStorage.Packages.Observers)
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionConstants)
-local PublicPlayerTypes = require(ReplicatedStorage.Shared.Data.PublicPlayerTypes)
 local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundRegistry)
 local SoundTypes = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundTypes)
-local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
+local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local VacuumAssets = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumAssets)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local VacuumFeedbackFormulas = require(ReplicatedStorage.Client.Features.Vacuum.Utils.VacuumFeedbackFormulas)
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
 local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
-local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 
 type PileFeel = {
 	pile: BasePart,
@@ -53,7 +51,7 @@ type PileFeel = {
 	emitter: ParticleEmitter?,
 }
 
-type Gauge = { fill: number, shown: number, fullUntil: number, drawn: number, part: BasePart? }
+type Gauge = { shown: number, drawn: number, part: BasePart? }
 
 export type VacuumFeedbackState = {
 	piles: number,
@@ -63,9 +61,15 @@ export type VacuumFeedbackState = {
 local log = Logger.new("VacuumFeedbackSystem")
 
 local active: { [BasePart]: PileFeel } = {}
-local counters = { pops = 0, fills = 0, fulls = 0, played = 0, pending = 0 }
+local counters = { pops = 0, ticks = 0, played = 0, pending = 0 }
 local stoppers: { () -> () } = {}
-local lastFill: number? = nil
+-- The crew's Gloom last seen, and when the canister last ticked.
+local lastGloom: number? = nil
+local lastTick = 0
+-- Whether the contract was met in the last snapshot (the chime plays once, when it is met).
+local wasMet = true
+-- What every gauge eases toward: the crew's Gloom as a share of the contract.
+local gaugeTarget = 0
 local gauges: { [number]: Gauge } = {}
 
 local function play(id: string, options: SoundTypes.PlayOptions?): SoundServiceClient.SoundHandle?
@@ -250,35 +254,24 @@ local function aim()
 	end
 end
 
-local function fillOf(map: PublicPlayerTypes.PublicPlayerMap, userId: number): number
-	local entry = map[StateSyncConstants.publicEntryKey(userId)]
-	local value = if entry ~= nil then entry[VacuumConstants.PUBLIC_FIELD] else nil
-	return if type(value) == "number" then value else 0
-end
-
-local function myFill(map: PublicPlayerTypes.PublicPlayerMap): number
-	return fillOf(map, Players.LocalPlayer.UserId)
-end
-
--- Every player's gauge follows their canister; one that just filled holds full a moment.
-local function followGauges(map: PublicPlayerTypes.PublicPlayerMap, running: boolean)
+-- The gauge target and the canister tick, from the shift snapshot.
+local function onShift(snapshot: ShiftTypes.ShiftSnapshot?)
+	local running = snapshot ~= nil and snapshot.phase == "running"
+	local gloom = if snapshot ~= nil then snapshot.cleared else 0
+	gaugeTarget = if snapshot ~= nil then VacuumFeedbackFormulas.gaugeTarget(gloom, snapshot.quota) else 0
+	local before = lastGloom
+	lastGloom = gloom
 	local now = os.clock()
-	for _, player in Players:GetPlayers() do
-		local fill = fillOf(map, player.UserId)
-		local gauge = gauges[player.UserId]
-		if gauge == nil then
-			local shown = math.clamp(fill / VacuumConstants.CANISTER_CAPACITY, 0, 1)
-			gauges[player.UserId] = { fill = fill, shown = shown, fullUntil = 0, drawn = -1, part = nil }
-		else
-			if
-				VacuumFeedbackFormulas.canisterCue(gauge.fill, fill, VacuumConstants.CANISTER_CAPACITY, running)
-				== "full"
-			then
-				gauge.fullUntil = now + VacuumConstants.GAUGE_FULL_HOLD
-			end
-			gauge.fill = fill
-		end
+	if before ~= nil and VacuumFeedbackFormulas.gloomTick(before, gloom, running, now, lastTick) then
+		lastTick = now
+		counters.ticks += 1
+		play("canisterTick")
 	end
+	local met = snapshot ~= nil and snapshot.quotaMet
+	if running and met and not wasMet then
+		play("canisterChime")
+	end
+	wasMet = met
 end
 
 -- Sizes a backpack's dust insert to `shown` and lights its lamp when full. False when it has no gauge.
@@ -313,43 +306,20 @@ local function drawGauge(gauge: Gauge, character: Model?): boolean
 end
 
 local function drawGauges(deltaTime: number)
-	local now = os.clock()
+	for _, player in Players:GetPlayers() do
+		if gauges[player.UserId] == nil then
+			gauges[player.UserId] = { shown = gaugeTarget, drawn = -1, part = nil }
+		end
+	end
 	for userId, gauge in gauges do
 		local player = Players:GetPlayerByUserId(userId)
 		if player == nil then
 			gauges[userId] = nil
 			continue
 		end
-		local target =
-			VacuumFeedbackFormulas.gaugeTarget(gauge.fill, VacuumConstants.CANISTER_CAPACITY, gauge.fullUntil, now)
-		gauge.shown = VacuumFeedbackFormulas.gaugeStep(gauge.shown, target, deltaTime, VacuumConstants.GAUGE_RATE)
+		gauge.shown = VacuumFeedbackFormulas.gaugeStep(gauge.shown, gaugeTarget, deltaTime, VacuumConstants.GAUGE_RATE)
 		if not drawGauge(gauge, player.Character) then
 			gauge.part = nil
-		end
-	end
-end
-
-local function onPublic(map: PublicPlayerTypes.PublicPlayerMap)
-	local snapshot = ShiftStore.snapshot()
-	local running = snapshot ~= nil and snapshot.phase == "running"
-	followGauges(map, running)
-	local fill = myFill(map)
-	local before = lastFill
-	lastFill = fill
-	if before == nil then
-		return
-	end
-	local cue = VacuumFeedbackFormulas.canisterCue(before, fill, VacuumConstants.CANISTER_CAPACITY, running)
-	if cue == "fill" then
-		counters.fills += 1
-		play("canisterTick")
-	elseif cue == "full" then
-		counters.fulls += 1
-		play("canisterChime")
-		local character = Players.LocalPlayer.Character
-		local root = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil
-		if root ~= nil and root:IsA("BasePart") then
-			play("dustBagPop", { at = root.Position })
 		end
 	end
 end
@@ -363,9 +333,8 @@ function VacuumFeedbackSystem.start()
 	table.insert(stoppers, Observers.observeTag(VacuumConstants.PILE_TAG, observePile))
 	-- A grimy valuable being cleaned feels like a pile being vacuumed; it pops when it comes up spotless.
 	table.insert(stoppers, Observers.observeTag(VacuumConstants.GRIME_TAG, observePile))
-	lastFill = myFill(StateSyncClientStore.publicPlayers())
-	followGauges(StateSyncClientStore.publicPlayers(), false)
-	table.insert(stoppers, Charm.subscribe(StateSyncClientStore.publicPlayers, onPublic))
+	onShift(ShiftStore.snapshot())
+	table.insert(stoppers, Charm.subscribe(ShiftStore.snapshot, onShift))
 	local connection = RunService.RenderStepped:Connect(function(deltaTime)
 		aim()
 		drawGauges(deltaTime)
@@ -385,7 +354,8 @@ function VacuumFeedbackSystem.stop()
 	end
 	table.clear(active)
 	table.clear(gauges)
-	lastFill = nil
+	lastGloom = nil
+	gaugeTarget = 0
 end
 
 function VacuumFeedbackSystem.getState(): VacuumFeedbackState

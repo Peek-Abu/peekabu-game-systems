@@ -1,15 +1,18 @@
 --!strict
 --[=[
-	CargoRegistry: the cargo catalog (Cleanup Crew spec §4 table): sixteen items found in the office plus the
-	dust bag the vacuum makes. Five of them are the small pocketable valuables the hotbar inventory was made for
-	(docs/superpowers/specs/2026-10-16-cleanup-crew-hotbar-inventory-design.md §5): rolled often, so a trip fills two to
-	four item slots. Built here at load and frozen; `ids()` is sorted so a roll that walks the
-	catalog picks the same items for the same seed.
+	CargoRegistry: the cargo catalog (Cleanup Crew spec §4 table): the items found in the office. Five of them are the
+	small pocketable valuables the hotbar inventory was made for (docs/superpowers/specs/
+	2026-10-16-cleanup-crew-hotbar-inventory-design.md §5): rolled often, so a trip fills two to four item slots. Built
+	here at load and frozen; `ids()` is sorted so a roll that walks the catalog picks the same items for the same seed.
 
-	Trash has a fixed price. A valuable (salvage) has a base RANGE, rolled once per shift and scaled by depth
-	(CargoAppraisalFormulas), an optional rare jackpot variant, and spawns grimy; its `value` is the range's middle,
-	a reference only (docs/superpowers/specs/2026-10-15-cleanup-crew-loot-loop-design.md §3.1: about 3x the old
-	catalog once depth is applied, the greed targets about 4x).
+	Trash has a fixed price, and no longer spawns: under the Gloom and Gleam economy (docs/superpowers/specs/
+	2026-10-16-cleanup-crew-gloom-gleam-economy-design.md §4) it counts toward nothing and pays nothing, so the roll
+	never places it (no weights) and the dust bag is gone. The three kinds stay in the catalog for the trash rules'
+	own specs and a possible later use (a throwable distraction); see that note's open question. A valuable (salvage)
+	has a base RANGE, rolled once per shift and scaled by depth (CargoAppraisalFormulas), an optional rare jackpot
+	variant, and spawns grimy; its `value` is the range's middle, a reference only (docs/superpowers/specs/
+	2026-10-15-cleanup-crew-loot-loop-design.md §3.1: about 3x the old catalog once depth is applied, the greed targets
+	about 4x).
 
 	Every number is a tuning hypothesis. spawnWeight / deskWeight are this plan's hypotheses for how often
 	an item is rolled on the open floor / into a desk; greed targets are placed by the roll itself.
@@ -107,22 +110,10 @@ local function define(
 	items[id] = table.freeze(def)
 end
 
--- Trash: a fixed price, counted toward the quota (no Recovery pay).
-define("rubbishBag", "Rubbish bag", "trash", "light", Color3.fromRGB(40, 40, 45), {
-	throwable = true,
-	spawnWeight = 3,
-	deskWeight = 2,
-}, 10)
-define("dustBag", "Dust bag", "trash", "light", Color3.fromRGB(150, 135, 110), { throwable = true }, 15)
-define("recyclingBox", "Recycling box", "trash", "light", Color3.fromRGB(60, 120, 200), {
-	spills = true,
-	spawnWeight = 2,
-}, 15)
-define("bottleBag", "Bottle bag", "trash", "light", Color3.fromRGB(70, 160, 90), {
-	rattly = true,
-	spawnWeight = 2,
-	deskWeight = 1,
-}, 15)
+-- Trash: a fixed price, never spawned (no weights; it counts toward nothing under the Gloom contract).
+define("rubbishBag", "Rubbish bag", "trash", "light", Color3.fromRGB(40, 40, 45), { throwable = true }, 10)
+define("recyclingBox", "Recycling box", "trash", "light", Color3.fromRGB(60, 120, 200), { spills = true }, 15)
+define("bottleBag", "Bottle bag", "trash", "light", Color3.fromRGB(70, 160, 90), { rattly = true }, 15)
 
 -- Valuables (Recoverable Assets): a base range before depth, grimy until vacuumed.
 define("officePlant", "Office plant", "salvage", "medium", Color3.fromRGB(50, 140, 60), {

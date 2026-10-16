@@ -7,9 +7,9 @@
 	- registers the channel (8 studs, 2.5 s) and refuses it to a player whose hands hold an item, or whose
 	  vacuum is not on that pile (VacuumTargetRules, the client's own pick with slack; re-checked every tick);
 	- shrinks a pile as its ChannelProgress rises;
-	- on completion destroys the pile, adds it to the credited channeler's canister (VacuumCanisterUtils),
-	  publishes the public `canister` field, and on overflow fires `dustBagReady` (Cargo spawns the bag);
-	- fires `pileCleared` (Office reveals what was hidden under it; Shift counts piles) and, every second a
+	- on completion destroys the pile and fires `pileCleared` (Office reveals what was hidden under it; Shift credits
+	  its Gloom to the contract, VacuumConstants.PILE_GLOOM, and counts piles; docs/superpowers/specs/
+	  2026-10-16-cleanup-crew-gloom-gleam-economy-design.md: no canister capacity, no dust bags) and, every second a
 	  pile is being vacuumed, `noiseMade` (the M2 Noise seam; nothing listens in M1).
 	- fires `vacuumStarted(player, pile)` when a player starts vacuuming a pile (Shift's analytics: first_cleanup_started);
 	- answers `canVacuum` for Cargo's grime channels (the loot loop, docs/superpowers/specs/
@@ -20,8 +20,7 @@
 	  shift's crew are given the vacuum Tool (VacuumToolSystem), which takes the wand off that same pack while held
 	  (never a second pack).
 
-	Spec-exempt shell (Instances, Players, RunService, signals); the maths is the specced
-	VacuumCanisterUtils.
+	Spec-exempt shell (Instances, Players, RunService, signals); the aim is the specced VacuumTargetRules.
 
 	@class VacuumServiceServer
 ]=]
@@ -40,7 +39,6 @@ local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionConstants)
 local InteractionRegistry = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionRegistry)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
-local VacuumCanisterUtils = require(ServerScriptService.Features.Vacuum.Utils.VacuumCanisterUtils)
 local VacuumChannelTracker = require(ServerScriptService.Features.Vacuum.State.VacuumChannelTracker)
 local VacuumToolSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumToolSystem)
 local VacuumVisualSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumVisualSystem)
@@ -48,7 +46,6 @@ local VacuumEquipmentRules = require(ReplicatedStorage.Shared.Features.Vacuum.Ru
 local VacuumSkinRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumSkinRules)
 local VacuumTargetRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumTargetRules)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
-local CarryPlacementSystem = require(ServerScriptService.Features.Carry.Systems.CarryPlacementSystem)
 local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
 local StateSyncPublicPlayerStore = require(ServerScriptService.Features.StateSync.State.StateSyncPublicPlayerStore)
 
@@ -61,17 +58,15 @@ if not InteractionRegistry.hasChannel(VacuumConstants.CHANNEL_KIND) then
 end
 
 local pileCleared: SignalTyped.Signal<BasePart, { Player }> = SignalTyped.new()
-local dustBagReady: SignalTyped.Signal<Player, CFrame, Instance> = SignalTyped.new()
 local noiseMade: SignalTyped.Signal<Vector3, number, string, { number }> = SignalTyped.new()
 local vacuumStarted: SignalTyped.Signal<Player, BasePart> = SignalTyped.new()
 
-local fills: { [number]: number } = {}
 local tools: { [Player]: VacuumToolSystem.Controller } = {}
 local equipped: { [Player]: boolean } = {}
 local animations: { [Player]: AnimationVacuumSystem.Controller } = {}
 -- Who is vacuuming which pile (vacuumStarted fires when a player's pile changes; the makers of each noise pulse).
 local channels = VacuumChannelTracker.new(VacuumConstants.MAKER_WINDOW)
-local counters = { spawned = 0, cleared = 0, bags = 0 }
+local counters = { spawned = 0, cleared = 0 }
 local stoppers: { () -> () } = {}
 -- The canister backpack each character wears.
 local worn: { [Model]: VacuumVisualSystem.WornBackpack } = {}
@@ -102,10 +97,6 @@ local function wornFor(character: Model): VacuumVisualSystem.WornBackpack?
 		worn[character] = backpack
 	end
 	return backpack
-end
-
-local function publish(userId: number)
-	StateSyncPublicPlayerStore.set(userId, { [VacuumConstants.PUBLIC_FIELD] = fills[userId] or 0 })
 end
 
 local function rootOf(player: Player): BasePart?
@@ -151,51 +142,14 @@ local function shrink(pile: BasePart)
 	pile.Position = Vector3.new(pile.Position.X, bottom + pile.Size.Y / 2, pile.Position.Z)
 end
 
--- Where a popped dust bag lands for `player`: ahead of them on their own floor, never through a wall.
-local function bagFloor(root: BasePart): CFrame
-	local ignore: { Instance } = {}
-	for _, other in Players:GetPlayers() do
-		if other.Character ~= nil then
-			table.insert(ignore, other.Character)
-		end
-	end
-	return CarryPlacementSystem.floorNear(
-		root.Position,
-		(root.CFrame * VacuumConstants.BAG_OFFSET).Position,
-		ignore,
-		VacuumConstants.BAG_WALL_MARGIN
-	)
-end
-
 -- The channel's completion: the pile is cleared once, for everyone on it.
 local function clear(players: { Player }, target: Instance)
 	if not target:IsA("BasePart") then
 		return
 	end
-	local parent = target.Parent
-	-- Where the pile's floor is, for a bag whose credited player has no root any more.
-	local pileFloor = CFrame.new(target.Position - Vector3.new(0, target.Size.Y / 2, 0))
 	-- Destroyed (not just forgotten) so a still-held channel cannot restart on this pile.
 	target:Destroy()
 	counters.cleared += 1
-	local ids: { number } = {}
-	for _, player in players do
-		table.insert(ids, player.UserId)
-	end
-	local creditId = VacuumCanisterUtils.creditFor(ids, function(userId)
-		return fills[userId] or 0
-	end)
-	local credited = if creditId ~= nil then Players:GetPlayerByUserId(creditId) else nil
-	if creditId ~= nil and credited ~= nil then
-		local fill, popped = VacuumCanisterUtils.add(fills[creditId] or 0, VacuumConstants.CANISTER_CAPACITY)
-		fills[creditId] = fill
-		publish(creditId)
-		local root = rootOf(credited)
-		if popped and parent ~= nil then
-			counters.bags += 1
-			dustBagReady:Fire(credited, if root ~= nil then bagFloor(root) else pileFloor, parent)
-		end
-	end
 	pileCleared:Fire(target, players)
 end
 
@@ -240,7 +194,6 @@ end
 export type VacuumServiceServer = {
 	dependencies: { string },
 	pileCleared: SignalTyped.Signal<BasePart, { Player }>,
-	dustBagReady: SignalTyped.Signal<Player, CFrame, Instance>,
 	noiseMade: SignalTyped.Signal<Vector3, number, string, { number }>,
 	vacuumStarted: SignalTyped.Signal<Player, BasePart>,
 	start: (self: VacuumServiceServer) -> (),
@@ -248,7 +201,6 @@ export type VacuumServiceServer = {
 	stop: (self: VacuumServiceServer) -> (),
 	getState: (self: VacuumServiceServer) -> { [string]: any },
 	spawnPile: (self: VacuumServiceServer, kind: string, floor: CFrame, parent: Instance) -> BasePart,
-	fillOf: (self: VacuumServiceServer, player: Player) -> number,
 	isVacuuming: (self: VacuumServiceServer, player: Player) -> boolean,
 	reset: (self: VacuumServiceServer) -> (),
 	setCrew: (self: VacuumServiceServer, crew: { Player }) -> (),
@@ -263,7 +215,6 @@ local VacuumServiceServer: VacuumServiceServer = {
 		"AnimationServiceServer",
 	},
 	pileCleared = pileCleared,
-	dustBagReady = dustBagReady,
 	noiseMade = noiseMade,
 	vacuumStarted = vacuumStarted,
 
@@ -350,7 +301,6 @@ local VacuumServiceServer: VacuumServiceServer = {
 				tools[player] = nil
 			end
 			equipped[player] = nil
-			fills[player.UserId] = nil
 			channels:forget(player.UserId)
 		end)
 		table.insert(stoppers, function()
@@ -401,10 +351,6 @@ local VacuumServiceServer: VacuumServiceServer = {
 		return canVacuum(player, target)
 	end,
 
-	fillOf = function(_self, player)
-		return fills[player.UserId] or 0
-	end,
-
 	--[=[
 		Whether `player` is vacuuming a pile right now (their channel asked within MAKER_WINDOW).
 	]=]
@@ -413,15 +359,11 @@ local VacuumServiceServer: VacuumServiceServer = {
 	end,
 
 	--[=[
-		Empties every canister (a new shift). Piles go with the shift's container (Office).
+		Takes the crew's vacuums and forgets who vacuumed what (a new shift). Piles go with the shift's container (Office).
 	]=]
 	reset = function(self)
 		self:setCrew({})
-		table.clear(fills)
 		channels:clear()
-		for _, player in Players:GetPlayers() do
-			publish(player.UserId)
-		end
 	end,
 
 	--[=[
@@ -474,10 +416,6 @@ local VacuumServiceServer: VacuumServiceServer = {
 	end,
 
 	getState = function(_self)
-		local canisters: { [string]: number } = {}
-		for userId, fill in fills do
-			canisters[tostring(userId)] = fill
-		end
 		local wearing = 0
 		for character in worn do
 			if character.Parent ~= nil then
@@ -487,7 +425,6 @@ local VacuumServiceServer: VacuumServiceServer = {
 		return {
 			piles = #CollectionService:GetTagged(VacuumConstants.PILE_TAG),
 			wearing = wearing,
-			canisters = canisters,
 			counters = table.clone(counters),
 		}
 	end,

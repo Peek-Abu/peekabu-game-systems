@@ -159,10 +159,10 @@ function DepotWorldViewModel.workOrder(attributes: { [string]: unknown }, crew: 
 	local clear: string
 	local who: string
 	if crew == nil then
-		clear = `CLEAR {ShiftQuotaFormulas.quota(1)}–{ShiftQuotaFormulas.quota(#ShiftConstants.QUOTA_BY_CREW)}`
-		who = "more crew, more to clear"
+		clear = `REMOVE {ShiftQuotaFormulas.quota(1)}–{ShiftQuotaFormulas.quota(#ShiftConstants.QUOTA_BY_CREW)} GLOOM`
+		who = "more crew, more Gloom"
 	else
-		clear = `CLEAR {ShiftQuotaFormulas.quota(crew)}`
+		clear = string.upper(ShiftCurrencyUtils.contract(ShiftQuotaFormulas.quota(crew)))
 		who = if crew <= 1 then "for one player" else `for a crew of {crew}`
 	end
 	return {
@@ -229,12 +229,16 @@ function DepotWorldViewModel.review(attributes: { [string]: unknown }): ReviewVi
 	return {
 		band = `SHIFT REVIEW · {band}`,
 		rows = {
-			{ label = "CLEARED", value = `{cleared} / {quota}` },
-			{ label = ShiftCurrencyUtils.earnedLabel(), value = ShiftCurrencyUtils.amount(bonus) },
+			{ label = "GLOOM", value = `{cleared} / {quota}` },
+			-- Every Gloom removed paid its Gleam at clock-out, on top of the valuables banked.
+			{
+				label = ShiftCurrencyUtils.earnedLabel(),
+				value = ShiftCurrencyUtils.amount(ShiftQuotaFormulas.breakdown(cleared, 0, bonus).gleam),
+			},
 			{ label = "TIMES CAUGHT", value = tostring(catches) },
 			{ label = "ASSETS", value = `{salvage} of {offered}` },
 		},
-		headline = if met then "QUOTA MET" else "QUOTA MISSED",
+		headline = if met then "CONTRACT MET" else "CONTRACT MISSED",
 		met = met,
 		rating = stamp,
 		crew = if #names > 0 then `Crew: {table.concat(names, " · ")}` else "",

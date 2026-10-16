@@ -13,8 +13,10 @@
 	  A member arriving on their own (late, or with a second party) is admitted into the transit or held on their own;
 	- run start: the crew respawns in the loading bay (anyone else respawns at the depot where this server runs
 	  it; DeathServiceServer:setSpawnPoint);
-	- banking: Cargo's `onBanked` (ShiftBankingSystem) adds trash to Round's `clearance` counter and salvage
-	  to `bonus`, keeps per-player scores, and stamps QUOTA MET once;
+	- the contract (docs/superpowers/specs/2026-10-16-cleanup-crew-gloom-gleam-economy-design.md): ShiftGloomSystem adds
+	  the Gloom of every cleared pile and every cleaning step to Round's `clearance` counter, live, and stamps CONTRACT
+	  MET once; banking (Cargo's `onBanked`, ShiftBankingSystem) adds the valuables' Gleam to `bonus` and keeps
+	  per-player scores, but never Gloom;
 	- pacing (M2): meeting the quota starts the Manager's break, which the clock ends; overtime is opt-in: any
 	  crew member holding the overtime sheet's Start overtime prompt at the truck starts the overtime warning for
 	  the whole crew, then overtime (assets x1.5, the top tier). The sheet's prompt shows only while overtime may
@@ -56,6 +58,7 @@ local ShiftPhaseRules = require(ShiftServer.Rules.ShiftPhaseRules)
 local ShiftNoticeUtils = require(ShiftServer.Utils.ShiftNoticeUtils)
 local ShiftRosterTracker = require(ShiftServer.State.ShiftRosterTracker)
 local ShiftBankingSystem = require(ShiftServer.Systems.ShiftBankingSystem)
+local ShiftGloomSystem = require(ShiftServer.Systems.ShiftGloomSystem)
 local ShiftTripSystem = require(ShiftServer.Systems.ShiftTripSystem)
 local ShiftTransitSystem = require(ShiftServer.Systems.ShiftTransitSystem)
 local ShiftSiteSystem = require(ShiftServer.Systems.ShiftSiteSystem)
@@ -222,7 +225,7 @@ local function beginRun(wasPrepared: boolean)
 	log:info(`shift {state.shift} started: variant {state.variant}, quota {state.quota}`)
 	VacuumServiceServer:setCrew(RoundServiceServer:participants())
 	ToastServiceServer:send("all", {
-		text = `Shift {state.shift}: bank {state.quota} of site value before the clock runs out. Clean what you find: it is worth more.`,
+		text = `Shift {state.shift}: remove {state.quota} Gloom before the clock runs out. Vacuum the dust; clean valuables, then bank them for Gleam.`,
 		style = ShiftConstants.TOAST_STICKY,
 		duration = 6,
 	})
@@ -274,9 +277,10 @@ local function onRoundPhase(roundState: RoundTypes.RoundState)
 	end
 end
 
--- Cargo's banking handler (ShiftBankingSystem): assets x1.5 in overtime; meeting the quota starts the break
+-- Cargo's banking handler (ShiftBankingSystem): assets x1.5 in overtime. Its gate and its re-check are the contract's
+-- too (ShiftGloomSystem, in `start`): meeting the contract starts the break
 -- (its notice comes from setState, ShiftNoticeUtils); returns the bonus credited, which Cargo's Banked floater shows.
-local onBanked = ShiftBankingSystem.new({
+local banking: ShiftBankingSystem.Deps = {
 	roster = roster,
 	canBank = trip.eligible,
 	isOpen = function(): boolean
@@ -293,7 +297,7 @@ local onBanked = ShiftBankingSystem.new({
 			publish()
 		end
 	end,
-})
+}
 
 local overtime = ShiftOvertimeSystem.new({
 	getState = function(): ShiftTypes.ShiftState
@@ -403,7 +407,9 @@ local ShiftServiceServer: ShiftServiceServer = {
 		DeathServiceServer:setSpawnPoint(trip.spawnFor)
 		trip:start(publish)
 		table.insert(stoppers, transit:start())
-		CargoServiceServer:onBanked(onBanked)
+		CargoServiceServer:onBanked(ShiftBankingSystem.new(banking))
+		-- The contract's progress: every cleared pile and cleaning step adds its Gloom live (same gate and re-check).
+		table.insert(stoppers, ShiftGloomSystem.start(banking.isOpen, banking.afterBank))
 		table.insert(stoppers, ShiftAnalyticsWatchSystem.start(changed, trip))
 		table.insert(stoppers, ShiftReviewSystem.start(roster, isRunning))
 		table.insert(stoppers, ShiftCrewStatusSystem.start(trip, isRunning))

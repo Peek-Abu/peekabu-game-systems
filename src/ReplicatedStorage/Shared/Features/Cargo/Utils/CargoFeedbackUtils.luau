@@ -103,8 +103,8 @@ end
 
 --[=[
 	The `Banked` announcement for a Load: the kinds loaded, the swoop from `from` to the top of the bed (centre
-	`bed`, size `bedSize`), and the amounts credited (cleared: everything at x1; pay: the bonus), rounded like the
-	review and clamped to the packet's range.
+	`bed`, size `bedSize`), and the amounts credited (cleared: trash only, banking adds no Gloom; pay: the Gleam
+	bonus), rounded like the review and clamped to the packet's range.
 	`credited` is the banking handler's second value (the bonus after any overtime multiplier); nil = the deposit's.
 ]=]
 function CargoFeedbackUtils.banked(
@@ -135,9 +135,9 @@ function CargoFeedbackUtils.banked(
 		visuals = visuals,
 		from = from,
 		to = bed + Vector3.new(0, bedSize.Y / 2, 0),
-		-- Everything banked counts toward the quota at x1 (docs/superpowers/specs/2026-10-15-cleanup-crew-loot-loop-design.md
-		-- §3.6; ShiftQuotaFormulas.credit): the CLEARED floater shows trash plus valuables.
-		clearance = math.clamp(round(deposit.clearance + deposit.bonus), 0, MAX_AMOUNT),
+		-- Banking adds no Gloom (docs/superpowers/specs/2026-10-16-cleanup-crew-gloom-gleam-economy-design.md §3.3):
+		-- valuables only pay, so there is no CLEARED floater for them (trash, never rolled now, keeps its own number).
+		clearance = math.clamp(round(deposit.clearance), 0, MAX_AMOUNT),
 		bonus = math.clamp(round(credited or deposit.bonus), 0, MAX_AMOUNT),
 	}
 end

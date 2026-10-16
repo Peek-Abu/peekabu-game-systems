@@ -254,7 +254,7 @@ return function()
 
 		it("never seals trash or a spotless valuable", function()
 			local spawn = Spawn.new(art)
-			local bag = spawn:spawn("dustBag", CFrame.new(), parent)
+			local bag = spawn:spawn("rubbishBag", CFrame.new(), parent)
 			local clean = spawn:spawn("monitor", CFrame.new(), parent, {
 				appraisal = { base = 100, clean = 1, appraised = true },
 			})

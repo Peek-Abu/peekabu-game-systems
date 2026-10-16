@@ -85,23 +85,25 @@ local function contractOf(id: string?): DepotTypes.Contract
 end
 
 local function lastOf(last: DepotTypes.LastShift, phone: boolean): LastView
-	local stamp = if last.quotaMet then "QUOTA MET" else "QUOTA MISSED"
+	local stamp = if last.quotaMet then "CONTRACT MET" else "CONTRACT MISSED"
 	local title = if phone
 		then "LAST SHIFT"
 		elseif last.truck > 0 then `YOUR LAST SHIFT — TRUCK {last.truck}`
 		else "YOUR LAST SHIFT"
+	-- Every Gloom removed paid its Gleam at clock-out, on top of the valuables banked.
+	local earned = ShiftQuotaFormulas.breakdown(last.cleared, 0, last.bonus).gleam
 	return {
 		title = title,
 		rows = {
-			{ label = "Cleared", value = `{last.cleared} / {last.quota}` },
-			{ label = "Earned", value = ShiftCurrencyUtils.amount(last.bonus) },
+			{ label = "Gloom removed", value = `{last.cleared} / {last.quota}` },
+			{ label = "Earned", value = ShiftCurrencyUtils.amount(earned) },
 			{ label = "Times rehired", value = tostring(last.catches) },
 			{ label = "Assets recovered", value = `{last.salvage} of {last.offered}` },
 		},
 		stamp = stamp,
 		met = last.quotaMet,
 		lines = {
-			`Cleared {last.cleared}/{last.quota}  ·  {ShiftCurrencyUtils.gain(last.bonus)}`,
+			`Gloom {last.cleared}/{last.quota}  ·  {ShiftCurrencyUtils.gain(earned)}`,
 			`Rehired {last.catches}  ·  Assets {last.salvage} of {last.offered}`,
 		},
 	}
@@ -113,7 +115,7 @@ function DepotBoardViewModel.crewOf(snapshot: QueueTypes.QueueSnapshot?, userId:
 	return if pad ~= nil then #pad.members else nil
 end
 
--- The QUOTA row: the quota for a crew of `crew`, or the range by crew size when there is no crew yet.
+-- The CONTRACT row: the contract for a crew of `crew`, or the range by crew size when there is no crew yet.
 local function quotaText(crew: number?, phone: boolean): string
 	local copy = DepotConstants.BOARD_COPY
 	if crew == nil then
@@ -137,20 +139,16 @@ function DepotBoardViewModel.board(id: string?, last: DepotTypes.LastShift?, pho
 	local rows: { RowView }
 	if phone then
 		rows = {
-			{ label = "QUOTA", text = quota, hazard = false },
+			{ label = "CONTRACT", text = quota, hazard = false },
 			{ label = "SHIFT", text = `{shift} · {copy.shiftPhone}`, hazard = false },
-			{ label = "PAY", text = `Assets → {ShiftCurrencyUtils.SYMBOL}`, hazard = false },
+			{ label = "PAY", text = copy.payPhone, hazard = false },
 			{ label = "HAZARD", text = copy.hazardPhone, hazard = true },
 		}
 	else
 		rows = {
-			{ label = "QUOTA", text = quota, hazard = false },
+			{ label = "CONTRACT", text = quota, hazard = false },
 			{ label = "SHIFT", text = `{shift} {copy.shift}`, hazard = false },
-			{
-				label = "PAY",
-				text = "Every Recoverable Asset you bank pays the crew its assessed value in dollars.",
-				hazard = false,
-			},
+			{ label = "PAY", text = copy.pay, hazard = false },
 			{ label = "CREW", text = copy.crew, hazard = false },
 			{ label = "HAZARD", text = copy.hazard, hazard = true },
 			{ label = "NOTES", text = contract.note, hazard = false },

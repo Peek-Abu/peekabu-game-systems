@@ -14,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local DepotTypes = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotTypes)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
+local ShiftCurrencyUtils = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftCurrencyUtils)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 local WorldBillboardViewModel = require(ReplicatedStorage.Client.UI.React.Screens.World.WorldBillboardViewModel)
 
@@ -55,9 +56,9 @@ function DepotCardViewModel.arrival(card: DepotTypes.ShownCard): ArrivalView
 		tab = "ARRIVAL",
 		client = WorldBillboardViewModel.clip(card.client, DepotCardViewModel.CLIENT_MAX),
 		job = card.job,
-		slip = "CLEARANCE CONTRACT",
-		clear = `CLEAR {card.quota}`,
-		before = `of site buildup before {ShiftHudViewModel.clock(ShiftConstants.SHIFT_SECONDS)}`,
+		slip = "SITE CONTRACT",
+		clear = string.upper(ShiftCurrencyUtils.contract(card.quota)),
+		before = `before {ShiftHudViewModel.clock(ShiftConstants.SHIFT_SECONDS)}`,
 		note = card.note,
 	}
 end

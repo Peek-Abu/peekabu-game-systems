@@ -7,7 +7,10 @@
 	server mirrors the channel's ChannelProgress into the item's cleanliness: a channel cleans the grime that was left
 	when it started (CargoAppraisalFormulas.cleanAt), so when the channel forgets the item the next one starts from the
 	cleanliness reached. Each change goes through the spawner's `setClean` (value, tag, appraisal, and no vacuum target
-	once spotless); the channel's completion makes it spotless (`finish`).
+	once spotless); the channel's completion makes it spotless (`finish`). Every step that raised its cleanliness
+	reports the Gloom it removed (`cleaned`, CargoAppraisalFormulas.gloomRemoved: the item's size Gloom in step with its
+	cleanliness, docs/superpowers/specs/2026-10-16-cleanup-crew-gloom-gleam-economy-design.md §3.2), which the shift
+	credits to the contract live. A sealed item is never cleaned again, so what was left on it is never removed.
 
 	The first appraisal of an item is told (a small sticky slip, Shift's slip toast style) to every crew member within
 	APPRAISAL_TELL_DISTANCE, with the `cargoAppraise` sound at the item; a valuable banked unappraised is told to its
@@ -31,6 +34,7 @@ local Observers = require(ReplicatedStorage.Packages.Observers)
 local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants)
 local CargoTypes = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoTypes)
 local CargoAppraisalFormulas = require(ReplicatedStorage.Shared.Features.Cargo.Utils.CargoAppraisalFormulas)
+local CargoRegistry = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoRegistry)
 local CargoFeedbackUtils = require(ReplicatedStorage.Shared.Features.Cargo.Utils.CargoFeedbackUtils)
 local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
 local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionConstants)
@@ -59,6 +63,8 @@ export type Deps = {
 	sound: (position: Vector3, id: string) -> (),
 	-- Tells a carrier their first grime lock of the shift (default: the sticky-note toast).
 	lockHint: ((player: Player) -> ())?,
+	-- The Gloom one cleaning step removed from `item` (more than zero); the shift credits it to the contract.
+	cleaned: ((item: Instance, gloom: number) -> ())?,
 }
 
 export type CargoGrimeSystem = {
@@ -128,7 +134,16 @@ function CargoGrimeSystem.new(deps: Deps): CargoGrimeSystem
 	end
 
 	local function setClean(item: Instance, clean: number)
-		if deps.spawner:setClean(item, clean, deps.now()) then
+		local before = cleanOf(item)
+		local appraisedNow = deps.spawner:setClean(item, clean, deps.now())
+		local kind = item:GetAttribute(CarryConstants.KIND_ATTRIBUTE)
+		local def = if type(kind) == "string" then CargoRegistry.get(kind) else nil
+		local gloom = if def ~= nil then CargoAppraisalFormulas.gloomRemoved(def, before, cleanOf(item)) else 0
+		local cleaned = deps.cleaned
+		if gloom > 0 and cleaned ~= nil then
+			cleaned(item, gloom)
+		end
+		if appraisedNow then
 			announce(item)
 		end
 	end

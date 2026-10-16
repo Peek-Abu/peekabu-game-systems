@@ -20,6 +20,8 @@
 	  valuables spawn grimy; vacuuming one (Vacuum's grime channel) cleans it, raises its value and appraises it at
 	  65% (a small sticky slip to the crew near it); an unappraised valuable banked is appraised at the truck (a
 	  slip to the banker). Carry's `pickedUp` seals a dirty valuable as it is (its grime locks on the first pick-up).
+	  Every cleaning step's Gloom fires `grimeRemoved` (the shift's contract, docs/superpowers/specs/
+	  2026-10-16-cleanup-crew-gloom-gleam-economy-design.md).
 	- Feel (M3): every Load is announced (`Banked`, built by CargoFeedbackUtils.banked: the client swoops the
 	  items into the truck, cha-chings and floats "+N"); drops (here), rattles and searches (CargoTraitSystem)
 	  play positional sounds, silent while their CargoAssets ids are pending.
@@ -50,7 +52,6 @@ local CargoEvents = require(CargoShared.Net.CargoEvents)
 local CargoFeedbackUtils = require(CargoShared.Utils.CargoFeedbackUtils)
 local CargoHandlingRules = require(CargoShared.Rules.CargoHandlingRules)
 local InteractionRegistry = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionRegistry)
-local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local CargoClaimTracker = require(CargoServer.State.CargoClaimTracker)
 local CargoInventorySystem = require(CargoServer.Systems.CargoInventorySystem)
 local CargoSpawnSystem = require(CargoServer.Systems.CargoSpawnSystem)
@@ -94,6 +95,8 @@ type Stock = { kind: string?, appraisal: CargoTypes.Appraisal?, searched: boolea
 local noiseMade: SignalTyped.Signal<Vector3, number, string, { number }> = SignalTyped.new()
 local searched: SignalTyped.Signal<BasePart> = SignalTyped.new()
 local collected: SignalTyped.Signal<Player, Instance> = SignalTyped.new()
+-- The Gloom a cleaning step removed from a valuable (the shift credits it to the contract, live).
+local grimeRemoved: SignalTyped.Signal<Instance, number> = SignalTyped.new()
 local spawner = CargoSpawnSystem.new()
 local claims = CargoClaimTracker.new()
 local stock: { [BasePart]: Stock } = {}
@@ -157,6 +160,9 @@ local grime = CargoGrimeSystem.new({
 	end,
 	sound = function(position: Vector3, id: string)
 		traits:sound(position, id)
+	end,
+	cleaned = function(item: Instance, gloom: number)
+		grimeRemoved:Fire(item, gloom)
 	end,
 })
 
@@ -261,6 +267,7 @@ export type CargoServiceServer = {
 	noiseMade: SignalTyped.Signal<Vector3, number, string, { number }>,
 	searched: SignalTyped.Signal<BasePart>,
 	collected: SignalTyped.Signal<Player, Instance>,
+	grimeRemoved: SignalTyped.Signal<Instance, number>,
 	start: (self: CargoServiceServer) -> (),
 	stop: (self: CargoServiceServer) -> (),
 	getState: (self: CargoServiceServer) -> { [string]: unknown },
@@ -302,9 +309,10 @@ CargoServiceServer = {
 	noiseMade = noiseMade,
 	searched = searched,
 	collected = collected,
+	grimeRemoved = grimeRemoved,
 
 	--[=[
-		Handles Load and Search, Carry's drops, Vacuum's dust bags and the hotbar inventory (cargo pick-ups and the
+		Handles Load and Search, Carry's drops and the hotbar inventory (cargo pick-ups and the
 		Select packet); scatters pocketed items on death and leave.
 	]=]
 	start = function(self)
@@ -328,11 +336,6 @@ CargoServiceServer = {
 				grime:pickedUp(object, player)
 			end
 		end)
-		local bags = VacuumServiceServer.dustBagReady:Connect(function(_player, floor, parent)
-			if parent.Parent ~= nil then
-				spawner:spawn(VacuumConstants.DUST_BAG_KIND, floor, parent)
-			end
-		end)
 		table.insert(stoppers, grime:start())
 		local leaving = Players.PlayerRemoving:Connect(function(player)
 			inventory:scatter(player, nil)
@@ -341,7 +344,6 @@ CargoServiceServer = {
 		table.insert(stoppers, function()
 			dropped:Disconnect()
 			lifted:Disconnect()
-			bags:Disconnect()
 			leaving:Disconnect()
 		end)
 		table.insert(stoppers, inventory:start())

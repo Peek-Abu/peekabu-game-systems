@@ -104,7 +104,7 @@ export type Range = {
 }
 
 export type RollOptions = {
-	-- The run's quota: the map is topped up until it can meet it (OfficeLootUtils.shortfall).
+	-- The run's contract (Gloom): the map is topped up with piles until it can meet it (OfficeLootUtils.shortfall).
 	quota: number,
 	-- The shift's A/B variant. Kept for analytics; since the loot loop it no longer changes the roll.
 	variant: string,

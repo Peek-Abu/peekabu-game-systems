@@ -56,6 +56,13 @@ return function()
 			expect(results.offered).to.equal(9)
 		end)
 
+		it("carries the Gloom from piles, never more than the Gloom removed, absent reading 0", function()
+			expect(ShiftResultsUtils.build(input(CREW, { dust = 300 })).dust).to.equal(300)
+			expect(ShiftResultsUtils.build(input(CREW, { dust = 900 })).dust).to.equal(380)
+			expect(ShiftResultsUtils.build(input(CREW)).dust).to.equal(0)
+			expect(ShiftResultsUtils.bare("clockout", 350, true).dust).to.equal(0)
+		end)
+
 		it("lists the crew by amount banked, with userIds and catches", function()
 			local results = ShiftResultsUtils.build(input(CREW))
 			expect(results.crew[1].name).to.equal("Ben")

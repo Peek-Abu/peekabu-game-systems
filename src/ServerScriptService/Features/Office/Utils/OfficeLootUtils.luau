@@ -4,11 +4,13 @@
 	OfficeSpawnUtils places things; this says what they are worth and how many piles bury something:
 
 	- `buried`: one BURY_CHANCE draw per pile, in order; the hits, capped at `room` (what the valuables budget leaves);
-	- `valueOf`: a plan's valuables (open, buried and in desks) at their plain base (a jackpot's multiplier taken off, so
-	  luck never raises what the quota assumes), its trash (floor, desks, and one dust bag per full canister of piles),
-	  and both at full and at average cleanliness (LOOT_AVERAGE_CLEAN);
-	- `shortfall`: whether the quota would need more than LOOT_QUOTA_SHARE_MAX of the average value (the roll then tops
-	  the map up, and OfficeSpawnRules refuses a plan still short).
+	- `gloomOf`: the site's Gloom (docs/superpowers/specs/2026-10-16-cleanup-crew-gloom-gleam-economy-design.md §3):
+	  every pile's VacuumConstants.PILE_GLOOM plus every valuable's grime at full grime (CargoAppraisalFormulas.gloomLeft:
+	  its size's Gloom);
+	- `valueOf`: a plan's valuables (open, buried and in desks) at their plain base (a jackpot's multiplier taken off),
+	  at full and at average cleanliness (LOOT_AVERAGE_CLEAN). Trash is never rolled and is worth nothing;
+	- `shortfall`: whether the contract would need more than CONTRACT_SHARE_MAX of the site's Gloom (the roll then tops
+	  the map up with piles, and OfficeSpawnRules refuses a plan still short).
 
 	Pure.
 
@@ -28,24 +30,22 @@ local OfficeTypes = require(ServerScriptService.Features.Office.Data.OfficeTypes
 export type PlanValue = {
 	-- How many valuables the plan offers.
 	valuables: number,
-	-- Trash value: floor and desk trash plus the piles' dust bags.
-	trash: number,
-	-- Everything at full cleanliness (valuables at their plain base).
+	-- The valuables at full cleanliness (at their plain base).
 	full: number,
-	-- Everything at average cleanliness (LOOT_AVERAGE_CLEAN).
+	-- The valuables at average cleanliness (LOOT_AVERAGE_CLEAN).
 	average: number,
 }
 
-local OfficeLootUtils = {}
+export type PlanGloom = {
+	-- The piles' Gloom.
+	dust: number,
+	-- The valuables' grime, at full grime.
+	grime: number,
+	-- Both: the site's Gloom, which the contract is a share of.
+	total: number,
+}
 
---[=[
-	The trash the dust bags of `pileCount` piles come to: one bag per full canister.
-]=]
-function OfficeLootUtils.pileTrash(pileCount: number): number
-	local dustBag = CargoRegistry.get(VacuumConstants.DUST_BAG_KIND)
-	local bags = math.floor(pileCount / VacuumConstants.CANISTER_CAPACITY)
-	return bags * (if dustBag ~= nil then dustBag.value else 0)
-end
+local OfficeLootUtils = {}
 
 --[=[
 	Which of `pileCount` piles bury something: one BURY_CHANCE draw per pile (all drawn, so `rng` is used alike
@@ -73,21 +73,12 @@ local function plainOf(def: CargoTypes.ItemDef, roll: CargoTypes.AppraisalRoll?)
 	return roll.base
 end
 
---[=[
-	What `plan` offers (see PlanValue).
-]=]
-function OfficeLootUtils.valueOf(plan: OfficeTypes.SpawnPlan): PlanValue
-	local valuables, plain, trash = 0, 0, OfficeLootUtils.pileTrash(#plan.piles)
+-- Calls `visit` with every valuable `plan` offers (open, buried and in desks) and its roll.
+local function eachValuable(plan: OfficeTypes.SpawnPlan, visit: (CargoTypes.ItemDef, CargoTypes.AppraisalRoll?) -> ())
 	local function add(kind: string?, roll: CargoTypes.AppraisalRoll?)
 		local def = if kind ~= nil then CargoRegistry.get(kind) else nil
-		if def == nil then
-			return
-		end
-		if def.grimy then
-			valuables += 1
-			plain += plainOf(def, roll)
-		else
-			trash += def.value
+		if def ~= nil and def.grimy then
+			visit(def, roll)
 		end
 	end
 	for _, item in plan.items do
@@ -99,19 +90,41 @@ function OfficeLootUtils.valueOf(plan: OfficeTypes.SpawnPlan): PlanValue
 	for _, search in plan.searchables do
 		add(search.kind, search.appraisal)
 	end
+end
+
+--[=[
+	What `plan` offers (see PlanValue).
+]=]
+function OfficeLootUtils.valueOf(plan: OfficeTypes.SpawnPlan): PlanValue
+	local valuables, plain = 0, 0
+	eachValuable(plan, function(def, roll)
+		valuables += 1
+		plain += plainOf(def, roll)
+	end)
 	return {
 		valuables = valuables,
-		trash = trash,
-		full = plain + trash,
-		average = plain * CargoAppraisalFormulas.grimeFactor(OfficeConstants.LOOT_AVERAGE_CLEAN) + trash,
+		full = plain,
+		average = plain * CargoAppraisalFormulas.grimeFactor(OfficeConstants.LOOT_AVERAGE_CLEAN),
 	}
 end
 
 --[=[
-	Whether `plan` is too poor for `quota`: the quota needs more than LOOT_QUOTA_SHARE_MAX of its average value.
+	The site's Gloom (see PlanGloom): every valuable spawns fully grimy.
 ]=]
-function OfficeLootUtils.shortfall(plan: OfficeTypes.SpawnPlan, quota: number): boolean
-	return OfficeLootUtils.valueOf(plan).average * OfficeConstants.LOOT_QUOTA_SHARE_MAX < quota
+function OfficeLootUtils.gloomOf(plan: OfficeTypes.SpawnPlan): PlanGloom
+	local dust = #plan.piles * VacuumConstants.PILE_GLOOM
+	local grime = 0
+	eachValuable(plan, function(def)
+		grime += CargoAppraisalFormulas.gloomLeft(def, 0)
+	end)
+	return { dust = dust, grime = grime, total = dust + grime }
+end
+
+--[=[
+	Whether `plan` is too thin for `contract`: the contract needs more than CONTRACT_SHARE_MAX of the site's Gloom.
+]=]
+function OfficeLootUtils.shortfall(plan: OfficeTypes.SpawnPlan, contract: number): boolean
+	return OfficeLootUtils.gloomOf(plan).total * OfficeConstants.CONTRACT_SHARE_MAX < contract
 end
 
 return OfficeLootUtils

@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local QueueTypes = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueTypes)
+local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 
@@ -55,7 +56,7 @@ function DepotPadViewModel.pad(
 	else
 		title = if truck ~= nil then `TRUCK {truck} — {DepotConstants.JOB_TITLE}` else DepotConstants.JOB_TITLE
 	end
-	title = `{title} · QUOTA {ShiftQuotaFormulas.quota(#pad.members)}`
+	title = `{title} · {ShiftQuotaFormulas.quota(#pad.members)} {string.upper(ShiftConstants.CONTRACT_UNIT)}`
 	return {
 		title = title,
 		count = `{#pad.members} / {pad.capacity}`,

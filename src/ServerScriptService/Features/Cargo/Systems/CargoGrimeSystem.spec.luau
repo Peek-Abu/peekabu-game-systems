@@ -8,7 +8,7 @@ local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interacti
 local Visuals = require(ServerScriptService.Features.Art.Systems.ArtVisualSystem)
 
 return function()
-	local parent, assets, spawner, system, appraisals, clock, hints
+	local parent, assets, spawner, system, appraisals, clock, hints, removed
 
 	beforeEach(function()
 		assets = Instance.new("Folder")
@@ -17,6 +17,7 @@ return function()
 		appraisals = {}
 		clock = 100
 		hints = {}
+		removed = {}
 		system = CargoGrimeSystem.new({
 			spawner = spawner,
 			now = function()
@@ -31,6 +32,10 @@ return function()
 			-- The first grime lock of a shift tells its carrier (a sticky note in the game).
 			lockHint = function(player)
 				table.insert(hints, player)
+			end,
+			-- The Gloom each cleaning step removed (the shift credits it to the contract).
+			cleaned = function(item, gloom)
+				table.insert(removed, { item = item, gloom = gloom })
 			end,
 		})
 	end)
@@ -97,12 +102,56 @@ return function()
 	end)
 
 	it("ignores trash", function()
-		local bag = spawner:spawn("dustBag", CFrame.new(40000, 0, 0), parent)
+		local bag = spawner:spawn("rubbishBag", CFrame.new(40000, 0, 0), parent)
 		bag:SetAttribute(InteractionConstants.CHANNEL_PROGRESS_ATTRIBUTE, 0.5)
 		system:update(bag)
 		system:finish(bag)
 		expect(bag:GetAttribute(CargoConstants.CLEAN_ATTRIBUTE)).to.equal(nil)
-		expect(bag:GetAttribute(CargoConstants.VALUE_ATTRIBUTE)).to.equal(15)
+		expect(bag:GetAttribute(CargoConstants.VALUE_ATTRIBUTE)).to.equal(10)
+		expect(#removed).to.equal(0)
+	end)
+
+	describe("Gloom removed", function()
+		local function total()
+			local sum = 0
+			for _, step in removed do
+				sum += step.gloom
+			end
+			return sum
+		end
+
+		it("credits the Gloom each cleaning step removes, live", function()
+			local item = monitor()
+			progress(item, 0.4)
+			expect(total()).to.equal(6)
+			expect(removed[#removed].item).to.equal(item)
+			progress(item, 0.6)
+			expect(total()).to.equal(9)
+		end)
+
+		it("adds up to exactly the item's Gloom once it is spotless", function()
+			local item = monitor()
+			progress(item, 0.33)
+			progress(item, nil)
+			progress(item, 0.21)
+			system:finish(item)
+			expect(total()).to.equal(CargoConstants.GLOOM_BY_SIZE.medium)
+		end)
+
+		it("never credits a step that removed nothing", function()
+			local item = monitor()
+			progress(item, 0.01)
+			expect(#removed).to.equal(0)
+		end)
+
+		it("never gives the rest of an item grabbed dirty", function()
+			local item = monitor()
+			progress(item, 0.4)
+			system:pickedUp(item, { UserId = 1, Name = "Carrier" })
+			progress(item, nil)
+			system:finish(item)
+			expect(total()).to.equal(6)
+		end)
 	end)
 
 	describe("grime lock", function()
@@ -138,7 +187,7 @@ return function()
 		end)
 
 		it("leaves trash and spotless valuables alone, and tells nobody", function()
-			local bag = spawner:spawn("dustBag", CFrame.new(40000, 0, 0), parent)
+			local bag = spawner:spawn("rubbishBag", CFrame.new(40000, 0, 0), parent)
 			system:pickedUp(bag, alice)
 			system:pickedUp(monitor(1), alice)
 			expect(bag:GetAttribute(CargoConstants.SEALED_ATTRIBUTE)).to.equal(nil)

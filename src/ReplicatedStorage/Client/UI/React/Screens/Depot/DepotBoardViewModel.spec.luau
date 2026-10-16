@@ -47,14 +47,14 @@ return function()
 		expect(#view.rows).to.equal(6)
 		expect(rowOf(view, "SHIFT").text).to.equal("7:00 on the clock. Clock out at the truck any time.")
 		expect(rowOf(view, "HAZARD").hazard).to.equal(true)
-		expect(rowOf(view, "QUOTA").hazard).to.equal(false)
+		expect(rowOf(view, "CONTRACT").hazard).to.equal(false)
 		expect(rowOf(view, "NOTES").text).to.equal(contract.note)
 	end)
 
 	it("keeps the phone to four short rows", function()
 		local view = DepotBoardViewModel.board(nil, nil, true)
 		expect(#view.rows).to.equal(4)
-		expect(rowOf(view, "PAY").text).to.equal("Assets → $")
+		expect(rowOf(view, "PAY").text).to.equal("1 Gleam per Gloom, plus valuables")
 	end)
 
 	describe("quota", function()
@@ -63,35 +63,35 @@ return function()
 
 		it("posts the quota for the crew in your truck", function()
 			local view = DepotBoardViewModel.board(nil, nil, false, 3)
-			expect(rowOf(view, "QUOTA").text).to.equal(
-				`{ShiftQuotaFormulas.quota(3)} for your crew of 3. Everything you bank counts, and clean things count more.`
+			expect(rowOf(view, "CONTRACT").text).to.equal(
+				`Remove {ShiftQuotaFormulas.quota(3)} Gloom for your crew of 3. Vacuum the dust; clean valuables before you lift them.`
 			)
-			expect(rowOf(DepotBoardViewModel.board(nil, nil, true, 3), "QUOTA").text).to.equal(
-				`{ShiftQuotaFormulas.quota(3)} for your crew`
+			expect(rowOf(DepotBoardViewModel.board(nil, nil, true, 3), "CONTRACT").text).to.equal(
+				`Remove {ShiftQuotaFormulas.quota(3)} Gloom`
 			)
 		end)
 
 		it("speaks to a solo player", function()
 			local view = DepotBoardViewModel.board(nil, nil, false, 1)
-			expect(rowOf(view, "QUOTA").text).to.equal(
-				`{low} for you on your own. Everything you bank counts, and clean things count more.`
+			expect(rowOf(view, "CONTRACT").text).to.equal(
+				`Remove {low} Gloom on your own. Vacuum the dust; clean valuables before you lift them.`
 			)
 		end)
 
 		it("shows the range by crew size when you are not in a truck", function()
 			local view = DepotBoardViewModel.board(nil, nil, false)
-			expect(rowOf(view, "QUOTA").text).to.equal(
-				`{low} for one player, up to {high} for four. Everything you bank counts, and clean things count more.`
+			expect(rowOf(view, "CONTRACT").text).to.equal(
+				`Remove {low} Gloom for one player, up to {high} for four. Vacuum the dust; clean valuables before you lift them.`
 			)
-			expect(rowOf(DepotBoardViewModel.board(nil, nil, true), "QUOTA").text).to.equal(
-				`{low}–{high}, by crew size`
+			expect(rowOf(DepotBoardViewModel.board(nil, nil, true), "CONTRACT").text).to.equal(
+				`Remove {low}–{high} Gloom`
 			)
 		end)
 
 		it("never posts the two-player figure to anyone else", function()
 			expect(
 				string.find(
-					rowOf(DepotBoardViewModel.board(nil, nil, false, 4), "QUOTA").text,
+					rowOf(DepotBoardViewModel.board(nil, nil, false, 4), "CONTRACT").text,
 					tostring(ShiftConstants.QUOTA),
 					1,
 					true
@@ -125,10 +125,11 @@ return function()
 		local last = DepotBoardViewModel.board(nil, LAST, false).last
 		expect(last.title).to.equal("YOUR LAST SHIFT — TRUCK 2")
 		expect(last.rows[1].value).to.equal("362 / 350")
-		expect(last.rows[2].value).to.equal("$215")
+		-- 362 Gloom at 1 Gleam each, plus 215 Gleam of valuables.
+		expect(last.rows[2].value).to.equal("577 Gleam")
 		expect(last.rows[3].value).to.equal("2")
 		expect(last.rows[4].value).to.equal("6 of 9")
-		expect(last.stamp).to.equal("QUOTA MET")
+		expect(last.stamp).to.equal("CONTRACT MET")
 	end)
 
 	it("drops the truck from the title when unknown and stamps a missed quota", function()
@@ -137,7 +138,7 @@ return function()
 		missed.quotaMet = false
 		local last = DepotBoardViewModel.board(nil, missed, false).last
 		expect(last.title).to.equal("YOUR LAST SHIFT")
-		expect(last.stamp).to.equal("QUOTA MISSED")
+		expect(last.stamp).to.equal("CONTRACT MISSED")
 		expect(last.met).to.equal(false)
 	end)
 
@@ -155,7 +156,7 @@ return function()
 	it("writes the phone's two last-shift lines", function()
 		local last = DepotBoardViewModel.board(nil, LAST, true).last
 		expect(last.title).to.equal("LAST SHIFT")
-		expect(last.lines[1]).to.equal("Cleared 362/350  ·  +$215")
+		expect(last.lines[1]).to.equal("Gloom 362/350  ·  +577 Gleam")
 		expect(last.lines[2]).to.equal("Rehired 2  ·  Assets 6 of 9")
 	end)
 

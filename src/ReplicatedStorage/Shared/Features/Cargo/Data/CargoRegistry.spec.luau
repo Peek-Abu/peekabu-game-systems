@@ -3,7 +3,6 @@ local CargoRegistry = require(script.Parent.CargoRegistry)
 -- Kind, category, reference value, range (docs/superpowers/specs/2026-10-15-cleanup-crew-loot-loop-design.md §3.1).
 local EXPECTED = {
 	{ "rubbishBag", "trash", 10, 10, 10 },
-	{ "dustBag", "trash", 15, 15, 15 },
 	{ "recyclingBox", "trash", 15, 15, 15 },
 	{ "bottleBag", "trash", 15, 15, 15 },
 	{ "officePlant", "salvage", 68, 45, 90 },
@@ -25,8 +24,9 @@ local EXPECTED = {
 local SMALL_VALUABLES = { "coffeeMug", "wristwatch", "deskClock", "snowGlobe", "keyring" }
 
 return function()
-	it("holds the sixteen office items and the dust bag", function()
-		expect(#CargoRegistry.ids()).to.equal(17)
+	it("holds the sixteen office items (no dust bag: the Gloom economy has none)", function()
+		expect(#CargoRegistry.ids()).to.equal(16)
+		expect(CargoRegistry.get("dustBag")).to.equal(nil)
 	end)
 
 	it("matches the spec's kinds, reference values and ranges", function()
@@ -95,7 +95,6 @@ return function()
 
 	it("carries the spec's traits", function()
 		expect(CargoRegistry.get("rubbishBag").throwable).to.equal(true)
-		expect(CargoRegistry.get("dustBag").throwable).to.equal(true)
 		expect(CargoRegistry.get("recyclingBox").spills).to.equal(true)
 		expect(CargoRegistry.get("bottleBag").rattly).to.equal(true)
 		expect(CargoRegistry.get("officePlant").blocksView).to.equal(true)
@@ -110,8 +109,14 @@ return function()
 		expect(CargoRegistry.get("filingCabinet").size).to.equal("bulky")
 	end)
 
-	it("never rolls the dust bag or a greed target onto the open floor", function()
-		expect(CargoRegistry.get("dustBag").spawnWeight).to.equal(0)
+	it("never rolls trash anywhere, nor a greed target onto the open floor", function()
+		for _, id in CargoRegistry.ids() do
+			local def = CargoRegistry.get(id)
+			if def.category == "trash" then
+				expect(def.spawnWeight).to.equal(0)
+				expect(def.deskWeight).to.equal(0)
+			end
+		end
 		for _, id in CargoRegistry.greedIds() do
 			expect(CargoRegistry.get(id).spawnWeight).to.equal(0)
 		end

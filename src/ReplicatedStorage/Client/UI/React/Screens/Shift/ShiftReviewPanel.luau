@@ -1,8 +1,9 @@
 --!strict
 --[=[
 	ShiftReviewPanel: the performance review (Figma 5a met 31:557, 5c missed 31:611, 5b phone 31:665) on the paperwork
-	look: a manila folder over the dimmed office with its tab, the crew line, the QUOTA MET / MISSED stamp, the four
-	rows, "Overall rating:" and its stamp, Harlow's (or HR's) closing line; a fold; the joke-award sticky notes; and the
+	look: a manila folder over the dimmed office with its tab, the crew line, the CONTRACT MET / MISSED stamp, the four
+	rows (on desktop the Gloom and the Gleam rows carry their dust / item cleaning / valuables breakdown under the
+	label), "Overall rating:" and its stamp, Harlow's (or HR's) closing line; a fold; the joke-award sticky notes; and the
 	crew vote (ANOTHER SHIFT / BACK TO DEPOT with vote dots on desktop, counts on the phone, "your vote" in marker ink
 	beside the local player's choice) and its footer. The folder is drawn at its Figma size and positions and scaled
 	by `scale` (ShiftReviewViewModel.fit), centred. On the phone "+2 MORE AWARDS" swaps the two stickies for the
@@ -215,6 +216,11 @@ local function desktopOf(props: ShiftReviewPanelProps): Nodes
 		local y = 222 + (index - 1) * 84
 		nodes[`rule{index}`] = rule(48, y, 700, 2)
 		nodes[`label{index}`] = label(row.label, "heading", 24, 48, y + 16)
+		-- The row's breakdown (dust, item cleaning, valuables) typed small under its label.
+		local detail = row.detail
+		if detail ~= nil then
+			nodes[`detail{index}`] = label(detail, "body", 17, 48, y + 50)
+		end
 		nodes[`value{index}`] = e(PaperLabel, {
 			text = row.value,
 			role = "number",

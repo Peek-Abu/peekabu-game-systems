@@ -2,7 +2,8 @@
 --[=[
 	ShiftHotbarViewModel: what the paper hotbar (ShiftHotbar) shows, from the local player's public entry
 	(docs/superpowers/specs/2026-10-16-cleanup-crew-hotbar-inventory-design.md §4): the vacuum in slot 1 with its
-	canister, the four item slots with each item's name and tag, which slot is chosen, and whether a big hands item locks
+	canister gauge (the crew's contract, Gloom removed of the contract: docs/superpowers/specs/
+	2026-10-16-cleanup-crew-gloom-gleam-economy-design.md §5), the four item slots with each item's name and tag, which slot is chosen, and whether a big hands item locks
 	them. Pure (specced).
 
 	@class ShiftHotbarViewModel
@@ -20,8 +21,8 @@ local ShiftCurrencyUtils = require(ReplicatedStorage.Shared.Features.Shift.Utils
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 
 -- One hotbar slot (docs/superpowers/specs/2026-10-16-cleanup-crew-hotbar-inventory-design.md §4): slot 1 the vacuum
--- (its canister as the tag), slots 2-5 the item slots (an item's name and tag: its value once known, "$???" before,
--- "+N" clearance for trash; empty ones blank).
+-- (the contract's progress as the tag, "340/500"), slots 2-5 the item slots (an item's name and tag: its Gleam once
+-- known, "??? Gleam" before, "+N" for trash; empty ones blank).
 export type SlotView = {
 	slot: number,
 	-- The key that chooses it ("1"-"5").
@@ -131,19 +132,19 @@ end
 --[=[
 	The hotbar (docs/superpowers/specs/2026-10-16-cleanup-crew-hotbar-inventory-design.md §4) from the local player's
 	public entry: the vacuum and the four item slots, which one is chosen, and whether a big hands item locks them.
+	`cleared` and `quota` are the shift's Gloom removed and contract (the vacuum's tag; blank without a contract).
 ]=]
-function ShiftHotbarViewModel.hotbar(me: PublicPlayerTypes.PublicPlayer?): HotbarView
+function ShiftHotbarViewModel.hotbar(me: PublicPlayerTypes.PublicPlayer?, cleared: number?, quota: number?): HotbarView
 	local entry: PublicPlayerTypes.PublicPlayer = me or {}
 	local selected = chosenSlot(entry)
 	local hands = entry[CargoConstants.PUBLIC_HANDS_FIELD]
-	local fill = entry[VacuumConstants.PUBLIC_FIELD]
 	local slots: { SlotView } = {
 		{
 			slot = CargoConstants.VACUUM_SLOT,
 			key = tostring(CargoConstants.VACUUM_SLOT),
 			kind = nil,
 			name = "VACUUM",
-			tag = `{if type(fill) == "number" then fill else 0}/{VacuumConstants.CANISTER_CAPACITY}`,
+			tag = if quota ~= nil and quota > 0 then `{math.floor(cleared or 0)}/{quota}` else "",
 			vacuum = true,
 			empty = false,
 			selected = selected == CargoConstants.VACUUM_SLOT,
@@ -171,7 +172,7 @@ function ShiftHotbarViewModel.hotbar(me: PublicPlayerTypes.PublicPlayer?): Hotba
 			elseif type(value) == "number" then
 				tag = ShiftCurrencyUtils.amount(value)
 			else
-				tag = `{ShiftCurrencyUtils.SYMBOL}???`
+				tag = ShiftCurrencyUtils.unknown()
 			end
 		end
 		table.insert(slots, {

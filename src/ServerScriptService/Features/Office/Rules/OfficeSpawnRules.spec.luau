@@ -1,12 +1,16 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local OfficeSpawnRules = require(script.Parent.OfficeSpawnRules)
+local OfficeConstants = require(ServerScriptService.Features.Office.Data.OfficeConstants)
 local OfficeLayoutConstants = require(ServerScriptService.Features.Office.Data.OfficeLayoutConstants)
+local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants)
+local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 
 local LAYOUT = OfficeLayoutConstants.LAYOUT
 
--- Three piles make one dust bag (15); with two rubbish bags (20) and the fish tank (260 at full, 169 at average
--- cleanliness) the map is worth 204 at average: enough for a quota up to 153.
+-- Three piles (PILE_GLOOM each) and the fish tank's grime (heavy) are the site's Gloom; the two rubbish bags (old
+-- fixtures) carry none. A contract may ask at most CONTRACT_SHARE_MAX of it.
 local function plan()
 	return {
 		piles = {
@@ -32,10 +36,15 @@ return function()
 		expect(ok).to.equal(true)
 	end)
 
-	it("refuses a map too poor for the quota at average cleanliness", function()
+	it("refuses a site too thin in Gloom for the contract", function()
+		local site = 3 * VacuumConstants.PILE_GLOOM + CargoConstants.GLOOM_BY_SIZE.heavy
+		local need = math.ceil(200 / OfficeConstants.CONTRACT_SHARE_MAX)
 		local ok, reason = OfficeSpawnRules.check(plan(), LAYOUT, 200)
 		expect(ok).to.equal(false)
-		expect(reason).to.equal("only 204 of a needed 267 value for a quota of 200")
+		expect(reason).to.equal(`only {site} of a needed {need} Gloom for a contract of 200`)
+		expect(OfficeSpawnRules.check(plan(), LAYOUT, math.floor(site * OfficeConstants.CONTRACT_SHARE_MAX))).to.equal(
+			true
+		)
 	end)
 
 	it("refuses a missing greed target", function()

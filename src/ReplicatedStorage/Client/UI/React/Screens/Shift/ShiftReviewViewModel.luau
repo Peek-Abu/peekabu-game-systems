@@ -16,9 +16,11 @@ local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.Depo
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local ShiftCurrencyUtils = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftCurrencyUtils)
+local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 
-export type RowView = { label: string, value: string }
+-- A totals row; `detail` is its breakdown line under the label (desktop), e.g. "Dust 260 · Item cleaning 80".
+export type RowView = { label: string, value: string, detail: string? }
 export type AwardSymbol = "medal" | "punchCard" | "droppedMug" | "quietShoe" | "noisyVacuum"
 export type AwardShape = {
 	x: number,
@@ -223,17 +225,25 @@ function ShiftReviewViewModel.review(
 	local voteEndsAt = snapshot.voteEndsAt
 	local left = ShiftHudViewModel.clock(if voteEndsAt ~= nil then voteEndsAt - now else 0)
 	local truck = snapshot.truck
+	-- The pay (docs/superpowers/specs/2026-10-16-cleanup-crew-gloom-gleam-economy-design.md §5): every Gloom removed,
+	-- from dust and from cleaning valuables, plus the valuables banked; paid whether or not the contract was met.
+	local split = ShiftQuotaFormulas.breakdown(results.cleared, results.dust or 0, results.bonus)
 	local crewText = if truck ~= nil then `Crew of Truck {truck}` else "Crew"
 	return {
 		tab = if phone then "PERFORMANCE REVIEW" else "PERFORMANCE REVIEW — NIGHT SHIFT",
 		subtitle = `{crewText} · {DepotConstants.CONTRACTS[1].client} · {DepotConstants.SITE}`,
-		headline = if met then "QUOTA MET" else "QUOTA MISSED",
+		headline = if met then "CONTRACT MET" else "CONTRACT MISSED",
 		met = met,
 		rows = {
-			{ label = "CLEARED", value = `{results.cleared} / {results.quota}` },
 			{
-				label = if met then ShiftCurrencyUtils.earnedLabel() else `{ShiftCurrencyUtils.earnedLabel()} (banked)`,
-				value = ShiftCurrencyUtils.amount(results.bonus),
+				label = "GLOOM REMOVED",
+				value = `{split.gloom} / {results.quota}`,
+				detail = `Dust {split.dust} · Item cleaning {split.grime}`,
+			},
+			{
+				label = ShiftCurrencyUtils.earnedLabel(),
+				value = ShiftCurrencyUtils.amount(split.gleam),
+				detail = `Dust {split.dustGleam} · Cleaning {split.grimeGleam} · Valuables {split.valuables}`,
 			},
 			{ label = "TIMES CAUGHT", value = tostring(results.catches) },
 			{ label = "ASSETS RECOVERED", value = `{results.salvage} of {results.offered}` },

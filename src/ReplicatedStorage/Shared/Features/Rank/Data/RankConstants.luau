@@ -40,7 +40,7 @@ local RankConstants = {
 	-- The results card's breakdown label for each award (short: the whole breakdown is one typed line).
 	LABELS = table.freeze({
 		shiftWorked = "Shift",
-		quotaMet = "Quota",
+		quotaMet = "Contract",
 		items = "Cargo",
 		overtimeSalvage = "Overtime salvage",
 		extracted = "Clocked out",

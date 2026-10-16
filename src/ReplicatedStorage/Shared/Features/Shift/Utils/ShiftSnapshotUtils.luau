@@ -224,6 +224,7 @@ local function resultsOf(value: WorldValue?): (ShiftResults?, boolean)
 	local crew = crewOf(value.crew)
 	local awards = awardsOf(value.awards)
 	local catches, catchesOk = countOf(value.catches)
+	local dust, dustOk = countOf(value.dust)
 	if type(outcome) ~= "string" or type(quotaMet) ~= "boolean" then
 		return nil, false
 	end
@@ -233,7 +234,7 @@ local function resultsOf(value: WorldValue?): (ShiftResults?, boolean)
 	if crew == nil or awards == nil then
 		return nil, false
 	end
-	if not catchesOk then
+	if not catchesOk or not dustOk then
 		return nil, false
 	end
 	local offered, offeredOk = countOf(value.offered)
@@ -245,6 +246,7 @@ local function resultsOf(value: WorldValue?): (ShiftResults?, boolean)
 		outcome = outcome,
 		quota = quota,
 		cleared = cleared,
+		dust = dust,
 		bonus = bonus,
 		salvage = salvage,
 		piles = piles,

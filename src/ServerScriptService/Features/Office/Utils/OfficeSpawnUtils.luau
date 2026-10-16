@@ -6,18 +6,20 @@
 	sequence:
 
 	1. piles: a count in `options.piles`, on shuffled pile markers, each a random pile kind;
-	2. desks and lockers: each holds a desk-weighted item with SEARCH_FILL_CHANCE, else nothing; after
-	   DESK_VALUABLES_MAX valuables, only desk trash;
+	2. desks and lockers: each holds a desk-weighted valuable with SEARCH_FILL_CHANCE, else nothing; after
+	   DESK_VALUABLES_MAX valuables, nothing;
 	3. the greed target (fish tank, filing cabinet or golden stapler), always in a deep room: a hidden one
 	   (the stapler) in a deep desk or locker (else under a deep pile), the others on a deep item marker;
 	4. the valuables budget, a count in `options.valuables` that the greed target and desk valuables count toward;
 	5. buried loot: one BURY_CHANCE draw per pile (OfficeLootUtils.buried), each hit burying a buriable valuable,
 	   capped so MIN_OPEN of the budget is left for the open;
 	6. the rest of the budget in the open (on item markers, or the furniture tops their kind belongs on);
-	7. the top-up: open valuables, at most TOP_UP_MAX, while the map is too poor for `options.quota`.
+	7. the top-up: plain piles on free pile markers, at most TOP_UP_MAX, while the site's Gloom is too thin for the
+	   contract (`options.quota`, OfficeLootUtils.shortfall; docs/superpowers/specs/
+	   2026-10-16-cleanup-crew-gloom-gleam-economy-design.md §3.4).
 
-	Every valuable is appraised as it is placed (CargoAppraisalFormulas.roll, scaled by its marker's depth). There is
-	no trash padding: trash is the piles' dust bags and the odd desk. The A/B variant no longer changes the roll.
+	Every valuable is appraised as it is placed (CargoAppraisalFormulas.roll, scaled by its marker's depth). No trash
+	is rolled: it counts toward nothing under the Gloom contract. The A/B variant no longer changes the roll.
 	OfficeSpawnRules.check verifies the result. Pure.
 
 	@class OfficeSpawnUtils
@@ -87,11 +89,7 @@ local function buriedWeight(def: ItemDef): number
 end
 
 local function deskWeight(def: ItemDef): number
-	return if def.greed then 0 else def.deskWeight
-end
-
-local function deskTrashWeight(def: ItemDef): number
-	return if def.grimy then 0 else def.deskWeight
+	return if def.greed or not def.grimy then 0 else def.deskWeight
 end
 
 -- The surface marker kinds loot of this def belongs on, in preference order; empty for the floor.
@@ -149,8 +147,8 @@ function OfficeSpawnUtils.roll(
 	local deskValuables = 0
 	for _, marker in searchMarkers do
 		local full = deskValuables >= OfficeConstants.DESK_VALUABLES_MAX
-		local kind = if rng:NextNumber() < OfficeConstants.SEARCH_FILL_CHANCE
-			then pickWeighted(if full then deskTrashWeight else deskWeight, rng)
+		local kind = if rng:NextNumber() < OfficeConstants.SEARCH_FILL_CHANCE and not full
+			then pickWeighted(deskWeight, rng)
 			else nil
 		local appraisal = appraise(kind, marker)
 		if appraisal ~= nil then
@@ -291,9 +289,14 @@ function OfficeSpawnUtils.roll(
 		greed = greed,
 		value = 0,
 	}
-	-- 7. The top-up: a map too poor for the quota gets a few more valuables in the open.
+	-- 7. The top-up: a site too thin in Gloom for the contract gets a few more plain piles.
 	local topped = 0
-	while topped < OfficeConstants.TOP_UP_MAX and OfficeLootUtils.shortfall(plan, options.quota) and placeOpen() do
+	while
+		topped < OfficeConstants.TOP_UP_MAX
+		and #piles < #pileMarkers
+		and OfficeLootUtils.shortfall(plan, options.quota)
+	do
+		table.insert(piles, { marker = pileMarkers[#piles + 1].id, kind = kinds[rng:NextInteger(1, #kinds)] })
 		topped += 1
 	end
 	plan.value = OfficeLootUtils.valueOf(plan).full

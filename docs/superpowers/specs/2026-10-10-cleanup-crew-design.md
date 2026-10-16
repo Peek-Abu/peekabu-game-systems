@@ -11,6 +11,11 @@ Date: 2026-10-10. Source briefs: `MVP_Demo_Pack/cleanup_crew_01_design.md`, `_02
 > below are updated; elsewhere "Harlow" and "salvage" survive as code names (the `harlow` NPC kind, the
 > `salvage` cargo category) and are never shown to players.
 
+> **Economy update, 2026-10-16.** [the Gloom and Gleam economy](2026-10-16-cleanup-crew-gloom-gleam-economy-design.md) replaces the quota, the dust bags, the trash and the
+> dollars: the contract is **Gloom** removed (a pile counts the instant it is vacuumed, a valuable only for the grime
+> cleaned off it; banking adds none), and the pay is **Gleam** (1 per Gloom at clock-out, plus the valuables banked,
+> ×1.5 in overtime). The canister is a live Gloom gauge with no capacity. §4 below is marked where it no longer holds.
+
 ## 1. Goal and success
 
 A published, playable demo of Cleanup Crew that the developer tests with two siblings (3 players) to
@@ -78,8 +83,9 @@ The depot contract board and a one-card arrival screen carry this; no tutorial n
 - Aim at a pile within ~8 studs and **hold** Use (mobile: hold the Vacuum button). Clears in ~2.5 s.
   The pile shrinks visibly; release cancels but **progress is kept**. Two vacuums on one pile add up.
 - Can't vacuum while your hands hold an item.
-- Each cleared pile adds 1 to your **canister** (capacity 3). Full → a **dust bag** (trash, 15) pops
-  out at your feet and the canister empties.
+- ~~Each cleared pile adds 1 to your **canister** (capacity 3). Full → a **dust bag** (trash, 15) pops
+  out at your feet and the canister empties.~~ Since 2026-10-16 a cleared pile removes 20 Gloom on the spot, and the
+  canister is a live gauge of the crew's contract (economy note §3.1).
 - **Noise:** a pulse every 1 s while vacuuming, radius ~40 studs.
 - Pile visuals: paper heap, debris and dust, cable tangle.
 - **Variant switch** (A/B from the validation plan, rewards unchanged): **B (default)** some salvage
@@ -118,7 +124,7 @@ searchable desk/locker.
 - **Banking:** stand in the truck bed, **Bank cargo** with your hands item (pockets unload with it). Trash
   adds to clearance, Recoverable Assets add dollars (×1.5 during overtime). Banked is safe forever. Pay
   is display-only in the demo (no saved balance); how an amount reads lives in one place, `ShiftCurrencyUtils`.
-- **Quota** ~350 clearance. Spawn guarantees: total trash value ≥ 1.5× quota (counting canister
+- **Quota** (since 2026-10-16 the contract, 260-320 Gloom by crew; economy note §3.4) ~350 clearance. Spawn guarantees: total trash value ≥ 1.5× quota (counting canister
   output from the piles spawned), and at least one greed target (fish tank, cabinet or golden
   stapler), placed deep.
 

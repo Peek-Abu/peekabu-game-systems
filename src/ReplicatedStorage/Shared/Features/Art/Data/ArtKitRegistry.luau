@@ -40,7 +40,6 @@ local keys: { [ArtTypes.Family]: { string } } = {
 	},
 	cargo = {
 		"rubbishBag",
-		"dustBag",
 		"recyclingBox",
 		"bottleBag",
 		"officePlant",

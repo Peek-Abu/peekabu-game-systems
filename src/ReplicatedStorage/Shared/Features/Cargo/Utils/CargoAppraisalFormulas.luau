@@ -93,6 +93,25 @@ function CargoAppraisalFormulas.cleanAt(start: number, progress: number): number
 end
 
 --[=[
+	The Gloom still on an item `clean` (0-1): its size's Gloom (CargoConstants.GLOOM_BY_SIZE) times the grime left,
+	rounded. Trash carries none (docs/superpowers/specs/2026-10-16-cleanup-crew-gloom-gleam-economy-design.md §3.2).
+]=]
+function CargoAppraisalFormulas.gloomLeft(def: ItemDef, clean: number): number
+	if not def.grimy then
+		return 0
+	end
+	return round((CargoConstants.GLOOM_BY_SIZE[def.size] or 0) * (1 - math.clamp(clean, 0, 1)))
+end
+
+--[=[
+	The Gloom a cleaning from `before` to `after` removed: the rounded Gloom left before minus after, never negative.
+	Being a difference of the same rounding, the steps of one cleaning always add up to exactly the item's Gloom.
+]=]
+function CargoAppraisalFormulas.gloomRemoved(def: ItemDef, before: number, after: number): number
+	return math.max(0, CargoAppraisalFormulas.gloomLeft(def, before) - CargoAppraisalFormulas.gloomLeft(def, after))
+end
+
+--[=[
 	A valuable's shown name: its jackpot's name in front once it is appraised ("Gold-trim monitor"), else the
 	catalog name, so a jackpot is a surprise.
 ]=]

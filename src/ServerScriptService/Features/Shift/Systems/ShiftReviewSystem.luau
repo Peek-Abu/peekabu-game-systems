@@ -83,6 +83,7 @@ local function build(input: ReviewInput): ShiftTypes.ShiftResults
 		outcome = input.outcome,
 		quota = input.quota,
 		cleared = RoundServiceServer:teamValue(ShiftConstants.CLEARANCE),
+		dust = RoundServiceServer:teamValue(ShiftConstants.DUST),
 		bonus = RoundServiceServer:teamValue(ShiftConstants.BONUS),
 		quotaMet = input.quotaMet,
 		crew = input.roster:list(),

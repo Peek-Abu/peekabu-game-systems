@@ -1,13 +1,18 @@
 --!strict
 --[=[
-	ShiftCurrencyUtils: how an amount of pay reads (docs/cleanup-crew-lore.md: Morrow & Morrow pays its Clearance
-	Associates a hazard-pay bonus in dollars, "Recovery pay", on the assessed value of the Recoverable Assets they
-	bank). Every price tag, load floater, fee plate, review and board row writes its amounts through here, so this is
-	the one place the currency's look lives. Display only: the amount is the shift's `bonus` counter, not a saved
-	balance. Pure.
+	ShiftCurrencyUtils: how pay and the contract read (docs/superpowers/specs/
+	2026-10-16-cleanup-crew-gloom-gleam-economy-design.md §5). Morrow & Morrow pays its Clearance Associates in Gleam,
+	refined Gloom: the one currency players see, written as the word after the number ("45 Gleam"; no sign, no emoji).
+	The contract is Gloom removed ("Gloom 340 / 500", "Remove 500 Gloom"). Every price tag, load floater, fee plate,
+	review and board row writes its amounts through here, so this is the one place the look lives; the words are
+	ShiftConstants.CURRENCY_NAME and CONTRACT_UNIT. Display only: no saved balance yet. Pure.
 
 	@class ShiftCurrencyUtils
 ]=]
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 
 -- A whole, non-negative amount (NaN reads 0).
 local function whole(value: number): number
@@ -18,38 +23,55 @@ local function whole(value: number): number
 end
 
 local ShiftCurrencyUtils = {
-	-- The currency's sign, written before the number.
-	SYMBOL = "$",
+	-- The currency's name, written after the number.
+	NAME = ShiftConstants.CURRENCY_NAME,
 }
 
 --[=[
-	"$45": `value` rounded to a whole amount, never below zero.
+	"45 Gleam": `value` rounded to a whole amount, never below zero.
 ]=]
 function ShiftCurrencyUtils.amount(value: number): string
-	return `{ShiftCurrencyUtils.SYMBOL}{whole(value)}`
+	return `{whole(value)} {ShiftCurrencyUtils.NAME}`
 end
 
 --[=[
-	"+$40": an amount just earned.
+	"??? Gleam": a value not appraised yet.
+]=]
+function ShiftCurrencyUtils.unknown(): string
+	return `??? {ShiftCurrencyUtils.NAME}`
+end
+
+--[=[
+	"+40 Gleam": an amount just earned.
 ]=]
 function ShiftCurrencyUtils.gain(value: number): string
 	return `+{ShiftCurrencyUtils.amount(value)}`
 end
 
 --[=[
-	"+$40": an already-formatted number (`text`, e.g. "+40") with the sign kept in front of the "$".
+	"+40 Gleam": an already-formatted number (`text`, e.g. "+40") with the currency named after it.
 ]=]
 function ShiftCurrencyUtils.signed(text: string): string
-	local sign = string.sub(text, 1, 1)
-	if sign == "+" or sign == "-" then
-		return `{sign}{ShiftCurrencyUtils.SYMBOL}{string.sub(text, 2)}`
-	end
-	return `{ShiftCurrencyUtils.SYMBOL}{text}`
+	return `{text} {ShiftCurrencyUtils.NAME}`
+end
+
+--[=[
+	"Gloom 340 / 500": the contract's progress, as the canister gauge and the HUD read it.
+]=]
+function ShiftCurrencyUtils.gloom(removed: number, contract: number): string
+	return `{ShiftConstants.CONTRACT_UNIT} {whole(removed)} / {whole(contract)}`
+end
+
+--[=[
+	"Remove 500 Gloom": the contract as the depot board and the work order post it.
+]=]
+function ShiftCurrencyUtils.contract(contract: number): string
+	return `Remove {whole(contract)} {ShiftConstants.CONTRACT_UNIT}`
 end
 
 --[=[
 	"EARNED": the label over the crew's running total (the fee plate, the review, the depot boards), which reads
-	"EARNED $240" beside the amount.
+	"EARNED 240 Gleam" beside the amount.
 ]=]
 function ShiftCurrencyUtils.earnedLabel(): string
 	return "EARNED"

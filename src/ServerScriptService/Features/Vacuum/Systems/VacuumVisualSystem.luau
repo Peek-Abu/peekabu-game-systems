@@ -17,7 +17,7 @@
 	  in, leaning out and back so its floor head hangs at hip height: VacuumVisualConstants.stow), and a hose (a
 	  textured, camera-facing Beam) from the pack's outlet to the wand. `setHeld` unclips the stowed wand and runs the hose to the wand in the hand. The
 	  gauge's dust insert carries its full size and Weld offset as attributes and starts empty (hidden); each
-	  client sizes it to the owner's canister (VacuumFeedbackSystem).
+	  client sizes it to the crew's Gloom against the contract (VacuumFeedbackSystem).
 	- `build` makes the hand wand inside the Tool: the grip at the handle, the wand leaning forward and its tube
 	  telescoped so the floor head rests flat on the floor from the holder's grip (VacuumHoldFormulas.hold, read
 	  from the holder's rig attachments). The hold it returns drives the arms (AnimationVacuumHoldSystem).
@@ -386,7 +386,7 @@ function Visual.wear(character: Model, skin: VacuumSkinRegistry.SkinDef?): WornB
 	end
 	local fill = partOf(pack, VacuumConstants.GAUGE_FILL_NAME)
 	if fill ~= nil then
-		-- Empty until a client draws its owner's fill (no dust in a fresh canister, in the depot or before the
+		-- Empty until a client draws the contract's fill (no dust in a fresh canister, in the depot or before the
 		-- first pile).
 		fill.Transparency = 1
 		fill:SetAttribute("GaugeFullSize", fill.Size)

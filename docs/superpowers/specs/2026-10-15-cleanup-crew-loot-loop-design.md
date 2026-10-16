@@ -5,6 +5,11 @@ and replaces its trash-only quota. The developer approved the three mechanics (b
 mystery appraisal) and the rebalance toward fewer, richer items. Every number is a tuning hypothesis kept in a Data
 constants module or the cargo registry.
 
+> **Superseded in part, 2026-10-16:** [the Gloom and Gleam economy](2026-10-16-cleanup-crew-gloom-gleam-economy-design.md) replaces the quota and the pay (§3.6), the dust bags, the trash and the
+> value top-up (§3.5), and "$" with Gleam. The contract is Gloom removed: a pile counts the instant it is vacuumed, a
+> valuable only for the grime cleaned off it, and banking adds none. Cleaning, grime, the grime lock, appraisal and
+> buried loot (§3.1-3.4) are unchanged. The sections below are marked where they no longer hold.
+
 ## 1. Why
 
 The playtest verdict was that the shift plays like a walking simulator. About 88% of a shift is spent carrying items
@@ -25,7 +30,7 @@ items** on the map, so every find feels like a find and every trip carries more 
 ## 2. The loop
 
 1. Explore. A pile that **glints** may hide something, and a grimy valuable's tag reads **"$???"**.
-2. Vacuum. A pile clears in 2.5 s and pays canister fill, which still makes a dust bag. A buried pile **pops** its item
+2. Vacuum. A pile clears in 2.5 s (since 2026-10-16 it removes 20 Gloom on the spot: no canister fill, no dust bag). A buried pile **pops** its item
    out. A grimy item gets cleaner, rises in value and is **appraised** at 65%.
 3. Choose. Cleaning takes time and is loud: it draws the Manager. You can clean it now, or grab it dirty for less.
    **Clean it where you find it:** the moment you pick it up its grime locks (§3.2a), so the choice is made on the
@@ -117,8 +122,8 @@ safe place, see the chase-kit design) and cleaned it there risk-free, which took
   **revealed** with a pop: a gold burst, a sound hook (`cargoReveal`, pending), and the item appearing where the pile
   stood.
 - **Glint:** a pile that hides something sparkles. A small twinkle plays every 3–5.5 s (randomised per pile), and only
-  clients within 20 studs draw it. It is meant to be easy to miss, and plain piles still pay canister fill toward dust
-  bags, so it is still worth vacuuming everything.
+  clients within 20 studs draw it. It is meant to be easy to miss, and plain piles still count toward the contract
+  (20 Gloom each since 2026-10-16), so it is still worth vacuuming everything.
 
 ### 3.5 The map (`OfficeLootUtils`, `OfficeConstants`)
 
@@ -129,14 +134,18 @@ safe place, see the chase-kit design) and cleaned it there risk-free, which took
   almost nothing to bury.
 - **Valuables:** a budget of 10–14 a map, counting the greed target, desk valuables and buried ones. The rest of the
   budget goes in the open, on floor markers or their furniture surfaces as before.
-- **Top-up guarantee:** if the plan's value at average cleanliness (0.5, a grime factor of 0.65), plus its trash, falls
+- **Top-up guarantee** (superseded 2026-10-16: the guarantee is now on the site's Gloom, topped up with plain piles;
+  see the economy note §3.4): if the plan's value at average cleanliness (0.5, a grime factor of 0.65), plus its trash, falls
   below quota ÷ 0.75, the roll adds open-floor valuables, up to 4 extra. `OfficeSpawnRules.check` refuses a plan that
   still falls short (the seed is re-rolled, as before). So the quota never needs more than 75% of a map's value at
   average cleanliness.
-- **Trash padding is gone.** That keeps the item count down, and trash is too cheap to be worth a trip on its own. The
-  canister still makes dust bags (15 each, about 5 a shift), so vacuuming plain piles still pays.
+- **Trash padding is gone.** That keeps the item count down, and trash is too cheap to be worth a trip on its own.
+  (Since 2026-10-16 no trash spawns at all and there are no dust bags: desks hold a valuable or nothing.)
 
 ### 3.6 Quota and pay (`ShiftQuotaFormulas`, `ShiftConstants`)
+
+> **Superseded 2026-10-16** by [the Gloom and Gleam economy](2026-10-16-cleanup-crew-gloom-gleam-economy-design.md) §3.3-3.4: the contract is 260 / 280 / 300 / 320 Gloom by crew size, banking adds
+> no Gloom, and the pay is 1 Gleam per Gloom plus the valuables banked (×1.5 in overtime). Kept below as history.
 
 - **Quota by crew size: 770 / 830 / 870 / 900** for 1 / 2 / 3 / 4 players. Measured over 30 generated offices, a
   map is worth about 1,850 fully clean and about 1,280 at average cleanliness (minimum 1,000, before any top-up), so
@@ -164,10 +173,10 @@ safe place, see the chase-kit design) and cleaned it there risk-free, which took
 | Multiplayer cleaning | Channel rates add up. Everyone on the item at the appraisal moment, plus anyone within 30 studs, gets the slip. Noise is credited to every cleaner. |
 | Vacuuming a pile next to an item | The aim picks the target nearest the wand's floor head, and keeps the current one while it stays in reach. Piles and items share one pick. |
 | Overtime ×1.5 | It applies to the valuables' pay, at their current (grime-scaled) value, at the moment they are banked. Cleared counts ×1. |
-| Dust-bag canister | Unchanged: 3 piles make a 15 dust bag. Cleaning an item does not fill the canister, because only cleared piles do. |
+| Dust-bag canister | Removed 2026-10-16: the canister is a live Gloom gauge with no capacity, and there are no dust bags (economy note §3.1). |
 | Banking an unappraised item | It is appraised at the truck, with the slip to the banker. It pays at its current cleanliness. |
 | A buried item and the greed target | The stapler still prefers a deep desk; if none exists it goes under a deep pile. Buried greed glints like any buried pile. |
-| Results screen | CLEARED shows every banked value against the quota. EARNED shows Recovery pay (valuables, overtime ×1.5). ASSETS RECOVERED shows valuables banked out of valuables offered, counting open, buried and desk ones. The EXCEEDS rating rule is unchanged (2 of every 3 offered). |
+| Results screen | (Since 2026-10-16: GLOOM REMOVED against the contract and EARNED in Gleam, each split into dust, item cleaning and valuables.) CLEARED shows every banked value against the quota. EARNED shows Recovery pay (valuables, overtime ×1.5). ASSETS RECOVERED shows valuables banked out of valuables offered, counting open, buried and desk ones. The EXCEEDS rating rule is unchanged (2 of every 3 offered). |
 | The HUD's hands line | A held valuable reads "$???". Its real number is on its tag. |
 
 ## 5. Presentation

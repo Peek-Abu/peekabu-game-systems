@@ -6,6 +6,9 @@ local Utils = require(script.Parent.OfficeLayoutUtils)
 local Spawn = require(script.Parent.OfficeSpawnUtils)
 local SpawnRules = require(Server.Rules.OfficeSpawnRules)
 local Constants = require(Server.Data.OfficeConstants)
+local ShiftConstants = require(game:GetService("ReplicatedStorage").Shared.Features.Shift.Data.ShiftConstants)
+-- The biggest crew's contract (Gloom): every generated office must be able to meet it.
+local CONTRACT = ShiftConstants.QUOTA_BY_CREW[#ShiftConstants.QUOTA_BY_CREW]
 return function()
 	describe("fresh procedural office", function()
 		it("creates distinct reproducible occupancy, sizes and connections with 16–24 work rooms", function()
@@ -195,10 +198,15 @@ return function()
 				for _, variant in { "A", "B" } do
 					local plan = Spawn.roll(
 						layout,
-						{ quota = 900, variant = variant, piles = Constants.PILES, valuables = Constants.VALUABLES },
+						{
+							quota = CONTRACT,
+							variant = variant,
+							piles = Constants.PILES,
+							valuables = Constants.VALUABLES,
+						},
 						Random.new(seed)
 					)
-					local ok, reason = SpawnRules.check(plan, layout, 900)
+					local ok, reason = SpawnRules.check(plan, layout, CONTRACT)
 					if not ok then
 						error(reason)
 					end

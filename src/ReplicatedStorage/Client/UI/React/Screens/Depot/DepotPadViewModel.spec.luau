@@ -20,17 +20,17 @@ return function()
 	it("titles the card with the truck, the job and this crew's quota", function()
 		local three = ShiftQuotaFormulas.quota(3)
 		expect(DepotPadViewModel.pad(pad(), 3, NAMES, 2, 100, false).title).to.equal(
-			`TRUCK 2 — HARLOW & FINCH JOB · QUOTA {three}`
+			`TRUCK 2 — HARLOW & FINCH JOB · {three} GLOOM`
 		)
 		expect(DepotPadViewModel.pad(pad(), 3, NAMES, nil, 100, false).title).to.equal(
-			`HARLOW & FINCH JOB · QUOTA {three}`
+			`HARLOW & FINCH JOB · {three} GLOOM`
 		)
-		expect(DepotPadViewModel.pad(pad(), 3, NAMES, 2, 100, true).title).to.equal(`TRUCK 2 · CREW · QUOTA {three}`)
+		expect(DepotPadViewModel.pad(pad(), 3, NAMES, 2, 100, true).title).to.equal(`TRUCK 2 · CREW · {three} GLOOM`)
 	end)
 
 	it("follows the crew aboard: a solo truck posts the solo quota", function()
 		local view = DepotPadViewModel.pad(pad({ members = { 3 } }), 3, NAMES, 1, 100, true)
-		expect(view.title).to.equal(`TRUCK 1 · CREW · QUOTA {ShiftQuotaFormulas.quota(1)}`)
+		expect(view.title).to.equal(`TRUCK 1 · CREW · {ShiftQuotaFormulas.quota(1)} GLOOM`)
 	end)
 
 	it("counts the crew and fills open slots up to capacity, you marked", function()

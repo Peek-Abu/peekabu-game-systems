@@ -3,10 +3,14 @@
 > **Canonical reference.** Copied from the developer's `cleanup_crew_lore_economy_foundation.md` on
 > 2026-10-13; edit it here. Approved project decisions on top of the text below:
 >
-> - The demo pays in plain **dollars** ("$45", "+$40", "EARNED $240"), not "Recovery Credits" (2026-10-14; the
->   short-lived company "Scrip" was dropped). Lore: Morrow & Morrow pays its associates a hazard-pay bonus in
->   dollars, **Recovery pay**, on the assessed value of every Recoverable Asset they bring back. The look of an
->   amount lives in one place, `ShiftCurrencyUtils`. It is display-only for now: no saved balance yet.
+> - **Gloom and Gleam** (2026-10-16, replacing the dollars of 2026-10-14; see
+>   `docs/superpowers/specs/2026-10-16-cleanup-crew-gloom-gleam-economy-design.md`). **Gloom** is the anomaly's
+>   residue, the "site buildup" below: the dust in the building and the grime on valuables. The contract is "Remove
+>   X Gloom". **Gleam** is refined Gloom, and Morrow & Morrow pays its associates in it ("45 Gleam"): 1 Gleam per
+>   Gloom removed, plus every Recoverable Asset banked at its appraised value. "Vacuum it = the job. Bank it = the
+>   pay." Where the text below says quota, banking cargo counts toward clearance, or Recovery Credits, read the
+>   contract in Gloom and the pay in Gleam. The look of an amount lives in one place, `ShiftCurrencyUtils`. It is
+>   display-only for now: no saved balance yet.
 > - The monster is **the Manager** in every player-facing string; code internals keep the `harlow` NPC kind.
 > - Overtime is opt-in: a crew member signs the overtime sheet beside the time clock at the truck
 >   (`docs/superpowers/specs/2026-10-10-cleanup-crew-design.md` §4 "Pacing").

@@ -22,6 +22,7 @@ local DeathConstants = require(ReplicatedStorage.Shared.Features.Death.Data.Deat
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local ShiftCurrencyUtils = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftCurrencyUtils)
+local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
 local SprintRules = require(ReplicatedStorage.Shared.Features.Sprint.Rules.SprintRules)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local ShiftPromptStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftPromptStore)
@@ -57,7 +58,8 @@ export type HudView = {
 	clearedShort: string,
 	fill: number,
 	quotaMet: boolean,
-	-- The plate's label ("EARNED", ShiftCurrencyUtils) over the crew's running total ("$240").
+	-- The plate's label ("EARNED", ShiftCurrencyUtils) over the crew's running total ("240 Gleam": the Gloom removed so
+	-- far plus the valuables banked).
 	feeLabel: string,
 	fee: string,
 	feeBoost: string?,
@@ -66,8 +68,6 @@ export type HudView = {
 	-- The hands item and the hotbar.
 	hands: HandsView?,
 	hotbar: ShiftHotbarViewModel.HotbarView,
-	canister: number,
-	canisterMax: number,
 	-- The clock-out slip's countdown, while one runs.
 	clockOut: string?,
 	truck: number?,
@@ -147,8 +147,8 @@ local function handsOf(kind: PublicPlayerTypes.PublicValue?): HandsView?
 	if def == nil then
 		return { kind = kind, name = kind, value = "", traits = "", short = "", fragile = false }
 	end
-	-- A valuable's worth is rolled, scaled and grimy: "$???" here, its real number on its tag (the loot loop).
-	local value = if def.grimy then `{ShiftCurrencyUtils.SYMBOL}???` else `+{def.value}`
+	-- A valuable's worth is rolled, scaled and grimy: "??? Gleam" here, its real number on its tag (the loot loop).
+	local value = if def.grimy then ShiftCurrencyUtils.unknown() else `+{def.value}`
 	return {
 		kind = kind,
 		name = def.name,
@@ -193,7 +193,6 @@ function ShiftHudViewModel.hud(
 	local left = if endsAt ~= nil then endsAt - now else 0
 	local total = ShiftConstants.SHIFT_SECONDS
 	local elapsed = math.clamp(total - left, 0, total)
-	local fill = entry[VacuumConstants.PUBLIC_FIELD]
 	local clockOutAt = snapshot.clockOutAt
 	local overtime = snapshot.stage == "overtime"
 	return {
@@ -209,19 +208,18 @@ function ShiftHudViewModel.hud(
 			ShiftHudViewModel.PUNCH_HOLES
 		),
 		pressure = math.clamp(snapshot.tier + 1, 1, ShiftHudViewModel.PRESSURE_PIPS),
-		cleared = tostring(snapshot.cleared),
-		quotaText = `/ {snapshot.quota} cleared`,
-		clearedShort = `{snapshot.cleared} / {snapshot.quota}`,
+		cleared = tostring(math.floor(snapshot.cleared)),
+		quotaText = `/ {snapshot.quota} {ShiftConstants.CONTRACT_UNIT}`,
+		clearedShort = ShiftCurrencyUtils.gloom(snapshot.cleared, snapshot.quota),
 		fill = if snapshot.quota > 0 then math.clamp(snapshot.cleared / snapshot.quota, 0, 1) else 1,
 		quotaMet = snapshot.quotaMet,
 		feeLabel = ShiftCurrencyUtils.earnedLabel(),
-		fee = ShiftCurrencyUtils.amount(snapshot.bonus),
+		-- Earned so far: every Gloom removed (paid at clock-out) plus the valuables banked.
+		fee = ShiftCurrencyUtils.amount(ShiftQuotaFormulas.breakdown(snapshot.cleared, 0, snapshot.bonus).gleam),
 		feeBoost = if overtime then `×{ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER} now` else nil,
 		feeBoostShort = if overtime then `×{ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER}` else nil,
 		hands = handsOf(entry[CarryConstants.PUBLIC_FIELD]),
-		hotbar = ShiftHotbarViewModel.hotbar(entry),
-		canister = if type(fill) == "number" then fill else 0,
-		canisterMax = VacuumConstants.CANISTER_CAPACITY,
+		hotbar = ShiftHotbarViewModel.hotbar(entry, snapshot.cleared, snapshot.quota),
 		clockOut = if snapshot.sub == "clockout" and clockOutAt ~= nil
 			then ShiftHudViewModel.clock(clockOutAt - now)
 			else nil,

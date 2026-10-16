@@ -51,6 +51,9 @@ local LEAF_COLORS: { Color3 } = {
 	Color3.fromRGB(38, 100, 44),
 }
 
+-- The Gloom a valuable's grime holds at full grime, by cargo size (GLOOM_BY_SIZE below).
+local GLOOM_BY_SIZE: { [string]: number } = { tiny = 5, light = 8, medium = 15, heavy = 25, bulky = 35 }
+
 return table.freeze({
 	WEIGHT = table.freeze(WEIGHT),
 	DROP_NOISE = table.freeze(DROP_NOISE),
@@ -145,6 +148,10 @@ return table.freeze({
 	-- pays x1, the far rooms x1.45-1.6).
 	DEPTH_VALUE_STEP = 0.15,
 	DEPTH_VALUE_MAX = 1.6,
+	-- The Gloom a valuable's grime holds at full grime, by size (docs/superpowers/specs/
+	-- 2026-10-16-cleanup-crew-gloom-gleam-economy-design.md §3.2): cleaning it removes that much toward the contract,
+	-- in step with its cleanliness. What is left when it is picked up dirty (its grime locks) is never removed.
+	GLOOM_BY_SIZE = table.freeze(GLOOM_BY_SIZE),
 	-- A valuable's server-owned state: its base (true) value, cleanliness, appraisal, jackpot name, and when it was
 	-- appraised (server time).
 	BASE_VALUE_ATTRIBUTE = "CargoBaseValue",

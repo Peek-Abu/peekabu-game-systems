@@ -23,7 +23,7 @@ Paid once per player by the server when the shift reaches its review (`RankConst
 | Earned for | XP |
 |---|---|
 | Working the shift (on the crew's review) | +10 |
-| The crew met quota | +15 |
+| The crew met the contract (Gloom removed; was the quota) | +15 |
 | Each cargo item you banked yourself | +1 (up to 10) |
 | Banking any salvage during overtime | +5 |
 | Clocking out uncaught (still with the crew at the end, never caught) | +5 |

@@ -36,11 +36,9 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 		pitch = { min = 0.95, max = 1.1 },
 		rollOffMaxDistance = 60,
 	},
-	-- Your canister taking a pile, and the chime when it is full.
+	-- The canister's Gloom gauge rising, and the chime when the contract is met (the gauge is full).
 	canisterTick = { assetId = "rbxassetid://112926891018046", group = "UI", volume = 0.5 },
 	canisterChime = { assetId = "rbxassetid://134210659787428", group = "UI", volume = 0.8 },
-	-- The dust bag popping out at your feet.
-	dustBagPop = { assetId = "rbxassetid://93403654054032", group = "SFX", volume = 0.8, rollOffMaxDistance = 40 },
 }
 
 for id, def in SOUNDS do

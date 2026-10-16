@@ -52,11 +52,10 @@ return table.freeze({
 	-- Aim at a pile within this many studs; one player clears it in DURATION seconds.
 	RANGE = 8,
 	DURATION = 2.5,
-	-- Piles per canister; the next one pops a dust bag (this Cargo kind) and empties it.
-	CANISTER_CAPACITY = 3,
-	DUST_BAG_KIND = "dustBag",
-	-- The public-player field holding a player's canister fill.
-	PUBLIC_FIELD = "canister",
+	-- The Gloom one cleared pile removes toward the shift's contract, the instant it is cleared (docs/superpowers/specs/
+	-- 2026-10-16-cleanup-crew-gloom-gleam-economy-design.md §3.1). There is no canister capacity and no dust bag: the
+	-- backpack's canister is a live gauge of the crew's contract.
+	PILE_GLOOM = 20,
 	-- Noise seam (M2): a pulse every NOISE_INTERVAL seconds while a pile is being vacuumed.
 	NOISE_INTERVAL = 1,
 	-- Seconds a vacuuming player stays counted after their channel's last tick (the channel asks every 0.1 s).
@@ -73,13 +72,8 @@ return table.freeze({
 	-- sees the vacuumer a moment later than the client that picked the pile.
 	TARGET = table.freeze({ head = 2, underfoot = 1, range = 5, minDot = 0.5, height = 6 }),
 	TARGET_SLACK = 2,
-	-- Where a dust bag lands: this far ahead of the HumanoidRootPart, on the floor under that point, kept inside
-	-- (CarryPlacementSystem.floorNear from the root, so never through a wall); and how far its centre stays from
-	-- a wall (the bag is 2 studs wide).
-	BAG_OFFSET = CFrame.new(0, 0, -2.5),
-	BAG_WALL_MARGIN = 1.15,
 	-- Feel (spec §7 "Vacuuming: suction particles into the nozzle, pile shrinks, rising whine, pop + sparkle,
-	-- canister fills"; "Canister full: chime, dust bag pops out"). The whine rises with the pile's progress.
+	-- canister fills"). The whine rises with the pile's progress.
 	WHINE_PITCH_MIN = 0.85,
 	WHINE_PITCH_MAX = 1.6,
 	WHINE_VOLUME_MIN = 0.6,
@@ -99,17 +93,17 @@ return table.freeze({
 	SPARKLE_SPEED = 10,
 	SPARKLE_COLOR = Color3.fromRGB(255, 240, 170),
 	-- The backpack (VacuumVisualSystem): the model on the character, the canister gauge's dust insert (resized
-	-- by each client from its owner's public `canister` fill, its Weld moved so its bottom stays put), the lamp
-	-- that lights when the canister is full, and the wand's floor head (where suction streams to).
+	-- by each client to the crew's contract progress, Gloom removed of the contract, its Weld moved so its bottom
+	-- stays put), the lamp that lights once the contract is met, and the wand's floor head (where suction streams to).
 	BACKPACK_NAME = "VacuumBackpack",
 	GAUGE_FILL_NAME = "GaugeFill",
 	GAUGE_WELD_NAME = "GaugeWeld",
 	LAMP_NAME = "FullLamp",
 	FLOOR_HEAD_NAME = "FloorHead",
-	-- The gauge eases toward its fill at this rate (1/s); a full canister shows full, lamp lit, this many seconds
-	-- before the dust bag pops out and it drains.
+	-- The gauge eases toward the contract's progress at this rate (1/s); the Gloom tick plays at most once per
+	-- GLOOM_TICK_GAP seconds, however fast the crew removes it.
 	GAUGE_RATE = 6,
-	GAUGE_FULL_HOLD = 1.2,
+	GLOOM_TICK_GAP = 0.15,
 	LAMP_ON_COLOR = Color3.fromRGB(255, 196, 64),
 	LAMP_OFF_COLOR = Color3.fromRGB(120, 92, 40),
 	PILE_KINDS = table.freeze(PILE_KINDS),

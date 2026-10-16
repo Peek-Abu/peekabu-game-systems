@@ -2,12 +2,13 @@ local ShiftHotbarViewModel = require(script.Parent.ShiftHotbarViewModel)
 
 return function()
 	describe("hotbar", function()
-		it("puts the vacuum in slot 1 with its canister, and the four item slots after it", function()
-			local view = ShiftHotbarViewModel.hotbar({ canister = 2, vacuumEquipped = true })
+		it("puts the vacuum in slot 1 with the contract's Gloom gauge, and the four item slots after it", function()
+			local view = ShiftHotbarViewModel.hotbar({ vacuumEquipped = true }, 340, 500)
 			expect(#view.slots).to.equal(5)
 			expect(view.slots[1].vacuum).to.equal(true)
 			expect(view.slots[1].name).to.equal("VACUUM")
-			expect(view.slots[1].tag).to.equal("2/3")
+			expect(view.slots[1].tag).to.equal("340/500")
+			expect(ShiftHotbarViewModel.hotbar({}).slots[1].tag).to.equal("")
 			expect(view.slots[1].key).to.equal("1")
 			expect(view.slots[1].selected).to.equal(true)
 			expect(view.slots[5].key).to.equal("5")
@@ -15,16 +16,16 @@ return function()
 			expect(view.locked).to.equal(false)
 		end)
 
-		it("tags a valuable $??? until appraised, then its value and jackpot name", function()
+		it("tags a valuable ??? Gleam until appraised, then its value and jackpot name", function()
 			local view = ShiftHotbarViewModel.hotbar({
 				inv1 = "wristwatch",
 				inv2 = "wristwatch",
 				inv2Value = 220,
 				inv2Variant = "Gold",
 			})
-			expect(view.slots[2].tag).to.equal("$???")
+			expect(view.slots[2].tag).to.equal("??? Gleam")
 			expect(view.slots[2].name).to.equal("Wristwatch")
-			expect(view.slots[3].tag).to.equal("$220")
+			expect(view.slots[3].tag).to.equal("220 Gleam")
 			expect(view.slots[3].name).to.equal("Gold wristwatch")
 		end)
 

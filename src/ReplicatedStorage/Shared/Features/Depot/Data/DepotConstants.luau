@@ -18,13 +18,17 @@ local DepotTypes = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotTyp
 -- (ShiftQuotaFormulas), or the range by crew size when they are not in one; worded for young players.
 local BOARD_COPY = table.freeze({
 	title = "TONIGHT'S JOB",
-	-- The quota counts everything banked (the loot loop, docs/superpowers/specs/2026-10-15-cleanup-crew-loot-loop-design.md).
-	-- string.format patterns: the quota, then the crew size (or the largest crew's quota).
-	quotaCrew = "%d for your crew of %d. Everything you bank counts, and clean things count more.",
-	quotaSolo = "%d for you on your own. Everything you bank counts, and clean things count more.",
-	quotaRange = "%d for one player, up to %d for four. Everything you bank counts, and clean things count more.",
-	quotaPhoneCrew = "%d for your crew",
-	quotaPhoneRange = "%d–%d, by crew size",
+	-- The contract is Gloom removed (docs/superpowers/specs/2026-10-16-cleanup-crew-gloom-gleam-economy-design.md §5):
+	-- dust counts the moment it is vacuumed, a valuable only for the grime cleaned off it.
+	-- string.format patterns: the contract, then the crew size (or the largest crew's contract).
+	quotaCrew = "Remove %d Gloom for your crew of %d. Vacuum the dust; clean valuables before you lift them.",
+	quotaSolo = "Remove %d Gloom on your own. Vacuum the dust; clean valuables before you lift them.",
+	quotaRange = "Remove %d Gloom for one player, up to %d for four. Vacuum the dust; clean valuables before you lift them.",
+	quotaPhoneCrew = "Remove %d Gloom",
+	quotaPhoneRange = "Remove %d–%d Gloom",
+	-- The PAY row: Gleam per Gloom at clock-out, plus the valuables banked.
+	pay = "1 Gleam per Gloom removed, paid at clock-out, plus every valuable you bank at its appraised value (x1.5 in overtime).",
+	payPhone = "1 Gleam per Gloom, plus valuables",
 	shift = "on the clock. Clock out at the truck any time.",
 	shiftPhone = "clock out at the truck",
 	crew = "1–4 per truck.",

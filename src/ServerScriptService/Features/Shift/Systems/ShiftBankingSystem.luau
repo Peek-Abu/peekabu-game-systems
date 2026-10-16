@@ -1,12 +1,12 @@
 --!strict
 --[=[
-	ShiftBankingSystem: the shift's banking handler for Cargo (Cleanup Crew spec §4 "Banking", §6.4). Everything
-	banked adds to Round's `clearance` counter, the quota, at x1; valuables (times the current multiplier: ×1.5 in
-	overtime) also add to `bonus`, the pay (ShiftQuotaFormulas.credit, docs/superpowers/specs/
-	2026-10-15-cleanup-crew-loot-loop-design.md §3.6); and the banker's run goes in the roster. Every refusal is decided before the first counter write; once a counter moved it
+	ShiftBankingSystem: the shift's banking handler for Cargo (Cleanup Crew spec §4 "Banking", §6.4). Banking is the
+	pay, never the job (docs/superpowers/specs/2026-10-16-cleanup-crew-gloom-gleam-economy-design.md §3.3): a Load adds
+	no Gloom to the contract (Round's `clearance`, which only piles and cleaning raise, ShiftGloomSystem); its
+	valuables, times the current multiplier (×1.5 in overtime), add their Gleam to `bonus` (ShiftQuotaFormulas.pay);
+	and the banker's run goes in the roster. Every refusal is decided before the first counter write; once a counter moved it
 	returns true whatever else fails, or Cargo would release the claim and the same items would bank twice. It
-	also returns the bonus it credited (after the multiplier), which Cargo's `Banked` floater shows (M3: the
-	"Loaded: …" toast is gone).
+	also returns the Gleam it credited (after the multiplier), which Cargo's `Banked` floater shows.
 
 	Moved out of ShiftServiceServer in M2 (the service was at the 400-line cap). Spec-exempt shell (Round); the
 	multiplier and the quota are the specced ShiftPhaseRules. Each accepted Load is reported to ShiftAnalyticsSystem
@@ -34,7 +34,7 @@ export type Deps = {
 	canBank: (Player) -> boolean,
 	-- What salvage is multiplied by right now (ShiftPhaseRules.salvageMultiplier).
 	multiplier: () -> number,
-	-- After the counters moved: re-check the quota and republish (the service's state machine).
+	-- After the counters moved: republish (and re-check the contract; banking alone never meets it).
 	afterBank: () -> (),
 }
 
@@ -55,8 +55,7 @@ function ShiftBankingSystem.new(deps: Deps): CargoTypes.BankHandler
 			return false, nil
 		end
 		local multiplier = deps.multiplier()
-		local credit = ShiftQuotaFormulas.credit(deposit, multiplier)
-		local cleared, bonus = credit.cleared, credit.earned
+		local bonus = ShiftQuotaFormulas.pay(deposit, multiplier)
 		local salvage = 0
 		for _, item in deposit.items do
 			if item.category == "salvage" then
@@ -65,24 +64,16 @@ function ShiftBankingSystem.new(deps: Deps): CargoTypes.BankHandler
 		end
 		local wrote = false
 		local ok = guarded("banking", function()
-			if cleared > 0 then
-				RoundServiceServer:addTeam(ShiftConstants.CLEARANCE, cleared)
-				wrote = true
-			end
 			if bonus > 0 then
 				RoundServiceServer:addTeam(ShiftConstants.BONUS, bonus)
 				wrote = true
 			end
-			RoundServiceServer:addScore(player, ShiftConstants.SCORE_BANKED, deposit.clearance + bonus)
+			RoundServiceServer:addScore(player, ShiftConstants.SCORE_BANKED, bonus)
 			wrote = true
 			if salvage > 0 then
 				RoundServiceServer:addScore(player, ShiftConstants.SCORE_SALVAGE, salvage)
 			end
-			deps.roster:record(
-				player.UserId,
-				player.DisplayName,
-				{ banked = deposit.clearance + bonus, salvage = salvage }
-			)
+			deps.roster:record(player.UserId, player.DisplayName, { banked = bonus, salvage = salvage })
 		end)
 		if not ok and not wrote then
 			return false, nil

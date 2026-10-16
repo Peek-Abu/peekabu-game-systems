@@ -319,7 +319,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants"] = "static tuning and names (no logic)",
 	["ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumAssets"] = "asset id slots; registers the uploaded sounds at load (no decisions)",
 	["ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumFeedbackSystem"] = "particles/Sound/Charm shell (decisions specced in VacuumFeedbackFormulas)",
-	["ServerScriptService.Features.Vacuum.VacuumServiceServer"] = "Instance/Players/RunService/signal shell (VacuumCanisterUtils is specced)",
+	["ServerScriptService.Features.Vacuum.VacuumServiceServer"] = "Instance/Players/RunService/signal shell (VacuumTargetRules is specced)",
 	["ReplicatedStorage.Client.Features.Vacuum.VacuumServiceClient"] = "Input shell (VacuumTargetRules is specced; the server decides)",
 
 	-- Cleanup Crew: Noise
