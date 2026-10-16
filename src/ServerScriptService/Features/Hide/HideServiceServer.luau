@@ -14,9 +14,9 @@
 	  spot refuses them SPOT_COOLDOWN_SECONDS; `evict` (the Manager's catch, the behaviours to come); their character
 	  dying or going; the furniture going (the office rebuilds each shift); picking up something too big. The body comes
 	  out at the first clear exit (in front, behind, either side).
-	- API for the Manager's behaviours to come (stare-down, opening the spot, sitting at the desk you are under):
-	  `isHidden`, `spotOf`, `seenEntering`, `setSeen`, `evict`, `spots`, `occupantOf`, and the `entered` / `exited`
-	  signals.
+	- API for the Manager's behaviours (the stare-down, sitting at the desk you are under):
+	  `isHidden`, `spotOf`, `seenEntering`, `setSeen`, `evict`, `spots`, `occupantOf`, `hold` (the camping push-out
+	  waits while he is at your spot), and the `entered` / `exited` signals.
 
 	Spec-exempt shell (Instances, Players, ByteNet, signals); the decisions are the specced HideRules, HideSpotUtils and
 	HideOccupancyTracker.
@@ -67,6 +67,8 @@ local counters: { [string]: number } =
 local bodies: { [number]: { root: BasePart, humanoid: Humanoid, entry: CFrame, tween: Tween } } = {}
 -- When each player's last stay ended (os.clock), for the re-entry rest.
 local lastLeft: { [number]: number } = {}
+-- Until when each hiding player's camping push-out is held (os.clock): the Manager is at their spot.
+local holds: { [number]: number } = {}
 local stoppers: { () -> () } = {}
 local campElapsed = 0
 
@@ -168,6 +170,7 @@ local function leave(player: Player, reason: ExitReason): boolean
 		return false
 	end
 	lastLeft[player.UserId] = os.clock()
+	holds[player.UserId] = nil
 	player:SetAttribute(HideConstants.PLAYER_SPOT_ATTRIBUTE, nil)
 	player:SetAttribute(HideConstants.PLAYER_SINCE_ATTRIBUTE, nil)
 	local spot = spotSystem:get(stay.spotId)
@@ -285,7 +288,7 @@ local function onHeartbeat(deltaTime: number)
 		if player == nil then
 			tracker:leave(userId)
 			bodies[userId] = nil
-		elseif HideRules.camp(now - stay.since) == "out" then
+		elseif HideRules.camp(now - stay.since) == "out" and now >= (holds[userId] or 0) then
 			leave(player, "cramped")
 		end
 	end
@@ -307,6 +310,7 @@ export type HideServiceServer = {
 	spots: (self: HideServiceServer) -> { Spot },
 	occupantOf: (self: HideServiceServer, spotId: string) -> Player?,
 	setWitness: (self: HideServiceServer, check: Witness?) -> (),
+	hold: (self: HideServiceServer, player: Player, untilTime: number) -> boolean,
 }
 
 local HideServiceServer: HideServiceServer = {
@@ -374,6 +378,7 @@ local HideServiceServer: HideServiceServer = {
 		tracker:clear()
 		table.clear(bodies)
 		table.clear(lastLeft)
+		table.clear(holds)
 	end,
 
 	isHidden = function(_self, player)
@@ -439,6 +444,18 @@ local HideServiceServer: HideServiceServer = {
 	]=]
 	setWitness = function(_self, check)
 		witness = check
+	end,
+
+	--[=[
+		Holds a hiding player's camping push-out until `untilTime` (os.clock): the Manager stands at or sits over their
+		spot, so being cramped never throws them into his lap. False when they are not hiding.
+	]=]
+	hold = function(_self, player, untilTime)
+		if tracker:of(player.UserId) == nil then
+			return false
+		end
+		holds[player.UserId] = math.max(holds[player.UserId] or 0, untilTime)
+		return true
 	end,
 
 	getState = function(_self)

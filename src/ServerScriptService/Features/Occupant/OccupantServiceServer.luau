@@ -1,31 +1,36 @@
 --!strict
 --[=[
-	OccupantServiceServer: Mr. Harlow (Cleanup Crew spec §4 "Mr. Harlow", §6.2 "Occupant"). He is the `harlow`
-	NPC kind (NpcServiceServer) driven by this service's brain:
+	OccupantServiceServer: Mr. Harlow (Cleanup Crew spec §4 "Mr. Harlow", §6.2 "Occupant"; the behaviour set,
+	docs/superpowers/specs/2026-10-15-cleanup-crew-manager-behaviours-design.md). He is the `harlow` NPC kind
+	(NpcServiceServer) driven by this service's brain:
 
 	- Life: when a shift starts running he is built (OccupantRigSystem) on a random point of the Office's
 	  patrol route and walks the loop in a random direction; when it stops he is despawned. He lives in the
 	  shift's container, so a reset removes him too.
 	- Senses, gathered in the brain each think and handed to the pure OccupantBrainRules: each crew member's
 	  position with one synchronous line-of-sight ray (Workspace:Raycast never yields; at most one ray per
-	  crew member per 0.25 s think, the base's own cost) and whether they hide (Hide: and whether he saw them go
+	  crew member per think, the base's own cost) and whether they hide (Hide: and whether he saw them go
 	  in), the latest noise he heard outside the truck's box (NoiseServiceServer through NoiseRules and the
-	  hearing scale), the shift's break, the route, the rest point, the safe truck box and the loading bay he may
-	  walk but never lingers in.
+	  hearing scale), the shift's break, the route, the rest point, the safe truck box, the loading bay he may
+	  walk but never lingers in, the office's desks and hiding spots (OccupantSenseSystem.furniture, refreshed every
+	  FURNITURE_REFRESH), who hides where, the pacing (tier, crew size, overtime) and a few random rolls.
+	- The brain's effects (OccupantEffectSystem): his body (OccupantSeatSystem: sitting at a desk, standing up, planted still at a spot,
+	  let go), whether he knows a hider (Hide's `setSeen`), holding a hider's camping push-out while he is at their
+	  spot (`hold`), a catch of a found hider, and the PA call-out (OccupantEvents.Pa, to everyone).
 	- Hiding: he is Hide's witness (`setWitness`): a player who goes into a spot while he sees them (or while he
-	  chases them) is "seen entering", and he knows where they are; a catch drags them out first (`evict`).
+	  chases them) is "seen entering"; the brain stares them down. A catch drags them out first (`evict`).
 	- Pacing: OccupantTuningFormulas turns the shift's tier and the crew size into his speeds (setTuning) and
 	  his hearing scale (NoiseServiceServer:setHearingScale), refreshed every TUNING_INTERVAL; a tier rise
 	  flickers every light (OccupantEvents.Flicker).
-	- Tells: his mode and target as attributes (the client's heartbeat), a "?" / "!" cue and a speech bubble
-	  (OccupantRigSystem, a paper memo; the line varies per cue, OccupantFeedbackUtils.pickLine); the client voices
-	  and types it (OccupantPresenceSystem); while he looks around he turns his root through a sweep.
-	- Catch: the kind's attack (onAttack) → OccupantCatchRules → OccupantCatchSystem: camera snap, lights out,
-	  ragdoll launch; ~8 s spectating (Death's respawn delay); the Rehired notice on the respawn in the loading bay; the
-	  catch counts in Shift's review.
+	- Tells: what he shows (OccupantTellRules.view: mode, target, phase, cue, face, gesture, tilt) as attributes
+	  every think (OccupantRigSystem.present), and a speech bubble per cue (a paper memo; the line varies per cue,
+	  OccupantFeedbackUtils.pickLine); the client voices and types it; while he looks around he turns his root.
+	- Catch: the kind's attack (onAttack) or the brain's catch effect → OccupantCatchSystem.attempt (OccupantCatchRules):
+	  the jumpscare, lights out, ragdoll launch; ~8 s spectating; the Rehired notice on the respawn in the loading bay;
+	  the catch counts in Shift's review.
 
-	Spec-exempt shell (Instances, raycasts, Players, signals); the decisions are the specced OccupantBrainRules,
-	OccupantCatchRules, OccupantTuningFormulas and OccupantTellRules.
+	Spec-exempt shell (Instances, raycasts, Players, signals); the decisions are the specced OccupantBrainRules (and
+	its Work, Stare and Director rules), OccupantCatchRules, OccupantTuningFormulas and OccupantTellRules.
 
 	@class OccupantServiceServer
 ]=]
@@ -54,11 +59,10 @@ local NpcRegistry = require(ServerScriptService.Features.Npc.Data.NpcRegistry)
 local NpcTypes = require(ServerScriptService.Features.Npc.Data.NpcTypes)
 local OccupantBrainRules = require(OccupantServer.Rules.OccupantBrainRules)
 local Sense = require(OccupantServer.Systems.OccupantSenseSystem)
-local Reach = require(OccupantServer.Rules.OccupantReachRules)
-local OccupantCatchRules = require(OccupantServer.Rules.OccupantCatchRules)
 local OccupantTuningFormulas = require(OccupantServer.Utils.OccupantTuningFormulas)
 local OccupantRigSystem = require(OccupantServer.Systems.OccupantRigSystem)
 local OccupantCatchSystem = require(OccupantServer.Systems.OccupantCatchSystem)
+local OccupantEffectSystem = require(OccupantServer.Systems.OccupantEffectSystem)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
 local HideServiceServer = require(ServerScriptService.Features.Hide.HideServiceServer)
 local NoiseServiceServer = require(ServerScriptService.Features.Noise.NoiseServiceServer)
@@ -90,6 +94,9 @@ if not NpcRegistry.has(OccupantConstants.NPC_KIND) then
 	})
 end
 
+-- How often the office's desks and hiding spots are re-read (the office rebuilds each shift; chairs attach with art).
+local FURNITURE_REFRESH = 5
+
 local log = Logger.new("OccupantServiceServer")
 
 local rig: OccupantRigSystem.Rig? = nil
@@ -100,6 +107,9 @@ local route: { Vector3 } = {}
 local restPoint = Vector3.zero
 local zone: OccupantTypes.Zone = { min = Vector3.zero, max = Vector3.zero }
 local bay: OccupantTypes.Zone? = nil
+local desks: { OccupantTypes.Desk } = {}
+local spots: { OccupantTypes.Spot } = {}
+local furnitureAt = -math.huge
 local pendingNoise: Vector3? = nil
 local lookBase: number? = nil
 local tuningElapsed = 0
@@ -109,17 +119,6 @@ local counters = { spawned = 0, heard = 0, chases = 0, catches = 0 }
 -- UserIds caught this life: their next character gets the Rehired notice.
 local rehire: { [number]: boolean } = {}
 local stoppers: { () -> () } = {}
-
-local function rootOf(player: Player): BasePart?
-	local character = player.Character
-	local root = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil
-	return if root ~= nil and root:IsA("BasePart") then root else nil
-end
-
-local function humanoidOf(player: Player): Humanoid?
-	local character = player.Character
-	return if character ~= nil then character:FindFirstChildOfClass("Humanoid") else nil
-end
 
 local function resting(): boolean
 	local state = shift
@@ -138,10 +137,9 @@ local function applyTuning()
 	NoiseServiceServer:setHearingScale(tuning.hearing)
 end
 
--- His mode on the model, the cue over his head, and a line for a cue.
+-- What he shows, and a line for a cue.
 local function show(current: OccupantRigSystem.Rig, nextMind: OccupantTypes.Mind, cue: OccupantTypes.Cue?)
-	OccupantRigSystem.setMode(current, nextMind.mode, nextMind.target)
-	OccupantRigSystem.setCue(current, OccupantTellRules.cueFor(nextMind.mode))
+	OccupantRigSystem.present(current, OccupantTellRules.view(nextMind, os.clock()))
 	local variants = if cue ~= nil then OccupantConstants.LINE_VARIANTS[cue] else nil
 	local line = if variants ~= nil then OccupantFeedbackUtils.pickLine(variants, rng:NextNumber(), lastLine) else nil
 	line = line or OccupantTellRules.lineFor(cue)
@@ -168,37 +166,105 @@ end
 local function witness(player: Player): boolean
 	local current, currentMind = rig, mind
 	local def = NpcRegistry.get(OccupantConstants.NPC_KIND)
-	if current == nil or currentMind == nil or def == nil then
-		return false
-	end
-	local seen = Sense.glimpses(current, def.sightRange, { player }, function(): boolean
-		return true
-	end)
-	return OccupantBrainRules.witnessed(
-		currentMind,
-		Sense.senses(current, def, os.clock(), seen, world()),
-		player.UserId
-	)
+	return current ~= nil
+		and currentMind ~= nil
+		and def ~= nil
+		and Sense.witness(current, currentMind, def, world(), player)
 end
 
--- The `harlow` brain: senses → OccupantBrainRules.step → intent. Never yields.
+-- The office's desks and hiding spots as he knows them, re-read every FURNITURE_REFRESH.
+local function furniture(current: OccupantRigSystem.Rig, now: number)
+	if now - furnitureAt < FURNITURE_REFRESH then
+		return
+	end
+	furnitureAt = now
+	desks, spots = Sense.furniture(HideServiceServer:spots(), current.humanoid.HipHeight + current.root.Size.Y / 2)
+end
+
+local catchHooks: OccupantCatchSystem.Hooks = {
+	stillOn = function(): boolean
+		local state = shift
+		return rig ~= nil and state ~= nil and state.phase == "running"
+	end,
+	onCaught = function(player: Player)
+		rehire[player.UserId] = true
+		ShiftServiceServer:noteCatch(player)
+		ToastServiceServer:send("all", {
+			text = OccupantFeedbackUtils.caughtText(player.DisplayName, OccupantConstants.SPECTATE_SECONDS),
+			style = ShiftConstants.TOAST_STICKY,
+			duration = 4,
+		})
+	end,
+}
+
+-- Catches `player` if the server's re-check allows (OccupantCatchSystem.attempt); `from` is the mind of the think that
+-- asked (a catch from a sit-in or a stare keeps its pose). Never yields.
+local function catchPlayer(player: Player, from: OccupantTypes.Mind?)
+	local current = rig
+	local before = mind
+	local state = shift
+	if current == nil or before == nil or state == nil then
+		return
+	end
+	local now = os.clock()
+	local graceUntil = before.grace[player.UserId]
+	local ok, reason = OccupantCatchSystem.attempt(current, player, {
+		inGrace = graceUntil ~= nil and now < graceUntil,
+		resting = state.stage == "break",
+		zone = zone,
+		-- A player he found in a hiding spot is in plain view to him (he knows where they are).
+		inView = Sense.inView(glimpses(current, math.huge), player.UserId),
+	}, catchHooks)
+	if not ok then
+		log:debug(`catch of {player.Name} refused: {reason or "?"}`)
+		return
+	end
+	local nextMind = OccupantBrainRules.caught(before, player.UserId, now, from)
+	mind = nextMind
+	counters.catches += 1
+	-- The catch line comes from OccupantCatchSystem; this clears the "!" and shows the catch (face, tilt).
+	show(current, nextMind, nil)
+end
+
+-- The kind's attack is the catch. Never yields.
+local function onCatch(npc: Model, player: Player)
+	local current = rig
+	if current ~= nil and npc == current.model then
+		catchPlayer(player, mind)
+	end
+end
+
+-- The `harlow` brain: senses → OccupantBrainRules.step → intent (and effects). Never yields.
 local function brain(def: NpcTypes.NpcDef, context: NpcTypes.BrainContext, npc: Model): NpcTypes.Intent?
 	local current = rig
 	local before = mind
-	if current == nil or before == nil or npc ~= current.model then
+	local state = shift
+	if current == nil or before == nil or state == nil or npc ~= current.model then
 		return { kind = "idle" }
 	end
+	furniture(current, context.now)
+	local participants = RoundServiceServer:participants()
 	local senses = Sense.senses(current, def, context.now, glimpses(current, def.sightRange), world())
 	senses.position = context.position
 	senses.heard = pendingNoise
+	senses.rolls = { rng:NextNumber(), rng:NextNumber(), rng:NextNumber(), rng:NextNumber() }
+	senses.desks = desks
+	senses.spots = spots
+	senses.hiders = Sense.hiders(participants)
+	senses.pacing = { tier = state.tier, solo = #participants <= 1, overtime = state.stage == "overtime" }
 	pendingNoise = nil
 	local result = OccupantBrainRules.step(before, senses)
 	mind = result.mind
-	if result.mind.mode ~= before.mode or result.mind.target ~= before.target or result.cue ~= nil then
-		if result.mind.mode == "chase" and before.mode ~= "chase" then
-			counters.chases += 1
-		end
-		show(current, result.mind, result.cue)
+	if result.mind.mode == "chase" and before.mode ~= "chase" then
+		counters.chases += 1
+	end
+	show(current, result.mind, result.cue)
+	-- After the mind is stored, so a catch builds on it.
+	local effects = result.effects
+	if effects ~= nil then
+		OccupantEffectSystem.apply(current, effects, function(player: Player)
+			catchPlayer(player, before)
+		end)
 	end
 	return result.intent
 end
@@ -222,78 +288,13 @@ local function onNoise(noise: NoiseTypes.NoiseEvent)
 	end
 end
 
-local catchHooks: OccupantCatchSystem.Hooks = {
-	stillOn = function(): boolean
-		local state = shift
-		return rig ~= nil and state ~= nil and state.phase == "running"
-	end,
-	onCaught = function(player: Player)
-		rehire[player.UserId] = true
-		ShiftServiceServer:noteCatch(player)
-		ToastServiceServer:send("all", {
-			text = OccupantFeedbackUtils.caughtText(player.DisplayName, OccupantConstants.SPECTATE_SECONDS),
-			style = ShiftConstants.TOAST_STICKY,
-			duration = 4,
-		})
-	end,
-}
-
--- The kind's attack is the catch: re-checked on the server (OccupantCatchRules), then the sequence. Never yields.
-local function onCatch(npc: Model, player: Player)
-	local current = rig
-	local before = mind
-	local state = shift
-	if current == nil or before == nil or state == nil or npc ~= current.model then
-		return
-	end
-	local root = rootOf(player)
-	local humanoid = humanoidOf(player)
-	local now = os.clock()
-	local graceUntil = before.grace[player.UserId]
-	local ok, reason = OccupantCatchRules.canCatch({
-		-- Horizontal reach plus a separate body-height and line-of-sight recheck.
-		distance = if root ~= nil
-			then Vector3.new(root.Position.X - current.root.Position.X, 0, root.Position.Z - current.root.Position.Z).Magnitude
-			else math.huge,
-		reachable = root ~= nil and humanoid ~= nil and Reach.canReach(
-			current.root.Position,
-			root.Position,
-			Sense.feetY(root, humanoid),
-			current.head.Position.Y + current.head.Size.Y / 2,
-			OccupantConstants.CATCH_RANGE + OccupantConstants.CATCH_SLACK
-		),
-		-- A player he saw go into a hiding spot is in plain view to him (he knows where they are).
-		clear = Sense.inView(glimpses(current, math.huge), player.UserId),
-		hidden = HideServiceServer:isHidden(player) and not HideServiceServer:seenEntering(player),
-		position = if root ~= nil then root.Position else current.root.Position,
-		alive = humanoid ~= nil and humanoid.Health > 0 and not DeathServiceServer:isDead(player),
-		catching = OccupantCatchSystem.isCatching(player.UserId),
-		inGrace = graceUntil ~= nil and now < graceUntil,
-		resting = state.stage == "break",
-		zone = zone,
-	})
-	if not ok then
-		log:debug(`catch of {player.Name} refused: {reason or "?"}`)
-		return
-	end
-	-- Dragged out of the spot he saw them go into, then caught.
-	HideServiceServer:evict(player, "evicted")
-	if not OccupantCatchSystem.begin(current, player, catchHooks) then
-		return
-	end
-	local nextMind = OccupantBrainRules.caught(before, player.UserId, now)
-	mind = nextMind
-	counters.catches += 1
-	-- The catch line comes from OccupantCatchSystem; this clears the "!" and publishes the mode.
-	show(current, nextMind, nil)
-end
-
 local function despawn()
 	local current = rig
 	rig = nil
 	mind = nil
 	pendingNoise = nil
 	lookBase = nil
+	furnitureAt = -math.huge
 	-- A catch in the last seconds: the next shift must not show a stale deadline.
 	for userId in rehire do
 		OccupantCatchSystem.clearDeadline(userId)
@@ -336,10 +337,11 @@ local function spawnHarlow()
 	zone = { min = min, max = max }
 	local bayMin, bayMax = OfficeServiceServer:loadingBay()
 	bay = { min = bayMin, max = bayMax }
-	local fresh = OccupantBrainRules.newMind(start, direction, os.clock())
+	local fresh = OccupantBrainRules.newMind(start, direction, os.clock(), rng:NextNumber())
 	rig = built
 	mind = fresh
 	pendingNoise = nil
+	furnitureAt = -math.huge
 	built.model.Destroying:Connect(function()
 		if rig == built then
 			rig = nil
@@ -368,7 +370,7 @@ local function onShift(state: ShiftTypes.ShiftState)
 	applyTuning()
 end
 
--- Per frame: turning while he looks around; tuning every TUNING_INTERVAL.
+-- Per frame: turning while he looks around (never while his body is anchored); tuning every TUNING_INTERVAL.
 local function onHeartbeat(deltaTime: number)
 	tuningElapsed += deltaTime
 	if tuningElapsed >= OccupantConstants.TUNING_INTERVAL then
@@ -379,7 +381,7 @@ local function onHeartbeat(deltaTime: number)
 	local currentMind = mind
 	local arrivedAt = if currentMind ~= nil then currentMind.arrivedAt else nil
 	local looking = currentMind ~= nil and (currentMind.mode == "investigate" or currentMind.mode == "search")
-	if current == nil or not looking or arrivedAt == nil then
+	if current == nil or not looking or arrivedAt == nil or current.root.Anchored then
 		lookBase = nil
 		return
 	end
@@ -433,13 +435,11 @@ local OccupantServiceServer: OccupantServiceServer = {
 		local leaving = Players.PlayerRemoving:Connect(function(player: Player)
 			rehire[player.UserId] = nil
 		end)
-		table.insert(stoppers, function()
-			leaving:Disconnect()
-		end)
 		local changed = ShiftServiceServer.changed:Connect(onShift)
 		local noises = NoiseServiceServer.made:Connect(onNoise)
 		local heartbeat = RunService.Heartbeat:Connect(onHeartbeat)
 		table.insert(stoppers, function()
+			leaving:Disconnect()
 			changed:Disconnect()
 			noises:Disconnect()
 			heartbeat:Disconnect()
@@ -475,11 +475,18 @@ local OccupantServiceServer: OccupantServiceServer = {
 		return {
 			present = rig ~= nil,
 			mode = if current ~= nil then current.mode else nil,
+			phase = if current ~= nil then current.phase else nil,
 			target = if current ~= nil then current.target else nil,
 			routeIndex = if current ~= nil then current.routeIndex else nil,
 			routeStep = if current ~= nil then current.routeStep else nil,
+			menace = if current ~= nil then current.menace else nil,
+			breatherUntil = if current ~= nil then current.breatherUntil else nil,
+			sitIns = if current ~= nil then current.sitIns else nil,
+			desks = #desks,
+			spots = #spots,
 			hearing = NoiseServiceServer:getHearingScale(),
 			counters = table.clone(counters),
+			effects = OccupantEffectSystem.getState(),
 		}
 	end,
 }

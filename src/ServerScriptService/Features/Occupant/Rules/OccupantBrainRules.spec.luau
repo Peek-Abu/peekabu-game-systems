@@ -531,13 +531,226 @@ return function()
 			)
 		end)
 
-		it("knows where a player he saw go in is, through the furniture", function()
+		it("never chases a player he saw go in: he stares the spot down instead", function()
 			local step = OccupantBrainRules.step(
 				fresh(),
-				senses({ players = { { userId = 7, position = AHEAD, clear = false, hidden = true, seen = true } } })
+				senses({
+					players = { { userId = 7, position = AHEAD, clear = false, hidden = true, seen = true } },
+					spots = { { id = "s1", center = AHEAD, stand = AHEAD - Vector3.new(3, 3, 0) } },
+					hiders = { { userId = 7, spotId = "s1", seen = true } },
+				})
 			)
-			expect(step.mind.mode).to.equal("chase")
-			expect(step.mind.target).to.equal(7)
+			expect(step.mind.mode).to.equal("stare")
+			expect(step.mind.quarry).to.equal(7)
+		end)
+	end)
+
+	describe("settleBody", function()
+		it("stands him up off the chair before he moves, faster into a chase", function()
+			local mind = fresh()
+			mind.mode = "chase"
+			mind.seated = true
+			local step = OccupantBrainRules.settleBody(
+				{ mind = mind, intent = { kind = "goTo", position = Vector3.zero, run = true } },
+				10
+			)
+			expect(step.mind.seated).to.equal(false)
+			expect(step.intent.kind).to.equal("idle")
+			expect(step.effects[1].kind).to.equal("stand")
+			expect(step.effects[1].speed).to.equal(OccupantConstants.AMBUSH_STAND_SPEED)
+			expect(step.mind.standUntil).to.equal(
+				10 + OccupantConstants.STAND_SECONDS / OccupantConstants.AMBUSH_STAND_SPEED
+			)
+		end)
+		it("keeps him seated while he types, and through a catch", function()
+			local mind = fresh()
+			mind.mode = "work"
+			mind.phase = "type"
+			mind.seated = true
+			expect(OccupantBrainRules.settleBody({ mind = mind, intent = { kind = "idle" } }, 0).effects).to.equal(nil)
+			mind.mode = "catch"
+			mind.phase = nil
+			expect(OccupantBrainRules.settleBody({ mind = mind, intent = { kind = "idle" } }, 0).effects).to.equal(nil)
+		end)
+		it("lets him go from a spot once he walks on", function()
+			local mind = fresh()
+			mind.planted = true
+			local step = OccupantBrainRules.settleBody({ mind = mind, intent = { kind = "idle" } }, 0)
+			expect(step.mind.planted).to.equal(false)
+			expect(step.effects[1].kind).to.equal("release")
+		end)
+	end)
+
+	describe("the stare-down", function()
+		local CENTER = Vector3.new(80, 1.5, 60)
+		local STAND = Vector3.new(76.4, 0, 60)
+		local AT_STAND = Vector3.new(76.4, 4.6, 60)
+		local SPOT = { id = "s1", center = CENTER, stand = STAND }
+		local HIDER = { userId = 7, spotId = "s1", seen = true }
+		local HIDDEN =
+			{ userId = 7, position = CENTER + Vector3.new(0, 3, 0), clear = false, hidden = true, seen = true }
+
+		local function stare(extra)
+			local value = senses({ players = { HIDDEN }, spots = { SPOT }, hiders = { HIDER } })
+			for key, item in extra or {} do
+				value[key] = item
+			end
+			return value
+		end
+
+		local function kinds(step)
+			local list = {}
+			for _, effect in step.effects or {} do
+				table.insert(list, effect.kind)
+			end
+			return table.concat(list, ",")
+		end
+
+		-- Walked to the spot and planted, staring for the rolled time (roll 0: the shortest).
+		local function planted()
+			local walking = OccupantBrainRules.step(fresh(), stare())
+			return OccupantBrainRules.step(walking.mind, stare({ now = 101, position = AT_STAND, rolls = { 0 } }))
+		end
+
+		it("walks to the spot's front, then plants there facing it, holding the camping push-out", function()
+			local walking = OccupantBrainRules.step(fresh(), stare())
+			expect(walking.mind.phase).to.equal("approach")
+			expect(walking.intent.position).to.equal(STAND)
+			local step = planted()
+			expect(step.mind.phase).to.equal("hold")
+			expect(step.mind.hold).to.equal(OccupantConstants.STARE_SECONDS.min)
+			expect(step.mind.planted).to.equal(true)
+			expect(kinds(step)).to.equal("plant,holdCamp")
+			expect(step.intent.kind).to.equal("idle")
+		end)
+
+		it("stands perfectly still for the stare", function()
+			local step = planted()
+			local still = OccupantBrainRules.step(
+				step.mind,
+				stare({ now = 101 + OccupantConstants.STARE_SECONDS.min - 0.1, position = AT_STAND })
+			)
+			expect(still.mind.phase).to.equal("hold")
+			expect(still.intent.kind).to.equal("idle")
+		end)
+
+		it("ends in a check (bend down, then the catch) on a low roll", function()
+			local step = planted()
+			local check = OccupantBrainRules.step(
+				step.mind,
+				stare({ now = 101 + OccupantConstants.STARE_SECONDS.min, position = AT_STAND, rolls = { 0.5, 0 } })
+			)
+			expect(check.mind.phase).to.equal("check")
+			expect(kinds(check)).to.equal("seen,holdCamp")
+			local catch = OccupantBrainRules.step(
+				check.mind,
+				stare({
+					now = 101 + OccupantConstants.STARE_SECONDS.min + OccupantConstants.CHECK_SECONDS + 0.01,
+					position = AT_STAND,
+				})
+			)
+			expect(kinds(catch)).to.equal("catch,release")
+			expect(catch.effects[1].userId).to.equal(7)
+		end)
+
+		it("ends with him walking away on a high roll, forgetting the hider", function()
+			local step = planted()
+			local leave = OccupantBrainRules.step(
+				step.mind,
+				stare({
+					now = 101 + OccupantConstants.STARE_SECONDS.min,
+					position = AT_STAND,
+					rolls = { 0.5, 0.99, 0.99 },
+				})
+			)
+			expect(leave.mind.mode).to.equal("patrol")
+			expect(kinds(leave)).to.equal("seen,release")
+			expect(leave.effects[1].seen).to.equal(false)
+			expect(leave.mind.cleared.s1).to.be.ok()
+		end)
+
+		it("always checks after a noise near the spot during the stare", function()
+			local step = planted()
+			local heard = OccupantBrainRules.step(
+				step.mind,
+				stare({ now = 102, position = AT_STAND, heard = CENTER + Vector3.new(2, 0, 0) })
+			)
+			expect(heard.mind.noisy).to.equal(true)
+			local check = OccupantBrainRules.step(
+				heard.mind,
+				stare({ now = 101 + OccupantConstants.STARE_SECONDS.min, position = AT_STAND, rolls = { 0.5, 0.99 } })
+			)
+			expect(check.mind.phase).to.equal("check")
+		end)
+
+		it("sometimes sits down at that very desk instead of leaving", function()
+			local desk = {
+				id = "d1",
+				seat = CFrame.lookAt(Vector3.new(76.95, 4.6, 60), Vector3.new(80, 4.6, 60)),
+				front = true,
+				spotId = "s1",
+			}
+			local spot = { id = "s1", center = CENTER, stand = STAND, deskId = "d1" }
+			local walking = OccupantBrainRules.step(fresh(), stare({ spots = { spot }, desks = { desk } }))
+			local step = OccupantBrainRules.step(
+				walking.mind,
+				stare({ now = 101, position = AT_STAND, spots = { spot }, desks = { desk }, rolls = { 0 } })
+			)
+			local sits = OccupantBrainRules.step(
+				step.mind,
+				stare({
+					now = 101 + OccupantConstants.STARE_SECONDS.min,
+					position = AT_STAND,
+					spots = { spot },
+					desks = { desk },
+					rolls = { 0.5, 0.99, 0 },
+				})
+			)
+			expect(sits.mind.mode).to.equal("work")
+			expect(sits.mind.sitIn).to.equal(true)
+			expect(sits.mind.quarry).to.equal(7)
+			expect(sits.mind.sitIns).to.equal(1)
+			expect(kinds(sits)).to.equal("release")
+		end)
+
+		it("is startled by a hider who bolts, then chases them", function()
+			local step = planted()
+			local out = { userId = 7, position = AT_STAND + Vector3.new(4, 0, 0), clear = true }
+			local bolt = OccupantBrainRules.step(
+				step.mind,
+				stare({ now = 103, position = AT_STAND, players = { out }, hiders = {} })
+			)
+			expect(bolt.mind.mode).to.equal("chase")
+			expect(bolt.mind.target).to.equal(7)
+			expect(bolt.intent.kind).to.equal("idle")
+			expect(bolt.mind.reactUntil).to.equal(103 + OccupantConstants.STARTLE_SECONDS)
+			expect(kinds(bolt)).to.equal("release")
+			local after = OccupantBrainRules.step(
+				bolt.mind,
+				stare({
+					now = 103 + OccupantConstants.STARTLE_SECONDS,
+					position = AT_STAND,
+					players = { out },
+					hiders = {},
+				})
+			)
+			expect(after.intent.kind).never.to.equal("idle")
+		end)
+
+		it("stares a moment at a hiding spot by a noise he walked up to (a suspicion stare)", function()
+			local noise = Vector3.new(90, 0, 60)
+			local heard = OccupantBrainRules.step(fresh(), senses({ heard = noise, spots = { SPOT } }))
+			local arrived = OccupantBrainRules.step(
+				heard.mind,
+				senses({ now = 101, position = Vector3.new(90, 3, 61), spots = { SPOT } })
+			)
+			expect(arrived.mind.mode).to.equal("stare")
+			expect(arrived.mind.quarry).to.equal(nil)
+			local planted_ = OccupantBrainRules.step(
+				arrived.mind,
+				senses({ now = 102, position = AT_STAND, spots = { SPOT }, rolls = { 1 } })
+			)
+			expect(planted_.mind.hold).to.equal(OccupantConstants.SUSPECT_SECONDS.max)
 		end)
 	end)
 end

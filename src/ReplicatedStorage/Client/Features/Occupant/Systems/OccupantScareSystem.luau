@@ -2,8 +2,8 @@
 --[=[
 	OccupantScareSystem: the catch scare on this client (Cleanup Crew spec §4 "Catch" step 1: "camera snaps to his
 	face ~0.6 s, nearby lights die, distorted sting, stretched-grin face"; kid-safe). `snap` (on CatchCam, which
-	only the caught player gets) plays the distorted sting and, for SNAP_SECONDS, puts a grin over his face that
-	stretches wide: the uploaded grin image (OccupantAssets.IMAGES.grin) or, while it is pending, a cartoon grin
+	only the caught player gets) plays the distorted sting and, for SNAP_SECONDS, on the fallback body only (the Smile
+	Mask shows its own Hunting face), puts a grin over his face that stretches wide: the uploaded grin image (OccupantAssets.IMAGES.grin) or, while it is pending, a cartoon grin
 	built from frames (white eyes, a wide toothy mouth). `lightsOut` (everyone) plays the power-down and his grab
 	where it happened. The camera, the red screen and the dark lights are M2's (OccupantServiceClient,
 	OccupantTellSystem).
@@ -104,7 +104,8 @@ function OccupantScareSystem.snap()
 	counters.scares += 1
 	play("harlowCatchSting")
 	local head = headOf()
-	if head == nil then
+	-- The Smile Mask has its own Hunting face (the server shows it): the grin is only for the fallback body.
+	if head == nil or (head.Parent ~= nil and head.Parent:FindFirstChild(OccupantAssets.FACE_PLATE) ~= nil) then
 		return
 	end
 	counters.grins += 1

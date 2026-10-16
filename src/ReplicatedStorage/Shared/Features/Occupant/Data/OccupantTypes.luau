@@ -7,11 +7,70 @@
 ]=]
 
 -- What he is doing: walking his route, checking a noise, chasing someone he sees, searching where he lost
--- them, on the shift's break, or standing over a catch.
-export type Mode = "patrol" | "investigate" | "chase" | "search" | "rest" | "catch"
+-- them, on the shift's break, standing over a catch, working at a desk (his routine, or sitting at the desk someone
+-- hides under: `sitIn`), or staring at a hiding spot.
+export type Mode = "patrol" | "investigate" | "chase" | "search" | "rest" | "catch" | "work" | "stare"
+
+-- Where he is inside a mode (published as an attribute; the client's typing, face and gestures follow it):
+-- work: walking to the desk, typing, the ambush (stopped dead, head swivelled); a sit-in also tips his head down under
+-- the desk, holds it there and brings it back up, then types a little more; stare: walking to the spot, holding still,
+-- bending down to look under.
+export type Phase =
+	"toDesk"
+	| "type"
+	| "ambush"
+	| "tip"
+	| "tipHold"
+	| "tipBack"
+	| "typeMore"
+	| "approach"
+	| "hold"
+	| "check"
 
 -- A moment worth a speech bubble (OccupantConstants.LINES).
-export type Cue = "spotted" | "curious" | "giveUp" | "resting" | "caught"
+export type Cue = "spotted" | "curious" | "giveUp" | "resting" | "caught" | "ambush" | "sitIn"
+
+-- A desk he can sit at: the root's frame on its chair (standing height, facing the desk), whether the chair is on the
+-- knee-hole side (only then can he sit at the desk someone hides under), and its hiding spot.
+export type Desk = {
+	id: string,
+	seat: CFrame,
+	front: boolean,
+	spotId: string?,
+}
+
+-- A hiding spot as he knows it: its centre, where he stands to stare at it, and its desk (nil for a table).
+export type Spot = {
+	id: string,
+	center: Vector3,
+	stand: Vector3,
+	deskId: string?,
+}
+
+-- A crew member hiding: in which spot, and whether he knows (Hide's seenEntering).
+export type Hider = {
+	userId: number,
+	spotId: string,
+	seen: boolean,
+}
+
+-- Something the brain asks the service to do this think (beyond the NPC intent).
+export type Effect =
+	{ kind: "sit", seat: CFrame }
+	| { kind: "stand", speed: number }
+	| { kind: "plant", frame: CFrame }
+	| { kind: "release" }
+	| { kind: "seen", userId: number, seen: boolean }
+	| { kind: "holdCamp", userId: number, untilTime: number }
+	| { kind: "catch", userId: number }
+	| { kind: "callout", userId: number }
+
+-- How the director paces him (from the shift and the crew).
+export type Pacing = {
+	tier: number,
+	solo: boolean,
+	overtime: boolean,
+}
 
 -- An axis-aligned box in the world (the truck's box, the one safe place; or the loading bay around it).
 export type Zone = {
@@ -44,6 +103,45 @@ export type Mind = {
 	-- there BAY_LINGER_SECONDS (he never body-blocks the truck's ramp).
 	bayAt: number?,
 	bayBarredUntil: number?,
+	-- Inside a work or stare mode: where he is, since when, and how long it lasts (rolled when it began).
+	phase: Phase?,
+	phaseAt: number?,
+	hold: number?,
+	-- The desk he works at (or sits at over a hider), the spot he stares at and the hider in it (nil for a suspicion
+	-- stare), whether this is a sit-in, and whether a noise came from near the spot meanwhile.
+	desk: Desk?,
+	spot: Spot?,
+	quarry: number?,
+	sitIn: boolean?,
+	noisy: boolean?,
+	-- The point the ambush turned to; until when his head stays swivelled to it.
+	point: Vector3?,
+	swivelUntil: number?,
+	-- His body: on a chair (the sit clip, root anchored), or planted still at a spot (root anchored).
+	seated: boolean?,
+	planted: boolean?,
+	-- Standing up from a chair, or startled (a hider bolting): no move before these.
+	standUntil: number?,
+	reactUntil: number?,
+	-- Seconds he had each player in sight (decaying), and whether he saw them go into their spot from close by.
+	watched: { [number]: number },
+	close: { [number]: boolean },
+	-- Spot id → until when he leaves that spot alone (after a stare that ended in him walking away).
+	cleared: { [string]: number },
+	-- The routine: when the next work break is due, and the last desk he used.
+	nextWorkAt: number,
+	lastDesk: string?,
+	-- The director: the next steer, the point he is steered to, the player the PA called out, the menace gauge, the
+	-- breather, sit-ins this shift and the last one, the next PA call-out, and the last think (for the gauge's rate).
+	nextSteerAt: number,
+	steer: Vector3?,
+	focus: number?,
+	menace: number,
+	breatherUntil: number?,
+	sitIns: number,
+	lastSitInAt: number?,
+	nextCalloutAt: number,
+	lastThink: number?,
 }
 
 -- One crew member as the service saw them this think; `clear` is the line-of-sight ray's verdict.
@@ -77,6 +175,13 @@ export type Senses = {
 	zone: Zone,
 	-- The loading bay around the truck: he may walk it, but never lingers (absent = no bay rule).
 	bay: Zone?,
+	-- Uniform 0..1 numbers for this think's random choices (absent = 0.5 each).
+	rolls: { number }?,
+	-- The desks he can sit at, every hiding spot, who hides where, and the pacing (absent = none / a crew at tier 0).
+	desks: { Desk }?,
+	spots: { Spot }?,
+	hiders: { Hider }?,
+	pacing: Pacing?,
 }
 
 -- What the catch rule needs about a would-be catch.

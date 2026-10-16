@@ -44,7 +44,8 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 		group = "SFX",
 		volume = 0.7,
 		pitch = { min = 0.9, max = 1.05 },
-		rollOffMaxDistance = 70,
+		-- Heard out to the far warning stage (STAGE_FAR).
+		rollOffMaxDistance = 85,
 		maxConcurrent = 2,
 	},
 	-- His tell: a pen tapping on his clipboard (looped on his head, heard through walls).
@@ -58,7 +59,21 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- Your heartbeat while he is near and has not seen you (2D).
 	harlowHeartbeat = { assetId = "rbxassetid://123214528916758", group = "SFX", volume = 0.8 },
 	-- He heard something: one deliberate pen click (the tapping cue for "?").
-	harlowCurious = { assetId = "rbxassetid://95530818541505", group = "SFX", volume = 0.8, rollOffMaxDistance = 80 },
+	harlowCurious = { assetId = "rbxassetid://95530818541505", group = "SFX", volume = 0.8, rollOffMaxDistance = 90 },
+	-- His typing while he sits at a desk (looped on his head, heard through rooms; the office typist's clip, reused). It
+	-- stops dead in the ambush.
+	harlowTyping = {
+		assetId = "rbxassetid://71155319819913",
+		group = "SFX",
+		volume = 0.65,
+		looped = true,
+		rollOffMaxDistance = 70,
+	},
+	-- The near warning stage: a low dread swell under everything while he is close and not chasing you (looped, 2D;
+	-- its volume follows how close he is). PLACEHOLDER slot: pending.
+	harlowDread = { assetId = PENDING, group = "Ambient", volume = 0.5, looped = true },
+	-- The ambush: a sharp intake as his head swivels round from the desk (positional). PLACEHOLDER slot: pending.
+	harlowAmbush = { assetId = PENDING, group = "SFX", volume = 0.9, rollOffMaxDistance = 60 },
 	-- The "!" sting (2D for the one he spotted, positional for everyone else).
 	harlowSpotted = { assetId = "rbxassetid://71081947321557", group = "SFX", volume = 1, rollOffMaxDistance = 90 },
 	-- Chase music for the chased player (looped).
@@ -130,7 +145,8 @@ local ANIMATIONS: { [string]: AnimationSlot } = {
 		interruption = "ambient",
 	},
 	-- CC Manager Sit Type v1: at a desk, stiffly typing with his long fingers (his pelvis on the seat through the Root
-	-- joint; see SEAT for where the game puts him). The head turn layers over it.
+	-- joint; see SEAT for where the game puts him). OccupantSeatSystem plays it at Action priority (over the base NPC's
+	-- idle pose) and the stand-up at Action2; the gestures (OccupantGestureSystem) layer over both.
 	harlowSitType = {
 		assetId = "rbxassetid://110578500987193",
 		looped = true,
@@ -145,7 +161,8 @@ local ANIMATIONS: { [string]: AnimationSlot } = {
 		interruption = "protected",
 	},
 	-- CC Manager Head Turn v1: the head swivels 180 degrees on the long neck and back (keys only the Neck, so it
-	-- layers over a walk). Registered for the game to play; nothing plays it yet.
+	-- layers over a walk). Registered; the ambush's swivel is procedural instead (OccupantGestureFormulas "swivel",
+	-- aimed at the point).
 	harlowHeadTurn = {
 		assetId = "rbxassetid://127323899647722",
 		looped = false,

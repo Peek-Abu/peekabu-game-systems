@@ -1,17 +1,23 @@
 --!strict
 --[=[
-	OccupantServiceClient: Mr. Harlow on the client. The catch (Cleanup Crew spec §4 "Catch" step 1): on
-	`CatchCam` the camera is held on his face for SNAP_SECONDS (a fixed camera mode above Death's spectate), with
-	a shake and a red, drained screen; then Death's spectate takes over. The sting and the stretched grin are
+	OccupantServiceClient: Mr. Harlow on the client. The catch jumpscare (Cleanup Crew spec §4 "Catch" step 1; the
+	behaviour set §6, docs/superpowers/specs/2026-10-15-cleanup-crew-manager-behaviours-design.md): on `CatchCam` the
+	camera follows his face for SNAP_SECONDS (a custom camera mode above Death's spectate: JUMPSCARE_DISTANCE in front of
+	his head, world up, so a face upside down under a desk reads upside down; the packet's still shot when his head is
+	gone), with a quick shake and a red, drained screen; then Death's spectate takes over. His head tilts meanwhile
+	(OccupantGestureSystem, the server's tilt). The sting and the stretched grin are
 	OccupantScareSystem's. At init it registers the catch's HUD widgets: the CCTV overlay while caught (CatchOverlay) and
 	the HR "Rehired." card around the respawn (CatchRehiredCard). The light and heartbeat tells run in OccupantTellSystem (lights out on a catch, every light flickering on a
-	tier rise). OccupantBillboardSystem draws his cue disc and typed memo. OccupantPresenceSystem plays his footsteps, mutter, cues, chase music, your heartbeat and his voice.
+	tier rise). OccupantBillboardSystem draws his cue disc and typed memo. OccupantPresenceSystem plays his footsteps, mutter, cues, chase music, your heartbeat and his voice. OccupantGestureSystem
+	lays his gestures over his joints; OccupantWarningSystem plays the staged warnings, his typing and the PA (its
+	subtitle: OccupantPaSubtitle, registered here; the server's call-out arrives as `Pa`).
 
 	Spec-exempt shell (Camera, Vfx, ByteNet).
 
 	@class OccupantServiceClient
 ]=]
 
+local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
@@ -25,6 +31,9 @@ local OccupantTellSystem = require(ReplicatedStorage.Client.Features.Occupant.Sy
 local OccupantPresenceSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantPresenceSystem)
 local OccupantBillboardSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantBillboardSystem)
 local OccupantScareSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantScareSystem)
+local OccupantGestureSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantGestureSystem)
+local OccupantWarningSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantWarningSystem)
+local OccupantPaSubtitle = require(ReplicatedStorage.Client.UI.React.Screens.World.OccupantPaSubtitle)
 local CatchOverlay = require(ReplicatedStorage.Client.UI.React.Screens.Catch.CatchOverlay)
 local CatchRehiredCard = require(ReplicatedStorage.Client.UI.React.Screens.Catch.CatchRehiredCard)
 local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudRegistry)
@@ -32,12 +41,31 @@ local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudReg
 local stoppers: { () -> () } = {}
 local snaps = 0
 
+-- His head, to follow for the jumpscare.
+local function harlowHead(): BasePart?
+	for _, instance in CollectionService:GetTagged(OccupantConstants.TAG) do
+		local head = instance:FindFirstChild("Head")
+		if head ~= nil and head:IsA("BasePart") then
+			return head
+		end
+	end
+	return nil
+end
+
 local function snap(cframe: CFrame)
 	snaps += 1
-	local token = CameraServiceClient:pushMode(
-		{ kind = "fixed", cframe = cframe, fov = OccupantConstants.CATCH_FOV },
-		OccupantConstants.CAMERA_PRIORITY
-	)
+	local head = harlowHead()
+	local token = CameraServiceClient:pushMode({
+		kind = "custom",
+		update = function(_dt: number): (CFrame, number?)
+			if head == nil or head.Parent == nil then
+				return cframe, OccupantConstants.CATCH_FOV
+			end
+			local face = head.Position
+			local eye = (head.CFrame * CFrame.new(0, 0, -OccupantConstants.JUMPSCARE_DISTANCE)).Position
+			return CFrame.lookAt(eye, face), OccupantConstants.JUMPSCARE_FOV
+		end,
+	}, OccupantConstants.CAMERA_PRIORITY)
 	CameraServiceClient:addTrauma(OccupantConstants.CATCH_TRAUMA)
 	local screen =
 		VfxServiceClient:requestScreen({ saturation = -0.7, contrast = 0.3, tint = OccupantConstants.CATCH_TINT })
@@ -64,6 +92,9 @@ local OccupantServiceClient: OccupantServiceClient = {
 		end
 		if not HudRegistry.has("catchRehired") then
 			HudRegistry.register("catchRehired", CatchRehiredCard, ShiftConstants.HUD_ORDER + 6)
+		end
+		if not HudRegistry.has("occupantPa") then
+			HudRegistry.register("occupantPa", OccupantPaSubtitle, ShiftConstants.HUD_ORDER + 4)
 		end
 	end,
 
@@ -102,12 +133,22 @@ local OccupantServiceClient: OccupantServiceClient = {
 				OccupantTellSystem.flickerAll(os.clock())
 			end)
 		)
+		table.insert(
+			stoppers,
+			OccupantEvents.packets.Pa.listen(function(data: { line: string, userId: number })
+				OccupantWarningSystem.callout(data.line)
+			end)
+		)
 		OccupantTellSystem.start()
 		table.insert(stoppers, OccupantTellSystem.stop)
 		OccupantPresenceSystem.start()
 		table.insert(stoppers, OccupantPresenceSystem.stop)
 		OccupantBillboardSystem.start()
 		table.insert(stoppers, OccupantBillboardSystem.stop)
+		OccupantGestureSystem.start()
+		table.insert(stoppers, OccupantGestureSystem.stop)
+		OccupantWarningSystem.start()
+		table.insert(stoppers, OccupantWarningSystem.stop)
 	end,
 
 	stop = function(_self)
@@ -124,6 +165,8 @@ local OccupantServiceClient: OccupantServiceClient = {
 			presence = OccupantPresenceSystem.getState(),
 			scare = OccupantScareSystem.getState(),
 			billboards = OccupantBillboardSystem.getState(),
+			gestures = OccupantGestureSystem.getState(),
+			warnings = OccupantWarningSystem.getState(),
 		}
 	end,
 }

@@ -36,6 +36,8 @@ local LINES: { [string]: string } = {
 	caught = "You're FIRED!",
 	giveUp = "*sigh*",
 	resting = "Fifteen minutes. Union rules.",
+	ambush = "Can I HELP you?",
+	sitIn = "Now… where was I.",
 }
 
 -- His lines per cue (spec §4 "Voice": the speech bubble's line; the spec's three are kept). The server picks one
@@ -46,7 +48,40 @@ local LINE_VARIANTS: { [string]: { string } } = {
 	caught = { "You're FIRED!" },
 	giveUp = { "*sigh*" },
 	resting = { "Fifteen minutes. Union rules.", "Don't touch my stapler.", "Coffee. Then performance reviews." },
+	ambush = { "Can I HELP you?", "We don't run in the office.", "Do you have an appointment?" },
+	sitIn = { "Now… where was I.", "Just a few more reports." },
 }
+
+-- The PA (behaviour set §5): a corporate line now and then while he is in the mid stage, and the call-out naming a
+-- crew member ("{name}" is replaced) before he drifts toward them.
+local PA_LINES: { string } = {
+	"The Manager will see you now.",
+	"Reminder: company property must not leave the building.",
+	"Productivity is being monitored.",
+	"Please remain at your workstation.",
+	"All staff: performance reviews are ongoing.",
+	"Lost and found is closed. Permanently.",
+}
+local PA_CALLOUTS: { string } =
+	{ "{name}. My office.", "{name}, a word.", "Would {name} please report to the Manager." }
+
+-- A procedural gesture laid over his animation (OccupantGestureFormulas): how long it takes to settle, and each
+-- joint's extra rotation in degrees (X pitch, Y yaw, Z roll; negative X bends forward).
+export type Gesture = { seconds: number, joints: { [string]: Vector3 } }
+
+local GESTURES: { [string]: Gesture } = {
+	-- The ambush: the head snaps round to the point on the long neck (the yaw is aimed live; this is its timing).
+	swivel = { seconds = 0.35, joints = {} },
+	-- The stare's check: he bends down from the waist and tips his head sideways to look under the furniture.
+	peek = { seconds = 1, joints = { Waist = Vector3.new(-52, 0, 16), Neck = Vector3.new(-28, 0, 62) } },
+	-- The sit-in: from the chair his body folds down beside his knees and the head turns upside down under the desk.
+	under = { seconds = 2.6, joints = { Waist = Vector3.new(-48, 0, 34), Neck = Vector3.new(-62, 0, 150) } },
+}
+
+export type Range = { min: number, max: number }
+local function range(min: number, max: number): Range
+	return table.freeze({ min = min, max = max })
+end
 
 return table.freeze({
 	-- The NPC kind, and the tag the client's tells find him by.
@@ -86,8 +121,8 @@ return table.freeze({
 	-- After a catch he stands CATCH_HOLD seconds, then walks on; he ignores that player GRACE_SECONDS.
 	CATCH_HOLD = 1.5,
 	GRACE_SECONDS = 10,
-	-- The catch: camera on his face ~0.6 s, then the launch; ~8 s spectating (Death's respawn delay).
-	SNAP_SECONDS = 0.6,
+	-- The catch: camera on his face ~1 s (the jumpscare), then the launch; ~8 s spectating (Death's respawn delay).
+	SNAP_SECONDS = 1,
 	SPECTATE_SECONDS = 8,
 	LAUNCH_SPEED = 45,
 	LAUNCH_UP = 35,
@@ -95,10 +130,10 @@ return table.freeze({
 	SPAWN_HEIGHT = 4,
 	-- How often his speeds and hearing are refreshed (tier, crew size).
 	TUNING_INTERVAL = 1,
-	-- Tells: lights within ~20 studs flicker; the heartbeat within HEARTBEAT_RANGE, one beat per BEAT_SLOW
+	-- Tells: lights within ~26 studs flicker (the mid stage); the heartbeat within HEARTBEAT_RANGE, one beat per BEAT_SLOW
 	-- seconds at the edge down to BEAT_FAST up close.
-	FLICKER_RADIUS = 20,
-	HEARTBEAT_RANGE = 40,
+	FLICKER_RADIUS = 26,
+	HEARTBEAT_RANGE = 25,
 	BEAT_SLOW = 1,
 	BEAT_FAST = 0.45,
 	-- A catch kills the lights within LIGHTS_OUT_RADIUS for LIGHTS_OUT_SECONDS; a tier rise flickers every
@@ -141,6 +176,110 @@ return table.freeze({
 	-- The incident report's room when the catch happened outside every room.
 	CATCH_ROOM_FALLBACK = "the office",
 	BODY = table.freeze(BODY),
+	PA_LINES = table.freeze(PA_LINES),
+	PA_CALLOUTS = table.freeze(PA_CALLOUTS),
+	-- Behaviour set (docs/superpowers/specs/2026-10-15-cleanup-crew-manager-behaviours-design.md). Ranges are seconds
+	-- (or studs) rolled per use.
+	-- §1 Desk work: the first break after he clocks in, the gap between breaks, how long he types; the desk "near the
+	-- crew" chance and band (studs from the nearest crew member, PICK_IDEAL wins), "elsewhere" distance, and how close a
+	-- standing player rules a desk out.
+	WORK_FIRST = range(20, 40),
+	WORK_GAP = range(35, 70),
+	WORK_SECONDS = range(10, 22),
+	PICK_NEAR_CHANCE = 0.55,
+	PICK_NEAR = range(18, 45),
+	PICK_IDEAL = 30,
+	PICK_FAR = 45,
+	PICK_CLEAR = 10,
+	-- The ambush: a player this close (or one he sees, or a noise) while he sits; the smile before the Noticing face, the
+	-- hold, the stand-up speed (1.8 s clip / 1.5 = 1.2 s). STAND_SECONDS is the clip at 1x; standOffset in OccupantAssets.
+	AMBUSH_RADIUS = 14,
+	AMBUSH_SMILE = 0.4,
+	AMBUSH_HOLD = 1.1,
+	AMBUSH_STAND_SPEED = 1.5,
+	STAND_SECONDS = 1.8,
+	-- §2 The stare-down: the gap from the spot's front edge to where he stands, how long he stares (known / suspected),
+	-- the check's odds, the bend before the catch, the startle, the noise radius around the spot, the suspicion radius
+	-- around a heard noise, how long a spot is left alone after he walks away.
+	STARE_GAP = 1.6,
+	STARE_SECONDS = range(4, 10),
+	SUSPECT_SECONDS = range(2, 4),
+	CHECK_BASE = 0.25,
+	CHECK_PER_SECOND = 0.08,
+	CHECK_CLOSE = 0.3,
+	CHECK_CLOSE_RADIUS = 12,
+	CHECK_MAX = 0.9,
+	CHECK_SECONDS = 1.1,
+	STARTLE_SECONDS = 0.7,
+	STARE_NOISE_RADIUS = 10,
+	SUSPECT_RADIUS = 10,
+	CLEARED_SECONDS = 25,
+	-- Seconds of sight remembered per player decay at this rate once he loses them (per second).
+	WATCH_DECAY = 0.5,
+	-- §3 Sitting at the desk you hide under: the roll, the per-shift cap and gap, how far back he sits (knees clear of
+	-- the hider), typing, the head tipping down (its Calm part), the hold, the catch odds, the head back up, typing more.
+	SIT_IN_CHANCE = 0.35,
+	SIT_IN_MAX = 2,
+	SIT_IN_GAP = 90,
+	SIT_IN_BACK = 0.7,
+	SIT_IN_TYPE = range(7, 11),
+	TIP_SECONDS = 2.6,
+	TIP_CALM = 1.7,
+	TIP_HOLD = 1.4,
+	SIT_IN_CATCH = 0.5,
+	TIP_BACK = 1,
+	TYPE_MORE = 2,
+	-- §4 The director: steer intervals (crew / solo, less per tier, overtime), the first steer, the spread round the
+	-- crew member, the breathers, the noise radius he still follows in a breather, the menace gauge's rates.
+	STEER_CREW = 28,
+	STEER_SOLO = 36,
+	STEER_PER_TIER = 4,
+	STEER_OVERTIME_CREW = 16,
+	STEER_OVERTIME_SOLO = 22,
+	STEER_FIRST = range(15, 30),
+	STEER_SPREAD = range(12, 20),
+	STEER_FOCUS_SPREAD = range(6, 10),
+	STEER_MIN = 8,
+	BREATHER_CREW = range(30, 60),
+	BREATHER_SOLO = range(40, 60),
+	BREATHER_PER_TIER = 5,
+	BREATHER_OVERTIME = range(15, 25),
+	BREATHER_HEARING = 20,
+	MENACE_MAX = 100,
+	MENACE_CHASE = 10,
+	MENACE_STARE = 6,
+	MENACE_NEAR = 3,
+	MENACE_NEAR_RADIUS = 18,
+	MENACE_SPOTTED = 15,
+	MENACE_CATCH = 45,
+	MENACE_DECAY = 2,
+	-- §5 The PA call-out (server): the first, the gap, the steer delay after it.
+	CALLOUT_FIRST = 75,
+	CALLOUT_GAP = range(120, 210),
+	CALLOUT_STEER_DELAY = 4,
+	-- §5 The staged tells (client): stage bands, the far pen click, the mid PA lines, the near dread swell.
+	STAGE_FAR = 85,
+	STAGE_MID = 45,
+	STAGE_NEAR = 25,
+	PEN_CLICK = range(9, 16),
+	PA_GAP = range(50, 100),
+	PA_CHANCE = 0.4,
+	PA_SECONDS = 4,
+	DREAD_FADE = 1.5,
+	-- Model attributes the client reads: his phase, his gesture and its target, and the catch tilt.
+	PHASE_ATTRIBUTE = "OccupantPhase",
+	GESTURE_ATTRIBUTE = "OccupantGesture",
+	GESTURE_TARGET_ATTRIBUTE = "OccupantGestureTarget",
+	TILT_ATTRIBUTE = "OccupantTilt",
+	-- §6 The jumpscare camera: in front of his face plate, its FOV, the head tilt.
+	JUMPSCARE_DISTANCE = 1.9,
+	JUMPSCARE_FOV = 38,
+	-- The gestures, how fast one lets go, and the catch's head tilt (degrees of roll, seconds, shiver).
+	GESTURES = table.freeze(GESTURES),
+	GESTURE_RELEASE = 0.4,
+	TILT_DEGREES = 25,
+	TILT_SECONDS = 0.45,
+	TILT_SHIVER = 2.5,
 	LINES = table.freeze(LINES),
 	LINE_VARIANTS = table.freeze(LINE_VARIANTS),
 	-- His memo types each line out at TYPE_RATE characters a second (spec §7 "typewriter type"; useTypedGraphemes).

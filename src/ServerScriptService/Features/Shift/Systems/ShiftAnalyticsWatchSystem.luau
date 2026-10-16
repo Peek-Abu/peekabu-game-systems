@@ -254,7 +254,7 @@ local function onNoise(event: NoiseTypes.NoiseEvent)
 	})
 end
 
--- Reads Harlow's mode and target (OccupantRigSystem.setMode writes both), sends what changed since `last` (this
+-- Reads Harlow's mode and target (OccupantRigSystem.present writes both), sends what changed since `last` (this
 -- model's previous read, nil at first) and returns the new reading.
 local function readHarlow(model: Instance, last: ShiftAnalyticsUtils.Harlow?): ShiftAnalyticsUtils.Harlow
 	local mode = model:GetAttribute(OccupantConstants.MODE_ATTRIBUTE)

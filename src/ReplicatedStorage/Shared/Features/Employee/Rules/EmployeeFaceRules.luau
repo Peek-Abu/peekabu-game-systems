@@ -28,6 +28,7 @@ local ALERT_MODES: { [OccupantTypes.Mode]: boolean } = {
 	chase = true,
 	search = true,
 	catch = true,
+	stare = true,
 }
 
 -- The mapping `faceFor` reads (an EmployeeDef has it).

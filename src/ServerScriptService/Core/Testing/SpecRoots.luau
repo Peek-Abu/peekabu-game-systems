@@ -356,6 +356,11 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Features.Occupant.Systems.OccupantCatchSystem"] = "Instance/ByteNet/Death shell (catch decisions and the launch are specced in OccupantCatchRules)",
 	["ReplicatedStorage.Client.Features.Occupant.OccupantServiceClient"] = "Camera/Vfx/ByteNet shell (tell decisions are specced in OccupantTellRules)",
 	["ReplicatedStorage.Client.Features.Occupant.Systems.OccupantScareSystem"] = "Instance/tween/Sound shell (the scare beat; no decisions)",
+	["ReplicatedStorage.Client.Features.Occupant.Systems.OccupantGestureSystem"] = "Motor6D/RunService shell (poses and easing specced in OccupantGestureFormulas)",
+	["ReplicatedStorage.Client.Features.Occupant.Systems.OccupantWarningSystem"] = "Sound/Instance/RunService shell (stages and typing specced in OccupantTellRules; the subtitle in OccupantPaStore)",
+	["ReplicatedStorage.Client.UI.React.Screens.World.OccupantPaSubtitle"] = "presentational React component (the strip specced in OccupantPaViewModel)",
+	["ServerScriptService.Features.Occupant.Systems.OccupantEffectSystem"] = "Players/ByteNet/Hide shell (which effects a think makes is specced in OccupantBrainRules and its rules)",
+	["ServerScriptService.Features.Occupant.Systems.OccupantSeatSystem"] = "Instance/tween/clip shell (when to sit, stand, plant or let go is specced in OccupantBrainRules and OccupantMindUtils)",
 
 	-- Cleanup Crew: Hide (hiding spots)
 	["ReplicatedStorage.Shared.Features.Hide.Data.HideConstants"] = "static tuning and names (no logic)",

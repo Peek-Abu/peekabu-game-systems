@@ -9,7 +9,7 @@
 	waits for one inside the NPC think), adds two empty tagged shells over his head (his cue and his memo; the
 	server writes only their attributes, the client draws them: OccupantBillboardSystem, and voices each line:
 	OccupantPresenceSystem), tags him Occupant (the client's tells find him by it) and, last, Npc with his NpcKind so
-	NpcServiceServer adopts him. `setMode` also puts the mode's painted face on his mask (OccupantFaceUtils).
+	NpcServiceServer adopts him. `present` publishes what he shows and puts the painted face on his mask.
 
 	Spec-exempt shell (Instances).
 
@@ -24,7 +24,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local OccupantAssets = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantAssets)
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local OccupantFaceUtils = require(ReplicatedStorage.Shared.Features.Occupant.Utils.OccupantFaceUtils)
-local OccupantTypes = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantTypes)
+local OccupantTellRules = require(ReplicatedStorage.Shared.Features.Occupant.Rules.OccupantTellRules)
 local NpcConstants = require(ServerScriptService.Features.Npc.Data.NpcConstants)
 
 export type Rig = {
@@ -135,6 +135,12 @@ local function tells(head: BasePart): (BillboardGui, BillboardGui)
 	return cue, speech
 end
 
+local function set(instance: Instance, name: string, value: string | number | boolean | Vector3)
+	if instance:GetAttribute(name) ~= value then
+		instance:SetAttribute(name, value)
+	end
+end
+
 local OccupantRigSystem = {}
 
 --[=[
@@ -180,7 +186,7 @@ end
 	The cue over his head ("?", "!" or ""), as the cue shell's attribute; the client draws the disc.
 ]=]
 function OccupantRigSystem.setCue(rig: Rig, text: string)
-	rig.cue:SetAttribute(OccupantConstants.CUE_ATTRIBUTE, text)
+	set(rig.cue, OccupantConstants.CUE_ATTRIBUTE, text)
 end
 
 --[=[
@@ -226,12 +232,23 @@ function OccupantRigSystem.setFace(model: Model, face: OccupantAssets.Face): boo
 end
 
 --[=[
-	Publishes his mode and target as attributes (the client's heartbeat reads them), and shows the mode's face.
+	Publishes what he shows (OccupantTellRules.view) as attributes: his mode and target (the client's heartbeat, the
+	crew's faces, analytics), his phase (the typing), the cue disc, the gesture and its point and the catch tilt (the
+	client's OccupantGestureSystem), and puts the face on his mask. Only what changed is written.
 ]=]
-function OccupantRigSystem.setMode(rig: Rig, mode: OccupantTypes.Mode, target: number?)
-	rig.model:SetAttribute(OccupantConstants.MODE_ATTRIBUTE, mode)
-	rig.model:SetAttribute(OccupantConstants.TARGET_ATTRIBUTE, target or 0)
-	OccupantRigSystem.setFace(rig.model, OccupantFaceUtils.faceFor(mode))
+function OccupantRigSystem.present(rig: Rig, view: OccupantTellRules.View)
+	local model = rig.model
+	set(model, OccupantConstants.MODE_ATTRIBUTE, view.mode)
+	set(model, OccupantConstants.TARGET_ATTRIBUTE, view.target)
+	set(model, OccupantConstants.PHASE_ATTRIBUTE, view.phase)
+	set(model, OccupantConstants.GESTURE_ATTRIBUTE, view.gesture)
+	set(model, OccupantConstants.TILT_ATTRIBUTE, view.tilt)
+	local point = view.gestureTarget
+	if point ~= nil then
+		set(model, OccupantConstants.GESTURE_TARGET_ATTRIBUTE, point)
+	end
+	OccupantRigSystem.setCue(rig, view.cue)
+	OccupantRigSystem.setFace(model, view.face)
 end
 
 return OccupantRigSystem

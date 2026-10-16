@@ -1,0 +1,92 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local OccupantGestureFormulas = require(script.Parent.OccupantGestureFormulas)
+local C = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
+
+local function near(a, b)
+	return a:ToObjectSpace(b).Position.Magnitude < 1e-3 and a.LookVector:Dot(b.LookVector) > 0.9999
+end
+
+return function()
+	describe("gestureFor", function()
+		it("swivels while his head is turned to an ambush point", function()
+			expect(OccupantGestureFormulas.gestureFor("work", "ambush", true, false, false)).to.equal("swivel")
+			expect(OccupantGestureFormulas.gestureFor("chase", nil, true, false, false)).to.equal("swivel")
+		end)
+		it("tips under the desk in a sit-in and peeks in a stare's check", function()
+			expect(OccupantGestureFormulas.gestureFor("work", "tip", false, true, false)).to.equal("under")
+			expect(OccupantGestureFormulas.gestureFor("work", "tipHold", false, true, false)).to.equal("under")
+			expect(OccupantGestureFormulas.gestureFor("work", "tipBack", false, true, false)).to.equal("")
+			expect(OccupantGestureFormulas.gestureFor("stare", "check", false, false, true)).to.equal("peek")
+			expect(OccupantGestureFormulas.gestureFor("stare", "hold", false, false, true)).to.equal("")
+		end)
+		it("keeps the pose through a catch made from it", function()
+			expect(OccupantGestureFormulas.gestureFor("catch", nil, false, true, false)).to.equal("under")
+			expect(OccupantGestureFormulas.gestureFor("catch", nil, false, false, true)).to.equal("peek")
+			expect(OccupantGestureFormulas.gestureFor("catch", nil, false, false, false)).to.equal("")
+		end)
+	end)
+
+	describe("pose", function()
+		it("names no joints for no gesture", function()
+			expect(next(OccupantGestureFormulas.pose("", 0))).to.equal(nil)
+		end)
+		it("turns the neck by the yaw for a swivel", function()
+			local pose = OccupantGestureFormulas.pose("swivel", math.pi / 2)
+			expect(near(pose.Neck, CFrame.Angles(0, math.pi / 2, 0))).to.equal(true)
+		end)
+		it("uses the authored joints for a peek", function()
+			local pose = OccupantGestureFormulas.pose("peek", 0)
+			local waist = C.GESTURES.peek.joints.Waist
+			expect(near(pose.Waist, CFrame.Angles(math.rad(waist.X), math.rad(waist.Y), math.rad(waist.Z)))).to.equal(
+				true
+			)
+		end)
+	end)
+
+	describe("progress", function()
+		it("eases from 0 to 1 over the gesture's seconds", function()
+			expect(OccupantGestureFormulas.progress("peek", 0)).to.equal(0)
+			expect(OccupantGestureFormulas.progress("peek", C.GESTURES.peek.seconds)).to.equal(1)
+			local half = OccupantGestureFormulas.progress("peek", C.GESTURES.peek.seconds / 2)
+			expect(half > 0.5 and half < 1).to.equal(true)
+		end)
+		it("lets go over GESTURE_RELEASE", function()
+			expect(OccupantGestureFormulas.progress("", C.GESTURE_RELEASE)).to.equal(1)
+		end)
+	end)
+
+	describe("blend", function()
+		it("goes from one pose to the other, joints missing on a side counting as still", function()
+			local from = { Neck = CFrame.Angles(0, 1, 0) }
+			local to = { Waist = CFrame.Angles(-1, 0, 0) }
+			local start = OccupantGestureFormulas.blend(from, to, 0)
+			expect(near(start.Neck, from.Neck)).to.equal(true)
+			expect(near(start.Waist, CFrame.identity)).to.equal(true)
+			local finish = OccupantGestureFormulas.blend(from, to, 1)
+			expect(near(finish.Neck, CFrame.identity)).to.equal(true)
+			expect(near(finish.Waist, to.Waist)).to.equal(true)
+		end)
+	end)
+
+	describe("yawTo", function()
+		it("is 0 straight ahead and turns toward a target to the side or behind", function()
+			local torso = CFrame.new()
+			expect(OccupantGestureFormulas.yawTo(torso, Vector3.new(0, 0, -10))).to.be.near(0)
+			expect(math.abs(OccupantGestureFormulas.yawTo(torso, Vector3.new(0, 0, 10)))).to.be.near(math.pi)
+			-- A target on his left (-X): a positive turn about Y brings -Z round to -X.
+			expect(OccupantGestureFormulas.yawTo(torso, Vector3.new(-10, 0, 0))).to.be.near(math.pi / 2)
+		end)
+	end)
+
+	describe("tilt", function()
+		it("rolls the head to TILT_DEGREES", function()
+			local tilt = OccupantGestureFormulas.tilt(C.TILT_SECONDS, false)
+			local _, _, roll = tilt:ToEulerAnglesXYZ()
+			expect(math.deg(roll)).to.be.near(C.TILT_DEGREES, 0.01)
+		end)
+		it("starts level", function()
+			expect(near(OccupantGestureFormulas.tilt(0, false), CFrame.identity)).to.equal(true)
+		end)
+	end)
+end

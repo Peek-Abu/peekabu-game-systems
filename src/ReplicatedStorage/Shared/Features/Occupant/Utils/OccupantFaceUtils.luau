@@ -3,7 +3,9 @@
 	OccupantFaceUtils: which painted face the Manager's porcelain mask shows in each mode ("A - Smile Mask",
 	characters/manager): the calm customer-service smile on patrol and on break, the noticing face (pupils
 	pinpoint and shift) while he investigates or searches, the hunting face (eyes wide, smile wider) while he
-	chases or catches. The faces are SurfaceAppearances in his template's `Faces` folder (OccupantAssets.FACES);
+	chases or catches. At a desk he smiles calmly; in the ambush he smiles AMBUSH_SMILE seconds, then notices; tipping
+	his head down under a desk he stays calm TIP_CALM seconds, then hunts; staring at a spot he notices, and hunts as he
+	bends to look. The faces are SurfaceAppearances in his template's `Faces` folder (OccupantAssets.FACES);
 	OccupantRigSystem puts the chosen one on his FacePlate. Pure.
 
 	@class OccupantFaceUtils
@@ -12,12 +14,32 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local OccupantAssets = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantAssets)
+local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local OccupantTypes = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantTypes)
 
 local OccupantFaceUtils = {}
 
-function OccupantFaceUtils.faceFor(mode: OccupantTypes.Mode): OccupantAssets.Face
-	if mode == "investigate" or mode == "search" then
+--[=[
+	The face for `mode`, `phase` (inside work / stare) and `elapsed` seconds into that phase.
+]=]
+function OccupantFaceUtils.faceFor(
+	mode: OccupantTypes.Mode,
+	phase: OccupantTypes.Phase?,
+	elapsed: number?
+): OccupantAssets.Face
+	local seconds = elapsed or 0
+	if mode == "work" then
+		if phase == "ambush" then
+			return if seconds < OccupantConstants.AMBUSH_SMILE then "Calm" else "Noticing"
+		elseif phase == "tip" then
+			return if seconds < OccupantConstants.TIP_CALM then "Calm" else "Hunting"
+		elseif phase == "tipHold" then
+			return "Hunting"
+		end
+		return "Calm"
+	elseif mode == "stare" then
+		return if phase == "check" then "Hunting" else "Noticing"
+	elseif mode == "investigate" or mode == "search" then
 		return "Noticing"
 	elseif mode == "chase" or mode == "catch" then
 		return "Hunting"

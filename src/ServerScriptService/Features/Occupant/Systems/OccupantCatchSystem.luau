@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	OccupantCatchSystem: the catch sequence (Cleanup Crew spec §4 "Catch"). `begin` turns Harlow to face the
-	player, freezes them (their root anchored), points their camera at his face (OccupantEvents.CatchCam),
+	player (unless he sits or stands planted, already facing them), freezes them (their root anchored), points their camera at his face (OccupantEvents.CatchCam),
 	kills the lights around him for everyone (OccupantEvents.LightsOut). After
 	SNAP_SECONDS the player is released and killed with a launch (base Death: ragdoll + velocity), away from him
 	and up; Carry drops their hands item and Cargo scatters their pockets as they die (M1), at the catch point
@@ -37,14 +37,26 @@ local OccupantEvents = require(ReplicatedStorage.Shared.Features.Occupant.Net.Oc
 local OccupantAnimationUtils = require(ReplicatedStorage.Shared.Features.Occupant.Utils.OccupantAnimationUtils)
 local OccupantFeedbackUtils = require(ReplicatedStorage.Shared.Features.Occupant.Utils.OccupantFeedbackUtils)
 local OccupantCatchRules = require(ServerScriptService.Features.Occupant.Rules.OccupantCatchRules)
+local Reach = require(ServerScriptService.Features.Occupant.Rules.OccupantReachRules)
 local OccupantRigSystem = require(ServerScriptService.Features.Occupant.Systems.OccupantRigSystem)
+local Sense = require(ServerScriptService.Features.Occupant.Systems.OccupantSenseSystem)
 local AnimationServiceServer = require(ServerScriptService.Features.Animation.AnimationServiceServer)
 local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
+local HideServiceServer = require(ServerScriptService.Features.Hide.HideServiceServer)
 local OfficeServiceServer = require(ServerScriptService.Features.Office.OfficeServiceServer)
 local ShiftServiceServer = require(ServerScriptService.Features.Shift.ShiftServiceServer)
 local StateSyncPublicPlayerStore = require(ServerScriptService.Features.StateSync.State.StateSyncPublicPlayerStore)
+
+-- What the service knows about a would-be catch that the rig and the player do not say.
+export type Attempt = {
+	inGrace: boolean,
+	resting: boolean,
+	zone: OccupantTypes.Zone,
+	-- A clear ray to them, or a hider he found (he knows where they are).
+	inView: boolean,
+}
 
 export type Hooks = {
 	-- Whether the catch may still finish (a shift is still running and Harlow is still there).
@@ -143,7 +155,10 @@ function OccupantCatchSystem.begin(rig: OccupantRigSystem.Rig, player: Player, h
 	end)
 
 	local harlow = rig.root
-	harlow.CFrame = CFrame.lookAt(harlow.Position, Vector3.new(root.Position.X, harlow.Position.Y, root.Position.Z))
+	-- Seated at a desk or planted at a spot he already faces them (and must not turn off his chair).
+	if not harlow.Anchored then
+		harlow.CFrame = CFrame.lookAt(harlow.Position, Vector3.new(root.Position.X, harlow.Position.Y, root.Position.Z))
+	end
 	root.Anchored = true
 	local face = rig.head.Position
 	local eye = face + harlow.CFrame.LookVector * FACE_DISTANCE
@@ -151,6 +166,50 @@ function OccupantCatchSystem.begin(rig: OccupantRigSystem.Rig, player: Player, h
 	OccupantEvents.packets.LightsOut.sendToAll(harlow.Position)
 	act(rig, "harlowGrab")
 	return true
+end
+
+--[=[
+	Catches `player` if the server's re-check allows (OccupantCatchRules: alive, not already caught, not on the break,
+	not in their grace or the truck's box, not hidden unseen, within reach and the grab volume, in view): drags them
+	out of a hiding spot first (`evict`), then `begin`. True when the catch began. Never yields.
+]=]
+function OccupantCatchSystem.attempt(
+	rig: OccupantRigSystem.Rig,
+	player: Player,
+	attempt: Attempt,
+	hooks: Hooks
+): (boolean, string?)
+	local character = player.Character
+	local found = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil
+	local root = if found ~= nil and found:IsA("BasePart") then found else nil
+	local humanoid = if character ~= nil then character:FindFirstChildOfClass("Humanoid") else nil
+	local ok, reason = OccupantCatchRules.canCatch({
+		-- Horizontal reach plus a separate body-height and line-of-sight recheck.
+		distance = if root ~= nil
+			then Vector3.new(root.Position.X - rig.root.Position.X, 0, root.Position.Z - rig.root.Position.Z).Magnitude
+			else math.huge,
+		reachable = root ~= nil and humanoid ~= nil and Reach.canReach(
+			rig.root.Position,
+			root.Position,
+			Sense.feetY(root, humanoid),
+			rig.head.Position.Y + rig.head.Size.Y / 2,
+			OccupantConstants.CATCH_RANGE + OccupantConstants.CATCH_SLACK
+		),
+		clear = attempt.inView,
+		hidden = HideServiceServer:isHidden(player) and not HideServiceServer:seenEntering(player),
+		position = if root ~= nil then root.Position else rig.root.Position,
+		alive = humanoid ~= nil and humanoid.Health > 0 and not DeathServiceServer:isDead(player),
+		catching = catching[player.UserId] == true,
+		inGrace = attempt.inGrace,
+		resting = attempt.resting,
+		zone = attempt.zone,
+	})
+	if not ok then
+		return false, reason
+	end
+	-- Dragged out of the spot he found them in, then caught.
+	HideServiceServer:evict(player, "evicted")
+	return OccupantCatchSystem.begin(rig, player, hooks), nil
 end
 
 --[=[
