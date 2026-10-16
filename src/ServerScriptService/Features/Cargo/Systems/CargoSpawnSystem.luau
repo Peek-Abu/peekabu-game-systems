@@ -10,6 +10,8 @@
 	docs/superpowers/specs/2026-10-15-cleanup-crew-loot-loop-design.md §3.2): its CargoValue always follows
 	CargoAppraisalFormulas.value, and while it is not spotless it is a vacuum target (VacuumConstants.GRIME_TAG and its
 	size's grime channel kind). `setClean` and `appraise` move that state on; `reprice` re-reads it after an impact.
+	`seal` locks a dirty valuable's grime (its first pick-up: "clean it where you find it"): never a vacuum target again,
+	and `setClean` refuses it.
 
 	Instance specs cover catalog authority, kit selection, fallback, reveal lifecycle and grime.
 
@@ -44,6 +46,7 @@ export type CargoSpawnSystem = {
 	reprice: (self: CargoSpawnSystem, item: Instance) -> (),
 	setClean: (self: CargoSpawnSystem, item: Instance, clean: number, now: number) -> boolean,
 	appraise: (self: CargoSpawnSystem, item: Instance, now: number) -> boolean,
+	seal: (self: CargoSpawnSystem, item: Instance) -> boolean,
 	floorUnder: (self: CargoSpawnSystem, position: Vector3, ignore: { Instance }) -> CFrame,
 }
 
@@ -124,6 +127,7 @@ local function price(item: Instance)
 		shell:SetAttribute(keys.clean, numberAttribute(item, CargoConstants.CLEAN_ATTRIBUTE, 0))
 		shell:SetAttribute(keys.appraised, item:GetAttribute(CargoConstants.APPRAISED_ATTRIBUTE) == true)
 		shell:SetAttribute(keys.appraisedAt, item:GetAttribute(CargoConstants.APPRAISED_AT_ATTRIBUTE))
+		shell:SetAttribute(keys.sealed, item:GetAttribute(CargoConstants.SEALED_ATTRIBUTE) == true)
 	end
 end
 
@@ -184,6 +188,9 @@ function CargoSpawnSystem.new(visuals: ArtVisualSystem.Controller?): CargoSpawnS
 				part:SetAttribute(CargoConstants.CLEAN_ATTRIBUTE, math.clamp(appraisal.clean, 0, 1))
 				part:SetAttribute(CargoConstants.APPRAISED_ATTRIBUTE, appraisal.appraised)
 				part:SetAttribute(CargoConstants.VARIANT_ATTRIBUTE, appraisal.variant)
+				if appraisal.sealed == true then
+					part:SetAttribute(CargoConstants.SEALED_ATTRIBUTE, true)
+				end
 			end
 			local source = if options ~= nil and options.source ~= nil
 				then options.source
@@ -197,7 +204,7 @@ function CargoSpawnSystem.new(visuals: ArtVisualSystem.Controller?): CargoSpawnS
 			makeTag(part, def, value, hidden, appraisal ~= nil)
 			if appraisal ~= nil then
 				price(part)
-				setCleanable(part, def, appraisal.clean < 1)
+				setCleanable(part, def, appraisal.clean < 1 and appraisal.sealed ~= true)
 			end
 			part.Parent = parent
 			local kitId = if options ~= nil then options.artKit else nil
@@ -239,11 +246,11 @@ function CargoSpawnSystem.new(visuals: ArtVisualSystem.Controller?): CargoSpawnS
 		--[=[
 			Moves a valuable's cleanliness up to `clean` (never down), appraises it the first time that reaches
 			APPRAISE_AT (`now`, server time, is when), re-prices it, and makes it no vacuum target once spotless.
-			True when this call appraised it.
+			True when this call appraised it. A sealed valuable is never cleaned.
 		]=]
 		setClean = function(_self, item, clean, now)
 			local def = grimyDef(item)
-			if def == nil then
+			if def == nil or item:GetAttribute(CargoConstants.SEALED_ATTRIBUTE) == true then
 				return false
 			end
 			local current = numberAttribute(item, CargoConstants.CLEAN_ATTRIBUTE, 0)
@@ -272,6 +279,26 @@ function CargoSpawnSystem.new(visuals: ArtVisualSystem.Controller?): CargoSpawnS
 			end
 			item:SetAttribute(CargoConstants.APPRAISED_ATTRIBUTE, true)
 			item:SetAttribute(CargoConstants.APPRAISED_AT_ATTRIBUTE, now)
+			price(item)
+			return true
+		end,
+
+		--[=[
+			Locks a valuable's grime as it is (its first pick-up while not spotless): it keeps its cleanliness and value,
+			stops being a vacuum target, and its tag reads GRIME LOCKED. True when this call sealed it; false for trash, a
+			spotless valuable or one already sealed.
+		]=]
+		seal = function(_self, item)
+			local def = grimyDef(item)
+			if
+				def == nil
+				or item:GetAttribute(CargoConstants.SEALED_ATTRIBUTE) == true
+				or numberAttribute(item, CargoConstants.CLEAN_ATTRIBUTE, 0) >= 1
+			then
+				return false
+			end
+			item:SetAttribute(CargoConstants.SEALED_ATTRIBUTE, true)
+			setCleanable(item, def, false)
 			price(item)
 			return true
 		end,

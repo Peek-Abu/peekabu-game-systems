@@ -82,6 +82,7 @@ function CargoFeedbackUtils.entryOf(object: Instance): CargoTypes.CargoEntry?
 			clean = clean,
 			appraised = object:GetAttribute(CargoConstants.APPRAISED_ATTRIBUTE) == true,
 			variant = if type(variant) == "string" then variant else nil,
+			sealed = if object:GetAttribute(CargoConstants.SEALED_ATTRIBUTE) == true then true else nil,
 		}
 	end
 	return { kind = kind, value = value, visual = visual, appraisal = appraisal }

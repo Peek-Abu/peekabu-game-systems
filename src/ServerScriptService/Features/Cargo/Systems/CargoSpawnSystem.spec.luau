@@ -224,4 +224,53 @@ return function()
 			expect(spawn:appraise(item, 6)).to.equal(false)
 		end)
 	end)
+
+	describe("grime lock (sealed as found)", function()
+		it("seals a dirty valuable: no longer cleanable, keeps its cleanliness and value, tag marked", function()
+			local spawn = Spawn.new(art)
+			local item = spawn:spawn("monitor", CFrame.new(), parent, {
+				appraisal = { base = 100, clean = 0.4, appraised = false },
+			})
+			local value = item:GetAttribute(Constants.VALUE_ATTRIBUTE)
+			expect(spawn:seal(item)).to.equal(true)
+			expect(item:GetAttribute(Constants.SEALED_ATTRIBUTE)).to.equal(true)
+			expect(item:GetAttribute(Constants.CLEAN_ATTRIBUTE)).to.equal(0.4)
+			expect(item:GetAttribute(Constants.VALUE_ATTRIBUTE)).to.equal(value)
+			expect(item:GetAttribute(Interaction.CHANNEL_KIND_ATTRIBUTE)).to.equal(nil)
+			expect(CollectionService:HasTag(item, Vacuum.GRIME_TAG)).to.equal(false)
+			local shell = item:FindFirstChild(Constants.LABEL_NAME)
+			expect(shell:GetAttribute(Constants.LABEL_KEYS.sealed)).to.equal(true)
+			expect(spawn:seal(item)).to.equal(false)
+		end)
+
+		it("refuses to clean a sealed valuable", function()
+			local spawn = Spawn.new(art)
+			local item = spawn:spawn("plaque", CFrame.new(), parent)
+			spawn:seal(item)
+			expect(spawn:setClean(item, 0.9, 3)).to.equal(false)
+			expect(item:GetAttribute(Constants.CLEAN_ATTRIBUTE)).to.equal(0)
+			expect(item:GetAttribute(Constants.APPRAISED_ATTRIBUTE)).to.equal(false)
+		end)
+
+		it("never seals trash or a spotless valuable", function()
+			local spawn = Spawn.new(art)
+			local bag = spawn:spawn("dustBag", CFrame.new(), parent)
+			local clean = spawn:spawn("monitor", CFrame.new(), parent, {
+				appraisal = { base = 100, clean = 1, appraised = true },
+			})
+			expect(spawn:seal(bag)).to.equal(false)
+			expect(spawn:seal(clean)).to.equal(false)
+			expect(clean:GetAttribute(Constants.SEALED_ATTRIBUTE)).to.equal(nil)
+		end)
+
+		it("respawns a sealed appraisal sealed (a pocket entry)", function()
+			local spawn = Spawn.new(art)
+			local item = spawn:spawn("plaque", CFrame.new(), parent, {
+				appraisal = { base = 80, clean = 0.3, appraised = false, sealed = true },
+			})
+			expect(item:GetAttribute(Constants.SEALED_ATTRIBUTE)).to.equal(true)
+			expect(CollectionService:HasTag(item, Vacuum.GRIME_TAG)).to.equal(false)
+			expect(item:GetAttribute(Interaction.CHANNEL_KIND_ATTRIBUTE)).to.equal(nil)
+		end)
+	end)
 end

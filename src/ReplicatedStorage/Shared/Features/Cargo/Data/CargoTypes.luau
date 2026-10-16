@@ -61,8 +61,9 @@ export type Jackpot = { name: string, chance: number, multiplier: number }
 export type AppraisalRoll = { base: number, variant: string? }
 
 -- A valuable's grime and appraisal state, as the item's attributes carry it (and a pocket entry keeps it):
--- `clean` 0 (fully grimy) to 1, `appraised` once its value is revealed (sticky).
-export type Appraisal = { base: number, variant: string?, clean: number, appraised: boolean }
+-- `clean` 0 (fully grimy) to 1, `appraised` once its value is revealed (sticky), `sealed` once its grime is locked
+-- (picked up while dirty: never cleaned again; absent = not sealed).
+export type Appraisal = { base: number, variant: string?, clean: number, appraised: boolean, sealed: boolean? }
 
 -- Visual-only server snapshot; never consulted for authoritative category or value.
 export type VisualIdentity = { kitId: string, proxySize: Vector3, rotation: CFrame }

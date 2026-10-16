@@ -16,7 +16,7 @@
 	- Grime (the loot loop, docs/superpowers/specs/2026-10-15-cleanup-crew-loot-loop-design.md, CargoGrimeSystem):
 	  valuables spawn grimy; vacuuming one (Vacuum's grime channel) cleans it, raises its value and appraises it at
 	  65% (a small sticky slip to the crew near it); an unappraised valuable banked is appraised at the truck (a
-	  slip to the banker).
+	  slip to the banker). Carry's `pickedUp` seals a dirty valuable as it is (its grime locks on the first pick-up).
 	- Feel (M3): every Load is announced (`Banked`, built by CargoFeedbackUtils.banked: the client swoops the
 	  items into the truck, cha-chings and floats "+N"); drops (here), rattles and searches (CargoTraitSystem)
 	  play positional sounds, silent while their CargoAssets ids are pending.
@@ -312,6 +312,11 @@ CargoServiceServer = {
 		end)
 
 		local dropped = CarryServiceServer.dropped:Connect(onDropped)
+		local lifted = CarryServiceServer.pickedUp:Connect(function(player, object)
+			if cargoOf(object) ~= nil then
+				grime:pickedUp(object, player)
+			end
+		end)
 		local bags = VacuumServiceServer.dustBagReady:Connect(function(_player, floor, parent)
 			if parent.Parent ~= nil then
 				spawner:spawn(VacuumConstants.DUST_BAG_KIND, floor, parent)
@@ -324,6 +329,7 @@ CargoServiceServer = {
 		end)
 		table.insert(stoppers, function()
 			dropped:Disconnect()
+			lifted:Disconnect()
 			bags:Disconnect()
 			leaving:Disconnect()
 		end)
@@ -448,6 +454,7 @@ CargoServiceServer = {
 	]=]
 	reset = function(_self)
 		ground:stop()
+		grime:reset()
 		claims:clear()
 		pocketSystem:clear()
 		for part in stock do

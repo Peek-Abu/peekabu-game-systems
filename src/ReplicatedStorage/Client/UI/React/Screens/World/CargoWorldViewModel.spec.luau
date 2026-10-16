@@ -119,6 +119,20 @@ return function()
 			expect(view.cracked).to.equal(true)
 		end)
 
+		it("marks a sealed valuable GRIME LOCKED at its cleanliness", function()
+			local attributes = grimy(30, 0.62, false)
+			attributes[KEYS.sealed] = true
+			local view = CargoWorldViewModel.priceTag(attributes, 0)
+			expect(view.mark).to.equal("GRIME LOCKED 62%")
+			expect(view.price).to.equal("$???")
+		end)
+
+		it("joins the grime lock and the fragile mark", function()
+			local attributes = grimy(20, 0.4, true, 1, true, 1)
+			attributes[KEYS.sealed] = true
+			expect(CargoWorldViewModel.priceTag(attributes, 100).mark).to.equal("GRIME LOCKED 40% · CRACKED −50%")
+		end)
+
 		it("leaves trash tags as they were", function()
 			local view = CargoWorldViewModel.priceTag(tag("Rubbish bag", "trash", 10), 0)
 			expect(view.appraised).to.equal(false)

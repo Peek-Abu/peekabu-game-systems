@@ -13,8 +13,12 @@
 	APPRAISAL_TELL_DISTANCE, with the `cargoAppraise` sound at the item; a valuable banked unappraised is told to its
 	banker (`banked`: the truck reveals it, as grimy as it is).
 
-	`start` registers the channels and observes every item tagged VacuumConstants.GRIME_TAG; `update`, `finish` and
-	`banked` are the specced core.
+	"Clean it where you find it": the first pick-up of a valuable that is not spotless locks its grime (`pickedUp`, the
+	spawner's `seal`): it keeps its cleanliness and value, nobody can clean it again, and the truck appraises it as it
+	is. The first lock of a shift tells its carrier why (`lockHint`, a small sticky note); `reset` forgets who was told.
+
+	`start` registers the channels and observes every item tagged VacuumConstants.GRIME_TAG; `update`, `finish`,
+	`banked`, `pickedUp` and `reset` are the specced core.
 
 	@class CargoGrimeSystem
 ]=]
@@ -53,12 +57,16 @@ export type Deps = {
 	now: () -> number,
 	-- A Cargo sound at a spot, for everyone near it (silent while pending).
 	sound: (position: Vector3, id: string) -> (),
+	-- Tells a carrier their first grime lock of the shift (default: the sticky-note toast).
+	lockHint: ((player: Player) -> ())?,
 }
 
 export type CargoGrimeSystem = {
 	update: (self: CargoGrimeSystem, item: Instance) -> (),
 	finish: (self: CargoGrimeSystem, item: Instance) -> (),
 	banked: (self: CargoGrimeSystem, deposit: CargoTypes.Deposit, banker: Player) -> (),
+	pickedUp: (self: CargoGrimeSystem, item: Instance, player: Player) -> (),
+	reset: (self: CargoGrimeSystem) -> (),
 	start: (self: CargoGrimeSystem) -> () -> (),
 }
 
@@ -76,6 +84,15 @@ local function slip(player: Player, text: string, variant: string?)
 	})
 end
 
+-- The default lock hint: a small sticky note, never the big stamp.
+local function lockNote(player: Player)
+	ToastServiceServer:send(player, {
+		text = CargoConstants.GRIME_LOCK_HINT,
+		style = CargoConstants.GRIME_LOCK_TOAST_STYLE,
+		duration = CargoConstants.GRIME_LOCK_TOAST_SECONDS,
+	})
+end
+
 local CargoGrimeSystem = {}
 
 function CargoGrimeSystem.new(deps: Deps): CargoGrimeSystem
@@ -83,6 +100,9 @@ function CargoGrimeSystem.new(deps: Deps): CargoGrimeSystem
 	local starts: { [Instance]: number } = {}
 	setmetatable(starts, { __mode = "k" })
 	local registered = false
+	-- UserIds told about the grime lock this shift.
+	local told: { [number]: boolean } = {}
+	local lockHint: (player: Player) -> () = deps.lockHint or lockNote
 
 	-- Just appraised by cleaning: the sound at the item and the slip to the crew near it.
 	local function announce(item: Instance)
@@ -161,6 +181,25 @@ function CargoGrimeSystem.new(deps: Deps): CargoGrimeSystem
 					)
 				end
 			end
+		end,
+
+		--[=[
+			`player` picked `item` up: a valuable that is not spotless is sealed as it is; their first lock this shift
+			tells them why.
+		]=]
+		pickedUp = function(_self, item, player)
+			starts[item] = nil
+			if deps.spawner:seal(item) and not told[player.UserId] then
+				told[player.UserId] = true
+				lockHint(player)
+			end
+		end,
+
+		--[=[
+			A new shift: everyone is told again.
+		]=]
+		reset = function(_self)
+			table.clear(told)
 		end,
 
 		--[=[

@@ -8,7 +8,7 @@ local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interacti
 local Visuals = require(ServerScriptService.Features.Art.Systems.ArtVisualSystem)
 
 return function()
-	local parent, assets, spawner, system, appraisals, clock
+	local parent, assets, spawner, system, appraisals, clock, hints
 
 	beforeEach(function()
 		assets = Instance.new("Folder")
@@ -16,6 +16,7 @@ return function()
 		spawner = CargoSpawnSystem.new(Visuals.new(assets))
 		appraisals = {}
 		clock = 100
+		hints = {}
 		system = CargoGrimeSystem.new({
 			spawner = spawner,
 			now = function()
@@ -26,6 +27,10 @@ return function()
 				if id == "cargoAppraise" then
 					table.insert(appraisals, position)
 				end
+			end,
+			-- The first grime lock of a shift tells its carrier (a sticky note in the game).
+			lockHint = function(player)
+				table.insert(hints, player)
 			end,
 		})
 	end)
@@ -98,5 +103,46 @@ return function()
 		system:finish(bag)
 		expect(bag:GetAttribute(CargoConstants.CLEAN_ATTRIBUTE)).to.equal(nil)
 		expect(bag:GetAttribute(CargoConstants.VALUE_ATTRIBUTE)).to.equal(15)
+	end)
+
+	describe("grime lock", function()
+		local alice = { UserId = 1 }
+		local bob = { UserId = 2 }
+
+		it("seals a dirty valuable on its first pick-up, as it is", function()
+			local item = monitor(0.4)
+			system:pickedUp(item, alice)
+			expect(item:GetAttribute(CargoConstants.SEALED_ATTRIBUTE)).to.equal(true)
+			expect(item:GetAttribute(CargoConstants.CLEAN_ATTRIBUTE)).to.equal(0.4)
+			expect(item:GetAttribute(InteractionConstants.CHANNEL_KIND_ATTRIBUTE)).to.equal(nil)
+		end)
+
+		it("stops cleaning a sealed item, even if its channel progress still moves", function()
+			local item = monitor()
+			progress(item, 0.3)
+			system:pickedUp(item, alice)
+			progress(item, 0.9)
+			system:finish(item)
+			expect(item:GetAttribute(CargoConstants.CLEAN_ATTRIBUTE)).to.be.near(0.3, 1e-9)
+			expect(#appraisals).to.equal(0)
+		end)
+
+		it("tells each carrier once a shift, and again after a reset", function()
+			system:pickedUp(monitor(), alice)
+			system:pickedUp(monitor(), alice)
+			system:pickedUp(monitor(), bob)
+			expect(#hints).to.equal(2)
+			system:reset()
+			system:pickedUp(monitor(), alice)
+			expect(#hints).to.equal(3)
+		end)
+
+		it("leaves trash and spotless valuables alone, and tells nobody", function()
+			local bag = spawner:spawn("dustBag", CFrame.new(40000, 0, 0), parent)
+			system:pickedUp(bag, alice)
+			system:pickedUp(monitor(1), alice)
+			expect(bag:GetAttribute(CargoConstants.SEALED_ATTRIBUTE)).to.equal(nil)
+			expect(#hints).to.equal(0)
+		end)
 	end)
 end

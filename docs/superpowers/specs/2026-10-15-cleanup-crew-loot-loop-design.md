@@ -28,6 +28,8 @@ items** on the map, so every find feels like a find and every trip carries more 
 2. Vacuum. A pile clears in 2.5 s and pays canister fill, which still makes a dust bag. A buried pile **pops** its item
    out. A grimy item gets cleaner, rises in value and is **appraised** at 65%.
 3. Choose. Cleaning takes time and is loud: it draws the Manager. You can clean it now, or grab it dirty for less.
+   **Clean it where you find it:** the moment you pick it up its grime locks (§3.2a), so the choice is made on the
+   spot, in the dark, not later in the safety of the truck.
 4. Bank it at the truck. An item that was never appraised is appraised there, with the same slip.
 
 ## 3. Rules and numbers
@@ -73,6 +75,22 @@ richer loot, a longer walk, more time near the Manager.
   being a vacuum target.
 - **Noise:** while anyone is cleaning an item, it pulses the vacuum's noise (radius 40, every second), exactly like a
   pile. The Manager hears it.
+
+### 3.2a Clean it where you find it (the grime lock)
+
+Added 2026-10-15, approved by the developer. Without it, players carried every item to the truck's box (the one
+safe place, see the chase-kit design) and cleaned it there risk-free, which took all the tension out of cleaning.
+
+- A valuable's grime **locks on its first pick-up** while it is not spotless (`CargoSpawnSystem.seal`, from Carry's
+  `pickedUp` through `CargoGrimeSystem.pickedUp`). It keeps its cleanliness and its value, stops being a vacuum target
+  (no grime tag, no channel kind), and `setClean` refuses it from then on, whoever asks.
+- It is marked `CargoSealed`. The flag rides the pocket entry (`Appraisal.sealed`), so a pocketed, scattered or
+  unpocketed item stays locked.
+- An unappraised locked item is still appraised at the truck, at the value it was locked at, as before.
+- A spotless item has nothing to lock. Trash is never grimy.
+- **Telling the player:** the tag's mark reads **"GRIME LOCKED 62%"** instead of "62% CLEAN". The first lock of each
+  shift, per player, puts a small sticky note in the corner: "Grime locked: clean it before you lift it." (the
+  `sticky` toast style, 4 s). `CargoServiceServer:reset` forgets who was told.
 
 ### 3.3 Appraisal
 
@@ -138,11 +156,11 @@ richer loot, a longer walk, more time near the Manager.
 
 | Case | Rule |
 |---|---|
-| Carrying a grimy item | It keeps its cleanliness. Nobody can clean it while it is held: `canChannel` refuses a target with `CarriedBy` set, the client never aims at it, and the channel is re-checked every tick. |
-| Dropping or throwing it | It lands with its cleanliness and can be cleaned again. A fragile item's crack and its grime multiply. |
-| Cleaning while someone holds it | Not allowed (as above). If someone picks up an item mid-clean, the cleaners' channels end on the next tick. Progress is kept. |
+| Carrying a grimy item | It keeps its cleanliness, and the pick-up locked its grime (§3.2a). Nobody can clean it while it is held: `canChannel` refuses a target with `CarriedBy` set, the client never aims at it, and the channel is re-checked every tick. |
+| Dropping or throwing it | It lands with its cleanliness, still locked: it can never be cleaned again. A fragile item's crack and its grime multiply. |
+| Cleaning while someone holds it | Not allowed (as above). If someone picks up an item mid-clean, the cleaners' channels end on the next tick and its grime locks at the cleanliness reached. |
 | A catch drops it | Same as a drop: forced drops keep the item and its state. Pocketed items scatter with their appraisal (base, cleanliness, appraised, variant) intact. |
-| Pocketing a tiny grimy item | Allowed. The pocket entry carries the appraisal. You can't clean in a pocket. Unpocketing or a scatter respawns it as it was. |
+| Pocketing a tiny grimy item | Allowed (you pick it up first, which locks it). The pocket entry carries the appraisal and the lock. You can't clean in a pocket. Unpocketing or a scatter respawns it as it was, still locked. |
 | Multiplayer cleaning | Channel rates add up. Everyone on the item at the appraisal moment, plus anyone within 30 studs, gets the slip. Noise is credited to every cleaner. |
 | Vacuuming a pile next to an item | The aim picks the target nearest the wand's floor head, and keeps the current one while it stays in reach. Piles and items share one pick. |
 | Overtime ×1.5 | It applies to the valuables' pay, at their current (grime-scaled) value, at the moment they are banked. Cleared counts ×1. |
@@ -159,7 +177,8 @@ richer loot, a longer walk, more time near the Manager.
   their rate falling from 4/s to 0. The art kit's meshes and SurfaceAppearances are never touched, so any template
   works, and a cleaned item is exactly its authored self.
 - **Tag:** the existing paper price tag (string hole, cream paper). The price reads "$???" until the item is
-  appraised. Its mark line reads "62% CLEAN" (joined with "FRAGILE" or "CRACKED −50%" where those apply). Once
+  appraised. Its mark line reads "62% CLEAN" (joined with "FRAGILE" or "CRACKED −50%" where those apply), or
+  "GRIME LOCKED 62%" once it has been picked up dirty. Once
   appraised, a small red **APPRAISED** rubber stamp sits on the tag. It pops in when the appraisal is fresh
   (`PaperStamp` pop). A tag also mounts while its item is being cleaned, so you can watch the percentage climb.
 - **Reveal:** a gold burst where the item appears, plus `cargoReveal`. **Appraisal:** a paper-fleck burst, plus

@@ -6,8 +6,8 @@
 	undamaged fragile item, "CRACKED −50%" / "CRACKED −75%" from CargoConstants.FRAGILE_TIERS once it took impacts
 	(the price turns red), else none. A grimy valuable (the loot loop, docs/superpowers/specs/
 	2026-10-15-cleanup-crew-loot-loop-design.md §5) reads "$???" until appraised, its mark leads with how clean it is
-	("62% CLEAN", joined with the fragile mark), and once appraised it carries the APPRAISED stamp, which pops while the
-	appraisal is fresh. `mounted`: a tag mounts within LABEL_DISTANCE of the camera and stays until
+	("62% CLEAN", joined with the fragile mark; "GRIME LOCKED 62%" once its grime is locked, picked up dirty), and once
+	appraised it carries the APPRAISED stamp, which pops while the appraisal is fresh. `mounted`: a tag mounts within LABEL_DISTANCE of the camera and stays until
 	LABEL_KEEP_DISTANCE, and never while the item is hidden under a pile.
 	The load floaters (W6): clearance pops as the number over CLEARED, the pay earned as a "+$40" stamp (the
 	approved frame's layout). Pure.
@@ -59,11 +59,13 @@ local function markOf(fragile: boolean, impacts: number): string?
 end
 
 -- "62% CLEAN": a grimy valuable's cleanliness, rounded down so it reads 100% only when spotless; nil once spotless.
-local function cleanMark(clean: number): string?
+-- "GRIME LOCKED 62%" once its grime is locked (it can never be cleaned again).
+local function cleanMark(clean: number, sealed: boolean): string?
 	if clean >= 1 then
 		return nil
 	end
-	return `{math.floor(math.clamp(clean, 0, 1) * 100)}% CLEAN`
+	local percent = math.floor(math.clamp(clean, 0, 1) * 100)
+	return if sealed then `GRIME LOCKED {percent}%` else `{percent}% CLEAN`
 end
 
 --[=[
@@ -86,7 +88,7 @@ function CargoWorldViewModel.priceTag(attributes: { [string]: unknown }, now: nu
 	local clean = if type(rawClean) == "number" then rawClean else 1
 	local appraisedAt = attributes[keys.appraisedAt]
 	local marks: { string } = {}
-	local grime = if grimy then cleanMark(clean) else nil
+	local grime = if grimy then cleanMark(clean, attributes[keys.sealed] == true) else nil
 	if grime ~= nil then
 		table.insert(marks, grime)
 	end

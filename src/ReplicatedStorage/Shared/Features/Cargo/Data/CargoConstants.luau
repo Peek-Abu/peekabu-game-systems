@@ -105,6 +105,8 @@ return table.freeze({
 		appraised = "CargoTagAppraised",
 		variant = "CargoTagVariant",
 		appraisedAt = "CargoTagAppraisedAt",
+		-- Its grime is locked (picked up dirty: sealed as found), so the tag reads "GRIME LOCKED".
+		sealed = "CargoTagSealed",
 	}),
 	LABEL_PX = Vector2.new(260, 70),
 	LABEL_DISTANCE = 24,
@@ -127,6 +129,13 @@ return table.freeze({
 	APPRAISED_ATTRIBUTE = "CargoAppraised",
 	VARIANT_ATTRIBUTE = "CargoVariant",
 	APPRAISED_AT_ATTRIBUTE = "CargoAppraisedAt",
+	-- "Clean it where you find it": a valuable's grime locks the first time it is picked up while not spotless. It
+	-- keeps its cleanliness and value, is never a vacuum target again, and the truck appraises it as it is. The first
+	-- lock of a shift tells its carrier why, on a small sticky note (Shift's "sticky" toast style).
+	SEALED_ATTRIBUTE = "CargoSealed",
+	GRIME_LOCK_TOAST_STYLE = "sticky",
+	GRIME_LOCK_TOAST_SECONDS = 4,
+	GRIME_LOCK_HINT = "Grime locked: clean it before you lift it.",
 	-- Set on a dust pile that hides an item (Office): its glint.
 	BURIED_ATTRIBUTE = "CargoBuried",
 	-- An appraisal is told (a small sticky slip off-centre, Shift's "slip" toast style, "slipJackpot" for a jackpot;
