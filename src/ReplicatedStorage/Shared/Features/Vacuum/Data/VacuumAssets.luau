@@ -53,6 +53,9 @@ return table.freeze({
 	PENDING = PENDING,
 	-- The backpack hose's corrugated strip (a Beam texture; characters/vacuum/make_hose_texture.py, Icey Labs).
 	HOSE_TEXTURE = "rbxassetid://82530981101419",
+	-- The Brass Bellows skin's corrugated copper hose (characters/vacuum/skins/brass-bellows, Icey Labs; decal
+	-- 87115006823609).
+	HOSE_TEXTURE_COPPER = "rbxassetid://79413170105323",
 	SOUNDS = table.freeze(SOUNDS),
 	WHINE = "vacuumWhine",
 	POP = "vacuumPop",

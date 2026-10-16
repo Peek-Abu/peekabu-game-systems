@@ -1,8 +1,8 @@
 --!strict
 --[=[
-	VacuumVisualSystem: the backpack vacuum's visuals, from the approved template
-	(ReplicatedStorage.Assets.CleanupCrew.Vacuum: `Backpack` pivoted at its mount, `Straps` pivoted at the torso
-	they were modelled round, `Wand` pieces) or, when it is missing, VacuumVisualConstants' graybox pieces.
+	VacuumVisualSystem: the backpack vacuum's visuals in the wearer's skin (VacuumSkinRegistry): the art is a fresh
+	copy of the skin's approved template, or the graybox (VacuumKitUtils.kit). Every skin is built on the same
+	geometry (characters/vacuum), so only its art and its hose texture differ.
 
 	The grip contract (characters/vacuum/README.md): a wand skin is complete only with two Attachments that say
 	where the hands go: `GripUpper` on `WandGrip` (the right hand, on the upper grip by the hose joint) and
@@ -33,23 +33,23 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
 local EmployeeRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeRegistry)
-local VacuumAssets = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumAssets)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
+local VacuumSkinRegistry = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumSkinRegistry)
+local VacuumSkinRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumSkinRules)
 local Constants = require(ServerScriptService.Features.Vacuum.Data.VacuumVisualConstants)
 local VacuumHoldFormulas = require(ServerScriptService.Features.Vacuum.Utils.VacuumHoldFormulas)
+local VacuumKitUtils = require(ServerScriptService.Features.Vacuum.Utils.VacuumKitUtils)
 
 export type WornBackpack = {
 	model: Model,
+	-- The skin it wears (the Tool builds its hand wand in the same one).
+	skin: VacuumSkinRegistry.SkinDef,
 	-- The held wand's hose inlet, or nil to stow the wand on the pack.
 	setHeld: (inlet: Attachment?) -> (),
 	destroy: () -> (),
 }
 
-type Piece = Constants.Piece
-type Kit = { pack: Model, straps: Model?, wand: { [string]: BasePart }, kind: string }
-
-local WAND_PIECES = { "WandGrip", "WandInlet", "WandTube", "WandSwivel", "FloorHead", "FloorHeadLip" }
-local GRIPS = { Constants.grips.upper, Constants.grips.lower }
+type Kit = VacuumKitUtils.Kit
 
 local Visual = {}
 
@@ -77,92 +77,7 @@ local function span(model: Model, partName: string, from: string, to: string): n
 	return if a ~= nil and b ~= nil then (a.Position - b.Position).Magnitude else nil
 end
 
-local function fromPiece(source: Piece): BasePart
-	local part = Instance.new("Part")
-	part.Name = source.name
-	part.Shape = source.shape
-	part.Size = source.size
-	part.CFrame = source.frame
-	part.Color = source.color
-	part.Material = source.material
-	part.Transparency = source.transparency
-	return part
-end
-
-local function template(): Model?
-	local current: Instance? = ReplicatedStorage
-	for _, name in Constants.TEMPLATE_PATH do
-		current = if current ~= nil then current:FindFirstChild(name) else nil
-	end
-	return if current ~= nil
-			and current:IsA("Model")
-			and current:GetAttribute("RuntimeApproved") == true
-		then current
-		else nil
-end
-
--- A fresh copy of the art: the template's, or the graybox fallback (the pack pivoted at its mount).
-local function kit(): Kit
-	local source = template()
-	if source ~= nil then
-		local copy = source:Clone()
-		local pack = copy:FindFirstChild("Backpack")
-		local straps = copy:FindFirstChild("Straps")
-		local wandFolder = copy:FindFirstChild("Wand")
-		local wand: { [string]: BasePart } = {}
-		if wandFolder ~= nil then
-			for _, name in WAND_PIECES do
-				local part = partOf(wandFolder, name)
-				if part ~= nil then
-					wand[name] = part
-				end
-			end
-		end
-		local complete = true
-		for _, name in WAND_PIECES do
-			local found: BasePart? = wand[name]
-			complete = complete and found ~= nil
-		end
-		-- The grip contract: a wand without both grips is not a complete skin.
-		for _, grip in GRIPS do
-			local holder: BasePart? = wand[grip.piece]
-			local found = if holder ~= nil then holder:FindFirstChild(grip.name) else nil
-			complete = complete and found ~= nil and found:IsA("Attachment")
-		end
-		if pack ~= nil and pack:IsA("Model") and complete then
-			pack.Parent = nil
-			local strapModel = if straps ~= nil and straps:IsA("Model") then straps else nil
-			if strapModel ~= nil then
-				strapModel.Parent = nil
-			end
-			for _, part in wand do
-				part.Parent = nil
-			end
-			copy:Destroy()
-			return { pack = pack, straps = strapModel, wand = wand, kind = "approved-mesh" }
-		end
-		copy:Destroy()
-	end
-	local pack = Instance.new("Model")
-	pack.Name = "Backpack"
-	for _, piece in Constants.backpack do
-		fromPiece(piece).Parent = pack
-	end
-	pack.WorldPivot = CFrame.identity
-	local wand: { [string]: BasePart } = {}
-	for _, piece in Constants.wand do
-		wand[piece.name] = fromPiece(piece)
-	end
-	for _, grip in GRIPS do
-		local attachment = Instance.new("Attachment")
-		attachment.Name = grip.name
-		attachment.Position = grip.position
-		attachment.Parent = wand[grip.piece]
-	end
-	return { pack = pack, straps = nil, wand = wand, kind = "native-source" }
-end
-
--- A grip Attachment of a complete kit (see `kit`).
+-- A grip Attachment of a complete kit (VacuumKitUtils.kit).
 local function gripOf(parts: { [string]: BasePart }, grip: { piece: string, name: string }): Attachment
 	local found = parts[grip.piece]:FindFirstChild(grip.name)
 	assert(found ~= nil and found:IsA("Attachment"), `wand has no {grip.name}`)
@@ -313,10 +228,16 @@ local function holdFor(holder: Model, dims: VacuumHoldFormulas.WandDims, size: n
 end
 
 --[=[
-	Builds the hand wand into `tool`, fitted to `holder` when given and measurable, and returns its handle and
-	the hold (nil: unmeasured, held as a hanging hand holds it). Records `VacuumVisualKind` and `VacuumTube`.
+	Builds the hand wand into `tool` in `skin` (Standard Issue when nil), fitted to `holder` when given and
+	measurable, and returns its handle and the hold (nil: unmeasured, held as a hanging hand holds it). Records
+	`VacuumVisualKind`, `VacuumSkin` and `VacuumTube`.
 ]=]
-function Visual.build(tool: Tool, holder: Model?): (BasePart, VacuumHoldFormulas.Hold?)
+function Visual.build(
+	tool: Tool,
+	holder: Model?,
+	skin: VacuumSkinRegistry.SkinDef?
+): (BasePart, VacuumHoldFormulas.Hold?)
+	local worn = skin or VacuumSkinRules.select(nil)
 	local handle = Instance.new("Part")
 	handle.Name = "Handle"
 	handle.Size = Vector3.new(0.2, 0.2, 0.2)
@@ -326,7 +247,7 @@ function Visual.build(tool: Tool, holder: Model?): (BasePart, VacuumHoldFormulas
 	handle.Parent = tool
 	local fit, scale = Visual.fitOf(holder)
 	local size = fit.size * scale
-	local art = kit()
+	local art = VacuumKitUtils.kit(worn)
 	local parts, dims, lipOffset = wandAt(art, size)
 	local hold = if holder ~= nil then holdFor(holder, dims, size) else nil
 	local tube = if hold ~= nil then hold.tube else Constants.DEFAULT_TUBE * size
@@ -350,6 +271,7 @@ function Visual.build(tool: Tool, holder: Model?): (BasePart, VacuumHoldFormulas
 	end
 	tool.Grip = if hold ~= nil then hold.toolGrip else Constants.DEFAULT_GRIP
 	tool:SetAttribute("VacuumVisualKind", art.kind)
+	tool:SetAttribute("VacuumSkin", worn.name)
 	tool:SetAttribute("VacuumTube", tube)
 	return handle, hold
 end
@@ -389,16 +311,18 @@ local function hose(texture: string, size: number): Beam
 end
 
 --[=[
-	Puts the canister backpack on `character` (see the class notes). Nil when it has no UpperTorso.
+	Puts the canister backpack on `character` in `skin` (Standard Issue when nil; see the class notes). Nil when it
+	has no UpperTorso. Records `VacuumVisualKind` and `VacuumSkin` on the pack.
 ]=]
-function Visual.wear(character: Model): WornBackpack?
+function Visual.wear(character: Model, skin: VacuumSkinRegistry.SkinDef?): WornBackpack?
+	local worn = skin or VacuumSkinRules.select(nil)
 	local torso = character:FindFirstChild("UpperTorso")
 	if torso == nil or not torso:IsA("BasePart") then
 		return nil
 	end
 	local fit, scale = Visual.fitOf(character)
 	local size = fit.size * scale
-	local art = kit()
+	local art = VacuumKitUtils.kit(worn)
 	local model = Instance.new("Model")
 	model.Name = VacuumConstants.BACKPACK_NAME
 	local mount = torso.CFrame * scaled(fit.mount, scale)
@@ -447,7 +371,7 @@ function Visual.wear(character: Model): WornBackpack?
 	outlet.Name = "HoseMount"
 	outlet.CFrame = outletPart.CFrame:ToObjectSpace(mount * scaled(Constants.outlet, size))
 	outlet.Parent = outletPart
-	local beam = hose(VacuumAssets.HOSE_TEXTURE, size)
+	local beam = hose(worn.hoseTexture, size)
 	beam.Attachment0 = outlet
 	beam.Attachment1 = stowedInlet
 	beam.Parent = model
@@ -472,10 +396,12 @@ function Visual.wear(character: Model): WornBackpack?
 		end
 	end
 	model:SetAttribute("VacuumVisualKind", art.kind)
+	model:SetAttribute("VacuumSkin", worn.name)
 	model.Parent = character
 	local destroyed = false
 	return {
 		model = model,
+		skin = worn,
 		setHeld = function(inlet)
 			if destroyed then
 				return

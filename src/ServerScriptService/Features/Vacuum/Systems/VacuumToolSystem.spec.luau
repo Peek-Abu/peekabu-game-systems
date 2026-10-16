@@ -54,6 +54,21 @@ return function()
 			tool:Destroy()
 			character:Destroy()
 		end)
+		it("builds the hand wand in the skin of the backpack it comes off", function()
+			local Registry = require(game.ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumSkinRegistry)
+			local backpack = {
+				model = Instance.new("Model"),
+				skin = Registry.get("BrassBellows"),
+				setHeld = function() end,
+				destroy = function() end,
+			}
+			local tool = System.create(nil, backpack)
+			expect(tool:GetAttribute("VacuumSkin")).to.equal("BrassBellows")
+			local plain = System.create()
+			expect(plain:GetAttribute("VacuumSkin")).to.equal(Registry.DEFAULT)
+			tool:Destroy()
+			plain:Destroy()
+		end)
 		it("does not treat a backpack Tool or an unrelated namesake as equipped", function()
 			local character = Instance.new("Model")
 			local tool = Instance.new("Tool")

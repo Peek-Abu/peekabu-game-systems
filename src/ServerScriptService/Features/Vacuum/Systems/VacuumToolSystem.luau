@@ -20,7 +20,8 @@ function VacuumToolSystem.create(holder: Model?, backpack: Visual.WornBackpack?)
 	tool.CanBeDropped = false
 	tool.RequiresHandle = true
 	tool:SetAttribute(Constants.TOOL_ATTRIBUTE, true)
-	local handle, plan = Visual.build(tool, holder)
+	-- The wand comes off `backpack`, so it is in the pack's skin.
+	local handle, plan = Visual.build(tool, holder, if backpack ~= nil then backpack.skin else nil)
 	local inlet = handle:FindFirstChild("HoseInlet")
 	local hold: AnimationVacuumHoldSystem.Controller? = nil
 	tool:GetPropertyChangedSignal("Parent"):Connect(function()

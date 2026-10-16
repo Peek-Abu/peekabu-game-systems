@@ -16,8 +16,9 @@
 	  2026-10-15-cleanup-crew-loot-loop-design.md §3.2: a grimy valuable, tagged GRIME_TAG, is vacuumed exactly like a
 	  pile; Cargo's CargoGrimeSystem owns the channel and the cleanliness), and pulses the same noise for it;
 	- dresses every character in the canister backpack as it spawns (VacuumVisualSystem.wear), in the depot as on
-	  a shift: it is part of the employee's look, its wand clipped on. A shift's crew are given the vacuum Tool
-	  (VacuumToolSystem), which takes the wand off that same pack while held (never a second pack).
+	  a shift: it is part of the employee's look, its wand clipped on, in its player's skin (VacuumSkinRules). A
+	  shift's crew are given the vacuum Tool (VacuumToolSystem), which takes the wand off that same pack while held
+	  (never a second pack).
 
 	Spec-exempt shell (Instances, Players, RunService, signals); the maths is the specced
 	VacuumCanisterUtils.
@@ -44,6 +45,7 @@ local VacuumChannelTracker = require(ServerScriptService.Features.Vacuum.State.V
 local VacuumToolSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumToolSystem)
 local VacuumVisualSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumVisualSystem)
 local VacuumEquipmentRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumEquipmentRules)
+local VacuumSkinRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumSkinRules)
 local VacuumTargetRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumTargetRules)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
 local CarryPlacementSystem = require(ServerScriptService.Features.Carry.Systems.CarryPlacementSystem)
@@ -84,7 +86,10 @@ local function wornFor(character: Model): VacuumVisualSystem.WornBackpack?
 		current.destroy()
 		worn[character] = nil
 	end
-	local backpack = VacuumVisualSystem.wear(character)
+	-- In its player's skin (VacuumSkinRules: the owner's MVP allowlist, else Standard Issue).
+	local player = Players:GetPlayerFromCharacter(character)
+	local backpack =
+		VacuumVisualSystem.wear(character, if player ~= nil then VacuumSkinRules.forPlayer(player.UserId) else nil)
 	if backpack ~= nil then
 		worn[character] = backpack
 	end

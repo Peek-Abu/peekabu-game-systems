@@ -1,8 +1,9 @@
 --!strict
 --[=[
-	VacuumVisualConstants: the backpack vacuum's geometry and hold tuning. The art is the uploaded template
-	(ReplicatedStorage.Assets.CleanupCrew.Vacuum, built by characters/vacuum/build_backpack_vacuum.py); the pieces
-	here are its graybox fallback with the same names and sizes, used when the template is missing.
+	VacuumVisualConstants: the backpack vacuum's geometry and hold tuning. The art is the uploaded template of the
+	wearer's skin (ReplicatedStorage.Assets.CleanupCrew.<template>, VacuumSkinRegistry; built by
+	characters/vacuum/build_backpack_vacuum.py, every skin on this same geometry); the pieces here are the graybox
+	fallback with the same names and sizes, used when no template is there.
 
 	Pack pieces are in mount space: the mount is the middle of the harness pad, where the pack meets the back; +Y
 	up, +Z back, +X the wearer's right. Wand pieces are placed per holder by VacuumHoldFormulas.wand (their frame
@@ -105,7 +106,8 @@ local OUTLET_AXIS = Vector3.new(0.95, -0.3, 0.1).Unit
 local OUTLET_UP = (Vector3.new(0, 1, 0) - OUTLET_AXIS * OUTLET_AXIS.Y).Unit
 
 return table.freeze({
-	TEMPLATE_PATH = table.freeze({ "Assets", "CleanupCrew", "Vacuum" }),
+	-- Where the skins' templates live under ReplicatedStorage (each by its VacuumSkinRegistry `template` name).
+	TEMPLATE_FOLDER = table.freeze({ "Assets", "CleanupCrew" }),
 	backpack = table.freeze(backpack),
 	wand = table.freeze(wand),
 	grips = grips,
