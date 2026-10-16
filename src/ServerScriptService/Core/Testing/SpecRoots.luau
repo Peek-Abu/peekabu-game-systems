@@ -413,6 +413,12 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftReviewTab"] = "React HUD widget reopening the review scene (no logic)",
 	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftScene"] = "scene registration (declarative, no logic)",
 	["ServerScriptService.Features.Shift.Systems.ShiftVoteSystem"] = "RequestHandler/ByteNet vote shell (the vote decisions are specced in ShiftVoteRules)",
+	["ServerScriptService.Features.Shift.Systems.ShiftSiteSystem"] = "Office/Vacuum/Cargo/Round orchestration shell (variant, quota and the spawn roll are specced in ShiftVariantRules, ShiftQuotaFormulas and OfficeSpawnUtils)",
+	["ServerScriptService.Features.Shift.Systems.ShiftTransitSystem"] = "Players/character/streaming/ByteNet/timer shell (holds, readiness and deadlines specced in ShiftTransitTracker, the entry in ShiftTransitUtils)",
+	["ReplicatedStorage.Client.Features.Shift.State.ShiftTransitStore"] = "Charm atoms and a computed facade over the transit world entry (decoding specced in ShiftTransitUtils)",
+	["ReplicatedStorage.Client.Features.Shift.Systems.ShiftTransitSystem"] = "Players/streaming/Workspace/ByteNet/RunService shell (cover and readiness specced in ShiftTransitRules)",
+	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftTransitPanel"] = "presentational React component (slip specced in ShiftTransitViewModel; story in ShiftTransitPanel.story)",
+	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftTransitScreen"] = "React overlay root wiring ShiftTransitStore to ShiftTransitPanel (no logic)",
 	-- Cleanup Crew: Depot
 	["ReplicatedStorage.Shared.Features.Depot.Data.DepotTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants"] = "static names, place table, contracts and card texts (no logic)",

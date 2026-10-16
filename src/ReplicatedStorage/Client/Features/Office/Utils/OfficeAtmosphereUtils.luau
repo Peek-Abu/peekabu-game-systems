@@ -3,7 +3,7 @@
 	OfficeAtmosphereUtils: which atmosphere the office has (Cleanup Crew spec §7 "The office at night"; "Tier up";
 	"Overtime: lighting shifts dim red"). In the depot hub (no snapshot, the lobby, or a player off the running
 	crew: DepotAtmosphereUtils) it is the depot's warm evening, so a shift's lighting never outlasts the shift; for
-	the crew, from the arrival countdown through the results it is night; while running, each pressure tier darkens
+	the crew, from the transit (`starting`) through the results it is night; while running, each pressure tier darkens
 	it a step, Harlow's break lifts it a little and overtime turns it dim red (and the lights red). The fluorescent
 	hum plays whenever the crew is in a shift. Pure.
 

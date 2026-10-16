@@ -8,7 +8,9 @@
 	of Lighting, so the hub and the office never fight over it. Every ATMOSPHERE_INTERVAL the broken lights near the
 	camera (OfficeLightUtils) blink, with a zap as each dims. It changes only a light's Color, Transparency and
 	PointLight Color/Brightness; M2's OccupantTellSystem owns Material and PointLight.Enabled, so the two compose.
-	Registers the office and depot presets with Vfx at load. Pending sounds (OfficeAssets) are silent.
+	Registers the office and depot presets with Vfx at load. Pending sounds (OfficeAssets) are silent. While the transit
+	screen covers the view (ShiftTransitStore.covered) a preset is applied at once, not blended, and one still blending
+	when the cover comes up is finished at once, so the screen reveals the right light.
 
 	Spec-exempt shell (Lighting via Vfx, Instances, Sound, Charm, RunService); the choices are the specced
 	OfficeAtmosphereUtils and OfficeLightUtils.
@@ -34,6 +36,7 @@ local OfficeAtmosphereConstants = require(OfficeClient.Data.OfficeAtmosphereCons
 local OfficeAtmosphereUtils = require(OfficeClient.Utils.OfficeAtmosphereUtils)
 local OfficeLightUtils = require(OfficeClient.Utils.OfficeLightUtils)
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
+local ShiftTransitStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftTransitStore)
 local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
 local VfxServiceClient = require(ReplicatedStorage.Client.Features.Vfx.VfxServiceClient)
 
@@ -151,7 +154,8 @@ local function onSnapshot(snapshot: ShiftTypes.ShiftSnapshot?)
 		applied = true
 		currentPreset = preset
 		counters.presets += 1
-		VfxServiceClient:setAtmosphere(preset, OfficeAtmosphereConstants.FADE)
+		local covered = ShiftTransitStore.covered()
+		VfxServiceClient:setAtmosphere(preset, if covered then 0 else OfficeAtmosphereConstants.FADE)
 	end
 	setOvertime(OfficeAtmosphereUtils.overtime(snapshot, userId))
 	setHum(OfficeAtmosphereUtils.hum(snapshot, userId))
@@ -218,6 +222,16 @@ function OfficeAtmosphereSystem.start()
 	end
 	onSnapshot(ShiftStore.snapshot())
 	table.insert(stoppers, Charm.subscribe(ShiftStore.snapshot, onSnapshot))
+	-- The cover is up: finish any blend at once (nothing behind the screen should still be fading).
+	table.insert(
+		stoppers,
+		Charm.subscribe(ShiftTransitStore.covered, function(covered: boolean)
+			local preset = currentPreset
+			if covered and preset ~= nil then
+				VfxServiceClient:setAtmosphere(preset, 0)
+			end
+		end)
+	)
 	local elapsed = 0
 	local connection = RunService.Heartbeat:Connect(function(deltaTime: number)
 		elapsed += deltaTime

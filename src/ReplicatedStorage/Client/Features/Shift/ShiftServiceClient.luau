@@ -8,7 +8,9 @@
 	(PaperToastStack: sticky notes top-right, stamps centre, appraisal slips bottom-right; ToastServiceClient:setDefaultWidget(false)). Starts
 	ShiftPromptSystem (the Interaction prompts drawn on paper) and registers the prompt chip; the chip and the phone
 	action arc are registered wrapped with ShiftPromptSystem.press as a prop, so neither component requires this
-	service (which requires them). Reads go through ShiftStore.
+	service (which requires them). Mounts the transit screen (ShiftTransitScreen) on the Overlay layer and starts
+	ShiftTransitSystem, which drives it (the load screen between the depot and the office and between shifts). Reads go
+	through ShiftStore.
 
 	Spec-exempt shell (Charm subscriptions, ByteNet); decoding is the specced ShiftSnapshotUtils.
 
@@ -32,6 +34,9 @@ local VacuumServiceClient = require(ReplicatedStorage.Client.Features.Vacuum.Vac
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
 local ShiftFeedbackSystem = require(ReplicatedStorage.Client.Features.Shift.Systems.ShiftFeedbackSystem)
 local ShiftPromptSystem = require(ReplicatedStorage.Client.Features.Shift.Systems.ShiftPromptSystem)
+local ShiftTransitSystem = require(ReplicatedStorage.Client.Features.Shift.Systems.ShiftTransitSystem)
+local ShiftTransitScreen = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftTransitScreen)
+local UIRoot = require(ReplicatedStorage.Client.UI.Layers.UIRoot)
 local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudRegistry)
 local ShiftHud = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHud)
 local ShiftMobileButtons = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftMobileButtons)
@@ -46,6 +51,8 @@ local ToastServiceClient = require(ReplicatedStorage.Client.Features.Toast.Toast
 local unsubscribers: { () -> () } = {}
 -- Whether this client is in a shift's results (the review scene was pushed for them).
 local reviewing = false
+-- The transit screen is mounted once per client session (its layer root survives respawns).
+local transitMounted = false
 
 -- The HUD widgets that press the shown prompt, given the press as a prop (module-level, so their identity is stable).
 local function PromptChipWidget(): React.ReactNode
@@ -139,6 +146,11 @@ local ShiftServiceClient: ShiftServiceClient = {
 	end,
 
 	start = function(_self)
+		if not transitMounted then
+			transitMounted = true
+			UIRoot.acquire("Overlay")(React.createElement(ShiftTransitScreen))
+		end
+		ShiftTransitSystem.start()
 		task.delay(ShiftConstants.PLATFORM_REPORT_DELAY, reportPlatform)
 		table.insert(
 			unsubscribers,
@@ -156,6 +168,7 @@ local ShiftServiceClient: ShiftServiceClient = {
 	end,
 
 	stop = function(_self)
+		ShiftTransitSystem.stop()
 		ShiftFeedbackSystem.stop()
 		for _, unsubscribe in unsubscribers do
 			unsubscribe()

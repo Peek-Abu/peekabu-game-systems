@@ -6,7 +6,9 @@
 	pushing it twice is a no-op, and once the scene leaves the stack (CLOSE or Escape) the store's board is cleared.
 	The truck queue pad card (DepotPad, with Depart now) replaces Queue's placeholder pad widget, which init hides
 	with QueueServiceClient:setDefaultWidget(false); the depot's world signs (truck tags, the boards) are drawn by DepotBillboardSystem into the shells the server builds;
-	the trucks' scanner arches flash on each bank (DepotTruckScannerSystem).
+	the trucks' scanner arches flash on each bank (DepotTruckScannerSystem). While Shift's transit screen covers the view
+	(ShiftTransitStore.covered) no card runs out: the drive card is dropped when the route slip comes up, and the card
+	behind the screen (the arrival folder) gets its full time once it clears.
 
 	Spec-exempt shell (ByteNet, HUD registration, scene stack, RunService); the card queue is the specced DepotStore.
 
@@ -28,6 +30,7 @@ local DepotBillboardSystem = require(ReplicatedStorage.Client.Features.Depot.Sys
 local DepotTruckScannerSystem = require(ReplicatedStorage.Client.Features.Depot.Systems.DepotTruckScannerSystem)
 local DepotStore = require(ReplicatedStorage.Client.Features.Depot.State.DepotStore)
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
+local ShiftTransitStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftTransitStore)
 local QueueServiceClient = require(ReplicatedStorage.Client.Features.Queue.QueueServiceClient)
 local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudRegistry)
 local DepotCard = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotCard)
@@ -115,8 +118,27 @@ local DepotServiceClient: DepotServiceClient = {
 				DepotStore.setLastShift(data)
 			end)
 		)
+		table.insert(
+			stoppers,
+			Charm.subscribe(ShiftTransitStore.slip, function(slip: boolean)
+				if slip then
+					DepotStore.dropDrive(os.clock())
+				end
+			end)
+		)
+		table.insert(
+			stoppers,
+			Charm.subscribe(ShiftTransitStore.covered, function(covered: boolean)
+				if not covered then
+					DepotStore.restamp(os.clock())
+				end
+			end)
+		)
 		DepotEvents.packets.Ready.send(true)
 		local ticking = RunService.Heartbeat:Connect(function()
+			if ShiftTransitStore.covered() then
+				return
+			end
 			if DepotStore.card() ~= nil then
 				DepotStore.expire(os.clock())
 			end

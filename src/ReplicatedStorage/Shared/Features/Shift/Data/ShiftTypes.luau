@@ -47,7 +47,7 @@ export type ShiftState = {
 	shift: number,
 	-- running: when the shift began (the tiers count from here).
 	startedAt: number?,
-	-- starting: the arrival countdown's end; running: the shift's end.
+	-- starting: the transit's deadline (ShiftTransitSystem); running: the shift's end.
 	endsAt: number?,
 	-- When the clock-out countdown ends the shift.
 	clockOutAt: number?,
@@ -146,5 +146,31 @@ export type ShiftSnapshot = {
 	-- The truck the crew came in (the depot's layout index), when the depart payload carried a valid one.
 	truck: number?,
 }
+
+-- One player held by a transit (the load screen while the office is built and they are placed in its truck). `id` is
+-- new for every transit, so a client's ready report for an older one is never taken for this one.
+export type TransitHold = {
+	userId: number,
+	id: number,
+	-- The office is built and the player placed: the client may start checking it can see it.
+	built: boolean,
+	-- The built office's layout seed (its model's LayoutSeed attribute); nil for the office built at boot.
+	seed: number?,
+	-- Where the player was placed (world), once built.
+	spot: Vector3?,
+}
+
+-- The `shiftTransit` world entry: who is held, and the slip's lines (the contract's client, the truck).
+export type TransitSnapshot = {
+	holds: { TransitHold },
+	client: string?,
+	truck: number?,
+}
+
+-- What this client's transit screen shows: nothing, plain black (the client booting, a respawn) or the route slip.
+export type TransitCover = "none" | "black" | "slip"
+
+-- Whether a held client may reveal: ready, still waiting (for `reason`), or out of time (reveal anyway).
+export type TransitVerdict = "ready" | "waiting" | "timeout"
 
 return {}

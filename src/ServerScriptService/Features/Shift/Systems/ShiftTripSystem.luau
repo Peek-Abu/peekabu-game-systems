@@ -6,8 +6,9 @@
 	- Queue `arrived(party, payload)`: the party joins the crew (ShiftCrewTracker.join: added to a crew still
 	  here, replacing one that has gone), and the payload's contract id (untrusted: it rode the teleport) is
 	  resolved by DepotContractUtils for the result card;
-	- Queue `joinedLate(player)`: an expected member who came after the start joins the crew and is moved to
-	  the loading bay;
+	- Queue `joinedLate(player)`: an expected member who came after the start joins the crew and is handed to
+	  `admit` (Shift's transit holds them behind the load screen and places them in the truck); every member of an
+	  arriving party is handed to `admit` too;
 	- Queue `returned(player)` on this server (a local move home in Studio) and leaving the server take a
 	  player out of the crew;
 	- `sendHome` is Back to depot: the result card (ShiftCardUtils.encode) rides
@@ -15,8 +16,9 @@
 	  shift restarts under it; if crew members are still here when that ends (the trip failed after Queue's
 	  retries), each is told once and `startable` lets the next shift begin.
 
-	It also gives Queue the loading bay as the shift's local-move arrival point and the depot as the home of
-	redirected strangers, and on a live PUBLIC server of the shift place (someone reached it without a
+	It also gives Queue the shift's local-move arrival point: where the player already stands (in Studio, still aboard
+	their truck at the depot), so nothing changes before the transit's load screen is up; the transit then places them in the truck). It gives Queue the depot as
+	the home of redirected strangers, and on a live PUBLIC server of the shift place (someone reached it without a
 	party; reserved servers are Queue's) it sends every player to the depot (and kicks one still here after the leaving window). ShiftServiceServer hands Round
 	`eligible` (only the crew takes part) and Death `spawnFor` (crew in the loading bay; anyone else at the
 	depot where this server runs it, otherwise in the loading bay).
@@ -52,6 +54,11 @@ local STUCK_TEXT = "The truck couldn't get back to the depot. Another shift it i
 local STRANDED_TEXT = "This shift server is empty. Rejoin from the depot."
 local REFUSED_TEXT = "The truck can't leave right now. Starting another shift."
 
+export type Options = {
+	-- A crew member arrived on their own or with a party (Shift's transit places them).
+	admit: (player: Player) -> (),
+}
+
 export type ShiftTripSystem = {
 	-- Round's `eligible`: only the crew takes part in a run. A plain function, handed over as it is.
 	eligible: (player: Player) -> boolean,
@@ -63,6 +70,8 @@ export type ShiftTripSystem = {
 	crewIds: (self: ShiftTripSystem, except: number?) -> { number },
 	-- The truck the crew rode (from the untrusted depart payload), nil when unknown.
 	truck: (self: ShiftTripSystem) -> number?,
+	-- The contract's client the crew is working for (the transit slip's destination).
+	client: (self: ShiftTripSystem) -> string,
 	startable: (self: ShiftTripSystem, now: number) -> number,
 	sendHome: (self: ShiftTripSystem, results: ShiftTypes.ShiftResults?, shift: number, now: number) -> boolean,
 	isLeaving: (self: ShiftTripSystem, now: number) -> boolean,
@@ -109,7 +118,7 @@ end
 
 local ShiftTripSystem = {}
 
-function ShiftTripSystem.new(): ShiftTripSystem
+function ShiftTripSystem.new(options: Options): ShiftTripSystem
 	local members = ShiftCrewTracker.new()
 	local contract: DepotTypes.Contract = DepotContractUtils.tonight(DepotConstants.CONTRACTS, os.time())
 	local truck: number? = nil
@@ -118,14 +127,6 @@ function ShiftTripSystem.new(): ShiftTripSystem
 
 	local function crewPlayers(): { Player }
 		return playersOf(members:present(presentIds()))
-	end
-
-	local function toLoadingBay(player: Player)
-		local character = player.Character
-		local index = table.find(members:present(presentIds()), player.UserId) or 1
-		if character ~= nil then
-			character:PivotTo(OfficeServiceServer:spawnCFrame(index))
-		end
 	end
 
 	local system: ShiftTripSystem = {
@@ -144,7 +145,12 @@ function ShiftTripSystem.new(): ShiftTripSystem
 		start = function(_self, onChanged)
 			changed = onChanged
 			QueueServiceServer:configure({ homeRole = DepotConstants.ROLE_DEPOT })
-			QueueServiceServer:setArrivalPoint(DepotConstants.ROLE_SHIFT, function(_player, index)
+			-- A local move leaves the party where it stands; the transit moves them once their screens are covered.
+			QueueServiceServer:setArrivalPoint(DepotConstants.ROLE_SHIFT, function(player, index)
+				local character = player.Character
+				if character ~= nil then
+					return character:GetPivot()
+				end
 				return OfficeServiceServer:spawnCFrame(index)
 			end)
 			local arrived = QueueServiceServer.arrived:Connect(function(party, payload)
@@ -156,11 +162,14 @@ function ShiftTripSystem.new(): ShiftTripSystem
 				truck = DepotContractUtils.truckOf(payload.truck, DepotConstants.MAX_TRUCKS)
 				log:info(`a crew of {#party} arrived for {contract.id}`)
 				changed()
+				for _, player in party do
+					options.admit(player)
+				end
 			end)
 			local late = QueueServiceServer.joinedLate:Connect(function(player)
 				if members:add(player.UserId) then
-					toLoadingBay(player)
 					changed()
+					options.admit(player)
 				end
 			end)
 			local returned = QueueServiceServer.returned:Connect(function(player, _payload)
@@ -220,6 +229,10 @@ function ShiftTripSystem.new(): ShiftTripSystem
 
 		truck = function(_self)
 			return truck
+		end,
+
+		client = function(_self)
+			return contract.client
 		end,
 
 		startable = function(_self, now)

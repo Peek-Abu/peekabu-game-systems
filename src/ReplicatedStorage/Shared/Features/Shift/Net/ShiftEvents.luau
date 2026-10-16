@@ -1,8 +1,8 @@
 --!strict
 --[=[
 	ShiftEvents: the Shift's ByteNet packets (client → server only). The server parses the vote
-	(ShiftVoteRules) and ignores it outside results, and accepts a platform report only from
-	ShiftPlatformRules' fixed enum.
+	(ShiftVoteRules) and ignores it outside results, accepts a platform report only from
+	ShiftPlatformRules' fixed enum, and a transit ready report only for the sender's own hold.
 
 	Boot-timing note (the CarryEvents precedent): the client waits for the per-namespace replicated value the
 	server creates when IT requires this module (at ShiftServiceServer load).
@@ -33,6 +33,12 @@ local ShiftEvents = ByteNet.defineNamespace(NAMESPACE, function()
 			-- the server drops any other value and keeps the first valid report.
 			Platform = ByteNet.definePacket({
 				value = ByteNet.uint8,
+				reliabilityType = "reliable",
+			}),
+			-- The transit hold id this client is ready for (it sees the new office, placed, streamed in and lit); the
+			-- server takes it only for the player's own built hold (ShiftTransitTracker.markReady).
+			TransitReady = ByteNet.definePacket({
+				value = ByteNet.uint32,
 				reliabilityType = "reliable",
 			}),
 		},

@@ -2,7 +2,7 @@
 --[=[
 	ShiftVoteSystem: the results vote (Cleanup Crew spec §3, §6.5): Another shift or Back to depot. It records
 	each crew member's vote (the `Vote` packet through RequestHandler, or ShiftServiceServer:vote), forgets a
-	leaver's, and resolves the vote as soon as ShiftVoteRules decides it (everyone present has voted, a majority
+	leaver's (whose absence may decide an open vote: it is resolved again a frame later), and resolves the vote as soon as ShiftVoteRules decides it (everyone present has voted, a majority
 	exists, or the vote timed out); the decision goes back to the service (`deps.decided`). The tally feeds the
 	`shift` world entry.
 
@@ -12,6 +12,7 @@
 	@class ShiftVoteSystem
 ]=]
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
@@ -34,7 +35,7 @@ export type Deps = {
 }
 
 export type ShiftVoteSystem = {
-	-- Listens for the `Vote` packet; returns the stopper.
+	-- Listens for the `Vote` packet and for leavers; returns the stopper.
 	start: (self: ShiftVoteSystem) -> () -> (),
 	vote: (self: ShiftVoteSystem, player: Player, choice: ShiftTypes.Vote) -> boolean,
 	forget: (self: ShiftVoteSystem, userId: number) -> (),
@@ -67,12 +68,28 @@ function ShiftVoteSystem.new(deps: Deps): ShiftVoteSystem
 	})
 
 	system = {
-		start = function(_self)
-			return ShiftEvents.packets.Vote.listen(function(data: string, player: Player?)
+		start = function(self)
+			local listening = ShiftEvents.packets.Vote.listen(function(data: string, player: Player?)
 				if player then
 					onVote(data, player)
 				end
 			end)
+			local leaving = Players.PlayerRemoving:Connect(function(player: Player)
+				self:forget(player.UserId)
+				deps.publish()
+				-- Their absence may decide the vote (everyone left has voted, or a majority now exists).
+				if deps.isOpen() then
+					task.defer(function()
+						if deps.isOpen() then
+							self:resolve(false, player.UserId)
+						end
+					end)
+				end
+			end)
+			return function()
+				listening()
+				leaving:Disconnect()
+			end
 		end,
 
 		--[=[

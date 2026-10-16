@@ -1,11 +1,17 @@
 --!strict
 --[=[
-	ShiftServiceServer: one Cleanup Crew shift, start to vote (spec §3, §6.5). It configures Round (a 5 s
-	arrival countdown, the 7:00 run, late join; results handed straight back, because Round cannot hold
-	them) and follows its phases through ShiftPhaseRules. Around them:
+	ShiftServiceServer: one Cleanup Crew shift, start to vote (spec §3, §6.5). It configures Round (the 7:00 run,
+	late join; results handed straight back, because Round cannot hold them) and follows its phases through
+	ShiftPhaseRules. Around them:
 
-	- run start: the clearance target, the office's spawns (OfficeServiceServer:beginShift), the crew moved
-	  to the loading bay, where the crew respawns (anyone else respawns at the depot where this server runs
+	- the transit (ShiftTransitSystem): a shift never starts in front of anyone. The crew's arrival, Another shift and
+	  the next shift begin a transit (`starting`): the crew is held (anchored) behind the load screen, and only once
+	  every screen is covered does the transit reset the last shift and prepare this one (ShiftSiteSystem: the variant,
+	  the quota for the crew, the clearance target and the office rebuilt and spawned), then place the crew in the truck.
+	  Once the whole crew's clients are ready (or the transit times out) Round's run starts (startNow), so the clock
+	  starts with the crew in; Occupant hears `running` only after the office is built.
+	  A member arriving on their own (late, or with a second party) is admitted into the transit or held on their own;
+	- run start: the crew respawns in the loading bay (anyone else respawns at the depot where this server runs
 	  it; DeathServiceServer:setSpawnPoint);
 	- banking: Cargo's `onBanked` (ShiftBankingSystem) adds trash to Round's `clearance` counter and salvage
 	  to `bonus`, keeps per-player scores, and stamps QUOTA MET once;
@@ -32,7 +38,6 @@
 	@class ShiftServiceServer
 ]=]
 
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -45,27 +50,23 @@ local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local RoundTypes = require(ReplicatedStorage.Shared.Features.Round.Data.RoundTypes)
 local ToastRegistry = require(ReplicatedStorage.Shared.Features.Toast.Data.ToastRegistry)
 local ShiftConstants = require(ShiftShared.Data.ShiftConstants)
-local CargoRegistry = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoRegistry)
 local ShiftTypes = require(ShiftShared.Data.ShiftTypes)
 local ShiftSnapshotUtils = require(ShiftShared.Utils.ShiftSnapshotUtils)
 local ShiftPhaseRules = require(ShiftServer.Rules.ShiftPhaseRules)
 local ShiftNoticeUtils = require(ShiftServer.Utils.ShiftNoticeUtils)
-local ShiftResultsUtils = require(ShiftServer.Utils.ShiftResultsUtils)
 local ShiftRosterTracker = require(ShiftServer.State.ShiftRosterTracker)
 local ShiftBankingSystem = require(ShiftServer.Systems.ShiftBankingSystem)
 local ShiftTripSystem = require(ShiftServer.Systems.ShiftTripSystem)
+local ShiftTransitSystem = require(ShiftServer.Systems.ShiftTransitSystem)
+local ShiftSiteSystem = require(ShiftServer.Systems.ShiftSiteSystem)
 local ShiftVoteSystem = require(ShiftServer.Systems.ShiftVoteSystem)
 local ShiftOvertimeSystem = require(ShiftServer.Systems.ShiftOvertimeSystem)
 local ShiftTimeClockSystem = require(ShiftServer.Systems.ShiftTimeClockSystem)
-local ShiftAnalyticsSystem = require(ShiftServer.Systems.ShiftAnalyticsSystem)
 local ShiftAnalyticsWatchSystem = require(ShiftServer.Systems.ShiftAnalyticsWatchSystem)
 local ShiftReviewSystem = require(ShiftServer.Systems.ShiftReviewSystem)
 local ShiftCrewStatusSystem = require(ShiftServer.Systems.ShiftCrewStatusSystem)
 local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
-local OfficeServiceServer = require(ServerScriptService.Features.Office.OfficeServiceServer)
-local OfficeSpawnUtils = require(ServerScriptService.Features.Office.Utils.OfficeSpawnUtils)
-local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
 local RoundServiceServer = require(ServerScriptService.Features.Round.RoundServiceServer)
 local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
 local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
@@ -82,18 +83,30 @@ local log = Logger.new("ShiftServiceServer")
 
 local state: ShiftTypes.ShiftState = ShiftPhaseRules.initial(ShiftConstants.QUOTA, ShiftConstants.VARIANT)
 local results: ShiftTypes.ShiftResults? = nil
--- Salvage this run's roll offered (the review's "salvage found N of M").
-local offered = 0
+-- The office as this run's site: its variant, quota and build, and what its roll offered.
+local site = ShiftSiteSystem.new()
 local resetPending = false
 -- Set once the clock-out has ended Round's run: tick repeats `endShift` until Round leaves running.
 local endingRun = false
 -- Every crew member's run so far, kept past leaving so their work stays in the crew totals.
 local roster = ShiftRosterTracker.new()
+-- The load screen between the depot and the office and between shifts; built below, once its steps exist.
+local transit: ShiftTransitSystem.ShiftTransitSystem
+-- The clock step (below); an arrival in the lobby runs it to start the crew's transit.
+local step: () -> ()
 -- The crew and the trips between the depot and the office (Queue); only the crew starts, takes part and votes.
-local trip = ShiftTripSystem.new()
+local trip = ShiftTripSystem.new({
+	admit = function(player: Player)
+		if state.phase == "lobby" and not transit:active() then
+			-- The crew's transit starts on the next step and holds them with everyone else.
+			task.defer(step)
+			return
+		end
+		transit:admit(player)
+	end,
+})
 -- The results vote (ShiftVoteSystem); built below, once finishReset exists.
 local voting: ShiftVoteSystem.ShiftVoteSystem
-local rng = Random.new()
 local publishScheduled = false
 local stoppers: { () -> () } = {}
 -- Every state change (a copy), for Occupant (Harlow follows the run, its break and its tier).
@@ -132,14 +145,6 @@ local function publish()
 	end)
 end
 
--- Runs one step; a throwing step is logged (not rethrown) and false is returned.
-local function guarded(label: string, step: () -> ()): boolean
-	return xpcall(step, function(err: unknown): unknown
-		log:error(`{label} failed: {err}`)
-		return err
-	end)
-end
-
 -- The one way the state changes: tells the crew what the pacing did, tells listeners, republishes.
 local function setState(nextState: ShiftTypes.ShiftState)
 	local before = state
@@ -148,54 +153,74 @@ local function setState(nextState: ShiftTypes.ShiftState)
 	publish()
 	-- Last, each in its own guard: a throwing toast cannot skip the signal or the publish.
 	for _, notice in ShiftNoticeUtils.notices(before, nextState) do
-		guarded("pacing notice", function()
+		xpcall(function()
 			ToastServiceServer:send("all", notice)
+		end, function(err: unknown)
+			log:error(`pacing notice failed: {err}`)
 		end)
 	end
 end
 
--- Clears everything the shift made and waits in the lobby (the tick starts the next countdown). Always
--- reaches the lobby, even when a reset step throws.
-local function finishReset()
-	guarded("office reset", function()
-		OfficeServiceServer:reset()
-	end)
-	guarded("vacuum reset", function()
-		VacuumServiceServer:reset()
-	end)
-	guarded("cargo reset", function()
-		CargoServiceServer:reset()
-	end)
+-- Forgets the last run's vote, roster and review.
+local function clearRun()
 	voting:clear()
 	roster:clear()
 	results = nil
 	endingRun = false
+end
+
+-- Clears everything the shift made (each step guarded: a throwing reset never stops the next shift).
+local function clearShift()
+	site:clear()
+	clearRun()
 	resetPending = false
+end
+
+-- Clears everything the shift made and waits in the lobby (the tick starts the next transit). Always
+-- reaches the lobby, even when a reset step throws.
+local function finishReset()
+	transit:cancel()
+	clearShift()
 	setState(ShiftPhaseRules.toLobby(state))
 end
 
-local function beginRun()
-	voting:clear()
-	roster:clear()
-	results = nil
-	endingRun = false
-	RoundServiceServer:setTarget(ShiftConstants.CLEARANCE, state.quota)
-	local plan = OfficeServiceServer:beginShift({
-		seed = rng:NextInteger(1, 1000000000),
-		variant = state.variant,
-		quota = state.quota,
-	})
-	offered = OfficeSpawnUtils.salvageCount(plan)
-	log:info(
-		`shift {state.shift} started: variant {state.variant}, greed {if plan.greed ~= nil then plan.greed.kind else "?"}`
-	)
-	VacuumServiceServer:setCrew(RoundServiceServer:participants())
-	for index, player in RoundServiceServer:participants() do
-		local character = player.Character
-		if character ~= nil then
-			character:PivotTo(OfficeServiceServer:spawnCFrame(index))
-		end
+-- Under the transit's cover: clears the last shift, then picks the next run's variant and the quota for the crew,
+-- and rebuilds and spawns the office. The run itself starts when the transit settles.
+local function prepareShift()
+	clearShift()
+	local choice = site:prepare(RoundServiceServer:getPhase().round + 1, #trip:crewIds())
+	local nextState = table.clone(state)
+	nextState.variant = choice.variant
+	nextState.quota = choice.quota
+	setState(nextState)
+end
+
+-- Begins the crew's transit (from the lobby, or from results for Another shift). False when nobody is here to go.
+local function startTransit(): boolean
+	if transit:active() then
+		return true
 	end
+	local crew = trip:crew()
+	if #crew == 0 then
+		return false
+	end
+	local nextState = ShiftPhaseRules.transit(state, now() + ShiftConstants.TRANSIT_TIMEOUT)
+	if nextState == nil then
+		return false
+	end
+	setState(nextState)
+	return transit:begin(crew)
+end
+
+-- The run has started. After a transit the office is already built and the crew placed; a run started some other way
+-- (an admin's round start) builds it here and moves the crew into the truck.
+local function beginRun(wasPrepared: boolean)
+	clearRun()
+	if not wasPrepared then
+		site:build({ variant = state.variant, quota = state.quota }, RoundServiceServer:participants())
+	end
+	log:info(`shift {state.shift} started: variant {state.variant}, quota {state.quota}`)
+	VacuumServiceServer:setCrew(RoundServiceServer:participants())
 	ToastServiceServer:send("all", {
 		text = `Shift {state.shift}: bank {state.quota} of site value before the clock runs out. Clean what you find: it is worth more.`,
 		style = ShiftConstants.TOAST_STICKY,
@@ -203,32 +228,17 @@ local function beginRun()
 	})
 end
 
--- The review, from Round's counters (they are cleared once Round returns to its lobby).
-local function buildResults(outcome: string): ShiftTypes.ShiftResults
-	-- Everyone taking part is listed, even with nothing done yet; leavers stay from the roster.
-	for _, player in trip:crew() do
-		roster:record(player.UserId, player.DisplayName, {})
-	end
-	return ShiftResultsUtils.build({
+-- The review (ShiftReviewSystem.results: never throws, so the shift can always end), from Round's counters, which are
+-- cleared once Round returns to its lobby; leavers stay from the roster.
+local function safeResults(outcome: string): ShiftTypes.ShiftResults
+	return ShiftReviewSystem.results({
 		outcome = outcome,
 		quota = state.quota,
-		cleared = RoundServiceServer:teamValue(ShiftConstants.CLEARANCE),
-		bonus = RoundServiceServer:teamValue(ShiftConstants.BONUS),
 		quotaMet = state.quotaMet,
-		crew = roster:list(),
-		offered = offered,
-		lookup = CargoRegistry.get,
+		crew = trip:crew(),
+		roster = roster,
+		offered = site:offered(),
 	})
-end
-
--- The review, or a bare one when building it throws: the shift must always be able to end.
-local function safeResults(outcome: string): ShiftTypes.ShiftResults
-	local ok, built = pcall(buildResults, outcome)
-	if ok then
-		return built
-	end
-	log:error(`building the results failed: {built}`)
-	return ShiftResultsUtils.bare(outcome, state.quota, state.quotaMet)
 end
 
 local function onRoundPhase(roundState: RoundTypes.RoundState)
@@ -245,18 +255,22 @@ local function onRoundPhase(roundState: RoundTypes.RoundState)
 	if nextState.phase == "results" and results == nil then
 		results = safeResults(roundState.outcome or "timeout")
 	end
-	if nextState.phase == "running" and before ~= "running" then
-		-- Each run's A/B variant (spec §4; rewards never read it), chosen before anyone hears of the run.
-		nextState.variant = ShiftAnalyticsSystem.pickVariant(nextState.shift)
-		-- The quota scales with the crew (ShiftQuotaFormulas); everything banked counts toward it.
-		nextState.quota = ShiftQuotaFormulas.quota(#RoundServiceServer:participants())
+	local starting = nextState.phase == "running" and before ~= "running"
+	local ready = if starting then site:take() else nil
+	if starting then
+		-- Chosen by the transit (prepareShift), which built the office for them; else chosen now, before anyone hears.
+		local choice = ready or site:choose(nextState.shift, #RoundServiceServer:participants())
+		nextState.variant = choice.variant
+		nextState.quota = choice.quota
+		-- A run started while the transit still holds the crew (an admin's start) releases them.
+		transit:cancel()
 	end
 	if before == "running" and nextState.phase ~= "running" then
 		VacuumServiceServer:setCrew({})
 	end
 	setState(nextState)
-	if nextState.phase == "running" and before ~= "running" then
-		beginRun()
+	if starting then
+		beginRun(ready ~= nil)
 	end
 end
 
@@ -298,23 +312,35 @@ voting = ShiftVoteSystem.new({
 	eligible = trip.eligible,
 	presentIds = presentIds,
 	publish = publish,
-	-- Back to depot: the crew rides home with the review; if the trip is refused, the reset is another shift.
+	-- Back to depot: the crew rides home with the review. Another shift (or a refused trip home): the transit covers
+	-- the crew's screens before the last shift is cleared and the next one built.
 	decided = function(depot: boolean)
-		if depot then
-			trip:sendHome(results, state.shift, now())
+		if depot and trip:sendHome(results, state.shift, now()) then
+			finishReset()
+			return
 		end
-		finishReset()
+		if not startTransit() then
+			finishReset()
+		end
 	end,
 })
 
-local function step()
+transit = ShiftTransitSystem.new({
+	prepare = prepareShift,
+	abandoned = finishReset,
+	slip = function(): (string?, number?)
+		return trip:client(), trip:truck()
+	end,
+})
+
+function step()
 	local advanced = ShiftPhaseRules.advance(state, now())
 	if advanced ~= nil then
 		setState(advanced)
 	end
 	local action = ShiftPhaseRules.tick(state, now(), trip:startable(now()))
 	if action == "start" then
-		RoundServiceServer:startCountdown()
+		startTransit()
 	elseif action == "endShift" then
 		if endingRun then
 			return
@@ -376,6 +402,7 @@ local ShiftServiceServer: ShiftServiceServer = {
 		})
 		DeathServiceServer:setSpawnPoint(trip.spawnFor)
 		trip:start(publish)
+		table.insert(stoppers, transit:start())
 		CargoServiceServer:onBanked(onBanked)
 		table.insert(stoppers, ShiftAnalyticsWatchSystem.start(changed, trip))
 		table.insert(stoppers, ShiftReviewSystem.start(roster, isRunning))
@@ -387,18 +414,6 @@ local ShiftServiceServer: ShiftServiceServer = {
 		table.insert(stoppers, overtime.start())
 
 		local phases = RoundServiceServer.phaseChanged:Connect(onRoundPhase)
-		local leaving = Players.PlayerRemoving:Connect(function(player)
-			voting:forget(player.UserId)
-			publish()
-			-- Their absence may decide the vote (everyone left has voted, or a majority now exists).
-			if state.phase == "results" then
-				task.defer(function()
-					if state.phase == "results" then
-						voting:resolve(false, player.UserId)
-					end
-				end)
-			end
-		end)
 		local elapsed = 0
 		local ticking = RunService.Heartbeat:Connect(function(deltaTime)
 			elapsed += deltaTime
@@ -409,7 +424,6 @@ local ShiftServiceServer: ShiftServiceServer = {
 		end)
 		table.insert(stoppers, function()
 			phases:Disconnect()
-			leaving:Disconnect()
 			ticking:Disconnect()
 		end)
 		table.insert(stoppers, voting:start())
@@ -461,6 +475,7 @@ local ShiftServiceServer: ShiftServiceServer = {
 		run first; the reset then happens when Round reports results.
 	]=]
 	resetShift = function(_self)
+		transit:cancel()
 		if RoundServiceServer:getPhase().phase == "running" then
 			resetPending = true
 			RoundServiceServer:endRound(ShiftConstants.OUTCOME_RESET)
@@ -502,6 +517,7 @@ local ShiftServiceServer: ShiftServiceServer = {
 			resetPending = resetPending,
 			crew = #trip:crewIds(),
 			leaving = trip:isLeaving(now()),
+			transit = transit:active(),
 		}
 	end,
 }

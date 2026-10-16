@@ -12,6 +12,12 @@
 	M2: Harlow's route, rest point, the loading bay he may walk (`loadingBay`) and the one safe place, the truck's box
 	(`safeZone`).
 
+	Ordering guarantee for anything that spawns into a shift (Occupant's Manager): `ready` fires (deferred, with the shift
+	folder) once `beginShift` has rebuilt the office and placed every spawn, and `isReady` says whether that shift is
+	still standing (false after `reset`). Shift's transit calls `beginShift` before Shift enters `running`, so by the
+	time ShiftServiceServer.changed reports `running` the office, its route and `container()` are already the new
+	shift's. `seed` is the rebuilt layout's seed (the model's LayoutSeed attribute), which the transit hands clients.
+
 	Spec-exempt shell (Instances, signals); the decisions are the specced OfficeLayoutRules, OfficeLayoutUtils,
 	OfficeSpawnUtils and OfficeSpawnRules.
 
@@ -27,6 +33,7 @@ local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.Carg
 local CargoTypes = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoTypes)
 local CargoAppraisalFormulas = require(ReplicatedStorage.Shared.Features.Cargo.Utils.CargoAppraisalFormulas)
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
+local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local OfficeConstants = require(OfficeServer.Data.OfficeConstants)
 local OfficeLayoutConstants = require(OfficeServer.Data.OfficeLayoutConstants)
 local OfficeTypes = require(OfficeServer.Data.OfficeTypes)
@@ -63,6 +70,10 @@ local dressing = OfficeSearchedDressingSystem.new()
 local hidden: { [BasePart]: BasePart } = {}
 local lastPlan: OfficeTypes.SpawnPlan? = nil
 local stoppers: { () -> () } = {}
+-- The seed of the layout standing now (nil: the boot layout).
+local layoutSeed: number? = nil
+-- Fired (with the shift folder) once a shift's office is rebuilt and every spawn placed.
+local ready: SignalTyped.Signal<Folder> = SignalTyped.new()
 
 -- The floor point under a marker, in the world.
 local function floorAt(marker: Marker): CFrame
@@ -136,6 +147,7 @@ local function rebuild(seed: number)
 	local current = OfficeBuildSystem.build(layout, OfficeConstants.ORIGIN)
 	current.model:SetAttribute("LayoutSeed", seed)
 	built = current
+	layoutSeed = seed
 	OfficeDecorSystem.build(layout, OfficeConstants.ORIGIN, current.model)
 end
 
@@ -167,6 +179,9 @@ end
 
 export type OfficeServiceServer = {
 	dependencies: { string },
+	ready: SignalTyped.Signal<Folder>,
+	isReady: (self: OfficeServiceServer) -> boolean,
+	seed: (self: OfficeServiceServer) -> number?,
 	start: (self: OfficeServiceServer) -> (),
 	stop: (self: OfficeServiceServer) -> (),
 	getState: (self: OfficeServiceServer) -> { [string]: any },
@@ -188,6 +203,7 @@ export type OfficeServiceServer = {
 
 local OfficeServiceServer: OfficeServiceServer = {
 	dependencies = { "VacuumServiceServer", "CargoServiceServer" },
+	ready = ready,
 
 	--[=[
 		Validates and builds the office, and reveals hidden items as their piles are cleared.
@@ -292,7 +308,22 @@ local OfficeServiceServer: OfficeServiceServer = {
 		end
 		lastPlan = plan
 		log:info(`shift spawns: {#plan.piles} piles, {#plan.items} items, worth {plan.value} clean`)
+		ready:Fire(folder)
 		return plan
+	end,
+
+	--[=[
+		Whether a shift's office is built and spawned (after `beginShift`, until `reset`).
+	]=]
+	isReady = function(_self)
+		return shiftFolder ~= nil
+	end,
+
+	--[=[
+		The seed of the layout standing now, or nil for the layout built at start.
+	]=]
+	seed = function(_self)
+		return layoutSeed
 	end,
 
 	--[=[

@@ -4,7 +4,8 @@
 	the office; Cleanup Crew spec §3 steps 2-3). `card` is a Charm atom the HUD widget reads; `show` takes a
 	card from the server (DepotEvents.Card), checks its kind and queues it behind a card still on screen (at
 	most MAX_QUEUED_CARDS wait; the oldest is dropped); `expire` moves on once a card's time is up. Times are
-	os.clock(). `board` / `lastShift` hold the contract board's open contract id and the player's last shift
+	os.clock(). Under the transit screen the drive card is dropped (`dropDrive`) and the card waiting behind the
+	screen gets its full time once it clears (`restamp`). `board` / `lastShift` hold the contract board's open contract id and the player's last shift
 	(DepotEvents.Board / LastShift). A mirror of what the server sent; nothing here is sent back.
 
 	@class DepotStore
@@ -108,6 +109,36 @@ function DepotStore.expire(now: number)
 	else
 		card(nil)
 	end
+end
+
+-- The transit screen came up: the drive card (and any queued) is dropped, since the screen is the trip now; the next
+-- card (the arrival folder) shows from `now`.
+function DepotStore.dropDrive(now: number)
+	for index = #pending, 1, -1 do
+		if pending[index].kind == "drive" then
+			table.remove(pending, index)
+		end
+	end
+	local current = card()
+	if current ~= nil and current.kind == "drive" then
+		local nextCard = table.remove(pending, 1)
+		if nextCard ~= nil then
+			present(nextCard, now)
+		else
+			card(nil)
+		end
+	end
+end
+
+-- The transit screen cleared: the card on screen gets its full time from `now` (it waited behind the screen).
+function DepotStore.restamp(now: number)
+	local current = card()
+	if current == nil then
+		return
+	end
+	local stamped = table.clone(current)
+	stamped.expiresAt = now + secondsFor(current.kind)
+	card(stamped)
 end
 
 -- Opens the board on a contract id from the server; an unknown id reads as the first contract. Returns the id shown.

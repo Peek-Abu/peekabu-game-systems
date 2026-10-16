@@ -11,6 +11,10 @@
 	- ShiftAnalyticsSystem `loaded`: each accepted Load's cargo items, and its salvage when the shift is in overtime
 	  (the company rank's award reads both off the review; RankFormulas).
 
+	`results` builds the performance review at the end of a shift (ShiftResultsUtils): everyone taking part is listed,
+	even with nothing done yet (leavers stay from the roster); a bare review when building it throws, so the shift can
+	always end (moved from ShiftServiceServer).
+
 	`crew()` reads the running roster back (copies) for the company rank's award at the end of the shift
 	(RankShiftSystem); empty when the system is not running.
 
@@ -38,6 +42,22 @@ local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumSe
 local ShiftRosterTracker = require(ServerScriptService.Features.Shift.State.ShiftRosterTracker)
 local ShiftAnalyticsSystem = require(ServerScriptService.Features.Shift.Systems.ShiftAnalyticsSystem)
 local ShiftAnalyticsWatchSystem = require(ServerScriptService.Features.Shift.Systems.ShiftAnalyticsWatchSystem)
+local ShiftResultsUtils = require(ServerScriptService.Features.Shift.Utils.ShiftResultsUtils)
+local Logger = require(ReplicatedStorage.Shared.Core.Logger)
+
+local log = Logger.new("ShiftReviewSystem")
+
+-- What the end of a shift hands the review.
+export type ReviewInput = {
+	outcome: string,
+	quota: number,
+	quotaMet: boolean,
+	-- The crew still here (everyone taking part is listed, even with nothing done yet).
+	crew: { Player },
+	roster: ShiftRosterTracker.ShiftRosterTracker,
+	-- Salvage the run's roll offered.
+	offered: number,
+}
 
 local function nameOf(userId: number): string?
 	local player = Players:GetPlayerByUserId(userId)
@@ -53,6 +73,33 @@ local ShiftReviewSystem = {}
 function ShiftReviewSystem.crew(): { ShiftTypes.CrewStats }
 	local roster = current
 	return if roster ~= nil then roster:list() else {}
+end
+
+local function build(input: ReviewInput): ShiftTypes.ShiftResults
+	for _, player in input.crew do
+		input.roster:record(player.UserId, player.DisplayName, {})
+	end
+	return ShiftResultsUtils.build({
+		outcome = input.outcome,
+		quota = input.quota,
+		cleared = RoundServiceServer:teamValue(ShiftConstants.CLEARANCE),
+		bonus = RoundServiceServer:teamValue(ShiftConstants.BONUS),
+		quotaMet = input.quotaMet,
+		crew = input.roster:list(),
+		offered = input.offered,
+		lookup = CargoRegistry.get,
+	})
+end
+
+-- The review from Round's counters (read before Round clears them), or a bare one when building it throws: the shift
+-- must always be able to end.
+function ShiftReviewSystem.results(input: ReviewInput): ShiftTypes.ShiftResults
+	local ok, built = pcall(build, input)
+	if ok then
+		return built
+	end
+	log:error(`building the results failed: {built}`)
+	return ShiftResultsUtils.bare(input.outcome, input.quota, input.quotaMet)
 end
 
 function ShiftReviewSystem.start(roster: ShiftRosterTracker.ShiftRosterTracker, running: () -> boolean): () -> ()

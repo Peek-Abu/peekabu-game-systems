@@ -77,6 +77,21 @@ function ShiftPhaseRules.toLobby(state: ShiftState): ShiftState
 end
 
 --[=[
+	The transit begins (ShiftTransitSystem: the load screen while the office is rebuilt and the crew placed): from the
+	lobby or a finished shift's results (Another shift) into `starting`, which ends at the transit's deadline `endsAt`.
+	Round's `running` then follows as usual. Nil while starting or running.
+]=]
+function ShiftPhaseRules.transit(state: ShiftState, endsAt: number): ShiftState?
+	if state.phase ~= "lobby" and state.phase ~= "results" then
+		return nil
+	end
+	local nextState = ShiftPhaseRules.toLobby(state)
+	nextState.phase = "starting"
+	nextState.endsAt = endsAt
+	return nextState
+end
+
+--[=[
 	Follows a Round phase change. Results are held until the vote even after Round returns to its lobby.
 ]=]
 function ShiftPhaseRules.follow(state: ShiftState, round: RoundTypes.RoundState, now: number): ShiftState?

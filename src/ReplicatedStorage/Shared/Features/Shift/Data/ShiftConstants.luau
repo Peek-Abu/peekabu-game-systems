@@ -96,8 +96,30 @@ return table.freeze({
 	QUOTA_BY_CREW = table.freeze({ 770, 830, 870, 900 }),
 	-- 7:00 on the clock.
 	SHIFT_SECONDS = 420,
-	-- The arrival card (Round's countdown).
+	-- Round's countdown, configured but unused: a shift starts with Round's startNow once its transit settles.
 	ARRIVAL_SECONDS = 5,
+	-- The transit: the load screen between the depot and the office and between shifts (ShiftTransitSystem). The
+	-- crew is held (anchored) the whole time. The server publishes the holds (TRANSIT_ENTRY), waits COVER_SECONDS for
+	-- the clients' screens to fade in (FADE_IN), then resets and rebuilds the office and places the crew in its truck.
+	-- Each client reveals (FADE_OUT, after the ARRIVED stamp for ARRIVED_SECONDS) once it sees the new office, its
+	-- character within PLACE_TOLERANCE studs of its spot, the area streamed in (STREAM_TIMEOUT) and the lighting
+	-- preset applied, but never before MIN_SECONDS, and anyway after CLIENT_TIMEOUT. The shift clock starts once the
+	-- whole crew reported ready, or TRANSIT_TIMEOUT after the hold began.
+	TRANSIT_ENTRY = "shiftTransit",
+	TRANSIT_COVER_SECONDS = 0.7,
+	TRANSIT_TIMEOUT = 15,
+	TRANSIT_CLIENT_TIMEOUT = 12,
+	TRANSIT_MIN_SECONDS = 1.5,
+	TRANSIT_FADE_IN = 0.3,
+	TRANSIT_FADE_OUT = 0.5,
+	TRANSIT_ARRIVED_SECONDS = 0.45,
+	TRANSIT_PLACE_TOLERANCE = 8,
+	TRANSIT_STREAM_TIMEOUT = 6,
+	-- A client starts black until its first shift and transit sync (at most BOOT_SECONDS), so nothing unlit shows.
+	TRANSIT_BOOT_SECONDS = 4,
+	-- A respawn (after a catch) blinks black this long, then fades out: no load screen.
+	TRANSIT_BLINK_SECONDS = 0.25,
+	TRANSIT_WAIT_TEXT = "Waiting for the rest of the crew.",
 	CLOCK_OUT_SECONDS = 10,
 	-- How long the results vote stays open.
 	VOTE_SECONDS = 30,
