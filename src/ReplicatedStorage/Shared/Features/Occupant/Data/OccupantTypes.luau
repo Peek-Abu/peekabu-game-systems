@@ -15,7 +15,9 @@ export type Mode = "patrol" | "investigate" | "chase" | "search" | "rest" | "cat
 -- Where he is inside a mode (published as an attribute; the client's typing, face and gestures follow it):
 -- work: walking to the desk, typing, the ambush (stopped dead, head swivelled); a sit-in also tips his head down under
 -- the desk, holds it there and brings it back up, then types a little more; stare: walking to the spot, holding still,
--- bending down to look under (a desk or table), or opening the door (a secure supply cabinet: slower, telegraphed).
+-- bending down to look under (a desk or table), or opening the door (a secure supply cabinet: slower, telegraphed);
+-- a slow head turn (behaviours design §11, in `alert` or seated in `work`): the slow turn itself, then the staring contest
+-- (`staring`); `jerk`: the first JERK_SECONDS of the chase a slow turn ends in (his body snaps round to his head).
 export type Phase =
 	"toDesk"
 	| "type"
@@ -28,6 +30,13 @@ export type Phase =
 	| "hold"
 	| "check"
 	| "open"
+	| "slowTurn"
+	| "staring"
+	| "jerk"
+
+-- Which head turn (behaviours design §11.1): the quick snap (the common case), the slow knowing turn ("I know you're
+-- there"), or the slow turn that ends in the staring contest (the rarest).
+export type TurnKind = "snap" | "knowing" | "stare"
 
 -- A moment worth a speech bubble (OccupantConstants.LINES).
 export type Cue = "spotted" | "curious" | "giveUp" | "resting" | "caught" | "ambush" | "sitIn"
@@ -151,6 +160,16 @@ export type Mind = {
 	-- once that reaches their glance delay.
 	glanceId: number?,
 	glanceSeconds: number?,
+	-- The slow turns (behaviours design §11): this head turn's variant; the last head turn's variant and when the last
+	-- slow one began; whether the crew had its staring contest this shift; who had their knowing turn; where each watched
+	-- player stood (their movement sets off the jerk); a developer's forced variant for the next head turn.
+	turn: TurnKind?,
+	lastTurn: TurnKind?,
+	slowAt: number?,
+	stared: boolean?,
+	knowingFor: { [number]: boolean }?,
+	anchors: { [number]: Vector3 }?,
+	forceTurn: TurnKind?,
 	-- Spot id → until when he leaves that spot alone (after a stare that ended in him walking away).
 	cleared: { [string]: number },
 	-- The routine: when the next work break is due, and the last desk he used.
@@ -184,6 +203,8 @@ export type Glimpse = {
 	seen: boolean?,
 	-- Crouching (the character's Crouching attribute): noticed slower in his peripheral zone.
 	crouched: boolean?,
+	-- Flat speed (studs/s, the root's velocity): moving during a slow turn or a stare sets off the jerk (§11.2).
+	speed: number?,
 }
 
 -- Everything the brain decides from, gathered by OccupantServiceServer each think.

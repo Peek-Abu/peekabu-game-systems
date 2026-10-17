@@ -86,6 +86,8 @@ function M.settle(mind: Mind)
 	mind.point = nil
 	mind.hunch = nil
 	mind.nearAt = nil
+	mind.turn = nil
+	mind.anchors = nil
 end
 
 -- Fills in a copy: forgets who he chased and what he heard.

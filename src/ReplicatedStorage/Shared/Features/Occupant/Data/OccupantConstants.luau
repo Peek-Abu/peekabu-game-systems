@@ -92,9 +92,19 @@ local PEEK_FOLD: { [string]: Vector3 } =
 local PEEK_FOLD_MIRROR: { [string]: Vector3 } =
 	table.freeze({ Waist = Vector3.new(-150, 0, 0), Neck = Vector3.new(150, 0, -90) })
 
+-- The slow head turn and the whip that finishes one in a hurry (behaviours design §11): their seconds, shared with the
+-- brain's timing below.
+local SLOW_TURN_SECONDS = 2.0
+local WHIP_SECONDS = 0.15
+
 local GESTURES: { [string]: Gesture } = {
 	-- The ambush: the head snaps round to the point on the long neck (the yaw is aimed live; this is its timing).
 	swivel = { seconds = 0.35, joints = {} },
+	-- The slow turn (§11.2): the same aimed yaw, smootherstepped over SLOW_TURN_SECONDS, the waist leading
+	-- (SLOW_WAIST_SHARE); and the whip that carries a turn the rest of the way over WHIP_SECONDS when the player moves.
+	-- OccupantGestureSystem carries one turn fraction across the two.
+	slowSwivel = { seconds = SLOW_TURN_SECONDS, joints = {} },
+	whip = { seconds = WHIP_SECONDS, joints = {} },
 	-- The stare's check, from beside the knee-hole (STARE_SIDE, STARE_GAP out: far enough that the fold clears the
 	-- top): the fold, then he leans in 1.5 studs so his face hangs at the mouth of the spot, just off its front edge.
 	peek = {
@@ -165,6 +175,8 @@ local DREAD = {
 	BEAT_NEAR_FAST = 0.7,
 	BEAT_AWARE = 0.55,
 	BEAT_CREW = 0.62,
+	-- A slow turn or a stare (behaviours design §11.2): the aware stage at full strength, beating faster.
+	BEAT_SLOW = 0.5,
 	-- The heartbeat sound's volumeScale = look.heart * HEART_GAIN (harlowHeartbeat is registered at 0.8). Measured live
 	-- 2026-10-17 in a chase at ~19 studs (RMS of PlaybackLoudness x Volume x group volume): the old heartbeat sat
 	-- ~19 dB over the old chase music; at 0.75 (chase heart 0.65-0.8) it sits ~5 dB over the louder music.
@@ -258,6 +270,20 @@ local DREAD = {
 			duck = -15,
 			muffle = -20,
 		}),
+		-- His slow turn or his stare (§11.2): unscaled by distance. The music ducks to near-silence (-30 dB) so the creak
+		-- and your heartbeat are all there is; the dread loop sits back too.
+		slowTurn = look({
+			heart = 1,
+			dread = 0.5,
+			vignette = 0.7,
+			desaturate = 0.4,
+			grain = 0.9,
+			red = 0.35,
+			edge = 0.4,
+			squeeze = 3,
+			duck = -30,
+			muffle = -12,
+		}),
 		crew = look({
 			heart = 0.45,
 			dread = 0.5,
@@ -317,6 +343,46 @@ return table.freeze({
 	-- A noise while he already searches: no head turn's beat, he runs straight there, but first his head snaps to it for
 	-- SEARCH_SNAP seconds (no move meanwhile) so it still reads (the developer, 2026-10-17).
 	SEARCH_SNAP = 0.2,
+	-- The slow turns (behaviours design §11, approved 2026-10-17; the snap above stays the common case).
+	-- §11.1 Which turn. A slow variant needs a target he is certain of: not hidden, a clear line, and within
+	-- CERTAIN_RANGE flat studs (the ambush radius) or seen at least CERTAIN_WATCHED seconds a moment ago (Mind.watched,
+	-- decaying WATCH_DECAY a second). Never on a breather, never right after another slow turn, at least SLOW_GAP
+	-- seconds after the last one.
+	CERTAIN_RANGE = 14,
+	CERTAIN_WATCHED = 0.5,
+	SLOW_GAP = 60,
+	-- The staring contest (the rarest): once a shift for the whole crew, only with the menace gauge within STARE_MENACE
+	-- (tension built, not peaking), on a roll under STARE_CHANCE (Senses.rolls[5]).
+	STARE_MENACE = range(20, 70),
+	STARE_CHANCE = 0.35,
+	-- The knowing turn: once a shift per player, only with menace at most KNOWING_MENACE_MAX, on a roll under
+	-- KNOWING_CHANCE (Senses.rolls[6]).
+	KNOWING_MENACE_MAX = 70,
+	KNOWING_CHANCE = 0.5,
+	-- §11.2 The slow turn: his head comes round over SLOW_TURN_SECONDS (the slowSwivel gesture), his waist leading with
+	-- SLOW_WAIST_SHARE of the yaw (all of it by SLOW_WAIST_LEAD of the turn) so the smile comes round last. For the first
+	-- SLOW_SETTLE seconds where the target "stands" follows them (time to freeze at the creak).
+	SLOW_TURN_SECONDS = SLOW_TURN_SECONDS,
+	SLOW_WAIST_SHARE = 0.2,
+	SLOW_WAIST_LEAD = 0.6,
+	SLOW_SETTLE = 0.35,
+	-- Meaningful movement (never a camera turn): a flat speed of STILL_SPEED studs/s or more, or a drift of
+	-- STILL_DISTANCE studs (3D, so a jump counts) from where they stood.
+	STILL_SPEED = 2.5,
+	STILL_DISTANCE = 1.25,
+	-- Moving mid-turn: his head whips the rest of the way over WHIP_SECONDS (the whip gesture) as the jerk begins.
+	WHIP_SECONDS = WHIP_SECONDS,
+	-- §11.3 The staring contest: after the turn he stares, stock still, for a rolled STARE_CONTEST_SECONDS, then bolts
+	-- anyway.
+	STARE_CONTEST_SECONDS = range(4, 7),
+	-- §11.4 The jerk: his body snaps round to his already-turned head over JERK_SECONDS (ease-out) as the chase starts;
+	-- from a chair he pops up with the stand clip at JERK_STAND_SPEED (1.8 s / 8 = 0.225 s).
+	JERK_SECONDS = 0.13,
+	JERK_STAND_SPEED = 8,
+	-- §11.2 The lights during a slow turn or a stare: those within SLOW_FLICKER_RADIUS studs flicker, dark whenever the
+	-- flicker noise is under SLOW_FLICKER_THRESHOLD (the usual flicker: FLICKER_RADIUS, -0.1, mostly lit).
+	SLOW_FLICKER_RADIUS = 34,
+	SLOW_FLICKER_THRESHOLD = 0.15,
 	-- Investigate scans for 4 s; search scans for 2 s at last-seen and nearby authored points. Investigate gives up after
 	-- GIVE_UP_SECONDS (an unreachable point).
 	LOOK_SECONDS = 4,

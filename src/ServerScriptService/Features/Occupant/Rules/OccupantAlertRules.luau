@@ -15,6 +15,9 @@
 	  At the check he chases whoever he sees down the cone his head looks along (OccupantSightUtils.toward: that player
 	  first, else the nearest), else he walks over to investigate the point.
 
+	- The slow turns (§11, OccupantTurnRules): `begin` picks the variant; a knowing turn or a staring contest runs its
+	  own think. `force` is a developer's forced variant (the `occupantturn` command).
+
 	Pure (see OccupantMindUtils).
 
 	@class OccupantAlertRules
@@ -25,11 +28,13 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local OccupantTypes = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantTypes)
+local OccupantTurnRules = require(ServerScriptService.Features.Occupant.Rules.OccupantTurnRules)
 local M = require(ServerScriptService.Features.Occupant.Utils.OccupantMindUtils)
 
 type Mind = OccupantTypes.Mind
 type Senses = OccupantTypes.Senses
 type Glimpse = OccupantTypes.Glimpse
+type TurnKind = OccupantTypes.TurnKind
 type Step = M.Step
 
 local IDLE = M.IDLE
@@ -57,11 +62,19 @@ local OccupantAlertRules = {}
 
 --[=[
 	The head turn to `point` (`target`: the player he glimpsed, nil for a noise): stopped dead, his head swivelled there
-	until the check, TURN_SWIVEL + TURN_HOLD (rolled) from now.
+	until the check, TURN_SWIVEL + TURN_HOLD (rolled) from now. Rarely a slow turn instead (OccupantTurnRules.pick).
 ]=]
 function OccupantAlertRules.begin(current: Mind, senses: Senses, point: Vector3, target: number?): Step
+	local who = OccupantTurnRules.candidate(current, senses, point, target)
+	local kind: TurnKind = OccupantTurnRules.pick(current, senses, who)
+	if OccupantTurnRules.slow(kind) and who ~= nil then
+		return OccupantTurnRules.begin(current, senses, who, kind, false)
+	end
 	local now = senses.now
 	local nextMind = M.enter(current, "alert", now)
+	nextMind.turn = "snap"
+	nextMind.lastTurn = "snap"
+	nextMind.forceTurn = nil
 	M.forget(nextMind)
 	nextMind.steer = nil
 	nextMind.target = target
@@ -116,6 +129,9 @@ end
 	One think in alert mode. Nil when someone is in his front cone (the brain's sight chases them).
 ]=]
 function OccupantAlertRules.think(current: Mind, senses: Senses, seen: { Glimpse }): Step?
+	if OccupantTurnRules.turning(current) then
+		return OccupantTurnRules.think(current, senses, seen)
+	end
 	if #seen > 0 then
 		return nil
 	end
@@ -144,6 +160,35 @@ function OccupantAlertRules.think(current: Mind, senses: Senses, seen: { Glimpse
 	M.forget(nextMind)
 	nextMind.noise = point
 	return { mind = nextMind, intent = { kind = "goTo", position = point, run = false }, cue = "curious" }
+end
+
+-- The modes he can be turned from at once by a developer's force (not at a desk, a spot, a catch or his break).
+local FORCEABLE: { [string]: boolean } = { patrol = true, investigate = true, search = true, alert = true }
+
+--[=[
+	A developer's forced variant (the `occupantturn` command): `kind` (or "auto" to clear) for the next head turn. When he
+	can see `userId` now (a clear line within his sight range, not hidden) and is free to, the turn starts at once at
+	them; else it is armed for his next head turn. Returns the new mind.
+]=]
+function OccupantAlertRules.force(current: Mind, senses: Senses, kind: TurnKind | "auto", userId: number): Mind
+	local nextMind = table.clone(current)
+	if kind == "auto" then
+		nextMind.forceTurn = nil
+		return nextMind
+	end
+	nextMind.forceTurn = kind
+	local glimpse = find(senses.players, userId)
+	if
+		glimpse == nil
+		or not FORCEABLE[current.mode]
+		or OccupantTurnRules.turning(current)
+		or glimpse.hidden == true
+		or not glimpse.clear
+		or (glimpse.position - senses.position).Magnitude > senses.sightRange
+	then
+		return nextMind
+	end
+	return OccupantAlertRules.begin(nextMind, senses, glimpse.position, userId).mind
 end
 
 return OccupantAlertRules

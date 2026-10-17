@@ -18,6 +18,9 @@
 	  back up (TIP_BACK), types TYPE_MORE, stands and walks on, forgetting them and leaving that spot alone
 	  CLEARED_SECONDS. A noise elsewhere, a passer-by or the hider bolting (their exit noise) is an ambush.
 
+	- A slow turn from the chair (§11, OccupantTurnRules): the ambush on a player he is certain of (no one in front of
+	  him) may be the knowing turn or the staring contest instead; seated, he pops up on the jerk.
+
 	Pure (see OccupantMindUtils).
 
 	@class OccupantWorkRules
@@ -30,6 +33,7 @@ local OccupantServer = ServerScriptService.Features.Occupant
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local OccupantTypes = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantTypes)
 local OccupantStareRules = require(OccupantServer.Rules.OccupantStareRules)
+local OccupantTurnRules = require(OccupantServer.Rules.OccupantTurnRules)
 local OccupantDeskUtils = require(OccupantServer.Utils.OccupantDeskUtils)
 local M = require(OccupantServer.Utils.OccupantMindUtils)
 
@@ -164,7 +168,19 @@ local function seated(current: Mind, senses: Senses, seen: { Glimpse }, heard: V
 	if phase ~= "ambush" then
 		local nearest, who = M.nearestNoticed(current, senses, true)
 		if OccupantStareRules.ambushes({ heard = heard ~= nil, seen = #seen > 0, nearest = nearest }) then
+			-- Nobody in front of him: a slow turn from the chair, when he is certain of them and it is picked (§11.1).
+			local point = if heard ~= nil then heard elseif who ~= nil then who.position else nil
+			if #seen == 0 and point ~= nil then
+				local aimed = if heard == nil and who ~= nil then who.userId else nil
+				local candidate = OccupantTurnRules.candidate(current, senses, point, aimed)
+				local kind: OccupantTypes.TurnKind = OccupantTurnRules.pick(current, senses, candidate)
+				if OccupantTurnRules.slow(kind) and candidate ~= nil then
+					return OccupantTurnRules.begin(current, senses, candidate, kind, true)
+				end
+			end
 			local nextMind = M.inPhase(current, "ambush", now, OccupantConstants.AMBUSH_HOLD)
+			nextMind.lastTurn = "snap"
+			nextMind.forceTurn = nil
 			if #seen > 0 then
 				nextMind.point = seen[1].position
 				nextMind.target = seen[1].userId
@@ -294,6 +310,9 @@ end
 	One think in work mode. Nil while walking to the desk when a sighting or a noise needs the usual handling.
 ]=]
 function OccupantWorkRules.think(current: Mind, senses: Senses, seen: { Glimpse }): Step?
+	if OccupantTurnRules.turning(current) then
+		return OccupantTurnRules.think(current, senses, seen)
+	end
 	local heard = M.audible(current, senses)
 	if current.phase == "toDesk" or current.phase == nil then
 		return toDesk(current, senses, seen, heard)

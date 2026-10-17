@@ -21,7 +21,8 @@
 	- stare: at a hiding spot he saw someone go into, or suspects (OccupantStareRules: still, then he looks or leaves);
 	- alert: the head turn (OccupantAlertRules, design §10): someone in his peripheral zone long enough, or a noise from
 	  beside or behind him while he patrols or investigates, stops him dead with only his head swivelled to it for a
-	  beat; then the chase if he sees someone that way, else he investigates the point.
+	  beat; then the chase if he sees someone that way, else he investigates the point. Rarely a slow turn instead
+	  (OccupantTurnRules, design §11): the knowing turn or the staring contest, ending in the jerk into the chase.
 
 	The truck's box (`zone`) is safe: nobody inside it is seen, no noise inside it is followed, so no goal is
 	ever inside it (his kind's pathCosts also make it unwalkable). The loading bay around it (`bay`) is not: he
@@ -53,6 +54,7 @@ local OccupantAlertRules = require(OccupantServer.Rules.OccupantAlertRules)
 local OccupantDirectorRules = require(OccupantServer.Rules.OccupantDirectorRules)
 local OccupantStareRules = require(OccupantServer.Rules.OccupantStareRules)
 local OccupantStuckRules = require(OccupantServer.Rules.OccupantStuckRules)
+local OccupantTurnRules = require(OccupantServer.Rules.OccupantTurnRules)
 local OccupantWorkRules = require(OccupantServer.Rules.OccupantWorkRules)
 local OccupantMenaceFormulas = require(OccupantServer.Utils.OccupantMenaceFormulas)
 local M = require(OccupantServer.Utils.OccupantMindUtils)
@@ -120,8 +122,12 @@ function OccupantBrainRules.settleBody(result: Step, now: number): Step
 	if mind.seated == true and not keepSeat then
 		local nextMind = table.clone(mind)
 		nextMind.seated = false
-		local hurried = mind.mode == "chase" or mind.mode == "investigate"
-		local speed = if hurried then OccupantConstants.AMBUSH_STAND_SPEED else 1
+		-- Into a chase, an investigation or a search he gets up fast; the jerk out of a slow turn pops him up (§11.4).
+		local hurried = mind.mode == "chase" or mind.mode == "investigate" or mind.mode == "search"
+		local speed = if mind.phase == "jerk"
+			then OccupantConstants.JERK_STAND_SPEED
+			elseif hurried then OccupantConstants.AMBUSH_STAND_SPEED
+			else 1
 		nextMind.standUntil = now + OccupantConstants.STAND_SECONDS / speed
 		return M.addEffect(
 			{ mind = nextMind, intent = IDLE, cue = result.cue, effects = result.effects },
@@ -471,7 +477,8 @@ end
 function OccupantBrainRules.step(mind: Mind, senses: Senses): Step
 	local thought = OccupantBrainRules.shutDoor(mind, think(mind, senses))
 	local result = OccupantDirectorRules.track(mind, OccupantBrainRules.settleBody(thought, senses.now), senses)
-	local nextMind = result.mind
+	-- The jerk's phase ends once his head is no longer held on them (an ordinary chase).
+	local nextMind = OccupantTurnRules.settle(result.mind, senses.now)
 	nextMind.bayAt = if M.inZone(senses.position, senses.bay) then (nextMind.bayAt or senses.now) else nil
 	local intent = result.intent
 	local standUntil = nextMind.standUntil

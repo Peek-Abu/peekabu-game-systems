@@ -220,6 +220,37 @@ return function()
 			expect(kinds(up)).to.equal("stand")
 		end)
 
+		it("turns slowly on a player behind him when it is a knowing turn, then pops up on the jerk", function()
+			local look = Vector3.new(-1, 0, 0)
+			local behind = { userId = 8, position = AT_SEAT + Vector3.new(10, 0, 0), clear = true, speed = 0 }
+			local rolls = { 0.5, 0.5, 0.5, 0, 1, 0 }
+			local mind = seated(101)
+			mind.menace = 30
+			local turn = OccupantBrainRules.step(
+				mind,
+				senses({ now = 102, position = AT_SEAT, look = look, players = { behind }, rolls = rolls })
+			)
+			expect(turn.mind.mode).to.equal("work")
+			expect(turn.mind.phase).to.equal("slowTurn")
+			expect(turn.mind.turn).to.equal("knowing")
+			expect(turn.mind.seated).to.equal(true)
+			expect(turn.mind.target).to.equal(8)
+			expect(turn.cue).to.equal(nil)
+			expect(kinds(turn)).to.equal("")
+			local now = 102 + C.SLOW_TURN_SECONDS + 0.01
+			local jerk = OccupantBrainRules.step(
+				turn.mind,
+				senses({ now = now, position = AT_SEAT, look = look, players = { behind } })
+			)
+			expect(jerk.mind.mode).to.equal("chase")
+			expect(jerk.mind.phase).to.equal("jerk")
+			expect(jerk.mind.target).to.equal(8)
+			expect(kinds(jerk)).to.equal("stand")
+			expect(jerk.effects[1].speed).to.equal(C.JERK_STAND_SPEED)
+			expect(jerk.mind.standUntil).to.be.near(now + C.STAND_SECONDS / C.JERK_STAND_SPEED)
+			expect(jerk.mind.swivelUntil).to.be.near(now + C.JERK_SECONDS + C.STAND_SECONDS / C.JERK_STAND_SPEED)
+		end)
+
 		it("investigates instead when the player behind him hid during the beat", function()
 			local look = Vector3.new(-1, 0, 0)
 			local behind = { userId = 8, position = AT_SEAT + Vector3.new(10, 0, 0), clear = true }
