@@ -27,5 +27,7 @@ return function()
 
 	it("waits a positive time for the new character", function()
 		expect(OccupantVfxConstants.REHIRE_WAIT > 0).to.equal(true)
+		expect(OccupantVfxConstants.REHIRE_SETTLE >= 0).to.equal(true)
+		expect(OccupantVfxConstants.REHIRE_SETTLE < OccupantVfxConstants.REHIRE_WAIT).to.equal(true)
 	end)
 end

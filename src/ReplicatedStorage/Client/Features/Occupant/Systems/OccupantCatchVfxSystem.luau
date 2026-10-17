@@ -85,7 +85,10 @@ local function rehire(player: Player)
 			local character = player.Character
 			local root, humanoid = rootOf(character)
 			if character ~= old and root ~= nil and humanoid ~= nil and humanoid.Health > 0 then
-				if VfxBurstSystem.polished() then
+				-- A beat for the camera to reach the new character (it was spectating elsewhere): the burst is
+				-- culled by its distance from the camera.
+				task.wait(OccupantVfxConstants.REHIRE_SETTLE)
+				if session == expected and root.Parent ~= nil and VfxBurstSystem.polished() then
 					counters.rehired += 1
 					local feet = root.Position - Vector3.new(0, humanoid.HipHeight + root.Size.Y / 2, 0)
 					VfxBurstSystem.play("occupantRehired", feet)

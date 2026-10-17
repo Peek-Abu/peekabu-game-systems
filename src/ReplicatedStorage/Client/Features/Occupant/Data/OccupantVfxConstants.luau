@@ -134,4 +134,7 @@ return table.freeze({
 	PRESETS = table.freeze(PRESETS),
 	-- How long after a caught player's deadline clears their new character is waited for (the Rehired puff).
 	REHIRE_WAIT = 8,
+	-- Seconds after it appears before the puff plays, so the camera has moved to it (a burst far from the camera is
+	-- skipped).
+	REHIRE_SETTLE = 0.3,
 })
