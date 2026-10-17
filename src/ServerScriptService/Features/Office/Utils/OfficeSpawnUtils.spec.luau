@@ -409,6 +409,26 @@ return function()
 		expect(share > 0.62 and share < 0.78).to.equal(true)
 	end)
 
+	-- Economy design §3.5 (2026-10-17): dust is about half of a typical shift's pay. A typical shift: 80% of the dust
+	-- vacuumed, two thirds of the valuables cleaned to LOOT_AVERAGE_CLEAN and banked (valueOf's average), their grime
+	-- cleaned that far; 1 Gleam per Gloom.
+	it("makes the dust about half of a typical shift's pay on a generated site", function()
+		local dust, rest = 0, 0
+		for seed = 1, 30 do
+			if seed % 5 == 0 then
+				task.wait()
+			end
+			local layout = OfficeLayoutGenerationUtils.generate(LAYOUT, seed)
+			local plan = OfficeSpawnUtils.roll(layout, options("B"), Random.new(seed))
+			local gloom = OfficeLootUtils.gloomOf(plan)
+			local value = OfficeLootUtils.valueOf(plan)
+			dust += 0.8 * gloom.dust
+			rest += 2 / 3 * (OfficeConstants.LOOT_AVERAGE_CLEAN * gloom.grime + value.average)
+		end
+		local share = dust / (dust + rest)
+		expect(share > 0.46 and share < 0.56).to.equal(true)
+	end)
+
 	it("lists every desk and locker, empty or not", function()
 		expect(#roll(3).searchables).to.equal(12)
 	end)

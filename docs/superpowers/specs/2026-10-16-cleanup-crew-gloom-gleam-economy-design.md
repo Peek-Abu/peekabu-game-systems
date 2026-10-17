@@ -28,7 +28,7 @@ truck, and cleaning a valuable mattered only through its price. The new split gi
 
 ### 3.1 Dust piles
 
-- A cleared pile removes **40 Gloom** (`VacuumConstants.PILE_GLOOM`; 20 until the follow-up of §3.5) toward the
+- A cleared pile removes **50 Gloom** (`VacuumConstants.PILE_GLOOM`; 20 until the follow-up of §3.5, 40 until §3.6) toward the
   contract **the instant it is vacuumed** (`ShiftGloomSystem`, from Vacuum's `pileCleared`).
 - **The dust is clustered** (§3.5): **4-6 dirty rooms** (`OfficeConstants.DIRTY_ROOMS`), each with **3-5 piles**
   (`PILES_PER_ROOM`), with a clean room between any two of them where the layout allows (no two dirty rooms share a
@@ -71,22 +71,23 @@ truck, and cleaning a valuable mattered only through its price. The new split gi
 ### 3.4 The contract
 
 - **Remove X Gloom.** Clock-out unlocks once it is met, and overtime stays opt-in after it, both as with the quota.
-- **By crew size 1 / 2 / 3 / 4: 530 / 560 / 610 / 650 Gloom** (`ShiftConstants.QUOTA_BY_CREW`; 260 / 280 / 300 /
-  320 at 20 per pile and spread dust).
-- **Measured** over 60 generated offices (2026-10-16, clustered dust at 40 per pile): 19.3 piles on average in 5
-  dirty rooms (4-6; 3, 4 and 5 piles about equally often), about 772 Gloom of dust and 107 of grime on 12.4
-  valuables, so a site holds about **880 Gloom** (610-1215). The contract asks about **60 / 64 / 69 / 74%** of it.
+- **By crew size 1 / 2 / 3 / 4: 640 / 690 / 740 / 790 Gloom** (`ShiftConstants.QUOTA_BY_CREW`; 530 / 560 / 610 /
+  650 at 40 per pile, 260 / 280 / 300 / 320 at 20 per pile and spread dust).
+- **Measured** over 60 generated offices (2026-10-17, clustered dust at 50 per pile): 19.3 piles on average in 4.9
+  dirty rooms (4-6; 3, 4 and 5 piles about equally often), about 965 Gloom of dust and 107 of grime on 12.4
+  valuables, so a site holds about **1070 Gloom** (730-1495). The contract asks about **60 / 64 / 69 / 74%** of it,
+  the same shares as at 40 per pile, so a shift is as hard as before.
   Solo gets the smallest share because one player covers less ground; the biggest crew is capped because the site
   does not grow with the crew.
 - **Guarantee** (`OfficeLootUtils.shortfall`, `OfficeSpawnRules.check`): the contract may ask at most **80%**
   (`OfficeConstants.CONTRACT_SHARE_MAX`) of the site's Gloom. A thinner roll gets up to **6** extra plain piles
-  (`TOP_UP_MAX`, was 4: the thinnest clustered roll, 4 rooms of 3 piles, needs about 5 for the biggest crew), on the
+  (`TOP_UP_MAX`, was 4: the thinnest clustered roll, 4 rooms of 3 piles, needs about 6 for the biggest crew), on the
   dirty rooms' spare pile markers first, then a clean room's, so the extra dust stays clustered; a plan still short is
-  refused and re-rolled. Measured: 0 of 60 generated offices refused, 0.85 extra piles a site on average, the biggest
-  crew's contract never above 80% of a topped-up site. The old value top-up (extra valuables) is gone: the pay is no
+  refused and re-rolled. Measured (2026-10-17, 50 per pile): 0 of 60 generated offices refused, 0.83 extra piles a
+  site on average, the biggest crew's contract never above 80% of a topped-up site (at most 79.8%). The old value top-up (extra valuables) is gone: the pay is no
   longer what the contract needs.
-- `OfficeSpawnUtils.spec` checks every generated office against the biggest crew's contract, and that the contract
-  is 62-78% of the average site.
+- `OfficeSpawnUtils.spec` checks every generated office against the biggest crew's contract, that the contract
+  is 62-78% of the average site, and that dust is 46-56% of a typical shift's pay (§3.6).
 
 ### 3.5 "A room of dust ≈ one good valuable": both levers, approved 2026-10-16
 
@@ -100,6 +101,33 @@ about **88% of the site's Gloom**. Its share of the pay: about **43% of a typica
 two thirds of the valuables banked at average cleanliness), **29%** of a perfect one (everything vacuumed, cleaned
 and banked). If the user wants dust nearer half of a perfect shift, the next levers are more dirty rooms
 (`DIRTY_ROOMS` 5-7) or about 50 a pile.
+
+### 3.6 Dust toward half the pay: 50 a pile, approved 2026-10-17
+
+The user approved raising dust's share of the pay toward half, on one condition: **valuables keep their values**.
+Only dust is worth more, and the contract scales with it so a shift stays as hard.
+
+- **The lever: the pile value, 40 → 50** (`VacuumConstants.PILE_GLOOM`). It reaches about half on its own, and it
+  leaves the map alone (the same 4-6 dirty rooms of 3-5 piles), where 5-7 dirty rooms would have changed how a site
+  plays (more rooms to cross, fewer clean ones between them).
+- **The typical shift** (the model behind §3.5's 43%, now written down and specced): 80% of the dust vacuumed, two
+  thirds of the valuables cleaned to `LOOT_AVERAGE_CLEAN` (0.5, value ×0.65) and banked, their grime cleaned that far.
+  Measured over 60 generated offices (2026-10-17):
+
+  | | 40 a pile | 50 a pile |
+  |---|---|---|
+  | Dust's share of a typical shift's pay | 43.6% | **49.1%** |
+  | Dust's share of a perfect shift's pay | 29.2% | 34.0% |
+  | A typical shift's pay (Gleam) | ~1,417 (dust 618) | **~1,571 (dust 772)** |
+  | A site's Gloom | ~880 (610-1215) | ~1070 (730-1495) |
+  | A dirty room | ~155 Gloom | ~198 (150-250) |
+  | A valuable's plain base, after depth | 142.3 Gleam | **142.3 Gleam (unchanged)** |
+  | Contract, crew 1-4 | 530 / 560 / 610 / 650 | **640 / 690 / 740 / 790** |
+  | Contract's share of a site | 60 / 64 / 69 / 74% | 60 / 64 / 69 / 74% |
+
+- **Valuables are untouched:** no change to `CargoRegistry`, `CargoConstants` or the appraisal and depth formulas. A
+  valuable's grime Gloom (tiny 5 … bulky 35) and its banked value are what they were, so the extra pay is all dust.
+- A dirty room is now worth a good valuable or a little more (about 200 Gloom against about 142 Gleam).
 
 ## 4. What was removed
 
@@ -139,6 +167,9 @@ Ranks and owner skins are unaffected.
 | Feature | Realm | Subfolder | Name | Job |
 |---|---|---|---|---|
 | Shift | server | Systems | ShiftGloomSystem | Credits each cleared pile's and cleaning step's Gloom to Round's `clearance` (and piles to `dust`) while a shift runs, then re-checks the contract |
+
+Follow-up (2026-10-17, §3.6): `VacuumConstants.PILE_GLOOM` 50; `ShiftConstants.QUOTA_BY_CREW` 640-790 (`QUOTA` 690);
+the `OfficeSpawnUtils.spec` dust-share check.
 
 Follow-up (2026-10-16, §3.5): `VacuumConstants.PILE_GLOOM` 40; `OfficeConstants` (`DIRTY_ROOMS`, `PILES_PER_ROOM`,
 `PILE_SPOTS`, `PILE_SPOT_STEP`, `TOP_UP_MAX` 6); `OfficeTypes.RollOptions` (`dirtyRooms`, `pilesPerRoom` replace

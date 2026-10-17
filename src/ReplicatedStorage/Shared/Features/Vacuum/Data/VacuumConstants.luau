@@ -54,9 +54,10 @@ return table.freeze({
 	DURATION = 2.5,
 	-- The Gloom one cleared pile removes toward the shift's contract, the instant it is cleared (docs/superpowers/specs/
 	-- 2026-10-16-cleanup-crew-gloom-gleam-economy-design.md §3.1). There is no canister capacity and no dust bag: the
-	-- backpack's canister is a live gauge of the crew's contract. 40 with the dust clustered (3-5 piles to a dirty room,
-	-- OfficeConstants): a dirty room is worth about one good valuable (§3.5).
-	PILE_GLOOM = 40,
+	-- backpack's canister is a live gauge of the crew's contract. 50 with the dust clustered (3-5 piles to a dirty room,
+	-- OfficeConstants): a dirty room (about 200) is worth a good valuable or a little more, and the dust is about half
+	-- of a typical shift's pay (§3.5; 40 until 2026-10-17, when it was about 43%).
+	PILE_GLOOM = 50,
 	-- Noise seam (M2): a pulse every NOISE_INTERVAL seconds while a pile is being vacuumed.
 	NOISE_INTERVAL = 1,
 	-- Seconds a vacuuming player stays counted after their channel's last tick (the channel asks every 0.1 s).

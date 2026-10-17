@@ -30,7 +30,7 @@ items** on the map, so every find feels like a find and every trip carries more 
 ## 2. The loop
 
 1. Explore. A pile that **glints** may hide something, and a grimy valuable's tag reads **"$???"**.
-2. Vacuum. A pile clears in 2.5 s (since 2026-10-16 it removes 40 Gloom on the spot: no canister fill, no dust bag). A buried pile **pops** its item
+2. Vacuum. A pile clears in 2.5 s (since 2026-10-16 it removes Gloom on the spot, 50 since 2026-10-17: no canister fill, no dust bag). A buried pile **pops** its item
    out. A grimy item gets cleaner, rises in value and is **appraised** at 65%.
 3. Choose. Cleaning takes time and is loud: it draws the Manager. You can clean it now, or grab it dirty for less.
    **Clean it where you find it:** the moment you pick it up its grime locks (§3.2a), so the choice is made on the
@@ -123,7 +123,7 @@ safe place, see the chase-kit design) and cleaned it there risk-free, which took
   stood.
 - **Glint:** a pile that hides something sparkles. A small twinkle plays every 3–5.5 s (randomised per pile), and only
   clients within 20 studs draw it. It is meant to be easy to miss, and plain piles still count toward the contract
-  (40 Gloom each since 2026-10-16, the dust clustered into 4-6 dirty rooms), so it is still worth vacuuming everything.
+  (50 Gloom each since 2026-10-17, the dust clustered into 4-6 dirty rooms), so it is still worth vacuuming everything.
 
 ### 3.5 The map (`OfficeLootUtils`, `OfficeConstants`)
 
@@ -144,7 +144,7 @@ safe place, see the chase-kit design) and cleaned it there risk-free, which took
 
 ### 3.6 Quota and pay (`ShiftQuotaFormulas`, `ShiftConstants`)
 
-> **Superseded 2026-10-16** by [the Gloom and Gleam economy](2026-10-16-cleanup-crew-gloom-gleam-economy-design.md) §3.3-3.4: the contract is 530 / 560 / 610 / 650 Gloom by crew size, banking adds
+> **Superseded 2026-10-16** by [the Gloom and Gleam economy](2026-10-16-cleanup-crew-gloom-gleam-economy-design.md) §3.3-3.4: the contract is 640 / 690 / 740 / 790 Gloom by crew size, banking adds
 > no Gloom, and the pay is 1 Gleam per Gloom plus the valuables banked (×1.5 in overtime). Kept below as history.
 
 - **Quota by crew size: 770 / 830 / 870 / 900** for 1 / 2 / 3 / 4 players. Measured over 30 generated offices, a

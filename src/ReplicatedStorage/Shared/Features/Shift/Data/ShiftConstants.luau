@@ -94,13 +94,13 @@ return table.freeze({
 	WORLD_ENTRY = "shift",
 	-- The contract ("quota" in code): Gloom to remove (economy design §3.4). Piles count the instant they are vacuumed,
 	-- valuables only for the grime cleaned off them; banking adds none. By crew size 1-4: a generated site holds about
-	-- 880 Gloom (610-1215; the dust clustered into 4-6 dirty rooms of 3-5 piles, about 19 piles x 40, plus about 107
-	-- of grime; measured over 60 seeds, 2026-10-16), so these ask about 60 / 64 / 69 / 74% of it (the site does not
+	-- 1070 Gloom (730-1495; the dust clustered into 4-6 dirty rooms of 3-5 piles, about 19 piles x 50, plus about 107
+	-- of grime; measured over 60 seeds, 2026-10-17), so these ask about 60 / 64 / 69 / 74% of it (the site does not
 	-- grow with the crew; OfficeSpawnUtils tops a thin one up with piles so the contract never needs more than 80%).
 	-- QUOTA is the two-player figure (the fallback before a run sets its own); a run and the depot's signs use
 	-- QUOTA_BY_CREW for the crew (ShiftQuotaFormulas).
-	QUOTA = 560,
-	QUOTA_BY_CREW = table.freeze({ 530, 560, 610, 650 }),
+	QUOTA = 690,
+	QUOTA_BY_CREW = table.freeze({ 640, 690, 740, 790 }),
 	-- 7:00 on the clock.
 	SHIFT_SECONDS = 420,
 	-- Round's countdown, configured but unused: a shift starts with Round's startNow once its transit settles.
