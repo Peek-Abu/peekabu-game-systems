@@ -5,7 +5,10 @@
 	keeps the last WINDOW seconds of it: the lowest is where this foot stands, the highest how far it swings. A
 	foot is ARMED once it rises LIFT_FRACTION of that swing above its stand, and PLANTS (a footstep) the frame it comes
 	back down to within PLANT_FRACTION of it: the moment of contact, whatever the clip, the rig's size or the speed
-	it plays at. Nothing plants:
+	it plays at. A clip's strides need not all stand at the same depth (Pippa's run loops two strides, the second
+	standing ~0.1 studs higher, a third of her swing): an armed foot that bottoms out in the lower STAND_FRACTION of
+	the swing without reaching the plant line also plants, on the frame it starts back up, when it came down at least
+	BOTTOM_DROP x the rig's scale from its peak (a stride, not a shuffle). Nothing plants:
 	- while the swing is below MIN_RANGE x the rig's scale (its HipHeight): an idle sway, a breath, a typing pose;
 	- for a foot held up longer than MAX_SWING (sitting, a stand-up, a carry pose): it is disarmed and must come down
 	  below the arm line before it can arm again, so the drop that ends it is not a step.
@@ -27,6 +30,9 @@ export type Foot = {
 	heights: { number },
 	armed: boolean,
 	armedAt: number,
+	-- Since it armed: its highest height, and its lowest since that peak (where a shallower stride bottoms out).
+	peak: number,
+	bottom: number,
 	-- Held up too long: may not arm until it comes back down below the arm line.
 	blocked: boolean,
 }
@@ -37,7 +43,16 @@ local FootstepPlantFormulas = {}
 	A foot first seen at `height`.
 ]=]
 function FootstepPlantFormulas.fresh(height: number): Foot
-	return { clock = 0, times = { 0 }, heights = { height }, armed = false, armedAt = 0, blocked = false }
+	return {
+		clock = 0,
+		times = { 0 },
+		heights = { height },
+		armed = false,
+		armedAt = 0,
+		peak = height,
+		bottom = height,
+		blocked = false,
+	}
 end
 
 --[=[
@@ -75,6 +90,7 @@ function FootstepPlantFormulas.step(foot: Foot, height: number, dt: number, scal
 	local range = high - low
 	local armLine = low + FootstepConstants.LIFT_FRACTION * range
 	local plantLine = low + FootstepConstants.PLANT_FRACTION * range
+	local standLine = low + FootstepConstants.STAND_FRACTION * range
 
 	if foot.armed and now - foot.armedAt > FootstepConstants.MAX_SWING then
 		foot.armed = false
@@ -89,13 +105,26 @@ function FootstepPlantFormulas.step(foot: Foot, height: number, dt: number, scal
 		return false
 	end
 	if foot.armed then
-		if height <= plantLine then
+		-- Down to the stand, or came down from its peak and bottomed out (now rising again) in the lower part of the
+		-- swing: a shallower stride's contact.
+		local bottomedOut = foot.peak - foot.bottom >= FootstepConstants.BOTTOM_DROP * scale
+			and height > foot.bottom
+			and foot.bottom <= standLine
+		if height <= plantLine or bottomedOut then
 			foot.armed = false
 			return true
+		end
+		if height >= foot.peak then
+			foot.peak = height
+			foot.bottom = height
+		else
+			foot.bottom = math.min(foot.bottom, height)
 		end
 	elseif not foot.blocked and height > armLine then
 		foot.armed = true
 		foot.armedAt = now
+		foot.peak = height
+		foot.bottom = height
 	end
 	return false
 end

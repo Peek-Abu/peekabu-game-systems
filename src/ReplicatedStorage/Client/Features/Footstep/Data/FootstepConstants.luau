@@ -32,13 +32,21 @@ local MATERIAL_SURFACES: { [Enum.Material]: Surface } = {
 
 return table.freeze({
 	-- The plant detector (FootstepPlantFormulas): each foot's last WINDOW seconds of height (longer than the slowest
-	-- stride); armed above LIFT_FRACTION of its swing, planted back below PLANT_FRACTION; no step for a swing under
+	-- stride); armed above LIFT_FRACTION of its swing, planted back below PLANT_FRACTION, or where it bottoms out in the
+	-- lower STAND_FRACTION (a stride that stands higher than the deepest one); no step for a swing under
 	-- MIN_RANGE x the rig's HipHeight, nor for a foot held up longer than MAX_SWING seconds. Measured 2026-10-16 (foot
 	-- centre swing): Pippa (HipHeight 0.375) walk 0.33 / sprint 0.35 studs; the Manager (3.6) a stiff 0.41 walk
 	-- (0.11 x his HipHeight) and a 1.1 chase run; both idles 0. Foot-falls at a stride of 0.63 s (his walk at 10 st/s).
 	WINDOW = 2,
 	LIFT_FRACTION = 0.55,
 	PLANT_FRACTION = 0.1,
+	-- Measured 2026-10-17 at sprint: Pippa's run clip loops two strides, the second standing 0.08-0.11 studs above the
+	-- first (24-35 % of her 0.32-stud swing), so every second contact never reached PLANT_FRACTION (a gallop, half the
+	-- steps). Her walk's stance wobbles (under 20 %) come after its plant, while the foot is disarmed.
+	STAND_FRACTION = 0.5,
+	-- ... after coming down at least BOTTOM_DROP x the rig's HipHeight from its peak: her sprint's shallow strides drop
+	-- 0.21-0.22 studs (0.56 x her 0.375), the shuffle as she sets off from idle 0.036 (0.1 x) while the other foot plants.
+	BOTTOM_DROP = 0.3,
 	MIN_RANGE = 0.04,
 	MAX_SWING = 1.2,
 	-- Moving on the ground: the root really crosses the floor at MOVING_SPEED studs/s or more (its own displacement,

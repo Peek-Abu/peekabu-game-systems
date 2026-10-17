@@ -41,6 +41,118 @@ return function()
 			expect(#plants).to.equal(6)
 		end)
 
+		it("plants every contact of a run whose second stride stands higher than its first (Pippa's sprint)", function()
+			-- Pippa's run clip holds two strides per loop and the second stands ~0.11 studs higher. One loop of her left
+			-- foot's height (foot centre minus root), measured live at 60 fps at sprint speed 2026-10-17: the deep
+			-- contact bottoms at frame 9, the shallow one at frame 23. Every 2nd contact used to be lost (a gallop).
+			local loop = {
+				-0.881,
+				-0.897,
+				-0.917,
+				-0.951,
+				-0.998,
+				-1.042,
+				-1.081,
+				-1.108,
+				-1.113,
+				-1.095,
+				-1.038,
+				-0.939,
+				-0.865,
+				-0.816,
+				-0.792,
+				-0.790,
+				-0.809,
+				-0.843,
+				-0.884,
+				-0.928,
+				-0.969,
+				-0.994,
+				-1.000,
+				-0.998,
+				-0.979,
+				-0.946,
+				-0.911,
+				-0.884,
+			}
+			local bottoms = { 9, 23 }
+			local foot = FootstepPlantFormulas.fresh(loop[1])
+			local plants = {}
+			local frame = 1
+			for _ = 1, 8 do
+				for index, height in loop do
+					if frame > 1 and FootstepPlantFormulas.step(foot, height, DT, 0.375) then
+						table.insert(plants, { frame = frame, index = index })
+					end
+					frame += 1
+				end
+			end
+			-- 8 loops, two contacts each, but the first (the foot is first seen already coming down to it, never armed).
+			expect(#plants).to.equal(15)
+			for _, plant in plants do
+				-- At its contact: no earlier than 3 frames before the bottom, no later than the frame after it.
+				local near = false
+				for _, bottom in bottoms do
+					if plant.index >= bottom - 3 and plant.index <= bottom + 1 then
+						near = true
+					end
+				end
+				expect(near).to.equal(true)
+			end
+		end)
+
+		it("is not a step when a foot only shuffles as the walk starts (the other foot's plant)", function()
+			-- Pippa's left foot as she sets off from idle, measured live 2026-10-17 at 60 fps: a 0.06-stud shuffle back
+			-- down to her stand while the right foot plants, then the real lift into the walk.
+			local start = {
+				-1.113,
+				-1.112,
+				-1.113,
+				-1.108,
+				-1.115,
+				-1.128,
+				-1.138,
+				-1.132,
+				-1.125,
+				-1.127,
+				-1.116,
+				-1.093,
+				-1.077,
+				-1.077,
+				-1.091,
+				-1.112,
+				-1.113,
+				-1.078,
+				-0.987,
+				-0.894,
+			}
+			local foot = FootstepPlantFormulas.fresh(start[1])
+			for index = 2, #start do
+				expect(FootstepPlantFormulas.step(foot, start[index], DT, 0.375)).to.equal(false)
+			end
+		end)
+
+		it("is not a step when a swinging foot wobbles in the upper half of its swing", function()
+			local foot = FootstepPlantFormulas.fresh(-2)
+			local plants = 0
+			local t = 0
+			while t < 5 do
+				t += DT
+				local phase = (t % 1) / 1
+				-- Up to 0.3, a dip back to 0.2 (still the upper half), up again, then down to stand at phase 0.5.
+				local height = -2
+				if phase < 0.5 then
+					local swing = math.sin(phase * 2 * math.pi)
+					height = -2 + 0.3 * swing - 0.12 * math.max(0, math.sin((phase - 0.15) / 0.2 * math.pi)) * swing
+				end
+				if FootstepPlantFormulas.step(foot, height, DT, 1) then
+					plants += 1
+				end
+			end
+			-- One contact per 1 s stride: 5.
+			expect(plants).to.equal(5)
+		end)
+
 		it("never plants a still foot", function()
 			local foot = FootstepPlantFormulas.fresh(-2)
 			for _ = 1, 600 do
