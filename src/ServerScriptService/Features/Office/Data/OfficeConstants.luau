@@ -141,9 +141,9 @@ return table.freeze({
 	-- M2: a ceiling light about every LIGHT_SPACING studs in each room (Harlow's tells flicker them).
 	LIGHT_SPACING = 15,
 	LIGHT_SIZE = Vector3.new(3, 0.3, 1.2),
-	LIGHT_COLOR = Color3.fromRGB(235, 240, 255),
-	LIGHT_RANGE = 22,
-	LIGHT_BRIGHTNESS = 0.7,
+	LIGHT_COLOR = Color3.fromRGB(215, 228, 255),
+	LIGHT_RANGE = 20,
+	LIGHT_BRIGHTNESS = 0.5,
 	-- The invisible volume over the truck's box (the one safe place) that Harlow's paths never enter.
 	SAFE_ZONE_NAME = "SafeZone",
 	-- M2: Harlow's route needs at least this many points.

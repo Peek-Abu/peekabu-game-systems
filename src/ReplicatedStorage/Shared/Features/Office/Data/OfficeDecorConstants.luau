@@ -29,12 +29,12 @@ return table.freeze({
 	EXIT_SIGN_SIZE = Vector3.new(3, 1, 0.3),
 	EXIT_SIGN_HEIGHT = 9,
 	EXIT_COLOR = Color3.fromRGB(60, 235, 120),
-	EXIT_LIGHT_RANGE = 12,
-	EXIT_LIGHT_BRIGHTNESS = 1.4,
+	EXIT_LIGHT_RANGE = 11,
+	EXIT_LIGHT_BRIGHTNESS = 1.1,
 	-- A monitor on each desk: a dark case and a glowing blue screen.
 	MONITOR_SIZE = Vector3.new(2, 1.3, 0.25),
 	MONITOR_CASE_COLOR = Color3.fromRGB(30, 30, 34),
 	MONITOR_COLOR = Color3.fromRGB(80, 140, 255),
 	MONITOR_LIGHT_RANGE = 8,
-	MONITOR_LIGHT_BRIGHTNESS = 0.9,
+	MONITOR_LIGHT_BRIGHTNESS = 0.75,
 })
