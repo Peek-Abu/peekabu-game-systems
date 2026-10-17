@@ -3,7 +3,8 @@
 	ShiftTransitViewModel: the transit screen's route slip (ShiftTransitPanel). A dispatch slip on the company's paper:
 	the "MORROW & MORROW — DISPATCH" band with "TRUCK n" (none when unknown), ROUTE SLIP, FROM the company depot TO the
 	contract's client (cut at CLIENT_MAX; "Site on file" before the server names one), a note, and the red IN TRANSIT
-	stamp, which turns to ARRIVED once this client is ready. Pure.
+	stamp, which turns to ARRIVED once this client is ready. `advance` moves the loading bar toward the client's
+	readiness. Pure.
 
 	@class ShiftTransitViewModel
 ]=]
@@ -42,6 +43,41 @@ ShiftTransitViewModel.NO_CLIENT = "Site on file"
 -- The V1 load screen's design canvas (1440x720) fitted to a window: never under 0.3 or over 1.25.
 function ShiftTransitViewModel.fit(viewport: Vector2): number
 	return math.clamp(math.min(viewport.X / 1500, viewport.Y / 780), 0.3, 1.25)
+end
+
+-- The loading bar's motion (ShiftTransitViewModel.advance): it closes on the readiness at CATCH_RATE, then creeps on
+-- at CREEP_RATE toward BAR_CREEP past it (never past BAR_CAP before arrival), and once arrived eases to full at
+-- ARRIVE_RATE, no slower than ARRIVE_SPEED per second, so it is full within the ARRIVED beat.
+ShiftTransitViewModel.CATCH_RATE = 4
+ShiftTransitViewModel.CREEP_RATE = 0.25
+ShiftTransitViewModel.BAR_CREEP = 0.12
+ShiftTransitViewModel.BAR_CAP = 0.97
+ShiftTransitViewModel.ARRIVE_RATE = 12
+ShiftTransitViewModel.ARRIVE_SPEED = 2.5
+
+--[=[
+	The loading bar's next fill, `dt` seconds after it showed `shown`, with the client's readiness at `target`
+	(ShiftTransitRules.progress) and `arrived` once it is ready: monotonic (never less than `shown`), never full before
+	arrival, full once arrived.
+]=]
+function ShiftTransitViewModel.advance(shown: number, target: number, arrived: boolean, dt: number): number
+	if dt ~= dt or dt <= 0 then
+		return shown
+	end
+	local nextValue: number
+	if arrived then
+		local eased = shown + (1 - shown) * (1 - math.exp(-ShiftTransitViewModel.ARRIVE_RATE * dt))
+		nextValue = math.max(eased, shown + ShiftTransitViewModel.ARRIVE_SPEED * dt)
+		if nextValue >= 0.998 then
+			nextValue = 1
+		end
+	else
+		local safe = if target == target then math.clamp(target, 0, 1) else 0
+		local goal = math.min(safe + ShiftTransitViewModel.BAR_CREEP, ShiftTransitViewModel.BAR_CAP)
+		local rate = if shown < safe then ShiftTransitViewModel.CATCH_RATE else ShiftTransitViewModel.CREEP_RATE
+		nextValue = shown + (goal - shown) * (1 - math.exp(-rate * dt))
+	end
+	return math.clamp(math.max(shown, nextValue), 0, 1)
 end
 
 function ShiftTransitViewModel.slip(snapshot: ShiftTypes.TransitSnapshot?, arrived: boolean): SlipView

@@ -138,4 +138,59 @@ return function()
 			expect(reason).to.equal("streamed")
 		end)
 	end)
+
+	describe("progress", function()
+		local function at(extra)
+			return ShiftTransitRules.progress(input(extra))
+		end
+
+		it("is full once the client is ready", function()
+			expect(at()).to.equal(1)
+		end)
+
+		it("climbs through the stages in the order they are met, never full before ready", function()
+			local steps = {
+				at({ hold = hold({ built = false }), seedSeen = false, streamed = false, lit = false, shownFor = 0 }),
+				at({ seedSeen = false, streamed = false, lit = false, shownFor = 0 }),
+				at({ position = false, streamed = false, lit = false, shownFor = 0 }),
+				at({ streamed = false, lit = false, shownFor = 0 }),
+				at({ lit = false, shownFor = 0 }),
+				at({ settledFor = 0, settledFrames = 0, shownFor = 0 }),
+				at({ settledFor = 1, settledFrames = 60, shownFor = 0 }),
+				at({ shownFor = 0 }),
+				at({ shownFor = ShiftConstants.TRANSIT_MIN_SECONDS * 0.5 }),
+			}
+			for index = 2, #steps do
+				expect(steps[index] > steps[index - 1]).to.equal(true)
+			end
+			expect(steps[1]).to.equal(0)
+			expect(steps[#steps] < 1).to.equal(true)
+		end)
+
+		it("fills the settle by the slower of its time and its frames", function()
+			local half = at({
+				settledFor = ShiftConstants.TRANSIT_SETTLE_SECONDS / 2,
+				settledFrames = ShiftConstants.TRANSIT_SETTLE_FRAMES,
+				shownFor = 0,
+			})
+			local fewFrames = at({
+				settledFor = ShiftConstants.TRANSIT_SETTLE_SECONDS / 2,
+				settledFrames = ShiftConstants.TRANSIT_SETTLE_FRAMES / 4,
+				shownFor = 0,
+			})
+			expect(fewFrames < half).to.equal(true)
+			local cold = at({
+				cold = true,
+				settledFor = ShiftConstants.TRANSIT_SETTLE_SECONDS / 2,
+				settledFrames = ShiftConstants.TRANSIT_SETTLE_FRAMES,
+				shownFor = 0,
+			})
+			expect(cold < half).to.equal(true)
+		end)
+
+		it("stays within 0..1", function()
+			local value = at({ settledFor = 999, settledFrames = 99999, shownFor = 0 })
+			expect(value >= 0 and value < 1).to.equal(true)
+		end)
+	end)
 end

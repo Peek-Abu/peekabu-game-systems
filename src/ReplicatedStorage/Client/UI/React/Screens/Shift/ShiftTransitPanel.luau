@@ -6,8 +6,8 @@
 	a 1440x720 canvas scaled by `scale` (ShiftTransitViewModel.fit): the cream "EN ROUTE TO" card (the client in big
 	stroked letters, the site line, the graded office photo, the truck's number on a sticker), the Manager's tip on a
 	dark plate with Gloom pooled along its floor, the company truck render driving in on speed lines, and the grape
-	loading bar (it keeps filling while in transit, full and DOORS OPEN! once this client is ready; still under reduced
-	motion). A fading-out cover keeps its last lines. Presentational: the words are ShiftTransitViewModel.slip.
+	loading bar: a real progress bar that follows this client's readiness (`progress`) and never goes back, easing to
+	full with DOORS OPEN! once this client is ready, then the cover fades. A fading-out cover keeps its last lines. Presentational: the words are ShiftTransitViewModel.slip.
 
 	@class ShiftTransitPanel
 ]=]
@@ -29,7 +29,6 @@ local ToonPanel = require(Toon.ToonPanel)
 local ToonPill = require(Toon.ToonPill)
 local ToonText = require(Toon.ToonText)
 local UIToonConstants = require(Toon.UIToonConstants)
-local useToonPlay = require(Toon.useToonPlay)
 
 local e = React.createElement
 
@@ -38,12 +37,12 @@ export type ShiftTransitPanelProps = {
 	view: ShiftTransitViewModel.SlipView?,
 	-- ShiftTransitViewModel.fit of this screen.
 	scale: number,
+	-- How far this client is toward its reveal (ShiftTransitStore.progress): the loading bar's target.
+	progress: number,
 }
 
 local COLOR = UIToonConstants.COLOR
 local CANVAS = Vector2.new(1440, 720)
--- One sweep of the loading bar while in transit.
-local LOOP_SECONDS = 2.4
 
 type Nodes = { [string]: React.ReactNode }
 
@@ -140,18 +139,28 @@ local function tip(view: ShiftTransitViewModel.SlipView): React.ReactNode
 	})
 end
 
-local function LoadBar(props: { view: ShiftTransitViewModel.SlipView }): React.ReactNode
+-- The grape loading bar: it follows the client's readiness (`progress`, ShiftTransitRules.progress) and never goes
+-- back (ShiftTransitViewModel.advance moves it every frame), and eases to full once this client has arrived.
+local function LoadBar(props: { view: ShiftTransitViewModel.SlipView, progress: number }): React.ReactNode
 	local view = props.view
-	local sweep = useToonPlay(LOOP_SECONDS, 0, nil, true)
-	local fill = sweep:map(function(alpha: number): number
-		if view.arrived then
-			return 1
+	local fill, setFill = React.useBinding(0)
+	-- The latest target and arrival, read by the frame loop without re-subscribing it.
+	local target = React.useRef(props.progress)
+	local arrived = React.useRef(view.arrived)
+	target.current = props.progress
+	arrived.current = view.arrived
+	React.useEffect(function(): () -> ()
+		local connection = RunService.RenderStepped:Connect(function(deltaTime: number)
+			local shown = fill:getValue()
+			local nextValue = ShiftTransitViewModel.advance(shown, target.current, arrived.current, deltaTime)
+			if nextValue ~= shown then
+				setFill(nextValue)
+			end
+		end)
+		return function()
+			connection:Disconnect()
 		end
-		if GuiService.ReducedMotionEnabled then
-			return 0.6
-		end
-		return 0.12 + 0.76 * alpha
-	end)
+	end, {})
 	return e(ToonBar, {
 		kind = "load",
 		fill = fill,
@@ -162,7 +171,7 @@ local function LoadBar(props: { view: ShiftTransitViewModel.SlipView }): React.R
 	})
 end
 
-local function trip(view: ShiftTransitViewModel.SlipView): React.ReactNode
+local function trip(view: ShiftTransitViewModel.SlipView, progress: number): React.ReactNode
 	local nodes: Nodes = {
 		card = card(view),
 		tip = tip(view),
@@ -173,7 +182,7 @@ local function trip(view: ShiftTransitViewModel.SlipView): React.ReactNode
 			drop = 10,
 			zIndex = 2,
 		}),
-		bar = e(LoadBar, { view = view }),
+		bar = e(LoadBar, { view = view, progress = progress }),
 	}
 	-- Speed lines behind the truck.
 	for index = 1, 5 do
@@ -272,7 +281,7 @@ local function ShiftTransitPanel(props: ShiftTransitPanelProps): React.ReactNode
 					BackgroundTransparency = 1,
 				}, {
 					scale = e("UIScale", { Scale = props.scale }),
-					trip = trip(view),
+					trip = trip(view, props.progress),
 				})
 				else nil,
 		}),

@@ -3,7 +3,8 @@
 	ShiftTransitStore: the transit as this client sees it. `snapshot` is a Charm computed atom over the `shiftTransit`
 	world entry, decoded by ShiftTransitUtils (nil before the first sync); what the transit screen shows
 	(ShiftTransitRules.cover) rides two flags, `covered` (anything: black or the slip) and `slip` (the route slip), read
-	together by `coverOf`; `arrived` says whether the slip carries the ARRIVED stamp. ShiftTransitSystem writes them; the screen (ShiftTransitScreen), the atmosphere (instant changes while covered) and the
+	together by `coverOf`; `arrived` says whether the slip carries the ARRIVED stamp; `progress` is how far the held client is toward its reveal
+	(the loading bar). ShiftTransitSystem writes them; the screen (ShiftTransitScreen), the atmosphere (instant changes while covered) and the
 	depot's travel cards read them. The client never writes the transit itself.
 
 	@class ShiftTransitStore
@@ -25,6 +26,8 @@ end)
 local covered = Charm.atom(true)
 local slip = Charm.atom(false)
 local arrived = Charm.atom(false)
+-- How far this client is toward its reveal (ShiftTransitRules.progress; 1 once arrived), drawn by the loading bar.
+local progress = Charm.atom(0)
 
 -- The cover the two flags make.
 local function coverOf(isCovered: boolean, isSlip: boolean): ShiftTypes.TransitCover
@@ -39,5 +42,6 @@ return {
 	covered = covered,
 	slip = slip,
 	arrived = arrived,
+	progress = progress,
 	coverOf = coverOf,
 }

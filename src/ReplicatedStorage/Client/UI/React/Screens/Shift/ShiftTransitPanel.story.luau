@@ -2,8 +2,8 @@
 --[=[
 	ShiftTransitPanel.story: the transit screen in Studio's edit mode (UI Labs), in a fixed screen-sized frame: `Cover`
 	switches the cover on and off (watch it fade), `Black` shows the plain black cover (booting, a respawn), `Arrived`
-	stamps ARRIVED, `Truck` sets the truck number (0 hides it), `LongClient` tries a 60-character client and `Phone`
-	draws it at the 844x390 phone's scale.
+	stamps ARRIVED, `Truck` sets the truck number (0 hides it), `LongClient` tries a 60-character client, `Progress` sets the client's readiness (the bar
+	catches up and creeps, never back; `Arrived` fills it) and `Phone` draws it at the 844x390 phone's scale.
 
 	@class ShiftTransitPanel.story
 ]=]
@@ -34,6 +34,7 @@ return UILabs.CreateReactStory({
 		Truck = 2,
 		LongClient = false,
 		Phone = false,
+		Progress = 0.45,
 	},
 }, function(props)
 	local snapshot: ShiftTypes.TransitSnapshot = {
@@ -50,6 +51,7 @@ return UILabs.CreateReactStory({
 		cover = cover,
 		view = ShiftTransitViewModel.slip(snapshot, props.controls.Arrived),
 		scale = WorldBillboardViewModel.screenScale(screen),
+		progress = math.clamp(props.controls.Progress, 0, 1),
 	}
 	return e("Frame", {
 		Size = UDim2.fromScale(1, 1),

@@ -11,7 +11,8 @@
 	  office's lights, tagged OccupantConstants.LIGHT_TAG, no longer streaming in) for TRANSIT_SETTLE_SECONDS and
 	  TRANSIT_SETTLE_FRAMES frames (the longer COLD settle when the camera has moved more than TRANSIT_COLD_DISTANCE
 	  since the slip went up: the first arrival from the depot), so the engine's own light has caught up before the
-	  reveal. When ready, or out of
+	  reveal. How far along it is (ShiftTransitRules.progress) goes to ShiftTransitStore.progress for the loading bar.
+	  When ready, or out of
 	  time (logged with what it still waited for), it reports ready for that hold (ShiftEvents.TransitReady), stamps
 	  ARRIVED for TRANSIT_ARRIVED_SECONDS, then clears.
 	- booting: plain black until the first shift and transit sync, at most TRANSIT_BOOT_SECONDS.
@@ -129,6 +130,8 @@ local function step()
 	end
 	local hold = ShiftTransitUtils.holdOf(transitSnapshot, Players.LocalPlayer.UserId)
 	local pending = hold ~= nil and hold.id ~= readyFor
+	-- The loading bar's target: nothing yet, the readiness while held, full from the reveal on.
+	local progress = 0
 	if hold ~= nil and pending then
 		if shownId ~= hold.id then
 			shownId = hold.id
@@ -172,6 +175,7 @@ local function step()
 		end
 		local verdict, reason = ShiftTransitRules.verdict(input)
 		waitingFor = reason or ""
+		progress = ShiftTransitRules.progress(input)
 		if verdict ~= "waiting" then
 			if verdict == "timeout" then
 				counters.timeouts += 1
@@ -204,6 +208,12 @@ local function step()
 	end
 	if ShiftTransitStore.arrived() ~= arriving then
 		ShiftTransitStore.arrived(arriving)
+	end
+	if arriving then
+		progress = 1
+	end
+	if ShiftTransitStore.progress() ~= progress then
+		ShiftTransitStore.progress(progress)
 	end
 end
 
@@ -253,6 +263,7 @@ function ShiftTransitSystem.stop()
 	ShiftTransitStore.covered(false)
 	ShiftTransitStore.slip(false)
 	ShiftTransitStore.arrived(false)
+	ShiftTransitStore.progress(0)
 end
 
 function ShiftTransitSystem.getState(): ShiftTransitState

@@ -14,7 +14,9 @@
 	several the first time it arrives from the depot) although every Lighting value and light is already set, and no
 	API reports when it is done, so the screen waits for the scene to stop changing for a while, counted in time AND
 	frames so a slow client waits longer. Short of that it waits (with the first condition still missing), until TRANSIT_CLIENT_TIMEOUT, when it
-	reveals anyway (the reason is logged). Pure.
+	reveals anyway (the reason is logged).
+
+	`progress`: how far along those stages the client is (0..1), which the load screen's bar draws. Pure.
 
 	@class ShiftTransitRules
 ]=]
@@ -93,18 +95,21 @@ function ShiftTransitRules.scene(input: VerdictInput): string?
 	return nil
 end
 
+-- The settle this hold needs: seconds and rendered frames (longer when the camera arrived from far away).
+local function settleOf(input: VerdictInput): (number, number)
+	if input.cold then
+		return ShiftConstants.TRANSIT_COLD_SETTLE_SECONDS, ShiftConstants.TRANSIT_COLD_SETTLE_FRAMES
+	end
+	return ShiftConstants.TRANSIT_SETTLE_SECONDS, ShiftConstants.TRANSIT_SETTLE_FRAMES
+end
+
 -- The first condition still missing, or nil.
 local function missing(input: VerdictInput): string?
 	local scene = ShiftTransitRules.scene(input)
 	if scene ~= nil then
 		return scene
 	end
-	local seconds = if input.cold
-		then ShiftConstants.TRANSIT_COLD_SETTLE_SECONDS
-		else ShiftConstants.TRANSIT_SETTLE_SECONDS
-	local frames = if input.cold
-		then ShiftConstants.TRANSIT_COLD_SETTLE_FRAMES
-		else ShiftConstants.TRANSIT_SETTLE_FRAMES
+	local seconds, frames = settleOf(input)
 	if input.settledFor < seconds or input.settledFrames < frames then
 		return "settling"
 	end
@@ -123,6 +128,46 @@ function ShiftTransitRules.verdict(input: VerdictInput): (ShiftTypes.TransitVerd
 		return "timeout", reason
 	end
 	return "waiting", reason
+end
+
+-- Where each stage starts on the loading bar: the scene's conditions in the order they are met, the settle (filled by
+-- its own progress), then the minimum time up to MINIMUM_END. Full only once ready.
+ShiftTransitRules.PROGRESS = table.freeze({
+	built = 0.08,
+	placed = 0.15,
+	streamed = 0.3,
+	lighting = 0.45,
+	settling = 0.55,
+	minimum = 0.92,
+	minimumEnd = 0.98,
+})
+
+--[=[
+	How far this held client is toward its reveal (0..1), for the load screen's bar: the stage it is waiting for
+	(PROGRESS), the settle filled by the slower of its time and its frames, the minimum time by how long the slip has
+	been up; 1 once ready. It can step back when a condition is lost again (the scene restarts its settle): the bar
+	that draws it never does (ShiftTransitViewModel.advance).
+]=]
+function ShiftTransitRules.progress(input: VerdictInput): number
+	local reason = missing(input)
+	local stage = ShiftTransitRules.PROGRESS
+	if reason == nil then
+		return 1
+	elseif reason == "office" then
+		return if input.hold.built then stage.built else 0
+	elseif reason == "placed" then
+		return stage.placed
+	elseif reason == "streamed" then
+		return stage.streamed
+	elseif reason == "lighting" then
+		return stage.lighting
+	elseif reason == "settling" then
+		local seconds, frames = settleOf(input)
+		local done = math.clamp(math.min(input.settledFor / seconds, input.settledFrames / frames), 0, 1)
+		return stage.settling + (stage.minimum - stage.settling) * done
+	end
+	local done = math.clamp(input.shownFor / ShiftConstants.TRANSIT_MIN_SECONDS, 0, 1)
+	return stage.minimum + (stage.minimumEnd - stage.minimum) * done
 end
 
 return ShiftTransitRules

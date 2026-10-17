@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	ShiftTransitScreen: the transit screen's root, mounted on the Overlay layer by ShiftServiceClient (above the HUD and
-	every panel). Draws ShiftTransitPanel from ShiftTransitStore (the cover, the ARRIVED stamp, the slip's lines through
+	every panel). Draws ShiftTransitPanel from ShiftTransitStore (the cover, the ARRIVED stamp, the loading bar's progress, the slip's lines through
 	ShiftTransitViewModel) at the screen's scale (ShiftTransitViewModel.fit).
 
 	@class ShiftTransitScreen
@@ -21,11 +21,13 @@ local function ShiftTransitScreen(): React.ReactNode
 	local slip = ReactCharm.useAtom(ShiftTransitStore.slip)
 	local arrived = ReactCharm.useAtom(ShiftTransitStore.arrived)
 	local snapshot = ReactCharm.useAtom(ShiftTransitStore.snapshot)
+	local progress = ReactCharm.useAtom(ShiftTransitStore.progress)
 	local viewport = usePaperViewport()
 	local props: ShiftTransitPanel.ShiftTransitPanelProps = {
 		cover = ShiftTransitStore.coverOf(covered, slip),
 		view = if covered and slip then ShiftTransitViewModel.slip(snapshot, arrived) else nil,
 		scale = ShiftTransitViewModel.fit(viewport),
+		progress = progress,
 	}
 	return React.createElement(ShiftTransitPanel, props)
 end

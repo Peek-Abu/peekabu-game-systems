@@ -58,4 +58,54 @@ return function()
 			expect(ShiftTransitViewModel.fit(Vector2.new(0, 0))).to.equal(0.3)
 		end)
 	end)
+
+	describe("advance", function()
+		local advance = ShiftTransitViewModel.advance
+
+		it("never goes backwards", function()
+			expect(advance(0.6, 0.2, false, 1 / 60) >= 0.6).to.equal(true)
+			expect(advance(0.6, 0, false, 1) >= 0.6).to.equal(true)
+		end)
+
+		it("closes on the readiness quickly", function()
+			local shown = 0
+			for _ = 1, 30 do
+				shown = advance(shown, 0.5, false, 1 / 60)
+			end
+			expect(shown > 0.4).to.equal(true)
+		end)
+
+		it("keeps creeping slowly past a stalled stage, short of full", function()
+			local shown = 0.5
+			local after = advance(shown, 0.5, false, 1 / 60)
+			expect(after > shown).to.equal(true)
+			expect(after - shown < 0.01).to.equal(true)
+			for _ = 1, 60 * 120 do
+				shown = advance(shown, 0.5, false, 1 / 60)
+			end
+			expect(shown < ShiftTransitViewModel.BAR_CAP + 1e-6).to.equal(true)
+			expect(shown <= 0.5 + ShiftTransitViewModel.BAR_CREEP + 1e-6).to.equal(true)
+		end)
+
+		it("is never full before arrival, even when ready", function()
+			local shown = 0
+			for _ = 1, 600 do
+				shown = advance(shown, 1, false, 1 / 60)
+			end
+			expect(shown < 1).to.equal(true)
+		end)
+
+		it("eases to full once arrived, within the ARRIVED beat", function()
+			local shown = 0.4
+			for _ = 1, 20 do
+				shown = advance(shown, 1, true, 1 / 60)
+			end
+			expect(shown).to.equal(1)
+		end)
+
+		it("ignores a broken step", function()
+			expect(advance(0.3, 0.5, false, -1)).to.equal(0.3)
+			expect(advance(0.3, 0 / 0, false, 1 / 60) >= 0.3).to.equal(true)
+		end)
+	end)
 end
