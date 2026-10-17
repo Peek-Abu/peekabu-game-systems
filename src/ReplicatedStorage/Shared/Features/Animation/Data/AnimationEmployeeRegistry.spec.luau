@@ -3,8 +3,8 @@ local AnimationRegistry = require(script.Parent.AnimationRegistry)
 local AnimationTypes = require(script.Parent.AnimationTypes)
 
 return function()
-	it("holds Pippa's idle, walk and run as looped Core locomotion with canonical ids", function()
-		for _, key in { "pippaidle", "pippawalk", "pipparun" } do
+	it("holds Pippa's idle, walk, run and crouch as looped Core locomotion with canonical ids", function()
+		for _, key in { "pippaidle", "pippawalk", "pipparun", "pippacrouchidle", "pippacrouchwalk" } do
 			local def = AnimationEmployeeRegistry[key]
 			expect(def).to.be.ok()
 			expect(AnimationTypes.isCanonicalAssetId(def.assetId)).to.equal(true)

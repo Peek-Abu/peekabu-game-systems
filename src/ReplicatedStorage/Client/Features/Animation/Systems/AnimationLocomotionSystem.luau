@@ -15,6 +15,12 @@
 	parkour state pins its own registry pose; state-driven poses resume on clear) — the seam that
 	replaces "edit the 1601-line script".
 
+	A STANCE changes which ground poses the state-driven core picks (`setStance`): crouched, standing
+	still is `crouchidle` and any movement is `crouchwalk` (its stride scaled by `crouchScale`, capped by
+	`crouchMaxRate`); jumps, falls, climbs and swims are untouched. A clip set without both crouch poses
+	in `poseIds` stays standing (there is no stock crouch). A stance change re-poses at once at the last
+	running speed (mid-air it waits for the landing).
+
 	@class AnimationLocomotionSystem
 ]=]
 
@@ -57,11 +63,17 @@ export type Config = {
 	-- ~1.3 st/s would otherwise play its walk 12x at WalkSpeed 16). Unset = `maxRate`.
 	walkMaxRate: number?,
 	runMaxRate: number?,
+	-- The crouch walk's divisor (its planted speed) and play-rate cap. Unset = `walkScale` / `walkMaxRate`.
+	crouchScale: number?,
+	crouchMaxRate: number?,
 	-- Logical pose -> registry id to play for it (a character's own clip set, e.g. an employee's
 	-- `{ idle = "pippaidle", walk = "pippawalk", run = "pipparun" }`). Poses it leaves out play the
 	-- registry entry named after the pose. `currentPose` still reports the logical pose.
 	poseIds: { [string]: string }?,
 }
+
+-- Which ground poses play: standing (idle/walk/run) or crouched (crouchidle/crouchwalk).
+export type Stance = "stand" | "crouch"
 
 export type LocomotionEvent =
 	"running"
@@ -86,6 +98,8 @@ export type AnimationLocomotionSystem = {
 		opts: AnimationPlayerSystem.PlayOpts?
 	) -> (boolean, string?),
 	clearPoseOverride: (self: AnimationLocomotionSystem) -> (),
+	setStance: (self: AnimationLocomotionSystem, stance: Stance) -> (),
+	currentStance: (self: AnimationLocomotionSystem) -> Stance,
 	destroy: (self: AnimationLocomotionSystem) -> (),
 }
 
@@ -145,6 +159,10 @@ function LocomotionAnimatorModule.new(player: PosePlayer, config: Config?): Anim
 	local walkMaxRate = if config ~= nil and config.walkMaxRate ~= nil then config.walkMaxRate else maxRate
 	local runMaxRate = if config ~= nil and config.runMaxRate ~= nil then config.runMaxRate else maxRate
 	local poseIds: { [string]: string } = if config ~= nil and config.poseIds ~= nil then config.poseIds else {}
+	local crouchScale = if config ~= nil and config.crouchScale ~= nil then config.crouchScale else walkScale
+	local crouchMaxRate = if config ~= nil and config.crouchMaxRate ~= nil then config.crouchMaxRate else walkMaxRate
+	-- Only a clip set with both crouch poses crouches (there is no stock crouch clip).
+	local canCrouch = poseIds.crouchidle ~= nil and poseIds.crouchwalk ~= nil
 
 	-- The registry id a logical pose plays.
 	local function idOf(logicalPose: string): string
@@ -173,6 +191,10 @@ function LocomotionAnimatorModule.new(player: PosePlayer, config: Config?): Anim
 	-- reports Freefall once per fall, usually a few frames after Jumping, so without this memory the fall
 	-- pose never plays: the one-shot jump clip ends (~1.2 s) and a longer fall shows no pose at all.
 	local pendingFall = false
+	local stance: Stance = "stand"
+	-- The speed of the latest `running` event while on the ground (nil after any other state): a stance change
+	-- re-poses at it.
+	local lastRunning: number? = nil
 
 	-- Switches to `nextPose`, or just retunes speed when the pose is unchanged (replaying a
 	-- looped pose would thrash its fade — the failure V3's pose-flap check watches for).
@@ -192,6 +214,32 @@ function LocomotionAnimatorModule.new(player: PosePlayer, config: Config?): Anim
 		-- state event retries. The player already logged the reason.
 		pose = if nextHandle ~= nil then nextPose else nil
 		handle = nextHandle
+	end
+
+	local function crouched(): boolean
+		return stance == "crouch" and canCrouch
+	end
+
+	-- The ground pose for `moveSpeed` in the current stance.
+	local function groundPose(moveSpeed: number)
+		if crouched() then
+			if moveSpeed <= IDLE_SPEED then
+				setPose("crouchidle")
+			else
+				setPose("crouchwalk", strideRate(moveSpeed / crouchScale, crouchMaxRate))
+			end
+		elseif moveSpeed <= IDLE_SPEED then
+			setPose("idle")
+		elseif moveSpeed < walkRunThreshold then
+			setPose("walk", strideRate(moveSpeed / walkScale, walkMaxRate))
+		else
+			setPose("run", strideRate(moveSpeed / runScale, runMaxRate))
+		end
+	end
+
+	-- Standing still in the current stance.
+	local function restPose()
+		setPose(if crouched() then "crouchidle" else "idle")
 	end
 
 	local function stopPose(fadeTime: number?)
@@ -231,15 +279,9 @@ function LocomotionAnimatorModule.new(player: PosePlayer, config: Config?): Anim
 			if event ~= "freefall" then
 				pendingFall = false
 			end
+			lastRunning = if event == "running" then (speed or 0) else nil
 			if event == "running" then
-				local moveSpeed = speed or 0
-				if moveSpeed <= IDLE_SPEED then
-					setPose("idle")
-				elseif moveSpeed < walkRunThreshold then
-					setPose("walk", strideRate(moveSpeed / walkScale, walkMaxRate))
-				else
-					setPose("run", strideRate(moveSpeed / runScale, runMaxRate))
-				end
+				groundPose(speed or 0)
 			elseif event == "jumping" then
 				jumpUntil = now + jumpDuration
 				setPose("jump")
@@ -260,7 +302,7 @@ function LocomotionAnimatorModule.new(player: PosePlayer, config: Config?): Anim
 			elseif event == "seated" then
 				setPose("sit")
 			elseif event == "gettingUp" or event == "platformStanding" then
-				setPose("idle")
+				restPose()
 			end
 		end,
 
@@ -303,7 +345,7 @@ function LocomotionAnimatorModule.new(player: PosePlayer, config: Config?): Anim
 				end
 				stopPose(DEFAULT_FADE)
 			elseif not dead then
-				setPose("idle")
+				restPose()
 			end
 		end,
 
@@ -328,7 +370,7 @@ function LocomotionAnimatorModule.new(player: PosePlayer, config: Config?): Anim
 			local overrideHandle, reason = player:play(id, opts)
 			if overrideHandle == nil then
 				-- Refusal falls back to the state-driven pose so the character is never frozen.
-				setPose("idle")
+				restPose()
 				return false, reason
 			end
 			overridePose = id
@@ -344,8 +386,28 @@ function LocomotionAnimatorModule.new(player: PosePlayer, config: Config?): Anim
 			overridePose = nil
 			handle = nil
 			if not destroyed and enabled and not dead then
-				setPose("idle")
+				restPose()
 			end
+		end,
+
+		--[=[
+			Sets the stance (crouched or standing). On the ground it re-poses at once at the last running
+			speed; mid-air, dead, disabled or overridden it is only remembered (the next pose uses it).
+		]=]
+		setStance = function(_self: AnimationLocomotionSystem, nextStance: Stance)
+			if destroyed or stance == nextStance then
+				return
+			end
+			stance = nextStance
+			local speed = lastRunning
+			if dead or not enabled or overridePose ~= nil or speed == nil then
+				return
+			end
+			groundPose(speed)
+		end,
+
+		currentStance = function(_self: AnimationLocomotionSystem): Stance
+			return stance
 		end,
 
 		destroy = function(_self: AnimationLocomotionSystem)

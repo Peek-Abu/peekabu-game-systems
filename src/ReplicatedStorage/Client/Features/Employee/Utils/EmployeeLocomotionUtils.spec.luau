@@ -52,6 +52,43 @@ return function()
 			expect(config.runScale).to.be.near(2, 1e-6)
 		end)
 
+		it("maps the crouch clips and plants the crouch stride at the employee's scale", function()
+			local config = EmployeeLocomotionUtils.fromDef(defWith({
+				idle = "a",
+				walk = "b",
+				run = "c",
+				crouchIdle = "d",
+				crouchWalk = "e",
+				walkPlantedSpeed = 1.2,
+				runPlantedSpeed = 1.6,
+				crouchWalkPlantedSpeed = 1.3,
+				minRate = 0.5,
+				walkMaxRate = 2.5,
+				runMaxRate = 3,
+				crouchWalkMaxRate = 2,
+			}, 1.25))
+			expect(config.poseIds.crouchidle).to.equal("d")
+			expect(config.poseIds.crouchwalk).to.equal("e")
+			expect(config.crouchScale).to.be.near(1.625, 1e-6)
+			expect(config.crouchMaxRate).to.equal(2)
+		end)
+
+		it("leaves the crouch out for an employee without crouch clips (it stays standing)", function()
+			local config = EmployeeLocomotionUtils.fromDef(defWith({
+				idle = "a",
+				walk = "b",
+				run = "c",
+				walkPlantedSpeed = 1.2,
+				runPlantedSpeed = 1.6,
+				minRate = 0.5,
+				walkMaxRate = 2.5,
+				runMaxRate = 3,
+			}))
+			expect(config.poseIds.crouchidle).to.equal(nil)
+			expect(config.poseIds.crouchwalk).to.equal(nil)
+			expect(config.crouchScale).to.equal(nil)
+		end)
+
 		it("returns nil for an employee without its own locomotion (stock clips)", function()
 			expect(EmployeeLocomotionUtils.fromDef(defWith(nil))).to.equal(nil)
 		end)
@@ -62,6 +99,8 @@ return function()
 			local config = EmployeeLocomotionUtils.forName("Pippa")
 			expect(config).to.be.ok()
 			expect(config.poseIds.walk).to.equal("pippawalk")
+			expect(config.poseIds.crouchidle).to.equal("pippacrouchidle")
+			expect(config.poseIds.crouchwalk).to.equal("pippacrouchwalk")
 		end)
 
 		it("returns nil for a missing, unknown or non-string name", function()

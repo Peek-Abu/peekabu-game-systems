@@ -10,6 +10,9 @@
 
 	Kill switch: the Workspace attribute `LocomotionEnabled` (unset = enabled).
 
+	Stance: when `options.crouchAttribute` names a character attribute, the core crouches while it is `true` (a game's
+	crouch feature sets it on the server; the engine replicates it, so every client poses every character the same).
+
 	May yield: `AnimationPlayerEngineSystem.forCharacter` waits up to 5 s for an Animator.
 
 	Spec-exempt shell (needs a live Humanoid + Animator); the core is specced in AnimationLocomotionSystem.spec.
@@ -33,17 +36,23 @@ local log = Logger.new("AnimationLocomotionHumanoidSystem")
 
 local AnimationLocomotionHumanoidSystem = {}
 
+export type BindOptions = {
+	-- A character attribute: `true` = crouched (AnimationLocomotionSystem:setStance).
+	crouchAttribute: string?,
+}
+
 local function isEnabled(): boolean
 	return Workspace:GetAttribute(ENABLED_ATTRIBUTE) ~= false
 end
 
 --[=[
 	Binds locomotion to `character`'s Humanoid. `config` tunes the core (a character's own clip set via
-	`poseIds`, its stride scales and caps); nil = the stock set and tuning.
+	`poseIds`, its stride scales and caps); nil = the stock set and tuning. `options` names what else drives it.
 ]=]
 function AnimationLocomotionHumanoidSystem.bind(
 	character: Model,
-	config: AnimationLocomotionSystem.Config?
+	config: AnimationLocomotionSystem.Config?,
+	options: BindOptions?
 ): (() -> ())?
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	if humanoid == nil or not humanoid:IsA("Humanoid") then
@@ -123,6 +132,15 @@ function AnimationLocomotionHumanoidSystem.bind(
 			animator:update(os.clock())
 		end),
 	}
+
+	local crouchAttribute = if options ~= nil then options.crouchAttribute else nil
+	if crouchAttribute ~= nil then
+		local function applyStance()
+			animator:setStance(if character:GetAttribute(crouchAttribute) == true then "crouch" else "stand")
+		end
+		applyStance()
+		table.insert(connections, character:GetAttributeChangedSignal(crouchAttribute):Connect(applyStance))
+	end
 
 	-- Start at idle (the stock script's "initialize to idle").
 	if isEnabled() then

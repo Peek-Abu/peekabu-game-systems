@@ -1,8 +1,8 @@
 --!strict
 --[=[
 	EmployeeLocomotionUtils: turns an employee's `locomotion` entry (EmployeeRegistry) into the locomotion
-	core's config, so an employee character plays its own idle/walk/run with strides scaled to its clips'
-	planted speeds. Used by `StarterCharacterScripts/Animate.client.luau` when it binds a character.
+	core's config, so an employee character plays its own idle/walk/run (and crouch idle / crouch walk, when it
+	has both) with strides scaled to its clips' planted speeds. Used by `StarterCharacterScripts/Animate.client.luau` when it binds a character.
 
 	@class EmployeeLocomotionUtils
 ]=]
@@ -26,14 +26,26 @@ function EmployeeLocomotionUtils.fromDef(def: EmployeeRegistry.EmployeeDef): Con
 	if locomotion == nil then
 		return nil
 	end
+	local poseIds: { [string]: string } = { idle = locomotion.idle, walk = locomotion.walk, run = locomotion.run }
+	-- Both crouch clips and their planted speed, or no crouch at all (the core then stays standing).
+	local crouchIdle, crouchWalk = locomotion.crouchIdle, locomotion.crouchWalk
+	local crouchPlanted = locomotion.crouchWalkPlantedSpeed
+	local crouchScale: number? = nil
+	if crouchIdle ~= nil and crouchWalk ~= nil and crouchPlanted ~= nil then
+		poseIds.crouchidle = crouchIdle
+		poseIds.crouchwalk = crouchWalk
+		crouchScale = crouchPlanted * def.scale
+	end
 	local config: Config = {
-		poseIds = { idle = locomotion.idle, walk = locomotion.walk, run = locomotion.run },
+		poseIds = poseIds,
 		-- Planted speeds are measured on the template; a scaled rig's stride covers `scale` times the ground.
 		walkScale = locomotion.walkPlantedSpeed * def.scale,
 		runScale = locomotion.runPlantedSpeed * def.scale,
 		minRate = locomotion.minRate,
 		walkMaxRate = locomotion.walkMaxRate,
 		runMaxRate = locomotion.runMaxRate,
+		crouchScale = crouchScale,
+		crouchMaxRate = if crouchScale ~= nil then locomotion.crouchWalkMaxRate else nil,
 	}
 	return config
 end

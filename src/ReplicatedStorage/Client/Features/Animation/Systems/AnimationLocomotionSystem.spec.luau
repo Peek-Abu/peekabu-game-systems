@@ -299,6 +299,116 @@ return function()
 		end)
 	end)
 
+	describe("stance (crouch)", function()
+		local CROUCH_IDS = {
+			idle = "pippaidle",
+			walk = "pippawalk",
+			run = "pipparun",
+			crouchidle = "pippacrouchidle",
+			crouchwalk = "pippacrouchwalk",
+		}
+		local CONFIG = {
+			walkRunThreshold = 18,
+			walkScale = 1.6,
+			runScale = 1.9,
+			crouchScale = 1.625,
+			minRate = 0.6,
+			walkMaxRate = 2.5,
+			runMaxRate = 2.2,
+			crouchMaxRate = 2,
+			poseIds = CROUCH_IDS,
+		}
+
+		it("stands by default", function()
+			local animator = makeAnimator(makeFakePlayer(), CONFIG)
+			expect(animator:currentStance()).to.equal("stand")
+		end)
+
+		it("crouch-idles still and crouch-walks moving, its stride scaled and capped on its own", function()
+			local fake = makeFakePlayer()
+			local animator = makeAnimator(fake, CONFIG)
+			animator:setStance("crouch")
+			animator:handleEvent("running", 0, 0)
+			expect(animator:currentPose()).to.equal("crouchidle")
+			expect(lastPlay(fake).id).to.equal("pippacrouchidle")
+			animator:handleEvent("running", 2, 1)
+			expect(animator:currentPose()).to.equal("crouchwalk")
+			expect(lastPlay(fake).id).to.equal("pippacrouchwalk")
+			expect(lastPlay(fake).opts.speed).to.be.near(2 / 1.625, 1e-6)
+			-- At the crouch speed (9) the stride is capped by crouchMaxRate, not the walk's cap.
+			animator:handleEvent("running", 9, 2)
+			expect(lastPlay(fake).adjustments[#lastPlay(fake).adjustments]).to.be.near(2, 1e-6)
+			-- Any speed crouched is the crouch walk (never the run).
+			animator:handleEvent("running", 25, 3)
+			expect(animator:currentPose()).to.equal("crouchwalk")
+		end)
+
+		it("re-poses at once on a stance change, at the last running speed, and back", function()
+			local fake = makeFakePlayer()
+			local animator = makeAnimator(fake, CONFIG)
+			animator:handleEvent("running", 8, 0)
+			expect(animator:currentPose()).to.equal("walk")
+			animator:setStance("crouch")
+			expect(animator:currentPose()).to.equal("crouchwalk")
+			expect(fake.stops[#fake.stops].id).to.equal("pippawalk")
+			animator:setStance("stand")
+			expect(animator:currentPose()).to.equal("walk")
+			expect(fake.stops[#fake.stops].id).to.equal("pippacrouchwalk")
+			expect(lastPlay(fake).opts.speed).to.be.near(2.5, 1e-6)
+		end)
+
+		it("stays standing for a clip set without crouch poses (the stock set)", function()
+			local fake = makeFakePlayer()
+			local animator = makeAnimator(fake, { poseIds = { idle = "pippaidle", walk = "pippawalk" } })
+			animator:setStance("crouch")
+			animator:handleEvent("running", 0, 0)
+			expect(animator:currentPose()).to.equal("idle")
+			expect(lastPlay(fake).id).to.equal("pippaidle")
+		end)
+
+		it("leaves jumps and falls alone, and lands back in the crouch", function()
+			local fake = makeFakePlayer()
+			local animator = makeAnimator(fake, CONFIG)
+			animator:setStance("crouch")
+			animator:handleEvent("running", 0, 0)
+			animator:handleEvent("jumping", nil, 1)
+			expect(animator:currentPose()).to.equal("jump")
+			-- Mid-air a stance change waits for the landing.
+			animator:setStance("stand")
+			expect(animator:currentPose()).to.equal("jump")
+			animator:setStance("crouch")
+			animator:handleEvent("running", 0, 2)
+			expect(animator:currentPose()).to.equal("crouchidle")
+		end)
+
+		it("ignores stance changes under an override or the kill switch, and resumes crouched", function()
+			local fake = makeFakePlayer()
+			local animator = makeAnimator(fake, CONFIG)
+			animator:handleEvent("running", 0, 0)
+			animator:setPoseOverride("sit")
+			animator:setStance("crouch")
+			expect(animator:currentPose()).to.equal("sit")
+			animator:clearPoseOverride()
+			expect(animator:currentPose()).to.equal("crouchidle")
+			animator:setEnabled(false)
+			animator:setStance("stand")
+			expect(animator:currentPose()).to.equal(nil)
+			animator:setEnabled(true)
+			expect(animator:currentPose()).to.equal("idle")
+		end)
+
+		it("does nothing once dead", function()
+			local fake = makeFakePlayer()
+			local animator = makeAnimator(fake, CONFIG)
+			animator:handleEvent("running", 0, 0)
+			animator:handleEvent("died", nil, 1)
+			local plays = #fake.plays
+			animator:setStance("crouch")
+			expect(#fake.plays).to.equal(plays)
+			expect(animator:currentPose()).to.equal(nil)
+		end)
+	end)
+
 	describe("other states", function()
 		it("swims when moving and swim-idles when not", function()
 			local fake = makeFakePlayer()

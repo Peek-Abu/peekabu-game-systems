@@ -7,7 +7,7 @@
 	Pippa's clips (uploaded under the Icey Labs group, sources in `characters/pippa/anim/`) are authored
 	relative to her own T-pose rest and carry no retargeting rig data, so `Workspace.Retargeting` does not
 	touch them. They are root-in-place loops whose feet plant at a measured speed at 1x playback (walk
-	1.27 st/s, run 1.52 st/s); EmployeeRegistry carries those numbers for the stride scaling.
+	1.27 st/s, run 1.52 st/s, crouch walk 1.3 st/s); EmployeeRegistry carries those numbers for the stride scaling.
 
 	All entries are Core + `ambient`, like the stock locomotion: gameplay clips (carry, vacuum, actions)
 	sit above them, and a bulk combat stop never kills them.
@@ -37,6 +37,10 @@ local AnimationEmployeeRegistry: AnimationDomain = table.freeze({
 	pippawalk = locomotion("rbxassetid://93025706307245"),
 	-- Pippa Run v1: 1.03 s loop (2 cycles), feet planted at 1.52 st/s at 1x.
 	pipparun = locomotion("rbxassetid://106530900825479"),
+	-- Pippa Crouch Idle v1: 3.0 s loop, feet fixed, a wary look left and right (root 0.30 below standing).
+	pippacrouchidle = locomotion("rbxassetid://89081416541239"),
+	-- Pippa Crouch Walk v1: 1.33 s loop (1 cycle), feet planted at 1.3 st/s at 1x (root 0.27 below standing).
+	pippacrouchwalk = locomotion("rbxassetid://116992389084029"),
 })
 
 return AnimationEmployeeRegistry

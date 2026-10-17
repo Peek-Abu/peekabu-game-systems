@@ -16,6 +16,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local AnimationLocomotionHumanoidSystem =
 	require(ReplicatedStorage.Client.Features.Animation.Systems.AnimationLocomotionHumanoidSystem)
+local CrouchConstants = require(ReplicatedStorage.Shared.Features.Crouch.Data.CrouchConstants)
 local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
 local EmployeeLocomotionUtils = require(ReplicatedStorage.Client.Features.Employee.Utils.EmployeeLocomotionUtils)
 
@@ -28,7 +29,9 @@ character:WaitForChild("Humanoid")
 -- An employee character (Cleanup Crew) plays its own idle/walk/run when its EmployeeRegistry entry has
 -- them; the server stamps the attribute on the StarterCharacter template, so it is here at spawn.
 local config = EmployeeLocomotionUtils.forName(character:GetAttribute(EmployeeConstants.NAME_ATTRIBUTE))
-local unbind = AnimationLocomotionHumanoidSystem.bind(character, config)
+-- Crouched (the server's Crouching attribute): the employee's crouch idle / walk.
+local unbind =
+	AnimationLocomotionHumanoidSystem.bind(character, config, { crouchAttribute = CrouchConstants.CROUCHING_ATTRIBUTE })
 if unbind ~= nil then
 	local release = unbind
 	character.Destroying:Connect(release)
