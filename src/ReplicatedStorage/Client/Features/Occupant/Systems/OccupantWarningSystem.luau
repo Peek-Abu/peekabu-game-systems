@@ -50,6 +50,7 @@ local typing: SoundServiceClient.SoundHandle? = nil
 -- The slow turn's creak while it sounds, and the phase the per-frame turn sounds last saw.
 local creak: SoundServiceClient.SoundHandle? = nil
 local turnPhase = ""
+local creakAt = -math.huge
 -- How fast a cut-short creak fades (s).
 local CREAK_CUT = 0.08
 local lastPhase = ""
@@ -227,13 +228,15 @@ local function turnSounds()
 	if phase == turnPhase then
 		return
 	end
-	if OccupantTellRules.cutShort(turnPhase, phase) then
+	-- Cut short only before the full turn: at its natural end the creak's last moments run on under the crack.
+	if OccupantTellRules.cutShort(turnPhase, phase) and os.clock() - creakAt < OccupantConstants.SLOW_TURN_SECONDS then
 		counters.creakCuts += 1
 		stopCreak(CREAK_CUT)
 	end
 	if head ~= nil and OccupantTellRules.slowTurned(turnPhase, phase) then
 		stopCreak(0)
 		counters.creaks += 1
+		creakAt = os.clock()
 		creak = play("harlowCreak", { at = head })
 	end
 	if head ~= nil and OccupantTellRules.jerked(turnPhase, phase) then
