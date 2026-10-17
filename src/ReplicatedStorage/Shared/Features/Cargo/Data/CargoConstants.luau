@@ -187,6 +187,9 @@ return table.freeze({
 	GRIME_VISUAL_CHECK = 0.25,
 	-- The buried pile's glint: a few sparkles every GLINT_INTERVAL_MIN..MAX seconds, seen within GLINT_DISTANCE.
 	GLINT_DISTANCE = 20,
+	-- No glint while the local character stands within this many studs of a pile's footprint: it would burst at
+	-- their feet (the pile is non-colliding and its top is about ankle height), and they have already found it.
+	GLINT_UNDERFOOT_MARGIN = 1,
 	GLINT_INTERVAL_MIN = 3,
 	GLINT_INTERVAL_MAX = 5.5,
 	GLINT_COUNT = 3,

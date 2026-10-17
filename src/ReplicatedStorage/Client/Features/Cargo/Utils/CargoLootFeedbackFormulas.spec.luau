@@ -38,6 +38,19 @@ return function()
 			expect(CargoLootFeedbackFormulas.glintSeen(CargoConstants.GLINT_DISTANCE)).to.equal(true)
 			expect(CargoLootFeedbackFormulas.glintSeen(CargoConstants.GLINT_DISTANCE + 0.5)).to.equal(false)
 		end)
+
+		it("is not drawn under the local character's feet (standing in the pile)", function()
+			local size = Vector3.new(4, 1.2, 4)
+			local margin = CargoConstants.GLINT_UNDERFOOT_MARGIN
+			expect(CargoLootFeedbackFormulas.glintUnderfoot(Vector3.new(0, 1.2, 0), size)).to.equal(true)
+			expect(CargoLootFeedbackFormulas.glintUnderfoot(Vector3.new(2 + margin, 1.2, -1), size)).to.equal(true)
+			expect(CargoLootFeedbackFormulas.glintUnderfoot(Vector3.new(2 + margin + 0.5, 1.2, 0), size)).to.equal(
+				false
+			)
+			expect(CargoLootFeedbackFormulas.glintUnderfoot(Vector3.new(0, 1.2, -(2 + margin + 0.5)), size)).to.equal(
+				false
+			)
+		end)
 	end)
 
 	describe("stamp", function()

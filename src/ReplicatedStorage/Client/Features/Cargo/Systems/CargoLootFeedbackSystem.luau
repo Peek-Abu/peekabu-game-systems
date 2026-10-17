@@ -5,7 +5,7 @@
 
 	- the glint: a dust pile marked CargoConstants.BURIED_ATTRIBUTE twinkles a few sparkles every
 	  GLINT_INTERVAL_MIN..MAX seconds (its own random schedule), drawn only when the local character is within
-	  GLINT_DISTANCE: a hint easy to miss;
+	  GLINT_DISTANCE and not standing in the pile (its top is at their feet): a hint easy to miss;
 	- the reveal: a cargo item that was hidden under a pile pops out with a gold burst and its reveal sound, whose value
 	  layer grows with the item's base value (CargoLootFeedbackFormulas.revealTier, CargoAssets.REVEAL_SOUNDS);
 	- the appraisal: a valuable appraised a moment ago (CargoAppraisedAt, fresh by CargoLootFeedbackFormulas.stampFresh)
@@ -130,6 +130,9 @@ end
 local function glint(pile: BasePart)
 	local root = localRoot()
 	if root == nil or not CargoLootFeedbackFormulas.glintSeen((root.Position - pile.Position).Magnitude) then
+		return
+	end
+	if CargoLootFeedbackFormulas.glintUnderfoot(pile.CFrame:PointToObjectSpace(root.Position), pile.Size) then
 		return
 	end
 	counters.glints += 1

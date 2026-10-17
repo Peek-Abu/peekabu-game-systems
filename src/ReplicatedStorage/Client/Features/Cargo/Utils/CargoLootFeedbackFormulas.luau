@@ -3,7 +3,7 @@
 	CargoLootFeedbackFormulas: how the loot loop looks (docs/superpowers/specs/2026-10-15-cleanup-crew-loot-loop-design.md
 	§5). A grimy valuable's darkening (a Highlight's fill transparency) and dust motes fade with its cleanliness and are
 	drawn only near the camera; a buried pile's glint comes every GLINT_INTERVAL_MIN..MAX seconds and is seen only up
-	close; an appraisal's stamp pops while it is fresh. Pure.
+	close, but not from inside the pile (`glintUnderfoot`); an appraisal's stamp pops while it is fresh. Pure.
 
 	@class CargoLootFeedbackFormulas
 ]=]
@@ -49,6 +49,15 @@ end
 ]=]
 function CargoLootFeedbackFormulas.glintSeen(distance: number): boolean
 	return distance <= CargoConstants.GLINT_DISTANCE
+end
+
+--[=[
+	Whether the local character stands over a pile (`offset`: their root in the pile's own space; `size`: the pile's
+	size), within GLINT_UNDERFOOT_MARGIN of its footprint. Its glint is skipped then: it would burst at their feet.
+]=]
+function CargoLootFeedbackFormulas.glintUnderfoot(offset: Vector3, size: Vector3): boolean
+	local margin = CargoConstants.GLINT_UNDERFOOT_MARGIN
+	return math.abs(offset.X) <= size.X / 2 + margin and math.abs(offset.Z) <= size.Z / 2 + margin
 end
 
 export type RevealTier = "low" | "mid" | "high" | "jackpot"
