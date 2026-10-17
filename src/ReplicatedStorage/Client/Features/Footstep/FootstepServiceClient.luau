@@ -14,7 +14,8 @@
 	  zeroed. The game's land, jump and ragdoll body-fall are FootstepLandingSystem's (started here).
 	- Every pool's sounds (and the jumps, the land and the body-fall) are kept loaded while this client runs (one silent, never-played Sound per asset in
 	  SoundService, preloaded through ContentProvider): a cold first step loaded late, the foot already down.
-	- getState: the counters and the last RECENT steps (the live sync check reads them).
+	- getState: the counters and the last RECENT steps (the live sync check reads them). onStep: hear each step as it
+	  plays (the Manager's dread shakes the camera on his footfalls).
 
 	Spec-exempt shell (Players, CollectionService, RunService); the decisions are the specced FootstepPlantFormulas,
 	FootstepGaitFormulas and FootstepSurfaceUtils.
@@ -57,6 +58,9 @@ local counters: FootstepEmitterSystem.Counters = { steps = 0, gated = 0, silent 
 local muted = 0
 local warm: { Sound } = {}
 local stoppers: { () -> () } = {}
+-- Who hears each step as it plays (onStep): the Manager's dread shakes the camera on his footfalls.
+type StepListener = (model: Model, record: FootstepEmitterSystem.StepRecord) -> ()
+local listeners: { StepListener } = {}
 
 -- One silent Sound per pooled asset, preloaded, so no step waits for its asset.
 local function preload()
@@ -248,6 +252,9 @@ local function step(dt: number)
 			if #recent > FootstepConstants.RECENT then
 				table.remove(recent, 1)
 			end
+			for _, hear in table.clone(listeners) do
+				task.spawn(hear, model, record)
+			end
 		end
 	end
 end
@@ -258,6 +265,7 @@ export type FootstepServiceClient = {
 	start: (self: FootstepServiceClient) -> (),
 	stop: (self: FootstepServiceClient) -> (),
 	getState: (self: FootstepServiceClient) -> { [string]: any },
+	onStep: (self: FootstepServiceClient, listener: StepListener) -> () -> (),
 }
 
 local FootstepServiceClient: FootstepServiceClient = {
@@ -301,6 +309,20 @@ local FootstepServiceClient: FootstepServiceClient = {
 		if group ~= nil then
 			group:Destroy()
 			silence = nil
+		end
+	end,
+
+	--[=[
+		Calls `listener` with the model and its step record each time a followed character's foot lands (a step that
+		played). Returns a function that stops listening.
+	]=]
+	onStep = function(_self, listener)
+		table.insert(listeners, listener)
+		return function()
+			local index = table.find(listeners, listener)
+			if index ~= nil then
+				table.remove(listeners, index)
+			end
 		end
 	end,
 

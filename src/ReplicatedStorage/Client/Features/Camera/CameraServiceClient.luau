@@ -4,7 +4,7 @@
 	docs/superpowers/specs/2026-10-09-camera-design.md).
 
 	Systems push MODES (`pushMode` â†’ token; the highest priority wins, the latest wins ties) and add
-	EFFECTS (`addTrauma`, `kickFov`, `addModifier`). Every frame, just after the engine camera updates,
+	EFFECTS (`addTrauma`, `kickFov`, `setFovOffset`, `addModifier`). Every frame, just after the engine camera updates,
 	it applies the top mode, then layers the shake, the custom modifiers and the FOV on top. It owns
 	`FieldOfView` outright (written absolutely each frame: the mode's FOV or the base FOV, plus kicks).
 
@@ -64,6 +64,16 @@ local followCFrame: CFrame? = nil
 local modifierErrors = 0
 -- Accessibility: scales every shake (Settings writes it through setShakeScale).
 local shakeScale = 1
+-- Held FOV offsets by owner (setFovOffset): unlike a kick they stay until their owner changes or clears them.
+local fovOffsets: { [string]: number? } = {}
+
+local function heldFov(): number
+	local total = 0
+	for _, degrees in fovOffsets do
+		total += degrees or 0
+	end
+	return total
+end
 
 local function currentCamera(): Camera?
 	return Workspace.CurrentCamera
@@ -172,7 +182,7 @@ local function step(dt: number)
 	if offset ~= CFrame.identity then
 		camera.CFrame *= offset
 	end
-	camera.FieldOfView = (modeFov or baseFov) + effects:fovOffset()
+	camera.FieldOfView = (modeFov or baseFov) + effects:fovOffset() + heldFov()
 end
 
 export type CameraServiceClient = {
@@ -187,6 +197,7 @@ export type CameraServiceClient = {
 	kickFov: (self: CameraServiceClient, amount: number, duration: number) -> (),
 	addModifier: (self: CameraServiceClient, modifier: Modifier) -> () -> (),
 	setShakeScale: (self: CameraServiceClient, scale: number) -> (),
+	setFovOffset: (self: CameraServiceClient, owner: string, degrees: number) -> (),
 }
 
 local connections: { RBXScriptConnection } = {}
@@ -262,6 +273,7 @@ local CameraServiceClient: CameraServiceClient = {
 		end
 		appliedToken = 0
 		effects:reset()
+		table.clear(fovOffsets)
 	end,
 
 	--[=[
@@ -310,6 +322,14 @@ local CameraServiceClient: CameraServiceClient = {
 		shakeScale = math.clamp(scale, 0, 1)
 	end,
 
+	--[=[
+		Holds an FOV offset of `degrees` for `owner` (0 clears it), added on top of the mode's FOV and the kicks until
+		the owner changes it. Offsets from different owners sum.
+	]=]
+	setFovOffset = function(_self, owner, degrees)
+		fovOffsets[owner] = if degrees ~= 0 then degrees else nil
+	end,
+
 	getState = function(_self)
 		local top = modes:top()
 		return {
@@ -317,6 +337,7 @@ local CameraServiceClient: CameraServiceClient = {
 			modes = modes:count(),
 			trauma = effects:trauma(),
 			shakeScale = shakeScale,
+			fovHeld = heldFov(),
 			fovKicks = effects:activeKicks(),
 			modifiers = #modifiers,
 			modifierErrors = modifierErrors,
