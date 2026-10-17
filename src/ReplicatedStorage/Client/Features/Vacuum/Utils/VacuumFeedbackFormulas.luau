@@ -96,4 +96,36 @@ function VacuumFeedbackFormulas.nearest(origin: Vector3, positions: { Vector3 },
 	return best
 end
 
+--[=[
+	How hard a pile is being sucked (0..1) for its particles: from 0.45 at the start to 0.85 near clearing, plus 0.075
+	per extra vacuumer; 0 with nobody on it.
+]=]
+function VacuumFeedbackFormulas.suctionStrength(progress: number, count: number): number
+	if count <= 0 then
+		return 0
+	end
+	local helpers = math.min(count, 3) - 1
+	return math.clamp(0.45 + 0.4 * math.clamp(progress, 0, 1) + 0.075 * helpers, 0, 1)
+end
+
+--[=[
+	Whether progress rising from `before` to `after` crossed a multiple of `step` (a pile puffs as it shrinks).
+]=]
+function VacuumFeedbackFormulas.pastStep(before: number, after: number, step: number): boolean
+	if step <= 0 or after <= before then
+		return false
+	end
+	return math.floor(after / step) > math.floor(before / step)
+end
+
+--[=[
+	A pile's pop scale: its size over the size the pop is drawn for, within `low`..`high`.
+]=]
+function VacuumFeedbackFormulas.popScale(size: number, reference: number, low: number, high: number): number
+	if reference <= 0 then
+		return 1
+	end
+	return math.clamp(size / reference, low, high)
+end
+
 return VacuumFeedbackFormulas

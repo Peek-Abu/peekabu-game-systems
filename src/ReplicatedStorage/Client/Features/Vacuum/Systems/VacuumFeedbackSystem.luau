@@ -6,7 +6,10 @@
 	  floor head (else hand; re-aimed every frame) and a whine loops at the pile, its pitch and volume rising with ChannelProgress
 	  (VacuumFeedbackFormulas.whine), winding down (vacuumStop) when the channel stops;
 	- when it disappears after being vacuumed (VacuumFeedbackFormulas.cleared on its peak progress): a pop and a
-	  sparkle burst where it was. The pile's shrinking is the server's (M1).
+	  sparkle burst where it was (a shine sweep on a valuable come up spotless). The pile's shrinking is the
+	  server's (M1).
+	The particles are VacuumVfxSystem's polished funnel, puffs, pop and shine; with VfxBurstSystem's A/B switch on
+	(`polished()` false) they are the pre-polish single stream and sparkle burst built here.
 	Listeners (`onPop`) hear every pop with the pile's size; `progressNear` says how far the pile at a point is (the
 	wand's kick, brace and shimmy, VacuumMotionSystem).
 	The canister is a live Gloom gauge (docs/superpowers/specs/2026-10-16-cleanup-crew-gloom-gleam-economy-design.md
@@ -40,9 +43,13 @@ local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.Va
 local VacuumFeedbackFormulas = require(ReplicatedStorage.Client.Features.Vacuum.Utils.VacuumFeedbackFormulas)
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
 local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
+local VacuumVfxSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumVfxSystem)
+local VfxBurstSystem = require(ReplicatedStorage.Client.Features.Vfx.Systems.VfxBurstSystem)
 
 type PileFeel = {
 	pile: BasePart,
+	-- A grimy valuable being cleaned (else a dust pile).
+	grime: boolean,
 	position: Vector3,
 	progress: number,
 	peak: number,
@@ -51,6 +58,8 @@ type PileFeel = {
 	whine: SoundServiceClient.SoundHandle?,
 	anchor: Attachment?,
 	emitter: ParticleEmitter?,
+	-- The polished stream (VacuumVfxSystem); the anchor and emitter are the pre-polish one (the A/B switch).
+	stream: VacuumVfxSystem.Stream?,
 }
 
 type Gauge = { shown: number, drawn: number, part: BasePart? }
@@ -116,7 +125,11 @@ local function vacuumerPoint(origin: Vector3): Vector3?
 end
 
 local function startSuction(feel: PileFeel)
-	if feel.emitter ~= nil then
+	if feel.emitter ~= nil or feel.stream ~= nil then
+		return
+	end
+	if VfxBurstSystem.polished() then
+		feel.stream = VacuumVfxSystem.stream(feel.pile, feel.grime)
 		return
 	end
 	local anchor = Instance.new("Attachment")
@@ -138,6 +151,11 @@ local function startSuction(feel: PileFeel)
 end
 
 local function stopSuction(feel: PileFeel)
+	local stream = feel.stream
+	if stream ~= nil then
+		stream:stop()
+		feel.stream = nil
+	end
 	local anchor = feel.anchor
 	local emitter = feel.emitter
 	if emitter ~= nil then
@@ -174,6 +192,10 @@ local function update(feel: PileFeel)
 	end
 	feel.activeAt = os.clock()
 	startSuction(feel)
+	local stream = feel.stream
+	if stream ~= nil then
+		stream:update(feel.progress, feel.count)
+	end
 	if feel.whine == nil and SoundRegistry.has(VacuumAssets.WHINE) then
 		feel.whine = play(VacuumAssets.WHINE, { at = feel.pile })
 	end
@@ -186,12 +208,20 @@ local function update(feel: PileFeel)
 	end
 end
 
-local function pop(position: Vector3, size: number)
+local function pop(feel: PileFeel, position: Vector3, size: number)
 	counters.pops += 1
 	for _, listener in popListeners do
 		task.spawn(listener, position, size)
 	end
 	play(VacuumAssets.POP, { at = position })
+	if VfxBurstSystem.polished() then
+		if feel.grime then
+			VacuumVfxSystem.shine(feel.pile)
+		else
+			VacuumVfxSystem.pop(position, size)
+		end
+		return
+	end
 	local anchor = Instance.new("Attachment")
 	anchor.Name = "VacuumSparkle"
 	anchor.Parent = Workspace.Terrain
@@ -211,13 +241,14 @@ local function pop(position: Vector3, size: number)
 	end)
 end
 
-local function observePile(instance: Instance): (() -> ())?
+local function observe(instance: Instance, grime: boolean): (() -> ())?
 	if not instance:IsA("BasePart") then
 		return nil
 	end
 	local pile: BasePart = instance
 	local feel: PileFeel = {
 		pile = pile,
+		grime = grime,
 		position = pile.Position,
 		progress = 0,
 		peak = 0,
@@ -240,14 +271,29 @@ local function observePile(instance: Instance): (() -> ())?
 		stopSuction(feel)
 		if vacuumed then
 			local base = pile:GetAttribute(VacuumConstants.BASE_SIZE_ATTRIBUTE)
-			pop(feel.position, if typeof(base) == "Vector3" then base.Magnitude else pile.Size.Magnitude)
+			pop(feel, feel.position, if typeof(base) == "Vector3" then base.Magnitude else pile.Size.Magnitude)
 		end
 	end
 end
 
--- Points every running suction stream at its vacuumer's hand.
+local function observePile(instance: Instance): (() -> ())?
+	return observe(instance, false)
+end
+
+local function observeGrime(instance: Instance): (() -> ())?
+	return observe(instance, true)
+end
+
+-- Points every running suction stream at its vacuumer's floor head.
 local function aim()
 	for _, feel in active do
+		local stream = feel.stream
+		if stream ~= nil then
+			local target = vacuumerPoint(feel.position)
+			if target ~= nil then
+				stream:aim(target)
+			end
+		end
 		local anchor = feel.anchor
 		local emitter = feel.emitter
 		if anchor ~= nil and emitter ~= nil then
@@ -338,9 +384,10 @@ function VacuumFeedbackSystem.start()
 	if #stoppers > 0 then
 		return
 	end
+	VfxBurstSystem.preload()
 	table.insert(stoppers, Observers.observeTag(VacuumConstants.PILE_TAG, observePile))
 	-- A grimy valuable being cleaned feels like a pile being vacuumed; it pops when it comes up spotless.
-	table.insert(stoppers, Observers.observeTag(VacuumConstants.GRIME_TAG, observePile))
+	table.insert(stoppers, Observers.observeTag(VacuumConstants.GRIME_TAG, observeGrime))
 	onShift(ShiftStore.snapshot())
 	table.insert(stoppers, Charm.subscribe(ShiftStore.snapshot, onShift))
 	local connection = RunService.RenderStepped:Connect(function(deltaTime)
@@ -410,7 +457,7 @@ end
 function VacuumFeedbackSystem.getState(): VacuumFeedbackState
 	local streaming = 0
 	for _, feel in active do
-		if feel.emitter ~= nil then
+		if feel.emitter ~= nil or feel.stream ~= nil then
 			streaming += 1
 		end
 	end
