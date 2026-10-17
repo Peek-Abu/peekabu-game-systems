@@ -1,7 +1,62 @@
 --!strict
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
+local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
+local DailyRewardConstants = require(ReplicatedStorage.Shared.Features.DailyReward.Data.DailyRewardConstants)
+local DailyRewardRules = require(ReplicatedStorage.Shared.Features.DailyReward.Rules.DailyRewardRules)
+local PlayerDataTypes = require(ReplicatedStorage.Shared.Data.PlayerDataTypes)
+local RankFormulas = require(ReplicatedStorage.Shared.Features.Rank.Utils.RankFormulas)
 local VM = {}
+
+-- The longest name the profile card prints before it is cut.
+local NAME_MAX = 14
+local SECONDS_PER_DAY = 86400
+
+export type ProfileView = { name: string, level: string, rank: string, xpText: string, fill: number }
+export type GiftView = { ready: boolean, text: string }
+export type TonightView = { title: string, site: string }
+
+-- The hub's profile card (V1): the player's name in caps, their Clearance Level, its name, the XP bar to the next
+-- level. `rank` is the published XP (RankViewModel.rankOf), nil until the server publishes it (the first rung).
+function VM.profile(name: string, rank: { xp: number, prevXp: number }?): ProfileView
+	local progress = RankFormulas.progress(if rank ~= nil then rank.xp else 0)
+	local upper = string.upper(name)
+	return {
+		name = if #upper > NAME_MAX then string.sub(upper, 1, NAME_MAX - 1) .. "." else upper,
+		level = tostring(progress.level.level),
+		rank = progress.level.name,
+		xpText = if progress.next ~= nil then `{progress.xp} / {progress.next.xp} XP` else `{progress.xp} XP`,
+		fill = progress.fill,
+	}
+end
+
+-- The daily gift tile: OPEN! while today's reward is claimable, else the time to the next day (h:mm:ss).
+function VM.gift(state: PlayerDataTypes.DailyReward, now: number): GiftView
+	local offset = DailyRewardConstants.DAY_OFFSET_HOURS
+	local today = DailyRewardRules.dayOf(now, offset)
+	local status = DailyRewardRules.status(state, today, DailyRewardConstants.CYCLE_LENGTH)
+	if status.claimable then
+		return { ready = true, text = "OPEN!" }
+	end
+	local left = math.max(0, math.ceil(SECONDS_PER_DAY - (now + offset * 3600) % SECONDS_PER_DAY))
+	return {
+		ready = false,
+		text = string.format("%d:%02d:%02d", left // 3600, (left % 3600) // 60, left % 60),
+	}
+end
+
+-- The Tonight card: tonight's building (the board's contract; the first contract until the board is found).
+function VM.tonight(id: string?): TonightView
+	local contract = DepotConstants.CONTRACTS[1]
+	for _, entry in DepotConstants.CONTRACTS do
+		if entry.id == id then
+			contract = entry
+		end
+	end
+	local client = string.upper(contract.client)
+	client = string.gsub(client, "%s+LTD%.?$", "")
+	return { title = client, site = DepotConstants.SITE }
+end
 export type Page = "guide" | "gear" | "settings"
 VM.PAGES = { "guide", "gear", "settings" }
 VM.SETTINGS = {

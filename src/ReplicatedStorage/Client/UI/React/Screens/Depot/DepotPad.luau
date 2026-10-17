@@ -2,7 +2,8 @@
 --[=[
 	DepotPad: the truck queue pad HUD widget (registered by DepotServiceClient). While the local player is aboard a pad
 	it reads the queue snapshot, their public truck number, the server clock and the device layout, and draws
-	DepotPadPanel (which replaces the base placeholder pad panel). Names are the crew display names (the view model names an unknown member "Crew"); the card only
+	the hub's Next shift card (DepotNextShiftCard) in its aboard state: the truck's countdown, a seat per place and GO!
+	to depart now (which replaces the base placeholder pad panel). Names are the crew display names (the view model names an unknown member "Crew"); the card only
 	displays, the server decides who is aboard and when the truck leaves. Depart now is the `onDepart` the service
 	passes in (components never talk to the server). It draws only where DepotPadViewModel.shown allows: in the depot
 	hub (the shift snapshot), not behind the load screen (ShiftTransitStore.covered) and not once the drive card is up
@@ -13,7 +14,6 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
 
 local React = require(ReplicatedStorage.Packages.React)
 local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
@@ -26,25 +26,16 @@ local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftSt
 local ShiftTransitStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftTransitStore)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local useServerClock = require(ReplicatedStorage.Client.UI.React.Hooks.useServerClock)
-local DepotPadPanel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotPadPanel)
+local DepotNextShiftCard = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotNextShiftCard)
 local DepotPadViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotPadViewModel)
 local PaperHudFrame = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudFrame)
-local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local usePaperHudScale = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperHudScale)
-local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 
 local TICK_SECONDS = 0.2
 
 export type DepotPadProps = {
 	onDepart: () -> (),
 }
-
--- The viewport shorter side, in px (the engine sizes its Jump button by it; the widget re-renders on the clock tick).
-local function shortSide(): number
-	local camera = Workspace.CurrentCamera
-	local viewport = if camera ~= nil then camera.ViewportSize else Vector2.new(844, 390)
-	return math.min(viewport.X, viewport.Y)
-end
 
 local function DepotPad(props: DepotPadProps): React.ReactNode
 	local snapshot = ReactCharm.useAtom(QueueStore.snapshot)
@@ -54,7 +45,7 @@ local function DepotPad(props: DepotPadProps): React.ReactNode
 	local card = ReactCharm.useAtom(DepotStore.card)
 	-- Drawn scaled to the window on desktop, with the rest of the HUD (PaperHudFrame).
 	local hudScale = usePaperHudScale()
-	local layout: UIPaperConstants.Layout = hudScale.layout
+	local phone = hudScale.layout == "phone"
 	local now = useServerClock(TICK_SECONDS)
 	local player = Players.LocalPlayer
 	local _, pad = QueueSnapshotUtils.padOf(snapshot, player.UserId)
@@ -72,25 +63,18 @@ local function DepotPad(props: DepotPadProps): React.ReactNode
 	end
 	local me = publicPlayers[StateSyncConstants.publicEntryKey(player.UserId)]
 	local truck = if me ~= nil then me[DepotConstants.PUBLIC_TRUCK] else nil
-	local view = DepotPadViewModel.pad(
-		pad,
-		player.UserId,
-		names,
-		if type(truck) == "number" then truck else nil,
-		now,
-		layout == "phone"
-	)
+	local view =
+		DepotPadViewModel.pad(pad, player.UserId, names, if type(truck) == "number" then truck else nil, now, phone)
 	if view == nil then
 		return nil
 	end
 	return React.createElement(PaperHudFrame, {
 		scale = hudScale.scale,
 		children = {
-			panel = React.createElement(DepotPadPanel, {
-				view = view,
-				layout = layout,
-				onDepart = props.onDepart,
-				jump = ShiftHudViewModel.arcFor(shortSide()).jump,
+			panel = React.createElement(DepotNextShiftCard, {
+				cta = DepotPadViewModel.cta(view, if type(truck) == "number" then truck else nil),
+				phone = phone,
+				onGo = props.onDepart,
 			}),
 		},
 	})
