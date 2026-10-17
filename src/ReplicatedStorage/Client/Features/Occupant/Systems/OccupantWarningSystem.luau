@@ -4,7 +4,7 @@
 	crew-manager-behaviours-design.md §1, §5). Every TELL_INTERVAL, by the stage OccupantTellRules.stage gives for the
 	local player's distance to him:
 
-	- far: a pen click from him every PEN_CLICK seconds (his footsteps carry this far too: OccupantPresenceSystem);
+	- far: a pen click from him every PEN_CLICK seconds (his footsteps carry this far too: FootstepServiceClient);
 	- mid: the lights near him flicker (OccupantTellSystem);
 	- near: the dread swell, louder the closer he is (pending slot; the heartbeat is OccupantPresenceSystem's);
 	- chase: the sting, the chase bed and the chase pulse (OccupantPresenceSystem, OccupantTellSystem).

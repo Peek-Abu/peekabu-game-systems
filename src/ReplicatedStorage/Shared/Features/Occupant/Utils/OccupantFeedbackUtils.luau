@@ -4,8 +4,8 @@
 	"Voice"). Which line he says for a cue (never the same twice running), which gibberish clip voices a line
 	(a stable hash, so a line always sounds the same), whether a line is spoken at all ("*sigh*" is an action),
 	which sounds his mode changes make for this client (a "hm?" when he
-	investigates, a sting when he spots someone, the chase bed while he chases you, a sigh when he gives up),
-	and how often and how loud his footsteps fall. Every chase on you starts with the sting, however it starts
+	investigates, a sting when he spots someone, the chase bed while he chases you, a sigh when he gives up;
+	his footsteps are the Footstep feature's). Every chase on you starts with the sting, however it starts
 	(2026-10-16: a chase switched from a crewmate onto you used to start silently). Pure.
 
 	@class OccupantFeedbackUtils
@@ -14,7 +14,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CargoTypes = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoTypes)
-local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 
 export type PresenceCue = "curious" | "spotted" | "giveUp" | "chaseStart" | "chaseEnd"
 
@@ -90,25 +89,6 @@ function OccupantFeedbackUtils.cues(
 		table.insert(list, "chaseEnd")
 	end
 	return list
-end
-
---[=[
-	Seconds between his footsteps at `speed` (studs/s); nil when he is (nearly) standing still.
-]=]
-function OccupantFeedbackUtils.footstepInterval(speed: number): number?
-	if speed < OccupantConstants.STEP_MIN_SPEED then
-		return nil
-	end
-	return math.clamp(OccupantConstants.STRIDE / speed, OccupantConstants.STEP_MIN, OccupantConstants.STEP_MAX)
-end
-
---[=[
-	How loud (x the registered volume) a footstep lands at `speed`: 1 at his walk, rising to STEP_RUN_VOLUME at his run.
-]=]
-function OccupantFeedbackUtils.footstepVolume(speed: number): number
-	local walk, run = OccupantConstants.STEP_WALK_SPEED, OccupantConstants.STEP_RUN_SPEED
-	local t = math.clamp((speed - walk) / (run - walk), 0, 1)
-	return 1 + (OccupantConstants.STEP_RUN_VOLUME - 1) * t
 end
 
 --[=[

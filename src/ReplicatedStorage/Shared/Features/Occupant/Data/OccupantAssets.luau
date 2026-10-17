@@ -38,16 +38,6 @@ local TEMPLATE_PATH: { string } = { "Assets", "CleanupCrew", "Characters", "Mana
 local FACES: { Face } = { "Calm", "Noticing", "Hunting" }
 
 local SOUNDS: { [string]: SoundTypes.SoundDef } = {
-	-- His heavy, uneven step (one per stride, positional, through walls).
-	harlowFootstep = {
-		assetId = "rbxassetid://119846856442242",
-		group = "SFX",
-		volume = 0.7,
-		pitch = { min = 0.9, max = 1.05 },
-		-- Heard out to the far warning stage (STAGE_FAR).
-		rollOffMaxDistance = 85,
-		maxConcurrent = 2,
-	},
 	-- His tell: a pen tapping on his clipboard (looped on his head, heard through walls).
 	harlowMutter = {
 		assetId = "rbxassetid://135690215756036",

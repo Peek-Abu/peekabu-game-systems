@@ -138,36 +138,6 @@ return function()
 		end)
 	end)
 
-	describe("footstepInterval", function()
-		it("steps faster the faster he walks, within limits", function()
-			local patrol = OccupantFeedbackUtils.footstepInterval(10)
-			local chase = OccupantFeedbackUtils.footstepInterval(15)
-			expect(chase < patrol).to.equal(true)
-			expect(patrol).to.be.near(OccupantConstants.STRIDE / 10, 1e-6)
-			expect(OccupantFeedbackUtils.footstepInterval(100)).to.equal(OccupantConstants.STEP_MIN)
-			expect(OccupantFeedbackUtils.footstepInterval(3)).to.equal(OccupantConstants.STEP_MAX)
-		end)
-
-		it("is silent standing still", function()
-			expect(OccupantFeedbackUtils.footstepInterval(0)).to.equal(nil)
-			expect(OccupantFeedbackUtils.footstepInterval(1)).to.equal(nil)
-		end)
-
-		it("lands louder when he runs, so the crew hears a chase", function()
-			expect(OccupantFeedbackUtils.footstepVolume(5)).to.equal(1)
-			expect(OccupantFeedbackUtils.footstepVolume(OccupantConstants.STEP_WALK_SPEED)).to.equal(1)
-			expect(OccupantFeedbackUtils.footstepVolume(OccupantConstants.STEP_RUN_SPEED)).to.be.near(
-				OccupantConstants.STEP_RUN_VOLUME,
-				1e-6
-			)
-			expect(OccupantFeedbackUtils.footstepVolume(100)).to.be.near(OccupantConstants.STEP_RUN_VOLUME, 1e-6)
-			local between = OccupantFeedbackUtils.footstepVolume(
-				(OccupantConstants.STEP_WALK_SPEED + OccupantConstants.STEP_RUN_SPEED) / 2
-			)
-			expect(between > 1 and between < OccupantConstants.STEP_RUN_VOLUME).to.equal(true)
-		end)
-	end)
-
 	describe("catch copy", function()
 		local CargoRegistry = require(game:GetService("ReplicatedStorage").Shared.Features.Cargo.Data.CargoRegistry)
 

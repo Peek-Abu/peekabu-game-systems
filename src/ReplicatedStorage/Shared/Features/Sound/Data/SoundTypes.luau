@@ -29,6 +29,8 @@ export type PlayOptions = {
 	at: PlayAt?,
 	-- Multiplies the registry volume (1 = as registered).
 	volumeScale: number?,
+	-- Multiplies the picked pitch (PlaybackSpeed; 1 = as registered).
+	pitchScale: number?,
 }
 
 return {}

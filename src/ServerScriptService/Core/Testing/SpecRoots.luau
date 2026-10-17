@@ -342,6 +342,13 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.Features.Office.Systems.OfficeAtmosphereSystem"] = "Lighting/Instance/Sound/Charm shell (choices specced in OfficeAtmosphereUtils, OfficeLightUtils)",
 	["ReplicatedStorage.Client.Features.Office.Systems.OfficeAmbienceSystem"] = "Sound/Instance/RunService shell (choices specced in OfficeAmbienceUtils)",
 
+	-- Cleanup Crew: Footstep
+	["ReplicatedStorage.Client.Features.Footstep.Data.FootstepAssets"] = "asset id pools; registers the footstep sounds at load (no decisions)",
+	["ReplicatedStorage.Client.Features.Footstep.Data.FootstepConstants"] = "static tuning and material map (no logic)",
+	["ReplicatedStorage.Client.Features.Footstep.Data.FootstepTypes"] = "type definitions only (no runtime logic)",
+	["ReplicatedStorage.Client.Features.Footstep.Systems.FootstepEmitterSystem"] = "Instance/raycast/Sound shell (plant, gait and surface decisions specced in FootstepPlantFormulas, FootstepGaitFormulas, FootstepSurfaceUtils)",
+	["ReplicatedStorage.Client.Features.Footstep.FootstepServiceClient"] = "Players/CollectionService/RunService shell (decisions specced in the Footstep Utils)",
+
 	-- Cleanup Crew: Occupant
 	["ReplicatedStorage.Shared.Features.Occupant.Data.OccupantAssets"] = "asset id slots; registers the uploaded sounds at load (no decisions)",
 	["ReplicatedStorage.Client.Features.Occupant.Systems.OccupantPresenceSystem"] = "Sound/Instance/RunService shell (choices specced in OccupantFeedbackUtils, OccupantTellRules; his lines are only voiced)",

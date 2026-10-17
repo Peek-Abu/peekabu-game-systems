@@ -8,7 +8,7 @@
 	(OccupantGestureSystem, the server's tilt). The sting and the stretched grin are
 	OccupantScareSystem's. At init it registers the catch's HUD widgets: the CCTV overlay while caught (CatchOverlay) and
 	the HR "Rehired." card around the respawn (CatchRehiredCard). The light and heartbeat tells run in OccupantTellSystem (lights out on a catch, every light flickering on a
-	tier rise). OccupantPresenceSystem plays his footsteps, mutter, cues, the chase sting and bed, your heartbeat and his voice (the
+	tier rise). OccupantPresenceSystem plays his mutter, cues, the chase sting and bed, your heartbeat and his voice (the
 	chase's screen pulse is OccupantTellSystem's). OccupantGestureSystem
 	lays his gestures over his joints; OccupantWarningSystem plays the staged warnings and his typing (no PA since
 	2026-10-16).

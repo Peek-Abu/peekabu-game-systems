@@ -3,7 +3,7 @@
 	SoundServiceClient: plays registered sounds on this client (design:
 	docs/superpowers/specs/2026-10-09-sound-design.md).
 
-	- `play(id, { at?, volumeScale? })` — a one-shot (or looped) sound, 2D or positional, in its group,
+	- `play(id, { at?, volumeScale?, pitchScale? })` — a one-shot (or looped) sound, 2D or positional, in its group,
 	  with its pitch variance and concurrency cap applied. Returns a handle to stop it early.
 	- `playMusic(id?, fade?)` / `setAmbience(layer, id?, fade?)` — looping tracks that crossfade.
 	- `setGroupVolume(group, volume)` — the per-group sliders (Music / SFX / UI / Ambient).
@@ -80,12 +80,12 @@ local function fadeTo(sound: Sound, volume: number, duration: number, done: (() 
 end
 
 -- A Sound built from a registry entry, not yet parented or playing.
-local function build(id: string, def: SoundTypes.SoundDef, volumeScale: number): Sound
+local function build(id: string, def: SoundTypes.SoundDef, volumeScale: number, pitchScale: number): Sound
 	local sound = Instance.new("Sound")
 	sound.Name = id
 	sound.SoundId = def.assetId
 	sound.Volume = def.volume * volumeScale
-	sound.PlaybackSpeed = SoundFormulas.pickPitch(def.pitch, rng:NextNumber())
+	sound.PlaybackSpeed = SoundFormulas.pickPitch(def.pitch, rng:NextNumber()) * pitchScale
 	sound.Looped = def.looped == true
 	sound.SoundGroup = groupFor(def.group)
 	local rollOff = def.rollOffMaxDistance
@@ -130,7 +130,7 @@ local function crossfade(current: Sound?, id: string?, fade: number, scale: numb
 		log:warn(`unknown sound "{id}"`)
 		return nil
 	end
-	local sound = build(id, def, scale)
+	local sound = build(id, def, scale, 1)
 	sound.Looped = true
 	local target = sound.Volume
 	sound.Volume = 0
@@ -175,7 +175,8 @@ local SoundServiceClient: SoundServiceClient = {
 			return nil
 		end
 		local scale = if options ~= nil and options.volumeScale ~= nil then options.volumeScale else 1
-		local sound = build(id, def, scale)
+		local pitchScale = if options ~= nil and options.pitchScale ~= nil then options.pitchScale else 1
+		local sound = build(id, def, scale, pitchScale)
 		local anchor = place(sound, if options ~= nil then options.at else nil)
 
 		local token, evicted = voices:start(id, def.maxConcurrent)

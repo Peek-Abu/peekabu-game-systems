@@ -3,8 +3,7 @@
 	OccupantPresenceSystem: how Mr. Harlow sounds on this client (Cleanup Crew spec §4 "Tells": "heartbeat when he
 	is near but hasn't seen you; 3D footsteps and muttering through walls; '!' + sting + chase music when he spots
 	you; a sigh when he gives up"; "Voice": "pitched, distorted gibberish plus a speech bubble with the line").
-	- His footsteps, paced and made louder by his speed (OccupantFeedbackUtils.footstepInterval / footstepVolume: the
-	  crew near a chase hears him running), and a muttering loop on his head.
+	- A muttering loop on his head. (His footsteps are FootstepServiceClient's, played as his feet land.)
 	- His mode changes (OccupantFeedbackUtils.cues): a "hm?" when he investigates, the sting whenever a chase starts
 	  (2D when it is on you, however it started, positional otherwise), the chase bed (the `harlowChase` music slot)
 	  while he chases you, a sigh when he gives up.
@@ -65,11 +64,10 @@ local connection: RBXScriptConnection? = nil
 local lastMode: string? = nil
 local lastMine = false
 local ownsMusic = false
-local stepClock = 0
 local beatClock = 0
-local counters = { steps = 0, beats = 0, lines = 0, cues = 0, played = 0, pending = 0, stings = 0, preloaded = 0 }
+local counters = { beats = 0, lines = 0, cues = 0, played = 0, pending = 0, stings = 0, preloaded = 0 }
 -- The sounds a chase depends on, kept loaded (`warm`) so none starts late.
-local PRELOAD: { string } = { "harlowSpotted", "harlowChase", "harlowHeartbeat", "harlowFootstep" }
+local PRELOAD: { string } = { "harlowSpotted", "harlowChase", "harlowHeartbeat" }
 local warm: { Sound } = {}
 
 local function play(id: string, options: SoundTypes.PlayOptions?): SoundServiceClient.SoundHandle?
@@ -178,7 +176,6 @@ local function attach(harlow: Harlow)
 	current = harlow
 	lastMode = nil
 	lastMine = false
-	stepClock = 0
 	mutter = play("harlowMutter", { at = harlow.head })
 	local model = harlow.model
 	speechConnection = model:GetAttributeChangedSignal(OccupantConstants.LINE_ATTRIBUTE):Connect(function()
@@ -221,22 +218,6 @@ local function onCue(cue: string, harlow: Harlow, mine: boolean)
 		setMusic(true)
 	elseif cue == "chaseEnd" then
 		setMusic(false)
-	end
-end
-
-local function stepFootsteps(harlow: Harlow, deltaTime: number)
-	local velocity = harlow.root.AssemblyLinearVelocity
-	local speed = Vector3.new(velocity.X, 0, velocity.Z).Magnitude
-	local interval = OccupantFeedbackUtils.footstepInterval(speed)
-	if interval == nil then
-		stepClock = 0
-		return
-	end
-	stepClock += deltaTime
-	if stepClock >= interval then
-		stepClock = 0
-		counters.steps += 1
-		play("harlowFootstep", { at = harlow.root, volumeScale = OccupantFeedbackUtils.footstepVolume(speed) })
 	end
 end
 
@@ -292,7 +273,6 @@ local function step(deltaTime: number)
 	end
 	lastMode = mode
 	lastMine = mine
-	stepFootsteps(harlow, deltaTime)
 	stepHeartbeat(harlow, mode, mine, deltaTime)
 end
 

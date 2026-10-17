@@ -295,16 +295,6 @@ return table.freeze({
 	TILT_SHIVER = 2.5,
 	LINES = table.freeze(LINES),
 	LINE_VARIANTS = table.freeze(LINE_VARIANTS),
-	-- Footsteps: one per STRIDE studs walked, clamped to STEP_MIN..STEP_MAX seconds; none below STEP_MIN_SPEED.
-	STRIDE = 4.5,
-	STEP_MIN_SPEED = 2,
-	STEP_MIN = 0.28,
-	STEP_MAX = 0.8,
-	-- His footsteps land louder as he speeds up: x1 at his walk (STEP_WALK_SPEED) up to STEP_RUN_VOLUME at his chase run
-	-- (STEP_RUN_SPEED), so the crew near a chase hears him running (OccupantFeedbackUtils.footstepVolume).
-	STEP_WALK_SPEED = 10,
-	STEP_RUN_SPEED = 20,
-	STEP_RUN_VOLUME = 1.6,
 	-- The catch scare's grin over his face (spec §4 "stretched-grin face"; kid-safe cartoon): its billboard,
 	-- size in studs, how wide the mouth stretches, teeth, colours (used while the grin image is pending).
 	GRIN_NAME = "OccupantGrin",
