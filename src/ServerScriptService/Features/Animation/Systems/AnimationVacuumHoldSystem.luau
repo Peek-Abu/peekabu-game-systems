@@ -12,13 +12,17 @@
 	wand is welded to the right hand it would be steering.
 	Poles bend the elbows outward and down. Fixed to the root (which does not bob), the floor head glides at a
 	constant height while the legs walk. No smoothing: a lagging hand lets the floor head dip into the floor.
-	No joint, attachment or Transform of the rig is written.
+	No joint, attachment or Transform of the rig is written. Each target records its planned frame
+	(VacuumMotionConstants.REST_ATTRIBUTE): every client moves its own copy for the visual motion layers (aim, brace,
+	kick, sway: VacuumMotionRigSystem), never replicated.
 
 	@class AnimationVacuumHoldSystem
 ]=]
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
+local VacuumMotionConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumMotionConstants)
 local VacuumHoldFormulas = require(ServerScriptService.Features.Vacuum.Utils.VacuumHoldFormulas)
 
 export type Controller = { destroy: () -> () }
@@ -54,6 +58,8 @@ function AnimationVacuumHoldSystem.hold(character: Model, hold: VacuumHoldFormul
 		local target = Instance.new("Attachment")
 		target.Name = name
 		target.CFrame = frame
+		-- The planned frame: each client moves its own copy of a target (VacuumMotionRigSystem) and comes back to it.
+		target:SetAttribute(VacuumMotionConstants.REST_ATTRIBUTE, frame)
 		target.Parent = root
 		table.insert(created, target)
 		return target
@@ -91,12 +97,17 @@ function AnimationVacuumHoldSystem.hold(character: Model, hold: VacuumHoldFormul
 	local leftGrip = attachment(part(character, "LeftHand"), "LeftGripAttachment")
 	local left = hold.left
 	if left ~= nil and leftUpper ~= nil and leftGrip ~= nil then
+		local target = marker("VacuumSupportTarget", left)
+		-- Where the left paw holds the wand and how far that arm reaches: the motion layers keep it in reach.
+		target:SetAttribute(VacuumMotionConstants.AT_ATTRIBUTE, hold.leftAt)
+		target:SetAttribute(VacuumMotionConstants.SHOULDER_ATTRIBUTE, hold.leftShoulder)
+		target:SetAttribute(VacuumMotionConstants.REACH_ATTRIBUTE, hold.leftReach)
 		control(
 			"VacuumSupportIK",
 			Enum.IKControlType.Transform,
 			leftUpper,
 			leftGrip,
-			marker("VacuumSupportTarget", left),
+			target,
 			marker("VacuumSupportPole", CFrame.new(hold.leftPole))
 		)
 	end

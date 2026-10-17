@@ -171,7 +171,8 @@ local function hipInTorso(character: Model, torso: BasePart): Vector3
 end
 
 --[=[
-	`side` ("Left"/"Right") arm of `character` in HumanoidRootPart space, from its rig attachments, with the shoulder
+	`side` ("Left"/"Right") arm of `character` in HumanoidRootPart space, from its rig attachments (its reach to the
+	paw's wrap point, Visual.wrapOf, and that point in the grip attachment's space), with the shoulder
 	where it is at the rig's REST pose (its joint chain without the animation's Transforms,
 	AnimationCarryMeasureSystem.restFrame), so the hold never depends on the pose of the moment it is planned in. The
 	Tool is made as a shift starts, mid-stride or while the crew is placed in the truck: read live, Pippa's shoulders
@@ -184,7 +185,9 @@ function Visual.arm(character: Model, side: string): VacuumHoldFormulas.Arm?
 	local shoulder = attachmentOf(character, "UpperTorso", side .. "ShoulderRigAttachment")
 	local upper = span(character, side .. "UpperArm", side .. "ShoulderRigAttachment", side .. "ElbowRigAttachment")
 	local lower = span(character, side .. "LowerArm", side .. "ElbowRigAttachment", side .. "WristRigAttachment")
-	local hand = span(character, side .. "Hand", side .. "WristRigAttachment", side .. "GripAttachment")
+	local wrap = Visual.wrapOf(character, side)
+	local wrist = attachmentOf(character, side .. "Hand", side .. "WristRigAttachment")
+	local grip = attachmentOf(character, side .. "Hand", side .. "GripAttachment")
 	if
 		root == nil
 		or not root:IsA("BasePart")
@@ -193,15 +196,31 @@ function Visual.arm(character: Model, side: string): VacuumHoldFormulas.Arm?
 		or shoulder == nil
 		or upper == nil
 		or lower == nil
-		or hand == nil
+		or wrap == nil
+		or wrist == nil
+		or grip == nil
 	then
 		return nil
 	end
 	return {
 		shoulder = AnimationCarryMeasureSystem.restFrame(torso, root):PointToWorldSpace(shoulder.Position),
 		upper = upper,
-		lower = lower + hand,
+		lower = lower + (wrap - wrist.Position).Magnitude,
+		wrap = grip.CFrame:PointToObjectSpace(wrap),
 	}
+end
+
+--[=[
+	Where `character`'s `side` paw holds the wand, in its hand's space: Constants.WRAP of the way from its wrist to
+	its grip attachment (VacuumHoldFormulas.Arm.wrap). Nil without both attachments.
+]=]
+function Visual.wrapOf(character: Model, side: string): Vector3?
+	local wrist = attachmentOf(character, side .. "Hand", side .. "WristRigAttachment")
+	local grip = attachmentOf(character, side .. "Hand", side .. "GripAttachment")
+	if wrist == nil or grip == nil then
+		return nil
+	end
+	return wrist.Position:Lerp(grip.Position, Constants.WRAP)
 end
 
 --[=[

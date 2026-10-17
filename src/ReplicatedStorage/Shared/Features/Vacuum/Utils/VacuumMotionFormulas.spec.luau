@@ -1,0 +1,240 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local VacuumMotionFormulas = require(script.Parent.VacuumMotionFormulas)
+local Constants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumMotionConstants)
+
+return function()
+	-- A Pippa-like hold in root space: the right hand's wand point 0.6 up and 0.9 forward, the floor head's bottom
+	-- 0.06 over a floor 1.375 below the root, out in front of and below the hand.
+	local PIVOT = Vector3.new(0.3, 0.6, -0.9)
+	local FLOOR = -1.375
+	local HEAD_Y = FLOOR + 0.06
+	local REST = {
+		pivot = PIVOT,
+		floorY = FLOOR,
+		corners = {
+			Vector3.new(-0.9, HEAD_Y, -2.0),
+			Vector3.new(0.3, HEAD_Y, -2.0),
+			Vector3.new(-0.9, HEAD_Y, -1.75),
+			Vector3.new(0.3, HEAD_Y, -1.75),
+		},
+	}
+	local NONE = { offset = Vector3.zero, pitch = 0, yaw = 0, roll = 0 }
+	local MARGIN = Constants.floorMargin
+
+	local function lowest(transform)
+		local y = math.huge
+		for _, corner in REST.corners do
+			y = math.min(y, (transform * corner).Y)
+		end
+		return y
+	end
+
+	describe("step", function()
+		it("settles a critically damped spring on its target without overshoot", function()
+			local x, v, peak = 0, 0, 0
+			for _ = 1, 120 do
+				x, v = VacuumMotionFormulas.step(x, v, 1, 1 / 60, 3, 1)
+				peak = math.max(peak, x)
+			end
+			expect(x).to.be.near(1, 1e-3)
+			expect(peak <= 1 + 1e-6).to.equal(true)
+		end)
+
+		it("overshoots when underdamped", function()
+			local x, v, peak = 0, 0, 0
+			for _ = 1, 120 do
+				x, v = VacuumMotionFormulas.step(x, v, 1, 1 / 60, 3, 0.3)
+				peak = math.max(peak, x)
+			end
+			expect(peak > 1.2).to.equal(true)
+		end)
+
+		it("is exact: one big step lands where many small ones do", function()
+			local x1, v1 = VacuumMotionFormulas.step(0.3, -2, 1, 0.09, 4, 0.4)
+			local x2, v2 = 0.3, -2
+			for _ = 1, 90 do
+				x2, v2 = VacuumMotionFormulas.step(x2, v2, 1, 0.001, 4, 0.4)
+			end
+			expect(x1).to.be.near(x2, 1e-6)
+			expect(v1).to.be.near(v2, 1e-5)
+			-- And for a critically damped and an overdamped one.
+			for _, damping in { 1, 1.6 } do
+				local a = VacuumMotionFormulas.step(0, 3, 1, 0.08, 2, damping)
+				local b, w = 0, 3
+				for _ = 1, 80 do
+					b, w = VacuumMotionFormulas.step(b, w, 1, 0.001, 2, damping)
+				end
+				expect(a).to.be.near(b, 1e-6)
+			end
+		end)
+
+		it("survives a long hitch (advances at most maxStep)", function()
+			local x, v = VacuumMotionFormulas.step(0, 0, 1, 5, 3, 1)
+			expect(x <= 1 + 1e-6 and x > 0).to.equal(true)
+			expect(math.abs(v) < 100).to.equal(true)
+		end)
+	end)
+
+	describe("aim", function()
+		local tuning = Constants.aim
+
+		it("holds the planned pose in the default third-person view", function()
+			for _, look in { tuning.deadLow, math.rad(-20), tuning.deadHigh } do
+				local raise, reach = VacuumMotionFormulas.aim(look, tuning)
+				expect(raise).to.equal(0)
+				expect(reach).to.equal(0)
+			end
+		end)
+
+		it("raises the floor head as the camera looks up, to its most", function()
+			local a = VacuumMotionFormulas.aim(math.rad(10), tuning)
+			local b = VacuumMotionFormulas.aim(math.rad(30), tuning)
+			expect(a > 0 and b > a).to.equal(true)
+			expect(VacuumMotionFormulas.aim(math.rad(89), tuning)).to.be.near(tuning.maxUp, 1e-6)
+		end)
+
+		it("reaches for the floor as the camera looks down, fully at fullDown", function()
+			local _, half = VacuumMotionFormulas.aim((tuning.deadLow + tuning.fullDown) / 2, tuning)
+			local _, full = VacuumMotionFormulas.aim(math.rad(-89), tuning)
+			expect(half).to.be.near(0.5, 1e-6)
+			expect(full).to.equal(1)
+		end)
+	end)
+
+	describe("encodeAim / decodeAim", function()
+		it("quantises the look pitch to a byte and back, in whole quanta of degrees", function()
+			local byte = VacuumMotionFormulas.encodeAim(math.rad(-22))
+			expect(byte >= 0 and byte <= 36).to.equal(true)
+			expect(VacuumMotionFormulas.decodeAim(byte)).to.equal(-20)
+			expect(VacuumMotionFormulas.decodeAim(VacuumMotionFormulas.encodeAim(math.rad(90)))).to.equal(90)
+			expect(VacuumMotionFormulas.decodeAim(VacuumMotionFormulas.encodeAim(math.rad(-200)))).to.equal(-90)
+		end)
+
+		it("refuses anything that is not a byte the client can send", function()
+			expect(VacuumMotionFormulas.decodeAim(37)).to.equal(nil)
+			expect(VacuumMotionFormulas.decodeAim(-1)).to.equal(nil)
+			expect(VacuumMotionFormulas.decodeAim(2.5)).to.equal(nil)
+			expect(VacuumMotionFormulas.decodeAim(0 / 0)).to.equal(nil)
+		end)
+	end)
+
+	describe("wand", function()
+		it("is the identity with no layers on (the hands on the planned hold)", function()
+			local transform = VacuumMotionFormulas.wand(REST, NONE, MARGIN)
+			expect((transform.Position - Vector3.zero).Magnitude < 1e-6).to.equal(true)
+			expect(transform.LookVector:Dot(Vector3.new(0, 0, -1))).to.be.near(1, 1e-6)
+		end)
+
+		it("turns about the right hand: the pivot stays put, so both grips move with the one rigid wand", function()
+			local transform =
+				VacuumMotionFormulas.wand(REST, { offset = Vector3.zero, pitch = 0.4, yaw = 0.2, roll = 0.1 }, MARGIN)
+			expect(((transform * PIVOT) - PIVOT).Magnitude < 1e-5).to.equal(true)
+		end)
+
+		it("raises the floor head off the floor for a positive pitch", function()
+			local transform = VacuumMotionFormulas.wand(
+				REST,
+				{ offset = Vector3.zero, pitch = math.rad(30), yaw = 0, roll = 0 },
+				MARGIN
+			)
+			expect(lowest(transform) > HEAD_Y + 0.3).to.equal(true)
+		end)
+
+		it("never lets the floor head under the floor: a dip is flattened out until it just clears", function()
+			local down = { offset = Vector3.new(0, -0.3, -0.1), pitch = -0.2, yaw = 0, roll = 0 }
+			local transform, pitch = VacuumMotionFormulas.wand(REST, down, MARGIN)
+			expect(lowest(transform)).to.be.near(FLOOR + MARGIN, 1e-3)
+			-- Flattened (more pitch), the hands still moved down and the head further out in front.
+			expect(pitch > -0.2).to.equal(true)
+			expect((transform * PIVOT).Y).to.be.near(PIVOT.Y - 0.3, 1e-4)
+			local before = (REST.corners[1] + REST.corners[4]) / 2
+			expect((transform * before).Z < before.Z).to.equal(true)
+		end)
+
+		it("scales every layer back together until the left paw can still reach its grip", function()
+			-- GripLower down the wand from the right hand, the left shoulder above and behind it, the arm just long enough.
+			local at = PIVOT + Vector3.new(-0.5, -0.6, -0.5)
+			local shoulder = at + Vector3.new(-0.4, 1.1, 0.5)
+			local reach = (at - shoulder).Magnitude / Constants.reachUse + 0.02
+			local holding = table.clone(REST)
+			holding.left = { at = at, shoulder = shoulder, reach = reach }
+			local swing = { offset = Vector3.new(0, 0, -0.3), pitch = 0.5, yaw = -0.4, roll = 0 }
+			local free = VacuumMotionFormulas.wand(REST, swing, MARGIN)
+			expect(((free * at) - shoulder).Magnitude > Constants.reachUse * reach).to.equal(true)
+			local held = VacuumMotionFormulas.wand(holding, swing, MARGIN)
+			local distance = ((held * at) - shoulder).Magnitude
+			expect(distance <= Constants.reachUse * reach + 1e-4).to.equal(true)
+			-- Scaled back only as far as it must: right at the edge, still moved.
+			expect(distance).to.be.near(Constants.reachUse * reach, 2e-3)
+			expect(held.Position.Magnitude > 1e-3).to.equal(true)
+		end)
+
+		it("counts the brace's lean: the shoulder drops and tips forward with it", function()
+			local motion = VacuumMotionFormulas.motion(Vector3.new(0, 0.2, 0), 0.2, math.rad(11))
+			local shoulder = Vector3.new(-0.5, 1, 0)
+			expect((motion * shoulder).Y < shoulder.Y - 0.15).to.equal(true)
+			expect((motion * shoulder).Z < shoulder.Z - 0.1).to.equal(true)
+			expect(VacuumMotionFormulas.motion(nil, 0.2, 0.3)).to.equal(CFrame.identity)
+		end)
+
+		it("lifts the wand when no flattening can clear the floor", function()
+			local sunk = { offset = Vector3.new(0, -3, 0), pitch = 0, yaw = 0, roll = 0 }
+			local transform = VacuumMotionFormulas.wand(REST, sunk, MARGIN)
+			expect(lowest(transform) >= FLOOR + MARGIN - 1e-4).to.equal(true)
+		end)
+	end)
+
+	describe("offsetOf", function()
+		it("raises the wand for the aim, and moves the hands down and out for the reach", function()
+			local raised = VacuumMotionFormulas.offsetOf({ raise = 0.3, reach = 0, brace = 0 })
+			expect(raised.pitch).to.be.near(0.3, 1e-6)
+			expect(raised.offset.Magnitude).to.equal(0)
+			local reached = VacuumMotionFormulas.offsetOf({ raise = 0, reach = 1, brace = 0 })
+			expect(reached.offset.Y).to.be.near(-Constants.aim.reachDrop, 1e-6)
+			expect(reached.offset.Z).to.be.near(-Constants.aim.reachForward, 1e-6)
+		end)
+
+		it("brings the hands down and in toward the body for the brace", function()
+			local braced = VacuumMotionFormulas.offsetOf({ raise = 0, reach = 0, brace = 1 })
+			expect(braced.offset.Y).to.be.near(-Constants.brace.handDrop, 1e-6)
+			expect(braced.offset.Z).to.be.near(Constants.brace.pull, 1e-6)
+		end)
+	end)
+
+	describe("brace", function()
+		it("braces part-way the moment suction starts, fully as the pile nears done, and not at all off it", function()
+			expect(VacuumMotionFormulas.braceTarget(false, 0.9)).to.equal(0)
+			expect(VacuumMotionFormulas.braceTarget(true, 0)).to.be.near(Constants.brace.base, 1e-6)
+			expect(VacuumMotionFormulas.braceTarget(true, 1)).to.be.near(1, 1e-6)
+			expect(VacuumMotionFormulas.braceTarget(true, 5)).to.be.near(1, 1e-6)
+		end)
+
+		it("drops the hips and leans the torso by the brace's weight", function()
+			local drop, lean = VacuumMotionFormulas.body(0.5)
+			expect(drop).to.be.near(Constants.brace.drop / 2, 1e-6)
+			expect(lean).to.be.near(Constants.brace.lean / 2, 1e-6)
+		end)
+	end)
+
+	describe("legFold", function()
+		it("folds hip, knee and ankle so the hips drop by `drop` with the foot still under the hip", function()
+			local thigh, shin, drop = 0.55, 0.5, 0.12
+			local hip, knee, ankle = VacuumMotionFormulas.legFold(thigh, shin, drop)
+			-- The thigh swings forward by hip, the shin back by ankle (the foot stays flat: hip + knee + ankle = 0).
+			expect(hip > 0 and ankle > 0 and knee < 0).to.equal(true)
+			expect(hip + knee + ankle).to.be.near(0, 1e-6)
+			expect(thigh * math.sin(hip)).to.be.near(shin * math.sin(ankle), 1e-4)
+			expect(thigh * (1 - math.cos(hip)) + shin * (1 - math.cos(ankle))).to.be.near(drop, 1e-4)
+		end)
+
+		it("does not fold for no drop, and stops at a deep crouch", function()
+			local hip, knee, ankle = VacuumMotionFormulas.legFold(0.5, 0.5, 0)
+			expect(hip).to.equal(0)
+			expect(knee).to.equal(0)
+			expect(ankle).to.equal(0)
+			local deep = VacuumMotionFormulas.legFold(0.5, 0.5, 5)
+			expect(deep <= math.rad(80) + 1e-6).to.equal(true)
+		end)
+	end)
+end

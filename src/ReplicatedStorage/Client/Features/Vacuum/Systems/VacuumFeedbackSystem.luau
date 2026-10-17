@@ -358,6 +358,25 @@ function VacuumFeedbackSystem.stop()
 	gaugeTarget = 0
 end
 
+--[=[
+	The progress (0..1) of the pile (or grimy valuable) being sucked nearest `position` within `range` studs, or nil when
+	none is: the vacuum motion layers read how hard the pile at a holder's floor head is (VacuumMotionSystem).
+]=]
+function VacuumFeedbackSystem.progressNear(position: Vector3, range: number): number?
+	local best: number? = nil
+	local bestDistance = range
+	for _, feel in active do
+		if feel.count > 0 then
+			local distance = (feel.position - position).Magnitude
+			if distance <= bestDistance then
+				best = feel.progress
+				bestDistance = distance
+			end
+		end
+	end
+	return best
+end
+
 function VacuumFeedbackSystem.getState(): VacuumFeedbackState
 	local streaming = 0
 	for _, feel in active do

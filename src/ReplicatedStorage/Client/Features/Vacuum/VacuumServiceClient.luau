@@ -7,7 +7,8 @@
 	on it; letting go stops the channel, and the pile keeps its progress. Nothing is sent while carrying. A grimy
 	valuable lying in the open (VacuumConstants.GRIME_TAG, not buried and not held) is aimed at exactly like a pile:
 	vacuuming it cleans it (the loot loop).
-	The server decides everything. VacuumFeedbackSystem plays the suction, whine, pop and canister sounds.
+	The server decides everything. VacuumFeedbackSystem plays the suction, whine, pop and canister sounds;
+	VacuumMotionSystem moves every holder's wand and body (aim, brace) on this client.
 
 	Spec-exempt shell (Input, CollectionService); the aim is the specced VacuumTargetRules.
 
@@ -23,6 +24,7 @@ local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.Carr
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local VacuumTargetRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumTargetRules)
 local VacuumFeedbackSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumFeedbackSystem)
+local VacuumMotionSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumMotionSystem)
 local CarryServiceClient = require(ReplicatedStorage.Client.Features.Carry.CarryServiceClient)
 local InputActionRegistry = require(ReplicatedStorage.Client.Features.Input.Data.InputActionRegistry)
 local InputServiceClient = require(ReplicatedStorage.Client.Features.Input.InputServiceClient)
@@ -150,11 +152,17 @@ local VacuumServiceClient: VacuumServiceClient = {
 			end)
 		)
 		VacuumFeedbackSystem.start()
+		VacuumMotionSystem.start({
+			localActive = function()
+				return holding and lastTarget ~= nil
+			end,
+		})
 	end,
 
 	stop = function(self)
 		self:endVacuum()
 		VacuumFeedbackSystem.stop()
+		VacuumMotionSystem.stop()
 		for _, unbind in unbinders do
 			unbind()
 		end

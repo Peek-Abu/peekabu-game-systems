@@ -273,13 +273,35 @@ Only arm joints are driven; no rig joint's C0/C1 or attachment is written.
   the pose of the moment): the Tool is made while the crew, just placed in the truck, is falling onto its bed, and a
   plan read from that pose (torso 0.36 forward, pitched 23 degrees) put Pippa's left hand out of reach, so that arm
   hung at full stretch, swaying with the idle, 0.2-0.3 stud off the wand. Two Transform IKControls (shoulder to
-  grip attachment) hold the arms to targets fixed on the root, no smoothing, so the floor head glides level.
+  grip attachment) hold the arms to targets fixed on the root, no smoothing, so the floor head glides level. Each
+  paw holds the wand at its **wrap point** (`VacuumVisualSystem.wrapOf`: 0.6 of the way from wrist to grip
+  attachment, inside the paw), not at the grip attachment, which on Pippa sits on the very tip of the paw: planned
+  there, the paws touched the wand with their fingertips; planned on the wrap point, the wand runs through the paw.
+
+  **The motion layers** (`VacuumMotionSystem` on every client, for every holder; `VacuumMotionRigSystem` lays a
+  pose on one rig; the maths and its springs in `VacuumMotionFormulas`, the tuning in `VacuumMotionConstants`).
+  Purely visual: each client moves its own copy of the two IK target Attachments (their planned frame is recorded on
+  them) and writes Motor6D Transforms in `PreSimulation`, after the Animator's IK; nothing replicates, and the
+  server's hold, suction and targeting never see it. Every layer moves the wand as ONE rigid body, both targets by
+  the same transform, so both hands stay on it by construction. It turns about the left paw's grip: Pippa's left arm
+  is planned near its full reach, and turned about the right hand the aim and the sway took GripLower up to 0.34
+  stud out of it. A pose that would sink the floor head is flattened until it just clears the floor, and one that
+  would take GripLower out of the left arm's reach is scaled back.
+  - **Aim**: the wand pitches with where its holder looks (up raises the nozzle, down reaches the hands out and
+    flattens the wand along the floor). The owner's camera drives theirs; it reaches everyone else as the character's
+    `VacuumAim` attribute (degrees), set by the server from `VacuumEvents.Aim` (5-degree steps, at most 10 a second,
+    only on change).
+  - **Brace**: while sucking (the server's `VacuumActive` attribute), the hips drop (Root), the knees fold with the
+    feet planted (`legFold`) and the torso leans in (Waist), deeper as the pile nears done. The engine solves the arm
+    IK after that, on the leaned torso, so the wand stays where the pose put it.
 
   **The validator** (`AnimationVacuumHarness`): Pippa in every vacuum skin, the hold planned mid-fall (the stock
   fall clip), then judged live over her idle, walk and run (two frames each) and vacuuming (the use clip when one
-  is registered, else the locomotion it plays over): each hand's grip attachment must be on its wand grip within
-  0.05 stud. Runs in the TestEZ suite; from a server Script in play: `print(Harness.format(Harness.run({})))`. A
-  stock R15 is not validated (every player spawns as an employee): its left hand does not reach `GripLower`.
+  is registered, else the locomotion it plays over), each frame under every motion layer at its extremes
+  (rest, both aim extremes, the brace and the brace with each aim, laid on by `VacuumMotionRigSystem` as a client lays them): each paw's wrap point must be on its
+  wand grip within 0.05 stud, each grip inside its paw, and the floor head over the floor. Runs in the TestEZ suite;
+  from a server Script in play: `print(Harness.format(Harness.run({})))`. A stock R15 is not validated (every player
+  spawns as an employee): its left hand does not reach `GripLower`.
 
 ## Retargeting (check this FIRST if poses ever look wrong)
 

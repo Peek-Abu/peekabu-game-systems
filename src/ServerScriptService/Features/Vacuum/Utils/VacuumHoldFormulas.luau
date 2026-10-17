@@ -22,8 +22,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local EmployeeRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeRegistry)
 
--- An arm in root space: its shoulder pivot, the upper arm's length, and the forearm + hand's to the grip.
-export type Arm = { shoulder: Vector3, upper: number, lower: number }
+-- An arm in root space: its shoulder pivot, the upper arm's length, and the forearm + hand's to where the hand
+-- holds (its wrap point); `wrap` is that point in the hand's grip attachment's space (nil: the attachment itself).
+-- Pippa's grip attachments sit at the very tip of her paws, so a hold planned on them touched the wand with the
+-- fingertips; planned on a point inside the paw, the paw closes round the wand.
+export type Arm = { shoulder: Vector3, upper: number, lower: number, wrap: Vector3? }
 
 -- The wand's measurements (studs, as built): half the grip's length, the hose inlet's height above it, the
 -- swivel's radius and the floor head's height; and the grips: how far up the wand from the grip's centre the
@@ -51,16 +54,23 @@ export type Tuning = {
 }
 
 export type Hold = {
-	-- Root-space frame for the RightGripAttachment (an IK target): the hand on the wand's GripUpper.
+	-- Root-space frame for the RightGripAttachment (an IK target): the hand's wrap point on the wand's GripUpper.
 	grip: CFrame,
+	-- Root-space points of the wand's GripUpper and GripLower (where the wrap points go; nil left: no left hand).
+	rightAt: Vector3,
+	leftAt: Vector3?,
+	-- The left arm's shoulder (root space, at rest) and reach to its wrap point, when it holds the wand: the motion
+	-- layers keep GripLower within it (VacuumMotionFormulas.wand).
+	leftShoulder: Vector3?,
+	leftReach: number?,
 	-- The Tool's Grip: with the hand there, the handle (the WandGrip's centre) sits square to the root, GripUpper
 	-- in the hand.
 	toolGrip: CFrame,
 	-- Root-space points the elbows bend toward.
 	rightPole: Vector3,
 	leftPole: Vector3,
-	-- Root-space frame for the LeftGripAttachment on the wand's GripLower (its hand turned along its forearm, like
-	-- the right), nil when the left arm cannot reach it.
+	-- Root-space frame for the LeftGripAttachment, its wrap point on the wand's GripLower (its hand turned along
+	-- its forearm, like the right), nil when the left arm cannot reach it.
 	left: CFrame?,
 	-- The wand tube's length, and the grip's height above the floor.
 	tube: number,
@@ -179,14 +189,20 @@ function VacuumHoldFormulas.hold(right: Arm, left: Arm?, floorY: number, wand: W
 	local reach = right.upper + right.lower
 	local target = right.shoulder + Vector3.new(tuning.out, -tuning.down, -tuning.forward) * reach
 	local rightPole = right.shoulder + RIGHT_POLE * reach
-	local grip =
-		gripFrame(target, VacuumHoldFormulas.elbow(right.shoulder, target, right.upper, right.lower, RIGHT_POLE))
+	-- The grip attachment sits `wrap` past the wrap point, which is on GripUpper.
+	local grip = gripFrame(
+		target,
+		VacuumHoldFormulas.elbow(right.shoulder, target, right.upper, right.lower, RIGHT_POLE)
+	) * CFrame.new(-(right.wrap or Vector3.zero))
 	local along = VacuumHoldFormulas.axis(tuning.angle, tuning.yaw)
 	-- The handle (the grip's centre) is `upper` down the wand from the right hand.
 	local handle = target + along * wand.upper
 	local height = handle.Y - floorY
 	local tube = VacuumHoldFormulas.tube(height, wand, tuning.angle, tuning.clearance, tuning.minTube)
 	local leftTarget: CFrame? = nil
+	local leftAt: Vector3? = nil
+	local leftShoulder: Vector3? = nil
+	local leftReach: number? = nil
 	local leftPole = right.shoulder * Vector3.new(-1, 1, 1) + LEFT_POLE * reach
 	if left ~= nil then
 		leftPole = left.shoulder + LEFT_POLE * (left.upper + left.lower)
@@ -196,13 +212,20 @@ function VacuumHoldFormulas.hold(right: Arm, left: Arm?, floorY: number, wand: W
 			leftTarget = gripFrame(
 				candidate,
 				VacuumHoldFormulas.elbow(left.shoulder, candidate, left.upper, left.lower, LEFT_POLE)
-			)
+			) * CFrame.new(-(left.wrap or Vector3.zero))
+			leftAt = candidate
+			leftShoulder = left.shoulder
+			leftReach = left.upper + left.lower
 		end
 	end
 	return {
 		grip = grip,
-		-- handle = grip * toolGrip:Inverse(): square to the root, `upper` down the wand from the hand.
-		toolGrip = CFrame.new(-along * wand.upper) * grip.Rotation,
+		rightAt = target,
+		leftAt = leftAt,
+		leftShoulder = leftShoulder,
+		leftReach = leftReach,
+		-- handle = grip * toolGrip:Inverse(): square to the root, `upper` down the wand from GripUpper.
+		toolGrip = CFrame.new(handle):Inverse() * grip,
 		rightPole = rightPole,
 		leftPole = leftPole,
 		left = leftTarget,

@@ -147,6 +147,40 @@ return function()
 			expect(VacuumHoldFormulas.hold(RIGHT, nil, FLOOR, WAND, TUNING).left).to.equal(nil)
 		end)
 
+		it(
+			"puts each paw's wrap point, not its grip attachment's tip, on its grip (the paw closes round the wand)",
+			function()
+				-- Pippa's grip attachments sit at the very tip of her paw; the wrap point is inside the paw.
+				local wrapRight =
+					{ shoulder = RIGHT.shoulder, upper = RIGHT.upper, lower = 0.9, wrap = Vector3.new(0, 0, 0.2) }
+				local wrapLeft =
+					{ shoulder = LEFT.shoulder, upper = LEFT.upper, lower = 0.9, wrap = Vector3.new(0, 0, 0.2) }
+				local wrapped = VacuumHoldFormulas.hold(wrapRight, wrapLeft, FLOOR, WAND, TUNING)
+				-- The wrap point lands where GripUpper is; the attachment itself sits `wrap` past it.
+				expect((wrapped.grip:PointToWorldSpace(wrapRight.wrap) - wrapped.rightAt).Magnitude < 1e-4).to.equal(
+					true
+				)
+				expect((wrapped.grip.Position - wrapped.rightAt).Magnitude).to.be.near(0.2, 1e-4)
+				-- The handle still hangs `upper` down the wand from GripUpper, square to the root.
+				local handle = wrapped.grip * wrapped.toolGrip:Inverse()
+				expect((handle.Position - (wrapped.rightAt + ALONG * WAND.upper)).Magnitude < 1e-4).to.equal(true)
+				expect(handle.LookVector:Dot(Vector3.new(0, 0, -1))).to.be.near(1, 1e-4)
+				-- The left paw's wrap point on GripLower.
+				expect(wrapped.left).to.be.ok()
+				local lowerAt = wrapped.rightAt + ALONG * (WAND.upper + WAND.gripHalf + WAND.lower)
+				expect((wrapped.leftAt - lowerAt).Magnitude < 1e-4).to.equal(true)
+				expect((wrapped.left:PointToWorldSpace(wrapLeft.wrap) - lowerAt).Magnitude < 1e-4).to.equal(true)
+				-- The left arm's shoulder and reach go with it (the motion layers keep GripLower inside it).
+				expect(wrapped.leftShoulder).to.equal(wrapLeft.shoulder)
+				expect(wrapped.leftReach).to.be.near(wrapLeft.upper + wrapLeft.lower, 1e-6)
+			end
+		)
+
+		it("has the wrap points on the grips themselves when the arms give none", function()
+			expect((hold.rightAt - hold.grip.Position).Magnitude < 1e-6).to.equal(true)
+			expect((hold.leftAt - hold.left.Position).Magnitude < 1e-6).to.equal(true)
+		end)
+
 		it("points the right elbow outward and down, the left one outward and forward", function()
 			expect(hold.rightPole.X > RIGHT.shoulder.X).to.equal(true)
 			expect(hold.rightPole.Y < RIGHT.shoulder.Y).to.equal(true)

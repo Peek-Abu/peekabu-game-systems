@@ -15,18 +15,28 @@
 	3. lets the engine's Animator solve the IK over the carrier's own clips and judges each frame: idle (two),
 	   walk (two), sprint (two) and vacuuming (the vacuum's use clip over the idle and the walk when one is
 	   registered, else the locomotion it plays over); each frame is shown once its clip has loaded and confirmed
-	   shown at its time and full weight (AnimationCarryClipHarness). In every frame the RightGripAttachment must be
-	   on the wand's GripUpper and the LeftGripAttachment on its GripLower (the grip contract), within GRIP_TOLERANCE.
+	   shown at its time and full weight (AnimationCarryClipHarness);
+	4. in each frame, lays every motion layer on the rig at its extremes (LAYERS: rest, aim up, aim down, the brace
+	   and the brace with each aim; VacuumMotionRigSystem, exactly as every client does, in PreSimulation after the
+	   Animator's IK) and judges each: each paw's wrap point (VacuumVisualSystem.wrapOf, inside the paw) must be on
+	   its grip, the right on the wand's GripUpper and the left on its GripLower (the grip contract), within
+	   GRIP_TOLERANCE; each grip must lie inside its paw (the paw closes round the wand); and the floor head's
+	   lowest corner must be over the floor (FLOOR_TOLERANCE).
 	`format` prints the report; the spec asserts it. Needs a real runtime (TestEZ in Studio): run it with
 	`Workspace.RunTests = true`, or from a server Script: `print(Harness.format(Harness.run({})))`.
 
 	@class AnimationVacuumHarness
 ]=]
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local AnimationRegistry = require(ReplicatedStorage.Shared.Features.Animation.Data.AnimationRegistry)
+local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
+local VacuumMotionConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumMotionConstants)
 local VacuumSkinRegistry = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumSkinRegistry)
+local VacuumMotionRigSystem = require(ReplicatedStorage.Shared.Features.Vacuum.Systems.VacuumMotionRigSystem)
+local VacuumMotionFormulas = require(ReplicatedStorage.Shared.Features.Vacuum.Utils.VacuumMotionFormulas)
 local AnimationCarryClipHarness = require(ServerScriptService.Features.Animation.Testing.AnimationCarryClipHarness)
 local AnimationCarryRigHarness = require(ServerScriptService.Features.Animation.Testing.AnimationCarryRigHarness)
 local VacuumToolSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumToolSystem)
@@ -37,9 +47,13 @@ type Carrier = AnimationCarryRigHarness.Carrier
 export type Frame = {
 	state: string,
 	name: string,
-	-- How far each hand's grip attachment is from its grip on the wand (studs); nil when it could not be measured.
+	-- The motion layer laid on (LAYERS).
+	layer: string,
+	-- How far each paw's wrap point is from its grip on the wand (studs); nil when it could not be measured.
 	right: number?,
 	left: number?,
+	-- The floor head's lowest corner over the floor (studs).
+	clear: number?,
 	problems: { string },
 }
 export type Entry = {
@@ -50,12 +64,25 @@ export type Entry = {
 	ok: boolean,
 }
 export type Result = { ok: boolean, entries: { Entry }, notes: { string } }
+-- The worst of a layer's frames: the furthest each paw sat from its grip, and the floor head's least clearance.
+type Worst = { right: number, left: number, clear: number }
 export type Options = { rigs: { string }?, skins: { string }? }
 
 local AnimationVacuumHarness = {}
 
--- How far a hand's grip attachment may sit from its grip on the wand (studs).
+-- How far a paw's wrap point may sit from its grip on the wand (studs).
 local GRIP_TOLERANCE = 0.05
+-- How far the floor head's lowest corner may dip under the floor (studs).
+local FLOOR_TOLERANCE = 0.02
+-- Each motion layer at its extremes (VacuumMotionFormulas.Layers), laid on every frame.
+local LAYERS: { { name: string, layers: VacuumMotionFormulas.Layers } } = {
+	{ name = "rest", layers = { raise = 0, reach = 0, brace = 0 } },
+	{ name = "aim up", layers = { raise = VacuumMotionConstants.aim.maxUp, reach = 0, brace = 0 } },
+	{ name = "aim down", layers = { raise = 0, reach = 1, brace = 0 } },
+	{ name = "brace", layers = { raise = 0, reach = 0, brace = 1 } },
+	{ name = "brace+down", layers = { raise = 0, reach = 1, brace = 1 } },
+	{ name = "brace+up", layers = { raise = VacuumMotionConstants.aim.maxUp, reach = 0, brace = 1 } },
+}
 -- Frames to let the Animator settle after a change.
 local SETTLE = 4
 -- The pose the plan is read in: the stock fall (AnimationLocomotionRegistry), at this fraction of the clip.
@@ -75,14 +102,57 @@ local function descendant(container: Instance, name: string): Attachment?
 	return if found ~= nil and found:IsA("Attachment") then found else nil
 end
 
-local function handGrip(model: Model, side: string): Attachment?
-	local hand = model:FindFirstChild(side .. "Hand")
-	local found = if hand ~= nil then hand:FindFirstChild(side .. "GripAttachment") else nil
-	return if found ~= nil and found:IsA("Attachment") then found else nil
+local function handOf(model: Model, side: string): BasePart?
+	local found = model:FindFirstChild(side .. "Hand")
+	return if found ~= nil and found:IsA("BasePart") then found else nil
 end
 
-local function gap(a: Attachment?, b: Attachment?): number?
-	return if a ~= nil and b ~= nil then (a.WorldPosition - b.WorldPosition).Magnitude else nil
+-- How far the paw's wrap point (hand space) is from the grip on the wand, and whether the grip is inside the paw.
+local function onPaw(hand: BasePart?, wrap: Vector3?, grip: Attachment?): (number?, boolean)
+	if hand == nil or wrap == nil or grip == nil then
+		return nil, false
+	end
+	local inHand = hand.CFrame:PointToObjectSpace(grip.WorldPosition)
+	local half = hand.Size / 2
+	local inside = math.abs(inHand.X) <= half.X and math.abs(inHand.Y) <= half.Y and math.abs(inHand.Z) <= half.Z
+	return (hand.CFrame:PointToWorldSpace(wrap) - grip.WorldPosition).Magnitude, inside
+end
+
+-- The floor head's lowest corner over the floor under `model`'s root (studs).
+local function clearance(model: Model, head: BasePart?): number?
+	local root = model:FindFirstChild("HumanoidRootPart")
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+	if head == nil or root == nil or not root:IsA("BasePart") or humanoid == nil then
+		return nil
+	end
+	local floor = root.Position.Y - (root.Size.Y / 2 + humanoid.HipHeight)
+	local half = head.Size / 2
+	local low = math.huge
+	for _, x in { -1, 1 } do
+		for _, y in { -1, 1 } do
+			for _, z in { -1, 1 } do
+				low = math.min(low, head.CFrame:PointToWorldSpace(Vector3.new(half.X * x, half.Y * y, half.Z * z)).Y)
+			end
+		end
+	end
+	return low - floor
+end
+
+--[=[
+	The pose VacuumMotionSystem lays on a bound rig for `layers` (its springs settled there).
+]=]
+function AnimationVacuumHarness.poseOf(
+	rig: VacuumMotionRigSystem.Rig,
+	layers: VacuumMotionFormulas.Layers
+): VacuumMotionRigSystem.Pose
+	local drop, lean = VacuumMotionFormulas.body(layers.brace)
+	local wand = VacuumMotionFormulas.wand(
+		rig.rest,
+		VacuumMotionFormulas.offsetOf(layers),
+		VacuumMotionConstants.floorMargin,
+		VacuumMotionFormulas.motion(rig.rest.waist, drop, lean)
+	)
+	return { wand = wand, drop = drop, lean = lean }
 end
 
 --[=[
@@ -162,37 +232,62 @@ local function hold(carrier: Carrier, skin: VacuumSkinRegistry.SkinDef): Entry
 		table.insert(entry.problems, "the left hand has no hold on the wand (planned out of its reach)")
 	end
 	local upper, lower = descendant(tool, "GripUpper"), descendant(tool, "GripLower")
-	local right, left = handGrip(model, "Right"), handGrip(model, "Left")
 	if upper == nil or lower == nil then
 		table.insert(entry.problems, "the wand has no GripUpper / GripLower (the grip contract)")
 	end
-	-- 3. Every frame, live.
+	local rightHand, leftHand = handOf(model, "Right"), handOf(model, "Left")
+	local rightWrap, leftWrap = VacuumVisualSystem.wrapOf(model, "Right"), VacuumVisualSystem.wrapOf(model, "Left")
+	local headFound = tool:FindFirstChild(VacuumConstants.FLOOR_HEAD_NAME)
+	local head = if headFound ~= nil and headFound:IsA("BasePart") then headFound else nil
+	-- 4. The motion layers, laid on as every client lays them (after the Animator's IK, every frame).
+	local rig = VacuumMotionRigSystem.bind(model)
+	if rig == nil then
+		table.insert(entry.problems, "the motion layers could not bind the held vacuum")
+	end
+	local pose: VacuumMotionRigSystem.Pose? = nil
+	local layering = RunService.PreSimulation:Connect(function()
+		if rig ~= nil and pose ~= nil then
+			rig.apply(pose)
+		end
+	end)
+	-- 3. Every frame, live, under every layer.
 	local list, _ = samples(carrier)
 	for _, sample in list do
-		local frame: Frame = { state = sample.state, name = sample.name, problems = {} }
 		local id = sample.id
+		local track: AnimationTrack? = nil
+		local overTrack: AnimationTrack? = nil
+		local shownProblem: string? = nil
 		if id == nil then
-			table.insert(frame.problems, "no clip")
+			shownProblem = "no clip"
 		else
-			local track, err = AnimationCarryClipHarness.show(animator, id, sample.at)
-			local overTrack: AnimationTrack? = nil
+			local shown, err = AnimationCarryClipHarness.show(animator, id, sample.at)
+			track = shown
 			local over = sample.over
 			if over ~= nil then
 				overTrack = AnimationCarryClipHarness.show(animator, over, 0.5)
 			end
-			if track == nil then
-				table.insert(frame.problems, err or "clip not shown")
-			else
+			if shown == nil then
+				shownProblem = err or "clip not shown"
+			end
+		end
+		for _, layer in LAYERS do
+			local frame: Frame = { state = sample.state, name = sample.name, layer = layer.name, problems = {} }
+			if shownProblem ~= nil then
+				table.insert(frame.problems, shownProblem)
+			elseif track ~= nil then
+				pose = if rig ~= nil then AnimationVacuumHarness.poseOf(rig, layer.layers) else nil
 				AnimationCarryRigHarness.settle(SETTLE)
 				local unshown = AnimationCarryClipHarness.shown(track, sample.at)
 				if unshown ~= nil then
 					table.insert(frame.problems, unshown)
 				end
-				frame.right = gap(right, upper)
-				frame.left = gap(left, lower)
-				local checks: { { side: string, distance: number? } } = {
-					{ side = "right", distance = frame.right },
-					{ side = "left", distance = frame.left },
+				local rightGap, rightInside = onPaw(rightHand, rightWrap, upper)
+				local leftGap, leftInside = onPaw(leftHand, leftWrap, lower)
+				frame.right, frame.left = rightGap, leftGap
+				frame.clear = clearance(model, head)
+				local checks: { { side: string, distance: number?, inside: boolean } } = {
+					{ side = "right", distance = rightGap, inside = rightInside },
+					{ side = "left", distance = leftGap, inside = leftInside },
 				}
 				for _, check in checks do
 					local side, distance = check.side, check.distance
@@ -203,20 +298,35 @@ local function hold(carrier: Carrier, skin: VacuumSkinRegistry.SkinDef): Entry
 							frame.problems,
 							string.format("%s hand %.3f stud off its grip on the wand", side, distance)
 						)
+					elseif not check.inside then
+						table.insert(frame.problems, `{side} grip is not inside its paw`)
 					end
 				end
-				track:Stop(0)
-				track:Destroy()
+				local clear = frame.clear
+				if clear == nil then
+					table.insert(frame.problems, "floor head not measured")
+				elseif clear < -FLOOR_TOLERANCE then
+					table.insert(frame.problems, string.format("floor head %.3f stud under the floor", -clear))
+				end
 			end
-			if overTrack ~= nil then
-				overTrack:Stop(0)
-				overTrack:Destroy()
+			for _, problem in frame.problems do
+				table.insert(entry.problems, `{frame.name} / {frame.layer}: {problem}`)
 			end
+			table.insert(entry.frames, frame)
 		end
-		for _, problem in frame.problems do
-			table.insert(entry.problems, `{frame.name}: {problem}`)
+		pose = nil
+		if track ~= nil then
+			track:Stop(0)
+			track:Destroy()
 		end
-		table.insert(entry.frames, frame)
+		if overTrack ~= nil then
+			overTrack:Stop(0)
+			overTrack:Destroy()
+		end
+	end
+	layering:Disconnect()
+	if rig ~= nil then
+		rig.release()
 	end
 	tool:Destroy()
 	entry.ok = #entry.problems == 0
@@ -269,17 +379,40 @@ function AnimationVacuumHarness.format(result: Result): string
 	end
 	for _, entry in result.entries do
 		table.insert(lines, `{if entry.ok then "PASS" else "FAIL"} {entry.rig} {entry.skin}`)
+		local worst: { [string]: Worst } = {}
 		for _, frame in entry.frames do
 			table.insert(
 				lines,
 				string.format(
-					"    %-12s right %s  left %s%s",
+					"    %-12s %-11s right %s  left %s  floor %s%s",
 					frame.name,
+					frame.layer,
 					if frame.right ~= nil then string.format("%.3f", frame.right) else "-",
 					if frame.left ~= nil then string.format("%.3f", frame.left) else "-",
+					if frame.clear ~= nil then string.format("%+.3f", frame.clear) else "-",
 					if #frame.problems > 0 then "  " .. table.concat(frame.problems, "; ") else ""
 				)
 			)
+			local w: Worst = worst[frame.layer] or { right = 0, left = 0, clear = math.huge }
+			w.right = math.max(w.right, frame.right or 0)
+			w.left = math.max(w.left, frame.left or 0)
+			w.clear = math.min(w.clear, frame.clear or math.huge)
+			worst[frame.layer] = w
+		end
+		for _, layer in LAYERS do
+			local w = worst[layer.name]
+			if w ~= nil then
+				table.insert(
+					lines,
+					string.format(
+						"  worst %-11s right %.3f  left %.3f  floor %+.3f",
+						layer.name,
+						w.right,
+						w.left,
+						w.clear
+					)
+				)
+			end
 		end
 		for _, problem in entry.problems do
 			if problem:find(":", 1, true) == nil then

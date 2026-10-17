@@ -1,4 +1,6 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
+local VacuumMotionConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumMotionConstants)
 local System = require(ServerScriptService.Features.Animation.Systems.AnimationVacuumHoldSystem)
 return function()
 	-- Two T-posed arms: root at the origin, shoulders at (+-0.5, 1, 0).
@@ -36,6 +38,10 @@ return function()
 
 	local hold = {
 		grip = CFrame.new(0.6, 0.2, -0.7) * CFrame.Angles(-1, 0, 0),
+		rightAt = Vector3.new(0.6, 0.2, -0.7),
+		leftAt = Vector3.new(0.6, 0.45, -0.55),
+		leftShoulder = Vector3.new(-0.5, 1, 0),
+		leftReach = 1.9,
 		toolGrip = CFrame.Angles(-1, 0, 0),
 		rightPole = Vector3.new(1.5, 0.4, 0.5),
 		leftPole = Vector3.new(-1.5, 0.4, 0.5),
@@ -69,6 +75,13 @@ return function()
 		expect(left.EndEffector.Name).to.equal("LeftGripAttachment")
 		expect(left.Type).to.equal(Enum.IKControlType.Transform)
 		expect(left.Target.CFrame).to.equal(hold.left)
+		-- Each target records its planned frame: clients move their own copies for the motion layers and come back.
+		expect(right.Target:GetAttribute(VacuumMotionConstants.REST_ATTRIBUTE)).to.equal(hold.grip)
+		expect(left.Target:GetAttribute(VacuumMotionConstants.REST_ATTRIBUTE)).to.equal(hold.left)
+		-- And the left paw's point on the wand, its shoulder and its reach (the layers keep it in reach).
+		expect(left.Target:GetAttribute(VacuumMotionConstants.AT_ATTRIBUTE)).to.equal(hold.leftAt)
+		expect(left.Target:GetAttribute(VacuumMotionConstants.SHOULDER_ATTRIBUTE)).to.equal(hold.leftShoulder)
+		expect(left.Target:GetAttribute(VacuumMotionConstants.REACH_ATTRIBUTE)).to.equal(hold.leftReach)
 		controller.destroy()
 		controller.destroy()
 		expect(humanoid:FindFirstChildWhichIsA("IKControl")).to.equal(nil)

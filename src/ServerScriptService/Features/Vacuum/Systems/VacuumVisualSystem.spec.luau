@@ -62,9 +62,28 @@ return function()
 			expect(arm.shoulder.X).to.be.near(0.5, 1e-4)
 			expect(arm.shoulder.Y).to.be.near(1, 1e-4)
 			expect(arm.upper).to.be.near(0.4, 1e-4)
-			expect(arm.lower).to.be.near(0.7, 1e-4)
+			-- The forearm, then the hand from its wrist to its wrap point (WRAP of the way to the grip attachment).
+			expect(arm.lower).to.be.near(0.4 + 0.3 * VisualConstants.WRAP, 1e-4)
 			holder:Destroy()
 		end)
+
+		it(
+			"holds the wand inside the paw: the wrap point lies between wrist and grip, given in the grip's space",
+			function()
+				local holder = makeHolder()
+				for _, side in { { "Right", 1 }, { "Left", -1 } } do
+					local name, sx = side[1], side[2]
+					local wrap = Visual.wrapOf(holder, name)
+					expect(wrap.X).to.be.near(sx * (-0.15 + 0.3 * VisualConstants.WRAP), 1e-4)
+					local arm = Visual.arm(holder, name)
+					-- From the grip attachment (at the paw's tip) back toward the wrist.
+					expect(arm.wrap.Magnitude).to.be.near(0.3 * (1 - VisualConstants.WRAP), 1e-4)
+					local grip = holder[name .. "Hand"][name .. "GripAttachment"]
+					expect((grip.CFrame:PointToWorldSpace(arm.wrap) - wrap).Magnitude < 1e-4).to.equal(true)
+				end
+				holder:Destroy()
+			end
+		)
 
 		it("reads the shoulder at the rig's rest pose, not where an animation or a landing has the torso", function()
 			-- Studio, a shift's start: the hold was planned while Pippa was being placed in the truck, her torso
@@ -147,9 +166,11 @@ return function()
 			local lower = find(tool, "WandTube"):FindFirstChild("GripLower")
 			expect(upper:IsA("Attachment")).to.equal(true)
 			expect(lower:IsA("Attachment")).to.equal(true)
-			-- handle = rightGrip * Tool.Grip:Inverse(), so the right hand's grip is at Tool.Grip in handle space.
+			-- handle = rightGrip * Tool.Grip:Inverse(), so the right hand's grip attachment is at Tool.Grip in handle
+			-- space, and its paw's wrap point (inside the paw) on GripUpper.
 			local inHandle = handle.CFrame:PointToObjectSpace(upper.WorldPosition)
-			expect((inHandle - hold.toolGrip.Position).Magnitude < 1e-3).to.equal(true)
+			local wrap = Visual.arm(holder, "Right").wrap
+			expect((inHandle - hold.toolGrip:PointToWorldSpace(wrap)).Magnitude < 1e-3).to.equal(true)
 			-- GripLower stays its modelled distance below the tube's top, however long the tube telescopes, and
 			-- lies below and in front of GripUpper.
 			local tube = find(tool, "WandTube")

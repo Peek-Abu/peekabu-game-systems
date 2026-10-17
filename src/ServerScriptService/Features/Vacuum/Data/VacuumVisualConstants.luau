@@ -141,6 +141,11 @@ return table.freeze({
 		clearance = 0.06,
 		minTube = 0.3,
 	}),
+	-- Where a paw holds the wand (VacuumHoldFormulas.Arm.wrap): this far from its wrist toward its grip attachment.
+	-- Pippa's grip attachments sit on the very tip of her paws (0.34 stud from the paw's middle), so a hold on them
+	-- touched the wand with the fingertips; 0.6 of the way puts the wand through the paw, just past its middle, and
+	-- the paw reads as closed round it.
+	WRAP = 0.6,
 	-- The hose Beam (studs as modelled): width; how far it bulges out of the outlet (wide while the wand is in
 	-- the hand, so it loops out round the arm instead of through it; short to the stowed wand) and into the
 	-- wand; its segments; and one texture tile's length (8 ribs).
