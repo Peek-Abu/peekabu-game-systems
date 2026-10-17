@@ -195,7 +195,8 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.UI.React.SceneHost"] = "React layer view — renders the stack's screens (selection specced in SceneStack.screensFor)",
 	["ReplicatedStorage.Client.UI.React.Debugger.DebugPanelScreen"] = "throwaway harness screen proving the SceneHost render path (no logic)",
 	["ReplicatedStorage.Client.UI.React.Screens.Hud.HudRoot"] = "React composition root — composes the HUD widgets + hide gate (no logic)",
-	["ReplicatedStorage.Client.Features.UI.Data.UIAssets"] = "static image-asset registry (no logic)",
+	["ReplicatedStorage.Client.Features.UI.Data.UIAssets"] = "static image- and sound-asset registry; registers the UI sounds at load (no logic)",
+	["ReplicatedStorage.Client.Features.UI.Systems.UISoundSystem"] = "ProximityPromptService/Sound shell (tiers, hold speed and the CTA are specced in UISoundFormulas)",
 
 	-- Client services: thin, network/Cmdr-bound shells whose behavior only manifests against a live
 	-- server; integration-tested in-game rather than unit-tested.
@@ -337,6 +338,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Features.Office.OfficeServiceServer"] = "Instance/signal shell (layout rules, spawn roll and spawn rules are specced)",
 	["ReplicatedStorage.Shared.Features.Office.Data.OfficeDecorConstants"] = "static decor look and emitter names (no logic)",
 	["ReplicatedStorage.Client.Features.Office.OfficeServiceClient"] = "client service shell (starts the atmosphere and ambience systems)",
+	["ReplicatedStorage.Client.Features.Depot.Data.DepotAssets"] = "asset id slots; registers the hub's record at load (no decisions)",
 	["ReplicatedStorage.Client.Features.Office.Data.OfficeAssets"] = "asset id slots; registers the uploaded sounds at load (no decisions)",
 	["ReplicatedStorage.Client.Features.Office.Data.OfficeAtmosphereConstants"] = "static presets and timing (no logic)",
 	["ReplicatedStorage.Client.Features.Office.Systems.OfficeAtmosphereSystem"] = "Lighting/Instance/Sound/Charm shell (choices specced in OfficeAtmosphereUtils, OfficeLightUtils)",
@@ -347,10 +349,12 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.Features.Footstep.Data.FootstepConstants"] = "static tuning and material map (no logic)",
 	["ReplicatedStorage.Client.Features.Footstep.Data.FootstepTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Client.Features.Footstep.Systems.FootstepEmitterSystem"] = "Instance/raycast/Sound shell (plant, gait and surface decisions specced in FootstepPlantFormulas, FootstepGaitFormulas, FootstepSurfaceUtils)",
+	["ReplicatedStorage.Client.Features.Footstep.Systems.FootstepLandingSystem"] = "Players/Instance/RunService/Sound shell (impact, take-off and land loudness specced in FootstepLandingFormulas)",
 	["ReplicatedStorage.Client.Features.Footstep.FootstepServiceClient"] = "Players/CollectionService/RunService shell (decisions specced in the Footstep Utils)",
 
 	-- Cleanup Crew: Occupant
 	["ReplicatedStorage.Shared.Features.Occupant.Data.OccupantAssets"] = "asset id slots; registers the uploaded sounds at load (no decisions)",
+	["ReplicatedStorage.Client.Features.Occupant.Systems.OccupantChaseMusicSystem"] = "Sound/RunService shell (the stem layer and its easing are specced in OccupantTellRules)",
 	["ReplicatedStorage.Client.Features.Occupant.Systems.OccupantPresenceSystem"] = "Sound/Instance/RunService shell (choices specced in OccupantFeedbackUtils, OccupantTellRules; his lines are only voiced)",
 	["ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants"] = "static tuning, names and placeholder lines (no logic)",
 	["ReplicatedStorage.Shared.Features.Occupant.Data.OccupantTypes"] = "type definitions only (no runtime logic)",

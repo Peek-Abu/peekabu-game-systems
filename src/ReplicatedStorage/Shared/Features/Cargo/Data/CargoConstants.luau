@@ -196,6 +196,9 @@ return table.freeze({
 	-- A buried item's reveal (gold burst) and an appraisal (paper flecks).
 	REVEAL_COUNT = 32,
 	REVEAL_COLOR = Color3.fromRGB(255, 205, 70),
+	-- The reveal sound's value layer grows with the revealed item's base value (CargoBaseValue): the lowest base each
+	-- tier starts at (below `mid` is "low"). Buried kinds roll 30-170 before depth, so "jackpot" is mostly a jackpot roll.
+	REVEAL_TIERS = table.freeze({ mid = 60, high = 100, jackpot = 160 }),
 	APPRAISE_COUNT = 14,
 	APPRAISE_COLOR = Color3.fromRGB(244, 236, 216),
 	-- How far down the floor is looked for under a spill or a scattered item.

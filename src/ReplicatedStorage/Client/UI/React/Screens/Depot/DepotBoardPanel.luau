@@ -300,6 +300,7 @@ local function DepotBoardPanel(props: DepotBoardPanelProps): React.ReactNode
 			ZIndex = Z_SHEET,
 		}, { sheet = dispatchOf(view, layout) }),
 		close = e(PaperButton, {
+			sound = "back",
 			text = view.close,
 			variant = "secondary",
 			onActivated = props.onClose,

@@ -5,7 +5,9 @@
 	AMBIENCE_INTERVAL: when the phone's wait is up, a phone rings on a desk with nobody near it (OfficeAmbienceUtils
 	.pick over the OfficeAmbient emitters); the elevator dings on the same rule on its own wait; each typist types
 	(a loop) while nobody is near and stops the moment you come within TYPING_STOP_RADIUS, staying quiet
-	TYPING_QUIET_SECONDS. Per client, no packets: each player hears their own office. Pending sounds (OfficeAssets)
+	TYPING_QUIET_SECONDS; and the office bed's sweeteners (a ceiling tick, a pipe knock, a far typewriter key, a lift
+	ding...), each kind on its own wait (SWEETENER_EVERY), one variant on a ring SWEETENER_NEAR..FAR studs round the
+	camera (OfficeAmbienceUtils.sweetenerAt). Per client, no packets: each player hears their own office. Pending sounds (OfficeAssets)
 	are skipped silently and counted.
 
 	Spec-exempt shell (Sound, Instances, RunService); the choices are the specced OfficeAmbienceUtils.
@@ -17,6 +19,7 @@ local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 
 local OfficeClient = ReplicatedStorage.Client.Features.Office
 local OfficeDecorConstants = require(ReplicatedStorage.Shared.Features.Office.Data.OfficeDecorConstants)
@@ -42,10 +45,12 @@ local typists: { [BasePart]: Typist } = {}
 local rng = Random.new()
 local nextPhone = 0
 local nextElevator = 0
+-- When each sweetener kind next sounds (os.clock()).
+local nextSweetener: { [string]: number } = {}
 local connection: RBXScriptConnection? = nil
-local counters = { phones = 0, elevators = 0, typingStarts = 0, typingStops = 0, pending = 0 }
+local counters = { phones = 0, elevators = 0, typingStarts = 0, typingStops = 0, sweeteners = 0, pending = 0 }
 
-local function play(id: string, at: BasePart): SoundServiceClient.SoundHandle?
+local function play(id: string, at: BasePart | Vector3): SoundServiceClient.SoundHandle?
 	if not SoundRegistry.has(id) then
 		counters.pending += 1
 		return nil
@@ -97,6 +102,38 @@ local function schedule(now: number)
 	local constants = OfficeAtmosphereConstants
 	nextPhone = now + OfficeAmbienceUtils.delay(rng:NextNumber(), constants.PHONE_MIN, constants.PHONE_MAX)
 	nextElevator = now + OfficeAmbienceUtils.delay(rng:NextNumber(), constants.ELEVATOR_MIN, constants.ELEVATOR_MAX)
+	for kind in OfficeAssets.SWEETENERS do
+		local every = constants.SWEETENER_EVERY[kind]
+		if every ~= nil then
+			nextSweetener[kind] = now + OfficeAmbienceUtils.delay(rng:NextNumber(), every.min, every.max)
+		end
+	end
+end
+
+-- Each sweetener kind whose wait is up sounds one of its variants somewhere round the camera.
+local function stepSweeteners(now: number)
+	local camera = Workspace.CurrentCamera
+	if camera == nil then
+		return
+	end
+	local constants = OfficeAtmosphereConstants
+	for kind, ids in OfficeAssets.SWEETENERS do
+		local every = constants.SWEETENER_EVERY[kind]
+		local due = nextSweetener[kind]
+		if every ~= nil and due ~= nil and now >= due and #ids > 0 then
+			nextSweetener[kind] = now + OfficeAmbienceUtils.delay(rng:NextNumber(), every.min, every.max)
+			local at = OfficeAmbienceUtils.sweetenerAt(
+				camera.CFrame.Position,
+				rng:NextNumber(),
+				rng:NextNumber(),
+				constants.SWEETENER_NEAR,
+				constants.SWEETENER_FAR
+			)
+			if play(ids[OfficeAmbienceUtils.variant(rng:NextNumber(), #ids)], at) ~= nil then
+				counters.sweeteners += 1
+			end
+		end
+	end
 end
 
 local function ring(
@@ -186,6 +223,7 @@ local function step()
 			)
 	end
 	stepTypists(list, parts, positions, now)
+	stepSweeteners(now)
 end
 
 local OfficeAmbienceSystem = {}

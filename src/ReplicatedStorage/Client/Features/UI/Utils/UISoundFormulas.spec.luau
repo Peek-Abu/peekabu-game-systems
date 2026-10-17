@@ -1,0 +1,63 @@
+local UISoundFormulas = require(script.Parent.UISoundFormulas)
+
+return function()
+	describe("buttonTier", function()
+		it("gives a button the tier its caller names", function()
+			expect(UISoundFormulas.buttonTier("go", "cta")).to.equal("cta")
+			expect(UISoundFormulas.buttonTier("secondary", "back")).to.equal("back")
+			expect(UISoundFormulas.buttonTier("primary", "click")).to.equal("click")
+		end)
+
+		it("defaults by look: filled action buttons confirm, the rest click", function()
+			expect(UISoundFormulas.buttonTier("go", nil)).to.equal("confirm")
+			expect(UISoundFormulas.buttonTier("primary", nil)).to.equal("confirm")
+			expect(UISoundFormulas.buttonTier("danger", nil)).to.equal("confirm")
+			expect(UISoundFormulas.buttonTier("secondary", nil)).to.equal("click")
+			expect(UISoundFormulas.buttonTier("prop", nil)).to.equal("click")
+			expect(UISoundFormulas.buttonTier("surface", nil)).to.equal("click")
+		end)
+	end)
+
+	describe("pressTier", function()
+		it("plays the button's tier, or the error when it is disabled", function()
+			expect(UISoundFormulas.pressTier("cta", false)).to.equal("cta")
+			expect(UISoundFormulas.pressTier("confirm", true)).to.equal("error")
+		end)
+	end)
+
+	describe("hovers", function()
+		it("hovers an enabled button that has a pointer look", function()
+			expect(UISoundFormulas.hovers("primary", false)).to.equal(true)
+			expect(UISoundFormulas.hovers("prop", false)).to.equal(true)
+		end)
+
+		it("stays quiet over a disabled button and the touch surfaces", function()
+			expect(UISoundFormulas.hovers("primary", true)).to.equal(false)
+			expect(UISoundFormulas.hovers("surface", false)).to.equal(false)
+		end)
+	end)
+
+	describe("prompts", function()
+		it("fits the wind-up to the hold: PlaybackSpeed = 1 / HoldDuration", function()
+			expect(UISoundFormulas.holdSpeed(1)).to.equal(1)
+			expect(UISoundFormulas.holdSpeed(0.8)).to.be.near(1.25, 1e-9)
+			expect(UISoundFormulas.holdSpeed(2)).to.equal(0.5)
+		end)
+
+		it("has no wind-up for a tap prompt", function()
+			expect(UISoundFormulas.holdSpeed(0)).to.equal(nil)
+		end)
+
+		it("keeps an extreme hold within the speed range", function()
+			expect(UISoundFormulas.holdSpeed(0.05)).to.equal(UISoundFormulas.MAX_SPEED)
+			expect(UISoundFormulas.holdSpeed(100)).to.equal(UISoundFormulas.MIN_SPEED)
+		end)
+
+		it("completes a CTA prompt with the CTA, any other hold with the done sound", function()
+			local cta = { "shift-clockout" }
+			expect(UISoundFormulas.doneTier("shift-clockout", cta)).to.equal("cta")
+			expect(UISoundFormulas.doneTier("cargo-search", cta)).to.equal("done")
+			expect(UISoundFormulas.doneTier(nil, cta)).to.equal("done")
+		end)
+	end)
+end

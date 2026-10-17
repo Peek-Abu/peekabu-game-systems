@@ -29,6 +29,7 @@ local CameraServiceClient = require(ReplicatedStorage.Client.Features.Camera.Cam
 local VfxServiceClient = require(ReplicatedStorage.Client.Features.Vfx.VfxServiceClient)
 local OccupantCatchStore = require(ReplicatedStorage.Client.Features.Occupant.State.OccupantCatchStore)
 local OccupantTellSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantTellSystem)
+local OccupantChaseMusicSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantChaseMusicSystem)
 local OccupantPresenceSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantPresenceSystem)
 local OccupantScareSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantScareSystem)
 local OccupantGestureSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantGestureSystem)
@@ -114,6 +115,7 @@ local OccupantServiceClient: OccupantServiceClient = {
 			stoppers,
 			OccupantEvents.packets.Rehired.listen(function(_back: boolean)
 				OccupantCatchStore.rehired(os.clock())
+				OccupantScareSystem.rehired()
 			end)
 		)
 		table.insert(
@@ -151,6 +153,7 @@ local OccupantServiceClient: OccupantServiceClient = {
 		return {
 			snaps = snaps,
 			presence = OccupantPresenceSystem.getState(),
+			chaseMusic = OccupantChaseMusicSystem.getState(),
 			scare = OccupantScareSystem.getState(),
 			gestures = OccupantGestureSystem.getState(),
 			warnings = OccupantWarningSystem.getState(),

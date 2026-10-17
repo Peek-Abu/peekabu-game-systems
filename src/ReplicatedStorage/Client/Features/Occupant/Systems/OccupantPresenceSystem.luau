@@ -5,13 +5,14 @@
 	you; a sigh when he gives up"; "Voice": "pitched, distorted gibberish plus a speech bubble with the line").
 	- A muttering loop on his head. (His footsteps are FootstepServiceClient's, played as his feet land.)
 	- His mode changes (OccupantFeedbackUtils.cues): a "hm?" when he investigates, the sting whenever a chase starts
-	  (2D when it is on you, however it started, positional otherwise), the chase bed (the `harlowChase` music slot)
-	  while he chases you, a sigh when he gives up.
+	  (on you: the chase music's own sting bar, 2D, however it started; positional "spotted" otherwise), the chase music
+	  (OccupantChaseMusicSystem: the sting, then the stems layered by his distance) while he chases you, a sigh when he
+	  gives up.
 	- Your heartbeat, on the beat OccupantTellRules.beatPeriod sets: the near heartbeat, and racing at CHASE_BEAT for as
 	  long as he chases you (the chase bed's beat; OccupantTellSystem pulses the screen with it).
-	- The chase sounds are kept warm while this client runs: one silent, never-played Sound per chase cue stays in
-	  SoundService (preloaded through ContentProvider), so a fresh play is loaded at once. Measured 2026-10-16: a cold
-	  sting took 0.23 s to load (0.88 s long, so a quarter of it was lost), a warm one 0.
+	- The chase sounds (and his desk sounds) are kept warm while this client runs: one silent, never-played Sound per cue
+	  stays in SoundService (preloaded through ContentProvider), so a fresh play is loaded at once. Measured 2026-10-16: a
+	  cold sting took 0.23 s to load (0.88 s long, so a quarter of it was lost), a warm one 0.
 	- His voice: each new line on his model (OccupantConstants.LINE_ATTRIBUTE) plays one uploaded gibberish clip chosen
 	  per line (OccupantFeedbackUtils.clipFor); "*sigh*" is not voiced. The words are never shown: no text over his head
 	  (2026-10-16: the tells stay diegetic).
@@ -40,6 +41,7 @@ local OccupantFeedbackUtils = require(OccupantShared.Utils.OccupantFeedbackUtils
 local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundRegistry)
 local SoundTypes = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundTypes)
 local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
+local OccupantChaseMusicSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantChaseMusicSystem)
 
 type Harlow = {
 	model: Model,
@@ -66,8 +68,22 @@ local lastMine = false
 local ownsMusic = false
 local beatClock = 0
 local counters = { beats = 0, lines = 0, cues = 0, played = 0, pending = 0, stings = 0, preloaded = 0 }
--- The sounds a chase depends on, kept loaded (`warm`) so none starts late.
-local PRELOAD: { string } = { "harlowSpotted", "harlowChase", "harlowHeartbeat" }
+-- The sounds a chase (and his desk) depends on, kept loaded (`warm`) so none starts late.
+local PRELOAD: { string } = {
+	"harlowSpotted",
+	"harlowChaseSting",
+	"harlowChase_ostinato",
+	"harlowChase_low",
+	"harlowChase_motif",
+	"harlowChase_ticks",
+	"harlowChase_pulse",
+	"harlowHeartbeat",
+	"harlowAmbush",
+	"harlowSit",
+	"deskSwivel",
+	"deskSwivelChair",
+	"deskSwivelBend",
+}
 local warm: { Sound } = {}
 
 local function play(id: string, options: SoundTypes.PlayOptions?): SoundServiceClient.SoundHandle?
@@ -96,17 +112,24 @@ local function find(): Harlow?
 	return nil
 end
 
+-- His distance to the local character (nil while either is missing).
+local function distanceToMe(): number?
+	local harlow = current
+	local character = Players.LocalPlayer.Character
+	local root = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil
+	if harlow == nil or root == nil or not root:IsA("BasePart") then
+		return nil
+	end
+	return (root.Position - harlow.root.Position).Magnitude
+end
+
 local function setMusic(on: boolean)
 	if on and not ownsMusic then
-		if SoundRegistry.has("harlowChase") then
-			ownsMusic = true
-			SoundServiceClient:playMusic("harlowChase")
-		else
-			counters.pending += 1
-		end
+		ownsMusic = true
+		OccupantChaseMusicSystem.begin(distanceToMe)
 	elseif not on and ownsMusic then
 		ownsMusic = false
-		SoundServiceClient:playMusic(nil)
+		OccupantChaseMusicSystem.finish()
 	end
 end
 
@@ -207,9 +230,8 @@ local function onCue(cue: string, harlow: Harlow, mine: boolean)
 		play("harlowCurious", { at = harlow.head })
 	elseif cue == "spotted" then
 		counters.stings += 1
-		if mine then
-			play("harlowSpotted")
-		else
+		-- On you, the chase music's sting bar is the sting (chaseStart, next in the same list).
+		if not mine then
 			play("harlowSpotted", { at = harlow.head, volumeScale = 0.6 })
 		end
 	elseif cue == "giveUp" then
@@ -283,6 +305,7 @@ function OccupantPresenceSystem.start()
 		return
 	end
 	connection = RunService.Heartbeat:Connect(step)
+	OccupantChaseMusicSystem.start()
 end
 
 function OccupantPresenceSystem.stop()
@@ -293,6 +316,7 @@ function OccupantPresenceSystem.stop()
 	end
 	detach()
 	release()
+	OccupantChaseMusicSystem.stop()
 end
 
 function OccupantPresenceSystem.getState(): OccupantPresenceState

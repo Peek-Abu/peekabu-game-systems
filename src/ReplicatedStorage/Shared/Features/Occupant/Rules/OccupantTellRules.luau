@@ -169,6 +169,38 @@ function OccupantTellRules.chasePulse(elapsed: number, ended: number?): number
 end
 
 --[=[
+	The chase music's intensity-2 stems (motif, ticks, pulse) for a chased player `distance` studs from him (0..1):
+	silent from CHASE_LAYER_FAR out, full within CHASE_LAYER_NEAR, linear between.
+]=]
+function OccupantTellRules.chaseLayer(distance: number): number
+	local near, far = OccupantConstants.CHASE_LAYER_NEAR, OccupantConstants.CHASE_LAYER_FAR
+	return 1 - math.clamp((distance - near) / (far - near), 0, 1)
+end
+
+--[=[
+	A stem layer's gain one `deltaTime` step from `current` toward `target`, moving at most 1 / CHASE_LAYER_SECONDS a
+	second (so a jittery distance never pumps the music).
+]=]
+function OccupantTellRules.easeLayer(current: number, target: number, deltaTime: number): number
+	local most = deltaTime / OccupantConstants.CHASE_LAYER_SECONDS
+	return current + math.clamp(target - current, -most, most)
+end
+
+--[=[
+	Whether he just sat down at a desk: walking to it (`toDesk`), then typing.
+]=]
+function OccupantTellRules.sat(before: string, after: string): boolean
+	return before == "toDesk" and after == "type"
+end
+
+--[=[
+	Whether he just rose out of the ambush (his chair swivels as he gets up).
+]=]
+function OccupantTellRules.rose(before: string, after: string): boolean
+	return before == "ambush" and after ~= "ambush"
+end
+
+--[=[
 	Whether a light `distance` studs from him is lit at `now` (`seed` tells lights apart).
 ]=]
 function OccupantTellRules.flicker(distance: number, now: number, seed: number): boolean

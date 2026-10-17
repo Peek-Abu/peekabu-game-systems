@@ -13,8 +13,8 @@
 	credits to the contract live. A sealed item is never cleaned again, so what was left on it is never removed.
 
 	The first appraisal of an item is told (a small sticky slip, Shift's slip toast style) to every crew member within
-	APPRAISAL_TELL_DISTANCE, with the `cargoAppraise` sound at the item; a valuable banked unappraised is told to its
-	banker (`banked`: the truck reveals it, as grimy as it is).
+	APPRAISAL_TELL_DISTANCE, with the `cargoAppraise` sound at the item (`cargoJackpot` for a jackpot); a valuable banked
+	unappraised is told to its banker (`banked`: the truck reveals it, as grimy as it is).
 
 	"Clean it where you find it": the first pick-up of a valuable that is not spotless locks its grime (`pickedUp`, the
 	spawner's `seal`): it keeps its cleanliness and value, nobody can clean it again, and the truck appraises it as it
@@ -119,7 +119,8 @@ function CargoGrimeSystem.new(deps: Deps): CargoGrimeSystem
 		local appraisal = entry.appraisal
 		local variant = if appraisal ~= nil then appraisal.variant else nil
 		local text = CargoFeedbackUtils.appraisalText(entry.kind, variant, entry.value, false)
-		deps.sound(item.Position, "cargoAppraise")
+		-- A jackpot's own sound starts with the appraisal's, then pays off (round-3 pick A).
+		deps.sound(item.Position, if variant ~= nil then "cargoJackpot" else "cargoAppraise")
 		for _, player in Players:GetPlayers() do
 			local character = player.Character
 			local root = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil

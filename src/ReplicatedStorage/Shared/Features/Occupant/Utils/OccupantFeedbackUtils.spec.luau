@@ -120,14 +120,21 @@ return function()
 			expect(#OccupantFeedbackUtils.cues("chase", "chase", true, true)).to.equal(0)
 		end)
 
-		it("has a chase bed to play (a placeholder until the real music is chosen)", function()
+		it("has chase music to play: a sting and looped stems, every one registered", function()
 			local OccupantAssets =
 				require(game:GetService("ReplicatedStorage").Shared.Features.Occupant.Data.OccupantAssets)
 			local SoundRegistry = require(game:GetService("ReplicatedStorage").Shared.Features.Sound.Data.SoundRegistry)
-			expect(OccupantAssets.SOUNDS.harlowChase.assetId).never.to.equal(OccupantAssets.PENDING)
-			expect(OccupantAssets.SOUNDS.harlowChase.looped).to.equal(true)
-			expect(SoundRegistry.has("harlowChase")).to.equal(true)
+			expect(SoundRegistry.has("harlowChaseSting")).to.equal(true)
 			expect(SoundRegistry.has("harlowSpotted")).to.equal(true)
+			local stems = 0
+			for _, list in { OccupantAssets.CHASE_STEMS.base, OccupantAssets.CHASE_STEMS.near } do
+				for _, id in list do
+					stems += 1
+					expect(OccupantAssets.SOUNDS[id].looped).to.equal(true)
+					expect(SoundRegistry.has(id)).to.equal(true)
+				end
+			end
+			expect(stems).to.equal(5)
 		end)
 
 		it("sighs when he gives up, and only then", function()

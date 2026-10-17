@@ -9,8 +9,10 @@
 	- near: the dread swell, louder the closer he is (pending slot; the heartbeat is OccupantPresenceSystem's);
 	- chase: the sting, the chase bed and the chase pulse (OccupantPresenceSystem, OccupantTellSystem).
 
-	Also his typing while he sits at a desk (OccupantTellRules.typing: a loop on his head that stops dead the moment it
-	ends, e.g. in the ambush, whose own sound plays then). No PA since 2026-10-16. And the hider's reveal: while he looks under their spot or tips his head under their
+	Also his desk (positional): the chair as he sits down (OccupantTellRules.sat), his typing while he sits
+	(OccupantTellRules.typing: a loop on his head that stops dead the moment it ends, e.g. in the ambush, whose own
+	sound plays then), and his chair swivelling as he rises out of the ambush (OccupantTellRules.rose: our layer plus the
+	two library layers of that mix, OccupantAssets.SWIVEL). No PA since 2026-10-16. And the hider's reveal: while he looks under their spot or tips his head under their
 	desk, their camera draws back into the spot and follows his face (OccupantTellRules.revealed). Reads only
 	replicated state. Pending sounds are skipped silently and counted.
 
@@ -24,6 +26,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local OccupantAssets = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantAssets)
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local OccupantTellRules = require(ReplicatedStorage.Shared.Features.Occupant.Rules.OccupantTellRules)
 local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundRegistry)
@@ -50,7 +53,8 @@ local stage: string = "none"
 local nextClick = 0
 -- The hider's reveal camera while it shows (CameraServiceClient's token).
 local reveal: number? = nil
-local counters = { reveals = 0, clicks = 0, typingStarts = 0, typingStops = 0, ambushes = 0, pending = 0 }
+local counters =
+	{ reveals = 0, clicks = 0, typingStarts = 0, typingStops = 0, ambushes = 0, sits = 0, swivels = 0, pending = 0 }
 
 local function play(id: string, options: SoundTypes.PlayOptions?): SoundServiceClient.SoundHandle?
 	if not SoundRegistry.has(id) then
@@ -58,6 +62,21 @@ local function play(id: string, options: SoundTypes.PlayOptions?): SoundServiceC
 		return nil
 	end
 	return SoundServiceClient:play(id, options)
+end
+
+-- The chair swivelling under him: our layer, and each library layer from its own start, cut where the mix cut it.
+local function swivel(head: BasePart)
+	counters.swivels += 1
+	play("deskSwivel", { at = head })
+	for _, layer in OccupantAssets.SWIVEL do
+		local handle = play(layer.id, { at = head })
+		if handle ~= nil then
+			handle.sound.TimePosition = layer.start
+			task.delay(layer.stopAt, function()
+				handle:stop(layer.fade)
+			end)
+		end
+	end
 end
 
 local function within(range: OccupantConstants.Range): number
@@ -154,9 +173,15 @@ local function step()
 	else
 		stopTyping()
 	end
+	if OccupantTellRules.sat(lastPhase, phase) then
+		counters.sits += 1
+		play("harlowSit", { at = head })
+	end
 	if phase == "ambush" and lastPhase ~= "ambush" then
 		counters.ambushes += 1
 		play("harlowAmbush", { at = head })
+	elseif OccupantTellRules.rose(lastPhase, phase) then
+		swivel(head)
 	end
 	lastPhase = phase
 	local me = Players.LocalPlayer

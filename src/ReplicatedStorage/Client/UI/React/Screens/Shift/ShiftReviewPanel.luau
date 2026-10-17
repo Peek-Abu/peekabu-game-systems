@@ -246,6 +246,8 @@ local function desktopOf(props: ShiftReviewPanelProps): Nodes
 		nodes[entry.key] = e(PaperButton, {
 			text = vote.label,
 			variant = if entry.choice == "another" then "go" else "secondary",
+			-- A vote is a decision: both stamp the confirm.
+			sound = "confirm",
 			onPaper = true,
 			disabled = not view.voteOpen,
 			onActivated = function()
@@ -327,6 +329,8 @@ local function phoneOf(props: ShiftReviewPanelProps, expanded: boolean, toggle: 
 		nodes[entry.key] = e(PaperButton, {
 			text = vote.text,
 			variant = if entry.choice == "another" then "go" else "secondary",
+			-- A vote is a decision: both stamp the confirm.
+			sound = "confirm",
 			onPaper = true,
 			disabled = not view.voteOpen,
 			onActivated = function()

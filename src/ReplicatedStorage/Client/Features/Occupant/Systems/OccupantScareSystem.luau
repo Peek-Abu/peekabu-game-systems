@@ -147,6 +147,13 @@ function OccupantScareSystem.lightsOut(position: Vector3)
 	play("harlowGrab", { at = position })
 end
 
+--[=[
+	You are back after a catch (the Rehired card shows): the time clock punches you back in (2D).
+]=]
+function OccupantScareSystem.rehired()
+	play("catchRehired")
+end
+
 function OccupantScareSystem.getState(): OccupantScareState
 	return table.clone(counters)
 end

@@ -4,8 +4,9 @@
 	dim, buzzing fluorescents (some flickering)"; "Overtime: lighting shifts dim red"). Follows ShiftStore's
 	snapshot: blends Lighting to OfficeAtmosphereUtils.preset (night, darker per tier, lighter on Harlow's break,
 	dim red in overtime; the depot's warm evening while the local player is in the hub); in overtime a red screen
-	tint and red ceiling lights; the fluorescent hum while the local player's crew is in a shift. It is the one owner
-	of Lighting, so the hub and the office never fight over it. Every ATMOSPHERE_INTERVAL the broken lights near the
+	tint and red ceiling lights; the office bed (its four looped beds, OfficeAssets.BED) while the local player's crew
+	is in a shift, and the hub's record (DepotAssets.HUB_THEME, the music slot) while they are in the hub. It is the
+	one owner of Lighting and of the place's bed, so the hub and the office never fight over them. Every ATMOSPHERE_INTERVAL the broken lights near the
 	camera (OfficeLightUtils) blink, with a zap as each dims. It changes only a light's Color, Transparency and
 	PointLight Color/Brightness; M2's OccupantTellSystem owns Material and PointLight.Enabled, so the two compose.
 	Registers the office and depot presets with Vfx at load. Pending sounds (OfficeAssets) are silent. While the transit
@@ -26,7 +27,9 @@ local Workspace = game:GetService("Workspace")
 
 local OfficeClient = ReplicatedStorage.Client.Features.Office
 local Charm = require(ReplicatedStorage.Packages.Charm)
+local DepotAssets = require(ReplicatedStorage.Client.Features.Depot.Data.DepotAssets)
 local DepotAtmosphereConstants = require(ReplicatedStorage.Client.Features.Depot.Data.DepotAtmosphereConstants)
+local DepotAtmosphereUtils = require(ReplicatedStorage.Client.Features.Depot.Utils.DepotAtmosphereUtils)
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundRegistry)
@@ -53,6 +56,7 @@ export type OfficeAtmosphereState = {
 	preset: string,
 	overtime: boolean,
 	hum: boolean,
+	hub: boolean,
 	dimNow: number,
 	counters: { [string]: number },
 }
@@ -73,6 +77,7 @@ local currentPreset: string? = nil
 local overtimeOn = false
 local overtimeToken: number? = nil
 local humOn = false
+local hubOn = false
 local stoppers: { () -> () } = {}
 local counters = { presets = 0, zaps = 0, pending = 0 }
 
@@ -133,15 +138,33 @@ local function setOvertime(on: boolean)
 	end
 end
 
+-- The office bed: each looped bed in its own ambience layer (named by its id), so they run on their own lengths.
 local function setHum(on: boolean)
 	if on == humOn then
 		return
 	end
 	humOn = on
+	for _, id in OfficeAssets.BED do
+		if not on then
+			SoundServiceClient:setAmbience(id, nil)
+		elseif SoundRegistry.has(id) then
+			SoundServiceClient:setAmbience(id, id)
+		else
+			counters.pending += 1
+		end
+	end
+end
+
+-- The hub's record while the local player is in the depot (the music slot: never on while a chase could play).
+local function setHub(on: boolean)
+	if on == hubOn then
+		return
+	end
+	hubOn = on
 	if not on then
-		SoundServiceClient:setAmbience(OfficeAtmosphereConstants.HUM_LAYER, nil)
-	elseif SoundRegistry.has(OfficeAssets.HUM) then
-		SoundServiceClient:setAmbience(OfficeAtmosphereConstants.HUM_LAYER, OfficeAssets.HUM)
+		SoundServiceClient:playMusic(nil)
+	elseif SoundRegistry.has(DepotAssets.HUB_THEME) then
+		SoundServiceClient:playMusic(DepotAssets.HUB_THEME)
 	else
 		counters.pending += 1
 	end
@@ -159,6 +182,7 @@ local function onSnapshot(snapshot: ShiftTypes.ShiftSnapshot?)
 	end
 	setOvertime(OfficeAtmosphereUtils.overtime(snapshot, userId))
 	setHum(OfficeAtmosphereUtils.hum(snapshot, userId))
+	setHub(DepotAtmosphereUtils.inHub(snapshot, userId))
 end
 
 local function restore(light: BasePart)
@@ -256,6 +280,7 @@ function OfficeAtmosphereSystem.stop()
 	table.clear(dimmed)
 	setOvertime(false)
 	setHum(false)
+	setHub(false)
 	VfxServiceClient:setAtmosphere(nil, 0)
 	applied = false
 	currentPreset = nil
@@ -272,6 +297,7 @@ function OfficeAtmosphereSystem.getState(): OfficeAtmosphereState
 		preset = currentPreset or "place",
 		overtime = overtimeOn,
 		hum = humOn,
+		hub = hubOn,
 		dimNow = blinking,
 		counters = table.clone(counters),
 	}

@@ -142,6 +142,8 @@ local function desktop(props: DepotPadPanelProps): React.ReactNode
 		button = e(PaperButton, {
 			text = "DEPART NOW",
 			variant = "go",
+			-- Start shift: the critical CTA.
+			sound = "cta",
 			size = UDim2.fromOffset(226, 76),
 			textSize = 26,
 			disabled = view.departing,
@@ -281,6 +283,8 @@ local function phone(props: DepotPadPanelProps): React.ReactNode
 		button = e(PaperButton, {
 			text = "DEPART NOW",
 			variant = "go",
+			-- Start shift: the critical CTA.
+			sound = "cta",
 			size = UDim2.fromOffset(240, PHONE_BUTTON_HEIGHT),
 			textSize = 22,
 			disabled = view.departing,

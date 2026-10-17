@@ -25,6 +25,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterGui = game:GetService("StarterGui")
 local Workspace = game:GetService("Workspace")
 
+local CargoAssets = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoAssets)
 local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants)
 local CargoInventoryRules = require(ReplicatedStorage.Shared.Features.Cargo.Rules.CargoInventoryRules)
 local CargoSlipSystem = require(ReplicatedStorage.Client.Features.Cargo.Systems.CargoSlipSystem)
@@ -40,6 +41,8 @@ local CargoLootFeedbackSystem = require(ReplicatedStorage.Client.Features.Cargo.
 local InputActionRegistry = require(ReplicatedStorage.Client.Features.Input.Data.InputActionRegistry)
 local InputServiceClient = require(ReplicatedStorage.Client.Features.Input.InputServiceClient)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
+local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundRegistry)
+local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
 
 local unbinders: { () -> () } = {}
 
@@ -172,11 +175,15 @@ local CargoServiceClient: CargoServiceClient = {
 	end,
 
 	--[=[
-		Asks for hotbar slot `slot` (1 the vacuum, 2-5 the item slots). The server checks it (a big item locks them all).
+		Asks for hotbar slot `slot` (1 the vacuum, 2-5 the item slots), with the slot-select tick (UI tier 1) at once.
+		The server checks it (a big item locks them all).
 	]=]
 	select = function(_self, slot)
 		if slot >= 1 and slot <= CargoConstants.HOTBAR_SLOTS then
 			CargoEvents.packets.Select.send(slot)
+			if SoundRegistry.has(CargoAssets.SELECT) then
+				SoundServiceClient:play(CargoAssets.SELECT)
+			end
 		end
 	end,
 

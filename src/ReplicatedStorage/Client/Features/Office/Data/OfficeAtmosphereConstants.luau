@@ -66,6 +66,17 @@ local PRESETS: { [string]: VfxTypes.Atmosphere } = {
 	},
 }
 
+-- Seconds between two sounds of each office bed sweetener kind (OfficeAssets.SWEETENERS).
+local SWEETENER_EVERY: { [string]: { min: number, max: number } } = {
+	ceilingTick = table.freeze({ min = 5, max = 12 }),
+	drawer = table.freeze({ min = 18, max = 30 }),
+	farDing = table.freeze({ min = 25, max = 40 }),
+	typeKey = table.freeze({ min = 6, max = 15 }),
+	floorCreak = table.freeze({ min = 8, max = 18 }),
+	musicBox = table.freeze({ min = 20, max = 35 }),
+	pipeKnock = table.freeze({ min = 9, max = 20 }),
+}
+
 return table.freeze({
 	PRESETS = table.freeze(PRESETS),
 	NIGHT = "officeNight",
@@ -79,8 +90,11 @@ return table.freeze({
 	OVERTIME_TINT = Color3.fromRGB(255, 185, 185),
 	OVERTIME_SATURATION = -0.2,
 	OVERTIME_LIGHT_COLOR = Color3.fromRGB(255, 95, 80),
-	-- The fluorescent hum's ambience slot.
-	HUM_LAYER = "officeHum",
+	-- The office bed's sweeteners (OfficeAmbienceSystem): each kind waits its own `min`..`max` seconds (the round-2 bed
+	-- plan A), then one variant sounds SWEETENER_NEAR..SWEETENER_FAR studs from the listener, on a level ring.
+	SWEETENER_EVERY = table.freeze(SWEETENER_EVERY),
+	SWEETENER_NEAR = 12,
+	SWEETENER_FAR = 30,
 	-- Broken fluorescents: this share of the lights (stable per light), within this many studs of the camera,
 	-- blink to BROKEN_DIM when their noise (at BROKEN_RATE) drops below BROKEN_THRESHOLD.
 	BROKEN_FRACTION = 0.18,

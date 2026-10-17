@@ -1,0 +1,38 @@
+local FootstepLandingFormulas = require(script.Parent.FootstepLandingFormulas)
+
+return function()
+	describe("impact", function()
+		it("hears a fall that stops: falling fast, then most of that speed gone in one sample", function()
+			expect(FootstepLandingFormulas.impact(-40, -2, 18)).to.equal(true)
+			expect(FootstepLandingFormulas.impact(-20, 3, 18)).to.equal(true)
+		end)
+
+		it("ignores a fall still falling, a slow step down and a body already on the floor", function()
+			expect(FootstepLandingFormulas.impact(-40, -38, 18)).to.equal(false)
+			expect(FootstepLandingFormulas.impact(-10, 0, 18)).to.equal(false)
+			expect(FootstepLandingFormulas.impact(0, 0, 18)).to.equal(false)
+		end)
+	end)
+
+	describe("jumped", function()
+		it("hears a take-off from the ground", function()
+			expect(FootstepLandingFormulas.jumped(0, 48, 25)).to.equal(true)
+			expect(FootstepLandingFormulas.jumped(5, 30, 25)).to.equal(true)
+		end)
+
+		it("ignores a body already rising and a small hop", function()
+			expect(FootstepLandingFormulas.jumped(40, 45, 25)).to.equal(false)
+			expect(FootstepLandingFormulas.jumped(0, 12, 25)).to.equal(false)
+		end)
+	end)
+
+	describe("landScale", function()
+		it("lands louder the faster the fall, within its bounds", function()
+			expect(FootstepLandingFormulas.landScale(0)).to.equal(FootstepLandingFormulas.SOFTEST)
+			expect(FootstepLandingFormulas.landScale(FootstepLandingFormulas.FULL_SPEED)).to.equal(1)
+			expect(FootstepLandingFormulas.landScale(500)).to.equal(1)
+			local mid = FootstepLandingFormulas.landScale(FootstepLandingFormulas.FULL_SPEED / 2)
+			expect(mid > FootstepLandingFormulas.SOFTEST and mid < 1).to.equal(true)
+		end)
+	end)
+end

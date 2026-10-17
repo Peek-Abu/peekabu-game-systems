@@ -49,4 +49,20 @@ return function()
 			expect(CargoLootFeedbackFormulas.stampFresh(nil, 11)).to.equal(false)
 		end)
 	end)
+
+	describe("reveal tier", function()
+		local tiers = CargoConstants.REVEAL_TIERS
+
+		it("grows with the revealed item's base value", function()
+			expect(CargoLootFeedbackFormulas.revealTier(tiers.mid - 1)).to.equal("low")
+			expect(CargoLootFeedbackFormulas.revealTier(tiers.mid)).to.equal("mid")
+			expect(CargoLootFeedbackFormulas.revealTier(tiers.high)).to.equal("high")
+			expect(CargoLootFeedbackFormulas.revealTier(tiers.jackpot - 1)).to.equal("high")
+			expect(CargoLootFeedbackFormulas.revealTier(tiers.jackpot)).to.equal("jackpot")
+		end)
+
+		it("reads an item without a base value as the lowest tier", function()
+			expect(CargoLootFeedbackFormulas.revealTier(nil)).to.equal("low")
+		end)
+	end)
 end

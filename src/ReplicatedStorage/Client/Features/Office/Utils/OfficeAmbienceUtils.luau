@@ -54,4 +54,27 @@ function OfficeAmbienceUtils.delay(roll: number, min: number, max: number): numb
 	return min + (max - min) * math.clamp(roll, 0, 1)
 end
 
+--[=[
+	Where a scattered bed sweetener (a ceiling tick, a pipe knock...) sounds: on a level ring around `listener`, at the
+	angle `angleRoll` (0-1) and between `min` and `max` studs out by `distanceRoll` (0-1).
+]=]
+function OfficeAmbienceUtils.sweetenerAt(
+	listener: Vector3,
+	angleRoll: number,
+	distanceRoll: number,
+	min: number,
+	max: number
+): Vector3
+	local angle = math.clamp(angleRoll, 0, 1) * 2 * math.pi
+	local distance = min + (max - min) * math.clamp(distanceRoll, 0, 1)
+	return listener + Vector3.new(math.cos(angle) * distance, 0, math.sin(angle) * distance)
+end
+
+--[=[
+	Which of `count` variants a roll (0-1) picks (1-based).
+]=]
+function OfficeAmbienceUtils.variant(roll: number, count: number): number
+	return math.clamp(math.floor(math.clamp(roll, 0, 1) * count) + 1, 1, count)
+end
+
 return OfficeAmbienceUtils

@@ -22,8 +22,17 @@ local PENDING = ""
 local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- A punch-clock "ka-chunk" when the shift starts.
 	shiftPunchIn = { assetId = "rbxassetid://109228401071501", group = "SFX", volume = 0.8 },
-	-- The truck's horn: quota met, and the shift's end.
+	-- The truck's horn: the shift's end.
 	shiftTruckHorn = { assetId = "rbxassetid://79879032987879", group = "SFX", volume = 1 },
+	-- The contract met mid-shift: the company motif F-A-C-Bb on clarinet over an oom-pah-pah, a ta-da and a register
+	-- ding, "you did it, keep going" (round-3 pick M1, in-house; 2D, over the office bed).
+	shiftContractMet = { assetId = "rbxassetid://75263082800024", group = "SFX", volume = 0.9 },
+	-- The performance review's jingle as it opens (2D, once; JINGLE_SOUNDS by ShiftCueUtils.jingle), in-house: met (round-2
+	-- C, spooky-first waltz into the relief), met with overtime pay (round-3 O1: C bigger, harp gliss, timpani, coins), and
+	-- missed (round-3 F3: the same record slowing to a stop before the relief lands).
+	shiftResultsMet = { assetId = "rbxassetid://74050052665633", group = "SFX", volume = 0.9 },
+	shiftResultsOvertime = { assetId = "rbxassetid://122358530335366", group = "SFX", volume = 0.9 },
+	shiftResultsMissed = { assetId = "rbxassetid://136628215898951", group = "SFX", volume = 0.9 },
 	-- A low brass sting when the pressure tier rises.
 	shiftTierSting = { assetId = "rbxassetid://136159590763818", group = "SFX", volume = 0.7 },
 	-- An office PA chime before overtime.
@@ -41,12 +50,19 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 
 local CUE_SOUNDS: { [string]: string } = {
 	shiftStart = "shiftPunchIn",
-	quotaMet = "shiftTruckHorn",
+	quotaMet = "shiftContractMet",
 	tierUp = "shiftTierSting",
 	warning = "shiftWarningChime",
 	overtime = "shiftOvertimeSting",
 	clockOut = "shiftClockOutHorn",
 	shiftEnd = "shiftTruckHorn",
+}
+
+-- The review's jingle per ShiftCueUtils.Jingle.
+local JINGLE_SOUNDS: { [string]: string } = {
+	met = "shiftResultsMet",
+	overtime = "shiftResultsOvertime",
+	missed = "shiftResultsMissed",
 }
 
 for id, def in SOUNDS do
@@ -59,6 +75,7 @@ return table.freeze({
 	PENDING = PENDING,
 	SOUNDS = table.freeze(SOUNDS),
 	CUE_SOUNDS = table.freeze(CUE_SOUNDS),
+	JINGLE_SOUNDS = table.freeze(JINGLE_SOUNDS),
 	TICKING = "shiftTicking",
 	COUNTDOWN_TICK = "shiftCountdownTick",
 })

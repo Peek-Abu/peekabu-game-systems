@@ -66,19 +66,34 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 		rollOffMaxDistance = 40,
 		maxConcurrent = 4,
 	},
-	-- The loot loop (docs/superpowers/specs/2026-10-15-cleanup-crew-loot-loop-design.md §5). A buried item popping out
-	-- of its pile: a PLACEHOLDER (the canister chime's upload) until a reveal sting is sourced. An appraisal: pending (its
-	-- sticky slip is silent on purpose, so this is its only sound once sourced: keep it soft). A buried pile's glint
-	-- twinkle: pending.
-	cargoReveal = {
-		assetId = "rbxassetid://134210659787428",
+	-- The loot loop (docs/superpowers/specs/2026-10-15-cleanup-crew-loot-loop-design.md §5), in-house (round-2 and -3
+	-- picks; the Icey Labs uploads). A buried item popping out of its pile: family C, the same dust clean + pop on every
+	-- tier and only the F-major value layer grows (one note, a 3rd, C-F-A, the full motif), by the item's base value
+	-- (CargoLootFeedbackFormulas.revealTier; REVEAL_SOUNDS). An appraisal: tag flick + stamp + vibes F6 ding (A1; its
+	-- sticky slip is silent on purpose, so this is its only sound); a jackpot appraisal starts with A1, holds a breath,
+	-- then pays off (red JACKPOT stamp, glock run, register, coins). A buried pile's glint: a music-box twinkle, mixed at
+	-- -24 LUFS (meant to be easy to miss).
+	cargoRevealLow = { assetId = "rbxassetid://103029093745671", group = "SFX", volume = 0.8, rollOffMaxDistance = 60 },
+	cargoRevealMid = { assetId = "rbxassetid://127359448338833", group = "SFX", volume = 0.8, rollOffMaxDistance = 60 },
+	cargoRevealHigh = { assetId = "rbxassetid://114181554867050", group = "SFX", volume = 0.8, rollOffMaxDistance = 70 },
+	cargoRevealJackpot = {
+		assetId = "rbxassetid://119747942358809",
 		group = "SFX",
-		volume = 0.7,
-		pitch = { min = 1.1, max = 1.2 },
-		rollOffMaxDistance = 50,
+		volume = 0.8,
+		rollOffMaxDistance = 80,
 	},
-	cargoAppraise = { assetId = PENDING, group = "SFX", volume = 0.8, rollOffMaxDistance = 40 },
-	cargoGlint = { assetId = PENDING, group = "SFX", volume = 0.3, rollOffMaxDistance = 20, maxConcurrent = 2 },
+	cargoAppraise = { assetId = "rbxassetid://78325157618409", group = "SFX", volume = 0.8, rollOffMaxDistance = 40 },
+	cargoJackpot = { assetId = "rbxassetid://112524045440299", group = "SFX", volume = 0.9, rollOffMaxDistance = 60 },
+	cargoGlint = {
+		assetId = "rbxassetid://100033229972306",
+		group = "SFX",
+		volume = 0.8,
+		rollOffMaxDistance = 20,
+		maxConcurrent = 2,
+	},
+	-- Choosing a hotbar slot (keys 1-5, the d-pad, a tap; equipping the vacuum too): a tab flick + card body, UI tier 1
+	-- from the paperwork family (round-3 pick A; 2D, tiny: it plays a lot).
+	cargoSelect = { assetId = "rbxassetid://81438361671526", group = "UI", volume = 0.8, maxConcurrent = 2 },
 	cargoRummage = {
 		assetId = "rbxassetid://9114061295",
 		group = "SFX",
@@ -94,7 +109,17 @@ for id, def in SOUNDS do
 	end
 end
 
+-- The reveal sound per value tier (CargoLootFeedbackFormulas.RevealTier).
+local REVEAL_SOUNDS: { [string]: string } = {
+	low = "cargoRevealLow",
+	mid = "cargoRevealMid",
+	high = "cargoRevealHigh",
+	jackpot = "cargoRevealJackpot",
+}
+
 return table.freeze({
 	PENDING = PENDING,
 	SOUNDS = table.freeze(SOUNDS),
+	REVEAL_SOUNDS = table.freeze(REVEAL_SOUNDS),
+	SELECT = "cargoSelect",
 })

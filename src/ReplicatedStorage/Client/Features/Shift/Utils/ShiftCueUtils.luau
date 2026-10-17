@@ -16,6 +16,9 @@ type ShiftSnapshot = ShiftTypes.ShiftSnapshot
 
 export type Cue = "shiftStart" | "quotaMet" | "tierUp" | "warning" | "overtime" | "clockOut" | "shiftEnd"
 
+-- The performance review's jingle (ShiftAssets.JINGLE_SOUNDS).
+export type Jingle = "met" | "overtime" | "missed"
+
 local ShiftCueUtils = {}
 
 --[=[
@@ -68,6 +71,30 @@ function ShiftCueUtils.countdown(snapshot: ShiftSnapshot?, now: number): number?
 		return nil
 	end
 	return math.max(0, math.ceil(at - now))
+end
+
+--[=[
+	The results jingle to play as the performance review arrives (`after` shows it, `before` did not): "overtime" when
+	the contract was met and the crew banked salvage in overtime (the overtime pay), "met" when it was met, "missed"
+	otherwise. Nil on the first snapshot a client sees and while the review stays up.
+]=]
+function ShiftCueUtils.jingle(before: ShiftSnapshot?, after: ShiftSnapshot?): Jingle?
+	if before == nil or after == nil or after.phase ~= "results" then
+		return nil
+	end
+	local results = after.results
+	if results == nil or (before.phase == "results" and before.results ~= nil) then
+		return nil
+	end
+	if not results.quotaMet then
+		return "missed"
+	end
+	for _, line in results.crew do
+		if (line.overtimeSalvage or 0) > 0 then
+			return "overtime"
+		end
+	end
+	return "met"
 end
 
 --[=[

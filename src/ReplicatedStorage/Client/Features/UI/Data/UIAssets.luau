@@ -1,6 +1,6 @@
 --!strict
 --[=[
-	UIAssets: the registry of image asset ids the UI references, by name.
+	UIAssets: the registry of image (and UI sound) asset ids the UI references, by name.
 
 	The single home for `rbxassetid://` literals in UI code — the CI asset-id gate bans them anywhere
 	else (asset-id literals may only live under a feature's `Data/` folder). A screen names an asset
@@ -15,6 +15,11 @@
 
 	@class UIAssets
 ]=]
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundRegistry)
+local SoundTypes = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundTypes)
 
 local UIAssets = {}
 
@@ -38,5 +43,41 @@ UIAssets.paper = table.freeze(PAPER)
 UIAssets.cctv = table.freeze({
 	scanlines = "",
 })
+
+-- Cleanup Crew UI sounds (round-2/3 picks, in-house, the paperwork hierarchy: pitch up = yes, down = back, dull =
+-- denied), all 2D in the UI group. Minor: hover (a paper tick) and click (tab flick + card), family P. Important: confirm
+-- (felt thunk + clip + one vibes note in F, family S), back (lower, shorter) and error (a dull thud + falling minor 2nd),
+-- family P. Critical: the CTA (confirm + a time-clock punch + rising F-A-C + a small ding, family S) for Start shift and
+-- Clock out. Prompts: the hold wind-up (a pizz F major scale, stretched to the hold) and the done (confirm S's felt and
+-- clip + a pizz F chord). Played by UISoundSystem by tier (UISoundFormulas.Tier -> TIERS).
+local SOUNDS: { [string]: SoundTypes.SoundDef } = {
+	uiHover = { assetId = "rbxassetid://125412787340819", group = "UI", volume = 0.7, maxConcurrent = 2 },
+	uiClick = { assetId = "rbxassetid://122165734026820", group = "UI", volume = 0.9, maxConcurrent = 2 },
+	uiConfirm = { assetId = "rbxassetid://83738970696959", group = "UI", volume = 0.9, maxConcurrent = 2 },
+	uiBack = { assetId = "rbxassetid://130280445606800", group = "UI", volume = 0.9, maxConcurrent = 2 },
+	uiError = { assetId = "rbxassetid://139831732223870", group = "UI", volume = 0.9, maxConcurrent = 2 },
+	uiCta = { assetId = "rbxassetid://78569365251759", group = "UI", volume = 1, maxConcurrent = 1 },
+	uiPromptHold = { assetId = "rbxassetid://105267179969138", group = "UI", volume = 1, maxConcurrent = 1 },
+	uiPromptDone = { assetId = "rbxassetid://134811176097827", group = "UI", volume = 1, maxConcurrent = 2 },
+}
+for id, def in SOUNDS do
+	if not SoundRegistry.has(id) then
+		SoundRegistry.register(id, def)
+	end
+end
+UIAssets.sounds = table.freeze(SOUNDS)
+
+-- The sound each UI tier plays.
+local TIERS: { [string]: string } = {
+	hover = "uiHover",
+	click = "uiClick",
+	confirm = "uiConfirm",
+	back = "uiBack",
+	error = "uiError",
+	cta = "uiCta",
+	hold = "uiPromptHold",
+	done = "uiPromptDone",
+}
+UIAssets.soundTiers = table.freeze(TIERS)
 
 return UIAssets

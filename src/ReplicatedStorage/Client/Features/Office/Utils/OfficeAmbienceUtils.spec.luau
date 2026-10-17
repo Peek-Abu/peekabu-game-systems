@@ -53,4 +53,28 @@ return function()
 			expect(OfficeAmbienceUtils.delay(7, 20, 50)).to.equal(50)
 		end)
 	end)
+
+	describe("sweeteners", function()
+		it("places a sweetener on a ring around the listener, at ear height", function()
+			local listener = Vector3.new(10, 5, -3)
+			for _, roll in { { 0, 0 }, { 0.25, 1 }, { 0.6, 0.5 }, { 0.99, 0.2 } } do
+				local at = OfficeAmbienceUtils.sweetenerAt(listener, roll[1], roll[2], 12, 30)
+				local flat = Vector3.new(at.X - listener.X, 0, at.Z - listener.Z).Magnitude
+				expect(at.Y).to.equal(listener.Y)
+				expect(flat >= 12 - 1e-6 and flat <= 30 + 1e-6).to.equal(true)
+			end
+			local near = OfficeAmbienceUtils.sweetenerAt(listener, 0, 0, 12, 30)
+			local far = OfficeAmbienceUtils.sweetenerAt(listener, 0, 1, 12, 30)
+			expect((near - listener).Magnitude).to.be.near(12, 1e-6)
+			expect((far - listener).Magnitude).to.be.near(30, 1e-6)
+		end)
+
+		it("picks each variant of a sweetener, never past the last", function()
+			expect(OfficeAmbienceUtils.variant(0, 3)).to.equal(1)
+			expect(OfficeAmbienceUtils.variant(0.5, 3)).to.equal(2)
+			expect(OfficeAmbienceUtils.variant(0.999, 3)).to.equal(3)
+			expect(OfficeAmbienceUtils.variant(1, 3)).to.equal(3)
+			expect(OfficeAmbienceUtils.variant(0.4, 1)).to.equal(1)
+		end)
+	end)
 end

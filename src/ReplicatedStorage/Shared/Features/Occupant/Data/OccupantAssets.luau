@@ -62,21 +62,31 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- The near warning stage: a low dread swell under everything while he is close and not chasing you (looped, 2D;
 	-- its volume follows how close he is). PLACEHOLDER slot: pending.
 	harlowDread = { assetId = PENDING, group = "Ambient", volume = 0.5, looped = true },
-	-- The ambush: a sharp intake as his head swivels round from the desk (positional). PLACEHOLDER slot: pending.
-	harlowAmbush = { assetId = PENDING, group = "SFX", volume = 0.9, rollOffMaxDistance = 60 },
+	-- The ambush: he snaps round from the desk, chair shove, porcelain grind and the lock of his head over a pizz F dim7
+	-- (round-2 pick A, in-house, 1.1 s = AMBUSH_HOLD; positional). Plays as the ambush starts.
+	harlowAmbush = { assetId = "rbxassetid://90232187116807", group = "SFX", volume = 0.9, rollOffMaxDistance = 60 },
+	-- He sits at a desk: casters roll the chair in, the seat creaks, the gas lift sighs and bottoms out (round-3 pick A,
+	-- in-house; positional, heard through the room). Plays as he reaches the chair.
+	harlowSit = { assetId = "rbxassetid://118633870993827", group = "SFX", volume = 0.9, rollOffMaxDistance = 70 },
+	-- His chair swivels as he rises out of the ambush (round-2 pick A = round-1 C + D layered): our SA3 squeak and
+	-- ceramic creak, played with the two library layers of that mix by their own ids (the user approved, 2026-10-17):
+	-- PSE "Office Chair 1" and APM "BASSBEND-Down 05". Their volumes are the mix's gains (-4.6 / -17.6 dB against
+	-- ours); SWIVEL says where each starts and stops.
+	deskSwivel = { assetId = "rbxassetid://80676054119585", group = "SFX", volume = 0.9, rollOffMaxDistance = 60 },
+	deskSwivelChair = { assetId = "rbxassetid://9117143754", group = "SFX", volume = 0.53, rollOffMaxDistance = 60 },
+	deskSwivelBend = { assetId = "rbxassetid://9043357191", group = "SFX", volume = 0.12, rollOffMaxDistance = 60 },
 	-- The "spotted" sting at every chase start (2D for the one he chases, positional for everyone else).
 	harlowSpotted = { assetId = "rbxassetid://71081947321557", group = "SFX", volume = 1, rollOffMaxDistance = 90 },
-	-- The chase bed for the chased player (looped, 2D, for as long as the chase on you lasts), under your racing
-	-- heartbeat (OccupantPresenceSystem beats it at CHASE_BEAT). PLACEHOLDER (2026-10-16) until the real chase music is
-	-- chosen: the overtime ticking (ShiftAssets shiftTicking's upload) sped up to 1.6x. Not a round-1 chase candidate
-	-- (those were rejected). Replace the id and drop `pitch` when the music lands.
-	harlowChase = {
-		assetId = "rbxassetid://118452299844030",
-		group = "Music",
-		volume = 0.9,
-		pitch = { min = 1.6, max = 1.6 },
-		looped = true,
-	},
+	-- The chase music for the chased player (round-2 pick B "Clockwork mallets", in-house: B minor, 144 bpm, 16 bars =
+	-- 26.67 s, bar-exact OGG loops; 2D, for as long as the chase on you lasts, under your racing heartbeat). One sting
+	-- bar, then five stems from one score with one common gain, so they sum to the mix (OccupantChaseMusicSystem):
+	-- intensity 1 = ostinato + low, intensity 2 adds motif, ticks and pulse as he closes (CHASE_STEMS).
+	harlowChaseSting = { assetId = "rbxassetid://136144780062166", group = "SFX", volume = 0.9 },
+	harlowChase_ostinato = { assetId = "rbxassetid://76713573491371", group = "Music", volume = 0.9, looped = true },
+	harlowChase_low = { assetId = "rbxassetid://87740742060998", group = "Music", volume = 0.9, looped = true },
+	harlowChase_motif = { assetId = "rbxassetid://94072671705529", group = "Music", volume = 0.9, looped = true },
+	harlowChase_ticks = { assetId = "rbxassetid://112793987544288", group = "Music", volume = 0.9, looped = true },
+	harlowChase_pulse = { assetId = "rbxassetid://112510222070935", group = "Music", volume = 0.9, looped = true },
 	harlowSigh = { assetId = "rbxassetid://126145488520317", group = "SFX", volume = 0.8, rollOffMaxDistance = 80 },
 	-- His 'voice': him scribbling you up on his clipboard, one clip per line (OccupantFeedbackUtils.clipFor picks among
 	-- the uploaded ones, so one clip covers every line until more are added).
@@ -112,6 +122,24 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	harlowCatchSting = { assetId = "rbxassetid://88133727845312", group = "SFX", volume = 1 },
 	harlowPowerDown = { assetId = "rbxassetid://95527531363916", group = "SFX", volume = 0.9, rollOffMaxDistance = 90 },
 	harlowGrab = { assetId = "rbxassetid://9113482942", group = "SFX", volume = 0.9, rollOffMaxDistance = 60 },
+	-- You respawn after a catch, with the Rehired card: the time clock punches you back IN + glock C-F up a fourth
+	-- (round-3 pick A; 2D, only for you). The throw itself is silent until the FIRED cue is remade (pending).
+	catchRehired = { assetId = "rbxassetid://80163458987401", group = "SFX", volume = 0.9 },
+}
+
+-- The chase music's stems (OccupantChaseMusicSystem): `base` plays the whole chase, `near` fades in as he closes. The
+-- first base stem is the one the others stay locked to.
+local CHASE_STEMS: { base: { string }, near: { string } } = {
+	base = { "harlowChase_ostinato", "harlowChase_low" },
+	near = { "harlowChase_motif", "harlowChase_ticks", "harlowChase_pulse" },
+}
+
+-- The desk swivel's library layers, as the round-2 mix placed them: the PSE chair starts `start` seconds into its file
+-- (its lead-in, trimmed in the mix) and each stops `stopAt` seconds in, fading `fade` seconds (the mix's cut).
+export type SwivelLayer = { id: string, start: number, stopAt: number, fade: number }
+local SWIVEL: { SwivelLayer } = {
+	{ id = "deskSwivelChair", start = 0.14, stopAt = 0.85, fade = 0.15 },
+	{ id = "deskSwivelBend", start = 0.03, stopAt = 0.8, fade = 0.4 },
 }
 
 local GIBBERISH: { string } = { "harlowGibberish1", "harlowGibberish2", "harlowGibberish3", "harlowGibberish4" }
@@ -210,6 +238,8 @@ return table.freeze({
 	-- move the root there when it ends.
 	SEAT = table.freeze({ standOffset = Vector3.new(0, 0, -1.1) }),
 	SOUNDS = table.freeze(SOUNDS),
+	CHASE_STEMS = table.freeze({ base = table.freeze(CHASE_STEMS.base), near = table.freeze(CHASE_STEMS.near) }),
+	SWIVEL = table.freeze(SWIVEL),
 	GIBBERISH = table.freeze(GIBBERISH),
 	IMAGES = table.freeze(IMAGES),
 	ANIMATIONS = table.freeze(ANIMATIONS),

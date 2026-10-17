@@ -51,6 +51,24 @@ function CargoLootFeedbackFormulas.glintSeen(distance: number): boolean
 	return distance <= CargoConstants.GLINT_DISTANCE
 end
 
+export type RevealTier = "low" | "mid" | "high" | "jackpot"
+
+--[=[
+	The reveal sound's tier for an item of base value `base` (CargoBaseValue; nil reads as the lowest): REVEAL_TIERS.
+]=]
+function CargoLootFeedbackFormulas.revealTier(base: number?): RevealTier
+	local tiers = CargoConstants.REVEAL_TIERS
+	local value = base or 0
+	if value >= tiers.jackpot then
+		return "jackpot"
+	elseif value >= tiers.high then
+		return "high"
+	elseif value >= tiers.mid then
+		return "mid"
+	end
+	return "low"
+end
+
 --[=[
 	Whether an appraisal made at `appraisedAt` (server time; nil = never) is fresh enough at `now` for its stamp to pop.
 ]=]

@@ -11,7 +11,8 @@
 	   `toggleKey` (SceneRegistry) opens or closes that scene. They gate on a focused TextBox rather than
 	   `gameProcessed`, because the engine marks Escape processed for its own menu (and so a search box
 	   keeps its keystrokes). A future Input system can take these over as keymaps-as-data.
-	3. **Mounts the always-on roots** at start — the HUD on the `Hud` layer, the `SceneHost` on `Panel`.
+	3. **Mounts the always-on roots** at start — the HUD on the `Hud` layer, the `SceneHost` on `Panel` — and starts the
+	   UI's sounds (UISoundSystem: the tiers PaperButton plays, the hold prompts' wind-up and done).
 
 	The shared state it drives lives elsewhere and is required directly (UISuppression, SceneStack,
 	UIRoot) — this service owns only the lifecycle, the same split as StateSyncClientStore/StateSyncServiceClient.
@@ -33,6 +34,7 @@ local UIRoot = require(ReplicatedStorage.Client.UI.Layers.UIRoot)
 local HudRoot = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudRoot)
 local SceneHost = require(ReplicatedStorage.Client.UI.React.SceneHost)
 local SceneRegistry = require(ReplicatedStorage.Client.UI.Scenes.SceneRegistry)
+local UISoundSystem = require(ReplicatedStorage.Client.Features.UI.Systems.UISoundSystem)
 
 local log = Logger.new("UIServiceClient")
 
@@ -119,6 +121,7 @@ local UIServiceClient: UIServiceClient = {
 		panelRender(React.createElement(SceneHost, { layer = "Panel" }))
 
 		log:debug("HUD and Panel SceneHost mounted")
+		UISoundSystem.start()
 	end,
 
 	--[=[
@@ -133,6 +136,7 @@ local UIServiceClient: UIServiceClient = {
 	stop = function(self)
 		UISuppression.reconcile({})
 		janitor:Cleanup()
+		UISoundSystem.stop()
 		self._hudMounted = false
 	end,
 
@@ -145,6 +149,7 @@ local UIServiceClient: UIServiceClient = {
 			hudMounted = self._hudMounted,
 			sceneDepth = SceneStack.depth(),
 			suppression = UISuppression.counts(),
+			sounds = UISoundSystem.getState(),
 		}
 	end,
 }

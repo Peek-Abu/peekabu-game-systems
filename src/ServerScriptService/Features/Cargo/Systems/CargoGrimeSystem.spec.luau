@@ -8,13 +8,14 @@ local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interacti
 local Visuals = require(ServerScriptService.Features.Art.Systems.ArtVisualSystem)
 
 return function()
-	local parent, assets, spawner, system, appraisals, clock, hints, removed
+	local parent, assets, spawner, system, appraisals, jackpots, clock, hints, removed
 
 	beforeEach(function()
 		assets = Instance.new("Folder")
 		parent = Instance.new("Model")
 		spawner = CargoSpawnSystem.new(Visuals.new(assets))
 		appraisals = {}
+		jackpots = {}
 		clock = 100
 		hints = {}
 		removed = {}
@@ -23,10 +24,13 @@ return function()
 			now = function()
 				return clock
 			end,
-			-- Each appraisal by cleaning plays cargoAppraise at the item (and slips the crew near it: nobody here).
+			-- Each appraisal by cleaning plays cargoAppraise at the item, cargoJackpot for a jackpot (and slips the crew
+			-- near it: nobody here).
 			sound = function(position, id)
 				if id == "cargoAppraise" then
 					table.insert(appraisals, position)
+				elseif id == "cargoJackpot" then
+					table.insert(jackpots, position)
 				end
 			end,
 			-- The first grime lock of a shift tells its carrier (a sticky note in the game).
@@ -45,9 +49,9 @@ return function()
 		assets:Destroy()
 	end)
 
-	local function monitor(clean)
+	local function monitor(clean, variant)
 		return spawner:spawn("monitor", CFrame.new(40000, 0, 0), parent, {
-			appraisal = { base = 100, clean = clean or 0, appraised = false },
+			appraisal = { base = 100, clean = clean or 0, appraised = false, variant = variant },
 		})
 	end
 
@@ -88,6 +92,14 @@ return function()
 		expect(item:GetAttribute(CargoConstants.APPRAISED_AT_ATTRIBUTE)).to.equal(104)
 		progress(item, 0.9)
 		expect(#appraisals).to.equal(1)
+	end)
+
+	it("announces a jackpot with the jackpot sound instead of the plain appraisal", function()
+		local item = monitor(0, "Gold-trim")
+		progress(item, 0.7)
+		expect(#jackpots).to.equal(1)
+		expect(jackpots[1]).to.equal(item.Position)
+		expect(#appraisals).to.equal(0)
 	end)
 
 	it("finishes an item spotless when its channel completes", function()

@@ -1,7 +1,8 @@
 --!strict
 --[=[
-	ShiftFeedbackSystem: how the shift sounds and feels on this client (Cleanup Crew spec §7 table: quota met
-	"truck horn", tier up, overtime "ticking music layer", clock out "horn honks"; the shift's start and end). It
+	ShiftFeedbackSystem: how the shift sounds and feels on this client (Cleanup Crew spec §7 table: quota met (the
+	in-house "contract met" jingle since 2026-10-17, was the truck horn), tier up, overtime "ticking music layer", clock
+	out "horn honks"; the shift's start and end; the review's results jingle as it opens, ShiftCueUtils.jingle). It
 	watches ShiftStore's snapshot: ShiftCueUtils says which moments just happened, and each plays its sound
 	(ShiftAssets.CUE_SOUNDS) and camera kick. Overtime keeps the ticking layer on (a SoundServiceClient ambience
 	slot); a clock-out countdown ticks every second, louder for the last COUNTDOWN_LOUD. The stamps and sticky
@@ -82,6 +83,10 @@ local function setTicking(on: boolean)
 end
 
 local function onSnapshot(current: ShiftTypes.ShiftSnapshot?)
+	local jingle = ShiftCueUtils.jingle(last, current)
+	if jingle ~= nil then
+		play(ShiftAssets.JINGLE_SOUNDS[jingle])
+	end
 	for _, cue in ShiftCueUtils.cues(last, current) do
 		counters.cues += 1
 		local id = ShiftAssets.CUE_SOUNDS[cue]

@@ -149,11 +149,24 @@ return table.freeze({
 	-- your heartbeat races at one beat per CHASE_BEAT seconds however far he is, and the screen pulses with it, soft
 	-- red (CHASE_TINT): up over CHASE_RISE seconds, never below CHASE_FLOOR of full between beats, fading out over
 	-- CHASE_FADE seconds once the chase ends (OccupantTellRules.chasePulse). Kept subtle (kid-friendly).
-	CHASE_BEAT = 0.36,
+	-- One beat of the chase music (B minor, 144 bpm; 2026-10-17, was 0.36 under the placeholder bed).
+	CHASE_BEAT = 60 / 144,
 	CHASE_RISE = 0.2,
 	CHASE_FLOOR = 0.35,
 	CHASE_FADE = 1.5,
 	CHASE_TINT = Color3.fromRGB(255, 165, 165),
+	-- The chase music (round-2 pick B, OccupantChaseMusicSystem): the sting is one bar (4 beats) that resolves into the
+	-- loop's downbeat, so the five stems start CHASE_STING_LEAD seconds after it. Intensity 1 (ostinato + low) plays
+	-- the whole chase; intensity 2's stems (motif, ticks, pulse) fade in as he closes: silent beyond CHASE_LAYER_FAR
+	-- studs, full within CHASE_LAYER_NEAR (OccupantTellRules.chaseLayer), moving at most 1 / CHASE_LAYER_SECONDS a
+	-- second. The stems re-lock to the ostinato when one drifts CHASE_STEM_DRIFT seconds; the chase's end fades them over
+	-- CHASE_MUSIC_FADE seconds.
+	CHASE_STING_LEAD = 4 * 60 / 144,
+	CHASE_LAYER_NEAR = 14,
+	CHASE_LAYER_FAR = 34,
+	CHASE_LAYER_SECONDS = 0.6,
+	CHASE_STEM_DRIFT = 0.04,
+	CHASE_MUSIC_FADE = 1.5,
 	-- The truck box's PathfindingModifier label (Office builds it; his kind's pathCosts never enter it), and
 	-- the tag on the office's ceiling lights (Office builds them; the tells flicker them).
 	SAFE_ZONE_LABEL = "SafeZone",

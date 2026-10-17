@@ -253,6 +253,7 @@ local function DepotHubScreen(
 				if layout.compact then width - 2 * layout.padding else layout.titleWidth
 			),
 			close = e(PaperButton, {
+				sound = "back",
 				text = "CLOSE",
 				variant = "secondary",
 				onPaper = true,

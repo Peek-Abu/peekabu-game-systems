@@ -63,4 +63,14 @@ return table.freeze({
 	MATERIAL_SURFACES = table.freeze(MATERIAL_SURFACES),
 	-- How many recent steps getState keeps (the live sync check reads them).
 	RECENT = 64,
+	-- The body meeting the floor (FootstepLandingSystem, FootstepLandingFormulas), from the root's vertical speed: a
+	-- land is an impact from LAND_SPEED studs/s down (a jump lands at ~50, a step off a kerb under it); a jump is a
+	-- take-off to JUMP_SPEED up (a full jump leaves at ~50); one land per LAND_GAP seconds. A dead body's first impact
+	-- from BODY_FALL_SPEED, within BODY_FALL_WINDOW seconds of the death (the catch's throw lands in ~1 s), is the
+	-- body-fall, once.
+	LAND_SPEED = 18,
+	JUMP_SPEED = 25,
+	LAND_GAP = 0.25,
+	BODY_FALL_SPEED = 8,
+	BODY_FALL_WINDOW = 4,
 })

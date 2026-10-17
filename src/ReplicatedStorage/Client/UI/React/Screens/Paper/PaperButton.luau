@@ -3,7 +3,9 @@
 	PaperButton: the kit's button (Components 5:2): an Oswald Bold label on a flat fill. `primary` is manila with
 	ink, `secondary` a 3 px outline (cream on the dark office, ink when `onPaper`), `danger` stamp red with cream,
 	`go` exit green with night. `disabled` fades it to half and swallows activation. `mark` writes a note to the
-	right of the button in Permanent Marker (the review's "your vote"; words, never a glyph). Presentational.
+	right of the button in Permanent Marker (the review's "your vote"; words, never a glyph). Presentational, plus its
+	sound: the hover as the pointer enters, and on a press its tier (`sound`: click / confirm / back / cta; absent =
+	its look's default, UISoundFormulas.buttonTier), or the error while disabled (UISoundSystem).
 
 	@class PaperButton
 ]=]
@@ -17,6 +19,8 @@ local UserInputService = game:GetService("UserInputService")
 local React = require(ReplicatedStorage.Packages.React)
 local PaperLabel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperLabel)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
+local UISoundFormulas = require(ReplicatedStorage.Client.Features.UI.Utils.UISoundFormulas)
+local UISoundSystem = require(ReplicatedStorage.Client.Features.UI.Systems.UISoundSystem)
 
 local VM = require(script.Parent.PaperButtonViewModel)
 
@@ -39,6 +43,8 @@ export type PaperButtonProps = {
 	position: UDim2?,
 	anchor: Vector2?,
 	layoutOrder: number?,
+	-- The press's UI sound tier (absent = the look's default: UISoundFormulas.buttonTier).
+	sound: UISoundFormulas.Tier?,
 }
 
 type Look = "primary" | "secondary" | "secondaryOnPaper" | "danger" | "go" | "prop" | "surface"
@@ -203,6 +209,9 @@ local function PaperButton(props: PaperButtonProps): React.ReactNode
 		Text = "",
 		[React.Event.MouseEnter] = function(_button: TextButton)
 			setHovered(true)
+			if UISoundFormulas.hovers(props.variant, disabled) then
+				UISoundSystem.play("hover")
+			end
 		end,
 		[React.Event.MouseLeave] = function(_button: TextButton)
 			setHovered(false)
@@ -233,6 +242,9 @@ local function PaperButton(props: PaperButtonProps): React.ReactNode
 			setPressed(false)
 		end,
 		[React.Event.Activated] = function(_button: TextButton)
+			UISoundSystem.play(
+				UISoundFormulas.pressTier(UISoundFormulas.buttonTier(props.variant, props.sound), disabled)
+			)
 			if not disabled then
 				props.onActivated()
 			end

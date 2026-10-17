@@ -6,11 +6,14 @@
 	- the glint: a dust pile marked CargoConstants.BURIED_ATTRIBUTE twinkles a few sparkles every
 	  GLINT_INTERVAL_MIN..MAX seconds (its own random schedule), drawn only when the local character is within
 	  GLINT_DISTANCE: a hint easy to miss;
-	- the reveal: a cargo item that was hidden under a pile pops out with a gold burst and `cargoReveal`;
+	- the reveal: a cargo item that was hidden under a pile pops out with a gold burst and its reveal sound, whose value
+	  layer grows with the item's base value (CargoLootFeedbackFormulas.revealTier, CargoAssets.REVEAL_SOUNDS);
 	- the appraisal: a valuable appraised a moment ago (CargoAppraisedAt, fresh by CargoLootFeedbackFormulas.stampFresh)
-	  bursts paper flecks with `cargoAppraise` (its sticky slip and its tag's stamp are the server's and the tag's).
+	  bursts paper flecks (its sound, `cargoAppraise` or `cargoJackpot`, is the server's CargoGrimeSystem.announce: one
+	  play for the crew near it; its sticky slip and its tag's stamp are the server's and the tag's).
 
-	Client-local instances; pending sounds (CargoAssets) are skipped silently.
+	The loot sounds and the hotbar tick are kept warm while this client runs (one silent, never-played Sound each,
+	preloaded), so none starts late. Client-local instances; pending sounds (CargoAssets) are skipped silently.
 
 	Spec-exempt shell (CollectionService, particles, Sound, RunService); the decisions are the specced
 	CargoLootFeedbackFormulas.
@@ -18,9 +21,11 @@
 	@class CargoLootFeedbackSystem
 ]=]
 
+local ContentProvider = game:GetService("ContentProvider")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local SoundService = game:GetService("SoundService")
 local Workspace = game:GetService("Workspace")
 
 local Observers = require(ReplicatedStorage.Packages.Observers)
@@ -45,6 +50,18 @@ local rng = Random.new()
 local nextGlint: { [BasePart]: number } = {}
 local counters = { glints = 0, reveals = 0, appraisals = 0 }
 local stoppers: { () -> () } = {}
+-- The loot sounds (and the hotbar's slot tick, CargoServiceClient.select) kept loaded.
+local WARM: { string } = {
+	"cargoSelect",
+	"cargoRevealLow",
+	"cargoRevealMid",
+	"cargoRevealHigh",
+	"cargoRevealJackpot",
+	"cargoAppraise",
+	"cargoJackpot",
+	"cargoGlint",
+}
+local warm: { Sound } = {}
 
 local function play(id: string, at: Vector3)
 	if CargoAssets.SOUNDS[id] ~= nil and SoundRegistry.has(id) then
@@ -70,6 +87,26 @@ local function burst(position: Vector3, color: Color3, count: number, size: numb
 	emitter:Emit(count)
 	task.delay(lifetime + 0.2, function()
 		anchor:Destroy()
+	end)
+end
+
+local function preload()
+	local sounds: { Instance } = {}
+	for _, id in WARM do
+		local def = CargoAssets.SOUNDS[id]
+		if def ~= nil and def.assetId ~= CargoAssets.PENDING then
+			-- Silent and never played: it only holds the asset in memory.
+			local sound = Instance.new("Sound")
+			sound.Name = `{id}Warm`
+			sound.SoundId = def.assetId
+			sound.Volume = 0
+			sound.Parent = SoundService
+			table.insert(warm, sound)
+			table.insert(sounds, sound)
+		end
+	end
+	task.spawn(function()
+		ContentProvider:PreloadAsync(sounds)
 	end)
 end
 
@@ -132,7 +169,9 @@ local function observeItem(instance: Instance): (() -> ())?
 		if wasHidden and not hidden then
 			counters.reveals += 1
 			burst(item.Position, CargoConstants.REVEAL_COLOR, CargoConstants.REVEAL_COUNT, 0.45, 12, 0.7)
-			play("cargoReveal", item.Position)
+			local base = item:GetAttribute(CargoConstants.BASE_VALUE_ATTRIBUTE)
+			local tier = CargoLootFeedbackFormulas.revealTier(if type(base) == "number" then base else nil)
+			play(CargoAssets.REVEAL_SOUNDS[tier], item.Position)
 		end
 		wasHidden = hidden
 	end)
@@ -150,7 +189,6 @@ local function observeItem(instance: Instance): (() -> ())?
 				6,
 				0.6
 			)
-			play("cargoAppraise", item.Position)
 		end
 	end)
 	return function()
@@ -165,6 +203,7 @@ function CargoLootFeedbackSystem.start()
 	if #stoppers > 0 then
 		return
 	end
+	preload()
 	table.insert(stoppers, Observers.observeTag(VacuumConstants.PILE_TAG, observePile))
 	table.insert(stoppers, Observers.observeTag(CarryConstants.TAG, observeItem))
 	local elapsed = 0
@@ -186,6 +225,10 @@ function CargoLootFeedbackSystem.stop()
 	end
 	table.clear(stoppers)
 	table.clear(nextGlint)
+	for _, sound in warm do
+		sound:Destroy()
+	end
+	table.clear(warm)
 end
 
 function CargoLootFeedbackSystem.getState(): CargoLootFeedbackState
