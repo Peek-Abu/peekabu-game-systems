@@ -18,6 +18,48 @@ export type Recipe = {
 	shakeRadius: number?,
 }
 
+-- One emitter of a code-built burst (VfxBurstRegistry). A layer either bursts `count` particles once, or (in a
+-- funnel stream) emits `rate` per second at full strength; never both.
+export type BurstLayer = {
+	texture: string,
+	color: ColorSequence,
+	size: NumberSequence,
+	transparency: NumberSequence,
+	lifetime: NumberRange,
+	speed: NumberRange,
+	count: number?,
+	rate: number?,
+	-- Seconds after the burst starts that this layer emits.
+	delay: number?,
+	spread: Vector2?,
+	direction: Enum.NormalId?,
+	acceleration: Vector3?,
+	drag: number?,
+	rotation: NumberRange?,
+	rotSpeed: NumberRange?,
+	squash: NumberSequence?,
+	lightEmission: number?,
+	lightInfluence: number?,
+	brightness: number?,
+	zOffset: number?,
+	orientation: Enum.ParticleOrientation?,
+}
+
+-- A short, warm light a burst may flash (at most one per burst).
+export type BurstLight = {
+	color: Color3,
+	brightness: number,
+	range: number,
+	seconds: number,
+}
+
+export type Burst = {
+	layers: { BurstLayer },
+	light: BurstLight?,
+	-- Beyond this many studs from the camera the burst is skipped.
+	maxDistance: number?,
+}
+
 -- One system's screen-effect request. Absent fields request nothing.
 export type ScreenRequest = {
 	blur: number?, -- BlurEffect.Size
