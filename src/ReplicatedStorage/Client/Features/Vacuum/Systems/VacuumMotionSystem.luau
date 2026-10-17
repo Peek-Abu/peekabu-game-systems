@@ -13,6 +13,9 @@
 	  done (its progress, VacuumFeedbackSystem.progressNear); letting go springs them back upright.
 	- Suction juice: while sucking, the floor head shimmies, more as the pile nears done; when a pile pops
 	  (VacuumFeedbackSystem.onPop) the wand of every holder who was just sucking it kicks back and up and settles.
+	- Secondary motion: the wand's head lags a turn and slides on when she stops (it turns as one rigid piece, so
+	  the hands stay on), and the canister bobs on the back with the torso's bounce, heavier and slower as the crew's
+	  gauge fills (VacuumFeedbackSystem.gaugeShare); the canister bobs on every employee, wand out or not.
 
 	Each layer eases on a spring (VacuumMotionFormulas.step) and the pose is laid on the rig in RunService.PreSimulation,
 	after the frame's animation and IK (VacuumMotionRigSystem).
@@ -42,8 +45,29 @@ type Holder = {
 	reach: Spring,
 	brace: Spring,
 	kick: Spring,
+	swayYaw: Spring,
+	swayPitch: Spring,
+	pack: Spring,
 	-- When it last sucked (a pop within the kick's window of it kicks its wand).
 	activeAt: number,
+	-- How the body moved: the root's last position and heading, its smoothed forward speed and acceleration and turn
+	-- rate (root space, so the same for the local character and replicated ones), and the torso's smoothed vertical
+	-- speed and acceleration.
+	motion: Motion,
+	-- The canister's joint and its rest C0 (found once per body).
+	packJoint: Weld?,
+	packRest: CFrame?,
+}
+
+type Motion = {
+	position: Vector3?,
+	heading: number,
+	forward: number,
+	accel: number,
+	yawRate: number,
+	torsoY: number?,
+	rise: number,
+	lift: number,
 }
 
 export type Options = {
@@ -59,6 +83,10 @@ local VacuumMotionSystem = {}
 local PILE_RANGE = 6
 -- A remote holder who has sent no aim yet looks the default third-person way.
 local DEFAULT_LOOK = math.rad(-20)
+-- Measured speeds and accelerations are smoothed over this many seconds (a replicated body moves in steps).
+local SMOOTHING = 0.08
+-- A jump further than this in one frame is a teleport, not motion (studs).
+local TELEPORT = 4
 
 local holders: { [Player]: Holder } = {}
 local connection: RBXScriptConnection? = nil
@@ -135,6 +163,7 @@ local function rigOf(holder: Holder): VacuumMotionRigSystem.Rig?
 	if bound ~= nil then
 		holder.rig = bound
 		holder.raise, holder.reach, holder.brace, holder.kick = spring(), spring(), spring(), spring()
+		holder.swayYaw, holder.swayPitch = spring(), spring()
 	end
 	return bound
 end
@@ -145,7 +174,8 @@ local function stepHolder(player: Player, holder: Holder, dt: number)
 	if rig == nil then
 		return
 	end
-	local aim, brace, kick = Constants.aim, Constants.brace, Constants.kick
+	local aim, brace, kick, sway = Constants.aim, Constants.brace, Constants.kick, Constants.sway
+	local swayYaw, swayPitch = VacuumMotionFormulas.swayTargets(holder.motion.yawRate, holder.motion.accel)
 	local raiseTarget, reachTarget = VacuumMotionFormulas.aim(lookOf(player, character), aim)
 	local head = rig.tool:FindFirstChild(VacuumConstants.FLOOR_HEAD_NAME)
 	local active = activeOf(player, character)
@@ -169,6 +199,8 @@ local function stepHolder(player: Player, holder: Holder, dt: number)
 		kick = ease(holder.kick, 0, dt, kick.frequency, kick.damping),
 		shimmyYaw = shimmyYaw,
 		shimmyRoll = shimmyRoll,
+		swayYaw = ease(holder.swayYaw, swayYaw, dt, sway.frequency, sway.damping),
+		swayPitch = ease(holder.swayPitch, swayPitch, dt, sway.frequency, sway.damping),
 	}
 	local drop, lean = VacuumMotionFormulas.body(math.max(layers.brace, 0))
 	local wand = VacuumMotionFormulas.wand(
@@ -178,6 +210,86 @@ local function stepHolder(player: Player, holder: Holder, dt: number)
 		VacuumMotionFormulas.motion(rig.rest.waist, drop, lean)
 	)
 	rig.apply({ wand = wand, drop = drop, lean = lean })
+end
+
+-- Smooths a measured rate toward `value` over SMOOTHING seconds.
+local function smooth(current: number, value: number, dt: number): number
+	return current + (value - current) * (1 - math.exp(-dt / SMOOTHING))
+end
+
+-- Measures how `holder`'s body moved since last frame (root space).
+local function measure(holder: Holder, dt: number)
+	local motion = holder.motion
+	local root = holder.character:FindFirstChild("HumanoidRootPart")
+	local torso = holder.character:FindFirstChild("UpperTorso")
+	if root == nil or not root:IsA("BasePart") then
+		return
+	end
+	local frame = root.CFrame
+	local look = frame.LookVector
+	local heading = math.atan2(-look.X, -look.Z)
+	local position = frame.Position
+	local last = motion.position
+	if last ~= nil and (position - last).Magnitude < TELEPORT then
+		local forward = (position - last):Dot(Vector3.new(look.X, 0, look.Z).Unit) / dt
+		local before = motion.forward
+		motion.forward = smooth(motion.forward, forward, dt)
+		motion.accel = smooth(motion.accel, (motion.forward - before) / dt, dt)
+		local turn = (heading - motion.heading + math.pi) % (2 * math.pi) - math.pi
+		motion.yawRate = smooth(motion.yawRate, turn / dt, dt)
+	else
+		motion.forward, motion.accel, motion.yawRate = 0, 0, 0
+	end
+	motion.position, motion.heading = position, heading
+	if torso ~= nil and torso:IsA("BasePart") then
+		local y = torso.Position.Y
+		local lastY = motion.torsoY
+		if lastY ~= nil and math.abs(y - lastY) < TELEPORT then
+			local before = motion.rise
+			motion.rise = smooth(motion.rise, (y - lastY) / dt, dt)
+			motion.lift = smooth(motion.lift, (motion.rise - before) / dt, dt)
+		else
+			motion.rise, motion.lift = 0, 0
+		end
+		motion.torsoY = y
+	end
+end
+
+-- Bobs `holder`'s canister on its joint (worn whether or not the wand is out).
+local function bob(holder: Holder, dt: number)
+	local joint = holder.packJoint
+	if joint == nil or joint.Parent == nil or not joint:IsDescendantOf(holder.character) then
+		local backpack = holder.character:FindFirstChild(VacuumConstants.BACKPACK_NAME)
+		local found = if backpack ~= nil then backpack:FindFirstChild(Constants.PACK_JOINT_NAME, true) else nil
+		local rest = if found ~= nil then found:GetAttribute(Constants.REST_ATTRIBUTE) else nil
+		if found == nil or not found:IsA("Weld") or typeof(rest) ~= "CFrame" then
+			holder.packJoint, holder.packRest = nil, nil
+			return
+		end
+		holder.packJoint, holder.packRest = found, rest
+		joint = found
+	end
+	local rest = holder.packRest
+	if joint == nil or rest == nil then
+		return
+	end
+	local fill = VacuumFeedbackSystem.gaugeShare()
+	local offset = ease(
+		holder.pack,
+		VacuumMotionFormulas.packTarget(holder.motion.lift, fill),
+		dt,
+		VacuumMotionFormulas.packFrequency(fill),
+		Constants.pack.damping
+	)
+	joint.C0 = rest * VacuumMotionFormulas.packFrame(math.clamp(offset, -Constants.pack.max, Constants.pack.max))
+end
+
+local function unbob(holder: Holder)
+	local joint, rest = holder.packJoint, holder.packRest
+	if joint ~= nil and rest ~= nil then
+		joint.C0 = rest
+	end
+	holder.packJoint, holder.packRest = nil, nil
 end
 
 -- A pile popped: every holder who was sucking just now, close to it, kicks (bigger piles harder).
@@ -200,10 +312,14 @@ local function onPop(position: Vector3, size: number)
 end
 
 local function step(dt: number)
+	if dt <= 0 then
+		return
+	end
 	local now = os.clock()
 	for player, holder in holders do
 		if player.Parent == nil or player.Character ~= holder.character then
 			release(holder)
+			unbob(holder)
 			holders[player] = nil
 		end
 	end
@@ -221,10 +337,27 @@ local function step(dt: number)
 				reach = spring(),
 				brace = spring(),
 				kick = spring(),
+				swayYaw = spring(),
+				swayPitch = spring(),
+				pack = spring(),
 				activeAt = -math.huge,
+				motion = {
+					position = nil,
+					heading = 0,
+					forward = 0,
+					accel = 0,
+					yawRate = 0,
+					torsoY = nil,
+					rise = 0,
+					lift = 0,
+				},
+				packJoint = nil,
+				packRest = nil,
 			}
 			holders[player] = holder
 		end
+		measure(holder, dt)
+		bob(holder, dt)
 		stepHolder(player, holder, dt)
 		if player == Players.LocalPlayer and holder.rig ~= nil then
 			sendAim(now)
@@ -254,6 +387,7 @@ function VacuumMotionSystem.stop()
 	stopPops = nil
 	for _, holder in holders do
 		release(holder)
+		unbob(holder)
 	end
 	table.clear(holders)
 	options = nil

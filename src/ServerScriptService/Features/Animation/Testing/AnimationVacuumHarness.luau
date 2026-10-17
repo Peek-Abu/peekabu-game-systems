@@ -17,7 +17,8 @@
 	   registered, else the locomotion it plays over); each frame is shown once its clip has loaded and confirmed
 	   shown at its time and full weight (AnimationCarryClipHarness);
 	4. in each frame, lays every motion layer on the rig at its extremes (LAYERS: rest, aim up, aim down, the brace
-	   and the brace with each aim, the pop's recoil and its rebound, the shimmy each way; VacuumMotionRigSystem, exactly as every client does, in PreSimulation after the
+	   and the brace with each aim, the pop's recoil and its rebound, the shimmy each way, the wand's sway each way
+	   and all at once; VacuumMotionRigSystem, exactly as every client does, in PreSimulation after the
 	   Animator's IK) and judges each: each paw's wrap point (VacuumVisualSystem.wrapOf, inside the paw) must be on
 	   its grip, the right on the wand's GripUpper and the left on its GripLower (the grip contract), within
 	   GRIP_TOLERANCE; each grip must lie inside its paw (the paw closes round the wand); and the floor head's
@@ -75,41 +76,58 @@ local GRIP_TOLERANCE = 0.05
 -- How far the floor head's lowest corner may dip under the floor (studs).
 local FLOOR_TOLERANCE = 0.02
 -- Each motion layer at its extremes (VacuumMotionFormulas.Layers), laid on every frame.
--- A layers' state: every layer off but those given.
-local function layered(
-	raise: number,
-	reach: number,
-	brace: number,
-	kick: number,
-	shimmy: number
-): VacuumMotionFormulas.Layers
-	local shimmyTuning = VacuumMotionConstants.shimmy
+-- A layers' state: every layer off but those given (the shimmy as a fraction of its amplitude, each way).
+type Given = {
+	raise: number?,
+	reach: number?,
+	brace: number?,
+	kick: number?,
+	shimmy: number?,
+	swayYaw: number?,
+	swayPitch: number?,
+}
+local function layered(given: Given): VacuumMotionFormulas.Layers
+	local shimmy = given.shimmy or 0
 	return {
-		raise = raise,
-		reach = reach,
-		brace = brace,
-		kick = kick,
-		shimmyYaw = shimmy * shimmyTuning.yaw,
-		shimmyRoll = shimmy * shimmyTuning.roll,
+		raise = given.raise or 0,
+		reach = given.reach or 0,
+		brace = given.brace or 0,
+		kick = given.kick or 0,
+		shimmyYaw = shimmy * VacuumMotionConstants.shimmy.yaw,
+		shimmyRoll = shimmy * VacuumMotionConstants.shimmy.roll,
+		swayYaw = given.swayYaw or 0,
+		swayPitch = given.swayPitch or 0,
 	}
 end
 local UP = VacuumMotionConstants.aim.maxUp
 -- The biggest kick (a pile at maxScale, at its peak).
 local KICK = VacuumMotionConstants.kick.maxScale
+local SWAY_YAW = VacuumMotionConstants.sway.maxYaw
+local SWAY_PITCH = VacuumMotionConstants.sway.maxPitch
 local LAYERS: { { name: string, layers: VacuumMotionFormulas.Layers } } = {
-	{ name = "rest", layers = layered(0, 0, 0, 0, 0) },
-	{ name = "aim up", layers = layered(UP, 0, 0, 0, 0) },
-	{ name = "aim down", layers = layered(0, 1, 0, 0, 0) },
-	{ name = "brace", layers = layered(0, 0, 1, 0, 0) },
-	{ name = "brace+down", layers = layered(0, 1, 1, 0, 0) },
-	{ name = "brace+up", layers = layered(UP, 0, 1, 0, 0) },
-	-- The pop: the kick's peak, and the spring's overshoot the other way, braced.
-	{ name = "recoil", layers = layered(0, 0, 1, KICK, 0) },
-	{ name = "recoil back", layers = layered(0, 1, 1, -0.4 * KICK, 0) },
-	{ name = "recoil+up", layers = layered(UP, 0, 0, KICK, 0) },
+	{ name = "rest", layers = layered({}) },
+	{ name = "aim up", layers = layered({ raise = UP }) },
+	{ name = "aim down", layers = layered({ reach = 1 }) },
+	{ name = "brace", layers = layered({ brace = 1 }) },
+	{ name = "brace+down", layers = layered({ reach = 1, brace = 1 }) },
+	{ name = "brace+up", layers = layered({ raise = UP, brace = 1 }) },
+	-- The pop: the kick's peak, and the spring's rebound the other way.
+	{ name = "recoil", layers = layered({ brace = 1, kick = KICK }) },
+	{ name = "recoil back", layers = layered({ reach = 1, brace = 1, kick = -0.4 * KICK }) },
+	{ name = "recoil+up", layers = layered({ raise = UP, kick = KICK }) },
 	-- The shimmy at its full amplitude, each way.
-	{ name = "shimmy+", layers = layered(0, 1, 1, 0, 1) },
-	{ name = "shimmy-", layers = layered(0, 0, 1, 0, -1) },
+	{ name = "shimmy+", layers = layered({ reach = 1, brace = 1, shimmy = 1 }) },
+	{ name = "shimmy-", layers = layered({ brace = 1, shimmy = -1 }) },
+	-- The wand's lag at its most: swung each way on a turn, slid on at a stop, trailing while aimed up.
+	{ name = "sway left", layers = layered({ swayYaw = SWAY_YAW }) },
+	{ name = "sway right", layers = layered({ swayYaw = -SWAY_YAW, reach = 1 }) },
+	{ name = "sway stop", layers = layered({ swayPitch = SWAY_PITCH, swayYaw = SWAY_YAW }) },
+	{ name = "sway+up", layers = layered({ raise = UP, swayPitch = -SWAY_PITCH, swayYaw = -SWAY_YAW }) },
+	-- Everything at once.
+	{
+		name = "all",
+		layers = layered({ raise = UP, brace = 1, kick = KICK, shimmy = 1, swayYaw = SWAY_YAW, swayPitch = SWAY_PITCH }),
+	},
 }
 -- Frames to let the Animator settle after a change.
 local SETTLE = 4

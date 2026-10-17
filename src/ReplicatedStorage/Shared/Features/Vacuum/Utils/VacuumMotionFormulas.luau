@@ -14,6 +14,8 @@
 	- `offsetOf`: the layers' state to the wand's offset (`wand`'s input).
 	- `kickScale` / `kickImpulse`: how hard a pile's pop kicks, as the spring's starting speed; `shimmy` the suction
 	  shimmy at a pile's progress.
+	- `swayTargets`: where the wand's lag swings for a turn and a stop; `packTarget` / `packFrequency` / `packFrame`
+	  the canister's bob on the back.
 	- `braceTarget` / `body`: how deep a holder braces, and the hip drop and lean that makes; `legFold` the hip, knee
 	  and ankle turns that drop the hips with the feet planted.
 	- `step`: one damped spring.
@@ -44,7 +46,8 @@ export type WandRest = {
 export type WandOffset = { offset: Vector3, pitch: number, yaw: number, roll: number }
 
 -- The layers' state: the aim's raise (radians) and reach (0..1), the brace's weight (0..1), the pop kick (its
--- spring: 1 is a reference pile's peak) and the suction shimmy's turn and roll (radians).
+-- spring: 1 is a reference pile's peak), the suction shimmy's turn and roll and the wand's lag (its turn and tip;
+-- radians).
 export type Layers = {
 	raise: number,
 	reach: number,
@@ -52,6 +55,8 @@ export type Layers = {
 	kick: number,
 	shimmyYaw: number,
 	shimmyRoll: number,
+	swayYaw: number,
+	swayPitch: number,
 }
 
 export type AimTuning = {
@@ -144,7 +149,7 @@ end
 --[=[
 	The wand's offset for the layers' state: the aim's raise turns it about its pivot; its reach and the brace
 	move the hands (down and out for the reach, down and in toward the body for the brace); the kick jolts them back
-	and up and hops the floor head; the shimmy turns and rolls it.
+	and up and hops the floor head; the shimmy turns and rolls it; the sway turns and tips it.
 ]=]
 function VacuumMotionFormulas.offsetOf(layers: Layers): WandOffset
 	local aim, brace, kick = Constants.aim, Constants.brace, Constants.kick
@@ -154,8 +159,8 @@ function VacuumMotionFormulas.offsetOf(layers: Layers): WandOffset
 			-(layers.reach * aim.reachDrop + layers.brace * brace.handDrop) + layers.kick * kick.lift,
 			-layers.reach * aim.reachForward + layers.brace * brace.pull + layers.kick * kick.lift * kick.back
 		),
-		pitch = layers.raise + layers.kick * kick.pitch,
-		yaw = layers.shimmyYaw,
+		pitch = layers.raise + layers.kick * kick.pitch + layers.swayPitch,
+		yaw = layers.shimmyYaw + layers.swayYaw,
 		roll = layers.shimmyRoll,
 	}
 end
@@ -289,6 +294,46 @@ function VacuumMotionFormulas.wand(rest: WandRest, offset: WandOffset, margin: n
 		end
 	end
 	return clamped(rest, scaledBy(offset, low), margin)
+end
+
+--[=[
+	Where the wand's lag swings (radians, its spring's targets): turning at `yawRate` (radians a second, positive
+	left) trails the head the other way; braking (`forwardAccel` studs/s/s along the facing, negative) slides it on
+	forward and up. Each within its most.
+]=]
+function VacuumMotionFormulas.swayTargets(yawRate: number, forwardAccel: number): (number, number)
+	local tuning = Constants.sway
+	return math.clamp(-yawRate * tuning.yawPerRate, -tuning.maxYaw, tuning.maxYaw),
+		math.clamp(-forwardAccel * tuning.pitchPerAccel, -tuning.maxPitch, tuning.maxPitch)
+end
+
+--[=[
+	Where the canister's bob spring pulls (studs up its mount) for the torso's vertical acceleration `accel`
+	(studs/s/s) with the gauge `fill` (0..1) full: it lags the bounce, further when full; within its most.
+]=]
+function VacuumMotionFormulas.packTarget(accel: number, fill: number): number
+	local tuning = Constants.pack
+	local gain = tuning.gain + (tuning.fullGain - tuning.gain) * math.clamp(fill, 0, 1)
+	return math.clamp(-accel * gain, -tuning.max, tuning.max)
+end
+
+--[=[
+	The canister's bob frequency (Hz) with the gauge `fill` full: a full canister is heavier and slower.
+]=]
+function VacuumMotionFormulas.packFrequency(fill: number): number
+	local tuning = Constants.pack
+	return tuning.frequency + (tuning.fullFrequency - tuning.frequency) * math.clamp(fill, 0, 1)
+end
+
+--[=[
+	The canister's offset on its mount for a bob of `offset` studs: moved up by it and sloshed (tipped about its
+	mount's X) in proportion.
+]=]
+function VacuumMotionFormulas.packFrame(offset: number): CFrame
+	if offset == 0 then
+		return CFrame.identity
+	end
+	return CFrame.new(0, offset, 0) * CFrame.Angles(offset * Constants.pack.tilt, 0, 0)
 end
 
 --[=[

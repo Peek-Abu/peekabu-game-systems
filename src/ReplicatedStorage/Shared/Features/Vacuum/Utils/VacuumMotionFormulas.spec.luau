@@ -22,7 +22,8 @@ return function()
 	local NONE = { offset = Vector3.zero, pitch = 0, yaw = 0, roll = 0 }
 	-- A layers' state: every layer off but those given.
 	local function layers(given)
-		local all = { raise = 0, reach = 0, brace = 0, kick = 0, shimmyYaw = 0, shimmyRoll = 0 }
+		local all =
+			{ raise = 0, reach = 0, brace = 0, kick = 0, shimmyYaw = 0, shimmyRoll = 0, swayYaw = 0, swayPitch = 0 }
 		for key, value in given do
 			all[key] = value
 		end
@@ -287,6 +288,55 @@ return function()
 			local shaken = VacuumMotionFormulas.offsetOf(layers({ shimmyYaw = 0.02, shimmyRoll = -0.01 }))
 			expect(shaken.yaw).to.be.near(0.02, 1e-6)
 			expect(shaken.roll).to.be.near(-0.01, 1e-6)
+		end)
+	end)
+
+	describe("sway", function()
+		it("trails a turn: turning left swings the floor head right, within its most", function()
+			local tuning = Constants.sway
+			local yaw = VacuumMotionFormulas.swayTargets(1, 0)
+			expect(yaw).to.be.near(-tuning.yawPerRate, 1e-6)
+			expect(VacuumMotionFormulas.swayTargets(-100, 0)).to.equal(tuning.maxYaw)
+		end)
+
+		it("slides the head on when she stops (braking raises it forward), within its most", function()
+			local tuning = Constants.sway
+			local _, braking = VacuumMotionFormulas.swayTargets(0, -10)
+			expect(braking).to.be.near(10 * tuning.pitchPerAccel, 1e-6)
+			local _, hard = VacuumMotionFormulas.swayTargets(0, -1000)
+			expect(hard).to.equal(tuning.maxPitch)
+		end)
+
+		it("turns and tips the wand for the sway", function()
+			local swung = VacuumMotionFormulas.offsetOf(layers({ swayYaw = 0.1, swayPitch = 0.05, shimmyYaw = 0.01 }))
+			expect(swung.yaw).to.be.near(0.11, 1e-6)
+			expect(swung.pitch).to.be.near(0.05, 1e-6)
+		end)
+	end)
+
+	describe("pack", function()
+		it("lags the torso's bounce: rising, the canister sags; it bobs further when full", function()
+			local tuning = Constants.pack
+			local empty = VacuumMotionFormulas.packTarget(10, 0)
+			local full = VacuumMotionFormulas.packTarget(10, 1)
+			expect(empty).to.be.near(-10 * tuning.gain, 1e-6)
+			expect(full < empty).to.equal(true)
+			expect(VacuumMotionFormulas.packTarget(-1e4, 1)).to.equal(tuning.max)
+		end)
+
+		it("is heavier and slower when full", function()
+			local tuning = Constants.pack
+			expect(VacuumMotionFormulas.packFrequency(0)).to.be.near(tuning.frequency, 1e-6)
+			expect(VacuumMotionFormulas.packFrequency(1)).to.be.near(tuning.fullFrequency, 1e-6)
+			expect(VacuumMotionFormulas.packFrequency(5)).to.be.near(tuning.fullFrequency, 1e-6)
+		end)
+
+		it("moves the pack up and down and sloshes it about its mount", function()
+			local frame = VacuumMotionFormulas.packFrame(0.05)
+			expect(frame.Position.Y).to.be.near(0.05, 1e-6)
+			local tilt = math.atan2(-frame.LookVector.Y, -frame.LookVector.Z)
+			expect(math.abs(tilt)).to.be.near(0.05 * Constants.pack.tilt, 1e-4)
+			expect(VacuumMotionFormulas.packFrame(0)).to.equal(CFrame.identity)
 		end)
 	end)
 

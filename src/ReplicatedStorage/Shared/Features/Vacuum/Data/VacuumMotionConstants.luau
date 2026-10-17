@@ -67,6 +67,30 @@ return table.freeze({
 		frequency = 5.5,
 		base = 0.15,
 	}),
+	-- The wand's lag: its head trails a turn (`yawPerRate` radians per radian a second of turning, at most `maxYaw`)
+	-- and slides on when she stops (`pitchPerAccel` radians per stud/s/s of braking, at most `maxPitch`; starting off it
+	-- would trail into the floor, which the floor clamp holds it out of), on an underdamped spring so it overshoots and
+	-- settles. The hands stay on the wand: it turns as one rigid piece.
+	sway = table.freeze({
+		yawPerRate = 0.075,
+		maxYaw = math.rad(14),
+		pitchPerAccel = 0.006,
+		maxPitch = math.rad(9),
+		frequency = 2.2,
+		damping = 0.38,
+	}),
+	-- The canister's bob: the pack rides a spring on the back, driven by the torso's bounce (`gain` studs of lag per
+	-- stud/s/s, at most `max`), with a forward-back slosh `tilt` radians per stud of bob. Empty it is quick and light
+	-- (`frequency`); a full gauge makes it heavier and slower (`fullFrequency`) and bob further (`fullGain`).
+	pack = table.freeze({
+		frequency = 3.6,
+		fullFrequency = 2.2,
+		damping = 0.32,
+		gain = 0.0035,
+		fullGain = 0.0065,
+		max = 0.09,
+		tilt = 0.9,
+	}),
 	-- Never let the floor head under the floor: its lowest corner stays `floorMargin` above it.
 	floorMargin = 0.01,
 	-- Never move the wand where the left paw cannot follow: its grip stays within `reachUse` of the left arm's reach
@@ -91,4 +115,6 @@ return table.freeze({
 	AT_ATTRIBUTE = "VacuumAt",
 	SHOULDER_ATTRIBUTE = "VacuumShoulder",
 	REACH_ATTRIBUTE = "VacuumReach",
+	-- The canister's joint on the UpperTorso (VacuumVisualSystem.wear), whose C0 each client bobs.
+	PACK_JOINT_NAME = "VacuumPackJoint",
 })

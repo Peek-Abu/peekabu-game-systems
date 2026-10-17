@@ -1,6 +1,6 @@
 -- The vacuum hold validator: the hand wand held by Pippa (every player spawns as an employee) in every vacuum skin,
 -- planned while she is falling (as a shift's start places the crew in the truck), then judged live at idle, walking,
--- sprinting and vacuuming, under every motion layer at its extremes (aim, brace, recoil, shimmy). Prints the full report to the output. Needs the place's art for Pippa and the skins.
+-- sprinting and vacuuming, under every motion layer at its extremes (aim, brace, recoil, shimmy, sway). Prints the full report to the output. Needs the place's art for Pippa and the skins.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 local Workspace = game:GetService("Workspace")

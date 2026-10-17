@@ -367,6 +367,14 @@ function VacuumFeedbackSystem.stop()
 end
 
 --[=[
+	How full every canister's gauge is heading (0..1: the crew's Gloom as a share of the contract): the canister's
+	bob grows heavier with it (VacuumMotionSystem).
+]=]
+function VacuumFeedbackSystem.gaugeShare(): number
+	return gaugeTarget
+end
+
+--[=[
 	Calls `listener` with the position and size (studs across) of every pile (or grimy valuable) that pops on this
 	client; returns its disconnect.
 ]=]

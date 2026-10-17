@@ -5,6 +5,7 @@ local Visual = require(script.Parent.VacuumVisualSystem)
 local VacuumAssets = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumAssets)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local VacuumSkinRegistry = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumSkinRegistry)
+local MotionConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumMotionConstants)
 local VisualConstants = require(ServerScriptService.Features.Vacuum.Data.VacuumVisualConstants)
 
 return function()
@@ -205,13 +206,22 @@ return function()
 			local model = holder:FindFirstChild(VacuumConstants.BACKPACK_NAME)
 			expect(model).to.equal(backpack.model)
 			local torso = holder.UpperTorso
+			-- The canister rides one joint on the torso (each client bobs it): every pack part is welded to it.
+			local anchor = model.PackAnchor
+			local joint = anchor:FindFirstChild(MotionConstants.PACK_JOINT_NAME)
+			expect(joint:IsA("Weld")).to.equal(true)
+			expect(joint.Part0).to.equal(torso)
+			expect(joint:GetAttribute(MotionConstants.REST_ATTRIBUTE)).to.equal(joint.C0)
 			for _, part in model:GetDescendants() do
 				if part:IsA("BasePart") then
 					expect(part.Massless).to.equal(true)
 					expect(part.CanCollide or part.CanQuery or part.CanTouch).to.equal(false)
 					local weld = part:FindFirstChildWhichIsA("Weld")
 					expect(weld).to.be.ok()
-					expect(weld.Part0).to.equal(torso)
+					-- The straps stay on the body.
+					local straps = model:FindFirstChild("Straps")
+					local onBody = part == anchor or (straps ~= nil and part:IsDescendantOf(straps))
+					expect(weld.Part0).to.equal(if onBody then torso else anchor)
 				end
 			end
 			local body = find(model, "CanisterBody")

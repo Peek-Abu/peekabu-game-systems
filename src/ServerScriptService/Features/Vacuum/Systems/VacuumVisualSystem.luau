@@ -11,7 +11,8 @@
 	below the tube's top is kept (in studs as modelled) and the attachment is moved with the tube. The hold reads
 	both (VacuumHoldFormulas: `upper` / `lower`), and the built wand carries them where the hands are.
 
-	- `wear` puts the canister backpack on a character: welded to the UpperTorso at the employee's registry fit
+	- `wear` puts the canister backpack on a character: welded (through one joint at the mount, PackAnchor's
+	  VacuumMotionConstants.PACK_JOINT_NAME, which each client bobs locally) to the UpperTorso at the employee's registry fit
 	  (EmployeeRegistry.backpack, at the employee's scale; anyone else is fitted from their torso's size), straps
 	  over the vest, the wand clipped to the pack's right side (the same wand as in the hand, its tube telescoped
 	  in, leaning out and back so its floor head hangs at hip height: VacuumVisualConstants.stow), and a hose (a
@@ -34,6 +35,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
 local EmployeeRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeRegistry)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
+local VacuumMotionConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumMotionConstants)
 local VacuumSkinRegistry = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumSkinRegistry)
 local VacuumSkinRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumSkinRules)
 local Constants = require(ServerScriptService.Features.Vacuum.Data.VacuumVisualConstants)
@@ -132,14 +134,15 @@ local function layWand(
 	parts.FloorHeadLip.CFrame = parts.FloorHead.CFrame * lipOffset
 end
 
-local function weldTo(part: BasePart, torso: BasePart, name: string)
+local function weldTo(part: BasePart, to: BasePart, name: string): Weld
 	prepare(part)
 	local weld = Instance.new("Weld")
 	weld.Name = name
-	weld.Part0 = torso
+	weld.Part0 = to
 	weld.Part1 = part
-	weld.C0 = torso.CFrame:ToObjectSpace(part.CFrame)
+	weld.C0 = to.CFrame:ToObjectSpace(part.CFrame)
 	weld.Parent = part
+	return weld
 end
 
 local function scaled(frame: CFrame, scale: number): CFrame
@@ -409,11 +412,22 @@ function Visual.wear(character: Model, skin: VacuumSkinRegistry.SkinDef?): WornB
 	beam.Attachment0 = outlet
 	beam.Attachment1 = stowedInlet
 	beam.Parent = model
+	-- The canister (and the wand clipped to it) rides one joint on the torso, at the mount: each client bobs it
+	-- locally (VacuumMotionConstants.PACK_JOINT_NAME, VacuumMotionRigSystem); the straps stay on the body.
+	local anchor = Instance.new("Part")
+	anchor.Name = "PackAnchor"
+	anchor.Size = Vector3.new(0.05, 0.05, 0.05)
+	anchor.Transparency = 1
+	anchor.CFrame = mount
+	anchor.Parent = model
+	local joint = weldTo(anchor, torso, VacuumMotionConstants.PACK_JOINT_NAME)
+	joint:SetAttribute(VacuumMotionConstants.REST_ATTRIBUTE, joint.C0)
 	for _, part in model:GetDescendants() do
-		if part:IsA("BasePart") then
+		if part:IsA("BasePart") and part ~= anchor then
+			local onBody = straps ~= nil and part:IsDescendantOf(straps)
 			weldTo(
 				part,
-				torso,
+				if onBody then torso else anchor,
 				if part.Name == VacuumConstants.GAUGE_FILL_NAME then VacuumConstants.GAUGE_WELD_NAME else "VacuumWeld"
 			)
 		end
