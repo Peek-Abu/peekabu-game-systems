@@ -34,7 +34,8 @@ export type QueuePadSystem = {
 	stop: (self: QueuePadSystem) -> (),
 	step: (self: QueuePadSystem, now: number) -> (),
 	departNow: (self: QueuePadSystem, player: Player, now: number) -> boolean,
-	unlock: (self: QueuePadSystem, pad: BasePart) -> (),
+	-- `hold`: the party that left (a local move); they board no pad until they step off this one.
+	unlock: (self: QueuePadSystem, pad: BasePart, hold: { Player }?) -> (),
 	forget: (self: QueuePadSystem, player: Player) -> (),
 	padOf: (self: QueuePadSystem, player: Player) -> BasePart?,
 	firstMisroute: (self: QueuePadSystem, pad: BasePart) -> boolean,
@@ -204,10 +205,16 @@ function QueuePadSystem.new(onDue: OnDue): QueuePadSystem
 			return true
 		end,
 
-		unlock = function(_self, pad)
+		unlock = function(_self, pad, hold)
 			local padId = idByPad[pad]
 			if padId ~= nil then
-				tracker:unlock(padId)
+				local ids: { number } = {}
+				if hold ~= nil then
+					for _, player in hold do
+						table.insert(ids, player.UserId)
+					end
+				end
+				tracker:unlock(padId, ids)
 				publish()
 			end
 		end,

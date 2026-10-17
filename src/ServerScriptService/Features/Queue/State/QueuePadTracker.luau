@@ -6,7 +6,9 @@
 
 	A player is aboard at most one pad (the first that claims them). While a pad departs its party is
 	frozen; `unlock` reopens it empty and the next sample re-boards whoever still stands there, which is
-	how a failed teleport puts the party back on its pad.
+	how a failed teleport puts the party back on its pad. A party that did leave is unlocked with `hold`: a local
+	move can leave them standing on the pad, so each held player boards no pad until a sample of the pad they left
+	shows them off it (they step off and on again to queue anew).
 
 	@class QueuePadTracker
 ]=]
@@ -38,7 +40,7 @@ export type QueuePadTracker = {
 	departNow: (self: QueuePadTracker, userId: number, now: number) -> string?,
 	due: (self: QueuePadTracker, now: number) -> { string },
 	lock: (self: QueuePadTracker, padId: string) -> { number },
-	unlock: (self: QueuePadTracker, padId: string) -> (),
+	unlock: (self: QueuePadTracker, padId: string, hold: { number }?) -> (),
 	forget: (self: QueuePadTracker, userId: number) -> boolean,
 	snapshot: (self: QueuePadTracker) -> WorldTypes.WorldTable,
 }
@@ -59,6 +61,8 @@ local QueuePadTracker = {}
 
 function QueuePadTracker.new(): QueuePadTracker
 	local pads: { [string]: Pad } = {}
+	-- Departed players (UserId -> the pad they left), kept off every pad until they step off that one.
+	local held: { [number]: string } = {}
 
 	local tracker: QueuePadTracker
 	tracker = {
@@ -70,6 +74,11 @@ function QueuePadTracker.new(): QueuePadTracker
 		remove = function(_self, padId)
 			local pad = pads[padId]
 			pads[padId] = nil
+			for userId, from in held do
+				if from == padId then
+					held[userId] = nil
+				end
+			end
 			return if pad ~= nil then pad.members else {}
 		end,
 
@@ -91,10 +100,19 @@ function QueuePadTracker.new(): QueuePadTracker
 			if pad == nil or pad.status ~= "open" then
 				return false
 			end
+			local present: { [number]: boolean } = {}
+			for _, userId in aboard do
+				present[userId] = true
+			end
+			for userId, from in held do
+				if from == padId and not present[userId] then
+					held[userId] = nil
+				end
+			end
 			local free: { number } = {}
 			for _, userId in aboard do
 				local current = self:padOf(userId)
-				if current == nil or current == padId then
+				if held[userId] == nil and (current == nil or current == padId) then
 					table.insert(free, userId)
 				end
 			end
@@ -154,10 +172,15 @@ function QueuePadTracker.new(): QueuePadTracker
 			return table.clone(pad.members)
 		end,
 
-		unlock = function(_self, padId)
+		unlock = function(_self, padId, hold)
 			local pad = pads[padId]
 			if pad == nil then
 				return
+			end
+			if hold ~= nil then
+				for _, userId in hold do
+					held[userId] = padId
+				end
 			end
 			pad.status = "open"
 			pad.members = {}
@@ -165,6 +188,7 @@ function QueuePadTracker.new(): QueuePadTracker
 		end,
 
 		forget = function(_self, userId)
+			held[userId] = nil
 			for _, pad in pads do
 				local index = table.find(pad.members, userId)
 				if index ~= nil then

@@ -10,7 +10,9 @@
 	- Roles: a game registers its place-role table in QueueRegistry ("lobby", "match", any strings). In
 	  Studio or on an unknown PlaceId every role runs in this one server ("local" mode) and a teleport
 	  becomes a move to the role's arrival point (`setArrivalPoint`), so the loop plays through rojo serve.
-	  With no arrival point for the role (its world is not built here) the party stays on its pad.
+	  With no arrival point for the role (its world is not built here) the party stays on its pad. A party that
+	  did move is not re-queued while it still stands there: each member boards again only after stepping off
+	  and on (QueuePadTracker's hold).
 	- Departing (live): a fresh reserved server, the party teleported with a ticket (expected user ids and
 	  the game's payload from `setDepartData`), retried on failure (3 retries, backing off); after the last
 	  the party is back on its pad with a toast and `departFailed` fires. A destination that cannot be
@@ -198,7 +200,8 @@ local function depart(pad: BasePart, padConfig: QueueTypes.PadConfig, party: { P
 		failDeparture(pad, party, reason or `no arrival point for "{destination}"`, not pads:firstMisroute(pad))
 	else
 		departing:Fire(pad, party)
-		pads:unlock(pad)
+		-- The move may leave them standing on the pad (a game moves them later): held off it until they step off.
+		pads:unlock(pad, party)
 		task.defer(function()
 			counters.arrivals += 1
 			arrived:Fire(party, payload)
