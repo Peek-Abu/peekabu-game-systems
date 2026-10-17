@@ -14,6 +14,9 @@
 	  spot refuses them SPOT_COOLDOWN_SECONDS; `evict` (the Manager's catch, the behaviours to come); their character
 	  dying or going; the furniture going (the office rebuilds each shift); picking up something too big. The body comes
 	  out at the first clear exit (in front, behind, either side).
+	- Coming out is heard (the Manager's behaviours design §10.3): HideRules.exitNoise's radius fires `noiseMade` from
+	  where the body comes out (NoiseServiceServer relays it, sources "hideExit" / "hideTumble"); a cramped push-out
+	  also plays the tumble (HideAssets.TUMBLE) to everyone within TUMBLE_SOUND_RADIUS (SoundServiceServer).
 	- API for the Manager's behaviours (the stare-down, sitting at the desk you are under):
 	  `isHidden`, `spotOf`, `seenEntering`, `setSeen`, `evict`, `spots`, `occupantOf`, `hold` (the camping push-out
 	  waits while he is at your spot), `setDoor` (he swings a cabinet's door open to check it: every client draws the
@@ -38,6 +41,7 @@ local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local CargoRegistry = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoRegistry)
 local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
+local HideAssets = require(HideShared.Data.HideAssets)
 local HideConstants = require(HideShared.Data.HideConstants)
 local HideTypes = require(HideShared.Data.HideTypes)
 local HideEvents = require(HideShared.Net.HideEvents)
@@ -48,6 +52,7 @@ local HideOccupancyTracker = require(ServerScriptService.Features.Hide.State.Hid
 local HideSpotSystem = require(ServerScriptService.Features.Hide.Systems.HideSpotSystem)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
+local SoundServiceServer = require(ServerScriptService.Features.Sound.SoundServiceServer)
 local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
 
 type Spot = HideTypes.Spot
@@ -60,6 +65,8 @@ local log = Logger.new("HideServiceServer")
 
 local entered: SignalTyped.Signal<Player, SpotInfo> = SignalTyped.new()
 local exited: SignalTyped.Signal<Player, string, ExitReason> = SignalTyped.new()
+-- Coming out of a spot is heard: (position, radius, source, makers), the Vacuum / Cargo noise seam.
+local noiseMade: SignalTyped.Signal<Vector3, number, string, { number }> = SignalTyped.new()
 local tracker = HideOccupancyTracker.new()
 local witness: Witness? = nil
 local counters: { [string]: number } =
@@ -183,12 +190,23 @@ local function leave(player: Player, reason: ExitReason): boolean
 	if body ~= nil then
 		body.tween:Cancel()
 	end
+	local outAt: Vector3? = nil
 	if body ~= nil and body.root.Parent ~= nil then
 		-- A living body comes out at an exit (also when the furniture went with them in it); a dead one just drops.
 		if spot ~= nil and body.humanoid.Health > 0 then
 			body.root.CFrame = exitFrame(spot, body.root, body.humanoid, body.entry)
+			outAt = body.root.Position
 		end
 		body.root.Anchored = false
+	end
+	-- Heard coming out (left: a small noise; cramped: the tumble, and its sound).
+	local radius = HideRules.exitNoise(reason)
+	if radius ~= nil and outAt ~= nil then
+		local tumble = reason == "cramped"
+		noiseMade:Fire(outAt, radius, if tumble then "hideTumble" else "hideExit", { player.UserId })
+		if tumble then
+			SoundServiceServer:playAt(outAt, HideAssets.TUMBLE, HideConstants.TUMBLE_SOUND_RADIUS)
+		end
 	end
 	if reason == "cramped" then
 		tracker:cool(player.UserId, stay.spotId, os.clock() + HideConstants.SPOT_COOLDOWN_SECONDS)
@@ -299,6 +317,7 @@ export type HideServiceServer = {
 	dependencies: { string },
 	entered: SignalTyped.Signal<Player, SpotInfo>,
 	exited: SignalTyped.Signal<Player, string, ExitReason>,
+	noiseMade: SignalTyped.Signal<Vector3, number, string, { number }>,
 	start: (self: HideServiceServer) -> (),
 	stop: (self: HideServiceServer) -> (),
 	getState: (self: HideServiceServer) -> { [string]: any },
@@ -316,9 +335,10 @@ export type HideServiceServer = {
 }
 
 local HideServiceServer: HideServiceServer = {
-	dependencies = { "CarryServiceServer", "DeathServiceServer", "ToastServiceServer" },
+	dependencies = { "CarryServiceServer", "DeathServiceServer", "SoundServiceServer", "ToastServiceServer" },
 	entered = entered,
 	exited = exited,
+	noiseMade = noiseMade,
 
 	--[=[
 		Builds a spot on every tagged piece of furniture, listens for Exit requests, and lets go of anyone whose

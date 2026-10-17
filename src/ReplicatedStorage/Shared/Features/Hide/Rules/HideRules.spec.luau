@@ -79,4 +79,17 @@ return function()
 			expect(HideRules.secondsLeft(HideConstants.CAMP_SECONDS + 3)).to.equal(0)
 		end)
 	end)
+
+	describe("exitNoise", function()
+		it("is a small noise leaving yourself, a bigger tumble when pushed out cramped", function()
+			expect(HideRules.exitNoise("left")).to.equal(HideConstants.EXIT_NOISE)
+			expect(HideRules.exitNoise("cramped")).to.equal(HideConstants.CRAMPED_NOISE)
+			expect(HideConstants.CRAMPED_NOISE > HideConstants.EXIT_NOISE).to.equal(true)
+		end)
+
+		it("is silent when another rule took you out (evicted, caught, gone)", function()
+			expect(HideRules.exitNoise("evicted")).to.equal(nil)
+			expect(HideRules.exitNoise("gone")).to.equal(nil)
+		end)
+	end)
 end

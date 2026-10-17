@@ -384,6 +384,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	-- Cleanup Crew: Hide (hiding spots)
 	["ReplicatedStorage.Shared.Features.Hide.Data.HideConstants"] = "static tuning and names (no logic)",
 	["ReplicatedStorage.Shared.Features.Hide.Data.HideTypes"] = "type definitions only (no runtime logic)",
+	["ReplicatedStorage.Shared.Features.Hide.Data.HideAssets"] = "asset id slots; registers the tumble sound at load (no decisions)",
 	["ReplicatedStorage.Shared.Features.Hide.Net.HideEvents"] = "ByteNet packet definitions (no logic)",
 	["ServerScriptService.Features.Hide.Systems.HideSpotSystem"] = "CollectionService/ProximityPrompt builder (spot frames specced in HideSpotUtils)",
 	["ServerScriptService.Features.Hide.HideServiceServer"] = "Instance/Players/ByteNet/signal shell (entry, camping and frames specced in HideRules, HideSpotUtils, HideOccupancyTracker)",

@@ -107,6 +107,12 @@ return table.freeze({
 	CAMP_WARN_SECONDS = 20,
 	CAMP_SECONDS = 30,
 	SPOT_COOLDOWN_SECONDS = 10,
+	-- Coming out is heard (the Manager's behaviours design §10.3; NoiseServiceServer relays it): leaving yourself makes a
+	-- small noise of EXIT_NOISE studs, being pushed out cramped a "tumble out" of CRAMPED_NOISE (and the tumble sound,
+	-- HideAssets.TUMBLE, to everyone within TUMBLE_SOUND_RADIUS). Evicted, caught or gone: no noise.
+	EXIT_NOISE = 9,
+	CRAMPED_NOISE = 19,
+	TUMBLE_SOUND_RADIUS = 60,
 	-- The hand items small enough to hide with (the hotbar's small sizes: tiny and light); a big item stops you.
 	POCKETABLE_SIZES = table.freeze({ tiny = true, light = true }),
 	-- The body under the furniture: the root stands where a standing root would (the pose folds the body down), placed

@@ -18,6 +18,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideConstants)
+-- Required for its registration: the server asks this client to play the tumble out of a spot (HideAssets.TUMBLE).
+require(ReplicatedStorage.Shared.Features.Hide.Data.HideAssets)
 local HidePoseFormulas = require(ReplicatedStorage.Client.Features.Hide.Utils.HidePoseFormulas)
 
 type Posed = { motor: Motor6D, target: CFrame }

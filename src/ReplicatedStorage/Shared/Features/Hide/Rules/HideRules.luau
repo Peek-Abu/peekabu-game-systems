@@ -4,8 +4,8 @@
 	2026-10-15-cleanup-crew-chase-kit-design.md §4). In: alive, not being caught, not already hidden, the spot free and
 	not cooling off for them, rested since their last stay (REENTER_SECONDS), within the prompt's range (plus
 	RANGE_TOLERANCE), and empty-handed or holding a small (tiny or light) item. Out: not before MIN_STAY_SECONDS (a tap in and
-	out cannot spam). Stay: fine until CAMP_WARN_SECONDS, cramped until CAMP_SECONDS, then pushed out. Shared: the
-	client's chip counts down with the same rule. Pure.
+	out cannot spam). Stay: fine until CAMP_WARN_SECONDS, cramped until CAMP_SECONDS, then pushed out. Coming out is
+	heard (`exitNoise`). Shared: the client's chip counts down with the same rule. Pure.
 
 	@class HideRules
 ]=]
@@ -66,6 +66,19 @@ function HideRules.camp(elapsed: number): Camp
 		return "cramped"
 	end
 	return "ok"
+end
+
+--[=[
+	The noise radius (studs) of coming out of a spot for `reason`: EXIT_NOISE leaving yourself, CRAMPED_NOISE pushed out
+	(the tumble); nil when another rule took you out (evicted, caught, gone).
+]=]
+function HideRules.exitNoise(reason: HideTypes.ExitReason): number?
+	if reason == "left" then
+		return HideConstants.EXIT_NOISE
+	elseif reason == "cramped" then
+		return HideConstants.CRAMPED_NOISE
+	end
+	return nil
 end
 
 --[=[

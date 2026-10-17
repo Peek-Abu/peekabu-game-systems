@@ -1,7 +1,8 @@
 --!strict
 --[=[
 	NoiseServiceServer: noise from any source, as one stream (Cleanup Crew spec §4, §6.2 "Noise"). Vacuum's
-	pulses and Cargo's drops, splashes, searches and rattles arrive on their `noiseMade` signals; anything else
+	pulses, Cargo's drops, splashes, searches and rattles, and Hide's coming out of a spot (the Manager's behaviours
+	design §10.3) arrive on their `noiseMade` signals; anything else
 	may call `emit`. Every noise fires `made` (Occupant decides whether Harlow hears it, through NoiseRules) and
 	shows every client a ripple at the radius Harlow hears it at (the hearing scale Occupant keeps current).
 
@@ -19,6 +20,7 @@ local NoiseTypes = require(NoiseShared.Data.NoiseTypes)
 local NoiseEvents = require(NoiseShared.Net.NoiseEvents)
 local NoiseRules = require(NoiseShared.Rules.NoiseRules)
 local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
+local HideServiceServer = require(ServerScriptService.Features.Hide.HideServiceServer)
 local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
 
 local made: SignalTyped.Signal<NoiseTypes.NoiseEvent> = SignalTyped.new()
@@ -39,11 +41,11 @@ export type NoiseServiceServer = {
 }
 
 local NoiseServiceServer: NoiseServiceServer = {
-	dependencies = { "VacuumServiceServer", "CargoServiceServer" },
+	dependencies = { "VacuumServiceServer", "CargoServiceServer", "HideServiceServer" },
 	made = made,
 
 	--[=[
-		Relays Vacuum's and Cargo's noise.
+		Relays Vacuum's, Cargo's and Hide's noise.
 	]=]
 	start = function(self)
 		local vacuum = VacuumServiceServer.noiseMade:Connect(
@@ -56,9 +58,15 @@ local NoiseServiceServer: NoiseServiceServer = {
 				self:emit(position, radius, source, makers)
 			end
 		)
+		local hide = HideServiceServer.noiseMade:Connect(
+			function(position: Vector3, radius: number, source: string, makers: { number })
+				self:emit(position, radius, source, makers)
+			end
+		)
 		table.insert(stoppers, function()
 			vacuum:Disconnect()
 			cargo:Disconnect()
+			hide:Disconnect()
 		end)
 	end,
 
