@@ -198,3 +198,96 @@ typing. `occupantwork` (Admins) sends him to a desk on demand.
 - He does not notice a hider under the desk he sits at for an ordinary break (now he only keeps his knees clear).
 - STARE_GAP 3.6 puts him further from the spot during the stare and the cabinet check (the face at an opened cabinet
   reads smaller).
+
+## 10. Awareness: peripheral vision and the head turn (2026-10-17)
+
+**The report.** Pushed out of a desk by "cramped" (HideConstants CAMP_SECONDS, 30 s), the player stood right beside
+him in the same room and he carried on. He only saw a 100° cone (60 studs) and a 40° long cone (125 studs), and
+coming out of a hiding spot made no noise at all. The developer approved options 1 + 2: peripheral vision, and a
+noise-driven head turn as his signature "I noticed something" tell. Every number below is in `OccupantConstants`
+(or `HideConstants` for the noises), tuning hypotheses as ever.
+
+### 10.1 Peripheral vision
+
+- The front cone is unchanged: **100°, 60 studs, seen at once**; the long cone too (40°, 125 studs, 0.35–1.4 s).
+- **The peripheral zone** (`OccupantSightUtils.peripheral`): outside the front cone but within **200° total (±100°)**
+  of his heading (`PERIPHERAL_ANGLE`), within **25 studs** (`PERIPHERAL_RANGE`), with a clear line of sight. Never a
+  hidden player, one in their grace, or anyone in the truck's box.
+- Someone there is **noticed slowly** (`OccupantSightUtils.glanceDelay`): **1.5 s** at his side rising to **2.5 s** at
+  25 studs (`GLANCE_SECONDS`, linear in the distance), **×1.4 crouched** (`GLANCE_CROUCH`; the character's `Crouching`
+  attribute, which nothing sets yet, so dormant). At 12 studs, about 2.0 s.
+- Only the nearest player in the zone is counted (`Mind.glanceId`, `glanceSeconds`); another becoming nearest starts
+  from 0. Out of the zone, the count falls back **2 s a second** (`NOTICE_DECAY`, as the long cone) and is dropped at 0.
+- He keeps walking while it counts (no tell). In patrol, investigate and search only (as the long cone).
+- When it completes he does **the head turn** at them, never an instant chase.
+
+### 10.2 The head turn (a new mode, `alert`)
+
+- **Triggers.**
+  - A peripheral notice completing (at that player).
+  - A noise he hears (through `NoiseRules`, the hearing scale and the breather's `BREATHER_HEARING`, as before) from
+    **outside his front cone** (more than 50° off his heading), while he patrols or investigates. A noise in front of
+    him is investigated as before. A search still re-aims at a noise directly (he is already hunting and running).
+- **The turn.** He stops dead (no move) and turns **only his head** to the point: the desk ambush's 180° `swivel`
+  on the long neck (0.35 s), the Noticing face. He holds **0.6–1.0 s** (`TURN_HOLD`, rolled per turn) after the swivel
+  lands (`TURN_SWIVEL` 0.35 s), so the check comes **0.95–1.35 s** after the trigger. While he holds, his head follows
+  the peripheral player as long as he can still see them that way.
+- **The check** (`OccupantSightUtils.toward`): anyone not hidden with a clear line, within **60 studs**
+  (`SIGHT_RANGE`), inside a **100° cone** (`SIGHT_ANGLE`) around the direction his head turned. The player who
+  triggered it is preferred, then the nearest. Found: **the chase** (the usual "spotted" cue and menace jump).
+- **Not found** (they hid again, or stepped behind a wall): he **investigates the point** (the usual walk, "curious",
+  look around, the suspicion stare at a spot by it).
+- Anyone who walks into his front cone during the hold is chased at once ("sight beats everything"). Other noises
+  during the hold are ignored. The shift's break cancels it as it cancels everything.
+- **Fairness.** The hold is the player's window: from the trigger they have ~1 s to get out of that cone or into a
+  hiding spot. Going into a spot during the hold is not "seen entering" (his body never turned), so he investigates
+  and may stare at the spot on a suspicion, as for any noise by the spots.
+- Replicated as the mode `alert`: the client's dread reads it as **aware** (`OccupantDreadFormulas` HUNTING), the
+  crew's faces as alarmed (`EmployeeFaceRules`), his face Noticing; `harlowAmbush` plays from his head as he turns.
+
+### 10.3 New noises (Hide, relayed by `NoiseServiceServer`)
+
+- **Leaving a spot yourself** (`left`): radius **9** (`EXIT_NOISE`), from where you come out.
+- **Pushed out by "cramped"** (`cramped`): a "tumble out", radius **19** (`CRAMPED_NOISE`), plus a short sound for
+  everyone near (`hideTumble`: the in-house body-fall C at 0.45 volume, rolled off by 45 studs). PLACEHOLDER: a
+  dedicated "tumble out of the furniture" sound is to be made.
+- Evicted, caught, gone: no noise (another rule already handles those moments).
+- `HideRules.exitNoise(reason)` gives the radius; `HideServiceServer.noiseMade` fires it, `NoiseServiceServer`
+  relays it like Vacuum's and Cargo's (sources `hideExit`, `hideTumble`).
+- So the reported case now plays: pushed out beside him → a 19-stud noise from his side → the head turn → he sees
+  you → the chase. A voluntary exit is heard only within 9 studs × his hearing scale (1 at tier 0 with a crew; it grows with the
+  tier and for a solo player), so one across the room is not heard.
+
+### 10.4 The desk ambush, folded in
+
+- **Trigger:** a noise he hears, a player he sees (his body's cone), or a player within **14 studs with a clear line
+  of sight** in any direction (`AMBUSH_RADIUS`). It no longer works through walls.
+- **After it** (the head swivel and AMBUSH_HOLD 1.1 s, unchanged, are the head turn): he chases anyone he sees in
+  his body's cone **or in the cone his head is turned to** (`OccupantSightUtils.toward`), else investigates the point.
+  A player right behind him is now chased, not investigated.
+- During a sit-in a noise at the spot still marks the hider (the certain catch) only while they are still under it:
+  the hider bolting makes their exit noise, and that is an ambush.
+
+### 10.5 How it composes
+
+- **Director:** `alert` is not patrol, so no steer or work break starts during it; the menace gauge moves as usual
+  (a chase from it bumps MENACE_SPOTTED). On a breather a turn needs a noise within BREATHER_HEARING (20); sight
+  (and so the peripheral notice) still works.
+- **Stare-down / sit-in / ambush:** unchanged triggers inside their modes; the stare's own noise handling is first.
+- **Chase / search:** the turn's chase is the ordinary chase; losing them goes to the ordinary search.
+- **Several players:** one turn at a time, at one point; the check takes the triggering player, else the nearest in
+  that cone.
+- **Hide's witness** stays the body's sight (near or far cone), not the peripheral zone or the turned head.
+
+### 10.6 Modules
+
+| Feature | Realm | Subfolder | Name | Job |
+|---|---|---|---|---|
+| Occupant | server | Rules | OccupantAlertRules | The head turn: the peripheral notice, whether a noise turns his head, the alert mode's think |
+| Hide | shared | Data | HideAssets | The hide feature's sounds (the tumble), registered at load |
+
+Changed: `OccupantSightUtils` (`peripheral`, `glanceDelay`, `toward`, `beside`), `OccupantMindUtils`,
+`OccupantBrainRules`, `OccupantWorkRules` (the rise), `OccupantStareRules` (`ambushes`), `OccupantTypes` (`alert`,
+`glanceId` / `glanceSeconds`, `Glimpse.crouched`), `OccupantConstants`, `OccupantSenseSystem` (crouch),
+`OccupantFaceUtils`, `OccupantDreadFormulas`, `OccupantWarningSystem` (the turn's sound), `EmployeeFaceRules`,
+`HideRules`, `HideConstants`, `HideServiceServer`, `NoiseServiceServer`, `HidePoseSystem` (registers the sound).
