@@ -97,6 +97,27 @@ return function()
 			expect(sat.intent.kind).to.equal("idle")
 		end)
 
+		it(
+			"someone hid under the desk while he walked to it: he sits back clear of them and holds their push-out",
+			function()
+				local walking = OccupantBrainRules.step(due(), senses())
+				local hider = { userId = 7, spotId = "s1", seen = false }
+				local sat = OccupantBrainRules.step(
+					walking.mind,
+					senses({ now = 101, position = AT_SEAT, rolls = { 0 }, hiders = { hider } })
+				)
+				-- An ordinary work break (he does not know): no tip, no sit-in cue, but his knees stay out of their huddle
+				-- and being cramped never throws them into his lap.
+				expect(sat.mind.phase).to.equal("type")
+				expect(sat.mind.sitIn).to.equal(nil)
+				expect(sat.cue).to.equal(nil)
+				expect(kinds(sat)).to.equal("sit,holdCamp")
+				expect((sat.effects[1].seat.Position - SEAT.Position).Magnitude).to.be.near(C.SIT_IN_BACK, 1e-3)
+				expect(sat.effects[2].userId).to.equal(7)
+				expect(sat.effects[2].untilTime > 101 + C.WORK_SECONDS.min).to.equal(true)
+			end
+		)
+
 		it("stands up and walks on when the typing is done", function()
 			local mind = seated(101, { 0 })
 			local still =

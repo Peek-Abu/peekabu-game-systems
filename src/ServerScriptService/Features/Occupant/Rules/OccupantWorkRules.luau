@@ -60,7 +60,12 @@ local function toDesk(current: Mind, senses: Senses, seen: { Glimpse }, heard: V
 		return M.walkOn(current, senses, nil)
 	end
 	if M.flat(senses.position, desk.seat.Position) <= M.ARRIVE_SEAT then
-		local seat = if current.sitIn
+		-- Someone under this desk: the sit-in's hider, or one who crawled in while he walked here (he does not know
+		-- them: an ordinary break, no tip). Either way he sits back so his knees stay out of their huddle, and their
+		-- camping push-out waits until he has walked off.
+		local unaware = if not current.sitIn and desk.spotId ~= nil then M.hiderIn(senses, desk.spotId) else nil
+		local under: number? = if current.sitIn then quarry elseif unaware ~= nil then unaware.userId else nil
+		local seat = if under ~= nil
 			then OccupantDeskUtils.sitBack(desk.seat, OccupantConstants.SIT_IN_BACK)
 			else desk.seat
 		local hold = M.within(
@@ -71,15 +76,13 @@ local function toDesk(current: Mind, senses: Senses, seen: { Glimpse }, heard: V
 		nextMind.seated = true
 		local step: Step = { mind = nextMind, intent = IDLE, cue = if current.sitIn then "sitIn" else nil }
 		step = M.addEffect(step, { kind = "sit", seat = seat, desk = desk.frame, deskSize = desk.size })
-		if current.sitIn and quarry ~= nil then
+		if under ~= nil then
 			-- Held until he has stood up and walked off, so being cramped never throws them into his lap.
-			local tail = OccupantConstants.TIP_SECONDS
-				+ OccupantConstants.TIP_HOLD
-				+ OccupantConstants.TIP_BACK
-				+ OccupantConstants.TYPE_MORE
-				+ OccupantConstants.STAND_SECONDS
-				+ 5
-			step = M.addEffect(step, { kind = "holdCamp", userId = quarry, untilTime = now + hold + tail })
+			local tail = OccupantConstants.STAND_SECONDS + 5
+			if current.sitIn then
+				tail += OccupantConstants.TIP_SECONDS + OccupantConstants.TIP_HOLD + OccupantConstants.TIP_BACK + OccupantConstants.TYPE_MORE
+			end
+			step = M.addEffect(step, { kind = "holdCamp", userId = under, untilTime = now + hold + tail })
 		end
 		return step
 	end
