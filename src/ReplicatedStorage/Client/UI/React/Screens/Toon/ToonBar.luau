@@ -1,8 +1,8 @@
 --!strict
 --[=[
 	ToonBar: a meter in the kit's style: a deep track with the ink outline and an inner shadow, a glossy capsule fill
-	by kind (`gloom`: the violet goo with bubbles and a glossy meniscus at its leading edge; `xp`: mint; `stamina`: gold;
-	`load`: grape) and an optional stroked label across it ("312 / 530"). `fill` is 0..1, a number or a binding (a
+	by kind (`gloom`: the violet goo with bubbles; `xp`: mint; `stamina`: gold; `load`: grape) whose rounded leading end
+	carries the fill's own light rim and no marker (the 2026-10-17 review dropped the meniscus cap) and an optional stroked label across it ("312 / 530"). `fill` is 0..1, a number or a binding (a
 	tween). Presentational (exempt; story in ToonBar.story).
 
 	@class ToonBar
@@ -74,23 +74,32 @@ local function ToonBar(props: ToonBarProps): React.ReactNode
 			ScaleType = Enum.ScaleType.Tile,
 			TileSize = UDim2.fromOffset(44, 44),
 		}, { corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }) })
-		-- The glossy meniscus riding the leading edge.
-		fillChildren.meniscus = e("Frame", {
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromScale(1, 0.5),
-			Size = UDim2.new(0, 20, 1, 8),
-			BackgroundColor3 = COLOR.gooHi,
-			BorderSizePixel = 0,
-			ZIndex = 2,
-		}, {
-			corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
-			stroke = e("UIStroke", { Color = COLOR.ink, Thickness = 3 }),
-			gradient = e("UIGradient", {
-				Color = ColorSequence.new(Color3.fromHex("E3D2FF"), COLOR.gooBase),
-				Rotation = 60,
-			}),
-		})
 	end
+	-- The fill's own light rim: the capsule's rounded leading end reads as one clean, bevelled edge (no marker on it).
+	-- (A stroke on a frame inset by its own thickness, so it stays inside the fill, clear of the track's ink outline.)
+	fillChildren.rim = e("Frame", {
+		Position = UDim2.fromOffset(2, 2),
+		Size = UDim2.new(1, -4, 1, -4),
+		BackgroundTransparency = 1,
+		ZIndex = 3,
+	}, {
+		corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
+		stroke = e("UIStroke", {
+			Color = COLOR.white,
+			Thickness = 2,
+			Transparency = 0.5,
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+		}, {
+			gradient = e("UIGradient", {
+				Rotation = 90,
+				Transparency = NumberSequence.new({
+					NumberSequenceKeypoint.new(0, 0.1),
+					NumberSequenceKeypoint.new(0.55, 0.65),
+					NumberSequenceKeypoint.new(1, 1),
+				}),
+			}),
+		}),
+	})
 	fillChildren.minimum = e("UISizeConstraint", { MinSize = Vector2.new(24, 0) })
 	local labelSize = props.labelSize or 24
 	return e("Frame", {
