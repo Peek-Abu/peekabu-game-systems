@@ -7,8 +7,13 @@
 	- held: the route slip, from the moment the hold is published. Once the hold is built it streams the area around
 	  its spot in (Player:RequestStreamAroundAsync) and checks the rest (ShiftTransitRules.verdict): the new office's
 	  model (its LayoutSeed attribute), the character on its spot, the lighting preset applied (OfficeAtmosphereSystem
-	  against OfficeAtmosphereUtils.preset). When ready, or out of time (logged with what it still waited for), it
-	  reports ready for that hold (ShiftEvents.TransitReady), stamps ARRIVED for TRANSIT_ARRIVED_SECONDS, then clears.
+	  against OfficeAtmosphereUtils.preset). Then the scene must hold still (ShiftTransitRules.scene complete and the
+	  office's lights, tagged OccupantConstants.LIGHT_TAG, no longer streaming in) for TRANSIT_SETTLE_SECONDS and
+	  TRANSIT_SETTLE_FRAMES frames (the longer COLD settle when the camera has moved more than TRANSIT_COLD_DISTANCE
+	  since the slip went up: the first arrival from the depot), so the engine's own light has caught up before the
+	  reveal. When ready, or out of
+	  time (logged with what it still waited for), it reports ready for that hold (ShiftEvents.TransitReady), stamps
+	  ARRIVED for TRANSIT_ARRIVED_SECONDS, then clears.
 	- booting: plain black until the first shift and transit sync, at most TRANSIT_BOOT_SECONDS.
 	- a respawn during a running shift (after a catch): a black blink of TRANSIT_BLINK_SECONDS, no slip.
 
@@ -18,12 +23,14 @@
 	@class ShiftTransitSystem
 ]=]
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
+local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftEvents = require(ReplicatedStorage.Shared.Features.Shift.Net.ShiftEvents)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
@@ -62,6 +69,13 @@ local bootUntil = 0
 local synced = false
 local waitingFor = ""
 local counters = { shown = 0, timeouts = 0 }
+-- The settle (ShiftTransitRules): since when (os.clock()) and for how many frames the held scene has been complete and
+-- unchanged (nil: it is not), and the office light count it was complete with.
+local settledSince: number? = nil
+local settledFrames = 0
+local settledLights = -1
+-- Where the camera was when the slip went up for the shown hold (the cold check).
+local shownFrom: Vector3? = nil
 
 local function rootPosition(): Vector3?
 	local character = Players.LocalPlayer.Character
@@ -119,19 +133,44 @@ local function step()
 		if shownId ~= hold.id then
 			shownId = hold.id
 			shownAt = now
+			local camera = Workspace.CurrentCamera
+			shownFrom = if camera ~= nil then camera.CFrame.Position else nil
 			counters.shown += 1
 		end
 		if hold.built then
 			stream(hold)
 		end
-		local verdict, reason = ShiftTransitRules.verdict({
+		local input: ShiftTransitRules.VerdictInput = {
 			hold = hold,
 			shownFor = now - shownAt,
 			seedSeen = seedSeen(hold.seed),
 			position = rootPosition(),
 			streamed = streamed[hold.id] == true,
 			lit = lit(),
-		})
+			settledFor = 0,
+			settledFrames = 0,
+			cold = false,
+		}
+		local from = shownFrom
+		local camera = Workspace.CurrentCamera
+		if from ~= nil and camera ~= nil then
+			input.cold = (camera.CFrame.Position - from).Magnitude > ShiftConstants.TRANSIT_COLD_DISTANCE
+		end
+		-- The scene restarts its settle whenever it is incomplete or more of the office's lights stream in.
+		local lights = #CollectionService:GetTagged(OccupantConstants.LIGHT_TAG)
+		if ShiftTransitRules.scene(input) ~= nil or lights ~= settledLights then
+			settledSince = nil
+			settledLights = lights
+		elseif settledSince == nil then
+			settledSince = now
+			settledFrames = 0
+		end
+		local since = settledSince
+		if since ~= nil then
+			input.settledFor = now - since
+			input.settledFrames = settledFrames
+		end
+		local verdict, reason = ShiftTransitRules.verdict(input)
 		waitingFor = reason or ""
 		if verdict ~= "waiting" then
 			if verdict == "timeout" then
@@ -143,6 +182,10 @@ local function step()
 			arrivedUntil = now + ShiftConstants.TRANSIT_ARRIVED_SECONDS
 			pending = false
 		end
+	end
+	if not pending then
+		settledSince = nil
+		settledLights = -1
 	end
 	local arriving = now < arrivedUntil
 	local cover = ShiftTransitRules.cover({
@@ -185,6 +228,7 @@ function ShiftTransitSystem.start()
 	bootUntil = os.clock() + ShiftConstants.TRANSIT_BOOT_SECONDS
 	local elapsed = CHECK_INTERVAL
 	local ticking = RunService.Heartbeat:Connect(function(deltaTime: number)
+		settledFrames += 1
 		elapsed += deltaTime
 		if elapsed >= CHECK_INTERVAL then
 			elapsed = 0

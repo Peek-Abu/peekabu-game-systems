@@ -110,18 +110,29 @@ return table.freeze({
 	-- the clients' screens to fade in (FADE_IN), then resets and rebuilds the office and places the crew in its truck.
 	-- Each client reveals (FADE_OUT, after the ARRIVED stamp for ARRIVED_SECONDS) once it sees the new office, its
 	-- character within PLACE_TOLERANCE studs of its spot, the area streamed in (STREAM_TIMEOUT) and the lighting
-	-- preset applied, but never before MIN_SECONDS, and anyway after CLIENT_TIMEOUT. The shift clock starts once the
-	-- whole crew reported ready, or TRANSIT_TIMEOUT after the hold began.
+	-- preset applied, once that scene has held still SETTLE_SECONDS and SETTLE_FRAMES rendered frames, or
+	-- COLD_SETTLE_SECONDS and COLD_SETTLE_FRAMES when the camera arrived from more than COLD_DISTANCE studs away (the
+	-- depot), but never before MIN_SECONDS, and anyway after CLIENT_TIMEOUT. The settle is the engine's own light
+	-- catching up, which no API reports. Measured live 2026-10-16 (Studio, about 40 fps): with every Lighting value and
+	-- light already set, the render stays dark about 1 s after a rebuilt office streams in when the camera was already
+	-- nearby (another shift), and 5-7 s after the camera first lands in the office from the depot; the frames make a
+	-- slow client wait longer. The shift clock starts once the whole crew reported ready, or TRANSIT_TIMEOUT after the
+	-- hold began.
 	TRANSIT_ENTRY = "shiftTransit",
 	TRANSIT_COVER_SECONDS = 0.7,
-	TRANSIT_TIMEOUT = 15,
-	TRANSIT_CLIENT_TIMEOUT = 12,
+	TRANSIT_TIMEOUT = 17,
+	TRANSIT_CLIENT_TIMEOUT = 14,
 	TRANSIT_MIN_SECONDS = 1.5,
 	TRANSIT_FADE_IN = 0.3,
 	TRANSIT_FADE_OUT = 0.5,
 	TRANSIT_ARRIVED_SECONDS = 0.45,
 	TRANSIT_PLACE_TOLERANCE = 8,
 	TRANSIT_STREAM_TIMEOUT = 6,
+	TRANSIT_SETTLE_SECONDS = 2,
+	TRANSIT_SETTLE_FRAMES = 120,
+	TRANSIT_COLD_DISTANCE = 500,
+	TRANSIT_COLD_SETTLE_SECONDS = 6,
+	TRANSIT_COLD_SETTLE_FRAMES = 300,
 	-- A client starts black until its first shift and transit sync (at most BOOT_SECONDS), so nothing unlit shows.
 	TRANSIT_BOOT_SECONDS = 4,
 	-- A respawn (after a catch) blinks black this long, then fades out: no load screen.
