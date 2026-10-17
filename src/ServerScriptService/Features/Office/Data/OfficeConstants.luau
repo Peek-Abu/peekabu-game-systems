@@ -142,7 +142,10 @@ return table.freeze({
 	LIGHT_SPACING = 15,
 	LIGHT_SIZE = Vector3.new(3, 0.3, 1.2),
 	LIGHT_COLOR = Color3.fromRGB(215, 228, 255),
-	LIGHT_RANGE = 20,
+	-- At least 1.25x the reach from a lamp to the floor corner between neighbouring lamps
+	-- (sqrt(WALL_HEIGHT^2 + 2 * (LIGHT_SPACING / 2)^2) = 16.02 studs, so 20.02), or the corners go dark
+	-- (OfficeBuildSystem.spec "ceiling lamp coverage"). The night is dimmed by LIGHT_BRIGHTNESS, not the range.
+	LIGHT_RANGE = 21,
 	LIGHT_BRIGHTNESS = 0.5,
 	-- The invisible volume over the truck's box (the one safe place) that Harlow's paths never enter.
 	SAFE_ZONE_NAME = "SafeZone",
