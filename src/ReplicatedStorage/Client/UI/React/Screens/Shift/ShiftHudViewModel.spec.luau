@@ -38,7 +38,7 @@ local function rectGap(button, rect)
 	return math.sqrt(dx * dx + dy * dy) - button.size / 2
 end
 
-local BUTTONS = { "primary", "drop", "throw", "sprint" }
+local BUTTONS = { "primary", "drop", "throw", "sprint", "crouch" }
 
 -- Every gap the arc must keep, as a list of the ones it breaks (empty when clear): >= 16 px from the Jump button and
 -- between buttons, and right of the thumbstick zone (the left 40% of a `width` px screen). Pure, so it can live
@@ -226,6 +226,22 @@ return function()
 			expect(ShiftHudViewModel.buttons(nil, false, true).sprint).to.equal(false)
 		end)
 
+		it("offers the CROUCH toggle with or without a load, never while hiding", function()
+			expect(ShiftHudViewModel.buttons(nil, false).crouch).to.equal(true)
+			expect(ShiftHudViewModel.buttons({ carrying = "coffeeMachine" }, false).crouch).to.equal(true)
+			expect(ShiftHudViewModel.buttons(nil, false, true).crouch).to.equal(false)
+		end)
+
+		it("puts CROUCH right above the Jump button, its own column", function()
+			for _, short in { 390, 768 } do
+				local arc = ShiftHudViewModel.arcFor(short)
+				local crouchCentre = arc.crouch.x + arc.crouch.size / 2
+				local jumpCentre = arc.jump.x + arc.jump.size / 2
+				expect(math.abs(crouchCentre - jumpCentre) <= 1).to.equal(true)
+				expect(arc.crouch.y + arc.crouch.size <= arc.jump.y).to.equal(true)
+			end
+		end)
+
 		it("keeps SPRINT clear of the other buttons on a narrow phone too", function()
 			expect(arcFailures(ShiftHudViewModel.arcFor(375), 667)).to.equal("")
 		end)
@@ -369,6 +385,7 @@ return function()
 	describe("key hints", function()
 		it("names keys and mouse buttons the way the HUD prints them", function()
 			expect(ShiftHudViewModel.keyName(Enum.KeyCode.G)).to.equal("G")
+			expect(ShiftHudViewModel.keyName(Enum.KeyCode.LeftControl)).to.equal("Ctrl")
 			expect(ShiftHudViewModel.keyName(Enum.UserInputType.MouseButton1)).to.equal("LMB")
 			expect(ShiftHudViewModel.keyName(Enum.KeyCode.Left)).to.equal("←")
 		end)
@@ -394,10 +411,11 @@ return function()
 
 		it("names the hint actions it reads bindings for", function()
 			local actions = ShiftHudViewModel.HINT_ACTIONS
-			expect(#actions).to.equal(5)
+			expect(#actions).to.equal(6)
 			expect(actions[1]).to.equal("vacuum")
 			expect(actions[4]).to.equal("interact")
 			expect(actions[5]).to.equal("sprint")
+			expect(actions[6]).to.equal("crouch")
 		end)
 
 		it("draws the hint row on desktop with a keyboard only", function()

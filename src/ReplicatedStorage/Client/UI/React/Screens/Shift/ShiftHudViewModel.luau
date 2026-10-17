@@ -24,6 +24,8 @@ local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTyp
 local ShiftCurrencyUtils = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftCurrencyUtils)
 local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
 local SprintRules = require(ReplicatedStorage.Shared.Features.Sprint.Rules.SprintRules)
+local CrouchConstants = require(ReplicatedStorage.Shared.Features.Crouch.Data.CrouchConstants)
+local CrouchRules = require(ReplicatedStorage.Shared.Features.Crouch.Rules.CrouchRules)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local ShiftPromptStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftPromptStore)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
@@ -82,6 +84,8 @@ export type ButtonsView = {
 	throw: boolean,
 	-- SPRINT (held): whenever the player is not hiding (a load slows it, it never forbids it).
 	sprint: boolean,
+	-- CROUCH (a toggle, lit while crouched): whenever the player is not hiding (the server refuses it with a big item).
+	crouch: boolean,
 }
 
 -- A round button (or the Jump button's square) as its top-left corner's offset from the screen's bottom-right corner
@@ -97,6 +101,8 @@ export type ArcView = {
 	drop: ArcSpot,
 	throw: ArcSpot,
 	sprint: ArcSpot,
+	-- CROUCH: right above the engine's Jump button.
+	crouch: ArcSpot,
 	-- The engine's Jump button the arc keeps clear of.
 	jump: ArcSpot,
 }
@@ -230,8 +236,8 @@ end
 --[=[
 	The phone's action buttons (Figma 1d/1e): one big button that is VACUUM with empty hands and LOAD while holding
 	something (lit green when the truck's Load prompt is up, `loadReady`); DROP / THROW only with something in hand
-	(THROW only for a throwable item); SPRINT whenever not `hiding`. The hotbar's slots are tapped on the hotbar
-	itself.
+	(THROW only for a throwable item); SPRINT and CROUCH whenever not `hiding`. The hotbar's slots are tapped on the
+	hotbar itself.
 ]=]
 function ShiftHudViewModel.buttons(
 	me: PublicPlayerTypes.PublicPlayer?,
@@ -250,6 +256,7 @@ function ShiftHudViewModel.buttons(
 		drop = holding,
 		throw = def ~= nil and def.throwable,
 		sprint = SprintRules.offered(hiding == true),
+		crouch = CrouchRules.offered(hiding == true),
 	}
 end
 
@@ -276,6 +283,8 @@ local PHONE_ARC: ArcView = table.freeze({
 	throw = spot(-289, -196, 72),
 	-- SPRINT: up and left of DROP, clear of THROW and of the thumbstick zone on the narrowest landscape phones.
 	sprint = spot(-380, -196, 72),
+	-- CROUCH: over the Jump button, 18 px above it (the thumb's natural reach: jump and crouch on one column).
+	crouch = spot(-95, -180, 72),
 	jump = spot(-95, -90, 70),
 })
 
@@ -289,6 +298,8 @@ local TABLET_ARC: ArcView = table.freeze({
 	throw = spot(-262, -316, 72),
 	-- SPRINT: above THROW (the arc's left edge stays inside the right 60% down to 501 px).
 	sprint = spot(-262, -408, 72),
+	-- CROUCH: centred over the large Jump button, 20 px above it.
+	crouch = spot(-146, -302, 72),
 	jump = spot(-170, -210, 120),
 })
 
@@ -367,6 +378,7 @@ local KEY_NAMES: { [string]: string } = {
 	Left = "←",
 	Right = "→",
 	LeftShift = "Shift",
+	LeftControl = "Ctrl",
 }
 
 -- A key's legend as the HUD prints it on a KeyChip.
@@ -381,6 +393,7 @@ local HINTS: { { action: string, label: string, hold: boolean } } = {
 	{ action = "throw", label = "throw", hold = false },
 	{ action = "interact", label = "bank / search", hold = false },
 	{ action = "sprint", label = "sprint", hold = true },
+	{ action = CrouchConstants.ACTION, label = "crouch", hold = true },
 }
 
 local hintActions: { string } = {}

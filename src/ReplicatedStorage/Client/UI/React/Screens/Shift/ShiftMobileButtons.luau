@@ -10,7 +10,9 @@
 	A HUD widget: it reads the shift snapshot, the local player's public entry, the scare beat and the touch flag, and
 	draws what ShiftHudViewModel.mobileButtons decides (whether the arc shows, VACUUM or BANK, which buttons are
 	available or lit). SPRINT (held, any time but while hiding; a load slows it) sits up and left of DROP; it
-	holds the sprint through SprintServiceClient. The base Input feature has no touch bindings, so the buttons call the Vacuum and Cargo client
+	holds the sprint through SprintServiceClient. CROUCH (a toggle, any time but while hiding) sits right above the
+	Jump button and lights while the player is crouched (CrouchStore: the crouch indicator on a phone); it toggles
+	through CrouchServiceClient. The base Input feature has no touch bindings, so the buttons call the Vacuum and Cargo client
 	services directly. The big button keeps the hold semantics for VACUUM. As BANK it is usable (and lit) only while the
 	truck's Load prompt is shown (ShiftPromptStore, ShiftHudViewModel.loadReady: the engine takes a touch hold only on
 	a shown prompt); pressing holds that prompt and releasing lets go, through the `onPrompt` prop (ShiftServiceClient
@@ -35,6 +37,8 @@ local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync
 local VacuumServiceClient = require(ReplicatedStorage.Client.Features.Vacuum.VacuumServiceClient)
 local HideStore = require(ReplicatedStorage.Client.Features.Hide.State.HideStore)
 local SprintServiceClient = require(ReplicatedStorage.Client.Features.Sprint.SprintServiceClient)
+local CrouchServiceClient = require(ReplicatedStorage.Client.Features.Crouch.CrouchServiceClient)
+local CrouchStore = require(ReplicatedStorage.Client.Features.Crouch.State.CrouchStore)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local usePaperViewport = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperViewport)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
@@ -131,6 +135,7 @@ local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactN
 	local scaring = useAtom(OccupantCatchStore.scaring)
 	local shownPrompt = useAtom(ShiftPromptStore.shown)
 	local hiding = useAtom(HideStore.hidden) ~= nil
+	local crouching = useAtom(CrouchStore.crouching)
 	local player = Players.LocalPlayer
 	local me = if player ~= nil then publicPlayers[StateSyncConstants.publicEntryKey(player.UserId)] else nil
 	local onPrompt = if props ~= nil then props.onPrompt else nil
@@ -243,6 +248,18 @@ local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactN
 				end,
 				onHoldEnd = function()
 					SprintServiceClient:setHeld(false)
+				end,
+			})
+			else nil,
+		crouch = if view.crouch
+			then e(ActionButton, {
+				label = "CROUCH",
+				spot = arc.crouch,
+				large = false,
+				available = true,
+				ready = crouching,
+				onActivated = function()
+					CrouchServiceClient:toggle()
 				end,
 			})
 			else nil,
