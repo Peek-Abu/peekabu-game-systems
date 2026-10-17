@@ -1,12 +1,13 @@
 --!strict
 --[=[
-	DepotCardPanel: the travel cards (Figma World UI 2c, S1), centred at 40% of the screen height and scaled by `scale`
-	(WorldBillboardViewModel.screenScale). Drive: a 520x260 cream dispatch ticket tilted 1.5° with a 46 px ink
-	letterhead ("TRUCK n" in glow green on the right), ON THE ROAD (Oswald 58), "Heading to …" (Special Elite 24) and a
-	road of 13 dashes (24x6, every 36 px) that a 30x20 stamp-red truck block crosses over the card's seconds. Arrival: a
-	640x400 manila folder with a 220 px ARRIVAL tab, the client (Oswald 56), the job line (Special Elite 26), a 330x170
-	cream CLEARANCE CONTRACT slip tilted 1.5° (CLEAR n in Oswald 58, its deadline) and the note on a sticky tilted -2°.
-	Presentational; the lines are DepotCardViewModel. Remount it per card (DepotCard keys it) so the truck starts again.
+	DepotCardPanel: the travel cards in the V1 kit, centred at 40% of the screen height and scaled by `scale`
+	(WorldBillboardViewModel.screenScale). Drive: a 520x260 cream panel on the depth stack tilted 1.5° under a grape
+	header (the dispatch letterhead, "TRUCK n" on a gold pill, the truck render breaking the corner), ON THE ROAD in
+	stroked display type, "Heading to …" and a lilac road of 13 dashes the truck render drives along over the card's
+	seconds. Arrival: a 640x400 cream panel with a mint ARRIVAL sticker breaking its top-left corner, the client in big
+	stroked type, the job line, the site contract on a dark plate (its name on a grape pill, the Gloom to remove as a
+	stroked grape number, its deadline) and the note on a lilac card tilted -2°. Presentational; the lines are
+	DepotCardViewModel. Remount it per card (DepotCard keys it) so the truck starts again.
 
 	@class DepotCardPanel
 ]=]
@@ -15,13 +16,15 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
 local DepotCardViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotCardViewModel)
-local PaperLabel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperLabel)
 local PaperScaleContext = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperScaleContext)
-local PaperSheet = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperSheet)
-local PaperTexture = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperTexture)
-local StickyNote = require(ReplicatedStorage.Client.UI.React.Screens.Paper.StickyNote)
-local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local usePaperMotion = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperMotion)
+local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
+local ToonIcon = require(Toon.ToonIcon)
+local ToonPanel = require(Toon.ToonPanel)
+local ToonPill = require(Toon.ToonPill)
+local ToonSurface = require(Toon.ToonSurface)
+local ToonText = require(Toon.ToonText)
+local UIToonConstants = require(Toon.UIToonConstants)
 
 local e = React.createElement
 
@@ -32,63 +35,63 @@ export type DepotCardPanelProps = {
 	scale: number,
 }
 
-local COLOR = UIPaperConstants.COLOR
 local DRIVE = Vector2.new(520, 260)
 local ARRIVAL = Vector2.new(640, 400)
-local BAND = 46
+local HEADER = 58
 local DASHES = 13
-local DASH = Vector2.new(24, 6)
+local DASH = Vector2.new(24, 8)
 local DASH_STEP = 36
-local ROAD = Vector2.new(24, 206)
-local TRUCK = Vector2.new(30, 20)
+local ROAD = Vector2.new(30, 218)
+local TRUCK = 64
 
-local function label(
-	text: string,
-	role: PaperLabel.Role,
+local function text(
+	value: string,
 	size: number,
-	color: Color3,
 	position: UDim2,
 	frame: UDim2,
-	scaled: boolean?
+	display: boolean,
+	meaning: UIToonConstants.Meaning?
 ): React.ReactNode
-	return e(PaperLabel, {
-		text = text,
-		role = role,
-		size = size,
-		color = color,
+	return e(ToonText, {
+		text = value,
+		font = if display then "display" else "body",
+		meaning = meaning,
+		textSize = size,
 		position = position,
-		frame = frame,
-		autoSize = false,
-		wrapped = scaled ~= true,
-		scaled = scaled,
-		-- Above the card's PaperTexture (ZIndex 0).
-		zIndex = 2,
+		size = frame,
+		wrapped = not display,
+		fit = true,
+		alignY = if display then "center" else "top",
 	})
 end
 
--- The dashed road and the truck crossing it once over `seconds`, from mount.
+-- The lilac road and the truck render driving along it once over `seconds`, from mount.
 local function Road(props: { seconds: number }): React.ReactNode
 	local alpha = usePaperMotion(props.seconds)
 	local children: { [string]: React.ReactNode } = {
 		truck = e("Frame", {
-			AnchorPoint = Vector2.new(0.5, 0.5),
+			AnchorPoint = Vector2.new(0.5, 1),
 			Position = alpha:map(function(value: number): UDim2
-				return UDim2.fromOffset(DASH.X / 2 + value * (DASHES - 1) * DASH_STEP, DASH.Y / 2)
+				return UDim2.fromOffset(DASH.X / 2 + value * (DASHES - 1) * DASH_STEP, DASH.Y + 6)
 			end),
-			Size = UDim2.fromOffset(TRUCK.X, TRUCK.Y),
-			BackgroundColor3 = COLOR.stamp,
-			BorderSizePixel = 0,
+			Size = UDim2.fromOffset(TRUCK, TRUCK),
+			BackgroundTransparency = 1,
 			ZIndex = 4,
-		}, { corner = e("UICorner", { CornerRadius = UDim.new(0, 4) }) }),
+		}, {
+			icon = e(ToonIcon, { icon = "truck", size = UDim2.fromScale(1, 1), drop = 3 }),
+		}),
 	}
 	for index = 1, DASHES do
 		children[`dash{index}`] = e("Frame", {
 			Position = UDim2.fromOffset((index - 1) * DASH_STEP, 0),
 			Size = UDim2.fromOffset(DASH.X, DASH.Y),
-			BackgroundColor3 = COLOR.manilaDeep,
+			BackgroundColor3 = UIToonConstants.shade("lilac").base,
 			BorderSizePixel = 0,
 			ZIndex = 3,
-		}, { corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }) })
+		}, {
+			corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }),
+			stroke = e("UIStroke", { Color = UIToonConstants.COLOR.ink, Thickness = 2 }),
+		})
 	end
 	return e("Frame", {
 		Position = UDim2.fromOffset(ROAD.X, ROAD.Y),
@@ -100,120 +103,103 @@ end
 
 local function driveCard(view: DepotCardViewModel.DriveView): React.ReactNode
 	local truck = view.truck
-	return e("Frame", {
-		Size = UDim2.fromOffset(DRIVE.X, DRIVE.Y),
-		Rotation = 1.5,
-		BackgroundTransparency = 1,
-	}, {
-		shadow = e("Frame", {
-			Position = UDim2.fromOffset(4, 6),
-			Size = UDim2.fromScale(1, 1),
-			BackgroundColor3 = COLOR.night,
-			BackgroundTransparency = 0.5,
-			BorderSizePixel = 0,
-			ZIndex = 0,
-		}, { corner = e("UICorner", { CornerRadius = UDim.new(0, 4) }) }),
-		paper = e("Frame", {
-			Size = UDim2.fromScale(1, 1),
-			BackgroundColor3 = COLOR.cream,
-			BorderSizePixel = 0,
-			ZIndex = 1,
-		}, {
-			corner = e("UICorner", { CornerRadius = UDim.new(0, 4) }),
-			texture = e(PaperTexture, { paper = COLOR.cream, corner = 4 }),
-			band = e("Frame", {
-				Size = UDim2.new(1, 0, 0, BAND),
-				BackgroundColor3 = COLOR.companyTeal,
-				BorderSizePixel = 0,
-				ZIndex = 2,
-			}, {
-				label = label(
-					view.band,
-					"heading",
-					22,
-					COLOR.cream,
-					UDim2.fromOffset(20, 0),
-					UDim2.new(1, -170, 1, 0),
-					true
-				),
-				truck = if truck ~= nil
-					then e(PaperLabel, {
-						text = truck,
-						role = "heading",
-						size = 22,
-						color = COLOR.fluorGlow,
-						align = "right",
-						position = UDim2.new(1, -140, 0, 0),
-						frame = UDim2.fromOffset(120, BAND),
-						autoSize = false,
-						wrapped = false,
-					})
-					else nil,
-			}),
-			title = label(
-				view.title,
-				"heading",
-				58,
-				COLOR.ink,
-				UDim2.fromOffset(24, 62),
-				UDim2.new(1, -48, 0, 72),
-				true
-			),
-			heading = label(
-				view.heading,
-				"body",
-				24,
-				COLOR.ink,
-				UDim2.fromOffset(24, 138),
-				UDim2.new(1, -48, 0, 34),
-				true
-			),
-			road = e(Road, { seconds = view.seconds }),
-		}),
+	local face: { [string]: React.ReactNode } = {
+		title = text(view.title, 52, UDim2.fromOffset(28, HEADER + 12), UDim2.new(1, -56, 0, 62), true),
+		heading = text(view.heading, 22, UDim2.fromOffset(30, HEADER + 78), UDim2.new(1, -60, 0, 30), false),
+		road = e(Road, { seconds = view.seconds }),
+	}
+	if truck ~= nil then
+		face.truckTag = e(ToonPill, {
+			text = truck,
+			hue = "gold",
+			textSize = 18,
+			anchor = Vector2.new(1, 0.5),
+			position = UDim2.new(1, -16, 0, HEADER / 2),
+			size = UDim2.fromOffset(112, 34),
+			zIndex = 6,
+		})
+	end
+	return e(ToonPanel, {
+		size = DRIVE,
+		header = {
+			title = view.band,
+			icon = "truck",
+			height = HEADER,
+			titleSize = 22,
+		},
+		pop = true,
+		children = face,
 	})
 end
 
 local function arrivalCard(view: DepotCardViewModel.ArrivalView): React.ReactNode
-	local slip: { [string]: React.ReactNode } = {
-		clear = label(view.clear, "heading", 58, COLOR.ink, UDim2.fromOffset(0, 0), UDim2.new(1, 0, 0, 66), true),
-		before = label(view.before, "body", 20, COLOR.ink, UDim2.fromOffset(0, 70), UDim2.new(1, 0, 0, 28)),
-	}
-	local folder: { [string]: React.ReactNode } = {
-		client = label(
-			view.client,
-			"heading",
-			56,
-			COLOR.ink,
-			UDim2.fromOffset(30, 22),
-			UDim2.fromOffset(580, 70),
-			true
-		),
-		job = label(view.job, "body", 26, COLOR.ink, UDim2.fromOffset(30, 96), UDim2.fromOffset(580, 66)),
-		slip = e(PaperSheet, {
-			position = UDim2.fromOffset(24, 170),
-			size = UDim2.fromOffset(330, 170),
-			paper = COLOR.cream,
-			tilt = 1.5,
-			band = view.slip,
-			bandColor = COLOR.companyTeal,
-			padding = 16,
-		}, slip),
-		sticky = e(StickyNote, {
-			text = view.note,
-			width = 200,
-			size = 20,
-			tilt = -2,
-			position = UDim2.fromOffset(400, 184),
+	local contract: { [string]: React.ReactNode } = {
+		clear = text(view.clear, 44, UDim2.fromOffset(18, 34), UDim2.new(1, -36, 0, 54), true, "grape"),
+		before = e(ToonText, {
+			text = view.before,
+			font = "body",
+			color = UIToonConstants.COLOR.white,
+			textSize = 18,
+			position = UDim2.fromOffset(20, 92),
+			size = UDim2.new(1, -40, 0, 26),
+			fit = true,
 		}),
 	}
-	return e(PaperSheet, {
-		size = UDim2.fromOffset(ARRIVAL.X, ARRIVAL.Y),
-		paper = COLOR.manila,
-		tab = view.tab,
-		tabWidth = 220,
-		tabTextSize = 26,
-		padding = 0,
-	}, folder)
+	local note: { [string]: React.ReactNode } = {
+		note = text(view.note, 18, UDim2.fromOffset(14, 12), UDim2.new(1, -28, 1, -24), false),
+	}
+	local face: { [string]: React.ReactNode } = {
+		client = text(view.client, 52, UDim2.fromOffset(34, 34), UDim2.fromOffset(570, 64), true),
+		job = text(view.job, 22, UDim2.fromOffset(36, 104), UDim2.fromOffset(568, 56), false),
+		contract = e(ToonSurface, {
+			hue = "night",
+			gloss = false,
+			radius = 22,
+			pattern = "bubbles",
+			position = UDim2.fromOffset(28, 176),
+			size = UDim2.fromOffset(340, 140),
+			children = contract,
+		}),
+		contractName = e(ToonPill, {
+			text = view.slip,
+			hue = "grape",
+			textSize = 16,
+			tilt = -3,
+			position = UDim2.fromOffset(44, 160),
+			size = UDim2.fromOffset(176, 32),
+			zIndex = 6,
+		}),
+		note = e("Frame", {
+			Position = UDim2.fromOffset(398, 182),
+			Size = UDim2.fromOffset(206, 130),
+			Rotation = -2,
+			BackgroundTransparency = 1,
+			ZIndex = 5,
+		}, {
+			card = e(ToonSurface, {
+				hue = "lilac",
+				small = true,
+				radius = 16,
+				size = UDim2.fromScale(1, 1),
+				children = note,
+			}),
+		}),
+	}
+	return e("Frame", {
+		Size = UDim2.fromOffset(ARRIVAL.X, ARRIVAL.Y),
+		BackgroundTransparency = 1,
+	}, {
+		panel = e(ToonPanel, { size = ARRIVAL - Vector2.new(0, 8), pop = true, children = face }),
+		tab = e(ToonPill, {
+			text = view.tab,
+			hue = "mint",
+			textSize = 26,
+			tilt = -6,
+			position = UDim2.fromOffset(-22, -24),
+			size = UDim2.fromOffset(190, 50),
+			zIndex = 8,
+		}),
+	})
 end
 
 local function DepotCardPanel(props: DepotCardPanelProps): React.ReactNode

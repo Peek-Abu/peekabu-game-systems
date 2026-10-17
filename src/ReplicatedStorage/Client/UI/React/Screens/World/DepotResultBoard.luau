@@ -1,11 +1,12 @@
 --!strict
 --[=[
-	DepotResultBoard: the result board (Figma World UI 2a, W3 + W4) at its 1140x446 design size: a cork board
-	(1140x420 at y 26, 20 px wood frame) under a 380x64 manilaDeep folder tab at (380, 0) with the title (Oswald 36).
-	With `review` (your card, W4): the review card pinned at (60, 76), 568x330 cream, tilted -1.5° under an ink band,
-	with the four rows, the QUOTA MET / MISSED stamp and the rating stamp, the crew line and Harlow's quote; and one
-	sticky per award ("TITLE" over the name) at (675, 96), (900, 110) and (790, 262). Without it: the bare board.
-	Presentational; the words are DepotWorldViewModel.review.
+	DepotResultBoard: the result board in the V1 kit at its 1140x446 design size: a dark board plate on the depth stack
+	(night, goo bubbles) under a grape title tab breaking its top edge. With `review` (your card): a cream card on the
+	stack, its grape header band naming the shift, the four rows (labels in Fredoka, values as stroked gold numbers),
+	CONTRACT MET / MISSED as a big stroked mint or coral title with the rating on a gold pill, the crew line and
+	Harlow's quote; and one gold award card per award (the award's render breaking its corner, the title over the
+	name), tilted on the board's right. Without it: the bare board. Presentational; the words are
+	DepotWorldViewModel.review.
 
 	@class DepotResultBoard
 ]=]
@@ -13,15 +14,15 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
-local CorkBoard = require(ReplicatedStorage.Client.UI.React.Screens.Paper.CorkBoard)
-local PaperAwardIcon = require(script.Parent.Parent.Paper.PaperAwardIcon)
-local PaperLabel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperLabel)
-local PaperSheet = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperSheet)
-local PaperStamp = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperStamp)
-local PaperTexture = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperTexture)
-local StickyNote = require(ReplicatedStorage.Client.UI.React.Screens.Paper.StickyNote)
-local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local DepotWorldViewModel = require(ReplicatedStorage.Client.UI.React.Screens.World.DepotWorldViewModel)
+local ShiftReviewViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftReviewViewModel)
+local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
+local ToonIcon = require(Toon.ToonIcon)
+local ToonPanel = require(Toon.ToonPanel)
+local ToonPill = require(Toon.ToonPill)
+local ToonSurface = require(Toon.ToonSurface)
+local ToonText = require(Toon.ToonText)
+local UIToonConstants = require(Toon.UIToonConstants)
 
 local e = React.createElement
 
@@ -30,116 +31,161 @@ export type DepotResultBoardProps = {
 	review: DepotWorldViewModel.ReviewView?,
 }
 
-local COLOR = UIPaperConstants.COLOR
-local STICKY_AT: { Vector2 } = { Vector2.new(675, 96), Vector2.new(900, 110), Vector2.new(790, 262) }
-local STICKY_TILT: { number } = { 3, -3, 1 }
+local BOARD = Vector2.new(1140, 446)
+local AWARD_AT: { Vector2 } = { Vector2.new(690, 96), Vector2.new(912, 112), Vector2.new(800, 262) }
+local AWARD_TILT: { number } = { 3, -3, 1 }
+local AWARD = Vector2.new(196, 112)
+local CARD = Vector2.new(586, 336)
+local CARD_HEADER = 60
 local ROW_HEIGHT = 42
 
-local function badge(title: string): React.ReactNode
-	return e(PaperAwardIcon, { title = title })
-end
-
 local function reviewCard(review: DepotWorldViewModel.ReviewView): React.ReactNode
-	local content: { [string]: React.ReactNode } = {}
+	local face: { [string]: React.ReactNode } = {}
+	local top = CARD_HEADER + 14
 	for index, row in review.rows do
-		local y = (index - 1) * ROW_HEIGHT
-		content[`label{index}`] = e(PaperLabel, {
+		local y = top + (index - 1) * ROW_HEIGHT
+		face[`label{index}`] = e(ToonText, {
 			text = row.label,
-			role = "medium",
-			size = 20,
-			color = COLOR.ink,
-			position = UDim2.fromOffset(0, y + 8),
-			frame = UDim2.fromOffset(180, 30),
-			autoSize = false,
-			wrapped = false,
+			font = "body",
+			textSize = 20,
+			position = UDim2.fromOffset(24, y),
+			size = UDim2.fromOffset(150, ROW_HEIGHT - 6),
+			fit = true,
 		})
-		content[`value{index}`] = e(PaperLabel, {
+		face[`value{index}`] = e(ToonText, {
 			text = row.value,
-			role = "number",
-			size = 30,
-			color = COLOR.ink,
-			position = UDim2.fromOffset(180, y),
-			frame = UDim2.fromOffset(130, 40),
-			autoSize = false,
-			wrapped = false,
-			scaled = true,
+			meaning = "gold",
+			textSize = 30,
+			position = UDim2.fromOffset(176, y),
+			size = UDim2.fromOffset(150, ROW_HEIGHT - 4),
+			fit = true,
 		})
-		content[`rule{index}`] = e("Frame", {
-			Position = UDim2.fromOffset(0, y + ROW_HEIGHT - 2),
-			Size = UDim2.fromOffset(310, 1),
-			BackgroundColor3 = COLOR.manilaDeep,
+		face[`rule{index}`] = e("Frame", {
+			Position = UDim2.fromOffset(24, y + ROW_HEIGHT - 4),
+			Size = UDim2.fromOffset(304, 2),
+			BackgroundColor3 = UIToonConstants.shade("cream").lo,
 			BorderSizePixel = 0,
 		})
 	end
-	content.headline = e(PaperStamp, {
+	face.headline = e(ToonText, {
 		text = review.headline,
-		size = 44,
-		tilt = 4,
+		meaning = if review.met then "mint" else "coral",
+		textSize = 40,
+		rotation = -4,
 		anchor = Vector2.new(0.5, 0.5),
-		position = UDim2.fromOffset(420, 58),
+		position = UDim2.fromOffset(456, top + 44),
+		size = UDim2.fromOffset(230, 92),
+		align = "center",
+		wrapped = true,
+		fit = true,
 	})
-	content.rating = e(PaperStamp, {
+	face.rating = e(ToonPill, {
 		text = review.rating,
-		size = 20,
+		hue = "gold",
+		textSize = 18,
 		tilt = 2,
 		anchor = Vector2.new(0.5, 0.5),
-		position = UDim2.fromOffset(420, 140),
+		position = UDim2.fromOffset(456, top + 116),
+		size = UDim2.fromOffset(210, 38),
 	})
-	content.crew = e(PaperLabel, {
+	face.crew = e(ToonText, {
 		text = review.crew,
-		role = "body",
-		size = 18,
-		color = COLOR.ink,
-		position = UDim2.fromOffset(0, 186),
-		frame = UDim2.new(1, 0, 0, 24),
-		autoSize = false,
-		wrapped = false,
-		scaled = true,
+		font = "body",
+		textSize = 18,
+		position = UDim2.fromOffset(24, top + 4 * ROW_HEIGHT + 8),
+		size = UDim2.new(1, -48, 0, 24),
+		fit = true,
 	})
-	content.quote = e(PaperLabel, {
+	face.quote = e(ToonText, {
 		text = review.quote,
-		role = "body",
-		size = 16,
-		color = COLOR.ink,
-		position = UDim2.fromOffset(0, 220),
-		frame = UDim2.new(1, 0, 0, 44),
-		autoSize = false,
+		font = "body",
+		textSize = 16,
+		color = UIToonConstants.shade("grape").lo,
+		position = UDim2.fromOffset(24, top + 4 * ROW_HEIGHT + 36),
+		size = UDim2.new(1, -48, 0, 44),
+		wrapped = true,
+		fit = true,
+		alignY = "top",
 	})
-	return e(PaperSheet, {
-		position = UDim2.fromOffset(60, 76),
-		size = UDim2.fromOffset(568, 330),
-		paper = COLOR.cream,
-		tilt = -1.5,
-		band = review.band,
-		bandColor = COLOR.companyTeal,
-		fastener = "pin",
-		padding = 20,
-	}, content)
+	return e(ToonPanel, {
+		position = UDim2.fromOffset(52, 76),
+		size = CARD,
+		header = { title = review.band, height = CARD_HEADER, titleSize = 30 },
+		children = face,
+	})
+end
+
+local function awardCard(sticky: DepotWorldViewModel.StickyView, index: number, at: Vector2): React.ReactNode
+	local symbol: ShiftReviewViewModel.AwardSymbol? = ShiftReviewViewModel.awardSymbol(sticky.title)
+	local face: { [string]: React.ReactNode } = {
+		title = e(ToonText, {
+			text = sticky.title,
+			textSize = 20,
+			position = UDim2.fromOffset(52, 12),
+			size = UDim2.new(1, -64, 0, 28),
+			fit = true,
+		}),
+		name = e(ToonText, {
+			text = sticky.name,
+			font = "body",
+			textSize = 18,
+			position = UDim2.fromOffset(16, 52),
+			size = UDim2.new(1, -32, 0, 40),
+			wrapped = true,
+			fit = true,
+			alignY = "top",
+		}),
+	}
+	return e("Frame", {
+		Position = UDim2.fromOffset(at.X, at.Y),
+		Size = UDim2.fromOffset(AWARD.X, AWARD.Y),
+		Rotation = AWARD_TILT[index] or 0,
+		BackgroundTransparency = 1,
+		ZIndex = 4,
+	}, {
+		card = e(ToonSurface, {
+			hue = "gold",
+			radius = 20,
+			size = UDim2.new(1, 0, 1, -7),
+			children = face,
+		}),
+		icon = e(ToonIcon, {
+			icon = if symbol ~= nil then ShiftReviewViewModel.awardIcon(symbol) else "trophy",
+			position = UDim2.fromOffset(-16, -22),
+			size = UDim2.fromOffset(64, 64),
+			rotation = -8,
+			drop = 4,
+			zIndex = 5,
+		}),
+	})
 end
 
 local function DepotResultBoard(props: DepotResultBoardProps): React.ReactNode
+	local tab: { [string]: React.ReactNode } = {
+		title = e(ToonText, {
+			text = props.title,
+			textSize = 34,
+			position = UDim2.fromOffset(20, 0),
+			size = UDim2.new(1, -40, 1, 0),
+			align = "center",
+			fit = true,
+		}),
+	}
 	local children: { [string]: React.ReactNode } = {
-		board = e(CorkBoard, { size = UDim2.fromOffset(1140, 420), position = UDim2.fromOffset(0, 26), frame = 20 }),
-		tab = e("Frame", {
-			Position = UDim2.fromOffset(380, 0),
-			Size = UDim2.fromOffset(380, 64),
-			BackgroundColor3 = COLOR.manilaDeep,
-			BorderSizePixel = 0,
-			ZIndex = 5,
-		}, {
-			corner = e("UICorner", { CornerRadius = UDim.new(0, 6) }),
-			texture = e(PaperTexture, { paper = COLOR.manilaDeep, corner = 6 }),
-			label = e(PaperLabel, {
-				text = props.title,
-				role = "heading",
-				size = 36,
-				color = COLOR.ink,
-				align = "center",
-				frame = UDim2.fromScale(1, 1),
-				autoSize = false,
-				wrapped = false,
-				zIndex = 2,
-			}),
+		board = e(ToonPanel, {
+			hue = "night",
+			gloss = false,
+			position = UDim2.fromOffset(12, 30),
+			size = Vector2.new(BOARD.X - 24, BOARD.Y - 42),
+		}),
+		tab = e(ToonSurface, {
+			hue = "grape",
+			radius = 22,
+			anchor = Vector2.new(0.5, 0),
+			position = UDim2.new(0.5, 0, 0, 4),
+			size = UDim2.fromOffset(420, 62),
+			zIndex = 5,
+			children = tab,
 		}),
 	}
 	local review = props.review
@@ -148,32 +194,16 @@ local function DepotResultBoard(props: DepotResultBoardProps): React.ReactNode
 			Size = UDim2.fromScale(1, 1),
 			BackgroundTransparency = 1,
 			ZIndex = 3,
-		}, { sheet = reviewCard(review) })
+		}, { card = reviewCard(review) })
 		for index, sticky in review.stickies do
-			local at: Vector2? = STICKY_AT[index]
+			local at: Vector2? = AWARD_AT[index]
 			if at ~= nil then
-				children[`sticky{index}`] = e("Frame", {
-					Position = UDim2.fromOffset(at.X, at.Y),
-					Size = UDim2.fromOffset(200, 0),
-					AutomaticSize = Enum.AutomaticSize.Y,
-					BackgroundTransparency = 1,
-					ZIndex = 4,
-				}, {
-					note = e(StickyNote, {
-						text = `{sticky.title}\n{sticky.name}`,
-						badge = badge(sticky.title),
-						badgeSize = 24,
-						width = 200,
-						size = 18,
-						tilt = STICKY_TILT[index],
-						tape = Vector2.new(80, 20),
-					}),
-				})
+				children[`award{index}`] = awardCard(sticky, index, at)
 			end
 		end
 	end
 	return e("Frame", {
-		Size = UDim2.fromOffset(1140, 446),
+		Size = UDim2.fromOffset(BOARD.X, BOARD.Y),
 		BackgroundTransparency = 1,
 	}, children)
 end

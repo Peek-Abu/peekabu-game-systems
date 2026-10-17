@@ -1,7 +1,7 @@
 --!strict
 --[=[
-	ShiftMobileButtons: the phone's arc of round action buttons around the big VACUUM / BANK button (Figma 1d 9:61,
-	1e 9:116): DROP and THROW at 72 px, the big button at 104 px, with >= 16 px between circles, all clear of
+	ShiftMobileButtons: the phone's arc of round action buttons (ShiftActionButton, V1 kit) around the big VACUUM / BANK
+	button (Figma 1d 9:61, 1e 9:116): DROP and THROW at 72 px, the big button at 104 px, with >= 16 px between circles, all clear of
 	the Roblox Jump button (bottom right) and the thumbstick zone (bottom-left 40%); the hotbar slots are tapped on the
 	hotbar (ShiftHotbar). Offsets are from the bottom-right
 	corner, so the arc tracks the Jump button; on a larger touch screen the engine's Jump button is bigger, so the arc
@@ -39,8 +39,8 @@ local HideStore = require(ReplicatedStorage.Client.Features.Hide.State.HideStore
 local SprintServiceClient = require(ReplicatedStorage.Client.Features.Sprint.SprintServiceClient)
 local CrouchServiceClient = require(ReplicatedStorage.Client.Features.Crouch.CrouchServiceClient)
 local CrouchStore = require(ReplicatedStorage.Client.Features.Crouch.State.CrouchStore)
-local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local usePaperViewport = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperViewport)
+local ShiftActionButton = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftActionButton)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 
 local e = React.createElement
@@ -51,83 +51,7 @@ export type ShiftMobileButtonsProps = {
 	onPrompt: ((down: boolean) -> ())?,
 }
 
-type ButtonProps = {
-	label: string,
-	spot: ShiftHudViewModel.ArcSpot,
-	large: boolean,
-	available: boolean,
-	ready: boolean,
-	onActivated: (() -> ())?,
-	onHoldBegin: (() -> ())?,
-	onHoldEnd: (() -> ())?,
-}
-
-local COLOR = UIPaperConstants.COLOR
--- Figma "Mobile button": night at 72%, a 3 px fluorescent ring at 85%; a ready one is exit green at 95%.
-local FILL_TRANSPARENCY = 0.28
-local READY_TRANSPARENCY = 0.05
-local STROKE_TRANSPARENCY = 0.15
--- An unavailable button draws at half opacity (Figma 0.45) and ignores input.
-local DIM = 0.5
-
--- `transparency` drawn at `opacity` overall.
-local function faded(transparency: number, opacity: number): number
-	return 1 - (1 - transparency) * opacity
-end
-
-local function isPress(input: InputObject): boolean
-	return input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1
-end
-
-local function ActionButton(props: ButtonProps): React.ReactNode
-	local opacity = if props.available then 1 else DIM
-	local onHoldBegin = props.onHoldBegin
-	local onHoldEnd = props.onHoldEnd
-	local onActivated = props.onActivated
-	local spot = props.spot
-	return e("TextButton", {
-		Position = UDim2.new(1, spot.x, 1, spot.y),
-		Size = UDim2.fromOffset(spot.size, spot.size),
-		AutoButtonColor = false,
-		Active = props.available,
-		BackgroundColor3 = if props.ready then COLOR.exitGreen else COLOR.night,
-		BackgroundTransparency = faded(if props.ready then READY_TRANSPARENCY else FILL_TRANSPARENCY, opacity),
-		BorderSizePixel = 0,
-		FontFace = UIPaperConstants.FONT.heading,
-		TextSize = if props.large then 20 else 15,
-		TextColor3 = if props.ready then COLOR.night else COLOR.fluorescent,
-		TextTransparency = faded(0, opacity),
-		Text = props.label,
-		[React.Event.InputBegan] = function(_button: TextButton, input: InputObject)
-			if onHoldBegin ~= nil and isPress(input) then
-				onHoldBegin()
-			end
-		end,
-		[React.Event.InputEnded] = function(_button: TextButton, input: InputObject)
-			if onHoldEnd ~= nil and isPress(input) then
-				onHoldEnd()
-			end
-		end,
-		[React.Event.Activated] = function()
-			if props.available and onActivated ~= nil then
-				onActivated()
-			end
-		end,
-		[React.Event.MouseLeave] = function()
-			if onHoldEnd ~= nil then
-				onHoldEnd()
-			end
-		end,
-	}, {
-		corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }),
-		stroke = e("UIStroke", {
-			Color = COLOR.fluorescent,
-			Thickness = 3,
-			Transparency = faded(if props.ready then 0 else STROKE_TRANSPARENCY, opacity),
-			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-		}),
-	})
-end
+type ButtonProps = ShiftActionButton.ShiftActionButtonProps
 
 local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactNode
 	local snapshot = useAtom(ShiftStore.snapshot)
@@ -224,7 +148,7 @@ local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactN
 		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
 	}, {
-		primary = e(ActionButton, {
+		primary = e(ShiftActionButton, {
 			label = primaryLabel,
 			spot = arc.primary,
 			large = true,
@@ -234,10 +158,10 @@ local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactN
 			onHoldBegin = if not view.primaryAvailable then nil elseif vacuuming then beginVacuum else beginLoad,
 			onHoldEnd = if vacuuming then endVacuum else endLoad,
 		}),
-		drop = if view.drop then e(ActionButton, dropProps) else nil,
-		throw = if view.throw then e(ActionButton, throwProps) else nil,
+		drop = if view.drop then e(ShiftActionButton, dropProps) else nil,
+		throw = if view.throw then e(ShiftActionButton, throwProps) else nil,
 		sprint = if view.sprint
-			then e(ActionButton, {
+			then e(ShiftActionButton, {
 				label = "SPRINT",
 				spot = arc.sprint,
 				large = false,
@@ -252,7 +176,7 @@ local function ShiftMobileButtons(props: ShiftMobileButtonsProps?): React.ReactN
 			})
 			else nil,
 		crouch = if view.crouch
-			then e(ActionButton, {
+			then e(ShiftActionButton, {
 				label = "CROUCH",
 				spot = arc.crouch,
 				large = false,

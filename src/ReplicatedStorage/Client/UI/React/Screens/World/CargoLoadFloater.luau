@@ -1,10 +1,11 @@
 --!strict
 --[=[
-	CargoLoadFloater: a load floater (Figma World UI 2b, W6) at its 340x130 design size. Clearance: "+15" in Oswald 80
-	fluorGlow with a 4 px night outline over "CLEARED" (Oswald 26). Bonus: a 300x96 monitorDeep stamp with a 5 px
-	monitor ring, "+40 BONUS" in Oswald 56 monitor blue, turned 5° clockwise (the frame's stamp leans with its right
-	edge down). `fade` (0 → 1) is every part's transparency, driven by CargoFeedbackSystem's tween, so fading never
-	re-renders. Presentational; the words are CargoWorldViewModel.floater.
+	CargoLoadFloater: a load floater in the V1 kit at its 340x130 design size, rising off the truck as cargo is banked.
+	Bonus (the Gleam earned): a grape plate on the depth stack turned 5° with the coin render breaking its left end, the
+	amount ("+40 Gleam") as a big stroked gold number and Gleam sparkles round it. Clearance (stray trash): "+15" as a
+	big stroked mint number over a white CLEARED. `fade` (0 → 1) fades the whole floater as one group (a CanvasGroup),
+	driven by CargoFeedbackSystem's tween, so fading never re-renders. Presentational; the words are
+	CargoWorldViewModel.floater.
 
 	@class CargoLoadFloater
 ]=]
@@ -12,8 +13,12 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
-local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local CargoWorldViewModel = require(ReplicatedStorage.Client.UI.React.Screens.World.CargoWorldViewModel)
+local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
+local ToonIcon = require(Toon.ToonIcon)
+local ToonSparkle = require(Toon.ToonSparkle)
+local ToonSurface = require(Toon.ToonSurface)
+local ToonText = require(Toon.ToonText)
 
 local e = React.createElement
 
@@ -22,83 +27,89 @@ export type CargoLoadFloaterProps = {
 	fade: React.Binding<number>,
 }
 
-local COLOR = UIPaperConstants.COLOR
-local FONT = UIPaperConstants.FONT
+local PLATE = Vector2.new(286, 84)
+local COIN = 92
 
--- Oswald text in fluorGlow with a night outline (the stroke follows the glyphs: Contextual).
-local function outlined(
-	text: string,
-	size: number,
-	outline: number,
-	y: number,
-	height: number,
-	fade: React.Binding<number>
-): React.ReactNode
-	return e("TextLabel", {
-		Position = UDim2.fromOffset(0, y),
-		Size = UDim2.new(1, 0, 0, height),
-		BackgroundTransparency = 1,
-		FontFace = FONT.number,
-		TextSize = size,
-		TextColor3 = COLOR.fluorGlow,
-		TextTransparency = fade,
-		TextXAlignment = Enum.TextXAlignment.Center,
-		RichText = false,
-		Text = text,
-	}, {
-		outline = e("UIStroke", {
-			Color = COLOR.night,
-			Thickness = outline,
-			Transparency = fade,
-			ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual,
+local function bonus(view: CargoWorldViewModel.FloaterView): { [string]: React.ReactNode }
+	local face: { [string]: React.ReactNode } = {
+		amount = e(ToonText, {
+			text = view.text,
+			meaning = "gold",
+			textSize = 52,
+			position = UDim2.fromOffset(COIN * 0.5, 0),
+			size = UDim2.new(1, -COIN * 0.5 - 14, 1, 0),
+			align = "center",
+			fit = true,
 		}),
-	})
+	}
+	return {
+		plate = e("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.new(0.5, 14, 0.5, -4),
+			Size = UDim2.fromOffset(PLATE.X, PLATE.Y),
+			Rotation = 5,
+			BackgroundTransparency = 1,
+		}, {
+			surface = e(ToonSurface, {
+				hue = "grape",
+				radius = 999,
+				pattern = "bubbles",
+				size = UDim2.new(1, 0, 1, -7),
+				children = face,
+			}),
+			coin = e(ToonIcon, {
+				icon = "gleam",
+				anchor = Vector2.new(0.5, 0.5),
+				position = UDim2.new(0, 6, 0.5, -6),
+				size = UDim2.fromOffset(COIN, COIN),
+				rotation = -8,
+				drop = 5,
+				zIndex = 5,
+			}),
+		}),
+		sparkles = e(ToonSparkle, {
+			spots = {
+				{ position = UDim2.fromOffset(300, 18), size = 28 },
+				{ position = UDim2.fromOffset(62, 112), size = 20 },
+				{ position = UDim2.fromOffset(212, 120), size = 16 },
+			},
+			zIndex = 6,
+		}),
+	}
+end
+
+local function clearance(view: CargoWorldViewModel.FloaterView): { [string]: React.ReactNode }
+	local nodes: { [string]: React.ReactNode } = {
+		amount = e(ToonText, {
+			text = view.text,
+			meaning = "mint",
+			textSize = 76,
+			size = UDim2.new(1, 0, 0, 90),
+			align = "center",
+			fit = true,
+		}),
+	}
+	local caption = view.caption
+	if caption ~= nil then
+		nodes.caption = e(ToonText, {
+			text = caption,
+			textSize = 26,
+			position = UDim2.fromOffset(0, 90),
+			size = UDim2.new(1, 0, 0, 34),
+			align = "center",
+			fit = true,
+		})
+	end
+	return nodes
 end
 
 local function CargoLoadFloater(props: CargoLoadFloaterProps): React.ReactNode
 	local view = props.view
-	local fade = props.fade
-	if view.bonus then
-		return e("Frame", {
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromScale(0.5, 0.5),
-			Size = UDim2.fromOffset(300, 96),
-			Rotation = 5,
-			BackgroundColor3 = COLOR.monitorDeep,
-			BackgroundTransparency = fade,
-			BorderSizePixel = 0,
-		}, {
-			corner = e("UICorner", { CornerRadius = UDim.new(0, 6) }),
-			ring = e("UIStroke", {
-				Color = COLOR.monitor,
-				Thickness = 5,
-				Transparency = fade,
-				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-			}),
-			label = e("TextLabel", {
-				Size = UDim2.fromScale(1, 1),
-				BackgroundTransparency = 1,
-				FontFace = FONT.heading,
-				TextSize = 56,
-				TextColor3 = COLOR.monitor,
-				TextTransparency = fade,
-				TextXAlignment = Enum.TextXAlignment.Center,
-				RichText = false,
-				Text = view.text,
-			}),
-		})
-	end
-	local children: { [string]: React.ReactNode } = {
-		amount = outlined(view.text, 80, 4, 0, 92, fade),
-	}
-	local caption = view.caption
-	if caption ~= nil then
-		children.caption = outlined(caption, 26, 2, 92, 34, fade)
-	end
-	return e("Frame", {
+	return e("CanvasGroup", {
 		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
-	}, children)
+		GroupTransparency = props.fade,
+	}, if view.bonus then bonus(view) else clearance(view))
 end
 
 return CargoLoadFloater

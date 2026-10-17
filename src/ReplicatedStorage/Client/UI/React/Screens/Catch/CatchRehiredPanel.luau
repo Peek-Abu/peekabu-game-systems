@@ -1,11 +1,12 @@
 --!strict
 --[=[
-	CatchRehiredPanel: the HR "Rehired." notice around the respawn (Figma 4c desktop 22:263, 4e phone 22:299). A dark
-	scrim, and centred on it a cream sheet: the ink "MORROW & MORROW — HUMAN RESOURCES" header band, "NOTICE OF
-	RE-EMPLOYMENT", the big typewriter "Rehired.", the ruled rows, a red REHIRED stamp in the empty lower-right area (clear
-	of the headline) and "Respawning at the loading bay…". The rows wrap and stack by their real height (a long "Dropped:"
-	row takes two lines); the card grows by whatever the rows take beyond the Figma's one-line rows, so the stamp and the
-	footer (placed from the card's bottom) stay below the last row. Every string comes from the specced
+	CatchRehiredPanel: the HR "Rehired." notice around the respawn (Figma 4c desktop 22:263, 4e phone 22:299) in the V1
+	kit. A dark scrim, and centred on it a cream panel on the depth stack popping in: the grape header band ("MORROW &
+	MORROW — HUMAN RESOURCES", worried Pippa breaking its corner), "NOTICE OF RE-EMPLOYMENT", the big stroked mint
+	"Rehired.", the ruled rows, a tilted mint REHIRED sticker in the empty lower-right area (clear of the headline) and
+	"Respawning at the loading bay…". The rows wrap and stack by their real height (a long "Dropped:" row takes two
+	lines); the card grows by whatever the rows take beyond the Figma's one-line rows, so the sticker and the footer
+	(placed from the card's bottom) stay below the last row. Every string comes from the specced
 	CatchViewModel.rehired. Presentational.
 
 	@class CatchRehiredPanel
@@ -15,11 +16,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
 local CatchViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Catch.CatchViewModel)
-local PaperLabel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperLabel)
 local PaperScaleContext = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperScaleContext)
-local PaperSheet = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperSheet)
-local PaperStamp = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperStamp)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
+local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
+local ToonPanel = require(Toon.ToonPanel)
+local ToonPill = require(Toon.ToonPill)
+local ToonText = require(Toon.ToonText)
+local UIToonConstants = require(Toon.UIToonConstants)
 
 local e = React.createElement
 
@@ -103,14 +106,13 @@ local SPEC: { [UIPaperConstants.Layout]: Spec } = {
 	},
 }
 
-local COLOR = UIPaperConstants.COLOR
--- Figma 4c/4e: the scrim (#050506 at 82%), the notice line's brown ink, the rules' manila and the footer's faded ink.
-local SCRIM = Color3.fromHex("050506")
+local COLOR = UIToonConstants.COLOR
+-- The scrim (the night's darkest shade at 82%) and the notice and footer lines in a quiet grape.
+local SCRIM = UIToonConstants.shade("night").lo
 local SCRIM_TRANSPARENCY = 0.18
-local NOTICE_INK = Color3.fromHex("5B4A2E")
-local RULE = Color3.fromHex("C9B994")
-local FOOTER_INK = Color3.fromHex("8A7F6A")
--- The stamp turns 8° clockwise (Figma -8°).
+local QUIET = UIToonConstants.shade("grape").lo
+local RULE = UIToonConstants.shade("cream").lo
+-- The REHIRED sticker turns 8° clockwise.
 local STAMP_TILT = 8
 -- Roblox caps TextSize at 100: a bigger headline is drawn at 100 and enlarged by a UIScale.
 local MAX_TEXT_SIZE = 100
@@ -119,12 +121,17 @@ local function headline(text: string, spec: Spec): React.ReactNode
 	local size = math.min(spec.titleSize, MAX_TEXT_SIZE)
 	return e("Frame", {
 		Position = UDim2.fromOffset(spec.titleAt.X, spec.titleAt.Y),
-		Size = UDim2.fromOffset(0, 0),
-		AutomaticSize = Enum.AutomaticSize.XY,
+		Size = UDim2.fromOffset(spec.ruleWidth / (spec.titleSize / size), math.ceil(size * 1.3)),
 		BackgroundTransparency = 1,
 	}, {
 		scale = if spec.titleSize > size then e("UIScale", { Scale = spec.titleSize / size }) else nil,
-		label = e(PaperLabel, { text = text, role = "body", size = size, color = COLOR.ink, fit = true }),
+		label = e(ToonText, {
+			text = text,
+			meaning = "mint",
+			textSize = size,
+			size = UDim2.fromScale(1, 1),
+			fit = true,
+		}),
 	})
 end
 
@@ -137,10 +144,21 @@ local function row(text: string, order: number, spec: Spec): React.ReactNode
 		BackgroundTransparency = 1,
 	}, {
 		layout = e("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, spec.ruleGap) }),
-		text = e(PaperLabel, { text = text, role = "body", size = spec.rowSize, color = COLOR.ink, layoutOrder = 1 }),
+		text = e("TextLabel", {
+			LayoutOrder = 1,
+			Size = UDim2.fromScale(1, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundTransparency = 1,
+			Text = text,
+			TextWrapped = true,
+			FontFace = UIToonConstants.FONT.body,
+			TextSize = spec.rowSize,
+			TextColor3 = COLOR.ink,
+			TextXAlignment = Enum.TextXAlignment.Left,
+		}),
 		rule = e("Frame", {
 			LayoutOrder = 2,
-			Size = UDim2.new(1, 0, 0, 1),
+			Size = UDim2.new(1, 0, 0, 2),
 			BackgroundColor3 = RULE,
 			BorderSizePixel = 0,
 		}),
@@ -164,45 +182,33 @@ local function CatchRehiredPanel(props: CatchRehiredPanelProps): React.ReactNode
 	end
 
 	local content: { [string]: React.ReactNode } = {
-		band = e("Frame", {
-			Size = UDim2.new(1, 0, 0, spec.band),
-			BackgroundColor3 = COLOR.companyTeal,
-			BorderSizePixel = 0,
-		}, {
-			header = e(PaperLabel, {
-				text = view.header,
-				role = "heading",
-				size = spec.headerSize,
-				color = COLOR.cream,
-				position = UDim2.fromOffset(spec.headerX, 0),
-				frame = UDim2.new(1, -2 * spec.headerX, 1, 0),
-				autoSize = false,
-				wrapped = false,
-			}),
-		}),
-		notice = e(PaperLabel, {
+		notice = e(ToonText, {
 			text = view.notice,
-			role = "body",
-			size = spec.noticeSize,
-			color = NOTICE_INK,
+			font = "body",
+			color = QUIET,
+			textSize = spec.noticeSize,
 			position = UDim2.fromOffset(spec.noticeAt.X, spec.noticeAt.Y),
+			size = UDim2.fromOffset(spec.ruleWidth, math.ceil(spec.noticeSize * 1.35)),
 			fit = true,
 		}),
 		title = headline(view.title, spec),
-		stamp = e(PaperStamp, {
+		stamp = e(ToonPill, {
 			text = view.stamp,
-			size = spec.stampSize,
+			hue = "mint",
+			textSize = math.floor(spec.stampSize * 0.6),
 			tilt = STAMP_TILT,
-			pop = true,
 			anchor = Vector2.new(0.5, 0.5),
 			position = UDim2.new(0, spec.stampCentre.X, 1, -spec.stampCentre.Y),
+			size = UDim2.fromOffset(math.floor(spec.stampSize * 4.4), math.floor(spec.stampSize * 1.15)),
+			zIndex = 6,
 		}),
-		footer = e(PaperLabel, {
+		footer = e(ToonText, {
 			text = view.footer,
-			role = "body",
-			size = spec.footerSize,
-			color = FOOTER_INK,
-			position = UDim2.new(0, spec.footerX, 1, -spec.footerFromBottom),
+			font = "body",
+			color = QUIET,
+			textSize = spec.footerSize,
+			position = UDim2.new(0, spec.footerX, 1, -spec.footerFromBottom - UIToonConstants.DEPTH.lip),
+			size = UDim2.fromOffset(spec.ruleWidth * 0.6, math.ceil(spec.footerSize * 1.35)),
 			fit = true,
 		}),
 		rows = e("Frame", {
@@ -217,6 +223,7 @@ local function CatchRehiredPanel(props: CatchRehiredPanelProps): React.ReactNode
 	}
 
 	local bleed = props.bleedTop or 0
+	local card = Vector2.new(spec.card.X, spec.card.Y + grow)
 	return e("Frame", {
 		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
@@ -231,12 +238,17 @@ local function CatchRehiredPanel(props: CatchRehiredPanelProps): React.ReactNode
 			BackgroundTransparency = SCRIM_TRANSPARENCY,
 			BorderSizePixel = 0,
 		}),
-		card = e(PaperSheet, {
-			size = UDim2.fromOffset(spec.card.X, spec.card.Y + grow),
+		card = e(ToonPanel, {
+			size = card,
 			position = UDim2.fromScale(0.5, 0.5),
 			anchor = Vector2.new(0.5, 0.5),
-			paper = COLOR.cream,
-			padding = 0,
+			header = {
+				title = view.header,
+				icon = "pippaWorried",
+				height = spec.band + 12,
+				titleSize = spec.headerSize + 4,
+			},
+			pop = true,
 			children = content,
 		}),
 	})

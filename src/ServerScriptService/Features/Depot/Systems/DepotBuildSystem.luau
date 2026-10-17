@@ -175,7 +175,8 @@ local function paintFloor(layout: DepotTypes.Layout, origin: CFrame, model: Mode
 		text.Size = UDim2.fromScale(1, 1)
 		text.Text = label.text
 		text.TextScaled = true
-		text.FontFace = Font.new(Font.fromEnum(Enum.Font.Oswald).Family, Enum.FontWeight.Bold)
+		-- The kit's display face (Luckiest Guy), so the floor paint reads like the rest of the game's type.
+		text.FontFace = Font.fromEnum(Enum.Font.LuckiestGuy)
 		text.TextColor3 = DepotLayoutConstants.MARKING.YELLOW
 		text.Parent = gui
 	end

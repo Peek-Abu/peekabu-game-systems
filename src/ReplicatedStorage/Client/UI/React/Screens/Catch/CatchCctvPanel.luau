@@ -1,11 +1,13 @@
 --!strict
 --[=[
-	CatchCctvPanel: the CCTV feed while the local player is caught (Figma 4b desktop 22:249, 4d phone 22:285, restyle
-	approved 2026-10-11). Faint horizontal scanlines over the view, four white L-shaped corner brackets, top-left the
-	red REC dot with "REC   CAM 04 · ROOM", "WATCHING  NAME" and the carrying line, top-right the night-clock timestamp,
-	bottom-centre "BACK ON THE CLOCK IN 0:06", and the cream INCIDENT REPORT slip (a red band, tilted). Desktop draws
-	the previous / next teammate key chips under the countdown; the phone draws two round "<" / ">" buttons at the sides
-	instead (`onPrev` / `onNext`), clear of the engine's Jump button (`jump`, from ShiftHudViewModel.arcFor). Every string comes
+	CatchCctvPanel: the CCTV feed while the local player is caught (Figma 4b desktop 22:249, 4d phone 22:285), in the V1
+	kit. The feed itself stays diegetic and quiet: faint scanlines and a night wash over the view, four white L-shaped
+	corner brackets. On it, in the kit: top-left a coral REC light with "REC   CAM 04 · ROOM" and "WATCHING  NAME" in
+	stroked display type over the carrying line, top-right the night-clock timestamp, bottom-centre "BACK ON THE CLOCK
+	IN 0:06" in coral on a dark pill, and the INCIDENT REPORT as a cream panel on the depth stack with its title on a
+	coral pill breaking its top-left corner. Desktop draws the previous / next teammate key caps under the countdown; the
+	phone draws two round PREV / NEXT buttons at the sides instead (`onPrev` / `onNext`), clear of the engine's Jump
+	button (`jump`, from ShiftHudViewModel.arcFor). Every string comes
 	from the specced CatchViewModel. Presentational.
 
 	@class CatchCctvPanel
@@ -15,12 +17,16 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
 local CatchViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Catch.CatchViewModel)
-local KeyChip = require(ReplicatedStorage.Client.UI.React.Screens.Paper.KeyChip)
-local PaperButton = require(script.Parent.Parent.Paper.PaperButton)
-local PaperLabel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperLabel)
 local PaperScaleContext = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperScaleContext)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
+local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
+local ToonButton = require(Toon.ToonButton)
+local ToonPanel = require(Toon.ToonPanel)
+local ToonPill = require(Toon.ToonPill)
+local ToonSurface = require(Toon.ToonSurface)
+local ToonText = require(Toon.ToonText)
+local UIToonConstants = require(Toon.UIToonConstants)
 
 local e = React.createElement
 
@@ -119,23 +125,21 @@ local SPEC: { [UIPaperConstants.Layout]: Spec } = {
 	},
 }
 
-local COLOR = UIPaperConstants.COLOR
--- Figma: the scanlines at 7% opacity, a night wash at 25%, the carrying line at 85%, the slip tilted 1.2°.
+local COLOR = UIToonConstants.COLOR
+-- The feed's own light: scanlines and brackets in white, a night wash at 25%, the carrying line at 85%.
+local FEED = COLOR.white
+local WASH = UIToonConstants.shade("night").lo
 local SCAN_TRANSPARENCY = 0.93
 local WASH_TRANSPARENCY = 0.75
 local DETAILS_TRANSPARENCY = 0.15
-local SLIP_TILT = -1.2
--- The desktop key chips: 12 px from chip to label, 120 px between the two hints, 50 px under the countdown.
+-- The desktop key caps: 12 px from cap to label, 120 px between the two hints, 50 px under the countdown.
 local CHIP_SIZE = 22
 local CHIP_LABEL_GAP = 12
 local HINT_GAP = 120
 local CHIPS_BELOW_BACK = 50
--- The phone buttons (Figma "Mobile button"): 72 px, night at 72%, a 3 px fluorescent ring at 85%, a 30 px label; their
--- foot sits BUTTON_ABOVE_JUMP above the Jump button's offset (272 px on the 390 px phone, as in 4d).
-local BUTTON_SIZE = 72
-local BUTTON_FILL_TRANSPARENCY = 0.28
-local BUTTON_STROKE_TRANSPARENCY = 0.15
-local BUTTON_TEXT = 30
+-- The phone buttons: 76 px round plates, their foot BUTTON_ABOVE_JUMP above the Jump button's offset.
+local BUTTON_SIZE = 76
+local BUTTON_TEXT = 18
 local BUTTON_ABOVE_JUMP = 28
 -- Enough lines to cover any viewport height.
 local SCAN_HEIGHT = 1600
@@ -150,7 +154,7 @@ local function scanlines(gap: number, drawnScale: React.Binding<number>, bleed: 
 		lines[`l{index}`] = e("Frame", {
 			Position = UDim2.fromOffset(0, index * gap),
 			Size = thickness,
-			BackgroundColor3 = COLOR.fluorescent,
+			BackgroundColor3 = FEED,
 			BackgroundTransparency = SCAN_TRANSPARENCY,
 			BorderSizePixel = 0,
 		})
@@ -160,7 +164,7 @@ local function scanlines(gap: number, drawnScale: React.Binding<number>, bleed: 
 		Position = UDim2.fromOffset(0, -bleed),
 		Size = UDim2.new(1, 0, 1, bleed),
 		ZIndex = 0,
-		BackgroundColor3 = COLOR.night,
+		BackgroundColor3 = WASH,
 		BackgroundTransparency = WASH_TRANSPARENCY,
 		BorderSizePixel = 0,
 		ClipsDescendants = true,
@@ -176,9 +180,9 @@ local function bracket(spec: Spec, corner: Vector2): React.ReactNode
 			AnchorPoint = corner,
 			Position = UDim2.fromScale(corner.X, corner.Y),
 			Size = size,
-			BackgroundColor3 = COLOR.fluorescent,
+			BackgroundColor3 = FEED,
 			BorderSizePixel = 0,
-		})
+		}, { corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }) })
 	end
 	return e("Frame", {
 		AnchorPoint = corner,
@@ -191,76 +195,95 @@ local function bracket(spec: Spec, corner: Vector2): React.ReactNode
 	})
 end
 
+-- How many lines `text` wraps to across `width` px of Fredoka at `size` (its average glyph is about 0.52 em wide).
+local function linesOf(text: string, size: number, width: number): number
+	return math.max(1, math.ceil((utf8.len(text) or #text) * size * 0.52 / width))
+end
+
 local function incidentSlip(view: CatchViewModel.CctvView, spec: Spec): React.ReactNode
-	local lines: { [string]: React.ReactNode } = {
-		layout = e("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 2) }),
-	}
+	local lineHeight = math.ceil(spec.slipText * 1.3)
+	local top = math.ceil(spec.slipBand * 0.6)
+	local width = spec.slipSize.X - 2 * spec.slipPad
+	local face: { [string]: React.ReactNode } = {}
+	local y = top
 	for index, line in view.incident do
-		lines[`line{index}`] = e(PaperLabel, {
+		local height = linesOf(line, spec.slipText, width) * lineHeight
+		face[`line{index}`] = e(ToonText, {
 			text = line,
-			role = "body",
-			size = spec.slipText,
-			color = COLOR.ink,
-			layoutOrder = index,
+			font = "body",
+			textSize = spec.slipText,
+			position = UDim2.fromOffset(spec.slipPad, y),
+			size = UDim2.new(1, -2 * spec.slipPad, 0, height),
+			wrapped = true,
+			fit = true,
+			alignY = "top",
 		})
+		y += height
 	end
+	local height = math.max(spec.slipSize.Y, y + spec.slipPad + UIToonConstants.DEPTH.lip)
 	return e("Frame", {
 		AnchorPoint = spec.slipAnchor,
 		Position = spec.slipAt,
-		Size = UDim2.fromOffset(spec.slipSize.X, 0),
-		AutomaticSize = Enum.AutomaticSize.Y,
-		Rotation = SLIP_TILT,
-		BackgroundColor3 = COLOR.cream,
-		BorderSizePixel = 0,
+		Size = UDim2.fromOffset(spec.slipSize.X, height + UIToonConstants.DEPTH.drop),
+		BackgroundTransparency = 1,
 	}, {
-		least = e("UISizeConstraint", { MinSize = spec.slipSize }),
-		padding = e("UIPadding", { PaddingBottom = UDim.new(0, spec.slipPad) }),
-		band = e("Frame", {
-			Size = UDim2.new(1, 0, 0, spec.slipBand),
-			BackgroundColor3 = COLOR.stamp,
-			BorderSizePixel = 0,
-		}, {
-			title = e(PaperLabel, {
-				text = view.incidentTitle,
-				role = "heading",
-				size = spec.slipTitle,
-				color = COLOR.cream,
-				position = UDim2.fromOffset(spec.slipPad, 0),
-				frame = UDim2.new(1, -2 * spec.slipPad, 1, 0),
-				autoSize = false,
-				wrapped = false,
-			}),
+		panel = e(ToonPanel, {
+			size = Vector2.new(spec.slipSize.X, height),
+			radius = if spec.slipSize.X < 300 then 16 else 22,
+			children = face,
 		}),
-		body = e("Frame", {
-			Position = UDim2.fromOffset(spec.slipPad, spec.slipBand + 4),
-			Size = UDim2.new(1, -2 * spec.slipPad, 0, 0),
-			AutomaticSize = Enum.AutomaticSize.Y,
-			BackgroundTransparency = 1,
-		}, lines),
+		title = e(ToonPill, {
+			text = view.incidentTitle,
+			hue = "coral",
+			textSize = spec.slipTitle,
+			tilt = -3,
+			position = UDim2.fromOffset(-spec.slipPad, -math.ceil(spec.slipBand * 0.55)),
+			size = UDim2.fromOffset(
+				math.min(
+					spec.slipSize.X,
+					40 + (utf8.len(view.incidentTitle) or #view.incidentTitle) * spec.slipTitle * 0.62
+				),
+				spec.slipBand
+			),
+			zIndex = 5,
+		}),
 	})
 end
 
 local function hint(key: string, label: string, order: number): React.ReactNode
+	local cap: { [string]: React.ReactNode } = {
+		key = e(ToonText, {
+			text = key,
+			textSize = CHIP_SIZE - 2,
+			size = UDim2.fromScale(1, 1),
+			align = "center",
+			fit = true,
+		}),
+	}
+	local capWidth = math.max(CHIP_SIZE + 18, (utf8.len(key) or #key) * CHIP_SIZE * 0.7 + 18)
 	return e("Frame", {
 		LayoutOrder = order,
-		Size = UDim2.fromOffset(0, 0),
-		AutomaticSize = Enum.AutomaticSize.XY,
+		Size = UDim2.fromOffset(
+			capWidth + CHIP_LABEL_GAP + (utf8.len(label) or #label) * CHIP_SIZE * 0.55,
+			CHIP_SIZE + 20
+		),
 		BackgroundTransparency = 1,
 	}, {
-		layout = e("UIListLayout", {
-			FillDirection = Enum.FillDirection.Horizontal,
-			VerticalAlignment = Enum.VerticalAlignment.Center,
-			SortOrder = Enum.SortOrder.LayoutOrder,
-			Padding = UDim.new(0, CHIP_LABEL_GAP),
+		cap = e(ToonSurface, {
+			hue = "cream",
+			small = true,
+			radius = 9,
+			size = UDim2.fromOffset(capWidth, CHIP_SIZE + 14),
+			children = cap,
 		}),
-		chip = e(KeyChip, { label = key, size = CHIP_SIZE, layoutOrder = 1 }),
-		label = e(PaperLabel, {
+		label = e(ToonText, {
 			text = label,
-			role = "body",
-			size = CHIP_SIZE,
-			color = COLOR.fluorescent,
+			font = "body",
+			color = COLOR.white,
+			textSize = CHIP_SIZE,
+			position = UDim2.fromOffset(capWidth + CHIP_LABEL_GAP, 0),
+			size = UDim2.new(1, -capWidth - CHIP_LABEL_GAP, 0, CHIP_SIZE + 14),
 			fit = true,
-			layoutOrder = 2,
 		}),
 	})
 end
@@ -284,7 +307,7 @@ local function keyHints(view: CatchViewModel.CctvView, spec: Spec): React.ReactN
 	})
 end
 
--- A round phone button with an approved text label ("<" / ">"), `side` 0 on the left edge, 1 on the right.
+-- A round phone button (PREV / NEXT), `side` 0 on the left edge, 1 on the right.
 local function roundButton(
 	text: string,
 	side: number,
@@ -293,39 +316,39 @@ local function roundButton(
 	onPress: () -> ()
 ): React.ReactNode
 	local edge = if side == 0 then spec.inset.left else -spec.inset.right
-	local content: React.ReactNode = e("Frame", {
-		Size = UDim2.fromScale(1, 1),
-		BackgroundColor3 = COLOR.night,
-		BackgroundTransparency = BUTTON_FILL_TRANSPARENCY,
-		BorderSizePixel = 0,
-	}, {
-		corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }),
-		stroke = e("UIStroke", {
-			Color = COLOR.fluorescent,
-			Thickness = 3,
-			Transparency = BUTTON_STROKE_TRANSPARENCY,
-			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-		}),
-		label = e(PaperLabel, {
-			text = text,
-			role = "heading",
-			size = BUTTON_TEXT,
-			color = COLOR.fluorescent,
-			align = "center",
-			frame = UDim2.fromScale(1, 1),
-			autoSize = false,
-			wrapped = false,
-		}),
-	})
-	return e(PaperButton, {
-		text = "",
-		variant = "surface",
-		content = content,
+	return e(ToonButton, {
+		text = text,
+		variant = "night",
+		radius = 999,
 		anchor = Vector2.new(side, 1),
 		position = UDim2.new(side, edge, 1, jump.y - BUTTON_ABOVE_JUMP),
 		size = UDim2.fromOffset(BUTTON_SIZE, BUTTON_SIZE),
 		textSize = BUTTON_TEXT,
 		onActivated = onPress,
+	})
+end
+
+-- One line of the feed's own type in white: stroked display type, or Fredoka (`display` false).
+local function feedText(
+	text: string,
+	size: number,
+	position: UDim2,
+	anchor: Vector2?,
+	display: boolean,
+	transparency: number?,
+	align: ("left" | "right" | "center")?
+): React.ReactNode
+	return e(ToonText, {
+		text = text,
+		font = if display then "display" else "body",
+		color = COLOR.white,
+		textSize = size,
+		anchor = anchor,
+		position = position,
+		size = UDim2.fromOffset(0, math.ceil(size * 1.35)),
+		automaticWidth = true,
+		align = align,
+		transparency = transparency,
 	})
 end
 
@@ -340,6 +363,7 @@ local function CatchCctvPanel(props: CatchCctvPanelProps): React.ReactNode
 	local lines = React.useMemo(function(): React.ReactNode
 		return scanlines(spec.scanGap, drawnScale, bleed)
 	end, linesDeps)
+	local backWidth = math.ceil((utf8.len(view.back) or #view.back) * spec.backSize * 0.62 + 48)
 
 	local children: { [string]: React.ReactNode } = {
 		scanlines = lines,
@@ -347,60 +371,52 @@ local function CatchCctvPanel(props: CatchCctvPanelProps): React.ReactNode
 		topRight = bracket(spec, Vector2.new(1, 0)),
 		bottomLeft = bracket(spec, Vector2.new(0, 1)),
 		bottomRight = bracket(spec, Vector2.new(1, 1)),
-		dot = e("Frame", {
-			Position = UDim2.fromOffset(spec.dotAt.X, spec.dotAt.Y),
-			Size = UDim2.fromOffset(spec.dot, spec.dot),
-			BackgroundColor3 = COLOR.exitRed,
-			BorderSizePixel = 0,
-		}, { corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }) }),
-		rec = e(PaperLabel, {
-			text = view.rec,
-			role = "timer",
-			size = spec.recSize,
-			color = COLOR.fluorescent,
-			position = UDim2.fromOffset(spec.recAt.X, spec.recAt.Y),
-			fit = true,
+		dot = e(ToonSurface, {
+			hue = "coral",
+			small = true,
+			radius = 999,
+			position = UDim2.fromOffset(spec.dotAt.X - 2, spec.dotAt.Y - 2),
+			size = UDim2.fromOffset(spec.dot + 4, spec.dot + 4),
 		}),
-		watching = e(PaperLabel, {
-			text = view.watching,
-			role = "heading",
-			size = spec.watchingSize,
-			color = COLOR.fluorescent,
-			position = UDim2.fromOffset(spec.watchingAt.X, spec.watchingAt.Y),
-			fit = true,
-		}),
-		details = e(PaperLabel, {
-			text = view.details,
-			role = "body",
-			size = spec.detailsSize,
-			color = COLOR.fluorescent,
-			transparency = DETAILS_TRANSPARENCY,
-			position = UDim2.fromOffset(spec.detailsAt.X, spec.detailsAt.Y),
-			fit = true,
-		}),
-		stamp = e(PaperLabel, {
-			text = view.stamp,
-			role = "timer",
-			size = spec.stampSize,
-			color = COLOR.fluorescent,
-			anchor = Vector2.new(1, 0),
-			position = UDim2.new(1, -spec.stampRight, 0, spec.recAt.Y),
-			fit = true,
-		}),
-		back = e(PaperLabel, {
+		rec = feedText(view.rec, spec.recSize, UDim2.fromOffset(spec.recAt.X, spec.recAt.Y - 2), nil, true),
+		watching = feedText(
+			view.watching,
+			spec.watchingSize,
+			UDim2.fromOffset(spec.watchingAt.X, spec.watchingAt.Y),
+			nil,
+			true
+		),
+		details = feedText(
+			view.details,
+			spec.detailsSize,
+			UDim2.fromOffset(spec.detailsAt.X, spec.detailsAt.Y),
+			nil,
+			false,
+			DETAILS_TRANSPARENCY
+		),
+		stamp = feedText(
+			view.stamp,
+			spec.stampSize,
+			UDim2.new(1, -spec.stampRight, 0, spec.recAt.Y - 2),
+			Vector2.new(1, 0),
+			true,
+			nil,
+			"right"
+		),
+		back = e(ToonPill, {
 			text = view.back,
-			role = "timer",
-			size = spec.backSize,
-			color = COLOR.fluorescent,
+			hue = "night",
+			meaning = "coral",
+			textSize = spec.backSize,
 			anchor = Vector2.new(0.5, 0),
-			position = UDim2.new(0.5, 0, 1, -spec.backBottom),
-			fit = true,
+			position = UDim2.new(0.5, 0, 1, -spec.backBottom - 6),
+			size = UDim2.fromOffset(backWidth, math.ceil(spec.backSize * 1.7)),
 		}),
 		incident = if #view.incident > 0 then incidentSlip(view, spec) else nil,
 	}
 	if phone then
-		children.prevButton = roundButton("<", 0, spec, props.jump, props.onPrev)
-		children.nextButton = roundButton(">", 1, spec, props.jump, props.onNext)
+		children.prevButton = roundButton("PREV", 0, spec, props.jump, props.onPrev)
+		children.nextButton = roundButton("NEXT", 1, spec, props.jump, props.onNext)
 	else
 		children.hints = keyHints(view, spec)
 	end
