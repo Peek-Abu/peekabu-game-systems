@@ -230,6 +230,12 @@ return table.freeze({
 	COUNTDOWN_LOUD = 3,
 	COUNTDOWN_LOUD_SCALE = 1.6,
 	FEEDBACK_INTERVAL = 0.1,
+	-- The results jingle ducks the music and the beds (the Music and Ambient groups) by RESULTS_DUCK_DB: down over
+	-- RESULTS_DUCK_IN seconds as it starts, back over RESULTS_DUCK_OUT once it ends (the profile: "music ducks 6 dB").
+	RESULTS_DUCK_DB = -6,
+	RESULTS_DUCK_IN = 0.3,
+	RESULTS_DUCK_OUT = 1,
+	RESULTS_DUCK_GROUPS = table.freeze({ "Music", "Ambient" }),
 	-- Crew status public fields (M3 UI: the crew roster and the CCTV), published by ShiftCrewStatusSystem every
 	-- CREW_STATUS_INTERVAL seconds while a shift runs. Flags are present only while true.
 	PUBLIC_IN_TRUCK = "inTruck",

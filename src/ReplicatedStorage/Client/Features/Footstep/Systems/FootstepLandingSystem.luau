@@ -2,14 +2,14 @@
 --[=[
 	FootstepLandingSystem: the body meeting the floor, for every player character this client sees, from its vertical
 	speed each frame (FootstepLandingFormulas; a remote character's Humanoid state does not replicate, its velocity does).
-	The game's own character sounds since RbxCharacterSounds is replaced by an empty script (StarterPlayerScripts;
-	round-3 default-sounds audit): the engine's running loop, free-fall wind, climb, swim, get-up and death "oof" are
-	gone, and these play instead:
+	The game's own character sounds (round-3 default-sounds audit): FootstepServiceClient mutes the engine's (its running
+	loop, free-fall wind, jump, landing, climb, swim, get-up and death "oof"), and these play instead:
 
 	- a land (FootstepAssets.LAND, 3D on the root, louder the faster the fall), at most one per LAND_GAP;
-	- the jump: the engine's own clip (FootstepAssets.DEFAULT_JUMP) until the in-house jump is remade (pending);
+	- the jump: one of FootstepAssets.JUMPS at random (never the same twice running), 3D on the root;
 	- a dead body's first impact within BODY_FALL_WINDOW of the death (the catch's throw, any ragdoll): the plush
-	  body-fall (FootstepAssets.BODY_FALL), once. The caught "FIRED" cue that replaces the "oof" is pending: silent.
+	  body-fall (FootstepAssets.BODY_FALL), once. (The caught player's "FIRED" stamp at the throw is
+	  OccupantScareSystem's.)
 
 	Spec-exempt shell (Players, Instances, RunService); the decisions are the specced FootstepLandingFormulas.
 
@@ -37,12 +37,14 @@ type Body = {
 	lastLand: number,
 	diedAt: number?,
 	fell: boolean,
-	jump: Sound?,
+	-- The last jump variant played (JUMPS index).
+	lastJump: number,
 }
 
 local bodies: { [Model]: Body } = {}
 local counters: Counters = { lands = 0, jumps = 0, bodyFalls = 0 }
 local stoppers: { () -> () } = {}
+local rng = Random.new()
 
 local function play(id: string, at: BasePart, volumeScale: number?)
 	if SoundRegistry.has(id) then
@@ -50,23 +52,13 @@ local function play(id: string, at: BasePart, volumeScale: number?)
 	end
 end
 
--- The engine's jump clip on this body's root (made once; an `rbxasset://` path, so not a registry sound).
+-- One jump variant at random (never the one this body played last), 3D on its root.
 local function playJump(body: Body)
-	local sound = body.jump
-	if sound == nil or sound.Parent == nil then
-		local made = Instance.new("Sound")
-		made.Name = "FootstepJump"
-		made.SoundId = FootstepAssets.DEFAULT_JUMP
-		made.Volume = FootstepAssets.DEFAULT_JUMP_VOLUME
-		made.Parent = body.root
-		body.jump = made
-		sound = made
-	end
-	if sound ~= nil then
-		counters.jumps += 1
-		sound.TimePosition = 0
-		sound:Play()
-	end
+	local jumps = FootstepAssets.JUMPS
+	local index = FootstepLandingFormulas.variant(rng:NextNumber(), #jumps, body.lastJump)
+	body.lastJump = index
+	counters.jumps += 1
+	play(jumps[index], body.root)
 end
 
 local function track(character: Model)
@@ -87,7 +79,7 @@ local function track(character: Model)
 		lastLand = 0,
 		diedAt = if humanoid.Health <= 0 then os.clock() else nil,
 		fell = false,
-		jump = nil,
+		lastJump = 0,
 	}
 	bodies[character] = body
 	humanoid.Died:Once(function()

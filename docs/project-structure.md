@@ -44,7 +44,7 @@ Only these live outside a `Features/` root:
 | `ReplicatedStorage/Client/UI/` | the React UI tree (layers, components, hooks, scenes); conventions in [Naming](#naming) |
 | `ServerScriptService/Commands/` | Cmdr commands; naming in [Naming](#naming) |
 | `ReplicatedStorage/Shared/CmdrTypes/` | Cmdr argument types |
-| entry scripts | `ServerHandler.server`, `TestRunner.server`, `ClientHandler.client`, `StarterCharacterScripts/Animate.client` and `StarterPlayerScripts/RbxCharacterSounds.client` (the engine skips inserting its own Animate or character-sounds script only when the name matches; the latter is empty, to turn the default character sounds off) |
+| entry scripts | `ServerHandler.server`, `TestRunner.server`, `ClientHandler.client`, and `StarterCharacterScripts/Animate.client` (the engine skips inserting its own Animate script only when the name matches) |
 
 Core and Data are closed lists. A module joins Core only if it is framework every feature uses, or a
 typed wrapper around a library; anything owned by one feature goes in that feature.

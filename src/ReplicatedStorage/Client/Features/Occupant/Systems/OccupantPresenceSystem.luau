@@ -83,6 +83,9 @@ local PRELOAD: { string } = {
 	"deskSwivel",
 	"deskSwivelChair",
 	"deskSwivelBend",
+	"harlowCatchSting",
+	"catchFired",
+	"catchRehired",
 }
 local warm: { Sound } = {}
 

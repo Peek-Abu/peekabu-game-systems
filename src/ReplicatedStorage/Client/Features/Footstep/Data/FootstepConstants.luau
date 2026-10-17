@@ -63,6 +63,21 @@ return table.freeze({
 	MATERIAL_SURFACES = table.freeze(MATERIAL_SURFACES),
 	-- How many recent steps getState keeps (the live sync check reads them).
 	RECENT = 64,
+	-- Roblox's own character sounds (RbxCharacterSounds' Sounds in each character's root), all muted on every
+	-- followed character: the game plays its own steps, jump, land and body-fall, and the caught "FIRED" replaces the
+	-- "oof". Measured 2026-10-17: an empty RbxCharacterSounds override no longer holds (SoundService
+	-- CharacterSoundsUseNewApi = Default puts the engine's script back in Play), so they are muted instead.
+	DEFAULT_SOUNDS = table.freeze({
+		"Running",
+		"Died",
+		"Jumping",
+		"Landing",
+		"FreeFalling",
+		"GettingUp",
+		"Climbing",
+		"Swimming",
+		"Splash",
+	}),
 	-- The body meeting the floor (FootstepLandingSystem, FootstepLandingFormulas), from the root's vertical speed: a
 	-- land is an impact from LAND_SPEED studs/s down (a jump lands at ~50, a step off a kerb under it); a jump is a
 	-- take-off to JUMP_SPEED up (a full jump leaves at ~50); one land per LAND_GAP seconds. A dead body's first impact

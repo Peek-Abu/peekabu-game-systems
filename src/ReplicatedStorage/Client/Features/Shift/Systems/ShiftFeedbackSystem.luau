@@ -2,7 +2,9 @@
 --[=[
 	ShiftFeedbackSystem: how the shift sounds and feels on this client (Cleanup Crew spec §7 table: quota met (the
 	in-house "contract met" jingle since 2026-10-17, was the truck horn), tier up, overtime "ticking music layer", clock
-	out "horn honks"; the shift's start and end; the review's results jingle as it opens, ShiftCueUtils.jingle). It
+	out "horn honks"; the shift's start and end; the review's results jingle as it opens, ShiftCueUtils.jingle, with the
+	music and the beds ducked under it: an EqualizerSoundEffect on the Music and Ambient groups, so the players' own
+	group volumes are never touched). It
 	watches ShiftStore's snapshot: ShiftCueUtils says which moments just happened, and each plays its sound
 	(ShiftAssets.CUE_SOUNDS) and camera kick. Overtime keeps the ticking layer on (a SoundServiceClient ambience
 	slot); a clock-out countdown ticks every second, louder for the last COUNTDOWN_LOUD. The stamps and sticky
@@ -16,6 +18,8 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local SoundService = game:GetService("SoundService")
+local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 export type ShiftFeedbackState = {
@@ -37,24 +41,71 @@ local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.Sound
 
 local log = Logger.new("ShiftFeedbackSystem")
 
-local counters = { cues = 0, played = 0, pending = 0, ticks = 0 }
+local counters = { cues = 0, played = 0, pending = 0, ticks = 0, ducks = 0 }
 local stoppers: { () -> () } = {}
 local last: ShiftTypes.ShiftSnapshot? = nil
 local ticking = false
 local lastSecond: number? = nil
 
 -- Plays a Shift sound if it is uploaded; a pending one is counted, an undeclared one is a developer error.
-local function play(id: string, volumeScale: number?)
+local function play(id: string, volumeScale: number?): SoundServiceClient.SoundHandle?
 	if ShiftAssets.SOUNDS[id] == nil then
 		log:warn(`"{id}" is not a ShiftAssets sound`)
-		return
+		return nil
 	end
 	if not SoundRegistry.has(id) then
 		counters.pending += 1
-		return
+		return nil
 	end
 	counters.played += 1
-	SoundServiceClient:play(id, { volumeScale = volumeScale })
+	return SoundServiceClient:play(id, { volumeScale = volumeScale })
+end
+
+-- Ducks the music and the beds under `sound` (the results jingle) until it ends: every band of an EqualizerSoundEffect
+-- on each group eases to RESULTS_DUCK_DB, then back to 0 and away.
+local function duckUnder(sound: Sound)
+	counters.ducks += 1
+	local level = ShiftConstants.RESULTS_DUCK_DB
+	for _, name in ShiftConstants.RESULTS_DUCK_GROUPS do
+		local group = SoundService:FindFirstChild(name)
+		if group ~= nil and group:IsA("SoundGroup") then
+			local duck = Instance.new("EqualizerSoundEffect")
+			duck.Name = "ShiftResultsDuck"
+			duck.LowGain = 0
+			duck.MidGain = 0
+			duck.HighGain = 0
+			duck.Parent = group
+			local down = { LowGain = level, MidGain = level, HighGain = level }
+			TweenService:Create(duck, TweenInfo.new(ShiftConstants.RESULTS_DUCK_IN), down):Play()
+			local function release()
+				local up = TweenService:Create(
+					duck,
+					TweenInfo.new(ShiftConstants.RESULTS_DUCK_OUT),
+					{ LowGain = 0, MidGain = 0, HighGain = 0 }
+				)
+				up.Completed:Once(function()
+					duck:Destroy()
+				end)
+				up:Play()
+			end
+			-- Ended for a jingle that plays out; Destroying for one cut short.
+			local ended: RBXScriptConnection? = nil
+			local gone: RBXScriptConnection? = nil
+			local function once()
+				if ended ~= nil then
+					ended:Disconnect()
+				end
+				if gone ~= nil then
+					gone:Disconnect()
+				end
+				ended = nil
+				gone = nil
+				release()
+			end
+			ended = sound.Ended:Connect(once)
+			gone = sound.Destroying:Connect(once)
+		end
+	end
 end
 
 -- `cue` is a ShiftCueUtils.Cue (typed string: the CUE_SOUNDS index above widens it).
@@ -85,7 +136,10 @@ end
 local function onSnapshot(current: ShiftTypes.ShiftSnapshot?)
 	local jingle = ShiftCueUtils.jingle(last, current)
 	if jingle ~= nil then
-		play(ShiftAssets.JINGLE_SOUNDS[jingle])
+		local handle = play(ShiftAssets.JINGLE_SOUNDS[jingle])
+		if handle ~= nil then
+			duckUnder(handle.sound)
+		end
 	end
 	for _, cue in ShiftCueUtils.cues(last, current) do
 		counters.cues += 1

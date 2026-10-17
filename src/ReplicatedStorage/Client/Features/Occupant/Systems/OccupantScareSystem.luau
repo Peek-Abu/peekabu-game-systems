@@ -98,11 +98,15 @@ end
 local OccupantScareSystem = {}
 
 --[=[
-	The caught player's scare beat: the sting, and the grin over his face for SNAP_SECONDS.
+	The caught player's scare beat: the sting, the grin over his face for SNAP_SECONDS, and FIRED on the throw.
 ]=]
 function OccupantScareSystem.snap()
 	counters.scares += 1
 	play("harlowCatchSting")
+	-- FIRED: its stamp lands on the throw, SNAP_SECONDS after the catch (OccupantCatchSystem).
+	task.delay(math.max(0, OccupantConstants.SNAP_SECONDS - OccupantAssets.FIRED_HIT), function()
+		play("catchFired")
+	end)
 	local head = headOf()
 	-- The Smile Mask has its own Hunting face (the server shows it): the grin is only for the fallback body.
 	if head == nil or (head.Parent ~= nil and head.Parent:FindFirstChild(OccupantAssets.FACE_PLATE) ~= nil) then

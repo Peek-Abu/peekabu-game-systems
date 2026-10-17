@@ -197,8 +197,9 @@ return table.freeze({
 	REVEAL_COUNT = 32,
 	REVEAL_COLOR = Color3.fromRGB(255, 205, 70),
 	-- The reveal sound's value layer grows with the revealed item's base value (CargoBaseValue): the lowest base each
-	-- tier starts at (below `mid` is "low"). Buried kinds roll 30-170 before depth, so "jackpot" is mostly a jackpot roll.
-	REVEAL_TIERS = table.freeze({ mid = 60, high = 100, jackpot = 160 }),
+	-- tier starts at (below `mid` is "low"). Measured live 2026-10-17: bases after depth ran 87-270 (a plaque 87, plants
+	-- 112-144, a coffee machine 210, a watch 270), so the top tier is a rare find.
+	REVEAL_TIERS = table.freeze({ mid = 100, high = 150, jackpot = 220 }),
 	APPRAISE_COUNT = 14,
 	APPRAISE_COLOR = Color3.fromRGB(244, 236, 216),
 	-- How far down the floor is looked for under a spill or a scattered item.

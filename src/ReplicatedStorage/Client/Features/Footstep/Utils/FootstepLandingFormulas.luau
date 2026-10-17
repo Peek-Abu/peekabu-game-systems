@@ -36,6 +36,17 @@ function FootstepLandingFormulas.jumped(before: number, now: number, minSpeed: n
 end
 
 --[=[
+	Which of `count` variants a roll (0-1) picks (1-based), never `last` again when there is another to pick.
+]=]
+function FootstepLandingFormulas.variant(roll: number, count: number, last: number): number
+	local index = math.clamp(math.floor(math.clamp(roll, 0, 1) * count) + 1, 1, count)
+	if count > 1 and index == last then
+		index = index % count + 1
+	end
+	return index
+end
+
+--[=[
 	The land's volume scale for a fall at `fallSpeed` studs/s (positive).
 ]=]
 function FootstepLandingFormulas.landScale(fallSpeed: number): number

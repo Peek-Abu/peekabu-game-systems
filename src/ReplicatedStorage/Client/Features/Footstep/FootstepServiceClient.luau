@@ -8,11 +8,11 @@
 	  Manager: `harlow`).
 	- Gait: hidden (the player's HideSpotId attribute), crouching (the character's Crouching attribute, a hook),
 	  sprinting (the player's Sprinting attribute, the server's decision); an NPC walks, louder as it speeds up.
-	- Roblox's own character sounds are off: StarterPlayerScripts' empty RbxCharacterSounds replaces the engine's script
-	  (2026-10-17), so its running loop, wind, landing and "oof" never play. The game's land, jump and ragdoll body-fall
-	  are FootstepLandingSystem's (started here). A `Running` clip that still turns up in a followed root (an engine
-	  that ignores the override) is muted, so steps never double up.
-	- Every pool's sounds (and the land and body-fall) are kept loaded while this client runs (one silent, never-played Sound per asset in
+	- Roblox's own character sounds (RbxCharacterSounds' running loop, jump, landing, wind, climb, swim, get-up and the
+	  "oof"; FootstepConstants.DEFAULT_SOUNDS) are muted on every character this service follows: each is moved into a
+	  silent SoundGroup (the engine's script rewrites their Volume, never their SoundGroup), an AudioPlayer one is
+	  zeroed. The game's land, jump and ragdoll body-fall are FootstepLandingSystem's (started here).
+	- Every pool's sounds (and the jumps, the land and the body-fall) are kept loaded while this client runs (one silent, never-played Sound per asset in
 	  SoundService, preloaded through ContentProvider): a cold first step loaded late, the foot already down.
 	- getState: the counters and the last RECENT steps (the live sync check reads them).
 
@@ -75,7 +75,11 @@ local function preload()
 		table.insert(warm, sound)
 		table.insert(sounds, sound)
 	end
-	for _, id in { FootstepAssets.LAND, FootstepAssets.BODY_FALL } do
+	local bodyIds: { string } = { FootstepAssets.LAND, FootstepAssets.BODY_FALL }
+	for _, id in FootstepAssets.JUMPS do
+		table.insert(bodyIds, id)
+	end
+	for _, id in bodyIds do
 		local def = SoundRegistry.get(id)
 		if def ~= nil then
 			warmOne(def.assetId)
@@ -111,17 +115,37 @@ local function playerSet(character: Model): string
 	return FootstepConstants.DEFAULT_SET
 end
 
--- RbxCharacterSounds' looped running clip, if the engine's script made one in this character's root.
+-- The silent group the engine's character sounds are moved into (made on first use).
+local silence: SoundGroup? = nil
+
+local function silentGroup(): SoundGroup
+	local existing = silence
+	if existing ~= nil and existing.Parent ~= nil then
+		return existing
+	end
+	local group = Instance.new("SoundGroup")
+	group.Name = "FootstepMutedDefaults"
+	group.Volume = 0
+	group.Parent = SoundService
+	silence = group
+	return group
+end
+
+-- RbxCharacterSounds' clips in this character's root (they appear lazily), muted as they turn up.
 local function muteDefault(rig: Rig)
-	-- Its sounds are Sounds today and AudioPlayers under the engine's new character-sounds flag; it never writes the
-	-- running clip's Volume after creating it (checked in its source, 2026-10-16), so zeroing it once holds.
-	local running = rig.root:FindFirstChild("Running")
-	if running ~= nil and running:IsA("Sound") and running.Volume > 0 then
-		running.Volume = 0
-		muted += 1
-	elseif running ~= nil and running:IsA("AudioPlayer") and running.Volume > 0 then
-		running.Volume = 0
-		muted += 1
+	for _, name in FootstepConstants.DEFAULT_SOUNDS do
+		local clip = rig.root:FindFirstChild(name)
+		if clip ~= nil and clip:IsA("Sound") then
+			local group = silentGroup()
+			if clip.SoundGroup ~= group then
+				clip.SoundGroup = group
+				muted += 1
+			end
+		end
+		if clip ~= nil and clip:IsA("AudioPlayer") and clip.Volume > 0 then
+			clip.Volume = 0
+			muted += 1
+		end
 	end
 end
 
@@ -273,6 +297,11 @@ local FootstepServiceClient: FootstepServiceClient = {
 			sound:Destroy()
 		end
 		table.clear(warm)
+		local group = silence
+		if group ~= nil then
+			group:Destroy()
+			silence = nil
+		end
 	end,
 
 	getState = function(_self)

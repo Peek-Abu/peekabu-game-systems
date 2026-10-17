@@ -10,6 +10,8 @@
 	  jittery distance never pumps the music.
 	- The stems stay locked: any stem more than CHASE_STEM_DRIFT seconds off the ostinato's TimePosition is put back on it.
 	- `finish`: the stems fade out over CHASE_MUSIC_FADE (a chase that ends inside the sting bar never starts them).
+	- A chase that flickers off and on inside the sting bar (measured live: three starts in 0.85 s at the edge of his
+	  sight) does not stack stings: the bar already sounding carries on, and the stems still start on its downbeat.
 	Pending stems (OccupantAssets) are skipped; a pending sting falls back to the library "spotted" sting.
 
 	Spec-exempt shell (Sound handles, RunService); the layer and easing are the specced OccupantTellRules.
@@ -46,6 +48,8 @@ type Stem = {
 local active = false
 -- When the stems start (os.clock()); nil once they have.
 local startAt: number? = nil
+-- When the last sting started (os.clock()).
+local stingAt = -math.huge
 local stems: { Stem } = {}
 local layer = 0
 local distanceOf: () -> number? = function(): number?
@@ -155,14 +159,18 @@ function OccupantChaseMusicSystem.begin(distance: () -> number?)
 	distanceOf = distance
 	local now = distance()
 	layer = if now ~= nil then OccupantTellRules.chaseLayer(now) else 0
-	local sting = if SoundRegistry.has("harlowChaseSting") then "harlowChaseSting" else "harlowSpotted"
-	if SoundRegistry.has(sting) then
-		counters.stings += 1
-		SoundServiceClient:play(sting)
-	else
-		counters.pending += 1
+	local clock = os.clock()
+	if clock - stingAt >= OccupantConstants.CHASE_STING_LEAD then
+		local sting = if SoundRegistry.has("harlowChaseSting") then "harlowChaseSting" else "harlowSpotted"
+		if SoundRegistry.has(sting) then
+			counters.stings += 1
+			SoundServiceClient:play(sting)
+		else
+			counters.pending += 1
+		end
+		stingAt = clock
 	end
-	startAt = os.clock() + OccupantConstants.CHASE_STING_LEAD
+	startAt = stingAt + OccupantConstants.CHASE_STING_LEAD
 end
 
 --[=[

@@ -42,8 +42,6 @@ ENTRY_SCRIPTS = frozenset(
         "src/StarterPlayer/StarterPlayerScripts/ClientHandler.client.luau",
         # The engine skips inserting its own Animate script only when the name matches.
         "src/StarterPlayer/StarterCharacterScripts/Animate.client.luau",
-        # The same for its character sounds: an empty RbxCharacterSounds turns the default sounds off.
-        "src/StarterPlayer/StarterPlayerScripts/RbxCharacterSounds.client.luau",
     }
 )
 UI_TREE = "src/ReplicatedStorage/Client/UI/"

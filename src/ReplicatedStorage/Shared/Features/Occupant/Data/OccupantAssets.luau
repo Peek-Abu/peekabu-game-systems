@@ -123,8 +123,12 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	harlowPowerDown = { assetId = "rbxassetid://95527531363916", group = "SFX", volume = 0.9, rollOffMaxDistance = 90 },
 	harlowGrab = { assetId = "rbxassetid://9113482942", group = "SFX", volume = 0.9, rollOffMaxDistance = 60 },
 	-- You respawn after a catch, with the Rehired card: the time clock punches you back IN + glock C-F up a fourth
-	-- (round-3 pick A; 2D, only for you). The throw itself is silent until the FIRED cue is remade (pending).
+	-- (round-3 pick A; 2D, only for you).
 	catchRehired = { assetId = "rbxassetid://80163458987401", group = "SFX", volume = 0.9 },
+	-- He throws you: FIRED (round-3 final pick F1 "heavy stamp": a backwards piano F dim7 swell into a heavy rubber
+	-- stamp on metal; 2D, only for the caught player; it replaces the engine's "oof"). Its stamp lands FIRED_HIT
+	-- seconds into the file, so it starts that long before the throw (OccupantScareSystem.snap).
+	catchFired = { assetId = "rbxassetid://99003711272251", group = "SFX", volume = 1 },
 }
 
 -- The chase music's stems (OccupantChaseMusicSystem): `base` plays the whole chase, `near` fades in as he closes. The
@@ -240,6 +244,8 @@ return table.freeze({
 	SOUNDS = table.freeze(SOUNDS),
 	CHASE_STEMS = table.freeze({ base = table.freeze(CHASE_STEMS.base), near = table.freeze(CHASE_STEMS.near) }),
 	SWIVEL = table.freeze(SWIVEL),
+	-- Where catchFired's stamp hits, in seconds from its start (fired_F1.mix.json hit_at_s).
+	FIRED_HIT = 0.322,
 	GIBBERISH = table.freeze(GIBBERISH),
 	IMAGES = table.freeze(IMAGES),
 	ANIMATIONS = table.freeze(ANIMATIONS),
