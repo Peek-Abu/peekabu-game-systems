@@ -227,10 +227,11 @@ noise-driven head turn as his signature "I noticed something" tell. Every number
   - A peripheral notice completing (at that player).
   - A noise he hears (through `NoiseRules`, the hearing scale and the breather's `BREATHER_HEARING`, as before) from
     **outside his front cone** (more than 50° off his heading), while he patrols or investigates. A noise in front of
-    him is investigated as before. A search still re-aims at a noise directly (he is already hunting and running).
+    him is investigated as before. A search still re-aims at a noise directly (he is already hunting and running), after a quick head snap
+    to it: **0.2 s** (`SEARCH_SNAP`) with his head swivelled there and no move, then the run (the developer, 2026-10-17).
 - **The turn.** He stops dead (no move) and turns **only his head** to the point: the desk ambush's 180° `swivel`
-  on the long neck (0.35 s), the Noticing face. He holds **0.6–1.0 s** (`TURN_HOLD`, rolled per turn) after the swivel
-  lands (`TURN_SWIVEL` 0.35 s), so the check comes **0.95–1.35 s** after the trigger. While he holds, his head follows
+  on the long neck (0.35 s), the Noticing face. He holds **1.0–1.4 s** (`TURN_HOLD`, rolled per turn; 0.6–1.0 until the developer added 0.4 s, 2026-10-17) after the swivel
+  lands (`TURN_SWIVEL` 0.35 s), so the check comes **1.35–1.75 s** after the trigger. While he holds, his head follows
   the peripheral player as long as he can still see them that way.
 - **The check** (`OccupantSightUtils.toward`): anyone not hidden with a clear line, within **60 studs**
   (`SIGHT_RANGE`), inside a **100° cone** (`SIGHT_ANGLE`) around the direction his head turned. The player who
@@ -239,7 +240,7 @@ noise-driven head turn as his signature "I noticed something" tell. Every number
   look around, the suspicion stare at a spot by it).
 - Anyone who walks into his front cone during the hold is chased at once ("sight beats everything"). Other noises
   during the hold are ignored. The shift's break cancels it as it cancels everything.
-- **Fairness.** The hold is the player's window: from the trigger they have ~1 s to get out of that cone or into a
+- **Fairness.** The hold is the player's window: from the trigger they have ~1.35–1.75 s to get out of that cone or into a
   hiding spot. Going into a spot during the hold is not "seen entering" (his body never turned), so he investigates
   and may stare at the spot on a suspicion, as for any noise by the spots.
 - Replicated as the mode `alert`: the client's dread reads it as **aware** (`OccupantDreadFormulas` HUNTING), the

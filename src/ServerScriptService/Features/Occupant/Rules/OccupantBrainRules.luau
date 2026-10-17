@@ -412,10 +412,14 @@ local function think(mind: Mind, senses: Senses): Step
 	local heard = M.audible(current, senses)
 	if heard ~= nil and not staring then
 		if current.mode == "search" then
+			-- Straight there, after a quick head snap to it (SEARCH_SNAP, no move meanwhile) so it still reads.
 			local nextMind = table.clone(current)
 			nextMind.searchPoints = M.searchPoints(heard, senses)
 			nextMind.searchIndex = 1
 			nextMind.arrivedAt = nil
+			nextMind.point = heard
+			nextMind.swivelUntil = now + OccupantConstants.SEARCH_SNAP
+			nextMind.reactUntil = now + OccupantConstants.SEARCH_SNAP
 			return { mind = nextMind, intent = { kind = "goTo", position = heard, run = true } }
 		end
 		-- From beside or behind him: the head turn first.

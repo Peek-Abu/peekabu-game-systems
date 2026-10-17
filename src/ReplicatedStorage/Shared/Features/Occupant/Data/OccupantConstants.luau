@@ -312,7 +312,11 @@ return table.freeze({
 	-- after it lands; then he chases anyone not hidden in the SIGHT_ANGLE cone his head looks down (SIGHT_RANGE), else
 	-- investigates the point. The hold is the player's window to hide or break the line.
 	TURN_SWIVEL = 0.35,
-	TURN_HOLD = range(0.6, 1.0),
+	-- (2026-10-17, the developer: +0.4 s, was 0.6-1.0, so a player has a real window to duck.)
+	TURN_HOLD = range(1.0, 1.4),
+	-- A noise while he already searches: no head turn's beat, he runs straight there, but first his head snaps to it for
+	-- SEARCH_SNAP seconds (no move meanwhile) so it still reads (the developer, 2026-10-17).
+	SEARCH_SNAP = 0.2,
 	-- Investigate scans for 4 s; search scans for 2 s at last-seen and nearby authored points. Investigate gives up after
 	-- GIVE_UP_SECONDS (an unreachable point).
 	LOOK_SECONDS = 4,

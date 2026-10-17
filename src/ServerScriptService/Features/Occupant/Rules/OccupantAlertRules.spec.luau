@@ -119,14 +119,25 @@ return function()
 			expect(step.mind.mode).to.equal("investigate")
 		end)
 
-		it("is not a reason to stop a search", function()
+		it("is not a reason to stop a search: a quick head snap to it, then he runs there", function()
 			local mind = fresh()
 			mind.mode = "search"
 			mind.since = 99
 			mind.target = 7
 			mind.lastSeen = Vector3.new(80, 3, 60)
-			local step = OccupantBrainRules.step(mind, senses({ heard = Vector3.new(40, 0, 60) }))
+			local noise = Vector3.new(40, 0, 60)
+			local step = OccupantBrainRules.step(mind, senses({ heard = noise }))
 			expect(step.mind.mode).to.equal("search")
+			expect(step.mind.point).to.equal(noise)
+			expect(step.mind.swivelUntil).to.be.near(100 + C.SEARCH_SNAP)
+			expect(step.intent.kind).to.equal("idle")
+			local snapping = OccupantBrainRules.step(step.mind, senses({ now = 100 + C.SEARCH_SNAP - 0.05 }))
+			expect(snapping.intent.kind).to.equal("idle")
+			local off = OccupantBrainRules.step(step.mind, senses({ now = 100 + C.SEARCH_SNAP + 0.01 }))
+			expect(off.mind.mode).to.equal("search")
+			expect(off.intent.kind).to.equal("goTo")
+			expect(off.intent.position).to.equal(noise)
+			expect(off.intent.run).to.equal(true)
 		end)
 
 		it("on a breather, only a near one turns him", function()
