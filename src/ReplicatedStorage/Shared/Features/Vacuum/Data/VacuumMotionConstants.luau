@@ -43,6 +43,30 @@ return table.freeze({
 		frequency = 2.6,
 		damping = 0.85,
 	}),
+	-- The pop kick: the wand jolts back and up `lift` (studs; `back` of it toward the body) and the floor head hops
+	-- `pitch`, then settles in about 0.3 s. A bigger pile kicks harder: its size against `sizeRef`, between `minScale`
+	-- and `maxScale`. Only holders who were sucking within `window` seconds, within `range` studs of the pile, kick.
+	kick = table.freeze({
+		lift = 0.15,
+		back = 0.6,
+		pitch = math.rad(7),
+		frequency = 4.5,
+		damping = 0.42,
+		sizeRef = 5.8,
+		minScale = 0.7,
+		maxScale = 1.3,
+		window = 0.6,
+		range = 10,
+	}),
+	-- The suction shimmy: while sucking, the floor head shimmies (a yaw and a roll about the wand's pivot, layered
+	-- sines at about `frequency` Hz, seeded per holder), from `base` of the full amplitude at the start of a pile to
+	-- all of it as it nears done (the progress squared). Slow enough to read as strain, not jitter.
+	shimmy = table.freeze({
+		yaw = math.rad(2.6),
+		roll = math.rad(2.2),
+		frequency = 5.5,
+		base = 0.15,
+	}),
 	-- Never let the floor head under the floor: its lowest corner stays `floorMargin` above it.
 	floorMargin = 0.01,
 	-- Never move the wand where the left paw cannot follow: its grip stays within `reachUse` of the left arm's reach

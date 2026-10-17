@@ -11,6 +11,8 @@
 	- Lean and brace: while a holder sucks (the server's ACTIVE_ATTRIBUTE, or the local player's own trigger at once),
 	  their hips drop, their knees fold and they lean in over the wand, deeper as the pile at their floor head nears
 	  done (its progress, VacuumFeedbackSystem.progressNear); letting go springs them back upright.
+	- Suction juice: while sucking, the floor head shimmies, more as the pile nears done; when a pile pops
+	  (VacuumFeedbackSystem.onPop) the wand of every holder who was just sucking it kicks back and up and settles.
 
 	Each layer eases on a spring (VacuumMotionFormulas.step) and the pose is laid on the rig in RunService.PreSimulation,
 	after the frame's animation and IK (VacuumMotionRigSystem).
@@ -39,6 +41,9 @@ type Holder = {
 	raise: Spring,
 	reach: Spring,
 	brace: Spring,
+	kick: Spring,
+	-- When it last sucked (a pop within the kick's window of it kicks its wand).
+	activeAt: number,
 }
 
 export type Options = {
@@ -57,6 +62,7 @@ local DEFAULT_LOOK = math.rad(-20)
 
 local holders: { [Player]: Holder } = {}
 local connection: RBXScriptConnection? = nil
+local stopPops: (() -> ())? = nil
 local options: Options? = nil
 local lastSent: number? = nil
 local sentAt = -math.huge
@@ -128,7 +134,7 @@ local function rigOf(holder: Holder): VacuumMotionRigSystem.Rig?
 	local bound = VacuumMotionRigSystem.bind(holder.character)
 	if bound ~= nil then
 		holder.rig = bound
-		holder.raise, holder.reach, holder.brace = spring(), spring(), spring()
+		holder.raise, holder.reach, holder.brace, holder.kick = spring(), spring(), spring(), spring()
 	end
 	return bound
 end
@@ -139,25 +145,30 @@ local function stepHolder(player: Player, holder: Holder, dt: number)
 	if rig == nil then
 		return
 	end
-	local aim, brace = Constants.aim, Constants.brace
+	local aim, brace, kick = Constants.aim, Constants.brace, Constants.kick
 	local raiseTarget, reachTarget = VacuumMotionFormulas.aim(lookOf(player, character), aim)
 	local head = rig.tool:FindFirstChild(VacuumConstants.FLOOR_HEAD_NAME)
 	local active = activeOf(player, character)
+	if active then
+		holder.activeAt = os.clock()
+	end
 	local progress = if active
 			and head ~= nil
 			and head:IsA("BasePart")
 		then VacuumFeedbackSystem.progressNear(head.Position, PILE_RANGE) or 0
 		else 0
+	local braced =
+		ease(holder.brace, VacuumMotionFormulas.braceTarget(active, progress), dt, brace.frequency, brace.damping)
+	-- The shimmy fades in and out with the brace (0 upright, 1 at the brace's start depth).
+	local shimmyYaw, shimmyRoll =
+		VacuumMotionFormulas.shimmy(os.clock(), player.UserId % 997, progress, braced / brace.base)
 	local layers: VacuumMotionFormulas.Layers = {
 		raise = ease(holder.raise, raiseTarget, dt, aim.frequency, aim.damping),
 		reach = ease(holder.reach, reachTarget, dt, aim.frequency, aim.damping),
-		brace = ease(
-			holder.brace,
-			VacuumMotionFormulas.braceTarget(active, progress),
-			dt,
-			brace.frequency,
-			brace.damping
-		),
+		brace = braced,
+		kick = ease(holder.kick, 0, dt, kick.frequency, kick.damping),
+		shimmyYaw = shimmyYaw,
+		shimmyRoll = shimmyRoll,
 	}
 	local drop, lean = VacuumMotionFormulas.body(math.max(layers.brace, 0))
 	local wand = VacuumMotionFormulas.wand(
@@ -167,6 +178,25 @@ local function stepHolder(player: Player, holder: Holder, dt: number)
 		VacuumMotionFormulas.motion(rig.rest.waist, drop, lean)
 	)
 	rig.apply({ wand = wand, drop = drop, lean = lean })
+end
+
+-- A pile popped: every holder who was sucking just now, close to it, kicks (bigger piles harder).
+local function onPop(position: Vector3, size: number)
+	local tuning = Constants.kick
+	local now = os.clock()
+	for _, holder in holders do
+		local rig = holder.rig
+		local root = holder.character:FindFirstChild("HumanoidRootPart")
+		if
+			rig ~= nil
+			and root ~= nil
+			and root:IsA("BasePart")
+			and now - holder.activeAt <= tuning.window
+			and (root.Position - position).Magnitude <= tuning.range
+		then
+			holder.kick.v += VacuumMotionFormulas.kickImpulse(VacuumMotionFormulas.kickScale(size))
+		end
+	end
 end
 
 local function step(dt: number)
@@ -184,7 +214,15 @@ local function step(dt: number)
 		end
 		local holder = holders[player]
 		if holder == nil then
-			holder = { character = character, rig = nil, raise = spring(), reach = spring(), brace = spring() }
+			holder = {
+				character = character,
+				rig = nil,
+				raise = spring(),
+				reach = spring(),
+				brace = spring(),
+				kick = spring(),
+				activeAt = -math.huge,
+			}
 			holders[player] = holder
 		end
 		stepHolder(player, holder, dt)
@@ -200,6 +238,7 @@ function VacuumMotionSystem.start(given: Options)
 	end
 	options = given
 	connection = RunService.PreSimulation:Connect(step)
+	stopPops = VacuumFeedbackSystem.onPop(onPop)
 end
 
 function VacuumMotionSystem.stop()
@@ -208,6 +247,11 @@ function VacuumMotionSystem.stop()
 		current:Disconnect()
 	end
 	connection = nil
+	local pops = stopPops
+	if pops ~= nil then
+		pops()
+	end
+	stopPops = nil
 	for _, holder in holders do
 		release(holder)
 	end

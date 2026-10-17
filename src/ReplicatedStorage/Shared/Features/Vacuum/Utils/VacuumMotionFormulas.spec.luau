@@ -20,6 +20,14 @@ return function()
 		},
 	}
 	local NONE = { offset = Vector3.zero, pitch = 0, yaw = 0, roll = 0 }
+	-- A layers' state: every layer off but those given.
+	local function layers(given)
+		local all = { raise = 0, reach = 0, brace = 0, kick = 0, shimmyYaw = 0, shimmyRoll = 0 }
+		for key, value in given do
+			all[key] = value
+		end
+		return all
+	end
 	local MARGIN = Constants.floorMargin
 
 	local function lowest(transform)
@@ -187,18 +195,98 @@ return function()
 
 	describe("offsetOf", function()
 		it("raises the wand for the aim, and moves the hands down and out for the reach", function()
-			local raised = VacuumMotionFormulas.offsetOf({ raise = 0.3, reach = 0, brace = 0 })
+			local raised = VacuumMotionFormulas.offsetOf(layers({ raise = 0.3 }))
 			expect(raised.pitch).to.be.near(0.3, 1e-6)
 			expect(raised.offset.Magnitude).to.equal(0)
-			local reached = VacuumMotionFormulas.offsetOf({ raise = 0, reach = 1, brace = 0 })
+			local reached = VacuumMotionFormulas.offsetOf(layers({ reach = 1 }))
 			expect(reached.offset.Y).to.be.near(-Constants.aim.reachDrop, 1e-6)
 			expect(reached.offset.Z).to.be.near(-Constants.aim.reachForward, 1e-6)
 		end)
 
 		it("brings the hands down and in toward the body for the brace", function()
-			local braced = VacuumMotionFormulas.offsetOf({ raise = 0, reach = 0, brace = 1 })
+			local braced = VacuumMotionFormulas.offsetOf(layers({ brace = 1 }))
 			expect(braced.offset.Y).to.be.near(-Constants.brace.handDrop, 1e-6)
 			expect(braced.offset.Z).to.be.near(Constants.brace.pull, 1e-6)
+		end)
+	end)
+
+	describe("kick", function()
+		it("jolts the hands back and up and hops the floor head, by the kick's size", function()
+			local kicked = VacuumMotionFormulas.offsetOf(layers({ kick = 1 }))
+			local tuning = Constants.kick
+			expect(kicked.offset.Y).to.be.near(tuning.lift, 1e-6)
+			expect(kicked.offset.Z).to.be.near(tuning.lift * tuning.back, 1e-6)
+			expect(kicked.pitch).to.be.near(tuning.pitch, 1e-6)
+		end)
+
+		it("kicks a bigger pile harder, within its bounds", function()
+			local tuning = Constants.kick
+			expect(VacuumMotionFormulas.kickScale(tuning.sizeRef)).to.be.near(1, 1e-6)
+			expect(VacuumMotionFormulas.kickScale(0.1)).to.equal(tuning.minScale)
+			expect(VacuumMotionFormulas.kickScale(100)).to.equal(tuning.maxScale)
+		end)
+
+		it("is an impulse that peaks at its scale, then settles back to rest in about 0.3 s", function()
+			local tuning = Constants.kick
+			local x, v = 0, VacuumMotionFormulas.kickImpulse(1)
+			local peak, peakAt, settledAt = 0, 0, nil
+			for i = 1, 120 do
+				x, v = VacuumMotionFormulas.step(x, v, 0, 1 / 240, tuning.frequency, tuning.damping)
+				if x > peak then
+					peak, peakAt = x, i / 240
+				end
+				if settledAt == nil and i / 240 > peakAt and math.abs(x) < 0.08 and math.abs(v) < 2 and peak > 0.9 then
+					settledAt = i / 240
+				end
+			end
+			expect(peak).to.be.near(1, 0.02)
+			expect(peakAt < 0.1).to.equal(true)
+			expect(settledAt ~= nil and settledAt < 0.4).to.equal(true)
+		end)
+	end)
+
+	describe("shimmy", function()
+		it("is still off a pile and grows with the pile's progress, to its full amplitude", function()
+			local tuning = Constants.shimmy
+			local function biggest(progress, weight)
+				local yaw, roll = 0, 0
+				for i = 0, 200 do
+					local y, r = VacuumMotionFormulas.shimmy(i / 100, 7, progress, weight)
+					yaw, roll = math.max(yaw, math.abs(y)), math.max(roll, math.abs(r))
+				end
+				return yaw, roll
+			end
+			local offYaw = biggest(1, 0)
+			expect(offYaw).to.equal(0)
+			local startYaw = biggest(0, 1)
+			local endYaw, endRoll = biggest(1, 1)
+			expect(startYaw > 0 and endYaw > 3 * startYaw).to.equal(true)
+			expect(endYaw <= tuning.yaw + 1e-6).to.equal(true)
+			expect(endRoll <= tuning.roll + 1e-6).to.equal(true)
+			expect(endYaw > 0.6 * tuning.yaw).to.equal(true)
+		end)
+
+		it("is smooth: no frame-to-frame jump bigger than its frequency allows", function()
+			local tuning = Constants.shimmy
+			local last = VacuumMotionFormulas.shimmy(0, 3, 1, 1)
+			for i = 1, 300 do
+				local yaw = VacuumMotionFormulas.shimmy(i / 60, 3, 1, 1)
+				-- At most the amplitude's slope (2 pi f A, the fastest of its sines) over a frame, with slack.
+				expect(math.abs(yaw - last) <= 2 * math.pi * tuning.frequency * 1.8 * tuning.yaw / 60).to.equal(true)
+				last = yaw
+			end
+		end)
+
+		it("shimmies two holders differently (seeded)", function()
+			local a = VacuumMotionFormulas.shimmy(0.37, 1, 1, 1)
+			local b = VacuumMotionFormulas.shimmy(0.37, 2, 1, 1)
+			expect(math.abs(a - b) > 1e-4).to.equal(true)
+		end)
+
+		it("turns and rolls the wand for the shimmy", function()
+			local shaken = VacuumMotionFormulas.offsetOf(layers({ shimmyYaw = 0.02, shimmyRoll = -0.01 }))
+			expect(shaken.yaw).to.be.near(0.02, 1e-6)
+			expect(shaken.roll).to.be.near(-0.01, 1e-6)
 		end)
 	end)
 

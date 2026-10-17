@@ -294,11 +294,14 @@ Only arm joints are driven; no rig joint's C0/C1 or attachment is written.
   - **Brace**: while sucking (the server's `VacuumActive` attribute), the hips drop (Root), the knees fold with the
     feet planted (`legFold`) and the torso leans in (Waist), deeper as the pile nears done. The engine solves the arm
     IK after that, on the leaned torso, so the wand stays where the pose put it.
+  - **Suction juice**: the floor head shimmies (layered sines, seeded per holder) more as the pile nears done; on a pop
+    (`VacuumFeedbackSystem.onPop`) the wand kicks back and up on an underdamped spring and settles in about 0.3 s,
+    bigger piles harder.
 
   **The validator** (`AnimationVacuumHarness`): Pippa in every vacuum skin, the hold planned mid-fall (the stock
   fall clip), then judged live over her idle, walk and run (two frames each) and vacuuming (the use clip when one
   is registered, else the locomotion it plays over), each frame under every motion layer at its extremes
-  (rest, both aim extremes, the brace and the brace with each aim, laid on by `VacuumMotionRigSystem` as a client lays them): each paw's wrap point must be on its
+  (rest, both aim extremes, the brace and the brace with each aim, the pop's recoil and rebound, the shimmy each way, laid on by `VacuumMotionRigSystem` as a client lays them): each paw's wrap point must be on its
   wand grip within 0.05 stud, each grip inside its paw, and the floor head over the floor. Runs in the TestEZ suite;
   from a server Script in play: `print(Harness.format(Harness.run({})))`. A stock R15 is not validated (every player
   spawns as an employee): its left hand does not reach `GripLower`.

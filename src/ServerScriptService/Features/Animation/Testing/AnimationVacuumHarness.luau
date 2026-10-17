@@ -17,7 +17,7 @@
 	   registered, else the locomotion it plays over); each frame is shown once its clip has loaded and confirmed
 	   shown at its time and full weight (AnimationCarryClipHarness);
 	4. in each frame, lays every motion layer on the rig at its extremes (LAYERS: rest, aim up, aim down, the brace
-	   and the brace with each aim; VacuumMotionRigSystem, exactly as every client does, in PreSimulation after the
+	   and the brace with each aim, the pop's recoil and its rebound, the shimmy each way; VacuumMotionRigSystem, exactly as every client does, in PreSimulation after the
 	   Animator's IK) and judges each: each paw's wrap point (VacuumVisualSystem.wrapOf, inside the paw) must be on
 	   its grip, the right on the wand's GripUpper and the left on its GripLower (the grip contract), within
 	   GRIP_TOLERANCE; each grip must lie inside its paw (the paw closes round the wand); and the floor head's
@@ -75,13 +75,41 @@ local GRIP_TOLERANCE = 0.05
 -- How far the floor head's lowest corner may dip under the floor (studs).
 local FLOOR_TOLERANCE = 0.02
 -- Each motion layer at its extremes (VacuumMotionFormulas.Layers), laid on every frame.
+-- A layers' state: every layer off but those given.
+local function layered(
+	raise: number,
+	reach: number,
+	brace: number,
+	kick: number,
+	shimmy: number
+): VacuumMotionFormulas.Layers
+	local shimmyTuning = VacuumMotionConstants.shimmy
+	return {
+		raise = raise,
+		reach = reach,
+		brace = brace,
+		kick = kick,
+		shimmyYaw = shimmy * shimmyTuning.yaw,
+		shimmyRoll = shimmy * shimmyTuning.roll,
+	}
+end
+local UP = VacuumMotionConstants.aim.maxUp
+-- The biggest kick (a pile at maxScale, at its peak).
+local KICK = VacuumMotionConstants.kick.maxScale
 local LAYERS: { { name: string, layers: VacuumMotionFormulas.Layers } } = {
-	{ name = "rest", layers = { raise = 0, reach = 0, brace = 0 } },
-	{ name = "aim up", layers = { raise = VacuumMotionConstants.aim.maxUp, reach = 0, brace = 0 } },
-	{ name = "aim down", layers = { raise = 0, reach = 1, brace = 0 } },
-	{ name = "brace", layers = { raise = 0, reach = 0, brace = 1 } },
-	{ name = "brace+down", layers = { raise = 0, reach = 1, brace = 1 } },
-	{ name = "brace+up", layers = { raise = VacuumMotionConstants.aim.maxUp, reach = 0, brace = 1 } },
+	{ name = "rest", layers = layered(0, 0, 0, 0, 0) },
+	{ name = "aim up", layers = layered(UP, 0, 0, 0, 0) },
+	{ name = "aim down", layers = layered(0, 1, 0, 0, 0) },
+	{ name = "brace", layers = layered(0, 0, 1, 0, 0) },
+	{ name = "brace+down", layers = layered(0, 1, 1, 0, 0) },
+	{ name = "brace+up", layers = layered(UP, 0, 1, 0, 0) },
+	-- The pop: the kick's peak, and the spring's overshoot the other way, braced.
+	{ name = "recoil", layers = layered(0, 0, 1, KICK, 0) },
+	{ name = "recoil back", layers = layered(0, 1, 1, -0.4 * KICK, 0) },
+	{ name = "recoil+up", layers = layered(UP, 0, 0, KICK, 0) },
+	-- The shimmy at its full amplitude, each way.
+	{ name = "shimmy+", layers = layered(0, 1, 1, 0, 1) },
+	{ name = "shimmy-", layers = layered(0, 0, 1, 0, -1) },
 }
 -- Frames to let the Animator settle after a change.
 local SETTLE = 4

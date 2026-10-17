@@ -12,6 +12,8 @@
 	- `aim`: the camera's look pitch to a raise (radians) and a reach (0..1). `encodeAim` / `decodeAim`: the byte the
 	  client sends and the server checks.
 	- `offsetOf`: the layers' state to the wand's offset (`wand`'s input).
+	- `kickScale` / `kickImpulse`: how hard a pile's pop kicks, as the spring's starting speed; `shimmy` the suction
+	  shimmy at a pile's progress.
 	- `braceTarget` / `body`: how deep a holder braces, and the hip drop and lean that makes; `legFold` the hip, knee
 	  and ankle turns that drop the hips with the feet planted.
 	- `step`: one damped spring.
@@ -41,8 +43,16 @@ export type WandRest = {
 -- the root's Z).
 export type WandOffset = { offset: Vector3, pitch: number, yaw: number, roll: number }
 
--- The layers' state: the aim's raise (radians) and reach (0..1), and the brace's weight (0..1).
-export type Layers = { raise: number, reach: number, brace: number }
+-- The layers' state: the aim's raise (radians) and reach (0..1), the brace's weight (0..1), the pop kick (its
+-- spring: 1 is a reference pile's peak) and the suction shimmy's turn and roll (radians).
+export type Layers = {
+	raise: number,
+	reach: number,
+	brace: number,
+	kick: number,
+	shimmyYaw: number,
+	shimmyRoll: number,
+}
 
 export type AimTuning = {
 	deadLow: number,
@@ -133,20 +143,62 @@ end
 
 --[=[
 	The wand's offset for the layers' state: the aim's raise turns it about its pivot; its reach and the brace
-	move the hands (down and out for the reach, down and in toward the body for the brace).
+	move the hands (down and out for the reach, down and in toward the body for the brace); the kick jolts them back
+	and up and hops the floor head; the shimmy turns and rolls it.
 ]=]
 function VacuumMotionFormulas.offsetOf(layers: Layers): WandOffset
-	local aim, brace = Constants.aim, Constants.brace
+	local aim, brace, kick = Constants.aim, Constants.brace, Constants.kick
 	return {
 		offset = Vector3.new(
 			0,
-			-(layers.reach * aim.reachDrop + layers.brace * brace.handDrop),
-			-layers.reach * aim.reachForward + layers.brace * brace.pull
+			-(layers.reach * aim.reachDrop + layers.brace * brace.handDrop) + layers.kick * kick.lift,
+			-layers.reach * aim.reachForward + layers.brace * brace.pull + layers.kick * kick.lift * kick.back
 		),
-		pitch = layers.raise,
-		yaw = 0,
-		roll = 0,
+		pitch = layers.raise + layers.kick * kick.pitch,
+		yaw = layers.shimmyYaw,
+		roll = layers.shimmyRoll,
 	}
+end
+
+--[=[
+	How hard a pile `size` studs across (its base size's length) kicks the wand when it pops: 1 for a reference pile,
+	within Constants.kick's bounds.
+]=]
+function VacuumMotionFormulas.kickScale(size: number): number
+	local kick = Constants.kick
+	return math.clamp(size / kick.sizeRef, kick.minScale, kick.maxScale)
+end
+
+--[=[
+	The starting speed that makes the kick's spring (at rest, Constants.kick's frequency and damping) peak at `scale`.
+	An underdamped spring started at speed v0 peaks at v0 / omega * exp(-damping * omega * t*), t* its peak's time.
+]=]
+function VacuumMotionFormulas.kickImpulse(scale: number): number
+	local kick = Constants.kick
+	local omega = 2 * math.pi * kick.frequency
+	local zeta = math.clamp(kick.damping, 0.01, 0.99)
+	local damped = omega * math.sqrt(1 - zeta * zeta)
+	local peakAt = math.atan2(math.sqrt(1 - zeta * zeta), zeta) / damped
+	return scale * omega * math.exp(zeta * omega * peakAt)
+end
+
+--[=[
+	The suction shimmy's turn and roll (radians) at time `t` (seconds), for a holder `seed`, on a pile `progress`
+	(0..1) done, faded by `weight` (0..1, how far into sucking the holder is): two layered sines each, from
+	Constants.shimmy.base of the amplitude at the start of a pile to all of it as it nears done (progress squared).
+]=]
+function VacuumMotionFormulas.shimmy(t: number, seed: number, progress: number, weight: number): (number, number)
+	local tuning = Constants.shimmy
+	local p = math.clamp(progress, 0, 1)
+	local amount = math.clamp(weight, 0, 1) * (tuning.base + (1 - tuning.base) * p * p)
+	if amount <= 0 then
+		return 0, 0
+	end
+	local w = 2 * math.pi * tuning.frequency
+	local phase = seed * 1.618
+	local yaw = 0.6 * math.sin(w * t + phase) + 0.4 * math.sin(w * 1.7 * t + phase * 2.3)
+	local roll = 0.6 * math.sin(w * 0.83 * t + phase * 3.1 + 1) + 0.4 * math.sin(w * 1.37 * t + phase * 0.7 + 2)
+	return amount * tuning.yaw * yaw, amount * tuning.roll * roll
 end
 
 local function frameAt(rest: WandRest, offset: WandOffset, pitch: number): CFrame

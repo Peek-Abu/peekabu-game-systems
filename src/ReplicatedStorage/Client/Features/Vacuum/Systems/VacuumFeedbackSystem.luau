@@ -7,6 +7,8 @@
 	  (VacuumFeedbackFormulas.whine), winding down (vacuumStop) when the channel stops;
 	- when it disappears after being vacuumed (VacuumFeedbackFormulas.cleared on its peak progress): a pop and a
 	  sparkle burst where it was. The pile's shrinking is the server's (M1).
+	Listeners (`onPop`) hear every pop with the pile's size; `progressNear` says how far the pile at a point is (the
+	wand's kick, brace and shimmy, VacuumMotionSystem).
 	The canister is a live Gloom gauge (docs/superpowers/specs/2026-10-16-cleanup-crew-gloom-gleam-economy-design.md
 	§3.1: no capacity, no dust bags): every backpack's gauge (its dust insert behind the window, VacuumVisualSystem on
 	the server) eases toward the crew's Gloom removed as a share of the contract (the shift snapshot's cleared / quota,
@@ -71,6 +73,8 @@ local wasMet = true
 -- What every gauge eases toward: the crew's Gloom as a share of the contract.
 local gaugeTarget = 0
 local gauges: { [number]: Gauge } = {}
+-- Who hears a pile pop (its position, and its size across in studs): the wand's kick (VacuumMotionSystem).
+local popListeners: { (position: Vector3, size: number) -> () } = {}
 
 local function play(id: string, options: SoundTypes.PlayOptions?): SoundServiceClient.SoundHandle?
 	if VacuumAssets.SOUNDS[id] == nil then
@@ -182,8 +186,11 @@ local function update(feel: PileFeel)
 	end
 end
 
-local function pop(position: Vector3)
+local function pop(position: Vector3, size: number)
 	counters.pops += 1
+	for _, listener in popListeners do
+		task.spawn(listener, position, size)
+	end
 	play(VacuumAssets.POP, { at = position })
 	local anchor = Instance.new("Attachment")
 	anchor.Name = "VacuumSparkle"
@@ -232,7 +239,8 @@ local function observePile(instance: Instance): (() -> ())?
 		local vacuumed = VacuumFeedbackFormulas.cleared(feel.peak, os.clock() - feel.activeAt)
 		stopSuction(feel)
 		if vacuumed then
-			pop(feel.position)
+			local base = pile:GetAttribute(VacuumConstants.BASE_SIZE_ATTRIBUTE)
+			pop(feel.position, if typeof(base) == "Vector3" then base.Magnitude else pile.Size.Magnitude)
 		end
 	end
 end
@@ -356,6 +364,20 @@ function VacuumFeedbackSystem.stop()
 	table.clear(gauges)
 	lastGloom = nil
 	gaugeTarget = 0
+end
+
+--[=[
+	Calls `listener` with the position and size (studs across) of every pile (or grimy valuable) that pops on this
+	client; returns its disconnect.
+]=]
+function VacuumFeedbackSystem.onPop(listener: (position: Vector3, size: number) -> ()): () -> ()
+	table.insert(popListeners, listener)
+	return function()
+		local index = table.find(popListeners, listener)
+		if index ~= nil then
+			table.remove(popListeners, index)
+		end
+	end
 end
 
 --[=[

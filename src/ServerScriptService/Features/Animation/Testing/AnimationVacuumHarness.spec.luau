@@ -1,6 +1,6 @@
 -- The vacuum hold validator: the hand wand held by Pippa (every player spawns as an employee) in every vacuum skin,
 -- planned while she is falling (as a shift's start places the crew in the truck), then judged live at idle, walking,
--- sprinting and vacuuming, under every motion layer at its extremes (aim, brace). Prints the full report to the output. Needs the place's art for Pippa and the skins.
+-- sprinting and vacuuming, under every motion layer at its extremes (aim, brace, recoil, shimmy). Prints the full report to the output. Needs the place's art for Pippa and the skins.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 local Workspace = game:GetService("Workspace")
@@ -46,19 +46,36 @@ return function()
 		end
 	end)
 
-	it("lays every motion layer on every frame: rest, both aim extremes and the brace", function()
-		for _, entry in result.entries do
-			local seen = {}
-			for _, frame in entry.frames do
-				seen[`{frame.name}/{frame.layer}`] = true
-			end
-			for _, frame in entry.frames do
-				for _, layer in { "rest", "aim up", "aim down", "brace", "brace+down", "brace+up" } do
-					expect(seen[`{frame.name}/{layer}`]).to.equal(true)
+	it(
+		"lays every motion layer on every frame: rest, both aim extremes, the brace, the recoil and the shimmy",
+		function()
+			for _, entry in result.entries do
+				local seen = {}
+				for _, frame in entry.frames do
+					seen[`{frame.name}/{frame.layer}`] = true
+				end
+				for _, frame in entry.frames do
+					for _, layer in
+						{
+							"rest",
+							"aim up",
+							"aim down",
+							"brace",
+							"brace+down",
+							"brace+up",
+							"recoil",
+							"recoil back",
+							"recoil+up",
+							"shimmy+",
+							"shimmy-",
+						}
+					do
+						expect(seen[`{frame.name}/{layer}`]).to.equal(true)
+					end
 				end
 			end
 		end
-	end)
+	)
 
 	it(
 		"keeps both paws closed on the wand's grips and the floor head over the floor in every frame and layer",
