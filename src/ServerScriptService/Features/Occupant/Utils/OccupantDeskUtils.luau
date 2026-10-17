@@ -18,6 +18,7 @@
 	  forward put his root inside the desk; physics shoved him out behind it, wedged against the wall where no path
 	  exists, and the costed NPC mover never steers without a path, so he stood still and never turned, even in a
 	  chase.)
+	- `nearestFrom`: the free desk nearest a point but at least some distance off (the developer's ambush summon).
 	- `facing`: a frame at a point looking at a target at the same height.
 
 	Distances are flat (X/Z). Pure.
@@ -113,6 +114,29 @@ function OccupantDeskUtils.pick(desks: { Desk }, input: PickInput): Desk?
 		end
 	end
 	return free[math.clamp(math.floor(math.clamp(input.roll, 0, 1) * #free) + 1, 1, #free)]
+end
+
+--[=[
+	The desk whose seat is nearest `point` and at least `minDistance` flat studs from it, never one someone hides under
+	(`occupied` spot ids); nil when none. A developer's summon (the ambush repro command).
+]=]
+function OccupantDeskUtils.nearestFrom(
+	desks: { Desk },
+	point: Vector3,
+	minDistance: number,
+	occupied: { [string]: boolean }
+): Desk?
+	local best: Desk? = nil
+	local bestDistance = math.huge
+	for _, desk in desks do
+		local spot = desk.spotId
+		local distance = flat(desk.seat.Position, point)
+		if not (spot ~= nil and occupied[spot] == true) and distance >= minDistance and distance < bestDistance then
+			best = desk
+			bestDistance = distance
+		end
+	end
+	return best
 end
 
 function OccupantDeskUtils.facing(at: Vector3, target: Vector3): CFrame

@@ -243,6 +243,43 @@ function OccupantWorkRules.due(current: Mind, senses: Senses): Step?
 end
 
 --[=[
+	A copy of `mind` sent to `desk` for a work break `now`, out of whatever he was doing (a developer's summon: the
+	ambush repro command). His body settles on the next think (OccupantBrainRules.settleBody).
+]=]
+function OccupantWorkRules.summon(mind: Mind, desk: OccupantTypes.Desk, now: number): Mind
+	local nextMind = M.enter(mind, "work", now)
+	M.forget(nextMind)
+	nextMind.steer = nil
+	nextMind.phase = "toDesk"
+	nextMind.phaseAt = now
+	nextMind.desk = desk
+	nextMind.lastDesk = desk.id
+	return nextMind
+end
+
+--[=[
+	A developer's summon (the ambush repro command): `mind` sent to the free desk nearest `point` at least
+	SUMMON_DISTANCE away (never one a hider is under), and that desk; nil, nil when there is none.
+]=]
+function OccupantWorkRules.summonNear(
+	mind: Mind,
+	desks: { OccupantTypes.Desk },
+	hiders: { OccupantTypes.Hider },
+	point: Vector3,
+	now: number
+): (Mind?, OccupantTypes.Desk?)
+	local occupied: { [string]: boolean } = {}
+	for _, hider in hiders do
+		occupied[hider.spotId] = true
+	end
+	local desk = OccupantDeskUtils.nearestFrom(desks, point, OccupantConstants.SUMMON_DISTANCE, occupied)
+	if desk == nil then
+		return nil, nil
+	end
+	return OccupantWorkRules.summon(mind, desk, now), desk
+end
+
+--[=[
 	One think in work mode. Nil while walking to the desk when a sighting or a noise needs the usual handling.
 ]=]
 function OccupantWorkRules.think(current: Mind, senses: Senses, seen: { Glimpse }): Step?

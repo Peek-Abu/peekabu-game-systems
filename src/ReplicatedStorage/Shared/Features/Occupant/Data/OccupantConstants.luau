@@ -262,6 +262,9 @@ return table.freeze({
 	-- The ambush: a player this close (or one he sees, or a noise) while he sits; the smile before the Noticing face, the
 	-- hold, the stand-up speed (1.8 s clip / 1.5 = 1.2 s). STAND_SECONDS is the clip at 1x; standOffset in OccupantAssets.
 	AMBUSH_RADIUS = 14,
+	-- The developer's ambush repro (`occupantwork`): the desk he is sent to is at least this far from the caller, so they
+	-- can watch him sit before walking up behind him.
+	SUMMON_DISTANCE = 20,
 	AMBUSH_SMILE = 0.4,
 	AMBUSH_HOLD = 1.1,
 	AMBUSH_STAND_SPEED = 1.5,

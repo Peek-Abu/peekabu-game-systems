@@ -27,6 +27,16 @@ local function input(extra)
 end
 
 return function()
+	describe("nearestFrom", function()
+		it("is the free desk nearest a point at least the given distance away (a dev summon)", function()
+			local origin = Vector3.new(0, 3, 0)
+			expect(OccupantDeskUtils.nearestFrom(DESKS, origin, 20, {}).id).to.equal("near")
+			expect(OccupantDeskUtils.nearestFrom(DESKS, origin, 0, {}).id).to.equal("close")
+			expect(OccupantDeskUtils.nearestFrom(DESKS, origin, 20, { s1 = true }).id).to.equal("far")
+			expect(OccupantDeskUtils.nearestFrom(DESKS, origin, 500, {})).to.equal(nil)
+		end)
+	end)
+
 	describe("pick", function()
 		it("near the crew: the desk in the band closest to the ideal distance", function()
 			local chosen = OccupantDeskUtils.pick(DESKS, input())

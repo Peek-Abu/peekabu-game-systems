@@ -58,6 +58,8 @@ local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTyp
 local NpcRegistry = require(ServerScriptService.Features.Npc.Data.NpcRegistry)
 local NpcTypes = require(ServerScriptService.Features.Npc.Data.NpcTypes)
 local OccupantBrainRules = require(OccupantServer.Rules.OccupantBrainRules)
+local OccupantMindUtils = require(OccupantServer.Utils.OccupantMindUtils)
+local OccupantWorkRules = require(OccupantServer.Rules.OccupantWorkRules)
 local Sense = require(OccupantServer.Systems.OccupantSenseSystem)
 local OccupantTuningFormulas = require(OccupantServer.Utils.OccupantTuningFormulas)
 local OccupantRigSystem = require(OccupantServer.Systems.OccupantRigSystem)
@@ -391,6 +393,7 @@ export type OccupantServiceServer = {
 	getHarlow: (self: OccupantServiceServer) -> Model?,
 	getMind: (self: OccupantServiceServer) -> OccupantTypes.Mind?,
 	_setRolls: (self: OccupantServiceServer, rolls: { number }?) -> (),
+	summonToDesk: (self: OccupantServiceServer, player: Player) -> (boolean, string),
 }
 
 local OccupantServiceServer: OccupantServiceServer = {
@@ -461,6 +464,25 @@ local OccupantServiceServer: OccupantServiceServer = {
 		fixedRolls = if rolls ~= nil then table.clone(rolls) else nil
 	end,
 
+	--[=[
+		A developer's ambush repro (the `occupantwork` command, Admins only): sends him to the free desk nearest
+		`player`, at least SUMMON_DISTANCE studs off, for a work break now. False and why when he cannot go.
+	]=]
+	summonToDesk = function(_self, player)
+		local character = player.Character
+		local root = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil
+		local current, currentMind = rig, mind
+		if current == nil or currentMind == nil or root == nil or not root:IsA("BasePart") then
+			return false, "no shift is running, or you have no character"
+		end
+		furnitureAt = -math.huge
+		furniture(current, os.clock())
+		local hiders = Sense.hiders(RoundServiceServer:participants())
+		local nextMind, desk = OccupantWorkRules.summonNear(currentMind, desks, hiders, root.Position, os.clock())
+		mind = nextMind or currentMind
+		return desk ~= nil, if desk ~= nil then `desk {desk.id}` else "no free desk that far from you"
+	end,
+
 	getMind = function(_self)
 		local current = mind
 		return if current ~= nil then table.clone(current) else nil
@@ -470,13 +492,7 @@ local OccupantServiceServer: OccupantServiceServer = {
 		local current = mind
 		return {
 			present = rig ~= nil,
-			mode = if current ~= nil then current.mode else nil,
-			phase = if current ~= nil then current.phase else nil,
-			target = if current ~= nil then current.target else nil,
-			routeIndex = if current ~= nil then current.routeIndex else nil,
-			menace = if current ~= nil then current.menace else nil,
-			breatherUntil = if current ~= nil then current.breatherUntil else nil,
-			sitIns = if current ~= nil then current.sitIns else nil,
+			mind = if current ~= nil then OccupantMindUtils.summary(current) else nil,
 			desks = #desks,
 			hearing = NoiseServiceServer:getHearingScale(),
 			counters = table.clone(counters),

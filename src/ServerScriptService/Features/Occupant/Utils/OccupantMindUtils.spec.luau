@@ -95,6 +95,17 @@ return function()
 		end)
 	end)
 
+	describe("summary", function()
+		it("names his mode, phase and target for the debugger", function()
+			local mind = fresh()
+			local summary = M.summary(mind)
+			expect(summary.mode).to.equal("patrol")
+			expect(summary.phase).to.equal("")
+			expect(summary.target).to.equal(0)
+			expect(summary.menace).to.equal(0)
+		end)
+	end)
+
 	describe("beginStare", function()
 		it("remembers how far from him the hider went in", function()
 			local spot = { id = "s", center = Vector3.new(66, 1.5, 60), stand = Vector3.new(64, 0, 60) }

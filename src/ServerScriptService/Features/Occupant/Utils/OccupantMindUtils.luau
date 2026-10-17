@@ -227,6 +227,21 @@ function M.positions(members: { OccupantDirectorUtils.Member }): { Vector3 }
 	return list
 end
 
+--[=[
+	What the debugger shows of his mind: his mode, phase, target, route point, menace gauge, breather and sit-ins.
+]=]
+function M.summary(mind: Mind): { [string]: string | number }
+	return {
+		mode = mind.mode,
+		phase = mind.phase or "",
+		target = mind.target or 0,
+		routeIndex = mind.routeIndex,
+		menace = mind.menace,
+		breatherUntil = mind.breatherUntil or 0,
+		sitIns = mind.sitIns,
+	}
+end
+
 -- Fills in a copy: back on his route at its nearest point.
 function M.rejoin(mind: Mind, senses: Senses)
 	local index = OccupantDirectorUtils.nearestIndex(senses.route, senses.position)

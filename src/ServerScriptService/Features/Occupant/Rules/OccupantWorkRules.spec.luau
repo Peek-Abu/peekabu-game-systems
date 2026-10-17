@@ -132,6 +132,48 @@ return function()
 		end)
 	end)
 
+	describe("summon", function()
+		it("sends him straight to that desk for a work break, out of whatever he was doing", function()
+			local mind = OccupantBrainRules.newMind(1, 1, 0)
+			mind.mode = "chase"
+			mind.target = 8
+			mind.steer = Vector3.new(1, 0, 1)
+			local summoned = OccupantWorkRules.summon(mind, DESK, 100)
+			expect(summoned.mode).to.equal("work")
+			expect(summoned.phase).to.equal("toDesk")
+			expect(summoned.desk.id).to.equal("d1")
+			expect(summoned.target).to.equal(nil)
+			expect(summoned.steer).to.equal(nil)
+			expect(summoned.sitIn).to.equal(nil)
+			expect(mind.mode).to.equal("chase")
+			local walking = OccupantBrainRules.step(summoned, senses({ now = 100.2 }))
+			expect(walking.intent.position).to.equal(AT_SEAT)
+		end)
+	end)
+
+	describe("summonNear", function()
+		it(
+			"sends him to the free desk nearest a point but at least SUMMON_DISTANCE off, never one a hider is under",
+			function()
+				local mind = OccupantBrainRules.newMind(1, 1, 0)
+				local far = Vector3.new(90 + C.SUMMON_DISTANCE + 5, 3, 60)
+				local summoned, desk = OccupantWorkRules.summonNear(mind, { DESK }, {}, far, 100)
+				expect(desk.id).to.equal("d1")
+				expect(summoned.mode).to.equal("work")
+				local none = OccupantWorkRules.summonNear(mind, { DESK }, {}, AT_SEAT, 100)
+				expect(none).to.equal(nil)
+				local hidden = OccupantWorkRules.summonNear(
+					mind,
+					{ DESK },
+					{ { userId = 7, spotId = "s1", seen = false } },
+					far,
+					100
+				)
+				expect(hidden).to.equal(nil)
+			end
+		)
+	end)
+
 	describe("the ambush", function()
 		it("springs on a noise: typing stops, the head swivels to it, a cue", function()
 			local noise = Vector3.new(120, 0, 70)
