@@ -88,9 +88,11 @@ local function profileCard(props: DepotHubPanelProps): React.ReactNode
 			ZIndex = 4,
 		}, {
 			star = e(ToonIcon, { icon = "xp", size = UDim2.fromScale(1, 1), drop = 3 }),
+			-- Centred on the star's body (its optical centre sits 3% below its box's centre), not on its box.
 			number = e(ToonText, {
 				text = profile.level,
 				textSize = if phone then 18 else 28,
+				position = UDim2.fromScale(0, 0.03),
 				size = UDim2.fromScale(1, 1),
 				align = "center",
 				zIndex = 3,

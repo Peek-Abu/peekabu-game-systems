@@ -116,6 +116,35 @@ return function()
 		end)
 	end)
 
+	describe("optical", function()
+		local CAP = VM.DISPLAY_CAP_SHIFT
+
+		it("leaves top-aligned display text where it is (its caps already start at the box's top)", function()
+			expect(VM.optical("top", 56, 4)).to.equal(0)
+		end)
+
+		it("lowers centred display text by its caps' offset, less half its drop", function()
+			expect(VM.optical("center", 56, 4)).to.be.near(CAP * 56 - 2, 1e-6)
+			expect(VM.optical("center", 100, 8)).to.be.near(CAP * 100 - 4, 1e-6)
+		end)
+
+		it("lowers bottom-aligned display text onto the box's foot, its drop included", function()
+			expect(VM.optical("bottom", 56, 4)).to.be.near(2 * CAP * 56 - 4, 1e-6)
+		end)
+
+		it("follows the size the text is really drawn at", function()
+			expect(VM.optical("center", 28, 2) < VM.optical("center", 56, 4)).to.equal(true)
+			expect(VM.optical("center", 0, 0)).to.equal(0)
+		end)
+
+		it(
+			"puts the caps' centre in the line box's centre (Luckiest Guy: caps over the top 70% of the line)",
+			function()
+				expect(CAP > 0.12 and CAP < 0.18).to.equal(true)
+			end
+		)
+	end)
+
 	describe("grouped", function()
 		it("writes whole numbers with thousands commas", function()
 			expect(VM.grouped(0)).to.equal("0")

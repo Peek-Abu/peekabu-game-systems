@@ -129,6 +129,28 @@ function ToonStyleViewModel.drop(size: number): number
 	return math.clamp(math.round(size * DEPTH.textDrop), 2, 8)
 end
 
+--[=[
+	Luckiest Guy's line box is its hhea ascent (1440) over its descent (608) of 2048 units, and its caps and digits
+	stand on the baseline up to the ascent: they fill the top 70% of the line, so text aligned to the box's centre
+	reads high by this fraction of its size (twice it at the bottom).
+]=]
+-- The caps' centre (half the ascent) above the line box's centre (half of ascent minus descent), in ems.
+ToonStyleViewModel.DISPLAY_CAP_SHIFT = (1440 / 2 - (1440 - 608) / 2) / 2048
+
+-- How far down (px) display text drawn at `size` with a hard drop of `drop` px moves so that its caps and its drop,
+-- together, sit centred in (or on the foot of) its box: its caps' offset in the line box, less the drop hanging under
+-- it (half of it when centred). Top-aligned text keeps its caps at the box's top.
+function ToonStyleViewModel.optical(alignY: "top" | "center" | "bottom", size: number, drop: number): number
+	if alignY == "top" or size <= 0 then
+		return 0
+	end
+	local shift = ToonStyleViewModel.DISPLAY_CAP_SHIFT * size
+	if alignY == "bottom" then
+		return 2 * shift - drop
+	end
+	return shift - drop / 2
+end
+
 function ToonStyleViewModel.grouped(value: number): string
 	if value ~= value or value <= 0 then
 		return "0"

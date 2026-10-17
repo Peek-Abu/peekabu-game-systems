@@ -4,7 +4,9 @@
 	gradient fill by meaning (gold = Gleam, mint = gain, coral = time and danger, grape = Gloom, white = labels) and a
 	hard ink drop (a duplicate label offset down). `body` is Fredoka One, ink on light faces and white on dark ones,
 	with no stroke. The text sits in a box (`size`, aligned by `align`); `fit` shrinks it to stay inside the box (its limits follow
-	PaperScaleContext, the scale a surface is drawn at).
+	PaperScaleContext, the scale a surface is drawn at). Display text is placed optically: Luckiest Guy's caps fill the
+	top of its line box and the drop hangs under them, so centred (or bottom-aligned) text is lowered until its caps and
+	drop, together, sit centred in (or on the foot of) the box (ToonStyleViewModel.optical, at the size it is drawn).
 	Presentational (exempt; story in ToonText.story; stroke and drop sizes specced in ToonStyleViewModel).
 
 	@class ToonText
@@ -39,7 +41,8 @@ export type ToonTextProps = {
 	fit: boolean?,
 	wrapped: boolean?,
 	rotation: number?,
-	transparency: number?,
+	-- A number, or a binding (a fade that never re-renders).
+	transparency: (number | React.Binding<number>)?,
 	zIndex: number?,
 	layoutOrder: number?,
 	-- The box grows to the text's width (`size`'s X offset is then the least width).
@@ -72,10 +75,28 @@ local function ToonText(props: ToonTextProps): React.ReactNode
 	local display = props.font ~= "body"
 	local size = props.textSize
 	local fit = props.fit == true
-	local transparency = props.transparency or 0
+	local transparency = props.transparency
 	-- A UITextSizeConstraint counts real screen px and ignores the UIScale the text is drawn under, so the fit limits
 	-- follow the scale the surface provides (PaperHudFrame and the scaled screens provide it; 1 elsewhere).
 	local scale = React.useContext(PaperScaleContext.Context)
+	local auto = props.automaticWidth == true
+	-- TextScaled wraps words whenever two lines fit the box, so a fitted single line is drawn in a box only one
+	-- line tall (centred on the caller's box by alignY): then shrinking to the width always wins.
+	local oneLine = fit and props.wrapped ~= true
+	local alignY: "top" | "center" | "bottom" = props.alignY or "center"
+	local lineHeight = math.ceil(size * 1.3)
+	local anchorY = if alignY == "top" then 0 elseif alignY == "bottom" then 1 else 0.5
+	-- The size the display text is really drawn at (a fitted line may shrink below textSize): read off the label's
+	-- TextBounds (one line's height is its size for Luckiest Guy) against its drawn height, so it holds under a UIScale.
+	local drawn, setDrawn = React.useBinding(size)
+	local measure = if display and oneLine
+		then function(rbx: TextLabel)
+			local height = rbx.AbsoluteSize.Y
+			if height > 0 and rbx.TextBounds.Y > 0 then
+				setDrawn(math.min(size, rbx.TextBounds.Y / height * lineHeight))
+			end
+		end
+		else nil
 	local function label(drop: boolean): React.ReactNode
 		local stroke = ToonStyleViewModel.stroke(size)
 		local children: { [string]: React.ReactNode } = {}
@@ -101,20 +122,31 @@ local function ToonText(props: ToonTextProps): React.ReactNode
 				end),
 			})
 		end
-		local offset = if drop then ToonStyleViewModel.drop(size) else 0
-		local auto = props.automaticWidth == true
-		-- TextScaled wraps words whenever two lines fit the box, so a fitted single line is drawn in a box only one
-		-- line tall (centred on the caller's box by alignY): then shrinking to the width always wins.
-		local oneLine = fit and props.wrapped ~= true
-		local alignY = props.alignY or "center"
-		local lineHeight = math.ceil(size * 1.3)
-		local anchorY = if alignY == "top" then 0 elseif alignY == "bottom" then 1 else 0.5
+		-- Display text is lowered so its caps (and its drop with it) sit optically centred in the box: Luckiest Guy's
+		-- caps fill the top of its line box (ToonStyleViewModel.optical). Body text (Fredoka) is centred as drawn.
+		local dropPx = if drop then ToonStyleViewModel.drop(size) else 0
+		local function offsetY(value: number): number
+			if not display then
+				return dropPx
+			end
+			return dropPx + ToonStyleViewModel.optical(alignY, value, ToonStyleViewModel.drop(value))
+		end
+		-- A fitted display line keeps its ink stroke inside the box too (TextScaled fits the glyphs, not the stroke).
+		local inset = if display and oneLine then stroke else 0
+		local position: UDim2 | React.Binding<UDim2>
+		if oneLine then
+			position = drawn:map(function(value: number): UDim2
+				return UDim2.new(0, inset, anchorY, offsetY(value))
+			end)
+		else
+			position = UDim2.fromOffset(0, offsetY(size))
+		end
 		return e("TextLabel", {
 			AnchorPoint = if oneLine then Vector2.new(0, anchorY) else nil,
-			Position = if oneLine then UDim2.new(0, 0, anchorY, offset) else UDim2.fromOffset(0, offset),
+			Position = position,
 			Size = if auto
 				then UDim2.fromScale(0, 1)
-				elseif oneLine then UDim2.new(1, 0, 0, lineHeight)
+				elseif oneLine then UDim2.new(1, -2 * inset, 0, lineHeight)
 				else UDim2.fromScale(1, 1),
 			AutomaticSize = if auto then Enum.AutomaticSize.X else nil,
 			BackgroundTransparency = 1,
@@ -128,8 +160,10 @@ local function ToonText(props: ToonTextProps): React.ReactNode
 			TextColor3 = if drop then COLOR.ink elseif display then COLOR.white else props.color or COLOR.ink,
 			TextTransparency = transparency,
 			TextXAlignment = X_ALIGN[props.align or "left"],
-			TextYAlignment = Y_ALIGN[props.alignY or "center"],
+			TextYAlignment = Y_ALIGN[alignY],
 			ZIndex = if drop then 1 else 2,
+			[React.Change.TextBounds] = if drop then nil else measure,
+			[React.Change.AbsoluteSize] = if drop then nil else measure,
 		}, children)
 	end
 	return e("Frame", {
