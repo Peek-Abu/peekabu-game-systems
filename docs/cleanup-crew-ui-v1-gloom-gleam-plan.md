@@ -43,6 +43,15 @@ constants are `UI<Thing>Constants`).
 | UI tree | client | React/Screens/Toon | ToonSparkle | Gleam sparkles twinkling on a stagger (exempt, story) |
 | UI tree | client | React/Screens/Toon | ToonWipe | The dirty → clean squeegee pass on open (exempt, story) |
 
+Screen modules added while restyling (same convention, beside their screens):
+
+| Feature | Realm | Subfolder | Name | Job (one line) |
+|---|---|---|---|---|
+| UI tree | client | React/Screens/Depot | DepotHubPanel | The V1 hub HUD layout, desktop and phone (exempt, story) |
+| UI tree | client | React/Screens/Depot | DepotNextShiftCard | The hub's Next shift CTA, idle or aboard a truck (exempt, story in DepotHubPanel.story) |
+| UI tree | client | React/Screens/Shift | ShiftGloomMeter | The Gloom meter and shift clock joined, top centre (exempt, story) |
+| UI tree | client | React/Screens/Shift | ShiftCrewList | The crew plate with headshots and YOU / CAUGHT stickers (exempt, story) |
+
 Asset ids go in the existing `Features/UI/Data/UIAssets` (`UIAssets.toon`), the only place `rbxassetid://` literals
 may live. The ids and their Decal/Image pairs are recorded in `characters/ui/shipped-ui-assets.md`.
 

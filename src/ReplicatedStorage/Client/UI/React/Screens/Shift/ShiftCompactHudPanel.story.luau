@@ -1,8 +1,8 @@
 --!strict
 --[=[
-    ShiftHudPanel.story: approved compact HUD in UI Labs. EmptyHands, Equipped and CrewOpen expose
+    ShiftCompactHudPanel.story: the live V1 shift HUD in UI Labs. EmptyHands, Equipped and CrewOpen expose
     equipment/disclosure states; Variant exposes quota/overtime/clock-out, and Phone uses an 844x390 frame.
-    Compare with Figma 75:2732; real touch input is verified separately from this visual story.
+    Compare with the V1 shift renders; real touch input is verified separately from this visual story.
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

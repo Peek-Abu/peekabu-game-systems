@@ -32,8 +32,12 @@ export type ToonSlotProps = {
 	hotkey: string?,
 	icon: UIAssets.ToonIcon?,
 	image: string?,
+	-- Any other art drawn in the plate instead of a render (a live model in a viewport).
+	art: React.ReactNode?,
 	caption: string?,
 	captionIcon: UIAssets.ToonIcon?,
+	-- The caption pill's colour (default cream).
+	captionHue: UIToonConstants.Hue?,
 	captionMeaning: UIToonConstants.Meaning?,
 	selected: boolean?,
 	disabled: boolean?,
@@ -56,7 +60,9 @@ local function ToonSlot(props: ToonSlotProps): React.ReactNode
 	local side = props.side
 	local hasArt = props.icon ~= nil or props.image ~= nil
 	local children: { [string]: React.ReactNode } = {}
-	if hasArt then
+	if props.art ~= nil then
+		children.art = props.art
+	elseif hasArt then
 		children.art = e(ToonIcon, {
 			icon = props.icon,
 			image = props.image,
@@ -71,7 +77,7 @@ local function ToonSlot(props: ToonSlotProps): React.ReactNode
 	if props.hotkey ~= nil then
 		children.key = e(ToonText, {
 			text = props.hotkey,
-			textSize = math.floor(side * 0.24),
+			textSize = math.max(12, math.floor(side * 0.24)),
 			position = UDim2.fromOffset(6, 2),
 			size = UDim2.fromOffset(side * 0.3, side * 0.28),
 			zIndex = 4,
@@ -81,13 +87,15 @@ local function ToonSlot(props: ToonSlotProps): React.ReactNode
 	if props.caption ~= nil then
 		overlay.caption = e(ToonPill, {
 			text = props.caption,
-			textSize = math.floor(side * 0.2),
+			-- Never below a readable 12 px, however small the slot.
+			textSize = math.max(12, math.floor(side * 0.2)),
 			icon = props.captionIcon,
-			iconSize = math.floor(side * 0.3),
+			iconSize = math.max(18, math.floor(side * 0.32)),
 			meaning = props.captionMeaning,
+			hue = props.captionHue,
 			anchor = Vector2.new(0.5, 0.5),
 			position = UDim2.fromScale(0.5, 1),
-			size = UDim2.fromOffset(side * 0.74, side * 0.28),
+			size = UDim2.fromOffset(math.max(46, side * 0.8), math.max(18, side * 0.28)),
 			zIndex = 6,
 		})
 	end

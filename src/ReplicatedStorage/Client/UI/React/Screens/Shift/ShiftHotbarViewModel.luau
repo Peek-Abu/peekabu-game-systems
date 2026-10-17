@@ -19,6 +19,7 @@ local CargoInventoryRules = require(CargoShared.Rules.CargoInventoryRules)
 local CargoAppraisalFormulas = require(CargoShared.Utils.CargoAppraisalFormulas)
 local ShiftCurrencyUtils = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftCurrencyUtils)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
+local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 
 -- One hotbar slot (docs/superpowers/specs/2026-10-16-cleanup-crew-hotbar-inventory-design.md §4): slot 1 the vacuum
 -- (the contract's progress as the tag, "340/500"), slots 2-5 the item slots (an item's name and tag: its Gleam once
@@ -41,6 +42,11 @@ export type SlotView = {
 	locked: boolean,
 	-- A FRAGILE item (its tag in red).
 	fragile: boolean,
+	-- V1: the vacuum's Gloom gauge (0..1 of the contract; nil without one) and the short caption a slot's pill shows
+	-- ("58%", a valuable's worth "220" or "???" with the coin, trash "+10"; nil for an empty slot).
+	gauge: number?,
+	caption: string?,
+	coin: boolean,
 }
 
 export type HotbarView = {
@@ -101,6 +107,18 @@ local PHONE: Metrics = table.freeze({
 
 local ShiftHotbarViewModel = {}
 
+-- The kit renders (UIAssets.toonIcons) of the cargo kinds that have one; the rest draw their live model.
+local ICONS: { [string]: UIAssets.ToonIcon } = {}
+ICONS.monitor = "monitor"
+ICONS.fishTank = "fishtank"
+ICONS.goldenStapler = "stapler"
+ICONS.snowGlobe = "globe"
+ICONS.keyring = "key"
+
+function ShiftHotbarViewModel.iconFor(kind: string): UIAssets.ToonIcon?
+	return ICONS[kind]
+end
+
 --[=[
 	The hotbar card's measurements on phone or desktop (HUD design px).
 ]=]
@@ -138,8 +156,12 @@ function ShiftHotbarViewModel.hotbar(me: PublicPlayerTypes.PublicPlayer?, cleare
 	local entry: PublicPlayerTypes.PublicPlayer = me or {}
 	local selected = chosenSlot(entry)
 	local hands = entry[CargoConstants.PUBLIC_HANDS_FIELD]
+	local gauge = if quota ~= nil and quota > 0 then math.clamp(math.floor(cleared or 0) / quota, 0, 1) else nil
 	local slots: { SlotView } = {
 		{
+			gauge = gauge,
+			caption = if gauge ~= nil then `{math.floor(gauge * 100 + 0.5)}%` else nil,
+			coin = false,
 			slot = CargoConstants.VACUUM_SLOT,
 			key = tostring(CargoConstants.VACUUM_SLOT),
 			kind = nil,
@@ -165,14 +187,21 @@ function ShiftHotbarViewModel.hotbar(me: PublicPlayerTypes.PublicPlayer?, cleare
 		local variant = entry[fields.variant]
 		local tag = ""
 		local name = ""
+		local caption: string? = nil
+		local coin = false
 		if def ~= nil then
 			name = CargoAppraisalFormulas.displayName(def, if type(variant) == "string" then variant else nil, true)
 			if def.category == "trash" then
 				tag = `+{if type(value) == "number" then value else def.value}`
+				caption = tag
 			elseif type(value) == "number" then
 				tag = ShiftCurrencyUtils.amount(value)
+				caption = tostring(math.floor(value))
+				coin = true
 			else
 				tag = ShiftCurrencyUtils.unknown()
+				caption = "???"
+				coin = true
 			end
 		end
 		table.insert(slots, {
@@ -187,6 +216,9 @@ function ShiftHotbarViewModel.hotbar(me: PublicPlayerTypes.PublicPlayer?, cleare
 			inHands = inHands,
 			locked = big,
 			fragile = def ~= nil and def.fragile,
+			gauge = nil,
+			caption = caption,
+			coin = coin,
 		})
 	end
 	return { slots = slots, locked = locked, selected = selected }

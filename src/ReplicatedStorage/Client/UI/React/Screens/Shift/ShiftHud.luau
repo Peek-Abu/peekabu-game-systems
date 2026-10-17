@@ -1,6 +1,6 @@
 --!strict
 --[=[
-    ShiftHud: reads authoritative shift/public state and renders the approved compact paperwork HUD.
+    ShiftHud: reads authoritative shift/public state and renders the compact V1 HUD (ShiftCompactHudPanel).
     Crew details are disclosed on demand. Physical-pixel sizes preserve readable text in short windows;
     the layout hook selects the phone arrangement. Catch/scare suppression stays on the outer frame.
 ]=]
@@ -78,6 +78,7 @@ local function ShiftHud(): React.ReactNode
 		roster = roster,
 		layout = layout,
 		viewport = actualViewport,
+		myId = player.UserId,
 		bindings = if UserInputService.KeyboardEnabled then bindings else {},
 		stamina = SprintViewModel.bar(stamina, false),
 		crewOpen = crewOpen,
