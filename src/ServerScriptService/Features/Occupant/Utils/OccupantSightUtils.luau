@@ -5,8 +5,10 @@
 	Far: a clear ray out to longRange in the narrow longAngle cone straight ahead, noticed over a beat that grows with
 	the distance (`noticeDelay`) unless it is his target. Never someone hiding, in their grace or in the truck's box.
 	Beside him (behaviours design §10.1): `peripheral`, a clear ray within PERIPHERAL_RANGE outside the front cone but
-	within PERIPHERAL_ANGLE, noticed over `glanceDelay`. His head turned (§10.2): `toward`, who he sees down the cone
-	his head looks along; `beside`, whether a point is outside his front cone (a noise there turns his head).
+	within PERIPHERAL_ANGLE, noticed over `glanceDelay`. Behind him (§11.7): `behind`, a clear ray within FELT_RANGE
+	past the peripheral zone (his blind back), felt over `feltDelay`. His head turned (§10.2): `toward`, who he sees
+	down the cone his head looks along; `beside`, whether a point is outside his front cone (a noise there turns his
+	head).
 
 	The rays are the caller's (each Glimpse says whether its line was clear). Pure.
 
@@ -174,6 +176,42 @@ function Sight.peripheral(mind: Mind, senses: Senses): { Glimpse }
 	end
 	nearestFirst(list, senses)
 	return list
+end
+
+--[=[
+	The players right behind him this think, nearest first (the felt presence, behaviours design §11.7): a clear ray
+	within FELT_RANGE, past PERIPHERAL_ANGLE of his heading (his blind back). Never someone hiding, in their grace or in
+	the safe zone.
+]=]
+function Sight.behind(mind: Mind, senses: Senses): { Glimpse }
+	local list: { Glimpse } = {}
+	for _, glimpse in senses.players do
+		if
+			eligible(mind, senses, glimpse)
+			and Sight.sightOf(mind, senses, glimpse) == nil
+			and (glimpse.position - senses.position).Magnitude <= OccupantConstants.FELT_RANGE
+			and not NpcSenseRules.inSight(
+				senses.position,
+				senses.look,
+				level(senses, glimpse.position),
+				math.huge,
+				OccupantConstants.PERIPHERAL_ANGLE
+			)
+		then
+			table.insert(list, glimpse)
+		end
+	end
+	nearestFirst(list, senses)
+	return list
+end
+
+--[=[
+	Seconds someone must linger behind him before he feels them: FELT_SECONDS, GLANCE_CROUCH times that `crouched`.
+]=]
+function Sight.feltDelay(crouched: boolean): number
+	return if crouched
+		then OccupantConstants.FELT_SECONDS * OccupantConstants.GLANCE_CROUCH
+		else OccupantConstants.FELT_SECONDS
 end
 
 --[=[

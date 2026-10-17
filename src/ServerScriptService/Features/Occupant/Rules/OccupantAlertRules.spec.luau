@@ -100,6 +100,52 @@ return function()
 		end)
 	end)
 
+	describe("the felt presence (behaviours design §11.7)", function()
+		-- 10 studs straight behind him: his blind spot, within FELT_RANGE.
+		local BACK = Vector3.new(50, 3, 60)
+
+		it("feels someone lingering right behind him over FELT_SECONDS, then turns his head to them", function()
+			local count = math.floor(C.FELT_SECONDS / 0.5) + 1
+			local steps = run(fresh(), 100, 0.5, count, { player(7, BACK) })
+			for index = 1, count - 1 do
+				expect(steps[index].mind.mode).to.equal("patrol")
+			end
+			expect(steps[count - 1].mind.glanceId).to.equal(7)
+			local turn = steps[count]
+			expect(turn.mind.mode).to.equal("alert")
+			expect(turn.mind.target).to.equal(7)
+			expect(turn.mind.point).to.equal(BACK)
+		end)
+
+		it("is a turn he is certain of: the knowing turn on its roll (no forcing)", function()
+			local count = math.floor(C.FELT_SECONDS / 0.5) + 1
+			local mind = fresh()
+			mind.menace = 40
+			local turn
+			for index = 0, count - 1 do
+				turn = OccupantBrainRules.step(
+					mind,
+					senses({
+						now = 100 + index * 0.5,
+						players = { player(7, BACK) },
+						rolls = { 0.5, 0.5, 0.5, 0, 1, 0 },
+					})
+				)
+				mind = turn.mind
+			end
+			expect(turn.mind.mode).to.equal("alert")
+			expect(turn.mind.phase).to.equal("slowTurn")
+			expect(turn.mind.turn).to.equal("knowing")
+		end)
+
+		it("never feels a hidden player, nor one beyond FELT_RANGE behind him", function()
+			local far = Vector3.new(60 - C.FELT_RANGE - 2, 3, 60)
+			local steps = run(fresh(), 100, 0.5, 10, { player(7, BACK, true, true), player(8, far) })
+			expect(steps[10].mind.mode).to.equal("patrol")
+			expect(steps[10].mind.glanceId).to.equal(nil)
+		end)
+	end)
+
 	describe("a noise beside or behind him", function()
 		it("turns his head to it while he patrols or investigates", function()
 			local noise = Vector3.new(40, 0, 60)

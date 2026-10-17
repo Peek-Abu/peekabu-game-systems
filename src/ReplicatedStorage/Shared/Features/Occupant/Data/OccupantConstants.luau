@@ -341,6 +341,11 @@ return table.freeze({
 	PERIPHERAL_RANGE = 25,
 	GLANCE_SECONDS = range(1.5, 2.5),
 	GLANCE_CROUCH = 1.4,
+	-- The felt presence (§11.7): someone behind him (past PERIPHERAL_ANGLE, his blind back) within FELT_RANGE
+	-- studs with a clear line is felt over FELT_SECONDS (×GLANCE_CROUCH crouched), sharing the glance's count;
+	-- then the head turn. FELT_RANGE is CERTAIN_RANGE, so the turn may be a slow one.
+	FELT_RANGE = 14,
+	FELT_SECONDS = 2.5,
 	-- The head turn (§10.2, mode `alert`): on a completed glance, or a noise from outside his front cone, he stops dead,
 	-- swivels only his head to the point (TURN_SWIVEL: the swivel gesture's own 0.35 s) and holds TURN_HOLD (rolled)
 	-- after it lands; then he chases anyone not hidden in the SIGHT_ANGLE cone his head looks down (SIGHT_RANGE), else
@@ -368,8 +373,9 @@ return table.freeze({
 	STARE_CHANCE = 0.35,
 	-- The knowing turn: once a shift per player, only with menace at most KNOWING_MENACE_MAX, on a roll under
 	-- KNOWING_CHANCE (Senses.rolls[6]).
-	KNOWING_MENACE_MAX = 70,
-	KNOWING_CHANCE = 0.5,
+	-- (85 and 0.75 since the 2026-10-17 tuning, §11.7: were 70 and 0.5.)
+	KNOWING_MENACE_MAX = 85,
+	KNOWING_CHANCE = 0.75,
 	-- §11.2 The slow turn: his head comes round over SLOW_TURN_SECONDS (the slowSwivel gesture), his waist leading with
 	-- SLOW_WAIST_SHARE of the yaw (all of it by SLOW_WAIST_LEAD of the turn) so the smile comes round last. For the first
 	-- SLOW_SETTLE seconds where the target "stands" follows them (time to freeze at the creak).

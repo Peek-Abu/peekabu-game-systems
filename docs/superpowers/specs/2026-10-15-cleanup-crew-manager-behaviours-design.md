@@ -305,7 +305,7 @@ hypotheses as ever.
 ### 11.1 Which turn: snap, knowing or stare
 
 Every head turn picks its variant once, as it starts (`OccupantTurnRules.pick`). That covers the §10.2 head turn (a
-completed glance, or a noise from beside or behind him) and the §1 desk ambush.
+completed glance or felt presence (§11.7), or a noise from beside or behind him) and the §1 desk ambush.
 
 1. **A target he is certain of.** The candidate is the turn's player: the glance's player, the ambush's nearest
    player, or else the nearest player down the cone toward the point. They count only when both hold:
@@ -326,8 +326,8 @@ completed glance, or a noise from beside or behind him) and the §1 desk ambush.
    - its roll is under **0.35** (`STARE_CHANCE`).
 4. **The knowing turn.** Otherwise it is picked when all three hold:
    - this player has not had one this shift (`knowingFor`);
-   - menace is at most **70** (`KNOWING_MENACE_MAX`);
-   - its roll is under **0.5** (`KNOWING_CHANCE`).
+   - menace is at most **85** (`KNOWING_MENACE_MAX`; 70 until §11.7);
+   - its roll is under **0.75** (`KNOWING_CHANCE`; 0.5 until §11.7).
 5. **Else the snap.** The rolls are `Senses.rolls[5]` (stare) and `[6]` (knowing). With no rolls (0.5 each) neither
    is picked.
 6. **A developer's force.** `occupantturn <snap|knowing|stare|auto>` (Admins) makes the next head turn that variant,
@@ -434,6 +434,28 @@ Changed modules:
 - **Client systems:** `OccupantGestureSystem`, `OccupantWarningSystem` (the creak and the crack), `OccupantTellSystem`
   and `OccupantDreadSystem`.
 - **A new command:** `occupantturn` (Cmdr, Admins).
+
+### 11.7 Tuning: the felt presence, and the knowing turn more often (2026-10-17, approved)
+
+**Why.** Playtesting, the developer never saw a slow turn. Walking up behind him triggered nothing: walking is silent
+and the back 160° is blind, so nothing turned his head until his route turned his body, put the player in his front
+cone and started an instant chase. And right after any chase the menace gauge sits above 70, which shut the knowing
+turn out. The developer approved three changes (numbers in `OccupantConstants`, tuning hypotheses as ever):
+
+1. **The felt presence** (a third head-turn trigger beside the peripheral notice and a noise). Someone **behind** him
+   (outside the peripheral zone's PERIPHERAL_ANGLE, so the back 160°), within **14 studs** (`FELT_RANGE`, the same
+   as CERTAIN_RANGE), with a clear line, is felt over **2.5 s** (`FELT_SECONDS`; ×GLANCE_CROUCH crouched, 3.5 s).
+   - It shares the peripheral notice's count (`Mind.glanceId` / `glanceSeconds`): the nearest player beside or behind
+     him is counted; out of both zones the count falls back NOTICE_DECAY a second. Patrol, investigate and search
+     only, as the peripheral notice. Never a hidden player, one in their grace or anyone in the truck's box.
+   - Felt, it is **the head turn** at them (`OccupantAlertRules.begin`), so §11.1 picks the variant as usual. They are
+     within CERTAIN_RANGE with a clear line, so he is certain of them: the knowing turn or the staring contest when the
+     gates and rolls allow, else the snap.
+   - `OccupantSightUtils.behind` (who is there) and `feltDelay`; `OccupantAlertRules.glance` counts both zones.
+2. **The knowing turn's menace cap** `KNOWING_MENACE_MAX`: **85** (was 70). The staring contest's band is unchanged
+   (20-70).
+3. **The knowing turn's roll** `KNOWING_CHANCE`: **0.75** (was 0.5). It is still once per shift per player, so this is
+   that player's first (and only) knowing turn of the shift.
 
 ## 12. Fix: the sit-in's look-under typed through its start and let the hider go (2026-10-17)
 

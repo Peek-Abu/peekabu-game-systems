@@ -264,6 +264,9 @@ M.noticeDelay = Sight.noticeDelay
 -- point is outside his front cone, and who he sees down a turned head's cone.
 M.peripheral = Sight.peripheral
 M.glanceDelay = Sight.glanceDelay
+-- Right behind him (§11.7): the felt presence and its delay.
+M.behind = Sight.behind
+M.feltDelay = Sight.feltDelay
 M.beside = Sight.beside
 M.toward = Sight.toward
 

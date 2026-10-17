@@ -117,10 +117,14 @@ function OccupantTurnRules.pick(mind: Mind, senses: Senses, who: Glimpse?): Turn
 	then
 		return "stare"
 	end
+	-- An absent roll (no rolls at all) never picks it, whatever KNOWING_CHANCE is (§11.1: no rolls, no slow turn).
 	local had = mind.knowingFor
+	local rolls = senses.rolls
 	if
 		(had == nil or had[who.userId] ~= true)
 		and menace <= OccupantConstants.KNOWING_MENACE_MAX
+		and rolls ~= nil
+		and rolls[6] ~= nil
 		and M.roll(senses, 6) < OccupantConstants.KNOWING_CHANCE
 	then
 		return "knowing"

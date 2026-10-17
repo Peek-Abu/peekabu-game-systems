@@ -7,6 +7,8 @@
 	  outside the front cone, within PERIPHERAL_ANGLE and PERIPHERAL_RANGE, a clear line, never hidden) is counted up
 	  each think while he walks on; at their glance delay (OccupantSightUtils.glanceDelay) he turns his head to them.
 	  Out of the zone the count falls back NOTICE_DECAY a second and is dropped at 0. Patrol, investigate and search.
+	  The felt presence (§11.7) shares the count: someone right behind him (OccupantSightUtils.behind, within
+	  FELT_RANGE) is felt over OccupantSightUtils.feltDelay; the nearest of the two zones is counted.
 	- `turns`: a noise he hears from outside his front cone, while he patrols or investigates, turns his head too.
 	- `begin`: the head turn (mode `alert`): he stops dead and swivels only his head to the point (the desk ambush's
 	  swivel), holding TURN_SWIVEL + TURN_HOLD (rolled).
@@ -94,7 +96,15 @@ end
 	The peripheral notice this think: the mind with the count moved, and the head turn once it completes (nil before).
 ]=]
 function OccupantAlertRules.glance(current: Mind, senses: Senses): (Mind, Step?)
-	local glimpse = if GLANCING[current.mode] then M.peripheral(current, senses)[1] else nil
+	local side = if GLANCING[current.mode] then M.peripheral(current, senses)[1] else nil
+	local back = if GLANCING[current.mode] then M.behind(current, senses)[1] else nil
+	local glimpse = side
+	if
+		back ~= nil
+		and (side == nil or (back.position - senses.position).Magnitude < (side.position - senses.position).Magnitude)
+	then
+		glimpse = back
+	end
 	if glimpse == nil then
 		local seconds = current.glanceSeconds
 		if seconds == nil then
@@ -109,7 +119,10 @@ function OccupantAlertRules.glance(current: Mind, senses: Senses): (Mind, Step?)
 	local carried = if current.glanceId == glimpse.userId then current.glanceSeconds or 0 else 0
 	local seconds = carried + tick(current, senses)
 	local distance = (glimpse.position - senses.position).Magnitude
-	if seconds >= M.glanceDelay(distance, glimpse.crouched == true) then
+	local delay = if glimpse == back
+		then M.feltDelay(glimpse.crouched == true)
+		else M.glanceDelay(distance, glimpse.crouched == true)
+	if seconds >= delay then
 		return current, OccupantAlertRules.begin(current, senses, glimpse.position, glimpse.userId)
 	end
 	local nextMind = table.clone(current)
