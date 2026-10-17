@@ -1,12 +1,11 @@
 --!strict
 --[=[
 	OccupantTellRules: what Harlow's tells show (Cleanup Crew spec §4 "Tells", §7; since 2026-10-16 nothing is drawn
-	over his head: no "?" / "!" and no speech text, the tells are diegetic): a voiced line per cue; a heartbeat while he is within
-	HEARTBEAT_RANGE and not chasing you, beating faster the closer he is; lights within FLICKER_RADIUS of him
-	flicker (deterministic noise per light, mostly on). The behaviour set (docs/superpowers/specs/2026-10-15-cleanup-
+	over his head: no "?" / "!" and no speech text, the tells are diegetic): a voiced line per cue; lights within
+	FLICKER_RADIUS of him flicker (deterministic noise per light, mostly on). The behaviour set (docs/superpowers/specs/2026-10-15-cleanup-
 	crew-manager-behaviours-design.md §5): his typing plays while he sits typing; the warning stage by distance (far: footsteps and a pen click; mid: flicker; near: the
-	heartbeat and the dread swell; chase: his chase on you; no PA since 2026-10-16). Shared: the server uses the cues and lines, the client
-	the heartbeat and flicker. Pure.
+	heartbeat and the dread swell; chase: his chase on you; no PA since 2026-10-16). The heartbeat and the screen mood
+	are OccupantDreadFormulas'. Shared: the server uses the cues and lines, the client the flicker. Pure.
 
 	@class OccupantTellRules
 ]=]
@@ -114,67 +113,11 @@ function OccupantTellRules.stage(distance: number, mode: string?, huntingMe: boo
 end
 
 --[=[
-	Whether your heartbeat sounds: he is within HEARTBEAT_RANGE and not chasing you.
-]=]
-function OccupantTellRules.heartbeat(distance: number, mode: string?, huntingMe: boolean): boolean
-	if distance > OccupantConstants.HEARTBEAT_RANGE then
-		return false
-	end
-	return not (mode == "chase" and huntingMe)
-end
-
---[=[
-	Seconds per beat: BEAT_SLOW at the edge of the range, BEAT_FAST with him on top of you.
-]=]
-function OccupantTellRules.period(distance: number): number
-	local closeness = 1 - math.clamp(distance / OccupantConstants.HEARTBEAT_RANGE, 0, 1)
-	return OccupantConstants.BEAT_SLOW + (OccupantConstants.BEAT_FAST - OccupantConstants.BEAT_SLOW) * closeness
-end
-
---[=[
-	The beat's strength (0..1) `elapsed` seconds into the heartbeat: full at each beat, gone a third of the way
-	to the next.
-]=]
-function OccupantTellRules.pulse(elapsed: number, distance: number): number
-	local period = OccupantTellRules.period(distance)
-	local phase = (elapsed % period) / period
-	return math.clamp(1 - phase * 3, 0, 1)
-end
-
---[=[
-	Seconds per heartbeat for a player `distance` studs from him (nil: no heartbeat): CHASE_BEAT while he chases you
-	(the chase bed's beat, however far he is), else the near heartbeat's `period` within HEARTBEAT_RANGE.
-]=]
-function OccupantTellRules.beatPeriod(distance: number, mode: string?, huntingMe: boolean): number?
-	if mode == "chase" and huntingMe then
-		return OccupantConstants.CHASE_BEAT
-	end
-	if not OccupantTellRules.heartbeat(distance, mode, huntingMe) then
-		return nil
-	end
-	return OccupantTellRules.period(distance)
-end
-
---[=[
-	The chase pulse on the chased player's screen (0..1), `elapsed` seconds into the chase and `ended` seconds after it
-	ended (nil while it lasts): up over CHASE_RISE, full on each CHASE_BEAT and never below CHASE_FLOOR between beats,
-	gone CHASE_FADE seconds after the end.
-]=]
-function OccupantTellRules.chasePulse(elapsed: number, ended: number?): number
-	local rise = math.clamp(elapsed / OccupantConstants.CHASE_RISE, 0, 1)
-	local fade = if ended ~= nil then 1 - math.clamp(ended / OccupantConstants.CHASE_FADE, 0, 1) else 1
-	local phase = (elapsed % OccupantConstants.CHASE_BEAT) / OccupantConstants.CHASE_BEAT
-	local beat = math.clamp(1 - phase * 3, 0, 1)
-	local floor = OccupantConstants.CHASE_FLOOR
-	return rise * fade * (floor + (1 - floor) * beat)
-end
-
---[=[
 	The chase music's intensity-2 stems (motif, ticks, pulse) for a chased player `distance` studs from him (0..1):
-	silent from CHASE_LAYER_FAR out, full within CHASE_LAYER_NEAR, linear between.
+	silent from DREAD.CHASE_LAYER_FAR out, full within DREAD.CHASE_LAYER_NEAR, linear between.
 ]=]
 function OccupantTellRules.chaseLayer(distance: number): number
-	local near, far = OccupantConstants.CHASE_LAYER_NEAR, OccupantConstants.CHASE_LAYER_FAR
+	local near, far = OccupantConstants.DREAD.CHASE_LAYER_NEAR, OccupantConstants.DREAD.CHASE_LAYER_FAR
 	return 1 - math.clamp((distance - near) / (far - near), 0, 1)
 end
 

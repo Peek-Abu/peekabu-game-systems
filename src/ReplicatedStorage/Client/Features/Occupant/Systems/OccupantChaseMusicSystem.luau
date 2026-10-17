@@ -9,6 +9,7 @@
 	  pulse) at the layer OccupantTellRules.chaseLayer gives for his distance, eased (OccupantTellRules.easeLayer) so a
 	  jittery distance never pumps the music.
 	- The stems stay locked: any stem more than CHASE_STEM_DRIFT seconds off the ostinato's TimePosition is put back on it.
+	- Every stem plays DREAD.CHASE_MUSIC_GAIN louder than registered; `beatPosition` gives the dread the beat grid.
 	- `finish`: the stems fade out over CHASE_MUSIC_FADE (a chase that ends inside the sting bar never starts them).
 	- A chase that flickers off and on inside the sting bar (measured live: three starts in 0.85 s at the edge of his
 	  sight) does not stack stings: the bar already sounding carries on, and the stems still start on its downbeat.
@@ -67,7 +68,9 @@ local function playStem(id: string, near: boolean)
 	if handle == nil then
 		return
 	end
-	local volume = handle.sound.Volume
+	-- The chase plays louder than registered (DREAD.CHASE_MUSIC_GAIN: it was too quiet under his footsteps).
+	local volume = handle.sound.Volume * OccupantConstants.DREAD.CHASE_MUSIC_GAIN
+	handle.sound.Volume = volume
 	if near then
 		handle.sound.Volume = volume * layer
 	end
@@ -180,6 +183,22 @@ function OccupantChaseMusicSystem.finish(fade: number?)
 	active = false
 	startAt = nil
 	stopStems(fade or OccupantConstants.CHASE_MUSIC_FADE)
+end
+
+--[=[
+	Where the chase music is on its beat grid, in seconds (nil while no chase on you sounds): the ostinato's
+	TimePosition once the stems play, else the time since the sting bar began (it is one bar, so its beats line up with
+	the loop's). The dread locks the heartbeat to it.
+]=]
+function OccupantChaseMusicSystem.beatPosition(): number?
+	if not active then
+		return nil
+	end
+	local lead = stems[1]
+	if lead ~= nil then
+		return lead.handle.sound.TimePosition
+	end
+	return math.max(0, os.clock() - stingAt)
 end
 
 function OccupantChaseMusicSystem.getState(): OccupantChaseMusicState

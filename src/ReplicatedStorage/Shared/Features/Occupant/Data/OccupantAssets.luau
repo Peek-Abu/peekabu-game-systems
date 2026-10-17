@@ -46,7 +46,8 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 		looped = true,
 		rollOffMaxDistance = 55,
 	},
-	-- Your heartbeat while he is near and has not seen you (2D).
+	-- Your heartbeat (2D): its rate and loudness are the dread's (OccupantDreadSystem), locked to the chase music's beat
+	-- in a chase on you.
 	harlowHeartbeat = { assetId = "rbxassetid://123214528916758", group = "SFX", volume = 0.8 },
 	-- He heard something: one deliberate pen click (the tapping cue for "?").
 	harlowCurious = { assetId = "rbxassetid://95530818541505", group = "SFX", volume = 0.8, rollOffMaxDistance = 90 },
@@ -59,9 +60,12 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 		looped = true,
 		rollOffMaxDistance = 70,
 	},
-	-- The near warning stage: a low dread swell under everything while he is close and not chasing you (looped, 2D;
-	-- its volume follows how close he is). PLACEHOLDER slot: pending.
-	harlowDread = { assetId = PENDING, group = "Ambient", volume = 0.5, looped = true },
+	-- The dread (OccupantDreadSystem): while he is near, hunting, or near a crewmate's chase (not in your own chase, where
+	-- the music takes over). In-house "dread A" (2026-10-17): a 48 s B minor loop, a B1/B2 hum pulsing every 2 s over a
+	-- bowed contrabass B1, cello tremolo F#2/B2, a theremin colour (D4, then the wrong F4), HVAC air, and porcelain
+	-- creaks and ticks (his body); -20 LUFS, level with the office bed at full (1.4 x the Music group). 2D; its volume follows the dread. In the Music group, so the ambience duck
+	-- never ducks it.
+	harlowDread = { assetId = "rbxassetid://89353947977345", group = "Music", volume = 1.4, looped = true },
 	-- The ambush: he snaps round from the desk, chair shove, porcelain grind and the lock of his head over a pizz F dim7
 	-- (round-2 pick A, in-house, 1.1 s = AMBUSH_HOLD; positional). Plays as the ambush starts.
 	harlowAmbush = { assetId = "rbxassetid://90232187116807", group = "SFX", volume = 0.9, rollOffMaxDistance = 60 },
@@ -149,8 +153,12 @@ local SWIVEL: { SwivelLayer } = {
 local GIBBERISH: { string } = { "harlowGibberish1", "harlowGibberish2", "harlowGibberish3", "harlowGibberish4" }
 
 -- The stretched grin shown over his face for the catch (Flux; transparent PNG).
-local IMAGES: { grin: string } = {
+local IMAGES: { grin: string, dreadVignette: string, dreadGrain: string } = {
 	grin = PENDING,
+	-- The dread overlay (DreadOverlay): a white radial vignette mask (tinted in game: the dark vignette and the red and
+	-- cyan edge fringe) and a 256 px film-grain tile. In-house, Icey Labs, 2026-10-17.
+	dreadVignette = "rbxassetid://73191148809863",
+	dreadGrain = "rbxassetid://71580114541626",
 }
 
 local ANIMATIONS: { [string]: AnimationSlot } = {

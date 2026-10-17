@@ -8,8 +8,7 @@
 	  (on you: the chase music's own sting bar, 2D, however it started; positional "spotted" otherwise), the chase music
 	  (OccupantChaseMusicSystem: the sting, then the stems layered by his distance) while he chases you, a sigh when he
 	  gives up.
-	- Your heartbeat, on the beat OccupantTellRules.beatPeriod sets: the near heartbeat, and racing at CHASE_BEAT for as
-	  long as he chases you (the chase bed's beat; OccupantTellSystem pulses the screen with it).
+	(Your heartbeat and the screen's mood are OccupantDreadSystem's.)
 	- The chase sounds (and his desk sounds) are kept warm while this client runs: one silent, never-played Sound per cue
 	  stays in SoundService (preloaded through ContentProvider), so a fresh play is loaded at once. Measured 2026-10-16: a
 	  cold sting took 0.23 s to load (0.88 s long, so a quarter of it was lost), a warm one 0.
@@ -19,8 +18,7 @@
 	Reads only replicated state: his tagged model, its mode/target and line attributes. Pending sounds
 	(OccupantAssets) are skipped silently and counted.
 
-	Spec-exempt shell (Sound, Instances, RunService); the choices are the specced OccupantFeedbackUtils and
-	OccupantTellRules.
+	Spec-exempt shell (Sound, Instances, RunService); the choices are the specced OccupantFeedbackUtils.
 
 	@class OccupantPresenceSystem
 ]=]
@@ -36,7 +34,6 @@ local OccupantShared = ReplicatedStorage.Shared.Features.Occupant
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local OccupantAssets = require(OccupantShared.Data.OccupantAssets)
 local OccupantConstants = require(OccupantShared.Data.OccupantConstants)
-local OccupantTellRules = require(OccupantShared.Rules.OccupantTellRules)
 local OccupantFeedbackUtils = require(OccupantShared.Utils.OccupantFeedbackUtils)
 local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundRegistry)
 local SoundTypes = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundTypes)
@@ -66,8 +63,7 @@ local connection: RBXScriptConnection? = nil
 local lastMode: string? = nil
 local lastMine = false
 local ownsMusic = false
-local beatClock = 0
-local counters = { beats = 0, lines = 0, cues = 0, played = 0, pending = 0, stings = 0, preloaded = 0 }
+local counters = { lines = 0, cues = 0, played = 0, pending = 0, stings = 0, preloaded = 0 }
 -- The sounds a chase (and his desk) depends on, kept loaded (`warm`) so none starts late.
 local PRELOAD: { string } = {
 	"harlowSpotted",
@@ -78,6 +74,7 @@ local PRELOAD: { string } = {
 	"harlowChase_ticks",
 	"harlowChase_pulse",
 	"harlowHeartbeat",
+	"harlowDread",
 	"harlowAmbush",
 	"harlowSit",
 	"deskSwivel",
@@ -246,28 +243,6 @@ local function onCue(cue: string, harlow: Harlow, mine: boolean)
 	end
 end
 
-local function stepHeartbeat(harlow: Harlow, mode: string?, mine: boolean, deltaTime: number)
-	local character = Players.LocalPlayer.Character
-	local root = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil
-	if root == nil or not root:IsA("BasePart") then
-		beatClock = 0
-		return
-	end
-	local distance = (root.Position - harlow.root.Position).Magnitude
-	local period = OccupantTellRules.beatPeriod(distance, mode, mine)
-	if period == nil then
-		beatClock = 0
-		return
-	end
-	beatClock += deltaTime
-	if beatClock >= period then
-		beatClock = 0
-		counters.beats += 1
-		local closeness = if mine then 1 else 1 - math.clamp(distance / OccupantConstants.HEARTBEAT_RANGE, 0, 1)
-		play("harlowHeartbeat", { volumeScale = 0.6 + 0.6 * closeness })
-	end
-end
-
 -- The Harlow this client follows: the attached one while his model exists, else a freshly found one (attached).
 local function ensure(): Harlow?
 	local attached = current
@@ -284,7 +259,7 @@ local function ensure(): Harlow?
 	return fresh
 end
 
-local function step(deltaTime: number)
+local function step()
 	local harlow = ensure()
 	if harlow == nil then
 		return
@@ -298,7 +273,6 @@ local function step(deltaTime: number)
 	end
 	lastMode = mode
 	lastMine = mine
-	stepHeartbeat(harlow, mode, mine, deltaTime)
 end
 
 local OccupantPresenceSystem = {}

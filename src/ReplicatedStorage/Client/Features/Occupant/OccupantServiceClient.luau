@@ -7,9 +7,11 @@
 	gone), with a quick shake and a red, drained screen; then Death's spectate takes over. His head tilts meanwhile
 	(OccupantGestureSystem, the server's tilt). The sting and the stretched grin are
 	OccupantScareSystem's. At init it registers the catch's HUD widgets: the CCTV overlay while caught (CatchOverlay) and
-	the HR "Rehired." card around the respawn (CatchRehiredCard). The light and heartbeat tells run in OccupantTellSystem (lights out on a catch, every light flickering on a
-	tier rise). OccupantPresenceSystem plays his mutter, cues, the chase sting and bed, your heartbeat and his voice (the
-	chase's screen pulse is OccupantTellSystem's). OccupantGestureSystem
+	the HR "Rehired." card around the respawn (CatchRehiredCard), and the dread's screen layer (DreadOverlay). The light
+	tells run in OccupantTellSystem (lights out on a catch, every light flickering on a tier rise). OccupantPresenceSystem
+	plays his mutter, cues, the chase sting and bed and his voice. OccupantDreadSystem plays the proximity dread: your
+	heartbeat, the dread loop, the screen's mood, the chase's FOV squeeze and footfall shake, and the ambience duck.
+	OccupantGestureSystem
 	lays his gestures over his joints; OccupantWarningSystem plays the staged warnings and his typing (no PA since
 	2026-10-16).
 
@@ -34,6 +36,8 @@ local OccupantPresenceSystem = require(ReplicatedStorage.Client.Features.Occupan
 local OccupantScareSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantScareSystem)
 local OccupantGestureSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantGestureSystem)
 local OccupantWarningSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantWarningSystem)
+local OccupantDreadSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantDreadSystem)
+local DreadOverlay = require(ReplicatedStorage.Client.UI.React.Screens.Dread.DreadOverlay)
 local CatchOverlay = require(ReplicatedStorage.Client.UI.React.Screens.Catch.CatchOverlay)
 local CatchRehiredCard = require(ReplicatedStorage.Client.UI.React.Screens.Catch.CatchRehiredCard)
 local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudRegistry)
@@ -84,11 +88,21 @@ export type OccupantServiceClient = {
 }
 
 local OccupantServiceClient: OccupantServiceClient = {
-	dependencies = { "CameraServiceClient", "VfxServiceClient", "SoundServiceClient" },
+	dependencies = {
+		"CameraServiceClient",
+		"VfxServiceClient",
+		"SoundServiceClient",
+		"FootstepServiceClient",
+		"DeathServiceClient",
+	},
 
 	init = function(_self)
 		if not HudRegistry.has("catchOverlay") then
 			HudRegistry.register("catchOverlay", CatchOverlay, ShiftConstants.HUD_ORDER + 5)
+		end
+		if not HudRegistry.has("occupantDread") then
+			-- Above the hiding peek's frame (-100), under every other widget.
+			HudRegistry.register("occupantDread", DreadOverlay, -90)
 		end
 		if not HudRegistry.has("catchRehired") then
 			HudRegistry.register("catchRehired", CatchRehiredCard, ShiftConstants.HUD_ORDER + 6)
@@ -139,6 +153,8 @@ local OccupantServiceClient: OccupantServiceClient = {
 		table.insert(stoppers, OccupantGestureSystem.stop)
 		OccupantWarningSystem.start()
 		table.insert(stoppers, OccupantWarningSystem.stop)
+		OccupantDreadSystem.start()
+		table.insert(stoppers, OccupantDreadSystem.stop)
 	end,
 
 	stop = function(_self)
@@ -157,7 +173,7 @@ local OccupantServiceClient: OccupantServiceClient = {
 			scare = OccupantScareSystem.getState(),
 			gestures = OccupantGestureSystem.getState(),
 			warnings = OccupantWarningSystem.getState(),
-			tells = OccupantTellSystem.getState(),
+			dread = OccupantDreadSystem.getState(),
 		}
 	end,
 }

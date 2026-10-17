@@ -6,8 +6,8 @@
 
 	- far: a pen click from him every PEN_CLICK seconds (his footsteps carry this far too: FootstepServiceClient);
 	- mid: the lights near him flicker (OccupantTellSystem);
-	- near: the dread swell, louder the closer he is (pending slot; the heartbeat is OccupantPresenceSystem's);
-	- chase: the sting, the chase bed and the chase pulse (OccupantPresenceSystem, OccupantTellSystem).
+	- near and the chase: the heartbeat, the dread loop and the screen's mood are OccupantDreadSystem's;
+	- chase: the sting and the chase music (OccupantPresenceSystem, OccupantChaseMusicSystem).
 
 	Also his desk (positional): the chair as he sits down (OccupantTellRules.sat), his typing while he sits
 	(OccupantTellRules.typing: a loop on his head that stops dead the moment it ends, e.g. in the ambush, whose own
@@ -44,10 +44,6 @@ export type OccupantWarningState = {
 local rng = Random.new()
 local connection: RBXScriptConnection? = nil
 local typing: SoundServiceClient.SoundHandle? = nil
-local dread: SoundServiceClient.SoundHandle? = nil
-local dreadBase = 0
--- The dread swell was asked for this near stage (a pending slot is asked once, not every tick).
-local dreadAsked = false
 local lastPhase = ""
 local stage: string = "none"
 local nextClick = 0
@@ -103,27 +99,6 @@ local function stopTyping()
 	end
 end
 
-local function setDread(closeness: number?)
-	local loop = dread
-	if closeness == nil then
-		dreadAsked = false
-		if loop ~= nil then
-			loop:stop(OccupantConstants.DREAD_FADE)
-			dread = nil
-		end
-		return
-	end
-	if loop == nil and not dreadAsked then
-		dreadAsked = true
-		loop = play("harlowDread")
-		dread = loop
-		dreadBase = if loop ~= nil then loop.sound.Volume else 0
-	end
-	if loop ~= nil then
-		loop.sound.Volume = dreadBase * (0.3 + 0.7 * math.clamp(closeness, 0, 1))
-	end
-end
-
 -- The hider's reveal: from where they huddle (their root, deeper in the spot than the peek camera), it follows his face
 -- (OccupantTellRules.revealed).
 local function setReveal(head: BasePart?, on: boolean)
@@ -153,7 +128,6 @@ local function step()
 	if model == nil or head == nil then
 		setReveal(nil, false)
 		stopTyping()
-		setDread(nil)
 		lastPhase = ""
 		stage = "none"
 		return
@@ -192,7 +166,6 @@ local function step()
 	local character = Players.LocalPlayer.Character
 	local root = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil
 	if root == nil or not root:IsA("BasePart") then
-		setDread(nil)
 		stage = "none"
 		return
 	end
@@ -209,7 +182,6 @@ local function step()
 		counters.clicks += 1
 		play("harlowCurious", { at = head, volumeScale = 0.7 })
 	end
-	setDread(if stage == "near" then 1 - distance / OccupantConstants.STAGE_NEAR else nil)
 end
 
 local OccupantWarningSystem = {}
@@ -235,7 +207,6 @@ function OccupantWarningSystem.stop()
 		connection = nil
 	end
 	stopTyping()
-	setDread(nil)
 	setReveal(nil, false)
 	lastPhase = ""
 	stage = "none"

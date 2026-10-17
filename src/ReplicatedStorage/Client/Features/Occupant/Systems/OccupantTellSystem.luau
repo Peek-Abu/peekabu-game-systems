@@ -5,13 +5,8 @@
 	- each office light (tag OfficeLight) within FLICKER_RADIUS of him flickers (OccupantTellRules.flicker);
 	  for TIER_FLICKER_SECONDS after a tier rise every light flickers; for LIGHTS_OUT_SECONDS after a catch the
 	  lights within LIGHTS_OUT_RADIUS of it are dark (the blackout is time-boxed on the tick, and `stop` clears
-	  it, so no light stays dark);
-	- while he is within HEARTBEAT_RANGE and not chasing you (OccupantTellRules.heartbeat), the screen pulses
-	  red with the beat (OccupantTellRules.pulse), faster the closer he is; it is silent while he is catching
-	  you. The heartbeat sound itself is OccupantPresenceSystem's;
-	- while he chases you, the chase pulse instead (OccupantTellRules.chasePulse): a soft red, slightly drained
-	  screen that throbs with the racing CHASE_BEAT heartbeat and fades out over CHASE_FADE when the chase ends. No
-	  icons and no text: with the overhead "!" gone (2026-10-16) this and the sounds are how a chase reads.
+	  it, so no light stays dark).
+	(The heartbeat and the screen's mood moved to OccupantDreadSystem, 2026-10-17.)
 	Real light brightness and visible emitter colour fade together; fixture housings retain their authored material. Client-local only.
 
 	Instance specs cover flicker restoration/cancellation; OccupantTellRules covers decisions and emitter selection.
@@ -20,14 +15,12 @@
 ]=]
 
 local CollectionService = game:GetService("CollectionService")
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local OccupantTellRules = require(ReplicatedStorage.Shared.Features.Occupant.Rules.OccupantTellRules)
-local VfxServiceClient = require(ReplicatedStorage.Client.Features.Vfx.VfxServiceClient)
 
 local connection: RBXScriptConnection? = nil
 type Fade = { tween: Tween?, completion: RBXScriptConnection? }
@@ -39,12 +32,6 @@ export type LightController = { setLit: (root: BasePart, on: boolean) -> (), cle
 local outAt: Vector3? = nil
 local outUntil = 0
 local flickerUntil = 0
-local screenToken: number? = nil
-local beatStarted = 0
--- The chase on you: when it started, and when it ended (its pulse fades from then).
-local chaseStarted: number? = nil
-local chaseEnded: number? = nil
-local chasePulses = 0
 
 local function cancel(fade: Fade)
 	if fade.completion ~= nil then
@@ -238,88 +225,7 @@ local function updateLights(now: number, harlow: BasePart?)
 	end
 end
 
-local function stopBeat()
-	local token = screenToken
-	if token ~= nil then
-		VfxServiceClient:releaseScreen(token)
-		screenToken = nil
-	end
-end
-
-local function updateHeartbeat(now: number, harlow: BasePart?)
-	local localPlayer = Players.LocalPlayer
-	local character = localPlayer.Character
-	local root = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil
-	if harlow == nil or root == nil or not root:IsA("BasePart") then
-		stopBeat()
-		return
-	end
-	local model = harlow.Parent
-	local mode = if model ~= nil then model:GetAttribute(OccupantConstants.MODE_ATTRIBUTE) else nil
-	local target = if model ~= nil then model:GetAttribute(OccupantConstants.TARGET_ATTRIBUTE) else nil
-	local modeName = if type(mode) == "string" then mode else nil
-	local onMe = target == localPlayer.UserId
-	local distance = (root.Position - harlow.Position).Magnitude
-	local chasedNow = modeName == "chase" and onMe
-	if chasedNow and (chaseStarted == nil or chaseEnded ~= nil) then
-		chaseStarted = now
-		chaseEnded = nil
-		chasePulses += 1
-	elseif not chasedNow and chaseStarted ~= nil and chaseEnded == nil then
-		chaseEnded = now
-	end
-	local started = chaseStarted
-	local ended = chaseEnded
-	if started ~= nil and not (modeName == "catch" and onMe) then
-		local sinceEnd = if ended ~= nil then now - ended else nil
-		if sinceEnd == nil or sinceEnd < OccupantConstants.CHASE_FADE then
-			local strength = OccupantTellRules.chasePulse(now - started, sinceEnd)
-			local token = screenToken or VfxServiceClient:requestScreen({})
-			screenToken = token
-			VfxServiceClient:updateScreen(token, {
-				tint = Color3.new(1, 1, 1):Lerp(OccupantConstants.CHASE_TINT, strength),
-				saturation = -0.3 * strength,
-				contrast = 0.08 * strength,
-			})
-			return
-		end
-	end
-	if ended ~= nil then
-		-- Faded out (or caught): the chase pulse is over; the near heartbeat may take over below.
-		chaseStarted = nil
-		chaseEnded = nil
-		if screenToken ~= nil then
-			stopBeat()
-		end
-	end
-	-- Silent while he chases you (the rule) and while he is catching you.
-	local beating = OccupantTellRules.heartbeat(distance, modeName, onMe) and not (modeName == "catch" and onMe)
-	if not beating then
-		stopBeat()
-		return
-	end
-	local existing = screenToken
-	local token: number = if existing ~= nil then existing else VfxServiceClient:requestScreen({})
-	if existing == nil then
-		beatStarted = now
-		screenToken = token
-	end
-	local strength = OccupantTellRules.pulse(now - beatStarted, distance)
-	local white = Color3.new(1, 1, 1)
-	VfxServiceClient:updateScreen(token, {
-		tint = white:Lerp(OccupantConstants.HEARTBEAT_TINT, strength),
-		saturation = -0.25 * strength,
-	})
-end
-
 local OccupantTellSystem = { newLightController = newLightController }
-
---[=[
-	The chase pulse for the debugger and live checks: whether it shows, and how many chases on you it has pulsed for.
-]=]
-function OccupantTellSystem.getState(): { chasing: boolean, pulses: number }
-	return { chasing = chaseStarted ~= nil and chaseEnded == nil, pulses = chasePulses }
-end
 
 function OccupantTellSystem.start()
 	if connection ~= nil then
@@ -335,13 +241,12 @@ function OccupantTellSystem.start()
 		local now = os.clock()
 		local harlow = harlowRoot()
 		updateLights(now, harlow)
-		updateHeartbeat(now, harlow)
 	end)
 end
 
 --[=[
 	Stops the tells and puts everything back: every light we darkened is lit again, the blackout and tier
-	flicker are cancelled, the screen tint is released.
+	flicker are cancelled.
 ]=]
 function OccupantTellSystem.stop()
 	local current = connection
@@ -349,9 +254,6 @@ function OccupantTellSystem.stop()
 		current:Disconnect()
 		connection = nil
 	end
-	stopBeat()
-	chaseStarted = nil
-	chaseEnded = nil
 	outAt = nil
 	outUntil = 0
 	flickerUntil = 0

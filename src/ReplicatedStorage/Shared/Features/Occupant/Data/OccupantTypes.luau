@@ -236,4 +236,24 @@ export type CatchReport = {
 	dropped: { string },
 }
 
+-- How strongly the dread shows on this client (OccupantDreadFormulas; client-local, from replicated state). A dread
+-- "stage": nothing; he is near and unaware of you; he sees you or is hunting; he chases you; a crewmate near you is
+-- being chased.
+export type DreadStage = "none" | "near" | "aware" | "chase" | "crew"
+
+-- One frame of the dread's look and mix. Volumes are scales of the sound's registered volume; screen values 0..1;
+-- `red` and `edge` are the peaks the heartbeat pulses to; `squeeze` FOV degrees; `duck` and `muffle` dB (<= 0).
+export type DreadLook = {
+	heart: number,
+	dread: number,
+	vignette: number,
+	desaturate: number,
+	grain: number,
+	red: number,
+	edge: number,
+	squeeze: number,
+	duck: number,
+	muffle: number,
+}
+
 return {}

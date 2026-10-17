@@ -372,6 +372,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.Features.Occupant.Systems.OccupantGestureSystem"] = "Motor6D/RunService shell (poses and easing specced in OccupantGestureFormulas)",
 	["ReplicatedStorage.Client.Features.Occupant.Systems.OccupantClearanceSystem"] = "Instance/raycast shell (the paths and the box test are specced in OccupantGestureFormulas)",
 	["ReplicatedStorage.Client.Features.Occupant.Systems.OccupantWarningSystem"] = "Sound/Instance/RunService shell (stages and typing specced in OccupantTellRules)",
+	["ReplicatedStorage.Client.Features.Occupant.Systems.OccupantDreadSystem"] = "Sound/Camera/Vfx/raycast/RunService shell (stage, look, easing, heartbeat, shake and EQ specced in OccupantDreadFormulas)",
 	["ServerScriptService.Features.Occupant.Systems.OccupantEffectSystem"] = "Players/ByteNet/Hide shell (which effects a think makes is specced in OccupantBrainRules and its rules)",
 	["ServerScriptService.Features.Occupant.Systems.OccupantSeatSystem"] = "Instance/tween/clip shell (when to sit, stand, plant or let go is specced in OccupantBrainRules and OccupantMindUtils)",
 
@@ -384,6 +385,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.Features.Hide.HideServiceClient"] = "ProximityPrompt/Camera/PlayerModule/ByteNet shell (words specced in HideViewModel, state in HideStore)",
 	["ReplicatedStorage.Client.UI.React.Screens.Hide.HideChip"] = "presentational React component (words specced in HideViewModel)",
 	["ReplicatedStorage.Client.UI.React.Screens.Hide.HidePeekOverlay"] = "presentational React component (overlay choice specced in HideViewModel)",
+	["ReplicatedStorage.Client.UI.React.Screens.Dread.DreadOverlay"] = "React HUD widget (layers specced in DreadViewModel)",
 	-- Cleanup Crew: Sprint
 	["ReplicatedStorage.Shared.Features.Sprint.Data.SprintConstants"] = "static tuning and names (no logic)",
 	["ReplicatedStorage.Shared.Features.Sprint.Net.SprintEvents"] = "ByteNet packet definitions (no logic)",
