@@ -58,6 +58,20 @@ local PATTERN: { [Pattern]: { image: string, tile: number, tint: Color3 } } = {
 	bubbles = { image = UIAssets.toon.patternBubbles, tile = 60, tint = COLOR.white },
 }
 
+-- The gloss band's transparency (top, bottom) per hue: dark plates take a fainter gloss, so they read as lacquer
+-- rather than a grey stripe.
+local GLOSS: { [UIToonConstants.Hue]: { top: number, bottom: number } } = {
+	night = { top = 0.8, bottom = 0.94 },
+	grape = { top = 0.6, bottom = 0.85 },
+	coral = { top = 0.5, bottom = 0.78 },
+	cream = { top = 0.3, bottom = 0.7 },
+	gold = { top = 0.42, bottom = 0.72 },
+	mint = { top = 0.42, bottom = 0.72 },
+	sky = { top = 0.42, bottom = 0.72 },
+	lilac = { top = 0.45, bottom = 0.75 },
+	steel = { top = 0.5, bottom = 0.8 },
+}
+
 local function corner(radius: number): React.ReactNode
 	return e("UICorner", { CornerRadius = UDim.new(0, math.max(0, radius)) })
 end
@@ -70,6 +84,7 @@ local function ToonSurface(props: ToonSurfaceProps): React.ReactNode
 	local lipHeight = if small then 5 else DEPTH.lip
 	local dropScale = if small then 0.6 else 1
 	local pose = props.pose or restBinding
+	local gloss = GLOSS[props.hue]
 
 	local face: { [string]: React.ReactNode } = {
 		-- The lip: the whole shape in the darker hue, outlined in ink. The body sits on it, short of its bottom.
@@ -154,8 +169,8 @@ local function ToonSurface(props: ToonSurfaceProps): React.ReactNode
 					gradient = e("UIGradient", {
 						Rotation = 90,
 						Transparency = NumberSequence.new({
-							NumberSequenceKeypoint.new(0, 0.42),
-							NumberSequenceKeypoint.new(1, 0.72),
+							NumberSequenceKeypoint.new(0, gloss.top),
+							NumberSequenceKeypoint.new(1, gloss.bottom),
 						}),
 					}),
 				})

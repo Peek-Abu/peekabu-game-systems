@@ -69,8 +69,8 @@ local function ShiftGloomMeter(props: ShiftGloomMeterProps): React.ReactNode
 		clock = e(ToonIcon, {
 			icon = "stopwatch",
 			anchor = Vector2.new(1, 0),
-			position = UDim2.new(1, if phone then 18 else 26, 0, if phone then -20 else -28),
-			size = UDim2.fromOffset(if phone then 52 else 74, if phone then 52 else 74),
+			position = UDim2.new(1, if phone then 16 else 22, 0, if phone then -24 else -34),
+			size = UDim2.fromOffset(if phone then 46 else 66, if phone then 46 else 66),
 			rotation = 10,
 			drop = 4,
 			zIndex = 6,
@@ -80,7 +80,7 @@ local function ShiftGloomMeter(props: ShiftGloomMeterProps): React.ReactNode
 			meaning = "coral",
 			textSize = if phone then 32 else 50,
 			anchor = Vector2.new(1, 1),
-			position = UDim2.new(1, -10, 1, if phone then -4 else -8),
+			position = UDim2.new(1, if phone then -18 else -26, 1, if phone then -4 else -8),
 			size = UDim2.fromOffset(clockWidth - 12, if phone then 38 else 58),
 			align = "right",
 			fit = true,
@@ -115,7 +115,8 @@ local function ShiftGloomMeter(props: ShiftGloomMeterProps): React.ReactNode
 		anchor = Vector2.new(0.5, 0),
 		position = UDim2.new(0.5, 0, 0, props.top),
 		radius = if phone then 20 else 26,
-		goo = { kind = "cap", from = size.X - clockWidth - 90, to = size.X - 40, scale = if phone then 0.5 else 0.7 },
+		-- A short pour along the top edge between the site line and the clock, small enough to stay over the digits.
+		goo = { kind = "cap", from = size.X - clockWidth + 6, to = size.X - 44, scale = if phone then 0.4 else 0.5 },
 		children = face,
 	})
 end

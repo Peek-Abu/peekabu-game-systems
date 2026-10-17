@@ -3,7 +3,8 @@
 	ToonText: the kit's type. `display` (the default) is Luckiest Guy with a thick round-jointed ink stroke, a
 	gradient fill by meaning (gold = Gleam, mint = gain, coral = time and danger, grape = Gloom, white = labels) and a
 	hard ink drop (a duplicate label offset down). `body` is Fredoka One, ink on light faces and white on dark ones,
-	with no stroke. The text sits in a box (`size`, aligned by `align`); `fit` shrinks it to stay inside the box.
+	with no stroke. The text sits in a box (`size`, aligned by `align`); `fit` shrinks it to stay inside the box (its limits follow
+	PaperScaleContext, the scale a surface is drawn at).
 	Presentational (exempt; story in ToonText.story; stroke and drop sizes specced in ToonStyleViewModel).
 
 	@class ToonText
@@ -12,6 +13,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
+local PaperScaleContext = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperScaleContext)
 local ToonStyleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonStyleViewModel)
 local UIToonConstants = require(ReplicatedStorage.Client.UI.React.Screens.Toon.UIToonConstants)
 
@@ -71,6 +73,9 @@ local function ToonText(props: ToonTextProps): React.ReactNode
 	local size = props.textSize
 	local fit = props.fit == true
 	local transparency = props.transparency or 0
+	-- A UITextSizeConstraint counts real screen px and ignores the UIScale the text is drawn under, so the fit limits
+	-- follow the scale the surface provides (PaperHudFrame and the scaled screens provide it; 1 elsewhere).
+	local scale = React.useContext(PaperScaleContext.Context)
 	local function label(drop: boolean): React.ReactNode
 		local stroke = ToonStyleViewModel.stroke(size)
 		local children: { [string]: React.ReactNode } = {}
@@ -87,7 +92,14 @@ local function ToonText(props: ToonTextProps): React.ReactNode
 			end
 		end
 		if fit then
-			children.limit = e("UITextSizeConstraint", { MaxTextSize = size, MinTextSize = math.max(8, size // 2) })
+			children.limit = e("UITextSizeConstraint", {
+				MaxTextSize = scale:map(function(value: number): number
+					return PaperScaleContext.limit(size, value)
+				end),
+				MinTextSize = scale:map(function(value: number): number
+					return PaperScaleContext.limit(math.max(6, size * 0.4), value)
+				end),
+			})
 		end
 		local offset = if drop then ToonStyleViewModel.drop(size) else 0
 		local auto = props.automaticWidth == true

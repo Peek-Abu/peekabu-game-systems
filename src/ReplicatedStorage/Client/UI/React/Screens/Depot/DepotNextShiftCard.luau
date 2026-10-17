@@ -45,14 +45,14 @@ type Geometry = {
 }
 
 local DESKTOP: Geometry = {
-	size = Vector2.new(860, 140),
+	size = Vector2.new(940, 140),
 	bottom = 26,
 	truck = 300,
 	textLeft = 252,
 	title = 48,
-	line = 26,
+	line = 22,
 	go = Vector2.new(150, 86),
-	seat = 58,
+	seat = 52,
 }
 local PHONE: Geometry = {
 	size = Vector2.new(430, 72),
@@ -117,16 +117,20 @@ local function DepotNextShiftCard(props: DepotNextShiftCardProps): React.ReactNo
 			layoutOrder = 2,
 		})
 	end
+	-- The seats sit between the line and GO!; the line and title stop short of them.
+	local seatsWidth = if g.seat > 0 and #cta.seats > 0 then #cta.seats * (g.seat + 8) + 6 else 0
+	local textWidth = g.size.X - g.textLeft - g.go.X - 32 - seatsWidth
 	local face: { [string]: React.ReactNode } = {
 		title = e(ToonText, {
 			text = cta.title,
 			textSize = g.title,
 			position = UDim2.fromOffset(g.textLeft, if props.phone then 4 else 14),
-			size = UDim2.fromOffset(g.size.X - g.textLeft - g.go.X - 40, g.title + 8),
+			size = UDim2.fromOffset(textWidth, g.title + 8),
+			fit = true,
 		}),
 		line = e("Frame", {
 			Position = UDim2.fromOffset(g.textLeft, if props.phone then 38 else 74),
-			Size = UDim2.fromOffset(g.size.X - g.textLeft - g.go.X - 40, if props.phone then 26 else 44),
+			Size = UDim2.fromOffset(textWidth, if props.phone then 26 else 44),
 			BackgroundTransparency = 1,
 		}, lineChildren),
 		go = e(ToonButton, {
@@ -148,7 +152,7 @@ local function DepotNextShiftCard(props: DepotNextShiftCardProps): React.ReactNo
 				FillDirection = Enum.FillDirection.Horizontal,
 				VerticalAlignment = Enum.VerticalAlignment.Center,
 				HorizontalAlignment = Enum.HorizontalAlignment.Right,
-				Padding = UDim.new(0, 10),
+				Padding = UDim.new(0, 8),
 				SortOrder = Enum.SortOrder.LayoutOrder,
 			}),
 		}
@@ -157,8 +161,8 @@ local function DepotNextShiftCard(props: DepotNextShiftCardProps): React.ReactNo
 		end
 		face.seats = e("Frame", {
 			AnchorPoint = Vector2.new(1, 0.5),
-			Position = UDim2.new(1, -g.go.X - 36, 0.5, 0),
-			Size = UDim2.fromOffset(4 * (g.seat + 10), g.seat + 8),
+			Position = UDim2.new(1, -g.go.X - 30, 0.5, 4),
+			Size = UDim2.fromOffset(seatsWidth, g.seat + 8),
 			BackgroundTransparency = 1,
 		}, seats)
 	end

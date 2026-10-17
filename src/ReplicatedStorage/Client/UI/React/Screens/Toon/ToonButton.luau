@@ -167,19 +167,25 @@ local function ToonButton(props: ToonButtonProps): React.ReactNode
 	local overlay: { [string]: React.ReactNode } = {}
 	if props.badge ~= nil then
 		local tag: { [string]: React.ReactNode } = {}
+		-- Smaller chrome takes a smaller sticker, so it never covers the render.
+		local small = props.small == true
+		local textSize = if small then 12 else 18
 		tag.label = e(ToonText, {
 			text = props.badge,
-			textSize = 18,
+			textSize = textSize,
 			size = UDim2.fromScale(1, 1),
 			align = "center",
 		})
 		overlay.badge = e(ToonSurface, {
 			hue = "coral",
 			small = true,
-			radius = 10,
+			radius = if small then 7 else 10,
 			anchor = Vector2.new(0.5, 0.5),
-			position = UDim2.new(1, -10, 0, 4),
-			size = UDim2.fromOffset(math.max(56, #props.badge * 14 + 20), 30),
+			position = UDim2.new(1, if small then -4 else -10, 0, if small then 0 else 4),
+			size = UDim2.fromOffset(
+				math.max(if small then 26 else 40, #props.badge * (textSize * 0.8) + (if small then 12 else 20)),
+				if small then 20 else 30
+			),
 			zIndex = 5,
 			children = tag,
 		})

@@ -5,7 +5,7 @@
 	gauge as a grape percent pill, slots 2-5 the items (the kit render where there is one, else the item's own model in
 	a little viewport) with a caption pill: the worth with the Gleam coin ("???" until appraised), "+N" for trash, coral
 	for a FRAGILE item. The slots' size is ShiftHotbarViewModel.metrics (the user's half-size hotbar). The chosen slot
-	lifts inside the lilac ring; a big item's slot reads FULL and the others grey while it locks them. Tapping or
+	lifts inside the lilac ring; a big item's slot reads FULL and the others recede while it locks them. Tapping or
 	clicking a slot asks for it (`onSelect`). Presentational: it draws the HotbarView it is given.
 
 	@class ShiftHotbar
@@ -114,12 +114,12 @@ local function Card(props: CardProps): React.ReactNode
 			icon = icon,
 			art = art,
 			caption = if slot.locked then "FULL" else slot.caption,
-			captionIcon = if slot.coin then "gleam" else nil,
+			captionIcon = if slot.coin and not slot.locked then "gleam" else nil,
 			captionMeaning = if slot.vacuum then "grape" elseif slot.coin then "gold" else "white",
 			captionHue = if slot.locked or slot.fragile then "coral" else nil,
 			selected = slot.selected,
-			-- Every slot but the big item's own greys while a big item locks the hotbar.
-			disabled = props.locked and not slot.locked,
+			-- Every slot but the big item's own recedes while a big item locks the hotbar.
+			dimmed = props.locked and not slot.locked,
 			onActivated = if onSelect ~= nil
 				then function()
 					onSelect(slot.slot)

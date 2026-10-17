@@ -2,7 +2,7 @@
 --[=[
 	ToonSlot: a hotbar slot on the kit's stack (a dark night plate in a shift): the item's render filling and breaking
 	the plate, its key number top-left, an optional caption pill at the foot (the vacuum's charge, a valuable's worth
-	with the coin), and the states: `selected` lifts it inside the lilac ring, `disabled` greys it, empty shows the
+	with the coin), and the states: `selected` lifts it inside the lilac ring, `disabled` greys it, `dimmed` recedes it, empty shows the
 	bare plate. Tapping or clicking calls `onActivated` when given. Presentational (exempt; story in ToonSlot.story;
 	the states are specced in ToonStyleViewModel).
 
@@ -41,6 +41,8 @@ export type ToonSlotProps = {
 	captionMeaning: UIToonConstants.Meaning?,
 	selected: boolean?,
 	disabled: boolean?,
+	-- Receded: darker and a touch smaller, its render greyed (the slots a big item locks), still tappable.
+	dimmed: boolean?,
 	onActivated: (() -> ())?,
 	zIndex: number?,
 	layoutOrder: number?,
@@ -54,7 +56,7 @@ local function ToonSlot(props: ToonSlotProps): React.ReactNode
 		pressed = false,
 		selected = props.selected == true,
 		disabled = disabled,
-		receded = false,
+		receded = props.dimmed == true,
 	})
 	local pose = useToonPose(target, UIToonConstants.MOTION.hoverSeconds)
 	local side = props.side
@@ -70,7 +72,7 @@ local function ToonSlot(props: ToonSlotProps): React.ReactNode
 			position = UDim2.fromScale(0.5, 0.46),
 			size = UDim2.fromScale(1.0, 1.0),
 			drop = 4,
-			greyed = disabled,
+			greyed = disabled or props.dimmed == true,
 			zIndex = 2,
 		})
 	end
