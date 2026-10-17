@@ -2,7 +2,7 @@
 --[=[
 	ShiftTransitScreen: the transit screen's root, mounted on the Overlay layer by ShiftServiceClient (above the HUD and
 	every panel). Draws ShiftTransitPanel from ShiftTransitStore (the cover, the ARRIVED stamp, the slip's lines through
-	ShiftTransitViewModel) at the screen's scale (WorldBillboardViewModel.screenScale).
+	ShiftTransitViewModel) at the screen's scale (ShiftTransitViewModel.fit).
 
 	@class ShiftTransitScreen
 ]=]
@@ -15,7 +15,6 @@ local ShiftTransitStore = require(ReplicatedStorage.Client.Features.Shift.State.
 local ShiftTransitPanel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftTransitPanel)
 local ShiftTransitViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftTransitViewModel)
 local usePaperViewport = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperViewport)
-local WorldBillboardViewModel = require(ReplicatedStorage.Client.UI.React.Screens.World.WorldBillboardViewModel)
 
 local function ShiftTransitScreen(): React.ReactNode
 	local covered = ReactCharm.useAtom(ShiftTransitStore.covered)
@@ -26,7 +25,7 @@ local function ShiftTransitScreen(): React.ReactNode
 	local props: ShiftTransitPanel.ShiftTransitPanelProps = {
 		cover = ShiftTransitStore.coverOf(covered, slip),
 		view = if covered and slip then ShiftTransitViewModel.slip(snapshot, arrived) else nil,
-		scale = WorldBillboardViewModel.screenScale(viewport),
+		scale = ShiftTransitViewModel.fit(viewport),
 	}
 	return React.createElement(ShiftTransitPanel, props)
 end

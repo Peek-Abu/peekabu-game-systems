@@ -6,6 +6,7 @@ local DailyRewardConstants = require(ReplicatedStorage.Shared.Features.DailyRewa
 local DailyRewardRules = require(ReplicatedStorage.Shared.Features.DailyReward.Rules.DailyRewardRules)
 local PlayerDataTypes = require(ReplicatedStorage.Shared.Data.PlayerDataTypes)
 local RankFormulas = require(ReplicatedStorage.Shared.Features.Rank.Utils.RankFormulas)
+local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local VM = {}
 
 -- The longest name the profile card prints before it is cut.
@@ -43,6 +44,24 @@ function VM.gift(state: PlayerDataTypes.DailyReward, now: number): GiftView
 		ready = false,
 		text = string.format("%d:%02d:%02d", left // 3600, (left % 3600) // 60, left % 60),
 	}
+end
+
+-- The render beside each guide / locker section, in VM.copy's order.
+function VM.sectionIcons(page: Page): { UIAssets.ToonIcon }
+	if page == "guide" then
+		return { "truck", "vacuum", "managerHunt", "clock" }
+	end
+	return { "vacuum", "gloom", "grab", "stamina" }
+end
+
+-- The hub page's header title (the gear page is the Locker in the V1 menus).
+function VM.pageTitle(page: Page): string
+	if page == "guide" then
+		return "GUIDE"
+	elseif page == "gear" then
+		return "LOCKER"
+	end
+	return "SETTINGS"
 end
 
 -- The Tonight card: tonight's building (the board's contract; the first contract until the board is found).

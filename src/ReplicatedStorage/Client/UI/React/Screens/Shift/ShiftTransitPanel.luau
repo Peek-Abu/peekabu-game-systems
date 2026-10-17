@@ -1,12 +1,13 @@
 --!strict
 --[=[
-	ShiftTransitPanel: the transit screen. A full-screen night-black cover that fades in over TRANSIT_FADE_IN when
-	`cover` leaves "none" and out over TRANSIT_FADE_OUT when it returns (it starts opaque when mounted covered, so a
-	booting client never sees an unlit frame). With cover "slip" it carries the route slip (ShiftTransitViewModel),
-	centred and scaled by `scale`: a 560x300 cream dispatch slip tilted -1.5°, the teal company band ("TRUCK n" in glow
-	green), ROUTE SLIP (Oswald 40), FROM / TO lines (Special Elite 24), a dashed road the stamp-red truck block keeps
-	crossing (LOOP_SECONDS a crossing; parked at the end once arrived; still under reduced motion), the note,
-	and the red IN TRANSIT stamp, which pops to a green ARRIVED. A fading-out slip keeps its last lines. Presentational.
+	ShiftTransitPanel: the load screen in the V1 kit (load render). A full-screen night cover that fades in over
+	TRANSIT_FADE_IN when `cover` leaves "none" and out over TRANSIT_FADE_OUT when it returns (it starts opaque when
+	mounted covered, so a booting client never sees an unlit frame). With cover "slip" it carries the trip, laid out on
+	a 1440x720 canvas scaled by `scale` (ShiftTransitViewModel.fit): the cream "EN ROUTE TO" card (the client in big
+	stroked letters, the site line, the graded office photo, the truck's number on a sticker), the Manager's tip on a
+	dark plate with Gloom pooled along its floor, the company truck render driving in on speed lines, and the grape
+	loading bar (it keeps filling while in transit, full and DOORS OPEN! once this client is ready; still under reduced
+	motion). A fading-out cover keeps its last lines. Presentational: the words are ShiftTransitViewModel.slip.
 
 	@class ShiftTransitPanel
 ]=]
@@ -18,187 +19,174 @@ local RunService = game:GetService("RunService")
 local React = require(ReplicatedStorage.Packages.React)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
-local PaperLabel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperLabel)
+local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local PaperScaleContext = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperScaleContext)
-local PaperStamp = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperStamp)
-local PaperTexture = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperTexture)
-local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local ShiftTransitViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftTransitViewModel)
+local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
+local ToonBar = require(Toon.ToonBar)
+local ToonIcon = require(Toon.ToonIcon)
+local ToonPanel = require(Toon.ToonPanel)
+local ToonPill = require(Toon.ToonPill)
+local ToonText = require(Toon.ToonText)
+local UIToonConstants = require(Toon.UIToonConstants)
+local useToonPlay = require(Toon.useToonPlay)
 
 local e = React.createElement
 
 export type ShiftTransitPanelProps = {
 	cover: ShiftTypes.TransitCover,
 	view: ShiftTransitViewModel.SlipView?,
-	-- WorldBillboardViewModel.screenScale of this screen.
+	-- ShiftTransitViewModel.fit of this screen.
 	scale: number,
 }
 
-local COLOR = UIPaperConstants.COLOR
-local SLIP = Vector2.new(560, 300)
-local BAND = 46
-local DASHES = 13
-local DASH = Vector2.new(24, 6)
-local DASH_STEP = 36
-local ROAD = Vector2.new(24, 214)
-local TRUCK = Vector2.new(30, 20)
--- One crossing of the road while in transit.
+local COLOR = UIToonConstants.COLOR
+local CANVAS = Vector2.new(1440, 720)
+-- One sweep of the loading bar while in transit.
 local LOOP_SECONDS = 2.4
 
-local function label(
-	text: string,
-	role: PaperLabel.Role,
-	size: number,
-	color: Color3,
-	position: UDim2,
-	frame: UDim2
-): React.ReactNode
-	return e(PaperLabel, {
-		text = text,
-		role = role,
-		size = size,
-		color = color,
-		position = position,
-		frame = frame,
-		autoSize = false,
-		wrapped = false,
-		scaled = true,
-		zIndex = 2,
+type Nodes = { [string]: React.ReactNode }
+
+local function card(view: ShiftTransitViewModel.SlipView): React.ReactNode
+	local face: Nodes = {
+		heading = e(ToonText, {
+			text = view.heading,
+			textSize = 30,
+			position = UDim2.fromOffset(28, 22),
+			size = UDim2.fromOffset(360, 36),
+			fit = true,
+		}),
+		client = e(ToonText, {
+			text = view.client,
+			textSize = 76,
+			position = UDim2.fromOffset(26, 60),
+			size = UDim2.fromOffset(546, 86),
+			fit = true,
+		}),
+		site = e(ToonText, {
+			text = view.site,
+			font = "body",
+			textSize = 24,
+			position = UDim2.fromOffset(30, 150),
+			size = UDim2.fromOffset(540, 30),
+			fit = true,
+		}),
+		photo = e("ImageLabel", {
+			Position = UDim2.fromOffset(28, 192),
+			Size = UDim2.fromOffset(544, 206),
+			BackgroundColor3 = COLOR.ink,
+			Image = UIAssets.toonPhotos.officeWide,
+			ScaleType = Enum.ScaleType.Crop,
+		}, {
+			corner = e("UICorner", { CornerRadius = UDim.new(0, 20) }),
+			stroke = e("UIStroke", { Color = COLOR.ink, Thickness = 5 }),
+		}),
+	}
+	local truck = view.truck
+	if truck ~= nil then
+		face.truck = e(ToonPill, {
+			text = truck,
+			hue = "mint",
+			textSize = 22,
+			tilt = 6,
+			anchor = Vector2.new(1, 0.5),
+			position = UDim2.new(1, 14, 0, 8),
+			size = UDim2.fromOffset(140, 42),
+			zIndex = 6,
+		})
+	end
+	return e(ToonPanel, {
+		size = Vector2.new(600, 430),
+		position = UDim2.fromOffset(40, 30),
+		pop = true,
+		children = face,
 	})
 end
 
--- A FROM / TO tag: fixed size (a scaled label shrinks a short word too far).
-local function tag(text: string, y: number): React.ReactNode
-	return e(PaperLabel, {
-		text = text,
-		role = "heading",
-		size = 20,
-		color = COLOR.companyTeal,
-		position = UDim2.fromOffset(24, y),
-		frame = UDim2.fromOffset(60, 30),
-		autoSize = false,
-		wrapped = false,
-		zIndex = 2,
+local function tip(view: ShiftTransitViewModel.SlipView): React.ReactNode
+	local face: Nodes = {
+		face = e(ToonIcon, {
+			icon = "managerCalm",
+			position = UDim2.fromOffset(-46, -26),
+			size = UDim2.fromOffset(160, 160),
+			drop = 6,
+			zIndex = 6,
+		}),
+		title = e(ToonText, {
+			text = "TIP",
+			textSize = 32,
+			position = UDim2.fromOffset(126, 12),
+			size = UDim2.fromOffset(200, 38),
+		}),
+		line = e(ToonText, {
+			text = view.tip,
+			font = "body",
+			color = COLOR.white,
+			textSize = 22,
+			position = UDim2.fromOffset(128, 50),
+			size = UDim2.fromOffset(450, 56),
+			wrapped = true,
+			fit = true,
+			alignY = "top",
+		}),
+	}
+	return e(ToonPanel, {
+		hue = "night",
+		size = Vector2.new(600, 136),
+		position = UDim2.fromOffset(40, 494),
+		gloss = false,
+		goo = { kind = "pool", from = 150, to = 560, scale = 0.45 },
+		children = face,
 	})
 end
 
--- The dashed road; the truck keeps crossing it until `arrived` parks it at the end.
-local function Road(props: { arrived: boolean }): React.ReactNode
-	local alpha, setAlpha = React.useBinding(if props.arrived then 1 else 0)
-	React.useEffect(function(): () -> ()
-		if props.arrived then
-			setAlpha(1)
-			return function() end
+local function LoadBar(props: { view: ShiftTransitViewModel.SlipView }): React.ReactNode
+	local view = props.view
+	local sweep = useToonPlay(LOOP_SECONDS, 0, nil, true)
+	local fill = sweep:map(function(alpha: number): number
+		if view.arrived then
+			return 1
 		end
 		if GuiService.ReducedMotionEnabled then
-			setAlpha(0.5)
-			return function() end
+			return 0.6
 		end
-		local elapsed = 0
-		local connection = RunService.RenderStepped:Connect(function(deltaTime: number)
-			elapsed += deltaTime
-			setAlpha((elapsed / LOOP_SECONDS) % 1)
-		end)
-		return function()
-			connection:Disconnect()
-		end
-	end, { props.arrived })
-	local children: { [string]: React.ReactNode } = {
-		truck = e("Frame", {
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = alpha:map(function(value: number): UDim2
-				return UDim2.fromOffset(DASH.X / 2 + value * (DASHES - 1) * DASH_STEP, DASH.Y / 2)
-			end),
-			Size = UDim2.fromOffset(TRUCK.X, TRUCK.Y),
-			BackgroundColor3 = COLOR.stamp,
-			BorderSizePixel = 0,
-			ZIndex = 4,
-		}, { corner = e("UICorner", { CornerRadius = UDim.new(0, 4) }) }),
-	}
-	for index = 1, DASHES do
-		children[`dash{index}`] = e("Frame", {
-			Position = UDim2.fromOffset((index - 1) * DASH_STEP, 0),
-			Size = UDim2.fromOffset(DASH.X, DASH.Y),
-			BackgroundColor3 = COLOR.manilaDeep,
-			BorderSizePixel = 0,
-			ZIndex = 3,
-		}, { corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }) })
-	end
-	return e("Frame", {
-		Position = UDim2.fromOffset(ROAD.X, ROAD.Y),
-		Size = UDim2.fromOffset((DASHES - 1) * DASH_STEP + DASH.X, DASH.Y),
-		BackgroundTransparency = 1,
-		ZIndex = 3,
-	}, children)
+		return 0.12 + 0.76 * alpha
+	end)
+	return e(ToonBar, {
+		kind = "load",
+		fill = fill,
+		label = view.bar,
+		labelSize = 30,
+		position = UDim2.fromOffset(40, 660),
+		size = UDim2.fromOffset(CANVAS.X - 80, 50),
+	})
 end
 
-local function slip(view: ShiftTransitViewModel.SlipView): React.ReactNode
-	local truck = view.truck
-	local paper: { [string]: React.ReactNode } = {
-		corner = e("UICorner", { CornerRadius = UDim.new(0, 4) }),
-		texture = e(PaperTexture, { paper = COLOR.cream, corner = 4 }),
-		band = e("Frame", {
-			Size = UDim2.new(1, 0, 0, BAND),
-			BackgroundColor3 = COLOR.companyTeal,
-			BorderSizePixel = 0,
-			ZIndex = 2,
-		}, {
-			label = label(view.band, "heading", 22, COLOR.cream, UDim2.fromOffset(20, 0), UDim2.new(1, -170, 1, 0)),
-			truck = if truck ~= nil
-				then e(PaperLabel, {
-					text = truck,
-					role = "heading",
-					size = 22,
-					color = COLOR.fluorGlow,
-					align = "right",
-					position = UDim2.new(1, -140, 0, 0),
-					frame = UDim2.fromOffset(120, BAND),
-					autoSize = false,
-					wrapped = false,
-					zIndex = 3,
-				})
-				else nil,
+local function trip(view: ShiftTransitViewModel.SlipView): React.ReactNode
+	local nodes: Nodes = {
+		card = card(view),
+		tip = tip(view),
+		truck = e(ToonIcon, {
+			image = UIAssets.toonPhotos.truckCut,
+			position = UDim2.fromOffset(660, -40),
+			size = UDim2.fromOffset(760, 680),
+			drop = 10,
+			zIndex = 2,
 		}),
-		title = label(view.title, "heading", 40, COLOR.ink, UDim2.fromOffset(24, 58), UDim2.fromOffset(300, 48)),
-		fromTag = tag("FROM", 116),
-		from = label(view.from, "body", 24, COLOR.ink, UDim2.fromOffset(90, 116), UDim2.fromOffset(300, 30)),
-		toTag = tag("TO", 154),
-		to = label(view.to, "body", 24, COLOR.ink, UDim2.fromOffset(90, 154), UDim2.fromOffset(440, 30)),
-		road = e(Road, { arrived = view.arrived }),
-		note = label(view.note, "body", 18, COLOR.ink, UDim2.fromOffset(24, 246), UDim2.fromOffset(500, 26)),
+		bar = e(LoadBar, { view = view }),
 	}
-	-- Keyed by the word, so ARRIVED stamps down fresh (its pop).
-	paper[`stamp{view.stamp}`] = e(PaperStamp, {
-		text = view.stamp,
-		size = 40,
-		color = if view.arrived then COLOR.inkGreen else COLOR.stamp,
-		tilt = -8,
-		pop = view.arrived,
-		anchor = Vector2.new(1, 0),
-		position = UDim2.new(1, -24, 0, 64),
-	})
-	return e("Frame", {
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromOffset(SLIP.X, SLIP.Y),
-		Rotation = -1.5,
-		BackgroundTransparency = 1,
-	}, {
-		shadow = e("Frame", {
-			Position = UDim2.fromOffset(5, 7),
-			Size = UDim2.fromScale(1, 1),
-			BackgroundColor3 = Color3.new(0, 0, 0),
-			BackgroundTransparency = 0.4,
-			BorderSizePixel = 0,
-			ZIndex = 0,
-		}, { corner = e("UICorner", { CornerRadius = UDim.new(0, 4) }) }),
-		paper = e("Frame", {
-			Size = UDim2.fromScale(1, 1),
-			BackgroundColor3 = COLOR.cream,
+	-- Speed lines behind the truck.
+	for index = 1, 5 do
+		nodes[`speed{index}`] = e("Frame", {
+			Position = UDim2.fromOffset(640 + (index % 2) * 30, 440 + index * 26),
+			Size = UDim2.fromOffset(260 - index * 18, 5),
+			BackgroundColor3 = COLOR.white,
+			BackgroundTransparency = 0.7,
 			BorderSizePixel = 0,
 			ZIndex = 1,
-		}, paper),
-	})
+		}, { corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }) })
+	end
+	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, nodes)
 end
 
 local function ShiftTransitPanel(props: ShiftTransitPanelProps): React.ReactNode
@@ -252,11 +240,14 @@ local function ShiftTransitPanel(props: ShiftTransitPanelProps): React.ReactNode
 		end
 	end, { covered })
 
-	-- PaperLabel's shrink-to-fit limits follow the slip's scale (see PaperScaleContext).
+	-- The text's shrink-to-fit limits follow the canvas's scale (see PaperScaleContext).
+	local outer = React.useContext(PaperScaleContext.Context)
+	local deps: { unknown } = { outer, props.scale }
 	local scale = React.useMemo(function(): React.Binding<number>
-		local binding = React.createBinding(props.scale)
-		return binding
-	end, { tostring(props.scale) })
+		return outer:map(function(value: number): number
+			return value * props.scale
+		end)
+	end, deps)
 
 	if not shown and not covered then
 		return nil
@@ -266,7 +257,7 @@ local function ShiftTransitPanel(props: ShiftTransitPanelProps): React.ReactNode
 	return e(PaperScaleContext.Context.Provider, { value = scale }, {
 		cover = e("CanvasGroup", {
 			Size = UDim2.fromScale(1, 1),
-			BackgroundColor3 = COLOR.night,
+			BackgroundColor3 = UIToonConstants.shade("night").lo,
 			BorderSizePixel = 0,
 			GroupTransparency = transparency,
 			-- Swallows clicks and taps on whatever is beneath.
@@ -276,12 +267,12 @@ local function ShiftTransitPanel(props: ShiftTransitPanelProps): React.ReactNode
 			slip = if withSlip and view ~= nil
 				then e("Frame", {
 					AnchorPoint = Vector2.new(0.5, 0.5),
-					Position = UDim2.fromScale(0.5, 0.46),
-					Size = UDim2.fromOffset(SLIP.X, SLIP.Y),
+					Position = UDim2.fromScale(0.5, 0.5),
+					Size = UDim2.fromOffset(CANVAS.X, CANVAS.Y),
 					BackgroundTransparency = 1,
 				}, {
 					scale = e("UIScale", { Scale = props.scale }),
-					slip = slip(view),
+					trip = trip(view),
 				})
 				else nil,
 		}),

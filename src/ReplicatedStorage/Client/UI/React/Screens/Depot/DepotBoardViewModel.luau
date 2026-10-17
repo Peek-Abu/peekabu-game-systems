@@ -18,6 +18,7 @@ local QueueSnapshotUtils = require(ReplicatedStorage.Shared.Features.Queue.Utils
 local QueueTypes = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueTypes)
 local ShiftCurrencyUtils = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftCurrencyUtils)
 local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
+local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 
 export type RowView = { label: string, text: string, hazard: boolean }
@@ -30,7 +31,24 @@ export type LastView = {
 	lines: { string },
 }
 
+-- V1: one contract chip (QUOTA, SHIFT, PAY, CREW) with its render.
+export type ChipView = { label: string, value: string, icon: UIAssets.ToonIcon }
+-- V1: one building card on the Jobs menu. Only tonight's office is open; the planned buildings show as coming soon
+-- (their concept photos are stand-ins until the maps exist).
+export type BuildingView = {
+	name: string,
+	site: string,
+	photo: "office" | "hospital" | "motel" | "mall",
+	open: boolean,
+	tag: string,
+}
+
 export type BoardView = {
+	client: string,
+	chips: { ChipView },
+	buildings: { BuildingView },
+	tip: string,
+	lastLine: string?,
 	title: string,
 	workOrder: string,
 	headline: string,
@@ -130,6 +148,22 @@ local function quotaText(crew: number?, phone: boolean): string
 	return if crew <= 1 then string.format(copy.quotaSolo, quota) else string.format(copy.quotaCrew, quota, crew)
 end
 
+local BUILDINGS: { BuildingView } = {
+	{ name = "ST. AGNES HOSPITAL", site = "West wing night ward", photo = "hospital", open = false, tag = "SOON" },
+	{ name = "LANTERN LANE MOTEL", site = "Rooms 1–24", photo = "motel", open = false, tag = "SOON" },
+	{ name = "GLIMMER MALL", site = "After hours", photo = "mall", open = false, tag = "SOON" },
+}
+
+-- The QUOTA chip: the crew's contract, or the range by crew size.
+local function quotaChip(crew: number?): string
+	if crew == nil then
+		local low = ShiftQuotaFormulas.quota(1)
+		local high = ShiftQuotaFormulas.quota(#ShiftConstants.QUOTA_BY_CREW)
+		return `{low}–{high} Gloom`
+	end
+	return `{ShiftQuotaFormulas.quota(crew)} Gloom`
+end
+
 -- `crew`: the size of the reader's truck crew (crewOf); nil when they are not in a truck.
 function DepotBoardViewModel.board(id: string?, last: DepotTypes.LastShift?, phone: boolean, crew: number?): BoardView
 	local contract = contractOf(id)
@@ -155,7 +189,31 @@ function DepotBoardViewModel.board(id: string?, last: DepotTypes.LastShift?, pho
 		}
 	end
 	local number = DepotBoardViewModel.workOrder(contract.id)
+	local client = string.upper(contract.client)
+	local buildings: { BuildingView } = {
+		{
+			name = (string.gsub(client, "%s+LTD%.?$", "")),
+			site = DepotConstants.SITE,
+			photo = "office",
+			open = true,
+			tag = "TONIGHT!",
+		},
+	}
+	for _, building in BUILDINGS do
+		table.insert(buildings, building)
+	end
+	local lastView = if last ~= nil then lastOf(last, phone) else nil
 	return {
+		client = client,
+		chips = {
+			{ label = "QUOTA", value = quotaChip(crew), icon = "gloom" },
+			{ label = "SHIFT", value = shift, icon = "stopwatch" },
+			{ label = "PAY", value = "1 per Gloom", icon = "gleam" },
+			{ label = "CREW", value = "1–4 employees", icon = "pippaHappy" },
+		},
+		buildings = buildings,
+		tip = copy.hazard,
+		lastLine = if last ~= nil then `Last shift: {lastOf(last, true).lines[1]}` else nil,
 		title = copy.title,
 		workOrder = if phone then `WORK ORDER {number} · {string.upper(contract.client)}` else `WORK ORDER {number}`,
 		headline = `{string.upper(contract.client)} — {string.upper(DepotConstants.SITE)}`,
@@ -163,7 +221,7 @@ function DepotBoardViewModel.board(id: string?, last: DepotTypes.LastShift?, pho
 		rows = rows,
 		sticky = copy.sticky,
 		approved = copy.approved,
-		last = if last ~= nil then lastOf(last, phone) else nil,
+		last = lastView,
 		dispatchLabel = if phone then "DISPATCH" else copy.dispatchLabel,
 		dispatchTitle = copy.dispatchTitle,
 		dispatchSteps = if phone then copy.dispatchPhone else copy.dispatchSteps,

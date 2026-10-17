@@ -1,5 +1,11 @@
 --!strict
--- Guide/gear are honest company briefing pages. Settings use the persisted, validated base service.
+--[=[
+	DepotHubScreen: the hub's GUIDE, LOCKER (the company equipment page) and SETTINGS in the V1 kit: a cream modal
+	popping in with its grape header (the page's render breaking the corner, Gloom drips from the header's foot, the
+	coral close) over a scrolling body. Guide and Locker are honest briefing pages, a card per section with its
+	render; Settings are the persisted, validated base settings (minus / plus steppers, the value on a pill, RESTORE
+	DEFAULTS). Sizes follow the specced DepotHubViewModel.panelLayout (physical px, so the text stays readable).
+]=]
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local React = require(ReplicatedStorage.Packages.React)
@@ -9,11 +15,14 @@ local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.Va
 local ShiftHudViewModel = require(script.Parent.Parent.Shift.ShiftHudViewModel)
 local SettingServiceClient = require(ReplicatedStorage.Client.Features.Setting.SettingServiceClient)
 local SceneStack = require(ReplicatedStorage.Client.UI.Scenes.SceneStack)
-local PaperSheet = require(script.Parent.Parent.Paper.PaperSheet)
-local PaperLabel = require(script.Parent.Parent.Paper.PaperLabel)
-local PaperButton = require(script.Parent.Parent.Paper.PaperButton)
-local PaperPropIcon = require(script.Parent.Parent.Paper.PaperPropIcon)
-local COLOR = require(script.Parent.Parent.Paper.UIPaperConstants).COLOR
+local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
+local ToonButton = require(Toon.ToonButton)
+local ToonIcon = require(Toon.ToonIcon)
+local ToonPanel = require(Toon.ToonPanel)
+local ToonPill = require(Toon.ToonPill)
+local ToonText = require(Toon.ToonText)
+local UIToonConstants = require(Toon.UIToonConstants)
+local COLOR = UIToonConstants.COLOR
 local usePaperViewport = require(script.Parent.Parent.Paper.usePaperViewport)
 local usePaperLayout = require(script.Parent.Parent.Paper.usePaperLayout)
 local VM = require(script.Parent.DepotHubViewModel)
@@ -26,12 +35,15 @@ local function label(
 	width: number,
 	heading: boolean?
 ): React.ReactNode
-	return e(PaperLabel, {
+	return e(ToonText, {
 		text = text,
-		role = if heading then "heading" else "body",
-		size = size,
+		font = if heading then "display" else "body",
+		textSize = size,
 		position = UDim2.fromOffset(x, y),
-		frame = UDim2.fromOffset(width, 0),
+		size = UDim2.fromOffset(width, if heading then size + 8 else size * 3),
+		fit = heading,
+		wrapped = not heading,
+		alignY = "top",
 	})
 end
 local function SettingsRows(props: { width: number, phone: boolean, preview: boolean? }): React.ReactNode
@@ -83,22 +95,21 @@ local function SettingsRows(props: { width: number, phone: boolean, preview: boo
 			if compact then props.width else props.width - 190,
 			true
 		)
-		nodes[`value{index}`] = label(
-			if value ~= nil then `{math.round(value * 100)}%` else "…",
-			20,
-			props.width - 128,
-			controlsY + 8,
-			70,
-			true
-		)
+		nodes[`value{index}`] = e(ToonPill, {
+			text = if value ~= nil then `{math.round(value * 100)}%` else "…",
+			hue = "night",
+			textSize = 20,
+			position = UDim2.fromOffset(props.width - 132, controlsY + 6),
+			size = UDim2.fromOffset(74, 36),
+		})
 		for _, direction in { -1, 1 } do
-			nodes[`{index}/{direction}`] = e(PaperButton, {
+			nodes[`{index}/{direction}`] = e(ToonButton, {
 				text = if direction < 0 then "−" else "+",
-				variant = "secondary",
-				onPaper = true,
-				position = UDim2.fromOffset(if direction < 0 then props.width - 185 else props.width - 54, controlsY),
-				size = UDim2.fromOffset(48, 48),
-				textSize = 28,
+				variant = if direction < 0 then "lilac" else "primary",
+				position = UDim2.fromOffset(if direction < 0 then props.width - 190 else props.width - 52, controlsY),
+				size = UDim2.fromOffset(50, 48),
+				textSize = 30,
+				small = true,
 				disabled = value == nil or (if direction < 0 then value == 0 else value == 1),
 				onActivated = function()
 					local current = if props.preview then values[setting.id] else SettingServiceClient:get(setting.id)
@@ -116,16 +127,15 @@ local function SettingsRows(props: { width: number, phone: boolean, preview: boo
 		end
 		nodes[`line{index}`] = e("Frame", {
 			Position = UDim2.fromOffset(0, y + rowHeight - 5),
-			Size = UDim2.fromOffset(props.width, 1),
-			BackgroundColor3 = COLOR.manilaDeep,
+			Size = UDim2.fromOffset(props.width, 2),
+			BackgroundColor3 = UIToonConstants.shade("cream").lo,
 			BorderSizePixel = 0,
 		})
 	end
-	nodes.reset = e(PaperButton, {
+	nodes.reset = e(ToonButton, {
 		text = "RESTORE DEFAULTS",
-		variant = "secondary",
-		onPaper = true,
-		size = UDim2.fromOffset(210, 48),
+		variant = "lilac",
+		size = UDim2.fromOffset(250, 52),
 		position = UDim2.fromOffset(0, if props.width < 440 then 452 else 352),
 		textSize = 18,
 		onActivated = function()
@@ -179,108 +189,191 @@ local function DepotHubScreen(
 		end
 	end
 	local copy = VM.copy(props.page, control)
-	local title = if props.page == "settings" then "PERSONAL SETTINGS" else copy.title
 	local body: { [string]: React.ReactNode } = {}
 	if props.page == "settings" then
 		body.settings = e(SettingsRows, { width = layout.bodyWidth, phone = phone, preview = props.preview })
 	else
-		body.list = e("UIListLayout", {
-			SortOrder = Enum.SortOrder.LayoutOrder,
-			Padding = UDim.new(0, 24),
-		})
-		for index, section in copy.sections do
-			body[`section{index}`] = e("Frame", {
-				LayoutOrder = index,
-				Size = UDim2.fromScale(1, 0),
-				AutomaticSize = Enum.AutomaticSize.Y,
-				BackgroundTransparency = 1,
-			}, {
-				list = e("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 8) }),
-				title = e(PaperLabel, {
-					text = section.title,
-					role = "heading",
-					size = if phone then 18 else 24,
-					frame = UDim2.fromScale(1, 0),
-					layoutOrder = 1,
-				}),
-				body = e(PaperLabel, {
-					text = section.body,
-					role = "body",
-					size = if phone then 16 else 21,
-					frame = UDim2.fromScale(1, 0),
-					layoutOrder = 2,
-				}),
+		local icons = VM.sectionIcons(props.page)
+		if props.page == "gear" then
+			-- The Locker: a card per piece of issued equipment, its render on a gold stage (the V1 locker cards).
+			body.grid = e("UIGridLayout", {
+				CellSize = UDim2.new(if phone then 1 else 0.5, -10, 0, if phone then 250 else 300),
+				CellPadding = UDim2.fromOffset(16, 16),
+				SortOrder = Enum.SortOrder.LayoutOrder,
 			})
+			body.pad = e("UIPadding", { PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 16) })
+			for index, section in copy.sections do
+				body[`section{index}`] = e("Frame", {
+					LayoutOrder = index,
+					BackgroundColor3 = UIToonConstants.shade("cream").hi,
+					BorderSizePixel = 0,
+				}, {
+					corner = e("UICorner", { CornerRadius = UDim.new(0, 20) }),
+					stroke = e("UIStroke", { Color = COLOR.ink, Thickness = 4 }),
+					stage = e("Frame", {
+						Position = UDim2.fromOffset(10, 10),
+						Size = UDim2.new(1, -20, 0, if phone then 96 else 130),
+						BackgroundColor3 = UIToonConstants.shade("gold").base,
+						BorderSizePixel = 0,
+					}, {
+						corner = e("UICorner", { CornerRadius = UDim.new(0, 14) }),
+						stroke = e("UIStroke", { Color = COLOR.ink, Thickness = 3 }),
+						gradient = e("UIGradient", {
+							Rotation = 90,
+							Color = ColorSequence.new(
+								UIToonConstants.shade("gold").hi,
+								UIToonConstants.shade("gold").base
+							),
+						}),
+						art = e(ToonIcon, {
+							icon = icons[index],
+							anchor = Vector2.new(0.5, 0.5),
+							position = UDim2.fromScale(0.5, 0.5),
+							size = UDim2.fromOffset(if phone then 88 else 124, if phone then 88 else 124),
+							drop = 5,
+						}),
+					}),
+					title = e(ToonText, {
+						text = section.title,
+						textSize = if phone then 20 else 24,
+						position = UDim2.fromOffset(16, if phone then 112 else 148),
+						size = UDim2.new(1, -32, 0, 30),
+						fit = true,
+					}),
+					text = e(ToonText, {
+						text = section.body,
+						font = "body",
+						textSize = if phone then 15 else 18,
+						position = UDim2.fromOffset(16, if phone then 144 else 182),
+						size = UDim2.new(1, -32, 0, if phone then 96 else 106),
+						wrapped = true,
+						fit = true,
+						alignY = "top",
+					}),
+				})
+			end
+		else
+			body.list = e("UIListLayout", {
+				SortOrder = Enum.SortOrder.LayoutOrder,
+				Padding = UDim.new(0, 16),
+			})
+			body.pad = e("UIPadding", {
+				PaddingLeft = UDim.new(0, if phone then 34 else 52),
+				PaddingTop = UDim.new(0, 12),
+				PaddingBottom = UDim.new(0, 16),
+			})
+			local iconSize = if phone then 64 else 92
+			for index, section in copy.sections do
+				-- A card per section, its render breaking the card's left edge (outside the card's text flow).
+				body[`section{index}`] = e("Frame", {
+					LayoutOrder = index,
+					Size = UDim2.new(1, -8, 0, 0),
+					AutomaticSize = Enum.AutomaticSize.Y,
+					BackgroundColor3 = UIToonConstants.shade("cream").hi,
+					BorderSizePixel = 0,
+				}, {
+					corner = e("UICorner", { CornerRadius = UDim.new(0, 18) }),
+					stroke = e("UIStroke", { Color = COLOR.ink, Thickness = 4 }),
+					icon = e(ToonIcon, {
+						icon = icons[index],
+						position = UDim2.fromOffset(-iconSize * 0.42, -8),
+						size = UDim2.fromOffset(iconSize, iconSize),
+						drop = 4,
+						zIndex = 3,
+					}),
+					text = e("Frame", {
+						Size = UDim2.fromScale(1, 0),
+						AutomaticSize = Enum.AutomaticSize.Y,
+						BackgroundTransparency = 1,
+					}, {
+						pad = e("UIPadding", {
+							PaddingLeft = UDim.new(0, iconSize * 0.66),
+							PaddingRight = UDim.new(0, 14),
+							PaddingTop = UDim.new(0, 10),
+							PaddingBottom = UDim.new(0, 12),
+						}),
+						list = e("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4) }),
+						title = e("TextLabel", {
+							LayoutOrder = 1,
+							Size = UDim2.fromScale(1, 0),
+							AutomaticSize = Enum.AutomaticSize.Y,
+							BackgroundTransparency = 1,
+							Text = section.title,
+							TextWrapped = true,
+							FontFace = UIToonConstants.FONT.display,
+							TextSize = if phone then 18 else 24,
+							TextColor3 = UIToonConstants.shade("grape").lo,
+							TextXAlignment = Enum.TextXAlignment.Left,
+						}),
+						body = e("TextLabel", {
+							LayoutOrder = 2,
+							Size = UDim2.fromScale(1, 0),
+							AutomaticSize = Enum.AutomaticSize.Y,
+							BackgroundTransparency = 1,
+							Text = section.body,
+							TextWrapped = true,
+							FontFace = UIToonConstants.FONT.body,
+							TextSize = if phone then 15 else 20,
+							TextColor3 = COLOR.ink,
+							TextXAlignment = Enum.TextXAlignment.Left,
+						}),
+					}),
+				})
+			end
 		end
 	end
+	local headerHeight = if layout.compact then 84 else 104
+	local subtitle = if props.page == "settings"
+		then (if props.preview then "Local preview · does not save" else "Saved to your account")
+		else copy.subtitle
+	local icon: "guide" | "locker" | "settings" = if props.page == "guide"
+		then "guide"
+		elseif props.page == "gear" then "locker"
+		else "settings"
+	local children: { [string]: React.ReactNode } = {
+		scroll = e("ScrollingFrame", {
+			Position = UDim2.fromOffset(layout.padding * 0.5, headerHeight + 44),
+			Size = UDim2.new(1, -layout.padding, 1, -headerHeight - 64),
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			CanvasSize = UDim2.fromOffset(0, 0),
+			AutomaticCanvasSize = Enum.AutomaticSize.Y,
+			ScrollingDirection = Enum.ScrollingDirection.Y,
+			ScrollBarThickness = 6,
+			ScrollBarImageColor3 = UIToonConstants.shade("grape").base,
+		}, {
+			content = e("Frame", {
+				Size = UDim2.new(1, -12, 0, 0),
+				AutomaticSize = Enum.AutomaticSize.Y,
+				BackgroundTransparency = 1,
+			}, body),
+		}),
+	}
 	return e("Frame", {
 		Size = UDim2.fromScale(1, 1),
-		BackgroundColor3 = COLOR.night,
-		BackgroundTransparency = 0.2,
+		BackgroundColor3 = COLOR.ink,
+		BackgroundTransparency = 0.35,
 		Active = true,
 		BorderSizePixel = 0,
 	}, {
-		sheet = e(PaperSheet, {
+		sheet = e(ToonPanel, {
 			anchor = Vector2.new(0.5, 0.5),
 			position = UDim2.fromScale(0.5, 0.5),
-			size = UDim2.fromOffset(width, height),
-			padding = 0,
-		}, {
-			strip = e(
-				"Frame",
-				{ Size = UDim2.new(1, 0, 0, 7), BackgroundColor3 = COLOR.companyTeal, BorderSizePixel = 0 }
-			),
-			icon = e("Frame", {
-				Position = UDim2.fromOffset(layout.padding, 22),
-				Size = UDim2.fromOffset(if layout.compact then 36 else 58, if layout.compact then 36 else 58),
-				BackgroundTransparency = 1,
-			}, { art = e(PaperPropIcon, { kind = props.page }) }),
-			title = label(
-				title,
-				if phone then 24 else 34,
-				if layout.compact then 64 else 96,
-				20,
-				layout.titleWidth,
-				true
-			),
-			subtitle = label(
-				if props.page == "settings"
-					then (if props.preview then "LOCAL PREVIEW / DOES NOT SAVE" else "SAVED TO YOUR ACCOUNT")
-					else copy.subtitle,
-				if phone then 14 else 17,
-				if layout.compact then layout.padding else 96,
-				if layout.compact then 80 else 62,
-				if layout.compact then width - 2 * layout.padding else layout.titleWidth
-			),
-			close = e(PaperButton, {
-				sound = "back",
-				text = "CLOSE",
-				variant = "secondary",
-				onPaper = true,
-				size = UDim2.fromOffset(if layout.compact then 68 else 106, 48),
-				position = UDim2.fromOffset(width - (if layout.compact then 88 else 130), 28),
-				textSize = if layout.compact then 16 else 20,
-				onActivated = function()
-					SceneStack.remove(VM.scene(props.page))
-				end,
-			}),
-			scroll = e("ScrollingFrame", {
-				Position = UDim2.fromOffset(layout.padding, layout.headerHeight),
-				Size = UDim2.new(1, -2 * layout.padding, 1, -layout.headerHeight - 20),
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				CanvasSize = UDim2.fromOffset(0, 0),
-				AutomaticCanvasSize = Enum.AutomaticSize.Y,
-				ScrollingDirection = Enum.ScrollingDirection.Y,
-				ScrollBarThickness = 5,
-				ScrollBarImageColor3 = COLOR.companyTeal,
-			}, {
-				content = e("Frame", {
-					Size = UDim2.new(1, -12, 0, 0),
-					AutomaticSize = Enum.AutomaticSize.Y,
-					BackgroundTransparency = 1,
-				}, body),
-			}),
+			size = Vector2.new(width, height),
+			header = {
+				title = VM.pageTitle(props.page),
+				subtitle = subtitle,
+				icon = icon,
+				height = headerHeight,
+				titleSize = if layout.compact then 40 else 54,
+				goo = true,
+			},
+			onClose = function()
+				SceneStack.remove(VM.scene(props.page))
+			end,
+			pop = true,
+			wipe = true,
+			children = children,
 		}),
 	})
 end

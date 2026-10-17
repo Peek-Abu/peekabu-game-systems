@@ -35,6 +35,20 @@ return function()
 			expect(waiting.text).to.equal("23:00:00")
 		end)
 
+		it("gives each guide and locker section its render, one per section", function()
+			for _, page in { "guide", "gear" } do
+				expect(#VM.sectionIcons(page)).to.equal(#VM.copy(page).sections)
+			end
+			expect(VM.sectionIcons("guide")[1]).to.equal("truck")
+			expect(VM.sectionIcons("gear")[1]).to.equal("vacuum")
+		end)
+
+		it("titles the hub pages for the V1 menus", function()
+			expect(VM.pageTitle("guide")).to.equal("GUIDE")
+			expect(VM.pageTitle("gear")).to.equal("LOCKER")
+			expect(VM.pageTitle("settings")).to.equal("SETTINGS")
+		end)
+
 		it("names tonight's building from the board's contract", function()
 			local card = VM.tonight("harlow-finch-2")
 			expect(card.title).to.equal("HARLOW & FINCH")

@@ -2,7 +2,7 @@
 --[=[
 	DepotBoardScreen: the contract board scene's screen (DepotScene). Reads the open contract and the last shift from
 	DepotStore, the reader's truck crew from QueueStore and the device layout, and draws DepotBoardPanel from DepotBoardViewModel, scaled to the viewport.
-	CLOSE takes the scene off the stack (Escape pops it through UIServiceClient); DepotServiceClient clears the store's
+	The LOCKER and GUIDE tabs (and READ THE BRIEF) swap the board for that hub page. CLOSE and FIND A TRUCK take the scene off the stack (Escape pops it through UIServiceClient); DepotServiceClient clears the store's
 	board once the scene has left the stack. No logic of its own.
 
 	@class DepotBoardScreen
@@ -22,12 +22,19 @@ local usePaperLayout = require(ReplicatedStorage.Client.UI.React.Screens.Paper.u
 local usePaperViewport = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperViewport)
 local DepotBoardPanel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotBoardPanel)
 local DepotBoardViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotBoardViewModel)
+local DepotHubViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotHubViewModel)
 
 local e = React.createElement
 local useAtom = ReactCharm.useAtom
 
 local function close()
 	SceneStack.remove(DepotConstants.BOARD_SCENE)
+end
+
+-- The Jobs menu's other tabs (and READ THE BRIEF): leave the board for that hub page.
+local function openTab(tab: DepotBoardPanel.Tab)
+	SceneStack.remove(DepotConstants.BOARD_SCENE)
+	SceneStack.push(DepotHubViewModel.scene(if tab == "locker" then "gear" else "guide"))
 end
 
 local function DepotBoardScreen(): React.ReactNode
@@ -43,6 +50,7 @@ local function DepotBoardScreen(): React.ReactNode
 		layout = layout,
 		scale = DepotBoardViewModel.fit(viewport, phone),
 		onClose = close,
+		onTab = openTab,
 	}
 	return e(DepotBoardPanel, props)
 end
