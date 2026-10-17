@@ -3,10 +3,10 @@
 	AnimationCarryRigHarness: the test carriers the carry validator (AnimationCarryHarness) holds every template on.
 
 	- `employee`: the default employee (Pippa), from her art template exactly as EmployeeSpawnSystem installs her
-	  (prepared, then scaled to her registry scale), with her own idle and walk.
+	  (prepared, then scaled to her registry scale), with her own idle, walk and run.
 	- `stockR15`: a stock R15 avatar from the engine's default HumanoidDescription proportions (dumped 2026-10-15),
 	  joined by BuildRigFromAttachments: in this place that gives the upgraded avatar joints (AnimationConstraints with
-	  BallSocketConstraint limits), as a real stock avatar has, with the stock idle and walk.
+	  BallSocketConstraint limits), as a real stock avatar has, with the stock idle, walk and run.
 	Both are built in the `CarryHarness` folder, far from any map, root anchored.
 
 	@class AnimationCarryRigHarness
@@ -21,7 +21,7 @@ local AnimationRegistry = require(Shared.Animation.Data.AnimationRegistry)
 local EmployeeRegistry = require(Shared.Employee.Data.EmployeeRegistry)
 local EmployeeSpawnSystem = require(ServerScriptService.Features.Employee.Systems.EmployeeSpawnSystem)
 
-export type Carrier = { name: string, model: Model, idle: string?, walk: string? }
+export type Carrier = { name: string, model: Model, idle: string?, walk: string?, run: string? }
 
 local AnimationCarryRigHarness = {}
 
@@ -264,6 +264,7 @@ function AnimationCarryRigHarness.carriers(only: { string }?): { Carrier }
 				model = pippa,
 				idle = clip(if locomotion ~= nil then locomotion.idle else nil),
 				walk = clip(if locomotion ~= nil then locomotion.walk else nil),
+				run = clip(if locomotion ~= nil then locomotion.run else nil),
 			})
 		end
 	end
@@ -273,6 +274,7 @@ function AnimationCarryRigHarness.carriers(only: { string }?): { Carrier }
 			model = AnimationCarryRigHarness.stockR15(ORIGIN + Vector3.new(40, 0, 0)),
 			idle = clip("idle"),
 			walk = clip("walk"),
+			run = clip("run"),
 		})
 	end
 	return carriers

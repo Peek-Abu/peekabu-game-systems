@@ -39,6 +39,7 @@ local VacuumSkinRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.V
 local Constants = require(ServerScriptService.Features.Vacuum.Data.VacuumVisualConstants)
 local VacuumHoldFormulas = require(ServerScriptService.Features.Vacuum.Utils.VacuumHoldFormulas)
 local VacuumKitUtils = require(ServerScriptService.Features.Vacuum.Utils.VacuumKitUtils)
+local AnimationCarryMeasureSystem = require(ServerScriptService.Features.Animation.Systems.AnimationCarryMeasureSystem)
 
 export type WornBackpack = {
 	model: Model,
@@ -170,20 +171,34 @@ local function hipInTorso(character: Model, torso: BasePart): Vector3
 end
 
 --[=[
-	`side` ("Left"/"Right") arm of `character` in HumanoidRootPart space, from its rig attachments (so it does not
-	depend on the pose); nil when the rig lacks them.
+	`side` ("Left"/"Right") arm of `character` in HumanoidRootPart space, from its rig attachments, with the shoulder
+	where it is at the rig's REST pose (its joint chain without the animation's Transforms,
+	AnimationCarryMeasureSystem.restFrame), so the hold never depends on the pose of the moment it is planned in. The
+	Tool is made as a shift starts, mid-stride or while the crew is placed in the truck: read live, Pippa's shoulders
+	were once measured 0.43 stud forward of rest, the left hand's target lay out of her reach, and that arm hung at
+	full stretch, swaying with the idle, 0.21-0.30 stud off the wand. Nil when the rig lacks the attachments.
 ]=]
 function Visual.arm(character: Model, side: string): VacuumHoldFormulas.Arm?
 	local root = character:FindFirstChild("HumanoidRootPart")
+	local torso = character:FindFirstChild("UpperTorso")
 	local shoulder = attachmentOf(character, "UpperTorso", side .. "ShoulderRigAttachment")
 	local upper = span(character, side .. "UpperArm", side .. "ShoulderRigAttachment", side .. "ElbowRigAttachment")
 	local lower = span(character, side .. "LowerArm", side .. "ElbowRigAttachment", side .. "WristRigAttachment")
 	local hand = span(character, side .. "Hand", side .. "WristRigAttachment", side .. "GripAttachment")
-	if root == nil or not root:IsA("BasePart") or shoulder == nil or upper == nil or lower == nil or hand == nil then
+	if
+		root == nil
+		or not root:IsA("BasePart")
+		or torso == nil
+		or not torso:IsA("BasePart")
+		or shoulder == nil
+		or upper == nil
+		or lower == nil
+		or hand == nil
+	then
 		return nil
 	end
 	return {
-		shoulder = root.CFrame:PointToObjectSpace(shoulder.WorldPosition),
+		shoulder = AnimationCarryMeasureSystem.restFrame(torso, root):PointToWorldSpace(shoulder.Position),
 		upper = upper,
 		lower = lower + hand,
 	}

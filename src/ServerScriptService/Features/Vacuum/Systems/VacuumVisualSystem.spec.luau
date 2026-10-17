@@ -66,6 +66,29 @@ return function()
 			holder:Destroy()
 		end)
 
+		it("reads the shoulder at the rig's rest pose, not where an animation or a landing has the torso", function()
+			-- Studio, a shift's start: the hold was planned while Pippa was being placed in the truck, her torso
+			-- 0.43 stud forward of rest, so the left hand's target lay out of her reach and that arm hung at full
+			-- stretch, swaying with the idle, 0.21-0.30 stud off the wand.
+			local holder = makeHolder()
+			local root = holder.HumanoidRootPart
+			local torso = holder.UpperTorso
+			local waist = Instance.new("Motor6D")
+			waist.Name = "Waist"
+			waist.Part0 = root
+			waist.Part1 = torso
+			waist.C0 = CFrame.new(0, 0.8, 0)
+			waist.Parent = torso
+			torso.CFrame = CFrame.new(0, 1.75, -0.45) * CFrame.Angles(0.3, 0, 0)
+			for _, side in { "Right", "Left" } do
+				local arm = Visual.arm(holder, side)
+				expect(arm.shoulder.X).to.be.near(if side == "Right" then 0.5 else -0.5, 1e-4)
+				expect(arm.shoulder.Y).to.be.near(1, 1e-4)
+				expect(arm.shoulder.Z).to.be.near(0, 1e-4)
+			end
+			holder:Destroy()
+		end)
+
 		it("has no arm for a rig without the attachments", function()
 			local model = Instance.new("Model")
 			Instance.new("Humanoid").Parent = model

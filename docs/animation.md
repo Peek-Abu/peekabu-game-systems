@@ -265,13 +265,21 @@ Only arm joints are driven; no rig joint's C0/C1 or attachment is written.
   runs in the TestEZ suite (`Workspace.RunTests = true`) and prints a report; from a server Script in play:
   `print(Harness.format(Harness.run({})))` (`{ record = true }` keeps every live pose). A template, rig or rule change
   that would show a hold wrong fails it.
-- **The vacuum** (`VacuumHoldFormulas`, `AnimationVacuumHoldSystem`): the same full-size vacuum for
-  everyone. Its body hangs ~1.5 studs and its floor head ~1.9 below the grip, where a stock avatar's
-  hanging hand holds it upright. For a shorter holder the hold is fitted, not the vacuum: it is tilted
-  front-up about the grip, as little as clears the floor, up to 25 degrees; past that, the right hand is
-  lifted by an arm IK (target on the root, beside the torso, oriented so the vacuum stands upright) for
-  the rest. Pippa (hang 0.86) gets 6.75 degrees and a 0.89-stud lift; the lowest point stays 0.04-0.11
-  studs above the floor at idle, walk and run. No IK smoothing: 0.1 s let the walk bob dip it 0.15 below.
+- **The vacuum** (`VacuumHoldFormulas`, `VacuumVisualSystem`, `AnimationVacuumHoldSystem`): a backpack canister
+  and a hand wand held in both hands, the right hand on the wand skin's `GripUpper`, the left on its `GripLower`
+  (the grip contract, `characters/vacuum/README.md`); the wand telescopes so its floor head rests on the floor from
+  the holder's grip. The hold is planned once, when the shift's Tool is made, from the holder's arms read at the
+  rig's **rest pose** (`VacuumVisualSystem.arm`: the shoulder through `AnimationCarryMeasureSystem.restFrame`, never
+  the pose of the moment): the Tool is made while the crew, just placed in the truck, is falling onto its bed, and a
+  plan read from that pose (torso 0.36 forward, pitched 23 degrees) put Pippa's left hand out of reach, so that arm
+  hung at full stretch, swaying with the idle, 0.2-0.3 stud off the wand. Two Transform IKControls (shoulder to
+  grip attachment) hold the arms to targets fixed on the root, no smoothing, so the floor head glides level.
+
+  **The validator** (`AnimationVacuumHarness`): Pippa in every vacuum skin, the hold planned mid-fall (the stock
+  fall clip), then judged live over her idle, walk and run (two frames each) and vacuuming (the use clip when one
+  is registered, else the locomotion it plays over): each hand's grip attachment must be on its wand grip within
+  0.05 stud. Runs in the TestEZ suite; from a server Script in play: `print(Harness.format(Harness.run({})))`. A
+  stock R15 is not validated (every player spawns as an employee): its left hand does not reach `GripLower`.
 
 ## Retargeting (check this FIRST if poses ever look wrong)
 
