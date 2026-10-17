@@ -1,12 +1,12 @@
 --!strict
 --[=[
 	DepotCardPanel: the travel cards in the V1 kit, centred at 40% of the screen height and scaled by `scale`
-	(WorldBillboardViewModel.screenScale). Drive: a 520x260 cream panel on the depth stack tilted 1.5° under a grape
-	header (the dispatch letterhead, "TRUCK n" on a gold pill, the truck render breaking the corner), ON THE ROAD in
-	stroked display type, "Heading to …" and a lilac road of 13 dashes the truck render drives along over the card's
+	(WorldBillboardViewModel.screenScale). Drive: a 520x260 cream panel on the depth stack under a grape
+	header (the dispatch letterhead, the truck render breaking the corner), ON THE ROAD in stroked display type with
+	"TRUCK n" on a tilted gold pill beside it, "Heading to …" and a lilac road of 13 dashes the truck render drives along over the card's
 	seconds. Arrival: a 640x400 cream panel with a mint ARRIVAL sticker breaking its top-left corner, the client in big
 	stroked type, the job line, the site contract on a dark plate (its name on a grape pill, the Gloom to remove as a
-	stroked grape number, its deadline) and the note on a lilac card tilted -2°. Presentational; the lines are
+	stroked white number, its deadline) and the note on a lilac card tilted -2°. Presentational; the lines are
 	DepotCardViewModel. Remount it per card (DepotCard keys it) so the truck starts again.
 
 	@class DepotCardPanel
@@ -104,7 +104,13 @@ end
 local function driveCard(view: DepotCardViewModel.DriveView): React.ReactNode
 	local truck = view.truck
 	local face: { [string]: React.ReactNode } = {
-		title = text(view.title, 52, UDim2.fromOffset(28, HEADER + 12), UDim2.new(1, -56, 0, 62), true),
+		title = text(
+			view.title,
+			52,
+			UDim2.fromOffset(28, HEADER + 12),
+			UDim2.new(1, if truck ~= nil then -172 else -56, 0, 62),
+			true
+		),
 		heading = text(view.heading, 22, UDim2.fromOffset(30, HEADER + 78), UDim2.new(1, -60, 0, 30), false),
 		road = e(Road, { seconds = view.seconds }),
 	}
@@ -113,9 +119,10 @@ local function driveCard(view: DepotCardViewModel.DriveView): React.ReactNode
 			text = truck,
 			hue = "gold",
 			textSize = 18,
+			tilt = 4,
 			anchor = Vector2.new(1, 0.5),
-			position = UDim2.new(1, -16, 0, HEADER / 2),
-			size = UDim2.fromOffset(112, 34),
+			position = UDim2.new(1, -18, 0, HEADER + 44),
+			size = UDim2.fromOffset(120, 38),
 			zIndex = 6,
 		})
 	end
@@ -134,7 +141,7 @@ end
 
 local function arrivalCard(view: DepotCardViewModel.ArrivalView): React.ReactNode
 	local contract: { [string]: React.ReactNode } = {
-		clear = text(view.clear, 44, UDim2.fromOffset(18, 34), UDim2.new(1, -36, 0, 54), true, "grape"),
+		clear = text(view.clear, 44, UDim2.fromOffset(18, 34), UDim2.new(1, -36, 0, 54), true),
 		before = e(ToonText, {
 			text = view.before,
 			font = "body",

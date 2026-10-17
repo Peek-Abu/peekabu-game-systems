@@ -59,9 +59,11 @@ local function RankSlip(props: RankSlipProps): React.ReactNode
 			ZIndex = 5,
 		}, {
 			icon = e(ToonIcon, { icon = "xp", size = UDim2.fromScale(1, 1), drop = 5 }),
+			-- Centred on the star's body (its optical centre sits 3% below its box's centre).
 			number = e(ToonText, {
 				text = level,
 				textSize = if phone then 22 else 42,
+				position = UDim2.fromScale(0, 0.03),
 				size = UDim2.fromScale(1, 1),
 				align = "center",
 				zIndex = 3,
@@ -119,7 +121,8 @@ local function RankSlip(props: RankSlipProps): React.ReactNode
 			textSize = if phone then 13 else 22,
 			tilt = -6,
 			anchor = Vector2.new(0.5, 0.5),
-			position = UDim2.new(1, if phone then -60 else -120, 0, if phone then -6 else -10),
+			-- Above the gain, clear of its digits.
+			position = UDim2.new(1, if phone then -60 else -120, 0, if phone then -13 else -18),
 			size = UDim2.fromOffset(if phone then 100 else 170, if phone then 24 else 40),
 			zIndex = 6,
 		})

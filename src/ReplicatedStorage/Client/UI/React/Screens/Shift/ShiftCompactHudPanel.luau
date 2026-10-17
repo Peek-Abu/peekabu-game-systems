@@ -100,7 +100,9 @@ local function ShiftCompactHudPanel(props: Props): React.ReactNode
 	local phone = props.layout == "phone"
 	local compact = VM.compact(view, props.bindings or {})
 	local inset = if phone then 10 else 24
-	local meterTop = if phone then 6 else 12
+	-- The stopwatch render breaks the meter's top-right corner (24 / 34 px above it): the meter sits low enough that
+	-- the render stays on the screen (the HUD layer spans the whole viewport, top bar included).
+	local meterTop = if phone then 28 else 40
 	local meterHeight = if phone then 70 else 96
 	local nodes: { [string]: React.ReactNode } = {
 		clearance = e(ShiftGloomMeter, { view = view, phone = phone, top = meterTop }),

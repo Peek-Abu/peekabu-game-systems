@@ -408,8 +408,9 @@ local function ShiftReviewPanel(props: ShiftReviewPanelProps): React.ReactNode
 			end,
 		})
 	end
-	-- The crew vote, bottom right.
-	local voteTop = if phone then 322 else 770
+	-- The crew vote, bottom right; on phone high enough that the chosen button's lilac ring and its drop stay on the
+	-- screen.
+	local voteTop = if phone then 312 else 770
 	nodes.voteTitle = e(ToonText, {
 		text = "WHAT NEXT?",
 		textSize = if phone then 18 else 40,

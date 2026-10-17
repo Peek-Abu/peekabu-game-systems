@@ -17,7 +17,6 @@ local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTyp
 local ShiftTransitPanel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftTransitPanel)
 local ShiftTransitViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftTransitViewModel)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
-local WorldBillboardViewModel = require(ReplicatedStorage.Client.UI.React.Screens.World.WorldBillboardViewModel)
 
 local e = React.createElement
 
@@ -50,7 +49,7 @@ return UILabs.CreateReactStory({
 	local panelProps: ShiftTransitPanel.ShiftTransitPanelProps = {
 		cover = cover,
 		view = ShiftTransitViewModel.slip(snapshot, props.controls.Arrived),
-		scale = WorldBillboardViewModel.screenScale(screen),
+		scale = ShiftTransitViewModel.fit(screen),
 		progress = math.clamp(props.controls.Progress, 0, 1),
 	}
 	return e("Frame", {

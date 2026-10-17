@@ -59,11 +59,11 @@ local function DepotWorkOrderBoard(props: DepotWorkOrderBoardProps): React.React
 		}),
 	}
 	local face: { [string]: React.ReactNode } = {
-		kicker = body(view.kicker, 16, top, 20),
+		kicker = body(view.kicker, 16, top - 6, 20),
 		client = e(ToonText, {
 			text = view.client,
 			textSize = 36,
-			position = UDim2.fromOffset(PAD, top + 20),
+			position = UDim2.fromOffset(PAD, top + 18),
 			size = UDim2.new(1, -2 * PAD, 0, 44),
 			fit = true,
 		}),

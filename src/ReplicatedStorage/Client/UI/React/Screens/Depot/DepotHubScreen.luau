@@ -7,6 +7,7 @@
 	DEFAULTS). Sizes follow the specced DepotHubViewModel.panelLayout (physical px, so the text stays readable).
 ]=]
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TextService = game:GetService("TextService")
 local UserInputService = game:GetService("UserInputService")
 local React = require(ReplicatedStorage.Packages.React)
 local InputServiceClient = require(ReplicatedStorage.Client.Features.Input.InputServiceClient)
@@ -195,7 +196,14 @@ local function DepotHubScreen(
 	local copy = VM.copy(props.page, control)
 	local body: { [string]: React.ReactNode } = {}
 	if props.page == "settings" then
-		body.settings = e(SettingsRows, { width = layout.bodyWidth, phone = phone, preview = props.preview })
+		-- Inset like the cards: the steppers' and RESTORE DEFAULTS' outlines and drops stay inside the scroll frame.
+		body.pad = e("UIPadding", {
+			PaddingLeft = UDim.new(0, EDGE),
+			PaddingRight = UDim.new(0, EDGE),
+			PaddingTop = UDim.new(0, 6),
+			PaddingBottom = UDim.new(0, 20),
+		})
+		body.settings = e(SettingsRows, { width = layout.bodyWidth - 2 * EDGE, phone = phone, preview = props.preview })
 	else
 		local icons = VM.sectionIcons(props.page)
 		if props.page == "gear" then
@@ -276,12 +284,33 @@ local function DepotHubScreen(
 			})
 			local iconSize = if phone then 64 else 92
 			for index, section in copy.sections do
-				-- A card per section on the depth stack, its render breaking the card's left edge. The text block sets the
-				-- card's height (it grows with its copy); the surface behind it fills the card short of its drop.
+				-- A card per section on the depth stack, its render breaking the card's left edge. The card is as tall as
+				-- its measured copy (TextService) plus the surface's lip and drop: an automatic size would also count the
+				-- surface's selected glow and ring, which reach past the card, and leave every card padded to the tallest.
+				-- The scroll content is the body width plus the panel padding (see DepotHubViewModel.panelLayout).
+				local textWidth = layout.bodyWidth
+					+ layout.padding
+					- (if phone then 34 else 52)
+					- 2 * EDGE
+					- iconSize * 0.66
+					- 14
+				local titleHeight = TextService:GetTextSize(
+					section.title,
+					if phone then 18 else 24,
+					Enum.Font.LuckiestGuy,
+					Vector2.new(textWidth, math.huge)
+				).Y
+				local bodyHeight = TextService:GetTextSize(
+					section.body,
+					if phone then 15 else 20,
+					Enum.Font.FredokaOne,
+					Vector2.new(textWidth, math.huge)
+				).Y
+				local cardHeight =
+					math.max(iconSize * 0.8, 12 + titleHeight + 4 + bodyHeight + 14 + DEPTH.lip + DEPTH.drop)
 				body[`section{index}`] = e("Frame", {
 					LayoutOrder = index,
-					Size = UDim2.new(1, -EDGE, 0, 0),
-					AutomaticSize = Enum.AutomaticSize.Y,
+					Size = UDim2.new(1, -EDGE, 0, math.ceil(cardHeight)),
 					BackgroundTransparency = 1,
 				}, {
 					surface = e(ToonSurface, {

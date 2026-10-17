@@ -74,8 +74,9 @@ local function profileCard(props: DepotHubPanelProps): React.ReactNode
 	local face: { [string]: React.ReactNode } = {
 		name = e(ToonText, {
 			text = profile.name,
-			textSize = if phone then 26 else 44,
-			position = UDim2.fromOffset(textLeft, if phone then 2 else 10),
+			-- On phone the name sits right above the XP bar: a size whose caps (optically centred) and drop clear it.
+			textSize = if phone then 23 else 44,
+			position = UDim2.fromOffset(textLeft, if phone then 0 else 10),
 			size = UDim2.fromOffset(card.X - textLeft - (if phone then 52 else 80), if phone then 28 else 48),
 			fit = true,
 			automaticWidth = false,
