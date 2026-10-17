@@ -1,10 +1,11 @@
 --!strict
 --[=[
-	PaperToastStack: Cleanup Crew's toasts on paper (Figma 1f). Taped sticky notes stack top-right (phone: centre-top,
-	250 px wide), newest on top, and stamp-style toasts thunk in big at the centre (shift milestones only). Slips (an
-	appraisal: the item over its value) are small sticky slips stacked bottom-right just above the hands and tool cards
-	(phone: right side under the tool card, clear of the action arc), newest nearest the corner, drifting in quietly; a
-	jackpot slip carries a small red JACKPOT stamp and its value in red. It replaces the base ToastStack
+	PaperToastStack: Cleanup Crew's toasts in the V1 kit (the shift renders' finds). Notes are cream cards stacked
+	top-right (phone: centre-top, 250 px wide), newest on top, and milestone toasts pop in big at the centre as a
+	stroked gold title (shift milestones only). Finds (an appraisal: the item and its worth) are small cards stacked
+	bottom-right (phone: right side, clear of the action arc), newest nearest the corner, drifting in quietly: the item
+	in Fredoka, its worth as a gold number with a Gleam sparkle; a jackpot is a gold card with a coral JACKPOT
+	sticker. (The module keeps its name: the toast view model and its registration are unchanged.) It replaces the base ToastStack
 	(ShiftServiceClient hides that with ToastServiceClient:setDefaultWidget(false)) and draws nothing during the scare
 	beat (Figma 4a). Which toasts show, in what order and at what tilt is the specced PaperToastViewModel.
 
@@ -21,14 +22,17 @@ local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
 local OccupantCatchStore = require(ReplicatedStorage.Client.Features.Occupant.State.OccupantCatchStore)
 local ToastStore = require(ReplicatedStorage.Client.Features.Toast.State.ToastStore)
 local PaperHudFrame = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudFrame)
-local PaperLabel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperLabel)
-local PaperStamp = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperStamp)
-local PaperTexture = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperTexture)
 local PaperToastViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperToastViewModel)
-local StickyNote = require(ReplicatedStorage.Client.UI.React.Screens.Paper.StickyNote)
+local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
+local ToonMotionViewModel = require(Toon.ToonMotionViewModel)
+local ToonPanel = require(Toon.ToonPanel)
+local ToonPill = require(Toon.ToonPill)
+local ToonSparkle = require(Toon.ToonSparkle)
+local ToonText = require(Toon.ToonText)
+local UIToonConstants = require(Toon.UIToonConstants)
+local useToonPlay = require(Toon.useToonPlay)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local usePaperHudScale = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperHudScale)
-local usePaperMotion = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperMotion)
 
 local e = React.createElement
 
@@ -44,12 +48,12 @@ export type LayerProps = {
 	layout: UIPaperConstants.Layout,
 }
 
-local COLOR = UIPaperConstants.COLOR
 local FONT_SIZE = table.freeze({
-	desktop = table.freeze({ title = 20, detail = 26, jackpot = 18 }),
-	phone = table.freeze({ title = 13, detail = 16, jackpot = 12 }),
+	desktop = table.freeze({ title = 20, detail = 30, jackpot = 14 }),
+	phone = table.freeze({ title = 13, detail = 18, jackpot = 10 }),
 })
-local SLIP_WIDTH = table.freeze({ desktop = 250, phone = 140 })
+local SLIP_WIDTH = table.freeze({ desktop = 280, phone = 150 })
+local SLIP_HEIGHT = table.freeze({ desktop = 62, phone = 40 })
 -- A slip drifts in from a little to the right, far shorter than a note's slide: it should be easy to miss.
 local SLIP_DRIFT = 40
 
@@ -59,92 +63,122 @@ type SlipProps = {
 	layoutOrder: number,
 }
 
--- One appraisal slip: a small yellow sticky with a scrap of tape, the item in marker, its value in Oswald.
+-- One find: a small card with the item and its worth as a gold number, drifting in from the right.
 local function Slip(props: SlipProps): React.ReactNode
-	local alpha = usePaperMotion(UIPaperConstants.MOTION.slideSeconds)
+	local alpha = useToonPlay(UIPaperConstants.MOTION.slideSeconds, 0, nil)
 	local slip = props.slip
 	local phone = props.layout == "phone"
 	local sizes = FONT_SIZE[props.layout]
 	local width = SLIP_WIDTH[props.layout]
-	local pad = if phone then 8 else 14
-	local lines: { [string]: React.ReactNode } = {
-		list = e("UIListLayout", {
-			FillDirection = Enum.FillDirection.Vertical,
-			Padding = UDim.new(0, if phone then 0 else 2),
-			SortOrder = Enum.SortOrder.LayoutOrder,
-		}),
-		padding = e("UIPadding", {
-			PaddingLeft = UDim.new(0, pad),
-			PaddingRight = UDim.new(0, pad),
-			PaddingTop = UDim.new(0, pad + (if slip.jackpot then sizes.jackpot else 0)),
-			PaddingBottom = UDim.new(0, pad),
-		}),
-		title = e(PaperLabel, {
+	local height = SLIP_HEIGHT[props.layout]
+	local pad = if phone then 10 else 16
+	local detail = slip.detail
+	local face: { [string]: React.ReactNode } = {
+		title = e(ToonText, {
 			text = slip.title,
-			role = "marker",
-			size = sizes.title,
-			color = COLOR.ink,
-			layoutOrder = 1,
+			font = "body",
+			textSize = sizes.title,
+			position = UDim2.fromOffset(pad, 0),
+			size = UDim2.new(if detail ~= nil then 0.55 else 1, -pad, 1, 0),
+			fit = true,
 		}),
 	}
-	local detail = slip.detail
 	if detail ~= nil then
-		lines.detail = e(PaperLabel, {
+		face.detail = e(ToonText, {
 			text = detail,
-			role = "number",
-			size = sizes.detail,
-			color = if slip.jackpot then COLOR.inkRed else COLOR.ink,
-			layoutOrder = 2,
+			meaning = "gold",
+			textSize = sizes.detail,
+			anchor = Vector2.new(1, 0),
+			position = UDim2.new(1, -pad, 0, 0),
+			size = UDim2.new(0.45, -pad, 1, 0),
+			align = "right",
+			fit = true,
+		})
+		face.sparkle = e(ToonSparkle, {
+			spots = { { position = UDim2.new(1, -pad, 0, 2), size = if phone then 12 else 20 } },
+			zIndex = 5,
+		})
+	end
+	local overlay: { [string]: React.ReactNode } = {}
+	if slip.jackpot then
+		overlay.jackpot = e(ToonPill, {
+			text = "JACKPOT",
+			hue = "coral",
+			textSize = sizes.jackpot,
+			tilt = -6,
+			position = UDim2.fromOffset(pad - 6, -10),
+			size = UDim2.fromOffset(if phone then 64 else 96, if phone then 18 else 26),
+			zIndex = 6,
 		})
 	end
 	return e("Frame", {
 		LayoutOrder = props.layoutOrder,
-		Size = UDim2.fromOffset(width, 0),
-		AutomaticSize = Enum.AutomaticSize.Y,
+		Size = UDim2.fromOffset(width, height + 8),
 		BackgroundTransparency = 1,
 	}, {
-		note = e("Frame", {
+		drift = e("Frame", {
 			Position = alpha:map(function(value: number): UDim2
 				return UDim2.fromOffset(SLIP_DRIFT * (1 - value), 0)
 			end),
-			Size = UDim2.fromOffset(width, 0),
-			AutomaticSize = Enum.AutomaticSize.Y,
-			Rotation = slip.tilt,
-			BackgroundColor3 = COLOR.sticky,
-			BorderSizePixel = 0,
+			Size = UDim2.fromOffset(width, height),
+			BackgroundTransparency = 1,
 		}, {
-			texture = e(PaperTexture, { paper = COLOR.sticky }),
-			tape = e("Frame", {
-				AnchorPoint = Vector2.new(0.5, 0.5),
-				Position = UDim2.fromScale(0.5, 0),
-				Size = UDim2.fromOffset(if phone then 32 else 54, if phone then 8 else 14),
-				BackgroundColor3 = COLOR.cream,
-				BackgroundTransparency = 0.35,
-				BorderSizePixel = 0,
-				ZIndex = 3,
+			card = e(ToonPanel, {
+				hue = if slip.jackpot then "gold" else "cream",
+				size = Vector2.new(width, height),
+				radius = if phone then 14 else 20,
+				children = face,
+				overlay = overlay,
 			}),
-			jackpot = if slip.jackpot
-				then e(PaperStamp, {
-					text = "JACKPOT",
-					size = sizes.jackpot,
-					tilt = UIPaperConstants.STAMP_TILT,
-					anchor = Vector2.new(0, 0),
-					position = UDim2.fromOffset(pad - 4, if phone then 3 else 6),
-				})
-				else nil,
-			body = e("Frame", {
-				Size = UDim2.fromScale(1, 0),
-				AutomaticSize = Enum.AutomaticSize.Y,
-				BackgroundTransparency = 1,
-				ZIndex = 2,
-			}, lines),
+		}),
+	})
+end
+
+-- A note: a cream card with its words in Fredoka (two lines at most).
+local function Note(props: { text: string, width: number, size: number, layoutOrder: number }): React.ReactNode
+	local face: { [string]: React.ReactNode } = {
+		text = e(ToonText, {
+			text = props.text,
+			font = "body",
+			textSize = props.size,
+			position = UDim2.fromOffset(16, 6),
+			size = UDim2.new(1, -32, 1, -12),
+			wrapped = true,
+			fit = true,
+		}),
+	}
+	return e(ToonPanel, {
+		size = Vector2.new(props.width, math.ceil(props.size * 2.6 + 16)),
+		pop = true,
+		layoutOrder = props.layoutOrder,
+		children = face,
+	})
+end
+
+-- A milestone: a big stroked gold title that pops in at the centre.
+local function Milestone(props: { text: string, size: number, tilt: number }): React.ReactNode
+	local alpha = useToonPlay(UIToonConstants.MOTION.popSeconds, 0, nil)
+	return e("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.38),
+		Size = UDim2.fromOffset(1200, props.size + 30),
+		BackgroundTransparency = 1,
+	}, {
+		pop = e("UIScale", { Scale = alpha:map(ToonMotionViewModel.pop) }),
+		title = e(ToonText, {
+			text = props.text,
+			meaning = "gold",
+			textSize = props.size,
+			size = UDim2.fromScale(1, 1),
+			align = "center",
+			rotation = props.tilt,
+			fit = true,
 		}),
 	})
 end
 
 local function Layer(props: LayerProps): React.ReactNode
 	local view = props.view
-	local text = UIPaperConstants.TEXT[props.layout]
 	local phone = props.layout == "phone"
 	local notes: { [string]: React.ReactNode } = {
 		list = e("UIListLayout", {
@@ -155,12 +189,10 @@ local function Layer(props: LayerProps): React.ReactNode
 		}),
 	}
 	for order, note in view.notes do
-		notes[`note{note.id}`] = e(StickyNote, {
+		notes[`note{note.id}`] = e(Note, {
 			text = note.text,
 			width = if phone then 250 else 340,
-			size = text.sticky,
-			tilt = note.tilt,
-			slide = true,
+			size = if phone then 15 else 21,
 			layoutOrder = order,
 		})
 	end
@@ -205,13 +237,10 @@ local function Layer(props: LayerProps): React.ReactNode
 	local stamp = view.stamp
 	if stamp ~= nil then
 		-- Keyed by the toast id, so a new stamp remounts and pops again.
-		children[`stamp{stamp.id}`] = e(PaperStamp, {
+		children[`stamp{stamp.id}`] = e(Milestone, {
 			text = stamp.text,
-			size = text.bigStamp,
-			tilt = stamp.tilt,
-			pop = true,
-			anchor = Vector2.new(0.5, 0.5),
-			position = UDim2.fromScale(0.5, 0.38),
+			size = if phone then 56 else 120,
+			tilt = -3,
 		})
 	end
 	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, children)

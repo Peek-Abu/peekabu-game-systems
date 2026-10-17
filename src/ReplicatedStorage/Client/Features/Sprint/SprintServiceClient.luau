@@ -3,8 +3,8 @@
 	SprintServiceClient: the local side of sprinting (docs/superpowers/specs/2026-10-15-cleanup-crew-chase-kit-design.md
 	§3). Holding the base Input action `sprint` (Shift / L3), or the phone's SPRINT button (`setHeld`), tells the server
 	the key is held; the server decides whether that sprints and sets the speed. The Player's SprintStamina / Sprinting
-	attributes feed SprintStore; the shift HUD draws the stamina slip from it (SprintStaminaSlip, tucked against the
-	equipment cards).
+	attributes feed SprintStore; the shift HUD draws the stamina bar from it (ShiftCompactHudPanel, over the
+	hotbar).
 
 	Spec-exempt shell (Input, ByteNet, attributes); the decisions are the server's specced SprintRules and
 	SprintStaminaFormulas, the bar's the specced SprintViewModel.

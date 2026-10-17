@@ -1,10 +1,10 @@
 --!strict
 --[=[
-	ShiftPromptChip: the paper interaction prompt (Figma 1a "Prompt": "[E] BANK monitor"), drawn for the
-	Interaction prompt the engine is showing (ShiftPromptStore; the engine's own card is off, see ShiftPromptSystem). A
-	cream slip taped on at a slight tilt, centred below the crosshair: a KeyChip with the prompt's key and the words; a
-	hold prompt fills an ink-green strip under the words while it is held. On phone (Figma 1d) it is a narrower slip
-	high in the screen, without the key (there is no keyboard).
+	ShiftPromptChip: the interaction prompt in the V1 kit ("[E] PICK UP Desk Monitor"), drawn for the Interaction
+	prompt the engine is showing (ShiftPromptStore; the engine's own card is off, see ShiftPromptSystem). A cream pill
+	on the depth stack, centred below the crosshair: a key cap with the prompt's key and the words; a hold prompt fills
+	a mint bar under the words while it is held. On phone it is a narrower pill high in the screen, without the key
+	(there is no keyboard).
 
 	On a touch device without a keyboard the whole slip is a touch button (elsewhere a plain Frame, so it never sinks a
 	mouse click): a touch holds the prompt and lifting (or sliding off) lets go, through the
@@ -30,10 +30,12 @@ local OccupantCatchStore = require(ReplicatedStorage.Client.Features.Occupant.St
 local ShiftPromptStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftPromptStore)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local useServerClock = require(ReplicatedStorage.Client.UI.React.Hooks.useServerClock)
-local KeyChip = require(ReplicatedStorage.Client.UI.React.Screens.Paper.KeyChip)
 local PaperHudFrame = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudFrame)
-local PaperLabel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperLabel)
-local PaperSheet = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperSheet)
+local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
+local ToonBar = require(Toon.ToonBar)
+local ToonPanel = require(Toon.ToonPanel)
+local ToonSurface = require(Toon.ToonSurface)
+local ToonText = require(Toon.ToonText)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local usePaperHudScale = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperHudScale)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
@@ -55,23 +57,22 @@ type Geometry = {
 	text: number,
 }
 
-local COLOR = UIPaperConstants.COLOR
--- Figma 1a "Prompt": 460x64, centred, top at 0.6 of the screen; 1d: 280 wide at y 236 on phone.
+-- Desktop: centred above the hotbar; phone: high in the screen, clear of the thumbstick and the action arc.
 local GEOMETRY: { [UIPaperConstants.Layout]: Geometry } = table.freeze({
 	desktop = table.freeze({
-		position = UDim2.new(0.5, 0, 1, -122),
-		size = Vector2.new(360, 46),
+		position = UDim2.new(0.5, 0, 1, -140),
+		size = Vector2.new(380, 52),
 		padding = 12,
-		text = 14,
+		text = 18,
 	}),
 	phone = table.freeze({
 		position = UDim2.new(0.5, 0, 0, 236),
-		size = Vector2.new(240, 56),
-		padding = 8,
+		size = Vector2.new(250, 54),
+		padding = 10,
 		text = UIPaperConstants.TEXT.phone.body,
 	}),
 })
-local KEY_SIZE = 16
+local KEY_SIZE = 34
 local KEY_GAP = 12
 local STRIP_HEIGHT = 4
 -- The server clock ticks fast only while a hold fills the strip.
@@ -83,27 +84,18 @@ local function isPress(input: InputObject): boolean
 	return input.UserInputType == Enum.UserInputType.Touch
 end
 
--- The hold strip: a faint ink track with the ink-green fill, just under the words.
+-- The hold bar: a mint fill just under the words.
 local function strip(fill: React.Binding<number>, inset: number): React.ReactNode
-	return e("Frame", {
-		Position = UDim2.new(0, inset, 1, 2),
-		Size = UDim2.new(1, -inset, 0, STRIP_HEIGHT),
-		BackgroundColor3 = COLOR.ink,
-		BackgroundTransparency = 0.85,
-		BorderSizePixel = 0,
-	}, {
-		fill = e("Frame", {
-			Size = fill:map(function(fraction: number): UDim2
-				return UDim2.fromScale(fraction, 1)
-			end),
-			BackgroundColor3 = COLOR.companyTeal,
-			BorderSizePixel = 0,
-		}),
+	return e(ToonBar, {
+		kind = "xp",
+		fill = fill,
+		position = UDim2.new(0, inset, 1, -2),
+		size = UDim2.new(1, -inset, 0, STRIP_HEIGHT + 6),
 	})
 end
 
 local function ShiftPromptChip(props: ShiftPromptChipProps?): React.ReactNode
-	local keyWidth, setKeyWidth = React.useState(KEY_SIZE + 26)
+	local keyWidth = KEY_SIZE + 4
 	local shown = useAtom(ShiftPromptStore.shown)
 	local publicPlayers = useAtom(StateSyncClientStore.publicPlayers)
 	local scaring = useAtom(OccupantCatchStore.scaring)
@@ -145,40 +137,51 @@ local function ShiftPromptChip(props: ShiftPromptChipProps?): React.ReactNode
 	local textInset = if desktop then keyWidth + KEY_GAP else 0
 	local fill = chip.fill
 	local content: { [string]: React.ReactNode } = {
-		text = e(PaperLabel, {
+		text = e(ToonText, {
 			text = chip.text,
-			role = "body",
-			size = geometry.text,
-			color = COLOR.ink,
+			font = "body",
+			textSize = geometry.text,
 			position = UDim2.fromOffset(textInset, 0),
-			frame = UDim2.new(1, -textInset, 1, 0),
+			size = UDim2.new(1, -textInset, 1, if fill ~= nil then -6 else 0),
 			align = if desktop then "left" else "center",
-			autoSize = false,
 			wrapped = not desktop,
+			fit = true,
 		}),
 	}
 	if desktop then
-		content.key = e("Frame", {
-			AnchorPoint = Vector2.new(0, 0.5),
-			Position = UDim2.fromScale(0, 0.5),
-			Size = UDim2.fromOffset(0, KEY_SIZE + 10),
-			AutomaticSize = Enum.AutomaticSize.X,
-			[React.Change.AbsoluteSize] = function(frame: Frame)
-				setKeyWidth(frame.AbsoluteSize.X)
-			end,
-			BackgroundTransparency = 1,
-		}, { chip = e(KeyChip, { label = chip.key, size = KEY_SIZE }) })
+		local cap: { [string]: React.ReactNode } = {}
+		cap.key = e(ToonText, {
+			text = chip.key,
+			textSize = 20,
+			size = UDim2.fromScale(1, 1),
+			align = "center",
+			fit = true,
+		})
+		content.key = e(ToonSurface, {
+			hue = "cream",
+			small = true,
+			radius = 9,
+			anchor = Vector2.new(0, 0.5),
+			position = UDim2.fromScale(0, 0.5),
+			size = UDim2.fromOffset(KEY_SIZE, KEY_SIZE),
+			children = cap,
+		})
 	end
 	if fill ~= nil then
 		content.strip = strip(progress, textInset)
 	end
-	local slip = e(PaperSheet, {
-		size = UDim2.fromScale(1, 1),
-		paper = if shown ~= nil and shown.holdStartedAt ~= nil then COLOR.manila else COLOR.cream,
-		tilt = -1,
-		fastener = "tape",
-		padding = geometry.padding,
-		children = content,
+	local inner: { [string]: React.ReactNode } = {
+		content = e("Frame", {
+			Position = UDim2.fromOffset(geometry.padding, 6),
+			Size = UDim2.new(1, -2 * geometry.padding, 1, -12),
+			BackgroundTransparency = 1,
+		}, content),
+	}
+	local slip = e(ToonPanel, {
+		hue = if shown ~= nil and shown.holdStartedAt ~= nil then "gold" else "cream",
+		size = geometry.size,
+		radius = 20,
+		children = inner,
 	})
 	local size = UDim2.fromOffset(geometry.size.X, geometry.size.Y)
 	if not ShiftHudViewModel.promptTouchable(UserInputService.TouchEnabled, UserInputService.KeyboardEnabled) then

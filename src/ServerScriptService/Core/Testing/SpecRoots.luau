@@ -403,7 +403,6 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Shared.Features.Sprint.Net.SprintEvents"] = "ByteNet packet definitions (no logic)",
 	["ServerScriptService.Features.Sprint.SprintServiceServer"] = "Humanoid/Players/ByteNet/RunService shell (decisions specced in SprintRules and SprintStaminaFormulas)",
 	["ReplicatedStorage.Client.Features.Sprint.SprintServiceClient"] = "Input/ByteNet/attribute shell (the server decides; the bar is specced in SprintViewModel)",
-	["ReplicatedStorage.Client.UI.React.Screens.Sprint.SprintStaminaSlip"] = "presentational React component (bar specced in SprintViewModel)",
 	-- Cleanup Crew: Crouch
 	["ReplicatedStorage.Shared.Features.Crouch.Data.CrouchConstants"] = "static tuning and names (no logic)",
 	["ReplicatedStorage.Shared.Features.Crouch.Net.CrouchEvents"] = "ByteNet packet definitions (no logic)",
@@ -496,8 +495,6 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.UI.React.Screens.Depot.DepotHub"] = "React HUD widget wiring the stores to DepotHubPanel (values specced in DepotHubViewModel)",
 	["ReplicatedStorage.Client.UI.React.Screens.Depot.DepotHubScreen"] = "React guide/gear/settings screen; decisions specced in DepotHubViewModel",
 	["ReplicatedStorage.Client.UI.React.Screens.Depot.DepotHubScene"] = "declarative registration for the specced hub pages",
-	["ReplicatedStorage.Client.UI.React.Screens.Paper.PaperPropIcon"] = "native GUI vector renderer; source shapes specced in PaperPropViewModel",
-	["ReplicatedStorage.Client.UI.React.Screens.Paper.PaperPortrait"] = "React thumbnail lifecycle shell; source userId specced in ShiftReviewViewModel",
 	["ReplicatedStorage.Client.UI.React.Screens.Paper.PaperAwardIcon"] = "native award renderer; title/shape mapping specced in ShiftReviewViewModel",
 	["ReplicatedStorage.Client.UI.React.Screens.Paper.PaperButton"] = "presentational React component (story in PaperKit.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperLayout"] = "React hook over the viewport (the decision is the specced ShiftPlatformRules.detect)",
