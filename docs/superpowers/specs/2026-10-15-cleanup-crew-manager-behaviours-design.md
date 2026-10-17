@@ -292,3 +292,139 @@ Changed: `OccupantSightUtils` (`peripheral`, `glanceDelay`, `toward`, `beside`),
 `glanceId` / `glanceSeconds`, `Glimpse.crouched`), `OccupantConstants`, `OccupantSenseSystem` (crouch),
 `OccupantFaceUtils`, `OccupantDreadFormulas`, `OccupantWarningSystem` (the turn's sound), `EmployeeFaceRules`,
 `HideRules`, `HideConstants`, `HideServiceServer`, `NoiseServiceServer`, `HidePoseSystem` (registers the sound).
+
+## 11. The slow turns: "I know you're there" and the staring contest (2026-10-17)
+
+**The approval.** The developer approved two rare slow-turn variants of the head turn (§10.2) on the same head-swivel
+rig. The quick snap (0.35 s, then the 1.0-1.4 s hold) stays the common case. Every number is in `OccupantConstants`
+(`SLOW_*`, `STILL_*`, `WHIP_SECONDS`, `JERK_*`, `CERTAIN_*`, `KNOWING_*`, `STARE_*` and `DREAD.LOOKS.slowTurn`), tuning
+hypotheses as ever.
+
+### 11.1 Which turn: snap, knowing or stare
+
+Every head turn picks its variant once, as it starts (`OccupantTurnRules.pick`). That covers the §10.2 head turn (a
+completed glance, or a noise from beside or behind him) and the §1 desk ambush.
+
+1. **A target he is certain of.** The candidate is the turn's player: the glance's player, the ambush's nearest
+   player, or else the nearest player down the cone toward the point. They count only when both hold:
+   - they are not hidden, not in their grace and not in the truck's box, and he has a clear line to them;
+   - they are within **14 flat studs** (`CERTAIN_RANGE`, the ambush radius), or he had them in sight a moment ago
+     (`watched` at least **0.5 s**, `CERTAIN_WATCHED`; it decays 0.5 s per second).
+
+   That covers the three approved cases: a player right behind him at his desk; a player pushed out "cramped" next to
+   him (its 19-stud tumble turns his head and they are within 14 studs); and a player coming out of a spot he just
+   saw them go into. With no such target, the turn is the **snap**.
+2. **Gates.** Each of these must hold, or the turn is the snap:
+   - he is not on a breather;
+   - the previous head turn was a snap (`lastTurn`), so two slow turns never come in a row, in either order;
+   - at least **60 s** have passed since the last slow turn (`SLOW_GAP`).
+3. **The staring contest (the rarest).** It is picked when all three hold:
+   - nobody in the crew has had one this shift (`stared`);
+   - the menace gauge is within **20-70** (`STARE_MENACE`: tension has built but is not peaking);
+   - its roll is under **0.35** (`STARE_CHANCE`).
+4. **The knowing turn.** Otherwise it is picked when all three hold:
+   - this player has not had one this shift (`knowingFor`);
+   - menace is at most **70** (`KNOWING_MENACE_MAX`);
+   - its roll is under **0.5** (`KNOWING_CHANCE`).
+5. **Else the snap.** The rolls are `Senses.rolls[5]` (stare) and `[6]` (knowing). With no rolls (0.5 each) neither
+   is picked.
+6. **A developer's force.** `occupantturn <snap|knowing|stare|auto>` (Admins) makes the next head turn that variant,
+   skipping the gates, rolls and certainty. It still needs a player he can see. If the caller is in his view, the
+   turn starts at once at the caller.
+
+### 11.2 The slow turn (both variants)
+
+- **His body.** He stops dead. Standing, he goes into mode `alert`; seated at a desk, he stays in `work`, with the
+  typing stopped dead. The phase is `slowTurn`, the turn's player is his `target`, and his head follows them.
+- **The turn.** His head turns slowly and deliberately to them over **2.0 s** (`SLOW_TURN_SECONDS`), as the gesture
+  `slowSwivel` (smootherstepped).
+  - His waist leads with **20 %** of the yaw (`SLOW_WAIST_SHARE`), all of it by 60 % of the turn, and the neck carries
+    the rest. So the shoulders come round first, then the long neck, and **the smile comes round last**.
+  - The face stays **Calm** (the customer-service smile) through the turn and the stare.
+- **Its sound.** A slow porcelain creak from his head (`harlowCreak`) replaces the snap's intake. It is stopped with a
+  0.08 s fade if the turn is cut short.
+- **The dread.** Within dread range the stage is **aware** at full strength, with no proximity scaling
+  (`OccupantDreadFormulas.slow`), using the `slowTurn` look:
+  - the heart at 1, beating faster (**0.5 s**, `BEAT_SLOW`), and the dread loop at 0.5;
+  - the office and chase music ducked **-30 dB** to near-silence and muffled -12;
+  - a stronger vignette.
+- **The lights.** Lights within **34 studs** (`SLOW_FLICKER_RADIUS`, against the usual 26) flicker with the existing
+  flicker, but darker: dark much more often (`SLOW_FLICKER_THRESHOLD`).
+- **What counts as moving.** Any meaningful movement, never a camera turn:
+  - a flat speed of at least **2.5 studs/s** (`STILL_SPEED`), or
+  - drifting at least **1.25 studs** from where they stood (`STILL_DISTANCE`; measured in 3D, so a jump counts).
+- **The settle.** For the first **0.35 s** (`SLOW_SETTLE`), the point they "stood" at follows them, so a player who
+  hears the creak can still freeze. A player still walking when the settle ends is chased then.
+- **Moving mid-turn.** It ends the turn early. On that think his head whips the rest of the way (`whip`, **0.15 s**,
+  `WHIP_SECONDS`), and the jerk (11.4) starts the chase at once.
+- **Hiding or breaking the line before the turn ends.** He **searches** from where they were, running: the ordinary
+  search (the last-seen point, then the nearby route points).
+
+### 11.3 How each variant ends
+
+- **The knowing turn.** If they stay still to the end of the 2.0 s: the jerk and the chase.
+- **The staring contest.** The turn completes, then comes phase `staring`: his head on them and no movement at all,
+  for a rolled **4-7 s** (`STARE_CONTEST_SECONDS`). Then:
+  - **The target moves:** the jerk and the bolt.
+  - **Another crew member moves** where he can see them (a clear line, within `SIGHT_RANGE`, inside `SIGHT_ANGLE`
+    toward the point his head looks at): the jerk and the bolt at **them**. Each watched player's standing point is
+    taken when he first sees them there. Players he cannot see never set him off.
+  - **Nobody moves for the whole stare:** the jerk and the bolt at the target anyway.
+  - **The target hides or breaks the line:** he searches.
+- **Sight beats everything, as ever.** Anyone walking into his body's front cone meanwhile is chased at once.
+
+### 11.4 The jerk (wherever a slow turn ends in a chase)
+
+He never bolts with his head still twisted backwards. On the trigger think he goes straight into the chase (mode
+`chase`, phase `jerk`). On that frame:
+
+- **His body.** The server turns his root to face the player over **0.13 s** (`JERK_SECONDS`, ease-out, per frame:
+  `OccupantSeatSystem.jerk`). His head stays locked on them in world space, so the body snaps round under an
+  already-turned head.
+- **Seated.** He pops up: the stand clip at **8x** (`JERK_STAND_SPEED`, 0.225 s), head still on them.
+- **His face** goes to **Hunting** (the smile widens) on the same attribute write.
+- **The sound.** A sharp porcelain crack (`harlowCrack`) from his head and the chase sting land together. Both fire
+  from the same replicated change, on the client's Heartbeat.
+- **The run.** A full-speed chase with no wind-up and no startle. The intent is the run, or the grab within reach.
+- **Watching every frame.** While he watches, the server checks for movement every frame: `OccupantServiceServer`'s
+  Heartbeat runs his brain then, not only on the 0.15 s NPC think. So the trigger is at most a frame late. The run
+  starts on the next NPC think, as soon as its path is ready.
+- **Afterwards.** The phase clears after `JERK_SECONDS`, leaving an ordinary chase.
+
+### 11.5 Replication and the client
+
+- **Phases.** `slowTurn` and `staring` (in `alert`, or in `work` at a desk) and `jerk` (in `chase`) ride the existing
+  phase attribute. No new attribute or packet is needed.
+- **Gestures.** `slowSwivel` (the turn and the stare) and `whip` (the hurried rest of a turn, and the jerk) ride the
+  gesture attribute. `OccupantGestureSystem` carries one turn fraction across them, so a whip continues from wherever
+  the slow turn got to.
+- **Several players.** One turn at a time, at one target. Others moving matter only during the stare, and only when
+  he sees them move. Each client's dread follows his mode and phase, so everyone near him gets the silence.
+
+### 11.6 Modules
+
+| Feature | Realm | Subfolder | Name | Job |
+|---|---|---|---|---|
+| Occupant | server | Rules | OccupantTurnRules | The slow turns: which variant, the slow turn's and the stare's think, the watch for movement, the jerk |
+
+Changed modules:
+
+- **Occupant rules:**
+  - `OccupantAlertRules`: `begin` picks the variant; `think` hands slow turns over.
+  - `OccupantWorkRules`: the ambush picks the variant too; seated slow turns.
+  - `OccupantBrainRules`: the jerk's phase settles; a seated jerk stands fast.
+- **Shared data and formulas:**
+  - `OccupantTypes`: phases, `TurnKind`, the mind's turn fields, `Glimpse.speed`.
+  - `OccupantConstants`.
+  - `OccupantGestureFormulas`: `slowSwivel` and `whip`, the waist lead.
+  - `OccupantDreadFormulas`: `slow`.
+  - `OccupantTellRules`: the harder flicker.
+  - `OccupantFaceUtils`: Calm through a slow turn.
+  - `OccupantAssets`: `harlowCreak` and `harlowCrack`.
+- **Server systems and service:**
+  - `OccupantSenseSystem`: speed.
+  - `OccupantSeatSystem`: `jerk`.
+  - `OccupantServiceServer`: the per-frame watch, `forceTurn`.
+- **Client systems:** `OccupantGestureSystem`, `OccupantWarningSystem` (the creak and the crack), `OccupantTellSystem`
+  and `OccupantDreadSystem`.
+- **A new command:** `occupantturn` (Cmdr, Admins).
