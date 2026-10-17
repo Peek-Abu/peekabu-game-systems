@@ -249,6 +249,8 @@ local function think(def: NpcTypes.NpcDef, now: number, position: Vector3): NpcT
 	mind = result.mind
 	if result.mind.mode == "chase" and before.mode ~= "chase" then
 		counters.chases += 1
+		-- Any chase start (the jerk is one) runs on the NPC's very next frame, not on its next scheduled think.
+		NpcServiceServer:wake(current.model)
 	end
 	show(current, result.mind, result.cue)
 	-- After the mind is stored, so a catch builds on it.
@@ -271,8 +273,8 @@ local function brain(def: NpcTypes.NpcDef, context: NpcTypes.BrainContext, npc: 
 end
 
 -- While he watches in a slow turn or a stare, his brain thinks every frame too (behaviours design §11.4), so a
--- player's first move is the jerk on that frame rather than on the next 0.15 s NPC think; the run itself starts on
--- the NPC's next think (the intent here is not carried out). Never yields.
+-- player's first move is the jerk on that frame rather than on the next 0.15 s NPC think. The intent here is not
+-- carried out: the jerk wakes the NPC (`think`), so the run starts on its next frame. Never yields.
 local function watch(now: number)
 	local current, before = rig, mind
 	local def = NpcRegistry.get(OccupantConstants.NPC_KIND)

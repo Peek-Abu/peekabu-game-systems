@@ -387,8 +387,9 @@ He never bolts with his head still twisted backwards. On the trigger think he go
   from the same replicated change, on the client's Heartbeat.
 - **The run.** A full-speed chase with no wind-up and no startle. The intent is the run, or the grab within reach.
 - **Watching every frame.** While he watches, the server checks for movement every frame: `OccupantServiceServer`'s
-  Heartbeat runs his brain then, not only on the 0.15 s NPC think. So the trigger is at most a frame late. The run
-  starts on the next NPC think, as soon as its path is ready.
+  Heartbeat runs his brain then, not only on the 0.15 s NPC think. So the trigger is at most a frame late. The jerk
+  (and any chase start) wakes the NPC (`NpcServiceServer:wake`), so the run starts on its next frame: while the path
+  computes he heads straight at a player in clear line, and the route takes over when it arrives.
 - **Afterwards.** The phase clears after `JERK_SECONDS`, leaving an ordinary chase.
 
 ### 11.5 Replication and the client

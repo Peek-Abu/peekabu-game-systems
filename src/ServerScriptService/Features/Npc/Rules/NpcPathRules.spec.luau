@@ -127,6 +127,28 @@ return function()
 		end)
 	end)
 
+	describe("headStraight", function()
+		it("heads straight at a goal in clear line while its first path computes", function()
+			expect(NpcPathRules.headStraight(true, 0, 0, true)).to.equal(true)
+		end)
+
+		it("follows the route once one has arrived", function()
+			expect(NpcPathRules.headStraight(true, 2, 5, true)).to.equal(false)
+		end)
+
+		it("heads straight again once the route is used up and a fresh path computes", function()
+			expect(NpcPathRules.headStraight(true, 6, 5, true)).to.equal(true)
+		end)
+
+		it("never heads straight at a goal out of line (a wall between)", function()
+			expect(NpcPathRules.headStraight(false, 0, 0, true)).to.equal(false)
+		end)
+
+		it("leaves a finished computation to the mover's own fallback", function()
+			expect(NpcPathRules.headStraight(true, 0, 0, false)).to.equal(false)
+		end)
+	end)
+
 	describe("nextPatrolIndex", function()
 		it("walks the route in order and loops", function()
 			expect(NpcPathRules.nextPatrolIndex(1, 3)).to.equal(2)

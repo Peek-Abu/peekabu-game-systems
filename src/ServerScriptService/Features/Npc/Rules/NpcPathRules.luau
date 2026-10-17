@@ -46,6 +46,16 @@ function NpcPathRules.shouldRepath(
 	return (newGoal - currentGoal).Magnitude > threshold or now - computedAt > maxAge
 end
 
+--[=[
+	Whether to head straight at the goal rather than wait for the pathfinder: the goal is in clear line, no route is
+	being followed (`routeIndex` outside 1..`routeCount`), and a path for it is still computing. The path is swapped
+	in when it arrives; a finished computation that found none leaves the mover's own fallback in charge.
+]=]
+function NpcPathRules.headStraight(inLine: boolean, routeIndex: number, routeCount: number, computing: boolean): boolean
+	local following = routeIndex >= 1 and routeIndex <= routeCount
+	return inLine and computing and not following
+end
+
 function NpcPathRules.nextPatrolIndex(index: number, count: number): number
 	return (index % count) + 1
 end

@@ -105,6 +105,21 @@ local function lineOfSight(agent: Agent, candidate: Candidate): boolean
 	return Workspace:Raycast(origin, candidate.position - origin, params) == nil
 end
 
+-- A clear line from the NPC to a point (a goTo goal); players' characters never block it.
+local function clearLine(agent: Agent, point: Vector3): boolean
+	local origin = agent.root.Position + Vector3.new(0, 1.5, 0)
+	local excluded: { Instance } = { agent.model }
+	for _, player in Players:GetPlayers() do
+		if player.Character ~= nil then
+			table.insert(excluded, player.Character)
+		end
+	end
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = excluded
+	return Workspace:Raycast(origin, point - origin, params) == nil
+end
+
 local function findCandidate(list: { Candidate }, userId: number?): Candidate?
 	for _, candidate in list do
 		if candidate.id == userId then
@@ -114,7 +129,14 @@ local function findCandidate(list: { Candidate }, userId: number?): Candidate?
 	return nil
 end
 
-local function updatePose(agent: Agent)
+local NpcBehaviourSystem = {}
+
+--[=[
+	Plays the locomotion clip for the NPC's current speed when that pose changed (cheap when it has not); `stride` also
+	re-fits the clip's rate to the speed (a fresh clip is always fitted). NpcServiceServer calls it every frame without
+	`stride`, so the legs follow the body from its first step; the think re-fits the stride.
+]=]
+function NpcBehaviourSystem.updatePose(agent: Agent, stride: boolean)
 	local animations = agent.def.animations
 	if animations == nil then
 		return
@@ -132,6 +154,10 @@ local function updatePose(agent: Agent)
 		end
 		local id = if pose == "idle" then animations.idle elseif pose == "walk" then animations.walk else animations.run
 		agent.poseHandle = if id ~= nil then AnimationServiceServer:playOnRig(agent.model, id) else nil
+		stride = true
+	end
+	if not stride then
+		return
 	end
 	-- The stride follows the speed every think, so the feet stay planted (a clip without a planted speed stays 1x).
 	local handle = agent.poseHandle
@@ -166,8 +192,6 @@ local function attack(agent: Agent, target: Candidate, now: number, deps: ThinkD
 		log:error(`onAttack("{agent.kind}") errored: {err}`)
 	end
 end
-
-local NpcBehaviourSystem = {}
 
 --[=[
 	One think for one NPC at `now` (os.clock).
@@ -246,18 +270,18 @@ function NpcBehaviourSystem.think(agent: Agent, now: number, deps: ThinkDeps)
 			if NpcBrainRules.inAttackRange(position, victim.position, def.attackRange, intent.verticalReach) then
 				attack(agent, victim, now, deps)
 			else
-				agent.mover:moveTo(victim.position, now)
+				agent.mover:moveTo(victim.position, now, lineOfSight(agent, victim))
 			end
 		end
 	elseif intent.kind == "chase" then
 		local quarry = findCandidate(list, intent.target)
 		if quarry ~= nil then
 			agent.humanoid.WalkSpeed = def.runSpeed
-			agent.mover:moveTo(quarry.position, now)
+			agent.mover:moveTo(quarry.position, now, lineOfSight(agent, quarry))
 		end
 	elseif intent.kind == "goTo" then
 		agent.humanoid.WalkSpeed = if intent.run then def.runSpeed else def.walkSpeed
-		agent.mover:moveTo(intent.position, now)
+		agent.mover:moveTo(intent.position, now, clearLine(agent, intent.position))
 	elseif intent.kind == "flee" then
 		agent.humanoid.WalkSpeed = def.runSpeed
 		agent.mover:moveTo(NpcPathRules.fleeGoal(position, intent.from, def.fleeRange * 1.5), now)
@@ -286,7 +310,7 @@ function NpcBehaviourSystem.think(agent: Agent, now: number, deps: ThinkDeps)
 	elseif agent.mover:goal() ~= nil then
 		agent.mover:stop()
 	end
-	updatePose(agent)
+	NpcBehaviourSystem.updatePose(agent, true)
 end
 
 return NpcBehaviourSystem

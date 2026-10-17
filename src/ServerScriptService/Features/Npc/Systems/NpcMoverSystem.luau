@@ -3,6 +3,9 @@
 	NpcMoverSystem: continuous server-owned Humanoid steering along native paths.
 	One ComputeAsync runs at a time. Refreshes retain a usable route and adopt its forward segment using
 	the live position, rather than rewinding to waypoint two. No-cost kinds alone may fall back to a direct goal.
+	A fresh move (from standing) to a goal the caller saw in clear line (`moveTo`'s `inLine`) heads straight at it until
+	its first path computation finishes (NpcPathRules.headStraight), so a bolt never stands waiting for the pathfinder;
+	the route takes over when it arrives, and a costed kind whose computation found none stands as before.
 	Pure progress/recovery decisions live in NpcPathRules; this native shell is spec-exempt.
 	@class NpcMoverSystem
 ]=]
@@ -16,7 +19,7 @@ local NpcConstants = require(ServerScriptService.Features.Npc.Data.NpcConstants)
 local NpcPathRules = require(ServerScriptService.Features.Npc.Rules.NpcPathRules)
 
 export type NpcMoverSystem = {
-	moveTo: (self: NpcMoverSystem, goal: Vector3, now: number) -> (),
+	moveTo: (self: NpcMoverSystem, goal: Vector3, now: number, inLine: boolean?) -> (),
 	stop: (self: NpcMoverSystem) -> (),
 	step: (self: NpcMoverSystem) -> (),
 	goal: (self: NpcMoverSystem) -> Vector3?,
@@ -41,6 +44,9 @@ function NpcMoverSystem.new(humanoid: Humanoid, root: BasePart, costs: { [string
 	local index = 0
 	local request = 0
 	local alive = true
+	-- A fresh move's goal in clear line, until a computation started for it finishes (headStraight's `computing`).
+	local inLineGoal = false
+	local awaitingRoute = false
 	local hasCosts = costs ~= nil and next(costs) ~= nil
 
 	local function steer(position: Vector3?)
@@ -108,6 +114,7 @@ function NpcMoverSystem.new(humanoid: Humanoid, root: BasePart, costs: { [string
 				candidate:Destroy()
 				return
 			end
+			awaitingRoute = false
 			local points = if ok and candidate.Status == Enum.PathStatus.Success then candidate:GetWaypoints() else {}
 			local budget = (root.Position - origin).Magnitude + NpcConstants.PATH_ADOPTION_CORRIDOR
 			local nextIndex =
@@ -134,7 +141,7 @@ function NpcMoverSystem.new(humanoid: Humanoid, root: BasePart, costs: { [string
 	end
 
 	local mover: NpcMoverSystem = {
-		moveTo = function(_self, goal, now)
+		moveTo = function(_self, goal, now, inLine)
 			if not alive then
 				return
 			end
@@ -142,9 +149,14 @@ function NpcMoverSystem.new(humanoid: Humanoid, root: BasePart, costs: { [string
 			if currentGoal == nil then
 				progressPosition = root.Position
 				progressAt = now
+				awaitingRoute = true
 			end
+			inLineGoal = inLine == true
 			-- Remember the latest allowed goal even while computation yields; never read a hidden quarry here.
 			currentGoal = goal
+			if NpcPathRules.headStraight(inLineGoal, index, #waypoints, awaitingRoute) then
+				steer(goal)
+			end
 			if pending or now - attemptedAt < NpcConstants.REPATH_MIN_INTERVAL then
 				return
 			end
@@ -166,6 +178,8 @@ function NpcMoverSystem.new(humanoid: Humanoid, root: BasePart, costs: { [string
 		stop = function(_self)
 			request += 1
 			invalidated = false
+			awaitingRoute = false
+			inLineGoal = false
 			clearPath()
 			currentGoal = nil
 			pathGoal = nil
@@ -223,6 +237,8 @@ function NpcMoverSystem.new(humanoid: Humanoid, root: BasePart, costs: { [string
 				steer(nil)
 			elseif index >= 1 and index <= #waypoints then
 				steer(waypoints[index].Position)
+			elseif NpcPathRules.headStraight(inLineGoal, index, #waypoints, awaitingRoute) then
+				steer(goal)
 			else
 				-- An exhausted costed route must refresh immediately rather than wait for maximum age.
 				invalidated = remaining
