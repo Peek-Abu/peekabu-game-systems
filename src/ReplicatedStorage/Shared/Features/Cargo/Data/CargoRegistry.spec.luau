@@ -4,7 +4,6 @@ local CargoRegistry = require(script.Parent.CargoRegistry)
 local EXPECTED = {
 	{ "rubbishBag", "trash", 10, 10, 10 },
 	{ "recyclingBox", "trash", 15, 15, 15 },
-	{ "bottleBag", "trash", 15, 15, 15 },
 	{ "officePlant", "salvage", 68, 45, 90 },
 	{ "plaque", "salvage", 75, 50, 100 },
 	{ "monitor", "salvage", 80, 40, 120 },
@@ -19,6 +18,8 @@ local EXPECTED = {
 	{ "deskClock", "salvage", 75, 55, 95 },
 	{ "snowGlobe", "salvage", 85, 60, 110 },
 	{ "keyring", "salvage", 45, 30, 60 },
+	-- The bottle bag, a valuable again (docs/superpowers/specs/2026-10-16-cleanup-crew-gloom-gleam-economy-design.md §3.2).
+	{ "bottleBag", "salvage", 65, 45, 85 },
 }
 
 local SMALL_VALUABLES = { "coffeeMug", "wristwatch", "deskClock", "snowGlobe", "keyring" }
@@ -61,22 +62,25 @@ return function()
 		expect(table.concat(buriable, ",")).to.equal("coffeeMug,keyring,monitor,officePlant,plaque,wristwatch")
 	end)
 
-	it("gives jackpots to the monitor, plaque, coffee machine, golden stapler and five small valuables", function()
-		local jackpots = {}
-		for _, id in CargoRegistry.ids() do
-			local jackpot = CargoRegistry.get(id).jackpot
-			if jackpot ~= nil then
-				expect(jackpot.chance > 0 and jackpot.chance < 0.5).to.equal(true)
-				expect(jackpot.multiplier > 1).to.equal(true)
-				expect(#jackpot.name > 0).to.equal(true)
-				table.insert(jackpots, id)
+	it(
+		"gives jackpots to the monitor, plaque, coffee machine, golden stapler, bottle bag and five small valuables",
+		function()
+			local jackpots = {}
+			for _, id in CargoRegistry.ids() do
+				local jackpot = CargoRegistry.get(id).jackpot
+				if jackpot ~= nil then
+					expect(jackpot.chance > 0 and jackpot.chance < 0.5).to.equal(true)
+					expect(jackpot.multiplier > 1).to.equal(true)
+					expect(#jackpot.name > 0).to.equal(true)
+					table.insert(jackpots, id)
+				end
 			end
+			expect(table.concat(jackpots, ",")).to.equal(
+				"bottleBag,coffeeMachine,coffeeMug,deskClock,goldenStapler,keyring,monitor,plaque,snowGlobe,wristwatch"
+			)
+			expect(CargoRegistry.get("monitor").jackpot.name).to.equal("Gold-trim")
 		end
-		expect(table.concat(jackpots, ",")).to.equal(
-			"coffeeMachine,coffeeMug,deskClock,goldenStapler,keyring,monitor,plaque,snowGlobe,wristwatch"
-		)
-		expect(CargoRegistry.get("monitor").jackpot.name).to.equal("Gold-trim")
-	end)
+	)
 
 	it("lists ids sorted", function()
 		local ids = CargoRegistry.ids()
@@ -160,6 +164,26 @@ return function()
 
 		it("has no desk phone (cut by the user)", function()
 			expect(CargoRegistry.has("deskPhone")).to.equal(false)
+		end)
+
+		it("brings the bottle bag back as a light, rattly valuable for the open floor, not desks or piles", function()
+			local bag = CargoRegistry.get("bottleBag")
+			expect(bag.category).to.equal("salvage")
+			expect(bag.size).to.equal("light")
+			expect(bag.grimy and bag.rattly).to.equal(true)
+			expect(bag.spawnWeight > 0).to.equal(true)
+			expect(bag.deskWeight).to.equal(0)
+			expect(bag.buriable or bag.hidden or bag.greed).to.equal(false)
+		end)
+
+		it("keeps the rubbish bag and the recycling box as the only trash", function()
+			local trash = {}
+			for _, id in CargoRegistry.ids() do
+				if CargoRegistry.get(id).category == "trash" then
+					table.insert(trash, id)
+				end
+			end
+			expect(table.concat(trash, ",")).to.equal("recyclingBox,rubbishBag")
 		end)
 
 		it("keeps the mug and the snow globe fragile and the keyring rattly", function()

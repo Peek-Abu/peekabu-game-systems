@@ -107,12 +107,12 @@ add("open", "desk", { { 50, 18 }, { 68, 28 }, { 86, 26 }, { 60, 46 }, { 80, 46 }
 add("open", "cabinet", { { 97, 3 } })
 add("open", "table", { { 62, 20 } })
 
-add("breakRoom", "pile", { { 6, 66 }, { 20, 80 } })
+add("breakRoom", "pile", { { 6, 66 }, { 20, 80 }, { 26, 78 } })
 add("breakRoom", "item", { { 4, 64 }, { 14, 70 }, { 26, 66 }, { 8, 84 }, { 24, 86 }, { 16, 87 } })
 add("breakRoom", "locker", { { 4, 78 } })
 add("breakRoom", "table", { { 13, 81 } })
 
-add("manager", "pile", { { 40, 70 }, { 52, 84 } })
+add("manager", "pile", { { 40, 70 }, { 52, 84 }, { 56, 80 } })
 add("manager", "item", { { 34, 64 }, { 46, 66 }, { 56, 72 }, { 36, 84 }, { 48, 86 }, { 56, 64 } })
 add("manager", "desk", { { 45, 78 } })
 

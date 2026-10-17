@@ -196,16 +196,13 @@ return function()
 				expect(Rules.checkRoute(layout)).to.equal(true)
 				local plans = {}
 				for _, variant in { "A", "B" } do
-					local plan = Spawn.roll(
-						layout,
-						{
-							quota = CONTRACT,
-							variant = variant,
-							piles = Constants.PILES,
-							valuables = Constants.VALUABLES,
-						},
-						Random.new(seed)
-					)
+					local plan = Spawn.roll(layout, {
+						quota = CONTRACT,
+						variant = variant,
+						dirtyRooms = Constants.DIRTY_ROOMS,
+						pilesPerRoom = Constants.PILES_PER_ROOM,
+						valuables = Constants.VALUABLES,
+					}, Random.new(seed))
 					local ok, reason = SpawnRules.check(plan, layout, CONTRACT)
 					if not ok then
 						error(reason)

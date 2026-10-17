@@ -54,7 +54,7 @@ return function()
 
 		it("adds salvage to bonus and unloads pockets with the hands item", function()
 			local deposit = CargoBankRules.deposit(
-				{ kind = "bottleBag", value = 15 },
+				{ kind = "recyclingBox", value = 15 },
 				{ { kind = "plaque", value = 25 }, { kind = "goldenStapler", value = 80 } },
 				CargoRegistry.get
 			)
@@ -78,7 +78,7 @@ return function()
 			local appraisal = { base = 100, clean = 0.2, appraised = false }
 			local deposit = CargoBankRules.deposit(
 				{ kind = "monitor", value = 44, appraisal = appraisal },
-				{ { kind = "bottleBag", value = 15 } },
+				{ { kind = "recyclingBox", value = 15 } },
 				CargoRegistry.get
 			)
 			expect(deposit.items[1].appraisal).to.equal(appraisal)

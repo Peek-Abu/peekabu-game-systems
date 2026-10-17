@@ -28,8 +28,13 @@ truck, and cleaning a valuable mattered only through its price. The new split gi
 
 ### 3.1 Dust piles
 
-- A cleared pile removes **20 Gloom** (`VacuumConstants.PILE_GLOOM`) toward the contract **the instant it is
-  vacuumed** (`ShiftGloomSystem`, from Vacuum's `pileCleared`).
+- A cleared pile removes **40 Gloom** (`VacuumConstants.PILE_GLOOM`; 20 until the follow-up of §3.5) toward the
+  contract **the instant it is vacuumed** (`ShiftGloomSystem`, from Vacuum's `pileCleared`).
+- **The dust is clustered** (§3.5): **4-6 dirty rooms** (`OfficeConstants.DIRTY_ROOMS`), each with **3-5 piles**
+  (`PILES_PER_ROOM`), with a clean room between any two of them where the layout allows (no two dirty rooms share a
+  doorway or a corridor; `OfficeSpawnUtils` step 1, `pileOrder`). Every other room is clean. Each generated room
+  offers up to 5 pile markers (`PILE_SPOTS`): its two rear corners, then the free floor nearest a wall, placed after
+  all the furniture so they never displace it (`OfficeLayoutRoomUtils`).
 - **No dust bags.** The canister has no capacity and nothing pops out. Nothing needs carrying to count. The
   backpack's canister window is now a **live Gloom gauge**: every crew member's gauge shows the crew's Gloom as a
   share of the contract, its lamp lights once the contract is met, it ticks as the Gloom rises and chimes once when
@@ -41,6 +46,10 @@ truck, and cleaning a valuable mattered only through its price. The new split gi
 
 - Every valuable carries Gloom by size, at full grime (`CargoConstants.GLOOM_BY_SIZE`): **tiny 5, light 8, medium 15,
   heavy 25, bulky 35**, times its starting grime (every valuable spawns fully grimy, so that is all of it).
+- **The bottle bag is a valuable again** (one of the three old trash kinds): light (8 Gloom, pocketable like the tiny
+  ones, so it goes in a hotbar item slot), rattly, base 45-85 Gleam before depth with a rare "Vintage glass" jackpot
+  (x2, 10%), open-floor weight 2 (about 1 in 15 open-floor rolls), never in a desk drawer and never under a pile. It
+  is cleaned, appraised and banked like every other valuable (`CargoRegistry`).
 - Cleaning removes it **live, in step with cleanliness**: each cleaning step reports the Gloom it took off
   (`CargoAppraisalFormulas.gloomRemoved`, through `CargoGrimeSystem`'s `cleaned` and Cargo's `grimeRemoved`). The
   steps are differences of one rounding, so a full cleaning always adds up to exactly the item's Gloom.
@@ -62,30 +71,35 @@ truck, and cleaning a valuable mattered only through its price. The new split gi
 ### 3.4 The contract
 
 - **Remove X Gloom.** Clock-out unlocks once it is met, and overtime stays opt-in after it, both as with the quota.
-- **By crew size 1 / 2 / 3 / 4: 260 / 280 / 300 / 320 Gloom** (`ShiftConstants.QUOTA_BY_CREW`).
-- **Measured** over 30 generated offices (2026-10-16, the same check as the old quota): 16.4 piles on average (14-18)
-  and about 107 Gloom of grime (70-170) on 11.6 valuables, so a site holds about **435 Gloom** (350-530). The
-  contract asks about **60 / 64 / 69 / 74%** of it. Solo gets the smallest share because one player covers less
-  ground; the biggest crew is capped because the site does not grow with the crew.
+- **By crew size 1 / 2 / 3 / 4: 530 / 560 / 610 / 650 Gloom** (`ShiftConstants.QUOTA_BY_CREW`; 260 / 280 / 300 /
+  320 at 20 per pile and spread dust).
+- **Measured** over 60 generated offices (2026-10-16, clustered dust at 40 per pile): 19.3 piles on average in 5
+  dirty rooms (4-6; 3, 4 and 5 piles about equally often), about 772 Gloom of dust and 107 of grime on 12.4
+  valuables, so a site holds about **880 Gloom** (610-1215). The contract asks about **60 / 64 / 69 / 74%** of it.
+  Solo gets the smallest share because one player covers less ground; the biggest crew is capped because the site
+  does not grow with the crew.
 - **Guarantee** (`OfficeLootUtils.shortfall`, `OfficeSpawnRules.check`): the contract may ask at most **80%**
-  (`OfficeConstants.CONTRACT_SHARE_MAX`) of the site's Gloom. A thinner roll gets up to 4 extra plain piles on free
-  pile markers (`TOP_UP_MAX`); a plan still short is refused and re-rolled. The old value top-up (extra valuables) is
-  gone: the pay is no longer what the contract needs.
+  (`OfficeConstants.CONTRACT_SHARE_MAX`) of the site's Gloom. A thinner roll gets up to **6** extra plain piles
+  (`TOP_UP_MAX`, was 4: the thinnest clustered roll, 4 rooms of 3 piles, needs about 5 for the biggest crew), on the
+  dirty rooms' spare pile markers first, then a clean room's, so the extra dust stays clustered; a plan still short is
+  refused and re-rolled. Measured: 0 of 60 generated offices refused, 0.85 extra piles a site on average, the biggest
+  crew's contract never above 80% of a topped-up site. The old value top-up (extra valuables) is gone: the pay is no
+  longer what the contract needs.
 - `OfficeSpawnUtils.spec` checks every generated office against the biggest crew's contract, and that the contract
   is 62-78% of the average site.
 
-### 3.5 "A room of dust ≈ one good valuable": not met at 20, needs a decision
+### 3.5 "A room of dust ≈ one good valuable": both levers, approved 2026-10-16
 
-Measured: a room that has dust holds **1.25 piles on average** (1 pile in 75% of them, 2 in 25%), so a room of dust is
-worth about **25 Gleam**. A good valuable banks about **90-165 Gleam** (median base 120 after depth; tiny ones 40-170).
-At 20 Gloom per pile the rule does not hold, by a factor of about 4. Two levers, for the user to choose:
+At 20 per pile with the dust spread thin (1.25 piles to a dusty room) a room of dust was worth about 25 Gleam against
+90-165 for a good valuable. The user approved R-2's pick: **cluster the dust into fewer, properly dirty rooms (3-5
+piles) and raise a pile to about 40.**
 
-1. **Raise `PILE_GLOOM` to about 75-80.** The rule holds, the site grows to about 1,400 Gloom and the contract table
-   scales with it (×3.7), and dust becomes about half of the pay. That softens "bank it = the pay".
-2. **Cluster the dust**: fewer dusty rooms with 3-5 piles each (an `OfficeSpawnUtils` change). The rule holds at about
-   20-25 per pile and dust stays the smaller part of the pay.
-
-Until then the shipped value is the approved **20**.
+Measured after the change (60 generated offices): a dirty room holds **3.9 piles, about 155 Gloom (120-200)**, and a
+valuable's plain base averages **142 Gleam** after depth, so a dirty room is worth about one good valuable. Dust is
+about **88% of the site's Gloom**. Its share of the pay: about **43% of a typical shift's** (most of the dust vacuumed,
+two thirds of the valuables banked at average cleanliness), **29%** of a perfect one (everything vacuumed, cleaned
+and banked). If the user wants dust nearer half of a perfect shift, the next levers are more dirty rooms
+(`DIRTY_ROOMS` 5-7) or about 50 a pile.
 
 ## 4. What was removed
 
@@ -95,9 +109,9 @@ Until then the shipped value is the approved **20**.
   reads it, and it can be deleted in Studio.
 - **Trash spawns**: trash only existed to pad the old quota. Desks and lockers now hold a valuable (still capped at 3)
   or nothing; trash has no weights, so it never spawns. Banking adds no "CLEARED" floater any more.
-- **Open question:** the three trash kinds (rubbish bag, recycling box, bottle bag) stay in the catalog, unspawned,
-  because the cargo rules' specs use them as fixtures and a throwable distraction could reuse them. Deleting them
-  outright touches about 20 spec files.
+- **Answered 2026-10-16:** the bottle bag came back as a valuable (§3.2). The rubbish bag and the recycling box stay
+  hidden in the catalog, unspawned: the cargo rules' specs use them as fixtures and a throwable distraction could
+  reuse them.
 
 ## 5. UI and copy (paperwork style)
 
@@ -125,6 +139,13 @@ Ranks and owner skins are unaffected.
 | Feature | Realm | Subfolder | Name | Job |
 |---|---|---|---|---|
 | Shift | server | Systems | ShiftGloomSystem | Credits each cleared pile's and cleaning step's Gloom to Round's `clearance` (and piles to `dust`) while a shift runs, then re-checks the contract |
+
+Follow-up (2026-10-16, §3.5): `VacuumConstants.PILE_GLOOM` 40; `OfficeConstants` (`DIRTY_ROOMS`, `PILES_PER_ROOM`,
+`PILE_SPOTS`, `PILE_SPOT_STEP`, `TOP_UP_MAX` 6); `OfficeTypes.RollOptions` (`dirtyRooms`, `pilesPerRoom` replace
+`piles`); `OfficeLayoutRoomUtils` (the extra pile spots); `OfficeSpawnUtils` (`pileOrder`: dirty rooms, clustered
+top-up); `OfficeLayoutRules.checkCapacity` (enough rooms with a dirty room's pile markers); `OfficeLayoutConstants`
+(one more pile marker in the authored break room and manager's office); `ShiftConstants.QUOTA_BY_CREW`;
+`CargoRegistry` (the bottle bag a valuable).
 
 Changed: `CargoConstants` (`GLOOM_BY_SIZE`), `CargoAppraisalFormulas` (`gloomLeft`, `gloomRemoved`), `CargoGrimeSystem`
 (`cleaned`), `CargoServiceServer` (`grimeRemoved`), `CargoRegistry` (no dust bag, trash unweighted),

@@ -10,9 +10,12 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local OfficeTypes = require(ServerScriptService.Features.Office.Data.OfficeTypes)
 
--- The loot loop (docs/superpowers/specs/2026-10-15-cleanup-crew-loot-loop-design.md §3.5): fewer piles, about a
--- third of them burying a valuable, and 10-14 valuables a map in all (open, buried and in desks).
-local PILES: OfficeTypes.Range = { min = 14, max = 18 }
+-- The dust is clustered (docs/superpowers/specs/2026-10-16-cleanup-crew-gloom-gleam-economy-design.md §3.1): a few
+-- properly dirty rooms with clean rooms between them, each holding PILES_PER_ROOM piles. About a third of the piles
+-- bury a valuable, and a map offers 10-14 valuables in all (open, buried and in desks; the loot loop,
+-- docs/superpowers/specs/2026-10-15-cleanup-crew-loot-loop-design.md §3.5).
+local DIRTY_ROOMS: OfficeTypes.Range = { min = 4, max = 6 }
+local PILES_PER_ROOM: OfficeTypes.Range = { min = 3, max = 5 }
 local VALUABLES: OfficeTypes.Range = { min = 10, max = 14 }
 -- Original catalog dimensions, rounded upward for visual fit without shrinking readable props.
 local DESK_PROP_SIZES: { [string]: Vector3 } = {
@@ -67,7 +70,12 @@ return table.freeze({
 	DOOR_MIN_WIDTH = 4,
 	-- Rooms this many doors from the loading bay, or more, are "deep" (where the greed target goes).
 	DEEP_DEPTH = 2,
-	PILES = table.freeze(PILES),
+	DIRTY_ROOMS = table.freeze(DIRTY_ROOMS),
+	PILES_PER_ROOM = table.freeze(PILES_PER_ROOM),
+	-- Each generated room offers up to PILE_SPOTS pile markers (OfficeLayoutRoomUtils: its two rear corners, then free
+	-- floor on a PILE_SPOT_STEP grid, nearest a wall first), so a dirty room can hold PILES_PER_ROOM.max.
+	PILE_SPOTS = 5,
+	PILE_SPOT_STEP = 1,
 	-- How many valuables a map offers, counting the greed target, desk valuables and buried ones (no trash: the Gloom
 	-- economy rolls none).
 	VALUABLES = table.freeze(VALUABLES),
@@ -83,9 +91,10 @@ return table.freeze({
 	LOOT_AVERAGE_CLEAN = 0.5,
 	-- The contract guarantee (docs/superpowers/specs/2026-10-16-cleanup-crew-gloom-gleam-economy-design.md §3.4): the
 	-- contract may ask at most CONTRACT_SHARE_MAX of the site's Gloom (piles plus valuables' grime); a thinner roll
-	-- adds up to TOP_UP_MAX more piles on free pile markers (plain, burying nothing).
+	-- adds up to TOP_UP_MAX more piles on free pile markers (plain, burying nothing; the dirty rooms' spare markers
+	-- first). 6: the thinnest clustered roll (4 dirty rooms of 3 piles) needs about 5 more for the biggest crew.
 	CONTRACT_SHARE_MAX = 0.8,
-	TOP_UP_MAX = 4,
+	TOP_UP_MAX = 6,
 	-- Seeds tried (seed, seed + 1, ...) before a roll that misses a guarantee is an error.
 	ROLL_ATTEMPTS = 5,
 	DESK_SIZE = Vector3.new(5, 3, 3),

@@ -5,7 +5,8 @@
 	§3.5). Deterministic for a given Random: the catalog is walked in sorted order and `rng` is consumed in a fixed
 	sequence:
 
-	1. piles: a count in `options.piles`, on shuffled pile markers, each a random pile kind;
+	1. piles, clustered: `options.dirtyRooms` dirty rooms with clean rooms between them where the layout allows, each
+	   holding `options.pilesPerRoom` piles on its own shuffled pile markers, each a random pile kind (pileOrder);
 	2. desks and lockers: each holds a desk-weighted valuable with SEARCH_FILL_CHANCE, else nothing; after
 	   DESK_VALUABLES_MAX valuables, nothing;
 	3. the greed target (fish tank, filing cabinet or golden stapler), always in a deep room: a hidden one
@@ -14,7 +15,7 @@
 	5. buried loot: one BURY_CHANCE draw per pile (OfficeLootUtils.buried), each hit burying a buriable valuable,
 	   capped so MIN_OPEN of the budget is left for the open;
 	6. the rest of the budget in the open (on item markers, or the furniture tops their kind belongs on);
-	7. the top-up: plain piles on free pile markers, at most TOP_UP_MAX, while the site's Gloom is too thin for the
+	7. the top-up: plain piles on free pile markers (the dirty rooms' leftovers first), at most TOP_UP_MAX, while the site's Gloom is too thin for the
 	   contract (`options.quota`, OfficeLootUtils.shortfall; docs/superpowers/specs/
 	   2026-10-16-cleanup-crew-gloom-gleam-economy-design.md §3.4).
 
@@ -42,7 +43,7 @@ local OfficeSpawnRules = require(OfficeServer.Rules.OfficeSpawnRules)
 type Marker = OfficeTypes.Marker
 type ItemDef = CargoTypes.ItemDef
 
-local function shuffled(list: { Marker }, rng: Random): { Marker }
+local function shuffled<T>(list: { T }, rng: Random): { T }
 	local copy = table.clone(list)
 	for index = #copy, 2, -1 do
 		local swap = rng:NextInteger(1, index)
@@ -97,6 +98,131 @@ local function surfaceFor(def: ItemDef): { string }
 	return OfficeSpawnRules.surfaceKindsFor(def.id)
 end
 
+-- Which rooms are next to which: they share a doorway, or a corridor joins them (a corridor is not a room, so two
+-- rooms either side of one have no clean room between them).
+local function neighbours(layout: OfficeTypes.Layout): { [string]: { [string]: boolean } }
+	local halls: { [string]: boolean } = {}
+	for _, room in layout.rooms do
+		if room.zone == "hallway" then
+			halls[room.id] = true
+		end
+	end
+	local direct: { [string]: { string } } = {}
+	local function link(a: string, b: string)
+		local list = direct[a]
+		if list == nil then
+			list = {}
+			direct[a] = list
+		end
+		table.insert(list, b)
+	end
+	for _, door in layout.doors do
+		link(door.a, door.b)
+		link(door.b, door.a)
+	end
+	local result: { [string]: { [string]: boolean } } = {}
+	local function mark(a: string, b: string)
+		if a == b then
+			return
+		end
+		local set = result[a]
+		if set == nil then
+			set = {}
+			result[a] = set
+		end
+		set[b] = true
+	end
+	for a, list in direct do
+		for _, b in list do
+			local through = direct[b]
+			if halls[b] and through ~= nil then
+				for _, c in through do
+					mark(a, c)
+				end
+			else
+				mark(a, b)
+			end
+		end
+	end
+	return result
+end
+
+--[=[
+	Step 1's markers: the piles' markers in pile order, then the free ones in top-up order, and how many of them
+	the piles take. DIRTY_ROOMS-many rooms are dirty (`options.dirtyRooms`), chosen in a shuffled order: first rooms with
+	at least `options.pilesPerRoom.min` pile markers and no dirty neighbour (neighbours), then any with that many, then
+	any. Each dirty room holds `options.pilesPerRoom` piles (at most its markers) on its own shuffled markers. The free
+	markers list the dirty rooms' leftovers first, then the clean rooms', room by room, so a top-up keeps the dust in
+	clusters.
+]=]
+local function pileOrder(
+	layout: OfficeTypes.Layout,
+	options: OfficeTypes.RollOptions,
+	rng: Random
+): ({ Marker }, number)
+	local byRoom: { [string]: { Marker } } = {}
+	local rooms: { string } = {}
+	for _, marker in OfficeLayoutUtils.markersOf(layout, "pile") do
+		local list = byRoom[marker.room]
+		if list == nil then
+			list = {}
+			byRoom[marker.room] = list
+			table.insert(rooms, marker.room)
+		end
+		table.insert(list, marker)
+	end
+	local order = shuffled(rooms, rng)
+	local near = neighbours(layout)
+	local wanted = rng:NextInteger(options.dirtyRooms.min, options.dirtyRooms.max)
+	local dirty: { string } = {}
+	local chosen: { [string]: boolean } = {}
+	for pass = 1, 3 do
+		for _, room in order do
+			if #dirty >= wanted then
+				break
+			end
+			if not chosen[room] then
+				local roomy = #byRoom[room] >= options.pilesPerRoom.min
+				local apart = true
+				local around = near[room]
+				if around ~= nil then
+					for other in chosen do
+						if around[other] then
+							apart = false
+						end
+					end
+				end
+				local take = if pass == 1 then roomy and apart elseif pass == 2 then roomy else true
+				if take then
+					chosen[room] = true
+					table.insert(dirty, room)
+				end
+			end
+		end
+	end
+	local used: { Marker } = {}
+	local spare: { Marker } = {}
+	for _, room in dirty do
+		local markers = shuffled(byRoom[room], rng)
+		local count = math.min(rng:NextInteger(options.pilesPerRoom.min, options.pilesPerRoom.max), #markers)
+		for index, marker in markers do
+			table.insert(if index <= count then used else spare, marker)
+		end
+	end
+	for _, room in order do
+		if not chosen[room] then
+			for _, marker in byRoom[room] do
+				table.insert(spare, marker)
+			end
+		end
+	end
+	local count = #used
+	for _, marker in spare do
+		table.insert(used, marker)
+	end
+	return used, count
+end
+
 local OfficeSpawnUtils = {}
 
 function OfficeSpawnUtils.roll(
@@ -121,9 +247,9 @@ function OfficeSpawnUtils.roll(
 		return roll
 	end
 
-	-- 1. Piles.
-	local pileMarkers = shuffled(OfficeLayoutUtils.markersOf(layout, "pile"), rng)
-	local pileCount = math.min(rng:NextInteger(options.piles.min, options.piles.max), #pileMarkers)
+	-- 1. Piles, clustered: the dirty rooms, then each one's piles on its own shuffled pile markers. `pileMarkers` lists
+	-- the markers the piles stand on (in pile order), then the free ones in top-up order (step 7).
+	local pileMarkers, pileCount = pileOrder(layout, options, rng)
 	local kinds = VacuumConstants.PILE_KIND_LIST
 	local piles: { OfficeTypes.PilePlan } = {}
 	for index = 1, pileCount do

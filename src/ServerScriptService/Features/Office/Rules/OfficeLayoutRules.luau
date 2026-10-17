@@ -194,13 +194,24 @@ function OfficeLayoutRules.validate(layout: Layout): (boolean, { string })
 end
 
 --[=[
-	Whether the spawn roll can always run on this layout: enough pile markers for the largest pile roll, a
-	spawn marker, and a deep item marker and a deep desk or locker for the greed target.
+	Whether the spawn roll can always run on this layout: enough rooms with room for a dirty room's piles (at least
+	DIRTY_ROOMS.max rooms holding PILES_PER_ROOM.min pile markers or more), a spawn marker, and a deep item marker and a
+	deep desk or locker for the greed target.
 ]=]
 function OfficeLayoutRules.checkCapacity(layout: Layout): (boolean, string?)
-	local piles = #OfficeLayoutUtils.markersOf(layout, "pile")
-	if piles < OfficeConstants.PILES.max then
-		return false, `{piles} pile markers; the roll needs {OfficeConstants.PILES.max}`
+	local perRoom: { [string]: number } = {}
+	for _, marker in OfficeLayoutUtils.markersOf(layout, "pile") do
+		perRoom[marker.room] = (perRoom[marker.room] or 0) + 1
+	end
+	local dirtyable = 0
+	for _, count in perRoom do
+		if count >= OfficeConstants.PILES_PER_ROOM.min then
+			dirtyable += 1
+		end
+	end
+	if dirtyable < OfficeConstants.DIRTY_ROOMS.max then
+		return false,
+			`{dirtyable} rooms have {OfficeConstants.PILES_PER_ROOM.min} pile markers; the roll needs {OfficeConstants.DIRTY_ROOMS.max}`
 	end
 	if #OfficeLayoutUtils.markersOf(layout, "spawn") == 0 then
 		return false, "no spawn markers"

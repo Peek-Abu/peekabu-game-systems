@@ -160,7 +160,8 @@ local function rollPlan(options: { seed: number, variant: string, quota: number 
 	local rollOptions: OfficeTypes.RollOptions = {
 		quota = options.quota,
 		variant = options.variant,
-		piles = OfficeConstants.PILES,
+		dirtyRooms = OfficeConstants.DIRTY_ROOMS,
+		pilesPerRoom = OfficeConstants.PILES_PER_ROOM,
 		valuables = OfficeConstants.VALUABLES,
 	}
 	local plan: OfficeTypes.SpawnPlan

@@ -84,7 +84,7 @@ The depot contract board and a one-card arrival screen carry this; no tutorial n
   The pile shrinks visibly; release cancels but **progress is kept**. Two vacuums on one pile add up.
 - Can't vacuum while your hands hold an item.
 - ~~Each cleared pile adds 1 to your **canister** (capacity 3). Full → a **dust bag** (trash, 15) pops
-  out at your feet and the canister empties.~~ Since 2026-10-16 a cleared pile removes 20 Gloom on the spot, and the
+  out at your feet and the canister empties.~~ Since 2026-10-16 a cleared pile removes 40 Gloom on the spot, and the
   canister is a live gauge of the crew's contract (economy note §3.1).
 - **Noise:** a pulse every 1 s while vacuuming, radius ~40 studs.
 - Pile visuals: paper heap, debris and dust, cable tangle.
@@ -124,7 +124,7 @@ searchable desk/locker.
 - **Banking:** stand in the truck bed, **Bank cargo** with your hands item (pockets unload with it). Trash
   adds to clearance, Recoverable Assets add dollars (×1.5 during overtime). Banked is safe forever. Pay
   is display-only in the demo (no saved balance); how an amount reads lives in one place, `ShiftCurrencyUtils`.
-- **Quota** (since 2026-10-16 the contract, 260-320 Gloom by crew; economy note §3.4) ~350 clearance. Spawn guarantees: total trash value ≥ 1.5× quota (counting canister
+- **Quota** (since 2026-10-16 the contract, 530-650 Gloom by crew; economy note §3.4) ~350 clearance. Spawn guarantees: total trash value ≥ 1.5× quota (counting canister
   output from the piles spawned), and at least one greed target (fish tank, cabinet or golden
   stapler), placed deep.
 

@@ -5,7 +5,7 @@ local OfficeLootUtils = require(script.Parent.OfficeLootUtils)
 local OfficeConstants = require(ServerScriptService.Features.Office.Data.OfficeConstants)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 
--- 3 piles (60 Gloom), a rubbish bag on the floor and a desk bottle bag (old fixtures: trash carries no Gloom and no
+-- 3 piles (PILE_GLOOM each), a rubbish bag on the floor and a desk recycling box (old fixtures: trash carries no Gloom and no
 -- value), and three valuables: a monitor (base 100, medium: 15 Gloom), a buried plaque (a "Solid brass" jackpot, base
 -- 200 = plain 80, tiny: 5) and a desk plaque (base 60, tiny: 5).
 local function plan()
@@ -26,7 +26,7 @@ local function plan()
 		},
 		searchables = {
 			{ marker = "a.desk.1", kind = "plaque", appraisal = { base = 60 } },
-			{ marker = "a.desk.2", kind = "bottleBag" },
+			{ marker = "a.desk.2", kind = "recyclingBox" },
 			{ marker = "a.desk.3" },
 		},
 		value = 0,

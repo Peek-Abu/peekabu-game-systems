@@ -108,7 +108,9 @@ export type RollOptions = {
 	quota: number,
 	-- The shift's A/B variant. Kept for analytics; since the loot loop it no longer changes the roll.
 	variant: string,
-	piles: Range,
+	-- How many rooms are dirty, and how many piles each dirty room holds (OfficeSpawnUtils step 1).
+	dirtyRooms: Range,
+	pilesPerRoom: Range,
 	valuables: Range,
 }
 

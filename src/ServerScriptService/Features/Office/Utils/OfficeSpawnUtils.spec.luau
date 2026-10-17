@@ -21,7 +21,8 @@ local function options(variant, quota)
 	return {
 		quota = quota or 0,
 		variant = variant,
-		piles = OfficeConstants.PILES,
+		dirtyRooms = OfficeConstants.DIRTY_ROOMS,
+		pilesPerRoom = OfficeConstants.PILES_PER_ROOM,
 		valuables = OfficeConstants.VALUABLES,
 	}
 end
@@ -108,11 +109,128 @@ return function()
 		expect(first.greed.kind).to.equal(second.greed.kind)
 	end)
 
-	it("rolls a pile count inside the configured range", function()
-		for seed = 1, 20 do
-			local count = #roll(seed).piles
-			expect(count >= OfficeConstants.PILES.min and count <= OfficeConstants.PILES.max).to.equal(true)
+	describe("clustered dust", function()
+		-- The piles of `plan` by room id.
+		local function pilesByRoom(layout, plan)
+			local rooms = {}
+			for _, pile in plan.piles do
+				local marker = OfficeLayoutUtils.marker(layout, pile.marker)
+				rooms[marker.room] = (rooms[marker.room] or 0) + 1
+			end
+			return rooms
 		end
+		-- Room ids next to each other: through a doorway, or a corridor between them.
+		local function neighbours(layout)
+			local halls = {}
+			for _, room in layout.rooms do
+				if room.zone == "hallway" then
+					halls[room.id] = true
+				end
+			end
+			local direct = {}
+			for _, door in layout.doors do
+				direct[door.a] = direct[door.a] or {}
+				direct[door.b] = direct[door.b] or {}
+				table.insert(direct[door.a], door.b)
+				table.insert(direct[door.b], door.a)
+			end
+			return function(a, b)
+				for _, other in direct[a] or {} do
+					if other == b then
+						return true
+					end
+					if halls[other] then
+						for _, beyond in direct[other] do
+							if beyond == b then
+								return true
+							end
+						end
+					end
+				end
+				return false
+			end
+		end
+
+		it("makes DIRTY_ROOMS rooms dirty, each with PILES_PER_ROOM piles, on generated offices", function()
+			for seed = 1, 30 do
+				if seed % 5 == 0 then
+					task.wait()
+				end
+				local layout = OfficeLayoutGenerationUtils.generate(LAYOUT, seed)
+				local plan = OfficeSpawnUtils.roll(layout, options("B"), Random.new(seed))
+				local dirty = 0
+				for _, count in pilesByRoom(layout, plan) do
+					dirty += 1
+					expect(count >= OfficeConstants.PILES_PER_ROOM.min).to.equal(true)
+					expect(count <= OfficeConstants.PILES_PER_ROOM.max).to.equal(true)
+				end
+				expect(dirty >= OfficeConstants.DIRTY_ROOMS.min and dirty <= OfficeConstants.DIRTY_ROOMS.max).to.equal(
+					true
+				)
+			end
+		end)
+
+		it("keeps a clean room between dirty rooms on generated offices", function()
+			for seed = 1, 30 do
+				if seed % 5 == 0 then
+					task.wait()
+				end
+				local layout = OfficeLayoutGenerationUtils.generate(LAYOUT, seed)
+				local plan = OfficeSpawnUtils.roll(layout, options("B"), Random.new(seed))
+				local near = neighbours(layout)
+				local rooms = {}
+				for room in pilesByRoom(layout, plan) do
+					table.insert(rooms, room)
+				end
+				for index, a in rooms do
+					for other = index + 1, #rooms do
+						if near(a, rooms[other]) then
+							error(`seed {seed}: dirty rooms {a} and {rooms[other]} are next to each other`)
+						end
+					end
+				end
+			end
+		end)
+
+		it("keeps the dust in the dirty rooms' own markers on the authored office too", function()
+			for seed = 1, 20 do
+				for _, count in pilesByRoom(LAYOUT, roll(seed)) do
+					expect(count <= OfficeConstants.PILES_PER_ROOM.max).to.equal(true)
+				end
+			end
+		end)
+
+		it("tops a thin site up in the dirty rooms first", function()
+			local big = QUOTA * 2
+			for seed = 1, 20 do
+				if seed % 5 == 0 then
+					task.wait()
+				end
+				local layout = OfficeLayoutGenerationUtils.generate(LAYOUT, seed)
+				local plain = OfficeSpawnUtils.roll(layout, options("B"), Random.new(seed))
+				local topped = OfficeSpawnUtils.roll(layout, options("B", big), Random.new(seed))
+				local before = pilesByRoom(layout, plain)
+				local spare = 0
+				for room, count in before do
+					local markers = 0
+					for _, marker in OfficeLayoutUtils.markersOf(layout, "pile") do
+						if marker.room == room then
+							markers += 1
+						end
+					end
+					spare += markers - count
+				end
+				local extra = #topped.piles - #plain.piles
+				local inDirty = 0
+				for index = #plain.piles + 1, #topped.piles do
+					local marker = OfficeLayoutUtils.marker(layout, topped.piles[index].marker)
+					if before[marker.room] ~= nil then
+						inDirty += 1
+					end
+				end
+				expect(inDirty).to.equal(math.min(extra, spare))
+			end
+		end)
 	end)
 
 	it("buries loot in both variants, the same way (the variant no longer changes the roll)", function()

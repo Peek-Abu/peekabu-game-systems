@@ -23,6 +23,36 @@ return function()
 				expect(counts.counter >= 1 and counts.desk >= 1).to.equal(true)
 			end
 		end)
+		it("offers a dirty room's worth of pile spots (up to PILE_SPOTS), clear of the doors and the centre", function()
+			local Constants = require(game:GetService("ServerScriptService").Features.Office.Data.OfficeConstants)
+			local full, roomy = 0, 0
+			for seed = 1, 40 do
+				if seed % 5 == 0 then
+					task.wait()
+				end
+				local maxX, maxZ = 30 + seed % 11, 28 + seed * 3 % 11
+				local room =
+					{ id = "work", name = "Work", minX = 0, minZ = 0, maxX = maxX, maxZ = maxZ, zone = "office" }
+				local piles = 0
+				for _, marker in RoomUtils.markers(room, Random.new(seed)) do
+					if marker.kind == "pile" then
+						piles += 1
+						expect(math.abs(marker.x - maxX / 2) > 5 and math.abs(marker.z - maxZ / 2) > 5).to.equal(true)
+					end
+				end
+				-- The two rear corners always; more where the floor is free.
+				expect(piles >= 2 and piles <= Constants.PILE_SPOTS).to.equal(true)
+				if piles >= Constants.PILES_PER_ROOM.min then
+					roomy += 1
+				end
+				if piles == Constants.PILE_SPOTS then
+					full += 1
+				end
+			end
+			if roomy < 32 or full < 24 then
+				error(`only {roomy} of 40 rooms hold a dirty room's minimum and {full} the full PILE_SPOTS`)
+			end
+		end)
 		it(
 			"stands at most one supply cabinet per room, against a wall, its door to the room; most rooms get one",
 			function()

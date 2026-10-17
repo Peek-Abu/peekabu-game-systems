@@ -5,6 +5,7 @@ local Types = require(Server.Data.OfficeTypes)
 local Constants = require(Server.Data.OfficeConstants)
 local Utils = {}
 type Footprint = { x: number, z: number, hx: number, hz: number }
+local PILE_SIZE = Vector3.new(4, 1, 4)
 local SIZES: { [Types.MarkerKind]: Vector3? } = {
 	desk = Constants.DESK_SIZE,
 	locker = Constants.LOCKER_SIZE,
@@ -14,7 +15,7 @@ local SIZES: { [Types.MarkerKind]: Vector3? } = {
 	cabinet = Constants.CABINET_SIZE,
 	closet = Constants.CLOSET_SIZE,
 	plant = Constants.PLANT_SIZE,
-	pile = Vector3.new(4, 1, 4),
+	pile = PILE_SIZE,
 	item = Vector3.new(3.6, 1, 3.6),
 }
 function Utils.markers(room: Types.Room, rng: Random): { Types.Marker }
@@ -135,6 +136,42 @@ function Utils.markers(room: Types.Room, rng: Random): { Types.Marker }
 	for _, candidate in closets do
 		if add("closet", candidate[1], candidate[2], candidate[3]) then
 			break
+		end
+	end
+	-- More dust spots, up to PILE_SPOTS (a dirty room holds several piles: docs/superpowers/specs/
+	-- 2026-10-16-cleanup-crew-gloom-gleam-economy-design.md §3.1). Placed after everything else, on the floor the room
+	-- has left, nearest a wall first, so they never displace furniture, loot spots or the supply cabinet. Each keeps a
+	-- little more than the usual gap, so float rounding never lands one exactly on another's edge.
+	local pileHalf = PILE_SIZE.X / 2
+	local spots: { Vector2 } = {}
+	local spotX = -hx + 2.5
+	while spotX <= hx - 2.5 + 0.001 do
+		local spotZ = -hz + 2.5
+		while spotZ <= hz - 2.5 + 0.001 do
+			table.insert(spots, Vector2.new(spotX, spotZ))
+			spotZ += Constants.PILE_SPOT_STEP
+		end
+		spotX += Constants.PILE_SPOT_STEP
+	end
+	local function toWall(spot: Vector2): number
+		return math.min(hx - math.abs(spot.X), hz - math.abs(spot.Y))
+	end
+	table.sort(spots, function(a: Vector2, b: Vector2): boolean
+		local wallA, wallB = toWall(a), toWall(b)
+		if wallA ~= wallB then
+			return wallA < wallB
+		end
+		if a.X ~= b.X then
+			return a.X < b.X
+		end
+		return a.Y < b.Y
+	end)
+	for _, spot in spots do
+		if (counts.pile or 0) >= Constants.PILE_SPOTS then
+			break
+		end
+		if clear(spot.X, spot.Y, pileHalf + 0.05, pileHalf + 0.05, 5) then
+			add("pile", spot.X, spot.Y, 0)
 		end
 	end
 	add("patrol", 0, 0, 0)

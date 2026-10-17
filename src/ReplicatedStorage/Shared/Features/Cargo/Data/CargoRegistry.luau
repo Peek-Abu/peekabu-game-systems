@@ -7,9 +7,9 @@
 
 	Trash has a fixed price, and no longer spawns: under the Gloom and Gleam economy (docs/superpowers/specs/
 	2026-10-16-cleanup-crew-gloom-gleam-economy-design.md §4) it counts toward nothing and pays nothing, so the roll
-	never places it (no weights) and the dust bag is gone. The three kinds stay in the catalog for the trash rules'
-	own specs and a possible later use (a throwable distraction); see that note's open question. A valuable (salvage)
-	has a base RANGE, rolled once per shift and scaled by depth (CargoAppraisalFormulas), an optional rare jackpot
+	never places it (no weights) and the dust bag is gone. The two kinds left (rubbish bag, recycling box) stay hidden
+	in the catalog for the trash rules' own specs and a possible later use (a throwable distraction); the bottle bag
+	is a valuable now. A valuable (salvage) has a base RANGE, rolled once per shift and scaled by depth (CargoAppraisalFormulas), an optional rare jackpot
 	variant, and spawns grimy; its `value` is the range's middle, a reference only (docs/superpowers/specs/
 	2026-10-15-cleanup-crew-loot-loop-design.md §3.1: about 3x the old catalog once depth is applied, the greed targets
 	about 4x).
@@ -113,7 +113,6 @@ end
 -- Trash: a fixed price, never spawned (no weights; it counts toward nothing under the Gloom contract).
 define("rubbishBag", "Rubbish bag", "trash", "light", Color3.fromRGB(40, 40, 45), { throwable = true }, 10)
 define("recyclingBox", "Recycling box", "trash", "light", Color3.fromRGB(60, 120, 200), { spills = true }, 15)
-define("bottleBag", "Bottle bag", "trash", "light", Color3.fromRGB(70, 160, 90), { rattly = true }, 15)
 
 -- Valuables (Recoverable Assets): a base range before depth, grimy until vacuumed.
 define("officePlant", "Office plant", "salvage", "medium", Color3.fromRGB(50, 140, 60), {
@@ -197,6 +196,15 @@ define("snowGlobe", "Snow globe", "salvage", "tiny", Color3.fromRGB(170, 215, 23
 	range = { min = 60, max = 110 },
 	jackpot = { name = "Musical", chance = 0.12, multiplier = 2 },
 	partSize = Vector3.new(1.1, 1.3, 1.1),
+})
+-- The bottle bag (an old trash kind brought back as a valuable, docs/superpowers/specs/
+-- 2026-10-16-cleanup-crew-gloom-gleam-economy-design.md §3.2): a light, rattly bag of deposit bottles. It pockets
+-- like the tiny ones, holds a light's Gloom, and is too big for a desk drawer or to hide under a pile.
+define("bottleBag", "Bottle bag", "salvage", "light", Color3.fromRGB(70, 160, 90), {
+	rattly = true,
+	spawnWeight = 2,
+	range = { min = 45, max = 85 },
+	jackpot = { name = "Vintage glass", chance = 0.1, multiplier = 2 },
 })
 define("keyring", "Keyring", "salvage", "tiny", Color3.fromRGB(205, 175, 90), {
 	rattly = true,
