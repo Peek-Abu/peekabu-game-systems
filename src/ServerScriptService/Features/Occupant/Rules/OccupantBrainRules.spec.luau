@@ -157,9 +157,10 @@ return function()
 			expect(stuck.cue).to.equal("giveUp")
 		end)
 
-		it("turns to a newer noise without a second cue", function()
+		it("turns to a newer noise in front of him without a second cue", function()
 			local heard = OccupantBrainRules.step(fresh(), senses({ heard = NOISE }))
-			local other = Vector3.new(70, 0, 90)
+			-- In his front cone (a newer one beside or behind him is the head turn: OccupantAlertRules.spec).
+			local other = Vector3.new(90, 0, 70)
 			local again = OccupantBrainRules.step(heard.mind, senses({ heard = other, now = 101 }))
 			expect(again.mind.noise).to.equal(other)
 			expect(again.cue).to.equal(nil)
@@ -330,8 +331,18 @@ return function()
 				senses({ now = 103, heard = noise, players = { player(7, Vector3.new(120, 3, 120), false) } })
 			)
 			expect(heard.mind.mode).to.equal("search")
-			expect(heard.intent.position).to.equal(noise)
-			expect(heard.intent.run).to.equal(true)
+			-- A quick head snap to it first (SEARCH_SNAP), then the run.
+			expect(heard.intent.kind).to.equal("idle")
+			expect(heard.mind.point).to.equal(noise)
+			local running = OccupantBrainRules.step(
+				heard.mind,
+				senses({
+					now = 103 + OccupantConstants.SEARCH_SNAP + 0.01,
+					players = { player(7, Vector3.new(120, 3, 120), false) },
+				})
+			)
+			expect(running.intent.position).to.equal(noise)
+			expect(running.intent.run).to.equal(true)
 			expect(heard.mind.lastSeen).to.equal(AHEAD)
 			expect(heard.mind.since).to.equal(101)
 		end)
