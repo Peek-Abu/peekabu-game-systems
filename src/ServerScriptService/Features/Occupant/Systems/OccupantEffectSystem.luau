@@ -2,7 +2,7 @@
 --[=[
 	OccupantEffectSystem: carries out what a think of the Manager's brain asks beyond the NPC intent
 	(OccupantTypes.Effect; docs/superpowers/specs/2026-10-15-cleanup-crew-manager-behaviours-design.md): his body
-	(OccupantSeatSystem: sit, stand, plant, release), whether he knows a hider (Hide's `setSeen`), holding a hider's
+	(OccupantSeatSystem: sit, stand, plant, release, unstick), whether he knows a hider (Hide's `setSeen`), holding a hider's
 	camping push-out while he is at their spot (Hide's `hold`), a supply cabinet's door swinging open as he checks it
 	(Hide's `setDoor`) and a catch (the service's `catch`, re-checked there). Effects naming a player who left are
 	skipped. Never yields.
@@ -22,7 +22,7 @@ local OccupantRigSystem = require(ServerScriptService.Features.Occupant.Systems.
 local OccupantSeatSystem = require(ServerScriptService.Features.Occupant.Systems.OccupantSeatSystem)
 local HideServiceServer = require(ServerScriptService.Features.Hide.HideServiceServer)
 
-local counters = { sits = 0, stands = 0, stares = 0, seen = 0, holds = 0, catches = 0, doors = 0 }
+local counters = { sits = 0, stands = 0, stares = 0, seen = 0, holds = 0, catches = 0, doors = 0, unsticks = 0 }
 
 local OccupantEffectSystem = {}
 
@@ -46,6 +46,9 @@ function OccupantEffectSystem.apply(
 		elseif effect.kind == "door" then
 			counters.doors += 1
 			HideServiceServer:setDoor(effect.spotId, effect.open)
+		elseif effect.kind == "unstick" then
+			counters.unsticks += 1
+			OccupantSeatSystem.unstick(rig, effect.position)
 		else
 			local player = Players:GetPlayerByUserId(effect.userId)
 			if player == nil then

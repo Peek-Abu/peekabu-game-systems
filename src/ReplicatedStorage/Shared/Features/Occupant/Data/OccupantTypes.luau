@@ -73,6 +73,8 @@ export type Effect =
 	| { kind: "holdCamp", userId: number, untilTime: number }
 	| { kind: "catch", userId: number }
 	| { kind: "door", spotId: string, open: boolean }
+	-- Stuck where no path starts: lifted to this route point (OccupantStuckRules).
+	| { kind: "unstick", position: Vector3 }
 
 -- How the director paces him (from the shift and the crew).
 export type Pacing = {
@@ -157,6 +159,11 @@ export type Mind = {
 	sitIns: number,
 	lastSitInAt: number?,
 	lastThink: number?,
+	-- Progress on a walk (OccupantStuckRules): where and when he last moved STUCK_MOVE, and how often in a row he has
+	-- been stuck since.
+	stuckFrom: Vector3?,
+	stuckAt: number?,
+	stuckCount: number?,
 }
 
 -- One crew member as the service saw them this think; `clear` is the line-of-sight ray's verdict.

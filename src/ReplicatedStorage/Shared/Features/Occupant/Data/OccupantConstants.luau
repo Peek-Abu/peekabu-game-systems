@@ -153,6 +153,11 @@ return table.freeze({
 	SEARCH_RADIUS = 36,
 	SEARCH_PROBES = 2,
 	GIVE_UP_SECONDS = 20,
+	-- A walk that goes nowhere (no path from where he stands, or to his goal): standing still on a `goTo` for
+	-- STUCK_SECONDS (moving less than STUCK_MOVE flat studs) drops that goal; still stuck after another STUCK_SECONDS, he
+	-- is lifted to the nearest route point (OccupantStuckRules; 2026-10-17 audit: patrol legs and steers had no give-up).
+	STUCK_SECONDS = 4,
+	STUCK_MOVE = 1.5,
 	-- The loading bay is no longer safe (only the truck's box is): he may patrol, chase and investigate in it, but after
 	-- BAY_LINGER_SECONDS there with nobody in sight he walks out and keeps out of it BAY_COOLDOWN_SECONDS, so he never
 	-- body-blocks the truck's ramp.

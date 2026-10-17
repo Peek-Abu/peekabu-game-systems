@@ -11,6 +11,7 @@
 	  STAND_CLEAR: never inside or behind it, where no path exists), and is let go, the clipboard back. Without the
 	  clip: at once.
 	- `plant`: anchored and slid onto a frame (staring at a spot, perfectly still); `release` lets go.
+	- `unstick`: let go and lifted onto a route point (stuck where no path starts: OccupantStuckRules).
 	- `look`: turning him while he looks around on arriving somewhere (investigate, search), per frame.
 	- Let go always hands his root back to the server's physics (SetNetworkOwner(nil)).
 
@@ -188,6 +189,22 @@ function OccupantSeatSystem.plant(rig: Rig, frame: CFrame)
 	local body = bodyOf(rig)
 	body.token += 1
 	slide(rig, body, frame)
+end
+
+--[=[
+	Lifts him, let go, onto the floor point `point` (a route point, where a path exists), keeping his heading: the last
+	resort when he is stuck where no path starts (OccupantStuckRules).
+]=]
+function OccupantSeatSystem.unstick(rig: Rig, point: Vector3)
+	local body = bodyOf(rig)
+	body.token += 1
+	body.seat = nil
+	stopSitting(body, 0)
+	showClipboard(rig, body, true)
+	letGo(rig, body)
+	local height = rig.humanoid.HipHeight + rig.root.Size.Y / 2
+	rig.root.CFrame = CFrame.new(point + Vector3.new(0, height, 0)) * rig.root.CFrame.Rotation
+	rig.root.AssemblyLinearVelocity = Vector3.zero
 end
 
 --[=[

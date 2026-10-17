@@ -30,8 +30,8 @@
 	A hidden player (Hide) is never chased: one he did not see go in is invisible to him; one he did (Senses.hiders,
 	seen) is stared at. Each step also settles his body (`settleBody`: off the chair, released from a spot) and
 	remembers what he saw and the menace gauge (OccupantDirectorRules.track); no move while he stands up or is
-	startled; a supply cabinet's door shuts whenever he leaves the phase that opened it (`shutDoor`). The service
-	carries out each step's effects.
+	startled; a walk that goes nowhere is dropped, then he is lifted out (OccupantStuckRules); a supply cabinet's door
+	shuts whenever he leaves the phase that opened it (`shutDoor`). The service carries out each step's effects.
 
 	The line-of-sight ray is the caller's (OccupantServiceServer): each Glimpse says whether it was clear.
 	Pure: nothing here yields or touches an Instance; it never changes the mind it is given. Times are
@@ -48,6 +48,7 @@ local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Dat
 local OccupantTypes = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantTypes)
 local OccupantDirectorRules = require(OccupantServer.Rules.OccupantDirectorRules)
 local OccupantStareRules = require(OccupantServer.Rules.OccupantStareRules)
+local OccupantStuckRules = require(OccupantServer.Rules.OccupantStuckRules)
 local OccupantWorkRules = require(OccupantServer.Rules.OccupantWorkRules)
 local OccupantMenaceFormulas = require(OccupantServer.Utils.OccupantMenaceFormulas)
 local M = require(OccupantServer.Utils.OccupantMindUtils)
@@ -454,7 +455,12 @@ function OccupantBrainRules.step(mind: Mind, senses: Senses): Step
 	if (standUntil ~= nil and senses.now < standUntil) or (reactUntil ~= nil and senses.now < reactUntil) then
 		intent = IDLE
 	end
-	return { mind = nextMind, intent = intent, cue = result.cue, effects = result.effects }
+	-- A walk that goes nowhere is dropped, then he is lifted out (never a freeze).
+	return OccupantStuckRules.watch(
+		mind,
+		{ mind = nextMind, intent = intent, cue = result.cue, effects = result.effects },
+		senses
+	)
 end
 
 return OccupantBrainRules
