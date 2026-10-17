@@ -293,4 +293,55 @@ return function()
 			expect(ShiftReviewViewModel.fit(Vector2.new(10, 10), false)).to.equal(ShiftReviewViewModel.MIN_SCALE)
 		end)
 	end)
+	describe("V1 results", function()
+		it("shouts the outcome and grades the rating", function()
+			local met = ShiftReviewViewModel.review(snapshot(), nil, 4, 100, false)
+			expect(met.title).to.equal("CONTRACT MET!")
+			expect(met.grade).to.equal("B")
+			local missed = ShiftReviewViewModel.review(
+				snapshot({}, review({ quotaMet = false, rating = "exceeds" })),
+				nil,
+				4,
+				100,
+				false
+			)
+			expect(missed.title).to.equal("CONTRACT MISSED")
+			expect(missed.grade).to.equal("C")
+			local great = ShiftReviewViewModel.review(snapshot({}, review({ rating = "exceeds" })), nil, 4, 100, false)
+			expect(great.grade).to.equal("A")
+		end)
+
+		it("gives each stat card its render, its number and its meaning", function()
+			local view = ShiftReviewViewModel.review(snapshot(), nil, 4, 100, false)
+			local cards = view.cards
+			expect(#cards).to.equal(4)
+			expect(cards[1].icon).to.equal("gloom")
+			expect(cards[1].value).to.equal("362/350")
+			expect(cards[1].meaning).to.equal("grape")
+			expect(cards[2].icon).to.equal("gleamPile")
+			expect(cards[2].value).to.equal("+577")
+			expect(cards[2].meaning).to.equal("gold")
+			expect(cards[2].gold).to.equal(true)
+			expect(cards[3].icon).to.equal("managerHunt")
+			expect(cards[3].value).to.equal("3")
+			expect(cards[3].meaning).to.equal("coral")
+			expect(cards[4].icon).to.equal("fishtank")
+			expect(cards[4].value).to.equal("6 OF 9")
+			expect(cards[4].meaning).to.equal("mint")
+		end)
+
+		it("draws each award with a render", function()
+			local view = ShiftReviewViewModel.review(snapshot(), nil, 4, 100, false)
+			expect(view.awards[1].icon).to.equal("trophy")
+			expect(view.awards[2].icon).to.equal("managerCalm")
+			expect(view.awards[3].icon).to.equal("grab")
+			expect(view.awards[4].icon).to.equal("stamina")
+			expect(ShiftReviewViewModel.awardIcon("noisyVacuum")).to.equal("vacuum")
+		end)
+
+		it("shows the vote's time left on its own", function()
+			local view = ShiftReviewViewModel.review(snapshot(), nil, 4, 96, false)
+			expect(view.voteClock).to.equal("0:24")
+		end)
+	end)
 end

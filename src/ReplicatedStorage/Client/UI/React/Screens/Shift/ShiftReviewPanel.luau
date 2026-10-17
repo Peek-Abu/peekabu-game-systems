@@ -1,17 +1,15 @@
 --!strict
 --[=[
-	ShiftReviewPanel: the performance review (Figma 5a met 31:557, 5c missed 31:611, 5b phone 31:665) on the paperwork
-	look: a manila folder over the dimmed office with its tab, the crew line, the CONTRACT MET / MISSED stamp, the four
-	rows (on desktop the Gloom and the Gleam rows carry their dust / item cleaning / valuables breakdown under the
-	label), "Overall rating:" and its stamp, Harlow's (or HR's) closing line; a fold; the joke-award sticky notes; and the
-	crew vote (ANOTHER SHIFT / BACK TO DEPOT with vote dots on desktop, counts on the phone, "your vote" in marker ink
-	beside the local player's choice) and its footer. The folder is drawn at its Figma size and positions and scaled
-	by `scale` (ShiftReviewViewModel.fit), centred. On the phone "+2 MORE AWARDS" swaps the two stickies for the
-	folded ones (UI-only state). With a `rank` view, the company rank's slip (RankSlip: level, XP bar, "Next: ...",
-	this shift's XP) is typed under the overall rating on desktop (Harlow's line moves down to make room) and along
-	the foot of the right column on the phone. Presentational: it draws the view it is given.
-
-	Tilts are the Figma rotations with the sign flipped (Figma turns counter-clockwise, Roblox clockwise).
+	ShiftReviewPanel: the results screen in the V1 kit (results render; the user's favourite): over the darkened office,
+	slow gold rays and a clean diagonal band (wiped clean by the squeegee as it opens) behind the huge stroked
+	CONTRACT MET! (gold) or CONTRACT MISSED (coral), the grade medallion breaking the title, Gleam sparkles; the
+	"SHIFT REVIEW · HARLOW & FINCH" pill; four stat cards whose renders break their left edge (the Gleam card is the
+	gold one); the company rank (RankSlip) under them with the Manager's line and the vote's footer; CREW AWARDS on
+	the right, the first award featured on a gold card with Pippa saluting from its corner; and the crew vote: the mint
+	ANOTHER SHIFT and the cream TO THE DEPOT with their counts, the local player's choice in V2's lilac selected ring,
+	the time left on a coral pill. Laid out at 1680x900 design px (phone 760x370) and scaled by `scale`
+	(ShiftReviewViewModel.fit), centred. On the phone "+2 MORE AWARDS" swaps in the folded awards (UI-only state).
+	Presentational: it draws the view it is given (specced in ShiftReviewViewModel and RankViewModel).
 
 	@class ShiftReviewPanel
 ]=]
@@ -20,24 +18,32 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
-local PaperButton = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperButton)
-local PaperAwardIcon = require(script.Parent.Parent.Paper.PaperAwardIcon)
-local PaperPortrait = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperPortrait)
-local PaperLabel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperLabel)
-local PaperSheet = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperSheet)
-local PaperStamp = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperStamp)
+local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
+local PaperScaleContext = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperScaleContext)
+local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local RankSlip = require(ReplicatedStorage.Client.UI.React.Screens.Rank.RankSlip)
 local RankViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Rank.RankViewModel)
-local StickyNote = require(ReplicatedStorage.Client.UI.React.Screens.Paper.StickyNote)
-local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local ShiftReviewViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftReviewViewModel)
+local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
+local ToonButton = require(Toon.ToonButton)
+local ToonIcon = require(Toon.ToonIcon)
+local ToonPanel = require(Toon.ToonPanel)
+local ToonPill = require(Toon.ToonPill)
+local ToonSparkle = require(Toon.ToonSparkle)
+local ToonSurface = require(Toon.ToonSurface)
+local ToonText = require(Toon.ToonText)
+local ToonWipe = require(Toon.ToonWipe)
+local UIToonConstants = require(Toon.UIToonConstants)
+local useToonPlay = require(Toon.useToonPlay)
 
 local e = React.createElement
+
+local COLOR = UIToonConstants.COLOR
 
 export type ShiftReviewPanelProps = {
 	view: ShiftReviewViewModel.ReviewView,
 	layout: UIPaperConstants.Layout,
-	-- The folder's scale on this screen (ShiftReviewViewModel.fit).
+	-- The layout's scale on this screen (ShiftReviewViewModel.fit).
 	scale: number,
 	onVote: (choice: ShiftTypes.Vote) -> (),
 	-- The local player's company rank (RankViewModel.slip); absent until the server publishes it.
@@ -46,343 +52,413 @@ export type ShiftReviewPanelProps = {
 
 type Nodes = { [string]: React.ReactNode }
 
-local COLOR = UIPaperConstants.COLOR
--- Figma 5a/5b scrim: near-black at 80% over the office.
-local SCRIM_TRANSPARENCY = 0.2
--- The desktop folder (Figma 5a): 1600x900 under the 46 px tab; the phone folder (5b) fills the safe area.
-local DESKTOP_TAB = 46
-local DESKTOP = Vector2.new(1600, 900)
-local PHONE = Vector2.new(748, 358)
--- Desktop sticky-note grid (340 wide), alternate tilts; phone pair (176 wide).
-local DESKTOP_STICKIES = { Vector2.new(848, 90), Vector2.new(1218, 90), Vector2.new(848, 280), Vector2.new(1218, 280) }
--- Phone notes start 20 px under the stat cards (cards end at y 206), so their tape clears them.
-local PHONE_STICKIES = { Vector2.new(16, 226), Vector2.new(204, 226) }
--- A smaller strip of tape for the 176 px phone notes, so it clears the stat cards above them.
-local PHONE_TAPE = Vector2.new(80, 18)
-local DOT = 26
--- The folder tab (Figma 5a: 399 wide) and its label size. Roblox fits Oswald's tall line box into TextSize, so a
--- Figma size is drawn about 1.4x larger to match its glyphs (and >= 20 px on desktop).
-local TAB_WIDTH = 399
-local TAB_TEXT = 28
--- The QUOTA MET / MISSED hero stamp (Figma 5a/5c 395-499 px wide at fs64; 5b 177 px at fs22), sized to match.
-local HEADLINE_DESKTOP = 96
--- The overall-rating stamp (Figma about 44 / 24), left-anchored after its label so the longest text (EXCEEDS
--- EXPECTATIONS, about 390 px wide at 44) grows to the right instead of over "Overall rating:".
-local RATING_DESKTOP = 44
-local RATING_PHONE = 24
-local LEFT_CENTRE = Vector2.new(0, 0.5)
-local HEADLINE_PHONE = 38
--- "your vote" in marker ink: above the legibility floors (desktop >= 20, phone >= 14) as drawn.
-local MARK_DESKTOP = 28
-local MARK_PHONE = 18
-local DOT_STEP = 32
--- The rank slip (desktop: under the overall rating, Harlow's line moved down to QUOTE_WITH_RANK; phone: the right
--- column's foot).
-local RANK_DESKTOP = Vector2.new(48, 640)
-local QUOTE_DESKTOP = 700
-local QUOTE_WITH_RANK = 790
-local RANK_PHONE = Vector2.new(404, 330)
+-- The design canvases (desktop / phone) the layout is drawn in before `scale`.
+local DESKTOP = Vector2.new(1680, 900)
+local PHONE = Vector2.new(760, 370)
+-- One turn of the rays, in seconds.
+local RAYS_PERIOD = 60
 
-local function at(x: number, y: number): UDim2
-	return UDim2.fromOffset(x, y)
-end
-
-local function label(
-	text: string,
-	role: PaperLabel.Role,
-	size: number,
-	x: number,
-	y: number,
-	width: number?
-): React.ReactNode
-	return e(PaperLabel, {
-		text = text,
-		role = role,
-		size = size,
-		position = at(x, y),
-		frame = if width ~= nil then UDim2.fromOffset(width, 0) else nil,
-		fit = width == nil,
-	})
-end
-
-local function rule(x: number, y: number, width: number, height: number): React.ReactNode
-	return e("Frame", {
-		Position = at(x, y),
-		Size = UDim2.fromOffset(width, height),
-		BackgroundColor3 = COLOR.companyTeal,
-		BorderSizePixel = 0,
-	})
-end
-
-local function stamp(text: string, size: number, tilt: number, x: number, y: number, anchor: Vector2?): React.ReactNode
-	return e(PaperStamp, {
-		text = text,
-		size = size,
-		tilt = tilt,
-		anchor = anchor or Vector2.new(0.5, 0.5),
-		position = at(x, y),
-	})
-end
-
-local function portrait(userId: number): React.ReactNode
-	return e(PaperPortrait, { userId = userId })
-end
-
--- Dedicated award art; original SVG reviews share these exact 64 px shape definitions.
-local function awardBadge(title: string): React.ReactNode
-	return e(PaperAwardIcon, { title = title })
-end
-
-local function stickiesOf(
-	awards: { ShiftReviewViewModel.AwardView },
-	spots: { Vector2 },
-	width: number,
-	size: number,
-	tape: Vector2?,
-	into: Nodes
-)
-	for index, spot in spots do
-		local award = awards[index]
-		if award ~= nil then
-			into[`award{index}`] = e(StickyNote, {
-				text = `{award.title}\n{award.line}`,
-				badge = if award.symbol ~= nil then awardBadge(award.title) else nil,
-				badgeSize = if width < 200 then 24 else 40,
-				portrait = if width >= 200 and award.userId ~= nil then portrait(award.userId) else nil,
-				width = width,
-				size = size,
-				tape = tape,
-				tilt = if index % 2 == 1 then -2 else 2,
-				position = at(spot.X, spot.Y),
-			})
-		end
+local function statCard(card: ShiftReviewViewModel.CardView, phone: boolean, position: UDim2): React.ReactNode
+	local size = if phone then Vector2.new(180, 74) else Vector2.new(400, 132)
+	local icon = if phone then 70 else 136
+	local left = if phone then 50 else 116
+	local face: Nodes = {
+		icon = e(ToonIcon, {
+			icon = card.icon,
+			position = UDim2.fromOffset(-icon * 0.3, (size.Y - icon) / 2 - 4),
+			size = UDim2.fromOffset(icon, icon),
+			drop = if phone then 3 else 6,
+			zIndex = 5,
+		}),
+		label = e(ToonText, {
+			text = card.label,
+			font = "body",
+			textSize = if phone then 13 else 22,
+			position = UDim2.fromOffset(left, if phone then 4 else 16),
+			size = UDim2.fromOffset(size.X - left - 10, if phone then 16 else 28),
+			fit = true,
+		}),
+		value = e(ToonText, {
+			text = card.value,
+			meaning = card.meaning,
+			textSize = if phone then 30 else 62,
+			position = UDim2.fromOffset(left, if phone then 24 else 48),
+			size = UDim2.fromOffset(size.X - left - 12, if phone then 38 else 70),
+			fit = true,
+		}),
+	}
+	if card.gold then
+		face.sparkles = e(ToonSparkle, {
+			spots = {
+				{ position = UDim2.new(1, -24, 0, 6), size = if phone then 16 else 30 },
+				{ position = UDim2.new(1, -60, 1, -14), size = if phone then 12 else 22 },
+			},
+			zIndex = 6,
+		})
 	end
+	return e(ToonPanel, {
+		hue = if card.gold then "gold" else "cream",
+		size = size,
+		position = position,
+		radius = if phone then 18 else 26,
+		children = face,
+	})
 end
 
--- A vote's dots (Figma 5a): `total` circles, the first `count` filled in ink, the rest outlined.
-local function dotsOf(vote: ShiftReviewViewModel.VoteView, x: number, y: number): React.ReactNode
-	local dots: Nodes = {}
-	for index = 1, vote.total do
-		local filled = index <= vote.count
-		dots[`dot{index}`] = e("Frame", {
-			Position = at((index - 1) * DOT_STEP, 0),
-			Size = UDim2.fromOffset(DOT, DOT),
+local function awardCard(
+	award: ShiftReviewViewModel.AwardView,
+	featured: boolean,
+	phone: boolean,
+	width: number,
+	position: UDim2
+): React.ReactNode
+	local height = if featured then (if phone then 72 else 148) else (if phone then 54 else 78)
+	local icon = if featured then (if phone then 70 else 128) else (if phone then 50 else 84)
+	local left = if phone then icon * 0.62 else icon * 0.72
+	local face: Nodes = {
+		title = e(ToonText, {
+			text = award.title,
+			textSize = if featured then (if phone then 20 else 42) else (if phone then 15 else 28),
+			position = UDim2.fromOffset(left, if featured then (if phone then 6 else 30) else 4),
+			size = UDim2.fromOffset(
+				width - left - (if featured then 200 else 20),
+				if featured then (if phone then 24 else 48) else (if phone then 20 else 34)
+			),
+			fit = true,
+		}),
+		line = e(ToonText, {
+			text = award.line,
+			font = "body",
+			textSize = if phone then 13 else 22,
+			position = UDim2.fromOffset(
+				left + 2,
+				if featured then (if phone then 36 else 84) else (if phone then 28 else 42)
+			),
+			size = UDim2.fromOffset(width - left - (if featured then 200 else 20), if phone then 16 else 28),
+			fit = true,
+		}),
+	}
+	if award.icon ~= nil then
+		face.icon = e(ToonIcon, {
+			icon = award.icon,
+			position = UDim2.fromOffset(-icon * 0.3, (height - icon) / 2 - 4),
+			size = UDim2.fromOffset(icon, icon),
+			drop = 5,
+			zIndex = 5,
+		})
+	end
+	if featured then
+		face.pippa = e(ToonIcon, {
+			image = UIAssets.toonPhotos.pippaSaluteCut,
+			anchor = Vector2.new(1, 1),
+			position = UDim2.new(1, if phone then 6 else 10, 1, 4),
+			size = UDim2.fromOffset(if phone then 90 else 200, if phone then 104 else 230),
+			drop = 0,
+			zIndex = 6,
+		})
+	end
+	return e(ToonPanel, {
+		hue = if featured then "gold" else "cream",
+		size = Vector2.new(width, height),
+		position = position,
+		radius = if phone then 18 else 26,
+		children = face,
+	})
+end
+
+local function voteButton(
+	vote: ShiftReviewViewModel.VoteView,
+	choice: ShiftTypes.Vote,
+	open: boolean,
+	phone: boolean,
+	position: UDim2,
+	width: number,
+	onVote: (choice: ShiftTypes.Vote) -> ()
+): React.ReactNode
+	local height = if phone then 54 else 84
+	local count = if phone then 34 else 54
+	local content: Nodes = {
+		label = e(ToonText, {
+			text = if choice == "depot" then "TO THE DEPOT" else vote.label,
+			textSize = if phone then 20 else 38,
+			position = UDim2.fromOffset(if phone then 10 else 22, 0),
+			size = UDim2.new(1, -(count + (if phone then 22 else 44)), 1, -4),
+			align = "center",
+			fit = true,
+		}),
+		count = e("Frame", {
+			AnchorPoint = Vector2.new(1, 0.5),
+			Position = UDim2.new(1, if phone then -8 else -16, 0.5, -2),
+			Size = UDim2.fromOffset(count, count),
 			BackgroundColor3 = COLOR.ink,
-			BackgroundTransparency = if filled then 0 else 1,
-			BorderSizePixel = 0,
 		}, {
 			corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }),
-			stroke = e("UIStroke", {
-				Color = COLOR.ink,
-				Thickness = 2,
-				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+			number = e(ToonText, {
+				text = tostring(vote.count),
+				textSize = if phone then 18 else 28,
+				size = UDim2.fromScale(1, 1),
+				align = "center",
 			}),
-		})
-	end
-	return e("Frame", {
-		Position = at(x, y),
-		Size = UDim2.fromOffset(vote.total * DOT_STEP, DOT),
-		BackgroundTransparency = 1,
-	}, dots)
-end
-
-local function desktopOf(props: ShiftReviewPanelProps): Nodes
-	local view = props.view
-	local nodes: Nodes = {
-		companyStrip = e(
-			"Frame",
-			{ Size = UDim2.new(1, 0, 0, 7), BackgroundColor3 = COLOR.companyTeal, BorderSizePixel = 0 }
-		),
-		copyNumber = label("CC / RECEIPT • SHIFT CLEARANCE", "heading", 18, 48, 852, 650),
-		subtitle = label(view.subtitle, "body", 22, 48, 30, 700),
-		headline = stamp(view.headline, HEADLINE_DESKTOP, 2, 246, 140),
-		ratingLabel = label(view.ratingLabel, "body", 24, 48, 590),
-		rating = stamp(view.rating, RATING_DESKTOP, 2, 284, 604, LEFT_CENTRE),
-		quote = label(
-			`{view.quote}\n{view.quoteBy}`,
-			"body",
-			22,
-			48,
-			if props.rank ~= nil then QUOTE_WITH_RANK else QUOTE_DESKTOP,
-			700
-		),
-		fold = rule(800, 30, 2, 840),
-		awardsTitle = label("CREW CLOCKS OFF", "heading", 26, 848, 36),
-		voteRule = rule(848, 500, 704, 2),
-		voteTitle = label(view.voteTitle, "heading", 26, 848, 526),
-		footer = label(view.footer, "body", 20, 848, 790, 704),
+		}),
 	}
-	for index, row in view.rows do
-		local y = 222 + (index - 1) * 84
-		nodes[`rule{index}`] = rule(48, y, 700, 2)
-		nodes[`label{index}`] = label(row.label, "heading", 24, 48, y + 16)
-		-- The row's breakdown (dust, item cleaning, valuables) typed small under its label.
-		local detail = row.detail
-		if detail ~= nil then
-			nodes[`detail{index}`] = label(detail, "body", 17, 48, y + 50)
-		end
-		nodes[`value{index}`] = e(PaperLabel, {
-			text = row.value,
-			role = "number",
-			size = 52,
-			align = "right",
-			position = at(360, y + 6),
-			frame = UDim2.fromOffset(388, 77),
-			autoSize = false,
-			wrapped = false,
-		})
-	end
-	local rank = props.rank
-	if rank ~= nil then
-		nodes.rank = e(RankSlip, { view = rank, layout = "desktop", position = at(RANK_DESKTOP.X, RANK_DESKTOP.Y) })
-	end
-	stickiesOf(view.awards, DESKTOP_STICKIES, 340, 24, nil, nodes)
-	local votes: { { key: string, vote: ShiftReviewViewModel.VoteView, choice: ShiftTypes.Vote, y: number } } = {
-		{ key = "another", vote = view.another, choice = "another", y = 580 },
-		{ key = "depot", vote = view.depot, choice = "depot", y = 680 },
-	}
-	for _, entry in votes do
-		local vote = entry.vote
-		nodes[entry.key] = e(PaperButton, {
-			text = vote.label,
-			variant = if entry.choice == "another" then "go" else "secondary",
-			-- A vote is a decision: both stamp the confirm.
-			sound = "confirm",
-			onPaper = true,
-			disabled = not view.voteOpen,
-			onActivated = function()
-				props.onVote(entry.choice)
-			end,
-			position = at(848, entry.y),
-			size = UDim2.fromOffset(286, 76),
-			textSize = 30,
-		})
-		nodes[`{entry.key}Dots`] = dotsOf(vote, 1180, entry.y + 20)
-		local mark = vote.mark
-		if mark ~= nil then
-			nodes[`{entry.key}Mark`] = e(PaperLabel, {
-				text = mark,
-				role = "marker",
-				size = MARK_DESKTOP,
-				anchor = Vector2.new(0, 0.5),
-				position = at(1180 + vote.total * DOT_STEP + 14, entry.y + 34),
-				fit = true,
-			})
-		end
-	end
-	return nodes
-end
-
--- The phone's award toggle: a transparent 48 px tall touch target around "+2 MORE AWARDS".
-local function toggleOf(text: string, onActivated: () -> ()): React.ReactNode
-	return e(PaperButton, {
-		text = text,
-		variant = "surface",
-		position = at(8, 339),
-		anchor = Vector2.new(0, 0.5),
-		size = UDim2.fromOffset(220, 48),
-		textSize = 15,
-		onActivated = onActivated,
+	return e(ToonButton, {
+		variant = if choice == "another" then "primary" else "secondary",
+		size = UDim2.fromOffset(width, height),
+		position = position,
+		selected = vote.mine,
+		disabled = not open,
+		content = content,
+		sound = if choice == "another" then "cta" else "back",
+		onActivated = function()
+			onVote(choice)
+		end,
 	})
 end
 
-local function phoneOf(props: ShiftReviewPanelProps, expanded: boolean, toggle: () -> ()): Nodes
-	local view = props.view
-	local nodes: Nodes = {
-		title = label(view.tab, "heading", 20, 16, 10),
-		headline = stamp(view.headline, HEADLINE_PHONE, 3, 105, 70),
-		voteTitle = label(view.voteTitle, "heading", 16, 404, 14),
-		footer = label(view.footer, "body", 14, 404, 240, 320),
-		ratingLabel = label(view.ratingLabel, "body", 15, 404, 306),
-		rating = stamp(view.rating, RATING_PHONE, 2, 476, 315, LEFT_CENTRE),
+local function headline(view: ShiftReviewViewModel.ReviewView, phone: boolean, canvas: Vector2): Nodes
+	local titleSize = if phone then 60 else 150
+	local centreY = if phone then 46 else 180
+	local spin = useToonPlay(RAYS_PERIOD, 0, nil, true)
+	local medal: Nodes = {}
+	medal.grade = e(ToonText, {
+		text = view.grade,
+		textSize = if phone then 52 else 124,
+		size = UDim2.fromScale(1, 0.9),
+		align = "center",
+	})
+	local band: Nodes = {
+		corner = e("UICorner", { CornerRadius = UDim.new(0, if phone then 20 else 40) }),
+		wipe = e(ToonWipe, { radius = if phone then 20 else 40, delay = 0.25 }),
 	}
-	for index, row in view.rows do
-		local x = if index % 2 == 1 then 16 else 202
-		local y = if index <= 2 then 100 else 156
-		nodes[`row{index}`] = e("Frame", {
-			Position = at(x, y),
-			Size = UDim2.fromOffset(174, 50),
-			BackgroundColor3 = COLOR.cream,
-			BackgroundTransparency = 0.4,
+	return {
+		rays = e("ImageLabel", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromOffset(canvas.X / 2, centreY),
+			Size = UDim2.fromOffset(if phone then 700 else 1600, if phone then 700 else 1600),
+			BackgroundTransparency = 1,
+			Image = UIAssets.toon.rays,
+			ImageColor3 = if view.met then UIToonConstants.shade("gold").hi else UIToonConstants.shade("lilac").hi,
+			ImageTransparency = 0.82,
+			Rotation = spin:map(function(alpha: number): number
+				return alpha * 360
+			end),
+			ZIndex = 0,
+		}),
+		band = e("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromOffset(canvas.X / 2, centreY + 6),
+			Size = UDim2.fromOffset(if phone then 600 else 1320, if phone then 80 else 196),
+			Rotation = -3,
+			BackgroundColor3 = COLOR.white,
+			BackgroundTransparency = 0.86,
 			BorderSizePixel = 0,
-		}, {
-			label = label(row.label, "heading", 14, 10, 3),
-			value = label(row.value, "number", 24, 10, 19),
-		})
-	end
-	local rank = props.rank
-	if rank ~= nil then
-		nodes.rank = e(RankSlip, { view = rank, layout = "phone", position = at(RANK_PHONE.X, RANK_PHONE.Y) })
-	end
-	local more = view.moreAwards
-	local less = view.lessAwards
-	stickiesOf(if expanded then view.extraAwards else view.awards, PHONE_STICKIES, 176, 16, PHONE_TAPE, nodes)
-	if more ~= nil and less ~= nil then
-		nodes.toggle = toggleOf(if expanded then less else more, toggle)
-	end
-	local votes: { { key: string, vote: ShiftReviewViewModel.VoteView, choice: ShiftTypes.Vote, y: number } } = {
-		{ key = "another", vote = view.another, choice = "another", y = 44 },
-		{ key = "depot", vote = view.depot, choice = "depot", y = 144 },
+			ZIndex = 1,
+		}, band),
+		title = e(ToonText, {
+			text = view.title,
+			meaning = if view.met then "gold" else "coral",
+			textSize = titleSize,
+			anchor = Vector2.new(0.5, 0.5),
+			position = UDim2.fromOffset(canvas.X / 2 - (if phone then 30 else 60), centreY),
+			size = UDim2.fromOffset(if phone then 560 else 1240, titleSize + 20),
+			align = "center",
+			rotation = -3,
+			fit = true,
+			zIndex = 3,
+		}),
+		medal = e(ToonSurface, {
+			hue = if view.met then "mint" else "coral",
+			radius = 999,
+			anchor = Vector2.new(0.5, 0.5),
+			position = UDim2.fromOffset(canvas.X - (if phone then 50 else 150), centreY - (if phone then 4 else 20)),
+			size = UDim2.fromOffset(if phone then 84 else 196, if phone then 84 else 196),
+			zIndex = 4,
+			children = medal,
+		}),
+		rating = e(ToonPill, {
+			text = view.rating,
+			hue = "night",
+			textSize = if phone then 11 else 20,
+			tilt = 8,
+			anchor = Vector2.new(0.5, 0.5),
+			position = UDim2.fromOffset(canvas.X - (if phone then 50 else 150), centreY + (if phone then 38 else 84)),
+			size = UDim2.fromOffset(if phone then 110 else 260, if phone then 22 else 38),
+			zIndex = 5,
+		}),
+		sparkles = e(ToonSparkle, {
+			spots = {
+				{
+					position = UDim2.fromOffset(canvas.X * 0.24, centreY - titleSize * 0.42),
+					size = if phone then 26 else 58,
+				},
+				{
+					position = UDim2.fromOffset(canvas.X * 0.69, centreY - titleSize * 0.55),
+					size = if phone then 22 else 46,
+				},
+				{
+					position = UDim2.fromOffset(canvas.X * 0.32, centreY + titleSize * 0.55),
+					size = if phone then 16 else 34,
+				},
+				{
+					position = UDim2.fromOffset(canvas.X * 0.77, centreY + titleSize * 0.5),
+					size = if phone then 18 else 38,
+				},
+			},
+			zIndex = 6,
+		}),
 	}
-	for _, entry in votes do
-		local vote = entry.vote
-		nodes[entry.key] = e(PaperButton, {
-			text = vote.text,
-			variant = if entry.choice == "another" then "go" else "secondary",
-			-- A vote is a decision: both stamp the confirm.
-			sound = "confirm",
-			onPaper = true,
-			disabled = not view.voteOpen,
-			onActivated = function()
-				props.onVote(entry.choice)
-			end,
-			position = at(404, entry.y),
-			size = UDim2.fromOffset(280, 62),
-			textSize = 20,
-		})
-		local mark = vote.mark
-		if mark ~= nil then
-			nodes[`{entry.key}Mark`] = label(mark, "marker", MARK_PHONE, 404, entry.y + 64)
-		end
-	end
-	return nodes
 end
 
 local function ShiftReviewPanel(props: ShiftReviewPanelProps): React.ReactNode
-	-- UI-only state: whether the phone shows its folded awards (hook called on every layout, for hook order).
-	local expanded, setExpanded = React.useState(false)
+	local view = props.view
 	local phone = props.layout == "phone"
-	local toggle = function()
-		setExpanded(not expanded)
+	local canvas = if phone then PHONE else DESKTOP
+	local showExtra, setShowExtra = React.useState(false)
+	-- The text fit limits follow the scale the canvas is drawn at (PaperScaleContext).
+	local outer = React.useContext(PaperScaleContext.Context)
+	local deps: { unknown } = { outer, props.scale }
+	local combined = React.useMemo(function(): React.Binding<number>
+		return outer:map(function(value: number): number
+			return value * props.scale
+		end)
+	end, deps)
+	local nodes: Nodes = headline(view, phone, canvas)
+	if not phone then
+		nodes.tab = e(ToonPill, {
+			text = "SHIFT REVIEW · HARLOW & FINCH",
+			hue = "night",
+			textSize = 26,
+			anchor = Vector2.new(0.5, 0),
+			position = UDim2.fromOffset(canvas.X / 2, 0),
+			size = UDim2.fromOffset(540, 52),
+			zIndex = 4,
+		})
 	end
-	local sheet = if phone then PHONE else DESKTOP
-	local top = if phone then 0 else DESKTOP_TAB
-	local content = if phone then phoneOf(props, expanded, toggle) else desktopOf(props)
-
+	-- The stat cards, 2x2 on the left.
+	local cardsTop = if phone then 96 else 300
+	local cardW = if phone then 188 else 420
+	local cardH = if phone then 82 else 154
+	for index, card in view.cards do
+		local column = (index - 1) % 2
+		local row = (index - 1) // 2
+		nodes[`card{index}`] =
+			statCard(card, phone, UDim2.fromOffset((if phone then 20 else 30) + column * cardW, cardsTop + row * cardH))
+	end
+	local rank = props.rank
+	if rank ~= nil then
+		nodes.rank = e(RankSlip, {
+			view = rank,
+			layout = props.layout,
+			position = UDim2.fromOffset(if phone then 20 else 30, cardsTop + 2 * cardH + (if phone then 4 else 10)),
+		})
+	end
+	if not phone then
+		nodes.quote = e(ToonText, {
+			text = `{view.quote}  {view.quoteBy}`,
+			font = "body",
+			color = COLOR.white,
+			textSize = 22,
+			position = UDim2.fromOffset(30, 780),
+			size = UDim2.fromOffset(820, 30),
+			fit = true,
+		})
+		nodes.footer = e(ToonText, {
+			text = view.footer,
+			font = "body",
+			color = UIToonConstants.shade("lilac").hi,
+			textSize = 18,
+			position = UDim2.fromOffset(30, 818),
+			size = UDim2.fromOffset(820, 26),
+			fit = true,
+		})
+	end
+	-- The awards on the right.
+	local right = if phone then 400 else 900
+	local width = canvas.X - right
+	nodes.awardsTitle = e(ToonText, {
+		text = "CREW AWARDS",
+		textSize = if phone then 22 else 44,
+		position = UDim2.fromOffset(right, if phone then 92 else 286),
+		size = UDim2.fromOffset(width, if phone then 26 else 50),
+	})
+	local awards: { ShiftReviewViewModel.AwardView } = if phone and showExtra then view.extraAwards else view.awards
+	local y = if phone then 124 else 350
+	for index, award in awards do
+		local featured = index == 1 and not (phone and showExtra)
+		nodes[`award{index}`] = awardCard(award, featured, phone, width, UDim2.fromOffset(right, y))
+		y += (if featured then (if phone then 72 else 148) else (if phone then 54 else 78)) + (if phone then 8 else 12)
+	end
+	if phone and view.moreAwards ~= nil then
+		nodes.more = e(ToonButton, {
+			variant = "lilac",
+			small = true,
+			text = if showExtra then view.lessAwards else view.moreAwards,
+			textSize = 13,
+			position = UDim2.fromOffset(right, y),
+			size = UDim2.fromOffset(170, 30),
+			onActivated = function()
+				setShowExtra(function(open: boolean)
+					return not open
+				end)
+			end,
+		})
+	end
+	-- The crew vote, bottom right.
+	local voteTop = if phone then 312 else 770
+	nodes.voteTitle = e(ToonText, {
+		text = "WHAT NEXT?",
+		textSize = if phone then 18 else 40,
+		position = UDim2.fromOffset(right, voteTop - (if phone then 26 else 6)),
+		size = UDim2.fromOffset(if phone then 120 else 260, if phone then 22 else 44),
+		fit = true,
+	})
+	nodes.voteClock = e(ToonPill, {
+		text = `VOTE · {view.voteClock}`,
+		hue = "coral",
+		textSize = if phone then 12 else 20,
+		position = UDim2.fromOffset(right + (if phone then 126 else 270), voteTop - (if phone then 26 else 2)),
+		size = UDim2.fromOffset(if phone then 92 else 160, if phone then 22 else 36),
+	})
+	local half = (width - (if phone then 10 else 20)) / 2
+	local buttonTop = voteTop + (if phone then 0 else 46)
+	nodes.another = voteButton(
+		view.another,
+		"another",
+		view.voteOpen,
+		phone,
+		UDim2.fromOffset(right, buttonTop),
+		half,
+		props.onVote
+	)
+	nodes.depot = voteButton(
+		view.depot,
+		"depot",
+		view.voteOpen,
+		phone,
+		UDim2.fromOffset(right + half + (if phone then 10 else 20), buttonTop),
+		half,
+		props.onVote
+	)
 	return e("Frame", {
 		Size = UDim2.fromScale(1, 1),
-		BackgroundColor3 = COLOR.night,
-		BackgroundTransparency = SCRIM_TRANSPARENCY,
+		BackgroundColor3 = COLOR.ink,
+		BackgroundTransparency = 0.18,
 		BorderSizePixel = 0,
-		Active = true,
 	}, {
-		folder = e("Frame", {
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromScale(0.5, 0.5),
-			Size = UDim2.fromOffset(sheet.X, sheet.Y + top),
-			BackgroundTransparency = 1,
-		}, {
-			scale = e("UIScale", { Scale = props.scale }),
-			sheet = e(PaperSheet, {
-				position = at(0, top),
-				size = UDim2.fromOffset(sheet.X, sheet.Y),
-				tab = if phone then nil else props.view.tab,
-				tabWidth = TAB_WIDTH,
-				tabTextSize = TAB_TEXT,
-				padding = 0,
-				paper = COLOR.cream,
-				fastener = "clip",
-			}, content),
+		vignette = e("UIGradient", {
+			Rotation = 90,
+			Color = ColorSequence.new(UIToonConstants.shade("night").base, COLOR.ink),
+		}),
+		canvas = e(PaperScaleContext.Context.Provider, { value = combined }, {
+			frame = e("Frame", {
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.5),
+				Size = UDim2.fromOffset(canvas.X, canvas.Y),
+				BackgroundTransparency = 1,
+			}, {
+				scale = e("UIScale", { Scale = props.scale }),
+				content = e(React.Fragment, nil, nodes),
+			}),
 		}),
 	})
 end

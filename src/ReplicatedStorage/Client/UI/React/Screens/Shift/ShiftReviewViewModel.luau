@@ -17,6 +17,7 @@ local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.Shif
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local ShiftCurrencyUtils = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftCurrencyUtils)
 local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
+local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 
 -- A totals row; `detail` is its breakdown line under the label (desktop), e.g. "Dust 260 · Item cleaning 80".
@@ -31,7 +32,23 @@ export type AwardShape = {
 	round: number,
 	color: "companyTeal" | "manila" | "cream" | "ink" | "stamp",
 }
-export type AwardView = { title: string, line: string, symbol: AwardSymbol?, userId: number? }
+export type AwardView = {
+	title: string,
+	line: string,
+	symbol: AwardSymbol?,
+	userId: number?,
+	-- V1: the award's kit render.
+	icon: UIAssets.ToonIcon?,
+}
+-- V1: a stat card (its render breaking the card's left edge, a label and a big number in its meaning's colour; the
+-- Gleam card is the gold one).
+export type CardView = {
+	label: string,
+	value: string,
+	icon: UIAssets.ToonIcon,
+	meaning: "gold" | "mint" | "coral" | "grape",
+	gold: boolean,
+}
 export type VoteView = {
 	label: string,
 	count: number,
@@ -44,6 +61,10 @@ export type VoteView = {
 }
 
 export type ReviewView = {
+	-- V1: the big title ("CONTRACT MET!"), the grade medallion's letter and the four stat cards.
+	title: string,
+	grade: string,
+	cards: { CardView },
 	tab: string,
 	subtitle: string,
 	headline: string,
@@ -60,6 +81,8 @@ export type ReviewView = {
 	moreAwards: string?,
 	lessAwards: string?,
 	voteTitle: string,
+	-- V1: the time left to vote ("0:24"), on its own pill.
+	voteClock: string,
 	-- Whether a vote can still be cast (until the vote closes at 0:00); the buttons are disabled after.
 	voteOpen: boolean,
 	another: VoteView,
@@ -79,6 +102,22 @@ local SHEET = table.freeze({
 })
 
 local ShiftReviewViewModel = {}
+
+local GRADE: { [ShiftTypes.Rating]: string } = { exceeds = "A", satisfactory = "B", needsImprovement = "C" }
+
+-- The kit render for an award's symbol.
+function ShiftReviewViewModel.awardIcon(symbol: AwardSymbol): UIAssets.ToonIcon
+	if symbol == "medal" then
+		return "trophy"
+	elseif symbol == "punchCard" then
+		return "managerCalm"
+	elseif symbol == "droppedMug" then
+		return "grab"
+	elseif symbol == "quietShoe" then
+		return "stamina"
+	end
+	return "vacuum"
+end
 
 -- The smallest scale `fit` returns (a degenerate viewport still draws something readable to vote on).
 ShiftReviewViewModel.MIN_SCALE = 0.4
@@ -185,11 +224,13 @@ end
 local function awardOf(award: ShiftTypes.Award, myUserId: number, phone: boolean): AwardView
 	local name = if myUserId ~= 0 and award.userId == myUserId then "you" else award.name
 	local line = if phone or award.detail == "" then name else `{name} — {award.detail}`
+	local symbol: AwardSymbol? = ShiftReviewViewModel.awardSymbol(award.title)
 	return {
 		title = award.title,
 		line = line,
-		symbol = ShiftReviewViewModel.awardSymbol(award.title),
+		symbol = symbol,
 		userId = if award.userId > 0 then award.userId else nil,
+		icon = if symbol ~= nil then ShiftReviewViewModel.awardIcon(symbol) else nil,
 	}
 end
 
@@ -230,6 +271,32 @@ function ShiftReviewViewModel.review(
 	local split = ShiftQuotaFormulas.breakdown(results.cleared, results.dust or 0, results.bonus)
 	local crewText = if truck ~= nil then `Crew of Truck {truck}` else "Crew"
 	return {
+		title = if met then "CONTRACT MET!" else "CONTRACT MISSED",
+		grade = GRADE[rating],
+		cards = {
+			{
+				label = "Gloom cleared",
+				value = `{split.gloom}/{results.quota}`,
+				icon = "gloom",
+				meaning = "grape",
+				gold = false,
+			},
+			{ label = "Gleam earned", value = `+{split.gleam}`, icon = "gleamPile", meaning = "gold", gold = true },
+			{
+				label = "Times caught",
+				value = tostring(results.catches),
+				icon = "managerHunt",
+				meaning = "coral",
+				gold = false,
+			},
+			{
+				label = "Valuables banked",
+				value = `{results.salvage} OF {results.offered}`,
+				icon = "fishtank",
+				meaning = "mint",
+				gold = false,
+			},
+		},
 		tab = if phone then "PERFORMANCE REVIEW" else "PERFORMANCE REVIEW — NIGHT SHIFT",
 		subtitle = `{crewText} · {DepotConstants.CONTRACTS[1].client} · {DepotConstants.SITE}`,
 		headline = if met then "CONTRACT MET" else "CONTRACT MISSED",
@@ -257,6 +324,7 @@ function ShiftReviewViewModel.review(
 		moreAwards = if extra > 0 then `+{extra} MORE AWARDS` else nil,
 		lessAwards = if extra > 0 then `FIRST {PHONE_AWARDS} AWARDS` else nil,
 		voteOpen = voteEndsAt == nil or now < voteEndsAt,
+		voteClock = left,
 		voteTitle = if phone then "WHAT NEXT?" else "WHAT NEXT? (crew vote)",
 		another = vote("ANOTHER SHIFT", snapshot.votesAnother, total, myVote == "another"),
 		depot = vote("BACK TO DEPOT", snapshot.votesDepot, total, myVote == "depot"),
