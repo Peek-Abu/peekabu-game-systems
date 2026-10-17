@@ -13,7 +13,7 @@
 	heartbeat, the dread loop, the screen's mood, the chase's FOV squeeze and footfall shake, and the ambience duck.
 	OccupantGestureSystem
 	lays his gestures over his joints; OccupantWarningSystem plays the staged warnings and his typing (no PA since
-	2026-10-16).
+	2026-10-16). OccupantCatchVfxSystem pops the porcelain crack at a throw and the Rehired puff, for everyone.
 
 	Spec-exempt shell (Camera, Vfx, ByteNet).
 
@@ -38,6 +38,7 @@ local OccupantGestureSystem = require(ReplicatedStorage.Client.Features.Occupant
 local OccupantWarningSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantWarningSystem)
 local OccupantDreadSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantDreadSystem)
 local DreadOverlay = require(ReplicatedStorage.Client.UI.React.Screens.Dread.DreadOverlay)
+local OccupantCatchVfxSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantCatchVfxSystem)
 local CatchOverlay = require(ReplicatedStorage.Client.UI.React.Screens.Catch.CatchOverlay)
 local CatchRehiredCard = require(ReplicatedStorage.Client.UI.React.Screens.Catch.CatchRehiredCard)
 local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudRegistry)
@@ -152,6 +153,8 @@ local OccupantServiceClient: OccupantServiceClient = {
 		OccupantGestureSystem.start()
 		table.insert(stoppers, OccupantGestureSystem.stop)
 		OccupantWarningSystem.start()
+		OccupantCatchVfxSystem.start()
+		table.insert(stoppers, OccupantCatchVfxSystem.stop)
 		table.insert(stoppers, OccupantWarningSystem.stop)
 		OccupantDreadSystem.start()
 		table.insert(stoppers, OccupantDreadSystem.stop)
