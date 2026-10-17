@@ -7,6 +7,10 @@
 	- TUMBLE: tumbling out of a spot pushed out "cramped" (the Manager's behaviours design §10.3). PLACEHOLDER: the
 	  in-house body-fall C (characters/audio/listening/round3/masters/sfx/bodyfall_C.wav, the footstepBodyFall upload)
 	  played quietly; a dedicated "tumble out of the furniture" sound is still to be made.
+	- BREATH_CALM / BREATH_NERVOUS: Pippa's toon breath while you hide (2D, only for you; OccupantDreadSystem crossfades
+	  them by the dread). In-house round-3 card 22 "B" (characters/audio/listening/round3/masters/breath): soft nose
+	  breathing with bunny nose twitches, a tiny plush chest, fur, and a small "mm" pitched in F; the nervous loop is
+	  quicker and shaky, a little "hn" on the exhale and her neck bell trembling. -24 / -22 LUFS loops, seamless.
 
 	Static data + registration (spec-exempt).
 
@@ -19,6 +23,8 @@ local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.Sound
 local SoundTypes = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundTypes)
 
 local TUMBLE = "hideTumble"
+local BREATH_CALM = "hideBreathCalm"
+local BREATH_NERVOUS = "hideBreathNervous"
 
 local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	[TUMBLE] = {
@@ -28,6 +34,8 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 		pitch = { min = 1.05, max = 1.15 },
 		rollOffMaxDistance = 45,
 	},
+	[BREATH_CALM] = { assetId = "rbxassetid://125241923141525", group = "SFX", volume = 0.6, looped = true },
+	[BREATH_NERVOUS] = { assetId = "rbxassetid://123903878582446", group = "SFX", volume = 0.6, looped = true },
 }
 
 for id, def in SOUNDS do
@@ -39,4 +47,6 @@ end
 return table.freeze({
 	SOUNDS = table.freeze(SOUNDS),
 	TUMBLE = TUMBLE,
+	BREATH_CALM = BREATH_CALM,
+	BREATH_NERVOUS = BREATH_NERVOUS,
 })
