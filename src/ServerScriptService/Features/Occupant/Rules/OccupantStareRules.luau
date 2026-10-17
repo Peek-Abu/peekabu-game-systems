@@ -152,7 +152,8 @@ local function approach(current: Mind, senses: Senses, spot: Spot): Step
 		and now - nearAt >= OccupantConstants.STAND_SETTLE
 	if distance > M.ARRIVE and not settled then
 		if M.elapsed(current, now) >= OccupantConstants.GIVE_UP_SECONDS then
-			return M.walkOn(current, senses, nil)
+			-- Unreachable: forget them and leave the spot alone, or `known` would send him straight back to it.
+			return leave(current, senses, spot)
 		end
 		local walking = current
 		if distance <= OccupantConstants.STAND_NEAR and nearAt == nil then
@@ -285,12 +286,18 @@ function OccupantStareRules.think(current: Mind, senses: Senses, seen: { Glimpse
 	if M.elapsed(current, now) < seconds then
 		return { mind = current, intent = IDLE }
 	end
-	local step = M.walkOn(current, senses, nil)
+	-- He walks on from the spot (left alone CLEARED_SECONDS); the catch, then the hider forgotten: a catch the server
+	-- refuses (a stand point a little out of reach) must not send him straight back into another stare. A caught
+	-- player is out of the spot by then, so the `seen` reset is a no-op for them. The cabinet door shuts as he leaves
+	-- the open phase (OccupantBrainRules.step).
+	local nextMind = table.clone(current)
+	local cleared = table.clone(current.cleared)
+	cleared[spot.id] = now + OccupantConstants.CLEARED_SECONDS
+	nextMind.cleared = cleared
+	local step = M.walkOn(nextMind, senses, nil)
 	if quarry ~= nil then
 		step = M.addEffect(step, { kind = "catch", userId = quarry })
-	end
-	if opening then
-		step = M.addEffect(step, { kind = "door", spotId = spot.id, open = false })
+		step = M.addEffect(step, { kind = "seen", userId = quarry, seen = false })
 	end
 	return step
 end

@@ -213,6 +213,8 @@ export type CatchInput = {
 	zone: Zone,
 	-- In a hiding spot he did not see them go in (one he did see is fair game).
 	hidden: boolean?,
+	-- A hider he found at their spot (the check, a cabinet he opened, a sit-in): he may reach FOUND_REACH further.
+	found: boolean?,
 }
 
 -- What the caught player is told (OccupantEvents.CatchReport, M3 UI incident report): the room, the shift clock's

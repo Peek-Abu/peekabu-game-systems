@@ -56,6 +56,8 @@ export type Attempt = {
 	zone: OccupantTypes.Zone,
 	-- A clear ray to them, or a hider he found (he knows where they are).
 	inView: boolean,
+	-- A hider he found at their spot (the brain's catch effect: a check, a cabinet he opened, a sit-in), not a chase grab.
+	found: boolean,
 }
 
 export type Hooks = {
@@ -193,7 +195,7 @@ function OccupantCatchSystem.attempt(
 			root.Position,
 			Sense.feetY(root, humanoid),
 			rig.head.Position.Y + rig.head.Size.Y / 2,
-			OccupantConstants.CATCH_RANGE + OccupantConstants.CATCH_SLACK
+			OccupantCatchRules.reach(attempt.found)
 		),
 		clear = attempt.inView,
 		hidden = HideServiceServer:isHidden(player) and not HideServiceServer:seenEntering(player),
@@ -203,6 +205,7 @@ function OccupantCatchSystem.attempt(
 		inGrace = attempt.inGrace,
 		resting = attempt.resting,
 		zone = attempt.zone,
+		found = attempt.found,
 	})
 	if not ok then
 		return false, reason

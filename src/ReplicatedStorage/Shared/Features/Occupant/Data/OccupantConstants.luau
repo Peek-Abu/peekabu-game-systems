@@ -113,6 +113,10 @@ return table.freeze({
 	-- Catch at ~4 studs (the server re-checks with CATCH_SLACK of tolerance); one try per CATCH_COOLDOWN.
 	CATCH_RANGE = 4,
 	CATCH_SLACK = 1,
+	-- A hider he found at their spot (the check, a cabinet he opened, a sit-in) may be this much further: his stare's
+	-- stand point (STARE_GAP out, beside the spot, or straight out further) is 6-7 studs from the huddle (2026-10-17
+	-- audit: a catch refused there looped him back into another stare).
+	FOUND_REACH = 3,
 	CATCH_COOLDOWN = 1,
 	-- After a catch he stands CATCH_HOLD seconds, then walks on; he ignores that player GRACE_SECONDS.
 	CATCH_HOLD = 1.5,

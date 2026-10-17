@@ -659,8 +659,23 @@ return function()
 					position = AT_STAND,
 				})
 			)
-			expect(kinds(catch)).to.equal("catch,release")
+			expect(kinds(catch)).to.equal("catch,seen,release")
 			expect(catch.effects[1].userId).to.equal(7)
+			-- A catch the server refuses must not loop him back into another stare at the same spot.
+			expect(catch.effects[2].seen).to.equal(false)
+			expect(catch.mind.cleared.s1).to.be.ok()
+		end)
+
+		it("gives up a stand point he cannot reach: forgets the hider and leaves the spot alone", function()
+			local walking = OccupantBrainRules.step(fresh(), stare())
+			local stuck = OccupantBrainRules.step(
+				walking.mind,
+				stare({ now = 100 + OccupantConstants.GIVE_UP_SECONDS, position = Vector3.new(60, 3, 70) })
+			)
+			expect(stuck.mind.mode).to.equal("patrol")
+			expect(kinds(stuck)).to.equal("seen")
+			expect(stuck.effects[1].seen).to.equal(false)
+			expect(stuck.mind.cleared.s1).to.be.ok()
 		end)
 
 		it("ends with him walking away on a high roll, forgetting the hider", function()
@@ -986,7 +1001,35 @@ return function()
 			expect(mid.mind.phase).to.equal("open")
 			local caught =
 				OccupantBrainRules.step(opening.mind, at(opening.mind.phaseAt + OccupantConstants.OPEN_SECONDS))
-			expect(kinds(caught)).to.equal("catch,door,release")
+			expect(kinds(caught)).to.equal("catch,seen,door,release")
+		end)
+
+		it("shuts the door again if the hider bolts while it swings open", function()
+			local spot = cabinet(Vector3.new(70, 1.5, 60))
+			local opening, at = staredAt(spot, { 0, 0, 0.99 })
+			local out = { userId = 7, position = spot.stand + Vector3.new(2, 4.6, 1.5), clear = true }
+			local bolt = OccupantBrainRules.step(
+				opening.mind,
+				at(opening.mind.phaseAt + 0.5, { players = { out }, hiders = {} })
+			)
+			expect(bolt.mind.mode).to.equal("chase")
+			local door = nil
+			for _, effect in bolt.effects or {} do
+				if effect.kind == "door" then
+					door = effect
+				end
+			end
+			expect(door).to.be.ok()
+			expect(door.spotId).to.equal("c1")
+			expect(door.open).to.equal(false)
+		end)
+
+		it("shuts the door again if the shift's break starts while it swings open", function()
+			local spot = cabinet(Vector3.new(70, 1.5, 60))
+			local opening, at = staredAt(spot, { 0, 0, 0.99 })
+			local rest = OccupantBrainRules.step(opening.mind, at(opening.mind.phaseAt + 0.5, { resting = true }))
+			expect(rest.mind.mode).to.equal("rest")
+			expect(kinds(rest)).to.equal("door,release")
 		end)
 
 		it(

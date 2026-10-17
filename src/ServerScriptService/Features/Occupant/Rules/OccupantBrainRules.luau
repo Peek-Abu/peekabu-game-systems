@@ -30,7 +30,8 @@
 	A hidden player (Hide) is never chased: one he did not see go in is invisible to him; one he did (Senses.hiders,
 	seen) is stared at. Each step also settles his body (`settleBody`: off the chair, released from a spot) and
 	remembers what he saw and the menace gauge (OccupantDirectorRules.track); no move while he stands up or is
-	startled. The service carries out each step's effects.
+	startled; a supply cabinet's door shuts whenever he leaves the phase that opened it (`shutDoor`). The service
+	carries out each step's effects.
 
 	The line-of-sight ray is the caller's (OccupantServiceServer): each Glimpse says whether it was clear.
 	Pure: nothing here yields or touches an Instance; it never changes the mind it is given. Times are
@@ -422,13 +423,29 @@ local function think(mind: Mind, senses: Senses): Step
 end
 
 --[=[
+	`result` with a supply cabinet's door shut again whenever he leaves the phase that swung it open (`before`: the mind
+	the think began with), however he leaves it: the check's end, the hider bolting, a sighting, the shift's break.
+]=]
+function OccupantBrainRules.shutDoor(before: Mind, result: Step): Step
+	local spot = before.spot
+	if before.mode ~= "stare" or before.phase ~= "open" or spot == nil then
+		return result
+	end
+	local after = result.mind
+	if after.mode == "stare" and after.phase == "open" then
+		return result
+	end
+	return M.addEffect(result, { kind = "door", spotId = spot.id, open = false })
+end
+
+--[=[
 	One think: the next mind, the NPC intent, a cue worth a speech bubble (or nil) and the effects for the service.
 	Also keeps when he walked into the loading bay, what he has seen, the menace gauge and his body (standing up,
 	startled: no move until then).
 ]=]
 function OccupantBrainRules.step(mind: Mind, senses: Senses): Step
-	local result =
-		OccupantDirectorRules.track(mind, OccupantBrainRules.settleBody(think(mind, senses), senses.now), senses)
+	local thought = OccupantBrainRules.shutDoor(mind, think(mind, senses))
+	local result = OccupantDirectorRules.track(mind, OccupantBrainRules.settleBody(thought, senses.now), senses)
 	local nextMind = result.mind
 	nextMind.bayAt = if M.inZone(senses.position, senses.bay) then (nextMind.bayAt or senses.now) else nil
 	local intent = result.intent

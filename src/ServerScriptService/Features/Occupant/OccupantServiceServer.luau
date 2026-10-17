@@ -63,6 +63,7 @@ local OccupantTuningFormulas = require(OccupantServer.Utils.OccupantTuningFormul
 local OccupantRigSystem = require(OccupantServer.Systems.OccupantRigSystem)
 local OccupantCatchSystem = require(OccupantServer.Systems.OccupantCatchSystem)
 local OccupantEffectSystem = require(OccupantServer.Systems.OccupantEffectSystem)
+local OccupantSeatSystem = require(OccupantServer.Systems.OccupantSeatSystem)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
 local HideServiceServer = require(ServerScriptService.Features.Hide.HideServiceServer)
 local NoiseServiceServer = require(ServerScriptService.Features.Noise.NoiseServiceServer)
@@ -111,7 +112,6 @@ local desks: { OccupantTypes.Desk } = {}
 local spots: { OccupantTypes.Spot } = {}
 local furnitureAt = -math.huge
 local pendingNoise: Vector3? = nil
-local lookBase: number? = nil
 local tuningElapsed = 0
 local rng = Random.new()
 -- A QA seam (`_setRolls`): fixed rolls for the brain instead of random ones (nil = random).
@@ -200,8 +200,9 @@ local catchHooks: OccupantCatchSystem.Hooks = {
 }
 
 -- Catches `player` if the server's re-check allows (OccupantCatchSystem.attempt); `from` is the mind of the think that
--- asked (a catch from a sit-in or a stare keeps its pose). Never yields.
-local function catchPlayer(player: Player, from: OccupantTypes.Mind?)
+-- asked (a catch from a sit-in or a stare keeps its pose); `found`: a hider he found at their spot (the brain's catch
+-- effect), not a chase grab. Never yields.
+local function catchPlayer(player: Player, from: OccupantTypes.Mind?, found: boolean)
 	local current = rig
 	local before = mind
 	local state = shift
@@ -216,6 +217,7 @@ local function catchPlayer(player: Player, from: OccupantTypes.Mind?)
 		zone = zone,
 		-- A player he found in a hiding spot is in plain view to him (he knows where they are).
 		inView = Sense.inView(glimpses(current, math.huge), player.UserId),
+		found = found,
 	}, catchHooks)
 	if not ok then
 		log:debug(`catch of {player.Name} refused: {reason or "?"}`)
@@ -232,7 +234,7 @@ end
 local function onCatch(npc: Model, player: Player)
 	local current = rig
 	if current ~= nil and npc == current.model then
-		catchPlayer(player, mind)
+		catchPlayer(player, mind, false)
 	end
 end
 
@@ -265,7 +267,7 @@ local function brain(def: NpcTypes.NpcDef, context: NpcTypes.BrainContext, npc: 
 	local effects = result.effects
 	if effects ~= nil then
 		OccupantEffectSystem.apply(current, effects, function(player: Player)
-			catchPlayer(player, before)
+			catchPlayer(player, before, true)
 		end)
 	end
 	return result.intent
@@ -295,7 +297,6 @@ local function despawn()
 	rig = nil
 	mind = nil
 	pendingNoise = nil
-	lookBase = nil
 	furnitureAt = -math.huge
 	-- A catch in the last seconds: the next shift must not show a stale deadline.
 	for userId in rehire do
@@ -379,19 +380,7 @@ local function onHeartbeat(deltaTime: number)
 		tuningElapsed = 0
 		applyTuning()
 	end
-	local current = rig
-	local currentMind = mind
-	local arrivedAt = if currentMind ~= nil then currentMind.arrivedAt else nil
-	local looking = currentMind ~= nil and (currentMind.mode == "investigate" or currentMind.mode == "search")
-	if current == nil or not looking or arrivedAt == nil or current.root.Anchored then
-		lookBase = nil
-		return
-	end
-	local look = current.root.CFrame.LookVector
-	local base: number = if lookBase ~= nil then lookBase else math.atan2(-look.X, -look.Z)
-	lookBase = base
-	local yaw = base + OccupantBrainRules.lookYaw(os.clock() - arrivedAt)
-	current.root.CFrame = CFrame.new(current.root.Position) * CFrame.Angles(0, yaw, 0)
+	OccupantSeatSystem.look(rig, mind, os.clock())
 end
 
 export type OccupantServiceServer = {

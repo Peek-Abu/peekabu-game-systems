@@ -2,8 +2,8 @@
 --[=[
 	OccupantCatchRules: whether Harlow may catch a player right now (Cleanup Crew spec §4 "Catch", "Grace",
 	§6.4 "Catches are decided on the server tick"): alive, not already being caught, not on his break, not in
-	their grace, outside the truck's box, not hidden where he did not see them go in, and within reach (CATCH_RANGE
-	plus CATCH_SLACK, since the base checks the range a moment earlier). `launch` is the throw: away from him, flat, plus an upward kick. Pure.
+	their grace, outside the truck's box, not hidden where he did not see them go in, and within reach (`reach`:
+	CATCH_RANGE plus CATCH_SLACK, since the base checks the range a moment earlier; FOUND_REACH more for a found hider). `launch` is the throw: away from him, flat, plus an upward kick. Pure.
 
 	@class OccupantCatchRules
 ]=]
@@ -42,10 +42,20 @@ function OccupantCatchRules.canCatch(input: OccupantTypes.CatchInput): (boolean,
 	if input.clear == false then
 		return false, "blocked"
 	end
-	if not (input.distance <= OccupantConstants.CATCH_RANGE + OccupantConstants.CATCH_SLACK) then
+	if not (input.distance <= OccupantCatchRules.reach(input.found == true)) then
 		return false, "too far"
 	end
 	return true, nil
+end
+
+--[=[
+	The flat studs a catch may reach: CATCH_RANGE plus CATCH_SLACK, and FOUND_REACH more for a hider he found at their
+	spot (`found`: the check, the cabinet he opened, the sit-in), whose stand point can sit a little further off than a
+	chase's grab (the straight-out stand point beside a cabinet or a table).
+]=]
+function OccupantCatchRules.reach(found: boolean): number
+	local range = OccupantConstants.CATCH_RANGE + OccupantConstants.CATCH_SLACK
+	return if found then range + OccupantConstants.FOUND_REACH else range
 end
 
 --[=[

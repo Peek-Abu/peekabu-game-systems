@@ -50,6 +50,23 @@ return function()
 			refused({ distance = OccupantConstants.CATCH_RANGE + OccupantConstants.CATCH_SLACK + 0.1 }, "too far")
 		end)
 
+		it(
+			"reaches further for a hider he found (a check, a cabinet he opened, a sit-in): he is at their spot",
+			function()
+				local found = OccupantCatchRules.reach(true)
+				expect(found).to.equal(
+					OccupantConstants.CATCH_RANGE + OccupantConstants.CATCH_SLACK + OccupantConstants.FOUND_REACH
+				)
+				expect(OccupantCatchRules.reach(false)).to.equal(
+					OccupantConstants.CATCH_RANGE + OccupantConstants.CATCH_SLACK
+				)
+				-- A stare's stand point is 6-7 studs from the hider: past a chase grab, within a found one.
+				expect(OccupantCatchRules.canCatch(input({ distance = 7.1, found = true }))).to.equal(true)
+				refused({ distance = 7.1 }, "too far")
+				refused({ distance = found + 0.1, found = true }, "too far")
+			end
+		)
+
 		it("refuses a NaN distance", function()
 			refused({ distance = 0 / 0 }, "too far")
 		end)

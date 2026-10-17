@@ -11,6 +11,7 @@
 	  STAND_CLEAR: never inside or behind it, where no path exists), and is let go, the clipboard back. Without the
 	  clip: at once.
 	- `plant`: anchored and slid onto a frame (staring at a spot, perfectly still); `release` lets go.
+	- `look`: turning him while he looks around on arriving somewhere (investigate, search), per frame.
 	- Let go always hands his root back to the server's physics (SetNetworkOwner(nil)).
 
 	A newer call cancels an older one's pending end (a token per rig). Spec-exempt shell (Instances, tweens, clips).
@@ -26,6 +27,8 @@ local AnimationRegistry = require(ReplicatedStorage.Shared.Features.Animation.Da
 local AnimationPlayerSystem = require(ReplicatedStorage.Shared.Features.Animation.Systems.AnimationPlayerSystem)
 local OccupantAssets = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantAssets)
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
+local OccupantTypes = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantTypes)
+local OccupantBrainRules = require(ServerScriptService.Features.Occupant.Rules.OccupantBrainRules)
 local OccupantRigSystem = require(ServerScriptService.Features.Occupant.Systems.OccupantRigSystem)
 local OccupantDeskUtils = require(ServerScriptService.Features.Occupant.Utils.OccupantDeskUtils)
 local AnimationServiceServer = require(ServerScriptService.Features.Animation.AnimationServiceServer)
@@ -41,6 +44,8 @@ type Body = {
 	seat: CFrame?,
 	desk: CFrame?,
 	deskSize: Vector3?,
+	-- His heading when he began looking around (`look`).
+	lookBase: number?,
 }
 
 -- He slides onto a seat or a stare's spot (the last stride the path left him short) at SLIDE_SPEED studs a second,
@@ -183,6 +188,28 @@ function OccupantSeatSystem.plant(rig: Rig, frame: CFrame)
 	local body = bodyOf(rig)
 	body.token += 1
 	slide(rig, body, frame)
+end
+
+--[=[
+	Turns him while he looks around (`mind` investigating or searching, arrived): his heading swept by
+	OccupantBrainRules.lookYaw from where he faced on arriving. Never while his body is anchored. Per frame.
+]=]
+function OccupantSeatSystem.look(rig: Rig?, mind: OccupantTypes.Mind?, now: number)
+	if rig == nil then
+		return
+	end
+	local body = bodyOf(rig)
+	local arrivedAt = if mind ~= nil then mind.arrivedAt else nil
+	local looking = mind ~= nil and (mind.mode == "investigate" or mind.mode == "search")
+	if not looking or arrivedAt == nil or rig.root.Anchored then
+		body.lookBase = nil
+		return
+	end
+	local facing = rig.root.CFrame.LookVector
+	local base: number = body.lookBase or math.atan2(-facing.X, -facing.Z)
+	body.lookBase = base
+	local yaw = base + OccupantBrainRules.lookYaw(now - arrivedAt)
+	rig.root.CFrame = CFrame.new(rig.root.Position) * CFrame.Angles(0, yaw, 0)
 end
 
 function OccupantSeatSystem.release(rig: Rig)
