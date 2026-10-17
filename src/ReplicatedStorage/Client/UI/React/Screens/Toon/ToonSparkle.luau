@@ -23,6 +23,8 @@ export type Spot = { position: UDim2, size: number }
 export type ToonSparkleProps = {
 	spots: { Spot },
 	zIndex: number?,
+	-- Fades every sparkle (a binding: a fading world floater).
+	transparency: React.Binding<number>?,
 }
 
 local PERIOD = UIToonConstants.MOTION.sparklePeriod
@@ -44,6 +46,7 @@ local function ToonSparkle(props: ToonSparkleProps): React.ReactNode
 			end),
 			BackgroundTransparency = 1,
 			Image = UIAssets.toon.sparkle,
+			ImageTransparency = props.transparency,
 			ZIndex = props.zIndex,
 		}, {
 			scale = e("UIScale", { Scale = pulse }),
