@@ -15,7 +15,8 @@
 	- A sit-in (he sits at the desk you hide under) is rare: SIT_IN_CHANCE, at most SIT_IN_MAX a shift, SIT_IN_GAP
 	  apart, only at a desk with someone under it whose chair is on the knee-hole side. At its end he catches you on
 	  SIT_IN_CATCH (certain after a noise).
-	- The ambush while he sits: a noise he hears, a player he sees, or a player within AMBUSH_RADIUS.
+	- The ambush while he sits: a noise he hears, a player he sees, or a player within AMBUSH_RADIUS with a clear line
+	  (any direction, never through a wall).
 
 	`think` runs the stare mode: walk to the spot's stand point (in a hurry after a chase; within STAND_NEAR for
 	STAND_SETTLE is close enough), plant there facing it (the camping push-out held), hold still; then check (bend down,
@@ -69,7 +70,7 @@ export type SitInInput = {
 export type AmbushInput = {
 	heard: boolean,
 	seen: boolean,
-	-- Flat studs to the nearest crew member he could notice (nil = nobody).
+	-- Flat studs to the nearest crew member he could notice with a clear line of sight (nil = nobody).
 	nearest: number?,
 }
 

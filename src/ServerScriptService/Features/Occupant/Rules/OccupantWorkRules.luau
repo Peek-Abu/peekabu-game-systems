@@ -8,14 +8,15 @@
 	  no desk = try again in 10 s.
 	- `think`, phase by phase: walk to the chair (a sighting or a noise on the way is handled like on patrol: nil);
 	  sit (a `sit` effect: the service anchors him there) and type WORK_SECONDS; then stand and walk on.
-	- The ambush (OccupantStareRules.ambushes): a noise, a sighting or a player within AMBUSH_RADIUS while he sits stops
-	  the typing dead and swivels his head to the point (the swivel lasts until he is up); after AMBUSH_HOLD he stands
-	  (faster) and chases whoever he sees, or investigates the point.
+	- The ambush (OccupantStareRules.ambushes): a noise, a sighting or a player within AMBUSH_RADIUS with a clear line
+	  (any direction; never through a wall, design §10.4) while he sits stops the typing dead and swivels his head to
+	  the point (the swivel lasts until he is up); after AMBUSH_HOLD he stands (faster) and chases whoever he sees in
+	  his body's cone or down the cone his head is turned to (OccupantSightUtils.toward), or investigates the point.
 	- A sit-in (he sat at the desk `quarry` hides under, OccupantStareRules.sitsIn): SIT_IN_BACK further back, typing
 	  SIT_IN_TYPE (the camping push-out held meanwhile); his head tips down under the desk (TIP_SECONDS), holds TIP_HOLD,
 	  and he catches them (OccupantStareRules.sitInCatches; a noise near the spot meanwhile makes it certain) or tips
 	  back up (TIP_BACK), types TYPE_MORE, stands and walks on, forgetting them and leaving that spot alone
-	  CLEARED_SECONDS. A noise elsewhere, a passer-by or the hider bolting is an ambush.
+	  CLEARED_SECONDS. A noise elsewhere, a passer-by or the hider bolting (their exit noise) is an ambush.
 
 	Pure (see OccupantMindUtils).
 
@@ -92,11 +93,19 @@ local function toDesk(current: Mind, senses: Senses, seen: { Glimpse }, heard: V
 	return { mind = current, intent = { kind = "goTo", position = desk.seat.Position, run = false } }
 end
 
--- The ambush is over: up, and after whoever he sees, else to the point.
+-- The ambush is over: up, and after whoever he sees (his body's cone, or down the cone his head is turned to), else
+-- to the point.
 local function rise(current: Mind, senses: Senses, seen: { Glimpse }): Step
 	local now = senses.now
 	local target: Glimpse? = nil
-	for _, glimpse in seen do
+	local candidates = table.clone(seen)
+	local point = current.point
+	if point ~= nil then
+		for _, glimpse in M.toward(current, senses, point) do
+			table.insert(candidates, glimpse)
+		end
+	end
+	for _, glimpse in candidates do
 		if glimpse.userId == current.target or target == nil then
 			target = glimpse
 		end
@@ -137,11 +146,13 @@ end
 local function seated(current: Mind, senses: Senses, seen: { Glimpse }, heard: Vector3?): Step
 	local now = senses.now
 	local phase = current.phase
-	-- A noise near the spot during a sit-in is the hider's undoing, not an ambush.
+	-- A noise near the spot during a sit-in is the hider's undoing, not an ambush (while they are still under it: one
+	-- who bolts makes their exit noise, and that is an ambush).
 	local spot = current.spot
 	if
 		current.sitIn
 		and heard ~= nil
+		and M.hiderOf(senses, current.quarry) ~= nil
 		and spot ~= nil
 		and M.flat(heard, spot.center) <= OccupantConstants.STARE_NOISE_RADIUS
 	then
@@ -151,7 +162,7 @@ local function seated(current: Mind, senses: Senses, seen: { Glimpse }, heard: V
 		heard = nil
 	end
 	if phase ~= "ambush" then
-		local nearest, who = M.nearestNoticed(current, senses)
+		local nearest, who = M.nearestNoticed(current, senses, true)
 		if OccupantStareRules.ambushes({ heard = heard ~= nil, seen = #seen > 0, nearest = nearest }) then
 			local nextMind = M.inPhase(current, "ambush", now, OccupantConstants.AMBUSH_HOLD)
 			if #seen > 0 then

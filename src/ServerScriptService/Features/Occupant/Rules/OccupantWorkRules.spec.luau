@@ -185,12 +185,55 @@ return function()
 			expect(step.intent.kind).to.equal("idle")
 		end)
 
-		it("springs on a player close by, even unseen", function()
+		it("springs on a player close by with a clear line, even behind him", function()
+			-- Seated looking along -X; the player 10 studs behind him (+X).
+			local near = { userId = 8, position = AT_SEAT + Vector3.new(10, 0, 0), clear = true }
+			local step = OccupantBrainRules.step(
+				seated(101),
+				senses({ now = 102, position = AT_SEAT, look = Vector3.new(-1, 0, 0), players = { near } })
+			)
+			expect(step.mind.phase).to.equal("ambush")
+			expect(step.mind.target).to.equal(8)
+		end)
+
+		it("never springs on a player close by through a wall (no line of sight, no noise)", function()
 			local near = { userId = 8, position = AT_SEAT + Vector3.new(0, 0, 10), clear = false }
 			local step =
 				OccupantBrainRules.step(seated(101), senses({ now = 102, position = AT_SEAT, players = { near } }))
-			expect(step.mind.phase).to.equal("ambush")
-			expect(step.mind.target).to.equal(8)
+			expect(step.mind.phase).to.equal("type")
+		end)
+
+		it("turns on a player behind him and chases them once up (his head turned to them)", function()
+			local look = Vector3.new(-1, 0, 0)
+			local behind = { userId = 8, position = AT_SEAT + Vector3.new(10, 0, 0), clear = true }
+			local ambush = OccupantBrainRules.step(
+				seated(101),
+				senses({ now = 102, position = AT_SEAT, look = look, players = { behind } })
+			)
+			expect(ambush.mind.point).to.equal(behind.position)
+			local up = OccupantBrainRules.step(
+				ambush.mind,
+				senses({ now = 102 + C.AMBUSH_HOLD + 0.01, position = AT_SEAT, look = look, players = { behind } })
+			)
+			expect(up.mind.mode).to.equal("chase")
+			expect(up.mind.target).to.equal(8)
+			expect(kinds(up)).to.equal("stand")
+		end)
+
+		it("investigates instead when the player behind him hid during the beat", function()
+			local look = Vector3.new(-1, 0, 0)
+			local behind = { userId = 8, position = AT_SEAT + Vector3.new(10, 0, 0), clear = true }
+			local ambush = OccupantBrainRules.step(
+				seated(101),
+				senses({ now = 102, position = AT_SEAT, look = look, players = { behind } })
+			)
+			local hidden = { userId = 8, position = behind.position, clear = true, hidden = true }
+			local up = OccupantBrainRules.step(
+				ambush.mind,
+				senses({ now = 102 + C.AMBUSH_HOLD + 0.01, position = AT_SEAT, look = look, players = { hidden } })
+			)
+			expect(up.mind.mode).to.equal("investigate")
+			expect(up.mind.noise).to.equal(behind.position)
 		end)
 
 		it("holds a beat, then stands up fast and investigates the point", function()
@@ -324,6 +367,16 @@ return function()
 			)
 			expect(noisy.mind.phase).to.equal("type")
 			expect(noisy.mind.noisy).to.equal(true)
+		end)
+
+		it("springs the ambush on a hider who bolts out from under him (their exit noise)", function()
+			local typing = sitIn(100).mind
+			local bolted = OccupantBrainRules.step(
+				typing,
+				senses({ now = 101, position = AT_SEAT, hiders = {}, heard = Vector3.new(86, 0, 61) })
+			)
+			expect(bolted.mind.phase).to.equal("ambush")
+			expect(bolted.mind.point).to.equal(Vector3.new(86, 0, 61))
 		end)
 	end)
 end
