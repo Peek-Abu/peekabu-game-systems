@@ -165,8 +165,10 @@ local DREAD = {
 	BEAT_NEAR_FAST = 0.7,
 	BEAT_AWARE = 0.55,
 	BEAT_CREW = 0.62,
-	-- The heartbeat sound's volumeScale = look.heart * HEART_GAIN (harlowHeartbeat is registered at 0.8).
-	HEART_GAIN = 1.5,
+	-- The heartbeat sound's volumeScale = look.heart * HEART_GAIN (harlowHeartbeat is registered at 0.8). Measured live
+	-- 2026-10-17 in a chase at ~19 studs (RMS of PlaybackLoudness x Volume x group volume): the old heartbeat sat
+	-- ~19 dB over the old chase music; at 0.75 (chase heart 0.65-0.8) it sits ~5 dB over the louder music.
+	HEART_GAIN = 0.75,
 	-- A pulse peaks on the beat and is gone PULSE_WIDTH of the way to the next (a quick attack, eased decay).
 	PULSE_WIDTH = 0.45,
 	-- The colour the beat pulses toward (multiplied into the screen tint), kept soft.
@@ -180,7 +182,7 @@ local DREAD = {
 	VIGNETTE_COLOR = Color3.fromRGB(8, 4, 10),
 	VIGNETTE_MAX = 0.85,
 	-- How much the vignette tightens (screen scale shrink) at full strength.
-	VIGNETTE_TIGHTEN = 0.18,
+	VIGNETTE_TIGHTEN = 0.12,
 	-- The grain's tile size (pixels) and its opacity at full strength.
 	GRAIN_TILE = 180,
 	GRAIN_MAX = 0.22,
@@ -211,7 +213,7 @@ local DREAD = {
 		near = look({
 			heart = 0.5,
 			dread = 1,
-			vignette = 0.35,
+			vignette = 0.45,
 			desaturate = 0.22,
 			grain = 0.5,
 			red = 0.1,
@@ -233,7 +235,7 @@ local DREAD = {
 			muffle = -6,
 		}),
 		chaseFar = look({
-			heart = 0.85,
+			heart = 0.65,
 			dread = 0,
 			vignette = 0.5,
 			desaturate = 0.3,
@@ -245,12 +247,12 @@ local DREAD = {
 			muffle = -6,
 		}),
 		chaseNear = look({
-			heart = 1,
+			heart = 0.8,
 			dread = 0,
 			vignette = 0.7,
 			desaturate = 0.4,
 			grain = 1,
-			red = 0.8,
+			red = 0.7,
 			edge = 0.9,
 			squeeze = 7,
 			duck = -15,

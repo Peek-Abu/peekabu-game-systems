@@ -63,7 +63,9 @@ return function()
 			expect(OccupantDreadFormulas.stage(input({ mode = "patrol" }))).to.equal("near")
 			expect(OccupantDreadFormulas.stage(input({ mode = "work", phase = "type" }))).to.equal("near")
 			expect(OccupantDreadFormulas.stage(input({ mode = "rest" }))).to.equal("none")
-			expect(OccupantDreadFormulas.stage(input({ mode = nil }))).to.equal("none")
+			local modeless = input()
+			modeless.mode = nil
+			expect(OccupantDreadFormulas.stage(modeless)).to.equal("none")
 		end)
 
 		it("is aware while he hunts, stares or turns on you", function()
@@ -123,8 +125,12 @@ return function()
 			local chase = OccupantDreadFormulas.target("chase", 1, 1, 0, false)
 			for _, key in { "heart", "vignette", "red", "grain" } do
 				expect(aware[key] > near[key]).to.equal(true)
+			end
+			for _, key in { "vignette", "red", "grain" } do
 				expect(chase[key] > aware[key]).to.equal(true)
 			end
+			-- In the chase the heart holds at the aware level: the music leads, the heartbeat thumps on its beat.
+			expect(chase.heart >= aware.heart).to.equal(true)
 			expect(chase.duck < aware.duck).to.equal(true)
 			expect(chase.squeeze > 0).to.equal(true)
 			expect(near.squeeze).to.equal(0)

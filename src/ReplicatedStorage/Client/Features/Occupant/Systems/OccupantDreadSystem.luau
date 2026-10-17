@@ -382,6 +382,10 @@ local function step(dt: number)
 		reduced
 	)
 	look = OccupantDreadFormulas.ease(look, aim, dt)
+	if mode == "catch" and target == me.UserId then
+		-- The jumpscare camera sets its own FOV: the chase's squeeze lets go at once rather than narrowing it.
+		look.squeeze = 0
+	end
 
 	stepHeartbeat(now)
 	local pulse = OccupantDreadFormulas.pulse(now - lastBeatAt, beatPeriod)
