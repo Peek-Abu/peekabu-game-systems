@@ -299,6 +299,20 @@ return table.freeze({
 	LONG_SIGHT_ANGLE = 40,
 	NOTICE_SECONDS = range(0.35, 1.4),
 	NOTICE_DECAY = 2,
+	-- Peripheral vision (behaviours design §10.1): outside the front cone but within PERIPHERAL_ANGLE degrees in all
+	-- (±100°), within PERIPHERAL_RANGE studs, with a clear line. Someone there is noticed over GLANCE_SECONDS (min at his
+	-- side, max at PERIPHERAL_RANGE; ×GLANCE_CROUCH crouched) while he walks on; out of the zone the count falls back
+	-- NOTICE_DECAY seconds a second. A completed glance is a head turn (TURN_*), never an instant chase.
+	PERIPHERAL_ANGLE = 200,
+	PERIPHERAL_RANGE = 25,
+	GLANCE_SECONDS = range(1.5, 2.5),
+	GLANCE_CROUCH = 1.4,
+	-- The head turn (§10.2, mode `alert`): on a completed glance, or a noise from outside his front cone, he stops dead,
+	-- swivels only his head to the point (TURN_SWIVEL: the swivel gesture's own 0.35 s) and holds TURN_HOLD (rolled)
+	-- after it lands; then he chases anyone not hidden in the SIGHT_ANGLE cone his head looks down (SIGHT_RANGE), else
+	-- investigates the point. The hold is the player's window to hide or break the line.
+	TURN_SWIVEL = 0.35,
+	TURN_HOLD = range(0.6, 1.0),
 	-- Investigate scans for 4 s; search scans for 2 s at last-seen and nearby authored points. Investigate gives up after
 	-- GIVE_UP_SECONDS (an unreachable point).
 	LOOK_SECONDS = 4,
@@ -398,7 +412,8 @@ return table.freeze({
 	PICK_IDEAL = 30,
 	PICK_FAR = 45,
 	PICK_CLEAR = 10,
-	-- The ambush: a player this close (or one he sees, or a noise) while he sits; the smile before the Noticing face, the
+	-- The ambush: a player this close with a clear line (or one he sees, or a noise) while he sits (§10.4: never through
+	-- a wall); the smile before the Noticing face, the
 	-- hold, the stand-up speed (1.8 s clip / 1.5 = 1.2 s). STAND_SECONDS is the clip at 1x; standOffset in OccupantAssets.
 	AMBUSH_RADIUS = 14,
 	-- The developer's ambush repro (`occupantwork`): the desk he is sent to is at least this far from the caller, so they

@@ -28,6 +28,8 @@ local MARKER_ATTRIBUTE = "OfficeMarkerId"
 local ART_KEY_ATTRIBUTE = "OfficeArtKey"
 local CHAIR_DESK_ATTRIBUTE = "OfficeDeskMarker"
 local CHAIR_KEY = "officeChair"
+-- A crouching character (FootstepConstants.CROUCH_ATTRIBUTE, a hook nothing sets yet): noticed slower beside him.
+local CROUCH_ATTRIBUTE = "Crouching"
 
 -- The body box checked at a stand point (wide and deep as his body, waist to head over the floor).
 local STAND_BOX = Vector3.new(2, 4, 1.6)
@@ -67,10 +69,13 @@ function System.glimpses(
 		if root and root:IsA("BasePart") and h and h.Health > 0 and eligible(player) then
 			local offset = root.Position - rig.head.Position
 			local clear = offset.Magnitude <= sightRange and Workspace:Raycast(rig.head.Position, offset, params) == nil
-			table.insert(
-				list,
-				{ userId = player.UserId, position = root.Position, feetY = System.feetY(root, h), clear = clear }
-			)
+			table.insert(list, {
+				userId = player.UserId,
+				position = root.Position,
+				feetY = System.feetY(root, h),
+				clear = clear,
+				crouched = character ~= nil and character:GetAttribute(CROUCH_ATTRIBUTE) == true,
+			})
 		end
 	end
 	return list

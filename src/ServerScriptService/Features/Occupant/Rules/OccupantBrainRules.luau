@@ -18,7 +18,10 @@
 	- catch: stand CATCH_HOLD seconds, then walk on to his next route point, ignoring the caught player for
 	  GRACE_SECONDS;
 	- work: at a desk (OccupantWorkRules: typing, the ambush, the sit-in at the desk someone hides under);
-	- stare: at a hiding spot he saw someone go into, or suspects (OccupantStareRules: still, then he looks or leaves).
+	- stare: at a hiding spot he saw someone go into, or suspects (OccupantStareRules: still, then he looks or leaves);
+	- alert: the head turn (OccupantAlertRules, design §10): someone in his peripheral zone long enough, or a noise from
+	  beside or behind him while he patrols or investigates, stops him dead with only his head swivelled to it for a
+	  beat; then the chase if he sees someone that way, else he investigates the point.
 
 	The truck's box (`zone`) is safe: nobody inside it is seen, no noise inside it is followed, so no goal is
 	ever inside it (his kind's pathCosts also make it unwalkable). The loading bay around it (`bay`) is not: he
@@ -46,6 +49,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local OccupantServer = ServerScriptService.Features.Occupant
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local OccupantTypes = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantTypes)
+local OccupantAlertRules = require(OccupantServer.Rules.OccupantAlertRules)
 local OccupantDirectorRules = require(OccupantServer.Rules.OccupantDirectorRules)
 local OccupantStareRules = require(OccupantServer.Rules.OccupantStareRules)
 local OccupantStuckRules = require(OccupantServer.Rules.OccupantStuckRules)
@@ -339,6 +343,11 @@ local function think(mind: Mind, senses: Senses): Step
 		if step ~= nil then
 			return step
 		end
+	elseif current.mode == "alert" then
+		local step = OccupantAlertRules.think(current, senses, seen)
+		if step ~= nil then
+			return step
+		end
 	end
 
 	-- Sight beats everything else.
@@ -358,6 +367,13 @@ local function think(mind: Mind, senses: Senses): Step
 		return noticing
 	end
 	current = fade(current, senses)
+
+	-- Someone beside him long enough: the head turn.
+	local glanced, turning = OccupantAlertRules.glance(current, senses)
+	if turning ~= nil then
+		return turning
+	end
+	current = glanced
 
 	-- Someone he saw go into a hiding spot (or tracked there): the stare-down.
 	local hider, hiderSpot = OccupantStareRules.known(current, senses)
@@ -401,6 +417,10 @@ local function think(mind: Mind, senses: Senses): Step
 			nextMind.searchIndex = 1
 			nextMind.arrivedAt = nil
 			return { mind = nextMind, intent = { kind = "goTo", position = heard, run = true } }
+		end
+		-- From beside or behind him: the head turn first.
+		if OccupantAlertRules.turns(current, senses, heard) then
+			return OccupantAlertRules.begin(current, senses, heard, nil)
 		end
 		local nextMind = M.enter(current, "investigate", now)
 		nextMind.noise = heard

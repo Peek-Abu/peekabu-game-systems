@@ -12,7 +12,8 @@
 	Also his desk (positional): the chair as he sits down (OccupantTellRules.sat), his typing while he sits
 	(OccupantTellRules.typing: a loop on his head that stops dead the moment it ends, e.g. in the ambush, whose own
 	sound plays then), and his chair swivelling as he rises out of the ambush (OccupantTellRules.rose: our layer plus the
-	two library layers of that mix, OccupantAssets.SWIVEL). No PA since 2026-10-16. And the hider's reveal: while he looks under their spot or tips his head under their
+	two library layers of that mix, OccupantAssets.SWIVEL), and the ambush's intake as his head turns to something he
+	noticed anywhere (OccupantTellRules.alerted, the `alert` mode). No PA since 2026-10-16. And the hider's reveal: while he looks under their spot or tips his head under their
 	desk, their camera draws back into the spot and follows his face (OccupantTellRules.revealed). Reads only
 	replicated state. Pending sounds are skipped silently and counted.
 
@@ -45,12 +46,22 @@ local rng = Random.new()
 local connection: RBXScriptConnection? = nil
 local typing: SoundServiceClient.SoundHandle? = nil
 local lastPhase = ""
+local lastMode: string? = nil
 local stage: string = "none"
 local nextClick = 0
 -- The hider's reveal camera while it shows (CameraServiceClient's token).
 local reveal: number? = nil
-local counters =
-	{ reveals = 0, clicks = 0, typingStarts = 0, typingStops = 0, ambushes = 0, sits = 0, swivels = 0, pending = 0 }
+local counters = {
+	reveals = 0,
+	clicks = 0,
+	typingStarts = 0,
+	typingStops = 0,
+	ambushes = 0,
+	turns = 0,
+	sits = 0,
+	swivels = 0,
+	pending = 0,
+}
 
 local function play(id: string, options: SoundTypes.PlayOptions?): SoundServiceClient.SoundHandle?
 	if not SoundRegistry.has(id) then
@@ -129,6 +140,7 @@ local function step()
 		setReveal(nil, false)
 		stopTyping()
 		lastPhase = ""
+		lastMode = nil
 		stage = "none"
 		return
 	end
@@ -157,7 +169,12 @@ local function step()
 	elseif OccupantTellRules.rose(lastPhase, phase) then
 		swivel(head)
 	end
+	if OccupantTellRules.alerted(lastMode, mode) then
+		counters.turns += 1
+		play("harlowAmbush", { at = head })
+	end
 	lastPhase = phase
+	lastMode = mode
 	local me = Players.LocalPlayer
 	local hiding = type(me:GetAttribute(HideConstants.PLAYER_SPOT_ATTRIBUTE)) == "string"
 	local onMe = model:GetAttribute(OccupantConstants.TARGET_ATTRIBUTE) == me.UserId
@@ -209,6 +226,7 @@ function OccupantWarningSystem.stop()
 	stopTyping()
 	setReveal(nil, false)
 	lastPhase = ""
+	lastMode = nil
 	stage = "none"
 end
 

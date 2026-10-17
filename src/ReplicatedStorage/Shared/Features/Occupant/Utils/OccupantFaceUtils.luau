@@ -2,7 +2,7 @@
 --[=[
 	OccupantFaceUtils: which painted face the Manager's porcelain mask shows in each mode ("A - Smile Mask",
 	characters/manager): the calm customer-service smile on patrol and on break, the noticing face (pupils
-	pinpoint and shift) while he investigates or searches, the hunting face (eyes wide, smile wider) while he
+	pinpoint and shift) while he investigates, searches or turns his head to something (alert), the hunting face (eyes wide, smile wider) while he
 	chases or catches. At a desk he smiles calmly; in the ambush he smiles AMBUSH_SMILE seconds, then notices; tipping
 	his head down under a desk he stays calm TIP_CALM seconds, then hunts; staring at a spot he notices, and hunts as he
 	bends to look. The faces are SurfaceAppearances in his template's `Faces` folder (OccupantAssets.FACES);
@@ -39,7 +39,7 @@ function OccupantFaceUtils.faceFor(
 		return "Calm"
 	elseif mode == "stare" then
 		return if phase == "check" or phase == "open" then "Hunting" else "Noticing"
-	elseif mode == "investigate" or mode == "search" then
+	elseif mode == "investigate" or mode == "search" or mode == "alert" then
 		return "Noticing"
 	elseif mode == "chase" or mode == "catch" then
 		return "Hunting"

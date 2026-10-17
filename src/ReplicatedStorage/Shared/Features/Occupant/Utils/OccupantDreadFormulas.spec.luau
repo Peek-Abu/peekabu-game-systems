@@ -69,7 +69,7 @@ return function()
 		end)
 
 		it("is aware while he hunts, stares or turns on you", function()
-			for _, mode in { "investigate", "search", "stare" } do
+			for _, mode in { "investigate", "search", "stare", "alert" } do
 				expect(OccupantDreadFormulas.stage(input({ mode = mode }))).to.equal("aware")
 			end
 			expect(OccupantDreadFormulas.stage(input({ mode = "chase", target = 99 }))).to.equal("aware")

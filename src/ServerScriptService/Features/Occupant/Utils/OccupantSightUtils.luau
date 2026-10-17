@@ -4,6 +4,9 @@
 	design.md §2). Near: a clear ray within sightRange in the sightAngle cone (his chase or search target all round).
 	Far: a clear ray out to longRange in the narrow longAngle cone straight ahead, noticed over a beat that grows with
 	the distance (`noticeDelay`) unless it is his target. Never someone hiding, in their grace or in the truck's box.
+	Beside him (behaviours design §10.1): `peripheral`, a clear ray within PERIPHERAL_RANGE outside the front cone but
+	within PERIPHERAL_ANGLE, noticed over `glanceDelay`. His head turned (§10.2): `toward`, who he sees down the cone
+	his head looks along; `beside`, whether a point is outside his front cone (a noise there turns his head).
 
 	The rays are the caller's (each Glimpse says whether its line was clear). Pure.
 
@@ -132,6 +135,89 @@ function Sight.sees(mind: Mind, senses: Senses, userId: number): boolean
 		end
 	end
 	return false
+end
+
+-- Eligible to be seen at all: a clear ray, not hiding, not in their grace, not in the truck's box.
+local function eligible(mind: Mind, senses: Senses, glimpse: Glimpse): boolean
+	return glimpse.clear
+		and glimpse.hidden ~= true
+		and not graced(mind, glimpse.userId, senses.now)
+		and not inZone(glimpse.position, senses.zone)
+end
+
+local function level(senses: Senses, point: Vector3): Vector3
+	return Vector3.new(point.X, senses.position.Y, point.Z)
+end
+
+--[=[
+	The players in his peripheral zone this think, nearest first: a clear ray within PERIPHERAL_RANGE, inside
+	PERIPHERAL_ANGLE of his heading but not seen in his front cone (`sightOf` is not "near"). Never someone hiding, in
+	their grace or in the safe zone.
+]=]
+function Sight.peripheral(mind: Mind, senses: Senses): { Glimpse }
+	local list: { Glimpse } = {}
+	for _, glimpse in senses.players do
+		if
+			eligible(mind, senses, glimpse)
+			and Sight.sightOf(mind, senses, glimpse) ~= "near"
+			and (glimpse.position - senses.position).Magnitude <= OccupantConstants.PERIPHERAL_RANGE
+			and NpcSenseRules.inSight(
+				senses.position,
+				senses.look,
+				level(senses, glimpse.position),
+				OccupantConstants.PERIPHERAL_RANGE,
+				OccupantConstants.PERIPHERAL_ANGLE
+			)
+		then
+			table.insert(list, glimpse)
+		end
+	end
+	nearestFirst(list, senses)
+	return list
+end
+
+--[=[
+	Seconds in his peripheral zone before he notices someone `distance` studs away: GLANCE_SECONDS.min at his side,
+	rising to GLANCE_SECONDS.max at PERIPHERAL_RANGE; GLANCE_CROUCH times that `crouched`.
+]=]
+function Sight.glanceDelay(distance: number, crouched: boolean): number
+	local t = math.clamp(distance / OccupantConstants.PERIPHERAL_RANGE, 0, 1)
+	local seconds = OccupantMenaceFormulas.within(OccupantConstants.GLANCE_SECONDS, t)
+	return if crouched then seconds * OccupantConstants.GLANCE_CROUCH else seconds
+end
+
+--[=[
+	Whether `point` is outside his front cone (beside or behind him): a noise from there turns his head.
+]=]
+function Sight.beside(senses: Senses, point: Vector3): boolean
+	return not NpcSenseRules.inSight(senses.position, senses.look, level(senses, point), math.huge, senses.sightAngle)
+end
+
+--[=[
+	The players he sees down the cone his head is turned to (toward `point`), nearest first: a clear ray within
+	sightRange, inside sightAngle of the direction to `point`. Never someone hiding, in their grace or in the safe zone.
+]=]
+function Sight.toward(mind: Mind, senses: Senses, point: Vector3): { Glimpse }
+	local flat = level(senses, point) - senses.position
+	local look = if flat.Magnitude > 1e-3 then flat.Unit else senses.look
+	local list: { Glimpse } = {}
+	for _, glimpse in senses.players do
+		if
+			eligible(mind, senses, glimpse)
+			and (glimpse.position - senses.position).Magnitude <= senses.sightRange
+			and NpcSenseRules.inSight(
+				senses.position,
+				look,
+				level(senses, glimpse.position),
+				senses.sightRange,
+				senses.sightAngle
+			)
+		then
+			table.insert(list, glimpse)
+		end
+	end
+	nearestFirst(list, senses)
+	return list
 end
 
 --[=[

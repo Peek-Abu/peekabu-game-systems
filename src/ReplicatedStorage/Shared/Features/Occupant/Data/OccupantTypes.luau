@@ -8,8 +8,9 @@
 
 -- What he is doing: walking his route, checking a noise, chasing someone he sees, searching where he lost
 -- them, on the shift's break, standing over a catch, working at a desk (his routine, or sitting at the desk someone
--- hides under: `sitIn`), or staring at a hiding spot.
-export type Mode = "patrol" | "investigate" | "chase" | "search" | "rest" | "catch" | "work" | "stare"
+-- hides under: `sitIn`), staring at a hiding spot, or stopped dead with his head turned to something he half noticed
+-- (`alert`: the head turn, behaviours design §10.2).
+export type Mode = "patrol" | "investigate" | "chase" | "search" | "rest" | "catch" | "work" | "stare" | "alert"
 
 -- Where he is inside a mode (published as an attribute; the client's typing, face and gestures follow it):
 -- work: walking to the desk, typing, the ambush (stopped dead, head swivelled); a sit-in also tips his head down under
@@ -128,7 +129,8 @@ export type Mind = {
 	noisy: boolean?,
 	hunch: boolean?,
 	nearAt: number?,
-	-- The point the ambush turned to; until when his head stays swivelled to it.
+	-- The point the ambush (or the head turn) turned to; until when his head stays swivelled to it. In `alert`,
+	-- `phaseAt` is when the turn began and `hold` how long until the check.
 	point: Vector3?,
 	swivelUntil: number?,
 	-- His body: on a chair (the sit clip, root anchored), or planted still at a spot (root anchored).
@@ -145,6 +147,10 @@ export type Mind = {
 	-- seconds; he chases once that reaches the notice delay for the distance.
 	noticeId: number?,
 	noticeSeconds: number?,
+	-- The nearest crew member in his peripheral zone he is noticing (§10.1): who, and for how many seconds; a head turn
+	-- once that reaches their glance delay.
+	glanceId: number?,
+	glanceSeconds: number?,
 	-- Spot id → until when he leaves that spot alone (after a stare that ended in him walking away).
 	cleared: { [string]: number },
 	-- The routine: when the next work break is due, and the last desk he used.
@@ -176,6 +182,8 @@ export type Glimpse = {
 	-- where they are (through the furniture).
 	hidden: boolean?,
 	seen: boolean?,
+	-- Crouching (the character's Crouching attribute): noticed slower in his peripheral zone.
+	crouched: boolean?,
 }
 
 -- Everything the brain decides from, gathered by OccupantServiceServer each think.

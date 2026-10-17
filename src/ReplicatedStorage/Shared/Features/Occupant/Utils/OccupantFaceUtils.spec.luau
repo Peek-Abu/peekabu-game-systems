@@ -14,6 +14,7 @@ return function()
 		it("narrows his pupils while he is noticing something", function()
 			expect(OccupantFaceUtils.faceFor("investigate")).to.equal("Noticing")
 			expect(OccupantFaceUtils.faceFor("search")).to.equal("Noticing")
+			expect(OccupantFaceUtils.faceFor("alert")).to.equal("Noticing")
 		end)
 
 		it("widens his eyes and smile while hunting someone", function()
@@ -45,7 +46,7 @@ return function()
 		end)
 
 		it("only ever names a face the template ships", function()
-			for _, mode in { "patrol", "investigate", "chase", "search", "rest", "catch", "work", "stare" } do
+			for _, mode in { "patrol", "investigate", "chase", "search", "rest", "catch", "work", "stare", "alert" } do
 				expect(table.find(OccupantAssets.FACES, OccupantFaceUtils.faceFor(mode))).to.be.ok()
 			end
 		end)

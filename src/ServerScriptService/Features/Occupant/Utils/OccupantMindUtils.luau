@@ -258,17 +258,25 @@ M.visible = Sight.visible
 M.distant = Sight.distant
 M.sees = Sight.sees
 M.noticeDelay = Sight.noticeDelay
+-- Beside him and where his head turns (behaviours design section 10): the peripheral zone, its notice delay, whether a
+-- point is outside his front cone, and who he sees down a turned head's cone.
+M.peripheral = Sight.peripheral
+M.glanceDelay = Sight.glanceDelay
+M.beside = Sight.beside
+M.toward = Sight.toward
 
 --[=[
 	The nearest crew member he could notice from where he is, seen or not (not hiding, not in the box, not in their
-	grace): the distance and who.
+	grace): the distance and who. `clear`: only one he has a clear line of sight to (the desk ambush: never through a
+	wall).
 ]=]
-function M.nearestNoticed(mind: Mind, senses: Senses): (number?, Glimpse?)
+function M.nearestNoticed(mind: Mind, senses: Senses, clear: boolean?): (number?, Glimpse?)
 	local best: number? = nil
 	local who: Glimpse? = nil
 	for _, glimpse in senses.players do
 		if
 			glimpse.hidden ~= true
+			and (clear ~= true or glimpse.clear)
 			and not M.graced(mind, glimpse.userId, senses.now)
 			and not M.inZone(glimpse.position, senses.zone)
 		then

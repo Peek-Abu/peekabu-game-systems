@@ -91,7 +91,9 @@ local function blend(from: DreadLook, to: DreadLook, alpha: number): DreadLook
 end
 
 -- Modes in which he is hunting someone (or about to): "sees you or hunting".
-local HUNTING: { [string]: boolean } = { investigate = true, search = true, stare = true, chase = true, catch = true }
+-- `alert`: his head turned to something he half noticed (behaviours design §10.2).
+local HUNTING: { [string]: boolean } =
+	{ investigate = true, search = true, stare = true, chase = true, catch = true, alert = true }
 -- Modes in which he goes about his business, unaware.
 local UNAWARE: { [string]: boolean } = { patrol = true, work = true }
 

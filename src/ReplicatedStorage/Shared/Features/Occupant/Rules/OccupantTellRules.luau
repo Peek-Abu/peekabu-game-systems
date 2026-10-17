@@ -138,6 +138,14 @@ function OccupantTellRules.sat(before: string, after: string): boolean
 end
 
 --[=[
+	Whether his head just turned to something he noticed (into the `alert` mode, behaviours design §10.2): his intake
+	plays from his head, the same as the desk ambush's.
+]=]
+function OccupantTellRules.alerted(before: string?, after: string?): boolean
+	return after == "alert" and before ~= "alert"
+end
+
+--[=[
 	Whether he just rose out of the ambush (his chair swivels as he gets up).
 ]=]
 function OccupantTellRules.rose(before: string, after: string): boolean

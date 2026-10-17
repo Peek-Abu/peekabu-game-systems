@@ -22,6 +22,7 @@ return function()
 			expect(EmployeeFaceRules.isThreatened("chase", false, NEAR)).to.equal(true)
 			expect(EmployeeFaceRules.isThreatened("search", false, NEAR)).to.equal(true)
 			expect(EmployeeFaceRules.isThreatened("catch", false, NEAR)).to.equal(true)
+			expect(EmployeeFaceRules.isThreatened("alert", false, NEAR)).to.equal(true)
 		end)
 
 		it("ignores a nearby Manager who is only patrolling or resting", function()
