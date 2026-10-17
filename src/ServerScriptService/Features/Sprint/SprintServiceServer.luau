@@ -13,6 +13,10 @@
 	Carry is told the unboosted walk (CarryServiceServer:setSpeedBase), so an item picked up or dropped mid-sprint
 	leaves Carry's walk speed right; each tick the sprint speed is set again for whatever is in the hands now.
 
+	Crouching (the character's Crouching attribute) holds a sprint back: asking to sprint (`wantsToSprint`) stands
+	the player up first (CrouchServiceServer), so a sprint always starts from the walk, never the crouch's speed.
+	Crouch composes Carry's speed base with this one (`unboostedSpeed`).
+
 	Spec-exempt shell (Humanoids, Players, ByteNet, RunService); the decisions are the specced SprintRules,
 	SprintSpeedFormulas and SprintStaminaFormulas.
 
@@ -25,6 +29,7 @@ local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local SprintShared = ReplicatedStorage.Shared.Features.Sprint
+local CrouchConstants = require(ReplicatedStorage.Shared.Features.Crouch.Data.CrouchConstants)
 local Observers = require(ReplicatedStorage.Packages.Observers)
 local SprintConstants = require(SprintShared.Data.SprintConstants)
 local SprintEvents = require(SprintShared.Net.SprintEvents)
@@ -112,6 +117,7 @@ local function stepOne(player: Player, runner: Runner, dt: number)
 		alive = alive,
 		frozen = root ~= nil and root:IsA("BasePart") and root.Anchored,
 		hidden = HideServiceServer:isHidden(player),
+		crouching = character ~= nil and character:GetAttribute(CrouchConstants.CROUCHING_ATTRIBUTE) == true,
 		stamina = SprintStaminaFormulas.canStart(runner.bar),
 	})
 	if runner.boosted ~= nil and (not ok or runner.boosted ~= humanoid) then
@@ -182,6 +188,8 @@ export type SprintServiceServer = {
 	stop: (self: SprintServiceServer) -> (),
 	getState: (self: SprintServiceServer) -> { [string]: any },
 	isSprinting: (self: SprintServiceServer, player: Player) -> boolean,
+	wantsToSprint: (self: SprintServiceServer, player: Player) -> boolean,
+	unboostedSpeed: (self: SprintServiceServer, player: Player) -> number?,
 	stamina: (self: SprintServiceServer, player: Player) -> number,
 }
 
@@ -191,10 +199,9 @@ local SprintServiceServer: SprintServiceServer = {
 	--[=[
 		Listens for sprint requests, tells Carry the unboosted speed, and steps everyone's sprint every TICK.
 	]=]
-	start = function(_self)
+	start = function(self)
 		CarryServiceServer:setSpeedBase(function(player: Player): number?
-			local runner = runners[player.UserId]
-			return if runner ~= nil and runner.boosted ~= nil then runner.base else nil
+			return self:unboostedSpeed(player)
 		end)
 		table.insert(
 			stoppers,
@@ -244,6 +251,25 @@ local SprintServiceServer: SprintServiceServer = {
 	isSprinting = function(_self, player)
 		local runner = runners[player.UserId]
 		return runner ~= nil and runner.boosted ~= nil
+	end,
+
+	--[=[
+		Whether the player sprints, or holds the sprint key with the stamina to start one (a crouch stands up for it).
+	]=]
+	wantsToSprint = function(_self, player)
+		local runner = runners[player.UserId]
+		if runner == nil then
+			return false
+		end
+		return runner.boosted ~= nil or (runner.requested and SprintStaminaFormulas.canStart(runner.bar))
+	end,
+
+	--[=[
+		The walk under a running sprint's boost (Carry's speed base); nil while not sprinting.
+	]=]
+	unboostedSpeed = function(_self, player)
+		local runner = runners[player.UserId]
+		return if runner ~= nil and runner.boosted ~= nil then runner.base else nil
 	end,
 
 	--[=[

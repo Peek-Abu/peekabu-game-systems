@@ -13,6 +13,10 @@ export type Input = {
 	alive: boolean,
 	frozen: boolean,
 	hidden: boolean,
+	-- Crouched (the character's Crouching attribute). The crouch ends when a sprint is asked for
+	-- (CrouchServiceServer), so this only holds the sprint back for the tick that stands the player up: a sprint
+	-- never starts from the crouch's speed.
+	crouching: boolean,
 	-- SprintStaminaFormulas.canStart for the bar now.
 	stamina: boolean,
 }
@@ -31,6 +35,9 @@ function SprintRules.canSprint(input: Input): (boolean, string?)
 	end
 	if input.hidden then
 		return false, "hidden"
+	end
+	if input.crouching then
+		return false, "crouching"
 	end
 	if not input.stamina then
 		return false, "winded"

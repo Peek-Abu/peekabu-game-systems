@@ -403,6 +403,11 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Features.Sprint.SprintServiceServer"] = "Humanoid/Players/ByteNet/RunService shell (decisions specced in SprintRules and SprintStaminaFormulas)",
 	["ReplicatedStorage.Client.Features.Sprint.SprintServiceClient"] = "Input/ByteNet/attribute shell (the server decides; the bar is specced in SprintViewModel)",
 	["ReplicatedStorage.Client.UI.React.Screens.Sprint.SprintStaminaSlip"] = "presentational React component (bar specced in SprintViewModel)",
+	-- Cleanup Crew: Crouch
+	["ReplicatedStorage.Shared.Features.Crouch.Data.CrouchConstants"] = "static tuning and names (no logic)",
+	["ReplicatedStorage.Shared.Features.Crouch.Net.CrouchEvents"] = "ByteNet packet definitions (no logic)",
+	["ServerScriptService.Features.Crouch.CrouchServiceServer"] = "Humanoid/Players/ByteNet/RunService shell (decisions specced in CrouchRules and CrouchSpeedFormulas)",
+	["ReplicatedStorage.Client.Features.Crouch.CrouchServiceClient"] = "Input/ByteNet/attribute/camera-offset shell (the request is specced in CrouchRequestUtils; the server decides)",
 	["ReplicatedStorage.Client.Features.Hide.Systems.HidePoseSystem"] = "Players/Motor6D/RunService shell (the pose and its easing are specced in HidePoseFormulas)",
 	["ReplicatedStorage.Client.Features.Hide.Systems.HideDoorSystem"] = "CollectionService/Instance/RunService shell (a cabinet door's local swing; the timing is HideConstants')",
 	-- Cleanup Crew: Shift

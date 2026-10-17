@@ -1,7 +1,7 @@
 local SprintRules = require(script.Parent.SprintRules)
 
 local function input(extra)
-	local value = { requested = true, alive = true, frozen = false, hidden = false, stamina = true }
+	local value = { requested = true, alive = true, frozen = false, hidden = false, crouching = false, stamina = true }
 	for key, item in extra or {} do
 		value[key] = item
 	end
@@ -26,6 +26,10 @@ return function()
 			refused({ frozen = true }, "frozen")
 			refused({ hidden = true }, "hidden")
 			refused({ stamina = false }, "winded")
+		end)
+
+		it("waits while crouched: the crouch stands up first, then the sprint starts from the walk", function()
+			refused({ crouching = true }, "crouching")
 		end)
 	end)
 
