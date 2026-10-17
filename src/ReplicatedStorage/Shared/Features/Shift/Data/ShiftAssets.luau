@@ -22,8 +22,6 @@ local PENDING = ""
 local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- A punch-clock "ka-chunk" when the shift starts.
 	shiftPunchIn = { assetId = "rbxassetid://109228401071501", group = "SFX", volume = 0.8 },
-	-- The truck's horn: the shift's end.
-	shiftTruckHorn = { assetId = "rbxassetid://79879032987879", group = "SFX", volume = 1 },
 	-- The contract met mid-shift: the company motif F-A-C-Bb on clarinet over an oom-pah-pah, a ta-da and a register
 	-- ding, "you did it, keep going" (round-3 pick M1, in-house; 2D, over the office bed).
 	shiftContractMet = { assetId = "rbxassetid://75263082800024", group = "SFX", volume = 0.9 },
@@ -55,7 +53,7 @@ local CUE_SOUNDS: { [string]: string } = {
 	warning = "shiftWarningChime",
 	overtime = "shiftOvertimeSting",
 	clockOut = "shiftClockOutHorn",
-	shiftEnd = "shiftTruckHorn",
+	-- shiftEnd has no sound: the results jingle opens at the same moment (the truck horn there was dropped 2026-10-17).
 }
 
 -- The review's jingle per ShiftCueUtils.Jingle.
