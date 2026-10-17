@@ -3,7 +3,7 @@
 	OccupantVfxConstants: the catch's world particles (VfxBurstRegistry bursts, played by OccupantCatchVfxSystem for
 	every player who sees it). Kid-safe: porcelain and dust, no red, nothing gory.
 
-	- occupantCatchCrack: the throw: a cartoon porcelain crack pops on the caught employee, porcelain shards scatter
+	- occupantCatchCrack: the throw: a cartoon lilac porcelain crack pops on the caught employee, porcelain shards scatter
 	  and fall, and a puff of dust.
 	- occupantRehired: back on the clock: a cream puff ring at their feet, Pippa-purple-to-gold sparkles rising and two
 	  fluttering slips of rehire paperwork.
@@ -31,7 +31,8 @@ local PRESETS: { [string]: Burst } = {
 		layers = {
 			{
 				texture = T.crack,
-				color = gradient({ P.porcelain }),
+				-- Lilac, not cream: a cream crack vanished against the office's white walls (user, 2026-10-17).
+				color = gradient({ P.pippa }),
 				size = seq({ { 0, 2.4 }, { 0.12, 4.2 }, { 1, 4.5 } }),
 				transparency = seq({ { 0, 0 }, { 0.6, 0 }, { 1, 1 } }),
 				lifetime = NumberRange.new(0.45),
@@ -44,7 +45,7 @@ local PRESETS: { [string]: Burst } = {
 			},
 			{
 				texture = T.shard,
-				color = gradient({ P.porcelain, P.porcelainShade }),
+				color = gradient({ P.porcelainShade, P.pippa }),
 				size = NumberSequence.new(0.5),
 				transparency = seq({ { 0, 0 }, { 0.8, 0 }, { 1, 1 } }),
 				lifetime = NumberRange.new(0.7, 1),
