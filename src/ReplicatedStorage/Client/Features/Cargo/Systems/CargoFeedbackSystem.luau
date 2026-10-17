@@ -3,8 +3,9 @@
 	CargoFeedbackSystem: how cargo feels on this client (Cleanup Crew spec §7 "Banking: item swoops into the
 	truck, cha-ching, '+15' floater, clearance bar fills"; §4 "Office plant: leaves partly block your view").
 	- `Banked` (server → all): a ghost of each loaded item swoops on an arc into the truck bed, shrinking and
-	  spinning (CargoFeedbackUtils.arc); when the last lands, a cha-ching at the bed and a rising, fading load floater
-	  per amount, drawn with the paper kit (CargoLoadFloater: "+15 CLEARED", the "+40 BONUS" stamp;
+	  spinning (CargoFeedbackUtils.arc), and as each lands its Gloom is refined into Gleam in the bed (CargoVfxConstants
+	  cargoBankRefine: wisps turning from purple-black to gold, gold sparkles rising); when the last lands, a cha-ching
+	  at the bed and a rising, fading load floater per amount, drawn with the paper kit (CargoLoadFloater: "+15 CLEARED", the "+40 BONUS" stamp;
 	  CargoWorldViewModel.floater; CargoFeedbackUtils.floaters). The clearance bar is the HUD's.
 	- Your public fields: a pickup sound when something new comes into your hands, a pocket sound when an item
 	  slot fills, and plant leaves in front of your camera while your hands hold a blocksView item.
@@ -39,6 +40,9 @@ local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.Sound
 local SoundTypes = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundTypes)
 local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
 local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
+local VfxBurstRegistry = require(ReplicatedStorage.Shared.Features.Vfx.Data.VfxBurstRegistry)
+local CargoVfxConstants = require(ReplicatedStorage.Client.Features.Cargo.Data.CargoVfxConstants)
+local VfxBurstSystem = require(ReplicatedStorage.Client.Features.Vfx.Systems.VfxBurstSystem)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local UIBillboardHost = require(ReplicatedStorage.Client.UI.Layers.UIBillboardHost)
 local UIBillboards = require(ReplicatedStorage.Client.UI.Layers.UIBillboards)
@@ -71,6 +75,13 @@ export type CargoFeedbackState = {
 
 local log = Logger.new("CargoFeedbackSystem")
 
+-- Registered at load (CargoLootFeedbackSystem registers the same set; whichever loads first does it).
+for id, preset in CargoVfxConstants.PRESETS do
+	if not VfxBurstRegistry.has(id) then
+		VfxBurstRegistry.register(id, preset)
+	end
+end
+
 local ghosts = CargoSwoopSystem.new()
 local session = 0
 local swoops: { Swoop } = {}
@@ -78,7 +89,8 @@ local floating: { Floating } = {}
 local leaves: { BasePart } = {}
 local lastHands: string? = nil
 local lastPockets = 0
-local counters = { banked = 0, swoops = 0, floaters = 0, pickups = 0, pockets = 0, played = 0, pending = 0 }
+local counters =
+	{ banked = 0, swoops = 0, refines = 0, floaters = 0, pickups = 0, pockets = 0, played = 0, pending = 0 }
 local stoppers: { () -> () } = {}
 
 local function play(id: string, options: SoundTypes.PlayOptions?)
@@ -225,6 +237,11 @@ local function step()
 		if alpha >= 1 then
 			item.ghost:destroy()
 			table.remove(swoops, index)
+			-- It lands in the bed: its Gloom is refined into Gleam.
+			if VfxBurstSystem.polished() then
+				counters.refines += 1
+				VfxBurstSystem.play("cargoBankRefine", item.to)
+			end
 		else
 			local scale = 1 + (CargoConstants.SWOOP_END_SCALE - 1) * alpha
 			item.ghost:update(

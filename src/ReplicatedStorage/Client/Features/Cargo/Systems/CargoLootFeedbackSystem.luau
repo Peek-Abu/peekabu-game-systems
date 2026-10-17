@@ -9,11 +9,12 @@
 	- the reveal: a cargo item that was hidden under a pile pops out with a gold burst and its reveal sound, whose value
 	  layer grows with the item's base value (CargoLootFeedbackFormulas.revealTier, CargoAssets.REVEAL_SOUNDS);
 	- the appraisal: a valuable appraised a moment ago (CargoAppraisedAt, fresh by CargoLootFeedbackFormulas.stampFresh)
-	  bursts paper flecks (its sound, `cargoAppraise` or `cargoJackpot`, is the server's CargoGrimeSystem.announce: one
-	  play for the crew near it; its sticky slip and its tag's stamp are the server's and the tag's).
+	  pops paper slips (a jackpot, one with a CargoVariant: a short gold burst with coins) (its sound, `cargoAppraise`
+	  or `cargoJackpot`, is the server's CargoGrimeSystem.announce: one play for the crew near it; its sticky slip and its tag's stamp are the server's and the tag's).
 
-	The loot sounds and the hotbar tick are kept warm while this client runs (one silent, never-played Sound each,
-	preloaded), so none starts late. Client-local instances; pending sounds (CargoAssets) are skipped silently.
+	The particles are CargoVfxConstants' polished bursts (VfxBurstSystem); with its A/B switch on they are the
+	pre-polish sparks built here. The loot sounds and the hotbar tick are kept warm while this client runs (one
+	silent, never-played Sound each, preloaded), so none starts late. Client-local instances; pending sounds (CargoAssets) are skipped silently.
 
 	Spec-exempt shell (CollectionService, particles, Sound, RunService); the decisions are the specced
 	CargoLootFeedbackFormulas.
@@ -36,6 +37,9 @@ local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.Sound
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local CargoLootFeedbackFormulas = require(ReplicatedStorage.Client.Features.Cargo.Utils.CargoLootFeedbackFormulas)
 local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
+local VfxBurstRegistry = require(ReplicatedStorage.Shared.Features.Vfx.Data.VfxBurstRegistry)
+local CargoVfxConstants = require(ReplicatedStorage.Client.Features.Cargo.Data.CargoVfxConstants)
+local VfxBurstSystem = require(ReplicatedStorage.Client.Features.Vfx.Systems.VfxBurstSystem)
 
 export type CargoLootFeedbackState = {
 	piles: number,
@@ -48,7 +52,7 @@ local GLINT_CHECK = 0.1
 local rng = Random.new()
 -- Every pile and when it next glints (os.clock()); only a buried one actually does.
 local nextGlint: { [BasePart]: number } = {}
-local counters = { glints = 0, reveals = 0, appraisals = 0 }
+local counters = { glints = 0, reveals = 0, appraisals = 0, jackpots = 0 }
 local stoppers: { () -> () } = {}
 -- The loot sounds (and the hotbar's slot tick, CargoServiceClient.select) kept loaded.
 local WARM: { string } = {
@@ -62,6 +66,13 @@ local WARM: { string } = {
 	"cargoGlint",
 }
 local warm: { Sound } = {}
+
+-- Registered at load: VfxBurstSystem refuses an unknown burst.
+for id, preset in CargoVfxConstants.PRESETS do
+	if not VfxBurstRegistry.has(id) then
+		VfxBurstRegistry.register(id, preset)
+	end
+end
 
 local function play(id: string, at: Vector3)
 	if CargoAssets.SOUNDS[id] ~= nil and SoundRegistry.has(id) then
@@ -123,6 +134,11 @@ local function glint(pile: BasePart)
 	end
 	counters.glints += 1
 	local top = pile.Position + Vector3.new(0, pile.Size.Y / 2, 0)
+	play("cargoGlint", top)
+	if VfxBurstSystem.polished() then
+		VfxBurstSystem.play("cargoGlint", top)
+		return
+	end
 	burst(
 		top,
 		CargoConstants.GLINT_COLOR,
@@ -131,7 +147,6 @@ local function glint(pile: BasePart)
 		1.5,
 		CargoConstants.GLINT_LIFETIME
 	)
-	play("cargoGlint", top)
 end
 
 local function stepGlints()
@@ -168,9 +183,13 @@ local function observeItem(instance: Instance): (() -> ())?
 		local hidden = item:GetAttribute(CargoConstants.HIDDEN_ATTRIBUTE) == true
 		if wasHidden and not hidden then
 			counters.reveals += 1
-			burst(item.Position, CargoConstants.REVEAL_COLOR, CargoConstants.REVEAL_COUNT, 0.45, 12, 0.7)
 			local base = item:GetAttribute(CargoConstants.BASE_VALUE_ATTRIBUTE)
 			local tier = CargoLootFeedbackFormulas.revealTier(if type(base) == "number" then base else nil)
+			if VfxBurstSystem.polished() then
+				VfxBurstSystem.play("cargoReveal", item.Position, { amount = CargoVfxConstants.REVEAL_AMOUNT[tier] })
+			else
+				burst(item.Position, CargoConstants.REVEAL_COLOR, CargoConstants.REVEAL_COUNT, 0.45, 12, 0.7)
+			end
 			play(CargoAssets.REVEAL_SOUNDS[tier], item.Position)
 		end
 		wasHidden = hidden
@@ -181,14 +200,14 @@ local function observeItem(instance: Instance): (() -> ())?
 			CargoLootFeedbackFormulas.stampFresh(if type(at) == "number" then at else nil, Workspace:GetServerTimeNow())
 		then
 			counters.appraisals += 1
-			burst(
-				item.Position + Vector3.new(0, item.Size.Y / 2, 0),
-				CargoConstants.APPRAISE_COLOR,
-				CargoConstants.APPRAISE_COUNT,
-				0.3,
-				6,
-				0.6
-			)
+			local top = item.Position + Vector3.new(0, item.Size.Y / 2, 0)
+			if VfxBurstSystem.polished() then
+				local jackpot = item:GetAttribute(CargoConstants.VARIANT_ATTRIBUTE) ~= nil
+				counters.jackpots += if jackpot then 1 else 0
+				VfxBurstSystem.play(if jackpot then "cargoJackpot" else "cargoAppraise", top)
+				return
+			end
+			burst(top, CargoConstants.APPRAISE_COLOR, CargoConstants.APPRAISE_COUNT, 0.3, 6, 0.6)
 		end
 	end)
 	return function()
@@ -204,6 +223,7 @@ function CargoLootFeedbackSystem.start()
 		return
 	end
 	preload()
+	VfxBurstSystem.preload()
 	table.insert(stoppers, Observers.observeTag(VacuumConstants.PILE_TAG, observePile))
 	table.insert(stoppers, Observers.observeTag(CarryConstants.TAG, observeItem))
 	local elapsed = 0
