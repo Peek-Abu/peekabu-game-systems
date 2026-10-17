@@ -52,12 +52,14 @@ crew, staged warning signs, and a new catch jumpscare. They replace the chase ki
 - **The event:**
   - He sits **0.7 studs further back** than at work, so his knees stop at the desk's edge instead of 0.45 into the
     knee-hole (the overlap with the hider's huddle). His shins and shoes fill the hider's peek view.
-  - He types for **7–11 s** (the typing is right above you).
+  - He types for **7–11 s** (the typing is right above you). The moment his chair starts to roll back for the look
+    under, the typing stops dead: the sound and his hands (the sit-and-type clip held still in the seated pose) until
+    his head is back up (2026-10-17, §12).
   - He folds forward over his knees and his head slowly comes in under the desk's lip, upside down, still smiling
     (2.6 s: Calm, then Hunting for the last 0.9 s). It holds **1.4 s**. The hider's camera draws back and turns to
     his face, the same reveal as the stare's check.
-  - Then: **50%** he catches you (certain if there was a noise), else his head rises (1 s), he types 2 s more, stands
-    and leaves.
+  - Then he **catches you** (since 2026-10-17, §12: was a 50% roll, and a look that found you and walked away read
+    as a bug). Only with nobody left under the desk does his head rise (1 s), he types 2 s more, stands and leaves.
 - **Tapping out** during it is the escape: he has to stand up first (1.2 s).
 
 ## 4. The director
@@ -330,7 +332,10 @@ completed glance, or a noise from beside or behind him) and the §1 desk ambush.
    is picked.
 6. **A developer's force.** `occupantturn <snap|knowing|stare|auto>` (Admins) makes the next head turn that variant,
    skipping the gates, rolls and certainty. It still needs a player he can see. If the caller is in his view, the
-   turn starts at once at the caller.
+   turn starts at once at the caller. In Studio the Workspace attribute **`ForceSlowTurn`** (a string: `snap`,
+   `knowing` or `stare`; `OccupantConstants.FORCE_TURN_ATTRIBUTE`) arms **every** head turn with that variant while it
+   is set (`OccupantTurnRules.forcedBy` / `arm`). Fail-closed: a live server ignores it; unset, `auto` or anything else
+   does nothing.
 
 ### 11.2 The slow turn (both variants)
 
@@ -429,3 +434,23 @@ Changed modules:
 - **Client systems:** `OccupantGestureSystem`, `OccupantWarningSystem` (the creak and the crack), `OccupantTellSystem`
   and `OccupantDreadSystem`.
 - **A new command:** `occupantturn` (Cmdr, Admins).
+
+## 12. Fix: the sit-in's look-under typed through its start and let the hider go (2026-10-17)
+
+**The report** (twice in a few rounds): chased, the player hid under a desk; he sat on it and typed (fine: the
+sit-in is wanted there); as he started to look under he kept typing for about half a second and it looked glitchy;
+he looked under the desk, did not catch them, and walked away.
+
+**Reproduced live** (the Clean place, a QA harness): chase → seen going in → `stare` → `work` sitIn → `type` → `tip`
+→ `tipHold` → (no catch on a high roll) → `tipBack` → `typeMore` → patrol. The server's track list showed the
+sit-and-type clip (`harlowSitType`, looped) at speed 1 all through `tip` and `tipHold`.
+
+| Symptom | Root cause | Fix |
+|---|---|---|
+| He kept typing as the look-under began (and through it) | Only the typing *sound* followed `OccupantTellRules.typing`; the looped `harlowSitType` clip ran on through the ambush, a slow turn from the chair and the whole sit-in motion, his hands typing while his chair rolled back and he folded | `OccupantSeatSystem.typing`: every think the clip runs only while `OccupantTellRules.typing` holds, else it is held still (speed 0, the seated pose kept). It changes on the very think the phase becomes `tip` (verified on the server and on the client: same frame) |
+| He looked under, found them and walked away | Not a refused catch: from the sit-in pose his root is 4.3 studs from the huddle, inside `FOUND_REACH`, the hider is marked seen before the catch effect, and `holdCamp` keeps them under. The catch was simply a roll, `SIT_IN_CATCH` 0.5 (`OccupantStareRules.sitInCatches`) | The look-under always catches a hider still under the desk (`OccupantWorkRules`, `tipHold`); `sitInCatches` and `SIT_IN_CATCH` removed |
+
+Live after the fix: three sit-in look-unders with every roll forced high (two after a chase, one at an unseen hider
+found by a noise), all caught; the clip froze on the `tip` think each time. The stare's own check (`check`) already
+always ended in the catch. Videos: `characters/qa/manager-videos/`.
+

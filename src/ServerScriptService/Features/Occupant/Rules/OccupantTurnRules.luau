@@ -16,6 +16,8 @@
 	  the target is searched for.
 	- The jerk: straight into the chase (mode `chase`, phase `jerk`, his head held on them for JERK_SECONDS, plus the
 	  fast stand-up from a chair); `settle` ends the phase.
+	- `forcedBy` / `arm`: the developer's ForceSlowTurn Workspace attribute (Studio only, fail-closed): while it names a
+	  variant, every head turn is armed with it (as `occupantturn` arms the next one).
 
 	Pure (see OccupantMindUtils).
 
@@ -124,6 +126,32 @@ function OccupantTurnRules.pick(mind: Mind, senses: Senses, who: Glimpse?): Turn
 		return "knowing"
 	end
 	return "snap"
+end
+
+local VARIANTS: { [string]: TurnKind } = { snap = "snap", knowing = "knowing", stare = "stare" }
+
+--[=[
+	The variant a ForceSlowTurn attribute `value` names ("snap", "knowing" or "stare", any case, trimmed), only when
+	`allowed` (a Studio session). Nil otherwise: unset, "auto", anything else, or a live server (fail-closed).
+]=]
+function OccupantTurnRules.forcedBy(value: unknown, allowed: boolean): TurnKind?
+	if not allowed or type(value) ~= "string" then
+		return nil
+	end
+	return VARIANTS[string.lower((string.gsub(value, "^%s*(.-)%s*$", "%1")))]
+end
+
+--[=[
+	`mind` armed with the forced variant `kind` for its next head turn (a copy), unless it already has one; `mind` itself
+	when `kind` is nil.
+]=]
+function OccupantTurnRules.arm(mind: Mind, kind: TurnKind?): Mind
+	if kind == nil or mind.forceTurn ~= nil then
+		return mind
+	end
+	local nextMind = table.clone(mind)
+	nextMind.forceTurn = kind
+	return nextMind
 end
 
 --[=[

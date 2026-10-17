@@ -13,8 +13,8 @@
 	- A secure supply cabinet is never looked into casually: he opens it (OPEN_SECONDS, slow and telegraphed) only after
 	  a noise at it, or when he saw you get in within OPEN_RADIUS and the check roll says so; never on a hunch.
 	- A sit-in (he sits at the desk you hide under) is rare: SIT_IN_CHANCE, at most SIT_IN_MAX a shift, SIT_IN_GAP
-	  apart, only at a desk with someone under it whose chair is on the knee-hole side. At its end he catches you on
-	  SIT_IN_CATCH (certain after a noise).
+	  apart, only at a desk with someone under it whose chair is on the knee-hole side. When his head comes in under
+	  the desk he always catches you (2026-10-17: he no longer looks you in the face and leaves).
 	- The ambush while he sits: a noise he hears, a player he sees, or a player within AMBUSH_RADIUS with a clear line
 	  (any direction, never through a wall).
 
@@ -117,10 +117,6 @@ function OccupantStareRules.sitsIn(input: SitInInput): boolean
 		return false
 	end
 	return input.roll < OccupantConstants.SIT_IN_CHANCE
-end
-
-function OccupantStareRules.sitInCatches(noisy: boolean, roll: number): boolean
-	return noisy or roll < OccupantConstants.SIT_IN_CATCH
 end
 
 function OccupantStareRules.ambushes(input: AmbushInput): boolean

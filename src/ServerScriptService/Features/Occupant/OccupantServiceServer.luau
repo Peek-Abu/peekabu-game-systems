@@ -245,6 +245,8 @@ local function think(def: NpcTypes.NpcDef, now: number, position: Vector3): NpcT
 		pendingForce = nil
 		before = OccupantAlertRules.force(before, senses, force.kind, force.userId)
 	end
+	-- The developer's ForceSlowTurn attribute (Studio only): every head turn that variant while it is set.
+	before = OccupantTurnRules.arm(before, Sense.forcedTurn())
 	local result = OccupantBrainRules.step(before, senses)
 	mind = result.mind
 	if result.mind.mode == "chase" and before.mode ~= "chase" then
@@ -260,6 +262,8 @@ local function think(def: NpcTypes.NpcDef, now: number, position: Vector3): NpcT
 			catchPlayer(player, before, true)
 		end)
 	end
+	-- His hands type only while he types (never through the sit-in's motion, an ambush or a slow turn from the chair).
+	OccupantSeatSystem.typing(current, mind or result.mind)
 	return result.intent
 end
 

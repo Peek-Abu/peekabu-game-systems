@@ -139,6 +139,13 @@ return function()
 			expect(OccupantTurnRules.pick(breathing, s, who)).to.equal("snap")
 		end)
 
+		it("is certain of a player who walks up close behind him with a clear line (the report, 2026-10-17)", function()
+			local mind = fresh()
+			local behind = player(7, BEHIND, { speed = 8 })
+			expect(OccupantTurnRules.certain(mind, senses(), behind)).to.equal(true)
+			expect(OccupantTurnRules.pick(mind, senses({ rolls = KNOWING }), behind)).to.equal("knowing")
+		end)
+
 		it("takes a developer's forced variant over every gate, given someone to turn to", function()
 			local forced = fresh(0)
 			forced.forceTurn = "stare"
@@ -385,5 +392,36 @@ return function()
 			armed.forceTurn = "stare"
 			expect(OccupantAlertRules.force(armed, senses(), "auto", 7).forceTurn).to.equal(nil)
 		end)
+	end)
+
+	describe("forcedBy (the ForceSlowTurn Workspace attribute)", function()
+		it("reads a variant name, any case and spacing, only where it is allowed (Studio)", function()
+			expect(OccupantTurnRules.forcedBy("knowing", true)).to.equal("knowing")
+			expect(OccupantTurnRules.forcedBy(" Stare ", true)).to.equal("stare")
+			expect(OccupantTurnRules.forcedBy("SNAP", true)).to.equal("snap")
+		end)
+
+		it("fails closed: outside Studio, unset, auto, junk or a non-string does nothing", function()
+			expect(OccupantTurnRules.forcedBy("knowing", false)).to.equal(nil)
+			expect(OccupantTurnRules.forcedBy(nil, true)).to.equal(nil)
+			expect(OccupantTurnRules.forcedBy("auto", true)).to.equal(nil)
+			expect(OccupantTurnRules.forcedBy("", true)).to.equal(nil)
+			expect(OccupantTurnRules.forcedBy("spin", true)).to.equal(nil)
+			expect(OccupantTurnRules.forcedBy(1, true)).to.equal(nil)
+			expect(OccupantTurnRules.forcedBy(true, true)).to.equal(nil)
+		end)
+
+		it(
+			"arms every head turn while set: a mind without a forced variant gets it, an armed one keeps its own",
+			function()
+				local mind = fresh()
+				expect(OccupantTurnRules.arm(mind, "knowing").forceTurn).to.equal("knowing")
+				expect(mind.forceTurn).to.equal(nil)
+				local armed = fresh()
+				armed.forceTurn = "stare"
+				expect(OccupantTurnRules.arm(armed, "knowing").forceTurn).to.equal("stare")
+				expect(OccupantTurnRules.arm(mind, nil)).to.equal(mind)
+			end
+		)
 	end)
 end

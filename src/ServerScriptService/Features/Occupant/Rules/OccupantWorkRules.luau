@@ -14,9 +14,11 @@
 	  his body's cone or down the cone his head is turned to (OccupantSightUtils.toward), or investigates the point.
 	- A sit-in (he sat at the desk `quarry` hides under, OccupantStareRules.sitsIn): SIT_IN_BACK further back, typing
 	  SIT_IN_TYPE (the camping push-out held meanwhile); his head tips down under the desk (TIP_SECONDS), holds TIP_HOLD,
-	  and he catches them (OccupantStareRules.sitInCatches; a noise near the spot meanwhile makes it certain) or tips
-	  back up (TIP_BACK), types TYPE_MORE, stands and walks on, forgetting them and leaving that spot alone
-	  CLEARED_SECONDS. A noise elsewhere, a passer-by or the hider bolting (their exit noise) is an ambush.
+	  and he always catches the hider he finds there (2026-10-17: a look that found them and let them be read as a
+	  bug). Only with nobody left under it (caught by someone else, gone) does he tip back up (TIP_BACK), type
+	  TYPE_MORE, stand and walk on, leaving that spot alone CLEARED_SECONDS. A noise elsewhere, a passer-by or the
+	  hider bolting (their exit noise) is an ambush. His typing (the sound and his hands) stops the moment the tip
+	  begins (OccupantTellRules.typing).
 
 	- A slow turn from the chair (§11, OccupantTurnRules): the ambush on a player he is certain of (no one in front of
 	  him) may be the knowing turn or the staring contest instead; seated, he pops up on the jerk.
@@ -217,12 +219,9 @@ local function seated(current: Mind, senses: Senses, seen: { Glimpse }, heard: V
 			return { mind = current, intent = IDLE }
 		end
 		local step: Step = { mind = M.inPhase(current, "tipBack", now, OccupantConstants.TIP_BACK), intent = IDLE }
+		-- His face is in front of theirs: he always catches the hider still under the desk.
 		local quarry = current.quarry
-		if
-			quarry ~= nil
-			and M.hiderOf(senses, quarry) ~= nil
-			and OccupantStareRules.sitInCatches(current.noisy == true, M.roll(senses, 3))
-		then
+		if quarry ~= nil and M.hiderOf(senses, quarry) ~= nil then
 			step = M.addEffect(step, { kind = "seen", userId = quarry, seen = true })
 			step = M.addEffect(step, { kind = "catch", userId = quarry })
 		end

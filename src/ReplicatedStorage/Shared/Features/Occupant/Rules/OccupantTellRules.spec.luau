@@ -98,6 +98,16 @@ return function()
 			expect(OccupantTellRules.typing("work", "tip")).to.equal(false)
 			expect(OccupantTellRules.typing("patrol", nil)).to.equal(false)
 		end)
+		it(
+			"is still through the whole sit-in motion, a slow turn from the chair and a catch (hands and sound)",
+			function()
+				for _, phase in { "tip", "tipHold", "tipBack", "ambush", "slowTurn", "staring" } do
+					expect(OccupantTellRules.typing("work", phase)).to.equal(false)
+				end
+				expect(OccupantTellRules.typing("catch", nil)).to.equal(false)
+				expect(OccupantTellRules.typing("catch", "tipBack")).to.equal(false)
+			end
+		)
 	end)
 
 	describe("stage", function()

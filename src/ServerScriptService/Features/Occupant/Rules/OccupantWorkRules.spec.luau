@@ -333,30 +333,32 @@ return function()
 			expect(step.effects[2].userId).to.equal(7)
 		end)
 
-		it("tips his head down, holds it, then catches on the roll", function()
-			local typing = sitIn(100).mind
-			local t = 100 + C.SIT_IN_TYPE.min
-			local tip = OccupantBrainRules.step(typing, senses({ now = t, position = AT_SEAT, hiders = { HIDER } }))
-			expect(tip.mind.phase).to.equal("tip")
-			local hold = OccupantBrainRules.step(
-				tip.mind,
-				senses({ now = t + C.TIP_SECONDS + 0.01, position = AT_SEAT, hiders = { HIDER } })
-			)
-			expect(hold.mind.phase).to.equal("tipHold")
-			local catch = OccupantBrainRules.step(
-				hold.mind,
-				senses({
-					now = t + C.TIP_SECONDS + C.TIP_HOLD + 0.02,
-					position = AT_SEAT,
-					hiders = { HIDER },
-					rolls = { 0.5, 0.5, 0 },
-				})
-			)
-			expect(kinds(catch)).to.equal("seen,catch")
-			expect(catch.effects[2].userId).to.equal(7)
+		it("tips his head down, holds it, then always catches the hider he finds there (2026-10-17)", function()
+			for _, roll in { 0, 0.5, 0.99 } do
+				local typing = sitIn(100).mind
+				local t = 100 + C.SIT_IN_TYPE.min
+				local tip = OccupantBrainRules.step(typing, senses({ now = t, position = AT_SEAT, hiders = { HIDER } }))
+				expect(tip.mind.phase).to.equal("tip")
+				local hold = OccupantBrainRules.step(
+					tip.mind,
+					senses({ now = t + C.TIP_SECONDS + 0.01, position = AT_SEAT, hiders = { HIDER } })
+				)
+				expect(hold.mind.phase).to.equal("tipHold")
+				local catch = OccupantBrainRules.step(
+					hold.mind,
+					senses({
+						now = t + C.TIP_SECONDS + C.TIP_HOLD + 0.02,
+						position = AT_SEAT,
+						hiders = { HIDER },
+						rolls = { 0.5, 0.5, roll },
+					})
+				)
+				expect(kinds(catch)).to.equal("seen,catch")
+				expect(catch.effects[2].userId).to.equal(7)
+			end
 		end)
 
-		it("lets a still hider be: head back up, a little more typing, then up and away, forgetting them", function()
+		it("with nobody left under the desk: head back up, a little more typing, then up and away", function()
 			local typing = sitIn(100).mind
 			local t = 100 + C.SIT_IN_TYPE.min
 			local mind =
@@ -365,24 +367,19 @@ return function()
 				mind,
 				senses({ now = t + C.TIP_SECONDS + 0.01, position = AT_SEAT, hiders = { HIDER } })
 			).mind
-			local spared = OccupantBrainRules.step(
+			-- They were caught by someone else, or left the game: gone without a sound.
+			local empty = OccupantBrainRules.step(
 				mind,
-				senses({
-					now = t + C.TIP_SECONDS + C.TIP_HOLD + 0.02,
-					position = AT_SEAT,
-					hiders = { HIDER },
-					rolls = { 0.5, 0.5, 0.99 },
-				})
+				senses({ now = t + C.TIP_SECONDS + C.TIP_HOLD + 0.02, position = AT_SEAT, hiders = {} })
 			)
-			expect(spared.mind.phase).to.equal("tipBack")
-			expect(spared.effects).to.equal(nil)
+			expect(empty.mind.phase).to.equal("tipBack")
+			expect(empty.effects).to.equal(nil)
 			local after = t + C.TIP_SECONDS + C.TIP_HOLD + C.TIP_BACK + 0.03
-			local more =
-				OccupantBrainRules.step(spared.mind, senses({ now = after, position = AT_SEAT, hiders = { HIDER } }))
+			local more = OccupantBrainRules.step(empty.mind, senses({ now = after, position = AT_SEAT, hiders = {} }))
 			expect(more.mind.phase).to.equal("typeMore")
 			local gone = OccupantBrainRules.step(
 				more.mind,
-				senses({ now = after + C.TYPE_MORE + 0.01, position = AT_SEAT, hiders = { HIDER } })
+				senses({ now = after + C.TYPE_MORE + 0.01, position = AT_SEAT, hiders = {} })
 			)
 			expect(gone.mind.mode).to.equal("patrol")
 			expect(kinds(gone)).to.equal("seen,stand")

@@ -357,6 +357,9 @@ return table.freeze({
 	-- decaying WATCH_DECAY a second). Never on a breather, never right after another slow turn, at least SLOW_GAP
 	-- seconds after the last one.
 	CERTAIN_RANGE = 14,
+	-- A developer's Workspace attribute (Studio only, fail-closed; OccupantTurnRules.forcedBy): "snap", "knowing" or
+	-- "stare" makes every head turn that variant while it is set, skipping the gates, rolls and certainty.
+	FORCE_TURN_ATTRIBUTE = "ForceSlowTurn",
 	CERTAIN_WATCHED = 0.5,
 	SLOW_GAP = 60,
 	-- The staring contest (the rarest): once a shift for the whole crew, only with the menace gauge within STARE_MENACE
@@ -547,7 +550,8 @@ return table.freeze({
 	-- Seconds of sight remembered per player decay at this rate once he loses them (per second).
 	WATCH_DECAY = 0.5,
 	-- §3 Sitting at the desk you hide under: the roll, the per-shift cap and gap, how far back he sits (knees clear of
-	-- the hider), typing, the head tipping down (its Calm part), the hold, the catch odds, the head back up, typing more.
+	-- the hider), typing, the head tipping down (its Calm part), the hold (then always the catch), the head back up,
+	-- typing more.
 	SIT_IN_CHANCE = 0.35,
 	SIT_IN_MAX = 2,
 	SIT_IN_GAP = 90,
@@ -556,7 +560,6 @@ return table.freeze({
 	TIP_SECONDS = 2.6,
 	TIP_CALM = 1.7,
 	TIP_HOLD = 1.4,
-	SIT_IN_CATCH = 0.5,
 	TIP_BACK = 1,
 	TYPE_MORE = 2,
 	-- §4 The director: steer intervals (crew / solo, less per tier, overtime), the first steer, the spread round the

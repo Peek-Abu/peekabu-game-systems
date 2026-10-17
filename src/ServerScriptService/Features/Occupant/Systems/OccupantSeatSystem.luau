@@ -6,6 +6,9 @@
 	- `sit`: the seat contract (OccupantAssets.SEAT): his root anchored and slid (SLIDE_SECONDS) onto the seat frame
 	  (over the chair at standing height, facing the desk), the clipboard hidden, the sit-and-type clip (at Action
 	  priority, over the base NPC's idle pose).
+	- `typing`: his hands type only while the brain says he types (OccupantTellRules.typing): the sit-and-type clip is
+	  held still (speed 0, the seated pose kept) through the ambush, a slow turn from the chair and the whole sit-in
+	  motion (the roll back, the fold, the look under, the way back up), so he never types while his chair rolls.
 	- `stand`: the stand-up clip at `speed` (Action2, over the sit clip it fades from); when it ends, the root moves
 	  SEAT.standOffset (where the clip ended him), pulled back clear of the desk he sat at (OccupantDeskUtils.standUp,
 	  STAND_CLEAR: never inside or behind it, where no path exists), and is let go, the clipboard back. Without the
@@ -31,6 +34,7 @@ local AnimationPlayerSystem = require(ReplicatedStorage.Shared.Features.Animatio
 local OccupantAssets = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantAssets)
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local OccupantTypes = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantTypes)
+local OccupantTellRules = require(ReplicatedStorage.Shared.Features.Occupant.Rules.OccupantTellRules)
 local OccupantBrainRules = require(ServerScriptService.Features.Occupant.Rules.OccupantBrainRules)
 local OccupantTurnRules = require(ServerScriptService.Features.Occupant.Rules.OccupantTurnRules)
 local OccupantRigSystem = require(ServerScriptService.Features.Occupant.Systems.OccupantRigSystem)
@@ -42,6 +46,8 @@ type Rig = OccupantRigSystem.Rig
 type Body = {
 	token: number,
 	sitting: AnimationPlayerSystem.PlayHandle?,
+	-- Whether the sit-and-type clip runs (his hands typing) or is held still.
+	typing: boolean,
 	tween: Tween?,
 	clipboard: number?,
 	-- The seat he sits on and its desk (frame and size), for where standing up ends.
@@ -67,7 +73,7 @@ setmetatable(bodies, { __mode = "k" })
 local function bodyOf(rig: Rig): Body
 	local body = bodies[rig.model]
 	if body == nil then
-		body = { token = 0 }
+		body = { token = 0, typing = true }
 		bodies[rig.model] = body
 	end
 	return body
@@ -140,6 +146,7 @@ function OccupantSeatSystem.sit(rig: Rig, seat: CFrame, desk: CFrame?, deskSize:
 	slide(rig, body, seat)
 	showClipboard(rig, body, false)
 	stopSitting(body, 0)
+	body.typing = true
 	if AnimationRegistry.get("harlowSitType") ~= nil then
 		body.sitting = AnimationServiceServer:playOnRig(
 			rig.model,
@@ -147,6 +154,24 @@ function OccupantSeatSystem.sit(rig: Rig, seat: CFrame, desk: CFrame?, deskSize:
 			{ priority = Enum.AnimationPriority.Action, fadeTime = SLIDE_SECONDS }
 		)
 	end
+end
+
+--[=[
+	Runs his seated typing while `mind` types (OccupantTellRules.typing), else holds it still in the seated pose. Per
+	think; only a change touches the clip.
+]=]
+function OccupantSeatSystem.typing(rig: Rig?, mind: OccupantTypes.Mind)
+	if rig == nil then
+		return
+	end
+	local body = bodyOf(rig)
+	local handle = body.sitting
+	local typing = OccupantTellRules.typing(mind.mode, mind.phase)
+	if handle == nil or body.typing == typing then
+		return
+	end
+	body.typing = typing
+	handle:adjustSpeed(if typing then 1 else 0)
 end
 
 function OccupantSeatSystem.stand(rig: Rig, speed: number)

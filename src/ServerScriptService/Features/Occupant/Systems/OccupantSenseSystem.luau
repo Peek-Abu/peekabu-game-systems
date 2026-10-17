@@ -14,6 +14,7 @@
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -22,6 +23,7 @@ local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Dat
 local CrouchConstants = require(ReplicatedStorage.Shared.Features.Crouch.Data.CrouchConstants)
 local HideTypes = require(ReplicatedStorage.Shared.Features.Hide.Data.HideTypes)
 local OccupantBrainRules = require(ServerScriptService.Features.Occupant.Rules.OccupantBrainRules)
+local OccupantTurnRules = require(ServerScriptService.Features.Occupant.Rules.OccupantTurnRules)
 local OccupantDeskUtils = require(ServerScriptService.Features.Occupant.Utils.OccupantDeskUtils)
 local HideServiceServer = require(ServerScriptService.Features.Hide.HideServiceServer)
 local OfficeServiceServer = require(ServerScriptService.Features.Office.OfficeServiceServer)
@@ -325,6 +327,17 @@ end
 -- How many desks he knows (the debugger).
 function System.knownDesks(): number
 	return #knownDesks
+end
+
+--[=[
+	The head-turn variant the developer forces with the Workspace's ForceSlowTurn attribute (OccupantTurnRules.forcedBy:
+	honoured in Studio only, nil anywhere else).
+]=]
+function System.forcedTurn(): Types.TurnKind?
+	return OccupantTurnRules.forcedBy(
+		Workspace:GetAttribute(OccupantConstants.FORCE_TURN_ATTRIBUTE),
+		RunService:IsStudio()
+	)
 end
 
 -- Forgets the furniture (a new shift's office): the next `known` re-reads it.
