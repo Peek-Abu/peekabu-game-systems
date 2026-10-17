@@ -6,7 +6,7 @@
 	- Who: every player's character (its set: the FootstepSet attribute, else its EmployeeName in lower case when
 	  FootstepAssets has that set, else `default`) and every model tagged with a FootstepConstants.TAG_SETS tag (the
 	  Manager: `harlow`).
-	- Gait: hidden (the player's HideSpotId attribute), crouching (the character's Crouching attribute, a hook),
+	- Gait: hidden (the player's HideSpotId attribute), crouching (the character's Crouching attribute, CrouchServiceServer's),
 	  sprinting (the player's Sprinting attribute, the server's decision); an NPC walks, louder as it speeds up.
 	- Roblox's own character sounds (RbxCharacterSounds' running loop, jump, landing, wind, climb, swim, get-up and the
 	  "oof"; FootstepConstants.DEFAULT_SOUNDS) are muted on every character this service follows: each is moved into a

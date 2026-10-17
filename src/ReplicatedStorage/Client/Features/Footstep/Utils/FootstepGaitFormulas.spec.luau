@@ -1,4 +1,5 @@
 local FootstepGaitFormulas = require(script.Parent.FootstepGaitFormulas)
+local FootstepAssets = require(script.Parent.Parent.Data.FootstepAssets)
 
 local SET = {
 	walkSpeed = 10,
@@ -53,6 +54,18 @@ return function()
 		it("is the crouch's or hidden's own, whatever the speed", function()
 			expect(FootstepGaitFormulas.scale(SET, "crouch", 18).volume).to.equal(0.4)
 			expect(FootstepGaitFormulas.scale(SET, "hidden", 18).volume).to.equal(0)
+		end)
+	end)
+
+	describe("the employees' crouch (2026-10-17: quiet and slow)", function()
+		it("steps 8-10 dB under the walk, a little lower in pitch", function()
+			for _, name in { "pippa", "default" } do
+				local gaits = FootstepAssets.SETS[name].gaits
+				local db = 20 * math.log10(gaits.crouch.volume / gaits.walk.volume)
+				expect(db <= -8 and db >= -10).to.equal(true)
+				expect(gaits.crouch.pitch < gaits.walk.pitch).to.equal(true)
+				expect(gaits.crouch.pitch >= 0.85).to.equal(true)
+			end
 		end)
 	end)
 end

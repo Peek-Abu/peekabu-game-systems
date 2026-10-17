@@ -53,7 +53,8 @@ local SETS: { [string]: FootstepSet } = {
 		gaits = {
 			walk = { volume = 1, pitch = 1 },
 			sprint = { volume = 1.5, pitch = 1.05 },
-			crouch = { volume = 0.4, pitch = 0.95 },
+			-- Crouched (CrouchConstants): -9.1 dB and 8 % lower (softer, duller), at the crouch walk's slower foot-falls.
+			crouch = { volume = 0.35, pitch = 0.92 },
 			hidden = { volume = 0, pitch = 1 },
 		},
 		surfaces = {
@@ -111,7 +112,8 @@ local SETS: { [string]: FootstepSet } = {
 		gaits = {
 			walk = { volume = 1, pitch = 1 },
 			sprint = { volume = 1.5, pitch = 1.05 },
-			crouch = { volume = 0.4, pitch = 0.95 },
+			-- Crouched (CrouchConstants): -9.1 dB and 8 % lower (softer, duller), at the crouch walk's slower foot-falls.
+			crouch = { volume = 0.35, pitch = 0.92 },
 			hidden = { volume = 0, pitch = 1 },
 		},
 		surfaces = {

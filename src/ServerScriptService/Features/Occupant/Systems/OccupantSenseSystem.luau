@@ -18,6 +18,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 local Types = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantTypes)
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
+local CrouchConstants = require(ReplicatedStorage.Shared.Features.Crouch.Data.CrouchConstants)
 local HideTypes = require(ReplicatedStorage.Shared.Features.Hide.Data.HideTypes)
 local OccupantBrainRules = require(ServerScriptService.Features.Occupant.Rules.OccupantBrainRules)
 local OccupantDeskUtils = require(ServerScriptService.Features.Occupant.Utils.OccupantDeskUtils)
@@ -28,8 +29,8 @@ local MARKER_ATTRIBUTE = "OfficeMarkerId"
 local ART_KEY_ATTRIBUTE = "OfficeArtKey"
 local CHAIR_DESK_ATTRIBUTE = "OfficeDeskMarker"
 local CHAIR_KEY = "officeChair"
--- A crouching character (FootstepConstants.CROUCH_ATTRIBUTE, a hook nothing sets yet): noticed slower beside him.
-local CROUCH_ATTRIBUTE = "Crouching"
+-- A crouching character (CrouchServiceServer's attribute): noticed slower beside him.
+local CROUCH_ATTRIBUTE = CrouchConstants.CROUCHING_ATTRIBUTE
 
 -- The body box checked at a stand point (wide and deep as his body, waist to head over the floor).
 local STAND_BOX = Vector3.new(2, 4, 1.6)
