@@ -2,10 +2,12 @@
 --[=[
 	NpcMoverSystem: walks one NPC's Humanoid to a goal along a PathfindingService path.
 
-	`moveTo(goal, now)` re-paths only when NpcPathRules.shouldRepath says so (the goal moved, or the path
-	is old). Path computation yields, so it runs on its own thread and a newer request supersedes an
-	older one. With no path (blocked, or the goal is off the navmesh) the Humanoid walks straight at the
-	goal. `step()` advances waypoints and jumps where the path says to.
+	`moveTo(goal, now, inLine)` re-paths only when NpcPathRules.shouldRepath says so (the goal moved, or the
+	path is old). Path computation yields, so it runs on its own thread and a newer request supersedes an
+	older one. While it computes, a goal the caller saw in clear line (`inLine`) is walked at straight away
+	(NpcPathRules.headStraight), so a fresh chase never stands waiting for the pathfinder; the path takes
+	over when it arrives. With no path (blocked, or the goal is off the navmesh) the Humanoid walks straight
+	at the goal. `step()` advances waypoints and jumps where the path says to.
 
 	Spec-exempt shell (PathfindingService, Humanoid); the decisions are NpcPathRules.
 
@@ -19,7 +21,7 @@ local NpcConstants = require(ServerScriptService.Features.Npc.Data.NpcConstants)
 local NpcPathRules = require(ServerScriptService.Features.Npc.Rules.NpcPathRules)
 
 export type NpcMoverSystem = {
-	moveTo: (self: NpcMoverSystem, goal: Vector3, now: number) -> (),
+	moveTo: (self: NpcMoverSystem, goal: Vector3, now: number, inLine: boolean?) -> (),
 	stop: (self: NpcMoverSystem) -> (),
 	step: (self: NpcMoverSystem) -> (),
 	goal: (self: NpcMoverSystem) -> Vector3?,
@@ -36,6 +38,7 @@ function NpcMoverSystem.new(humanoid: Humanoid, root: BasePart): NpcMoverSystem
 	local waypoints: { PathWaypoint } = {}
 	local index = 0
 	local request = 0
+	local computing = false
 	local alive = true
 
 	local function walkTo(position: Vector3)
@@ -45,6 +48,7 @@ function NpcMoverSystem.new(humanoid: Humanoid, root: BasePart): NpcMoverSystem
 	local function startPath(goal: Vector3)
 		request += 1
 		local mine = request
+		computing = true
 		task.spawn(function()
 			local ok = pcall(function()
 				path:ComputeAsync(root.Position, goal)
@@ -52,6 +56,7 @@ function NpcMoverSystem.new(humanoid: Humanoid, root: BasePart): NpcMoverSystem
 			if not alive or mine ~= request then
 				return
 			end
+			computing = false
 			if ok and path.Status == Enum.PathStatus.Success then
 				waypoints = path:GetWaypoints()
 				-- Waypoint 1 is where the NPC stands; head for the next one.
@@ -68,9 +73,9 @@ function NpcMoverSystem.new(humanoid: Humanoid, root: BasePart): NpcMoverSystem
 	end
 
 	local mover: NpcMoverSystem = {
-		moveTo = function(_self, goal, now)
+		moveTo = function(_self, goal, now, inLine)
 			if
-				not NpcPathRules.shouldRepath(
+				NpcPathRules.shouldRepath(
 					currentGoal,
 					goal,
 					computedAt,
@@ -79,15 +84,18 @@ function NpcMoverSystem.new(humanoid: Humanoid, root: BasePart): NpcMoverSystem
 					NpcConstants.REPATH_MAX_AGE
 				)
 			then
-				return
+				currentGoal = goal
+				computedAt = now
+				startPath(goal)
 			end
-			currentGoal = goal
-			computedAt = now
-			startPath(goal)
+			if NpcPathRules.headStraight(inLine == true, index, #waypoints, computing) then
+				walkTo(goal)
+			end
 		end,
 
 		stop = function(_self)
 			request += 1
+			computing = false
 			currentGoal = nil
 			computedAt = nil
 			waypoints = {}

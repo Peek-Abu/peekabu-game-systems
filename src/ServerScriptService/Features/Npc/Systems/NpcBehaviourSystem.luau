@@ -1,8 +1,9 @@
 --!strict
 --[=[
 	NpcBehaviourSystem: one NPC's think — perception, the brain's decision, carrying the intent out through
-	its mover, attacks, and its locomotion pose. NpcServiceServer owns the agents and calls `think` on each
-	NPC's schedule (design: docs/superpowers/specs/2026-10-09-npc-design.md).
+	its mover, and attacks — and its locomotion pose. NpcServiceServer owns the agents, calls `think` on each
+	NPC's schedule and `updatePose` every frame, so the legs follow the body from its first step rather than
+	from the next think (design: docs/superpowers/specs/2026-10-09-npc-design.md).
 
 	Spec-exempt shell (Players, raycasts, Humanoids, animation); every decision is a specced rule module
 	(NpcSenseRules, NpcBrainRules, NpcPathRules).
@@ -110,7 +111,12 @@ local function findCandidate(list: { Candidate }, userId: number?): Candidate?
 	return nil
 end
 
-local function updatePose(agent: Agent)
+local NpcBehaviourSystem = {}
+
+--[=[
+	Plays the locomotion clip for the NPC's current speed when that pose changed (cheap when it has not).
+]=]
+function NpcBehaviourSystem.updatePose(agent: Agent)
 	local animations = agent.def.animations
 	if animations == nil then
 		return
@@ -156,8 +162,6 @@ local function attack(agent: Agent, target: Candidate, now: number, deps: ThinkD
 	end
 end
 
-local NpcBehaviourSystem = {}
-
 --[=[
 	One think for one NPC at `now` (os.clock).
 ]=]
@@ -168,6 +172,8 @@ function NpcBehaviourSystem.think(agent: Agent, now: number, deps: ThinkDeps)
 
 	-- Perception: a hostile NPC hunts what it sees (or still remembers); a timid one notes the nearest.
 	local target: Candidate? = nil
+	-- The target was seen this think (a clear line to it), not only remembered.
+	local targetInLine = false
 	if def.attitude == "hostile" then
 		local visible: { NpcSenseRules.Candidate } = {}
 		for _, candidate in list do
@@ -187,6 +193,7 @@ function NpcBehaviourSystem.think(agent: Agent, now: number, deps: ThinkDeps)
 		if seen ~= nil then
 			agent.targetUserId = seen
 			agent.lastSeenAt = now
+			targetInLine = true
 		elseif not NpcSenseRules.remembers(agent.lastSeenAt, now, def.loseSightTime) then
 			agent.targetUserId = nil
 		end
@@ -218,7 +225,7 @@ function NpcBehaviourSystem.think(agent: Agent, now: number, deps: ThinkDeps)
 		attack(agent, target, now, deps)
 	elseif intent.kind == "chase" and target ~= nil then
 		agent.humanoid.WalkSpeed = def.runSpeed
-		agent.mover:moveTo(target.position, now)
+		agent.mover:moveTo(target.position, now, targetInLine)
 	elseif intent.kind == "flee" then
 		agent.humanoid.WalkSpeed = def.runSpeed
 		agent.mover:moveTo(NpcPathRules.fleeGoal(position, intent.from, def.fleeRange * 1.5), now)
@@ -247,7 +254,6 @@ function NpcBehaviourSystem.think(agent: Agent, now: number, deps: ThinkDeps)
 	elseif agent.mover:goal() ~= nil then
 		agent.mover:stop()
 	end
-	updatePose(agent)
 end
 
 return NpcBehaviourSystem
