@@ -20,9 +20,13 @@ local ToonButton = require(Toon.ToonButton)
 local ToonIcon = require(Toon.ToonIcon)
 local ToonPanel = require(Toon.ToonPanel)
 local ToonPill = require(Toon.ToonPill)
+local ToonSurface = require(Toon.ToonSurface)
 local ToonText = require(Toon.ToonText)
 local UIToonConstants = require(Toon.UIToonConstants)
 local COLOR = UIToonConstants.COLOR
+local DEPTH = UIToonConstants.DEPTH
+-- Room inside the scroll frame for a card's ink outline (it is drawn outside the card) on its open sides.
+local EDGE = DEPTH.outline + 3
 local usePaperViewport = require(script.Parent.Parent.Paper.usePaperViewport)
 local usePaperLayout = require(script.Parent.Parent.Paper.usePaperLayout)
 local VM = require(script.Parent.DepotHubViewModel)
@@ -197,46 +201,41 @@ local function DepotHubScreen(
 		if props.page == "gear" then
 			-- The Locker: a card per piece of issued equipment, its render on a gold stage (the V1 locker cards).
 			body.grid = e("UIGridLayout", {
-				CellSize = UDim2.new(if phone then 1 else 0.5, -10, 0, if phone then 250 else 300),
+				-- Each cell holds its card AND the card's hard drop (the card is drawn DEPTH.drop short of it).
+				CellSize = UDim2.new(if phone then 1 else 0.5, -10, 0, if phone then 262 else 312),
 				CellPadding = UDim2.fromOffset(16, 16),
 				SortOrder = Enum.SortOrder.LayoutOrder,
 			})
-			body.pad = e("UIPadding", { PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 16) })
+			-- Room on every side for the cards' ink outline and their drop, so the scroll frame never cuts them.
+			body.pad = e("UIPadding", {
+				PaddingLeft = UDim.new(0, EDGE),
+				PaddingRight = UDim.new(0, EDGE),
+				PaddingTop = UDim.new(0, 12),
+				PaddingBottom = UDim.new(0, 20),
+			})
 			for index, section in copy.sections do
-				body[`section{index}`] = e("Frame", {
-					LayoutOrder = index,
-					BackgroundColor3 = UIToonConstants.shade("cream").hi,
-					BorderSizePixel = 0,
-				}, {
-					corner = e("UICorner", { CornerRadius = UDim.new(0, 20) }),
-					stroke = e("UIStroke", { Color = COLOR.ink, Thickness = 4 }),
-					stage = e("Frame", {
-						Position = UDim2.fromOffset(10, 10),
-						Size = UDim2.new(1, -20, 0, if phone then 96 else 130),
-						BackgroundColor3 = UIToonConstants.shade("gold").base,
-						BorderSizePixel = 0,
-					}, {
-						corner = e("UICorner", { CornerRadius = UDim.new(0, 14) }),
-						stroke = e("UIStroke", { Color = COLOR.ink, Thickness = 3 }),
-						gradient = e("UIGradient", {
-							Rotation = 90,
-							Color = ColorSequence.new(
-								UIToonConstants.shade("gold").hi,
-								UIToonConstants.shade("gold").base
-							),
-						}),
-						art = e(ToonIcon, {
-							icon = icons[index],
-							anchor = Vector2.new(0.5, 0.5),
-							position = UDim2.fromScale(0.5, 0.5),
-							size = UDim2.fromOffset(if phone then 88 else 124, if phone then 88 else 124),
-							drop = 5,
-						}),
+				local stage: { [string]: React.ReactNode } = {
+					art = e(ToonIcon, {
+						icon = icons[index],
+						anchor = Vector2.new(0.5, 0.5),
+						position = UDim2.fromScale(0.5, 0.5),
+						size = UDim2.fromOffset(if phone then 88 else 124, if phone then 88 else 124),
+						drop = 5,
+					}),
+				}
+				local face: { [string]: React.ReactNode } = {
+					stage = e(ToonSurface, {
+						hue = "gold",
+						small = true,
+						radius = 14,
+						position = UDim2.fromOffset(10, 10),
+						size = UDim2.new(1, -20, 0, if phone then 96 else 130),
+						children = stage,
 					}),
 					title = e(ToonText, {
 						text = section.title,
 						textSize = if phone then 20 else 24,
-						position = UDim2.fromOffset(16, if phone then 112 else 148),
+						position = UDim2.fromOffset(16, if phone then 114 else 150),
 						size = UDim2.new(1, -32, 0, 30),
 						fit = true,
 					}),
@@ -244,11 +243,23 @@ local function DepotHubScreen(
 						text = section.body,
 						font = "body",
 						textSize = if phone then 15 else 18,
-						position = UDim2.fromOffset(16, if phone then 144 else 182),
-						size = UDim2.new(1, -32, 0, if phone then 96 else 106),
+						position = UDim2.fromOffset(16, if phone then 146 else 184),
+						size = UDim2.new(1, -32, 0, if phone then 92 else 104),
 						wrapped = true,
 						fit = true,
 						alignY = "top",
+					}),
+				}
+				body[`section{index}`] = e("Frame", {
+					LayoutOrder = index,
+					BackgroundTransparency = 1,
+				}, {
+					card = e(ToonSurface, {
+						hue = "cream",
+						radius = 20,
+						pattern = "sparkle",
+						size = UDim2.new(1, 0, 1, -DEPTH.drop),
+						children = face,
 					}),
 				})
 			end
@@ -259,21 +270,27 @@ local function DepotHubScreen(
 			})
 			body.pad = e("UIPadding", {
 				PaddingLeft = UDim.new(0, if phone then 34 else 52),
-				PaddingTop = UDim.new(0, 12),
-				PaddingBottom = UDim.new(0, 16),
+				PaddingRight = UDim.new(0, EDGE),
+				PaddingTop = UDim.new(0, 14),
+				PaddingBottom = UDim.new(0, 20),
 			})
 			local iconSize = if phone then 64 else 92
 			for index, section in copy.sections do
-				-- A card per section, its render breaking the card's left edge (outside the card's text flow).
+				-- A card per section on the depth stack, its render breaking the card's left edge. The text block sets the
+				-- card's height (it grows with its copy); the surface behind it fills the card short of its drop.
 				body[`section{index}`] = e("Frame", {
 					LayoutOrder = index,
-					Size = UDim2.new(1, -8, 0, 0),
+					Size = UDim2.new(1, -EDGE, 0, 0),
 					AutomaticSize = Enum.AutomaticSize.Y,
-					BackgroundColor3 = UIToonConstants.shade("cream").hi,
-					BorderSizePixel = 0,
+					BackgroundTransparency = 1,
 				}, {
-					corner = e("UICorner", { CornerRadius = UDim.new(0, 18) }),
-					stroke = e("UIStroke", { Color = COLOR.ink, Thickness = 4 }),
+					surface = e(ToonSurface, {
+						hue = "cream",
+						radius = 18,
+						pattern = "sparkle",
+						size = UDim2.new(1, 0, 1, -DEPTH.drop),
+						zIndex = 1,
+					}),
 					icon = e(ToonIcon, {
 						icon = icons[index],
 						position = UDim2.fromOffset(-iconSize * 0.42, -8),
@@ -285,12 +302,14 @@ local function DepotHubScreen(
 						Size = UDim2.fromScale(1, 0),
 						AutomaticSize = Enum.AutomaticSize.Y,
 						BackgroundTransparency = 1,
+						ZIndex = 2,
 					}, {
 						pad = e("UIPadding", {
 							PaddingLeft = UDim.new(0, iconSize * 0.66),
 							PaddingRight = UDim.new(0, 14),
-							PaddingTop = UDim.new(0, 10),
-							PaddingBottom = UDim.new(0, 12),
+							PaddingTop = UDim.new(0, 12),
+							-- The surface's lip and the card's drop sit under the copy.
+							PaddingBottom = UDim.new(0, 14 + DEPTH.lip + DEPTH.drop),
 						}),
 						list = e("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4) }),
 						title = e("TextLabel", {
@@ -304,6 +323,7 @@ local function DepotHubScreen(
 							TextSize = if phone then 18 else 24,
 							TextColor3 = UIToonConstants.shade("grape").lo,
 							TextXAlignment = Enum.TextXAlignment.Left,
+							ZIndex = 2,
 						}),
 						body = e("TextLabel", {
 							LayoutOrder = 2,
@@ -316,6 +336,7 @@ local function DepotHubScreen(
 							TextSize = if phone then 15 else 20,
 							TextColor3 = COLOR.ink,
 							TextXAlignment = Enum.TextXAlignment.Left,
+							ZIndex = 2,
 						}),
 					}),
 				})
