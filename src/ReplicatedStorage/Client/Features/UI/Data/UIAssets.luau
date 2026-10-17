@@ -23,6 +23,40 @@ local SoundTypes = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundTyp
 
 local UIAssets = {}
 
+-- The V1 kit's icon names (the keys of UIAssets.toonIcons).
+export type ToonIcon =
+	"clock"
+	| "dust"
+	| "fishtank"
+	| "flashlight"
+	| "gift"
+	| "gleam"
+	| "gleamPile"
+	| "globe"
+	| "gloom"
+	| "grab"
+	| "guide"
+	| "jobs"
+	| "key"
+	| "lock"
+	| "locker"
+	| "managerCalm"
+	| "managerHunt"
+	| "monitor"
+	| "mop"
+	| "pippaHappy"
+	| "pippaWorried"
+	| "settings"
+	| "spray"
+	| "stamina"
+	| "stapler"
+	| "stopwatch"
+	| "trophy"
+	| "truck"
+	| "vacuum"
+	| "vacuumBrass"
+	| "xp"
+
 -- A tileable texture: its asset id (PENDING "" until the developer uploads it) and its size in px, the TileSize it
 -- repeats at. PaperTexture draws nothing while an id is "", so every paper stays a flat colour until then.
 export type Texture = { id: string, tile: Vector2 }
@@ -38,6 +72,72 @@ local PAPER: { [string]: Texture } = {
 	wood = table.freeze({ id = "rbxassetid://129212444634345", tile = Vector2.new(256, 128) }), -- wood.png
 }
 UIAssets.paper = table.freeze(PAPER)
+
+-- Cleanup Crew V1 "Gloom & Gleam" kit (2026-10-17), uploaded to the Icey Labs group. Each id is the Image under the
+-- uploaded Decal (characters/ui/shipped-ui-assets.md lists both). Icons are 256 px renders with the 5 px ink outline
+-- baked in (their hard drop is a second, ink-tinted copy, never baked).
+local TOON_ICONS: { [ToonIcon]: string } = {
+	clock = "rbxassetid://97995675031546",
+	dust = "rbxassetid://87348303383802",
+	fishtank = "rbxassetid://72370733106499",
+	flashlight = "rbxassetid://115788026706324",
+	gift = "rbxassetid://84976135728496",
+	gleam = "rbxassetid://92098466484576",
+	gleamPile = "rbxassetid://87196921749527",
+	globe = "rbxassetid://105862507048588",
+	gloom = "rbxassetid://139797009877972",
+	grab = "rbxassetid://128476532358528",
+	guide = "rbxassetid://108576171337491",
+	jobs = "rbxassetid://72307376362077",
+	key = "rbxassetid://99994665542005",
+	lock = "rbxassetid://83785061837290",
+	locker = "rbxassetid://132365115657905",
+	managerCalm = "rbxassetid://79215225592922",
+	managerHunt = "rbxassetid://126690679697372",
+	monitor = "rbxassetid://115152845494708",
+	mop = "rbxassetid://135344307549758",
+	pippaHappy = "rbxassetid://83422913842035",
+	pippaWorried = "rbxassetid://77310837138468",
+	settings = "rbxassetid://112995353478331",
+	spray = "rbxassetid://122601719267115",
+	stamina = "rbxassetid://82683111969978",
+	stapler = "rbxassetid://91446482823859",
+	stopwatch = "rbxassetid://79924913809502",
+	trophy = "rbxassetid://123624581133724",
+	truck = "rbxassetid://114161028640916",
+	vacuum = "rbxassetid://95204983643911",
+	vacuumBrass = "rbxassetid://70576303094914",
+	xp = "rbxassetid://77433204551858",
+}
+UIAssets.toonIcons = table.freeze(TOON_ICONS)
+
+-- Graded photos and cut-out renders (the map cards are 960x600, the portraits square, the cut-outs outlined PNGs).
+UIAssets.toonPhotos = table.freeze({
+	officeCard = "rbxassetid://130708209071391",
+	hospitalCard = "rbxassetid://76365174293518",
+	motelCard = "rbxassetid://104743022093430",
+	mallCard = "rbxassetid://108801045193529",
+	managerPortrait = "rbxassetid://136047524517573",
+	officeWide = "rbxassetid://105469082592765",
+	pippaPortrait = "rbxassetid://100337810904422",
+	truckCut = "rbxassetid://72922265291902",
+	pippaSaluteCut = "rbxassetid://77407692720114",
+})
+
+-- The kit's drawn pieces (implemented/tools/make_toon_assets.py, all at 2x). The goo: `capTile` (256x112) and
+-- `poolTile` (256x80) are one whole tile each; `gooEnds` is the atlas of their ends (cap ends at y 0, 256x112 each;
+-- pool ends at y 128, 256x80 each). `glow` is a 128 px white 9-slice (centre 48..80) tinted per use; `patternSparkle`
+-- (144) and `patternBubbles` (120) are white tiles tinted per panel.
+UIAssets.toon = table.freeze({
+	capTile = "rbxassetid://114961170504517",
+	poolTile = "rbxassetid://106249912761815",
+	gooEnds = "rbxassetid://70785823038696",
+	glow = "rbxassetid://78717613960831",
+	rays = "rbxassetid://103836764476829",
+	patternSparkle = "rbxassetid://97732926490283",
+	patternBubbles = "rbxassetid://90150192373857",
+	sparkle = "rbxassetid://79532536364589",
+})
 
 -- The CCTV overlay's scanlines (M3 UI). PENDING and not drawn yet.
 UIAssets.cctv = table.freeze({
