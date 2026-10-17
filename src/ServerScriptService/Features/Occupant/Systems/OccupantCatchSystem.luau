@@ -9,7 +9,9 @@
 	the ~8 s of watching, and `hooks.onCaught` does the rest (Shift's catch count, toasts). At the throw he says the
 	line ("You're FIRED!", not during the scare), the caught player's public deadline (`caughtUntil`) is published
 	for the roster and their private incident report (room, shift clock, what they dropped) is sent
-	(OccupantEvents.CatchReport); `rehired` clears the deadline and sends the Rehired notice. If the shift ended
+	(OccupantEvents.CatchReport); `caught` counts the catch for Shift, toasts the crew and owes the player the Rehired
+	notice, which `watchRehires` sends on their next character (`rehired`: the deadline cleared, the notice sent);
+	`dropRehires` forgets what is owed when the shift ends. If the shift ended
 	meanwhile (`hooks.stillOn`), the player is just released. He plays his grab clip at the start and his throw clip at
 	the launch when they are uploaded (OccupantAssets).
 
@@ -24,10 +26,12 @@
 	@class OccupantCatchSystem
 ]=]
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 local Workspace = game:GetService("Workspace")
 
+local Observers = require(ReplicatedStorage.Packages.Observers)
 local AnimationRegistry = require(ReplicatedStorage.Shared.Features.Animation.Data.AnimationRegistry)
 local CargoRegistry = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoRegistry)
 local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
@@ -46,7 +50,9 @@ local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServi
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
 local HideServiceServer = require(ServerScriptService.Features.Hide.HideServiceServer)
 local OfficeServiceServer = require(ServerScriptService.Features.Office.OfficeServiceServer)
+local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftServiceServer = require(ServerScriptService.Features.Shift.ShiftServiceServer)
+local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
 local StateSyncPublicPlayerStore = require(ServerScriptService.Features.StateSync.State.StateSyncPublicPlayerStore)
 
 -- What the service knows about a would-be catch that the rig and the player do not say.
@@ -235,6 +241,54 @@ end
 ]=]
 function OccupantCatchSystem.clear()
 	table.clear(catching)
+end
+
+-- UserIds caught this life: their next character gets the Rehired notice.
+local rehire: { [number]: boolean } = {}
+
+--[=[
+	A catch went through (the service's `onCaught` hook): Shift counts it, the crew is told, and the player is owed the
+	Rehired notice on their next character.
+]=]
+function OccupantCatchSystem.caught(player: Player)
+	rehire[player.UserId] = true
+	ShiftServiceServer:noteCatch(player)
+	ToastServiceServer:send("all", {
+		text = OccupantFeedbackUtils.caughtText(player.DisplayName, OccupantConstants.SPECTATE_SECONDS),
+		style = ShiftConstants.TOAST_STICKY,
+		duration = 4,
+	})
+end
+
+--[=[
+	Sends the Rehired notice on each caught player's next character (a player who leaves is owed nothing). Returns the
+	stopper.
+]=]
+function OccupantCatchSystem.watchRehires(): () -> ()
+	local stopObserving = Observers.observeCharacter(function(player: Player, _character: Model)
+		if rehire[player.UserId] then
+			rehire[player.UserId] = nil
+			OccupantCatchSystem.rehired(player)
+		end
+		return nil
+	end)
+	local leaving = Players.PlayerRemoving:Connect(function(player: Player)
+		rehire[player.UserId] = nil
+	end)
+	return function()
+		stopObserving()
+		leaving:Disconnect()
+	end
+end
+
+--[=[
+	The shift is over: no deadline left showing, no notice owed.
+]=]
+function OccupantCatchSystem.dropRehires()
+	for userId in rehire do
+		OccupantCatchSystem.clearDeadline(userId)
+	end
+	table.clear(rehire)
 end
 
 return OccupantCatchSystem

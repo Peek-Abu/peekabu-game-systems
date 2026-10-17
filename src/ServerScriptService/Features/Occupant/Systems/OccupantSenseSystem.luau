@@ -6,7 +6,8 @@
 	every hiding spot (`furniture`: its centre, where he stands to stare at it, and whether it is a secure supply
 	cabinet) and every desk with its seat frame
 	(over its art chair, OfficeDecorSystem's officeChair marked with the desk's id, else where the chair rule puts it),
-	and the hiders in their spots (`hiders`).
+	and the hiders in their spots (`hiders`); `known` keeps that furniture, re-read every FURNITURE_REFRESH, and `gather`
+	is everything the brain decides from for one think.
 
 	@class OccupantSenseSystem
 ]=]
@@ -23,6 +24,7 @@ local HideTypes = require(ReplicatedStorage.Shared.Features.Hide.Data.HideTypes)
 local OccupantBrainRules = require(ServerScriptService.Features.Occupant.Rules.OccupantBrainRules)
 local OccupantDeskUtils = require(ServerScriptService.Features.Occupant.Utils.OccupantDeskUtils)
 local HideServiceServer = require(ServerScriptService.Features.Hide.HideServiceServer)
+local OfficeServiceServer = require(ServerScriptService.Features.Office.OfficeServiceServer)
 
 -- Office's attributes: a desk's marker id, and an art chair's key and desk (OfficeBuildSystem, OfficeDecorSystem).
 local MARKER_ATTRIBUTE = "OfficeMarkerId"
@@ -31,6 +33,12 @@ local CHAIR_DESK_ATTRIBUTE = "OfficeDeskMarker"
 local CHAIR_KEY = "officeChair"
 -- A crouching character (CrouchServiceServer's attribute): noticed slower beside him.
 local CROUCH_ATTRIBUTE = CrouchConstants.CROUCHING_ATTRIBUTE
+
+-- How often the office's desks and hiding spots are re-read (the office rebuilds each shift; chairs attach with art).
+local FURNITURE_REFRESH = 5
+local knownAt = -math.huge
+local knownDesks: { Types.Desk } = {}
+local knownSpots: { Types.Spot } = {}
 
 -- The body box checked at a stand point (wide and deep as his body, waist to head over the floor).
 local STAND_BOX = Vector3.new(2, 4, 1.6)
@@ -70,12 +78,15 @@ function System.glimpses(
 		if root and root:IsA("BasePart") and h and h.Health > 0 and eligible(player) then
 			local offset = root.Position - rig.head.Position
 			local clear = offset.Magnitude <= sightRange and Workspace:Raycast(rig.head.Position, offset, params) == nil
+			local velocity = root.AssemblyLinearVelocity
 			table.insert(list, {
 				userId = player.UserId,
 				position = root.Position,
 				feetY = System.feetY(root, h),
 				clear = clear,
 				crouched = character ~= nil and character:GetAttribute(CROUCH_ATTRIBUTE) == true,
+				-- Moving during a slow turn or a stare sets off the jerk (behaviours design §11.2).
+				speed = Vector3.new(velocity.X, 0, velocity.Z).Magnitude,
 			})
 		end
 	end
@@ -88,6 +99,33 @@ export type World = {
 	zone: Types.Zone,
 	bay: Types.Zone?,
 }
+-- The office's layout for him (Office, read as he clocks in): `route` his patrol points, the rest point, the truck's box
+-- and the loading bay.
+function System.layout(route: { Vector3 }): World
+	local min, max = OfficeServiceServer:safeZone()
+	local bayMin, bayMax = OfficeServiceServer:loadingBay()
+	return {
+		resting = false,
+		route = route,
+		restPoint = OfficeServiceServer:restPoint(),
+		zone = { min = min, max = max },
+		bay = { min = bayMin, max = bayMax },
+	}
+end
+-- The world he walks this think: `place` (an empty office before he clocks in) on the shift's break or not.
+function System.world(place: World?, resting: boolean): World
+	if place == nil then
+		return {
+			resting = resting,
+			route = {},
+			restPoint = Vector3.zero,
+			zone = { min = Vector3.zero, max = Vector3.zero },
+		}
+	end
+	local world = table.clone(place)
+	world.resting = resting
+	return world
+end
 -- Marks who in `list` hides (Hide) and whether he saw them go in. Returns `list`.
 function System.markHidden(list: { Types.Glimpse }): { Types.Glimpse }
 	for _, glimpse in list do
@@ -266,6 +304,65 @@ function System.hiders(participants: { Player }): { Types.Hider }
 		end
 	end
 	return list
+end
+
+--[=[
+	The office's desks and hiding spots as he knows them (`furniture`), re-read every FURNITURE_REFRESH (`fresh`: now).
+]=]
+function System.known(
+	rig: { humanoid: Humanoid, root: BasePart },
+	now: number,
+	fresh: boolean?
+): ({ Types.Desk }, { Types.Spot })
+	if fresh == true or now - knownAt >= FURNITURE_REFRESH then
+		knownAt = now
+		knownDesks, knownSpots =
+			System.furniture(HideServiceServer:spots(), rig.humanoid.HipHeight + rig.root.Size.Y / 2)
+	end
+	return knownDesks, knownSpots
+end
+
+-- How many desks he knows (the debugger).
+function System.knownDesks(): number
+	return #knownDesks
+end
+
+-- Forgets the furniture (a new shift's office): the next `known` re-reads it.
+function System.forget()
+	knownAt = -math.huge
+end
+
+-- What one think gathers besides his own body: the crew (and who may be seen), the world, the noise, the rolls, the pacing.
+export type Gathering = {
+	participants: { Player },
+	eligible: (Player) -> boolean,
+	world: World,
+	heard: Vector3?,
+	rolls: { number },
+	pacing: Types.Pacing,
+}
+
+--[=[
+	Everything the brain decides from for one think at `now`, him at `position`: the glimpses (one ray each, who hides),
+	his sight, the world, the noise and rolls, the furniture he knows, the hiders and the pacing.
+]=]
+function System.gather(
+	rig: { model: Model, head: BasePart, root: BasePart, humanoid: Humanoid },
+	sight: { sightRange: number, sightAngle: number },
+	now: number,
+	position: Vector3,
+	input: Gathering
+): Types.Senses
+	local players =
+		System.markHidden(System.glimpses(rig, System.rayRange(sight.sightRange), input.participants, input.eligible))
+	local senses = System.senses(rig, sight, now, players, input.world)
+	senses.position = position
+	senses.heard = input.heard
+	senses.rolls = input.rolls
+	senses.desks, senses.spots = System.known(rig, now)
+	senses.hiders = System.hiders(input.participants)
+	senses.pacing = input.pacing
+	return senses
 end
 
 return System

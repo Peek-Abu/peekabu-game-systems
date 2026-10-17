@@ -12,7 +12,7 @@
 	  crew member per think, the base's own cost) and whether they hide (Hide: and whether he saw them go
 	  in), the latest noise he heard outside the truck's box (NoiseServiceServer through NoiseRules and the
 	  hearing scale), the shift's break, the route, the rest point, the safe truck box, the loading bay he may
-	  walk but never lingers in, the office's desks and hiding spots (OccupantSenseSystem.furniture, refreshed every
+	  walk but never lingers in, the office's desks and hiding spots (OccupantSenseSystem.known, refreshed every
 	  FURNITURE_REFRESH), who hides where, the pacing (tier, crew size, overtime) and a few random rolls.
 	- The brain's effects (OccupantEffectSystem): his body (OccupantSeatSystem: sitting at a desk, standing up, planted still at a spot,
 	  let go), whether he knows a hider (Hide's `setSeen`), holding a hider's camping push-out while he is at their
@@ -35,7 +35,6 @@
 	@class OccupantServiceServer
 ]=]
 
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -43,7 +42,6 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local OccupantShared = ReplicatedStorage.Shared.Features.Occupant
 local OccupantServer = ServerScriptService.Features.Occupant
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
-local Observers = require(ReplicatedStorage.Packages.Observers)
 local AnimationRegistry = require(ReplicatedStorage.Shared.Features.Animation.Data.AnimationRegistry)
 local NoiseRules = require(ReplicatedStorage.Shared.Features.Noise.Rules.NoiseRules)
 local NoiseTypes = require(ReplicatedStorage.Shared.Features.Noise.Data.NoiseTypes)
@@ -53,11 +51,12 @@ local OccupantEvents = require(OccupantShared.Net.OccupantEvents)
 local OccupantTellRules = require(OccupantShared.Rules.OccupantTellRules)
 local OccupantAnimationUtils = require(OccupantShared.Utils.OccupantAnimationUtils)
 local OccupantFeedbackUtils = require(OccupantShared.Utils.OccupantFeedbackUtils)
-local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local NpcRegistry = require(ServerScriptService.Features.Npc.Data.NpcRegistry)
 local NpcTypes = require(ServerScriptService.Features.Npc.Data.NpcTypes)
+local OccupantAlertRules = require(OccupantServer.Rules.OccupantAlertRules)
 local OccupantBrainRules = require(OccupantServer.Rules.OccupantBrainRules)
+local OccupantTurnRules = require(OccupantServer.Rules.OccupantTurnRules)
 local OccupantMindUtils = require(OccupantServer.Utils.OccupantMindUtils)
 local OccupantWorkRules = require(OccupantServer.Rules.OccupantWorkRules)
 local Sense = require(OccupantServer.Systems.OccupantSenseSystem)
@@ -73,7 +72,6 @@ local NpcServiceServer = require(ServerScriptService.Features.Npc.NpcServiceServ
 local OfficeServiceServer = require(ServerScriptService.Features.Office.OfficeServiceServer)
 local RoundServiceServer = require(ServerScriptService.Features.Round.RoundServiceServer)
 local ShiftServiceServer = require(ServerScriptService.Features.Shift.ShiftServiceServer)
-local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
 
 -- Registered at load so setBrain / onAttack (start) find the kind.
 if not NpcRegistry.has(OccupantConstants.NPC_KIND) then
@@ -97,31 +95,26 @@ if not NpcRegistry.has(OccupantConstants.NPC_KIND) then
 	})
 end
 
--- How often the office's desks and hiding spots are re-read (the office rebuilds each shift; chairs attach with art).
-local FURNITURE_REFRESH = 5
-
 local log = Logger.new("OccupantServiceServer")
 
 local rig: OccupantRigSystem.Rig? = nil
 local mind: OccupantTypes.Mind? = nil
 local spawning = false
 local shift: ShiftTypes.ShiftState? = nil
-local route: { Vector3 } = {}
-local restPoint = Vector3.zero
-local zone: OccupantTypes.Zone = { min = Vector3.zero, max = Vector3.zero }
-local bay: OccupantTypes.Zone? = nil
-local desks: { OccupantTypes.Desk } = {}
-local spots: { OccupantTypes.Spot } = {}
-local furnitureAt = -math.huge
+-- The office's layout for him this shift (OccupantSenseSystem.layout; nil before he clocks in).
+local place: Sense.World? = nil
 local pendingNoise: Vector3? = nil
 local tuningElapsed = 0
 local rng = Random.new()
 -- A QA seam (`_setRolls`): fixed rolls for the brain instead of random ones (nil = random).
 local fixedRolls: { number }? = nil
+-- Random rolls per think (Senses.rolls; 5 and 6 pick the slow turns, behaviours design §11.1).
+local ROLLS = 6
+-- A developer's forced head-turn variant (`occupantturn`), applied on the next think: which, and for whom.
+local pendingForce: { kind: OccupantTypes.TurnKind | "auto", userId: number }? = nil
 local lastLine: string? = nil
-local counters = { spawned = 0, heard = 0, chases = 0, catches = 0 }
--- UserIds caught this life: their next character gets the Rehired notice.
-local rehire: { [number]: boolean } = {}
+-- (watchThinks / watchJerks: the per-frame watch during a slow turn, behaviours design §11.4.)
+local counters = { spawned = 0, heard = 0, chases = 0, catches = 0, watchThinks = 0, watchJerks = 0 }
 local stoppers: { () -> () } = {}
 
 local function resting(): boolean
@@ -155,15 +148,16 @@ end
 
 -- Every crew member he could see this think, each with one line-of-sight ray from his head, and whether they hide
 -- (and he saw them go in).
+local function eligible(player: Player): boolean
+	return not DeathServiceServer:isDead(player) and not OccupantCatchSystem.isCatching(player.UserId)
+end
+
 local function glimpses(current: OccupantRigSystem.Rig, sightRange: number): { OccupantTypes.Glimpse }
-	local list = Sense.glimpses(current, sightRange, RoundServiceServer:participants(), function(player)
-		return not DeathServiceServer:isDead(player) and not OccupantCatchSystem.isCatching(player.UserId)
-	end)
-	return Sense.markHidden(list)
+	return Sense.markHidden(Sense.glimpses(current, sightRange, RoundServiceServer:participants(), eligible))
 end
 
 local function world(): Sense.World
-	return { resting = resting(), route = route, restPoint = restPoint, zone = zone, bay = bay }
+	return Sense.world(place, resting())
 end
 
 -- Hide's witness: whether he sees `player` right now as they go into a spot (or is chasing them). Never yields.
@@ -176,29 +170,12 @@ local function witness(player: Player): boolean
 		and Sense.witness(current, currentMind, def, world(), player)
 end
 
--- The office's desks and hiding spots as he knows them, re-read every FURNITURE_REFRESH.
-local function furniture(current: OccupantRigSystem.Rig, now: number)
-	if now - furnitureAt < FURNITURE_REFRESH then
-		return
-	end
-	furnitureAt = now
-	desks, spots = Sense.furniture(HideServiceServer:spots(), current.humanoid.HipHeight + current.root.Size.Y / 2)
-end
-
 local catchHooks: OccupantCatchSystem.Hooks = {
 	stillOn = function(): boolean
 		local state = shift
 		return rig ~= nil and state ~= nil and state.phase == "running"
 	end,
-	onCaught = function(player: Player)
-		rehire[player.UserId] = true
-		ShiftServiceServer:noteCatch(player)
-		ToastServiceServer:send("all", {
-			text = OccupantFeedbackUtils.caughtText(player.DisplayName, OccupantConstants.SPECTATE_SECONDS),
-			style = ShiftConstants.TOAST_STICKY,
-			duration = 4,
-		})
-	end,
+	onCaught = OccupantCatchSystem.caught,
 }
 
 -- Catches `player` if the server's re-check allows (OccupantCatchSystem.attempt); `from` is the mind of the think that
@@ -216,7 +193,7 @@ local function catchPlayer(player: Player, from: OccupantTypes.Mind?, found: boo
 	local ok, reason = OccupantCatchSystem.attempt(current, player, {
 		inGrace = graceUntil ~= nil and now < graceUntil,
 		resting = state.stage == "break",
-		zone = zone,
+		zone = world().zone,
 		-- A player he found in a hiding spot is in plain view to him (he knows where they are).
 		inView = Sense.inView(glimpses(current, math.huge), player.UserId),
 		found = found,
@@ -240,25 +217,34 @@ local function onCatch(npc: Model, player: Player)
 	end
 end
 
--- The `harlow` brain: senses → OccupantBrainRules.step → intent (and effects). Never yields.
-local function brain(def: NpcTypes.NpcDef, context: NpcTypes.BrainContext, npc: Model): NpcTypes.Intent?
-	local current = rig
-	local before = mind
-	local state = shift
-	if current == nil or before == nil or state == nil or npc ~= current.model then
+-- One think at `now` with him at `position`: senses → OccupantBrainRules.step, the mind stored, his tells shown and
+-- the effects carried out. Returns the intent (idle with no Manager or shift). Never yields.
+local function think(def: NpcTypes.NpcDef, now: number, position: Vector3): NpcTypes.Intent
+	local current, before, state = rig, mind, shift
+	if current == nil or before == nil or state == nil then
 		return { kind = "idle" }
 	end
-	furniture(current, context.now)
 	local participants = RoundServiceServer:participants()
-	local senses = Sense.senses(current, def, context.now, glimpses(current, Sense.rayRange(def.sightRange)), world())
-	senses.position = context.position
-	senses.heard = pendingNoise
-	senses.rolls = fixedRolls or { rng:NextNumber(), rng:NextNumber(), rng:NextNumber(), rng:NextNumber() }
-	senses.desks = desks
-	senses.spots = spots
-	senses.hiders = Sense.hiders(participants)
-	senses.pacing = { tier = state.tier, solo = #participants <= 1, overtime = state.stage == "overtime" }
+	-- Fixed rolls (the QA seam) leave the rest at 0.5, as an absent roll.
+	local fixed = fixedRolls
+	local rolls = if fixed ~= nil then table.clone(fixed) else {}
+	for index = #rolls + 1, ROLLS do
+		rolls[index] = if fixed ~= nil then 0.5 else rng:NextNumber()
+	end
+	local senses = Sense.gather(current, def, now, position, {
+		participants = participants,
+		eligible = eligible,
+		world = world(),
+		heard = pendingNoise,
+		rolls = rolls,
+		pacing = { tier = state.tier, solo = #participants <= 1, overtime = state.stage == "overtime" },
+	})
 	pendingNoise = nil
+	local force = pendingForce
+	if force ~= nil then
+		pendingForce = nil
+		before = OccupantAlertRules.force(before, senses, force.kind, force.userId)
+	end
 	local result = OccupantBrainRules.step(before, senses)
 	mind = result.mind
 	if result.mind.mode == "chase" and before.mode ~= "chase" then
@@ -275,6 +261,32 @@ local function brain(def: NpcTypes.NpcDef, context: NpcTypes.BrainContext, npc: 
 	return result.intent
 end
 
+-- The `harlow` brain: one think (above) on the NPC's tick. Never yields.
+local function brain(def: NpcTypes.NpcDef, context: NpcTypes.BrainContext, npc: Model): NpcTypes.Intent?
+	local current = rig
+	if current == nil or npc ~= current.model then
+		return { kind = "idle" }
+	end
+	return think(def, context.now, context.position)
+end
+
+-- While he watches in a slow turn or a stare, his brain thinks every frame too (behaviours design §11.4), so a
+-- player's first move is the jerk on that frame rather than on the next 0.15 s NPC think; the run itself starts on
+-- the NPC's next think (the intent here is not carried out). Never yields.
+local function watch(now: number)
+	local current, before = rig, mind
+	local def = NpcRegistry.get(OccupantConstants.NPC_KIND)
+	if current == nil or before == nil or def == nil or not OccupantTurnRules.turning(before) then
+		return
+	end
+	counters.watchThinks += 1
+	think(def, now, current.root.Position)
+	local after = mind
+	if after ~= nil and after.phase == "jerk" then
+		counters.watchJerks += 1
+	end
+end
+
 -- A noise: remembered for the next think if he hears it (not while resting or standing over a catch). A noise
 -- inside the truck's box is dropped here, before it can replace an earlier valid one: `Senses.heard` carries
 -- one point, so the one passed is the latest heard noise OUTSIDE the box.
@@ -284,7 +296,7 @@ local function onNoise(noise: NoiseTypes.NoiseEvent)
 	if current == nil or currentMind == nil or currentMind.mode == "rest" or currentMind.mode == "catch" then
 		return
 	end
-	if OccupantBrainRules.inZone(noise.position, zone) then
+	if OccupantBrainRules.inZone(noise.position, world().zone) then
 		return
 	end
 	local scale = NoiseServiceServer:getHearingScale()
@@ -299,12 +311,9 @@ local function despawn()
 	rig = nil
 	mind = nil
 	pendingNoise = nil
-	furnitureAt = -math.huge
+	Sense.forget()
 	-- A catch in the last seconds: the next shift must not show a stale deadline.
-	for userId in rehire do
-		OccupantCatchSystem.clearDeadline(userId)
-	end
-	table.clear(rehire)
+	OccupantCatchSystem.dropRehires()
 	if current ~= nil and current.model.Parent ~= nil then
 		NpcServiceServer:despawn(current.model)
 	end
@@ -336,17 +345,12 @@ local function spawnHarlow()
 		built.model:Destroy()
 		return
 	end
-	route = points
-	restPoint = OfficeServiceServer:restPoint()
-	local min, max = OfficeServiceServer:safeZone()
-	zone = { min = min, max = max }
-	local bayMin, bayMax = OfficeServiceServer:loadingBay()
-	bay = { min = bayMin, max = bayMax }
+	place = Sense.layout(points)
 	local fresh = OccupantBrainRules.newMind(start, direction, os.clock(), rng:NextNumber())
 	rig = built
 	mind = fresh
 	pendingNoise = nil
-	furnitureAt = -math.huge
+	Sense.forget()
 	built.model.Destroying:Connect(function()
 		if rig == built then
 			rig = nil
@@ -382,7 +386,10 @@ local function onHeartbeat(deltaTime: number)
 		tuningElapsed = 0
 		applyTuning()
 	end
-	OccupantSeatSystem.look(rig, mind, os.clock())
+	local now = os.clock()
+	watch(now)
+	OccupantSeatSystem.look(rig, mind, now)
+	OccupantSeatSystem.jerk(rig, mind, now)
 end
 
 export type OccupantServiceServer = {
@@ -394,6 +401,11 @@ export type OccupantServiceServer = {
 	getMind: (self: OccupantServiceServer) -> OccupantTypes.Mind?,
 	_setRolls: (self: OccupantServiceServer, rolls: { number }?) -> (),
 	summonToDesk: (self: OccupantServiceServer, player: Player) -> (boolean, string),
+	forceTurn: (
+		self: OccupantServiceServer,
+		player: Player,
+		kind: OccupantTypes.TurnKind | "auto"
+	) -> (boolean, string),
 }
 
 local OccupantServiceServer: OccupantServiceServer = {
@@ -417,24 +429,11 @@ local OccupantServiceServer: OccupantServiceServer = {
 		NpcServiceServer:onAttack(OccupantConstants.NPC_KIND, onCatch)
 		-- ~8 s of spectating before the respawn (spec §4); Shift's resolver respawns in the loading bay.
 		DeathServiceServer:configure({ respawnDelay = OccupantConstants.SPECTATE_SECONDS })
-		table.insert(
-			stoppers,
-			Observers.observeCharacter(function(player: Player, _character: Model)
-				if rehire[player.UserId] then
-					rehire[player.UserId] = nil
-					OccupantCatchSystem.rehired(player)
-				end
-				return nil
-			end)
-		)
-		local leaving = Players.PlayerRemoving:Connect(function(player: Player)
-			rehire[player.UserId] = nil
-		end)
+		table.insert(stoppers, OccupantCatchSystem.watchRehires())
 		local changed = ShiftServiceServer.changed:Connect(onShift)
 		local noises = NoiseServiceServer.made:Connect(onNoise)
 		local heartbeat = RunService.Heartbeat:Connect(onHeartbeat)
 		table.insert(stoppers, function()
-			leaving:Disconnect()
 			changed:Disconnect()
 			noises:Disconnect()
 			heartbeat:Disconnect()
@@ -475,12 +474,25 @@ local OccupantServiceServer: OccupantServiceServer = {
 		if current == nil or currentMind == nil or root == nil or not root:IsA("BasePart") then
 			return false, "no shift is running, or you have no character"
 		end
-		furnitureAt = -math.huge
-		furniture(current, os.clock())
+		local desks = Sense.known(current, os.clock(), true)
 		local hiders = Sense.hiders(RoundServiceServer:participants())
 		local nextMind, desk = OccupantWorkRules.summonNear(currentMind, desks, hiders, root.Position, os.clock())
 		mind = nextMind or currentMind
 		return desk ~= nil, if desk ~= nil then `desk {desk.id}` else "no free desk that far from you"
+	end,
+
+	--[=[
+		A developer's forced head-turn variant (the `occupantturn` command, Admins only; behaviours design §11.1):
+		`kind` for his next head turn ("auto" clears it), started at once at `player` when he can see them. Applied on
+		his next think. False and why when there is no Manager or no character.
+	]=]
+	forceTurn = function(_self, player, kind)
+		local character = player.Character
+		if rig == nil or mind == nil or character == nil then
+			return false, "no shift is running, or you have no character"
+		end
+		pendingForce = { kind = kind, userId = player.UserId }
+		return true, "queued"
 	end,
 
 	getMind = function(_self)
@@ -493,7 +505,7 @@ local OccupantServiceServer: OccupantServiceServer = {
 		return {
 			present = rig ~= nil,
 			mind = if current ~= nil then OccupantMindUtils.summary(current) else nil,
-			desks = #desks,
+			desks = Sense.knownDesks(),
 			hearing = NoiseServiceServer:getHearingScale(),
 			counters = table.clone(counters),
 			effects = OccupantEffectSystem.getState(),
