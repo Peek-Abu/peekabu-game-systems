@@ -2,6 +2,10 @@
 --[=[
 	DepotPadViewModel: the truck's queue card for a player standing in its bed (Figma 3a/3b): the truck and the job
 	with the quota for the crew aboard (ShiftQuotaFormulas), "3 / 4" aboard, a slot per seat (you marked, empty seats "open"), the departure countdown, and how to leave. Pure.
+	`shown` is where the card may be up at all: only in the depot hub (DepotHubViewModel.visible), so never for a crew
+	member once their shift is starting, running or in results, never behind the load screen, and never once the crew
+	has departed (the drive card is up). The queue snapshot alone is not enough: after a departure the party is left
+	standing on the bed until the transit moves them, so Queue briefly re-boards them.
 
 	@class DepotPadViewModel
 ]=]
@@ -9,9 +13,12 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
+local DepotTypes = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotTypes)
 local QueueTypes = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueTypes)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
+local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
+local DepotHubViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotHubViewModel)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 
 export type SlotView = { name: string, open: boolean, you: boolean }
@@ -27,6 +34,16 @@ export type PadView = {
 }
 
 local DepotPadViewModel = {}
+
+-- Whether the queue card may show: in the depot hub, with no load screen and no drive card up.
+function DepotPadViewModel.shown(
+	shift: ShiftTypes.ShiftSnapshot?,
+	myId: number,
+	covered: boolean,
+	card: DepotTypes.CardKind?
+): boolean
+	return not covered and card ~= "drive" and DepotHubViewModel.visible(shift, myId)
+end
 
 function DepotPadViewModel.pad(
 	pad: QueueTypes.PadSnapshot?,
