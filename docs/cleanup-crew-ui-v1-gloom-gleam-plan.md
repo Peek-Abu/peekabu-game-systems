@@ -58,3 +58,30 @@ may live. The ids and their Decal/Image pairs are recorded in `characters/ui/shi
 Screens are restyled in place (DepotHub, DepotPadPanel, ShiftHud's panels, ShiftReviewPanel, DepotBoardPanel,
 DepotHubScreen, ShiftTransitPanel); their view models keep the data flow and gain pure, specced helpers where a screen
 needs a new derived value. The paperwork components are removed once nothing uses them.
+
+## Feedback fixes (2026-10-17, after the first play of V1)
+
+1. **Gloom meter end:** the meniscus cap on the fill's leading edge is gone (`ToonBar`); the fill ends in its own
+   rounded, rim-lit capsule end.
+2. **Load screen bar:** a real progress bar. `ShiftTransitRules.progress` (spec) turns the readiness stages (office,
+   placed, streamed, lighting, the settle by the slower of its time and frames, the minimum time) into 0..1, the client's
+   ShiftTransitSystem writes it to `ShiftTransitStore.progress`, and the panel moves the bar with
+   `ShiftTransitViewModel.advance` (spec): it never goes back, creeps through a long stage short of full, and eases to
+   full once ARRIVED, then the cover fades.
+3. **World and billboard UI in V1:** cargo price tags (and the APPRAISED sticker), the banking floaters, the truck pad
+   tags, the work-order board, the result board, the travel cards, the hide chip, the CCTV catch screen, the Rehired
+   notice, the results reopen tab, the phone action arc and the floor bay stencils. The paper pieces nothing uses any
+   more are removed (KeyChip, PaperStamp, PaperTag, CorkBoard, StickyNote, PaperSheet, PaperLabel, PaperButton (+ view
+   model), PaperAwardIcon, PaperTexture (+ view model), PaperKit.story).
+4. **Clipping:** Locker / Guide cards are on the depth stack inside cells that hold their drop, with scroll padding
+   for their outline on every open side.
+5. **Centring:** `ToonText` places display type optically (`ToonStyleViewModel.optical`, spec): Luckiest Guy's caps
+   fill the top 70% of its line box and the hard drop hangs under them, so centred text is lowered by its caps' offset
+   less half its drop, at the size it is really drawn; a fitted line keeps its ink stroke inside its box. The rank
+   number sits on the star's optical centre.
+
+New module:
+
+| Feature | Realm | Subfolder | Name | Job (one line) |
+|---|---|---|---|---|
+| UI tree | client | React/Screens/Shift | ShiftActionButton | One round button of the phone's action arc on the V1 stack (exempt, story) |
