@@ -8,9 +8,11 @@
 	  in-house body-fall C (characters/audio/listening/round3/masters/sfx/bodyfall_C.wav, the footstepBodyFall upload)
 	  played quietly; a dedicated "tumble out of the furniture" sound is still to be made.
 	- BREATH_CALM / BREATH_NERVOUS: Pippa's toon breath while you hide (2D, only for you; OccupantDreadSystem crossfades
-	  them by the dread). In-house round-3 card 22 "B" (characters/audio/listening/round3/masters/breath): soft nose
-	  breathing with bunny nose twitches, a tiny plush chest, fur, and a small "mm" pitched in F; the nervous loop is
-	  quicker and shaky, a little "hn" on the exhale and her neck bell trembling. -24 / -22 LUFS loops, seamless.
+	  them by the dread). In-house round-3 card 22 v2 "A, squeaky toy" (characters/audio/listening/round3/masters/breath2),
+	  remade after "doesn't sound toony at all - sounds heavy like a person": no breath noise, all tonal and pitched in
+	  F. A soft rubber-toy squeak goes "hee" up on the inhale and "hoo" down on the exhale, with triple-chirp bunny
+	  sniffs, a felt "pum" and soft neck-bell tinkles; the nervous loop has fast wobbly pants up high, two-chirp sniffs
+	  and her bell trembling. -24 / -22 LUFS loops, seamless.
 
 	Static data + registration (spec-exempt).
 
@@ -34,8 +36,8 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 		pitch = { min = 1.05, max = 1.15 },
 		rollOffMaxDistance = 45,
 	},
-	[BREATH_CALM] = { assetId = "rbxassetid://125241923141525", group = "SFX", volume = 0.6, looped = true },
-	[BREATH_NERVOUS] = { assetId = "rbxassetid://123903878582446", group = "SFX", volume = 0.6, looped = true },
+	[BREATH_CALM] = { assetId = "rbxassetid://140150448225283", group = "SFX", volume = 0.6, looped = true },
+	[BREATH_NERVOUS] = { assetId = "rbxassetid://72152719558413", group = "SFX", volume = 0.6, looped = true },
 }
 
 for id, def in SOUNDS do
