@@ -289,6 +289,16 @@ local HideServiceClient: HideServiceClient = {
 				description = "Hide in a spot (hold); leave it",
 			})
 		end
+		if not InputActionRegistry.has(HideConstants.JUMP_OUT_ACTION) then
+			InputActionRegistry.register(HideConstants.JUMP_OUT_ACTION, {
+				context = "gameplay",
+				bindings = {
+					keyboard = { HideConstants.JUMP_OUT_KEYBOARD_KEY },
+					gamepad = { HideConstants.JUMP_OUT_GAMEPAD_KEY },
+				},
+				description = "Jump out of a hiding spot",
+			})
+		end
 		if not HudRegistry.has("hidePeek") then
 			HudRegistry.register("hidePeek", OverlayWidget, -100)
 		end
@@ -362,7 +372,12 @@ local HideServiceClient: HideServiceClient = {
 		end)
 		local spotChanged =
 			player:GetAttributeChangedSignal(HideConstants.PLAYER_SPOT_ATTRIBUTE):Connect(onHiddenChanged)
-		local jumped = UserInputService.JumpRequest:Connect(requestExit)
+		-- Jumping leaves a spot. Not JumpRequest: the hide locks the controls the default jump comes from.
+		local unbindJump = InputServiceClient:bind(HideConstants.JUMP_OUT_ACTION, function(phase)
+			if phase == "begin" then
+				requestExit()
+			end
+		end)
 		-- The hiding key's press (not its hold: the prompt keeps the hold) leaves a spot.
 		local unbindHide = InputServiceClient:bind(HideConstants.ACTION, function(phase)
 			if phase == "begin" then
@@ -394,7 +409,7 @@ local HideServiceClient: HideServiceClient = {
 			holdBegan:Disconnect()
 			holdEnded:Disconnect()
 			spotChanged:Disconnect()
-			jumped:Disconnect()
+			unbindJump()
 			unbindHide()
 			unbindInteract()
 			ranges:Disconnect()

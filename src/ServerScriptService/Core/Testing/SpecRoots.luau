@@ -52,6 +52,9 @@ end
 	  live Luau execution task still saw one — Roblox re-inserts it whenever it's absent). Its
 	  nested `CommonUtils` folder happens to contain modules ending in `.spec` (e.g. CameraWrapper,
 	  ConnectionUtil) that are not TestEZ specs at all, just Roblox's own naming.
+	- `StarterPlayer.PlayerModule` — the same default scripts in Roblox's current (Input Action
+	  System) layout, which the engine provisions directly under StarterPlayer at runtime and loads
+	  from there instead of copying into PlayerScripts. Not ours either.
 	- `ReplicatedStorage.Modules` — legacy code in an existing place this base is synced into.
 	  `ReplicatedStorage` is mounted with `$ignoreUnknownInstances`, deliberately, so that Rojo cannot
 	  delete the artist-owned `Assets` folder (see the deployment model in AGENTS.md). The same flag
@@ -65,7 +68,8 @@ function SpecRoots.assertAllSpecsCovered(roots: { Instance })
 
 	-- Non-first-party trees to skip. Wally mounts Packages/DevPackages under ReplicatedStorage and
 	-- ServerPackages under ServerScriptService (see default.project.json); PlayerModule is Roblox's
-	-- own runtime-provisioned default under StarterPlayerScripts, not ours or Wally's.
+	-- own runtime-provisioned default (under StarterPlayerScripts in the legacy layout, directly under
+	-- StarterPlayer in the current one), not ours or Wally's.
 	local excludedFolders: { Instance } = {}
 	for _, name in { "Packages", "ServerPackages", "DevPackages" } do
 		local folder = ReplicatedStorage:FindFirstChild(name) or ServerScriptService:FindFirstChild(name)
@@ -73,9 +77,11 @@ function SpecRoots.assertAllSpecsCovered(roots: { Instance })
 			table.insert(excludedFolders, folder)
 		end
 	end
-	local playerModule = StarterPlayer.StarterPlayerScripts:FindFirstChild("PlayerModule")
-	if playerModule then
-		table.insert(excludedFolders, playerModule)
+	for _, parent in { StarterPlayer.StarterPlayerScripts, StarterPlayer } do
+		local playerModule = parent:FindFirstChild("PlayerModule")
+		if playerModule then
+			table.insert(excludedFolders, playerModule)
+		end
 	end
 	-- An existing game's legacy tree, present in a place synced over an older game and absent from a
 	-- clean build. Matched by NAME rather than by content: `src/ReplicatedStorage` has no `Modules`
@@ -206,7 +212,6 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.Features.Debugger.DebuggerServiceClient"] = "network-bound client shell",
 	["ReplicatedStorage.Client.Features.StateSync.StateSyncServiceClient"] = "network-bound client shell",
 	["ReplicatedStorage.Client.Features.Input.InputServiceClient"] = "UserInputService/UISuppression shell (rules and trackers are specced)",
-	["ReplicatedStorage.Client.Features.Input.Systems.InputControlsSystem"] = "runtime PlayerModule controls toggle (--!nocheck)",
 	["ReplicatedStorage.Client.Features.Camera.CameraServiceClient"] = "Camera/RunService shell (maths and stacks are specced)",
 	["ReplicatedStorage.Client.Features.Sound.SoundServiceClient"] = "Sound/TweenService/ByteNet shell (registry, formulas and voices are specced)",
 	["ServerScriptService.Features.Sound.SoundServiceServer"] = "Players/ByteNet shell (listener selection is specced in SoundFormulas)",

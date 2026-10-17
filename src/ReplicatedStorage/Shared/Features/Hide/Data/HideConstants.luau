@@ -88,6 +88,11 @@ return table.freeze({
 	ACTION = "hide",
 	KEYBOARD_KEY = Enum.KeyCode.C,
 	GAMEPAD_KEY = Enum.KeyCode.ButtonL1,
+	-- Jumping leaves a spot too. Its own action on the jump keys, not UserInputService.JumpRequest: hiding
+	-- locks the character's controls, and with them the default jump that JumpRequest comes from.
+	JUMP_OUT_ACTION = "hideJumpOut",
+	JUMP_OUT_KEYBOARD_KEY = Enum.KeyCode.Space,
+	JUMP_OUT_GAMEPAD_KEY = Enum.KeyCode.ButtonA,
 	ENTER_HOLD = 0,
 	ENTER_RANGE = 6,
 	-- The server allows this much more than ENTER_RANGE (the player moved as they pressed).
