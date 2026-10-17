@@ -129,3 +129,72 @@ Changed: `OccupantBrainRules` (now the orchestrator over the Work, Stare and Dir
 - `harlowDread`: the near-stage dread swell (a low, slow loop).
 - `harlowAmbush`: a short sharp intake for the ambush swivel. Silent until uploaded; the sting covers it.
 - The PA was removed (2026-10-16), so it needs no voice lines.
+
+## 9. Audit and fixes (2026-10-17)
+
+### His head through the desk (the hider's view)
+
+**Report:** "the desk covers manager's head a bit", mostly while his head moves in and out.
+
+**Cause** (sampled frame by frame against the desk art's parts, from the hider's camera): both gestures were one straight
+blend from his pose to the end pose, so the arc of his very long torso and neck went where the geometry is.
+
+- **Sit-in** (`under`): from the chair his head arced forward over the desk and came straight down through its top
+  and the keyboard (head, face plate and neck inside the top for ~0.5 s; his hands pressed into the top at the start).
+  The hider saw the head come out of the underside. Tipping back up went the same way in 0.4 s.
+- **Stare's check** (`peek`): he stood 1.6 studs out on the desk's +X side, where the drawer pedestal is. The fold
+  swept his head through the top and it ended inside the pedestal: from under the desk his face was hidden entirely.
+- The camera and the desk's geometry were not at fault; neither was a missing collision (the art is non-colliding).
+
+**Fix: shape the path, not the camera.** Moving the camera or putting the head on "the visible side" cannot help
+while the head passes through solid furniture (everyone else sees it too), and fading the desk loses the "under the
+desk" framing. A gesture can now be **keyed** (`OccupantConstants.GESTURES[...].keys`, `OccupantGestureFormulas.along`):
+waypoints of joint rotations plus `back`, a draw-back of his whole body on the Root joint.
+
+- **Sit-in:** he rolls back 2.8 studs **with his chair** (every client moves the chair art with him), folds so his
+  head drops in front of the desk's edge, then rolls in to 0.5 studs back: his head ends just inside the lip, upside
+  down, the whole face in view. Out (`exit`, TIP_BACK) the same way in reverse, whatever comes next (a catch, an
+  ambush).
+- **Check:** he stares from the knee-hole's open side (`STARE_SIDE` -1.9) and further out (`STARE_GAP` 3.6), folds
+  there clear of the top, then leans in 1.5 studs so his face hangs at the mouth of the spot. Desks and tables. When the
+  knee-hole side is blocked (a filing cabinet beside the desk) he stands on the other side and his head tips the
+  other way (`peekMirror`, `Spot.side`): tipped the usual way from there it ended behind the drawer pedestal.
+- **Supply cabinet:** no gesture; the louvre overlay was still drawn over his face once he opened the door. It now
+  goes when the door opens (`HideStore.setDoorOpen`, `HideViewModel.overlay`).
+- **Safety net, hider only** (`OccupantClearanceSystem`): the draw-back is scaled to the room behind him (a ray), and
+  any part of the hider's own spot that his bent body still meets is faded for that hider until it no longer does.
+  In the sampled layouts it never fires (all 20 desks of a layout had room for the full roll back).
+- A found hider can be caught from `FOUND_REACH` (3) further than a chase grab, since his stand point is now 6-7
+  studs from the huddle.
+
+Before and after frames: `characters/qa/manager-v3/frames/` and the contact sheets beside them.
+
+### Behaviour bugs fixed
+
+| Bug | Root cause | Fix |
+|---|---|---|
+| Frozen for good (e.g. wedged in a filing cabinet, or a patrol/steer leg that no path reaches) | His NPC kind is costed (the truck box), and a costed mover never steers without a path; patrol legs and the director's steer had no give-up | `OccupantStuckRules`: standing still on a walk for STUCK_SECONDS drops that goal; still stuck, he is lifted to the nearest route point (`unstick`) |
+| Re-stared the same spot forever when its stand point was unreachable | The approach's give-up only walked on; the hider stayed "seen", so `known` sent him straight back | The give-up leaves the spot alone and forgets the hider, like an ordinary walk-away |
+| Looped stare → check → refused catch → stare | A catch refused at a far stand point left the hider "seen" | The check's end clears the spot and forgets the hider after the catch; `FOUND_REACH` |
+| A supply cabinet left standing open | The door was shut only at the check's end; a hider bolting, a sighting or the shift's break skipped it | `OccupantBrainRules.shutDoor`: leaving the open phase any way shuts it |
+| Sat with his knees in a hider's huddle, and could push them out "cramped" into his lap | A hider who crawled under a desk while he walked to it was not noticed at the chair | He sits back (SIT_IN_BACK) and holds their push-out, still unaware (no tip) |
+
+### The desk ambush, how to see it
+
+The trigger (`OccupantWorkRules` seated phases, `OccupantStareRules.ambushes`): while he sits typing at a desk, any
+crew member within **14 flat studs** (`AMBUSH_RADIUS`; no line of sight needed, any direction, so right behind him
+works), anyone in his sight cone (60 studs, 100°, facing the desk), or any noise he hears. No minimum typing time, no
+cooldown, no chance roll, no menace gating; only a hider is never counted. He then holds 1.1 s (head swivelled to you),
+stands in 1.2 s, and chases whoever is in his body's sight cone, else investigates where you were and chases as soon as
+he turns and sees you. Work breaks come 20-40 s into the shift, then every 35-70 s, last 10-22 s, and are taken at a
+desk nobody stands within 10 studs of (often 18-45 studs from the crew), so they are easy to miss: listen for the
+typing. `occupantwork` (Admins) sends him to a desk on demand.
+
+### Design questions (not bugs)
+
+- After the ambush he chases only if you are inside his body's sight cone; a player behind him gets a short
+  investigation first, though his head turned to them.
+- The 14-stud ambush ignores walls: typing in one room, he springs on someone in the next.
+- He does not notice a hider under the desk he sits at for an ordinary break (now he only keeps his knees clear).
+- STARE_GAP 3.6 puts him further from the spot during the stare and the cabinet check (the face at an opened cabinet
+  reads smaller).
