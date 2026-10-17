@@ -69,6 +69,10 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- The ambush: he snaps round from the desk, chair shove, porcelain grind and the lock of his head over a pizz F dim7
 	-- (round-2 pick A, in-house, 1.1 s = AMBUSH_HOLD; positional). Plays as the ambush starts.
 	harlowAmbush = { assetId = "rbxassetid://90232187116807", group = "SFX", volume = 0.9, rollOffMaxDistance = 60 },
+	-- The slow turns (behaviours design §11, in-house round 5): his neck's slow porcelain creak through the 2.0 s turn
+	-- (stopped short if the turn is), and the sharp porcelain crack of the jerk, landing with the chase sting.
+	harlowCreak = { assetId = PENDING, group = "SFX", volume = 0.9, rollOffMaxDistance = 60 },
+	harlowCrack = { assetId = PENDING, group = "SFX", volume = 1, rollOffMaxDistance = 80 },
 	-- He sits at a desk: casters roll the chair in, the seat creaks, the gas lift sighs and bottoms out (round-3 pick A,
 	-- in-house; positional, heard through the room). Plays as he reaches the chair.
 	harlowSit = { assetId = "rbxassetid://118633870993827", group = "SFX", volume = 0.9, rollOffMaxDistance = 70 },

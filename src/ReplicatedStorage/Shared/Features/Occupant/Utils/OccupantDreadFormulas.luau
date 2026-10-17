@@ -97,9 +97,20 @@ local HUNTING: { [string]: boolean } =
 -- Modes in which he goes about his business, unaware.
 local UNAWARE: { [string]: boolean } = { patrol = true, work = true }
 
+-- The slow turns' phases (behaviours design §11.2), standing (alert) or seated (work).
+local SLOW_PHASES: { [string]: boolean } = { slowTurn = true, staring = true }
+
 local OccupantDreadFormulas = {}
 
 OccupantDreadFormulas.ZERO = ZERO
+
+--[=[
+	Whether he is in a slow turn or a stare (behaviours design §11.2): the aware stage at full strength, the music
+	near-silent.
+]=]
+function OccupantDreadFormulas.slow(mode: string?, phase: string?): boolean
+	return (mode == "alert" or mode == "work") and phase ~= nil and SLOW_PHASES[phase] == true
+end
 
 --[=[
 	His proximity (0..1) at `distance` studs; `sight` 1 = clear line of sight to his head, 0 = none (blended between).
@@ -135,7 +146,7 @@ function OccupantDreadFormulas.stage(input: StageInput): DreadStage
 			return "chase"
 		end
 		if input.proximity > 0 and mode ~= nil then
-			if HUNTING[mode] or (onMe and mode ~= "rest") then
+			if HUNTING[mode] or (onMe and mode ~= "rest") or OccupantDreadFormulas.slow(mode, input.phase) then
 				return "aware"
 			end
 			if UNAWARE[mode] then
@@ -152,18 +163,22 @@ end
 --[=[
 	The look `stage` aims for: near scaled by `proximity`; aware by max(proximity, AWARE_FLOOR); the chase blended
 	chaseFar -> chaseNear by `closeness` (the chase music's layer, 0..1); crew scaled by `crew`. `hidden`: hiding while
-	he is near (any stage but none and crew) holds the heart at HIDDEN_HEART and muffles the world.
+	he is near (any stage but none and crew) holds the heart at HIDDEN_HEART and muffles the world. `slow`: his slow turn
+	or stare (§11.2): the aware stage shows the slowTurn look, unscaled.
 ]=]
 function OccupantDreadFormulas.target(
 	stage: DreadStage,
 	proximity: number,
 	closeness: number,
 	crew: number,
-	hidden: boolean
+	hidden: boolean,
+	slow: boolean?
 ): DreadLook
 	local looks = DREAD.LOOKS
 	local look: DreadLook
-	if stage == "near" then
+	if stage == "aware" and slow == true then
+		look = scaled(looks.slowTurn, 1)
+	elseif stage == "near" then
 		look = scaled(looks.near, math.clamp(proximity, 0, 1))
 	elseif stage == "aware" then
 		look = scaled(looks.aware, math.max(math.clamp(proximity, 0, 1), DREAD.AWARE_FLOOR))
@@ -222,8 +237,10 @@ end
 --[=[
 	Seconds per heartbeat for `stage` (nil: no heartbeat of its own; the chase's follows the music's beat).
 ]=]
-function OccupantDreadFormulas.beatPeriod(stage: DreadStage, proximity: number): number?
-	if stage == "near" then
+function OccupantDreadFormulas.beatPeriod(stage: DreadStage, proximity: number, slow: boolean?): number?
+	if stage == "aware" and slow == true then
+		return DREAD.BEAT_SLOW
+	elseif stage == "near" then
 		return lerp(DREAD.BEAT_NEAR_SLOW, DREAD.BEAT_NEAR_FAST, math.clamp(proximity, 0, 1))
 	elseif stage == "aware" then
 		return DREAD.BEAT_AWARE

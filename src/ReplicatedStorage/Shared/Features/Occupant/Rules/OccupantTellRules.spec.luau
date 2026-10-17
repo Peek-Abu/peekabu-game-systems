@@ -186,4 +186,73 @@ return function()
 			expect(OccupantTellRules.alerted(nil, "patrol")).to.equal(false)
 		end)
 	end)
+
+	describe("the slow turns (behaviours design §11)", function()
+		local function mind(extra)
+			local value = { mode = "patrol", since = 0, routeIndex = 1, routeStep = 1, grace = {} }
+			for key, item in extra or {} do
+				value[key] = item
+			end
+			return value
+		end
+
+		it("shows the slow swivel, smiling, and the whip on the jerk", function()
+			local point = Vector3.new(1, 2, 3)
+			local turning = OccupantTellRules.view(
+				mind({ mode = "alert", phase = "slowTurn", phaseAt = 0, point = point, swivelUntil = math.huge }),
+				1
+			)
+			expect(turning.gesture).to.equal("slowSwivel")
+			expect(turning.gestureTarget).to.equal(point)
+			expect(turning.face).to.equal("Calm")
+			expect(turning.phase).to.equal("slowTurn")
+			local jerk = OccupantTellRules.view(
+				mind({ mode = "chase", phase = "jerk", phaseAt = 1, point = point, swivelUntil = 1.13, target = 7 }),
+				1.05
+			)
+			expect(jerk.gesture).to.equal("whip")
+			expect(jerk.face).to.equal("Hunting")
+		end)
+
+		it("creaks as a slow turn starts, cracks on the jerk, and cuts the creak short only off the turn", function()
+			expect(OccupantTellRules.slowTurned("", "slowTurn")).to.equal(true)
+			expect(OccupantTellRules.slowTurned("type", "slowTurn")).to.equal(true)
+			expect(OccupantTellRules.slowTurned("slowTurn", "slowTurn")).to.equal(false)
+			expect(OccupantTellRules.jerked("slowTurn", "jerk")).to.equal(true)
+			expect(OccupantTellRules.jerked("staring", "jerk")).to.equal(true)
+			expect(OccupantTellRules.jerked("jerk", "jerk")).to.equal(false)
+			expect(OccupantTellRules.cutShort("slowTurn", "jerk")).to.equal(true)
+			expect(OccupantTellRules.cutShort("slowTurn", "")).to.equal(true)
+			expect(OccupantTellRules.cutShort("slowTurn", "staring")).to.equal(false)
+			expect(OccupantTellRules.cutShort("staring", "jerk")).to.equal(false)
+		end)
+
+		it("never plays the snap's intake for a slow turn", function()
+			expect(OccupantTellRules.alerted("patrol", "alert", "")).to.equal(true)
+			expect(OccupantTellRules.alerted("patrol", "alert", "slowTurn")).to.equal(false)
+		end)
+
+		it("flickers the lights harder and further during a slow turn", function()
+			local beyond = OccupantConstants.FLICKER_RADIUS + 4
+			local darkNormal, darkHard, darkBeyond = 0, 0, 0
+			for index = 1, 400 do
+				local now = index * 0.037
+				if not OccupantTellRules.flicker(10, now, 1.3) then
+					darkNormal += 1
+				end
+				if not OccupantTellRules.flicker(10, now, 1.3, true) then
+					darkHard += 1
+				end
+				if not OccupantTellRules.flicker(beyond, now, 1.3, true) then
+					darkBeyond += 1
+				end
+				expect(OccupantTellRules.flicker(beyond, now, 1.3)).to.equal(true)
+				expect(OccupantTellRules.flicker(OccupantConstants.SLOW_FLICKER_RADIUS + 1, now, 1.3, true)).to.equal(
+					true
+				)
+			end
+			expect(darkHard > darkNormal).to.equal(true)
+			expect(darkBeyond > 0).to.equal(true)
+		end)
+	end)
 end

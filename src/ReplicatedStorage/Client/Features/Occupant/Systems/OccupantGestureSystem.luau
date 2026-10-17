@@ -8,8 +8,11 @@
 	offsets (OccupantGestureFormulas) over whatever his clips put on his Neck and Waist, easing from the last pose to
 	the new one. A keyed gesture (the check, the sit-in) follows its path instead, drawing his whole body back on the
 	Root joint (scaled to the room behind him) and, seated, his chair with it; leaving one plays its exit path back to
-	rest first (OccupantClearanceSystem: the room, the chair, the hider's fade). Visual only: the server's own copy of
-	him never bends.
+	rest first (OccupantClearanceSystem: the room, the chair, the hider's fade). The slow turns (behaviours design §11:
+	`slowSwivel`, `whip`) carry one turn fraction across both gestures and aim it from his lower body each step
+	(OccupantGestureFormulas.turnPose: the waist leads, the smile comes round last); as the server snaps his body round
+	in the jerk, the aimed yaw unwinds, so the head stays on the player while the body catches up. Visual only: the
+	server's own copy of him never bends.
 
 	Spec-exempt shell (Motor6Ds, RunService); the poses and their easing are the specced OccupantGestureFormulas.
 
@@ -29,6 +32,11 @@ type Offsets = OccupantGestureFormulas.Offsets
 type Body = {
 	model: Model,
 	torso: BasePart?,
+	-- His lower body (the slow turns aim from it, below the waist they twist).
+	lower: BasePart?,
+	-- A slow turn's fraction (0..1), carried from the slow swivel into the whip, and when it last advanced.
+	turned: number,
+	turnedAt: number,
 	joints: { [string]: Motor6D },
 	complete: boolean,
 	gesture: string,
@@ -80,12 +88,14 @@ local function scan(body: Body)
 	body.complete = found >= #POSED
 	local torso = body.model:FindFirstChild("UpperTorso")
 	body.torso = if torso ~= nil and torso:IsA("BasePart") then torso else nil
+	local lower = body.model:FindFirstChild("LowerTorso")
+	body.lower = if lower ~= nil and lower:IsA("BasePart") then lower else nil
 end
 
 local function bodyOf(model: Model): Body
 	local existing = bodies[model]
 	if existing ~= nil then
-		if not existing.complete or existing.torso == nil then
+		if not existing.complete or existing.torso == nil or existing.lower == nil then
 			scan(existing)
 		end
 		return existing
@@ -93,6 +103,9 @@ local function bodyOf(model: Model): Body
 	local body: Body = {
 		model = model,
 		torso = nil,
+		lower = nil,
+		turned = 0,
+		turnedAt = os.clock(),
 		joints = {},
 		complete = false,
 		gesture = "",
@@ -137,6 +150,11 @@ local function step()
 				end
 				body.reach = OccupantClearanceSystem.reach(instance, deepest)
 			end
+			if OccupantGestureFormulas.turning(gesture) and not OccupantGestureFormulas.turning(body.gesture) then
+				-- A slow turn starts from wherever his head is.
+				body.turned = 0
+			end
+			body.turnedAt = now
 			body.from = body.shown
 			body.gesture = gesture
 			body.since = now
@@ -169,7 +187,14 @@ local function step()
 				body.from = {}
 				body.since = math.max(body.since, exit.since + exit.seconds)
 			end
-			if keys ~= nil then
+			local lower = body.lower
+			if OccupantGestureFormulas.turning(gesture) and typeof(target) == "Vector3" and lower ~= nil then
+				-- A slow turn (or its whip): one fraction carried across both, aimed from his lower body.
+				body.turned = OccupantGestureFormulas.advance(body.turned, gesture, now - body.turnedAt)
+				body.turnedAt = now
+				shown =
+					OccupantGestureFormulas.turnPose(OccupantGestureFormulas.yawTo(lower.CFrame, target), body.turned)
+			elseif keys ~= nil then
 				shown, back = OccupantGestureFormulas.along(keys, (now - body.since) / seconds)
 			else
 				local pose = OccupantGestureFormulas.pose(gesture, yaw)

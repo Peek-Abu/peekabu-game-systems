@@ -174,7 +174,8 @@ local function beat()
 	SoundServiceClient:play("harlowHeartbeat", { volumeScale = look.heart * DREAD.HEART_GAIN })
 end
 
-local function stepHeartbeat(now: number)
+-- `slow`: his slow turn or stare (behaviours design §11.2) beats faster.
+local function stepHeartbeat(now: number, slow: boolean)
 	if stage == "chase" then
 		beatPeriod = OccupantConstants.CHASE_BEAT
 		local position = OccupantChaseMusicSystem.beatPosition()
@@ -190,7 +191,7 @@ local function stepHeartbeat(now: number)
 		return
 	end
 	lastMusicBeat = -1
-	local period = OccupantDreadFormulas.beatPeriod(stage, proximity)
+	local period = OccupantDreadFormulas.beatPeriod(stage, proximity, slow)
 	if period == nil then
 		return
 	end
@@ -377,8 +378,10 @@ local function step(dt: number)
 	end
 	local closeness = if stage == "chase" then OccupantTellRules.chaseLayer(distance) else 0
 	local reduced = reduceMotion()
+	-- His slow turn or stare (behaviours design §11.2): the aware look at full strength, the music near-silent.
+	local slow = OccupantDreadFormulas.slow(mode, phase)
 	local aim = OccupantDreadFormulas.reduce(
-		OccupantDreadFormulas.target(stage, proximity, closeness, crew, hidden and stage ~= "none"),
+		OccupantDreadFormulas.target(stage, proximity, closeness, crew, hidden and stage ~= "none", slow),
 		reduced
 	)
 	look = OccupantDreadFormulas.ease(look, aim, dt)
@@ -387,7 +390,7 @@ local function step(dt: number)
 		look.squeeze = 0
 	end
 
-	stepHeartbeat(now)
+	stepHeartbeat(now, slow)
 	local pulse = OccupantDreadFormulas.pulse(now - lastBeatAt, beatPeriod)
 	setScreen(pulse)
 	OccupantDreadTracker.set({

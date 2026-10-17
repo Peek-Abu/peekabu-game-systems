@@ -6,6 +6,7 @@
 	  for TIER_FLICKER_SECONDS after a tier rise every light flickers; for LIGHTS_OUT_SECONDS after a catch the
 	  lights within LIGHTS_OUT_RADIUS of it are dark (the blackout is time-boxed on the tick, and `stop` clears
 	  it, so no light stays dark).
+	  through his slow turn or stare (behaviours design §11.2) the lights within SLOW_FLICKER_RADIUS flicker harder.
 	(The heartbeat and the screen's mood moved to OccupantDreadSystem, 2026-10-17.)
 	Real light brightness and visible emitter colour fade together; fixture housings retain their authored material. Client-local only.
 
@@ -21,6 +22,7 @@ local TweenService = game:GetService("TweenService")
 
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local OccupantTellRules = require(ReplicatedStorage.Shared.Features.Occupant.Rules.OccupantTellRules)
+local OccupantDreadFormulas = require(ReplicatedStorage.Shared.Features.Occupant.Utils.OccupantDreadFormulas)
 
 local connection: RBXScriptConnection? = nil
 type Fade = { tween: Tween?, completion: RBXScriptConnection? }
@@ -198,12 +200,27 @@ local function harlowRoot(): BasePart?
 	return nil
 end
 
+-- Whether he is in a slow turn or a stare (his replicated mode and phase): the lights near him flicker harder.
+local function slowTurning(harlow: BasePart?): boolean
+	local model = if harlow ~= nil then harlow.Parent else nil
+	if model == nil then
+		return false
+	end
+	local mode = model:GetAttribute(OccupantConstants.MODE_ATTRIBUTE)
+	local phase = model:GetAttribute(OccupantConstants.PHASE_ATTRIBUTE)
+	return OccupantDreadFormulas.slow(
+		if type(mode) == "string" then mode else nil,
+		if type(phase) == "string" then phase else nil
+	)
+end
+
 local function updateLights(now: number, harlow: BasePart?)
 	if now >= outUntil then
 		outAt = nil
 	end
 	local darkAround = outAt
 	local everywhere = now < flickerUntil
+	local hard = slowTurning(harlow)
 	for _, instance in CollectionService:GetTagged(OccupantConstants.LIGHT_TAG) do
 		if instance:IsA("BasePart") then
 			local seed = seedOf(instance)
@@ -212,7 +229,7 @@ local function updateLights(now: number, harlow: BasePart?)
 				on = OccupantTellRules.flicker(0, now, seed)
 			end
 			if on and harlow ~= nil then
-				on = OccupantTellRules.flicker((instance.Position - harlow.Position).Magnitude, now, seed)
+				on = OccupantTellRules.flicker((instance.Position - harlow.Position).Magnitude, now, seed, hard)
 			end
 			if
 				darkAround ~= nil

@@ -39,6 +39,9 @@ function OccupantFaceUtils.faceFor(
 		return "Calm"
 	elseif mode == "stare" then
 		return if phase == "check" or phase == "open" then "Hunting" else "Noticing"
+	elseif mode == "alert" and (phase == "slowTurn" or phase == "staring") then
+		-- A slow turn and the stare (behaviours design §11.2): the customer-service smile comes round last.
+		return "Calm"
 	elseif mode == "investigate" or mode == "search" or mode == "alert" then
 		return "Noticing"
 	elseif mode == "chase" or mode == "catch" then

@@ -51,4 +51,13 @@ return function()
 			end
 		end)
 	end)
+
+	describe("the slow turns (behaviours design §11)", function()
+		it("keeps the calm smile through a slow turn and a stare, and widens it on the jerk", function()
+			expect(OccupantFaceUtils.faceFor("alert", "slowTurn", 1)).to.equal("Calm")
+			expect(OccupantFaceUtils.faceFor("alert", "staring", 3)).to.equal("Calm")
+			expect(OccupantFaceUtils.faceFor("work", "slowTurn", 1)).to.equal("Calm")
+			expect(OccupantFaceUtils.faceFor("chase", "jerk", 0)).to.equal("Hunting")
+		end)
+	end)
 end

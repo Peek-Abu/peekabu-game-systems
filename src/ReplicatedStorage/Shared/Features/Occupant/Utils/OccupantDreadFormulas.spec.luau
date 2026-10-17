@@ -274,4 +274,35 @@ return function()
 			expect(a == 0 and b == 0 and c == 0).to.equal(true)
 		end)
 	end)
+
+	describe("the slow turns (behaviours design §11.2)", function()
+		it("knows a slow turn or a stare, standing or seated, and nothing else", function()
+			expect(OccupantDreadFormulas.slow("alert", "slowTurn")).to.equal(true)
+			expect(OccupantDreadFormulas.slow("alert", "staring")).to.equal(true)
+			expect(OccupantDreadFormulas.slow("work", "slowTurn")).to.equal(true)
+			expect(OccupantDreadFormulas.slow("alert", nil)).to.equal(false)
+			expect(OccupantDreadFormulas.slow("chase", "jerk")).to.equal(false)
+		end)
+
+		it("is the aware stage near him even while seated", function()
+			expect(OccupantDreadFormulas.stage(input({ mode = "work", phase = "slowTurn" }))).to.equal("aware")
+			expect(OccupantDreadFormulas.stage(input({ mode = "alert", phase = "staring", proximity = 0 }))).to.equal(
+				"none"
+			)
+		end)
+
+		it("shows the slow look at full strength however far, the music near-silent", function()
+			local look = OccupantDreadFormulas.target("aware", 0.05, 0, 0, false, true)
+			expect(look.heart).to.equal(DREAD.LOOKS.slowTurn.heart)
+			expect(look.duck).to.equal(DREAD.LOOKS.slowTurn.duck)
+			expect(look.duck <= -24).to.equal(true)
+			local aware = OccupantDreadFormulas.target("aware", 1, 0, 0, false, false)
+			expect(look.vignette > aware.vignette).to.equal(true)
+		end)
+
+		it("beats faster than the aware stage", function()
+			expect(OccupantDreadFormulas.beatPeriod("aware", 0.5, true)).to.equal(DREAD.BEAT_SLOW)
+			expect(DREAD.BEAT_SLOW < DREAD.BEAT_AWARE).to.equal(true)
+		end)
+	end)
 end

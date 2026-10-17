@@ -13,7 +13,9 @@
 	(OccupantTellRules.typing: a loop on his head that stops dead the moment it ends, e.g. in the ambush, whose own
 	sound plays then), and his chair swivelling as he rises out of the ambush (OccupantTellRules.rose: our layer plus the
 	two library layers of that mix, OccupantAssets.SWIVEL), and the ambush's intake as his head turns to something he
-	noticed anywhere (OccupantTellRules.alerted, the `alert` mode). No PA since 2026-10-16. And the hider's reveal: while he looks under their spot or tips his head under their
+	noticed anywhere (OccupantTellRules.alerted, the `alert` mode). The slow turns (behaviours design §11): his neck's
+	creak as one starts (stopped short with it), and the porcelain crack on the jerk; these are checked every frame, so
+	the crack lands on the same frame as the chase sting. No PA since 2026-10-16. And the hider's reveal: while he looks under their spot or tips his head under their
 	desk, their camera draws back into the spot and follows his face (OccupantTellRules.revealed). Reads only
 	replicated state. Pending sounds are skipped silently and counted.
 
@@ -45,6 +47,11 @@ export type OccupantWarningState = {
 local rng = Random.new()
 local connection: RBXScriptConnection? = nil
 local typing: SoundServiceClient.SoundHandle? = nil
+-- The slow turn's creak while it sounds, and the phase the per-frame turn sounds last saw.
+local creak: SoundServiceClient.SoundHandle? = nil
+local turnPhase = ""
+-- How fast a cut-short creak fades (s).
+local CREAK_CUT = 0.08
 local lastPhase = ""
 local lastMode: string? = nil
 local stage: string = "none"
@@ -60,6 +67,9 @@ local counters = {
 	turns = 0,
 	sits = 0,
 	swivels = 0,
+	creaks = 0,
+	creakCuts = 0,
+	cracks = 0,
 	pending = 0,
 }
 
@@ -169,7 +179,7 @@ local function step()
 	elseif OccupantTellRules.rose(lastPhase, phase) then
 		swivel(head)
 	end
-	if OccupantTellRules.alerted(lastMode, mode) then
+	if OccupantTellRules.alerted(lastMode, mode, phase) then
 		counters.turns += 1
 		play("harlowAmbush", { at = head })
 	end
@@ -201,6 +211,38 @@ local function step()
 	end
 end
 
+local function stopCreak(fade: number)
+	local sound = creak
+	creak = nil
+	if sound ~= nil then
+		sound:stop(fade)
+	end
+end
+
+-- Every frame: the slow turn's creak and the jerk's crack (behaviours design §11), on the frame the phase replicates.
+local function turnSounds()
+	local model, head = harlow()
+	local value = if model ~= nil then model:GetAttribute(OccupantConstants.PHASE_ATTRIBUTE) else nil
+	local phase = if type(value) == "string" then value else ""
+	if phase == turnPhase then
+		return
+	end
+	if OccupantTellRules.cutShort(turnPhase, phase) then
+		counters.creakCuts += 1
+		stopCreak(CREAK_CUT)
+	end
+	if head ~= nil and OccupantTellRules.slowTurned(turnPhase, phase) then
+		stopCreak(0)
+		counters.creaks += 1
+		creak = play("harlowCreak", { at = head })
+	end
+	if head ~= nil and OccupantTellRules.jerked(turnPhase, phase) then
+		counters.cracks += 1
+		play("harlowCrack", { at = head })
+	end
+	turnPhase = phase
+end
+
 local OccupantWarningSystem = {}
 
 function OccupantWarningSystem.start()
@@ -209,6 +251,7 @@ function OccupantWarningSystem.start()
 	end
 	local elapsed = 0
 	connection = RunService.Heartbeat:Connect(function(deltaTime: number)
+		turnSounds()
 		elapsed += deltaTime
 		if elapsed >= OccupantConstants.TELL_INTERVAL then
 			elapsed = 0
@@ -224,6 +267,8 @@ function OccupantWarningSystem.stop()
 		connection = nil
 	end
 	stopTyping()
+	stopCreak(0)
+	turnPhase = ""
 	setReveal(nil, false)
 	lastPhase = ""
 	lastMode = nil

@@ -46,6 +46,12 @@ function OccupantGestureFormulas.gestureFor(
 ): string
 	local peek = if mirrored == true then "peekMirror" else "peek"
 	if swivelling then
+		-- The slow turns (behaviours design §11): slowly through the turn and the stare, a whip through the jerk.
+		if phase == "slowTurn" or phase == "staring" then
+			return "slowSwivel"
+		elseif phase == "jerk" then
+			return "whip"
+		end
 		return "swivel"
 	end
 	if mode == "work" and (phase == "tip" or phase == "tipHold") then
@@ -198,6 +204,48 @@ function OccupantGestureFormulas.overlaps(a: Box, b: Box, margin: number): boole
 		end
 	end
 	return true
+end
+
+-- The gestures that share one turn fraction (a whip carries a slow turn on from where it got to).
+local TURNING: { [string]: boolean } = { slowSwivel = true, whip = true }
+
+--[=[
+	Whether `gesture` is a slow turn's (behaviours design §11): its pose is `turnPose` at a carried turn fraction.
+]=]
+function OccupantGestureFormulas.turning(gesture: string): boolean
+	return TURNING[gesture] == true
+end
+
+--[=[
+	The turn fraction (0..1) `dt` seconds on from `turned` at `gesture`'s pace (its seconds for a whole turn).
+]=]
+function OccupantGestureFormulas.advance(turned: number, gesture: string, dt: number): number
+	local def = OccupantConstants.GESTURES[gesture]
+	local seconds = if def ~= nil then def.seconds else OccupantConstants.GESTURE_RELEASE
+	if seconds <= 0 then
+		return 1
+	end
+	return math.clamp(turned + dt / seconds, 0, 1)
+end
+
+local function smoother(t: number): number
+	local x = math.clamp(t, 0, 1)
+	return x * x * x * (x * (x * 6 - 15) + 10)
+end
+
+--[=[
+	A slow turn's pose `turned` (0..1) of the way to `total` (radians, the yaw to the target from his lower body): the
+	head's yaw smootherstepped, his waist taking SLOW_WAIST_SHARE of it (all of that by SLOW_WAIST_LEAD of the turn) and
+	the neck the rest, so his shoulders come round first and the smile last.
+]=]
+function OccupantGestureFormulas.turnPose(total: number, turned: number): Offsets
+	local lead = OccupantConstants.SLOW_WAIST_LEAD
+	local waist = total * OccupantConstants.SLOW_WAIST_SHARE * smooth(if lead > 0 then turned / lead else 1)
+	local head = total * smoother(turned)
+	local offsets: Offsets = {}
+	offsets.Waist = CFrame.Angles(0, waist, 0)
+	offsets.Neck = CFrame.Angles(0, head - waist, 0)
+	return offsets
 end
 
 --[=[

@@ -141,8 +141,30 @@ end
 	Whether his head just turned to something he noticed (into the `alert` mode, behaviours design §10.2): his intake
 	plays from his head, the same as the desk ambush's.
 ]=]
-function OccupantTellRules.alerted(before: string?, after: string?): boolean
-	return after == "alert" and before ~= "alert"
+function OccupantTellRules.alerted(before: string?, after: string?, phase: string?): boolean
+	-- A slow turn creaks instead (behaviours design §11.2).
+	return after == "alert" and before ~= "alert" and phase ~= "slowTurn"
+end
+
+--[=[
+	Whether a slow turn just began (behaviours design §11.2): his neck's creak plays from his head.
+]=]
+function OccupantTellRules.slowTurned(before: string, after: string): boolean
+	return after == "slowTurn" and before ~= "slowTurn"
+end
+
+--[=[
+	Whether the jerk just began (behaviours design §11.4): the porcelain crack plays from his head, with the sting.
+]=]
+function OccupantTellRules.jerked(before: string, after: string): boolean
+	return after == "jerk" and before ~= "jerk"
+end
+
+--[=[
+	Whether a slow turn was cut short (the jerk, a search, anything but the stare that follows it): the creak stops.
+]=]
+function OccupantTellRules.cutShort(before: string, after: string): boolean
+	return before == "slowTurn" and after ~= "slowTurn" and after ~= "staring"
 end
 
 --[=[
@@ -153,13 +175,16 @@ function OccupantTellRules.rose(before: string, after: string): boolean
 end
 
 --[=[
-	Whether a light `distance` studs from him is lit at `now` (`seed` tells lights apart).
+	Whether a light `distance` studs from him is lit at `now` (`seed` tells lights apart). `hard`: his slow turn or stare
+	(behaviours design §11.2): out to SLOW_FLICKER_RADIUS, dark much more often.
 ]=]
-function OccupantTellRules.flicker(distance: number, now: number, seed: number): boolean
-	if distance > OccupantConstants.FLICKER_RADIUS then
+function OccupantTellRules.flicker(distance: number, now: number, seed: number, hard: boolean?): boolean
+	local radius = if hard == true then OccupantConstants.SLOW_FLICKER_RADIUS else OccupantConstants.FLICKER_RADIUS
+	if distance > radius then
 		return true
 	end
-	return math.noise(now * FLICKER_RATE, seed) > FLICKER_THRESHOLD
+	local threshold = if hard == true then OccupantConstants.SLOW_FLICKER_THRESHOLD else FLICKER_THRESHOLD
+	return math.noise(now * FLICKER_RATE, seed) > threshold
 end
 
 -- Only actual luminous panels or explicitly marked emitter geometry change, never the fixture housing.
