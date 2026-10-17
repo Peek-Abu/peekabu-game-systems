@@ -155,8 +155,10 @@ local function ToonText(props: ToonTextProps): React.ReactNode
 			FontFace = if display then UIToonConstants.FONT.display else UIToonConstants.FONT.body,
 			TextSize = size,
 			TextScaled = fit,
-			-- A fitted single line shrinks to the box width; wrapped text shrinks to its lines.
-			TextWrapped = props.wrapped == true,
+			-- A fitted single line shrinks to the box width; wrapped text shrinks to its lines. TextWrapped is left
+			-- alone on fitted text: setting it false after TextScaled turns TextScaled back off (the engine ties the two
+			-- together, and React applies props in no fixed order), so a fitted label never shrank.
+			TextWrapped = if fit then nil else props.wrapped == true,
 			TextColor3 = if drop then COLOR.ink elseif display then COLOR.white else props.color or COLOR.ink,
 			TextTransparency = transparency,
 			TextXAlignment = X_ALIGN[props.align or "left"],
