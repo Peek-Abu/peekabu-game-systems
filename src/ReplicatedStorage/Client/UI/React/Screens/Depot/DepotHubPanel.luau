@@ -28,6 +28,7 @@ local ToonBar = require(Toon.ToonBar)
 local ToonButton = require(Toon.ToonButton)
 local ToonIcon = require(Toon.ToonIcon)
 local ToonPill = require(Toon.ToonPill)
+local ToonSparkle = require(Toon.ToonSparkle)
 local ToonStyleViewModel = require(Toon.ToonStyleViewModel)
 local ToonSurface = require(Toon.ToonSurface)
 local ToonText = require(Toon.ToonText)
@@ -206,6 +207,20 @@ local function topRight(props: DepotHubPanelProps): React.ReactNode
 			anchor = Vector2.new(1, 0),
 			position = UDim2.fromScale(1, 0),
 			size = if phone then UDim2.fromOffset(176, 46) else UDim2.fromOffset(330, 82),
+		}),
+		-- Gleam's sparkles over the counter (the kit marks what you earn).
+		sparkles = e(ToonSparkle, {
+			spots = {
+				{
+					position = UDim2.fromOffset(if phone then -40 else -76, if phone then 2 else 4),
+					size = if phone then 16 else 30,
+				},
+				{
+					position = UDim2.fromOffset(if phone then -110 else -210, if phone then 44 else 78),
+					size = if phone then 11 else 20,
+				},
+			},
+			zIndex = 4,
 		}),
 		gift = e(ToonButton, {
 			variant = "grape",

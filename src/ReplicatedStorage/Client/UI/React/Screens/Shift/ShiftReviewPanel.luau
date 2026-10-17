@@ -121,7 +121,7 @@ local function awardCard(
 			textSize = if featured then (if phone then 20 else 42) else (if phone then 15 else 28),
 			position = UDim2.fromOffset(left, if featured then (if phone then 6 else 30) else 4),
 			size = UDim2.fromOffset(
-				width - left - (if featured then 200 else 20),
+				width - left - (if featured then (if phone then 96 else 200) else 20),
 				if featured then (if phone then 24 else 48) else (if phone then 20 else 34)
 			),
 			fit = true,
@@ -134,7 +134,10 @@ local function awardCard(
 				left + 2,
 				if featured then (if phone then 36 else 84) else (if phone then 28 else 42)
 			),
-			size = UDim2.fromOffset(width - left - (if featured then 200 else 20), if phone then 16 else 28),
+			size = UDim2.fromOffset(
+				width - left - (if featured then (if phone then 96 else 200) else 20),
+				if phone then 16 else 28
+			),
 			fit = true,
 		}),
 	}
@@ -175,8 +178,8 @@ local function voteButton(
 	width: number,
 	onVote: (choice: ShiftTypes.Vote) -> ()
 ): React.ReactNode
-	local height = if phone then 54 else 84
-	local count = if phone then 34 else 54
+	local height = if phone then 44 else 84
+	local count = if phone then 30 else 54
 	local content: Nodes = {
 		label = e(ToonText, {
 			text = if choice == "depot" then "TO THE DEPOT" else vote.label,
@@ -389,13 +392,15 @@ local function ShiftReviewPanel(props: ShiftReviewPanelProps): React.ReactNode
 		y += (if featured then (if phone then 72 else 148) else (if phone then 54 else 78)) + (if phone then 8 else 12)
 	end
 	if phone and view.moreAwards ~= nil then
+		-- Under the awards, right-aligned, clear of the vote below.
 		nodes.more = e(ToonButton, {
 			variant = "lilac",
 			small = true,
 			text = if showExtra then view.lessAwards else view.moreAwards,
 			textSize = 13,
-			position = UDim2.fromOffset(right, y),
-			size = UDim2.fromOffset(170, 30),
+			anchor = Vector2.new(1, 0),
+			position = UDim2.fromOffset(canvas.X, y - 2),
+			size = UDim2.fromOffset(170, 24),
 			onActivated = function()
 				setShowExtra(function(open: boolean)
 					return not open
@@ -404,7 +409,7 @@ local function ShiftReviewPanel(props: ShiftReviewPanelProps): React.ReactNode
 		})
 	end
 	-- The crew vote, bottom right.
-	local voteTop = if phone then 312 else 770
+	local voteTop = if phone then 322 else 770
 	nodes.voteTitle = e(ToonText, {
 		text = "WHAT NEXT?",
 		textSize = if phone then 18 else 40,

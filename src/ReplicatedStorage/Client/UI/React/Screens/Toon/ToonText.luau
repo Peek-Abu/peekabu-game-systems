@@ -103,9 +103,19 @@ local function ToonText(props: ToonTextProps): React.ReactNode
 		end
 		local offset = if drop then ToonStyleViewModel.drop(size) else 0
 		local auto = props.automaticWidth == true
+		-- TextScaled wraps words whenever two lines fit the box, so a fitted single line is drawn in a box only one
+		-- line tall (centred on the caller's box by alignY): then shrinking to the width always wins.
+		local oneLine = fit and props.wrapped ~= true
+		local alignY = props.alignY or "center"
+		local lineHeight = math.ceil(size * 1.3)
+		local anchorY = if alignY == "top" then 0 elseif alignY == "bottom" then 1 else 0.5
 		return e("TextLabel", {
-			Position = UDim2.fromOffset(0, offset),
-			Size = if auto then UDim2.fromScale(0, 1) else UDim2.fromScale(1, 1),
+			AnchorPoint = if oneLine then Vector2.new(0, anchorY) else nil,
+			Position = if oneLine then UDim2.new(0, 0, anchorY, offset) else UDim2.fromOffset(0, offset),
+			Size = if auto
+				then UDim2.fromScale(0, 1)
+				elseif oneLine then UDim2.new(1, 0, 0, lineHeight)
+				else UDim2.fromScale(1, 1),
 			AutomaticSize = if auto then Enum.AutomaticSize.X else nil,
 			BackgroundTransparency = 1,
 			Text = props.text,
@@ -113,7 +123,8 @@ local function ToonText(props: ToonTextProps): React.ReactNode
 			FontFace = if display then UIToonConstants.FONT.display else UIToonConstants.FONT.body,
 			TextSize = size,
 			TextScaled = fit,
-			TextWrapped = props.wrapped == true or fit,
+			-- A fitted single line shrinks to the box width; wrapped text shrinks to its lines.
+			TextWrapped = props.wrapped == true,
 			TextColor3 = if drop then COLOR.ink elseif display then COLOR.white else props.color or COLOR.ink,
 			TextTransparency = transparency,
 			TextXAlignment = X_ALIGN[props.align or "left"],

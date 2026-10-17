@@ -38,8 +38,9 @@ export type Header = {
 	icon: UIAssets.ToonIcon?,
 	height: number?,
 	titleSize: number?,
-	-- The band's foot melts into drips over the panel.
+	-- The band's foot melts into drips over the panel (`gooScale` sizes them; default 0.75).
 	goo: boolean?,
+	gooScale: number?,
 }
 
 export type Goo = {
@@ -74,7 +75,9 @@ local function header(props: ToonPanelProps, spec: Header, radius: number): { [s
 	local titleSize = spec.titleSize or 64
 	local shade = UIToonConstants.shade("grape")
 	local hasIcon = spec.icon ~= nil
-	local textLeft = if hasIcon then 190 else 32
+	-- The render breaking the corner scales with the band, and the title starts clear of it.
+	local iconSize = math.floor(height * 1.55)
+	local textLeft = if hasIcon then math.floor(height * 1.45) else 32
 	local nodes: { [string]: React.ReactNode } = {
 		band = e("Frame", {
 			Size = UDim2.new(1, 0, 0, height),
@@ -124,8 +127,8 @@ local function header(props: ToonPanelProps, spec: Header, radius: number): { [s
 		title = e(ToonText, {
 			text = spec.title,
 			textSize = titleSize,
-			position = UDim2.fromOffset(textLeft, 10),
-			size = UDim2.new(1, -textLeft - 120, 0, titleSize + 12),
+			position = UDim2.fromOffset(textLeft, math.max(4, height * 0.08)),
+			size = UDim2.new(1, -textLeft - height * 0.95, 0, titleSize + 12),
 			fit = true,
 			zIndex = 3,
 		}),
@@ -136,8 +139,8 @@ local function header(props: ToonPanelProps, spec: Header, radius: number): { [s
 			font = "body",
 			color = Color3.new(1, 1, 1),
 			textSize = 22,
-			position = UDim2.fromOffset(textLeft + 4, titleSize + 20),
-			size = UDim2.new(1, -textLeft - 140, 0, 28),
+			position = UDim2.fromOffset(textLeft + 4, titleSize + math.max(8, height * 0.12)),
+			size = UDim2.new(1, -textLeft - height * 1.1, 0, 28),
 			fit = true,
 			zIndex = 3,
 		})
@@ -147,6 +150,7 @@ local function header(props: ToonPanelProps, spec: Header, radius: number): { [s
 			kind = "cap",
 			width = props.size.X,
 			radius = radius,
+			scale = spec.gooScale or 0.75,
 			top = height - 3,
 			zIndex = 2,
 		})
@@ -155,8 +159,8 @@ local function header(props: ToonPanelProps, spec: Header, radius: number): { [s
 		-- The render breaks the panel's top-left corner.
 		nodes.icon = e(ToonIcon, {
 			icon = spec.icon,
-			position = UDim2.fromOffset(-46, -52),
-			size = UDim2.fromOffset(200, 200),
+			position = UDim2.fromOffset(-iconSize * 0.23, -iconSize * 0.26),
+			size = UDim2.fromOffset(iconSize, iconSize),
 			rotation = -8,
 			drop = 7,
 			zIndex = 8,
@@ -167,11 +171,12 @@ local function header(props: ToonPanelProps, spec: Header, radius: number): { [s
 		nodes.close = e(ToonButton, {
 			variant = "danger",
 			text = "X",
-			textSize = 44,
+			textSize = math.floor(height * 0.36),
 			layout = "inline",
 			anchor = Vector2.new(1, 0.5),
-			position = UDim2.new(1, -24, 0, height / 2),
-			size = UDim2.fromOffset(84, 76),
+			position = UDim2.new(1, -math.floor(height * 0.2), 0, height / 2),
+			size = UDim2.fromOffset(math.floor(height * 0.66), math.floor(height * 0.6)),
+			small = height < 90,
 			sound = "back",
 			onActivated = onClose,
 			zIndex = 8,
