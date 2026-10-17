@@ -37,10 +37,12 @@ local AnimationEmployeeRegistry: AnimationDomain = table.freeze({
 	pippawalk = locomotion("rbxassetid://93025706307245"),
 	-- Pippa Run v1: 1.03 s loop (2 cycles), feet planted at 1.52 st/s at 1x.
 	pipparun = locomotion("rbxassetid://106530900825479"),
-	-- Pippa Crouch Idle v1: 3.0 s loop, feet fixed, a wary look left and right (root 0.30 below standing).
-	pippacrouchidle = locomotion("rbxassetid://89081416541239"),
-	-- Pippa Crouch Walk v1: 1.33 s loop (1 cycle), feet planted at 1.3 st/s at 1x (root 0.27 below standing).
-	pippacrouchwalk = locomotion("rbxassetid://116992389084029"),
+	-- Pippa Crouch Idle v2: 3.0 s loop, feet fixed, a wary look left and right (root 0.30 below standing), the chest
+	-- 20 degrees forward, her idle's arms (hanging, own sway). A held item's or the vacuum's IK still takes the arms.
+	pippacrouchidle = locomotion("rbxassetid://133583434240097"),
+	-- Pippa Crouch Walk v2: 1.33 s loop (1 cycle), feet planted at 1.3 st/s at 1x (root 0.27 below standing), the
+	-- same lean and idle arms with a small step counter-swing.
+	pippacrouchwalk = locomotion("rbxassetid://100643609508734"),
 })
 
 return AnimationEmployeeRegistry
