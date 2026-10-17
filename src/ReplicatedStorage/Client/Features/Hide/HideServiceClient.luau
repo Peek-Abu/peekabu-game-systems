@@ -56,6 +56,8 @@ local nextId = 0
 local current: ProximityPrompt? = nil
 local held: ProximityPrompt? = nil
 local peekToken: number? = nil
+-- The door of the cabinet the player hides in, watched for the Manager opening it (the louvres then go).
+local doorWatch: RBXScriptConnection? = nil
 local hiddenSpot: string? = nil
 -- When the local player went into the current spot (server time), and the spots that push-outs closed to them.
 local hiddenSince = 0
@@ -172,6 +174,24 @@ local function peekMode(base: CFrame): CameraTypes.ModeDef
 	}
 end
 
+-- Watches the door of the furniture `anchor` hangs on (nil: stops watching), mirroring it into HideStore.
+local function watchDoor(anchor: Instance?)
+	local watching = doorWatch
+	if watching ~= nil then
+		watching:Disconnect()
+		doorWatch = nil
+	end
+	local furniture = if anchor ~= nil then anchor.Parent else nil
+	if furniture == nil then
+		return
+	end
+	local function sync()
+		HideStore.setDoorOpen(furniture:GetAttribute(HideConstants.DOOR_OPEN_ATTRIBUTE) == true)
+	end
+	doorWatch = furniture:GetAttributeChangedSignal(HideConstants.DOOR_OPEN_ATTRIBUTE):Connect(sync)
+	sync()
+end
+
 -- Follows the server's word on where the local player hides.
 local function onHiddenChanged()
 	local spotId = player:GetAttribute(HideConstants.PLAYER_SPOT_ATTRIBUTE)
@@ -192,6 +212,7 @@ local function onHiddenChanged()
 		if left ~= nil and HideRules.camp(Workspace:GetServerTimeNow() - hiddenSince) == "out" then
 			cooling[left] = os.clock() + HideConstants.SPOT_COOLDOWN_SECONDS
 		end
+		watchDoor(nil)
 		HideStore.setHidden(nil)
 		setBodyShown(true)
 		ProximityPromptService.Enabled = true
@@ -212,6 +233,7 @@ local function onHiddenChanged()
 		noun = if type(noun) == "string" then noun else "spot",
 		since = if type(since) == "number" then since else Workspace:GetServerTimeNow(),
 	})
+	watchDoor(anchor)
 	if typeof(peek) == "CFrame" then
 		peekToken = CameraServiceClient:pushMode(peekMode(peek), HideConstants.PEEK_PRIORITY)
 	end

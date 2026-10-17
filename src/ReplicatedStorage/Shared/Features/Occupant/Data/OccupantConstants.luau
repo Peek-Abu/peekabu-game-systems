@@ -54,17 +54,70 @@ local LINE_VARIANTS: { [string]: { string } } = {
 
 -- A procedural gesture laid over his animation (OccupantGestureFormulas): how long it takes to settle, and each
 -- joint's extra rotation in degrees (X pitch, Y yaw, Z roll; negative X bends forward).
-export type Gesture = { seconds: number, joints: { [string]: Vector3 } }
+--
+-- A keyed gesture (`keys`) follows a path instead of one straight blend: each key is reached at `at` (0..1 of
+-- `seconds`, smoothstepped between keys) with its joints and `back`, how far his whole body is drawn back (studs along
+-- his root's back, the Root joint; negative leans him in; a seated body takes its chair along on every client). `exit` is the path back to
+-- rest over `exitSeconds`, from the last key, whatever he does next. (2026-10-17: the straight blends arced his head
+-- over the desk and down through its top, in view of the hider; the paths below were sampled against the desk and
+-- table art for every frame and touch nothing: OccupantClearanceSystem still fades, for the hider only, any part of
+-- their spot his body meets where a wall stops him drawing back.)
+export type GestureKey = { at: number, back: number, joints: { [string]: Vector3 } }
+export type Gesture = {
+	seconds: number,
+	joints: { [string]: Vector3 },
+	keys: { GestureKey }?,
+	exit: { GestureKey }?,
+	exitSeconds: number?,
+}
+
+local function key(at: number, back: number, joints: { [string]: Vector3 }): GestureKey
+	return table.freeze({ at = at, back = back, joints = joints })
+end
+
+-- At rest (no extra rotation).
+local REST: { [string]: Vector3 } = table.freeze({})
+-- The sit-in's fold: over his knees, his head upside down facing the hider.
+local UNDER_FOLD: { [string]: Vector3 } =
+	table.freeze({ Waist = Vector3.new(-98, 0, 0), Neck = Vector3.new(98, 0, 180) })
+-- The stare's check: folded double (he is far too tall to stoop), his head hanging tipped sideways, toward the spot's
+-- centre line: from its -X side (PEEK_FOLD) or, mirrored, its +X side (PEEK_FOLD_MIRROR). Tipped the other way, from a
+-- desk's +X side, his head ended behind its drawer pedestal.
+local PEEK_FOLD: { [string]: Vector3 } =
+	table.freeze({ Waist = Vector3.new(-150, 0, 0), Neck = Vector3.new(150, 0, 90) })
+local PEEK_FOLD_MIRROR: { [string]: Vector3 } =
+	table.freeze({ Waist = Vector3.new(-150, 0, 0), Neck = Vector3.new(150, 0, -90) })
 
 local GESTURES: { [string]: Gesture } = {
 	-- The ambush: the head snaps round to the point on the long neck (the yaw is aimed live; this is its timing).
 	swivel = { seconds = 0.35, joints = {} },
-	-- The stare's check: he folds double at the waist (he is far too tall to stoop) and his head hangs down, tipped
-	-- sideways, at the mouth of the spot (tuned live against the built desk).
-	peek = { seconds = 0.9, joints = { Waist = Vector3.new(-150, 0, 0), Neck = Vector3.new(150, 0, 90) } },
-	-- The sit-in: from the chair he folds forward over his knees and his head comes in under the desk's lip, upside
-	-- down and facing the hider (tuned live: the head ends 0.6 studs under the front edge, just off the floor).
-	under = { seconds = 2.6, joints = { Waist = Vector3.new(-98, 0, 0), Neck = Vector3.new(98, 0, 180) } },
+	-- The stare's check, from beside the knee-hole (STARE_SIDE, STARE_GAP out: far enough that the fold clears the
+	-- top): the fold, then he leans in 1.5 studs so his face hangs at the mouth of the spot, just off its front edge.
+	peek = {
+		seconds = 1,
+		joints = PEEK_FOLD,
+		keys = { key(0.6, 0, PEEK_FOLD), key(1, -1.5, PEEK_FOLD) },
+		exit = { key(0.4, 0, PEEK_FOLD), key(1, 0, REST) },
+		exitSeconds = 0.6,
+	},
+	-- The same from the spot's other side (Spot.side > 0), his head tipped the other way.
+	peekMirror = {
+		seconds = 1,
+		joints = PEEK_FOLD_MIRROR,
+		keys = { key(0.6, 0, PEEK_FOLD_MIRROR), key(1, -1.5, PEEK_FOLD_MIRROR) },
+		exit = { key(0.4, 0, PEEK_FOLD_MIRROR), key(1, 0, REST) },
+		exitSeconds = 0.6,
+	},
+	-- The sit-in: he rolls his chair back, folds forward over his knees with his head dropping in front of the desk's
+	-- edge, then rolls in so his head comes in under the lip, upside down and facing the hider (it ends 0.5 studs
+	-- back, its face just inside the edge). Out (TIP_BACK) the same way in reverse.
+	under = {
+		seconds = 2.6,
+		joints = UNDER_FOLD,
+		keys = { key(0.25, 2.8, REST), key(0.7, 2.8, UNDER_FOLD), key(1, 0.5, UNDER_FOLD) },
+		exit = { key(0.3, 2.8, UNDER_FOLD), key(0.8, 2.8, REST), key(1, 0, REST) },
+		exitSeconds = 1,
+	},
 }
 
 export type Range = { min: number, max: number }
@@ -218,11 +271,15 @@ return table.freeze({
 	-- CHECK_FAR and beyond (there it is only a suspicion: a short stare), plus CHECK_PER_SECOND per second he had eyes on
 	-- you (fading out with the distance), capped at CHECK_MAX. HUNCH_CHECK: he lost his chase near a spot without seeing
 	-- where you went, stares at it a moment, and looks on this roll.
-	STARE_GAP = 1.6,
-	-- ...and that far to the side of the spot's centre line, beside the desk's chair rather than in it. When furniture
-	-- stands there (a table beside a supply cabinet), the other side, else straight out STARE_GAP + STAND_OUT
-	-- (OccupantDeskUtils.standPoints; the first clear one, OccupantSenseSystem): he is never slid into furniture.
-	STARE_SIDE = 1.9,
+	-- (3.6 since 2026-10-17, was 1.6: from there his check's fold arced his head through the desk's top; now he folds
+	-- clear of it and leans in.)
+	STARE_GAP = 3.6,
+	-- ...and that far to the side of the spot's centre line, beside the desk's chair rather than in it: on its left (-X,
+	-- the knee-hole's open side; a desk's drawer pedestal fills its +X end, where his check's head ended inside it,
+	-- 2026-10-17). When furniture stands there (a table beside a supply cabinet), the other side, else straight out
+	-- STARE_GAP + STAND_OUT (OccupantDeskUtils.standPoints; the first clear one, OccupantSenseSystem): he is never slid
+	-- into furniture.
+	STARE_SIDE = -1.9,
 	STAND_OUT = 1.5,
 	STARE_SECONDS = range(4, 10),
 	SUSPECT_SECONDS = range(2, 4),

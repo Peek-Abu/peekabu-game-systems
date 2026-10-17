@@ -49,6 +49,9 @@ export type Spot = {
 	id: string,
 	center: Vector3,
 	stand: Vector3,
+	-- Which side of the spot's centre line the stand point is (the sign of its local X; 0 straight out): his check
+	-- tips his head toward the centre line from there (OccupantGestureFormulas.gestureFor).
+	side: number?,
 	deskId: string?,
 	secure: boolean?,
 }

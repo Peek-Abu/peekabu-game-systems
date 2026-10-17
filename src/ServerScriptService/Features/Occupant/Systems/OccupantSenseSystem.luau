@@ -206,10 +206,13 @@ function System.furniture(
 		local part = spot.furniture
 		local marker = part:GetAttribute(MARKER_ATTRIBUTE)
 		local deskId = if spot.noun == "desk" and type(marker) == "string" then marker else nil
+		local stand = standAt(spot.frame, part.Size, clear)
+		local across = spot.frame:PointToObjectSpace(stand).X
 		table.insert(views, {
 			id = spot.id,
 			center = part.Position,
-			stand = standAt(spot.frame, part.Size, clear),
+			stand = stand,
+			side = if math.abs(across) < 1e-3 then 0 elseif across > 0 then 1 else -1,
 			deskId = deskId,
 			-- A closed supply cabinet (Hide's "inside" spot) is secure: he must open it to look.
 			secure = spot.kind == "inside",

@@ -27,6 +27,16 @@ return function()
 		expect(HideStore.prompt().holdStartedAt).to.equal(nil)
 	end)
 
+	it("marks the hiding spot's door open or shut, and nothing while not hiding", function()
+		HideStore.setDoorOpen(true)
+		expect(HideStore.hidden()).to.equal(nil)
+		HideStore.setHidden({ spotId = "cabinet.a", kind = "inside", noun = "cabinet", since = 5 })
+		HideStore.setDoorOpen(true)
+		expect(HideStore.hidden().doorOpen).to.equal(true)
+		HideStore.setDoorOpen(false)
+		expect(HideStore.hidden().doorOpen).to.equal(false)
+	end)
+
 	it("keeps a copy of the spot the player hides in", function()
 		local hidden = { spotId = "desk.a", kind = "under", noun = "desk", since = 5 }
 		HideStore.setHidden(hidden)

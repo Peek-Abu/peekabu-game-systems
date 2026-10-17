@@ -77,13 +77,17 @@ end
 
 --[=[
 	The peek overlay for the spot the player hides in, or nil when not hiding: the furniture's underside, or a supply
-	cabinet's louvred door ("slats").
+	cabinet's louvred door ("slats"); none once that door stands open (the Manager opening it: his face must not be
+	behind slats that are no longer there).
 ]=]
 function HideViewModel.overlay(hidden: HideStore.HiddenView?): Overlay?
 	if hidden == nil then
 		return nil
 	end
-	return if hidden.kind == "inside" then "slats" else "under"
+	if hidden.kind == "inside" then
+		return if hidden.doorOpen == true then nil else "slats"
+	end
+	return "under"
 end
 
 return HideViewModel

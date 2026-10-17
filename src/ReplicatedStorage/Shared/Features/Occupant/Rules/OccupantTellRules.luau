@@ -66,7 +66,8 @@ function OccupantTellRules.view(mind: OccupantTypes.Mind, now: number): View
 			mind.phase,
 			swivelling,
 			mind.sitIn == true,
-			mind.spot ~= nil
+			mind.spot ~= nil,
+			mind.spot ~= nil and (mind.spot.side or 0) > 0
 		),
 		gestureTarget = if swivelling then mind.point else nil,
 		tilt = mind.mode == "catch" and now - mind.since < OccupantConstants.SNAP_SECONDS + 0.5,

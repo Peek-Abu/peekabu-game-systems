@@ -20,6 +20,18 @@ return function()
 			expect(OccupantGestureFormulas.gestureFor("stare", "check", false, false, true)).to.equal("peek")
 			expect(OccupantGestureFormulas.gestureFor("stare", "hold", false, false, true)).to.equal("")
 		end)
+		it("mirrors the check from the spot's other side, through its catch too", function()
+			expect(OccupantGestureFormulas.gestureFor("stare", "check", false, false, true, true)).to.equal(
+				"peekMirror"
+			)
+			expect(OccupantGestureFormulas.gestureFor("catch", nil, false, false, true, true)).to.equal("peekMirror")
+			expect(OccupantGestureFormulas.gestureFor("stare", "check", false, false, true, false)).to.equal("peek")
+			local mirror = C.GESTURES.peekMirror.joints.Neck
+			local plain = C.GESTURES.peek.joints.Neck
+			expect(mirror.Z).to.equal(-plain.Z)
+			expect(mirror.X).to.equal(plain.X)
+		end)
+
 		it("keeps the pose through a catch made from it", function()
 			expect(OccupantGestureFormulas.gestureFor("catch", nil, false, true, false)).to.equal("under")
 			expect(OccupantGestureFormulas.gestureFor("catch", nil, false, false, true)).to.equal("peek")
@@ -66,6 +78,84 @@ return function()
 			local finish = OccupantGestureFormulas.blend(from, to, 1)
 			expect(near(finish.Neck, CFrame.identity)).to.equal(true)
 			expect(near(finish.Waist, to.Waist)).to.equal(true)
+		end)
+	end)
+
+	describe("along (a keyed path)", function()
+		local KEYS = {
+			{ at = 0.25, back = 2, joints = {} },
+			{ at = 0.75, back = 2, joints = { Waist = Vector3.new(-90, 0, 0) } },
+			{ at = 1, back = 0.5, joints = { Waist = Vector3.new(-90, 0, 0) } },
+		}
+
+		it("starts at rest and reaches each key at its time", function()
+			local start, startBack = OccupantGestureFormulas.along(KEYS, 0)
+			expect(startBack).to.equal(0)
+			expect(start.Waist).to.equal(nil)
+			local first, firstBack = OccupantGestureFormulas.along(KEYS, 0.25)
+			expect(firstBack).to.be.near(2)
+			expect(first.Waist).to.equal(nil)
+			local second, secondBack = OccupantGestureFormulas.along(KEYS, 0.75)
+			expect(secondBack).to.be.near(2)
+			expect(near(second.Waist, CFrame.Angles(math.rad(-90), 0, 0))).to.equal(true)
+			local _, lastBack = OccupantGestureFormulas.along(KEYS, 1)
+			expect(lastBack).to.be.near(0.5)
+		end)
+
+		it("keeps the fold out of the first leg: he draws back before he bends", function()
+			local mid, back = OccupantGestureFormulas.along(KEYS, 0.2)
+			expect(mid.Waist).to.equal(nil)
+			expect(back > 0 and back < 2).to.equal(true)
+		end)
+
+		it("holds the last key past the end, and starts from a given waypoint", function()
+			local _, back = OccupantGestureFormulas.along(KEYS, 3)
+			expect(back).to.be.near(0.5)
+			local _, from = OccupantGestureFormulas.along(KEYS, 0, { back = 1, joints = {} })
+			expect(from).to.be.near(1)
+		end)
+
+		it("keys the peek and the sit-in, both ending at their authored fold", function()
+			for _, name in { "peek", "under" } do
+				local keys, seconds = OccupantGestureFormulas.keyed(name)
+				expect(keys).to.be.ok()
+				expect(seconds).to.equal(C.GESTURES[name].seconds)
+				local final = OccupantGestureFormulas.along(keys, 1)
+				local waist = C.GESTURES[name].joints.Waist
+				expect(near(final.Waist, CFrame.Angles(math.rad(waist.X), math.rad(waist.Y), math.rad(waist.Z)))).to.equal(
+					true
+				)
+			end
+			expect(OccupantGestureFormulas.keyed("swivel")).to.equal(nil)
+		end)
+
+		it("leaves a keyed gesture by its exit path, from its last key back to rest", function()
+			local keys, seconds, start = OccupantGestureFormulas.exit("under")
+			expect(keys).to.be.ok()
+			expect(seconds).to.equal(C.GESTURES.under.exitSeconds)
+			expect(start.back).to.equal(C.GESTURES.under.keys[#C.GESTURES.under.keys].back)
+			local rest, back = OccupantGestureFormulas.along(keys, 1, start)
+			expect(back).to.be.near(0)
+			expect(next(rest)).to.equal(nil)
+			expect(OccupantGestureFormulas.exit("swivel")).to.equal(nil)
+			expect(OccupantGestureFormulas.exit("")).to.equal(nil)
+		end)
+	end)
+
+	describe("overlaps", function()
+		local function box(x, y, z, size)
+			return { cframe = CFrame.new(x, y, z), size = size or Vector3.one * 2 }
+		end
+		it("meets boxes that interpenetrate, not ones that only touch or stand apart", function()
+			expect(OccupantGestureFormulas.overlaps(box(0, 0, 0), box(1, 0, 0), 0.05)).to.equal(true)
+			expect(OccupantGestureFormulas.overlaps(box(0, 0, 0), box(2, 0, 0), 0.05)).to.equal(false)
+			expect(OccupantGestureFormulas.overlaps(box(0, 0, 0), box(5, 0, 0), 0)).to.equal(false)
+		end)
+		it("sees a turned box miss a corner it would hit unturned", function()
+			local turned =
+				{ cframe = CFrame.new(2.9, 2.9, 0) * CFrame.Angles(0, 0, math.rad(45)), size = Vector3.one * 2 }
+			expect(OccupantGestureFormulas.overlaps(box(0, 0, 0, Vector3.one * 4), turned, 0)).to.equal(false)
+			expect(OccupantGestureFormulas.overlaps(box(0, 0, 0, Vector3.one * 4), box(2.6, 2.6, 0), 0)).to.equal(true)
 		end)
 	end)
 

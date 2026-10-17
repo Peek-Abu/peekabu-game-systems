@@ -28,6 +28,8 @@ export type HiddenView = {
 	noun: string,
 	-- When they went in (server time).
 	since: number,
+	-- A supply cabinet's door stands open (the Manager opening it to look in).
+	doorOpen: boolean?,
 }
 
 local initialPrompt: PromptView? = nil
@@ -71,6 +73,18 @@ end
 
 function HideStore.setHidden(view: HiddenView?)
 	hidden(if view ~= nil then table.clone(view) else nil)
+end
+
+--[=[
+	Marks the door of the spot the player hides in open or shut (nothing while not hiding).
+]=]
+function HideStore.setDoorOpen(open: boolean)
+	local current = hidden()
+	if current ~= nil and current.doorOpen ~= open then
+		local nextView = table.clone(current)
+		nextView.doorOpen = open
+		hidden(nextView)
+	end
 end
 
 function HideStore.clear()

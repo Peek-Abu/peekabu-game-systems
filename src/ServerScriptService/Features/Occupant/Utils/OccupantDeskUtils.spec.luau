@@ -97,6 +97,12 @@ return function()
 			expect((points[2] - Vector3.new(-1.9, 0, -3.1)).Magnitude < 1e-4).to.equal(true)
 			expect((points[3] - Vector3.new(0, 0, -(1.5 + 1.6 + C.STAND_OUT))).Magnitude < 1e-4).to.equal(true)
 		end)
+
+		it("tries a desk's knee-hole side first (-X), away from its drawer pedestal", function()
+			local points =
+				OccupantDeskUtils.standPoints(CFrame.new(0, 1.5, 0), Vector3.new(5, 3, 3), C.STARE_GAP, C.STARE_SIDE)
+			expect(points[1].X < 0).to.equal(true)
+		end)
 	end)
 
 	describe("sitBack", function()

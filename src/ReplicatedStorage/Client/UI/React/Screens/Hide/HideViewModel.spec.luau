@@ -55,6 +55,8 @@ return function()
 			inside.kind = "inside"
 			inside.noun = "cabinet"
 			expect(HideViewModel.overlay(inside)).to.equal("slats")
+			inside.doorOpen = true
+			expect(HideViewModel.overlay(inside)).to.equal(nil)
 		end)
 		it("leaves over half the cabinet view open between the louvres, still clearly a door", function()
 			local louvre = HideViewModel.LOUVRE
