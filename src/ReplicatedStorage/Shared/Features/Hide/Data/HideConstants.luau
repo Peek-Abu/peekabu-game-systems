@@ -107,6 +107,9 @@ return table.freeze({
 	-- Replicated on the hiding Player: the spot's id, and when they went in (server time).
 	PLAYER_SPOT_ATTRIBUTE = "HideSpotId",
 	PLAYER_SINCE_ATTRIBUTE = "HideSince",
+	-- Replicated on the hiding Player while the camping push-out is held off (HideServiceServer:hold): until when (server
+	-- time), so their chip shows no cramped countdown meanwhile.
+	PLAYER_HELD_ATTRIBUTE = "HideHeldUntil",
 	-- Anti-camping: after CAMP_WARN_SECONDS in one spot the chip warns "cramped"; at CAMP_SECONDS they are pushed out,
 	-- and that spot refuses them for SPOT_COOLDOWN_SECONDS.
 	CAMP_WARN_SECONDS = 20,

@@ -181,6 +181,7 @@ local function leave(player: Player, reason: ExitReason): boolean
 	holds[player.UserId] = nil
 	player:SetAttribute(HideConstants.PLAYER_SPOT_ATTRIBUTE, nil)
 	player:SetAttribute(HideConstants.PLAYER_SINCE_ATTRIBUTE, nil)
+	player:SetAttribute(HideConstants.PLAYER_HELD_ATTRIBUTE, nil)
 	local spot = spotSystem:get(stay.spotId)
 	if spot ~= nil then
 		spotSystem:setOpen(spot.id, true)
@@ -477,7 +478,10 @@ local HideServiceServer: HideServiceServer = {
 		if tracker:of(player.UserId) == nil then
 			return false
 		end
-		holds[player.UserId] = math.max(holds[player.UserId] or 0, untilTime)
+		local held = math.max(holds[player.UserId] or 0, untilTime)
+		holds[player.UserId] = held
+		-- Replicated in server time (holds are os.clock), so the hider's chip drops its cramped countdown meanwhile.
+		player:SetAttribute(HideConstants.PLAYER_HELD_ATTRIBUTE, Workspace:GetServerTimeNow() + (held - os.clock()))
 		return true
 	end,
 

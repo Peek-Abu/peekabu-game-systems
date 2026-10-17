@@ -30,6 +30,8 @@ export type HiddenView = {
 	since: number,
 	-- A supply cabinet's door stands open (the Manager opening it to look in).
 	doorOpen: boolean?,
+	-- Until when (server time) the server holds off the camping push-out (the Manager at or sitting over the spot).
+	heldUntil: number?,
 }
 
 local initialPrompt: PromptView? = nil
@@ -83,6 +85,19 @@ function HideStore.setDoorOpen(open: boolean)
 	if current ~= nil and current.doorOpen ~= open then
 		local nextView = table.clone(current)
 		nextView.doorOpen = open
+		hidden(nextView)
+	end
+end
+
+--[=[
+	Marks until when (server time; nil: not held) the camping push-out is held off for the spot the player hides in
+	(nothing while not hiding).
+]=]
+function HideStore.setHeldUntil(untilTime: number?)
+	local current = hidden()
+	if current ~= nil and current.heldUntil ~= untilTime then
+		local nextView = table.clone(current)
+		nextView.heldUntil = untilTime
 		hidden(nextView)
 	end
 end

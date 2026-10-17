@@ -192,6 +192,13 @@ local function watchDoor(anchor: Instance?)
 	sync()
 end
 
+-- Follows the server's hold on the camping push-out (the Manager at or sitting over the spot): the chip drops its
+-- cramped countdown meanwhile (HideViewModel.chip).
+local function syncHeld()
+	local heldUntil = player:GetAttribute(HideConstants.PLAYER_HELD_ATTRIBUTE)
+	HideStore.setHeldUntil(if type(heldUntil) == "number" then heldUntil else nil)
+end
+
 -- Follows the server's word on where the local player hides.
 local function onHiddenChanged()
 	local spotId = player:GetAttribute(HideConstants.PLAYER_SPOT_ATTRIBUTE)
@@ -233,6 +240,7 @@ local function onHiddenChanged()
 		noun = if type(noun) == "string" then noun else "spot",
 		since = if type(since) == "number" then since else Workspace:GetServerTimeNow(),
 	})
+	syncHeld()
 	watchDoor(anchor)
 	if typeof(peek) == "CFrame" then
 		peekToken = CameraServiceClient:pushMode(peekMode(peek), HideConstants.PEEK_PRIORITY)
@@ -372,6 +380,7 @@ local HideServiceClient: HideServiceClient = {
 		end)
 		local spotChanged =
 			player:GetAttributeChangedSignal(HideConstants.PLAYER_SPOT_ATTRIBUTE):Connect(onHiddenChanged)
+		local heldChanged = player:GetAttributeChangedSignal(HideConstants.PLAYER_HELD_ATTRIBUTE):Connect(syncHeld)
 		-- Jumping leaves a spot. Not JumpRequest: the hide locks the controls the default jump comes from.
 		local unbindJump = InputServiceClient:bind(HideConstants.JUMP_OUT_ACTION, function(phase)
 			if phase == "begin" then
@@ -409,6 +418,7 @@ local HideServiceClient: HideServiceClient = {
 			holdBegan:Disconnect()
 			holdEnded:Disconnect()
 			spotChanged:Disconnect()
+			heldChanged:Disconnect()
 			unbindJump()
 			unbindHide()
 			unbindInteract()

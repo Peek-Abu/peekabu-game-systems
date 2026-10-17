@@ -54,7 +54,11 @@ function HideViewModel.chip(
 	end
 	if hidden ~= nil then
 		local elapsed = now - hidden.since
-		if HideRules.camp(elapsed) ~= "ok" then
+		-- While the server holds the push-out off (the Manager at or sitting over the spot) there is no countdown to
+		-- warn about: it would read out a push-out that is not coming.
+		local heldUntil = hidden.heldUntil
+		local held = heldUntil ~= nil and now < heldUntil
+		if not held and HideRules.camp(elapsed) ~= "ok" then
 			return { key = key, text = `CRAMPED · out in {HideRules.secondsLeft(elapsed)}s`, fill = nil, warn = true }
 		end
 		return { key = key, text = `LEAVE {string.lower(hidden.noun)}`, fill = nil, warn = false }

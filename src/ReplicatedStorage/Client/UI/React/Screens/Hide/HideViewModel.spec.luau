@@ -39,6 +39,25 @@ return function()
 			)
 		end)
 
+		it("does not warn while the Manager holds the push-out off (a sit-in look-under at their spot)", function()
+			local now = 100 + HideConstants.CAMP_WARN_SECONDS + 3
+			local held = table.clone(HIDDEN)
+			held.heldUntil = 100 + HideConstants.CAMP_SECONDS + 10
+			local view = HideViewModel.chip(nil, held, "C", now, false)
+			expect(view.warn).to.equal(false)
+			expect(view.text).to.equal("LEAVE table")
+			-- Past the stay's own limit too: no countdown while held.
+			view = HideViewModel.chip(nil, held, "C", 100 + HideConstants.CAMP_SECONDS + 2, false)
+			expect(view.warn).to.equal(false)
+		end)
+
+		it("warns again once the hold has run out", function()
+			local now = 100 + HideConstants.CAMP_WARN_SECONDS + 3
+			local held = table.clone(HIDDEN)
+			held.heldUntil = now - 0.1
+			expect(HideViewModel.chip(nil, held, "C", now, false).warn).to.equal(true)
+		end)
+
 		it("shows nothing without a prompt or a spot, or while the HUD is hidden", function()
 			expect(HideViewModel.chip(nil, nil, "C", 0, false)).to.equal(nil)
 			expect(HideViewModel.chip(PROMPT, HIDDEN, "C", 0, true)).to.equal(nil)
