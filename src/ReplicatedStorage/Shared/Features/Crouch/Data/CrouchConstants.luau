@@ -22,8 +22,9 @@ return table.freeze({
 	-- Footstep (the crouch gait), Occupant (the slower glance) and the camera read.
 	CROUCHING_ATTRIBUTE = "Crouching",
 	-- The local camera drops this many studs while crouched (Humanoid.CameraOffset), easing in CAMERA_EASE seconds
-	-- (the time to cover ~63 % of the way).
-	CAMERA_DROP = 1.1,
+	-- (the time to cover ~63 % of the way). Measured 2026-10-17: Pippa's head drops 0.34 studs crouched (her short legs
+	-- fold little); the camera goes a touch further so the change reads. 1.1 put the eye below her own head.
+	CAMERA_DROP = 0.4,
 	CAMERA_EASE = 0.08,
 	-- A toggle the server has not honoured within TOGGLE_CONFIRM seconds (asked while sprinting, hidden, hands full)
 	-- is let go, so it never crouches the player later by surprise.
