@@ -10,7 +10,16 @@ return table.freeze({
 	-- orbit. 13 studs sits the camera over Pippa's shoulder in the office's 12-stud-high rooms instead of hard against
 	-- the far wall; 16 had it pinned to walls (and popping in and out) in most rooms.
 	MAX_ZOOM_DISTANCE = 13,
-	MIN_ZOOM_DISTANCE = 0.5,
+	-- No first person in normal play. At 4 studs Pippa (her 2.4-stud head, ears to 2.9 studs above it, the backpack)
+	-- takes about a quarter of the screen's width with the room still readable past her; at 3.5 her head starts to
+	-- crowd the middle. Authored views (a hiding spot's peek, the catch and reveal shots) frame themselves regardless.
+	MIN_ZOOM_DISTANCE = 4,
+	-- The subject's fade from the final camera-to-head distance (CameraFadeSystem): opaque at FADE_FAR and beyond,
+	-- hidden at FADE_NEAR and inside. FADE_FAR sits a stud under MIN_ZOOM_DISTANCE (the head rides about a stud above
+	-- the camera's focus), so only a camera the walls pull in fades her; the ramp stays at or above the engine's own
+	-- fade (which ends at 1.25 studs) at every distance.
+	FADE_NEAR = 1,
+	FADE_FAR = 3,
 	-- The occlusion pass: the sphere swept from the focus to the camera (studs). Larger than the near plane's corner
 	-- (about 0.15 at 70 degrees), so the near plane never reaches a surface, and the corkboards, dado rails and door
 	-- trims a few tenths proud of a wall stay in front of the camera.

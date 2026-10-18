@@ -29,6 +29,8 @@ local CameraModeTracker = require(CameraClient.State.CameraModeTracker)
 local CameraEffectTracker = require(CameraClient.State.CameraEffectTracker)
 local CameraOcclusionFormulas = require(CameraClient.Utils.CameraOcclusionFormulas)
 local CameraOcclusionSystem = require(CameraClient.Systems.CameraOcclusionSystem)
+local CameraFadeFormulas = require(CameraClient.Utils.CameraFadeFormulas)
+local CameraFadeSystem = require(CameraClient.Systems.CameraFadeSystem)
 local UISuppression = require(ReplicatedStorage.Client.UI.Suppression.UISuppression)
 
 type ModeDef = CameraTypes.ModeDef
@@ -71,6 +73,8 @@ local fovOffsets: { [string]: number? } = {}
 -- The occlusion pass's current limit (studs from the focus) while it holds the camera in; nil = not holding.
 local occlusionLimit: number? = nil
 local occlusionPulls = 0
+-- The subject character's fade from the final camera distance (CameraFadeSystem).
+local fader = CameraFadeSystem.new()
 
 local function heldFov(): number
 	local total = 0
@@ -148,6 +152,29 @@ local function occlude(camera: Camera, dt: number)
 	occlusionLimit = limit
 	occlusionPulls += 1
 	camera.CFrame += (position - focus).Unit * (limit - engine)
+end
+
+-- The character the engine camera follows (the CameraSubject Humanoid's model), if any.
+local function subjectCharacter(camera: Camera): Model?
+	local subject = camera.CameraSubject
+	if subject ~= nil and subject:IsA("Humanoid") then
+		local model = subject.Parent
+		if model ~= nil and model:IsA("Model") then
+			return model
+		end
+	end
+	return nil
+end
+
+-- Fades the subject's character from where the camera finally stands this frame (after the occlusion pass), measured
+-- to its head (CameraFadeSystem says why the engine's own fade cannot).
+local function fadeSubject(camera: Camera)
+	local character = subjectCharacter(camera)
+	local head = if character ~= nil then character:FindFirstChild("Head") else nil
+	local anchor = if head ~= nil and head:IsA("BasePart") then head.Position else camera.Focus.Position
+	local distance = (camera.CFrame.Position - anchor).Magnitude
+	local amount = CameraFadeFormulas.transparency(distance, CameraConstants.FADE_NEAR, CameraConstants.FADE_FAR)
+	CameraFadeSystem.apply(fader, character, amount)
 end
 
 -- Applies a newly-topped mode's engine settings (once, when the top changes).
@@ -239,6 +266,11 @@ local function step(dt: number)
 		camera.CFrame *= offset
 	end
 	camera.FieldOfView = (modeFov or baseFov) + effects:fovOffset() + heldFov()
+	-- Last, from the final camera position. An authored shot (or the first-person lock) leaves the character to its
+	-- owner: a hiding spot hides the body from its peek camera itself.
+	if engineView then
+		fadeSubject(camera)
+	end
 end
 
 export type CameraServiceClient = {
@@ -329,6 +361,7 @@ local CameraServiceClient: CameraServiceClient = {
 		end
 		appliedToken = 0
 		occlusionLimit = nil
+		CameraFadeSystem.release(fader)
 		effects:reset()
 		table.clear(fovOffsets)
 	end,
@@ -400,6 +433,7 @@ local CameraServiceClient: CameraServiceClient = {
 			modifierErrors = modifierErrors,
 			occlusionLimit = occlusionLimit or 0,
 			occlusionPulls = occlusionPulls,
+			fade = fader.written,
 		}
 	end,
 }
