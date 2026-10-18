@@ -67,8 +67,9 @@ type LightBase = {
 	transparency: number,
 }
 
--- Each light's own look (captured the first time this client touches it), and which are dimmed now. Plain maps:
--- the lights are built once with the office and never replaced, and `dimmed` is iterated and cleared.
+-- Each light's own look (captured the first time this client touches it), and which are dimmed now. The office is
+-- rebuilt every shift, so a light leaving the game is forgotten (its tag's removed signal) rather than kept, with its
+-- destroyed part, for the rest of the session.
 local bases: { [BasePart]: LightBase } = {}
 local dimmed: { [BasePart]: boolean } = {}
 
@@ -256,6 +257,16 @@ function OfficeAtmosphereSystem.start()
 			end
 		end)
 	)
+	local removed = CollectionService:GetInstanceRemovedSignal(OccupantConstants.LIGHT_TAG)
+		:Connect(function(instance: Instance)
+			if instance:IsA("BasePart") then
+				bases[instance] = nil
+				dimmed[instance] = nil
+			end
+		end)
+	table.insert(stoppers, function()
+		removed:Disconnect()
+	end)
 	local elapsed = 0
 	local connection = RunService.Heartbeat:Connect(function(deltaTime: number)
 		elapsed += deltaTime

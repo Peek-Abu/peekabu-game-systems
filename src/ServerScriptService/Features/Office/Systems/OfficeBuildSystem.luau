@@ -145,6 +145,9 @@ function OfficeBuildSystem.build(
 			fixture.Material = Enum.Material.Neon
 			fixture.CanCollide = false
 			fixture.CanQuery = false
+			fixture.CanTouch = false
+			-- Flush under the ceiling, its shadow falls inside the ceiling's: casting it is shadow-pass cost for nothing.
+			fixture.CastShadow = false
 			local light = Instance.new("PointLight")
 			light.Range = OfficeConstants.LIGHT_RANGE
 			light.Brightness = OfficeConstants.LIGHT_BRIGHTNESS
@@ -163,6 +166,7 @@ function OfficeBuildSystem.build(
 				panel.CanCollide = false
 				panel.CanQuery = false
 				panel.CanTouch = false
+				panel.CastShadow = false
 			end
 			CollectionService:AddTag(fixture, OccupantConstants.LIGHT_TAG)
 		end
