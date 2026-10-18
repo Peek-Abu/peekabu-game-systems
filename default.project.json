@@ -27,7 +27,9 @@
       },
       "$properties": {
         "DevCameraOcclusionMode": "Zoom",
-        "EnableMouseLockOption": false
+        "EnableMouseLockOption": false,
+        "HealthDisplayDistance": 0,
+        "NameDisplayDistance": 0
       }
     },
     "SoundService": {

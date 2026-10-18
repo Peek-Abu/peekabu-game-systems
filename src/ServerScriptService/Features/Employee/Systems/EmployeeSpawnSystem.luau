@@ -7,9 +7,10 @@
 	`install` copies the employee's art template (ReplicatedStorage, art-owned, never in the source tree) into
 	StarterPlayer as `StarterCharacter` at server boot, scaled to the employee's registry `scale` (Model:ScaleTo:
 	parts, Motor6Ds, attachments and HipHeight; animations play scaled on a scaled model), and turns off LoadCharacterAppearance so the engine
-	does not dress it in the player's avatar. This is runtime-only: Rojo never owns StarterCharacter or that
-	property (StarterPlayer's node only mounts the two script folders and DevCameraOcclusionMode), so a sync
-	cannot fight it and a published place does not need it saved in.
+	does not dress it in the player's avatar, and turns the engine's overhead name tag and health bar off on its
+	Humanoid. This is runtime-only: Rojo never owns StarterCharacter or that property (StarterPlayer's node only
+	mounts the two script folders and sets camera and overhead-display properties), so a sync cannot fight it
+	and a published place does not need it saved in.
 
 	`prepare` fills in what an exported employee rig lacks and a stock R15 avatar has (EmployeeRigUtils): the
 	`<Joint>RigAttachment` pairs at every joint pivot (BuildRigFromAttachments, the carry IK's arm reach),
@@ -143,6 +144,15 @@ function EmployeeSpawnSystem.install(
 			humanoid.JumpHeight = jumpHeight
 			humanoid.JumpPower = jumpPower
 		end
+	end
+	-- The crew never wear the engine's overhead name tag or health bar. Hidden here, on the character every
+	-- player spawns as, so it holds alive, damaged and dead (a dead Humanoid's Health 0 is what shows the bar
+	-- under DisplayWhenDamaged); StarterPlayer's Name/HealthDisplayDistance = 0 (default.project.json) hides
+	-- it for every other Humanoid a player looks at.
+	local starterHumanoid = starter:FindFirstChildOfClass("Humanoid")
+	if starterHumanoid ~= nil then
+		starterHumanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+		starterHumanoid.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
 	end
 	if existing ~= nil then
 		existing:Destroy()

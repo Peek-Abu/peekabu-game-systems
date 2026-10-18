@@ -153,6 +153,21 @@ return function()
 			end
 		)
 
+		it("turns the engine's overhead name and health display off on the StarterCharacter", function()
+			-- A template Humanoid keeps the engine defaults (Viewer, DisplayWhenDamaged): a dead employee's
+			-- health (0) then shows the stock name tag and health bar over the body.
+			local template = makeTemplate()
+			local source = makeSource(template)
+			local target = Instance.new("Folder")
+			expect(EmployeeSpawnSystem.install(def, source, target)).to.equal(true)
+			local humanoid = target[EmployeeConstants.STARTER_CHARACTER_NAME].Humanoid
+			expect(humanoid.DisplayDistanceType).to.equal(Enum.HumanoidDisplayDistanceType.None)
+			expect(humanoid.HealthDisplayType).to.equal(Enum.HumanoidHealthDisplayType.AlwaysOff)
+			expect(template.Humanoid.DisplayDistanceType).to.equal(Enum.HumanoidDisplayDistanceType.Viewer)
+			source:Destroy()
+			target:Destroy()
+		end)
+
 		it("replaces an employee StarterCharacter from an earlier install", function()
 			local source = makeSource(makeTemplate())
 			local target = Instance.new("Folder")
