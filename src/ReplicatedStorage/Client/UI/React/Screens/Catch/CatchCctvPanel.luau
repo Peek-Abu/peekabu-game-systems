@@ -414,10 +414,11 @@ local function CatchCctvPanel(props: CatchCctvPanelProps): React.ReactNode
 		}),
 		incident = if #view.incident > 0 then incidentSlip(view, spec) else nil,
 	}
-	if phone then
+	-- Nobody to watch (solo, or the whole crew down): no previous / next to offer.
+	if view.canSwitch and phone then
 		children.prevButton = roundButton("PREV", 0, spec, props.jump, props.onPrev)
 		children.nextButton = roundButton("NEXT", 1, spec, props.jump, props.onNext)
-	else
+	elseif view.canSwitch then
 		children.hints = keyHints(view, spec)
 	end
 

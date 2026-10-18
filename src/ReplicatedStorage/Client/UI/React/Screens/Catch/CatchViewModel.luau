@@ -47,6 +47,8 @@ export type CctvView = {
 	incident: { string },
 	prevKey: string,
 	nextKey: string,
+	-- Someone is on the feed, so previous / next can switch it (false solo: the controls are hidden).
+	canSwitch: boolean,
 }
 
 export type RehiredInput = {
@@ -164,6 +166,7 @@ function CatchViewModel.cctv(input: CctvInput): CctvView?
 	end
 	local rec, watching, details = "REC   CAM -- · NO SIGNAL", "NO SIGNAL", "Nobody to watch."
 	local target, name = input.target, input.targetName
+	local canSwitch = target ~= nil and name ~= nil
 	if target ~= nil and name ~= nil then
 		rec, watching, details = feedOf(target, name, input.phone)
 	end
@@ -181,6 +184,7 @@ function CatchViewModel.cctv(input: CctvInput): CctvView?
 		incident = incidentOf(report, input.phone),
 		prevKey = input.prevKey,
 		nextKey = input.nextKey,
+		canSwitch = canSwitch,
 	}
 end
 

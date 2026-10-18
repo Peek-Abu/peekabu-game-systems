@@ -56,6 +56,7 @@ return function()
 			expect(view.rec).to.equal("REC   CAM 06 · SERVER ROOM")
 			expect(view.watching).to.equal("WATCHING  SAM")
 			expect(view.details).to.equal("carrying: Coffee machine · 2 rooms from the truck")
+			expect(view.canSwitch).to.equal(true)
 		end)
 
 		it("says one room, and the loading bay, in words", function()
@@ -72,6 +73,8 @@ return function()
 			local view = CatchViewModel.cctv(value)
 			expect(view.watching).to.equal("NO SIGNAL")
 			expect(view.rec).to.equal("REC   CAM -- · NO SIGNAL")
+			-- Solo (or everyone down): no teammate to switch to, so no previous / next controls.
+			expect(view.canSwitch).to.equal(false)
 		end)
 
 		it("counts down to the respawn and never below 0:00", function()
