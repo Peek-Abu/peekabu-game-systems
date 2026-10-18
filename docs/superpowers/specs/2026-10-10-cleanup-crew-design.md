@@ -82,7 +82,8 @@ The depot contract board and a one-card arrival screen carry this; no tutorial n
    - **Everyone still in punched** → the truck leaves at once (a solo punch ends the shift instantly).
    - **Half or more of the crew still in punched** (1 of 2, 2 of 3, 2 of 4) → "**TRUCK LEAVES IN 30**"
      for everyone; at 0 the shift ends. Anyone still inside then is **paid the same** as the rest (a
-     kids' game: no penalty). The countdown never stops or moves later; it only ends sooner.
+     kids' game: no penalty), the "Clocked out" rank XP included. The countdown never stops or moves later;
+     it only ends sooner.
    - A leave or a catch recomputes (every 0.25 s and at each punch): if everyone left still in has
      punched, the truck leaves at once; a catch can also bring the share to half and start the countdown.
    - Feedback: everyone sees the clock-out board under the Gloom meter ("2/4 CLOCKED OUT", a time card
@@ -94,6 +95,10 @@ The depot contract board and a one-card arrival screen carry this; no tutorial n
    Code: `ShiftClockOutRules` (pure decisions), `ShiftClockOutSystem` (punch, board, settle, hold),
    `ShiftClockOutViewModel` / `ShiftClockOutBoard` (HUD); `ShiftConstants.TRUCK_LEAVES_SECONDS`.
    Unbanked cargo is lost from this run only. Timer expiry also ends the shift with what is banked.
+   - Rank XP (decided 2026-10-18; `RankFormulas.factsFor`, docs/cleanup-crew-rank.md): the "Clocked out +5"
+     line is paid only when the shift ends through the clock-out (everyone still in punched, or the truck's
+     countdown reached 0), and then to every crew member still in and uncaught, punched or not. A shift
+     that ends by the timer with no clock-out (or any other way) pays no "Clocked out" line.
 7. **Results:** the "performance review" (cleared, dollars earned, catches, assets recovered, joke awards).
    Party vote: **Another shift** (reset in the same server) or **Back to depot** (teleport).
 

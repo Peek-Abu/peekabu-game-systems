@@ -26,8 +26,13 @@ Paid once per player by the server when the shift reaches its review (`RankConst
 | The crew met the contract (Gloom removed; was the quota) | +15 |
 | Each cargo item you banked yourself | +1 (up to 10) |
 | Banking any salvage during overtime | +5 |
-| Clocking out uncaught (still with the crew at the end, never caught) | +5 |
+| Clocking out uncaught: the shift ended through the clock-out and you were still with the crew then, never caught | +5 |
 | The whole crew clocked out uncaught | +5 each |
+
+The clock-out line ("Clocked out") is paid only when the shift ends through the clock-out (review outcome
+`clockout`): everyone still in punched, or the truck-leaves countdown reached 0. Then every crew member still in gets
+it, including anyone still inside when the truck left (no penalty). A shift that ends any other way, such as the shift
+timer running out with no clock-out, pays no "Clocked out" line to anyone.
 
 A caught player gets neither extraction bonus; the results card types "Incident Report filed" instead. A shift ended by
 a reset (`resetShift`) never reaches its review and pays nothing.

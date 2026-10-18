@@ -20,6 +20,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local RoundConstants = require(ReplicatedStorage.Shared.Features.Round.Data.RoundConstants)
 local RoundTypes = require(ReplicatedStorage.Shared.Features.Round.Data.RoundTypes)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
@@ -125,6 +126,7 @@ function ShiftPhaseRules.follow(state: ShiftState, round: RoundTypes.RoundState,
 			tier = 0,
 			shift = state.shift,
 			voteEndsAt = now + ShiftConstants.VOTE_SECONDS,
+			outcome = round.outcome or RoundConstants.OUTCOME_TIMEOUT,
 			quota = state.quota,
 			quotaMet = state.quotaMet,
 			variant = state.variant,

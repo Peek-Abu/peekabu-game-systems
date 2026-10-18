@@ -5,12 +5,15 @@
 
 	- `levelFor` / `progress`: where an XP total sits on RankRegistry's ladder.
 	- `entriesOf`: the crew lines of a published review (ShiftTypes.ShiftResults) as RankTypes.CrewEntry.
-	- `factsFor`: one player's shift, from the crew's entries, whether the quota was met and the crew still present at
-	  the end.
+	- `factsFor`: one player's shift, from the crew's entries, whether the quota was met, the crew still present at
+	  the end and how the shift ended (the review's `outcome`).
 	- `award`: the XP lines for those facts (RankConstants.XP).
 
-	"Extracted" means still with the crew when the shift ended and never caught by the Manager; a caught player gets no
-	extraction bonus (nor the whole-crew one) and an incident report line instead.
+	"Extracted" (the "Clocked out" line) means the shift ended through the clock-out (ShiftConstants.OUTCOME_CLOCKOUT:
+	everyone still in punched, or the truck-leaves countdown ran out) and the player was still with the crew then and
+	never caught by the Manager. Everyone still inside when the truck left is paid it too, punched or not (design §3
+	step 6: no penalty); a shift that ends any other way (the shift timer running out) pays it to nobody. A caught
+	player gets no extraction bonus (nor the whole-crew one) and an incident report line instead.
 
 	@class RankFormulas
 ]=]
@@ -20,6 +23,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RankConstants = require(ReplicatedStorage.Shared.Features.Rank.Data.RankConstants)
 local RankRegistry = require(ReplicatedStorage.Shared.Features.Rank.Data.RankRegistry)
 local RankTypes = require(ReplicatedStorage.Shared.Features.Rank.Data.RankTypes)
+local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 
 type CrewEntry = RankTypes.CrewEntry
@@ -73,8 +77,15 @@ function RankFormulas.entriesOf(results: ShiftTypes.ShiftResults): { CrewEntry }
 	return entries
 end
 
--- `userId`'s shift facts, or nil when they are not in `crew`. `present`: the crew still there at the end.
-function RankFormulas.factsFor(crew: { CrewEntry }, quotaMet: boolean, present: { number }, userId: number): ShiftFacts?
+-- `userId`'s shift facts, or nil when they are not in `crew`. `present`: the crew still there at the end; `outcome`:
+-- how the shift ended (ShiftResults.outcome).
+function RankFormulas.factsFor(
+	crew: { CrewEntry },
+	quotaMet: boolean,
+	present: { number },
+	userId: number,
+	outcome: string
+): ShiftFacts?
 	local mine: CrewEntry? = nil
 	local everyone = #crew > 0
 	for _, line in crew do
@@ -94,7 +105,7 @@ function RankFormulas.factsFor(crew: { CrewEntry }, quotaMet: boolean, present: 
 		quotaMet = quotaMet,
 		items = mine.items,
 		overtimeSalvage = mine.overtimeSalvage,
-		extracted = not caught and table.find(present, userId) ~= nil,
+		extracted = outcome == ShiftConstants.OUTCOME_CLOCKOUT and not caught and table.find(present, userId) ~= nil,
 		caught = caught,
 		crewExtracted = everyone,
 	}

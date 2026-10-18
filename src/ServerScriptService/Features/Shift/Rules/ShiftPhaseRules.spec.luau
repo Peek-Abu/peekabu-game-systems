@@ -125,6 +125,23 @@ return function()
 			expect(state.quotaMet).to.equal(true)
 		end)
 
+		it("carries how the run ended into results: Round's outcome, a timeout when it gave none", function()
+			local out = ShiftPhaseRules.follow(running(), round("results", { outcome = "clockout" }), 600)
+			expect(out.outcome).to.equal("clockout")
+			local timedOut = ShiftPhaseRules.follow(running(), round("results"), 600)
+			expect(timedOut.outcome).to.equal("timeout")
+		end)
+
+		it("drops the outcome when the next run starts", function()
+			local nextRun = ShiftPhaseRules.follow(
+				ShiftPhaseRules.follow(running(), round("results", { outcome = "clockout" }), 600),
+				round("running", { round = 2, endsAt = 1200 }),
+				700
+			)
+			expect(nextRun.phase).to.equal("running")
+			expect(nextRun.outcome).to.equal(nil)
+		end)
+
 		it("stays in results when Round goes back to its lobby", function()
 			expect(ShiftPhaseRules.follow(results(), round("lobby"), 601)).to.equal(nil)
 		end)

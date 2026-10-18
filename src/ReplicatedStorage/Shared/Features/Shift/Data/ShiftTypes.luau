@@ -54,6 +54,9 @@ export type ShiftState = {
 	clockOutAt: number?,
 	-- When the results vote closes.
 	voteEndsAt: number?,
+	-- results: how the run ended (Round's outcome: ShiftConstants.OUTCOME_CLOCKOUT after a clock-out, "timeout" when
+	-- the shift timer ran out).
+	outcome: string?,
 	quota: number,
 	quotaMet: boolean,
 	variant: Variant,

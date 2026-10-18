@@ -19,9 +19,11 @@ local function fakeSignal()
 	}
 end
 
-local function state(phase, shift, quotaMet)
+local function state(phase, shift, quotaMet, outcome)
 	return {
 		phase = phase,
+		-- Only a results state carries one; the tests' reviews end through the clock-out unless they say otherwise.
+		outcome = if phase == "results" then outcome or "clockout" else nil,
 		sub = "normal",
 		stage = "normal",
 		tier = 0,
@@ -105,6 +107,29 @@ return function()
 			expect(byUser[2].extracted).to.equal(false)
 			expect(byUser[1].extracted).to.equal(true)
 			expect(byUser[1].crewExtracted).to.equal(false)
+		end)
+
+		it(
+			"pays the clock-out line to the whole crew still in only when the shift ended through the clock-out",
+			function()
+				changed:Fire(state("results", 1, true))
+				expect(calls[1].facts.extracted).to.equal(true)
+				expect(calls[2].facts.extracted).to.equal(true)
+				changed:Fire(state("lobby", 1, true))
+				changed:Fire(state("results", 2, true, "timeout"))
+				expect(#calls).to.equal(4)
+				expect(calls[3].facts.worked).to.equal(true)
+				expect(calls[3].facts.extracted).to.equal(false)
+				expect(calls[4].facts.extracted).to.equal(false)
+			end
+		)
+
+		it("pays no clock-out line when the results state carries no outcome", function()
+			local unknown = state("results", 1, true)
+			unknown.outcome = nil
+			changed:Fire(unknown)
+			expect(#calls).to.equal(2)
+			expect(calls[1].facts.extracted).to.equal(false)
 		end)
 
 		it("stops listening when stopped", function()

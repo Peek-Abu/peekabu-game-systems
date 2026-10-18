@@ -126,7 +126,7 @@ return function()
 	describe("factsFor", function()
 		it("reads a crew member's run from the review", function()
 			local review = results({ line(1, { items = 4, overtimeSalvage = 1 }), line(2) }, true)
-			local f = RankFormulas.factsFor(RankFormulas.entriesOf(review), review.quotaMet, { 1, 2 }, 1)
+			local f = RankFormulas.factsFor(RankFormulas.entriesOf(review), review.quotaMet, { 1, 2 }, 1, "clockout")
 			expect(f.worked).to.equal(true)
 			expect(f.quotaMet).to.equal(true)
 			expect(f.items).to.equal(4)
@@ -137,25 +137,48 @@ return function()
 		end)
 
 		it("is nil for someone not on the review", function()
-			expect(RankFormulas.factsFor(RankFormulas.entriesOf(results({ line(1) }, false)), false, { 1 }, 9)).never.to.be.ok()
+			expect(
+				RankFormulas.factsFor(RankFormulas.entriesOf(results({ line(1) }, false)), false, { 1 }, 9, "clockout")
+			).never.to.be.ok()
 		end)
 
 		it("treats a caught or departed crew member as not extracted, for them and the crew", function()
 			local review = results({ line(1), line(2, { caught = 1 }), line(3) }, false)
-			local caught = RankFormulas.factsFor(RankFormulas.entriesOf(review), review.quotaMet, { 1, 2 }, 2)
+			local caught =
+				RankFormulas.factsFor(RankFormulas.entriesOf(review), review.quotaMet, { 1, 2 }, 2, "clockout")
 			expect(caught.caught).to.equal(true)
 			expect(caught.extracted).to.equal(false)
-			local other = RankFormulas.factsFor(RankFormulas.entriesOf(review), review.quotaMet, { 1, 2 }, 1)
+			local other =
+				RankFormulas.factsFor(RankFormulas.entriesOf(review), review.quotaMet, { 1, 2 }, 1, "clockout")
 			expect(other.extracted).to.equal(true)
 			expect(other.crewExtracted).to.equal(false)
 			-- Player 3 is on the review but left before the end.
-			expect(RankFormulas.factsFor(RankFormulas.entriesOf(review), review.quotaMet, { 1, 2 }, 3).extracted).to.equal(
-				false
-			)
+			expect(
+				RankFormulas.factsFor(RankFormulas.entriesOf(review), review.quotaMet, { 1, 2 }, 3, "clockout").extracted
+			).to.equal(false)
+		end)
+
+		it("pays the clock-out line only when the shift ended through the clock-out", function()
+			local review = results({ line(1), line(2) }, true)
+			local entries = RankFormulas.entriesOf(review)
+			-- Everyone punched, or the truck-leaves countdown ran out: the whole crew still in is paid, punched or not.
+			local out = RankFormulas.factsFor(entries, true, { 1, 2 }, 2, "clockout")
+			expect(out.extracted).to.equal(true)
+			-- The shift timer ran out with no clock-out (or any other end): no clock-out line for anyone.
+			for _, outcome in { "timeout", "abandoned", "wiped", "cancelled" } do
+				local f = RankFormulas.factsFor(entries, true, { 1, 2 }, 1, outcome)
+				expect(f.extracted).to.equal(false)
+				expect(f.worked).to.equal(true)
+				local award = RankFormulas.award(f)
+				for _, awarded in award.lines do
+					expect(awarded.key).never.to.equal("extracted")
+				end
+			end
 		end)
 
 		it("reads absent cargo counts as zero", function()
-			local f = RankFormulas.factsFor(RankFormulas.entriesOf(results({ line(1) }, false)), false, { 1 }, 1)
+			local f =
+				RankFormulas.factsFor(RankFormulas.entriesOf(results({ line(1) }, false)), false, { 1 }, 1, "clockout")
 			expect(f.items).to.equal(0)
 			expect(f.overtimeSalvage).to.equal(0)
 		end)

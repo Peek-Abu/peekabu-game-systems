@@ -77,7 +77,7 @@ function RankViewModel.slip(
 		promoted = false,
 	}
 	local facts = if results ~= nil
-		then RankFormulas.factsFor(RankFormulas.entriesOf(results), results.quotaMet, present, userId)
+		then RankFormulas.factsFor(RankFormulas.entriesOf(results), results.quotaMet, present, userId, results.outcome)
 		else nil
 	if facts ~= nil then
 		local award = RankFormulas.award(facts)

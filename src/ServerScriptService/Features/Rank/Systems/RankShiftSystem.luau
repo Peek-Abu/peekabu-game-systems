@@ -4,7 +4,8 @@
 	(`ShiftServiceServer.changed`): when a shift it has not paid reaches its review (phase "results"), every crew
 	member on the shift's roster (ShiftReviewSystem.crew) gets `award(userId, runId, facts)` once, with facts from
 	RankFormulas.factsFor: the roster's catches, cargo items and overtime salvage, whether the quota was met, and who is
-	still with the crew (ShiftAnalyticsSystem.crew). A run that ends in a reset never reaches "results" and pays nothing.
+	still with the crew (ShiftAnalyticsSystem.crew), and how the shift ended (the results state's `outcome`: the
+	"Clocked out" line is paid only after a clock-out). A run that ends in a reset never reaches "results" and pays nothing.
 
 	The run id is `<session>:<shift>`: the session is a GUID per server start (Shift's counter restarts with the
 	server), so a run id never repeats; RankRules.applyAward refuses a run already paid, so even a replayed state cannot
@@ -87,8 +88,9 @@ function RankShiftSystem.start(source: Source, award: Award, session: string?): 
 		local runId = `{prefix}:{state.shift}`
 		local entries = entriesOf(source.crew())
 		local present = source.present()
+		local outcome = state.outcome or ""
 		for _, entry in entries do
-			local facts = RankFormulas.factsFor(entries, state.quotaMet, present, entry.userId)
+			local facts = RankFormulas.factsFor(entries, state.quotaMet, present, entry.userId, outcome)
 			if facts ~= nil then
 				xpcall(award, function(err: unknown): unknown
 					log:error(`rank award for {entry.userId} in run {runId} failed: {err}`)
