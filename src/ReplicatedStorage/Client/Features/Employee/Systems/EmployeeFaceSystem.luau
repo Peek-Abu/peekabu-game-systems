@@ -6,7 +6,8 @@
 	what lets the plate's empty areas show through: a MeshPart TextureID renders them black). Each employee
 	carries its expressions as SurfaceAppearances in a `Faces` folder (not rendered there); showing one
 	clones it onto the plate in place of the current face. The swap is client-local: the server only
-	replicates the EmployeeFace attribute (EmployeeExpressionSystem), never instances.
+	replicates the EmployeeFace attribute (EmployeeExpressionSystem), never instances, so `bind` re-applies
+	it whenever the engine re-replicates the plate (streaming) or the face set.
 
 	@class EmployeeFaceSystem
 ]=]
@@ -15,9 +16,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
 local EmployeeRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeRegistry)
-
--- How long `bind` waits for a streamed-in character's face parts.
-local PART_WAIT = 5
 
 local EmployeeFaceSystem = {}
 
@@ -53,9 +51,15 @@ function EmployeeFaceSystem.apply(character: Model, face: EmployeeRegistry.Face,
 end
 
 --[=[
-	Shows the character's EmployeeFace attribute now and whenever it changes, and again from the new set
-	when a skin swaps the `Faces` folder (EmployeeSkinSystem). Unknown values are ignored (the authored
-	face stays).
+	Shows the character's EmployeeFace attribute now and whenever it changes, and puts it back whenever the
+	engine re-replicates what the face sits on:
+	- a `Faces` folder arrives (a skin swapped the set, EmployeeSkinSystem; or it streamed in late);
+	- a SurfaceAppearance this system did not make lands on the FacePlate. The swap is client-local, so the
+	  server's plate still wears the authored face: with StreamingEnabled another player's FacePlate streams
+	  out and back in as a fresh copy of it (the authored face, not the one the attribute names), and a
+	  character can arrive before its plate. Nothing changes the attribute then, so without this the client
+	  keeps showing the authored face while the owner, whose character never streams out, sees the real one.
+	Unknown values are ignored (the authored face stays).
 	@return () -> () -- stops following
 ]=]
 function EmployeeFaceSystem.bind(character: Model): () -> ()
@@ -70,32 +74,28 @@ function EmployeeFaceSystem.bind(character: Model): () -> ()
 			EmployeeFaceSystem.apply(character, face, force)
 		end
 	end
-	local function refresh()
+	local connection = character:GetAttributeChangedSignal(EmployeeConstants.FACE_ATTRIBUTE):Connect(function()
 		show(false)
-	end
-	local connection = character:GetAttributeChangedSignal(EmployeeConstants.FACE_ATTRIBUTE):Connect(refresh)
-	local swapped = character.ChildAdded:Connect(function(child: Instance)
-		if child.Name == EmployeeConstants.FACES_FOLDER then
-			show(true)
+	end)
+	local arrived = character.DescendantAdded:Connect(function(descendant: Instance)
+		local parent = descendant.Parent
+		local isFaces = descendant.Name == EmployeeConstants.FACES_FOLDER and parent == character
+		local isForeignFace = descendant:IsA("SurfaceAppearance")
+			and parent ~= nil
+			and parent.Name == EmployeeConstants.FACE_PLATE
+			and parent.Parent == character
+			and descendant:GetAttribute(EmployeeConstants.FACE_ATTRIBUTE) == nil
+		if isFaces or isForeignFace then
+			-- Deferred: the swap destroys the arriving appearance, which must not happen inside its own
+			-- arrival, and the rest of a streamed-in subtree lands first.
+			task.defer(show, true)
 		end
 	end)
-	if
-		character:FindFirstChild(EmployeeConstants.FACE_PLATE) ~= nil
-		and character:FindFirstChild(EmployeeConstants.FACES_FOLDER) ~= nil
-	then
-		refresh()
-	else
-		-- A streamed character can arrive before its face parts.
-		task.spawn(function()
-			character:WaitForChild(EmployeeConstants.FACE_PLATE, PART_WAIT)
-			character:WaitForChild(EmployeeConstants.FACES_FOLDER, PART_WAIT)
-			refresh()
-		end)
-	end
+	show(false)
 	return function()
 		released = true
 		connection:Disconnect()
-		swapped:Disconnect()
+		arrived:Disconnect()
 	end
 end
 

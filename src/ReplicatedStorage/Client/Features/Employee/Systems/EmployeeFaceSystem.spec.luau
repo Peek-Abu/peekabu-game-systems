@@ -114,6 +114,59 @@ return function()
 			model:Destroy()
 		end)
 
+		it("puts the face back on a FacePlate that streams back in with the authored face", function()
+			-- StreamingEnabled: another player's FacePlate streams out and back in as a fresh copy of the server's
+			-- plate, wearing the authored face, while the attribute has not changed.
+			local model, plate = makeEmployee()
+			model:SetAttribute(EmployeeConstants.FACE_ATTRIBUTE, "Content")
+			local release = EmployeeFaceSystem.bind(model)
+			plate:Destroy()
+			local streamed = Instance.new("MeshPart")
+			streamed.Name = EmployeeConstants.FACE_PLATE
+			local authored = Instance.new("SurfaceAppearance")
+			authored.Name = EmployeeConstants.FACE_APPEARANCE
+			authored.Parent = streamed
+			streamed.Parent = model
+			task.wait()
+			local appearances = faceOf(streamed)
+			expect(#appearances).to.equal(1)
+			expect(appearances[1]:GetAttribute(EmployeeConstants.FACE_ATTRIBUTE)).to.equal("Content")
+			release()
+			model:Destroy()
+		end)
+
+		it("shows the face on a FacePlate that arrives after bind, however late", function()
+			local model, plate = makeEmployee()
+			plate.Parent = nil
+			model:SetAttribute(EmployeeConstants.FACE_ATTRIBUTE, "Worried")
+			local release = EmployeeFaceSystem.bind(model)
+			task.wait()
+			plate.Parent = model
+			task.wait()
+			local appearances = faceOf(plate)
+			expect(#appearances).to.equal(1)
+			expect(appearances[1]:GetAttribute(EmployeeConstants.FACE_ATTRIBUTE)).to.equal("Worried")
+			release()
+			model:Destroy()
+		end)
+
+		it("stops watching for a returning FacePlate once released", function()
+			local model, plate = makeEmployee()
+			model:SetAttribute(EmployeeConstants.FACE_ATTRIBUTE, "Content")
+			local release = EmployeeFaceSystem.bind(model)
+			release()
+			plate:Destroy()
+			local streamed = Instance.new("MeshPart")
+			streamed.Name = EmployeeConstants.FACE_PLATE
+			local authored = Instance.new("SurfaceAppearance")
+			authored.Name = EmployeeConstants.FACE_APPEARANCE
+			authored.Parent = streamed
+			streamed.Parent = model
+			task.wait()
+			expect(streamed[EmployeeConstants.FACE_APPEARANCE]).to.equal(authored)
+			model:Destroy()
+		end)
+
 		it("ignores an unknown face value", function()
 			local model, plate = makeEmployee()
 			local before = plate[EmployeeConstants.FACE_APPEARANCE]
