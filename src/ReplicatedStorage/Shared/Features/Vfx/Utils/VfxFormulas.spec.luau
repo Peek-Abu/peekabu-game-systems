@@ -76,6 +76,59 @@ return function()
 		end)
 	end)
 
+	describe("screenActive", function()
+		it("turns every effect off at the neutral state", function()
+			local active = VfxFormulas.screenActive(VfxFormulas.combineScreen({}))
+			expect(active.blur).to.equal(false)
+			expect(active.color).to.equal(false)
+			expect(active.depth).to.equal(false)
+		end)
+
+		it("turns on only the effect whose values differ from neutral", function()
+			local blurOnly = VfxFormulas.screenActive(VfxFormulas.combineScreen({ { blur = 6 } }))
+			expect(blurOnly.blur).to.equal(true)
+			expect(blurOnly.color).to.equal(false)
+			expect(blurOnly.depth).to.equal(false)
+			local depthOnly = VfxFormulas.screenActive(VfxFormulas.combineScreen({ { depthOfField = 0.2 } }))
+			expect(depthOnly.depth).to.equal(true)
+			expect(depthOnly.blur).to.equal(false)
+			for _, request in
+				{
+					{ brightness = 0.1 },
+					{ contrast = -0.2 },
+					{ saturation = -0.4 },
+					{
+						tint = Color3.new(1, 0.8, 1),
+					},
+				}
+			do
+				local active = VfxFormulas.screenActive(VfxFormulas.combineScreen({ request }))
+				expect(active.color).to.equal(true)
+				expect(active.blur).to.equal(false)
+			end
+		end)
+
+		it("treats an ease that has all but arrived at neutral as neutral", function()
+			local from = VfxFormulas.combineScreen({ { blur = 10, saturation = -0.5, depthOfField = 0.4 } })
+			local almost = VfxFormulas.lerpScreen(from, VfxFormulas.combineScreen({}), 0.99999)
+			local active = VfxFormulas.screenActive(almost)
+			expect(active.blur).to.equal(false)
+			expect(active.color).to.equal(false)
+			expect(active.depth).to.equal(false)
+		end)
+	end)
+
+	describe("screenSettled", function()
+		it("is true only when the applied state has reached the target", function()
+			local neutral = VfxFormulas.combineScreen({})
+			local blurred = VfxFormulas.combineScreen({ { blur = 10 } })
+			expect(VfxFormulas.screenSettled(neutral, neutral)).to.equal(true)
+			expect(VfxFormulas.screenSettled(blurred, blurred)).to.equal(true)
+			expect(VfxFormulas.screenSettled(blurred, neutral)).to.equal(false)
+			expect(VfxFormulas.screenSettled(VfxFormulas.lerpScreen(blurred, neutral, 0.99999), neutral)).to.equal(true)
+		end)
+	end)
+
 	describe("resolveAtmosphere", function()
 		it("is the base with no preset", function()
 			local values = VfxFormulas.resolveAtmosphere(BASE, nil)

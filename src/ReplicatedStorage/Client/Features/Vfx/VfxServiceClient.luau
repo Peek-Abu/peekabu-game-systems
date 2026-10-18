@@ -178,23 +178,38 @@ local function ensureDepth(camera: Camera): DepthOfFieldEffect
 	return created
 end
 
--- The post effects stay enabled: at their neutral values (blur 0, no colour offset, white tint, depth of
--- field 0) they change nothing, so there is no on/off state to manage.
+-- The post effects are enabled only while their values are visibly away from neutral (VfxFormulas.screenActive):
+-- at neutral they change nothing on screen, but an enabled Blur / ColorCorrection / DepthOfField still costs a GPU
+-- pass every frame, which phones and tablets feel. Once the ease has arrived the frame writes nothing; it writes
+-- again when a request changes the target or the Camera (and with it the effects) is replaced.
+local screenWrittenTo: Camera? = nil
 local function stepScreen(dt: number)
 	local target = VfxFormulas.combineScreen(screens:list())
-	local alpha = 1 - math.exp(-VfxConstants.SCREEN_SHARPNESS * dt)
-	screenApplied = VfxFormulas.lerpScreen(screenApplied, target, alpha)
 	local camera = Workspace.CurrentCamera
 	if camera == nil then
 		return
 	end
+	if VfxFormulas.screenSettled(screenApplied, target) then
+		if screenWrittenTo == camera and blurEffect ~= nil and blurEffect.Parent == camera then
+			return
+		end
+		screenApplied = target
+	else
+		local alpha = 1 - math.exp(-VfxConstants.SCREEN_SHARPNESS * dt)
+		screenApplied = VfxFormulas.lerpScreen(screenApplied, target, alpha)
+	end
 	local blur, color, depth = ensureBlur(camera), ensureColor(camera), ensureDepth(camera)
+	local active = VfxFormulas.screenActive(screenApplied)
 	blur.Size = screenApplied.blur
+	blur.Enabled = active.blur
 	color.Brightness = screenApplied.brightness
 	color.Contrast = screenApplied.contrast
 	color.Saturation = screenApplied.saturation
 	color.TintColor = screenApplied.tint
+	color.Enabled = active.color
 	depth.FarIntensity = screenApplied.depthOfField
+	depth.Enabled = active.depth
+	screenWrittenTo = if VfxFormulas.screenSettled(screenApplied, target) then camera else nil
 end
 
 local function stepAtmosphere(dt: number)

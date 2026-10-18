@@ -77,6 +77,46 @@ function VfxFormulas.lerpScreen(from: ScreenState, to: ScreenState, alpha: numbe
 	}
 end
 
+-- Below this a screen value is invisible (a thousandth of a blur pixel, of a colour step, of depth of field).
+local SCREEN_EPSILON = 1e-3
+
+local function nonzero(value: number): boolean
+	return math.abs(value) > SCREEN_EPSILON
+end
+
+local function sameScreen(a: ScreenState, b: ScreenState): boolean
+	return not nonzero(a.blur - b.blur)
+		and not nonzero(a.brightness - b.brightness)
+		and not nonzero(a.contrast - b.contrast)
+		and not nonzero(a.saturation - b.saturation)
+		and not nonzero(a.tint.R - b.tint.R)
+		and not nonzero(a.tint.G - b.tint.G)
+		and not nonzero(a.tint.B - b.tint.B)
+		and not nonzero(a.depthOfField - b.depthOfField)
+end
+
+--[=[
+	Which post effects a screen state needs switched on. A neutral effect changes nothing on screen, but an
+	enabled Blur / ColorCorrection / DepthOfField still costs its GPU pass every frame (heavy on phones), so the
+	effects are only enabled while their values are visibly away from neutral.
+]=]
+function VfxFormulas.screenActive(state: ScreenState): { blur: boolean, color: boolean, depth: boolean }
+	return {
+		blur = nonzero(state.blur),
+		color = nonzero(state.brightness) or nonzero(state.contrast) or nonzero(state.saturation) or nonzero(
+			state.tint.R - 1
+		) or nonzero(state.tint.G - 1) or nonzero(state.tint.B - 1),
+		depth = nonzero(state.depthOfField),
+	}
+end
+
+--[=[
+	Whether the eased screen `applied` has (visibly) arrived at `target`, so the per-frame ease can stop writing.
+]=]
+function VfxFormulas.screenSettled(applied: ScreenState, target: ScreenState): boolean
+	return sameScreen(applied, target)
+end
+
 --[=[
 	The full atmosphere a preset produces: its values where it sets them, the base elsewhere.
 ]=]
