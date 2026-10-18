@@ -50,6 +50,8 @@ local photoOf: { [number]: string } = {}
 -- Characters given a uniform piece.
 local uniformed = 0
 local connections: { RBXScriptConnection } = {}
+-- Each player's CharacterAdded watch, disconnected when they leave (one per join otherwise piles up).
+local spawnWatches: { [Player]: RBXScriptConnection } = {}
 local rankConnection: SignalTyped.Connection? = nil
 
 local expressions = EmployeeExpressionSystem.new({
@@ -142,12 +144,12 @@ local function dress(player: Player, character: Model)
 end
 
 local function watchSpawns(player: Player)
-	table.insert(
-		connections,
-		player.CharacterAdded:Connect(function(character: Model)
-			dress(player, character)
-		end)
-	)
+	if spawnWatches[player] ~= nil then
+		return
+	end
+	spawnWatches[player] = player.CharacterAdded:Connect(function(character: Model)
+		dress(player, character)
+	end)
 	local character = player.Character
 	if character ~= nil then
 		dress(player, character)
@@ -226,6 +228,11 @@ local EmployeeServiceServer: EmployeeServiceServer = {
 		table.insert(
 			connections,
 			Players.PlayerRemoving:Connect(function(player: Player)
+				local watch = spawnWatches[player]
+				if watch ~= nil then
+					watch:Disconnect()
+					spawnWatches[player] = nil
+				end
 				expressions.forget(player.UserId)
 				skinOf[player.UserId] = nil
 				photoOf[player.UserId] = nil
@@ -238,6 +245,10 @@ local EmployeeServiceServer: EmployeeServiceServer = {
 			connection:Disconnect()
 		end
 		table.clear(connections)
+		for _, watch in spawnWatches do
+			watch:Disconnect()
+		end
+		table.clear(spawnWatches)
 		if rankConnection ~= nil then
 			rankConnection:Disconnect()
 			rankConnection = nil

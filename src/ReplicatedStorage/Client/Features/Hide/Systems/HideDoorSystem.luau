@@ -51,6 +51,8 @@ end
 function HideDoorSystem.start(): () -> ()
 	local swings: { [BasePart]: Swing } = {}
 	local connections: { RBXScriptConnection } = {}
+	-- Each watched cabinet's attribute connection, dropped when it leaves the tag (the office is rebuilt every shift).
+	local doors: { [BasePart]: RBXScriptConnection } = {}
 
 	local function changed(root: BasePart)
 		local open = root:GetAttribute(HideConstants.DOOR_OPEN_ATTRIBUTE) == true
@@ -91,19 +93,32 @@ function HideDoorSystem.start(): () -> ()
 			return
 		end
 		local root = instance
-		table.insert(
-			connections,
-			root:GetAttributeChangedSignal(HideConstants.DOOR_OPEN_ATTRIBUTE):Connect(function()
-				changed(root)
-			end)
-		)
+		if doors[root] ~= nil then
+			return
+		end
+		doors[root] = root:GetAttributeChangedSignal(HideConstants.DOOR_OPEN_ATTRIBUTE):Connect(function()
+			changed(root)
+		end)
 		changed(root)
+	end
+
+	local function unwatch(instance: Instance)
+		if not instance:IsA("BasePart") then
+			return
+		end
+		local connection = doors[instance]
+		if connection ~= nil then
+			connection:Disconnect()
+			doors[instance] = nil
+		end
+		swings[instance] = nil
 	end
 
 	for _, tagged in CollectionService:GetTagged(HideConstants.FURNITURE_TAG) do
 		watch(tagged)
 	end
 	table.insert(connections, CollectionService:GetInstanceAddedSignal(HideConstants.FURNITURE_TAG):Connect(watch))
+	table.insert(connections, CollectionService:GetInstanceRemovedSignal(HideConstants.FURNITURE_TAG):Connect(unwatch))
 	table.insert(
 		connections,
 		RunService.RenderStepped:Connect(function()
@@ -143,6 +158,10 @@ function HideDoorSystem.start(): () -> ()
 		for _, connection in connections do
 			connection:Disconnect()
 		end
+		for _, connection in doors do
+			connection:Disconnect()
+		end
+		table.clear(doors)
 		for root, swing in swings do
 			if swing.door.Parent ~= nil and root.Parent ~= nil then
 				swing.door.CFrame = root.CFrame * swing.closed

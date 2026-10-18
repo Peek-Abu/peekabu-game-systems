@@ -22,6 +22,7 @@ export type HideOccupancyTracker = {
 	setSeen: (self: HideOccupancyTracker, userId: number, seen: boolean) -> boolean,
 	cool: (self: HideOccupancyTracker, userId: number, spotId: string, untilTime: number) -> (),
 	cooling: (self: HideOccupancyTracker, userId: number, spotId: string, now: number) -> boolean,
+	forget: (self: HideOccupancyTracker, userId: number) -> (),
 	all: (self: HideOccupancyTracker) -> { [number]: Occupancy },
 	clear: (self: HideOccupancyTracker) -> (),
 }
@@ -86,7 +87,20 @@ function HideOccupancyTracker.new(): HideOccupancyTracker
 		cooling = function(_self, userId, spotId, now)
 			local mine = cools[userId]
 			local untilTime = if mine ~= nil then mine[spotId] else nil
+			if mine ~= nil and untilTime ~= nil and now >= untilTime then
+				-- Over: drop it, so the map only holds spots still cooling.
+				mine[spotId] = nil
+				if next(mine) == nil then
+					cools[userId] = nil
+				end
+			end
 			return untilTime ~= nil and now < untilTime
+		end,
+
+		-- The player left: their stay and every spot cooling for them go.
+		forget = function(self, userId)
+			self:leave(userId)
+			cools[userId] = nil
 		end,
 
 		all = function(_self)

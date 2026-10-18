@@ -122,6 +122,12 @@ local function onPublic(map: PublicPlayerTypes.PublicPlayerMap)
 		end
 	end
 	deadlines = now
+	-- Someone who left while caught is never rehired: let their old character go.
+	for userId in thrown do
+		if Players:GetPlayerByUserId(userId) == nil then
+			thrown[userId] = nil
+		end
+	end
 end
 
 local OccupantCatchVfxSystem = {}

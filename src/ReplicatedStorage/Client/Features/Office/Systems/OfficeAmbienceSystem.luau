@@ -40,7 +40,8 @@ type Typist = {
 	quietUntil: number,
 }
 
--- A plain map (iterated and cleared): the emitters are built once with the office and never replaced.
+-- A plain map (iterated and cleared). The office is rebuilt every shift, and a client only sees the old
+-- emitters leave the DataModel (never Destroying), so stepTypists drops the ones that have gone.
 local typists: { [BasePart]: Typist } = {}
 local rng = Random.new()
 local nextPhone = 0
@@ -161,6 +162,13 @@ local function stepTypists(
 	local character = Players.LocalPlayer.Character
 	local root = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil
 	local me = if root ~= nil and root:IsA("BasePart") then root.Position else nil
+	-- A rebuilt office's old emitters: stop their loop and let the part go.
+	for part, typist in typists do
+		if not part:IsDescendantOf(Workspace) then
+			silence(typist)
+			typists[part] = nil
+		end
+	end
 	for index, emitter in list do
 		if emitter.kind == "typing" then
 			local part = parts[index]

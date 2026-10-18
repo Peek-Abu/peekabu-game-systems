@@ -116,6 +116,22 @@ function InteractionChannelSystem.new(handlers: { [string]: ChannelHandler }): I
 		return true, nil
 	end
 
+	-- Forgets a target that is gone or no longer a channel, so the id map does not hold it.
+	local function forget(targetId: number, target: Instance?)
+		tracker:reset(targetId)
+		targetById[targetId] = nil
+		if target ~= nil then
+			idOf[target] = nil
+			target:SetAttribute(InteractionConstants.CHANNEL_PROGRESS_ATTRIBUTE, nil)
+			target:SetAttribute(InteractionConstants.CHANNEL_COUNT_ATTRIBUTE, nil)
+		end
+	end
+
+	local function gone(target: Instance): boolean
+		local kind = kindOf(target)
+		return kind == nil or InteractionRegistry.getChannel(kind) == nil or not target:IsDescendantOf(Workspace)
+	end
+
 	local function publish(targetId: number)
 		local target: Instance? = targetById[targetId]
 		if target == nil then
@@ -161,7 +177,15 @@ function InteractionChannelSystem.new(handlers: { [string]: ChannelHandler }): I
 		end,
 
 		step = function(_self, dt)
-			for _, targetId in tracker:activeTargets() do
+			local active = tracker:activeTargets()
+			-- A partly channeled target nobody is on (walked off, caught, the office rebuilt): drop it once it is
+			-- gone, or targetById would keep every abandoned pile of every shift.
+			for targetId, target in targetById do
+				if not table.find(active, targetId) and gone(target) then
+					forget(targetId, target)
+				end
+			end
+			for _, targetId in active do
 				local target: Instance? = targetById[targetId]
 				for _, userId in tracker:channelers(targetId) do
 					local player = Players:GetPlayerByUserId(userId)
@@ -172,14 +196,7 @@ function InteractionChannelSystem.new(handlers: { [string]: ChannelHandler }): I
 				local kind = if target ~= nil then kindOf(target) else nil
 				local def = if kind ~= nil then InteractionRegistry.getChannel(kind) else nil
 				if target == nil or kind == nil or def == nil or not target:IsDescendantOf(Workspace) then
-					-- Destroyed or no longer a channel: forget it so the id map does not hold it.
-					tracker:reset(targetId)
-					targetById[targetId] = nil
-					if target ~= nil then
-						idOf[target] = nil
-						target:SetAttribute(InteractionConstants.CHANNEL_PROGRESS_ATTRIBUTE, nil)
-						target:SetAttribute(InteractionConstants.CHANNEL_COUNT_ATTRIBUTE, nil)
-					end
+					forget(targetId, target)
 					continue
 				end
 				local done = tracker:advance(targetId, dt, def.duration)

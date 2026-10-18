@@ -379,7 +379,7 @@ local HideServiceServer: HideServiceServer = {
 			end
 		end)
 		local leaving = Players.PlayerRemoving:Connect(function(player: Player)
-			tracker:leave(player.UserId)
+			tracker:forget(player.UserId)
 			bodies[player.UserId] = nil
 			lastLeft[player.UserId] = nil
 		end)
