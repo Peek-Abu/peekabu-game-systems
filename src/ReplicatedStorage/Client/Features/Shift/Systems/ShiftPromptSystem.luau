@@ -207,6 +207,11 @@ local function onHidden(prompt: ProximityPrompt)
 	end
 end
 
+-- One sight ray setup for every pick, re-filtered only when the character changes.
+local sight = RaycastParams.new()
+sight.FilterType = Enum.RaycastFilterType.Exclude
+local sightCharacter: Model? = nil
+
 -- The engine's native input only sees the chosen prompt in range. Others get a local zero range;
 -- authoritative reach/enabled checks still run on the server. Never mutate the object's attributes.
 local function selectNearby()
@@ -217,9 +222,10 @@ local function selectNearby()
 	local candidates: { Rules.Candidate } = {}
 	local byId: { [number]: ProximityPrompt } = {}
 	if root ~= nil and root:IsA("BasePart") and humanoid ~= nil and humanoid.Health > 0 and camera ~= nil then
-		local ray = RaycastParams.new()
-		ray.FilterType = Enum.RaycastFilterType.Exclude
-		ray.FilterDescendantsInstances = if character ~= nil then { character } else {}
+		if sightCharacter ~= character then
+			sightCharacter = character
+			sight.FilterDescendantsInstances = if character ~= nil then { character } else {}
+		end
 		for prompt, id in ids do
 			local target = targetOf(prompt)
 			local parent = prompt.Parent
@@ -229,19 +235,24 @@ local function selectNearby()
 			elseif parent ~= nil and parent:IsA("Attachment") then
 				position = parent.WorldPosition
 			end
-			if target ~= nil and position ~= nil and paperworkUsable(prompt, target, root) then
-				local offset = position - root.Position
-				local distance = offset.Magnitude
+			local offset = if position ~= nil then position - root.Position else Vector3.zero
+			local distance = offset.Magnitude
+			local kind = kindOf(prompt)
+			local isLoad = kind == CargoConstants.LOAD_KIND and target ~= nil and target:IsA("BasePart")
+			local range = if isLoad
+				then ranges[prompt] or 0
+				else math.min(ranges[prompt] or 0, if kind == "carry" then 6 else 8)
+			-- Out of reach can never be chosen (ShiftPromptRules.choose), so the sight ray and the screen
+			-- projection are spent only on the few prompts within reach, not on every prompt in the office.
+			if target ~= nil and position ~= nil and distance <= range and paperworkUsable(prompt, target, root) then
 				local screen, onScreen = camera:WorldToViewportPoint(position)
-				local result = Workspace:Raycast(camera.CFrame.Position, position - camera.CFrame.Position, ray)
+				local result = Workspace:Raycast(camera.CFrame.Position, position - camera.CFrame.Position, sight)
 				local visible = onScreen
 					and screen.Z > 0
 					and (result == nil or result.Instance == target or result.Instance:IsDescendantOf(target))
-				local range = math.min(ranges[prompt] or 0, if kindOf(prompt) == "carry" then 6 else 8)
 				local loadReach = true
-				if kindOf(prompt) == CargoConstants.LOAD_KIND and target:IsA("BasePart") then
+				if isLoad and target:IsA("BasePart") then
 					loadReach = CargoBankRules.canLoad(target.CFrame:PointToObjectSpace(root.Position), target.Size)
-					range = ranges[prompt] or 0
 				end
 				table.insert(candidates, {
 					id = id,
@@ -252,7 +263,7 @@ local function selectNearby()
 					enabled = loadReach
 						and target:GetAttribute(InteractionConstants.ENABLED_ATTRIBUTE) ~= false
 						and (
-							kindOf(prompt) ~= "carry"
+							kind ~= "carry"
 							or (
 																-- The hotbar: a small item in one hand still lets E pocket another.
 CargoInventoryRules.handsFree(heldKind())
