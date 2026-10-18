@@ -57,6 +57,11 @@ type Holder = {
 	-- The canister's joint and its rest C0 (found once per body).
 	packJoint: Weld?,
 	packRest: CFrame?,
+	-- Its root, upper torso and held vacuum's floor head, found once and kept while they stay in place (read every
+	-- frame).
+	root: BasePart?,
+	torso: BasePart?,
+	head: BasePart?,
 }
 
 type Motion = {
@@ -168,6 +173,26 @@ local function rigOf(holder: Holder): VacuumMotionRigSystem.Rig?
 	return bound
 end
 
+-- `holder`'s body part `name`: the cached one while it is still in the body, else looked up.
+local function bodyPart(holder: Holder, cached: BasePart?, name: string): BasePart?
+	if cached ~= nil and cached.Parent == holder.character then
+		return cached
+	end
+	local found = holder.character:FindFirstChild(name)
+	return if found ~= nil and found:IsA("BasePart") then found else nil
+end
+
+-- The held vacuum's floor head: the cached one while it is still on this rig's tool, else looked up.
+local function floorHead(holder: Holder, rig: VacuumMotionRigSystem.Rig): BasePart?
+	local cached = holder.head
+	if cached ~= nil and cached.Parent == rig.tool then
+		return cached
+	end
+	local found = rig.tool:FindFirstChild(VacuumConstants.FLOOR_HEAD_NAME)
+	holder.head = if found ~= nil and found:IsA("BasePart") then found else nil
+	return holder.head
+end
+
 local function stepHolder(player: Player, holder: Holder, dt: number)
 	local character = holder.character
 	local rig = rigOf(holder)
@@ -177,14 +202,12 @@ local function stepHolder(player: Player, holder: Holder, dt: number)
 	local aim, brace, kick, sway = Constants.aim, Constants.brace, Constants.kick, Constants.sway
 	local swayYaw, swayPitch = VacuumMotionFormulas.swayTargets(holder.motion.yawRate, holder.motion.accel)
 	local raiseTarget, reachTarget = VacuumMotionFormulas.aim(lookOf(player, character), aim)
-	local head = rig.tool:FindFirstChild(VacuumConstants.FLOOR_HEAD_NAME)
+	local head = floorHead(holder, rig)
 	local active = activeOf(player, character)
 	if active then
 		holder.activeAt = os.clock()
 	end
-	local progress = if active
-			and head ~= nil
-			and head:IsA("BasePart")
+	local progress = if active and head ~= nil
 		then VacuumFeedbackSystem.progressNear(head.Position, PILE_RANGE) or 0
 		else 0
 	local braced =
@@ -220,9 +243,10 @@ end
 -- Measures how `holder`'s body moved since last frame (root space).
 local function measure(holder: Holder, dt: number)
 	local motion = holder.motion
-	local root = holder.character:FindFirstChild("HumanoidRootPart")
-	local torso = holder.character:FindFirstChild("UpperTorso")
-	if root == nil or not root:IsA("BasePart") then
+	local root = bodyPart(holder, holder.root, "HumanoidRootPart")
+	local torso = bodyPart(holder, holder.torso, "UpperTorso")
+	holder.root, holder.torso = root, torso
+	if root == nil then
 		return
 	end
 	local frame = root.CFrame
@@ -241,7 +265,7 @@ local function measure(holder: Holder, dt: number)
 		motion.forward, motion.accel, motion.yawRate = 0, 0, 0
 	end
 	motion.position, motion.heading = position, heading
-	if torso ~= nil and torso:IsA("BasePart") then
+	if torso ~= nil then
 		local y = torso.Position.Y
 		local lastY = motion.torsoY
 		if lastY ~= nil and math.abs(y - lastY) < TELEPORT then
@@ -298,11 +322,10 @@ local function onPop(position: Vector3, size: number)
 	local now = os.clock()
 	for _, holder in holders do
 		local rig = holder.rig
-		local root = holder.character:FindFirstChild("HumanoidRootPart")
+		local root = bodyPart(holder, holder.root, "HumanoidRootPart")
 		if
 			rig ~= nil
 			and root ~= nil
-			and root:IsA("BasePart")
 			and now - holder.activeAt <= tuning.window
 			and (root.Position - position).Magnitude <= tuning.range
 		then
@@ -353,6 +376,9 @@ local function step(dt: number)
 				},
 				packJoint = nil,
 				packRest = nil,
+				root = nil,
+				torso = nil,
+				head = nil,
 			}
 			holders[player] = holder
 		end

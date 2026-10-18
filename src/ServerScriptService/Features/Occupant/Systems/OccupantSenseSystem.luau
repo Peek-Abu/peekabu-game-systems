@@ -27,12 +27,11 @@ local OccupantTurnRules = require(ServerScriptService.Features.Occupant.Rules.Oc
 local OccupantDeskUtils = require(ServerScriptService.Features.Occupant.Utils.OccupantDeskUtils)
 local HideServiceServer = require(ServerScriptService.Features.Hide.HideServiceServer)
 local OfficeServiceServer = require(ServerScriptService.Features.Office.OfficeServiceServer)
+local OfficeDecorConstants = require(ReplicatedStorage.Shared.Features.Office.Data.OfficeDecorConstants)
 
--- Office's attributes: a desk's marker id, and an art chair's key and desk (OfficeBuildSystem, OfficeDecorSystem).
+-- Office's attributes: a desk's marker id, and an art chair's desk (OfficeBuildSystem, OfficeDecorSystem).
 local MARKER_ATTRIBUTE = "OfficeMarkerId"
-local ART_KEY_ATTRIBUTE = "OfficeArtKey"
 local CHAIR_DESK_ATTRIBUTE = "OfficeDeskMarker"
-local CHAIR_KEY = "officeChair"
 -- A crouching character (CrouchServiceServer's attribute): noticed slower beside him.
 local CROUCH_ATTRIBUTE = CrouchConstants.CROUCHING_ATTRIBUTE
 
@@ -188,14 +187,15 @@ local function officeOf(part: Instance): Instance?
 	return current
 end
 
--- Every art chair under `office`, by the desk id it serves.
+-- Every art chair under `office`, by the desk id it serves: the chairs OfficeDecorSystem tagged (CHAIR_TAG), not a
+-- scan of the whole office every FURNITURE_REFRESH.
 local function chairs(office: Instance?): { [string]: BasePart }
 	local found: { [string]: BasePart } = {}
 	if office == nil then
 		return found
 	end
-	for _, item in office:GetDescendants() do
-		if item:IsA("BasePart") and item:GetAttribute(ART_KEY_ATTRIBUTE) == CHAIR_KEY then
+	for _, item in CollectionService:GetTagged(OfficeDecorConstants.CHAIR_TAG) do
+		if item:IsA("BasePart") and item:IsDescendantOf(office) then
 			local desk = item:GetAttribute(CHAIR_DESK_ATTRIBUTE)
 			if type(desk) == "string" then
 				found[desk] = item

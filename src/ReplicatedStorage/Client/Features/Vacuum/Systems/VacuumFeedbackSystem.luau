@@ -13,9 +13,9 @@
 	Listeners (`onPop`) hear every pop with the pile's size; `progressNear` says how far the pile at a point is (the
 	wand's kick, brace and shimmy, VacuumMotionSystem).
 	The canister is a live Gloom gauge (docs/superpowers/specs/2026-10-16-cleanup-crew-gloom-gleam-economy-design.md
-	§3.1: no capacity, no dust bags): every backpack's gauge (its dust insert behind the window, VacuumVisualSystem on
-	the server) eases toward the crew's Gloom removed as a share of the contract (the shift snapshot's cleared / quota,
-	VacuumFeedbackFormulas.gaugeTarget), its lamp lit once the contract is met; the canister ticks as the Gloom rises
+	§3.1: no capacity, no dust bags): every backpack's gauge eases toward the crew's Gloom removed as a share of the
+	contract (the shift snapshot's cleared / quota, VacuumFeedbackFormulas.gaugeTarget; drawn by VacuumGaugeSystem),
+	its lamp lit once the contract is met; the canister ticks as the Gloom rises
 	(VacuumFeedbackFormulas.gloomTick; only while a shift runs) and chimes once when the contract is met. The insert is resized and
 	its Weld moved locally (never replicated) from the full size and offset the server recorded on them. Client-local instances; pending sounds
 	(VacuumAssets) are skipped silently and counted.
@@ -43,6 +43,7 @@ local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.Va
 local VacuumFeedbackFormulas = require(ReplicatedStorage.Client.Features.Vacuum.Utils.VacuumFeedbackFormulas)
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
 local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
+local VacuumGaugeSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumGaugeSystem)
 local VacuumVfxSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumVfxSystem)
 local VfxBurstSystem = require(ReplicatedStorage.Client.Features.Vfx.Systems.VfxBurstSystem)
 
@@ -62,8 +63,6 @@ type PileFeel = {
 	stream: VacuumVfxSystem.Stream?,
 }
 
-type Gauge = { shown: number, drawn: number, part: BasePart? }
-
 export type VacuumFeedbackState = {
 	piles: number,
 	counters: { [string]: number },
@@ -81,7 +80,6 @@ local lastTick = 0
 local wasMet = true
 -- What every gauge eases toward: the crew's Gloom as a share of the contract.
 local gaugeTarget = 0
-local gauges: { [number]: Gauge } = {}
 -- Who hears a pile pop (its position, and its size across in studs): the wand's kick (VacuumMotionSystem).
 local popListeners: { (position: Vector3, size: number) -> () } = {}
 
@@ -96,6 +94,20 @@ local function play(id: string, options: SoundTypes.PlayOptions?): SoundServiceC
 	end
 	counters.played += 1
 	return SoundServiceClient:play(id, options)
+end
+
+-- A fire-and-forget sound (the pop, the canister's tick and chime): no handle, so its Sound is reused.
+local function shot(id: string, options: SoundTypes.PlayOptions?)
+	if VacuumAssets.SOUNDS[id] == nil then
+		log:warn(`"{id}" is not a VacuumAssets sound`)
+		return
+	end
+	if not SoundRegistry.has(id) then
+		counters.pending += 1
+		return
+	end
+	counters.played += 1
+	SoundServiceClient:playOneShot(id, options)
 end
 
 local function readNumber(instance: Instance, name: string): number
@@ -213,7 +225,7 @@ local function pop(feel: PileFeel, position: Vector3, size: number)
 	for _, listener in popListeners do
 		task.spawn(listener, position, size)
 	end
-	play(VacuumAssets.POP, { at = position })
+	shot(VacuumAssets.POP, { at = position })
 	if VfxBurstSystem.polished() then
 		if feel.grime then
 			VacuumVfxSystem.shine(feel.pile)
@@ -319,63 +331,13 @@ local function onShift(snapshot: ShiftTypes.ShiftSnapshot?)
 	if before ~= nil and VacuumFeedbackFormulas.gloomTick(before, gloom, running, now, lastTick) then
 		lastTick = now
 		counters.ticks += 1
-		play("canisterTick")
+		shot("canisterTick")
 	end
 	local met = snapshot ~= nil and snapshot.quotaMet
 	if running and met and not wasMet then
-		play("canisterChime")
+		shot("canisterChime")
 	end
 	wasMet = met
-end
-
--- Sizes a backpack's dust insert to `shown` and lights its lamp when full. False when it has no gauge.
-local function drawGauge(gauge: Gauge, character: Model?): boolean
-	local backpack = if character ~= nil then character:FindFirstChild(VacuumConstants.BACKPACK_NAME) else nil
-	local fill = if backpack ~= nil then backpack:FindFirstChild(VacuumConstants.GAUGE_FILL_NAME, true) else nil
-	local weld = if fill ~= nil then fill:FindFirstChild(VacuumConstants.GAUGE_WELD_NAME) else nil
-	if fill == nil or not fill:IsA("BasePart") or weld == nil or not weld:IsA("Weld") then
-		return false
-	end
-	if gauge.part == fill and math.abs(gauge.drawn - gauge.shown) < 1e-4 then
-		return true
-	end
-	local fullSize = fill:GetAttribute("GaugeFullSize")
-	local fullC0 = weld:GetAttribute("GaugeFullC0")
-	if typeof(fullSize) ~= "Vector3" or typeof(fullC0) ~= "CFrame" then
-		return false
-	end
-	local height, drop = VacuumFeedbackFormulas.gaugeFill(fullSize.Y, gauge.shown)
-	fill.Size = Vector3.new(fullSize.X, math.max(height, 0.001), fullSize.Z)
-	fill.Transparency = if height < 0.005 then 1 else 0
-	weld.C0 = fullC0 * CFrame.new(0, -drop, 0)
-	local lamp = if backpack ~= nil then backpack:FindFirstChild(VacuumConstants.LAMP_NAME, true) else nil
-	if lamp ~= nil and lamp:IsA("BasePart") then
-		local lit = gauge.shown >= 0.98
-		lamp.Material = if lit then Enum.Material.Neon else Enum.Material.SmoothPlastic
-		lamp.Color = if lit then VacuumConstants.LAMP_ON_COLOR else VacuumConstants.LAMP_OFF_COLOR
-	end
-	gauge.part = fill
-	gauge.drawn = gauge.shown
-	return true
-end
-
-local function drawGauges(deltaTime: number)
-	for _, player in Players:GetPlayers() do
-		if gauges[player.UserId] == nil then
-			gauges[player.UserId] = { shown = gaugeTarget, drawn = -1, part = nil }
-		end
-	end
-	for userId, gauge in gauges do
-		local player = Players:GetPlayerByUserId(userId)
-		if player == nil then
-			gauges[userId] = nil
-			continue
-		end
-		gauge.shown = VacuumFeedbackFormulas.gaugeStep(gauge.shown, gaugeTarget, deltaTime, VacuumConstants.GAUGE_RATE)
-		if not drawGauge(gauge, player.Character) then
-			gauge.part = nil
-		end
-	end
 end
 
 local VacuumFeedbackSystem = {}
@@ -392,7 +354,7 @@ function VacuumFeedbackSystem.start()
 	table.insert(stoppers, Charm.subscribe(ShiftStore.snapshot, onShift))
 	local connection = RunService.RenderStepped:Connect(function(deltaTime)
 		aim()
-		drawGauges(deltaTime)
+		VacuumGaugeSystem.draw(deltaTime, gaugeTarget)
 	end)
 	table.insert(stoppers, function()
 		connection:Disconnect()
@@ -408,7 +370,7 @@ function VacuumFeedbackSystem.stop()
 		stopSuction(feel)
 	end
 	table.clear(active)
-	table.clear(gauges)
+	VacuumGaugeSystem.clear()
 	lastGloom = nil
 	gaugeTarget = 0
 end

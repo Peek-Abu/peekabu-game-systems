@@ -1,6 +1,10 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+
+local OfficeDecorConstants = require(ReplicatedStorage.Shared.Features.Office.Data.OfficeDecorConstants)
 local Sense = require(script.Parent.OccupantSenseSystem)
 return function()
-	it("knows each hiding spot and seats a desk on its art chair, facing the desk", function()
+	it("knows each hiding spot and seats a desk on its tagged art chair in its own office, facing the desk", function()
 		local office = Instance.new("Model")
 		local desk = Instance.new("Part")
 		desk.Size = Vector3.new(5, 3, 3)
@@ -12,7 +16,18 @@ return function()
 		chair.Position = Vector3.new(10, 1.75, 6.95)
 		chair:SetAttribute("OfficeArtKey", "officeChair")
 		chair:SetAttribute("OfficeDeskMarker", "d1")
+		chair:AddTag(OfficeDecorConstants.CHAIR_TAG)
 		chair.Parent = office
+		-- Chairs are found by their tag (OfficeDecorSystem), never by scanning the office; another office's chair for
+		-- a desk of the same id is not this desk's.
+		local elsewhere = Instance.new("Model")
+		local stranger = Instance.new("Part")
+		stranger.Position = Vector3.new(90, 1.75, 90)
+		stranger:SetAttribute("OfficeArtKey", "officeChair")
+		stranger:SetAttribute("OfficeDeskMarker", "d1")
+		stranger:AddTag(OfficeDecorConstants.CHAIR_TAG)
+		stranger.Parent = elsewhere
+		elsewhere.Parent = Workspace
 		local table_ = Instance.new("Part")
 		table_.Size = Vector3.new(5, 3.1, 3)
 		table_.CFrame = CFrame.new(40, 1.55, 10)
@@ -21,7 +36,10 @@ return function()
 			{ id = "a", kind = "under", noun = "desk", furniture = desk, frame = desk.CFrame },
 			{ id = "b", kind = "under", noun = "table", furniture = table_, frame = table_.CFrame },
 		}
-		local desks, views = Sense.furniture(spots, 4.6)
+		office.Parent = Workspace
+		local desks, views = Sense.furniture(spots, 4.6, function()
+			return true
+		end)
 		expect(#views).to.equal(2)
 		expect(views[1].deskId).to.equal("d1")
 		expect(views[2].deskId).to.equal(nil)
@@ -34,6 +52,7 @@ return function()
 		expect((desks[1].seat.Position - Vector3.new(10, 4.6, 6.95)).Magnitude < 1e-3).to.equal(true)
 		expect(desks[1].seat.LookVector.Z > 0.99).to.equal(true)
 		office:Destroy()
+		elsewhere:Destroy()
 	end)
 	it("knows a supply cabinet as a secure spot, a desk or table as not", function()
 		local cabinet = Instance.new("Part")
