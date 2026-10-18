@@ -25,6 +25,10 @@ local SoundConstants: {
 	DEFAULT_GROUP_VOLUMES: { [SoundTypes.SoundGroupName]: number },
 	DEFAULT_SERVER_RADIUS: number,
 	DEFAULT_FADE: number,
+	IDLE_PER_PLACE: number,
+	IDLE_SHARED: number,
+	LOAD_TIMEOUT: number,
+	DEFAULT_ROLL_OFF_MAX: number,
 } =
 	table.freeze({
 		GROUPS = table.freeze(groups),
@@ -33,6 +37,16 @@ local SoundConstants: {
 		DEFAULT_SERVER_RADIUS = 150,
 		-- Default crossfade for music and ambience, in seconds.
 		DEFAULT_FADE = 1.5,
+		-- One-shot voices kept idle for reuse per place they play from (a foot, a pile): a walk needs one a foot, a
+		-- sprint's overlapping steps two (SoundServiceClient:playOneShot).
+		IDLE_PER_PLACE = 3,
+		-- ...and for the places many sounds share (2D in SoundService, the fixed points' anchors in the Terrain).
+		IDLE_SHARED = 8,
+		-- A sound still not loaded this long after its play (a failed or missing asset) is released: its Ended never
+		-- fires, so it would otherwise hold its Sound and its concurrency slot for good.
+		LOAD_TIMEOUT = 8,
+		-- The engine's Sound.RollOffMaxDistance, restored on a reused voice whose sound gives none.
+		DEFAULT_ROLL_OFF_MAX = 10000,
 	})
 
 return SoundConstants

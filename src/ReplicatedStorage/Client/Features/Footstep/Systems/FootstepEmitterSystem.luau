@@ -5,7 +5,9 @@
 	lowest corner, which dips below the stance as the foot rolls heel to toe) goes through
 	FootstepPlantFormulas; on the frame a foot lands, and only while the character is moving on the ground (its root
 	really crossing the floor, a floor under it, alive, not seated), it plays one variant of its set's pool for the
-	surface under it (FootstepSurfaceUtils), scaled by its gait (FootstepGaitFormulas), 3D on that foot.
+	surface under it (FootstepSurfaceUtils), scaled by its gait (FootstepGaitFormulas), 3D on that foot. Steps are
+	one-shots (SoundServiceClient:playOneShot): each foot reuses the Sounds of its earlier steps (a walk keeps one a
+	foot, a sprint's overlapping steps two) rather than creating one a step; they go with the character.
 
 	Works for any rig whose Animator this client sees: a player's own character, another player's (the engine
 	replicates the tracks its owner plays) and a server NPC (the server's tracks replicate the same way), so the steps
@@ -51,6 +53,8 @@ export type Rig = {
 	feet: { FootTrack },
 	lastRoot: Vector3?,
 	speed: number,
+	-- The floor ray's filter (the rig itself), made once.
+	floorParams: RaycastParams,
 }
 
 export type StepRecord = {
@@ -85,9 +89,7 @@ end
 
 -- The floor under the rig and its surface; nil when nothing is under it (airborne).
 local function floorUnder(rig: Rig): Surface?
-	local params = RaycastParams.new()
-	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = { rig.model }
+	local params = rig.floorParams
 	local reach = rig.humanoid.HipHeight + rig.root.Size.Y / 2 + FootstepConstants.GROUND_SLACK
 	local hit = Workspace:Raycast(rig.root.Position, Vector3.new(0, -reach, 0), params)
 	if hit == nil then
@@ -119,6 +121,9 @@ function FootstepEmitterSystem.new(model: Model, setName: string, gaitInput: () 
 	if set == nil or humanoid == nil or root == nil or not root:IsA("BasePart") or feet == nil then
 		return nil
 	end
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { model }
 	return {
 		model = model,
 		humanoid = humanoid,
@@ -129,6 +134,7 @@ function FootstepEmitterSystem.new(model: Model, setName: string, gaitInput: () 
 		feet = feet,
 		lastRoot = nil,
 		speed = 0,
+		floorParams = params,
 	}
 end
 
@@ -201,7 +207,7 @@ function FootstepEmitterSystem.update(rig: Rig, dt: number, counters: Counters):
 			continue
 		end
 		track.last = index
-		SoundServiceClient:play(
+		SoundServiceClient:playOneShot(
 			pool[index],
 			{ at = track.part, volumeScale = gaitScale.volume, pitchScale = gaitScale.pitch }
 		)

@@ -55,6 +55,7 @@ local function kindOf(prompt: ProximityPrompt): string?
 	return nil
 end
 
+-- The hold's wind-up (it needs a handle, to stop it on release).
 local function playTier(tier: Tier, pitchScale: number?): SoundServiceClient.SoundHandle?
 	if not RunService:IsRunning() then
 		return nil
@@ -65,6 +66,19 @@ local function playTier(tier: Tier, pitchScale: number?): SoundServiceClient.Sou
 	end
 	counters.played += 1
 	return SoundServiceClient:play(id, { pitchScale = pitchScale })
+end
+
+-- Every other tier: fire-and-forget, so the clicks reuse their Sounds instead of making one each.
+local function shotTier(tier: Tier)
+	if not RunService:IsRunning() then
+		return
+	end
+	local id = UIAssets.soundTiers[tier]
+	if id == nil or not SoundRegistry.has(id) then
+		return
+	end
+	counters.played += 1
+	SoundServiceClient:playOneShot(id)
 end
 
 local function releaseHold(fade: number)
@@ -98,7 +112,7 @@ local UISoundSystem = {}
 	Plays the UI sound of `tier` (nothing outside a running game, or while it is pending).
 ]=]
 function UISoundSystem.play(tier: Tier)
-	playTier(tier)
+	shotTier(tier)
 end
 
 function UISoundSystem.start()
@@ -132,7 +146,7 @@ function UISoundSystem.start()
 		end
 		releaseHold(HOLD_RELEASE)
 		local tier: Tier = UISoundFormulas.doneTier(kindOf(prompt), CTA_KINDS)
-		playTier(tier)
+		shotTier(tier)
 		if tier == "cta" then
 			counters.ctas += 1
 		else

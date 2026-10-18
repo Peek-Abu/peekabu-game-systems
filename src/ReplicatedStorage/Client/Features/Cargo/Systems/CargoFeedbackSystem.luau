@@ -103,7 +103,7 @@ local function play(id: string, options: SoundTypes.PlayOptions?)
 		return
 	end
 	counters.played += 1
-	SoundServiceClient:play(id, options)
+	SoundServiceClient:playOneShot(id, options)
 end
 
 -- Unmounts a floater's root, then destroys its anchor (and with it the BillboardGui). Once per floater.

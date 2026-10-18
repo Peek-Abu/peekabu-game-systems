@@ -48,7 +48,7 @@ local rng = Random.new()
 
 local function play(id: string, at: BasePart, volumeScale: number?)
 	if SoundRegistry.has(id) then
-		SoundServiceClient:play(id, { at = at, volumeScale = volumeScale })
+		SoundServiceClient:playOneShot(id, { at = at, volumeScale = volumeScale })
 	end
 end
 

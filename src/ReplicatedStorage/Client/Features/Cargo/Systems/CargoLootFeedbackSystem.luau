@@ -76,7 +76,7 @@ end
 
 local function play(id: string, at: Vector3)
 	if CargoAssets.SOUNDS[id] ~= nil and SoundRegistry.has(id) then
-		SoundServiceClient:play(id, { at = at })
+		SoundServiceClient:playOneShot(id, { at = at })
 	end
 end
 

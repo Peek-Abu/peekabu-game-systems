@@ -224,7 +224,7 @@ local function stepBroken()
 		if dim and not dimmed[light] then
 			counters.zaps += 1
 			if SoundRegistry.has(OfficeAssets.ZAP) then
-				SoundServiceClient:play(OfficeAssets.ZAP, { at = light })
+				SoundServiceClient:playOneShot(OfficeAssets.ZAP, { at = light })
 			else
 				counters.pending += 1
 			end

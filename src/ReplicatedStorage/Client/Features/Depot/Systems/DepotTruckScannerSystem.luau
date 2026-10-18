@@ -153,10 +153,10 @@ function DepotTruckScannerSystem.start(): () -> ()
 			if scanner == nil or DepotTruckScannerSystem.flash(scanner, Workspace) == nil then
 				return
 			end
-			SoundServiceClient:play(BEEP, { at = scanner })
+			SoundServiceClient:playOneShot(BEEP, { at = scanner })
 			task.delay(BEEP_GAP, function()
 				if running and scanner.Parent ~= nil then
-					SoundServiceClient:play(BEEP, { at = scanner })
+					SoundServiceClient:playOneShot(BEEP, { at = scanner })
 				end
 			end)
 		end)

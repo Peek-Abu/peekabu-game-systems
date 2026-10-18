@@ -316,7 +316,7 @@ local VfxServiceClient: VfxServiceClient = {
 
 		local sound = recipe.sound
 		if sound ~= nil then
-			SoundServiceClient:play(sound, { at = position })
+			SoundServiceClient:playOneShot(sound, { at = position })
 		end
 		local trauma, radius = recipe.trauma, recipe.shakeRadius
 		local camera = Workspace.CurrentCamera

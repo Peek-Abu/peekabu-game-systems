@@ -182,7 +182,7 @@ local CargoServiceClient: CargoServiceClient = {
 		if slot >= 1 and slot <= CargoConstants.HOTBAR_SLOTS then
 			CargoEvents.packets.Select.send(slot)
 			if SoundRegistry.has(CargoAssets.SELECT) then
-				SoundServiceClient:play(CargoAssets.SELECT)
+				SoundServiceClient:playOneShot(CargoAssets.SELECT)
 			end
 		end
 	end,

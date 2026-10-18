@@ -11,9 +11,11 @@
 	- Roblox's own character sounds (RbxCharacterSounds' running loop, jump, landing, wind, climb, swim, get-up and the
 	  "oof"; FootstepConstants.DEFAULT_SOUNDS) are muted on every character this service follows: each is moved into a
 	  silent SoundGroup (the engine's script rewrites their Volume, never their SoundGroup), an AudioPlayer one is
-	  zeroed. The game's land, jump and ragdoll body-fall are FootstepLandingSystem's (started here).
+	  zeroed. Event-driven: each rig's root is read once and then watched (ChildAdded, and the clip's SoundGroup /
+	  Volume), never searched per frame. The game's land, jump and ragdoll body-fall are FootstepLandingSystem's (started here).
 	- Every pool's sounds (and the jumps, the land and the body-fall) are kept loaded while this client runs (one silent, never-played Sound per asset in
-	  SoundService, preloaded through ContentProvider): a cold first step loaded late, the foot already down.
+	  SoundService, preloaded through ContentProvider): a cold first step loaded late, the foot already down. An
+	  asset that fails to load drops its warm Sound.
 	- getState: the counters and the last RECENT steps (the live sync check reads them). onStep: hear each step as it
 	  plays (the Manager's dread shakes the camera on his footfalls).
 
@@ -56,6 +58,8 @@ local pending: { [Model]: Pending } = {}
 local recent: { FootstepEmitterSystem.StepRecord } = {}
 local counters: FootstepEmitterSystem.Counters = { steps = 0, gated = 0, silent = 0 }
 local muted = 0
+-- Each followed rig's watch on its engine clips (its root's ChildAdded and each clip's mute).
+local muting: { [Model]: { RBXScriptConnection } } = {}
 local warm: { Sound } = {}
 local stoppers: { () -> () } = {}
 -- Who hears each step as it plays (onStep): the Manager's dread shakes the camera on his footfalls.
@@ -64,14 +68,14 @@ local listeners: { StepListener } = {}
 
 -- One silent Sound per pooled asset, preloaded, so no step waits for its asset.
 local function preload()
-	local seen: { [string]: boolean } = {}
+	local seen: { [string]: Sound? } = {}
 	local sounds: { Instance } = {}
 	local function warmOne(assetId: string)
-		if seen[assetId] then
+		if seen[assetId] ~= nil then
 			return
 		end
-		seen[assetId] = true
 		local sound = Instance.new("Sound")
+		seen[assetId] = sound
 		sound.Name = "FootstepWarm"
 		sound.SoundId = assetId
 		sound.Volume = 0
@@ -99,7 +103,16 @@ local function preload()
 		end
 	end
 	task.spawn(function()
-		ContentProvider:PreloadAsync(sounds)
+		ContentProvider:PreloadAsync(sounds, function(contentId: string, status: Enum.AssetFetchStatus)
+			local sound = seen[contentId]
+			if sound ~= nil and status == Enum.AssetFetchStatus.Failure then
+				local index = table.find(warm, sound)
+				if index ~= nil then
+					table.remove(warm, index)
+				end
+				sound:Destroy()
+			end
+		end)
 	end)
 end
 
@@ -135,22 +148,59 @@ local function silentGroup(): SoundGroup
 	return group
 end
 
--- RbxCharacterSounds' clips in this character's root (they appear lazily), muted as they turn up.
-local function muteDefault(rig: Rig)
-	for _, name in FootstepConstants.DEFAULT_SOUNDS do
-		local clip = rig.root:FindFirstChild(name)
-		if clip ~= nil and clip:IsA("Sound") then
+-- Mutes one of RbxCharacterSounds' clips (they appear lazily in the root) and keeps it muted.
+local function muteClip(clip: Instance, connections: { RBXScriptConnection })
+	if table.find(FootstepConstants.DEFAULT_SOUNDS, clip.Name) == nil then
+		return
+	end
+	if clip:IsA("Sound") then
+		local sound = clip
+		local function apply()
 			local group = silentGroup()
-			if clip.SoundGroup ~= group then
-				clip.SoundGroup = group
+			if sound.SoundGroup ~= group then
+				sound.SoundGroup = group
 				muted += 1
 			end
 		end
-		if clip ~= nil and clip:IsA("AudioPlayer") and clip.Volume > 0 then
-			clip.Volume = 0
-			muted += 1
+		apply()
+		table.insert(connections, sound:GetPropertyChangedSignal("SoundGroup"):Connect(apply))
+	elseif clip:IsA("AudioPlayer") then
+		local player = clip
+		local function apply()
+			if player.Volume > 0 then
+				player.Volume = 0
+				muted += 1
+			end
 		end
+		apply()
+		table.insert(connections, player:GetPropertyChangedSignal("Volume"):Connect(apply))
 	end
+end
+
+local function unwatch(model: Model)
+	local connections = muting[model]
+	if connections ~= nil then
+		for _, connection in connections do
+			connection:Disconnect()
+		end
+		muting[model] = nil
+	end
+end
+
+-- Mutes the engine's clips in this rig's root now and as they turn up.
+local function watchDefaults(model: Model, rig: Rig)
+	unwatch(model)
+	local connections: { RBXScriptConnection } = {}
+	muting[model] = connections
+	for _, child in rig.root:GetChildren() do
+		muteClip(child, connections)
+	end
+	table.insert(
+		connections,
+		rig.root.ChildAdded:Connect(function(child: Instance)
+			muteClip(child, connections)
+		end)
+	)
 end
 
 local function follow(model: Model, setName: () -> string, gaitInput: () -> GaitInput)
@@ -160,6 +210,7 @@ local function follow(model: Model, setName: () -> string, gaitInput: () -> Gait
 end
 
 local function forget(model: Model)
+	unwatch(model)
 	rigs[model] = nil
 	culled[model] = nil
 	pending[model] = nil
@@ -227,6 +278,7 @@ local function step(dt: number)
 		if rig ~= nil then
 			pending[model] = nil
 			rigs[model] = rig
+			watchDefaults(model, rig)
 		end
 	end
 	local camera = Workspace.CurrentCamera
@@ -235,7 +287,6 @@ local function step(dt: number)
 		if model.Parent == nil or rig.root.Parent == nil then
 			continue
 		end
-		muteDefault(rig)
 		local far = listener ~= nil
 			and (rig.root.Position - listener).Magnitude
 				> rig.set.rollOffMaxDistance + FootstepConstants.CULL_MARGIN
@@ -298,6 +349,9 @@ local FootstepServiceClient: FootstepServiceClient = {
 			stopper()
 		end
 		table.clear(stoppers)
+		for model in muting do
+			unwatch(model)
+		end
 		table.clear(rigs)
 		table.clear(culled)
 		table.clear(pending)
