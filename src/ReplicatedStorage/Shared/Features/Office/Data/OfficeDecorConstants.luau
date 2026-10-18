@@ -16,6 +16,8 @@ return table.freeze({
 	-- The invisible sound emitters: their tag, and the attribute naming what plays there.
 	AMBIENT_TAG = "OfficeAmbient",
 	AMBIENT_KIND_ATTRIBUTE = "AmbientKind",
+	-- Every office chair's root (OfficeDecorSystem), so the Manager's chair is found by tag, not by a workspace scan.
+	CHAIR_TAG = "OfficeChair",
 	-- How far above a desk's top a phone or typing emitter sits; every TYPING_EVERY-th desk has a typist.
 	EMITTER_LIFT = 0.5,
 	TYPING_EVERY = 2,

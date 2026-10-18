@@ -107,9 +107,12 @@ return function()
 				expect(root.CanCollide).to.equal(key == "filingCabinet" or key == "breakTable")
 				expect(root.CanQuery).to.equal(root.CanCollide)
 				expect(root.CanTouch).to.equal(false)
-				-- Only the table is tagged, as a hiding spot (Hide); the cabinet is not.
+				-- Only the table is tagged, as a hiding spot (Hide); the cabinet is not. A chair carries only the chair
+				-- tag, so clients and the Manager's senses find chairs without scanning the workspace.
 				local hideable = key == "breakTable"
-				expect(#CollectionService:GetTags(root)).to.equal(if hideable then 1 else 0)
+				local chair = key == "officeChair"
+				expect(#CollectionService:GetTags(root)).to.equal(if hideable or chair then 1 else 0)
+				expect(root:HasTag(Constants.CHAIR_TAG)).to.equal(chair)
 				expect(root:HasTag("HideFurniture")).to.equal(hideable)
 				expect(root:GetAttribute("HideFurnitureKind")).to.equal(if key == "breakTable" then "table" else nil)
 				expect(root:FindFirstChild("ArtVisual") ~= nil).to.equal(true)

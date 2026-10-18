@@ -175,6 +175,9 @@ local function artOnly(
 		root:Destroy()
 		return
 	end
+	if key == "officeChair" then
+		CollectionService:AddTag(root, OfficeDecorConstants.CHAIR_TAG)
+	end
 	-- The table is a hiding spot (Hide): under it; the supply cabinet too: inside it.
 	local hideKind = HIDE_KINDS[key]
 	if hideKind ~= nil then

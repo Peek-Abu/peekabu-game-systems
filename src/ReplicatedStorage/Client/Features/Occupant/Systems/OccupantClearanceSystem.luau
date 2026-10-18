@@ -23,11 +23,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideConstants)
+local OfficeDecorConstants = require(ReplicatedStorage.Shared.Features.Office.Data.OfficeDecorConstants)
 local OccupantGestureFormulas = require(ReplicatedStorage.Shared.Features.Occupant.Utils.OccupantGestureFormulas)
 
--- Office's attribute naming an art piece's kind (OfficeDecorSystem), and the chair's.
-local ART_KEY_ATTRIBUTE = "OfficeArtKey"
-local CHAIR_KEY = "officeChair"
 -- His chair stands under his root (a sit-in sits SIT_IN_BACK behind its centre): the nearest chair this close.
 local CHAIR_RADIUS = 2.5
 -- Studs kept between his drawn-back body and a wall behind him.
@@ -57,8 +55,10 @@ local counters = { reaches = 0, carries = 0, fades = 0 }
 local function chairNear(root: BasePart): BasePart?
 	local best: BasePart? = nil
 	local bestDistance = CHAIR_RADIUS
-	for _, part in Workspace:GetDescendants() do
-		if part:IsA("BasePart") and part:GetAttribute(ART_KEY_ATTRIBUTE) == CHAIR_KEY then
+	-- By tag (OfficeDecorSystem): `carry` asks every frame of a sit-in until it finds his chair, and a scan of the
+	-- whole workspace each of those frames was a visible hitch on phones.
+	for _, part in CollectionService:GetTagged(OfficeDecorConstants.CHAIR_TAG) do
+		if part:IsA("BasePart") then
 			local offset = part.Position - root.Position
 			local distance = Vector3.new(offset.X, 0, offset.Z).Magnitude
 			if distance < bestDistance then
