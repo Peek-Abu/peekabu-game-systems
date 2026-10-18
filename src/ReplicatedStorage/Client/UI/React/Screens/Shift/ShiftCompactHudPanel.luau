@@ -2,8 +2,8 @@
 --[=[
 	ShiftCompactHudPanel: the live shift HUD in the V1 kit (shift-desktop / shift-mobile renders), kept restrained the
 	way horror games hold back in a run: few elements, each on the full depth stack.
-	- top centre: the Gloom meter and the shift clock joined in one plate (ShiftGloomMeter), and while the crew clocks
-	  out a coral countdown pill under it;
+	- top centre: the Gloom meter and the shift clock joined in one plate (ShiftGloomMeter); while the crew clocks out,
+	  ShiftHud draws the clock-out board under it (ShiftClockOutBoard);
 	- the crew (ShiftCrewList): top-left on desktop under Roblox's buttons, top-right on phone; tapping it shows each
 	  member's status beside it (`crewOpen`);
 	- bottom centre: the hotbar (ShiftHotbar: the vacuum with its Gloom gauge, the items with their worth), the stamina
@@ -102,7 +102,6 @@ local function ShiftCompactHudPanel(props: Props): React.ReactNode
 	-- The stopwatch render breaks the meter's top-right corner (24 / 34 px above it): the meter sits low enough that
 	-- the render stays on the screen (the HUD layer spans the whole viewport, top bar included).
 	local meterTop = if phone then 28 else 40
-	local meterHeight = if phone then 70 else 96
 	local nodes: { [string]: React.ReactNode } = {
 		clearance = e(ShiftGloomMeter, { view = view, phone = phone, top = meterTop }),
 	}
@@ -205,17 +204,6 @@ local function ShiftCompactHudPanel(props: Props): React.ReactNode
 			position = UDim2.new(0.5, 0, 1, -stackTop - (if #actions > 0 then 24 else 0)),
 			radius = 18,
 			children = slip,
-		})
-	end
-	local countdown = view.clockOut
-	if countdown ~= nil then
-		nodes.clockOut = e(ToonPill, {
-			text = `CLOCKING OUT IN {countdown}`,
-			hue = "coral",
-			textSize = if phone then 16 else 22,
-			anchor = Vector2.new(0.5, 0),
-			position = UDim2.new(0.5, 0, 0, meterTop + meterHeight + 18),
-			size = UDim2.fromOffset(if phone then 250 else 340, if phone then 30 else 40),
 		})
 	end
 	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, nodes)

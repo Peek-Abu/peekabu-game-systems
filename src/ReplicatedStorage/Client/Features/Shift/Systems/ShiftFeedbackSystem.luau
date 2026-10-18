@@ -7,7 +7,8 @@
 	group volumes are never touched). It
 	watches ShiftStore's snapshot: ShiftCueUtils says which moments just happened, and each plays its sound
 	(ShiftAssets.CUE_SOUNDS) and camera kick. Overtime keeps the ticking layer on (a SoundServiceClient ambience
-	slot); a clock-out countdown ticks every second, louder for the last COUNTDOWN_LOUD. The stamps and sticky
+	slot); a crew member's punch plays the punch clock; the truck's countdown honks, then ticks every second for its last
+	COUNTDOWN_TICKS, louder for the last COUNTDOWN_LOUD. The stamps and sticky
 	notes are toasts the server sends (ShiftNoticeUtils); the lights' flicker is Harlow's tells. A pending sound
 	(ShiftAssets) is skipped silently and counted.
 
@@ -153,17 +154,17 @@ local function onSnapshot(current: ShiftTypes.ShiftSnapshot?)
 	setTicking(ShiftCueUtils.ticking(current))
 end
 
--- The clock-out countdown: one tick per whole second, louder at the end.
+-- The truck's countdown: one tick per whole second for its last seconds, louder at the end (ShiftCueUtils.tickScale).
 local function stepCountdown()
 	local second = ShiftCueUtils.countdown(ShiftStore.snapshot(), Workspace:GetServerTimeNow())
 	if second == lastSecond then
 		return
 	end
 	lastSecond = second
-	if second ~= nil and second > 0 then
+	local scale = ShiftCueUtils.tickScale(second)
+	if scale ~= nil then
 		counters.ticks += 1
-		local loud = second <= ShiftConstants.COUNTDOWN_LOUD
-		play(ShiftAssets.COUNTDOWN_TICK, if loud then ShiftConstants.COUNTDOWN_LOUD_SCALE else 1)
+		play(ShiftAssets.COUNTDOWN_TICK, scale)
 	end
 end
 

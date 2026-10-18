@@ -1,11 +1,12 @@
 --!strict
 --[=[
 	ShiftCrewViewModel: the crew roster card (Figma 35:1100-35:1165, 1a-1e): each crew member's status line, the ink it
-	is written in, whether their name is struck through (caught, or not aboard while clocking out), and the phone's
-	two-line form (everyone fine on line one, trouble on line two, names sharing a status grouped). Status priority:
-	caught > (while clocking out) in the truck bed / NOT ABOARD > carrying > vacuuming > at the truck > room > on shift.
-	The tick box (Figma 35:1100 / 35:1119 / 35:1137): ticked only for crew at or in the truck ("at the truck", "in the
-	truck bed"), a marker X for a struck member (caught, NOT ABOARD), empty otherwise. Pure.
+	is written in, whether their name is struck through (caught), and the phone's two-line form (everyone fine on line
+	one, trouble on line two, names sharing a status grouped). Status priority: caught > clocked out (their card punched,
+	`punched`) > (while the truck counts down) still inside > carrying > vacuuming > at the truck > room > on shift. Still
+	inside is never struck or red: whoever is inside when the truck leaves is paid like the rest. The tick box (Figma
+	35:1100 / 35:1119 / 35:1137): ticked for crew who clocked out or are at the truck, a marker X for a caught member,
+	empty otherwise. Pure.
 
 	@class ShiftCrewViewModel
 ]=]
@@ -64,6 +65,7 @@ local function statusOf(
 	name: string,
 	entry: PublicPlayerTypes.PublicPlayer,
 	clockingOut: boolean,
+	punched: boolean,
 	now: number
 ): MemberView
 	local caughtUntil = entry[OccupantConstants.PUBLIC_CAUGHT_UNTIL]
@@ -74,13 +76,13 @@ local function statusOf(
 	if entry[DeathConstants.PUBLIC_FIELD] == true then
 		return member(userId, name, "CAUGHT", "CAUGHT", "danger", true, false)
 	end
-	local inTruck = entry[ShiftConstants.PUBLIC_IN_TRUCK] == true
-	if clockingOut then
-		if inTruck then
-			return member(userId, name, "in the truck bed", "in the truck bed", "ok", false, true)
-		end
-		return member(userId, name, "NOT ABOARD", "NOT ABOARD", "danger", true, false)
+	if punched then
+		return member(userId, name, "clocked out", "clocked out", "ok", false, true)
 	end
+	if clockingOut then
+		return member(userId, name, "still inside", "still inside", "busy", false, false)
+	end
+	local inTruck = entry[ShiftConstants.PUBLIC_IN_TRUCK] == true
 	local carrying = entry[CarryConstants.PUBLIC_FIELD]
 	if type(carrying) == "string" then
 		local def = CargoRegistry.get(carrying)
@@ -136,7 +138,8 @@ function ShiftCrewViewModel.roster(
 	names: { [number]: string },
 	truck: number?,
 	clockingOut: boolean,
-	now: number
+	now: number,
+	punched: { number }?
 ): RosterView?
 	if #crew == 0 then
 		return nil
@@ -146,7 +149,8 @@ function ShiftCrewViewModel.roster(
 	local trouble: { MemberView } = {}
 	for _, userId in crew do
 		local entry = players[StateSyncConstants.publicEntryKey(userId)] or {}
-		local view = statusOf(userId, names[userId] or "Crew", entry, clockingOut, now)
+		local out = punched ~= nil and table.find(punched, userId) ~= nil
+		local view = statusOf(userId, names[userId] or "Crew", entry, clockingOut, out, now)
 		table.insert(members, view)
 		table.insert(if view.tone == "danger" then trouble else fine, view)
 	end

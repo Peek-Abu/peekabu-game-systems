@@ -35,6 +35,14 @@ local function overtime()
 	return ShiftPhaseRules.advance(warned(), 165 + ShiftConstants.WARNING_SECONDS)
 end
 
+-- `state` with the truck's countdown running (ShiftClockOutRules), the truck leaving at `at`.
+local function clockingOut(state, at)
+	local nextState = table.clone(state)
+	nextState.sub = "clockout"
+	nextState.clockOutAt = at
+	return nextState
+end
+
 return function()
 	it("starts in the lobby with the quota and variant", function()
 		local state = ShiftPhaseRules.initial(350, "A")
@@ -132,31 +140,6 @@ return function()
 		end)
 	end)
 
-	describe("clockOut", function()
-		it("starts one countdown while running", function()
-			local state = ShiftPhaseRules.clockOut(running(), 200)
-			expect(state.sub).to.equal("clockout")
-			expect(state.clockOutAt).to.equal(200 + ShiftConstants.CLOCK_OUT_SECONDS)
-		end)
-
-		it("ignores a second press during the countdown", function()
-			local state = ShiftPhaseRules.clockOut(running(), 200)
-			expect(ShiftPhaseRules.clockOut(state, 205)).to.equal(nil)
-		end)
-
-		it("ignores a press outside a running shift", function()
-			expect(ShiftPhaseRules.clockOut(ShiftPhaseRules.initial(350, "B"), 0)).to.equal(nil)
-			expect(ShiftPhaseRules.clockOut(results(), 610)).to.equal(nil)
-		end)
-
-		it("keeps the overtime stage through a clock out", function()
-			local state = ShiftPhaseRules.clockOut(overtime(), 220)
-			expect(state.sub).to.equal("clockout")
-			expect(state.stage).to.equal("overtime")
-			expect(ShiftPhaseRules.salvageMultiplier(state)).to.equal(ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER)
-		end)
-	end)
-
 	describe("markQuota", function()
 		it("marks the quota met once it is reached and starts the break", function()
 			expect(ShiftPhaseRules.markQuota(running(), 349, 150)).to.equal(nil)
@@ -202,7 +185,7 @@ return function()
 		end)
 
 		it("is refused once the crew is clocking out, and outside a running shift", function()
-			local leaving = ShiftPhaseRules.clockOut(onBreak(), 155)
+			local leaving = clockingOut(onBreak(), 185)
 			expect(ShiftPhaseRules.canStartOvertime(leaving)).to.equal(false)
 			expect(ShiftPhaseRules.startOvertime(leaving, 156)).to.equal(nil)
 			expect(ShiftPhaseRules.startOvertime(ShiftPhaseRules.initial(350, "B"), 0)).to.equal(nil)
@@ -282,7 +265,7 @@ return function()
 		end)
 
 		it("ends the shift when the clock-out countdown runs out", function()
-			local state = ShiftPhaseRules.clockOut(running(), 200)
+			local state = clockingOut(running(), 210)
 			expect(ShiftPhaseRules.tick(state, 209.9, 1)).to.equal("none")
 			expect(ShiftPhaseRules.tick(state, 210, 1)).to.equal("endShift")
 		end)
@@ -299,7 +282,7 @@ return function()
 	end)
 
 	it("returns to the lobby keeping the shift count and clearing the run", function()
-		local met = ShiftPhaseRules.markQuota(ShiftPhaseRules.clockOut(running(), 200), 400, 200)
+		local met = ShiftPhaseRules.markQuota(clockingOut(running(), 230), 400, 200)
 		local state = ShiftPhaseRules.toLobby(met)
 		expect(state.phase).to.equal("lobby")
 		expect(state.sub).to.equal("normal")

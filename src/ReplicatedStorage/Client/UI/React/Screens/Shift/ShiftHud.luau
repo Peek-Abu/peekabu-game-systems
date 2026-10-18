@@ -2,7 +2,8 @@
 --[=[
     ShiftHud: reads authoritative shift/public state and renders the compact V1 HUD (ShiftCompactHudPanel).
     Crew details are disclosed on demand. Physical-pixel sizes preserve readable text in short windows;
-    the layout hook selects the phone arrangement. Catch/scare suppression stays on the outer frame.
+    the layout hook selects the phone arrangement. Catch/scare suppression stays on the outer frame. While the crew
+    clocks out, the clock-out board (ShiftClockOutBoard) sits under the Gloom meter.
 ]=]
 
 local Players = game:GetService("Players")
@@ -21,6 +22,8 @@ local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper
 local usePaperHudScale = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperHudScale)
 local ShiftCrewViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftCrewViewModel)
 local ShiftCompactHudPanel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftCompactHudPanel)
+local ShiftClockOutBoard = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftClockOutBoard)
+local ShiftClockOutViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftClockOutViewModel)
 local CargoServiceClient = require(ReplicatedStorage.Client.Features.Cargo.CargoServiceClient)
 local usePaperViewport = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperViewport)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
@@ -85,8 +88,15 @@ local function ShiftHud(): React.ReactNode
 			names[userId] = member.DisplayName
 		end
 	end
-	local roster =
-		ShiftCrewViewModel.roster(snapshot.crew, publicPlayers, names, snapshot.truck, snapshot.sub == "clockout", now)
+	local roster = ShiftCrewViewModel.roster(
+		snapshot.crew,
+		publicPlayers,
+		names,
+		snapshot.truck,
+		snapshot.sub == "clockout",
+		now,
+		snapshot.punched
+	)
 	local bindings = keyBindings()
 	local panel = e(ShiftCompactHudPanel, {
 		view = view,
@@ -106,11 +116,16 @@ local function ShiftHud(): React.ReactNode
 			CargoServiceClient:select(slot)
 		end,
 	})
+	-- While the crew clocks out: who is out and the truck's countdown, under the Gloom meter.
+	local board = ShiftClockOutViewModel.board(snapshot, player.UserId)
 	return e("Frame", {
 		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
 		Visible = not hidden,
-	}, { panel = panel })
+	}, {
+		panel = panel,
+		clockOut = if board ~= nil then e(ShiftClockOutBoard, { view = board, phone = layout == "phone" }) else nil,
+	})
 end
 
 return ShiftHud

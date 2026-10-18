@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	ShiftCueUtils: which shift moments just happened, for the sounds and kicks (Cleanup Crew spec §7 table: quota
-	met, tier up, overtime, clock out; the shift's start and end). Compares two snapshots of the `shift` world
+	met, tier up, overtime, clock out (a crew member's punch, the truck's countdown); the shift's start and end). Compares two snapshots of the `shift` world
 	entry: the first snapshot a client sees (a late joiner's included) cues nothing, so nobody arrives to a burst
 	of horns. Also the clock-out countdown's whole second and whether the overtime ticking layer plays. Pure.
 
@@ -10,11 +10,12 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 
 type ShiftSnapshot = ShiftTypes.ShiftSnapshot
 
-export type Cue = "shiftStart" | "quotaMet" | "tierUp" | "warning" | "overtime" | "clockOut" | "shiftEnd"
+export type Cue = "shiftStart" | "quotaMet" | "tierUp" | "warning" | "overtime" | "punch" | "clockOut" | "shiftEnd"
 
 -- The performance review's jingle (ShiftAssets.JINGLE_SOUNDS).
 export type Jingle = "met" | "overtime" | "missed"
@@ -53,6 +54,9 @@ function ShiftCueUtils.cues(before: ShiftSnapshot?, after: ShiftSnapshot?): { Cu
 	elseif after.tier > before.tier then
 		table.insert(list, "tierUp")
 	end
+	if #after.punched > #before.punched then
+		table.insert(list, "punch")
+	end
 	if after.sub == "clockout" and before.sub ~= "clockout" then
 		table.insert(list, "clockOut")
 	end
@@ -71,6 +75,17 @@ function ShiftCueUtils.countdown(snapshot: ShiftSnapshot?, now: number): number?
 		return nil
 	end
 	return math.max(0, math.ceil(at - now))
+end
+
+--[=[
+	The volume scale of the countdown's tick at `second` left (ShiftCueUtils.countdown): only the last COUNTDOWN_TICKS
+	seconds tick (30 s of ticks would drown the shift), the last COUNTDOWN_LOUD louder; nil for no tick.
+]=]
+function ShiftCueUtils.tickScale(second: number?): number?
+	if second == nil or second <= 0 or second > ShiftConstants.COUNTDOWN_TICKS then
+		return nil
+	end
+	return if second <= ShiftConstants.COUNTDOWN_LOUD then ShiftConstants.COUNTDOWN_LOUD_SCALE else 1
 end
 
 --[=[

@@ -4,7 +4,7 @@
 	counters, vote counts and results into the plain snapshot published through StateSyncWorldStore;
 	`decode` is the client's trust boundary for it (the RoundSnapshotUtils pattern): a wrong type anywhere
 	rejects the whole value; absent vote counts read 0. It also carries the crew's userIds and the truck's layout
-	index, and a review's salvage offered and rating stamp (absent on a snapshot from before M3 UI: offered reads 0
+	index, who has clocked out and how many crew members are still in (absent: nobody, 0), and a review's salvage offered and rating stamp (absent on a snapshot from before M3 UI: offered reads 0
 	and the rating is derived from the quota alone).
 
 	@class ShiftSnapshotUtils
@@ -295,6 +295,8 @@ function ShiftSnapshotUtils.build(
 		results = results,
 		crew = if crew ~= nil then table.clone(crew) else {},
 		truck = truck,
+		punched = if state.punched ~= nil then table.clone(state.punched) else {},
+		crewIn = state.crewIn or 0,
 	}
 end
 
@@ -344,6 +346,11 @@ function ShiftSnapshotUtils.decode(value: WorldValue?): ShiftSnapshot?
 	if crew == nil or not truckOk then
 		return nil
 	end
+	local punched = idsOf(value.punched)
+	local crewIn, crewInOk = countOf(value.crewIn)
+	if punched == nil or not crewInOk then
+		return nil
+	end
 	local snapshot: ShiftSnapshot = {
 		phase = phase,
 		sub = sub,
@@ -364,6 +371,8 @@ function ShiftSnapshotUtils.decode(value: WorldValue?): ShiftSnapshot?
 		results = results,
 		crew = crew,
 		truck = truck,
+		punched = punched,
+		crewIn = crewIn,
 	}
 	return snapshot
 end

@@ -80,18 +80,34 @@ return function()
 		expect(statusOf(view, 2).status).to.equal("CAUGHT · back 0:00")
 	end)
 
-	it("shows aboard / NOT ABOARD only while clocking out", function()
+	it("shows a punched card as clocked out even before the truck's countdown", function()
+		local view = ShiftCrewViewModel.roster(
+			{ 1, 3 },
+			players({ [3] = { vacuuming = true } }),
+			NAMES,
+			nil,
+			false,
+			0,
+			{ 1 }
+		)
+		expect(statusOf(view, 1).status).to.equal("clocked out")
+		expect(statusOf(view, 1).box).to.equal("tick")
+		expect(statusOf(view, 3).status).to.equal("vacuuming")
+	end)
+
+	it("shows clocked out / still inside only while the truck counts down, never struck", function()
 		local crew = players({ [1] = { inTruck = true, carrying = "coffeeMachine" }, [3] = { vacuuming = true } })
-		local out = ShiftCrewViewModel.roster({ 1, 3 }, crew, NAMES, 2, true, 0)
-		expect(statusOf(out, 1).status).to.equal("in the truck bed")
-		expect(statusOf(out, 3).status).to.equal("NOT ABOARD")
-		expect(statusOf(out, 3).struck).to.equal(true)
+		local out = ShiftCrewViewModel.roster({ 1, 3 }, crew, NAMES, 2, true, 0, { 1 })
+		expect(statusOf(out, 1).status).to.equal("clocked out")
+		expect(statusOf(out, 1).tone).to.equal("ok")
+		expect(statusOf(out, 3).status).to.equal("still inside")
+		expect(statusOf(out, 3).struck).to.equal(false)
 		local normal = ShiftCrewViewModel.roster({ 1, 3 }, crew, NAMES, 2, false, 0)
 		expect(statusOf(normal, 1).status).to.equal("carrying Coffee machine")
 		expect(statusOf(normal, 3).status).to.equal("vacuuming")
 	end)
 
-	it("keeps CAUGHT above aboard / NOT ABOARD while clocking out", function()
+	it("keeps CAUGHT above clocked out / still inside while clocking out", function()
 		local view = ShiftCrewViewModel.roster(
 			{ 2 },
 			players({
@@ -116,7 +132,7 @@ return function()
 		expect(alex.struck).to.equal(true)
 	end)
 
-	it("ticks only crew in the truck bed or at the truck", function()
+	it("ticks only crew who clocked out or are at the truck", function()
 		local crew = players({
 			[1] = { carrying = "coffeeMachine", inTruck = true },
 			[2] = { caughtUntil = 106, dead = true },
@@ -130,9 +146,9 @@ return function()
 		expect(statusOf(atTruck, 1).box).to.equal("tick")
 		local room = ShiftCrewViewModel.roster({ 1 }, players({ [1] = { room = "Archive" } }), NAMES, nil, false, 0)
 		expect(statusOf(room, 1).box).to.equal("empty")
-		local out = ShiftCrewViewModel.roster({ 1, 3 }, crew, NAMES, nil, true, 100)
+		local out = ShiftCrewViewModel.roster({ 1, 3 }, crew, NAMES, nil, true, 100, { 1 })
 		expect(statusOf(out, 1).box).to.equal("tick")
-		expect(statusOf(out, 3).box).to.equal("x")
+		expect(statusOf(out, 3).box).to.equal("empty")
 	end)
 
 	it("falls back to the room, then to on shift", function()
@@ -169,10 +185,10 @@ return function()
 			NAMES,
 			nil,
 			true,
-			0
+			0,
+			{ 1, 2 }
 		)
-		expect(view.compact[1]).to.equal("Sam, Alex: in the truck bed")
-		expect(view.compact[2]).to.equal("Jo: NOT ABOARD")
+		expect(view.compact[1]).to.equal("Sam, Alex: clocked out · Jo: still inside")
 	end)
 
 	it("marks which phone line is trouble, even when it is the only line", function()

@@ -22,7 +22,9 @@
 	  the whole crew, then overtime (assets x1.5, the top tier). The sheet's prompt shows only while overtime may
 	  start (ShiftPhaseRules.canStartOvertime). The clock raises the pressure tier at 2:00 and 4:00
 	  (ShiftPhaseRules.advance); each change is announced (ShiftNoticeUtils) and fired on `changed`;
-	- clock out: the time clock at the truck starts a 10 s countdown for everyone, then ends the run;
+	- clock out (ShiftClockOutSystem, ShiftClockOutRules): each crew member punches their own card at the truck's time
+	  clock and waits in the truck's box; half or more of the crew still in punched starts the truck's 30 s countdown,
+	  and the run ends when it runs out or once everyone still in has punched (a solo punch ends it at once);
 	- analytics and the A/B variant (M5): each run's variant comes from ShiftAnalyticsSystem.pickVariant;
 	  ShiftAnalyticsWatchSystem turns the shift's and the other features' signals into the spec §6.6 events;
 	- results: ShiftResultsUtils builds the review; the crew votes Another shift / Back to depot (ShiftVoteSystem;
@@ -65,6 +67,7 @@ local ShiftSiteSystem = require(ShiftServer.Systems.ShiftSiteSystem)
 local ShiftVoteSystem = require(ShiftServer.Systems.ShiftVoteSystem)
 local ShiftOvertimeSystem = require(ShiftServer.Systems.ShiftOvertimeSystem)
 local ShiftTimeClockSystem = require(ShiftServer.Systems.ShiftTimeClockSystem)
+local ShiftClockOutSystem = require(ShiftServer.Systems.ShiftClockOutSystem)
 local ShiftAnalyticsWatchSystem = require(ShiftServer.Systems.ShiftAnalyticsWatchSystem)
 local ShiftReviewSystem = require(ShiftServer.Systems.ShiftReviewSystem)
 local ShiftCrewStatusSystem = require(ShiftServer.Systems.ShiftCrewStatusSystem)
@@ -299,12 +302,27 @@ local banking: ShiftBankingSystem.Deps = {
 	end,
 }
 
-local overtime = ShiftOvertimeSystem.new({
-	getState = function(): ShiftTypes.ShiftState
-		return state
-	end,
+local function getState(): ShiftTypes.ShiftState
+	return state
+end
+
+-- Each crew member's own time card; a member who punched waits in the truck and may no longer sign for overtime.
+local clockOuts = ShiftClockOutSystem.new({
+	getState = getState,
 	setState = setState,
+	now = now,
+	crew = function(): { Player }
+		return trip:crew()
+	end,
 	eligible = trip.eligible,
+})
+-- The truck's time clock: a crew member who reaches it punches their card.
+local timeClock = ShiftTimeClockSystem.new({ clockOut = clockOuts.punch, eligible = trip.eligible })
+
+local overtime = ShiftOvertimeSystem.new({
+	getState = getState,
+	setState = setState,
+	eligible = clockOuts.working,
 	now = now,
 	changed = changed,
 })
@@ -394,7 +412,7 @@ local ShiftServiceServer: ShiftServiceServer = {
 		Configures Round and Death, takes over banking and the time clock, follows Round,
 		listens for votes and starts the clock.
 	]=]
-	start = function(self)
+	start = function(_self)
 		RoundServiceServer:configure({
 			minPlayers = ShiftConstants.MIN_PLAYERS,
 			countdown = ShiftConstants.ARRIVAL_SECONDS,
@@ -413,11 +431,9 @@ local ShiftServiceServer: ShiftServiceServer = {
 		table.insert(stoppers, ShiftAnalyticsWatchSystem.start(changed, trip))
 		table.insert(stoppers, ShiftReviewSystem.start(roster, isRunning))
 		table.insert(stoppers, ShiftCrewStatusSystem.start(trip, isRunning))
-		local function clockOutBy(player: Player)
-			self:clockOut(player)
-		end
-		table.insert(stoppers, ShiftTimeClockSystem.new({ clockOut = clockOutBy, eligible = trip.eligible }).start())
+		table.insert(stoppers, timeClock.start())
 		table.insert(stoppers, overtime.start())
+		table.insert(stoppers, clockOuts.start())
 
 		local phases = RoundServiceServer.phaseChanged:Connect(onRoundPhase)
 		local elapsed = 0
@@ -451,22 +467,11 @@ local ShiftServiceServer: ShiftServiceServer = {
 	end,
 
 	--[=[
-		Starts the 10 s clock-out countdown (the time clock's prompt). False when it cannot (not running, or
-		already counting down).
+		Punches `player`'s time card (the time clock's prompt; ShiftClockOutSystem): they wait in the truck, and the
+		truck's countdown or the end follows. False when refused (no player, not running, not crew, already punched).
 	]=]
 	clockOut = function(_self, player)
-		local nextState = ShiftPhaseRules.clockOut(state, now())
-		if nextState == nil then
-			return false
-		end
-		setState(nextState)
-		local who = if player ~= nil then player.DisplayName else "Someone"
-		ToastServiceServer:send("all", {
-			text = `{who} is clocking out!`,
-			style = ShiftConstants.TOAST_STICKY,
-			duration = ShiftConstants.CLOCK_OUT_SECONDS,
-		})
-		return true
+		return player ~= nil and clockOuts.punch(player)
 	end,
 
 	--[=[

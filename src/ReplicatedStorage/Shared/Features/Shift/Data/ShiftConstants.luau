@@ -138,7 +138,10 @@ return table.freeze({
 	-- A respawn (after a catch) blinks black this long, then fades out: no load screen.
 	TRANSIT_BLINK_SECONDS = 0.25,
 	TRANSIT_WAIT_TEXT = "Waiting for the rest of the crew.",
-	CLOCK_OUT_SECONDS = 10,
+	-- Clocking out (ShiftClockOutRules): each crew member punches their own card, then waits in the truck's box. Once
+	-- half or more of the crew still in have punched, the truck leaves TRUCK_LEAVES_SECONDS later; when everyone still
+	-- in has punched (a solo punch too) it leaves at once.
+	TRUCK_LEAVES_SECONDS = 30,
 	-- How long the results vote stays open.
 	VOTE_SECONDS = 30,
 	MIN_PLAYERS = 1,
@@ -227,6 +230,8 @@ return table.freeze({
 	TIER_TRAUMA = 0.2,
 	OVERTIME_TRAUMA = 0.3,
 	TICKING_LAYER = "shiftOvertime",
+	-- The truck's countdown ticks only for its last COUNTDOWN_TICKS seconds, louder for the last COUNTDOWN_LOUD.
+	COUNTDOWN_TICKS = 10,
 	COUNTDOWN_LOUD = 3,
 	COUNTDOWN_LOUD_SCALE = 1.6,
 	FEEDBACK_INTERVAL = 0.1,

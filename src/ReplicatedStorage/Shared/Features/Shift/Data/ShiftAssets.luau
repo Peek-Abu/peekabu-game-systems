@@ -38,7 +38,7 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	shiftOvertimeSting = { assetId = "rbxassetid://95766845390235", group = "SFX", volume = 0.9 },
 	-- The overtime layer: a clock ticking under everything (looped).
 	shiftTicking = { assetId = "rbxassetid://118452299844030", group = "Music", volume = 0.5, looped = true },
-	-- Two honks: someone clocked out.
+	-- Two honks: the truck's countdown started (half the crew clocked out), or it leaves at once.
 	shiftClockOutHorn = { assetId = "rbxassetid://121905159563801", group = "SFX", volume = 1 },
 	shiftCountdownTick = { assetId = "rbxassetid://135218748578686", group = "UI", volume = 0.6, maxConcurrent = 2 },
 	-- The toast styles' sounds (ShiftConstants.TOAST_STYLES): a paper rustle and a rubber stamp.
@@ -52,6 +52,8 @@ local CUE_SOUNDS: { [string]: string } = {
 	tierUp = "shiftTierSting",
 	warning = "shiftWarningChime",
 	overtime = "shiftOvertimeSting",
+	-- A crew member punched their card (the same punch clock as the shift's start), then the truck honks its countdown.
+	punch = "shiftPunchIn",
 	clockOut = "shiftClockOutHorn",
 	-- shiftEnd has no sound: the results jingle opens at the same moment (the truck horn there was dropped 2026-10-17).
 }

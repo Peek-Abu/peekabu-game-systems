@@ -4,9 +4,9 @@
 	crew chooses to leave or to begin optional overtime recovery; staying is a deliberate choice). The truck's
 	overtime sheet, beside the time clock inside the box, carries the OVERTIME_KIND prompt ("Start overtime", held
 	OVERTIME_HOLD seconds); like the clock, it counts only from an empty-handed crew member standing in front of it
-	(ShiftTimeClockSystem.reaches). Any one crew member signing starts the overtime warning for the whole crew, the
-	same any-player rule as the clock out, and is announced by name so nobody is surprised; anyone may still clock
-	out during the warning or in overtime. `sync` shows the prompt exactly while ShiftPhaseRules.canStartOvertime holds; `start` runs it on every
+	(ShiftTimeClockSystem.reaches). Any one crew member still working (not clocked out: Deps.eligible is
+	ShiftClockOutSystem.working) signing starts the overtime warning for the whole crew, and is announced by name so
+	nobody is surprised; each crew member may still clock out during the warning or in overtime. `sync` shows the prompt exactly while ShiftPhaseRules.canStartOvertime holds; `start` runs it on every
 	shift state change and takes the prompt's triggers.
 
 	Kept out of ShiftServiceServer (the service is at the 400-line cap). The decisions are the specced

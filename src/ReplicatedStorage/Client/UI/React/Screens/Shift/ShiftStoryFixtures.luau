@@ -21,6 +21,9 @@ export type SnapshotChanges = {
 	tier: number?,
 	sub: ShiftTypes.ShiftSub?,
 	clockOutAt: number?,
+	-- Who has clocked out and how many crew members are still in (default: nobody of 3).
+	punched: { number }?,
+	crewIn: number?,
 }
 
 local NAMES: { [number]: string } = { [1] = "Sam", [2] = "Alex", [3] = "Jo" }
@@ -65,6 +68,8 @@ function ShiftStoryFixtures.snapshot(changes: SnapshotChanges): ShiftTypes.Shift
 		votesDepot = 0,
 		crew = { 1, 2, 3 },
 		truck = 2,
+		punched = changes.punched or {},
+		crewIn = changes.crewIn or 3,
 	}
 end
 

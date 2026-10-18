@@ -4,7 +4,8 @@
 	shift follows Round's phases (lobby → starting → running → results) but keeps `results` itself until the
 	crew votes: Round is configured to leave results at once (it cannot be held or cut short).
 
-	While running, two things move independently: the clock-out countdown (`sub`) and the pacing `stage`.
+	While running, two things move independently: the truck's clock-out countdown (`sub`, ShiftClockOutRules) and the
+	pacing `stage`.
 	Meeting the quota starts the Manager's break (a regroup window); `advance` ends it at its deadline, back to the
 	normal stage. Overtime is opt-in (docs/cleanup-crew-lore.md "Contract sequence"): only `startOvertime`, a crew
 	member's deliberate action at the truck, begins the overtime warning, which `advance` turns into overtime at its
@@ -22,6 +23,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RoundTypes = require(ReplicatedStorage.Shared.Features.Round.Data.RoundTypes)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
+local ShiftClockOutRules = require(script.Parent.ShiftClockOutRules)
 
 type ShiftState = ShiftTypes.ShiftState
 type ShiftStage = ShiftTypes.ShiftStage
@@ -135,20 +137,6 @@ function ShiftPhaseRules.follow(state: ShiftState, round: RoundTypes.RoundState,
 end
 
 --[=[
-	Starts the clock-out countdown. Only while running and not already counting down. The pacing stage is
-	untouched (overtime still pays ×1.5 during the countdown).
-]=]
-function ShiftPhaseRules.clockOut(state: ShiftState, now: number): ShiftState?
-	if state.phase ~= "running" or state.sub == "clockout" then
-		return nil
-	end
-	local nextState = table.clone(state)
-	nextState.sub = "clockout"
-	nextState.clockOutAt = now + ShiftConstants.CLOCK_OUT_SECONDS
-	return nextState
-end
-
---[=[
 	Marks the quota met the first time clearance reaches it during a running shift, and starts the Manager's
 	break (BREAK_SECONDS from `now`).
 ]=]
@@ -243,14 +231,13 @@ end
 
 --[=[
 	What to do on this clock step: start a countdown (someone is waiting in the lobby), end the shift (the
-	clock-out countdown ran out), resolve the vote (its time is up), or nothing.
+	truck left: ShiftClockOutRules.countdownOver), resolve the vote (its time is up), or nothing.
 ]=]
 function ShiftPhaseRules.tick(state: ShiftState, now: number, present: number): ShiftTypes.TickAction
 	if state.phase == "lobby" and present >= ShiftConstants.MIN_PLAYERS then
 		return "start"
 	end
-	local clockOutAt = state.clockOutAt
-	if state.phase == "running" and state.sub == "clockout" and clockOutAt ~= nil and now >= clockOutAt then
+	if ShiftClockOutRules.countdownOver(state, now) then
 		return "endShift"
 	end
 	local voteEndsAt = state.voteEndsAt

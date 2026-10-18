@@ -1,4 +1,7 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local ShiftCueUtils = require(script.Parent.ShiftCueUtils)
+local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 
 local function snapshot(overrides)
 	local base = {
@@ -15,6 +18,8 @@ local function snapshot(overrides)
 		variant = "B",
 		votesAnother = 0,
 		votesDepot = 0,
+		punched = {},
+		crewIn = 0,
 	}
 	for key, value in overrides or {} do
 		base[key] = value
@@ -68,6 +73,24 @@ return function()
 			expect(list[1]).to.equal("clockOut")
 		end)
 
+		it("punches a card when a crew member clocks out, once per punch", function()
+			local list = ShiftCueUtils.cues(snapshot({ crewIn = 3 }), snapshot({ punched = { 4 }, crewIn = 3 }))
+			expect(#list).to.equal(1)
+			expect(list[1]).to.equal("punch")
+			local one = snapshot({ punched = { 4 }, crewIn = 3 })
+			expect(#ShiftCueUtils.cues(one, one)).to.equal(0)
+		end)
+
+		it("punches, then honks, when a punch starts the truck's countdown", function()
+			local list = ShiftCueUtils.cues(
+				snapshot({ crewIn = 2 }),
+				snapshot({ punched = { 4 }, crewIn = 2, sub = "clockout", clockOutAt = 130 })
+			)
+			expect(#list).to.equal(2)
+			expect(list[1]).to.equal("punch")
+			expect(list[2]).to.equal("clockOut")
+		end)
+
 		it("says nothing between two lobby snapshots", function()
 			expect(#ShiftCueUtils.cues(snapshot({ phase = "lobby" }), snapshot({ phase = "lobby", shift = 2 }))).to.equal(
 				0
@@ -89,6 +112,20 @@ return function()
 				nil
 			)
 			expect(ShiftCueUtils.countdown(nil, 100)).to.equal(nil)
+		end)
+	end)
+
+	describe("tickScale", function()
+		it("ticks only the countdown's last seconds, louder at the very end", function()
+			expect(ShiftCueUtils.tickScale(ShiftConstants.COUNTDOWN_TICKS + 1)).to.equal(nil)
+			expect(ShiftCueUtils.tickScale(ShiftConstants.COUNTDOWN_TICKS)).to.equal(1)
+			expect(ShiftCueUtils.tickScale(ShiftConstants.COUNTDOWN_LOUD)).to.equal(ShiftConstants.COUNTDOWN_LOUD_SCALE)
+			expect(ShiftCueUtils.tickScale(1)).to.equal(ShiftConstants.COUNTDOWN_LOUD_SCALE)
+		end)
+
+		it("is silent at zero and without a countdown", function()
+			expect(ShiftCueUtils.tickScale(0)).to.equal(nil)
+			expect(ShiftCueUtils.tickScale(nil)).to.equal(nil)
 		end)
 	end)
 

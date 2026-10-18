@@ -24,6 +24,7 @@ local function harness(carrying, crew)
 	log.system = ShiftTimeClockSystem.new({
 		clockOut = function(player)
 			table.insert(log.clockedOut, player)
+			return true
 		end,
 		carrying = function()
 			return carrying == true

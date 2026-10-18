@@ -46,6 +46,7 @@ local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync
 local Rules = require(ReplicatedStorage.Client.Features.Shift.Rules.ShiftPromptRules)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTimeClockRules = require(ReplicatedStorage.Shared.Features.Shift.Rules.ShiftTimeClockRules)
+local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
 local ranges: { [ProximityPrompt]: number } = {}
 local chosen: ProximityPrompt? = nil
 local nextId = 0
@@ -97,13 +98,15 @@ local function kindOf(prompt: ProximityPrompt): string?
 end
 
 -- The truck's paperwork (Clock out, Start overtime) is a candidate only with empty hands, in front of it in the box:
--- the rule the server refuses by, so it never takes the key from Bank cargo. Every other prompt passes.
+-- the rule the server refuses by, so it never takes the key from Bank cargo, and never once the local player has
+-- clocked out (they wait in the truck; the server refuses them too). Every other prompt passes.
 local function paperworkUsable(prompt: ProximityPrompt, target: Instance, root: BasePart): boolean
 	local kind = kindOf(prompt)
 	if kind ~= ShiftConstants.CLOCK_OUT_KIND and kind ~= ShiftConstants.OVERTIME_KIND then
 		return true
 	end
-	if not target:IsA("BasePart") then
+	local snapshot = ShiftStore.snapshot()
+	if not target:IsA("BasePart") or (snapshot ~= nil and table.find(snapshot.punched, Players.LocalPlayer.UserId)) then
 		return false
 	end
 	local ok =

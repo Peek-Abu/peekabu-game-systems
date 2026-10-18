@@ -7,7 +7,7 @@
 	cargo up the ramp to bank it can never clock the crew out. `reaches` is shared with the overtime sheet.
 
 	Kept out of ShiftServiceServer (the service is at the 400-line cap). The decision is the specced
-	ShiftTimeClockRules; the clock out itself is the service's (Deps.clockOut), and what a player carries is Carry's
+	ShiftTimeClockRules; the punch itself is ShiftClockOutSystem's (Deps.clockOut), and what a player carries is Carry's
 	unless a spec hands in a fake.
 
 	@class ShiftTimeClockSystem
@@ -33,8 +33,8 @@ if not InteractionRegistry.has(ShiftConstants.CLOCK_OUT_KIND) then
 end
 
 export type Deps = {
-	-- Starts the clock-out countdown (the service's clockOut).
-	clockOut: (player: Player) -> (),
+	-- Punches the player's time card (ShiftClockOutSystem.punch); false when refused.
+	clockOut: (player: Player) -> boolean,
 	-- Whether a player is carrying something; absent = Carry.
 	carrying: ((player: Player) -> boolean)?,
 	-- Whether a player is on the shift's crew (ShiftTripSystem.eligible): nobody else can end the crew's shift.
@@ -44,7 +44,7 @@ export type Deps = {
 export type ShiftTimeClockSystem = {
 	-- Takes the clock's triggers; returns the stopper.
 	start: () -> () -> (),
-	-- `player` held Clock out on `target`: clocks out when they reach it. False when refused.
+	-- `player` held Clock out on `target`: punches their card when they reach it. False when refused.
 	punch: (player: Player, target: Instance) -> boolean,
 }
 
@@ -85,8 +85,7 @@ function ShiftTimeClockSystem.new(deps: Deps): ShiftTimeClockSystem
 			if not deps.eligible(player) or not ShiftTimeClockSystem.reaches(player, target, carrying(player)) then
 				return false
 			end
-			deps.clockOut(player)
-			return true
+			return deps.clockOut(player)
 		end,
 	}
 	return system

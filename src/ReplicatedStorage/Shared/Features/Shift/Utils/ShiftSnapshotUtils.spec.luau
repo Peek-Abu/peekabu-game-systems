@@ -51,6 +51,30 @@ return function()
 		expect(snapshot.clockOutAt).to.equal(500)
 	end)
 
+	it("carries who clocked out and how many are still in", function()
+		local snapshot = ShiftSnapshotUtils.decode(
+			ShiftSnapshotUtils.build(state({ punched = { 4, 9 }, crewIn = 3 }), 0, 0, 0, 0, nil)
+		)
+		expect(#snapshot.punched).to.equal(2)
+		expect(snapshot.punched[2]).to.equal(9)
+		expect(snapshot.crewIn).to.equal(3)
+	end)
+
+	it("reads nobody clocked out and 0 still in when they are absent", function()
+		local snapshot = ShiftSnapshotUtils.decode(ShiftSnapshotUtils.build(state(), 0, 0, 0, 0, nil))
+		expect(#snapshot.punched).to.equal(0)
+		expect(snapshot.crewIn).to.equal(0)
+	end)
+
+	it("rejects a malformed clock-out list", function()
+		local value = ShiftSnapshotUtils.build(state(), 0, 0, 0, 0, nil)
+		value.punched = { "Sam" }
+		expect(ShiftSnapshotUtils.decode(value)).to.equal(nil)
+		local count = ShiftSnapshotUtils.build(state(), 0, 0, 0, 0, nil)
+		count.crewIn = "3"
+		expect(ShiftSnapshotUtils.decode(count)).to.equal(nil)
+	end)
+
 	it("round-trips results and votes", function()
 		local value = ShiftSnapshotUtils.build(
 			state({ phase = "results", voteEndsAt = 1000, quotaMet = true }),

@@ -72,8 +72,28 @@ The depot contract board and a one-card arrival screen carry this; no tutorial n
    returns at the normal tier. **Overtime is opt-in:** any crew member holds **Start overtime** on the
    overtime sheet beside the time clock → "**Overtime in 0:30: assets ×1.5. Bank your cargo and
    regroup.**" → overtime at the top tier until the timer ends. The clock alone never starts it.
-6. **Clock out** at the truck any time: anyone presses it, a 10 s countdown is announced to all;
-   unbanked cargo is lost from this run only. Timer expiry also ends the shift with what is banked.
+6. **Clock out** at the truck any time, **one card per crew member** (approved 2026-10-17; replaces "anyone
+   presses it, a 10 s countdown for all"). Each crew member holds **Clock out** on the time clock inside the
+   truck's box to punch their own card, and then waits in the truck: they are moved onto the bed at their
+   crew spot and kept in the box (walking off puts them back), where the Manager never sees, hears or
+   catches anyone. Once punched you are out: no going back in, no overtime sheet.
+   - The crew **still in** = the crew in the server minus whoever is caught right now (dead and
+     spectating until rehired); leavers are gone from the crew.
+   - **Everyone still in punched** → the truck leaves at once (a solo punch ends the shift instantly).
+   - **Half or more of the crew still in punched** (1 of 2, 2 of 3, 2 of 4) → "**TRUCK LEAVES IN 30**"
+     for everyone; at 0 the shift ends. Anyone still inside then is **paid the same** as the rest (a
+     kids' game: no penalty). The countdown never stops or moves later; it only ends sooner.
+   - A leave or a catch recomputes (every 0.25 s and at each punch): if everyone left still in has
+     punched, the truck leaves at once; a catch can also bring the share to half and start the countdown.
+   - Feedback: everyone sees the clock-out board under the Gloom meter ("2/4 CLOCKED OUT", a time card
+     per crew member still in, the countdown big in coral for its last 10 s), a sticky note and the
+     punch-clock sound per punch, and a stamp + the truck's horn when the countdown starts; it ticks only
+     for its last 10 s. The crew roster reads "clocked out" / "still inside".
+   - Overtime keeps paying ×1.5 until the truck leaves; the overtime sheet can no longer be started once
+     the countdown runs (and never by a punched member).
+   Code: `ShiftClockOutRules` (pure decisions), `ShiftClockOutSystem` (punch, board, settle, hold),
+   `ShiftClockOutViewModel` / `ShiftClockOutBoard` (HUD); `ShiftConstants.TRUCK_LEAVES_SECONDS`.
+   Unbanked cargo is lost from this run only. Timer expiry also ends the shift with what is banked.
 7. **Results:** the "performance review" (cleared, dollars earned, catches, assets recovered, joke awards).
    Party vote: **Another shift** (reset in the same server) or **Back to depot** (teleport).
 
@@ -153,7 +173,7 @@ searchable desk/locker.
 - Party size: solo gets hearing ×0.75 and chase speed −1.
 - Quota met → the Manager's break 30 s → normal stage. Overtime only by choice: a crew member holds the
   overtime sheet's **Start overtime** prompt (1.5 s hold, shown only while overtime may start; any one
-  member decides for the crew, like the clock out, and is named in a toast) → overtime warning 30 s →
+  member still working decides for the crew and is named in a toast) → overtime warning 30 s →
   overtime at the top tier. Clocking out stays possible throughout (`ShiftPhaseRules.startOvertime`,
   `ShiftOvertimeSystem`).
 - No threat budget, no extra entities. Add only if the simple knobs fail to pace well.
@@ -259,7 +279,7 @@ phones ringing in empty rooms, an elevator dinging on its own, typing that stops
 | Quota met | "QUOTA MET" stamp, truck horn |
 | Tier up | lights flicker, sticky note |
 | Overtime | lighting shifts dim red, ticking music layer |
-| Clock out | horn honks, large countdown |
+| Clock out | a punch-clock "ka-chunk" + sticky note per punch; horn honks + TRUCK LEAVES stamp when the truck's countdown starts; the clock-out board with the countdown, ticking its last 10 s |
 | Caught | §4 catch sequence |
 
 Harlow's body: a tall, too-thin suited R15 rig built from a HumanoidDescription in code, so no

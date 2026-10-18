@@ -8,7 +8,8 @@
 -- Mirrors Round's phases, except that Shift holds `results` itself until the crew votes.
 export type ShiftPhase = "lobby" | "starting" | "running" | "results"
 
--- The clock-out countdown. Independent of the pacing stage: a crew may clock out during the break or overtime.
+-- The truck's countdown (the crew is clocking out: ShiftClockOutRules). Independent of the pacing stage: a crew may
+-- clock out during the break or overtime.
 export type ShiftSub = "normal" | "clockout"
 
 -- Pacing after the quota (spec §4 "Pacing", opt-in per docs/cleanup-crew-lore.md): break (the Manager rests) → normal;
@@ -49,13 +50,17 @@ export type ShiftState = {
 	startedAt: number?,
 	-- starting: the transit's deadline (ShiftTransitSystem); running: the shift's end.
 	endsAt: number?,
-	-- When the clock-out countdown ends the shift.
+	-- When the truck leaves (the clock-out countdown ends the shift).
 	clockOutAt: number?,
 	-- When the results vote closes.
 	voteEndsAt: number?,
 	quota: number,
 	quotaMet: boolean,
 	variant: Variant,
+	-- The crew members who punched their card this run (sorted userIds; nil: nobody yet), and how many crew members
+	-- are still in the shift (in the server and not caught; nil until first counted). ShiftClockOutRules.
+	punched: { number }?,
+	crewIn: number?,
 }
 
 -- The performance review's overall stamp (Figma 35:1096): quota missed, met, or met with the salvage threshold.
@@ -148,6 +153,10 @@ export type ShiftSnapshot = {
 	crew: { number },
 	-- The truck the crew came in (the depot's layout index), when the depart payload carried a valid one.
 	truck: number?,
+	-- Who has clocked out (sorted userIds) and how many crew members are still in the shift ("2/4 CLOCKED OUT"); empty
+	-- and 0 outside a run.
+	punched: { number },
+	crewIn: number,
 }
 
 -- One player held by a transit (the load screen while the office is built and they are placed in its truck). `id` is
