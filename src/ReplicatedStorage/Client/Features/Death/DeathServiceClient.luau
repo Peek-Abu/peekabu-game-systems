@@ -25,6 +25,7 @@ local CameraServiceClient = require(ReplicatedStorage.Client.Features.Camera.Cam
 local InputActionRegistry = require(ReplicatedStorage.Client.Features.Input.Data.InputActionRegistry)
 local InputServiceClient = require(ReplicatedStorage.Client.Features.Input.InputServiceClient)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
+local DeathRemainsSystem = require(ReplicatedStorage.Client.Features.Death.Systems.DeathRemainsSystem)
 
 local enabled = true
 local filter: ((userId: number) -> boolean)? = nil
@@ -165,6 +166,8 @@ local DeathServiceClient: DeathServiceClient = {
 			end)
 		)
 		table.insert(stoppers, endSpectating)
+		-- Old characters: the server's Destroy reaches this client only as a removal (DeathRemainsSystem).
+		table.insert(stoppers, DeathRemainsSystem.start())
 	end,
 
 	stop = function(_self)
