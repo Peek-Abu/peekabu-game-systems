@@ -209,6 +209,37 @@ return function()
 			local visual = Art.attach(a, "building", "floorTile")
 			expect(visual:FindFirstChildWhichIsA("BasePart", true).Size).to.equal(a.Size)
 		end)
+		it("flags a solid building or furniture proxy as a camera occluder while its art shows", function()
+			local ReplicatedStorage = game:GetService("ReplicatedStorage")
+			local ATTRIBUTE = require(ReplicatedStorage.Shared.Features.Camera.Data.CameraOccluderConstants).ATTRIBUTE
+			for _, family in { "building", "furniture" } do
+				local source = template("art-spec-map-a", "solid" .. family)
+				source.Parent = folder(folder(kitRoot, "art-spec-map-a"), family)
+			end
+			template("art-spec-map-a", "monitor")
+			local wall = root(mapA)
+			Art.attach(wall, "building", "solidbuilding")
+			expect(wall:GetAttribute(ATTRIBUTE)).to.equal(true)
+			Art.setHidden(wall, true)
+			expect(wall:GetAttribute(ATTRIBUTE)).to.equal(nil)
+			Art.setHidden(wall, false)
+			expect(wall:GetAttribute(ATTRIBUTE)).to.equal(true)
+			Art.detach(wall)
+			expect(wall:GetAttribute(ATTRIBUTE)).to.equal(nil)
+
+			local cabinet = root(mapA)
+			expect(Art.attach(cabinet, "furniture", "solidfurniture")).never.to.equal(nil)
+			expect(cabinet:GetAttribute(ATTRIBUTE)).to.equal(true)
+
+			-- A see-through prop (non-colliding) and cargo (carried, loose) never stop the camera.
+			local prop = root(mapA)
+			prop.CanCollide = false
+			Art.attach(prop, "furniture", "solidfurniture")
+			expect(prop:GetAttribute(ATTRIBUTE)).to.equal(nil)
+			local cargo = root(mapA)
+			Art.attach(cargo, "cargo", "monitor")
+			expect(cargo:GetAttribute(ATTRIBUTE)).to.equal(nil)
+		end)
 	end)
 	it("normalizes an authored positive-Z front within a rotated root without changing its source", function()
 		local source = template("art-spec-map-a", "monitor")

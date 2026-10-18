@@ -1,7 +1,11 @@
 --!strict
 -- Approved artist geometry decorates existing authoritative roots. No global active map/kit.
 -- Proxy dimensions are fixed per attachment; reattach after a deliberate root Size change.
+-- A solid (colliding) building or furniture proxy is flagged CameraOccluderConstants.ATTRIBUTE while its art shows:
+-- the proxy is invisible, so the engine's Poppercam looks straight through it, and the camera's own occlusion pass
+-- (CameraOcclusionSystem) needs the flag to stop at the art's outer face instead of inside the wall.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CameraOccluderConstants = require(ReplicatedStorage.Shared.Features.Camera.Data.CameraOccluderConstants)
 local ArtShared = ReplicatedStorage.Shared.Features.Art
 local ArtTypes = require(ArtShared.Data.ArtTypes)
 local ArtKitRegistry = require(ArtShared.Data.ArtKitRegistry)
@@ -12,6 +16,8 @@ type VisualRecord = {
 	originalRootTransparency: number,
 	transparency: { [BasePart]: number },
 	connections: { RBXScriptConnection },
+	-- Whether the proxy stands in for solid art the camera must not pass (CameraOccluderConstants).
+	occludes: boolean,
 }
 export type Controller = {
 	resolveKit: (instance: Instance) -> string,
@@ -59,6 +65,7 @@ local function create(assetRoot: Instance?): Controller
 		end
 		records[root] = nil
 		root:SetAttribute("ArtSupportSurfaceY", nil)
+		root:SetAttribute(CameraOccluderConstants.ATTRIBUTE, nil)
 		for _, connection in record.connections do
 			connection:Disconnect()
 		end
@@ -75,6 +82,7 @@ local function create(assetRoot: Instance?): Controller
 		for part, transparency in record.transparency do
 			part.Transparency = if hidden then 1 else transparency
 		end
+		root:SetAttribute(CameraOccluderConstants.ATTRIBUTE, if record.occludes and not hidden then true else nil)
 	end
 
 	function ArtVisualSystem.attach(
@@ -201,6 +209,7 @@ local function create(assetRoot: Instance?): Controller
 			originalRootTransparency = originalTransparency,
 			transparency = transparency,
 			connections = {},
+			occludes = (family == "building" or family == "furniture") and root.CanCollide,
 		}
 		records[root] = record
 		local support = template:GetAttribute("SupportSurfaceY")
@@ -231,6 +240,7 @@ local function create(assetRoot: Instance?): Controller
 				end
 				records[root] = nil
 				root:SetAttribute("ArtSupportSurfaceY", nil)
+				root:SetAttribute(CameraOccluderConstants.ATTRIBUTE, nil)
 				for _, connection in record.connections do
 					connection:Disconnect()
 				end

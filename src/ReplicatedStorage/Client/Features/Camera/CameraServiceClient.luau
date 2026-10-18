@@ -27,6 +27,8 @@ local CameraConstants = require(CameraClient.Data.CameraConstants)
 local CameraMotionFormulas = require(CameraClient.Utils.CameraMotionFormulas)
 local CameraModeTracker = require(CameraClient.State.CameraModeTracker)
 local CameraEffectTracker = require(CameraClient.State.CameraEffectTracker)
+local CameraOcclusionFormulas = require(CameraClient.Utils.CameraOcclusionFormulas)
+local CameraOcclusionSystem = require(CameraClient.Systems.CameraOcclusionSystem)
 local UISuppression = require(ReplicatedStorage.Client.UI.Suppression.UISuppression)
 
 type ModeDef = CameraTypes.ModeDef
@@ -66,6 +68,9 @@ local modifierErrors = 0
 local shakeScale = 1
 -- Held FOV offsets by owner (setFovOffset): unlike a kick they stay until their owner changes or clears them.
 local fovOffsets: { [string]: number? } = {}
+-- The occlusion pass's current limit (studs from the focus) while it holds the camera in; nil = not holding.
+local occlusionLimit: number? = nil
+local occlusionPulls = 0
 
 local function heldFov(): number
 	local total = 0
@@ -100,6 +105,49 @@ local function restoreEngine(camera: Camera)
 		changedSubject = false
 	end
 	followCFrame = nil
+end
+
+-- What the occlusion sweep looks through: every player's character (the engine's Poppercam does the same).
+local function characters(): { Instance }
+	local list: { Instance } = {}
+	for _, player in Players:GetPlayers() do
+		local character = player.Character
+		if character ~= nil then
+			table.insert(list, character)
+		end
+	end
+	return list
+end
+
+local function subjectPart(camera: Camera): BasePart?
+	local subject = camera.CameraSubject
+	if subject ~= nil and subject:IsA("Humanoid") then
+		return subject.RootPart
+	elseif subject ~= nil and subject:IsA("BasePart") then
+		return subject
+	end
+	return nil
+end
+
+-- Our wall check over the engine's (CameraOcclusionSystem): pulls the engine's third-person camera in front of any
+-- wall, proxy or prop between it and its focus; snaps in, eases back out (CameraOcclusionFormulas).
+local function occlude(camera: Camera, dt: number)
+	local focus = camera.Focus.Position
+	local position = camera.CFrame.Position
+	local engine = (position - focus).Magnitude
+	if engine < CameraConstants.OCCLUSION_MIN_DISTANCE then
+		occlusionLimit = nil
+		return
+	end
+	local clear = CameraOcclusionSystem.clearance(focus, position, characters(), subjectPart(camera))
+	local limit = CameraOcclusionFormulas.limit(occlusionLimit, clear, dt, CameraConstants.OCCLUSION_RELEASE)
+	if not CameraOcclusionFormulas.applies(engine, limit) then
+		occlusionLimit = nil
+		return
+	end
+	occlusionLimit = limit
+	occlusionPulls += 1
+	camera.CFrame += (position - focus).Unit * (limit - engine)
 end
 
 -- Applies a newly-topped mode's engine settings (once, when the top changes).
@@ -165,6 +213,14 @@ local function step(dt: number)
 	local modeCFrame, modeFov = evaluate(camera, def, dt)
 	if modeCFrame ~= nil then
 		camera.CFrame = modeCFrame
+	end
+	-- Only while the engine drives a third-person view: an authored shot (fixed, follow, custom) frames itself.
+	local engineView = (def == nil or (def.kind == "default" and def.firstPerson ~= true))
+		and camera.CameraType == Enum.CameraType.Custom
+	if engineView then
+		occlude(camera, dt)
+	else
+		occlusionLimit = nil
 	end
 
 	effects:step(dt)
@@ -272,6 +328,7 @@ local CameraServiceClient: CameraServiceClient = {
 			camera.FieldOfView = baseFov
 		end
 		appliedToken = 0
+		occlusionLimit = nil
 		effects:reset()
 		table.clear(fovOffsets)
 	end,
@@ -341,6 +398,8 @@ local CameraServiceClient: CameraServiceClient = {
 			fovKicks = effects:activeKicks(),
 			modifiers = #modifiers,
 			modifierErrors = modifierErrors,
+			occlusionLimit = occlusionLimit or 0,
+			occlusionPulls = occlusionPulls,
 		}
 	end,
 }

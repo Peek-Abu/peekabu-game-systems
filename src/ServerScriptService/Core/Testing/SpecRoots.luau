@@ -145,6 +145,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.Features.Input.Data.InputTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Client.Features.Camera.Data.CameraTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Client.Features.Camera.Data.CameraConstants"] = "static tuning values (no logic)",
+	["ReplicatedStorage.Shared.Features.Camera.Data.CameraOccluderConstants"] = "static attribute name (no logic)",
 	["ReplicatedStorage.Shared.Features.Sound.Data.SoundTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Features.Sound.Data.SoundConstants"] = "static tuning values (no logic)",
 	["ReplicatedStorage.Shared.Features.Sound.Net.SoundEvents"] = "ByteNet packet definitions (no logic)",
