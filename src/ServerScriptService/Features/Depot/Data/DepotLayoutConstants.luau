@@ -49,6 +49,41 @@ return table.freeze({
 	RAMP_DEPTH = 4.5,
 	TRUCK_WIDTH = 15,
 	BOARD_SIZE = Vector3.new(12, 8, 1),
+	-- The contract board's body (DepotBoardVisualSystem): its sign is drawn on the board part's front face, so this is
+	-- everything behind it, INSET from the part's outline so the work-order card's rounded corners cover it from the
+	-- front. A graphite frame (RAIL wide, DEPTH deep) round a recessed ivory back, teal battens bracing it, a graphite
+	-- two-strut kickstand down to floor pads KICK studs behind its face, and the company sticker on the back. The
+	-- truck's palette and finish (DepotTruckVisualSystem's art: SmoothPlastic graphite, ivory, teal and gold), so it
+	-- reads as the depot's own kit.
+	BOARD_BODY = table.freeze({
+		INSET = 0.3,
+		-- Gap between the sign's face and the frame, so the frame never z-fights or pokes through the sign.
+		FACE_GAP = 0.03,
+		DEPTH = 0.55,
+		RAIL = 0.35,
+		PANEL_DEPTH = 0.22,
+		BATTEN = 0.4,
+		BATTEN_DEPTH = 0.18,
+		STRUT = 0.3,
+		-- The struts meet the back this far up from the board's centre, and the floor this far behind its face.
+		STRUT_TOP = 1.2,
+		KICK = 2.8,
+		STRUT_INSET = 2.2,
+		FRAME_COLOR = Color3.fromHex("2e3536"),
+		PANEL_COLOR = Color3.fromHex("e5ddc5"),
+		BATTEN_COLOR = Color3.fromHex("1f6e66"),
+		STRUT_COLOR = Color3.fromHex("2e3536"),
+		STICKER_SIZE = Vector2.new(3.6, 1.7),
+		-- The sticker's design (px) and its copy: the company on the trucks' livery.
+		STICKER_PX = Vector2.new(360, 170),
+		STICKER_TITLE = "MORROW & MORROW",
+		STICKER_LINE = "CLEARANCE  ·  DEPOT 4",
+		STICKER_SMALL = "COMPANY PROPERTY · DO NOT REMOVE",
+		STICKER_PAPER = Color3.fromHex("f1dfa9"),
+		STICKER_INK = Color3.fromHex("2e3536"),
+		STICKER_TEAL = Color3.fromHex("1f6e66"),
+		STICKER_GOLD = Color3.fromHex("e8b23c"),
+	}),
 	-- Trucks, boards and spawns keep this far inside the walls.
 	MARGIN = 3,
 	-- Space between two trucks.

@@ -5,7 +5,8 @@
 	QueueCountdown and QueueDestination set BEFORE the QueuePad tag, because Queue reads them once when the
 	pad is tagged), a cab behind it and an empty truck tag shell above it (tagged, its truck number and seats as attributes; the client draws it); the contract board's sign shell with tonight's
 	contract as attributes; the result board's sign shell, and `pinCard`, which hangs a returning player's review shell
-	that only they see (in their PlayerGui, kept across respawns). Physical boards are SurfaceGui; truck tags are BillboardGui. The client
+	that only they see (in their PlayerGui, kept across respawns). Physical boards are SurfaceGui (the contract board
+	with a built body behind its face, DepotBoardVisualSystem); truck tags are BillboardGui. The client
 	draws (Figma World UI 2a, DepotBillboardSystem). Everything is anchored under one Model in Workspace.
 
 	Hub v1: a concrete slab floor with real expansion joints, warm ceiling strips over the trucks and over each
@@ -97,6 +98,7 @@ local function surface(name: string, adornee: BasePart, design: Vector2): Surfac
 end
 
 local TruckVisual = require(ServerScriptService.Features.Depot.Systems.DepotTruckVisualSystem)
+local BoardVisual = require(ServerScriptService.Features.Depot.Systems.DepotBoardVisualSystem)
 
 -- Floor paint is a decal-thin layer: nothing collides with, raycasts against, touches or shadows it.
 local function decalPart(name: string, size: Vector3, cframe: CFrame, parent: Instance): Part
@@ -304,6 +306,9 @@ function DepotBuildSystem.build(
 	-- The board's prompt opens the work order (M3 UI): attributes first, then the tag (Interaction reads them on tag).
 	-- The sign draws the whole board; the part stays as its adornee, collision and prompt anchor but is not seen.
 	contractBoard.Transparency = 1
+	-- Its body (frame, plywood back, bracing, kickstand, company sticker) sits behind the sign's face, so the board
+	-- has thickness edge-on and a finished back.
+	BoardVisual.build(contractBoard, boards)
 	contractBoard:SetAttribute(InteractionConstants.KIND_ATTRIBUTE, DepotConstants.BOARD_KIND)
 	CollectionService:AddTag(contractBoard, InteractionConstants.TAG)
 	local contractSign = surface("ContractSign", contractBoard, DepotConstants.BILLBOARD_PX.contract)
