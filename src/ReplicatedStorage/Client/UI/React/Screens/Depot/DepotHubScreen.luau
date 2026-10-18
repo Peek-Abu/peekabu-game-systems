@@ -189,8 +189,13 @@ local function DepotHubScreen(
 		control = "Hold VACUUM on the shift's touch controls near dust."
 	elseif bindings ~= nil then
 		local keys = if string.sub(input.Name, 1, 7) == "Gamepad" then bindings.gamepad else bindings.keyboard
-		if keys ~= nil and keys[1] ~= nil then
-			control = `Hold {ShiftHudViewModel.keyName(keys[1])} near dust to clean.`
+		local key = if keys ~= nil then keys[1] else nil
+		if key ~= nil then
+			-- The HUD's key cap says "LMB"; a sentence in the guide spells it out for younger players.
+			local name = if key == Enum.UserInputType.MouseButton1
+				then "the left mouse button"
+				else ShiftHudViewModel.keyName(key)
+			control = `Hold {name} near dust to clean.`
 		end
 	end
 	local copy = VM.copy(props.page, control)
