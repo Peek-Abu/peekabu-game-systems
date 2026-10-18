@@ -177,7 +177,7 @@ local function beat()
 		return
 	end
 	counters.beats += 1
-	SoundServiceClient:play("harlowHeartbeat", { volumeScale = look.heart * DREAD.HEART_GAIN })
+	SoundServiceClient:playOneShot("harlowHeartbeat", { volumeScale = look.heart * DREAD.HEART_GAIN })
 end
 
 -- `slow`: his slow turn or stare (behaviours design §11.2) beats faster.

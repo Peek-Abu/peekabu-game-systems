@@ -47,7 +47,7 @@ local function play(id: string, options: SoundTypes.PlayOptions?)
 		return
 	end
 	counters.played += 1
-	SoundServiceClient:play(id, options)
+	SoundServiceClient:playOneShot(id, options)
 end
 
 local function headOf(): BasePart?

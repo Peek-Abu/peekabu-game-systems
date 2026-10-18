@@ -27,6 +27,8 @@ local SoundConstants: {
 	DEFAULT_FADE: number,
 	IDLE_PER_PLACE: number,
 	IDLE_SHARED: number,
+	PREWARM_2D: number,
+	PREWARM_POINTS: number,
 	LOAD_TIMEOUT: number,
 	DEFAULT_ROLL_OFF_MAX: number,
 } =
@@ -40,8 +42,13 @@ local SoundConstants: {
 		-- One-shot voices kept idle for reuse per place they play from (a foot, a pile): a walk needs one a foot, a
 		-- sprint's overlapping steps two (SoundServiceClient:playOneShot).
 		IDLE_PER_PLACE = 3,
-		-- ...and for the places many sounds share (2D in SoundService, the fixed points' anchors in the Terrain).
-		IDLE_SHARED = 8,
+		-- ...and for the places many sounds share (2D in SoundService, the fixed points' anchors in the Terrain): a chase
+		-- alone holds five stems, its sting, the heartbeat and the dread loop in 2D.
+		IDLE_SHARED = 12,
+		-- Idle voices made at client start in 2D and at the fixed-point anchors (SoundServiceClient:prewarm), so the
+		-- shift's music stings, UI, sweeteners, pops and server-requested sounds never create a Sound mid-play.
+		PREWARM_2D = 12,
+		PREWARM_POINTS = 8,
 		-- A sound still not loaded this long after its play (a failed or missing asset) is released: its Ended never
 		-- fires, so it would otherwise hold its Sound and its concurrency slot for good.
 		LOAD_TIMEOUT = 8,

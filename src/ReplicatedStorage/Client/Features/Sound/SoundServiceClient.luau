@@ -1,24 +1,31 @@
 --!strict
 --[=[
 	SoundServiceClient: plays registered sounds on this client (design:
-	docs/superpowers/specs/2026-10-09-sound-design.md).
+	docs/superpowers/specs/2026-10-09-sound-design.md). No play creates a Sound once its place is warm: every Sound is
+	a reusable voice kept idle where it last played (SoundIdlePool), and the loops are kept per track.
 
-	- `play(id, { at?, volumeScale?, pitchScale? })` — a one-shot (or looped) sound, 2D or positional, in its group,
-	  with its pitch variance and concurrency cap applied. Returns a handle to stop it early (or to steer its Sound).
-	- `prewarm(at, count)` — makes `count` idle one-shot Sounds at an instance ahead of its first plays (a character's
-	  feet on spawn), so steady play there never creates a Sound.
-	- `playOneShot(id, options?)` — the same sound, fire-and-forget: no handle, so its Sound is reused. A finished
-	  one-shot's Sound stays idle where it played (SoundIdlePool: a foot, a pile, the 2D SoundService, a fixed point's
-	  anchor) and the next one-shot there re-points it (SoundId, volume, pitch) instead of creating a Sound. Several
-	  can play at one place at once (a sprint's overlapping steps never cut each other off); at most IDLE_PER_PLACE
-	  stay idle per place (IDLE_SHARED for the shared places), the rest are destroyed. A place's idle voices go with
-	  it (they are its children), and places that left the world are swept on later releases.
-	- `playMusic(id?, fade?)` / `setAmbience(layer, id?, fade?)` — looping tracks that crossfade.
+	- `playOneShot(id, options?)` — a sound, fire-and-forget: no handle. Its voice comes from the idle voices at its
+	  place (a foot, a head, the 2D SoundService, the Terrain's fixed-point anchors), re-pointed (SoundId, volume,
+	  pitch), and goes back there when it ends. Several can play at one place at once (a sprint's overlapping steps
+	  never cut each other off); at most IDLE_PER_PLACE stay idle per place (IDLE_SHARED for the shared places, or what
+	  the place was pre-warmed for), the rest are destroyed. A place's idle voices go with it (they are its children),
+	  and places that left the world are swept on later releases.
+	- `play(id, { at?, volumeScale?, pitchScale? })` — the same, with a handle to stop it (fade) or steer its Sound
+	  while it plays: a loop (a typist, the whine, the chase stems) or a sound cut short. Its voice comes from the same
+	  idle voices and goes back on `stop` or when it plays out; one evicted by its id's concurrency cap is destroyed (its
+	  caller may still steer it). A handle's `stop` after its sound has ended does nothing.
+	- `prewarm(at?, count)` — makes idle voices at a place ahead of its first plays (a character's feet on spawn, the
+	  office's emitters when it is built, the Manager's head; nil = 2D, a Vector3 = the fixed-point anchors) and keeps
+	  that many idle there, so steady play there never creates a Sound.
+	- `playMusic(id?, fade?)` / `setAmbience(layer, id?, fade?)` — looping tracks that crossfade. Each track's Sound is
+	  made once per slot and kept: a fade-out stops it, the next start plays it again.
 	- `setGroupVolume(group, volume)` — the per-group sliders (Music / SFX / UI / Ambient).
-	- Listens for the server's `SoundEvents.Play` (one-shots).
+	- Listens for the server's `SoundEvents.Play` (one-shots: the server never makes a Sound).
 	- A non-looped sound whose asset never loads (LOAD_TIMEOUT after its play), or whose place is removed from the game
 	  without being destroyed, is released: its Ended never fires, so it would otherwise keep its Sound, its anchor and
 	  its concurrency slot for good (and a handle's watcher, like the results jingle's duck, would never let go).
+	- A voice going idle stops, drops the effects put on it while it played (the dread's EQ) and goes silent (volume
+	  0), so nothing scanning the playing sounds takes it for one.
 
 	Spec-exempt shell (Sound instances, TweenService, ByteNet); the rules live in SoundRegistry,
 	SoundFormulas, SoundVoiceTracker and SoundIdlePool.
@@ -48,13 +55,15 @@ export type SoundHandle = {
 	stop: (self: SoundHandle, fade: number?) -> (),
 }
 
--- A reusable one-shot Sound, at its place (a fixed point's Sound sits in its own anchor in the Terrain).
+-- A reusable Sound, at its place (a fixed point's Sound sits in its own anchor in the Terrain).
 type Voice = {
 	sound: Sound,
 	anchor: Attachment?,
 	place: Instance,
 	-- The voice token of the play it is sounding now; nil while idle.
 	token: number?,
+	-- A handle's fade-out running on it (cancelled when it is released).
+	fade: Tween?,
 }
 
 local log = Logger.new("SoundServiceClient")
@@ -62,14 +71,28 @@ local log = Logger.new("SoundServiceClient")
 local rng = Random.new()
 local voices = SoundVoiceTracker.new()
 local idle: SoundIdlePool.SoundIdlePool<Instance, Voice> = SoundIdlePool.new()
+-- The idle cap of each place pre-warmed above its default (a place that left the world is forgotten by the sweep).
+local caps: { [Instance]: number } = {}
 local groups: { [string]: SoundGroup? } = {}
 -- token -> how to stop the sound playing for it (so an evicted voice can be stopped).
 local playing: { [number]: () -> () } = {}
 local music: Sound? = nil
 local ambience: { [string]: Sound? } = {}
--- created: Sounds made for plays; prewarmed: idle one-shot Sounds made ahead of any play (prewarm); reused: one-shots
--- that re-pointed an idle Sound; unloaded: released unloaded.
-local counters = { played = 0, evicted = 0, unknown = 0, created = 0, prewarmed = 0, reused = 0, unloaded = 0 }
+-- Each looping track's kept Sound, by its slot ("music" or the ambience layer) and id, and its running fade.
+local tracks: { [string]: Sound? } = {}
+local trackFades: { [Sound]: Tween? } = {}
+-- created: Sounds made for plays and tracks; prewarmed: idle voices made ahead of any play (prewarm); reused: plays
+-- that re-pointed an idle voice; resumed: track starts that replayed a kept Sound; unloaded: released unloaded.
+local counters = {
+	played = 0,
+	evicted = 0,
+	unknown = 0,
+	created = 0,
+	prewarmed = 0,
+	reused = 0,
+	resumed = 0,
+	unloaded = 0,
+}
 -- Releases since the last sweep of places that left the world.
 local releases = 0
 local SWEEP_EVERY = 64
@@ -87,23 +110,27 @@ local function groupFor(name: SoundGroupName): SoundGroup
 	return created
 end
 
--- Fades `sound` to `volume` over `duration`, then calls `done` (immediately when duration <= 0).
-local function fadeTo(sound: Sound, volume: number, duration: number, done: (() -> ())?)
+-- Fades `sound` to `volume` over `duration`, then calls `done` (immediately when duration <= 0; never for a fade
+-- that is cancelled). Returns the running tween, if any.
+local function fadeTo(sound: Sound, volume: number, duration: number, done: (() -> ())?): Tween?
 	if duration <= 0 then
 		sound.Volume = volume
 		if done ~= nil then
 			done()
 		end
-		return
+		return nil
 	end
 	local tween = TweenService:Create(sound, TweenInfo.new(duration), { Volume = volume })
 	if done ~= nil then
 		local finish = done
-		tween.Completed:Once(function()
-			finish()
+		tween.Completed:Once(function(state: Enum.PlaybackState)
+			if state == Enum.PlaybackState.Completed then
+				finish()
+			end
 		end)
 	end
 	tween:Play()
+	return tween
 end
 
 -- Points `sound` at a registry entry: its asset, volume, a picked pitch, loop and group.
@@ -119,31 +146,24 @@ local function configure(sound: Sound, id: string, def: SoundTypes.SoundDef, vol
 	sound.RollOffMaxDistance = def.rollOffMaxDistance or SoundConstants.DEFAULT_ROLL_OFF_MAX
 end
 
--- A Sound built from a registry entry, not yet parented or playing.
-local function build(id: string, def: SoundTypes.SoundDef, volumeScale: number, pitchScale: number): Sound
-	local sound = Instance.new("Sound")
-	configure(sound, id, def, volumeScale, pitchScale)
-	counters.created += 1
-	return sound
+-- Where a play at `at` keeps its voices, and the fixed point for a Vector3 (its anchor's position).
+local function placeOf(at: SoundTypes.PlayAt?): (Instance, Vector3?)
+	if typeof(at) == "Vector3" then
+		return Workspace.Terrain, at
+	elseif typeof(at) == "Instance" then
+		return at, nil
+	end
+	-- Outside the Workspace a Sound plays without position (2D).
+	return SoundService, nil
 end
 
--- Parents a sound where it should play from; returns an anchor to destroy with it (a Vector3 needs one).
-local function place(sound: Sound, at: SoundTypes.PlayAt?): Instance?
-	if at == nil then
-		-- Outside the Workspace a Sound plays without position (2D).
-		sound.Parent = SoundService
-		return nil
-	end
-	if typeof(at) == "Vector3" then
-		local anchor = Instance.new("Attachment")
-		anchor.Name = `{sound.Name}Anchor`
-		anchor.WorldPosition = at
-		anchor.Parent = Workspace.Terrain
-		sound.Parent = anchor
-		return anchor
-	end
-	sound.Parent = at
-	return nil
+-- How many idle voices `place` keeps.
+local function capOf(place: Instance): number
+	local base = if place == SoundService or place == Workspace.Terrain
+		then SoundConstants.IDLE_SHARED
+		else SoundConstants.IDLE_PER_PLACE
+	local raised = caps[place]
+	return if raised ~= nil and raised > base then raised else base
 end
 
 -- Releases `sound` if it never loaded LOAD_TIMEOUT after its play (`still` says the play is still the current one).
@@ -168,7 +188,8 @@ local function destroyVoice(voice: Voice)
 	end
 end
 
--- Destroys the idle voices of places that left the world (deparented without being destroyed).
+-- Destroys the idle voices of places that left the world (deparented without being destroyed), and forgets their
+-- raised caps.
 local function sweep()
 	for _, at in idle:places() do
 		if at.Parent == nil then
@@ -177,10 +198,15 @@ local function sweep()
 			end
 		end
 	end
+	for at in caps do
+		if at.Parent == nil then
+			caps[at] = nil
+		end
+	end
 end
 
--- Ends a one-shot voice's play: frees its slot and keeps it idle at its place (or destroys it when that is full,
--- gone, or it never loaded).
+-- Ends a voice's play: frees its slot and keeps it idle at its place (or destroys it when that is full, gone, or
+-- `keep` is false: it never loaded, or a handle's caller may still steer it).
 local function release(voice: Voice, keep: boolean)
 	local token = voice.token
 	if token == nil then
@@ -189,12 +215,25 @@ local function release(voice: Voice, keep: boolean)
 	voice.token = nil
 	voices:finish(token)
 	playing[token] = nil
+	local fade = voice.fade
+	if fade ~= nil then
+		voice.fade = nil
+		fade:Cancel()
+	end
 	local sound = voice.sound
 	sound:Stop()
-	local cap = if voice.place == SoundService or voice.anchor ~= nil
-		then SoundConstants.IDLE_SHARED
-		else SoundConstants.IDLE_PER_PLACE
-	if not keep or voice.place.Parent == nil or sound.Parent == nil or not idle:put(voice.place, voice, cap) then
+	for _, child in sound:GetChildren() do
+		if child:IsA("SoundEffect") then
+			child:Destroy()
+		end
+	end
+	sound.Volume = 0
+	if
+		not keep
+		or voice.place.Parent == nil
+		or sound.Parent == nil
+		or not idle:put(voice.place, voice, capOf(voice.place))
+	then
 		destroyVoice(voice)
 	end
 	releases += 1
@@ -204,11 +243,12 @@ local function release(voice: Voice, keep: boolean)
 	end
 end
 
--- A new one-shot voice at `place` (an anchor of its own for a fixed point), released when it ends. (Its caller
--- counts it: created for a play, prewarmed ahead of one.)
+-- A new voice at `place` (an anchor of its own for a fixed point), released when it ends. (Its caller counts it:
+-- created for a play, prewarmed ahead of one.)
 local function newVoice(at: Instance, point: Vector3?): Voice
 	local sound = Instance.new("Sound")
-	local voice: Voice = { sound = sound, anchor = nil, place = at, token = nil }
+	sound.Volume = 0
+	local voice: Voice = { sound = sound, anchor = nil, place = at, token = nil, fade = nil }
 	if point ~= nil then
 		local anchor = Instance.new("Attachment")
 		anchor.Name = "OneShotAnchor"
@@ -222,9 +262,10 @@ local function newVoice(at: Instance, point: Vector3?): Voice
 	sound.Ended:Connect(function()
 		release(voice, true)
 	end)
-	-- Its place removed from the game without being destroyed: it can never end, so let it go.
+	-- Its place removed from the game without being destroyed: a non-looped play can never end, so let it go. (A
+	-- loop is its handle's: its caller stops it.)
 	sound.AncestryChanged:Connect(function()
-		if voice.token ~= nil and not sound:IsDescendantOf(game) then
+		if voice.token ~= nil and not sound.Looped and not sound:IsDescendantOf(game) then
 			release(voice, false)
 		end
 	end)
@@ -254,30 +295,124 @@ local function claim(id: string, def: SoundTypes.SoundDef): number
 	return token
 end
 
-local function crossfade(current: Sound?, id: string?, fade: number, scale: number): Sound?
-	if current ~= nil then
-		local outgoing = current
-		fadeTo(outgoing, 0, fade, function()
-			outgoing:Destroy()
+-- Plays `id` on a voice at its place (an idle one re-pointed, else a new one). `handled`: a handle holds it, so an
+-- eviction destroys it rather than keeping it for reuse.
+local function start(
+	id: string,
+	def: SoundTypes.SoundDef,
+	options: SoundTypes.PlayOptions?,
+	handled: boolean
+): (Voice, number)
+	local where, point = placeOf(if options ~= nil then options.at else nil)
+	local current: Voice
+	local idleVoice = idle:take(where)
+	if idleVoice ~= nil then
+		counters.reused += 1
+		local anchor = idleVoice.anchor
+		if anchor ~= nil and point ~= nil then
+			anchor.WorldPosition = point
+		end
+		current = idleVoice
+	else
+		current = newVoice(where, point)
+		counters.created += 1
+	end
+	local scale = if options ~= nil and options.volumeScale ~= nil then options.volumeScale else 1
+	local pitchScale = if options ~= nil and options.pitchScale ~= nil then options.pitchScale else 1
+	local sound = current.sound
+	configure(sound, id, def, scale, pitchScale)
+	sound.TimePosition = 0
+
+	local token = claim(id, def)
+	current.token = token
+	local voice = current
+	playing[token] = function()
+		release(voice, not handled)
+	end
+	sound:Play()
+	counters.played += 1
+	if not sound.Looped then
+		guardLoad(sound, function()
+			return voice.token == token
+		end, function()
+			release(voice, false)
 		end)
 	end
-	if id == nil then
-		return nil
+	return voice, token
+end
+
+-- Cancels a track's running fade.
+local function stopTrackFade(sound: Sound)
+	local running = trackFades[sound]
+	if running ~= nil then
+		trackFades[sound] = nil
+		running:Cancel()
 	end
-	local def = SoundRegistry.get(id)
-	if def == nil then
-		counters.unknown += 1
-		log:warn(`unknown sound "{id}"`)
-		return nil
+end
+
+-- Fades a track's Sound to `volume`, then calls `done` (unless a later fade replaces this one).
+local function fadeTrack(sound: Sound, volume: number, duration: number, done: (() -> ())?)
+	stopTrackFade(sound)
+	local tween = fadeTo(sound, volume, duration, done)
+	if tween ~= nil then
+		trackFades[sound] = tween
 	end
-	local sound = build(id, def, scale, 1)
-	sound.Looped = true
-	local target = sound.Volume
-	sound.Volume = 0
-	sound.Parent = SoundService
-	sound:Play()
-	fadeTo(sound, target, fade)
-	return sound
+end
+
+-- Crossfades the `slot`'s track from `current` to `id` (nil: to silence). The track's Sound is the slot's kept one
+-- for that id (made the first time): a stopped one plays from its start, one still fading out fades back up.
+local function crossfade(current: Sound?, slot: string, id: string?, fade: number): Sound?
+	local nextSound: Sound? = nil
+	if id ~= nil then
+		local def = SoundRegistry.get(id)
+		if def == nil then
+			counters.unknown += 1
+			log:warn(`unknown sound "{id}"`)
+		else
+			local key = `{slot}|{id}`
+			local kept = tracks[key]
+			local sound: Sound
+			if kept == nil then
+				local made = Instance.new("Sound")
+				configure(made, id, def, 1, 1)
+				made.Looped = true
+				made.Volume = 0
+				made.Parent = SoundService
+				tracks[key] = made
+				counters.created += 1
+				sound = made
+			else
+				sound = kept
+				if kept ~= current then
+					counters.resumed += 1
+				end
+			end
+			if sound ~= current then
+				-- Still sounding (fading out): it fades back up from where it is, without restarting.
+				local sounding = sound.IsPlaying
+				local from = sound.Volume
+				configure(sound, id, def, 1, 1)
+				sound.Looped = true
+				if sounding then
+					sound.Volume = from
+				else
+					sound.Volume = 0
+					sound.TimePosition = 0
+					sound:Play()
+				end
+			end
+			fadeTrack(sound, def.volume, fade)
+			nextSound = sound
+		end
+	end
+	if current ~= nil and current ~= nextSound then
+		local outgoing = current
+		fadeTrack(outgoing, 0, fade, function()
+			trackFades[outgoing] = nil
+			outgoing:Stop()
+		end)
+	end
+	return nextSound
 end
 
 export type SoundServiceClient = {
@@ -287,7 +422,7 @@ export type SoundServiceClient = {
 
 	play: (self: SoundServiceClient, id: string, options: SoundTypes.PlayOptions?) -> SoundHandle?,
 	playOneShot: (self: SoundServiceClient, id: string, options: SoundTypes.PlayOptions?) -> (),
-	prewarm: (self: SoundServiceClient, at: Instance, count: number) -> number,
+	prewarm: (self: SoundServiceClient, at: SoundTypes.PlayAt?, count: number) -> number,
 	playMusic: (self: SoundServiceClient, id: string?, fade: number?) -> (),
 	setAmbience: (self: SoundServiceClient, layer: string, id: string?, fade: number?) -> (),
 	setGroupVolume: (self: SoundServiceClient, group: SoundGroupName, volume: number) -> (),
@@ -297,17 +432,21 @@ local SoundServiceClient: SoundServiceClient = {
 	dependencies = {},
 
 	--[=[
-		Listens for server-requested sounds. (Volume groups are created on first use: the first `play` or
-		`setGroupVolume` that names them.)
+		Listens for server-requested sounds and warms the shared places (2D and the fixed-point anchors), so the
+		shift's UI, music stings and scattered one-shots never create a Sound. (Volume groups are created on first
+		use: the first `play` or `setGroupVolume` that names them.)
 	]=]
 	start = function(self)
 		SoundEvents.packets.Play.listen(function(data)
 			self:playOneShot(data.id, { at = data.position })
 		end)
+		self:prewarm(nil, SoundConstants.PREWARM_2D)
+		self:prewarm(Vector3.zero, SoundConstants.PREWARM_POINTS)
 	end,
 
 	--[=[
-		Plays a registered sound. Nil (and a warning) for an unknown id.
+		Plays a registered sound with a handle (to stop it, or steer its Sound while it plays). Nil (and a warning)
+		for an unknown id.
 	]=]
 	play = function(_self, id, options)
 		local def = SoundRegistry.get(id)
@@ -316,58 +455,32 @@ local SoundServiceClient: SoundServiceClient = {
 			log:warn(`unknown sound "{id}"`)
 			return nil
 		end
-		local scale = if options ~= nil and options.volumeScale ~= nil then options.volumeScale else 1
-		local pitchScale = if options ~= nil and options.pitchScale ~= nil then options.pitchScale else 1
-		local sound = build(id, def, scale, pitchScale)
-		local anchor = place(sound, if options ~= nil then options.at else nil)
-
-		local token = claim(id, def)
-		playing[token] = function()
-			sound:Destroy()
-		end
-
-		local function cleanup()
-			voices:finish(token)
-			playing[token] = nil
-			if anchor ~= nil then
-				anchor:Destroy()
-			elseif sound.Parent ~= nil then
-				sound:Destroy()
-			end
-		end
-		-- Destroying (eviction, stop, or an anchor part going away) always frees the voice.
-		sound.Destroying:Once(function()
-			voices:finish(token)
-			playing[token] = nil
-		end)
-		if not sound.Looped then
-			sound.Ended:Once(cleanup)
-			guardLoad(sound, function()
-				return playing[token] ~= nil
-			end, cleanup)
-			-- Its place removed from the game without being destroyed: it can never end. (A loop is its caller's.)
-			sound.AncestryChanged:Connect(function()
-				if playing[token] ~= nil and not sound:IsDescendantOf(game) then
-					cleanup()
-				end
-			end)
-		end
-		sound:Play()
-		counters.played += 1
-
+		local voice, token = start(id, def, options, true)
+		local sound = voice.sound
 		local handle: SoundHandle = {
 			sound = sound,
 			stop = function(_handle, fade)
-				fadeTo(sound, 0, fade or 0, cleanup)
+				if voice.token ~= token then
+					return
+				end
+				local running = voice.fade
+				if running ~= nil then
+					voice.fade = nil
+					running:Cancel()
+				end
+				voice.fade = fadeTo(sound, 0, fade or 0, function()
+					if voice.token == token then
+						release(voice, true)
+					end
+				end)
 			end,
 		}
 		return handle
 	end,
 
 	--[=[
-		Plays a registered sound and forgets it (no handle): its Sound is reused from the idle voices at its place,
-		else created and kept for reuse when it ends. A looped sound needs a handle to stop it, so it goes through
-		`play`. Warns for an unknown id.
+		Plays a registered sound and forgets it (no handle): its voice goes back to its place's idle voices when it
+		ends. A looped sound needs a handle to stop it, so it goes through `play`. Warns for an unknown id.
 	]=]
 	playOneShot = function(self, id, options)
 		local def = SoundRegistry.get(id)
@@ -380,59 +493,28 @@ local SoundServiceClient: SoundServiceClient = {
 			self:play(id, options)
 			return
 		end
-		local at = if options ~= nil then options.at else nil
-		local point: Vector3? = nil
-		local where: Instance = SoundService
-		if typeof(at) == "Vector3" then
-			point = at
-			where = Workspace.Terrain
-		elseif typeof(at) == "Instance" then
-			where = at
-		end
-		local current: Voice
-		local idleVoice = idle:take(where)
-		if idleVoice ~= nil then
-			counters.reused += 1
-			local anchor = idleVoice.anchor
-			if anchor ~= nil and point ~= nil then
-				anchor.WorldPosition = point
-			end
-			current = idleVoice
-		else
-			current = newVoice(where, point)
-			counters.created += 1
-		end
-		local scale = if options ~= nil and options.volumeScale ~= nil then options.volumeScale else 1
-		local pitchScale = if options ~= nil and options.pitchScale ~= nil then options.pitchScale else 1
-		local sound = current.sound
-		configure(sound, id, def, scale, pitchScale)
-		sound.TimePosition = 0
-
-		local token = claim(id, def)
-		current.token = token
-		playing[token] = function()
-			release(current, true)
-		end
-		sound:Play()
-		counters.played += 1
-		guardLoad(sound, function()
-			return current.token == token
-		end, function()
-			release(current, false)
-		end)
+		start(id, def, options, false)
 	end,
 
 	--[=[
-		Makes idle one-shot Sounds at `at` (a foot, a root) until it holds `count` (at most its idle cap), so the
-		first plays there reuse them instead of creating Sounds mid-play; a play beyond them still creates one.
-		Returns how many it made (none for a place outside the game).
+		Makes idle voices at `at` (an instance; nil = 2D; a Vector3 = the fixed-point anchors) until it holds `count`,
+		and keeps at least that many idle there from now on, so the first plays there reuse them instead of creating
+		Sounds mid-play; a play beyond them still creates one. Returns how many it made (none for a place outside the
+		game).
 	]=]
 	prewarm = function(_self, at, count)
-		if not at:IsDescendantOf(game) then
+		local where, point = placeOf(at)
+		if not where:IsDescendantOf(game) then
 			return 0
 		end
-		local made = idle:prewarm(at, math.min(count, SoundConstants.IDLE_PER_PLACE), function(): Voice
-			return newVoice(at, nil)
+		if where ~= SoundService and where ~= Workspace.Terrain then
+			local raised = caps[where]
+			if raised == nil or raised < count then
+				caps[where] = count
+			end
+		end
+		local made = idle:prewarm(where, math.min(count, capOf(where)), function(): Voice
+			return newVoice(where, point)
 		end)
 		counters.prewarmed += made
 		return made
@@ -442,14 +524,14 @@ local SoundServiceClient: SoundServiceClient = {
 		Crossfades to a music track (looped), or to silence with nil.
 	]=]
 	playMusic = function(_self, id, fade)
-		music = crossfade(music, id, fade or SoundConstants.DEFAULT_FADE, 1)
+		music = crossfade(music, "music", id, fade or SoundConstants.DEFAULT_FADE)
 	end,
 
 	--[=[
 		Crossfades one named ambience layer (looped) to a sound, or to silence with nil. Layers mix.
 	]=]
 	setAmbience = function(_self, layer, id, fade)
-		local next = crossfade(ambience[layer], id, fade or SoundConstants.DEFAULT_FADE, 1)
+		local next = crossfade(ambience[layer], `ambience:{layer}`, id, fade or SoundConstants.DEFAULT_FADE)
 		if next ~= nil then
 			ambience[layer] = next
 		else
@@ -467,11 +549,16 @@ local SoundServiceClient: SoundServiceClient = {
 			table.insert(layers, layer)
 		end
 		table.sort(layers)
+		local kept = 0
+		for _ in tracks do
+			kept += 1
+		end
 		return {
 			music = if music ~= nil then music.Name else "none",
 			ambience = layers,
 			counters = table.clone(counters),
 			idle = idle:count(),
+			tracks = kept,
 		}
 	end,
 }

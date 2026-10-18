@@ -73,13 +73,15 @@ return table.freeze({
 	-- How many recent steps getState keeps (the live sync check reads them).
 	RECENT = 64,
 	-- Idle one-shot Sounds made on each foot (and a player's root, for the jump and land) as its character is
-	-- followed: a walk reuses one a foot, a sprint's overlapping steps two, so steady play never creates a Sound
-	-- (SoundServiceClient:prewarm; a third overlap still grows the pool, up to its idle cap).
-	PREWARM_PER_ANCHOR = 2,
+	-- followed: a walk reuses one a foot, a sprint's overlapping steps two or three (measured 2026-10-18: a sprint
+	-- still made a third on each foot), so steady play never creates a Sound (SoundServiceClient:prewarm).
+	PREWARM_PER_ANCHOR = 3,
 	-- Roblox's own character sounds (RbxCharacterSounds' Sounds in each character's root), all muted on every
 	-- followed character: the game plays its own steps, jump, land and body-fall, and the caught "FIRED" replaces the
 	-- "oof". Measured 2026-10-17: an empty RbxCharacterSounds override no longer holds (SoundService
 	-- CharacterSoundsUseNewApi = Default puts the engine's script back in Play), so they are muted instead.
+	-- The engine's script that makes them (removed from PlayerScripts by FootstepServiceClient).
+	ENGINE_SOUND_SCRIPT = "RbxCharacterSounds",
 	DEFAULT_SOUNDS = table.freeze({
 		"Running",
 		"Died",

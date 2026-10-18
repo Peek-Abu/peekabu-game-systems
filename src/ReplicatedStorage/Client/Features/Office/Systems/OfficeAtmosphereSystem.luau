@@ -224,7 +224,8 @@ local function stepBroken()
 		if dim and not dimmed[light] then
 			counters.zaps += 1
 			if SoundRegistry.has(OfficeAssets.ZAP) then
-				SoundServiceClient:playOneShot(OfficeAssets.ZAP, { at = light })
+				-- At the tube's spot (it never moves): a shared fixed-point voice, not one made per broken tube.
+				SoundServiceClient:playOneShot(OfficeAssets.ZAP, { at = light.Position })
 			else
 				counters.pending += 1
 			end

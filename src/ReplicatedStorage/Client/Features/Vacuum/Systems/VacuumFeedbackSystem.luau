@@ -209,7 +209,8 @@ local function update(feel: PileFeel)
 		stream:update(feel.progress, feel.count)
 	end
 	if feel.whine == nil and SoundRegistry.has(VacuumAssets.WHINE) then
-		feel.whine = play(VacuumAssets.WHINE, { at = feel.pile })
+		-- At the pile's spot (it never moves), so the whine reuses a fixed-point voice instead of making one per pile.
+		feel.whine = play(VacuumAssets.WHINE, { at = feel.position })
 	end
 	local whine = feel.whine
 	local def = SoundRegistry.get(VacuumAssets.WHINE)

@@ -13,6 +13,9 @@
 	  silent SoundGroup (the engine's script rewrites their Volume, never their SoundGroup), an AudioPlayer one is
 	  zeroed. Event-driven: each rig's root is read once and then watched (ChildAdded, and the clip's SoundGroup /
 	  Volume), never searched per frame. The game's land, jump and ragdoll body-fall are FootstepLandingSystem's (started here).
+	  The engine's script that makes them (RbxCharacterSounds, in this player's PlayerScripts) is removed as this service
+	  starts, so it stops making nine Sounds for every character it sees spawn (a catch's rehire made 18 mid-shift,
+	  measured 2026-10-18); the clips it made before then stay muted.
 	- Every pool's sounds (and the jumps, the land and the body-fall) are kept loaded while this client runs (one silent, never-played Sound per asset in
 	  SoundService, preloaded through ContentProvider): a cold first step loaded late, the foot already down. An
 	  asset that fails to load drops its warm Sound.
@@ -345,6 +348,27 @@ export type FootstepServiceClient = {
 	onStep: (self: FootstepServiceClient, listener: StepListener) -> () -> (),
 }
 
+-- The engine's character-sound script in this player's PlayerScripts: removed (now and if it turns up later), which
+-- disconnects it, so no later spawn makes its clips.
+local function retireEngineSounds()
+	local scripts = Players.LocalPlayer:FindFirstChildOfClass("PlayerScripts")
+	if scripts == nil then
+		return
+	end
+	local function retire(child: Instance)
+		if child.Name == FootstepConstants.ENGINE_SOUND_SCRIPT and child:IsA("BaseScript") then
+			child:Destroy()
+		end
+	end
+	for _, child in scripts:GetChildren() do
+		retire(child)
+	end
+	local added = scripts.ChildAdded:Connect(retire)
+	table.insert(stoppers, function()
+		added:Disconnect()
+	end)
+end
+
 local FootstepServiceClient: FootstepServiceClient = {
 	dependencies = { "SoundServiceClient" },
 
@@ -352,6 +376,7 @@ local FootstepServiceClient: FootstepServiceClient = {
 
 	start = function(_self)
 		preload()
+		retireEngineSounds()
 		for _, player in Players:GetPlayers() do
 			followPlayer(player)
 		end

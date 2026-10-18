@@ -9,6 +9,9 @@
 	ding...), each kind on its own wait (SWEETENER_EVERY), one variant on a ring SWEETENER_NEAR..FAR studs round the
 	camera (OfficeAmbienceUtils.sweetenerAt). Per client, no packets: each player hears their own office. Pending sounds (OfficeAssets)
 	are skipped silently and counted.
+	No play creates a Sound: the rings and sweeteners are fire-and-forget one-shots (SoundServiceClient:playOneShot,
+	the sweeteners on the shared fixed-point anchors), and each emitter gets one idle voice the first time the running
+	shift's office shows it (SoundServiceClient:prewarm), which its rings or its typing loop then reuse.
 
 	Spec-exempt shell (Sound, Instances, RunService); the choices are the specced OfficeAmbienceUtils.
 
@@ -49,7 +52,10 @@ local nextElevator = 0
 -- When each sweetener kind next sounds (os.clock()).
 local nextSweetener: { [string]: number } = {}
 local connection: RBXScriptConnection? = nil
-local counters = { phones = 0, elevators = 0, typingStarts = 0, typingStops = 0, sweeteners = 0, pending = 0 }
+-- The emitters already given their idle voice (a rebuilt office's old ones are dropped with the typists').
+local warmed: { [BasePart]: boolean } = {}
+local counters =
+	{ phones = 0, elevators = 0, typingStarts = 0, typingStops = 0, sweeteners = 0, pending = 0, warmed = 0 }
 
 local function play(id: string, at: BasePart | Vector3): SoundServiceClient.SoundHandle?
 	if not SoundRegistry.has(id) then
@@ -57,6 +63,26 @@ local function play(id: string, at: BasePart | Vector3): SoundServiceClient.Soun
 		return nil
 	end
 	return SoundServiceClient:play(id, { at = at })
+end
+
+-- A fire-and-forget ring or sweetener (its voice is reused); false while it is pending.
+local function shot(id: string, at: BasePart | Vector3): boolean
+	if not SoundRegistry.has(id) then
+		counters.pending += 1
+		return false
+	end
+	SoundServiceClient:playOneShot(id, { at = at })
+	return true
+end
+
+-- Gives each emitter not yet warmed its one idle voice (a ring, or a typist's loop, then reuses it).
+local function warm(parts: { BasePart })
+	for _, part in parts do
+		if not warmed[part] then
+			warmed[part] = true
+			counters.warmed += SoundServiceClient:prewarm(part, 1)
+		end
+	end
 end
 
 local function emitters(): ({ OfficeAmbienceUtils.Emitter }, { BasePart })
@@ -130,7 +156,7 @@ local function stepSweeteners(now: number)
 				constants.SWEETENER_NEAR,
 				constants.SWEETENER_FAR
 			)
-			if play(ids[OfficeAmbienceUtils.variant(rng:NextNumber(), #ids)], at) ~= nil then
+			if shot(ids[OfficeAmbienceUtils.variant(rng:NextNumber(), #ids)], at) then
 				counters.sweeteners += 1
 			end
 		end
@@ -149,7 +175,7 @@ local function ring(
 	if index == nil then
 		return false
 	end
-	play(id, parts[index])
+	shot(id, parts[index])
 	return true
 end
 
@@ -167,6 +193,11 @@ local function stepTypists(
 		if not part:IsDescendantOf(Workspace) then
 			silence(typist)
 			typists[part] = nil
+		end
+	end
+	for part in warmed do
+		if not part:IsDescendantOf(Workspace) then
+			warmed[part] = nil
 		end
 	end
 	for index, emitter in list do
@@ -207,6 +238,7 @@ local function step()
 		return
 	end
 	local list, parts = emitters()
+	warm(parts)
 	local positions = crew()
 	if now >= nextPhone then
 		if ring("phone", OfficeAssets.PHONE, list, parts, positions) then
@@ -259,6 +291,7 @@ function OfficeAmbienceSystem.stop()
 	end
 	silenceAll()
 	table.clear(typists)
+	table.clear(warmed)
 end
 
 function OfficeAmbienceSystem.getState(): OfficeAmbienceState

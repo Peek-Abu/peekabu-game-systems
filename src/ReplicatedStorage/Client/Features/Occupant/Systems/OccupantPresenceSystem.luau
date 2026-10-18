@@ -11,7 +11,10 @@
 	(Your heartbeat and the screen's mood are OccupantDreadSystem's.)
 	- The chase sounds (and his desk sounds) are kept warm while this client runs: one silent, never-played Sound per cue
 	  stays in SoundService (preloaded through ContentProvider), so a fresh play is loaded at once. Measured 2026-10-16: a
-	  cold sting took 0.23 s to load (0.88 s long, so a quarter of it was lost), a warm one 0.
+	  cold sting took 0.23 s to load (0.88 s long, so a quarter of it was lost), a warm one 0. They are made when this
+	  system starts, not when he first appears.
+	- His head is pre-warmed (SoundServiceClient:prewarm, HEAD_VOICES) when he is found, so his mutter, typing, chair,
+	  stings and voice reuse idle voices there instead of creating Sounds mid-shift.
 	- His voice: each new line on his model (OccupantConstants.LINE_ATTRIBUTE) plays one uploaded gibberish clip chosen
 	  per line (OccupantFeedbackUtils.clipFor); "*sigh*" is not voiced. The words are never shown: no text over his head
 	  (2026-10-16: the tells stay diegetic).
@@ -85,6 +88,8 @@ local PRELOAD: { string } = {
 	"catchRehired",
 }
 local warm: { Sound } = {}
+-- Idle voices kept on his head: the mutter and typing loops, the three-layer swivel and a tell or voice line over them.
+local HEAD_VOICES = 6
 
 local function play(id: string, options: SoundTypes.PlayOptions?): SoundServiceClient.SoundHandle?
 	if OccupantAssets.SOUNDS[id] == nil then
@@ -195,8 +200,8 @@ local function release()
 end
 
 local function attach(harlow: Harlow)
-	preload()
 	current = harlow
+	SoundServiceClient:prewarm(harlow.head, HEAD_VOICES)
 	lastMode = nil
 	lastMine = false
 	mutter = play("harlowMutter", { at = harlow.head })
@@ -281,6 +286,7 @@ function OccupantPresenceSystem.start()
 	if connection ~= nil then
 		return
 	end
+	preload()
 	connection = RunService.Heartbeat:Connect(step)
 	OccupantChaseMusicSystem.start()
 end

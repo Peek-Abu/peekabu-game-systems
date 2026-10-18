@@ -48,18 +48,33 @@ local last: ShiftTypes.ShiftSnapshot? = nil
 local ticking = false
 local lastSecond: number? = nil
 
--- Plays a Shift sound if it is uploaded; a pending one is counted, an undeclared one is a developer error.
-local function play(id: string, volumeScale: number?): SoundServiceClient.SoundHandle?
+-- Whether a Shift sound can play: uploaded (a pending one is counted; an undeclared one is a developer error).
+local function playable(id: string): boolean
 	if ShiftAssets.SOUNDS[id] == nil then
 		log:warn(`"{id}" is not a ShiftAssets sound`)
-		return nil
+		return false
 	end
 	if not SoundRegistry.has(id) then
 		counters.pending += 1
-		return nil
+		return false
 	end
 	counters.played += 1
+	return true
+end
+
+-- Plays a Shift sound with a handle (the results jingle, which the duck follows).
+local function play(id: string, volumeScale: number?): SoundServiceClient.SoundHandle?
+	if not playable(id) then
+		return nil
+	end
 	return SoundServiceClient:play(id, { volumeScale = volumeScale })
+end
+
+-- Plays a Shift sound fire-and-forget (a cue, a countdown tick): its voice is reused.
+local function shot(id: string, volumeScale: number?)
+	if playable(id) then
+		SoundServiceClient:playOneShot(id, { volumeScale = volumeScale })
+	end
 end
 
 -- Ducks the music and the beds under `sound` (the results jingle) until it ends: every band of an EqualizerSoundEffect
@@ -146,7 +161,7 @@ local function onSnapshot(current: ShiftTypes.ShiftSnapshot?)
 		counters.cues += 1
 		local id = ShiftAssets.CUE_SOUNDS[cue]
 		if id ~= nil then
-			play(id)
+			shot(id)
 		end
 		kick(cue)
 	end
@@ -164,7 +179,7 @@ local function stepCountdown()
 	local scale = ShiftCueUtils.tickScale(second)
 	if scale ~= nil then
 		counters.ticks += 1
-		play(ShiftAssets.COUNTDOWN_TICK, scale)
+		shot(ShiftAssets.COUNTDOWN_TICK, scale)
 	end
 end
 

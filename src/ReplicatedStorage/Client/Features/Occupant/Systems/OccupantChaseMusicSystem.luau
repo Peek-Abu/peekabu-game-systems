@@ -167,7 +167,7 @@ function OccupantChaseMusicSystem.begin(distance: () -> number?)
 		local sting = if SoundRegistry.has("harlowChaseSting") then "harlowChaseSting" else "harlowSpotted"
 		if SoundRegistry.has(sting) then
 			counters.stings += 1
-			SoundServiceClient:play(sting)
+			SoundServiceClient:playOneShot(sting)
 		else
 			counters.pending += 1
 		end
