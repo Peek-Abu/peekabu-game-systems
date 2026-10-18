@@ -210,10 +210,32 @@ local function onHidden(prompt: ProximityPrompt)
 	end
 end
 
--- One sight ray setup for every pick, re-filtered only when the character changes.
+-- One sight ray setup for every pick. The ray looks past what ShiftPromptRules.sight says does not hide a prompt
+-- (invisible non-colliding volumes, see-through art, what the player carries), adding each to the filter; it is
+-- reset to the player's own character before every prompt's ray.
 local sight = RaycastParams.new()
 sight.FilterType = Enum.RaycastFilterType.Exclude
-local sightCharacter: Model? = nil
+-- Parts looked past before a ray gives up and counts the prompt as hidden.
+local SIGHT_MAX_PIERCE = 8
+
+-- Whether the camera sees `target` at `position`: the first part on the way that hides it decides.
+local function inSight(origin: Vector3, position: Vector3, target: Instance, character: Model, root: BasePart): boolean
+	sight.FilterDescendantsInstances = { character }
+	local direction = position - origin
+	for _ = 1, SIGHT_MAX_PIERCE do
+		local result = Workspace:Raycast(origin, direction, sight)
+		if result == nil then
+			return true
+		end
+		local hit = result.Instance
+		local verdict = if hit:IsA("BasePart") then Rules.sight(hit, target, root) else "past"
+		if verdict ~= "past" then
+			return verdict == "target"
+		end
+		sight:AddToFilter(hit)
+	end
+	return false
+end
 
 -- The engine's native input only sees the chosen prompt in range. Others get a local zero range;
 -- authoritative reach/enabled checks still run on the server. Never mutate the object's attributes.
@@ -224,11 +246,14 @@ local function selectNearby()
 	local camera = Workspace.CurrentCamera
 	local candidates: { Rules.Candidate } = {}
 	local byId: { [number]: ProximityPrompt } = {}
-	if root ~= nil and root:IsA("BasePart") and humanoid ~= nil and humanoid.Health > 0 and camera ~= nil then
-		if sightCharacter ~= character then
-			sightCharacter = character
-			sight.FilterDescendantsInstances = if character ~= nil then { character } else {}
-		end
+	if
+		character ~= nil
+		and root ~= nil
+		and root:IsA("BasePart")
+		and humanoid ~= nil
+		and humanoid.Health > 0
+		and camera ~= nil
+	then
 		for prompt, id in ids do
 			local target = targetOf(prompt)
 			local parent = prompt.Parent
@@ -249,10 +274,9 @@ local function selectNearby()
 			-- projection are spent only on the few prompts within reach, not on every prompt in the office.
 			if target ~= nil and position ~= nil and distance <= range and paperworkUsable(prompt, target, root) then
 				local screen, onScreen = camera:WorldToViewportPoint(position)
-				local result = Workspace:Raycast(camera.CFrame.Position, position - camera.CFrame.Position, sight)
 				local visible = onScreen
 					and screen.Z > 0
-					and (result == nil or result.Instance == target or result.Instance:IsDescendantOf(target))
+					and inSight(camera.CFrame.Position, position, target, character, root)
 				local loadReach = true
 				if isLoad and target:IsA("BasePart") then
 					loadReach = CargoBankRules.canLoad(target.CFrame:PointToObjectSpace(root.Position), target.Size)
