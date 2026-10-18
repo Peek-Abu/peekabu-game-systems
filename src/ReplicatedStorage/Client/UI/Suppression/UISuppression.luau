@@ -2,7 +2,7 @@
 --[=[
 	UISuppression: the shared world-suppression singleton (like StateSyncClientStore is shared state, driven by
 	StateSyncServiceClient). Wires the pure UIWorldSuppression core to the real scene resolver and the
-	ONE handler UI legitimately owns — the mouse (freeing the pointer for UI) — and exposes
+	ONE handler UI legitimately owns — the mouse (freeing the pointer for UI, through a Modal button) — and exposes
 	`registerHandler`/`reconcile`/`counts`. Everything that needs suppression requires THIS module;
 	UIServiceClient drives `reconcile` off the scene stack.
 
@@ -20,6 +20,7 @@
 	@class UISuppression
 ]=]
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
@@ -39,16 +40,58 @@ local core = UIWorldSuppression.new(resolveScene, function(message: string)
 	log:warn(message)
 end)
 
--- Built-in handler: mouse. Free the pointer for UI via ModalEnabled, restoring the prior value on
--- release. engage/disengage fire only on the 0↔1 transition, so save-on-engage is safe.
+-- Built-in handler: mouse. Frees the pointer for UI while a scene asks for it. The engine locks the cursor to the
+-- centre in first person and in shift lock, and only a visible GuiButton with `Modal` set overrides that lock
+-- (`UserInputService.ModalEnabled` does not: it only hides the touch controls; that part is kept as it was). The modal
+-- button is a zero-size, invisible TextButton in its own ScreenGui, made on first use and shown only
+-- while engaged. engage/disengage fire only on the 0<->1 transition, so save-on-engage is safe.
 local savedModalEnabled = false
+local modalButton: TextButton? = nil
+
+local function modal(): TextButton?
+	local existing = modalButton
+	local existingGui = if existing ~= nil then existing.Parent else nil
+	if existing ~= nil and existingGui ~= nil and existingGui.Parent ~= nil then
+		return existing
+	end
+	local player = Players.LocalPlayer
+	local playerGui = if player ~= nil then player:FindFirstChildOfClass("PlayerGui") else nil
+	if playerGui == nil then
+		return nil
+	end
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "UIMouseModal"
+	gui.ResetOnSpawn = false
+	local button = Instance.new("TextButton")
+	button.Name = "FreeMouse"
+	button.Size = UDim2.fromOffset(0, 0)
+	button.BackgroundTransparency = 1
+	button.Text = ""
+	button.Selectable = false
+	button.Active = false
+	button.Visible = false
+	button.Modal = true
+	button.Parent = gui
+	gui.Parent = playerGui
+	modalButton = button
+	return button
+end
+
 core.registerHandler("mouse", {
 	engage = function()
 		savedModalEnabled = UserInputService.ModalEnabled
 		UserInputService.ModalEnabled = true
+		local button = modal()
+		if button ~= nil then
+			button.Visible = true
+		end
 	end,
 	disengage = function()
 		UserInputService.ModalEnabled = savedModalEnabled
+		local button = modalButton
+		if button ~= nil then
+			button.Visible = false
+		end
 	end,
 })
 
