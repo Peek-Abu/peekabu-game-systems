@@ -23,9 +23,9 @@ local e = React.createElement
 type Row = { key: string, label: string, kind: ToonBar.Kind, start: number, disabled: boolean? }
 
 local ROWS: { Row } = {
-	{ key = "music", label = "Music", kind = "load", start = 0.8 },
-	{ key = "sfx", label = "Equipment & effects", kind = "xp", start = 0.55 },
-	{ key = "ui", label = "UI feedback", kind = "stamina", start = 1 },
+	{ key = "music", label = "Music & ambience", kind = "load", start = 0.8 },
+	{ key = "sfx", label = "Sound effects", kind = "xp", start = 0.55 },
+	{ key = "shake", label = "Camera shake", kind = "stamina", start = 1 },
 	{ key = "off", label = "Disabled", kind = "load", start = 0.3, disabled = true },
 }
 

@@ -80,6 +80,13 @@ return function()
 			)
 		end)
 
+		it("still accepts a save holding the retired uiVolume / ambientVolume, and reads them as unknown", function()
+			local settings = { values = { musicVolume = 0.4, uiVolume = 0.2, ambientVolume = 0 } }
+			expect(SettingRules.validate(settings)).to.equal(true)
+			expect(SettingRules.valueOf(settings, "uiVolume")).to.equal(nil)
+			expect(SettingRules.valueOf(settings, "ambientVolume")).to.equal(nil)
+		end)
+
 		it("rejects a registered id holding an invalid value, non-scalars and too many values", function()
 			expect(SettingRules.validate({ values = { musicVolume = 3 } })).to.equal(false)
 			expect(SettingRules.validate({ values = { retired = {} } })).to.equal(false)

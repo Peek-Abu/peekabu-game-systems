@@ -104,6 +104,20 @@ return function()
 			expect(size.X >= 48).to.equal(true)
 			expect(size.Y >= 48).to.equal(true)
 		end)
+		it("lists the trimmed settings: music & ambience, sound effects, camera shake", function()
+			local labels = {}
+			for _, setting in VM.SETTINGS do
+				table.insert(labels, setting.label)
+			end
+			expect(#labels).to.equal(3)
+			expect(labels[1]).to.equal("Music & ambience")
+			expect(labels[2]).to.equal("Sound effects")
+			expect(labels[3]).to.equal("Camera shake")
+		end)
+		it("stacks the restore button and the note under the last settings row", function()
+			expect(VM.settingsFooterY(false)).to.equal(#VM.SETTINGS * 68 + 12)
+			expect(VM.settingsFooterY(true)).to.equal(#VM.SETTINGS * 88 + 12)
+		end)
 		it("lists only registered percentage settings, so each gets a slider", function()
 			local SettingRegistry =
 				require(game:GetService("ReplicatedStorage").Shared.Features.Setting.Data.SettingRegistry)

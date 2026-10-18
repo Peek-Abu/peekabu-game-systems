@@ -13,23 +13,23 @@ local SoundTypes = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundTyp
 
 export type BaseSetting = { id: string, def: SettingTypes.SettingDef }
 
--- Volumes multiply each Sound group's default volume (SoundConstants.DEFAULT_GROUP_VOLUMES).
+-- Volumes multiply each Sound group's default volume (SoundConstants.DEFAULT_GROUP_VOLUMES). Two volumes: music
+-- with the ambience, and every effect with the UI's (the separate uiVolume / ambientVolume were merged into them;
+-- PlayerDataMigrationSystem v1 -> v2 drops their saved values).
 local BASE: { BaseSetting } = {
 	{ id = "musicVolume", def = { kind = "number", default = 1, min = 0, max = 1, step = 0.05 } },
 	{ id = "sfxVolume", def = { kind = "number", default = 1, min = 0, max = 1, step = 0.05 } },
-	{ id = "uiVolume", def = { kind = "number", default = 1, min = 0, max = 1, step = 0.05 } },
-	{ id = "ambientVolume", def = { kind = "number", default = 1, min = 0, max = 1, step = 0.05 } },
 	-- Accessibility: scales every camera shake (0 = none).
 	{ id = "cameraShake", def = { kind = "number", default = 1, min = 0, max = 1, step = 0.05 } },
 	{ id = "keybinds", def = { kind = "keybinds", default = "" } },
 }
 
--- The volume setting that drives each Sound group.
+-- The volume setting that drives each Sound group (one setting may drive several groups).
 local volumeSettings: { [SoundTypes.SoundGroupName]: string } = {
 	Music = "musicVolume",
+	Ambient = "musicVolume",
 	SFX = "sfxVolume",
-	UI = "uiVolume",
-	Ambient = "ambientVolume",
+	UI = "sfxVolume",
 }
 
 -- Annotated (the SoundConstants pattern) so freezing the module keeps the group names' literal types.

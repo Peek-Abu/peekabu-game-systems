@@ -79,12 +79,18 @@ end
 export type Page = "guide" | "gear" | "settings"
 VM.PAGES = { "guide", "gear", "settings" }
 VM.SETTINGS = {
-	{ id = "musicVolume", label = "Music" },
-	{ id = "sfxVolume", label = "Equipment & effects" },
-	{ id = "uiVolume", label = "UI feedback" },
-	{ id = "ambientVolume", label = "Building ambience" },
+	-- musicVolume drives the Music and Ambient groups, sfxVolume the SFX and UI groups (SettingConstants.VOLUME_SETTINGS).
+	{ id = "musicVolume", label = "Music & ambience" },
+	{ id = "sfxVolume", label = "Sound effects" },
 	{ id = "cameraShake", label = "Camera shake" },
 }
+-- The settings rows' heights: a wide row (label beside its slider) and a compact one (label over it).
+VM.SETTINGS_ROW = 68
+VM.SETTINGS_ROW_COMPACT = 88
+-- Where RESTORE DEFAULTS sits, a gap under the last settings row (its one-line note follows under the button).
+function VM.settingsFooterY(compact: boolean): number
+	return #VM.SETTINGS * (if compact then VM.SETTINGS_ROW_COMPACT else VM.SETTINGS_ROW) + 12
+end
 -- The settings rows' label column on a wide sheet (the slider fills the rest of the row).
 VM.SLIDER_LABEL_WIDTH = 280
 function VM.visible(snapshot: ShiftTypes.ShiftSnapshot?, userId: number): boolean

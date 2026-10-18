@@ -92,7 +92,7 @@ local function SettingsRows(props: { width: number, phone: boolean, preview: boo
 	local nodes: { [string]: React.ReactNode } = {}
 	for index, setting in VM.SETTINGS do
 		local compact = props.width < 440
-		local rowHeight = if compact then 88 else 68
+		local rowHeight = if compact then VM.SETTINGS_ROW_COMPACT else VM.SETTINGS_ROW
 		local y = (index - 1) * rowHeight
 		local value = values[setting.id]
 		local def = SettingRegistry.get(setting.id)
@@ -137,11 +137,12 @@ local function SettingsRows(props: { width: number, phone: boolean, preview: boo
 			BorderSizePixel = 0,
 		})
 	end
+	local footerY = VM.settingsFooterY(props.width < 440)
 	nodes.reset = e(ToonButton, {
 		text = "RESTORE DEFAULTS",
 		variant = "lilac",
 		size = UDim2.fromOffset(250, 52),
-		position = UDim2.fromOffset(0, if props.width < 440 then 452 else 352),
+		position = UDim2.fromOffset(0, footerY),
 		textSize = 18,
 		onActivated = function()
 			if props.preview then
@@ -160,13 +161,17 @@ local function SettingsRows(props: { width: number, phone: boolean, preview: boo
 			end
 		end,
 	})
-	nodes.note = label(
-		"Motion follows Roblox's Reduce Motion setting. Key bindings remain managed by your saved input settings.",
-		if props.phone then 14 else 18,
-		0,
-		if props.width < 440 then 514 else 414,
-		props.width
-	)
+	-- One line under the button, fitted so a narrow sheet never wraps it.
+	local noteSize = if props.phone then 14 else 18
+	nodes.note = e(ToonText, {
+		text = "Motion follows Roblox's Reduce Motion setting.",
+		font = "body",
+		textSize = noteSize,
+		position = UDim2.fromOffset(0, footerY + 62),
+		size = UDim2.fromOffset(props.width, noteSize + 8),
+		fit = true,
+		alignY = "top",
+	})
 	return e(
 		"Frame",
 		{ Size = UDim2.fromOffset(props.width, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1 },

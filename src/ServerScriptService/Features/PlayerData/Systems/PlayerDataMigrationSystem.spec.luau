@@ -2,9 +2,9 @@
 --[=[
 	Unit tests for PlayerDataMigrationSystem.
 
-	The production migration list is intentionally empty, so these exercise the core
-	`_applyWith` routine with synthetic migrations to prove the versioning, chaining,
-	skip-old, baseline, and error-safety behavior.
+	The production list's cases are under "apply (production list)"; the core `_applyWith` routine is
+	exercised with synthetic migrations to prove the versioning, chaining, skip-old, baseline, and
+	error-safety behavior.
 ]=]
 
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -13,16 +13,51 @@ local PlayerDataMigrationSystem = require(ServerScriptService.Features.PlayerDat
 return function()
 	describe("PlayerDataMigrationSystem", function()
 		describe("apply (production list)", function()
-			it("has CURRENT_VERSION = 1 with no migrations registered", function()
-				expect(PlayerDataMigrationSystem.CURRENT_VERSION).to.equal(1)
+			it("has CURRENT_VERSION = 2 (one migration registered)", function()
+				expect(PlayerDataMigrationSystem.CURRENT_VERSION).to.equal(2)
 			end)
 
-			it("stamps unversioned data as v1 and leaves fields intact", function()
+			it("migrates unversioned data to current and leaves unrelated fields intact", function()
 				local data = { currency = { gold = 5 }, inventory = { items = {} } }
 				local result = PlayerDataMigrationSystem.apply(data, nil)
 				expect(result).to.equal("ok")
-				expect(data._schemaVersion).to.equal(1)
+				expect(data._schemaVersion).to.equal(PlayerDataMigrationSystem.CURRENT_VERSION)
 				expect(data.currency.gold).to.equal(5)
+			end)
+
+			it("v1 -> v2 drops the merged volume settings and keeps the ones they merged into", function()
+				-- "Music & ambience" is musicVolume, "Sound effects" is sfxVolume: their saved values carry over as
+				-- they are; the merged uiVolume / ambientVolume are removed, and other settings are untouched.
+				local data = {
+					account = {
+						settings = {
+							values = {
+								musicVolume = 0.4,
+								sfxVolume = 0.6,
+								uiVolume = 0.2,
+								ambientVolume = 0,
+								cameraShake = 0.5,
+							},
+						},
+					},
+				}
+				expect(PlayerDataMigrationSystem.apply(data, 1)).to.equal("ok")
+				local values = data.account.settings.values
+				expect(values.musicVolume).to.equal(0.4)
+				expect(values.sfxVolume).to.equal(0.6)
+				expect(values.cameraShake).to.equal(0.5)
+				expect(values.uiVolume).to.equal(nil)
+				expect(values.ambientVolume).to.equal(nil)
+				expect(data._schemaVersion).to.equal(2)
+			end)
+
+			it("v1 -> v2 is safe on a profile without stored settings", function()
+				local data = { account = {} }
+				expect(PlayerDataMigrationSystem.apply(data, 1)).to.equal("ok")
+				expect(data.account.settings).to.equal(nil)
+				local bare = { account = { settings = { values = {} } } }
+				expect(PlayerDataMigrationSystem.apply(bare, 1)).to.equal("ok")
+				expect(next(bare.account.settings.values)).to.equal(nil)
 			end)
 		end)
 

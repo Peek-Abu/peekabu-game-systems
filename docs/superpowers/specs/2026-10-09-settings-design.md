@@ -13,7 +13,8 @@ changed by the player through one validated request, and applied by the systems 
    `{ kind = "number", default, min, max, step? }`, `{ kind = "boolean", default }`,
    `{ kind = "choice", default, options }`, or `{ kind = "keybinds", default = "" }`. Shared, because the
    server validates every change against the same definitions the client renders. The base registers
-   `musicVolume`, `sfxVolume`, `uiVolume`, `ambientVolume` (0–1), `cameraShake` (0–1, accessibility) and
+   `musicVolume` (music + ambience) and `sfxVolume` (effects + UI) (0–1; the earlier `uiVolume` /
+   `ambientVolume` were merged into them, migration v1 -> v2), `cameraShake` (0–1, accessibility) and
    `keybinds`; a game registers its own (`mouseSensitivity`, `colorblindMode`, …) at load.
 2. **One account slice**, `settings = { values = { [id] = value } }`: only values that differ from the
    default are stored, so a changed default reaches every player who never touched it. The data-layer

@@ -1,4 +1,6 @@
 local SettingRegistry = require(script.Parent.SettingRegistry)
+local SettingConstants = require(script.Parent.SettingConstants)
+local SoundConstants = require(game:GetService("ReplicatedStorage").Shared.Features.Sound.Data.SoundConstants)
 
 local function ensure(id, def)
 	if SettingRegistry.get(id) == nil then
@@ -12,6 +14,23 @@ return function()
 		expect(ids[1]).to.equal("musicVolume")
 		expect(SettingRegistry.get("cameraShake").kind).to.equal("number")
 		expect(SettingRegistry.get("keybinds").kind).to.equal("keybinds")
+	end)
+
+	it("drives every Sound group from a registered volume: music with ambience, effects with UI", function()
+		for _, group in SoundConstants.GROUPS do
+			local id = SettingConstants.VOLUME_SETTINGS[group]
+			expect(id).to.be.ok()
+			local def = SettingRegistry.get(id)
+			expect(def).to.be.ok()
+			expect(def.kind).to.equal("number")
+		end
+		expect(SettingConstants.VOLUME_SETTINGS.Music).to.equal("musicVolume")
+		expect(SettingConstants.VOLUME_SETTINGS.Ambient).to.equal("musicVolume")
+		expect(SettingConstants.VOLUME_SETTINGS.SFX).to.equal("sfxVolume")
+		expect(SettingConstants.VOLUME_SETTINGS.UI).to.equal("sfxVolume")
+		-- The merged volumes are retired, not registered.
+		expect(SettingRegistry.get("uiVolume")).to.equal(nil)
+		expect(SettingRegistry.get("ambientVolume")).to.equal(nil)
 	end)
 
 	it("registers a game's own setting after the base ones", function()

@@ -61,7 +61,21 @@ local BASELINE_VERSION = 1
 			data.currency.gold = nil
 		end,
 ]=]
-local MIGRATIONS: { Migration } = {}
+local MIGRATIONS: { Migration } = {
+	-- v1 -> v2: the settings page merged "Building ambience" into "Music & ambience" (musicVolume) and "UI
+	-- feedback" into "Sound effects" (sfxVolume). The kept volumes carry their saved values over unchanged; the
+	-- merged ids are no longer registered, so their stored values are dropped (they would only fill
+	-- SettingConstants.MAX_STORED). Profiles without stored settings are left as they are.
+	function(data)
+		local account = data.account
+		local settings = if type(account) == "table" then account.settings else nil
+		local values = if type(settings) == "table" then settings.values else nil
+		if type(values) == "table" then
+			values.uiVolume = nil
+			values.ambientVolume = nil
+		end
+	end,
+}
 
 local PlayerDataMigrationSystem = {}
 
