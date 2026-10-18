@@ -56,8 +56,15 @@ end
 local function DreadOverlay(): React.ReactNode
 	local layers, setLayers = React.useBinding(HIDDEN)
 	React.useEffect(function(): () -> ()
+		-- Out of dread the layers stay HIDDEN: written once, not re-pushed through every binding each frame.
+		local shown: DreadViewModel.Layers = HIDDEN
 		local connection = RunService.RenderStepped:Connect(function()
-			setLayers(DreadViewModel.layers(OccupantDreadTracker.get(), os.clock()) or HIDDEN)
+			local nextLayers = DreadViewModel.layers(OccupantDreadTracker.get(), os.clock()) or HIDDEN
+			if nextLayers == HIDDEN and shown == HIDDEN then
+				return
+			end
+			shown = nextLayers
+			setLayers(nextLayers)
 		end)
 		return function()
 			connection:Disconnect()
