@@ -8,6 +8,9 @@
 	few retries. One award per player and key is in flight at a time. `awarded(player, key)` fires on a new
 	award. `has(player, key)` yields for a first check and then reads the cache.
 
+	A player's cache is forgotten when they leave, and a check or award that finishes after that (the Badge
+	calls yield) does not write it back, so a departed player leaves nothing behind.
+
 	Spec-exempt shell (BadgeService, Players); the bookkeeping is the specced BadgeAwardTracker and the
 	catalogue BadgeRegistry.
 
@@ -48,6 +51,11 @@ local function attempt(label: string, call: () -> boolean): boolean?
 	return nil
 end
 
+-- Whether the player is still in the game (read fresh after a yield, never narrowed by an earlier check).
+local function present(player: Player): boolean
+	return player.Parent ~= nil
+end
+
 local function checkOwned(player: Player, key: string, badgeId: number): boolean?
 	local known = tracker:owned(player.UserId, key)
 	if known ~= nil then
@@ -56,7 +64,8 @@ local function checkOwned(player: Player, key: string, badgeId: number): boolean
 	local owned = attempt(`UserHasBadgeAsync({key})`, function()
 		return BadgeService:UserHasBadgeAsync(player.UserId, badgeId)
 	end)
-	if owned ~= nil then
+	-- Not cached once the player has left during the check: their cache was already forgotten.
+	if owned ~= nil and present(player) then
 		tracker:setOwned(player.UserId, key, owned)
 	end
 	return owned
@@ -95,23 +104,30 @@ local BadgeServiceServer: BadgeServiceServer = {
 	end,
 
 	--[=[
-		Awards a registered badge in the background (no-op when it is owned or already being awarded).
+		Awards a registered badge in the background (no-op when it is owned, already being awarded, or the
+		player has left).
 		Throws for an unregistered key.
 	]=]
 	award = function(_self, player, key)
 		local def = BadgeRegistry.get(key)
 		assert(def ~= nil, `badge "{key}" is not registered`)
-		if tracker:owned(player.UserId, key) == true or not tracker:begin(player.UserId, key) then
+		if
+			not present(player)
+			or tracker:owned(player.UserId, key) == true
+			or not tracker:begin(player.UserId, key)
+		then
 			return
 		end
 		task.spawn(function()
 			local owned = checkOwned(player, key, def.badgeId)
-			if owned == false and player.Parent ~= nil then
+			if owned == false and present(player) then
 				local done = attempt(`AwardBadgeAsync({key})`, function()
 					return BadgeService:AwardBadgeAsync(player.UserId, def.badgeId)
 				end)
 				if done == true then
-					tracker:setOwned(player.UserId, key, true)
+					if present(player) then
+						tracker:setOwned(player.UserId, key, true)
+					end
 					counters.awarded += 1
 					awarded:Fire(player, key)
 				else
