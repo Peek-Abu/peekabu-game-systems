@@ -8,7 +8,8 @@
 	  DeathServiceServer tracks the model (ragdoll, `humanoidDied`).
 	- Each NPC thinks every THINK_INTERVAL (staggered) through NpcBehaviourSystem: perception
 	  (NpcSenseRules + one line-of-sight ray), NpcBrainRules.decide, then the intent through its
-	  NpcMoverSystem.
+	  NpcMoverSystem. `wake(npc)` brings its next think forward to the next frame (a game's state change
+	  that must act at once, e.g. a bolt into a chase). Its pose follows its speed every frame.
 	- Attacks use the kind's cooldown and damage through DeathServiceServer:damage (credited to the kind),
 	  unless the game registered `onAttack(kind, fn)`.
 	- Poses play through AnimationServiceServer:playOnRig from the kind's `animations`.
@@ -197,6 +198,7 @@ export type NpcServiceServer = {
 	onAttack: (self: NpcServiceServer, kind: string, handler: AttackHandler) -> (),
 	setTargetFilter: (self: NpcServiceServer, filter: ((player: Player) -> boolean)?) -> (),
 	setTarget: (self: NpcServiceServer, npc: Model, player: Player?) -> boolean,
+	wake: (self: NpcServiceServer, npc: Model) -> boolean,
 }
 
 local NpcServiceServer: NpcServiceServer = {
@@ -234,6 +236,7 @@ local NpcServiceServer: NpcServiceServer = {
 			for _, agent in agents do
 				if agent.humanoid.Health > 0 then
 					agent.mover:step()
+					NpcBehaviourSystem.updatePose(agent)
 					if now >= agent.nextThinkAt then
 						agent.nextThinkAt = now + NpcConstants.THINK_INTERVAL
 						local ok, err = pcall(function()
@@ -343,6 +346,21 @@ local NpcServiceServer: NpcServiceServer = {
 		end
 		agent.targetUserId = if player ~= nil then player.UserId else nil
 		agent.lastSeenAt = if player ~= nil then os.clock() else nil
+		return true
+	end,
+
+	--[=[
+		Thinks for `npc` on the next frame instead of at its next scheduled think (THINK_INTERVAL), so a
+		state change (a bolt into a chase) acts at once. Its schedule resumes from that think. Safe to call
+		from inside its own think: it then thinks again on the next frame. False when `npc` is not a live NPC.
+	]=]
+	wake = function(_self, npc)
+		local id = roster:idOf(npc)
+		local agent = if id ~= nil then agents[id] else nil
+		if agent == nil then
+			return false
+		end
+		agent.nextThinkAt = -math.huge
 		return true
 	end,
 

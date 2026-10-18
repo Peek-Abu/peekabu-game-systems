@@ -26,17 +26,20 @@ data-driven behaviour layer, pathfinding, animation and death, so a game describ
    filter (`setTargetFilter`, e.g. only round participants who are alive).
 5. **Movement** uses PathfindingService through `NpcMoverSystem`, re-pathing only when the goal moved
    more than a threshold or the path is old (`NpcPathRules.shouldRepath`), with a direct `MoveTo` fallback
-   when no path exists. Patrol points are the BaseParts in the Folder named by the model's `NpcPatrol`
+   when no path exists. While a path computes, a goal in clear line is walked at straight away
+   (`NpcPathRules.headStraight`) and the path takes over when it arrives, so a chase never waits on the
+   pathfinder. Patrol points are the BaseParts in the Folder named by the model's `NpcPatrol`
    attribute, visited in name order. Wander and flee goals are pure (`NpcPathRules`).
 6. **Attacks** happen in range after the kind's cooldown: by default `DeathServiceServer:damage` with the
    kind as the credited source; `onAttack(kind, fn)` replaces that (a grab, a jumpscare).
 7. **Animation** through `AnimationServiceServer:playOnRig` from the kind's optional `animations = { idle,
-   walk, run, attack }` registry ids, chosen by speed (`NpcBrainRules.poseFor`); a template may instead
+   walk, run, attack }` registry ids, chosen by speed (`NpcBrainRules.poseFor`) every frame; a template may instead
    carry its own Animate script.
 8. Dead NPCs are removed after `corpseTime`. `spawned(model, kind)` and `died(model, kind, info)` signals.
 
 A game can point an NPC at a player directly with `setTarget(npc, player)` (a noise, a trap), limit who
-NPCs hunt with `setTargetFilter`, and remove them with `despawn` / `clear`.
+NPCs hunt with `setTargetFilter`, and remove them with `despawn` / `clear`. `wake(npc)` brings an NPC's
+next think forward to the next frame, for a game state change that must act at once (a bolt into a chase).
 
 Not now: group tactics, a hearing model, flying or swimming agents.
 
