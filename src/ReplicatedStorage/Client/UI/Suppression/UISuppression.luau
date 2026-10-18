@@ -2,7 +2,8 @@
 --[=[
 	UISuppression: the shared world-suppression singleton (like StateSyncClientStore is shared state, driven by
 	StateSyncServiceClient). Wires the pure UIWorldSuppression core to the real scene resolver and the
-	ONE handler UI legitimately owns — the mouse (freeing the pointer for UI) — and exposes
+	ONE handler UI legitimately owns — the mouse (freeing the pointer for UI: ModalEnabled, and the Modal button
+	SceneHost renders off `UIStore.mouseFreed`) — and exposes
 	`registerHandler`/`reconcile`/`counts`. Everything that needs suppression requires THIS module;
 	UIServiceClient drives `reconcile` off the scene stack.
 
@@ -25,6 +26,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local SceneRegistry = require(ReplicatedStorage.Client.UI.Scenes.SceneRegistry)
+local UIStore = require(ReplicatedStorage.Client.UI.Scenes.UIStore)
 local UIWorldSuppression = require(script.Parent.UIWorldSuppression)
 
 local log = Logger.new("UISuppression")
@@ -39,16 +41,21 @@ local core = UIWorldSuppression.new(resolveScene, function(message: string)
 	log:warn(message)
 end)
 
--- Built-in handler: mouse. Free the pointer for UI via ModalEnabled, restoring the prior value on
--- release. engage/disengage fire only on the 0↔1 transition, so save-on-engage is safe.
+-- Built-in handler: mouse. Frees the pointer for UI while a scene asks for it. The engine locks the cursor to the
+-- centre in first person and in shift lock, and only a visible GuiButton with `Modal` set overrides that lock
+-- (`UserInputService.ModalEnabled` does not: it only hides the touch controls; that part is kept as it was). The
+-- handler sets `UIStore.mouseFreed`, and SceneHost renders a zero-size, invisible Modal button while it is true.
+-- engage/disengage fire only on the 0<->1 transition, so save-on-engage is safe.
 local savedModalEnabled = false
 core.registerHandler("mouse", {
 	engage = function()
 		savedModalEnabled = UserInputService.ModalEnabled
 		UserInputService.ModalEnabled = true
+		UIStore.mouseFreed(true)
 	end,
 	disengage = function()
 		UserInputService.ModalEnabled = savedModalEnabled
+		UIStore.mouseFreed(false)
 	end,
 })
 
