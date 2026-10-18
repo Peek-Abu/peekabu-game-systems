@@ -12,14 +12,16 @@ return function()
 					count += 1
 				end
 			end
-			-- 45 office pieces (the dust bag went with the Gloom and Gleam economy), the supply cabinet (a secure
-			-- hiding spot) and the five small pocketable valuables (the hotbar inventory).
-			expect(count).to.equal(51)
+			-- 44 office pieces (the dust bag went with the Gloom and Gleam economy, the desk calendar left the art
+			-- kit), the supply cabinet (a secure hiding spot) and the five small pocketable valuables (the hotbar
+			-- inventory).
+			expect(count).to.equal(50)
 			expect(Registry.contains("furniture", "supplyCabinet")).to.equal(true)
 			expect(Registry.contains("cargo", "dustBag")).to.equal(false)
 			expect(Registry.contains("cargo", "deskPhone")).to.equal(false)
 			expect(Registry.contains("cargo", "keyring")).to.equal(true)
 			expect(Registry.contains("cargo", "printer")).to.equal(false)
+			expect(Registry.contains("props", "deskCalendar")).to.equal(false)
 			expect(Registry.contains("equipment", "vacuum")).to.equal(false)
 		end)
 	end)

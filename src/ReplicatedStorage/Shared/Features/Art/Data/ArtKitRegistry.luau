@@ -64,7 +64,6 @@ local keys: { [ArtTypes.Family]: { string } } = {
 		"paperStack",
 		"mouse",
 		"bookStack",
-		"deskCalendar",
 		"stationeryCup",
 	},
 	-- Equipment is an extension family: company equipment has its own visual systems.

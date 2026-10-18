@@ -68,7 +68,7 @@ return function()
 		expect(decor:FindFirstChild("Screen", true).Transparency).to.equal(1)
 		expect(decor:FindFirstChild("Screen", true):FindFirstChildOfClass("PointLight") ~= nil).to.equal(true)
 	end)
-	it("dresses desks with the complete nine-prop kit and chairs without gameplay tags or desktop overflow", function()
+	it("dresses desks with the complete eight-prop kit and chairs without gameplay tags or desktop overflow", function()
 		for _, key in
 			{
 				"keyboard",
@@ -78,12 +78,13 @@ return function()
 				"folder",
 				"paperStack",
 				"bookStack",
-				"deskCalendar",
 				"stationeryCup",
 			}
 		do
 			template("props", key)
 		end
+		-- A desk calendar left over in a place's kit (it was removed from the art kit) is never placed.
+		template("props", "deskCalendar")
 		template("furniture", "officeChair")
 		template("cargo", "filingCabinet")
 		template("furniture", "breakTable")
@@ -134,9 +135,11 @@ return function()
 			end
 		end
 		expect(chairs).to.equal(desks)
-		for _, key in { "mug", "paperTray", "folder", "paperStack", "bookStack", "deskCalendar", "stationeryCup" } do
+		for _, key in { "mug", "paperTray", "folder", "paperStack", "bookStack", "stationeryCup" } do
 			expect(found[key]).to.equal(true)
 		end
+		-- The desk calendar left the art kit: no desk asks for it.
+		expect(found.deskCalendar).to.equal(nil)
 		for _, desk in built.searchables do
 			if desk.Name == "Desk" then
 				expect(desk:FindFirstChild("Keyboard"):FindFirstChild("ArtVisual") ~= nil).to.equal(true)
@@ -252,7 +255,7 @@ return function()
 		expect(CollectionService:HasTag(elevator, Constants.AMBIENT_TAG)).to.equal(true)
 	end)
 	it("rotates all desktop dressing with a rotated desk and turns the paper tray another half-turn", function()
-		for _, key in { "mug", "stationeryCup", "folder", "paperTray", "deskCalendar" } do
+		for _, key in { "mug", "stationeryCup", "folder", "paperTray" } do
 			template("props", key)
 		end
 		local layout = table.clone(Layout)

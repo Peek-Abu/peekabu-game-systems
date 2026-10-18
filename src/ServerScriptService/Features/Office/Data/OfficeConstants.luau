@@ -24,7 +24,6 @@ local DESK_PROP_SIZES: { [string]: Vector3 } = {
 	folder = Vector3.new(1.15, 0.104, 1.495),
 	paperStack = Vector3.new(0.987, 0.131, 1.294),
 	bookStack = Vector3.new(1.007, 0.465, 1.14),
-	deskCalendar = Vector3.new(0.78, 0.597, 0.445),
 	stationeryCup = Vector3.new(0.34, 0.721, 0.34),
 }
 local FLOOR_COLORS: { Color3 } = {

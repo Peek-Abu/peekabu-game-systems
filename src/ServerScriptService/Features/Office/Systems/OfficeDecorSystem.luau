@@ -218,7 +218,6 @@ local function dressDesk(
 		prop("paperStack", -1.85, 0.65)
 		prop("bookStack", 1.85, 0.65)
 	end
-	prop("deskCalendar", 0.55, 1.24)
 end
 
 local function chairAt(layout: OfficeTypes.Layout, desk: OfficeTypes.Marker, origin: CFrame): CFrame?
