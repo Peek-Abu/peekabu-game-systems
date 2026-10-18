@@ -77,6 +77,48 @@ return function()
 			expect(all(pieces, 1)).to.equal(true)
 		end)
 
+		-- The vacuum bug (2-player test, 2026-10-18): the wand was faded in the hand, put away (the Tool moved to the
+		-- Backpack) before the fade ended, and the end only reached what was still in the character, so the wand came
+		-- out invisible every time after.
+		it("shows a held thing put away while faded, at once", function()
+			local fader = CameraFadeSystem.new()
+			local model, pieces = character()
+			local wand = pieces[4]
+			local held = wand.Parent
+			CameraFadeSystem.apply(fader, model, 0.9)
+			held.Parent = nil
+			CameraFadeSystem.apply(fader, model, 0.9)
+			expect(wand.LocalTransparencyModifier).to.equal(0)
+			held.Parent = model
+			CameraFadeSystem.apply(fader, model, 0)
+			expect(wand.LocalTransparencyModifier).to.equal(0)
+		end)
+
+		it("shows a held thing put away while faded, when the fade ends", function()
+			local fader = CameraFadeSystem.new()
+			local model, pieces = character()
+			local wand = pieces[4]
+			local held = wand.Parent
+			CameraFadeSystem.apply(fader, model, 0.9)
+			held.Parent = nil
+			CameraFadeSystem.apply(fader, model, 0)
+			expect(wand.LocalTransparencyModifier).to.equal(0)
+			held:Destroy()
+		end)
+
+		it("shows a held thing put away while faded, when the subject changes", function()
+			local fader = CameraFadeSystem.new()
+			local model, pieces = character()
+			local other = character()
+			local wand = pieces[4]
+			local held = wand.Parent
+			CameraFadeSystem.apply(fader, model, 0.9)
+			held.Parent = nil
+			CameraFadeSystem.apply(fader, other, 0.5)
+			expect(wand.LocalTransparencyModifier).to.equal(0)
+			held:Destroy()
+		end)
+
 		it("shows the previous character when the subject changes", function()
 			local fader = CameraFadeSystem.new()
 			local first, firstPieces = character()

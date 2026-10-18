@@ -15,6 +15,11 @@
 	and otherwise leaves the modifier alone: another owner (a hiding spot hiding the body from its peek camera) keeps
 	what it set. A faded character that stops being the subject is shown again.
 
+	It shows again exactly what it faded, wherever that is now: a piece that left the character during the fade (the
+	vacuum put away, its Tool moved to the Backpack) is shown at once. Restoring only what was still in the character
+	left a wand put away mid-fade invisible every time it came out again, for good, since nothing else writes a Tool's
+	modifier (2-player test, 2026-10-18).
+
 	@class CameraFadeSystem
 ]=]
 
@@ -23,17 +28,53 @@ export type Fader = {
 	character: Model?,
 	-- What it last wrote (0 = nothing held).
 	written: number,
+	-- Every piece it holds faded now (shown again when the fade ends or the piece leaves the character).
+	parts: { [BasePart]: true },
+	decals: { [Decal]: true },
 }
 
 local CameraFadeSystem = {}
 
-local function write(character: Model, amount: number)
+-- Shows every piece `fader` holds faded and forgets them.
+local function showAll(fader: Fader)
+	for part in fader.parts do
+		part.LocalTransparencyModifier = 0
+	end
+	for decal in fader.decals do
+		decal.LocalTransparencyModifier = 0
+	end
+	table.clear(fader.parts)
+	table.clear(fader.decals)
+end
+
+-- Writes `amount` on every BasePart and Decal under `character` and shows any piece it faded that is no longer there.
+local function write(fader: Fader, character: Model, amount: number)
+	local parts: { [BasePart]: true } = {}
+	local decals: { [Decal]: true } = {}
 	for _, piece in character:GetDescendants() do
 		if piece:IsA("BasePart") then
 			piece.LocalTransparencyModifier = amount
+			parts[piece] = true
 		elseif piece:IsA("Decal") then
 			piece.LocalTransparencyModifier = amount
+			decals[piece] = true
 		end
+	end
+	for part in fader.parts do
+		if not parts[part] then
+			part.LocalTransparencyModifier = 0
+		end
+	end
+	for decal in fader.decals do
+		if not decals[decal] then
+			decal.LocalTransparencyModifier = 0
+		end
+	end
+	if amount > 0 then
+		fader.parts, fader.decals = parts, decals
+	else
+		table.clear(fader.parts)
+		table.clear(fader.decals)
 	end
 end
 
@@ -41,7 +82,7 @@ end
 	A fader holding nothing.
 ]=]
 function CameraFadeSystem.new(): Fader
-	return { character = nil, written = 0 }
+	return { character = nil, written = 0, parts = {}, decals = {} }
 end
 
 --[=[
@@ -51,8 +92,9 @@ function CameraFadeSystem.apply(fader: Fader, character: Model?, amount: number)
 	local previous = fader.character
 	if previous ~= character then
 		if previous ~= nil and fader.written > 0 then
-			write(previous, 0)
+			write(fader, previous, 0)
 		end
+		showAll(fader)
 		fader.character = character
 		fader.written = 0
 	end
@@ -60,7 +102,7 @@ function CameraFadeSystem.apply(fader: Fader, character: Model?, amount: number)
 		return
 	end
 	if amount > 0 or fader.written > 0 then
-		write(character, amount)
+		write(fader, character, amount)
 		fader.written = amount
 	end
 end
