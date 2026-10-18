@@ -7,7 +7,8 @@
 	tint and red ceiling lights; the office bed (its four looped beds, OfficeAssets.BED) while the local player's crew
 	is in a shift, and the hub's record (DepotAssets.HUB_THEME, the music slot) while they are in the hub. It is the
 	one owner of Lighting and of the place's bed, so the hub and the office never fight over them. Every ATMOSPHERE_INTERVAL the broken lights near the
-	camera (OfficeLightUtils) blink, with a zap as each dims. It changes only a light's Color, Transparency and
+	camera (OfficeLightUtils) blink, with a zap as a burst of blinks starts (OfficeLightUtils.zaps: once per burst, spaced
+	per tube and across tubes). It changes only a light's Color, Transparency and
 	PointLight Color/Brightness; M2's OccupantTellSystem owns Material and PointLight.Enabled, so the two compose.
 	Registers the office and depot presets with Vfx at load. Pending sounds (OfficeAssets) are silent. While the transit
 	screen covers the view (ShiftTransitStore.covered) a preset is applied at once, not blended, and one still blending
@@ -72,6 +73,10 @@ type LightBase = {
 -- destroyed part, for the rest of the session.
 local bases: { [BasePart]: LightBase } = {}
 local dimmed: { [BasePart]: boolean } = {}
+-- When each tube last began a blink and last zapped, and when any tube last zapped (OfficeLightUtils.zaps).
+local lastBlink: { [BasePart]: number } = {}
+local lastZap: { [BasePart]: number } = {}
+local lastAnyZap: number? = nil
 
 local applied = false
 local currentPreset: string? = nil
@@ -80,7 +85,7 @@ local overtimeToken: number? = nil
 local humOn = false
 local hubOn = false
 local stoppers: { () -> () } = {}
-local counters = { presets = 0, zaps = 0, pending = 0 }
+local counters = { presets = 0, blinks = 0, zaps = 0, pending = 0 }
 
 local function baseOf(light: BasePart): LightBase
 	local existing = bases[light]
@@ -222,13 +227,19 @@ local function stepBroken()
 		end
 		light.Transparency = if dim then OfficeAtmosphereConstants.BROKEN_TRANSPARENCY else base.transparency
 		if dim and not dimmed[light] then
-			counters.zaps += 1
-			if SoundRegistry.has(OfficeAssets.ZAP) then
-				-- At the tube's spot (it never moves): a shared fixed-point voice, not one made per broken tube.
-				SoundServiceClient:playOneShot(OfficeAssets.ZAP, { at = light.Position })
-			else
-				counters.pending += 1
+			counters.blinks += 1
+			if OfficeLightUtils.zaps(now, lastBlink[light], lastZap[light], lastAnyZap) then
+				lastZap[light] = now
+				lastAnyZap = now
+				counters.zaps += 1
+				if SoundRegistry.has(OfficeAssets.ZAP) then
+					-- At the tube's spot (it never moves): a shared fixed-point voice, not one made per broken tube.
+					SoundServiceClient:playOneShot(OfficeAssets.ZAP, { at = light.Position })
+				else
+					counters.pending += 1
+				end
 			end
+			lastBlink[light] = now
 		end
 		dimmed[light] = dim
 	end
@@ -263,6 +274,8 @@ function OfficeAtmosphereSystem.start()
 			if instance:IsA("BasePart") then
 				bases[instance] = nil
 				dimmed[instance] = nil
+				lastBlink[instance] = nil
+				lastZap[instance] = nil
 			end
 		end)
 	table.insert(stoppers, function()
@@ -290,6 +303,9 @@ function OfficeAtmosphereSystem.stop()
 		restore(light)
 	end
 	table.clear(dimmed)
+	table.clear(lastBlink)
+	table.clear(lastZap)
+	lastAnyZap = nil
 	setOvertime(false)
 	setHum(false)
 	setHub(false)

@@ -56,4 +56,22 @@ function OfficeLightUtils.glow(now: number, seed: number): number
 	return 1
 end
 
+--[=[
+	Whether a broken tube's blink starting at `now` zaps: only the first blink of a burst (the tube's previous blink
+	began at least ZAP_BURST_GAP ago), at least ZAP_TUBE_GAP after this tube's last zap, and at least ZAP_GLOBAL_GAP
+	after any tube's last zap, so a room of blinking tubes is an occasional accent, not a stream. `nil` is "never".
+]=]
+function OfficeLightUtils.zaps(now: number, lastBlink: number?, lastTubeZap: number?, lastAnyZap: number?): boolean
+	if lastBlink ~= nil and now - lastBlink < OfficeAtmosphereConstants.ZAP_BURST_GAP then
+		return false
+	end
+	if lastTubeZap ~= nil and now - lastTubeZap < OfficeAtmosphereConstants.ZAP_TUBE_GAP then
+		return false
+	end
+	if lastAnyZap ~= nil and now - lastAnyZap < OfficeAtmosphereConstants.ZAP_GLOBAL_GAP then
+		return false
+	end
+	return true
+end
+
 return OfficeLightUtils

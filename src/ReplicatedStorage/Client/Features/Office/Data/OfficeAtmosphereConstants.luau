@@ -105,6 +105,12 @@ return table.freeze({
 	-- A blinking light's neon fades this far while dim.
 	BROKEN_TRANSPARENCY = 0.6,
 	ATMOSPHERE_INTERVAL = 0.05,
+	-- A broken tube's zap (OfficeLightUtils.zaps): only a burst's first blink (one after ZAP_BURST_GAP seconds without
+	-- a blink starts a burst), ZAP_TUBE_GAP seconds apart per tube and ZAP_GLOBAL_GAP apart across every tube (at most
+	-- 12 a minute; simulated ~10 a minute with eight broken tubes in range, which blink ~620 times a minute).
+	ZAP_BURST_GAP = 1.5,
+	ZAP_TUBE_GAP = 12,
+	ZAP_GLOBAL_GAP = 5,
 	-- Ambient dread (OfficeAmbienceSystem): phone and elevator waits, an "empty room" radius, when typing stops and
 	-- how long it stays quiet, how often it re-checks.
 	PHONE_MIN = 20,

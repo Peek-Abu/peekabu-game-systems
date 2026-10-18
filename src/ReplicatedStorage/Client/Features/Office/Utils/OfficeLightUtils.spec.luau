@@ -72,4 +72,59 @@ return function()
 			expect(fulls > dims).to.equal(true)
 		end)
 	end)
+
+	describe("zaps", function()
+		local C = OfficeAtmosphereConstants
+
+		it("zaps a tube's first blink when nothing has zapped", function()
+			expect(OfficeLightUtils.zaps(100, nil, nil, nil)).to.equal(true)
+		end)
+
+		it("does not zap a blink inside the tube's current burst", function()
+			local now = 100
+			expect(OfficeLightUtils.zaps(now, now - C.ZAP_BURST_GAP * 0.5, nil, nil)).to.equal(false)
+			expect(OfficeLightUtils.zaps(now, now - C.ZAP_BURST_GAP, nil, nil)).to.equal(true)
+		end)
+
+		it("does not zap the same tube again within its minimum gap", function()
+			local now = 100
+			local steady = now - C.ZAP_BURST_GAP * 2
+			expect(OfficeLightUtils.zaps(now, steady, now - C.ZAP_TUBE_GAP * 0.5, nil)).to.equal(false)
+			expect(OfficeLightUtils.zaps(now, steady, now - C.ZAP_TUBE_GAP, nil)).to.equal(true)
+		end)
+
+		it("does not zap any tube within the global gap of the last zap", function()
+			local now = 100
+			expect(OfficeLightUtils.zaps(now, nil, nil, now - C.ZAP_GLOBAL_GAP * 0.5)).to.equal(false)
+			expect(OfficeLightUtils.zaps(now, nil, nil, now - C.ZAP_GLOBAL_GAP)).to.equal(true)
+		end)
+
+		it("keeps a room of blinking tubes to an occasional accent over a shift", function()
+			-- Twelve broken tubes in range for a 391 s shift, stepped like OfficeAtmosphereSystem.
+			local seconds = 391
+			local lastOnset, lastZap, dimmed = {}, {}, {}
+			local lastAny = nil
+			local onsets, zaps = 0, 0
+			for step = 0, seconds / C.ATMOSPHERE_INTERVAL do
+				local now = step * C.ATMOSPHERE_INTERVAL
+				for tube = 1, 12 do
+					local dim = OfficeLightUtils.glow(now, tube * 8.37) < 1
+					if dim and not dimmed[tube] then
+						onsets += 1
+						if OfficeLightUtils.zaps(now, lastOnset[tube], lastZap[tube], lastAny) then
+							zaps += 1
+							lastZap[tube] = now
+							lastAny = now
+						end
+						lastOnset[tube] = now
+					end
+					dimmed[tube] = dim
+				end
+			end
+			local perMinute = zaps / (seconds / 60)
+			expect(onsets > zaps * 5).to.equal(true)
+			expect(perMinute <= 60 / C.ZAP_GLOBAL_GAP).to.equal(true)
+			expect(perMinute >= 1).to.equal(true)
+		end)
+	end)
 end
