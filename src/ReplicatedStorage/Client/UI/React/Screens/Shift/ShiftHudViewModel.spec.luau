@@ -219,7 +219,9 @@ return function()
 
 		it("carries the deadline the shift clock counts down to, so it ticks without the whole HUD", function()
 			expect(ShiftHudViewModel.hud(snapshot(), nil, 100, false).endsAt).to.equal(1000)
-			expect(ShiftHudViewModel.hud(snapshot({ endsAt = nil }), nil, 100, false).endsAt).to.equal(nil)
+			local open = snapshot()
+			open.endsAt = nil
+			expect(ShiftHudViewModel.hud(open, nil, 100, false).endsAt).to.equal(nil)
 		end)
 	end)
 
