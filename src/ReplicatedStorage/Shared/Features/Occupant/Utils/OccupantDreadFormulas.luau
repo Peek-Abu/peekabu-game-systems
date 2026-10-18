@@ -13,6 +13,8 @@
 	- The heartbeat: `beatPeriod` (the chase's follows the music: `musicBeat`), `pulse` its shape.
 	- `footfallTrauma`: his steps shake your camera while he sees or chases you, close.
 	- `eq`: the ambience EQ's bands for a duck and a muffle.
+	- `framed`: the look eased back while a camera frames his face (the catch, the reveal), so the screen does not
+	  crush it.
 
 	Shared and pure (the client's OccupantDreadSystem plays it).
 
@@ -231,6 +233,25 @@ function OccupantDreadFormulas.reduce(look: DreadLook, reduceMotion: boolean): D
 	local copy = table.clone(look)
 	copy.squeeze = 0
 	copy.edge = 0
+	return copy
+end
+
+--[=[
+	The look with its screen side eased back while a camera frames his face (the catch's jumpscare, the hider's reveal):
+	`amount` (0..1, eased by the caller) of the way to the vignette, desaturation, red and grain times DREAD.FACE_*, and
+	no edge fringe. The sound side (heart, dread, duck, muffle, squeeze) is unchanged.
+]=]
+function OccupantDreadFormulas.framed(look: DreadLook, amount: number): DreadLook
+	local t = math.clamp(amount, 0, 1)
+	if t <= 0 then
+		return look
+	end
+	local copy = table.clone(look)
+	copy.vignette = look.vignette * lerp(1, DREAD.FACE_VIGNETTE, t)
+	copy.desaturate = look.desaturate * lerp(1, DREAD.FACE_DESATURATE, t)
+	copy.red = look.red * lerp(1, DREAD.FACE_RED, t)
+	copy.grain = look.grain * lerp(1, DREAD.FACE_GRAIN, t)
+	copy.edge = look.edge * (1 - t)
 	return copy
 end
 

@@ -303,6 +303,15 @@ local DREAD = {
 	HIDDEN_MUFFLE = -22,
 	HIDDEN_DUCK = -9,
 	HIDDEN_VIGNETTE = 0.1,
+	-- While a camera frames his face (the catch's jumpscare, the hider's reveal; OccupantFaceLightSystem lights it), the
+	-- screen side of the look eases back to these shares (OccupantDreadFormulas.framed) over FACE_EASE (1/s): the
+	-- vignette, the grey and the red pulse had stacked with the catch's own red screen and the lights-out until his
+	-- face was a dark smudge (user, 2026-10-17). The fringe goes entirely.
+	FACE_VIGNETTE = 0.35,
+	FACE_DESATURATE = 0.3,
+	FACE_RED = 0.2,
+	FACE_GRAIN = 0.5,
+	FACE_EASE = 12,
 }
 
 return table.freeze({
@@ -448,7 +457,11 @@ return table.freeze({
 	CAMERA_PRIORITY = 70,
 	CATCH_FOV = 50,
 	CATCH_TRAUMA = 0.6,
-	CATCH_TINT = Color3.fromRGB(255, 120, 120),
+	-- The catch's screen: a red, drained flash that still leaves his lit face readable (2026-10-17: was saturation
+	-- -0.7, contrast 0.3 and a (255, 120, 120) tint, which with the dread and the lights-out crushed his face to black).
+	CATCH_TINT = Color3.fromRGB(255, 172, 166),
+	CATCH_SATURATION = -0.35,
+	CATCH_CONTRAST = 0.08,
 	-- One beat of the chase music (B minor, 144 bpm): the chased player's heartbeat locks to it (DREAD).
 	CHASE_BEAT = 60 / 144,
 	-- The chase music (round-2 pick B, OccupantChaseMusicSystem): the sting is one bar (4 beats) that resolves into the

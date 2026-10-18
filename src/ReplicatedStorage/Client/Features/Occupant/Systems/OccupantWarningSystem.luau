@@ -16,7 +16,8 @@
 	noticed anywhere (OccupantTellRules.alerted, the `alert` mode). The slow turns (behaviours design §11): his neck's
 	creak as one starts (stopped short with it), and the porcelain crack on the jerk; these are checked every frame, so
 	the crack lands on the same frame as the chase sting. No PA since 2026-10-16. And the hider's reveal: while he looks under their spot or tips his head under their
-	desk, their camera draws back into the spot and follows his face (OccupantTellRules.revealed). Reads only
+	desk, their camera draws back into the spot and follows his face (OccupantTellRules.revealed), his face lit for them
+	alone (OccupantFaceLightSystem). Reads only
 	replicated state. Pending sounds are skipped silently and counted.
 
 	Spec-exempt shell (Sound, Instances, RunService); the choices are the specced OccupantTellRules.
@@ -35,6 +36,7 @@ local OccupantTellRules = require(ReplicatedStorage.Shared.Features.Occupant.Rul
 local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundRegistry)
 local SoundTypes = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundTypes)
 local CameraServiceClient = require(ReplicatedStorage.Client.Features.Camera.CameraServiceClient)
+local OccupantFaceLightSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantFaceLightSystem)
 local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideConstants)
 local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
 
@@ -57,8 +59,9 @@ local lastPhase = ""
 local lastMode: string? = nil
 local stage: string = "none"
 local nextClick = 0
--- The hider's reveal camera while it shows (CameraServiceClient's token).
+-- The hider's reveal camera while it shows (CameraServiceClient's token), and the face lights' owner for it.
 local reveal: number? = nil
+local FACE_OWNER = "reveal"
 local counters = {
 	reveals = 0,
 	clicks = 0,
@@ -138,8 +141,11 @@ local function setReveal(head: BasePart?, on: boolean)
 				return CFrame.lookAt(eye, head.Position), OccupantConstants.REVEAL_FOV
 			end,
 		}, OccupantConstants.REVEAL_PRIORITY)
+		-- Shot from inside the spot, so nothing in the room lights his face: this client lights it.
+		OccupantFaceLightSystem.frame(FACE_OWNER, head)
 	elseif not on and token ~= nil then
 		CameraServiceClient:removeMode(token)
+		OccupantFaceLightSystem.release(FACE_OWNER)
 		reveal = nil
 	end
 end

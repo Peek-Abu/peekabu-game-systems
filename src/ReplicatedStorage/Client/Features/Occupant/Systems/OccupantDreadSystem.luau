@@ -12,7 +12,8 @@
 	- the dread loop (harlowDread, 2D) while he is near, hunting, or near a crewmate's chase (the chase music replaces it
 	  in your own chase);
 	- the screen: desaturated and, on each beat, a soft red pulse (VfxServiceClient), plus the vignette, the grain and
-	  the beat's edge fringe (OccupantDreadTracker -> DreadOverlay);
+	  the beat's edge fringe (OccupantDreadTracker -> DreadOverlay); eased back while a camera frames his face
+	  (OccupantFaceLightSystem.framing, OccupantDreadFormulas.framed) so it never crushes it;
 	- in your chase, a held FOV squeeze (CameraServiceClient:setFovOffset), and while he sees or chases you, a camera
 	  shake on his footfalls (FootstepServiceClient:onStep; the cameraShake setting scales it);
 	- the mix: an EqualizerSoundEffect on the Ambient group and on every other Music-group sound (the overtime ticking)
@@ -45,6 +46,7 @@ local OccupantTellRules = require(OccupantShared.Rules.OccupantTellRules)
 local OccupantDreadFormulas = require(OccupantShared.Utils.OccupantDreadFormulas)
 local OccupantChaseMusicSystem = require(OccupantClient.Systems.OccupantChaseMusicSystem)
 local OccupantDreadTracker = require(OccupantClient.State.OccupantDreadTracker)
+local OccupantFaceLightSystem = require(OccupantClient.Systems.OccupantFaceLightSystem)
 local DepotAtmosphereUtils = require(ReplicatedStorage.Client.Features.Depot.Utils.DepotAtmosphereUtils)
 local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideConstants)
 local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundRegistry)
@@ -64,6 +66,8 @@ export type OccupantDreadState = {
 	sight: number,
 	crew: number,
 	hidden: boolean,
+	-- How far the screen is eased back for a camera on his face (0..1).
+	framing: number,
 	reduceMotion: boolean,
 	look: DreadLook,
 	eqs: number,
@@ -91,6 +95,8 @@ local WHITE = Color3.new(1, 1, 1)
 local connection: RBXScriptConnection? = nil
 local stopSteps: (() -> ())? = nil
 local look: DreadLook = OccupantDreadFormulas.ZERO
+-- How far the screen is eased back for a camera on his face (0..1; OccupantFaceLightSystem.framing, eased).
+local framing = 0
 local stage: DreadStage = "none"
 local proximity = 0
 local crew = 0
@@ -285,9 +291,9 @@ local function setMix(now: number)
 	end
 end
 
-local function setScreen(pulse: number)
-	local red = if reduceMotion() then look.red * DREAD.REDUCED_RED else look.red * pulse
-	local active = look.desaturate > OFF or red > OFF
+local function setScreen(shown: DreadLook, pulse: number)
+	local red = if reduceMotion() then shown.red * DREAD.REDUCED_RED else shown.red * pulse
+	local active = shown.desaturate > OFF or red > OFF
 	local token = screenToken
 	if not active then
 		if token ~= nil then
@@ -298,8 +304,8 @@ local function setScreen(pulse: number)
 	end
 	local request = {
 		tint = WHITE:Lerp(DREAD.PULSE_TINT, math.clamp(red, 0, 1)),
-		saturation = -look.desaturate,
-		contrast = 0.06 * look.vignette,
+		saturation = -shown.desaturate,
+		contrast = 0.06 * shown.vignette,
 	}
 	if token == nil then
 		screenToken = VfxServiceClient:requestScreen(request)
@@ -310,6 +316,7 @@ end
 
 local function clearAll()
 	look = OccupantDreadFormulas.ZERO
+	framing = 0
 	stage = "none"
 	proximity = 0
 	crew = 0
@@ -390,13 +397,18 @@ local function step(dt: number)
 		look.squeeze = 0
 	end
 
+	-- A camera on his face (the catch, the reveal): the screen eases back so it does not crush his lit face.
+	local frameAim = if OccupantFaceLightSystem.framing() then 1 else 0
+	framing += (frameAim - framing) * (1 - math.exp(-DREAD.FACE_EASE * dt))
+	local shown = OccupantDreadFormulas.framed(look, framing)
+
 	stepHeartbeat(now, slow)
 	local pulse = OccupantDreadFormulas.pulse(now - lastBeatAt, beatPeriod)
-	setScreen(pulse)
+	setScreen(shown, pulse)
 	OccupantDreadTracker.set({
-		vignette = look.vignette,
-		grain = look.grain,
-		edge = if reduced then 0 else look.edge * pulse,
+		vignette = shown.vignette,
+		grain = shown.grain,
+		edge = if reduced then 0 else shown.edge * pulse,
 		still = reduced,
 	})
 	CameraServiceClient:setFovOffset(FOV_OWNER, if look.squeeze > OFF then -look.squeeze else 0)
@@ -465,6 +477,7 @@ function OccupantDreadSystem.getState(): OccupantDreadState
 		sight = sight,
 		crew = crew,
 		hidden = hidden,
+		framing = framing,
 		reduceMotion = reduceMotion(),
 		look = table.clone(look),
 		eqs = count,

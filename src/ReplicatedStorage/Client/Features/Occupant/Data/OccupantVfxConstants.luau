@@ -8,6 +8,8 @@
 	- occupantRehired: back on the clock: a cream puff ring at their feet, Pippa-purple-to-gold sparkles rising and two
 	  fluttering slips of rehire paperwork.
 
+	And the face lights' tuning (FACE_KEY, FACE_RIM; OccupantFaceLightSystem).
+
 	@class OccupantVfxConstants
 ]=]
 
@@ -138,4 +140,20 @@ return table.freeze({
 	-- Seconds after it appears before the puff plays, so the camera has moved to it (a burst far from the camera is
 	-- skipped).
 	REHIRE_SETTLE = 0.3,
+	-- The face lights (OccupantFaceLightSystem): while a camera frames his face (the catch's jumpscare, the hider's
+	-- reveal) this client alone lights it: a soft warm key in front of and just above his face, and a cool rim behind
+	-- his head that cuts his silhouette from a dark room. Offsets are in his head's space (his face looks down -Z).
+	-- Unshadowed, short-ranged, so they light him and barely the room; only this client sees them.
+	FACE_KEY = table.freeze({
+		offset = Vector3.new(0, 0.45, -2.2),
+		color = Color3.fromRGB(255, 232, 210),
+		brightness = 1.6,
+		range = 6,
+	}),
+	FACE_RIM = table.freeze({
+		offset = Vector3.new(0, 1.1, 1.6),
+		color = Color3.fromRGB(176, 196, 255),
+		brightness = 1.3,
+		range = 4.5,
+	}),
 })

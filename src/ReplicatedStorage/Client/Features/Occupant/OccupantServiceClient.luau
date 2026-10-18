@@ -4,7 +4,8 @@
 	behaviour set §6, docs/superpowers/specs/2026-10-15-cleanup-crew-manager-behaviours-design.md): on `CatchCam` the
 	camera follows his face for SNAP_SECONDS (a custom camera mode above Death's spectate: JUMPSCARE_DISTANCE in front of
 	his head, world up, so a face upside down under a desk reads upside down; the packet's still shot when his head is
-	gone), with a quick shake and a red, drained screen; then Death's spectate takes over. His head tilts meanwhile
+	gone), with a quick shake and a red, drained screen, and his face lit for this client alone (OccupantFaceLightSystem:
+	the catch's lights-out leaves nothing else to light it); then Death's spectate takes over. His head tilts meanwhile
 	(OccupantGestureSystem, the server's tilt). The sting and the stretched grin are
 	OccupantScareSystem's. At init it registers the catch's HUD widgets: the CCTV overlay while caught (CatchOverlay) and
 	the HR "Rehired." card around the respawn (CatchRehiredCard), and the dread's screen layer (DreadOverlay). The light
@@ -39,12 +40,15 @@ local OccupantWarningSystem = require(ReplicatedStorage.Client.Features.Occupant
 local OccupantDreadSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantDreadSystem)
 local DreadOverlay = require(ReplicatedStorage.Client.UI.React.Screens.Dread.DreadOverlay)
 local OccupantCatchVfxSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantCatchVfxSystem)
+local OccupantFaceLightSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantFaceLightSystem)
 local CatchOverlay = require(ReplicatedStorage.Client.UI.React.Screens.Catch.CatchOverlay)
 local CatchRehiredCard = require(ReplicatedStorage.Client.UI.React.Screens.Catch.CatchRehiredCard)
 local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudRegistry)
 
 local stoppers: { () -> () } = {}
 local snaps = 0
+-- The face lights' owner for the jumpscare.
+local FACE_OWNER = "catch"
 
 -- His head, to follow for the jumpscare.
 local function harlowHead(): BasePart?
@@ -71,12 +75,19 @@ local function snap(cframe: CFrame)
 			return CFrame.lookAt(eye, face), OccupantConstants.JUMPSCARE_FOV
 		end,
 	}, OccupantConstants.CAMERA_PRIORITY)
+	if head ~= nil then
+		OccupantFaceLightSystem.frame(FACE_OWNER, head)
+	end
 	CameraServiceClient:addTrauma(OccupantConstants.CATCH_TRAUMA)
-	local screen =
-		VfxServiceClient:requestScreen({ saturation = -0.7, contrast = 0.3, tint = OccupantConstants.CATCH_TINT })
+	local screen = VfxServiceClient:requestScreen({
+		saturation = OccupantConstants.CATCH_SATURATION,
+		contrast = OccupantConstants.CATCH_CONTRAST,
+		tint = OccupantConstants.CATCH_TINT,
+	})
 	task.delay(OccupantConstants.SNAP_SECONDS, function()
 		CameraServiceClient:removeMode(token)
 		VfxServiceClient:releaseScreen(screen)
+		OccupantFaceLightSystem.release(FACE_OWNER)
 	end)
 end
 
@@ -166,6 +177,7 @@ local OccupantServiceClient: OccupantServiceClient = {
 		end
 		table.clear(stoppers)
 		OccupantCatchStore.clear()
+		OccupantFaceLightSystem.clear()
 	end,
 
 	getState = function(_self)
