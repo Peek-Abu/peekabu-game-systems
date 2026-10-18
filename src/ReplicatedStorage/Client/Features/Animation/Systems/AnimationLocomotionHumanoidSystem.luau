@@ -72,11 +72,16 @@ function AnimationLocomotionHumanoidSystem.bind(character: Model): (() -> ())?
 		humanoid.Running:Connect(function(speed: number)
 			animator:handleEvent("running", speed, os.clock())
 		end),
-		humanoid.Jumping:Connect(function()
-			animator:handleEvent("jumping", nil, os.clock())
+		-- Jumping and FreeFalling fire on entering (true) AND leaving (false) the state; only entering is an event.
+		humanoid.Jumping:Connect(function(active: boolean)
+			if active then
+				animator:handleEvent("jumping", nil, os.clock())
+			end
 		end),
-		humanoid.FreeFalling:Connect(function()
-			animator:handleEvent("freefall", nil, os.clock())
+		humanoid.FreeFalling:Connect(function(active: boolean)
+			if active then
+				animator:handleEvent("freefall", nil, os.clock())
+			end
 		end),
 		humanoid.Climbing:Connect(function(speed: number)
 			animator:handleEvent("climbing", speed, os.clock())

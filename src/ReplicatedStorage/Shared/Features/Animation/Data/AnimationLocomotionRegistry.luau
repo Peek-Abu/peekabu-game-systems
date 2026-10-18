@@ -4,7 +4,8 @@
 
 	Seeded 2026-07-20 from the ids the old game's RUNNING `Animate` fork actually played — its
 	`Animation` config-children in `StarterCharacterScripts`, the live truth — NOT its stale internal
-	tables or the `RS.Modules.Animate` copy. Every id here is provisional until the developer's V5
+	tables or the `RS.Modules.Animate` copy. The jump and fall were corrected to the stock R15 clips on
+	2026-10-13 (see their entries); every other id here is provisional until the developer's V5
 	feel/id sign-off checkpoint; replacing one is a one-line edit.
 
 	Census oddities deliberately NOT carried over (flagged for V5): the fork's `walk` set contained a
@@ -44,8 +45,13 @@ local AnimationLocomotionRegistry: AnimationDomain = table.freeze({
 	idle = entry("rbxassetid://11526063910", true),
 	walk = entry("rbxassetid://11257118786", true),
 	run = entry("rbxassetid://11525748624", true),
-	jump = entry("rbxassetid://9126863232", false),
-	fall = entry("rbxassetid://11525896362", true),
+	-- Stock R15 jump and fall (2026-10-13). The inherited clips (jump 9126863232, fall 11525896362) were
+	-- authored for the old game's custom controller: the jump opens on a ground crouch (hips 0.6-0.9 studs
+	-- down, knees ~90 degrees) and the fall holds a deep tuck with the hips 0.89 down. A native Humanoid fires
+	-- Jumping at takeoff, so the crouch played in the air and the tuck pushed the feet through the floor while
+	-- it blended out on landing: the "legs bug out" on every rig.
+	jump = entry("rbxassetid://507765000", false),
+	fall = entry("rbxassetid://507767968", true),
 	climb = entry("rbxassetid://507765644", true),
 	swim = entry("rbxassetid://913384386", true),
 	swimidle = entry("rbxassetid://913389285", true),

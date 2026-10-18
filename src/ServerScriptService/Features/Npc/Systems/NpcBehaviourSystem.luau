@@ -1,8 +1,9 @@
 --!strict
 --[=[
 	NpcBehaviourSystem: one NPC's think — perception, the brain's decision, carrying the intent out through
-	its mover, attacks, and its locomotion pose. NpcServiceServer owns the agents and calls `think` on each
-	NPC's schedule (design: docs/superpowers/specs/2026-10-09-npc-design.md).
+	its mover, and attacks — and its locomotion pose. NpcServiceServer owns the agents, calls `think` on each
+	NPC's schedule and `updatePose` every frame, so the legs follow the body from its first step rather than
+	from the next think (design: docs/superpowers/specs/2026-10-09-npc-design.md).
 
 	Spec-exempt shell (Players, raycasts, Humanoids, animation); every decision is a specced rule module
 	(NpcSenseRules, NpcBrainRules, NpcPathRules).
@@ -104,6 +105,21 @@ local function lineOfSight(agent: Agent, candidate: Candidate): boolean
 	return Workspace:Raycast(origin, candidate.position - origin, params) == nil
 end
 
+-- A clear line from the NPC to a point (a goTo goal); players' characters never block it.
+local function clearLine(agent: Agent, point: Vector3): boolean
+	local origin = agent.root.Position + Vector3.new(0, 1.5, 0)
+	local excluded: { Instance } = { agent.model }
+	for _, player in Players:GetPlayers() do
+		if player.Character ~= nil then
+			table.insert(excluded, player.Character)
+		end
+	end
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = excluded
+	return Workspace:Raycast(origin, point - origin, params) == nil
+end
+
 local function findCandidate(list: { Candidate }, userId: number?): Candidate?
 	for _, candidate in list do
 		if candidate.id == userId then
@@ -113,7 +129,12 @@ local function findCandidate(list: { Candidate }, userId: number?): Candidate?
 	return nil
 end
 
-local function updatePose(agent: Agent)
+local NpcBehaviourSystem = {}
+
+--[=[
+	Plays the locomotion clip for the NPC's current speed when that pose changed (cheap when it has not).
+]=]
+function NpcBehaviourSystem.updatePose(agent: Agent)
 	local animations = agent.def.animations
 	if animations == nil then
 		return
@@ -158,8 +179,6 @@ local function attack(agent: Agent, target: Candidate, now: number, deps: ThinkD
 		log:error(`onAttack("{agent.kind}") errored: {err}`)
 	end
 end
-
-local NpcBehaviourSystem = {}
 
 --[=[
 	One think for one NPC at `now` (os.clock).
@@ -238,18 +257,18 @@ function NpcBehaviourSystem.think(agent: Agent, now: number, deps: ThinkDeps)
 			if (victim.position - position).Magnitude <= def.attackRange then
 				attack(agent, victim, now, deps)
 			else
-				agent.mover:moveTo(victim.position, now)
+				agent.mover:moveTo(victim.position, now, lineOfSight(agent, victim))
 			end
 		end
 	elseif intent.kind == "chase" then
 		local quarry = findCandidate(list, intent.target)
 		if quarry ~= nil then
 			agent.humanoid.WalkSpeed = def.runSpeed
-			agent.mover:moveTo(quarry.position, now)
+			agent.mover:moveTo(quarry.position, now, lineOfSight(agent, quarry))
 		end
 	elseif intent.kind == "goTo" then
 		agent.humanoid.WalkSpeed = if intent.run then def.runSpeed else def.walkSpeed
-		agent.mover:moveTo(intent.position, now)
+		agent.mover:moveTo(intent.position, now, clearLine(agent, intent.position))
 	elseif intent.kind == "flee" then
 		agent.humanoid.WalkSpeed = def.runSpeed
 		agent.mover:moveTo(NpcPathRules.fleeGoal(position, intent.from, def.fleeRange * 1.5), now)
@@ -278,7 +297,6 @@ function NpcBehaviourSystem.think(agent: Agent, now: number, deps: ThinkDeps)
 	elseif agent.mover:goal() ~= nil then
 		agent.mover:stop()
 	end
-	updatePose(agent)
 end
 
 return NpcBehaviourSystem
