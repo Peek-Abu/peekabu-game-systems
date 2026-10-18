@@ -14,8 +14,9 @@
 	- `playMusic(id?, fade?)` / `setAmbience(layer, id?, fade?)` — looping tracks that crossfade.
 	- `setGroupVolume(group, volume)` — the per-group sliders (Music / SFX / UI / Ambient).
 	- Listens for the server's `SoundEvents.Play` (one-shots).
-	- A non-looped sound whose asset never loads (LOAD_TIMEOUT after its play) is released: its Ended never fires, so
-	  it would otherwise keep its Sound, its anchor and its concurrency slot for good.
+	- A non-looped sound whose asset never loads (LOAD_TIMEOUT after its play), or whose place is removed from the game
+	  without being destroyed, is released: its Ended never fires, so it would otherwise keep its Sound, its anchor and
+	  its concurrency slot for good (and a handle's watcher, like the results jingle's duck, would never let go).
 
 	Spec-exempt shell (Sound instances, TweenService, ByteNet); the rules live in SoundRegistry,
 	SoundFormulas, SoundVoiceTracker and SoundIdlePool.
@@ -218,6 +219,12 @@ local function newVoice(at: Instance, point: Vector3?): Voice
 	sound.Ended:Connect(function()
 		release(voice, true)
 	end)
+	-- Its place removed from the game without being destroyed: it can never end, so let it go.
+	sound.AncestryChanged:Connect(function()
+		if voice.token ~= nil and not sound:IsDescendantOf(game) then
+			release(voice, false)
+		end
+	end)
 	-- Destroyed with its place (a character leaving, a pile popping): forget it, idle or playing.
 	sound.Destroying:Once(function()
 		local token = voice.token
@@ -334,6 +341,12 @@ local SoundServiceClient: SoundServiceClient = {
 			guardLoad(sound, function()
 				return playing[token] ~= nil
 			end, cleanup)
+			-- Its place removed from the game without being destroyed: it can never end. (A loop is its caller's.)
+			sound.AncestryChanged:Connect(function()
+				if playing[token] ~= nil and not sound:IsDescendantOf(game) then
+					cleanup()
+				end
+			end)
 		end
 		sound:Play()
 		counters.played += 1

@@ -44,6 +44,8 @@ type Body = {
 local bodies: { [Model]: Body } = {}
 local counters: Counters = { lands = 0, jumps = 0, bodyFalls = 0 }
 local stoppers: { () -> () } = {}
+-- Each player's CharacterAdded connection, dropped when they leave.
+local followers: { [Player]: RBXScriptConnection? } = {}
 local rng = Random.new()
 
 local function play(id: string, at: BasePart, volumeScale: number?)
@@ -137,21 +139,32 @@ function FootstepLandingSystem.start()
 		if player.Character ~= nil then
 			task.spawn(track, player.Character)
 		end
-		local added = player.CharacterAdded:Connect(function(character: Model)
+		followers[player] = player.CharacterAdded:Connect(function(character: Model)
 			task.spawn(track, character)
-		end)
-		table.insert(stoppers, function()
-			added:Disconnect()
 		end)
 	end
 	for _, player in Players:GetPlayers() do
 		follow(player)
 	end
 	local joined = Players.PlayerAdded:Connect(follow)
+	local left = Players.PlayerRemoving:Connect(function(player: Player)
+		local added = followers[player]
+		if added ~= nil then
+			added:Disconnect()
+			followers[player] = nil
+		end
+	end)
 	local beat = RunService.Heartbeat:Connect(step)
 	table.insert(stoppers, function()
 		joined:Disconnect()
+		left:Disconnect()
 		beat:Disconnect()
+		for _, added in followers do
+			if added ~= nil then
+				added:Disconnect()
+			end
+		end
+		table.clear(followers)
 	end)
 end
 

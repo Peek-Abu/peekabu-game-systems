@@ -62,6 +62,8 @@ local muted = 0
 local muting: { [Model]: { RBXScriptConnection } } = {}
 local warm: { Sound } = {}
 local stoppers: { () -> () } = {}
+-- Each player's character connections, dropped when they leave.
+local followers: { [Player]: () -> () } = {}
 -- Who hears each step as it plays (onStep): the Manager's dread shakes the camera on his footfalls.
 type StepListener = (model: Model, record: FootstepEmitterSystem.StepRecord) -> ()
 local listeners: { StepListener } = {}
@@ -236,10 +238,18 @@ local function followPlayer(player: Player)
 	end
 	local added = player.CharacterAdded:Connect(onCharacter)
 	local removing = player.CharacterRemoving:Connect(forget)
-	table.insert(stoppers, function()
+	followers[player] = function()
 		added:Disconnect()
 		removing:Disconnect()
-	end)
+	end
+end
+
+local function unfollowPlayer(player: Player)
+	local unfollow = followers[player]
+	if unfollow ~= nil then
+		unfollow()
+		followers[player] = nil
+	end
 end
 
 local function followTagged(tag: string, setName: string)
@@ -284,7 +294,17 @@ local function step(dt: number)
 	local camera = Workspace.CurrentCamera
 	local listener = if camera ~= nil then camera.CFrame.Position else nil
 	for model, rig in rigs do
-		if model.Parent == nil or rig.root.Parent == nil then
+		if model.Parent == nil then
+			-- Removed from the game (a character left, an NPC despawned): forget it.
+			forget(model)
+			continue
+		end
+		if rig.root.Parent == nil then
+			-- Its root was replaced: rebuild the rig from the model next frame.
+			forget(model)
+			follow(model, function()
+				return rig.setName
+			end, rig.gaitInput)
 			continue
 		end
 		local far = listener ~= nil
@@ -330,8 +350,13 @@ local FootstepServiceClient: FootstepServiceClient = {
 			followPlayer(player)
 		end
 		local joined = Players.PlayerAdded:Connect(followPlayer)
+		local left = Players.PlayerRemoving:Connect(unfollowPlayer)
 		table.insert(stoppers, function()
 			joined:Disconnect()
+			left:Disconnect()
+			for player in followers do
+				unfollowPlayer(player)
+			end
 		end)
 		for tag, setName in FootstepConstants.TAG_SETS do
 			followTagged(tag, setName)
