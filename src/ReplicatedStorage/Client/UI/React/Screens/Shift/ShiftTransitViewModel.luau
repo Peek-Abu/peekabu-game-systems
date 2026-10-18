@@ -15,6 +15,7 @@ local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.Shif
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local WorldBillboardViewModel = require(ReplicatedStorage.Client.UI.React.Screens.World.WorldBillboardViewModel)
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
+local PaperHudScaleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudScaleViewModel)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 
 export type SlipView = {
@@ -40,9 +41,11 @@ local ShiftTransitViewModel = {}
 ShiftTransitViewModel.CLIENT_MAX = 30
 ShiftTransitViewModel.NO_CLIENT = "Site on file"
 
--- The V1 load screen's design canvas (1440x720) fitted to a window: never under 0.3 or over 1.25.
+-- The V1 load screen's design canvas fitted to a window: never under 0.3, at most 1.25x the one UI scale.
 function ShiftTransitViewModel.fit(viewport: Vector2): number
-	return math.clamp(math.min(viewport.X / 1500, viewport.Y / 780), 0.3, 1.25)
+	-- The slip's 1500x780 design is drawn 1.25x on the 1920x1080 reference, and grows with the one UI scale above it.
+	local cap = 1.25 * PaperHudScaleViewModel.scale(viewport, "desktop")
+	return math.clamp(math.min(viewport.X / 1500, viewport.Y / 780), 0.3, cap)
 end
 
 -- The loading bar's motion (ShiftTransitViewModel.advance): it closes on the readiness at CATCH_RATE, then creeps on

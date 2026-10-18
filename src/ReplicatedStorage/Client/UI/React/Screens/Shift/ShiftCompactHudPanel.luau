@@ -9,7 +9,8 @@
 	- bottom centre: the hotbar (ShiftHotbar: the vacuum with its Gloom gauge, the items with their worth), the stamina
 	  bar over it while it is not full, and on desktop what the hands hold with its keys over that.
 	On phone everything stays clear of the thumbstick (bottom left) and the action arc and Jump (bottom right; those
-	buttons are ShiftMobileButtons). Physical px, so text stays readable in a short window. Presentational: it draws the
+	buttons are ShiftMobileButtons). Laid out in HUD design px: ShiftHud draws it inside PaperHudFrame at the game's
+	one UI scale. Presentational: it draws the
 	views it is given (specced in ShiftHudViewModel, ShiftHotbarViewModel, ShiftCrewViewModel, SprintViewModel).
 
 	@class ShiftCompactHudPanel
@@ -212,10 +213,10 @@ local function ShiftCompactHudPanel(props: Props): React.ReactNode
 				text = table.concat(actions, "   "),
 				font = "body",
 				color = UIToonConstants.COLOR.white,
-				textSize = 15,
+				textSize = 16,
 				anchor = Vector2.new(0.5, 0),
 				position = UDim2.new(0.5, 0, 1, 6),
-				size = UDim2.fromOffset(380, 20),
+				size = UDim2.fromOffset(380, 22),
 				align = "center",
 			})
 		end

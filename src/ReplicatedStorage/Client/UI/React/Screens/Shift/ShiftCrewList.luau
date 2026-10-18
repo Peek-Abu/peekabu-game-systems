@@ -78,7 +78,7 @@ local function row(member: ShiftCrewViewModel.MemberView, you: boolean, height: 
 		children.tag = e(ToonPill, {
 			text = tag,
 			hue = if tag == "YOU" then "gold" else "coral",
-			textSize = if height > 34 then 14 else 11,
+			textSize = if height > 34 then 14 else 12,
 			anchor = Vector2.new(1, 0.5),
 			position = UDim2.fromScale(1, 0.5),
 			size = UDim2.fromOffset(if tag == "YOU" then 50 else 66, if height > 34 then 24 else 20),

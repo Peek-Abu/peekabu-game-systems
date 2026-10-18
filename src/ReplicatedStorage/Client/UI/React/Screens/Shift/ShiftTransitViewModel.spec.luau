@@ -57,6 +57,12 @@ return function()
 			expect(ShiftTransitViewModel.fit(Vector2.new(844, 390))).to.equal(0.5)
 			expect(ShiftTransitViewModel.fit(Vector2.new(0, 0))).to.equal(0.3)
 		end)
+
+		it("grows with the one UI scale on a big monitor (its 1500x780 design is 1.25x at 1080p)", function()
+			-- 2560x1440: the UI scale is 4/3, so the slip draws at 1.25 * 4/3; 4K: 1.25 * 2.
+			expect(ShiftTransitViewModel.fit(Vector2.new(2560, 1440))).to.be.near(1.25 * 4 / 3, 1e-6)
+			expect(ShiftTransitViewModel.fit(Vector2.new(3840, 2160))).to.equal(2.5)
+		end)
 	end)
 
 	describe("advance", function()

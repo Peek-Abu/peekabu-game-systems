@@ -85,6 +85,8 @@ VM.SETTINGS = {
 	{ id = "ambientVolume", label = "Building ambience" },
 	{ id = "cameraShake", label = "Camera shake" },
 }
+-- The settings rows' label column on a wide sheet (the slider fills the rest of the row).
+VM.SLIDER_LABEL_WIDTH = 280
 function VM.visible(snapshot: ShiftTypes.ShiftSnapshot?, userId: number): boolean
 	return snapshot == nil or snapshot.phase == "lobby" or table.find(snapshot.crew, userId) == nil
 end
@@ -113,9 +115,6 @@ function VM.panelLayout(viewport: Vector2, phone: boolean): PanelLayout
 		bodyWidth = width - 2 * padding - 12,
 		headerHeight = if compact then 140 else 110,
 	}
-end
-function VM.adjust(current: number, direction: number): number
-	return math.clamp(math.round((current + direction * 0.1) * 100) / 100, 0, 1)
 end
 function VM.scene(page: Page): string
 	return `depot.{page}`

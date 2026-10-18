@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	DepotCardPanel: the travel cards in the V1 kit, centred at 40% of the screen height and scaled by `scale`
-	(WorldBillboardViewModel.screenScale). Drive: a 520x260 cream panel on the depth stack under a grape
+	(PaperHudScaleViewModel.scale). Drive: a 520x260 cream panel on the depth stack under a grape
 	header (the dispatch letterhead, the truck render breaking the corner), ON THE ROAD in stroked display type with
 	"TRUCK n" on a tilted gold pill beside it, "Heading to …" and a lilac road of 13 dashes the truck render drives along over the card's
 	seconds. Arrival: a 640x400 cream panel with a mint ARRIVAL sticker breaking its top-left corner, the client in big
@@ -31,7 +31,7 @@ local e = React.createElement
 export type DepotCardPanelProps = {
 	drive: DepotCardViewModel.DriveView?,
 	arrival: DepotCardViewModel.ArrivalView?,
-	-- WorldBillboardViewModel.screenScale of this screen.
+	-- The game's one UI scale (PaperHudScaleViewModel.scale) for this screen.
 	scale: number,
 }
 

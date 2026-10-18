@@ -19,6 +19,7 @@ local QueueTypes = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueTyp
 local ShiftCurrencyUtils = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftCurrencyUtils)
 local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
+local PaperHudScaleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudScaleViewModel)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 
 export type RowView = { label: string, text: string, hazard: boolean }
@@ -85,12 +86,14 @@ function DepotBoardViewModel.workOrder(id: string): string
 	return string.format("#%04d", hash)
 end
 
--- The scale the board is drawn at on a `viewport`-sized screen: 1 when it fits, else the tighter side's ratio.
+-- The scale the board is drawn at on a `viewport`-sized screen: the game's one UI scale (PaperHudScaleViewModel) when
+-- the board fits at it, else the tighter side's ratio.
 function DepotBoardViewModel.fit(viewport: Vector2, phone: boolean): number
 	local board = if phone then BOARD.phone else BOARD.desktop
 	local across = (viewport.X - board.marginX) / board.width
 	local down = (viewport.Y - board.marginY) / board.height
-	return math.clamp(math.min(across, down), DepotBoardViewModel.MIN_SCALE, 1)
+	local fit = PaperHudScaleViewModel.cap(math.min(across, down), viewport, if phone then "phone" else "desktop")
+	return math.max(fit, DepotBoardViewModel.MIN_SCALE)
 end
 
 local function contractOf(id: string?): DepotTypes.Contract

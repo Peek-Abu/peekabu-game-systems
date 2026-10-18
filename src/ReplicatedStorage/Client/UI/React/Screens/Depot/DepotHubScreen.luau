@@ -3,8 +3,10 @@
 	DepotHubScreen: the hub's GUIDE, LOCKER (the company equipment page) and SETTINGS in the V1 kit: a cream modal
 	popping in with its grape header (the page's render breaking the corner, Gloom drips from the header's foot, the
 	coral close) over a scrolling body. Guide and Locker are honest briefing pages, a card per section with its
-	render; Settings are the persisted, validated base settings (minus / plus steppers, the value on a pill, RESTORE
-	DEFAULTS). Sizes follow the specced DepotHubViewModel.panelLayout (physical px, so the text stays readable).
+	render; Settings are the persisted, validated base settings (a ToonSlider per percentage setting, its value on a
+	pill, RESTORE DEFAULTS). Sizes follow the specced DepotHubViewModel.panelLayout in HUD design px, laid out against the virtual
+	viewport and drawn at the game's one UI scale (PaperHudScaleViewModel, inside PaperHudFrame), so the sheet keeps
+	the same share of the screen as the hub on a small laptop and on a 4K monitor.
 ]=]
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TextService = game:GetService("TextService")
@@ -20,7 +22,7 @@ local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonButton = require(Toon.ToonButton)
 local ToonIcon = require(Toon.ToonIcon)
 local ToonPanel = require(Toon.ToonPanel)
-local ToonPill = require(Toon.ToonPill)
+local ToonSlider = require(Toon.ToonSlider)
 local ToonSurface = require(Toon.ToonSurface)
 local ToonText = require(Toon.ToonText)
 local UIToonConstants = require(Toon.UIToonConstants)
@@ -29,6 +31,8 @@ local DEPTH = UIToonConstants.DEPTH
 -- Room inside the scroll frame for a card's ink outline (it is drawn outside the card) on its open sides.
 local EDGE = DEPTH.outline + 3
 local usePaperViewport = require(script.Parent.Parent.Paper.usePaperViewport)
+local PaperHudFrame = require(script.Parent.Parent.Paper.PaperHudFrame)
+local PaperHudScaleViewModel = require(script.Parent.Parent.Paper.PaperHudScaleViewModel)
 local usePaperLayout = require(script.Parent.Parent.Paper.usePaperLayout)
 local VM = require(script.Parent.DepotHubViewModel)
 local e = React.createElement
@@ -90,42 +94,38 @@ local function SettingsRows(props: { width: number, phone: boolean, preview: boo
 		local compact = props.width < 440
 		local rowHeight = if compact then 88 else 68
 		local y = (index - 1) * rowHeight
-		local controlsY = y + (if compact then 32 else 7)
 		local value = values[setting.id]
+		local def = SettingRegistry.get(setting.id)
 		nodes[`label{index}`] = label(
 			setting.label,
 			if props.phone then 16 else 22,
 			0,
-			y + (if compact then 0 else 16),
-			if compact then props.width else props.width - 190,
+			y + (if compact then 0 else 20),
+			if compact then props.width else VM.SLIDER_LABEL_WIDTH,
 			true
 		)
-		nodes[`value{index}`] = e(ToonPill, {
-			text = if value ~= nil then `{math.round(value * 100)}%` else "…",
-			hue = "night",
-			textSize = 20,
-			position = UDim2.fromOffset(props.width - 132, controlsY + 6),
-			size = UDim2.fromOffset(74, 36),
-		})
-		for _, direction in { -1, 1 } do
-			nodes[`{index}/{direction}`] = e(ToonButton, {
-				text = if direction < 0 then "−" else "+",
-				variant = if direction < 0 then "lilac" else "primary",
-				position = UDim2.fromOffset(if direction < 0 then props.width - 190 else props.width - 52, controlsY),
-				size = UDim2.fromOffset(50, 48),
-				textSize = 30,
-				small = true,
-				disabled = value == nil or (if direction < 0 then value == 0 else value == 1),
-				onActivated = function()
-					local current = if props.preview then values[setting.id] else SettingServiceClient:get(setting.id)
-					if type(current) == "number" then
-						if props.preview then
-							local nextValues = table.clone(values)
-							nextValues[setting.id] = VM.adjust(current, direction)
-							setValues(nextValues)
-						else
-							SettingServiceClient:set(setting.id, VM.adjust(current, direction))
-						end
+		if def ~= nil and def.kind == "number" then
+			-- A slider per percentage setting (ToonSlider): drag, click to jump, or step with the keys / d-pad.
+			nodes[`slider{index}`] = e(ToonSlider, {
+				value = value or def.default,
+				min = def.min,
+				max = def.max,
+				step = def.step,
+				disabled = value == nil,
+				position = UDim2.fromOffset(
+					if compact then 0 else VM.SLIDER_LABEL_WIDTH + 16,
+					y + (if compact then 32 else 10)
+				),
+				size = UDim2.fromOffset(if compact then props.width else props.width - VM.SLIDER_LABEL_WIDTH - 16, 48),
+				onChange = function(next: number)
+					if props.preview then
+						setValues(function(previous: { [string]: number }): { [string]: number }
+							local nextValues = table.clone(previous)
+							nextValues[setting.id] = next
+							return nextValues
+						end)
+					else
+						SettingServiceClient:set(setting.id, next)
 					end
 				end,
 			})
@@ -180,7 +180,11 @@ local function DepotHubScreen(
 	local livePhone = usePaperLayout() == "phone"
 	local viewport = props.viewport or liveViewport
 	local phone = if props.phone ~= nil then props.phone else livePhone
-	local layout = VM.panelLayout(viewport, phone)
+	-- The one UI scale, and the screen in design px (less the scaled frame's top shift) the sheet is laid out in.
+	local scale = PaperHudScaleViewModel.scale(viewport, if phone then "phone" else "desktop")
+	local virtual =
+		PaperHudScaleViewModel.virtual(viewport - Vector2.new(0, PaperHudScaleViewModel.topShift(scale)), scale)
+	local layout = VM.panelLayout(virtual, phone)
 	local width, height = layout.width, layout.height
 	local bindings = InputServiceClient:bindingsFor(VacuumConstants.ACTION)
 	local input = UserInputService:GetLastInputType()
@@ -201,7 +205,7 @@ local function DepotHubScreen(
 	local copy = VM.copy(props.page, control)
 	local body: { [string]: React.ReactNode } = {}
 	if props.page == "settings" then
-		-- Inset like the cards: the steppers' and RESTORE DEFAULTS' outlines and drops stay inside the scroll frame.
+		-- Inset like the cards: the sliders' and RESTORE DEFAULTS' outlines and drops stay inside the scroll frame.
 		body.pad = e("UIPadding", {
 			PaddingLeft = UDim.new(0, EDGE),
 			PaddingRight = UDim.new(0, EDGE),
@@ -411,24 +415,29 @@ local function DepotHubScreen(
 		Active = true,
 		BorderSizePixel = 0,
 	}, {
-		sheet = e(ToonPanel, {
-			anchor = Vector2.new(0.5, 0.5),
-			position = UDim2.fromScale(0.5, 0.5),
-			size = Vector2.new(width, height),
-			header = {
-				title = VM.pageTitle(props.page),
-				subtitle = subtitle,
-				icon = icon,
-				height = headerHeight,
-				titleSize = if layout.compact then 40 else 54,
-				goo = true,
+		scaled = e(PaperHudFrame, {
+			scale = scale,
+			children = {
+				sheet = e(ToonPanel, {
+					anchor = Vector2.new(0.5, 0.5),
+					position = UDim2.fromScale(0.5, 0.5),
+					size = Vector2.new(width, height),
+					header = {
+						title = VM.pageTitle(props.page),
+						subtitle = subtitle,
+						icon = icon,
+						height = headerHeight,
+						titleSize = if layout.compact then 40 else 54,
+						goo = true,
+					},
+					onClose = function()
+						SceneStack.remove(VM.scene(props.page))
+					end,
+					pop = true,
+					wipe = true,
+					children = children,
+				}),
 			},
-			onClose = function()
-				SceneStack.remove(VM.scene(props.page))
-			end,
-			pop = true,
-			wipe = true,
-			children = children,
 		}),
 	})
 end

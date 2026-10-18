@@ -296,7 +296,7 @@ local function headline(view: ShiftReviewViewModel.ReviewView, phone: boolean, c
 		rating = e(ToonPill, {
 			text = view.rating,
 			hue = "night",
-			textSize = if phone then 11 else 20,
+			textSize = if phone then 12 else 20,
 			tilt = 8,
 			anchor = Vector2.new(0.5, 0.5),
 			position = UDim2.fromOffset(canvas.X - (if phone then 50 else 150), centreY + (if phone then 38 else 84)),

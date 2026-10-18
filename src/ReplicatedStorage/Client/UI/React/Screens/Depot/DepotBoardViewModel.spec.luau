@@ -163,8 +163,13 @@ return function()
 	describe("fit", function()
 		it("draws the board at full size when the screen has room", function()
 			expect(DepotBoardViewModel.fit(Vector2.new(1920, 1080), false)).to.equal(1)
-			expect(DepotBoardViewModel.fit(Vector2.new(2560, 1440), false)).to.equal(1)
 			expect(DepotBoardViewModel.fit(Vector2.new(844, 390), true)).to.equal(1)
+		end)
+
+		it("grows the board with the UI on a bigger monitor (the one UI scale), only as far as it fits", function()
+			-- 2560x1440: the UI scale is 4/3; the board fits up to (1440 - 136) / 900 = 1.449, so it draws at 4/3.
+			expect(DepotBoardViewModel.fit(Vector2.new(2560, 1440), false)).to.be.near(4 / 3, 1e-6)
+			expect(DepotBoardViewModel.fit(Vector2.new(3840, 2160), false)).to.equal(2)
 		end)
 
 		it("shrinks the desktop board to the narrower side of a small screen", function()

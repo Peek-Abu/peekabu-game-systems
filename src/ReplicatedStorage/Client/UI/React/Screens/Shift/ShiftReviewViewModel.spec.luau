@@ -278,6 +278,10 @@ return function()
 			expect(ShiftReviewViewModel.fit(Vector2.new(1920, 1080), false)).to.equal(1)
 		end)
 
+		it("grows the review with the UI on a 4K monitor (the one UI scale)", function()
+			expect(ShiftReviewViewModel.fit(Vector2.new(3840, 2160), false)).to.equal(2)
+		end)
+
 		it("shrinks the desktop review on a 1366x768 screen", function()
 			local scale = ShiftReviewViewModel.fit(Vector2.new(1366, 768), false)
 			expect(scale < 1).to.equal(true)

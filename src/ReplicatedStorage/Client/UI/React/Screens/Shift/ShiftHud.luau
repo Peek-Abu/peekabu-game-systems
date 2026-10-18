@@ -1,8 +1,9 @@
 --!strict
 --[=[
     ShiftHud: reads authoritative shift/public state and renders the compact V1 HUD (ShiftCompactHudPanel).
-    Crew details are disclosed on demand. Physical-pixel sizes preserve readable text in short windows;
-    the layout hook selects the phone arrangement. Catch/scare suppression stays on the outer frame. While the crew
+    Crew details are disclosed on demand. Drawn at the game's one UI scale (PaperHudFrame, usePaperHudScale: grows
+    on a big monitor, stops shrinking at the readable minimum on a small laptop); the layout hook selects the phone
+    arrangement. Catch/scare suppression stays on the outer frame. While the crew
     clocks out, the clock-out board (ShiftClockOutBoard) sits under the Gloom meter.
     It does not follow the clock: the time-driven texts (the shift clock, a caught member's "back in", the board's
     truck countdown) tick inside their own small components, so the HUD re-renders only when its stores change.
@@ -27,7 +28,7 @@ local ShiftCompactHudPanel = require(ReplicatedStorage.Client.UI.React.Screens.S
 local ShiftClockOutBoard = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftClockOutBoard)
 local ShiftClockOutViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftClockOutViewModel)
 local CargoServiceClient = require(ReplicatedStorage.Client.Features.Cargo.CargoServiceClient)
-local usePaperViewport = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperViewport)
+local PaperHudFrame = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudFrame)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 local SprintStore = require(ReplicatedStorage.Client.Features.Sprint.State.SprintStore)
 local SprintViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Sprint.SprintViewModel)
@@ -67,7 +68,6 @@ local function ShiftHud(): React.ReactNode
 	local staminaShown = useAtom(SprintStore.shown)
 	-- The desktop HUD is drawn scaled to the window; `viewport` is the window in HUD design px.
 	local hudScale = usePaperHudScale()
-	local actualViewport = usePaperViewport()
 	local crewOpen, setCrewOpen = React.useState(false)
 	React.useEffect(function()
 		setCrewOpen(false)
@@ -105,7 +105,7 @@ local function ShiftHud(): React.ReactNode
 		view = view,
 		roster = roster,
 		layout = layout,
-		viewport = actualViewport,
+		viewport = hudScale.viewport,
 		myId = player.UserId,
 		bindings = if UserInputService.KeyboardEnabled then bindings else {},
 		stamina = if staminaShown then e(StaminaBar) else nil,
@@ -127,8 +127,15 @@ local function ShiftHud(): React.ReactNode
 		BackgroundTransparency = 1,
 		Visible = not hidden,
 	}, {
-		panel = panel,
-		clockOut = if board ~= nil then e(ShiftClockOutBoard, { view = board, phone = layout == "phone" }) else nil,
+		scaled = e(PaperHudFrame, {
+			scale = hudScale.scale,
+			children = {
+				panel = panel,
+				clockOut = if board ~= nil
+					then e(ShiftClockOutBoard, { view = board, phone = layout == "phone" })
+					else nil,
+			},
+		}),
 	})
 end
 

@@ -4,7 +4,8 @@
 	gradient fill by meaning (gold = Gleam, mint = gain, coral = time and danger, grape = Gloom, white = labels) and a
 	hard ink drop (a duplicate label offset down). `body` is Fredoka One, ink on light faces and white on dark ones,
 	with no stroke. The text sits in a box (`size`, aligned by `align`); `fit` shrinks it to stay inside the box (its limits follow
-	PaperScaleContext, the scale a surface is drawn at). Display text is placed optically: Luckiest Guy's caps fill the
+	PaperScaleContext, the scale a surface is drawn at, and it never shrinks below PaperScaleContext.floor's readable
+	px; a fitted line's stroke follows the size it is drawn at). Display text is placed optically: Luckiest Guy's caps fill the
 	top of its line box and the drop hangs under them, so centred (or bottom-aligned) text is lowered until its caps and
 	drop, together, sit centred in (or on the foot of) the box (ToonStyleViewModel.optical, at the size it is drawn).
 	Presentational (exempt; story in ToonText.story; stroke and drop sizes specced in ToonStyleViewModel).
@@ -79,6 +80,8 @@ local function ToonText(props: ToonTextProps): React.ReactNode
 	-- A UITextSizeConstraint counts real screen px and ignores the UIScale the text is drawn under, so the fit limits
 	-- follow the scale the surface provides (PaperHudFrame and the scaled screens provide it; 1 elsewhere).
 	local scale = React.useContext(PaperScaleContext.Context)
+	-- Fitted text never shrinks below this many real px on screen UI (PaperScaleContext.floor; 1 on world signs).
+	local readable = React.useContext(PaperScaleContext.Readable)
 	local auto = props.automaticWidth == true
 	-- TextScaled wraps words whenever two lines fit the box, so a fitted single line is drawn in a box only one
 	-- line tall (centred on the caller's box by alignY): then shrinking to the width always wins.
@@ -103,7 +106,13 @@ local function ToonText(props: ToonTextProps): React.ReactNode
 		if display then
 			children.stroke = e("UIStroke", {
 				Color = COLOR.ink,
-				Thickness = stroke,
+				-- A fitted line's stroke follows the size it is really drawn at: a stroke sized for the design size
+				-- swallows the glyphs of a line that shrank to fit.
+				Thickness = if measure ~= nil
+					then drawn:map(function(value: number): number
+						return ToonStyleViewModel.stroke(value)
+					end)
+					else stroke,
 				LineJoinMode = Enum.LineJoinMode.Round,
 				ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual,
 				Transparency = transparency,
@@ -118,7 +127,7 @@ local function ToonText(props: ToonTextProps): React.ReactNode
 					return PaperScaleContext.limit(size, value)
 				end),
 				MinTextSize = scale:map(function(value: number): number
-					return PaperScaleContext.limit(math.max(6, size * 0.4), value)
+					return PaperScaleContext.floor(size, value, readable)
 				end),
 			})
 		end

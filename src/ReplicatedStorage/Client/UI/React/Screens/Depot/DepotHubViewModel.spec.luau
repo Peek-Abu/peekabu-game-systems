@@ -104,10 +104,14 @@ return function()
 			expect(size.X >= 48).to.equal(true)
 			expect(size.Y >= 48).to.equal(true)
 		end)
-		it("bounds audio and shake adjustment and rounds percent", function()
-			expect(VM.adjust(0, -1)).to.equal(0)
-			expect(VM.adjust(1, 1)).to.equal(1)
-			expect(VM.adjust(0.5, 1)).to.equal(0.6)
+		it("lists only registered percentage settings, so each gets a slider", function()
+			local SettingRegistry =
+				require(game:GetService("ReplicatedStorage").Shared.Features.Setting.Data.SettingRegistry)
+			for _, setting in VM.SETTINGS do
+				local def = SettingRegistry.get(setting.id)
+				expect(def).to.be.ok()
+				expect(def.kind).to.equal("number")
+			end
 		end)
 	end)
 end

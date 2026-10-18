@@ -19,7 +19,7 @@ local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.Shif
 local DepotCardPanel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotCardPanel)
 local DepotCardViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotCardViewModel)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
-local WorldBillboardViewModel = require(ReplicatedStorage.Client.UI.React.Screens.World.WorldBillboardViewModel)
+local PaperHudScaleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudScaleViewModel)
 
 local e = React.createElement
 
@@ -55,7 +55,7 @@ return UILabs.CreateReactStory({
 	local panelProps: DepotCardPanel.DepotCardPanelProps = {
 		drive = if arrival then nil else DepotCardViewModel.drive(card),
 		arrival = if arrival then DepotCardViewModel.arrival(card) else nil,
-		scale = WorldBillboardViewModel.screenScale(screen),
+		scale = PaperHudScaleViewModel.scale(screen, "desktop"),
 	}
 	-- Keyed by Replay, so flipping it remounts the card and its truck starts again.
 	local cards: { [string]: React.ReactNode } = {

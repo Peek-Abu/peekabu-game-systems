@@ -202,7 +202,7 @@ local function chip(view: DepotBoardViewModel.ChipView, phone: boolean, size: Ve
 		}),
 		label = e(ToonText, {
 			text = view.label,
-			textSize = if phone then 10 else 16,
+			textSize = if phone then 12 else 16,
 			position = UDim2.fromOffset(left, if phone then 2 else 6),
 			size = UDim2.fromOffset(size.X - left - 8, if phone then 14 else 22),
 			fit = true,

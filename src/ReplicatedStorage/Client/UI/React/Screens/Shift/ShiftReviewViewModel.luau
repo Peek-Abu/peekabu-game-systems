@@ -18,6 +18,7 @@ local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTyp
 local ShiftCurrencyUtils = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftCurrencyUtils)
 local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
+local PaperHudScaleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudScaleViewModel)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 
 -- A totals row; `detail` is its breakdown line under the label (desktop), e.g. "Dust 260 · Item cleaning 80".
@@ -122,12 +123,14 @@ end
 -- The smallest scale `fit` returns (a degenerate viewport still draws something readable to vote on).
 ShiftReviewViewModel.MIN_SCALE = 0.4
 
--- The scale the review is drawn at on a `viewport`-sized screen: 1 when it fits, else the tighter side's ratio.
+-- The scale the review is drawn at on a `viewport`-sized screen: the game's one UI scale (PaperHudScaleViewModel) when
+-- the sheet fits at it, else the tighter side's ratio.
 function ShiftReviewViewModel.fit(viewport: Vector2, phone: boolean): number
 	local sheet = if phone then SHEET.phone else SHEET.desktop
 	local across = (viewport.X - sheet.marginX) / sheet.width
 	local down = (viewport.Y - sheet.marginY) / sheet.height
-	return math.clamp(math.min(across, down), ShiftReviewViewModel.MIN_SCALE, 1)
+	local fit = PaperHudScaleViewModel.cap(math.min(across, down), viewport, if phone then "phone" else "desktop")
+	return math.max(fit, ShiftReviewViewModel.MIN_SCALE)
 end
 
 local function vote(label: string, count: number, total: number, mine: boolean): VoteView

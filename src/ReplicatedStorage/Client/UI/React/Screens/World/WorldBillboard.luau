@@ -49,27 +49,30 @@ local function WorldBillboard(props: WorldBillboardProps): React.ReactNode
 		return binding
 	end, { `{sizing}:{screen}:{design.X}x{design.Y}` })
 
+	-- A world sign shrinks with distance, so its fitted text has no readable floor (screen UI keeps READABLE_PX).
 	return e(PaperScaleContext.Context.Provider, { value = scale }, {
-		root = e("Frame", {
-			Size = UDim2.fromScale(1, 1),
-			BackgroundTransparency = 1,
-			[React.Change.AbsoluteSize] = if props.sizing == "studs"
-				then function(rbx: Frame)
-					setAbsolute(rbx.AbsoluteSize)
-				end
-				else nil,
-		}, {
-			design = e("Frame", {
-				AnchorPoint = Vector2.new(0.5, 0.5),
-				Position = UDim2.fromScale(0.5, 0.5),
-				Size = UDim2.fromOffset(design.X, design.Y),
+		readable = e(PaperScaleContext.Readable.Provider, { value = 1 }, {
+			root = e("Frame", {
+				Size = UDim2.fromScale(1, 1),
 				BackgroundTransparency = 1,
+				[React.Change.AbsoluteSize] = if props.sizing == "studs"
+					then function(rbx: Frame)
+						setAbsolute(rbx.AbsoluteSize)
+					end
+					else nil,
 			}, {
-				scale = e("UIScale", { Scale = scale }),
-				content = e("Frame", {
-					Size = UDim2.fromScale(1, 1),
+				design = e("Frame", {
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.fromScale(0.5, 0.5),
+					Size = UDim2.fromOffset(design.X, design.Y),
 					BackgroundTransparency = 1,
-				}, props.children),
+				}, {
+					scale = e("UIScale", { Scale = scale }),
+					content = e("Frame", {
+						Size = UDim2.fromScale(1, 1),
+						BackgroundTransparency = 1,
+					}, props.children),
+				}),
 			}),
 		}),
 	})
