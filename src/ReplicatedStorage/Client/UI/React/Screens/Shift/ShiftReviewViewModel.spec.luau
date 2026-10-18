@@ -174,6 +174,17 @@ return function()
 			results.awards[1].userId = 0
 			local view = ShiftReviewViewModel.review(snapshot({}, results), nil, 0, 100, false)
 			expect(view.awards[1].line).to.equal("Sam — hauled 140")
+			expect(view.awards[1].userId).to.equal(nil)
+		end)
+
+		it("keeps a Studio test player's negative userId so the award shows their portrait", function()
+			local results = review()
+			results.awards[1].userId = -1
+			results.awards[2].userId = -2
+			local view = ShiftReviewViewModel.review(snapshot({}, results), nil, -2, 100, false)
+			expect(view.awards[1].userId).to.equal(-1)
+			expect(view.awards[2].userId).to.equal(-2)
+			expect(view.awards[2].line).to.equal("you — caught twice")
 		end)
 
 		it("drops the dash when an award has no detail", function()

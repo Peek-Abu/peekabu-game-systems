@@ -232,7 +232,9 @@ local function awardOf(award: ShiftTypes.Award, myUserId: number, phone: boolean
 		title = award.title,
 		line = line,
 		symbol = symbol,
-		userId = if award.userId > 0 then award.userId else nil,
+		-- 0 is the server's "no player" (ShiftCardUtils); any other id is a player, including Studio test
+		-- players, whose ids are negative.
+		userId = if award.userId ~= 0 then award.userId else nil,
 		icon = if symbol ~= nil then ShiftReviewViewModel.awardIcon(symbol) else nil,
 	}
 end
