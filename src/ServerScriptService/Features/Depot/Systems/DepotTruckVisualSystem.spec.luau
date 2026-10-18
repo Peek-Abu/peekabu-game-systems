@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Visual = require(script.Parent.DepotTruckVisualSystem)
 local Constants = require(script.Parent.Parent.Data.DepotTruckVisualConstants)
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
+local CameraOccluderConstants = require(ReplicatedStorage.Shared.Features.Camera.Data.CameraOccluderConstants)
 
 local function deckPoint(bed, point)
 	return (bed.CFrame * CFrame.new(0, bed.Size.Y / 2, 0)):PointToObjectSpace(point)
@@ -93,6 +94,19 @@ return function()
 				end
 			end
 		)
+
+		it("flags the cab's collision as a camera wall (no shell core stands in it) and nothing else", function()
+			Visual.buildWith(bed, folder, nil)
+			for _, entry in Constants.COLLISION do
+				local part = bed:FindFirstChild(entry.name)
+				local flagged = part:GetAttribute(CameraOccluderConstants.ATTRIBUTE)
+				if entry.name == "TruckCab" then
+					expect(flagged).to.equal(true)
+				else
+					expect(flagged).to.equal(nil)
+				end
+			end
+		end)
 
 		it("builds an opaque camera shell under the bed, which the default camera stops at", function()
 			Visual.buildWith(bed, folder, nil)

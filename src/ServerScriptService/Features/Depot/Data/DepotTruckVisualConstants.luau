@@ -6,7 +6,7 @@
 	whole footprint stays clear inside the box (walls outside x = +-6, the doorway 12 wide and under the roll drum).
 
 	- COLLISION: native parts the art never replaces: box walls, roof, arch posts, the cab and the ramp (a wedge from
-	  the ground to the bed's back edge). A collidable part is always queryable, so they are parented to the bed:
+	  the ground to the bed's back edge). The cab's (`occludes`) is also the camera's wall there. A collidable part is always queryable, so they are parented to the bed:
 	  the load prompt's sight check (a ray to the bed that may hit the bed or its descendants) still sees the bed
 	  through the box.
 	- SHELL: the camera's walls. The default camera (Popper) only stops at opaque parts (older clients: also
@@ -42,6 +42,8 @@ export type Solid = {
 	centre: Vector3,
 	size: Vector3,
 	shape: Shape,
+	-- The camera treats this invisible proxy as solid (CameraOccluderConstants): for a piece with no SHELL core in it.
+	occludes: boolean?,
 }
 
 export type LiveryFace = { piece: string, face: Enum.NormalId }
@@ -97,8 +99,8 @@ for _, z in { -4, 11.2 } do
 	end
 end
 
-local function solid(name: string, centre: Vector3, size: Vector3, shape: Shape): Solid
-	return { name = name, centre = centre, size = size, shape = shape }
+local function solid(name: string, centre: Vector3, size: Vector3, shape: Shape, occludes: boolean?): Solid
+	return { name = name, centre = centre, size = size, shape = shape, occludes = occludes }
 end
 
 local COLLISION: { Solid } = {
@@ -108,7 +110,9 @@ local COLLISION: { Solid } = {
 	solid("TruckRoof", Vector3.new(0, 7.35, 0.3), Vector3.new(13.4, 0.75, 16.9), "Block"),
 	solid("TruckArchPostLeft", Vector3.new(-6.6, 3.5, -8.3), Vector3.new(1.2, 7, 1.3), "Block"),
 	solid("TruckArchPostRight", Vector3.new(6.6, 3.5, -8.3), Vector3.new(1.2, 7, 1.3), "Block"),
-	solid("TruckCab", Vector3.new(0, 2.4, 11.7), Vector3.new(10.6, 8.6, 6.4), "Block"),
+	-- The cab has no shell core (its art is not a plain box), so its proxy is the camera's wall: without it the camera
+	-- went through the cab, and stood inside or behind it, whenever a player had the truck's front behind them.
+	solid("TruckCab", Vector3.new(0, 2.4, 11.7), Vector3.new(10.6, 8.6, 6.4), "Block", true),
 	-- A wedge rises toward +Z: its tall face meets the bed's back edge, its foot is on the ground RAMP_LENGTH out.
 	solid("TruckRamp", Vector3.new(0, -1.5, -10), Vector3.new(7, 3, 4), "Wedge"),
 }

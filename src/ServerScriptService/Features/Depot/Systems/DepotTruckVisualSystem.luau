@@ -27,6 +27,7 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
+local CameraOccluderConstants = require(ReplicatedStorage.Shared.Features.Camera.Data.CameraOccluderConstants)
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local Constants = require(ServerScriptService.Features.Depot.Data.DepotTruckVisualConstants)
 
@@ -208,6 +209,9 @@ local function collision(deck: CFrame, bed: BasePart)
 		part.CanQuery = true
 		part.CanTouch = false
 		part.Material = Enum.Material.SmoothPlastic
+		if entry.occludes == true then
+			part:SetAttribute(CameraOccluderConstants.ATTRIBUTE, true)
+		end
 		part.Parent = bed
 	end
 end
