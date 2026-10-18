@@ -485,9 +485,11 @@ return table.freeze({
 	-- M3 UI. Public field: the server time a caught player is back on the clock (the roster's "CAUGHT · back 0:06");
 	-- cleared on the respawn.
 	PUBLIC_CAUGHT_UNTIL = "caughtUntil",
-	-- The Rehired card shows from REHIRED_LEAD seconds before the respawn until REHIRED_HOLD seconds after it.
+	-- The Rehired card shows from REHIRED_LEAD seconds before the respawn until REHIRED_HOLD seconds after it, the new
+	-- character held still meanwhile (OccupantServiceClient), then fades out over REHIRED_FADE as control comes back.
 	REHIRED_LEAD = 1.5,
 	REHIRED_HOLD = 3,
+	REHIRED_FADE = 0.5,
 	-- The incident report's room when the catch happened outside every room.
 	CATCH_ROOM_FALLBACK = "the office",
 	BODY = table.freeze(BODY),

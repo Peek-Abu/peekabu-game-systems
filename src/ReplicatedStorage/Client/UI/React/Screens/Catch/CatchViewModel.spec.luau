@@ -1,4 +1,5 @@
 local CatchViewModel = require(script.Parent.CatchViewModel)
+local OccupantConstants = require(game:GetService("ReplicatedStorage").Shared.Features.Occupant.Data.OccupantConstants)
 
 local REPORT = { room = "Archive", clock = 222, backAt = 108, dropped = { "Monitor", "Employee of the Month plaque" } }
 
@@ -149,6 +150,25 @@ return function()
 			expect(CatchViewModel.rehired(after)).to.equal(nil)
 		end)
 
+		-- 2-player test (2026-10-18): the player could walk around under the notice for its whole hold, and it then
+		-- vanished at once. The notice now holds while the player is held still (OccupantServiceClient locks movement
+		-- for REHIRED_HOLD), then fades out over REHIRED_FADE as control comes back.
+		it("is shown until the hold ends, then fades out as the player can move", function()
+			local after = rehiredInput({ me = {}, rehiredAt = 49 })
+			after.nowClock = 49 + OccupantConstants.REHIRED_HOLD - 0.1
+			expect(CatchViewModel.rehired(after).shown).to.equal(true)
+			after.nowClock = 49 + OccupantConstants.REHIRED_HOLD + OccupantConstants.REHIRED_FADE / 2
+			local fading = CatchViewModel.rehired(after)
+			expect(fading ~= nil).to.equal(true)
+			expect(fading.shown).to.equal(false)
+			after.nowClock = 49 + OccupantConstants.REHIRED_HOLD + OccupantConstants.REHIRED_FADE + 0.1
+			expect(CatchViewModel.rehired(after)).to.equal(nil)
+		end)
+
+		it("is shown before the respawn", function()
+			expect(CatchViewModel.rehired(rehiredInput()).shown).to.equal(true)
+		end)
+
 		it("needs a report", function()
 			local value = rehiredInput()
 			value.report = nil
@@ -193,6 +213,9 @@ return function()
 		it("ticks the notice while a catch counts down and until its hold after the respawn", function()
 			expect(CatchViewModel.rehiredTicks(REPORT, { dead = true, caughtUntil = 106 }, nil, 50)).to.equal(true)
 			expect(CatchViewModel.rehiredTicks(REPORT, {}, 49, 50)).to.equal(true)
+			-- Through the fade out, so the notice is told when the hold ends and when the fade is over.
+			local fading = 49 + OccupantConstants.REHIRED_HOLD + OccupantConstants.REHIRED_FADE / 2
+			expect(CatchViewModel.rehiredTicks(REPORT, {}, 49, fading)).to.equal(true)
 			-- Past the hold the notice is gone for good: nothing to tick for.
 			expect(CatchViewModel.rehiredTicks(REPORT, {}, 49, 60)).to.equal(false)
 			expect(CatchViewModel.rehiredTicks(REPORT, {}, nil, 50)).to.equal(false)

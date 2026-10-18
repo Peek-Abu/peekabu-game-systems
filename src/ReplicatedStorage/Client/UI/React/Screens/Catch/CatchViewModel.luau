@@ -6,7 +6,7 @@
 	incident report. Only a real catch shows it: the local player is `dead` AND has a numeric `caughtUntil` (a plain
 	death, e.g. a reset, shows nothing), and a report left over from an earlier catch (its `backAt` before this
 	catch's deadline) is ignored. `spectateKeys`: the key-cap legends for the spectate actions. `rehired`: the HR notice from REHIRED_LEAD seconds before the respawn until REHIRED_HOLD seconds
-	after it. Pure; the components only lay the fields out.
+	after it (`shown`; the player is held still meanwhile), then REHIRED_FADE more while it fades out. Pure; the components only lay the fields out.
 
 	@class CatchViewModel
 ]=]
@@ -62,6 +62,8 @@ export type RehiredInput = {
 }
 
 export type RehiredView = {
+	-- False while it fades out (the hold is over: the player can move again).
+	shown: boolean,
 	header: string,
 	notice: string,
 	title: string,
@@ -200,7 +202,8 @@ end
 
 --[=[
 	Whether the HR notice follows the clock: with a report, while a catch counts down to the respawn, or until
-	REHIRED_HOLD after it (one tick past the hold hides the notice; after that nothing changes with time).
+	REHIRED_HOLD after it, and through the REHIRED_FADE after that (a tick past the hold starts the fade, one past the fade
+	removes the notice; after that nothing changes with time).
 ]=]
 function CatchViewModel.rehiredTicks(
 	report: OccupantTypes.CatchReport?,
@@ -213,7 +216,10 @@ function CatchViewModel.rehiredTicks(
 	end
 	local caughtUntil = if me ~= nil then me[OccupantConstants.PUBLIC_CAUGHT_UNTIL] else nil
 	return type(caughtUntil) == "number"
-		or (rehiredAt ~= nil and nowClock - rehiredAt <= OccupantConstants.REHIRED_HOLD)
+		or (
+			rehiredAt ~= nil
+			and nowClock - rehiredAt <= OccupantConstants.REHIRED_HOLD + OccupantConstants.REHIRED_FADE
+		)
 end
 
 function CatchViewModel.rehired(input: RehiredInput): RehiredView?
@@ -224,11 +230,15 @@ function CatchViewModel.rehired(input: RehiredInput): RehiredView?
 	local caughtUntil = if input.me ~= nil then input.me[OccupantConstants.PUBLIC_CAUGHT_UNTIL] else nil
 	local rehiredAt = input.rehiredAt
 	-- Before the respawn: this catch's deadline is near and the report is this catch's.
-	local before = type(caughtUntil) == "number"
+	local before: boolean = type(caughtUntil) == "number"
 		and currentReport(report, caughtUntil) ~= nil
 		and caughtUntil - input.nowServer <= OccupantConstants.REHIRED_LEAD
-	local after = rehiredAt ~= nil and input.nowClock - rehiredAt <= OccupantConstants.REHIRED_HOLD
-	if not before and not after then
+	local since = if rehiredAt ~= nil then input.nowClock - rehiredAt else nil
+	local holding: boolean = since ~= nil and since <= OccupantConstants.REHIRED_HOLD
+	local fading: boolean = since ~= nil
+		and since > OccupantConstants.REHIRED_HOLD
+		and since <= OccupantConstants.REHIRED_HOLD + OccupantConstants.REHIRED_FADE
+	if not before and not holding and not fading then
 		return nil
 	end
 	local ended = ShiftHudViewModel.clock(report.clock)
@@ -244,7 +254,9 @@ function CatchViewModel.rehired(input: RehiredInput): RehiredView?
 			`Re-hired: {back}, no questions asked`,
 			dropped,
 		}
+	local shown: boolean = before or holding
 	return {
+		shown = shown,
 		header = `{ShiftConstants.EMPLOYER_BAND} — HUMAN RESOURCES`,
 		notice = "NOTICE OF RE-EMPLOYMENT",
 		title = REHIRED_TITLE,

@@ -16,7 +16,12 @@
 	lays his gestures over his joints; OccupantWarningSystem plays the staged warnings and his typing (no PA since
 	2026-10-16). OccupantCatchVfxSystem pops the porcelain crack at a throw and the Rehired puff, for everyone.
 
-	Spec-exempt shell (Camera, Vfx, ByteNet).
+	On `Rehired` (the new character is in) the player is held still for REHIRED_HOLD while the card is up: the character's
+	controls off and a sinking `ui` input context silencing the gameplay actions (vacuum, hotbar), like a menu; then
+	control comes back and the card fades out (CatchViewModel). Walking about under the full-screen notice felt wrong
+	(2-player test, 2026-10-18). The camera is left alone: Death's spectate has already ended with the respawn.
+
+	Spec-exempt shell (Camera, Vfx, Input, ByteNet).
 
 	@class OccupantServiceClient
 ]=]
@@ -29,6 +34,8 @@ local OccupantTypes = require(ReplicatedStorage.Shared.Features.Occupant.Data.Oc
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local OccupantEvents = require(ReplicatedStorage.Shared.Features.Occupant.Net.OccupantEvents)
 local CameraServiceClient = require(ReplicatedStorage.Client.Features.Camera.CameraServiceClient)
+local InputServiceClient = require(ReplicatedStorage.Client.Features.Input.InputServiceClient)
+local InputControlsSystem = require(ReplicatedStorage.Client.Features.Input.Systems.InputControlsSystem)
 local VfxServiceClient = require(ReplicatedStorage.Client.Features.Vfx.VfxServiceClient)
 local OccupantCatchStore = require(ReplicatedStorage.Client.Features.Occupant.State.OccupantCatchStore)
 local OccupantTellSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantTellSystem)
@@ -47,6 +54,9 @@ local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudReg
 
 local stoppers: { () -> () } = {}
 local snaps = 0
+-- The input context holding the rehired player still, and which hold it is (a later hold outlives an earlier delay).
+local holdToken: number? = nil
+local holds = 0
 -- The face lights' owner for the jumpscare.
 local FACE_OWNER = "catch"
 
@@ -91,6 +101,32 @@ local function snap(cframe: CFrame)
 	end)
 end
 
+-- Gives control back after a rehire hold (nothing when none is held).
+local function releaseHold()
+	local token = holdToken
+	if token == nil then
+		return
+	end
+	holdToken = nil
+	InputServiceClient:removeContext(token)
+	task.spawn(InputControlsSystem.setEnabled, true)
+end
+
+-- Holds the rehired player still while the card is up (REHIRED_HOLD), then gives control back.
+local function holdStill()
+	holds += 1
+	local mine = holds
+	if holdToken == nil then
+		holdToken = InputServiceClient:pushContext("ui", { sink = true })
+	end
+	task.spawn(InputControlsSystem.setEnabled, false)
+	task.delay(OccupantConstants.REHIRED_HOLD, function()
+		if holds == mine then
+			releaseHold()
+		end
+	end)
+end
+
 export type OccupantServiceClient = {
 	dependencies: { string },
 	init: (self: OccupantServiceClient) -> (),
@@ -106,6 +142,7 @@ local OccupantServiceClient: OccupantServiceClient = {
 		"SoundServiceClient",
 		"FootstepServiceClient",
 		"DeathServiceClient",
+		"InputServiceClient",
 	},
 
 	init = function(_self)
@@ -142,8 +179,10 @@ local OccupantServiceClient: OccupantServiceClient = {
 			OccupantEvents.packets.Rehired.listen(function(_back: boolean)
 				OccupantCatchStore.rehired(os.clock())
 				OccupantScareSystem.rehired()
+				holdStill()
 			end)
 		)
+		table.insert(stoppers, releaseHold)
 		table.insert(
 			stoppers,
 			OccupantEvents.packets.LightsOut.listen(function(position: Vector3)
