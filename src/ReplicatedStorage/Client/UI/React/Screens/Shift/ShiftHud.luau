@@ -26,6 +26,7 @@ local usePaperViewport = require(ReplicatedStorage.Client.UI.React.Screens.Paper
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 local SprintStore = require(ReplicatedStorage.Client.Features.Sprint.State.SprintStore)
 local SprintViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Sprint.SprintViewModel)
+local ToonBar = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonBar)
 
 local e = React.createElement
 local useAtom = ReactCharm.useAtom
@@ -40,11 +41,25 @@ local function keyBindings(): ShiftHudViewModel.KeyBindings
 	return bindings
 end
 
+-- The stamina bar's fill: the one piece of the HUD that reads the stamina, so a sprint's ~20 stamina steps a second
+-- re-render this bar alone rather than the whole HUD (ShiftHud follows only SprintStore.shown, to lay out around it).
+local function StaminaBar(): React.ReactNode
+	local view = SprintViewModel.bar(useAtom(SprintStore.stamina), false)
+	if view == nil then
+		return nil
+	end
+	return e(ToonBar, {
+		kind = if view.low then "load" else "stamina",
+		fill = view.fill,
+		size = UDim2.fromScale(1, 1),
+	})
+end
+
 local function ShiftHud(): React.ReactNode
 	local snapshot = useAtom(ShiftStore.snapshot)
 	local publicPlayers = useAtom(StateSyncClientStore.publicPlayers)
 	local scaring = useAtom(OccupantCatchStore.scaring)
-	local stamina = useAtom(SprintStore.stamina)
+	local staminaShown = useAtom(SprintStore.shown)
 	-- The desktop HUD is drawn scaled to the window; `viewport` is the window in HUD design px.
 	local hudScale = usePaperHudScale()
 	local actualViewport = usePaperViewport()
@@ -80,7 +95,7 @@ local function ShiftHud(): React.ReactNode
 		viewport = actualViewport,
 		myId = player.UserId,
 		bindings = if UserInputService.KeyboardEnabled then bindings else {},
-		stamina = SprintViewModel.bar(stamina, false),
+		stamina = if staminaShown then e(StaminaBar) else nil,
 		crewOpen = crewOpen,
 		onCrewToggle = function()
 			setCrewOpen(function(open: boolean)

@@ -19,7 +19,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
-local SprintViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Sprint.SprintViewModel)
 local ShiftCrewList = require(script.Parent.ShiftCrewList)
 local ShiftGloomMeter = require(script.Parent.ShiftGloomMeter)
 local ShiftHotbar = require(script.Parent.ShiftHotbar)
@@ -27,7 +26,6 @@ local ShiftHotbarViewModel = require(script.Parent.ShiftHotbarViewModel)
 local CrewVM = require(script.Parent.ShiftCrewViewModel)
 local VM = require(script.Parent.ShiftHudViewModel)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
-local ToonBar = require(Toon.ToonBar)
 local ToonIcon = require(Toon.ToonIcon)
 local ToonPanel = require(Toon.ToonPanel)
 local ToonPill = require(Toon.ToonPill)
@@ -48,8 +46,9 @@ export type Props = {
 	-- A hotbar slot was tapped or clicked: ask for that slot.
 	onSelect: ((slot: number) -> ())?,
 	bindings: VM.KeyBindings?,
-	-- The sprint's stamina while it is not full (Sprint).
-	stamina: SprintViewModel.BarView?,
+	-- The sprint's stamina bar while it is not full (Sprint): ShiftHud's live bar element, which reads the stamina
+	-- itself so a draining bar re-renders only the bar, not this panel.
+	stamina: React.ReactElement?,
 }
 
 -- The crew detail: each member's status in words, on a dark plate beside the list.
@@ -140,8 +139,8 @@ local function ShiftCompactHudPanel(props: Props): React.ReactNode
 	})
 	local stackTop = inset + 8 + bar.Y + 14
 	-- The stamina bar over the hotbar while it is not full: the sneaker render and a gold (coral when low) bar.
-	local staminaView = props.stamina
-	if staminaView ~= nil then
+	local staminaBar = props.stamina
+	if staminaBar ~= nil then
 		local width = math.max(bar.X, if phone then 200 else 260)
 		nodes.stamina = e("Frame", {
 			AnchorPoint = Vector2.new(0.5, 1),
@@ -157,11 +156,7 @@ local function ShiftCompactHudPanel(props: Props): React.ReactNode
 				drop = 3,
 				zIndex = 3,
 			}),
-			bar = e(ToonBar, {
-				kind = if staminaView.low then "load" else "stamina",
-				fill = staminaView.fill,
-				size = UDim2.fromScale(1, 1),
-			}),
+			bar = staminaBar,
 		})
 		stackTop += (if phone then 16 else 20) + 14
 	end

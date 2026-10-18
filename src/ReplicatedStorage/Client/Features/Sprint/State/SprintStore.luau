@@ -15,9 +15,16 @@ local Charm = require(ReplicatedStorage.Packages.Charm)
 local stamina = Charm.atom(1)
 local sprinting = Charm.atom(false)
 
+-- Whether the stamina bar shows (SprintViewModel.bar: only while not full). The HUD lays out around the bar on this,
+-- which flips twice a sprint, so it does not re-render with every stamina step; only the bar itself reads `stamina`.
+local shown = Charm.computed(function(): boolean
+	return stamina() < 1
+end)
+
 local SprintStore = {
 	stamina = stamina,
 	sprinting = sprinting,
+	shown = shown,
 }
 
 --[=[
