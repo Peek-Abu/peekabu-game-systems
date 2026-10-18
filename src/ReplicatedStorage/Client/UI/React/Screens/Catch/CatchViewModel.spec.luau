@@ -199,6 +199,21 @@ return function()
 		end)
 	end)
 
+	describe("rehirePending", function()
+		-- Read on the local CharacterAdded: the server clears the deadline only after the new character exists, so a
+		-- caught player's next character still sees it and is held still from its first frame.
+		it("is pending while the local player still carries a catch deadline", function()
+			expect(CatchViewModel.rehirePending({ dead = true, caughtUntil = 106 })).to.equal(true)
+			expect(CatchViewModel.rehirePending({ caughtUntil = 106 })).to.equal(true)
+		end)
+
+		it("is not pending after a plain death, with no entry, or once the deadline is cleared", function()
+			expect(CatchViewModel.rehirePending({ dead = true })).to.equal(false)
+			expect(CatchViewModel.rehirePending({})).to.equal(false)
+			expect(CatchViewModel.rehirePending(nil)).to.equal(false)
+		end)
+	end)
+
 	describe("ticking", function()
 		-- The overlay and the notice follow the clock only while something they show counts down, so an idle HUD
 		-- does not re-render on the clock.

@@ -16,9 +16,12 @@
 	lays his gestures over his joints; OccupantWarningSystem plays the staged warnings and his typing (no PA since
 	2026-10-16). OccupantCatchVfxSystem pops the porcelain crack at a throw and the Rehired puff, for everyone.
 
-	On `Rehired` (the new character is in) the player is held still for REHIRED_HOLD while the card is up: the character's
-	controls off and a sinking `ui` input context silencing the gameplay actions (vacuum, hotbar), like a menu; then
-	control comes back and the card fades out (CatchViewModel). Walking about under the full-screen notice felt wrong
+	A rehired player is held still while the card is up: the character's controls off and a sinking `ui` input context
+	silencing the gameplay actions (vacuum, hotbar), like a menu; then control comes back and the card fades out
+	(CatchViewModel). The hold starts on the new character's CharacterAdded when it is a rehire
+	(CatchViewModel.rehirePending: the catch's deadline is still on the local entry), so there is no moment of free
+	movement before the `Rehired` packet lands (about 0.2 s in the 2-player test, 2026-10-18); the packet then restarts
+	it, so control comes back REHIRED_HOLD after the notice, as the card fades. Walking about under the full-screen notice felt wrong
 	(2-player test, 2026-10-18). The camera is left alone: Death's spectate has already ended with the respawn.
 
 	Spec-exempt shell (Camera, Vfx, Input, ByteNet).
@@ -27,6 +30,7 @@
 ]=]
 
 local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
@@ -51,6 +55,9 @@ local OccupantFaceLightSystem = require(ReplicatedStorage.Client.Features.Occupa
 local CatchOverlay = require(ReplicatedStorage.Client.UI.React.Screens.Catch.CatchOverlay)
 local CatchRehiredCard = require(ReplicatedStorage.Client.UI.React.Screens.Catch.CatchRehiredCard)
 local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudRegistry)
+local CatchViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Catch.CatchViewModel)
+local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
+local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 
 local stoppers: { () -> () } = {}
 local snaps = 0
@@ -182,6 +189,17 @@ local OccupantServiceClient: OccupantServiceClient = {
 				holdStill()
 			end)
 		)
+		-- A rehire's new character is held from its first frame, before the Rehired packet arrives.
+		local spawned = Players.LocalPlayer.CharacterAdded:Connect(function()
+			local me =
+				StateSyncClientStore.publicPlayers()[StateSyncConstants.publicEntryKey(Players.LocalPlayer.UserId)]
+			if CatchViewModel.rehirePending(me) then
+				holdStill()
+			end
+		end)
+		table.insert(stoppers, function()
+			spawned:Disconnect()
+		end)
 		table.insert(stoppers, releaseHold)
 		table.insert(
 			stoppers,

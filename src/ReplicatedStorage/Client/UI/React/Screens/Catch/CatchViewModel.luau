@@ -201,6 +201,16 @@ function CatchViewModel.cctvTicks(me: PublicPlayerTypes.PublicPlayer?): boolean
 end
 
 --[=[
+	Whether the local player's new character is a rehire, read on its CharacterAdded: `me` still carries the catch's
+	deadline. The server clears it only once the new character exists (OccupantCatchSystem.rehired), after the
+	character replicates, so the hold can start on the character's first frame instead of when the Rehired packet
+	lands a moment later. The shift ending clears it (no notice owed) before any respawn.
+]=]
+function CatchViewModel.rehirePending(me: PublicPlayerTypes.PublicPlayer?): boolean
+	return me ~= nil and type(me[OccupantConstants.PUBLIC_CAUGHT_UNTIL]) == "number"
+end
+
+--[=[
 	Whether the HR notice follows the clock: with a report, while a catch counts down to the respawn, or until
 	REHIRED_HOLD after it, and through the REHIRED_FADE after that (a tick past the hold starts the fade, one past the fade
 	removes the notice; after that nothing changes with time).
