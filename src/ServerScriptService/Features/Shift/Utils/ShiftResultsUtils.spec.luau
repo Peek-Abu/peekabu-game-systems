@@ -63,6 +63,16 @@ return function()
 			expect(ShiftResultsUtils.bare("clockout", 350, true).dust).to.equal(0)
 		end)
 
+		it("counts Times caught as the whole crew's catches: one each for two members is 2", function()
+			local results = ShiftResultsUtils.build(input({
+				member(1, "Ava", { caught = 1 }),
+				member(2, "Ben", { caught = 1 }),
+			}))
+			expect(results.catches).to.equal(2)
+			expect(results.crew[1].caught).to.equal(1)
+			expect(results.crew[2].caught).to.equal(1)
+		end)
+
 		it("lists the crew by amount banked, with userIds and catches", function()
 			local results = ShiftResultsUtils.build(input(CREW))
 			expect(results.crew[1].name).to.equal("Ben")
