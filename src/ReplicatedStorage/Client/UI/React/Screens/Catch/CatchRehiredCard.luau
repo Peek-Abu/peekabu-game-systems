@@ -33,11 +33,13 @@ local function CatchRehiredCard(): React.ReactNode
 	-- Drawn scaled to the window on desktop (the 760x600 notice is taller than a short window), via PaperHudFrame.
 	local hudScale = usePaperHudScale()
 	local layout: UIPaperConstants.Layout = hudScale.layout
-	local now = useServerClock()
 	local player = Players.LocalPlayer
+	local me = publicPlayers[StateSyncConstants.publicEntryKey(player.UserId)]
+	-- The clock re-renders it only around a catch (CatchViewModel.rehiredTicks), not four times a second all shift.
+	local now = useServerClock(nil, CatchViewModel.rehiredTicks(report, me, rehiredAt, os.clock()))
 	local view = CatchViewModel.rehired({
 		report = report,
-		me = publicPlayers[StateSyncConstants.publicEntryKey(player.UserId)],
+		me = me,
 		name = player.DisplayName,
 		rehiredAt = rehiredAt,
 		nowServer = now,

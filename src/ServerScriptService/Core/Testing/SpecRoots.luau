@@ -429,6 +429,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.Features.Shift.Systems.ShiftFeedbackSystem"] = "Sound/Camera/Charm shell (cue choices are specced in ShiftCueUtils)",
 	["ReplicatedStorage.Client.UI.React.Hooks.useServerClock"] = "React hook — re-renders on the server clock (no logic)",
 	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHud"] = "React HUD widget wiring stores to ShiftCompactHudPanel (view models specced)",
+	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftCountdown"] = "presentational React component: one live countdown (its wake time and text specced in ShiftHudViewModel.untilTick / clock)",
 	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftClockOutBoard"] = "presentational React component (story in ShiftClockOutBoard.story; words and counts specced in ShiftClockOutViewModel)",
 	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftGloomMeter"] = "presentational React component (story in ShiftCompactHudPanel.story; words specced in ShiftHudViewModel.meter)",
 	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftCrewList"] = "presentational React component (story in ShiftCompactHudPanel.story; roster specced in ShiftCrewViewModel)",

@@ -4,11 +4,14 @@
     Crew details are disclosed on demand. Physical-pixel sizes preserve readable text in short windows;
     the layout hook selects the phone arrangement. Catch/scare suppression stays on the outer frame. While the crew
     clocks out, the clock-out board (ShiftClockOutBoard) sits under the Gloom meter.
+    It does not follow the clock: the time-driven texts (the shift clock, a caught member's "back in", the board's
+    truck countdown) tick inside their own small components, so the HUD re-renders only when its stores change.
 ]=]
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
 
 local React = require(ReplicatedStorage.Packages.React)
 local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
@@ -17,7 +20,6 @@ local InputServiceClient = require(ReplicatedStorage.Client.Features.Input.Input
 local OccupantCatchStore = require(ReplicatedStorage.Client.Features.Occupant.State.OccupantCatchStore)
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
-local useServerClock = require(ReplicatedStorage.Client.UI.React.Hooks.useServerClock)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local usePaperHudScale = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperHudScale)
 local ShiftCrewViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftCrewViewModel)
@@ -71,7 +73,8 @@ local function ShiftHud(): React.ReactNode
 		setCrewOpen(false)
 	end, { if snapshot ~= nil then snapshot.shift else 0 })
 	local layout: UIPaperConstants.Layout = hudScale.layout
-	local now = useServerClock()
+	-- The clock as of this render: the static texts' time. The ticking ones read it themselves (ShiftCountdown).
+	local now = Workspace:GetServerTimeNow()
 	local player = Players.LocalPlayer
 	local me = if player ~= nil then publicPlayers[StateSyncConstants.publicEntryKey(player.UserId)] else nil
 	-- The panel is drawn (and hidden with a prop) rather than unmounted while hidden, so its stamps keep their state
@@ -106,6 +109,7 @@ local function ShiftHud(): React.ReactNode
 		myId = player.UserId,
 		bindings = if UserInputService.KeyboardEnabled then bindings else {},
 		stamina = if staminaShown then e(StaminaBar) else nil,
+		live = true,
 		crewOpen = crewOpen,
 		onCrewToggle = function()
 			setCrewOpen(function(open: boolean)

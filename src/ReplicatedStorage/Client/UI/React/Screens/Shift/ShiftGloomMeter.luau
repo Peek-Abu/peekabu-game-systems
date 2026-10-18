@@ -5,6 +5,8 @@
 	Gloom removed of the contract, and the shift clock in coral with the time-clock render breaking the top-right
 	corner, where a little Gloom is poured along the top edge (the Gloom is what this plate is about). The bar eases to
 	each new total (useProgressTween); the total and time are drawn as they are. Restrained on purpose: one plate.
+	With a `deadline` the time is a live ShiftCountdown to it (only the digits re-render as it ticks); without one (a
+	story) it is the view's time.
 	Presentational (exempt; story in ShiftCompactHudPanel.story; words specced in ShiftHudViewModel.meter).
 
 	@class ShiftGloomMeter
@@ -14,6 +16,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
 local useProgressTween = require(ReplicatedStorage.Client.UI.React.Hooks.useProgressTween)
+local ShiftCountdown = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftCountdown)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonBar = require(Toon.ToonBar)
@@ -28,6 +31,8 @@ export type ShiftGloomMeterProps = {
 	view: ShiftHudViewModel.HudView,
 	phone: boolean,
 	top: number,
+	-- The server-clock time the shift clock counts down to, live (ShiftHud); nil draws `view.time` as it is.
+	deadline: number?,
 }
 
 local function ShiftGloomMeter(props: ShiftGloomMeterProps): React.ReactNode
@@ -75,8 +80,10 @@ local function ShiftGloomMeter(props: ShiftGloomMeterProps): React.ReactNode
 			drop = 4,
 			zIndex = 6,
 		}),
-		time = e(ToonText, {
-			text = view.time,
+	}
+	local function timeText(text: string): React.ReactNode
+		return e(ToonText, {
+			text = text,
 			meaning = "coral",
 			textSize = if phone then 32 else 50,
 			anchor = Vector2.new(1, 1),
@@ -85,8 +92,12 @@ local function ShiftGloomMeter(props: ShiftGloomMeterProps): React.ReactNode
 			align = "right",
 			fit = true,
 			zIndex = 4,
-		}),
-	}
+		})
+	end
+	local deadline = props.deadline
+	face.time = if deadline ~= nil
+		then e(ShiftCountdown, { deadline = deadline, render = timeText })
+		else timeText(view.time)
 	if not phone then
 		face.site = e(ToonText, {
 			text = meter.site,

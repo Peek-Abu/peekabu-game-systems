@@ -67,10 +67,11 @@ local function CatchOverlay(): React.ReactNode
 	-- Drawn scaled to the window on desktop (its corner pieces, countdown and slip are fixed px), via PaperHudFrame.
 	local hudScale = usePaperHudScale()
 	local layout: UIPaperConstants.Layout = hudScale.layout
-	local now = useServerClock()
-	local targetId = useSpectateTarget()
 	local player = Players.LocalPlayer
 	local me = publicPlayers[StateSyncConstants.publicEntryKey(player.UserId)]
+	-- The clock re-renders it only while it shows (the local player is down): not four times a second all shift.
+	local now = useServerClock(nil, CatchViewModel.cctvTicks(me))
+	local targetId = useSpectateTarget()
 	local target = if targetId ~= nil then publicPlayers[StateSyncConstants.publicEntryKey(targetId)] else nil
 	local targetPlayer = if targetId ~= nil then Players:GetPlayerByUserId(targetId) else nil
 	local prevKey, nextKey = CatchViewModel.spectateKeys(spectateBindings())

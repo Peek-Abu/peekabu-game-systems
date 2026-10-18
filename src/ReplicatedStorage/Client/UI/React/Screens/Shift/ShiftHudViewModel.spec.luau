@@ -93,6 +93,25 @@ return function()
 		end)
 	end)
 
+	describe("untilTick", function()
+		local slack = ShiftHudViewModel.TICK_SLACK
+		it("waits until the shown second changes, just past it", function()
+			expect(math.abs(ShiftHudViewModel.untilTick(5.3) - (0.3 + slack)) < 1e-6).to.equal(true)
+			expect(math.abs(ShiftHudViewModel.untilTick(0.4) - (0.4 + slack)) < 1e-6).to.equal(true)
+		end)
+
+		it("waits a whole second on an exact second (m:ss rounds up)", function()
+			expect(math.abs(ShiftHudViewModel.untilTick(5) - (1 + slack)) < 1e-6).to.equal(true)
+			-- Shown 0:05 at 5.0 left; still 0:05 just after, 0:04 from 4.0.
+			expect(ShiftHudViewModel.clock(5)).to.equal(ShiftHudViewModel.clock(4.01))
+		end)
+
+		it("never ticks again once the countdown shows 0:00", function()
+			expect(ShiftHudViewModel.untilTick(0)).to.equal(nil)
+			expect(ShiftHudViewModel.untilTick(-3)).to.equal(nil)
+		end)
+	end)
+
 	describe("clock", function()
 		it("formats minutes and seconds, rounding up and never negative", function()
 			expect(ShiftHudViewModel.clock(420)).to.equal("7:00")
@@ -192,11 +211,15 @@ return function()
 			expect(view.hotbar.slots[3].empty).to.equal(false)
 		end)
 
-		it("counts the clock-out down and carries the truck", function()
+		it("carries the truck", function()
 			local view =
 				ShiftHudViewModel.hud(snapshot({ sub = "clockout", clockOutAt = 107, truck = 2 }), nil, 100, false)
-			expect(view.clockOut).to.equal("0:07")
 			expect(view.truck).to.equal(2)
+		end)
+
+		it("carries the deadline the shift clock counts down to, so it ticks without the whole HUD", function()
+			expect(ShiftHudViewModel.hud(snapshot(), nil, 100, false).endsAt).to.equal(1000)
+			expect(ShiftHudViewModel.hud(snapshot({ endsAt = nil }), nil, 100, false).endsAt).to.equal(nil)
 		end)
 	end)
 

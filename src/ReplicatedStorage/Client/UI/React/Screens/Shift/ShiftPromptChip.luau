@@ -75,9 +75,8 @@ local GEOMETRY: { [UIPaperConstants.Layout]: Geometry } = table.freeze({
 local KEY_SIZE = 34
 local KEY_GAP = 12
 local STRIP_HEIGHT = 4
--- The server clock ticks fast only while a hold fills the strip.
+-- The server clock ticks only while a hold fills the strip.
 local HOLD_TICK = 0.05
-local IDLE_TICK = 0.25
 
 -- Only a touch presses the slip: a mouse button is the vacuum (LMB) and a keyboard player presses the prompt's key.
 local function isPress(input: InputObject): boolean
@@ -102,7 +101,8 @@ local function ShiftPromptChip(props: ShiftPromptChipProps?): React.ReactNode
 	-- The desktop chip is drawn scaled to the window, with the rest of the HUD (PaperHudFrame).
 	local hudScale = usePaperHudScale()
 	local layout: UIPaperConstants.Layout = hudScale.layout
-	local now = useServerClock(if shown ~= nil and shown.holdStartedAt ~= nil then HOLD_TICK else IDLE_TICK)
+	-- Only a hold's fill changes with time; an idle prompt does not follow the clock.
+	local now = useServerClock(HOLD_TICK, shown ~= nil and shown.holdStartedAt ~= nil)
 	local onPress = if props ~= nil then props.onPress else nil
 	-- Whether this chip started a hold that has not been released yet.
 	local pressing = React.useRef(false)

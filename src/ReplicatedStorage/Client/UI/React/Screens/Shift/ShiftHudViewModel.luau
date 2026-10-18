@@ -70,8 +70,9 @@ export type HudView = {
 	-- The hands item and the hotbar.
 	hands: HandsView?,
 	hotbar: ShiftHotbarViewModel.HotbarView,
-	-- The clock-out slip's countdown, while one runs.
-	clockOut: string?,
+	-- The server-clock time the shift clock counts down to (a live clock ticks on it by itself, ShiftCountdown, so
+	-- the HUD does not re-render each second).
+	endsAt: number?,
 	truck: number?,
 }
 
@@ -129,6 +130,22 @@ local ShiftHudViewModel = {}
 function ShiftHudViewModel.clock(seconds: number): string
 	local whole = math.max(0, math.ceil(seconds))
 	return string.format("%d:%02d", whole // 60, whole % 60)
+end
+
+-- A countdown wakes this long after the second it waits for, so the new second is surely shown.
+ShiftHudViewModel.TICK_SLACK = 0.02
+
+--[=[
+	How long until a countdown with `seconds` left shows a different `clock` (just past that second); nil once it shows
+	0:00 (it never changes again). A live clock (ShiftCountdown) sleeps exactly this, so it re-renders once a second,
+	on the second.
+]=]
+function ShiftHudViewModel.untilTick(seconds: number): number?
+	if seconds <= 0 then
+		return nil
+	end
+	local fraction = seconds - math.floor(seconds)
+	return (if fraction > 0 then fraction else 1) + ShiftHudViewModel.TICK_SLACK
 end
 
 ShiftHudViewModel.PUNCH_HOLES = 5
@@ -199,7 +216,6 @@ function ShiftHudViewModel.hud(
 	local left = if endsAt ~= nil then endsAt - now else 0
 	local total = ShiftConstants.SHIFT_SECONDS
 	local elapsed = math.clamp(total - left, 0, total)
-	local clockOutAt = snapshot.clockOutAt
 	local overtime = snapshot.stage == "overtime"
 	return {
 		vacuumEquipped = entry[VacuumConstants.PUBLIC_EQUIPPED_FIELD] == true,
@@ -226,9 +242,7 @@ function ShiftHudViewModel.hud(
 		feeBoostShort = if overtime then `×{ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER}` else nil,
 		hands = handsOf(entry[CarryConstants.PUBLIC_FIELD]),
 		hotbar = ShiftHotbarViewModel.hotbar(entry, snapshot.cleared, snapshot.quota),
-		clockOut = if snapshot.sub == "clockout" and clockOutAt ~= nil
-			then ShiftHudViewModel.clock(clockOutAt - now)
-			else nil,
+		endsAt = endsAt,
 		truck = snapshot.truck,
 	}
 end

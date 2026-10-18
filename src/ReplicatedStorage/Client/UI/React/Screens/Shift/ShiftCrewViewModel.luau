@@ -35,6 +35,8 @@ export type MemberView = {
 	tone: Tone,
 	struck: boolean,
 	box: Box,
+	-- While caught: the server-clock time they are back, which the status counts down to (a live line ticks on it).
+	caughtUntil: number?,
 }
 
 export type RosterView = {
@@ -71,7 +73,9 @@ local function statusOf(
 	local caughtUntil = entry[OccupantConstants.PUBLIC_CAUGHT_UNTIL]
 	if type(caughtUntil) == "number" then
 		local text = `CAUGHT · back {ShiftHudViewModel.clock(caughtUntil - now)}`
-		return member(userId, name, text, text, "danger", true, false)
+		local caught = member(userId, name, text, text, "danger", true, false)
+		caught.caughtUntil = caughtUntil
+		return caught
 	end
 	if entry[DeathConstants.PUBLIC_FIELD] == true then
 		return member(userId, name, "CAUGHT", "CAUGHT", "danger", true, false)

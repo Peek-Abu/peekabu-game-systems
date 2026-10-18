@@ -19,6 +19,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
+local ShiftCountdown = require(script.Parent.ShiftCountdown)
 local ShiftCrewList = require(script.Parent.ShiftCrewList)
 local ShiftGloomMeter = require(script.Parent.ShiftGloomMeter)
 local ShiftHotbar = require(script.Parent.ShiftHotbar)
@@ -49,6 +50,10 @@ export type Props = {
 	-- The sprint's stamina bar while it is not full (Sprint): ShiftHud's live bar element, which reads the stamina
 	-- itself so a draining bar re-renders only the bar, not this panel.
 	stamina: React.ReactElement?,
+	-- Whether the clocks run live (ShiftHud): the shift clock and a caught member's "back in" line each tick as a
+	-- ShiftCountdown to the view's deadlines, so only they re-render each second. A story draws the view's texts as
+	-- they are.
+	live: boolean?,
 }
 
 -- The crew detail: each member's status in words, on a dark plate beside the list.
@@ -56,7 +61,8 @@ local function rosterDetail(
 	roster: CrewVM.RosterView,
 	phone: boolean,
 	position: UDim2,
-	anchor: Vector2
+	anchor: Vector2,
+	live: boolean
 ): React.ReactNode
 	local lineHeight = if phone then 22 else 28
 	local width = if phone then 240 else 300
@@ -70,18 +76,29 @@ local function rosterDetail(
 		}),
 	}
 	for index, member in roster.members do
-		rows[`member{index}`] = e(ToonText, {
-			text = `{member.name}: {member.status}`,
-			font = "body",
-			color = if member.tone == "danger"
-				then UIToonConstants.shade("coral").hi
-				elseif member.tone == "ok" then UIToonConstants.shade("mint").hi
-				else UIToonConstants.COLOR.white,
-			textSize = if phone then 14 else 17,
-			position = UDim2.fromOffset(14, 8 + index * lineHeight),
-			size = UDim2.fromOffset(width - 28, lineHeight),
-			fit = true,
-		})
+		local function line(status: string): React.ReactNode
+			return e(ToonText, {
+				text = `{member.name}: {status}`,
+				font = "body",
+				color = if member.tone == "danger"
+					then UIToonConstants.shade("coral").hi
+					elseif member.tone == "ok" then UIToonConstants.shade("mint").hi
+					else UIToonConstants.COLOR.white,
+				textSize = if phone then 14 else 17,
+				position = UDim2.fromOffset(14, 8 + index * lineHeight),
+				size = UDim2.fromOffset(width - 28, lineHeight),
+				fit = true,
+			})
+		end
+		local caughtUntil = member.caughtUntil
+		rows[`member{index}`] = if live and caughtUntil ~= nil
+			then e(ShiftCountdown, {
+				deadline = caughtUntil,
+				render = function(clock: string): React.ReactNode
+					return line(`CAUGHT · back {clock}`)
+				end,
+			})
+			else line(member.status)
 	end
 	return e(ToonPanel, {
 		hue = "night",
@@ -102,8 +119,12 @@ local function ShiftCompactHudPanel(props: Props): React.ReactNode
 	-- The stopwatch render breaks the meter's top-right corner (24 / 34 px above it): the meter sits low enough that
 	-- the render stays on the screen (the HUD layer spans the whole viewport, top bar included).
 	local meterTop = if phone then 28 else 40
+	local live = props.live == true
 	local nodes: { [string]: React.ReactNode } = {
-		clearance = e(ShiftGloomMeter, { view = view, phone = phone, top = meterTop }),
+		clearance = e(
+			ShiftGloomMeter,
+			{ view = view, phone = phone, top = meterTop, deadline = if live then view.endsAt else nil }
+		),
 	}
 	-- The crew: top-left on desktop (under Roblox's buttons), top-right on phone.
 	local roster = props.roster
@@ -123,7 +144,8 @@ local function ShiftCompactHudPanel(props: Props): React.ReactNode
 				roster,
 				phone,
 				if phone then UDim2.new(1, -inset - 186, 0, 6) else UDim2.fromOffset(inset + 248, 66),
-				if phone then Vector2.new(1, 0) else Vector2.zero
+				if phone then Vector2.new(1, 0) else Vector2.zero,
+				live
 			)
 		end
 	end

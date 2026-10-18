@@ -69,7 +69,6 @@ local KEY_SIZE = 34
 local KEY_GAP = 12
 local STRIP_HEIGHT = 4
 local HOLD_TICK = 0.05
-local IDLE_TICK = 0.25
 
 local function isPress(input: InputObject): boolean
 	return input.UserInputType == Enum.UserInputType.Touch
@@ -83,7 +82,8 @@ local function HideChip(props: HideChipProps?): React.ReactNode
 	local hudScale = usePaperHudScale()
 	local layout: UIPaperConstants.Layout = hudScale.layout
 	local holding = prompt ~= nil and prompt.holdStartedAt ~= nil
-	local now = useServerClock(if holding or hidden ~= nil then HOLD_TICK else IDLE_TICK)
+	-- Only a hold's fill and a hidden player's chip change with time; an idle prompt does not follow the clock.
+	local now = useServerClock(HOLD_TICK, holding or hidden ~= nil)
 	local onPress = if props ~= nil then props.onPress else nil
 	local onLeave = if props ~= nil then props.onLeave else nil
 	local pressing = React.useRef(false)

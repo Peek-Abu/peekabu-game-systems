@@ -188,6 +188,34 @@ function CatchViewModel.cctv(input: CctvInput): CctvView?
 	}
 end
 
+--[=[
+	Whether the CCTV overlay follows the clock: only while the local player (`me`) is down with a deadline (the only
+	time it shows, and its stamp and "back on the clock" count).
+]=]
+function CatchViewModel.cctvTicks(me: PublicPlayerTypes.PublicPlayer?): boolean
+	return me ~= nil
+		and me[DeathConstants.PUBLIC_FIELD] == true
+		and type(me[OccupantConstants.PUBLIC_CAUGHT_UNTIL]) == "number"
+end
+
+--[=[
+	Whether the HR notice follows the clock: with a report, while a catch counts down to the respawn, or until
+	REHIRED_HOLD after it (one tick past the hold hides the notice; after that nothing changes with time).
+]=]
+function CatchViewModel.rehiredTicks(
+	report: OccupantTypes.CatchReport?,
+	me: PublicPlayerTypes.PublicPlayer?,
+	rehiredAt: number?,
+	nowClock: number
+): boolean
+	if report == nil then
+		return false
+	end
+	local caughtUntil = if me ~= nil then me[OccupantConstants.PUBLIC_CAUGHT_UNTIL] else nil
+	return type(caughtUntil) == "number"
+		or (rehiredAt ~= nil and nowClock - rehiredAt <= OccupantConstants.REHIRED_HOLD)
+end
+
 function CatchViewModel.rehired(input: RehiredInput): RehiredView?
 	local report = input.report
 	if report == nil then

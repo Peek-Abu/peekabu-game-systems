@@ -179,6 +179,27 @@ return function()
 		end)
 	end)
 
+	describe("ticking", function()
+		-- The overlay and the notice follow the clock only while something they show counts down, so an idle HUD
+		-- does not re-render on the clock.
+		it("ticks the CCTV only while the local player is down with a deadline", function()
+			expect(CatchViewModel.cctvTicks({ dead = true, caughtUntil = 106 })).to.equal(true)
+			expect(CatchViewModel.cctvTicks({ caughtUntil = 106 })).to.equal(false)
+			expect(CatchViewModel.cctvTicks({ dead = true })).to.equal(false)
+			expect(CatchViewModel.cctvTicks({})).to.equal(false)
+			expect(CatchViewModel.cctvTicks(nil)).to.equal(false)
+		end)
+
+		it("ticks the notice while a catch counts down and until its hold after the respawn", function()
+			expect(CatchViewModel.rehiredTicks(REPORT, { dead = true, caughtUntil = 106 }, nil, 50)).to.equal(true)
+			expect(CatchViewModel.rehiredTicks(REPORT, {}, 49, 50)).to.equal(true)
+			-- Past the hold the notice is gone for good: nothing to tick for.
+			expect(CatchViewModel.rehiredTicks(REPORT, {}, 49, 60)).to.equal(false)
+			expect(CatchViewModel.rehiredTicks(REPORT, {}, nil, 50)).to.equal(false)
+			expect(CatchViewModel.rehiredTicks(nil, { dead = true, caughtUntil = 106 }, 49, 50)).to.equal(false)
+		end)
+	end)
+
 	describe("spectateKeys", function()
 		it("prints the first keyboard binding of each spectate action", function()
 			local prev, nextKey = CatchViewModel.spectateKeys({

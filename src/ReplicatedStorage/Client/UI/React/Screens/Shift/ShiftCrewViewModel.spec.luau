@@ -66,6 +66,14 @@ return function()
 		expect(alex.status).to.equal("CAUGHT · back 0:06")
 		expect(alex.tone).to.equal("danger")
 		expect(alex.struck).to.equal(true)
+		-- The time the countdown runs to, so the detail line can tick on its own.
+		expect(alex.caughtUntil).to.equal(106)
+	end)
+
+	it("carries no countdown for a member who is not caught", function()
+		local view =
+			ShiftCrewViewModel.roster({ 2 }, players({ [2] = { carrying = "coffeeMachine" } }), NAMES, nil, false, 100)
+		expect(statusOf(view, 2).caughtUntil).to.equal(nil)
 	end)
 
 	it("clamps the back-in countdown at 0:00", function()
