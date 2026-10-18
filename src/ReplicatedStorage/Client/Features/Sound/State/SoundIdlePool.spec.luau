@@ -83,4 +83,47 @@ return function()
 		expect(#places).to.equal(1)
 		expect(places[1]).to.equal(footB)
 	end)
+	it("pre-warms a place up to a count of idle voices, made only for the shortfall", function()
+		local pool = SoundIdlePool.new()
+		local made = 0
+		local function make()
+			made += 1
+			return { n = made }
+		end
+		expect(pool:prewarm(footA, 2, make)).to.equal(2)
+		expect(pool:count(footA)).to.equal(2)
+		expect(made).to.equal(2)
+		-- Already warm: nothing new.
+		expect(pool:prewarm(footA, 2, make)).to.equal(0)
+		expect(made).to.equal(2)
+		-- One taken (playing): only the gap is refilled.
+		pool:take(footA)
+		expect(pool:prewarm(footA, 2, make)).to.equal(1)
+		expect(pool:count(footA)).to.equal(2)
+		expect(made).to.equal(3)
+		-- Another place warms on its own.
+		expect(pool:prewarm(footB, 1, make)).to.equal(1)
+		expect(pool:count()).to.equal(3)
+	end)
+
+	it("hands back a pre-warmed voice like a released one", function()
+		local pool = SoundIdlePool.new()
+		local voice = { name = "warm" }
+		pool:prewarm(footA, 1, function()
+			return voice
+		end)
+		expect(pool:take(footA)).to.equal(voice)
+		expect(pool:take(footA)).to.equal(nil)
+	end)
+
+	it("pre-warms nothing for a count of zero or less", function()
+		local pool = SoundIdlePool.new()
+		local function make()
+			return {}
+		end
+		expect(pool:prewarm(footA, 0, make)).to.equal(0)
+		expect(pool:prewarm(footA, -1, make)).to.equal(0)
+		expect(pool:count()).to.equal(0)
+		expect(#pool:places()).to.equal(0)
+	end)
 end

@@ -5,6 +5,8 @@
 
 	- `play(id, { at?, volumeScale?, pitchScale? })` — a one-shot (or looped) sound, 2D or positional, in its group,
 	  with its pitch variance and concurrency cap applied. Returns a handle to stop it early (or to steer its Sound).
+	- `prewarm(at, count)` — makes `count` idle one-shot Sounds at an instance ahead of its first plays (a character's
+	  feet on spawn), so steady play there never creates a Sound.
 	- `playOneShot(id, options?)` — the same sound, fire-and-forget: no handle, so its Sound is reused. A finished
 	  one-shot's Sound stays idle where it played (SoundIdlePool: a foot, a pile, the 2D SoundService, a fixed point's
 	  anchor) and the next one-shot there re-points it (SoundId, volume, pitch) instead of creating a Sound. Several
@@ -65,8 +67,9 @@ local groups: { [string]: SoundGroup? } = {}
 local playing: { [number]: () -> () } = {}
 local music: Sound? = nil
 local ambience: { [string]: Sound? } = {}
--- created: Sounds made for plays; reused: one-shots that re-pointed an idle Sound; unloaded: released unloaded.
-local counters = { played = 0, evicted = 0, unknown = 0, created = 0, reused = 0, unloaded = 0 }
+-- created: Sounds made for plays; prewarmed: idle one-shot Sounds made ahead of any play (prewarm); reused: one-shots
+-- that re-pointed an idle Sound; unloaded: released unloaded.
+local counters = { played = 0, evicted = 0, unknown = 0, created = 0, prewarmed = 0, reused = 0, unloaded = 0 }
 -- Releases since the last sweep of places that left the world.
 local releases = 0
 local SWEEP_EVERY = 64
@@ -201,10 +204,10 @@ local function release(voice: Voice, keep: boolean)
 	end
 end
 
--- A new one-shot voice at `place` (an anchor of its own for a fixed point), released when it ends.
+-- A new one-shot voice at `place` (an anchor of its own for a fixed point), released when it ends. (Its caller
+-- counts it: created for a play, prewarmed ahead of one.)
 local function newVoice(at: Instance, point: Vector3?): Voice
 	local sound = Instance.new("Sound")
-	counters.created += 1
 	local voice: Voice = { sound = sound, anchor = nil, place = at, token = nil }
 	if point ~= nil then
 		local anchor = Instance.new("Attachment")
@@ -284,6 +287,7 @@ export type SoundServiceClient = {
 
 	play: (self: SoundServiceClient, id: string, options: SoundTypes.PlayOptions?) -> SoundHandle?,
 	playOneShot: (self: SoundServiceClient, id: string, options: SoundTypes.PlayOptions?) -> (),
+	prewarm: (self: SoundServiceClient, at: Instance, count: number) -> number,
 	playMusic: (self: SoundServiceClient, id: string?, fade: number?) -> (),
 	setAmbience: (self: SoundServiceClient, layer: string, id: string?, fade: number?) -> (),
 	setGroupVolume: (self: SoundServiceClient, group: SoundGroupName, volume: number) -> (),
@@ -396,6 +400,7 @@ local SoundServiceClient: SoundServiceClient = {
 			current = idleVoice
 		else
 			current = newVoice(where, point)
+			counters.created += 1
 		end
 		local scale = if options ~= nil and options.volumeScale ~= nil then options.volumeScale else 1
 		local pitchScale = if options ~= nil and options.pitchScale ~= nil then options.pitchScale else 1
@@ -415,6 +420,22 @@ local SoundServiceClient: SoundServiceClient = {
 		end, function()
 			release(current, false)
 		end)
+	end,
+
+	--[=[
+		Makes idle one-shot Sounds at `at` (a foot, a root) until it holds `count` (at most its idle cap), so the
+		first plays there reuse them instead of creating Sounds mid-play; a play beyond them still creates one.
+		Returns how many it made (none for a place outside the game).
+	]=]
+	prewarm = function(_self, at, count)
+		if not at:IsDescendantOf(game) then
+			return 0
+		end
+		local made = idle:prewarm(at, math.min(count, SoundConstants.IDLE_PER_PLACE), function(): Voice
+			return newVoice(at, nil)
+		end)
+		counters.prewarmed += made
+		return made
 	end,
 
 	--[=[

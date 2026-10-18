@@ -16,6 +16,8 @@
 	- Every pool's sounds (and the jumps, the land and the body-fall) are kept loaded while this client runs (one silent, never-played Sound per asset in
 	  SoundService, preloaded through ContentProvider): a cold first step loaded late, the foot already down. An
 	  asset that fails to load drops its warm Sound.
+	- Each followed rig's feet get FootstepConstants.PREWARM_PER_ANCHOR idle step Sounds as it is built
+	  (SoundServiceClient:prewarm), so no step creates a Sound mid-play.
 	- getState: the counters and the last RECENT steps (the live sync check reads them). onStep: hear each step as it
 	  plays (the Manager's dread shakes the camera on his footfalls).
 
@@ -39,6 +41,7 @@ local FootstepGaitFormulas = require(ReplicatedStorage.Client.Features.Footstep.
 local FootstepEmitterSystem = require(ReplicatedStorage.Client.Features.Footstep.Systems.FootstepEmitterSystem)
 local FootstepLandingSystem = require(ReplicatedStorage.Client.Features.Footstep.Systems.FootstepLandingSystem)
 local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundRegistry)
+local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
 local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
 local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideConstants)
 local SprintConstants = require(ReplicatedStorage.Shared.Features.Sprint.Data.SprintConstants)
@@ -289,6 +292,9 @@ local function step(dt: number)
 			pending[model] = nil
 			rigs[model] = rig
 			watchDefaults(model, rig)
+			for _, track in rig.feet do
+				SoundServiceClient:prewarm(track.part, FootstepConstants.PREWARM_PER_ANCHOR)
+			end
 		end
 	end
 	local camera = Workspace.CurrentCamera

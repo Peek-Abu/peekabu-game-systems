@@ -2,8 +2,8 @@
 --[=[
 	SoundIdlePool: the one-shot voices that finished playing, kept per place they play from (a foot, a pile, the 2D
 	SoundService), so the next one-shot there re-points an existing Sound instead of creating one
-	(SoundServiceClient:playOneShot). Most recently released first; at most `cap` idle voices per place (a refused
-	voice is the caller's to destroy). Plain bookkeeping over opaque keys and items.
+	(SoundServiceClient:playOneShot), or pre-warmed there before the first play (SoundServiceClient:prewarm). Most
+	recently released first; at most `cap` idle voices per place (a refused voice is the caller's to destroy). Plain bookkeeping over opaque keys and items.
 
 	@class SoundIdlePool
 ]=]
@@ -13,6 +13,9 @@ export type SoundIdlePool<K, T> = {
 	take: (self: SoundIdlePool<K, T>, place: K) -> T?,
 	-- Keeps `voice` for `place`; false when `place` already holds `cap` idle voices.
 	put: (self: SoundIdlePool<K, T>, place: K, voice: T, cap: number) -> boolean,
+	-- Fills `place` up to `count` idle voices with `make()` (a character's feet warmed on spawn, so no step creates a
+	-- Sound mid-play); returns how many it made.
+	prewarm: (self: SoundIdlePool<K, T>, place: K, count: number, make: () -> T) -> number,
 	-- Drops `voice` if it is idle at `place` (it was destroyed).
 	remove: (self: SoundIdlePool<K, T>, place: K, voice: T) -> (),
 	-- Drops every idle voice of `place` and returns them (to destroy).
@@ -55,6 +58,20 @@ function SoundIdlePool.new<K, T>(): SoundIdlePool<K, T>
 			end
 			table.insert(list, voice)
 			return true
+		end,
+
+		prewarm = function(_self, place, count, make)
+			local list = idle[place]
+			local have = if list ~= nil then #list else 0
+			if have >= count then
+				return 0
+			end
+			local filled: { T } = if list ~= nil then list else {}
+			idle[place] = filled
+			for _ = have + 1, count do
+				table.insert(filled, make())
+			end
+			return count - have
 		end,
 
 		remove = function(_self, place, voice)

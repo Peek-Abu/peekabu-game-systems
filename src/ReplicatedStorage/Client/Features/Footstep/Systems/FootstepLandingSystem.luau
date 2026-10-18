@@ -84,6 +84,8 @@ local function track(character: Model)
 		lastJump = 0,
 	}
 	bodies[character] = body
+	-- The jump and land play on the root: their Sounds are made now, not on the first jump.
+	SoundServiceClient:prewarm(root, FootstepConstants.PREWARM_PER_ANCHOR)
 	humanoid.Died:Once(function()
 		if body.diedAt == nil then
 			body.diedAt = os.clock()
