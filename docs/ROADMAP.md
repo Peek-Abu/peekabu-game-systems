@@ -36,17 +36,18 @@ Re-seeded from `venture-game-systems` (main at `bb33e81`), which itself began as
 | Camera | A prioritized mode stack (engine default with first-person / spectate, fixed shots, smoothed follow, custom) plus trauma shake, FOV kicks and custom modifiers; the UI `cameraState` handler |
 | Sound | A validated sound registry, volume groups, 2D / positional playback with pitch variance and per-id caps, crossfading music and ambience layers, and server-requested sounds by radius |
 | VFX | Effect recipes over artist templates (with sound and distance-scaled shake), combined screen effects (blur, colour, depth of field) eased per frame, and atmosphere presets blended over Lighting, synced from the server |
-| Interaction | Tag + kind on world objects → engine ProximityPrompts; every trigger re-checked on the server (distance, enabled, cooldown) before the kind's handler; prompts follow the `interact` binding |
-| Carry | Pick up / drop / throw tagged world objects: one per player, welded to the character, weight slows you, published to everyone, dropped on death or leave |
+| Interaction | Tag + kind on world objects → engine ProximityPrompts; every trigger re-checked on the server (distance, enabled, cooldown) before the kind's handler; prompts follow the `interact` binding; channels give a continuous hold with server-side progress (`registerChannel`, `channel`, `resetChannel`) |
+| Carry | Pick up / drop / throw tagged world objects: one per player, welded to the character, weight slows you, published to everyone, dropped on death or leave; `pickedUp` / `dropped(reason)` signals tell a game what happened |
 | Round | Lobby → countdown → run → results as a pure, configurable phase machine (inert until a game opts in); run-only participants, eliminations, team counters and targets, scores and run containers on the inventory rules; synced to every client through the StateSync world slice |
 | Marketplace | Exactly-once developer-product grants (purchase id recorded in the same persisted transaction as the grant), cached gamepass ownership published as a public field, and an account-scoped premium currency |
 | Entitlements | Account-wide "you own this" by category and id (suits, skins, unlocks): registered catalogue, structure-validated slice replicated to the owner, `grantOp` so a purchase and its unlock are one atomic write |
 | Settings | A shared settings registry (number / boolean / choice / keybinds), an account slice storing only non-default values, one validated client request with local preview, and the base settings applied to Sound volumes, camera shake and Input rebinds |
-| NPC / AI | Registered NPC kinds (passive / hostile / timid) spawned from artist templates or adopted by tag; a pure brain (attack, chase, flee, patrol, wander, idle) over sight-cone perception with memory; PathfindingService movement; damage through Death; poses via `playOnRig` |
-| Death | Damage credit and kill info, ragdolls on native Humanoids (players and NPCs), an `auto` / `manual` respawn policy, the public `dead` field, and client-side spectating of living players |
+| NPC / AI | Registered NPC kinds (passive / hostile / timid) spawned from artist templates or adopted by tag; a pure brain (attack, chase, flee, patrol, wander, idle) over sight-cone perception with memory; PathfindingService movement; damage through Death; poses via `playOnRig`; a game can replace a kind's brain (`setBrain`), send an NPC to a point (`goTo`), tune one NPC (`setTuning`) and avoid zones (`pathCosts`) |
+| Death | Damage credit and kill info, ragdolls on native Humanoids (players and NPCs), an `auto` / `manual` respawn policy, the public `dead` field, client-side spectating of living players, a game-chosen spawn point (`setSpawnPoint`) and a launch on `kill` |
 | Voice | Audio API proximity voice on native characters: server-made microphone inputs with server-enforced access lists, routing over the public `dead` / `radio` fields (spatial, radio, the dead channel), client wiring of emitters and radio / direct chains |
 | Small services | Leaderstats (registered player-list columns), Badges (award by key, cached, retried), Analytics (a safe AnalyticsService wrapper), Daily rewards (an account streak claimed in one transaction with its reward), weighted Loot tables (pure, seedable rolls and drop chances) |
 | UI framework | React layers (respawn-safe), scene stack with Escape / gamepad-B pop and per-scene toggle keys, world-suppression contract, HUD widget registry, primitives + tokens, UI Labs stories |
+| Toast | Server-sent toasts (`ToastServiceServer:send`) to one player or all, with registered styles (`info` ships), text cut at 140 characters, 1 to 15 seconds, and a HUD stack showing 4 at a time |
 | Debugger | F4 overlay: logs, services, live state tree, animations, UI stack |
 | Admin | Cmdr with a fail-closed allowlist; currency, inventory, title, animation, round, premium, entitlement, NPC and daily-reward commands |
 | Tooling | `--!strict`, selene, stylua, luau-lsp typecheck, layout rules + module map, file-length cap, cast/trailer/asset-id/UI CI gates, TestEZ on Open Cloud |
@@ -79,6 +80,10 @@ Ordered so each builds on the ones before it. Every one is a NEW, generic design
 | 12 | **Death, ragdoll, spectate** ✅ built (`docs/superpowers/specs/2026-10-09-death-design.md`) | Ragdoll on native Humanoids, death flow, spectate camera mode; hooks `AnimationServiceServer:stopAll`. | 2, 3 |
 | 13 | **Voice** ✅ built (`docs/superpowers/specs/2026-10-09-voice-design.md`) | Audio-API proximity voice anchored to `Character.Head`, with routing (radio, dead-player channel). | 2 |
 | 14 | Leaderstats, badges, analytics, daily rewards, weighted loot tables ✅ built (`docs/superpowers/specs/2026-10-09-small-services-design.md`) | Small shared services. | as needed |
+
+## Queue — planned before Cleanup Crew M4
+
+Party pads and reserved servers: a group gathers on a pad and is teleported together into a reserved server. It follows the base game hooks in its own PR.
 
 ## Game demos
 

@@ -9,15 +9,20 @@
 	@class InteractionServiceClient
 ]=]
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Observers = require(ReplicatedStorage.Packages.Observers)
 local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionConstants)
+local InteractionEvents = require(ReplicatedStorage.Shared.Features.Interaction.Net.InteractionEvents)
 local InputServiceClient = require(ReplicatedStorage.Client.Features.Input.InputServiceClient)
 
 local PROMPT_WAIT_SECONDS = 10
 
 local stopObserver: (() -> ())? = nil
+local stopCharacterWatch: (() -> ())? = nil
+local channelTarget: Instance? = nil
+local lastSentAt = 0
 
 -- The first KeyCode in a binding list (a mouse button cannot key a prompt), or nil.
 local function firstKeyCode(list: { Enum.KeyCode | Enum.UserInputType }?): Enum.KeyCode?
@@ -51,12 +56,21 @@ export type InteractionServiceClient = {
 	dependencies: { string },
 	start: (self: InteractionServiceClient) -> (),
 	stop: (self: InteractionServiceClient) -> (),
+	startChannel: (self: InteractionServiceClient, target: Instance) -> (),
+	stopChannel: (self: InteractionServiceClient) -> (),
 }
 
 local InteractionServiceClient: InteractionServiceClient = {
 	dependencies = { "InputServiceClient" },
 
 	start = function(_self)
+		-- A new character ends any held channel (the server dropped it with the old one).
+		local characterAdded = Players.LocalPlayer.CharacterAdded:Connect(function()
+			channelTarget = nil
+		end)
+		stopCharacterWatch = function()
+			characterAdded:Disconnect()
+		end
 		stopObserver = Observers.observeTag(InteractionConstants.TAG, function(target: Instance)
 			local alive = true
 			task.spawn(function()
@@ -77,11 +91,39 @@ local InteractionServiceClient: InteractionServiceClient = {
 		end)
 	end,
 
+	--[=[
+		Starts channeling `target` (the game decides when: aim + hold). Call it every frame while
+		held: a repeat for the same target is re-sent at most every CHANNEL_RESEND_INTERVAL, so a channel the
+		server ended (complete, out of range, death, reset) resumes while the button is still held.
+	]=]
+	startChannel = function(_self, target)
+		local now = os.clock()
+		if channelTarget == target and now - lastSentAt < InteractionConstants.CHANNEL_RESEND_INTERVAL then
+			return
+		end
+		channelTarget = target
+		lastSentAt = now
+		InteractionEvents.packets.ChannelStart.send(target)
+	end,
+
+	stopChannel = function(_self)
+		if channelTarget == nil then
+			return
+		end
+		channelTarget = nil
+		InteractionEvents.packets.ChannelStop.send(true)
+	end,
+
 	stop = function(_self)
 		local stop = stopObserver
 		if stop ~= nil then
 			stop()
 			stopObserver = nil
+		end
+		local stopWatch = stopCharacterWatch
+		if stopWatch ~= nil then
+			stopWatch()
+			stopCharacterWatch = nil
 		end
 	end,
 }

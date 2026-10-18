@@ -20,4 +20,12 @@ export type InteractionDef = {
 	requiresLineOfSight: boolean?,
 }
 
+-- A channel: hold-to-work on an object with progress kept on the server (vacuum a pile, repair a fault).
+export type ChannelDef = {
+	-- Seconds one player needs from zero to done. Several players on one target add their rates.
+	duration: number,
+	-- Studs; absent = InteractionConstants.DEFAULT_MAX_DISTANCE.
+	maxDistance: number?,
+}
+
 return {}

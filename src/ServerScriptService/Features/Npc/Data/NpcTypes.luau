@@ -32,6 +32,9 @@ export type NpcDef = {
 	attackCooldown: number,
 	corpseTime: number,
 	animations: NpcAnimations?,
+	-- PathfindingService costs by material/label name (math.huge = never enter). Absent = defaults.
+	-- With costs set, a goal the path can't reach because of them leaves the NPC standing (no straight-line walk).
+	pathCosts: { [string]: number }?,
 }
 
 -- What a game passes to NpcRegistry.register: everything but the attitude has a default.
@@ -50,14 +53,19 @@ export type NpcDefInput = {
 	attackCooldown: number?,
 	corpseTime: number?,
 	animations: NpcAnimations?,
+	-- PathfindingService costs by material/label name (math.huge = never enter). Absent = defaults.
+	-- With costs set, a goal the path can't reach because of them leaves the NPC standing (no straight-line walk).
+	pathCosts: { [string]: number }?,
 }
 
 -- What the brain sees this tick. `target` is a player the NPC sees or remembers; `threat` the nearest
--- player at all (for fleeing).
+-- player at all (for fleeing); `position` is the NPC's own; `now` is os.clock().
 export type BrainContext = {
-	target: { userId: number, distance: number }?,
+	target: { userId: number, distance: number, position: Vector3 }?,
 	threat: { position: Vector3, distance: number }?,
 	hasPatrol: boolean,
+	position: Vector3,
+	now: number,
 }
 
 export type Intent =
@@ -67,6 +75,19 @@ export type Intent =
 	| { kind: "chase", target: number }
 	| { kind: "attack", target: number }
 	| { kind: "flee", from: Vector3 }
+	| { kind: "goTo", position: Vector3, run: boolean }
+
+-- Runtime overrides for one live NPC (a game's pressure tiers). Nil fields keep the kind's value.
+export type NpcTuning = {
+	walkSpeed: number?,
+	runSpeed: number?,
+	sightRange: number?,
+	sightAngle: number?,
+}
+
+-- A game's brain for one kind. Returning nil uses the default brain (NpcBrainRules.decide) this tick.
+-- Runs inside the NPC think loop: it must not yield.
+export type Brain = (def: NpcDef, context: BrainContext, npc: Model) -> Intent?
 
 export type Pose = "idle" | "walk" | "run"
 

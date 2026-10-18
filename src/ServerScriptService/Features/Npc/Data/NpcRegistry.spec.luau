@@ -45,4 +45,13 @@ return function()
 		end).to.throw()
 		expect(NpcRegistry.has("spec-bad-1")).to.equal(false)
 	end)
+
+	it("keeps pathCosts and refuses a negative cost", function()
+		NpcRegistry.register("spec-costs", { attitude = "hostile", pathCosts = { SafeZone = math.huge } })
+		expect(NpcRegistry.get("spec-costs").pathCosts.SafeZone).to.equal(math.huge)
+		expect(function()
+			NpcRegistry.register("spec-costs-bad", { attitude = "hostile", pathCosts = { SafeZone = -1 } })
+		end).to.throw()
+		expect(NpcRegistry.has("spec-costs-bad")).to.equal(false)
+	end)
 end

@@ -11,6 +11,7 @@
 	  animations (`AnimationServiceServer:stopAll`) and fires `died`; every tracked death fires
 	  `humanoidDied`.
 	- Respawn policy: `auto` (the engine, after `respawnDelay`) or `manual` (only `respawn(player)`).
+	- `setSpawnPoint(resolver)` chooses where characters appear; `kill(..., { launch })` throws the body as it dies.
 
 	Spec-exempt shell (Humanoids, joints, Players); the rules are the specced DeathCreditTracker,
 	DeathRagdollUtils and DeathSpectateRules.
@@ -46,6 +47,10 @@ local credits = DeathCreditTracker.new()
 -- An explicit cause from kill(), read when the humanoid dies. Weak keys, like the credit tracker.
 local causes: { [Humanoid]: string } = {}
 setmetatable(causes, { __mode = "k" })
+-- A launch from kill(), applied when the humanoid dies. Weak keys, like `causes`.
+local launches: { [Humanoid]: Vector3 } = {}
+setmetatable(launches, { __mode = "k" })
+local spawnResolver: DeathTypes.SpawnResolver? = nil
 local counters = { playerDeaths = 0, rigDeaths = 0, ragdolls = 0 }
 local stoppers: { () -> () } = {}
 
@@ -66,14 +71,20 @@ local function humanoidOf(model: Model): Humanoid?
 end
 
 -- Swaps every non-root Motor6D for a limited ball socket. False when already ragdolled.
+-- The engine itself disables the root Motor6D (Root / RootJoint) shortly after the Humanoid settles
+-- into Dead, which would drop the root part through the world; a WeldConstraint is not managed by the
+-- Humanoid, so the root is welded to the body with one instead.
 local function ragdollModel(model: Model): boolean
 	if model:GetAttribute(DeathConstants.RAGDOLL_NAME) == true then
 		return false
 	end
 	model:SetAttribute(DeathConstants.RAGDOLL_NAME, true)
 	local jointParts: { [BasePart]: true } = {}
+	local rootBody: BasePart? = nil
 	for _, descendant in model:GetDescendants() do
-		if descendant:IsA("Motor6D") and not DeathRagdollUtils.isRootJoint(descendant.Name) then
+		if descendant:IsA("Motor6D") and DeathRagdollUtils.isRootJoint(descendant.Name) then
+			rootBody = descendant.Part1
+		elseif descendant:IsA("Motor6D") then
 			local part0 = descendant.Part0
 			local part1 = descendant.Part1
 			if part0 ~= nil and part1 ~= nil then
@@ -110,9 +121,33 @@ local function ragdollModel(model: Model): boolean
 	if root ~= nil and root:IsA("BasePart") then
 		root.CanCollide = false
 		root.Massless = true
+		if rootBody == nil then
+			local torso = model:FindFirstChild("LowerTorso") or model:FindFirstChild("Torso")
+			rootBody = if torso ~= nil and torso:IsA("BasePart") then torso else nil
+		end
+		if rootBody ~= nil and rootBody ~= root then
+			local weld = Instance.new("WeldConstraint")
+			weld.Name = DeathConstants.RAGDOLL_NAME
+			weld.Part0 = root
+			weld.Part1 = rootBody
+			weld.Parent = root
+		end
 	end
 	counters.ragdolls += 1
 	return true
+end
+
+-- Takes the body from its owner and throws it. A player's character is simulated by that player's
+-- client, which would ignore a velocity the server sets, so ownership moves to the server first.
+local function launchModel(model: Model, velocity: Vector3)
+	for _, descendant in model:GetDescendants() do
+		if descendant:IsA("BasePart") and not descendant.Anchored then
+			pcall(function()
+				descendant:SetNetworkOwner(nil)
+			end)
+			descendant.AssemblyLinearVelocity = velocity
+		end
+	end
 end
 
 -- Wires one humanoid's death. `player` is set for a player's character.
@@ -131,6 +166,11 @@ local function watch(model: Model, humanoid: Humanoid, player: Player?): RBXScri
 		end
 		if config.ragdoll then
 			ragdollModel(model)
+		end
+		local launch: Vector3? = launches[humanoid]
+		launches[humanoid] = nil
+		if launch ~= nil then
+			launchModel(model, launch)
 		end
 		if player ~= nil then
 			died:Fire(player, info)
@@ -155,7 +195,8 @@ export type DeathServiceServer = {
 
 	configure: (self: DeathServiceServer, update: DeathTypes.DeathConfigUpdate) -> (),
 	damage: (self: DeathServiceServer, humanoid: Humanoid, amount: number, source: DeathTypes.DamageSource?) -> (),
-	kill: (self: DeathServiceServer, humanoid: Humanoid, cause: string?) -> (),
+	kill: (self: DeathServiceServer, humanoid: Humanoid, cause: string?, options: DeathTypes.KillOptions?) -> (),
+	setSpawnPoint: (self: DeathServiceServer, resolver: DeathTypes.SpawnResolver?) -> (),
 	track: (self: DeathServiceServer, model: Model) -> (),
 	ragdoll: (self: DeathServiceServer, model: Model) -> boolean,
 	respawn: (self: DeathServiceServer, player: Player) -> boolean,
@@ -175,6 +216,22 @@ local DeathServiceServer: DeathServiceServer = {
 		table.insert(
 			stoppers,
 			Observers.observeCharacter(function(player: Player, character: Model)
+				local resolver = spawnResolver
+				if resolver ~= nil then
+					local ok, cframe = pcall(resolver, player)
+					if not ok then
+						log:warn(`spawn resolver failed for {player.Name}: {cframe}`)
+					elseif typeof(cframe) == "CFrame" then
+						-- Deferred: the engine places a new character after CharacterAdded fires.
+						task.defer(function()
+							if character.Parent ~= nil then
+								character:PivotTo(cframe)
+							end
+						end)
+					elseif cframe ~= nil then
+						log:warn(`spawn resolver for {player.Name} returned {typeof(cframe)}, not a CFrame`)
+					end
+				end
 				StateSyncPublicPlayerStore.clearField(player.UserId, DeathConstants.PUBLIC_FIELD)
 				local humanoid = humanoidOf(character)
 				if humanoid == nil then
@@ -245,16 +302,28 @@ local DeathServiceServer: DeathServiceServer = {
 	end,
 
 	--[=[
-		Kills a humanoid outright, with an optional cause ("fell", "caught", "round-ended").
+		Kills a humanoid outright, with an optional cause ("fell", "caught", "round-ended") and an optional
+		launch velocity applied to the body as it dies.
 	]=]
-	kill = function(_self, humanoid, cause)
+	kill = function(_self, humanoid, cause, options)
 		if humanoid.Health <= 0 then
 			return
 		end
 		if cause ~= nil then
 			causes[humanoid] = cause
 		end
+		if options ~= nil and options.launch ~= nil then
+			launches[humanoid] = options.launch
+		end
 		humanoid.Health = 0
+	end,
+
+	--[=[
+		Sets where every player's next character appears (a loading bay, a team base); nil restores the
+		engine's choice. A resolver returning nil for a player leaves that spawn alone.
+	]=]
+	setSpawnPoint = function(_self, resolver)
+		spawnResolver = resolver
 	end,
 
 	--[=[
@@ -296,6 +365,7 @@ local DeathServiceServer: DeathServiceServer = {
 			respawn = config.respawn,
 			respawnDelay = config.respawnDelay,
 			ragdoll = config.ragdoll,
+			spawnResolver = spawnResolver ~= nil,
 			counters = table.clone(counters),
 		}
 	end,

@@ -13,6 +13,7 @@ local InteractionTypes = require(ReplicatedStorage.Shared.Features.Interaction.D
 type InteractionDef = InteractionTypes.InteractionDef
 
 local kinds: { [string]: InteractionDef } = {}
+local channels: { [string]: InteractionTypes.ChannelDef } = {}
 
 local InteractionRegistry = {}
 
@@ -44,6 +45,27 @@ end
 
 function InteractionRegistry.has(id: string): boolean
 	return kinds[id] ~= nil
+end
+
+--[=[
+	Registers a channel kind. Asserts: the id is new; duration is positive; maxDistance is positive.
+]=]
+function InteractionRegistry.registerChannel(id: string, def: InteractionTypes.ChannelDef)
+	assert(channels[id] == nil, `channel kind "{id}" is already registered`)
+	assert(def.duration > 0, `channel "{id}": duration must be positive`)
+	local distance = def.maxDistance
+	if distance ~= nil then
+		assert(distance > 0, `channel "{id}": maxDistance must be positive`)
+	end
+	channels[id] = def
+end
+
+function InteractionRegistry.getChannel(id: string): InteractionTypes.ChannelDef?
+	return channels[id]
+end
+
+function InteractionRegistry.hasChannel(id: string): boolean
+	return channels[id] ~= nil
 end
 
 return InteractionRegistry

@@ -7,7 +7,8 @@
 	older one. While it computes, a goal the caller saw in clear line (`inLine`) is walked at straight away
 	(NpcPathRules.headStraight), so a fresh chase never stands waiting for the pathfinder; the path takes
 	over when it arrives. With no path (blocked, or the goal is off the navmesh) the Humanoid walks straight
-	at the goal. `step()` advances waypoints and jumps where the path says to.
+	at the goal, unless the kind has pathCosts: then it stands still instead. `step()` advances waypoints and
+	jumps where the path says to. `costs` are the kind's pathCosts (PathfindingModifier labels or materials).
 
 	Spec-exempt shell (PathfindingService, Humanoid); the decisions are NpcPathRules.
 
@@ -31,8 +32,8 @@ export type NpcMoverSystem = {
 
 local NpcMoverSystem = {}
 
-function NpcMoverSystem.new(humanoid: Humanoid, root: BasePart): NpcMoverSystem
-	local path = PathfindingService:CreatePath({ AgentCanJump = true })
+function NpcMoverSystem.new(humanoid: Humanoid, root: BasePart, costs: { [string]: number }?): NpcMoverSystem
+	local path = PathfindingService:CreatePath({ AgentCanJump = true, Costs = costs or {} })
 	local currentGoal: Vector3? = nil
 	local computedAt: number? = nil
 	local waypoints: { PathWaypoint } = {}
@@ -40,6 +41,7 @@ function NpcMoverSystem.new(humanoid: Humanoid, root: BasePart): NpcMoverSystem
 	local request = 0
 	local computing = false
 	local alive = true
+	local hasCosts = costs ~= nil and next(costs) ~= nil
 
 	local function walkTo(position: Vector3)
 		humanoid:MoveTo(position)
@@ -67,7 +69,12 @@ function NpcMoverSystem.new(humanoid: Humanoid, root: BasePart): NpcMoverSystem
 			else
 				waypoints = {}
 				index = 0
-				walkTo(goal)
+				if hasCosts then
+					-- A goal the costs make unreachable leaves the NPC standing (no straight-line walk into it).
+					walkTo(root.Position)
+				else
+					walkTo(goal)
+				end
 			end
 		end)
 	end

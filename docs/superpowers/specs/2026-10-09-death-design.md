@@ -44,3 +44,7 @@ Not now: death screens (UI, game-specific), revives (a game calls `respawn` or i
 | Death | server | State | DeathCreditTracker | Last damage source per humanoid, within the credit window |
 | Death | server | root | DeathServiceServer | Damage and credit, ragdoll, respawn policy, the public `dead` field, signals |
 | Death | client | root | DeathServiceClient | Spectating while dead |
+
+## 2026-10-10 additions
+
+A game now chooses where characters appear. `DeathServiceServer:setSpawnPoint(resolver?)` sets a resolver for the spawn position. If the resolver errors or returns something that is not a CFrame, Death warns and falls back to the default spawn. `kill(humanoid, cause?, { launch: Vector3? })` takes an options table, and `launch` throws the body as it dies.
