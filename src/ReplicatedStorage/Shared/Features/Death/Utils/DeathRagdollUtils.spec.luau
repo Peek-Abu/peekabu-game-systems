@@ -27,4 +27,21 @@ return function()
 			expect(name ~= "").to.equal(true)
 		end
 	end)
+
+	it("pairs every body part with every other exactly once, so no two limbs of one ragdoll collide", function()
+		local found = DeathRagdollUtils.selfCollisionPairs({ "A", "B", "C", "D" })
+		expect(#found).to.equal(6)
+		local seen = {}
+		for _, pair in found do
+			expect(pair[1] ~= pair[2]).to.equal(true)
+			local key = if pair[1] < pair[2] then pair[1] .. pair[2] else pair[2] .. pair[1]
+			expect(seen[key]).to.equal(nil)
+			seen[key] = true
+		end
+	end)
+
+	it("gives no pairs for fewer than two parts", function()
+		expect(#DeathRagdollUtils.selfCollisionPairs({})).to.equal(0)
+		expect(#DeathRagdollUtils.selfCollisionPairs({ "A" })).to.equal(0)
+	end)
 end
