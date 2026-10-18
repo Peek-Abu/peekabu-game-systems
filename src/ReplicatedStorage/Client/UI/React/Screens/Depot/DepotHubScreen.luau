@@ -161,15 +161,17 @@ local function SettingsRows(props: { width: number, phone: boolean, preview: boo
 			end
 		end,
 	})
-	-- One line under the button, fitted so a narrow sheet never wraps it.
+	-- One line under the button, fitted; the box has room for a second line so a very narrow sheet (where the fit
+	-- reaches the text floor) wraps instead of clipping.
 	local noteSize = if props.phone then 14 else 18
 	nodes.note = e(ToonText, {
 		text = "Motion follows Roblox's Reduce Motion setting.",
 		font = "body",
 		textSize = noteSize,
 		position = UDim2.fromOffset(0, footerY + 62),
-		size = UDim2.fromOffset(props.width, noteSize + 8),
+		size = UDim2.fromOffset(props.width, 2 * noteSize + 8),
 		fit = true,
+		wrapped = true,
 		alignY = "top",
 	})
 	return e(
