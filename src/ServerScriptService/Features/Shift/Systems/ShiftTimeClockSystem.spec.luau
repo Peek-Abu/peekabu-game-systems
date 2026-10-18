@@ -19,7 +19,7 @@ local function scene(offset)
 	return folder, clock, { UserId = 9031, DisplayName = "Clock Spec", Character = character }
 end
 
-local function harness(carrying)
+local function harness(carrying, crew)
 	local log = { clockedOut = {} }
 	log.system = ShiftTimeClockSystem.new({
 		clockOut = function(player)
@@ -27,6 +27,9 @@ local function harness(carrying)
 		end,
 		carrying = function()
 			return carrying == true
+		end,
+		eligible = function()
+			return crew ~= false
 		end,
 	})
 	return log
@@ -71,6 +74,14 @@ return function()
 		it("refuses a crew member carrying cargo, even right at the clock", function()
 			local folder, clock, player = scene(Vector3.new(0, -1, -2))
 			local log = harness(true)
+			expect(log.system.punch(player, clock)).to.equal(false)
+			expect(#log.clockedOut).to.equal(0)
+			folder:Destroy()
+		end)
+
+		it("refuses a player outside the crew, even right at the clock", function()
+			local folder, clock, player = scene(Vector3.new(1, -1, -3))
+			local log = harness(false, false)
 			expect(log.system.punch(player, clock)).to.equal(false)
 			expect(#log.clockedOut).to.equal(0)
 			folder:Destroy()

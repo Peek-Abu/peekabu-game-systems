@@ -416,7 +416,7 @@ local ShiftServiceServer: ShiftServiceServer = {
 		local function clockOutBy(player: Player)
 			self:clockOut(player)
 		end
-		table.insert(stoppers, ShiftTimeClockSystem.new({ clockOut = clockOutBy }).start())
+		table.insert(stoppers, ShiftTimeClockSystem.new({ clockOut = clockOutBy, eligible = trip.eligible }).start())
 		table.insert(stoppers, overtime.start())
 
 		local phases = RoundServiceServer.phaseChanged:Connect(onRoundPhase)

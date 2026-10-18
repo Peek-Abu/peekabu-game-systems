@@ -37,6 +37,8 @@ export type Deps = {
 	clockOut: (player: Player) -> (),
 	-- Whether a player is carrying something; absent = Carry.
 	carrying: ((player: Player) -> boolean)?,
+	-- Whether a player is on the shift's crew (ShiftTripSystem.eligible): nobody else can end the crew's shift.
+	eligible: (player: Player) -> boolean,
 }
 
 export type ShiftTimeClockSystem = {
@@ -80,7 +82,7 @@ function ShiftTimeClockSystem.new(deps: Deps): ShiftTimeClockSystem
 		end,
 
 		punch = function(player, target)
-			if not ShiftTimeClockSystem.reaches(player, target, carrying(player)) then
+			if not deps.eligible(player) or not ShiftTimeClockSystem.reaches(player, target, carrying(player)) then
 				return false
 			end
 			deps.clockOut(player)
