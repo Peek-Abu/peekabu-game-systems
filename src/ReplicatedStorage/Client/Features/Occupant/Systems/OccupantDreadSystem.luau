@@ -11,17 +11,13 @@
 	  loud while you hide near him;
 	- the dread loop (harlowDread, 2D) while he is near, hunting, or near a crewmate's chase (the chase music replaces it
 	  in your own chase);
-	- your breath while you hide on a shift (HideAssets BREATH_CALM / BREATH_NERVOUS, 2D, only for you): both loops
-	  play while you are in a spot and crossfade by how nervous the stage makes you (OccupantDreadFormulas.breathTarget,
-	  eased), slow and calm with him away, quick and shaky as he closes or hunts; they take the hidden duck and muffle;
 	- the screen: desaturated and, on each beat, a soft red pulse (VfxServiceClient), plus the vignette, the grain and
 	  the beat's edge fringe (OccupantDreadTracker -> DreadOverlay);
 	- in your chase, a held FOV squeeze (CameraServiceClient:setFovOffset), and while he sees or chases you, a camera
 	  shake on his footfalls (FootstepServiceClient:onStep; the cameraShake setting scales it);
 	- the mix: an EqualizerSoundEffect on the Ambient group and on every other Music-group sound (the overtime ticking)
-	  ducks them and muffles their highs: harder in a chase, hardest with him close or while you hide near him. Your
-	  hiding breath takes the same EQ, so it sits under that mix. His own sounds, the chase stems and the dread loop are
-	  never touched.
+	  ducks them and muffles their highs: harder in a chase, hardest with him close or while you hide near him. His
+	  own sounds, the chase stems and the dread loop are never touched.
 
 	Nothing in the depot hub or outside a running shift; a spectator gets only the crew look. Reduce motion (the
 	engine's ReducedMotionEnabled, DREAD.REDUCE_MOTION or `setReduceMotion`) drops the squeeze, the fringe, the beat
@@ -50,7 +46,6 @@ local OccupantDreadFormulas = require(OccupantShared.Utils.OccupantDreadFormulas
 local OccupantChaseMusicSystem = require(OccupantClient.Systems.OccupantChaseMusicSystem)
 local OccupantDreadTracker = require(OccupantClient.State.OccupantDreadTracker)
 local DepotAtmosphereUtils = require(ReplicatedStorage.Client.Features.Depot.Utils.DepotAtmosphereUtils)
-local HideAssets = require(ReplicatedStorage.Shared.Features.Hide.Data.HideAssets)
 local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideConstants)
 local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundRegistry)
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
@@ -69,9 +64,6 @@ export type OccupantDreadState = {
 	sight: number,
 	crew: number,
 	hidden: boolean,
-	-- The hiding breath: how nervous it is (0..1) and whether its loops play.
-	breath: number,
-	breathing: boolean,
 	reduceMotion: boolean,
 	look: DreadLook,
 	eqs: number,
@@ -115,12 +107,7 @@ local screenToken: number? = nil
 local dreadLoop: SoundServiceClient.SoundHandle? = nil
 local dreadBase = 0
 local eqs: { [Instance]: EqualizerSoundEffect? } = {}
--- The hiding breath's two loops (by sound id) with their registered volumes, and how nervous it is.
-type BreathLoop = { handle: SoundServiceClient.SoundHandle, base: number }
-local breaths: { [string]: BreathLoop } = {}
-local breathNervous = 0
-local counters =
-	{ beats = 0, musicBeats = 0, shakes = 0, stages = 0, loops = 0, pending = 0, sightRays = 0, breaths = 0 }
+local counters = { beats = 0, musicBeats = 0, shakes = 0, stages = 0, loops = 0, pending = 0, sightRays = 0 }
 local rayParams = RaycastParams.new()
 rayParams.FilterType = Enum.RaycastFilterType.Exclude
 rayParams.IgnoreWater = true
@@ -241,50 +228,6 @@ local function setLoop(level: number)
 	started.sound.Volume = dreadBase * level
 end
 
-local function stopBreath()
-	for id, loop in breaths do
-		loop.handle:stop(DREAD.BREATH_FADE)
-		breaths[id] = nil
-	end
-	breathNervous = 0
-end
-
--- One of the breath's loops at `gain` of its registered volume (started on first use; both play while you hide).
-local function breathLoop(id: string, gain: number)
-	local loop = breaths[id]
-	if loop ~= nil then
-		loop.handle.sound.Volume = loop.base * gain
-		return
-	end
-	if not SoundRegistry.has(id) then
-		counters.pending += 1
-		return
-	end
-	local started = SoundServiceClient:play(id)
-	if started == nil then
-		return
-	end
-	counters.breaths += 1
-	breaths[id] = { handle = started, base = started.sound.Volume }
-	started.sound.Volume = started.sound.Volume * gain
-end
-
--- Your breath while you hide on a shift: calm and nervous crossfaded by the stage (eased).
-local function setBreath(hiding: boolean, slow: boolean, dt: number)
-	if not hiding then
-		if next(breaths) ~= nil then
-			stopBreath()
-		end
-		breathNervous = 0
-		return
-	end
-	local aim = OccupantDreadFormulas.breathTarget(stage, proximity, slow)
-	breathNervous = OccupantDreadFormulas.breathEase(breathNervous, aim, dt)
-	local calm, nervous = OccupantDreadFormulas.breathGains(breathNervous)
-	breathLoop(HideAssets.BREATH_CALM, calm)
-	breathLoop(HideAssets.BREATH_NERVOUS, nervous)
-end
-
 local function releaseEqs()
 	for _, eq in eqs do
 		if eq ~= nil then
@@ -318,9 +261,6 @@ local function setMix(now: number)
 	local ambient = SoundService:FindFirstChild("Ambient")
 	if ambient ~= nil and ambient:IsA("SoundGroup") then
 		eqFor(ambient)
-	end
-	for _, loop in breaths do
-		eqFor(loop.handle.sound)
 	end
 	if now >= nextScan then
 		nextScan = now + SCAN_INTERVAL
@@ -376,7 +316,6 @@ local function clearAll()
 	hidden = false
 	lastMusicBeat = -1
 	setLoop(0)
-	stopBreath()
 	releaseEqs()
 	local token = screenToken
 	if token ~= nil then
@@ -394,8 +333,7 @@ local function step(dt: number)
 	local harlowRoot = rootOf(harlow)
 	local spectated = DeathServiceClient:spectating()
 	local listener = if spectated ~= nil then characterRoot(spectated) else rootOf(me.Character)
-	local shift = onShift()
-	local active = shift and harlow ~= nil and harlowRoot ~= nil and listener ~= nil
+	local active = onShift() and harlow ~= nil and harlowRoot ~= nil and listener ~= nil
 	local mode: string? = nil
 	local phase: string? = nil
 	local target = 0
@@ -463,7 +401,6 @@ local function step(dt: number)
 	})
 	CameraServiceClient:setFovOffset(FOV_OWNER, if look.squeeze > OFF then -look.squeeze else 0)
 	setLoop(look.dread)
-	setBreath(shift and hidden, slow, dt)
 	setMix(now)
 end
 
@@ -528,8 +465,6 @@ function OccupantDreadSystem.getState(): OccupantDreadState
 		sight = sight,
 		crew = crew,
 		hidden = hidden,
-		breath = breathNervous,
-		breathing = next(breaths) ~= nil,
 		reduceMotion = reduceMotion(),
 		look = table.clone(look),
 		eqs = count,

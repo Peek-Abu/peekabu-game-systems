@@ -303,14 +303,6 @@ local DREAD = {
 	HIDDEN_MUFFLE = -22,
 	HIDDEN_DUCK = -9,
 	HIDDEN_VIGNETTE = 0.1,
-	-- Your breath while you hide (2D, only for you; HideAssets BREATH_CALM / BREATH_NERVOUS): the two loops crossfade
-	-- by OccupantDreadFormulas.breathTarget, getting nervous at BREATH_RISE (1/s) and calming at BREATH_FALL; a
-	-- crewmate's chase near you makes it only BREATH_CREW nervous. Both loops fade out over BREATH_FADE (s) when you
-	-- leave the spot. They take the world's hidden duck and muffle (the ambience EQ), so they sit under that mix.
-	BREATH_RISE = 2.5,
-	BREATH_FALL = 0.8,
-	BREATH_CREW = 0.35,
-	BREATH_FADE = 0.4,
 }
 
 return table.freeze({

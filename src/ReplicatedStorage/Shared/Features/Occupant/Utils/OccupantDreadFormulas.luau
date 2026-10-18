@@ -13,8 +13,6 @@
 	- The heartbeat: `beatPeriod` (the chase's follows the music: `musicBeat`), `pulse` its shape.
 	- `footfallTrauma`: his steps shake your camera while he sees or chases you, close.
 	- `eq`: the ambience EQ's bands for a duck and a muffle.
-	- Your breath while you hide (`breathTarget`, `breathGains`, `breathEase`): a calm loop and a nervous loop
-	  crossfaded by how nervous the stage makes you.
 
 	Shared and pure (the client's OccupantDreadSystem plays it).
 
@@ -286,44 +284,6 @@ end
 ]=]
 function OccupantDreadFormulas.eq(duck: number, muffle: number): (number, number, number)
 	return duck, duck + muffle * DREAD.MUFFLE_MID, duck + muffle
-end
-
---[=[
-	How nervous your breath is while you hide (0 calm .. 1 nervous): calm with him away (none), nervous with his
-	`proximity` while he is near and unaware, fully nervous while he hunts, stares or chases (aware, chase) and in his
-	slow turn (`slow`); a crewmate's chase near you only BREATH_CREW.
-]=]
-function OccupantDreadFormulas.breathTarget(stage: DreadStage, proximity: number, slow: boolean): number
-	if slow or stage == "aware" or stage == "chase" then
-		return 1
-	elseif stage == "near" then
-		return math.clamp(proximity, 0, 1)
-	elseif stage == "crew" then
-		return DREAD.BREATH_CREW
-	end
-	return 0
-end
-
---[=[
-	The calm and nervous loops' volume scales for a nervousness (0..1): an equal-power crossfade.
-]=]
-function OccupantDreadFormulas.breathGains(nervous: number): (number, number)
-	local x = math.clamp(nervous, 0, 1)
-	if x >= 1 then
-		return 0, 1
-	elseif x <= 0 then
-		return 1, 0
-	end
-	return math.cos(x * math.pi / 2), math.sin(x * math.pi / 2)
-end
-
---[=[
-	The breath's nervousness one step toward `target`: BREATH_RISE (1/s) while it gets more nervous, BREATH_FALL while
-	it calms down (so it settles slowly after he leaves).
-]=]
-function OccupantDreadFormulas.breathEase(current: number, target: number, dt: number): number
-	local sharpness = if target > current then DREAD.BREATH_RISE else DREAD.BREATH_FALL
-	return current + (target - current) * (1 - math.exp(-sharpness * dt))
 end
 
 return OccupantDreadFormulas
