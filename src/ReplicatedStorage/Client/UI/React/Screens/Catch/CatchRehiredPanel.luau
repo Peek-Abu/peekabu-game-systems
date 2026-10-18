@@ -2,20 +2,22 @@
 --[=[
 	CatchRehiredPanel: the HR "Rehired." notice around the respawn (Figma 4c desktop 22:263, 4e phone 22:299) in the V1
 	kit. A dark scrim, and centred on it a cream panel on the depth stack popping in: the grape header band ("MORROW &
-	MORROW — HUMAN RESOURCES", worried Pippa breaking its corner), "NOTICE OF RE-EMPLOYMENT", the big stroked mint
-	"Rehired.", the ruled rows, a tilted mint REHIRED sticker in the empty lower-right area (clear of the headline) and
-	"Respawning at the loading bay…". The rows wrap and stack by their real height (a long "Dropped:" row takes two
-	lines); the card grows by whatever the rows take beyond the Figma's one-line rows, so the sticker and the footer
-	(placed from the card's bottom) stay below the last row. Every string comes from the specced
-	CatchViewModel.rehired. Presentational.
+	MORROW — HUMAN RESOURCES", the rehired player's own character, worried, breaking its corner), "NOTICE OF
+	RE-EMPLOYMENT", the big stroked mint "Rehired.", the ruled rows, a tilted mint REHIRED sticker in the empty
+	lower-right area (clear of the headline) and "Respawning at the loading bay…". The rows wrap and stack by their real
+	height (a long "Dropped:" row takes two lines); the card grows by whatever the rows take beyond the Figma's one-line
+	rows, so the sticker and the footer (placed from the card's bottom) stay below the last row. Every string comes from
+	the specced CatchViewModel.rehired. Presentational.
 
 	@class CatchRehiredPanel
 ]=]
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
 local CatchViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Catch.CatchViewModel)
+local CharacterPortrait = require(ReplicatedStorage.Client.UI.React.Screens.Portrait.CharacterPortrait)
 local PaperScaleContext = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperScaleContext)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
@@ -32,6 +34,8 @@ export type CatchRehiredPanelProps = {
 	-- Design px the scrim reaches above the panel's top so it covers the whole screen when the panel is drawn in a
 	-- shifted PaperHudFrame (PaperHudScaleViewModel.bleed). nil = 0 (a story, or an unshifted frame).
 	bleedTop: number?,
+	-- Whose character breaks the header's corner (the rehired player); nil = the local player.
+	userId: number?,
 }
 
 -- Every measurement per layout, in px, from the Figma frames (positions are inside the card; the card's height is its
@@ -167,6 +171,8 @@ end
 
 local function CatchRehiredPanel(props: CatchRehiredPanelProps): React.ReactNode
 	local view = props.view
+	local me = Players.LocalPlayer
+	local userId = props.userId or (if me ~= nil then me.UserId else nil)
 	local spec = SPEC[props.layout]
 	-- The rows' measured height in design px (0 until they are laid out); the card grows by what they take beyond the
 	-- Figma's. AbsoluteSize is real px, so it is divided by the scale the notice is drawn at (PaperHudFrame).
@@ -244,7 +250,18 @@ local function CatchRehiredPanel(props: CatchRehiredPanelProps): React.ReactNode
 			anchor = Vector2.new(0.5, 0.5),
 			header = {
 				title = view.header,
-				icon = "pippaWorried",
+				-- The rehired player's own character, worried (the "caught" pose), where the kit's render would be: head,
+				-- ears and chest (no edge of the unclipped frame cuts an ear), a little larger than the render.
+				art = function(size: number): React.ReactNode
+					return e(CharacterPortrait, {
+						userId = userId,
+						context = "caught",
+						framing = "upper",
+						anchor = Vector2.new(0.5, 0.5),
+						position = UDim2.fromScale(0.5, 0.5),
+						size = UDim2.fromOffset(size * 1.25, size * 1.25),
+					})
+				end,
 				height = spec.band + 12,
 				titleSize = spec.headerSize + 4,
 			},

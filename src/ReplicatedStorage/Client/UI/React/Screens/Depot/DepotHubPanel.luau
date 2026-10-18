@@ -2,8 +2,8 @@
 --[=[
 	DepotHubPanel: the depot hub's HUD in the V1 kit (hub-desktop / hub-mobile renders), laid out in HUD design px
 	(1920x1080 desktop, scaled by PaperHudFrame; 844x390 phone):
-	- top-left, right of Roblox's menu and chat buttons: the profile card (Pippa's portrait breaking the card, the
-	  player's name, the Clearance Level star, the rank name on desktop and the XP bar);
+	- top-left, right of Roblox's menu and chat buttons: the profile card (the player's own character in a ring
+	  breaking the card, the player's name, the Clearance Level star, the rank name on desktop and the XP bar);
 	- under it the menu tiles (JOBS, LOCKER, GUIDE, SETTINGS: renders breaking their tiles; a column on desktop, a 2x2
 	  grid on phone, clear of the thumbstick);
 	- top-right: the Gleam counter (the coin render overlapping a gold number) and the daily gift (OPEN! with a badge,
@@ -23,6 +23,7 @@ local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local DepotHubViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotHubViewModel)
 local DepotNextShiftCard = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotNextShiftCard)
 local DepotPadViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotPadViewModel)
+local CharacterPortrait = require(ReplicatedStorage.Client.UI.React.Screens.Portrait.CharacterPortrait)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonBar = require(Toon.ToonBar)
 local ToonButton = require(Toon.ToonButton)
@@ -40,6 +41,8 @@ local COLOR = UIToonConstants.COLOR
 
 export type DepotHubPanelProps = {
 	phone: boolean,
+	-- Whose character the profile ring shows (nil: the fallback photo, as in the story).
+	userId: number?,
 	profile: DepotHubViewModel.ProfileView,
 	gleam: string,
 	gift: DepotHubViewModel.GiftView,
@@ -132,7 +135,8 @@ local function profileCard(props: DepotHubPanelProps): React.ReactNode
 			size = UDim2.fromOffset(card.X, card.Y),
 			children = face,
 		}),
-		-- Pippa's portrait in a ring, breaking the card's left edge.
+		-- The player's own character (CharacterPortrait, posed for their rank) in a ring, breaking the card's left
+		-- edge.
 		portrait = e("Frame", {
 			Size = UDim2.fromOffset(portrait, portrait),
 			BackgroundColor3 = UIToonConstants.shade("lilac").hi,
@@ -149,14 +153,16 @@ local function profileCard(props: DepotHubPanelProps): React.ReactNode
 				corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }),
 				stroke = e("UIStroke", { Color = COLOR.white, Thickness = if phone then 2 else 4 }),
 			}),
-			photo = e("ImageLabel", {
-				AnchorPoint = Vector2.new(0.5, 0.5),
-				Position = UDim2.fromScale(0.5, 0.5),
-				Size = UDim2.new(1, -12, 1, -12),
-				BackgroundTransparency = 1,
-				Image = UIAssets.toonPhotos.pippaPortrait,
-				ScaleType = Enum.ScaleType.Crop,
-			}, { corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }) }),
+			photo = e(CharacterPortrait, {
+				userId = props.userId,
+				context = "profile",
+				framing = "bust",
+				anchor = Vector2.new(0.5, 0.5),
+				position = UDim2.fromScale(0.5, 0.5),
+				size = UDim2.new(1, -12, 1, -12),
+				round = true,
+				zIndex = 3,
+			}),
 		}),
 	})
 end

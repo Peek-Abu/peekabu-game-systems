@@ -487,6 +487,8 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.UI.React.Screens.Toon.ToonSparkle"] = "presentational React component (story in ToonSparkle.story; twinkle specced in ToonMotionViewModel)",
 	["ReplicatedStorage.Client.UI.React.Screens.Toon.ToonWipe"] = "presentational React component (story in ToonWipe.story; sweep specced in ToonMotionViewModel)",
 	-- Cleanup Crew: the paper UI kit (M3 UI)
+	["ReplicatedStorage.Client.UI.React.Screens.Portrait.CharacterPortrait"] = "React component over a ViewportFrame (story in CharacterPortrait.story; framing, light and fallback specced in PortraitViewModel, pose in EmployeePoseRules, the copy in EmployeePortraitSystem)",
+	["ReplicatedStorage.Client.UI.React.Screens.Portrait.usePortraitCharacter"] = "React hook over live Players/characters (what a rebuild produces is specced in EmployeePortraitSystem)",
 	["ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants"] = "static palette, fonts and sizes (no logic; inkColor is a frozen lookup)",
 	["ReplicatedStorage.Client.UI.React.Screens.World.WorldBillboard"] = "presentational React wrapper (fit and screen scale specced in WorldBillboardViewModel)",
 	["ReplicatedStorage.Client.UI.React.Screens.Depot.DepotHub"] = "React HUD widget wiring the stores to DepotHubPanel (values specced in DepotHubViewModel)",

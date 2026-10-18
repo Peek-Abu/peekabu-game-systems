@@ -36,6 +36,8 @@ export type Header = {
 	title: string,
 	subtitle: string?,
 	icon: UIAssets.ToonIcon?,
+	-- Drawn in the icon's place instead (a live CharacterPortrait), given the icon's size in design px.
+	art: ((size: number) -> React.ReactNode)?,
 	height: number?,
 	titleSize: number?,
 	-- The band's foot melts into drips over the panel (`gooScale` sizes them; default 0.75).
@@ -74,7 +76,7 @@ local function header(props: ToonPanelProps, spec: Header, radius: number): { [s
 	local height = spec.height or 120
 	local titleSize = spec.titleSize or 64
 	local shade = UIToonConstants.shade("grape")
-	local hasIcon = spec.icon ~= nil
+	local hasIcon = spec.icon ~= nil or spec.art ~= nil
 	-- The render breaking the corner scales with the band, and the title starts clear of it.
 	local iconSize = math.floor(height * 1.55)
 	local textLeft = if hasIcon then math.floor(height * 1.45) else 32
@@ -155,7 +157,16 @@ local function header(props: ToonPanelProps, spec: Header, radius: number): { [s
 			zIndex = 2,
 		})
 	end
-	if hasIcon then
+	local art = spec.art
+	if art ~= nil then
+		-- The art breaks the panel's top-left corner where the render would.
+		nodes.icon = e("Frame", {
+			Position = UDim2.fromOffset(-iconSize * 0.23, -iconSize * 0.26),
+			Size = UDim2.fromOffset(iconSize, iconSize),
+			BackgroundTransparency = 1,
+			ZIndex = 8,
+		}, { art = art(iconSize) })
+	elseif hasIcon then
 		-- The render breaks the panel's top-left corner.
 		nodes.icon = e(ToonIcon, {
 			icon = spec.icon,

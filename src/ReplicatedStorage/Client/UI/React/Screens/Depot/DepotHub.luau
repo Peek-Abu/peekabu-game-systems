@@ -75,6 +75,7 @@ local function DepotHub(props: DepotHubProps): React.ReactNode
 		children = {
 			hub = React.createElement(DepotHubPanel, {
 				phone = phone,
+				userId = player.UserId,
 				profile = VM.profile(player.DisplayName, rank),
 				gleam = ToonStyleViewModel.grouped(CurrencyUtils.getCurrencyAmount(currency, "coins")),
 				gift = VM.gift(daily, now),

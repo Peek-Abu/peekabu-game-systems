@@ -1,10 +1,10 @@
 --!strict
 --[=[
-	ShiftCrewList: the crew in a shift (V1 shift renders): a small dark plate with a row per crew member, their
-	headshot, their name and a sticker for what matters at a glance (YOU in gold, CAUGHT in coral; a caught member's
-	name is struck through and faded). Tapping it opens the detail (`open`): each member's status in words, beside it.
-	Desktop: top-left under Roblox's buttons. Phone: top-right. Presentational (exempt; story in ShiftCompactHudPanel.story;
-	the roster is specced in ShiftCrewViewModel).
+	ShiftCrewList: the crew in a shift (V1 shift renders): a small dark plate with a row per crew member, their own
+	character's head (CharacterPortrait), their name and a sticker for what matters at a glance (YOU in gold, CAUGHT in
+	coral; a caught member's name is struck through and faded). Tapping it opens the detail (`open`): each member's
+	status in words, beside it. Desktop: top-left under Roblox's buttons. Phone: top-right. Presentational (exempt;
+	story in ShiftCompactHudPanel.story; the roster is specced in ShiftCrewViewModel).
 
 	@class ShiftCrewList
 ]=]
@@ -12,6 +12,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
+local CharacterPortrait = require(ReplicatedStorage.Client.UI.React.Screens.Portrait.CharacterPortrait)
 local ShiftCrewViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftCrewViewModel)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonPanel = require(Toon.ToonPanel)
@@ -35,15 +36,22 @@ export type ShiftCrewListProps = {
 local function row(member: ShiftCrewViewModel.MemberView, you: boolean, height: number, width: number, order: number)
 	local avatar = height - 8
 	local children: { [string]: React.ReactNode } = {
-		face = e("ImageLabel", {
+		face = e("Frame", {
 			Position = UDim2.fromOffset(0, 4),
 			Size = UDim2.fromOffset(avatar, avatar),
 			BackgroundColor3 = UIToonConstants.shade("lilac").hi,
-			Image = `rbxthumb://type=AvatarHeadShot&id={member.userId}&w=150&h=150`,
-			ImageTransparency = if member.struck then 0.5 else 0,
 		}, {
 			corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }),
 			stroke = e("UIStroke", { Color = if you then COLOR.selected else COLOR.ink, Thickness = 3 }),
+			-- Their own character's head (a caught one worried and greyed).
+			portrait = e(CharacterPortrait, {
+				userId = member.userId,
+				context = if member.struck then "caught" else "crew",
+				framing = "head",
+				size = UDim2.fromScale(1, 1),
+				round = true,
+				dim = member.struck,
+			}),
 		}),
 		name = e(ToonText, {
 			text = member.name,

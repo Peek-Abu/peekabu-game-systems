@@ -1,10 +1,10 @@
 --!strict
 --[=[
 	DepotNextShiftCard: the hub's "Next shift" CTA (V1 hub render), bottom-centre between the phone's thumbstick and
-	Jump: a cream bar with the company truck render breaking its top-left corner, NEXT SHIFT, a line ("Walk into a
-	truck bed to join", or the truck's countdown in a coral pill), a seat per place with the crew's headshots (desktop)
-	and the mint GO! with Gleam sparkles. What it says is DepotPadViewModel.cta; GO! is `onGo` (the hub opens the Jobs
-	board, the queue pad departs now). Presentational (exempt; story in DepotHubPanel.story).
+	Jump: a cream bar with the company truck render breaking its top-left corner, NEXT SHIFT, a line ("Walk into a truck
+	bed to join", or the truck's countdown in a coral pill), a seat per place with each crew member's own character
+	(desktop) and the mint GO! with Gleam sparkles. What it says is DepotPadViewModel.cta; GO! is `onGo` (the hub opens
+	the Jobs board, the queue pad departs now). Presentational (exempt; story in DepotHubPanel.story).
 
 	@class DepotNextShiftCard
 ]=]
@@ -14,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage.Packages.React)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local DepotPadViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotPadViewModel)
+local CharacterPortrait = require(ReplicatedStorage.Client.UI.React.Screens.Portrait.CharacterPortrait)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonButton = require(Toon.ToonButton)
 local ToonIcon = require(Toon.ToonIcon)
@@ -74,11 +75,13 @@ local function seat(view: DepotPadViewModel.SeatView, side: number, order: numbe
 		}),
 	}
 	if not view.open and view.userId ~= nil then
-		children.face = e("ImageLabel", {
-			Size = UDim2.fromScale(1, 1),
-			BackgroundTransparency = 1,
-			Image = `rbxthumb://type=AvatarHeadShot&id={view.userId}&w=150&h=150`,
-		}, { corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }) })
+		children.face = e(CharacterPortrait, {
+			userId = view.userId,
+			context = "crew",
+			framing = "head",
+			size = UDim2.fromScale(1, 1),
+			round = true,
+		})
 	end
 	return e("Frame", {
 		Size = UDim2.fromOffset(side, side),

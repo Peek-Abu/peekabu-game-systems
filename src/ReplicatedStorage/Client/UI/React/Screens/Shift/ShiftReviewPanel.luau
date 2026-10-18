@@ -5,10 +5,11 @@
 	CONTRACT MET! (gold) or CONTRACT MISSED (coral), the grade medallion breaking the title, Gleam sparkles; the
 	"SHIFT REVIEW · HARLOW & FINCH" pill; four stat cards whose renders break their left edge (the Gleam card is the
 	gold one); the company rank (RankSlip) under them with the Manager's line and the vote's footer; CREW AWARDS on
-	the right, the first award featured on a gold card with Pippa saluting from its corner; and the crew vote: the mint
-	ANOTHER SHIFT and the cream TO THE DEPOT with their counts, the local player's choice in V2's lilac selected ring,
-	the time left on a coral pill. Laid out at 1680x900 design px (phone 760x370) and scaled by `scale`
-	(ShiftReviewViewModel.fit), centred. On the phone "+2 MORE AWARDS" swaps in the folded awards (UI-only state).
+	the right, the first award featured on a gold card with its winner's own character standing on its corner; and
+	the crew vote: the mint ANOTHER SHIFT and the cream TO THE DEPOT with their counts, the local player's choice in
+	V2's lilac selected ring, the time left on a coral pill. Laid out at 1680x900 design px (phone 760x370) and
+	scaled by `scale` (ShiftReviewViewModel.fit), centred. On the phone "+2 MORE AWARDS" swaps in the folded awards
+	(UI-only state).
 	Presentational: it draws the view it is given (specced in ShiftReviewViewModel and RankViewModel).
 
 	@class ShiftReviewPanel
@@ -21,6 +22,7 @@ local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTyp
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local PaperScaleContext = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperScaleContext)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
+local CharacterPortrait = require(ReplicatedStorage.Client.UI.React.Screens.Portrait.CharacterPortrait)
 local RankSlip = require(ReplicatedStorage.Client.UI.React.Screens.Rank.RankSlip)
 local RankViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Rank.RankViewModel)
 local ShiftReviewViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftReviewViewModel)
@@ -110,7 +112,8 @@ local function awardCard(
 	featured: boolean,
 	phone: boolean,
 	width: number,
-	position: UDim2
+	position: UDim2,
+	grade: string?
 ): React.ReactNode
 	local height = if featured then (if phone then 72 else 148) else (if phone then 54 else 78)
 	local icon = if featured then (if phone then 70 else 128) else (if phone then 50 else 84)
@@ -150,7 +153,19 @@ local function awardCard(
 			zIndex = 5,
 		})
 	end
-	if featured then
+	if featured and award.userId ~= nil then
+		-- The winner's own character, full figure, posed for the shift's grade, standing on the card's corner.
+		face.pippa = e(CharacterPortrait, {
+			userId = award.userId,
+			context = "award",
+			framing = "full",
+			grade = grade,
+			anchor = Vector2.new(1, 1),
+			position = UDim2.new(1, if phone then 6 else 10, 1, 4),
+			size = UDim2.fromOffset(if phone then 90 else 200, if phone then 104 else 230),
+			zIndex = 6,
+		})
+	elseif featured then
 		face.pippa = e(ToonIcon, {
 			image = UIAssets.toonPhotos.pippaSaluteCut,
 			anchor = Vector2.new(1, 1),
@@ -388,7 +403,7 @@ local function ShiftReviewPanel(props: ShiftReviewPanelProps): React.ReactNode
 	local y = if phone then 124 else 350
 	for index, award in awards do
 		local featured = index == 1 and not (phone and showExtra)
-		nodes[`award{index}`] = awardCard(award, featured, phone, width, UDim2.fromOffset(right, y))
+		nodes[`award{index}`] = awardCard(award, featured, phone, width, UDim2.fromOffset(right, y), view.grade)
 		y += (if featured then (if phone then 72 else 148) else (if phone then 54 else 78)) + (if phone then 8 else 12)
 	end
 	if phone and view.moreAwards ~= nil then
