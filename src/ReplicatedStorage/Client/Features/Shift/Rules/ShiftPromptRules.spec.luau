@@ -26,6 +26,56 @@ return function()
 		end)
 	end)
 
+	describe("aim", function()
+		-- The office truck's bed (12 x 3 x 16, axis-aligned) and a camera behind the player looking toward the cab (+Z).
+		local BED = CFrame.new(1090.5, 2.5, -17)
+		local BED_SIZE = Vector3.new(12, 3, 16)
+		local LOOK = Vector3.new(0, -0.3, 0.95).Unit
+
+		it("counts the bed straight ahead from its front half, facing the cab (its centre is behind)", function()
+			local root = Vector3.new(1087.75, 5.43, -11)
+			-- The old measure, to the bed's centre, was behind the player: Load was never offered.
+			expect(LOOK:Dot((BED.Position - root).Unit) < 0).to.equal(true)
+			expect(Rules.aim(BED, BED_SIZE, root, LOOK)).to.equal(1)
+			local bed = candidate(1, (BED.Position - root).Magnitude, Rules.aim(BED, BED_SIZE, root, LOOK))
+			bed.range = 16
+			expect(Rules.choose({ bed }, nil)).to.equal(1)
+		end)
+
+		it("counts a part ahead when its nearest edge is, beside the bed's front half", function()
+			local root = Vector3.new(1083, 3, -11)
+			expect(LOOK:Dot((BED.Position - root).Unit) < 0).to.equal(true)
+			expect(Rules.aim(BED, BED_SIZE, root, LOOK) >= 0).to.equal(true)
+		end)
+
+		it("is straight ahead inside a part, and keeps a part wholly behind the player behind", function()
+			expect(Rules.aim(BED, BED_SIZE, BED.Position, LOOK)).to.equal(1)
+			local behind = CFrame.new(1090.5, 2.5, -40)
+			expect(Rules.aim(behind, Vector3.new(4, 3, 4), Vector3.new(1090.5, 5.43, -20), LOOK) < 0).to.equal(true)
+		end)
+
+		it("measures a small part like its centre, and a point (an attachment) exactly so", function()
+			local root = Vector3.new(0, 3, 0)
+			local look = Vector3.new(1, 0, 0)
+			local small = CFrame.new(4, 3, 3)
+			local toCentre = look:Dot((small.Position - root).Unit)
+			expect(math.abs(Rules.aim(small, Vector3.new(0.5, 0.5, 0.5), root, look) - toCentre) < 0.1).to.equal(true)
+			expect(math.abs(Rules.aim(small, Vector3.zero, root, look) - toCentre) < 1e-6).to.equal(true)
+		end)
+
+		it("follows a rotated part's own axes", function()
+			-- A long thin part (20 along its own X) at Z = 10. Turned 90 degrees about Y it runs along world Z
+			-- (X -0.5..0.5, Z 0..20), so from (5, 3, 0) its nearest point is to the -X side; unturned (X -10..10,
+			-- Z 9.5..10.5) it is to the +Z side.
+			local size = Vector3.new(20, 1, 1)
+			local root = Vector3.new(5, 3, 0)
+			local west = Vector3.new(-1, 0, 0)
+			local turned = CFrame.new(0, 3, 10) * CFrame.Angles(0, math.rad(90), 0)
+			expect(math.abs(Rules.aim(turned, size, root, west) - 1) < 1e-4).to.equal(true)
+			expect(math.abs(Rules.aim(CFrame.new(0, 3, 10), size, root, west)) < 1e-4).to.equal(true)
+		end)
+	end)
+
 	describe("sight", function()
 		local made = {}
 		local function part(props)

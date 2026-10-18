@@ -258,10 +258,16 @@ local function selectNearby()
 			local target = targetOf(prompt)
 			local parent = prompt.Parent
 			local position: Vector3? = nil
+			-- The prompt's part as a box, for the aim (its nearest point); an attachment is a point.
+			local box = CFrame.identity
+			local boxSize = Vector3.zero
 			if parent ~= nil and parent:IsA("BasePart") then
 				position = parent.Position
+				box = parent.CFrame
+				boxSize = parent.Size
 			elseif parent ~= nil and parent:IsA("Attachment") then
 				position = parent.WorldPosition
+				box = CFrame.new(parent.WorldPosition)
 			end
 			local offset = if position ~= nil then position - root.Position else Vector3.zero
 			local distance = offset.Magnitude
@@ -284,7 +290,8 @@ local function selectNearby()
 				table.insert(candidates, {
 					id = id,
 					distance = distance,
-					dot = if distance > 0 then camera.CFrame.LookVector:Dot(offset.Unit) else 1,
+					-- To the part's nearest point: from the truck bed's front half its centre is behind the player.
+					dot = Rules.aim(box, boxSize, root.Position, camera.CFrame.LookVector),
 					range = range,
 					visible = visible,
 					enabled = loadReach
