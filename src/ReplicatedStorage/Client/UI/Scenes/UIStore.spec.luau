@@ -14,9 +14,11 @@ return function()
 	-- file (SceneStack.spec) may have left it non-empty. beforeEach makes each test order-independent.
 	beforeEach(function()
 		UIStore.sceneStack({})
+		UIStore.mouseFreed(false)
 	end)
 	afterEach(function()
 		UIStore.sceneStack({}) -- also leave it clean for other specs
+		UIStore.mouseFreed(false)
 	end)
 
 	describe("sceneStack", function()
@@ -31,6 +33,19 @@ return function()
 			expect(#stack).to.equal(2)
 			expect(stack[1]).to.equal("A")
 			expect(stack[2]).to.equal("B")
+		end)
+	end)
+
+	describe("mouseFreed", function()
+		it("starts false (no scene has asked for the mouse at boot)", function()
+			expect(UIStore.mouseFreed()).to.equal(false)
+		end)
+
+		it("round-trips the mouse handler's engage and disengage", function()
+			UIStore.mouseFreed(true)
+			expect(UIStore.mouseFreed()).to.equal(true)
+			UIStore.mouseFreed(false)
+			expect(UIStore.mouseFreed()).to.equal(false)
 		end)
 	end)
 end
