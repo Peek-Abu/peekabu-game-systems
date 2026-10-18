@@ -61,6 +61,41 @@ local function beforeRunHook(context: BeforeRunContext): string?
 end
 
 --[=[
+	A command module and its optional server half (`<Name>Server`), as Cmdr's RegisterCommand takes them.
+]=]
+export type CommandScripts = {
+	shared: ModuleScript,
+	server: ModuleScript?,
+}
+
+--[=[
+	Every command under `container` (sub-folders included), paired with its `<Name>Server` half. Cmdr's own
+	RegisterCommandsIn treats every other module with "Server" in its name as an orphaned server half and warns about
+	it, which here meant one Output warning per command spec (`<Name>Server.spec`) every session; specs are skipped
+	instead, and a server half is only ever picked up through its command.
+]=]
+local function commandScripts(container: Instance): { CommandScripts }
+	local found: { CommandScripts } = {}
+	for _, child in container:GetChildren() do
+		if child:IsA("ModuleScript") then
+			local name = child.Name
+			if string.sub(name, -5) ~= ".spec" and string.find(name, "Server", 1, true) == nil then
+				local server = container:FindFirstChild(name .. "Server")
+				table.insert(found, {
+					shared = child,
+					server = if server ~= nil and server:IsA("ModuleScript") then server else nil,
+				})
+			end
+		elseif child:IsA("Folder") then
+			for _, nested in commandScripts(child) do
+				table.insert(found, nested)
+			end
+		end
+	end
+	return found
+end
+
+--[=[
 	Public interface of the service — the SINGLE place method/field types are declared.
 
 	The module below is one annotated table literal (`local AdminServiceServer:
@@ -78,6 +113,8 @@ export type AdminServiceServer = {
 	-- TEST SEAM — the BeforeRun permission gate above, exposed so specs can drive the deny/allow
 	-- branches with fake contexts. Game code never calls this; init() registers it with Cmdr.
 	_beforeRunHook: (context: BeforeRunContext) -> string?,
+	-- TEST SEAM — the command/server pairing init() registers from ServerScriptService.Commands.
+	_commandScripts: (container: Instance) -> { CommandScripts },
 }
 
 local AdminServiceServer: AdminServiceServer = {
@@ -106,7 +143,9 @@ local AdminServiceServer: AdminServiceServer = {
 		if not commandsFolder then
 			log:warn("Commands folder not found in ServerScriptService, skip registration")
 		else
-			Cmdr:RegisterCommandsIn(commandsFolder)
+			for _, scripts in commandScripts(commandsFolder) do
+				Cmdr.Registry:RegisterCommand(scripts.shared, scripts.server)
+			end
 		end
 
 		-- Register the permission gate (see beforeRunHook above) for every command run.
@@ -122,6 +161,7 @@ local AdminServiceServer: AdminServiceServer = {
 	end,
 
 	_beforeRunHook = beforeRunHook,
+	_commandScripts = commandScripts,
 }
 
 return AdminServiceServer
