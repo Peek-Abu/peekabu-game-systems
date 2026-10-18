@@ -21,6 +21,7 @@ local AnimationShared = ReplicatedStorage.Shared.Features.Animation
 local AnimationTypes = require(AnimationShared.Data.AnimationTypes)
 local AnimationLocomotionRegistry = require(AnimationShared.Data.AnimationLocomotionRegistry)
 local AnimationActionRegistry = require(AnimationShared.Data.AnimationActionRegistry)
+local AnimationOccupantRegistry = require(AnimationShared.Data.AnimationOccupantRegistry)
 
 type AnimationDef = AnimationTypes.AnimationDef
 type AnimationDomain = AnimationTypes.AnimationDomain
@@ -42,6 +43,7 @@ export type ComposedIndex = {
 local DOMAIN_MODULES: { [string]: AnimationDomain } = table.freeze({
 	locomotion = AnimationLocomotionRegistry,
 	actions = AnimationActionRegistry,
+	occupant = AnimationOccupantRegistry,
 })
 
 -- The replicated-action fields (R3): a replicable entry carries a unique wire id and a layer, and a

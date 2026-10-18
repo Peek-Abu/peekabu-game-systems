@@ -1,0 +1,232 @@
+--!strict
+--[=[
+	DepotBuildSystem: builds the depot's static graybox once (Cleanup Crew spec §1 "polished feel on
+	graybox", §3 step 1, §5): a floor and four walls; per truck a bed that is a Queue pad (QueueCapacity,
+	QueueCountdown and QueueDestination set BEFORE the QueuePad tag, because Queue reads them once when the
+	pad is tagged), a cab behind it and an empty truck tag shell above it (tagged, its truck number and seats as attributes; the client draws it); the contract board's sign shell with tonight's
+	contract as attributes; the result board's sign shell, and `pinCard`, which hangs a returning player's review shell
+	that only they see (in their PlayerGui, kept across respawns). Every sign is an empty tagged BillboardGui the client
+	draws (Figma World UI 2a, DepotBillboardSystem). Everything is anchored under one Model in Workspace.
+
+	Spec-exempt shell (Instances); the layout is the one the specced DepotLayoutRules validated.
+
+	@class DepotBuildSystem
+]=]
+
+local CollectionService = game:GetService("CollectionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
+local Workspace = game:GetService("Workspace")
+
+local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
+local DepotTypes = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotTypes)
+local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionConstants)
+local QueueConstants = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueConstants)
+local DepotLayoutConstants = require(ServerScriptService.Features.Depot.Data.DepotLayoutConstants)
+
+export type BuiltTruck = {
+	id: string,
+	-- 1-based, in layout order: "TRUCK 1".
+	index: number,
+	capacity: number,
+	pad: BasePart,
+}
+
+export type Built = {
+	model: Model,
+	trucks: { BuiltTruck },
+	resultBoard: BasePart,
+	contractBoard: BasePart,
+}
+
+local function block(name: string, size: Vector3, cframe: CFrame, color: Color3, parent: Instance): Part
+	local part = Instance.new("Part")
+	part.Name = name
+	part.Size = size
+	part.CFrame = cframe
+	part.Color = color
+	part.Material = Enum.Material.SmoothPlastic
+	part.TopSurface = Enum.SurfaceType.Smooth
+	part.BottomSurface = Enum.SurfaceType.Smooth
+	part.Anchored = true
+	part.Parent = parent
+	return part
+end
+
+local function folder(name: string, parent: Instance): Folder
+	local created = Instance.new("Folder")
+	created.Name = name
+	created.Parent = parent
+	return created
+end
+
+-- An empty world-sign shell over `adornee` (M3b world UI), sized in studs from its Figma design (`design` px times
+-- DepotConstants.STUDS_PER_PX). The client draws into it (DepotBillboardSystem). The caller writes its attributes, then
+-- tags and parents it. Returned unparented.
+local function shell(name: string, adornee: BasePart, design: Vector2, offset: Vector3): BillboardGui
+	local gui = Instance.new("BillboardGui")
+	gui.Name = name
+	gui.Adornee = adornee
+	local studs = design * DepotConstants.STUDS_PER_PX
+	gui.Size = UDim2.fromScale(studs.X, studs.Y)
+	gui.StudsOffset = offset
+	gui.MaxDistance = DepotLayoutConstants.LABEL_MAX_DISTANCE
+	gui.LightInfluence = 0
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	return gui
+end
+
+local DepotBuildSystem = {}
+
+function DepotBuildSystem.build(
+	layout: DepotTypes.Layout,
+	origin: CFrame,
+	contractAttributes: { [string]: string }
+): Built
+	local model = Instance.new("Model")
+	model.Name = DepotLayoutConstants.MODEL_NAME
+	local floor = layout.floor
+	local width = floor.maxX - floor.minX
+	local depth = floor.maxZ - floor.minZ
+	local centreX = floor.minX + width / 2
+	local centreZ = floor.minZ + depth / 2
+	local floorThickness = DepotLayoutConstants.FLOOR_THICKNESS
+	block(
+		"Floor",
+		Vector3.new(width, floorThickness, depth),
+		origin * CFrame.new(centreX, -floorThickness / 2, centreZ),
+		DepotLayoutConstants.FLOOR_COLOR,
+		model
+	)
+
+	local height = DepotLayoutConstants.WALL_HEIGHT
+	local thickness = DepotLayoutConstants.WALL_THICKNESS
+	local walls = folder("Walls", model)
+	local across = Vector3.new(width + thickness, height, thickness)
+	local along = Vector3.new(thickness, height, depth + thickness)
+	for _, wall in
+		{
+			{ size = across, x = centreX, z = floor.minZ },
+			{ size = across, x = centreX, z = floor.maxZ },
+			{ size = along, x = floor.minX, z = centreZ },
+			{ size = along, x = floor.maxX, z = centreZ },
+		}
+	do
+		block(
+			"Wall",
+			wall.size,
+			origin * CFrame.new(wall.x, height / 2, wall.z),
+			DepotLayoutConstants.WALL_COLOR,
+			walls
+		)
+	end
+
+	local bed = DepotLayoutConstants.BED_SIZE
+	local cab = DepotLayoutConstants.CAB_SIZE
+	local trucks: { BuiltTruck } = {}
+	for index, truck in layout.trucks do
+		local truckFolder = folder(truck.id, model)
+		-- Annotated: `block` returns a Part, and BuiltTruck.pad is a BasePart (table fields are invariant).
+		local pad: BasePart = block(
+			"TruckBed",
+			bed,
+			origin * CFrame.new(truck.x, bed.Y / 2, truck.z),
+			DepotLayoutConstants.BED_COLOR,
+			truckFolder
+		)
+		pad:SetAttribute(QueueConstants.CAPACITY_ATTRIBUTE, truck.capacity)
+		pad:SetAttribute(QueueConstants.COUNTDOWN_ATTRIBUTE, truck.countdown)
+		pad:SetAttribute(QueueConstants.DESTINATION_ATTRIBUTE, DepotConstants.ROLE_SHIFT)
+		CollectionService:AddTag(pad, QueueConstants.TAG)
+		block(
+			"TruckCab",
+			cab,
+			origin * CFrame.new(truck.x, cab.Y / 2, truck.z + bed.Z / 2 + cab.Z / 2),
+			DepotLayoutConstants.TRUCK_COLOR,
+			truckFolder
+		)
+		local tag = shell("PadTag", pad, DepotConstants.BILLBOARD_PX.truck, DepotLayoutConstants.PAD_TAG_OFFSET)
+		tag:SetAttribute(DepotConstants.TRUCK_ATTRIBUTE, index)
+		tag:SetAttribute(DepotConstants.CAPACITY_ATTRIBUTE, truck.capacity)
+		CollectionService:AddTag(tag, DepotConstants.BILLBOARD_TAGS.truck)
+		tag.Parent = truckFolder
+		table.insert(trucks, { id = truck.id, index = index, capacity = truck.capacity, pad = pad })
+	end
+
+	local boards = folder("Boards", model)
+	local boardSize = DepotLayoutConstants.BOARD_SIZE
+	local contractPoint = layout.contractBoard
+	local contractBoard = block(
+		"ContractBoard",
+		boardSize,
+		origin * CFrame.new(contractPoint.x, boardSize.Y / 2, contractPoint.z),
+		DepotLayoutConstants.BOARD_COLOR,
+		boards
+	)
+	-- The board's prompt opens the work order (M3 UI): attributes first, then the tag (Interaction reads them on tag).
+	-- The sign draws the whole board; the part stays as its adornee, collision and prompt anchor but is not seen.
+	contractBoard.Transparency = 1
+	contractBoard:SetAttribute(InteractionConstants.KIND_ATTRIBUTE, DepotConstants.BOARD_KIND)
+	CollectionService:AddTag(contractBoard, InteractionConstants.TAG)
+	local contractSign =
+		shell("ContractSign", contractBoard, DepotConstants.BILLBOARD_PX.contract, DepotLayoutConstants.CONTRACT_OFFSET)
+	for key, value in contractAttributes do
+		contractSign:SetAttribute(key, value)
+	end
+	CollectionService:AddTag(contractSign, DepotConstants.BILLBOARD_TAGS.contract)
+	contractSign.Parent = boards
+	local resultPoint = layout.resultBoard
+	local resultBoard = block(
+		"ResultBoard",
+		boardSize,
+		origin * CFrame.new(resultPoint.x, boardSize.Y / 2, resultPoint.z),
+		DepotLayoutConstants.BOARD_COLOR,
+		boards
+	)
+	-- The sign draws the whole board; the part stays as its adornee but is not seen.
+	resultBoard.Transparency = 1
+	local resultSign =
+		shell("ResultSign", resultBoard, DepotConstants.BILLBOARD_PX.result, DepotLayoutConstants.RESULT_OFFSET)
+	CollectionService:AddTag(resultSign, DepotConstants.BILLBOARD_TAGS.result)
+	resultSign.Parent = boards
+
+	model.Parent = Workspace
+	return { model = model, trucks = trucks, resultBoard = resultBoard, contractBoard = contractBoard }
+end
+
+--[=[
+	Pins `attributes` (ShiftCardUtils.attributes) on the result board for `player` only: a review shell in their
+	PlayerGui (replacing their last card, kept across respawns) at the board's spot and size, which their client draws as
+	the whole board with the card on it (DepotBillboardSystem). Yields up to PLAYER_GUI_WAIT seconds for the PlayerGui;
+	false when it never appears or the player left.
+]=]
+function DepotBuildSystem.pinCard(
+	player: Player,
+	board: BasePart,
+	attributes: { [string]: string | number | boolean }
+): boolean
+	local found = player:WaitForChild("PlayerGui", DepotLayoutConstants.PLAYER_GUI_WAIT)
+	if found == nil or not found:IsA("PlayerGui") or player.Parent == nil then
+		return false
+	end
+	-- The old card goes after the new one is parented, so a client's review set never drops to 0 in between.
+	local old = found:FindFirstChild(DepotLayoutConstants.CARD_NAME)
+	local card = shell(
+		DepotLayoutConstants.CARD_NAME,
+		board,
+		DepotConstants.BILLBOARD_PX.result,
+		DepotLayoutConstants.RESULT_OFFSET
+	)
+	for key, value in attributes do
+		card:SetAttribute(key, value)
+	end
+	CollectionService:AddTag(card, DepotConstants.BILLBOARD_TAGS.review)
+	card.ResetOnSpawn = false
+	card.Parent = found
+	if old ~= nil then
+		old:Destroy()
+	end
+	return true
+end
+
+return DepotBuildSystem
