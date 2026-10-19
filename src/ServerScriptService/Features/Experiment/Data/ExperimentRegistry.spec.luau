@@ -20,8 +20,8 @@ return function()
 				expect(#def.variants).to.equal(2)
 				expect(def.variants[1]).never.to.equal(def.variants[2])
 				for _, variant in def.variants do
-					expect(#variant <= 8).to.equal(true)
-					expect(string.match(variant, "^[%w%.]+$")).to.be.ok()
+					expect(#variant <= 9).to.equal(true)
+					expect(string.match(variant, "^[%w%.%-]+$")).to.be.ok()
 				end
 			end
 		end)
