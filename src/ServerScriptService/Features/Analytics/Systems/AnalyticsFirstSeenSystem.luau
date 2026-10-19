@@ -16,10 +16,13 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
+local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local Guard = require(ReplicatedStorage.Shared.Core.Guard)
 local PlayerDataTypes = require(ReplicatedStorage.Shared.Data.PlayerDataTypes)
 local PlayerDataService = require(ServerScriptService.Features.PlayerData.PlayerDataServiceServer)
 local PlayerDataSliceSystem = require(ServerScriptService.Features.PlayerData.Systems.PlayerDataSliceSystem)
+
+local log = Logger.new("AnalyticsFirstSeenSystem")
 
 local BEFORE_TRACKING = 1
 
@@ -59,10 +62,15 @@ function AnalyticsFirstSeenSystem.decide(at: number, now: number): (boolean, num
 	return false, at
 end
 
+-- mutate() returns false both for "the mutator changed nothing" (a returning player) and for a refused
+-- write (PlayerDataServiceServer.luau:697-806), so `ran` tells them apart: a returning player is recorded
+-- even though mutate() returns false; a new player is recorded only when the write was accepted.
 local function stamp(userId: number)
+	local ran = false
 	local isNew = false
 	local final = 0
 	local ok = firstSeenSlice.mutate(userId, function(slice)
+		ran = true
 		isNew, final = AnalyticsFirstSeenSystem.decide(slice.at, os.time())
 		if isNew then
 			slice.at = final
@@ -70,9 +78,11 @@ local function stamp(userId: number)
 		end
 		return false
 	end)
-	if ok then
+	if ran and (ok or not isNew) then
 		newThisSession[userId] = isNew
 		stampedAt[userId] = final
+	else
+		log:warn(`firstSeen stamp for userId {userId} was not written; the player stays unknown this session`)
 	end
 end
 
