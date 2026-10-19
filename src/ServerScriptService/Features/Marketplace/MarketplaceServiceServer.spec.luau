@@ -132,6 +132,7 @@ return function()
 		it("reports a Gleam source with amount, balance and reason", function()
 			seed(1)
 			MarketplaceService:addPremium(1, 25, "admin")
+			task.wait() -- SignalPlus delivers on task.defer
 			expect(#events).to.equal(1)
 			local e = events[1]
 			expect(e.userId).to.equal(1)
@@ -146,8 +147,10 @@ return function()
 			seed(1)
 			MarketplaceService:addPremium(1, 10)
 			MarketplaceService:spendPremium(1, 11)
+			task.wait()
 			expect(#events).to.equal(1) -- only the add
 			MarketplaceService:spendPremium(1, 4)
+			task.wait()
 			expect(#events).to.equal(2)
 			expect(events[2].flow).to.equal("sink")
 			expect(events[2].amount).to.equal(4)
