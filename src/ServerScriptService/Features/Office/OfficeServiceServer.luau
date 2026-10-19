@@ -18,6 +18,8 @@
 	time ShiftServiceServer.changed reports `running` the office, its route and `container()` are already the new
 	shift's. `seed` is the rebuilt layout's seed (the model's LayoutSeed attribute), which the transit hands clients.
 
+	The office is built only where the shift role runs (QueueServiceServer:runsRole); a hub-only server builds nothing.
+
 	Spec-exempt shell (Instances, signals); the decisions are the specced OfficeLayoutRules, OfficeLayoutUtils,
 	OfficeSpawnUtils and OfficeSpawnRules.
 
@@ -49,6 +51,8 @@ local OfficeDecorSystem = require(OfficeServer.Systems.OfficeDecorSystem)
 local OfficeSearchedDressingSystem = require(OfficeServer.Systems.OfficeSearchedDressingSystem)
 local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
 local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
+local QueueServiceServer = require(ServerScriptService.Features.Queue.QueueServiceServer)
+local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 
 type Marker = OfficeTypes.Marker
 
@@ -203,13 +207,17 @@ export type OfficeServiceServer = {
 }
 
 local OfficeServiceServer: OfficeServiceServer = {
-	dependencies = { "VacuumServiceServer", "CargoServiceServer" },
+	dependencies = { "VacuumServiceServer", "CargoServiceServer", "QueueServiceServer" },
 	ready = ready,
 
 	--[=[
 		Validates and builds the office, and reveals hidden items as their piles are cleared.
 	]=]
 	start = function(_self)
+		if not QueueServiceServer:runsRole(DepotConstants.ROLE_SHIFT) then
+			log:info("not a shift server: the office is not built")
+			return
+		end
 		local ok, errors = OfficeLayoutRules.validate(LAYOUT)
 		assert(ok, `office layout is invalid:\n{table.concat(errors, "\n")}`)
 		local capacityOk, reason = OfficeLayoutRules.checkCapacity(LAYOUT)
