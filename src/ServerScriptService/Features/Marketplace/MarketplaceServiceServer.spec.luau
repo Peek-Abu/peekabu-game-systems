@@ -98,6 +98,7 @@ return function()
 		local changedConnection = nil
 
 		beforeEach(function()
+			task.wait() -- drain SignalPlus events deferred by earlier tests
 			events = {}
 			changedConnection = MarketplaceService.premiumChanged:Connect(function(change)
 				table.insert(events, change)

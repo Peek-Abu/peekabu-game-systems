@@ -172,6 +172,7 @@ return function()
 		end)
 
 		beforeEach(function()
+			task.wait() -- drain SignalPlus events deferred by earlier tests
 			_profiles = {}
 			events = {}
 			writes = 0
