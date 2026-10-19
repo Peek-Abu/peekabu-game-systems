@@ -23,6 +23,7 @@ local AnalyticsRules = require(ServerScriptService.Features.Analytics.Rules.Anal
 -- Required at load so the firstSeen slice registers before PlayerDataServiceServer init (ServerHandler requires
 -- every service module first).
 local AnalyticsFirstSeenSystem = require(ServerScriptService.Features.Analytics.Systems.AnalyticsFirstSeenSystem)
+local AnalyticsEconomySystem = require(ServerScriptService.Features.Analytics.Systems.AnalyticsEconomySystem)
 local AnalyticsSessionSystem = require(ServerScriptService.Features.Analytics.Systems.AnalyticsSessionSystem)
 local AnalyticsTypes = require(ServerScriptService.Features.Analytics.Data.AnalyticsTypes)
 
@@ -32,6 +33,7 @@ local log = Logger.new("AnalyticsServiceServer")
 local counters = { sent = 0, skipped = 0, failed = 0 }
 local stopFirstSeen: (() -> ())? = nil
 local stopSession: (() -> ())? = nil
+local stopEconomy: (() -> ())? = nil
 
 local function send(label: string, call: () -> ())
 	if RunService:IsStudio() then
@@ -87,11 +89,17 @@ export type AnalyticsServiceServer = {
 }
 
 local AnalyticsServiceServer: AnalyticsServiceServer = {
-	dependencies = { "PlayerDataServiceServer", "ExperimentServiceServer", "QueueServiceServer" },
+	dependencies = {
+		"PlayerDataServiceServer",
+		"ExperimentServiceServer",
+		"QueueServiceServer",
+		"CurrencyServiceServer",
+		"MarketplaceServiceServer",
+	},
 
 	--[=[
 		Starts stamping each account's first-seen time as its profile loads, and the session system (platform,
-		assignment log, hub funnel), handing it a Sender over this service's own calls.
+		assignment log, hub funnel) and the economy system, handing them a Sender over this service's own calls.
 	]=]
 	start = function(self)
 		if stopFirstSeen == nil then
@@ -119,10 +127,15 @@ local AnalyticsServiceServer: AnalyticsServiceServer = {
 				end,
 			}
 			stopSession = AnalyticsSessionSystem.start(sender)
+			stopEconomy = AnalyticsEconomySystem.start(sender)
 		end
 	end,
 
 	stop = function(_self)
+		if stopEconomy ~= nil then
+			stopEconomy()
+			stopEconomy = nil
+		end
 		if stopSession ~= nil then
 			stopSession()
 			stopSession = nil

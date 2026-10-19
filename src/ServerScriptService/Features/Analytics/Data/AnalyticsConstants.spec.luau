@@ -28,4 +28,17 @@ return function()
 			end
 		end
 	end)
+
+	it("every currency with a name has its experiments, and every transaction type is a Roblox name", function()
+		for currency in AnalyticsConstants.CURRENCY_NAMES do
+			expect(AnalyticsConstants.CURRENCY_EXPERIMENTS[currency] ~= nil).to.equal(true)
+		end
+		for _, transactionType in AnalyticsConstants.TRANSACTION_TYPES do
+			local ok, item = pcall(function()
+				return Enum.AnalyticsEconomyTransactionType:FromName(transactionType)
+			end)
+			expect(ok).to.equal(true)
+			expect(item ~= nil).to.equal(true)
+		end
+	end)
 end

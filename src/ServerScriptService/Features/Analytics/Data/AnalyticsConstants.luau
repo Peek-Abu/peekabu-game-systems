@@ -28,6 +28,19 @@ local CURRENCY_EXPERIMENTS: { [string]: { string } } = table.freeze({
 	gloom = table.freeze({ "exp-timecard" }),
 })
 
+-- The name each economy currency is reported under.
+local CURRENCY_NAMES: { [string]: string } = table.freeze({
+	gloom = "Gloom",
+	credits = "Credits",
+	gleam = "Gleam",
+})
+
+-- Each loggable currency change reason -> an Enum.AnalyticsEconomyTransactionType name. A reason that is absent
+-- ("admin", "other") is not logged.
+local TRANSACTION_TYPES: { [string]: string } = table.freeze({
+	shiftPay = "Gameplay",
+})
+
 local AnalyticsConstants = {
 	BUILD_LABEL = "w1",
 	FUNNEL = "first_time",
@@ -38,6 +51,8 @@ local AnalyticsConstants = {
 	MAX_TAGS = 2,
 	FUNNEL_EXPERIMENTS = FUNNEL_EXPERIMENTS,
 	CURRENCY_EXPERIMENTS = CURRENCY_EXPERIMENTS,
+	CURRENCY_NAMES = CURRENCY_NAMES,
+	TRANSACTION_TYPES = TRANSACTION_TYPES,
 }
 
 --[=[

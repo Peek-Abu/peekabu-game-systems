@@ -260,6 +260,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Features.Badge.BadgeServiceServer"] = "BadgeService shell (BadgeAwardTracker and BadgeRegistry are specced)",
 	["ServerScriptService.Features.Analytics.AnalyticsServiceServer"] = "AnalyticsService shell; starts AnalyticsSessionSystem (AnalyticsRules is specced)",
 	["ServerScriptService.Features.Analytics.Systems.AnalyticsSessionSystem"] = "Players/ByteNet/Queue/PlayerData shell (context, cohort, tags and dedupe are specced in AnalyticsContextUtils, AnalyticsContextTracker, ExperimentServiceServer)",
+	["ServerScriptService.Features.Analytics.Systems.AnalyticsEconomySystem"] = "CurrencyServiceServer/MarketplaceServiceServer signal shell (the event decision is specced in AnalyticsEconomyUtils)",
 	["ServerScriptService.Features.Analytics.Data.AnalyticsTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Client.Features.DailyReward.DailyRewardServiceClient"] = "read facade and request sender (DailyRewardRules is specced)",
 	["ReplicatedStorage.Client.Features.Marketplace.MarketplaceServiceClient"] = "MarketplaceService prompt shell (the server grants; the registry is specced)",
