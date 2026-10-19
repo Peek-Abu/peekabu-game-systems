@@ -118,8 +118,8 @@ return table.freeze({
 	EVENT_SET = table.freeze(EVENT_SET),
 	VOCABULARY = table.freeze(VOCABULARY),
 	INFO_EVENTS = table.freeze(INFO_EVENTS),
-	-- The build label; the place version is appended ("m5-v42"; "m5-dev" in Studio).
-	BUILD_LABEL = "m5",
+	-- The crew experiments every shift event is tagged with (ExperimentRegistry ids, in tag order).
+	EXPERIMENTS = table.freeze({ "exp-clean", "exp-rehire" }),
 	-- A longer target/outcome/reason is "other" (the engine caps a field at 50 characters).
 	TOKEN_MAX = 40,
 	-- Event values are clamped to 0..VALUE_MAX and rounded to 0.1.

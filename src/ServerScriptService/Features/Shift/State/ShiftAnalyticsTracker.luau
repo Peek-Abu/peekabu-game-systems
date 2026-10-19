@@ -2,8 +2,6 @@
 --[=[
 	ShiftAnalyticsTracker: what Cleanup Crew's analytics remembers between events (spec §6.6, §6.4). Plain bookkeeping
 	nothing subscribes to:
-	- each player's platform: the first valid report wins ("unknown" is never accepted, a second report is ignored),
-	  forgotten when they leave;
 	- per shift: who has started their first cleanup, piles cleared per player, when the quota was met (seconds into
 	  the shift);
 	- the last few noises (which one Mr. Harlow most likely heard) and the last records (the in-server log the Studio
@@ -12,19 +10,14 @@
 	@class ShiftAnalyticsTracker
 ]=]
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
-local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local ShiftAnalyticsUtils = require(ServerScriptService.Features.Shift.Utils.ShiftAnalyticsUtils)
 
-type Platform = ShiftTypes.Platform
 type Noise = ShiftAnalyticsUtils.Noise
 type Record = ShiftAnalyticsUtils.Record
 
 export type ShiftAnalyticsTracker = {
-	setPlatform: (self: ShiftAnalyticsTracker, userId: number, platform: Platform) -> boolean,
-	platformOf: (self: ShiftAnalyticsTracker, userId: number) -> Platform,
 	forget: (self: ShiftAnalyticsTracker, userId: number) -> (),
 	beginShift: (self: ShiftAnalyticsTracker) -> (),
 	firstCleanup: (self: ShiftAnalyticsTracker, userId: number) -> boolean,
@@ -49,7 +42,6 @@ local function push<T>(list: { T }, item: T, limit: number)
 end
 
 function ShiftAnalyticsTracker.new(recentLimit: number, noiseLimit: number): ShiftAnalyticsTracker
-	local platforms: { [number]: Platform } = {}
 	local cleaned: { [number]: boolean } = {}
 	local piles: { [number]: number } = {}
 	local quotaMetAt: number? = nil
@@ -57,20 +49,7 @@ function ShiftAnalyticsTracker.new(recentLimit: number, noiseLimit: number): Shi
 	local records: { Record } = {}
 
 	local tracker: ShiftAnalyticsTracker = {
-		setPlatform = function(_self, userId, platform)
-			if platform == "unknown" or platforms[userId] ~= nil then
-				return false
-			end
-			platforms[userId] = platform
-			return true
-		end,
-
-		platformOf = function(_self, userId)
-			return platforms[userId] or "unknown"
-		end,
-
 		forget = function(_self, userId)
-			platforms[userId] = nil
 			cleaned[userId] = nil
 			piles[userId] = nil
 		end,

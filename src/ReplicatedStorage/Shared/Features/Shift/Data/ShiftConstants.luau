@@ -13,8 +13,9 @@ local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTyp
 local ToastTypes = require(ReplicatedStorage.Shared.Features.Toast.Data.ToastTypes)
 
 local VARIANT: ShiftTypes.Variant = "B"
--- How each shift's variant is chosen (ShiftVariantRules): "alternate" flips A/B per shift; "fixed" always plays VARIANT.
-local VARIANT_MODE: ShiftTypes.VariantMode = "alternate"
+-- How each shift's variant is chosen (ShiftVariantRules): "fixed" always plays VARIANT (the salvage A/B is not a
+-- registered experiment; the per-crew experiments are the analytics unit); "alternate" flips A/B per shift.
+local VARIANT_MODE: ShiftTypes.VariantMode = "fixed"
 
 -- Cleanup Crew's toast styles. The first two (spec §6.1 "sticky note" and "stamp"; §7 "sticky-note toasts, rubber-stamp
 -- announcements"). Look from the Figma style page, pending the developer's approval; each `sound` is a

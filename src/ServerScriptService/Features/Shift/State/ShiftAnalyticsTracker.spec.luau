@@ -5,7 +5,8 @@ local function record(event)
 		event = event,
 		session = "studio",
 		build = "m5-dev",
-		variant = "B",
+		tags = "1.5s+10s",
+		cohort = "new",
 		platform = "pc",
 		party = 1,
 		target = "none",
@@ -16,32 +17,6 @@ local function record(event)
 end
 
 return function()
-	describe("platforms", function()
-		it("keeps the first valid platform report", function()
-			local tracker = ShiftAnalyticsTracker.new(10, 4)
-			expect(tracker:setPlatform(7, "phone")).to.equal(true)
-			expect(tracker:setPlatform(7, "pc")).to.equal(false)
-			expect(tracker:platformOf(7)).to.equal("phone")
-		end)
-
-		it("refuses unknown and reads unknown for a player who never reported", function()
-			local tracker = ShiftAnalyticsTracker.new(10, 4)
-			expect(tracker:setPlatform(7, "unknown")).to.equal(false)
-			expect(tracker:platformOf(7)).to.equal("unknown")
-			expect(tracker:setPlatform(7, "tablet")).to.equal(true)
-		end)
-
-		it("forgets a player who left, and keeps platforms across shifts", function()
-			local tracker = ShiftAnalyticsTracker.new(10, 4)
-			tracker:setPlatform(7, "phone")
-			tracker:setPlatform(8, "pc")
-			tracker:beginShift()
-			expect(tracker:platformOf(8)).to.equal("pc")
-			tracker:forget(7)
-			expect(tracker:platformOf(7)).to.equal("unknown")
-		end)
-	end)
-
 	describe("per shift", function()
 		it("reports a player's first cleanup once per shift", function()
 			local tracker = ShiftAnalyticsTracker.new(10, 4)

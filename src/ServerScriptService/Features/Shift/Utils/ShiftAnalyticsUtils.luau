@@ -4,7 +4,7 @@
 	target, outcome and reason are tokens from ShiftAnalyticsConstants.VOCABULARY (anything else becomes "other", so
 	no player name, chat line or id can reach a field); its value is a clamped, finite number. The engine takes three
 	custom fields, so:
-	- field 1 packs the context "variant|platform|party|build" (low cardinality),
+	- field 1 packs the context "tags|platform|party|cohort|build" (AnalyticsContextUtils.field; low cardinality),
 	- field 2 is the target (a cargo kind, "kind:source", a pile kind, a noise source, a fixed word),
 	- field 3 is the outcome, or "outcome:reason" when there is a failure reason.
 	The full record (with the session id, which stays out of the engine fields) goes to the server log.
@@ -16,19 +16,20 @@
 	@class ShiftAnalyticsUtils
 ]=]
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
-local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
+local AnalyticsContextUtils = require(ServerScriptService.Features.Analytics.Utils.AnalyticsContextUtils)
+local AnalyticsTypes = require(ServerScriptService.Features.Analytics.Data.AnalyticsTypes)
 local ShiftAnalyticsConstants = require(ServerScriptService.Features.Shift.Data.ShiftAnalyticsConstants)
 
--- Which session, build, variant, device and crew size an event belongs to.
+-- Which session, experiment variants, device, crew size, cohort and build an event belongs to.
 export type Context = {
 	session: string,
-	build: string,
-	variant: ShiftTypes.Variant,
-	platform: ShiftTypes.Platform,
+	tags: string,
+	platform: string,
 	party: number,
+	cohort: AnalyticsTypes.Cohort,
+	build: string,
 }
 
 -- What a caller says about one event; every string is checked against the vocabulary.
@@ -44,7 +45,8 @@ export type Record = {
 	event: string,
 	session: string,
 	build: string,
-	variant: string,
+	tags: string,
+	cohort: string,
 	platform: string,
 	party: number,
 	target: string,
@@ -130,10 +132,6 @@ function ShiftAnalyticsUtils.session(jobId: string): string
 	return if jobId == "" then "studio" else jobId
 end
 
-function ShiftAnalyticsUtils.build(label: string, placeVersion: number): string
-	return if placeVersion > 0 then `{label}-v{placeVersion}` else `{label}-dev`
-end
-
 local function partySize(count: number): number
 	if count ~= count then
 		return 0
@@ -142,7 +140,7 @@ local function partySize(count: number): number
 end
 
 function ShiftAnalyticsUtils.contextField(context: Context): string
-	return `{context.variant}|{context.platform}|{partySize(context.party)}|{context.build}`
+	return AnalyticsContextUtils.field(context)
 end
 
 function ShiftAnalyticsUtils.outcomeField(details: Details): string
@@ -174,7 +172,8 @@ function ShiftAnalyticsUtils.record(event: string, context: Context, details: De
 		event = event,
 		session = context.session,
 		build = context.build,
-		variant = context.variant,
+		tags = context.tags,
+		cohort = context.cohort,
 		platform = context.platform,
 		party = partySize(context.party),
 		target = ShiftAnalyticsUtils.token(details.target),

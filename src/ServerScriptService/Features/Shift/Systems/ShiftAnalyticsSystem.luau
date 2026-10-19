@@ -5,24 +5,25 @@
 	vocabulary tokens (ShiftAnalyticsUtils.token: catalog ids and fixed words only, so no name, chat line or id can reach
 	a field). Each record goes to:
 	- AnalyticsServiceServer:custom(player, event, value, { context, target, outcome }): the engine takes three custom
-	  fields, so field 1 packs "variant|platform|party|build" (AnalyticsServiceServer sends nothing in Studio);
+	  fields, so field 1 packs "tags|platform|party|cohort|build" (AnalyticsSessionSystem.contextOf: the two crew
+	  experiments' variants, the platform the Analytics feature takes, the cohort; AnalyticsServiceServer sends nothing
+	  in Studio);
 	- the server log, key events at info and the rest at debug, with the session id (JobId) the engine fields leave out;
 	- a ring of recent records and any `listen` callbacks (the Studio test sink).
 	"crew" events go once to each crew member still in the server: the shift's crew (ShiftTripSystem, handed to
 	`start`), not Round's participants, which Round clears on its way back to the lobby before its deferred
 	`runEnded` reaches the watch (Shift runs Round with no results time), so shift_ended would find nobody.
 
-	It also keeps the experiment context: the session, the build (BUILD_LABEL + PlaceVersion), each shift's variant
-	(`pickVariant`: ShiftVariantRules over the Workspace override, ShiftConstants.VARIANT_MODE and the JobId, logged at
-	info), each player's platform (the `Platform` packet, parsed by ShiftPlatformRules, first report wins) and the shift
-	state the watch hands it. `banked` (ShiftBankingSystem) sends cargo_banked per item and closes the loader's
+	It also keeps the session, each shift's salvage variant (`pickVariant`: ShiftVariantRules over the Workspace
+	override, ShiftConstants.VARIANT_MODE and the JobId, logged at info; not an experiment, its source is
+	contract_started's target) and the shift state the watch hands it. The platform and experiment tags come from
+	AnalyticsSessionSystem. `banked` (ShiftBankingSystem) sends cargo_banked per item and closes the loader's
 	optional-salvage attempts; `closeAttempts` sends optional_salvage_attempted for each closed attempt. `banked` also
 	fires `loaded` (the loader, the items and salvage items in the Load, and how many are overtime loot), which
 	ShiftReviewSystem counts into the roster for the company rank's award.
 
-	Spec-exempt shell (AnalyticsService, Players, ByteNet, a Workspace attribute); payloads, tokens, variant, platform
-	and attempts are the specced ShiftAnalyticsUtils, ShiftVariantRules, ShiftPlatformRules, ShiftAnalyticsTracker and
-	ShiftSalvageTracker.
+	Spec-exempt shell (AnalyticsService, Players, a Workspace attribute); payloads, tokens, variant and attempts are
+	the specced ShiftAnalyticsUtils, ShiftVariantRules, ShiftAnalyticsTracker and ShiftSalvageTracker.
 
 	@class ShiftAnalyticsSystem
 ]=]
@@ -39,10 +40,8 @@ local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local CargoTypes = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoTypes)
 local ShiftConstants = require(ShiftShared.Data.ShiftConstants)
 local ShiftTypes = require(ShiftShared.Data.ShiftTypes)
-local ShiftEvents = require(ShiftShared.Net.ShiftEvents)
-local ShiftPlatformRules = require(ShiftShared.Rules.ShiftPlatformRules)
-local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local AnalyticsServiceServer = require(ServerScriptService.Features.Analytics.AnalyticsServiceServer)
+local AnalyticsSessionSystem = require(ServerScriptService.Features.Analytics.Systems.AnalyticsSessionSystem)
 local RoundServiceServer = require(ServerScriptService.Features.Round.RoundServiceServer)
 local ShiftAnalyticsConstants = require(ShiftServer.Data.ShiftAnalyticsConstants)
 local ShiftVariantRules = require(ShiftServer.Rules.ShiftVariantRules)
@@ -57,12 +56,10 @@ type Details = ShiftAnalyticsUtils.Details
 
 local log = Logger.new("ShiftAnalyticsSystem")
 local session = ShiftAnalyticsUtils.session(game.JobId)
-local build = ShiftAnalyticsUtils.build(ShiftAnalyticsConstants.BUILD_LABEL, game.PlaceVersion)
 local tracker = ShiftAnalyticsTracker.new(ShiftAnalyticsConstants.RECENT_LIMIT, ShiftAnalyticsConstants.NOISE_LIMIT)
 local salvage = ShiftSalvageTracker.new()
 local listeners: { (Record) -> () } = {}
 local counters = { sent = 0, unknown = 0 }
-local variant: ShiftTypes.Variant = ShiftConstants.VARIANT
 local variantSource: ShiftTypes.VariantSource = "fixed"
 local shiftState: ShiftTypes.ShiftState? = nil
 local stoppers: { () -> () } = {}
@@ -93,19 +90,21 @@ end
 
 -- One record for one player: AnalyticsService, the log, the ring, the listeners.
 local function send(event: string, player: Player, party: number, details: Details)
+	local base = AnalyticsSessionSystem.contextOf(player, ShiftAnalyticsConstants.EXPERIMENTS, party)
 	local context: ShiftAnalyticsUtils.Context = {
 		session = session,
-		build = build,
-		variant = variant,
-		platform = tracker:platformOf(player.UserId),
-		party = party,
+		tags = base.tags,
+		platform = base.platform,
+		party = base.party,
+		cohort = base.cohort,
+		build = base.build,
 	}
 	local record = ShiftAnalyticsUtils.record(event, context, details)
 	tracker:remember(record)
 	AnalyticsServiceServer:custom(player, event, record.value, ShiftAnalyticsUtils.fields(context, details))
 	counters.sent += 1
 	local line =
-		`{record.event} target={record.target} outcome={record.outcome} reason={record.reason} value={record.value} variant={record.variant} platform={record.platform} party={record.party} build={record.build} session={record.session}`
+		`{record.event} target={record.target} outcome={record.outcome} reason={record.reason} value={record.value} tags={record.tags} platform={record.platform} party={record.party} cohort={record.cohort} build={record.build} session={record.session}`
 	if ShiftAnalyticsConstants.INFO_EVENTS[event] then
 		log:info(line)
 	else
@@ -157,7 +156,7 @@ function ShiftAnalyticsSystem.emit(event: string, scope: Scope, details: Details
 end
 
 --[=[
-	The variant for the shift about to start (ShiftVariantRules); remembered for every event's context and logged.
+	The variant for the shift about to start (ShiftVariantRules); its source is remembered (contract_started's target) and logged.
 	Never throws: ShiftServiceServer calls it inside its phase handler.
 ]=]
 function ShiftAnalyticsSystem.pickVariant(shift: number): ShiftTypes.Variant
@@ -169,9 +168,8 @@ function ShiftAnalyticsSystem.pickVariant(shift: number): ShiftTypes.Variant
 		session = session,
 		shift = shift,
 	})
-	variant = picked
 	variantSource = source
-	log:info(`shift {shift}: variant {picked} ({source}), session {session}, build {build}`)
+	log:info(`shift {shift}: variant {picked} ({source}), session {session}, build {AnalyticsSessionSystem.build()}`)
 	return picked
 end
 
@@ -287,40 +285,15 @@ function ShiftAnalyticsSystem.recent(): { Record }
 	return tracker:recent()
 end
 
--- The platform report: rate-limited, parsed from the fixed enum, first valid report wins.
-local onPlatform = RequestHandler.wrap({
-	name = "ShiftPlatform",
-	rateLimit = { maxRequests = 3, windowSeconds = 10 },
-	-- Count, don't warn: the default warn line carries the sender's UserId, and no analytics path logs one.
-	onReject = "count",
-	validate = function(data: number, _player: Player): (boolean, string?, ShiftTypes.Platform?)
-		local platform: ShiftTypes.Platform? = ShiftPlatformRules.parse(data)
-		if platform == nil then
-			return false, "unknown platform", nil
-		end
-		return true, nil, platform
-	end,
-	handler = function(_data: number, player: Player, platform: ShiftTypes.Platform?)
-		if platform ~= nil and tracker:setPlatform(player.UserId, platform) then
-			log:debug(`platform {platform} reported`)
-		end
-	end,
-})
-
 --[=[
-	Takes platform reports; a leaving player's open attempts close as "left" and their bookkeeping is forgotten.
-	`crew` lists the shift's crew (ShiftTripSystem), which outlives Round's post-run cleanup.
+	A leaving player's open attempts close as "left" and their bookkeeping is forgotten. `crew` lists the shift's crew
+	(ShiftTripSystem), which outlives Round's post-run cleanup; it also sizes each event's party.
 ]=]
 function ShiftAnalyticsSystem.start(crew: () -> { Player })
 	crewSource = crew
-	table.insert(
-		stoppers,
-		ShiftEvents.packets.Platform.listen(function(data: number, player: Player?)
-			if player then
-				onPlatform(data, player)
-			end
-		end)
-	)
+	AnalyticsSessionSystem.setParty(function(): number
+		return math.max(#ShiftAnalyticsSystem.crew(), 1)
+	end)
 	local leaving = Players.PlayerRemoving:Connect(function(player: Player)
 		ShiftAnalyticsSystem.closeAttempts(salvage:resolvePlayer(player.UserId, "left"), player)
 		tracker:forget(player.UserId)
@@ -335,6 +308,7 @@ function ShiftAnalyticsSystem.stop()
 		stop()
 	end
 	table.clear(stoppers)
+	AnalyticsSessionSystem.setParty(nil)
 	shiftState = nil
 	crewSource = nil
 end
@@ -342,8 +316,7 @@ end
 function ShiftAnalyticsSystem.getState(): { [string]: string | number }
 	return {
 		session = session,
-		build = build,
-		variant = variant,
+		build = AnalyticsSessionSystem.build(),
 		variantSource = variantSource,
 		sent = counters.sent,
 		unknown = counters.unknown,
