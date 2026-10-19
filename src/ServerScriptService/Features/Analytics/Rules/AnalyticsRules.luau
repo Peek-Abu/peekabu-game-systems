@@ -42,4 +42,14 @@ function AnalyticsRules.customFields(values: { string }?): { [string]: string }?
 	return fields
 end
 
+--[=[
+	The fields as a debug-log suffix, "[a|b|c]"; empty with none.
+]=]
+function AnalyticsRules.describe(values: { string }?): string
+	if values == nil or #values == 0 then
+		return ""
+	end
+	return `[{table.concat(values, "|")}]`
+end
+
 return AnalyticsRules

@@ -110,7 +110,7 @@ local AnalyticsServiceServer: AnalyticsServiceServer = {
 			return
 		end
 		local customFields = AnalyticsRules.customFields(fields)
-		send(`custom {name}`, function()
+		send(`custom {name}{AnalyticsRules.describe(fields)}`, function()
 			AnalyticsService:LogCustomEvent(player, name, value, customFields)
 		end)
 	end,
@@ -124,7 +124,7 @@ local AnalyticsServiceServer: AnalyticsServiceServer = {
 			then Enum.AnalyticsEconomyFlowType.Source
 			else Enum.AnalyticsEconomyFlowType.Sink
 		local customFields = AnalyticsRules.customFields(fields)
-		send(`economy {flow} {currency}`, function()
+		send(`economy {flow} {currency}{AnalyticsRules.describe(fields)}`, function()
 			AnalyticsService:LogEconomyEvent(
 				player,
 				flowType,
@@ -147,7 +147,7 @@ local AnalyticsServiceServer: AnalyticsServiceServer = {
 			return
 		end
 		local customFields = AnalyticsRules.customFields(fields)
-		send(`funnel {name} {step}`, function()
+		send(`funnel {name} {step}{AnalyticsRules.describe(fields)}`, function()
 			AnalyticsService:LogFunnelStepEvent(player, name, nil, step, stepName, customFields)
 		end)
 	end,

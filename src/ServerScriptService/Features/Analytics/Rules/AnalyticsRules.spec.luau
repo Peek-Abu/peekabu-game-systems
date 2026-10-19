@@ -37,4 +37,12 @@ return function()
 			expect(#fields.CustomField01).to.equal(AnalyticsRules.MAX_NAME_LENGTH)
 		end)
 	end)
+
+	describe("describe", function()
+		it("describes fields for the debug log", function()
+			expect(AnalyticsRules.describe({ "a", "b" })).to.equal("[a|b]")
+			expect(AnalyticsRules.describe(nil)).to.equal("")
+			expect(AnalyticsRules.describe({})).to.equal("")
+		end)
+	end)
 end

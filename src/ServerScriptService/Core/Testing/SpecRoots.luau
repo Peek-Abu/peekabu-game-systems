@@ -259,6 +259,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Features.Leaderstat.LeaderstatServiceServer"] = "Instance/Players shell (the column catalogue is specced)",
 	["ServerScriptService.Features.Badge.BadgeServiceServer"] = "BadgeService shell (BadgeAwardTracker and BadgeRegistry are specced)",
 	["ServerScriptService.Features.Analytics.AnalyticsServiceServer"] = "AnalyticsService shell (AnalyticsRules is specced)",
+	["ServerScriptService.Features.Analytics.Data.AnalyticsTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Client.Features.DailyReward.DailyRewardServiceClient"] = "read facade and request sender (DailyRewardRules is specced)",
 	["ReplicatedStorage.Client.Features.Marketplace.MarketplaceServiceClient"] = "MarketplaceService prompt shell (the server grants; the registry is specced)",
 
