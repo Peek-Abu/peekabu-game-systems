@@ -2,6 +2,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local EmployeeRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeRegistry)
 local EmployeeLocomotionUtils = require(script.Parent.EmployeeLocomotionUtils)
+local CrouchConstants = require(ReplicatedStorage.Shared.Features.Crouch.Data.CrouchConstants)
+local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
 
 local function defWith(locomotion, scale)
 	local base = EmployeeRegistry.get("Pippa")
@@ -107,6 +109,26 @@ return function()
 			expect(EmployeeLocomotionUtils.forName(nil)).to.equal(nil)
 			expect(EmployeeLocomotionUtils.forName("Nobody")).to.equal(nil)
 			expect(EmployeeLocomotionUtils.forName(7)).to.equal(nil)
+		end)
+	end)
+
+	describe("Pippa's crouch walk", function()
+		it("plants at the crouch speed (feet slide under 10 %)", function()
+			local config = EmployeeLocomotionUtils.forName("Pippa")
+			expect(config).to.be.ok()
+			expect(config.crouchScale).to.be.ok()
+			expect(config.crouchMaxRate).to.be.ok()
+			local planted = config.crouchScale * config.crouchMaxRate
+			expect(CrouchConstants.CROUCH_SPEED / planted <= 1.1).to.equal(true)
+		end)
+
+		it("keeps a loaded crouch above the minimum rate (no backward slide)", function()
+			local config = EmployeeLocomotionUtils.forName("Pippa")
+			expect(config).to.be.ok()
+			expect(config.crouchScale).to.be.ok()
+			-- The slowest any load makes a crouch: Carry's speed floor.
+			local slowest = CrouchConstants.CROUCH_SPEED * CarryConstants.MIN_SPEED_MULTIPLIER
+			expect(slowest / config.crouchScale >= config.minRate).to.equal(true)
 		end)
 	end)
 end

@@ -6,11 +6,11 @@ local CarryFormulas = require(ReplicatedStorage.Shared.Features.Carry.Utils.Carr
 local CrouchConstants = require(ReplicatedStorage.Shared.Features.Crouch.Data.CrouchConstants)
 
 return function()
-	it("creeps at CROUCH_SPEED empty-handed: 55-60 % of the walk (16)", function()
+	it("creeps at CROUCH_SPEED empty-handed: about 40 % of the walk (16)", function()
 		expect(CrouchSpeedFormulas.speed(nil)).to.equal(CrouchConstants.CROUCH_SPEED)
 		expect(CrouchSpeedFormulas.speed(0)).to.equal(CrouchConstants.CROUCH_SPEED)
 		local fraction = CrouchConstants.CROUCH_SPEED / 16
-		expect(fraction >= 0.55 and fraction <= 0.6).to.equal(true)
+		expect(fraction >= 0.38 and fraction <= 0.42).to.equal(true)
 	end)
 
 	it("slows the crouch by the carry's own walk factor (the small items a crouch allows)", function()

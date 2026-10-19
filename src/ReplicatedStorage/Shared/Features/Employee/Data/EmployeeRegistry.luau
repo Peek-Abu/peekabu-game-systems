@@ -173,14 +173,14 @@ local EMPLOYEES: { [string]: EmployeeDef } = {
 			crouchWalk = "pippacrouchwalk",
 			walkPlantedSpeed = 1.27,
 			runPlantedSpeed = 1.52,
-			-- 1.625 st/s at her 1.25 scale: planted up to 3.25 st/s at the 2x cap (3 steps a second), so at the
-			-- crouch speed (9) the feet slide 2.8x (her walk at 16 slides 4x): her legs cannot plant 9 st/s at a
-			-- creeping cadence.
+			-- 1.625 st/s at her 1.25 scale: planted up to 6.5 st/s at the 4x cap (about 6 steps a second, a quick
+			-- scurrying sneak), which is exactly the crouch speed (CrouchConstants.CROUCH_SPEED), so the feet plant
+			-- (her walk at 16 still slides 4x).
 			crouchWalkPlantedSpeed = 1.3,
 			minRate = 0.6,
 			walkMaxRate = 2.5,
 			runMaxRate = 2.2,
-			crouchWalkMaxRate = 2,
+			crouchWalkMaxRate = 4,
 		},
 		-- High on the back, between the head's overhang and the tail (the pack was modelled on her), its pad on
 		-- the hi-vis vest's back (outer surface 0.505 there, characters/identity/README.md).
