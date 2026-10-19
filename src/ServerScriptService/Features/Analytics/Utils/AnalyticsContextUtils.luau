@@ -1,7 +1,8 @@
 --!strict
 --[=[
 	AnalyticsContextUtils: builds the one context field every week-1 analytics event carries:
-	`tags|platform|party|cohort|build`. Pure.
+	`tags|platform|party|cohort|build` (custom events); funnel events split it into a stable first field
+	(`funnelField`) and a per-step third (`funnelTail`). Pure.
 
 	@class AnalyticsContextUtils
 ]=]
@@ -57,6 +58,22 @@ end
 function AnalyticsContextUtils.field(context: Context): string
 	local party = math.clamp(math.floor(context.party), 0, MAX_PARTY)
 	return `{context.tags}|{context.platform}|{party}|{context.cohort}|{context.build}`
+end
+
+--[=[
+	A funnel event's first field: only values that never change across a player's steps (`tags|cohort|build`), so
+	the funnel can be segmented. `label` is the bare build label, not the place version (the hub and the Shift place
+	differ).
+]=]
+function AnalyticsContextUtils.funnelField(tags: string, cohort: Cohort, label: string): string
+	return `{tags}|{cohort}|{label}`
+end
+
+--[=[
+	A funnel event's third field: the values that vary by step, `platform|party` (party floored and clamped 0..99).
+]=]
+function AnalyticsContextUtils.funnelTail(platform: string, party: number): string
+	return `{platform}|{math.clamp(math.floor(party), 0, MAX_PARTY)}`
 end
 
 return AnalyticsContextUtils

@@ -1,6 +1,7 @@
 local Workspace = game:GetService("Workspace")
 
 local ExperimentServiceServer = require(script.Parent.ExperimentServiceServer)
+local ExperimentRegistry = require(script.Parent.Data.ExperimentRegistry)
 
 return function()
 	local saved
@@ -16,6 +17,11 @@ return function()
 		it("is the hash variant for the player's user id", function()
 			-- exp-friendskip is per crew; use a per-player one with a pinned key
 			expect(ExperimentServiceServer:playerVariant({ UserId = 156 }, "exp-tutorial")).to.equal("5beats")
+		end)
+
+		it("gives a fake player with a negative user id a registry variant", function()
+			local variant = ExperimentServiceServer:playerVariant({ UserId = -1 }, "exp-tutorial")
+			expect(table.find(ExperimentRegistry.get("exp-tutorial").variants, variant) ~= nil).to.equal(true)
 		end)
 
 		it("errors on an unknown id", function()
@@ -37,6 +43,12 @@ return function()
 			expect(ExperimentServiceServer:crewVariant("studio", "exp-friendskip")).to.equal("forced")
 		end)
 
+		it("errors loudly on an empty crew id", function()
+			expect(function()
+				ExperimentServiceServer:crewVariant("", "exp-friendskip")
+			end).to.throw()
+		end)
+
 		it("errors when asked per crew for a per-player experiment", function()
 			expect(function()
 				ExperimentServiceServer:crewVariant("studio", "exp-stars")
@@ -49,6 +61,22 @@ return function()
 			if game.JobId == "" then
 				expect(ExperimentServiceServer:crewId()).to.equal("studio")
 			end
+		end)
+	end)
+
+	describe("variantOf", function()
+		it("uses the crew id for a crew experiment and the user id for a player one", function()
+			local player = { UserId = 156 }
+			expect(ExperimentServiceServer:variantOf(player, "exp-friendskip")).to.equal(
+				ExperimentServiceServer:crewVariant(ExperimentServiceServer:crewId(), "exp-friendskip")
+			)
+			expect(ExperimentServiceServer:variantOf(player, "exp-tutorial")).to.equal("5beats")
+		end)
+
+		it("errors on an unknown id", function()
+			expect(function()
+				ExperimentServiceServer:variantOf({ UserId = 1 }, "exp-nope")
+			end).to.throw()
 		end)
 	end)
 

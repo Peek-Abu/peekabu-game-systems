@@ -93,8 +93,12 @@ function AnalyticsFirstSeenSystem.start(): () -> ()
 		stamp(userId)
 	end)
 	local removing = Players.PlayerRemoving:Connect(function(player: Player)
-		newThisSession[player.UserId] = nil
-		stampedAt[player.UserId] = nil
+		-- Deferred so every other PlayerRemoving handler (the shift's "left" events) still reads this player's cohort.
+		local userId = player.UserId
+		task.defer(function()
+			newThisSession[userId] = nil
+			stampedAt[userId] = nil
+		end)
 	end)
 	for _, player in Players:GetPlayers() do
 		if firstSeenSlice.get(player.UserId) ~= nil then

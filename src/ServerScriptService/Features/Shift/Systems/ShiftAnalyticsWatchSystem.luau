@@ -133,9 +133,7 @@ local function onChanged(state: ShiftTypes.ShiftState)
 	end
 	if state.phase == "results" and (previous == nil or previous.phase ~= "results") then
 		-- Server proxy for "saw the review": the results phase began while the player was present.
-		for _, player in ShiftAnalyticsSystem.crew() do
-			AnalyticsSessionSystem.funnelStep(player, "results_viewed")
-		end
+		funnelCrew("results_viewed")
 	end
 	if state.phase ~= "running" then
 		return

@@ -15,6 +15,11 @@ return function()
 			expect(parsed["exp-stars"]).to.equal("flat")
 		end)
 
+		it("is empty for a boolean or a table", function()
+			expect(next(ExperimentOverrideRules.parse(true))).to.equal(nil)
+			expect(next(ExperimentOverrideRules.parse({ "exp-friendskip=skip" }))).to.equal(nil)
+		end)
+
 		it("is empty for nil, a number or an empty string", function()
 			expect(next(ExperimentOverrideRules.parse(nil))).to.equal(nil)
 			expect(next(ExperimentOverrideRules.parse(42))).to.equal(nil)

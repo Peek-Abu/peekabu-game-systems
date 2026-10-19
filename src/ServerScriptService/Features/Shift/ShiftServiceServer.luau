@@ -435,6 +435,7 @@ local ShiftServiceServer: ShiftServiceServer = {
 		"QueueServiceServer",
 		"DepotServiceServer",
 		"CurrencyServiceServer",
+		"AnalyticsServiceServer",
 	},
 
 	--[=[

@@ -73,9 +73,15 @@ local ExperimentServiceServer: ExperimentServiceServer = {
 	OVERRIDE_ATTRIBUTE = OVERRIDE_ATTRIBUTE,
 
 	--[=[
-		The variant this crew gets in a per-crew experiment. Errors on an unknown id or a per-player experiment.
+		The variant this crew gets in a per-crew experiment. Errors on an empty crew id, an unknown id or a per-player experiment.
 	]=]
 	crewVariant = function(_self, crewId, experimentId)
+		if crewId == "" then
+			error(
+				"crewVariant needs a crew id; pass ExperimentServiceServer:crewId() (game.JobId is empty in Studio)",
+				2
+			)
+		end
 		local variant = resolve(definitionFor(experimentId, "crew"), crewId, currentOverrides())
 		return variant
 	end,

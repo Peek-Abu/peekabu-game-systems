@@ -113,7 +113,8 @@ function AnalyticsSessionSystem.field(player: Player, experimentIds: { string },
 end
 
 --[=[
-	Logs funnel step `stepName` once per player per session. False for an unknown step, a repeat, or before `start`.
+	Logs funnel step `stepName` once per player per session, with the fields `{tags}|{cohort}|{build}`, the detail
+	("-" when none) and `{platform}|{party}`. False for an unknown step, a repeat, or before `start`.
 ]=]
 function AnalyticsSessionSystem.funnelStep(player: Player, stepName: string, detail: string?): boolean
 	local out = sender
@@ -124,12 +125,17 @@ function AnalyticsSessionSystem.funnelStep(player: Player, stepName: string, det
 	if number == nil or not tracker:markStep(player.UserId, number) then
 		return false
 	end
-	local field = AnalyticsSessionSystem.field(
+	local context = AnalyticsSessionSystem.contextOf(
 		player,
 		AnalyticsConstants.FUNNEL_EXPERIMENTS,
 		AnalyticsSessionSystem.partyOf(player)
 	)
-	out.funnel(player, number, stepName, { field, detail or "-" })
+	-- Field 1 is stable across steps (so the funnel can be segmented); what changes per step rides in 2 and 3.
+	out.funnel(player, number, stepName, {
+		AnalyticsContextUtils.funnelField(context.tags, context.cohort, AnalyticsConstants.BUILD_LABEL),
+		detail or "-",
+		AnalyticsContextUtils.funnelTail(context.platform, context.party),
+	})
 	return true
 end
 
@@ -174,7 +180,7 @@ function AnalyticsSessionSystem.start(out: AnalyticsTypes.Sender): () -> ()
 			onPlatform(data, player)
 		end
 	end)
-	local loaded = PlayerDataServiceServer.profileLoaded:Connect(function(userId: number)
+	local function onProfileLoaded(userId: number)
 		local player = Players:GetPlayerByUserId(userId)
 		if player == nil then
 			return
@@ -186,7 +192,14 @@ function AnalyticsSessionSystem.start(out: AnalyticsTypes.Sender): () -> ()
 		if QueueServiceServer:runsRole(DepotConstants.ROLE_DEPOT) then
 			AnalyticsSessionSystem.funnelStep(player, "joined_hub")
 		end
-	end)
+	end
+	local loaded = PlayerDataServiceServer.profileLoaded:Connect(onProfileLoaded)
+	-- Players whose profile loaded before this started (the tracker and the funnel dedupe repeats).
+	for _, player in Players:GetPlayers() do
+		if PlayerDataServiceServer:getProfile(player.UserId) ~= nil then
+			onProfileLoaded(player.UserId)
+		end
+	end
 	local departing = QueueServiceServer.departing:Connect(function(_pad: BasePart, party: { Player })
 		for _, member in party do
 			AnalyticsSessionSystem.funnelStep(member, "boarded_truck")
@@ -196,7 +209,11 @@ function AnalyticsSessionSystem.start(out: AnalyticsTypes.Sender): () -> ()
 		AnalyticsSessionSystem.funnelStep(player, "next_shift", "hub")
 	end)
 	local removing = Players.PlayerRemoving:Connect(function(player: Player)
-		tracker:forget(player.UserId)
+		-- Deferred so every other PlayerRemoving handler (the shift's "left" events) still reads this player's context.
+		local userId = player.UserId
+		task.defer(function()
+			tracker:forget(userId)
+		end)
 	end)
 	return function()
 		stopPlatform()

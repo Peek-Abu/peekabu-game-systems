@@ -66,6 +66,33 @@ return function()
 		end)
 	end)
 
+	describe("funnelField", function()
+		it("is tags|cohort|build with the bare label", function()
+			expect(AnalyticsContextUtils.funnelField("5beats+forced", "new", "w1")).to.equal("5beats+forced|new|w1")
+			expect(AnalyticsContextUtils.funnelField("-", "unk", "w1")).to.equal("-|unk|w1")
+		end)
+
+		it("the longest field fits in the engine's 50 characters", function()
+			local longest = 0
+			for _, def in ExperimentRegistry.list() do
+				for _, variant in def.variants do
+					longest = math.max(longest, #variant)
+				end
+			end
+			local tags = string.rep("x", longest) .. "+" .. string.rep("x", longest)
+			local field = AnalyticsContextUtils.funnelField(tags, "unk", "w1-v99999")
+			expect(#field <= AnalyticsRules.MAX_NAME_LENGTH).to.equal(true)
+		end)
+	end)
+
+	describe("funnelTail", function()
+		it("is platform|party, the party floored and clamped", function()
+			expect(AnalyticsContextUtils.funnelTail("phone", 3)).to.equal("phone|3")
+			expect(AnalyticsContextUtils.funnelTail("unknown", 250)).to.equal("unknown|99")
+			expect(AnalyticsContextUtils.funnelTail("pc", -2.5)).to.equal("pc|0")
+		end)
+	end)
+
 	describe("build", function()
 		it("appends the place version, or dev", function()
 			expect(AnalyticsContextUtils.build("w1", 42)).to.equal("w1-v42")

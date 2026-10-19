@@ -41,6 +41,10 @@ local TRANSACTION_TYPES: { [string]: string } = table.freeze({
 	shiftPay = "Gameplay",
 })
 
+-- The reasons that are deliberately not logged. Every CurrencyConstants ChangeReason is in exactly one of
+-- TRANSACTION_TYPES or this list (spec-enforced).
+local UNLOGGED_REASONS: { string } = table.freeze({ "admin", "other" })
+
 local AnalyticsConstants = {
 	BUILD_LABEL = "w1",
 	FUNNEL = "first_time",
@@ -53,6 +57,7 @@ local AnalyticsConstants = {
 	CURRENCY_EXPERIMENTS = CURRENCY_EXPERIMENTS,
 	CURRENCY_NAMES = CURRENCY_NAMES,
 	TRANSACTION_TYPES = TRANSACTION_TYPES,
+	UNLOGGED_REASONS = UNLOGGED_REASONS,
 }
 
 --[=[

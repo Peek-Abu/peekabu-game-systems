@@ -29,6 +29,22 @@ return function()
 		end
 	end)
 
+	it("every currency change reason is either logged or deliberately unlogged, never both", function()
+		-- ChangeReason is a type, not a runtime value: update this list when CurrencyConstants.ChangeReason grows.
+		local reasons = { "shiftPay", "admin", "other" }
+		for _, reason in reasons do
+			local logged = AnalyticsConstants.TRANSACTION_TYPES[reason] ~= nil
+			local unlogged = table.find(AnalyticsConstants.UNLOGGED_REASONS, reason) ~= nil
+			expect(logged ~= unlogged).to.equal(true)
+		end
+		for reason in AnalyticsConstants.TRANSACTION_TYPES do
+			expect(table.find(reasons, reason) ~= nil).to.equal(true)
+		end
+		for _, reason in AnalyticsConstants.UNLOGGED_REASONS do
+			expect(table.find(reasons, reason) ~= nil).to.equal(true)
+		end
+	end)
+
 	it("every currency with a name has its experiments, and every transaction type is a Roblox name", function()
 		for currency in AnalyticsConstants.CURRENCY_NAMES do
 			expect(AnalyticsConstants.CURRENCY_EXPERIMENTS[currency] ~= nil).to.equal(true)
