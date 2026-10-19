@@ -20,6 +20,8 @@
 	- A returning player (Queue `returned`) gets their result card (ShiftCardUtils.decode: teleport data is
 	  untrusted) pinned on the result board, visible to them only, and a toast; the card's summary
 	  (DepotEvents.LastShift, held until Ready like cards) feeds the board's "last shift" card.
+	- In a hub-only server (this server runs the depot but not the shift) the depot places spawning players on
+	  its spawn points (Death's spawn resolver); where Shift runs, Shift's trip owns it.
 	- The contract board's prompt (Interaction kind DepotConstants.BOARD_KIND) sends the player Board with
 	  tonight's contract id; the depart data carries the truck number (layout order) beside the contract id,
 	  and each player's public `truck` field (DepotConstants.PUBLIC_TRUCK) follows the truck bed they stand in.
@@ -49,6 +51,7 @@ local DepotLayoutRules = require(DepotServer.Rules.DepotLayoutRules)
 local DepotContractUtils = require(DepotServer.Utils.DepotContractUtils)
 local DepotPlaceUtils = require(DepotServer.Utils.DepotPlaceUtils)
 local DepotBuildSystem = require(DepotServer.Systems.DepotBuildSystem)
+local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
 local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
 local QueueRegistry = require(ServerScriptService.Features.Queue.Data.QueueRegistry)
 local QueueServiceServer = require(ServerScriptService.Features.Queue.QueueServiceServer)
@@ -82,6 +85,8 @@ local crewTruck: number? = nil
 -- That crew's quota (ShiftQuotaFormulas, by how many arrived); a late member is told the same one.
 local crewQuota: number = ShiftQuotaFormulas.quota(1)
 local stoppers: { () -> () } = {}
+-- True while this hub-only server's depot owns Death's spawn resolver (Shift owns it wherever it runs).
+local ownsSpawns = false
 local cardsSent = 0
 local cardsPinned = 0
 
@@ -204,6 +209,7 @@ local DepotServiceServer: DepotServiceServer = {
 		"ToastServiceServer",
 		"InteractionServiceServer",
 		"StateSyncServiceServer",
+		"DeathServiceServer",
 	},
 
 	--[=[
@@ -263,6 +269,13 @@ local DepotServiceServer: DepotServiceServer = {
 			log:info("not a depot server: the garage is not built")
 			return
 		end
+		if DepotPlaceUtils.depotOwnsSpawns(true, QueueServiceServer:runsRole(DepotConstants.ROLE_SHIFT)) then
+			DeathServiceServer:setSpawnPoint(function(player)
+				return self:spawnCFrame(table.find(Players:GetPlayers(), player) or 1)
+			end)
+			ownsSpawns = true
+			log:info("hub spawns: the depot places players")
+		end
 		local ok, errors = DepotLayoutRules.validate(LAYOUT)
 		assert(ok, `depot layout is invalid:\n{table.concat(errors, "\n")}`)
 		built =
@@ -293,6 +306,10 @@ local DepotServiceServer: DepotServiceServer = {
 		table.clear(truckOf)
 		QueueServiceServer:setDepartData(nil)
 		QueueServiceServer:setArrivalPoint(DepotConstants.ROLE_DEPOT, nil)
+		if ownsSpawns then
+			DeathServiceServer:setSpawnPoint(nil)
+			ownsSpawns = false
+		end
 		local current = built
 		if current ~= nil then
 			current.model:Destroy()

@@ -38,4 +38,19 @@ return function()
 			expect(roles[DepotConstants.ROLE_SHIFT]).to.be.a("number")
 		end)
 	end)
+
+	describe("depotOwnsSpawns", function()
+		it("is the depot's job in a hub-only server", function()
+			expect(DepotPlaceUtils.depotOwnsSpawns(true, false)).to.equal(true)
+		end)
+
+		it("stays Shift's job when both roles run here (Studio, local mode)", function()
+			expect(DepotPlaceUtils.depotOwnsSpawns(true, true)).to.equal(false)
+		end)
+
+		it("is never the depot's job in a shift-only server", function()
+			expect(DepotPlaceUtils.depotOwnsSpawns(false, true)).to.equal(false)
+			expect(DepotPlaceUtils.depotOwnsSpawns(false, false)).to.equal(false)
+		end)
+	end)
 end

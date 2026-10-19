@@ -32,4 +32,9 @@ function DepotPlaceUtils.roles(hubPlaceId: number, shiftPlaceId: number): { [str
 	})
 end
 
+-- True only when this server runs the depot and not the shift; otherwise Shift's trip owns the spawn resolver.
+function DepotPlaceUtils.depotOwnsSpawns(runsDepot: boolean, runsShift: boolean): boolean
+	return runsDepot and not runsShift
+end
+
 return DepotPlaceUtils
