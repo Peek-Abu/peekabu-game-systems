@@ -24,7 +24,7 @@
 	depot where this server runs it, otherwise in the loading bay).
 
 	Spec-exempt shell (Players, Queue signals, teleports); membership and the leaving window are the specced
-	ShiftCrewTracker, the card is the specced ShiftCardUtils, the contract the specced DepotContractUtils.
+	ShiftCrewTracker, the stranded-server check ShiftPlaceRules, the card is the specced ShiftCardUtils, the contract the specced DepotContractUtils.
 
 	@class ShiftTripSystem
 ]=]
@@ -44,6 +44,7 @@ local DepotServiceServer = require(ServerScriptService.Features.Depot.DepotServi
 local OfficeServiceServer = require(ServerScriptService.Features.Office.OfficeServiceServer)
 local QueuePlaceRules = require(ServerScriptService.Features.Queue.Rules.QueuePlaceRules)
 local QueueServiceServer = require(ServerScriptService.Features.Queue.QueueServiceServer)
+local ShiftPlaceRules = require(ServerScriptService.Features.Shift.Rules.ShiftPlaceRules)
 local ShiftCrewTracker = require(ServerScriptService.Features.Shift.State.ShiftCrewTracker)
 local ShiftCardUtils = require(ServerScriptService.Features.Shift.Utils.ShiftCardUtils)
 local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
@@ -111,9 +112,11 @@ end
 
 -- A live public server of the shift place: nobody should be here without a party.
 local function isPublicShiftServer(): boolean
-	return QueueServiceServer:mode() == "live"
-		and QueueServiceServer:role() == DepotConstants.ROLE_SHIFT
-		and not QueuePlaceRules.isReservedServer(game.PrivateServerId, game.PrivateServerOwnerId)
+	return ShiftPlaceRules.isStrandedServer(
+		QueueServiceServer:mode(),
+		QueueServiceServer:role(),
+		QueuePlaceRules.isReservedServer(game.PrivateServerId, game.PrivateServerOwnerId)
+	)
 end
 
 local ShiftTripSystem = {}
@@ -189,7 +192,7 @@ function ShiftTripSystem.new(options: Options): ShiftTripSystem
 				leaving:Disconnect()
 			end)
 			if isPublicShiftServer() then
-				log:warn("a public server of the shift place: every player is sent to the depot")
+				log:warn("a public server of the shift place: every player is sent to the hub")
 				local function sendToDepot(player: Player)
 					QueueServiceServer:returnParty({ player }, DepotConstants.ROLE_DEPOT, {})
 					-- Still here after the window: the teleport failed; nothing else would ever remove them.
