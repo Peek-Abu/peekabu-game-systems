@@ -10,9 +10,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local DepotTypes = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotTypes)
 
--- The place-role table, registered in Queue's QueueRegistry by DepotServiceServer at load. Keys are the
--- role names below. 0 is Queue's placeholder PlaceId: that role is reached by a local move (both roles in
--- one server) until its real PlaceId is filled in. See docs/cleanup-crew-publish.md.
 -- The contract board's work order (Figma 2a/2b). Quota and shift lines are filled from ShiftConstants by
 -- DepotBoardViewModel; NOTES is the contract's own note. The quota line is for the crew in the reader's truck
 -- (ShiftQuotaFormulas), or the range by crew size when they are not in one; worded for young players.
@@ -44,6 +41,7 @@ local BOARD_COPY = table.freeze({
 })
 
 -- The hub: the experience's start place (public servers, the lobby).
+-- Both ids are registered through DepotPlaceUtils.roles; while either is 0, both register as 0 and the server plays both roles.
 local HUB_PLACE_ID = 113354563835664
 -- OWNER: the Shift place's PlaceId (docs/cleanup-crew-publish.md §2). 0 keeps both roles in one server.
 local SHIFT_PLACE_ID = 0

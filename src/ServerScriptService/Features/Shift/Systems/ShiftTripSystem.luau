@@ -19,7 +19,7 @@
 	It also gives Queue the shift's local-move arrival point: where the player already stands (in Studio, still aboard
 	their truck at the depot), so nothing changes before the transit's load screen is up; the transit then places them in the truck). It gives Queue the depot as
 	the home of redirected strangers, and on a live PUBLIC server of the shift place (someone reached it without a
-	party; reserved servers are Queue's) it sends every player to the depot (and kicks one still here after the leaving window). ShiftServiceServer hands Round
+	party; reserved servers are Queue's) it sends every player to the hub (and kicks one still here after the leaving window). ShiftServiceServer hands Round
 	`eligible` (only the crew takes part) and Death `spawnFor` (crew in the loading bay; anyone else at the
 	depot where this server runs it, otherwise in the loading bay).
 
