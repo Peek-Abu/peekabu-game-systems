@@ -46,6 +46,7 @@ local NoiseTypes = require(ReplicatedStorage.Shared.Features.Noise.Data.NoiseTyp
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
+local AnalyticsSessionSystem = require(ServerScriptService.Features.Analytics.Systems.AnalyticsSessionSystem)
 local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
@@ -108,15 +109,40 @@ local function held(player: Player): string
 	return kind or "empty"
 end
 
+-- A first-time funnel step for each crew member (the tracker drops repeats).
+local function funnelCrew(step: string, detail: string?)
+	for _, player in ShiftAnalyticsSystem.crew() do
+		AnalyticsSessionSystem.funnelStep(player, step, detail)
+	end
+end
+
 local function onChanged(state: ShiftTypes.ShiftState)
 	local previous = before
 	before = state
 	ShiftAnalyticsSystem.setShift(state)
+	-- Punching out can happen in any phase; the review opens for everyone present when the results phase begins.
+	if previous == nil or previous.punched ~= state.punched then
+		for _, userId in
+			ShiftAnalyticsUtils.newlyPunched(if previous ~= nil then previous.punched else nil, state.punched)
+		do
+			local player = Players:GetPlayerByUserId(userId)
+			if player ~= nil then
+				AnalyticsSessionSystem.funnelStep(player, "clocked_out")
+			end
+		end
+	end
+	if state.phase == "results" and (previous == nil or previous.phase ~= "results") then
+		-- Server proxy for "saw the review": the results phase began while the player was present.
+		for _, player in ShiftAnalyticsSystem.crew() do
+			AnalyticsSessionSystem.funnelStep(player, "results_viewed")
+		end
+	end
 	if state.phase ~= "running" then
 		return
 	end
 	if previous == nil or previous.phase ~= "running" then
 		ShiftAnalyticsSystem.beginShift()
+		funnelCrew("shift_started")
 		local replay = state.shift > 1
 		ShiftAnalyticsSystem.emit("contract_started", "crew", {
 			target = ShiftAnalyticsSystem.variantSource(),
@@ -124,6 +150,7 @@ local function onChanged(state: ShiftTypes.ShiftState)
 			value = state.shift,
 		})
 		if replay then
+			funnelCrew("next_shift", "replay")
 			ShiftAnalyticsSystem.emit("replay_started", "crew", {
 				target = "another_shift",
 				outcome = "same_server",
@@ -133,6 +160,7 @@ local function onChanged(state: ShiftTypes.ShiftState)
 	elseif previous ~= nil and state.quotaMet and not previous.quotaMet then
 		local at = ShiftAnalyticsSystem.elapsed()
 		ShiftAnalyticsSystem.tracker:markQuota(at)
+		funnelCrew("quota_met")
 		ShiftAnalyticsSystem.emit("quota_met", "crew", { target = "clearance", outcome = "met", value = at })
 	end
 end
@@ -152,6 +180,9 @@ local function onRunEnded(outcome: string)
 end
 
 local function onVacuumStarted(player: Player, pile: BasePart)
+	if running() then
+		AnalyticsSessionSystem.funnelStep(player, "first_cleanup")
+	end
 	if not running() or not ShiftAnalyticsSystem.tracker:firstCleanup(player.UserId) then
 		return
 	end
@@ -186,6 +217,7 @@ local function onPickedUp(player: Player, object: Instance)
 	if kind == nil then
 		return
 	end
+	AnalyticsSessionSystem.funnelStep(player, "first_pickup")
 	ShiftAnalyticsSystem.emit("cargo_picked_up", player, {
 		target = `{kind}:{source}`,
 		outcome = ShiftAnalyticsSystem.quotaTag(),

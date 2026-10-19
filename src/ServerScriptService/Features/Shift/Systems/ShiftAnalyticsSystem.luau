@@ -240,6 +240,7 @@ end
 	the loader's attempts for the banked salvage kinds close as banked.
 ]=]
 function ShiftAnalyticsSystem.banked(player: Player, deposit: CargoTypes.Deposit)
+	AnalyticsSessionSystem.funnelStep(player, "first_bank")
 	local tag = ShiftAnalyticsSystem.quotaTag()
 	local salvageKinds: { string } = {}
 	local salvageCount = 0

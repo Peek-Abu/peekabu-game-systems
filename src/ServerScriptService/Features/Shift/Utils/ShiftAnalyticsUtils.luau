@@ -237,6 +237,23 @@ function ShiftAnalyticsUtils.credited(category: string, value: number, multiplie
 end
 
 --[=[
+	The user ids in `after` that are not in `before` (the crew members who just punched out); nil reads as nobody.
+]=]
+function ShiftAnalyticsUtils.newlyPunched(before: { number }?, after: { number }?): { number }
+	local seen: { [number]: boolean } = {}
+	for _, id in before or {} do
+		seen[id] = true
+	end
+	local fresh: { number } = {}
+	for _, id in after or {} do
+		if not seen[id] then
+			table.insert(fresh, id)
+		end
+	end
+	return fresh
+end
+
+--[=[
 	"noise_investigation" when he starts investigating, "chase_started" when he starts chasing someone (or switches to
 	someone else); nil otherwise.
 ]=]
