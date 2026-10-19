@@ -37,6 +37,7 @@ return function()
 					titles = { earned = {} },
 					premium = { balance = 7 },
 					receipts = { ids = {} },
+					firstSeen = { at = 0 },
 					entitlements = { owned = {} },
 					settings = { values = {} },
 					dailyReward = { lastDay = 0, streak = 0 },

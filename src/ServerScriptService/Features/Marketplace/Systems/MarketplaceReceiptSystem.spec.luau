@@ -9,6 +9,7 @@ local function world()
 		present = true,
 		loaded = true,
 		receipts = { ids = {} },
+		firstSeen = { at = 0 },
 		coins = 0,
 		saveSucceeds = true,
 		commits = 0,

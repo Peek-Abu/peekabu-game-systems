@@ -74,6 +74,7 @@ local function makeProfileData(): PlayerDataTypes.PlayerProfile
 			itemMint = { nextUid = 1 },
 			premium = { balance = 0 },
 			receipts = { ids = {} },
+			firstSeen = { at = 0 },
 			entitlements = { owned = {} },
 			settings = { values = {} },
 			dailyReward = { lastDay = 0, streak = 0 },

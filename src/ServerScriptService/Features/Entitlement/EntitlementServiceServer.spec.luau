@@ -60,6 +60,7 @@ local function makeProfileData()
 			titles = { earned = {} },
 			premium = { balance = 0 },
 			receipts = { ids = {} },
+			firstSeen = { at = 0 },
 			entitlements = { owned = {} },
 			settings = { values = {} },
 			dailyReward = { lastDay = 0, streak = 0 },

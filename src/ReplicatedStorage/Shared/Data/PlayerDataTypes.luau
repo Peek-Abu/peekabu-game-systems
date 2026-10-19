@@ -120,6 +120,14 @@ export type Rank = {
 	lastAwardedRunId: string,
 }
 
+--[=[
+	The account-wide first-seen stamp (AnalyticsFirstSeenSystem; server-only, never synced): the unix time the
+	account was first seen with tracking on. 0 = not stamped yet; 1 = an account from before tracking.
+]=]
+export type FirstSeen = {
+	at: number,
+}
+
 -- A stored setting value; which one a setting holds is its registered kind (SettingTypes).
 export type SettingValue = number | boolean | string
 
@@ -169,6 +177,7 @@ export type PlayerAccount = {
 	settings: Settings,
 	dailyReward: DailyReward,
 	rank: Rank,
+	firstSeen: FirstSeen,
 	-- Extend with other ACCOUNT-WIDE slices here (settings, entitlements, ...)
 }
 

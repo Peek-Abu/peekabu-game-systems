@@ -19,11 +19,15 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local AnalyticsRules = require(ServerScriptService.Features.Analytics.Rules.AnalyticsRules)
+-- Required at load so the firstSeen slice registers before PlayerDataServiceServer init (ServerHandler requires
+-- every service module first).
+local AnalyticsFirstSeenSystem = require(ServerScriptService.Features.Analytics.Systems.AnalyticsFirstSeenSystem)
 
 export type ProgressionStatus = "start" | "complete" | "fail"
 
 local log = Logger.new("AnalyticsServiceServer")
 local counters = { sent = 0, skipped = 0, failed = 0 }
+local stopFirstSeen: (() -> ())? = nil
 
 local function send(label: string, call: () -> ())
 	if RunService:IsStudio() then
@@ -44,6 +48,8 @@ end
 
 export type AnalyticsServiceServer = {
 	dependencies: { string },
+	start: (self: AnalyticsServiceServer) -> (),
+	stop: (self: AnalyticsServiceServer) -> (),
 	custom: (self: AnalyticsServiceServer, player: Player, event: string, value: number?, fields: { string }?) -> (),
 	economy: (
 		self: AnalyticsServiceServer,
@@ -77,7 +83,23 @@ export type AnalyticsServiceServer = {
 }
 
 local AnalyticsServiceServer: AnalyticsServiceServer = {
-	dependencies = {},
+	dependencies = { "PlayerDataServiceServer" },
+
+	--[=[
+		Starts stamping each account's first-seen time as its profile loads.
+	]=]
+	start = function(_self)
+		if stopFirstSeen == nil then
+			stopFirstSeen = AnalyticsFirstSeenSystem.start()
+		end
+	end,
+
+	stop = function(_self)
+		if stopFirstSeen ~= nil then
+			stopFirstSeen()
+			stopFirstSeen = nil
+		end
+	end,
 
 	--[=[
 		A custom event ("egg-stolen", "jumpscare-seen"), with an optional value and up to three fields.
