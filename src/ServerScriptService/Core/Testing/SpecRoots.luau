@@ -453,7 +453,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftTransitScreen"] = "React overlay root wiring ShiftTransitStore to ShiftTransitPanel (no logic)",
 	-- Cleanup Crew: Depot
 	["ReplicatedStorage.Shared.Features.Depot.Data.DepotTypes"] = "type definitions only (no runtime logic)",
-	["ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants"] = "static names, place table, contracts and card texts (no logic)",
+	["ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants"] = "static names, place ids, contracts and card texts (no logic)",
 	["ServerScriptService.Features.Depot.Data.DepotLayoutConstants"] = "authored layout data; validated by DepotLayoutRules.spec",
 	["ReplicatedStorage.Shared.Features.Depot.Net.DepotEvents"] = "ByteNet packet definitions (no logic)",
 	["ServerScriptService.Features.Depot.Systems.DepotBuildSystem"] = "Instance builder (the layout is validated by the specced DepotLayoutRules)",

@@ -1,6 +1,6 @@
 --!strict
 --[=[
-	DepotConstants: the depot's names, the place-role table, tonight's contracts, and the travel cards'
+	DepotConstants: the depot's names, the place ids, tonight's contracts, and the travel cards'
 	timings and texts (Cleanup Crew spec §2, §3, §5). Static data (spec-exempt).
 
 	@class DepotConstants
@@ -43,12 +43,10 @@ local BOARD_COPY = table.freeze({
 	close = "CLOSE  [Esc]",
 })
 
-local PLACE_IDS: { [string]: number } = {
-	-- PLACEHOLDER: the depot place (the experience's start place).
-	depot = 0,
-	-- PLACEHOLDER: the shift place, once the developer creates it in the experience.
-	shift = 0,
-}
+-- The hub: the experience's start place (public servers, the lobby).
+local HUB_PLACE_ID = 113354563835664
+-- OWNER: the Shift place's PlaceId (docs/cleanup-crew-publish.md §2). 0 keeps both roles in one server.
+local SHIFT_PLACE_ID = 0
 
 -- Tonight's job rotates by UTC day (DepotContractUtils.tonight). All are Harlow & Finch: there is one office.
 local CONTRACTS: { DepotTypes.Contract } = {
@@ -75,7 +73,8 @@ local CONTRACTS: { DepotTypes.Contract } = {
 return table.freeze({
 	ROLE_DEPOT = "depot",
 	ROLE_SHIFT = "shift",
-	PLACE_IDS = table.freeze(PLACE_IDS),
+	HUB_PLACE_ID = HUB_PLACE_ID,
+	SHIFT_PLACE_ID = SHIFT_PLACE_ID,
 	CONTRACTS = table.freeze(CONTRACTS),
 	-- How long each travel card stays up; a card that arrives while another shows waits behind it.
 	DRIVE_CARD_SECONDS = 3,

@@ -40,8 +40,7 @@ return function()
 		end)
 
 		it("has a placeholder-or-real whole PlaceId for both roles", function()
-			for _, role in { DepotConstants.ROLE_DEPOT, DepotConstants.ROLE_SHIFT } do
-				local placeId = DepotConstants.PLACE_IDS[role]
+			for _, placeId in { DepotConstants.HUB_PLACE_ID, DepotConstants.SHIFT_PLACE_ID } do
 				expect(type(placeId)).to.equal("number")
 				expect(placeId >= 0 and placeId == math.floor(placeId)).to.equal(true)
 			end

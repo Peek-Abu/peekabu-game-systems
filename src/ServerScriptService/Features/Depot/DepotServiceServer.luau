@@ -2,8 +2,8 @@
 --[=[
 	DepotServiceServer: the company garage, Cleanup Crew's lobby (spec §3 steps 1-3 and 7, §5, §6.2 "Depot").
 
-	- At load it registers the place-role table (DepotConstants.PLACE_IDS: placeholders until the developer
-	  creates the shift place) in Queue's QueueRegistry, so Queue knows every role before services start.
+	- At load it registers the place-role table (DepotPlaceUtils.roles of the hub and shift place ids; the shift
+	  id is a placeholder until the developer creates the shift place) in Queue's QueueRegistry, so Queue knows every role before services start.
 	- Where this server runs the depot role (the depot place; in Studio every role runs in one server) it
 	  builds the graybox garage at DepotLayoutConstants.ORIGIN, validated by DepotLayoutRules (a broken
 	  layout is a boot error): truck beds tagged QueuePad (Queue holds the parties, runs the countdown and
@@ -47,6 +47,7 @@ local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils
 local DepotLayoutConstants = require(DepotServer.Data.DepotLayoutConstants)
 local DepotLayoutRules = require(DepotServer.Rules.DepotLayoutRules)
 local DepotContractUtils = require(DepotServer.Utils.DepotContractUtils)
+local DepotPlaceUtils = require(DepotServer.Utils.DepotPlaceUtils)
 local DepotBuildSystem = require(DepotServer.Systems.DepotBuildSystem)
 local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
 local QueueRegistry = require(ServerScriptService.Features.Queue.Data.QueueRegistry)
@@ -57,7 +58,7 @@ local ShiftCardUtils = require(ServerScriptService.Features.Shift.Utils.ShiftCar
 local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
 
 -- The place-role table, at load: Queue resolves this server's role and routes when services start.
-for role, placeId in DepotConstants.PLACE_IDS do
+for role, placeId in DepotPlaceUtils.roles(DepotConstants.HUB_PLACE_ID, DepotConstants.SHIFT_PLACE_ID) do
 	if not QueueRegistry.has(role) then
 		QueueRegistry.register(role, placeId)
 	end
