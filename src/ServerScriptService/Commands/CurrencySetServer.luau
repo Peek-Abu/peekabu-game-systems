@@ -11,7 +11,7 @@ return function(_context, target: Player, currencyType: CurrencyConstants.Curren
 	-- profile isn't loaded AND when the value was already the target (a no-op), so it can't tell the
 	-- two apart. Reading the stored value back distinguishes them — and reports the clamped value, not
 	-- the raw input.
-	CurrencyService:setCurrency(target.UserId, currencyType, amount)
+	CurrencyService:setCurrency(target.UserId, currencyType, amount, "admin")
 
 	local currency = CurrencyService:getCurrency(target.UserId)
 	if currency == nil then

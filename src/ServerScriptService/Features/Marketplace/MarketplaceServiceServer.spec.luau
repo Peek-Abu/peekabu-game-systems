@@ -94,7 +94,21 @@ return function()
 			return profile
 		end
 
+		local events = {}
+		local changedConnection = nil
+
+		beforeEach(function()
+			events = {}
+			changedConnection = MarketplaceService.premiumChanged:Connect(function(change)
+				table.insert(events, change)
+			end)
+		end)
+
 		afterEach(function()
+			if changedConnection ~= nil then
+				changedConnection:Disconnect()
+				changedConnection = nil
+			end
 			for userId in seeded do
 				PlayerDataService:_setProfileForTesting(userId, nil)
 				StateSyncServerStore.remove(userId)
@@ -113,6 +127,32 @@ return function()
 			expect(MarketplaceService:addPremium(1, 50)).to.equal(true)
 			expect(MarketplaceService:spendPremium(1, 20)).to.equal(true)
 			expect(MarketplaceService:getPremium(1)).to.equal(30)
+		end)
+
+		it("reports a Gleam source with amount, balance and reason", function()
+			seed(1)
+			MarketplaceService:addPremium(1, 25, "admin")
+			expect(#events).to.equal(1)
+			local e = events[1]
+			expect(e.userId).to.equal(1)
+			expect(e.currency).to.equal("gleam")
+			expect(e.flow).to.equal("source")
+			expect(e.amount).to.equal(25)
+			expect(e.balance).to.equal(25)
+			expect(e.reason).to.equal("admin")
+		end)
+
+		it("reports a sink on a successful spend, and nothing for a short one", function()
+			seed(1)
+			MarketplaceService:addPremium(1, 10)
+			MarketplaceService:spendPremium(1, 11)
+			expect(#events).to.equal(1) -- only the add
+			MarketplaceService:spendPremium(1, 4)
+			expect(#events).to.equal(2)
+			expect(events[2].flow).to.equal("sink")
+			expect(events[2].amount).to.equal(4)
+			expect(events[2].balance).to.equal(6)
+			expect(events[2].reason).to.equal("other")
 		end)
 
 		it("refuses to spend more than the balance, spending nothing", function()

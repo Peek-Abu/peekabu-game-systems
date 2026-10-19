@@ -30,6 +30,7 @@ local Guard = require(ReplicatedStorage.Shared.Core.Guard)
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local PlayerDataTypes = require(ReplicatedStorage.Shared.Data.PlayerDataTypes)
+local CurrencyConstants = require(ReplicatedStorage.Shared.Features.Currency.Data.CurrencyConstants)
 local MarketplaceConstants = require(MarketplaceData.MarketplaceConstants)
 local MarketplaceRegistry = require(MarketplaceData.MarketplaceRegistry)
 local MarketplaceTypes = require(MarketplaceData.MarketplaceTypes)
@@ -61,6 +62,7 @@ export type ProductGrant = (player: Player, receipt: Receipt) -> { TransactionOp
 local log = Logger.new("MarketplaceServiceServer")
 
 local productGranted: SignalTyped.Signal<Player, string> = SignalTyped.new()
+local premiumChanged: SignalTyped.Signal<CurrencyConstants.CurrencyChange> = SignalTyped.new()
 local productHandlers: { [string]: ProductGrant } = {}
 local passHandlers: { [string]: { (player: Player) -> () } } = {}
 local passes = MarketplacePassTracker.new()
@@ -69,6 +71,24 @@ local counters = { granted = 0, regranted = 0, retried = 0, passesFound = 0 }
 local stoppers: { () -> () } = {}
 
 -- Narrows the engine's receipt table (typed `{ [string]: any }`) to the fields the base reads.
+-- Reports a Gleam balance change. Called AFTER `mutate` returns, never inside the mutator.
+local function reportPremium(
+	userId: number,
+	flow: "source" | "sink",
+	amount: number,
+	balance: number,
+	reason: CurrencyConstants.ChangeReason
+)
+	premiumChanged:Fire({
+		userId = userId,
+		currency = "gleam",
+		flow = flow,
+		amount = amount,
+		balance = balance,
+		reason = reason,
+	})
+end
+
 local function receiptFrom(info: { [string]: any }): Receipt?
 	local purchaseId = info.PurchaseId
 	local playerId = info.PlayerId
@@ -196,6 +216,7 @@ end
 export type MarketplaceServiceServer = {
 	dependencies: { string },
 	productGranted: SignalTyped.Signal<Player, string>,
+	premiumChanged: SignalTyped.Signal<CurrencyConstants.CurrencyChange>,
 
 	start: (self: MarketplaceServiceServer) -> (),
 	stop: (self: MarketplaceServiceServer) -> (),
@@ -208,8 +229,18 @@ export type MarketplaceServiceServer = {
 	promptPass: (self: MarketplaceServiceServer, player: Player, key: string) -> (),
 
 	getPremium: (self: MarketplaceServiceServer, userId: number) -> number?,
-	addPremium: (self: MarketplaceServiceServer, userId: number, amount: number) -> (boolean, string?),
-	spendPremium: (self: MarketplaceServiceServer, userId: number, amount: number) -> (boolean, string?),
+	addPremium: (
+		self: MarketplaceServiceServer,
+		userId: number,
+		amount: number,
+		reason: CurrencyConstants.ChangeReason?
+	) -> (boolean, string?),
+	spendPremium: (
+		self: MarketplaceServiceServer,
+		userId: number,
+		amount: number,
+		reason: CurrencyConstants.ChangeReason?
+	) -> (boolean, string?),
 	premiumOp: (
 		self: MarketplaceServiceServer,
 		userId: number,
@@ -221,6 +252,7 @@ export type MarketplaceServiceServer = {
 local MarketplaceServiceServer: MarketplaceServiceServer = {
 	dependencies = { "PlayerDataServiceServer", "StateSyncServiceServer" },
 	productGranted = productGranted,
+	premiumChanged = premiumChanged,
 
 	--[=[
 		Takes over ProcessReceipt, checks registered passes for every player, and follows pass purchases.
@@ -327,32 +359,44 @@ local MarketplaceServiceServer: MarketplaceServiceServer = {
 	--[=[
 		Adds premium (a whole, positive amount). Refused by the data layer past MAX_PREMIUM.
 	]=]
-	addPremium = function(_self, userId, amount)
+	addPremium = function(_self, userId, amount, reason)
 		Guard.positiveAmount(amount)
-		return premiumSlice.mutate(userId, function(premium)
+		local balance = 0
+		local changed, why = premiumSlice.mutate(userId, function(premium)
 			premium.balance += amount
+			balance = premium.balance
 			return true
 		end)
+		if changed then
+			reportPremium(userId, "source", amount, balance, reason or "other")
+		end
+		return changed, why
 	end,
 
 	--[=[
 		Spends premium. False (nothing spent) when the balance is short or the profile is not loaded.
 	]=]
-	spendPremium = function(_self, userId, amount)
+	spendPremium = function(_self, userId, amount, reason)
 		Guard.positiveAmount(amount)
-		local changed, reason = premiumSlice.mutate(userId, function(premium)
+		local balance = 0
+		local changed, why = premiumSlice.mutate(userId, function(premium)
 			if premium.balance < amount then
 				return false
 			end
 			premium.balance -= amount
+			balance = premium.balance
 			return true
 		end)
-		return changed, reason
+		if changed then
+			reportPremium(userId, "sink", amount, balance, reason or "other")
+		end
+		return changed, why
 	end,
 
 	--[=[
 		A typed transaction op over the premium slice, for atomic multi-slice writes (spend premium and
-		grant an item, or a product that grants premium).
+		grant an item, or a product that grants premium). Raw ops do NOT fire `premiumChanged`; the
+		week 2 shop's product grants must report it themselves.
 	]=]
 	premiumOp = function(_self, userId, mutator)
 		return premiumSlice.op(userId, mutator)

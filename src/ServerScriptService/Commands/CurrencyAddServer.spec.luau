@@ -25,7 +25,7 @@ return function()
 		local _origAddCurrency
 		local _origGetCurrency
 		local _origGetCurrencyAmount
-		local calls: { { userId: number, currencyType: string, amount: number } } = {}
+		local calls: { { userId: number, currencyType: string, amount: number, reason: string? } } = {}
 		local stored: { [string]: number }? = nil
 
 		beforeAll(function()
@@ -33,8 +33,14 @@ return function()
 			_origGetCurrency = CurrencyService.getCurrency
 			_origGetCurrencyAmount = CurrencyService.getCurrencyAmount
 
-			CurrencyService.addCurrency = function(_self: any, userId: number, currencyType: any, amount: number)
-				table.insert(calls, { userId = userId, currencyType = currencyType, amount = amount })
+			CurrencyService.addCurrency = function(
+				_self: any,
+				userId: number,
+				currencyType: any,
+				amount: number,
+				reason: string?
+			)
+				table.insert(calls, { userId = userId, currencyType = currencyType, amount = amount, reason = reason })
 				if stored == nil then
 					return false
 				end
@@ -70,6 +76,11 @@ return function()
 			expect(calls[1].userId).to.equal(42)
 			expect(calls[1].currencyType).to.equal("credits")
 			expect(calls[1].amount).to.equal(250)
+		end)
+
+		it("tags the grant as an admin change", function()
+			addCurrencyCommand(nil, fakePlayer, "credits", 250)
+			expect(calls[1].reason).to.equal("admin")
 		end)
 
 		it("reports the amount added and the new total when the profile is loaded", function()

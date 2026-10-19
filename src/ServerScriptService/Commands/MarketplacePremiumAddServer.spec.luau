@@ -17,6 +17,7 @@ return function()
 		local originalAdd
 		local stored = nil
 		local refuse = false
+		local lastReason = nil
 
 		beforeAll(function()
 			originalGet = MarketplaceService.getPremium
@@ -24,7 +25,8 @@ return function()
 			MarketplaceService.getPremium = function()
 				return stored
 			end
-			MarketplaceService.addPremium = function(_self, _userId, amount)
+			MarketplaceService.addPremium = function(_self, _userId, amount, reason)
+				lastReason = reason
 				if stored == nil or refuse then
 					return false, "over the cap"
 				end
@@ -41,6 +43,7 @@ return function()
 		beforeEach(function()
 			stored = 0
 			refuse = false
+			lastReason = nil
 		end)
 
 		it("adds premium and reports the new balance", function()
@@ -48,6 +51,11 @@ return function()
 			expect(stored).to.equal(25)
 			expect(message:find("Added 25")).to.be.ok()
 			expect(message:find("now 25")).to.be.ok()
+		end)
+
+		it("tags the grant as an admin change", function()
+			premiumAdd(nil, fakePlayer, 25)
+			expect(lastReason).to.equal("admin")
 		end)
 
 		it("reports an unloaded profile", function()

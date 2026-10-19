@@ -13,7 +13,7 @@ return function(_context, target: Player, currencyType: CurrencyConstants.Curren
 	-- already validated the type).
 	local loaded = CurrencyService:getCurrency(target.UserId) ~= nil
 	local before = CurrencyService:getCurrencyAmount(target.UserId, currencyType)
-	CurrencyService:addCurrency(target.UserId, currencyType, amount)
+	CurrencyService:addCurrency(target.UserId, currencyType, amount, "admin")
 
 	if not loaded then
 		return `Failed to add currency — {target.Name}'s profile isn't loaded.`

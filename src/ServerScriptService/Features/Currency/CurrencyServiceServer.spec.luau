@@ -77,6 +77,10 @@ return function()
 		local _origGetAccountShell
 		local _origMutate
 
+		-- Change events collected from CurrencyService.changed.
+		local events: { CurrencyConstants.CurrencyChange } = {}
+		local changedConnection
+
 		-- The slot the service's reads and writes must land in.
 		local function activeSlotOf(userId: number): any
 			local profile = _profiles[userId]
@@ -169,7 +173,86 @@ return function()
 
 		beforeEach(function()
 			_profiles = {}
+			events = {}
 			writes = 0
+			changedConnection = CurrencyService.changed:Connect(function(change)
+				table.insert(events, change)
+			end)
+		end)
+
+		afterEach(function()
+			changedConnection:Disconnect()
+		end)
+
+		-- -------------------------------------------------------------------------
+		describe("change events", function()
+			it("reports a source with the amount, ending balance and reason", function()
+				_profiles[1] = makeProfile(100)
+				expect(CurrencyService:addCurrency(1, "credits", 40, "admin")).to.equal(true)
+				expect(#events).to.equal(1)
+				local e = events[1]
+				expect(e.userId).to.equal(1)
+				expect(e.currency).to.equal("credits")
+				expect(e.flow).to.equal("source")
+				expect(e.amount).to.equal(40)
+				expect(e.balance).to.equal(140)
+				expect(e.reason).to.equal("admin")
+			end)
+
+			it("reports a sink on remove and defaults the reason to other", function()
+				_profiles[1] = makeProfile(100)
+				CurrencyService:removeCurrency(1, "credits", 30)
+				expect(events[1].flow).to.equal("sink")
+				expect(events[1].amount).to.equal(30)
+				expect(events[1].balance).to.equal(70)
+				expect(events[1].reason).to.equal("other")
+			end)
+
+			it("reports setCurrency as the delta with the given reason", function()
+				_profiles[1] = makeProfile(100)
+				CurrencyService:setCurrency(1, "credits", 60, "admin")
+				expect(events[1].flow).to.equal("sink")
+				expect(events[1].amount).to.equal(40)
+				expect(events[1].balance).to.equal(60)
+				expect(events[1].reason).to.equal("admin")
+			end)
+
+			it("reports nothing for a refused or no-change write", function()
+				_profiles[1] = makeProfile(100)
+				CurrencyService:removeCurrency(1, "credits", 500)
+				CurrencyService:setCurrency(1, "credits", 100)
+				expect(#events).to.equal(0)
+			end)
+
+			it("grants Credits and Gloom in one write, one event each", function()
+				_profiles[1] = makeProfile(0)
+				expect(CurrencyService:grant(1, { credits = 760, gloom = 340 }, "shiftPay")).to.equal(true)
+				expect(CurrencyService:getCurrencyAmount(1, "credits")).to.equal(760)
+				expect(CurrencyService:getCurrencyAmount(1, "gloom")).to.equal(340)
+				expect(#events).to.equal(2)
+				expect(writes).to.equal(1) -- the mutate stub counts data-layer writes
+			end)
+
+			it("reports the clamped delta at the cap, and nothing once fully absorbed", function()
+				_profiles[1] = makeProfile(CurrencyConstants.MAX_CURRENCY - 10)
+				CurrencyService:grant(1, { credits = 50 }, "shiftPay")
+				expect(events[1].amount).to.equal(10)
+				expect(events[1].balance).to.equal(CurrencyConstants.MAX_CURRENCY)
+				expect(CurrencyService:grant(1, { credits = 50 }, "shiftPay")).to.equal(false)
+				expect(#events).to.equal(1)
+			end)
+
+			it("grants nothing for all-zero amounts and refuses bad input", function()
+				_profiles[1] = makeProfile(0)
+				expect(CurrencyService:grant(1, { credits = 0, gloom = 0 }, "shiftPay")).to.equal(false)
+				expect(function()
+					CurrencyService:grant(1, { credits = -1 }, "shiftPay")
+				end).to.throw()
+				expect(function()
+					CurrencyService:grant(1, { coins = 1 } :: any, "shiftPay")
+				end).to.throw()
+				expect(#events).to.equal(0)
+			end)
 		end)
 
 		-- -------------------------------------------------------------------------
@@ -369,7 +452,7 @@ return function()
 		describe("grant", function()
 			it("credits Gloom and Credits in one write", function()
 				_profiles[1] = makeProfile(0)
-				expect(CurrencyService:grant(1, { credits = 760, gloom = 340 })).to.equal(true)
+				expect(CurrencyService:grant(1, { credits = 760, gloom = 340 }, "shiftPay")).to.equal(true)
 				expect(CurrencyService:getCurrencyAmount(1, "credits")).to.equal(760)
 				expect(CurrencyService:getCurrencyAmount(1, "gloom")).to.equal(340)
 				expect(writes).to.equal(1)
@@ -377,41 +460,41 @@ return function()
 
 			it("adds to the existing balance", function()
 				_profiles[1] = makeProfile(100)
-				expect(CurrencyService:grant(1, { credits = 40 })).to.equal(true)
+				expect(CurrencyService:grant(1, { credits = 40 }, "shiftPay")).to.equal(true)
 				expect(CurrencyService:getCurrencyAmount(1, "credits")).to.equal(140)
 			end)
 
 			it("caps at MAX_CURRENCY, and reports false once fully absorbed", function()
 				_profiles[1] = makeProfile(CurrencyConstants.MAX_CURRENCY - 10)
-				expect(CurrencyService:grant(1, { credits = 50 })).to.equal(true)
+				expect(CurrencyService:grant(1, { credits = 50 }, "shiftPay")).to.equal(true)
 				expect(CurrencyService:getCurrencyAmount(1, "credits")).to.equal(CurrencyConstants.MAX_CURRENCY)
-				expect(CurrencyService:grant(1, { credits = 50 })).to.equal(false)
+				expect(CurrencyService:grant(1, { credits = 50 }, "shiftPay")).to.equal(false)
 			end)
 
 			it("writes nothing for all-zero or empty amounts", function()
 				_profiles[1] = makeProfile(0)
-				expect(CurrencyService:grant(1, { credits = 0, gloom = 0 })).to.equal(false)
-				expect(CurrencyService:grant(1, {})).to.equal(false)
+				expect(CurrencyService:grant(1, { credits = 0, gloom = 0 }, "shiftPay")).to.equal(false)
+				expect(CurrencyService:grant(1, {}, "shiftPay")).to.equal(false)
 				expect(writes).to.equal(0)
 			end)
 
 			it("refuses a negative amount, an unknown currency and a bad user id before writing", function()
 				_profiles[1] = makeProfile(0)
 				expect(function()
-					CurrencyService:grant(1, { credits = -1 })
+					CurrencyService:grant(1, { credits = -1 }, "shiftPay")
 				end).to.throw()
 				expect(function()
-					CurrencyService:grant(1, { coins = 1 } :: any)
+					CurrencyService:grant(1, { coins = 1 } :: any, "shiftPay")
 				end).to.throw()
 				expect(function()
-					CurrencyService:grant("bad" :: any, { credits = 1 })
+					CurrencyService:grant("bad" :: any, { credits = 1 }, "shiftPay")
 				end).to.throw()
 				expect(writes).to.equal(0)
 				expect(CurrencyService:getCurrencyAmount(1, "credits")).to.equal(0)
 			end)
 
 			it("returns false when the profile is not loaded", function()
-				expect(CurrencyService:grant(999, { credits = 5 })).to.equal(false)
+				expect(CurrencyService:grant(999, { credits = 5 }, "shiftPay")).to.equal(false)
 			end)
 		end)
 

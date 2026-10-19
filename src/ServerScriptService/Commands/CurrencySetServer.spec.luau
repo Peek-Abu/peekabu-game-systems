@@ -18,15 +18,21 @@ return function()
 	describe("CurrencySetServer", function()
 		local _origSetCurrency
 		local _origGetCurrency
-		local calls: { { userId: number, currencyType: string, amount: number } } = {}
+		local calls: { { userId: number, currencyType: string, amount: number, reason: string? } } = {}
 		local stored: { [string]: number }? = nil
 
 		beforeAll(function()
 			_origSetCurrency = CurrencyService.setCurrency
 			_origGetCurrency = CurrencyService.getCurrency
 
-			CurrencyService.setCurrency = function(_self: any, userId: number, currencyType: any, amount: number)
-				table.insert(calls, { userId = userId, currencyType = currencyType, amount = amount })
+			CurrencyService.setCurrency = function(
+				_self: any,
+				userId: number,
+				currencyType: any,
+				amount: number,
+				reason: string?
+			)
+				table.insert(calls, { userId = userId, currencyType = currencyType, amount = amount, reason = reason })
 				if stored ~= nil then
 					stored[currencyType] = amount
 				end
@@ -53,6 +59,11 @@ return function()
 			expect(calls[1].userId).to.equal(42)
 			expect(calls[1].currencyType).to.equal("credits")
 			expect(calls[1].amount).to.equal(10)
+		end)
+
+		it("tags the write as an admin change", function()
+			setCurrencyCommand(nil, fakePlayer, "credits", 10)
+			expect(calls[1].reason).to.equal("admin")
 		end)
 
 		it("reports the stored value when the profile is loaded", function()

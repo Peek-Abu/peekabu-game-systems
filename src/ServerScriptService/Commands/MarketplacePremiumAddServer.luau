@@ -10,7 +10,7 @@ return function(_context, target: Player, amount: number)
 	if MarketplaceService:getPremium(target.UserId) == nil then
 		return `Failed to add premium: {target.Name}'s profile isn't loaded.`
 	end
-	local ok, reason = MarketplaceService:addPremium(target.UserId, amount)
+	local ok, reason = MarketplaceService:addPremium(target.UserId, amount, "admin")
 	if not ok then
 		return `Failed to add premium to {target.Name}: {reason or "refused"}.`
 	end

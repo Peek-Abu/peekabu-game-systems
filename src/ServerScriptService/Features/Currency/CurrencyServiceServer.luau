@@ -4,6 +4,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local Guard = require(ReplicatedStorage.Shared.Core.Guard)
+local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local PlayerDataTypes = require(ReplicatedStorage.Shared.Data.PlayerDataTypes)
 local CurrencyUtils = require(ReplicatedStorage.Shared.Features.Currency.Utils.CurrencyUtils)
 local CurrencyConstants = require(ReplicatedStorage.Shared.Features.Currency.Data.CurrencyConstants)
@@ -27,6 +28,30 @@ end, CurrencyUtils.validateCurrency)
 
 local log = Logger.new("CurrencyServiceServer")
 
+local currencyChanged: SignalTyped.Signal<CurrencyConstants.CurrencyChange> = SignalTyped.new()
+
+-- Fires one change event for a balance that moved (nothing when it did not). Always called AFTER
+-- `mutate` returns, never inside the mutator (a no-yield region).
+local function report(
+	userId: number,
+	currency: CurrencyConstants.CurrencyType,
+	oldAmount: number,
+	newAmount: number,
+	reason: CurrencyConstants.ChangeReason
+)
+	if newAmount == oldAmount then
+		return
+	end
+	currencyChanged:Fire({
+		userId = userId,
+		currency = currency,
+		flow = if newAmount > oldAmount then "source" else "sink",
+		amount = math.abs(newAmount - oldAmount),
+		balance = newAmount,
+		reason = reason,
+	})
+end
+
 --[=[
 	Public interface of the service — the SINGLE place method/field types are declared.
 
@@ -44,6 +69,7 @@ local log = Logger.new("CurrencyServiceServer")
 ]=]
 export type CurrencyServiceServer = {
 	dependencies: { string },
+	changed: SignalTyped.Signal<CurrencyConstants.CurrencyChange>,
 
 	init: (self: CurrencyServiceServer) -> (),
 	getCurrency: (self: CurrencyServiceServer, userId: number) -> PlayerDataTypes.Currency?,
@@ -62,21 +88,29 @@ export type CurrencyServiceServer = {
 		self: CurrencyServiceServer,
 		userId: number,
 		currencyType: CurrencyConstants.CurrencyType,
-		amount: number
+		amount: number,
+		reason: CurrencyConstants.ChangeReason?
 	) -> boolean,
 	removeCurrency: (
 		self: CurrencyServiceServer,
 		userId: number,
 		currencyType: CurrencyConstants.CurrencyType,
-		amount: number
+		amount: number,
+		reason: CurrencyConstants.ChangeReason?
 	) -> boolean,
 	setCurrency: (
 		self: CurrencyServiceServer,
 		userId: number,
 		currencyType: CurrencyConstants.CurrencyType,
-		amount: number
+		amount: number,
+		reason: CurrencyConstants.ChangeReason?
 	) -> boolean,
-	grant: (self: CurrencyServiceServer, userId: number, amounts: CurrencyConstants.Amounts) -> boolean,
+	grant: (
+		self: CurrencyServiceServer,
+		userId: number,
+		amounts: CurrencyConstants.Amounts,
+		reason: CurrencyConstants.ChangeReason
+	) -> boolean,
 	currencyOp: (
 		self: CurrencyServiceServer,
 		userId: number,
@@ -87,6 +121,7 @@ export type CurrencyServiceServer = {
 
 local CurrencyServiceServer: CurrencyServiceServer = {
 	dependencies = { "PlayerDataServiceServer" },
+	changed = currencyChanged,
 
 	--[=[
 		Initializes the CurrencyServiceServer. Validates the hand-maintained CurrencyType union
@@ -143,22 +178,27 @@ local CurrencyServiceServer: CurrencyServiceServer = {
 		@param amount number -- The amount to add
 		@return boolean -- True if successful, false otherwise
 	]=]
-	addCurrency = function(_self, userId, currencyType, amount)
+	addCurrency = function(_self, userId, currencyType, amount, reason)
 		Guard.userId(userId)
 		assert(CurrencyConstants.isValidCurrencyType(currencyType), `invalid currency type: "{currencyType}"`)
 		Guard.positiveAmount(amount)
 
 		-- Truncate mutate's (changed, reason) to the declared boolean: Currency doesn't surface
 		-- validator reasons yet (see Inventory/Equipment for the surfaced pattern when it does).
+		local before, after = 0, 0
 		local changed = currencySlice.mutate(userId, function(currency)
 			local oldAmount = currency[currencyType] or 0
 			local newAmount = math.min(oldAmount + amount, CurrencyConstants.MAX_CURRENCY)
 			if newAmount == oldAmount then
 				return false -- No change due to cap
 			end
+			before, after = oldAmount, newAmount
 			currency[currencyType] = newAmount
 			return true
 		end)
+		if changed then
+			report(userId, currencyType, before, after, reason or "other")
+		end
 		return changed
 	end,
 
@@ -169,21 +209,26 @@ local CurrencyServiceServer: CurrencyServiceServer = {
 		@param amount number -- The amount to remove
 		@return boolean -- True if successful, false otherwise
 	]=]
-	removeCurrency = function(_self, userId, currencyType, amount)
+	removeCurrency = function(_self, userId, currencyType, amount, reason)
 		Guard.userId(userId)
 		assert(CurrencyConstants.isValidCurrencyType(currencyType), `invalid currency type: "{currencyType}"`)
 		Guard.positiveAmount(amount)
 
 		-- Truncate mutate's (changed, reason) to the declared boolean: Currency doesn't surface
 		-- validator reasons yet (see Inventory/Equipment for the surfaced pattern when it does).
+		local before, after = 0, 0
 		local changed = currencySlice.mutate(userId, function(currency)
 			local oldAmount = currency[currencyType] or 0
 			if oldAmount < amount then
 				return false
 			end
-			currency[currencyType] = oldAmount - amount
+			before, after = oldAmount, oldAmount - amount
+			currency[currencyType] = after
 			return true
 		end)
+		if changed then
+			report(userId, currencyType, before, after, reason or "other")
+		end
 		return changed
 	end,
 
@@ -195,7 +240,7 @@ local CurrencyServiceServer: CurrencyServiceServer = {
 		@param amount number -- The amount to set (clamped to MAX_CURRENCY)
 		@return boolean -- True if successful, false otherwise
 	]=]
-	setCurrency = function(_self, userId, currencyType, amount)
+	setCurrency = function(_self, userId, currencyType, amount, reason)
 		Guard.userId(userId)
 		assert(CurrencyConstants.isValidCurrencyType(currencyType), `invalid currency type: "{currencyType}"`)
 		Guard.nonNegativeAmount(amount)
@@ -203,26 +248,32 @@ local CurrencyServiceServer: CurrencyServiceServer = {
 		local clamped = math.min(amount, CurrencyConstants.MAX_CURRENCY)
 		-- Truncate mutate's (changed, reason) to the declared boolean: Currency doesn't surface
 		-- validator reasons yet (see Inventory/Equipment for the surfaced pattern when it does).
+		local before = 0
 		local changed = currencySlice.mutate(userId, function(currency)
 			local oldAmount = currency[currencyType] or 0
 			if oldAmount == clamped then
 				return false -- No change needed
 			end
+			before = oldAmount
 			currency[currencyType] = clamped
 			return true
 		end)
+		if changed then
+			report(userId, currencyType, before, clamped, reason or "other")
+		end
 		return changed
 	end,
 
 	--[=[
 		Credits several currencies in ONE write (one currency-slice mutation), each capped at MAX_CURRENCY. Server-only
 		reward path (shift pay). Zero amounts are skipped; an unknown currency key or a negative/non-finite amount throws
-		before anything is written.
+		before anything is written. Fires `changed` once per currency whose balance moved, after the write.
 		@param userId number -- The user ID
 		@param amounts CurrencyConstants.Amounts -- Amount to add per currency
+		@param reason CurrencyConstants.ChangeReason -- Why, for economy analytics
 		@return boolean -- True when at least one balance changed (false: nothing to add, everything already at the cap, or no profile)
 	]=]
-	grant = function(_self, userId, amounts)
+	grant = function(_self, userId, amounts, reason)
 		Guard.userId(userId)
 		local adds: { { currency: CurrencyConstants.CurrencyType, amount: number } } = {}
 		for key, amount in amounts do
@@ -239,18 +290,24 @@ local CurrencyServiceServer: CurrencyServiceServer = {
 			return false
 		end
 
+		local moved: { { currency: CurrencyConstants.CurrencyType, before: number, after: number } } = {}
 		local changed = currencySlice.mutate(userId, function(currency)
-			local moved = false
+			table.clear(moved) -- a re-run mutator must not double-report
 			for _, add in adds do
 				local oldAmount = currency[add.currency] or 0
 				local newAmount = math.min(oldAmount + add.amount, CurrencyConstants.MAX_CURRENCY)
 				if newAmount ~= oldAmount then
 					currency[add.currency] = newAmount
-					moved = true
+					table.insert(moved, { currency = add.currency, before = oldAmount, after = newAmount })
 				end
 			end
-			return moved
+			return #moved > 0
 		end)
+		if changed then
+			for _, move in moved do
+				report(userId, move.currency, move.before, move.after, reason)
+			end
+		end
 		return changed
 	end,
 
@@ -259,6 +316,7 @@ local CurrencyServiceServer: CurrencyServiceServer = {
 		multi-player atomic writes via `PlayerDataService:transaction()`. The mutator's `currency`
 		param is fully typed — this is the typed alternative to hand-writing a raw operation table.
 		Pure packaging: nothing runs (and no validation beyond userId) until transaction() executes.
+		Raw transaction ops do NOT fire `changed`; use `grant` for reportable payouts.
 
 		```lua
 		PlayerDataService:transaction({

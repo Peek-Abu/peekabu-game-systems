@@ -15,8 +15,20 @@ export type CurrencyDefinition = {
 -- Define the type explicitly (must match CURRENCIES keys)
 export type CurrencyType = "gloom" | "credits"
 
+-- Economy analytics: every currency the game can report a change for. Gleam is the Robux-bought
+-- `premium` account slice (see below), so it is reportable but is not a CurrencyType key.
+export type EconomyCurrency = CurrencyType | "gleam"
+export type ChangeReason = "shiftPay" | "admin" | "other"
 -- An amount per currency, for crediting several in one write (CurrencyServiceServer:grant).
 export type Amounts = { [CurrencyType]: number }
+export type CurrencyChange = {
+	userId: number,
+	currency: EconomyCurrency,
+	flow: "source" | "sink",
+	amount: number,
+	balance: number,
+	reason: ChangeReason,
+}
 
 --[=[
 	DO NOT add a premium (Robux-purchased) currency here.
