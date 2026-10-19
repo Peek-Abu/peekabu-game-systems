@@ -18,16 +18,20 @@ local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
+local AnalyticsConstants = require(ServerScriptService.Features.Analytics.Data.AnalyticsConstants)
 local AnalyticsRules = require(ServerScriptService.Features.Analytics.Rules.AnalyticsRules)
 -- Required at load so the firstSeen slice registers before PlayerDataServiceServer init (ServerHandler requires
 -- every service module first).
 local AnalyticsFirstSeenSystem = require(ServerScriptService.Features.Analytics.Systems.AnalyticsFirstSeenSystem)
+local AnalyticsSessionSystem = require(ServerScriptService.Features.Analytics.Systems.AnalyticsSessionSystem)
+local AnalyticsTypes = require(ServerScriptService.Features.Analytics.Data.AnalyticsTypes)
 
 export type ProgressionStatus = "start" | "complete" | "fail"
 
 local log = Logger.new("AnalyticsServiceServer")
 local counters = { sent = 0, skipped = 0, failed = 0 }
 local stopFirstSeen: (() -> ())? = nil
+local stopSession: (() -> ())? = nil
 
 local function send(label: string, call: () -> ())
 	if RunService:IsStudio() then
@@ -83,18 +87,46 @@ export type AnalyticsServiceServer = {
 }
 
 local AnalyticsServiceServer: AnalyticsServiceServer = {
-	dependencies = { "PlayerDataServiceServer" },
+	dependencies = { "PlayerDataServiceServer", "ExperimentServiceServer", "QueueServiceServer" },
 
 	--[=[
-		Starts stamping each account's first-seen time as its profile loads.
+		Starts stamping each account's first-seen time as its profile loads, and the session system (platform,
+		assignment log, hub funnel), handing it a Sender over this service's own calls.
 	]=]
-	start = function(_self)
+	start = function(self)
 		if stopFirstSeen == nil then
 			stopFirstSeen = AnalyticsFirstSeenSystem.start()
+		end
+		if stopSession == nil then
+			local sender: AnalyticsTypes.Sender = {
+				custom = function(player, event, value, fields)
+					self:custom(player, event, value, fields)
+				end,
+				funnel = function(player, step, stepName, fields)
+					self:funnel(player, AnalyticsConstants.FUNNEL, step, stepName, fields)
+				end,
+				economy = function(player, call, fields)
+					self:economy(
+						player,
+						call.flow,
+						call.currency,
+						call.amount,
+						call.endingBalance,
+						call.transactionType,
+						call.sku,
+						fields
+					)
+				end,
+			}
+			stopSession = AnalyticsSessionSystem.start(sender)
 		end
 	end,
 
 	stop = function(_self)
+		if stopSession ~= nil then
+			stopSession()
+			stopSession = nil
+		end
 		if stopFirstSeen ~= nil then
 			stopFirstSeen()
 			stopFirstSeen = nil

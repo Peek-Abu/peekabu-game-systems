@@ -1,0 +1,195 @@
+--!strict
+--[=[
+	AnalyticsSessionSystem: week-1 analytics' per-session shell, running in the hub and in the Shift place. It takes the
+	client's platform report, logs each player's experiment assignment once per session, keeps the hub half of the
+	first-time funnel (joined_hub, boarded_truck, next_shift) and builds the one context field every event carries.
+
+	It is handed a Sender at `start` and never requires AnalyticsServiceServer (that service starts it).
+
+	Spec-exempt shell (Players, ByteNet, Queue, PlayerData); the context, cohort, tags and dedupe are the specced
+	AnalyticsContextUtils, AnalyticsContextTracker and ExperimentServiceServer.
+
+	@class AnalyticsSessionSystem
+]=]
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
+
+local Logger = require(ReplicatedStorage.Shared.Core.Logger)
+local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
+local ShiftEvents = require(ReplicatedStorage.Shared.Features.Shift.Net.ShiftEvents)
+local ShiftPlatformRules = require(ReplicatedStorage.Shared.Features.Shift.Rules.ShiftPlatformRules)
+local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
+local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
+local AnalyticsConstants = require(ServerScriptService.Features.Analytics.Data.AnalyticsConstants)
+local AnalyticsTypes = require(ServerScriptService.Features.Analytics.Data.AnalyticsTypes)
+local AnalyticsContextTracker = require(ServerScriptService.Features.Analytics.State.AnalyticsContextTracker)
+local AnalyticsContextUtils = require(ServerScriptService.Features.Analytics.Utils.AnalyticsContextUtils)
+local ExperimentRegistry = require(ServerScriptService.Features.Experiment.Data.ExperimentRegistry)
+local ExperimentServiceServer = require(ServerScriptService.Features.Experiment.ExperimentServiceServer)
+local PlayerDataServiceServer = require(ServerScriptService.Features.PlayerData.PlayerDataServiceServer)
+local QueueServiceServer = require(ServerScriptService.Features.Queue.QueueServiceServer)
+
+local log = Logger.new("AnalyticsSessionSystem")
+local build = AnalyticsContextUtils.build(AnalyticsConstants.BUILD_LABEL, game.PlaceVersion)
+local tracker = AnalyticsContextTracker.new()
+
+local sender: AnalyticsTypes.Sender? = nil
+local partyResolver: ((Player) -> number)? = nil
+
+local AnalyticsSessionSystem = {}
+
+AnalyticsSessionSystem.tracker = tracker
+
+--[=[
+	Sets how a player's party size is found (the Shift place hands in its crew size). Nil goes back to 1.
+]=]
+function AnalyticsSessionSystem.setParty(resolver: ((Player) -> number)?)
+	partyResolver = resolver
+end
+
+function AnalyticsSessionSystem.partyOf(player: Player): number
+	local resolver = partyResolver
+	if resolver == nil then
+		return 1
+	end
+	return resolver(player)
+end
+
+function AnalyticsSessionSystem.build(): string
+	return build
+end
+
+--[=[
+	The player's context: the variant tags of `experimentIds` (a crew experiment reads "-" on a hub server, which is
+	not a crew), platform, party, cohort and build.
+]=]
+function AnalyticsSessionSystem.contextOf(
+	player: Player,
+	experimentIds: { string },
+	party: number
+): AnalyticsTypes.Context
+	local isCrew = QueueServiceServer:runsRole(DepotConstants.ROLE_SHIFT)
+	local variants: { string } = {}
+	for _, id in experimentIds do
+		local definition = ExperimentRegistry.get(id)
+		if definition ~= nil and definition.unit == "crew" and not isCrew then
+			table.insert(variants, "-")
+		else
+			table.insert(variants, ExperimentServiceServer:variantOf(player, id))
+		end
+	end
+	return {
+		tags = AnalyticsContextUtils.tags(variants),
+		platform = tracker:platformOf(player.UserId),
+		party = party,
+		cohort = tracker:cohortOf(player.UserId),
+		build = build,
+	}
+end
+
+--[=[
+	The packed `tags|platform|party|cohort|build` field for the player.
+]=]
+function AnalyticsSessionSystem.field(player: Player, experimentIds: { string }, party: number): string
+	return AnalyticsContextUtils.field(AnalyticsSessionSystem.contextOf(player, experimentIds, party))
+end
+
+--[=[
+	Logs funnel step `stepName` once per player per session. False for an unknown step, a repeat, or before `start`.
+]=]
+function AnalyticsSessionSystem.funnelStep(player: Player, stepName: string, detail: string?): boolean
+	local out = sender
+	if out == nil then
+		return false
+	end
+	local number = AnalyticsConstants.stepNumber(stepName)
+	if number == nil or not tracker:markStep(player.UserId, number) then
+		return false
+	end
+	local field = AnalyticsSessionSystem.field(
+		player,
+		AnalyticsConstants.FUNNEL_EXPERIMENTS,
+		AnalyticsSessionSystem.partyOf(player)
+	)
+	out.funnel(player, number, stepName, { field, detail or "-" })
+	return true
+end
+
+-- The platform report: rate-limited, parsed from the fixed enum, first valid report wins.
+local onPlatform = RequestHandler.wrap({
+	name = "AnalyticsPlatform",
+	rateLimit = { maxRequests = 3, windowSeconds = 10 },
+	-- Count, don't warn: the default warn line carries the sender's UserId, and no analytics path logs one.
+	onReject = "count",
+	validate = function(data: number, _player: Player): (boolean, string?, ShiftTypes.Platform?)
+		local platform: ShiftTypes.Platform? = ShiftPlatformRules.parse(data)
+		if platform == nil then
+			return false, "unknown platform", nil
+		end
+		return true, nil, platform
+	end,
+	handler = function(_data: number, player: Player, platform: ShiftTypes.Platform?)
+		if platform ~= nil and tracker:setPlatform(player.UserId, platform) then
+			log:debug(`platform {platform} reported`)
+		end
+	end,
+})
+
+local function logAssignments(out: AnalyticsTypes.Sender, player: Player)
+	local includeCrew = QueueServiceServer:runsRole(DepotConstants.ROLE_SHIFT)
+	for _, assignment in ExperimentServiceServer:assignments(player, includeCrew) do
+		out.custom(player, AnalyticsConstants.ASSIGNMENT_EVENT, nil, {
+			assignment.experimentId,
+			assignment.variant,
+			`{assignment.unit}:{assignment.source}`,
+		})
+	end
+end
+
+--[=[
+	Starts platform intake, the assignment log and the hub funnel triggers. Returns the stopper.
+]=]
+function AnalyticsSessionSystem.start(out: AnalyticsTypes.Sender): () -> ()
+	sender = out
+	local stopPlatform = ShiftEvents.packets.Platform.listen(function(data: number, player: Player?)
+		if player then
+			onPlatform(data, player)
+		end
+	end)
+	local loaded = PlayerDataServiceServer.profileLoaded:Connect(function(userId: number)
+		local player = Players:GetPlayerByUserId(userId)
+		if player == nil then
+			return
+		end
+		-- Task 7 sets the cohort here, first.
+		if tracker:markAssigned(userId) then
+			logAssignments(out, player)
+		end
+		if QueueServiceServer:runsRole(DepotConstants.ROLE_DEPOT) then
+			AnalyticsSessionSystem.funnelStep(player, "joined_hub")
+		end
+	end)
+	local departing = QueueServiceServer.departing:Connect(function(_pad: BasePart, party: { Player })
+		for _, member in party do
+			AnalyticsSessionSystem.funnelStep(member, "boarded_truck")
+		end
+	end)
+	local returned = QueueServiceServer.returned:Connect(function(player: Player)
+		AnalyticsSessionSystem.funnelStep(player, "next_shift", "hub")
+	end)
+	local removing = Players.PlayerRemoving:Connect(function(player: Player)
+		tracker:forget(player.UserId)
+	end)
+	return function()
+		stopPlatform()
+		loaded:Disconnect()
+		departing:Disconnect()
+		returned:Disconnect()
+		removing:Disconnect()
+		sender = nil
+	end
+end
+
+return AnalyticsSessionSystem
