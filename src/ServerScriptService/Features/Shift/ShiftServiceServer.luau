@@ -32,6 +32,8 @@
 	- the crew (M4): a shift starts only for the party that arrived through the Queue (ShiftTripSystem); only
 	  the crew takes part in Round's run, votes and respawns in the loading bay;
 	- the review (M3 UI): ShiftReviewSystem counts piles, drops, noise and times heard for the review;
+	- role: the shift runs only where the shift role runs (QueueServiceServer:runsRole); a hub-only server
+	  publishes no `shift` entry and starts none of this;
 	- reset: Office, Vacuum and Cargo clear everything the shift made. `resetShift` mid-run (Studio test
 	  runs) ends Round's run first and skips the review.
 
@@ -76,6 +78,8 @@ local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServi
 local RoundServiceServer = require(ServerScriptService.Features.Round.RoundServiceServer)
 local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
 local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
+local QueueServiceServer = require(ServerScriptService.Features.Queue.QueueServiceServer)
+local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local StateSyncWorldStore = require(ServerScriptService.Features.StateSync.State.StateSyncWorldStore)
 
 -- Registered at load, before any toast names them (the server's ToastRules falls back to "info" otherwise).
@@ -91,6 +95,8 @@ local state: ShiftTypes.ShiftState = ShiftPhaseRules.initial(ShiftConstants.QUOT
 local results: ShiftTypes.ShiftResults? = nil
 -- The office as this run's site: its variant, quota and build, and what its roll offered.
 local site = ShiftSiteSystem.new()
+-- True once `start` got past the shift-role gate; `stop` does nothing otherwise.
+local started = false
 local resetPending = false
 -- Set once the clock-out has ended Round's run: tick repeats `endShift` until Round leaves running.
 local endingRun = false
@@ -413,6 +419,11 @@ local ShiftServiceServer: ShiftServiceServer = {
 		listens for votes and starts the clock.
 	]=]
 	start = function(_self)
+		if not QueueServiceServer:runsRole(DepotConstants.ROLE_SHIFT) then
+			log:info("not a shift server: the shift does not run here")
+			return
+		end
+		started = true
 		RoundServiceServer:configure({
 			minPlayers = ShiftConstants.MIN_PLAYERS,
 			countdown = ShiftConstants.ARRIVAL_SECONDS,
@@ -453,6 +464,10 @@ local ShiftServiceServer: ShiftServiceServer = {
 	end,
 
 	stop = function(_self)
+		-- Inert in a hub-only server: leave Depot's spawn resolver (Death) alone.
+		if not started then
+			return
+		end
 		for _, stop in stoppers do
 			stop()
 		end
@@ -460,6 +475,7 @@ local ShiftServiceServer: ShiftServiceServer = {
 		trip:stop()
 		DeathServiceServer:setSpawnPoint(nil)
 		StateSyncWorldStore.clear(ShiftConstants.WORLD_ENTRY)
+		started = false
 	end,
 
 	getShift = function(_self)

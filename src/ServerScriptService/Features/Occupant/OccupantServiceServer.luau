@@ -28,6 +28,7 @@
 	- Catch: the kind's attack (onAttack) or the brain's catch effect → OccupantCatchSystem.attempt (OccupantCatchRules):
 	  the jumpscare, lights out, ragdoll launch; ~8 s spectating; the Rehired notice on the respawn in the loading bay;
 	  the catch counts in Shift's review.
+	- Role: he exists only where the shift role runs (QueueServiceServer:runsRole); a hub-only server spawns no Harlow.
 
 	Spec-exempt shell (Instances, raycasts, Players, signals); the decisions are the specced OccupantBrainRules (and
 	its Work, Stare and Director rules), OccupantCatchRules, OccupantTuningFormulas and OccupantTellRules.
@@ -72,6 +73,8 @@ local NpcServiceServer = require(ServerScriptService.Features.Npc.NpcServiceServ
 local OfficeServiceServer = require(ServerScriptService.Features.Office.OfficeServiceServer)
 local RoundServiceServer = require(ServerScriptService.Features.Round.RoundServiceServer)
 local ShiftServiceServer = require(ServerScriptService.Features.Shift.ShiftServiceServer)
+local QueueServiceServer = require(ServerScriptService.Features.Queue.QueueServiceServer)
+local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 
 -- Registered at load so setBrain / onAttack (start) find the kind.
 if not NpcRegistry.has(OccupantConstants.NPC_KIND) then
@@ -424,12 +427,17 @@ local OccupantServiceServer: OccupantServiceServer = {
 		"RoundServiceServer",
 		"ToastServiceServer",
 		"HideServiceServer",
+		"QueueServiceServer",
 	},
 
 	--[=[
 		Gives the kind its brain, follows the shift, listens for noise and turns him while he looks around.
 	]=]
 	start = function(_self)
+		if not QueueServiceServer:runsRole(DepotConstants.ROLE_SHIFT) then
+			log:info("not a shift server: the Manager does not run here")
+			return
+		end
 		NpcServiceServer:setBrain(OccupantConstants.NPC_KIND, brain)
 		HideServiceServer:setWitness(witness)
 		NpcServiceServer:onAttack(OccupantConstants.NPC_KIND, onCatch)
