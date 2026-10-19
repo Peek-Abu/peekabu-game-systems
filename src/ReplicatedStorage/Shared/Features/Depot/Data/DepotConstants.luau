@@ -43,8 +43,7 @@ local BOARD_COPY = table.freeze({
 -- The hub: the experience's start place (public servers, the lobby).
 -- Both ids are registered through DepotPlaceUtils.roles; while either is 0, both register as 0 and the server plays both roles.
 local HUB_PLACE_ID = 113354563835664
--- OWNER: the Shift place's PlaceId (docs/cleanup-crew-publish.md §2). 0 keeps both roles in one server.
-local SHIFT_PLACE_ID = 0
+local SHIFT_PLACE_ID = 118845637680835
 
 -- Tonight's job rotates by UTC day (DepotContractUtils.tonight). All are Harlow & Finch: there is one office.
 local CONTRACTS: { DepotTypes.Contract } = {
