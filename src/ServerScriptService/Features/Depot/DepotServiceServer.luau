@@ -3,7 +3,8 @@
 	DepotServiceServer: the company garage, Cleanup Crew's lobby (spec §3 steps 1-3 and 7, §5, §6.2 "Depot").
 
 	- At load it registers the place-role table (DepotPlaceUtils.roles of the hub and shift place ids; the shift
-	  id is a placeholder until the developer creates the shift place) in Queue's QueueRegistry, so Queue knows every role before services start.
+	  id is a placeholder until the developer creates the shift place) in Queue's QueueRegistry, so Queue knows
+	  every role before services start.
 	- Where this server runs the depot role (the depot place; in Studio every role runs in one server) it
 	  builds the graybox garage at DepotLayoutConstants.ORIGIN, validated by DepotLayoutRules (a broken
 	  layout is a boot error): truck beds tagged QueuePad (Queue holds the parties, runs the countdown and
