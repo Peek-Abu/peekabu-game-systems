@@ -24,6 +24,7 @@ local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTyp
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local AnalyticsConstants = require(ServerScriptService.Features.Analytics.Data.AnalyticsConstants)
 local AnalyticsTypes = require(ServerScriptService.Features.Analytics.Data.AnalyticsTypes)
+local AnalyticsFirstSeenSystem = require(ServerScriptService.Features.Analytics.Systems.AnalyticsFirstSeenSystem)
 local AnalyticsContextTracker = require(ServerScriptService.Features.Analytics.State.AnalyticsContextTracker)
 local AnalyticsContextUtils = require(ServerScriptService.Features.Analytics.Utils.AnalyticsContextUtils)
 local ExperimentRegistry = require(ServerScriptService.Features.Experiment.Data.ExperimentRegistry)
@@ -57,6 +58,17 @@ function AnalyticsSessionSystem.partyOf(player: Player): number
 	return resolver(player)
 end
 
+--[=[
+	Sets the player's cohort from the saved first-seen time (24 h window, so a first session that spans the hub and
+	the Shift place reads "new" on both). A no-op while the stamp is not loaded yet: the cohort stays "unk".
+]=]
+local function refreshCohort(userId: number)
+	local firstSeen = AnalyticsFirstSeenSystem.firstSeenAt(userId)
+	if firstSeen ~= nil then
+		tracker:setCohort(userId, AnalyticsContextUtils.cohort(firstSeen, os.time()))
+	end
+end
+
 function AnalyticsSessionSystem.build(): string
 	return build
 end
@@ -70,6 +82,10 @@ function AnalyticsSessionSystem.contextOf(
 	experimentIds: { string },
 	party: number
 ): AnalyticsTypes.Context
+	-- Signal order against the first-seen stamp is not guaranteed, so a still-unknown cohort is retried here.
+	if tracker:cohortOf(player.UserId) == "unk" then
+		refreshCohort(player.UserId)
+	end
 	local isCrew = QueueServiceServer:runsRole(DepotConstants.ROLE_SHIFT)
 	local variants: { string } = {}
 	for _, id in experimentIds do
@@ -163,7 +179,7 @@ function AnalyticsSessionSystem.start(out: AnalyticsTypes.Sender): () -> ()
 		if player == nil then
 			return
 		end
-		-- Task 7 sets the cohort here, first.
+		refreshCohort(userId)
 		if tracker:markAssigned(userId) then
 			logAssignments(out, player)
 		end

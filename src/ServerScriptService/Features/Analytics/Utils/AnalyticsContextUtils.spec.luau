@@ -11,6 +11,10 @@ return function()
 			expect(AnalyticsContextUtils.cohort(1000, 1000 + 86400)).to.equal("ret")
 			expect(AnalyticsContextUtils.cohort(nil, 5)).to.equal("unk")
 		end)
+
+		it("a first-seen in the future reads new, not negative-returning", function()
+			expect(AnalyticsContextUtils.cohort(2000, 1000)).to.equal("new")
+		end)
 	end)
 
 	describe("tags", function()
