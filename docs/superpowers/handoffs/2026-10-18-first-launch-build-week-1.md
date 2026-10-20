@@ -64,7 +64,7 @@ starting. Then read `AGENTS.md` and the two first-launch reports listed under "W
   valuables made clear). Friends joining a party skip it. Then a gentler Probation first shift.
 
 **Characters**
-- Five employees with light perks and near-flat stats: Pippa, Hauler, Sweeper, Sneak, Scout (working names).
+- Five employees with light perks and near-flat stats: Pippa (Rescuer), Cappy (Scout), Prickles (Sweeper), then a Sneak (likely Morel) and a Hauler. Rank shows on the company lanyard (New Kid, Sweeper, Cleaner, Super Cleaner, Little Boss, Boss, Big Boss); no vests or sashes.
 - Each has 5 mastery ranks.
 - **Pippa polish comes first**: closer to her reference, before new employees reuse the rig.
 
@@ -154,7 +154,7 @@ before starting.
 7. **Week 2 (next):**
    - Orientation wing and Probation shift.
    - The School site.
-   - Employees 2–3.
+   - Employees 2–3: Cappy (Scout: valuables ping for the crew after a room is cleaned; slower vacuum) and Prickles (Sweeper: wider, faster suction; louder). Concept sheets are in characters/concepts/employees and the Figma "Characters" page.
    - Shop and both Lockers.
    - The first effect cosmetics.
    - The Timecard and Work Order.
