@@ -226,14 +226,11 @@ function OfficeLayoutRules.markerFits(layout: Layout, marker: OfficeTypes.Marker
 		return false
 	end
 	if marker.kind == "desk" or marker.kind == "locker" then
-		local half = rotatedHalf(marker)
-		if half ~= nil then
-			for _, other in layout.markers do
-				if
-					other.id ~= marker.id
-					and OfficeLayoutUtils.surfaceTopY(other.kind) ~= nil
-					and overlapsFootprint(other, half, marker)
-				then
+		for _, other in layout.markers do
+			if other.id ~= marker.id and OfficeLayoutUtils.surfaceTopY(other.kind) ~= nil then
+				-- The surface piece's own half-extent, against this desk or locker's.
+				local otherHalf = rotatedHalf(other)
+				if otherHalf ~= nil and overlapsFootprint(other, otherHalf, marker) then
 					return false
 				end
 			end

@@ -60,6 +60,20 @@ return function()
 			expect(kept).to.equal(layout)
 		end)
 
+		it("keeps a desk beside a counter and a cabinet that validate accepts", function()
+			-- Desk half-width 4.125 + counter half-width 3 = 7.125 < 9 apart; cabinet 0.95 + 4.125 < 6 apart.
+			local layout = office({
+				{ id = "r.desk.1", room = "r", kind = "desk", x = 20, z = 5, rotation = 0 },
+				{ id = "r.counter.1", room = "r", kind = "counter", x = 29.2, z = 5, rotation = 0 },
+				{ id = "r.cabinet.1", room = "r", kind = "cabinet", x = 14, z = 5, rotation = 0 },
+			})
+			local valid = OfficeLayoutRules.validate(layout)
+			expect(valid).to.equal(true)
+			local kept, dropped = OfficeLayoutUtils.dropUnfit(layout, OfficeLayoutRules)
+			expect(dropped).to.equal(0)
+			expect(kept).to.equal(layout)
+		end)
+
 		it("drops a table that crowds loot but keeps the loot and the other furniture", function()
 			local layout = office({
 				{ id = "r.table.1", room = "r", kind = "table", x = 10, z = 5, rotation = 0 },
