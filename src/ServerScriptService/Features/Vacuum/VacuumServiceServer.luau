@@ -46,6 +46,7 @@ local VacuumMotionConstants = require(ReplicatedStorage.Shared.Features.Vacuum.D
 local VacuumEvents = require(ReplicatedStorage.Shared.Features.Vacuum.Net.VacuumEvents)
 local VacuumMotionFormulas = require(ReplicatedStorage.Shared.Features.Vacuum.Utils.VacuumMotionFormulas)
 local VacuumChannelTracker = require(ServerScriptService.Features.Vacuum.State.VacuumChannelTracker)
+local VacuumHideSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumHideSystem)
 local VacuumToolSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumToolSystem)
 local VacuumVisualSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumVisualSystem)
 local VacuumEquipmentRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumEquipmentRules)
@@ -254,7 +255,7 @@ local VacuumServiceServer: VacuumServiceServer = {
 	--[=[
 		Handles the pile channel, shrinks piles as they progress, pulses vacuum noise, forgets leavers.
 	]=]
-	start = function(_self)
+	start = function(self)
 		InteractionServiceServer:channel(VacuumConstants.CHANNEL_KIND, {
 			canChannel = canVacuum,
 			onComplete = clear,
@@ -271,6 +272,23 @@ local VacuumServiceServer: VacuumServiceServer = {
 					if backpack ~= nil then
 						backpack.destroy()
 					end
+				end
+			end)
+		)
+
+		-- Going into a hiding spot puts the wand back on the backpack; it stays there (no resume).
+		local hide = VacuumHideSystem.new({
+			unequip = function(player: Player)
+				self:setEquipped(player, false)
+			end,
+		})
+		table.insert(stoppers, hide.stop)
+		table.insert(
+			stoppers,
+			Observers.observePlayer(function(player: Player)
+				hide.watch(player)
+				return function()
+					hide.unwatch(player)
 				end
 			end)
 		)

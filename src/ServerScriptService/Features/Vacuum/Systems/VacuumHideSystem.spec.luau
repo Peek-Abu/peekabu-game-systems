@@ -1,0 +1,65 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideConstants)
+local System = require(script.Parent.VacuumHideSystem)
+
+return function()
+	local ATTRIBUTE = HideConstants.PLAYER_SPOT_ATTRIBUTE
+
+	-- A Configuration stands in for the Player; attribute-changed handlers run deferred, hence the waits.
+	local function setup()
+		local player = Instance.new("Configuration")
+		local calls = {}
+		local hide = System.new({
+			unequip = function(who)
+				table.insert(calls, who)
+			end,
+		})
+		hide.watch(player)
+		return player, calls, hide
+	end
+
+	describe("vacuum hide system", function()
+		it("unequips once when the player goes into a spot, and not when they come out", function()
+			local player, calls, hide = setup()
+			player:SetAttribute(ATTRIBUTE, "desk.3")
+			task.wait()
+			expect(#calls).to.equal(1)
+			expect(calls[1]).to.equal(player)
+			player:SetAttribute(ATTRIBUTE, nil)
+			task.wait()
+			expect(#calls).to.equal(1)
+			hide.stop()
+			player:Destroy()
+		end)
+		it("does not unequip again when the spot id changes while still hiding", function()
+			local player, calls, hide = setup()
+			player:SetAttribute(ATTRIBUTE, "desk.3")
+			task.wait()
+			player:SetAttribute(ATTRIBUTE, "desk.4")
+			task.wait()
+			expect(#calls).to.equal(1)
+			player:SetAttribute(ATTRIBUTE, nil)
+			task.wait()
+			player:SetAttribute(ATTRIBUTE, "desk.4")
+			task.wait()
+			expect(#calls).to.equal(2)
+			hide.stop()
+			player:Destroy()
+		end)
+		it("calls nothing after unwatch or stop", function()
+			local player, calls, hide = setup()
+			hide.unwatch(player)
+			player:SetAttribute(ATTRIBUTE, "desk.3")
+			task.wait()
+			expect(#calls).to.equal(0)
+			player:SetAttribute(ATTRIBUTE, nil)
+			hide.watch(player)
+			hide.stop()
+			player:SetAttribute(ATTRIBUTE, "desk.3")
+			task.wait()
+			expect(#calls).to.equal(0)
+			player:Destroy()
+		end)
+	end)
+end
