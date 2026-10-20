@@ -54,6 +54,8 @@ export type ShiftCrewListProps = {
 	position: UDim2,
 	anchor: Vector2,
 	onToggle: (() -> ())?,
+	-- The phone's list width on a narrow screen (ShiftCrewViewModel.phoneFit); nil is the design width.
+	width: number?,
 }
 
 local function row(member: ShiftCrewViewModel.MemberView, you: boolean, height: number, width: number, order: number)
@@ -125,10 +127,12 @@ end
 
 local function ShiftCrewList(props: ShiftCrewListProps): React.ReactNode
 	local phone = props.phone
-	local rowHeight = if phone then 28 else 40
-	local width = if phone then 176 else 236
-	local padding = if phone then 8 else 12
+	local list = if phone then ShiftCrewViewModel.LIST.phone else ShiftCrewViewModel.LIST.desktop
+	local rowHeight = list.row
+	local padding = list.padding
 	local members = props.roster.members
+	local size = ShiftCrewViewModel.listSize(phone, #members, props.width)
+	local width, height = size.X, size.Y
 	local rows: { [string]: React.ReactNode } = {
 		layout = e("UIListLayout", {
 			SortOrder = Enum.SortOrder.LayoutOrder,
@@ -138,7 +142,6 @@ local function ShiftCrewList(props: ShiftCrewListProps): React.ReactNode
 	for index, member in members do
 		rows[`m{index}`] = row(member, member.userId == props.myId, rowHeight, width - 2 * padding, index)
 	end
-	local height = 2 * padding + #members * (rowHeight + 2)
 	local body: { [string]: React.ReactNode } = {
 		rows = e("Frame", {
 			Position = UDim2.fromOffset(padding, padding),

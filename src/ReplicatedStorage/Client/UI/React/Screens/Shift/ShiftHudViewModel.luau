@@ -126,6 +126,15 @@ export type KeyBindings = { [string]: { Enum.KeyCode | Enum.UserInputType }? }
 
 local ShiftHudViewModel = {}
 
+-- The Gloom meter plate (ShiftGloomMeter), top centre, in HUD design px: its size, its top edge and its Gloom render's
+-- size (the render breaks the plate's left edge by 38% of itself). What opens beside or under it (the crew roster)
+-- lays out against these.
+ShiftHudViewModel.METER = table.freeze({
+	phone = table.freeze({ size = Vector2.new(400, 70), top = 28, icon = 70 }),
+	desktop = table.freeze({ size = Vector2.new(620, 96), top = 40, icon = 100 }),
+})
+ShiftHudViewModel.METER_ICON_OVERHANG = 0.38
+
 -- "m:ss", seconds rounded up, never below 0:00.
 function ShiftHudViewModel.clock(seconds: number): string
 	local whole = math.max(0, math.ceil(seconds))

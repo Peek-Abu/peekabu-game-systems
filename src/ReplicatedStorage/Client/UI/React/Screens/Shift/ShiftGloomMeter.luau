@@ -31,6 +31,8 @@ export type ShiftGloomMeterProps = {
 	view: ShiftHudViewModel.HudView,
 	phone: boolean,
 	top: number,
+	-- The phone's plate width on a narrow screen (ShiftCrewViewModel.phoneFit); nil is the design width.
+	width: number?,
 	-- The server-clock time the shift clock counts down to, live (ShiftHud); nil draws `view.time` as it is.
 	deadline: number?,
 }
@@ -40,15 +42,16 @@ local function ShiftGloomMeter(props: ShiftGloomMeterProps): React.ReactNode
 	local phone = props.phone
 	local meter = ShiftHudViewModel.meter(view)
 	local fill = useProgressTween(view.fill, 0.22, nil, true)
-	local size = if phone then Vector2.new(400, 70) else Vector2.new(620, 96)
-	local iconSize = if phone then 70 else 100
+	local metrics = if phone then ShiftHudViewModel.METER.phone else ShiftHudViewModel.METER.desktop
+	local size = Vector2.new(props.width or metrics.size.X, metrics.size.Y)
+	local iconSize = metrics.icon
 	local left = if phone then 50 else 74
 	local clockWidth = if phone then 104 else 150
 	local barHeight = if phone then 24 else 34
 	local face: { [string]: React.ReactNode } = {
 		gloom = e(ToonIcon, {
 			icon = "gloom",
-			position = UDim2.fromOffset(-iconSize * 0.38, -iconSize * 0.12),
+			position = UDim2.fromOffset(-iconSize * ShiftHudViewModel.METER_ICON_OVERHANG, -iconSize * 0.12),
 			size = UDim2.fromOffset(iconSize, iconSize),
 			drop = 5,
 			zIndex = 5,
