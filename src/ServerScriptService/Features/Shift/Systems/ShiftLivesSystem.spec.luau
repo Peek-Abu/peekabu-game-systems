@@ -37,6 +37,9 @@ local function harness(players)
 				log.fields[userId][field] = nil
 			end
 		end,
+		down = function(player)
+			table.insert(log.calls, `down {player.UserId}`)
+		end,
 		hold = function(player)
 			table.insert(log.calls, `hold {player.UserId}`)
 		end,
@@ -131,6 +134,24 @@ return function()
 			expect(log.fields[1][LIVES]).to.equal(START - 1)
 			log.system:admit(member(2))
 			expect(log.fields[2][LIVES]).to.equal(START)
+		end)
+
+		it("puts a knocked-out player who rejoins straight back out", function()
+			local log = harness({ member(1) })
+			spendAll(log, member(1))
+			local before = #log.calls
+			log.system:admit(member(1))
+			expect(log.calls[before + 1]).to.equal("hold 1")
+			expect(log.calls[before + 2]).to.equal("eliminate 1")
+			expect(log.calls[before + 3]).to.equal("down 1")
+			expect(log.fields[1][OUT]).to.equal(true)
+			expect(log.fields[1][LIVES]).to.equal(0)
+		end)
+
+		it("does not hold or drop a joiner who has lives", function()
+			local log = harness({ member(1) })
+			log.system:admit(member(2))
+			expect(#log.calls).to.equal(0)
 		end)
 
 		it("does nothing outside a run", function()

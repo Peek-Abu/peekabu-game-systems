@@ -176,12 +176,12 @@ return function()
 			expect(state.clockOutAt).to.equal(200)
 		end)
 
-		it("counts down, not leaves, while the only unpunched member is down but coming back", function()
+		it("keeps waiting while the only unpunched member is down but coming back", function()
 			-- 2 is caught (dead, spectating) with lives left; 1 has punched.
 			local stillIn = ShiftClockOutRules.stillIn({ 1, 2 }, { 2 })
 			local state = ShiftClockOutRules.settle(punched({ 1 }), stillIn, 200, { 2 })
-			expect(state.sub).to.equal("clockout")
-			expect(state.clockOutAt).to.equal(200 + LEAVE)
+			expect(state.sub).to.equal("normal")
+			expect(state.clockOutAt).to.equal(nil)
 		end)
 
 		it("leaves at once when the only unpunched member is knocked out, not merely down", function()

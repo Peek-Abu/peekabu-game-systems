@@ -151,15 +151,14 @@ return function()
 			expect(log.state.crewIn).to.equal(1)
 		end)
 
-		it("keeps counting down, not leaving, when the last one inside is only caught and will be back", function()
+		it("keeps waiting, not leaving, when the last one inside is only caught and will be back", function()
 			local log = harness(2)
 			log.out[2] = true
 			log.system.punch(log.crew[1])
-			expect(log.state.sub).to.equal("clockout")
-			expect(log.state.clockOutAt).to.equal(200 + ShiftConstants.TRUCK_LEAVES_SECONDS)
+			expect(log.state.clockOutAt).to.equal(nil)
 			log.time = 215
 			log.system.settle()
-			expect(log.state.clockOutAt).to.equal(200 + ShiftConstants.TRUCK_LEAVES_SECONDS)
+			expect(log.state.clockOutAt).to.equal(nil)
 		end)
 
 		it("leaves at once when the last one inside leaves the game", function()

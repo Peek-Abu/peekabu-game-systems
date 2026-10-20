@@ -39,12 +39,15 @@ export type Deps = {
 	release: ((player: Player) -> ())?,
 	eliminate: ((player: Player) -> ())?,
 	playerById: ((userId: number) -> Player?)?,
+	-- Drops a knocked-out player's live character (a rejoin loads a fresh one).
+	down: ((player: Player) -> ())?,
 }
 
 export type ShiftLivesSystem = {
 	-- A new run: everyone in `players` starts with the starting lives (replacing whatever was kept).
 	begin: (self: ShiftLivesSystem, players: { Player }) -> (),
-	-- A late joiner gets the starting lives; a player already listed keeps what they have. Nothing outside a run.
+	-- A late joiner gets the starting lives; a player already listed keeps what they have (one who is out, rejoining, is
+	-- put straight back out: held, eliminated, their character dropped). Nothing outside a run.
 	admit: (self: ShiftLivesSystem, player: Player) -> (),
 	-- One catch. True when it was the player's last life (they are now out); false otherwise, and for an unknown player
 	-- or one already out, or outside a run.
@@ -72,6 +75,14 @@ local function realEliminate(player: Player)
 	RoundServiceServer:eliminate(player)
 end
 
+local function realDown(player: Player)
+	local character = player.Character
+	local humanoid = if character ~= nil then character:FindFirstChildOfClass("Humanoid") else nil
+	if humanoid ~= nil then
+		DeathServiceServer:kill(humanoid, "caught")
+	end
+end
+
 local function realPlayerById(userId: number): Player?
 	return Players:GetPlayerByUserId(userId)
 end
@@ -84,6 +95,7 @@ function ShiftLivesSystem.new(deps: Deps): ShiftLivesSystem
 	local hold: (Player) -> () = deps.hold or realHold
 	local release: (Player) -> () = deps.release or realRelease
 	local eliminate: (Player) -> () = deps.eliminate or realEliminate
+	local down: (Player) -> () = deps.down or realDown
 	local playerById: (number) -> Player? = deps.playerById or realPlayerById
 
 	local tracker = ShiftLivesTracker.new()
@@ -127,6 +139,20 @@ function ShiftLivesSystem.new(deps: Deps): ShiftLivesSystem
 				return
 			end
 			tracker:admit(player.UserId, startingLives())
+			if tracker:isOut(player.UserId) then
+				-- Left and came back while out: a new Player object has no hold, and a fresh character is alive.
+				local fields: Fields = {
+					[ShiftConstants.PUBLIC_LIVES] = 0,
+					[ShiftConstants.PUBLIC_LIVES_MAX] = tracker:max(player.UserId) or 0,
+					[ShiftConstants.PUBLIC_KNOCKED_OUT] = true,
+				}
+				published[player.UserId] = true
+				setFields(player.UserId, fields)
+				hold(player)
+				eliminate(player)
+				down(player)
+				return
+			end
 			publishLives(player.UserId)
 		end,
 

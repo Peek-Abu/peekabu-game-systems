@@ -493,6 +493,7 @@ local ShiftServiceServer: ShiftServiceServer = {
 		table.clear(stoppers)
 		trip:stop()
 		DeathServiceServer:setSpawnPoint(nil)
+		lives:clear()
 		StateSyncWorldStore.clear(ShiftConstants.WORLD_ENTRY)
 		started = false
 	end,
