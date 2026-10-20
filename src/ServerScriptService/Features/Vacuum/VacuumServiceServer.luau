@@ -46,13 +46,13 @@ local VacuumMotionConstants = require(ReplicatedStorage.Shared.Features.Vacuum.D
 local VacuumEvents = require(ReplicatedStorage.Shared.Features.Vacuum.Net.VacuumEvents)
 local VacuumMotionFormulas = require(ReplicatedStorage.Shared.Features.Vacuum.Utils.VacuumMotionFormulas)
 local VacuumChannelTracker = require(ServerScriptService.Features.Vacuum.State.VacuumChannelTracker)
-local VacuumHideSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumHideSystem)
 local VacuumToolSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumToolSystem)
 local VacuumVisualSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumVisualSystem)
 local VacuumEquipmentRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumEquipmentRules)
 local VacuumSkinRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumSkinRules)
 local VacuumTargetRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumTargetRules)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
+local HideServiceServer = require(ServerScriptService.Features.Hide.HideServiceServer)
 local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
 local StateSyncPublicPlayerStore = require(ServerScriptService.Features.StateSync.State.StateSyncPublicPlayerStore)
 
@@ -247,6 +247,7 @@ local VacuumServiceServer: VacuumServiceServer = {
 		"CarryServiceServer",
 		"StateSyncServiceServer",
 		"AnimationServiceServer",
+		"HideServiceServer",
 	},
 	pileCleared = pileCleared,
 	noiseMade = noiseMade,
@@ -276,22 +277,14 @@ local VacuumServiceServer: VacuumServiceServer = {
 			end)
 		)
 
-		-- Going into a hiding spot puts the wand back on the backpack; it stays there (no resume).
-		local hide = VacuumHideSystem.new({
-			unequip = function(player: Player)
-				self:setEquipped(player, false)
-			end,
-		})
-		table.insert(stoppers, hide.stop)
-		table.insert(
-			stoppers,
-			Observers.observePlayer(function(player: Player)
-				hide.watch(player)
-				return function()
-					hide.unwatch(player)
-				end
-			end)
-		)
+		-- Going into a hiding spot puts the wand back on the backpack first (so Hide measures the body with it on); it
+		-- stays there (no resume).
+		HideServiceServer:setBeforeEnter(function(player: Player)
+			self:setEquipped(player, false)
+		end)
+		table.insert(stoppers, function()
+			HideServiceServer:setBeforeEnter(nil)
+		end)
 
 		table.insert(
 			stoppers,

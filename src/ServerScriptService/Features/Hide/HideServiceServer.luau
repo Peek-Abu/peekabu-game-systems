@@ -62,6 +62,9 @@ type SpotInfo = HideTypes.SpotInfo
 type ExitReason = HideTypes.ExitReason
 -- Whether the Manager sees this player right now (asked as they go in). Must not yield.
 export type Witness = (player: Player) -> boolean
+-- Runs for a player the rules let in, before their rig is measured for the hug (Vacuum puts the wand back on the pack).
+-- Must not yield.
+export type BeforeEnter = (player: Player) -> ()
 
 local log = Logger.new("HideServiceServer")
 
@@ -71,6 +74,7 @@ local exited: SignalTyped.Signal<Player, string, ExitReason> = SignalTyped.new()
 local noiseMade: SignalTyped.Signal<Vector3, number, string, { number }> = SignalTyped.new()
 local tracker = HideOccupancyTracker.new()
 local witness: Witness? = nil
+local beforeEnter: BeforeEnter? = nil
 local counters: { [string]: number } =
 	{ entered = 0, seen = 0, left = 0, cramped = 0, evicted = 0, gone = 0, refused = 0 }
 -- The body each hiding player went in with (a respawn's new character is never moved by an old stay).
@@ -268,20 +272,34 @@ local function enter(player: Player, spot: Spot): (boolean, string?)
 		counters.refused += 1
 		return false, reason
 	end
+	local prepare = beforeEnter
+	if prepare ~= nil then
+		prepare(player)
+	end
 	local check = witness
 	local seen = check ~= nil and check(player)
 	tracker:enter(player.UserId, spot.id, now, seen)
 	local frames = HideSpotUtils.frames(spot.noun, spot.frame, spot.furniture.Size, standHeight(root, humanoid))
 	-- A quick slide in, not a teleport.
-	local tween = TweenService:Create(
-		root,
-		TweenInfo.new(HideConstants.TUCK_SECONDS, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-		{ CFrame = hideFrame(spot, player.Character, frames.hide) }
-	)
+	local tweenInfo = TweenInfo.new(HideConstants.TUCK_SECONDS, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	local tween = TweenService:Create(root, tweenInfo, { CFrame = hideFrame(spot, player.Character, frames.hide) })
 	bodies[player.UserId] = { root = root, humanoid = humanoid, entry = root.CFrame, tween = tween }
 	root.Anchored = true
 	root.AssemblyLinearVelocity = Vector3.zero
 	tween:Play()
+	-- Parent changes may be signalled deferred (the stowed wand reappears on the pack a beat after the unequip), so
+	-- measure again once they have landed and slide to the frame of the body as it now is.
+	task.defer(function()
+		local body = bodies[player.UserId]
+		if body == nil or body.tween ~= tween or root.Parent == nil then
+			return
+		end
+		local settled =
+			TweenService:Create(root, tweenInfo, { CFrame = hideFrame(spot, player.Character, frames.hide) })
+		tween:Cancel()
+		body.tween = settled
+		settled:Play()
+	end)
 	spotSystem:setOpen(spot.id, false)
 	player:SetAttribute(HideConstants.PLAYER_SPOT_ATTRIBUTE, spot.id)
 	player:SetAttribute(HideConstants.PLAYER_SINCE_ATTRIBUTE, Workspace:GetServerTimeNow())
@@ -357,6 +375,7 @@ export type HideServiceServer = {
 	spots: (self: HideServiceServer) -> { Spot },
 	occupantOf: (self: HideServiceServer, spotId: string) -> Player?,
 	setWitness: (self: HideServiceServer, check: Witness?) -> (),
+	setBeforeEnter: (self: HideServiceServer, hook: BeforeEnter?) -> (),
 	hold: (self: HideServiceServer, player: Player, untilTime: number) -> boolean,
 	setDoor: (self: HideServiceServer, spotId: string, open: boolean) -> boolean,
 }
@@ -494,6 +513,14 @@ local HideServiceServer: HideServiceServer = {
 	]=]
 	setWitness = function(_self, check)
 		witness = check
+	end,
+
+	--[=[
+		Sets THE before-enter hook: runs for a player the rules let in, before their rig is measured for the hug
+		(VacuumServiceServer puts the wand back on the pack there). Nil = none.
+	]=]
+	setBeforeEnter = function(_self, hook)
+		beforeEnter = hook
 	end,
 
 	--[=[
