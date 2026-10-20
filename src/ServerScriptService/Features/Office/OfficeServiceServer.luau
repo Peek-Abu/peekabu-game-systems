@@ -56,10 +56,19 @@ local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.Depo
 
 type Marker = OfficeTypes.Marker
 
-local LAYOUT = OfficeFurniturePlacementUtils.normalize(OfficeLayoutConstants.LAYOUT)
-local depths = OfficeLayoutUtils.depths(LAYOUT)
-
 local log = Logger.new("OfficeServiceServer")
+
+-- Desks and break tables grew (HIDE_FURNITURE_SCALE): any that no longer fit where it stands is removed.
+local function fitted(layout: OfficeTypes.Layout): OfficeTypes.Layout
+	local kept, dropped = OfficeLayoutUtils.dropUnfit(layout, OfficeLayoutRules)
+	if dropped > 0 then
+		log:info(`dropped {dropped} desk(s) and table(s) that no longer fit`)
+	end
+	return kept
+end
+
+local LAYOUT = fitted(OfficeFurniturePlacementUtils.normalize(OfficeLayoutConstants.LAYOUT))
+local depths = OfficeLayoutUtils.depths(LAYOUT)
 
 local markerById: { [string]: Marker } = {}
 for _, marker in LAYOUT.markers do
@@ -121,8 +130,10 @@ end
 local restMarker = markerById[LAYOUT.rest]
 
 local function rebuild(seed: number)
-	local layout = OfficeFurniturePlacementUtils.normalize(
-		OfficeLayoutGenerationUtils.generate(OfficeLayoutConstants.LAYOUT, seed)
+	local layout = fitted(
+		OfficeFurniturePlacementUtils.normalize(
+			OfficeLayoutGenerationUtils.generate(OfficeLayoutConstants.LAYOUT, seed)
+		)
 	)
 	local ok, errors = OfficeLayoutRules.validate(layout)
 	assert(ok, `generated office layout is invalid: {table.concat(errors, "; ")}`)

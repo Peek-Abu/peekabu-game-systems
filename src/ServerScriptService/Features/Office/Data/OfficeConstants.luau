@@ -14,6 +14,9 @@ local OfficeTypes = require(ServerScriptService.Features.Office.Data.OfficeTypes
 -- properly dirty rooms with clean rooms between them, each holding PILES_PER_ROOM piles. About a third of the piles
 -- bury a valuable, and a map offers 10-14 valuables in all (open, buried and in desks; the loot loop,
 -- docs/superpowers/specs/2026-10-15-cleanup-crew-loot-loop-design.md §3.5).
+-- Desks, break tables and chairs are built this many times their catalog size, so a full-size employee fits
+-- underneath in the hide pose (Hide HUG_FREE_MIN).
+local HIDE_FURNITURE_SCALE = 1.65
 local DIRTY_ROOMS: OfficeTypes.Range = { min = 4, max = 6 }
 local PILES_PER_ROOM: OfficeTypes.Range = { min = 3, max = 5 }
 local VALUABLES: OfficeTypes.Range = { min = 10, max = 14 }
@@ -40,7 +43,10 @@ return table.freeze({
 	MODEL_NAME = "CleanupCrewOffice",
 	ART_KIT_ID = "client-office-slate",
 	DESK_PROP_SIZES = table.freeze(DESK_PROP_SIZES),
-	OFFICE_CHAIR_SIZE = Vector3.new(2.27, 3.562, 2.26),
+	HIDE_FURNITURE_SCALE = HIDE_FURNITURE_SCALE,
+	OFFICE_CHAIR_SIZE = Vector3.new(2.27, 3.562, 2.26) * HIDE_FURNITURE_SCALE,
+	-- The gap between a desk's edge and the chair drawn beside it.
+	OFFICE_CHAIR_GAP = 0.42,
 	DECOR_KEYBOARD_SIZE = Vector3.new(1.8, 0.212, 0.8),
 	DECOR_MOUSE_SIZE = Vector3.new(0.35, 0.258, 0.53),
 	SHELF_SIZE = Vector3.new(5, 6, 2),
@@ -54,7 +60,7 @@ return table.freeze({
 	CLOSET_SIZE = Vector3.new(4.32, 8, 3.45),
 	-- Sparse: of the rooms with room for one, every CLOSET_EVERY-th (in the layout's own room order) keeps its cabinet.
 	CLOSET_EVERY = 3,
-	TABLE_SIZE = Vector3.new(5, 3.1, 3),
+	TABLE_SIZE = Vector3.new(5, 3.1, 3) * HIDE_FURNITURE_SCALE,
 	-- Loot (bulkiest kind is 3.5 wide) never spawns clipped into surface furniture.
 	SURFACE_ITEM_CLEAR = 1.8,
 	-- Visual-only monitor/elevator envelopes include the authored stand/surround depth.
@@ -97,7 +103,7 @@ return table.freeze({
 	TOP_UP_MAX = 6,
 	-- Seeds tried (seed, seed + 1, ...) before a roll that misses a guarantee is an error.
 	ROLL_ATTEMPTS = 5,
-	DESK_SIZE = Vector3.new(5, 3, 3),
+	DESK_SIZE = Vector3.new(5, 3, 3) * HIDE_FURNITURE_SCALE,
 	LOCKER_SIZE = Vector3.new(2.5, 7, 2.5),
 	-- The truck bed is a platform this tall; the cab sits behind it.
 	BED_HEIGHT = 3,

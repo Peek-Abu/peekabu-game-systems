@@ -118,6 +118,10 @@ return function()
 			end
 		end)
 		it("keeps furniture, chairs and truck clear of all physical door approaches", function()
+			local chairHalf = math.max(Constants.OFFICE_CHAIR_SIZE.X, Constants.OFFICE_CHAIR_SIZE.Z) / 2
+			local chairOffset = Constants.DESK_SIZE.Z / 2
+				+ Constants.OFFICE_CHAIR_SIZE.Z / 2
+				+ Constants.OFFICE_CHAIR_GAP
 			local sizes = {
 				desk = Constants.DESK_SIZE,
 				locker = Constants.LOCKER_SIZE,
@@ -158,10 +162,10 @@ return function()
 						if marker.kind == "desk" then
 							local yaw = marker.rotation
 							clear(
-								marker.x - 3.05 * math.sin(yaw),
-								marker.z - 3.05 * math.cos(yaw),
-								1.14,
-								1.14,
+								marker.x - chairOffset * math.sin(yaw),
+								marker.z - chairOffset * math.cos(yaw),
+								chairHalf,
+								chairHalf,
 								marker.room
 							)
 						end

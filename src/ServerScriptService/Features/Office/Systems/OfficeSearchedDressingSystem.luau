@@ -42,28 +42,103 @@ function System.buildTemplate(kind: FurnitureKind): Model
 	local slate = Color3.fromRGB(83, 101, 122)
 	local steel = Color3.fromRGB(48, 54, 58)
 	if kind == "desk" then
-		piece(model, "OakTop", Vector3.new(5, 0.23, 3), Vector3.new(0, 2.885, 0), oak, nil)
-		piece(model, "ModestyPanel", Vector3.new(4.5, 1.4, 0.1), Vector3.new(0, 1.9, 1.23), slate, nil)
+		-- Drawn at 5x3x3; every size and position grows with the desk.
+		local deskScale = Constants.DESK_SIZE / Vector3.new(5, 3, 3)
+		local function scaled(v: Vector3): Vector3
+			return v * deskScale
+		end
+		piece(model, "OakTop", scaled(Vector3.new(5, 0.23, 3)), scaled(Vector3.new(0, 2.885, 0)), oak, nil)
+		piece(model, "ModestyPanel", scaled(Vector3.new(4.5, 1.4, 0.1)), scaled(Vector3.new(0, 1.9, 1.23)), slate, nil)
 		for _, z in { -1.1, 1.1 } do
-			piece(model, "SteelLeg", Vector3.new(0.13, 2.77, 0.13), Vector3.new(-2.2, 1.385, z), steel, nil)
+			piece(
+				model,
+				"SteelLeg",
+				scaled(Vector3.new(0.13, 2.77, 0.13)),
+				scaled(Vector3.new(-2.2, 1.385, z)),
+				steel,
+				nil
+			)
 		end
 		-- Hollow pedestal: side/back/bottom panels, two lower closed fronts; upper opening stays real.
 		for _, x in { 1, 2.25 } do
-			piece(model, "PedestalSide", Vector3.new(0.1, 2.77, 2.7), Vector3.new(x, 1.385, 0), oak, nil)
+			piece(
+				model,
+				"PedestalSide",
+				scaled(Vector3.new(0.1, 2.77, 2.7)),
+				scaled(Vector3.new(x, 1.385, 0)),
+				oak,
+				nil
+			)
 		end
-		piece(model, "PedestalBack", Vector3.new(1.35, 2.77, 0.1), Vector3.new(1.625, 1.385, 1.3), oak, nil)
-		piece(model, "PedestalBase", Vector3.new(1.35, 0.1, 2.7), Vector3.new(1.625, 0.05, 0), oak, nil)
+		piece(
+			model,
+			"PedestalBack",
+			scaled(Vector3.new(1.35, 2.77, 0.1)),
+			scaled(Vector3.new(1.625, 1.385, 1.3)),
+			oak,
+			nil
+		)
+		piece(model, "PedestalBase", scaled(Vector3.new(1.35, 0.1, 2.7)), scaled(Vector3.new(1.625, 0.05, 0)), oak, nil)
 		for _, y in { 0.55, 1.4 } do
-			piece(model, "LowerDrawer", Vector3.new(1.15, 0.75, 0.08), Vector3.new(1.625, y, -1.36), oak, nil)
-			piece(model, "LowerPull", Vector3.new(0.48, 0.07, 0.08), Vector3.new(1.625, y + 0.1, -1.44), steel, nil)
+			piece(
+				model,
+				"LowerDrawer",
+				scaled(Vector3.new(1.15, 0.75, 0.08)),
+				scaled(Vector3.new(1.625, y, -1.36)),
+				oak,
+				nil
+			)
+			piece(
+				model,
+				"LowerPull",
+				scaled(Vector3.new(0.48, 0.07, 0.08)),
+				scaled(Vector3.new(1.625, y + 0.1, -1.44)),
+				steel,
+				nil
+			)
 		end
-		piece(model, "UpperDrawerFront", Vector3.new(1.15, 0.7, 0.08), Vector3.new(1.625, 2.28, -1.36), oak, "drawer")
-		piece(model, "UpperPull", Vector3.new(0.48, 0.07, 0.08), Vector3.new(1.625, 2.38, -1.44), steel, "drawer")
-		piece(model, "DrawerBottom", Vector3.new(1.1, 0.06, 2.2), Vector3.new(1.625, 1.97, -0.25), oak, "drawer")
+		piece(
+			model,
+			"UpperDrawerFront",
+			scaled(Vector3.new(1.15, 0.7, 0.08)),
+			scaled(Vector3.new(1.625, 2.28, -1.36)),
+			oak,
+			"drawer"
+		)
+		piece(
+			model,
+			"UpperPull",
+			scaled(Vector3.new(0.48, 0.07, 0.08)),
+			scaled(Vector3.new(1.625, 2.38, -1.44)),
+			steel,
+			"drawer"
+		)
+		piece(
+			model,
+			"DrawerBottom",
+			scaled(Vector3.new(1.1, 0.06, 2.2)),
+			scaled(Vector3.new(1.625, 1.97, -0.25)),
+			oak,
+			"drawer"
+		)
 		for _, x in { 1.09, 2.16 } do
-			piece(model, "DrawerSide", Vector3.new(0.06, 0.6, 2.2), Vector3.new(x, 2.25, -0.25), oak, "drawer")
+			piece(
+				model,
+				"DrawerSide",
+				scaled(Vector3.new(0.06, 0.6, 2.2)),
+				scaled(Vector3.new(x, 2.25, -0.25)),
+				oak,
+				"drawer"
+			)
 		end
-		piece(model, "DrawerBack", Vector3.new(1.1, 0.6, 0.06), Vector3.new(1.625, 2.25, 0.82), oak, "drawer")
+		piece(
+			model,
+			"DrawerBack",
+			scaled(Vector3.new(1.1, 0.6, 0.06)),
+			scaled(Vector3.new(1.625, 2.25, 0.82)),
+			oak,
+			"drawer"
+		)
 	else
 		local size = Constants.LOCKER_SIZE
 		for _, x in { -size.X / 2 + 0.06, size.X / 2 - 0.06 } do

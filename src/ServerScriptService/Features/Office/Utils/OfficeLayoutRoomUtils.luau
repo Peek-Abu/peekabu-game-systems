@@ -75,11 +75,14 @@ function Utils.markers(room: Types.Room, rng: Random): { Types.Marker }
 		return true
 	end
 	-- Minimum 30x28 cells fit these essentials in their corners with four physical ports.
-	local deskX, deskZ = -flip * (hx - 3.5), -hz + Constants.DESK_SIZE.Z / 2 + wall
-	assert(add("desk", deskX, deskZ, math.pi), "compact room requires a clear workstation")
-	local chairZ = deskZ + 3.05
-	assert(clear(deskX, chairZ, 1.14, 1.14), "compact workstation requires its inward chair")
-	table.insert(occupied, { x = deskX, z = chairZ, hx = 1.14, hz = 1.14 })
+	-- A desk (and its chair) that does not fit the room's walls, doors and cross is left out, never moved or shrunk.
+	local chairHalf = math.max(Constants.OFFICE_CHAIR_SIZE.X, Constants.OFFICE_CHAIR_SIZE.Z) / 2
+	local chairOffset = Constants.DESK_SIZE.Z / 2 + Constants.OFFICE_CHAIR_SIZE.Z / 2 + Constants.OFFICE_CHAIR_GAP
+	local deskX, deskZ = -flip * (hx - 1 - Constants.DESK_SIZE.X / 2), -hz + Constants.DESK_SIZE.Z / 2 + wall
+	local chairZ = deskZ + chairOffset
+	if clear(deskX, chairZ, chairHalf, chairHalf) and add("desk", deskX, deskZ, math.pi) then
+		table.insert(occupied, { x = deskX, z = chairZ, hx = chairHalf, hz = chairHalf })
+	end
 	assert(
 		add("counter", flip * (hx - 3.5), -hz + Constants.COUNTER_SIZE.Z / 2 + wall, math.pi),
 		"compact room requires an appliance surface"
@@ -99,9 +102,9 @@ function Utils.markers(room: Types.Room, rng: Random): { Types.Marker }
 	if room.zone == "storage" or room.zone == "records" then
 		add("shelf", hx - Constants.SHELF_SIZE.Z / 2 - wall, hz - 7.5, math.pi / 2)
 	elseif room.zone == "training" or room.zone == "office" then
-		local x, z = -flip * (hx - 3.5), hz - Constants.DESK_SIZE.Z / 2 - wall
-		if clear(x, z - 3.05, 1.14, 1.14) and add("desk", x, z, 0) then
-			table.insert(occupied, { x = x, z = z - 3.05, hx = 1.14, hz = 1.14 })
+		local x, z = -flip * (hx - 1 - Constants.DESK_SIZE.X / 2), hz - Constants.DESK_SIZE.Z / 2 - wall
+		if clear(x, z - chairOffset, chairHalf, chairHalf) and add("desk", x, z, 0) then
+			table.insert(occupied, { x = x, z = z - chairOffset, hx = chairHalf, hz = chairHalf })
 		end
 	end
 	local cabinet: Types.MarkerKind = if rng:NextInteger(0, 1) == 0 then "locker" else "cabinet"

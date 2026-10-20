@@ -23,6 +23,76 @@ local TruckVisual = require(ServerScriptService.Features.Depot.Data.DepotTruckVi
 type Layout = OfficeTypes.Layout
 type Room = OfficeTypes.Room
 
+local PILE_HALF = 0
+for _, style in VacuumConstants.PILE_KINDS do
+	PILE_HALF = math.max(PILE_HALF, style.size.X / 2, style.size.Z / 2)
+end
+
+local function halfExtents(kind: OfficeTypes.MarkerKind): Vector2?
+	if kind == "counter" then
+		return Vector2.new(OfficeConstants.COUNTER_SIZE.X / 2, OfficeConstants.COUNTER_SIZE.Z / 2)
+	elseif kind == "table" then
+		return Vector2.new(OfficeConstants.TABLE_SIZE.X / 2, OfficeConstants.TABLE_SIZE.Z / 2)
+	elseif kind == "cabinet" then
+		return Vector2.new(OfficeConstants.CABINET_SIZE.X / 2, OfficeConstants.CABINET_SIZE.Z / 2)
+	elseif kind == "desk" then
+		return Vector2.new(OfficeConstants.DESK_SIZE.X / 2, OfficeConstants.DESK_SIZE.Z / 2)
+	elseif kind == "locker" then
+		return Vector2.new(OfficeConstants.LOCKER_SIZE.X / 2, OfficeConstants.LOCKER_SIZE.Z / 2)
+	end
+	return nil
+end
+
+local function rotatedHalf(marker: OfficeTypes.Marker): Vector2?
+	local half = halfExtents(marker.kind)
+	if half == nil then
+		return nil
+	end
+	local angle = marker.rotation or 0
+	local c, s = math.abs(math.cos(angle)), math.abs(math.sin(angle))
+	return Vector2.new(half.X * c + half.Y * s, half.X * s + half.Y * c)
+end
+
+-- Whether a desk or locker footprint overlaps the surface furniture `marker`.
+local function overlapsFootprint(marker: OfficeTypes.Marker, half: Vector2, other: OfficeTypes.Marker): boolean
+	local ohalf = rotatedHalf(other)
+	return ohalf ~= nil
+		and math.abs(other.x - marker.x) < half.X + ohalf.X
+		and math.abs(other.z - marker.z) < half.Y + ohalf.Y
+end
+
+-- What crowds the surface furniture `marker` (none for any other kind).
+local function surfaceProblems(layout: Layout, marker: OfficeTypes.Marker): { string }
+	local problems: { string } = {}
+	if OfficeLayoutUtils.surfaceTopY(marker.kind) == nil then
+		return problems
+	end
+	local half = rotatedHalf(marker)
+	assert(half ~= nil, `surface marker "{marker.id}" has no footprint`)
+	for _, other in layout.markers do
+		if other.id ~= marker.id then
+			if other.kind == "item" then
+				local clear = OfficeConstants.SURFACE_ITEM_CLEAR
+				if math.abs(other.x - marker.x) < half.X + clear and math.abs(other.z - marker.z) < half.Y + clear then
+					table.insert(problems, `surface marker "{marker.id}" crowds item marker "{other.id}"`)
+				end
+			elseif other.kind == "desk" or other.kind == "locker" then
+				if overlapsFootprint(marker, half, other) then
+					table.insert(problems, `surface marker "{marker.id}" overlaps "{other.id}"`)
+				end
+			elseif other.kind == "pile" then
+				if
+					math.abs(other.x - marker.x) < half.X + PILE_HALF
+					and math.abs(other.z - marker.z) < half.Y + PILE_HALF
+				then
+					table.insert(problems, `surface marker "{marker.id}" overlaps "{other.id}"`)
+				end
+			end
+		end
+	end
+	return problems
+end
+
 local OfficeLayoutRules = {}
 
 local function inside(room: Room, x: number, z: number, margin: number): boolean
@@ -116,66 +186,9 @@ function OfficeLayoutRules.validate(layout: Layout): (boolean, { string })
 	end
 
 	-- Surface furniture stands clear: loot never clips into it and it never swallows gameplay volumes.
-	local PILE_HALF = 0
-	for _, style in VacuumConstants.PILE_KINDS do
-		PILE_HALF = math.max(PILE_HALF, style.size.X / 2, style.size.Z / 2)
-	end
-	local function halfExtents(kind: OfficeTypes.MarkerKind): Vector2?
-		if kind == "counter" then
-			return Vector2.new(OfficeConstants.COUNTER_SIZE.X / 2, OfficeConstants.COUNTER_SIZE.Z / 2)
-		elseif kind == "table" then
-			return Vector2.new(OfficeConstants.TABLE_SIZE.X / 2, OfficeConstants.TABLE_SIZE.Z / 2)
-		elseif kind == "cabinet" then
-			return Vector2.new(OfficeConstants.CABINET_SIZE.X / 2, OfficeConstants.CABINET_SIZE.Z / 2)
-		elseif kind == "desk" then
-			return Vector2.new(OfficeConstants.DESK_SIZE.X / 2, OfficeConstants.DESK_SIZE.Z / 2)
-		elseif kind == "locker" then
-			return Vector2.new(OfficeConstants.LOCKER_SIZE.X / 2, OfficeConstants.LOCKER_SIZE.Z / 2)
-		end
-		return nil
-	end
-	local function rotatedHalf(marker: OfficeTypes.Marker): Vector2?
-		local half = halfExtents(marker.kind)
-		if half == nil then
-			return nil
-		end
-		local angle = marker.rotation or 0
-		local c, s = math.abs(math.cos(angle)), math.abs(math.sin(angle))
-		return Vector2.new(half.X * c + half.Y * s, half.X * s + half.Y * c)
-	end
 	for _, marker in layout.markers do
-		if OfficeLayoutUtils.surfaceTopY(marker.kind) ~= nil then
-			local half = rotatedHalf(marker)
-			assert(half ~= nil, `surface marker "{marker.id}" has no footprint`)
-			for _, other in layout.markers do
-				if other.id ~= marker.id then
-					if other.kind == "item" then
-						local clear = OfficeConstants.SURFACE_ITEM_CLEAR
-						if
-							math.abs(other.x - marker.x) < half.X + clear
-							and math.abs(other.z - marker.z) < half.Y + clear
-						then
-							table.insert(errors, `surface marker "{marker.id}" crowds item marker "{other.id}"`)
-						end
-					elseif other.kind == "desk" or other.kind == "locker" then
-						local ohalf = rotatedHalf(other)
-						if
-							ohalf ~= nil
-							and math.abs(other.x - marker.x) < half.X + ohalf.X
-							and math.abs(other.z - marker.z) < half.Y + ohalf.Y
-						then
-							table.insert(errors, `surface marker "{marker.id}" overlaps "{other.id}"`)
-						end
-					elseif other.kind == "pile" then
-						if
-							math.abs(other.x - marker.x) < half.X + PILE_HALF
-							and math.abs(other.z - marker.z) < half.Y + PILE_HALF
-						then
-							table.insert(errors, `surface marker "{marker.id}" overlaps "{other.id}"`)
-						end
-					end
-				end
-			end
+		for _, problem in surfaceProblems(layout, marker) do
+			table.insert(errors, problem)
 		end
 	end
 
@@ -191,6 +204,42 @@ function OfficeLayoutRules.validate(layout: Layout): (boolean, { string })
 		table.insert(errors, `the truck is not inside the start room "{start.id}"`)
 	end
 	return #errors == 0, errors
+end
+
+--[=[
+	Whether `marker` passes the per-marker checks `validate` runs: inside its room's walls, and clear of what it
+	would crowd (surface furniture of loot, desks, lockers and piles; a desk or locker of surface furniture).
+	Used to drop furniture that no longer fits. Pure.
+]=]
+function OfficeLayoutRules.markerFits(layout: Layout, marker: OfficeTypes.Marker): boolean
+	local room: Room? = nil
+	for _, candidate in layout.rooms do
+		if candidate.id == marker.room then
+			room = candidate
+			break
+		end
+	end
+	if room == nil or not markerInside(room, marker) then
+		return false
+	end
+	if #surfaceProblems(layout, marker) > 0 then
+		return false
+	end
+	if marker.kind == "desk" or marker.kind == "locker" then
+		local half = rotatedHalf(marker)
+		if half ~= nil then
+			for _, other in layout.markers do
+				if
+					other.id ~= marker.id
+					and OfficeLayoutUtils.surfaceTopY(other.kind) ~= nil
+					and overlapsFootprint(other, half, marker)
+				then
+					return false
+				end
+			end
+		end
+	end
+	return true
 end
 
 --[=[

@@ -29,6 +29,9 @@ local OfficeConstants = require(OfficeServer.Data.OfficeConstants)
 local OfficeTypes = require(OfficeServer.Data.OfficeTypes)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
 
+-- Desk dressing was laid out on a 5x3 top; its spots move with the real top (the props keep their size).
+local DESK_SPREAD = OfficeConstants.DESK_SIZE / Vector3.new(5, 3, 3)
+
 -- Art-only furniture that is also a hiding spot, by its art key (under a table; inside a supply cabinet).
 local HIDE_KINDS: { [string]: HideConstants.FurnitureKind } = { breakTable = "table", supplyCabinet = "cabinet" }
 -- Art-only furniture that stands solid (the rest are see-through props).
@@ -91,12 +94,17 @@ local function monitor(deskTop: CFrame, parent: Instance, art: ArtVisualSystem.C
 	-- Towards the desk's back edge. The monitor art carries its display face on art-local -Z
 	-- (the +Z face shows rear vents), so the proxy stays unrotated and the screen faces the
 	-- -Z sitter; the fallback Screen below already faces -Z the same way.
-	local case =
-		part("Monitor", size, deskTop * CFrame.new(0, size.Y / 2, 0.6), OfficeDecorConstants.MONITOR_CASE_COLOR, parent)
+	local case = part(
+		"Monitor",
+		size,
+		deskTop * CFrame.new(0, size.Y / 2, 0.6 * DESK_SPREAD.Z),
+		OfficeDecorConstants.MONITOR_CASE_COLOR,
+		parent
+	)
 	local screen = part(
 		"Screen",
 		Vector3.new(size.X - 0.2, size.Y - 0.2, 0.05),
-		deskTop * CFrame.new(0, size.Y / 2, 0.6 - size.Z / 2 - 0.03),
+		deskTop * CFrame.new(0, size.Y / 2, 0.6 * DESK_SPREAD.Z - size.Z / 2 - 0.03),
 		OfficeDecorConstants.MONITOR_COLOR,
 		parent
 	)
@@ -209,27 +217,32 @@ local function dressDesk(
 		)
 	end
 	-- Two side work areas leave the central monitor and keyboard legible. Variants rotate larger paper props.
-	prop("mug", -2.08, -1.12)
-	prop("stationeryCup", 1.95, -1.12)
+	prop("mug", -2.08 * DESK_SPREAD.X, -1.12 * DESK_SPREAD.Z)
+	prop("stationeryCup", 1.95 * DESK_SPREAD.X, -1.12 * DESK_SPREAD.Z)
 	if index % 2 == 1 then
-		prop("folder", -1.85, 0.65)
-		prop("paperTray", 1.85, 0.65)
+		prop("folder", -1.85 * DESK_SPREAD.X, 0.65 * DESK_SPREAD.Z)
+		prop("paperTray", 1.85 * DESK_SPREAD.X, 0.65 * DESK_SPREAD.Z)
 	else
-		prop("paperStack", -1.85, 0.65)
-		prop("bookStack", 1.85, 0.65)
+		prop("paperStack", -1.85 * DESK_SPREAD.X, 0.65 * DESK_SPREAD.Z)
+		prop("bookStack", 1.85 * DESK_SPREAD.X, 0.65 * DESK_SPREAD.Z)
 	end
 end
 
 local function chairAt(layout: OfficeTypes.Layout, desk: OfficeTypes.Marker, origin: CFrame): CFrame?
 	local room = OfficeLayoutUtils.room(layout, desk.room)
+	-- A chair stands OFFICE_CHAIR_GAP clear of the desk edge and is never pushed under it.
+	local gap = OfficeConstants.OFFICE_CHAIR_GAP
+	local chair = OfficeConstants.OFFICE_CHAIR_SIZE
+	local alongZ = OfficeConstants.DESK_SIZE.Z / 2 + chair.Z / 2 + gap
+	local alongX = OfficeConstants.DESK_SIZE.X / 2 + chair.Z / 2 + gap
 	local candidates = {
 		-- officeChair art seats toward its CFrame LookVector: at turn 0 the backrest sits on the
 		-- +Z side (live Studio screenshot 2026-10-13), so each side needs the half-turn more than
 		-- the naive orientation to face the sitter toward the desk.
-		{ x = 0, z = -3.05, turn = math.pi },
-		{ x = 0, z = 3.05, turn = 0 },
-		{ x = -4.05, z = 0, turn = -math.pi / 2 },
-		{ x = 4.05, z = 0, turn = math.pi / 2 },
+		{ x = 0, z = -alongZ, turn = math.pi },
+		{ x = 0, z = alongZ, turn = 0 },
+		{ x = -alongX, z = 0, turn = -math.pi / 2 },
+		{ x = alongX, z = 0, turn = math.pi / 2 },
 	}
 	local sizes: { [string]: Vector3? } = {
 		desk = OfficeConstants.DESK_SIZE,
@@ -244,7 +257,7 @@ local function chairAt(layout: OfficeTypes.Layout, desk: OfficeTypes.Marker, ori
 		local offset = CFrame.Angles(0, desk.rotation or 0, 0)
 			:VectorToWorldSpace(Vector3.new(candidate.x, 0, candidate.z))
 		local x, z = desk.x + offset.X, desk.z + offset.Z
-		local half = 1.14
+		local half = math.max(chair.X, chair.Z) / 2
 		local clear = room == nil
 			or (
 				x - half > room.minX + 0.2
@@ -339,7 +352,7 @@ function OfficeDecorSystem.build(
 						local oldSize, oldFrame = keyboard.Size, keyboard.CFrame
 						keyboard.Size = OfficeConstants.DECOR_KEYBOARD_SIZE
 						keyboard.CFrame = deskTop
-							* CFrame.new(-0.45, keyboard.Size.Y / 2, -0.6)
+							* CFrame.new(-0.45 * DESK_SPREAD.X, keyboard.Size.Y / 2, -0.6 * DESK_SPREAD.Z)
 							* CFrame.Angles(0, math.pi, 0)
 						if art.attach(keyboard, "props", "keyboard") ~= nil then
 							for _, child in proxy:GetChildren() do
@@ -356,7 +369,7 @@ function OfficeDecorSystem.build(
 						local oldSize, oldFrame = mouse.Size, mouse.CFrame
 						mouse.Size = OfficeConstants.DECOR_MOUSE_SIZE
 						mouse.CFrame = deskTop
-							* CFrame.new(1.05, mouse.Size.Y / 2, -0.65)
+							* CFrame.new(1.05 * DESK_SPREAD.X, mouse.Size.Y / 2, -0.65 * DESK_SPREAD.Z)
 							* CFrame.Angles(0, math.pi, 0)
 						if art.attach(mouse, "props", "mouse") == nil then
 							mouse.Size, mouse.CFrame = oldSize, oldFrame
@@ -371,9 +384,9 @@ function OfficeDecorSystem.build(
 		if chairFloor ~= nil then
 			artOnly("officeChair", "furniture", OfficeConstants.OFFICE_CHAIR_SIZE, chairFloor, desk.id, folder, art)
 		end
-		emitter("phone", (deskTop * CFrame.new(1.5, lift, 0)).Position, folder)
+		emitter("phone", (deskTop * CFrame.new(1.5 * DESK_SPREAD.X, lift, 0)).Position, folder)
 		if index % OfficeDecorConstants.TYPING_EVERY == 1 then
-			emitter("typing", (deskTop * CFrame.new(-1, lift, 0)).Position, folder)
+			emitter("typing", (deskTop * CFrame.new(-1 * DESK_SPREAD.X, lift, 0)).Position, folder)
 		end
 	end
 	-- Sparse art-only furniture: corner filing cabinets and meeting/break tables with lootable

@@ -17,6 +17,9 @@ type Room = OfficeTypes.Room
 type Door = OfficeTypes.Door
 type Edge = OfficeTypes.Edge
 
+-- What dropUnfit needs from OfficeLayoutRules (passed in: Rules requires this module).
+type FitRules = { markerFits: (layout: Layout, marker: OfficeTypes.Marker) -> boolean }
+
 local OfficeLayoutUtils = {}
 
 function OfficeLayoutUtils.room(layout: Layout, id: string): Room?
@@ -59,6 +62,29 @@ function OfficeLayoutUtils.markersOf(layout: Layout, kind: OfficeTypes.MarkerKin
 		end
 	end
 	return list
+end
+
+--[=[
+	`layout` without any desk or table `rules` rejects at the current furniture sizes (outside its room's walls, or
+	overlapping another marker), and how many it dropped. Each is judged in layout order against the markers still
+	standing, so two clashing pieces lose only the first. Nothing else is moved, resized or removed. Pure.
+]=]
+function OfficeLayoutUtils.dropUnfit(layout: Layout, rules: FitRules): (Layout, number)
+	local working = table.clone(layout)
+	working.markers = table.clone(layout.markers)
+	local dropped = 0
+	for _, marker in layout.markers do
+		if marker.kind == "desk" or marker.kind == "table" then
+			if not rules.markerFits(working, marker) then
+				table.remove(working.markers, table.find(working.markers, marker))
+				dropped += 1
+			end
+		end
+	end
+	if dropped == 0 then
+		return layout, 0
+	end
+	return working, dropped
 end
 
 --[=[

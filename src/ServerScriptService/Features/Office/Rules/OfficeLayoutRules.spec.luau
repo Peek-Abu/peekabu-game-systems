@@ -1,6 +1,7 @@
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local OfficeLayoutRules = require(script.Parent.OfficeLayoutRules)
+local OfficeLayoutUtils = require(ServerScriptService.Features.Office.Utils.OfficeLayoutUtils)
 local OfficeLayoutConstants = require(ServerScriptService.Features.Office.Data.OfficeLayoutConstants)
 
 local function fixture()
@@ -30,8 +31,10 @@ end
 
 return function()
 	describe("the authored office", function()
-		it("is valid", function()
-			local ok, errors = OfficeLayoutRules.validate(OfficeLayoutConstants.LAYOUT)
+		it("is valid once the furniture that no longer fits is dropped", function()
+			-- The desks and tables grew (HIDE_FURNITURE_SCALE): the break and open-plan tables now crowd loot spots.
+			local layout = OfficeLayoutUtils.dropUnfit(OfficeLayoutConstants.LAYOUT, OfficeLayoutRules)
+			local ok, errors = OfficeLayoutRules.validate(layout)
 			if not ok then
 				error(table.concat(errors, "\n"))
 			end

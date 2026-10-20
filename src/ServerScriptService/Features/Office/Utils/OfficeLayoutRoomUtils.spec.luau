@@ -20,7 +20,8 @@ return function()
 				end
 				expect(counts.pile >= 2).to.equal(true)
 				expect(counts.item >= 4).to.equal(true)
-				expect(counts.counter >= 1 and counts.desk >= 1).to.equal(true)
+				-- A desk is left out where it no longer fits a 30-stud room's walls and door approaches.
+				expect(counts.counter >= 1).to.equal(true)
 			end
 		end)
 		it("offers a dirty room's worth of pile spots (up to PILE_SPOTS), clear of the doors and the centre", function()

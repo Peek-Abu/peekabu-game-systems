@@ -1,6 +1,11 @@
 local ServerScriptService = game:GetService("ServerScriptService")
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local OfficeLayoutUtils = require(script.Parent.OfficeLayoutUtils)
+local OfficeLayoutRules = require(ServerScriptService.Features.Office.Rules.OfficeLayoutRules)
+local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideConstants)
+local HideHugFormulas = require(ReplicatedStorage.Shared.Features.Hide.Utils.HideHugFormulas)
 local OfficeLayoutConstants = require(ServerScriptService.Features.Office.Data.OfficeLayoutConstants)
 local OfficeConstants = require(ServerScriptService.Features.Office.Data.OfficeConstants)
 
@@ -9,6 +14,65 @@ local ROOM = { id = "r", name = "R", minX = 0, minZ = 0, maxX = 20, maxZ = 10 }
 local TRUCK = { minX = 0, minZ = 0, maxX = 1, maxZ = 1, clockX = 0, clockZ = 0 }
 
 return function()
+	describe("furniture free space", function()
+		it("leaves a full-size hider room under a desk and a break table on every axis", function()
+			for kind, size in { desk = OfficeConstants.DESK_SIZE, table = OfficeConstants.TABLE_SIZE } do
+				local free = HideHugFormulas.freeSize(HideConstants.FURNITURE[kind].free, size)
+				expect(free.X >= HideConstants.HUG_FREE_MIN.X).to.equal(true)
+				expect(free.Y >= HideConstants.HUG_FREE_MIN.Y).to.equal(true)
+				expect(free.Z >= HideConstants.HUG_FREE_MIN.Z).to.equal(true)
+			end
+		end)
+	end)
+
+	describe("dropUnfit", function()
+		local function office(markers)
+			return {
+				startRoom = "r",
+				rooms = { { id = "r", name = "R", minX = 0, minZ = 0, maxX = 40, maxZ = 10 } },
+				doors = {},
+				markers = markers,
+				truck = TRUCK,
+			}
+		end
+
+		it("removes a desk that crosses a wall and counts it", function()
+			local layout = office({
+				{ id = "r.desk.1", room = "r", kind = "desk", x = 30, z = 5, rotation = 0 },
+				{ id = "r.desk.2", room = "r", kind = "desk", x = 2, z = 5, rotation = 0 },
+			})
+			local kept, dropped = OfficeLayoutUtils.dropUnfit(layout, OfficeLayoutRules)
+			expect(dropped).to.equal(1)
+			expect(#kept.markers).to.equal(1)
+			expect(kept.markers[1].id).to.equal("r.desk.1")
+			expect(kept.markers[1].x).to.equal(30)
+			expect(#layout.markers).to.equal(2)
+		end)
+
+		it("returns a layout where everything fits unchanged", function()
+			local layout = office({
+				{ id = "r.desk.1", room = "r", kind = "desk", x = 30, z = 5, rotation = 0 },
+				{ id = "r.table.1", room = "r", kind = "table", x = 8, z = 5, rotation = 0 },
+				{ id = "r.pile.1", room = "r", kind = "pile", x = 20, z = 8 },
+			})
+			local kept, dropped = OfficeLayoutUtils.dropUnfit(layout, OfficeLayoutRules)
+			expect(dropped).to.equal(0)
+			expect(kept).to.equal(layout)
+		end)
+
+		it("drops a table that crowds loot but keeps the loot and the other furniture", function()
+			local layout = office({
+				{ id = "r.table.1", room = "r", kind = "table", x = 10, z = 5, rotation = 0 },
+				{ id = "r.item.1", room = "r", kind = "item", x = 10, z = 8 },
+				{ id = "r.locker.1", room = "r", kind = "locker", x = 36, z = 8, rotation = 0 },
+			})
+			local kept, dropped = OfficeLayoutUtils.dropUnfit(layout, OfficeLayoutRules)
+			expect(dropped).to.equal(1)
+			expect(#kept.markers).to.equal(2)
+			expect(OfficeLayoutUtils.marker(kept, "r.table.1")).to.equal(nil)
+		end)
+	end)
+
 	describe("depths", function()
 		it("counts doors from the loading bay", function()
 			local depths = OfficeLayoutUtils.depths(LAYOUT)

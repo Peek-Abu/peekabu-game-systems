@@ -270,8 +270,10 @@ return function()
 		local tray = decor:FindFirstChild("paperTray")
 		expect(tray.CFrame.LookVector:Dot(desk.CFrame.LookVector) > 0.99).to.equal(true)
 		local relative = desk.CFrame:PointToObjectSpace(tray.Position)
-		expect(math.abs(relative.X - 1.85) < 0.001).to.equal(true)
-		expect(math.abs(relative.Z - 0.65) < 0.001).to.equal(true)
+		-- Dressed at (1.85, 0.65) on a 5x3 top; the spot moves with the bigger top.
+		local spread = OfficeConstants.DESK_SIZE / Vector3.new(5, 3, 3)
+		expect(math.abs(relative.X - 1.85 * spread.X) < 0.001).to.equal(true)
+		expect(math.abs(relative.Z - 0.65 * spread.Z) < 0.001).to.equal(true)
 		local monitor = decor:FindFirstChild("Monitor")
 		expect(monitor.CFrame.LookVector:Dot(desk.CFrame.LookVector) > 0.99).to.equal(true)
 	end)
@@ -279,12 +281,16 @@ return function()
 		template("furniture", "officeChair")
 		local layout = table.clone(Layout)
 		layout.artKit = "test-map-a"
+		-- Each blocker stands where a chair would: beside the desk edge, the chair's depth and the gap away.
+		local deskSize, chairSize = OfficeConstants.DESK_SIZE, OfficeConstants.OFFICE_CHAIR_SIZE
+		local alongZ = deskSize.Z / 2 + chairSize.Z / 2 + OfficeConstants.OFFICE_CHAIR_GAP
+		local alongX = deskSize.X / 2 + chairSize.Z / 2 + OfficeConstants.OFFICE_CHAIR_GAP
 		layout.markers = {
 			{ id = "test.desk", kind = "desk", room = layout.startRoom, x = 12, z = 12 },
-			{ id = "test.counter.front", kind = "counter", room = layout.startRoom, x = 12, z = 8.95 },
-			{ id = "test.shelf.back", kind = "shelf", room = layout.startRoom, x = 12, z = 15.05 },
-			{ id = "test.table.left", kind = "table", room = layout.startRoom, x = 7.95, z = 12 },
-			{ id = "test.cabinet.right", kind = "cabinet", room = layout.startRoom, x = 16.05, z = 12 },
+			{ id = "test.counter.front", kind = "counter", room = layout.startRoom, x = 12, z = 12 - alongZ },
+			{ id = "test.shelf.back", kind = "shelf", room = layout.startRoom, x = 12, z = 12 + alongZ },
+			{ id = "test.table.left", kind = "table", room = layout.startRoom, x = 12 - alongX, z = 12 },
+			{ id = "test.cabinet.right", kind = "cabinet", room = layout.startRoom, x = 12 + alongX, z = 12 },
 		}
 		local origin = CFrame.new(60000, 0, 0)
 		built = Build.build(layout, origin, art)
