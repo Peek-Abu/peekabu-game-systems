@@ -20,7 +20,7 @@ export type Tuck = { along: number, back: number, yaw: number }
 -- front).
 export type FurnitureDef = { spot: "under" | "inside", action: string, noun: string, tuck: Tuck, turnable: boolean }
 
--- One joint of the tucked pose: its Motor6D's name, the rotation (degrees about the joint's X, Y, Z) and an offset.
+-- One joint of the hug pose: its Motor6D's name, the rotation (degrees about the joint's X, Y, Z) and an offset.
 export type PoseJoint = { joint: string, rotation: Vector3, offset: Vector3 }
 
 local function furniture(noun: string, tuck: Tuck, turnable: boolean): FurnitureDef
@@ -50,24 +50,25 @@ local function pose(joint: string, rotation: Vector3, offset: Vector3?): PoseJoi
 	return table.freeze(entry)
 end
 
--- The tucked huddle under the desk, on the employee rig (R15 joints, arms T-posed in the rig): kneeling on the heels,
--- the torso folded down over the knees, the head bowed (the ears, which Employee's ear system owns, follow it forward
--- and low) and the arms tucked along the body. The body lies along the desk's length, so it fits under the desktop.
--- Tuned live in Studio.
-local TUCK_POSE: { PoseJoint } = {
-	pose("Root", Vector3.new(0, 0, 0), Vector3.new(0, -0.55, 0)),
-	pose("LeftHip", Vector3.new(95, 0, 0)),
-	pose("RightHip", Vector3.new(95, 0, 0)),
-	pose("LeftKnee", Vector3.new(-165, 0, 0)),
-	pose("RightKnee", Vector3.new(-165, 0, 0)),
-	pose("LeftAnkle", Vector3.new(60, 0, 0)),
-	pose("RightAnkle", Vector3.new(60, 0, 0)),
-	pose("Waist", Vector3.new(-75, 0, 0)),
-	pose("Neck", Vector3.new(-55, 0, 0)),
-	pose("LeftShoulder", Vector3.new(0, 0, 80)),
-	pose("RightShoulder", Vector3.new(0, 0, -80)),
-	pose("LeftElbow", Vector3.new(0, 30, 0)),
-	pose("RightElbow", Vector3.new(0, -30, 0)),
+-- The owner's knee-hug pose (HideHug2) on the employee rig, by Motor6D name: hugging the knees, the head bowed (the ears
+-- are in it: HidePoseSystem writes them, Employee's ear springs rest meanwhile). Every offset is zero: placement, not
+-- the Root offset, puts the body on the floor (HideHugFormulas).
+local HUG_POSE: { PoseJoint } = {
+	pose("Neck", Vector3.new(25, 0, 0)),
+	pose("LeftEarBase", Vector3.new(120, 0, 10)),
+	pose("RightEarBase", Vector3.new(120, 0, -10)),
+	pose("Waist", Vector3.new(-54.99, 0, 0)),
+	pose("Root", Vector3.new(10, 0, 0)),
+	pose("LeftHip", Vector3.new(105.40, 4.08, -11.29)),
+	pose("RightHip", Vector3.new(105.40, -4.08, 11.29)),
+	pose("LeftKnee", Vector3.new(-145, 0, 0)),
+	pose("RightKnee", Vector3.new(-145, 0, 0)),
+	pose("LeftAnkle", Vector3.new(35, 0, 0)),
+	pose("RightAnkle", Vector3.new(35, 0, 0)),
+	pose("LeftShoulder", Vector3.new(0, -75, 25)),
+	pose("RightShoulder", Vector3.new(0, 75, -25)),
+	pose("LeftElbow", Vector3.new(0, -45, 0)),
+	pose("RightElbow", Vector3.new(0, 45, 0)),
 }
 
 return table.freeze({
@@ -124,8 +125,8 @@ return table.freeze({
 	-- The hand items small enough to hide with (the hotbar's small sizes: tiny and light); a big item stops you.
 	POCKETABLE_SIZES = table.freeze({ tiny = true, light = true }),
 	-- The body under the furniture: the root stands where a standing root would (the pose folds the body down), placed
-	-- by its FurnitureDef's tuck (TUCK_POSE).
-	TUCK_POSE = table.freeze(TUCK_POSE),
+	-- by its FurnitureDef's tuck (HUG_POSE).
+	HUG_POSE = table.freeze(HUG_POSE),
 	-- A spot faces the room: its furniture is turned half round when its back has more than OPEN_MARGIN studs more
 	-- open floor than its front, looked for out to OPEN_PROBE studs.
 	OPEN_MARGIN = 1,

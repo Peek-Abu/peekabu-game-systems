@@ -5,15 +5,14 @@ local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideCo
 
 return function()
 	describe("targets", function()
-		it("has a Transform for every joint of the tucked pose", function()
+		it("has a Transform for every joint of the hug pose", function()
 			local targets = HidePoseFormulas.targets()
-			for _, entry in HideConstants.TUCK_POSE do
+			for _, entry in HideConstants.HUG_POSE do
 				expect(targets[entry.joint]).never.to.equal(nil)
 			end
-			-- Folding: the hips swing the thighs forward, the waist bends the torso down.
-			local hip = targets.LeftHip
-			expect(hip:VectorToWorldSpace(Vector3.new(0, -1, 0)).Z < -0.9).to.equal(true)
-			expect(targets.Waist:VectorToWorldSpace(Vector3.new(0, 1, 0)).Z < -0.9).to.equal(true)
+			-- Hugging the knees: the hips swing the thighs forward, the waist bends the torso down.
+			expect(targets.LeftHip:VectorToWorldSpace(Vector3.new(0, -1, 0)).Z < -0.9).to.equal(true)
+			expect(targets.Waist:VectorToWorldSpace(Vector3.new(0, 1, 0)).Z < -0.7).to.equal(true)
 		end)
 	end)
 

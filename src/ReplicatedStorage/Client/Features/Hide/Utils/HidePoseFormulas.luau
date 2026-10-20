@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	HidePoseFormulas: the tucked huddle a hiding player shows everyone (docs/superpowers/specs/
-	2026-10-15-cleanup-crew-chase-kit-design.md §4). `targets` turns HideConstants.TUCK_POSE into each joint's Transform;
+	2026-10-15-cleanup-crew-chase-kit-design.md §4). `targets` is the knee-hug pose (HideHugFormulas.pose) as each joint's Transform;
 	`weight` eases the fold in over TUCK_SECONDS and out over UNTUCK_SECONDS (quad out: quick, then settling); `blend`
 	lays the pose over whatever the animation put on the joint. Pure.
 
@@ -11,19 +11,15 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideConstants)
+local HideHugFormulas = require(ReplicatedStorage.Shared.Features.Hide.Utils.HideHugFormulas)
 
 local HidePoseFormulas = {}
 
 --[=[
-	The tucked pose's Transform for each joint it moves, by Motor6D name.
+	The hug pose's Transform for each joint it moves, by Motor6D name.
 ]=]
 function HidePoseFormulas.targets(): { [string]: CFrame }
-	local targets: { [string]: CFrame } = {}
-	for _, entry in HideConstants.TUCK_POSE do
-		local r = entry.rotation
-		targets[entry.joint] = CFrame.new(entry.offset) * CFrame.Angles(math.rad(r.X), math.rad(r.Y), math.rad(r.Z))
-	end
-	return targets
+	return HideHugFormulas.pose()
 end
 
 --[=[

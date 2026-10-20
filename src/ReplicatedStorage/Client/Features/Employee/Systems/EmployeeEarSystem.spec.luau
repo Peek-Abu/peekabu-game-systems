@@ -113,5 +113,35 @@ return function()
 			untrack()
 			model:Destroy()
 		end)
+
+		it("leaves the ear joints alone while the character is hiding, then resumes from them", function()
+			local hiding = true
+			local ears = EmployeeEarSystem.new(function()
+				return hiding
+			end)
+			local model, root, motors = makeEmployee(Vector3.new(0, 0, 0))
+			local untrack = ears.track(model)
+			local posed = CFrame.Angles(math.rad(120), 0, math.rad(10))
+			for _, motor in motors do
+				motor.Transform = posed
+			end
+			local focus = Vector3.new(0, 0, 10)
+			ears.step(1 / 60, focus, 0)
+			root.CFrame = CFrame.new(0, 0, -0.3)
+			ears.step(1 / 60, focus, 1 / 60)
+			expect(motors[-1].Transform).to.equal(posed)
+			expect(motors[1].Transform).to.equal(posed)
+			expect(ears.getState().active).to.equal(0)
+			-- Out of the spot: the springs take over from the joints' pose (the spring range clamps it to EAR_MAX_ANGLE).
+			hiding = false
+			ears.step(1 / 60, focus, 2 / 60)
+			root.CFrame = CFrame.new(0, 0, -0.6)
+			ears.step(1 / 60, focus, 3 / 60)
+			local pitch = motors[1].Transform:ToEulerAnglesXYZ()
+			expect(math.abs(pitch - EmployeeConstants.EAR_MAX_ANGLE) < math.rad(5)).to.equal(true)
+			expect(ears.getState().active).to.equal(1)
+			untrack()
+			model:Destroy()
+		end)
 	end)
 end

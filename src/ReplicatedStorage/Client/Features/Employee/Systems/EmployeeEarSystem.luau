@@ -12,9 +12,11 @@
 	@class EmployeeEarSystem
 ]=]
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
+local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideConstants)
 local EmployeeEarFormulas = require(ReplicatedStorage.Client.Features.Employee.Utils.EmployeeEarFormulas)
 
 type Ear = {
@@ -33,6 +35,7 @@ type Employee = {
 	previous: CFrame?,
 	vertical: number,
 	active: boolean,
+	hiding: boolean,
 }
 
 export type EmployeeEarState = {
@@ -100,9 +103,29 @@ local function rest(employee: Employee)
 	employee.previous = nil
 	employee.vertical = 0
 	employee.active = false
+	employee.hiding = false
 end
 
-function EmployeeEarSystem.new(): EmployeeEarSystem
+-- Whether the character's Player is in a hiding spot.
+local function playerIsHiding(model: Model): boolean
+	local player = Players:GetPlayerFromCharacter(model)
+	return player ~= nil and player:GetAttribute(HideConstants.PLAYER_SPOT_ATTRIBUTE) ~= nil
+end
+
+-- Picks the springs up where the joints are (the inverse of EmployeeEarFormulas.transform), so nothing snaps.
+local function seedFromJoints(employee: Employee)
+	for _, ear in employee.ears do
+		local x, _, z = ear.motor.Transform:ToEulerAnglesXYZ()
+		ear.pitch, ear.pitchVelocity = x, 0
+		ear.outward, ear.outwardVelocity = -ear.side * z, 0
+	end
+	employee.previous = nil
+	employee.vertical = 0
+end
+
+-- `isHiding` (default: the character's Player has HideConstants.PLAYER_SPOT_ATTRIBUTE set) is injectable for specs.
+function EmployeeEarSystem.new(isHiding: ((Model) -> boolean)?): EmployeeEarSystem
+	local hidingCheck = isHiding or playerIsHiding
 	local employees: { [Model]: Employee } = {}
 	local random = Random.new()
 
@@ -135,6 +158,7 @@ function EmployeeEarSystem.new(): EmployeeEarSystem
 				previous = nil,
 				vertical = 0,
 				active = false,
+				hiding = false,
 			}
 			for _, descendant in character:GetDescendants() do
 				addEar(employee, descendant)
@@ -156,11 +180,20 @@ function EmployeeEarSystem.new(): EmployeeEarSystem
 		step = function(dt, focus, now)
 			for model, employee in employees do
 				local root = rootOf(model)
-				if
+				if hidingCheck(model) then
+					-- The hide pose writes these joints: leave them be, and start afresh when it lets go.
+					employee.hiding = true
+					employee.previous = nil
+					employee.active = false
+				elseif
 					#employee.ears > 0
 					and root ~= nil
 					and (root.Position - focus).Magnitude <= EmployeeConstants.EAR_RADIUS
 				then
+					if employee.hiding then
+						employee.hiding = false
+						seedFromJoints(employee)
+					end
 					employee.active = true
 					stepEmployee(employee, root, dt, now)
 				elseif employee.active then
