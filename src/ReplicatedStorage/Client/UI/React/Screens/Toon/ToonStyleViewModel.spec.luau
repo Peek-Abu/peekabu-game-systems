@@ -116,6 +116,20 @@ return function()
 		end)
 	end)
 
+	describe("pillWidth", function()
+		it("fits the measured label, both side paddings, both stroke sides and 4 px slack", function()
+			-- stroke(12) = 2: 33 + 2 * 7 + 2 * 2 + 4.
+			expect(VM.pillWidth(33, 12, 7)).to.equal(55)
+			-- stroke(14) = 2: 96 + 2 * 12 + 2 * 2 + 4.
+			expect(VM.pillWidth(96, 14, 12)).to.equal(128)
+		end)
+
+		it("rounds a fractional measure up and treats a broken one as no text", function()
+			expect(VM.pillWidth(33.2, 12, 7)).to.equal(56)
+			expect(VM.pillWidth(-4, 12, 7)).to.equal(22)
+		end)
+	end)
+
 	describe("optical", function()
 		local CAP = VM.DISPLAY_CAP_SHIFT
 

@@ -35,6 +35,9 @@ export type ToonPillProps = {
 	trailing: React.ReactNode?,
 	-- Room kept clear at the right for `trailing` (px).
 	trailingWidth: number?,
+	-- The label's side padding (px, default 12): a small tag sized from its measured text
+	-- (ToonStyleViewModel.pillWidth) takes less.
+	padX: number?,
 	zIndex: number?,
 	layoutOrder: number?,
 }
@@ -43,8 +46,9 @@ local function ToonPill(props: ToonPillProps): React.ReactNode
 	local textSize = props.textSize or 26
 	local iconSize = props.iconSize or math.floor(textSize * 1.9)
 	local hasIcon = props.icon ~= nil
-	local left = if hasIcon then iconSize * 0.62 else 12
-	local right = props.trailingWidth or 12
+	local padX = props.padX or 12
+	local left = if hasIcon then iconSize * 0.62 else padX
+	local right = props.trailingWidth or padX
 	local hue: UIToonConstants.Hue = props.hue or "cream"
 	local face: { [string]: React.ReactNode } = {}
 	face.label = e(ToonText, {

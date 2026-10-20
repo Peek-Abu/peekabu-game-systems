@@ -4,7 +4,8 @@
 	and grows with the drop growing under it; press drops the body onto its shadow, collapsing the drop and the lip;
 	selected lifts, grows and rings in V2's lilac; the unselected siblings recede; disabled ignores all of it). `hue`
 	is a variant's palette colour (steel when disabled), `textOn` the text colour that reads on a face, `stroke` /
-	`drop` the ink stroke and hard drop for display text of a size, `grouped` a count with thousands commas, `blend` the pose part-way between two states. Pure.
+	`drop` the ink stroke and hard drop for display text of a size, `pillWidth` the width a pill needs for its measured
+	label, `grouped` a count with thousands commas, `blend` the pose part-way between two states. Pure.
 
 	@class ToonStyleViewModel
 ]=]
@@ -127,6 +128,13 @@ end
 -- The hard ink drop under display text `size` px tall (2..8).
 function ToonStyleViewModel.drop(size: number): number
 	return math.clamp(math.round(size * DEPTH.textDrop), 2, 8)
+end
+
+-- A pill's label is fitted inside the pill less its side padding (`padX` each side) and its ink stroke (each side), so
+-- a pill sized from the label's measured width (`textWidth`, TextService at `textSize`) never shrinks or wraps it. Whole
+-- px, with 4 px slack for the engine's rounding under a UIScale.
+function ToonStyleViewModel.pillWidth(textWidth: number, textSize: number, padX: number): number
+	return math.ceil(math.max(0, textWidth) + 2 * padX + 2 * ToonStyleViewModel.stroke(textSize) + 4)
 end
 
 --[=[
