@@ -536,7 +536,7 @@ return function()
 						local marker = OfficeLayoutUtils.marker(layout, item.marker)
 						if marker ~= nil and table.find(kinds, marker.kind) == nil then
 							for _, kind in kinds do
-								expect(used[kind] or 0).to.equal(totals[kind])
+								expect(used[kind] or 0).to.equal(totals[kind] or 0)
 							end
 						end
 					end
