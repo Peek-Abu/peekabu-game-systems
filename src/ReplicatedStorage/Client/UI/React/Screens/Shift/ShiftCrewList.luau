@@ -1,8 +1,8 @@
 --!strict
 --[=[
 	ShiftCrewList: the crew in a shift (V1 shift renders): a small dark plate with a row per crew member, their own
-	character's head (CharacterPortrait), their name and a sticker for what matters at a glance (YOU in gold, CAUGHT in
-	coral; a caught member's name is struck through and faded). Every pill is as wide as its measured label
+	character's head (CharacterPortrait), their name, their Gloom-life pips (ShiftLivesPips) and a sticker for what matters at a glance (YOU in gold, CAUGHT in
+	coral, OUT for a member knocked out for the shift; a caught member's name is struck through and faded). Every pill is as wide as its measured label
 	(TextService, ToonStyleViewModel.pillWidth), so no label is ever cut, and the name keeps clear of the tag's column.
 	Tapping it opens the detail (`open`): each member's status in words, beside it. Desktop: top-left under Roblox's buttons. Phone: top-right. Presentational (exempt;
 	story in ShiftCompactHudPanel.story; the roster is specced in ShiftCrewViewModel).
@@ -16,6 +16,8 @@ local TextService = game:GetService("TextService")
 local React = require(ReplicatedStorage.Packages.React)
 local CharacterPortrait = require(ReplicatedStorage.Client.UI.React.Screens.Portrait.CharacterPortrait)
 local ShiftCrewViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftCrewViewModel)
+local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
+local ShiftLivesPips = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftLivesPips)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonPanel = require(Toon.ToonPanel)
 local ToonPill = require(Toon.ToonPill)
@@ -32,6 +34,9 @@ local PILL_PAD = 7
 -- The tag's column beyond its box: its 2 px inset from the row's right, its ink outline (3 px, drawn outside its box),
 -- up to 2 px of sticker tilt and a 2 px gap.
 local TAG_CLEARANCE = 9
+
+-- The gap between a row's Gloom-life pips and the tag (or the row's right edge) and the name.
+local PIPS_CLEARANCE = 4
 
 -- Luckiest Guy label widths in design px (the HUD scales them with everything else), measured once per label.
 local measured: { [string]: number } = {}
@@ -63,11 +68,17 @@ local function row(member: ShiftCrewViewModel.MemberView, you: boolean, height: 
 	local lineX = avatar + 8
 	local roomy = height > 34
 	-- The sticker for what matters at a glance, its width from its measured label.
-	local tag = if member.tone == "danger" then "CAUGHT" elseif you then "YOU" else nil
+	local tag = if member.out then "OUT" elseif member.tone == "danger" then "CAUGHT" elseif you then "YOU" else nil
 	local tagSize = if roomy then 14 else 12
 	local tagWidth = if tag ~= nil then pillWidth(tag, tagSize) else 0
 	-- The tag's column at the row's right, kept clear by the name.
 	local tagColumn = if tag ~= nil then tagWidth + TAG_CLEARANCE else 0
+	-- The Gloom-life pips between the name and the tag (none for a member not in a shift), their column kept clear too.
+	local lives, livesMax = member.lives, member.livesMax
+	local sizes = if roomy then ShiftHudViewModel.LIVES.desktop else ShiftHudViewModel.LIVES.phone
+	local pipsWidth = if lives ~= nil and livesMax ~= nil then ShiftLivesPips.width(sizes, livesMax) else 0
+	local pipsColumn = if pipsWidth > 0 then pipsWidth + PIPS_CLEARANCE else 0
+	local nameWidth = width - lineX - tagColumn - pipsColumn
 	local children: { [string]: React.ReactNode } = {
 		face = e("Frame", {
 			Position = UDim2.fromOffset(0, 4),
@@ -92,7 +103,7 @@ local function row(member: ShiftCrewViewModel.MemberView, you: boolean, height: 
 			color = COLOR.white,
 			textSize = if roomy then 19 else 15,
 			position = UDim2.fromOffset(lineX, 0),
-			size = UDim2.fromOffset(width - lineX - tagColumn, height),
+			size = UDim2.fromOffset(nameWidth, height),
 			fit = true,
 			transparency = if member.struck then 0.45 else 0,
 		}),
@@ -100,10 +111,19 @@ local function row(member: ShiftCrewViewModel.MemberView, you: boolean, height: 
 	if member.struck then
 		children.strike = e("Frame", {
 			Position = UDim2.new(0, lineX, 0.5, 0),
-			Size = UDim2.fromOffset(math.min(width - lineX - tagColumn, 8 + #member.name * 9), 2),
+			Size = UDim2.fromOffset(math.min(nameWidth, 8 + #member.name * 9), 2),
 			BackgroundColor3 = COLOR.white,
 			BackgroundTransparency = 0.3,
 			BorderSizePixel = 0,
+		})
+	end
+	if lives ~= nil and livesMax ~= nil then
+		children.lives = ShiftLivesPips.pips({
+			lives = lives,
+			livesMax = livesMax,
+			sizes = sizes,
+			position = UDim2.new(1, -(tagColumn + 2), 0.5, 0),
+			anchor = Vector2.new(1, 0.5),
 		})
 	end
 	if tag ~= nil then

@@ -3,8 +3,8 @@
 	CatchViewModel: the catch's screens (Figma 4b/4d CCTV, 4c/4e Rehired card). `cctv`: while the local player is down
 	in a running shift, the feed of the teammate Death is spectating (camera number, room, what they carry, rooms from
 	the truck), a fictional night clock, the respawn countdown (never below 0:00), the spectate key legends and the
-	incident report. Only a real catch shows it: the local player is `dead` AND has a numeric `caughtUntil` (a plain
-	death, e.g. a reset, shows nothing), and a report left over from an earlier catch (its `backAt` before this
+	incident report. Only a real catch shows it: the local player is `dead` AND has a numeric `caughtUntil` or is
+	`knockedOut` for the shift ("OUT FOR THE SHIFT"; a plain death, e.g. a reset, shows nothing), and a report left over from an earlier catch (its `backAt` before this
 	catch's deadline) is ignored. `spectateKeys`: the key-cap legends for the spectate actions. `rehired`: the HR notice from REHIRED_LEAD seconds before the respawn until REHIRED_HOLD seconds
 	after it (`shown`; the player is held still meanwhile), then REHIRED_FADE more while it fades out. Pure; the components only lay the fields out.
 
@@ -163,7 +163,9 @@ function CatchViewModel.cctv(input: CctvInput): CctvView?
 		return nil
 	end
 	local caughtUntil = me[OccupantConstants.PUBLIC_CAUGHT_UNTIL]
-	if type(caughtUntil) ~= "number" then
+	-- A knocked-out player (their last Gloom life spent) has no deadline: the feed stays up for the rest of the shift.
+	local out = me[ShiftConstants.PUBLIC_KNOCKED_OUT] == true
+	if type(caughtUntil) ~= "number" and not out then
 		return nil
 	end
 	local rec, watching, details = "REC   CAM -- · NO SIGNAL", "NO SIGNAL", "Nobody to watch."
@@ -174,14 +176,17 @@ function CatchViewModel.cctv(input: CctvInput): CctvView?
 	end
 	local endsAt = snapshot.endsAt
 	local elapsed = ShiftConstants.SHIFT_SECONDS - (if endsAt ~= nil then endsAt - input.now else 0)
-	local report = currentReport(input.report, caughtUntil)
+	local report = if type(caughtUntil) == "number" then currentReport(input.report, caughtUntil) else input.report
+	-- ShiftHudViewModel.clock clamps at 0:00.
+	local back = if type(caughtUntil) == "number"
+		then `BACK ON THE CLOCK IN {ShiftHudViewModel.clock(caughtUntil - input.now)}`
+		else "OUT FOR THE SHIFT"
 	return {
 		rec = rec,
 		watching = watching,
 		details = details,
 		stamp = `{ShiftConstants.NIGHT_DAY} {CatchViewModel.nightClock(elapsed)}`,
-		-- ShiftHudViewModel.clock clamps at 0:00.
-		back = `BACK ON THE CLOCK IN {ShiftHudViewModel.clock(caughtUntil - input.now)}`,
+		back = back,
 		incidentTitle = if input.phone then "INCIDENT REPORT" else "INCIDENT REPORT · YOU",
 		incident = incidentOf(report, input.phone),
 		prevKey = input.prevKey,
@@ -191,13 +196,16 @@ function CatchViewModel.cctv(input: CctvInput): CctvView?
 end
 
 --[=[
-	Whether the CCTV overlay follows the clock: only while the local player (`me`) is down with a deadline (the only
-	time it shows, and its stamp and "back on the clock" count).
+	Whether the CCTV overlay follows the clock: only while the local player (`me`) is down with a deadline or knocked out
+	(the only times it shows, and its stamp and "back on the clock" count).
 ]=]
 function CatchViewModel.cctvTicks(me: PublicPlayerTypes.PublicPlayer?): boolean
 	return me ~= nil
 		and me[DeathConstants.PUBLIC_FIELD] == true
-		and type(me[OccupantConstants.PUBLIC_CAUGHT_UNTIL]) == "number"
+		and (
+			type(me[OccupantConstants.PUBLIC_CAUGHT_UNTIL]) == "number"
+			or me[ShiftConstants.PUBLIC_KNOCKED_OUT] == true
+		)
 end
 
 --[=[

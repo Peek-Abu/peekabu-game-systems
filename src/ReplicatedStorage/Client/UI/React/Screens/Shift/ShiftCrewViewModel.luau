@@ -2,7 +2,7 @@
 --[=[
 	ShiftCrewViewModel: the crew roster card (Figma 35:1100-35:1165, 1a-1e): each crew member's status line, the ink it
 	is written in, whether their name is struck through (caught), and the phone's two-line form (everyone fine on line
-	one, trouble on line two, names sharing a status grouped). Status priority: caught > clocked out (their card punched,
+	one, trouble on line two, names sharing a status grouped). Status priority: knocked out (OUT) > caught > clocked out (their card punched,
 	`punched`) > (while the truck counts down) still inside > carrying > vacuuming > at the truck > room > on shift. Still
 	inside is never struck or red: whoever is inside when the truck leaves is paid like the rest. The tick box (Figma
 	35:1100 / 35:1119 / 35:1137): ticked for crew who clocked out or are at the truck, a marker X for a caught member,
@@ -37,6 +37,11 @@ export type MemberView = {
 	tone: Tone,
 	struck: boolean,
 	box: Box,
+	-- Gloom lives left and the most this shift (nil when the member is not in a shift: no pips are drawn).
+	lives: number?,
+	livesMax: number?,
+	-- Knocked out for the shift (their last life spent): struck, tagged OUT, and no way back.
+	out: boolean,
 	-- While caught: the server-clock time they are back, which the status counts down to (a live line ticks on it).
 	caughtUntil: number?,
 }
@@ -61,10 +66,19 @@ local function member(
 	aboard: boolean
 ): MemberView
 	local box: Box = if struck then "x" elseif aboard then "tick" else "empty"
-	return { userId = userId, name = name, status = status, short = short, tone = tone, struck = struck, box = box }
+	return {
+		userId = userId,
+		name = name,
+		status = status,
+		short = short,
+		tone = tone,
+		struck = struck,
+		box = box,
+		out = false,
+	}
 end
 
-local function statusOf(
+local function baseStatus(
 	userId: number,
 	name: string,
 	entry: PublicPlayerTypes.PublicPlayer,
@@ -72,6 +86,11 @@ local function statusOf(
 	punched: boolean,
 	now: number
 ): MemberView
+	if entry[ShiftConstants.PUBLIC_KNOCKED_OUT] == true then
+		local out = member(userId, name, "OUT", "OUT", "danger", true, false)
+		out.out = true
+		return out
+	end
 	local caughtUntil = entry[OccupantConstants.PUBLIC_CAUGHT_UNTIL]
 	if type(caughtUntil) == "number" then
 		local text = `CAUGHT · back {ShiftHudViewModel.clock(caughtUntil - now)}`
@@ -113,6 +132,25 @@ local function statusOf(
 		return member(userId, name, room, room, "muted", false, false)
 	end
 	return member(userId, name, "on shift", "on shift", "muted", false, false)
+end
+
+-- A member's status, with their Gloom lives (the `lives` and `livesMax` public fields) when they have them.
+local function statusOf(
+	userId: number,
+	name: string,
+	entry: PublicPlayerTypes.PublicPlayer,
+	clockingOut: boolean,
+	punched: boolean,
+	now: number
+): MemberView
+	local view = baseStatus(userId, name, entry, clockingOut, punched, now)
+	local lives = entry[ShiftConstants.PUBLIC_LIVES]
+	local livesMax = entry[ShiftConstants.PUBLIC_LIVES_MAX]
+	if type(lives) == "number" and type(livesMax) == "number" then
+		view.lives = lives
+		view.livesMax = livesMax
+	end
+	return view
 end
 
 -- "Sam, Alex: in the truck bed · Jo: vacuuming": names that share a short status, grouped, in roster order.
@@ -193,7 +231,7 @@ ShiftCrewViewModel.DETAIL = table.freeze({
 })
 
 -- What else shares the phone's band under the Gloom meter (HUD design px), which the open roster keeps left of:
--- ShiftClockOutBoard's phone board (330 wide, centred, during the clock-out; its 62 px time-clock render, set 40% over
+-- ShiftClockOutBoard's phone board (330 wide, centred under the Gloom-life pips, during the clock-out; its 62 px time-clock render, set 40% over
 -- its left edge and tilted -8 degrees, reaches 29 px left of it: 0.6 * 62 / 2 - 31 * (cos 8 + sin 8)). And
 -- Roblox's dynamic thumbstick: its ring rests in the bottom 150 px of the screen's left 40% (the card is not Active,
 -- so a touch on it still reaches the thumbstick; it is only kept out of the ring's way).

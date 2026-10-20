@@ -135,6 +135,45 @@ ShiftHudViewModel.METER = table.freeze({
 })
 ShiftHudViewModel.METER_ICON_OVERHANG = 0.38
 
+-- The local player's Gloom-life pips, just under the meter (HUD design px): a pip's diameter, the gap between pips, the
+-- ink outline drawn around each (it breaks the pip's box by `stroke`), the gap under the meter (clear of its 7 px drop
+-- shadow) and the gap the clock-out board keeps under the pips.
+ShiftHudViewModel.LIVES = table.freeze({
+	phone = table.freeze({ pip = 10, gap = 4, stroke = 2, below = 8, boardGap = 8 }),
+	desktop = table.freeze({ pip = 14, gap = 4, stroke = 2, below = 8, boardGap = 8 }),
+})
+-- The pip row's loss pop: scale up to this and back over this many seconds.
+ShiftHudViewModel.LIVES_POP = table.freeze({ scale = 1.25, seconds = 0.25 })
+
+-- The pip row's scale `t` (0-1) into a life-loss pop: 1 up to LIVES_POP.scale at the midpoint and back to 1.
+function ShiftHudViewModel.lossPop(t: number): number
+	return 1 + (ShiftHudViewModel.LIVES_POP.scale - 1) * math.sin(math.pi * math.clamp(t, 0, 1))
+end
+
+--[=[
+	Where the local player's Gloom-life pips go on a `viewport` (HUD design px): the top-left corner and size of the row
+	for a full set of lives (ShiftConstants.STARTING_LIVES), centred under the Gloom meter, `below` clear of its plate and
+	drop shadow. It sits in the band the clock-out board used to open at (see `boardTop`), clear of the crew list and the
+	open roster.
+]=]
+function ShiftHudViewModel.livesFrame(layout: UIPaperConstants.Layout, viewport: Vector2): (Vector2, Vector2)
+	local lives = if layout == "phone" then ShiftHudViewModel.LIVES.phone else ShiftHudViewModel.LIVES.desktop
+	local meter = if layout == "phone" then ShiftHudViewModel.METER.phone else ShiftHudViewModel.METER.desktop
+	local count = ShiftConstants.STARTING_LIVES
+	local box = lives.pip + 2 * lives.stroke
+	local size = Vector2.new(count * box + (count - 1) * lives.gap, box)
+	return Vector2.new(viewport.X / 2 - size.X / 2, meter.top + meter.size.Y + lives.below), size
+end
+
+--[=[
+	The clock-out board's top edge (HUD design px): `boardGap` under the Gloom-life pips, so the board never sits on them.
+]=]
+function ShiftHudViewModel.boardTop(layout: UIPaperConstants.Layout, viewport: Vector2): number
+	local lives = if layout == "phone" then ShiftHudViewModel.LIVES.phone else ShiftHudViewModel.LIVES.desktop
+	local at, size = ShiftHudViewModel.livesFrame(layout, viewport)
+	return at.Y + size.Y + lives.boardGap
+end
+
 -- "m:ss", seconds rounded up, never below 0:00.
 function ShiftHudViewModel.clock(seconds: number): string
 	local whole = math.max(0, math.ceil(seconds))

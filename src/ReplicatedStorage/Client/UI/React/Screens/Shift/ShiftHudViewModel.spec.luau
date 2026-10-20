@@ -1,3 +1,4 @@
+local CrewVM = require(script.Parent.ShiftCrewViewModel)
 local ShiftHudViewModel = require(script.Parent.ShiftHudViewModel)
 
 local function snapshot(extra)
@@ -508,6 +509,73 @@ return function()
 			expect(ShiftHudViewModel.meter({ quotaMet = true, overtime = false }).title).to.equal("CONTRACT MET!")
 			expect(ShiftHudViewModel.meter({ quotaMet = true, overtime = false }).met).to.equal(true)
 			expect(ShiftHudViewModel.meter({ quotaMet = true, overtime = true }).title).to.equal("OVERTIME!")
+		end)
+	end)
+
+	describe("livesFrame", function()
+		local function overlaps(aAt, aSize, bAt, bSize)
+			return aAt.X < bAt.X + bSize.X
+				and bAt.X < aAt.X + aSize.X
+				and aAt.Y < bAt.Y + bSize.Y
+				and bAt.Y < aAt.Y + aSize.Y
+		end
+
+		-- The viewport of each layout (HUD design px) the frame is specced at.
+		local cases = {
+			{ layout = "phone", viewport = Vector2.new(844, 390), count = 4 },
+			{ layout = "desktop", viewport = Vector2.new(1920, 1080), count = 4 },
+		}
+
+		it("sits centred under the meter and its drop shadow", function()
+			for _, case in cases do
+				local at, size = ShiftHudViewModel.livesFrame(case.layout, case.viewport)
+				local meter = ShiftHudViewModel.METER[case.layout]
+				expect(at.X + size.X / 2).to.equal(case.viewport.X / 2)
+				expect(at.Y >= meter.top + meter.size.Y + 7).to.equal(true)
+			end
+		end)
+
+		it("never overlaps the meter, the crew list or the clock-out board", function()
+			for _, case in cases do
+				local phone = case.layout == "phone"
+				local at, size = ShiftHudViewModel.livesFrame(case.layout, case.viewport)
+				local meter = ShiftHudViewModel.METER[case.layout]
+				local w = case.viewport.X
+				-- The meter plate with its Gloom render, its stopwatch render and its drop shadow.
+				local plate = if phone then CrewVM.phoneFit(w).meter else meter.size.X
+				local meterAt = Vector2.new(
+					w / 2 - plate / 2 - meter.icon * ShiftHudViewModel.METER_ICON_OVERHANG,
+					meter.top - (if phone then 24 else 34)
+				)
+				local meterEnd =
+					Vector2.new(w / 2 + plate / 2 + (if phone then 16 else 22), meter.top + meter.size.Y + 7)
+				expect(overlaps(at, size, meterAt, meterEnd - meterAt)).to.equal(false)
+				-- The crew list: top-right on phone, top-left under Roblox's buttons on desktop.
+				local listWidth = if phone then CrewVM.phoneFit(w).list else nil
+				local listSize = CrewVM.listSize(phone, case.count, listWidth)
+				local listAt = if phone then Vector2.new(w - 10 - listSize.X, 6) else Vector2.new(24, 66)
+				expect(overlaps(at, size, listAt, listSize)).to.equal(false)
+				-- The clock-out board: centred, `boardTop` down, 7 px of outline above it, its clock render reaching out.
+				local boardWidth = if phone then 330 else 470
+				local boardHeight = if phone then 80 else 108
+				local boardAt = Vector2.new(
+					w / 2 - boardWidth / 2 - (if phone then 29 else 40),
+					ShiftHudViewModel.boardTop(case.layout, case.viewport) - 7
+				)
+				expect(overlaps(at, size, boardAt, Vector2.new(boardWidth + 40, boardHeight + 14))).to.equal(false)
+			end
+		end)
+
+		it("pops to 1.25 at the midpoint and settles back to 1", function()
+			expect(ShiftHudViewModel.lossPop(0)).to.equal(1)
+			expect(math.abs(ShiftHudViewModel.lossPop(1) - 1) < 1e-9).to.equal(true)
+			expect(math.abs(ShiftHudViewModel.lossPop(0.5) - 1.25) < 1e-9).to.equal(true)
+			expect(ShiftHudViewModel.lossPop(-1)).to.equal(1)
+		end)
+
+		it("fits a full set of lives", function()
+			local _, size = ShiftHudViewModel.livesFrame("phone", Vector2.new(844, 390))
+			expect(size).to.equal(Vector2.new(3 * 14 + 2 * 4, 14))
 		end)
 	end)
 end

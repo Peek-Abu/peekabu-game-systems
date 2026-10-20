@@ -4,6 +4,7 @@
 	way horror games hold back in a run: few elements, each on the full depth stack.
 	- top centre: the Gloom meter and the shift clock joined in one plate (ShiftGloomMeter); while the crew clocks out,
 	  ShiftHud draws the clock-out board under it (ShiftClockOutBoard);
+	- under the meter, the local player's Gloom-life pips (ShiftLivesPips.Local); the clock-out board opens under them;
 	- the crew (ShiftCrewList): top-left on desktop under Roblox's buttons, top-right on phone; tapping it shows each
 	  member's status (`crewOpen`) beside it, or under it on a narrow window, and on the left under the meter on phone
 	  (never on the meter, its clock or the clock-out board: ShiftCrewViewModel.rosterFrame);
@@ -27,6 +28,7 @@ local ShiftCrewList = require(script.Parent.ShiftCrewList)
 local ShiftGloomMeter = require(script.Parent.ShiftGloomMeter)
 local ShiftHotbar = require(script.Parent.ShiftHotbar)
 local ShiftHotbarViewModel = require(script.Parent.ShiftHotbarViewModel)
+local ShiftLivesPips = require(script.Parent.ShiftLivesPips)
 local CrewVM = require(script.Parent.ShiftCrewViewModel)
 local VM = require(script.Parent.ShiftHudViewModel)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
@@ -162,8 +164,22 @@ local function ShiftCompactHudPanel(props: Props): React.ReactNode
 			deadline = if live then view.endsAt else nil,
 		}),
 	}
-	-- The crew: top-left on desktop (under Roblox's buttons), top-right on phone.
+	-- The local player's Gloom-life pips just under the meter (ShiftHudViewModel.livesFrame), from their roster entry.
 	local roster = props.roster
+	if roster ~= nil then
+		for _, member in roster.members do
+			local lives, livesMax = member.lives, member.livesMax
+			if member.userId == props.myId and lives ~= nil and livesMax ~= nil then
+				nodes.lives = e(ShiftLivesPips.Local, {
+					lives = lives,
+					livesMax = livesMax,
+					layout = props.layout,
+					viewport = props.viewport,
+				})
+			end
+		end
+	end
+	-- The crew: top-left on desktop (under Roblox's buttons), top-right on phone.
 	if roster ~= nil and #roster.members > 0 then
 		-- The list's top-left corner (the phone's is pinned to the right edge; the open card lays out against it).
 		local listWidth = if phone then fit.list else nil

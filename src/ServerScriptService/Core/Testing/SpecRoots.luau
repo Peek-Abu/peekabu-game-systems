@@ -434,6 +434,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftClockOutBoard"] = "presentational React component (story in ShiftClockOutBoard.story; words and counts specced in ShiftClockOutViewModel)",
 	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftGloomMeter"] = "presentational React component (story in ShiftCompactHudPanel.story; words specced in ShiftHudViewModel.meter)",
 	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftCrewList"] = "presentational React component (story in ShiftCompactHudPanel.story; roster specced in ShiftCrewViewModel)",
+	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftLivesPips"] = "presentational React component (story in ShiftCompactHudPanel.story; sizes, frame and pop curve specced in ShiftHudViewModel)",
 	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHotbar"] = "presentational React component (slots specced in ShiftHudViewModel.hotbar; story in ShiftCompactHudPanel.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftStoryFixtures"] = "story fixtures (static sample data)",
 	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftActionButton"] = "presentational React component (story in ShiftActionButton.story; the arc and the states specced in ShiftHudViewModel.arcFor / buttons, the press pose in ToonStyleViewModel.pose)",

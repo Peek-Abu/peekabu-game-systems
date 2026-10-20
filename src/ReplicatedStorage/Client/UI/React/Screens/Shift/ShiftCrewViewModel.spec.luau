@@ -77,6 +77,41 @@ return function()
 		expect(statusOf(view, 2).caughtUntil).to.equal(nil)
 	end)
 
+	it("reads a knocked-out member as OUT, struck, with no countdown", function()
+		local view = ShiftCrewViewModel.roster(
+			{ 2 },
+			players({ [2] = { dead = true, knockedOut = true, lives = 0, livesMax = 3 } }),
+			NAMES,
+			nil,
+			false,
+			100
+		)
+		local alex = statusOf(view, 2)
+		expect(alex.status).to.equal("OUT")
+		expect(alex.short).to.equal("OUT")
+		expect(alex.tone).to.equal("danger")
+		expect(alex.struck).to.equal(true)
+		expect(alex.out).to.equal(true)
+		expect(alex.caughtUntil).to.equal(nil)
+		expect(alex.lives).to.equal(0)
+	end)
+
+	it("carries a member's Gloom lives, and none when they are not in a shift", function()
+		local view = ShiftCrewViewModel.roster(
+			{ 1, 2 },
+			players({ [1] = { lives = 2, livesMax = 3 }, [2] = { vacuuming = true } }),
+			NAMES,
+			nil,
+			false,
+			100
+		)
+		expect(statusOf(view, 1).lives).to.equal(2)
+		expect(statusOf(view, 1).livesMax).to.equal(3)
+		expect(statusOf(view, 1).out).to.equal(false)
+		expect(statusOf(view, 2).lives).to.equal(nil)
+		expect(statusOf(view, 2).livesMax).to.equal(nil)
+	end)
+
 	it("clamps the back-in countdown at 0:00", function()
 		local view = ShiftCrewViewModel.roster(
 			{ 2 },
@@ -344,8 +379,12 @@ return function()
 					Vector2.new(w - 10 - ShiftCrewViewModel.phoneFit(w).list, 6),
 					ShiftCrewViewModel.listSize(true, count, ShiftCrewViewModel.phoneFit(w).list),
 				},
-				-- ShiftClockOutBoard: 330x80 centred at 114 (+7 drop), its tilted clock render reaching 29 px left.
-				board = { Vector2.new(w / 2 - 165 - 29, 114 - 7), Vector2.new(330 + 29, 80 + 7 + 7) },
+				-- ShiftClockOutBoard: 330x80 centred under the Gloom-life pips (ShiftHudViewModel.boardTop, +7 drop), its
+				-- tilted clock render reaching 29 px left.
+				board = {
+					Vector2.new(w / 2 - 165 - 29, ShiftHudViewModel.boardTop("phone", viewport) - 7),
+					Vector2.new(330 + 29, 80 + 7 + 7),
+				},
 				-- ShiftPromptChip: 250x54 centred at 236.
 				chip = { Vector2.new(w / 2 - 125, 236), Vector2.new(250, 54) },
 				-- The thumbstick's resting ring: the bottom 150 px of the left 40%.

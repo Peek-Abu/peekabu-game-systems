@@ -132,7 +132,11 @@ local function ShiftHud(): React.ReactNode
 			children = {
 				panel = panel,
 				clockOut = if board ~= nil
-					then e(ShiftClockOutBoard, { view = board, phone = layout == "phone" })
+					then e(ShiftClockOutBoard, {
+						view = board,
+						phone = layout == "phone",
+						top = ShiftHudViewModel.boardTop(layout, hudScale.viewport),
+					})
 					else nil,
 			},
 		}),

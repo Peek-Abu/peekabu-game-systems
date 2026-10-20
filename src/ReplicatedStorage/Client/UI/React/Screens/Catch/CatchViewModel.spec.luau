@@ -52,6 +52,13 @@ return function()
 			expect(CatchViewModel.cctv(input()) ~= nil).to.equal(true)
 		end)
 
+		it("shows OUT FOR THE SHIFT for a knocked-out player with no deadline", function()
+			local view = CatchViewModel.cctv(input({ me = { dead = true, knockedOut = true } }))
+			expect(view ~= nil).to.equal(true)
+			expect(view.back).to.equal("OUT FOR THE SHIFT")
+			expect(CatchViewModel.cctv(input({ me = { dead = true, lives = 2 } }))).to.equal(nil)
+		end)
+
 		it("labels the camera, the room and who is watched", function()
 			local view = CatchViewModel.cctv(input())
 			expect(view.rec).to.equal("REC   CAM 06 · SERVER ROOM")

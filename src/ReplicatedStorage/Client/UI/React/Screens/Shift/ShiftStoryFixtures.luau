@@ -29,9 +29,9 @@ export type SnapshotChanges = {
 local NAMES: { [number]: string } = { [1] = "Sam", [2] = "Alex", [3] = "Jo" }
 
 local PLAYERS: PublicPlayerTypes.PublicPlayerMap = {
-	["1"] = { carrying = "coffeeMachine", inTruck = true },
-	["2"] = { caughtUntil = 6, dead = true },
-	["3"] = { vacuuming = true, room = "Archive" },
+	["1"] = { carrying = "coffeeMachine", inTruck = true, lives = 3, livesMax = 3 },
+	["2"] = { caughtUntil = 6, dead = true, lives = 1, livesMax = 3 },
+	["3"] = { vacuuming = true, room = "Archive", lives = 2, livesMax = 3 },
 }
 
 local ME: PublicPlayerTypes.PublicPlayer = {
