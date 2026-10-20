@@ -46,8 +46,10 @@ local HideConstants = require(HideShared.Data.HideConstants)
 local HideTypes = require(HideShared.Data.HideTypes)
 local HideEvents = require(HideShared.Net.HideEvents)
 local HideRules = require(HideShared.Rules.HideRules)
+local HideHugFormulas = require(HideShared.Utils.HideHugFormulas)
 local HideSpotUtils = require(HideShared.Utils.HideSpotUtils)
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
+local HideRigUtils = require(ServerScriptService.Features.Hide.Utils.HideRigUtils)
 local HideOccupancyTracker = require(ServerScriptService.Features.Hide.State.HideOccupancyTracker)
 local HideSpotSystem = require(ServerScriptService.Features.Hide.Systems.HideSpotSystem)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
@@ -105,6 +107,30 @@ end
 -- The root's height over the feet: where a standing character's root sits.
 local function standHeight(root: BasePart, humanoid: Humanoid): number
 	return humanoid.HipHeight + root.Size.Y / 2
+end
+
+-- Where the hiding root goes: a desk or table's hug frame (the posed body on the floor, back to the furniture) from
+-- the character's measured rig, else the spot's standing-height frame (a cabinet, or a rig that cannot be measured).
+local function hideFrame(spot: Spot, character: Model?, fallback: CFrame): CFrame
+	local def = HideConstants.FURNITURE[spot.noun]
+	local free = if def ~= nil then def.free else nil
+	local rig = if character ~= nil and free ~= nil then HideRigUtils.read(character) else nil
+	if free == nil or rig == nil then
+		return fallback
+	end
+	local low, high = HideHugFormulas.extents(rig, HideHugFormulas.pose())
+	-- No piece was reachable: extents is (inf, -inf).
+	if
+		low.X == math.huge
+		or low.Y == math.huge
+		or low.Z == math.huge
+		or high.X == -math.huge
+		or high.Y == -math.huge
+		or high.Z == -math.huge
+	then
+		return fallback
+	end
+	return HideHugFormulas.hugFrame(spot.frame, spot.furniture.Size, free, low, high, HideConstants.HUG_BACK_GAP)
 end
 
 local spotSystem: HideSpotSystem.HideSpotSystem
@@ -250,7 +276,7 @@ local function enter(player: Player, spot: Spot): (boolean, string?)
 	local tween = TweenService:Create(
 		root,
 		TweenInfo.new(HideConstants.TUCK_SECONDS, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-		{ CFrame = frames.hide }
+		{ CFrame = hideFrame(spot, player.Character, frames.hide) }
 	)
 	bodies[player.UserId] = { root = root, humanoid = humanoid, entry = root.CFrame, tween = tween }
 	root.Anchored = true

@@ -60,6 +60,7 @@ end
 local FURNITURE: { [string]: FurnitureDef } = {
 	-- A desk's drawer pedestal fills its +X end: the curled body lies corner to corner across the knee-hole (about
 	-- 3.5 by 3), head toward the front-left corner.
+	-- (Desk and table tuck: HideSpotUtils.frames still reads it for every kind; the hiding root's frame comes from hugFrame.)
 	-- Free space (measured 2026-10-20 on the 5x3x3 proxy): clear of the steel legs, the pedestal, the top's underside and
 	-- the modesty panel.
 	desk = furniture(
