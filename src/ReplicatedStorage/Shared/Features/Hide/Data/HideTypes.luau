@@ -67,4 +67,17 @@ export type SpotInfo = {
 	seenEntering: boolean,
 }
 
+-- The free space under or in a piece of furniture, as fractions of its proxy's size, centred on the proxy; the front is
+-- local -Z.
+export type FreeBox = { min: Vector3, max: Vector3 }
+
+-- One Motor6D of a rig: its name, the parts it joins (by name) and its C0 and C1.
+export type RigJoint = { name: string, part0: string, part1: string, c0: CFrame, c1: CFrame }
+
+-- One box of a rig: with `base` nil a jointed body part; otherwise rigid on `base` at `offset`.
+export type RigPiece = { part: string, base: string?, offset: CFrame, size: Vector3 }
+
+-- A character's joints and boxes, enough to measure it in a pose (HideHugFormulas.extents).
+export type RigShape = { root: string, joints: { RigJoint }, pieces: { RigPiece } }
+
 return {}

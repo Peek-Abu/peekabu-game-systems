@@ -7,6 +7,10 @@
 	@class HideConstants
 ]=]
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local HideTypes = require(ReplicatedStorage.Shared.Features.Hide.Data.HideTypes)
+
 export type FurnitureKind = "desk" | "table" | "cabinet"
 
 -- Where the tucked body lies under a piece of furniture (its spot's frame): the root `along` its length (+X) and
@@ -17,15 +21,33 @@ export type Tuck = { along: number, back: number, yaw: number }
 -- closed; lockers and filing cabinets stay out: a locker's open and closed states made it unreliable, a filing cabinet
 -- is too small), the prompt's verb and noun, where the body lies (or stands), and whether the spot may face the
 -- furniture's back when that is the more open side (a table; a desk's knee-hole and a cabinet's door are always its
--- front).
-export type FurnitureDef = { spot: "under" | "inside", action: string, noun: string, tuck: Tuck, turnable: boolean }
+-- front). `free` is the clear space the hugging body must fit in (desks and tables; a cabinet has none).
+export type FurnitureDef = {
+	spot: "under" | "inside",
+	action: string,
+	noun: string,
+	tuck: Tuck,
+	turnable: boolean,
+	free: HideTypes.FreeBox?,
+}
 
 -- One joint of the hug pose: its Motor6D's name, the rotation (degrees about the joint's X, Y, Z) and an offset.
 export type PoseJoint = { joint: string, rotation: Vector3, offset: Vector3 }
 
-local function furniture(noun: string, tuck: Tuck, turnable: boolean): FurnitureDef
-	local def: FurnitureDef =
-		{ spot = "under", action = "Hide under", noun = noun, tuck = table.freeze(tuck), turnable = turnable }
+local function box(min: Vector3, max: Vector3): HideTypes.FreeBox
+	local free: HideTypes.FreeBox = { min = min, max = max }
+	return table.freeze(free)
+end
+
+local function furniture(noun: string, tuck: Tuck, turnable: boolean, free: HideTypes.FreeBox): FurnitureDef
+	local def: FurnitureDef = {
+		spot = "under",
+		action = "Hide under",
+		noun = noun,
+		tuck = table.freeze(tuck),
+		turnable = turnable,
+		free = free,
+	}
 	return table.freeze(def)
 end
 
@@ -38,9 +60,22 @@ end
 local FURNITURE: { [string]: FurnitureDef } = {
 	-- A desk's drawer pedestal fills its +X end: the curled body lies corner to corner across the knee-hole (about
 	-- 3.5 by 3), head toward the front-left corner.
-	desk = furniture("desk", { along = -0.1, back = 0.55, yaw = 49 }, false),
+	-- Free space (measured 2026-10-20 on the 5x3x3 proxy): clear of the steel legs, the pedestal, the top's underside and
+	-- the modesty panel.
+	desk = furniture(
+		"desk",
+		{ along = -0.1, back = 0.55, yaw = 49 },
+		false,
+		box(Vector3.new(-0.428, -0.5, -0.5), Vector3.new(0.19, 0.4233, 0.3933))
+	),
 	-- A table is open underneath: the body lies along its length.
-	table = furniture("table", { along = 1.1, back = 0.2, yaw = 90 }, true),
+	-- Free space (measured on the 5x3.1x3 proxy): between the legs, under the brace; the far edge is the back.
+	table = furniture(
+		"table",
+		{ along = 1.1, back = 0.2, yaw = 90 },
+		true,
+		box(Vector3.new(-0.36, -0.5, -0.5), Vector3.new(0.36, 0.3516, 0.5))
+	),
 	-- The tall supply cabinet: standing upright in the middle, a little back from the door, facing out of it.
 	cabinet = closet("cabinet", { along = 0, back = 0.25, yaw = 0 }),
 }
@@ -127,6 +162,10 @@ return table.freeze({
 	-- The body under the furniture: the root stands where a standing root would (the pose folds the body down), placed
 	-- by its FurnitureDef's tuck (HUG_POSE).
 	HUG_POSE = table.freeze(HUG_POSE),
+	-- The hugging body's back stands this far inside the free box's back; the free box is at least this big (studs) for
+	-- a spot to take the pose.
+	HUG_BACK_GAP = 0.05,
+	HUG_FREE_MIN = Vector3.new(3.6, 4.2, 4.3),
 	-- A spot faces the room: its furniture is turned half round when its back has more than OPEN_MARGIN studs more
 	-- open floor than its front, looked for out to OPEN_PROBE studs.
 	OPEN_MARGIN = 1,
