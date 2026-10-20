@@ -4,15 +4,16 @@
 	so the crew sees a catch as clearly as the caught player:
 
 	- the throw: when a player's public `caughtUntil` deadline appears (the server sets it at the throw,
-	  OccupantCatchSystem), a porcelain crack, shards and dust pop on their character;
+	  OccupantCatchSystem), or their `knockedOut` turns true (the last-life catch publishes no deadline), a porcelain
+	  crack, shards and dust pop on their character; once per knock-out, a republish does not repeat it;
 	- back on the clock: when it clears, their next living character (not the one that was thrown) gets the
 	  Rehired puff at its feet, if it arrives within REHIRE_WAIT seconds.
 
 	The deadlines already set when this client starts are the baseline: nothing replays for them. The caught player's
 	camera, red screen and Rehired card are OccupantServiceClient's.
 
-	Spec-exempt shell (Charm, Players, VfxBurstSystem): its only decision is a nil-to-set / set-to-nil check per
-	player; the presets are specced in OccupantVfxConstants.
+	Spec-exempt shell (Charm, Players, VfxBurstSystem): its only decisions are a nil-to-set / set-to-nil check per
+	player (the throw is OccupantCatchVfxUtils.thrown); the presets are specced in OccupantVfxConstants.
 
 	@class OccupantCatchVfxSystem
 ]=]
@@ -23,8 +24,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Charm = require(ReplicatedStorage.Packages.Charm)
 local PublicPlayerTypes = require(ReplicatedStorage.Shared.Data.PublicPlayerTypes)
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
+local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
 local VfxBurstRegistry = require(ReplicatedStorage.Shared.Features.Vfx.Data.VfxBurstRegistry)
+local OccupantCatchVfxUtils = require(ReplicatedStorage.Client.Features.Occupant.Utils.OccupantCatchVfxUtils)
 local OccupantVfxConstants = require(ReplicatedStorage.Client.Features.Occupant.Data.OccupantVfxConstants)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local VfxBurstSystem = require(ReplicatedStorage.Client.Features.Vfx.Systems.VfxBurstSystem)
@@ -45,6 +48,8 @@ end
 -- Whose deadline was set at the last look, and the character each was caught in.
 local deadlines: { [number]: boolean } = {}
 local thrown: { [number]: Model? } = {}
+-- Who was knocked out at the last look (a knock-out throws once).
+local knockedOut: { [number]: boolean } = {}
 local counters = { cracks = 0, rehired = 0 }
 local stoppers: { () -> () } = {}
 -- Bumped on stop: a pending Rehired wait from before is dropped.
@@ -100,28 +105,42 @@ local function rehire(player: Player)
 	end)
 end
 
-local function read(map: PublicPlayerTypes.PublicPlayerMap): { [number]: boolean }
+local function read(map: PublicPlayerTypes.PublicPlayerMap): ({ [number]: boolean }, { [number]: boolean })
 	local set: { [number]: boolean } = {}
+	local out: { [number]: boolean } = {}
 	for _, player in Players:GetPlayers() do
 		local entry = map[StateSyncConstants.publicEntryKey(player.UserId)]
-		if entry ~= nil and type(entry[OccupantConstants.PUBLIC_CAUGHT_UNTIL]) == "number" then
-			set[player.UserId] = true
+		if entry ~= nil then
+			if type(entry[OccupantConstants.PUBLIC_CAUGHT_UNTIL]) == "number" then
+				set[player.UserId] = true
+			end
+			if entry[ShiftConstants.PUBLIC_KNOCKED_OUT] == true then
+				out[player.UserId] = true
+			end
 		end
 	end
-	return set
+	return set, out
 end
 
 local function onPublic(map: PublicPlayerTypes.PublicPlayerMap)
-	local now = read(map)
+	local now, nowOut = read(map)
 	for _, player in Players:GetPlayers() do
 		local userId = player.UserId
-		if now[userId] and not deadlines[userId] then
+		if
+			OccupantCatchVfxUtils.thrown(
+				deadlines[userId] == true,
+				now[userId] == true,
+				knockedOut[userId] == true,
+				nowOut[userId] == true
+			)
+		then
 			crack(player)
 		elseif deadlines[userId] and not now[userId] then
 			rehire(player)
 		end
 	end
 	deadlines = now
+	knockedOut = nowOut
 	-- Someone who left while caught is never rehired: let their old character go.
 	for userId in thrown do
 		if Players:GetPlayerByUserId(userId) == nil then
@@ -137,7 +156,7 @@ function OccupantCatchVfxSystem.start()
 		return
 	end
 	VfxBurstSystem.preload()
-	deadlines = read(StateSyncClientStore.publicPlayers())
+	deadlines, knockedOut = read(StateSyncClientStore.publicPlayers())
 	table.insert(stoppers, Charm.subscribe(StateSyncClientStore.publicPlayers, onPublic))
 end
 
@@ -148,6 +167,7 @@ function OccupantCatchVfxSystem.stop()
 	end
 	table.clear(stoppers)
 	table.clear(deadlines)
+	table.clear(knockedOut)
 	table.clear(thrown)
 end
 
