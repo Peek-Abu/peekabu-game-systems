@@ -183,8 +183,9 @@ local function ShiftCompactHudPanel(props: Props): React.ReactNode
 	if roster ~= nil and #roster.members > 0 then
 		-- The list's top-left corner (the phone's is pinned to the right edge; the open card lays out against it).
 		local listWidth = if phone then fit.list else nil
+		local tall = CrewVM.anyLives(roster.members)
 		local listAt = if phone
-			then Vector2.new(props.viewport.X - inset - CrewVM.listSize(phone, #roster.members, listWidth).X, 6)
+			then Vector2.new(props.viewport.X - inset - CrewVM.listSize(phone, #roster.members, listWidth, tall).X, 6)
 			else Vector2.new(inset, 66)
 		nodes.crew = e(ShiftCrewList, {
 			roster = roster,
@@ -196,7 +197,7 @@ local function ShiftCompactHudPanel(props: Props): React.ReactNode
 			onToggle = props.onCrewToggle,
 		})
 		if props.crewOpen then
-			local frame = CrewVM.rosterFrame(phone, props.viewport, #roster.members, listAt)
+			local frame = CrewVM.rosterFrame(phone, props.viewport, #roster.members, listAt, tall)
 			nodes.roster = rosterDetail(roster, phone, frame, live)
 		end
 	end

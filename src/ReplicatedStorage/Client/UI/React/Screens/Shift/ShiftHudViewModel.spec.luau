@@ -552,7 +552,7 @@ return function()
 				expect(overlaps(at, size, meterAt, meterEnd - meterAt)).to.equal(false)
 				-- The crew list: top-right on phone, top-left under Roblox's buttons on desktop.
 				local listWidth = if phone then CrewVM.phoneFit(w).list else nil
-				local listSize = CrewVM.listSize(phone, case.count, listWidth)
+				local listSize = CrewVM.listSize(phone, case.count, listWidth, true)
 				local listAt = if phone then Vector2.new(w - 10 - listSize.X, 6) else Vector2.new(24, 66)
 				expect(overlaps(at, size, listAt, listSize)).to.equal(false)
 				-- The clock-out board: centred, `boardTop` down, 7 px of outline above it, its clock render reaching out.

@@ -219,9 +219,44 @@ end
 
 -- The crew list card (ShiftCrewList) per layout, in HUD design px: rows of `row` px 2 px apart inside `padding`.
 ShiftCrewViewModel.LIST = table.freeze({
-	phone = table.freeze({ width = 176, row = 28, padding = 8 }),
-	desktop = table.freeze({ width = 236, row = 40, padding = 12 }),
+	phone = table.freeze({ width = 176, row = 28, padding = 8, livesLine = 12 }),
+	desktop = table.freeze({ width = 236, row = 40, padding = 12, livesLine = 16 }),
 })
+
+-- The tag's column beyond its box: its 2 px inset from the row's right, its ink outline (3 px, drawn outside its box),
+-- up to 2 px of sticker tilt and a 2 px gap.
+ShiftCrewViewModel.TAG_CLEARANCE = 9
+-- The gap between a row's Gloom-life pips and its tag on the lives line.
+ShiftCrewViewModel.PIPS_CLEARANCE = 4
+
+export type RowLayout = {
+	-- The name's width (it keeps clear of the tag's column only when the tag shares its line).
+	nameWidth: number,
+	-- With Gloom lives, the pips and the tag share a second line under the name; `pipsX` is the pips' left edge.
+	secondLine: boolean,
+	pipsX: number,
+}
+
+--[=[
+	How a crew row of `rowWidth` px lays out (ShiftCrewList): the face then the name on the first line. A row without
+	Gloom lives (`livesMax` nil) keeps its tag at the right of the name's line. A row with lives puts the pips under the
+	name (left-aligned with it when the tag still fits beside them, else from the row's left edge) and the tag at the
+	right of that second line, so the name always has the whole line less the face. `tagWidth` is the tag pill's width
+	(0 for none).
+]=]
+function ShiftCrewViewModel.rowLayout(phone: boolean, rowWidth: number, tagWidth: number, livesMax: number?): RowLayout
+	local list = if phone then ShiftCrewViewModel.LIST.phone else ShiftCrewViewModel.LIST.desktop
+	local lineX = list.row
+	local tagColumn = if tagWidth > 0 then tagWidth + ShiftCrewViewModel.TAG_CLEARANCE else 0
+	if livesMax == nil then
+		return { nameWidth = rowWidth - lineX - tagColumn, secondLine = false, pipsX = 0 }
+	end
+	local lives = if phone then ShiftHudViewModel.LIVES.phone else ShiftHudViewModel.LIVES.desktop
+	local box = lives.pip + 2 * lives.stroke
+	local pipsWidth = livesMax * box + math.max(0, livesMax - 1) * lives.gap
+	local fits = lineX + pipsWidth + ShiftCrewViewModel.PIPS_CLEARANCE + tagColumn <= rowWidth
+	return { nameWidth = rowWidth - lineX, secondLine = true, pipsX = if fits then lineX else 0 }
+end
 
 -- The open roster card (ShiftCompactHudPanel): its widest width, its line pitch (the phone's shrinks to `minLine` on a
 -- short screen), the gap it keeps from its neighbours, its text's side padding and (phone) its inset from the left.
@@ -250,10 +285,27 @@ export type DetailFrame = {
 	padding: number,
 }
 
--- The crew list's size for `count` members; `width` (phone: ShiftCrewViewModel.phoneFit) overrides the design width.
-function ShiftCrewViewModel.listSize(phone: boolean, count: number, width: number?): Vector2
+-- Whether any of the roster's members carries Gloom lives (then every row has the second line).
+function ShiftCrewViewModel.anyLives(members: { MemberView }): boolean
+	for _, item in members do
+		if item.lives ~= nil then
+			return true
+		end
+	end
+	return false
+end
+
+-- The height of one crew row: with Gloom lives (`lives`) it carries a second line for the pips and the tag.
+function ShiftCrewViewModel.rowHeight(phone: boolean, lives: boolean?): number
 	local list = if phone then ShiftCrewViewModel.LIST.phone else ShiftCrewViewModel.LIST.desktop
-	return Vector2.new(width or list.width, 2 * list.padding + count * (list.row + 2))
+	return list.row + (if lives == true then list.livesLine else 0)
+end
+
+-- The crew list's size for `count` members (with Gloom lives: `lives`, taller rows); `width` (phone:
+-- ShiftCrewViewModel.phoneFit) overrides the design width.
+function ShiftCrewViewModel.listSize(phone: boolean, count: number, width: number?, lives: boolean?): Vector2
+	local list = if phone then ShiftCrewViewModel.LIST.phone else ShiftCrewViewModel.LIST.desktop
+	return Vector2.new(width or list.width, 2 * list.padding + count * (ShiftCrewViewModel.rowHeight(phone, lives) + 2))
 end
 
 -- Phone: the Gloom meter (centred) and the top-right crew list share the top band. Beside the list, the meter's
@@ -274,19 +326,25 @@ end
 
 --[=[
 	Where the open roster card goes on a `viewport` (HUD design px) for `count` members, the crew list's top-left corner
-	being `listAt`. It is a title line plus one line per member, 20 px of padding, and it never sits on the Gloom meter
+	being `listAt` (its rows taller with Gloom `lives`). It is a title line plus one line per member, 20 px of padding, and it never sits on the Gloom meter
 	(ShiftHudViewModel.METER) or its shift clock:
 	- desktop: beside the crew list when it ends clear of the meter's Gloom render (wide windows), else under the list;
 	- phone (the list is top-right, next to the clock): on the left, `inset` in, `gap` under the meter, ending `gap`
 	  before the clock-out board's render (PHONE_BAND); its line pitch shrinks (never under `minLine`) so it ends `gap`
 	  above the thumbstick's ring.
 ]=]
-function ShiftCrewViewModel.rosterFrame(phone: boolean, viewport: Vector2, count: number, listAt: Vector2): DetailFrame
+function ShiftCrewViewModel.rosterFrame(
+	phone: boolean,
+	viewport: Vector2,
+	count: number,
+	listAt: Vector2,
+	lives: boolean?
+): DetailFrame
 	local detail = if phone then ShiftCrewViewModel.DETAIL.phone else ShiftCrewViewModel.DETAIL.desktop
 	local meter = if phone then ShiftHudViewModel.METER.phone else ShiftHudViewModel.METER.desktop
 	local meterLeft = viewport.X / 2 - meter.size.X / 2
 	if not phone then
-		local list = ShiftCrewViewModel.listSize(phone, count)
+		local list = ShiftCrewViewModel.listSize(phone, count, nil, lives)
 		local beside = listAt.X + list.X + detail.gap
 		local meterEdge = meterLeft - meter.icon * ShiftHudViewModel.METER_ICON_OVERHANG
 		local position = if beside + detail.width + detail.gap <= meterEdge

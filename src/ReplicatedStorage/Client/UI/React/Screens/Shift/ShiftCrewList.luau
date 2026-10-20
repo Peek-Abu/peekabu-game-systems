@@ -31,13 +31,6 @@ local COLOR = UIToonConstants.COLOR
 
 -- The side padding of the roster's small pills (the tag).
 local PILL_PAD = 7
--- The tag's column beyond its box: its 2 px inset from the row's right, its ink outline (3 px, drawn outside its box),
--- up to 2 px of sticker tilt and a 2 px gap.
-local TAG_CLEARANCE = 9
-
--- The gap between a row's Gloom-life pips and the tag (or the row's right edge) and the name.
-local PIPS_CLEARANCE = 4
-
 -- Luckiest Guy label widths in design px (the HUD scales them with everything else), measured once per label.
 local measured: { [string]: number } = {}
 
@@ -63,7 +56,15 @@ export type ShiftCrewListProps = {
 	width: number?,
 }
 
-local function row(member: ShiftCrewViewModel.MemberView, you: boolean, height: number, width: number, order: number)
+local function row(
+	member: ShiftCrewViewModel.MemberView,
+	you: boolean,
+	phone: boolean,
+	tall: boolean,
+	width: number,
+	order: number
+)
+	local height = (if phone then ShiftCrewViewModel.LIST.phone else ShiftCrewViewModel.LIST.desktop).row
 	local avatar = height - 8
 	local lineX = avatar + 8
 	local roomy = height > 34
@@ -71,14 +72,15 @@ local function row(member: ShiftCrewViewModel.MemberView, you: boolean, height: 
 	local tag = if member.out then "OUT" elseif member.tone == "danger" then "CAUGHT" elseif you then "YOU" else nil
 	local tagSize = if roomy then 14 else 12
 	local tagWidth = if tag ~= nil then pillWidth(tag, tagSize) else 0
-	-- The tag's column at the row's right, kept clear by the name.
-	local tagColumn = if tag ~= nil then tagWidth + TAG_CLEARANCE else 0
-	-- The Gloom-life pips between the name and the tag (none for a member not in a shift), their column kept clear too.
+	-- With Gloom lives (none for a member not in a shift) the pips and the tag share a second line under the name;
+	-- otherwise the tag sits at the name's right, which the name keeps clear of.
 	local lives, livesMax = member.lives, member.livesMax
+	local layout = ShiftCrewViewModel.rowLayout(phone, width, tagWidth, if lives ~= nil then livesMax else nil)
 	local sizes = if roomy then ShiftHudViewModel.LIVES.desktop else ShiftHudViewModel.LIVES.phone
-	local pipsWidth = if lives ~= nil and livesMax ~= nil then ShiftLivesPips.width(sizes, livesMax) else 0
-	local pipsColumn = if pipsWidth > 0 then pipsWidth + PIPS_CLEARANCE else 0
-	local nameWidth = width - lineX - tagColumn - pipsColumn
+	local nameWidth = layout.nameWidth
+	local tagHeight = if roomy then 24 else (if layout.secondLine then 16 else 20)
+	-- The second line's centre: the pips' row starts 2 px above the first line's bottom.
+	local lineY = height - 2 + (sizes.pip + 2 * sizes.stroke) / 2
 	local children: { [string]: React.ReactNode } = {
 		face = e("Frame", {
 			Position = UDim2.fromOffset(0, 4),
@@ -122,8 +124,7 @@ local function row(member: ShiftCrewViewModel.MemberView, you: boolean, height: 
 			lives = lives,
 			livesMax = livesMax,
 			sizes = sizes,
-			position = UDim2.new(1, -(tagColumn + 2), 0.5, 0),
-			anchor = Vector2.new(1, 0.5),
+			position = UDim2.fromOffset(layout.pipsX, height - 2),
 		})
 	end
 	if tag ~= nil then
@@ -133,13 +134,13 @@ local function row(member: ShiftCrewViewModel.MemberView, you: boolean, height: 
 			textSize = tagSize,
 			padX = PILL_PAD,
 			anchor = Vector2.new(1, 0.5),
-			position = UDim2.new(1, -2, 0.5, 0),
-			size = UDim2.fromOffset(tagWidth, if roomy then 24 else 20),
+			position = if layout.secondLine then UDim2.new(1, -2, 0, lineY) else UDim2.new(1, -2, 0.5, 0),
+			size = UDim2.fromOffset(tagWidth, tagHeight),
 			tilt = if tag == "YOU" then -3 else 3,
 		})
 	end
 	return e("Frame", {
-		Size = UDim2.fromOffset(width, height),
+		Size = UDim2.fromOffset(width, ShiftCrewViewModel.rowHeight(phone, tall)),
 		BackgroundTransparency = 1,
 		LayoutOrder = order,
 	}, children)
@@ -148,10 +149,10 @@ end
 local function ShiftCrewList(props: ShiftCrewListProps): React.ReactNode
 	local phone = props.phone
 	local list = if phone then ShiftCrewViewModel.LIST.phone else ShiftCrewViewModel.LIST.desktop
-	local rowHeight = list.row
 	local padding = list.padding
 	local members = props.roster.members
-	local size = ShiftCrewViewModel.listSize(phone, #members, props.width)
+	local tall = ShiftCrewViewModel.anyLives(members)
+	local size = ShiftCrewViewModel.listSize(phone, #members, props.width, tall)
 	local width, height = size.X, size.Y
 	local rows: { [string]: React.ReactNode } = {
 		layout = e("UIListLayout", {
@@ -160,7 +161,7 @@ local function ShiftCrewList(props: ShiftCrewListProps): React.ReactNode
 		}),
 	}
 	for index, member in members do
-		rows[`m{index}`] = row(member, member.userId == props.myId, rowHeight, width - 2 * padding, index)
+		rows[`m{index}`] = row(member, member.userId == props.myId, phone, tall, width - 2 * padding, index)
 	end
 	local body: { [string]: React.ReactNode } = {
 		rows = e("Frame", {
