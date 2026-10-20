@@ -89,6 +89,8 @@ export type CrewStats = {
 	-- overtime. Absent reads 0.
 	items: number?,
 	overtimeSalvage: number?,
+	-- Out of lives this shift (ShiftRosterTracker.markOut); absent reads false.
+	knockedOut: boolean?,
 }
 
 export type CrewLine = {
@@ -101,6 +103,8 @@ export type CrewLine = {
 	-- Cargo items banked and overtime salvage banked (CrewStats), for the rank award. Absent reads 0.
 	items: number?,
 	overtimeSalvage: number?,
+	-- Knocked out for the rest of the shift (CrewStats); absent reads false.
+	knockedOut: boolean?,
 }
 
 -- A joke award: its title (upper case, as stamped), who won it and the one-line reason ("hauled 140").

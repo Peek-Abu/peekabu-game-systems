@@ -118,4 +118,32 @@ return function()
 			expect(entry.dropKind).to.equal(nil)
 		end)
 	end)
+
+	describe("markOut", function()
+		it("flags a listed member as knocked out", function()
+			local roster = ShiftRosterTracker.new()
+			roster:record(1, "Ava", { banked = 10 })
+			roster:markOut(1, "Ava")
+			local entry = roster:list()[1]
+			expect(entry.knockedOut).to.equal(true)
+			expect(entry.banked).to.equal(10)
+		end)
+
+		it("lists a new member who was knocked out before scoring", function()
+			local roster = ShiftRosterTracker.new()
+			roster:markOut(2, "Ben")
+			local entry = roster:list()[1]
+			expect(entry.name).to.equal("Ben")
+			expect(entry.knockedOut).to.equal(true)
+		end)
+
+		it("leaves everyone else in", function()
+			local roster = ShiftRosterTracker.new()
+			roster:record(1, "Ava", {})
+			roster:markOut(2, "Ben")
+			for _, entry in roster:list() do
+				expect(entry.knockedOut == true).to.equal(entry.userId == 2)
+			end
+		end)
+	end)
 end

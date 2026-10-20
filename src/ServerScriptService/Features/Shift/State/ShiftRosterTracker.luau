@@ -28,6 +28,8 @@ export type ShiftRosterTracker = {
 	-- One drop by hand (or a fragile throw); keeps the most valuable item dropped (the first on a tie).
 	noteDrop: (self: ShiftRosterTracker, userId: number, name: string, kind: string, value: number) -> (),
 	list: (self: ShiftRosterTracker) -> { ShiftTypes.CrewStats },
+	-- Marks the player (listed at zero if new) as knocked out for the rest of the shift.
+	markOut: (self: ShiftRosterTracker, userId: number, name: string) -> (),
 	clear: (self: ShiftRosterTracker) -> (),
 }
 
@@ -77,6 +79,10 @@ function ShiftRosterTracker.new(): ShiftRosterTracker
 				entry.dropKind = kind
 				entry.dropValue = value
 			end
+		end,
+
+		markOut = function(_self, userId, name)
+			entryFor(userId, name).knockedOut = true
 		end,
 
 		list = function(_self)

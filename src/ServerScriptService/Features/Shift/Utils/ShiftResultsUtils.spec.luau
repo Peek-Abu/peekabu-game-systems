@@ -127,6 +127,36 @@ return function()
 		end)
 	end)
 
+	describe("a wiped crew", function()
+		it("misses the contract even when the Gloom was cleared", function()
+			local results = ShiftResultsUtils.build(input(CREW, { outcome = "wiped", quotaMet = true }))
+			expect(results.quotaMet).to.equal(false)
+			expect(results.rating).to.equal("needsImprovement")
+		end)
+
+		it("keeps a met quota on a clock-out", function()
+			expect(ShiftResultsUtils.build(input(CREW, { outcome = "clockout", quotaMet = true })).quotaMet).to.equal(
+				true
+			)
+		end)
+
+		it("misses the contract on the bare review too", function()
+			expect(ShiftResultsUtils.bare("wiped", 350, true).quotaMet).to.equal(false)
+			expect(ShiftResultsUtils.bare("wiped", 350, true).rating).to.equal("needsImprovement")
+		end)
+
+		it("carries who was knocked out onto the crew lines", function()
+			local crew = { member(1, "Ava", { knockedOut = true }), member(2, "Ben") }
+			local results = ShiftResultsUtils.build(input(crew))
+			local byName = {}
+			for _, line in results.crew do
+				byName[line.name] = line
+			end
+			expect(byName.Ava.knockedOut).to.equal(true)
+			expect(byName.Ben.knockedOut).to.equal(nil)
+		end)
+	end)
+
 	describe("joke awards", function()
 		it("makes the top hauler EMPLOYEE OF THE NIGHT", function()
 			local award = awardOf(ShiftResultsUtils.build(input(CREW)), "EMPLOYEE OF THE NIGHT")

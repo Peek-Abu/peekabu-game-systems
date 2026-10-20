@@ -10,6 +10,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local RoundConstants = require(ReplicatedStorage.Shared.Features.Round.Data.RoundConstants)
 local CargoTypes = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoTypes)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
@@ -145,7 +146,13 @@ function ShiftResultsUtils.awards(crew: { CrewStats }, lookup: Lookup): { ShiftT
 end
 
 -- An empty review: what the shift falls back to when building the real one throws.
+-- A wiped crew missed the contract, whatever the Gloom cleared before.
+local function met(outcome: string, quotaMet: boolean): boolean
+	return quotaMet and outcome ~= RoundConstants.OUTCOME_WIPED
+end
+
 function ShiftResultsUtils.bare(outcome: string, quota: number, quotaMet: boolean): ShiftTypes.ShiftResults
+	local quotaMade = met(outcome, quotaMet)
 	return {
 		outcome = outcome,
 		quota = quota,
@@ -156,8 +163,8 @@ function ShiftResultsUtils.bare(outcome: string, quota: number, quotaMet: boolea
 		piles = 0,
 		catches = 0,
 		offered = 0,
-		rating = ShiftResultsUtils.rating(quotaMet, 0, 0),
-		quotaMet = quotaMet,
+		rating = ShiftResultsUtils.rating(quotaMade, 0, 0),
+		quotaMet = quotaMade,
 		crew = {},
 		awards = {},
 	}
@@ -183,11 +190,13 @@ function ShiftResultsUtils.build(input: ResultsInput): ShiftTypes.ShiftResults
 			caught = member.caught or 0,
 			items = member.items or 0,
 			overtimeSalvage = member.overtimeSalvage or 0,
+			knockedOut = member.knockedOut,
 		})
 		salvage += member.salvage
 		piles += member.piles
 		catches += member.caught or 0
 	end
+	local quotaMade = met(input.outcome, input.quotaMet)
 	return {
 		outcome = input.outcome,
 		quota = input.quota,
@@ -198,8 +207,8 @@ function ShiftResultsUtils.build(input: ResultsInput): ShiftTypes.ShiftResults
 		piles = piles,
 		catches = catches,
 		offered = input.offered,
-		rating = ShiftResultsUtils.rating(input.quotaMet, salvage, input.offered),
-		quotaMet = input.quotaMet,
+		rating = ShiftResultsUtils.rating(quotaMade, salvage, input.offered),
+		quotaMet = quotaMade,
 		crew = lines,
 		awards = ShiftResultsUtils.awards(crew, input.lookup),
 	}

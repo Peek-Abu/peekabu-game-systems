@@ -105,6 +105,10 @@ function ShiftClockOutRules.settle(state: ShiftState, stillIn: { number }, now: 
 	end
 	local count, total = ShiftClockOutRules.tally(state, stillIn)
 	local verdict = ShiftClockOutRules.verdict(count, total)
+	-- Everyone still in was knocked out after a card was punched: that card clocks the crew out.
+	if total == 0 and state.punched ~= nil and #state.punched > 0 then
+		verdict = "leave"
+	end
 	local sub: ShiftTypes.ShiftSub = state.sub
 	local clockOutAt = state.clockOutAt
 	if verdict == "leave" then
