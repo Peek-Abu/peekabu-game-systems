@@ -165,5 +165,9 @@ return function()
 			expect(OccupantFeedbackUtils.caughtText("Alex", 8)).to.equal("Alex was caught! Back in 0:08.")
 			expect(OccupantFeedbackUtils.caughtText("Alex", 61)).to.equal("Alex was caught! Back in 1:01.")
 		end)
+
+		it("writes the out toast when the last life is spent", function()
+			expect(OccupantFeedbackUtils.outText("Alex")).to.equal("Alex is out for the shift")
+		end)
 	end)
 end

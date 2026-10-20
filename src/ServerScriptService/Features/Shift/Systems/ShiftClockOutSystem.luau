@@ -46,6 +46,9 @@ export type Deps = {
 	-- moving a player onto the truck bed at crew spot `index`, whether a player is inside the truck's box (nil without
 	-- a character), and telling everyone.
 	isOut: ((player: Player) -> boolean)?,
+	-- Whether a player is knocked out for the shift (no lives left; Shift's lives tracker). Absent = never. A member who
+	-- is out but not knocked out is only down for now: the truck does not leave at once while they have not punched.
+	isKnockedOut: ((player: Player) -> boolean)?,
 	board: ((player: Player, index: number) -> ())?,
 	aboard: ((player: Player) -> boolean?)?,
 	announce: ((toasts: { ToastTypes.ToastRequest }) -> ())?,
@@ -102,29 +105,37 @@ local ShiftClockOutSystem = {}
 
 function ShiftClockOutSystem.new(deps: Deps): ShiftClockOutSystem
 	local isOut: (Player) -> boolean = deps.isOut or realIsOut
+	local isKnockedOut: (Player) -> boolean = deps.isKnockedOut
+		or function(_player: Player): boolean
+			return false
+		end
 	local board: (Player, number) -> () = deps.board or realBoard
 	local aboard: (Player) -> boolean? = deps.aboard or realAboard
 	local announce: ({ ToastTypes.ToastRequest }) -> () = deps.announce or realAnnounce
 
-	-- The crew's userIds (in crew order) and the ones still in now.
-	local function count(): ({ number }, { number })
+	-- The crew's userIds (in crew order), the ones still in now, and the ones down but coming back (out, not knocked out).
+	local function count(): ({ number }, { number }, { number })
 		local ids: { number } = {}
 		local out: { number } = {}
+		local waiting: { number } = {}
 		for _, player in deps.crew() do
 			table.insert(ids, player.UserId)
 			if isOut(player) then
 				table.insert(out, player.UserId)
+				if not isKnockedOut(player) then
+					table.insert(waiting, player.UserId)
+				end
 			end
 		end
-		return ids, ShiftClockOutRules.stillIn(ids, out)
+		return ids, ShiftClockOutRules.stillIn(ids, out), waiting
 	end
 
 	-- Settles the state; true when the truck's countdown started just now (not leaving at once).
 	local function settleState(): boolean
 		local now = deps.now()
 		local before = deps.getState()
-		local _, stillIn = count()
-		local nextState = ShiftClockOutRules.settle(before, stillIn, now)
+		local _, stillIn, waiting = count()
+		local nextState = ShiftClockOutRules.settle(before, stillIn, now, waiting)
 		if nextState == nil then
 			return false
 		end

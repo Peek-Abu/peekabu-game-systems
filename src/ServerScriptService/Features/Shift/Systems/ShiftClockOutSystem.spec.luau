@@ -23,6 +23,7 @@ local function harness(size)
 		),
 		crew = {},
 		out = {},
+		knocked = {},
 		outside = {},
 		boarded = {},
 		toasts = {},
@@ -49,6 +50,9 @@ local function harness(size)
 		end,
 		isOut = function(player)
 			return log.out[player.UserId] == true
+		end,
+		isKnockedOut = function(player)
+			return log.knocked[player.UserId] == true
 		end,
 		board = function(player, index)
 			table.insert(log.boarded, { userId = player.UserId, index = index })
@@ -136,14 +140,26 @@ return function()
 	end)
 
 	describe("settle", function()
-		it("leaves at once when the last one inside is caught during the countdown", function()
+		it("leaves at once when the last one inside is knocked out during the countdown", function()
 			local log = harness(2)
 			log.system.punch(log.crew[1])
 			log.time = 215
 			log.out[2] = true
+			log.knocked[2] = true
 			log.system.settle()
 			expect(log.state.clockOutAt).to.equal(215)
 			expect(log.state.crewIn).to.equal(1)
+		end)
+
+		it("keeps counting down, not leaving, when the last one inside is only caught and will be back", function()
+			local log = harness(2)
+			log.out[2] = true
+			log.system.punch(log.crew[1])
+			expect(log.state.sub).to.equal("clockout")
+			expect(log.state.clockOutAt).to.equal(200 + ShiftConstants.TRUCK_LEAVES_SECONDS)
+			log.time = 215
+			log.system.settle()
+			expect(log.state.clockOutAt).to.equal(200 + ShiftConstants.TRUCK_LEAVES_SECONDS)
 		end)
 
 		it("leaves at once when the last one inside leaves the game", function()

@@ -73,6 +73,7 @@ local ShiftClockOutSystem = require(ShiftServer.Systems.ShiftClockOutSystem)
 local ShiftAnalyticsWatchSystem = require(ShiftServer.Systems.ShiftAnalyticsWatchSystem)
 local ShiftReviewSystem = require(ShiftServer.Systems.ShiftReviewSystem)
 local ShiftCrewStatusSystem = require(ShiftServer.Systems.ShiftCrewStatusSystem)
+local ShiftLivesSystem = require(ShiftServer.Systems.ShiftLivesSystem)
 local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
 local RoundServiceServer = require(ServerScriptService.Features.Round.RoundServiceServer)
@@ -104,11 +105,15 @@ local endingRun = false
 local roster = ShiftRosterTracker.new()
 -- The load screen between the depot and the office and between shifts; built below, once its steps exist.
 local transit: ShiftTransitSystem.ShiftTransitSystem
+-- Gloom lives (ShiftLivesSystem); built below, once isRunning exists.
+local lives: ShiftLivesSystem.ShiftLivesSystem
 -- The clock step (below); an arrival in the lobby runs it to start the crew's transit.
 local step: () -> ()
 -- The crew and the trips between the depot and the office (Queue); only the crew starts, takes part and votes.
 local trip = ShiftTripSystem.new({
 	admit = function(player: Player)
+		-- A late joiner gets the starting lives (nothing unless the shift is running).
+		lives:admit(player)
 		if state.phase == "lobby" and not transit:active() then
 			-- The crew's transit starts on the next step and holds them with everyone else.
 			task.defer(step)
@@ -131,6 +136,13 @@ end
 local function isRunning(): boolean
 	return state.phase == "running"
 end
+
+lives = ShiftLivesSystem.new({
+	isRunning = isRunning,
+	markOut = function(userId: number, name: string)
+		roster:markOut(userId, name)
+	end,
+})
 
 -- The crew members in the server (`except`: one who is leaving; Players still lists them during PlayerRemoving).
 local function presentIds(except: number?): { number }
@@ -173,8 +185,9 @@ local function setState(nextState: ShiftTypes.ShiftState)
 	end
 end
 
--- Forgets the last run's vote, roster and review.
+-- Forgets the last run's vote, roster and review; brings knocked-out players back and clears the lives.
 local function clearRun()
+	lives:clear()
 	voting:clear()
 	roster:clear()
 	results = nil
@@ -228,6 +241,7 @@ end
 -- (an admin's round start) builds it here and moves the crew into the truck.
 local function beginRun(wasPrepared: boolean)
 	clearRun()
+	lives:begin(RoundServiceServer:participants())
 	if not wasPrepared then
 		site:build({ variant = state.variant, quota = state.quota }, RoundServiceServer:participants())
 	end
@@ -321,6 +335,9 @@ local clockOuts = ShiftClockOutSystem.new({
 		return trip:crew()
 	end,
 	eligible = trip.eligible,
+	isKnockedOut = function(player: Player): boolean
+		return lives:isKnockedOut(player)
+	end,
 })
 -- The truck's time clock: a crew member who reaches it punches their card.
 local timeClock = ShiftTimeClockSystem.new({ clockOut = clockOuts.punch, eligible = trip.eligible })
@@ -397,6 +414,8 @@ export type ShiftServiceServer = {
 	vote: (self: ShiftServiceServer, player: Player, choice: ShiftTypes.Vote) -> boolean,
 	resetShift: (self: ShiftServiceServer) -> (),
 	noteCatch: (self: ShiftServiceServer, player: Player) -> boolean,
+	spendLife: (self: ShiftServiceServer, player: Player) -> boolean,
+	addLivesModifier: (self: ShiftServiceServer, modify: (number) -> number) -> () -> (),
 }
 
 local ShiftServiceServer: ShiftServiceServer = {
@@ -521,6 +540,23 @@ local ShiftServiceServer: ShiftServiceServer = {
 		roster:record(player.UserId, player.DisplayName, { caught = 1 })
 		publish()
 		return true
+	end,
+
+	--[=[
+		Spends one of `player`'s lives for a catch (ShiftLivesSystem). True when it was the last: the player is out for
+		the shift (kept down, out of the round, marked in the review). False when the shift is not running, the player is
+		unknown or already out, or lives remain.
+	]=]
+	spendLife = function(_self, player)
+		return lives:spend(player)
+	end,
+
+	--[=[
+		Shapes the lives each player starts a shift with: `modify` takes the lives so far and returns the new count (see
+		ShiftLivesRules.starting). Returns the function that removes it. Applies from the next run start or admit.
+	]=]
+	addLivesModifier = function(_self, modify)
+		return lives:addModifier(modify)
 	end,
 
 	getState = function(_self)

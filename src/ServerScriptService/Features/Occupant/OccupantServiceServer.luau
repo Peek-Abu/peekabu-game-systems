@@ -178,6 +178,9 @@ local catchHooks: OccupantCatchSystem.Hooks = {
 		local state = shift
 		return rig ~= nil and state ~= nil and state.phase == "running"
 	end,
+	spendLife = function(player: Player): boolean
+		return ShiftServiceServer:spendLife(player)
+	end,
 	onCaught = OccupantCatchSystem.caught,
 }
 

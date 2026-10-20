@@ -98,8 +98,18 @@ end
 --[=[
 	Brings the state up to date with the crew still in at `now`: records `crewIn`, starts the truck's countdown at half,
 	and leaves now once everyone still in has punched. Nil when nothing changed or the shift is not running.
+
+	`waiting`: crew members who are down but will be back (caught with lives left: dead only until they are rehired,
+	not knocked out). They never block the countdown's start, but while one of them has not punched the truck does not
+	leave at once: it counts down instead (or waits, with no card punched). A knocked-out member is not waiting: they
+	are out for the shift and are simply not in `stillIn`.
 ]=]
-function ShiftClockOutRules.settle(state: ShiftState, stillIn: { number }, now: number): ShiftState?
+function ShiftClockOutRules.settle(
+	state: ShiftState,
+	stillIn: { number },
+	now: number,
+	waiting: { number }?
+): ShiftState?
 	if state.phase ~= "running" then
 		return nil
 	end
@@ -108,6 +118,14 @@ function ShiftClockOutRules.settle(state: ShiftState, stillIn: { number }, now: 
 	-- Everyone still in was knocked out after a card was punched: that card clocks the crew out.
 	if total == 0 and state.punched ~= nil and #state.punched > 0 then
 		verdict = "leave"
+	end
+	if verdict == "leave" and waiting ~= nil then
+		for _, userId in waiting do
+			if not ShiftClockOutRules.isPunched(state, userId) then
+				verdict = if state.punched ~= nil and #state.punched > 0 then "countdown" else "none"
+				break
+			end
+		end
 	end
 	local sub: ShiftTypes.ShiftSub = state.sub
 	local clockOutAt = state.clockOutAt

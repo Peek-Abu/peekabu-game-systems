@@ -120,4 +120,9 @@ function OccupantFeedbackUtils.caughtText(name: string, seconds: number): string
 	return `{name} was caught! Back in {string.format("%d:%02d", whole // 60, whole % 60)}.`
 end
 
+-- The crew's toast when someone's last life is spent: "Alex is out for the shift".
+function OccupantFeedbackUtils.outText(name: string): string
+	return `{name} is out for the shift`
+end
+
 return OccupantFeedbackUtils

@@ -176,6 +176,32 @@ return function()
 			expect(state.clockOutAt).to.equal(200)
 		end)
 
+		it("counts down, not leaves, while the only unpunched member is down but coming back", function()
+			-- 2 is caught (dead, spectating) with lives left; 1 has punched.
+			local stillIn = ShiftClockOutRules.stillIn({ 1, 2 }, { 2 })
+			local state = ShiftClockOutRules.settle(punched({ 1 }), stillIn, 200, { 2 })
+			expect(state.sub).to.equal("clockout")
+			expect(state.clockOutAt).to.equal(200 + LEAVE)
+		end)
+
+		it("leaves at once when the only unpunched member is knocked out, not merely down", function()
+			local stillIn = ShiftClockOutRules.stillIn({ 1, 2 }, { 2 })
+			local state = ShiftClockOutRules.settle(punched({ 1 }), stillIn, 200, {})
+			expect(state.sub).to.equal("clockout")
+			expect(state.clockOutAt).to.equal(200)
+		end)
+
+		it("leaves at once when the members who are down have punched", function()
+			local stillIn = ShiftClockOutRules.stillIn({ 1, 2 }, {})
+			local state = ShiftClockOutRules.settle(punched({ 1, 2 }), stillIn, 200, { 2 })
+			expect(state.clockOutAt).to.equal(200)
+		end)
+
+		it("does not end a shift with a card punched while everyone else is down and coming back", function()
+			local state = ShiftClockOutRules.settle(punched({ 1 }), {}, 200, { 2 })
+			expect(state == nil or state.clockOutAt == nil).to.equal(true)
+		end)
+
 		it("waits with nobody still in and nobody punched", function()
 			local state = ShiftClockOutRules.settle(running(), {}, 200)
 			expect(state == nil or state.sub == "normal").to.equal(true)

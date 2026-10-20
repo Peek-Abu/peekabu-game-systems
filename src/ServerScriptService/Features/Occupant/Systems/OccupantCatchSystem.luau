@@ -40,6 +40,7 @@ local OccupantTypes = require(ReplicatedStorage.Shared.Features.Occupant.Data.Oc
 local OccupantEvents = require(ReplicatedStorage.Shared.Features.Occupant.Net.OccupantEvents)
 local OccupantAnimationUtils = require(ReplicatedStorage.Shared.Features.Occupant.Utils.OccupantAnimationUtils)
 local OccupantFeedbackUtils = require(ReplicatedStorage.Shared.Features.Occupant.Utils.OccupantFeedbackUtils)
+local OccupantCatchUtils = require(ServerScriptService.Features.Occupant.Utils.OccupantCatchUtils)
 local OccupantCatchRules = require(ServerScriptService.Features.Occupant.Rules.OccupantCatchRules)
 local Reach = require(ServerScriptService.Features.Occupant.Rules.OccupantReachRules)
 local OccupantRigSystem = require(ServerScriptService.Features.Occupant.Systems.OccupantRigSystem)
@@ -69,7 +70,9 @@ export type Attempt = {
 export type Hooks = {
 	-- Whether the catch may still finish (a shift is still running and Harlow is still there).
 	stillOn: () -> boolean,
-	onCaught: (player: Player) -> (),
+	-- Spends one of the player's lives (Shift's); true when that was the last and the player is out for the shift.
+	spendLife: (player: Player) -> boolean,
+	onCaught: (player: Player, knockedOut: boolean) -> (),
 }
 
 -- How far in front of his face the caught player's camera sits.
@@ -154,12 +157,17 @@ function OccupantCatchSystem.begin(rig: OccupantRigSystem.Rig, player: Player, h
 			OccupantConstants.LAUNCH_UP
 		)
 		act(rig, "harlowThrow")
+		-- Before the kill: a knock-out holds the player down, so their death must find the hold already set.
+		local knockedOut = hooks.spendLife(player)
+		local after = OccupantCatchUtils.afterCatch(knockedOut, report.backAt)
 		DeathServiceServer:kill(victim, "caught", { launch = velocity })
 		-- Figma 4a: the line comes with the throw, not the scare.
 		OccupantRigSystem.say(rig, OccupantConstants.LINES.caught)
-		StateSyncPublicPlayerStore.set(userId, { [OccupantConstants.PUBLIC_CAUGHT_UNTIL] = report.backAt })
+		if after.publishBack ~= nil then
+			StateSyncPublicPlayerStore.set(userId, { [OccupantConstants.PUBLIC_CAUGHT_UNTIL] = after.publishBack })
+		end
 		OccupantEvents.packets.CatchReport.sendTo(report, player)
-		hooks.onCaught(player)
+		hooks.onCaught(player, knockedOut)
 	end)
 
 	local harlow = rig.root
@@ -248,13 +256,23 @@ local rehire: { [number]: boolean } = {}
 
 --[=[
 	A catch went through (the service's `onCaught` hook): Shift counts it, the crew is told, and the player is owed the
-	Rehired notice on their next character.
+	Rehired notice on their next character. A catch that knocked the player out (`knockedOut`) owes no notice and tells
+	the crew they are out for the shift instead (OccupantCatchUtils.afterCatch).
 ]=]
-function OccupantCatchSystem.caught(player: Player)
-	rehire[player.UserId] = true
+function OccupantCatchSystem.caught(player: Player, knockedOut: boolean)
+	-- The report's back-at time is not used here; only the toast and the rehire flag are.
+	local after = OccupantCatchUtils.afterCatch(knockedOut, 0)
+	if after.rehire then
+		rehire[player.UserId] = true
+	else
+		rehire[player.UserId] = nil
+	end
 	ShiftServiceServer:noteCatch(player)
+	local text = if after.toast == "out"
+		then OccupantFeedbackUtils.outText(player.DisplayName)
+		else OccupantFeedbackUtils.caughtText(player.DisplayName, OccupantConstants.SPECTATE_SECONDS)
 	ToastServiceServer:send("all", {
-		text = OccupantFeedbackUtils.caughtText(player.DisplayName, OccupantConstants.SPECTATE_SECONDS),
+		text = text,
 		style = ShiftConstants.TOAST_STICKY,
 		duration = 4,
 	})
