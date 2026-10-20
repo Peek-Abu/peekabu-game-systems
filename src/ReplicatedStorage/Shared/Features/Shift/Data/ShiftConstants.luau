@@ -248,6 +248,12 @@ return table.freeze({
 	PUBLIC_ROOM = "room",
 	PUBLIC_ROOM_DEPTH = "roomDepth",
 	PUBLIC_CAM = "cam",
+	-- Gloom lives: each player starts a shift with STARTING_LIVES (modifiers may change it); every catch spends one,
+	-- the last knocks them out for the shift. Public fields: lives, livesMax (numbers), knockedOut (boolean).
+	STARTING_LIVES = 3,
+	PUBLIC_LIVES = "lives",
+	PUBLIC_LIVES_MAX = "livesMax",
+	PUBLIC_KNOCKED_OUT = "knockedOut",
 	CREW_STATUS_INTERVAL = 0.25,
 	-- The CCTV's fictional night clock (Figma 4b "THU 03:44:12"): 03:00:00 at the shift's start.
 	NIGHT_CLOCK_START = 3 * 3600,
