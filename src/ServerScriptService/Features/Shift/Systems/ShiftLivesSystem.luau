@@ -41,13 +41,16 @@ export type Deps = {
 	playerById: ((userId: number) -> Player?)?,
 	-- Drops a knocked-out player's live character (a rejoin loads a fresh one).
 	down: ((player: Player) -> ())?,
+	-- Calls `onCharacter` for every character the player gets from now on; returns the function that stops it.
+	watch: ((player: Player, onCharacter: () -> ()) -> () -> ())?,
 }
 
 export type ShiftLivesSystem = {
 	-- A new run: everyone in `players` starts with the starting lives (replacing whatever was kept).
 	begin: (self: ShiftLivesSystem, players: { Player }) -> (),
 	-- A late joiner gets the starting lives; a player already listed keeps what they have (one who is out, rejoining, is
-	-- put straight back out: held, eliminated, their character dropped). Nothing outside a run.
+	-- put straight back out: held, eliminated, their character dropped, and any character that arrives later in the
+	-- run dropped too, as the join load usually lands after this). Nothing outside a run.
 	admit: (self: ShiftLivesSystem, player: Player) -> (),
 	-- One catch. True when it was the player's last life (they are now out); false otherwise, and for an unknown player
 	-- or one already out, or outside a run.
@@ -75,11 +78,27 @@ local function realEliminate(player: Player)
 	RoundServiceServer:eliminate(player)
 end
 
+-- Kills the player's character once it has a Humanoid (a character that has just arrived may not yet).
 local function realDown(player: Player)
 	local character = player.Character
-	local humanoid = if character ~= nil then character:FindFirstChildOfClass("Humanoid") else nil
-	if humanoid ~= nil then
-		DeathServiceServer:kill(humanoid, "caught")
+	if character == nil then
+		return
+	end
+	task.spawn(function()
+		local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid", 5)
+		if humanoid ~= nil and humanoid:IsA("Humanoid") and player.Character == character then
+			DeathServiceServer:kill(humanoid, "knockedOut")
+		end
+	end)
+end
+
+local function realWatch(player: Player, onCharacter: () -> ()): () -> ()
+	local connection = player.CharacterAdded:Connect(function()
+		-- A frame for Death to start watching the new character before it is killed.
+		task.defer(onCharacter)
+	end)
+	return function()
+		connection:Disconnect()
 	end
 end
 
@@ -97,11 +116,22 @@ function ShiftLivesSystem.new(deps: Deps): ShiftLivesSystem
 	local eliminate: (Player) -> () = deps.eliminate or realEliminate
 	local down: (Player) -> () = deps.down or realDown
 	local playerById: (number) -> Player? = deps.playerById or realPlayerById
+	local watch: (Player, () -> ()) -> () -> () = deps.watch or realWatch
 
 	local tracker = ShiftLivesTracker.new()
 	local modifiers: { (number) -> number } = {}
 	-- Every userId whose lives fields were published, so the shift's end clears leavers' too.
 	local published: { [number]: boolean } = {}
+	-- Stops for the watches on rejoined knocked-out players' characters, until the shift's end.
+	local watches: { [number]: () -> () } = {}
+
+	local function stopWatching(userId: number)
+		local stop = watches[userId]
+		if stop ~= nil then
+			watches[userId] = nil
+			stop()
+		end
+	end
 
 	local function startingLives(): number
 		return ShiftLivesRules.starting(ShiftConstants.STARTING_LIVES, modifiers)
@@ -151,6 +181,12 @@ function ShiftLivesSystem.new(deps: Deps): ShiftLivesSystem
 				hold(player)
 				eliminate(player)
 				down(player)
+				stopWatching(player.UserId)
+				watches[player.UserId] = watch(player, function()
+					if deps.isRunning() and tracker:isOut(player.UserId) then
+						down(player)
+					end
+				end)
 				return
 			end
 			publishLives(player.UserId)
@@ -185,6 +221,9 @@ function ShiftLivesSystem.new(deps: Deps): ShiftLivesSystem
 		end,
 
 		clear = function(_self)
+			for userId in watches do
+				stopWatching(userId)
+			end
 			for _, userId in tracker:out() do
 				local player = playerById(userId)
 				if player ~= nil then

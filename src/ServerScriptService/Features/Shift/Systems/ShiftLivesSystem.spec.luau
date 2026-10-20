@@ -14,7 +14,7 @@ end
 
 -- A system over fakes: `log.fields[userId]` is the public entry, `log.calls` the effects in order.
 local function harness(players)
-	local log = { running = true, fields = {}, calls = {}, marked = {}, byId = {} }
+	local log = { running = true, fields = {}, calls = {}, watching = {}, marked = {}, byId = {} }
 	for _, player in players do
 		log.byId[player.UserId] = player
 	end
@@ -35,6 +35,12 @@ local function harness(players)
 		clearField = function(userId, field)
 			if log.fields[userId] ~= nil then
 				log.fields[userId][field] = nil
+			end
+		end,
+		watch = function(player, onCharacter)
+			log.watching[player.UserId] = onCharacter
+			return function()
+				log.watching[player.UserId] = nil
 			end
 		end,
 		down = function(player)
@@ -152,6 +158,27 @@ return function()
 			local log = harness({ member(1) })
 			log.system:admit(member(2))
 			expect(#log.calls).to.equal(0)
+			expect(log.watching[2]).to.equal(nil)
+		end)
+
+		it("drops a character that arrives after the rejoin, while the shift runs", function()
+			local log = harness({ member(1) })
+			spendAll(log, member(1))
+			log.system:admit(member(1))
+			local before = #log.calls
+			log.watching[1]()
+			expect(log.calls[before + 1]).to.equal("down 1")
+		end)
+
+		it("leaves a late character alone once the run is over", function()
+			local log = harness({ member(1) })
+			spendAll(log, member(1))
+			log.system:admit(member(1))
+			local onCharacter = log.watching[1]
+			log.running = false
+			local before = #log.calls
+			onCharacter()
+			expect(#log.calls).to.equal(before)
 		end)
 
 		it("does nothing outside a run", function()
@@ -174,6 +201,14 @@ return function()
 				expect(log.fields[userId][OUT]).to.equal(nil)
 			end
 			expect(log.system:isKnockedOut(member(1))).to.equal(false)
+		end)
+
+		it("stops watching a rejoined player's characters", function()
+			local log = harness({ member(1) })
+			spendAll(log, member(1))
+			log.system:admit(member(1))
+			log.system:clear()
+			expect(log.watching[1]).to.equal(nil)
 		end)
 
 		it("clears a knocked-out player who has left without releasing anyone", function()
