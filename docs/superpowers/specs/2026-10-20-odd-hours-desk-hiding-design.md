@@ -93,7 +93,7 @@ So desks are roughly 1.5× today's size, with the desktop at about 4.5 studs.
 
 **Claude's calls on the knock-on effects** (to check while reading):
 - **Chairs:** a chair stays fully outside the free space, pulled out in front of the open side, never pushed in. It must never overlap a hider.
-- **Layout:** if the bigger desks or tables don't fit a room with its walkways, door clearances and the Manager's paths kept, the layout gets fewer or moved desks. Walkways and the free-space rule both win over desk count, so furniture is never shrunk below the rule.
+- **Layout (owner's call):** keep it simple, since the map is being rebuilt anyway. If a bigger desk or table doesn't fit where it stands (walls, walkways, doors), remove it. No rearranging and no shrinking.
 
 ### 4. Vacuum and backpack
 
