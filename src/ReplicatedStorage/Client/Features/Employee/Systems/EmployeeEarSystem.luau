@@ -125,7 +125,7 @@ end
 
 -- `isHiding` (default: the character's Player has HideConstants.PLAYER_SPOT_ATTRIBUTE set) is injectable for specs.
 function EmployeeEarSystem.new(isHiding: ((Model) -> boolean)?): EmployeeEarSystem
-	local hidingCheck = isHiding or playerIsHiding
+	local hidingCheck: (Model) -> boolean = isHiding or playerIsHiding
 	local employees: { [Model]: Employee } = {}
 	local random = Random.new()
 

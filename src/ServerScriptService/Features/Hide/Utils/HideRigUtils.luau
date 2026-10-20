@@ -135,10 +135,13 @@ function HideRigUtils.read(character: Model): HideTypes.RigShape?
 	while head <= #queue do
 		local current = queue[head]
 		head += 1
-		for _, neighbour in adjacency[current] or {} do
-			if not baseOf[neighbour] then
-				baseOf[neighbour] = baseOf[current]
-				table.insert(queue, neighbour)
+		local neighbours = adjacency[current]
+		if neighbours ~= nil then
+			for _, neighbour in neighbours do
+				if not baseOf[neighbour] then
+					baseOf[neighbour] = baseOf[current]
+					table.insert(queue, neighbour)
+				end
 			end
 		end
 	end
