@@ -7,15 +7,18 @@
 	gold one); the company rank (RankSlip) under them with the Manager's line and the vote's footer; CREW AWARDS on
 	the right, the first award featured on a gold card with its winner's own character standing on its corner; and
 	the crew vote: the mint ANOTHER SHIFT and the cream TO THE DEPOT with their counts, the local player's choice in
-	V2's lilac selected ring, the time left on a coral pill. Laid out at 1680x900 design px (phone 760x370) and
-	scaled by `scale` (ShiftReviewViewModel.fit), centred. On the phone "+2 MORE AWARDS" swaps in the folded awards
-	(UI-only state).
+	V2's lilac selected ring, the time left on a coral pill. Laid out at 1680x900 design px (phone 760x370,
+	ShiftReviewViewModel.CANVAS) and scaled by `scale` (ShiftReviewViewModel.fit), centred. On the phone "+2 MORE
+	AWARDS" swaps in the folded awards (UI-only state); "WHAT NEXT?", the vote clock and that button share one row
+	above the vote, clear of the chosen button's lifted ring. Pills are sized from their measured labels
+	(ToonStyleViewModel.pillWidth; the rating badge by ShiftReviewViewModel.badge), so no label is cut.
 	Presentational: it draws the view it is given (specced in ShiftReviewViewModel and RankViewModel).
 
 	@class ShiftReviewPanel
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TextService = game:GetService("TextService")
 
 local React = require(ReplicatedStorage.Packages.React)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
@@ -32,6 +35,7 @@ local ToonIcon = require(Toon.ToonIcon)
 local ToonPanel = require(Toon.ToonPanel)
 local ToonPill = require(Toon.ToonPill)
 local ToonSparkle = require(Toon.ToonSparkle)
+local ToonStyleViewModel = require(Toon.ToonStyleViewModel)
 local ToonSurface = require(Toon.ToonSurface)
 local ToonText = require(Toon.ToonText)
 local ToonWipe = require(Toon.ToonWipe)
@@ -54,11 +58,14 @@ export type ShiftReviewPanelProps = {
 
 type Nodes = { [string]: React.ReactNode }
 
--- The design canvases (desktop / phone) the layout is drawn in before `scale`.
-local DESKTOP = Vector2.new(1680, 900)
-local PHONE = Vector2.new(760, 370)
 -- One turn of the rays, in seconds.
 local RAYS_PERIOD = 60
+
+-- The width (design px) a pill needs for its Luckiest Guy `text` at `textSize` with `padX` side padding.
+local function pillFor(text: string, textSize: number, padX: number): number
+	local width = TextService:GetTextSize(text, textSize, Enum.Font.LuckiestGuy, Vector2.new(10000, 1000)).X
+	return ToonStyleViewModel.pillWidth(width, textSize, padX)
+end
 
 local function statCard(card: ShiftReviewViewModel.CardView, phone: boolean, position: UDim2): React.ReactNode
 	local size = if phone then Vector2.new(180, 74) else Vector2.new(400, 132)
@@ -236,6 +243,8 @@ end
 local function headline(view: ShiftReviewViewModel.ReviewView, phone: boolean, canvas: Vector2): Nodes
 	local titleSize = if phone then 60 else 150
 	local centreY = if phone then 46 else 180
+	local ratingSize = if phone then 12 else 20
+	local badge = ShiftReviewViewModel.badge(pillFor(view.rating, ratingSize, if phone then 8 else 12), phone)
 	local spin = useToonPlay(RAYS_PERIOD, 0, nil, true)
 	local medal: Nodes = {}
 	medal.grade = e(ToonText, {
@@ -288,7 +297,7 @@ local function headline(view: ShiftReviewViewModel.ReviewView, phone: boolean, c
 			hue = if view.met then "mint" else "coral",
 			radius = 999,
 			anchor = Vector2.new(0.5, 0.5),
-			position = UDim2.fromOffset(canvas.X - (if phone then 50 else 150), centreY - (if phone then 4 else 20)),
+			position = UDim2.fromOffset(badge.medalX, centreY - (if phone then 4 else 20)),
 			size = UDim2.fromOffset(if phone then 84 else 196, if phone then 84 else 196),
 			zIndex = 4,
 			children = medal,
@@ -296,11 +305,12 @@ local function headline(view: ShiftReviewViewModel.ReviewView, phone: boolean, c
 		rating = e(ToonPill, {
 			text = view.rating,
 			hue = "night",
-			textSize = if phone then 12 else 20,
+			textSize = ratingSize,
+			padX = if phone then 8 else nil,
 			tilt = 8,
 			anchor = Vector2.new(0.5, 0.5),
-			position = UDim2.fromOffset(canvas.X - (if phone then 50 else 150), centreY + (if phone then 38 else 84)),
-			size = UDim2.fromOffset(if phone then 110 else 260, if phone then 22 else 38),
+			position = UDim2.fromOffset(badge.x, centreY + (if phone then 38 else 84)),
+			size = UDim2.fromOffset(badge.width, if phone then 22 else 38),
 			zIndex = 5,
 		}),
 		sparkles = e(ToonSparkle, {
@@ -330,7 +340,7 @@ end
 local function ShiftReviewPanel(props: ShiftReviewPanelProps): React.ReactNode
 	local view = props.view
 	local phone = props.layout == "phone"
-	local canvas = if phone then PHONE else DESKTOP
+	local canvas = if phone then ShiftReviewViewModel.CANVAS.phone else ShiftReviewViewModel.CANVAS.desktop
 	local showExtra, setShowExtra = React.useState(false)
 	-- The text fit limits follow the scale the canvas is drawn at (PaperScaleContext).
 	local outer = React.useContext(PaperScaleContext.Context)
@@ -401,21 +411,25 @@ local function ShiftReviewPanel(props: ShiftReviewPanelProps): React.ReactNode
 	})
 	local awards: { ShiftReviewViewModel.AwardView } = if phone and showExtra then view.extraAwards else view.awards
 	local y = if phone then 124 else 350
+	-- The last card's bottom edge: the desktop vote row sits under it (ShiftReviewViewModel.voteRow).
+	local awardsBottom = y
 	for index, award in awards do
 		local featured = index == 1 and not (phone and showExtra)
 		nodes[`award{index}`] = awardCard(award, featured, phone, width, UDim2.fromOffset(right, y), view.grade)
-		y += (if featured then (if phone then 72 else 148) else (if phone then 54 else 78)) + (if phone then 8 else 12)
+		awardsBottom = y + (if featured then (if phone then 72 else 148) else (if phone then 54 else 78))
+		y = awardsBottom + (if phone then 8 else 12)
 	end
-	if phone and view.moreAwards ~= nil then
-		-- Under the awards, right-aligned, clear of the vote below.
+	local more, less = view.moreAwards, view.lessAwards
+	if phone and more ~= nil then
+		-- Under the awards, right-aligned, clear of the vote below; as wide as its longer label (12 px label inset).
 		nodes.more = e(ToonButton, {
 			variant = "lilac",
 			small = true,
-			text = if showExtra then view.lessAwards else view.moreAwards,
+			text = if showExtra then less else more,
 			textSize = 13,
 			anchor = Vector2.new(1, 0),
 			position = UDim2.fromOffset(canvas.X, y - 2),
-			size = UDim2.fromOffset(170, 24),
+			size = UDim2.fromOffset(math.max(pillFor(more, 13, 12), pillFor(less or more, 13, 12)), 24),
 			onActivated = function()
 				setShowExtra(function(open: boolean)
 					return not open
@@ -423,43 +437,39 @@ local function ShiftReviewPanel(props: ShiftReviewPanelProps): React.ReactNode
 			end,
 		})
 	end
-	-- The crew vote, bottom right; on phone high enough that the chosen button's lilac ring and its drop stay on the
-	-- screen.
-	local voteTop = if phone then 312 else 770
+	-- The crew vote, bottom right; on desktop clear of the awards' ink; on phone high enough that the chosen button's
+	-- lilac ring and its drop stay on the screen, its header row 52 px up (the chosen button's ring reaches 20 px over
+	-- it), the clock right after the measured "WHAT NEXT?".
+	local voteRow = ShiftReviewViewModel.voteRow(awardsBottom, phone)
+	local headerTop = voteRow.headerTop
 	nodes.voteTitle = e(ToonText, {
 		text = "WHAT NEXT?",
 		textSize = if phone then 18 else 40,
-		position = UDim2.fromOffset(right, voteTop - (if phone then 26 else 6)),
+		position = UDim2.fromOffset(right, headerTop),
 		size = UDim2.fromOffset(if phone then 120 else 260, if phone then 22 else 44),
 		fit = true,
 	})
+	local clockWidth = if phone then math.max(92, pillFor(`VOTE · {view.voteClock}`, 12, 8)) else 160
+	local clockAt = UDim2.fromOffset(
+		right + (if phone then pillFor("WHAT NEXT?", 18, 0) + 2 else 270),
+		headerTop + (if phone then ShiftReviewViewModel.PHONE_CLOCK.top else 4)
+	)
 	nodes.voteClock = e(ToonPill, {
 		text = `VOTE · {view.voteClock}`,
 		hue = "coral",
 		textSize = if phone then 12 else 20,
-		position = UDim2.fromOffset(right + (if phone then 126 else 270), voteTop - (if phone then 26 else 2)),
-		size = UDim2.fromOffset(if phone then 92 else 160, if phone then 22 else 36),
+		padX = if phone then 8 else nil,
+		position = clockAt,
+		size = UDim2.fromOffset(clockWidth, if phone then ShiftReviewViewModel.PHONE_CLOCK.height else 36),
 	})
-	local half = (width - (if phone then 10 else 20)) / 2
-	local buttonTop = voteTop + (if phone then 0 else 46)
-	nodes.another = voteButton(
-		view.another,
-		"another",
-		view.voteOpen,
-		phone,
-		UDim2.fromOffset(right, buttonTop),
-		half,
-		props.onVote
-	)
-	nodes.depot = voteButton(
-		view.depot,
-		"depot",
-		view.voteOpen,
-		phone,
-		UDim2.fromOffset(right + half + (if phone then 10 else 20), buttonTop),
-		half,
-		props.onVote
-	)
+	local gap = if phone then 10 else 20
+	local half = (width - gap) / 2
+	for index = 1, 2 do
+		local choice: ShiftTypes.Vote = if index == 1 then "another" else "depot"
+		local vote = if index == 1 then view.another else view.depot
+		local at = UDim2.fromOffset(right + (index - 1) * (half + gap), voteRow.buttonsTop)
+		nodes[choice] = voteButton(vote, choice, view.voteOpen, phone, at, half, props.onVote)
+	end
 	return e("Frame", {
 		Size = UDim2.fromScale(1, 1),
 		BackgroundColor3 = COLOR.ink,

@@ -130,6 +130,25 @@ return function()
 		end)
 	end)
 
+	describe("fitSize", function()
+		it("keeps the label's own size when it fits its room", function()
+			expect(VM.fitSize(180, 15, 228, 12)).to.equal(15)
+			expect(VM.fitSize(228, 15, 228, 12)).to.equal(15)
+		end)
+
+		it("scales a label that is too wide down to fit, in whole px", function()
+			-- 15 * 200 / 240 = 12.5 -> 12.
+			expect(VM.fitSize(240, 15, 200, 10)).to.equal(12)
+			expect(VM.fitSize(300, 20, 150, 8)).to.equal(10)
+		end)
+
+		it("never goes under the text floor, and leaves an empty or broken measure alone", function()
+			expect(VM.fitSize(400, 15, 100, 12)).to.equal(12)
+			expect(VM.fitSize(400, 15, -20, 12)).to.equal(12)
+			expect(VM.fitSize(0, 15, 0, 12)).to.equal(15)
+		end)
+	end)
+
 	describe("optical", function()
 		local CAP = VM.DISPLAY_CAP_SHIFT
 

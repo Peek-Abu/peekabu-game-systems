@@ -4,12 +4,16 @@
 	the XP star render breaking its left edge (the level's number on it), "LV n · Rank" in Fredoka, this shift's XP in a
 	mint gradient on the right, the XP bar with its total, the breakdown under it, a gold PROMOTED sticker once a
 	level-up has landed and "Incident Report filed" in coral for a caught player. Desktop draws it 820x120 design px;
-	the phone draws a 370x56 strip (level, rank, gain and a thin bar). Presentational: the words are RankViewModel.slip.
+	the phone draws a 370x58 strip (level, rank, gain and a thin bar): the gain's box is its measured width, the rank
+	line is drawn at the size that fits the room left of it (ToonStyleViewModel.fitSize) and PROMOTED! hangs on the
+	strip's bottom-right edge, its pill sized from its measured label, clear of the stat cards above and the gain.
+	Presentational: the words are RankViewModel.slip.
 
 	@class RankSlip
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TextService = game:GetService("TextService")
 
 local React = require(ReplicatedStorage.Packages.React)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
@@ -19,6 +23,7 @@ local ToonBar = require(Toon.ToonBar)
 local ToonIcon = require(Toon.ToonIcon)
 local ToonPanel = require(Toon.ToonPanel)
 local ToonPill = require(Toon.ToonPill)
+local ToonStyleViewModel = require(Toon.ToonStyleViewModel)
 local ToonText = require(Toon.ToonText)
 local UIToonConstants = require(Toon.UIToonConstants)
 
@@ -44,6 +49,12 @@ local function titleCase(text: string): string
 	return table.concat(words, " ")
 end
 
+-- A one-line label's width in design px at `textSize` (Luckiest Guy, or Fredoka for `body`).
+local function measure(text: string, textSize: number, body: boolean?): number
+	local font = if body then Enum.Font.FredokaOne else Enum.Font.LuckiestGuy
+	return TextService:GetTextSize(text, textSize, font, Vector2.new(10000, 1000)).X
+end
+
 local function RankSlip(props: RankSlipProps): React.ReactNode
 	local view = props.view
 	local phone = props.layout == "phone"
@@ -51,6 +62,17 @@ local function RankSlip(props: RankSlipProps): React.ReactNode
 	local star = if phone then 64 else 132
 	local left = if phone then 46 else 104
 	local level = levelOf(view.heading)
+	local title = `LV {level} · {titleCase(view.rank)}`
+	local gain = if view.gain ~= nil then (string.gsub(view.gain, " this shift", "")) else nil
+	-- The gain's box (its measured width and stroke on phone) and the rank line's room left of it, 8 px apart.
+	local gainWidth = if not phone
+		then 200
+		elseif gain ~= nil then measure(gain, 20) + 2 * ToonStyleViewModel.stroke(20) + 4
+		else 0
+	local titleRoom = size.X - left - (if phone then 16 + gainWidth + 8 else 200)
+	local titleSize = if phone
+		then ToonStyleViewModel.fitSize(measure(title, 15, true), 15, titleRoom, UIPaperConstants.TEXT_MIN.phone)
+		else 26
 	local face: { [string]: React.ReactNode } = {
 		star = e("Frame", {
 			Position = UDim2.fromOffset(-star * 0.36, (size.Y - star) / 2 - 4),
@@ -70,11 +92,11 @@ local function RankSlip(props: RankSlipProps): React.ReactNode
 			}),
 		}),
 		title = e(ToonText, {
-			text = `LV {level} · {titleCase(view.rank)}`,
+			text = title,
 			font = "body",
-			textSize = if phone then 15 else 26,
+			textSize = titleSize,
 			position = UDim2.fromOffset(left, if phone then 4 else 14),
-			size = UDim2.fromOffset(size.X - left - (if phone then 90 else 200), if phone then 20 else 32),
+			size = UDim2.fromOffset(titleRoom, if phone then 20 else 32),
 			fit = true,
 		}),
 		bar = e(ToonBar, {
@@ -86,15 +108,14 @@ local function RankSlip(props: RankSlipProps): React.ReactNode
 			size = UDim2.fromOffset(size.X - left - 20, if phone then 14 else 32),
 		}),
 	}
-	local gain = view.gain
 	if gain ~= nil then
 		face.gain = e(ToonText, {
-			text = string.gsub(gain, " this shift", ""),
+			text = gain,
 			meaning = "mint",
 			textSize = if phone then 20 else 40,
 			anchor = Vector2.new(1, 0),
 			position = UDim2.new(1, -16, 0, if phone then 0 else 4),
-			size = UDim2.fromOffset(if phone then 90 else 200, if phone then 26 else 48),
+			size = UDim2.fromOffset(gainWidth, if phone then 26 else 48),
 			align = "right",
 			fit = true,
 		})
@@ -115,15 +136,18 @@ local function RankSlip(props: RankSlipProps): React.ReactNode
 		end
 	end
 	if view.promoted then
+		-- Desktop: above the gain, clear of its digits. Phone: the strip sits right under the stat cards, so the sticker
+		-- hangs on its bottom-right edge instead (its top clear of the bar), as wide as its measured label.
+		local promotedWidth = if phone then ToonStyleViewModel.pillWidth(measure("PROMOTED!", 13), 13, 8) else 170
 		face.promoted = e(ToonPill, {
 			text = "PROMOTED!",
 			hue = "gold",
 			textSize = if phone then 13 else 22,
 			tilt = -6,
+			padX = if phone then 8 else nil,
 			anchor = Vector2.new(0.5, 0.5),
-			-- Above the gain, clear of its digits.
-			position = UDim2.new(1, if phone then -60 else -120, 0, if phone then -13 else -18),
-			size = UDim2.fromOffset(if phone then 100 else 170, if phone then 24 else 40),
+			position = if phone then UDim2.new(1, -promotedWidth / 2 - 10, 1, 8) else UDim2.new(1, -120, 0, -18),
+			size = UDim2.fromOffset(promotedWidth, if phone then 24 else 40),
 			zIndex = 6,
 		})
 	end

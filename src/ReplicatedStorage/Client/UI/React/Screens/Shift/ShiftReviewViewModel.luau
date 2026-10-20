@@ -104,6 +104,60 @@ local SHEET = table.freeze({
 
 local ShiftReviewViewModel = {}
 
+-- How far the award cards' ink (the card's ink drop and its outline: 7 + 5) reaches below the card.
+ShiftReviewViewModel.AWARD_INK = 12
+-- The phone's vote clock tag: its top below the header's (clear of the last award card's drop: 6 px) and its height.
+ShiftReviewViewModel.PHONE_CLOCK = table.freeze({ top = 11, height = 20 })
+-- The clear space between the awards' ink and the vote header under them (desktop; the phone's row is fixed).
+ShiftReviewViewModel.VOTE_GAP = 14
+
+export type VoteRow = { headerTop: number, buttonsTop: number }
+
+--[=[
+	Where the vote row sits: the "WHAT NEXT?" header and the two buttons under it. Desktop: VOTE_GAP under the awards'
+	ink (`awardsBottom`: the last award card's bottom edge, plus AWARD_INK), the buttons 52 px under the header. Phone:
+	fixed (the header 52 px over the buttons at 314, clear of the chosen button's lifted ring), whatever the awards.
+]=]
+function ShiftReviewViewModel.voteRow(awardsBottom: number, phone: boolean): VoteRow
+	if phone then
+		return { headerTop = 262, buttonsTop = 314 }
+	end
+	local headerTop = awardsBottom + ShiftReviewViewModel.AWARD_INK + ShiftReviewViewModel.VOTE_GAP
+	return { headerTop = headerTop, buttonsTop = headerTop + 52 }
+end
+
+-- The design canvases ShiftReviewPanel lays the review out in before `fit` scales it (desktop / phone).
+ShiftReviewViewModel.CANVAS = table.freeze({ desktop = Vector2.new(1680, 900), phone = Vector2.new(760, 370) })
+
+-- The grade medallion's centre in from the canvas's right edge, the rating badge's design width under it, and the
+-- room the badge keeps inside the canvas's right edge.
+ShiftReviewViewModel.MEDAL = table.freeze({
+	desktop = table.freeze({ inset = 150, badge = 260 }),
+	phone = table.freeze({ inset = 50, badge = 110 }),
+})
+ShiftReviewViewModel.BADGE_MARGIN = 6
+
+-- `medalX`: the medallion's centre; `x`, `width`: the rating badge's centre and width under it.
+export type Badge = { medalX: number, x: number, width: number }
+
+--[=[
+	The rating badge under the grade medallion: as wide as its measured label needs (`needed`,
+	ToonStyleViewModel.pillWidth) and never narrower than its design width, so a long rating ("SATISFACTORY",
+	"EXCEEDS EXPECTATIONS") is never cut; centred under the medallion unless that runs it past the canvas's right edge
+	(BADGE_MARGIN inside it), then pulled left just enough.
+]=]
+function ShiftReviewViewModel.badge(needed: number, phone: boolean): Badge
+	local medal = if phone then ShiftReviewViewModel.MEDAL.phone else ShiftReviewViewModel.MEDAL.desktop
+	local canvas = if phone then ShiftReviewViewModel.CANVAS.phone else ShiftReviewViewModel.CANVAS.desktop
+	local medalX = canvas.X - medal.inset
+	local width = math.max(medal.badge, needed)
+	return {
+		medalX = medalX,
+		x = math.min(medalX, canvas.X - ShiftReviewViewModel.BADGE_MARGIN - width / 2),
+		width = width,
+	}
+end
+
 local GRADE: { [ShiftTypes.Rating]: string } = { exceeds = "A", satisfactory = "B", needsImprovement = "C" }
 
 -- The kit render for an award's symbol.

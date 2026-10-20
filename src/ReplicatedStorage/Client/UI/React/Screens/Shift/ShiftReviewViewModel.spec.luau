@@ -284,6 +284,36 @@ return function()
 		end)
 	end)
 
+	describe("badge", function()
+		it("keeps the design width and centres under the medallion when the label fits", function()
+			local badge = ShiftReviewViewModel.badge(240, false)
+			expect(badge.medalX).to.equal(1680 - 150)
+			expect(badge.width).to.equal(260)
+			expect(badge.x).to.equal(1530)
+			expect(ShiftReviewViewModel.badge(105, true).width).to.equal(110)
+		end)
+
+		it("pulls even the design-width phone badge 11 px in: centred at 710 it ran 5 px off the 760 canvas", function()
+			local badge = ShiftReviewViewModel.badge(105, true)
+			expect(badge.medalX).to.equal(710)
+			-- 760 - 6 - 110 / 2 = 699: it spans 644..754, still under the 84 px medallion (668..752).
+			expect(badge.x).to.equal(699)
+			expect(math.abs(badge.x - badge.medalX) < 84 / 2).to.equal(true)
+		end)
+
+		it("widens to the measured label when it needs more than the design width, and stays on the canvas", function()
+			local badge = ShiftReviewViewModel.badge(158, true)
+			expect(badge.width).to.equal(158)
+			-- Centred at 710 it would end at 789, past the 760 canvas: pulled left to end 6 px inside it.
+			expect(badge.x).to.equal(760 - 6 - 79)
+			expect(badge.x + badge.width / 2 <= 760 - ShiftReviewViewModel.BADGE_MARGIN).to.equal(true)
+		end)
+
+		it("pulls a badge that only just overflows left by exactly the overflow", function()
+			expect(ShiftReviewViewModel.badge(120, true).x).to.equal(694)
+		end)
+	end)
+
 	describe("fit", function()
 		it("draws the desktop review at full size on a 1920x1080 screen", function()
 			expect(ShiftReviewViewModel.fit(Vector2.new(1920, 1080), false)).to.equal(1)
@@ -357,6 +387,34 @@ return function()
 		it("shows the vote's time left on its own", function()
 			local view = ShiftReviewViewModel.review(snapshot(), nil, 4, 96, false)
 			expect(view.voteClock).to.equal("0:24")
+		end)
+	end)
+
+	describe("vote row", function()
+		it("sits clear of the desktop awards' ink: 768 is the last card's bottom, its ink reaches 780", function()
+			local row = ShiftReviewViewModel.voteRow(768, false)
+			expect(row.headerTop).to.equal(794)
+			expect(row.buttonsTop).to.equal(846)
+			expect(row.headerTop - (768 + ShiftReviewViewModel.AWARD_INK)).to.equal(ShiftReviewViewModel.VOTE_GAP)
+		end)
+
+		it("follows the awards' bottom on desktop", function()
+			expect(ShiftReviewViewModel.voteRow(700, false).headerTop).to.equal(726)
+		end)
+
+		it("keeps the phone's fixed row whatever the awards", function()
+			local row = ShiftReviewViewModel.voteRow(500, true)
+			expect(row.headerTop).to.equal(262)
+			expect(row.buttonsTop).to.equal(314)
+		end)
+
+		it("keeps the phone's vote clock 6 px under the awards' ink and clear of the buttons' lifted ring", function()
+			local row = ShiftReviewViewModel.voteRow(500, true)
+			local clock = ShiftReviewViewModel.PHONE_CLOCK
+			-- The phone's last award card ends at 258 (featured 124..196, then 204..258); its drop and outline reach ~267.
+			expect(row.headerTop + clock.top - 267 >= 6).to.equal(true)
+			-- The chosen button's ring reaches 20 px over the buttons.
+			expect(row.headerTop + clock.top + clock.height <= row.buttonsTop - 20).to.equal(true)
 		end)
 	end)
 end

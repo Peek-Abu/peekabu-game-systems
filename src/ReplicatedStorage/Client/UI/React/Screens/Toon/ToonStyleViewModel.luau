@@ -5,7 +5,8 @@
 	selected lifts, grows and rings in V2's lilac; the unselected siblings recede; disabled ignores all of it). `hue`
 	is a variant's palette colour (steel when disabled), `textOn` the text colour that reads on a face, `stroke` /
 	`drop` the ink stroke and hard drop for display text of a size, `pillWidth` the width a pill needs for its measured
-	label, `grouped` a count with thousands commas, `blend` the pose part-way between two states. Pure.
+	label, `fitSize` the size a measured one-line label is drawn at to fit its room, `grouped` a count with thousands
+	commas, `blend` the pose part-way between two states. Pure.
 
 	@class ToonStyleViewModel
 ]=]
@@ -135,6 +136,17 @@ end
 -- px, with 4 px slack for the engine's rounding under a UIScale.
 function ToonStyleViewModel.pillWidth(textWidth: number, textSize: number, padX: number): number
 	return math.ceil(math.max(0, textWidth) + 2 * padX + 2 * ToonStyleViewModel.stroke(textSize) + 4)
+end
+
+-- The size (whole px) a one-line label measured `textWidth` px wide at `textSize` is drawn at to fit `room` px: its
+-- own size when it fits, else scaled down to fit, never below `minSize` (the text floor). Drawn at this size (not
+-- TextScaled), a label fits at any UI scale: a fitted label can not shrink under the readable floor on a small window
+-- and overflows into its neighbour instead.
+function ToonStyleViewModel.fitSize(textWidth: number, textSize: number, room: number, minSize: number): number
+	if textWidth <= room or textWidth <= 0 then
+		return textSize
+	end
+	return math.max(minSize, math.floor(textSize * math.max(0, room) / textWidth))
 end
 
 --[=[
