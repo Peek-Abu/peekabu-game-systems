@@ -85,6 +85,11 @@ return function()
 			expect(#calls).to.equal(2)
 		end)
 
+		it("pays no contract XP after a wipe, even with the quota met", function()
+			changed:Fire(state("results", 1, true, "wiped"))
+			expect(calls[1].facts.quotaMet).to.equal(false)
+		end)
+
 		it("pays the next shift under its own run id", function()
 			changed:Fire(state("results", 1, true))
 			changed:Fire(state("lobby", 1, true))

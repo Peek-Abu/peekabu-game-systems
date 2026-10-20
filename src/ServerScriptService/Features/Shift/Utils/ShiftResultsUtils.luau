@@ -145,12 +145,15 @@ function ShiftResultsUtils.awards(crew: { CrewStats }, lookup: Lookup): { ShiftT
 	return awards
 end
 
--- An empty review: what the shift falls back to when building the real one throws.
--- A wiped crew missed the contract, whatever the Gloom cleared before.
-local function met(outcome: string, quotaMet: boolean): boolean
+-- Whether the contract was made: the quota was met and the crew was not wiped. A wiped crew missed it, whatever the
+-- Gloom cleared before. The review and the rank XP both read this, so they cannot disagree.
+function ShiftResultsUtils.met(outcome: string, quotaMet: boolean): boolean
 	return quotaMet and outcome ~= RoundConstants.OUTCOME_WIPED
 end
 
+local met = ShiftResultsUtils.met
+
+-- An empty review: what the shift falls back to when building the real one throws.
 function ShiftResultsUtils.bare(outcome: string, quota: number, quotaMet: boolean): ShiftTypes.ShiftResults
 	local quotaMade = met(outcome, quotaMet)
 	return {

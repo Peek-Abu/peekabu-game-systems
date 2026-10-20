@@ -145,6 +145,13 @@ return function()
 			expect(ShiftResultsUtils.bare("wiped", 350, true).rating).to.equal("needsImprovement")
 		end)
 
+		it("shares one definition of a made contract", function()
+			expect(ShiftResultsUtils.met("wiped", true)).to.equal(false)
+			expect(ShiftResultsUtils.met("clockout", true)).to.equal(true)
+			expect(ShiftResultsUtils.met("clockout", false)).to.equal(false)
+			expect(ShiftResultsUtils.met("wiped", false)).to.equal(false)
+		end)
+
 		it("carries who was knocked out onto the crew lines", function()
 			local crew = { member(1, "Ava", { knockedOut = true }), member(2, "Ben") }
 			local results = ShiftResultsUtils.build(input(crew))

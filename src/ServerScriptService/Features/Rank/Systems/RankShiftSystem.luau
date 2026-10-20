@@ -28,6 +28,7 @@ local RankFormulas = require(ReplicatedStorage.Shared.Features.Rank.Utils.RankFo
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local ShiftAnalyticsSystem = require(ServerScriptService.Features.Shift.Systems.ShiftAnalyticsSystem)
 local ShiftReviewSystem = require(ServerScriptService.Features.Shift.Systems.ShiftReviewSystem)
+local ShiftResultsUtils = require(ServerScriptService.Features.Shift.Utils.ShiftResultsUtils)
 
 export type Award = (userId: number, runId: string, facts: RankTypes.ShiftFacts) -> ()
 
@@ -90,7 +91,13 @@ function RankShiftSystem.start(source: Source, award: Award, session: string?): 
 		local present = source.present()
 		local outcome = state.outcome or ""
 		for _, entry in entries do
-			local facts = RankFormulas.factsFor(entries, state.quotaMet, present, entry.userId, outcome)
+			local facts = RankFormulas.factsFor(
+				entries,
+				ShiftResultsUtils.met(outcome, state.quotaMet),
+				present,
+				entry.userId,
+				outcome
+			)
 			if facts ~= nil then
 				xpcall(award, function(err: unknown): unknown
 					log:error(`rank award for {entry.userId} in run {runId} failed: {err}`)
