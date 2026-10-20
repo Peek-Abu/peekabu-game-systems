@@ -10,11 +10,13 @@
 	- A player's death sets the public `dead` field (cleared on the next spawn), ends their granted
 	  animations (`AnimationServiceServer:stopAll`) and fires `died`; every tracked death fires
 	  `humanoidDied`.
-	- Respawn policy: `auto` (the engine, after `respawnDelay`) or `manual` (only `respawn(player)`).
+	- Respawn policy: `auto` (Death respawns each player `respawnDelay` after their death) or `manual` (only
+	  `respawn(player)`). `holdRespawn(player)` keeps one player down under either policy until
+	  `releaseRespawn(player)`; everyone else still respawns.
 	- `setSpawnPoint(resolver)` chooses where characters appear; `kill(..., { launch })` throws the body as it dies.
 
 	Spec-exempt shell (Humanoids, joints, Players); the rules are the specced DeathCreditTracker,
-	DeathRagdollUtils and DeathSpectateRules.
+	DeathRagdollUtils, DeathSpectateRules and DeathRespawnRules.
 
 	@class DeathServiceServer
 ]=]
@@ -30,6 +32,7 @@ local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local DeathConstants = require(DeathData.DeathConstants)
 local DeathTypes = require(DeathData.DeathTypes)
 local DeathRagdollUtils = require(ReplicatedStorage.Shared.Features.Death.Utils.DeathRagdollUtils)
+local DeathRespawnRules = require(ServerScriptService.Features.Death.Rules.DeathRespawnRules)
 local DeathCreditTracker = require(ServerScriptService.Features.Death.State.DeathCreditTracker)
 local AnimationServiceServer = require(ServerScriptService.Features.Animation.AnimationServiceServer)
 local StateSyncPublicPlayerStore = require(ServerScriptService.Features.StateSync.State.StateSyncPublicPlayerStore)
@@ -53,6 +56,8 @@ setmetatable(launches, { __mode = "k" })
 local spawnResolver: DeathTypes.SpawnResolver? = nil
 local counters = { playerDeaths = 0, rigDeaths = 0, ragdolls = 0 }
 local stoppers: { () -> () } = {}
+-- Players kept down on purpose; they are not respawned until released.
+local held: { [Player]: true } = {}
 
 local function infoFor(humanoid: Humanoid): DeathInfo
 	local source = credits:credit(humanoid, os.clock(), config.creditWindow)
@@ -161,6 +166,37 @@ local function launchModel(model: Model, velocity: Vector3)
 	end
 end
 
+local function loadCharacter(player: Player): boolean
+	if player.Parent == nil then
+		return false
+	end
+	task.spawn(function()
+		player:LoadCharacterAsync()
+	end)
+	return true
+end
+
+-- Auto policy: respawns the player `respawnDelay` after this death, unless something has changed by then
+-- (they left, got a new character, or are held). `respawnDelay` is read now, so a later configure applies to
+-- later deaths.
+local function scheduleRespawn(player: Player, model: Model)
+	if not DeathRespawnRules.respawns(config.respawn, held[player] == true) then
+		return
+	end
+	task.delay(config.respawnDelay, function()
+		if player.Parent == nil or player.Character ~= model then
+			return
+		end
+		local entry = StateSyncPublicPlayerStore.get(player.UserId)
+		if entry == nil or entry[DeathConstants.PUBLIC_FIELD] ~= true then
+			return
+		end
+		if DeathRespawnRules.respawns(config.respawn, held[player] == true) then
+			loadCharacter(player)
+		end
+	end)
+end
+
 -- Wires one humanoid's death. `player` is set for a player's character.
 local function watch(model: Model, humanoid: Humanoid, player: Player?): RBXScriptConnection
 	if config.ragdoll then
@@ -184,6 +220,7 @@ local function watch(model: Model, humanoid: Humanoid, player: Player?): RBXScri
 			launchModel(model, launch)
 		end
 		if player ~= nil then
+			scheduleRespawn(player, model)
 			died:Fire(player, info)
 		end
 		humanoidDied:Fire(model, info)
@@ -192,7 +229,8 @@ end
 
 local function applyRespawnPolicy()
 	Players.RespawnTime = config.respawnDelay
-	Players.CharacterAutoLoads = config.respawn == "auto"
+	-- Death drives respawns itself (per player, so one can be held); the engine never auto-loads.
+	Players.CharacterAutoLoads = false
 end
 
 export type DeathServiceServer = {
@@ -212,6 +250,9 @@ export type DeathServiceServer = {
 	ragdoll: (self: DeathServiceServer, model: Model) -> boolean,
 	respawn: (self: DeathServiceServer, player: Player) -> boolean,
 	isDead: (self: DeathServiceServer, player: Player) -> boolean,
+	holdRespawn: (self: DeathServiceServer, player: Player) -> (),
+	releaseRespawn: (self: DeathServiceServer, player: Player) -> (),
+	isHeld: (self: DeathServiceServer, player: Player) -> boolean,
 }
 
 local DeathServiceServer: DeathServiceServer = {
@@ -259,16 +300,17 @@ local DeathServiceServer: DeathServiceServer = {
 				end
 			end)
 		)
-		-- Under the manual policy the engine loads nobody, so joining players are loaded here.
+		-- The engine loads nobody (Death drives respawns), so joining players are loaded here; a leaving
+		-- player is dropped from the hold set.
 		table.insert(
 			stoppers,
 			Observers.observePlayer(function(player: Player)
-				if not Players.CharacterAutoLoads and player.Character == nil then
-					task.spawn(function()
-						player:LoadCharacterAsync()
-					end)
+				if player.Character == nil then
+					loadCharacter(player)
 				end
-				return nil
+				return function()
+					held[player] = nil
+				end
 			end)
 		)
 	end,
@@ -357,13 +399,29 @@ local DeathServiceServer: DeathServiceServer = {
 		Loads a new character for the player (the manual policy's way back). False if they left.
 	]=]
 	respawn = function(_self, player)
-		if player.Parent == nil then
-			return false
+		return loadCharacter(player)
+	end,
+
+	--[=[
+		Keeps the player down: they are not auto-respawned after a death until `releaseRespawn`.
+		A death while held schedules nothing.
+	]=]
+	holdRespawn = function(_self, player)
+		held[player] = true
+	end,
+
+	--[=[
+		Clears the hold and, if the player is dead, respawns them at once.
+	]=]
+	releaseRespawn = function(self, player)
+		held[player] = nil
+		if self:isDead(player) then
+			self:respawn(player)
 		end
-		task.spawn(function()
-			player:LoadCharacterAsync()
-		end)
-		return true
+	end,
+
+	isHeld = function(_self, player)
+		return held[player] == true
 	end,
 
 	isDead = function(_self, player)
