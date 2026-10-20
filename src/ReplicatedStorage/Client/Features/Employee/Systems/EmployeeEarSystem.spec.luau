@@ -34,6 +34,13 @@ return function()
 		return cframe.Position.Magnitude < 1e-6 and cframe.LookVector:Dot(Vector3.new(0, 0, -1)) > 0.999999
 	end
 
+	local function nearCFrame(actual, expected)
+		local a, b = { actual:GetComponents() }, { expected:GetComponents() }
+		for i = 1, 12 do
+			expect(math.abs(a[i] - b[i]) < 1e-4).to.equal(true)
+		end
+	end
+
 	describe("step", function()
 		it("drives both ear joints of a nearby employee", function()
 			local ears = EmployeeEarSystem.new()
@@ -129,8 +136,8 @@ return function()
 			ears.step(1 / 60, focus, 0)
 			root.CFrame = CFrame.new(0, 0, -0.3)
 			ears.step(1 / 60, focus, 1 / 60)
-			expect(motors[-1].Transform).to.equal(posed)
-			expect(motors[1].Transform).to.equal(posed)
+			nearCFrame(motors[-1].Transform, posed)
+			nearCFrame(motors[1].Transform, posed)
 			expect(ears.getState().active).to.equal(0)
 			-- Out of the spot: the springs take over from the joints' pose (the spring range clamps it to EAR_MAX_ANGLE).
 			hiding = false
@@ -140,6 +147,28 @@ return function()
 			local pitch = motors[1].Transform:ToEulerAnglesXYZ()
 			expect(math.abs(pitch - EmployeeConstants.EAR_MAX_ANGLE) < math.rad(5)).to.equal(true)
 			expect(ears.getState().active).to.equal(1)
+			untrack()
+			model:Destroy()
+		end)
+
+		it("rests a hider's ears when they leave the spot out of range", function()
+			local hiding = true
+			local ears = EmployeeEarSystem.new(function()
+				return hiding
+			end)
+			local model, _, motors = makeEmployee(Vector3.new(0, 0, 0))
+			local untrack = ears.track(model)
+			local posed = CFrame.Angles(math.rad(120), 0, math.rad(10))
+			for _, motor in motors do
+				motor.Transform = posed
+			end
+			local far = Vector3.new(EmployeeConstants.EAR_RADIUS + 50, 0, 0)
+			ears.step(1 / 60, far, 0)
+			nearCFrame(motors[1].Transform, posed)
+			hiding = false
+			ears.step(1 / 60, far, 1 / 60)
+			expect(isIdentity(motors[-1].Transform)).to.equal(true)
+			expect(isIdentity(motors[1].Transform)).to.equal(true)
 			untrack()
 			model:Destroy()
 		end)

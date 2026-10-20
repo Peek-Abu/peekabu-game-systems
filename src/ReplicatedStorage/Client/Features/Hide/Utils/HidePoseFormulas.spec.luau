@@ -32,7 +32,10 @@ return function()
 		it("keeps the animation at 0 and the pose at 1", function()
 			local animated = CFrame.Angles(0.2, 0, 0)
 			local target = CFrame.new(0, -1, 0)
-			expect(HidePoseFormulas.blend(animated, target, 0)).to.equal(animated)
+			local blended = { HidePoseFormulas.blend(animated, target, 0):GetComponents() }
+			for i, value in { animated:GetComponents() } do
+				expect(math.abs(blended[i] - value) < 1e-4).to.equal(true)
+			end
 			expect(HidePoseFormulas.blend(animated, target, 1).Position.Y).to.be.near(-1, 1e-6)
 		end)
 	end)

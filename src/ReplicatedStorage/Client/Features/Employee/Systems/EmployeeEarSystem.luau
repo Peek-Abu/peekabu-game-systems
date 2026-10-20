@@ -196,7 +196,7 @@ function EmployeeEarSystem.new(isHiding: ((Model) -> boolean)?): EmployeeEarSyst
 					end
 					employee.active = true
 					stepEmployee(employee, root, dt, now)
-				elseif employee.active then
+				elseif employee.active or employee.hiding then
 					rest(employee)
 				end
 			end
