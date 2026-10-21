@@ -32,13 +32,15 @@ function AnalyticsEconomyUtils.call(change: CurrencyConstants.CurrencyChange): A
 	if currency == nil or transactionType == nil then
 		return nil
 	end
+	-- Widen the reason to the call's `sku: string?` here: a table field is invariant, so the literal union will not fit.
+	local sku: string = change.reason
 	return {
 		flow = change.flow,
 		currency = currency,
 		amount = change.amount,
 		endingBalance = change.balance,
 		transactionType = transactionType,
-		sku = change.reason,
+		sku = sku,
 	}
 end
 
