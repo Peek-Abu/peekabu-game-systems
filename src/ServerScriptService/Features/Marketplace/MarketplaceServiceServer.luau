@@ -70,7 +70,6 @@ local inFlight: { [string]: true } = {}
 local counters = { granted = 0, regranted = 0, retried = 0, passesFound = 0 }
 local stoppers: { () -> () } = {}
 
--- Narrows the engine's receipt table (typed `{ [string]: any }`) to the fields the base reads.
 -- Reports a Gleam balance change. Called AFTER `mutate` returns, never inside the mutator.
 local function reportPremium(
 	userId: number,
@@ -89,6 +88,7 @@ local function reportPremium(
 	})
 end
 
+-- Narrows the engine's receipt table (typed `{ [string]: any }`) to the fields the base reads.
 local function receiptFrom(info: { [string]: any }): Receipt?
 	local purchaseId = info.PurchaseId
 	local playerId = info.PlayerId

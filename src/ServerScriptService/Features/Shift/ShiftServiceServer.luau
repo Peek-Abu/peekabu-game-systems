@@ -476,7 +476,7 @@ local ShiftServiceServer: ShiftServiceServer = {
 					return trip:crewIds()
 				end,
 			}, function(userId: number, amounts)
-				return CurrencyServiceServer:grant(userId, amounts)
+				return CurrencyServiceServer:grant(userId, amounts, "shiftPay")
 			end)
 		)
 		table.insert(stoppers, ShiftCrewStatusSystem.start(trip, isRunning))
