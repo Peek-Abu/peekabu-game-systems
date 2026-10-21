@@ -63,7 +63,11 @@ function ShiftPaySystem.start(source: Source, pay: Pay): () -> ()
 			return
 		end
 		local amounts = ShiftPaySystem.amounts(results)
-		if (amounts.credits or 0) <= 0 and (amounts.gloom or 0) <= 0 then
+		local total = 0
+		for _, amount in amounts do
+			total += amount
+		end
+		if total <= 0 then
 			return
 		end
 		local seen: { [number]: true } = {}
