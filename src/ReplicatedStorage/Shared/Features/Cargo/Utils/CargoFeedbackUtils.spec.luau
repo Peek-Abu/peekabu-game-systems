@@ -123,6 +123,18 @@ return function()
 			)
 		end)
 
+		it("shows overtime loot's pay with the x1.5 and says so", function()
+			expect(CargoFeedbackUtils.appraisalText("monitor", nil, 95, true, true)).to.equal(
+				"Monitor\n143 Credits at the truck (×1.5)"
+			)
+			expect(CargoFeedbackUtils.appraisalText("monitor", nil, 36, false, true)).to.equal(
+				"Monitor\n54 Credits (×1.5)"
+			)
+			expect(CargoFeedbackUtils.appraisalText("monitor", nil, 36, true, false)).to.equal(
+				"Monitor\n36 Credits at the truck"
+			)
+		end)
+
 		it("falls back to the kind for an unknown item", function()
 			expect(CargoFeedbackUtils.appraisalText("spaceship", nil, 5, false)).to.equal("spaceship\n5 Credits")
 		end)

@@ -118,7 +118,7 @@ function CargoGrimeSystem.new(deps: Deps): CargoGrimeSystem
 		end
 		local appraisal = entry.appraisal
 		local variant = if appraisal ~= nil then appraisal.variant else nil
-		local text = CargoFeedbackUtils.appraisalText(entry.kind, variant, entry.value, false)
+		local text = CargoFeedbackUtils.appraisalText(entry.kind, variant, entry.value, false, entry.overtime)
 		-- A jackpot's own sound starts with the appraisal's, then pays off (round-3 pick A).
 		deps.sound(item.Position, if variant ~= nil then "cargoJackpot" else "cargoAppraise")
 		for _, player in Players:GetPlayers() do
@@ -192,7 +192,7 @@ function CargoGrimeSystem.new(deps: Deps): CargoGrimeSystem
 				if appraisal ~= nil and not appraisal.appraised then
 					slip(
 						banker,
-						CargoFeedbackUtils.appraisalText(item.kind, appraisal.variant, item.value, true),
+						CargoFeedbackUtils.appraisalText(item.kind, appraisal.variant, item.value, true, item.overtime),
 						appraisal.variant
 					)
 				end

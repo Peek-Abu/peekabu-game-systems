@@ -18,6 +18,7 @@ local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.Carr
 local ArtVisualSystem = require(ReplicatedStorage.Shared.Features.Art.Systems.ArtVisualSystem)
 local CargoTypes = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoTypes)
 local CargoAppraisalFormulas = require(ReplicatedStorage.Shared.Features.Cargo.Utils.CargoAppraisalFormulas)
+local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftCurrencyUtils = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftCurrencyUtils)
 
 export type Tone = "clearance" | "bonus"
@@ -145,12 +146,23 @@ end
 
 --[=[
 	The appraisal slip's words (docs/superpowers/specs/2026-10-15-cleanup-crew-loot-loop-design.md §3.3): the item's
-	shown name (a jackpot by its variant) over what it pays now; `atTruck` when banking revealed it.
+	shown name (a jackpot by its variant) over what it pays now; `atTruck` when banking revealed it. Overtime loot
+	shows what it pays with the overtime bonus (ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER) and says so.
 ]=]
-function CargoFeedbackUtils.appraisalText(kind: string, variant: string?, value: number, atTruck: boolean): string
+function CargoFeedbackUtils.appraisalText(
+	kind: string,
+	variant: string?,
+	value: number,
+	atTruck: boolean,
+	overtime: boolean?
+): string
 	local def = CargoRegistry.get(kind)
 	local name = if def ~= nil then CargoAppraisalFormulas.displayName(def, variant, true) else kind
 	local where = if atTruck then " at the truck" else ""
+	if overtime == true then
+		local multiplier = ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER
+		return `{name}\n{ShiftCurrencyUtils.amount(math.max(0, value) * multiplier)}{where} (×{multiplier})`
+	end
 	return `{name}\n{ShiftCurrencyUtils.amount(value)}{where}`
 end
 
