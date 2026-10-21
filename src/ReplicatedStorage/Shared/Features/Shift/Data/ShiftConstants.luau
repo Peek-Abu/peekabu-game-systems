@@ -90,6 +90,8 @@ return table.freeze({
 	CONTRACT_UNIT = "Gloom",
 	-- The pay for each Gloom removed (dust and item cleaning), paid at clock-out; overtime never multiplies it.
 	GLEAM_PER_GLOOM = 1,
+	-- The Gloom each crew member keeps (saved to their account) per Gloom the crew removed: floor(cleared x this).
+	SAVED_GLOOM_PER_CLEARED = 0.1,
 	-- The StateSyncWorldStore entry the snapshot is published under.
 	WORLD_ENTRY = "shift",
 	-- The contract ("quota" in code): Gloom to remove (economy design §3.4). Piles count the instant they are vacuumed,

@@ -27,7 +27,7 @@
 	  and the run ends when it runs out or once everyone still in has punched (a solo punch ends it at once);
 	- analytics and the A/B variant (M5): each run's variant comes from ShiftAnalyticsSystem.pickVariant;
 	  ShiftAnalyticsWatchSystem turns the shift's and the other features' signals into the spec §6.6 events;
-	- results: ShiftResultsUtils builds the review; the crew votes Another shift / Back to depot (ShiftVoteSystem;
+	- results: ShiftResultsUtils builds the review; ShiftPaySystem pays the crew still present when it opens; the crew votes Another shift / Back to depot (ShiftVoteSystem;
 	  Back to depot sends the crew home through ShiftTripSystem with the review as its result card);
 	- the crew (M4): a shift starts only for the party that arrived through the Queue (ShiftTripSystem); only
 	  the crew takes part in Round's run, votes and respawns in the loading bay;
@@ -74,6 +74,8 @@ local ShiftAnalyticsWatchSystem = require(ShiftServer.Systems.ShiftAnalyticsWatc
 local ShiftReviewSystem = require(ShiftServer.Systems.ShiftReviewSystem)
 local ShiftCrewStatusSystem = require(ShiftServer.Systems.ShiftCrewStatusSystem)
 local ShiftLivesSystem = require(ShiftServer.Systems.ShiftLivesSystem)
+local ShiftPaySystem = require(ShiftServer.Systems.ShiftPaySystem)
+local CurrencyServiceServer = require(ServerScriptService.Features.Currency.CurrencyServiceServer)
 local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
 local RoundServiceServer = require(ServerScriptService.Features.Round.RoundServiceServer)
@@ -432,6 +434,7 @@ local ShiftServiceServer: ShiftServiceServer = {
 		"StateSyncServiceServer",
 		"QueueServiceServer",
 		"DepotServiceServer",
+		"CurrencyServiceServer",
 	},
 
 	--[=[
@@ -461,6 +464,21 @@ local ShiftServiceServer: ShiftServiceServer = {
 		table.insert(stoppers, ShiftGloomSystem.start(banking.isOpen, banking.afterBank))
 		table.insert(stoppers, ShiftAnalyticsWatchSystem.start(changed, trip))
 		table.insert(stoppers, ShiftReviewSystem.start(roster, isRunning))
+		-- Pay: every crew member still here gets the full Credits and saved Gloom when the review opens.
+		table.insert(
+			stoppers,
+			ShiftPaySystem.start({
+				changed = changed,
+				results = function()
+					return results
+				end,
+				present = function()
+					return trip:crewIds()
+				end,
+			}, function(userId: number, amounts)
+				return CurrencyServiceServer:grant(userId, amounts)
+			end)
+		)
 		table.insert(stoppers, ShiftCrewStatusSystem.start(trip, isRunning))
 		table.insert(stoppers, timeClock.start())
 		table.insert(stoppers, overtime.start())
