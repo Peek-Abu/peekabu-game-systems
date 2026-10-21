@@ -23,8 +23,8 @@ local BOARD_COPY = table.freeze({
 	quotaRange = "Remove %d Gloom for one player, up to %d for four. Vacuum the dust; clean valuables before you lift them.",
 	quotaPhoneCrew = "Remove %d Gloom",
 	quotaPhoneRange = "Remove %d–%d Gloom",
-	-- The PAY row: Credits per Gloom at clock-out, plus the valuables banked.
-	pay = "1 Credit per Gloom removed, paid at clock-out, plus every valuable you bank at its appraised value (x1.5 in overtime).",
+	-- The PAY row: Credits per Gloom at the end of the shift, plus the valuables banked.
+	pay = "1 Credit per Gloom removed, paid at the end of the shift, plus every valuable you bank at its appraised value (x1.5 in overtime).",
 	payPhone = "1 Credit per Gloom, plus valuables",
 	shift = "on the clock. Clock out at the truck any time.",
 	shiftPhone = "clock out at the truck",

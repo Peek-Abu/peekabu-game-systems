@@ -65,7 +65,7 @@ end
 
 return function()
 	describe("ShiftPaySystem", function()
-		local changed, present, reviewNow, calls, failFor, stop
+		local changed, present, reviewNow, calls, failFor, stop, refusals, attempts, queue
 
 		beforeEach(function()
 			changed = fakeSignal()
@@ -73,6 +73,9 @@ return function()
 			reviewNow = nil
 			calls = {}
 			failFor = nil
+			refusals = 0
+			attempts = 0
+			queue = {}
 			stop = ShiftPaySystem.start({
 				changed = changed,
 				results = function()
@@ -85,10 +88,24 @@ return function()
 				if userId == failFor then
 					error("boom")
 				end
+				attempts += 1
+				if attempts <= refusals then
+					return false
+				end
 				table.insert(calls, { userId = userId, amounts = amounts })
 				return true
+			end, function(_seconds, fn)
+				table.insert(queue, fn)
 			end)
 		end)
+
+		local function runQueue()
+			local batch = queue
+			queue = {}
+			for _, fn in batch do
+				fn()
+			end
+		end
 
 		afterEach(function()
 			stop()
@@ -162,6 +179,47 @@ return function()
 			changed:Fire(state("results", 1, false, "clockout"))
 			expect(#calls).to.equal(1)
 			expect(calls[#calls].userId).to.equal(2)
+		end)
+
+		it("retries a refused payment until it lands, and pays once", function()
+			present = { 1 }
+			reviewNow = review(50, 50, 0)
+			refusals = 2
+			changed:Fire(state("results", 1, false, "clockout"))
+			expect(#calls).to.equal(0)
+			runQueue()
+			expect(#calls).to.equal(0)
+			runQueue()
+			expect(#calls).to.equal(1)
+			expect(#queue).to.equal(0)
+			runQueue()
+			expect(#calls).to.equal(1)
+		end)
+
+		it("gives up after 5 attempts", function()
+			present = { 1 }
+			reviewNow = review(50, 50, 0)
+			refusals = 99
+			changed:Fire(state("results", 1, false, "clockout"))
+			for _ = 1, 10 do
+				runQueue()
+			end
+			expect(attempts).to.equal(5)
+			expect(#calls).to.equal(0)
+		end)
+
+		it("stops retrying when the player leaves mid-retry", function()
+			present = { 1 }
+			reviewNow = review(50, 50, 0)
+			refusals = 99
+			changed:Fire(state("results", 1, false, "clockout"))
+			runQueue()
+			expect(attempts).to.equal(2)
+			present = {}
+			runQueue()
+			runQueue()
+			expect(attempts).to.equal(2)
+			expect(#calls).to.equal(0)
 		end)
 
 		it("stops paying once stopped", function()
