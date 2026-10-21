@@ -19,7 +19,10 @@ local FUNNEL_STEPS: { string } = table.freeze({
 	"next_shift",
 })
 
-local FUNNEL_EXPERIMENTS: { string } = table.freeze({ "exp-tutorial", "exp-friendskip" })
+-- Field 1 of every funnel step carries only per-player experiments, so one player's funnel is never split between the
+-- hub and the Shift place. A per-crew experiment (a hub is not a crew) rides in the step-varying third field.
+local FUNNEL_EXPERIMENTS: { string } = table.freeze({ "exp-tutorial" })
+local FUNNEL_CREW_EXPERIMENTS: { string } = table.freeze({ "exp-friendskip" })
 
 -- Experiments that tag a currency's economy events (at most MAX_TAGS each).
 local CURRENCY_EXPERIMENTS: { [string]: { string } } = table.freeze({
@@ -54,6 +57,7 @@ local AnalyticsConstants = {
 	ASSIGNMENT_EVENT = "experiment_assigned",
 	MAX_TAGS = 2,
 	FUNNEL_EXPERIMENTS = FUNNEL_EXPERIMENTS,
+	FUNNEL_CREW_EXPERIMENTS = FUNNEL_CREW_EXPERIMENTS,
 	CURRENCY_EXPERIMENTS = CURRENCY_EXPERIMENTS,
 	CURRENCY_NAMES = CURRENCY_NAMES,
 	TRANSACTION_TYPES = TRANSACTION_TYPES,

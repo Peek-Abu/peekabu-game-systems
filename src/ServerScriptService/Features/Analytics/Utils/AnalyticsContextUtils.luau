@@ -72,8 +72,8 @@ end
 --[=[
 	A funnel event's third field: the values that vary by step, `platform|party` (party floored and clamped 0..99).
 ]=]
-function AnalyticsContextUtils.funnelTail(platform: string, party: number): string
-	return `{platform}|{math.clamp(math.floor(party), 0, MAX_PARTY)}`
+function AnalyticsContextUtils.funnelTail(platform: string, party: number, crewTags: string): string
+	return `{platform}|{math.clamp(math.floor(party), 0, MAX_PARTY)}|{crewTags}`
 end
 
 return AnalyticsContextUtils

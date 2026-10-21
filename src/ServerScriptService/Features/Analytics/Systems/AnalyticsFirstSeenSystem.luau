@@ -80,7 +80,7 @@ local function stamp(userId: number)
 		newThisSession[userId] = isNew
 		stampedAt[userId] = final
 	else
-		log:warn(`firstSeen stamp for userId {userId} was not written; the player stays unknown this session`)
+		log:warn("a firstSeen stamp was not written; the player stays unknown this session")
 	end
 end
 

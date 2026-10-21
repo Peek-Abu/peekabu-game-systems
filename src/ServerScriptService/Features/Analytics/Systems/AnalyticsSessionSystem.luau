@@ -113,8 +113,8 @@ function AnalyticsSessionSystem.field(player: Player, experimentIds: { string },
 end
 
 --[=[
-	Logs funnel step `stepName` once per player per session, with the fields `{tags}|{cohort}|{build}`, the detail
-	("-" when none) and `{platform}|{party}`. False for an unknown step, a repeat, or before `start`.
+	Logs funnel step `stepName` once per player per session, with the fields `{player tags}|{cohort}|{build}`, the
+	detail ("-" when none) and `{platform}|{party}|{crew tags}`. False for an unknown step, a repeat, or before `start`.
 ]=]
 function AnalyticsSessionSystem.funnelStep(player: Player, stepName: string, detail: string?): boolean
 	local out = sender
@@ -130,11 +130,13 @@ function AnalyticsSessionSystem.funnelStep(player: Player, stepName: string, det
 		AnalyticsConstants.FUNNEL_EXPERIMENTS,
 		AnalyticsSessionSystem.partyOf(player)
 	)
+	-- The crew experiments (a hub reads "-") ride in the tail, not field 1, which must match on every step.
+	local crew = AnalyticsSessionSystem.contextOf(player, AnalyticsConstants.FUNNEL_CREW_EXPERIMENTS, context.party)
 	-- Field 1 is stable across steps (so the funnel can be segmented); what changes per step rides in 2 and 3.
 	out.funnel(player, number, stepName, {
 		AnalyticsContextUtils.funnelField(context.tags, context.cohort, AnalyticsConstants.BUILD_LABEL),
 		detail or "-",
-		AnalyticsContextUtils.funnelTail(context.platform, context.party),
+		AnalyticsContextUtils.funnelTail(context.platform, context.party, crew.tags),
 	})
 	return true
 end

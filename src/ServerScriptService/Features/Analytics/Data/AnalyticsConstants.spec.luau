@@ -21,11 +21,24 @@ return function()
 			expect(ExperimentRegistry.get(id) ~= nil).to.equal(true)
 		end
 		expect(#AnalyticsConstants.FUNNEL_EXPERIMENTS <= AnalyticsConstants.MAX_TAGS).to.equal(true)
+		for _, id in AnalyticsConstants.FUNNEL_CREW_EXPERIMENTS do
+			expect(ExperimentRegistry.get(id) ~= nil).to.equal(true)
+		end
+		expect(#AnalyticsConstants.FUNNEL_CREW_EXPERIMENTS <= AnalyticsConstants.MAX_TAGS).to.equal(true)
 		for _, ids in AnalyticsConstants.CURRENCY_EXPERIMENTS do
 			expect(#ids <= AnalyticsConstants.MAX_TAGS).to.equal(true)
 			for _, id in ids do
 				expect(ExperimentRegistry.get(id) ~= nil).to.equal(true)
 			end
+		end
+	end)
+
+	it("keeps funnel field 1 to per-player experiments and the crew ones to the tail", function()
+		for _, id in AnalyticsConstants.FUNNEL_EXPERIMENTS do
+			expect(ExperimentRegistry.get(id).unit).to.equal("player")
+		end
+		for _, id in AnalyticsConstants.FUNNEL_CREW_EXPERIMENTS do
+			expect(ExperimentRegistry.get(id).unit).to.equal("crew")
 		end
 	end)
 

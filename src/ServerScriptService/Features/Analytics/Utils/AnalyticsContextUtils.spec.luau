@@ -86,10 +86,14 @@ return function()
 	end)
 
 	describe("funnelTail", function()
-		it("is platform|party, the party floored and clamped", function()
-			expect(AnalyticsContextUtils.funnelTail("phone", 3)).to.equal("phone|3")
-			expect(AnalyticsContextUtils.funnelTail("unknown", 250)).to.equal("unknown|99")
-			expect(AnalyticsContextUtils.funnelTail("pc", -2.5)).to.equal("pc|0")
+		it("is platform|party|crew tags, the party floored and clamped", function()
+			expect(AnalyticsContextUtils.funnelTail("phone", 3, "skip")).to.equal("phone|3|skip")
+			expect(AnalyticsContextUtils.funnelTail("unknown", 250, "-")).to.equal("unknown|99|-")
+			expect(AnalyticsContextUtils.funnelTail("pc", -2.5, "forced")).to.equal("pc|0|forced")
+		end)
+
+		it("fits the engine's 50 characters at its longest", function()
+			expect(#AnalyticsContextUtils.funnelTail("unknown", 99, "xxxxxxxxx+xxxxxxxxx") <= 50).to.equal(true)
 		end)
 	end)
 
