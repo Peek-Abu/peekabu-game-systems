@@ -270,9 +270,34 @@ return function()
 			expect(ShiftCrewViewModel.listSize(true, 4, 151)).to.equal(Vector2.new(151, 16 + 4 * 30))
 		end)
 
-		it("grows each row by a second line for the Gloom-life pips", function()
-			expect(ShiftCrewViewModel.listSize(false, 3, nil, true)).to.equal(Vector2.new(236, 24 + 3 * 58))
-			expect(ShiftCrewViewModel.listSize(true, 4, nil, true)).to.equal(Vector2.new(176, 16 + 4 * 42))
+		it("grows each row by a second line for the Gloom-life hearts", function()
+			expect(ShiftCrewViewModel.listSize(false, 3, nil, true)).to.equal(Vector2.new(236, 24 + 3 * 62))
+			expect(ShiftCrewViewModel.listSize(true, 4, nil, true)).to.equal(Vector2.new(176, 16 + 4 * 43))
+		end)
+
+		it("holds a full heart row: livesLine is the heart's box less how far it rises into the name line", function()
+			for _, phone in { true, false } do
+				local list = if phone then ShiftCrewViewModel.LIST.phone else ShiftCrewViewModel.LIST.desktop
+				local lives = if phone then ShiftHudViewModel.LIVES.phone else ShiftHudViewModel.LIVES.desktop
+				expect(list.livesLine).to.equal(lives.pip + 2 * lives.stroke - list.heartLift)
+			end
+		end)
+	end)
+
+	describe("heartIcons", function()
+		it("is `max` entries, the first `lives` whole hearts and the rest gloomed", function()
+			expect(table.concat(ShiftCrewViewModel.heartIcons(2, 3), ",")).to.equal("heart,heart,heartGloomed")
+			expect(table.concat(ShiftCrewViewModel.heartIcons(3, 3), ",")).to.equal("heart,heart,heart")
+			expect(table.concat(ShiftCrewViewModel.heartIcons(0, 3), ",")).to.equal(
+				"heartGloomed,heartGloomed,heartGloomed"
+			)
+			expect(#ShiftCrewViewModel.heartIcons(1, 4)).to.equal(4)
+			expect(#ShiftCrewViewModel.heartIcons(5, 3)).to.equal(3)
+		end)
+
+		it("sizes hearts at 20 on phone and 28 on desktop, never under 20", function()
+			expect(ShiftHudViewModel.LIVES.phone.pip).to.equal(20)
+			expect(ShiftHudViewModel.LIVES.desktop.pip).to.equal(28)
 		end)
 	end)
 
@@ -410,7 +435,7 @@ return function()
 
 		it("drops under the taller crew list when its rows carry lives", function()
 			local frame = ShiftCrewViewModel.rosterFrame(false, Vector2.new(1000, 700), 3, Vector2.new(24, 66), true)
-			expect(frame.position).to.equal(Vector2.new(24, 66 + 24 + 3 * 58 + 12))
+			expect(frame.position).to.equal(Vector2.new(24, 66 + 24 + 3 * 62 + 12))
 		end)
 
 		-- Everything else on a phone screen the open roster must stay clear of (top-left corner, size).

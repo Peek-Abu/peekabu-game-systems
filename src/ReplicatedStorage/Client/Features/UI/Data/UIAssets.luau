@@ -36,6 +36,8 @@ export type ToonIcon =
 	| "gloom"
 	| "grab"
 	| "guide"
+	| "heart"
+	| "heartGloomed"
 	| "jobs"
 	| "key"
 	| "lock"
@@ -88,6 +90,8 @@ local TOON_ICONS: { [ToonIcon]: string } = {
 	gloom = "rbxassetid://139797009877972",
 	grab = "rbxassetid://128476532358528",
 	guide = "rbxassetid://108576171337491",
+	heart = "rbxassetid://75866312534437",
+	heartGloomed = "rbxassetid://85905766239276",
 	jobs = "rbxassetid://72307376362077",
 	key = "rbxassetid://99994665542005",
 	lock = "rbxassetid://83785061837290",

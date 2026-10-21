@@ -79,8 +79,10 @@ local function row(
 	local sizes = if roomy then ShiftHudViewModel.LIVES.desktop else ShiftHudViewModel.LIVES.phone
 	local nameWidth = layout.nameWidth
 	local tagHeight = if roomy then 24 else (if layout.secondLine then 16 else 20)
-	-- The second line's centre: the pips' row starts 2 px above the first line's bottom.
-	local lineY = height - 2 + (sizes.pip + 2 * sizes.stroke) / 2
+	-- The hearts' row starts `heartLift` px above the first line's bottom; the second line's centre is its middle.
+	local list = if phone then ShiftCrewViewModel.LIST.phone else ShiftCrewViewModel.LIST.desktop
+	local heartsTop = height - list.heartLift
+	local lineY = heartsTop + (sizes.pip + 2 * sizes.stroke) / 2
 	local children: { [string]: React.ReactNode } = {
 		face = e("Frame", {
 			Position = UDim2.fromOffset(0, 4),
@@ -124,7 +126,7 @@ local function row(
 			lives = lives,
 			livesMax = livesMax,
 			sizes = sizes,
-			position = UDim2.fromOffset(layout.pipsX, height - 2),
+			position = UDim2.fromOffset(layout.pipsX, heartsTop),
 		})
 	end
 	if tag ~= nil then

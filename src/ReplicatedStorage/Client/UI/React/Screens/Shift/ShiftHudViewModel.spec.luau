@@ -575,7 +575,7 @@ return function()
 
 		it("fits a full set of lives", function()
 			local _, size = ShiftHudViewModel.livesFrame("phone", Vector2.new(844, 390))
-			expect(size).to.equal(Vector2.new(3 * 14 + 2 * 4, 14))
+			expect(size).to.equal(Vector2.new(3 * 20 + 2 * 4, 20))
 		end)
 	end)
 end

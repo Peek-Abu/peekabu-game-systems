@@ -217,16 +217,18 @@ function ShiftCrewViewModel.roster(
 	}
 end
 
--- The crew list card (ShiftCrewList) per layout, in HUD design px: rows of `row` px 2 px apart inside `padding`.
+-- The crew list card (ShiftCrewList) per layout, in HUD design px: rows of `row` px 2 px apart inside `padding`. A row
+-- with Gloom lives adds `livesLine` px for its heart row, which starts `heartLift` px above the name line's bottom (in
+-- the name's empty lower margin), so livesLine = heart size - heartLift.
 ShiftCrewViewModel.LIST = table.freeze({
-	phone = table.freeze({ width = 176, row = 28, padding = 8, livesLine = 12 }),
-	desktop = table.freeze({ width = 236, row = 40, padding = 12, livesLine = 16 }),
+	phone = table.freeze({ width = 176, row = 28, padding = 8, livesLine = 13, heartLift = 7 }),
+	desktop = table.freeze({ width = 236, row = 40, padding = 12, livesLine = 20, heartLift = 8 }),
 })
 
 -- The tag's column beyond its box: its 2 px inset from the row's right, its ink outline (3 px, drawn outside its box),
 -- up to 2 px of sticker tilt and a 2 px gap.
 ShiftCrewViewModel.TAG_CLEARANCE = 9
--- The gap between a row's Gloom-life pips and its tag on the lives line.
+-- The gap between a row's Gloom-life hearts and its tag on the lives line.
 ShiftCrewViewModel.PIPS_CLEARANCE = 4
 
 export type RowLayout = {
@@ -236,6 +238,17 @@ export type RowLayout = {
 	secondLine: boolean,
 	pipsX: number,
 }
+
+--[=[
+	The heart icons for a player's lives: `max` entries, the first `lives` "heart" and the rest "heartGloomed".
+]=]
+function ShiftCrewViewModel.heartIcons(lives: number, max: number): { "heart" | "heartGloomed" }
+	local icons: { "heart" | "heartGloomed" } = {}
+	for index = 1, max do
+		icons[index] = if index <= lives then "heart" else "heartGloomed"
+	end
+	return icons
+end
 
 --[=[
 	How a crew row of `rowWidth` px lays out (ShiftCrewList): the face then the name on the first line. A row without
