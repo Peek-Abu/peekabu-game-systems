@@ -161,9 +161,8 @@ return function()
 			expect(names[1]).to.equal("Golden stapler")
 		end)
 
-		it("writes the caught toast with the respawn time", function()
-			expect(OccupantFeedbackUtils.caughtText("Alex", 8)).to.equal("Alex was caught! Back in 0:08.")
-			expect(OccupantFeedbackUtils.caughtText("Alex", 61)).to.equal("Alex was caught! Back in 1:01.")
+		it("writes the hit toast without a back-in time", function()
+			expect(OccupantFeedbackUtils.hitText("Alex")).to.equal("Alex got caught!")
 		end)
 
 		it("writes the out toast when the last life is spent", function()

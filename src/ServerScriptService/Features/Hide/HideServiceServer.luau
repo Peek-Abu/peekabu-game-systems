@@ -258,7 +258,12 @@ local function enter(player: Player, spot: Spot): (boolean, string?)
 	local humanoid = humanoidOf(player)
 	local now = os.clock()
 	local ok, reason = HideRules.canEnter({
-		alive = root ~= nil and humanoid ~= nil and humanoid.Health > 0 and not DeathServiceServer:isDead(player),
+		-- Knocked down (Death's knockdown) cannot climb in until they are up.
+		alive = root ~= nil
+			and humanoid ~= nil
+			and humanoid.Health > 0
+			and not DeathServiceServer:isDead(player)
+			and not DeathServiceServer:isDown(player),
 		-- A frozen root is a catch in progress (the Manager anchors it).
 		catching = root ~= nil and root.Anchored,
 		hidden = tracker:of(player.UserId) ~= nil,

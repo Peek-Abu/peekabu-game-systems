@@ -14,6 +14,9 @@
 	  `respawn(player)`). `holdRespawn(player)` keeps one player down under either policy until
 	  `releaseRespawn(player)`; everyone else still respawns.
 	- `setSpawnPoint(resolver)` chooses where characters appear; `kill(..., { launch })` throws the body as it dies.
+	- `knockdown(player, launch, seconds)` is the non-lethal take-down: thrown, down `seconds`, then up where they
+	  landed (DeathKnockdownSystem; the owning client plays the pose). `isDown` says whether they are down now;
+	  `standUp` gets them up early. Not the one-way `ragdoll`.
 
 	Spec-exempt shell (Humanoids, joints, Players); the rules are the specced DeathCreditTracker,
 	DeathRagdollUtils, DeathSpectateRules and DeathRespawnRules.
@@ -34,6 +37,7 @@ local DeathTypes = require(DeathData.DeathTypes)
 local DeathRagdollUtils = require(ReplicatedStorage.Shared.Features.Death.Utils.DeathRagdollUtils)
 local DeathRespawnRules = require(ServerScriptService.Features.Death.Rules.DeathRespawnRules)
 local DeathCreditTracker = require(ServerScriptService.Features.Death.State.DeathCreditTracker)
+local DeathKnockdownSystem = require(ServerScriptService.Features.Death.Systems.DeathKnockdownSystem)
 local AnimationServiceServer = require(ServerScriptService.Features.Animation.AnimationServiceServer)
 local StateSyncPublicPlayerStore = require(ServerScriptService.Features.StateSync.State.StateSyncPublicPlayerStore)
 
@@ -245,6 +249,9 @@ export type DeathServiceServer = {
 	configure: (self: DeathServiceServer, update: DeathTypes.DeathConfigUpdate) -> (),
 	damage: (self: DeathServiceServer, humanoid: Humanoid, amount: number, source: DeathTypes.DamageSource?) -> (),
 	kill: (self: DeathServiceServer, humanoid: Humanoid, cause: string?, options: DeathTypes.KillOptions?) -> (),
+	knockdown: (self: DeathServiceServer, player: Player, launch: Vector3, seconds: number) -> (),
+	standUp: (self: DeathServiceServer, player: Player) -> (),
+	isDown: (self: DeathServiceServer, player: Player) -> boolean,
 	setSpawnPoint: (self: DeathServiceServer, resolver: DeathTypes.SpawnResolver?) -> (),
 	track: (self: DeathServiceServer, model: Model) -> (),
 	ragdoll: (self: DeathServiceServer, model: Model) -> boolean,
@@ -320,6 +327,7 @@ local DeathServiceServer: DeathServiceServer = {
 			stop()
 		end
 		table.clear(stoppers)
+		DeathKnockdownSystem.standUpAll()
 	end,
 
 	--[=[
@@ -369,6 +377,28 @@ local DeathServiceServer: DeathServiceServer = {
 			launches[humanoid] = options.launch
 		end
 		humanoid.Health = 0
+	end,
+
+	--[=[
+		Knocks `player` down without killing them: thrown with `launch` (studs/s), down for `seconds` (movement, and
+		whatever asks `isDown`, refused), then up where they landed. A reset or respawn meanwhile ends it. Never yields.
+	]=]
+	knockdown = function(_self, player, launch, seconds)
+		DeathKnockdownSystem.knockdown(player, launch, seconds)
+	end,
+
+	--[=[
+		Gets `player` up from a knockdown now (nothing when they are not down).
+	]=]
+	standUp = function(_self, player)
+		DeathKnockdownSystem.standUp(player)
+	end,
+
+	--[=[
+		Whether `player` is knocked down right now.
+	]=]
+	isDown = function(_self, player)
+		return DeathKnockdownSystem.isDown(player)
 	end,
 
 	--[=[

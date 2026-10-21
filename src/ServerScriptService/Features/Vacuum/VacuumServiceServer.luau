@@ -36,6 +36,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local Observers = require(ReplicatedStorage.Packages.Observers)
 local AnimationRegistry = require(ReplicatedStorage.Shared.Features.Animation.Data.AnimationRegistry)
+local DeathKnockdownUtils = require(ReplicatedStorage.Shared.Features.Death.Utils.DeathKnockdownUtils)
 local AnimationServiceServer = require(ServerScriptService.Features.Animation.AnimationServiceServer)
 local AnimationVacuumSystem = require(ServerScriptService.Features.Animation.Systems.AnimationVacuumSystem)
 local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
@@ -205,7 +206,8 @@ local function pulse()
 end
 
 -- Whether `player` may vacuum `target` now (asked at the start and every tick): spec §4, you can't vacuum while your
--- hands hold an item; the vacuum must be on the target. A start on a new target fires `vacuumStarted`. Never yields.
+-- hands hold an item or while knocked down; the vacuum must be on the target. A start on a new target fires
+-- `vacuumStarted`. Never yields.
 local function canVacuum(player: Player, target: Instance): boolean
 	local character = player.Character
 	local humanoid = if character ~= nil then character:FindFirstChildOfClass("Humanoid") else nil
@@ -214,7 +216,8 @@ local function canVacuum(player: Player, target: Instance): boolean
 			tools[player] ~= nil,
 			VacuumToolSystem.isEquipped(character),
 			CarryServiceServer:getCarried(player) ~= nil,
-			humanoid ~= nil and humanoid.Health > 0
+			-- Knocked down (Death's knockdown) counts as not able to work, like dead.
+			humanoid ~= nil and humanoid.Health > 0 and not DeathKnockdownUtils.isDown(character)
 		) or not inReach(player, target)
 	then
 		return false

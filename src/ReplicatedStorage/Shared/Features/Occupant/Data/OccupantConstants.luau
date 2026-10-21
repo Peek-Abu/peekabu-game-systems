@@ -435,8 +435,11 @@ return table.freeze({
 	-- After a catch he stands CATCH_HOLD seconds, then walks on; he ignores that player GRACE_SECONDS.
 	CATCH_HOLD = 1.5,
 	GRACE_SECONDS = 10,
-	-- The catch: camera on his face ~1 s (the jumpscare), then the launch; ~8 s spectating (Death's respawn delay).
+	-- The catch: camera on his face ~1 s (the jumpscare), then the launch. A catch that leaves a life is a hit: down
+	-- KNOCKDOWN_SECONDS (Death's knockdown), then up where they landed. The last life's catch kills: ~8 s spectating
+	-- (Death's respawn delay), or held down for the shift once knocked out.
 	SNAP_SECONDS = 1,
+	KNOCKDOWN_SECONDS = 1,
 	SPECTATE_SECONDS = 8,
 	LAUNCH_SPEED = 45,
 	LAUNCH_UP = 35,

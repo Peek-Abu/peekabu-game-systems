@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	InteractionChannelSystem: runs every channel. Each tick it re-checks every channeler (a living
-	character, in range, the target enabled and still in the world, the game's canChannel), advances
+	character that is not knocked down, in range, the target enabled and still in the world, the game's canChannel), advances
 	progress through InteractionChannelTracker, mirrors it onto the target's ChannelProgress /
 	ChannelCount attributes, and calls the kind's onComplete once when a target reaches full.
 
@@ -18,6 +18,7 @@ local Workspace = game:GetService("Workspace")
 
 local InteractionData = ReplicatedStorage.Shared.Features.Interaction.Data
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
+local DeathKnockdownUtils = require(ReplicatedStorage.Shared.Features.Death.Utils.DeathKnockdownUtils)
 local InteractionConstants = require(InteractionData.InteractionConstants)
 local InteractionRegistry = require(InteractionData.InteractionRegistry)
 local InteractionRules = require(ServerScriptService.Features.Interaction.Rules.InteractionRules)
@@ -93,6 +94,7 @@ function InteractionChannelSystem.new(handlers: { [string]: ChannelHandler }): I
 			else math.huge
 		local ok, reason = InteractionRules.check({
 			hasCharacter = alive,
+			down = DeathKnockdownUtils.isDown(character),
 			distance = distance,
 			maxDistance = def.maxDistance or InteractionConstants.DEFAULT_MAX_DISTANCE,
 			tolerance = InteractionConstants.DISTANCE_TOLERANCE,

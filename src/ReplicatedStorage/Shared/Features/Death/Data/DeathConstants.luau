@@ -50,6 +50,9 @@ local DeathConstants = {
 	ROOT_JOINT_NAMES = { "Root", "RootJoint" },
 	-- Name given to the constraints and attachments a ragdoll adds.
 	RAGDOLL_NAME = "Ragdoll",
+	-- Character attribute the server sets while a knockdown holds the character down: the throw's velocity
+	-- (Vector3); cleared when they get up. It goes with the character, so a reset never leaves anyone down.
+	KNOCKDOWN_ATTRIBUTE = "Knockdown",
 	-- Spectate Input actions (DeathServiceClient registers them).
 	SPECTATE_NEXT = "spectateNext",
 	SPECTATE_PREV = "spectatePrev",

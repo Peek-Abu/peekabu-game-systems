@@ -3,6 +3,7 @@ local InteractionRules = require(script.Parent.InteractionRules)
 local function input(overrides)
 	local base = {
 		hasCharacter = true,
+		down = false,
 		distance = 5,
 		maxDistance = 10,
 		tolerance = 2,
@@ -24,6 +25,12 @@ return function()
 		local ok, reason = InteractionRules.check(input({ hasCharacter = false }))
 		expect(ok).to.equal(false)
 		expect(reason).to.equal("no-character")
+	end)
+
+	it("refuses a knocked-down player until they are up", function()
+		local ok, reason = InteractionRules.check(input({ down = true }))
+		expect(ok).to.equal(false)
+		expect(reason).to.equal("down")
 	end)
 
 	it("allows up to maxDistance plus tolerance, and refuses beyond", function()

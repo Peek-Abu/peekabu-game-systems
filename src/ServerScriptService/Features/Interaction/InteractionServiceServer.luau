@@ -4,8 +4,8 @@
 	docs/superpowers/specs/2026-10-09-interaction-design.md).
 
 	Every object tagged `Interactable` with a registered `InteractionKind` gets a ProximityPrompt
-	configured from its kind. A trigger is re-checked here (InteractionRules: character, enabled,
-	distance + tolerance, per-player-per-object cooldown) before the kind's handler runs. One handler per
+	configured from its kind. A trigger is re-checked here (InteractionRules: character, not knocked down
+	(Death's knockdown mark), enabled, distance + tolerance, per-player-per-object cooldown) before the kind's handler runs. One handler per
 	kind: `onInteract(kind, function(player, target) ... end)`.
 
 	Channels: an object with a ChannelKind attribute can be held-to-work; progress lives on the server
@@ -28,6 +28,7 @@ local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local InteractionConstants = require(InteractionData.InteractionConstants)
 local InteractionRegistry = require(InteractionData.InteractionRegistry)
 local InteractionEvents = require(ReplicatedStorage.Shared.Features.Interaction.Net.InteractionEvents)
+local DeathKnockdownUtils = require(ReplicatedStorage.Shared.Features.Death.Utils.DeathKnockdownUtils)
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local InteractionChannelSystem = require(ServerScriptService.Features.Interaction.Systems.InteractionChannelSystem)
 local InteractionRules = require(ServerScriptService.Features.Interaction.Rules.InteractionRules)
@@ -102,6 +103,7 @@ local function onTriggered(target: Instance, kind: string, root: BasePart, playe
 	local now = os.clock()
 	local ok, reason = InteractionRules.check({
 		hasCharacter = hasCharacter,
+		down = DeathKnockdownUtils.isDown(character),
 		distance = distance,
 		maxDistance = def.maxDistance or InteractionConstants.DEFAULT_MAX_DISTANCE,
 		tolerance = InteractionConstants.DISTANCE_TOLERANCE,

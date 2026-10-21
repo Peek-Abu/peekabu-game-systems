@@ -113,11 +113,10 @@ function OccupantFeedbackUtils.droppedNames(
 	return names
 end
 
--- The crew's toast when someone is caught (Figma 1f): "Alex was caught! Back in 0:08." The m:ss formatting is a
--- third copy (Shift's notices and the client's clock have theirs); Shared cannot require the client one.
-function OccupantFeedbackUtils.caughtText(name: string, seconds: number): string
-	local whole = math.max(0, math.ceil(seconds))
-	return `{name} was caught! Back in {string.format("%d:%02d", whole // 60, whole % 60)}.`
+-- The crew's toast when a catch leaves someone a life (a hit: knocked down, up again in a moment, so there is no
+-- "back in" time): "Alex got caught!".
+function OccupantFeedbackUtils.hitText(name: string): string
+	return `{name} got caught!`
 end
 
 -- The crew's toast when someone's last life is spent: "Alex is out for the shift".

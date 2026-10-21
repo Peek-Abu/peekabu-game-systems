@@ -26,8 +26,8 @@
 	  every think (OccupantRigSystem.present), and a speech bubble per cue (a paper memo; the line varies per cue,
 	  OccupantFeedbackUtils.pickLine); the client voices and types it; while he looks around he turns his root.
 	- Catch: the kind's attack (onAttack) or the brain's catch effect → OccupantCatchSystem.attempt (OccupantCatchRules):
-	  the jumpscare, lights out, ragdoll launch; ~8 s spectating; the Rehired notice on the respawn in the loading bay;
-	  the catch counts in Shift's review.
+	  the jumpscare, lights out, then the throw: a catch that leaves a life knocks the player down for about a second
+	  (Death's knockdown), the last life's catch kills them (out for the shift); every catch counts in Shift's review.
 	- Role: he exists only where the shift role runs (QueueServiceServer:runsRole); a hub-only server spawns no Harlow.
 
 	Spec-exempt shell (Instances, raycasts, Players, signals); the decisions are the specced OccupantBrainRules (and
@@ -326,6 +326,8 @@ local function despawn()
 	Sense.forget()
 	-- A catch in the last seconds: the next shift must not show a stale deadline.
 	OccupantCatchSystem.dropRehires()
+	-- A hit in the last second: nobody stays down into the next shift.
+	OccupantCatchSystem.standUpAll()
 	if current ~= nil and current.model.Parent ~= nil then
 		NpcServiceServer:despawn(current.model)
 	end

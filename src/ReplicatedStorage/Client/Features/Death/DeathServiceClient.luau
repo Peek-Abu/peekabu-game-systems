@@ -6,7 +6,8 @@
 	While the local player's public `dead` field is set, the camera follows a living player through a
 	CameraServiceClient `default` mode with `subject`. `spectateNext` / `spectatePrev` or `cycleSpectate` cycle; a target who
 	dies or leaves is replaced; respawning (the field clearing) ends it. Candidates and cycling are the
-	pure DeathSpectateRules.
+	pure DeathSpectateRules. A knockdown (the server's non-lethal take-down) is played on the local character by
+	DeathKnockdownSystem.
 
 	Spec-exempt shell (Camera, Input, Charm, Players).
 
@@ -26,6 +27,7 @@ local InputActionRegistry = require(ReplicatedStorage.Client.Features.Input.Data
 local InputServiceClient = require(ReplicatedStorage.Client.Features.Input.InputServiceClient)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local DeathRemainsSystem = require(ReplicatedStorage.Client.Features.Death.Systems.DeathRemainsSystem)
+local DeathKnockdownSystem = require(ReplicatedStorage.Client.Features.Death.Systems.DeathKnockdownSystem)
 
 local enabled = true
 local filter: ((userId: number) -> boolean)? = nil
@@ -168,6 +170,7 @@ local DeathServiceClient: DeathServiceClient = {
 		table.insert(stoppers, endSpectating)
 		-- Old characters: the server's Destroy reaches this client only as a removal (DeathRemainsSystem).
 		table.insert(stoppers, DeathRemainsSystem.start())
+		table.insert(stoppers, DeathKnockdownSystem.start())
 	end,
 
 	stop = function(_self)

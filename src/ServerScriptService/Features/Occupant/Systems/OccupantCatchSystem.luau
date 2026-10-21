@@ -3,21 +3,30 @@
 	OccupantCatchSystem: the catch sequence (Cleanup Crew spec §4 "Catch"). `begin` turns Harlow to face the
 	player (unless he sits or stands planted, already facing them), freezes them (their root anchored), points their camera at his face (OccupantEvents.CatchCam),
 	kills the lights around him for everyone (OccupantEvents.LightsOut). After
-	SNAP_SECONDS the player is released and killed with a launch (base Death: ragdoll + velocity), away from him
-	and up; Carry drops their hands item and Cargo scatters their pockets as they die (M1), at the catch point
-	(the Died handlers run before the launch velocity moves the body). Death's spectate and respawn delay give
-	the ~8 s of watching, and `hooks.onCaught` does the rest (Shift's catch count, toasts). At the throw he says the
-	line ("You're FIRED!", not during the scare), the caught player's public deadline (`caughtUntil`) is published
-	for the roster and their private incident report (room, shift clock, what they dropped) is sent
-	(OccupantEvents.CatchReport); `caught` counts the catch for Shift, toasts the crew and owes the player the Rehired
-	notice, which `watchRehires` sends on their next character (`rehired`: the deadline cleared, the notice sent);
-	`dropRehires` forgets what is owed when the shift ends. If the shift ended
-	meanwhile (`hooks.stillOn`), the player is just released. He plays his grab clip at the start and his throw clip at
-	the launch when they are uploaded (OccupantAssets).
+	SNAP_SECONDS the player is released and Shift spends one of their lives (`hooks.spendLife`); then
+	OccupantCatchUtils.afterCatch says what follows (spec 2026-10-20 §1):
+
+	- A life left: a hit. They are knocked down with the launch (Death's knockdown: thrown away from him and up,
+	  down KNOCKDOWN_SECONDS, then up where they landed; movement, the vacuum and interaction refused meanwhile).
+	  No death, no `caughtUntil`, no incident report, no Rehired notice: back on their feet in about a second, with
+	  the Manager's grace to run in.
+	- The last life: killed with the launch (base Death: ragdoll + velocity). Carry drops their hands item and Cargo
+	  scatters their pockets as they die (M1), at the catch point (the Died handlers run before the launch velocity
+	  moves the body); Shift holds their respawn, so the body stays where it fell and they spectate for the rest of
+	  the shift. Their private incident report (room, shift clock, what they dropped) is sent
+	  (OccupantEvents.CatchReport) for the OUT FOR THE SHIFT screen.
+
+	At the throw he says the line ("You're FIRED!", not during the scare), and `hooks.onCaught` does the rest:
+	`caught` counts the catch for Shift and toasts the crew ("got caught!" for a hit, "out for the shift" for the
+	last). The Rehired notice (`watchRehires`, `rehired`, `dropRehires`) is kept for a catch that publishes a
+	back-at time; afterCatch publishes none today. `standUpAll` gets everyone this system knocked down back up when
+	the shift ends. If the shift ended meanwhile (`hooks.stillOn`), the player is just released. He plays his grab
+	clip at the start and his throw clip at the launch when they are uploaded (OccupantAssets).
 
 	The freeze is the anchored root, not PlatformStand, and Death's ragdoll swaps Motor6Ds for ball sockets
 	without PlatformStand either, so Cargo's client slip restore (PlatformStand = false after SLIP_SECONDS,
-	skipped once Health is 0) cannot undo any part of the catch.
+	skipped once Health is 0) cannot undo any part of the catch; the knockdown's client holds its PlatformStand
+	against that restore.
 
 	Called from the NPC think (onAttack), so `begin` itself never yields: the wait is a task.delay.
 
@@ -80,6 +89,8 @@ local FACE_DISTANCE = 2.5
 
 -- UserIds whose catch is running.
 local catching: { [number]: boolean } = {}
+-- Players a hit knocked down this shift (stood up when it ends).
+local knocked: { [number]: Player } = {}
 
 local function registered(id: string): boolean
 	return AnimationRegistry.get(id) ~= nil
@@ -149,6 +160,7 @@ function OccupantCatchSystem.begin(rig: OccupantRigSystem.Rig, player: Player, h
 		if not hooks.stillOn() or victim.Parent == nil or victim.Health <= 0 then
 			return
 		end
+		-- Read before the kill drops what they carry (only the last life's catch sends it).
 		local report = reportFor(player, root.Position)
 		local velocity = OccupantCatchRules.launch(
 			rig.root.Position,
@@ -159,14 +171,21 @@ function OccupantCatchSystem.begin(rig: OccupantRigSystem.Rig, player: Player, h
 		act(rig, "harlowThrow")
 		-- Before the kill: a knock-out holds the player down, so their death must find the hold already set.
 		local knockedOut = hooks.spendLife(player)
-		local after = OccupantCatchUtils.afterCatch(knockedOut, report.backAt)
-		DeathServiceServer:kill(victim, "caught", { launch = velocity })
+		local after = OccupantCatchUtils.afterCatch(knockedOut)
+		if after.kill then
+			DeathServiceServer:kill(victim, "caught", { launch = velocity })
+		else
+			knocked[userId] = player
+			DeathServiceServer:knockdown(player, velocity, OccupantConstants.KNOCKDOWN_SECONDS)
+		end
 		-- Figma 4a: the line comes with the throw, not the scare.
 		OccupantRigSystem.say(rig, OccupantConstants.LINES.caught)
 		if after.publishBack ~= nil then
 			StateSyncPublicPlayerStore.set(userId, { [OccupantConstants.PUBLIC_CAUGHT_UNTIL] = after.publishBack })
 		end
-		OccupantEvents.packets.CatchReport.sendTo(report, player)
+		if after.kill then
+			OccupantEvents.packets.CatchReport.sendTo(report, player)
+		end
 		hooks.onCaught(player, knockedOut)
 	end)
 
@@ -237,6 +256,16 @@ function OccupantCatchSystem.clearDeadline(userId: number)
 end
 
 --[=[
+	Gets every player a hit knocked down back up now (the shift ended), and forgets them.
+]=]
+function OccupantCatchSystem.standUpAll()
+	for _, player in knocked do
+		DeathServiceServer:standUp(player)
+	end
+	table.clear(knocked)
+end
+
+--[=[
 	A caught player's new character spawned: clears their public deadline and tells them they are back (the Rehired card).
 ]=]
 function OccupantCatchSystem.rehired(player: Player)
@@ -255,13 +284,12 @@ end
 local rehire: { [number]: boolean } = {}
 
 --[=[
-	A catch went through (the service's `onCaught` hook): Shift counts it, the crew is told, and the player is owed the
-	Rehired notice on their next character. A catch that knocked the player out (`knockedOut`) owes no notice and tells
-	the crew they are out for the shift instead (OccupantCatchUtils.afterCatch).
+	A catch went through (the service's `onCaught` hook): Shift counts it (every catch, hit or not) and the crew is
+	told: "got caught!" for a hit, "out for the shift" when it knocked the player out (`knockedOut`). The player is owed
+	the Rehired notice only when afterCatch says so (OccupantCatchUtils.afterCatch).
 ]=]
 function OccupantCatchSystem.caught(player: Player, knockedOut: boolean)
-	-- The report's back-at time is not used here; only the toast and the rehire flag are.
-	local after = OccupantCatchUtils.afterCatch(knockedOut, 0)
+	local after = OccupantCatchUtils.afterCatch(knockedOut)
 	if after.rehire then
 		rehire[player.UserId] = true
 	else
@@ -270,7 +298,7 @@ function OccupantCatchSystem.caught(player: Player, knockedOut: boolean)
 	ShiftServiceServer:noteCatch(player)
 	local text = if after.toast == "out"
 		then OccupantFeedbackUtils.outText(player.DisplayName)
-		else OccupantFeedbackUtils.caughtText(player.DisplayName, OccupantConstants.SPECTATE_SECONDS)
+		else OccupantFeedbackUtils.hitText(player.DisplayName)
 	ToastServiceServer:send("all", {
 		text = text,
 		style = ShiftConstants.TOAST_STICKY,
@@ -292,6 +320,7 @@ function OccupantCatchSystem.watchRehires(): () -> ()
 	end)
 	local leaving = Players.PlayerRemoving:Connect(function(player: Player)
 		rehire[player.UserId] = nil
+		knocked[player.UserId] = nil
 	end)
 	return function()
 		stopObserving()
