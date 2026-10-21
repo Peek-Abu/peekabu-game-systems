@@ -82,7 +82,7 @@ local function makeProfileData(
 	local slots: { PlayerDataTypes.PlayerSlot } = {}
 	for index = 1, PlayerDataConstants.MAX_SLOTS do
 		slots[index] = {
-			currency = { coins = 100 },
+			currency = { credits = 100 },
 			inventory = { items = {} },
 			equippedTitle = {},
 		}

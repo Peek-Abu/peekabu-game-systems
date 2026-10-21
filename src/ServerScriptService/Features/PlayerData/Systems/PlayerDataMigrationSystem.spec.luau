@@ -7,14 +7,16 @@
 	error-safety behavior.
 ]=]
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
+local CurrencyUtils = require(ReplicatedStorage.Shared.Features.Currency.Utils.CurrencyUtils)
 local PlayerDataMigrationSystem = require(ServerScriptService.Features.PlayerData.Systems.PlayerDataMigrationSystem)
 
 return function()
 	describe("PlayerDataMigrationSystem", function()
 		describe("apply (production list)", function()
-			it("has CURRENT_VERSION = 2 (one migration registered)", function()
-				expect(PlayerDataMigrationSystem.CURRENT_VERSION).to.equal(2)
+			it("has CURRENT_VERSION = 3 (two migrations registered)", function()
+				expect(PlayerDataMigrationSystem.CURRENT_VERSION).to.equal(3)
 			end)
 
 			it("migrates unversioned data to current and leaves unrelated fields intact", function()
@@ -48,7 +50,7 @@ return function()
 				expect(values.cameraShake).to.equal(0.5)
 				expect(values.uiVolume).to.equal(nil)
 				expect(values.ambientVolume).to.equal(nil)
-				expect(data._schemaVersion).to.equal(2)
+				expect(data._schemaVersion).to.equal(PlayerDataMigrationSystem.CURRENT_VERSION)
 			end)
 
 			it("v1 -> v2 is safe on a profile without stored settings", function()
@@ -58,6 +60,39 @@ return function()
 				local bare = { account = { settings = { values = {} } } }
 				expect(PlayerDataMigrationSystem.apply(bare, 1)).to.equal("ok")
 				expect(next(bare.account.settings.values)).to.equal(nil)
+			end)
+
+			it("v2 -> v3 removes coins and starts Gloom and Credits at 0 in every slot", function()
+				local data = {
+					slots = { { currency = { coins = 640 } }, { currency = { coins = 5, gloom = 9, credits = 3 } } },
+					account = {},
+				}
+				expect(PlayerDataMigrationSystem.apply(data, 2)).to.equal("ok")
+				for _, slot in data.slots do
+					expect(slot.currency.coins).to.equal(nil)
+					expect(slot.currency.gloom).to.equal(0)
+					expect(slot.currency.credits).to.equal(0)
+					expect(CurrencyUtils.validateCurrency(slot.currency)).to.equal(true)
+				end
+				expect(data._schemaVersion).to.equal(3)
+			end)
+
+			it("v2 -> v3 is safe on a profile without slots or currency", function()
+				local data = { slots = { {} } }
+				expect(PlayerDataMigrationSystem.apply(data, 2)).to.equal("ok")
+				expect(data.slots[1].currency.credits).to.equal(0)
+				expect(PlayerDataMigrationSystem.apply({}, 2)).to.equal("ok")
+			end)
+
+			it("v1 -> v3 runs both migrations", function()
+				local data = {
+					account = { settings = { values = { uiVolume = 1 } } },
+					slots = { { currency = { coins = 1 } } },
+				}
+				expect(PlayerDataMigrationSystem.apply(data, 1)).to.equal("ok")
+				expect(data.account.settings.values.uiVolume).to.equal(nil)
+				expect(data.slots[1].currency.coins).to.equal(nil)
+				expect(data._schemaVersion).to.equal(3)
 			end)
 		end)
 

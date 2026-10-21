@@ -22,10 +22,10 @@ return function()
 
 	describe("atom round-trip", function()
 		it("stores and returns a currency snapshot", function()
-			StateSyncClientStore.currency({ coins = 5 })
+			StateSyncClientStore.currency({ credits = 5 })
 			local currency = StateSyncClientStore.currency()
 			expect(currency).to.be.ok()
-			expect(currency.coins).to.equal(5)
+			expect((currency :: any).credits).to.equal(5)
 			StateSyncClientStore.currency(nil) -- restore the loading state for other specs
 		end)
 
@@ -41,8 +41,8 @@ return function()
 	describe("setterFor", function()
 		it("writes an inbound value into the matching atom", function()
 			local setCurrency = StateSyncClientStore.setterFor("currency")
-			setCurrency({ coins = 11 })
-			expect((StateSyncClientStore.currency() :: any).coins).to.equal(11)
+			setCurrency({ credits = 11 })
+			expect((StateSyncClientStore.currency() :: any).credits).to.equal(11)
 			StateSyncClientStore.currency(nil) -- restore the loading state for other specs
 		end)
 

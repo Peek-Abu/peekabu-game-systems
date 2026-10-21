@@ -13,8 +13,15 @@ local PlayerDataTypes = require(ReplicatedStorage.Shared.Data.PlayerDataTypes)
 return function()
 	describe("validateCurrency", function()
 		it("accepts a well-formed balance", function()
-			local ok = CurrencyUtils.validateCurrency({ coins = 100 })
+			local ok = CurrencyUtils.validateCurrency({ credits = 100 })
 			expect(ok).to.equal(true)
+		end)
+
+		it("accepts gloom and credits and rejects the retired coins key", function()
+			expect(CurrencyUtils.validateCurrency({ gloom = 0, credits = 0 })).to.equal(true)
+			local ok, reason = CurrencyUtils.validateCurrency({ coins = 1 } :: any)
+			expect(ok).to.equal(false)
+			expect((reason :: string):find("coins", 1, true)).to.be.ok()
 		end)
 
 		it("rejects an unregistered currency key", function()
@@ -24,12 +31,12 @@ return function()
 		end)
 
 		it("rejects a negative balance", function()
-			local ok = CurrencyUtils.validateCurrency({ coins = -1 })
+			local ok = CurrencyUtils.validateCurrency({ credits = -1 })
 			expect(ok).to.equal(false)
 		end)
 
 		it("rejects a balance above MAX_CURRENCY", function()
-			local ok = CurrencyUtils.validateCurrency({ coins = CurrencyConstants.MAX_CURRENCY + 1 })
+			local ok = CurrencyUtils.validateCurrency({ credits = CurrencyConstants.MAX_CURRENCY + 1 })
 			expect(ok).to.equal(false)
 		end)
 
@@ -43,26 +50,26 @@ return function()
 	describe("getCurrencyAmount", function()
 		it("should return correct amount for valid currency", function()
 			local currency: PlayerDataTypes.Currency = {
-				coins = 100,
+				credits = 100,
 			}
 
-			expect(CurrencyUtils.getCurrencyAmount(currency, "coins")).to.equal(100)
+			expect(CurrencyUtils.getCurrencyAmount(currency, "credits")).to.equal(100)
 		end)
 
 		it("should return 0 for missing currency type", function()
-			-- A currency table that does not carry the requested key at all (coins unset).
+			-- A currency table that does not carry the requested key at all (credits unset).
 			local currency: PlayerDataTypes.Currency = {}
 
-			expect(CurrencyUtils.getCurrencyAmount(currency, "coins")).to.equal(0)
+			expect(CurrencyUtils.getCurrencyAmount(currency, "credits")).to.equal(0)
 		end)
 
 		it("should return 0 for nil currency table", function()
-			expect(CurrencyUtils.getCurrencyAmount(nil, "coins")).to.equal(0)
+			expect(CurrencyUtils.getCurrencyAmount(nil, "credits")).to.equal(0)
 		end)
 
 		it("should return 0 for invalid currency type", function()
 			local currency: PlayerDataTypes.Currency = {
-				coins = 100,
+				credits = 100,
 			}
 
 			-- getCurrencyAmount is typed to CurrencyType; cast an invalid value to exercise the
@@ -76,41 +83,41 @@ return function()
 
 		beforeEach(function()
 			currency = {
-				coins = 100,
+				credits = 100,
 			}
 		end)
 
 		it("should return true when player has enough", function()
-			expect(CurrencyUtils.hasEnoughCurrency(currency, "coins", 50)).to.equal(true)
-			expect(CurrencyUtils.hasEnoughCurrency(currency, "coins", 100)).to.equal(true)
+			expect(CurrencyUtils.hasEnoughCurrency(currency, "credits", 50)).to.equal(true)
+			expect(CurrencyUtils.hasEnoughCurrency(currency, "credits", 100)).to.equal(true)
 		end)
 
 		it("should return false when player lacks funds", function()
-			expect(CurrencyUtils.hasEnoughCurrency(currency, "coins", 150)).to.equal(false)
+			expect(CurrencyUtils.hasEnoughCurrency(currency, "credits", 150)).to.equal(false)
 		end)
 
 		it("should return false for nil currency table", function()
-			expect(CurrencyUtils.hasEnoughCurrency(nil, "coins", 10)).to.equal(false)
+			expect(CurrencyUtils.hasEnoughCurrency(nil, "credits", 10)).to.equal(false)
 		end)
 
 		it("should return false for missing currency type", function()
 			local emptyCurrency: PlayerDataTypes.Currency = {}
-			expect(CurrencyUtils.hasEnoughCurrency(emptyCurrency, "coins", 10)).to.equal(false)
+			expect(CurrencyUtils.hasEnoughCurrency(emptyCurrency, "credits", 10)).to.equal(false)
 		end)
 
 		it("should throw error for non-positive amount", function()
 			expect(function()
-				CurrencyUtils.hasEnoughCurrency(currency, "coins", 0)
+				CurrencyUtils.hasEnoughCurrency(currency, "credits", 0)
 			end).to.throw()
 
 			expect(function()
-				CurrencyUtils.hasEnoughCurrency(currency, "coins", -10)
+				CurrencyUtils.hasEnoughCurrency(currency, "credits", -10)
 			end).to.throw()
 		end)
 
 		it("should throw error for non-number amount", function()
 			expect(function()
-				CurrencyUtils.hasEnoughCurrency(currency, "coins", "invalid" :: any)
+				CurrencyUtils.hasEnoughCurrency(currency, "credits", "invalid" :: any)
 			end).to.throw()
 		end)
 	end)
@@ -134,9 +141,9 @@ return function()
 		end)
 
 		it("should append currency icon when type is provided", function()
-			local coinsDef = CurrencyConstants.getCurrencyDefinition("coins")
+			local coinsDef = CurrencyConstants.getCurrencyDefinition("credits")
 
-			expect(CurrencyUtils.formatCurrency(100, "coins")).to.equal("100 " .. coinsDef.icon)
+			expect(CurrencyUtils.formatCurrency(100, "credits")).to.equal("100 " .. coinsDef.icon)
 		end)
 
 		it("should not append icon for invalid currency type", function()

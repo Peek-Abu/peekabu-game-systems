@@ -13,7 +13,7 @@ export type CurrencyDefinition = {
 }
 
 -- Define the type explicitly (must match CURRENCIES keys)
-export type CurrencyType = "coins"
+export type CurrencyType = "gloom" | "credits"
 
 --[=[
 	DO NOT add a premium (Robux-purchased) currency here.
@@ -27,15 +27,20 @@ export type CurrencyType = "coins"
 	never as a key in this table. That needs no migration — ProfileStore's `Reconcile()` backfills new
 	template fields onto existing profiles.
 
-	Only soft, earned-in-play currencies belong in this table. `coins` is the base's placeholder:
-	rename it (and its specs) to the game's real currency.
+	Only soft, earned-in-play currencies belong in this table. The base's `coins` placeholder is retired:
+	Gloom and Credits are the game's real currencies. Gleam is the premium currency and lives in the `premium`
+	ACCOUNT slice, not here.
 ]=]
 -- Add new currencies here. Typed by CurrencyType keys so iteration yields CurrencyType (no cast)
 -- and adding a key that isn't in the CurrencyType union below is a compile error.
 local CURRENCIES: { [CurrencyType]: CurrencyDefinition } = {
-	coins = {
-		name = "Coins",
-		icon = "🪙",
+	gloom = {
+		name = "Gloom",
+		icon = "🫧",
+	},
+	credits = {
+		name = "Credits",
+		icon = "💵",
 	},
 	-- Add more SLOT-SCOPED (earned-in-play) currencies as needed:
 	-- tickets = {
@@ -53,7 +58,7 @@ local CURRENCIES: { [CurrencyType]: CurrencyDefinition } = {
 --   - a union member (and mirror entry) with no CURRENCIES entry, or a mirror that fell behind a
 --     grown union+CURRENCIES → validateCurrencyTypes() below errors at boot.
 -- When adding a currency, update all three: CURRENCIES, CurrencyType, and this list.
-local CURRENCY_TYPE_MEMBERS: { CurrencyType } = { "coins" }
+local CURRENCY_TYPE_MEMBERS: { CurrencyType } = { "gloom", "credits" }
 
 -- Pure core of validateCurrencyTypes, split out (and exported) so the drift failure modes are
 -- spec-testable with synthetic inputs — the real inputs can't drift in a test without failing

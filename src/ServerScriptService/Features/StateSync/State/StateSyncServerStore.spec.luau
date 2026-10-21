@@ -17,20 +17,20 @@ return function()
 
 	describe("setCurrency", function()
 		it("stores a per-user snapshot", function()
-			StateSyncServerStore.setCurrency(USER, { coins = 100 })
-			expect(StateSyncServerStore.currencies()[USER].coins).to.equal(100)
+			StateSyncServerStore.setCurrency(USER, { credits = 100 })
+			expect(StateSyncServerStore.currencies()[USER].credits).to.equal(100)
 		end)
 
 		it("deep-copies so later mutation of the source can't leak in", function()
-			local live = { coins = 100 }
+			local live = { credits = 100 }
 			StateSyncServerStore.setCurrency(USER, live)
-			live.coins = 999 -- mutate the source after storing
-			expect(StateSyncServerStore.currencies()[USER].coins).to.equal(100)
+			live.credits = 999 -- mutate the source after storing
+			expect(StateSyncServerStore.currencies()[USER].credits).to.equal(100)
 		end)
 
 		it("replaces the per-user map immutably (new table identity)", function()
 			local before = StateSyncServerStore.currencies()
-			StateSyncServerStore.setCurrency(USER, { coins = 1 })
+			StateSyncServerStore.setCurrency(USER, { credits = 1 })
 			expect(StateSyncServerStore.currencies()).never.to.equal(before)
 		end)
 	end)
@@ -60,13 +60,13 @@ return function()
 				},
 				slots = {
 					{
-						currency = { coins = 7 },
+						currency = { credits = 7 },
 						inventory = { items = { { itemType = "potion", quantity = 2 } } },
 						equippedTitle = {},
 					},
 				},
 			})
-			expect(StateSyncServerStore.currencies()[USER].coins).to.equal(7)
+			expect(StateSyncServerStore.currencies()[USER].credits).to.equal(7)
 			expect(StateSyncServerStore.inventories()[USER].items[1].itemType).to.equal("potion")
 		end)
 	end)
@@ -88,13 +88,13 @@ return function()
 				},
 				slots = {
 					{
-						currency = { coins = 12 },
+						currency = { credits = 12 },
 						inventory = { items = { { itemType = "potion", quantity = 2 } } },
 						equippedTitle = {},
 					},
 				},
 			})
-			expect(StateSyncServerStore.currencies()[USER].coins).to.equal(12)
+			expect(StateSyncServerStore.currencies()[USER].credits).to.equal(12)
 			-- The profile's inventory field is ignored — sync("currency", ...) never reads it.
 			expect(StateSyncServerStore.inventories()[USER].items[1].itemType).to.equal("shield")
 		end)
@@ -122,12 +122,12 @@ return function()
 				},
 				slots = {
 					{
-						currency = { coins = 7 },
+						currency = { credits = 7 },
 						inventory = { items = {} },
 						equippedTitle = {},
 					},
 					{
-						currency = { coins = 999 },
+						currency = { credits = 999 },
 						inventory = { items = {} },
 						equippedTitle = {},
 					},
@@ -135,12 +135,12 @@ return function()
 			}
 
 			StateSyncServerStore.sync("currency", USER, profile)
-			expect(StateSyncServerStore.currencies()[USER].coins).to.equal(7)
-			expect(StateSyncServerStore.currencies()[USER].coins).to.never.equal(999)
+			expect(StateSyncServerStore.currencies()[USER].credits).to.equal(7)
+			expect(StateSyncServerStore.currencies()[USER].credits).to.never.equal(999)
 
 			profile.slotState.active = 2
 			StateSyncServerStore.sync("currency", USER, profile)
-			expect(StateSyncServerStore.currencies()[USER].coins).to.equal(999)
+			expect(StateSyncServerStore.currencies()[USER].credits).to.equal(999)
 		end)
 	end)
 
@@ -159,9 +159,9 @@ return function()
 
 	describe("getterFor", function()
 		it("returns a getter reading the user's slice snapshot", function()
-			StateSyncServerStore.setCurrency(USER, { coins = 42 })
+			StateSyncServerStore.setCurrency(USER, { credits = 42 })
 			local getter = StateSyncServerStore.getterFor("currency", USER)
-			expect((getter() :: any).coins).to.equal(42)
+			expect((getter() :: any).credits).to.equal(42)
 		end)
 
 		it("errors on an unknown slice", function()
@@ -173,7 +173,7 @@ return function()
 
 	describe("remove", function()
 		it("drops a user's mirrored currency and inventory", function()
-			StateSyncServerStore.setCurrency(USER, { coins = 1 })
+			StateSyncServerStore.setCurrency(USER, { credits = 1 })
 			StateSyncServerStore.setInventory(USER, { items = { { itemType = "sword", quantity = 1 } } })
 			StateSyncServerStore.remove(USER)
 			expect(StateSyncServerStore.currencies()[USER]).to.equal(nil)

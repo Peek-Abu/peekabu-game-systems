@@ -19,7 +19,8 @@ local PlayerDataService = require(ServerScriptService.Features.PlayerData.Player
 -- on EVERY write via CurrencyUtils.validateCurrency — shared with the bank's `currency` (see the bank
 -- design spec), so a raw op can never persist an unknown key or an out-of-range balance on either.
 local currencySlice = PlayerDataSliceSystem.registerSlot("currency", {
-	coins = 100,
+	gloom = 0,
+	credits = 0,
 }, function(slot)
 	return slot.currency
 end, CurrencyUtils.validateCurrency)
@@ -109,7 +110,7 @@ local CurrencyServiceServer: CurrencyServiceServer = {
 	--[=[
 		Gets a specific currency amount for a user.
 		@param userId number -- The user ID
-		@param currencyType CurrencyConstants.CurrencyType -- The currency type ("coins")
+		@param currencyType CurrencyConstants.CurrencyType -- The currency type ("gloom" or "credits")
 		@return number -- The amount of that currency
 	]=]
 	getCurrencyAmount = function(self, userId, currencyType)
@@ -122,7 +123,7 @@ local CurrencyServiceServer: CurrencyServiceServer = {
 	--[=[
 		Checks if a player has enough of a specific currency.
 		@param userId number -- The user ID
-		@param currencyType CurrencyConstants.CurrencyType -- The currency type ("coins")
+		@param currencyType CurrencyConstants.CurrencyType -- The currency type ("gloom" or "credits")
 		@param amount number -- The amount to check for
 		@return boolean -- True if the player has enough, false otherwise
 	]=]
@@ -137,7 +138,7 @@ local CurrencyServiceServer: CurrencyServiceServer = {
 	--[=[
 		Adds currency to a player's account.
 		@param userId number -- The user ID
-		@param currencyType CurrencyConstants.CurrencyType -- The currency type ("coins")
+		@param currencyType CurrencyConstants.CurrencyType -- The currency type ("gloom" or "credits")
 		@param amount number -- The amount to add
 		@return boolean -- True if successful, false otherwise
 	]=]
@@ -163,7 +164,7 @@ local CurrencyServiceServer: CurrencyServiceServer = {
 	--[=[
 		Removes currency from a player's account.
 		@param userId number -- The user ID
-		@param currencyType CurrencyConstants.CurrencyType -- The currency type ("coins")
+		@param currencyType CurrencyConstants.CurrencyType -- The currency type ("gloom" or "credits")
 		@param amount number -- The amount to remove
 		@return boolean -- True if successful, false otherwise
 	]=]
@@ -189,7 +190,7 @@ local CurrencyServiceServer: CurrencyServiceServer = {
 		Sets a specific currency amount for a player. The amount is clamped to MAX_CURRENCY so the cap
 		invariant holds for every write path — matching addCurrency, which also caps.
 		@param userId number -- The user ID
-		@param currencyType CurrencyConstants.CurrencyType -- The currency type ("coins")
+		@param currencyType CurrencyConstants.CurrencyType -- The currency type ("gloom" or "credits")
 		@param amount number -- The amount to set (clamped to MAX_CURRENCY)
 		@return boolean -- True if successful, false otherwise
 	]=]
@@ -220,10 +221,10 @@ local CurrencyServiceServer: CurrencyServiceServer = {
 
 		```lua
 		PlayerDataService:transaction({
-			CurrencyService:currencyOp(sellerId, function(c) c.coins += 500 return true end),
+			CurrencyService:currencyOp(sellerId, function(c) c.credits += 500 return true end),
 			CurrencyService:currencyOp(buyerId, function(c)
-				if c.coins < 500 then return false end
-				c.coins -= 500 return true
+				if c.credits < 500 then return false end
+				c.credits -= 500 return true
 			end),
 		})
 		```

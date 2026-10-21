@@ -44,26 +44,26 @@ return function()
 
 		beforeEach(function()
 			calls = {}
-			stored = { coins = 0 }
+			stored = { credits = 0 }
 		end)
 
 		it("forwards the target's UserId, currency type, and amount to the service", function()
-			setCurrencyCommand(nil, fakePlayer, "coins", 10)
+			setCurrencyCommand(nil, fakePlayer, "credits", 10)
 			expect(#calls).to.equal(1)
 			expect(calls[1].userId).to.equal(42)
-			expect(calls[1].currencyType).to.equal("coins")
+			expect(calls[1].currencyType).to.equal("credits")
 			expect(calls[1].amount).to.equal(10)
 		end)
 
 		it("reports the stored value when the profile is loaded", function()
-			local message = setCurrencyCommand(nil, fakePlayer, "coins", 10)
+			local message = setCurrencyCommand(nil, fakePlayer, "credits", 10)
 			expect(message:find("TestPlayer")).to.be.ok()
 			expect(message:find("10")).to.be.ok()
 		end)
 
 		it("reports a not-loaded failure when the profile isn't loaded", function()
 			stored = nil
-			local message = setCurrencyCommand(nil, fakePlayer, "coins", 10)
+			local message = setCurrencyCommand(nil, fakePlayer, "credits", 10)
 			expect(message:find("Failed")).to.be.ok()
 		end)
 	end)

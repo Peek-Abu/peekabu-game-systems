@@ -75,6 +75,21 @@ local MIGRATIONS: { Migration } = {
 			values.ambientVolume = nil
 		end
 	end,
+	-- v2 -> v3: the placeholder `coins` is retired; Gloom and Credits start at 0 in every slot (no carry-over: coins
+	-- were a placeholder and shift pay was never saved). Profiles without slots or a currency table are left safe.
+	function(data)
+		if type(data.slots) == "table" then
+			for _, slot in data.slots do
+				if type(slot) == "table" then
+					local currency = if type(slot.currency) == "table" then slot.currency else {}
+					currency.coins = nil
+					currency.gloom = 0
+					currency.credits = 0
+					slot.currency = currency
+				end
+			end
+		end
+	end,
 }
 
 local PlayerDataMigrationSystem = {}

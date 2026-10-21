@@ -23,7 +23,7 @@ local MAX_SLOTS = 1
 --
 -- The slice fields are present but EMPTY: the skeleton owes the PlayerSlot type its declared fields,
 -- while the actual defaults belong to the owning service's registration (CurrencyServiceServer's
--- `{ coins = 100 }`, …), which stamps over them at module load. That is what keeps this file free of
+-- `{ credits = 0 }`, …), which stamps over them at module load. That is what keeps this file free of
 -- domain knowledge — and free of casts, since the annotated local supplies the type.
 local function emptySlots(): { PlayerDataTypes.PlayerSlot }
 	local slots: { PlayerDataTypes.PlayerSlot } = {}
@@ -195,7 +195,7 @@ local function assertRegisterable(patternKey: string, slice: string, validator: 
 end
 
 -- Deep-copy so the template owns an independent table per destination. Callers pass literals
--- (e.g. { coins = 100 }); without this, every slot would alias ONE default table and a write to slot 1
+-- (e.g. { credits = 0 }); without this, every slot would alias ONE default table and a write to slot 1
 -- would surface in the others. Scalars pass through untouched.
 local function copyDefault(defaultData: any): any
 	return if type(defaultData) == "table" then sift.Dictionary.copyDeep(defaultData) else defaultData

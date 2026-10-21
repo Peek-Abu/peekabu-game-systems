@@ -26,7 +26,7 @@ return function()
 	describe("DEFINITIONS", function()
 		it("each entry's read() extracts its own slice off the active slot", function()
 			local fakeSlot = {
-				currency = { coins = 5 },
+				currency = { credits = 5 },
 				inventory = { items = { { itemType = "wrench", quantity = 1 } } },
 				equippedTitle = {},
 			}
@@ -111,9 +111,9 @@ return function()
 	-- These readers are pure functions of the profile they are handed, so hand-built three-slot
 	-- profiles exercise the active-slot projection even while PlayerDataConstants.MAX_SLOTS = 1.
 	describe("slot-scoped readers", function()
-		local function slot(coins)
+		local function slot(credits)
 			return {
-				currency = { coins = coins },
+				currency = { credits = credits },
 				inventory = { items = {} },
 				equippedTitle = {},
 			}
@@ -131,17 +131,17 @@ return function()
 		end
 
 		it("reads currency from the ACTIVE slot", function()
-			expect(StateSyncSliceRegistry.DEFINITIONS.currency.read(profileWith(2)).coins).to.equal(2)
+			expect(StateSyncSliceRegistry.DEFINITIONS.currency.read(profileWith(2)).credits).to.equal(2)
 		end)
 
 		it("follows the active slot", function()
-			expect(StateSyncSliceRegistry.DEFINITIONS.currency.read(profileWith(3)).coins).to.equal(3)
+			expect(StateSyncSliceRegistry.DEFINITIONS.currency.read(profileWith(3)).credits).to.equal(3)
 		end)
 
 		it("never exposes an inactive slot's value", function()
 			local mirrored = StateSyncSliceRegistry.DEFINITIONS.currency.read(profileWith(1))
-			expect(mirrored.coins).to.equal(1)
-			expect(mirrored.coins).to.never.equal(2)
+			expect(mirrored.credits).to.equal(1)
+			expect(mirrored.credits).to.never.equal(2)
 		end)
 
 		-- Inventory is `{ items = { InventoryEntry } }`, not a bare entry array. The reader must hand
