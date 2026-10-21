@@ -199,7 +199,7 @@ return function()
 			offered = 9,
 			rating = "exceeds",
 			crew = { { userId = 7, name = "Ava", banked = 200, piles = 6, salvage = 2, caught = 1 } },
-			awards = { { title = "MOST REHIRED", name = "Ava", userId = 7, detail = "caught once" } },
+			awards = { { title = "MOST CAUGHT", name = "Ava", userId = 7, detail = "caught once" } },
 		}
 
 		it("carries the crew, the truck, the rating and the award details through build and decode", function()

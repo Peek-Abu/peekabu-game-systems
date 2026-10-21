@@ -16,7 +16,7 @@ local function review(extra)
 		crew = {},
 		awards = {
 			{ title = "EMPLOYEE OF THE NIGHT", name = "Sam", userId = 1, detail = "hauled 140" },
-			{ title = "MOST REHIRED", name = "Alex", userId = 2, detail = "caught twice" },
+			{ title = "MOST CAUGHT", name = "Alex", userId = 2, detail = "caught twice" },
 			{ title = "BUTTERFINGERS", name = "Jo", userId = 3, detail = "dropped the fish tank" },
 			{ title = "QUIETEST FEET", name = "Me", userId = 4, detail = "never heard once" },
 		},
@@ -63,7 +63,7 @@ return function()
 		it("maps each real award to its own silhouette", function()
 			local expected = {
 				["EMPLOYEE OF THE NIGHT"] = "medal",
-				["MOST REHIRED"] = "punchCard",
+				["MOST CAUGHT"] = "punchCard",
 				["BUTTERFINGERS"] = "droppedMug",
 				["QUIETEST FEET"] = "quietShoe",
 				["LOUDEST VACUUM"] = "noisyVacuum",

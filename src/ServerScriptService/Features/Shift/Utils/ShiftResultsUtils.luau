@@ -2,7 +2,7 @@
 --[=[
 	ShiftResultsUtils: builds the end-of-shift performance review (spec §3 step 7): the shift's totals, the crew
 	ordered by what they banked, the overall rating stamp, and the four joke awards (Figma 5a/5c: EMPLOYEE OF THE
-	NIGHT, MOST REHIRED, BUTTERFINGERS, and LOUDEST VACUUM or QUIETEST FEET). A stat nobody scored gives no award.
+	NIGHT, MOST CAUGHT, BUTTERFINGERS, and LOUDEST VACUUM or QUIETEST FEET). A stat nobody scored gives no award.
 	Ties go to whoever is listed first (more banked, then name). Pure.
 
 	@class ShiftResultsUtils
@@ -94,7 +94,7 @@ end
 
 --[=[
 	The four joke awards (Figma 5a/5c), from a crew already in crew order: EMPLOYEE OF THE NIGHT (most banked),
-	MOST REHIRED (most caught), BUTTERFINGERS (most drops; names the most valuable), and LOUDEST VACUUM when someone
+	MOST CAUGHT, BUTTERFINGERS (most drops; names the most valuable), and LOUDEST VACUUM when someone
 	woke Harlow LOUDEST_MIN_WOKE times, else QUIETEST FEET. A stat nobody scored gives no award.
 ]=]
 function ShiftResultsUtils.awards(crew: { CrewStats }, lookup: Lookup): { ShiftTypes.Award }

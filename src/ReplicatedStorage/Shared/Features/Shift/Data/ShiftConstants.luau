@@ -64,7 +64,7 @@ local RATING_TEXT: { [string]: string } = {
 -- The joke awards' titles (Figma 5a/5c sticky notes).
 local AWARD_TITLES = {
 	employee = "EMPLOYEE OF THE NIGHT",
-	rehired = "MOST REHIRED",
+	rehired = "MOST CAUGHT",
 	butterfingers = "BUTTERFINGERS",
 	quietest = "QUIETEST FEET",
 	loudest = "LOUDEST VACUUM",
