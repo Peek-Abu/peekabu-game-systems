@@ -361,7 +361,7 @@ return function()
 			local cards = view.cards
 			expect(#cards).to.equal(4)
 			expect(cards[1].icon).to.equal("gloom")
-			expect(cards[1].label).to.equal("Gloom cleared · 36 saved")
+			expect(cards[1].label).to.equal("Gloom cleared")
 			expect(cards[1].value).to.equal("362/350")
 			expect(cards[1].meaning).to.equal("grape")
 			expect(cards[2].icon).to.equal("gleamPile")

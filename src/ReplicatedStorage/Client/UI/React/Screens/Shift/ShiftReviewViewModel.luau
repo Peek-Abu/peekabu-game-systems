@@ -335,7 +335,7 @@ function ShiftReviewViewModel.review(
 		grade = GRADE[rating],
 		cards = {
 			{
-				label = if saved > 0 then `Gloom cleared · {saved} saved` else "Gloom cleared",
+				label = "Gloom cleared",
 				value = `{split.gloom}/{results.quota}`,
 				icon = "gloom",
 				meaning = "grape",
