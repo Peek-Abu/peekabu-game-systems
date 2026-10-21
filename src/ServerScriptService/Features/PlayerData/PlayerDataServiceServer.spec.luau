@@ -2100,8 +2100,9 @@ return function()
 				-- stamped current — the stored version was read BEFORE Reconcile backfilled it.
 				expect(profile.Data._schemaVersion).to.equal(PlayerDataMigrationSystem.CURRENT_VERSION)
 				expect(PlayerDataService:getState().sessions["1"]).to.be.ok()
-				-- The reactive projection is seeded at load, no separate handshake.
-				expect(StateSyncServerStore.currencies()[1].credits).to.equal(100)
+				-- The reactive projection is seeded at load, no separate handshake. The v2 -> v3 step starts
+				-- Credits at 0, so the old balance does not carry over.
+				expect(StateSyncServerStore.currencies()[1].credits).to.equal(0)
 				-- And the session accepts writes.
 				expect(PlayerDataService:mutate(1, CURRENCY_PATH, function(c: any)
 					c.credits = 1

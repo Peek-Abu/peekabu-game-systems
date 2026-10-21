@@ -55,14 +55,15 @@ return function()
 		it("rounds once on the total", function()
 			local odd = {
 				clearance = 0,
-				bonus = 9,
+				bonus = 3,
 				items = {
-					{ kind = "plaque", category = "salvage", value = 3, overtime = true },
-					{ kind = "plaque", category = "salvage", value = 3, overtime = true },
-					{ kind = "plaque", category = "salvage", value = 3, overtime = false },
+					{ kind = "plaque", category = "salvage", value = 1, overtime = true },
+					{ kind = "plaque", category = "salvage", value = 1, overtime = true },
+					{ kind = "plaque", category = "salvage", value = 1, overtime = true },
 				},
 			}
-			expect(ShiftQuotaFormulas.pay(odd)).to.equal(14)
+			-- 3 + 3 * 0.5 = 4.5 rounds to 5; rounding each item's 0.5 extra would give 6.
+			expect(ShiftQuotaFormulas.pay(odd)).to.equal(5)
 		end)
 
 		it("pays nothing for a trash-only load, overtime flag or not", function()
