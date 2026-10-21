@@ -37,6 +37,7 @@ local Observers = require(ReplicatedStorage.Packages.Observers)
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local CarryConstants = require(CarryShared.Data.CarryConstants)
+local DeathKnockdownUtils = require(ReplicatedStorage.Shared.Features.Death.Utils.DeathKnockdownUtils)
 local CarryRegistry = require(CarryShared.Data.CarryRegistry)
 local CarryTypes = require(CarryShared.Data.CarryTypes)
 local CarryFormulas = require(CarryShared.Utils.CarryFormulas)
@@ -187,6 +188,10 @@ local onDrop = RequestHandler.wrap({
 	rateLimitKey = "Carry",
 	rateLimit = { maxRequests = 10, windowSeconds = 5 },
 	handler = function(_data: unknown, player: Player)
+		-- A downed player (a knockdown) puts nothing down: the server refuses, like the other gated actions.
+		if DeathKnockdownUtils.isDown(player.Character) then
+			return
+		end
 		CarryServiceServer:drop(player)
 	end,
 })
@@ -196,7 +201,7 @@ local onThrow = RequestHandler.wrap({
 	rateLimitKey = "Carry",
 	rateLimit = { maxRequests = 10, windowSeconds = 5 },
 	handler = function(data: unknown, player: Player)
-		if typeof(data) == "Vector3" then
+		if typeof(data) == "Vector3" and not DeathKnockdownUtils.isDown(player.Character) then
 			CarryServiceServer:throw(player, data)
 		end
 	end,

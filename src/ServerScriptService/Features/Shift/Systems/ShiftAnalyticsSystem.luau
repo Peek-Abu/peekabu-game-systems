@@ -256,7 +256,9 @@ function ShiftAnalyticsSystem.banked(player: Player, deposit: CargoTypes.Deposit
 	end
 	loaded:Fire(player, #deposit.items, salvageCount, overtimeCount)
 	for _, item in deposit.items do
-		local multiplier = if item.overtime == true then ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER else 1
+		local multiplier = if item.overtime == true
+			then ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER
+			else ShiftConstants.SALVAGE_MULTIPLIER
 		ShiftAnalyticsSystem.emit("cargo_banked", player, {
 			target = item.kind,
 			outcome = tag,

@@ -5,8 +5,9 @@
 	camera follows his face for SNAP_SECONDS (a custom camera mode above Death's spectate: JUMPSCARE_DISTANCE in front of
 	his head, world up, so a face upside down under a desk reads upside down; the packet's still shot when his head is
 	gone), with a quick shake and a red, drained screen, and his face lit for this client alone (OccupantFaceLightSystem:
-	the catch's lights-out leaves nothing else to light it); then Death's spectate takes over. His head tilts meanwhile
-	(OccupantGestureSystem, the server's tilt). The sting and the stretched grin are
+	the catch's lights-out leaves nothing else to light it); then the player's own camera returns: catches 1 and 2 knock
+	them down for a moment (Death's knockdown), the 3rd knocks them out (Death's spectate takes over). His head tilts
+	meanwhile (OccupantGestureSystem, the server's tilt). The sting and the stretched grin are
 	OccupantScareSystem's. At init it registers the catch's HUD widgets: the CCTV overlay while caught (CatchOverlay) and
 	the HR "Rehired." card around the respawn (CatchRehiredCard), and the dread's screen layer (DreadOverlay). The light
 	tells run in OccupantTellSystem (lights out on a catch, every light flickering on a tier rise). OccupantPresenceSystem
@@ -14,7 +15,7 @@
 	heartbeat, the dread loop, the screen's mood, the chase's FOV squeeze and footfall shake, and the ambience duck.
 	OccupantGestureSystem
 	lays his gestures over his joints; OccupantWarningSystem plays the staged warnings and his typing (no PA since
-	2026-10-16). OccupantCatchVfxSystem pops the porcelain crack at a throw and the Rehired puff, for everyone.
+	2026-10-16). OccupantCatchVfxSystem pops the porcelain crack at a knockdown or knock-out, for everyone.
 
 	A rehired player is held still while the card is up: the character's controls off and a sinking `ui` input context
 	silencing the gameplay actions (vacuum, hotbar), like a menu; then control comes back and the card fades out

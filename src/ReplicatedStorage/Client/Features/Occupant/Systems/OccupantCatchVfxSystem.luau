@@ -3,11 +3,12 @@
 	OccupantCatchVfxSystem: the catch's world particles on every client (OccupantVfxConstants, through VfxBurstSystem),
 	so the crew sees a catch as clearly as the caught player:
 
-	- the throw: when a player's public `caughtUntil` deadline appears (the server sets it at the throw,
-	  OccupantCatchSystem), or their `knockedOut` turns true (the last-life catch publishes no deadline), a porcelain
-	  crack, shards and dust pop on their character; once per knock-out, a republish does not repeat it;
-	- back on the clock: when it clears, their next living character (not the one that was thrown) gets the
-	  Rehired puff at its feet, if it arrives within REHIRE_WAIT seconds.
+	- the throw: when a player's character goes down (catches 1 and 2: the server sets the Knockdown attribute on it,
+	  DeathKnockdownSystem) or their public `knockedOut` turns true (the 3rd catch), a porcelain crack, shards and dust
+	  pop on their character; once per knockdown or knock-out, a republish does not repeat it. A public `caughtUntil`
+	  deadline appearing throws too, but no catch publishes one today;
+	- back on the clock: when a deadline clears, their next living character (not the one that was thrown) gets the
+	  Rehired puff at its feet, if it arrives within REHIRE_WAIT seconds (idle today, with no deadline).
 
 	The deadlines already set when this client starts are the baseline: nothing replays for them. The caught player's
 	camera, red screen and Rehired card are OccupantServiceClient's.
@@ -22,6 +23,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Charm = require(ReplicatedStorage.Packages.Charm)
+local DeathConstants = require(ReplicatedStorage.Shared.Features.Death.Data.DeathConstants)
+local DeathKnockdownUtils = require(ReplicatedStorage.Shared.Features.Death.Utils.DeathKnockdownUtils)
 local PublicPlayerTypes = require(ReplicatedStorage.Shared.Data.PublicPlayerTypes)
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
@@ -50,6 +53,11 @@ local deadlines: { [number]: boolean } = {}
 local thrown: { [number]: Model? } = {}
 -- Who was knocked out at the last look (a knock-out throws once).
 local knockedOut: { [number]: boolean } = {}
+-- Who was down (Knockdown attribute on their character) at the last look.
+local down: { [number]: boolean } = {}
+-- Per player: the connection on their current character's Knockdown attribute, and the one for their next character.
+local attributeWatch: { [number]: RBXScriptConnection } = {}
+local characterWatch: { [number]: RBXScriptConnection } = {}
 local counters = { cracks = 0, rehired = 0 }
 local stoppers: { () -> () } = {}
 -- Bumped on stop: a pending Rehired wait from before is dropped.
@@ -122,6 +130,63 @@ local function read(map: PublicPlayerTypes.PublicPlayerMap): ({ [number]: boolea
 	return set, out
 end
 
+-- The character's Knockdown attribute (or the character itself) changed: crack once when it goes down.
+local function onDownChanged(player: Player)
+	local userId = player.UserId
+	local was = down[userId] == true
+	local now = DeathKnockdownUtils.isDown(player.Character)
+	down[userId] = now
+	if OccupantCatchVfxUtils.thrown(false, false, false, false, was, now) then
+		crack(player)
+	end
+end
+
+-- Follows the player's current character's Knockdown attribute; a new character is followed from its spawn.
+local function follow(player: Player)
+	local userId = player.UserId
+	local previous = attributeWatch[userId]
+	if previous ~= nil then
+		previous:Disconnect()
+		attributeWatch[userId] = nil
+	end
+	local character = player.Character
+	if character ~= nil then
+		attributeWatch[userId] = character
+			:GetAttributeChangedSignal(DeathConstants.KNOCKDOWN_ATTRIBUTE)
+			:Connect(function()
+				onDownChanged(player)
+			end)
+	end
+	onDownChanged(player)
+end
+
+local function watch(player: Player)
+	local userId = player.UserId
+	if characterWatch[userId] ~= nil then
+		return
+	end
+	characterWatch[userId] = player.CharacterAdded:Connect(function()
+		follow(player)
+	end)
+	-- The baseline: someone already down when this client starts replays nothing.
+	down[userId] = DeathKnockdownUtils.isDown(player.Character)
+	follow(player)
+end
+
+local function unwatch(userId: number)
+	local attribute = attributeWatch[userId]
+	if attribute ~= nil then
+		attribute:Disconnect()
+		attributeWatch[userId] = nil
+	end
+	local character = characterWatch[userId]
+	if character ~= nil then
+		character:Disconnect()
+		characterWatch[userId] = nil
+	end
+	down[userId] = nil
+end
+
 local function onPublic(map: PublicPlayerTypes.PublicPlayerMap)
 	local now, nowOut = read(map)
 	for _, player in Players:GetPlayers() do
@@ -131,7 +196,9 @@ local function onPublic(map: PublicPlayerTypes.PublicPlayerMap)
 				deadlines[userId] == true,
 				now[userId] == true,
 				knockedOut[userId] == true,
-				nowOut[userId] == true
+				nowOut[userId] == true,
+				false,
+				false
 			)
 		then
 			crack(player)
@@ -157,6 +224,17 @@ function OccupantCatchVfxSystem.start()
 	end
 	VfxBurstSystem.preload()
 	deadlines, knockedOut = read(StateSyncClientStore.publicPlayers())
+	for _, player in Players:GetPlayers() do
+		watch(player)
+	end
+	local added = Players.PlayerAdded:Connect(watch)
+	local removing = Players.PlayerRemoving:Connect(function(player)
+		unwatch(player.UserId)
+	end)
+	table.insert(stoppers, function()
+		added:Disconnect()
+		removing:Disconnect()
+	end)
 	table.insert(stoppers, Charm.subscribe(StateSyncClientStore.publicPlayers, onPublic))
 end
 
@@ -168,6 +246,9 @@ function OccupantCatchVfxSystem.stop()
 	table.clear(stoppers)
 	table.clear(deadlines)
 	table.clear(knockedOut)
+	for userId in characterWatch do
+		unwatch(userId)
+	end
 	table.clear(thrown)
 end
 
