@@ -92,8 +92,9 @@ function ShiftSiteSystem.new(): ShiftSiteSystem
 		end,
 
 		startOvertime = function(_self)
+			-- The batch is salvage the review can bank, so it joins what the site offered ("found N of M").
 			guarded("overtime loot", function()
-				OfficeServiceServer:spawnOvertimeLoot()
+				offered += OfficeServiceServer:spawnOvertimeLoot()
 			end)
 		end,
 

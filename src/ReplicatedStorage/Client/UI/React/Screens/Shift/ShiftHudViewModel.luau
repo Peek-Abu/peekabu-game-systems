@@ -287,8 +287,8 @@ function ShiftHudViewModel.hud(
 		feeLabel = ShiftCurrencyUtils.earnedLabel(),
 		-- Earned so far: every Gloom removed (paid at clock-out) plus the valuables banked.
 		fee = ShiftCurrencyUtils.amount(ShiftQuotaFormulas.breakdown(snapshot.cleared, 0, snapshot.bonus).gleam),
-		feeBoost = if overtime then `×{ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER} now` else nil,
-		feeBoostShort = if overtime then `×{ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER}` else nil,
+		feeBoost = if overtime then `New loot ×{ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER}` else nil,
+		feeBoostShort = if overtime then `NEW ×{ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER}` else nil,
 		hands = handsOf(entry[CarryConstants.PUBLIC_FIELD]),
 		hotbar = ShiftHotbarViewModel.hotbar(entry, snapshot.cleared, snapshot.quota),
 		endsAt = endsAt,
