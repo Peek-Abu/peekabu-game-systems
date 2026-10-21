@@ -15,6 +15,9 @@ export type CurrencyDefinition = {
 -- Define the type explicitly (must match CURRENCIES keys)
 export type CurrencyType = "gloom" | "credits"
 
+-- An amount per currency, for crediting several in one write (CurrencyServiceServer:grant).
+export type Amounts = { [CurrencyType]: number }
+
 --[=[
 	DO NOT add a premium (Robux-purchased) currency here.
 

@@ -76,6 +76,7 @@ export type CurrencyServiceServer = {
 		currencyType: CurrencyConstants.CurrencyType,
 		amount: number
 	) -> boolean,
+	grant: (self: CurrencyServiceServer, userId: number, amounts: CurrencyConstants.Amounts) -> boolean,
 	currencyOp: (
 		self: CurrencyServiceServer,
 		userId: number,
@@ -209,6 +210,45 @@ local CurrencyServiceServer: CurrencyServiceServer = {
 			end
 			currency[currencyType] = clamped
 			return true
+		end)
+		return changed
+	end,
+
+	--[=[
+		Credits several currencies in ONE write (one currency-slice mutation), each capped at MAX_CURRENCY. Server-only
+		reward path (shift pay). Zero amounts are skipped; an unknown currency key or a negative/non-finite amount throws
+		before anything is written.
+		@param userId number -- The user ID
+		@param amounts CurrencyConstants.Amounts -- Amount to add per currency
+		@return boolean -- True when at least one balance changed (false: nothing to add, everything already at the cap, or no profile)
+	]=]
+	grant = function(_self, userId, amounts)
+		Guard.userId(userId)
+		local adds: { [CurrencyConstants.CurrencyType]: number } = {}
+		local any = false
+		for currencyType, amount in amounts do
+			assert(CurrencyConstants.isValidCurrencyType(currencyType), `invalid currency type: "{currencyType}"`)
+			Guard.nonNegativeAmount(amount)
+			if amount > 0 then
+				adds[currencyType] = amount
+				any = true
+			end
+		end
+		if not any then
+			return false
+		end
+
+		local changed = currencySlice.mutate(userId, function(currency)
+			local moved = false
+			for currencyType, amount in adds do
+				local oldAmount = currency[currencyType] or 0
+				local newAmount = math.min(oldAmount + amount, CurrencyConstants.MAX_CURRENCY)
+				if newAmount ~= oldAmount then
+					currency[currencyType] = newAmount
+					moved = true
+				end
+			end
+			return moved
 		end)
 		return changed
 	end,

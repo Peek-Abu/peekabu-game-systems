@@ -66,6 +66,8 @@ return function()
 	describe("CurrencyServiceServer", function()
 		-- In-memory store, reset per test
 		local _profiles: { [number]: any } = {}
+		-- Counts the mocked mutate calls (one per currency-slice write) so a test can pin "one write".
+		local writes = 0
 
 		-- Save originals so we can restore after this spec
 		local _origGetActiveSlot
@@ -150,6 +152,7 @@ return function()
 				if data == nil then
 					return false
 				end
+				writes += 1
 				local result = mutator(data)
 				return result ~= false
 			end
@@ -165,6 +168,7 @@ return function()
 
 		beforeEach(function()
 			_profiles = {}
+			writes = 0
 		end)
 
 		-- -------------------------------------------------------------------------
@@ -357,6 +361,56 @@ return function()
 
 			it("should return false when profile is not loaded", function()
 				expect(CurrencyService:setCurrency(999, "credits", 100)).to.equal(false)
+			end)
+		end)
+
+		-- -------------------------------------------------------------------------
+		describe("grant", function()
+			it("credits Gloom and Credits in one write", function()
+				_profiles[1] = makeProfile(0)
+				expect(CurrencyService:grant(1, { credits = 760, gloom = 340 })).to.equal(true)
+				expect(CurrencyService:getCurrencyAmount(1, "credits")).to.equal(760)
+				expect(CurrencyService:getCurrencyAmount(1, "gloom")).to.equal(340)
+				expect(writes).to.equal(1)
+			end)
+
+			it("adds to the existing balance", function()
+				_profiles[1] = makeProfile(100)
+				expect(CurrencyService:grant(1, { credits = 40 })).to.equal(true)
+				expect(CurrencyService:getCurrencyAmount(1, "credits")).to.equal(140)
+			end)
+
+			it("caps at MAX_CURRENCY, and reports false once fully absorbed", function()
+				_profiles[1] = makeProfile(CurrencyConstants.MAX_CURRENCY - 10)
+				expect(CurrencyService:grant(1, { credits = 50 })).to.equal(true)
+				expect(CurrencyService:getCurrencyAmount(1, "credits")).to.equal(CurrencyConstants.MAX_CURRENCY)
+				expect(CurrencyService:grant(1, { credits = 50 })).to.equal(false)
+			end)
+
+			it("writes nothing for all-zero or empty amounts", function()
+				_profiles[1] = makeProfile(0)
+				expect(CurrencyService:grant(1, { credits = 0, gloom = 0 })).to.equal(false)
+				expect(CurrencyService:grant(1, {})).to.equal(false)
+				expect(writes).to.equal(0)
+			end)
+
+			it("refuses a negative amount, an unknown currency and a bad user id before writing", function()
+				_profiles[1] = makeProfile(0)
+				expect(function()
+					CurrencyService:grant(1, { credits = -1 })
+				end).to.throw()
+				expect(function()
+					CurrencyService:grant(1, { coins = 1 } :: any)
+				end).to.throw()
+				expect(function()
+					CurrencyService:grant("bad" :: any, { credits = 1 })
+				end).to.throw()
+				expect(writes).to.equal(0)
+				expect(CurrencyService:getCurrencyAmount(1, "credits")).to.equal(0)
+			end)
+
+			it("returns false when the profile is not loaded", function()
+				expect(CurrencyService:grant(999, { credits = 5 })).to.equal(false)
 			end)
 		end)
 
