@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	ExperimentOverrideRules: parses the developer override string (a Workspace attribute such as
-	`"exp-clean=3s, exp-rehire=10s"`) into an `{ [experimentId]: variant }` map. Pairs that are malformed, name an
+	`"exp-friendskip=skip, exp-tutorial=3beats"`) into an `{ [experimentId]: variant }` map. Pairs that are malformed, name an
 	unknown experiment or name a variant the experiment does not have are dropped. Pure.
 
 	@class ExperimentOverrideRules

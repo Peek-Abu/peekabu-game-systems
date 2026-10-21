@@ -2,7 +2,7 @@
 --[=[
 	ExperimentServiceServer: the one door other systems use to read a player's or crew's experiment variant.
 	A variant is the stable hash split of the unit (see ExperimentAssignUtils), unless the developer override
-	(a Workspace string attribute, `ExperimentOverride`, e.g. `"exp-clean=3s, exp-rehire=10s"`) names one, which
+	(a Workspace string attribute, `ExperimentOverride`, e.g. `"exp-friendskip=skip, exp-tutorial=3beats"`) names one, which
 	wins in any place. Overrides are read fresh on every call. The crew id is this shift server's JobId: a
 	reserved Shift server holds exactly one crew, so it is stable through that crew's Another-shift replays.
 

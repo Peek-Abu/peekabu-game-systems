@@ -22,8 +22,6 @@ end
 
 -- Board order.
 local DEFINITIONS: { Definition } = table.freeze({
-	define("exp-rehire", "Rehire countdown after the 3rd layer", "crew", "5s", "10s"),
-	define("exp-clean", "Time to clean a layer off a teammate", "crew", "1.5s", "3s"),
 	define("exp-tutorial", "Tutorial length", "player", "3beats", "5beats"),
 	define("exp-friendskip", "Friends skip the tutorial", "crew", "skip", "forced"),
 	define("exp-unlock", "Site unlock pace", "player", "after3", "after6"),

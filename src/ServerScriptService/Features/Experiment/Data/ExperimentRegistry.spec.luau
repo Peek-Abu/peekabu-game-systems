@@ -2,12 +2,12 @@ local ExperimentRegistry = require(script.Parent.ExperimentRegistry)
 
 return function()
 	describe("ExperimentRegistry", function()
-		it("lists the eleven launch experiments in board order", function()
+		it("lists the nine launch experiments in board order", function()
 			local ids = ExperimentRegistry.ids()
-			expect(#ids).to.equal(11)
-			expect(ids[1]).to.equal("exp-rehire")
-			expect(ids[10]).to.equal("exp-timecard")
-			expect(ids[11]).to.equal("exp-locker")
+			expect(#ids).to.equal(9)
+			expect(ids[1]).to.equal("exp-tutorial")
+			expect(ids[8]).to.equal("exp-timecard")
+			expect(ids[9]).to.equal("exp-locker")
 		end)
 
 		it("gives every experiment a unique id, a unit and two distinct short variants", function()
@@ -26,13 +26,18 @@ return function()
 			end
 		end)
 
-		it("assigns the crew-shared mechanics per crew and the rest per player", function()
-			expect(ExperimentRegistry.get("exp-clean").unit).to.equal("crew")
-			expect(ExperimentRegistry.get("exp-rehire").unit).to.equal("crew")
+		it("assigns the crew-shared mechanic per crew and the rest per player", function()
 			expect(ExperimentRegistry.get("exp-friendskip").unit).to.equal("crew")
 			expect(ExperimentRegistry.get("exp-stars").unit).to.equal("player")
-			expect(ExperimentRegistry.get("exp-clean").variants[1]).to.equal("1.5s")
-			expect(ExperimentRegistry.get("exp-rehire").variants[2]).to.equal("10s")
+			local crewCount = 0
+			for _, def in ExperimentRegistry.list() do
+				if def.unit == "crew" then
+					crewCount += 1
+				end
+			end
+			expect(crewCount).to.equal(1)
+			expect(ExperimentRegistry.get("exp-friendskip").variants[1]).to.equal("skip")
+			expect(ExperimentRegistry.get("exp-friendskip").variants[2]).to.equal("forced")
 		end)
 
 		it("is nil for an unknown id", function()
