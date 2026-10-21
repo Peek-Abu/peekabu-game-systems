@@ -122,7 +122,8 @@ export type Rank = {
 
 --[=[
 	The account-wide first-seen stamp (AnalyticsFirstSeenSystem; server-only, never synced): the unix time the
-	account was first seen with tracking on. 0 = not stamped yet; 1 = an account from before tracking.
+	account was first seen with tracking on. 0 = not stamped yet (a new account, or one that last played before
+	this shipped: both stamp now on the next load).
 ]=]
 export type FirstSeen = {
 	at: number,

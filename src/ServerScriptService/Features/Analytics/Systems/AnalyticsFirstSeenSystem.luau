@@ -2,8 +2,9 @@
 --[=[
 	AnalyticsFirstSeenSystem: the saved, server-only `firstSeen` account slice behind "new vs returning"
 	analytics. When a profile loads, an unstamped account (`at == 0`) is stamped with the current time and
-	the player is remembered as new for this session; any stamped account (including `BEFORE_TRACKING`,
-	what the v3 migration writes on pre-tracking accounts) is returning.
+	the player is remembered as new for this session; any stamped account is returning. There is no migration:
+	the profile's Reconcile backfills `{ at = 0 }` into every existing profile, so an account that last played
+	before this shipped reads as new once (its first session after the update), then keeps its stamp.
 
 	The slice registers at module load. AnalyticsServiceServer requires this module at the top, and
 	ServerHandler requires every `*ServiceServer` before it inits PlayerDataServiceServer, so the slice is in
@@ -23,8 +24,6 @@ local PlayerDataService = require(ServerScriptService.Features.PlayerData.Player
 local PlayerDataSliceSystem = require(ServerScriptService.Features.PlayerData.Systems.PlayerDataSliceSystem)
 
 local log = Logger.new("AnalyticsFirstSeenSystem")
-
-local BEFORE_TRACKING = 1
 
 local newThisSession: { [number]: boolean } = {}
 local stampedAt: { [number]: number } = {}
@@ -48,7 +47,6 @@ local firstSeenSlice = PlayerDataSliceSystem.registerAccount("firstSeen", { at =
 end, validate)
 
 local AnalyticsFirstSeenSystem = {
-	BEFORE_TRACKING = BEFORE_TRACKING,
 	validate = validate,
 }
 
