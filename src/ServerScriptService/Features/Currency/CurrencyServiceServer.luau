@@ -224,27 +224,28 @@ local CurrencyServiceServer: CurrencyServiceServer = {
 	]=]
 	grant = function(_self, userId, amounts)
 		Guard.userId(userId)
-		local adds: { [CurrencyConstants.CurrencyType]: number } = {}
-		local any = false
-		for currencyType, amount in amounts do
-			assert(CurrencyConstants.isValidCurrencyType(currencyType), `invalid currency type: "{currencyType}"`)
+		local adds: { { currency: CurrencyConstants.CurrencyType, amount: number } } = {}
+		for key, amount in amounts do
+			assert(CurrencyConstants.isValidCurrencyType(key), `invalid currency type: "{key}"`)
 			Guard.nonNegativeAmount(amount)
-			if amount > 0 then
-				adds[currencyType] = amount
-				any = true
+		end
+		for _, currencyType: CurrencyConstants.CurrencyType in CurrencyConstants.getValidCurrencies() do
+			local amount = amounts[currencyType]
+			if amount ~= nil and amount > 0 then
+				table.insert(adds, { currency = currencyType, amount = amount })
 			end
 		end
-		if not any then
+		if #adds == 0 then
 			return false
 		end
 
 		local changed = currencySlice.mutate(userId, function(currency)
 			local moved = false
-			for currencyType, amount in adds do
-				local oldAmount = currency[currencyType] or 0
-				local newAmount = math.min(oldAmount + amount, CurrencyConstants.MAX_CURRENCY)
+			for _, add in adds do
+				local oldAmount = currency[add.currency] or 0
+				local newAmount = math.min(oldAmount + add.amount, CurrencyConstants.MAX_CURRENCY)
 				if newAmount ~= oldAmount then
-					currency[currencyType] = newAmount
+					currency[add.currency] = newAmount
 					moved = true
 				end
 			end
