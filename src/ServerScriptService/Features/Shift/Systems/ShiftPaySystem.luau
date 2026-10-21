@@ -57,11 +57,11 @@ function ShiftPaySystem.start(source: Source, pay: Pay): () -> ()
 		if state.phase ~= "results" or paid[state.shift] then
 			return
 		end
-		paid[state.shift] = true
 		local results = source.results()
 		if results == nil then
 			return
 		end
+		paid[state.shift] = true
 		local amounts = ShiftPaySystem.amounts(results)
 		local total = 0
 		for _, amount in amounts do
@@ -74,10 +74,13 @@ function ShiftPaySystem.start(source: Source, pay: Pay): () -> ()
 		for _, userId in source.present() do
 			if not seen[userId] then
 				seen[userId] = true
-				xpcall(pay, function(err: unknown): unknown
+				local ok, granted = xpcall(pay, function(err: unknown): unknown
 					log:error(`pay for {userId} in shift {state.shift} failed: {err}`)
 					return err
 				end, userId, table.clone(amounts))
+				if ok and not granted then
+					log:warn(`pay for {userId} in shift {state.shift} was not credited (no profile, or nothing to add)`)
+				end
 			end
 		end
 	end)
