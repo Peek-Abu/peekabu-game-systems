@@ -17,7 +17,7 @@
 	info), each player's platform (the `Platform` packet, parsed by ShiftPlatformRules, first report wins) and the shift
 	state the watch hands it. `banked` (ShiftBankingSystem) sends cargo_banked per item and closes the loader's
 	optional-salvage attempts; `closeAttempts` sends optional_salvage_attempted for each closed attempt. `banked` also
-	fires `loaded` (the loader, the items and salvage items in the Load, and whether the shift is in overtime), which
+	fires `loaded` (the loader, the items and salvage items in the Load, and how many are overtime loot), which
 	ShiftReviewSystem counts into the roster for the company rank's award.
 
 	Spec-exempt shell (AnalyticsService, Players, ByteNet, a Workspace attribute); payloads, tokens, variant, platform
@@ -69,8 +69,8 @@ local stoppers: { () -> () } = {}
 -- The shift's crew (set by `start`); before that, Round's participants.
 local crewSource: (() -> { Player })? = nil
 
--- Every accepted Load: the loader, its item count, its salvage count, and whether the shift was in overtime.
-local loaded: SignalTyped.Signal<Player, number, number, boolean> = SignalTyped.new()
+-- Every accepted Load: the loader, its item count, its salvage count, and how many of its items are overtime loot.
+local loaded: SignalTyped.Signal<Player, number, number, number> = SignalTyped.new()
 
 local ShiftAnalyticsSystem = {}
 
@@ -241,18 +241,22 @@ end
 	A Load (ShiftBankingSystem, after the counters moved): cargo_banked per item (salvage at the credited value), then
 	the loader's attempts for the banked salvage kinds close as banked.
 ]=]
-function ShiftAnalyticsSystem.banked(player: Player, deposit: CargoTypes.Deposit, multiplier: number)
+function ShiftAnalyticsSystem.banked(player: Player, deposit: CargoTypes.Deposit)
 	local tag = ShiftAnalyticsSystem.quotaTag()
 	local salvageKinds: { string } = {}
-	local state = shiftState
 	local salvageCount = 0
+	local overtimeCount = 0
 	for _, item in deposit.items do
 		if item.category == "salvage" then
 			salvageCount += 1
+			if item.overtime == true then
+				overtimeCount += 1
+			end
 		end
 	end
-	loaded:Fire(player, #deposit.items, salvageCount, state ~= nil and state.stage == "overtime")
+	loaded:Fire(player, #deposit.items, salvageCount, overtimeCount)
 	for _, item in deposit.items do
+		local multiplier = if item.overtime == true then ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER else 1
 		ShiftAnalyticsSystem.emit("cargo_banked", player, {
 			target = item.kind,
 			outcome = tag,

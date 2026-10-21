@@ -103,6 +103,9 @@ return table.freeze({
 	TOP_UP_MAX = 6,
 	-- Seeds tried (seed, seed + 1, ...) before a roll that misses a guarantee is an error.
 	ROLL_ATTEMPTS = 5,
+	-- The overtime batch (Shift spec §3): this share of the shift's valuables, rounded, at least 1, spawned once when
+	-- overtime begins on the spots the first roll left free. Only these items pay the overtime multiplier.
+	OVERTIME_LOOT_SHARE = 0.5,
 	DESK_SIZE = Vector3.new(5, 3, 3) * HIDE_FURNITURE_SCALE,
 	LOCKER_SIZE = Vector3.new(2.5, 7, 2.5),
 	-- The truck bed is a platform this tall; the cab sits behind it.

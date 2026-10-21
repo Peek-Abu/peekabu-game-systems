@@ -57,7 +57,7 @@ function ShiftNoticeUtils.notices(before: ShiftTypes.ShiftState, after: ShiftTyp
 		table.insert(
 			list,
 			note(
-				`Site activity has settled for now. Clock out at the truck to leave, or start overtime there: assets ×{multiplier}, more activity.`
+				`Site activity has settled for now. Clock out at the truck to leave, or start overtime there: new shimmering loot ×{multiplier}, more activity.`
 			)
 		)
 	end
@@ -69,13 +69,16 @@ function ShiftNoticeUtils.notices(before: ShiftTypes.ShiftState, after: ShiftTyp
 		table.insert(
 			list,
 			note(
-				`Overtime in {clock(ShiftConstants.WARNING_SECONDS)}: assets ×{multiplier}. Bank your cargo and regroup.`
+				`Overtime in {clock(ShiftConstants.WARNING_SECONDS)}: new loot appears, ×{multiplier}. Bank your cargo and regroup.`
 			)
 		)
 	end
 	if after.stage == "overtime" and before.stage ~= "overtime" then
 		table.insert(list, stamp("OVERTIME"))
-		table.insert(list, note(`Assets ×{multiplier} until the clock runs out. Site activity is heavier now.`))
+		table.insert(
+			list,
+			note(`Shimmering loot ×{multiplier} until the clock runs out. Site activity is heavier now.`)
+		)
 	elseif after.tier > before.tier and after.stage ~= "break" and after.stage ~= "warning" and not breakOver then
 		table.insert(list, note("Site activity is picking up…"))
 	end

@@ -60,6 +60,15 @@ function OfficeSpawnRules.surfaceKindsFor(itemId: string): { string }
 end
 
 --[=[
+	How many valuables the overtime batch spawns: OVERTIME_LOOT_SHARE of the shift's `normalValuables`, rounded, at
+	least 1, capped by the `freeSpots` the first roll left. No free spot gives 0 (never an error).
+]=]
+function OfficeSpawnRules.overtimeBatchSize(normalValuables: number, freeSpots: number): number
+	local wanted = math.max(1, math.floor(OfficeConstants.OVERTIME_LOOT_SHARE * normalValuables + 0.5))
+	return math.max(0, math.min(wanted, freeSpots))
+end
+
+--[=[
 	Ok when `plan` meets every guarantee for the contract `quota` (Gloom); otherwise the first broken one.
 ]=]
 function OfficeSpawnRules.check(plan: SpawnPlan, layout: OfficeTypes.Layout, quota: number): (boolean, string?)

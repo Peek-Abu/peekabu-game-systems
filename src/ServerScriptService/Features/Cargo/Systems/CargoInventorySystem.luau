@@ -191,6 +191,7 @@ function CargoInventorySystem.new(deps: Deps): CargoInventorySystem
 			appraisal = entry.appraisal,
 			artKit = if entry.visual ~= nil then entry.visual.kitId else nil,
 			source = "hotbar",
+			overtime = entry.overtime,
 		})
 		handsItem[userId] = part
 		task.spawn(function()

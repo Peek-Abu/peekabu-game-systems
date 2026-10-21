@@ -430,6 +430,91 @@ function OfficeSpawnUtils.roll(
 end
 
 --[=[
+	The spots the first roll left free for the overtime batch: item markers and furniture tops that no item of `plan`
+	stands on, in layout order. (Piles, desks and lockers are never overtime spots.)
+]=]
+function OfficeSpawnUtils.freeSpots(layout: OfficeTypes.Layout, plan: OfficeTypes.SpawnPlan): { Marker }
+	local used: { [string]: boolean } = {}
+	for _, item in plan.items do
+		used[item.marker] = true
+	end
+	local list: { Marker } = {}
+	for _, marker in layout.markers do
+		if not used[marker.id] and (marker.kind == "item" or OfficeLayoutUtils.surfaceTopY(marker.kind) ~= nil) then
+			table.insert(list, marker)
+		end
+	end
+	return list
+end
+
+--[=[
+	Rolls the overtime batch onto the spots the first `plan` left free (`freeSpots`): OfficeSpawnRules.overtimeBatchSize
+	valuables, each an open salvage kind (same weights and surface rules as the shift's open valuables), appraised for
+	its spot's depth. Deterministic for a given `rng`. Empty when no spot is free.
+]=]
+function OfficeSpawnUtils.rollOvertime(
+	layout: OfficeTypes.Layout,
+	plan: OfficeTypes.SpawnPlan,
+	rng: Random
+): { OfficeTypes.ItemPlan }
+	local free = OfficeSpawnUtils.freeSpots(layout, plan)
+	local count = OfficeSpawnRules.overtimeBatchSize(OfficeSpawnUtils.salvageCount(plan), #free)
+	local batch: { OfficeTypes.ItemPlan } = {}
+	if count == 0 then
+		return batch
+	end
+	local depths = OfficeLayoutUtils.depths(layout)
+	local pool = shuffled(free, rng)
+	local function takeSurface(itemId: string): Marker?
+		for _, wanted in OfficeSpawnRules.surfaceKindsFor(itemId) do
+			for index, marker in pool do
+				if marker.kind == wanted then
+					return table.remove(pool, index)
+				end
+			end
+		end
+		return nil
+	end
+	local function hasSurface(itemId: string): boolean
+		for _, wanted in OfficeSpawnRules.surfaceKindsFor(itemId) do
+			for _, marker in pool do
+				if marker.kind == wanted then
+					return true
+				end
+			end
+		end
+		return false
+	end
+	local function takeFloor(): Marker?
+		for index, marker in pool do
+			if marker.kind == "item" then
+				return table.remove(pool, index)
+			end
+		end
+		return nil
+	end
+	for _ = 1, count do
+		local kind = pickWeighted(function(def)
+			return if OfficeSpawnRules.requiresSurface(def.id) and not hasSurface(def.id) then 0 else salvageWeight(def)
+		end, rng)
+		local def = if kind ~= nil then CargoRegistry.get(kind) else nil
+		if kind == nil or def == nil then
+			break
+		end
+		local spot = if #surfaceFor(def) > 0 then takeSurface(kind) else nil
+		if spot == nil then
+			spot = takeFloor()
+		end
+		if spot == nil then
+			break
+		end
+		local appraisal = if def.grimy then CargoAppraisalFormulas.roll(def, depths[spot.room] or 0, rng) else nil
+		table.insert(batch, { marker = spot.id, kind = kind, appraisal = appraisal })
+	end
+	return batch
+end
+
+--[=[
 	How many salvage items a plan offers: on the open floor, hidden under piles and in desks or lockers (the review's
 	"salvage found N of M"). The greed target is placed through one of those lists, so it is counted once.
 ]=]

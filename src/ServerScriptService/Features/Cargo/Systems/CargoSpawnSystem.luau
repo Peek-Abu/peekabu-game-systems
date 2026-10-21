@@ -197,6 +197,9 @@ function CargoSpawnSystem.new(visuals: ArtVisualSystem.Controller?): CargoSpawnS
 				elseif hidden then "pile"
 				else "open"
 			part:SetAttribute(CargoConstants.SOURCE_ATTRIBUTE, source)
+			if options ~= nil and options.overtime == true then
+				part:SetAttribute(CargoConstants.OVERTIME_ATTRIBUTE, true)
+			end
 			if hidden then
 				part:SetAttribute(CargoConstants.HIDDEN_ATTRIBUTE, true)
 				part:SetAttribute(InteractionConstants.ENABLED_ATTRIBUTE, false)

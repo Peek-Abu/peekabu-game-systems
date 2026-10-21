@@ -50,7 +50,7 @@ export type ShiftFacts = {
 	-- On the shift's review (the crew that took part).
 	worked: boolean,
 	quotaMet: boolean,
-	-- Cargo items this player banked, and salvage items they banked during overtime.
+	-- Cargo items this player banked, and overtime loot items they banked.
 	items: number,
 	overtimeSalvage: number,
 	-- Still with the crew at the end and never caught.

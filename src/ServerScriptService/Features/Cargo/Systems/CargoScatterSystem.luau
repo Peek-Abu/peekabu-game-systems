@@ -110,6 +110,7 @@ function CargoScatterSystem.new(deps: Deps): CargoScatterSystem
 					appraisal = entry.appraisal,
 					artKit = if entry.visual ~= nil then entry.visual.kitId else nil,
 					source = "scatter",
+					overtime = entry.overtime,
 				})
 			end
 			return #entries

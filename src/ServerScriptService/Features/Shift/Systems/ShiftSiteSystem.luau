@@ -3,7 +3,7 @@
 	ShiftSiteSystem: the office as one run's site (Cleanup Crew spec §6.2, §6.5). It picks a run's A/B variant
 	(ShiftAnalyticsSystem.pickVariant) and the quota for the crew (ShiftQuotaFormulas), sets Round's clearance target,
 	rebuilds and spawns the office for it (OfficeServiceServer:beginShift, a fresh seed each run) and remembers how much
-	salvage the roll offered (the review's "salvage found N of M"). `clear` resets everything a run made (Office,
+	salvage the roll offered, and spawns the overtime batch when overtime begins (`startOvertime`) (the review's "salvage found N of M"). `clear` resets everything a run made (Office,
 	Vacuum, Cargo), each step guarded so a throwing reset never stops the next shift, and forgets a prepared run.
 
 	- `prepare` is the transit's step, under the load screen, before the crew is placed; `take` hands its choice to the
@@ -41,6 +41,8 @@ export type Choice = {
 
 export type ShiftSiteSystem = {
 	clear: (self: ShiftSiteSystem) -> (),
+	-- Overtime began: Office spawns the shift's overtime batch (once; OfficeServiceServer:spawnOvertimeLoot).
+	startOvertime: (self: ShiftSiteSystem) -> (),
 	choose: (self: ShiftSiteSystem, shift: number, crewSize: number) -> Choice,
 	prepare: (self: ShiftSiteSystem, shift: number, crewSize: number) -> Choice,
 	build: (self: ShiftSiteSystem, choice: Choice, players: { Player }) -> (),
@@ -86,6 +88,12 @@ function ShiftSiteSystem.new(): ShiftSiteSystem
 			end)
 			guarded("cargo reset", function()
 				CargoServiceServer:reset()
+			end)
+		end,
+
+		startOvertime = function(_self)
+			guarded("overtime loot", function()
+				OfficeServiceServer:spawnOvertimeLoot()
 			end)
 		end,
 

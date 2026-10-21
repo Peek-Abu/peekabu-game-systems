@@ -601,4 +601,50 @@ return function()
 			expect(rewards(a)).to.equal(rewards(b))
 		end
 	end)
+
+	describe("rollOvertime", function()
+		it("spawns the batch size on spots the first roll left free, never reusing a marker", function()
+			for seed = 1, 30 do
+				local plan = roll(seed)
+				local free = OfficeSpawnUtils.freeSpots(LAYOUT, plan)
+				local batch = OfficeSpawnUtils.rollOvertime(LAYOUT, plan, Random.new(seed))
+				local expected = OfficeSpawnRules.overtimeBatchSize(OfficeSpawnUtils.salvageCount(plan), #free)
+				expect(#batch <= expected).to.equal(true)
+				expect(#batch >= math.min(1, expected)).to.equal(true)
+				local used = {}
+				for _, item in plan.items do
+					used[item.marker] = true
+				end
+				for _, item in batch do
+					expect(used[item.marker]).to.equal(nil)
+					used[item.marker] = true
+					local def = CargoRegistry.get(item.kind)
+					expect(def.category).to.equal("salvage")
+					expect(item.appraisal ~= nil).to.equal(def.grimy)
+				end
+			end
+		end)
+		it("is deterministic for a seed", function()
+			local plan = roll(7)
+			local a = OfficeSpawnUtils.rollOvertime(LAYOUT, plan, Random.new(3))
+			local b = OfficeSpawnUtils.rollOvertime(LAYOUT, plan, Random.new(3))
+			expect(#a).to.equal(#b)
+			for index, item in a do
+				expect(item.marker).to.equal(b[index].marker)
+				expect(item.kind).to.equal(b[index].kind)
+			end
+		end)
+		it("spawns nothing, without error, when no spot is free", function()
+			local plan = roll(5)
+			local layout = table.clone(LAYOUT)
+			layout.markers = {}
+			for _, marker in LAYOUT.markers do
+				if marker.kind ~= "item" and OfficeLayoutUtils.surfaceTopY(marker.kind) == nil then
+					table.insert(layout.markers, marker)
+				end
+			end
+			expect(#OfficeSpawnUtils.freeSpots(layout, plan)).to.equal(0)
+			expect(#OfficeSpawnUtils.rollOvertime(layout, plan, Random.new(1))).to.equal(0)
+		end)
+	end)
 end

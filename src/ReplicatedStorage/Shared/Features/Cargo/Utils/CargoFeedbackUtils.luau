@@ -85,7 +85,8 @@ function CargoFeedbackUtils.entryOf(object: Instance): CargoTypes.CargoEntry?
 			sealed = if object:GetAttribute(CargoConstants.SEALED_ATTRIBUTE) == true then true else nil,
 		}
 	end
-	return { kind = kind, value = value, visual = visual, appraisal = appraisal }
+	local overtime = if object:GetAttribute(CargoConstants.OVERTIME_ATTRIBUTE) == true then true else nil
+	return { kind = kind, value = value, visual = visual, appraisal = appraisal, overtime = overtime }
 end
 
 function CargoFeedbackUtils.floaters(clearance: number, bonus: number): { Floater }

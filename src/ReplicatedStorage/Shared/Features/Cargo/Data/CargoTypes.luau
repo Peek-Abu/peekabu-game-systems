@@ -75,6 +75,8 @@ export type CargoEntry = {
 	visual: VisualIdentity?,
 	-- A valuable's grime and appraisal (nil for trash).
 	appraisal: Appraisal?,
+	-- True for the overtime batch's loot (CargoConstants.OVERTIME_ATTRIBUTE); it keeps the flag in a pocket.
+	overtime: boolean?,
 }
 
 export type DepositItem = {
@@ -83,6 +85,8 @@ export type DepositItem = {
 	value: number,
 	visual: VisualIdentity?,
 	appraisal: Appraisal?,
+	-- True for overtime loot: the only items that pay the overtime multiplier (ShiftQuotaFormulas.pay).
+	overtime: boolean?,
 }
 
 -- What one Load is worth: trash adds to clearance, salvage to bonus (before any overtime multiplier).
@@ -112,6 +116,8 @@ export type SpawnOptions = {
 	-- "hotbar" (drawn from an item slot into the hands);
 	-- absent = "pile" when hidden, else "open".
 	source: string?,
+	-- Marks the item as overtime loot (CargoConstants.OVERTIME_ATTRIBUTE).
+	overtime: boolean?,
 }
 
 -- What pressing E on a cargo item does (CargoInventoryRules.pickUpPlan): a small item goes into a free item slot

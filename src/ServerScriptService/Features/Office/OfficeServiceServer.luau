@@ -82,6 +82,8 @@ local dressing = OfficeSearchedDressingSystem.new()
 -- pile â†’ the item hidden under it, for this shift.
 local hidden: { [BasePart]: BasePart } = {}
 local lastPlan: OfficeTypes.SpawnPlan? = nil
+-- Whether this shift's overtime batch has spawned (one batch per shift; cleared by beginShift and reset).
+local overtimeSpawned = false
 local stoppers: { () -> () } = {}
 -- The seed of the layout standing now (nil: the boot layout).
 local layoutSeed: number? = nil
@@ -205,6 +207,7 @@ export type OfficeServiceServer = {
 		self: OfficeServiceServer,
 		options: { seed: number, variant: string, quota: number }
 	) -> OfficeTypes.SpawnPlan,
+	spawnOvertimeLoot: (self: OfficeServiceServer) -> number,
 	reset: (self: OfficeServiceServer) -> (),
 	spawnCFrame: (self: OfficeServiceServer, index: number) -> CFrame,
 	container: (self: OfficeServiceServer) -> Folder?,
@@ -327,9 +330,41 @@ local OfficeServiceServer: OfficeServiceServer = {
 			end
 		end
 		lastPlan = plan
+		overtimeSpawned = false
 		log:info(`shift spawns: {#plan.piles} piles, {#plan.items} items, worth {plan.value} clean`)
 		ready:Fire(folder)
 		return plan
+	end,
+
+	--[=[
+		Spawns the shift's overtime batch (once per shift; Shift calls it when the stage turns to "overtime", since
+		Shift already depends on Office): OfficeSpawnUtils.rollOvertime on the spots the first roll left free, each
+		item placed through Cargo with `overtime = true`, so only it pays the overtime multiplier. Returns how many
+		spawned (0 when a batch already spawned, no shift stands, or no spot is free).
+	]=]
+	spawnOvertimeLoot = function(_self)
+		local plan = lastPlan
+		local folder = shiftFolder
+		if overtimeSpawned or plan == nil or folder == nil then
+			return 0
+		end
+		overtimeSpawned = true
+		local batch = OfficeSpawnUtils.rollOvertime(LAYOUT, plan, Random.new())
+		local spawned = 0
+		for _, itemPlan in batch do
+			local marker = markerById[itemPlan.marker]
+			if marker ~= nil then
+				CargoServiceServer:spawnItem(
+					itemPlan.kind,
+					spotFrame(marker),
+					folder,
+					{ appraisal = fresh(itemPlan.appraisal), overtime = true }
+				)
+				spawned += 1
+			end
+		end
+		log:info(`overtime loot: {spawned} items`)
+		return spawned
 	end,
 
 	--[=[
@@ -356,6 +391,7 @@ local OfficeServiceServer: OfficeServiceServer = {
 		shiftFolder = nil
 		table.clear(hidden)
 		lastPlan = nil
+		overtimeSpawned = false
 		dressing.clear()
 	end,
 

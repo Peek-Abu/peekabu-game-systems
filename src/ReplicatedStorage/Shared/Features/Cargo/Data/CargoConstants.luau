@@ -85,6 +85,8 @@ return table.freeze({
 	HIDDEN_ATTRIBUTE = "CargoHidden",
 	-- Where an item came from, for analytics: "open", "pile" (uncovered by vacuuming), "desk" (searched), "scatter".
 	SOURCE_ATTRIBUTE = "CargoSource",
+	-- Set on the shift's overtime batch (Office, Shift spec §3): pays x1.5 when banked, and shimmers on the client.
+	OVERTIME_ATTRIBUTE = "OvertimeLoot",
 	LABEL_NAME = "CargoLabel",
 	-- Interaction kinds Cargo registers (the truck bed and the desks / lockers carry them).
 	LOAD_KIND = "cargo-load",

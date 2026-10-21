@@ -29,7 +29,7 @@ local RankConstants = {
 		-- Per cargo item the player banked themselves, up to `itemCap` items.
 		perItem = 1,
 		itemCap = 10,
-		-- Once, when the player banked any salvage during overtime.
+		-- Once, when the player banked any overtime loot (the shimmering batch Office spawns when overtime begins).
 		overtimeSalvage = 5,
 		-- With the crew at the end and never caught.
 		extracted = 5,
@@ -42,7 +42,7 @@ local RankConstants = {
 		shiftWorked = "Shift",
 		quotaMet = "Contract",
 		items = "Cargo",
-		overtimeSalvage = "Overtime salvage",
+		overtimeSalvage = "Overtime loot",
 		extracted = "Clocked out",
 		crewExtracted = "Whole crew out",
 	}),

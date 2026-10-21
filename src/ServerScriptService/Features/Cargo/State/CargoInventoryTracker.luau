@@ -45,6 +45,7 @@ local function clone(entry: CargoEntry): CargoEntry
 		value = entry.value,
 		visual = if entry.visual ~= nil then table.clone(entry.visual) else nil,
 		appraisal = if entry.appraisal ~= nil then table.clone(entry.appraisal) else nil,
+		overtime = entry.overtime,
 	}
 end
 

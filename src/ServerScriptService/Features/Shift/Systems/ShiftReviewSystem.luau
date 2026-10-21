@@ -157,13 +157,13 @@ function ShiftReviewSystem.start(roster: ShiftRosterTracker.ShiftRosterTracker, 
 	end)
 
 	local loads = ShiftAnalyticsSystem.loaded:Connect(
-		function(player: Player, items: number, salvage: number, overtime: boolean)
+		function(player: Player, items: number, _salvage: number, overtimeLoot: number)
 			if not running() or player.Parent == nil then
 				return
 			end
 			roster:record(player.UserId, player.DisplayName, {
 				items = items,
-				overtimeSalvage = if overtime then salvage else 0,
+				overtimeSalvage = overtimeLoot,
 			})
 		end
 	)

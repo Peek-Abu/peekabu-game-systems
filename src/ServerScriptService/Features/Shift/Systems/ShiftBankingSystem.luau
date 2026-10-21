@@ -3,13 +3,13 @@
 	ShiftBankingSystem: the shift's banking handler for Cargo (Cleanup Crew spec §4 "Banking", §6.4). Banking is the
 	pay, never the job (docs/superpowers/specs/2026-10-16-cleanup-crew-gloom-gleam-economy-design.md §3.3): a Load adds
 	no Gloom to the contract (Round's `clearance`, which only piles and cleaning raise, ShiftGloomSystem); its
-	valuables, times the current multiplier (×1.5 in overtime), add their Gleam to `bonus` (ShiftQuotaFormulas.pay);
+	valuables add their Gleam to `bonus` (ShiftQuotaFormulas.pay: only overtime loot, flagged per item, pays ×1.5);
 	and the banker's run goes in the roster. Every refusal is decided before the first counter write; once a counter moved it
 	returns true whatever else fails, or Cargo would release the claim and the same items would bank twice. It
-	also returns the Gleam it credited (after the multiplier), which Cargo's `Banked` floater shows.
+	also returns the Gleam it credited (overtime loot's ×1.5 included), which Cargo's `Banked` floater shows.
 
 	Moved out of ShiftServiceServer in M2 (the service was at the 400-line cap). Spec-exempt shell (Round); the
-	multiplier and the quota are the specced ShiftPhaseRules. Each accepted Load is reported to ShiftAnalyticsSystem
+	pay is the specced ShiftQuotaFormulas and the quota the specced ShiftPhaseRules. Each accepted Load is reported to ShiftAnalyticsSystem
 	(cargo_banked, optional-salvage attempts).
 
 	@class ShiftBankingSystem
@@ -32,8 +32,6 @@ export type Deps = {
 	isOpen: () -> boolean,
 	-- Current authoritative crew eligibility, shared by explicit and automatic cargo loads.
 	canBank: (Player) -> boolean,
-	-- What salvage is multiplied by right now (ShiftPhaseRules.salvageMultiplier).
-	multiplier: () -> number,
 	-- After the counters moved: republish (and re-check the contract; banking alone never meets it).
 	afterBank: () -> (),
 }
@@ -54,8 +52,7 @@ function ShiftBankingSystem.new(deps: Deps): CargoTypes.BankHandler
 		if not deps.isOpen() or not deps.canBank(player) then
 			return false, nil
 		end
-		local multiplier = deps.multiplier()
-		local bonus = ShiftQuotaFormulas.pay(deposit, multiplier)
+		local bonus = ShiftQuotaFormulas.pay(deposit)
 		local salvage = 0
 		for _, item in deposit.items do
 			if item.category == "salvage" then
@@ -80,7 +77,7 @@ function ShiftBankingSystem.new(deps: Deps): CargoTypes.BankHandler
 		end
 		-- Analytics (M5): cargo_banked per item, at the quota tag before this Load; closes the loader's attempts.
 		guarded("banking analytics", function()
-			ShiftAnalyticsSystem.banked(player, deposit, multiplier)
+			ShiftAnalyticsSystem.banked(player, deposit)
 		end)
 		-- The quota stamp and the publish, in their own guard: a throwing follow-up never un-banks the deposit.
 		guarded("banking follow-up", deps.afterBank)

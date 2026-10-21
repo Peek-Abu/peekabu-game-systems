@@ -253,22 +253,12 @@ return function()
 		end)
 	end)
 
-	describe("tierAt and salvageMultiplier", function()
+	describe("tierAt", function()
 		it("reads the tier from the shift's start", function()
 			expect(ShiftPhaseRules.tierAt(running(), 150)).to.equal(0)
 			expect(ShiftPhaseRules.tierAt(running(), 230)).to.equal(1)
 			expect(ShiftPhaseRules.tierAt(running(), 350)).to.equal(2)
 			expect(ShiftPhaseRules.tierAt(ShiftPhaseRules.initial(350, "B"), 9999)).to.equal(0)
-		end)
-
-		it("multiplies salvage only in overtime", function()
-			expect(ShiftPhaseRules.salvageMultiplier(running())).to.equal(ShiftConstants.SALVAGE_MULTIPLIER)
-			expect(ShiftPhaseRules.salvageMultiplier(onBreak())).to.equal(ShiftConstants.SALVAGE_MULTIPLIER)
-			expect(ShiftPhaseRules.salvageMultiplier(ShiftPhaseRules.advance(onBreak(), 180))).to.equal(
-				ShiftConstants.SALVAGE_MULTIPLIER
-			)
-			expect(ShiftPhaseRules.salvageMultiplier(warned())).to.equal(ShiftConstants.SALVAGE_MULTIPLIER)
-			expect(ShiftPhaseRules.salvageMultiplier(overtime())).to.equal(1.5)
 		end)
 	end)
 

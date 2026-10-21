@@ -17,7 +17,7 @@ export type Delta = {
 	caught: number?,
 	noise: number?,
 	woke: number?,
-	-- Cargo items banked, and salvage banked during overtime (ShiftReviewSystem, from each accepted Load).
+	-- Cargo items banked, and overtime loot banked (ShiftReviewSystem, from each accepted Load).
 	items: number?,
 	overtimeSalvage: number?,
 }

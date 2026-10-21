@@ -12,6 +12,10 @@
 	  pops paper slips (a jackpot, one with a CargoVariant: a short gold burst with coins) (its sound, `cargoAppraise`
 	  or `cargoJackpot`, is the server's CargoGrimeSystem.announce: one play for the crew near it; its sticky slip and its tag's stamp are the server's and the tag's).
 
+	- the shimmer: an item marked CargoConstants.OVERTIME_ATTRIBUTE (the overtime batch, Shift spec §3) twinkles the
+	  same glint sparkles every SHIMMER_MIN..MAX seconds, for everyone near it, silently, until it is banked or
+	  destroyed (its observer ends, which forgets it);
+
 	The particles are CargoVfxConstants' polished bursts (VfxBurstSystem); with its A/B switch on they are the
 	pre-polish sparks built here. The loot sounds and the hotbar tick are kept warm while this client runs (one
 	silent, never-played Sound each, preloaded), so none starts late. Client-local instances; pending sounds (CargoAssets) are skipped silently.
@@ -49,7 +53,13 @@ export type CargoLootFeedbackState = {
 -- How often the glint schedule is checked.
 local GLINT_CHECK = 0.1
 
+-- How long an overtime item waits between sparkles (seconds): subtle, a twinkle now and then.
+local SHIMMER_MIN = 1.4
+local SHIMMER_MAX = 2.8
+
 local rng = Random.new()
+-- Every overtime item and when it next shimmers (os.clock()).
+local nextShimmer: { [BasePart]: number } = {}
 -- Every pile and when it next glints (os.clock()); only a buried one actually does.
 local nextGlint: { [BasePart]: number } = {}
 local counters = { glints = 0, reveals = 0, appraisals = 0, jackpots = 0 }
@@ -152,6 +162,33 @@ local function glint(pile: BasePart)
 	)
 end
 
+local function shimmer(item: BasePart)
+	local root = localRoot()
+	if root == nil or not CargoLootFeedbackFormulas.glintSeen((root.Position - item.Position).Magnitude) then
+		return
+	end
+	local top = item.Position + Vector3.new(0, item.Size.Y / 2, 0)
+	if VfxBurstSystem.polished() then
+		VfxBurstSystem.play("cargoGlint", top)
+		return
+	end
+	burst(top, CargoConstants.GLINT_COLOR, 2, CargoConstants.GLINT_SIZE, 1.5, CargoConstants.GLINT_LIFETIME)
+end
+
+local function stepShimmers()
+	local now = os.clock()
+	for item, at in nextShimmer do
+		if item.Parent == nil then
+			nextShimmer[item] = nil
+		elseif now >= at then
+			nextShimmer[item] = now + rng:NextNumber(SHIMMER_MIN, SHIMMER_MAX)
+			if item:GetAttribute(CargoConstants.HIDDEN_ATTRIBUTE) ~= true then
+				shimmer(item)
+			end
+		end
+	end
+end
+
 local function stepGlints()
 	local now = os.clock()
 	for pile, at in nextGlint do
@@ -197,6 +234,17 @@ local function observeItem(instance: Instance): (() -> ())?
 		end
 		wasHidden = hidden
 	end)
+	local function syncShimmer()
+		if item:GetAttribute(CargoConstants.OVERTIME_ATTRIBUTE) == true then
+			if nextShimmer[item] == nil then
+				nextShimmer[item] = os.clock() + rng:NextNumber(SHIMMER_MIN, SHIMMER_MAX)
+			end
+		else
+			nextShimmer[item] = nil
+		end
+	end
+	syncShimmer()
+	local overtimeChanged = item:GetAttributeChangedSignal(CargoConstants.OVERTIME_ATTRIBUTE):Connect(syncShimmer)
 	local appraisedChanged = item:GetAttributeChangedSignal(CargoConstants.APPRAISED_AT_ATTRIBUTE):Connect(function()
 		local at = item:GetAttribute(CargoConstants.APPRAISED_AT_ATTRIBUTE)
 		if
@@ -216,6 +264,8 @@ local function observeItem(instance: Instance): (() -> ())?
 	return function()
 		hiddenChanged:Disconnect()
 		appraisedChanged:Disconnect()
+		overtimeChanged:Disconnect()
+		nextShimmer[item] = nil
 	end
 end
 
@@ -235,6 +285,7 @@ function CargoLootFeedbackSystem.start()
 		if elapsed >= GLINT_CHECK then
 			elapsed = 0
 			stepGlints()
+			stepShimmers()
 		end
 	end)
 	table.insert(stoppers, function()
@@ -248,6 +299,7 @@ function CargoLootFeedbackSystem.stop()
 	end
 	table.clear(stoppers)
 	table.clear(nextGlint)
+	table.clear(nextShimmer)
 	for _, sound in warm do
 		sound:Destroy()
 	end

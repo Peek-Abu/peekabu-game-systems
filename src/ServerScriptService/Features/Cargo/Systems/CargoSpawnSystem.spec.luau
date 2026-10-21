@@ -49,6 +49,16 @@ return function()
 			template.Parent = cargo
 		end
 	end
+	describe("overtime loot", function()
+		it("marks only items spawned with the overtime option", function()
+			local spawn = Spawn.new(art)
+			local floor = CFrame.new(30000, 20, 0)
+			local marked = spawn:spawn("monitor", floor, parent, { overtime = true })
+			local plain = spawn:spawn("monitor", floor, parent)
+			expect(marked:GetAttribute(Constants.OVERTIME_ATTRIBUTE)).to.equal(true)
+			expect(plain:GetAttribute(Constants.OVERTIME_ATTRIBUTE)).to.equal(nil)
+		end)
+	end)
 	describe("cargo art authority and fallback", function()
 		it("preserves every registry kind's proxy dimensions, values, tags and floor", function()
 			local spawn = Spawn.new(art)

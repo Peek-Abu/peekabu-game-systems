@@ -148,7 +148,7 @@ function VM.copy(
 				},
 				{
 					title = "04 / CLOCK OFF",
-					body = "Remove the contract's Gloom, then choose: clock out at the truck, or sign the overtime sheet beside it for ×1.5 on valuables and a faster Manager. Every Gloom removed pays 1 Gleam at clock-out. Review your crew's awards and vote for another shift or the depot.",
+					body = "Remove the contract's Gloom, then choose: clock out at the truck, or sign the overtime sheet beside it for new shimmering loot worth ×1.5 and a faster Manager. Every Gloom removed pays 1 Gleam at clock-out. Review your crew's awards and vote for another shift or the depot.",
 				},
 			},
 		}

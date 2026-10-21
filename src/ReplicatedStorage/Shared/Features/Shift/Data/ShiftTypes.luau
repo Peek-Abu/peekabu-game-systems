@@ -85,8 +85,8 @@ export type CrewStats = {
 	woke: number?,
 	dropKind: string?,
 	dropValue: number?,
-	-- The company rank's award (RankFormulas): cargo items this member banked, and salvage items they banked during
-	-- overtime. Absent reads 0.
+	-- The company rank's award (RankFormulas): cargo items this member banked, and the
+	-- overtime loot items they banked. Absent reads 0.
 	items: number?,
 	overtimeSalvage: number?,
 	-- Out of lives this shift (ShiftRosterTracker.markOut); absent reads false.
@@ -100,7 +100,7 @@ export type CrewLine = {
 	piles: number,
 	salvage: number,
 	caught: number,
-	-- Cargo items banked and overtime salvage banked (CrewStats), for the rank award. Absent reads 0.
+	-- Cargo items banked and overtime loot banked (CrewStats; the field keeps its old name), for the rank award. Absent reads 0.
 	items: number?,
 	overtimeSalvage: number?,
 	-- Knocked out for the rest of the shift (CrewStats); absent reads false.

@@ -175,6 +175,10 @@ local function setState(nextState: ShiftTypes.ShiftState)
 	state = nextState
 	changed:Fire(table.clone(nextState))
 	publish()
+	-- Overtime begins: Office spawns its once-per-shift batch of shimmering loot (Shift already depends on Office).
+	if nextState.phase == "running" and nextState.stage == "overtime" and before.stage ~= "overtime" then
+		site:startOvertime()
+	end
 	-- Last, each in its own guard: a throwing toast cannot skip the signal or the publish.
 	for _, notice in ShiftNoticeUtils.notices(before, nextState) do
 		xpcall(function()
@@ -300,7 +304,7 @@ local function onRoundPhase(roundState: RoundTypes.RoundState)
 	end
 end
 
--- Cargo's banking handler (ShiftBankingSystem): assets x1.5 in overtime. Its gate and its re-check are the contract's
+-- Cargo's banking handler (ShiftBankingSystem): overtime loot pays x1.5, everything else x1. Its gate and its re-check are the contract's
 -- too (ShiftGloomSystem, in `start`): meeting the contract starts the break
 -- (its notice comes from setState, ShiftNoticeUtils); returns the bonus credited, which Cargo's Banked floater shows.
 local banking: ShiftBankingSystem.Deps = {
@@ -308,9 +312,6 @@ local banking: ShiftBankingSystem.Deps = {
 	canBank = trip.eligible,
 	isOpen = function(): boolean
 		return state.phase == "running" and not endingRun
-	end,
-	multiplier = function(): number
-		return ShiftPhaseRules.salvageMultiplier(state)
 	end,
 	afterBank = function()
 		local met = ShiftPhaseRules.markQuota(state, RoundServiceServer:teamValue(ShiftConstants.CLEARANCE), now())

@@ -4,8 +4,8 @@
 	2026-10-16-cleanup-crew-gloom-gleam-economy-design.md: "Vacuum it = the job. Bank it = the pay."). The contract
 	("quota" in code) is Gloom to remove, scaled with the crew (ShiftConstants.QUOTA_BY_CREW): a cleared pile counts
 	`pileGloom` the instant it is vacuumed, a valuable only the grime cleaned off it (Cargo's grimeRemoved). Banking adds
-	no Gloom: a Load pays its valuables in Gleam (`pay`, Round's `bonus` counter), times the salvage multiplier (x1.5 in
-	overtime). At clock-out every Gloom removed pays GLEAM_PER_GLOOM Gleam, never multiplied (`breakdown`). Shared: the
+	no Gloom: a Load pays its valuables in Gleam (`pay`, Round's `bonus` counter); only the overtime batch's loot
+	(`overtime` on its deposit line) pays x1.5, whenever it is banked. At clock-out every Gloom removed pays GLEAM_PER_GLOOM Gleam, never multiplied (`breakdown`). Shared: the
 	run sets its contract with it, the depot posts the contract for a truck's crew, and the review splits the pay. Pure.
 
 	@class ShiftQuotaFormulas
@@ -46,11 +46,18 @@ function ShiftQuotaFormulas.quota(crew: number): number
 end
 
 --[=[
-	The Gleam `deposit` pays when banked: its valuables x `multiplier`, rounded. Its trash pays nothing, and no Load
-	adds Gloom.
+	The Gleam `deposit` pays when banked: its valuables, with each overtime item (`overtime = true`, the overtime
+	batch) paying OVERTIME_SALVAGE_MULTIPLIER times its value and every other item x1, rounded once on the total (so
+	10 + 10 with one overtime item is 25). Its trash pays nothing, and no Load adds Gloom.
 ]=]
-function ShiftQuotaFormulas.pay(deposit: CargoTypes.Deposit, multiplier: number): number
-	return whole(deposit.bonus * multiplier)
+function ShiftQuotaFormulas.pay(deposit: CargoTypes.Deposit): number
+	local extra = 0
+	for _, item in deposit.items do
+		if item.overtime == true and item.category ~= "trash" then
+			extra += math.max(0, item.value) * (ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER - 1)
+		end
+	end
+	return whole(deposit.bonus + extra)
 end
 
 --[=[

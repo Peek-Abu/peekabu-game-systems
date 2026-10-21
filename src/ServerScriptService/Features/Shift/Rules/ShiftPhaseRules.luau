@@ -222,16 +222,6 @@ function ShiftPhaseRules.tierAt(state: ShiftState, now: number): number
 end
 
 --[=[
-	What salvage is multiplied by when banked now: ×1.5 in overtime, else ×1.
-]=]
-function ShiftPhaseRules.salvageMultiplier(state: ShiftState): number
-	if state.stage == "overtime" then
-		return ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER
-	end
-	return ShiftConstants.SALVAGE_MULTIPLIER
-end
-
---[=[
 	What to do on this clock step: start a countdown (someone is waiting in the lobby), end the shift (the
 	truck left: ShiftClockOutRules.countdownOver), resolve the vote (its time is up), or nothing.
 ]=]

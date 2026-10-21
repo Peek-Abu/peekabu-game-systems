@@ -85,6 +85,17 @@ return function()
 			expect(deposit.items[2].appraisal).to.equal(nil)
 		end)
 
+		it("carries the overtime flag onto its deposit line, and only when set", function()
+			local deposit = CargoBankRules.deposit(
+				{ kind = "monitor", value = 10, overtime = true },
+				{ { kind = "plaque", value = 10 }, { kind = "plaque", value = 10, overtime = false } },
+				CargoRegistry.get
+			)
+			expect(deposit.items[1].overtime).to.equal(true)
+			expect(deposit.items[2].overtime).to.equal(nil)
+			expect(deposit.items[3].overtime).to.equal(nil)
+		end)
+
 		it("refuses an empty load", function()
 			local deposit, reason = CargoBankRules.deposit(nil, {}, CargoRegistry.get)
 			expect(deposit).to.equal(nil)

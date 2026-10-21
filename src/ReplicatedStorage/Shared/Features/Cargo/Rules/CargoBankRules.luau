@@ -82,6 +82,7 @@ function CargoBankRules.deposit(
 			value = value,
 			visual = entry.visual,
 			appraisal = entry.appraisal,
+			overtime = if entry.overtime == true then true else nil,
 		})
 	end
 	if #deposit.items == 0 then

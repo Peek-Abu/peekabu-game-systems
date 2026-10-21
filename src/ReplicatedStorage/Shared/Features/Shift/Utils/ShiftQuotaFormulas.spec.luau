@@ -28,15 +28,50 @@ return function()
 		local deposit = { clearance = 15, bonus = 81, items = {} }
 
 		it("pays the valuables banked, and banking adds no Gloom", function()
-			expect(ShiftQuotaFormulas.pay(deposit, 1)).to.equal(81)
+			expect(ShiftQuotaFormulas.pay(deposit)).to.equal(81)
 		end)
 
-		it("multiplies the valuables in overtime, rounded", function()
-			expect(ShiftQuotaFormulas.pay(deposit, 1.5)).to.equal(122)
+		it("pays one overtime item x1.5 and the normal one x1", function()
+			local mixed = {
+				clearance = 0,
+				bonus = 20,
+				items = {
+					{ kind = "plaque", category = "salvage", value = 10, overtime = true },
+					{ kind = "plaque", category = "salvage", value = 10, overtime = false },
+				},
+			}
+			expect(ShiftQuotaFormulas.pay(mixed)).to.equal(25)
 		end)
 
-		it("pays nothing for a trash-only load", function()
-			expect(ShiftQuotaFormulas.pay({ clearance = 30, bonus = 0, items = {} }, 1.5)).to.equal(0)
+		it("pays a normal item x1 even for a Load banked in overtime", function()
+			local normal = {
+				clearance = 0,
+				bonus = 10,
+				items = { { kind = "plaque", category = "salvage", value = 10, overtime = false } },
+			}
+			expect(ShiftQuotaFormulas.pay(normal)).to.equal(10)
+		end)
+
+		it("rounds once on the total", function()
+			local odd = {
+				clearance = 0,
+				bonus = 9,
+				items = {
+					{ kind = "plaque", category = "salvage", value = 3, overtime = true },
+					{ kind = "plaque", category = "salvage", value = 3, overtime = true },
+					{ kind = "plaque", category = "salvage", value = 3, overtime = false },
+				},
+			}
+			expect(ShiftQuotaFormulas.pay(odd)).to.equal(14)
+		end)
+
+		it("pays nothing for a trash-only load, overtime flag or not", function()
+			local trash = {
+				clearance = 30,
+				bonus = 0,
+				items = { { kind = "rubbishBag", category = "trash", value = 30, overtime = true } },
+			}
+			expect(ShiftQuotaFormulas.pay(trash)).to.equal(0)
 		end)
 	end)
 
