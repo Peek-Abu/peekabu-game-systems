@@ -44,8 +44,8 @@ return UILabs.CreateReactStory({
 	}
 	local slots: { Slot } = {
 		{ hotkey = "1", icon = "vacuum", caption = "58%", meaning = "grape", selected = true },
-		{ hotkey = "2", icon = "monitor", caption = "36", captionIcon = "gleam", meaning = "gold" },
-		{ hotkey = "3", icon = "fishtank", caption = "120", captionIcon = "gleam", meaning = "gold" },
+		{ hotkey = "2", icon = "monitor", caption = "36", captionIcon = "credits", meaning = "gold" },
+		{ hotkey = "3", icon = "fishtank", caption = "120", captionIcon = "credits", meaning = "gold" },
 		{ hotkey = "4" },
 		{ hotkey = "5", icon = "stapler", disabled = true },
 	}

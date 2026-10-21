@@ -106,7 +106,7 @@ local function CargoPriceTag(props: CargoPriceTagProps): React.ReactNode
 		}),
 		-- The coin render breaks the tag's top-right corner, over the price.
 		coin = e(ToonIcon, {
-			icon = "gleam",
+			icon = "credits",
 			anchor = Vector2.new(0.5, 0.5),
 			position = UDim2.fromOffset(BODY.X - 6, 10),
 			size = UDim2.fromOffset(COIN, COIN),

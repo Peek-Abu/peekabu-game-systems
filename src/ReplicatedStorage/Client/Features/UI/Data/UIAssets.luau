@@ -30,8 +30,8 @@ export type ToonIcon =
 	| "fishtank"
 	| "flashlight"
 	| "gift"
+	| "credits"
 	| "gleam"
-	| "gleamPile"
 	| "globe"
 	| "gloom"
 	| "grab"
@@ -84,10 +84,10 @@ local TOON_ICONS: { [ToonIcon]: string } = {
 	fishtank = "rbxassetid://72370733106499",
 	flashlight = "rbxassetid://115788026706324",
 	gift = "rbxassetid://84976135728496",
-	gleam = "rbxassetid://92098466484576",
-	gleamPile = "rbxassetid://87196921749527",
+	credits = "rbxassetid://120886772987647", -- the Credits ticket (2026-10-21, decal 72265330733611)
+	gleam = "rbxassetid://138856527532184", -- the premium Gleam crystal (2026-10-21, decal 98003345456608)
 	globe = "rbxassetid://105862507048588",
-	gloom = "rbxassetid://139797009877972",
+	gloom = "rbxassetid://110943091530715", -- the Gloom goo splat (2026-10-21, decal 92515925352249)
 	grab = "rbxassetid://128476532358528",
 	guide = "rbxassetid://108576171337491",
 	heart = "rbxassetid://75866312534437",

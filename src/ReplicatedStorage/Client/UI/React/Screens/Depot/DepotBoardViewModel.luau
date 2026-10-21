@@ -211,7 +211,7 @@ function DepotBoardViewModel.board(id: string?, last: DepotTypes.LastShift?, pho
 		chips = {
 			{ label = "QUOTA", value = quotaChip(crew), icon = "gloom" },
 			{ label = "SHIFT", value = shift, icon = "stopwatch" },
-			{ label = "PAY", value = "1 per Gloom", icon = "gleam" },
+			{ label = "PAY", value = "1 per Gloom", icon = "credits" },
 			{ label = "CREW", value = "1–4 employees", icon = "pippaHappy" },
 		},
 		buildings = buildings,

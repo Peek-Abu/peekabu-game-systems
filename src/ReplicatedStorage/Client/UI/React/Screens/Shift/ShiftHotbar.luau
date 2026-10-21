@@ -114,7 +114,7 @@ local function Card(props: CardProps): React.ReactNode
 			icon = icon,
 			art = art,
 			caption = if slot.locked then "FULL" else slot.caption,
-			captionIcon = if slot.coin and not slot.locked then "gleam" else nil,
+			captionIcon = if slot.coin and not slot.locked then "credits" else nil,
 			captionMeaning = if slot.vacuum then "grape" elseif slot.coin then "gold" else "white",
 			captionHue = if slot.locked or slot.fragile then "coral" else nil,
 			selected = slot.selected,

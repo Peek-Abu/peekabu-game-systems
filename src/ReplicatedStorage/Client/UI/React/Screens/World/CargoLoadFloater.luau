@@ -32,7 +32,7 @@ local COIN = 84
 local function bonus(view: CargoWorldViewModel.FloaterView, fade: React.Binding<number>): { [string]: React.ReactNode }
 	return {
 		coin = e(ToonIcon, {
-			icon = "gleam",
+			icon = "credits",
 			anchor = Vector2.new(0, 0.5),
 			position = UDim2.new(0, 6, 0.5, -4),
 			size = UDim2.fromOffset(COIN, COIN),

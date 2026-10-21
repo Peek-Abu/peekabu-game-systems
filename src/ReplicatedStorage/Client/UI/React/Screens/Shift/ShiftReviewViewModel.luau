@@ -341,7 +341,7 @@ function ShiftReviewViewModel.review(
 				meaning = "grape",
 				gold = false,
 			},
-			{ label = "Credits earned", value = `+{split.credits}`, icon = "gleamPile", meaning = "gold", gold = true },
+			{ label = "Credits earned", value = `+{split.credits}`, icon = "credits", meaning = "gold", gold = true },
 			{
 				label = "Times caught",
 				value = tostring(results.catches),

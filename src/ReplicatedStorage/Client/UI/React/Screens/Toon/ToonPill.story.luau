@@ -44,7 +44,7 @@ return UILabs.CreateReactStory({
 		text = controls.Amount,
 		meaning = "gold",
 		textSize = 54,
-		icon = "gleam",
+		icon = "credits",
 		iconSize = 100,
 		small = false,
 		trailing = plus,
@@ -71,7 +71,7 @@ return UILabs.CreateReactStory({
 	nodes.worth = e(ToonPill, {
 		text = "36",
 		meaning = "gold",
-		icon = "gleam",
+		icon = "credits",
 		textSize = 24,
 		position = UDim2.fromOffset(460, 160),
 		size = UDim2.fromOffset(110, 40),

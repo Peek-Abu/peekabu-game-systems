@@ -210,7 +210,7 @@ local function topRight(props: DepotHubPanelProps): React.ReactNode
 			text = props.credits,
 			meaning = "gold",
 			textSize = if phone then 30 else 56,
-			icon = "gleam",
+			icon = "credits",
 			iconSize = if phone then 60 else 108,
 			small = phone,
 			anchor = Vector2.new(1, 0),
