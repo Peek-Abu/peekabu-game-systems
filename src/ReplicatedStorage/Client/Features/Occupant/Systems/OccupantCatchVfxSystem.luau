@@ -56,8 +56,8 @@ local knockedOut: { [number]: boolean } = {}
 -- Who was down (Knockdown attribute on their character) at the last look.
 local down: { [number]: boolean } = {}
 -- Per player: the connection on their current character's Knockdown attribute, and the one for their next character.
-local attributeWatch: { [number]: RBXScriptConnection } = {}
-local characterWatch: { [number]: RBXScriptConnection } = {}
+local attributeWatch: { [number]: RBXScriptConnection? } = {}
+local characterWatch: { [number]: RBXScriptConnection? } = {}
 local counters = { cracks = 0, rehired = 0 }
 local stoppers: { () -> () } = {}
 -- Bumped on stop: a pending Rehired wait from before is dropped.
