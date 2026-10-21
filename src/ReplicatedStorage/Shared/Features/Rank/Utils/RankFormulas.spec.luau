@@ -176,6 +176,16 @@ return function()
 			end
 		end)
 
+		it("pays the whole-crew line only when the shift ended through the clock-out", function()
+			local entries = RankFormulas.entriesOf(results({ line(1), line(2) }, true))
+			expect(RankFormulas.factsFor(entries, true, { 1, 2 }, 1, "clockout").crewExtracted).to.equal(true)
+			for _, outcome in { "timeout", "abandoned", "wiped", "cancelled" } do
+				local f = RankFormulas.factsFor(entries, true, { 1, 2 }, 1, outcome)
+				expect(f.crewExtracted).to.equal(false)
+				expect(amountOf(RankFormulas.award(f), "crewExtracted")).never.to.be.ok()
+			end
+		end)
+
 		it("reads absent cargo counts as zero", function()
 			local f =
 				RankFormulas.factsFor(RankFormulas.entriesOf(results({ line(1) }, false)), false, { 1 }, 1, "clockout")

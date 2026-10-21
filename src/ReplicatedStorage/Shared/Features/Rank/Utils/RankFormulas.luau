@@ -13,7 +13,9 @@
 	everyone still in punched, or the truck-leaves countdown ran out) and the player was still with the crew then and
 	never caught by the Manager. Everyone still inside when the truck left is paid it too, punched or not (design §3
 	step 6: no penalty); a shift that ends any other way (the shift timer running out) pays it to nobody. A caught
-	player gets no extraction bonus (nor the whole-crew one) and an incident report line instead.
+	player gets no extraction bonus (nor the whole-crew one) and an incident report line instead. The whole-crew line
+	("Whole crew out") follows the same clock-out rule: it pays only when the shift ended through the clock-out, and
+	only when everyone on the crew is still there and uncaught.
 
 	@class RankFormulas
 ]=]
@@ -107,7 +109,7 @@ function RankFormulas.factsFor(
 		overtimeSalvage = mine.overtimeSalvage,
 		extracted = outcome == ShiftConstants.OUTCOME_CLOCKOUT and not caught and table.find(present, userId) ~= nil,
 		caught = caught,
-		crewExtracted = everyone,
+		crewExtracted = everyone and outcome == ShiftConstants.OUTCOME_CLOCKOUT,
 	}
 end
 
