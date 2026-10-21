@@ -122,7 +122,7 @@ local ExperimentServiceServer: ExperimentServiceServer = {
 		for _, definition in ExperimentRegistry.list() do
 			if definition.unit == "player" or includeCrew then
 				local unitKey = if definition.unit == "crew" then crewId else tostring(player.UserId)
-				local variant, source = resolve(definition, unitKey, overrides)
+				local variant: string, source: Source = resolve(definition, unitKey, overrides)
 				table.insert(result, {
 					experimentId = definition.id,
 					unit = definition.unit,

@@ -5,7 +5,7 @@ local function record(event)
 		event = event,
 		session = "studio",
 		build = "m5-dev",
-		tags = "1.5s+10s",
+		tags = "5beats+skip",
 		cohort = "new",
 		platform = "pc",
 		party = 1,

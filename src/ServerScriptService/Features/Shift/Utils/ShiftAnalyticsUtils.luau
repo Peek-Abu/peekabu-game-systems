@@ -241,11 +241,13 @@ end
 ]=]
 function ShiftAnalyticsUtils.newlyPunched(before: { number }?, after: { number }?): { number }
 	local seen: { [number]: boolean } = {}
-	for _, id in before or {} do
+	local beforeIds: { number } = before or {}
+	for _, id in beforeIds do
 		seen[id] = true
 	end
 	local fresh: { number } = {}
-	for _, id in after or {} do
+	local afterIds: { number } = after or {}
+	for _, id in afterIds do
 		if not seen[id] then
 			table.insert(fresh, id)
 		end

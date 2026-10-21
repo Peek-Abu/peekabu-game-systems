@@ -19,7 +19,7 @@ return function()
 
 	describe("tags", function()
 		it("joins variants with + and is - for none", function()
-			expect(AnalyticsContextUtils.tags({ "1.5s", "10s" })).to.equal("1.5s+10s")
+			expect(AnalyticsContextUtils.tags({ "5beats", "skip" })).to.equal("5beats+skip")
 			expect(AnalyticsContextUtils.tags({})).to.equal("-")
 		end)
 	end)
@@ -27,13 +27,13 @@ return function()
 	describe("field", function()
 		it("packs tags, platform, party, cohort and build", function()
 			local field = AnalyticsContextUtils.field({
-				tags = "1.5s+10s",
+				tags = "5beats+skip",
 				platform = "phone",
 				party = 3,
 				cohort = "new",
 				build = "w1-v12",
 			})
-			expect(field).to.equal("1.5s+10s|phone|3|new|w1-v12")
+			expect(field).to.equal("5beats+skip|phone|3|new|w1-v12")
 		end)
 
 		it("clamps the party to 0..99", function()

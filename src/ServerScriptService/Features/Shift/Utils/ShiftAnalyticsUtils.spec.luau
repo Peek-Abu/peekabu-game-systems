@@ -2,11 +2,12 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local ShiftAnalyticsUtils = require(script.Parent.ShiftAnalyticsUtils)
 local ShiftAnalyticsConstants = require(ServerScriptService.Features.Shift.Data.ShiftAnalyticsConstants)
+local AnalyticsConstants = require(ServerScriptService.Features.Analytics.Data.AnalyticsConstants)
 local ExperimentRegistry = require(ServerScriptService.Features.Experiment.Data.ExperimentRegistry)
 
 local function context(overrides)
 	local base =
-		{ session = "job-1", build = "w1-v12", tags = "1.5s+10s", platform = "phone", party = 3, cohort = "new" }
+		{ session = "job-1", build = "w1-v12", tags = "5beats+skip", platform = "phone", party = 3, cohort = "new" }
 	for key, value in overrides or {} do
 		base[key] = value
 	end
@@ -79,15 +80,14 @@ return function()
 
 	describe("contextField", function()
 		it("packs tags, platform, party, cohort and build", function()
-			expect(ShiftAnalyticsUtils.contextField(context())).to.equal("1.5s+10s|phone|3|new|w1-v12")
+			expect(ShiftAnalyticsUtils.contextField(context())).to.equal("5beats+skip|phone|3|new|w1-v12")
 		end)
 
-		it("tags each shift event with the two crew experiments", function()
+		it("tags each shift event with registered experiments, at most MAX_TAGS", function()
 			expect(#ShiftAnalyticsConstants.EXPERIMENTS).to.equal(2)
+			expect(#ShiftAnalyticsConstants.EXPERIMENTS <= AnalyticsConstants.MAX_TAGS).to.equal(true)
 			for _, id in ShiftAnalyticsConstants.EXPERIMENTS do
-				local definition = ExperimentRegistry.get(id)
-				expect(definition).to.be.ok()
-				expect(definition.unit).to.equal("crew")
+				expect(ExperimentRegistry.get(id)).to.be.ok()
 			end
 		end)
 	end)
@@ -96,7 +96,7 @@ return function()
 		it("packs the context into field 1, the target into 2 and the outcome into 3", function()
 			local fields = ShiftAnalyticsUtils.fields(context(), { target = "plaque:pile", outcome = "banked" })
 			expect(#fields).to.equal(3)
-			expect(fields[1]).to.equal("1.5s+10s|phone|3|new|w1-v12")
+			expect(fields[1]).to.equal("5beats+skip|phone|3|new|w1-v12")
 			expect(fields[2]).to.equal("plaque:pile")
 			expect(fields[3]).to.equal("banked")
 		end)
@@ -116,7 +116,7 @@ return function()
 		it("clamps the party size and cleans every string", function()
 			local fields =
 				ShiftAnalyticsUtils.fields(context({ party = 150 }), { target = "Bob", outcome = "hi there" })
-			expect(fields[1]).to.equal("1.5s+10s|phone|99|new|w1-v12")
+			expect(fields[1]).to.equal("5beats+skip|phone|99|new|w1-v12")
 			expect(fields[2]).to.equal("other")
 			expect(fields[3]).to.equal("other")
 		end)
@@ -132,7 +132,7 @@ return function()
 			expect(record.event).to.equal("pile_cleared")
 			expect(record.session).to.equal("job-1")
 			expect(record.build).to.equal("w1-v12")
-			expect(record.tags).to.equal("1.5s+10s")
+			expect(record.tags).to.equal("5beats+skip")
 			expect(record.cohort).to.equal("new")
 			expect(record.platform).to.equal("phone")
 			expect(record.party).to.equal(3)

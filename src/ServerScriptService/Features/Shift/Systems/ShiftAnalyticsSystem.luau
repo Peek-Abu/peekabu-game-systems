@@ -5,7 +5,7 @@
 	vocabulary tokens (ShiftAnalyticsUtils.token: catalog ids and fixed words only, so no name, chat line or id can reach
 	a field). Each record goes to:
 	- AnalyticsServiceServer:custom(player, event, value, { context, target, outcome }): the engine takes three custom
-	  fields, so field 1 packs "tags|platform|party|cohort|build" (AnalyticsSessionSystem.contextOf: the two crew
+	  fields, so field 1 packs "tags|platform|party|cohort|build" (AnalyticsSessionSystem.contextOf: the tagged
 	  experiments' variants, the platform the Analytics feature takes, the cohort; AnalyticsServiceServer sends nothing
 	  in Studio);
 	- the server log, key events at info and the rest at debug, with the session id (JobId) the engine fields leave out;

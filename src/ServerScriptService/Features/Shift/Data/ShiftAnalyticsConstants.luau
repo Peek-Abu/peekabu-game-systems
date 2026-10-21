@@ -118,8 +118,9 @@ return table.freeze({
 	EVENT_SET = table.freeze(EVENT_SET),
 	VOCABULARY = table.freeze(VOCABULARY),
 	INFO_EVENTS = table.freeze(INFO_EVENTS),
-	-- The crew experiments every shift event is tagged with (ExperimentRegistry ids, in tag order).
-	EXPERIMENTS = table.freeze({ "exp-clean", "exp-rehire" }),
+	-- The experiments every shift event is tagged with (ExperimentRegistry ids, in tag order; at most
+	-- AnalyticsConstants.MAX_TAGS). The one crew experiment reads "-" on a hub server, which is not a crew.
+	EXPERIMENTS = table.freeze({ "exp-tutorial", "exp-friendskip" }),
 	-- A longer target/outcome/reason is "other" (the engine caps a field at 50 characters).
 	TOKEN_MAX = 40,
 	-- Event values are clamped to 0..VALUE_MAX and rounded to 0.1.
