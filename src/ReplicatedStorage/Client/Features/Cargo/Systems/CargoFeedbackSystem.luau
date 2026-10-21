@@ -5,7 +5,7 @@
 	- `Banked` (server → all): a ghost of each loaded item swoops on an arc into the truck bed, shrinking and
 	  spinning (CargoFeedbackUtils.arc), and as each lands its Gloom is refined into Gleam in the bed (CargoVfxConstants
 	  cargoBankRefine: wisps turning from purple-black to gold, gold sparkles rising); when the last lands, a cha-ching
-	  at the bed and a rising, fading load floater per amount, drawn in the V1 kit (CargoLoadFloater: "+15 CLEARED", the gold "+40 Gleam" with the coin;
+	  at the bed and a rising, fading load floater per amount, drawn in the V1 kit (CargoLoadFloater: "+15 CLEARED", the gold "+40 Credits" with the coin;
 	  CargoWorldViewModel.floater; CargoFeedbackUtils.floaters). The clearance bar is the HUD's.
 	- Your public fields: a pickup sound when something new comes into your hands, a pocket sound when an item
 	  slot fills, and plant leaves in front of your camera while your hands hold a blocksView item.

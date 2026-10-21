@@ -2,7 +2,7 @@
 --[=[
 	CargoPriceTag: a cargo item's price tag in the V1 kit at its 260x70 design size: a cream capsule on the depth stack
 	(small chrome, the sparkle pattern), the name in Fredoka (shrinking to fit the longest catalog name) and the price as
-	a stroked gold number on the right (coral once cracked), with the Gleam coin render breaking the tag's top-right
+	a stroked gold number on the right (coral once cracked), with the coin render breaking the tag's top-right
 	corner. The mark (FRAGILE, CRACKED −50%, 62% CLEAN) is a small pill under the name: coral once cracked or grime
 	locked, sky otherwise. An appraised valuable wears a tilted mint APPRAISED sticker at the tag's lower right, popping
 	in when the appraisal is fresh. Presentational; the words are CargoWorldViewModel.priceTag.

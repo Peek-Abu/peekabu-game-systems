@@ -60,7 +60,7 @@ export type HudView = {
 	clearedShort: string,
 	fill: number,
 	quotaMet: boolean,
-	-- The plate's label ("EARNED", ShiftCurrencyUtils) over the crew's running total ("240 Gleam": the Gloom removed so
+	-- The plate's label ("EARNED", ShiftCurrencyUtils) over the crew's running total ("240 Credits": the Gloom removed so
 	-- far plus the valuables banked).
 	feeLabel: string,
 	fee: string,
@@ -219,7 +219,7 @@ local function handsOf(kind: PublicPlayerTypes.PublicValue?): HandsView?
 	if def == nil then
 		return { kind = kind, name = kind, value = "", traits = "", short = "", fragile = false }
 	end
-	-- A valuable's worth is rolled, scaled and grimy: "??? Gleam" here, its real number on its tag (the loot loop).
+	-- A valuable's worth is rolled, scaled and grimy: "??? Credits" here, its real number on its tag (the loot loop).
 	local value = if def.grimy then ShiftCurrencyUtils.unknown() else `+{def.value}`
 	return {
 		kind = kind,
@@ -286,7 +286,7 @@ function ShiftHudViewModel.hud(
 		quotaMet = snapshot.quotaMet,
 		feeLabel = ShiftCurrencyUtils.earnedLabel(),
 		-- Earned so far: every Gloom removed (paid at clock-out) plus the valuables banked.
-		fee = ShiftCurrencyUtils.amount(ShiftQuotaFormulas.breakdown(snapshot.cleared, 0, snapshot.bonus).gleam),
+		fee = ShiftCurrencyUtils.amount(ShiftQuotaFormulas.breakdown(snapshot.cleared, 0, snapshot.bonus).credits),
 		feeBoost = if overtime then `New loot ×{ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER}` else nil,
 		feeBoostShort = if overtime then `NEW ×{ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER}` else nil,
 		hands = handsOf(entry[CarryConstants.PUBLIC_FIELD]),

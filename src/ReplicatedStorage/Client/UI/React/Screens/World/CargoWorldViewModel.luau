@@ -2,14 +2,14 @@
 --[=[
 	CargoWorldViewModel: what a cargo item's price tag says and when it is drawn (Figma World UI 2b, W5). The tag reads
 	the item's shell attributes (CargoConstants.LABEL_KEYS): the name (cut at NAME_MAX, the longest catalog name, so
-	every real name stays whole), the price ("45 Gleam" for a Recoverable Asset, ShiftCurrencyUtils; "+10" for trash, never rolled now) and the mark: "FRAGILE" for an
+	every real name stays whole), the price ("45 Credits" for a Recoverable Asset, ShiftCurrencyUtils; "+10" for trash, never rolled now) and the mark: "FRAGILE" for an
 	undamaged fragile item, "CRACKED −50%" / "CRACKED −75%" from CargoConstants.FRAGILE_TIERS once it took impacts
 	(the price turns red), else none. A grimy valuable (the loot loop, docs/superpowers/specs/
-	2026-10-15-cleanup-crew-loot-loop-design.md §5) reads "??? Gleam" until appraised, its mark leads with how clean it is
+	2026-10-15-cleanup-crew-loot-loop-design.md §5) reads "??? Credits" until appraised, its mark leads with how clean it is
 	("62% CLEAN", joined with the fragile mark; "GRIME LOCKED 62%" once its grime is locked, picked up dirty), and once
 	appraised it carries the APPRAISED stamp, which pops while the appraisal is fresh. `mounted`: a tag mounts within LABEL_DISTANCE of the camera and stays until
 	LABEL_KEEP_DISTANCE, and never while the item is hidden under a pile.
-	The load floaters (W6): the Gleam earned as a "+40 Gleam" stamp (the approved frame's layout); banking adds no
+	The load floaters (W6): the Credits earned as a "+40 Credits" stamp (the approved frame's layout); banking adds no
 	Gloom, so the number over CLEARED shows only for stray trash. Pure.
 
 	@class CargoWorldViewModel

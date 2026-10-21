@@ -107,7 +107,7 @@ return function()
 			changed:Fire(state("results", 1, true, "clockout"))
 			expect(#calls).to.equal(2)
 			for _, call in calls do
-				expect(call.amounts.credits).to.equal(340 * ShiftConstants.GLEAM_PER_GLOOM + 420)
+				expect(call.amounts.credits).to.equal(340 * ShiftConstants.CREDITS_PER_GLOOM + 420)
 				expect(call.amounts.gloom).to.equal(34)
 				expect(call.userId).never.to.equal(3)
 			end

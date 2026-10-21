@@ -110,21 +110,21 @@ return function()
 	describe("appraisalText", function()
 		it("writes the shown name over what it pays, a jackpot by its variant", function()
 			expect(CargoFeedbackUtils.appraisalText("monitor", "Gold-trim", 250, false)).to.equal(
-				"Gold-trim monitor\n250 Gleam"
+				"Gold-trim monitor\n250 Credits"
 			)
 			expect(CargoFeedbackUtils.appraisalText("plaque", nil, 41.6, false)).to.equal(
-				"Employee of the Month plaque\n42 Gleam"
+				"Employee of the Month plaque\n42 Credits"
 			)
 		end)
 
 		it("says when the truck appraised it", function()
 			expect(CargoFeedbackUtils.appraisalText("monitor", nil, 36, true)).to.equal(
-				"Monitor\n36 Gleam at the truck"
+				"Monitor\n36 Credits at the truck"
 			)
 		end)
 
 		it("falls back to the kind for an unknown item", function()
-			expect(CargoFeedbackUtils.appraisalText("spaceship", nil, 5, false)).to.equal("spaceship\n5 Gleam")
+			expect(CargoFeedbackUtils.appraisalText("spaceship", nil, 5, false)).to.equal("spaceship\n5 Credits")
 		end)
 	end)
 

@@ -15,7 +15,7 @@
 	  it; DeathServiceServer:setSpawnPoint);
 	- the contract (docs/superpowers/specs/2026-10-16-cleanup-crew-gloom-gleam-economy-design.md): ShiftGloomSystem adds
 	  the Gloom of every cleared pile and every cleaning step to Round's `clearance` counter, live, and stamps CONTRACT
-	  MET once; banking (Cargo's `onBanked`, ShiftBankingSystem) adds the valuables' Gleam to `bonus` and keeps
+	  MET once; banking (Cargo's `onBanked`, ShiftBankingSystem) adds the valuables' Credits to `bonus` and keeps
 	  per-player scores, but never Gloom;
 	- pacing (M2): meeting the quota starts the Manager's break, which the clock ends; overtime is opt-in: any
 	  crew member holding the overtime sheet's Start overtime prompt at the truck starts the overtime warning for
@@ -254,7 +254,7 @@ local function beginRun(wasPrepared: boolean)
 	log:info(`shift {state.shift} started: variant {state.variant}, quota {state.quota}`)
 	VacuumServiceServer:setCrew(RoundServiceServer:participants())
 	ToastServiceServer:send("all", {
-		text = `Shift {state.shift}: remove {state.quota} Gloom before the clock runs out. Vacuum the dust; clean valuables, then bank them for Gleam.`,
+		text = `Shift {state.shift}: remove {state.quota} Gloom before the clock runs out. Vacuum the dust; clean valuables, then bank them for Credits.`,
 		style = ShiftConstants.TOAST_STICKY,
 		duration = 6,
 	})

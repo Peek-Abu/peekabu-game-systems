@@ -86,7 +86,7 @@ return function()
 			local salvage = ShiftHudViewModel.hud(snapshot(), { carrying = "monitor" }, 0, false)
 			expect(ShiftHudViewModel.compact(trash, {}).cargoValue).to.equal("+10 clearance")
 			-- A valuable's worth is a mystery until appraised (its tag shows it): the HUD never guesses.
-			expect(ShiftHudViewModel.compact(salvage, {}).cargoValue).to.equal("??? Gleam")
+			expect(ShiftHudViewModel.compact(salvage, {}).cargoValue).to.equal("??? Credits")
 		end)
 		it("counts pocketed items even with empty hands", function()
 			local view = ShiftHudViewModel.hud(snapshot(), { inv1 = "plaque", inv3 = "keyring" }, 0, false)
@@ -131,15 +131,15 @@ return function()
 		end)
 
 		it(
-			"fills the contract folder with the Gloom removed, and the fee plate with the Gleam earned so far",
+			"fills the contract folder with the Gloom removed, and the fee plate with the Credits earned so far",
 			function()
 				local view = ShiftHudViewModel.hud(snapshot(), nil, 580, false)
 				expect(view.cleared).to.equal("120")
 				expect(view.quotaText).to.equal("/ 350 Gloom")
 				expect(view.clearedShort).to.equal("Gloom 120 / 350")
 				expect(math.abs(view.fill - 120 / 350) < 1e-6).to.equal(true)
-				-- 120 Gloom at 1 Gleam each, plus 40 Gleam of valuables banked.
-				expect(view.fee).to.equal("160 Gleam")
+				-- 120 Gloom at 1 Credit each, plus 40 Credits of valuables banked.
+				expect(view.fee).to.equal("160 Credits")
 				expect(view.feeBoost).to.equal(nil)
 				expect(view.feeBoostShort).to.equal(nil)
 			end
@@ -191,9 +191,9 @@ return function()
 		it("describes the hands item with its value and traits", function()
 			local view = ShiftHudViewModel.hud(snapshot(), { carrying = "monitor" }, 0, false)
 			expect(view.hands.name).to.equal("Monitor")
-			expect(view.hands.value).to.equal("??? Gleam")
+			expect(view.hands.value).to.equal("??? Credits")
 			expect(view.hands.traits).to.equal("medium · FRAGILE")
-			expect(view.hands.short).to.equal("??? Gleam fragile")
+			expect(view.hands.short).to.equal("??? Credits fragile")
 			expect(view.hands.fragile).to.equal(true)
 		end)
 

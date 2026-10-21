@@ -104,7 +104,7 @@ end
 
 --[=[
 	The `Banked` announcement for a Load: the kinds loaded, the swoop from `from` to the top of the bed (centre
-	`bed`, size `bedSize`), and the amounts credited (cleared: trash only, banking adds no Gloom; pay: the Gleam
+	`bed`, size `bedSize`), and the amounts credited (cleared: trash only, banking adds no Gloom; pay: the Credits
 	bonus), rounded like the review and clamped to the packet's range.
 	`credited` is the banking handler's second value (the bonus after any overtime multiplier); nil = the deposit's.
 ]=]

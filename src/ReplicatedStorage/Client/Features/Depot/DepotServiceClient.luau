@@ -4,7 +4,7 @@
 	takes the server's cards (DepotEvents.Card) into DepotStore and moves the card on as its time runs out.
 	The board's prompt (DepotEvents.Board) opens the contract board scene (DepotScene, registered at require):
 	pushing it twice is a no-op, and once the scene leaves the stack (CLOSE or Escape) the store's board is cleared.
-	The hub HUD (DepotHub: profile, Gleam, daily gift, Tonight, the menu tiles and
+	The hub HUD (DepotHub: profile, Credits, daily gift, Tonight, the menu tiles and
 	the Next shift card) claims its gift through DailyRewardServiceClient. The truck queue pad card (DepotPad, with GO!
 	to depart now) replaces Queue's placeholder pad widget, which init hides
 	with QueueServiceClient:setDefaultWidget(false); the depot's world signs (truck tags, the boards) are drawn by DepotBillboardSystem into the shells the server builds;

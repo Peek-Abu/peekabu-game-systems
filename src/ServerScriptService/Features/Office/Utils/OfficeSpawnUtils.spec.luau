@@ -411,7 +411,7 @@ return function()
 
 	-- Economy design §3.5 (2026-10-17): dust is about half of a typical shift's pay. A typical shift: 80% of the dust
 	-- vacuumed, two thirds of the valuables cleaned to LOOT_AVERAGE_CLEAN and banked (valueOf's average), their grime
-	-- cleaned that far; 1 Gleam per Gloom.
+	-- cleaned that far; 1 Credit per Gloom.
 	it("makes the dust about half of a typical shift's pay on a generated site", function()
 		local dust, rest = 0, 0
 		for seed = 1, 30 do

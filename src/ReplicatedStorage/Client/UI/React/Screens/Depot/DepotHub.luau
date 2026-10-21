@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	DepotHub: the depot hub's HUD widget (registered by DepotServiceClient). Reads the shift snapshot (never shown over a
-	crew's shift), the travel card (hidden under it), the player's published rank, their Gleam (the `credits` balance),
+	crew's shift), the travel card (hidden under it), the player's published rank, their Credits (the `credits` balance),
 	the daily reward slice on the server clock, the contract board's contract and whether they are aboard a truck,
 	and draws DepotHubPanel in the V1 kit. JOBS / the Tonight card / GO! (when not aboard) open the contract board;
 	LOCKER, GUIDE and SETTINGS push the hub pages; the gift asks to claim (`onClaimGift`, from the service: components
@@ -77,7 +77,7 @@ local function DepotHub(props: DepotHubProps): React.ReactNode
 				phone = phone,
 				userId = player.UserId,
 				profile = VM.profile(player.DisplayName, rank),
-				gleam = ToonStyleViewModel.grouped(CurrencyUtils.getCurrencyAmount(currency, "credits")),
+				credits = ToonStyleViewModel.grouped(CurrencyUtils.getCurrencyAmount(currency, "credits")),
 				gift = VM.gift(daily, now),
 				tonight = VM.tonight(boardContract()),
 				cta = if pad == nil then DepotPadViewModel.cta(nil, nil) else nil,

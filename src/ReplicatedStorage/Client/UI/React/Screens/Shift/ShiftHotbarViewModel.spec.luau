@@ -16,16 +16,16 @@ return function()
 			expect(view.locked).to.equal(false)
 		end)
 
-		it("tags a valuable ??? Gleam until appraised, then its value and jackpot name", function()
+		it("tags a valuable ??? Credits until appraised, then its value and jackpot name", function()
 			local view = ShiftHotbarViewModel.hotbar({
 				inv1 = "wristwatch",
 				inv2 = "wristwatch",
 				inv2Value = 220,
 				inv2Variant = "Gold",
 			})
-			expect(view.slots[2].tag).to.equal("??? Gleam")
+			expect(view.slots[2].tag).to.equal("??? Credits")
 			expect(view.slots[2].name).to.equal("Wristwatch")
-			expect(view.slots[3].tag).to.equal("220 Gleam")
+			expect(view.slots[3].tag).to.equal("220 Credits")
 			expect(view.slots[3].name).to.equal("Gold wristwatch")
 		end)
 
@@ -71,7 +71,7 @@ return function()
 			expect(ShiftHotbarViewModel.hotbar({}).slots[1].gauge).to.equal(nil)
 		end)
 
-		it("captions a valuable with its worth (no unit: the coin says Gleam), trash with its clearance", function()
+		it("captions a valuable with its worth (no unit: the coin says Credits), trash with its clearance", function()
 			local view = ShiftHotbarViewModel.hotbar({ inv1 = "wristwatch", inv2 = "wristwatch", inv2Value = 220 })
 			expect(view.slots[2].caption).to.equal("???")
 			expect(view.slots[2].coin).to.equal(true)

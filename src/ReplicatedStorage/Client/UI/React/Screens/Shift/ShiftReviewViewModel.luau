@@ -42,7 +42,7 @@ export type AwardView = {
 	icon: UIAssets.ToonIcon?,
 }
 -- V1: a stat card (its render breaking the card's left edge, a label and a big number in its meaning's colour; the
--- Gleam card is the gold one).
+-- Credits card is the gold one).
 export type CardView = {
 	label: string,
 	value: string,
@@ -328,19 +328,20 @@ function ShiftReviewViewModel.review(
 	-- The pay (docs/superpowers/specs/2026-10-16-cleanup-crew-gloom-gleam-economy-design.md §5): every Gloom removed,
 	-- from dust and from cleaning valuables, plus the valuables banked; paid whether or not the contract was met.
 	local split = ShiftQuotaFormulas.breakdown(results.cleared, results.dust or 0, results.bonus)
+	local saved = ShiftQuotaFormulas.savedGloom(results.cleared)
 	local crewText = if truck ~= nil then `Crew of Truck {truck}` else "Crew"
 	return {
 		title = if met then "CONTRACT MET!" else "CONTRACT MISSED",
 		grade = GRADE[rating],
 		cards = {
 			{
-				label = "Gloom cleared",
+				label = if saved > 0 then `Gloom cleared · {saved} saved` else "Gloom cleared",
 				value = `{split.gloom}/{results.quota}`,
 				icon = "gloom",
 				meaning = "grape",
 				gold = false,
 			},
-			{ label = "Gleam earned", value = `+{split.gleam}`, icon = "gleamPile", meaning = "gold", gold = true },
+			{ label = "Credits earned", value = `+{split.credits}`, icon = "gleamPile", meaning = "gold", gold = true },
 			{
 				label = "Times caught",
 				value = tostring(results.catches),
@@ -368,8 +369,8 @@ function ShiftReviewViewModel.review(
 			},
 			{
 				label = ShiftCurrencyUtils.earnedLabel(),
-				value = ShiftCurrencyUtils.amount(split.gleam),
-				detail = `Dust {split.dustGleam} · Cleaning {split.grimeGleam} · Valuables {split.valuables}`,
+				value = ShiftCurrencyUtils.amount(split.credits),
+				detail = `Dust {split.dustCredits} · Cleaning {split.grimeCredits} · Valuables {split.valuables} · Saved Gloom {saved}`,
 			},
 			{ label = "TIMES CAUGHT", value = tostring(results.catches) },
 			{ label = "ASSETS RECOVERED", value = `{results.salvage} of {results.offered}` },

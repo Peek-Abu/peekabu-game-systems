@@ -7,7 +7,7 @@
 	  counter (the contract) and its `dust` counter (the review's split), the instant it is cleared;
 	- a cleaning step on a valuable (Cargo's `grimeRemoved`, the Gloom that step took off it) adds to `clearance` only.
 
-	Banking adds no Gloom (ShiftBankingSystem pays Gleam). After each credit `afterCredit` runs: the service re-checks
+	Banking adds no Gloom (ShiftBankingSystem pays Credits). After each credit `afterCredit` runs: the service re-checks
 	the contract (CONTRACT MET, clock-out unlocks) and republishes. The counters are written through `addTeam`, so the
 	spec drives it without Round; `ShiftGloomSystem.start` is the service's one-line wiring onto Round, Vacuum and Cargo.
 

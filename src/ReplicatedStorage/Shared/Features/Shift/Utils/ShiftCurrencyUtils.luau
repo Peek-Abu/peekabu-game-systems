@@ -1,11 +1,11 @@
 --!strict
 --[=[
 	ShiftCurrencyUtils: how pay and the contract read (docs/superpowers/specs/
-	2026-10-16-cleanup-crew-gloom-gleam-economy-design.md §5). Morrow & Morrow pays its Clearance Associates in Gleam,
-	refined Gloom: the one currency players see, written as the word after the number ("45 Gleam"; no sign, no emoji).
+	2026-10-16-cleanup-crew-gloom-gleam-economy-design.md §5). Morrow & Morrow pays its Clearance Associates in Credits
+	(saved at shift end; Gleam is the premium balance), written as the word after the number ("45 Credits"; no sign, no emoji).
 	The contract is Gloom removed ("Gloom 340 / 500", "Remove 500 Gloom"). Every price tag, load floater, fee plate,
 	review and board row writes its amounts through here, so this is the one place the look lives; the words are
-	ShiftConstants.CURRENCY_NAME and CONTRACT_UNIT. Display only: no saved balance yet. Pure.
+	ShiftConstants.CURRENCY_NAME and CONTRACT_UNIT. Pure.
 
 	@class ShiftCurrencyUtils
 ]=]
@@ -28,28 +28,28 @@ local ShiftCurrencyUtils = {
 }
 
 --[=[
-	"45 Gleam": `value` rounded to a whole amount, never below zero.
+	"45 Credits": `value` rounded to a whole amount, never below zero.
 ]=]
 function ShiftCurrencyUtils.amount(value: number): string
 	return `{whole(value)} {ShiftCurrencyUtils.NAME}`
 end
 
 --[=[
-	"??? Gleam": a value not appraised yet.
+	"??? Credits": a value not appraised yet.
 ]=]
 function ShiftCurrencyUtils.unknown(): string
 	return `??? {ShiftCurrencyUtils.NAME}`
 end
 
 --[=[
-	"+40 Gleam": an amount just earned.
+	"+40 Credits": an amount just earned.
 ]=]
 function ShiftCurrencyUtils.gain(value: number): string
 	return `+{ShiftCurrencyUtils.amount(value)}`
 end
 
 --[=[
-	"+40 Gleam": an already-formatted number (`text`, e.g. "+40") with the currency named after it.
+	"+40 Credits": an already-formatted number (`text`, e.g. "+40") with the currency named after it.
 ]=]
 function ShiftCurrencyUtils.signed(text: string): string
 	return `{text} {ShiftCurrencyUtils.NAME}`
@@ -71,7 +71,7 @@ end
 
 --[=[
 	"EARNED": the label over the crew's running total (the fee plate, the review, the depot boards), which reads
-	"EARNED 240 Gleam" beside the amount.
+	"EARNED 240 Credits" beside the amount.
 ]=]
 function ShiftCurrencyUtils.earnedLabel(): string
 	return "EARNED"

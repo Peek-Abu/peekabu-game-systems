@@ -22,8 +22,8 @@ local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.Va
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 
 -- One hotbar slot (docs/superpowers/specs/2026-10-16-cleanup-crew-hotbar-inventory-design.md §4): slot 1 the vacuum
--- (the contract's progress as the tag, "340/500"), slots 2-5 the item slots (an item's name and tag: its Gleam once
--- known, "??? Gleam" before, "+N" for trash; empty ones blank).
+-- (the contract's progress as the tag, "340/500"), slots 2-5 the item slots (an item's name and tag: its Credits once
+-- known, "??? Credits" before, "+N" for trash; empty ones blank).
 export type SlotView = {
 	slot: number,
 	-- The key that chooses it ("1"-"5").

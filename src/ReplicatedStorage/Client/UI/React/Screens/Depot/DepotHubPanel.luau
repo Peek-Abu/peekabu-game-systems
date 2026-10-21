@@ -6,7 +6,7 @@
 	  breaking the card, the player's name, the Clearance Level star, the rank name on desktop and the XP bar);
 	- under it the menu tiles (JOBS, LOCKER, GUIDE, SETTINGS: renders breaking their tiles; a column on desktop, a 2x2
 	  grid on phone, clear of the thumbstick);
-	- top-right: the Gleam counter (the coin render overlapping a gold number) and the daily gift (OPEN! with a badge,
+	- top-right: the Credits counter (the coin render overlapping a gold number) and the daily gift (OPEN! with a badge,
 	  else the time to the next day); on desktop the Tonight card (tonight's building photo, the Manager breaking its
 	  edge), which opens the Jobs board;
 	- bottom-centre: the Next shift card (DepotNextShiftCard), unless the queue pad's own card is up.
@@ -44,7 +44,7 @@ export type DepotHubPanelProps = {
 	-- Whose character the profile ring shows (nil: the fallback photo, as in the story).
 	userId: number?,
 	profile: DepotHubViewModel.ProfileView,
-	gleam: string,
+	credits: string,
 	gift: DepotHubViewModel.GiftView,
 	tonight: DepotHubViewModel.TonightView,
 	-- Nil while the queue pad's own card shows.
@@ -206,8 +206,8 @@ local function topRight(props: DepotHubPanelProps): React.ReactNode
 	local phone = props.phone
 	local gift = props.gift
 	local nodes: { [string]: React.ReactNode } = {
-		gleam = e(ToonPill, {
-			text = props.gleam,
+		credits = e(ToonPill, {
+			text = props.credits,
 			meaning = "gold",
 			textSize = if phone then 30 else 56,
 			icon = "gleam",

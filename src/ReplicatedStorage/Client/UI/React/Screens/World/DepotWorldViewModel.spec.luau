@@ -206,8 +206,8 @@ return function()
 			expect(view.rows[1].label).to.equal("GLOOM")
 			expect(view.rows[1].value).to.equal("362 / 350")
 			expect(view.rows[2].label).to.equal("EARNED")
-			-- 362 Gloom at 1 Gleam each, plus 215 Gleam of valuables.
-			expect(view.rows[2].value).to.equal("577 Gleam")
+			-- 362 Gloom at 1 Credit each, plus 215 Credits of valuables.
+			expect(view.rows[2].value).to.equal("577 Credits")
 			expect(view.rows[3].label).to.equal("TIMES CAUGHT")
 			expect(view.rows[3].value).to.equal("3")
 			expect(view.rows[4].label).to.equal("ASSETS")

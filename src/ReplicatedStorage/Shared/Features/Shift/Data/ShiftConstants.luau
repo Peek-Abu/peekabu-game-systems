@@ -83,13 +83,13 @@ return table.freeze({
 	EMPLOYER_BAND = "MORROW & MORROW",
 	EMPLOYER_SLOGAN = "A clean site is a compliant site.",
 	-- The economy (docs/superpowers/specs/2026-10-16-cleanup-crew-gloom-gleam-economy-design.md): the contract is
-	-- counted in Gloom (the anomaly's residue: the dust, and the grime on valuables), and the company pays in Gleam
-	-- (refined Gloom), the one currency players see. Display only (no saved balance yet): rename them here and every
+	-- counted in Gloom (the anomaly's residue: the dust, and the grime on valuables), and the company pays in Credits,
+	-- saved to the player's account at shift end (Gleam is the separate premium balance). Rename them here and every
 	-- price tag, floater, plate and review follows (ShiftCurrencyUtils).
-	CURRENCY_NAME = "Gleam",
+	CURRENCY_NAME = "Credits",
 	CONTRACT_UNIT = "Gloom",
 	-- The pay for each Gloom removed (dust and item cleaning), paid at clock-out; overtime never multiplies it.
-	GLEAM_PER_GLOOM = 1,
+	CREDITS_PER_GLOOM = 1,
 	-- The Gloom each crew member keeps (saved to their account) per Gloom the crew removed: floor(cleared x this).
 	SAVED_GLOOM_PER_CLEARED = 0.1,
 	-- The StateSyncWorldStore entry the snapshot is published under.
@@ -172,7 +172,7 @@ return table.freeze({
 	SOLO_HEARING = 0.75,
 	SOLO_CHASE_SPEED = -0.5,
 	-- Round team counters and per-player scores. CLEARANCE is the Gloom removed (the contract's progress, Round's
-	-- target), DUST the part of it from piles (the rest is item cleaning), BONUS the Gleam for banked valuables.
+	-- target), DUST the part of it from piles (the rest is item cleaning), BONUS the Credits for banked valuables.
 	CLEARANCE = "clearance",
 	DUST = "dust",
 	BONUS = "bonus",

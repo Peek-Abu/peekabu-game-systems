@@ -50,14 +50,14 @@ return function()
 		it("keeps slip toasts out of the notes and the stamp", function()
 			local view = PaperToastViewModel.layout({
 				toast(1),
-				toast(2, ShiftConstants.TOAST_SLIP, "Monitor\n36 Gleam"),
+				toast(2, ShiftConstants.TOAST_SLIP, "Monitor\n36 Credits"),
 				toast(3, ShiftConstants.TOAST_STAMP, "QUOTA MET"),
 			}, 3)
 			expect(#view.notes).to.equal(1)
 			expect(view.stamp.text).to.equal("QUOTA MET")
 			expect(#view.slips).to.equal(1)
 			expect(view.slips[1].title).to.equal("Monitor")
-			expect(view.slips[1].detail).to.equal("36 Gleam")
+			expect(view.slips[1].detail).to.equal("36 Credits")
 			expect(view.slips[1].jackpot).to.equal(false)
 		end)
 

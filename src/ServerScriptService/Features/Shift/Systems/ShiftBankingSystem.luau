@@ -3,10 +3,10 @@
 	ShiftBankingSystem: the shift's banking handler for Cargo (Cleanup Crew spec §4 "Banking", §6.4). Banking is the
 	pay, never the job (docs/superpowers/specs/2026-10-16-cleanup-crew-gloom-gleam-economy-design.md §3.3): a Load adds
 	no Gloom to the contract (Round's `clearance`, which only piles and cleaning raise, ShiftGloomSystem); its
-	valuables add their Gleam to `bonus` (ShiftQuotaFormulas.pay: only overtime loot, flagged per item, pays ×1.5);
+	valuables add their Credits to `bonus` (ShiftQuotaFormulas.pay: only overtime loot, flagged per item, pays ×1.5);
 	and the banker's run goes in the roster. Every refusal is decided before the first counter write; once a counter moved it
 	returns true whatever else fails, or Cargo would release the claim and the same items would bank twice. It
-	also returns the Gleam it credited (overtime loot's ×1.5 included), which Cargo's `Banked` floater shows.
+	also returns the Credits it credited (overtime loot's ×1.5 included), which Cargo's `Banked` floater shows.
 
 	Moved out of ShiftServiceServer in M2 (the service was at the 400-line cap). Spec-exempt shell (Round); the
 	pay is the specced ShiftQuotaFormulas and the quota the specced ShiftPhaseRules. Each accepted Load is reported to ShiftAnalyticsSystem

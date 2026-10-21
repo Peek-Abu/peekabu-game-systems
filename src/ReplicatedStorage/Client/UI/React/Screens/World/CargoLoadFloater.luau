@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	CargoLoadFloater: a load floater in the V1 kit at its 340x130 design size, rising off the truck as cargo is banked.
-	Bonus (the Gleam earned): the amount ("+40 Gleam") as a big stroked gold number with the coin render beside it and
+	Bonus (the Credits earned): the amount ("+40 Credits") as a big stroked gold number with the coin render beside it and
 	Gleam sparkles round it. Clearance (stray trash): "+15" as a big stroked mint number over a white CLEARED. `fade`
 	(0 → 1) is every part's transparency, driven by CargoFeedbackSystem's tween, so fading never re-renders. (No
 	CanvasGroup and no plate: a CanvasGroup does not draw inside a BillboardGui, and the depth stack's layers cannot

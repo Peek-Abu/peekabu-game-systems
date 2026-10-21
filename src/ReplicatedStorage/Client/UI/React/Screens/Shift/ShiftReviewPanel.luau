@@ -2,8 +2,8 @@
 --[=[
 	ShiftReviewPanel: the results screen in the V1 kit (results render; the user's favourite): over the darkened office,
 	slow gold rays and a clean diagonal band (wiped clean by the squeegee as it opens) behind the huge stroked
-	CONTRACT MET! (gold) or CONTRACT MISSED (coral), the grade medallion breaking the title, Gleam sparkles; the
-	"SHIFT REVIEW · HARLOW & FINCH" pill; four stat cards whose renders break their left edge (the Gleam card is the
+	CONTRACT MET! (gold) or CONTRACT MISSED (coral), the grade medallion breaking the title, Gleam sparkles (art); the
+	"SHIFT REVIEW · HARLOW & FINCH" pill; four stat cards whose renders break their left edge (the Credits card is the
 	gold one); the company rank (RankSlip) under them with the Manager's line and the vote's footer; CREW AWARDS on
 	the right, the first award featured on a gold card with its winner's own character standing on its corner; and
 	the crew vote: the mint ANOTHER SHIFT and the cream TO THE DEPOT with their counts, the local player's choice in

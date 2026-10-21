@@ -3,7 +3,7 @@
 	ShiftPaySystem: pays the crew when the shift's review opens. It follows Shift's state (`ShiftServiceServer.changed`):
 	the first time a shift reaches its review (phase "results", any outcome: clock-out or timeout), every crew member
 	still present (`source.present`, knocked-out players included, de-duplicated) gets the shift's full pay through
-	`pay`: Credits = the shift's pay from ShiftQuotaFormulas.breakdown (Gloom removed x GLEAM_PER_GLOOM plus the banked
+	`pay`: Credits = the shift's pay from ShiftQuotaFormulas.breakdown (Gloom removed x CREDITS_PER_GLOOM plus the banked
 	valuables, overtime included) and saved Gloom = floor(cleared x SAVED_GLOOM_PER_CLEARED). Players who left get
 	nothing. A reset never reaches "results" and pays nothing; a shift pays once. Each payment runs in its own guard, so
 	one failure never skips the rest of the crew.
@@ -18,7 +18,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local CurrencyConstants = require(ReplicatedStorage.Shared.Features.Currency.Data.CurrencyConstants)
-local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
 
@@ -42,8 +41,8 @@ local ShiftPaySystem = {}
 function ShiftPaySystem.amounts(results: ShiftTypes.ShiftResults): CurrencyConstants.Amounts
 	local split = ShiftQuotaFormulas.breakdown(results.cleared, results.dust or 0, results.bonus)
 	return {
-		credits = split.gleam,
-		gloom = math.floor(math.max(0, results.cleared) * ShiftConstants.SAVED_GLOOM_PER_CLEARED),
+		credits = split.credits,
+		gloom = ShiftQuotaFormulas.savedGloom(results.cleared),
 	}
 end
 

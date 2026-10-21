@@ -111,8 +111,8 @@ local function lastOf(last: DepotTypes.LastShift, phone: boolean): LastView
 		then "LAST SHIFT"
 		elseif last.truck > 0 then `YOUR LAST SHIFT — TRUCK {last.truck}`
 		else "YOUR LAST SHIFT"
-	-- Every Gloom removed paid its Gleam at clock-out, on top of the valuables banked.
-	local earned = ShiftQuotaFormulas.breakdown(last.cleared, 0, last.bonus).gleam
+	-- Every Gloom removed paid its Credits at clock-out, on top of the valuables banked.
+	local earned = ShiftQuotaFormulas.breakdown(last.cleared, 0, last.bonus).credits
 	return {
 		title = title,
 		rows = {

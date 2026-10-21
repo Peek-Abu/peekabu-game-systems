@@ -230,10 +230,10 @@ function DepotWorldViewModel.review(attributes: { [string]: unknown }): ReviewVi
 		band = `SHIFT REVIEW · {band}`,
 		rows = {
 			{ label = "GLOOM", value = `{cleared} / {quota}` },
-			-- Every Gloom removed paid its Gleam at clock-out, on top of the valuables banked.
+			-- Every Gloom removed paid its Credits at clock-out, on top of the valuables banked.
 			{
 				label = ShiftCurrencyUtils.earnedLabel(),
-				value = ShiftCurrencyUtils.amount(ShiftQuotaFormulas.breakdown(cleared, 0, bonus).gleam),
+				value = ShiftCurrencyUtils.amount(ShiftQuotaFormulas.breakdown(cleared, 0, bonus).credits),
 			},
 			{ label = "TIMES CAUGHT", value = tostring(catches) },
 			{ label = "ASSETS", value = `{salvage} of {offered}` },

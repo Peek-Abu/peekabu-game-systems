@@ -140,7 +140,7 @@ function VM.copy(
 				},
 				{
 					title = "02 / VACUUM & BANK",
-					body = `Equip your vacuum. {cleanControl or "Hold the cleaning action near dust."} Every pile you vacuum removes Gloom toward the contract on the spot, and so does cleaning the grime off a valuable. Bank the valuables at the truck (the Mobile Recovery Unit) for Gleam.`,
+					body = `Equip your vacuum. {cleanControl or "Hold the cleaning action near dust."} Every pile you vacuum removes Gloom toward the contract on the spot, and so does cleaning the grime off a valuable. Bank the valuables at the truck (the Mobile Recovery Unit) for Credits.`,
 				},
 				{
 					title = "03 / WATCH YOUR NOISE",
@@ -148,7 +148,7 @@ function VM.copy(
 				},
 				{
 					title = "04 / CLOCK OFF",
-					body = "Remove the contract's Gloom, then choose: clock out at the truck, or sign the overtime sheet beside it for new shimmering loot worth ×1.5 and a faster Manager. Every Gloom removed pays 1 Gleam at clock-out. Review your crew's awards and vote for another shift or the depot.",
+					body = "Remove the contract's Gloom, then choose: clock out at the truck, or sign the overtime sheet beside it for new shimmering loot worth ×1.5 and a faster Manager. Every Gloom removed pays 1 Credit at clock-out. Review your crew's awards and vote for another shift or the depot.",
 				},
 			},
 		}
