@@ -1,8 +1,8 @@
 --!strict
 --[=[
 	ShiftCrewList: the crew in a shift (V1 shift renders): a small dark plate with a row per crew member, their own
-	character's head (CharacterPortrait), their name, their Gloom-life pips (ShiftLivesPips) and a sticker for what matters at a glance (YOU in gold, CAUGHT in
-	coral, OUT for a member knocked out for the shift; a caught member's name is struck through and faded). Every pill is as wide as its measured label
+	character's head (CharacterPortrait), their name, their Gloom-life hearts (ShiftLivesPips) at the row's right (OUT takes their place for a member knocked out for the shift; the local player's name is gold) and, on a row without lives, a sticker for what matters at a glance (YOU in gold, CAUGHT in
+	coral; a caught member's name is struck through and faded). Every pill is as wide as its measured label
 	(TextService, ToonStyleViewModel.pillWidth), so no label is ever cut, and the name keeps clear of the tag's column.
 	Tapping it opens the detail (`open`): each member's status in words, beside it. Desktop: top-left under Roblox's buttons. Phone: top-right. Presentational (exempt;
 	story in ShiftCompactHudPanel.story; the roster is specced in ShiftCrewViewModel).
@@ -56,33 +56,28 @@ export type ShiftCrewListProps = {
 	width: number?,
 }
 
-local function row(
-	member: ShiftCrewViewModel.MemberView,
-	you: boolean,
-	phone: boolean,
-	tall: boolean,
-	width: number,
-	order: number
-)
+local function row(member: ShiftCrewViewModel.MemberView, you: boolean, phone: boolean, width: number, order: number)
 	local height = (if phone then ShiftCrewViewModel.LIST.phone else ShiftCrewViewModel.LIST.desktop).row
-	local avatar = height - 8
-	local lineX = avatar + 8
 	local roomy = height > 34
-	-- The sticker for what matters at a glance, its width from its measured label.
-	local tag = if member.out then "OUT" elseif member.tone == "danger" then "CAUGHT" elseif you then "YOU" else nil
+	-- With Gloom lives (none for a member not in a shift) the right column holds the hearts, or OUT in their place, and
+	-- the local player is marked by a gold name; without them the tag (OUT, CAUGHT or YOU) sits at the name's right.
+	local lives, livesMax = member.lives, member.livesMax
+	local hasLives = lives ~= nil and livesMax ~= nil
+	local tag = if member.out
+		then "OUT"
+		elseif hasLives then nil
+		elseif member.tone == "danger" then "CAUGHT"
+		elseif you then "YOU"
+		else nil
 	local tagSize = if roomy then 14 else 12
 	local tagWidth = if tag ~= nil then pillWidth(tag, tagSize) else 0
-	-- With Gloom lives (none for a member not in a shift) the pips and the tag share a second line under the name;
-	-- otherwise the tag sits at the name's right, which the name keeps clear of.
-	local lives, livesMax = member.lives, member.livesMax
-	local layout = ShiftCrewViewModel.rowLayout(phone, width, tagWidth, if lives ~= nil then livesMax else nil)
+	local layout = ShiftCrewViewModel.rowLayout(phone, width, tagWidth, if hasLives then livesMax else nil)
 	local sizes = if roomy then ShiftHudViewModel.LIVES.desktop else ShiftHudViewModel.LIVES.phone
 	local nameWidth = layout.nameWidth
-	local tagHeight = if roomy then 24 else (if layout.secondLine then 16 else 20)
-	-- The hearts' row starts `heartLift` px above the first line's bottom; the second line's centre is its middle.
-	local list = if phone then ShiftCrewViewModel.LIST.phone else ShiftCrewViewModel.LIST.desktop
-	local heartsTop = height - list.heartLift
-	local lineY = heartsTop + (sizes.pip + 2 * sizes.stroke) / 2
+	local avatar = layout.avatar
+	local lineX = layout.nameX
+	local tagHeight = if roomy then 24 else 20
+	local nameColor = if you and hasLives then UIToonConstants.shade("gold").base else COLOR.white
 	local children: { [string]: React.ReactNode } = {
 		face = e("Frame", {
 			Position = UDim2.fromOffset(0, 4),
@@ -90,7 +85,10 @@ local function row(
 			BackgroundColor3 = UIToonConstants.shade("lilac").hi,
 		}, {
 			corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }),
-			stroke = e("UIStroke", { Color = if you then COLOR.selected else COLOR.ink, Thickness = 3 }),
+			stroke = e(
+				"UIStroke",
+				{ Color = if you then COLOR.selected else COLOR.ink, Thickness = ShiftCrewViewModel.FACE_OUTLINE }
+			),
 			-- Their own character's head (a caught one worried and greyed).
 			portrait = e(CharacterPortrait, {
 				userId = member.userId,
@@ -104,7 +102,7 @@ local function row(
 		name = e(ToonText, {
 			text = member.name,
 			font = "body",
-			color = COLOR.white,
+			color = nameColor,
 			textSize = if roomy then 19 else 15,
 			position = UDim2.fromOffset(lineX, 0),
 			size = UDim2.fromOffset(nameWidth, height),
@@ -121,12 +119,12 @@ local function row(
 			BorderSizePixel = 0,
 		})
 	end
-	if lives ~= nil and livesMax ~= nil then
+	if lives ~= nil and livesMax ~= nil and not member.out then
 		children.lives = ShiftLivesPips.pips({
 			lives = lives,
 			livesMax = livesMax,
 			sizes = sizes,
-			position = UDim2.fromOffset(layout.pipsX, heartsTop),
+			position = UDim2.fromOffset(layout.columnX or 0, (height - sizes.pip - 2 * sizes.stroke) / 2),
 		})
 	end
 	if tag ~= nil then
@@ -136,13 +134,16 @@ local function row(
 			textSize = tagSize,
 			padX = PILL_PAD,
 			anchor = Vector2.new(1, 0.5),
-			position = if layout.secondLine then UDim2.new(1, -2, 0, lineY) else UDim2.new(1, -2, 0.5, 0),
-			size = UDim2.fromOffset(tagWidth, tagHeight),
+			position = UDim2.new(1, -2, 0.5, 0),
+			size = UDim2.fromOffset(
+				if layout.columnWidth ~= nil then math.min(tagWidth, layout.columnWidth) else tagWidth,
+				tagHeight
+			),
 			tilt = if tag == "YOU" then -3 else 3,
 		})
 	end
 	return e("Frame", {
-		Size = UDim2.fromOffset(width, ShiftCrewViewModel.rowHeight(phone, tall)),
+		Size = UDim2.fromOffset(width, height),
 		BackgroundTransparency = 1,
 		LayoutOrder = order,
 	}, children)
@@ -153,8 +154,7 @@ local function ShiftCrewList(props: ShiftCrewListProps): React.ReactNode
 	local list = if phone then ShiftCrewViewModel.LIST.phone else ShiftCrewViewModel.LIST.desktop
 	local padding = list.padding
 	local members = props.roster.members
-	local tall = ShiftCrewViewModel.anyLives(members)
-	local size = ShiftCrewViewModel.listSize(phone, #members, props.width, tall)
+	local size = ShiftCrewViewModel.listSize(phone, #members, props.width)
 	local width, height = size.X, size.Y
 	local rows: { [string]: React.ReactNode } = {
 		layout = e("UIListLayout", {
@@ -163,7 +163,7 @@ local function ShiftCrewList(props: ShiftCrewListProps): React.ReactNode
 		}),
 	}
 	for index, member in members do
-		rows[`m{index}`] = row(member, member.userId == props.myId, phone, tall, width - 2 * padding, index)
+		rows[`m{index}`] = row(member, member.userId == props.myId, phone, width - 2 * padding, index)
 	end
 	local body: { [string]: React.ReactNode } = {
 		rows = e("Frame", {

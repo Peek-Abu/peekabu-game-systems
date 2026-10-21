@@ -1,5 +1,6 @@
 local ShiftCrewViewModel = require(script.Parent.ShiftCrewViewModel)
 local ShiftHudViewModel = require(script.Parent.ShiftHudViewModel)
+local ToonStyleViewModel = require(script.Parent.Parent.Toon.ToonStyleViewModel)
 
 local NAMES = { [1] = "Sam", [2] = "Alex", [3] = "Jo" }
 
@@ -269,19 +270,6 @@ return function()
 			expect(ShiftCrewViewModel.listSize(true, 4)).to.equal(Vector2.new(176, 16 + 4 * 30))
 			expect(ShiftCrewViewModel.listSize(true, 4, 151)).to.equal(Vector2.new(151, 16 + 4 * 30))
 		end)
-
-		it("grows each row by a second line for the Gloom-life hearts", function()
-			expect(ShiftCrewViewModel.listSize(false, 3, nil, true)).to.equal(Vector2.new(236, 24 + 3 * 62))
-			expect(ShiftCrewViewModel.listSize(true, 4, nil, true)).to.equal(Vector2.new(176, 16 + 4 * 43))
-		end)
-
-		it("holds a full heart row: livesLine is the heart's box less how far it rises into the name line", function()
-			for _, phone in { true, false } do
-				local list = if phone then ShiftCrewViewModel.LIST.phone else ShiftCrewViewModel.LIST.desktop
-				local lives = if phone then ShiftHudViewModel.LIVES.phone else ShiftHudViewModel.LIVES.desktop
-				expect(list.livesLine).to.equal(lives.pip + 2 * lives.stroke - list.heartLift)
-			end
-		end)
 	end)
 
 	describe("heartIcons", function()
@@ -302,35 +290,49 @@ return function()
 	end)
 
 	describe("rowLayout", function()
-		-- A generous pill width for the widest tag (CAUGHT at the phone's 12 px, or at the desktop's 14 px).
-		local WIDEST_TAG = 80
+		local FACE_OUTLINE = ShiftCrewViewModel.FACE_OUTLINE
+		-- Every row width the lists are drawn at: the phone's 140-176 list and the desktop's 236 (less the card's padding).
+		local cases = {}
+		for width = 140, 176 do
+			table.insert(cases, { phone = true, rowWidth = width - 16, lives = ShiftHudViewModel.LIVES.phone })
+		end
+		table.insert(cases, { phone = false, rowWidth = 236 - 24, lives = ShiftHudViewModel.LIVES.desktop })
 
-		it("gives the name at least 60 px at the narrowest phone list, with the widest tag and full lives", function()
-			local narrow = ShiftCrewViewModel.phoneFit(0).list
-			expect(narrow).to.equal(140)
-			for _, tagWidth in { 0, 40, WIDEST_TAG } do
-				local layout = ShiftCrewViewModel.rowLayout(true, narrow - 16, tagWidth, 3)
-				expect(layout.secondLine).to.equal(true)
-				expect(layout.nameWidth >= 60).to.equal(true)
+		it("keeps a lives row's name clear of the face (with its outline) and of the hearts", function()
+			for _, case in cases do
+				local layout = ShiftCrewViewModel.rowLayout(case.phone, case.rowWidth, 0, 3)
+				expect(layout.nameX >= layout.avatar + FACE_OUTLINE).to.equal(true)
+				expect(layout.nameX + layout.nameWidth <= layout.columnX).to.equal(true)
+				expect(layout.nameWidth > 0).to.equal(true)
 			end
 		end)
 
-		it("gives the name at least 60 px on every phone list width and on desktop", function()
-			for width = 140, 176 do
-				expect(ShiftCrewViewModel.rowLayout(true, width - 16, WIDEST_TAG, 3).nameWidth >= 60).to.equal(true)
+		it("puts the hearts' column at the row's right edge, three hearts wide", function()
+			for _, case in cases do
+				local layout = ShiftCrewViewModel.rowLayout(case.phone, case.rowWidth, 0, 3)
+				expect(layout.columnX + layout.columnWidth).to.equal(case.rowWidth)
+				expect(layout.columnWidth).to.equal(3 * case.lives.pip + 2 * case.lives.gap)
 			end
-			expect(ShiftCrewViewModel.rowLayout(false, 236 - 24, WIDEST_TAG, 3).nameWidth >= 60).to.equal(true)
 		end)
 
-		it("aligns the pips with the name when the tag fits beside them, else starts them at the row's edge", function()
-			expect(ShiftCrewViewModel.rowLayout(true, 160, 50, 3).pipsX).to.equal(28)
-			expect(ShiftCrewViewModel.rowLayout(true, 124, 60, 3).pipsX).to.equal(0)
-			expect(ShiftCrewViewModel.rowLayout(false, 212, 66, 3).pipsX).to.equal(40)
+		it("gives the name at least 60 px on the 844 phone list and on desktop", function()
+			local phone = ShiftCrewViewModel.rowLayout(true, ShiftCrewViewModel.phoneFit(844).list - 16, 0, 3)
+			expect(phone.nameWidth >= 60).to.equal(true)
+			expect(ShiftCrewViewModel.rowLayout(false, 236 - 24, 0, 3).nameWidth >= 60).to.equal(true)
+		end)
+
+		it("holds the OUT pill, even for a wide label, inside the hearts' column", function()
+			-- A generous OUT label width (Luckiest Guy) at the phone's 12 px and the desktop's 14 px tags, 7 px of padding.
+			for _, case in { { phone = true, label = 40, size = 12 }, { phone = false, label = 46, size = 14 } } do
+				local layout = ShiftCrewViewModel.rowLayout(case.phone, 200, 0, 3)
+				local pill = ToonStyleViewModel.pillWidth(case.label, case.size, 7)
+				expect(pill <= layout.columnWidth).to.equal(true)
+			end
 		end)
 
 		it("keeps the tag inline, and the name clear of it, for a member without lives", function()
 			local layout = ShiftCrewViewModel.rowLayout(true, 160, 50, nil)
-			expect(layout.secondLine).to.equal(false)
+			expect(layout.columnX).to.equal(nil)
 			expect(layout.nameWidth).to.equal(160 - 28 - 59)
 		end)
 	end)
@@ -433,11 +435,6 @@ return function()
 			end
 		)
 
-		it("drops under the taller crew list when its rows carry lives", function()
-			local frame = ShiftCrewViewModel.rosterFrame(false, Vector2.new(1000, 700), 3, Vector2.new(24, 66), true)
-			expect(frame.position).to.equal(Vector2.new(24, 66 + 24 + 3 * 62 + 12))
-		end)
-
 		-- Everything else on a phone screen the open roster must stay clear of (top-left corner, size).
 		local function phoneObstacles(viewport, count)
 			local w, h = viewport.X, viewport.Y
@@ -446,7 +443,7 @@ return function()
 				meter = { meterAt, meterSize },
 				list = {
 					Vector2.new(w - 10 - ShiftCrewViewModel.phoneFit(w).list, 6),
-					ShiftCrewViewModel.listSize(true, count, ShiftCrewViewModel.phoneFit(w).list, true),
+					ShiftCrewViewModel.listSize(true, count, ShiftCrewViewModel.phoneFit(w).list),
 				},
 				-- ShiftClockOutBoard: 330x80 centred under the Gloom-life pips (ShiftHudViewModel.boardTop, +7 drop), its
 				-- tilted clock render reaching 29 px left.
@@ -502,17 +499,21 @@ return function()
 			end
 		end)
 
-		it("keeps the crew list, with lives rows, above the action arc on 667 and 844 phones", function()
-			for _, viewport in { Vector2.new(667, 375), Vector2.new(844, 390) } do
-				local obstacles = phoneObstacles(viewport, 4)
-				local list = obstacles.list
-				for name, rect in obstacles do
-					if string.sub(name, 1, 4) == "arc_" then
-						expect(overlaps(list[1], list[2], rect[1], rect[2])).to.equal(false)
+		it(
+			"keeps the 4-member crew list 8 px clear of every action button, Crouch included, on 667 and 844 phones",
+			function()
+				for _, viewport in { Vector2.new(667, 375), Vector2.new(844, 390) } do
+					local obstacles = phoneObstacles(viewport, 4)
+					local list = obstacles.list
+					for name, rect in obstacles do
+						if string.sub(name, 1, 4) == "arc_" then
+							local at, size = rect[1] - Vector2.new(8, 8), rect[2] + Vector2.new(16, 16)
+							expect(overlaps(list[1], list[2], at, size)).to.equal(false)
+						end
 					end
 				end
 			end
-		end)
+		)
 
 		it("narrows on a 667x375 phone and tightens its lines so 4 members still end above the thumbstick", function()
 			local viewport = Vector2.new(667, 375)
