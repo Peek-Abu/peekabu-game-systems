@@ -10,11 +10,11 @@ Plan: `docs/superpowers/plans/2026-10-10-m5-cleanup-crew-analytics.md`.
   published games only); in Studio read the server log instead.
 - Roblox dashboard: Creator Dashboard → the experience → Analytics → Custom events (Explore). Charts can take up to
   24 h to fill. Each event has three custom fields, used as breakdowns:
-  - **field 1** `variant|platform|party|build`, e.g. `B|phone|3|m5-v42`;
+  - **field 1** `tags|platform|party|cohort|build`, e.g. `5beats+skip|phone|3|new|w1-v42` (`tags` = the variants of the experiments that affect the event, `-` when none; `cohort` = `new` / `ret` / `unk`; built by `AnalyticsContextUtils`);
   - **field 2** the target (a cargo kind, `kind:source`, a pile kind, a noise source, a word);
   - **field 3** the outcome, or `outcome:reason` for a failure (`failed:caught`).
 - Server log (Studio Output, or F9 → Server in a live server you are in): every event as
-  `[ShiftAnalyticsSystem] <event> target=… outcome=… reason=… value=… variant=… platform=… party=… build=… session=<JobId>`;
+  `[ShiftAnalyticsSystem] <event> target=… outcome=… reason=… value=… tags=… platform=… party=… cohort=… build=… session=<JobId>`;
   key events at info, the rest at debug. The session id is only here (it would blow up a dashboard field).
 - No personal data: no names, UserIds or chat in any field or log line. Field values are catalog ids and fixed words
   only; anything else is written as `other`.
@@ -40,7 +40,9 @@ vocabulary): these are the token fallbacks, never personal data.
 | cargo_banked | each item in a Load | loader | value credited | kind | quota |
 | noise_investigation | Harlow starts investigating | crew | s | noise he most likely heard | quota |
 | chase_started | Harlow starts chasing someone | that player | s | held kind or `empty` | quota |
-| player_caught | Harlow catches someone | that player | s | `harlow` | quota |
+| player_hit | Harlow catches someone who has lives left (a knockdown) | that player | lives left after it | `harlow` | quota |
+| knocked_out | Harlow catches someone on their last life | that player | s | `harlow` | quota |
+| crew_wiped | the run ends `wiped` (everyone knocked out) | crew | s | `harlow` | `wiped` |
 | quota_met | clearance reaches the quota | crew | s | `clearance` | `met` |
 | optional_salvage_attempted | an attempt closes | attempter | s from quota to pick-up | `kind:source` | `banked`, or `failed:` + `dropped` / `thrown` / `caught` / `left` / `unbanked` |
 | shift_ended | the run ends | each crew member | that player's attempts | `piles_0` / `piles_1_2` / `piles_3_5` / `piles_6_plus` | how the run ended (`clockout` / `timeout` / …) + `:quota_met` / `:quota_missed` |
@@ -63,8 +65,8 @@ clock-out countdown runs; it closes once, as `banked` or failed with a reason.
   and a wrong outcome, only when one player holds two salvage of the same kind. The real fix needs the same Cargo
   extraction as N4.
 - **`caught` includes any death (N5).** A `caught` drop or attempt failure comes from the death that follows the
-  catch, so it also counts a reset button or a fall, not only Mr. Harlow. (`player_caught` itself is Harlow-only: it
-  checks his catch cause.)
+  catch, so it also counts a reset button or a fall, not only Mr. Harlow. (`knocked_out` is Harlow-only: it
+  comes from his catch, not from the death.)
 - **`cargo_dropped … left` is effectively never sent for a leaving player.** The deferred Carry "removed" signal for a
   leaving player fires after the player has gone, so the record has no recipient. (It is sent on a non-death respawn,
   below.)

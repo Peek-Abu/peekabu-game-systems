@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	ShiftAnalyticsSystem: Cleanup Crew's one door to analytics (spec §6.6, §6.4, §1). Every game event goes through
-	`emit`: the name must be one of the 13 (ShiftAnalyticsConstants.EVENTS); target, outcome and reason become
+	`emit`: the name must be one of the 15 (ShiftAnalyticsConstants.EVENTS); target, outcome and reason become
 	vocabulary tokens (ShiftAnalyticsUtils.token: catalog ids and fixed words only, so no name, chat line or id can reach
 	a field). Each record goes to:
 	- AnalyticsServiceServer:custom(player, event, value, { context, target, outcome }): the engine takes three custom

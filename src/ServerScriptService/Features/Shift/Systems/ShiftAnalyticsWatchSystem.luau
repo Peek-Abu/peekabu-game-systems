@@ -18,7 +18,10 @@
 	  says so (after the quota, outside the loading bay); `dropped`: the item's attempt closes (dropped / thrown /
 	  caught / left) and cargo_dropped is sent. Stashing into a slot, banking and resets ("forced", "destroyed") are not
 	  drops;
-	- Death `died` with Harlow's cause: the player's open attempts close as "caught", then player_caught;
+	- Death `died` with Harlow's cause: the player's open attempts close as "caught";
+	- Shift `caught` (ShiftServiceServer:noteCatch, after the catch spent a life): one event per catch, chosen by
+	  ShiftAnalyticsUtils.catchEvent from the lives left: player_hit (a knockdown) or knocked_out (the last life), never
+	  both; Round `runEnded` with the "wiped" outcome also sends crew_wiped to the crew, before shift_ended;
 	- Mr. Harlow's mode/target attributes (the `Occupant` tag; read, never required, since Occupant requires Shift):
 	  noise_investigation for the crew, with the noise he most likely heard (Noise `made`, kept a few seconds), and
 	  chase_started for the chased player, with what they hold. `investigated` tells the review who woke him
@@ -167,6 +170,10 @@ local function onRunEnded(outcome: string)
 	ShiftAnalyticsSystem.closeAttempts(ShiftAnalyticsSystem.salvage:resolveAll("unbanked"))
 	local state = ShiftAnalyticsSystem.shift()
 	local reason = if state ~= nil and state.quotaMet then "quota_met" else "quota_missed"
+	local wipe = ShiftAnalyticsUtils.wipeDetails(outcome, ShiftAnalyticsSystem.elapsed())
+	if wipe ~= nil then
+		ShiftAnalyticsSystem.emit("crew_wiped", "crew", wipe)
+	end
 	for _, player in ShiftAnalyticsSystem.crew() do
 		ShiftAnalyticsSystem.emit("shift_ended", player, {
 			target = ShiftAnalyticsUtils.pileBucket(ShiftAnalyticsSystem.tracker:pilesOf(player.UserId)),
@@ -267,13 +274,14 @@ local function onDied(player: Player, info: DeathTypes.DeathInfo)
 		return
 	end
 	ShiftAnalyticsSystem.closeAttempts(ShiftAnalyticsSystem.salvage:resolvePlayer(player.UserId, "caught"))
-	if running() then
-		ShiftAnalyticsSystem.emit("player_caught", player, {
-			target = "harlow",
-			outcome = ShiftAnalyticsSystem.quotaTag(),
-			value = ShiftAnalyticsSystem.elapsed(),
-		})
-	end
+end
+
+-- One catch, once: a hit (a life remains) or the knock-out (the last life). ShiftServiceServer:noteCatch fires it only
+-- for a catch counted during a run, so it is not re-checked here (the signal is deferred; the run may have just ended).
+local function onCaught(player: Player, livesLeft: number)
+	local event, details =
+		ShiftAnalyticsUtils.catchEvent(livesLeft, ShiftAnalyticsSystem.quotaTag(), ShiftAnalyticsSystem.elapsed())
+	ShiftAnalyticsSystem.emit(event, player, details)
 end
 
 local function onNoise(event: NoiseTypes.NoiseEvent)
@@ -360,6 +368,7 @@ ShiftAnalyticsWatchSystem.investigated = investigated
 ]=]
 function ShiftAnalyticsWatchSystem.start(
 	changed: SignalTyped.Signal<ShiftTypes.ShiftState>,
+	caught: SignalTyped.Signal<Player, number>,
 	trip: ShiftTripSystem.ShiftTripSystem
 ): () -> ()
 	ShiftAnalyticsSystem.start(function()
@@ -397,6 +406,10 @@ function ShiftAnalyticsWatchSystem.start(
 	local dropped = CarryServiceServer.dropped:Connect(onDropped)
 	keep(function()
 		dropped:Disconnect()
+	end)
+	local caughtConnection = caught:Connect(onCaught)
+	keep(function()
+		caughtConnection:Disconnect()
 	end)
 	local died = DeathServiceServer.died:Connect(onDied)
 	keep(function()

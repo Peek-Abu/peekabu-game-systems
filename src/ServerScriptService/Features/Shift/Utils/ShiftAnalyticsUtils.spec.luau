@@ -16,8 +16,8 @@ end
 
 return function()
 	describe("isEvent", function()
-		it("knows exactly the 13 spec events", function()
-			expect(#ShiftAnalyticsConstants.EVENTS).to.equal(13)
+		it("knows exactly the 15 events: the spec's 12 (player_caught is split) and the 3 catch events", function()
+			expect(#ShiftAnalyticsConstants.EVENTS).to.equal(15)
 			for _, name in ShiftAnalyticsConstants.EVENTS do
 				expect(ShiftAnalyticsUtils.isEvent(name)).to.equal(true)
 			end
@@ -27,6 +27,65 @@ return function()
 			expect(ShiftAnalyticsUtils.isEvent("Contract_Started")).to.equal(false)
 			expect(ShiftAnalyticsUtils.isEvent("chat")).to.equal(false)
 			expect(ShiftAnalyticsUtils.isEvent("")).to.equal(false)
+		end)
+	end)
+
+	describe("catchEvent", function()
+		it("is player_hit with the lives left while a life remains", function()
+			local event, details = ShiftAnalyticsUtils.catchEvent(2, "before_quota", 40)
+			expect(event).to.equal("player_hit")
+			expect(details.target).to.equal("harlow")
+			expect(details.outcome).to.equal("before_quota")
+			expect(details.value).to.equal(2)
+		end)
+
+		it("is knocked_out, with the shift clock, when no life remains", function()
+			local event, details = ShiftAnalyticsUtils.catchEvent(0, "after_quota", 312.5)
+			expect(event).to.equal("knocked_out")
+			expect(details.target).to.equal("harlow")
+			expect(details.outcome).to.equal("after_quota")
+			expect(details.value).to.equal(312.5)
+		end)
+
+		it("sends one event per catch: only the last life's catch is knocked_out, never also a hit", function()
+			for lives = 0, 5 do
+				local event = ShiftAnalyticsUtils.catchEvent(lives, "before_quota", 1)
+				expect(event).to.equal(if lives == 0 then "knocked_out" else "player_hit")
+			end
+		end)
+
+		it("only names registered events and keeps every field in the vocabulary", function()
+			for lives = 0, 3 do
+				local event, details = ShiftAnalyticsUtils.catchEvent(lives, "before_quota", 5)
+				expect(ShiftAnalyticsUtils.isEvent(event)).to.equal(true)
+				expect(ShiftAnalyticsUtils.token(details.target)).to.equal(details.target)
+				expect(ShiftAnalyticsUtils.token(details.outcome)).to.equal(details.outcome)
+			end
+		end)
+
+		it("treats a negative count as knocked out", function()
+			expect((ShiftAnalyticsUtils.catchEvent(-1, "before_quota", 1))).to.equal("knocked_out")
+		end)
+	end)
+
+	describe("wipeDetails", function()
+		it("is a crew_wiped record only when the run ended wiped", function()
+			local details = ShiftAnalyticsUtils.wipeDetails("wiped", 123)
+			expect(details).to.be.ok()
+			expect(details.target).to.equal("harlow")
+			expect(details.outcome).to.equal("wiped")
+			expect(details.value).to.equal(123)
+			expect(ShiftAnalyticsUtils.token(details.outcome)).to.equal("wiped")
+		end)
+
+		it("is nil for every other way a run ends", function()
+			for _, outcome in { "clockout", "timeout", "abandoned", "cancelled", "reset", "other", "" } do
+				expect(ShiftAnalyticsUtils.wipeDetails(outcome, 10)).to.equal(nil)
+			end
+		end)
+
+		it("names a registered event", function()
+			expect(ShiftAnalyticsUtils.isEvent("crew_wiped")).to.equal(true)
 		end)
 	end)
 

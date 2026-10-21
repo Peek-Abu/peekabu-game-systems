@@ -16,8 +16,10 @@
 	@class ShiftAnalyticsUtils
 ]=]
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
+local RoundConstants = require(ReplicatedStorage.Shared.Features.Round.Data.RoundConstants)
 local AnalyticsContextUtils = require(ServerScriptService.Features.Analytics.Utils.AnalyticsContextUtils)
 local AnalyticsTypes = require(ServerScriptService.Features.Analytics.Data.AnalyticsTypes)
 local ShiftAnalyticsConstants = require(ServerScriptService.Features.Shift.Data.ShiftAnalyticsConstants)
@@ -181,6 +183,29 @@ function ShiftAnalyticsUtils.record(event: string, context: Context, details: De
 		reason = if reason ~= nil then ShiftAnalyticsUtils.token(reason) else "none",
 		value = ShiftAnalyticsUtils.value(details.value),
 	}
+end
+
+--[=[
+	The one event a finished catch sends, from the lives the player has left after it: "player_hit" (a knockdown, a
+	life remains; value = the lives left) or "knocked_out" (the last life; value = seconds into the shift). Never both,
+	so a catch is counted once. Pure.
+]=]
+function ShiftAnalyticsUtils.catchEvent(livesLeft: number, quotaTag: string, elapsed: number): (string, Details)
+	if livesLeft > 0 then
+		return "player_hit", { target = "harlow", outcome = quotaTag, value = livesLeft }
+	end
+	return "knocked_out", { target = "harlow", outcome = quotaTag, value = elapsed }
+end
+
+--[=[
+	The crew_wiped record when the run ended "wiped" (Round's outcome: everyone was knocked out); nil for every other
+	end. `elapsed` is the seconds into the shift.
+]=]
+function ShiftAnalyticsUtils.wipeDetails(outcome: string, elapsed: number): Details?
+	if outcome ~= RoundConstants.OUTCOME_WIPED then
+		return nil
+	end
+	return { target = "harlow", outcome = "wiped", value = elapsed }
 end
 
 function ShiftAnalyticsUtils.quotaTag(quotaMet: boolean): string

@@ -56,6 +56,8 @@ export type ShiftLivesSystem = {
 	-- or one already out, or outside a run.
 	spend: (self: ShiftLivesSystem, player: Player) -> boolean,
 	isKnockedOut: (self: ShiftLivesSystem, player: Player) -> boolean,
+	-- The lives the player has left (0 once out); nil for a player not in the run.
+	livesLeft: (self: ShiftLivesSystem, player: Player) -> number?,
 	-- The shift's end: releases everyone knocked out, clears every public field, forgets the lives.
 	clear: (self: ShiftLivesSystem) -> (),
 	-- Shapes the starting lives (ShiftLivesRules.starting); returns the function that removes it.
@@ -218,6 +220,10 @@ function ShiftLivesSystem.new(deps: Deps): ShiftLivesSystem
 
 		isKnockedOut = function(_self, player)
 			return tracker:isOut(player.UserId)
+		end,
+
+		livesLeft = function(_self, player)
+			return tracker:get(player.UserId)
 		end,
 
 		clear = function(_self)

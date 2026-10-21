@@ -130,6 +130,8 @@ local publishScheduled = false
 local stoppers: { () -> () } = {}
 -- Every state change (a copy), for Occupant (Harlow follows the run, its break and its tier).
 local changed: SignalTyped.Signal<ShiftTypes.ShiftState> = SignalTyped.new()
+-- Every counted catch with the lives the player has left after it (0 = knocked out), for analytics.
+local caught: SignalTyped.Signal<Player, number> = SignalTyped.new()
 
 local function now(): number
 	return Workspace:GetServerTimeNow()
@@ -409,6 +411,7 @@ end
 export type ShiftServiceServer = {
 	dependencies: { string },
 	changed: SignalTyped.Signal<ShiftTypes.ShiftState>,
+	caught: SignalTyped.Signal<Player, number>,
 	start: (self: ShiftServiceServer) -> (),
 	stop: (self: ShiftServiceServer) -> (),
 	getState: (self: ShiftServiceServer) -> { [string]: any },
@@ -423,6 +426,7 @@ export type ShiftServiceServer = {
 
 local ShiftServiceServer: ShiftServiceServer = {
 	changed = changed,
+	caught = caught,
 	dependencies = {
 		"RoundServiceServer",
 		"OfficeServiceServer",
@@ -463,7 +467,7 @@ local ShiftServiceServer: ShiftServiceServer = {
 		CargoServiceServer:onBanked(ShiftBankingSystem.new(banking))
 		-- The contract's progress: every cleared pile and cleaning step adds its Gloom live (same gate and re-check).
 		table.insert(stoppers, ShiftGloomSystem.start(banking.isOpen, banking.afterBank))
-		table.insert(stoppers, ShiftAnalyticsWatchSystem.start(changed, trip))
+		table.insert(stoppers, ShiftAnalyticsWatchSystem.start(changed, caught, trip))
 		table.insert(stoppers, ShiftReviewSystem.start(roster, isRunning))
 		-- Pay: every crew member still here gets the full Credits and saved Gloom when the review opens.
 		table.insert(
@@ -552,7 +556,8 @@ local ShiftServiceServer: ShiftServiceServer = {
 	end,
 
 	--[=[
-		Counts a catch by the Manager against the player (the review's roster). False outside a running shift.
+		Counts a catch by the Manager against the player (the review's roster) and fires `caught` with the lives they have
+		left (the catch spent one first, `spendLife`). False outside a running shift.
 	]=]
 	noteCatch = function(_self, player)
 		if state.phase ~= "running" then
@@ -560,6 +565,10 @@ local ShiftServiceServer: ShiftServiceServer = {
 		end
 		roster:record(player.UserId, player.DisplayName, { caught = 1 })
 		publish()
+		local livesLeft = lives:livesLeft(player)
+		if livesLeft ~= nil then
+			caught:Fire(player, livesLeft)
+		end
 		return true
 	end,
 

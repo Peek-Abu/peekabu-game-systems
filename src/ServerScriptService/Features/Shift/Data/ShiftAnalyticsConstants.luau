@@ -1,6 +1,6 @@
 --!strict
 --[=[
-	ShiftAnalyticsConstants: Cleanup Crew's analytics vocabulary (spec §6.6). The 13 event names are the only ones
+	ShiftAnalyticsConstants: Cleanup Crew's analytics vocabulary (spec §6.6). The 15 event names are the only ones
 	ShiftAnalyticsSystem sends. Every target, outcome and reason must be a VOCABULARY word (the fixed words below,
 	cargo ids and pile kinds), or a ":"-joined pair of them, so nothing a player typed or is called can reach a field.
 	Static data (spec-exempt).
@@ -13,7 +13,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CargoRegistry = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoRegistry)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 
--- Spec §6.6, verbatim.
+-- Spec §6.6, except player_caught: the three catch events replace it (a hit, the last life, a wipe), so a catch is
+-- counted once.
 local EVENTS: { string } = {
 	"contract_started",
 	"first_cleanup_started",
@@ -23,7 +24,9 @@ local EVENTS: { string } = {
 	"cargo_banked",
 	"noise_investigation",
 	"chase_started",
-	"player_caught",
+	"player_hit",
+	"knocked_out",
+	"crew_wiped",
 	"quota_met",
 	"optional_salvage_attempted",
 	"shift_ended",
@@ -74,7 +77,7 @@ local WORDS: { string } = {
 	"drop",
 	"search",
 	"rattle",
-	-- player_caught.
+	-- The catch events.
 	"harlow",
 	-- How a run ended (Round's outcomes, Shift's clock out and reset) and the quota.
 	"clockout",
@@ -108,7 +111,9 @@ local INFO_EVENTS: { [string]: boolean } = {
 	contract_started = true,
 	quota_met = true,
 	optional_salvage_attempted = true,
-	player_caught = true,
+	player_hit = true,
+	knocked_out = true,
+	crew_wiped = true,
 	shift_ended = true,
 	replay_started = true,
 }
