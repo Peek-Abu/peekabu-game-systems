@@ -49,11 +49,15 @@ export type LayerProps = {
 }
 
 local FONT_SIZE = table.freeze({
-	desktop = table.freeze({ title = 20, detail = 30, jackpot = 14 }),
-	phone = table.freeze({ title = 13, detail = 18, jackpot = 10 }),
+	desktop = table.freeze({ title = 20, detail = 28, jackpot = 14 }),
+	phone = table.freeze({ title = 11, detail = 15, jackpot = 10 }),
 })
-local SLIP_WIDTH = table.freeze({ desktop = 280, phone = 150 })
-local SLIP_HEIGHT = table.freeze({ desktop = 62, phone = 40 })
+local SLIP_WIDTH = table.freeze({ desktop = 280, phone = 200 })
+-- A slip is two rows, the item over its value, each the slip's full width (side by side, both were squeezed until
+-- "34 Credits at the truck" no longer fit). The phone slip keeps its height so two still fit above the Jump button.
+local SLIP_HEIGHT = table.freeze({ desktop = 84, phone = 40 })
+-- The share of a slip's height the item's row takes when a value line sits under it.
+local SLIP_TITLE_SHARE = 0.42
 -- A slip drifts in from a little to the right, far shorter than a note's slide: it should be easy to miss.
 local SLIP_DRIFT = 40
 
@@ -72,14 +76,16 @@ local function Slip(props: SlipProps): React.ReactNode
 	local width = SLIP_WIDTH[props.layout]
 	local height = SLIP_HEIGHT[props.layout]
 	local pad = if phone then 10 else 16
+	local inset = if phone then 3 else 6
 	local detail = slip.detail
+	local titleShare = if detail ~= nil then SLIP_TITLE_SHARE else 1
 	local face: { [string]: React.ReactNode } = {
 		title = e(ToonText, {
 			text = slip.title,
 			font = "body",
 			textSize = sizes.title,
-			position = UDim2.fromOffset(pad, 0),
-			size = UDim2.new(if detail ~= nil then 0.55 else 1, -pad, 1, 0),
+			position = UDim2.fromOffset(pad, inset),
+			size = UDim2.new(1, -2 * pad, titleShare, -inset),
 			fit = true,
 		}),
 	}
@@ -88,10 +94,8 @@ local function Slip(props: SlipProps): React.ReactNode
 			text = detail,
 			meaning = "gold",
 			textSize = sizes.detail,
-			anchor = Vector2.new(1, 0),
-			position = UDim2.new(1, -pad, 0, 0),
-			size = UDim2.new(0.45, -pad, 1, 0),
-			align = "right",
+			position = UDim2.new(0, pad, titleShare, 0),
+			size = UDim2.new(1, -2 * pad, 1 - titleShare, -inset),
 			fit = true,
 		})
 		face.sparkle = e(ToonSparkle, {
