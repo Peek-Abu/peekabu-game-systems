@@ -17,15 +17,17 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
 
+local AnalyticsServer = ServerScriptService.Features.Analytics
+
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
-local AnalyticsConstants = require(ServerScriptService.Features.Analytics.Data.AnalyticsConstants)
-local AnalyticsRules = require(ServerScriptService.Features.Analytics.Rules.AnalyticsRules)
+local AnalyticsConstants = require(AnalyticsServer.Data.AnalyticsConstants)
+local AnalyticsRules = require(AnalyticsServer.Rules.AnalyticsRules)
 -- Required at load so the firstSeen slice registers before PlayerDataServiceServer init (ServerHandler requires
 -- every service module first).
-local AnalyticsFirstSeenSystem = require(ServerScriptService.Features.Analytics.Systems.AnalyticsFirstSeenSystem)
-local AnalyticsEconomySystem = require(ServerScriptService.Features.Analytics.Systems.AnalyticsEconomySystem)
-local AnalyticsSessionSystem = require(ServerScriptService.Features.Analytics.Systems.AnalyticsSessionSystem)
-local AnalyticsTypes = require(ServerScriptService.Features.Analytics.Data.AnalyticsTypes)
+local AnalyticsFirstSeenSystem = require(AnalyticsServer.Systems.AnalyticsFirstSeenSystem)
+local AnalyticsEconomySystem = require(AnalyticsServer.Systems.AnalyticsEconomySystem)
+local AnalyticsSessionSystem = require(AnalyticsServer.Systems.AnalyticsSessionSystem)
+local AnalyticsTypes = require(AnalyticsServer.Data.AnalyticsTypes)
 
 export type ProgressionStatus = "start" | "complete" | "fail"
 

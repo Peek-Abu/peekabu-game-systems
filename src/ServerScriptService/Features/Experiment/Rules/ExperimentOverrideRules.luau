@@ -7,7 +7,9 @@
 	@class ExperimentOverrideRules
 ]=]
 
-local ExperimentRegistry = require(script.Parent.Parent.Data.ExperimentRegistry)
+local ServerScriptService = game:GetService("ServerScriptService")
+
+local ExperimentRegistry = require(ServerScriptService.Features.Experiment.Data.ExperimentRegistry)
 
 local ExperimentOverrideRules = {}
 

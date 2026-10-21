@@ -11,11 +11,14 @@
 	@class ExperimentServiceServer
 ]=]
 
+local ServerScriptService = game:GetService("ServerScriptService")
 local Workspace = game:GetService("Workspace")
 
-local ExperimentRegistry = require(script.Parent.Data.ExperimentRegistry)
-local ExperimentOverrideRules = require(script.Parent.Rules.ExperimentOverrideRules)
-local ExperimentAssignUtils = require(script.Parent.Utils.ExperimentAssignUtils)
+local ExperimentServer = ServerScriptService.Features.Experiment
+
+local ExperimentRegistry = require(ExperimentServer.Data.ExperimentRegistry)
+local ExperimentOverrideRules = require(ExperimentServer.Rules.ExperimentOverrideRules)
+local ExperimentAssignUtils = require(ExperimentServer.Utils.ExperimentAssignUtils)
 
 local OVERRIDE_ATTRIBUTE = "ExperimentOverride"
 

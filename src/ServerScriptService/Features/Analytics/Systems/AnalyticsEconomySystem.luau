@@ -14,11 +14,13 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
+local AnalyticsServer = ServerScriptService.Features.Analytics
+
 local CurrencyConstants = require(ReplicatedStorage.Shared.Features.Currency.Data.CurrencyConstants)
-local AnalyticsConstants = require(ServerScriptService.Features.Analytics.Data.AnalyticsConstants)
-local AnalyticsTypes = require(ServerScriptService.Features.Analytics.Data.AnalyticsTypes)
-local AnalyticsSessionSystem = require(ServerScriptService.Features.Analytics.Systems.AnalyticsSessionSystem)
-local AnalyticsEconomyUtils = require(ServerScriptService.Features.Analytics.Utils.AnalyticsEconomyUtils)
+local AnalyticsConstants = require(AnalyticsServer.Data.AnalyticsConstants)
+local AnalyticsTypes = require(AnalyticsServer.Data.AnalyticsTypes)
+local AnalyticsSessionSystem = require(AnalyticsServer.Systems.AnalyticsSessionSystem)
+local AnalyticsEconomyUtils = require(AnalyticsServer.Utils.AnalyticsEconomyUtils)
 local CurrencyServiceServer = require(ServerScriptService.Features.Currency.CurrencyServiceServer)
 local MarketplaceServiceServer = require(ServerScriptService.Features.Marketplace.MarketplaceServiceServer)
 

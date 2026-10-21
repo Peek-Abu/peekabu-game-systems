@@ -8,7 +8,9 @@
 	@class ExperimentAssignUtils
 ]=]
 
-local ExperimentRegistry = require(script.Parent.Parent.Data.ExperimentRegistry)
+local ServerScriptService = game:GetService("ServerScriptService")
+
+local ExperimentRegistry = require(ServerScriptService.Features.Experiment.Data.ExperimentRegistry)
 
 local TWO_32 = 4294967296
 local FNV_OFFSET = 2166136261
