@@ -130,8 +130,9 @@ local publishScheduled = false
 local stoppers: { () -> () } = {}
 -- Every state change (a copy), for Occupant (Harlow follows the run, its break and its tier).
 local changed: SignalTyped.Signal<ShiftTypes.ShiftState> = SignalTyped.new()
--- Every counted catch with the lives the player has left after it (0 = knocked out), for analytics.
-local caught: SignalTyped.Signal<Player, number> = SignalTyped.new()
+-- Every counted catch with the lives the player has left after it (0 = knocked out) and the seconds into the shift at
+-- the catch, for analytics.
+local caught: SignalTyped.Signal<Player, number, number> = SignalTyped.new()
 
 local function now(): number
 	return Workspace:GetServerTimeNow()
@@ -411,7 +412,7 @@ end
 export type ShiftServiceServer = {
 	dependencies: { string },
 	changed: SignalTyped.Signal<ShiftTypes.ShiftState>,
-	caught: SignalTyped.Signal<Player, number>,
+	caught: SignalTyped.Signal<Player, number, number>,
 	start: (self: ShiftServiceServer) -> (),
 	stop: (self: ShiftServiceServer) -> (),
 	getState: (self: ShiftServiceServer) -> { [string]: any },
@@ -557,7 +558,7 @@ local ShiftServiceServer: ShiftServiceServer = {
 
 	--[=[
 		Counts a catch by the Manager against the player (the review's roster) and fires `caught` with the lives they have
-		left (the catch spent one first, `spendLife`). False outside a running shift.
+		left (the catch spent one first, `spendLife`) and the shift seconds at the catch. False outside a running shift.
 	]=]
 	noteCatch = function(_self, player)
 		if state.phase ~= "running" then
@@ -567,7 +568,7 @@ local ShiftServiceServer: ShiftServiceServer = {
 		publish()
 		local livesLeft = lives:livesLeft(player)
 		if livesLeft ~= nil then
-			caught:Fire(player, livesLeft)
+			caught:Fire(player, livesLeft, math.max(0, now() - (state.startedAt or now())))
 		end
 		return true
 	end,

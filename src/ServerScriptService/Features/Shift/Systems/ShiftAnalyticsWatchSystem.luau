@@ -278,9 +278,8 @@ end
 
 -- One catch, once: a hit (a life remains) or the knock-out (the last life). ShiftServiceServer:noteCatch fires it only
 -- for a catch counted during a run, so it is not re-checked here (the signal is deferred; the run may have just ended).
-local function onCaught(player: Player, livesLeft: number)
-	local event, details =
-		ShiftAnalyticsUtils.catchEvent(livesLeft, ShiftAnalyticsSystem.quotaTag(), ShiftAnalyticsSystem.elapsed())
+local function onCaught(player: Player, livesLeft: number, elapsed: number)
+	local event, details = ShiftAnalyticsUtils.catchEvent(livesLeft, ShiftAnalyticsSystem.quotaTag(), elapsed)
 	ShiftAnalyticsSystem.emit(event, player, details)
 end
 
@@ -368,7 +367,7 @@ ShiftAnalyticsWatchSystem.investigated = investigated
 ]=]
 function ShiftAnalyticsWatchSystem.start(
 	changed: SignalTyped.Signal<ShiftTypes.ShiftState>,
-	caught: SignalTyped.Signal<Player, number>,
+	caught: SignalTyped.Signal<Player, number, number>,
 	trip: ShiftTripSystem.ShiftTripSystem
 ): () -> ()
 	ShiftAnalyticsSystem.start(function()
