@@ -333,12 +333,16 @@ return function()
 			expect(ShiftCrewViewModel.rowLayout(false, 212, 0, 3).face).to.equal(true)
 		end)
 
-		it("holds the OUT pill, even for a wide label, inside the hearts' column", function()
-			-- A generous OUT label width (Luckiest Guy) at the phone's 12 px and the desktop's 14 px tags, 7 px of padding.
-			for _, case in { { phone = true, label = 40, size = 12 }, { phone = false, label = 46, size = 14 } } do
+		it("holds the measured OUT pill inside the hearts' column, clear of the name", function()
+			local TextService = game:GetService("TextService")
+			for _, case in { { phone = true, size = 12 }, { phone = false, size = 14 } } do
 				local layout = ShiftCrewViewModel.rowLayout(case.phone, 200, 0, 3)
-				local pill = ToonStyleViewModel.pillWidth(case.label, case.size, 7)
+				local label =
+					TextService:GetTextSize("OUT", case.size, Enum.Font.LuckiestGuy, Vector2.new(10000, 1000)).X
+				local pill = ToonStyleViewModel.pillWidth(label, case.size, ShiftCrewViewModel.OUT_PAD)
 				expect(pill <= layout.columnWidth).to.equal(true)
+				-- Right-aligned in the column (2 px inset), so its left edge is past the name's end.
+				expect(200 - 2 - pill >= layout.nameX + layout.nameWidth).to.equal(true)
 			end
 		end)
 

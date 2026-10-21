@@ -231,6 +231,8 @@ ShiftCrewViewModel.TAG_CLEARANCE = 9
 ShiftCrewViewModel.NAME_CLEARANCE = 4
 -- Below this crew list width (phone) the rows drop the face so the name keeps its room beside the hearts.
 ShiftCrewViewModel.FACE_MIN_LIST = 160
+-- The side padding of the OUT pill on a lives row, tight so it fits the hearts' column (phone: 48 px) at the 12 px tag text.
+ShiftCrewViewModel.OUT_PAD = 3
 -- The face's ink outline (3 px, drawn outside its box).
 ShiftCrewViewModel.FACE_OUTLINE = 3
 

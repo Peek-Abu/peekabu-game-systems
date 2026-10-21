@@ -34,15 +34,15 @@ local PILL_PAD = 7
 -- Luckiest Guy label widths in design px (the HUD scales them with everything else), measured once per label.
 local measured: { [string]: number } = {}
 
--- The width of a small pill whose label is `text` at `textSize`.
-local function pillWidth(text: string, textSize: number): number
+-- The width of a small pill whose label is `text` at `textSize` with `pad` px of side padding.
+local function pillWidth(text: string, textSize: number, pad: number): number
 	local key = `{textSize}:{text}`
 	local width = measured[key]
 	if width == nil then
 		width = TextService:GetTextSize(text, textSize, Enum.Font.LuckiestGuy, Vector2.new(10000, 1000)).X
 		measured[key] = width
 	end
-	return ToonStyleViewModel.pillWidth(width, textSize, PILL_PAD)
+	return ToonStyleViewModel.pillWidth(width, textSize, pad)
 end
 
 export type ShiftCrewListProps = {
@@ -70,7 +70,8 @@ local function row(member: ShiftCrewViewModel.MemberView, you: boolean, phone: b
 		elseif you then "YOU"
 		else nil
 	local tagSize = if roomy then 14 else 12
-	local tagWidth = if tag ~= nil then pillWidth(tag, tagSize) else 0
+	local tagPad = if hasLives then ShiftCrewViewModel.OUT_PAD else PILL_PAD
+	local tagWidth = if tag ~= nil then pillWidth(tag, tagSize, tagPad) else 0
 	local layout = ShiftCrewViewModel.rowLayout(phone, width, tagWidth, if hasLives then livesMax else nil)
 	local sizes = if roomy then ShiftHudViewModel.LIVES.desktop else ShiftHudViewModel.LIVES.phone
 	local nameWidth = layout.nameWidth
@@ -134,13 +135,10 @@ local function row(member: ShiftCrewViewModel.MemberView, you: boolean, phone: b
 			text = tag,
 			hue = if tag == "YOU" then "gold" else "coral",
 			textSize = tagSize,
-			padX = PILL_PAD,
+			padX = tagPad,
 			anchor = Vector2.new(1, 0.5),
 			position = UDim2.new(1, -2, 0.5, 0),
-			size = UDim2.fromOffset(
-				if layout.columnWidth ~= nil then math.min(tagWidth, layout.columnWidth) else tagWidth,
-				tagHeight
-			),
+			size = UDim2.fromOffset(tagWidth, tagHeight),
 			tilt = if tag == "YOU" then -3 else 3,
 		})
 	end
