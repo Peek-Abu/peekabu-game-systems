@@ -229,6 +229,8 @@ ShiftCrewViewModel.LIST = table.freeze({
 ShiftCrewViewModel.TAG_CLEARANCE = 9
 -- The gap between a row's name and its trailing hearts (or OUT pill).
 ShiftCrewViewModel.NAME_CLEARANCE = 4
+-- Below this crew list width (phone) the rows drop the face so the name keeps its room beside the hearts.
+ShiftCrewViewModel.FACE_MIN_LIST = 160
 -- The face's ink outline (3 px, drawn outside its box).
 ShiftCrewViewModel.FACE_OUTLINE = 3
 
@@ -244,7 +246,8 @@ function ShiftCrewViewModel.heartIcons(lives: number, max: number): { "heart" | 
 end
 
 export type RowLayout = {
-	-- The face's box (a square at the row's left, its outline not included).
+	-- Whether the row draws its face, and its box (a square at the row's left, its outline not included).
+	face: boolean,
 	avatar: number,
 	-- The name's left edge and width: clear of the face with its outline, and of what trails at the right.
 	nameX: number,
@@ -258,20 +261,23 @@ export type RowLayout = {
 	How a crew row of `rowWidth` px lays out (ShiftCrewList): the face, then the name. A row without Gloom lives
 	(`livesMax` nil) keeps its tag at the right of the name's line (`tagWidth` is the tag pill's width, 0 for none), and
 	the name keeps clear of it. A row with lives has no tag: its right column holds the hearts (the OUT pill takes their
-	place), and the name runs from the face to that column.
+	place), and the name runs from the face to that column. On a phone list under FACE_MIN_LIST wide the face is dropped
+	and the name starts at the row's left.
 ]=]
 function ShiftCrewViewModel.rowLayout(phone: boolean, rowWidth: number, tagWidth: number, livesMax: number?): RowLayout
 	local list = if phone then ShiftCrewViewModel.LIST.phone else ShiftCrewViewModel.LIST.desktop
 	local avatar = list.row - 8
-	local nameX = avatar + 8
+	local face = not phone or rowWidth + 2 * list.padding >= ShiftCrewViewModel.FACE_MIN_LIST
+	local nameX = if face then avatar + 8 else 0
 	if livesMax == nil then
 		local tagColumn = if tagWidth > 0 then tagWidth + ShiftCrewViewModel.TAG_CLEARANCE else 0
-		return { avatar = avatar, nameX = nameX, nameWidth = rowWidth - nameX - tagColumn }
+		return { face = face, avatar = avatar, nameX = nameX, nameWidth = rowWidth - nameX - tagColumn }
 	end
 	local lives = if phone then ShiftHudViewModel.LIVES.phone else ShiftHudViewModel.LIVES.desktop
 	local box = lives.pip + 2 * lives.stroke
 	local column = livesMax * box + math.max(0, livesMax - 1) * lives.gap
 	return {
+		face = face,
 		avatar = avatar,
 		nameX = nameX,
 		nameWidth = rowWidth - nameX - column - ShiftCrewViewModel.NAME_CLEARANCE,

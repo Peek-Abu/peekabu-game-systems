@@ -79,26 +79,28 @@ local function row(member: ShiftCrewViewModel.MemberView, you: boolean, phone: b
 	local tagHeight = if roomy then 24 else 20
 	local nameColor = if you and hasLives then UIToonConstants.shade("gold").base else COLOR.white
 	local children: { [string]: React.ReactNode } = {
-		face = e("Frame", {
-			Position = UDim2.fromOffset(0, 4),
-			Size = UDim2.fromOffset(avatar, avatar),
-			BackgroundColor3 = UIToonConstants.shade("lilac").hi,
-		}, {
-			corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }),
-			stroke = e(
-				"UIStroke",
-				{ Color = if you then COLOR.selected else COLOR.ink, Thickness = ShiftCrewViewModel.FACE_OUTLINE }
-			),
-			-- Their own character's head (a caught one worried and greyed).
-			portrait = e(CharacterPortrait, {
-				userId = member.userId,
-				context = if member.struck then "caught" else "crew",
-				framing = "head",
-				size = UDim2.fromScale(1, 1),
-				round = true,
-				dim = member.struck,
-			}),
-		}),
+		face = if layout.face
+			then e("Frame", {
+				Position = UDim2.fromOffset(0, 4),
+				Size = UDim2.fromOffset(avatar, avatar),
+				BackgroundColor3 = UIToonConstants.shade("lilac").hi,
+			}, {
+				corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }),
+				stroke = e(
+					"UIStroke",
+					{ Color = if you then COLOR.selected else COLOR.ink, Thickness = ShiftCrewViewModel.FACE_OUTLINE }
+				),
+				-- Their own character's head (a caught one worried and greyed).
+				portrait = e(CharacterPortrait, {
+					userId = member.userId,
+					context = if member.struck then "caught" else "crew",
+					framing = "head",
+					size = UDim2.fromScale(1, 1),
+					round = true,
+					dim = member.struck,
+				}),
+			})
+			else nil,
 		name = e(ToonText, {
 			text = member.name,
 			font = "body",

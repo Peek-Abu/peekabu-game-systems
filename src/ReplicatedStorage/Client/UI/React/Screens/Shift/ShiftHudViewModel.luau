@@ -136,11 +136,11 @@ ShiftHudViewModel.METER = table.freeze({
 ShiftHudViewModel.METER_ICON_OVERHANG = 0.38
 
 -- The local player's Gloom-life hearts, just under the meter (HUD design px): a heart's side (`pip`; never under 20),
--- the gap between hearts, the extra outline drawn around each (`stroke`: 0, the toon heart renders carry their ink
+-- the gap between hearts (the phone's is negative: each heart overlaps the last by 6 px, the leftmost on top), the extra outline drawn around each (`stroke`: 0, the toon heart renders carry their ink
 -- outline baked in), the gap under the meter (clear of its 7 px drop shadow) and the gap the clock-out board keeps under
 -- the hearts.
 ShiftHudViewModel.LIVES = table.freeze({
-	phone = table.freeze({ pip = 20, gap = 4, stroke = 0, below = 8, boardGap = 8 }),
+	phone = table.freeze({ pip = 20, gap = -6, stroke = 0, below = 8, boardGap = 8 }),
 	desktop = table.freeze({ pip = 28, gap = 4, stroke = 0, below = 8, boardGap = 8 }),
 })
 -- The pip row's loss pop: scale up to this and back over this many seconds.

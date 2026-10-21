@@ -301,7 +301,11 @@ return function()
 		it("keeps a lives row's name clear of the face (with its outline) and of the hearts", function()
 			for _, case in cases do
 				local layout = ShiftCrewViewModel.rowLayout(case.phone, case.rowWidth, 0, 3)
-				expect(layout.nameX >= layout.avatar + FACE_OUTLINE).to.equal(true)
+				if layout.face then
+					expect(layout.nameX >= layout.avatar + FACE_OUTLINE).to.equal(true)
+				else
+					expect(layout.nameX).to.equal(0)
+				end
 				expect(layout.nameX + layout.nameWidth <= layout.columnX).to.equal(true)
 				expect(layout.nameWidth > 0).to.equal(true)
 			end
@@ -315,10 +319,18 @@ return function()
 			end
 		end)
 
-		it("gives the name at least 60 px on the 844 phone list and on desktop", function()
-			local phone = ShiftCrewViewModel.rowLayout(true, ShiftCrewViewModel.phoneFit(844).list - 16, 0, 3)
-			expect(phone.nameWidth >= 60).to.equal(true)
-			expect(ShiftCrewViewModel.rowLayout(false, 236 - 24, 0, 3).nameWidth >= 60).to.equal(true)
+		it("gives the name at least 60 px at every phone list width and on desktop", function()
+			for _, case in cases do
+				expect(ShiftCrewViewModel.rowLayout(case.phone, case.rowWidth, 0, 3).nameWidth >= 60).to.equal(true)
+			end
+		end)
+
+		it("drops the face on phone lists under 160 wide and keeps it from there up and on desktop", function()
+			for width = 140, 176 do
+				local layout = ShiftCrewViewModel.rowLayout(true, width - 16, 0, 3)
+				expect(layout.face).to.equal(width >= 160)
+			end
+			expect(ShiftCrewViewModel.rowLayout(false, 212, 0, 3).face).to.equal(true)
 		end)
 
 		it("holds the OUT pill, even for a wide label, inside the hearts' column", function()

@@ -60,6 +60,8 @@ function ShiftLivesPips.pips(props: PipsProps): React.ReactNode
 			Position = UDim2.fromOffset((index - 1) * (box + sizes.gap) + box / 2, box / 2),
 			Size = UDim2.fromOffset(box, box),
 			BackgroundTransparency = 1,
+			-- The leftmost heart is on top where they overlap.
+			ZIndex = props.livesMax - index + 1,
 		}, {
 			scale = if popping then e("UIScale", { Scale = props.scale }) else nil,
 			icon = e(ToonIcon, { icon = icons[index], size = UDim2.fromScale(1, 1), drop = 0 }),
