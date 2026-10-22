@@ -155,8 +155,8 @@ function OfficeDoorSystem.build(layout: OfficeTypes.Layout, origin: CFrame, pare
 			local size = if horizontal
 				then Vector3.new(door.width, height, thickness)
 				else Vector3.new(thickness, height, door.width)
-			local centre = Vector3.new(door.x, 0, door.z)
-			local a = origin:PointToWorldSpace(centre - size / 2)
+			local centre = Vector3.new(door.x, height / 2, door.z)
+			local a = origin:PointToWorldSpace(centre - size / 2) -- doorway box: floor to DOOR_HEIGHT
 			local b = origin:PointToWorldSpace(centre + size / 2)
 			local record: Record = {
 				state = {
@@ -200,6 +200,37 @@ function OfficeDoorSystem.build(layout: OfficeTypes.Layout, origin: CFrame, pare
 		end
 	end
 
+	-- Starts a swing to open or shut. A close that ends with someone in the doorway reopens instead of shutting them in.
+	local function swing(record: Record, opening: boolean)
+		record.busy = true
+		setOpen(record, opening)
+		if opening then
+			record.leaf.CanCollide = false
+		end
+		local tween = TweenService:Create(
+			record.fraction,
+			TweenInfo.new(OfficeConstants.DOOR_SWING_SECONDS, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+			{ Value = if opening then 1 else 0 }
+		)
+		record.tween = tween
+		tween.Completed:Once(function()
+			if record.tween ~= tween then
+				return
+			end
+			record.tween = nil
+			tween:Destroy()
+			if opening or OfficeDoorUtils.canClose(record.boxMin, record.boxMax, bodies()) then
+				record.busy = false
+				if not opening then
+					record.leaf.CanCollide = true
+				end
+			else
+				swing(record, true)
+			end
+		end)
+		tween:Play()
+	end
+
 	local set: DoorSet
 	set = {
 		toggle = function(id, _by)
@@ -211,29 +242,7 @@ function OfficeDoorSystem.build(layout: OfficeTypes.Layout, origin: CFrame, pare
 			if not opening and not OfficeDoorUtils.canClose(record.boxMin, record.boxMax, bodies()) then
 				return false
 			end
-			record.busy = true
-			setOpen(record, opening)
-			if opening then
-				record.leaf.CanCollide = false
-			end
-			local tween = TweenService:Create(
-				record.fraction,
-				TweenInfo.new(OfficeConstants.DOOR_SWING_SECONDS, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-				{ Value = if opening then 1 else 0 }
-			)
-			record.tween = tween
-			tween.Completed:Once(function()
-				if record.tween ~= tween then
-					return
-				end
-				record.tween = nil
-				record.busy = false
-				tween:Destroy()
-				if not record.state.open then
-					record.leaf.CanCollide = true
-				end
-			end)
-			tween:Play()
+			swing(record, opening)
 			return true
 		end,
 

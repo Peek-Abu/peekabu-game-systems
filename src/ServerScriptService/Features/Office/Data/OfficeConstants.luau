@@ -111,7 +111,7 @@ return table.freeze({
 	MARKER_MARGIN = 2,
 	DOOR_MIN_WIDTH = 4,
 	-- Real doors (OfficeDoorSystem): the leaf's id kind / path label, size, swing and the noise / auto-open radii.
-	-- The leaf is 3 studs below the 12-stud wall top (the doorway trim covers the rest). A leaf carries a
+	-- The leaf stops 3 studs short of the 12-stud wall top (that gap above the leaf is left open). A leaf carries a
 	-- PathfindingModifier (Label DOOR_PATH_LABEL, PassThrough) so Mr. Harlow's paths ignore it; he opens doors within
 	-- DOOR_AUTO_OPEN_RADIUS of himself, and a door slammed by a player is heard DOOR_SLAM_RADIUS studs away.
 	DOOR_KIND = "officeDoor",

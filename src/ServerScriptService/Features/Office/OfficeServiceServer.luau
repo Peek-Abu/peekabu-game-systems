@@ -269,7 +269,16 @@ local OfficeServiceServer: OfficeServiceServer = {
 			end
 			local closing = target:GetAttribute("OfficeDoorOpen") == true
 			if current.doors.toggle(id, player) and closing then
-				NoiseServiceServer:emit(target.Position, OfficeConstants.DOOR_SLAM_RADIUS, "door", { player.UserId })
+				for _, state in current.doors.states() do
+					if state.id == id then
+						NoiseServiceServer:emit(
+							state.position,
+							OfficeConstants.DOOR_SLAM_RADIUS,
+							"door",
+							{ player.UserId }
+						)
+					end
+				end
 			end
 		end)
 		local current = OfficeBuildSystem.build(LAYOUT, OfficeConstants.ORIGIN)
