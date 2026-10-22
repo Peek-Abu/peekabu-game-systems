@@ -13,8 +13,13 @@
 	of the goal (ComputeAsync can return a partial path to the nearest reachable point). Failures read
 	"<seed> <targetId>: <status>" or "<seed> <targetId>: ends <d> studs short".
 
-	A room centre that sits inside collidable furniture or decor (a conference table, say) cannot be a goal, so that
-	room is judged at its own patrol marker instead (every kit room and junction has one).
+	A room centre that sits inside a colliding part of the built model (a conference table, a supply cabinet; a 2x4x2
+	box query that ignores the room's floor and ceiling) cannot be a goal, so that room is judged 2 studs inside its
+	first door instead ("<room>.door-side"): a dead end must stay reachable.
+
+	Seed number i (1-based position in `seeds`) is built at origin offset (i - 1) * 1000 studs in X, and the navmesh
+	gets 1 s to settle after each build: rebuilding at one origin right after destroying the previous model left a
+	stale navmesh (NoPath on reachable rooms).
 
 	Each seed's build is destroyed after a pcall, so a failing or erroring seed leaves nothing in the Workspace.
 	Runs sequentially; ComputeAsync yields. Needs a real runtime (TestEZ in Studio).
@@ -27,7 +32,6 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local Workspace = game:GetService("Workspace")
 
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
-local OfficeDecorConstants = require(ReplicatedStorage.Shared.Features.Office.Data.OfficeDecorConstants)
 
 local OfficeServer = ServerScriptService.Features.Office
 local OfficeLayoutConstants = require(OfficeServer.Data.OfficeLayoutConstants)
@@ -42,9 +46,14 @@ local END_TOLERANCE = 4
 -- A character's root height above the floor: both ends of a path are lifted this far.
 local LIFT = 3
 -- Seconds the navmesh gets to settle after the build before the first ComputeAsync.
-local SETTLE_SECONDS = 0.5
--- The furniture probe: a box this size just above the floor at the room centre.
+local SETTLE_SECONDS = 1
+-- The blocked-centre probe: a box this size, centred PROBE_HEIGHT above the floor.
 local PROBE_SIZE = Vector3.new(2, 4, 2)
+local PROBE_HEIGHT = 3
+-- How far inside a room its door-side target sits.
+local DOOR_SIDE_PUSH = 2
+-- Each seed builds this far (X) from the previous one, so a fresh navmesh never meets a stale one.
+local SEED_SPACING = 1000
 
 export type Result = {
 	failures: { string },
@@ -55,39 +64,41 @@ local OfficeTraversalHarness = {}
 
 type Target = { id: string, x: number, z: number }
 
-local function patrolOf(layout: OfficeTypes.Layout, roomId: string): OfficeTypes.Marker?
-	for _, marker in layout.markers do
-		if marker.kind == "patrol" and marker.room == roomId then
-			return marker
-		end
-	end
-	return nil
-end
-
--- True when collidable furniture or decor stands at the point (office-local x, z).
+-- True when a colliding part of the built model (other than its floors and ceilings) fills the point (office-local
+-- x, z): a 2x4x2 box about 3 studs above the floor, queried against the model's own parts.
 local function blocked(model: Model, origin: CFrame, x: number, z: number): boolean
-	local roots: { Instance } = {}
-	local furniture = model:FindFirstChild("Furniture")
-	if furniture ~= nil then
-		table.insert(roots, furniture)
-	end
-	local decor = model:FindFirstChild(OfficeDecorConstants.DECOR_FOLDER)
-	if decor ~= nil then
-		table.insert(roots, decor)
-	end
-	if #roots == 0 then
-		return false
-	end
 	local params = OverlapParams.new()
 	params.FilterType = Enum.RaycastFilterType.Include
-	params.FilterDescendantsInstances = roots
-	local box = origin * CFrame.new(x, PROBE_SIZE.Y / 2 + 0.5, z)
-	for _, part in Workspace:GetPartBoundsInBox(box, PROBE_SIZE, params) do
-		if part.CanCollide then
+	params.FilterDescendantsInstances = { model }
+	params.RespectCanCollide = true
+	for _, part in Workspace:GetPartBoundsInBox(origin * CFrame.new(x, PROBE_HEIGHT, z), PROBE_SIZE, params) do
+		if part.Name ~= "Floor" and part.Name ~= "FloorUnderlay" and part.Name ~= "Ceiling" then
 			return true
 		end
 	end
 	return false
+end
+
+-- The room's first door centre pushed DOOR_SIDE_PUSH studs into the room along the door's inward normal.
+local function doorSide(layout: OfficeTypes.Layout, room: OfficeTypes.Room): Vector2?
+	for _, door in layout.doors do
+		if door.a == room.id or door.b == room.id then
+			local edges = {
+				{ math.abs(door.x - room.minX), 1, 0 },
+				{ math.abs(door.x - room.maxX), -1, 0 },
+				{ math.abs(door.z - room.minZ), 0, 1 },
+				{ math.abs(door.z - room.maxZ), 0, -1 },
+			}
+			local best = edges[1]
+			for _, edge in edges do
+				if edge[1] < best[1] then
+					best = edge
+				end
+			end
+			return Vector2.new(door.x + best[2] * DOOR_SIDE_PUSH, door.z + best[3] * DOOR_SIDE_PUSH)
+		end
+	end
+	return nil
 end
 
 local function targetsFor(layout: OfficeTypes.Layout, model: Model, origin: CFrame): { Target }
@@ -102,10 +113,11 @@ local function targetsFor(layout: OfficeTypes.Layout, model: Model, origin: CFra
 			local x, z = (room.minX + room.maxX) / 2, (room.minZ + room.maxZ) / 2
 			local id = `{room.id}.centre`
 			if blocked(model, origin, x, z) then
-				-- The centre is inside furniture: judge the room at its patrol marker.
-				local patrol = patrolOf(layout, room.id)
-				if patrol ~= nil then
-					x, z, id = patrol.x, patrol.z, `{room.id}.centre(patrol)`
+				-- The centre is inside furniture (a conference table, a supply cabinet): judge the room just inside its
+				-- door instead, so a dead end stays reachable.
+				local side = doorSide(layout, room)
+				if side ~= nil then
+					x, z, id = side.X, side.Y, `{room.id}.door-side`
 				end
 			end
 			table.insert(targets, { id = id, x = x, z = z })
@@ -190,8 +202,8 @@ end
 function OfficeTraversalHarness.run(seeds: { number }, origin: CFrame): Result
 	local failures: { string } = {}
 	local paths = 0
-	for _, seed in seeds do
-		paths += checkSeed(seed, origin, failures)
+	for index, seed in seeds do
+		paths += checkSeed(seed, origin * CFrame.new((index - 1) * SEED_SPACING, 0, 0), failures)
 	end
 	return { failures = failures, paths = paths }
 end
