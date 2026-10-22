@@ -132,17 +132,18 @@ end
 local restMarker = markerById[LAYOUT.rest]
 
 local function rebuild(seed: number)
-	local layout = fitted(
-		OfficeFurniturePlacementUtils.normalize(
-			OfficeLayoutGenerationUtils.generate(OfficeLayoutConstants.LAYOUT, seed)
-		)
-	)
+	local layout = OfficeLayoutGenerationUtils.generate(OfficeLayoutConstants.LAYOUT, seed)
 	local ok, errors = OfficeLayoutRules.validate(layout)
 	assert(ok, `generated office layout is invalid: {table.concat(errors, "; ")}`)
 	local capacity, reason = OfficeLayoutRules.checkCapacity(layout)
 	assert(capacity, reason or "generated layout capacity")
 	local routeOk, routeReason = OfficeLayoutRules.checkRoute(layout)
 	assert(routeOk, routeReason or "generated layout route")
+	local hideOk, hideReason = OfficeLayoutRules.checkHideSpots(layout)
+	assert(hideOk, hideReason or "generated layout hide spots")
+	local walkOk, walkReason =
+		OfficeLayoutRules.checkWalk(layout, OfficeConstants.WALK_SPEED * OfficeConstants.MAX_WALK_SECONDS)
+	assert(walkOk, walkReason or "generated layout walk")
 	LAYOUT = layout
 	depths = OfficeLayoutUtils.depths(layout)
 	table.clear(markerById)

@@ -9,196 +9,274 @@ local Constants = require(Server.Data.OfficeConstants)
 local ShiftConstants = require(game:GetService("ReplicatedStorage").Shared.Features.Shift.Data.ShiftConstants)
 -- The biggest crew's contract (Gloom): every generated office must be able to meet it.
 local CONTRACT = ShiftConstants.QUOTA_BY_CREW[#ShiftConstants.QUOTA_BY_CREW]
+local SEEDS = 200
+
+local function overlaps(a, b)
+	return a.minX < b.maxX and b.minX < a.maxX and a.minZ < b.maxZ and b.minZ < a.maxZ
+end
+
+-- Generated once per seed for the whole file (the specs below only read the layouts).
+local cache = {}
+local function layoutFor(seed)
+	local layout = cache[seed]
+	if layout == nil then
+		layout = Gen.generate(Base, seed)
+		cache[seed] = layout
+	end
+	return layout
+end
+
+local function isKit(room)
+	return room.zone ~= "hallway" and room.id ~= "bay"
+end
+
 return function()
-	describe("fresh procedural office", function()
-		it("creates distinct reproducible occupancy, sizes and connections with 16–24 work rooms", function()
-			local signatures, entrances = {}, {}
-			for seed = 1, 40 do
-				-- Give Studio a scheduler slice without reducing seed coverage.
-				if seed % 5 == 0 then
+	describe("kit-room office generator", function()
+		it("is deterministic and varied", function()
+			local signatures = {}
+			for seed = 1, SEEDS do
+				if seed % 10 == 0 then
 					task.wait()
 				end
 				local layout, again = Gen.generate(Base, seed), Gen.generate(Base, seed)
-				local count, signature = 0, {}
+				expect(#layout.rooms).to.equal(#again.rooms)
+				local signature = {}
 				for index, room in layout.rooms do
+					expect(room.id).to.equal(again.rooms[index].id)
 					expect(room.minX).to.equal(again.rooms[index].minX)
-					if room.zone ~= "hallway" and room.id ~= "bay" then
-						count += 1
-					end
-					table.insert(signature, room.id .. ":" .. room.minX .. ":" .. room.maxZ)
-				end
-				expect(count >= 16 and count <= 24).to.equal(true)
-				for _, door in layout.doors do
-					table.insert(signature, door.a .. ":" .. door.b)
-					if door.a == "bay" then
-						entrances[Utils.doorEdge(Utils.room(layout, "bay"), door)] = true
-					end
+					expect(room.minZ).to.equal(again.rooms[index].minZ)
+					table.insert(signature, `{room.id}:{room.kit}:{room.minX}:{room.minZ}`)
 				end
 				signatures[table.concat(signature, ";")] = true
 			end
-			local n, sides = 0, 0
+			local distinct = 0
 			for _ in signatures do
-				n += 1
+				distinct += 1
 			end
-			for _ in entrances do
-				sides += 1
-			end
-			expect(n >= 30).to.equal(true)
-			expect(sides).to.equal(4)
+			expect(distinct >= 30).to.equal(true)
 		end)
-		it("mixes actual shared-wall room doors with corridor links and smaller varied rooms in every seed", function()
-			for seed = 1, 60 do
-				if seed % 5 == 0 then
+
+		it("passes every layout rule on every seed", function()
+			for seed = 1, SEEDS do
+				if seed % 10 == 0 then
 					task.wait()
 				end
-				local layout = Gen.generate(Base, seed)
-				local direct, corridors, dimensions, workRooms = 0, 0, {}, 0
-				for _, room in layout.rooms do
-					if room.id ~= "bay" and room.zone ~= "hallway" then
-						local width, depth = room.maxX - room.minX, room.maxZ - room.minZ
-						expect(width >= 30 and width <= 40 and depth >= 28 and depth <= 38).to.equal(true)
-						dimensions[width .. ":" .. depth] = true
-						workRooms += 1
-					elseif room.zone == "hallway" then
-						corridors += 1
-					end
-				end
-				for _, door in layout.doors do
-					local a, b = Utils.room(layout, door.a), Utils.room(layout, door.b)
-					if a.id ~= "bay" and b.id ~= "bay" and a.zone ~= "hallway" and b.zone ~= "hallway" then
-						direct += 1
-						expect(Utils.doorEdge(a, door) ~= nil and Utils.doorEdge(b, door) ~= nil).to.equal(true)
-						expect(a.maxX == b.minX or b.maxX == a.minX or a.maxZ == b.minZ or b.maxZ == a.minZ).to.equal(
-							true
-						)
-					end
-				end
-				local distinct = 0
-				for _ in dimensions do
-					distinct += 1
-				end
-				expect(direct >= 1 and corridors >= 1 and distinct == workRooms).to.equal(true)
-			end
-		end)
-		it("has connected nonoverlapping geometry, cycles and at most four physical cardinal ports", function()
-			for seed = 1, 60 do
-				-- Give Studio a scheduler slice without reducing seed coverage.
-				if seed % 5 == 0 then
-					task.wait()
-				end
-				local layout = Gen.generate(Base, seed)
+				local layout = layoutFor(seed)
 				local ok, errors = Rules.validate(layout)
 				if not ok then
-					error(table.concat(errors, "\n"))
+					error(`seed {seed}: {table.concat(errors, "; ")}`)
 				end
-				expect(#layout.doors >= #layout.rooms).to.equal(true)
-				for _, room in layout.rooms do
-					local edges = {}
-					for _, door in layout.doors do
-						if door.a == room.id or door.b == room.id then
-							local edge = Utils.doorEdge(room, door)
-							expect(edges[edge]).to.equal(nil)
-							edges[edge] = true
-						end
+				local checks = {
+					{ "capacity", Rules.checkCapacity(layout) },
+					{ "route", Rules.checkRoute(layout) },
+					{ "hide spots", Rules.checkHideSpots(layout) },
+					{ "walk", Rules.checkWalk(layout, 640) },
+				}
+				for _, check in checks do
+					if not check[2] then
+						error(`seed {seed}: {check[1]} failed`)
 					end
 				end
-				local walls = Utils.mergedWallSegments(layout)
-				for _, door in layout.doors do
-					-- Native radius-2 probes rejected seven-stud collision apertures.
-					-- Wall caps intrude half their thickness at either jamb.
-					expect(door.width >= 10).to.equal(true)
-					expect(door.width - Constants.WALL_THICKNESS >= 9).to.equal(true)
-					for _, wall in walls do
-						local blocked = if wall.x1 == wall.x2
-							then math.abs(door.x - wall.x1) < 0.01 and door.z > wall.z1 and door.z < wall.z2
-							else math.abs(door.z - wall.z1) < 0.01 and door.x > wall.x1 and door.x < wall.x2
-						expect(blocked).to.equal(false)
-					end
-				end
+				local _, walk = Rules.checkWalk(layout, Constants.WALK_SPEED * Constants.MAX_WALK_SECONDS)
+				expect(walk).to.equal(nil)
 			end
 		end)
-		it("keeps furniture, chairs and truck clear of all physical door approaches", function()
-			local chairHalf = math.max(Constants.OFFICE_CHAIR_SIZE.X, Constants.OFFICE_CHAIR_SIZE.Z) / 2
-			local chairOffset = Constants.DESK_SIZE.Z / 2
-				+ Constants.OFFICE_CHAIR_SIZE.Z / 2
-				+ Constants.OFFICE_CHAIR_GAP
-			local sizes = {
-				desk = Constants.DESK_SIZE,
-				locker = Constants.LOCKER_SIZE,
-				shelf = Constants.SHELF_SIZE,
-				counter = Constants.COUNTER_SIZE,
-				table = Constants.TABLE_SIZE,
-				cabinet = Constants.CABINET_SIZE,
-				plant = Constants.PLANT_SIZE,
-			}
-			for seed = 1, 60 do
-				-- Give Studio a scheduler slice without reducing seed coverage.
-				if seed % 5 == 0 then
+
+		it("holds 14-20 kit rooms: one server room, one reception, at least one breakout, 4+ kit ids", function()
+			for seed = 1, SEEDS do
+				if seed % 10 == 0 then
 					task.wait()
 				end
-				local layout = Gen.generate(Base, seed)
-				local function clear(x, z, hx, hz, roomId)
-					for _, door in layout.doors do
-						if door.a == roomId or door.b == roomId then
-							local valid = math.abs(x - door.x) >= hx + door.width / 2 + 2 - 0.001
-								or math.abs(z - door.z) >= hz + door.width / 2 + 2 - 0.001
-							if not valid then
-								error(roomId .. " blocked " .. door.a .. "/" .. door.b .. " at " .. x .. "," .. z)
+				local layout = layoutFor(seed)
+				local total, byType, kits = 0, {}, {}
+				for _, room in layout.rooms do
+					if isKit(room) then
+						total += 1
+						expect(room.kit ~= nil).to.equal(true)
+						expect(room.floor).to.equal(1)
+						byType[room.roomType] = (byType[room.roomType] or 0) + 1
+						kits[room.kit] = true
+					end
+				end
+				expect(total >= Constants.KIT_ROOMS.min and total <= Constants.KIT_ROOMS.max).to.equal(true)
+				expect(byType.server).to.equal(1)
+				expect(byType.reception).to.equal(1)
+				expect((byType.breakout or 0) >= 1).to.equal(true)
+				local distinct = 0
+				for _ in kits do
+					distinct += 1
+				end
+				expect(distinct >= 4).to.equal(true)
+			end
+		end)
+
+		it("gives every kit room exactly one door, onto a hallway, on a wall they share", function()
+			for seed = 1, SEEDS do
+				if seed % 10 == 0 then
+					task.wait()
+				end
+				local layout = layoutFor(seed)
+				for _, room in layout.rooms do
+					if isKit(room) then
+						local count = 0
+						for _, door in layout.doors do
+							if door.a == room.id or door.b == room.id then
+								count += 1
+								local other = Utils.room(layout, if door.a == room.id then door.b else door.a)
+								expect(other.zone).to.equal("hallway")
+								expect(Utils.doorEdge(room, door) ~= nil).to.equal(true)
+								expect(Utils.doorEdge(other, door) ~= nil).to.equal(true)
 							end
 						end
+						expect(count).to.equal(1)
 					end
-				end
-				for _, marker in layout.markers do
-					local size = sizes[marker.kind]
-					if size then
-						local cosine, sine = math.abs(math.cos(marker.rotation)), math.abs(math.sin(marker.rotation))
-						clear(
-							marker.x,
-							marker.z,
-							(size.X * cosine + size.Z * sine) / 2,
-							(size.X * sine + size.Z * cosine) / 2,
-							marker.room
-						)
-						if marker.kind == "desk" then
-							local yaw = marker.rotation
-							clear(
-								marker.x - chairOffset * math.sin(yaw),
-								marker.z - chairOffset * math.cos(yaw),
-								chairHalf,
-								chairHalf,
-								marker.room
-							)
-						end
-					end
-				end
-				local truck = layout.truck
-				-- A wide approach all the way to the bay's central path avoids truck/clock interception.
-				local bayDoor = layout.doors[#layout.doors]
-				local bay = Utils.room(layout, "bay")
-				local edge = Utils.doorEdge(bay, bayDoor)
-				expect(truck.maxZ + 6.425 < bay.maxZ - 0.5).to.equal(true)
-				expect(truck.minZ - 2 > bay.minZ + 0.5).to.equal(true)
-				if edge == "minX" or edge == "maxX" then
-					local boundary = if edge == "minX" then truck.minX - bay.minX else bay.maxX - truck.maxX
-					expect(boundary >= 20).to.equal(true)
-				else
-					expect(truck.maxX <= bayDoor.x - 4).to.equal(true)
 				end
 			end
 		end)
-		it("preserves capacity, patrol safe-zone and A/B greed/trash/reward guarantees over the seed matrix", function()
-			for seed = 1, 60 do
-				-- Give Studio a scheduler slice without reducing seed coverage.
-				if seed % 5 == 0 then
+
+		it("places the reception identically on every seed, with the entrance behind it", function()
+			local first = nil
+			for seed = 1, SEEDS do
+				if seed % 10 == 0 then
 					task.wait()
 				end
-				local layout = Gen.generate(Base, seed)
-				expect(Rules.checkCapacity(layout)).to.equal(true)
-				expect(#Utils.markersOf(layout, "counter") >= 16).to.equal(true)
-				expect(#Utils.markersOf(layout, "item") >= 64).to.equal(true)
-				expect(#Utils.markersOf(layout, "pile") >= 32).to.equal(true)
-				expect(Rules.checkRoute(layout)).to.equal(true)
-				local plans = {}
+				local layout = layoutFor(seed)
+				local reception = nil
+				for _, room in layout.rooms do
+					if room.roomType == "reception" then
+						reception = room
+					end
+				end
+				if first == nil then
+					first = reception
+				end
+				expect(reception.minX).to.equal(first.minX)
+				expect(reception.minZ).to.equal(first.minZ)
+				expect(reception.maxX).to.equal(first.maxX)
+				expect(reception.maxZ).to.equal(first.maxZ)
+				local entrances = 0
+				for _, facade in layout.facades or {} do
+					if facade.kind == "entrance" then
+						entrances += 1
+						expect(facade.room).to.equal(reception.id)
+						expect(facade.x).to.equal(reception.minX)
+						expect(facade.width).to.equal(12)
+					end
+				end
+				expect(entrances).to.equal(1)
+			end
+		end)
+
+		it("puts one stairwell facade on a junction wall with nothing behind it", function()
+			for seed = 1, SEEDS do
+				if seed % 10 == 0 then
+					task.wait()
+				end
+				local layout = layoutFor(seed)
+				local stairwells = 0
+				for _, facade in layout.facades or {} do
+					if facade.kind == "stairwell" then
+						stairwells += 1
+						local junction = Utils.room(layout, facade.room)
+						expect(junction.zone).to.equal("hallway")
+						-- A 6 x 4 probe on the outside of the junction's wall touches no room.
+						local probe
+						if facade.x == junction.minX then
+							probe = { minX = facade.x - 4, maxX = facade.x, minZ = facade.z - 3, maxZ = facade.z + 3 }
+						elseif facade.x == junction.maxX then
+							probe = { minX = facade.x, maxX = facade.x + 4, minZ = facade.z - 3, maxZ = facade.z + 3 }
+						elseif facade.z == junction.minZ then
+							probe = { minX = facade.x - 3, maxX = facade.x + 3, minZ = facade.z - 4, maxZ = facade.z }
+						else
+							expect(facade.z).to.equal(junction.maxZ)
+							probe = { minX = facade.x - 3, maxX = facade.x + 3, minZ = facade.z, maxZ = facade.z + 4 }
+						end
+						for _, room in layout.rooms do
+							expect(overlaps(probe, room)).to.equal(false)
+						end
+						expect(facade.width).to.equal(6)
+					end
+				end
+				expect(stairwells).to.equal(1)
+			end
+		end)
+
+		it("totals about the measured floor area, hallways included and the bay left out", function()
+			local sum = 0
+			for seed = 1, SEEDS do
+				if seed % 10 == 0 then
+					task.wait()
+				end
+				for _, room in layoutFor(seed).rooms do
+					if room.id ~= "bay" then
+						sum += (room.maxX - room.minX) * (room.maxZ - room.minZ)
+					end
+				end
+			end
+			local mean = sum / SEEDS
+			expect(math.abs(mean - Constants.TARGET_FLOOR_AREA) <= Constants.TARGET_FLOOR_AREA * 0.3).to.equal(true)
+		end)
+
+		it("prunes dead-end corridors that serve no room and stands a closet in each dead end left", function()
+			for seed = 1, SEEDS do
+				if seed % 10 == 0 then
+					task.wait()
+				end
+				local layout = layoutFor(seed)
+				local degree = {}
+				for _, door in layout.doors do
+					local a, b = Utils.room(layout, door.a), Utils.room(layout, door.b)
+					if a.zone == "hallway" and b.zone == "hallway" then
+						degree[a.id] = (degree[a.id] or 0) + 1
+						degree[b.id] = (degree[b.id] or 0) + 1
+					end
+				end
+				local closets = {}
+				for _, marker in Utils.markersOf(layout, "closet") do
+					closets[marker.room] = true
+				end
+				for _, room in layout.rooms do
+					if string.sub(room.id, 1, 5) == "hallJ" and degree[room.id] == 1 then
+						local lobby = room.id == "hallJ1_3"
+						local dock = room.id == "hallJ3_1"
+						if not lobby and not dock then
+							expect(closets[room.id]).to.equal(true)
+						end
+					end
+				end
+			end
+		end)
+
+		it("patrols every junction and rests in the first breakout", function()
+			for seed = 1, SEEDS do
+				if seed % 10 == 0 then
+					task.wait()
+				end
+				local layout = layoutFor(seed)
+				for _, room in layout.rooms do
+					if string.sub(room.id, 1, 5) == "hallJ" then
+						expect(Utils.marker(layout, `{room.id}.patrol.1`) ~= nil).to.equal(true)
+					end
+				end
+				expect(string.match(layout.rest, "^breakout%d+%.rest%.1$") ~= nil).to.equal(true)
+				expect(Utils.marker(layout, layout.rest) ~= nil).to.equal(true)
+				local bayVisits = 0
+				for index, id in layout.route do
+					if id == "bay.patrol.1" then
+						bayVisits += 1
+						expect(layout.route[index - 1]).to.equal(layout.route[index + 1])
+					end
+				end
+				expect(bayVisits).to.equal(1)
+			end
+		end)
+
+		it("rolls spawns that meet the biggest crew's contract on every seed", function()
+			for seed = 1, SEEDS do
+				if seed % 10 == 0 then
+					task.wait()
+				end
+				local layout = layoutFor(seed)
 				for _, variant in { "A", "B" } do
 					local plan = Spawn.roll(layout, {
 						quota = CONTRACT,
@@ -209,61 +287,13 @@ return function()
 					}, Random.new(seed))
 					local ok, reason = SpawnRules.check(plan, layout, CONTRACT)
 					if not ok then
-						error(reason)
-					end
-					plans[variant] = plan
-				end
-				expect(Spawn.salvageCount(plans.A)).to.equal(Spawn.salvageCount(plans.B))
-			end
-		end)
-		it("routes the patrol through the loading bay once, from and back to the room it opens into", function()
-			for seed = 1, 20 do
-				local layout = Gen.generate(Base, seed)
-				local bayDoor = layout.doors[#layout.doors]
-				expect(bayDoor.a).to.equal("bay")
-				local entry = `{bayDoor.b}.patrol.1`
-				local visits = 0
-				for index, id in layout.route do
-					if id == "bay.patrol.1" then
-						visits += 1
-						expect(layout.route[index - 1]).to.equal(entry)
-						expect(layout.route[index + 1]).to.equal(entry)
+						error(`seed {seed}: {reason}`)
 					end
 				end
-				expect(visits).to.equal(1)
-				local marker = nil
-				for _, candidate in layout.markers do
-					if candidate.id == "bay.patrol.1" then
-						marker = candidate
-					end
-				end
-				expect(marker.kind).to.equal("patrol")
-				expect(marker.room).to.equal("bay")
 			end
 		end)
 
-		it("stands a few supply cabinets, sparse: about one in three rooms, never two in a room", function()
-			for seed = 1, 20 do
-				if seed % 5 == 0 then
-					task.wait()
-				end
-				local layout = Gen.generate(Base, seed)
-				local rooms, perRoom, total = 0, {}, 0
-				for _, room in layout.rooms do
-					if room.zone ~= "hallway" and room.id ~= "bay" then
-						rooms += 1
-					end
-				end
-				for _, marker in Utils.markersOf(layout, "closet") do
-					total += 1
-					perRoom[marker.room] = (perRoom[marker.room] or 0) + 1
-					expect(perRoom[marker.room]).to.equal(1)
-				end
-				expect(total >= 2).to.equal(true)
-				expect(total <= math.ceil(rooms / Constants.CLOSET_EVERY)).to.equal(true)
-			end
-		end)
-		it("keeps input immutable and map kits local to the selected map", function()
+		it("keeps the input immutable and the map kit local to the selected map", function()
 			local selected = table.clone(Base)
 			selected.artKit = "alternate-office-kit"
 			local count = #Base.rooms

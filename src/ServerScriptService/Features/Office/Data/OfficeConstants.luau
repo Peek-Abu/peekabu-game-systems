@@ -59,6 +59,22 @@ return table.freeze({
 	ATRIUM_SIZE = 26,
 	CORRIDOR_EDGES = table.freeze({ min = 9, max = 12 }),
 	LOOPS = table.freeze({ min = 1, max = 2 }),
+	-- The kit generator (OfficeLayoutGenerationUtils): the number of kit rooms per map (reception included), how far
+	-- past the corridor lattice's bounding box a room may reach, the cursor step when no kit fits a slot, the weights
+	-- of the drawn room types (server and reception are fixed: one each), the extra conference weight at the
+	-- perimeter, the attempts before generate gives up, and the area a map's rooms (bay excluded) should total.
+	KIT_ROOMS = table.freeze({ min = 14, max = 20 }),
+	ROOM_MARGIN = 36,
+	ROOM_STEP = 4,
+	KIT_WEIGHTS = table.freeze({ pods = 45, conference = 25, storage = 20, breakout = 10 }),
+	PERIMETER_CONFERENCE_BOOST = 3,
+	GENERATE_ATTEMPTS = 8,
+	-- A generated map needs this many hiding places (desks and closets), and every room within WALK_SPEED *
+	-- MAX_WALK_SECONDS studs of walking from the bay.
+	HIDE_SPOTS_MIN = 8,
+	WALK_SPEED = 16,
+	MAX_WALK_SECONDS = 40,
+	TARGET_FLOOR_AREA = 24300,
 	DESK_PROP_SIZES = table.freeze(DESK_PROP_SIZES),
 	HIDE_FURNITURE_SCALE = HIDE_FURNITURE_SCALE,
 	OFFICE_CHAIR_SIZE = Vector3.new(2.27, 3.562, 2.26) * HIDE_FURNITURE_SCALE,
@@ -75,8 +91,6 @@ return table.freeze({
 	CABINET_SIZE = Vector3.new(1.9, 4.2, 2),
 	-- The tall supply cabinet (a secure hiding spot): the supplyCabinet art's own bounds, room inside for a crew member.
 	CLOSET_SIZE = Vector3.new(4.32, 8, 3.45),
-	-- Sparse: of the rooms with room for one, every CLOSET_EVERY-th (in the layout's own room order) keeps its cabinet.
-	CLOSET_EVERY = 3,
 	TABLE_SIZE = Vector3.new(5, 3.1, 3) * HIDE_FURNITURE_SCALE,
 	-- Loot (bulkiest kind is 3.5 wide) never spawns clipped into surface furniture.
 	SURFACE_ITEM_CLEAR = 1.8,
@@ -96,10 +110,6 @@ return table.freeze({
 	DEEP_DEPTH = 2,
 	DIRTY_ROOMS = table.freeze(DIRTY_ROOMS),
 	PILES_PER_ROOM = table.freeze(PILES_PER_ROOM),
-	-- Each generated room offers up to PILE_SPOTS pile markers (OfficeLayoutRoomUtils: its two rear corners, then free
-	-- floor on a PILE_SPOT_STEP grid, nearest a wall first), so a dirty room can hold PILES_PER_ROOM.max.
-	PILE_SPOTS = 5,
-	PILE_SPOT_STEP = 1,
 	-- How many valuables a map offers, counting the greed target, desk valuables and buried ones (no trash: the Gloom
 	-- economy rolls none).
 	VALUABLES = table.freeze(VALUABLES),

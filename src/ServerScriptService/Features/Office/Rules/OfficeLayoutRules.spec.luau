@@ -239,4 +239,79 @@ return function()
 			expect(reason).to.equal('rest point "b.rest.9" is not a rest marker')
 		end)
 	end)
+
+	describe("checkHideSpots", function()
+		local function withDesks(count)
+			local layout = fixture()
+			for index = 1, count do
+				table.insert(layout.markers, { id = `b.desk.{index}`, room = "b", kind = "desk", x = 30, z = 10 })
+			end
+			return layout
+		end
+
+		it("refuses seven hiding places", function()
+			local ok, reason = OfficeLayoutRules.checkHideSpots(withDesks(7))
+			expect(ok).to.equal(false)
+			expect(string.find(reason, "hide", 1, true) ~= nil).to.equal(true)
+		end)
+
+		it("accepts eight, counting desks and closets together", function()
+			expect(OfficeLayoutRules.checkHideSpots(withDesks(8))).to.equal(true)
+			local mixed = withDesks(5)
+			for index = 1, 3 do
+				table.insert(mixed.markers, { id = `b.closet.{index}`, room = "b", kind = "closet", x = 30, z = 10 })
+			end
+			expect(OfficeLayoutRules.checkHideSpots(mixed)).to.equal(true)
+		end)
+	end)
+
+	describe("checkWalk", function()
+		-- Six rooms in a row, 40 studs each; the doors sit on the shared walls at x = 40 .. 200.
+		local function chain()
+			local layout = fixture()
+			layout.startRoom = "r1"
+			layout.rooms = {}
+			layout.doors = {}
+			for index = 1, 6 do
+				table.insert(layout.rooms, {
+					id = `r{index}`,
+					name = "R",
+					minX = (index - 1) * 40,
+					maxX = index * 40,
+					minZ = 0,
+					maxZ = 20,
+				})
+				if index > 1 then
+					table.insert(
+						layout.doors,
+						{ a = `r{index - 1}`, b = `r{index}`, x = (index - 1) * 40, z = 10, width = 6 }
+					)
+				end
+			end
+			return layout
+		end
+
+		it("fails naming the farthest room when the walk is too long", function()
+			local ok, reason = OfficeLayoutRules.checkWalk(chain(), 100)
+			expect(ok).to.equal(false)
+			expect(string.find(reason, "r6", 1, true) ~= nil).to.equal(true)
+		end)
+
+		it("passes at a generous limit", function()
+			expect(OfficeLayoutRules.checkWalk(chain(), 1000)).to.equal(true)
+		end)
+
+		it("measures from the last door to the room's centre", function()
+			-- r6: door at x = 200 is 160 studs from the first door, its centre 20 further.
+			expect(OfficeLayoutRules.checkWalk(chain(), 180)).to.equal(true)
+			expect(OfficeLayoutRules.checkWalk(chain(), 179)).to.equal(false)
+		end)
+
+		it("fails a room no door reaches", function()
+			local layout = chain()
+			table.remove(layout.doors)
+			local ok = OfficeLayoutRules.checkWalk(layout, 1000)
+			expect(ok).to.equal(false)
+		end)
+	end)
 end

@@ -5,7 +5,7 @@
 	share, rooms the start room cannot reach, markers outside their room (or within MARKER_MARGIN of a
 	wall), surface furniture (counters, tables, cabinets) crowded by floor loot spots or overlapping desks,
 	lockers or piles, and a truck outside the start room. `checkCapacity` says whether the spawn roll has the markers
-	it needs. `checkRoute` (M2) says whether Harlow's patrol route and rest point are usable. OfficeServiceServer refuses to build a layout that fails either. Pure.
+	it needs. `checkRoute` (M2) says whether Harlow's patrol route and rest point are usable. `checkHideSpots` and `checkWalk` hold generated maps to the hiding-place count and the walking distance from the bay. OfficeServiceServer refuses to build a layout that fails them. Pure.
 
 	@class OfficeLayoutRules
 ]=]
@@ -319,6 +319,76 @@ function OfficeLayoutRules.checkRoute(layout: Layout): (boolean, string?)
 	end
 	if rest.room == layout.startRoom then
 		return false, `rest point "{layout.rest}" is in the loading bay`
+	end
+	return true, nil
+end
+
+--[=[
+	Whether the map has enough places to hide: at least HIDE_SPOTS_MIN desk and closet markers.
+]=]
+function OfficeLayoutRules.checkHideSpots(layout: Layout): (boolean, string?)
+	local count = #OfficeLayoutUtils.markersOf(layout, "desk") + #OfficeLayoutUtils.markersOf(layout, "closet")
+	if count < OfficeConstants.HIDE_SPOTS_MIN then
+		return false, `{count} hide spots (desks and closets); the map needs {OfficeConstants.HIDE_SPOTS_MIN}`
+	end
+	return true, nil
+end
+
+--[=[
+	Whether every room is within `maxStuds` of walking from the start room: Dijkstra over door centres (a door
+	touching the start room is at 0; two doors on one room are joined by their straight-line distance), then the
+	step from the nearest door to the room's centre. Fails naming the farthest room.
+]=]
+function OfficeLayoutRules.checkWalk(layout: Layout, maxStuds: number): (boolean, string?)
+	local doors = layout.doors
+	local byRoom: { [string]: { number } } = {}
+	local dist: { number } = {}
+	for index, door in doors do
+		dist[index] = if door.a == layout.startRoom or door.b == layout.startRoom then 0 else math.huge
+		for _, id in { door.a, door.b } do
+			local list = byRoom[id] or {}
+			byRoom[id] = list
+			table.insert(list, index)
+		end
+	end
+	local done: { [number]: boolean } = {}
+	while true do
+		local best: number? = nil
+		for index in doors do
+			if not done[index] and dist[index] < math.huge and (best == nil or dist[index] < dist[best]) then
+				best = index
+			end
+		end
+		if best == nil then
+			break
+		end
+		done[best] = true
+		local door = doors[best]
+		for _, id in { door.a, door.b } do
+			for _, other in byRoom[id] do
+				local beside = doors[other]
+				local step = math.sqrt((beside.x - door.x) ^ 2 + (beside.z - door.z) ^ 2)
+				dist[other] = math.min(dist[other], dist[best] + step)
+			end
+		end
+	end
+	local worstId, worst = "", 0
+	for _, room in layout.rooms do
+		local reach = 0
+		if room.id ~= layout.startRoom then
+			reach = math.huge
+			local cx, cz = (room.minX + room.maxX) / 2, (room.minZ + room.maxZ) / 2
+			for _, index in byRoom[room.id] or {} do
+				local door = doors[index]
+				reach = math.min(reach, dist[index] + math.sqrt((door.x - cx) ^ 2 + (door.z - cz) ^ 2))
+			end
+		end
+		if reach > worst then
+			worstId, worst = room.id, reach
+		end
+	end
+	if worst > maxStuds then
+		return false, `room "{worstId}" is {math.floor(worst)} studs from the start (limit {maxStuds})`
 	end
 	return true, nil
 end

@@ -43,7 +43,7 @@ export type PickInput = {
 	bay: OccupantTypes.Zone?,
 }
 
--- Office's chair rule: a desk's chair stands this far in front of its centre (OfficeLayoutRoomUtils).
+-- Office's chair rule: a desk's chair stands this far in front of its centre (from the retired grid generator).
 local CHAIR_DISTANCE = 3.05
 
 local function flat(a: Vector3, b: Vector3): number
