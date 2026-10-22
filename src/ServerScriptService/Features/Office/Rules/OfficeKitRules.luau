@@ -15,6 +15,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local OfficeConstants = require(ServerScriptService.Features.Office.Data.OfficeConstants)
 local OfficeTypes = require(ServerScriptService.Features.Office.Data.OfficeTypes)
 local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideConstants)
+local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 
 type Kit = OfficeTypes.Kit
 type KitMarker = OfficeTypes.KitMarker
@@ -23,6 +24,11 @@ type Rect = { minX: number, maxX: number, minZ: number, maxZ: number }
 
 -- The top slab of a desk, which does not count as free space under it.
 local DESK_TOP = 0.3
+-- The largest pile's half-size: OfficeLayoutRules keeps piles this far from surface furniture, so kits do too.
+local PILE_HALF = 0
+for _, style in VacuumConstants.PILE_KINDS do
+	PILE_HALF = math.max(PILE_HALF, style.size.X / 2, style.size.Z / 2)
+end
 -- Touching footprints are fine; this much overlap is not.
 local EPSILON = 0.001
 
@@ -197,7 +203,7 @@ function OfficeKitRules.check(kit: Kit): (boolean, { string })
 				if
 					overlaps(
 						{ minX = marker.x, maxX = marker.x, minZ = marker.z, maxZ = marker.z },
-						grow(box, OfficeConstants.SURFACE_ITEM_CLEAR)
+						grow(box, if marker.kind == "pile" then PILE_HALF else OfficeConstants.SURFACE_ITEM_CLEAR)
 					)
 				then
 					table.insert(errors, `{label}: {names[index]} crowds {names[other]}`)

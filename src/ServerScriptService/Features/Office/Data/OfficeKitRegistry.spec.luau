@@ -24,7 +24,7 @@ local function layoutOf(placement)
 end
 
 return function()
-	it("every kit passes OfficeKitRules in every facing and mirror", function()
+	it("every kit passes OfficeKitRules", function()
 		for _, kit in OfficeKitRegistry.KITS do
 			local ok, errors = OfficeKitRules.check(kit)
 			expect(`{kit.id}: {table.concat(errors, "; ")}`).to.equal(`{kit.id}: `)

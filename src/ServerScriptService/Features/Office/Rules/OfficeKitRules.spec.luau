@@ -93,7 +93,7 @@ return function()
 	it("flags a pile crowding furniture", function()
 		local kit = fixture()
 		kit.markers[3].x = 22
-		kit.markers[3].z = 17
+		kit.markers[3].z = 18
 		local _, errors = OfficeKitRules.check(kit)
 		expect(hasError(errors, "crowds")).to.equal(true)
 	end)
