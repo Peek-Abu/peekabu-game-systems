@@ -406,7 +406,7 @@ return function()
 			end
 			expect(#glass).to.equal(1)
 			expect(glass[1].Material).to.equal(Enum.Material.Glass)
-			expect(glass[1].Transparency).to.equal(0.55)
+			expect(math.abs(glass[1].Transparency - 0.55) < 1e-4).to.equal(true)
 			expect(glass[1].CanCollide).to.equal(true)
 			expect(glass[1].CanQuery).to.equal(true)
 			expect(glass[1].Size.X).to.equal(6)
