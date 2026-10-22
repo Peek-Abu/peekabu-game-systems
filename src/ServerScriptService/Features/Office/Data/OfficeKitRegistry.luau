@@ -74,6 +74,7 @@ local KITS: { Kit } = {
 			at("pile", 16, 17),
 			at("pile", 12, 22),
 			at("pile", 20, 22),
+			at("pile", 22, 3.5),
 			at("item", 13, 6.5),
 			at("item", 20, 13.5),
 			at("patrol", 16, 3),
