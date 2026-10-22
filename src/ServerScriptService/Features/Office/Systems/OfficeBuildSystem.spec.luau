@@ -383,4 +383,35 @@ return function()
 			expect(faces[-1]).to.equal(3)
 		end)
 	end)
+
+	describe("glass panes", function()
+		it("builds one collidable, queryable GlassWall tagged SightThrough per pane", function()
+			local layout = {
+				startRoom = "a",
+				rooms = {
+					{ id = "a", name = "A", minX = 0, minZ = 0, maxX = 20, maxZ = 10 },
+					{ id = "b", name = "B", minX = 0, minZ = 10, maxX = 20, maxZ = 20 },
+				},
+				doors = {},
+				markers = {},
+				truck = Layout.truck,
+				panes = { { x1 = 10, z1 = 10, x2 = 16, z2 = 10 } },
+			}
+			local built = build(layout)
+			local glass = {}
+			for _, part in built.model.Walls:GetChildren() do
+				if part.Name == "GlassWall" then
+					table.insert(glass, part)
+				end
+			end
+			expect(#glass).to.equal(1)
+			expect(glass[1].Material).to.equal(Enum.Material.Glass)
+			expect(glass[1].Transparency).to.equal(0.55)
+			expect(glass[1].CanCollide).to.equal(true)
+			expect(glass[1].CanQuery).to.equal(true)
+			expect(glass[1].Size.X).to.equal(6)
+			expect(CollectionService:HasTag(glass[1], Occupant.SIGHT_THROUGH_TAG)).to.equal(true)
+			expect(glass[1]:FindFirstChild("ArtVisual")).to.equal(nil)
+		end)
+	end)
 end

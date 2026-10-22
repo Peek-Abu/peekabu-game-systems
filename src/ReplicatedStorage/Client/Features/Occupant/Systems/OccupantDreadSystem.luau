@@ -161,6 +161,9 @@ local function castSight(head: BasePart, harlow: Model, listener: BasePart)
 	if mine ~= nil then
 		table.insert(ignore, mine)
 	end
+	for _, glass in CollectionService:GetTagged(OccupantConstants.SIGHT_THROUGH_TAG) do
+		table.insert(ignore, glass)
+	end
 	rayParams.FilterDescendantsInstances = ignore
 	local from = camera.CFrame.Position
 	local hit = Workspace:Raycast(from, head.Position - from, rayParams)

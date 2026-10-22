@@ -311,6 +311,26 @@ return function()
 			expect(line[3][1]).to.equal(49)
 		end)
 
+		it("cuts a glass pane out of the merged shared wall and returns the panes", function()
+			local layout = twoRooms({ id = "b", name = "B", minX = 0, minZ = 10, maxX = 20, maxZ = 20 })
+			layout.rooms[1].maxX = 20
+			layout.panes = { { x1 = 10, z1 = 10, x2 = 16, z2 = 10 } }
+			local line = spans(OfficeLayoutUtils.mergedWallSegments(layout), true, 10)
+			expect(#line).to.equal(2)
+			expect(line[1][1]).to.equal(0)
+			expect(line[1][2]).to.equal(10)
+			expect(line[2][1]).to.equal(16)
+			expect(line[2][2]).to.equal(20)
+			expect(#OfficeLayoutUtils.panes(layout)).to.equal(1)
+			expect(#OfficeLayoutUtils.panes(LAYOUT)).to.equal(0)
+		end)
+
+		it("removes a merged piece a pane covers completely", function()
+			local layout = twoRooms({ id = "b", name = "B", minX = 10, minZ = 0, maxX = 20, maxZ = 10 })
+			layout.panes = { { x1 = 10, z1 = 0, x2 = 10, z2 = 10 } }
+			expect(#spans(OfficeLayoutUtils.mergedWallSegments(layout), false, 10)).to.equal(0)
+		end)
+
 		it("builds the real layout from 18 pieces totalling 692 studs", function()
 			local segments = OfficeLayoutUtils.mergedWallSegments(LAYOUT)
 			local total = 0

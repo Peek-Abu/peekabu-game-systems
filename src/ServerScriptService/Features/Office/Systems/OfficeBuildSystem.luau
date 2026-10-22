@@ -8,7 +8,8 @@
 	Shift opens it once the quota is met), and a desk or locker on every desk / locker marker (Cargo's
 	Search prompt, off until Cargo stocks it; a desk is also a hiding spot, tagged for Hide). M2: ceiling lights (tagged for Harlow's tells) and the truck box's
 	PathfindingModifier volume (Harlow walks the loading bay but never paths into the truck's box). Everything is anchored under one Model in Workspace at
-	the layout's origin. Physical per-room ceilings enclose the camera.
+	the layout's origin. Glass walls fill the layout's panes (Glass, see-through, solid, tagged SightThrough so Harlow's
+	sight passes them; the wall pieces beside them stop flush). Physical per-room ceilings enclose the camera.
 
 	Instance shell; specs cover ceilings, and OfficeLayoutRules validates the layout.
 
@@ -173,6 +174,7 @@ function OfficeBuildSystem.build(
 	end
 
 	local wallFolder = folder("Walls", model)
+	local panes = OfficeLayoutUtils.panes(layout)
 	local function endcap(x: number, z: number, horizontal: boolean): number
 		for _, door in layout.doors do
 			local room = OfficeLayoutUtils.room(layout, door.a)
@@ -187,6 +189,19 @@ function OfficeBuildSystem.build(
 					and sameLine
 					and math.abs(math.abs(offset) - door.width / 2) < 1e-4
 				then
+					return 0
+				end
+			end
+		end
+		-- A wall ending at a glass pane stops flush at it, like at a door aperture.
+		for _, pane in panes do
+			local paneHorizontal = pane.z1 == pane.z2
+			if paneHorizontal == horizontal then
+				local sameLine = if horizontal then math.abs(z - pane.z1) < 1e-4 else math.abs(x - pane.x1) < 1e-4
+				local at = if horizontal then x else z
+				local from = if horizontal then pane.x1 else pane.z1
+				local to = if horizontal then pane.x2 else pane.z2
+				if sameLine and (math.abs(at - from) < 1e-4 or math.abs(at - to) < 1e-4) then
 					return 0
 				end
 			end
@@ -212,6 +227,26 @@ function OfficeBuildSystem.build(
 		if art.attach(wall, "building", "wallSolid") ~= nil then
 			opaqueBacking(wall, opaqueStructure)
 		end
+	end
+
+	-- Glass panes: see-through, solid to walkers, no art skin and no opaque backing. Harlow's sight passes them.
+	for _, pane in panes do
+		local horizontal = pane.z1 == pane.z2
+		local length = if horizontal then pane.x2 - pane.x1 else pane.z2 - pane.z1
+		local centre = CFrame.new((pane.x1 + pane.x2) / 2, height / 2, (pane.z1 + pane.z2) / 2)
+		local turn = if horizontal then CFrame.identity else CFrame.Angles(0, math.pi / 2, 0)
+		local glass = block(
+			"GlassWall",
+			Vector3.new(length, height, thickness),
+			origin * centre * turn,
+			OfficeConstants.WALL_COLOR,
+			wallFolder
+		)
+		glass.Material = Enum.Material.Glass
+		glass.Transparency = 0.55
+		glass.CanCollide = true
+		glass.CanQuery = true
+		CollectionService:AddTag(glass, OccupantConstants.SIGHT_THROUGH_TAG)
 	end
 
 	-- Visual-only frames retain the original open door gaps and never add collision.

@@ -481,6 +481,8 @@ return table.freeze({
 	-- the tag on the office's ceiling lights (Office builds them; the tells flicker them).
 	SAFE_ZONE_LABEL = "SafeZone",
 	LIGHT_TAG = "OfficeLight",
+	-- Parts his sight ray (and the camera-to-him dread ray) pass through: glass walls Office builds. They stay solid.
+	SIGHT_THROUGH_TAG = "SightThrough",
 	-- His voiced line (a model attribute: "" when none). Never drawn: since 2026-10-16 nothing shows over his head.
 	LINE_ATTRIBUTE = "OccupantLine",
 	-- Player-facing name (the Residual company paperwork calls the "Site Supervisor Proxy"); the internals keep `harlow`.

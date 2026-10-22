@@ -67,6 +67,10 @@ function System.glimpses(
 			table.insert(exclude, player.Character)
 		end
 	end
+	-- Glass he sees through (SIGHT_THROUGH_TAG) never blocks the ray, though it still blocks his walking.
+	for _, glass in CollectionService:GetTagged(OccupantConstants.SIGHT_THROUGH_TAG) do
+		table.insert(exclude, glass)
+	end
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.FilterDescendantsInstances = exclude

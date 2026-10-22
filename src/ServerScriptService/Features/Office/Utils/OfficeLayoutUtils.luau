@@ -247,7 +247,9 @@ end
 --[=[
 	Every wall of the layout with the duplicates removed. Each room emits its own walls, so a wall two rooms
 	share comes out twice, and rooms of different lengths overlap only partly: the pieces are unioned per
-	wall line (touching pieces join), so each stretch of wall appears exactly once.
+	wall line (touching pieces join), so each stretch of wall appears exactly once. The layout's glass panes are
+	then cut out of the merged lines (after merging, so a neighbouring room's wall cannot refill the glass gap):
+	a pane covering a piece removes it, a pane inside a piece splits it.
 ]=]
 function OfficeLayoutUtils.mergedWallSegments(layout: Layout): { OfficeTypes.Segment }
 	local lines: { [string]: { horizontal: boolean, fixed: number, spans: { { number } } } } = {}
@@ -290,7 +292,55 @@ function OfficeLayoutUtils.mergedWallSegments(layout: Layout): { OfficeTypes.Seg
 		end
 		emit()
 	end
-	return merged
+	local panes = OfficeLayoutUtils.panes(layout)
+	if #panes == 0 then
+		return merged
+	end
+	local result: { OfficeTypes.Segment } = {}
+	for _, segment in merged do
+		local horizontal = segment.z1 == segment.z2
+		local fixed = if horizontal then segment.z1 else segment.x1
+		local pieces: { { number } } =
+			{ { if horizontal then segment.x1 else segment.z1, if horizontal then segment.x2 else segment.z2 } }
+		for _, pane in panes do
+			local paneHorizontal = pane.z1 == pane.z2
+			local paneFixed = if paneHorizontal then pane.z1 else pane.x1
+			if paneHorizontal == horizontal and math.abs(paneFixed - fixed) <= 1e-6 then
+				local cutFrom = if horizontal then pane.x1 else pane.z1
+				local cutTo = if horizontal then pane.x2 else pane.z2
+				local remaining: { { number } } = {}
+				for _, piece in pieces do
+					if cutTo <= piece[1] + 1e-6 or cutFrom >= piece[2] - 1e-6 then
+						table.insert(remaining, piece)
+					else
+						if cutFrom - piece[1] > 1e-6 then
+							table.insert(remaining, { piece[1], cutFrom })
+						end
+						if piece[2] - cutTo > 1e-6 then
+							table.insert(remaining, { cutTo, piece[2] })
+						end
+					end
+				end
+				pieces = remaining
+			end
+		end
+		for _, piece in pieces do
+			if horizontal then
+				table.insert(result, { x1 = piece[1], z1 = fixed, x2 = piece[2], z2 = fixed })
+			else
+				table.insert(result, { x1 = fixed, z1 = piece[1], x2 = fixed, z2 = piece[2] })
+			end
+		end
+	end
+	return result
+end
+
+--[=[
+	The layout's glass panes (wall spans the generator turned to glass, see mergedWallSegments); none when it has
+	none. A copy of the list.
+]=]
+function OfficeLayoutUtils.panes(layout: Layout): { OfficeTypes.Segment }
+	return table.clone(layout.panes or {})
 end
 
 --[=[
