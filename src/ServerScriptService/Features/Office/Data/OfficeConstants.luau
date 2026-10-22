@@ -44,6 +44,21 @@ return table.freeze({
 	ART_KIT_ID = "client-office-slate",
 	-- The floor number kit rooms are placed on (one floor today).
 	FLOOR_NUMBER = 1,
+	-- The corridor network (OfficeCorridorUtils): a LATTICE_COLS x LATTICE_ROWS grid of junction nodes, each line
+	-- jittered by up to LATTICE_JITTER studs (the dock and lobby lines are never jittered).
+	LATTICE_COLS = 5,
+	LATTICE_ROWS = 4,
+	LATTICE_STEP_X = 64,
+	LATTICE_STEP_Z = 60,
+	LATTICE_JITTER = 6,
+	DOCK_NODE = table.freeze({ col = 3, row = 1 }),
+	LOBBY_NODE = table.freeze({ col = 1, row = 3 }),
+	CORRIDOR_WIDE = 10,
+	CORRIDOR_NARROW = 6,
+	NARROW_CHANCE = 0.35,
+	ATRIUM_SIZE = 26,
+	CORRIDOR_EDGES = table.freeze({ min = 9, max = 12 }),
+	LOOPS = table.freeze({ min = 1, max = 2 }),
 	DESK_PROP_SIZES = table.freeze(DESK_PROP_SIZES),
 	HIDE_FURNITURE_SCALE = HIDE_FURNITURE_SCALE,
 	OFFICE_CHAIR_SIZE = Vector3.new(2.27, 3.562, 2.26) * HIDE_FURNITURE_SCALE,
