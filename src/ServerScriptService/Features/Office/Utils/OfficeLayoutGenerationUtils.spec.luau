@@ -179,6 +179,9 @@ return function()
 						stairwells += 1
 						local junction = Utils.room(layout, facade.room)
 						expect(junction.zone).to.equal("hallway")
+						for _, closet in Utils.markersOf(layout, "closet") do
+							expect(closet.room ~= junction.id).to.equal(true)
+						end
 						-- A 6 x 4 probe on the outside of the junction's wall touches no room.
 						local probe
 						if facade.x == junction.minX then
@@ -255,7 +258,23 @@ return function()
 				local layout = layoutFor(seed)
 				for _, room in layout.rooms do
 					if string.sub(room.id, 1, 5) == "hallJ" then
-						expect(Utils.marker(layout, `{room.id}.patrol.1`) ~= nil).to.equal(true)
+						-- A tight dead end's patrol point lies in its corridor piece instead.
+						local own = Utils.marker(layout, `{room.id}.patrol.1`)
+						if own == nil then
+							local closet = Utils.marker(layout, `{room.id}.closet.1`)
+							expect(closet ~= nil).to.equal(true)
+							local found = false
+							for _, door in layout.doors do
+								local other = if door.a == room.id
+									then door.b
+									elseif door.b == room.id then door.a
+									else nil
+								if other ~= nil and Utils.marker(layout, `{other}.patrol.1`) ~= nil then
+									found = true
+								end
+							end
+							expect(found).to.equal(true)
+						end
 					end
 				end
 				expect(string.match(layout.rest, "^breakout%d+%.rest%.1$") ~= nil).to.equal(true)
@@ -269,6 +288,51 @@ return function()
 				end
 				expect(bayVisits).to.equal(1)
 			end
+		end)
+
+		it("keeps every patrol point 2 studs clear of every closet", function()
+			for seed = 1, SEEDS do
+				if seed % 10 == 0 then
+					task.wait()
+				end
+				local layout = layoutFor(seed)
+				for _, closet in Utils.markersOf(layout, "closet") do
+					local yaw = closet.rotation or 0
+					local cosine, sine = math.abs(math.cos(yaw)), math.abs(math.sin(yaw))
+					local halfX = (Constants.CLOSET_SIZE.X * cosine + Constants.CLOSET_SIZE.Z * sine) / 2
+					local halfZ = (Constants.CLOSET_SIZE.X * sine + Constants.CLOSET_SIZE.Z * cosine) / 2
+					for _, patrol in Utils.markersOf(layout, "patrol") do
+						local dx = math.max(math.abs(patrol.x - closet.x) - halfX, 0)
+						local dz = math.max(math.abs(patrol.z - closet.z) - halfZ, 0)
+						if math.sqrt(dx * dx + dz * dz) < 2 then
+							error(`seed {seed}: {patrol.id} is within 2 studs of {closet.id}`)
+						end
+					end
+				end
+			end
+		end)
+
+		it("gives every room a depth from its walk, with loot both shallow and deep", function()
+			local shallow, deep = 0, 0
+			for seed = 1, SEEDS do
+				if seed % 10 == 0 then
+					task.wait()
+				end
+				local layout = layoutFor(seed)
+				local walked = Utils.walkDistances(layout)
+				local depths = Utils.depths(layout)
+				for _, room in layout.rooms do
+					expect(room.depth).to.equal(math.floor(walked[room.id] / Constants.DEPTH_STUDS))
+					expect(depths[room.id]).to.equal(room.depth)
+				end
+				expect(depths.bay).to.equal(0)
+				for _, marker in Utils.markersOf(layout, "item") do
+					local depth = depths[marker.room]
+					shallow += if depth <= 1 then 1 else 0
+					deep += if depth >= Constants.DEEP_DEPTH then 1 else 0
+				end
+			end
+			expect(shallow > 0 and deep > 0).to.equal(true)
 		end)
 
 		it("rolls spawns that meet the biggest crew's contract on every seed", function()

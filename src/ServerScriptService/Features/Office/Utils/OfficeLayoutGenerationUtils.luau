@@ -40,6 +40,8 @@ local SLOT_DEPTH = 24
 local STAIR_WIDTH = 6
 local STAIR_DEPTH = 4
 local ENTRANCE_WIDTH = 12
+-- A patrol point keeps this far (Harlow's agent radius) from a closet's front.
+local PATROL_CLEARANCE = 2
 local CLOSET_YAW: { [Edge]: number } = { minX = math.pi / 2, maxX = -math.pi / 2, minZ = 0, maxZ = math.pi }
 
 -- The mutable state of one attempt.
@@ -282,8 +284,15 @@ local function pruneDeadEnds(network: Network, served: { [string]: boolean }): {
 	local changed = true
 	while changed do
 		changed = false
-		for id, junction in network.junctions do
-			if not alive[id] or junction == network.dock or junction == network.lobby or served[id] then
+		for _, junction in network.rooms do
+			local id = junction.id
+			if
+				network.junctions[id] == nil
+				or not alive[id]
+				or junction == network.dock
+				or junction == network.lobby
+				or served[id]
+			then
 				continue
 			end
 			local links: { string } = {}
@@ -323,12 +332,14 @@ local INWARD: { [Edge]: Vector2 } = {
 	maxZ = Vector2.new(0, -1),
 }
 
--- A junction's patrol marker (its centre, or between its closet and its corridor when it has one) and closet.
-local function junctionMarkers(junction: Room, edge: Edge?): { OfficeTypes.Marker }
+-- A junction's markers. A dead end (`edge`, the wall its corridor `segment` leaves through) gets a closet on its far
+-- wall and its patrol point between the closet and the corridor; where that leaves under PATROL_CLEARANCE of the
+-- closet's face (a 6-wide junction), the point moves to the middle of the segment instead.
+local function junctionMarkers(junction: Room, edge: Edge?, segment: Room?): { OfficeTypes.Marker }
 	local cx, cz = center(junction)
 	local patrol: OfficeTypes.Marker =
 		{ id = `{junction.id}.patrol.1`, room = junction.id, kind = "patrol", x = cx, z = cz, rotation = 0 }
-	if edge == nil then
+	if edge == nil or segment == nil then
 		return { patrol }
 	end
 	local inward = INWARD[edge]
@@ -340,6 +351,10 @@ local function junctionMarkers(junction: Room, edge: Edge?): { OfficeTypes.Marke
 	local faceAt = half - wall - closetDepth
 	local patrolAt = math.max(-half + OfficeConstants.MARKER_MARGIN, (faceAt - half) / 2)
 	patrol.x, patrol.z = cx + inward.X * patrolAt, cz + inward.Y * patrolAt
+	if faceAt - patrolAt < PATROL_CLEARANCE then
+		local sx, sz = center(segment)
+		patrol = { id = `{segment.id}.patrol.1`, room = segment.id, kind = "patrol", x = sx, z = sz, rotation = 0 }
+	end
 	return {
 		patrol,
 		{
@@ -353,7 +368,7 @@ local function junctionMarkers(junction: Room, edge: Edge?): { OfficeTypes.Marke
 	}
 end
 
--- Marks the junctions: a patrol point in each, and a closet in each dead end left after pruning.
+-- Marks the junctions: a patrol point for each (in the junction, or in its segment for a tight dead end), and a closet in each dead end left after pruning.
 local function markJunctions(build: Build, network: Network, alive: { [string]: boolean })
 	-- Network doors always run junction (a) to segment (b).
 	local segments: { [string]: Room } = {}
@@ -374,7 +389,7 @@ local function markJunctions(build: Build, network: Network, alive: { [string]: 
 			if #own == 1 and junction ~= network.dock and junction ~= network.lobby then
 				edge = junctionEdge(junction, own[1])
 			end
-			addMarkers(build, junctionMarkers(junction, edge))
+			addMarkers(build, junctionMarkers(junction, edge, own[1]))
 		end
 	end
 end
@@ -385,8 +400,15 @@ type Wall = { edge: Edge, x: number, z: number, dx: number, dz: number }
 -- The stairwell: a 6-wide facade on a door-free junction wall whose 6 x 4 probe outside touches no room.
 local function addStairwell(build: Build, network: Network, alive: { [string]: boolean }): boolean
 	local candidates: { OfficeTypes.Facade } = {}
+	-- A dead end's closet stands against its far wall: no stairwell there.
+	local closeted: { [string]: boolean } = {}
+	for _, marker in build.layout.markers do
+		if marker.kind == "closet" then
+			closeted[marker.room] = true
+		end
+	end
 	for _, junction in network.rooms do
-		if not alive[junction.id] or network.junctions[junction.id] == nil then
+		if not alive[junction.id] or network.junctions[junction.id] == nil or closeted[junction.id] then
 			continue
 		end
 		local used: { [string]: boolean } = {}
@@ -463,15 +485,16 @@ local function buildRoute(layout: Layout, network: Network): { string }
 	local function walk(id: string)
 		seen[id] = true
 		local own = patrols[id]
-		if own ~= nil then
-			table.insert(route, own)
+		local function visit()
+			if own ~= nil and route[#route] ~= own then
+				table.insert(route, own)
+			end
 		end
+		visit()
 		for _, other in adjacent[id] or {} do
 			if not seen[other] then
 				walk(other)
-				if own ~= nil then
-					table.insert(route, own)
-				end
+				visit()
 			end
 		end
 	end
@@ -599,6 +622,14 @@ local function construct(base: Layout, rng: Random): (Layout?, string?)
 		table.insert(doors, door)
 	end
 	layout.doors = doors
+	-- Every room's depth: its walk from the bay in DEPTH_STUDS steps (corridor pieces add doors, not distance).
+	local walked = OfficeLayoutUtils.walkDistances(layout)
+	for _, room in layout.rooms do
+		local distance = walked[room.id]
+		if distance ~= nil then
+			room.depth = math.floor(distance / OfficeConstants.DEPTH_STUDS)
+		end
+	end
 	markJunctions(state, network, alive)
 
 	if not addStairwell(state, network, alive) then

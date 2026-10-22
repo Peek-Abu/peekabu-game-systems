@@ -26,6 +26,9 @@ export type Room = {
 	floor: number?,
 	kit: string?,
 	roomType: RoomType?,
+	-- Generated maps only: how far from the loading bay by foot, in DEPTH_STUDS steps (OfficeLayoutUtils.depths
+	-- reports it in place of the door count).
+	depth: number?,
 }
 
 -- What kind of workplace a kit room is.

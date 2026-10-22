@@ -112,6 +112,73 @@ return function()
 		end)
 	end)
 
+	describe("depths of a generated map", function()
+		it("reports a room's own depth in place of its door count", function()
+			local layout = {
+				startRoom = "a",
+				rooms = {
+					{ id = "a", name = "A", minX = 0, minZ = 0, maxX = 10, maxZ = 10, depth = 0 },
+					{ id = "b", name = "B", minX = 10, minZ = 0, maxX = 20, maxZ = 10, depth = 5 },
+					{ id = "c", name = "C", minX = 20, minZ = 0, maxX = 30, maxZ = 10 },
+				},
+				doors = {
+					{ a = "a", b = "b", x = 10, z = 5, width = 6 },
+					{ a = "b", b = "c", x = 20, z = 5, width = 6 },
+				},
+				markers = {},
+				truck = TRUCK,
+			}
+			local depths = OfficeLayoutUtils.depths(layout)
+			expect(depths.a).to.equal(0)
+			expect(depths.b).to.equal(5)
+			expect(depths.c).to.equal(2)
+		end)
+
+		it("ignores the depth of a room nothing reaches", function()
+			local depths = OfficeLayoutUtils.depths({
+				startRoom = "a",
+				rooms = { { id = "z", name = "Z", minX = 0, minZ = 0, maxX = 1, maxZ = 1, depth = 4 } },
+				doors = {},
+				markers = {},
+				truck = TRUCK,
+			})
+			expect(depths.z).to.equal(nil)
+		end)
+	end)
+
+	describe("walkDistances", function()
+		local function chain()
+			local rooms, doors = {}, {}
+			for index = 1, 3 do
+				table.insert(rooms, {
+					id = `r{index}`,
+					name = "R",
+					minX = (index - 1) * 40,
+					maxX = index * 40,
+					minZ = 0,
+					maxZ = 20,
+				})
+				if index > 1 then
+					table.insert(doors, { a = `r{index - 1}`, b = `r{index}`, x = (index - 1) * 40, z = 10, width = 6 })
+				end
+			end
+			return { startRoom = "r1", rooms = rooms, doors = doors, markers = {}, truck = TRUCK }
+		end
+
+		it("walks door to door, then to the room's centre", function()
+			local walked = OfficeLayoutUtils.walkDistances(chain())
+			expect(walked.r1).to.equal(0)
+			expect(walked.r2).to.equal(20)
+			expect(walked.r3).to.equal(60)
+		end)
+
+		it("leaves a room no door reaches out", function()
+			local layout = chain()
+			table.remove(layout.doors)
+			expect(OfficeLayoutUtils.walkDistances(layout).r3).to.equal(nil)
+		end)
+	end)
+
 	describe("surfaceTopY", function()
 		it("reports the furniture top for surface spots and nil for floor spots", function()
 			expect(OfficeLayoutUtils.surfaceTopY("counter")).to.equal(OfficeConstants.COUNTER_SIZE.Y)

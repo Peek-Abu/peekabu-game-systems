@@ -119,7 +119,7 @@ return function()
 			end
 			return rooms
 		end
-		-- Room ids next to each other: through a doorway, or a corridor between them.
+		-- Room ids next to each other: through a doorway, or one corridor between them with their doors close together.
 		local function neighbours(layout)
 			local halls = {}
 			for _, room in layout.rooms do
@@ -131,17 +131,18 @@ return function()
 			for _, door in layout.doors do
 				direct[door.a] = direct[door.a] or {}
 				direct[door.b] = direct[door.b] or {}
-				table.insert(direct[door.a], door.b)
-				table.insert(direct[door.b], door.a)
+				table.insert(direct[door.a], { room = door.b, x = door.x, z = door.z })
+				table.insert(direct[door.b], { room = door.a, x = door.x, z = door.z })
 			end
 			return function(a, b)
-				for _, other in direct[a] or {} do
-					if other == b then
+				for _, via in direct[a] or {} do
+					if via.room == b then
 						return true
 					end
-					if halls[other] then
-						for _, beyond in direct[other] do
-							if beyond == b then
+					if halls[via.room] then
+						for _, far in direct[via.room] do
+							local apart = math.sqrt((far.x - via.x) ^ 2 + (far.z - via.z) ^ 2)
+							if far.room == b and apart <= OfficeConstants.NEIGHBOUR_DOOR_STUDS then
 								return true
 							end
 						end

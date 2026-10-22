@@ -340,49 +340,10 @@ end
 	step from the nearest door to the room's centre. Fails naming the farthest room.
 ]=]
 function OfficeLayoutRules.checkWalk(layout: Layout, maxStuds: number): (boolean, string?)
-	local doors = layout.doors
-	local byRoom: { [string]: { number } } = {}
-	local dist: { number } = {}
-	for index, door in doors do
-		dist[index] = if door.a == layout.startRoom or door.b == layout.startRoom then 0 else math.huge
-		for _, id in { door.a, door.b } do
-			local list = byRoom[id] or {}
-			byRoom[id] = list
-			table.insert(list, index)
-		end
-	end
-	local done: { [number]: boolean } = {}
-	while true do
-		local best: number? = nil
-		for index in doors do
-			if not done[index] and dist[index] < math.huge and (best == nil or dist[index] < dist[best]) then
-				best = index
-			end
-		end
-		if best == nil then
-			break
-		end
-		done[best] = true
-		local door = doors[best]
-		for _, id in { door.a, door.b } do
-			for _, other in byRoom[id] do
-				local beside = doors[other]
-				local step = math.sqrt((beside.x - door.x) ^ 2 + (beside.z - door.z) ^ 2)
-				dist[other] = math.min(dist[other], dist[best] + step)
-			end
-		end
-	end
+	local distances = OfficeLayoutUtils.walkDistances(layout)
 	local worstId, worst = "", 0
 	for _, room in layout.rooms do
-		local reach = 0
-		if room.id ~= layout.startRoom then
-			reach = math.huge
-			local cx, cz = (room.minX + room.maxX) / 2, (room.minZ + room.maxZ) / 2
-			for _, index in byRoom[room.id] or {} do
-				local door = doors[index]
-				reach = math.min(reach, dist[index] + math.sqrt((door.x - cx) ^ 2 + (door.z - cz) ^ 2))
-			end
-		end
+		local reach = distances[room.id] or math.huge
 		if reach > worst then
 			worstId, worst = room.id, reach
 		end

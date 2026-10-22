@@ -98,8 +98,9 @@ local function surfaceFor(def: ItemDef): { string }
 	return OfficeSpawnRules.surfaceKindsFor(def.id)
 end
 
--- Which rooms are next to which: they share a doorway, or a corridor joins them (a corridor is not a room, so two
--- rooms either side of one have no clean room between them).
+-- Which rooms are next to which: they share a doorway, or one corridor piece joins them and their two doors are within
+-- NEIGHBOUR_DOOR_STUDS of each other (a corridor is not a room, but far along a long one is not "next door").
+type Link = { room: string, x: number, z: number }
 local function neighbours(layout: OfficeTypes.Layout): { [string]: { [string]: boolean } }
 	local halls: { [string]: boolean } = {}
 	for _, room in layout.rooms do
@@ -107,18 +108,18 @@ local function neighbours(layout: OfficeTypes.Layout): { [string]: { [string]: b
 			halls[room.id] = true
 		end
 	end
-	local direct: { [string]: { string } } = {}
-	local function link(a: string, b: string)
+	local direct: { [string]: { Link } } = {}
+	local function link(a: string, b: string, door: OfficeTypes.Door)
 		local list = direct[a]
 		if list == nil then
 			list = {}
 			direct[a] = list
 		end
-		table.insert(list, b)
+		table.insert(list, { room = b, x = door.x, z = door.z })
 	end
 	for _, door in layout.doors do
-		link(door.a, door.b)
-		link(door.b, door.a)
+		link(door.a, door.b, door)
+		link(door.b, door.a, door)
 	end
 	local result: { [string]: { [string]: boolean } } = {}
 	local function mark(a: string, b: string)
@@ -133,14 +134,17 @@ local function neighbours(layout: OfficeTypes.Layout): { [string]: { [string]: b
 		set[b] = true
 	end
 	for a, list in direct do
-		for _, b in list do
-			local through = direct[b]
-			if halls[b] and through ~= nil then
-				for _, c in through do
-					mark(a, c)
+		for _, via in list do
+			local through = direct[via.room]
+			if halls[via.room] and through ~= nil then
+				for _, far in through do
+					local apart = math.sqrt((far.x - via.x) ^ 2 + (far.z - via.z) ^ 2)
+					if apart <= OfficeConstants.NEIGHBOUR_DOOR_STUDS then
+						mark(a, far.room)
+					end
 				end
 			else
-				mark(a, b)
+				mark(a, via.room)
 			end
 		end
 	end

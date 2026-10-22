@@ -75,6 +75,12 @@ return table.freeze({
 	WALK_SPEED = 16,
 	MAX_WALK_SECONDS = 40,
 	TARGET_FLOOR_AREA = 24300,
+	-- A generated room's depth is its walking distance from the bay over DEPTH_STUDS, rounded down: about one room of the
+	-- old grid crossed, so DEEP_DEPTH keeps meaning "a couple of rooms in" now that corridors add doors.
+	DEPTH_STUDS = 48,
+	-- Two kit rooms joined through one corridor piece are next to each other (no clean room between them) only when
+	-- their doors are this close; further along a long corridor is not "next door".
+	NEIGHBOUR_DOOR_STUDS = 24,
 	DESK_PROP_SIZES = table.freeze(DESK_PROP_SIZES),
 	HIDE_FURNITURE_SCALE = HIDE_FURNITURE_SCALE,
 	OFFICE_CHAIR_SIZE = Vector3.new(2.27, 3.562, 2.26) * HIDE_FURNITURE_SCALE,

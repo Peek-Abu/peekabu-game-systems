@@ -1,7 +1,7 @@
 --!strict
 --[=[
-	OfficeLayoutUtils: answers about a layout: lookups, each room's depth (doors from the start room, by
-	breadth-first search), which wall a door sits on, and the wall pieces a room's edges break into around
+	OfficeLayoutUtils: answers about a layout: lookups, each room's depth (doors from the start room, or its own
+	`depth`), walking distances from the start room, which wall a door sits on, and the wall pieces a room's edges break into around
 	its doors (per room, or merged across the layout). Pure.
 
 	@class OfficeLayoutUtils
@@ -88,7 +88,8 @@ function OfficeLayoutUtils.dropUnfit(layout: Layout, rules: FitRules): (Layout, 
 end
 
 --[=[
-	Doors from the start room to each reachable room (the start room is 0). Unreachable rooms are absent.
+	Each reachable room's depth (the start room is 0; unreachable rooms are absent): doors from the start room, by
+	breadth-first search, unless the room carries its own `depth` (generated maps: walking distance in DEPTH_STUDS).
 ]=]
 function OfficeLayoutUtils.depths(layout: Layout): { [string]: number }
 	local result: { [string]: number } = { [layout.startRoom] = 0 }
@@ -107,6 +108,67 @@ function OfficeLayoutUtils.depths(layout: Layout): { [string]: number }
 			if other ~= nil and result[other] == nil then
 				result[other] = result[current] + 1
 				table.insert(queue, other)
+			end
+		end
+	end
+	for _, room in layout.rooms do
+		local walked = room.depth
+		if walked ~= nil and result[room.id] ~= nil then
+			result[room.id] = walked
+		end
+	end
+	return result
+end
+
+--[=[
+	Studs of walking from the start room to the centre of every room it reaches (the start room is 0; others are
+	absent): Dijkstra over door centres, where a door touching the start room is at 0 and two doors on one room are
+	joined by their straight-line distance, then the step from the nearest door to the room's centre.
+]=]
+function OfficeLayoutUtils.walkDistances(layout: Layout): { [string]: number }
+	local doors = layout.doors
+	local byRoom: { [string]: { number } } = {}
+	local dist: { number } = {}
+	for index, door in doors do
+		dist[index] = if door.a == layout.startRoom or door.b == layout.startRoom then 0 else math.huge
+		for _, id in { door.a, door.b } do
+			local list = byRoom[id] or {}
+			byRoom[id] = list
+			table.insert(list, index)
+		end
+	end
+	local done: { [number]: boolean } = {}
+	while true do
+		local best: number? = nil
+		for index in doors do
+			if not done[index] and dist[index] < math.huge and (best == nil or dist[index] < dist[best]) then
+				best = index
+			end
+		end
+		if best == nil then
+			break
+		end
+		done[best] = true
+		local door = doors[best]
+		for _, id in { door.a, door.b } do
+			for _, other in byRoom[id] do
+				local beside = doors[other]
+				local step = math.sqrt((beside.x - door.x) ^ 2 + (beside.z - door.z) ^ 2)
+				dist[other] = math.min(dist[other], dist[best] + step)
+			end
+		end
+	end
+	local result: { [string]: number } = { [layout.startRoom] = 0 }
+	for _, room in layout.rooms do
+		if room.id ~= layout.startRoom then
+			local reach = math.huge
+			local cx, cz = (room.minX + room.maxX) / 2, (room.minZ + room.maxZ) / 2
+			for _, index in byRoom[room.id] or {} do
+				local door = doors[index]
+				reach = math.min(reach, dist[index] + math.sqrt((door.x - cx) ^ 2 + (door.z - cz) ^ 2))
+			end
+			if reach < math.huge then
+				result[room.id] = reach
 			end
 		end
 	end
