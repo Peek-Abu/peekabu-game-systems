@@ -75,6 +75,8 @@ return table.freeze({
 	-- A marker sits at least this far inside its room's walls.
 	MARKER_MARGIN = 2,
 	DOOR_MIN_WIDTH = 4,
+	-- Kit rooms: furniture stays out of a box this deep behind the front door (OfficeKitRules).
+	DOOR_APPROACH = 5,
 	-- Rooms this many doors from the loading bay, or more, are "deep" (where the greed target goes).
 	DEEP_DEPTH = 2,
 	DIRTY_ROOMS = table.freeze(DIRTY_ROOMS),
