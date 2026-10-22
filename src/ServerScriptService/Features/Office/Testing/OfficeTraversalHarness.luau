@@ -14,8 +14,8 @@
 	"<seed> <targetId>: <status>" or "<seed> <targetId>: ends <d> studs short".
 
 	A room centre that sits inside a colliding part of the built model (a conference table, a supply cabinet; a 2x4x2
-	box query that ignores the room's floor and ceiling) cannot be a goal, so that room is judged 2 studs inside its
-	first door instead ("<room>.door-side"): a dead end must stay reachable.
+	box query that ignores the room's floor and ceiling) cannot be a goal, so that room is judged at its first door's
+	centre instead ("<room>.doorway", the threshold): a dead end must stay reachable.
 
 	Seed number i (1-based position in `seeds`) is built at origin offset (i - 1) * 1000 studs in X, and the navmesh
 	gets 1 s to settle after each build: rebuilding at one origin right after destroying the previous model left a
@@ -50,8 +50,6 @@ local SETTLE_SECONDS = 1
 -- The blocked-centre probe: a box this size, centred PROBE_HEIGHT above the floor.
 local PROBE_SIZE = Vector3.new(2, 4, 2)
 local PROBE_HEIGHT = 3
--- How far inside a room its door-side target sits.
-local DOOR_SIDE_PUSH = 2
 -- Each seed builds this far (X) from the previous one, so a fresh navmesh never meets a stale one.
 local SEED_SPACING = 1000
 
@@ -79,23 +77,11 @@ local function blocked(model: Model, origin: CFrame, x: number, z: number): bool
 	return false
 end
 
--- The room's first door centre pushed DOOR_SIDE_PUSH studs into the room along the door's inward normal.
-local function doorSide(layout: OfficeTypes.Layout, room: OfficeTypes.Room): Vector2?
+-- The room's first door centre (the threshold, at the room's edge).
+local function doorway(layout: OfficeTypes.Layout, room: OfficeTypes.Room): Vector2?
 	for _, door in layout.doors do
 		if door.a == room.id or door.b == room.id then
-			local edges = {
-				{ math.abs(door.x - room.minX), 1, 0 },
-				{ math.abs(door.x - room.maxX), -1, 0 },
-				{ math.abs(door.z - room.minZ), 0, 1 },
-				{ math.abs(door.z - room.maxZ), 0, -1 },
-			}
-			local best = edges[1]
-			for _, edge in edges do
-				if edge[1] < best[1] then
-					best = edge
-				end
-			end
-			return Vector2.new(door.x + best[2] * DOOR_SIDE_PUSH, door.z + best[3] * DOOR_SIDE_PUSH)
+			return Vector2.new(door.x, door.z)
 		end
 	end
 	return nil
@@ -115,9 +101,9 @@ local function targetsFor(layout: OfficeTypes.Layout, model: Model, origin: CFra
 			if blocked(model, origin, x, z) then
 				-- The centre is inside furniture (a conference table, a supply cabinet): judge the room just inside its
 				-- door instead, so a dead end stays reachable.
-				local side = doorSide(layout, room)
+				local side = doorway(layout, room)
 				if side ~= nil then
-					x, z, id = side.X, side.Y, `{room.id}.door-side`
+					x, z, id = side.X, side.Y, `{room.id}.doorway`
 				end
 			end
 			table.insert(targets, { id = id, x = x, z = z })
