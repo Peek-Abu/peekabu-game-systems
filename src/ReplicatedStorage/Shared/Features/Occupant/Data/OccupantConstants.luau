@@ -405,6 +405,8 @@ return table.freeze({
 	-- GIVE_UP_SECONDS (an unreachable point).
 	LOOK_SECONDS = 4,
 	SEARCH_SECONDS = 2,
+	-- How long he stands still after opening a door in reach, before he walks on.
+	DOOR_BEAT_SECONDS = 0.5,
 	SEARCH_MAX_SECONDS = 32,
 	SEARCH_RADIUS = 36,
 	SEARCH_PROBES = 2,

@@ -28,6 +28,8 @@
 	- Catch: the kind's attack (onAttack) or the brain's catch effect → OccupantCatchSystem.attempt (OccupantCatchRules):
 	  the jumpscare, lights out, then the throw: a catch that leaves a life knocks the player down for about a second
 	  (Death's knockdown), the last life's catch kills them (out for the shift); every catch counts in Shift's review.
+	- Doors: each think, before he senses, he opens every closed door in reach (OfficeServiceServer:openDoorsNear) and
+	  stands still for a DOOR_BEAT_SECONDS (0.5 s) beat (OccupantDoorRules); a catch is never held.
 	- Role: he exists only where the shift role runs (QueueServiceServer:runsRole); a hub-only server spawns no Harlow.
 
 	Spec-exempt shell (Instances, raycasts, Players, signals); the decisions are the specced OccupantBrainRules (and
@@ -57,6 +59,7 @@ local NpcRegistry = require(ServerScriptService.Features.Npc.Data.NpcRegistry)
 local NpcTypes = require(ServerScriptService.Features.Npc.Data.NpcTypes)
 local OccupantAlertRules = require(OccupantServer.Rules.OccupantAlertRules)
 local OccupantBrainRules = require(OccupantServer.Rules.OccupantBrainRules)
+local OccupantDoorRules = require(OccupantServer.Rules.OccupantDoorRules)
 local OccupantTurnRules = require(OccupantServer.Rules.OccupantTurnRules)
 local OccupantMindUtils = require(OccupantServer.Utils.OccupantMindUtils)
 local OccupantWorkRules = require(OccupantServer.Rules.OccupantWorkRules)
@@ -102,6 +105,8 @@ local log = Logger.new("OccupantServiceServer")
 
 local rig: OccupantRigSystem.Rig? = nil
 local mind: OccupantTypes.Mind? = nil
+-- Until when the door beat holds his walk (os.clock); reset with the mind.
+local holdUntil = 0
 local spawning = false
 local shift: ShiftTypes.ShiftState? = nil
 -- The office's layout for him this shift (OccupantSenseSystem.layout; nil before he clocks in).
@@ -230,6 +235,10 @@ local function think(def: NpcTypes.NpcDef, now: number, position: Vector3): NpcT
 	if current == nil or before == nil or state == nil then
 		return { kind = "idle" }
 	end
+	-- Doors in reach open first, so an opened leaf no longer blocks this think's sight rays.
+	if OfficeServiceServer:openDoorsNear(position) then
+		holdUntil = now + OccupantConstants.DOOR_BEAT_SECONDS
+	end
 	local participants = RoundServiceServer:participants()
 	-- Fixed rolls (the QA seam) leave the rest at 0.5, as an absent roll.
 	local fixed = fixedRolls
@@ -270,7 +279,7 @@ local function think(def: NpcTypes.NpcDef, now: number, position: Vector3): NpcT
 	end
 	-- His hands type only while he types (never through the sit-in's motion, an ambush or a slow turn from the chair).
 	OccupantSeatSystem.typing(current, mind or result.mind)
-	return result.intent
+	return OccupantDoorRules.hold(result.intent, now, holdUntil)
 end
 
 -- The `harlow` brain: one think (above) on the NPC's tick. Never yields.
@@ -322,6 +331,7 @@ local function despawn()
 	local current = rig
 	rig = nil
 	mind = nil
+	holdUntil = 0
 	pendingNoise = nil
 	Sense.forget()
 	-- A catch in the last seconds: the next shift must not show a stale deadline.
@@ -363,12 +373,14 @@ local function spawnHarlow()
 	local fresh = OccupantBrainRules.newMind(start, direction, os.clock(), rng:NextNumber())
 	rig = built
 	mind = fresh
+	holdUntil = 0
 	pendingNoise = nil
 	Sense.forget()
 	built.model.Destroying:Connect(function()
 		if rig == built then
 			rig = nil
 			mind = nil
+			holdUntil = 0
 		end
 	end)
 	counters.spawned += 1
