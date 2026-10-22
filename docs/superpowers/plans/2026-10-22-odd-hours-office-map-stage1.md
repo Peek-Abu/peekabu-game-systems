@@ -148,14 +148,14 @@ Greybox kits: the implementer authors the coordinates. The counts are minimums.
 
 | id | roomType | name | size | W × D | door (offset, width, kind) | glass | markers (at least) |
 |---|---|---|---|---|---|---|---|
-| pods_a | pods | Desk pods | L | 36 × 28 | 18, 6, solid | – | desk 6, pile 5, item 3, patrol 1, plant 1, cabinet 1 |
-| pods_b | pods | Desk pods | M | 28 × 22 | 6, 6, solid | – | desk 4, pile 4, item 2, patrol 1, board 1 |
-| conference_a | conference | Conference room | M | 28 × 20 | 6, 6, glass | 10–26 | table 1, pile 4, item 2, board 1, patrol 1 |
-| conference_b | conference | Meeting room | S | 18 × 16 | 4, 6, glass | 8–16 | table 1, pile 3, item 1, patrol 1 |
-| breakout_a | breakout | Breakout lounge | M | 26 × 22 | 20, 6, solid | – | counter 1, table 2, pile 5, item 3, rest 1, patrol 1, plant 1 |
-| storage_a | storage | Storage closet | S | 16 × 14 | 8, 6, solid | – | closet 2, locker 2, shelf 1, pile 3, item 1, patrol 1 |
-| server_a | server | Server room | M | 24 × 20 | 12, 6, solid | – | shelf 3 (server racks, greybox), closet 1, pile 4, item 2, patrol 1 |
-| reception_a | reception | Reception | L | 32 × 26 | 16, 10, open | – | counter 1, plant 2, cabinet 1, pile 4, item 2, patrol 1 |
+| pods_a | pods | Desk pods | L | 40 × 32 | 20, 6, solid | – | desk 6, pile 5, item 3, patrol 1, plant 1, cabinet 1 |
+| pods_b | pods | Desk pods | M | 32 × 26 | 6, 6, solid | – | desk 4, pile 4, item 2, patrol 1, board 1 |
+| conference_a | conference | Conference room | M | 32 × 24 | 6, 6, glass | 10–30 | table 1, pile 4, item 2, board 1, patrol 1 |
+| conference_b | conference | Meeting room | S | 22 × 18 | 4, 6, glass | 8–20 | table 1, pile 3, item 1, patrol 1 |
+| breakout_a | breakout | Breakout lounge | M | 30 × 26 | 24, 6, solid | – | counter 1, table 2, pile 5, item 3, rest 1, patrol 1, plant 1 |
+| storage_a | storage | Storage closet | S | 18 × 16 | 9, 6, solid | – | closet 2, locker 2, shelf 1, pile 3, item 1, patrol 1 |
+| server_a | server | Server room | M | 28 × 24 | 14, 6, solid | – | shelf 3 (server racks, greybox), closet 1, pile 4, item 2, patrol 1 |
+| reception_a | reception | Reception | L | 36 × 30 | 18, 10, open | – | counter 1, plant 2, cabinet 1, pile 4, item 2, patrol 1 |
 
 - [ ] **Step 1: Write the failing `OfficeKitRules.spec`.**
   - A clean fixture kit passes with `{}`.
@@ -191,7 +191,7 @@ Constants added to `OfficeConstants` (values verbatim):
 
 ```lua
 LATTICE_COLS = 5, LATTICE_ROWS = 4,
-LATTICE_STEP_X = 56, LATTICE_STEP_Z = 52, LATTICE_JITTER = 6,
+LATTICE_STEP_X = 64, LATTICE_STEP_Z = 60, LATTICE_JITTER = 6,
 DOCK_NODE = { col = 3, row = 1 }, LOBBY_NODE = { col = 1, row = 3 },
 CORRIDOR_WIDE = 10, CORRIDOR_NARROW = 6, NARROW_CHANCE = 0.35, ATRIUM_SIZE = 26,
 CORRIDOR_EDGES = { min = 9, max = 12 }, LOOPS = { min = 1, max = 2 },
@@ -244,10 +244,10 @@ Algorithm:
 Constants:
 
 ```lua
-KIT_ROOMS = { min = 14, max = 20 }, ROOM_MARGIN = 30, ROOM_STEP = 4,
+KIT_ROOMS = { min = 14, max = 20 }, ROOM_MARGIN = 36, ROOM_STEP = 4,
 KIT_WEIGHTS = { pods = 45, conference = 25, storage = 20, breakout = 10 }, PERIMETER_CONFERENCE_BOOST = 3,
 GENERATE_ATTEMPTS = 8, HIDE_SPOTS_MIN = 8, WALK_SPEED = 16, MAX_WALK_SECONDS = 40,
-TARGET_FLOOR_AREA = <measured in step 1>,
+TARGET_FLOOR_AREA = 24300,
 ```
 
 `generate`:
@@ -277,7 +277,7 @@ TARGET_FLOOR_AREA = <measured in step 1>,
    - `rest` is the first breakout's rest marker.
 9. **No furniture normalisation.** `rebuild` in `OfficeServiceServer` calls `generate` directly and drops `normalize` and `fitted` for generated layouts. The boot `LAYOUT` keeps them. It also asserts `checkHideSpots` and `checkWalk`.
 
-- [ ] **Step 1: Measure today's floor area.**
+- [x] **Step 1: Measure today's floor area.** Done by the controller 2026-10-22: mean 24256 (min 18371, max 31441) over seeds 1–20 → `TARGET_FLOOR_AREA = 24300`.
   - Before changing anything, the controller runs this in Studio via `execute_luau`: require `OfficeLayoutGenerationUtils` and sum the room areas (excluding the bay) over seeds 1–20.
   - Record the mean, rounded to 100, as `TARGET_FLOOR_AREA`.
   - Note the value in the ledger.
