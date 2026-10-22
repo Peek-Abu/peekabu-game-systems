@@ -342,16 +342,26 @@ return function()
 				end
 				local layout = layoutFor(seed)
 				for _, variant in { "A", "B" } do
-					local plan = Spawn.roll(layout, {
-						quota = CONTRACT,
-						variant = variant,
-						dirtyRooms = Constants.DIRTY_ROOMS,
-						pilesPerRoom = Constants.PILES_PER_ROOM,
-						valuables = Constants.VALUABLES,
-					}, Random.new(seed))
-					local ok, reason = SpawnRules.check(plan, layout, CONTRACT)
-					if not ok then
-						error(`seed {seed}: {reason}`)
+					-- Mirrors OfficeServiceServer's rollPlan: roll seeds seed, seed + 1, ... until one meets the contract.
+					local failure
+					local met = false
+					for attempt = 0, Constants.ROLL_ATTEMPTS - 1 do
+						local plan = Spawn.roll(layout, {
+							quota = CONTRACT,
+							variant = variant,
+							dirtyRooms = Constants.DIRTY_ROOMS,
+							pilesPerRoom = Constants.PILES_PER_ROOM,
+							valuables = Constants.VALUABLES,
+						}, Random.new(seed + attempt))
+						local ok, reason = SpawnRules.check(plan, layout, CONTRACT)
+						if ok then
+							met = true
+							break
+						end
+						failure = reason
+					end
+					if not met then
+						error(`seed {seed}: {failure}`)
 					end
 				end
 			end
