@@ -110,6 +110,19 @@ return table.freeze({
 	-- A marker sits at least this far inside its room's walls.
 	MARKER_MARGIN = 2,
 	DOOR_MIN_WIDTH = 4,
+	-- Real doors (OfficeDoorSystem): the leaf's id kind / path label, size, swing and the noise / auto-open radii.
+	-- The leaf is 3 studs below the 12-stud wall top (the doorway trim covers the rest). A leaf carries a
+	-- PathfindingModifier (Label DOOR_PATH_LABEL, PassThrough) so Mr. Harlow's paths ignore it; he opens doors within
+	-- DOOR_AUTO_OPEN_RADIUS of himself, and a door slammed by a player is heard DOOR_SLAM_RADIUS studs away.
+	DOOR_KIND = "officeDoor",
+	DOOR_PATH_LABEL = "OfficeDoor",
+	DOOR_HEIGHT = 9,
+	DOOR_LEAF_THICKNESS = 0.3,
+	DOOR_SWING_SECONDS = 0.3,
+	DOOR_OPEN_ANGLE = math.rad(95),
+	DOOR_AUTO_OPEN_RADIUS = 10,
+	DOOR_SLAM_RADIUS = 18,
+	DOOR_COLOR = Color3.fromRGB(122, 92, 64),
 	-- Kit rooms: furniture stays out of a box this deep behind the front door (OfficeKitRules).
 	DOOR_APPROACH = 5,
 	-- Rooms this many doors from the loading bay, or more, are "deep" (where the greed target goes).

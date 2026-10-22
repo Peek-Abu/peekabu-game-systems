@@ -12,6 +12,10 @@
 	M2: Harlow's route, rest point, the loading bay he may walk (`loadingBay`) and the one safe place, the truck's box
 	(`safeZone`).
 
+	Doors: it registers the door prompt (OfficeConstants.DOOR_KIND, "Open / close"), toggles the door on interact
+	(a player's close slams: a "door" noise, DOOR_SLAM_RADIUS), and `openDoorsNear` lets Harlow open the closed doors
+	about him (false when no office stands).
+
 	Ordering guarantee for anything that spawns into a shift (Occupant's Manager): `ready` fires (deferred, with the shift
 	folder) once `beginShift` has rebuilt the office and placed every spawn, and `isReady` says whether that shift is
 	still standing (false after `reset`). Shift's transit calls `beginShift` before Shift enters `running`, so by the
@@ -53,6 +57,9 @@ local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServi
 local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
 local QueueServiceServer = require(ServerScriptService.Features.Queue.QueueServiceServer)
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
+local InteractionRegistry = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionRegistry)
+local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
+local NoiseServiceServer = require(ServerScriptService.Features.Noise.NoiseServiceServer)
 
 type Marker = OfficeTypes.Marker
 
@@ -160,6 +167,7 @@ local function rebuild(seed: number)
 	restMarker = markerById[layout.rest]
 	local old = built
 	if old ~= nil then
+		old.doors.destroy()
 		old.model:Destroy()
 	end
 	local current = OfficeBuildSystem.build(layout, OfficeConstants.ORIGIN)
@@ -219,10 +227,17 @@ export type OfficeServiceServer = {
 	whereIs: (self: OfficeServiceServer, position: Vector3) -> (string?, number?, number?),
 	truckBed: (self: OfficeServiceServer) -> BasePart?,
 	overtimeSheet: (self: OfficeServiceServer) -> BasePart?,
+	openDoorsNear: (self: OfficeServiceServer, position: Vector3) -> boolean,
 }
 
 local OfficeServiceServer: OfficeServiceServer = {
-	dependencies = { "VacuumServiceServer", "CargoServiceServer", "QueueServiceServer" },
+	dependencies = {
+		"VacuumServiceServer",
+		"CargoServiceServer",
+		"QueueServiceServer",
+		"InteractionServiceServer",
+		"NoiseServiceServer",
+	},
 	ready = ready,
 
 	--[=[
@@ -239,6 +254,24 @@ local OfficeServiceServer: OfficeServiceServer = {
 		assert(capacityOk, `office layout cannot hold a shift: {reason or "?"}`)
 		local routeOk, routeReason = OfficeLayoutRules.checkRoute(LAYOUT)
 		assert(routeOk, `office layout has no usable patrol route: {routeReason or "?"}`)
+		if not InteractionRegistry.has(OfficeConstants.DOOR_KIND) then
+			InteractionRegistry.register(OfficeConstants.DOOR_KIND, {
+				actionText = "Open / close",
+				objectText = "Door",
+				maxDistance = 8,
+			})
+		end
+		InteractionServiceServer:onInteract(OfficeConstants.DOOR_KIND, function(player, target)
+			local current = built
+			local id = target:GetAttribute("OfficeDoorId")
+			if current == nil or type(id) ~= "string" or not target:IsA("BasePart") then
+				return
+			end
+			local closing = target:GetAttribute("OfficeDoorOpen") == true
+			if current.doors.toggle(id, player) and closing then
+				NoiseServiceServer:emit(target.Position, OfficeConstants.DOOR_SLAM_RADIUS, "door", { player.UserId })
+			end
+		end)
 		local current = OfficeBuildSystem.build(LAYOUT, OfficeConstants.ORIGIN)
 		built = current
 		-- The office at night (exit signs, blue monitors, the elevator, ambience emitters), once.
@@ -274,6 +307,7 @@ local OfficeServiceServer: OfficeServiceServer = {
 		self:reset()
 		local current = built
 		if current ~= nil then
+			current.doors.destroy()
 			current.model:Destroy()
 			built = nil
 		end
@@ -475,6 +509,15 @@ local OfficeServiceServer: OfficeServiceServer = {
 	overtimeSheet = function(_self)
 		local current = built
 		return if current ~= nil then current.overtime else nil
+	end,
+
+	--[=[
+		Opens every closed door within OfficeConstants.DOOR_AUTO_OPEN_RADIUS of `position` (Harlow's think calls this).
+		False when nothing opened or no office stands.
+	]=]
+	openDoorsNear = function(_self, position)
+		local current = built
+		return if current ~= nil then current.doors.openNear(position) else false
 	end,
 
 	getState = function(_self)

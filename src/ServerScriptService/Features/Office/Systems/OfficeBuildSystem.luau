@@ -10,6 +10,8 @@
 	PathfindingModifier volume (Harlow walks the loading bay but never paths into the truck's box). Everything is anchored under one Model in Workspace at
 	the layout's origin. Glass walls fill the layout's panes (Glass, see-through, solid, tagged SightThrough so Harlow's
 	sight passes them; the wall pieces beside them stop flush). Physical per-room ceilings enclose the camera.
+	Doors: every doorway keeps its visual-only frame and trim, and OfficeDoorSystem adds a real leaf to each solid or
+	glass door plus a locked flush leaf on every facade (`Built.doors`, destroyed with the office).
 
 	Instance shell; specs cover ceilings, and OfficeLayoutRules validates the layout.
 
@@ -33,6 +35,7 @@ local OfficeConstants = require(OfficeServer.Data.OfficeConstants)
 local OfficeTypes = require(OfficeServer.Data.OfficeTypes)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
 local OfficeLoadingBayUtils = require(OfficeServer.Utils.OfficeLoadingBayUtils)
+local OfficeDoorSystem = require(script.Parent.OfficeDoorSystem)
 
 export type Built = {
 	model: Model,
@@ -40,6 +43,7 @@ export type Built = {
 	clock: BasePart,
 	overtime: BasePart,
 	searchables: { [string]: BasePart },
+	doors: OfficeDoorSystem.DoorSet,
 }
 
 local function block(name: string, size: Vector3, cframe: CFrame, color: Color3, parent: Instance): Part
@@ -423,8 +427,17 @@ function OfficeBuildSystem.build(
 		modifier.Parent = zone
 	end
 
+	local doors = OfficeDoorSystem.build(layout, origin, model)
+
 	model.Parent = Workspace
-	return { model = model, bed = bed, clock = clock, overtime = overtime, searchables = searchables }
+	return {
+		model = model,
+		bed = bed,
+		clock = clock,
+		overtime = overtime,
+		searchables = searchables,
+		doors = doors,
+	}
 end
 
 return OfficeBuildSystem
