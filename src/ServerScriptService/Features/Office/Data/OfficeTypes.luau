@@ -14,7 +14,7 @@ local CargoTypes = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoTyp
 
 -- An axis-aligned nonoverlapping floor rectangle. Functional workplaces use archetype zones;
 -- hallway rectangles are physical corridor links and are excluded from semantic work-room counts.
--- A nil zone remains valid for authored layouts.
+-- A nil zone remains valid for authored layouts. floor/kit/roomType are set only on generated (kit) rooms.
 export type Room = {
 	id: string,
 	name: string,
@@ -23,15 +23,25 @@ export type Room = {
 	maxX: number,
 	maxZ: number,
 	zone: string?,
+	floor: number?,
+	kit: string?,
+	roomType: RoomType?,
 }
 
--- A doorway centred at (x, z) on the wall rooms `a` and `b` share.
+-- What kind of workplace a kit room is.
+export type RoomType = "pods" | "conference" | "breakout" | "storage" | "server" | "reception"
+
+-- How a doorway is filled: open (no leaf), solid door, or glass door.
+export type DoorKind = "open" | "solid" | "glass"
+
+-- A doorway centred at (x, z) on the wall rooms `a` and `b` share. A nil kind means open.
 export type Door = {
 	a: string,
 	b: string,
 	x: number,
 	z: number,
 	width: number,
+	kind: DoorKind?,
 }
 
 -- patrol: a point on Mr. Harlow's route; rest: where he takes his break (M2).
@@ -75,6 +85,15 @@ export type Truck = {
 	clockZ: number,
 }
 
+-- A building-front piece on the exterior wall of `room`, centred at (x, z).
+export type Facade = {
+	room: string,
+	x: number,
+	z: number,
+	width: number,
+	kind: "entrance" | "stairwell",
+}
+
 export type Layout = {
 	-- Visual kit selected by this map; absent uses OfficeConstants.ART_KIT_ID.
 	artKit: string?,
@@ -86,6 +105,9 @@ export type Layout = {
 	-- Mr. Harlow's patrol route: patrol marker ids in walking order (a loop), and his rest marker (M2).
 	route: { string },
 	rest: string,
+	-- Generated maps only: building-front pieces, and glass wall spans.
+	facades: { Facade }?,
+	panes: { Segment }?,
 }
 
 export type Edge = "minX" | "maxX" | "minZ" | "maxZ"
@@ -101,6 +123,39 @@ export type Segment = {
 export type Range = {
 	min: number,
 	max: number,
+}
+
+-- A marker in a kit's local frame (before facing and mirroring). Yaw is local; absent means zero.
+export type KitMarker = {
+	kind: MarkerKind,
+	x: number,
+	z: number,
+	rotation: number?,
+}
+
+-- A hand-authored room. Local frame: x along the front wall from the front-left corner (seen from
+-- inside), z into the room. door.offset is the door's centre along the front wall; glass is a span of it.
+export type Kit = {
+	id: string,
+	roomType: RoomType,
+	name: string,
+	size: "S" | "M" | "L",
+	width: number,
+	depth: number,
+	door: { offset: number, width: number, kind: DoorKind },
+	glass: { from: number, to: number }?,
+	markers: { KitMarker },
+}
+
+-- A kit placed in the world: the room, its front door, the glass pane (if any) and its markers.
+export type Placement = {
+	room: Room,
+	doorX: number,
+	doorZ: number,
+	doorWidth: number,
+	doorKind: DoorKind,
+	pane: Segment?,
+	markers: { Marker },
 }
 
 export type RollOptions = {

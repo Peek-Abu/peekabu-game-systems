@@ -42,6 +42,8 @@ return table.freeze({
 	ORIGIN = CFrame.new(1000, 1, 0),
 	MODEL_NAME = "CleanupCrewOffice",
 	ART_KIT_ID = "client-office-slate",
+	-- The floor number kit rooms are placed on (one floor today).
+	FLOOR_NUMBER = 1,
 	DESK_PROP_SIZES = table.freeze(DESK_PROP_SIZES),
 	HIDE_FURNITURE_SCALE = HIDE_FURNITURE_SCALE,
 	OFFICE_CHAIR_SIZE = Vector3.new(2.27, 3.562, 2.26) * HIDE_FURNITURE_SCALE,
