@@ -210,4 +210,19 @@ export type SpawnPlan = {
 	value: number,
 }
 
+export type ShellMaterial = "plaster" | "oak" | "skirt" | "frame" | "glass" | "ceiling" | "grid"
+export type ShellBox = {
+	name: string,
+	size: Vector3,
+	cframe: CFrame,
+	material: ShellMaterial,
+	collide: boolean,
+}
+
+-- A ceiling troffer panel (layout x/z); lit ones glow and carry a light.
+export type LightPanel = { x: number, z: number, lit: boolean, rotated: boolean, brightness: number }
+
+-- A shadow-casting fill light.
+export type FillLight = { position: Vector3, brightness: number, range: number, color: Color3, shadows: boolean }
+
 return {}

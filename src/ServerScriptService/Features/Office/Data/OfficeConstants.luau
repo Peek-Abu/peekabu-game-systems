@@ -80,6 +80,32 @@ local ROOM_LIGHT: { [string]: { brightness: number, spacing: number } } = {
 	server = { brightness = 0.3, spacing = 18 },
 	reception = { brightness = 0.6, spacing = 15 },
 }
+-- The spike's light recipe per room type (key = OfficeArtKeyUtils.roomType; an unknown type uses pods).
+local LIGHTING: {
+	[string]: {
+		panelBrightness: number,
+		panelRange: number,
+		allLit: boolean,
+		fillBrightness: number,
+		fillRange: number,
+	},
+} =
+	{
+		hallway = { panelBrightness = 0.2, panelRange = 14, allLit = true, fillBrightness = 1.3, fillRange = 12 },
+		pods = { panelBrightness = 0.22, panelRange = 14, allLit = false, fillBrightness = 1.7, fillRange = 11.5 },
+		breakout = { panelBrightness = 0.22, panelRange = 14, allLit = false, fillBrightness = 1.7, fillRange = 11.5 },
+		reception = { panelBrightness = 0.22, panelRange = 14, allLit = false, fillBrightness = 1.7, fillRange = 11.5 },
+		conference = { panelBrightness = 0.22, panelRange = 14, allLit = false, fillBrightness = 1.5, fillRange = 11.5 },
+		server = { panelBrightness = 0.12, panelRange = 14, allLit = false, fillBrightness = 0.6, fillRange = 10 },
+		storage = { panelBrightness = 0.15, panelRange = 14, allLit = true, fillBrightness = 0.8, fillRange = 10 },
+	}
+-- Small accent lights by attachment name (they cast no shadows).
+local ACCENT_LIGHTS: { [string]: { brightness: number, range: number, color: Color3 } } = {
+	LedLight = { brightness = 0.4, range = 6, color = Color3.fromRGB(120, 170, 255) },
+	ScreenLight = { brightness = 0.7, range = 6, color = Color3.fromRGB(190, 215, 255) },
+	GlowLight = { brightness = 1.6, range = 11, color = Color3.fromRGB(255, 200, 140) },
+	LampLight = { brightness = 1.6, range = 11, color = Color3.fromRGB(255, 168, 90) },
+}
 local FLOOR_COLORS: { Color3 } = {
 	Color3.fromRGB(96, 92, 86),
 	Color3.fromRGB(70, 82, 96),
@@ -273,6 +299,11 @@ return table.freeze({
 	-- LIGHT_COLOR: rooms differ only in brightness and lamp spacing, never in tint. An unknown type falls back to
 	-- LIGHT_SPACING / LIGHT_BRIGHTNESS. LIGHT_RANGE covers every spacing here (OfficeBuildSystem.spec checks each).
 	ROOM_LIGHT = table.freeze(ROOM_LIGHT),
+	LIGHTING = table.freeze(LIGHTING),
+	ACCENT_LIGHTS = table.freeze(ACCENT_LIGHTS),
+	-- Troffer panel glow and the warm fill light colours (from the spike).
+	PANEL_COLOR = Color3.fromRGB(255, 226, 190),
+	FILL_COLOR = Color3.fromRGB(255, 205, 150),
 	-- The invisible volume over the truck's box (the one safe place) that Harlow's paths never enter.
 	SAFE_ZONE_NAME = "SafeZone",
 	-- M2: Harlow's route needs at least this many points.

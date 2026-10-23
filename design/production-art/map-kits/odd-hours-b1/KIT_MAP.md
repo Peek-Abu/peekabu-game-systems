@@ -46,6 +46,17 @@ decal-resolved colour/normal/rough images. Every mesh as imported faces -Z (chec
 | supplyCabinet | furniture | t2_supplyCabinet 88586894738036 | 4.32 x 8 x 3.45 | NegativeZ | Uniform | built |
 | stairwellSign | furniture | t2_stairwellSign 103288430156868 | 2 x 1 x 0.1 | NegativeZ | Uniform | built |
 | exitSign, elevatorFront, cargo, props | - | not in this kit | - | - | - | slate fallback |
+| troffer | building | mock `CeilingPanel` (Neon + troffer Texture), SurfaceLight stripped, part attribute `OfficeLightEmitter` | 5 x 0.2 x 3 | NegativeZ | Stretch | built (spike match) |
+| rug | furniture | mock `Rug` (Fabric + Decal on top) | 14 x 0.1 x 13 | NegativeZ | Uniform | built (spike match) |
+| windowBay | furniture | mock `c_windowbay` + `c_blinds_full`, blinds on -Z (room side) | 6 x 10.3 x 0.97 | NegativeZ | Uniform | built (spike match); hang with its bottom 1.5 above the floor |
+| column | furniture | Part shaft 2 x 13 x 2 `OH_Plaster` + skirt 2.8 x 0.6 x 2.8 | 2.8 x 13 x 2.8 | NegativeZ | Uniform | built (spike match) |
+| receptionGlow | furniture | mock `ReceptionPanel` (`OH_Plaster`) + `ReceptionGlow` card behind; Attachment `GlowLight` | 14 x 6 x 0.6 | NegativeZ | Uniform | built (spike match); centre 6.5 above the floor |
+| floorLamp | furniture | (existing) + Attachment `LampLight` under the shade | 1.54 x 6.52 x 1.54 | NegativeZ | Uniform | attachment added (spike match) |
+
+Spike-match templates (2026-10-23) come from `AddSpikeTemplates.CommandBar.luau`: clones of `Workspace.ClaudeMockRoom`
+parts (already-uploaded art; no upload). `AssembleKit` rebuilds the kit folder from scratch, so run `AddSpikeTemplates`
+again after it. The troffer carries no light: the code adds the SurfaceLight to lit panels. All six pass
+`ArtKitRules.validateTemplate` (checked in Edit on a fresh clone of the rules).
 
 ## Task 4 uploads (owner-approved batch 2026-10-22; Icey Labs group 189923277, all Approved)
 
