@@ -12,7 +12,7 @@ local MaterialService = game:GetService("MaterialService")
 
 local KIT_ID = "odd-hours-b1"
 local IDS = {
-	c_desk = {"127882537035090", "88294060743146", "111911500506654", "78946548801062"},
+	c_desk_nodivider = {"74890171416031", "81026453399291", "78612349455668", "93828460741235"}, -- the mock-room desk without the privacy divider (replaces c_desk)
 	c_chair = {"76140780685205", "133451549732406", "133440041678773", "133033333497328"},
 	c_lockers = {"80348717249179", "83914590869498", "76034031473396", "103555969898410"},
 	c_bookshelf = {"82298001439367", "138256636385004", "112643864130260", "102527266813417"},
@@ -35,7 +35,12 @@ local IDS = {
 	d_sconce = {"95782564886770", "113321291672262", "129301370669287", "73769983264894"},
 	d_wallclock = {"129091527121534", "106825833040150", "112018453094246", "110202766440781"},
 	r_deskplant = {"101911962938936", "112018184525997", "", ""},
-	-- Task 2 meshes (uploaded in Task 4): add rows like t2_serverRack = {"model", "color", "normal", "rough"}.
+	-- Task 2 meshes (uploaded in Task 4). Colour/normal/rough are DECAL ids; they resolve to image ids at run time.
+	t2_serverRack = {"76858453551547", "79134697329536", "108106230649311", "105815688686484"},
+	t2_doorLeaf = {"128086321055290", "126343314525764", "76384627646625", "70500544549300"},
+	t2_doorLeafGlass = {"121018102259344", "135379141376361", "135630238974539", "77112399835962"},
+	t2_supplyCabinet = {"88586894738036", "126150657377347", "139489244266070", "95122457736870"},
+	t2_stairwellSign = {"103288430156868", "133644663294809", "73965497346519", "113065990472125"},
 }
 local TROFFER_DECAL = "125363236292378" -- "surf troffer color"
 local DESK_SIZE = Vector3.new(5, 3, 3) * 1.65 -- OfficeConstants.DESK_SIZE
@@ -45,7 +50,7 @@ local DESK_FREE_FRAC = { min = Vector3.new(-0.428, -0.5, -0.5), max = Vector3.ne
 
 -- Mesh-based templates: { key, family, asset row, FrontAxis (which way the mesh faces as imported; checked by eye), fit }
 local MESH = {
-	{ "desk", "furniture", "c_desk", "NegativeZ", "Stretch" },
+	{ "desk", "furniture", "c_desk_nodivider", "NegativeZ", "Stretch" },
 	{ "officeChair", "furniture", "c_chair", "NegativeZ" },
 	{ "locker", "furniture", "c_lockers", "NegativeZ" },
 	{ "shelf", "furniture", "c_bookshelf", "NegativeZ" },
@@ -67,7 +72,7 @@ local MESH = {
 	{ "sconce", "furniture", "d_sconce", "NegativeZ" },
 	{ "wallClock", "furniture", "d_wallclock", "NegativeZ" },
 	{ "deskPlant", "furniture", "r_deskplant", "NegativeZ" },
-	-- Task 2 (pending upload):
+	-- Task 2 (uploaded in Task 4):
 	{ "serverRack", "furniture", "t2_serverRack", "NegativeZ" },
 	{ "supplyCabinet", "furniture", "t2_supplyCabinet", "NegativeZ" },
 	{ "stairwellSign", "furniture", "t2_stairwellSign", "NegativeZ" },
@@ -77,7 +82,6 @@ local MESH = {
 
 -- Held keys: not built; the slate kit covers them through the attachFirst fallback. Delete the entry to turn one on.
 local HELD = {
-	desk = "held: divider breaks hide space, re-export pending (no-divider desk id turns it back on)",
 	locker = "held: bank of lockers != single searchable locker",
 }
 
@@ -109,10 +113,18 @@ local function loadAll()
 			local ok, m = pcall(InsertService.LoadAsset, InsertService, tonumber(job[3]))
 			if ok then
 				if job[1] == "mesh" then
-					local mp = m:FindFirstChildWhichIsA("MeshPart", true)
-					if mp then
+					-- every MeshPart of the import (a multi-object FBX also brings LED_* / Glass pieces)
+					local list = {}
+					for _, d in m:GetDescendants() do
+						if d:IsA("MeshPart") then
+							table.insert(list, d)
+						end
+					end
+					for _, mp in list do
 						mp.Parent = nil
-						meshCache[job[2]] = mp
+					end
+					if #list > 0 then
+						meshCache[job[2]] = list
 					end
 				else
 					local d = m:FindFirstChildWhichIsA("Decal", true)
@@ -198,33 +210,68 @@ local function buildFluorescent()
 	return finish(m, Vector3.new(3.5, 0.24, 1), "Stretch")
 end
 
+-- Multi-object meshes: the main piece carries the SurfaceAppearance; LED_* pieces become Neon (their own colour, no
+-- texture) and `Glass` becomes Material Glass at 0.5. validateTemplate rejects lights, so the blue point light asked for
+-- on the middle LED cannot live in the template: an Attachment "LedLight" marks the spot instead.
+local LED_COLORS = {
+	LED_Green = Color3.fromRGB(40, 220, 70),
+	LED_Amber = Color3.fromRGB(255, 160, 20),
+	LED_Blue = Color3.fromRGB(40, 110, 255),
+}
 local function buildMesh(spec)
 	local key, asset, front, fit = spec[1], spec[3], spec[4], spec[5]
 	local row = IDS[asset]
 	if not row then
 		return nil, "no asset id yet (" .. asset .. ")"
 	end
-	local src = meshCache[asset]
-	if not src then
+	local list = meshCache[asset]
+	if not list then
 		return nil, "model " .. row[1] .. " failed to load"
 	end
-	local mp = src:Clone()
-	mp.Name = key
-	mp.Anchored = true
-	for _, c in mp:GetChildren() do
-		c:Destroy()
+	local main
+	for _, p in list do
+		if not (string.sub(p.Name, 1, 4) == "LED_" or p.Name == "Glass") then
+			main = p
+			break
+		end
 	end
-	local sa = Instance.new("SurfaceAppearance")
-	sa.ColorMap = imageCache[asset .. "#2"] or ""
-	sa.NormalMap = imageCache[asset .. "#3"] or ""
-	sa.RoughnessMap = imageCache[asset .. "#4"] or ""
-	sa.Parent = mp
-	local size = mp.Size
-	-- Uploaded meshes are bbox-centred: sit the box on the pivot's floor. No yaw is baked in (a rotated part makes
-	-- Stretch fit refuse non-uniform scale); the facing is declared through FrontAxis instead.
-	mp.CFrame = CFrame.new(0, size.Y / 2, 0)
+	if not main then
+		return nil, "model " .. row[1] .. " has no main mesh"
+	end
 	local m = newModel(key)
-	mp.Parent = m
+	local size = main.Size
+	-- Uploaded meshes are bbox-centred: sit the main box on the pivot's floor (extra pieces keep their offset from it).
+	-- No yaw is baked in (a rotated part makes Stretch fit refuse non-uniform scale); the facing is declared through
+	-- FrontAxis. The FBX 180-degree yaw is already inside the imported part offsets (LEDs sit at -Z, X mirrored).
+	for _, src in list do
+		local mp = src:Clone()
+		for _, c in mp:GetChildren() do
+			c:Destroy()
+		end
+		mp.Anchored = true
+		mp.CFrame = CFrame.new(0, size.Y / 2, 0) * main.CFrame:ToObjectSpace(src.CFrame)
+		if src == main then
+			mp.Name = key
+			local sa = Instance.new("SurfaceAppearance")
+			sa.ColorMap = imageCache[asset .. "#2"] or ""
+			sa.NormalMap = imageCache[asset .. "#3"] or ""
+			sa.RoughnessMap = imageCache[asset .. "#4"] or ""
+			sa.Parent = mp
+		elseif LED_COLORS[src.Name] then
+			mp.Material = Enum.Material.Neon
+			mp.Color = LED_COLORS[src.Name]
+			if src.Name == "LED_Amber" then -- the middle LED
+				local a = Instance.new("Attachment")
+				a.Name = "LedLight"
+				a.Parent = mp
+			end
+		elseif src.Name == "Glass" then
+			mp.Material = Enum.Material.Glass
+			mp.Transparency = 0.5
+			mp.Color = Color3.fromRGB(150, 185, 195)
+		end
+		mp.Parent = m
+	end
 	return finish(m, size, fit, front)
 end
 
@@ -279,12 +326,30 @@ end
 local function measureDesk(template)
 	local base = template:GetAttribute("BaseSize")
 	local scale = DESK_SIZE / base
-	local f = scratch(template, scale)
-	local op = OverlapParams.new()
-	op.FilterType = Enum.RaycastFilterType.Include
-	op.FilterDescendantsInstances = { f }
+	-- Exact-geometry test: every face of the desk's mesh (through an EditableMesh) as an axis-aligned box, scaled to
+	-- DESK_SIZE, floor-up. GetPartBoundsInBox on one big MeshPart answers with the part's bounds, so it can never see a
+	-- knee-hole; the face boxes can (exact for the desk's flat panels, conservative on rounded edges).
+	local mp = template:FindFirstChildWhichIsA("MeshPart")
+	local em = game:GetService("AssetService"):CreateEditableMeshAsync(Content.fromUri(mp.MeshId))
+	local tris = {}
+	for _, fid in em:GetFaces() do
+		local lo, hi
+		for _, vid in em:GetFaceVertices(fid) do
+			local p = em:GetPosition(vid) * scale + Vector3.new(0, DESK_SIZE.Y / 2, 0)
+			lo = lo and lo:Min(p) or p
+			hi = hi and hi:Max(p) or p
+		end
+		table.insert(tris, { lo, hi })
+	end
 	local function free(centre, size)
-		return #workspace:GetPartBoundsInBox(CFrame.new(SCRATCH + centre), size - Vector3.one * 0.02, op) == 0
+		local a, b = centre - size / 2 + Vector3.one * 0.01, centre + size / 2 - Vector3.one * 0.01
+		for _, t in tris do
+			local lo, hi = t[1], t[2]
+			if lo.X < b.X and hi.X > a.X and lo.Y < b.Y and hi.Y > a.Y and lo.Z < b.Z and hi.Z > a.Z then
+				return false
+			end
+		end
+		return true
 	end
 	local out = { scale = scale }
 	-- 1) the gameplay free box (HideConstants.FURNITURE.desk.free) at DESK_SIZE, floor-up.
@@ -327,7 +392,6 @@ local function measureDesk(template)
 		end
 	end
 	out.maxHeightAtHugFootprint = maxH
-	f:Destroy()
 	return out
 end
 

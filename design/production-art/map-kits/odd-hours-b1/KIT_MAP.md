@@ -3,8 +3,7 @@
 Kit: `ReplicatedStorage.Assets.CleanupCrew.ArtKits["odd-hours-b1"]` (Shift place, not in Rojo). Built by
 `AssembleKit.CommandBar.luau` (idempotent; rebuilds the folder each run). The kit holds only what it restyles:
 `OfficeArtKeyUtils.attachFirst` falls back to `client-office-slate` for everything else (cargo, props, exitSign,
-elevatorFront, ...). Re-run the script after adding the Task 2 ids (rows `t2_serverRack`, `t2_supplyCabinet`,
-`t2_stairwellSign`, `t2_doorLeaf`, `t2_doorLeafGlass` in `IDS`) and the `OH_Vinyl` / `OH_Lino` MaterialVariants.
+elevatorFront, ...). Stage 2 uploads (Task 4) are in: rows `t2_*` and `c_desk_nodivider` in `IDS`, plus the `OH_Vinyl` / `OH_Lino` MaterialVariants (see "Task 4 uploads" below).
 
 Mesh templates: uploaded MeshPart (bbox-centred, no yaw baked in), seated on the pivot floor, SurfaceAppearance from the
 decal-resolved colour/normal/rough images. Every mesh as imported faces -Z (checked by eye on a contact sheet), so
@@ -17,11 +16,11 @@ decal-resolved colour/normal/rough images. Every mesh as imported faces -Z (chec
 | ceilingTile | building | Part, Concrete + `OH_Ceiling` | 4 x 0.1 x 4 | NegativeZ | Stretch | built |
 | wallSolid | building | Plaster body (`OH_Plaster`) + oak dado rail at 3.2 (`OH_Oak`) + dark skirting | 8 x 8 x 0.44 | NegativeZ | Stretch | built |
 | fluorescent | building | metal housing + Neon diffuser + `surf troffer` colour as a Decal on the bottom face | 3.5 x 0.24 x 1 | NegativeZ | Stretch | built |
-| floorTile_server | building | `OH_Vinyl` slab | - | - | - | pending (MaterialVariant not made; Task 4) |
-| floorTile_breakout | building | `OH_Lino` slab | - | - | - | pending (MaterialVariant not made; Task 4) |
-| doorLeaf | building | Task 2 mesh | - | - | - | pending upload (Task 4) |
-| doorLeafGlass | building | Task 2 mesh | - | - | - | pending upload (Task 4) |
-| desk | furniture | c_desk 127882537035090 | 8.8 x 6.69 x 4.6 | - | Stretch | HELD: divider breaks hide space, re-export pending (slate desk via fallback) |
+| floorTile_server | building | Plastic + `OH_Vinyl` slab | 4 x 0.092 x 4 | NegativeZ | Stretch | built |
+| floorTile_breakout | building | Plastic + `OH_Lino` slab | 4 x 0.092 x 4 | NegativeZ | Stretch | built |
+| doorLeaf | building | t2_doorLeaf 128086321055290 | 5.9 x 9 x 0.3 | NegativeZ | Stretch | built (hinge side: see door note) |
+| doorLeafGlass | building | t2_doorLeafGlass 121018102259344 (+ `Glass` piece: Material Glass, Transparency 0.5) | 5.9 x 9 x 0.3 | NegativeZ | Stretch | built (hinge side: see door note) |
+| desk | furniture | c_desk_nodivider 74890171416031 | 8.8 x 4.95 x 4.6 | NegativeZ | Stretch | built (no divider; hide space passes, see below) |
 | officeChair | furniture | c_chair 76140780685205 | 2.71 x 4.60 x 2.79 | NegativeZ | Uniform | built |
 | locker | furniture | c_lockers 80348717249179 | 6 x 8 x 2.52 | - | Uniform | HELD: bank of lockers != single searchable locker (marker is ~2.5 x 7 x 2.5, art would shrink to 0.42x; slate locker via fallback) |
 | shelf | furniture | c_bookshelf 82298001439367 | 5.54 x 8 x 2.08 | NegativeZ | Uniform | built |
@@ -43,39 +42,74 @@ decal-resolved colour/normal/rough images. Every mesh as imported faces -Z (chec
 | sconce | furniture | d_sconce 95782564886770 | 0.88 x 1.05 x 0.98 | NegativeZ | Uniform | built |
 | wallClock | furniture | d_wallclock 129091527121534 | 1.8 x 1.8 x 0.25 | NegativeZ | Uniform | built |
 | deskPlant | furniture | r_deskplant 101911962938936 (colour map only) | 1.26 x 1.39 x 1.26 | NegativeZ | Uniform | built |
-| serverRack | furniture | Task 2 mesh | - | - | - | pending upload (Task 4) |
-| supplyCabinet | furniture | Task 2 mesh | - | - | - | pending upload (Task 4) |
-| stairwellSign | furniture | Task 2 mesh | - | - | - | pending upload (Task 4) |
+| serverRack | furniture | t2_serverRack 76858453551547 (+ `LED_Green/Amber/Blue` pieces: Neon, own colour) | 2 x 7 x 3.5 | NegativeZ | Uniform | built |
+| supplyCabinet | furniture | t2_supplyCabinet 88586894738036 | 4.32 x 8 x 3.45 | NegativeZ | Uniform | built |
+| stairwellSign | furniture | t2_stairwellSign 103288430156868 | 2 x 1 x 0.1 | NegativeZ | Uniform | built |
 | exitSign, elevatorFront, cargo, props | - | not in this kit | - | - | - | slate fallback |
+
+## Task 4 uploads (owner-approved batch 2026-10-22; Icey Labs group 189923277, all Approved)
+
+6 models + 24 images. Images were created as Decals (type 13); the script resolves them to Image ids through
+`InsertService:LoadAsset`, as in stage 1. Creator verified on economy.roblox.com (`CreatorTargetId 189923277`, "Icey Labs")
+for serverRack (model, type 10), serverRack color, c_desk_nodivider and surf lino rough (type 13). Raw log:
+`upload_log_stage2.jsonl` (also in the scratchpad `real/`).
+
+| Asset | model | color | normal | rough |
+|---|---|---|---|---|
+| serverRack | 76858453551547 | 79134697329536 | 108106230649311 | 105815688686484 |
+| doorLeaf | 128086321055290 | 126343314525764 | 76384627646625 | 70500544549300 |
+| doorLeafGlass | 121018102259344 | 135379141376361 | 135630238974539 | 77112399835962 |
+| supplyCabinet | 88586894738036 | 126150657377347 | 139489244266070 | 95122457736870 |
+| stairwellSign | 103288430156868 | 133644663294809 | 73965497346519 | 113065990472125 |
+| c_desk_nodivider | 74890171416031 | 81026453399291 | 78612349455668 | 93828460741235 |
+| surf vinyl (floor) | - | 101900287489221 | 116209190833069 | 75027194809569 |
+| surf lino (floor) | - | 121652013918684 | 113839306478006 | 128575032242313 |
+
+MaterialVariants (MaterialService, resolved image ids, StudsPerTile 8, BaseMaterial Plastic):
+`OH_Vinyl` = 72254599732798 / 104486307492802 / 105527373510920; `OH_Lino` = 82266988550517 / 116901973023085 / 119203464324229
+(colour / normal / roughness). Floors: `proc.py vinyl` / `proc.py lino` (new kinds), `texstyle.py` classes `vinyl` / `lino`
+(added to `style.json`; copies in `textures/`), `measure_one` PASS: vinyl lum_std 0.0298 fine 0.0149, lino 0.0158 / 0.0121.
+
+Multi-object meshes: the script keeps every MeshPart of the import with its offset from the main piece. serverRack's `LED_*`
+become Neon with their own colours (no SurfaceAppearance); the middle LED (`LED_Amber`) carries an Attachment `LedLight`.
+`validateTemplate` rejects lights, so the blue PointLight (range 6, brightness 0.4) cannot live in a template: a runtime hook
+must add it at that attachment. doorLeafGlass's `Glass` is Material Glass, Transparency 0.5.
+
+FBX traps: the 180 deg yaw is already inside the imported part offsets (LEDs sit at -Z, X mirrored), so no part is rotated;
+bbox-centring is handled by seating the main piece at (0, size.Y/2, 0) and keeping the other pieces' offsets from it.
+
+Door hinge side (open issue): authored hinge on the leaf's -X edge, lever on +X. After the FBX yaw the imported leaf has the
+LEVER at -X and the HINGE at +X (checked on the uploaded mesh through an EditableMesh: the lever/rose vertices that stand
+proud of the slab have mean X = -1.75). `OfficeDoorUtils.leafFrame` hinges the proxy at local -X for doors on a Z edge
+("horizontal") and at local +X for doors on an X edge ("vertical", the closed frame is turned a quarter turn). So vertical
+doors match, horizontal doors show the lever on the hinge side. A template cannot fix it: a 180 deg rotated part makes
+`ArtVisualSystem.attach` refuse non-uniform Stretch (proxy 4 x 9 x 0.3 vs 5.9 x 9 x 0.3). Fixes: let attach mirror
+(accept a 180 deg yaw about Y) for the door keys, or re-export the doors mirrored in X (a new upload).
 
 ## Coverage and validation report (script run in Edit)
 
 ```
-built 25 (invalid 0), pending 7, held 2 (desk, locker), failed 0
+built 33 (invalid 0), pending 0, held 1 (locker), failed 0
 ```
 
 Every built template passes `ArtKitRules.validateTemplate` (required through a fresh `:Clone()` of the module).
-Pending: floorTile_server, floorTile_breakout, doorLeaf, doorLeafGlass, serverRack, supplyCabinet, stairwellSign.
+Pending: none. Held: locker.
 
 Live attach check (Edit, cloned `ArtVisualSystem`, proxies under a Model with `ArtKitId = "odd-hours-b1"`): `attach`
 returned a visual for all 27 keys built in the first run (before desk and locker were held; the kit now has 25) (kitchenCounter set `ArtSupportSurfaceY`). exitSign / serverRack / doorLeaf
 return nil from the kit (so the slate fallback / greybox applies). The test model and scratch parts were deleted;
 nothing is left in Workspace.
 
-## Desk hide-space measurement (why desk is held)
+## Desk hide-space measurement (`c_desk_nodivider`, desk is built)
 
-`c_desk` as uploaded: 8.8 x 6.69 x 4.6. Its worktop is at Y 4.95, the underside of the top at Y 4.67, and a green
-privacy divider rises to Y 6.69 at the back. Stretch fit maps the whole bounds (divider included) onto
-`DESK_SIZE` 8.25 x 4.95 x 4.95, so the scale is (0.9375, 0.740, 1.076): the underside drops to about 3.46 studs.
+`c_desk_nodivider` (rebuilt from the mock-room `c_desk` without the divider, `build_set_stage2.py`): 8.8 x 4.95 x 4.6, top
+at 4.95 and underside at 4.67. Stretch to `DESK_SIZE` 8.25 x 4.95 x 4.95 gives scale (0.9375, 1.0, 1.076). Measured on the
+uploaded mesh through an EditableMesh (face boxes scaled to DESK_SIZE; the old `GetPartBoundsInBox` search only sees a
+MeshPart's bounds, so it was replaced in the script):
 
-- Height free under the top at DESK_SIZE: about 3.46 (needs 4.2) -> FAIL (short by ~0.74).
-- Depth: the modesty panel sits at z about +2.26 of a 4.95 desk, so about 4.7 free from the front (needs 4.3) -> ok.
-- Width: knee-hole spans x about -3.7..+1.9 (the drawer pedestal is at +X, like the slate desk) = about 5.6 (needs 3.6) -> ok.
-- Script search: 0 placements of a 3.6 x 4.2 x 4.3 box anywhere; HideConstants' own free box (5.10 x 4.57 x 4.42) blocked.
-
-Cause is only the divider in the Y stretch: without it the mesh is 4.95 tall (underside 4.67), scale Y becomes 1.0
-and the free height is 4.67 (>= 4.2). Fixes, none done here: re-export `c_desk` without the divider (separate mesh),
-or let the desk proxy be taller than 4.95. The desk is therefore held (not built); the slate desk covers it through the fallback.
+- Knee-hole (front is -Z): x -3.61..+1.64 = 5.25 wide (needs 3.6), underside 4.67 high (needs 4.2), z -2.48..+2.26 = 4.73 deep from the front (needs 4.3); the drawer pedestal is at +X, the leg panel at -X.
+- Script: 54 placements of a 3.6 x 4.2 x 4.3 box (centres x -1.58..-0.33, z -0.32..0.08); max free height at that footprint 4.6; HideConstants' own free box (5.10 x 4.57 x 4.42) is free = true.
+- Turntables: `turntables/c_desk_nodivider_{front,back,side,below,tq}.png`.
 
 ## Notes and captures
 

@@ -353,6 +353,34 @@ def stairwellSign():
     print("DONE stairwellSign tris", len(me.polygons), "size", [round(x, 3) for x in ob.dimensions], "objects", ["stairwellSign"])
 
 
+# ------------------------------------------------------------- c_desk_nodivider ---
+def _drawer_stack(x0, x1, y_front, z0, z1, n, handle_w=1.0, mat="drawer"):
+    gap = 0.06
+    h = (z1 - z0 - (n - 1) * gap) / n
+    for i in range(n):
+        a = z0 + i * (h + gap)
+        box(f"dr{x0}{i}", x0 + 0.05, x1 - 0.05, y_front - 0.03, y_front + 0.14, a, a + h, mat, bevel=0.035)
+        hz = a + h * 0.62; cx = (x0 + x1) / 2
+        cylx(f"hd{x0}{i}", cx - handle_w / 2, cx + handle_w / 2, y_front - 0.2, hz, 0.05, "metal", 12)
+        for sx in (-handle_w / 2 + 0.08, handle_w / 2 - 0.08):
+            box(f"hp{x0}{i}{sx}", cx + sx - 0.035, cx + sx + 0.035, y_front - 0.2, y_front - 0.02, hz - 0.03, hz + 0.03, "metal", bevel=0)
+    box(f"sh{x0}", x0 + 0.04, x1 - 0.04, y_front + 0.1, y_front + 0.16, z0, z1, "gap", bevel=0)
+
+
+@prop
+def c_desk_nodivider():
+    """The mock-room desk (c_desk) without the green privacy divider: the mesh top is the worktop at 4.95. 8.8 W x 4.6 D x 4.95 H."""
+    W, D, TOP, T = 8.8, 4.6, 4.95, 0.28
+    U = TOP - T
+    box("top", -W / 2, W / 2, -D / 2, D / 2, U, TOP, "wood", r=0.35, corners=("fl", "fr"), bevel=0.09)
+    box("ped", -4.25, -1.75, -1.95, 2.05, 0.22, U, "laminate", r=0.12, corners=("fl", "fr"))
+    box("plinth", -4.17, -1.83, -1.85, 1.95, 0.0, 0.24, "gap", bevel=0.02)
+    _drawer_stack(-4.25, -1.75, -2.05, 0.3, U - 0.08, 3, 1.2)
+    box("leg", 3.85, 4.25, -2.05, 2.05, 0.0, U, "laminate", r=0.18, corners=("fl", "fr"), bevel=0.03)
+    box("modesty", -1.75, 3.85, 2.1, 2.22, 1.1, U, "laminate", bevel=0.03)
+    finish2("c_desk_nodivider")
+
+
 if __name__ == "__main__":
     for w in sys.argv[sys.argv.index("--") + 1:]:
         H.reset()

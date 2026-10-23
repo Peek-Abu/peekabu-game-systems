@@ -1,0 +1,171 @@
+{
+ "_about": "Odd Hours texture style spec v0 (S2 clean + S1 moody). Every texture, whatever its source, is pushed onto these targets by texstyle.py. Numbers measured from CC0 scans and Dandy's World / Doors reference shots on 2026-10-22.",
+ "tile_px": 1024,
+ "px_per_stud": 128,
+ "classes": {
+  "wood": {
+   "swatch": [
+    168,
+    112,
+    66
+   ],
+   "lum_std": 0.06,
+   "sat": 0.48,
+   "denoise": 0.6,
+   "normal_tilt": 6.0,
+   "rough": [
+    0.48,
+    0.06
+   ],
+   "studs": 8
+  },
+  "plaster": {
+   "swatch": [
+    214,
+    205,
+    186
+   ],
+   "lum_std": 0.03,
+   "sat": 0.12,
+   "denoise": 1.0,
+   "normal_tilt": 9.0,
+   "rough": [
+    0.62,
+    0.05
+   ],
+   "studs": 8
+  },
+  "fabric": {
+   "swatch": [
+    92,
+    112,
+    84
+   ],
+   "lum_std": 0.05,
+   "sat": 0.25,
+   "denoise": 0.0,
+   "normal_tilt": 16.0,
+   "rough": [
+    0.85,
+    0.04
+   ],
+   "studs": 4
+  },
+  "carpet": {
+   "swatch": [
+    74,
+    86,
+    68
+   ],
+   "lum_std": 0.028,
+   "sat": 0.2,
+   "denoise": 0.5,
+   "normal_tilt": 6.0,
+   "rough": [
+    0.92,
+    0.02
+   ],
+   "studs": 8
+  },
+  "tile": {
+   "swatch": [
+    196,
+    186,
+    162
+   ],
+   "lum_std": 0.065,
+   "sat": 0.14,
+   "denoise": 0.8,
+   "normal_tilt": 4.0,
+   "rough": [
+    0.5,
+    0.08
+   ],
+   "studs": 8
+  },
+  "metal": {
+   "swatch": [
+    128,
+    130,
+    134
+   ],
+   "lum_std": 0.04,
+   "sat": 0.04,
+   "denoise": 0.8,
+   "normal_tilt": 3.0,
+   "rough": [
+    0.38,
+    0.06
+   ],
+   "studs": 4
+  },
+  "ceiling": {
+   "swatch": [
+    206,
+    200,
+    186
+   ],
+   "lum_std": 0.05,
+   "sat": 0.06,
+   "denoise": 0.3,
+   "normal_tilt": 5.0,
+   "rough": [
+    0.85,
+    0.03
+   ],
+   "studs": 8,
+   "keep_color": true,
+   "swatch_pull": 0.5
+  },
+  "rug": {
+   "swatch": [
+    150,
+    120,
+    86
+   ],
+   "lum_std": 0.09,
+   "sat": 0.3,
+   "denoise": 0.2,
+   "normal_tilt": 9.0,
+   "rough": [
+    0.9,
+    0.03
+   ],
+   "studs": 6,
+   "keep_color": true,
+   "swatch_pull": 0.4
+  },
+  "vinyl": {
+   "swatch": [
+    148,
+    160,
+    171
+   ],
+   "lum_std": 0.03,
+   "sat": 0.09,
+   "denoise": 0.7,
+   "normal_tilt": 4.0,
+   "rough": [
+    0.4,
+    0.06
+   ],
+   "studs": 8
+  },
+  "lino": {
+   "swatch": [
+    172,
+    142,
+    104
+   ],
+   "lum_std": 0.026,
+   "sat": 0.22,
+   "denoise": 0.15,
+   "normal_tilt": 3.0,
+   "rough": [
+    0.55,
+    0.04
+   ],
+   "studs": 8
+  }
+ }
+}
