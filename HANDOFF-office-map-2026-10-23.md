@@ -1,5 +1,7 @@
 # Handoff: Odd Hours office map (2026-10-23)
 
+**Status 2026-10-23 (later): the spike-match plan (docs/superpowers/plans/2026-10-23-odd-hours-office-map-spike-match.md) is built and green — waiting on the owner's play-check. See reports/office-spike-match-measure.md.**
+
 Read this first if you are continuing the office map work. Branch `game/cleanup-crew`, worktree
 `E:/Projects/peekabu-game-systems/.claude/worktrees/mvp-demo-pack-052599`. Nothing is pushed.
 
