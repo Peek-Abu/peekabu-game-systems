@@ -160,7 +160,6 @@ function OfficeBuildSystem.build(
 		local amount = if roomType ~= nil then OfficeConstants.ROOM_LIGHT[roomType] else nil
 		local lightSpacing = if amount ~= nil then amount.spacing else OfficeConstants.LIGHT_SPACING
 		local lightBrightness = if amount ~= nil then amount.brightness else OfficeConstants.LIGHT_BRIGHTNESS
-		local lightRange = if amount ~= nil then amount.range else OfficeConstants.LIGHT_RANGE
 		for _, point in OfficeLayoutUtils.lightPoints(room, lightSpacing) do
 			local size = OfficeConstants.LIGHT_SIZE
 			local fixture = block(
@@ -177,7 +176,7 @@ function OfficeBuildSystem.build(
 			-- Flush under the ceiling, its shadow falls inside the ceiling's: casting it is shadow-pass cost for nothing.
 			fixture.CastShadow = false
 			local light = Instance.new("PointLight")
-			light.Range = lightRange
+			light.Range = OfficeConstants.LIGHT_RANGE
 			light.Brightness = lightBrightness
 			light.Color = OfficeConstants.LIGHT_COLOR
 			light.Parent = fixture

@@ -99,9 +99,9 @@ return function()
 			expect(lamp.Range >= floorDistance * 1.25).to.equal(true)
 		end)
 		it("reaches the floor corners at every room type's own spacing", function()
-			for roomType, amount in Constants.ROOM_LIGHT do
+			for _, amount in Constants.ROOM_LIGHT do
 				local reach = math.sqrt(Constants.WALL_HEIGHT ^ 2 + 2 * (amount.spacing / 2) ^ 2)
-				expect(roomType and amount.range >= reach * 1.25).to.equal(true)
+				expect(Constants.LIGHT_RANGE >= reach * 1.25).to.equal(true)
 			end
 		end)
 	end)
@@ -153,10 +153,11 @@ return function()
 			local types = { "hallway", "pods", "conference", "breakout", "storage", "server", "reception" }
 			local built = build(roomsOf(types))
 			for index, roomType in types do
-				for _, lamp in lampsIn(built, "R" .. index) do
+				local lamps = lampsIn(built, "R" .. index)
+				expect(#lamps > 0).to.equal(true)
+				for _, lamp in lamps do
 					expect(lamp.Color).to.equal(Constants.LIGHT_COLOR)
 					expect(math.abs(lamp.Brightness - Constants.ROOM_LIGHT[roomType].brightness) < 1e-4).to.equal(true)
-					expect(lamp.Range).to.equal(Constants.ROOM_LIGHT[roomType].range)
 				end
 			end
 		end)
