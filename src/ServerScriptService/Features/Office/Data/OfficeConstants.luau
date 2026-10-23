@@ -221,6 +221,8 @@ local OUTSIDE = table.freeze({
 	FADE_OUT = 0.2,
 	FADE_IN = 0.3,
 	DOCK_EXIT_WIDTH = 8,
+	-- The outside roller door's width (the Gloom ooze under it spills this wide).
+	DOCK_DOOR_WIDTH = 14,
 	VOLUME_HEIGHT = 120,
 })
 
