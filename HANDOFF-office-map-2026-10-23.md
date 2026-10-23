@@ -1,6 +1,6 @@
 # Handoff: Odd Hours office map (2026-10-23)
 
-**Status 2026-10-23 (later): the spike-match plan (docs/superpowers/plans/2026-10-23-odd-hours-office-map-spike-match.md) is built and green — waiting on the owner's play-check. See reports/office-spike-match-measure.md.**
+**Status 2026-10-23 (evening): spike-match plan built, plus the owner's first play-check fixes (commits 1cf0df77..9f519d95: facades cased + "Locked", Harlow opens only doors on his line, low break tables, elevator on a hall wall, reshift cleanup guards, wall-corner/pilaster trim). Studio at 9f519d95: suite 4354/0, traversal seeds 1-20 957/0. Waiting on the owner's re-check. Deferred: searched-desk art swap (needs a drawer desk template, art pass). Root causes: .superpowers/sdd/2026-10-23-odd-hours-office-map-spike-match/playcheck-rootcauses.md.**
 
 Read this first if you are continuing the office map work. Branch `game/cleanup-crew`, worktree
 `E:/Projects/peekabu-game-systems/.claude/worktrees/mvp-demo-pack-052599`. Nothing is pushed.
