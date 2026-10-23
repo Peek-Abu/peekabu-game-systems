@@ -186,35 +186,79 @@ return function()
 						end
 					end
 				end
-				-- No trim along the doorway's own wall inside it (the opening less a tenth, 1.9 deep at x = 0).
+				-- No trim along the doorway's own wall in the middle of it: the opening less the walls bounding its mouth
+				-- (half a wall each side) and a trim depth, 1.9 deep at x = 0.
 				for _, part in model.Shell:GetChildren() do
 					if part.Name == "Wainscot" or part.Name == "Rail" or part.Name == "Skirt" then
 						local x, z = part.Position.X - ORIGIN.X, part.Position.Z
 						local hx, hz = part.Size.X / 2, part.Size.Z / 2
-						local along = part.Size.Z > part.Size.X and z - hz < 5.95 and z + hz > 0.05
+						local along = part.Size.Z > part.Size.X and z - hz < 5 and z + hz > 1
 						expect(along and x - hx < 0.95 and x + hx > -0.95).to.equal(false)
 					end
 				end
 				return face, others
 			end
 
-			it("wraps an archway's mouth corner: the trim reaches slab end + proud, covering the wall end", function()
+			it("closes an archway's mouth corner: no slab end face is left without trim", function()
 				local face, others = corner("open")
+				local proud = Constants.SHELL.wainscotProud
+				-- The z = 0 wall's A-side face wraps to its slab end plus its depth (x -0.8)...
 				local minX = face.Position.X - ORIGIN.X - face.Size.X / 2
-				expect(minX).to.be.near(-0.5 - Constants.SHELL.wainscotProud, 1e-3)
-				-- No coplanar overlap: it shares no volume with any other wainscot.
+				expect(minX).to.be.near(-0.5 - proud, 1e-3)
+				-- ...and the x = 0 wall below the mouth is a corner there, not a door end, though its end is the opening's
+				-- edge: its slab runs on to the z = 0 wall's face (z 0.5) and its W-side trim (x -0.8 .. -0.5) meets the
+				-- wrap there, so together they cover the band at the corner with no gap.
+				local stub
 				for _, other in others do
-					local dx = math.abs(face.Position.X - other.Position.X) - (face.Size.X + other.Size.X) / 2
-					local dz = math.abs(face.Position.Z - other.Position.Z) - (face.Size.Z + other.Size.Z) / 2
-					expect(dx >= -1e-3 or dz >= -1e-3).to.equal(true)
+					local x = other.Position.X - ORIGIN.X
+					if
+						other.Size.Z > other.Size.X
+						and math.abs(x + 0.5 + proud / 2) < 0.01
+						and other.Position.Z < 1
+					then
+						stub = other
+					end
 				end
+				expect(stub ~= nil).to.equal(true)
+				expect(stub.Position.Z + stub.Size.Z / 2).to.be.near(0.5, 1e-3)
+				local slabTop = -math.huge
+				for _, part in model.Shell:GetChildren() do
+					local x = part.Position.X - ORIGIN.X
+					if
+						part.Name == "Plaster"
+						and part.Size.Z > part.Size.X
+						and math.abs(x + 0.25) < 0.01
+						and part.Position.Z < 1
+					then
+						slabTop = math.max(slabTop, part.Position.Z + part.Size.Z / 2)
+					end
+				end
+				expect(slabTop).to.be.near(0.5, 1e-3)
+				-- No coplanar overlap: no parallel wainscot (the same outer face plane) shares volume with the wrap.
+				-- Perpendicular pieces meeting at a corner may overlap: they never share an outer face.
+				for _, other in others do
+					if other.Size.X > other.Size.Z then
+						local dx = math.abs(face.Position.X - other.Position.X) - (face.Size.X + other.Size.X) / 2
+						local dz = math.abs(face.Position.Z - other.Position.Z) - (face.Size.Z + other.Size.Z) / 2
+						expect(dx >= -1e-3 or dz >= -1e-3).to.equal(true)
+					end
+				end
+				-- And the stub's trim stops where the wrap starts: they touch, never overlap.
+				expect(stub.Position.Z + stub.Size.Z / 2 <= face.Position.Z - face.Size.Z / 2 + 1e-3).to.equal(true)
 			end)
 
 			it("stops a real door's corner at the slab end: the casing covers it, no wrap into it", function()
 				for _, kind in { "solid", "glass" } do
-					local face = corner(kind)
+					local face, others = corner(kind)
 					local minX = face.Position.X - ORIGIN.X - face.Size.X / 2
 					expect(minX >= -0.5 - 1e-3).to.equal(true)
+					-- The wall continuing into the jamb is still a door end: its W-side trim stops flush at z = 0.
+					for _, other in others do
+						local x = other.Position.X - ORIGIN.X
+						if other.Size.Z > other.Size.X and math.abs(x + 0.65) < 0.01 and other.Position.Z < 1 then
+							expect(other.Position.Z + other.Size.Z / 2).to.be.near(0, 1e-3)
+						end
+					end
 					model:Destroy()
 					model = nil
 				end

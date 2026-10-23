@@ -207,6 +207,25 @@ return function()
 			end
 		end)
 
+		it("insets an archway's gap so a corner at its edge keeps its trim (doorGaps with an inset)", function()
+			local gaps =
+				OfficeShellUtils.doorGaps({ a = "a", b = "w", x = 3, z = 0, width = 6, kind = "open" }, "minZ", 1)
+			for _, gap in gaps do
+				expect(gap.from).to.be.near(1, 1e-6)
+				expect(gap.to).to.be.near(5, 1e-6)
+			end
+			-- A run ending at the opening's edge as a corner (it extends half a wall and wraps) keeps that trim.
+			local run = { x1 = -10, z1 = 0, x2 = 0, z2 = 0 }
+			local reach = -math.huge
+			for _, box in OfficeShellUtils.wall(run, 0.5, 0.5, { outerLast = 1, gaps = gaps }) do
+				if box.material ~= "plaster" then
+					reach = math.max(reach, footprint(box).maxX)
+				end
+			end
+			expect(reach > 0.5).to.equal(true)
+			expect(reach <= 1 + 1e-6).to.equal(true)
+		end)
+
 		it(
 			"still wraps a true L corner when an opening elsewhere on the arm's line does not start at the junction",
 			function()

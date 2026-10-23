@@ -276,13 +276,16 @@ function OfficeShellUtils.doorOpening(door: Door, edge: Edge): Segment
 end
 
 --[=[
-	The stretches of trim a doorway on `edge` leaves out of a run on its own wall line: its rough opening, on both
-	faces. A run normally stops at a door's edge; this guarantees no trim ever lies inside an opening.
+	The stretches of trim a doorway on `edge` leaves out of a run on its own wall line: its rough opening less `inset`
+	(default 0) at each end, on both faces. A run normally stops at a door's edge; this guarantees no trim lies inside
+	an opening. An archway passes an inset so a run that ends at its edge as a corner (another wall meets it there)
+	keeps the trim it extends and wraps by.
 ]=]
-function OfficeShellUtils.doorGaps(door: Door, edge: Edge): { TrimGap }
+function OfficeShellUtils.doorGaps(door: Door, edge: Edge, inset: number?): { TrimGap }
 	local horizontal = edge == "minZ" or edge == "maxZ"
 	local centre = if horizontal then door.x else door.z
-	local lo, hi = centre - door.width / 2, centre + door.width / 2
+	local margin = inset or 0
+	local lo, hi = centre - door.width / 2 + margin, centre + door.width / 2 - margin
 	return { { side = -1, from = lo, to = hi }, { side = 1, from = lo, to = hi } }
 end
 

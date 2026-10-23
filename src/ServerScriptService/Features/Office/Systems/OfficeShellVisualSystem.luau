@@ -37,6 +37,9 @@ type HasVariant = (name: string) -> boolean
 local PANEL_SIZE = Vector3.new(4, 0.2, 2)
 local FILL_SIZE = Vector3.one * 0.2
 local EPSILON = 1e-4
+-- The deepest trim (wainscot, rail or skirt): how far past a slab end a corner's wrap can reach.
+local CORNER_TRIM_REACH =
+	math.max(OfficeConstants.SHELL.wainscotProud, OfficeConstants.SHELL.railDepth, OfficeConstants.SHELL.skirtProud)
 
 local FLOOR_BY_TYPE: { [string]: OfficeTypes.ShellMaterial } = {
 	hallway = "hallcarpet",
@@ -110,9 +113,31 @@ local function build(box: OfficeTypes.ShellBox, origin: CFrame, parent: Instance
 	end
 end
 
+-- Whether a wall perpendicular to a run along `horizontal` passes through or ends at (x, z): a corner there.
+local function meetsWall(walls: { OfficeTypes.Segment }, x: number, z: number, horizontal: boolean): boolean
+	for _, wall in walls do
+		if (wall.z1 == wall.z2) ~= horizontal then
+			local fixed = if horizontal then wall.x1 else wall.z1
+			local lo = if horizontal then math.min(wall.z1, wall.z2) else math.min(wall.x1, wall.x2)
+			local hi = if horizontal then math.max(wall.z1, wall.z2) else math.max(wall.x1, wall.x2)
+			local along, across = if horizontal then x else z, if horizontal then z else x
+			if math.abs(fixed - along) < EPSILON and lo <= across + EPSILON and hi >= across - EPSILON then
+				return true
+			end
+		end
+	end
+	return false
+end
+
 -- How far a wall ending at (x, z) extends past that point: nothing at a door aperture or a glass pane, half a wall
--- thickness at a corner.
-local function endcap(layout: OfficeTypes.Layout, x: number, z: number, horizontal: boolean): number
+-- thickness at a corner (also at an archway's edge where another of `walls` meets the end).
+local function endcap(
+	layout: OfficeTypes.Layout,
+	walls: { OfficeTypes.Segment },
+	x: number,
+	z: number,
+	horizontal: boolean
+): number
 	for _, door in layout.doors do
 		local room = OfficeLayoutUtils.room(layout, door.a)
 		local edge: OfficeTypes.Edge? = if room ~= nil then OfficeLayoutUtils.doorEdge(room, door) else nil
@@ -120,8 +145,13 @@ local function endcap(layout: OfficeTypes.Layout, x: number, z: number, horizont
 			local across = edge == "minZ" or edge == "maxZ"
 			local sameLine = if horizontal then math.abs(z - door.z) < EPSILON else math.abs(x - door.x) < EPSILON
 			local offset = if horizontal then x - door.x else z - door.z
+			local real = door.kind == "solid" or door.kind == "glass"
 			if across == horizontal and sameLine and math.abs(math.abs(offset) - door.width / 2) < EPSILON then
-				return 0
+				-- A door end, flush. At an archway's edge where another wall meets it is a corner (its slab and trim
+				-- run on to that wall); at a real door the casing covers the end, so it stays flush.
+				if real or not meetsWall(walls, x, z, horizontal) then
+					return 0
+				end
 			end
 		end
 	end
@@ -162,7 +192,8 @@ local function facadesOf(layout: OfficeTypes.Layout): { OfficeTypes.Facade }
 end
 
 -- The facades of `layout` that lie on `segment`'s wall line and overlap it: each breaks the trim on its face. So do
--- its doorways' rough openings, on both faces (OfficeShellUtils.doorGaps).
+-- its doorways' rough openings, on both faces (OfficeShellUtils.doorGaps): a real door's whole opening, an archway's
+-- less the reach a corner at its edge extends and wraps by (half a wall plus the deepest trim).
 local function facadeGaps(layout: OfficeTypes.Layout, segment: OfficeTypes.Segment): { OfficeShellUtils.TrimGap }
 	local gaps: { OfficeShellUtils.TrimGap } = {}
 	local horizontal = segment.z1 == segment.z2
@@ -172,7 +203,9 @@ local function facadeGaps(layout: OfficeTypes.Layout, segment: OfficeTypes.Segme
 		local edge: OfficeTypes.Edge? = if room ~= nil then OfficeLayoutUtils.doorEdge(room, door) else nil
 		local line = if horizontal then door.z else door.x
 		if edge ~= nil and (edge == "minZ" or edge == "maxZ") == horizontal and math.abs(line - fixed) < EPSILON then
-			table.move(OfficeShellUtils.doorGaps(door, edge), 1, 2, #gaps + 1, gaps)
+			local real = door.kind == "solid" or door.kind == "glass"
+			local inset = if real then 0 else OfficeConstants.WALL_THICKNESS / 2 + CORNER_TRIM_REACH
+			table.move(OfficeShellUtils.doorGaps(door, edge, inset), 1, 2, #gaps + 1, gaps)
 		end
 	end
 	for _, facade in facadesOf(layout) do
@@ -208,8 +241,8 @@ local function buildWalls(layout: OfficeTypes.Layout, origin: CFrame, shell: Fol
 	end
 	for _, segment in segments do
 		local horizontal = segment.z1 == segment.z2
-		local first = endcap(layout, segment.x1, segment.z1, horizontal)
-		local last = endcap(layout, segment.x2, segment.z2, horizontal)
+		local first = endcap(layout, segments, segment.x1, segment.z1, horizontal)
+		local last = endcap(layout, segments, segment.x2, segment.z2, horizontal)
 		local extra: OfficeShellUtils.WallTrim = {
 			outerFirst = if first > 0
 				then OfficeShellUtils.outerSide(meeting, segment.x1, segment.z1, horizontal)
