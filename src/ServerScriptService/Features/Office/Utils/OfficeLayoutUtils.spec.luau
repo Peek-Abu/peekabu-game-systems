@@ -15,8 +15,8 @@ local TRUCK = { minX = 0, minZ = 0, maxX = 1, maxZ = 1, clockX = 0, clockZ = 0 }
 
 return function()
 	describe("furniture free space", function()
-		it("leaves a full-size hider room under a desk and a break table on every axis", function()
-			for kind, size in { desk = OfficeConstants.DESK_SIZE, table = OfficeConstants.TABLE_SIZE } do
+		it("leaves a full-size hider room under a desk on every axis", function()
+			for kind, size in { desk = OfficeConstants.DESK_SIZE } do
 				local free = HideHugFormulas.freeSize(HideConstants.FURNITURE[kind].free, size)
 				expect(free.X >= HideConstants.HUG_FREE_MIN.X).to.equal(true)
 				expect(free.Y >= HideConstants.HUG_FREE_MIN.Y).to.equal(true)
@@ -195,6 +195,9 @@ return function()
 			expect(OfficeLayoutUtils.surfaceTopFor(marker("counter"))).to.equal(OfficeConstants.COUNTER_SIZE.Y)
 			expect(OfficeLayoutUtils.surfaceTopFor(marker("table", "breakTable"))).to.equal(
 				OfficeConstants.TABLE_SIZE.Y
+			)
+			expect(math.abs(OfficeLayoutUtils.surfaceTopFor(marker("table", "breakTable")) - 2.97) < 1e-4).to.equal(
+				true
 			)
 			expect(OfficeLayoutUtils.surfaceTopFor(marker("desk", "desk"))).to.equal(nil)
 			expect(OfficeLayoutUtils.surfaceTopFor(marker("shelf", "serverRack"))).to.equal(nil)
@@ -479,9 +482,17 @@ return function()
 			expect(OfficeLayoutUtils.markerSize(marker("shelf", "serverRack"))).to.equal(Vector3.new(2, 7, 3.5))
 		end)
 
-		it("keeps the kind's size for art without an entry (desk, breakTable)", function()
+		it("keeps the kind's size for art without an entry (desk)", function()
 			expect(OfficeLayoutUtils.markerSize(marker("desk", "desk"))).to.equal(OfficeConstants.DESK_SIZE)
-			expect(OfficeLayoutUtils.markerSize(marker("table", "breakTable"))).to.equal(OfficeConstants.TABLE_SIZE)
+		end)
+
+		it("sizes a break table as the low coffee table its art renders as", function()
+			local size = OfficeLayoutUtils.markerSize(marker("table", "breakTable"))
+			expect(math.abs(size.Y - 1.8 * OfficeConstants.HIDE_FURNITURE_SCALE) < 1e-4).to.equal(true)
+			expect(math.abs(size.Y - 2.97) < 1e-4).to.equal(true)
+			expect(OfficeLayoutUtils.markerSize(marker("table"))).to.equal(size)
+			-- Loot stands on the art's top, not above it.
+			expect(OfficeLayoutUtils.surfaceTopFor(marker("table", "breakTable"))).to.equal(size.Y)
 		end)
 
 		it("sizes a prop by PROP_SIZES and an unsized prop by nothing", function()

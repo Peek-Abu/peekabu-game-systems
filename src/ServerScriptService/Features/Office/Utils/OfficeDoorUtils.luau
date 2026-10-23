@@ -20,9 +20,12 @@
 	@class OfficeDoorUtils
 ]=]
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
+local OfficeDecorConstants = require(ReplicatedStorage.Shared.Features.Office.Data.OfficeDecorConstants)
 local OfficeConstants = require(ServerScriptService.Features.Office.Data.OfficeConstants)
+local OfficeLayoutUtils = require(ServerScriptService.Features.Office.Utils.OfficeLayoutUtils)
 local OfficeTypes = require(ServerScriptService.Features.Office.Data.OfficeTypes)
 
 type Door = OfficeTypes.Door
@@ -108,6 +111,27 @@ function OfficeDoorUtils.facadeFrame(facade: Facade, room: Room, origin: CFrame)
 		return origin * CFrame.new(facade.x - inset, y, facade.z) * quarter
 	end
 	return nil
+end
+
+--[=[
+	Where an elevator facade's front stands (layout space, relative to `origin`): flush on the room side of the wall it
+	fronts, at the elevator's height (ELEVATOR_POINT.Y), local +Z pointing into the room. Nil when (x, z) is on none
+	of the room's walls.
+]=]
+function OfficeDoorUtils.elevatorFrame(facade: Facade, room: Room, origin: CFrame): CFrame?
+	local edge = OfficeLayoutUtils.facadeEdge(room, facade)
+	if edge == nil then
+		return nil
+	end
+	local inset = OfficeConstants.WALL_THICKNESS / 2 + OfficeConstants.ELEVATOR_FRONT_SIZE.Z / 2
+	local into = if edge == "minZ"
+		then Vector3.new(0, 0, 1)
+		elseif edge == "maxZ" then Vector3.new(0, 0, -1)
+		elseif edge == "minX" then Vector3.new(1, 0, 0)
+		else Vector3.new(-1, 0, 0)
+	local position = Vector3.new(facade.x, OfficeDecorConstants.ELEVATOR_POINT.Y, facade.z) + into * inset
+	-- lookAt points local -Z at its target, so aim away from the room to point +Z into it.
+	return origin * CFrame.lookAt(position, position - into)
 end
 
 --[=[

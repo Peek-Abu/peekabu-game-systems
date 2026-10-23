@@ -470,8 +470,14 @@ end
 -- A junction wall: its midpoint and the direction that points out of the junction.
 type Wall = { edge: Edge, x: number, z: number, dx: number, dz: number }
 
--- The stairwell: a 6-wide facade on a door-free junction wall whose 6 x 4 probe outside touches no room.
-local function addStairwell(build: Build, network: Network, alive: { [string]: boolean }): boolean
+-- A 6-wide facade of `kind` (the stairwell, the elevator) on a door-free junction wall whose 6 x 4 probe outside
+-- touches no room and that holds no other facade.
+local function addFacade(
+	build: Build,
+	network: Network,
+	alive: { [string]: boolean },
+	kind: "stairwell" | "elevator"
+): boolean
 	local candidates: { OfficeTypes.Facade } = {}
 	-- A dead end's closet stands against its far wall: no stairwell there.
 	local closeted: { [string]: boolean } = {}
@@ -491,6 +497,12 @@ local function addStairwell(build: Build, network: Network, alive: { [string]: b
 				if edge ~= nil then
 					used[edge] = true
 				end
+			end
+		end
+		for _, facade in build.facades do
+			local edge = if facade.room == junction.id then OfficeLayoutUtils.facadeEdge(junction, facade) else nil
+			if edge ~= nil then
+				used[edge] = true
 			end
 		end
 		-- A fixed order, so the pick replays from the seed.
@@ -523,7 +535,7 @@ local function addStairwell(build: Build, network: Network, alive: { [string]: b
 			if clear then
 				table.insert(
 					candidates,
-					{ room = junction.id, x = wall.x, z = wall.z, width = STAIR_WIDTH, kind = "stairwell" }
+					{ room = junction.id, x = wall.x, z = wall.z, width = STAIR_WIDTH, kind = kind }
 				)
 			end
 		end
@@ -706,8 +718,11 @@ local function construct(base: Layout, rng: Random): (Layout?, string?)
 	end
 	markJunctions(state, network, alive)
 
-	if not addStairwell(state, network, alive) then
+	if not addFacade(state, network, alive, "stairwell") then
 		return nil, "no junction wall has room for the stairwell"
+	end
+	if not addFacade(state, network, alive, "elevator") then
+		return nil, "no junction wall has room for the elevator"
 	end
 
 	layout.facades, layout.panes = state.facades, state.panes

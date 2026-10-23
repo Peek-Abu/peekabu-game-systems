@@ -53,6 +53,7 @@ local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
 local OfficeLayoutGenerationUtils = require(OfficeServer.Utils.OfficeLayoutGenerationUtils)
 local OfficeLoadingBayUtils = require(OfficeServer.Utils.OfficeLoadingBayUtils)
 local OfficeFurniturePlacementUtils = require(OfficeServer.Utils.OfficeFurniturePlacementUtils)
+local OfficeSurfaceUtils = require(OfficeServer.Utils.OfficeSurfaceUtils)
 local OfficeSpawnUtils = require(OfficeServer.Utils.OfficeSpawnUtils)
 local OfficeBuildSystem = require(OfficeServer.Systems.OfficeBuildSystem)
 local OfficeDecorSystem = require(OfficeServer.Systems.OfficeDecorSystem)
@@ -120,9 +121,13 @@ local function spotFrame(marker: Marker): CFrame
 						or part:GetAttribute("OfficeDeskMarker") == marker.id
 					)
 				then
-					local support = part:GetAttribute("ArtSupportSurfaceY")
-					if type(support) == "number" then
-						return part.CFrame * CFrame.new(0, support - part.Size.Y / 2, 0)
+					local onArt = OfficeSurfaceUtils.surfaceOnPart(
+						part.CFrame,
+						part.Size,
+						part:GetAttribute("ArtSupportSurfaceY")
+					)
+					if onArt ~= nil then
+						return onArt
 					end
 				end
 			end

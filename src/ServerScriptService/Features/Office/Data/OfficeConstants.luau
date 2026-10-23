@@ -68,11 +68,13 @@ local PROP_WALL_HEIGHT: { [string]: number } = {
 local PROP_DESK_TOP: { [string]: boolean } = { deskPlant = true }
 -- The proxy size of furniture restyled by a marker's `art` override: the template's BaseSize (KIT_MAP), so the proxy
 -- follows the art instead of Uniform fit shrinking it to the slate-tuned kind size. No entry for the desk (it keeps
--- DESK_SIZE for hide space), the locker (a single locker; the kit's is a bank), the chair (decor-placed) or
--- breakTable (a hide spot: its 1.8-high art leaves no HUG_FREE_MIN under it, so it stays at TABLE_SIZE).
+-- DESK_SIZE for hide space), the locker (a single locker; the kit's is a bank) or the chair (decor-placed).
+-- breakTable is a low coffee table: its proxy is the art's size x HIDE_FURNITURE_SCALE (what it renders at), so the
+-- visible top is the proxy top, and it leaves no HUG_FREE_MIN under it: no hiding spot.
 -- (The closets use CLOSET_SIZE and the partition is a prop: PROP_SIZES.)
 local ART_SIZES: { [string]: Vector3 } = {
 	corkboard = Vector3.new(6.4, 6.1, 1.9),
+	breakTable = Vector3.new(5, 1.8, 3) * HIDE_FURNITURE_SCALE,
 	shelf = Vector3.new(5.54, 8, 2.08),
 	serverRack = Vector3.new(2, 7, 3.5),
 	kitchenCounter = Vector3.new(8, 6.35, 3.08),
@@ -278,7 +280,7 @@ return table.freeze({
 	CABINET_SIZE = Vector3.new(1.9, 4.2, 2),
 	-- The tall supply cabinet (a secure hiding spot): the supplyCabinet art's own bounds, room inside for a crew member.
 	CLOSET_SIZE = Vector3.new(4.32, 8, 3.45),
-	TABLE_SIZE = Vector3.new(5, 3.1, 3) * HIDE_FURNITURE_SCALE,
+	TABLE_SIZE = Vector3.new(5, 1.8, 3) * HIDE_FURNITURE_SCALE,
 	-- Loot (bulkiest kind is 3.5 wide) never spawns clipped into surface furniture.
 	SURFACE_ITEM_CLEAR = 1.8,
 	-- Visual-only monitor/elevator envelopes include the authored stand/surround depth.

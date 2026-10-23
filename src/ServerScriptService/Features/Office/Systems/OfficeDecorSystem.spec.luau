@@ -108,14 +108,14 @@ return function()
 				expect(root.CanCollide).to.equal(key == "filingCabinet" or key == "breakTable")
 				expect(root.CanQuery).to.equal(root.CanCollide)
 				expect(root.CanTouch).to.equal(false)
-				-- Only the table is tagged, as a hiding spot (Hide); the cabinet is not. A chair carries only the chair
-				-- tag, so clients and the Manager's senses find chairs without scanning the workspace.
-				local hideable = key == "breakTable"
+				-- No table is tagged: a break table is a low coffee table with no room under it (no hiding spot). A chair
+				-- carries only the chair tag, so clients and the Manager's senses find chairs without scanning the
+				-- workspace.
 				local chair = key == "officeChair"
-				expect(#CollectionService:GetTags(root)).to.equal(if hideable or chair then 1 else 0)
+				expect(#CollectionService:GetTags(root)).to.equal(if chair then 1 else 0)
 				expect(root:HasTag(Constants.CHAIR_TAG)).to.equal(chair)
-				expect(root:HasTag("HideFurniture")).to.equal(hideable)
-				expect(root:GetAttribute("HideFurnitureKind")).to.equal(if key == "breakTable" then "table" else nil)
+				expect(root:HasTag("HideFurniture")).to.equal(false)
+				expect(root:GetAttribute("HideFurnitureKind")).to.equal(nil)
 				expect(root:FindFirstChild("ArtVisual") ~= nil).to.equal(true)
 				if key == "officeChair" then
 					chairs += 1
@@ -385,7 +385,7 @@ return function()
 			end).to.throw("PROP_SIZES")
 		end)
 
-		it("lets a table marker's art key win, and only the default table art hides", function()
+		it("lets a table marker's art key win, and no table hides", function()
 			template("furniture", "breakTable")
 			template("furniture", "conferenceTable")
 			assets["test-map-a"].furniture.conferenceTable:FindFirstChildOfClass("Part").Name = "Conference"
@@ -407,12 +407,44 @@ return function()
 				elseif key == "breakTable" then
 					plain += 1
 					expect(root:FindFirstChild("ArtVisual"):FindFirstChild("Conference")).to.equal(nil)
-					expect(root:GetAttribute("HideFurnitureKind")).to.equal("table")
+					-- A coffee table: its proxy is its art's height, and nothing hides under it.
+					expect(root:GetAttribute("HideFurnitureKind")).to.equal(nil)
 					expect(root.Size).to.equal(OfficeConstants.TABLE_SIZE)
+					expect(math.abs(root.Size.Y - 2.97) < 1e-4).to.equal(true)
 				end
 			end
 			expect(conference).to.equal(1)
 			expect(plain).to.equal(2)
+		end)
+
+		it("builds the elevator at its facade, facing into the room, and at ELEVATOR_POINT without one", function()
+			local boot = decorOf(propLayout({}))
+			local bootFront = boot:FindFirstChild("ElevatorFront")
+			local point = Constants.ELEVATOR_POINT
+			expect(math.abs(bootFront.Position.X - (60000 + point.X)) < 1e-3).to.equal(true)
+			expect(math.abs(bootFront.Position.Z - point.Z) < 1e-3).to.equal(true)
+			built.model:Destroy()
+
+			local layout = propLayout({})
+			layout.facades = { { room = "a", x = 20, z = 40, width = 6, kind = "elevator" } }
+			local decor = decorOf(layout)
+			local front = decor:FindFirstChild("ElevatorFront")
+			local inset = OfficeConstants.WALL_THICKNESS / 2 + OfficeConstants.ELEVATOR_FRONT_SIZE.Z / 2
+			expect(math.abs(front.Position.X - 60020) < 1e-3).to.equal(true)
+			expect(math.abs(front.Position.Z - (40 - inset)) < 1e-3).to.equal(true)
+			-- Its doors, lamp and emitter stand on the same front, the emitter on the room side.
+			local doors = 0
+			for _, child in decor:GetChildren() do
+				if child.Name == "ElevatorDoor" then
+					doors += 1
+					expect(math.abs(child.Position.Z - front.Position.Z) < 1e-3).to.equal(true)
+				elseif child.Name == "ElevatorLamp" then
+					expect(math.abs(child.Position.X - 60020) < 1e-3).to.equal(true)
+				elseif child.Name == "Ambient (elevator)" then
+					expect(child.Position.Z < front.Position.Z).to.equal(true)
+				end
+			end
+			expect(doors).to.equal(2)
 		end)
 
 		it("records the room-type variant key a prop attached", function()

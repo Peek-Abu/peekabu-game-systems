@@ -36,6 +36,8 @@ local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideCo
 local OfficeConstants = require(OfficeServer.Data.OfficeConstants)
 local OfficeTypes = require(OfficeServer.Data.OfficeTypes)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
+local OfficeDoorUtils = require(OfficeServer.Utils.OfficeDoorUtils)
+local OfficeSurfaceUtils = require(OfficeServer.Utils.OfficeSurfaceUtils)
 local OfficeArtKeyUtils = require(OfficeServer.Utils.OfficeArtKeyUtils)
 local OfficeLightingUtils = require(OfficeServer.Utils.OfficeLightingUtils)
 
@@ -159,24 +161,19 @@ local function emitter(kind: OfficeDecorConstants.AmbientKind, position: Vector3
 	CollectionService:AddTag(spot, OfficeDecorConstants.AMBIENT_TAG)
 end
 
-local function elevator(origin: CFrame, parent: Instance, art: ArtVisualSystem.Controller)
-	local point = OfficeDecorConstants.ELEVATOR_POINT
+-- The elevator front on `frame`: local +Z points into the room, X runs along the wall.
+local function elevator(frame: CFrame, parent: Instance, art: ArtVisualSystem.Controller)
 	local door = OfficeDecorConstants.ELEVATOR_DOOR_SIZE
-	local front = part(
-		"ElevatorFront",
-		OfficeConstants.ELEVATOR_FRONT_SIZE,
-		origin * CFrame.new(point) * CFrame.Angles(0, math.pi / 2, 0),
-		OfficeDecorConstants.ELEVATOR_COLOR,
-		parent
-	)
+	local front =
+		part("ElevatorFront", OfficeConstants.ELEVATOR_FRONT_SIZE, frame, OfficeDecorConstants.ELEVATOR_COLOR, parent)
 	local visual =
 		OfficeArtKeyUtils.attachFirst(art, front, "furniture", OfficeArtKeyUtils.candidates("elevatorFront", nil, nil))
 	front.Transparency = 1
 	for _, side in { -1, 1 } do
 		local panel = part(
 			"ElevatorDoor",
-			door,
-			origin * CFrame.new(point.X, point.Y, point.Z + side * door.Z / 2),
+			Vector3.new(door.Z, door.Y, door.X),
+			frame * CFrame.new(side * door.Z / 2, 0, 0),
 			OfficeDecorConstants.ELEVATOR_COLOR,
 			parent
 		)
@@ -187,13 +184,17 @@ local function elevator(origin: CFrame, parent: Instance, art: ArtVisualSystem.C
 	end
 	local lamp = part(
 		"ElevatorLamp",
-		OfficeDecorConstants.ELEVATOR_LAMP_SIZE,
-		origin * CFrame.new(point.X, point.Y + door.Y / 2 + 0.6, point.Z),
+		Vector3.new(
+			OfficeDecorConstants.ELEVATOR_LAMP_SIZE.Z,
+			OfficeDecorConstants.ELEVATOR_LAMP_SIZE.Y,
+			OfficeDecorConstants.ELEVATOR_LAMP_SIZE.X
+		),
+		frame * CFrame.new(0, door.Y / 2 + 0.6, 0),
 		OfficeDecorConstants.ELEVATOR_LAMP_COLOR,
 		parent
 	)
 	lamp.Material = Enum.Material.Neon
-	emitter("elevator", (origin * CFrame.new(point.X + 1, point.Y, point.Z)).Position, parent)
+	emitter("elevator", (frame * CFrame.new(0, 0, 1)).Position, parent)
 end
 
 -- Optional additions have no graybox fallback: only approved art creates visible dressing. `key` is the piece's
@@ -229,6 +230,10 @@ local function artOnly(
 	-- The table is a hiding spot (Hide): under it; the supply cabinet too: inside it. Only the default art: a
 	-- restyled table (the conference table) has no measured hug space under it.
 	local hideKind = if override == nil or override == key then HIDE_KINDS[key] else nil
+	-- A table hides only when the hider fits under its proxy (a low coffee table does not).
+	if hideKind == "table" and not OfficeSurfaceUtils.canHideUnder(size) then
+		hideKind = nil
+	end
 	if hideKind ~= nil then
 		root:SetAttribute(HideConstants.FURNITURE_KIND_ATTRIBUTE, hideKind)
 		CollectionService:AddTag(root, HideConstants.FURNITURE_TAG)
@@ -553,7 +558,20 @@ function OfficeDecorSystem.build(
 	for _, marker in OfficeLayoutUtils.markersOf(layout, "prop") do
 		propAt(marker, OfficeArtKeyUtils.roomType(OfficeLayoutUtils.room(layout, marker.room)), origin, folder, art)
 	end
-	elevator(origin, folder, art)
+	-- On the layout's elevator facade; the authored boot layout has none and keeps ELEVATOR_POINT.
+	local elevatorFrame = origin * CFrame.new(OfficeDecorConstants.ELEVATOR_POINT) * CFrame.Angles(0, math.pi / 2, 0)
+	local facades: { OfficeTypes.Facade } = layout.facades or {}
+	for _, facade in facades do
+		if facade.kind == "elevator" then
+			local room = OfficeLayoutUtils.room(layout, facade.room)
+			local frame = if room ~= nil then OfficeDoorUtils.elevatorFrame(facade, room, origin) else nil
+			if frame ~= nil then
+				elevatorFrame = frame
+			end
+			break
+		end
+	end
+	elevator(elevatorFrame, folder, art)
 	folder.Parent = parent
 	return folder
 end

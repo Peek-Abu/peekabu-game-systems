@@ -112,6 +112,31 @@ return function()
 		end)
 	end)
 
+	describe("elevatorFrame", function()
+		local function facing(facade)
+			return OfficeDoorUtils.elevatorFrame(facade, KIT, CFrame.identity)
+		end
+
+		it("stands on the room side of the wall at the elevator's height, +Z facing into the room", function()
+			local inset = OfficeConstants.WALL_THICKNESS / 2 + OfficeConstants.ELEVATOR_FRONT_SIZE.Z / 2
+			local minZ = facing({ room = "kit", x = 10, z = 0, width = 6, kind = "elevator" })
+			expect(close(minZ.Z, inset) and close(minZ.X, 10)).to.equal(true)
+			expect(close(minZ.LookVector.Z, -1)).to.equal(true)
+			local maxZ = facing({ room = "kit", x = 10, z = 10, width = 6, kind = "elevator" })
+			expect(close(maxZ.Z, 10 - inset)).to.equal(true)
+			expect(close(maxZ.LookVector.Z, 1)).to.equal(true)
+			local minX = facing({ room = "kit", x = 0, z = 5, width = 6, kind = "elevator" })
+			expect(close(minX.X, inset) and close(minX.LookVector.X, -1)).to.equal(true)
+			local maxX = facing({ room = "kit", x = 20, z = 5, width = 6, kind = "elevator" })
+			expect(close(maxX.X, 20 - inset) and close(maxX.LookVector.X, 1)).to.equal(true)
+			expect(close(minZ.Y, 4)).to.equal(true)
+		end)
+
+		it("is nil off the walls", function()
+			expect(facing({ room = "kit", x = 10, z = 5, width = 6, kind = "elevator" })).to.equal(nil)
+		end)
+	end)
+
 	describe("facadeLeaves", function()
 		it("fits an entrance's two leaves inside the casing, side by side", function()
 			local casing = OfficeConstants.SHELL.casing

@@ -274,6 +274,59 @@ return function()
 			end
 		end)
 
+		it(
+			"puts one elevator facade on a hallway wall with nothing behind it, apart from the stairwell and doors",
+			function()
+				for seed = 1, SEEDS do
+					if seed % 10 == 0 then
+						task.wait()
+					end
+					local layout = layoutFor(seed)
+					local elevators = 0
+					for _, facade in layout.facades or {} do
+						if facade.kind == "elevator" then
+							elevators += 1
+							local junction = Utils.room(layout, facade.room)
+							expect(junction.zone).to.equal("hallway")
+							expect(facade.width).to.equal(6)
+							local edge = Utils.facadeEdge(junction, facade)
+							expect(edge ~= nil).to.equal(true)
+							-- Nothing behind it: the 6 x 4 probe outside the wall touches no room.
+							local probe
+							if edge == "minX" then
+								probe =
+									{ minX = facade.x - 4, maxX = facade.x, minZ = facade.z - 3, maxZ = facade.z + 3 }
+							elseif edge == "maxX" then
+								probe =
+									{ minX = facade.x, maxX = facade.x + 4, minZ = facade.z - 3, maxZ = facade.z + 3 }
+							elseif edge == "minZ" then
+								probe =
+									{ minX = facade.x - 3, maxX = facade.x + 3, minZ = facade.z - 4, maxZ = facade.z }
+							else
+								probe =
+									{ minX = facade.x - 3, maxX = facade.x + 3, minZ = facade.z, maxZ = facade.z + 4 }
+							end
+							for _, room in layout.rooms do
+								expect(overlaps(probe, room)).to.equal(false)
+							end
+							-- No door shares its wall; no other facade of the room shares its wall either.
+							for _, door in layout.doors do
+								if door.a == junction.id or door.b == junction.id then
+									expect(Utils.doorEdge(junction, door) ~= edge).to.equal(true)
+								end
+							end
+							for _, other in layout.facades or {} do
+								if other ~= facade and other.room == facade.room then
+									expect(Utils.facadeEdge(junction, other) ~= edge).to.equal(true)
+								end
+							end
+						end
+					end
+					expect(elevators).to.equal(1)
+				end
+			end
+		)
+
 		it("totals about the measured floor area, hallways included and the bay left out", function()
 			local sum = 0
 			for seed = 1, SEEDS do

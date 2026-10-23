@@ -97,6 +97,27 @@ return function()
 			expect(a:GetAttribute("ArtSupportSurfaceY")).to.equal(nil)
 		end)
 
+		it(
+			"reports the art's own height as the support surface when a Uniform fit leaves it under the proxy",
+			function()
+				-- A 2 x 2 x 2 template in a 4 x 8 x 6 proxy scales by 2: 4 high, 4 under the proxy's top.
+				template("art-spec-map-a", "monitor")
+				local a = root(mapA)
+				Art.attach(a, "cargo", "monitor")
+				expect(a:GetAttribute("ArtSupportSurfaceY")).to.equal(4)
+				Art.detach(a)
+				expect(a:GetAttribute("ArtSupportSurfaceY")).to.equal(nil)
+			end
+		)
+
+		it("leaves the support surface unset when the art reaches the proxy's top", function()
+			template("art-spec-map-a", "monitor")
+			local a = root(mapA)
+			a.Size = Vector3.new(4, 4, 4)
+			Art.attach(a, "cargo", "monitor")
+			expect(a:GetAttribute("ArtSupportSurfaceY")).to.equal(nil)
+		end)
+
 		it("preserves root physics and tags, fits at its floor, and follows moving roots", function()
 			template("art-spec-map-a", "monitor", 0.35)
 			local a = root(mapA)

@@ -11,6 +11,9 @@ local ArtTypes = require(ArtShared.Data.ArtTypes)
 local ArtKitRegistry = require(ArtShared.Data.ArtKitRegistry)
 local ArtKitRules = require(ArtShared.Rules.ArtKitRules)
 
+-- How far a Uniform-fit art's top may sit under its proxy's top before it reports its own height as the support surface.
+local SUPPORT_GAP = 0.05
+
 type VisualRecord = {
 	model: Model,
 	originalRootTransparency: number,
@@ -125,7 +128,8 @@ local function create(assetRoot: Instance?): Controller
 			targetSize = Vector3.new(width, root.Size.Y, root.Size.Z)
 		end
 		local scale = targetSize / baseSize
-		if ArtKitRules.fitMode(template, family) == "Uniform" then
+		local uniform = ArtKitRules.fitMode(template, family) == "Uniform"
+		if uniform then
 			local minimum = math.min(scale.X, scale.Y, scale.Z)
 			scale = Vector3.new(minimum, minimum, minimum)
 		end
@@ -215,6 +219,10 @@ local function create(assetRoot: Instance?): Controller
 		local support = template:GetAttribute("SupportSurfaceY")
 		if type(support) == "number" and support == support and support > 0 and support <= baseSize.Y then
 			root:SetAttribute("ArtSupportSurfaceY", support * scale.Y)
+		elseif type(support) ~= "number" and uniform and baseSize.Y * scale.Y < root.Size.Y - SUPPORT_GAP then
+			-- A Uniform fit left the art shorter than its proxy: whatever stands on it stands on the art's top,
+			-- not on the invisible proxy top.
+			root:SetAttribute("ArtSupportSurfaceY", baseSize.Y * scale.Y)
 		end
 		clone.Parent = root
 		table.insert(record.connections, root:GetPropertyChangedSignal("CFrame"):Connect(align))

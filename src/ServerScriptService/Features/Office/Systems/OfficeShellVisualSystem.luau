@@ -224,7 +224,8 @@ local function buildWalls(layout: OfficeTypes.Layout, origin: CFrame, shell: Fol
 	for _, facade in facadesOf(layout) do
 		local room = OfficeLayoutUtils.room(layout, facade.room)
 		local edge: OfficeTypes.Edge? = if room ~= nil then OfficeLayoutUtils.facadeEdge(room, facade) else nil
-		if edge ~= nil then
+		-- An elevator has no casing: its front fills the span (OfficeDecorSystem).
+		if edge ~= nil and facade.kind ~= "elevator" then
 			for _, box in OfficeShellUtils.facadeCasing(facade, edge) do
 				build(box, origin, shell, hasVariant)
 			end

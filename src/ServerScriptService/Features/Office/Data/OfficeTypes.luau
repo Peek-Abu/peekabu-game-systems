@@ -98,7 +98,7 @@ export type Facade = {
 	x: number,
 	z: number,
 	width: number,
-	kind: "entrance" | "stairwell",
+	kind: "entrance" | "stairwell" | "elevator",
 }
 
 export type Layout = {

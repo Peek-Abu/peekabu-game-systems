@@ -558,6 +558,16 @@ return function()
 			built.doors.destroy()
 		end)
 
+		it("gives an elevator facade no leaf and no prompt: the elevator art is its own front", function()
+			local layout = twoRooms("open", nil)
+			layout.facades = { { room = "a", x = 0, z = 5, width = 6, kind = "elevator" } }
+			local built = build(layout)
+			for _, leaf in built.model.Doors:GetChildren() do
+				expect(leaf:GetAttribute("OfficeFacade")).to.equal(nil)
+			end
+			built.doors.destroy()
+		end)
+
 		it("tags every facade leaf for Interaction as the locked-door kind, and real leaves as doors", function()
 			local layout = twoRooms("solid", nil)
 			layout.facades = {

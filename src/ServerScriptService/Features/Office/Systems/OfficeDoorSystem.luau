@@ -270,7 +270,10 @@ function OfficeDoorSystem.build(
 	local facades: { OfficeTypes.Facade } = layout.facades or {}
 	for index, facade in facades do
 		local room = OfficeLayoutUtils.room(layout, facade.room)
-		local frame = if room ~= nil then OfficeDoorUtils.facadeFrame(facade, room, origin) else nil
+		-- An elevator is its own front (OfficeDecorSystem): no leaf, no prompt.
+		local frame = if room ~= nil and facade.kind ~= "elevator"
+			then OfficeDoorUtils.facadeFrame(facade, room, origin)
+			else nil
 		if frame ~= nil then
 			local entrance = facade.kind == "entrance"
 			for leafIndex, spec in OfficeDoorUtils.facadeLeaves(facade) do
