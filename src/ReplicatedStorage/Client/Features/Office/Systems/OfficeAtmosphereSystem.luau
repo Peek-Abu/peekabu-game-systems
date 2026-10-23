@@ -207,10 +207,14 @@ local function stepBroken()
 		return
 	end
 	local now = os.clock()
-	local list = lights()
+	-- Fill anchors (invisible, OfficeLightFill) are not tubes: they stay out of the blink pool.
+	local list: { BasePart } = {}
 	local positions: { Vector3 } = {}
-	for index, light in list do
-		positions[index] = light.Position
+	for _, light in lights() do
+		if light:GetAttribute("OfficeLightFill") ~= true then
+			table.insert(list, light)
+			table.insert(positions, light.Position)
+		end
 	end
 	local near: { [BasePart]: boolean } = {}
 	local center = camera.CFrame.Position
@@ -225,7 +229,10 @@ local function stepBroken()
 		if point ~= nil then
 			point.Brightness = base.brightness * factor
 		end
-		light.Transparency = if dim then OfficeAtmosphereConstants.BROKEN_TRANSPARENCY else base.transparency
+		-- A fully transparent light (an invisible anchor or an art proxy root) never gets a visible dim slab.
+		if base.transparency < 1 then
+			light.Transparency = if dim then OfficeAtmosphereConstants.BROKEN_TRANSPARENCY else base.transparency
+		end
 		if dim and not dimmed[light] then
 			counters.blinks += 1
 			if OfficeLightUtils.zaps(now, lastBlink[light], lastZap[light], lastAnyZap) then

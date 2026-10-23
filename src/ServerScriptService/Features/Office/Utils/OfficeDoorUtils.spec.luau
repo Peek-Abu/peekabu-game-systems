@@ -22,7 +22,7 @@ return function()
 			local size = OfficeDoorUtils.leafSize({ a = "kit", b = "hall", x = 10, z = 0, width = 6.8, kind = "solid" })
 			expect(close(size.X, 6.1)).to.equal(true)
 			expect(close(size.Y, OfficeConstants.DOOR_HEIGHT - 0.35)).to.equal(true)
-			expect(size.Z).to.equal(OfficeConstants.DOOR_LEAF_THICKNESS)
+			expect(close(size.Z, OfficeConstants.DOOR_LEAF_THICKNESS)).to.equal(true)
 		end)
 	end)
 

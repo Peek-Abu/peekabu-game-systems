@@ -243,7 +243,10 @@ return function()
 				-- The plaster slabs of the wall line at 20 (one per face): the aperture lies between their ends.
 				for _, wall in built.model.Shell:GetChildren() do
 					local line = if vertical then wall.Position.X - 50000 else wall.Position.Z
-					if wall.Name == "Plaster" and math.abs(line - 20) < 0.3 then
+					-- Only slabs running along the wall line: the rooms' perpendicular side walls (merged across
+					-- the line, so their centre also reads 20) are longer across than along it.
+					local along = if vertical then wall.Size.Z > wall.Size.X else wall.Size.X > wall.Size.Z
+					if wall.Name == "Plaster" and along and math.abs(line - 20) < 0.3 then
 						local centre = if vertical then wall.Position.Z else wall.Position.X - 50000
 						local half = if vertical then wall.Size.Z / 2 else wall.Size.X / 2
 						if centre < 10 then
@@ -542,7 +545,7 @@ return function()
 				local leaf = built.model.Doors.DoorLeaf
 				expect(leaf.Size.X).to.be.near(6 - 2 * Constants.SHELL.casing, 0.001)
 				expect(leaf.Size.Y).to.be.near(Constants.DOOR_HEIGHT - Constants.SHELL.casing, 0.001)
-				expect(leaf.Size.Z).to.equal(Constants.DOOR_LEAF_THICKNESS)
+				expect(leaf.Size.Z).to.be.near(Constants.DOOR_LEAF_THICKNESS, 0.001)
 				built.doors.destroy()
 			end
 		)
@@ -556,6 +559,12 @@ return function()
 			expect(floorOf(built, "B").Color).to.equal(Constants.SHELL_MATERIALS.hallcarpet.color)
 			expect(floorOf(built, "A"):FindFirstChild("ArtVisual")).to.equal(nil)
 			expect(built.model.A:FindFirstChild("FloorUnderlay")).to.equal(nil)
+		end)
+
+		it("floors the start room (the bay) in vinyl and other untyped rooms in carpet", function()
+			local built = build(twoRooms("open", nil))
+			expect(floorOf(built, "A").Material).to.equal(Enum.Material.Plastic)
+			expect(floorOf(built, "B").Material).to.equal(Enum.Material.Fabric)
 		end)
 	end)
 end

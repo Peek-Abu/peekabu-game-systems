@@ -106,7 +106,11 @@ function OfficeBuildSystem.build(
 			OfficeConstants.WALL_COLOR,
 			roomFolder
 		)
-		Shell.apply(floor, Shell.floorMaterial(OfficeArtKeyUtils.roomType(room)))
+		-- Only the loading bay (the start room) is vinyl; other authored rooms have no type and take carpet.
+		local roomType = if room.id == layout.startRoom or room.id == "bay"
+			then "bay"
+			else OfficeArtKeyUtils.roomType(room)
+		Shell.apply(floor, Shell.floorMaterial(roomType))
 	end
 	Shell.build(layout, origin, model, art)
 

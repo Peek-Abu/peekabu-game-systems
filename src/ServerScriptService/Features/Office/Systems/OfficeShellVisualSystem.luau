@@ -43,6 +43,7 @@ local FLOOR_BY_TYPE: { [string]: OfficeTypes.ShellMaterial } = {
 	breakout = "lino",
 	server = "vinyl",
 	storage = "vinyl",
+	bay = "vinyl",
 }
 
 local OfficeShellVisualSystem = {}
@@ -60,11 +61,11 @@ end
 
 --[=[
 	The floor material for a room type (OfficeArtKeyUtils.roomType): hallway carpet in corridors, lino in the
-	breakout room, vinyl in server and storage rooms and the authored bay (no type), carpet everywhere else.
+	breakout room, vinyl in server and storage rooms and in the bay (OfficeBuildSystem passes "bay"), carpet else.
 ]=]
 function OfficeShellVisualSystem.floorMaterial(roomType: string?): OfficeTypes.ShellMaterial
 	if roomType == nil then
-		return "vinyl"
+		return "carpet"
 	end
 	return FLOOR_BY_TYPE[roomType] or "carpet"
 end
@@ -232,6 +233,8 @@ local function buildFill(fill: OfficeTypes.FillLight, origin: CFrame, parent: In
 	anchor.Transparency = 1
 	anchor.CanCollide, anchor.CanQuery = false, false
 	anchor.CastShadow = false
+	-- Not a tube: the atmosphere's broken-light blink skips fills (Harlow's tells still flicker them).
+	anchor:SetAttribute("OfficeLightFill", true)
 	local light = Instance.new("PointLight")
 	light.Brightness = fill.brightness
 	light.Range = fill.range
