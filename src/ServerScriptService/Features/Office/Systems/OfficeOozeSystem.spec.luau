@@ -50,6 +50,9 @@ return function()
 		for _, part in all do
 			expect(part.Position.Z <= 0).to.equal(true)
 			expect(math.abs(part.Position.X) <= 8).to.equal(true)
+			if part.Name == "Puddle" then
+				expect(math.abs(part.Position.X) + part.Size.Y / 2 <= 7.01).to.equal(true)
+			end
 			expect(part.CanCollide).to.equal(false)
 			expect(part.CanQuery).to.equal(false)
 			expect(part.CastShadow).to.equal(false)
@@ -74,8 +77,7 @@ return function()
 	it("makes at most 2 puddles within 4 studs of the door for a little", function()
 		local model = OfficeOozeSystem.build("little", DOOR, 14, folder)
 		local all = partsOf(model)
-		expect(#all >= 1).to.equal(true)
-		expect(#all <= 2).to.equal(true)
+		expect(#all).to.equal(2)
 		for _, part in all do
 			expect(part.Position.Z <= 0).to.equal(true)
 			expect(reachOf(part) <= 4.01).to.equal(true)
@@ -91,5 +93,34 @@ return function()
 		for _, part in partsOf(model) do
 			expect(frame:PointToObjectSpace(part.Position).Z <= 0).to.equal(true)
 		end
+	end)
+
+	describe("buildAtDock", function()
+		local layout = {
+			entrances = {
+				{ id = "lobby", outside = { x = 1, z = 1, yaw = 0 } },
+				{ id = "dock", outside = { x = 100, z = 200, yaw = 0 } },
+			},
+		}
+		local origin = CFrame.new(0, 5, 0)
+
+		it("builds at the dock's outside door, in the world", function()
+			local model = OfficeOozeSystem.buildAtDock(layout, origin, 1300, folder)
+			expect(model).to.be.ok()
+			expect(model.Parent).to.equal(folder)
+			for _, part in partsOf(model) do
+				expect(part.Position.Z <= 200).to.equal(true)
+				expect(math.abs(part.Position.X - 100) <= 8).to.equal(true)
+			end
+		end)
+
+		it("builds nothing for a clean site", function()
+			expect(OfficeOozeSystem.buildAtDock(layout, origin, 500, folder)).to.equal(nil)
+		end)
+
+		it("builds nothing without a dock entrance", function()
+			local noDock = { entrances = { layout.entrances[1] } }
+			expect(OfficeOozeSystem.buildAtDock(noDock, origin, 1300, folder)).to.equal(nil)
+		end)
 	end)
 end

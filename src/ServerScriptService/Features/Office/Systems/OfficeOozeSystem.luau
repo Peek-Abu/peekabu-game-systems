@@ -10,6 +10,8 @@
 	@class OfficeOozeSystem
 ]=]
 
+local OfficeConstants = require(script.Parent.Parent.Data.OfficeConstants)
+local OfficeTypes = require(script.Parent.Parent.Data.OfficeTypes)
 local OfficeOozeRules = require(script.Parent.Parent.Rules.OfficeOozeRules)
 
 local OfficeOozeSystem = {}
@@ -101,6 +103,32 @@ function OfficeOozeSystem.build(
 	end
 	model.Parent = parent
 	return model
+end
+
+--[=[
+	Builds the ooze for a site of `gloom` (OfficeOozeRules.level) at the layout's outside dock door, under `parent`
+	(the office model, so a rebuild takes it away). `origin` places the layout in the world. Nil when the site is
+	clean or the layout has no dock entrance.
+]=]
+function OfficeOozeSystem.buildAtDock(
+	layout: OfficeTypes.Layout,
+	origin: CFrame,
+	gloom: number,
+	parent: Instance
+): Model?
+	for _, entrance in layout.entrances or {} do
+		if entrance.id == "dock" then
+			local at = entrance.outside
+			local door = origin * CFrame.new(at.x, 0, at.z) * CFrame.Angles(0, at.yaw, 0)
+			return OfficeOozeSystem.build(
+				OfficeOozeRules.level(gloom),
+				door,
+				OfficeConstants.OUTSIDE.DOCK_DOOR_WIDTH,
+				parent
+			)
+		end
+	end
+	return nil
 end
 
 return table.freeze(OfficeOozeSystem)

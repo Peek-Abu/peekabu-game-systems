@@ -67,7 +67,6 @@ local OfficeFurniturePlacementUtils = require(OfficeServer.Utils.OfficeFurniture
 local OfficeSurfaceUtils = require(OfficeServer.Utils.OfficeSurfaceUtils)
 local OfficeSpawnUtils = require(OfficeServer.Utils.OfficeSpawnUtils)
 local OfficeLootUtils = require(OfficeServer.Utils.OfficeLootUtils)
-local OfficeOozeRules = require(OfficeServer.Rules.OfficeOozeRules)
 local OfficeOozeSystem = require(OfficeServer.Systems.OfficeOozeSystem)
 local OfficeBuildSystem = require(OfficeServer.Systems.OfficeBuildSystem)
 local OfficeDecorSystem = require(OfficeServer.Systems.OfficeDecorSystem)
@@ -413,19 +412,7 @@ local OfficeServiceServer: OfficeServiceServer = {
 			end
 		end
 		lastPlan = plan
-		-- The site's Gloom shows as ooze under the outside dock door (it goes with the office model on a rebuild).
-		local model = if built ~= nil then built.model else nil
-		for _, entrance in LAYOUT.entrances or {} do
-			if entrance.id == "dock" and model ~= nil then
-				local at = entrance.outside
-				OfficeOozeSystem.build(
-					OfficeOozeRules.level(OfficeLootUtils.gloomOf(plan).total),
-					OfficeConstants.ORIGIN * CFrame.new(at.x, 0, at.z) * CFrame.Angles(0, at.yaw, 0),
-					OfficeConstants.DOCK_DOOR_WIDTH,
-					model
-				)
-			end
-		end
+		OfficeOozeSystem.buildAtDock(LAYOUT, OfficeConstants.ORIGIN, OfficeLootUtils.gloomOf(plan).total, current.model)
 		overtimeSpawned = false
 		log:info(`shift spawns: {#plan.piles} piles, {#plan.items} items, worth {plan.value} clean`)
 		ready:Fire(folder)
