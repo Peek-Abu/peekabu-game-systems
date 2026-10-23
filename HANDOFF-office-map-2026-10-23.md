@@ -1,6 +1,8 @@
 # Handoff: Odd Hours office map (2026-10-23)
 
-**Status 2026-10-23 (evening): spike-match plan built, plus the owner's first play-check fixes (commits 1cf0df77..9f519d95: facades cased + "Locked", Harlow opens only doors on his line, low break tables, elevator on a hall wall, reshift cleanup guards, wall-corner/pilaster trim). Studio at 9f519d95: suite 4354/0, traversal seeds 1-20 957/0. Waiting on the owner's re-check. Deferred: searched-desk art swap (needs a drawer desk template, art pass). Root causes: .superpowers/sdd/2026-10-23-odd-hours-office-map-spike-match/playcheck-rootcauses.md.**
+**Status 2026-10-23 (night): stage 3 (the outside) built and verified in Studio (commits cbd186f2..dee97022 + the Task 9 report). Suite 4436/0, traversal seeds 1-20 957/0; entrances, Harlow's yard safe zone, exterior atmosphere, dock ooze and the truck on its pad checked in real shifts (reports/office-stage3-outside.md). Walk truck->dock 217 studs (13.6 s, just over the 190-215 band); banking costs ~28 s per trip, ~2:48 for 6 trips (quota and shift length NOT retuned: owner decides). Waiting on the owner's play-check (Step 5). Owner must save the Shift place (Ctrl+S).**
+
+**Earlier status 2026-10-23 (evening): spike-match plan built, plus the owner's first play-check fixes (commits 1cf0df77..9f519d95: facades cased + "Locked", Harlow opens only doors on his line, low break tables, elevator on a hall wall, reshift cleanup guards, wall-corner/pilaster trim). Studio at 9f519d95: suite 4354/0, traversal seeds 1-20 957/0. Waiting on the owner's re-check. Deferred: searched-desk art swap (needs a drawer desk template, art pass). Root causes: .superpowers/sdd/2026-10-23-odd-hours-office-map-spike-match/playcheck-rootcauses.md.**
 
 Read this first if you are continuing the office map work. Branch `game/cleanup-crew`, worktree
 `E:/Projects/peekabu-game-systems/.claude/worktrees/mvp-demo-pack-052599`. Nothing is pushed.
@@ -16,7 +18,8 @@ generated office match the spike. The stage 2 look was rejected; see below for w
 | Stage 1: kit generator, real doors, Harlow traversal | Done, and passed the owner's play-check. Plan: `docs/superpowers/plans/2026-10-22-odd-hours-office-map-stage1.md`. |
 | Stage 2: "odd-hours-b1" art kit | Built and green (4243/0 specs; traversal seeds 1–20: 1317 paths, 0 failures). **Owner rejected the look** (details below). Plan: `docs/superpowers/plans/2026-10-22-odd-hours-office-map-stage2.md`. |
 | Spike: hand-built open office in the mock-room style | Built in the Shift place as `Workspace.ClaudeSpike`. Owner loves it. Script: `design/production-art/map-kits/odd-hours-b1/spike/BuildSpike.CommandBar.luau`. Captures are in the same folder. |
-| Stage 3 (outside) and stage 4 (per-run toggles/anomalies) | Not started. |
+| Stage 3 (outside) | Built and verified in Studio (plan `docs/superpowers/plans/2026-10-23-odd-hours-office-map-stage3-outside.md`, report `reports/office-stage3-outside.md`). Waiting on the owner's play-check. |
+| Stage 4 (per-run toggles/anomalies) | Not started. |
 
 ## Why stage 2 was rejected (owner, 2026-10-23)
 
@@ -83,6 +86,7 @@ generated office match the spike. The stage 2 look was rejected; see below for w
 
 ## Studio / place state (important)
 
+- 2026-10-23 night (stage 3): `Workspace.OfficeExterior` (the fixed exterior set: yard, truck pad, closed dock roller door, lobby rotunda, car park; built by `design/production-art/map-kits/odd-hours-b1/exterior/BuildExterior.CommandBar.luau`) **replaces the exterior spike** (`ClaudeExteriorSpike` is gone), standing at `OfficeConstants.OUTSIDE.EXTERIOR_OFFSET` (0, 0, -1600): 1,600 studs south of the generated office, which it is not physically joined to (entrances teleport). The truck is code-built in `CleanupCrewOffice` on the pad (world 1168, -1876). **The owner must save the place (Ctrl+S)** or the exterior is lost. `RunTests` is cleared (nil). Captures: `design/production-art/map-kits/odd-hours-b1/exterior/captures/`.
 - 2026-10-23 evening: removed from the Shift place (owner OK) the unused `OfficeMap` (old hand-built map format, 289 lights), `ClaudeSpike` and `ClaudeMockRoom`, and cleared the Workspace `RunTests` attribute (it ran the full suite on every Play and caused the lag). Set `RunTests = true` only while running specs, then clear it. Owner must save (Ctrl+S).
 
 - **The Shift place must be saved (Ctrl+S) by the owner.** These live only in the open session until it is saved:
