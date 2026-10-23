@@ -10,7 +10,10 @@
 	PathfindingModifier volume (Harlow walks the loading bay but never paths into the truck's box). Everything is anchored under one Model in Workspace at
 	the layout's origin. Glass walls fill the layout's panes (Glass, see-through, solid, tagged SightThrough so Harlow's
 	sight passes them; the wall pieces beside them stop flush). Physical per-room ceilings enclose the camera.
-	Doors: every doorway keeps its visual-only frame and trim, and OfficeDoorSystem adds a real leaf to each solid or
+	Art keys: every attach goes through OfficeArtKeyUtils (a marker's own `art` key, then the default key's room-type
+variant, then the default key), so a kit may restyle one room type (floorTile_server) or one piece (serverRack for a
+shelf). Walls are merged across rooms, so they use the default key only.
+Doors: every doorway keeps its visual-only frame and trim, and OfficeDoorSystem adds a real leaf to each solid or
 	glass door plus a locked flush leaf on every facade (`Built.doors`, destroyed with the office).
 
 	Instance shell; specs cover ceilings, and OfficeLayoutRules validates the layout.
@@ -34,6 +37,7 @@ local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.Shif
 local OfficeConstants = require(OfficeServer.Data.OfficeConstants)
 local OfficeTypes = require(OfficeServer.Data.OfficeTypes)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
+local OfficeArtKeyUtils = require(OfficeServer.Utils.OfficeArtKeyUtils)
 local OfficeLoadingBayUtils = require(OfficeServer.Utils.OfficeLoadingBayUtils)
 local OfficeDoorSystem = require(script.Parent.OfficeDoorSystem)
 
@@ -111,6 +115,7 @@ function OfficeBuildSystem.build(
 
 	for index, room in layout.rooms do
 		local roomFolder = folder(room.name, model)
+		local roomType = OfficeArtKeyUtils.roomType(room)
 		local width = room.maxX - room.minX
 		local depth = room.maxZ - room.minZ
 		local floor = block(
@@ -120,7 +125,14 @@ function OfficeBuildSystem.build(
 			colors[(index - 1) % #colors + 1],
 			roomFolder
 		)
-		if art.attach(floor, "building", "floorTile") ~= nil then
+		if
+			OfficeArtKeyUtils.attachFirst(
+				art,
+				floor,
+				"building",
+				OfficeArtKeyUtils.candidates("floorTile", nil, roomType)
+			) ~= nil
+		then
 			-- Carpet weave sits above its recessed face; keep backing below both to avoid hiding the carpet.
 			local skin =
 				block("FloorUnderlay", floor.Size, floor.CFrame * CFrame.new(0, -0.1, 0), floor.Color, roomFolder)
@@ -134,7 +146,14 @@ function OfficeBuildSystem.build(
 			roomFolder
 		)
 
-		if art.attach(ceiling, "building", "ceilingTile") ~= nil then
+		if
+			OfficeArtKeyUtils.attachFirst(
+				art,
+				ceiling,
+				"building",
+				OfficeArtKeyUtils.candidates("ceilingTile", nil, roomType)
+			) ~= nil
+		then
 			opaqueBacking(ceiling, opaqueStructure)
 		end
 
@@ -158,7 +177,14 @@ function OfficeBuildSystem.build(
 			light.Brightness = OfficeConstants.LIGHT_BRIGHTNESS
 			light.Color = OfficeConstants.LIGHT_COLOR
 			light.Parent = fixture
-			if art.attach(fixture, "building", "fluorescent") ~= nil then
+			if
+				OfficeArtKeyUtils.attachFirst(
+					art,
+					fixture,
+					"building",
+					OfficeArtKeyUtils.candidates("fluorescent", nil, roomType)
+				) ~= nil
+			then
 				local panel = block(
 					"LightPanel",
 					Vector3.new(size.X * 0.82, 0.025, size.Z * 0.65),
@@ -228,6 +254,7 @@ function OfficeBuildSystem.build(
 		)
 		local turn = if horizontal then CFrame.identity else CFrame.Angles(0, math.pi / 2, 0)
 		local wall = block("Wall", size, origin * centre * turn, OfficeConstants.WALL_COLOR, wallFolder)
+		-- Default key only: a merged segment can border two rooms of different types, so no room-type variant.
 		if art.attach(wall, "building", "wallSolid") ~= nil then
 			opaqueBacking(wall, opaqueStructure)
 		end
@@ -331,7 +358,16 @@ function OfficeBuildSystem.build(
 				if isDesk then OfficeConstants.DESK_COLOR else OfficeConstants.LOCKER_COLOR,
 				furniture
 			)
-			art.attach(part, "furniture", if isDesk then "desk" else "locker")
+			OfficeArtKeyUtils.attachFirst(
+				art,
+				part,
+				"furniture",
+				OfficeArtKeyUtils.candidates(
+					if isDesk then "desk" else "locker",
+					marker.art,
+					OfficeArtKeyUtils.roomType(OfficeLayoutUtils.room(layout, marker.room))
+				)
+			)
 			if not isDesk then
 				local room = OfficeLayoutUtils.room(layout, marker.room)
 				if room ~= nil then
@@ -391,14 +427,25 @@ function OfficeBuildSystem.build(
 			part.CanTouch = false
 			part:SetAttribute("OfficeMarkerId", marker.id)
 			part:SetAttribute("ArtWallMounted", marker.kind ~= "plant")
+			local roomType = OfficeArtKeyUtils.roomType(OfficeLayoutUtils.room(layout, marker.room))
 			if marker.kind == "plant" then
-				art.attach(part, "cargo", "officePlant")
+				OfficeArtKeyUtils.attachFirst(
+					art,
+					part,
+					"cargo",
+					OfficeArtKeyUtils.candidates("officePlant", marker.art, roomType)
+				)
 			else
 				local key = if marker.kind == "shelf"
 					then "shelf"
 					elseif marker.kind == "counter" then "kitchenCounter"
 					else "corkboard"
-				art.attach(part, "furniture", key)
+				OfficeArtKeyUtils.attachFirst(
+					art,
+					part,
+					"furniture",
+					OfficeArtKeyUtils.candidates(key, marker.art, roomType)
+				)
 				local supportY = part:GetAttribute("ArtSupportSurfaceY")
 				if marker.kind == "counter" and type(supportY) == "number" then
 					part.CanCollide = false
@@ -441,7 +488,7 @@ function OfficeBuildSystem.build(
 		modifier.Parent = zone
 	end
 
-	local doors = OfficeDoorSystem.build(layout, origin, model)
+	local doors = OfficeDoorSystem.build(layout, origin, model, art)
 
 	model.Parent = Workspace
 	return {

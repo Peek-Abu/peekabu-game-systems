@@ -29,6 +29,31 @@ local DESK_PROP_SIZES: { [string]: Vector3 } = {
 	bookStack = Vector3.new(1.007, 0.465, 1.14),
 	stationeryCup = Vector3.new(0.34, 0.721, 0.34),
 }
+-- Art-only dressing props (the `prop` marker kind), named by Marker.art: W x H x D studs. Props over 1 stud tall
+-- collide. The wall-mounted ones (PROP_WALL_HEIGHT) hang on a wall at that centre height.
+local PROP_SIZES: { [string]: Vector3 } = {
+	sofa = Vector3.new(7, 3.2, 3.2),
+	vending = Vector3.new(3.6, 7, 3),
+	waterCooler = Vector3.new(1.6, 4.2, 1.6),
+	copier = Vector3.new(3.6, 4, 3),
+	floorLamp = Vector3.new(1.6, 6, 1.6),
+	planter = Vector3.new(2.4, 4.5, 2.4),
+	wasteBin = Vector3.new(1.4, 1.8, 1.4),
+	artFrame = Vector3.new(3.5, 2.5, 0.25),
+	wallScreen = Vector3.new(5, 3, 0.3),
+	sconce = Vector3.new(1, 1.4, 0.6),
+	wallClock = Vector3.new(1.4, 1.4, 0.2),
+	deskPlant = Vector3.new(0.9, 1.2, 0.9),
+	partition = Vector3.new(6, 4.5, 0.4),
+	stairwellSign = Vector3.new(2, 1, 0.1),
+}
+local PROP_WALL_HEIGHT: { [string]: number } = {
+	artFrame = 6,
+	wallScreen = 6.5,
+	sconce = 7.5,
+	wallClock = 8,
+	stairwellSign = 7,
+}
 local FLOOR_COLORS: { Color3 } = {
 	Color3.fromRGB(96, 92, 86),
 	Color3.fromRGB(70, 82, 96),
@@ -42,6 +67,10 @@ return table.freeze({
 	ORIGIN = CFrame.new(1000, 1, 0),
 	MODEL_NAME = "CleanupCrewOffice",
 	ART_KIT_ID = "client-office-slate",
+	-- The art kit every generated map uses (OfficeLayoutGenerationUtils); the authored boot layout keeps ART_KIT_ID.
+	GENERATED_ART_KIT = "odd-hours-b1",
+	PROP_SIZES = table.freeze(PROP_SIZES),
+	PROP_WALL_HEIGHT = table.freeze(PROP_WALL_HEIGHT),
 	-- The floor number kit rooms are placed on (one floor today).
 	FLOOR_NUMBER = 1,
 	-- The corridor network (OfficeCorridorUtils): a LATTICE_COLS x LATTICE_ROWS grid of junction nodes, each line

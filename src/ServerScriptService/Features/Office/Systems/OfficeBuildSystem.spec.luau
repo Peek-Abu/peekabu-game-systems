@@ -447,4 +447,111 @@ return function()
 			expect(glass[1]:FindFirstChild("ArtVisual")).to.equal(nil)
 		end)
 	end)
+
+	describe("art keys", function()
+		local function twoRooms(kind, roomTypeA)
+			return {
+				artKit = "test-map-a",
+				startRoom = "a",
+				rooms = {
+					{ id = "a", name = "A", minX = 0, minZ = 0, maxX = 20, maxZ = 10, roomType = roomTypeA },
+					{ id = "b", name = "B", minX = 0, minZ = 10, maxX = 20, maxZ = 20 },
+				},
+				doors = { { a = "a", b = "b", x = 10, z = 10, width = 6, kind = kind } },
+				markers = {},
+				truck = Layout.truck,
+			}
+		end
+		local function floorOf(built, roomName)
+			return built.model[roomName].Floor
+		end
+		-- Marks a template's body so a test can tell which key's template was attached.
+		local function mark(family, key)
+			assets["test-map-a"][family][key]:FindFirstChildOfClass("Part").Name = key
+		end
+
+		it("uses floorTile_server in a server room and floorTile elsewhere", function()
+			template("building", "floorTile")
+			template("building", "floorTile_server")
+			mark("building", "floorTile")
+			mark("building", "floorTile_server")
+			local built = build(twoRooms("open", "server"))
+			expect(floorOf(built, "A").ArtVisual:FindFirstChild("floorTile_server") ~= nil).to.equal(true)
+			expect(floorOf(built, "B").ArtVisual:FindFirstChild("floorTile") ~= nil).to.equal(true)
+		end)
+
+		it("falls back to floorTile when the room-type variant is missing, and to greybox with neither", function()
+			template("building", "floorTile")
+			local built = build(twoRooms("open", "server"))
+			expect(floorOf(built, "A"):FindFirstChild("ArtVisual") ~= nil).to.equal(true)
+			built.model:Destroy()
+			assets:ClearAllChildren()
+			local bare = build(twoRooms("open", "server"))
+			expect(floorOf(bare, "A"):FindFirstChild("ArtVisual")).to.equal(nil)
+		end)
+
+		it("uses the hallway variant for corridor pieces", function()
+			template("building", "floorTile_hallway")
+			local layout = twoRooms("open", nil)
+			layout.rooms[2].zone = "hallway"
+			local built = build(layout)
+			expect(floorOf(built, "B"):FindFirstChild("ArtVisual") ~= nil).to.equal(true)
+			expect(floorOf(built, "A"):FindFirstChild("ArtVisual")).to.equal(nil)
+		end)
+
+		it("overrides a shelf marker's art key", function()
+			template("furniture", "shelf")
+			template("furniture", "serverRack")
+			mark("furniture", "serverRack")
+			local layout = twoRooms("open", nil)
+			layout.markers = {
+				{ id = "a.shelf.1", room = "a", kind = "shelf", x = 5, z = 5, art = "serverRack" },
+				{ id = "a.shelf.2", room = "a", kind = "shelf", x = 12, z = 5 },
+			}
+			local built = build(layout)
+			local racks = 0
+			for _, part in built.model.Furniture:GetChildren() do
+				local visual = part:FindFirstChild("ArtVisual")
+				expect(visual ~= nil).to.equal(true)
+				if visual:FindFirstChild("serverRack") then
+					racks += 1
+				end
+			end
+			expect(racks).to.equal(1)
+		end)
+
+		it("gives a solid door's leaf the doorLeaf template and a glass door's the doorLeafGlass one", function()
+			template("building", "doorLeaf")
+			template("building", "doorLeafGlass")
+			mark("building", "doorLeaf")
+			mark("building", "doorLeafGlass")
+			for kind, key in { solid = "doorLeaf", glass = "doorLeafGlass" } do
+				local built = build(twoRooms(kind, nil))
+				local leaf = built.model.Doors.DoorLeaf
+				local visual = leaf:FindFirstChild("ArtVisual")
+				expect(visual ~= nil).to.equal(true)
+				expect(visual:FindFirstChild(key) ~= nil).to.equal(true)
+				-- The leaf keeps its collision; the visual never collides and is welded to the leaf.
+				expect(leaf.CanCollide).to.equal(true)
+				expect(leaf.CanQuery).to.equal(true)
+				for _, part in visual:GetDescendants() do
+					if part:IsA("BasePart") then
+						expect(part.CanCollide).to.equal(false)
+						expect(part:FindFirstChild("ArtRootWeld").Part0).to.equal(leaf)
+					end
+				end
+				built.doors.destroy()
+				built.model:Destroy()
+			end
+		end)
+
+		it("keeps the glass leaf's greybox look when no door art exists", function()
+			local built = build(twoRooms("glass", nil))
+			local leaf = built.model.Doors.DoorLeaf
+			expect(leaf:FindFirstChild("ArtVisual")).to.equal(nil)
+			expect(leaf.Material).to.equal(Enum.Material.Glass)
+			expect(leaf.Transparency).to.equal(0.5)
+			built.doors.destroy()
+		end)
+	end)
 end

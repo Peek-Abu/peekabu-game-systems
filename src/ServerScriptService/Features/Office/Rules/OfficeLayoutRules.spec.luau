@@ -124,6 +124,38 @@ return function()
 			expect(hasError(errors, 'surface marker "b.cabinet.1" overlaps "b.desk.1"')).to.equal(true)
 		end)
 
+		it("treats a floor prop as furniture: walls, loot clearance and desk overlap", function()
+			local layout = fixture()
+			table.insert(layout.markers, { id = "b.prop.1", room = "b", kind = "prop", art = "sofa", x = 39, z = 10 })
+			local _, outside = OfficeLayoutRules.validate(layout)
+			expect(hasError(outside, 'marker "b.prop.1" is not inside room "b"')).to.equal(true)
+
+			layout = fixture()
+			table.insert(layout.markers, { id = "b.prop.1", room = "b", kind = "prop", art = "sofa", x = 30, z = 10 })
+			table.insert(layout.markers, { id = "b.item.1", room = "b", kind = "item", x = 30, z = 12.5 })
+			table.insert(layout.markers, { id = "b.desk.1", room = "b", kind = "desk", x = 33, z = 10 })
+			local _, errors = OfficeLayoutRules.validate(layout)
+			expect(hasError(errors, 'surface marker "b.prop.1" crowds item marker "b.item.1"')).to.equal(true)
+			expect(hasError(errors, 'surface marker "b.prop.1" overlaps "b.desk.1"')).to.equal(true)
+		end)
+
+		it("lets a wall prop hang over loot and rejects a prop with no sized art", function()
+			local layout = fixture()
+			table.insert(
+				layout.markers,
+				{ id = "b.prop.1", room = "b", kind = "prop", art = "artFrame", x = 30, z = 19.375 }
+			)
+			table.insert(layout.markers, { id = "b.item.1", room = "b", kind = "item", x = 30, z = 18 })
+			local ok = OfficeLayoutRules.validate(layout)
+			expect(ok).to.equal(true)
+			table.insert(
+				layout.markers,
+				{ id = "b.prop.2", room = "b", kind = "prop", art = "nonsense", x = 25, z = 5 }
+			)
+			local _, errors = OfficeLayoutRules.validate(layout)
+			expect(hasError(errors, 'prop marker "b.prop.2" names no sized art')).to.equal(true)
+		end)
+
 		it("reports a door that is not on a wall both rooms share", function()
 			local layout = fixture()
 			layout.doors[1].x = 10

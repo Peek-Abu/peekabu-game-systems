@@ -8,6 +8,11 @@
 	Props and chairs are non-colliding; table/cabinet proxies support their loot physically; the table is tagged as a
 	hiding spot (Hide), and so is each tall supply cabinet (solid; a secure spot, inside it). The flickering and
 	sounds are client side.
+Art keys: each piece tries its marker's `art` key, then the default key's room-type variant, then the default key
+(OfficeArtKeyUtils), so a `table` marker with art "conferenceTable" gets that template and keeps the table's hiding
+and collision. `prop` markers are art-only dressing (sofa, vending machine, wall frame...): a transparent proxy sized
+OfficeConstants.PROP_SIZES[art], solid when over a stud tall, destroyed when no template resolves; the wall-mounted
+ones (PROP_WALL_HEIGHT) hang at that height, non-colliding.
 
 	Instance specs cover kit dressing, fallback, tabletop bounds and preserved ambiance; OfficeLayoutRules validates placement.
 
@@ -28,6 +33,7 @@ local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideCo
 local OfficeConstants = require(OfficeServer.Data.OfficeConstants)
 local OfficeTypes = require(OfficeServer.Data.OfficeTypes)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
+local OfficeArtKeyUtils = require(OfficeServer.Utils.OfficeArtKeyUtils)
 
 -- Desk dressing was laid out on a 5x3 top; its spots move with the real top (the props keep their size).
 local DESK_SPREAD = OfficeConstants.DESK_SIZE / Vector3.new(5, 3, 3)
@@ -61,10 +67,10 @@ local function glow(on: BasePart, color: Color3, range: number, brightness: numb
 	point.Parent = on
 end
 
-local function exitSign(at: CFrame, parent: Instance, art: ArtVisualSystem.Controller)
+local function exitSign(at: CFrame, parent: Instance, art: ArtVisualSystem.Controller, roomType: string?)
 	local sign = part("ExitSign", OfficeDecorConstants.EXIT_SIGN_SIZE, at, OfficeDecorConstants.EXIT_COLOR, parent)
 	sign.Material = Enum.Material.Neon
-	art.attach(sign, "building", "exitSign")
+	OfficeArtKeyUtils.attachFirst(art, sign, "building", OfficeArtKeyUtils.candidates("exitSign", nil, roomType))
 	for _, face in { Enum.NormalId.Front, Enum.NormalId.Back } do
 		local surface = Instance.new("SurfaceGui")
 		surface.Face = face
@@ -89,7 +95,7 @@ local function exitSign(at: CFrame, parent: Instance, art: ArtVisualSystem.Contr
 	)
 end
 
-local function monitor(deskTop: CFrame, parent: Instance, art: ArtVisualSystem.Controller)
+local function monitor(deskTop: CFrame, parent: Instance, art: ArtVisualSystem.Controller, roomType: string?)
 	local size = OfficeConstants.DECOR_MONITOR_SIZE
 	-- Towards the desk's back edge. The monitor art carries its display face on art-local -Z
 	-- (the +Z face shows rear vents), so the proxy stays unrotated and the screen faces the
@@ -109,7 +115,10 @@ local function monitor(deskTop: CFrame, parent: Instance, art: ArtVisualSystem.C
 		parent
 	)
 	screen.Material = Enum.Material.Neon
-	if art.attach(case, "cargo", "monitor") ~= nil then
+	if
+		OfficeArtKeyUtils.attachFirst(art, case, "cargo", OfficeArtKeyUtils.candidates("monitor", nil, roomType))
+		~= nil
+	then
 		screen.Transparency = 1
 	end
 	glow(
@@ -137,7 +146,8 @@ local function elevator(origin: CFrame, parent: Instance, art: ArtVisualSystem.C
 		OfficeDecorConstants.ELEVATOR_COLOR,
 		parent
 	)
-	local visual = art.attach(front, "furniture", "elevatorFront")
+	local visual =
+		OfficeArtKeyUtils.attachFirst(art, front, "furniture", OfficeArtKeyUtils.candidates("elevatorFront", nil, nil))
 	front.Transparency = 1
 	for _, side in { -1, 1 } do
 		local panel = part(
@@ -163,7 +173,8 @@ local function elevator(origin: CFrame, parent: Instance, art: ArtVisualSystem.C
 	emitter("elevator", (origin * CFrame.new(point.X + 1, point.Y, point.Z)).Position, parent)
 end
 
--- Optional additions have no graybox fallback: only approved art creates visible dressing.
+-- Optional additions have no graybox fallback: only approved art creates visible dressing. `key` is the piece's
+-- default art key (it also decides collision and hiding); `override` and `roomType` pick other templates first.
 local function artOnly(
 	key: string,
 	family: ArtTypes.Family,
@@ -171,7 +182,9 @@ local function artOnly(
 	floor: CFrame,
 	deskId: string,
 	parent: Instance,
-	art: ArtVisualSystem.Controller
+	art: ArtVisualSystem.Controller,
+	override: string?,
+	roomType: string?
 )
 	local root = part(key, size, floor * CFrame.new(0, size.Y / 2, 0), OfficeConstants.DESK_COLOR, parent)
 	root.Transparency = 1
@@ -179,7 +192,9 @@ local function artOnly(
 	root.CanQuery = root.CanCollide
 	root:SetAttribute("OfficeArtKey", key)
 	root:SetAttribute("OfficeDeskMarker", deskId)
-	if art.attach(root, family, key) == nil then
+	if
+		OfficeArtKeyUtils.attachFirst(art, root, family, OfficeArtKeyUtils.candidates(key, override, roomType)) == nil
+	then
 		root:Destroy()
 		return
 	end
@@ -191,6 +206,47 @@ local function artOnly(
 	if hideKind ~= nil then
 		root:SetAttribute(HideConstants.FURNITURE_KIND_ATTRIBUTE, hideKind)
 		CollectionService:AddTag(root, HideConstants.FURNITURE_TAG)
+	end
+end
+
+-- An art-only dressing prop: a `prop` marker names its template (`art`) and is sized by PROP_SIZES.
+local function propAt(
+	marker: OfficeTypes.Marker,
+	roomType: string?,
+	origin: CFrame,
+	parent: Instance,
+	art: ArtVisualSystem.Controller
+)
+	local key = marker.art
+	if key == nil then
+		error(`prop marker "{marker.id}" has no art key`)
+	end
+	local size = OfficeConstants.PROP_SIZES[key]
+	if size == nil then
+		error(`prop marker "{marker.id}" names art "{key}" with no PROP_SIZES entry`)
+	end
+	local wallHeight = OfficeConstants.PROP_WALL_HEIGHT[key]
+	local height = if wallHeight ~= nil then wallHeight else size.Y / 2
+	local root = part(
+		key,
+		size,
+		origin * CFrame.new(marker.x, height, marker.z) * CFrame.Angles(0, marker.rotation or 0, 0),
+		OfficeConstants.DESK_COLOR,
+		parent
+	)
+	root.Transparency = 1
+	-- Wall hangings are out of reach and never block: only floor props over a stud tall are solid.
+	root.CanCollide = wallHeight == nil and size.Y > 1
+	root.CanQuery = root.CanCollide
+	root:SetAttribute("OfficeArtKey", key)
+	root:SetAttribute("OfficeMarkerId", marker.id)
+	if wallHeight ~= nil then
+		root:SetAttribute("ArtWallMounted", true)
+	end
+	if
+		OfficeArtKeyUtils.attachFirst(art, root, "furniture", OfficeArtKeyUtils.candidates(key, nil, roomType)) == nil
+	then
+		root:Destroy()
 	end
 end
 
@@ -268,6 +324,9 @@ local function chairAt(layout: OfficeTypes.Layout, desk: OfficeTypes.Marker, ori
 		if clear then
 			for _, other in layout.markers do
 				local size = sizes[other.kind]
+				if other.kind == "prop" and other.art ~= nil and OfficeConstants.PROP_WALL_HEIGHT[other.art] == nil then
+					size = OfficeConstants.PROP_SIZES[other.art]
+				end
 				if other.id ~= desk.id and size ~= nil then
 					if
 						math.abs(x - other.x)
@@ -327,7 +386,12 @@ function OfficeDecorSystem.build(
 				local turn = if edge == "minX" or edge == "maxX"
 					then CFrame.Angles(0, math.rad(90), 0)
 					else CFrame.identity
-				exitSign(origin * CFrame.new(door.x, OfficeDecorConstants.EXIT_SIGN_HEIGHT, door.z) * turn, folder, art)
+				exitSign(
+					origin * CFrame.new(door.x, OfficeDecorConstants.EXIT_SIGN_HEIGHT, door.z) * turn,
+					folder,
+					art,
+					OfficeArtKeyUtils.roomType(start)
+				)
 			end
 		end
 	end
@@ -336,6 +400,7 @@ function OfficeDecorSystem.build(
 		local deskTop = origin
 			* CFrame.new(desk.x, OfficeConstants.DESK_SIZE.Y, desk.z)
 			* CFrame.Angles(0, desk.rotation or 0, 0)
+		local deskRoomType = OfficeArtKeyUtils.roomType(OfficeLayoutUtils.room(layout, desk.room))
 		local furniture = parent:FindFirstChild("Furniture")
 		if furniture ~= nil then
 			for _, proxy in furniture:GetChildren() do
@@ -354,7 +419,14 @@ function OfficeDecorSystem.build(
 						keyboard.CFrame = deskTop
 							* CFrame.new(-0.45 * DESK_SPREAD.X, keyboard.Size.Y / 2, -0.6 * DESK_SPREAD.Z)
 							* CFrame.Angles(0, math.pi, 0)
-						if art.attach(keyboard, "props", "keyboard") ~= nil then
+						if
+							OfficeArtKeyUtils.attachFirst(
+								art,
+								keyboard,
+								"props",
+								OfficeArtKeyUtils.candidates("keyboard", nil, deskRoomType)
+							) ~= nil
+						then
 							for _, child in proxy:GetChildren() do
 								if child.Name == "Keycap" or child.Name == "SpaceBar" then
 									child:Destroy()
@@ -371,18 +443,35 @@ function OfficeDecorSystem.build(
 						mouse.CFrame = deskTop
 							* CFrame.new(1.05 * DESK_SPREAD.X, mouse.Size.Y / 2, -0.65 * DESK_SPREAD.Z)
 							* CFrame.Angles(0, math.pi, 0)
-						if art.attach(mouse, "props", "mouse") == nil then
+						if
+							OfficeArtKeyUtils.attachFirst(
+								art,
+								mouse,
+								"props",
+								OfficeArtKeyUtils.candidates("mouse", nil, deskRoomType)
+							) == nil
+						then
 							mouse.Size, mouse.CFrame = oldSize, oldFrame
 						end
 					end
 				end
 			end
 		end
-		monitor(deskTop, folder, art)
+		monitor(deskTop, folder, art, deskRoomType)
 		dressDesk(desk, index, origin, folder, art)
 		local chairFloor = chairAt(layout, desk, origin)
 		if chairFloor ~= nil then
-			artOnly("officeChair", "furniture", OfficeConstants.OFFICE_CHAIR_SIZE, chairFloor, desk.id, folder, art)
+			artOnly(
+				"officeChair",
+				"furniture",
+				OfficeConstants.OFFICE_CHAIR_SIZE,
+				chairFloor,
+				desk.id,
+				folder,
+				art,
+				nil,
+				deskRoomType
+			)
 		end
 		emitter("phone", (deskTop * CFrame.new(1.5 * DESK_SPREAD.X, lift, 0)).Position, folder)
 		if index % OfficeDecorConstants.TYPING_EVERY == 1 then
@@ -399,7 +488,9 @@ function OfficeDecorSystem.build(
 			origin * CFrame.new(marker.x, 0, marker.z) * CFrame.Angles(0, marker.rotation or 0, 0),
 			marker.id,
 			folder,
-			art
+			art,
+			marker.art,
+			OfficeArtKeyUtils.roomType(OfficeLayoutUtils.room(layout, marker.room))
 		)
 	end
 	-- The tall supply cabinets: solid, and a secure hiding spot (Hide). No art, no cabinet (`artOnly`).
@@ -411,7 +502,9 @@ function OfficeDecorSystem.build(
 			origin * CFrame.new(marker.x, 0, marker.z) * CFrame.Angles(0, marker.rotation or 0, 0),
 			marker.id,
 			folder,
-			art
+			art,
+			marker.art,
+			OfficeArtKeyUtils.roomType(OfficeLayoutUtils.room(layout, marker.room))
 		)
 	end
 	for _, marker in OfficeLayoutUtils.markersOf(layout, "table") do
@@ -422,8 +515,13 @@ function OfficeDecorSystem.build(
 			origin * CFrame.new(marker.x, 0, marker.z) * CFrame.Angles(0, marker.rotation or 0, 0),
 			marker.id,
 			folder,
-			art
+			art,
+			marker.art,
+			OfficeArtKeyUtils.roomType(OfficeLayoutUtils.room(layout, marker.room))
 		)
+	end
+	for _, marker in OfficeLayoutUtils.markersOf(layout, "prop") do
+		propAt(marker, OfficeArtKeyUtils.roomType(OfficeLayoutUtils.room(layout, marker.room)), origin, folder, art)
 	end
 	elevator(origin, folder, art)
 	folder.Parent = parent

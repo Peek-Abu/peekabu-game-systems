@@ -14,9 +14,13 @@ return function()
 			end
 			-- 44 office pieces (the dust bag went with the Gloom and Gleam economy, the desk calendar left the art
 			-- kit), the supply cabinet (a secure hiding spot) and the five small pocketable valuables (the hotbar
-			-- inventory).
-			expect(count).to.equal(50)
+			-- inventory), plus 19 keys for the generated Odd Hours B1 kit (doorLeafGlass, three floor variants,
+			-- stairwellSign and fourteen furniture pieces).
+			expect(count).to.equal(69)
 			expect(Registry.contains("furniture", "supplyCabinet")).to.equal(true)
+			expect(Registry.contains("furniture", "serverRack")).to.equal(true)
+			expect(Registry.contains("building", "doorLeafGlass")).to.equal(true)
+			expect(Registry.kits["odd-hours-b1"] ~= nil).to.equal(true)
 			expect(Registry.contains("cargo", "dustBag")).to.equal(false)
 			expect(Registry.contains("cargo", "deskPhone")).to.equal(false)
 			expect(Registry.contains("cargo", "keyring")).to.equal(true)

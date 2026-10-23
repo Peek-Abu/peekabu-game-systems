@@ -6,6 +6,7 @@ local ArtKitRegistry = {}
 ArtKitRegistry.DEFAULT_KIT = "client-office-slate"
 local kits: { [string]: ArtTypes.Kit } = {
 	["client-office-slate"] = { id = "client-office-slate", name = "Client office slate" },
+	["odd-hours-b1"] = { id = "odd-hours-b1", name = "Odd Hours B1 office" },
 }
 local keys: { [ArtTypes.Family]: { string } } = {
 	building = {
@@ -21,6 +22,11 @@ local keys: { [ArtTypes.Family]: { string } } = {
 		"exitSign",
 		"pillar",
 		"garageDoor",
+		"doorLeafGlass",
+		"floorTile_server",
+		"floorTile_breakout",
+		"floorTile_hallway",
+		"stairwellSign",
 	},
 	furniture = {
 		"desk",
@@ -37,6 +43,20 @@ local keys: { [ArtTypes.Family]: { string } } = {
 		"pipeSet",
 		"cableSet",
 		"supplyCabinet",
+		"serverRack",
+		"conferenceTable",
+		"receptionDesk",
+		"partition",
+		"sofa",
+		"vending",
+		"waterCooler",
+		"copier",
+		"floorLamp",
+		"planter",
+		"artFrame",
+		"wallScreen",
+		"sconce",
+		"deskPlant",
 	},
 	cargo = {
 		"rubbishBag",

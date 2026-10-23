@@ -51,6 +51,7 @@ export type Door = {
 -- shelf/counter/plant/board are visual-only dressing markers for zone kits (ignored by spawn rolls).
 -- cabinet/table are art-only furniture with lootable tops (plaque, meeting-table monitors).
 -- closet: a tall supply cabinet against a wall, art-only, a secure hiding spot (Hide's "inside" kind).
+-- prop: art-only dressing (sofa, vending machine, wall frame...) named by Marker.art; gameplay ignores it.
 export type MarkerKind =
 	"pile"
 	| "item"
@@ -66,6 +67,7 @@ export type MarkerKind =
 	| "cabinet"
 	| "table"
 	| "closet"
+	| "prop"
 
 -- A place something can spawn (or a player appears): its id is "<room>.<kind>.<n>".
 export type Marker = {
@@ -134,6 +136,8 @@ export type KitMarker = {
 	x: number,
 	z: number,
 	rotation: number?,
+	-- Art template key override (see Marker.art); a prop marker must name one.
+	art: string?,
 }
 
 -- A hand-authored room. Local frame: x along the front wall from the front-left corner (seen from

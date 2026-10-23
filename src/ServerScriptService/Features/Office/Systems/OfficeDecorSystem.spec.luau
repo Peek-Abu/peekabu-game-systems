@@ -297,4 +297,91 @@ return function()
 		local decor = Decor.build(layout, origin, built.model, art)
 		expect(decor:FindFirstChild("officeChair")).to.equal(nil)
 	end)
+
+	describe("prop markers and art keys", function()
+		local function propLayout(markers)
+			return {
+				artKit = "test-map-a",
+				startRoom = "a",
+				rooms = { { id = "a", name = "A", minX = 0, minZ = 0, maxX = 40, maxZ = 40 } },
+				doors = {},
+				markers = markers,
+				truck = Layout.truck,
+			}
+		end
+		local function decorOf(layout)
+			built = Build.build(layout, CFrame.new(60000, 0, 0), art)
+			return Decor.build(layout, CFrame.new(60000, 0, 0), built.model, art)
+		end
+
+		it("builds a prop marker with a template as an art-only root of its PROP_SIZES size", function()
+			template("furniture", "sofa")
+			local decor = decorOf(propLayout({
+				{ id = "a.prop.1", room = "a", kind = "prop", art = "sofa", x = 20, z = 20 },
+			}))
+			local root = decor:FindFirstChild("sofa")
+			expect(root ~= nil).to.equal(true)
+			expect(root:FindFirstChild("ArtVisual") ~= nil).to.equal(true)
+			expect(root.Size).to.equal(OfficeConstants.PROP_SIZES.sofa)
+			expect(root.Transparency).to.equal(1)
+			expect(root.CanCollide).to.equal(true)
+			expect(root.CanQuery).to.equal(true)
+			expect(root.Position.Y).to.equal(OfficeConstants.PROP_SIZES.sofa.Y / 2)
+			expect(root:GetAttribute("ArtWallMounted")).to.equal(nil)
+		end)
+
+		it("leaves no root for a prop marker without a template", function()
+			local decor = decorOf(propLayout({
+				{ id = "a.prop.1", room = "a", kind = "prop", art = "sofa", x = 20, z = 20 },
+			}))
+			expect(decor:FindFirstChild("sofa")).to.equal(nil)
+		end)
+
+		it("hangs a wall prop at its mounting height without collision", function()
+			template("furniture", "artFrame")
+			local decor = decorOf(propLayout({
+				{ id = "a.prop.1", room = "a", kind = "prop", art = "artFrame", x = 20, z = 39.375 },
+			}))
+			local root = decor:FindFirstChild("artFrame")
+			expect(root ~= nil).to.equal(true)
+			expect(root:GetAttribute("ArtWallMounted")).to.equal(true)
+			expect(root.Position.Y).to.equal(OfficeConstants.PROP_WALL_HEIGHT.artFrame)
+			expect(root.CanCollide).to.equal(false)
+		end)
+
+		it("errors clearly on a prop marker with no art or an unsized one", function()
+			local noArt = propLayout({ { id = "a.prop.1", room = "a", kind = "prop", x = 20, z = 20 } })
+			expect(function()
+				decorOf(noArt)
+			end).to.throw("no art key")
+			local unsized =
+				propLayout({ { id = "a.prop.2", room = "a", kind = "prop", art = "nonsense", x = 20, z = 20 } })
+			expect(function()
+				decorOf(unsized)
+			end).to.throw("PROP_SIZES")
+		end)
+
+		it("lets a table marker's art key win while keeping the table's hiding", function()
+			template("furniture", "breakTable")
+			template("furniture", "conferenceTable")
+			assets["test-map-a"].furniture.conferenceTable:FindFirstChildOfClass("Part").Name = "Conference"
+			local decor = decorOf(propLayout({
+				{ id = "a.table.1", room = "a", kind = "table", art = "conferenceTable", x = 20, z = 20 },
+				{ id = "a.table.2", room = "a", kind = "table", x = 30, z = 30 },
+			}))
+			local conference, plain = 0, 0
+			for _, root in decor:GetChildren() do
+				if root:GetAttribute("OfficeArtKey") == "breakTable" then
+					expect(root:GetAttribute("HideFurnitureKind")).to.equal("table")
+					if root:FindFirstChild("ArtVisual"):FindFirstChild("Conference") then
+						conference += 1
+					else
+						plain += 1
+					end
+				end
+			end
+			expect(conference).to.equal(1)
+			expect(plain).to.equal(1)
+		end)
+	end)
 end

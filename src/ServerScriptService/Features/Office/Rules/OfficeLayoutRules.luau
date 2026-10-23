@@ -4,7 +4,8 @@
 	rooms, overlapping rooms, doors that name missing rooms, are too narrow or are not on a wall both rooms
 	share, rooms the start room cannot reach, markers outside their room (or within MARKER_MARGIN of a
 	wall), surface furniture (counters, tables, cabinets) crowded by floor loot spots or overlapping desks,
-	lockers or piles, and a truck outside the start room. `checkCapacity` says whether the spawn roll has the markers
+	lockers or piles, floor `prop` markers (art-only dressing sized by OfficeConstants.PROP_SIZES) treated like surface
+	furniture for those tests, and a truck outside the start room. `checkCapacity` says whether the spawn roll has the markers
 	it needs. `checkRoute` (M2) says whether Harlow's patrol route and rest point are usable. `checkHideSpots` and `checkWalk` hold generated maps to the hiding-place count and the walking distance from the bay. OfficeServiceServer refuses to build a layout that fails them. Pure.
 
 	@class OfficeLayoutRules
@@ -28,8 +29,24 @@ for _, style in VacuumConstants.PILE_KINDS do
 	PILE_HALF = math.max(PILE_HALF, style.size.X / 2, style.size.Z / 2)
 end
 
-local function halfExtents(kind: OfficeTypes.MarkerKind): Vector2?
-	if kind == "counter" then
+-- A prop's size from its art key (nil for a prop naming no sized art); props hung on a wall are above the floor.
+local function propSize(marker: OfficeTypes.Marker): Vector3?
+	if marker.art == nil then
+		return nil
+	end
+	return OfficeConstants.PROP_SIZES[marker.art]
+end
+
+local function isFloorProp(marker: OfficeTypes.Marker): boolean
+	return marker.kind == "prop" and (marker.art == nil or OfficeConstants.PROP_WALL_HEIGHT[marker.art] == nil)
+end
+
+local function halfExtents(marker: OfficeTypes.Marker): Vector2?
+	local kind = marker.kind
+	if kind == "prop" then
+		local size = propSize(marker)
+		return if size ~= nil then Vector2.new(size.X / 2, size.Z / 2) else nil
+	elseif kind == "counter" then
 		return Vector2.new(OfficeConstants.COUNTER_SIZE.X / 2, OfficeConstants.COUNTER_SIZE.Z / 2)
 	elseif kind == "table" then
 		return Vector2.new(OfficeConstants.TABLE_SIZE.X / 2, OfficeConstants.TABLE_SIZE.Z / 2)
@@ -44,7 +61,7 @@ local function halfExtents(kind: OfficeTypes.MarkerKind): Vector2?
 end
 
 local function rotatedHalf(marker: OfficeTypes.Marker): Vector2?
-	local half = halfExtents(marker.kind)
+	local half = halfExtents(marker)
 	if half == nil then
 		return nil
 	end
@@ -61,14 +78,17 @@ local function overlapsFootprint(marker: OfficeTypes.Marker, half: Vector2, othe
 		and math.abs(other.z - marker.z) < half.Y + ohalf.Y
 end
 
--- What crowds the surface furniture `marker` (none for any other kind).
+-- What crowds the surface furniture or floor prop `marker` (none for any other kind).
 local function surfaceProblems(layout: Layout, marker: OfficeTypes.Marker): { string }
 	local problems: { string } = {}
-	if OfficeLayoutUtils.surfaceTopY(marker.kind) == nil then
+	if OfficeLayoutUtils.surfaceTopY(marker.kind) == nil and not isFloorProp(marker) then
 		return problems
 	end
 	local half = rotatedHalf(marker)
-	assert(half ~= nil, `surface marker "{marker.id}" has no footprint`)
+	if half == nil then
+		table.insert(problems, `prop marker "{marker.id}" names no sized art`)
+		return problems
+	end
 	for _, other in layout.markers do
 		if other.id ~= marker.id then
 			if other.kind == "item" then
@@ -110,11 +130,12 @@ local function markerInside(room: Room, marker: OfficeTypes.Marker): boolean
 		shelf = OfficeConstants.SHELF_SIZE,
 		board = OfficeConstants.BOARD_SIZE,
 	}
-	local size: Vector3? = sizes[marker.kind]
-	if size == nil or marker.rotation == nil then
+	local size: Vector3? = if marker.kind == "prop" then propSize(marker) else sizes[marker.kind]
+	local rotation = marker.rotation or (if marker.kind == "prop" then 0 else nil)
+	if size == nil or rotation == nil then
 		return inside(room, marker.x, marker.z, OfficeConstants.MARKER_MARGIN)
 	end
-	local cosine, sine = math.abs(math.cos(marker.rotation)), math.abs(math.sin(marker.rotation))
+	local cosine, sine = math.abs(math.cos(rotation)), math.abs(math.sin(rotation))
 	local halfX = (size.X * cosine + size.Z * sine) / 2
 	local halfZ = (size.X * sine + size.Z * cosine) / 2
 	local wall = OfficeConstants.WALL_THICKNESS / 2
@@ -227,7 +248,7 @@ function OfficeLayoutRules.markerFits(layout: Layout, marker: OfficeTypes.Marker
 	end
 	if marker.kind == "desk" or marker.kind == "locker" then
 		for _, other in layout.markers do
-			if other.id ~= marker.id and OfficeLayoutUtils.surfaceTopY(other.kind) ~= nil then
+			if other.id ~= marker.id and (OfficeLayoutUtils.surfaceTopY(other.kind) ~= nil or isFloorProp(other)) then
 				-- The surface piece's own half-extent, against this desk or locker's.
 				local otherHalf = rotatedHalf(other)
 				if otherHalf ~= nil and overlapsFootprint(other, otherHalf, marker) then

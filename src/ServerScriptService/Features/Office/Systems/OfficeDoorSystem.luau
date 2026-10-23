@@ -21,7 +21,11 @@
 	The swing tweens a fraction (0 closed .. 1 open) and places the leaf with OfficeDoorUtils.leafFrame each step,
 	so it travels the hinge's arc (tweening the CFrame itself would cut a chord). A door ignores toggles mid-swing.
 
-	Instance/TweenService shell; the door maths is the specced OfficeDoorUtils.
+	Art: a leaf takes the kit's `doorLeaf` (solid) or `doorLeafGlass` (glass) template through OfficeArtKeyUtils; the
+visual welds to the leaf, so it swings with it and stays non-colliding while the leaf keeps its collision and tags
+(attaching hides the leaf's own plastic or glass; with no template the greybox leaf stays as it was).
+
+Instance/TweenService shell; the door maths is the specced OfficeDoorUtils.
 
 	@class OfficeDoorSystem
 ]=]
@@ -33,6 +37,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 local TweenService = game:GetService("TweenService")
 
+local ArtVisualSystem = require(ServerScriptService.Features.Art.Systems.ArtVisualSystem)
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionConstants)
 local OfficeServer = ServerScriptService.Features.Office
@@ -40,6 +45,7 @@ local OfficeConstants = require(OfficeServer.Data.OfficeConstants)
 local OfficeTypes = require(OfficeServer.Data.OfficeTypes)
 local OfficeDoorUtils = require(OfficeServer.Utils.OfficeDoorUtils)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
+local OfficeArtKeyUtils = require(OfficeServer.Utils.OfficeArtKeyUtils)
 
 type DoorState = OfficeDoorUtils.DoorState
 
@@ -108,9 +114,16 @@ local function stopTween(record: Record)
 end
 
 --[=[
-	Builds every leaf under a "Doors" folder in `parent` (the office model), laid out relative to `origin`.
+	Builds every leaf under a "Doors" folder in `parent` (the office model), laid out relative to `origin`. `visuals`
+	supplies the leaf art (default: the live ArtVisualSystem).
 ]=]
-function OfficeDoorSystem.build(layout: OfficeTypes.Layout, origin: CFrame, parent: Instance): DoorSet
+function OfficeDoorSystem.build(
+	layout: OfficeTypes.Layout,
+	origin: CFrame,
+	parent: Instance,
+	visuals: ArtVisualSystem.Controller?
+): DoorSet
+	local art = visuals or ArtVisualSystem
 	local folder = Instance.new("Folder")
 	folder.Name = "Doors"
 	folder.Parent = parent
@@ -185,6 +198,12 @@ function OfficeDoorSystem.build(layout: OfficeTypes.Layout, origin: CFrame, pare
 				kind == "glass",
 				folder
 			)
+			OfficeArtKeyUtils.attachFirst(
+				art,
+				leaf,
+				"building",
+				OfficeArtKeyUtils.candidates(if kind == "glass" then "doorLeafGlass" else "doorLeaf", nil, nil)
+			)
 			local modifier = Instance.new("PathfindingModifier")
 			modifier.Label = OfficeConstants.DOOR_PATH_LABEL
 			modifier.PassThrough = true
@@ -239,6 +258,16 @@ function OfficeDoorSystem.build(layout: OfficeTypes.Layout, origin: CFrame, pare
 				folder
 			)
 			leaf.CFrame = frame
+			OfficeArtKeyUtils.attachFirst(
+				art,
+				leaf,
+				"building",
+				OfficeArtKeyUtils.candidates(
+					if facade.kind == "entrance" then "doorLeafGlass" else "doorLeaf",
+					nil,
+					nil
+				)
+			)
 			leaf:SetAttribute("OfficeFacade", facade.kind)
 		end
 	end

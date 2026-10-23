@@ -411,11 +411,12 @@ return function()
 			end
 		end)
 
-		it("keeps the input immutable and the map kit local to the selected map", function()
+		it("keeps the input immutable and always selects the generated art kit", function()
 			local selected = table.clone(Base)
 			selected.artKit = "alternate-office-kit"
 			local count = #Base.rooms
-			expect(Gen.generate(selected, 19).artKit).to.equal(selected.artKit)
+			expect(Gen.generate(selected, 19).artKit).to.equal(Constants.GENERATED_ART_KIT)
+			expect(selected.artKit).to.equal("alternate-office-kit")
 			expect(#Base.rooms).to.equal(count)
 			expect(Base.rooms[1].minX).to.equal(0)
 		end)

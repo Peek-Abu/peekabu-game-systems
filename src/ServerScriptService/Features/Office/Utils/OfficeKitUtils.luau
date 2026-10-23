@@ -73,6 +73,7 @@ function OfficeKitUtils.place(
 			x = x,
 			z = z,
 			rotation = theta + (if mirrored then -yaw else yaw),
+			art = source.art,
 		})
 	end
 

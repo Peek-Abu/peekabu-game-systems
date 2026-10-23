@@ -542,7 +542,7 @@ local function construct(base: Layout, rng: Random): (Layout?, string?)
 		return nil, "the corridor network has no loop"
 	end
 	local layout: Layout = {
-		artKit = base.artKit,
+		artKit = OfficeConstants.GENERATED_ART_KIT,
 		startRoom = "bay",
 		rooms = {},
 		doors = {},
