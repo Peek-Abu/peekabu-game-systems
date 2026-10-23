@@ -143,7 +143,7 @@ return function()
 			local layout = fixture()
 			table.insert(
 				layout.markers,
-				{ id = "b.prop.1", room = "b", kind = "prop", art = "artFrame", x = 30, z = 19.375 }
+				{ id = "b.prop.1", room = "b", kind = "prop", art = "artFrame", x = 30, z = 19.365 }
 			)
 			table.insert(layout.markers, { id = "b.item.1", room = "b", kind = "item", x = 30, z = 18 })
 			local ok = OfficeLayoutRules.validate(layout)

@@ -148,8 +148,8 @@ return function()
 
 		it("lets a wall prop hang over floor furniture but only against a wall", function()
 			local kit = fixture()
-			-- The back wall's inner face is at 23.5: a 0.25-deep frame has its back there.
-			table.insert(kit.markers, { kind = "prop", art = "artFrame", x = 22, z = 23.375, rotation = 0 })
+			-- The back wall's inner face is at 23.5: a 0.27-deep frame has its back there.
+			table.insert(kit.markers, { kind = "prop", art = "artFrame", x = 22, z = 23.365, rotation = 0 })
 			local ok, errors = OfficeKitRules.check(kit)
 			expect(errors[1]).to.equal(nil)
 			expect(ok).to.equal(true)

@@ -185,8 +185,13 @@ return function()
 		end
 
 		it("is the art's top for a restyled surface and the kind's otherwise", function()
-			expect(OfficeLayoutUtils.surfaceTopFor(marker("counter", "receptionDesk"))).to.equal(4.6)
-			expect(OfficeLayoutUtils.surfaceTopFor(marker("table", "conferenceTable"))).to.equal(4.95)
+			-- ART_SIZES hold float32 Vector3 components: compare with a tolerance.
+			expect(math.abs(OfficeLayoutUtils.surfaceTopFor(marker("counter", "receptionDesk")) - 4.6) < 1e-4).to.equal(
+				true
+			)
+			expect(math.abs(OfficeLayoutUtils.surfaceTopFor(marker("table", "conferenceTable")) - 4.95) < 1e-4).to.equal(
+				true
+			)
 			expect(OfficeLayoutUtils.surfaceTopFor(marker("counter"))).to.equal(OfficeConstants.COUNTER_SIZE.Y)
 			expect(OfficeLayoutUtils.surfaceTopFor(marker("table", "breakTable"))).to.equal(
 				OfficeConstants.TABLE_SIZE.Y
