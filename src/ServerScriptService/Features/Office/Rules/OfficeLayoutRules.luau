@@ -200,7 +200,8 @@ function OfficeLayoutRules.validate(layout: Layout): (boolean, { string })
 
 	-- A spawn marker may name a ground (the yard); nothing else does.
 	local groundsById: { [string]: Room } = {}
-	for _, ground in layout.grounds or {} do
+	local grounds: { Room } = layout.grounds or {}
+	for _, ground in grounds do
 		groundsById[ground.id] = ground
 	end
 	local seen: { [string]: boolean } = {}

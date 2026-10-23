@@ -251,7 +251,8 @@ local function propAt(
 	if key == nil then
 		error(`prop marker "{marker.id}" has no art key`)
 	end
-	local size = OfficeConstants.PROP_SIZES[key]
+	-- Optional on purpose: the map may lack this key (a Vector3 index result cannot be compared with nil).
+	local size: Vector3? = OfficeConstants.PROP_SIZES[key]
 	if size == nil then
 		error(`prop marker "{marker.id}" names art "{key}" with no PROP_SIZES entry`)
 	end
