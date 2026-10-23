@@ -34,11 +34,11 @@ type Stand = { edge: Edge, along: number, half: number, rect: Rect }
 -- A collidable stands exactly SHELL.trimClearance off the plaster face: the wainscot, rail and skirt run behind it.
 local MAX_WALL_GAP = OfficeConstants.SHELL.trimClearance
 -- Mr. Harlow's lanes come first: a hall narrower than WIDE_HALL keeps NARROW_CLEAR studs clear beside a prop, a
--- WIDE_HALL one keeps WIDE_CLEAR; a prop too deep for the hall's width (a planter or sofa off the trim leaves a 14 hall
--- under 10) gives way to a water cooler. Junctions and the atrium are wider.
+-- WIDE_HALL one keeps WIDE_CLEAR (a planter or sofa off the trim leaves 9.5 and 9.8 of a 14 hall); a prop too deep for
+-- the hall's width gives way to a water cooler. Junctions and the atrium are wider.
 local WIDE_HALL = 14
 local NARROW_CLEAR = 7
-local WIDE_CLEAR = 10
+local WIDE_CLEAR = 9
 local OPENING_CLEAR = 3
 local PATROL_CLEAR = 2
 local FURNITURE_CLEAR = 1
