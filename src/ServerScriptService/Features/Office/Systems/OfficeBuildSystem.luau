@@ -273,6 +273,20 @@ function OfficeBuildSystem.build(
 			frame.CanQuery = false
 			frame.CanTouch = false
 			DoorwayVisual.build(frame)
+			-- A real door's leaf stops at DOOR_HEIGHT: wall the rest of the opening so nothing shows over it.
+			if door.kind == "solid" or door.kind == "glass" then
+				local lintel = height - OfficeConstants.DOOR_HEIGHT
+				local header = block(
+					"DoorHeader",
+					Vector3.new(door.width, lintel, thickness),
+					origin * CFrame.new(door.x, OfficeConstants.DOOR_HEIGHT + lintel / 2, door.z) * turn,
+					OfficeConstants.WALL_COLOR,
+					doorFolder
+				)
+				if art.attach(header, "building", "wallSolid") ~= nil then
+					opaqueBacking(header, opaqueStructure)
+				end
+			end
 		end
 	end
 

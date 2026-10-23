@@ -384,6 +384,39 @@ return function()
 		end)
 	end)
 
+	describe("door headers", function()
+		local function doorLayout(kind)
+			return {
+				startRoom = "a",
+				rooms = {
+					{ id = "a", name = "A", minX = 0, minZ = 0, maxX = 20, maxZ = 10 },
+					{ id = "b", name = "B", minX = 0, minZ = 10, maxX = 20, maxZ = 20 },
+				},
+				doors = { { a = "a", b = "b", x = 10, z = 10, width = 6, kind = kind } },
+				markers = {},
+				truck = Layout.truck,
+			}
+		end
+		it("closes the wall above a solid or glass door so nothing shows over the leaf", function()
+			for _, kind in { "solid", "glass" } do
+				local built = build(doorLayout(kind))
+				local header = built.model.DoorFrames:FindFirstChild("DoorHeader")
+				expect(header ~= nil).to.equal(true)
+				expect(header.Size.X).to.be.near(6, 0.001)
+				expect(header.Position.Y - header.Size.Y / 2).to.be.near(Constants.DOOR_HEIGHT, 0.001)
+				expect(header.Position.Y + header.Size.Y / 2).to.be.near(Constants.WALL_HEIGHT, 0.001)
+				expect(header.CanCollide).to.equal(true)
+				expect(header.CanQuery).to.equal(true)
+				built.doors.destroy()
+			end
+		end)
+		it("leaves an open doorway full height", function()
+			local built = build(doorLayout("open"))
+			expect(built.model.DoorFrames:FindFirstChild("DoorHeader")).to.equal(nil)
+			built.doors.destroy()
+		end)
+	end)
+
 	describe("glass panes", function()
 		it("builds one collidable, queryable GlassWall tagged SightThrough per pane", function()
 			local layout = {
