@@ -161,6 +161,63 @@ return function()
 			end
 		end)
 
+		it("treats an open doorway starting at the junction as an arm: a T, so no wrap crosses its mouth", function()
+			-- A run along X ending at (0, 0); on the x = 0 line a wall runs to -Z and an open doorway (no merged segment)
+			-- runs from the junction to +Z.
+			local run = { x1 = 0, z1 = 0, x2 = 20, z2 = 0 }
+			local arm = { x1 = 0, z1 = -20, x2 = 0, z2 = 0 }
+			local opening =
+				OfficeShellUtils.doorOpening({ a = "a", b = "w", x = 0, z = 3, width = 6, kind = "open" }, "minX")
+			expect(opening.x1).to.equal(0)
+			expect(opening.x2).to.equal(0)
+			expect(math.min(opening.z1, opening.z2)).to.equal(0)
+			expect(math.max(opening.z1, opening.z2)).to.equal(6)
+			-- Read without the opening it is an L (outer face +Z), and the wrap crosses the doorway's mouth.
+			local asL = OfficeShellUtils.outerSide({ run, arm }, 0, 0, true)
+			expect(asL).to.equal(1)
+			-- Trim that runs across the doorway's mouth: through the whole wall band (x -0.5 .. 0.5), inside
+			-- the opening (z 0 .. 6). A T's inner reach stays within the band, as it does into a through-wall's slab.
+			local function crossesMouth(boxes)
+				for _, box in boxes do
+					if box.material ~= "plaster" then
+						local f = footprint(box)
+						if f.minX < -0.5 - 1e-6 and f.maxX > 0.5 + 1e-6 and f.minZ < 5.95 and f.maxZ > 0.05 then
+							return true
+						end
+					end
+				end
+				return false
+			end
+			expect(crossesMouth(OfficeShellUtils.wall(run, 0.5, 0.5, { outerFirst = asL }))).to.equal(true)
+			-- With the opening as an arm it is a T: no outer face, and no trim inside the opening.
+			local asT = OfficeShellUtils.outerSide({ run, arm, opening }, 0, 0, true)
+			expect(asT).to.equal(nil)
+			expect(crossesMouth(OfficeShellUtils.wall(run, 0.5, 0.5, { outerFirst = asT }))).to.equal(false)
+		end)
+
+		it("breaks a run's trim on both faces across a door opening on its own line (doorGaps)", function()
+			local run = { x1 = -10, z1 = 0, x2 = 20, z2 = 0 }
+			local gaps = OfficeShellUtils.doorGaps({ a = "a", b = "w", x = 3, z = 0, width = 6, kind = "open" }, "minZ")
+			expect(#gaps).to.equal(2)
+			for _, box in OfficeShellUtils.wall(run, 0.5, 0.5, { gaps = gaps }) do
+				if box.material ~= "plaster" then
+					local f = footprint(box)
+					expect(f.maxX <= 0 + 1e-6 or f.minX >= 6 - 1e-6).to.equal(true)
+				end
+			end
+		end)
+
+		it(
+			"still wraps a true L corner when an opening elsewhere on the arm's line does not start at the junction",
+			function()
+				local run = { x1 = 0, z1 = 0, x2 = 20, z2 = 0 }
+				local arm = { x1 = 0, z1 = -20, x2 = 0, z2 = 0 }
+				local far =
+					OfficeShellUtils.doorOpening({ a = "a", b = "w", x = 0, z = -10, width = 6, kind = "open" }, "maxX")
+				expect(OfficeShellUtils.outerSide({ run, arm, far }, 0, 0, true)).to.equal(1)
+			end
+		)
+
 		it("leaves a T-junction end unchanged, and names no outer face there", function()
 			local stem = { x1 = 0, z1 = 0, x2 = 20, z2 = 0 }
 			local through = { x1 = 0, z1 = -10, x2 = 0, z2 = 10 }

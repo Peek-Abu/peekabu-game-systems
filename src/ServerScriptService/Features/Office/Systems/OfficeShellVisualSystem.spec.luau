@@ -157,6 +157,45 @@ return function()
 			expect(innerMin).to.be.near(-0.3, 1e-3)
 		end)
 
+		it("never runs wall trim across an open doorway that starts at a junction (a T with a door arm)", function()
+			-- The z = 0 wall between A and B ends at x = 0. On the x = 0 line a wall runs down (B | W) and an open doorway
+			-- from A to W runs up from the junction (z 0..6), with no merged segment there.
+			model = Instance.new("Model")
+			local plan = {
+				startRoom = "a",
+				rooms = {
+					{ id = "a", name = "A", minX = 0, maxX = 20, minZ = 0, maxZ = 20, roomType = "pods" },
+					{ id = "b", name = "B", minX = 0, maxX = 20, minZ = -20, maxZ = 0, roomType = "pods" },
+					{ id = "w", name = "W", minX = -10, maxX = 0, minZ = -6, maxZ = 6, zone = "hallway" },
+				},
+				doors = { { a = "a", b = "w", x = 0, z = 3, width = 6, kind = "open" } },
+				markers = {},
+				truck = { minX = 1, maxX = 3, minZ = -3, maxZ = -1, clockX = 4, clockZ = -3 },
+			}
+			Shell.build(plan, ORIGIN, model, art, never)
+			local trims, along, across = 0, 0, 0
+			for _, part in model.Shell:GetChildren() do
+				if part.Name == "Wainscot" or part.Name == "Rail" or part.Name == "Skirt" then
+					trims += 1
+					local x = part.Position.X - ORIGIN.X
+					local z = part.Position.Z
+					local hx, hz = part.Size.X / 2, part.Size.Z / 2
+					local inOpening = z - hz < 5.95 and z + hz > 0.05
+					-- Along the opening's wall (the probe's box: the opening less a tenth, 1.9 deep at x = 0).
+					if part.Size.Z > part.Size.X and inOpening and x - hx < 0.95 and x + hx > -0.95 then
+						along += 1
+					end
+					-- Across its mouth: through the whole wall band (x -0.5 .. 0.5), from one room into the other.
+					if part.Size.X > part.Size.Z and inOpening and x - hx < -0.5 - 1e-3 and x + hx > 0.5 + 1e-3 then
+						across += 1
+					end
+				end
+			end
+			expect(trims > 0).to.equal(true)
+			expect(along).to.equal(0)
+			expect(across).to.equal(0)
+		end)
+
 		it("frames a glass pane and tags only its sheet SightThrough, collidable and queryable", function()
 			build(never)
 			local sheets = 0

@@ -161,17 +161,26 @@ local function facadesOf(layout: OfficeTypes.Layout): { OfficeTypes.Facade }
 	return facades
 end
 
--- The facades of `layout` that lie on `segment`'s wall line and overlap it: each breaks the trim on its face.
+-- The facades of `layout` that lie on `segment`'s wall line and overlap it: each breaks the trim on its face. So do
+-- its doorways' rough openings, on both faces (OfficeShellUtils.doorGaps).
 local function facadeGaps(layout: OfficeTypes.Layout, segment: OfficeTypes.Segment): { OfficeShellUtils.TrimGap }
 	local gaps: { OfficeShellUtils.TrimGap } = {}
 	local horizontal = segment.z1 == segment.z2
+	local fixed = if horizontal then segment.z1 else segment.x1
+	for _, door in layout.doors do
+		local room = OfficeLayoutUtils.room(layout, door.a)
+		local edge: OfficeTypes.Edge? = if room ~= nil then OfficeLayoutUtils.doorEdge(room, door) else nil
+		local line = if horizontal then door.z else door.x
+		if edge ~= nil and (edge == "minZ" or edge == "maxZ") == horizontal and math.abs(line - fixed) < EPSILON then
+			table.move(OfficeShellUtils.doorGaps(door, edge), 1, 2, #gaps + 1, gaps)
+		end
+	end
 	for _, facade in facadesOf(layout) do
 		local room = OfficeLayoutUtils.room(layout, facade.room)
 		local edge: OfficeTypes.Edge? = if room ~= nil then OfficeLayoutUtils.facadeEdge(room, facade) else nil
 		if edge ~= nil and (edge == "minZ" or edge == "maxZ") == horizontal then
 			local gap = OfficeShellUtils.facadeGap(facade, edge)
 			local line = if horizontal then facade.z else facade.x
-			local fixed = if horizontal then segment.z1 else segment.x1
 			if math.abs(line - fixed) < EPSILON then
 				table.insert(gaps, gap)
 			end
@@ -182,10 +191,18 @@ end
 
 local function buildWalls(layout: OfficeTypes.Layout, origin: CFrame, shell: Folder, hasVariant: HasVariant?)
 	local segments = OfficeLayoutUtils.mergedWallSegments(layout)
-	-- Everything a run's end can meet: the merged walls and the glass panes.
+	-- Everything a run's end can meet: the merged walls, the glass panes and the doorways' rough openings (an opening
+	-- that starts at a junction is an arm there: a T, never an L whose wrap would cross the doorway's mouth).
 	local meeting: { OfficeTypes.Segment } = table.clone(segments)
 	for _, pane in OfficeLayoutUtils.panes(layout) do
 		table.insert(meeting, pane)
+	end
+	for _, door in layout.doors do
+		local room = OfficeLayoutUtils.room(layout, door.a)
+		local edge: OfficeTypes.Edge? = if room ~= nil then OfficeLayoutUtils.doorEdge(room, door) else nil
+		if edge ~= nil then
+			table.insert(meeting, OfficeShellUtils.doorOpening(door, edge))
+		end
 	end
 	for _, segment in segments do
 		local horizontal = segment.z1 == segment.z2

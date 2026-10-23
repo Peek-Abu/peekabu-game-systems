@@ -161,7 +161,8 @@ end
 --[=[
 	Which face of a wall run ending at (x, z) is the OUTSIDE of an L corner: +1 (the +Z / +X face) or -1, nil when no
 	wall meets the end or walls meet it on both sides (a T-junction or a cross: both faces are inside). `walls` are
-	every wall piece (merged segments and glass panes); `horizontal` is the run's direction.
+	every wall piece (merged segments and glass panes) and every doorway's rough opening (`doorOpening`: an opening
+	that starts at the end is an arm, as a wall would be); `horizontal` is the run's direction.
 ]=]
 function OfficeShellUtils.outerSide(walls: { Segment }, x: number, z: number, horizontal: boolean): number?
 	local alongEnd = if horizontal then x else z
@@ -259,6 +260,29 @@ end
 function OfficeShellUtils.facadeGap(facade: OfficeTypes.Facade, edge: Edge): TrimGap
 	local _, lo, hi = facadeLine(facade, edge)
 	return { side = facadeSide(edge), from = lo, to = hi }
+end
+
+--[=[
+	A doorway's rough opening on `edge` of its room, as a wall-line segment (its width along the wall). Handed to
+	`outerSide` with the walls, an opening that starts at a junction counts as an arm there, so a T whose arm is a
+	doorway is never read as an L and no corner wrap crosses the doorway's mouth.
+]=]
+function OfficeShellUtils.doorOpening(door: Door, edge: Edge): Segment
+	if edge == "minZ" or edge == "maxZ" then
+		return { x1 = door.x - door.width / 2, z1 = door.z, x2 = door.x + door.width / 2, z2 = door.z }
+	end
+	return { x1 = door.x, z1 = door.z - door.width / 2, x2 = door.x, z2 = door.z + door.width / 2 }
+end
+
+--[=[
+	The stretches of trim a doorway on `edge` leaves out of a run on its own wall line: its rough opening, on both
+	faces. A run normally stops at a door's edge; this guarantees no trim ever lies inside an opening.
+]=]
+function OfficeShellUtils.doorGaps(door: Door, edge: Edge): { TrimGap }
+	local horizontal = edge == "minZ" or edge == "maxZ"
+	local centre = if horizontal then door.x else door.z
+	local lo, hi = centre - door.width / 2, centre + door.width / 2
+	return { { side = -1, from = lo, to = hi }, { side = 1, from = lo, to = hi } }
 end
 
 --[=[
