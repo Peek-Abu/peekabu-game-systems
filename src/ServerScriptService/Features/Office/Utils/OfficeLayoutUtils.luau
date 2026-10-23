@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	OfficeLayoutUtils: answers about a layout: lookups, each room's depth (doors from the start room, or its own
-	`depth`), walking distances from the start room, which wall a door sits on, and the wall pieces a room's edges break into around
+	`depth`), walking distances from the start room, which wall a door or facade sits on, which walls a footprint lies against and the openings on a wall, and the wall pieces a room's edges break into around
 	its doors (per room, or merged across the layout). Pure.
 
 	@class OfficeLayoutUtils
@@ -16,6 +16,8 @@ type Layout = OfficeTypes.Layout
 type Room = OfficeTypes.Room
 type Door = OfficeTypes.Door
 type Edge = OfficeTypes.Edge
+-- An axis-aligned rectangle: a room, or a footprint's bound.
+type Bounds = { minX: number, maxX: number, minZ: number, maxZ: number }
 
 -- What the size lookups need of a marker: a layout Marker or a kit's KitMarker.
 type Sized = { kind: OfficeTypes.MarkerKind, art: string? }
@@ -258,6 +260,67 @@ function OfficeLayoutUtils.doorEdge(room: Room, door: Door): Edge?
 		end
 	end
 	return nil
+end
+
+--[=[
+	The facade's wall of `room` (the wall its centre lies on), or nil when it is on none of them.
+]=]
+function OfficeLayoutUtils.facadeEdge(room: Room, facade: OfficeTypes.Facade): Edge?
+	if math.abs(facade.z - room.minZ) < 1e-4 then
+		return "minZ"
+	elseif math.abs(facade.z - room.maxZ) < 1e-4 then
+		return "maxZ"
+	elseif math.abs(facade.x - room.minX) < 1e-4 then
+		return "minX"
+	elseif math.abs(facade.x - room.maxX) < 1e-4 then
+		return "maxX"
+	end
+	return nil
+end
+
+--[=[
+	The walls of `room` that `box` (a footprint's bound, same frame) lies against: its back within half a wall plus a
+	stud of the wall line. In the order minZ, maxZ, minX, maxX.
+]=]
+function OfficeLayoutUtils.wallsAgainst(room: Bounds, box: Bounds): { Edge }
+	local reach = 0.5 + OfficeConstants.WALL_THICKNESS / 2
+	local edges: { Edge } = {}
+	if box.minZ - room.minZ <= reach then
+		table.insert(edges, "minZ")
+	end
+	if room.maxZ - box.maxZ <= reach then
+		table.insert(edges, "maxZ")
+	end
+	if box.minX - room.minX <= reach then
+		table.insert(edges, "minX")
+	end
+	if room.maxX - box.maxX <= reach then
+		table.insert(edges, "maxX")
+	end
+	return edges
+end
+
+--[=[
+	The openings on `edge` of `room`, each as its span along the wall ({ from, to }: x for minZ/maxZ, z for minX/maxX):
+	every door of the room on that wall and every facade of it.
+]=]
+function OfficeLayoutUtils.openingsOn(layout: Layout, room: Room, edge: Edge): { { number } }
+	local horizontal = edge == "minZ" or edge == "maxZ"
+	local spans: { { number } } = {}
+	for _, door in layout.doors do
+		if (door.a == room.id or door.b == room.id) and OfficeLayoutUtils.doorEdge(room, door) == edge then
+			local centre = if horizontal then door.x else door.z
+			table.insert(spans, { centre - door.width / 2, centre + door.width / 2 })
+		end
+	end
+	local facades: { OfficeTypes.Facade } = layout.facades or {}
+	for _, facade in facades do
+		if facade.room == room.id and OfficeLayoutUtils.facadeEdge(room, facade) == edge then
+			local centre = if horizontal then facade.x else facade.z
+			table.insert(spans, { centre - facade.width / 2, centre + facade.width / 2 })
+		end
+	end
+	return spans
 end
 
 local EDGES: { Edge } = { "minZ", "maxZ", "minX", "maxX" }

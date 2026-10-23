@@ -120,6 +120,23 @@ return function()
 	end)
 
 	describe("prop markers", function()
+		it("flags a wall prop hung over the door on the front wall, but not beside it", function()
+			local kit = fixture()
+			-- The front wall's inner face is at 0.5: a 0.27-deep frame, turned half way to face into the room.
+			table.insert(kit.markers, { kind = "prop", art = "artFrame", x = 15, z = 0.635, rotation = math.pi })
+			local ok, errors = OfficeKitRules.check(kit)
+			expect(ok).to.equal(false)
+			expect(hasError(errors, "hangs over the door")).to.equal(true)
+			-- 4 wide: 20..24 clears the door's 12..18; 17.5..21.5 still overlaps its edge.
+			kit.markers[#kit.markers].x = 22
+			local clear, clearErrors = OfficeKitRules.check(kit)
+			expect(clearErrors[1]).to.equal(nil)
+			expect(clear).to.equal(true)
+			kit.markers[#kit.markers].x = 19.5
+			local _, edgeErrors = OfficeKitRules.check(kit)
+			expect(hasError(edgeErrors, "hangs over the door")).to.equal(true)
+		end)
+
 		it("counts a floor prop as furniture: a sofa on a desk overlaps", function()
 			local kit = fixture()
 			table.insert(kit.markers, { kind = "prop", art = "sofa", x = 6, z = 8, rotation = 0 })
@@ -188,5 +205,16 @@ return function()
 		kit.markers[#kit.markers].x = 14
 		local _, errors = OfficeKitRules.check(kit)
 		expect(hasError(errors, "is not on a desk")).to.equal(true)
+	end)
+
+	it("flags a desk-top prop whose yaw differs from its desk's", function()
+		local kit = fixture()
+		table.insert(kit.markers, { kind = "prop", art = "deskPlant", x = 6, z = 8, rotation = math.pi / 2 })
+		local ok, errors = OfficeKitRules.check(kit)
+		expect(ok).to.equal(false)
+		expect(hasError(errors, "is not on a desk")).to.equal(true)
+		kit.markers[#kit.markers].rotation = nil
+		local fine = OfficeKitRules.check(kit)
+		expect(fine).to.equal(true)
 	end)
 end

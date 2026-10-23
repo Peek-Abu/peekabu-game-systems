@@ -4,7 +4,7 @@
 	rooms, overlapping rooms, doors that name missing rooms, are too narrow or are not on a wall both rooms
 	share, rooms the start room cannot reach, markers outside their room (or within MARKER_MARGIN of a
 	wall), surface furniture (counters, tables, cabinets) crowded by floor loot spots or overlapping desks,
-	lockers or piles, floor `prop` markers (art-only dressing sized by OfficeConstants.PROP_SIZES) treated like surface
+	lockers or piles, wall props (PROP_WALL_HEIGHT) hung over a door or facade of their wall, floor `prop` markers (art-only dressing sized by OfficeConstants.PROP_SIZES) treated like surface
 	furniture for those tests (furniture sizes come from OfficeLayoutUtils.markerSize, art-sized where the marker's `art`
 	has an ART_SIZES entry), and a truck outside the start room. `checkCapacity` says whether the spawn roll has the markers
 	it needs. `checkRoute` (M2) says whether Harlow's patrol route and rest point are usable. `checkHideSpots` and `checkWalk` hold generated maps to the hiding-place count and the walking distance from the bay. OfficeServiceServer refuses to build a layout that fails them. Pure.
@@ -24,6 +24,7 @@ local TruckVisual = require(ServerScriptService.Features.Depot.Data.DepotTruckVi
 
 type Layout = OfficeTypes.Layout
 type Room = OfficeTypes.Room
+type Edge = OfficeTypes.Edge
 
 local PILE_HALF = 0
 for _, style in VacuumConstants.PILE_KINDS do
@@ -96,6 +97,33 @@ local function surfaceProblems(layout: Layout, marker: OfficeTypes.Marker): { st
 		end
 	end
 	return problems
+end
+
+-- Whether `marker` is a prop hung on a wall.
+local function isWallProp(marker: OfficeTypes.Marker): boolean
+	return marker.kind == "prop" and marker.art ~= nil and OfficeConstants.PROP_WALL_HEIGHT[marker.art] ~= nil
+end
+
+-- Wall-mounted `marker` hung over a door or facade of `room` on the wall it lies against (spans overlapping along it).
+local function coversOpening(layout: Layout, room: Room, marker: OfficeTypes.Marker): boolean
+	local half = rotatedHalf(marker)
+	if half == nil then
+		return false
+	end
+	local box =
+		{ minX = marker.x - half.X, maxX = marker.x + half.X, minZ = marker.z - half.Y, maxZ = marker.z + half.Y }
+	for _, edge: Edge in OfficeLayoutUtils.wallsAgainst(room, box) do
+		local openings = OfficeLayoutUtils.openingsOn(layout, room, edge)
+		local horizontal = edge == "minZ" or edge == "maxZ"
+		local from = if horizontal then box.minX else box.minZ
+		local to = if horizontal then box.maxX else box.maxZ
+		for _, span in openings do
+			if from < span[2] - 0.001 and span[1] < to - 0.001 then
+				return true
+			end
+		end
+	end
+	return false
 end
 
 local OfficeLayoutRules = {}
@@ -179,6 +207,8 @@ function OfficeLayoutRules.validate(layout: Layout): (boolean, { string })
 			table.insert(errors, `marker "{marker.id}" names a missing room`)
 		elseif not markerInside(room, marker) then
 			table.insert(errors, `marker "{marker.id}" is not inside room "{room.id}"`)
+		elseif isWallProp(marker) and coversOpening(layout, room, marker) then
+			table.insert(errors, `wall prop "{marker.id}" hangs over a door or facade of room "{room.id}"`)
 		end
 	end
 

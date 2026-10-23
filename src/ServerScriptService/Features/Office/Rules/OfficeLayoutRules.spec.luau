@@ -98,6 +98,48 @@ return function()
 			expect(hasError(errors, 'marker "b.pile.1" names a missing room')).to.equal(true)
 		end)
 
+		it("reports a wall prop hung over a door on its wall, and accepts one beside it", function()
+			local layout = fixture()
+			table.insert(layout.markers, {
+				id = "b.prop.1",
+				room = "b",
+				kind = "prop",
+				art = "artFrame",
+				x = 20.635,
+				z = 10,
+				rotation = math.pi / 2,
+			})
+			local ok, errors = OfficeLayoutRules.validate(layout)
+			expect(ok).to.equal(false)
+			expect(hasError(errors, 'wall prop "b.prop.1" hangs over a door or facade of room "b"')).to.equal(true)
+			-- 4 wide along the wall: z 14..18 clears the door's 7..13.
+			layout.markers[#layout.markers].z = 16
+			local clear, clearErrors = OfficeLayoutRules.validate(layout)
+			expect(table.concat(clearErrors, "; ")).to.equal("")
+			expect(clear).to.equal(true)
+		end)
+
+		it("reports a wall prop hung over a facade on its wall, and accepts one beside it", function()
+			local layout = fixture()
+			layout.facades = { { room = "a", x = 0, z = 10, width = 8, kind = "entrance" } }
+			table.insert(layout.markers, {
+				id = "a.prop.1",
+				room = "a",
+				kind = "prop",
+				art = "artFrame",
+				x = 0.635,
+				z = 10,
+				rotation = -math.pi / 2,
+			})
+			local _, errors = OfficeLayoutRules.validate(layout)
+			expect(hasError(errors, 'wall prop "a.prop.1" hangs over a door or facade of room "a"')).to.equal(true)
+			-- z 15..19 clears the facade's 6..14.
+			layout.markers[#layout.markers].z = 17
+			local ok, clearErrors = OfficeLayoutRules.validate(layout)
+			expect(table.concat(clearErrors, "; ")).to.equal("")
+			expect(ok).to.equal(true)
+		end)
+
 		it("reports surface furniture crowded by a floor loot spot", function()
 			local layout = fixture()
 			table.insert(layout.markers, { id = "b.table.1", room = "b", kind = "table", x = 30, z = 14 })

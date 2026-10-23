@@ -9,7 +9,8 @@
 	OfficeConstants.ART_SIZES entry (a conference table, a server rack) takes that art's footprint. `prop` markers
 	(art-only dressing, sized by OfficeConstants.PROP_SIZES[art]) count as furniture; a wall-mounted prop
 	(PROP_WALL_HEIGHT) hangs above the floor, so it skips the overlap, approach and clearance tests but must lie against
-	a wall; a desk-top prop (PROP_DESK_TOP) must sit at a desk's centre and takes no floor space; a prop without a
+	a wall, and not over the door on the front wall; a desk-top prop (PROP_DESK_TOP) must sit at a desk's centre and
+	yaw and takes no floor space; a prop without a
 	sized `art` is an error. Works in the kit's local frame (x along the front wall, z into the room). Pure.
 
 	@class OfficeKitRules
@@ -118,6 +119,8 @@ function OfficeKitRules.check(kit: Kit): (boolean, { string })
 		table.insert(errors, `{label}: the glass span is not on the front wall`)
 	end
 
+	local doorFrom, doorTo = door.offset - door.width / 2, door.offset + door.width / 2
+
 	-- Names ("desk 2") in authored order, counts per kind, and the furniture footprints.
 	local names: { string } = {}
 	local counts: { [string]: number } = {}
@@ -136,10 +139,15 @@ function OfficeKitRules.check(kit: Kit): (boolean, { string })
 		end
 		local fits: boolean
 		if deskTop(marker) then
-			-- It stands on a desk: that desk's centre.
+			-- It stands on a desk: that desk's centre and yaw.
 			fits = false
 			for _, other in kit.markers do
-				if other.kind == "desk" and other.x == marker.x and other.z == marker.z then
+				if
+					other.kind == "desk"
+					and other.x == marker.x
+					and other.z == marker.z
+					and (other.rotation or 0) == (marker.rotation or 0)
+				then
 					fits = true
 				end
 			end
@@ -155,17 +163,17 @@ function OfficeKitRules.check(kit: Kit): (boolean, { string })
 		if not fits then
 			table.insert(errors, `{label}: {names[index]} is outside the walls`)
 		elseif box ~= nil and wallMounted(marker) then
-			-- Its back lies within half a wall plus a stud of a wall line.
-			local reach = 0.5 + OfficeConstants.WALL_THICKNESS / 2
-			if
-				not (
-					box.minX <= reach
-					or kit.width - box.maxX <= reach
-					or box.minZ <= reach
-					or kit.depth - box.maxZ <= reach
-				)
-			then
+			-- Its back lies within half a wall plus a stud of a wall line, and not over the door on the front wall.
+			local against =
+				OfficeLayoutUtils.wallsAgainst({ minX = 0, maxX = kit.width, minZ = 0, maxZ = kit.depth }, box)
+			if #against == 0 then
 				table.insert(errors, `{label}: {names[index]} is not against a wall`)
+			elseif
+				table.find(against, "minZ") ~= nil
+				and box.minX < doorTo - EPSILON
+				and doorFrom < box.maxX - EPSILON
+			then
+				table.insert(errors, `{label}: {names[index]} hangs over the door`)
 			end
 		end
 	end

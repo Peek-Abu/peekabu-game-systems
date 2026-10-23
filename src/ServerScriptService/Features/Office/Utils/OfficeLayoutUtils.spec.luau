@@ -226,6 +226,53 @@ return function()
 		end)
 	end)
 
+	describe("facadeEdge", function()
+		it("finds the wall a facade is centred on, and nil off the walls", function()
+			local function facade(x, z)
+				return { room = "r", x = x, z = z, width = 6, kind = "entrance" }
+			end
+			expect(OfficeLayoutUtils.facadeEdge(ROOM, facade(10, 0))).to.equal("minZ")
+			expect(OfficeLayoutUtils.facadeEdge(ROOM, facade(10, 10))).to.equal("maxZ")
+			expect(OfficeLayoutUtils.facadeEdge(ROOM, facade(0, 5))).to.equal("minX")
+			expect(OfficeLayoutUtils.facadeEdge(ROOM, facade(20, 5))).to.equal("maxX")
+			expect(OfficeLayoutUtils.facadeEdge(ROOM, facade(10, 5))).to.equal(nil)
+		end)
+	end)
+
+	describe("wallsAgainst", function()
+		it("lists the walls a footprint's back lies within a stud and a half of", function()
+			local box = { minX = 0.5, maxX = 4.5, minZ = 0.5, maxZ = 0.77 }
+			expect(table.concat(OfficeLayoutUtils.wallsAgainst(ROOM, box), ",")).to.equal("minZ,minX")
+			local middle = { minX = 8, maxX = 12, minZ = 4, maxZ = 5 }
+			expect(#OfficeLayoutUtils.wallsAgainst(ROOM, middle)).to.equal(0)
+			local back = { minX = 8, maxX = 12, minZ = 9.23, maxZ = 9.5 }
+			expect(table.concat(OfficeLayoutUtils.wallsAgainst(ROOM, back), ",")).to.equal("maxZ")
+		end)
+	end)
+
+	describe("openingsOn", function()
+		it("lists the spans of a wall's doors and facades, and no other wall's", function()
+			local layout = {
+				doors = {
+					{ a = "r", b = "s", x = 10, z = 0, width = 4 },
+					{ a = "r", b = "s", x = 20, z = 5, width = 4 },
+					{ a = "x", b = "y", x = 3, z = 0, width = 2 },
+				},
+				facades = { { room = "r", x = 0, z = 5, width = 6, kind = "entrance" } },
+			}
+			local front = OfficeLayoutUtils.openingsOn(layout, ROOM, "minZ")
+			expect(#front).to.equal(1)
+			expect(front[1][1]).to.equal(8)
+			expect(front[1][2]).to.equal(12)
+			local left = OfficeLayoutUtils.openingsOn(layout, ROOM, "minX")
+			expect(#left).to.equal(1)
+			expect(left[1][1]).to.equal(2)
+			expect(left[1][2]).to.equal(8)
+			expect(#OfficeLayoutUtils.openingsOn(layout, ROOM, "maxX")).to.equal(1)
+			expect(#OfficeLayoutUtils.openingsOn(layout, ROOM, "maxZ")).to.equal(0)
+		end)
+	end)
+
 	describe("wallSegments", function()
 		it("builds four walls for a room without doors", function()
 			expect(#OfficeLayoutUtils.wallSegments(ROOM, {})).to.equal(4)
