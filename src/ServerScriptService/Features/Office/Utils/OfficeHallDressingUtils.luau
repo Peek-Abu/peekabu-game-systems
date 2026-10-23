@@ -30,9 +30,12 @@ type Rect = { minX: number, maxX: number, minZ: number, maxZ: number }
 -- A prop standing against `edge`, centred at `along` and `half` wide along the wall.
 type Stand = { edge: Edge, along: number, half: number, rect: Rect }
 
-local MAX_WALL_GAP = 0.1
--- The deepest dressing is the planter (3.92) plus the gap: a 10-wide hall keeps about 5 studs clear.
-local MAX_REACH = 4.1
+local MAX_WALL_GAP = 0.05
+-- Mr. Harlow's lanes come first: a hall narrower than WIDE_HALL keeps NARROW_CLEAR studs clear beside a prop (only a
+-- water cooler fits), a WIDE_HALL one keeps WIDE_CLEAR (a planter or sofa fits). Junctions and the atrium are wider.
+local WIDE_HALL = 14
+local NARROW_CLEAR = 7
+local WIDE_CLEAR = 10
 local OPENING_CLEAR = 3
 local PATROL_CLEAR = 2
 local FURNITURE_CLEAR = 1
@@ -58,7 +61,7 @@ local HALF_WALL = OfficeConstants.WALL_THICKNESS / 2
 
 local OfficeHallDressingUtils = {
 	MAX_WALL_GAP = MAX_WALL_GAP,
-	MAX_REACH = MAX_REACH,
+	WIDE_HALL = WIDE_HALL,
 	OPENING_CLEAR = OPENING_CLEAR,
 	PATROL_CLEAR = PATROL_CLEAR,
 	COLLIDABLE_SPACING = COLLIDABLE_SPACING,
@@ -161,6 +164,9 @@ type State = {
 	-- Every wall prop and collidable footprint along each wall, as { from, to }.
 	hung: { [Edge]: { { number } } },
 	collidable: boolean,
+	-- Hall width (short side) and the clear width a prop must leave across it; nil in a junction.
+	width: number?,
+	clear: number,
 	markers: { Marker },
 	next: number,
 }
@@ -213,6 +219,10 @@ local function canStand(state: State, edge: Edge, art: string, along: number): b
 		return false
 	end
 	local rect = footprint(state.room, edge, art, along, MAX_WALL_GAP)
+	local width = state.width
+	if width ~= nil and width - sizeOf(art).Z - MAX_WALL_GAP < state.clear then
+		return false
+	end
 	for _, opening in state.rects do
 		if closer(rect, opening, OPENING_CLEAR) then
 			return false
@@ -280,6 +290,9 @@ local function dressWall(state: State, edge: Edge)
 			end
 		elseif rng:NextNumber() >= SLOT_SKIP then
 			local art = if rng:NextInteger(0, 1) == 0 then "planter" else "sofa"
+			if (state.width or WIDE_HALL) < WIDE_HALL then
+				art = "waterCooler"
+			end
 			for _, shift in SLOT_SHIFTS do
 				if canStand(state, edge, art, at + shift) then
 					standAt(state, edge, art, at + shift)
@@ -362,6 +375,8 @@ function OfficeHallDressingUtils.dress(room: Room, layout: Layout, rng: Random, 
 		stands = {},
 		hung = {},
 		collidable = not entrance(room, layout),
+		width = if junction == true then nil else math.min(room.maxX - room.minX, room.maxZ - room.minZ),
+		clear = NARROW_CLEAR,
 		markers = {},
 		next = 1,
 	}
@@ -384,6 +399,10 @@ function OfficeHallDressingUtils.dress(room: Room, layout: Layout, rng: Random, 
 		end
 	end
 
+	local width = state.width
+	if width ~= nil and width >= WIDE_HALL then
+		state.clear = WIDE_CLEAR
+	end
 	sconces(state)
 	if junction == true then
 		corners(state)

@@ -104,20 +104,46 @@ end
 
 return function()
 	describe("OfficeHallDressingUtils", function()
-		it("keeps the lane clear: collidables hug their wall", function()
-			local collidables = 0
+		it("keeps the lane clear: 7 in a 10-wide hall (coolers only), 10 in a 14-wide hall", function()
+			local seen = { narrow = 0, wide = 0 }
 			for seed = 1, SEEDS do
 				for _, entry in hallProps(layoutFor(seed)) do
-					local marker = entry.marker
-					if COLLIDABLE[marker.art] then
-						collidables += 1
-						local _, gap, reach = wallAndReach(marker, entry.room)
+					local marker, room = entry.marker, entry.room
+					local width = math.min(room.maxX - room.minX, room.maxZ - room.minZ)
+					if COLLIDABLE[marker.art] and width <= Dressing.WIDE_HALL then
+						local _, gap, reach = wallAndReach(marker, room)
 						expect(gap <= Dressing.MAX_WALL_GAP + 0.001).to.equal(true)
-						expect(reach <= Dressing.MAX_REACH + 0.001).to.equal(true)
+						if width < Dressing.WIDE_HALL then
+							seen.narrow += 1
+							expect(marker.art).to.equal("waterCooler")
+							expect(reach <= 3).to.equal(true)
+							expect(width - reach >= 7).to.equal(true)
+						else
+							seen.wide += 1
+							expect(width - reach >= 10).to.equal(true)
+						end
 					end
 				end
 			end
-			expect(collidables > 0).to.equal(true)
+			expect(seen.narrow + seen.wide > 0).to.equal(true)
+		end)
+
+		it("turns every sconce to face into the hall", function()
+			local checked = 0
+			for seed = 1, SEEDS do
+				for _, entry in hallProps(layoutFor(seed)) do
+					local marker, room = entry.marker, entry.room
+					if marker.art == "sconce" then
+						checked += 1
+						-- The front is local -Z: (-sin, -cos) in x, z for a yaw.
+						local lookX, lookZ = -math.sin(marker.rotation), -math.cos(marker.rotation)
+						local towardX = (room.minX + room.maxX) / 2 - marker.x
+						local towardZ = (room.minZ + room.maxZ) / 2 - marker.z
+						expect(lookX * towardX + lookZ * towardZ > 0).to.equal(true)
+					end
+				end
+			end
+			expect(checked > 0).to.equal(true)
 		end)
 
 		it("keeps 3 studs from every door casing and junction mouth", function()
