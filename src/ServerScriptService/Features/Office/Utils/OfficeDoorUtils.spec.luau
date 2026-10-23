@@ -112,6 +112,32 @@ return function()
 		end)
 	end)
 
+	describe("facadeLeaves", function()
+		it("fits an entrance's two leaves inside the casing, side by side", function()
+			local casing = OfficeConstants.SHELL.casing
+			local leaves = OfficeDoorUtils.facadeLeaves({ room = "kit", x = 10, z = 0, width = 6, kind = "entrance" })
+			expect(#leaves).to.equal(2)
+			local lo, hi = math.huge, -math.huge
+			for _, leaf in leaves do
+				expect(close(leaf.size.Y, OfficeConstants.DOOR_HEIGHT - casing)).to.equal(true)
+				lo = math.min(lo, leaf.offset.X - leaf.size.X / 2)
+				hi = math.max(hi, leaf.offset.X + leaf.size.X / 2)
+				-- Stands on the floor: the frame is DOOR_HEIGHT / 2 up.
+				expect(close(OfficeConstants.DOOR_HEIGHT / 2 + leaf.offset.Y - leaf.size.Y / 2, 0)).to.equal(true)
+			end
+			expect(close(lo, -(3 - casing))).to.equal(true)
+			expect(close(hi, 3 - casing)).to.equal(true)
+			expect(close(leaves[1].offset.X + leaves[1].size.X / 2, 0)).to.equal(true)
+		end)
+
+		it("gives a stairwell one solid leaf inside the casing", function()
+			local leaves = OfficeDoorUtils.facadeLeaves({ room = "kit", x = 10, z = 0, width = 6, kind = "stairwell" })
+			expect(#leaves).to.equal(1)
+			expect(close(leaves[1].size.X, 6 - 2 * OfficeConstants.SHELL.casing)).to.equal(true)
+			expect(leaves[1].side).to.equal(0)
+		end)
+	end)
+
 	describe("near", function()
 		it("returns only closed doors within the radius on the ground plane", function()
 			local doors = {

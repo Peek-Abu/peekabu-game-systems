@@ -112,6 +112,120 @@ return function()
 			end
 		end)
 
+		it(
+			"closes outer corners: the outer face reaches the slab end plus its depth, the inner face is unchanged",
+			function()
+				local walls = {
+					{ x1 = 0, z1 = 0, x2 = 20, z2 = 0 },
+					{ x1 = 0, z1 = 0, x2 = 0, z2 = 20 },
+				}
+				local outerX = OfficeShellUtils.outerSide(walls, 0, 0, true)
+				local outerZ = OfficeShellUtils.outerSide(walls, 0, 0, false)
+				expect(outerX).to.equal(-1)
+				expect(outerZ).to.equal(-1)
+				local alongX = OfficeShellUtils.wall(walls[1], 0.5, 0.5, { outerFirst = outerX })
+				local alongZ = OfficeShellUtils.wall(walls[2], 0.5, 0.5, { outerFirst = outerZ })
+				for _, spec in { { "oak", 0.3 }, { "rail", 0.5 }, { "skirt", 0.4 } } do
+					local material, proud = spec[1], spec[2]
+					local a, b, innerA, innerB
+					for _, box in named(alongX, material) do
+						local f = footprint(box)
+						if f.minZ < 0 then
+							a = f
+						else
+							innerA = f
+						end
+					end
+					for _, box in named(alongZ, material) do
+						local f = footprint(box)
+						if f.minX < 0 then
+							b = f
+						else
+							innerB = f
+						end
+					end
+					-- The outer runs overlap in both axes: no gap at the corner.
+					expect(a.minX < b.maxX and b.minX < a.maxX).to.equal(true)
+					expect(a.minZ < b.maxZ and b.minZ < a.maxZ).to.equal(true)
+					-- They reach the slab end (-0.5) plus their depth and no further.
+					expect(a.minX).to.be.near(-0.5 - proud, 1e-6)
+					expect(b.minZ).to.be.near(-0.5 - proud, 1e-6)
+					-- The inner face keeps today's reach.
+					expect(innerA.minX).to.be.near(-proud, 1e-6)
+					expect(innerB.minZ).to.be.near(-proud, 1e-6)
+				end
+			end
+		)
+
+		it("leaves a T-junction end unchanged, and names no outer face there", function()
+			local stem = { x1 = 0, z1 = 0, x2 = 20, z2 = 0 }
+			local through = { x1 = 0, z1 = -10, x2 = 0, z2 = 10 }
+			expect(OfficeShellUtils.outerSide({ stem, through }, 0, 0, true)).to.equal(nil)
+			expect(OfficeShellUtils.outerSide({ stem }, 0, 0, true)).to.equal(nil)
+			local plain = OfficeShellUtils.wall(stem, 0.5, 0.5)
+			local same = OfficeShellUtils.wall(stem, 0.5, 0.5, { gaps = {} })
+			expect(#same).to.equal(#plain)
+			for index, box in plain do
+				expect(footprint(same[index]).minX).to.be.near(footprint(box).minX, 1e-6)
+				expect(footprint(same[index]).maxX).to.be.near(footprint(box).maxX, 1e-6)
+			end
+		end)
+
+		it("breaks the trim at a facade on its face only, and the plaster stays whole", function()
+			local gap = OfficeShellUtils.facadeGap({ room = "a", x = 10, z = 0, width = 6, kind = "entrance" }, "minZ")
+			expect(gap.side).to.equal(1)
+			expect(gap.from).to.be.near(7, 1e-6)
+			expect(gap.to).to.be.near(13, 1e-6)
+			local boxes = OfficeShellUtils.wall({ x1 = 0, z1 = 0, x2 = 20, z2 = 0 }, 0.5, 0.5, { gaps = { gap } })
+			expect(#named(boxes, "plaster")).to.equal(2)
+			for _, slab in named(boxes, "plaster") do
+				expect(slab.size.X).to.be.near(21, 1e-6)
+			end
+			for _, material in { "oak", "rail", "skirt" } do
+				local onFace, other = 0, 0
+				for _, box in named(boxes, material) do
+					local f = footprint(box)
+					if f.minZ > 0 then
+						onFace += 1
+						expect(f.maxX <= 7 + 1e-6 or f.minX >= 13 - 1e-6).to.equal(true)
+					else
+						other += 1
+						expect(f.minX < 7 and f.maxX > 13).to.equal(true)
+					end
+				end
+				expect(onFace).to.equal(2)
+				expect(other).to.equal(1)
+			end
+		end)
+
+		it("gives a facade an oak casing of two jambs and a head on its face", function()
+			local facade = { room = "a", x = 10, z = 0, width = 6, kind = "entrance" }
+			local boxes = OfficeShellUtils.facadeCasing(facade, "minZ")
+			expect(#boxes).to.equal(3)
+			local jambs, heads = 0, 0
+			for _, box in boxes do
+				expect(box.material).to.equal("oak")
+				local f = footprint(box)
+				expect(f.minZ).to.be.near(0, 1e-6)
+				expect(f.maxZ).to.be.near(OfficeConstants.WALL_THICKNESS / 2 + S.casing, 1e-6)
+				if box.name == "Jamb" then
+					jambs += 1
+					expect(box.size.X).to.be.near(S.casing, 1e-6)
+					expect(box.size.Y).to.be.near(OfficeConstants.DOOR_HEIGHT, 1e-6)
+				elseif box.name == "Head" then
+					heads += 1
+					expect(box.size.X).to.be.near(6, 1e-6)
+					expect(box.cframe.Position.Y + box.size.Y / 2).to.be.near(OfficeConstants.DOOR_HEIGHT, 1e-6)
+				end
+			end
+			expect(jambs).to.equal(2)
+			expect(heads).to.equal(1)
+			-- On a max edge the casing is on the -Z face.
+			local back =
+				OfficeShellUtils.facadeCasing({ room = "a", x = 10, z = 20, width = 6, kind = "stairwell" }, "maxZ")
+			expect(footprint(back[1]).maxZ).to.be.near(20, 1e-6)
+		end)
+
 		it("casing", function()
 			local door = { a = "a", b = "b", x = 10, z = 0, width = 6.8, kind = "solid" }
 			local boxes = OfficeShellUtils.doorCasing(door, "minZ")

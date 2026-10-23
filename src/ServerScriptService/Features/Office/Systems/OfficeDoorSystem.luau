@@ -267,19 +267,16 @@ function OfficeDoorSystem.build(
 		local frame = if room ~= nil then OfficeDoorUtils.facadeFrame(facade, room, origin) else nil
 		if frame ~= nil then
 			local entrance = facade.kind == "entrance"
-			local count = if entrance then 2 else 1
-			local width = facade.width / count
-			for leafIndex = 1, count do
-				local side = if count == 1 then 0 elseif leafIndex == 1 then -1 else 1
+			for leafIndex, spec in OfficeDoorUtils.facadeLeaves(facade) do
 				local leaf = leafPart(
-					if count == 1 then `Facade{index}` else `Facade{index}_{leafIndex}`,
-					Vector3.new(width, height, OfficeConstants.DOOR_LEAF_THICKNESS),
+					if entrance then `Facade{index}_{leafIndex}` else `Facade{index}`,
+					spec.size,
 					entrance,
 					folder
 				)
 				leaf.CFrame = frame
-					* CFrame.new(side * width / 2, 0, 0)
-					* CFrame.Angles(0, if side < 0 then math.pi else 0, 0)
+					* CFrame.new(spec.offset)
+					* CFrame.Angles(0, if spec.side < 0 then math.pi else 0, 0)
 				dress(art, leaf, entrance)
 				leaf:SetAttribute("OfficeFacade", facade.kind)
 			end

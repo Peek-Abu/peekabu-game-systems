@@ -25,6 +25,7 @@ type Line = { horizontal: boolean, line: number }
 
 local WIDE_ARCHWAY = 8
 local EPSILON = 1e-6
+local MEET = 1e-4
 
 local OfficeShellUtils = {}
 
@@ -76,32 +77,104 @@ local function between(a: number, b: number): { number }
 	return { math.min(a, b), math.max(a, b) }
 end
 
+-- A stretch of one face's trim to leave out: `side` is the face (+1 toward +Z / +X of the wall line, -1 the other),
+-- `from` / `to` the along-range in layout coordinates.
+export type TrimGap = { side: number, from: number, to: number }
+
+-- Optional extras for `wall`. `outerFirst` / `outerLast`: the face (+1 / -1) that is the OUTSIDE of an L corner at that
+-- end (nil at a door, a pane, a T-junction or a free end). `gaps`: stretches of trim to leave out (facades).
+export type WallTrim = { outerFirst: number?, outerLast: number?, gaps: { TrimGap }? }
+
+-- The along-ranges of `range` that are not covered by any of `gaps` on `side`.
+local function cutGaps(range: { number }, gaps: { TrimGap }?, side: number): { { number } }
+	local pieces: { { number } } = { range }
+	local list: { TrimGap } = gaps or {}
+	for _, gap in list do
+		if gap.side == side then
+			local remaining: { { number } } = {}
+			for _, piece in pieces do
+				if gap.to <= piece[1] + EPSILON or gap.from >= piece[2] - EPSILON then
+					table.insert(remaining, piece)
+				else
+					if gap.from - piece[1] > EPSILON then
+						table.insert(remaining, { piece[1], gap.from })
+					end
+					if piece[2] - gap.to > EPSILON then
+						table.insert(remaining, { gap.to, piece[2] })
+					end
+				end
+			end
+			pieces = remaining
+		end
+	end
+	return pieces
+end
+
 --[=[
 	A wall run: two plaster slabs plus, on both faces, wainscot, rail and skirt. `first` / `last` are how far the run
 	extends past each end (half the wall thickness at a corner, 0 at a door or pane). Trim at a corner end reaches
-	past it by its own depth so two runs meeting at an inside corner close; at a door end it stops flush.
+	past it by its own depth so two runs meeting at an inside corner close; at a door end it stops flush. `trim` (see
+	WallTrim) lets the OUTER face of an L corner reach the slab end plus its depth so two outer runs overlap and close
+	the corner, and breaks a face's trim at a facade.
 ]=]
-function OfficeShellUtils.wall(segment: Segment, first: number, last: number): { ShellBox }
+function OfficeShellUtils.wall(segment: Segment, first: number, last: number, extra: WallTrim?): { ShellBox }
 	local shell = OfficeConstants.SHELL
 	local where, from, to = lineOf(segment)
 	local boxes: { ShellBox } = {}
 	local slabRange = { from - first, to + last }
 	local slabY = { -shell.slabOverhang, OfficeConstants.WALL_HEIGHT + shell.slabOverhang }
+	local outerFirst = if extra ~= nil then extra.outerFirst else nil
+	local outerLast = if extra ~= nil then extra.outerLast else nil
+	local gaps = if extra ~= nil then extra.gaps else nil
 	for _, side in { -1, 1 } do
 		table.insert(boxes, box("Plaster", "plaster", true, where, slabRange, slabY, between(0, side * shell.slab)))
 		local face = side * shell.slab
 		local function trim(name: string, material: ShellMaterial, proud: number, y0: number, y1: number)
-			local reach = { from - (if first > 0 then proud else 0), to + (if last > 0 then proud else 0) }
-			table.insert(
-				boxes,
-				box(name, material, false, where, reach, { y0, y1 }, between(face, face + side * proud))
-			)
+			local lo = from - (if first > 0 then (if outerFirst == side then first else 0) + proud else 0)
+			local hi = to + (if last > 0 then (if outerLast == side then last else 0) + proud else 0)
+			for _, piece in cutGaps({ lo, hi }, gaps, side) do
+				table.insert(
+					boxes,
+					box(name, material, false, where, piece, { y0, y1 }, between(face, face + side * proud))
+				)
+			end
 		end
 		trim("Wainscot", "oak", shell.wainscotProud, 0, shell.wainscotHeight)
 		trim("Rail", "rail", shell.railDepth, shell.wainscotHeight, shell.wainscotHeight + shell.railHeight)
 		trim("Skirt", "skirt", shell.skirtProud, 0, shell.skirtHeight)
 	end
 	return boxes
+end
+
+--[=[
+	Which face of a wall run ending at (x, z) is the OUTSIDE of an L corner: +1 (the +Z / +X face) or -1, nil when no
+	wall meets the end or walls meet it on both sides (a T-junction or a cross: both faces are inside). `walls` are
+	every wall piece (merged segments and glass panes); `horizontal` is the run's direction.
+]=]
+function OfficeShellUtils.outerSide(walls: { Segment }, x: number, z: number, horizontal: boolean): number?
+	local alongEnd = if horizontal then x else z
+	local across = if horizontal then z else x
+	local low, high = false, false
+	for _, other in walls do
+		local otherHorizontal = other.z1 == other.z2
+		if otherHorizontal ~= horizontal then
+			local fixed = if otherHorizontal then other.z1 else other.x1
+			local from = if otherHorizontal then other.x1 else other.z1
+			local to = if otherHorizontal then other.x2 else other.z2
+			local lo, hi = math.min(from, to), math.max(from, to)
+			-- A perpendicular wall whose centre line passes through this end and reaches the run's own line.
+			if math.abs(fixed - alongEnd) < MEET and lo <= across + MEET and hi >= across - MEET then
+				low = low or lo < across - MEET
+				high = high or hi > across + MEET
+			end
+		end
+	end
+	if high and not low then
+		return -1
+	elseif low and not high then
+		return 1
+	end
+	return nil
 end
 
 --[=[
@@ -134,6 +207,46 @@ function OfficeShellUtils.doorCasing(door: Door, edge: Edge): { ShellBox }
 	table.insert(boxes, box("Jamb", "oak", true, where, { hi - shell.casing, hi }, { 0, top }, across))
 	table.insert(boxes, box("Head", "oak", true, where, { lo, hi }, { top - shell.casing, top }, across))
 	return boxes
+end
+
+-- The face (+1 toward +Z / +X, -1 the other) a facade on `edge` of its room stands on: the room side, so +1 on a min
+-- edge and -1 on a max edge (OfficeDoorUtils.facadeFrame puts its leaf there).
+local function facadeSide(edge: Edge): number
+	return if edge == "minZ" or edge == "minX" then 1 else -1
+end
+
+local function facadeLine(facade: OfficeTypes.Facade, edge: Edge): (Line, number, number)
+	local horizontal = edge == "minZ" or edge == "maxZ"
+	local centre = if horizontal then facade.x else facade.z
+	return { horizontal = horizontal, line = if horizontal then facade.z else facade.x },
+		centre - facade.width / 2,
+		centre + facade.width / 2
+end
+
+--[=[
+	The oak casing of a facade on `edge` of its room: two jambs and a head around the facade's width and DOOR_HEIGHT,
+	like a real door's but only on the face the facade is on (the other face is the outside). Trim only, so nothing
+	collides.
+]=]
+function OfficeShellUtils.facadeCasing(facade: OfficeTypes.Facade, edge: Edge): { ShellBox }
+	local shell = OfficeConstants.SHELL
+	local where, lo, hi = facadeLine(facade, edge)
+	local side = facadeSide(edge)
+	local across = between(0, side * (OfficeConstants.WALL_THICKNESS / 2 + shell.casing))
+	local top = OfficeConstants.DOOR_HEIGHT
+	return {
+		box("Jamb", "oak", false, where, { lo, lo + shell.casing }, { 0, top }, across),
+		box("Jamb", "oak", false, where, { hi - shell.casing, hi }, { 0, top }, across),
+		box("Head", "oak", false, where, { lo, hi }, { top - shell.casing, top }, across),
+	}
+end
+
+--[=[
+	The stretch of wall trim a facade on `edge` interrupts: its width, on the face it stands on.
+]=]
+function OfficeShellUtils.facadeGap(facade: OfficeTypes.Facade, edge: Edge): TrimGap
+	local _, lo, hi = facadeLine(facade, edge)
+	return { side = facadeSide(edge), from = lo, to = hi }
 end
 
 --[=[

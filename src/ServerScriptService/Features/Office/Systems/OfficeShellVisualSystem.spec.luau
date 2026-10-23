@@ -112,6 +112,51 @@ return function()
 			expect(header.CanQuery).to.equal(true)
 		end)
 
+		it("breaks the trim at a facade, gives it a casing, and closes an outer corner", function()
+			model = Instance.new("Model")
+			local plan = layout()
+			plan.facades = { { room = "a", x = 0, z = 10, width = 6, kind = "stairwell" } }
+			Shell.build(plan, ORIGIN, model, art, never)
+			-- The facade stands on room A's minX wall (x = 0), face +X: no trim overlaps z 7..13 there, trim stays on -X.
+			local onFace, onOther = 0, 0
+			for _, part in model.Shell:GetChildren() do
+				if
+					(part.Name == "Wainscot" or part.Name == "Rail" or part.Name == "Skirt")
+					and math.abs(part.Position.X - ORIGIN.X) < 2
+					and part.Size.Z > part.Size.X
+				then
+					local localX = part.Position.X - ORIGIN.X
+					local z0, z1 = part.Position.Z - part.Size.Z / 2, part.Position.Z + part.Size.Z / 2
+					if localX > 0 and z0 < 13 - 1e-3 and z1 > 7 + 1e-3 then
+						onFace += 1
+					elseif localX < 0 and z0 < 7 and z1 > 13 then
+						onOther += 1
+					end
+				end
+			end
+			expect(onFace).to.equal(0)
+			expect(onOther).to.equal(3)
+			-- The solid door's casing plus the facade's.
+			expect(countNamed(model, "Jamb")).to.equal(4)
+			expect(countNamed(model, "Head")).to.equal(2)
+			-- The bay's outer corner at (0, -20): the outer (-Z) face of its z = -20 wall reaches 0.5 + 0.3 past it, the
+			-- inner face only 0.3.
+			local outerMin, innerMin = math.huge, math.huge
+			for _, part in model.Shell:GetChildren() do
+				if part.Name == "Wainscot" and part.Size.X > part.Size.Z then
+					local z = part.Position.Z
+					local minX = part.Position.X - ORIGIN.X - part.Size.X / 2
+					if math.abs(z + 20.65) < 0.01 then
+						outerMin = math.min(outerMin, minX)
+					elseif math.abs(z + 19.35) < 0.01 then
+						innerMin = math.min(innerMin, minX)
+					end
+				end
+			end
+			expect(outerMin).to.be.near(-0.8, 1e-3)
+			expect(innerMin).to.be.near(-0.3, 1e-3)
+		end)
+
 		it("frames a glass pane and tags only its sheet SightThrough, collidable and queryable", function()
 			build(never)
 			local sheets = 0

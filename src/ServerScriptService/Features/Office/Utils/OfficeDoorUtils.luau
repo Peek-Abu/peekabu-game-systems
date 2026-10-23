@@ -109,6 +109,29 @@ function OfficeDoorUtils.facadeFrame(facade: Facade, room: Room, origin: CFrame)
 end
 
 --[=[
+	The leaves of a facade, each as `size` (X along the wall, Y height, Z thickness), `offset` from the facade frame
+	(`facadeFrame`: X along the wall, Y down from the frame's half-height) and `side` (-1 / 0 / +1: which half of the
+	facade it hangs on, 0 for a single leaf). They fill the clear opening inside the facade's oak casing, as a real
+	door's does: width - 2 x casing by DOOR_HEIGHT - casing. An entrance is two glass leaves side by side, a stairwell
+	one solid leaf.
+]=]
+function OfficeDoorUtils.facadeLeaves(facade: Facade): { { size: Vector3, offset: Vector3, side: number } }
+	local casing = OfficeConstants.SHELL.casing
+	local count = if facade.kind == "entrance" then 2 else 1
+	local width = (facade.width - 2 * casing) / count
+	local leaves: { { size: Vector3, offset: Vector3, side: number } } = {}
+	for index = 1, count do
+		local side = if count == 1 then 0 elseif index == 1 then -1 else 1
+		table.insert(leaves, {
+			size = Vector3.new(width, OfficeConstants.DOOR_HEIGHT - casing, OfficeConstants.DOOR_LEAF_THICKNESS),
+			offset = Vector3.new(side * width / 2, -casing / 2, 0),
+			side = side,
+		})
+	end
+	return leaves
+end
+
+--[=[
 	The ids of the closed doors whose centre is within `radius` studs of `point` on the ground plane (XZ).
 ]=]
 function OfficeDoorUtils.near(doors: { DoorState }, point: Vector3, radius: number): { string }
