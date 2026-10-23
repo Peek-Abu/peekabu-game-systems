@@ -134,6 +134,48 @@ return function()
 			end
 		end)
 
+		it("lays every glass pane on a hallway room's edge, so no window shows the outside", function()
+			local EPS = 1e-6
+			local total = 0
+			for seed = 1, SEEDS do
+				if seed % 10 == 0 then
+					task.wait()
+				end
+				local layout = layoutFor(seed)
+				for _, pane in layout.panes or {} do
+					total += 1
+					expect(pane.x1 <= pane.x2 and pane.z1 <= pane.z2).to.equal(true)
+					local length = (pane.x2 - pane.x1) + (pane.z2 - pane.z1)
+					expect(length >= 2 - EPS).to.equal(true)
+					local onHallway = false
+					for _, room in layout.rooms do
+						if room.zone == "hallway" then
+							if math.abs(pane.z1 - pane.z2) < EPS then
+								onHallway = onHallway
+									or (
+										(math.abs(pane.z1 - room.minZ) < EPS or math.abs(pane.z1 - room.maxZ) < EPS)
+										and pane.x1 >= room.minX - EPS
+										and pane.x2 <= room.maxX + EPS
+									)
+							elseif math.abs(pane.x1 - pane.x2) < EPS then
+								onHallway = onHallway
+									or (
+										(math.abs(pane.x1 - room.minX) < EPS or math.abs(pane.x1 - room.maxX) < EPS)
+										and pane.z1 >= room.minZ - EPS
+										and pane.z2 <= room.maxZ + EPS
+									)
+							end
+						end
+					end
+					if not onHallway then
+						error(`seed {seed}: pane ({pane.x1}, {pane.z1})-({pane.x2}, {pane.z2}) is not on a hallway edge`)
+					end
+				end
+			end
+			-- Conference rooms carry glass; the seeds must actually exercise it.
+			expect(total > 0).to.equal(true)
+		end)
+
 		it("places the reception identically on every seed, with the entrance behind it", function()
 			local first = nil
 			for seed = 1, SEEDS do

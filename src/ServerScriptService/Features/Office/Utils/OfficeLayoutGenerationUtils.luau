@@ -2,7 +2,8 @@
 --[=[
 	OfficeLayoutGenerationUtils: a fresh workplace from a seed. The corridor network (OfficeCorridorUtils) is the
 	skeleton; the loading bay hangs off the dock junction, the reception off the lobby junction, and hand-authored
-	kit rooms (OfficeKitRegistry, placed by OfficeKitUtils) line the corridor segments on both sides. Dead-end
+	kit rooms (OfficeKitRegistry, placed by OfficeKitUtils) line the corridor segments on both sides; a kit's glass
+	pane is clipped to the corridor it faces, so no window looks out of the building. Dead-end
 	corridors that serve no room are pruned (a closet stands in each dead end left), a stairwell facade goes on a
 	free junction wall, and Mr. Harlow's patrol route and rest point are derived from the result.
 
@@ -31,7 +32,7 @@ type Kit = OfficeTypes.Kit
 type Edge = OfficeTypes.Edge
 type RoomType = OfficeTypes.RoomType
 type Network = OfficeCorridorUtils.Network
-type Segment = OfficeCorridorUtils.Segment
+type Run = OfficeCorridorUtils.Run
 
 -- The kit types that are drawn from KIT_WEIGHTS, in a fixed order so draws replay from the seed.
 local DRAWN: { RoomType } = { "pods", "conference", "storage", "breakout" }
@@ -42,6 +43,8 @@ local STAIR_DEPTH = 4
 local ENTRANCE_WIDTH = 12
 -- A patrol point keeps this far (Harlow's agent radius) from a closet's front.
 local PATROL_CLEARANCE = 2
+-- A glass pane clipped to its corridor is dropped when less than this is left.
+local MIN_PANE = 2
 local CLOSET_YAW: { [Edge]: number } = { minX = math.pi / 2, maxX = -math.pi / 2, minZ = 0, maxZ = math.pi }
 
 -- The mutable state of one attempt.
@@ -117,7 +120,7 @@ local function draw(rng: Random, pool: { RoomType }, boosted: boolean): RoomType
 end
 
 -- Whether a room hung on `segment`'s side (+1 toward +x/+z, -1 toward -x/-z) would reach the perimeter.
-local function atPerimeter(build: Build, segment: Segment, side: number): boolean
+local function atPerimeter(build: Build, segment: Run, side: number): boolean
 	local room, box = segment.room, build.box
 	local margin = OfficeConstants.ROOM_MARGIN
 	if segment.horizontal then
@@ -163,24 +166,45 @@ local function nextId(build: Build, roomType: RoomType): string
 	return `{roomType}{(build.counts[roomType] or 0) + 1}`
 end
 
+-- The front-left corner and facing of a kit `width` wide whose slot starts at `cursor` on `segment`'s `side`.
+local function slotFront(segment: Run, side: number, cursor: number, width: number): (number, number, Edge)
+	local room = segment.room
+	if segment.horizontal then
+		if side > 0 then
+			return cursor, room.maxZ, "minZ"
+		end
+		return cursor + width, room.minZ, "maxZ"
+	elseif side > 0 then
+		return room.maxX, cursor + width, "minX"
+	end
+	return room.minX, cursor, "maxX"
+end
+
+-- `pane` cut to the part that faces `segment` (its span along the corridor), so glass never looks past a
+-- corridor's end into the void; nil when less than MIN_PANE is left.
+local function clipPane(pane: OfficeTypes.Segment, segment: Run): OfficeTypes.Segment?
+	if segment.horizontal then
+		local x1, x2 = math.max(pane.x1, segment.from), math.min(pane.x2, segment.to)
+		if x2 - x1 < MIN_PANE then
+			return nil
+		end
+		return { x1 = x1, z1 = pane.z1, x2 = x2, z2 = pane.z2 }
+	end
+	local z1, z2 = math.max(pane.z1, segment.from), math.min(pane.z2, segment.to)
+	if z2 - z1 < MIN_PANE then
+		return nil
+	end
+	return { x1 = pane.x1, z1 = z1, x2 = pane.x2, z2 = z2 }
+end
+
 -- Tries every kit of `roomType` (largest first, randomly mirrored) in the slot starting at `cursor` along
--- `segment`'s `side`; places the first that fits. Returns the placed kit's width, or nil.
-local function tryPlace(build: Build, segment: Segment, side: number, cursor: number, roomType: RoomType): number?
+-- `segment`'s `side`; places the first that fits. Returns the placed kit's width, or nil. The kit's glass pane is
+-- clipped to the corridor it faces (the front wall may run on past the corridor's end).
+local function tryPlace(build: Build, segment: Run, side: number, cursor: number, roomType: RoomType): number?
 	local room = segment.room
 	for _, kit in kitsLargestFirst(roomType) do
 		local mirrored = build.rng:NextInteger(0, 1) == 1
-		local frontX: number, frontZ: number, facing: Edge
-		if segment.horizontal then
-			if side > 0 then
-				frontX, frontZ, facing = cursor, room.maxZ, "minZ"
-			else
-				frontX, frontZ, facing = cursor + kit.width, room.minZ, "maxZ"
-			end
-		elseif side > 0 then
-			frontX, frontZ, facing = room.maxX, cursor + kit.width, "minX"
-		else
-			frontX, frontZ, facing = room.minX, cursor, "maxX"
-		end
+		local frontX, frontZ, facing = slotFront(segment, side, cursor, kit.width)
 		local id = nextId(build, roomType)
 		local placement = OfficeKitUtils.place(kit, id, frontX, frontZ, facing, mirrored)
 		-- The whole doorway lies along the segment, and the room clears every room and the margin box.
@@ -212,8 +236,9 @@ local function tryPlace(build: Build, segment: Segment, side: number, cursor: nu
 				width = placement.doorWidth,
 				kind = placement.doorKind,
 			}, placement.markers)
-			if placement.pane ~= nil then
-				table.insert(build.panes, placement.pane)
+			local pane = if placement.pane ~= nil then clipPane(placement.pane, segment) else nil
+			if pane ~= nil then
+				table.insert(build.panes, pane)
 			end
 			return kit.width
 		end
@@ -222,7 +247,7 @@ local function tryPlace(build: Build, segment: Segment, side: number, cursor: nu
 end
 
 -- One slot: the deck's next type first, then the other drawn types (never a second server room or reception).
-local function fillSlot(build: Build, segment: Segment, side: number, cursor: number): number?
+local function fillSlot(build: Build, segment: Run, side: number, cursor: number): number?
 	local rng = build.rng
 	local boosted = atPerimeter(build, segment, side)
 	local pool: { RoomType } = table.clone(DRAWN)
@@ -260,7 +285,7 @@ end
 
 -- Lines the segments, in shuffled order and both sides in random order, until the deck is spent.
 local function lineSegments(build: Build, network: Network, wanted: number)
-	local order: { Segment } = table.clone(network.segments)
+	local order: { Run } = table.clone(network.segments)
 	shuffle(build.rng, order)
 	for _, segment in order do
 		local sides = { 1, -1 }

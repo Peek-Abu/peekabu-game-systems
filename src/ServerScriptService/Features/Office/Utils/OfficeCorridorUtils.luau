@@ -16,14 +16,15 @@ local OfficeConstants = require(ServerScriptService.Features.Office.Data.OfficeC
 type Room = OfficeTypes.Room
 type Door = OfficeTypes.Door
 
--- A corridor between two junction faces. from/to are the span along the corridor (x when horizontal, else z).
-export type Segment = { room: Room, horizontal: boolean, from: number, to: number }
+-- A corridor run between two junction faces (a "segment" of the network; named Run so it does not collide with
+-- OfficeTypes.Segment, a wall span). from/to are the span along the corridor (x when horizontal, else z).
+export type Run = { room: Room, horizontal: boolean, from: number, to: number }
 
 -- spine: the ids of the segments on the dock-to-lobby path, dock first.
 export type Network = {
 	rooms: { Room },
 	doors: { Door },
-	segments: { Segment },
+	segments: { Run },
 	junctions: { [string]: Room },
 	dock: Room,
 	lobby: Room,
@@ -251,7 +252,7 @@ function OfficeCorridorUtils.network(rng: Random): Network
 		end
 	end
 
-	local segments: { Segment } = {}
+	local segments: { Run } = {}
 	local doors: { Door } = {}
 	local spine: { string } = {}
 	for index, edge in sorted do
