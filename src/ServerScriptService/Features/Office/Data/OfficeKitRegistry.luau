@@ -208,19 +208,19 @@ local KITS: { Kit } = {
 		glass = { from = 9, to = 21 },
 		markers = {
 			-- The spike's meeting room: the table past the door's swing, a screen on the back wall, a frame on the right and a
-			-- planter in the back-left corner. The glass front runs beside the door.
-			styled("table", "conferenceTable", 12.2, 10.5, 0),
+			-- planter in the front-right corner. The glass front runs beside the door.
+			styled("table", "conferenceTable", 12, 10.5, 0),
 			at("pile", 2.5, 9),
 			at("pile", 12, 3.5),
-			at("pile", 19.5, 3.5),
-			at("pile", 7.5, 16),
+			at("pile", 14, 5),
+			at("pile", 4, 16),
 			at("pile", 11, 16),
-			at("item", 15, 4.5),
-			at("item", 2.2, 11),
+			at("item", 10, 5.5),
+			at("item", 2, 13),
 			at("patrol", 8, 16),
 			prop("wallScreen", 10, 17.33, 0),
 			prop("artFrame", 21.365, 10, QUARTER),
-			prop("planter", 3.08, 14.99, 0),
+			prop("planter", 18.92, 3.01, HALF),
 		},
 	},
 	{

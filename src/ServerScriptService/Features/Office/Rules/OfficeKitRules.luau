@@ -111,6 +111,54 @@ local function offTrim(kit: Kit, a: Rect, wall: number): boolean
 		and kit.depth - wall - a.maxZ >= need
 end
 
+-- Mr. Harlow walks a 3-stud-wide path (half of it either side of his centre); the grid that is tested for it.
+local PATH_HALF = 1.5
+local PATH_STEP = 0.5
+
+-- The grid cells (keyed column * rows + row) a PATH_HALF-wide path reaches from the middle of the door, keeping
+-- PATH_HALF off every wall plaster face and every floor footprint in `boxes`.
+local function reachableCells(kit: Kit, boxes: { [number]: Rect }, wall: number): { [number]: boolean }
+	local columns, rows = math.floor(kit.width / PATH_STEP), math.floor(kit.depth / PATH_STEP)
+	local function free(column: number, row: number): boolean
+		local x, z = column * PATH_STEP, row * PATH_STEP
+		if
+			x < wall + PATH_HALF
+			or x > kit.width - wall - PATH_HALF
+			or z < wall + PATH_HALF
+			or z > kit.depth - wall - PATH_HALF
+		then
+			return false
+		end
+		for _, box in boxes do
+			if
+				box.minX - PATH_HALF < x
+				and x < box.maxX + PATH_HALF
+				and box.minZ - PATH_HALF < z
+				and z < box.maxZ + PATH_HALF
+			then
+				return false
+			end
+		end
+		return true
+	end
+	local startColumn, startRow = math.floor(kit.door.offset / PATH_STEP), math.floor((wall + PATH_HALF) / PATH_STEP)
+	local seen: { [number]: boolean } = { [startColumn * rows + startRow] = true }
+	local stack: { { number } } = { { startColumn, startRow } }
+	while #stack > 0 do
+		local cell = stack[#stack]
+		stack[#stack] = nil
+		for _, step in { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } } do
+			local column, row = cell[1] + step[1], cell[2] + step[2]
+			local key = column * rows + row
+			if column >= 0 and column < columns and row >= 0 and row < rows and not seen[key] and free(column, row) then
+				seen[key] = true
+				table.insert(stack, { column, row })
+			end
+		end
+	end
+	return seen
+end
+
 local OfficeKitRules = {}
 
 --[=[
@@ -260,6 +308,25 @@ function OfficeKitRules.check(kit: Kit): (boolean, { string })
 			end
 			if not clear then
 				table.insert(errors, `{label}: the chair strip of {names[index]} is not clear`)
+			end
+		end
+	end
+
+	-- Harlow can reach his patrol and rest points: a 3-stud path from the door gets within 0.6 of each.
+	local reached = reachableCells(kit, boxes, wall)
+	local rows = math.floor(kit.depth / PATH_STEP)
+	for index, marker in kit.markers do
+		if marker.kind == "patrol" or marker.kind == "rest" then
+			local found = false
+			for column = math.ceil((marker.x - 0.6) / PATH_STEP), math.floor((marker.x + 0.6 + EPSILON) / PATH_STEP) do
+				for row = math.ceil((marker.z - 0.6) / PATH_STEP), math.floor((marker.z + 0.6 + EPSILON) / PATH_STEP) do
+					if reached[column * rows + row] then
+						found = true
+					end
+				end
+			end
+			if not found then
+				table.insert(errors, `{label}: {names[index]} cannot be reached by a 3-stud path from the door`)
 			end
 		end
 	end

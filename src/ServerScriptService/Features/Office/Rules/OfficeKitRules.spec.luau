@@ -142,6 +142,30 @@ return function()
 		expect(ok).to.equal(true)
 	end)
 
+	it("flags a patrol or rest marker no 3-stud path reaches from the door", function()
+		local function pocketed()
+			local kit = fixture()
+			-- A conference table (14 x 6) across the room's back half leaves 2.5 studs to the back wall: Harlow cannot get
+			-- past it to the patrol point behind.
+			kit.markers = {
+				{ kind = "table", art = "conferenceTable", x = 15, z = 18, rotation = 0 },
+				{ kind = "pile", x = 4, z = 8 },
+				{ kind = "pile", x = 26, z = 8 },
+				{ kind = "pile", x = 15, z = 8 },
+				{ kind = "patrol", x = 15, z = 22 },
+			}
+			return kit
+		end
+		local _, errors = OfficeKitRules.check(pocketed())
+		expect(hasError(errors, "cannot be reached")).to.equal(true)
+		-- Out in the open (the table moved to the front half's side, leaving lanes all round) it can.
+		local open = pocketed()
+		open.markers[1].z = 14
+		open.markers[5].z = 20
+		local _, openErrors = OfficeKitRules.check(open)
+		expect(hasError(openErrors, "cannot be reached")).to.equal(false)
+	end)
+
 	it("flags a pile crowding furniture", function()
 		local kit = fixture()
 		kit.markers[3].x = 22
