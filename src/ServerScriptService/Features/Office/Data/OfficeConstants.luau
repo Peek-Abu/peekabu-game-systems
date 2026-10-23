@@ -244,7 +244,7 @@ return table.freeze({
 	KIT_ROOMS = table.freeze({ min = 6, max = 12 }),
 	ROOM_MARGIN = 44,
 	ROOM_STEP = 4,
-	KIT_WEIGHTS = table.freeze({ pods = 55, conference = 20, storage = 15, breakout = 10 }),
+	KIT_WEIGHTS = table.freeze({ pods = 60, conference = 18, storage = 12, breakout = 10 }),
 	PERIMETER_CONFERENCE_BOOST = 1.5,
 	GENERATE_ATTEMPTS = 8,
 	-- A generated map needs this many hiding places (desks and closets), and every room within WALK_SPEED *

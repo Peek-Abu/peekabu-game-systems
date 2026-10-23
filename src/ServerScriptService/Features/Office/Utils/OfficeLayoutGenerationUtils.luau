@@ -2,7 +2,7 @@
 --[=[
 	OfficeLayoutGenerationUtils: a fresh workplace from a seed. The corridor network (OfficeCorridorUtils) is the
 	skeleton; the loading bay hangs off the dock junction, the reception off the lobby junction, and hand-authored
-	kit rooms (OfficeKitRegistry, placed by OfficeKitUtils) line the corridor segments on both sides; a kit's glass
+	kit rooms (OfficeKitRegistry, placed by OfficeKitUtils) line the corridor segments on both sides, spread round-robin (each segment takes one room per round); a kit's glass
 	pane is clipped to the corridor it faces, so no window looks out of the building. Dead-end
 	corridors that serve no room are pruned (a closet stands in each dead end left), a stairwell facade goes on a
 	free junction wall, and Mr. Harlow's patrol route and rest point are derived from the result.
@@ -294,18 +294,54 @@ local function fillSlot(build: Build, segment: Run, side: number, cursor: number
 	return nil
 end
 
--- Lines the segments, in shuffled order and both sides in random order, until the deck is spent.
+-- One segment being lined: its two sides in a random order, whose turn is next, and each side's cursor.
+type Lane = { segment: Run, sides: { number }, turn: number, cursors: { [number]: number } }
+
+-- Places one room on `side` of the lane at or after that side's cursor; false when the side is full.
+local function placeOne(build: Build, lane: Lane, side: number): boolean
+	local segment = lane.segment
+	local cursor = lane.cursors[side]
+	while cursor < segment.to do
+		local width = fillSlot(build, segment, side, cursor)
+		if width ~= nil then
+			lane.cursors[side] = cursor + width
+			return true
+		end
+		cursor += OfficeConstants.ROOM_STEP
+	end
+	lane.cursors[side] = cursor
+	return false
+end
+
+-- Lines the segments round-robin until the deck is spent: each round gives every segment (shuffled order) one room,
+-- on its sides in turn. Spreading the rooms over the network keeps them apart (the clustered dust needs clean rooms
+-- between dirty ones: OfficeSpawnUtils' neighbours) and lets each segment's first slot take a full-length kit.
 local function lineSegments(build: Build, network: Network, wanted: number)
 	local order: { Run } = table.clone(network.segments)
 	shuffle(build.rng, order)
+	local lanes: { Lane } = {}
 	for _, segment in order do
 		local sides = { 1, -1 }
 		shuffle(build.rng, sides)
-		for _, side in sides do
-			local cursor = segment.from
-			while cursor < segment.to and build.placed < wanted do
-				local width = fillSlot(build, segment, side, cursor)
-				cursor += width or OfficeConstants.ROOM_STEP
+		table.insert(
+			lanes,
+			{ segment = segment, sides = sides, turn = 1, cursors = { [1] = segment.from, [-1] = segment.from } }
+		)
+	end
+	local progressed = true
+	while progressed and build.placed < wanted do
+		progressed = false
+		for _, lane in lanes do
+			if build.placed >= wanted then
+				break
+			end
+			for _ = 1, 2 do
+				local side = lane.sides[lane.turn]
+				lane.turn = 3 - lane.turn
+				if placeOne(build, lane, side) then
+					progressed = true
+					break
+				end
 			end
 		end
 	end
