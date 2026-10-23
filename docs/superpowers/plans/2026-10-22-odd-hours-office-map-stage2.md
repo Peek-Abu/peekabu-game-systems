@@ -7,10 +7,10 @@
 **Architecture:**
 - **Reuse the existing art system.** `ArtVisualSystem.attach(root, family, key)` already swaps a greybox proxy for a template from `ReplicatedStorage.Assets.CleanupCrew.ArtKits/<kitId>/<family>/<key>`, and falls back to greybox when a key is missing. Stage 2 adds a new kit, `odd-hours-b1`, which generated layouts select.
 - **Art lives in the Studio place**, assembled by a command script from the mock room's uploaded Icey Labs assets plus a few new hand-built props.
-- **Three small code changes:**
+- **Three small code changes (plus per-room-type light amount, Task 6):**
   - kit markers can name their own art key (server racks, conference table, sofa…);
   - a new art-only `prop` marker kind for room dressing;
-  - per-room-type keys and lighting.
+  - per-room-type art keys.
 
 **Tech Stack:** Luau `--!strict` (TestEZ specs in Studio), headless Blender 5.1 + the `texture-pipeline` skill (`hardlib.py`/`build_set.py`), Open Cloud uploads via `publish.py`, the Studio MCP for assembly.
 
@@ -188,24 +188,31 @@ Per kit, add `art` overrides and `prop` markers, keeping every existing gameplay
 - [ ] **Step 2:** Author the coordinates against wall-hugging (`ArtWallMounted` for frames, screens, sconces and clocks at wall height; the rest on the floor, clear of aisles ≥ 4 studs). Re-run `chk.py` with prop footprints.
 - [ ] **Step 3:** The controller runs the suite plus the traversal harness for seeds 1–20 (all doors closed): PASS. Commit: `Office kits: room dressing and per-type furniture art`.
 
-### Task 6: Atmosphere per room type (code)
+### Task 6: Light amount per room type (code)
 
-**Files:** `Office/Data/OfficeConstants.luau` (`ROOM_LIGHT: { [string]: { color: Color3, brightness: number, spacing: number } }`), and `OfficeBuildSystem.luau`, which uses it for each room's lights (fallback: the current values).
+Owner direction (2026-10-22): like Lethal Company, the light STYLE is the same everywhere: one cool office-fluorescent colour (`OfficeConstants.LIGHT_COLOR`, as in the mock room). Rooms differ only in HOW MUCH light: brightness and lamp spacing. Colour accents come from objects (rack LEDs, a lamp), never from tinting a room's ceiling lights. Per-run dark spots and flicker stay in stage 4.
 
-Values (S1 moody):
+**Files:**
+- `Office/Data/OfficeConstants.luau`: `ROOM_LIGHT: { [string]: { brightness: number, spacing: number } }`.
+- `OfficeBuildSystem.luau`: uses it for each room's lights; colour is always `LIGHT_COLOR`; an unknown type falls back to the current `LIGHT_BRIGHTNESS`/`LIGHT_SPACING`.
+- `serverRack` template: its LED strips are Neon parts with a small blue PointLight (range 6, brightness 0.4), so the server room's blue is object glow.
 
-| Room | Colour | Brightness | Spacing |
-|---|---|---|---|
-| hallway | (200, 214, 240) | 0.35 | 18 |
-| pods | (215, 228, 255) | 0.5 | 15 |
-| conference | (255, 236, 210) | 0.45 | 15 |
-| breakout | (255, 222, 180) | 0.55 | 15 |
-| storage | (230, 230, 220) | 0.3 | 15 |
-| server | (150, 190, 255) | 0.4 | 15, plus a blue PointLight on each rack (decor) |
-| reception | (255, 240, 220) | 0.6 | 15 |
+| Room | Brightness | Spacing |
+|---|---|---|
+| hallway | 0.35 | 18 |
+| pods | 0.5 | 15 |
+| conference | 0.45 | 15 |
+| breakout | 0.5 | 15 |
+| storage | 0.3 | 18 |
+| server | 0.3 | 18 |
+| reception | 0.6 | 15 |
 
-- [ ] **Step 1:** Write the failing spec: a server room's lights use the server colour, and an unknown room type uses the defaults.
-- [ ] **Step 2:** Implement. The controller runs the suite: PASS. Commit: `Office: per-room-type lighting`.
+- [ ] **Step 1: Write the failing spec.**
+  - A server room's lights use brightness 0.3 and `LIGHT_COLOR`.
+  - Every room's lights share one colour.
+  - An unknown room type uses the defaults.
+  - Keep `OfficeBuildSystem.spec`'s "ceiling lamp coverage" passing: an 18-stud spacing still needs `LIGHT_RANGE` ≥ 1.25 × reach. Compute it, and raise `LIGHT_RANGE` only if the spec demands it.
+- [ ] **Step 2:** Implement. The controller runs the suite: PASS. Commit: `Office: light amount per room type (one light colour everywhere)`.
 
 ### Task 7: Look check and owner review
 
