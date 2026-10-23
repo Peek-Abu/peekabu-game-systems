@@ -155,14 +155,15 @@ function OfficeGroundsUtils.arrivalMarkers(truck: OfficeTypes.Truck): { OfficeTy
 end
 
 --[=[
-	The bay's two shelves: one centred against each x wall, MARKER_MARGIN in, facing into the room.
+	The bay's two shelves: one centred against each x wall, MARKER_MARGIN in, facing into the room
+	by the kits' convention (OfficeKitRegistry: -pi/2 at the minX wall, +pi/2 at the maxX wall).
 ]=]
 function OfficeGroundsUtils.bayShelves(bay: OfficeTypes.Room): { OfficeTypes.Marker }
 	local z = (bay.minZ + bay.maxZ) / 2
 	local margin = OfficeConstants.MARKER_MARGIN
 	return {
-		{ id = "bay.shelf.1", room = bay.id, kind = "shelf", x = bay.minX + margin, z = z, rotation = math.pi / 2 },
-		{ id = "bay.shelf.2", room = bay.id, kind = "shelf", x = bay.maxX - margin, z = z, rotation = -math.pi / 2 },
+		{ id = "bay.shelf.1", room = bay.id, kind = "shelf", x = bay.minX + margin, z = z, rotation = -math.pi / 2 },
+		{ id = "bay.shelf.2", room = bay.id, kind = "shelf", x = bay.maxX - margin, z = z, rotation = math.pi / 2 },
 	}
 end
 

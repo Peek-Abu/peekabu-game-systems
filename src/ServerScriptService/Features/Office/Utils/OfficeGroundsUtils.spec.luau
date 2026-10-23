@@ -151,6 +151,14 @@ return function()
 			expect(shelves[2].z).to.equal(-31)
 			expect(shelves[1].kind).to.equal("shelf")
 		end)
+
+		it("turns each bay shelf to face into the room, by the kits' convention", function()
+			-- The kits (OfficeKitRegistry) face a shelf on the maxX wall with +pi/2 (the storage closet's and the
+			-- open office's right-wall shelves) and a minX-wall prop with -pi/2 (the closet's sconce).
+			local shelves = OfficeGroundsUtils.bayShelves(BAY)
+			expect(shelves[1].rotation).to.equal(-math.pi / 2)
+			expect(shelves[2].rotation).to.equal(math.pi / 2)
+		end)
 	end)
 
 	describe("exitFacades", function()
