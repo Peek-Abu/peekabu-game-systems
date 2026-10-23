@@ -3,7 +3,8 @@
 	OfficeDoorSystem: the office's real doors. For every layout door of kind "solid" or "glass" a leaf players open
 	and close (an anchored part tagged for Interaction, kind OfficeConstants.DOOR_KIND, swung about its hinge with
 	TweenService), and for every facade a closed, flush, non-interactable leaf on the room side of the wall it fronts
-	(attribute `OfficeFacade` = its kind; glass for an entrance, solid for a stairwell). Door ids are "<a>|<b>".
+	(attribute `OfficeFacade` = its kind; a stairwell is one solid leaf, an entrance a pair of glass leaves, each half
+	its width, hinged at the outer edges: a double door). Door ids are "<a>|<b>".
 
 	A leaf is CanQuery, and CanCollide only while closed (an open leaf neither blocks walkers nor Mr. Harlow's sight
 	ray, which respects CanCollide). Its PathfindingModifier (Label DOOR_PATH_LABEL, PassThrough) keeps closed doors
@@ -27,7 +28,7 @@
 	flags a colliding art leaf as a camera occluder (CameraOccluderConstants.ATTRIBUTE); a glass leaf never occludes, and
 	a solid one only while closed (cleared as an opening swing starts, restored when a close completes).
 
-Instance/TweenService shell; the door maths is the specced OfficeDoorUtils.
+	Instance/TweenService shell; the door maths is the specced OfficeDoorUtils.
 
 	@class OfficeDoorSystem
 ]=]
@@ -260,21 +261,31 @@ function OfficeDoorSystem.build(
 		end
 	end
 
-	-- Facades: locked fake doors on unbroken walls (closed, flush, not interactable).
+	-- Facades: locked fake doors on unbroken walls (closed, flush, not interactable). An entrance is a double glass
+	-- door: two leaves of half its width side by side, each hinged at its outer edge (the template's hinge is its local
+	-- +X, so the leaf on the frame's -X side is turned half way); a stairwell is one solid leaf.
 	local facades: { OfficeTypes.Facade } = layout.facades or {}
 	for index, facade in facades do
 		local room = OfficeLayoutUtils.room(layout, facade.room)
 		local frame = if room ~= nil then OfficeDoorUtils.facadeFrame(facade, room, origin) else nil
 		if frame ~= nil then
-			local leaf = leafPart(
-				`Facade{index}`,
-				Vector3.new(facade.width, height, OfficeConstants.DOOR_LEAF_THICKNESS),
-				facade.kind == "entrance",
-				folder
-			)
-			leaf.CFrame = frame
-			dress(art, leaf, facade.kind == "entrance")
-			leaf:SetAttribute("OfficeFacade", facade.kind)
+			local entrance = facade.kind == "entrance"
+			local count = if entrance then 2 else 1
+			local width = facade.width / count
+			for leafIndex = 1, count do
+				local side = if count == 1 then 0 elseif leafIndex == 1 then -1 else 1
+				local leaf = leafPart(
+					if count == 1 then `Facade{index}` else `Facade{index}_{leafIndex}`,
+					Vector3.new(width, height, OfficeConstants.DOOR_LEAF_THICKNESS),
+					entrance,
+					folder
+				)
+				leaf.CFrame = frame
+					* CFrame.new(side * width / 2, 0, 0)
+					* CFrame.Angles(0, if side < 0 then math.pi else 0, 0)
+				dress(art, leaf, entrance)
+				leaf:SetAttribute("OfficeFacade", facade.kind)
+			end
 		end
 	end
 

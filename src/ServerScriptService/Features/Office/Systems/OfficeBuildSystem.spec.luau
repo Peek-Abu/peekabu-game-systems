@@ -642,6 +642,35 @@ return function()
 			expect(lights[1].Shadows).to.equal(false)
 		end)
 
+		it("hangs the LED light on any attached template with a LedLight attachment, not only a server rack", function()
+			template("furniture", "shelf")
+			local part = assets["test-map-a"].furniture.shelf:FindFirstChildOfClass("Part")
+			local attachment = Instance.new("Attachment")
+			attachment.Name = "LedLight"
+			attachment.Parent = part
+			local layout = twoRooms("open", nil)
+			layout.markers = { { id = "a.shelf.1", room = "a", kind = "shelf", x = 5, z = 5 } }
+			local built = build(layout)
+			local lights = {}
+			for _, descendant in built.model.Furniture:GetDescendants() do
+				if descendant:IsA("PointLight") then
+					table.insert(lights, descendant)
+				end
+			end
+			expect(#lights).to.equal(1)
+			expect(lights[1].Parent.Name).to.equal("LedLight")
+		end)
+
+		it("hangs no LED light on a template without the attachment, even a server rack", function()
+			template("furniture", "serverRack")
+			local layout = twoRooms("open", nil)
+			layout.markers = { { id = "a.shelf.1", room = "a", kind = "shelf", x = 5, z = 5, art = "serverRack" } }
+			local built = build(layout)
+			for _, descendant in built.model.Furniture:GetDescendants() do
+				expect(descendant:IsA("PointLight")).to.equal(false)
+			end
+		end)
+
 		it("gives a solid door's leaf the doorLeaf template and a glass door's the doorLeafGlass one", function()
 			template("building", "doorLeaf")
 			template("building", "doorLeafGlass")
@@ -665,6 +694,49 @@ return function()
 				built.doors.destroy()
 				built.model:Destroy()
 			end
+		end)
+
+		it("builds an entrance facade as two half-width glass leaves hinged at their outer edges", function()
+			template("building", "doorLeafGlass")
+			local layout = twoRooms("open", nil)
+			layout.facades = { { room = "a", x = 0, z = 5, width = 12, kind = "entrance" } }
+			local built = build(layout)
+			local leaves = {}
+			for _, leaf in built.model.Doors:GetChildren() do
+				if leaf:GetAttribute("OfficeFacade") == "entrance" then
+					table.insert(leaves, leaf)
+				end
+			end
+			expect(#leaves).to.equal(2)
+			local sides = 0
+			for _, leaf in leaves do
+				expect(leaf.Size.X).to.equal(6)
+				expect(leaf.Material).to.equal(Enum.Material.Glass)
+				expect(leaf:FindFirstChild("ArtVisual") ~= nil).to.equal(true)
+				-- Side by side, flush on the wall, centred 3 studs either side of the facade's centre.
+				expect(math.abs(math.abs(leaf.Position.Z - 5) - 3) < 1e-3).to.equal(true)
+				-- The hinge is the leaf's local +X: it lies toward the outer edge, away from the centre.
+				expect((leaf.Position.Z - 5) * leaf.CFrame.RightVector.Z > 0).to.equal(true)
+				sides += if leaf.Position.Z > 5 then 1 else 0
+			end
+			expect(sides).to.equal(1)
+			built.doors.destroy()
+		end)
+
+		it("builds a stairwell facade as one solid leaf of its own width", function()
+			local layout = twoRooms("open", nil)
+			layout.facades = { { room = "a", x = 0, z = 5, width = 6, kind = "stairwell" } }
+			local built = build(layout)
+			local count = 0
+			for _, leaf in built.model.Doors:GetChildren() do
+				if leaf:GetAttribute("OfficeFacade") == "stairwell" then
+					count += 1
+					expect(leaf.Size.X).to.equal(6)
+					expect(leaf.Material).to.equal(Enum.Material.WoodPlanks)
+				end
+			end
+			expect(count).to.equal(1)
+			built.doors.destroy()
 		end)
 
 		it("flags only a closed solid art leaf as a camera occluder", function()
