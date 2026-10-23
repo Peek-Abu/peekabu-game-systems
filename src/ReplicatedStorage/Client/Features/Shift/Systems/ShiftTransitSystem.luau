@@ -17,6 +17,9 @@
 	  ARRIVED for TRANSIT_ARRIVED_SECONDS, then clears.
 	- booting: plain black until the first shift and transit sync, at most TRANSIT_BOOT_SECONDS.
 	- a respawn during a running shift (after a catch): a black blink of TRANSIT_BLINK_SECONDS, no slip.
+	- an office entrance's teleport (ShiftEvents.EntranceFade from OfficeEntranceSystem): black from the cover packet
+	  until the uncover packet (at most ENTRANCE_COVER_SECONDS), fading over the packet's seconds
+	  (ShiftTransitStore.fadeSeconds; any other cover resets it to the transit's own fades).
 
 	Spec-exempt shell (Players, streaming, Workspace, ByteNet, RunService); the decisions are the specced
 	ShiftTransitRules, the decoding the specced ShiftTransitUtils.
@@ -46,6 +49,8 @@ local log = Logger.new("ShiftTransitSystem")
 
 -- How often the hold is checked (s).
 local CHECK_INTERVAL = 0.1
+-- An entrance's cover lifts by itself this long after it went up if the uncover never arrives (s).
+local ENTRANCE_COVER_SECONDS = 4
 
 export type ShiftTransitState = {
 	cover: ShiftTypes.TransitCover,
@@ -66,6 +71,8 @@ local streamed: { [number]: boolean } = {}
 local streaming: { [number]: boolean } = {}
 local arrivedUntil = 0
 local blinkUntil: number? = nil
+-- An office entrance's black cover runs until this os.clock() time (nil: none).
+local entranceUntil: number? = nil
 local bootUntil = 0
 local synced = false
 local waitingFor = ""
@@ -192,10 +199,20 @@ local function step()
 		settledLights = -1
 	end
 	local arriving = now < arrivedUntil
+	local booting = not synced and now < bootUntil
+	local blinking = blinkUntil ~= nil and now < blinkUntil
+	-- Any other cover fades at the transit's own pace.
+	if (pending or arriving or booting or blinking) and ShiftTransitStore.fadeSeconds() ~= nil then
+		ShiftTransitStore.fadeSeconds(nil)
+	end
+	local blackUntil = blinkUntil
+	if entranceUntil ~= nil and (blackUntil == nil or entranceUntil > blackUntil) then
+		blackUntil = entranceUntil
+	end
 	local cover = ShiftTransitRules.cover({
 		held = pending or arriving,
-		booting = not synced and now < bootUntil,
-		blinkUntil = blinkUntil,
+		booting = booting,
+		blinkUntil = blackUntil,
 		now = now,
 	})
 	local covered = cover ~= "none"
@@ -229,6 +246,13 @@ local function onCharacter()
 	blinkUntil = os.clock() + ShiftConstants.TRANSIT_BLINK_SECONDS
 end
 
+-- An office entrance's teleport: black over `seconds` while it moves the player, then back over `seconds`.
+local function onEntranceFade(data: { covered: boolean, seconds: number })
+	ShiftTransitStore.fadeSeconds(math.clamp(data.seconds, 0, 1))
+	entranceUntil = if data.covered then os.clock() + ENTRANCE_COVER_SECONDS else nil
+	step()
+end
+
 local ShiftTransitSystem = {}
 
 function ShiftTransitSystem.start()
@@ -246,9 +270,11 @@ function ShiftTransitSystem.start()
 		end
 	end)
 	local respawning = Players.LocalPlayer.CharacterAdded:Connect(onCharacter)
+	local stopFade = ShiftEvents.packets.EntranceFade.listen(onEntranceFade)
 	table.insert(stoppers, function()
 		ticking:Disconnect()
 		respawning:Disconnect()
+		stopFade()
 	end)
 	step()
 end
@@ -264,6 +290,8 @@ function ShiftTransitSystem.stop()
 	ShiftTransitStore.slip(false)
 	ShiftTransitStore.arrived(false)
 	ShiftTransitStore.progress(0)
+	ShiftTransitStore.fadeSeconds(nil)
+	entranceUntil = nil
 end
 
 function ShiftTransitSystem.getState(): ShiftTransitState

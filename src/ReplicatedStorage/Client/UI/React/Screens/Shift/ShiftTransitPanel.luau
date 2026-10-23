@@ -39,6 +39,9 @@ export type ShiftTransitPanelProps = {
 	scale: number,
 	-- How far this client is toward its reveal (ShiftTransitStore.progress): the loading bar's target.
 	progress: number,
+	-- How long the cover's fade in or out takes; nil = TRANSIT_FADE_IN / TRANSIT_FADE_OUT (an office entrance's quick
+	-- black cover sets it).
+	fadeSeconds: number?,
 }
 
 local COLOR = UIToonConstants.COLOR
@@ -215,7 +218,8 @@ local function ShiftTransitPanel(props: ShiftTransitPanelProps): React.ReactNode
 
 	React.useEffect(function(): () -> ()
 		local target = if covered then 0 else 1
-		local seconds = if covered then ShiftConstants.TRANSIT_FADE_IN else ShiftConstants.TRANSIT_FADE_OUT
+		local seconds = props.fadeSeconds
+			or (if covered then ShiftConstants.TRANSIT_FADE_IN else ShiftConstants.TRANSIT_FADE_OUT)
 		if covered then
 			setShown(true)
 		end

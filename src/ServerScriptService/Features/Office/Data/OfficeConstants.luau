@@ -216,6 +216,10 @@ local OUTSIDE = table.freeze({
 	OUTSIDE_STEP = 5,
 	INSIDE_STEP = 4,
 	ENTRANCE_REACH = 10,
+	-- An entrance's teleport (OfficeEntranceSystem): the player's screen fades to black over FADE_OUT, they move, and
+	-- it fades back in over FADE_IN.
+	FADE_OUT = 0.2,
+	FADE_IN = 0.3,
 	DOCK_EXIT_WIDTH = 8,
 	VOLUME_HEIGHT = 120,
 })

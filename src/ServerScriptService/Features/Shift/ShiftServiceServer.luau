@@ -58,6 +58,7 @@ local ToastRegistry = require(ReplicatedStorage.Shared.Features.Toast.Data.Toast
 local ShiftConstants = require(ShiftShared.Data.ShiftConstants)
 local ShiftTypes = require(ShiftShared.Data.ShiftTypes)
 local ShiftSnapshotUtils = require(ShiftShared.Utils.ShiftSnapshotUtils)
+local ShiftEvents = require(ShiftShared.Net.ShiftEvents)
 local ShiftPhaseRules = require(ShiftServer.Rules.ShiftPhaseRules)
 local ShiftNoticeUtils = require(ShiftServer.Utils.ShiftNoticeUtils)
 local ShiftRosterTracker = require(ShiftServer.State.ShiftRosterTracker)
@@ -76,6 +77,8 @@ local ShiftCrewStatusSystem = require(ShiftServer.Systems.ShiftCrewStatusSystem)
 local ShiftLivesSystem = require(ShiftServer.Systems.ShiftLivesSystem)
 local ShiftPaySystem = require(ShiftServer.Systems.ShiftPaySystem)
 local CurrencyServiceServer = require(ServerScriptService.Features.Currency.CurrencyServiceServer)
+local OfficeServiceServer = require(ServerScriptService.Features.Office.OfficeServiceServer)
+local OfficeEntranceSystem = require(ServerScriptService.Features.Office.Systems.OfficeEntranceSystem)
 local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
 local RoundServiceServer = require(ServerScriptService.Features.Round.RoundServiceServer)
@@ -348,6 +351,24 @@ local clockOuts = ShiftClockOutSystem.new({
 -- The truck's time clock: a crew member who reaches it punches their card.
 local timeClock = ShiftTimeClockSystem.new({ clockOut = clockOuts.punch, eligible = trip.eligible })
 
+-- The office's entrances (outside door <-> inside exit): only the running shift's crew, up and playing, goes through.
+local entrances = OfficeEntranceSystem.new({
+	inCrew = function(player: Player): boolean
+		return isRunning() and trip.eligible(player)
+	end,
+	alive = function(player: Player): boolean
+		return not DeathServiceServer:isDead(player)
+			and not DeathServiceServer:isDown(player)
+			and not lives:isKnockedOut(player)
+	end,
+	entrance = function(id)
+		return OfficeServiceServer:entrance(id)
+	end,
+	fade = function(player: Player, covered: boolean, seconds: number)
+		ShiftEvents.packets.EntranceFade.sendTo({ covered = covered, seconds = seconds }, player)
+	end,
+})
+
 local overtime = ShiftOvertimeSystem.new({
 	getState = getState,
 	setState = setState,
@@ -487,6 +508,7 @@ local ShiftServiceServer: ShiftServiceServer = {
 		)
 		table.insert(stoppers, ShiftCrewStatusSystem.start(trip, isRunning))
 		table.insert(stoppers, timeClock.start())
+		table.insert(stoppers, entrances.start())
 		table.insert(stoppers, overtime.start())
 		table.insert(stoppers, clockOuts.start())
 

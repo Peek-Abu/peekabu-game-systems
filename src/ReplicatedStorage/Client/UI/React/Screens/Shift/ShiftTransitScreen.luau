@@ -22,12 +22,14 @@ local function ShiftTransitScreen(): React.ReactNode
 	local arrived = ReactCharm.useAtom(ShiftTransitStore.arrived)
 	local snapshot = ReactCharm.useAtom(ShiftTransitStore.snapshot)
 	local progress = ReactCharm.useAtom(ShiftTransitStore.progress)
+	local fadeSeconds = ReactCharm.useAtom(ShiftTransitStore.fadeSeconds)
 	local viewport = usePaperViewport()
 	local props: ShiftTransitPanel.ShiftTransitPanelProps = {
 		cover = ShiftTransitStore.coverOf(covered, slip),
 		view = if covered and slip then ShiftTransitViewModel.slip(snapshot, arrived) else nil,
 		scale = ShiftTransitViewModel.fit(viewport),
 		progress = progress,
+		fadeSeconds = fadeSeconds,
 	}
 	return React.createElement(ShiftTransitPanel, props)
 end
