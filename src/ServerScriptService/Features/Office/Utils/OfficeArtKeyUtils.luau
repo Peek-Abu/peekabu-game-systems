@@ -3,7 +3,9 @@
 	OfficeArtKeyUtils: which art template does a piece of office furniture use? `candidates` lists the keys to try
 	in order (a marker's own `art` override, the default key's room-type variant, the default key) and `attachFirst`
 	attaches the first that has a template, so a kit that lacks the variant falls back to the plain art and a place
-	without the kit falls back to greybox. Pure apart from the attach call.
+	without the kit falls back to greybox. A piece the map's own kit lacks falls back to the default kit
+	(ArtKitRegistry.DEFAULT_KIT): `attachFirst` tries every key in the resolved kit, then every key again in the
+	default kit, so a restyling kit only needs the pieces it changes. Pure apart from the attach call.
 
 	@class OfficeArtKeyUtils
 ]=]
@@ -12,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local ArtVisualSystem = require(ServerScriptService.Features.Art.Systems.ArtVisualSystem)
+local ArtKitRegistry = require(ReplicatedStorage.Shared.Features.Art.Data.ArtKitRegistry)
 local ArtTypes = require(ReplicatedStorage.Shared.Features.Art.Data.ArtTypes)
 
 local OfficeTypes = require(ServerScriptService.Features.Office.Data.OfficeTypes)
@@ -51,7 +54,8 @@ function OfficeArtKeyUtils.candidates(defaultKey: string, override: string?, roo
 end
 
 --[=[
-	Attaches the first of `keys` that resolves to a template to `root`; nil when none does (greybox stays).
+	Attaches the first of `keys` that resolves to a template to `root`, trying the root's own kit first and then the
+	default kit; nil when none does (greybox stays).
 ]=]
 function OfficeArtKeyUtils.attachFirst(
 	art: ArtVisualSystem.Controller,
@@ -63,6 +67,14 @@ function OfficeArtKeyUtils.attachFirst(
 		local visual = art.attach(root, family, key)
 		if visual ~= nil then
 			return visual
+		end
+	end
+	if art.resolveKit(root) ~= ArtKitRegistry.DEFAULT_KIT then
+		for _, key in keys do
+			local visual = art.attach(root, family, key, ArtKitRegistry.DEFAULT_KIT)
+			if visual ~= nil then
+				return visual
+			end
 		end
 	end
 	return nil

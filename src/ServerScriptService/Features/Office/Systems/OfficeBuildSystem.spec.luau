@@ -545,6 +545,22 @@ return function()
 			end
 		end)
 
+		it("flags only a closed solid art leaf as a camera occluder", function()
+			template("building", "doorLeaf")
+			template("building", "doorLeafGlass")
+			local solid = build(twoRooms("solid", nil))
+			local leaf = solid.model.Doors.DoorLeaf
+			expect(leaf:GetAttribute("CameraOccluder")).to.equal(true)
+			expect(solid.doors.toggle("a|b", nil)).to.equal(true)
+			expect(leaf:GetAttribute("CameraOccluder")).to.equal(nil)
+			solid.doors.closeAll()
+			expect(leaf:GetAttribute("CameraOccluder")).to.equal(true)
+			solid.doors.destroy()
+			local glass = build(twoRooms("glass", nil))
+			expect(glass.model.Doors.DoorLeaf:GetAttribute("CameraOccluder")).to.equal(nil)
+			glass.doors.destroy()
+		end)
+
 		it("keeps the glass leaf's greybox look when no door art exists", function()
 			local built = build(twoRooms("glass", nil))
 			local leaf = built.model.Doors.DoorLeaf

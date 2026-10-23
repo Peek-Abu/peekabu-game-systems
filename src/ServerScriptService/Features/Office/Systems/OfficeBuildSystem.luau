@@ -11,9 +11,9 @@
 	the layout's origin. Glass walls fill the layout's panes (Glass, see-through, solid, tagged SightThrough so Harlow's
 	sight passes them; the wall pieces beside them stop flush). Physical per-room ceilings enclose the camera.
 	Art keys: every attach goes through OfficeArtKeyUtils (a marker's own `art` key, then the default key's room-type
-variant, then the default key), so a kit may restyle one room type (floorTile_server) or one piece (serverRack for a
-shelf). Walls are merged across rooms, so they use the default key only.
-Doors: every doorway keeps its visual-only frame and trim, and OfficeDoorSystem adds a real leaf to each solid or
+	variant, then the default key), so a kit may restyle one room type (floorTile_server) or one piece (serverRack for a
+	shelf). Walls are merged across rooms, so they use the default key only.
+	Doors: every doorway keeps its visual-only frame and trim, and OfficeDoorSystem adds a real leaf to each solid or
 	glass door plus a locked flush leaf on every facade (`Built.doors`, destroyed with the office).
 
 	Instance shell; specs cover ceilings, and OfficeLayoutRules validates the layout.

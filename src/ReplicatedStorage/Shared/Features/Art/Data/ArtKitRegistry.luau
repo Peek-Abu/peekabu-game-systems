@@ -26,7 +26,6 @@ local keys: { [ArtTypes.Family]: { string } } = {
 		"floorTile_server",
 		"floorTile_breakout",
 		"floorTile_hallway",
-		"stairwellSign",
 	},
 	furniture = {
 		"desk",
@@ -57,6 +56,7 @@ local keys: { [ArtTypes.Family]: { string } } = {
 		"wallScreen",
 		"sconce",
 		"deskPlant",
+		"stairwellSign",
 	},
 	cargo = {
 		"rubbishBag",

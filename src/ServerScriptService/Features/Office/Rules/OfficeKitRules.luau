@@ -6,8 +6,8 @@
 	strip on its front (local -Z, the knee-hole side HideSpotUtils and OfficeDecorSystem use) or without room to
 	hide under, a missing patrol (or, in a breakout, rest) marker, fewer piles than a dirty room needs, and a pile or item
 	marker crowding furniture. `prop` markers (art-only dressing, sized by OfficeConstants.PROP_SIZES[art]) count as
-furniture; a wall-mounted prop (PROP_WALL_HEIGHT) hangs above the floor, so it skips the overlap, approach and
-clearance tests but must lie against a wall; a prop without a sized `art` is an error. Works in the kit's local frame (x along the front wall, z into the room). Pure.
+	furniture; a wall-mounted prop (PROP_WALL_HEIGHT) hangs above the floor, so it skips the overlap, approach and
+	clearance tests but must lie against a wall; a prop without a sized `art` is an error. Works in the kit's local frame (x along the front wall, z into the room). Pure.
 
 	@class OfficeKitRules
 ]=]

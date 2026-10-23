@@ -1,4 +1,5 @@
 local OfficeArtKeyUtils = require(script.Parent.OfficeArtKeyUtils)
+local ArtKitRegistry = require(game:GetService("ReplicatedStorage").Shared.Features.Art.Data.ArtKitRegistry)
 local Visuals = require(game:GetService("ServerScriptService").Features.Art.Systems.ArtVisualSystem)
 
 return function()
@@ -68,6 +69,27 @@ return function()
 			local visual = OfficeArtKeyUtils.attachFirst(art, root, "furniture", { "first", "second", "third" })
 			expect(visual ~= nil).to.equal(true)
 			expect(visual.Parent).to.equal(root)
+		end)
+		it("falls back to the default kit when the map's own kit lacks every key", function()
+			root.Parent:SetAttribute("ArtKitId", "odd-hours-b1")
+			local own = Instance.new("Folder")
+			own.Name = "odd-hours-b1"
+			own.Parent = assets
+			local default = assets["test-keys"]
+			default.Name = ArtKitRegistry.DEFAULT_KIT
+			local visual = OfficeArtKeyUtils.attachFirst(art, root, "furniture", { "first", "second" })
+			expect(visual ~= nil).to.equal(true)
+			expect(visual:GetAttribute("ArtKitId")).to.equal(ArtKitRegistry.DEFAULT_KIT)
+		end)
+		it("prefers the map's own kit over the default kit", function()
+			root.Parent:SetAttribute("ArtKitId", "odd-hours-b1")
+			local default = assets["test-keys"]
+			default.Name = ArtKitRegistry.DEFAULT_KIT
+			local own = default:Clone()
+			own.Name = "odd-hours-b1"
+			own.Parent = assets
+			local visual = OfficeArtKeyUtils.attachFirst(art, root, "furniture", { "second" })
+			expect(visual:GetAttribute("ArtKitId")).to.equal("odd-hours-b1")
 		end)
 		it("returns nil when no key has a template", function()
 			expect(OfficeArtKeyUtils.attachFirst(art, root, "furniture", { "first", "third" })).to.equal(nil)

@@ -22,8 +22,10 @@
 	so it travels the hinge's arc (tweening the CFrame itself would cut a chord). A door ignores toggles mid-swing.
 
 	Art: a leaf takes the kit's `doorLeaf` (solid) or `doorLeafGlass` (glass) template through OfficeArtKeyUtils; the
-visual welds to the leaf, so it swings with it and stays non-colliding while the leaf keeps its collision and tags
-(attaching hides the leaf's own plastic or glass; with no template the greybox leaf stays as it was).
+	visual welds to the leaf, so it swings with it and stays non-colliding while the leaf keeps its collision and tags
+	(attaching hides the leaf's own plastic or glass; with no template the greybox leaf stays as it was). ArtVisualSystem
+	flags a colliding art leaf as a camera occluder (CameraOccluderConstants.ATTRIBUTE); a glass leaf never occludes, and
+	a solid one only while closed (cleared as an opening swing starts, restored when a close completes).
 
 Instance/TweenService shell; the door maths is the specced OfficeDoorUtils.
 
@@ -38,6 +40,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local TweenService = game:GetService("TweenService")
 
 local ArtVisualSystem = require(ServerScriptService.Features.Art.Systems.ArtVisualSystem)
+local CameraOccluderConstants = require(ReplicatedStorage.Shared.Features.Camera.Data.CameraOccluderConstants)
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionConstants)
 local OfficeServer = ServerScriptService.Features.Office
@@ -56,6 +59,8 @@ type Record = {
 	sign: number,
 	leaf: BasePart,
 	fraction: NumberValue,
+	-- A solid leaf wearing art: it occludes the camera while closed.
+	occluder: boolean,
 	busy: boolean,
 	tween: Tween?,
 	connection: RBXScriptConnection?,
@@ -102,6 +107,20 @@ local function leafPart(name: string, size: Vector3, glass: boolean, parent: Ins
 	end
 	leaf.Parent = parent
 	return leaf
+end
+
+-- Attaches the leaf's door art; true when it did and the leaf is solid (so it occludes while closed).
+local function dress(art: ArtVisualSystem.Controller, leaf: BasePart, glass: boolean): boolean
+	local visual = OfficeArtKeyUtils.attachFirst(
+		art,
+		leaf,
+		"building",
+		OfficeArtKeyUtils.candidates(if glass then "doorLeafGlass" else "doorLeaf", nil, nil)
+	)
+	if visual ~= nil and glass then
+		leaf:SetAttribute(CameraOccluderConstants.ATTRIBUTE, nil)
+	end
+	return visual ~= nil and not glass
 end
 
 local function stopTween(record: Record)
@@ -198,12 +217,7 @@ function OfficeDoorSystem.build(
 				kind == "glass",
 				folder
 			)
-			OfficeArtKeyUtils.attachFirst(
-				art,
-				leaf,
-				"building",
-				OfficeArtKeyUtils.candidates(if kind == "glass" then "doorLeafGlass" else "doorLeaf", nil, nil)
-			)
+			local occluder = dress(art, leaf, kind == "glass")
 			local modifier = Instance.new("PathfindingModifier")
 			modifier.Label = OfficeConstants.DOOR_PATH_LABEL
 			modifier.PassThrough = true
@@ -230,6 +244,7 @@ function OfficeDoorSystem.build(
 				sign = OfficeDoorUtils.swingSign(door, edge, room),
 				leaf = leaf,
 				fraction = Instance.new("NumberValue"),
+				occluder = occluder,
 				busy = false,
 				tween = nil,
 				connection = nil,
@@ -258,16 +273,7 @@ function OfficeDoorSystem.build(
 				folder
 			)
 			leaf.CFrame = frame
-			OfficeArtKeyUtils.attachFirst(
-				art,
-				leaf,
-				"building",
-				OfficeArtKeyUtils.candidates(
-					if facade.kind == "entrance" then "doorLeafGlass" else "doorLeaf",
-					nil,
-					nil
-				)
-			)
+			dress(art, leaf, facade.kind == "entrance")
 			leaf:SetAttribute("OfficeFacade", facade.kind)
 		end
 	end
@@ -278,6 +284,9 @@ function OfficeDoorSystem.build(
 		setOpen(record, opening)
 		if opening then
 			record.leaf.CanCollide = false
+			if record.occluder then
+				record.leaf:SetAttribute(CameraOccluderConstants.ATTRIBUTE, nil)
+			end
 		end
 		local tween = TweenService:Create(
 			record.fraction,
@@ -295,6 +304,9 @@ function OfficeDoorSystem.build(
 				record.busy = false
 				if not opening then
 					record.leaf.CanCollide = true
+					if record.occluder then
+						record.leaf:SetAttribute(CameraOccluderConstants.ATTRIBUTE, true)
+					end
 				end
 			else
 				swing(record, true)
@@ -351,6 +363,9 @@ function OfficeDoorSystem.build(
 				record.fraction.Value = 0
 				setOpen(record, false)
 				record.leaf.CanCollide = true
+				if record.occluder then
+					record.leaf:SetAttribute(CameraOccluderConstants.ATTRIBUTE, true)
+				end
 			end
 		end,
 
