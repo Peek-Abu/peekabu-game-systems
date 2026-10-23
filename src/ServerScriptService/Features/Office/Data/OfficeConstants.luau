@@ -294,17 +294,23 @@ return table.freeze({
 	-- A marker sits at least this far inside its room's walls.
 	MARKER_MARGIN = 2,
 	DOOR_MIN_WIDTH = 4,
-	-- Real doors (OfficeDoorSystem): the leaf's id kind / path label, size, swing and the noise / auto-open radii.
+	-- Real doors (OfficeDoorSystem): the leaf's id kind / path label, size, swing and the noise / reach radii.
 	-- The leaf stops short of the wall top (that gap above the leaf is left open). A leaf carries a
-	-- PathfindingModifier (Label DOOR_PATH_LABEL, PassThrough) so Mr. Harlow's paths ignore it; he opens doors within
-	-- DOOR_AUTO_OPEN_RADIUS of himself, and a door slammed by a player is heard DOOR_SLAM_RADIUS studs away.
+	-- PathfindingModifier (Label DOOR_PATH_LABEL, PassThrough) so Mr. Harlow's paths ignore it; he opens a door only
+	-- when it lies within DOOR_REACH of him and ahead of his heading (a door he is walking through), a player cannot
+	-- close a door while an NPC is within DOOR_REACH of it, and a door slammed by a player is heard DOOR_SLAM_RADIUS
+	-- studs away. A facade leaf (locked set dressing) is tagged FACADE_KIND and rattles DOOR_RATTLE_ANGLE for
+	-- DOOR_RATTLE_SECONDS when a player tries it.
 	DOOR_KIND = "officeDoor",
+	FACADE_KIND = "officeFacade",
 	DOOR_PATH_LABEL = "OfficeDoor",
 	DOOR_HEIGHT = 9.4,
 	DOOR_LEAF_THICKNESS = 0.3,
 	DOOR_SWING_SECONDS = 0.3,
 	DOOR_OPEN_ANGLE = math.rad(95),
-	DOOR_AUTO_OPEN_RADIUS = 10,
+	DOOR_REACH = 8,
+	DOOR_RATTLE_ANGLE = math.rad(1.5),
+	DOOR_RATTLE_SECONDS = 0.25,
 	DOOR_SLAM_RADIUS = 18,
 	DOOR_COLOR = Color3.fromRGB(122, 92, 64),
 	-- Kit rooms: furniture stays out of a box this deep behind the front door (OfficeKitRules).

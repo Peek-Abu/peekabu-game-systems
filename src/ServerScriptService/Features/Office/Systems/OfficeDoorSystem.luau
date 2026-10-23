@@ -14,10 +14,14 @@
 	Bodies: a doorway is clear to close only with no Humanoid's root in it, players and NPCs alike (Mr. Harlow is
 	never shut in or knocked by a closing leaf): player roots from Players, every other Humanoid model's root from a
 	spatial query of the doorway. A player's close is also refused while any NPC root is within
-	DOOR_AUTO_OPEN_RADIUS of the door (he would reopen it at once), so a player can neither close a door on him nor
-	stall him by spamming it, and no false slam is heard. `openNear` opens every closed door in reach but reports
-	true only when one it opened lies ahead of the given heading (OfficeDoorUtils.ahead), so his door beat skips side
-	doors and doors behind him.
+	DOOR_REACH of the door (he would reopen it at once), so a player can neither close a door on him nor
+	stall him by spamming it, and no false slam is heard. `openNear` opens only the closed doors he is walking
+	through: within DOOR_REACH and ahead of the given heading (OfficeDoorUtils.reach; a nil heading counts every
+	door as ahead). Doors behind him, beside him or farther off stay as they are.
+
+	Facades are locked: each leaf is tagged for Interaction as OfficeConstants.FACADE_KIND ("Locked"), and `rattle`
+	gives it a short yaw jiggle about its own centre (OfficeDoorUtils.rattle) that returns exactly to its frame, with
+	no noise; a rattle ignores interacts while it runs.
 
 	The swing tweens a fraction (0 closed .. 1 open) and places the leaf with OfficeDoorUtils.leafFrame each step,
 	so it travels the hinge's arc (tweening the CFrame itself would cut a chord). A door ignores toggles mid-swing.
@@ -72,14 +76,19 @@ type Record = {
 	boxMax: Vector3,
 }
 
+-- A facade leaf's rattle: its resting frame, the 0 .. 1 progress being tweened and the running tween.
+type Rattle = { frame: CFrame, progress: NumberValue, tween: Tween? }
+
 export type DoorSet = {
 	-- Opens a closed door or closes an open one. False when it is mid-swing, unknown, someone (player or NPC)
 	-- stands in the doorway of a door being closed, or, for a player's close, an NPC is within
-	-- DOOR_AUTO_OPEN_RADIUS of it. `by` is the player who asked (nil: Harlow / the harness).
+	-- DOOR_REACH of it. `by` is the player who asked (nil: Harlow / the harness).
 	toggle: (id: string, by: Player?) -> boolean,
-	-- Opens every closed door within OfficeConstants.DOOR_AUTO_OPEN_RADIUS of `point` (XZ). True if a door it opened
-	-- lies ahead of `heading` (OfficeDoorUtils.ahead; a nil heading counts every door as ahead).
+	-- Opens every closed door within OfficeConstants.DOOR_REACH of `point` (XZ) and ahead of `heading`
+	-- (OfficeDoorUtils.ahead; a nil heading counts every door as ahead). True if it opened one.
 	openNear: (point: Vector3, heading: Vector3?) -> boolean,
+	-- Rattles a locked facade leaf. False when `leaf` is not one or is already rattling.
+	rattle: (leaf: BasePart) -> boolean,
 	-- Every door's id, world centre and open flag. Live: read only, do not keep across a rebuild.
 	states: () -> { DoorState },
 	-- Snaps every door shut (test harness).
@@ -150,6 +159,7 @@ function OfficeDoorSystem.build(
 	folder.Name = "Doors"
 	folder.Parent = parent
 	local records: { [string]: Record } = {}
+	local rattles: { [BasePart]: Rattle } = {}
 	local states: { DoorState } = {}
 	local thickness = OfficeConstants.WALL_THICKNESS
 	local height = OfficeConstants.DOOR_HEIGHT
@@ -196,14 +206,10 @@ function OfficeDoorSystem.build(
 		return found
 	end
 
-	-- The roots of the NPCs within DOOR_AUTO_OPEN_RADIUS of `record`'s door.
+	-- The roots of the NPCs within DOOR_REACH of `record`'s door.
 	local function npcsNear(record: Record): { Vector3 }
 		local found: { Vector3 } = {}
-		rootsIn(
-			Workspace:GetPartBoundsInRadius(record.state.position, OfficeConstants.DOOR_AUTO_OPEN_RADIUS),
-			true,
-			found
-		)
+		rootsIn(Workspace:GetPartBoundsInRadius(record.state.position, OfficeConstants.DOOR_REACH), true, found)
 		return found
 	end
 
@@ -258,7 +264,7 @@ function OfficeDoorSystem.build(
 		end
 	end
 
-	-- Facades: locked fake doors on unbroken walls (closed, flush, not interactable). An entrance is a double glass
+	-- Facades: locked fake doors on unbroken walls (closed, flush, locked: tagged FACADE_KIND, they only rattle). An entrance is a double glass
 	-- door: two leaves of half its width side by side, each hinged at its outer edge (the template's hinge is its local
 	-- +X, so the leaf on the frame's -X side is turned half way); a stairwell is one solid leaf.
 	local facades: { OfficeTypes.Facade } = layout.facades or {}
@@ -279,6 +285,9 @@ function OfficeDoorSystem.build(
 					* CFrame.Angles(0, if spec.side < 0 then math.pi else 0, 0)
 				dress(art, leaf, entrance)
 				leaf:SetAttribute("OfficeFacade", facade.kind)
+				leaf:SetAttribute(InteractionConstants.KIND_ATTRIBUTE, OfficeConstants.FACADE_KIND)
+				CollectionService:AddTag(leaf, InteractionConstants.TAG)
+				rattles[leaf] = { frame = leaf.CFrame, progress = Instance.new("NumberValue"), tween = nil }
 			end
 		end
 	end
@@ -333,7 +342,7 @@ function OfficeDoorSystem.build(
 					return false
 				end
 				-- A player's close with Mr. Harlow about: he would reopen it, so it never starts (and never slams).
-				local radius = OfficeConstants.DOOR_AUTO_OPEN_RADIUS
+				local radius = OfficeConstants.DOOR_REACH
 				if by ~= nil and OfficeDoorUtils.npcNear(npcsNear(record), record.state.position, radius) then
 					return false
 				end
@@ -343,18 +352,38 @@ function OfficeDoorSystem.build(
 		end,
 
 		openNear = function(point, heading)
-			local ahead = false
-			for _, id in OfficeDoorUtils.near(states, point, OfficeConstants.DOOR_AUTO_OPEN_RADIUS) do
-				local record = records[id]
-				if
-					set.toggle(id, nil)
-					and record ~= nil
-					and OfficeDoorUtils.ahead(record.state.position, point, heading)
-				then
-					ahead = true
+			local opened = false
+			for _, id in OfficeDoorUtils.reach(states, point, heading, OfficeConstants.DOOR_REACH) do
+				if set.toggle(id, nil) then
+					opened = true
 				end
 			end
-			return ahead
+			return opened
+		end,
+
+		rattle = function(leaf)
+			local rattle = rattles[leaf]
+			if rattle == nil or rattle.tween ~= nil then
+				return false
+			end
+			local tween = TweenService:Create(
+				rattle.progress,
+				TweenInfo.new(OfficeConstants.DOOR_RATTLE_SECONDS, Enum.EasingStyle.Linear),
+				{ Value = 1 }
+			)
+			rattle.tween = tween
+			rattle.progress.Value = 0
+			local connection = rattle.progress.Changed:Connect(function(value)
+				leaf.CFrame = rattle.frame * OfficeDoorUtils.rattle(value)
+			end)
+			tween.Completed:Once(function()
+				connection:Disconnect()
+				leaf.CFrame = rattle.frame
+				rattle.tween = nil
+				tween:Destroy()
+			end)
+			tween:Play()
+			return true
 		end,
 
 		states = function()
@@ -383,7 +412,18 @@ function OfficeDoorSystem.build(
 				end
 				record.fraction:Destroy()
 			end
+			for leaf, rattle in rattles do
+				local tween = rattle.tween
+				if tween ~= nil then
+					rattle.tween = nil
+					tween:Cancel()
+					tween:Destroy()
+					leaf.CFrame = rattle.frame
+				end
+				rattle.progress:Destroy()
+			end
 			table.clear(records)
+			table.clear(rattles)
 			table.clear(states)
 		end,
 	}

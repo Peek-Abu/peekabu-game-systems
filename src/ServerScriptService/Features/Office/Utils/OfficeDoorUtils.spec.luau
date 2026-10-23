@@ -138,18 +138,50 @@ return function()
 		end)
 	end)
 
-	describe("near", function()
-		it("returns only closed doors within the radius on the ground plane", function()
-			local doors = {
-				{ id = "a|b", position = Vector3.new(0, 4, 0), open = false },
-				{ id = "c|d", position = Vector3.new(5, 4, 0), open = true },
-				{ id = "e|f", position = Vector3.new(30, 4, 0), open = false },
-				{ id = "g|h", position = Vector3.new(0, 90, 9), open = false },
-			}
-			local ids = OfficeDoorUtils.near(doors, Vector3.new(0, 0, 0), 10)
-			expect(#ids).to.equal(2)
-			expect(ids[1]).to.equal("a|b")
-			expect(ids[2]).to.equal("g|h")
+	describe("reach", function()
+		local point = Vector3.new(0, 3, 0)
+		local heading = Vector3.new(0, 0, 1)
+		local function ids(doors)
+			return OfficeDoorUtils.reach(doors, point, heading, 8)
+		end
+		it("includes a closed door 6 studs ahead", function()
+			local found = ids({ { id = "a|b", position = Vector3.new(0, 4.7, 6), open = false } })
+			expect(#found).to.equal(1)
+			expect(found[1]).to.equal("a|b")
+		end)
+		it("skips a door 9 studs ahead: beyond the reach", function()
+			expect(#ids({ { id = "a|b", position = Vector3.new(0, 4.7, 9), open = false } })).to.equal(0)
+		end)
+		it("skips a door 6 studs behind him, and one level beside him", function()
+			expect(#ids({ { id = "a|b", position = Vector3.new(0, 4.7, -6), open = false } })).to.equal(0)
+			expect(#ids({ { id = "a|b", position = Vector3.new(6, 4.7, 0), open = false } })).to.equal(0)
+		end)
+		it("skips a door that is already open, and ignores height", function()
+			expect(#ids({ { id = "a|b", position = Vector3.new(0, 4.7, 6), open = true } })).to.equal(0)
+			expect(#ids({ { id = "a|b", position = Vector3.new(0, 90, 6), open = false } })).to.equal(1)
+		end)
+		it("counts every door within reach as ahead with no heading", function()
+			local doors = { { id = "a|b", position = Vector3.new(0, 4.7, -6), open = false } }
+			expect(#OfficeDoorUtils.reach(doors, point, nil, 8)).to.equal(1)
+		end)
+	end)
+
+	describe("rattle", function()
+		it("is the identity at both ends of the rattle", function()
+			expect(OfficeDoorUtils.rattle(0)).to.equal(CFrame.identity)
+			expect(OfficeDoorUtils.rattle(1)).to.equal(CFrame.identity)
+			expect(OfficeDoorUtils.rattle(1.5)).to.equal(CFrame.identity)
+		end)
+		it("only turns about the vertical axis, never past the amplitude, and moves in between", function()
+			local moved = false
+			for step = 1, 99 do
+				local frame = OfficeDoorUtils.rattle(step / 100)
+				expect(frame.Position.Magnitude < 1e-6).to.equal(true)
+				local _, yaw = frame:ToEulerAnglesYXZ()
+				expect(math.abs(yaw) <= OfficeConstants.DOOR_RATTLE_ANGLE + 1e-6).to.equal(true)
+				moved = moved or math.abs(yaw) > 1e-3
+			end
+			expect(moved).to.equal(true)
 		end)
 	end)
 

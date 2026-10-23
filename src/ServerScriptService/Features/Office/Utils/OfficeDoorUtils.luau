@@ -1,8 +1,8 @@
 --!strict
 --[=[
 	OfficeDoorUtils: the maths of the office's real doors. Where a door leaf stands at a fraction of its swing, which
-	way it swings, which closed doors are near a point, whether a door lies ahead of a walker, whether an NPC is
-	near a door, and whether a doorway is clear enough to close. Pure.
+	way it swings, which closed doors a walker is walking through (in reach and ahead), whether a door lies ahead of a walker, the
+	rattle of a locked door, whether an NPC is near a door, and whether a doorway is clear enough to close. Pure.
 
 	Frames are in layout space: pass the office origin to get world space. A leaf is the clear opening inside the oak
 	casing, a box (`leafSize`: door.width - 2 x casing by DOOR_HEIGHT - casing, DOOR_LEAF_THICKNESS thick) centred in
@@ -34,6 +34,8 @@ export type DoorState = { id: string, position: Vector3, open: boolean }
 
 -- Bodies this close (studs, each axis) to the doorway keep it from closing.
 local BODY_MARGIN = 1
+-- Back-and-forth jiggles in one rattle.
+local RATTLE_JIGGLES = 3
 
 local OfficeDoorUtils = {}
 
@@ -132,24 +134,6 @@ function OfficeDoorUtils.facadeLeaves(facade: Facade): { { size: Vector3, offset
 end
 
 --[=[
-	The ids of the closed doors whose centre is within `radius` studs of `point` on the ground plane (XZ).
-]=]
-function OfficeDoorUtils.near(doors: { DoorState }, point: Vector3, radius: number): { string }
-	local ids: { string } = {}
-	local limit = radius * radius
-	for _, state in doors do
-		if not state.open then
-			local dx = state.position.X - point.X
-			local dz = state.position.Z - point.Z
-			if dx * dx + dz * dz <= limit then
-				table.insert(ids, state.id)
-			end
-		end
-	end
-	return ids
-end
-
---[=[
 	Whether `target` (a door's centre) lies ahead of a walker at `point` heading `heading`: the ground-plane (XZ) dot
 	product of (target - point) and the heading is positive. With no heading, or one with no ground-plane part,
 	every door counts as ahead.
@@ -163,6 +147,38 @@ function OfficeDoorUtils.ahead(target: Vector3, point: Vector3, heading: Vector3
 		return true
 	end
 	return (target.X - point.X) * hx + (target.Z - point.Z) * hz > 0
+end
+
+--[=[
+	The ids of the closed doors a walker at `point` heading `heading` is walking through: the door's centre is within
+	`radius` studs on the ground plane (XZ) and ahead of the heading (`ahead`; a nil heading counts every door as ahead).
+]=]
+function OfficeDoorUtils.reach(doors: { DoorState }, point: Vector3, heading: Vector3?, radius: number): { string }
+	local ids: { string } = {}
+	local limit = radius * radius
+	for _, state in doors do
+		if not state.open then
+			local dx = state.position.X - point.X
+			local dz = state.position.Z - point.Z
+			if dx * dx + dz * dz <= limit and OfficeDoorUtils.ahead(state.position, point, heading) then
+				table.insert(ids, state.id)
+			end
+		end
+	end
+	return ids
+end
+
+--[=[
+	The turn of a locked door's rattle at fraction `t` (0 .. 1) of DOOR_RATTLE_SECONDS: a few small yaw jiggles of up
+	to DOOR_RATTLE_ANGLE that die away, applied on the right of the leaf's own frame (so about its centre). Exactly the
+	identity at t <= 0 and t >= 1.
+]=]
+function OfficeDoorUtils.rattle(t: number): CFrame
+	if t <= 0 or t >= 1 then
+		return CFrame.identity
+	end
+	local swing = math.sin(t * 2 * math.pi * RATTLE_JIGGLES) * (1 - t)
+	return CFrame.Angles(0, OfficeConstants.DOOR_RATTLE_ANGLE * swing, 0)
 end
 
 --[=[

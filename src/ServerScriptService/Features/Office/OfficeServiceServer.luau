@@ -14,8 +14,9 @@
 
 	Doors: it registers the door prompt (OfficeConstants.DOOR_KIND, "Open / close"), toggles the door on interact
 	(a player's accepted close slams: a "door" noise, DOOR_SLAM_RADIUS; a close with Harlow about is refused), and
-	`openDoorsNear` lets Harlow open the closed doors about him, true when one he opened lies ahead of his heading
-	(false when no office stands).
+	`openDoorsNear` lets Harlow open the closed doors he is walking through (within DOOR_REACH, ahead of his heading;
+	true when it opened one, false when no office stands). Facade leaves are locked set dressing: their prompt
+	(OfficeConstants.FACADE_KIND, "Locked") only rattles the leaf.
 
 	Ordering guarantee for anything that spawns into a shift (Occupant's Manager): `ready` fires (deferred, with the shift
 	folder) once `beginShift` has rebuilt the office and placed every spawn, and `isReady` says whether that shift is
@@ -283,6 +284,19 @@ local OfficeServiceServer: OfficeServiceServer = {
 				maxDistance = 8,
 			})
 		end
+		if not InteractionRegistry.has(OfficeConstants.FACADE_KIND) then
+			InteractionRegistry.register(OfficeConstants.FACADE_KIND, {
+				actionText = "Locked",
+				objectText = "Door",
+				maxDistance = 8,
+			})
+		end
+		InteractionServiceServer:onInteract(OfficeConstants.FACADE_KIND, function(_player, target)
+			local current = built
+			if current ~= nil and target:IsA("BasePart") then
+				current.doors.rattle(target)
+			end
+		end)
 		InteractionServiceServer:onInteract(OfficeConstants.DOOR_KIND, function(player, target)
 			local current = built
 			local id = target:GetAttribute("OfficeDoorId")
@@ -543,9 +557,9 @@ local OfficeServiceServer: OfficeServiceServer = {
 	end,
 
 	--[=[
-		Opens every closed door within OfficeConstants.DOOR_AUTO_OPEN_RADIUS of `position` (Harlow's think calls this).
-		True when a door it opened lies ahead of `heading` (nil: any door counts); false when none did, nothing
-		opened or no office stands.
+		Opens every closed door within OfficeConstants.DOOR_REACH of `position` and ahead of `heading` (nil: any door
+		counts): the doors Harlow is walking through (his think calls this). True when it opened one; false when none did
+		or no office stands.
 	]=]
 	openDoorsNear = function(_self, position, heading)
 		local current = built

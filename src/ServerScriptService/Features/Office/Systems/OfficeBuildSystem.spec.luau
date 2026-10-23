@@ -558,6 +558,114 @@ return function()
 			built.doors.destroy()
 		end)
 
+		it("tags every facade leaf for Interaction as the locked-door kind, and real leaves as doors", function()
+			local layout = twoRooms("solid", nil)
+			layout.facades = {
+				{ room = "a", x = 0, z = 5, width = 12, kind = "entrance" },
+				{ room = "a", x = 20, z = 5, width = 6, kind = "stairwell" },
+			}
+			local built = build(layout)
+			local facades, doors = 0, 0
+			for _, leaf in built.model.Doors:GetChildren() do
+				expect(CollectionService:HasTag(leaf, Interaction.TAG)).to.equal(true)
+				if leaf:GetAttribute("OfficeFacade") ~= nil then
+					facades += 1
+					expect(leaf:GetAttribute(Interaction.KIND_ATTRIBUTE)).to.equal(Constants.FACADE_KIND)
+				else
+					doors += 1
+					expect(leaf:GetAttribute(Interaction.KIND_ATTRIBUTE)).to.equal(Constants.DOOR_KIND)
+				end
+			end
+			expect(facades).to.equal(3)
+			expect(doors).to.equal(1)
+			built.doors.destroy()
+		end)
+
+		it("rattles a facade leaf and returns it exactly to its frame, ignoring interacts mid-rattle", function()
+			local layout = twoRooms("open", nil)
+			layout.facades = { { room = "a", x = 0, z = 5, width = 6, kind = "stairwell" } }
+			local built = build(layout)
+			local leaf
+			for _, child in built.model.Doors:GetChildren() do
+				if child:GetAttribute("OfficeFacade") ~= nil then
+					leaf = child
+				end
+			end
+			local frame = leaf.CFrame
+			expect(built.doors.rattle(leaf)).to.equal(true)
+			expect(built.doors.rattle(leaf)).to.equal(false)
+			task.wait(Constants.DOOR_RATTLE_SECONDS + 0.3)
+			expect(leaf.CFrame).to.equal(frame)
+			expect(built.doors.rattle(leaf)).to.equal(true)
+			built.doors.destroy()
+		end)
+
+		describe("Harlow's door reach", function()
+			local npcs = {}
+			afterEach(function()
+				for _, npc in npcs do
+					npc:Destroy()
+				end
+				table.clear(npcs)
+			end)
+			-- The door of twoRooms stands at (50010, 4.7, 10): a point `dz` studs from it along Z.
+			local function at(dz)
+				return Vector3.new(50010, 3, 10 + dz)
+			end
+			local function npcAt(position)
+				local model = Instance.new("Model")
+				model.Name = "TestNpc"
+				local root = Instance.new("Part")
+				root.Name = "HumanoidRootPart"
+				root.Anchored = true
+				root.CanCollide = false
+				root.Position = position
+				root.Parent = model
+				Instance.new("Humanoid").Parent = model
+				model.Parent = workspace
+				table.insert(npcs, model)
+			end
+
+			it("does not open a door 9 studs away", function()
+				local built = build(twoRooms("solid", nil))
+				expect(built.doors.openNear(at(-9), Vector3.new(0, 0, 1))).to.equal(false)
+				expect(built.model.Doors.DoorLeaf:GetAttribute("OfficeDoorOpen")).to.equal(false)
+				built.doors.destroy()
+			end)
+
+			it("does not open a door 6 studs behind him", function()
+				local built = build(twoRooms("solid", nil))
+				expect(built.doors.openNear(at(6), Vector3.new(0, 0, 1))).to.equal(false)
+				expect(built.model.Doors.DoorLeaf:GetAttribute("OfficeDoorOpen")).to.equal(false)
+				built.doors.destroy()
+			end)
+
+			it("opens a door 6 studs ahead", function()
+				local built = build(twoRooms("solid", nil))
+				expect(built.doors.openNear(at(-6), Vector3.new(0, 0, 1))).to.equal(true)
+				expect(built.model.Doors.DoorLeaf:GetAttribute("OfficeDoorOpen")).to.equal(true)
+				built.doors.destroy()
+			end)
+
+			it("lets a player close a door with an NPC 9 studs away, and refuses it at 6", function()
+				local built = build(twoRooms("solid", nil))
+				local player = {}
+				for _, dz in { -9, -6 } do
+					built.doors.closeAll()
+					expect(built.doors.toggle("a|b", nil)).to.equal(true)
+					task.wait(Constants.DOOR_SWING_SECONDS + 0.3)
+					npcAt(at(dz))
+					expect(built.doors.toggle("a|b", player)).to.equal(dz == -9)
+					for _, npc in npcs do
+						npc:Destroy()
+					end
+					table.clear(npcs)
+					task.wait(Constants.DOOR_SWING_SECONDS + 0.3)
+				end
+				built.doors.destroy()
+			end)
+		end)
+
 		it("flags only a closed solid art leaf as a camera occluder", function()
 			template("building", "doorLeaf")
 			template("building", "doorLeafGlass")
