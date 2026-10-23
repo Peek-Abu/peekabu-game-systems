@@ -74,7 +74,16 @@ local function openingRects(layout, room)
 	for _, edge in { "minX", "maxX", "minZ", "maxZ" } do
 		local horizontal = edge == "minZ" or edge == "maxZ"
 		local wall = room[edge]
-		for _, span in LayoutUtils.openingsOn(layout, room, edge) do
+		local spans = LayoutUtils.openingsOn(layout, room, edge)
+		for _, pane in LayoutUtils.panes(layout) do
+			if
+				(pane.z1 == pane.z2) == horizontal
+				and math.abs((if horizontal then pane.z1 else pane.x1) - wall) < 1e-6
+			then
+				table.insert(spans, if horizontal then { pane.x1, pane.x2 } else { pane.z1, pane.z2 })
+			end
+		end
+		for _, span in spans do
 			local from, to = span[1] - Constants.SHELL.casing, span[2] + Constants.SHELL.casing
 			if horizontal then
 				table.insert(rects, { minX = from, maxX = to, minZ = wall - HALF_WALL, maxZ = wall + HALF_WALL })

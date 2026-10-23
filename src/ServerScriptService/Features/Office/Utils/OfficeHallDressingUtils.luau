@@ -244,7 +244,8 @@ local function canStand(state: State, edge: Edge, art: string, along: number): b
 	end
 	local half = sizeOf(art).X / 2
 	local from, to = span(state.room, edge)
-	if along - half < from or along + half > to then
+	-- The wall at each end carries trim too: stay MAX_WALL_GAP off it.
+	if along - half < from + MAX_WALL_GAP or along + half > to - MAX_WALL_GAP then
 		return false
 	end
 	local rect = footprint(state.room, edge, art, along, MAX_WALL_GAP)
@@ -370,7 +371,7 @@ local function corners(state: State)
 		local half = sizeOf(art).X / 2
 		for _, candidate in candidates do
 			local from, to = span(state.room, candidate.edge)
-			local along = if candidate.atStart then from + half else to - half
+			local along = if candidate.atStart then from + MAX_WALL_GAP + half else to - MAX_WALL_GAP - half
 			if canStand(state, candidate.edge, art, along) then
 				standAt(state, candidate.edge, art, along)
 				break

@@ -182,8 +182,12 @@ function OfficeKitRules.check(kit: Kit): (boolean, { string })
 			table.insert(errors, `{label}: {names[index]} is outside the walls`)
 		elseif box ~= nil and wallMounted(marker) then
 			-- Its back lies within half a wall plus a stud of a wall line, and not over the door on the front wall.
-			local against =
-				OfficeLayoutUtils.wallsAgainst({ minX = 0, maxX = kit.width, minZ = 0, maxZ = kit.depth }, box)
+			-- The window bay stands SHELL.trimClearance off the plaster: measure it from there.
+			local reach = if marker.art == "windowBay" then OfficeConstants.SHELL.trimClearance else 0
+			local against = OfficeLayoutUtils.wallsAgainst(
+				{ minX = 0, maxX = kit.width, minZ = 0, maxZ = kit.depth },
+				grow(box, reach)
+			)
 			if #against == 0 then
 				table.insert(errors, `{label}: {names[index]} is not against a wall`)
 			elseif
