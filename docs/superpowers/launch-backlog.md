@@ -48,3 +48,21 @@ building it now. Each one is planned in the first-launch ideation, after the rem
 - `SpecRoots.luau` is over the 400-line limit and needs splitting.
 - `UISuppression.luau` fails `check_pr_rules` on the game branch. Port PR #11's Modal approach.
 - Merge base PRs #10 and #11.
+
+## Future updates: keeping the first minutes engaging (owner, 2026-10-23)
+
+Raised while planning the outside (stage 3): the truck now parks about 200 studs (12.5 s) from the dock door, and the
+owner worries about players getting bored on the walk and leaving in the first minutes. Not for stage 3; noted for
+later updates. (The exterior hints, Gloom ooze under the dock door and the anomaly pool, are already in the office map
+plan and are not repeated here.)
+
+- **Arrival as an event.** The truck drives in and parks while the crew stands in the back (like Lethal Company's
+  landing), plus a short dispatch radio line with tonight's quota and one hint ("Facilities reports a leak in the east
+  wing"). Biggest hook; new work, since the truck is never animated today.
+- **First payoff within ~30 s of entering.** Guarantee Gloom and an item or two in the dock room or the first hall.
+- **Cheap walking outside.** Outside and empty-handed: free sprint, slightly faster than normal. The trip in is quick;
+  only the loaded trip back is slow (the tense part). Sprint and carry slow-down already exist (`CarrySpeedSystem`).
+- **Fewer banking trips, not shorter ones,** only if play-tests show carrying feels like chores: a dolly/cart at the
+  dock, or let crews stage loot by the dock door like Lethal players pile scrap at the entrance.
+- **Measure drop-off.** Extend shift analytics with when each player leaves (shift second) and where (truck, yard,
+  inside), to see whether the walk actually loses people.
