@@ -210,7 +210,7 @@ export type SpawnPlan = {
 	value: number,
 }
 
-export type ShellMaterial = "plaster" | "oak" | "skirt" | "frame" | "glass" | "ceiling" | "grid"
+export type ShellMaterial = "plaster" | "oak" | "rail" | "skirt" | "frame" | "glass" | "ceiling" | "grid"
 export type ShellBox = {
 	name: string,
 	size: Vector3,

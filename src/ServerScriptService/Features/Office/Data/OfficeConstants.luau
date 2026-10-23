@@ -106,6 +106,72 @@ local ACCENT_LIGHTS: { [string]: { brightness: number, range: number, color: Col
 	GlowLight = { brightness = 1.6, range = 11, color = Color3.fromRGB(255, 200, 140) },
 	LampLight = { brightness = 1.6, range = 11, color = Color3.fromRGB(255, 168, 90) },
 }
+-- Shell geometry sizes in studs (OfficeShellUtils). slab: one plaster layer (a wall is two); slabOverhang: how far the
+-- slabs run below the floor top and above the ceiling; wainscot/rail/skirt: trim heights and how far each stands off the
+-- slab face; casing: door jamb thickness; pilaster: archway column width; mullion/mullionSpacing/glassFrame/baseRail:
+-- framed glass; gridSpacing/gridWidth/gridThickness: ceiling grid strips.
+local SHELL = table.freeze({
+	slab = 0.5,
+	slabOverhang = 1,
+	wainscotHeight = 3,
+	wainscotProud = 0.3,
+	railHeight = 0.25,
+	railDepth = 0.5,
+	skirtHeight = 0.6,
+	skirtProud = 0.4,
+	casing = 0.35,
+	pilaster = 0.6,
+	mullion = 0.4,
+	mullionSpacing = 6,
+	glassFrame = 0.6,
+	baseRail = 0.35,
+	gridSpacing = 4,
+	gridWidth = 0.15,
+	gridThickness = 0.08,
+})
+-- What each shell box is made of (a nil variant is none). Values measured from the spike and the mock room.
+local SHELL_MATERIALS: { [OfficeTypes.ShellMaterial]: { material: Enum.Material, variant: string?, color: Color3, transparency: number } } =
+	{
+		plaster = {
+			material = Enum.Material.Plaster,
+			variant = "OH_Plaster",
+			color = Color3.new(1, 1, 1),
+			transparency = 0,
+		},
+		oak = { material = Enum.Material.Wood, variant = "OH_Oak", color = Color3.new(1, 1, 1), transparency = 0 },
+		rail = { material = Enum.Material.Wood, variant = nil, color = Color3.fromRGB(110, 80, 56), transparency = 0 },
+		skirt = {
+			material = Enum.Material.SmoothPlastic,
+			variant = nil,
+			color = Color3.fromRGB(150, 112, 80),
+			transparency = 0,
+		},
+		frame = {
+			material = Enum.Material.SmoothPlastic,
+			variant = nil,
+			color = Color3.fromRGB(46, 48, 56),
+			transparency = 0,
+		},
+		grid = {
+			material = Enum.Material.SmoothPlastic,
+			variant = nil,
+			color = Color3.fromRGB(170, 165, 156),
+			transparency = 0,
+		},
+		glass = {
+			material = Enum.Material.Glass,
+			variant = nil,
+			color = Color3.fromRGB(170, 205, 215),
+			transparency = 0.6,
+		},
+		ceiling = {
+			material = Enum.Material.Concrete,
+			variant = "OH_Ceiling",
+			color = Color3.new(1, 1, 1),
+			transparency = 0,
+		},
+	}
+
 local FLOOR_COLORS: { Color3 } = {
 	Color3.fromRGB(96, 92, 86),
 	Color3.fromRGB(70, 82, 96),
@@ -194,19 +260,22 @@ return table.freeze({
 	DECOR_MONITOR_SIZE = Vector3.new(2.25, 1.845, 0.7),
 	ELEVATOR_FRONT_SIZE = Vector3.new(6, 8, 0.5),
 	SHIFT_FOLDER_NAME = "Shift",
-	WALL_HEIGHT = 12,
+	WALL_HEIGHT = 13,
 	WALL_THICKNESS = 1,
+	-- Shell trim and framing dimensions (OfficeShellUtils), measured from the approved spike.
+	SHELL = SHELL,
+	SHELL_MATERIALS = table.freeze(SHELL_MATERIALS),
 	FLOOR_THICKNESS = 1,
 	-- A marker sits at least this far inside its room's walls.
 	MARKER_MARGIN = 2,
 	DOOR_MIN_WIDTH = 4,
 	-- Real doors (OfficeDoorSystem): the leaf's id kind / path label, size, swing and the noise / auto-open radii.
-	-- The leaf stops 3 studs short of the 12-stud wall top (that gap above the leaf is left open). A leaf carries a
+	-- The leaf stops short of the wall top (that gap above the leaf is left open). A leaf carries a
 	-- PathfindingModifier (Label DOOR_PATH_LABEL, PassThrough) so Mr. Harlow's paths ignore it; he opens doors within
 	-- DOOR_AUTO_OPEN_RADIUS of himself, and a door slammed by a player is heard DOOR_SLAM_RADIUS studs away.
 	DOOR_KIND = "officeDoor",
 	DOOR_PATH_LABEL = "OfficeDoor",
-	DOOR_HEIGHT = 9,
+	DOOR_HEIGHT = 9.4,
 	DOOR_LEAF_THICKNESS = 0.3,
 	DOOR_SWING_SECONDS = 0.3,
 	DOOR_OPEN_ANGLE = math.rad(95),
