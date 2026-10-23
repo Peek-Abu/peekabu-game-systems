@@ -109,11 +109,15 @@ export type World = {
 function System.layout(route: { Vector3 }): World
 	local min, max = OfficeServiceServer:safeZone()
 	local bayMin, bayMax = OfficeServiceServer:loadingBay()
+	local more: { Types.Zone } = {}
+	for _, box in OfficeServiceServer:outdoors() do
+		table.insert(more, { min = box.min, max = box.max })
+	end
 	return {
 		resting = false,
 		route = route,
 		restPoint = OfficeServiceServer:restPoint(),
-		zone = { min = min, max = max },
+		zone = { min = min, max = max, more = more },
 		bay = { min = bayMin, max = bayMax },
 	}
 end

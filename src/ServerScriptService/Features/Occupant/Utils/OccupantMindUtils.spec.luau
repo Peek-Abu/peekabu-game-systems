@@ -32,6 +32,22 @@ local function fresh()
 end
 
 return function()
+	describe("inZone", function()
+		local YARD = { min = Vector3.new(200, 0, 0), max = Vector3.new(260, 20, 40) }
+		it("is true in the box, false outside it, false without a zone", function()
+			expect(M.inZone(Vector3.new(10, 3, 10), ZONE)).to.equal(true)
+			expect(M.inZone(Vector3.new(230, 3, 10), ZONE)).to.equal(false)
+			expect(M.inZone(Vector3.new(10, 3, 10), nil)).to.equal(false)
+		end)
+		it("is true in any `more` box, and unchanged with more = nil", function()
+			local zone = { min = ZONE.min, max = ZONE.max, more = { YARD } }
+			expect(M.inZone(Vector3.new(230, 3, 10), zone)).to.equal(true)
+			expect(M.inZone(Vector3.new(10, 3, 10), zone)).to.equal(true)
+			expect(M.inZone(Vector3.new(120, 3, 10), zone)).to.equal(false)
+			expect(M.inZone(Vector3.new(230, 3, 10), { min = ZONE.min, max = ZONE.max })).to.equal(false)
+		end)
+	end)
+
 	describe("enter", function()
 		it("copies into the mode and forgets any desk or spot", function()
 			local mind = fresh()

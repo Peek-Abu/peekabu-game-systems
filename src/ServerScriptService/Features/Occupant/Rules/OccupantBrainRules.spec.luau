@@ -255,6 +255,19 @@ return function()
 			expect(OccupantBrainRules.inZone(inside.intent.position, ZONE)).to.equal(false)
 		end)
 
+		it("never spots a player standing in the yard, and ignores a noise there", function()
+			local yard = { min = AHEAD - Vector3.new(5, 5, 5), max = AHEAD + Vector3.new(5, 5, 5) }
+			local zone = { min = ZONE.min, max = ZONE.max, more = { yard } }
+			local control = OccupantBrainRules.step(fresh(), senses({ players = { player(7, AHEAD) } }))
+			expect(control.mind.mode).to.equal("chase")
+			local step = OccupantBrainRules.step(fresh(), senses({ zone = zone, players = { player(7, AHEAD) } }))
+			expect(step.mind.mode).to.equal("patrol")
+			local heard = OccupantBrainRules.step(fresh(), senses({ heard = Vector3.new(82, 0, 60) }))
+			expect(heard.mind.mode).to.equal("investigate")
+			local noisy = OccupantBrainRules.step(fresh(), senses({ zone = zone, heard = Vector3.new(82, 0, 60) }))
+			expect(noisy.mind.mode).to.equal("patrol")
+		end)
+
 		it("never spots a player standing in the loading bay", function()
 			local step = OccupantBrainRules.step(
 				fresh(),

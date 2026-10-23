@@ -34,13 +34,34 @@ local function graced(mind: Mind, userId: number, now: number): boolean
 	return untilTime ~= nil and now < untilTime
 end
 
-local function inZone(point: Vector3, zone: OccupantTypes.Zone): boolean
-	return point.X >= zone.min.X
-		and point.X <= zone.max.X
-		and point.Y >= zone.min.Y
-		and point.Y <= zone.max.Y
-		and point.Z >= zone.min.Z
-		and point.Z <= zone.max.Z
+local function inBox(point: Vector3, box: OccupantTypes.Zone): boolean
+	return point.X >= box.min.X
+		and point.X <= box.max.X
+		and point.Y >= box.min.Y
+		and point.Y <= box.max.Y
+		and point.Z >= box.min.Z
+		and point.Z <= box.max.Z
+end
+
+--[=[
+	Whether `point` is in `zone`'s box or any of its `more` boxes (the yard and car park); false without a zone. The one
+	zone test of all his senses (OccupantMindUtils.inZone is this).
+]=]
+function Sight.inZone(point: Vector3, zone: OccupantTypes.Zone?): boolean
+	if zone == nil then
+		return false
+	end
+	if inBox(point, zone) then
+		return true
+	end
+	if zone.more ~= nil then
+		for _, box in zone.more do
+			if inBox(point, box) then
+				return true
+			end
+		end
+	end
+	return false
 end
 
 export type Sight = "near" | "far"
@@ -60,7 +81,7 @@ function Sight.sightOf(mind: Mind, senses: Senses, glimpse: Glimpse): Sight?
 		not glimpse.clear
 		or glimpse.hidden == true
 		or graced(mind, glimpse.userId, senses.now)
-		or inZone(glimpse.position, senses.zone)
+		or Sight.inZone(glimpse.position, senses.zone)
 	then
 		return nil
 	end
@@ -144,7 +165,7 @@ local function eligible(mind: Mind, senses: Senses, glimpse: Glimpse): boolean
 	return glimpse.clear
 		and glimpse.hidden ~= true
 		and not graced(mind, glimpse.userId, senses.now)
-		and not inZone(glimpse.position, senses.zone)
+		and not Sight.inZone(glimpse.position, senses.zone)
 end
 
 local function level(senses: Senses, point: Vector3): Vector3

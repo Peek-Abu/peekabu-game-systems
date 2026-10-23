@@ -93,10 +93,12 @@ export type Pacing = {
 	overtime: boolean,
 }
 
--- An axis-aligned box in the world (the truck's box, the one safe place; or the loading bay around it).
+-- An axis-aligned box in the world (the truck's box, a safe place; or the loading bay around it). `more` adds boxes
+-- that count as the same zone (the outdoor yard and car park, safe ground like the truck).
 export type Zone = {
 	min: Vector3,
 	max: Vector3,
+	more: { Zone }?,
 }
 
 -- His memory between thinks. Times are os.clock() seconds.

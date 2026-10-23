@@ -56,6 +56,16 @@ return function()
 			behind.look = Vector3.new(-1, 0, 0)
 			expect(Sight.sightOf(mind(), behind, glimpse(1, Vector3.new(30, 3, 20)))).to.equal(nil)
 		end)
+		it("never sees someone in a `more` box of the zone", function()
+			local s = senses()
+			s.zone = {
+				min = ZONE.min,
+				max = ZONE.max,
+				more = { { min = Vector3.new(90, 0, 50), max = Vector3.new(110, 20, 70) } },
+			}
+			expect(Sight.sightOf(mind(), s, glimpse(1, Vector3.new(100, 3, 60)))).to.equal(nil)
+			expect(Sight.sightOf(mind(), senses(), glimpse(1, Vector3.new(100, 3, 60)))).to.equal("near")
+		end)
 		it("sees his chase target all round up close", function()
 			local s = senses()
 			local behind = glimpse(7, Vector3.new(40, 3, 60))

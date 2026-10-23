@@ -123,14 +123,10 @@ function M.elapsed(mind: Mind, now: number): number
 	return now - (mind.phaseAt or now)
 end
 
+-- In the zone's box or in any of its `more` boxes (the yard and car park). One definition, Sight's (Mind requires
+-- Sight, so it cannot be the other way round).
 function M.inZone(point: Vector3, zone: OccupantTypes.Zone?): boolean
-	return zone ~= nil
-		and point.X >= zone.min.X
-		and point.X <= zone.max.X
-		and point.Y >= zone.min.Y
-		and point.Y <= zone.max.Y
-		and point.Z >= zone.min.Z
-		and point.Z <= zone.max.Z
+	return Sight.inZone(point, zone)
 end
 
 -- Keeping out of the bay after lingering there.

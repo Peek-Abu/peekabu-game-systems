@@ -75,6 +75,15 @@ return function()
 			refused({ position = Vector3.new(38, 3, 28), distance = 2 }, "safe zone")
 		end)
 
+		it("refuses a player standing outdoors (a `more` box), even at arm's length", function()
+			local zone = {
+				min = ZONE.min,
+				max = ZONE.max,
+				more = { { min = Vector3.new(200, 0, 0), max = Vector3.new(260, 20, 40) } },
+			}
+			refused({ zone = zone, position = Vector3.new(230, 3, 20), distance = 2 }, "safe zone")
+		end)
+
 		it("refuses a dead player, one mid-catch, one in grace, and anyone on his break", function()
 			refused({ alive = false }, "not alive")
 			refused({ catching = true }, "already caught")
