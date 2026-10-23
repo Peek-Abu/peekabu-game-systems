@@ -10,6 +10,14 @@
 	from blocking his paths; he opens them with `openNear`. Glass leaves are tagged SightThrough. Attributes:
 	OfficeDoorId and OfficeDoorOpen (mirrors the state; flips as a swing starts).
 
+	Bodies: a doorway is clear to close only with no Humanoid's root in it, players and NPCs alike (Mr. Harlow is
+	never shut in or knocked by a closing leaf): player roots from Players, every other Humanoid model's root from a
+	spatial query of the doorway. A player's close is also refused while any NPC root is within
+	DOOR_AUTO_OPEN_RADIUS of the door (he would reopen it at once), so a player can neither close a door on him nor
+	stall him by spamming it, and no false slam is heard. `openNear` opens every closed door in reach but reports
+	true only when one it opened lies ahead of the given heading (OfficeDoorUtils.ahead), so his door beat skips side
+	doors and doors behind him.
+
 	The swing tweens a fraction (0 closed .. 1 open) and places the leaf with OfficeDoorUtils.leafFrame each step,
 	so it travels the hinge's arc (tweening the CFrame itself would cut a chord). A door ignores toggles mid-swing.
 
@@ -20,6 +28,7 @@
 
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 local TweenService = game:GetService("TweenService")
@@ -50,11 +59,13 @@ type Record = {
 }
 
 export type DoorSet = {
-	-- Opens a closed door or closes an open one. False when it is mid-swing, unknown, or something stands in the
-	-- doorway of a door being closed. `by` is the player who asked (nil: Harlow / the harness).
+	-- Opens a closed door or closes an open one. False when it is mid-swing, unknown, someone (player or NPC)
+	-- stands in the doorway of a door being closed, or, for a player's close, an NPC is within
+	-- DOOR_AUTO_OPEN_RADIUS of it. `by` is the player who asked (nil: Harlow / the harness).
 	toggle: (id: string, by: Player?) -> boolean,
-	-- Opens every closed door within OfficeConstants.DOOR_AUTO_OPEN_RADIUS of `point` (XZ). True if any opened.
-	openNear: (point: Vector3) -> boolean,
+	-- Opens every closed door within OfficeConstants.DOOR_AUTO_OPEN_RADIUS of `point` (XZ). True if a door it opened
+	-- lies ahead of `heading` (OfficeDoorUtils.ahead; a nil heading counts every door as ahead).
+	openNear: (point: Vector3, heading: Vector3?) -> boolean,
 	-- Every door's id, world centre and open flag. Live: read only, do not keep across a rebuild.
 	states: () -> { DoorState },
 	-- Snaps every door shut (test harness).
@@ -118,7 +129,24 @@ function OfficeDoorSystem.build(layout: OfficeTypes.Layout, origin: CFrame, pare
 			OfficeDoorUtils.leafFrame(record.door, record.edge, record.sign, record.fraction.Value, origin)
 	end
 
-	local function bodies(): { Vector3 }
+	-- The roots among `parts` of Humanoid models (NPCs only when `npcOnly`), appended to `into`.
+	local function rootsIn(parts: { BasePart }, npcOnly: boolean, into: { Vector3 })
+		for _, part in parts do
+			local model = part.Parent
+			if
+				part.Name == "HumanoidRootPart"
+				and model ~= nil
+				and model:IsA("Model")
+				and model:FindFirstChildOfClass("Humanoid") ~= nil
+				and not (npcOnly and Players:GetPlayerFromCharacter(model) ~= nil)
+			then
+				table.insert(into, part.Position)
+			end
+		end
+	end
+
+	-- Every Humanoid root that could stand in `record`'s doorway: each player's, and any other in the doorway box.
+	local function bodies(record: Record): { Vector3 }
 		local found: { Vector3 } = {}
 		for _, player in Players:GetPlayers() do
 			local character = player.Character
@@ -127,6 +155,20 @@ function OfficeDoorSystem.build(layout: OfficeTypes.Layout, origin: CFrame, pare
 				table.insert(found, root.Position)
 			end
 		end
+		-- Covers the box OfficeDoorUtils.canClose tests (grown by its one-stud margin).
+		local size = record.boxMax - record.boxMin + Vector3.one * 2
+		rootsIn(Workspace:GetPartBoundsInBox(CFrame.new((record.boxMin + record.boxMax) / 2), size), true, found)
+		return found
+	end
+
+	-- The roots of the NPCs within DOOR_AUTO_OPEN_RADIUS of `record`'s door.
+	local function npcsNear(record: Record): { Vector3 }
+		local found: { Vector3 } = {}
+		rootsIn(
+			Workspace:GetPartBoundsInRadius(record.state.position, OfficeConstants.DOOR_AUTO_OPEN_RADIUS),
+			true,
+			found
+		)
 		return found
 	end
 
@@ -219,7 +261,7 @@ function OfficeDoorSystem.build(layout: OfficeTypes.Layout, origin: CFrame, pare
 			end
 			record.tween = nil
 			tween:Destroy()
-			if opening or OfficeDoorUtils.canClose(record.boxMin, record.boxMax, bodies()) then
+			if opening or OfficeDoorUtils.canClose(record.boxMin, record.boxMax, bodies(record)) then
 				record.busy = false
 				if not opening then
 					record.leaf.CanCollide = true
@@ -233,27 +275,39 @@ function OfficeDoorSystem.build(layout: OfficeTypes.Layout, origin: CFrame, pare
 
 	local set: DoorSet
 	set = {
-		toggle = function(id, _by)
+		toggle = function(id, by)
 			local record = records[id]
 			if record == nil or record.busy then
 				return false
 			end
 			local opening = not record.state.open
-			if not opening and not OfficeDoorUtils.canClose(record.boxMin, record.boxMax, bodies()) then
-				return false
+			if not opening then
+				if not OfficeDoorUtils.canClose(record.boxMin, record.boxMax, bodies(record)) then
+					return false
+				end
+				-- A player's close with Mr. Harlow about: he would reopen it, so it never starts (and never slams).
+				local radius = OfficeConstants.DOOR_AUTO_OPEN_RADIUS
+				if by ~= nil and OfficeDoorUtils.npcNear(npcsNear(record), record.state.position, radius) then
+					return false
+				end
 			end
 			swing(record, opening)
 			return true
 		end,
 
-		openNear = function(point)
-			local opened = false
+		openNear = function(point, heading)
+			local ahead = false
 			for _, id in OfficeDoorUtils.near(states, point, OfficeConstants.DOOR_AUTO_OPEN_RADIUS) do
-				if set.toggle(id, nil) then
-					opened = true
+				local record = records[id]
+				if
+					set.toggle(id, nil)
+					and record ~= nil
+					and OfficeDoorUtils.ahead(record.state.position, point, heading)
+				then
+					ahead = true
 				end
 			end
-			return opened
+			return ahead
 		end,
 
 		states = function()

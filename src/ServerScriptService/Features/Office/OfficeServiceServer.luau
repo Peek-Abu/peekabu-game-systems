@@ -13,8 +13,9 @@
 	(`safeZone`).
 
 	Doors: it registers the door prompt (OfficeConstants.DOOR_KIND, "Open / close"), toggles the door on interact
-	(a player's close slams: a "door" noise, DOOR_SLAM_RADIUS), and `openDoorsNear` lets Harlow open the closed doors
-	about him (false when no office stands).
+	(a player's accepted close slams: a "door" noise, DOOR_SLAM_RADIUS; a close with Harlow about is refused), and
+	`openDoorsNear` lets Harlow open the closed doors about him, true when one he opened lies ahead of his heading
+	(false when no office stands).
 
 	Ordering guarantee for anything that spawns into a shift (Occupant's Manager): `ready` fires (deferred, with the shift
 	folder) once `beginShift` has rebuilt the office and placed every spawn, and `isReady` says whether that shift is
@@ -227,7 +228,7 @@ export type OfficeServiceServer = {
 	whereIs: (self: OfficeServiceServer, position: Vector3) -> (string?, number?, number?),
 	truckBed: (self: OfficeServiceServer) -> BasePart?,
 	overtimeSheet: (self: OfficeServiceServer) -> BasePart?,
-	openDoorsNear: (self: OfficeServiceServer, position: Vector3) -> boolean,
+	openDoorsNear: (self: OfficeServiceServer, position: Vector3, heading: Vector3?) -> boolean,
 }
 
 local OfficeServiceServer: OfficeServiceServer = {
@@ -522,11 +523,12 @@ local OfficeServiceServer: OfficeServiceServer = {
 
 	--[=[
 		Opens every closed door within OfficeConstants.DOOR_AUTO_OPEN_RADIUS of `position` (Harlow's think calls this).
-		False when nothing opened or no office stands.
+		True when a door it opened lies ahead of `heading` (nil: any door counts); false when none did, nothing
+		opened or no office stands.
 	]=]
-	openDoorsNear = function(_self, position)
+	openDoorsNear = function(_self, position, heading)
 		local current = built
-		return if current ~= nil then current.doors.openNear(position) else false
+		return if current ~= nil then current.doors.openNear(position, heading) else false
 	end,
 
 	getState = function(_self)

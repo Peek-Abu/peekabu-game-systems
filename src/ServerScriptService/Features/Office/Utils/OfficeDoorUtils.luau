@@ -1,7 +1,8 @@
 --!strict
 --[=[
 	OfficeDoorUtils: the maths of the office's real doors. Where a door leaf stands at a fraction of its swing, which
-	way it swings, which closed doors are near a point, and whether a doorway is clear enough to close. Pure.
+	way it swings, which closed doors are near a point, whether a door lies ahead of a walker, whether an NPC is
+	near a door, and whether a doorway is clear enough to close. Pure.
 
 	Frames are in layout space: pass the office origin to get world space. A leaf is a box (door.width x
 	DOOR_HEIGHT x DOOR_LEAF_THICKNESS) centred in the wall line at height DOOR_HEIGHT / 2, turned a quarter turn
@@ -103,6 +104,36 @@ function OfficeDoorUtils.near(doors: { DoorState }, point: Vector3, radius: numb
 		end
 	end
 	return ids
+end
+
+--[=[
+	Whether `target` (a door's centre) lies ahead of a walker at `point` heading `heading`: the ground-plane (XZ) dot
+	product of (target - point) and the heading is positive. With no heading, or one with no ground-plane part,
+	every door counts as ahead.
+]=]
+function OfficeDoorUtils.ahead(target: Vector3, point: Vector3, heading: Vector3?): boolean
+	if heading == nil then
+		return true
+	end
+	local hx, hz = heading.X, heading.Z
+	if hx * hx + hz * hz < 1e-8 then
+		return true
+	end
+	return (target.X - point.X) * hx + (target.Z - point.Z) * hz > 0
+end
+
+--[=[
+	Whether any of `points` (NPC roots) is within `radius` studs of `centre` on the ground plane (XZ).
+]=]
+function OfficeDoorUtils.npcNear(points: { Vector3 }, centre: Vector3, radius: number): boolean
+	local limit = radius * radius
+	for _, point in points do
+		local dx, dz = point.X - centre.X, point.Z - centre.Z
+		if dx * dx + dz * dz <= limit then
+			return true
+		end
+	end
+	return false
 end
 
 --[=[
