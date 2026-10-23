@@ -90,8 +90,22 @@ return function()
 			expect(#plan.fills > 0).to.equal(true)
 			for _, fill in plan.fills do
 				expect(fill.shadows).to.equal(true)
-				expect(fill.color).to.equal(OfficeConstants.FILL_COLOR)
+				expect(fill.color).to.equal(Color3.fromRGB(255, 232, 205))
 				expect(fill.position.Y).to.equal(4)
+			end
+		end)
+
+		it("panel colour is the spike value", function()
+			expect(OfficeConstants.PANEL_COLOR).to.equal(Color3.fromRGB(255, 240, 220))
+		end)
+
+		it("z-run sconce spots use minX/maxX sides, alternating from minX", function()
+			local spots = OfficeLightingUtils.sconceSpots(room(0, 10, 0, 64))
+			expect(#spots).to.equal(4)
+			for i, spot in spots do
+				expect(spot.side).to.equal(if i % 2 == 1 then "minX" else "maxX")
+				expect(spot.x).to.equal(if i % 2 == 1 then 0 else 10)
+				expect(spot.z).to.equal(8 + (i - 1) * 16)
 			end
 		end)
 

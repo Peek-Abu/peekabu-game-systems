@@ -302,8 +302,8 @@ return table.freeze({
 	LIGHTING = table.freeze(LIGHTING),
 	ACCENT_LIGHTS = table.freeze(ACCENT_LIGHTS),
 	-- Troffer panel glow and the warm fill light colours (from the spike).
-	PANEL_COLOR = Color3.fromRGB(255, 226, 190),
-	FILL_COLOR = Color3.fromRGB(255, 205, 150),
+	PANEL_COLOR = Color3.fromRGB(255, 240, 220),
+	FILL_COLOR = Color3.fromRGB(255, 232, 205),
 	-- The invisible volume over the truck's box (the one safe place) that Harlow's paths never enter.
 	SAFE_ZONE_NAME = "SafeZone",
 	-- M2: Harlow's route needs at least this many points.
