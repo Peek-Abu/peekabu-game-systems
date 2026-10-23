@@ -27,7 +27,7 @@ Studio window "Odd Hours: Shift", 2026-10-23.
 |---|---|
 | P1 | **PASS**: suite 4436/0; traversal seeds 1-20, doors closed: 957 paths, 0 failures |
 | P2 | **PASS**: no Harlow path to the pad; the yard and car park are in his zone |
-| P3 | **Spawn PASS; walk to dock MARGINAL** (217-221 studs vs 190-215); dock → lobby PASS (431-435) |
+| P3 | **Spawn PASS; walk to dock MARGINAL** (217-221 studs vs 190-215; just over the band, accepted inside the owner's 160-250 range, controller Ruling 5); dock → lobby PASS (431-435) |
 | P4 | **PASS**: enter/leave at the dock and lobby, carried item travels, 5 rapid Enters give 1 teleport |
 | P5 | **PASS**: `whereIs` gives Yard / Car park; aboard true on the bed and false 3 studs off; the TimeClock clock-out works |
 | P6 | **PASS**: none / little / lot at 900 / 1100 / 1400; the ooze sits on the pad in front of the closed door |
@@ -191,7 +191,7 @@ In `design/production-art/map-kits/odd-hours-b1/exterior/captures/`. All are Pla
 - Banking happens at the truck in the yard. Each banking trip now goes dock exit → teleport → yard → truck, and back.
 - From P3, the walk is 217 studs = **13.6 s each way**: about 13.1 s once the 8-stud prompt reach is counted.
 - Each teleport adds a 0.5 s fade (0.2 out, 0.3 in).
-- **Per trip:** about 2 × 13.6 + 2 × 0.5 ≈ **28 s**. The plan estimated 2 × 12.5 = 25 s.
+- **Per trip:** about 2 × 13.6 + 2 × 0.5 ≈ **28 s**. This is the upper bound, using the full 217-stud walk; reach-adjusted (8-stud prompt reach) it is about 27 s. The plan estimated 2 × 12.5 = 25 s.
 - **6 trips per shift:** about **2 min 48 s** (6 × 28 s), which is 33% of the 8:30 (510 s) shift. That is on top of the walk inside the office to the dock room.
   - Stage 1 measured no trip count, so 6 is the brief's default.
 - A crew that banks each valuable as it is cleaned spends a third of the shift crossing the yard. The trip count and the time cost are the owner's to weigh after the play-check.
@@ -203,4 +203,5 @@ In `design/production-art/map-kits/odd-hours-b1/exterior/captures/`. All are Pla
 - The feel of the 13.6 s yard walk per leg.
 - Whether the carry drift seen in P4 happens with normal input.
 - The ooze streak look.
+- The one-off client warning on the first arrival, "transit screen timed out waiting for placed" (revealed anyway; the crew landed): see whether it recurs.
 - The roller door's loud CorrodedMetal and the hedge speckle (Task 8's art notes).

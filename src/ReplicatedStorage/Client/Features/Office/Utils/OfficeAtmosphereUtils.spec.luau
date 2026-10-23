@@ -167,5 +167,13 @@ return function()
 			expect(OfficeAtmosphereUtils.outdoors(Vector3.new(5, 130, 5), boxes)).to.equal(false)
 			expect(OfficeAtmosphereUtils.outdoors(Vector3.new(5, 3, 5), {})).to.equal(false)
 		end)
+
+		it("counts a point just past a box edge as outdoors when padded, never one far inside the office", function()
+			local past = Vector3.new(20, 3, 5)
+			expect(OfficeAtmosphereUtils.outdoors(past, boxes)).to.equal(false)
+			expect(OfficeAtmosphereUtils.outdoors(past, boxes, 15)).to.equal(true)
+			expect(OfficeAtmosphereUtils.outdoors(past, boxes, 9)).to.equal(false)
+			expect(OfficeAtmosphereUtils.outdoors(Vector3.new(-5000, 3, -5000), boxes, 15)).to.equal(false)
+		end)
 	end)
 end

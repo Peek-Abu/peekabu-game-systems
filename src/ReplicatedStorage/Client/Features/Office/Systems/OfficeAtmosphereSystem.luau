@@ -29,6 +29,7 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local OfficeClient = ReplicatedStorage.Client.Features.Office
+local CameraConstants = require(ReplicatedStorage.Client.Features.Camera.Data.CameraConstants)
 local Charm = require(ReplicatedStorage.Packages.Charm)
 local DepotAssets = require(ReplicatedStorage.Client.Features.Depot.Data.DepotAssets)
 local DepotAtmosphereConstants = require(ReplicatedStorage.Client.Features.Depot.Data.DepotAtmosphereConstants)
@@ -181,6 +182,11 @@ end
 
 -- The outdoor boxes the server built (Workspace.CleanupCrewOffice.Outdoors: one invisible part per ground). None when
 -- the layout has no grounds (an authored layout, the hub).
+-- The camera orbits up to MAX_ZOOM_DISTANCE from the character, and the fence is see-through and not queryable, so the
+-- camera can sit past the boxes' edge (the fence line); the test grows them by that and a margin. The outdoor grounds
+-- are ~1,600 studs from the office, so the padding never reaches indoors.
+local OUTDOOR_PAD = CameraConstants.MAX_ZOOM_DISTANCE + 2
+
 local function outdoorBoxes(): { { min: Vector3, max: Vector3 } }
 	local boxes: { { min: Vector3, max: Vector3 } } = {}
 	local office = Workspace:FindFirstChild("CleanupCrewOffice")
@@ -203,7 +209,7 @@ local function cameraOutside(snapshot: ShiftTypes.ShiftSnapshot?): boolean
 	if camera == nil or snapshot == nil or DepotAtmosphereUtils.inHub(snapshot, Players.LocalPlayer.UserId) then
 		return false
 	end
-	return OfficeAtmosphereUtils.outdoors(camera.CFrame.Position, outdoorBoxes())
+	return OfficeAtmosphereUtils.outdoors(camera.CFrame.Position, outdoorBoxes(), OUTDOOR_PAD)
 end
 
 -- Applies the snapshot's look with the camera's current indoors/outdoors. `fade` is the blend when not covered.
@@ -310,6 +316,13 @@ function OfficeAtmosphereSystem.start()
 			local preset = currentPreset
 			if covered and preset ~= nil then
 				VfxServiceClient:setAtmosphere(preset, 0)
+			elseif not covered then
+				-- The cover is lifting after a teleport: switch indoors/outdoors now, before the reveal, not on the
+				-- next poll.
+				local snapshot = ShiftStore.snapshot()
+				if cameraOutside(snapshot) ~= outsideNow then
+					apply(snapshot, 0)
+				end
 			end
 		end)
 	)

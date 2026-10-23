@@ -27,16 +27,6 @@ local OUTSIDE = {
 local OFFSET = OUTSIDE.EXTERIOR_OFFSET -- every part is built in exterior space and moved by this
 
 local NAME = "OfficeExterior"
-local recording = nil
-pcall(function() recording = CHS:TryBeginRecording("Build " .. NAME) end)
-
-for _, n in ipairs({ NAME, "ClaudeExteriorSpike" }) do
-	local old = workspace:FindFirstChild(n)
-	if old then old:Destroy() end
-end
-local ROOT = Instance.new("Model")
-ROOT.Name = NAME
-ROOT.Parent = workspace
 
 ------------------------------------------------------------------ key numbers (exterior space = world - OFFSET)
 local PLAZA_Y = 1.36 -- lobby plaza / rotunda floor top
@@ -76,6 +66,18 @@ assert(DOCK_X == ORIGIN.X + OUTSIDE.DOCK_OUTSIDE.x and DOCKBLK.z0 + OFFSET.Z == 
 assert(math.abs(WX0 - ROT_R - (ORIGIN.X + OUTSIDE.LOBBY_OUTSIDE.x)) < 0.5 and LOBBY_Z + OFFSET.Z == OUTSIDE.LOBBY_OUTSIDE.z, "lobby doors misaligned")
 assert(DOCK_X == ORIGIN.X + OUTSIDE.TRUCK_CENTRE.X, "truck pad misaligned")
 assert(SITE.x0 == ORIGIN.X + OUTSIDE.carpark.minX, "car park misaligned")
+
+-- only after the asserts pass: the old set is destroyed and the recording opened
+local recording = nil
+pcall(function() recording = CHS:TryBeginRecording("Build " .. NAME) end)
+
+for _, n in ipairs({ NAME, "ClaudeExteriorSpike" }) do
+	local old = workspace:FindFirstChild(n)
+	if old then old:Destroy() end
+end
+local ROOT = Instance.new("Model")
+ROOT.Name = NAME
+ROOT.Parent = workspace
 local ROAD = { z0 = TRUCK_Z - 9, z1 = TRUCK_Z + 9, x0 = PAD.x1 } -- access road: east gate -> truck pad
 
 local rng = Random.new(5150)
@@ -267,12 +269,11 @@ do
 	box("DockPad", DOCKBLK.x0 - 6, DOCKBLK.x1 + 14, 0, GROUND + 0.04, -112, DOCKBLK.z0, M.dockPad)
 	for i = 0, 8 do
 		local z = -70 - i * 4.5
-		local h = mk("Hatch", Vector3.new(0.6, 0.04, 9), CFrame.new(DOCKBLK.x0 - 2, GROUND + 0.06, z) * CFrame.Angles(0, math.rad(45), 0), M.yellowLine)
+		mk("Hatch", Vector3.new(0.6, 0.04, 9), CFrame.new(DOCKBLK.x0 - 2, GROUND + 0.06, z) * CFrame.Angles(0, math.rad(45), 0), M.yellowLine)
 	end
 	box("DockLaneL", DOCK_X - 10, DOCK_X - 9.4, GROUND + 0.04, GROUND + 0.07, -112, DOCKBLK.z0, M.yellowLine)
 	box("DockLaneR", DOCK_X + 9.4, DOCK_X + 10, GROUND + 0.04, GROUND + 0.07, -112, DOCKBLK.z0, M.yellowLine)
 	box("DockStop", DOCK_X - 10, DOCK_X + 10, GROUND + 0.04, GROUND + 0.07, -71.4, -70.8, M.yellowLine)
-	-- dock reveal floor (through the 2-stud gap up to the keep-out face, flush with the interior floor)
 	-- lobby plaza and its floor through the wall
 	box("LobbyPlaza", 912, WX0, 0, PLAZA_Y, LOBBY_Z - 34, LOBBY_Z + 34, M.plaza)
 	box("LobbyRamp", 904, 912, 0, GROUND + 0.16, LOBBY_Z - 8, LOBBY_Z + 8, M.plaza)
@@ -319,7 +320,6 @@ flush()
 ------------------------------------------------------------------ 2. podium shell
 -- a wall along X (south/north) or Z (west/east) with rectangular holes {a0, a1, y0, y1}
 local function wallRun(name, along, a0, a1, y0, y1, t0, t1, holes, mat)
-	local cuts = { a0 }
 	table.sort(holes, function(p, q) return p[1] < q[1] end)
 	local function piece(u0, u1, v0, v1)
 		if u1 - u0 < 0.01 or v1 - v0 < 0.01 then return end
@@ -402,7 +402,7 @@ do
 	box("DockBase", x1d, D.x1 + 0.4, 0, 2.5, D.z0 - 0.4, D.z0, M.stoneDark)
 	-- inner reveal of the doorway (lined in dark metal so the tunnel reads as a door frame)
 	box("DoorBack", x0d, x1d, GROUND, yTop, D.z0 + 0.6, D.z1, M.darkMetal) -- fills the opening behind the curtain
-	-- roller door: rolled up, drum housing outside, bottom slat showing, guide rails
+	-- roller door housing and guide rails
 	box("RollerHousing", x0d - 1, x1d + 1, yTop + 0.2, yTop + 2.6, D.z0 - 1.6, D.z0, M.metal)
 	-- the roller door, rolled DOWN: its front face is the dock door plane (OUTSIDE.DOCK_OUTSIDE), with a thin warm
 	-- gap of light under it where the ooze seeps out

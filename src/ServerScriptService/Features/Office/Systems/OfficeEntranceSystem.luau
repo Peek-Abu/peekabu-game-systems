@@ -262,9 +262,15 @@ function OfficeEntranceSystem.new(deps: Deps): OfficeEntranceSystem
 				if not moved then
 					log:warn(`{kind} {entranceId} for {player.Name} failed: {tostring(err)}`)
 				end
-				deps.fade(player, false, OUTSIDE.FADE_IN)
+				-- Clear first: a failing send (the player just left) must not leave the entrance pending.
 				if requested == generation then
 					pending[userId] = nil
+				end
+				local sent, sendErr = pcall(function()
+					deps.fade(player, false, OUTSIDE.FADE_IN)
+				end)
+				if not sent then
+					log:warn(`fade-in for {player.Name} failed: {tostring(sendErr)}`)
 				end
 			end)
 			return true

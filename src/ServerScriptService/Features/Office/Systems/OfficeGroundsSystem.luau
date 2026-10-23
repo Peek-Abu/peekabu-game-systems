@@ -26,6 +26,7 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
+local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local ArtVisualSystem = require(ServerScriptService.Features.Art.Systems.ArtVisualSystem)
 local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionConstants)
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
@@ -40,6 +41,7 @@ local OfficeDecorSystem = require(script.Parent.OfficeDecorSystem)
 local OfficeDoorSystem = require(script.Parent.OfficeDoorSystem)
 
 local OUTSIDE = OfficeConstants.OUTSIDE
+local log = Logger.new("OfficeGroundsSystem")
 local DOOR_SIZE = Vector3.new(8, 10, 1)
 -- The EXIT sign's clearance above the exit's casing head (at DOOR_HEIGHT).
 local SIGN_CLEARANCE = 0.25
@@ -162,6 +164,8 @@ function OfficeGroundsSystem.build(
 			local sign =
 				OfficeDecorSystem.exitSign(origin * CFrame.new(at) * turn, exits, art, OfficeArtKeyUtils.roomType(room))
 			sign:SetAttribute("EntranceId", entrance.id)
+		else
+			log:warn(`entrance {entrance.id}: exit room or edge could not be resolved; no inside exit built`)
 		end
 	end
 	return built
