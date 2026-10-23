@@ -3,9 +3,9 @@
 	OccupantDoorRules: Mr. Harlow's door beat. Each think he opens the closed doors on his line of travel
 	(OfficeServiceServer:openDoorsNear, OfficeDoorUtils.reach: within DOOR_REACH, ahead of his heading and within a
 	door's half-width plus his agent radius of his heading line); when he opens one he pauses for
-	OccupantConstants.DOOR_BEAT_SECONDS before walking on, so the beat follows the same rule. `hold` turns a walk
-	(`goTo`) into standing still while the beat lasts. Anything else passes through unchanged, so a catch (`attack`) is
-	never held. `heading` is the direction he is going, which the think hands openDoorsNear. Pure.
+	OccupantConstants.DOOR_BEAT_SECONDS before walking on, so the beat follows the same rule (a door he only stands at,
+	within DOOR_CLOSE_REACH, opens without a beat). `hold` turns a walk (`goTo`) into standing still while the beat
+	lasts. Anything else passes through unchanged, so a catch (`attack`) is never held. `heading` is the direction he is going, which the think hands openDoorsNear. Pure.
 
 	His NPC intents have no "stand" kind: `idle` is the one that halts him in place.
 
@@ -31,7 +31,7 @@ local MOVING_SPEED = 0.5
 
 --[=[
 	The direction he is going, flat (Y = 0) and unit: his ground-plane `velocity` while he moves, else the direction
-	from `position` to `goal` (his current walk target, if any), else nil (no heading: he opens no door).
+	from `position` to `goal` (his current walk target, if any), else nil (no heading: he opens only a door he stands at, DOOR_CLOSE_REACH).
 ]=]
 function OccupantDoorRules.heading(velocity: Vector3, position: Vector3, goal: Vector3?): Vector3?
 	local flat = Vector3.new(velocity.X, 0, velocity.Z)

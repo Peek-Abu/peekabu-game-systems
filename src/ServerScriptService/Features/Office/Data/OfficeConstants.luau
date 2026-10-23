@@ -312,6 +312,10 @@ return table.freeze({
 	DOOR_SWING_SECONDS = 0.3,
 	DOOR_OPEN_ANGLE = math.rad(95),
 	DOOR_REACH = 8,
+	-- A closed door within this many studs of Mr. Harlow (ground plane) opens whatever his heading: he is at its
+	-- doorway (turning into a side door). Inside a 1-stud wall plus the doorway, so no door pops open through a wall
+	-- from farther off. It never triggers his door beat.
+	DOOR_CLOSE_REACH = 3,
 	DOOR_RATTLE_ANGLE = math.rad(1.5),
 	DOOR_RATTLE_SECONDS = 0.25,
 	DOOR_SLAM_RADIUS = 18,

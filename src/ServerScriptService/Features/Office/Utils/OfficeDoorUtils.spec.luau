@@ -258,6 +258,23 @@ return function()
 		end)
 	end)
 
+	describe("near", function()
+		local point = Vector3.new(0, 3, 0)
+		local function door(x, z, open)
+			return { id = "a|b", position = Vector3.new(x, 4.7, z), width = 6, open = open == true }
+		end
+		it("includes a closed door 2.5 studs to his side: he is at the doorway, whatever his heading", function()
+			expect(#OfficeDoorUtils.near({ door(2.5, 0) }, point, 3)).to.equal(1)
+			expect(#OfficeDoorUtils.near({ door(0, -2.5) }, point, 3)).to.equal(1)
+		end)
+		it("skips a door 4 studs to the side, an open one, and ignores height", function()
+			expect(#OfficeDoorUtils.near({ door(4, 0) }, point, 3)).to.equal(0)
+			expect(#OfficeDoorUtils.near({ door(2.5, 0, true) }, point, 3)).to.equal(0)
+			local high = { id = "a|b", position = Vector3.new(2.5, 90, 0), width = 6, open = false }
+			expect(#OfficeDoorUtils.near({ high }, point, 3)).to.equal(1)
+		end)
+	end)
+
 	describe("rattle", function()
 		it("is the identity at both ends of the rattle", function()
 			expect(OfficeDoorUtils.rattle(0)).to.equal(CFrame.identity)

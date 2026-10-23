@@ -551,8 +551,9 @@ local OfficeServiceServer: OfficeServiceServer = {
 
 	--[=[
 		Opens the closed doors Harlow is walking through (his think calls this): on his line of travel from `position`
-		along `heading` (OfficeDoorUtils.reach with OfficeConstants.DOOR_REACH; nil: he stands still and none opens).
-		True when it opened one; false when none did or no office stands.
+		along `heading` (OfficeDoorUtils.reach with OfficeConstants.DOOR_REACH; nil: he stands still and none opens),
+		plus any closed door within DOOR_CLOSE_REACH whatever the heading. True when it opened one on his line; false
+		otherwise or when no office stands.
 	]=]
 	openDoorsNear = function(_self, position, heading)
 		local current = built

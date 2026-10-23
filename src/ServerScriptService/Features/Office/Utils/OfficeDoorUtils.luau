@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	OfficeDoorUtils: the maths of the office's real doors. Where a door leaf stands at a fraction of its swing, which
-	way it swings, which closed doors a walker is walking through (in reach, ahead and on his line of travel), where the
+	way it swings, which closed doors a walker is walking through (in reach, ahead and on his line of travel) or standing at, where the
 	elevator front stands, the rattle of a locked door, whether an NPC is near a door, and whether a doorway is clear enough to close. Pure.
 
 	Frames are in layout space: pass the office origin to get world space. A leaf is the clear opening inside the oak
@@ -201,6 +201,23 @@ function OfficeDoorUtils.reach(doors: { DoorState }, point: Vector3, heading: Ve
 		local lateral = math.abs(dx * uz - dz * ux)
 		local onLine = lateral <= state.width / 2 + AGENT_RADIUS
 		if not state.open and forward > 0 and dx * dx + dz * dz <= radius * radius and onLine then
+			table.insert(ids, state.id)
+		end
+	end
+	return ids
+end
+
+--[=[
+	The ids of the closed doors a walker at `point` is standing at: the door's centre is within `radius` studs on the
+	ground plane (XZ), whatever his heading (none included). With DOOR_CLOSE_REACH (3) he is in or at the doorway, so it
+	covers turning into a side door without reaching a door on the far side of a wall from farther off.
+]=]
+function OfficeDoorUtils.near(doors: { DoorState }, point: Vector3, radius: number): { string }
+	local ids: { string } = {}
+	for _, state in doors do
+		local dx = state.position.X - point.X
+		local dz = state.position.Z - point.Z
+		if not state.open and dx * dx + dz * dz <= radius * radius then
 			table.insert(ids, state.id)
 		end
 	end

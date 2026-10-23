@@ -30,7 +30,7 @@
 	  (Death's knockdown), the last life's catch kills them (out for the shift); every catch counts in Shift's review.
 	- Doors: each think, before he senses, he opens the closed doors he is walking through, on his line of travel
 	  (OfficeServiceServer:openDoorsNear, handed his heading: OccupantDoorRules.heading of his velocity, else his last
-	  walk target; with neither he opens none) and, when he opened one, stands still for a DOOR_BEAT_SECONDS (0.5 s)
+	  walk target; with neither he opens only a door he stands at, DOOR_CLOSE_REACH) and, when he opened one, stands still for a DOOR_BEAT_SECONDS (0.5 s)
 	  beat (OccupantDoorRules); a catch is never held.
 	- Role: he exists only where the shift role runs (QueueServiceServer:runsRole); a hub-only server spawns no Harlow.
 

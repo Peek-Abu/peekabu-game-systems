@@ -18,7 +18,9 @@
 	stall him by spamming it, and no false slam is heard. `openNear` opens only the closed doors he is walking
 	through, on his line of travel: within DOOR_REACH, ahead of the given heading and within the door's half-width
 	plus his agent radius of his heading line (OfficeDoorUtils.reach). Doors behind him, beside him (a side door he
-	walks past along a corridor) or farther off stay as they are, and with no heading (he stands still) none opens.
+	walks past along a corridor) or farther off stay as they are, and with no heading (he stands still) none opens;
+	except that a closed door within DOOR_CLOSE_REACH (he is at its doorway) opens whatever his heading, and only a
+	door opened on his line counts toward `openNear`'s result (his door beat).
 
 	Facades are locked: each leaf is tagged for Interaction as OfficeConstants.FACADE_KIND ("Locked"), and `rattle`
 	gives it a short yaw jiggle about its own centre (OfficeDoorUtils.rattle) that returns exactly to its frame, with
@@ -95,7 +97,8 @@ export type DoorSet = {
 	-- DOOR_REACH of it. `by` is the player who asked (nil: Harlow / the harness).
 	toggle: (id: string, by: Player?) -> boolean,
 	-- Opens every closed door on the line of travel from `point` along `heading` (OfficeDoorUtils.reach with
-	-- OfficeConstants.DOOR_REACH; a nil heading opens none). True if it opened one.
+	-- OfficeConstants.DOOR_REACH; a nil heading opens none), and every closed door within DOOR_CLOSE_REACH whatever
+	-- the heading (OfficeDoorUtils.near). True only if it opened one on his line (the door beat).
 	openNear: (point: Vector3, heading: Vector3?) -> boolean,
 	-- Rattles a locked facade leaf. False when `leaf` is not one or is already rattling.
 	rattle: (leaf: BasePart) -> boolean,
@@ -378,6 +381,10 @@ function OfficeDoorSystem.build(
 				if set.toggle(id, nil) then
 					opened = true
 				end
+			end
+			-- Doors he stands at open too, whatever his heading, but never count toward the beat.
+			for _, id in OfficeDoorUtils.near(states, point, OfficeConstants.DOOR_CLOSE_REACH) do
+				set.toggle(id, nil)
 			end
 			return opened
 		end,
