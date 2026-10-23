@@ -18,8 +18,8 @@ decal-resolved colour/normal/rough images. Every mesh as imported faces -Z (chec
 | fluorescent | building | metal housing + Neon diffuser + `surf troffer` colour as a Decal on the bottom face | 3.5 x 0.24 x 1 | NegativeZ | Stretch | built |
 | floorTile_server | building | Plastic + `OH_Vinyl` slab | 4 x 0.092 x 4 | NegativeZ | Stretch | built |
 | floorTile_breakout | building | Plastic + `OH_Lino` slab | 4 x 0.092 x 4 | NegativeZ | Stretch | built |
-| doorLeaf | building | t2_doorLeaf 128086321055290 | 5.9 x 9 x 0.3 | NegativeZ | Stretch | built (hinge side: see door note) |
-| doorLeafGlass | building | t2_doorLeafGlass 121018102259344 (+ `Glass` piece: Material Glass, Transparency 0.5) | 5.9 x 9 x 0.3 | NegativeZ | Stretch | built (hinge side: see door note) |
+| doorLeaf | building | t2_doorLeaf 128086321055290 | 5.9 x 9 x 0.3 | NegativeZ | Stretch | built (hinge at local +X, see door note) |
+| doorLeafGlass | building | t2_doorLeafGlass 121018102259344 (+ `Glass` piece: Material Glass, Transparency 0.5) | 5.9 x 9 x 0.3 | NegativeZ | Stretch | built (hinge at local +X, see door note) |
 | desk | furniture | c_desk_nodivider 74890171416031 | 8.8 x 4.95 x 4.6 | NegativeZ | Stretch | built (no divider; hide space passes, see below) |
 | officeChair | furniture | c_chair 76140780685205 | 2.71 x 4.60 x 2.79 | NegativeZ | Uniform | built |
 | locker | furniture | c_lockers 80348717249179 | 6 x 8 x 2.52 | - | Uniform | HELD: bank of lockers != single searchable locker (marker is ~2.5 x 7 x 2.5, art would shrink to 0.42x; slate locker via fallback) |
@@ -78,13 +78,13 @@ must add it at that attachment. doorLeafGlass's `Glass` is Material Glass, Trans
 FBX traps: the 180 deg yaw is already inside the imported part offsets (LEDs sit at -Z, X mirrored), so no part is rotated;
 bbox-centring is handled by seating the main piece at (0, size.Y/2, 0) and keeping the other pieces' offsets from it.
 
-Door hinge side (open issue): authored hinge on the leaf's -X edge, lever on +X. After the FBX yaw the imported leaf has the
+Door hinge side (resolved): authored hinge on the leaf's -X edge, lever on +X. After the FBX yaw the imported leaf has the
 LEVER at -X and the HINGE at +X (checked on the uploaded mesh through an EditableMesh: the lever/rose vertices that stand
-proud of the slab have mean X = -1.75). `OfficeDoorUtils.leafFrame` hinges the proxy at local -X for doors on a Z edge
-("horizontal") and at local +X for doors on an X edge ("vertical", the closed frame is turned a quarter turn). So vertical
-doors match, horizontal doors show the lever on the hinge side. A template cannot fix it: a 180 deg rotated part makes
-`ArtVisualSystem.attach` refuse non-uniform Stretch (proxy 4 x 9 x 0.3 vs 5.9 x 9 x 0.3). Fixes: let attach mirror
-(accept a 180 deg yaw about Y) for the door keys, or re-export the doors mirrored in X (a new upload).
+proud of the slab have mean X = -1.75). Fixed in code: `OfficeDoorUtils.leafFrame` now hinges the proxy at local +X for
+every door, horizontal or vertical (commit dfbc5803), so the lever never shows on the hinge side and no template change was
+needed. The generated entrance facade is a double door: two 6-wide `doorLeafGlass` leaves side by side (the template is
+5.9 wide, so Stretch stays near 1), each hinged at its outer edge (the left leaf is yawed half a turn so its local +X
+points left).
 
 ## Coverage and validation report (script run in Edit)
 
@@ -96,7 +96,7 @@ Every built template passes `ArtKitRules.validateTemplate` (required through a f
 Pending: none. Held: locker.
 
 Live attach check (Edit, cloned `ArtVisualSystem`, proxies under a Model with `ArtKitId = "odd-hours-b1"`): `attach`
-returned a visual for all 27 keys built in the first run (before desk and locker were held; the kit now has 25) (kitchenCounter set `ArtSupportSurfaceY`). exitSign / serverRack / doorLeaf
+returned a visual for all 27 keys built in the first run (before desk and locker were held; the kit now has 33 built, the locker still held) (kitchenCounter set `ArtSupportSurfaceY`). exitSign / serverRack / doorLeaf
 return nil from the kit (so the slate fallback / greybox applies). The test model and scratch parts were deleted;
 nothing is left in Workspace.
 
