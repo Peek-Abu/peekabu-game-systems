@@ -9,6 +9,8 @@
 	- `dockEntrance(bay)` / `lobbyEntrance(reception, z, width)`: an entrance and its inside doorway.
 	- `outsideFrame(entrance)` / `insideFrame(entrance, room)`: where a player arrives, outside or in.
 	- `groundAt(grounds, x, z)`: the ground a point stands on.
+	- `arrivalMarkers(truck)` / `bayShelves(bay)`: the crew's `yard.spawn.N` markers, and the bay's two wall shelves.
+	- `problems(layout)`: what is wrong with a layout's grounds, truck and entrances (OfficeLayoutRules).
 
 	@class OfficeGroundsUtils
 ]=]
@@ -16,6 +18,7 @@
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local OfficeConstants = require(ServerScriptService.Features.Office.Data.OfficeConstants)
+local OfficeLoadingBayUtils = require(script.Parent.OfficeLoadingBayUtils)
 local OfficeTypes = require(ServerScriptService.Features.Office.Data.OfficeTypes)
 local TruckVisual = require(ServerScriptService.Features.Depot.Data.DepotTruckVisualConstants)
 
@@ -134,6 +137,109 @@ function OfficeGroundsUtils.groundAt(grounds: { OfficeTypes.Room }, x: number, z
 		end
 	end
 	return nil
+end
+
+--[=[
+	The crew's spawn markers `yard.spawn.N`, one per arrival point on the yard truck's bed.
+]=]
+function OfficeGroundsUtils.arrivalMarkers(truck: OfficeTypes.Truck): { OfficeTypes.Marker }
+	local markers: { OfficeTypes.Marker } = {}
+	for index, point in OfficeLoadingBayUtils.arrivals(truck) do
+		table.insert(
+			markers,
+			{ id = `yard.spawn.{index}`, room = "yard", kind = "spawn", x = point.X, z = point.Z, rotation = 0 }
+		)
+	end
+	return markers
+end
+
+--[=[
+	The bay's two shelves: one centred against each x wall, MARKER_MARGIN in, facing into the room.
+]=]
+function OfficeGroundsUtils.bayShelves(bay: OfficeTypes.Room): { OfficeTypes.Marker }
+	local z = (bay.minZ + bay.maxZ) / 2
+	local margin = OfficeConstants.MARKER_MARGIN
+	return {
+		{ id = "bay.shelf.1", room = bay.id, kind = "shelf", x = bay.minX + margin, z = z, rotation = math.pi / 2 },
+		{ id = "bay.shelf.2", room = bay.id, kind = "shelf", x = bay.maxX - margin, z = z, rotation = -math.pi / 2 },
+	}
+end
+
+-- Whether the entrance's exit sits on one of `room`'s walls, its whole width within the wall's span.
+local function exitOnWall(room: OfficeTypes.Room, exit: OfficeTypes.Door): boolean
+	local half = exit.width / 2
+	if exit.z == room.minZ or exit.z == room.maxZ then
+		return exit.x - half >= room.minX and exit.x + half <= room.maxX
+	elseif exit.x == room.minX or exit.x == room.maxX then
+		return exit.z - half >= room.minZ and exit.z + half <= room.maxZ
+	end
+	return false
+end
+
+--[=[
+	Every problem with a layout's grounds: the truck lies inside one ground, no ground overlaps a room, and each
+	entrance's exit sits on its room's wall (within the wall's span) with its outside door on its ground (or within a
+	stud of it). Empty when the layout has no grounds.
+]=]
+function OfficeGroundsUtils.problems(layout: OfficeTypes.Layout): { string }
+	local errors: { string } = {}
+	local grounds = layout.grounds
+	if grounds == nil then
+		return errors
+	end
+	local truck = layout.truck
+	local stands = false
+	for _, ground in grounds do
+		local corners = { { truck.minX, truck.minZ }, { truck.maxX, truck.maxZ }, { truck.clockX, truck.clockZ } }
+		local all = true
+		for _, corner in corners do
+			all = all and OfficeGroundsUtils.groundAt({ ground }, corner[1], corner[2]) ~= nil
+		end
+		stands = stands or all
+	end
+	if not stands then
+		table.insert(errors, "the truck must stand on a ground")
+	end
+	for _, ground in grounds do
+		for _, room in layout.rooms do
+			if
+				ground.minX < room.maxX
+				and room.minX < ground.maxX
+				and ground.minZ < room.maxZ
+				and room.minZ < ground.maxZ
+			then
+				table.insert(errors, `ground "{ground.id}" overlaps room "{room.id}"`)
+			end
+		end
+	end
+	for _, entrance in layout.entrances or {} do
+		local room: OfficeTypes.Room? = nil
+		for _, candidate in layout.rooms do
+			if candidate.id == entrance.exit.a then
+				room = candidate
+			end
+		end
+		if room == nil or not exitOnWall(room, entrance.exit) then
+			table.insert(errors, `entrance "{entrance.id}" exit is not on the wall of room "{entrance.exit.a}"`)
+		end
+		local ground: OfficeTypes.Room? = nil
+		for _, candidate in grounds do
+			if candidate.id == entrance.ground then
+				ground = candidate
+			end
+		end
+		local slack = 1
+		if
+			ground == nil
+			or entrance.outside.x < ground.minX - slack
+			or entrance.outside.x > ground.maxX + slack
+			or entrance.outside.z < ground.minZ - slack
+			or entrance.outside.z > ground.maxZ + slack
+		then
+			table.insert(errors, `entrance "{entrance.id}" outside door is not on ground "{entrance.ground}"`)
+		end
+	end
+	return errors
 end
 
 return OfficeGroundsUtils

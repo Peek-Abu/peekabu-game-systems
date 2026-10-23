@@ -18,6 +18,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local OfficeServer = ServerScriptService.Features.Office
 local OfficeConstants = require(OfficeServer.Data.OfficeConstants)
 local OfficeTypes = require(OfficeServer.Data.OfficeTypes)
+local OfficeGroundsUtils = require(OfficeServer.Utils.OfficeGroundsUtils)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local TruckVisual = require(ServerScriptService.Features.Depot.Data.DepotTruckVisualConstants)
@@ -197,13 +198,18 @@ function OfficeLayoutRules.validate(layout: Layout): (boolean, { string })
 		end
 	end
 
+	-- A spawn marker may name a ground (the yard); nothing else does.
+	local groundsById: { [string]: Room } = {}
+	for _, ground in layout.grounds or {} do
+		groundsById[ground.id] = ground
+	end
 	local seen: { [string]: boolean } = {}
 	for _, marker in layout.markers do
 		if seen[marker.id] then
 			table.insert(errors, `marker "{marker.id}" is defined twice`)
 		end
 		seen[marker.id] = true
-		local room = roomsById[marker.room]
+		local room = roomsById[marker.room] or groundsById[marker.room]
 		if room == nil then
 			table.insert(errors, `marker "{marker.id}" names a missing room`)
 		elseif not markerInside(room, marker) then
@@ -221,7 +227,11 @@ function OfficeLayoutRules.validate(layout: Layout): (boolean, { string })
 	end
 
 	local truck = layout.truck
-	if
+	if layout.grounds ~= nil then
+		for _, problem in OfficeGroundsUtils.problems(layout) do
+			table.insert(errors, problem)
+		end
+	elseif
 		start ~= nil
 		and not (
 			inside(start, truck.minX, truck.minZ, 0)

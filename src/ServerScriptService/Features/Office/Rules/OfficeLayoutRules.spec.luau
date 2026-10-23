@@ -48,6 +48,70 @@ return function()
 		end)
 	end)
 
+	describe("validate with grounds", function()
+		local function outside()
+			local layout = fixture()
+			layout.rooms[2].minX = 20
+			layout.grounds = { { id = "yard", name = "Yard", minX = -60, minZ = 0, maxX = -10, maxZ = 20 } }
+			layout.truck = { minX = -50, minZ = 2, maxX = -40, maxZ = 18, clockX = -30, clockZ = 4, yaw = math.pi }
+			layout.markers[1] = { id = "yard.spawn.1", room = "yard", kind = "spawn", x = -45, z = 10 }
+			layout.entrances = {
+				{
+					id = "dock",
+					ground = "yard",
+					outside = { x = -10, z = 10, yaw = 0 },
+					exit = { a = "a", b = "dock", x = 0, z = 10, width = 8, kind = "solid" },
+				},
+			}
+			return layout
+		end
+
+		it("accepts a truck on the ground, an exit on the wall and a spawn marker in the yard", function()
+			local ok, errors = OfficeLayoutRules.validate(outside())
+			expect(table.concat(errors, "; ")).to.equal("")
+			expect(ok).to.equal(true)
+		end)
+
+		it("refuses a truck in a room", function()
+			local layout = outside()
+			layout.truck = { minX = 2, minZ = 10, maxX = 8, maxZ = 18, clockX = 12, clockZ = 4 }
+			local _, errors = OfficeLayoutRules.validate(layout)
+			expect(hasError(errors, "truck must stand on a ground")).to.equal(true)
+		end)
+
+		it("refuses an exit off its room's wall", function()
+			local layout = outside()
+			layout.entrances[1].exit.x = 5
+			local _, errors = OfficeLayoutRules.validate(layout)
+			expect(hasError(errors, 'entrance "dock" exit')).to.equal(true)
+			layout.entrances[1].exit.x, layout.entrances[1].exit.z = 0, 19
+			_, errors = OfficeLayoutRules.validate(layout)
+			expect(hasError(errors, 'entrance "dock" exit')).to.equal(true)
+		end)
+
+		it("refuses an outside door off its ground", function()
+			local layout = outside()
+			layout.entrances[1].outside.x = 30
+			local _, errors = OfficeLayoutRules.validate(layout)
+			expect(hasError(errors, "outside door")).to.equal(true)
+		end)
+
+		it("refuses a ground overlapping a room", function()
+			local layout = outside()
+			layout.grounds[1].maxX = 5
+			local _, errors = OfficeLayoutRules.validate(layout)
+			expect(hasError(errors, 'ground "yard" overlaps room "a"')).to.equal(true)
+		end)
+
+		it("keeps the authored office valid with no grounds", function()
+			local layout = OfficeLayoutUtils.dropUnfit(OfficeLayoutConstants.LAYOUT, OfficeLayoutRules)
+			expect(layout.grounds).to.equal(nil)
+			local ok, errors = OfficeLayoutRules.validate(layout)
+			expect(#errors).to.equal(0)
+			expect(ok).to.equal(true)
+		end)
+	end)
+
 	describe("validate", function()
 		it("accepts a small valid layout", function()
 			local ok, errors = OfficeLayoutRules.validate(fixture())

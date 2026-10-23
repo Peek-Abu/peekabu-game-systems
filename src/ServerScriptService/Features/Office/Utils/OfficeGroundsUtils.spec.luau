@@ -127,4 +127,56 @@ return function()
 			expect(OfficeGroundsUtils.groundAt(grounds, 168, -30)).to.equal(nil)
 		end)
 	end)
+
+	describe("markers", function()
+		it("names the arrival markers yard.spawn.N, in the yard, on the truck", function()
+			local truck = OfficeGroundsUtils.truck()
+			local markers = OfficeGroundsUtils.arrivalMarkers(truck)
+			expect(#markers).to.equal(#OfficeConstants.ARRIVAL_OFFSETS)
+			for index, marker in markers do
+				expect(marker.id).to.equal(`yard.spawn.{index}`)
+				expect(marker.room).to.equal("yard")
+				expect(marker.kind).to.equal("spawn")
+				expect(marker.x > truck.minX and marker.x < truck.maxX).to.equal(true)
+				expect(marker.z > truck.minZ and marker.z < truck.maxZ).to.equal(true)
+			end
+		end)
+
+		it("stands one bay shelf against each x wall, MARKER_MARGIN in, centred", function()
+			local shelves = OfficeGroundsUtils.bayShelves(BAY)
+			expect(#shelves).to.equal(2)
+			expect(shelves[1].x).to.equal(BAY.minX + OfficeConstants.MARKER_MARGIN)
+			expect(shelves[2].x).to.equal(BAY.maxX - OfficeConstants.MARKER_MARGIN)
+			expect(shelves[1].z).to.equal(-31)
+			expect(shelves[2].z).to.equal(-31)
+			expect(shelves[1].kind).to.equal("shelf")
+		end)
+	end)
+
+	describe("problems", function()
+		it("is empty without grounds and for the real outside", function()
+			expect(#OfficeGroundsUtils.problems({ rooms = { BAY }, truck = OfficeGroundsUtils.truck() })).to.equal(0)
+			local layout = {
+				rooms = { BAY, RECEPTION },
+				grounds = OfficeGroundsUtils.grounds(),
+				truck = OfficeGroundsUtils.truck(),
+				entrances = {
+					OfficeGroundsUtils.dockEntrance(BAY),
+					OfficeGroundsUtils.lobbyEntrance(RECEPTION, 152, 12),
+				},
+			}
+			expect(#OfficeGroundsUtils.problems(layout)).to.equal(0)
+		end)
+
+		it("names a truck off the ground and an exit off its wall", function()
+			local layout = {
+				rooms = { BAY },
+				grounds = OfficeGroundsUtils.grounds(),
+				truck = { minX = 0, maxX = 5, minZ = 0, maxZ = 5, clockX = 1, clockZ = 1 },
+				entrances = { OfficeGroundsUtils.dockEntrance(BAY) },
+			}
+			layout.entrances[1].exit.x = 100
+			expect(#OfficeGroundsUtils.problems(layout)).to.equal(2)
+		end)
+	end)
 end

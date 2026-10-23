@@ -21,6 +21,7 @@ local Server = ServerScriptService.Features.Office
 local OfficeConstants = require(Server.Data.OfficeConstants)
 local OfficeCorridorUtils = require(script.Parent.OfficeCorridorUtils)
 local OfficeFacadeUtils = require(script.Parent.OfficeFacadeUtils)
+local OfficeGroundsUtils = require(script.Parent.OfficeGroundsUtils)
 local OfficeHallDressingUtils = require(script.Parent.OfficeHallDressingUtils)
 local OfficeKitRegistry = require(Server.Data.OfficeKitRegistry)
 local OfficeKitUtils = require(script.Parent.OfficeKitUtils)
@@ -573,20 +574,13 @@ local function construct(base: Layout, rng: Random): (Layout?, string?)
 		pending = nil,
 	}
 
-	-- The loading bay, south of the dock junction, with the truck and the crew's arrival points.
+	-- The loading bay, south of the dock junction; the truck and the crew's arrival points are outside, in the yard.
 	local bay, bayDoor = OfficeLoadingBayUtils.bay(3, network.dock)
 	table.insert(state.solid, bay)
-	layout.truck = OfficeLoadingBayUtils.truck(bay, 3)
-	for index, point in OfficeLoadingBayUtils.arrivals(layout.truck) do
-		table.insert(layout.markers, {
-			id = `bay.spawn.{index}`,
-			room = "bay",
-			kind = "spawn",
-			x = point.X,
-			z = point.Z,
-			rotation = 0,
-		})
-	end
+	layout.grounds = OfficeGroundsUtils.grounds()
+	layout.truck = OfficeGroundsUtils.truck()
+	addMarkers(state, OfficeGroundsUtils.arrivalMarkers(layout.truck))
+	addMarkers(state, OfficeGroundsUtils.bayShelves(bay))
 	local patrol = OfficeLoadingBayUtils.patrolPoint(bay, 3)
 	table.insert(
 		layout.markers,
@@ -613,10 +607,10 @@ local function construct(base: Layout, rng: Random): (Layout?, string?)
 		kind = reception.doorKind,
 	}, reception.markers)
 	local _, receptionZ = center(reception.room)
-	table.insert(
-		state.facades,
-		{ room = "reception1", x = reception.room.minX, z = receptionZ, width = ENTRANCE_WIDTH, kind = "entrance" }
-	)
+	layout.entrances = {
+		OfficeGroundsUtils.dockEntrance(bay),
+		OfficeGroundsUtils.lobbyEntrance(reception.room, receptionZ, ENTRANCE_WIDTH),
+	}
 
 	-- The deck: a server room and a breakout lounge, then weighted draws up to the target (reception counts).
 	local target = rng:NextInteger(OfficeConstants.KIT_ROOMS.min, OfficeConstants.KIT_ROOMS.max)

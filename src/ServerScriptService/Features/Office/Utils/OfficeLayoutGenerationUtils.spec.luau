@@ -26,6 +26,41 @@ local function layoutFor(seed)
 	return layout
 end
 
+-- Seed 7's room depths before the outside existed (4cad2927): the outside must not move a single wall.
+local SEED_7_DEPTHS = {
+	hallJ1_1 = 3,
+	hallJ2_1 = 1,
+	hallJ3_1 = 0,
+	hallJ1_2 = 4,
+	hallJ2_2 = 3,
+	hallJ3_2 = 1,
+	hallJ1_3 = 6,
+	hallJ2_3 = 4,
+	hallJ3_3 = 6,
+	hallS1 = 0,
+	hallS2 = 2,
+	hallS3 = 4,
+	hallS4 = 5,
+	hallS5 = 2,
+	hallS6 = 5,
+	hallS7 = 1,
+	hallS8 = 5,
+	hallS9 = 4,
+	hallS10 = 2,
+	bay = 0,
+	reception1 = 6,
+	server1 = 2,
+	breakout1 = 4,
+	pods1 = 3,
+	conference1 = 6,
+	conference2 = 1,
+	conference3 = 5,
+	pods2 = 4,
+	breakout2 = 1,
+	conference4 = 3,
+	pods3 = 5,
+}
+
 local function isKit(room)
 	return room.zone ~= "hallway" and room.id ~= "bay"
 end
@@ -204,7 +239,7 @@ return function()
 			expect(total > 0).to.equal(true)
 		end)
 
-		it("places the reception identically on every seed, with the entrance behind it", function()
+		it("places the reception identically on every seed, with the lobby entrance on its wall", function()
 			local first = nil
 			for seed = 1, SEEDS do
 				if seed % 10 == 0 then
@@ -224,17 +259,69 @@ return function()
 				expect(reception.minZ).to.equal(first.minZ)
 				expect(reception.maxX).to.equal(first.maxX)
 				expect(reception.maxZ).to.equal(first.maxZ)
-				local entrances = 0
 				for _, facade in layout.facades or {} do
-					if facade.kind == "entrance" then
-						entrances += 1
-						expect(facade.room).to.equal(reception.id)
-						expect(facade.x).to.equal(reception.minX)
-						expect(facade.width).to.equal(12)
+					expect(facade.kind ~= "entrance").to.equal(true)
+				end
+				local lobby = layout.entrances[2]
+				expect(lobby.exit.a).to.equal(reception.id)
+				expect(lobby.exit.x).to.equal(reception.minX)
+				expect(lobby.exit.width).to.equal(12)
+			end
+		end)
+
+		it("stands the truck in the yard and gives the dock and the lobby their exits, on every seed", function()
+			for seed = 1, SEEDS do
+				if seed % 10 == 0 then
+					task.wait()
+				end
+				local layout = layoutFor(seed)
+				expect(#layout.grounds).to.equal(2)
+				expect(layout.truck.yaw).to.equal(math.pi)
+				local yard = layout.grounds[1]
+				expect(yard.id).to.equal("yard")
+				expect(layout.truck.minX >= yard.minX and layout.truck.maxX <= yard.maxX).to.equal(true)
+				expect(layout.truck.minZ >= yard.minZ and layout.truck.maxZ <= yard.maxZ).to.equal(true)
+				expect(layout.startRoom).to.equal("bay")
+				local byId = {}
+				for _, entrance in layout.entrances do
+					byId[entrance.id] = entrance
+				end
+				expect(byId.dock.exit.a).to.equal("bay")
+				expect(byId.dock.exit.x).to.equal(168)
+				expect(byId.dock.exit.z).to.equal(-52)
+				expect(byId.lobby.exit.a).to.equal("reception1")
+				expect(byId.lobby.exit.x).to.equal(-38)
+				expect(byId.lobby.exit.z > 138 and byId.lobby.exit.z < 166).to.equal(true)
+				for _, facade in layout.facades or {} do
+					expect(facade.kind ~= "entrance").to.equal(true)
+				end
+				local spawns = Utils.markersOf(layout, "spawn")
+				expect(#spawns > 0).to.equal(true)
+				for _, marker in spawns do
+					expect(marker.room).to.equal("yard")
+				end
+				for _, ground in layout.grounds do
+					for _, room in layout.rooms do
+						expect(overlaps(ground, room)).to.equal(false)
 					end
 				end
-				expect(entrances).to.equal(1)
+				local shelves = 0
+				for _, marker in Utils.markersOf(layout, "shelf") do
+					shelves += if marker.room == "bay" then 1 else 0
+				end
+				expect(shelves).to.equal(2)
 			end
+		end)
+
+		it("keeps every room's depth as before the outside (seed 7)", function()
+			local depths = Utils.depths(layoutFor(7))
+			local count = 0
+			for _, room in layoutFor(7).rooms do
+				count += 1
+				expect(depths[room.id]).to.equal(SEED_7_DEPTHS[room.id])
+			end
+			expect(count).to.equal(31)
+			expect(depths.bay).to.equal(0)
 		end)
 
 		it("puts one stairwell facade on a junction wall with nothing behind it", function()
