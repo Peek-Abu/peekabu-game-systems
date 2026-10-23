@@ -69,6 +69,10 @@ return table.freeze({
 	ART_KIT_ID = "client-office-slate",
 	-- The art kit every generated map uses (OfficeLayoutGenerationUtils); the authored boot layout keeps ART_KIT_ID.
 	GENERATED_ART_KIT = "odd-hours-b1",
+	-- The server rack's LED glow (a PointLight on the template's LedLight attachment).
+	SERVER_LED_COLOR = Color3.fromRGB(120, 170, 255),
+	SERVER_LED_RANGE = 6,
+	SERVER_LED_BRIGHTNESS = 0.4,
 	PROP_SIZES = table.freeze(PROP_SIZES),
 	PROP_WALL_HEIGHT = table.freeze(PROP_WALL_HEIGHT),
 	-- The floor number kit rooms are placed on (one floor today).

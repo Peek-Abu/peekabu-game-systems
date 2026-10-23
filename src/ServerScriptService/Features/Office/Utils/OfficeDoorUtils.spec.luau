@@ -14,7 +14,7 @@ return function()
 		it("fills the opening at fraction 0, centred at half the door height", function()
 			local frame = OfficeDoorUtils.leafFrame(DOOR, "minZ", 1, 0, ORIGIN)
 			expect(close(frame.X, 1010) and close(frame.Y, 4.5) and close(frame.Z, 500)).to.equal(true)
-			expect(close(frame.LookVector.Z, -1)).to.equal(true)
+			expect(close(frame.LookVector.Z, 1)).to.equal(true)
 		end)
 
 		it("turns 95 degrees about the hinge at x = 7 toward +Z at fraction 1 (sign +1, minZ edge)", function()
@@ -23,8 +23,8 @@ return function()
 			expect(close(frame.X, 1006.7385)).to.equal(true)
 			expect(close(frame.Y, 4.5)).to.equal(true)
 			expect(close(frame.Z, 502.9886)).to.equal(true)
-			-- The leaf's width axis now points mostly along Z.
-			expect(close(frame.RightVector.Z, math.sin(math.rad(95)))).to.equal(true)
+			-- The leaf's width axis now points mostly along Z (its local +X, the hinge side, toward -Z).
+			expect(close(frame.RightVector.Z, -math.sin(math.rad(95)))).to.equal(true)
 		end)
 
 		it("swings the other way for sign -1", function()
@@ -40,6 +40,21 @@ return function()
 			-- Hinge (0, 7); centre 3 along +Z rotates to (3 sin 95, 7 + 3 cos 95) = (2.9886, 6.7385).
 			expect(close(open.X, 2.9886)).to.equal(true)
 			expect(close(open.Z, 6.7385)).to.equal(true)
+		end)
+	end)
+
+	describe("hinge side", function()
+		it("keeps the hinge at the leaf's local +X for horizontal and vertical doors, closed and open", function()
+			local horizontal = DOOR
+			local vertical = { a = "kit", b = "hall", x = 0, z = 10, width = 6, kind = "solid" }
+			for fraction = 0, 1 do
+				local h = OfficeDoorUtils.leafFrame(horizontal, "minZ", 1, fraction, ORIGIN)
+				local hinge = h * Vector3.new(horizontal.width / 2, 0, 0)
+				expect(close(hinge.X, 1007) and close(hinge.Z, 500)).to.equal(true)
+				local v = OfficeDoorUtils.leafFrame(vertical, "minX", 1, fraction, ORIGIN)
+				local vhinge = v * Vector3.new(vertical.width / 2, 0, 0)
+				expect(close(vhinge.X, 1000) and close(vhinge.Z, 507)).to.equal(true)
+			end
 		end)
 	end)
 
@@ -68,6 +83,9 @@ return function()
 			local eastFrame = OfficeDoorUtils.facadeFrame(east, KIT, CFrame.identity)
 			expect(close(eastFrame.X, 19.35)).to.equal(true)
 			expect(close(math.abs(eastFrame.RightVector.Z), 1)).to.equal(true)
+			-- The same hinge convention as a door: local +X toward -Z on an X wall, toward -X on a Z wall.
+			expect(close(eastFrame.RightVector.Z, -1)).to.equal(true)
+			expect(close(frame.RightVector.X, -1)).to.equal(true)
 		end)
 
 		it("is nil off the walls", function()

@@ -9,6 +9,10 @@
 	for a door on an X edge (minX / maxX) so its width runs along Z. It hinges at the door's "-side" jamb: x - width/2
 	for a door on a Z edge (minZ / maxZ, "horizontal"), z - width/2 for a door on an X edge ("vertical").
 
+	Hinge side: the hinge always sits at the leaf's local +X (door art authors its hinge there), so a Z-edge door's
+	closed leaf is turned half a turn and an X-edge door's a quarter turn; facades use the same orientations. The leaf
+	is a symmetric box, so collision and the swing arc do not depend on it.
+
 	Swing sign: positive swings the free end toward +Z for a horizontal door and toward +X for a vertical one;
 	negative the other way. `swingSign` picks the sign that swings INTO the non-hallway room.
 
@@ -43,7 +47,7 @@ end
 function OfficeDoorUtils.leafFrame(door: Door, edge: Edge, swingSign: number, fraction: number, origin: CFrame): CFrame
 	local horizontal = isHorizontal(edge)
 	local closed = CFrame.new(door.x, OfficeConstants.DOOR_HEIGHT / 2, door.z)
-		* (if horizontal then CFrame.identity else CFrame.Angles(0, math.pi / 2, 0))
+		* CFrame.Angles(0, if horizontal then math.pi else math.pi / 2, 0)
 	local hinge = CFrame.new(
 		if horizontal then door.x - door.width / 2 else door.x,
 		0,
@@ -76,10 +80,11 @@ function OfficeDoorUtils.facadeFrame(facade: Facade, room: Room, origin: CFrame)
 	local inset = OfficeConstants.WALL_THICKNESS / 2 + OfficeConstants.DOOR_LEAF_THICKNESS / 2
 	local y = OfficeConstants.DOOR_HEIGHT / 2
 	local quarter = CFrame.Angles(0, math.pi / 2, 0)
+	local half = CFrame.Angles(0, math.pi, 0)
 	if math.abs(facade.z - room.minZ) < 1e-4 then
-		return origin * CFrame.new(facade.x, y, facade.z + inset)
+		return origin * CFrame.new(facade.x, y, facade.z + inset) * half
 	elseif math.abs(facade.z - room.maxZ) < 1e-4 then
-		return origin * CFrame.new(facade.x, y, facade.z - inset)
+		return origin * CFrame.new(facade.x, y, facade.z - inset) * half
 	elseif math.abs(facade.x - room.minX) < 1e-4 then
 		return origin * CFrame.new(facade.x + inset, y, facade.z) * quarter
 	elseif math.abs(facade.x - room.maxX) < 1e-4 then

@@ -520,6 +520,29 @@ return function()
 			expect(racks).to.equal(1)
 		end)
 
+		it("hangs one blue point light on a server rack's LedLight attachment", function()
+			template("furniture", "serverRack")
+			local part = assets["test-map-a"].furniture.serverRack:FindFirstChildOfClass("Part")
+			local attachment = Instance.new("Attachment")
+			attachment.Name = "LedLight"
+			attachment.Parent = part
+			local layout = twoRooms("open", nil)
+			layout.markers = { { id = "a.shelf.1", room = "a", kind = "shelf", x = 5, z = 5, art = "serverRack" } }
+			local built = build(layout)
+			local lights = {}
+			for _, descendant in built.model.Furniture:GetDescendants() do
+				if descendant:IsA("PointLight") then
+					table.insert(lights, descendant)
+				end
+			end
+			expect(#lights).to.equal(1)
+			expect(lights[1].Parent.Name).to.equal("LedLight")
+			expect(lights[1].Color).to.equal(Color3.fromRGB(120, 170, 255))
+			expect(lights[1].Range).to.equal(6)
+			expect(lights[1].Brightness).to.equal(0.4)
+			expect(lights[1].Shadows).to.equal(false)
+		end)
+
 		it("gives a solid door's leaf the doorLeaf template and a glass door's the doorLeafGlass one", function()
 			template("building", "doorLeaf")
 			template("building", "doorLeafGlass")

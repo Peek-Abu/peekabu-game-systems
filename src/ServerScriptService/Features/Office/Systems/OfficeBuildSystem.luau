@@ -12,7 +12,7 @@
 	sight passes them; the wall pieces beside them stop flush). Physical per-room ceilings enclose the camera.
 	Art keys: every attach goes through OfficeArtKeyUtils (a marker's own `art` key, then the default key's room-type
 	variant, then the default key), so a kit may restyle one room type (floorTile_server) or one piece (serverRack for a
-	shelf). Walls are merged across rooms, so they use the default key only.
+	shelf), and a server rack gets a dim blue point light on its template's `LedLight` attachment. Walls are merged across rooms, so they use the default key only.
 	Doors: every doorway keeps its visual-only frame and trim, and OfficeDoorSystem adds a real leaf to each solid or
 	glass door plus a locked flush leaf on every facade (`Built.doors`, destroyed with the office).
 
@@ -440,12 +440,25 @@ function OfficeBuildSystem.build(
 					then "shelf"
 					elseif marker.kind == "counter" then "kitchenCounter"
 					else "corkboard"
-				OfficeArtKeyUtils.attachFirst(
+				local visual = OfficeArtKeyUtils.attachFirst(
 					art,
 					part,
 					"furniture",
 					OfficeArtKeyUtils.candidates(key, marker.art, roomType)
 				)
+				-- Templates may not carry lights (ArtKitRules): a server rack's LED part holds an attachment for the code
+				-- to hang its glow on.
+				local led = if visual ~= nil and marker.art == "serverRack"
+					then visual:FindFirstChild("LedLight", true)
+					else nil
+				if led ~= nil and led:IsA("Attachment") then
+					local glow = Instance.new("PointLight")
+					glow.Color = OfficeConstants.SERVER_LED_COLOR
+					glow.Range = OfficeConstants.SERVER_LED_RANGE
+					glow.Brightness = OfficeConstants.SERVER_LED_BRIGHTNESS
+					glow.Shadows = false
+					glow.Parent = led
+				end
 				local supportY = part:GetAttribute("ArtSupportSurfaceY")
 				if marker.kind == "counter" and type(supportY) == "number" then
 					part.CanCollide = false
