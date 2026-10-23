@@ -122,17 +122,17 @@ function OfficeShellUtils.doorCasing(door: Door, edge: Edge): { ShellBox }
 			local reach = OfficeConstants.WALL_THICKNESS / 2 + shell.wainscotProud
 			local across = { -reach, reach }
 			local y = { 0, OfficeConstants.WALL_HEIGHT }
-			table.insert(boxes, box("Pilaster", "plaster", false, where, { lo, lo + shell.pilaster }, y, across))
-			table.insert(boxes, box("Pilaster", "plaster", false, where, { hi - shell.pilaster, hi }, y, across))
+			table.insert(boxes, box("Pilaster", "plaster", true, where, { lo, lo + shell.pilaster }, y, across))
+			table.insert(boxes, box("Pilaster", "plaster", true, where, { hi - shell.pilaster, hi }, y, across))
 		end
 		return boxes
 	end
 	local reach = OfficeConstants.WALL_THICKNESS / 2 + shell.casing
 	local across = { -reach, reach }
 	local top = OfficeConstants.DOOR_HEIGHT
-	table.insert(boxes, box("Jamb", "oak", false, where, { lo, lo + shell.casing }, { 0, top }, across))
-	table.insert(boxes, box("Jamb", "oak", false, where, { hi - shell.casing, hi }, { 0, top }, across))
-	table.insert(boxes, box("Head", "oak", false, where, { lo, hi }, { top - shell.casing, top }, across))
+	table.insert(boxes, box("Jamb", "oak", true, where, { lo, lo + shell.casing }, { 0, top }, across))
+	table.insert(boxes, box("Jamb", "oak", true, where, { hi - shell.casing, hi }, { 0, top }, across))
+	table.insert(boxes, box("Head", "oak", true, where, { lo, hi }, { top - shell.casing, top }, across))
 	return boxes
 end
 
@@ -190,7 +190,7 @@ function OfficeShellUtils.ceiling(room: Room): { ShellBox }
 			size = Vector3.new(width, shell.slabOverhang, depth),
 			cframe = CFrame.new(centreX, height + shell.slabOverhang / 2, centreZ),
 			material = "ceiling",
-			collide = false,
+			collide = true,
 		},
 	}
 	local stripY = height - shell.gridThickness / 2

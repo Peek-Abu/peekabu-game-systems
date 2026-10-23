@@ -117,6 +117,9 @@ return function()
 			local boxes = OfficeShellUtils.doorCasing(door, "minZ")
 			local oak = named(boxes, "oak")
 			expect(#oak).to.equal(3)
+			for _, piece in oak do
+				expect(piece.collide).to.equal(true)
+			end
 			local jambs = {}
 			local head
 			for _, box in oak do
@@ -176,11 +179,13 @@ return function()
 			local room = { id = "r", name = "r", minX = 0, maxX = 12, minZ = 0, maxZ = 12 }
 			local boxes = OfficeShellUtils.ceiling(room)
 			expect(#named(boxes, "ceiling")).to.equal(1)
+			expect(named(boxes, "ceiling")[1].collide).to.equal(true)
 			local strips = named(boxes, "grid")
 			expect(#strips).to.equal(4)
 			for _, strip in strips do
 				expect(math.min(strip.size.X, strip.size.Z)).to.be.near(0.15, 1e-6)
 				expect(strip.size.Y).to.be.near(0.08, 1e-6)
+				expect(strip.collide).to.equal(false)
 				expect(strip.cframe.Position.Y).to.be.near(H - 0.04, 1e-6)
 			end
 		end)
