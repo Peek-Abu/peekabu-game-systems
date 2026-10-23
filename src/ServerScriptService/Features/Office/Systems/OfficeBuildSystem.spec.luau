@@ -55,153 +55,6 @@ return function()
 		model.WorldPivot = CFrame.identity
 		model.Parent = group
 	end
-	describe("native camera occlusion", function()
-		it("retains opaque collidable backing behind imported walls and ceilings", function()
-			for _, key in { "wallSolid", "ceilingTile" } do
-				template("building", key)
-			end
-			local selected = table.clone(Layout)
-			selected.artKit = "test-map-a"
-			local built = build(selected)
-			local checked = 0
-			for _, root in built.model:GetDescendants() do
-				if root:IsA("BasePart") and (root.Name == "Wall" or root.Name == "Ceiling") then
-					local backing
-					for _, candidate in built.model.OpaqueStructure:GetChildren() do
-						if candidate.CFrame == root.CFrame then
-							backing = candidate
-							break
-						end
-					end
-					expect(backing and not backing:IsDescendantOf(root)).to.equal(true)
-					expect(backing ~= nil).to.equal(true)
-					expect(backing.Transparency).to.equal(0)
-					expect(backing.CanQuery and backing.CanCollide).to.equal(true)
-					expect(backing.CFrame).to.equal(root.CFrame)
-					if root.Name == "Wall" then
-						expect(backing.Size.Z <= root.Size.Z * 0.5).to.equal(true)
-					end
-					expect(
-						backing.Size.X < root.Size.X and backing.Size.Y < root.Size.Y and backing.Size.Z < root.Size.Z
-					).to.equal(true)
-					checked += 1
-				end
-			end
-			expect(checked > 2).to.equal(true)
-		end)
-	end)
-	describe("ceiling lamp coverage", function()
-		it("reaches floor corners between neighbouring fixtures with falloff reserve", function()
-			local built = build(Layout)
-			local fixture = built.model:FindFirstChild("Light", true)
-			local lamp = fixture:FindFirstChildOfClass("PointLight")
-			local floorDistance = math.sqrt(Constants.WALL_HEIGHT ^ 2 + 2 * (Constants.LIGHT_SPACING / 2) ^ 2)
-			expect(lamp.Range >= floorDistance * 1.25).to.equal(true)
-		end)
-		it("reaches the floor corners at every room type's own spacing", function()
-			for _, amount in Constants.ROOM_LIGHT do
-				local reach = math.sqrt(Constants.WALL_HEIGHT ^ 2 + 2 * (amount.spacing / 2) ^ 2)
-				expect(Constants.LIGHT_RANGE >= reach * 1.25).to.equal(true)
-			end
-		end)
-	end)
-	describe("light amount per room type", function()
-		local function roomsOf(types)
-			local rooms = {}
-			for index, roomType in types do
-				local zone = if roomType == "hallway" then "hallway" else nil
-				table.insert(rooms, {
-					id = "r" .. index,
-					name = "R" .. index,
-					minX = (index - 1) * 40,
-					maxX = (index - 1) * 40 + 36,
-					minZ = 0,
-					maxZ = 36,
-					roomType = if zone == nil then roomType else nil,
-					zone = zone,
-				})
-			end
-			return {
-				startRoom = "r1",
-				rooms = rooms,
-				doors = {},
-				markers = {},
-				truck = Layout.truck,
-			}
-		end
-		local function lampsIn(built, name)
-			local lamps = {}
-			for _, part in built.model[name]:GetChildren() do
-				if part.Name == "Light" then
-					table.insert(lamps, part:FindFirstChildOfClass("PointLight"))
-				end
-			end
-			return lamps
-		end
-
-		it("uses the table's brightness and the one light colour in a server room", function()
-			local built = build(roomsOf({ "server" }))
-			local lamps = lampsIn(built, "R1")
-			expect(#lamps > 0).to.equal(true)
-			for _, lamp in lamps do
-				expect(math.abs(lamp.Brightness - 0.3) < 1e-4).to.equal(true)
-				expect(lamp.Color).to.equal(Constants.LIGHT_COLOR)
-			end
-		end)
-
-		it("shares one colour across every room type and applies each type's brightness", function()
-			local types = { "hallway", "pods", "conference", "breakout", "storage", "server", "reception" }
-			local built = build(roomsOf(types))
-			for index, roomType in types do
-				local lamps = lampsIn(built, "R" .. index)
-				expect(#lamps > 0).to.equal(true)
-				for _, lamp in lamps do
-					expect(lamp.Color).to.equal(Constants.LIGHT_COLOR)
-					expect(math.abs(lamp.Brightness - Constants.ROOM_LIGHT[roomType].brightness) < 1e-4).to.equal(true)
-				end
-			end
-		end)
-
-		it("falls back to the default amount for an unknown room type", function()
-			local built = build(roomsOf({ "mystery" }))
-			local lamps = lampsIn(built, "R1")
-			expect(#lamps > 0).to.equal(true)
-			for _, lamp in lamps do
-				expect(lamp.Brightness).to.equal(Constants.LIGHT_BRIGHTNESS)
-				expect(lamp.Range).to.equal(Constants.LIGHT_RANGE)
-			end
-		end)
-	end)
-	describe("floor backing", function()
-		it("backs imported carpet below its recessed face without coplanar overlap", function()
-			template("building", "floorTile")
-			local selected = table.clone(Layout)
-			selected.artKit = "test-map-a"
-			local built = build(selected)
-			local floor = built.model:FindFirstChild("Floor", true)
-			local skin = floor.Parent:FindFirstChild("FloorUnderlay")
-			expect(skin.Transparency).to.equal(0)
-			expect(skin.Position.Y + skin.Size.Y / 2 < floor.Position.Y + floor.Size.Y / 2 - 0.08).to.equal(true)
-			expect(skin.CanCollide).to.equal(true)
-			expect(skin.CanQuery).to.equal(true)
-		end)
-	end)
-	describe("imported lamp emission", function()
-		it("gives the imported housing a distinct visible emitting panel", function()
-			template("building", "fluorescent")
-			local selected = table.clone(Layout)
-			selected.artKit = "test-map-a"
-			local built = build(selected)
-			local fixture = built.model:FindFirstChild("Light", true)
-			local panel = fixture:FindFirstChild("LightPanel")
-			expect(panel:GetAttribute("OfficeLightEmitter")).to.equal(true)
-			expect(panel.Material).to.equal(Enum.Material.Neon)
-			expect(panel.CanCollide).to.equal(false)
-			-- Flush under the ceiling, a lamp's shadow falls inside the ceiling's own: no shadow-pass cost for nothing.
-			expect(panel.CastShadow).to.equal(false)
-			expect(fixture.CastShadow).to.equal(false)
-		end)
-	end)
 	describe("actual worktop support", function()
 		it("keeps a tall fixture's faucet outside the collision support height", function()
 			template("furniture", "kitchenCounter")
@@ -221,9 +74,6 @@ return function()
 	end)
 	describe("map-local art selection and fallback", function()
 		it("attaches building and furniture visuals without changing gameplay roots", function()
-			for _, key in { "floorTile", "ceilingTile", "wallSolid", "wallDoorway", "fluorescent" } do
-				template("building", key)
-			end
 			for _, key in { "desk", "locker", "shelf", "kitchenCounter", "corkboard" } do
 				template("furniture", key)
 			end
@@ -240,10 +90,6 @@ return function()
 			local built = build(selected)
 			for _, name in
 				{
-					"Floor",
-					"Ceiling",
-					"Wall",
-					"Light",
 					"Shelf",
 					"KitchenCounter",
 					"OfficePlant",
@@ -260,9 +106,6 @@ return function()
 				expect(proxy.CanCollide).to.equal(true)
 				expect(CollectionService:HasTag(proxy, Interaction.TAG)).to.equal(true)
 			end
-			local frame = built.model:FindFirstChild("DoorFrame", true)
-			expect(frame.CanCollide).to.equal(false)
-			expect(frame.CanQuery).to.equal(false)
 		end)
 		it("selects a kit per map and retains the default independently", function()
 			local selected = table.clone(Layout)
@@ -276,7 +119,7 @@ return function()
 			local selected = table.clone(Layout)
 			selected.artKit = "missing-test-kit"
 			local built = build(selected)
-			local ceiling = built.model:FindFirstChild("Ceiling", true)
+			local ceiling = built.model.Shell:FindFirstChild("Ceiling")
 			expect(ceiling ~= nil).to.equal(true)
 			expect(ceiling.CanCollide).to.equal(true)
 			expect(ceiling.Transparency).to.equal(0)
@@ -285,9 +128,15 @@ return function()
 				expect(part:GetAttribute(Interaction.ENABLED_ATTRIBUTE)).to.equal(false)
 				expect(part.CanCollide).to.equal(true)
 			end
-			local light = built.model:FindFirstChild("Light", true)
-			expect(CollectionService:HasTag(light, Occupant.LIGHT_TAG)).to.equal(true)
-			expect(light:FindFirstChildOfClass("PointLight") ~= nil).to.equal(true)
+			local light
+			for _, descendant in built.model.Lights:GetDescendants() do
+				if descendant:IsA("BasePart") and CollectionService:HasTag(descendant, Occupant.LIGHT_TAG) then
+					light = descendant
+					break
+				end
+			end
+			expect(light ~= nil).to.equal(true)
+			expect(light:FindFirstChildWhichIsA("Light") ~= nil).to.equal(true)
 			expect(light.CastShadow).to.equal(false)
 			expect(light.CanTouch).to.equal(false)
 		end)
@@ -323,20 +172,6 @@ return function()
 		local board = built.model:FindFirstChild("Corkboard", true)
 		expect(board.Position.Y - board.Size.Y / 2 >= 3).to.equal(true)
 		expect(board.CFrame.LookVector.Z > 0.99).to.equal(true)
-	end)
-	it("keeps floor coverage opaque beneath attached art", function()
-		template("building", "floorTile")
-		local selected = table.clone(Layout)
-		selected.artKit = "test-map-a"
-		local built = build(selected)
-		for _, root in built.model:GetDescendants() do
-			if root.Name == "Floor" and root:IsA("BasePart") then
-				expect(root.CanCollide).to.equal(true)
-				local skin = root.Parent:FindFirstChild("FloorUnderlay")
-				expect(skin.Transparency).to.equal(0)
-				expect(skin.Position.Y + skin.Size.Y / 2 < root.Position.Y + root.Size.Y / 2).to.equal(true)
-			end
-		end
 	end)
 	describe("truck paperwork", function()
 		local Truck = require(game:GetService("ServerScriptService").Features.Depot.Data.DepotTruckVisualConstants)
@@ -405,55 +240,22 @@ return function()
 			for _, vertical in { false, true } do
 				local built = build(connectedRooms(vertical))
 				local left, right
-				for _, wall in built.model.Walls:GetChildren() do
+				-- The plaster slabs of the wall line at 20 (one per face): the aperture lies between their ends.
+				for _, wall in built.model.Shell:GetChildren() do
 					local line = if vertical then wall.Position.X - 50000 else wall.Position.Z
-					local tangent = if vertical then Vector3.zAxis else Vector3.xAxis
-					if
-						wall:IsA("BasePart")
-						and math.abs(line - 20) < 0.001
-						and math.abs(wall.CFrame.RightVector:Dot(tangent)) > 0.99
-					then
+					if wall.Name == "Plaster" and math.abs(line - 20) < 0.3 then
 						local centre = if vertical then wall.Position.Z else wall.Position.X - 50000
+						local half = if vertical then wall.Size.Z / 2 else wall.Size.X / 2
 						if centre < 10 then
-							left = centre + wall.Size.X / 2
+							left = centre + half
 						else
-							right = centre - wall.Size.X / 2
+							right = centre - half
 						end
 					end
 				end
 				expect(left ~= nil and right ~= nil).to.equal(true)
 				expect(right - left).to.be.near(10, 0.001)
 			end
-		end)
-		it("replaces the monolithic wall skin with narrow trim outside the aperture on both faces", function()
-			template("building", "wallDoorway")
-			local selected = connectedRooms()
-			selected.artKit = "test-map-a"
-			local built = build(selected)
-			local frame = built.model.DoorFrames:FindFirstChild("DoorFrame")
-			expect(frame:FindFirstChild("ArtVisual")).to.equal(nil)
-			local faces = { [1] = 0, [-1] = 0 }
-			for _, trim in frame:GetChildren() do
-				if trim:IsA("BasePart") then
-					local localPosition = frame.CFrame:PointToObjectSpace(trim.Position)
-					local side = if localPosition.Z > 0 then 1 else -1
-					faces[side] += 1
-					expect(trim.CanCollide).to.equal(false)
-					expect(trim.CanQuery).to.equal(false)
-					expect(trim.CanTouch).to.equal(false)
-					if trim.Name == "Jamb" then
-						expect(math.abs(localPosition.X) - trim.Size.X / 2 >= 5 - 0.001).to.equal(true)
-						expect(trim.Size.X <= 0.2).to.equal(true)
-					else
-						expect(
-							localPosition.Y + trim.Size.Y / 2 <= Constants.WALL_HEIGHT / 2 + 0.001
-								and localPosition.Y - trim.Size.Y / 2 >= Constants.WALL_HEIGHT / 2 - 0.25
-						).to.equal(true)
-					end
-				end
-			end
-			expect(faces[1]).to.equal(3)
-			expect(faces[-1]).to.equal(3)
 		end)
 	end)
 
@@ -473,11 +275,11 @@ return function()
 		it("closes the wall above a solid or glass door so nothing shows over the leaf", function()
 			for _, kind in { "solid", "glass" } do
 				local built = build(doorLayout(kind))
-				local header = built.model.DoorFrames:FindFirstChild("DoorHeader")
+				local header = built.model.Shell:FindFirstChild("DoorHeader")
 				expect(header ~= nil).to.equal(true)
 				expect(header.Size.X).to.be.near(6, 0.001)
 				expect(header.Position.Y - header.Size.Y / 2).to.be.near(Constants.DOOR_HEIGHT, 0.001)
-				expect(header.Position.Y + header.Size.Y / 2).to.be.near(Constants.WALL_HEIGHT, 0.001)
+				expect(header.Position.Y + header.Size.Y / 2).to.be.near(Constants.WALL_HEIGHT + 1, 0.001)
 				expect(header.CanCollide).to.equal(true)
 				expect(header.CanQuery).to.equal(true)
 				built.doors.destroy()
@@ -485,13 +287,13 @@ return function()
 		end)
 		it("leaves an open doorway full height", function()
 			local built = build(doorLayout("open"))
-			expect(built.model.DoorFrames:FindFirstChild("DoorHeader")).to.equal(nil)
+			expect(built.model.Shell:FindFirstChild("DoorHeader")).to.equal(nil)
 			built.doors.destroy()
 		end)
 	end)
 
 	describe("glass panes", function()
-		it("builds one collidable, queryable GlassWall tagged SightThrough per pane", function()
+		it("builds one collidable, queryable Glass sheet tagged SightThrough per pane", function()
 			local layout = {
 				startRoom = "a",
 				rooms = {
@@ -505,17 +307,15 @@ return function()
 			}
 			local built = build(layout)
 			local glass = {}
-			for _, part in built.model.Walls:GetChildren() do
-				if part.Name == "GlassWall" then
+			for _, part in built.model.Shell:GetChildren() do
+				if part.Name == "Glass" then
 					table.insert(glass, part)
 				end
 			end
 			expect(#glass).to.equal(1)
 			expect(glass[1].Material).to.equal(Enum.Material.Glass)
-			expect(math.abs(glass[1].Transparency - 0.55) < 1e-4).to.equal(true)
 			expect(glass[1].CanCollide).to.equal(true)
 			expect(glass[1].CanQuery).to.equal(true)
-			expect(glass[1].Size.X).to.equal(6)
 			expect(CollectionService:HasTag(glass[1], Occupant.SIGHT_THROUGH_TAG)).to.equal(true)
 			expect(glass[1]:FindFirstChild("ArtVisual")).to.equal(nil)
 		end)
@@ -542,35 +342,6 @@ return function()
 		local function mark(family, key)
 			assets["test-map-a"][family][key]:FindFirstChildOfClass("Part").Name = key
 		end
-
-		it("uses floorTile_server in a server room and floorTile elsewhere", function()
-			template("building", "floorTile")
-			template("building", "floorTile_server")
-			mark("building", "floorTile")
-			mark("building", "floorTile_server")
-			local built = build(twoRooms("open", "server"))
-			expect(floorOf(built, "A").ArtVisual:FindFirstChild("floorTile_server") ~= nil).to.equal(true)
-			expect(floorOf(built, "B").ArtVisual:FindFirstChild("floorTile") ~= nil).to.equal(true)
-		end)
-
-		it("falls back to floorTile when the room-type variant is missing, and to greybox with neither", function()
-			template("building", "floorTile")
-			local built = build(twoRooms("open", "server"))
-			expect(floorOf(built, "A"):FindFirstChild("ArtVisual") ~= nil).to.equal(true)
-			built.model:Destroy()
-			assets:ClearAllChildren()
-			local bare = build(twoRooms("open", "server"))
-			expect(floorOf(bare, "A"):FindFirstChild("ArtVisual")).to.equal(nil)
-		end)
-
-		it("uses the hallway variant for corridor pieces", function()
-			template("building", "floorTile_hallway")
-			local layout = twoRooms("open", nil)
-			layout.rooms[2].zone = "hallway"
-			local built = build(layout)
-			expect(floorOf(built, "B"):FindFirstChild("ArtVisual") ~= nil).to.equal(true)
-			expect(floorOf(built, "A"):FindFirstChild("ArtVisual")).to.equal(nil)
-		end)
 
 		it("overrides a shelf marker's art key", function()
 			template("furniture", "shelf")
@@ -762,6 +533,29 @@ return function()
 			expect(leaf.Material).to.equal(Enum.Material.Glass)
 			expect(leaf.Transparency).to.equal(0.5)
 			built.doors.destroy()
+		end)
+
+		it(
+			"fills the clear opening with a leaf: the door minus a casing each side, a casing short of the top",
+			function()
+				local built = build(twoRooms("solid", nil))
+				local leaf = built.model.Doors.DoorLeaf
+				expect(leaf.Size.X).to.be.near(6 - 2 * Constants.SHELL.casing, 0.001)
+				expect(leaf.Size.Y).to.be.near(Constants.DOOR_HEIGHT - Constants.SHELL.casing, 0.001)
+				expect(leaf.Size.Z).to.equal(Constants.DOOR_LEAF_THICKNESS)
+				built.doors.destroy()
+			end
+		)
+
+		it("floors each room in its type's material, with no art tile or underlay", function()
+			local layout = twoRooms("open", "server")
+			layout.rooms[2].zone = "hallway"
+			local built = build(layout)
+			expect(floorOf(built, "A").Material).to.equal(Enum.Material.Plastic)
+			expect(floorOf(built, "B").Material).to.equal(Enum.Material.Fabric)
+			expect(floorOf(built, "B").Color).to.equal(Constants.SHELL_MATERIALS.hallcarpet.color)
+			expect(floorOf(built, "A"):FindFirstChild("ArtVisual")).to.equal(nil)
+			expect(built.model.A:FindFirstChild("FloorUnderlay")).to.equal(nil)
 		end)
 	end)
 end

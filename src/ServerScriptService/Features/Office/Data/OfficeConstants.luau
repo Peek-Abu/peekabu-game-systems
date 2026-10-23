@@ -71,15 +71,6 @@ local ART_SIZES: { [string]: Vector3 } = {
 	receptionDesk = Vector3.new(12.86, 4.6, 5.16),
 	conferenceTable = Vector3.new(14, 4.95, 6),
 }
-local ROOM_LIGHT: { [string]: { brightness: number, spacing: number } } = {
-	hallway = { brightness = 0.35, spacing = 18 },
-	pods = { brightness = 0.5, spacing = 15 },
-	conference = { brightness = 0.45, spacing = 15 },
-	breakout = { brightness = 0.5, spacing = 15 },
-	storage = { brightness = 0.3, spacing = 18 },
-	server = { brightness = 0.3, spacing = 18 },
-	reception = { brightness = 0.6, spacing = 15 },
-}
 -- The spike's light recipe per room type (key = OfficeArtKeyUtils.roomType; an unknown type uses pods).
 local LIGHTING: {
 	[string]: {
@@ -170,14 +161,31 @@ local SHELL_MATERIALS: { [OfficeTypes.ShellMaterial]: { material: Enum.Material,
 			color = Color3.new(1, 1, 1),
 			transparency = 0,
 		},
+		carpet = {
+			material = Enum.Material.Fabric,
+			variant = "OH_Carpet",
+			color = Color3.new(1, 1, 1),
+			transparency = 0,
+		},
+		hallcarpet = {
+			material = Enum.Material.Fabric,
+			variant = "OH_Carpet",
+			color = Color3.fromRGB(191, 191, 198),
+			transparency = 0,
+		},
+		lino = {
+			material = Enum.Material.Plastic,
+			variant = "OH_Lino",
+			color = Color3.new(1, 1, 1),
+			transparency = 0,
+		},
+		vinyl = {
+			material = Enum.Material.Plastic,
+			variant = "OH_Vinyl",
+			color = Color3.new(1, 1, 1),
+			transparency = 0,
+		},
 	}
-
-local FLOOR_COLORS: { Color3 } = {
-	Color3.fromRGB(96, 92, 86),
-	Color3.fromRGB(70, 82, 96),
-	Color3.fromRGB(88, 96, 78),
-	Color3.fromRGB(100, 86, 80),
-}
 
 return table.freeze({
 	-- Where the office's local 0, 0 sits in the world: far from the origin, where M4 builds the depot.
@@ -346,7 +354,6 @@ return table.freeze({
 		Vector2.new(-2.75, 4),
 		Vector2.new(2.75, 4),
 	}),
-	FLOOR_COLORS = table.freeze(FLOOR_COLORS),
 	WALL_COLOR = Color3.fromRGB(200, 198, 190),
 	DESK_COLOR = Color3.fromRGB(140, 110, 80),
 	LOCKER_COLOR = Color3.fromRGB(110, 120, 130),
@@ -354,20 +361,7 @@ return table.freeze({
 	BED_COLOR = Color3.fromRGB(60, 60, 64),
 	CLOCK_COLOR = Color3.fromRGB(200, 60, 50),
 	OVERTIME_COLOR = Color3.fromRGB(230, 170, 40),
-	-- M2: a ceiling light about every LIGHT_SPACING studs in each room (Harlow's tells flicker them).
-	LIGHT_SPACING = 15,
-	LIGHT_SIZE = Vector3.new(3, 0.3, 1.2),
-	LIGHT_COLOR = Color3.fromRGB(215, 228, 255),
-	-- At least 1.25x the reach from a lamp to the floor corner between neighbouring lamps, for the widest spacing in
-	-- use: sqrt(WALL_HEIGHT^2 + 2 * (spacing / 2)^2) is 16.02 studs at spacing 15 (x1.25 = 20.02) and sqrt(306) = 17.49 at
-	-- spacing 18 (x1.25 = 21.86, so 22), or the corners go dark (OfficeBuildSystem.spec "ceiling lamp coverage").
-	-- The night is dimmed by LIGHT_BRIGHTNESS, not the range.
-	LIGHT_RANGE = 22,
-	LIGHT_BRIGHTNESS = 0.5,
-	-- Light AMOUNT per room type (key = OfficeArtKeyUtils.roomType, so corridors are "hallway"). The colour is always
-	-- LIGHT_COLOR: rooms differ only in brightness and lamp spacing, never in tint. An unknown type falls back to
-	-- LIGHT_SPACING / LIGHT_BRIGHTNESS. LIGHT_RANGE covers every spacing here (OfficeBuildSystem.spec checks each).
-	ROOM_LIGHT = table.freeze(ROOM_LIGHT),
+	-- The office's lights (OfficeLightingUtils / OfficeShellVisualSystem): LIGHTING is the per-room-type recipe.
 	LIGHTING = table.freeze(LIGHTING),
 	ACCENT_LIGHTS = table.freeze(ACCENT_LIGHTS),
 	-- Troffer panel glow and the warm fill light colours (from the spike).

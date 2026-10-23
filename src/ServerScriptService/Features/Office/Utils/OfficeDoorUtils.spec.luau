@@ -1,4 +1,5 @@
 local OfficeDoorUtils = require(script.Parent.OfficeDoorUtils)
+local OfficeConstants = require(script.Parent.Parent.Data.OfficeConstants)
 
 local ORIGIN = CFrame.new(1000, 0, 500)
 local DOOR = { a = "kit", b = "hall", x = 10, z = 0, width = 6, kind = "solid" }
@@ -9,37 +10,54 @@ local function close(a, b)
 	return math.abs(a - b) < 1e-3
 end
 
+-- A leaf is the clear opening: the door minus a casing each side, DOOR_HEIGHT less one casing tall.
+local CASING = OfficeConstants.SHELL.casing
+local LEAF_WIDTH = DOOR.width - 2 * CASING
+local LEAF_MID = (OfficeConstants.DOOR_HEIGHT - CASING) / 2
+local HINGE_OFFSET = LEAF_WIDTH / 2
+
 return function()
+	describe("leafSize", function()
+		it("fills the clear opening: the door minus a casing each side, one casing short of DOOR_HEIGHT", function()
+			local size = OfficeDoorUtils.leafSize({ a = "kit", b = "hall", x = 10, z = 0, width = 6.8, kind = "solid" })
+			expect(close(size.X, 6.1)).to.equal(true)
+			expect(close(size.Y, OfficeConstants.DOOR_HEIGHT - 0.35)).to.equal(true)
+			expect(size.Z).to.equal(OfficeConstants.DOOR_LEAF_THICKNESS)
+		end)
+	end)
+
 	describe("leafFrame", function()
-		it("fills the opening at fraction 0, centred at half the door height", function()
+		it("fills the opening at fraction 0, centred at half the leaf height", function()
 			local frame = OfficeDoorUtils.leafFrame(DOOR, "minZ", 1, 0, ORIGIN)
-			expect(close(frame.X, 1010) and close(frame.Y, 4.5) and close(frame.Z, 500)).to.equal(true)
+			expect(close(frame.X, 1010) and close(frame.Y, LEAF_MID) and close(frame.Z, 500)).to.equal(true)
 			expect(close(frame.LookVector.Z, 1)).to.equal(true)
 		end)
 
-		it("turns 95 degrees about the hinge at x = 7 toward +Z at fraction 1 (sign +1, minZ edge)", function()
+		it("turns 95 degrees about the leaf's hinge edge toward +Z at fraction 1 (sign +1, minZ edge)", function()
 			local frame = OfficeDoorUtils.leafFrame(DOOR, "minZ", 1, 1, ORIGIN)
-			-- Centre is 3 studs from the hinge: (7 + 3 cos 95, 3 sin 95) = (6.7385, 2.9886).
-			expect(close(frame.X, 1006.7385)).to.equal(true)
-			expect(close(frame.Y, 4.5)).to.equal(true)
-			expect(close(frame.Z, 502.9886)).to.equal(true)
+			-- The hinge is half a leaf width left of the centre; the centre swings round it.
+			local angle = math.rad(95)
+			expect(close(frame.X, 1010 - HINGE_OFFSET + HINGE_OFFSET * math.cos(angle))).to.equal(true)
+			expect(close(frame.Y, LEAF_MID)).to.equal(true)
+			expect(close(frame.Z, 500 + HINGE_OFFSET * math.sin(angle))).to.equal(true)
 			-- The leaf's width axis now points mostly along Z (its local +X, the hinge side, toward -Z).
-			expect(close(frame.RightVector.Z, -math.sin(math.rad(95)))).to.equal(true)
+			expect(close(frame.RightVector.Z, -math.sin(angle))).to.equal(true)
 		end)
 
 		it("swings the other way for sign -1", function()
 			local frame = OfficeDoorUtils.leafFrame(DOOR, "minZ", -1, 1, ORIGIN)
-			expect(close(frame.Z, 497.0114)).to.equal(true)
+			expect(close(frame.Z, 500 - HINGE_OFFSET * math.sin(math.rad(95)))).to.equal(true)
 		end)
 
-		it("hinges a vertical door at z - width/2 and swings toward +X for sign +1", function()
+		it("hinges a vertical door at its leaf's -z edge and swings toward +X for sign +1", function()
 			local door = { a = "kit", b = "hall", x = 0, z = 10, width = 6, kind = "solid" }
 			local closed = OfficeDoorUtils.leafFrame(door, "minX", 1, 0, CFrame.identity)
 			expect(close(closed.X, 0) and close(closed.Z, 10)).to.equal(true)
 			local open = OfficeDoorUtils.leafFrame(door, "minX", 1, 1, CFrame.identity)
-			-- Hinge (0, 7); centre 3 along +Z rotates to (3 sin 95, 7 + 3 cos 95) = (2.9886, 6.7385).
-			expect(close(open.X, 2.9886)).to.equal(true)
-			expect(close(open.Z, 6.7385)).to.equal(true)
+			local angle = math.rad(95)
+			local hingeZ = 10 - HINGE_OFFSET
+			expect(close(open.X, HINGE_OFFSET * math.sin(angle))).to.equal(true)
+			expect(close(open.Z, hingeZ + HINGE_OFFSET * math.cos(angle))).to.equal(true)
 		end)
 	end)
 
@@ -49,11 +67,11 @@ return function()
 			local vertical = { a = "kit", b = "hall", x = 0, z = 10, width = 6, kind = "solid" }
 			for fraction = 0, 1 do
 				local h = OfficeDoorUtils.leafFrame(horizontal, "minZ", 1, fraction, ORIGIN)
-				local hinge = h * Vector3.new(horizontal.width / 2, 0, 0)
-				expect(close(hinge.X, 1007) and close(hinge.Z, 500)).to.equal(true)
+				local hinge = h * Vector3.new(LEAF_WIDTH / 2, 0, 0)
+				expect(close(hinge.X, 1010 - HINGE_OFFSET) and close(hinge.Z, 500)).to.equal(true)
 				local v = OfficeDoorUtils.leafFrame(vertical, "minX", 1, fraction, ORIGIN)
-				local vhinge = v * Vector3.new(vertical.width / 2, 0, 0)
-				expect(close(vhinge.X, 1000) and close(vhinge.Z, 507)).to.equal(true)
+				local vhinge = v * Vector3.new(LEAF_WIDTH / 2, 0, 0)
+				expect(close(vhinge.X, 1000) and close(vhinge.Z, 510 - HINGE_OFFSET)).to.equal(true)
 			end
 		end)
 	end)
@@ -78,7 +96,7 @@ return function()
 		it("stands flush on the room side of the wall", function()
 			local facade = { room = "kit", x = 10, z = 0, width = 6, kind = "entrance" }
 			local frame = OfficeDoorUtils.facadeFrame(facade, KIT, CFrame.identity)
-			expect(close(frame.Z, 0.65) and close(frame.Y, 4.5)).to.equal(true)
+			expect(close(frame.Z, 0.65) and close(frame.Y, OfficeConstants.DOOR_HEIGHT / 2)).to.equal(true)
 			local east = { room = "kit", x = 20, z = 5, width = 6, kind = "stairwell" }
 			local eastFrame = OfficeDoorUtils.facadeFrame(east, KIT, CFrame.identity)
 			expect(close(eastFrame.X, 19.35)).to.equal(true)

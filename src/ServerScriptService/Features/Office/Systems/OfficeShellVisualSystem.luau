@@ -1,0 +1,275 @@
+--!strict
+--[=[
+	OfficeShellVisualSystem: turns the pure shell and lighting plans into Parts. Under the office model it builds a
+	`Shell` folder (wall slabs and trim, door casings and lintels, framed glass, ceilings) and a `Lights` folder (one
+	subfolder per room, holding its troffer panels and fill lights). Every shell box takes its Material and colour from
+	OfficeConstants.SHELL_MATERIALS, with the MaterialVariant only where the place has one by that name.
+
+	A troffer panel is a Part under the ceiling whose visual is the kit's `troffer` template (lit and unlit alike);
+	with no template the Part itself is a 4 x 0.2 x 2 greybox panel. A lit one is tagged for Harlow's tells and carries
+	a downward SurfaceLight; an unlit one has no light and no glow. A fill is an invisible anchor holding a shadowed
+	PointLight. The wall, ceiling and fluorescent art keys are no longer used: the slabs are opaque.
+
+	Floors stay in OfficeBuildSystem, which asks `floorMaterial` and `apply` for the surface.
+
+	Instance shell; the geometry is OfficeShellUtils, the placement OfficeLightingUtils (both specced).
+
+	@class OfficeShellVisualSystem
+]=]
+
+local CollectionService = game:GetService("CollectionService")
+local MaterialService = game:GetService("MaterialService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
+
+local ArtVisualSystem = require(ServerScriptService.Features.Art.Systems.ArtVisualSystem)
+local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
+local OfficeServer = ServerScriptService.Features.Office
+local OfficeConstants = require(OfficeServer.Data.OfficeConstants)
+local OfficeTypes = require(OfficeServer.Data.OfficeTypes)
+local OfficeArtKeyUtils = require(OfficeServer.Utils.OfficeArtKeyUtils)
+local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
+local OfficeLightingUtils = require(OfficeServer.Utils.OfficeLightingUtils)
+local OfficeShellUtils = require(OfficeServer.Utils.OfficeShellUtils)
+
+type HasVariant = (name: string) -> boolean
+
+local PANEL_SIZE = Vector3.new(4, 0.2, 2)
+local FILL_SIZE = Vector3.one * 0.2
+local EPSILON = 1e-4
+
+local FLOOR_BY_TYPE: { [string]: OfficeTypes.ShellMaterial } = {
+	hallway = "hallcarpet",
+	breakout = "lino",
+	server = "vinyl",
+	storage = "vinyl",
+}
+
+local OfficeShellVisualSystem = {}
+
+local function inPlace(name: string): boolean
+	return MaterialService:FindFirstChild(name) ~= nil
+end
+
+local function folder(name: string, parent: Instance): Folder
+	local created = Instance.new("Folder")
+	created.Name = name
+	created.Parent = parent
+	return created
+end
+
+--[=[
+	The floor material for a room type (OfficeArtKeyUtils.roomType): hallway carpet in corridors, lino in the
+	breakout room, vinyl in server and storage rooms and the authored bay (no type), carpet everywhere else.
+]=]
+function OfficeShellVisualSystem.floorMaterial(roomType: string?): OfficeTypes.ShellMaterial
+	if roomType == nil then
+		return "vinyl"
+	end
+	return FLOOR_BY_TYPE[roomType] or "carpet"
+end
+
+--[=[
+	Gives `part` the material's Material, colour and transparency, and its MaterialVariant when `hasVariant` (default:
+	MaterialService has a variant of that name) says the place has one.
+]=]
+function OfficeShellVisualSystem.apply(part: BasePart, material: OfficeTypes.ShellMaterial, hasVariant: HasVariant?)
+	local look = OfficeConstants.SHELL_MATERIALS[material]
+	part.Material = look.material
+	part.Color = look.color
+	part.Transparency = look.transparency
+	local variant = look.variant
+	if variant ~= nil and (hasVariant or inPlace)(variant) then
+		part.MaterialVariant = variant
+	end
+end
+
+local function newPart(name: string, size: Vector3, cframe: CFrame, parent: Instance): Part
+	local part = Instance.new("Part")
+	part.Name = name
+	part.Size = size
+	part.CFrame = cframe
+	part.Anchored = true
+	part.TopSurface = Enum.SurfaceType.Smooth
+	part.BottomSurface = Enum.SurfaceType.Smooth
+	part.CanTouch = false
+	part.Parent = parent
+	return part
+end
+
+local function build(box: OfficeTypes.ShellBox, origin: CFrame, parent: Instance, hasVariant: HasVariant?)
+	local part = newPart(box.name, box.size, origin * box.cframe, parent)
+	OfficeShellVisualSystem.apply(part, box.material, hasVariant)
+	part.CanCollide = box.collide
+	part.CanQuery = box.collide
+	-- Grid strips hang under the slab, so their shadow is the slab's own.
+	part.CastShadow = box.name ~= "Grid"
+	if box.material == "glass" then
+		CollectionService:AddTag(part, OccupantConstants.SIGHT_THROUGH_TAG)
+	end
+end
+
+-- How far a wall ending at (x, z) extends past that point: nothing at a door aperture or a glass pane, half a wall
+-- thickness at a corner.
+local function endcap(layout: OfficeTypes.Layout, x: number, z: number, horizontal: boolean): number
+	for _, door in layout.doors do
+		local room = OfficeLayoutUtils.room(layout, door.a)
+		local edge: OfficeTypes.Edge? = if room ~= nil then OfficeLayoutUtils.doorEdge(room, door) else nil
+		if edge ~= nil then
+			local across = edge == "minZ" or edge == "maxZ"
+			local sameLine = if horizontal then math.abs(z - door.z) < EPSILON else math.abs(x - door.x) < EPSILON
+			local offset = if horizontal then x - door.x else z - door.z
+			if across == horizontal and sameLine and math.abs(math.abs(offset) - door.width / 2) < EPSILON then
+				return 0
+			end
+		end
+	end
+	for _, pane in OfficeLayoutUtils.panes(layout) do
+		if (pane.z1 == pane.z2) == horizontal then
+			local sameLine = if horizontal then math.abs(z - pane.z1) < EPSILON else math.abs(x - pane.x1) < EPSILON
+			local at = if horizontal then x else z
+			local from = if horizontal then pane.x1 else pane.z1
+			local to = if horizontal then pane.x2 else pane.z2
+			if sameLine and (math.abs(at - from) < EPSILON or math.abs(at - to) < EPSILON) then
+				return 0
+			end
+		end
+	end
+	return OfficeConstants.WALL_THICKNESS / 2
+end
+
+-- The plaster lintel over a solid or glass door (the casing stops at DOOR_HEIGHT), as wide as the door and as thick
+-- as the wall, up to the slab top.
+local function lintel(door: OfficeTypes.Door, horizontal: boolean): OfficeTypes.ShellBox
+	local bottom = OfficeConstants.DOOR_HEIGHT
+	local height = OfficeConstants.WALL_HEIGHT + OfficeConstants.SHELL.slabOverhang - bottom
+	local thickness = OfficeConstants.WALL_THICKNESS
+	return {
+		name = "DoorHeader",
+		size = if horizontal
+			then Vector3.new(door.width, height, thickness)
+			else Vector3.new(thickness, height, door.width),
+		cframe = CFrame.new(door.x, bottom + height / 2, door.z),
+		material = "plaster",
+		collide = true,
+	}
+end
+
+local function buildWalls(layout: OfficeTypes.Layout, origin: CFrame, shell: Folder, hasVariant: HasVariant?)
+	for _, segment in OfficeLayoutUtils.mergedWallSegments(layout) do
+		local horizontal = segment.z1 == segment.z2
+		local first = endcap(layout, segment.x1, segment.z1, horizontal)
+		local last = endcap(layout, segment.x2, segment.z2, horizontal)
+		for _, box in OfficeShellUtils.wall(segment, first, last) do
+			build(box, origin, shell, hasVariant)
+		end
+	end
+	for _, pane in OfficeLayoutUtils.panes(layout) do
+		for _, box in OfficeShellUtils.glassPane(pane) do
+			build(box, origin, shell, hasVariant)
+		end
+	end
+	for _, door in layout.doors do
+		local room = OfficeLayoutUtils.room(layout, door.a)
+		local edge: OfficeTypes.Edge? = if room ~= nil then OfficeLayoutUtils.doorEdge(room, door) else nil
+		if edge ~= nil then
+			for _, box in OfficeShellUtils.doorCasing(door, edge) do
+				build(box, origin, shell, hasVariant)
+			end
+			if door.kind == "solid" or door.kind == "glass" then
+				build(lintel(door, edge == "minZ" or edge == "maxZ"), origin, shell, hasVariant)
+			end
+		end
+	end
+end
+
+local function buildPanel(
+	panel: OfficeTypes.LightPanel,
+	range: number,
+	roomType: string?,
+	origin: CFrame,
+	parent: Instance,
+	art: ArtVisualSystem.Controller
+)
+	local turn = if panel.rotated then CFrame.Angles(0, math.pi / 2, 0) else CFrame.identity
+	local root = newPart(
+		"Panel",
+		PANEL_SIZE,
+		origin * CFrame.new(panel.x, OfficeConstants.WALL_HEIGHT - PANEL_SIZE.Y / 2, panel.z) * turn,
+		parent
+	)
+	root.Color = OfficeConstants.PANEL_COLOR
+	root.CanCollide, root.CanQuery = false, false
+	-- Flush under the ceiling, its shadow falls inside the ceiling's: casting it is shadow-pass cost for nothing.
+	root.CastShadow = false
+	local visual =
+		OfficeArtKeyUtils.attachFirst(art, root, "building", OfficeArtKeyUtils.candidates("troffer", nil, roomType))
+	if not panel.lit then
+		root.Material = Enum.Material.SmoothPlastic
+		if visual ~= nil then
+			for _, part in visual:GetDescendants() do
+				if part:IsA("BasePart") and part.Material == Enum.Material.Neon then
+					part.Material = Enum.Material.SmoothPlastic
+				end
+			end
+		end
+		return
+	end
+	root.Material = Enum.Material.Neon
+	root:SetAttribute("OfficeLightEmitter", true)
+	local light = Instance.new("SurfaceLight")
+	light.Face = Enum.NormalId.Bottom
+	light.Brightness = panel.brightness
+	light.Range = range
+	light.Color = OfficeConstants.PANEL_COLOR
+	light.Shadows = false
+	light.Parent = root
+	CollectionService:AddTag(root, OccupantConstants.LIGHT_TAG)
+end
+
+local function buildFill(fill: OfficeTypes.FillLight, origin: CFrame, parent: Instance)
+	local anchor = newPart("Fill", FILL_SIZE, origin * CFrame.new(fill.position), parent)
+	anchor.Transparency = 1
+	anchor.CanCollide, anchor.CanQuery = false, false
+	anchor.CastShadow = false
+	local light = Instance.new("PointLight")
+	light.Brightness = fill.brightness
+	light.Range = fill.range
+	light.Color = fill.color
+	light.Shadows = fill.shadows
+	light.Parent = anchor
+	CollectionService:AddTag(anchor, OccupantConstants.LIGHT_TAG)
+end
+
+--[=[
+	Builds the shell and the lights of `layout` (placed at `origin`) under `model`. `art` supplies the troffer art;
+	`hasVariant` says whether the place has a MaterialVariant by a name (default: MaterialService does).
+]=]
+function OfficeShellVisualSystem.build(
+	layout: OfficeTypes.Layout,
+	origin: CFrame,
+	model: Model,
+	art: ArtVisualSystem.Controller,
+	hasVariant: HasVariant?
+)
+	local shell = folder("Shell", model)
+	local lights = folder("Lights", model)
+	buildWalls(layout, origin, shell, hasVariant)
+	for _, room in layout.rooms do
+		for _, box in OfficeShellUtils.ceiling(room) do
+			build(box, origin, shell, hasVariant)
+		end
+		local roomType = OfficeArtKeyUtils.roomType(room)
+		local recipe = OfficeConstants.LIGHTING[roomType or "pods"] or OfficeConstants.LIGHTING.pods
+		local plan = OfficeLightingUtils.roomLights(room, roomType)
+		local roomFolder = folder(room.name, lights)
+		for _, panel in plan.panels do
+			buildPanel(panel, recipe.panelRange, roomType, origin, roomFolder, art)
+		end
+		for _, fill in plan.fills do
+			buildFill(fill, origin, roomFolder)
+		end
+	end
+end
+
+return OfficeShellVisualSystem

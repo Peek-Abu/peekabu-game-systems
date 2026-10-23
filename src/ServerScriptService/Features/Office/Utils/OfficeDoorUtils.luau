@@ -4,10 +4,11 @@
 	way it swings, which closed doors are near a point, whether a door lies ahead of a walker, whether an NPC is
 	near a door, and whether a doorway is clear enough to close. Pure.
 
-	Frames are in layout space: pass the office origin to get world space. A leaf is a box (door.width x
-	DOOR_HEIGHT x DOOR_LEAF_THICKNESS) centred in the wall line at height DOOR_HEIGHT / 2, turned a quarter turn
-	for a door on an X edge (minX / maxX) so its width runs along Z. It hinges at the door's "-side" jamb: x - width/2
-	for a door on a Z edge (minZ / maxZ, "horizontal"), z - width/2 for a door on an X edge ("vertical").
+	Frames are in layout space: pass the office origin to get world space. A leaf is the clear opening inside the oak
+	casing, a box (`leafSize`: door.width - 2 x casing by DOOR_HEIGHT - casing, DOOR_LEAF_THICKNESS thick) centred in
+	the wall line at half its height, turned a quarter turn for a door on an X edge (minX / maxX) so its width runs
+	along Z. It hinges at the door's "-side" edge of the leaf: x - leafWidth/2 for a door on a Z edge (minZ / maxZ,
+	"horizontal"), z - leafWidth/2 for a door on an X edge ("vertical").
 
 	Hinge side: the hinge always sits at the leaf's local +X (door art authors its hinge there), so a Z-edge door's
 	closed leaf is turned half a turn and an X-edge door's a quarter turn; facades use the same orientations. The leaf
@@ -36,6 +37,19 @@ local BODY_MARGIN = 1
 
 local OfficeDoorUtils = {}
 
+--[=[
+	A solid or glass door's leaf: the clear opening inside the casing. X is the width along the wall, Y the height
+	from the floor, Z the leaf's thickness.
+]=]
+function OfficeDoorUtils.leafSize(door: Door): Vector3
+	local casing = OfficeConstants.SHELL.casing
+	return Vector3.new(
+		door.width - 2 * casing,
+		OfficeConstants.DOOR_HEIGHT - casing,
+		OfficeConstants.DOOR_LEAF_THICKNESS
+	)
+end
+
 local function isHorizontal(edge: Edge): boolean
 	return edge == "minZ" or edge == "maxZ"
 end
@@ -46,12 +60,13 @@ end
 ]=]
 function OfficeDoorUtils.leafFrame(door: Door, edge: Edge, swingSign: number, fraction: number, origin: CFrame): CFrame
 	local horizontal = isHorizontal(edge)
-	local closed = CFrame.new(door.x, OfficeConstants.DOOR_HEIGHT / 2, door.z)
+	local size = OfficeDoorUtils.leafSize(door)
+	local closed = CFrame.new(door.x, size.Y / 2, door.z)
 		* CFrame.Angles(0, if horizontal then math.pi else math.pi / 2, 0)
 	local hinge = CFrame.new(
-		if horizontal then door.x - door.width / 2 else door.x,
+		if horizontal then door.x - size.X / 2 else door.x,
 		0,
-		if horizontal then door.z else door.z - door.width / 2
+		if horizontal then door.z else door.z - size.X / 2
 	)
 	-- Turning about +Y by a positive angle takes +X toward -Z and +Z toward +X.
 	local angle = swingSign * fraction * OfficeConstants.DOOR_OPEN_ANGLE

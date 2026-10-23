@@ -22,6 +22,8 @@
 	The swing tweens a fraction (0 closed .. 1 open) and places the leaf with OfficeDoorUtils.leafFrame each step,
 	so it travels the hinge's arc (tweening the CFrame itself would cut a chord). A door ignores toggles mid-swing.
 
+	A leaf is the clear opening inside the casing (OfficeDoorUtils.leafSize), so it swings clear of the oak jambs.
+
 	Art: a leaf takes the kit's `doorLeaf` (solid) or `doorLeafGlass` (glass) template through OfficeArtKeyUtils; the
 	visual welds to the leaf, so it swings with it and stays non-colliding while the leaf keeps its collision and tags
 	(attaching hides the leaf's own plastic or glass; with no template the greybox leaf stays as it was). ArtVisualSystem
@@ -212,12 +214,7 @@ function OfficeDoorSystem.build(
 		if (kind == "solid" or kind == "glass") and room ~= nil and edge ~= nil then
 			local id = `{door.a}|{door.b}`
 			local horizontal = edge == "minZ" or edge == "maxZ"
-			local leaf = leafPart(
-				"DoorLeaf",
-				Vector3.new(door.width, height, OfficeConstants.DOOR_LEAF_THICKNESS),
-				kind == "glass",
-				folder
-			)
+			local leaf = leafPart("DoorLeaf", OfficeDoorUtils.leafSize(door), kind == "glass", folder)
 			local occluder = dress(art, leaf, kind == "glass")
 			local modifier = Instance.new("PathfindingModifier")
 			modifier.Label = OfficeConstants.DOOR_PATH_LABEL

@@ -70,7 +70,7 @@ local function blocked(model: Model, origin: CFrame, x: number, z: number): bool
 	params.FilterDescendantsInstances = { model }
 	params.RespectCanCollide = true
 	for _, part in Workspace:GetPartBoundsInBox(origin * CFrame.new(x, PROBE_HEIGHT, z), PROBE_SIZE, params) do
-		if part.Name ~= "Floor" and part.Name ~= "FloorUnderlay" and part.Name ~= "Ceiling" then
+		if part.Name ~= "Floor" and part.Name ~= "Ceiling" then
 			return true
 		end
 	end

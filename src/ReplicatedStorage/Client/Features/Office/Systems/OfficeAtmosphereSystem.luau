@@ -9,7 +9,7 @@
 	one owner of Lighting and of the place's bed, so the hub and the office never fight over them. Every ATMOSPHERE_INTERVAL the broken lights near the
 	camera (OfficeLightUtils) blink, with a zap as a burst of blinks starts (OfficeLightUtils.zaps: once per burst, spaced
 	per tube and across tubes). It changes only a light's Color, Transparency and
-	PointLight Color/Brightness; M2's OccupantTellSystem owns Material and PointLight.Enabled, so the two compose.
+	lamp (PointLight or SurfaceLight) Color/Brightness; M2's OccupantTellSystem owns Material and Light.Enabled, so the two compose.
 	Registers the office and depot presets with Vfx at load. Pending sounds (OfficeAssets) are silent. While the transit
 	screen covers the view (ShiftTransitStore.covered) a preset is applied at once, not blended, and one still blending
 	when the cover comes up is finished at once, so the screen reveals the right light.
@@ -92,7 +92,7 @@ local function baseOf(light: BasePart): LightBase
 	if existing ~= nil then
 		return existing
 	end
-	local point = light:FindFirstChildOfClass("PointLight")
+	local point = light:FindFirstChildWhichIsA("Light")
 	local created: LightBase = {
 		color = light.Color,
 		brightness = if point ~= nil then point.Brightness else 0,
@@ -118,7 +118,7 @@ local function paint(light: BasePart, red: boolean)
 	local base = baseOf(light)
 	local color = if red then OfficeAtmosphereConstants.OVERTIME_LIGHT_COLOR else base.color
 	light.Color = color
-	local point = light:FindFirstChildOfClass("PointLight")
+	local point = light:FindFirstChildWhichIsA("Light")
 	if point ~= nil then
 		point.Color = color
 	end
@@ -194,7 +194,7 @@ end
 local function restore(light: BasePart)
 	local base = baseOf(light)
 	light.Transparency = base.transparency
-	local point = light:FindFirstChildOfClass("PointLight")
+	local point = light:FindFirstChildWhichIsA("Light")
 	if point ~= nil then
 		point.Brightness = base.brightness
 	end
@@ -221,7 +221,7 @@ local function stepBroken()
 		local base = baseOf(light)
 		local factor = OfficeLightUtils.glow(now, OfficeLightUtils.hash(light.Position) * 100)
 		local dim = factor < 1
-		local point = light:FindFirstChildOfClass("PointLight")
+		local point = light:FindFirstChildWhichIsA("Light")
 		if point ~= nil then
 			point.Brightness = base.brightness * factor
 		end
