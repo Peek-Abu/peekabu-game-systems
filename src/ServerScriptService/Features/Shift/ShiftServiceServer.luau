@@ -351,10 +351,11 @@ local clockOuts = ShiftClockOutSystem.new({
 -- The truck's time clock: a crew member who reaches it punches their card.
 local timeClock = ShiftTimeClockSystem.new({ clockOut = clockOuts.punch, eligible = trip.eligible })
 
--- The office's entrances (outside door <-> inside exit): only the running shift's crew, up and playing, goes through.
+-- The office's entrances (outside door <-> inside exit): only the running shift's crew still working (not clocked out),
+-- up and playing, goes through.
 local entrances = OfficeEntranceSystem.new({
 	inCrew = function(player: Player): boolean
-		return isRunning() and trip.eligible(player)
+		return isRunning() and clockOuts.working(player)
 	end,
 	alive = function(player: Player): boolean
 		return not DeathServiceServer:isDead(player)

@@ -77,7 +77,11 @@ local function harness(door, overrides)
 		after = function(seconds, run)
 			table.insert(log.delayed, { seconds = seconds, run = run })
 		end,
-		stream = function() end,
+		stream = function()
+			if overrides.onStream ~= nil then
+				overrides.onStream()
+			end
+		end,
 	})
 	return log
 end
@@ -218,5 +222,105 @@ return function()
 			expect(#log.fades).to.equal(0)
 			folder:Destroy()
 		end)
+	end)
+	describe("between the request and the move", function()
+		-- Requests at the dock door, applies `change` (before the move, or during the stream with `duringStream`), runs
+		-- the delayed move and returns what happened.
+		local function interrupted(change, duringStream)
+			local folder, door, root, player = scene(Vector3.new(0, -2, 3))
+			local overrides = {}
+			local log = harness(door, overrides)
+			local start = root.Position
+			expect(log.system.request(player, OfficeConstants.ENTER_KIND, "dock", 100)).to.equal(true)
+			if duringStream then
+				overrides.onStream = function()
+					change(player, root, overrides)
+				end
+			else
+				change(player, root, overrides)
+			end
+			log.delayed[1].run()
+			local result = {
+				stayed = (root.Position - start).Magnitude < 0.05,
+				fadedIn = #log.fades == 2 and log.fades[2].covered == false,
+			}
+			-- The pending flag cleared: put everything back and the next request is taken.
+			overrides.onStream = nil
+			overrides.inCrew = nil
+			overrides.alive = nil
+			root.Anchored = false
+			player.Character:FindFirstChildOfClass("Humanoid").Health = 100
+			root.CFrame = door.CFrame * CFrame.new(0, -2, 3)
+			result.cleared = log.system.request(player, OfficeConstants.ENTER_KIND, "dock", 101) == true
+			folder:Destroy()
+			return result
+		end
+
+		local function expectStayed(result)
+			expect(result.stayed).to.equal(true)
+			expect(result.fadedIn).to.equal(true)
+			expect(result.cleared).to.equal(true)
+		end
+
+		it("a player who dies stays put, the screen uncovers and the flag clears", function()
+			expectStayed(interrupted(function(player)
+				player.Character:FindFirstChildOfClass("Humanoid").Health = 0
+			end))
+		end)
+
+		it("a caught player (root anchored) stays put", function()
+			expectStayed(interrupted(function(_player, root)
+				root.Anchored = true
+			end))
+		end)
+
+		it("a player knocked out (alive false) stays put", function()
+			expectStayed(interrupted(function(_player, _root, overrides)
+				overrides.alive = false
+			end))
+		end)
+
+		it("a player who clocked out or whose shift ended (inCrew false) stays put", function()
+			expectStayed(interrupted(function(_player, _root, overrides)
+				overrides.inCrew = false
+			end))
+		end)
+
+		it("a caught player during the stream stays put", function()
+			expectStayed(interrupted(function(_player, root)
+				root.Anchored = true
+			end, true))
+		end)
+
+		it("a shift that ends during the stream leaves the player where they are", function()
+			expectStayed(interrupted(function(_player, _root, overrides)
+				overrides.inCrew = false
+			end, true))
+		end)
+
+		it("a player who respawned is not moved (neither body)", function()
+			local folder, door, root, player = scene(Vector3.new(0, -2, 3))
+			local log = harness(door)
+			local start = root.Position
+			expect(log.system.request(player, OfficeConstants.ENTER_KIND, "dock", 100)).to.equal(true)
+			local old = player.Character
+			local fresh = old:Clone()
+			fresh.Parent = folder
+			player.Character = fresh
+			local freshStart = fresh.HumanoidRootPart.Position
+			log.delayed[1].run()
+			expect((root.Position - start).Magnitude < 0.05).to.equal(true)
+			expect((fresh.HumanoidRootPart.Position - freshStart).Magnitude < 0.05).to.equal(true)
+			expect(log.fades[2].covered).to.equal(false)
+			folder:Destroy()
+		end)
+	end)
+
+	it("refuses a clocked-out player (inCrew means on the running shift and still working)", function()
+		local folder, door, _root, player = scene(Vector3.new(0, -2, 3))
+		local log = harness(door, { inCrew = false })
+		expect(log.system.request(player, OfficeConstants.LEAVE_KIND, "dock", 1)).to.equal(false)
+		expect(#log.fades).to.equal(0)
+		folder:Destroy()
 	end)
 end

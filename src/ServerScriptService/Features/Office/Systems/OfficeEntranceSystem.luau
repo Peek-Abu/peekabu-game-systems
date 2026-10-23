@@ -6,9 +6,12 @@
 	(leave) frame, SPAWN_HEIGHT up, and the screen fades back in over OUTSIDE.FADE_IN. The same spot every time.
 
 	`request(player, kind, entranceId, now)` is refused (false, nothing happens) when the player is not on the running
-	shift's crew (`deps.inCrew`), is dead, down or caught (`deps.alive`, a dead humanoid, or the catch's anchored root),
+	shift's crew still working (`deps.inCrew`: a clocked-out player is done for the shift), is dead, down or caught (`deps.alive`, a dead humanoid, or the catch's anchored root),
 	stands farther than OUTSIDE.ENTRANCE_REACH from every part of that kind and entrance, or already has a teleport
 	pending (spamming the prompt, Review Focus 2). A pending flag that never cleared expires after PENDING_SECONDS.
+	The same checks run again when the move is due and again after the target streams in (that yields): a player
+	caught, killed, respawned, clocked out or past the shift's end meanwhile stays put; the screen still uncovers and
+	the pending flag still clears. Stopping the system drops every pending teleport.
 
 	What a player carries travels with them: Carry holds an object with a Weld (or a Motor6D) from the character's body
 	into the object, so it is part of the character's assembly, and `teleport` sets the root's CFrame, which moves the
@@ -59,7 +62,7 @@ export type State = {
 }
 
 export type Deps = {
-	-- Whether the player is on the running shift's crew.
+	-- Whether the player is on the running shift's crew and still working (not clocked out).
 	inCrew: (player: Player) -> boolean,
 	-- Whether the player is up and playing (not dead, knocked down or knocked out); absent = true. The system also
 	-- refuses a dead humanoid and an anchored root (a catch in progress) by itself.
@@ -161,6 +164,8 @@ function OfficeEntranceSystem.new(deps: Deps): OfficeEntranceSystem
 	local stream: (player: Player, position: Vector3) -> () = deps.stream or realStream
 	-- userId -> the server time the pending teleport stops blocking new requests.
 	local pending: { [number]: number } = {}
+	-- Bumped by the stopper: a teleport requested before a stop never lands after it.
+	local generation = 0
 
 	local function isAlive(player: Player, root: BasePart): boolean
 		local character = player.Character
@@ -190,8 +195,11 @@ function OfficeEntranceSystem.new(deps: Deps): OfficeEntranceSystem
 					end
 				end)
 			end
-			-- Interaction keeps one handler per kind for the session: nothing to undo.
-			return function() end
+			-- Interaction keeps one handler per kind for the session; stopping drops every pending teleport.
+			return function()
+				generation += 1
+				table.clear(pending)
+			end
 		end,
 
 		request = function(player, kind, entranceId, now)
@@ -215,20 +223,35 @@ function OfficeEntranceSystem.new(deps: Deps): OfficeEntranceSystem
 				return false
 			end
 			pending[userId] = now + PENDING_SECONDS
-			local frame = OfficeEntranceSystem.target(kind, outsideFrame, insideFrame)
-				+ Vector3.new(0, OfficeConstants.SPAWN_HEIGHT, 0)
 			deps.fade(player, true, OUTSIDE.FADE_OUT)
 			local character = player.Character
-			-- Caught, killed or respawned during the fade: they stay where they are.
-			local function land()
+			local requested = generation
+			-- Whether the teleport may still land: the same character, alive and not caught, still on the running
+			-- shift's crew and working, and the system not stopped since the request.
+			local function stillGoing(): boolean
 				local current = rootOf(player)
-				if
-					character ~= nil
+				return requested == generation
+					and character ~= nil
 					and player.Character == character
 					and current ~= nil
 					and isAlive(player, current)
-				then
-					stream(player, frame.Position)
+					and deps.inCrew(player)
+			end
+			-- Caught, killed, respawned, clocked out or the shift over during the fade or the stream: they stay put.
+			local function land()
+				if not stillGoing() then
+					return
+				end
+				-- The frames now (the office could have been rebuilt since the request).
+				local outsideNow, insideNow = deps.entrance(entranceId)
+				if outsideNow == nil or insideNow == nil or character == nil then
+					return
+				end
+				local frame = OfficeEntranceSystem.target(kind, outsideNow, insideNow)
+					+ Vector3.new(0, OfficeConstants.SPAWN_HEIGHT, 0)
+				-- Streaming yields (up to STREAM_TIMEOUT): a catch or the shift's end can come meanwhile.
+				stream(player, frame.Position)
+				if stillGoing() then
 					OfficeEntranceSystem.teleport(character, frame)
 				end
 			end
@@ -240,7 +263,9 @@ function OfficeEntranceSystem.new(deps: Deps): OfficeEntranceSystem
 					log:warn(`{kind} {entranceId} for {player.Name} failed: {tostring(err)}`)
 				end
 				deps.fade(player, false, OUTSIDE.FADE_IN)
-				pending[userId] = nil
+				if requested == generation then
+					pending[userId] = nil
+				end
 			end)
 			return true
 		end,
