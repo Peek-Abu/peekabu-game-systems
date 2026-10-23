@@ -19,6 +19,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local Server = ServerScriptService.Features.Office
 local OfficeConstants = require(Server.Data.OfficeConstants)
 local OfficeCorridorUtils = require(script.Parent.OfficeCorridorUtils)
+local OfficeHallDressingUtils = require(script.Parent.OfficeHallDressingUtils)
 local OfficeKitRegistry = require(Server.Data.OfficeKitRegistry)
 local OfficeKitUtils = require(script.Parent.OfficeKitUtils)
 local OfficeLayoutRules = require(Server.Rules.OfficeLayoutRules)
@@ -710,6 +711,11 @@ local function construct(base: Layout, rng: Random): (Layout?, string?)
 	end
 
 	layout.facades, layout.panes = state.facades, state.panes
+	for _, room in layout.rooms do
+		if room.zone == "hallway" then
+			addMarkers(state, OfficeHallDressingUtils.dress(room, layout, rng, network.junctions[room.id] ~= nil))
+		end
+	end
 	layout.route = buildRoute(layout, network)
 	for _, room in layout.rooms do
 		if room.roomType == "breakout" then
