@@ -73,6 +73,15 @@ local ART_SIZES: { [string]: Vector3 } = {
 	partition = Vector3.new(6, 5, 1.8),
 	supplyCabinet = Vector3.new(4.32, 8, 3.45),
 }
+local ROOM_LIGHT: { [string]: { brightness: number, spacing: number, range: number } } = {
+	hallway = { brightness = 0.35, spacing = 18, range = 22 },
+	pods = { brightness = 0.5, spacing = 15, range = 21 },
+	conference = { brightness = 0.45, spacing = 15, range = 21 },
+	breakout = { brightness = 0.5, spacing = 15, range = 21 },
+	storage = { brightness = 0.3, spacing = 18, range = 22 },
+	server = { brightness = 0.3, spacing = 18, range = 22 },
+	reception = { brightness = 0.6, spacing = 15, range = 21 },
+}
 local FLOOR_COLORS: { Color3 } = {
 	Color3.fromRGB(96, 92, 86),
 	Color3.fromRGB(70, 82, 96),
@@ -259,6 +268,12 @@ return table.freeze({
 	-- (OfficeBuildSystem.spec "ceiling lamp coverage"). The night is dimmed by LIGHT_BRIGHTNESS, not the range.
 	LIGHT_RANGE = 21,
 	LIGHT_BRIGHTNESS = 0.5,
+	-- Light AMOUNT per room type (key = OfficeArtKeyUtils.roomType, so corridors are "hallway"). The colour is always
+	-- LIGHT_COLOR: rooms differ only in brightness and lamp spacing, never in tint. Each entry carries its own range,
+	-- because the range must stay >= 1.25x the lamp-to-floor-corner reach for ITS spacing (spacing 15 -> 20.02, covered by
+	-- LIGHT_RANGE 21; spacing 18 -> sqrt(WALL_HEIGHT^2 + 2 * 9^2) = 16.97 -> 21.2, so 22). An unknown type falls back to
+	-- LIGHT_SPACING / LIGHT_BRIGHTNESS / LIGHT_RANGE (OfficeBuildSystem.spec "ceiling lamp coverage" checks every entry).
+	ROOM_LIGHT = table.freeze(ROOM_LIGHT),
 	-- The invisible volume over the truck's box (the one safe place) that Harlow's paths never enter.
 	SAFE_ZONE_NAME = "SafeZone",
 	-- M2: Harlow's route needs at least this many points.

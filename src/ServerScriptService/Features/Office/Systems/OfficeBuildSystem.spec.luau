@@ -98,6 +98,78 @@ return function()
 			local floorDistance = math.sqrt(Constants.WALL_HEIGHT ^ 2 + 2 * (Constants.LIGHT_SPACING / 2) ^ 2)
 			expect(lamp.Range >= floorDistance * 1.25).to.equal(true)
 		end)
+		it("reaches the floor corners at every room type's own spacing", function()
+			for roomType, amount in Constants.ROOM_LIGHT do
+				local reach = math.sqrt(Constants.WALL_HEIGHT ^ 2 + 2 * (amount.spacing / 2) ^ 2)
+				expect(roomType and amount.range >= reach * 1.25).to.equal(true)
+			end
+		end)
+	end)
+	describe("light amount per room type", function()
+		local function roomsOf(types)
+			local rooms = {}
+			for index, roomType in types do
+				local zone = if roomType == "hallway" then "hallway" else nil
+				table.insert(rooms, {
+					id = "r" .. index,
+					name = "R" .. index,
+					minX = (index - 1) * 40,
+					maxX = (index - 1) * 40 + 36,
+					minZ = 0,
+					maxZ = 36,
+					roomType = if zone == nil then roomType else nil,
+					zone = zone,
+				})
+			end
+			return {
+				startRoom = "r1",
+				rooms = rooms,
+				doors = {},
+				markers = {},
+				truck = Layout.truck,
+			}
+		end
+		local function lampsIn(built, name)
+			local lamps = {}
+			for _, part in built.model[name]:GetChildren() do
+				if part.Name == "Light" then
+					table.insert(lamps, part:FindFirstChildOfClass("PointLight"))
+				end
+			end
+			return lamps
+		end
+
+		it("uses the table's brightness and the one light colour in a server room", function()
+			local built = build(roomsOf({ "server" }))
+			local lamps = lampsIn(built, "R1")
+			expect(#lamps > 0).to.equal(true)
+			for _, lamp in lamps do
+				expect(math.abs(lamp.Brightness - 0.3) < 1e-4).to.equal(true)
+				expect(lamp.Color).to.equal(Constants.LIGHT_COLOR)
+			end
+		end)
+
+		it("shares one colour across every room type and applies each type's brightness", function()
+			local types = { "hallway", "pods", "conference", "breakout", "storage", "server", "reception" }
+			local built = build(roomsOf(types))
+			for index, roomType in types do
+				for _, lamp in lampsIn(built, "R" .. index) do
+					expect(lamp.Color).to.equal(Constants.LIGHT_COLOR)
+					expect(math.abs(lamp.Brightness - Constants.ROOM_LIGHT[roomType].brightness) < 1e-4).to.equal(true)
+					expect(lamp.Range).to.equal(Constants.ROOM_LIGHT[roomType].range)
+				end
+			end
+		end)
+
+		it("falls back to the default amount for an unknown room type", function()
+			local built = build(roomsOf({ "mystery" }))
+			local lamps = lampsIn(built, "R1")
+			expect(#lamps > 0).to.equal(true)
+			for _, lamp in lamps do
+				expect(lamp.Brightness).to.equal(Constants.LIGHT_BRIGHTNESS)
+				expect(lamp.Range).to.equal(Constants.LIGHT_RANGE)
+			end
+		end)
 	end)
 	describe("floor backing", function()
 		it("backs imported carpet below its recessed face without coplanar overlap", function()
