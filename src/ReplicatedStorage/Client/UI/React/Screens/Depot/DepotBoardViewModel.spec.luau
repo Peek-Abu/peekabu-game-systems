@@ -45,7 +45,7 @@ return function()
 		local contract = DepotConstants.CONTRACTS[2]
 		local view = DepotBoardViewModel.board(contract.id, nil, false)
 		expect(#view.rows).to.equal(6)
-		expect(rowOf(view, "SHIFT").text).to.equal("7:00 on the clock. Clock out at the truck any time.")
+		expect(rowOf(view, "SHIFT").text).to.equal("8:30 on the clock. Clock out at the truck any time.")
 		expect(rowOf(view, "HAZARD").hazard).to.equal(true)
 		expect(rowOf(view, "CONTRACT").hazard).to.equal(false)
 		expect(rowOf(view, "NOTES").text).to.equal(contract.note)

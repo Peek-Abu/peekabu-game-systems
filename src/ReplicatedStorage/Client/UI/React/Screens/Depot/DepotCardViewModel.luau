@@ -4,7 +4,7 @@
 	"MORROW & MORROW — DISPATCH" letterhead, "TRUCK n" (none when unknown), ON THE ROAD and where the truck is heading,
 	shown for DepotConstants.DRIVE_CARD_SECONDS (the truck crosses the road in that time). The arrival card is the job
 	folder: the ARRIVAL tab, the client as headline, the job line, the clearance-contract slip ("CLEAR 350 / of trash
-	before 7:00") and the contract's note. A client name is cut at CLIENT_MAX on both (it rides the teleport). Pure.
+	before 8:30") and the contract's note. A client name is cut at CLIENT_MAX on both (it rides the teleport). Pure.
 
 	@class DepotCardViewModel
 ]=]

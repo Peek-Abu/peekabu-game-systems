@@ -104,8 +104,8 @@ return table.freeze({
 	-- QUOTA_BY_CREW for the crew (ShiftQuotaFormulas).
 	QUOTA = 690,
 	QUOTA_BY_CREW = table.freeze({ 640, 690, 740, 790 }),
-	-- 7:00 on the clock.
-	SHIFT_SECONDS = 420,
+	-- 8:30 on the clock (owner, 2026-10-22: the corridor office walks further than the old grid; was 7:00).
+	SHIFT_SECONDS = 510,
 	-- Round's countdown, configured but unused: a shift starts with Round's startNow once its transit settles.
 	ARRIVAL_SECONDS = 5,
 	-- The transit: the load screen between the depot and the office and between shifts (ShiftTransitSystem). The

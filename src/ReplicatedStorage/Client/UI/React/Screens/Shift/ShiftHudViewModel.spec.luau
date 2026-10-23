@@ -162,7 +162,7 @@ return function()
 		it("reads the time, OUT and the stage label", function()
 			local view = ShiftHudViewModel.hud(snapshot(), nil, 748, false)
 			expect(view.time).to.equal("4:12")
-			expect(view.outText).to.equal("OUT 7:00")
+			expect(view.outText).to.equal("OUT 8:30")
 			expect(view.clockLabel).to.equal("SHIFT")
 			expect(view.overtime).to.equal(false)
 		end)
@@ -315,7 +315,7 @@ return function()
 
 	describe("phone time card", function()
 		it("reads OUT on the compact card until overtime, then OVERTIME", function()
-			expect(ShiftHudViewModel.hud(snapshot(), nil, 0, false).compactSub).to.equal("OUT 7:00")
+			expect(ShiftHudViewModel.hud(snapshot(), nil, 0, false).compactSub).to.equal("OUT 8:30")
 			expect(ShiftHudViewModel.hud(snapshot({ stage = "overtime" }), nil, 0, false).compactSub).to.equal(
 				"OVERTIME"
 			)

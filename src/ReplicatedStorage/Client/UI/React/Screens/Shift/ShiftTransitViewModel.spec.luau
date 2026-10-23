@@ -36,7 +36,7 @@ return function()
 			local view = ShiftTransitViewModel.slip({ holds = {}, client = "Harlow & Finch Ltd.", truck = 2 }, false)
 			expect(view.heading).to.equal("EN ROUTE TO")
 			expect(view.client).to.equal("HARLOW & FINCH")
-			expect(view.site).to.equal("4th floor offices · 7:00 shift")
+			expect(view.site).to.equal("4th floor offices · 8:30 shift")
 			expect(view.bar).to.equal("DRIVING TO THE SITE...")
 		end)
 

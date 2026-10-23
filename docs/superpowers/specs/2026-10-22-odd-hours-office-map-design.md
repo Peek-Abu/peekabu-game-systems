@@ -106,8 +106,9 @@ The model is **Lethal Company**:
 ## Constraints
 
 - **Launch about Nov 26, 2026** (pre-launch plan doc). The MVP must not slip for map ambition.
-- **Shift length is 7 minutes** (`ShiftConstants.SHIFT_SECONDS = 420`). Layout size and banking walks
-  must fit that.
+- **Shift length is 8:30** (`ShiftConstants.SHIFT_SECONDS = 510`; owner raised it from 7:00 on 2026-10-22 after
+  the stage 1 play-check, because the corridor office walks further: about 177 studs truck-to-pile one way).
+  Layout size and banking walks must fit that.
 - **Hideable furniture fits the largest employee in the knee-hug pose:**
   - Free space under a desk is at least `HideConstants.HUG_FREE_MIN` = 3.6 W × 4.2 H × 4.3 D studs.
   - The furniture grows to fit; characters never shrink (memory `hide-furniture-sizing`).

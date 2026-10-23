@@ -91,8 +91,8 @@ return function()
 		end)
 
 		it("stamps a night clock from the time into the shift", function()
-			-- endsAt 352, now 100: 252 s left of 420, so 168 s in: 03:02:48.
-			expect(CatchViewModel.cctv(input()).stamp).to.equal("THU 03:02:48")
+			-- endsAt 352, now 100: 252 s left of 510, so 258 s in: 03:04:18.
+			expect(CatchViewModel.cctv(input()).stamp).to.equal("THU 03:04:18")
 			expect(CatchViewModel.nightClock(3600)).to.equal("04:00:00")
 		end)
 
