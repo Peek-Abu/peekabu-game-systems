@@ -372,21 +372,81 @@ return function()
 			}))
 			local conference, plain = 0, 0
 			for _, root in decor:GetChildren() do
-				if root:GetAttribute("OfficeArtKey") == "breakTable" then
-					if root:FindFirstChild("ArtVisual"):FindFirstChild("Conference") then
-						conference += 1
-						-- A big table with no measured hug space under it is no hiding spot.
-						expect(root:GetAttribute("HideFurnitureKind")).to.equal(nil)
-						expect(root.Size).to.equal(Vector3.new(14, 4.95, 6))
-					else
-						plain += 1
-						expect(root:GetAttribute("HideFurnitureKind")).to.equal("table")
-						expect(root.Size).to.equal(OfficeConstants.TABLE_SIZE)
-					end
+				-- OfficeArtKey records the key that attached: the restyled table's own, not the default's.
+				local key = root:GetAttribute("OfficeArtKey")
+				if key == "conferenceTable" then
+					conference += 1
+					expect(root:FindFirstChild("ArtVisual"):FindFirstChild("Conference") ~= nil).to.equal(true)
+					-- A big table with no measured hug space under it is no hiding spot.
+					expect(root:GetAttribute("HideFurnitureKind")).to.equal(nil)
+					expect(root.Size).to.equal(Vector3.new(14, 4.95, 6))
+				elseif key == "breakTable" then
+					plain += 1
+					expect(root:FindFirstChild("ArtVisual"):FindFirstChild("Conference")).to.equal(nil)
+					expect(root:GetAttribute("HideFurnitureKind")).to.equal("table")
+					expect(root.Size).to.equal(OfficeConstants.TABLE_SIZE)
 				end
 			end
 			expect(conference).to.equal(1)
 			expect(plain).to.equal(2)
+		end)
+
+		it("records the room-type variant key a prop attached", function()
+			template("furniture", "sofa_breakout")
+			local layout = propLayout({ { id = "a.prop.1", room = "a", kind = "prop", art = "sofa", x = 20, z = 20 } })
+			layout.rooms[1].roomType = "breakout"
+			local root = decorOf(layout):FindFirstChild("sofa")
+			expect(root:GetAttribute("OfficeArtKey")).to.equal("sofa_breakout")
+		end)
+
+		it("clears the camera occluder flag on a low floor prop but keeps it on a tall one", function()
+			template("furniture", "wasteBin")
+			template("furniture", "sofa")
+			local decor = decorOf(propLayout({
+				{ id = "a.prop.1", room = "a", kind = "prop", art = "wasteBin", x = 10, z = 10 },
+				{ id = "a.prop.2", room = "a", kind = "prop", art = "sofa", x = 25, z = 25 },
+			}))
+			local bin, sofa = decor:FindFirstChild("wasteBin"), decor:FindFirstChild("sofa")
+			expect(bin.CanCollide).to.equal(true)
+			expect(bin:GetAttribute("CameraOccluder")).to.equal(nil)
+			expect(sofa.CanCollide).to.equal(true)
+			expect(sofa:GetAttribute("CameraOccluder")).to.equal(true)
+		end)
+
+		it("keeps the desk plant clear of every desk dressing prop on both desk variants", function()
+			for _, key in { "mug", "stationeryCup", "folder", "paperTray", "paperStack", "bookStack" } do
+				template("props", key)
+			end
+			template("furniture", "deskPlant")
+			local decor = decorOf(propLayout({
+				{ id = "a.desk.1", room = "a", kind = "desk", x = 10, z = 10, rotation = 0 },
+				{ id = "a.prop.1", room = "a", kind = "prop", art = "deskPlant", x = 10, z = 10, rotation = 0 },
+				{ id = "a.desk.2", room = "a", kind = "desk", x = 30, z = 10, rotation = 0 },
+				{ id = "a.prop.2", room = "a", kind = "prop", art = "deskPlant", x = 30, z = 10, rotation = 0 },
+			}))
+			local checked = 0
+			for _, plant in decor:GetChildren() do
+				if plant:GetAttribute("OfficeArtKey") == "deskPlant" then
+					local deskX = plant:GetAttribute("OfficeMarkerId") == "a.prop.1" and 10 or 30
+					for _, other in decor:GetChildren() do
+						local desk = other:GetAttribute("OfficeDeskMarker")
+						local key = other:GetAttribute("OfficeArtKey")
+						if desk ~= nil and OfficeConstants.DESK_PROP_SIZES[key] ~= nil then
+							-- Same desk (the dressing is built on it): its footprints must not overlap in XZ.
+							if math.abs(other.Position.X - 60000 - deskX) < OfficeConstants.DESK_SIZE.X then
+								local apartX = math.abs(plant.Position.X - other.Position.X)
+									>= (plant.Size.X + other.Size.X) / 2
+								local apartZ = math.abs(plant.Position.Z - other.Position.Z)
+									>= (plant.Size.Z + other.Size.Z) / 2
+								expect(apartX or apartZ).to.equal(true)
+								checked += 1
+							end
+						end
+					end
+				end
+			end
+			-- Each desk has a mug, a cup and two paper props: four per plant, two plants.
+			expect(checked).to.equal(8)
 		end)
 
 		it("stands a desk-top prop on its desk's top at the desk plant offset", function()

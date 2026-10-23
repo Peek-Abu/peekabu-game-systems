@@ -55,29 +55,29 @@ end
 
 --[=[
 	Attaches the first of `keys` that resolves to a template to `root`, trying the root's own kit first and then the
-	default kit; nil when none does (greybox stays).
+	default kit; returns the visual and the key that attached, or nil when none does (greybox stays).
 ]=]
 function OfficeArtKeyUtils.attachFirst(
 	art: ArtVisualSystem.Controller,
 	root: BasePart,
 	family: ArtTypes.Family,
 	keys: { string }
-): Model?
+): (Model?, string?)
 	for _, key in keys do
 		local visual = art.attach(root, family, key)
 		if visual ~= nil then
-			return visual
+			return visual, key
 		end
 	end
 	if art.resolveKit(root) ~= ArtKitRegistry.DEFAULT_KIT then
 		for _, key in keys do
 			local visual = art.attach(root, family, key, ArtKitRegistry.DEFAULT_KIT)
 			if visual ~= nil then
-				return visual
+				return visual, key
 			end
 		end
 	end
-	return nil
+	return nil, nil
 end
 
 return OfficeArtKeyUtils

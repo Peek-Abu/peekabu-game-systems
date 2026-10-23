@@ -8,11 +8,11 @@
 	Props and chairs are non-colliding; table/cabinet proxies support their loot physically; the table is tagged as a
 	hiding spot (Hide), and so is each tall supply cabinet (solid; a secure spot, inside it). The flickering and
 	sounds are client side.
-Art keys: each piece tries its marker's `art` key, then the default key's room-type variant, then the default key
-(OfficeArtKeyUtils), so a `table` marker with art "conferenceTable" gets that template and keeps the table's hiding
-and collision. `prop` markers are art-only dressing (sofa, vending machine, wall frame...): a transparent proxy sized
-OfficeConstants.PROP_SIZES[art], solid when over a stud tall, destroyed when no template resolves; the wall-mounted
-ones (PROP_WALL_HEIGHT) hang at that height, non-colliding.
+	Art keys: each piece tries its marker's `art` key, then the default key's room-type variant, then the default key
+	(OfficeArtKeyUtils), so a `table` marker with art "conferenceTable" gets that template and keeps the table's hiding
+	and collision. `prop` markers are art-only dressing (sofa, vending machine, wall frame...): a transparent proxy sized
+	OfficeConstants.PROP_SIZES[art], solid when over a stud tall, destroyed when no template resolves; the wall-mounted
+	ones (PROP_WALL_HEIGHT) hang at that height, non-colliding.
 
 	Instance specs cover kit dressing, fallback, tabletop bounds and preserved ambiance; OfficeLayoutRules validates placement.
 
@@ -26,6 +26,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local ArtVisualSystem = require(ServerScriptService.Features.Art.Systems.ArtVisualSystem)
 
 local ArtTypes = require(ReplicatedStorage.Shared.Features.Art.Data.ArtTypes)
+local CameraOccluderConstants = require(ReplicatedStorage.Shared.Features.Camera.Data.CameraOccluderConstants)
 
 local OfficeServer = ServerScriptService.Features.Office
 local OfficeDecorConstants = require(ReplicatedStorage.Shared.Features.Office.Data.OfficeDecorConstants)
@@ -37,6 +38,9 @@ local OfficeArtKeyUtils = require(OfficeServer.Utils.OfficeArtKeyUtils)
 
 -- Desk dressing was laid out on a 5x3 top; its spots move with the real top (the props keep their size).
 local DESK_SPREAD = OfficeConstants.DESK_SIZE / Vector3.new(5, 3, 3)
+
+-- A solid floor prop shorter than this never counts as a camera occluder.
+local LOW_PROP_HEIGHT = 3
 
 -- Art-only furniture that is also a hiding spot, by its art key (under a table; inside a supply cabinet).
 local HIDE_KINDS: { [string]: HideConstants.FurnitureKind } = { breakTable = "table", supplyCabinet = "cabinet" }
@@ -190,14 +194,15 @@ local function artOnly(
 	root.Transparency = 1
 	root.CanCollide = SOLID[key] == true
 	root.CanQuery = root.CanCollide
-	root:SetAttribute("OfficeArtKey", key)
 	root:SetAttribute("OfficeDeskMarker", deskId)
-	if
-		OfficeArtKeyUtils.attachFirst(art, root, family, OfficeArtKeyUtils.candidates(key, override, roomType)) == nil
-	then
+	local visual, attached =
+		OfficeArtKeyUtils.attachFirst(art, root, family, OfficeArtKeyUtils.candidates(key, override, roomType))
+	if visual == nil or attached == nil then
 		root:Destroy()
 		return
 	end
+	-- The key that actually attached (a restyled table records its own art key, not the default).
+	root:SetAttribute("OfficeArtKey", attached)
 	if key == "officeChair" then
 		CollectionService:AddTag(root, OfficeDecorConstants.CHAIR_TAG)
 	end
@@ -244,15 +249,20 @@ local function propAt(
 	-- Wall hangings are out of reach and never block: only floor props over a stud tall are solid.
 	root.CanCollide = wallHeight == nil and not onDesk and size.Y > 1
 	root.CanQuery = root.CanCollide
-	root:SetAttribute("OfficeArtKey", key)
 	root:SetAttribute("OfficeMarkerId", marker.id)
 	if wallHeight ~= nil then
 		root:SetAttribute("ArtWallMounted", true)
 	end
-	if
-		OfficeArtKeyUtils.attachFirst(art, root, "furniture", OfficeArtKeyUtils.candidates(key, nil, roomType)) == nil
-	then
+	local visual, attached =
+		OfficeArtKeyUtils.attachFirst(art, root, "furniture", OfficeArtKeyUtils.candidates(key, nil, roomType))
+	if visual == nil or attached == nil then
 		root:Destroy()
+		return
+	end
+	root:SetAttribute("OfficeArtKey", attached)
+	-- A low floor prop (a bin) is no camera occluder: the camera would stop short of it instead of clearing it.
+	if root.CanCollide and size.Y < LOW_PROP_HEIGHT then
+		root:SetAttribute(CameraOccluderConstants.ATTRIBUTE, nil)
 	end
 end
 

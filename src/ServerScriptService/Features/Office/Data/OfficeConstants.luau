@@ -62,7 +62,7 @@ local PROP_DESK_TOP: { [string]: boolean } = { deskPlant = true }
 -- follows the art instead of Uniform fit shrinking it to the slate-tuned kind size. No entry for the desk (it keeps
 -- DESK_SIZE for hide space), the locker (a single locker; the kit's is a bank), the chair (decor-placed) or
 -- breakTable (a hide spot: its 1.8-high art leaves no HUG_FREE_MIN under it, so it stays at TABLE_SIZE).
--- supplyCabinet equals CLOSET_SIZE.
+-- (The closets use CLOSET_SIZE and the partition is a prop: PROP_SIZES.)
 local ART_SIZES: { [string]: Vector3 } = {
 	corkboard = Vector3.new(6.4, 6.1, 1.9),
 	shelf = Vector3.new(5.54, 8, 2.08),
@@ -70,8 +70,6 @@ local ART_SIZES: { [string]: Vector3 } = {
 	kitchenCounter = Vector3.new(8, 6.35, 3.08),
 	receptionDesk = Vector3.new(12.86, 4.6, 5.16),
 	conferenceTable = Vector3.new(14, 4.95, 6),
-	partition = Vector3.new(6, 5, 1.8),
-	supplyCabinet = Vector3.new(4.32, 8, 3.45),
 }
 local ROOM_LIGHT: { [string]: { brightness: number, spacing: number } } = {
 	hallway = { brightness = 0.35, spacing = 18 },
@@ -104,7 +102,9 @@ return table.freeze({
 	PROP_SIZES = table.freeze(PROP_SIZES),
 	PROP_WALL_HEIGHT = table.freeze(PROP_WALL_HEIGHT),
 	PROP_DESK_TOP = table.freeze(PROP_DESK_TOP),
-	DESK_PLANT_OFFSET = Vector3.new(-3.4, 0, 1.7),
+	-- On the left of the desk's front half, in the clear band between the mug (z -1.85) and the folder or paper stack
+	-- (z 1.07) of OfficeDecorSystem.dressDesk (DESK_SPREAD 1.65).
+	DESK_PLANT_OFFSET = Vector3.new(-3.4, 0, -0.6),
 	ART_SIZES = table.freeze(ART_SIZES),
 	-- The floor number kit rooms are placed on (one floor today).
 	FLOOR_NUMBER = 1,
@@ -131,7 +131,7 @@ return table.freeze({
 	ROOM_MARGIN = 36,
 	ROOM_STEP = 4,
 	KIT_WEIGHTS = table.freeze({ pods = 45, conference = 25, storage = 20, breakout = 10 }),
-	PERIMETER_CONFERENCE_BOOST = 3,
+	PERIMETER_CONFERENCE_BOOST = 1.5,
 	GENERATE_ATTEMPTS = 8,
 	-- A generated map needs this many hiding places (desks and closets), and every room within WALK_SPEED *
 	-- MAX_WALK_SECONDS studs of walking from the bay.
