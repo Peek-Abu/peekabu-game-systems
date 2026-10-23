@@ -10,7 +10,9 @@
 	camera (OfficeLightUtils) blink, with a zap as a burst of blinks starts (OfficeLightUtils.zaps: once per burst, spaced
 	per tube and across tubes). It changes only a light's Color, Transparency and
 	lamp (PointLight or SurfaceLight) Color/Brightness; M2's OccupantTellSystem owns Material and Light.Enabled, so the two compose.
-	Registers the office and depot presets with Vfx at load. Pending sounds (OfficeAssets) are silent. While the transit
+	Outdoors (the camera inside a Workspace.CleanupCrewOffice.Outdoors box, polled every OUTDOOR_POLL in a shift) it
+	blends to the moonlit officeExterior look (red in overtime) and hushes the hum; `expected()` names the preset the
+	camera should show now. Registers the office and depot presets with Vfx at load. Pending sounds (OfficeAssets) are silent. While the transit
 	screen covers the view (ShiftTransitStore.covered) a preset is applied at once, not blended, and one still blending
 	when the cover comes up is finished at once, so the screen reveals the right light.
 
@@ -84,6 +86,7 @@ local overtimeOn = false
 local overtimeToken: number? = nil
 local humOn = false
 local hubOn = false
+local outsideNow = false
 local stoppers: { () -> () } = {}
 local counters = { presets = 0, blinks = 0, zaps = 0, pending = 0 }
 
@@ -176,19 +179,53 @@ local function setHub(on: boolean)
 	end
 end
 
-local function onSnapshot(snapshot: ShiftTypes.ShiftSnapshot?)
+-- The outdoor boxes the server built (Workspace.CleanupCrewOffice.Outdoors: one invisible part per ground). None when
+-- the layout has no grounds (an authored layout, the hub).
+local function outdoorBoxes(): { { min: Vector3, max: Vector3 } }
+	local boxes: { { min: Vector3, max: Vector3 } } = {}
+	local office = Workspace:FindFirstChild("CleanupCrewOffice")
+	local folder = if office ~= nil then office:FindFirstChild("Outdoors") else nil
+	if folder == nil then
+		return boxes
+	end
+	for _, part in folder:GetChildren() do
+		if part:IsA("BasePart") then
+			local center, half = part.CFrame.Position, part.Size / 2
+			table.insert(boxes, { min = center - half, max = center + half })
+		end
+	end
+	return boxes
+end
+
+-- Whether the camera is outdoors now; only ever true in a shift (the hub is the depot's evening).
+local function cameraOutside(snapshot: ShiftTypes.ShiftSnapshot?): boolean
+	local camera = Workspace.CurrentCamera
+	if camera == nil or snapshot == nil or DepotAtmosphereUtils.inHub(snapshot, Players.LocalPlayer.UserId) then
+		return false
+	end
+	return OfficeAtmosphereUtils.outdoors(camera.CFrame.Position, outdoorBoxes())
+end
+
+-- Applies the snapshot's look with the camera's current indoors/outdoors. `fade` is the blend when not covered.
+local function apply(snapshot: ShiftTypes.ShiftSnapshot?, fade: number)
 	local userId = Players.LocalPlayer.UserId
-	local preset = OfficeAtmosphereUtils.preset(snapshot, userId)
+	local outside = cameraOutside(snapshot)
+	outsideNow = outside
+	local preset = OfficeAtmosphereUtils.preset(snapshot, userId, outside)
 	if not applied or preset ~= currentPreset then
 		applied = true
 		currentPreset = preset
 		counters.presets += 1
 		local covered = ShiftTransitStore.covered()
-		VfxServiceClient:setAtmosphere(preset, if covered then 0 else OfficeAtmosphereConstants.FADE)
+		VfxServiceClient:setAtmosphere(preset, if covered then 0 else fade)
 	end
 	setOvertime(OfficeAtmosphereUtils.overtime(snapshot, userId))
-	setHum(OfficeAtmosphereUtils.hum(snapshot, userId))
+	setHum(OfficeAtmosphereUtils.hum(snapshot, userId, outside))
 	setHub(DepotAtmosphereUtils.inHub(snapshot, userId))
+end
+
+local function onSnapshot(snapshot: ShiftTypes.ShiftSnapshot?)
+	apply(snapshot, OfficeAtmosphereConstants.FADE)
 end
 
 local function restore(light: BasePart)
@@ -289,7 +326,17 @@ function OfficeAtmosphereSystem.start()
 		removed:Disconnect()
 	end)
 	local elapsed = 0
+	local outdoorElapsed = 0
 	local connection = RunService.Heartbeat:Connect(function(deltaTime: number)
+		outdoorElapsed += deltaTime
+		if outdoorElapsed >= OfficeAtmosphereConstants.OUTDOOR_POLL then
+			outdoorElapsed = 0
+			-- The teleport fade hides the switch, so a short blend; only a change re-applies.
+			local snapshot = ShiftStore.snapshot()
+			if cameraOutside(snapshot) ~= outsideNow then
+				apply(snapshot, OfficeAtmosphereConstants.OUTDOOR_FADE)
+			end
+		end
 		elapsed += deltaTime
 		if elapsed >= OfficeAtmosphereConstants.ATMOSPHERE_INTERVAL then
 			elapsed = 0
@@ -319,6 +366,13 @@ function OfficeAtmosphereSystem.stop()
 	VfxServiceClient:setAtmosphere(nil, 0)
 	applied = false
 	currentPreset = nil
+	outsideNow = false
+end
+
+-- The preset this client should be showing now (the snapshot and where the camera is), for ShiftTransitSystem.lit().
+function OfficeAtmosphereSystem.expected(): string
+	local snapshot = ShiftStore.snapshot()
+	return OfficeAtmosphereUtils.preset(snapshot, Players.LocalPlayer.UserId, cameraOutside(snapshot))
 end
 
 function OfficeAtmosphereSystem.getState(): OfficeAtmosphereState

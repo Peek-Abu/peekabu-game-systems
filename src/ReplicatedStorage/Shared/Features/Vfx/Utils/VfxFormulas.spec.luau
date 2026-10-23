@@ -11,6 +11,16 @@ local BASE = {
 	fogColor = Color3.new(0.7, 0.7, 0.7),
 	fogStart = 0,
 	fogEnd = 100000,
+	geographicLatitude = 41.7,
+	environmentDiffuseScale = 0,
+	environmentSpecularScale = 0,
+	atmosphereDensity = 0.395,
+	atmosphereOffset = 0,
+	atmosphereColor = Color3.new(0.2, 0.4, 0.6),
+	atmosphereDecay = Color3.new(0, 0, 0),
+	atmosphereHaze = 0,
+	atmosphereGlare = 0,
+	moonAngularSize = 11,
 }
 
 local function near(a, b)
@@ -144,6 +154,23 @@ return function()
 		end)
 	end)
 
+	describe("resolveAtmosphere (the sky and air fields)", function()
+		it("takes the base for every field a preset omits", function()
+			local values = VfxFormulas.resolveAtmosphere(BASE, { clockTime = 0 })
+			expect(values.geographicLatitude).to.equal(41.7)
+			expect(values.atmosphereDensity).to.equal(0.395)
+			expect(values.atmosphereColor).to.equal(BASE.atmosphereColor)
+			expect(values.moonAngularSize).to.equal(11)
+			expect(values.environmentDiffuseScale).to.equal(0)
+		end)
+
+		it("overrides the ones it sets", function()
+			local values = VfxFormulas.resolveAtmosphere(BASE, { atmosphereHaze = 2.2, atmosphereGlare = 0.35 })
+			expect(values.atmosphereHaze).to.equal(2.2)
+			expect(values.atmosphereGlare).to.equal(0.35)
+		end)
+	end)
+
 	describe("blendAtmosphere", function()
 		it("returns the endpoints at alpha 0 and 1 and blends between", function()
 			local night =
@@ -154,6 +181,18 @@ return function()
 			expect(near(mid.clockTime, 7)).to.equal(true)
 			expect(near(mid.brightness, 1)).to.equal(true)
 			expect(near(mid.ambient.R, 0.25)).to.equal(true)
+		end)
+
+		it("blends the latitude and the atmosphere colour at their midpoint", function()
+			local to = VfxFormulas.resolveAtmosphere(
+				BASE,
+				{ geographicLatitude = 71.7, atmosphereColor = Color3.new(0.6, 0.4, 0.2), moonAngularSize = 21 }
+			)
+			local mid = VfxFormulas.blendAtmosphere(BASE, to, 0.5)
+			expect(near(mid.geographicLatitude, 56.7)).to.equal(true)
+			expect(near(mid.atmosphereColor.R, 0.4)).to.equal(true)
+			expect(near(mid.atmosphereColor.B, 0.4)).to.equal(true)
+			expect(near(mid.moonAngularSize, 16)).to.equal(true)
 		end)
 
 		it("clamps alpha", function()

@@ -63,6 +63,37 @@ return function()
 			)
 		end)
 
+		it("is the moonlit exterior outside, for the whole shift, whatever the tier or break", function()
+			expect(OfficeAtmosphereUtils.preset(snapshot(), ME, true)).to.equal("officeExterior")
+			expect(OfficeAtmosphereUtils.preset(snapshot({ tier = 2 }), ME, true)).to.equal("officeExterior")
+			expect(OfficeAtmosphereUtils.preset(snapshot({ stage = "break", tier = 1 }), ME, true)).to.equal(
+				"officeExterior"
+			)
+			expect(OfficeAtmosphereUtils.preset(snapshot({ phase = "results" }), ME, true)).to.equal("officeExterior")
+		end)
+
+		it("turns the exterior red in overtime", function()
+			expect(OfficeAtmosphereUtils.preset(snapshot({ stage = "overtime" }), ME, true)).to.equal(
+				"officeExteriorOvertime"
+			)
+		end)
+
+		it("keeps every inside answer when outside is nil or false", function()
+			expect(OfficeAtmosphereUtils.preset(snapshot({ tier = 2 }), ME, false)).to.equal(
+				OfficeAtmosphereConstants.TIER2
+			)
+			expect(OfficeAtmosphereUtils.preset(snapshot({ stage = "overtime" }), ME, nil)).to.equal(
+				OfficeAtmosphereConstants.OVERTIME
+			)
+		end)
+
+		it("is the depot's evening in the hub even when outside", function()
+			expect(OfficeAtmosphereUtils.preset(nil, ME, true)).to.equal(DepotAtmosphereConstants.EVENING)
+			expect(OfficeAtmosphereUtils.preset(snapshot({ crew = { OTHER } }), ME, true)).to.equal(
+				DepotAtmosphereConstants.EVENING
+			)
+		end)
+
 		it("only names registered presets", function()
 			for _, name in
 				{
@@ -71,6 +102,8 @@ return function()
 					OfficeAtmosphereConstants.TIER2,
 					OfficeAtmosphereConstants.BREAK,
 					OfficeAtmosphereConstants.OVERTIME,
+					OfficeAtmosphereConstants.EXTERIOR,
+					OfficeAtmosphereConstants.EXTERIOR_OVERTIME,
 				}
 			do
 				expect(OfficeAtmosphereConstants.PRESETS[name]).to.be.ok()
@@ -108,6 +141,31 @@ return function()
 
 		it("keeps the hub quiet while another crew works", function()
 			expect(OfficeAtmosphereUtils.hum(snapshot({ crew = { OTHER } }), ME)).to.equal(false)
+		end)
+	end)
+
+	describe("hum outside", function()
+		it("is silent outside", function()
+			expect(OfficeAtmosphereUtils.hum(snapshot(), ME, true)).to.equal(false)
+			expect(OfficeAtmosphereUtils.hum(snapshot(), ME, false)).to.equal(true)
+		end)
+	end)
+
+	describe("outdoors", function()
+		local boxes = {
+			{ min = Vector3.new(0, 0, 0), max = Vector3.new(10, 120, 10) },
+			{ min = Vector3.new(100, 0, 100), max = Vector3.new(120, 120, 120) },
+		}
+
+		it("is true inside any box", function()
+			expect(OfficeAtmosphereUtils.outdoors(Vector3.new(5, 3, 5), boxes)).to.equal(true)
+			expect(OfficeAtmosphereUtils.outdoors(Vector3.new(110, 50, 110), boxes)).to.equal(true)
+		end)
+
+		it("is false outside every box", function()
+			expect(OfficeAtmosphereUtils.outdoors(Vector3.new(50, 3, 50), boxes)).to.equal(false)
+			expect(OfficeAtmosphereUtils.outdoors(Vector3.new(5, 130, 5), boxes)).to.equal(false)
+			expect(OfficeAtmosphereUtils.outdoors(Vector3.new(5, 3, 5), {})).to.equal(false)
 		end)
 	end)
 end

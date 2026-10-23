@@ -133,6 +133,24 @@ function VfxFormulas.resolveAtmosphere(base: AtmosphereValues, preset: Atmospher
 		fogColor = if preset.fogColor ~= nil then preset.fogColor else base.fogColor,
 		fogStart = if preset.fogStart ~= nil then preset.fogStart else base.fogStart,
 		fogEnd = if preset.fogEnd ~= nil then preset.fogEnd else base.fogEnd,
+		geographicLatitude = if preset.geographicLatitude ~= nil
+			then preset.geographicLatitude
+			else base.geographicLatitude,
+		environmentDiffuseScale = if preset.environmentDiffuseScale ~= nil
+			then preset.environmentDiffuseScale
+			else base.environmentDiffuseScale,
+		environmentSpecularScale = if preset.environmentSpecularScale ~= nil
+			then preset.environmentSpecularScale
+			else base.environmentSpecularScale,
+		atmosphereDensity = if preset.atmosphereDensity ~= nil
+			then preset.atmosphereDensity
+			else base.atmosphereDensity,
+		atmosphereOffset = if preset.atmosphereOffset ~= nil then preset.atmosphereOffset else base.atmosphereOffset,
+		atmosphereColor = if preset.atmosphereColor ~= nil then preset.atmosphereColor else base.atmosphereColor,
+		atmosphereDecay = if preset.atmosphereDecay ~= nil then preset.atmosphereDecay else base.atmosphereDecay,
+		atmosphereHaze = if preset.atmosphereHaze ~= nil then preset.atmosphereHaze else base.atmosphereHaze,
+		atmosphereGlare = if preset.atmosphereGlare ~= nil then preset.atmosphereGlare else base.atmosphereGlare,
+		moonAngularSize = if preset.moonAngularSize ~= nil then preset.moonAngularSize else base.moonAngularSize,
 	}
 end
 
@@ -150,6 +168,16 @@ function VfxFormulas.blendAtmosphere(from: AtmosphereValues, to: AtmosphereValue
 		fogColor = from.fogColor:Lerp(to.fogColor, t),
 		fogStart = lerp(from.fogStart, to.fogStart, t),
 		fogEnd = lerp(from.fogEnd, to.fogEnd, t),
+		geographicLatitude = lerp(from.geographicLatitude, to.geographicLatitude, t),
+		environmentDiffuseScale = lerp(from.environmentDiffuseScale, to.environmentDiffuseScale, t),
+		environmentSpecularScale = lerp(from.environmentSpecularScale, to.environmentSpecularScale, t),
+		atmosphereDensity = lerp(from.atmosphereDensity, to.atmosphereDensity, t),
+		atmosphereOffset = lerp(from.atmosphereOffset, to.atmosphereOffset, t),
+		atmosphereColor = from.atmosphereColor:Lerp(to.atmosphereColor, t),
+		atmosphereDecay = from.atmosphereDecay:Lerp(to.atmosphereDecay, t),
+		atmosphereHaze = lerp(from.atmosphereHaze, to.atmosphereHaze, t),
+		atmosphereGlare = lerp(from.atmosphereGlare, to.atmosphereGlare, t),
+		moonAngularSize = lerp(from.moonAngularSize, to.moonAngularSize, t),
 	}
 end
 

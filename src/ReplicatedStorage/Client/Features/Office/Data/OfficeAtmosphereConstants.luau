@@ -64,6 +64,42 @@ local PRESETS: { [string]: VfxTypes.Atmosphere } = {
 		fogStart = 28,
 		fogEnd = 130,
 	},
+	-- The fixed outside (yard, car park): a brighter moonlit night (spike round 2). Fog takes the place's base.
+	officeExterior = {
+		clockTime = 1.2,
+		geographicLatitude = 70,
+		brightness = 2.2,
+		exposure = -0.1,
+		ambient = Color3.fromRGB(40, 40, 60),
+		outdoorAmbient = Color3.fromRGB(105, 108, 160),
+		environmentDiffuseScale = 1,
+		environmentSpecularScale = 1,
+		atmosphereDensity = 0.3,
+		atmosphereOffset = 0.12,
+		atmosphereColor = Color3.fromRGB(112, 100, 168),
+		atmosphereDecay = Color3.fromRGB(72, 52, 124),
+		atmosphereHaze = 2.2,
+		atmosphereGlare = 0.35,
+		moonAngularSize = 10,
+	},
+	-- The same in overtime, red like the inside (the planner's tuning hypothesis).
+	officeExteriorOvertime = {
+		clockTime = 1.2,
+		geographicLatitude = 70,
+		brightness = 1.8,
+		exposure = -0.1,
+		ambient = Color3.fromRGB(40, 40, 60),
+		outdoorAmbient = Color3.fromRGB(120, 60, 70),
+		environmentDiffuseScale = 1,
+		environmentSpecularScale = 1,
+		atmosphereDensity = 0.3,
+		atmosphereOffset = 0.12,
+		atmosphereColor = Color3.fromRGB(150, 70, 90),
+		atmosphereDecay = Color3.fromRGB(100, 40, 60),
+		atmosphereHaze = 2.2,
+		atmosphereGlare = 0.35,
+		moonAngularSize = 10,
+	},
 }
 
 -- Seconds between two sounds of each office bed sweetener kind (OfficeAssets.SWEETENERS).
@@ -84,6 +120,11 @@ return table.freeze({
 	TIER2 = "officeTier2",
 	BREAK = "officeBreak",
 	OVERTIME = "officeOvertime",
+	EXTERIOR = "officeExterior",
+	EXTERIOR_OVERTIME = "officeExteriorOvertime",
+	-- Seconds between checks of whether the camera is outdoors, and the short blend when that changes.
+	OUTDOOR_POLL = 0.25,
+	OUTDOOR_FADE = 0.3,
 	-- Seconds to blend between presets.
 	FADE = 3,
 	-- Overtime: a red, slightly drained screen and red ceiling lights.

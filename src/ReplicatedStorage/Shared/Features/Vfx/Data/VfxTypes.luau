@@ -90,9 +90,20 @@ export type Atmosphere = {
 	fogColor: Color3?,
 	fogStart: number?,
 	fogEnd: number?,
+	geographicLatitude: number?,
+	environmentDiffuseScale: number?,
+	environmentSpecularScale: number?,
+	atmosphereDensity: number?,
+	atmosphereOffset: number?,
+	atmosphereColor: Color3?,
+	atmosphereDecay: Color3?,
+	atmosphereHaze: number?,
+	atmosphereGlare: number?,
+	moonAngularSize: number?,
 }
 
--- Every Lighting value the atmosphere system manages, fully specified.
+-- Every Lighting value the atmosphere system manages, fully specified. The atmosphere* fields live on Lighting's
+-- first Atmosphere child and moonAngularSize on its first Sky child; with none they are carried but not written.
 export type AtmosphereValues = {
 	clockTime: number,
 	brightness: number,
@@ -102,6 +113,16 @@ export type AtmosphereValues = {
 	fogColor: Color3,
 	fogStart: number,
 	fogEnd: number,
+	geographicLatitude: number,
+	environmentDiffuseScale: number,
+	environmentSpecularScale: number,
+	atmosphereDensity: number,
+	atmosphereOffset: number,
+	atmosphereColor: Color3,
+	atmosphereDecay: Color3,
+	atmosphereHaze: number,
+	atmosphereGlare: number,
+	moonAngularSize: number,
 }
 
 return {}

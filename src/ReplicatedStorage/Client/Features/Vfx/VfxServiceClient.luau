@@ -60,7 +60,20 @@ local warnedTemplates: { [string]: boolean } = {}
 local counters = { played = 0, unknown = 0, missingTemplates = 0 }
 local connection: RBXScriptConnection? = nil
 
+-- Lighting's first Atmosphere and Sky children, when the place has them (it may have neither).
+local function atmosphereInstance(): Atmosphere?
+	return Lighting:FindFirstChildWhichIsA("Atmosphere")
+end
+
+local function skyInstance(): Sky?
+	return Lighting:FindFirstChildWhichIsA("Sky")
+end
+
+-- The atmosphere fields are carried even with no instance to read: the engine's defaults stand in, and writeLighting
+-- skips them.
 local function readLighting(): AtmosphereValues
+	local air = atmosphereInstance()
+	local sky = skyInstance()
 	return {
 		clockTime = Lighting.ClockTime,
 		brightness = Lighting.Brightness,
@@ -70,6 +83,16 @@ local function readLighting(): AtmosphereValues
 		fogColor = Lighting.FogColor,
 		fogStart = Lighting.FogStart,
 		fogEnd = Lighting.FogEnd,
+		geographicLatitude = Lighting.GeographicLatitude,
+		environmentDiffuseScale = Lighting.EnvironmentDiffuseScale,
+		environmentSpecularScale = Lighting.EnvironmentSpecularScale,
+		atmosphereDensity = if air ~= nil then air.Density else 0.395,
+		atmosphereOffset = if air ~= nil then air.Offset else 0,
+		atmosphereColor = if air ~= nil then air.Color else Color3.fromRGB(199, 170, 107),
+		atmosphereDecay = if air ~= nil then air.Decay else Color3.fromRGB(92, 60, 13),
+		atmosphereHaze = if air ~= nil then air.Haze else 0,
+		atmosphereGlare = if air ~= nil then air.Glare else 0,
+		moonAngularSize = if sky ~= nil then sky.MoonAngularSize else 11,
 	}
 end
 
@@ -82,6 +105,22 @@ local function writeLighting(values: AtmosphereValues)
 	Lighting.FogColor = values.fogColor
 	Lighting.FogStart = values.fogStart
 	Lighting.FogEnd = values.fogEnd
+	Lighting.GeographicLatitude = values.geographicLatitude
+	Lighting.EnvironmentDiffuseScale = values.environmentDiffuseScale
+	Lighting.EnvironmentSpecularScale = values.environmentSpecularScale
+	local air = atmosphereInstance()
+	if air ~= nil then
+		air.Density = values.atmosphereDensity
+		air.Offset = values.atmosphereOffset
+		air.Color = values.atmosphereColor
+		air.Decay = values.atmosphereDecay
+		air.Haze = values.atmosphereHaze
+		air.Glare = values.atmosphereGlare
+	end
+	local sky = skyInstance()
+	if sky ~= nil then
+		sky.MoonAngularSize = values.moonAngularSize
+	end
 end
 
 local function templateFolder(name: string): Instance?

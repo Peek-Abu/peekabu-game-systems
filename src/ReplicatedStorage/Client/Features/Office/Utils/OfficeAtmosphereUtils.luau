@@ -5,7 +5,8 @@
 	crew: DepotAtmosphereUtils) it is the depot's warm evening, so a shift's lighting never outlasts the shift; for
 	the crew, from the transit (`starting`) through the results it is night; while running, each pressure tier darkens
 	it a step, Harlow's break lifts it a little and overtime turns it dim red (and the lights red). The fluorescent
-	hum plays whenever the crew is in a shift. Pure.
+	hum plays whenever the crew is in a shift, except outside (`outside`: the yard and car park get a moonlit exterior
+	look, red in overtime, whatever the tier or break; the hub stays the depot's evening). Pure.
 
 	@class OfficeAtmosphereUtils
 ]=]
@@ -21,9 +22,16 @@ type ShiftSnapshot = ShiftTypes.ShiftSnapshot
 
 local OfficeAtmosphereUtils = {}
 
-function OfficeAtmosphereUtils.preset(snapshot: ShiftSnapshot?, userId: number): string
+function OfficeAtmosphereUtils.preset(snapshot: ShiftSnapshot?, userId: number, outside: boolean?): string
 	if snapshot == nil or DepotAtmosphereUtils.inHub(snapshot, userId) then
 		return DepotAtmosphereConstants.EVENING
+	end
+	if outside == true then
+		-- The yard and car park: one moonlit look for the whole shift (tier and break are the inside's dread).
+		if snapshot.phase == "running" and snapshot.stage == "overtime" then
+			return OfficeAtmosphereConstants.EXTERIOR_OVERTIME
+		end
+		return OfficeAtmosphereConstants.EXTERIOR
 	end
 	if snapshot.phase ~= "running" then
 		return OfficeAtmosphereConstants.NIGHT
@@ -50,8 +58,25 @@ function OfficeAtmosphereUtils.overtime(snapshot: ShiftSnapshot?, userId: number
 		and snapshot.stage == "overtime"
 end
 
-function OfficeAtmosphereUtils.hum(snapshot: ShiftSnapshot?, userId: number): boolean
-	return snapshot ~= nil and not DepotAtmosphereUtils.inHub(snapshot, userId)
+function OfficeAtmosphereUtils.hum(snapshot: ShiftSnapshot?, userId: number, outside: boolean?): boolean
+	return snapshot ~= nil and not DepotAtmosphereUtils.inHub(snapshot, userId) and outside ~= true
+end
+
+-- Whether `point` is inside any of the axis-aligned outdoor boxes.
+function OfficeAtmosphereUtils.outdoors(point: Vector3, boxes: { { min: Vector3, max: Vector3 } }): boolean
+	for _, box in boxes do
+		if
+			point.X >= box.min.X
+			and point.X <= box.max.X
+			and point.Y >= box.min.Y
+			and point.Y <= box.max.Y
+			and point.Z >= box.min.Z
+			and point.Z <= box.max.Z
+		then
+			return true
+		end
+	end
+	return false
 end
 
 return OfficeAtmosphereUtils

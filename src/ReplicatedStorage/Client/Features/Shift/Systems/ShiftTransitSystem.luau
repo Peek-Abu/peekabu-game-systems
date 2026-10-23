@@ -7,7 +7,7 @@
 	- held: the route slip, from the moment the hold is published. Once the hold is built it streams the area around
 	  its spot in (Player:RequestStreamAroundAsync) and checks the rest (ShiftTransitRules.verdict): the new office's
 	  model (its LayoutSeed attribute), the character on its spot, the lighting preset applied (OfficeAtmosphereSystem
-	  against OfficeAtmosphereUtils.preset). Then the scene must hold still (ShiftTransitRules.scene complete and the
+	  against OfficeAtmosphereSystem.expected()). Then the scene must hold still (ShiftTransitRules.scene complete and the
 	  office's lights, tagged OccupantConstants.LIGHT_TAG, no longer streaming in) for TRANSIT_SETTLE_SECONDS and
 	  TRANSIT_SETTLE_FRAMES frames (the longer COLD settle when the camera has moved more than TRANSIT_COLD_DISTANCE
 	  since the slip went up: the first arrival from the depot), so the engine's own light has caught up before the
@@ -40,7 +40,6 @@ local ShiftEvents = require(ReplicatedStorage.Shared.Features.Shift.Net.ShiftEve
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local ShiftTransitUtils = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftTransitUtils)
 local OfficeAtmosphereSystem = require(ReplicatedStorage.Client.Features.Office.Systems.OfficeAtmosphereSystem)
-local OfficeAtmosphereUtils = require(ReplicatedStorage.Client.Features.Office.Utils.OfficeAtmosphereUtils)
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
 local ShiftTransitRules = require(ReplicatedStorage.Client.Features.Shift.Rules.ShiftTransitRules)
 local ShiftTransitStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftTransitStore)
@@ -108,8 +107,7 @@ local function seedSeen(seed: number?): boolean
 end
 
 local function lit(): boolean
-	local expected = OfficeAtmosphereUtils.preset(ShiftStore.snapshot(), Players.LocalPlayer.UserId)
-	return OfficeAtmosphereSystem.getState().preset == expected
+	return OfficeAtmosphereSystem.getState().preset == OfficeAtmosphereSystem.expected()
 end
 
 local function stream(hold: ShiftTypes.TransitHold)
