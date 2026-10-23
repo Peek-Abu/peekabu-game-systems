@@ -110,6 +110,35 @@ local KITS: { Kit } = {
 		},
 	},
 	{
+		id = "pods_c",
+		roomType = "pods",
+		name = "Desk pods",
+		size = "S",
+		width = 30,
+		depth = 22,
+		door = { offset = 15, width = 6, kind = "solid" },
+		markers = {
+			-- Two rows facing a shared aisle: the front row is turned half way (chairs toward the aisle), the back
+			-- row is not. The front row sits past the door leaf's swing.
+			at("desk", 8, 9, HALF),
+			at("desk", 22, 9, HALF),
+			at("desk", 8, 18.5, 0),
+			at("desk", 22, 18.5, 0),
+			at("pile", 4, 13.75),
+			at("pile", 11, 13.75),
+			at("pile", 19, 13.75),
+			at("pile", 26, 13.75),
+			at("pile", 3, 3),
+			at("pile", 27, 3),
+			at("item", 15, 10),
+			at("item", 15, 18.5),
+			at("patrol", 15, 13.75),
+			-- Dressing: a bin on the front wall beside the door, a frame on the back wall.
+			prop("wasteBin", 24, 1.43, HALF),
+			prop("artFrame", 15, 21.365, 0),
+		},
+	},
+	{
 		id = "conference_a",
 		roomType = "conference",
 		name = "Conference room",
@@ -267,11 +296,12 @@ local KITS: { Kit } = {
 			at("item", 8.5, 20),
 			at("patrol", 18, 27),
 			-- Dressing: a sofa on the left wall, planters in the back-left corner and on the right, a frame behind
-			-- the desk and a clock on the left wall.
+			-- the desk (right of the entrance facade the generator hangs on the back wall, x 12..24) and a clock on
+			-- the left wall.
 			prop("sofa", 2.31, 14, -QUARTER),
 			prop("planter", 2.53, 27.54, 0),
 			prop("planter", 33.54, 17, QUARTER),
-			prop("artFrame", 18, 29.365, 0),
+			prop("artFrame", 29, 29.365, 0),
 			prop("wallClock", 0.625, 22, -QUARTER),
 		},
 	},

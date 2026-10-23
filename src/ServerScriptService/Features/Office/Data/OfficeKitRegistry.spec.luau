@@ -14,6 +14,7 @@ local FACINGS = { "minZ", "minX", "maxZ", "maxX" }
 local DRESSING = {
 	pods_a = { props = { copier = 1, planter = 1, wasteBin = 2, artFrame = 1, partition = 2 }, art = {} },
 	pods_b = { props = { waterCooler = 1, wasteBin = 1, deskPlant = 2 }, art = {} },
+	pods_c = { props = { wasteBin = 1 }, art = {} },
 	conference_a = {
 		props = { wallScreen = 1, artFrame = 1, planter = 1 },
 		art = { table = "conferenceTable" },
@@ -75,6 +76,27 @@ return function()
 		end
 	end)
 
+	it("keeps the reception's wall dressing off the entrance facade the generator hangs on its back wall", function()
+		local kit = OfficeKitRegistry.get("reception_a")
+		for _, mirrored in { false, true } do
+			local placement = OfficeKitUtils.place(kit, "reception1", 100, 100, "maxX", mirrored)
+			local layout = layoutOf(placement)
+			-- The generator's entrance: 12 wide, centred on the room's minX wall (the kit's back wall).
+			layout.facades = {
+				{
+					room = "reception1",
+					x = placement.room.minX,
+					z = (placement.room.minZ + placement.room.maxZ) / 2,
+					width = 12,
+					kind = "entrance",
+				},
+			}
+			local ok, errors = OfficeLayoutRules.validate(layout)
+			expect(`mirrored={mirrored}: {table.concat(errors, "; ")}`).to.equal(`mirrored={mirrored}: `)
+			expect(ok).to.equal(true)
+		end
+	end)
+
 	it("covers the lean set", function()
 		for _, roomType in ROOM_TYPES do
 			expect(#OfficeKitRegistry.ofType(roomType) > 0).to.equal(true)
@@ -121,7 +143,7 @@ return function()
 				expect(`{kit.id} {art} {(counts[art] or 0) >= count}`).to.equal(`{kit.id} {art} true`)
 			end
 		end
-		expect(#OfficeKitRegistry.KITS).to.equal(8)
+		expect(#OfficeKitRegistry.ofType("pods") >= 3).to.equal(true)
 	end)
 
 	it("gives every restyled furniture marker its art", function()

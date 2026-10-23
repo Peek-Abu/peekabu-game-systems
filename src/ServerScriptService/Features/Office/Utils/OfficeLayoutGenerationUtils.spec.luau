@@ -110,6 +110,29 @@ return function()
 			end
 		end)
 
+		it(
+			"mixes the room types: desk pods are at least a quarter of the kit rooms over seeds 1-50, conference at most 40%",
+			function()
+				local pods, conference, total = 0, 0, 0
+				for seed = 1, 50 do
+					if seed % 10 == 0 then
+						task.wait()
+					end
+					for _, room in layoutFor(seed).rooms do
+						if room.kit ~= nil then
+							total += 1
+							pods += if room.roomType == "pods" then 1 else 0
+							conference += if room.roomType == "conference" then 1 else 0
+						end
+					end
+				end
+				expect(`pods {pods}/{total}: {pods >= total * 0.25}`).to.equal(`pods {pods}/{total}: true`)
+				expect(`conference {conference}/{total}: {conference <= total * 0.4}`).to.equal(
+					`conference {conference}/{total}: true`
+				)
+			end
+		)
+
 		it("gives every kit room exactly one door, onto a hallway, on a wall they share", function()
 			for seed = 1, SEEDS do
 				if seed % 10 == 0 then
