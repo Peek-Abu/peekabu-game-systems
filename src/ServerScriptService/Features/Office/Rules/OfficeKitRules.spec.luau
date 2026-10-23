@@ -1,6 +1,7 @@
 local OfficeKitRules = require(script.Parent.OfficeKitRules)
 
--- A clean 30 x 24 kit: a desk (chair strip behind it), a shelf on the back wall, three piles, a patrol point.
+-- A clean 30 x 24 kit: a desk (chair strip on its front, local -Z, toward the front wall), a shelf on the back
+-- wall, three piles, a patrol point.
 local function fixture()
 	return {
 		id = "fixture",
@@ -11,7 +12,7 @@ local function fixture()
 		depth = 24,
 		door = { offset = 15, width = 6, kind = "solid" },
 		markers = {
-			{ kind = "desk", x = 8, z = 8, rotation = 0 },
+			{ kind = "desk", x = 6, z = 8, rotation = 0 },
 			{ kind = "shelf", x = 22, z = 20, rotation = 0 },
 			{ kind = "pile", x = 4, z = 20 },
 			{ kind = "pile", x = 12, z = 18 },
@@ -53,13 +54,33 @@ return function()
 		expect(hasError(errors, "outside the walls")).to.equal(true)
 	end)
 
-	it("flags a desk without room for its chair", function()
+	it("flags a desk without room for its chair on its front (local -Z)", function()
 		local kit = fixture()
-		-- One stud off the back wall, chair side toward it.
-		kit.markers[1].x = 8
-		kit.markers[1].z = 24 - 1 - 2.475
+		-- One stud off the front wall's inner face, front (-Z) toward it; its back (+Z) is wide open.
+		kit.markers[1].z = 0.5 + 1 + 2.475
 		local _, errors = OfficeKitRules.check(kit)
 		expect(hasError(errors, "chair")).to.equal(true)
+	end)
+
+	it("reads the chair strip on the desk's turned front", function()
+		local kit = fixture()
+		-- Turned half way, the front faces +Z: the same spot off the front wall is now clear.
+		kit.markers[1].z = 0.5 + 1 + 2.475
+		kit.markers[1].rotation = math.pi
+		local ok, errors = OfficeKitRules.check(kit)
+		expect(hasError(errors, "chair")).to.equal(false)
+		expect(ok).to.equal(true)
+	end)
+
+	it("keeps furniture out of a swung leaf's reach behind a solid door, but not an open doorway", function()
+		local kit = fixture()
+		-- A 2 x 2 plant from 5 to 7 studs in: clear of DOOR_APPROACH (5), inside the 6-wide leaf's swing (6.5).
+		table.insert(kit.markers, { kind = "plant", x = 15, z = 6 })
+		local _, errors = OfficeKitRules.check(kit)
+		expect(hasError(errors, "door approach")).to.equal(true)
+		kit.door.kind = "open"
+		local _, openErrors = OfficeKitRules.check(kit)
+		expect(hasError(openErrors, "door approach")).to.equal(false)
 	end)
 
 	it("flags a plant in the door approach", function()

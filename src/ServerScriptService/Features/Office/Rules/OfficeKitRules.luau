@@ -2,8 +2,9 @@
 --[=[
 	OfficeKitRules: is a hand-authored kit clean? `check` lists every problem: a marker outside the walls
 	(furniture by its yawed footprint, point markers within MARKER_MARGIN), two furniture footprints that
-	overlap, furniture in the door approach, a desk without a clear chair strip or without room to hide under,
-	a missing patrol (or, in a breakout, rest) marker, fewer piles than a dirty room needs, and a pile or item
+	overlap, furniture in the door approach (as deep as a swung-open leaf reaches), a desk without a clear chair
+	strip on its front (local -Z, the knee-hole side HideSpotUtils and OfficeDecorSystem use) or without room to
+	hide under, a missing patrol (or, in a breakout, rest) marker, fewer piles than a dirty room needs, and a pile or item
 	marker crowding furniture. Works in the kit's local frame (x along the front wall, z into the room). Pure.
 
 	@class OfficeKitRules
@@ -133,12 +134,17 @@ function OfficeKitRules.check(kit: Kit): (boolean, { string })
 		end
 	end
 
-	-- Furniture does not overlap, and keeps out of the door approach.
+	-- Furniture does not overlap, and keeps out of the door approach. A solid or glass door's leaf swings into
+	-- the room as far as the door is wide, so its approach reaches past the swung leaf.
+	local approachDepth = OfficeConstants.DOOR_APPROACH
+	if door.kind ~= "open" then
+		approachDepth = math.max(approachDepth, door.width + 0.5)
+	end
 	local approach: Rect = {
 		minX = door.offset - (door.width + 2) / 2,
 		maxX = door.offset + (door.width + 2) / 2,
 		minZ = 0,
-		maxZ = OfficeConstants.DOOR_APPROACH,
+		maxZ = approachDepth,
 	}
 	for index, box in boxes do
 		if overlaps(box, approach) then
@@ -151,7 +157,8 @@ function OfficeKitRules.check(kit: Kit): (boolean, { string })
 		end
 	end
 
-	-- A desk has room to hide under, and a free strip for its chair on its local +Z side.
+	-- A desk has room to hide under, and a free strip for its chair on its front: local -Z, the knee-hole side
+	-- (HideSpotUtils' "front = local -Z", OfficeDecorSystem.chairAt's first candidate).
 	local free = OfficeConstants.DESK_SIZE - Vector3.new(0, DESK_TOP, 0)
 	local hug = HideConstants.HUG_FREE_MIN
 	if counts.desk ~= nil and (free.X < hug.X or free.Y < hug.Y or free.Z < hug.Z) then
@@ -163,8 +170,8 @@ function OfficeKitRules.check(kit: Kit): (boolean, { string })
 			local yaw = marker.rotation or 0
 			local reach = OfficeConstants.DESK_SIZE.Z / 2 + chairDepth / 2
 			local strip = rect(
-				marker.x + math.sin(yaw) * reach,
-				marker.z + math.cos(yaw) * reach,
+				marker.x - math.sin(yaw) * reach,
+				marker.z - math.cos(yaw) * reach,
 				OfficeConstants.DESK_SIZE.X,
 				chairDepth,
 				yaw

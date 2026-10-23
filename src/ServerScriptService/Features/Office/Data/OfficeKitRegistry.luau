@@ -3,7 +3,9 @@
 	OfficeKitRegistry: the greybox catalogue of hand-authored office kits (stage 1 of the office map rebuild):
 	eight rooms across the six room types, as pure data in each kit's local frame (OfficeTypes.Kit). Every kit
 	passes OfficeKitRules; the spec also places each one in every facing and mirror and validates it as a layout.
-	Aisles are kept at least 4 studs wide for Mr. Harlow. Counts are minimums; the coordinates are tuning.
+	Aisles are kept at least 4 studs wide for Mr. Harlow. A desk's front (local -Z: knee-hole and chair, the side
+	HideSpotUtils and OfficeDecorSystem use) faces the room's open floor. Counts are minimums; the coordinates are
+	tuning.
 
 	Static data, but spec'd on purpose (OfficeKitRegistry.spec) so the catalogue is validated like
 	OfficeLayoutConstants is.
@@ -36,13 +38,14 @@ local KITS: { Kit } = {
 		depth = 32,
 		door = { offset = 20, width = 6, kind = "solid" },
 		markers = {
-			-- Front row's chairs sit behind it (+Z); the back row is turned so its chairs face the middle aisle.
-			at("desk", 6, 8, 0),
-			at("desk", 20, 8, 0),
-			at("desk", 34, 8, 0),
-			at("desk", 6, 26.5, HALF),
-			at("desk", 20, 26.5, HALF),
-			at("desk", 34, 26.5, HALF),
+			-- Both rows' fronts (and chairs) face the middle aisle: the front row is turned half way, the back row
+			-- is not. The front row sits past the door leaf's swing.
+			at("desk", 6, 9, HALF),
+			at("desk", 20, 9, HALF),
+			at("desk", 34, 9, HALF),
+			at("desk", 6, 27, 0),
+			at("desk", 20, 27, 0),
+			at("desk", 34, 27, 0),
 			at("plant", 3, 3),
 			at("cabinet", 38.4, 1.6, 0),
 			at("pile", 13, 30),
@@ -65,10 +68,11 @@ local KITS: { Kit } = {
 		depth = 26,
 		door = { offset = 6, width = 6, kind = "solid" },
 		markers = {
-			at("desk", 3.5, 9.5, QUARTER),
-			at("desk", 3.5, 19, QUARTER),
-			at("desk", 28.5, 9.5, -QUARTER),
-			at("desk", 28.5, 19, -QUARTER),
+			-- Desks against the side walls, fronts (and chairs) toward the middle; the left pair clears the door.
+			at("desk", 3.5, 11, -QUARTER),
+			at("desk", 3.5, 20.5, -QUARTER),
+			at("desk", 28.5, 9.5, QUARTER),
+			at("desk", 28.5, 19, QUARTER),
 			at("board", 16, 25.3, 0),
 			at("pile", 16, 10),
 			at("pile", 16, 17),
