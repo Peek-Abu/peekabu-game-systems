@@ -33,12 +33,18 @@
 	  lies ahead of him, stands still for a DOOR_BEAT_SECONDS (0.5 s) beat (OccupantDoorRules); a catch is never held.
 	- Role: he exists only where the shift role runs (QueueServiceServer:runsRole); a hub-only server spawns no Harlow.
 
+	Twin guard: `spawnHarlow` (before it builds) and `despawn` (after it removes the current rig) despawn every other
+	model tagged OccupantConstants.TAG (the tag OccupantRigSystem.build stamps on a manager rig) and warn "removed N
+	stray manager rig(s)": a shift transit whose cleanup errored (it runs guarded) must not leave a second, inactive
+	Harlow standing in the world.
+
 	Spec-exempt shell (Instances, raycasts, Players, signals); the decisions are the specced OccupantBrainRules (and
 	its Work, Stare and Director rules), OccupantCatchRules, OccupantTuningFormulas and OccupantTellRules.
 
 	@class OccupantServiceServer
 ]=]
 
+local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -334,6 +340,21 @@ local function onNoise(noise: NoiseTypes.NoiseEvent)
 	end
 end
 
+-- Guard: despawns every manager rig (a model OccupantRigSystem.build tagged OccupantConstants.TAG) except `keep`, and
+-- warns with the count as evidence: there is only ever one Harlow, so any other is a twin a past cleanup missed.
+local function sweepStrays(keep: Model?)
+	local removed = 0
+	for _, instance in CollectionService:GetTagged(OccupantConstants.TAG) do
+		if instance:IsA("Model") and instance ~= keep then
+			NpcServiceServer:despawn(instance)
+			removed += 1
+		end
+	end
+	if removed > 0 then
+		log:warn(`removed {removed} stray manager rig(s)`)
+	end
+end
+
 local function despawn()
 	local current = rig
 	rig = nil
@@ -349,6 +370,7 @@ local function despawn()
 	if current ~= nil and current.model.Parent ~= nil then
 		NpcServiceServer:despawn(current.model)
 	end
+	sweepStrays(nil)
 end
 
 -- Builds Harlow for the running shift (yields while the rig is generated).
@@ -362,6 +384,7 @@ local function spawnHarlow()
 		log:warn("no shift container or patrol route: Harlow stays home")
 		return
 	end
+	sweepStrays(nil)
 	spawning = true
 	local start = rng:NextInteger(1, #points)
 	local direction = if rng:NextNumber() < 0.5 then -1 else 1

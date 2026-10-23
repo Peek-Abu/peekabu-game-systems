@@ -330,6 +330,29 @@ return function()
 		end)
 	end)
 
+	describe("stray offices", function()
+		it("clearStrays removes every office model but the one kept, and counts them", function()
+			local kept = build(Layout)
+			local strayA = Instance.new("Model")
+			strayA.Name = Constants.MODEL_NAME
+			strayA.Parent = workspace
+			local strayB = Instance.new("Model")
+			strayB.Name = Constants.MODEL_NAME
+			strayB.Parent = workspace
+			local other = Instance.new("Model")
+			other.Name = "NotTheOffice"
+			other.Parent = workspace
+			table.insert(models, other)
+			expect(Build.clearStrays(kept.model)).to.equal(2)
+			expect(strayA.Parent).to.equal(nil)
+			expect(strayB.Parent).to.equal(nil)
+			expect(kept.model.Parent).to.equal(workspace)
+			expect(other.Parent).to.equal(workspace)
+			expect(Build.clearStrays(kept.model)).to.equal(0)
+			kept.doors.destroy()
+		end)
+	end)
+
 	describe("art keys", function()
 		local function twoRooms(kind, roomTypeA)
 			return {
@@ -513,6 +536,22 @@ return function()
 				built.doors.destroy()
 				built.model:Destroy()
 			end
+		end)
+
+		it("builds one leaf for a door id the layout repeats", function()
+			local layout = twoRooms("solid", nil)
+			table.insert(layout.doors, { a = "a", b = "b", x = 10, z = 10, width = 6, kind = "solid" })
+			local built = build(layout)
+			local leaves = 0
+			for _, child in built.model.Doors:GetChildren() do
+				if child.Name == "DoorLeaf" then
+					leaves += 1
+				end
+			end
+			expect(leaves).to.equal(1)
+			expect(#built.doors.states()).to.equal(1)
+			built.doors.destroy()
+			built.model:Destroy()
 		end)
 
 		it("builds an entrance facade as two half-width glass leaves hinged at their outer edges", function()

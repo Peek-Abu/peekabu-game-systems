@@ -321,4 +321,20 @@ function OfficeBuildSystem.build(
 	}
 end
 
+--[=[
+	Destroys every office model in Workspace (a child named OfficeConstants.MODEL_NAME) except `keep`, and returns how
+	many it removed. A rebuild calls this so a model its owner lost track of (a failed or interrupted cleanup in a
+	shift transit) can never stand beside the new office as a second set of walls and door leaves.
+]=]
+function OfficeBuildSystem.clearStrays(keep: Model?): number
+	local removed = 0
+	for _, child in Workspace:GetChildren() do
+		if child.Name == OfficeConstants.MODEL_NAME and child ~= keep then
+			child:Destroy()
+			removed += 1
+		end
+	end
+	return removed
+end
+
 return OfficeBuildSystem

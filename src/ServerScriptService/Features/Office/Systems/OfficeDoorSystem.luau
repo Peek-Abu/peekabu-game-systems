@@ -26,6 +26,9 @@
 	The swing tweens a fraction (0 closed .. 1 open) and places the leaf with OfficeDoorUtils.leafFrame each step,
 	so it travels the hinge's arc (tweening the CFrame itself would cut a chord). A door ignores toggles mid-swing.
 
+	One leaf per door id: if the layout lists an id twice (ids are "<a>|<b>"), the repeat is warned about and skipped, so
+	two leaves can never stand in one doorway.
+
 	A leaf is the clear opening inside the casing (OfficeDoorUtils.leafSize), so it swings clear of the oak jambs.
 
 	Art: a leaf takes the kit's `doorLeaf` (solid) or `doorLeafGlass` (glass) template through OfficeArtKeyUtils; the
@@ -46,6 +49,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 local TweenService = game:GetService("TweenService")
 
+local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local ArtVisualSystem = require(ServerScriptService.Features.Art.Systems.ArtVisualSystem)
 local CameraOccluderConstants = require(ReplicatedStorage.Shared.Features.Camera.Data.CameraOccluderConstants)
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
@@ -56,6 +60,8 @@ local OfficeTypes = require(OfficeServer.Data.OfficeTypes)
 local OfficeDoorUtils = require(OfficeServer.Utils.OfficeDoorUtils)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
 local OfficeArtKeyUtils = require(OfficeServer.Utils.OfficeArtKeyUtils)
+
+local log = Logger.new("OfficeDoorSystem")
 
 type DoorState = OfficeDoorUtils.DoorState
 
@@ -217,8 +223,11 @@ function OfficeDoorSystem.build(
 		local kind = door.kind
 		local room = OfficeLayoutUtils.room(layout, door.a)
 		local edge: OfficeTypes.Edge? = if room ~= nil then OfficeLayoutUtils.doorEdge(room, door) else nil
-		if (kind == "solid" or kind == "glass") and room ~= nil and edge ~= nil then
-			local id = `{door.a}|{door.b}`
+		local id = `{door.a}|{door.b}`
+		if (kind == "solid" or kind == "glass") and room ~= nil and edge ~= nil and records[id] ~= nil then
+			-- One leaf per id: a repeat would stack a second leaf on the first (one open, one shut).
+			log:warn(` door {id} is in the layout twice; the repeat is skipped`)
+		elseif (kind == "solid" or kind == "glass") and room ~= nil and edge ~= nil then
 			local horizontal = edge == "minZ" or edge == "maxZ"
 			local leaf = leafPart("DoorLeaf", OfficeDoorUtils.leafSize(door), kind == "glass", folder)
 			local occluder = dress(art, leaf, kind == "glass")

@@ -28,6 +28,11 @@
 
 	The office is built only where the shift role runs (QueueServiceServer:runsRole); a hub-only server builds nothing.
 
+	Stray guard: `rebuild` and the first build at `start` destroy every Workspace child named
+	OfficeConstants.MODEL_NAME that is not the tracked model (OfficeBuildSystem.clearStrays) and warn "removed N stray
+	office model(s)" when there were any: a transit whose reset errored (it runs guarded) must never leave an old office,
+	with its door leaves, standing beside the new one. `stop` still destroys the tracked model.
+
 	Spec-exempt shell (Instances, signals); the decisions are the specced OfficeLayoutRules, OfficeLayoutUtils,
 	OfficeSpawnUtils and OfficeSpawnRules.
 
@@ -166,6 +171,15 @@ local function generateLayout(seed: number): (OfficeTypes.Layout, number)
 	error(`office generation failed from seed {seed} to {seed + GENERATE_RETRIES}: {lastError}`, 0)
 end
 
+-- Destroys every office model in Workspace except the tracked one, warning with the count (it should never find one).
+local function clearStrays()
+	local current = built
+	local removed = OfficeBuildSystem.clearStrays(if current ~= nil then current.model else nil)
+	if removed > 0 then
+		log:warn(`removed {removed} stray office model(s)`)
+	end
+end
+
 local function rebuild(requested: number)
 	local layout, seed = generateLayout(requested)
 	local ok, errors = OfficeLayoutRules.validate(layout)
@@ -198,6 +212,8 @@ local function rebuild(requested: number)
 		old.doors.destroy()
 		old.model:Destroy()
 	end
+	-- Guard: any other office model in Workspace (one a past cleanup missed) goes too, with a warning as evidence.
+	clearStrays()
 	local current = OfficeBuildSystem.build(layout, OfficeConstants.ORIGIN)
 	current.model:SetAttribute("LayoutSeed", seed)
 	built = current
@@ -322,6 +338,7 @@ local OfficeServiceServer: OfficeServiceServer = {
 				end
 			end
 		end)
+		clearStrays()
 		local current = OfficeBuildSystem.build(LAYOUT, OfficeConstants.ORIGIN)
 		built = current
 		-- The office at night (exit signs, blue monitors, the elevator, ambience emitters), once.
