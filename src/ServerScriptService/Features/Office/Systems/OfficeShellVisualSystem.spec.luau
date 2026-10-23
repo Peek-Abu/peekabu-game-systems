@@ -161,16 +161,62 @@ return function()
 			-- The z = 0 wall between A and B ends at x = 0. On the x = 0 line a wall runs down (B | W) and a doorway from A
 			-- to W runs up from the junction (z 0..6), with no merged segment there: an archway's mouth corner (seed 9's
 			-- hallJ2_1 | hallS5), or a real door's.
-			local function corner(kind)
+			-- No trim face shares a plane and an overlapping area (facing the same way) with a casing or pilaster face:
+			-- that z-fights. Back-to-back faces (a trim end butting a jamb's side) face each other and never show.
+			local function coplanarWithCasing()
+				local trims, casings = {}, {}
+				for _, part in model.Shell:GetChildren() do
+					if part.Name == "Wainscot" or part.Name == "Rail" or part.Name == "Skirt" then
+						table.insert(trims, part)
+					elseif part.Name == "Jamb" or part.Name == "Head" or part.Name == "Pilaster" then
+						table.insert(casings, part)
+					end
+				end
+				local axes = { "X", "Y", "Z" }
+				local found = 0
+				for _, trim in trims do
+					for _, casing in casings do
+						for index, axis in axes do
+							for _, sign in { -1, 1 } do
+								local a = trim.Position[axis] + sign * trim.Size[axis] / 2
+								local b = casing.Position[axis] + sign * casing.Size[axis] / 2
+								if math.abs(a - b) < 1e-3 then
+									local area = true
+									for other, name in axes do
+										if other ~= index then
+											local lo = math.max(
+												trim.Position[name] - trim.Size[name] / 2,
+												casing.Position[name] - casing.Size[name] / 2
+											)
+											local hi = math.min(
+												trim.Position[name] + trim.Size[name] / 2,
+												casing.Position[name] + casing.Size[name] / 2
+											)
+											area = area and hi - lo > 1e-3
+										end
+									end
+									if area then
+										found += 1
+									end
+								end
+							end
+						end
+					end
+				end
+				return found
+			end
+
+			local function corner(kind, width)
 				model = Instance.new("Model")
+				local span = width or 6
 				local plan = {
 					startRoom = "a",
 					rooms = {
 						{ id = "a", name = "A", minX = 0, maxX = 20, minZ = 0, maxZ = 20, roomType = "pods" },
 						{ id = "b", name = "B", minX = 0, maxX = 20, minZ = -20, maxZ = 0, roomType = "pods" },
-						{ id = "w", name = "W", minX = -10, maxX = 0, minZ = -6, maxZ = 6, zone = "hallway" },
+						{ id = "w", name = "W", minX = -10, maxX = 0, minZ = -6, maxZ = 12, zone = "hallway" },
 					},
-					doors = { { a = "a", b = "w", x = 0, z = 3, width = 6, kind = kind } },
+					doors = { { a = "a", b = "w", x = 0, z = span / 2, width = span, kind = kind } },
 					markers = {},
 					truck = { minX = 1, maxX = 3, minZ = -3, maxZ = -1, clockX = 4, clockZ = -3 },
 				}
@@ -192,7 +238,7 @@ return function()
 					if part.Name == "Wainscot" or part.Name == "Rail" or part.Name == "Skirt" then
 						local x, z = part.Position.X - ORIGIN.X, part.Position.Z
 						local hx, hz = part.Size.X / 2, part.Size.Z / 2
-						local along = part.Size.Z > part.Size.X and z - hz < 5 and z + hz > 1
+						local along = part.Size.Z > part.Size.X and z - hz < span - 1 and z + hz > 1
 						expect(along and x - hx < 0.95 and x + hx > -0.95).to.equal(false)
 					end
 				end
@@ -245,6 +291,44 @@ return function()
 				end
 				-- And the stub's trim stops where the wrap starts: they touch, never overlap.
 				expect(stub.Position.Z + stub.Size.Z / 2 <= face.Position.Z - face.Size.Z / 2 + 1e-3).to.equal(true)
+			end)
+
+			it("stands a wide archway's pilaster proud of the trim, and stops the trim at its side", function()
+				local face, others = corner("open", 10)
+				expect(coplanarWithCasing()).to.equal(0)
+				local shell = Constants.SHELL
+				local pilaster
+				for _, part in model.Shell:GetChildren() do
+					if part.Name == "Pilaster" and part.Position.Z < 5 then
+						pilaster = part
+					end
+				end
+				-- Its front faces stand proud of the rail on both sides of the wall.
+				local x = pilaster.Position.X - ORIGIN.X
+				expect(x - pilaster.Size.X / 2 < -(0.5 + shell.railDepth) - 1e-3).to.equal(true)
+				expect(x + pilaster.Size.X / 2 > 0.5 + shell.railDepth + 1e-3).to.equal(true)
+				-- The wall below the mouth is a door end there: its trim stops at the pilaster's side (z = 0).
+				for _, other in others do
+					local ox = other.Position.X - ORIGIN.X
+					if
+						other.Size.Z > other.Size.X
+						and math.abs(math.abs(ox) - 0.65) < 0.01
+						and other.Position.Z < 0
+					then
+						expect(other.Position.Z + other.Size.Z / 2).to.be.near(0, 1e-3)
+					end
+				end
+				-- The z = 0 wall does not wrap round it: its A-side trim stays within the slab end.
+				expect(face.Position.X - ORIGIN.X - face.Size.X / 2 >= -0.5 - 1e-3).to.equal(true)
+			end)
+
+			it("leaves no trim face coplanar with a real door's casing", function()
+				for _, kind in { "solid", "glass" } do
+					corner(kind)
+					expect(coplanarWithCasing()).to.equal(0)
+					model:Destroy()
+					model = nil
+				end
 			end)
 
 			it("stops a real door's corner at the slab end: the casing covers it, no wrap into it", function()

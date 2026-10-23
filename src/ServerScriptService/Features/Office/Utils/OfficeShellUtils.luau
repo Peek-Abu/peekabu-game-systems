@@ -29,6 +29,12 @@ local MEET = 1e-4
 
 local OfficeShellUtils = {}
 
+-- The deepest trim (wainscot, rail or skirt) proud of a slab face.
+local function deepestTrim(): number
+	local shell = OfficeConstants.SHELL
+	return math.max(shell.wainscotProud, shell.railDepth, shell.skirtProud)
+end
+
 -- A box spanning along-range [a0, a1], across-range [n0, n1] (offsets from the wall line) and Y [y0, y1].
 local function box(
 	name: string,
@@ -192,8 +198,9 @@ end
 
 --[=[
 	The trim around a doorway on `edge` of its room. A solid or glass door gets an oak casing (two jambs and a head)
-	inside the rough opening, proud on both faces; an open doorway wider than 8 gets plaster pilasters at both jambs;
-	a narrow open one gets nothing.
+	inside the rough opening, proud on both faces; an open doorway wider than 8 gets plaster pilasters at both jambs,
+	which stand proud of every trim on both faces (the deepest trim plus 0.05: nothing shares their face plane, so
+	nothing z-fights with them); a narrow open one gets nothing.
 ]=]
 function OfficeShellUtils.doorCasing(door: Door, edge: Edge): { ShellBox }
 	local shell = OfficeConstants.SHELL
@@ -205,7 +212,7 @@ function OfficeShellUtils.doorCasing(door: Door, edge: Edge): { ShellBox }
 	local kind = door.kind or "open"
 	if kind == "open" then
 		if door.width > WIDE_ARCHWAY then
-			local reach = OfficeConstants.WALL_THICKNESS / 2 + shell.wainscotProud
+			local reach = OfficeConstants.WALL_THICKNESS / 2 + deepestTrim() + 0.05
 			local across = { -reach, reach }
 			local y = { 0, OfficeConstants.WALL_HEIGHT }
 			table.insert(boxes, box("Pilaster", "plaster", true, where, { lo, lo + shell.pilaster }, y, across))
@@ -260,6 +267,43 @@ end
 function OfficeShellUtils.facadeGap(facade: OfficeTypes.Facade, edge: Edge): TrimGap
 	local _, lo, hi = facadeLine(facade, edge)
 	return { side = facadeSide(edge), from = lo, to = hi }
+end
+
+--[=[
+	Whether a doorway is cased: a real door (solid or glass: its oak casing) or an open archway wide enough for
+	pilasters. Trim stops at a cased doorway's edge and never wraps round it: the casing or pilaster covers the slab end.
+]=]
+function OfficeShellUtils.cased(door: Door): boolean
+	local kind = door.kind or "open"
+	return kind == "solid" or kind == "glass" or door.width > WIDE_ARCHWAY
+end
+
+--[=[
+	The trim gaps that stop a run's trim at both sides of `solid` (a pilaster) on each face whose trim would pass through
+	it: the face's trim band (slab face to the deepest trim) overlaps it across the wall, and it overlaps the
+	run along it. The gap spans it along the run, so the trim ends against its sides.
+]=]
+function OfficeShellUtils.boxGaps(segment: Segment, solid: ShellBox): { TrimGap }
+	local where, from, to = lineOf(segment)
+	local position, half = solid.cframe.Position, solid.size / 2
+	local alongLo = if where.horizontal then position.X - half.X else position.Z - half.Z
+	local alongHi = if where.horizontal then position.X + half.X else position.Z + half.Z
+	local acrossLo = (if where.horizontal then position.Z - half.Z else position.X - half.X) - where.line
+	local acrossHi = (if where.horizontal then position.Z + half.Z else position.X + half.X) - where.line
+	local gaps: { TrimGap } = {}
+	-- A run's trim reaches at most half a wall plus the deepest trim past its ends (a corner's wrap).
+	local past = OfficeConstants.WALL_THICKNESS / 2 + deepestTrim()
+	if alongHi <= from - past - EPSILON or alongLo >= to + past + EPSILON then
+		return gaps
+	end
+	local face = OfficeConstants.SHELL.slab
+	for _, side in { -1, 1 } do
+		local band = between(side * face, side * (face + deepestTrim()))
+		if acrossLo < band[2] - EPSILON and acrossHi > band[1] + EPSILON then
+			table.insert(gaps, { side = side, from = alongLo, to = alongHi })
+		end
+	end
+	return gaps
 end
 
 --[=[

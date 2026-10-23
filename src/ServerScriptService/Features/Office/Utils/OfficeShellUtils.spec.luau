@@ -337,11 +337,53 @@ return function()
 			local boxes = OfficeShellUtils.doorCasing(door, "minZ")
 			expect(#named(boxes, "plaster")).to.equal(2)
 			expect(#named(boxes, "oak")).to.equal(0)
+			-- Like a casing, proud of every trim on both faces: half a wall plus the deepest trim (the rail) plus 0.05.
+			local reach = OfficeConstants.WALL_THICKNESS / 2 + S.railDepth + 0.05
 			for _, box in boxes do
 				expect(box.size.X).to.be.near(0.6, 1e-6)
+				expect(footprint(box).maxZ).to.be.near(reach, 1e-6)
+				expect(footprint(box).minZ).to.be.near(-reach, 1e-6)
 			end
 			local narrow = { a = "a", b = "b", x = 10, z = 0, width = 6 }
 			expect(#OfficeShellUtils.doorCasing(narrow, "minZ")).to.equal(0)
+		end)
+
+		it(
+			"boxGaps: a run's trim stops at both sides of a pilaster it would pass through, on that face only",
+			function()
+				-- A wide archway on the x = 0 line from z = 0, and the z = 0 wall running +X from the junction: the pilaster
+				-- (z 0 .. 0.6) stands 0.1 proud of that wall's +Z face, so its +Z trim would run through it.
+				local door = { a = "a", b = "w", x = 0, z = 5, width = 10, kind = "open" }
+				local pilasters = OfficeShellUtils.doorCasing(door, "minX")
+				local low = pilasters[1]
+				for _, box in pilasters do
+					if box.cframe.Position.Z < low.cframe.Position.Z then
+						low = box
+					end
+				end
+				local run = { x1 = 0, z1 = 0, x2 = 20, z2 = 0 }
+				local gaps = OfficeShellUtils.boxGaps(run, low)
+				expect(#gaps).to.equal(1)
+				expect(gaps[1].side).to.equal(1)
+				local reach = OfficeConstants.WALL_THICKNESS / 2 + S.railDepth + 0.05
+				for _, box in OfficeShellUtils.wall(run, 0.5, 0.5, { gaps = gaps }) do
+					local f = footprint(box)
+					if box.material ~= "plaster" and f.minZ > 0 then
+						expect(f.minX).to.be.near(reach, 1e-6)
+					end
+				end
+				-- A run whose trim bands miss the box gets no gap.
+				expect(#OfficeShellUtils.boxGaps({ x1 = 0, z1 = 3, x2 = 20, z2 = 3 }, low)).to.equal(0)
+			end
+		)
+
+		it("cased: a real door, or an open archway wide enough for pilasters", function()
+			expect(OfficeShellUtils.cased({ a = "a", b = "b", x = 0, z = 0, width = 6, kind = "solid" })).to.equal(true)
+			expect(OfficeShellUtils.cased({ a = "a", b = "b", x = 0, z = 0, width = 6, kind = "glass" })).to.equal(true)
+			expect(OfficeShellUtils.cased({ a = "a", b = "b", x = 0, z = 0, width = 14, kind = "open" })).to.equal(true)
+			expect(OfficeShellUtils.cased({ a = "a", b = "b", x = 0, z = 0, width = 14 })).to.equal(true)
+			expect(OfficeShellUtils.cased({ a = "a", b = "b", x = 0, z = 0, width = 8, kind = "open" })).to.equal(false)
+			expect(OfficeShellUtils.cased({ a = "a", b = "b", x = 0, z = 0, width = 6 })).to.equal(false)
 		end)
 
 		it("framed glass", function()

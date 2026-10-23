@@ -145,11 +145,11 @@ local function endcap(
 			local across = edge == "minZ" or edge == "maxZ"
 			local sameLine = if horizontal then math.abs(z - door.z) < EPSILON else math.abs(x - door.x) < EPSILON
 			local offset = if horizontal then x - door.x else z - door.z
-			local real = door.kind == "solid" or door.kind == "glass"
 			if across == horizontal and sameLine and math.abs(math.abs(offset) - door.width / 2) < EPSILON then
-				-- A door end, flush. At an archway's edge where another wall meets it is a corner (its slab and trim
-				-- run on to that wall); at a real door the casing covers the end, so it stays flush.
-				if real or not meetsWall(walls, x, z, horizontal) then
+				-- A door end, flush. At a narrow archway's edge where another wall meets it is a corner (its slab and
+				-- trim run on to that wall); at a cased doorway (a real door's casing, a wide archway's pilaster) the
+				-- casing covers the end, so it stays flush.
+				if OfficeShellUtils.cased(door) or not meetsWall(walls, x, z, horizontal) then
 					return 0
 				end
 			end
@@ -192,8 +192,9 @@ local function facadesOf(layout: OfficeTypes.Layout): { OfficeTypes.Facade }
 end
 
 -- The facades of `layout` that lie on `segment`'s wall line and overlap it: each breaks the trim on its face. So do
--- its doorways' rough openings, on both faces (OfficeShellUtils.doorGaps): a real door's whole opening, an archway's
--- less the reach a corner at its edge extends and wraps by (half a wall plus the deepest trim).
+-- its doorways' rough openings, on both faces (OfficeShellUtils.doorGaps): a cased doorway's whole opening, a narrow
+-- archway's less the reach a corner at its edge extends and wraps by (half a wall plus the deepest trim). And a wide
+-- archway's pilasters stop any run's trim at their sides (OfficeShellUtils.boxGaps), on whichever line it runs.
 local function facadeGaps(layout: OfficeTypes.Layout, segment: OfficeTypes.Segment): { OfficeShellUtils.TrimGap }
 	local gaps: { OfficeShellUtils.TrimGap } = {}
 	local horizontal = segment.z1 == segment.z2
@@ -203,9 +204,16 @@ local function facadeGaps(layout: OfficeTypes.Layout, segment: OfficeTypes.Segme
 		local edge: OfficeTypes.Edge? = if room ~= nil then OfficeLayoutUtils.doorEdge(room, door) else nil
 		local line = if horizontal then door.z else door.x
 		if edge ~= nil and (edge == "minZ" or edge == "maxZ") == horizontal and math.abs(line - fixed) < EPSILON then
-			local real = door.kind == "solid" or door.kind == "glass"
-			local inset = if real then 0 else OfficeConstants.WALL_THICKNESS / 2 + CORNER_TRIM_REACH
+			local cased = OfficeShellUtils.cased(door)
+			local inset = if cased then 0 else OfficeConstants.WALL_THICKNESS / 2 + CORNER_TRIM_REACH
 			table.move(OfficeShellUtils.doorGaps(door, edge, inset), 1, 2, #gaps + 1, gaps)
+		end
+		if edge ~= nil and (door.kind or "open") == "open" then
+			for _, box in OfficeShellUtils.doorCasing(door, edge) do
+				for _, gap in OfficeShellUtils.boxGaps(segment, box) do
+					table.insert(gaps, gap)
+				end
+			end
 		end
 	end
 	for _, facade in facadesOf(layout) do
@@ -224,10 +232,10 @@ end
 
 local function buildWalls(layout: OfficeTypes.Layout, origin: CFrame, shell: Folder, hasVariant: HasVariant?)
 	local segments = OfficeLayoutUtils.mergedWallSegments(layout)
-	-- Everything a run's end can meet: the merged walls, the glass panes and the real doors' rough openings. A real
-	-- door starting at a junction is an arm there (a T): the oak casing covers the slab end, so the trim stops instead
-	-- of wrapping into the casing. An archway (open doorway) is not: its mouth corner is an L whose open side is the
-	-- outer face, so the trim wraps round the wall end that bounds the archway (no bare plaster strip).
+	-- Everything a run's end can meet: the merged walls, the glass panes and the cased doorways' rough openings. A
+	-- cased doorway (a real door, a wide archway) starting at a junction is an arm there (a T): its casing or pilaster
+	-- covers the slab end, so the trim stops instead of wrapping into it. A narrow archway is not: its mouth corner is
+	-- an L whose open side is the outer face, so the trim wraps round the wall end that bounds it.
 	local meeting: { OfficeTypes.Segment } = table.clone(segments)
 	for _, pane in OfficeLayoutUtils.panes(layout) do
 		table.insert(meeting, pane)
@@ -235,7 +243,7 @@ local function buildWalls(layout: OfficeTypes.Layout, origin: CFrame, shell: Fol
 	for _, door in layout.doors do
 		local room = OfficeLayoutUtils.room(layout, door.a)
 		local edge: OfficeTypes.Edge? = if room ~= nil then OfficeLayoutUtils.doorEdge(room, door) else nil
-		if edge ~= nil and (door.kind == "solid" or door.kind == "glass") then
+		if edge ~= nil and OfficeShellUtils.cased(door) then
 			table.insert(meeting, OfficeShellUtils.doorOpening(door, edge))
 		end
 	end
