@@ -539,7 +539,7 @@ return function()
 			expect(lights[1].Parent.Name).to.equal("LedLight")
 			expect(lights[1].Color).to.equal(Color3.fromRGB(120, 170, 255))
 			expect(lights[1].Range).to.equal(6)
-			expect(lights[1].Brightness).to.equal(0.4)
+			expect(math.abs(lights[1].Brightness - 0.4) < 1e-4).to.equal(true)
 			expect(lights[1].Shadows).to.equal(false)
 		end)
 
