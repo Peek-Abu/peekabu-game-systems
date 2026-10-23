@@ -161,13 +161,13 @@ return function()
 			end
 		end)
 
-		it("treats an open doorway starting at the junction as an arm: a T, so no wrap crosses its mouth", function()
-			-- A run along X ending at (0, 0); on the x = 0 line a wall runs to -Z and an open doorway (no merged segment)
-			-- runs from the junction to +Z.
+		it("treats a door opening handed in as an arm: a T, so no wrap crosses its mouth", function()
+			-- A run along X ending at (0, 0); on the x = 0 line a wall runs to -Z and a real door (no merged segment) runs
+			-- from the junction to +Z. (The visual system hands in real doors' openings only: an archway corner wraps.)
 			local run = { x1 = 0, z1 = 0, x2 = 20, z2 = 0 }
 			local arm = { x1 = 0, z1 = -20, x2 = 0, z2 = 0 }
 			local opening =
-				OfficeShellUtils.doorOpening({ a = "a", b = "w", x = 0, z = 3, width = 6, kind = "open" }, "minX")
+				OfficeShellUtils.doorOpening({ a = "a", b = "w", x = 0, z = 3, width = 6, kind = "solid" }, "minX")
 			expect(opening.x1).to.equal(0)
 			expect(opening.x2).to.equal(0)
 			expect(math.min(opening.z1, opening.z2)).to.equal(0)

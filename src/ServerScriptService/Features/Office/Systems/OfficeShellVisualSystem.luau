@@ -191,8 +191,10 @@ end
 
 local function buildWalls(layout: OfficeTypes.Layout, origin: CFrame, shell: Folder, hasVariant: HasVariant?)
 	local segments = OfficeLayoutUtils.mergedWallSegments(layout)
-	-- Everything a run's end can meet: the merged walls, the glass panes and the doorways' rough openings (an opening
-	-- that starts at a junction is an arm there: a T, never an L whose wrap would cross the doorway's mouth).
+	-- Everything a run's end can meet: the merged walls, the glass panes and the real doors' rough openings. A real
+	-- door starting at a junction is an arm there (a T): the oak casing covers the slab end, so the trim stops instead
+	-- of wrapping into the casing. An archway (open doorway) is not: its mouth corner is an L whose open side is the
+	-- outer face, so the trim wraps round the wall end that bounds the archway (no bare plaster strip).
 	local meeting: { OfficeTypes.Segment } = table.clone(segments)
 	for _, pane in OfficeLayoutUtils.panes(layout) do
 		table.insert(meeting, pane)
@@ -200,7 +202,7 @@ local function buildWalls(layout: OfficeTypes.Layout, origin: CFrame, shell: Fol
 	for _, door in layout.doors do
 		local room = OfficeLayoutUtils.room(layout, door.a)
 		local edge: OfficeTypes.Edge? = if room ~= nil then OfficeLayoutUtils.doorEdge(room, door) else nil
-		if edge ~= nil then
+		if edge ~= nil and (door.kind == "solid" or door.kind == "glass") then
 			table.insert(meeting, OfficeShellUtils.doorOpening(door, edge))
 		end
 	end

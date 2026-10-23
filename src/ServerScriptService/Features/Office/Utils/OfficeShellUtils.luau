@@ -161,7 +161,7 @@ end
 --[=[
 	Which face of a wall run ending at (x, z) is the OUTSIDE of an L corner: +1 (the +Z / +X face) or -1, nil when no
 	wall meets the end or walls meet it on both sides (a T-junction or a cross: both faces are inside). `walls` are
-	every wall piece (merged segments and glass panes) and every doorway's rough opening (`doorOpening`: an opening
+	every wall piece (merged segments and glass panes) and every real door's rough opening (`doorOpening`: an opening
 	that starts at the end is an arm, as a wall would be); `horizontal` is the run's direction.
 ]=]
 function OfficeShellUtils.outerSide(walls: { Segment }, x: number, z: number, horizontal: boolean): number?
@@ -264,8 +264,9 @@ end
 
 --[=[
 	A doorway's rough opening on `edge` of its room, as a wall-line segment (its width along the wall). Handed to
-	`outerSide` with the walls, an opening that starts at a junction counts as an arm there, so a T whose arm is a
-	doorway is never read as an L and no corner wrap crosses the doorway's mouth.
+	`outerSide` with the walls, an opening that starts at a junction counts as an arm there, so no corner wrap crosses
+	it. OfficeShellVisualSystem hands in real doors only (their casing covers the slab end); an archway's mouth
+	corner is left an L, so its trim wraps round the wall end.
 ]=]
 function OfficeShellUtils.doorOpening(door: Door, edge: Edge): Segment
 	if edge == "minZ" or edge == "maxZ" then
