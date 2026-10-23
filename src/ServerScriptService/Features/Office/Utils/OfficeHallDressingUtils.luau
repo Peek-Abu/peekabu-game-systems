@@ -163,6 +163,8 @@ type State = {
 	stands: { Stand },
 	-- Every wall prop and collidable footprint along each wall, as { from, to }.
 	hung: { [Edge]: { { number } } },
+	-- The art frames among them, which a collidable prop never stands under.
+	frames: { [Edge]: { { number } } },
 	collidable: boolean,
 	-- Hall width (short side) and the clear width a prop must leave across it; nil in a junction.
 	width: number?,
@@ -205,6 +207,11 @@ end
 local function hang(state: State, edge: Edge, art: string, along: number)
 	local half = sizeOf(art).X / 2
 	table.insert(hungOn(state, edge), { along - half, along + half })
+	if art == "artFrame" then
+		local frames = state.frames[edge] or {}
+		state.frames[edge] = frames
+		table.insert(frames, { along - half, along + half })
+	end
 	add(state, marker(state.room, state.next, art, edge, along, 0))
 end
 
@@ -225,6 +232,12 @@ local function canStand(state: State, edge: Edge, art: string, along: number): b
 	end
 	for _, opening in state.rects do
 		if closer(rect, opening, OPENING_CLEAR) then
+			return false
+		end
+	end
+	local frames: { { number } } = state.frames[edge] or {}
+	for _, frame in frames do
+		if along - half < frame[2] and frame[1] < along + half then
 			return false
 		end
 	end
@@ -374,6 +387,7 @@ function OfficeHallDressingUtils.dress(room: Room, layout: Layout, rng: Random, 
 		patrols = {},
 		stands = {},
 		hung = {},
+		frames = {},
 		collidable = not entrance(room, layout),
 		width = if junction == true then nil else math.min(room.maxX - room.minX, room.maxZ - room.minZ),
 		clear = NARROW_CLEAR,

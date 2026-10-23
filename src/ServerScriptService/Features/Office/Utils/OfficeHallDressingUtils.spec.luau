@@ -236,7 +236,7 @@ return function()
 			expect(a ~= b).to.equal(true)
 		end)
 
-		it("dresses a bare hall without touching a door", function()
+		it("dresses a bare hall with sized props that belong to it", function()
 			local room = { id = "h1", name = "h", zone = "hallway", minX = 0, maxX = 60, minZ = 0, maxZ = 10 }
 			local other = { id = "k1", name = "k", minX = 20, maxX = 40, minZ = 10, maxZ = 30 }
 			local layout = {
@@ -251,6 +251,76 @@ return function()
 				expect(marker.kind).to.equal("prop")
 				expect(marker.room).to.equal("h1")
 				expect(Constants.PROP_SIZES[marker.art] ~= nil).to.equal(true)
+			end
+		end)
+
+		it("keeps collidables on opposite walls 9 apart along the hall", function()
+			local pairsChecked = 0
+			for seed = 1, 30 do
+				local room = { id = "h1", name = "h", zone = "hallway", minX = 0, maxX = 120, minZ = 0, maxZ = 14 }
+				local layout = { rooms = { room }, doors = {}, markers = {}, facades = {} }
+				local south, north = {}, {}
+				for _, marker in Dressing.dress(room, layout, Random.new(seed)) do
+					if COLLIDABLE[marker.art] then
+						table.insert(if marker.z < 7 then south else north, marker)
+					end
+				end
+				for _, a in south do
+					for _, b in north do
+						pairsChecked += 1
+						expect(math.abs(a.x - b.x) >= 9 - 0.001).to.equal(true)
+					end
+				end
+			end
+			expect(pairsChecked > 0).to.equal(true)
+		end)
+
+		it("puts no collidable at the bay or lobby entrance", function()
+			local function dressed(neighbour)
+				local room = { id = "j1", name = "j", zone = "hallway", minX = 0, maxX = 20, minZ = 0, maxZ = 20 }
+				local layout = {
+					rooms = { room, neighbour },
+					doors = { { a = "j1", b = neighbour.id, x = 10, z = 20, width = 6, kind = "open" } },
+					markers = {},
+					facades = {},
+				}
+				local count, props = 0, 0
+				for seed = 1, 10 do
+					for _, marker in Dressing.dress(room, layout, Random.new(seed), true) do
+						props += 1
+						count += if COLLIDABLE[marker.art] then 1 else 0
+					end
+				end
+				return count, props
+			end
+			local bayCount, bayProps = dressed({ id = "bay", name = "b", minX = 0, maxX = 20, minZ = 20, maxZ = 40 })
+			expect(bayCount).to.equal(0)
+			expect(bayProps > 0).to.equal(true)
+			local lobbyCount =
+				dressed({ id = "r1", name = "r", roomType = "reception", minX = 0, maxX = 20, minZ = 20, maxZ = 40 })
+			expect(lobbyCount).to.equal(0)
+			-- Any other neighbour leaves the junction its corner pieces.
+			local otherCount =
+				dressed({ id = "k1", name = "k", roomType = "pods", minX = 0, maxX = 20, minZ = 20, maxZ = 40 })
+			expect(otherCount > 0).to.equal(true)
+		end)
+
+		it("never stands a collidable under an art frame", function()
+			for seed = 1, SEEDS do
+				local props = hallProps(layoutFor(seed))
+				for _, a in props do
+					if COLLIDABLE[a.marker.art] then
+						for _, b in props do
+							if b.marker.art == "artFrame" and b.room == a.room then
+								local ax, az = extents(a.marker)
+								local bx, bz = extents(b.marker)
+								local overlap = math.abs(a.marker.x - b.marker.x) < ax + bx
+									and math.abs(a.marker.z - b.marker.z) < az + bz
+								expect(overlap).to.equal(false)
+							end
+						end
+					end
+				end
 			end
 		end)
 
