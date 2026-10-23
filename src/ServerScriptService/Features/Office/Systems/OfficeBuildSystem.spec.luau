@@ -155,8 +155,13 @@ return function()
 			for _, name in { "Shelf", "KitchenCounter", "OfficePlant", "Corkboard" } do
 				local part = furniture:FindFirstChild(name)
 				expect(part ~= nil).to.equal(true)
-				expect(part.CanCollide).to.equal(name == "Shelf" or name == "KitchenCounter")
-				expect(part.CanQuery).to.equal(name == "Shelf" or name == "KitchenCounter")
+				-- A standing board is solid and queryable like a shelf; only the plant is not.
+				expect(part.CanCollide).to.equal(name ~= "OfficePlant")
+				expect(part.CanQuery).to.equal(name ~= "OfficePlant")
+				-- Only wall-backed pieces push their art to the proxy's back face; a standing board stays centred.
+				expect(part:GetAttribute("ArtWallMounted")).to.equal(
+					if name == "Shelf" or name == "KitchenCounter" then true else nil
+				)
 				expect(CollectionService:HasTag(part, Interaction.TAG)).to.equal(false)
 			end
 		end)

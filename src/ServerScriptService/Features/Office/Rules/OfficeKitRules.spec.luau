@@ -163,9 +163,10 @@ return function()
 			local ok, errors = OfficeKitRules.check(kit)
 			expect(errors[1]).to.equal(nil)
 			expect(ok).to.equal(true)
-			kit.markers[#kit.markers].x = 26
+			-- The rug (the marker before the pile) moved to x 26 reaches 19..33, through the right wall (inner face 29.5).
+			kit.markers[#kit.markers - 1].x = 26
 			local _, outside = OfficeKitRules.check(kit)
-			expect(hasError(outside, "outside the walls")).to.equal(true)
+			expect(hasError(outside, "prop 1 at (26, 10) is outside the walls")).to.equal(true)
 		end)
 
 		it("flags a prop with no art or an unsized one", function()

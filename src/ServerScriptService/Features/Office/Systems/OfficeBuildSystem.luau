@@ -235,11 +235,16 @@ function OfficeBuildSystem.build(
 				OfficeConstants.DESK_COLOR,
 				furniture
 			)
-			part.CanCollide = marker.kind == "shelf" or marker.kind == "counter"
+			-- A standing board is floor furniture like a shelf: solid and queryable.
+			part.CanCollide = marker.kind == "shelf" or marker.kind == "counter" or marker.kind == "board"
 			part.CanQuery = part.CanCollide
 			part.CanTouch = false
 			part:SetAttribute("OfficeMarkerId", marker.id)
-			part:SetAttribute("ArtWallMounted", marker.kind ~= "plant")
+			-- Shelves and counters back onto a wall (ArtVisualSystem pushes their art to the proxy's back face); a plant
+			-- and a free-standing board keep their art centred.
+			if marker.kind == "shelf" or marker.kind == "counter" then
+				part:SetAttribute("ArtWallMounted", true)
+			end
 			local roomType = OfficeArtKeyUtils.roomType(OfficeLayoutUtils.room(layout, marker.room))
 			if marker.kind == "plant" then
 				local visual = OfficeArtKeyUtils.attachFirst(
