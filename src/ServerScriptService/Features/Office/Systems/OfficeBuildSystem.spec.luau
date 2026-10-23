@@ -212,6 +212,30 @@ return function()
 				true
 			)
 		end)
+
+		it("turns the yard truck's bed by its yaw at the truck centre, its paperwork following the bed", function()
+			local TruckVisualSystem =
+				require(game:GetService("ServerScriptService").Features.Depot.Systems.DepotTruckVisualSystem)
+			local Generation = require(Server.Utils.OfficeLayoutGenerationUtils)
+			local layout = Generation.generate(Layout, 3)
+			local built = build(layout)
+			local look = built.bed.CFrame.LookVector
+			expect((look - Vector3.new(0, 0, 1)).Magnitude < 1e-3).to.equal(true)
+			local truck = layout.truck
+			local centre =
+				Vector3.new((truck.minX + truck.maxX) / 2, Constants.BED_HEIGHT / 2, (truck.minZ + truck.maxZ) / 2)
+			expect((built.bed.Position - CFrame.new(50000, 0, 0):PointToWorldSpace(centre)).Magnitude < 0.01).to.equal(
+				true
+			)
+			local clockFrame = TruckVisualSystem.paperwork(built.bed, "clock")
+			expect((built.clock.Position - clockFrame.Position).Magnitude < 0.01).to.equal(true)
+			expect(built.clock.CFrame.LookVector:Dot(clockFrame.LookVector) > 0.999).to.equal(true)
+		end)
+
+		it("keeps the authored layout's bed at yaw 0", function()
+			local built = build(Layout)
+			expect((built.bed.CFrame.LookVector - Vector3.new(0, 0, -1)).Magnitude < 1e-3).to.equal(true)
+		end)
 	end)
 	describe("narrow doorway trim", function()
 		local function connectedRooms(vertical)
@@ -604,6 +628,60 @@ return function()
 			end
 			expect(count).to.equal(1)
 			built.doors.destroy()
+		end)
+
+		it("facadeLeaves builds a facade's closed flush leaves, dressed but untagged, for a caller's prompt", function()
+			template("building", "doorLeaf")
+			local DoorSystem = require(Server.Systems.OfficeDoorSystem)
+			local layout = twoRooms("open", nil)
+			local room = layout.rooms[1]
+			local parent = Instance.new("Folder")
+			local origin = CFrame.new(50000, 0, 0)
+			parent.Parent = workspace
+			local stairwell = DoorSystem.facadeLeaves(
+				{ room = "a", x = 0, z = 5, width = 6, kind = "stairwell" },
+				room,
+				origin,
+				parent,
+				art,
+				"Exit"
+			)
+			expect(#stairwell).to.equal(1)
+			local leaf = stairwell[1]
+			expect(leaf.Name).to.equal("Exit")
+			expect(leaf.Parent).to.equal(parent)
+			expect(math.abs(leaf.Size.X - (6 - 2 * Constants.SHELL.casing)) < 1e-3).to.equal(true)
+			expect(leaf.Material).to.equal(Enum.Material.WoodPlanks)
+			expect(leaf.CanCollide).to.equal(true)
+			expect(CollectionService:HasTag(leaf, Interaction.TAG)).to.equal(false)
+			expect(leaf:GetAttribute("OfficeFacade")).to.equal(nil)
+			-- Built 50000 studs out: float32 positions are good to ~0.005.
+			local at = origin:PointToObjectSpace(leaf.Position)
+			expect(math.abs(at.X - (Constants.WALL_THICKNESS / 2 + Constants.DOOR_LEAF_THICKNESS / 2)) < 0.01).to.equal(
+				true
+			)
+			expect(math.abs(at.Z - 5) < 0.01).to.equal(true)
+			local entrance = DoorSystem.facadeLeaves(
+				{ room = "a", x = 0, z = 5, width = 12, kind = "entrance" },
+				room,
+				origin,
+				parent,
+				art,
+				"Exit"
+			)
+			expect(#entrance).to.equal(2)
+			expect(entrance[1].Material).to.equal(Enum.Material.Glass)
+			expect(
+				#DoorSystem.facadeLeaves(
+					{ room = "a", x = 5, z = 5, width = 6, kind = "stairwell" },
+					room,
+					origin,
+					parent,
+					art,
+					"Exit"
+				)
+			).to.equal(0)
+			parent:Destroy()
 		end)
 
 		it("gives an elevator facade no leaf and no prompt: the elevator art is its own front", function()

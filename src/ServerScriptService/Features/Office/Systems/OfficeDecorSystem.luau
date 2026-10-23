@@ -92,7 +92,7 @@ local function accentLights(visual: Instance)
 	end
 end
 
-local function exitSign(at: CFrame, parent: Instance, art: ArtVisualSystem.Controller, roomType: string?)
+local function exitSign(at: CFrame, parent: Instance, art: ArtVisualSystem.Controller, roomType: string?): Part
 	local sign = part("ExitSign", OfficeDecorConstants.EXIT_SIGN_SIZE, at, OfficeDecorConstants.EXIT_COLOR, parent)
 	sign.Material = Enum.Material.Neon
 	OfficeArtKeyUtils.attachFirst(art, sign, "building", OfficeArtKeyUtils.candidates("exitSign", nil, roomType))
@@ -118,6 +118,7 @@ local function exitSign(at: CFrame, parent: Instance, art: ArtVisualSystem.Contr
 		OfficeDecorConstants.EXIT_LIGHT_RANGE,
 		OfficeDecorConstants.EXIT_LIGHT_BRIGHTNESS
 	)
+	return sign
 end
 
 local function monitor(deskTop: CFrame, parent: Instance, art: ArtVisualSystem.Controller, roomType: string?)
@@ -396,6 +397,13 @@ local function chairAt(layout: OfficeTypes.Layout, desk: OfficeTypes.Marker, ori
 end
 
 local OfficeDecorSystem = {}
+
+--[=[
+	Builds one lit EXIT sign (the kit's `exitSign` art for `roomType`, a neon fallback reading EXIT on both faces, and
+	its glow) at `at` under `parent`, and returns it. The decor hangs one over each start-room door; OfficeGroundsSystem
+	hangs one over each entrance's inside exit.
+]=]
+OfficeDecorSystem.exitSign = exitSign
 
 --[=[
 	Builds the night decor for `layout` at `origin` into one folder under `parent`, and returns it.

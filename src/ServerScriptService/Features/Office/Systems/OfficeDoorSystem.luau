@@ -152,6 +152,38 @@ local function dress(art: ArtVisualSystem.Controller, leaf: BasePart, glass: boo
 	return visual ~= nil and not glass
 end
 
+--[=[
+	Builds the closed, flush leaves of `facade` on the room side of its wall in `room`, under `parent`, laid out
+	relative to `origin` (OfficeDoorUtils.facadeFrame and facadeLeaves): an entrance is a pair of glass leaves of half
+	its width side by side, each hinged at its outer edge (the template's hinge is its local +X, so the leaf on the
+	frame's -X side is turned half way); any other kind is one solid leaf. Each is dressed with the kit's door art and
+	named `name` (an entrance's `name_1`, `name_2`), but untagged: the caller gives them their prompt. Empty for an
+	elevator (its own front) or a facade on none of the room's walls. Also builds an entrance's inside exit
+	(OfficeGroundsSystem).
+]=]
+function OfficeDoorSystem.facadeLeaves(
+	facade: OfficeTypes.Facade,
+	room: OfficeTypes.Room,
+	origin: CFrame,
+	parent: Instance,
+	art: ArtVisualSystem.Controller,
+	name: string
+): { BasePart }
+	local leaves: { BasePart } = {}
+	local frame = if facade.kind ~= "elevator" then OfficeDoorUtils.facadeFrame(facade, room, origin) else nil
+	if frame == nil then
+		return leaves
+	end
+	local glass = facade.kind == "entrance"
+	for leafIndex, spec in OfficeDoorUtils.facadeLeaves(facade) do
+		local leaf = leafPart(if glass then `{name}_{leafIndex}` else name, spec.size, glass, parent)
+		leaf.CFrame = frame * CFrame.new(spec.offset) * CFrame.Angles(0, if spec.side < 0 then math.pi else 0, 0)
+		dress(art, leaf, glass)
+		table.insert(leaves, leaf)
+	end
+	return leaves
+end
+
 local function stopTween(record: Record)
 	local tween = record.tween
 	if tween ~= nil then
@@ -285,29 +317,13 @@ function OfficeDoorSystem.build(
 		end
 	end
 
-	-- Facades: locked fake doors on unbroken walls (closed, flush, locked: tagged FACADE_KIND, they only rattle). An entrance is a double glass
-	-- door: two leaves of half its width side by side, each hinged at its outer edge (the template's hinge is its local
-	-- +X, so the leaf on the frame's -X side is turned half way); a stairwell is one solid leaf.
+	-- Facades: locked fake doors on unbroken walls (closed, flush, locked: tagged FACADE_KIND, they only rattle), their
+	-- leaves built by facadeLeaves. An elevator is its own front (OfficeDecorSystem): no leaf, no prompt.
 	local facades: { OfficeTypes.Facade } = layout.facades or {}
 	for index, facade in facades do
 		local room = OfficeLayoutUtils.room(layout, facade.room)
-		-- An elevator is its own front (OfficeDecorSystem): no leaf, no prompt.
-		local frame = if room ~= nil and facade.kind ~= "elevator"
-			then OfficeDoorUtils.facadeFrame(facade, room, origin)
-			else nil
-		if frame ~= nil then
-			local entrance = facade.kind == "entrance"
-			for leafIndex, spec in OfficeDoorUtils.facadeLeaves(facade) do
-				local leaf = leafPart(
-					if entrance then `Facade{index}_{leafIndex}` else `Facade{index}`,
-					spec.size,
-					entrance,
-					folder
-				)
-				leaf.CFrame = frame
-					* CFrame.new(spec.offset)
-					* CFrame.Angles(0, if spec.side < 0 then math.pi else 0, 0)
-				dress(art, leaf, entrance)
+		if room ~= nil then
+			for _, leaf in OfficeDoorSystem.facadeLeaves(facade, room, origin, folder, art, `Facade{index}`) do
 				leaf:SetAttribute("OfficeFacade", facade.kind)
 				leaf:SetAttribute(InteractionConstants.KIND_ATTRIBUTE, OfficeConstants.FACADE_KIND)
 				CollectionService:AddTag(leaf, InteractionConstants.TAG)

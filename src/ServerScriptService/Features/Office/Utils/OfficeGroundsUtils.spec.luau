@@ -153,6 +153,37 @@ return function()
 		end)
 	end)
 
+	describe("exitFacades", function()
+		it(
+			"is each entrance's exit as a facade on its room: a solid exit one leaf, a glass exit a double door",
+			function()
+				local layout = {
+					rooms = { BAY, RECEPTION },
+					entrances = {
+						OfficeGroundsUtils.dockEntrance(BAY),
+						OfficeGroundsUtils.lobbyEntrance(RECEPTION, 152, 12),
+					},
+				}
+				local facades = OfficeGroundsUtils.exitFacades(layout)
+				expect(#facades).to.equal(2)
+				expect(facades[1].room).to.equal("bay")
+				expect(facades[1].x).to.equal(168)
+				expect(facades[1].z).to.equal(-52)
+				expect(facades[1].width).to.equal(8)
+				expect(facades[1].kind).to.equal("stairwell")
+				expect(facades[2].room).to.equal("reception1")
+				expect(facades[2].x).to.equal(-38)
+				expect(facades[2].z).to.equal(152)
+				expect(facades[2].width).to.equal(12)
+				expect(facades[2].kind).to.equal("entrance")
+			end
+		)
+
+		it("is empty without entrances", function()
+			expect(#OfficeGroundsUtils.exitFacades({ rooms = { BAY } })).to.equal(0)
+		end)
+	end)
+
 	describe("problems", function()
 		it("is empty without grounds and for the real outside", function()
 			expect(#OfficeGroundsUtils.problems({ rooms = { BAY }, truck = OfficeGroundsUtils.truck() })).to.equal(0)

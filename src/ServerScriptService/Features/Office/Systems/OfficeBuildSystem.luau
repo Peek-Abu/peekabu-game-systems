@@ -15,6 +15,9 @@
 	accent's point light (OfficeLightingUtils.accentFor). A board stands on the floor on its own legs.
 	Doors: OfficeDoorSystem adds a real leaf to each solid or glass door plus a locked flush leaf on every facade
 	(`Built.doors`, destroyed with the office).
+	Outside (generated maps): the truck's bed is turned by `truck.yaw` (its art and paperwork follow the bed), and
+	OfficeGroundsSystem adds the Outdoors safe volumes, the entrances' outside door hit boxes and inside exits
+	(`Built.outside`).
 
 	Instance shell; specs cover the instance shell, and OfficeLayoutRules validates the layout.
 
@@ -42,6 +45,7 @@ local OfficeArtKeyUtils = require(OfficeServer.Utils.OfficeArtKeyUtils)
 local OfficeLoadingBayUtils = require(OfficeServer.Utils.OfficeLoadingBayUtils)
 local OfficeLightingUtils = require(OfficeServer.Utils.OfficeLightingUtils)
 local OfficeDoorSystem = require(script.Parent.OfficeDoorSystem)
+local OfficeGroundsSystem = require(script.Parent.OfficeGroundsSystem)
 
 local log = Logger.new("OfficeBuildSystem")
 
@@ -52,6 +56,8 @@ export type Built = {
 	overtime: BasePart,
 	searchables: { [string]: BasePart },
 	doors: OfficeDoorSystem.DoorSet,
+	-- The teleport entrances' inside exits and outside doors (empty without grounds).
+	outside: OfficeGroundsSystem.Built,
 }
 
 local function block(name: string, size: Vector3, cframe: CFrame, color: Color3, parent: Instance): Part
@@ -146,7 +152,9 @@ function OfficeBuildSystem.build(
 	local bed = block(
 		"TruckBed",
 		Vector3.new(bedWidth, bedHeight, bedDepth),
-		origin * CFrame.new(truck.minX + bedWidth / 2, bedHeight / 2, truck.minZ + bedDepth / 2),
+		origin
+			* CFrame.new(truck.minX + bedWidth / 2, bedHeight / 2, truck.minZ + bedDepth / 2)
+			* CFrame.Angles(0, truck.yaw or 0, 0),
 		OfficeConstants.BED_COLOR,
 		truckFolder
 	)
@@ -312,6 +320,7 @@ function OfficeBuildSystem.build(
 	end
 
 	local doors = OfficeDoorSystem.build(layout, origin, model, art)
+	local outside = OfficeGroundsSystem.build(layout, origin, model, art)
 
 	model.Parent = Workspace
 	return {
@@ -321,6 +330,7 @@ function OfficeBuildSystem.build(
 		overtime = overtime,
 		searchables = searchables,
 		doors = doors,
+		outside = outside,
 	}
 end
 

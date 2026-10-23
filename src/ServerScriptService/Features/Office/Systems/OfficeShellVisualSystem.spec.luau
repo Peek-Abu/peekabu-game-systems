@@ -157,6 +157,38 @@ return function()
 			expect(innerMin).to.be.near(-0.3, 1e-3)
 		end)
 
+		it("breaks the trim at an entrance's exit and cases it, like a facade", function()
+			model = Instance.new("Model")
+			local plan = layout()
+			plan.entrances = {
+				{
+					id = "dock",
+					ground = "yard",
+					outside = { x = 0, z = -100, yaw = 0 },
+					exit = { a = "a", b = "dock", x = 0, z = 10, width = 6, kind = "solid" },
+				},
+			}
+			Shell.build(plan, ORIGIN, model, art, never)
+			local onFace = 0
+			for _, part in model.Shell:GetChildren() do
+				if
+					(part.Name == "Wainscot" or part.Name == "Rail" or part.Name == "Skirt")
+					and math.abs(part.Position.X - ORIGIN.X) < 2
+					and part.Size.Z > part.Size.X
+				then
+					local localX = part.Position.X - ORIGIN.X
+					local z0, z1 = part.Position.Z - part.Size.Z / 2, part.Position.Z + part.Size.Z / 2
+					if localX > 0 and z0 < 13 - 1e-3 and z1 > 7 + 1e-3 then
+						onFace += 1
+					end
+				end
+			end
+			expect(onFace).to.equal(0)
+			-- The solid door's casing plus the exit's.
+			expect(countNamed(model, "Jamb")).to.equal(4)
+			expect(countNamed(model, "Head")).to.equal(2)
+		end)
+
 		describe("a corner whose other side is a doorway", function()
 			-- The z = 0 wall between A and B ends at x = 0. On the x = 0 line a wall runs down (B | W) and a doorway from A
 			-- to W runs up from the junction (z 0..6), with no merged segment there: an archway's mouth corner (seed 9's

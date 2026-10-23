@@ -28,6 +28,7 @@ local OfficeServer = ServerScriptService.Features.Office
 local OfficeConstants = require(OfficeServer.Data.OfficeConstants)
 local OfficeTypes = require(OfficeServer.Data.OfficeTypes)
 local OfficeArtKeyUtils = require(OfficeServer.Utils.OfficeArtKeyUtils)
+local OfficeGroundsUtils = require(OfficeServer.Utils.OfficeGroundsUtils)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
 local OfficeLightingUtils = require(OfficeServer.Utils.OfficeLightingUtils)
 local OfficeShellUtils = require(OfficeServer.Utils.OfficeShellUtils)
@@ -186,8 +187,13 @@ local function lintel(door: OfficeTypes.Door, horizontal: boolean): OfficeTypes.
 	}
 end
 
+-- The layout's facades, plus each entrance's exit as one (OfficeGroundsUtils.exitFacades): an exit breaks the trim
+-- and is cased exactly like a facade.
 local function facadesOf(layout: OfficeTypes.Layout): { OfficeTypes.Facade }
-	local facades: { OfficeTypes.Facade } = layout.facades or {}
+	local facades: { OfficeTypes.Facade } = table.clone(layout.facades or {})
+	for _, exit in OfficeGroundsUtils.exitFacades(layout) do
+		table.insert(facades, exit)
+	end
 	return facades
 end
 

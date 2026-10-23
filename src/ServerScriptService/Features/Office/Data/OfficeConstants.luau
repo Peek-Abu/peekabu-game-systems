@@ -326,6 +326,10 @@ return table.freeze({
 	-- DOOR_RATTLE_SECONDS when a player tries it.
 	DOOR_KIND = "officeDoor",
 	FACADE_KIND = "officeFacade",
+	-- The teleport entrances (OfficeGroundsSystem): an outside door's hit box takes a player in, an inside exit's
+	-- leaf takes them out. Each carries the attribute EntranceId.
+	ENTER_KIND = "OfficeEnter",
+	LEAVE_KIND = "OfficeLeave",
 	DOOR_PATH_LABEL = "OfficeDoor",
 	DOOR_HEIGHT = 9.4,
 	DOOR_LEAF_THICKNESS = 0.3,

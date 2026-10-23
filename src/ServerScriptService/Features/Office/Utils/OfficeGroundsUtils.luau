@@ -9,6 +9,7 @@
 	- `dockEntrance(bay)` / `lobbyEntrance(reception, z, width)`: an entrance and its inside doorway.
 	- `outsideFrame(entrance)` / `insideFrame(entrance, room)`: where a player arrives, outside or in.
 	- `groundAt(grounds, x, z)`: the ground a point stands on.
+	- `exitFacades(layout)`: each entrance's exit as a facade on its room (trim broken, cased and leafed like one).
 	- `arrivalMarkers(truck)` / `bayShelves(bay)`: the crew's `yard.spawn.N` markers, and the bay's two wall shelves.
 	- `problems(layout)`: what is wrong with a layout's grounds, truck and entrances (OfficeLayoutRules).
 
@@ -165,6 +166,27 @@ function OfficeGroundsUtils.bayShelves(bay: OfficeTypes.Room): { OfficeTypes.Mar
 	}
 end
 
+--[=[
+	Each entrance's exit as a facade on its room (`exit.a`), so the shell breaks the trim at it and cases it, and its
+	leaves are a facade's (OfficeDoorSystem.facadeLeaves): a solid exit takes the stairwell's one solid leaf, a glass
+	exit the entrance's double glass door. Empty when the layout has no entrances.
+]=]
+function OfficeGroundsUtils.exitFacades(layout: OfficeTypes.Layout): { OfficeTypes.Facade }
+	local facades: { OfficeTypes.Facade } = {}
+	local entrances: { OfficeTypes.Entrance } = layout.entrances or {}
+	for _, entrance in entrances do
+		local exit = entrance.exit
+		table.insert(facades, {
+			room = exit.a,
+			x = exit.x,
+			z = exit.z,
+			width = exit.width,
+			kind = if exit.kind == "glass" then "entrance" else "stairwell",
+		})
+	end
+	return facades
+end
+
 -- Whether the entrance's exit sits on one of `room`'s walls, its whole width within the wall's span.
 local function exitOnWall(room: OfficeTypes.Room, exit: OfficeTypes.Door): boolean
 	local half = exit.width / 2
@@ -212,7 +234,8 @@ function OfficeGroundsUtils.problems(layout: OfficeTypes.Layout): { string }
 			end
 		end
 	end
-	for _, entrance in layout.entrances or {} do
+	local entrances: { OfficeTypes.Entrance } = layout.entrances or {}
+	for _, entrance in entrances do
 		local room: OfficeTypes.Room? = nil
 		for _, candidate in layout.rooms do
 			if candidate.id == entrance.exit.a then

@@ -12,6 +12,10 @@
 	M2: Harlow's route, rest point, the loading bay he may walk (`loadingBay`) and the one safe place, the truck's box
 	(`safeZone`).
 
+	Outside (generated maps): `outdoors` is the grounds' world boxes (the Outdoors safe volumes), `entrance(id)` an
+	entrance's world outside and inside frames, and `whereIs` names the ground a point outside stands on. `safeZone`
+	stays the truck's box: clocking out "aboard" still means in the truck.
+
 	Doors: OfficeDoorSystem.listen registers the door prompt (OfficeConstants.DOOR_KIND, "Open / close"); it toggles the door on interact
 	(a player's accepted close slams: a "door" noise, DOOR_SLAM_RADIUS; a close with Harlow about is refused), and
 	`openDoorsNear` lets Harlow open the closed doors he is walking through (on his line of travel: within DOOR_REACH,
@@ -58,6 +62,7 @@ local OfficeSpawnRules = require(OfficeServer.Rules.OfficeSpawnRules)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
 local OfficeLayoutGenerationUtils = require(OfficeServer.Utils.OfficeLayoutGenerationUtils)
 local OfficeLoadingBayUtils = require(OfficeServer.Utils.OfficeLoadingBayUtils)
+local OfficeGroundsUtils = require(OfficeServer.Utils.OfficeGroundsUtils)
 local OfficeFurniturePlacementUtils = require(OfficeServer.Utils.OfficeFurniturePlacementUtils)
 local OfficeSurfaceUtils = require(OfficeServer.Utils.OfficeSurfaceUtils)
 local OfficeSpawnUtils = require(OfficeServer.Utils.OfficeSpawnUtils)
@@ -258,6 +263,8 @@ export type OfficeServiceServer = {
 	safeZone: (self: OfficeServiceServer) -> (Vector3, Vector3),
 	loadingBay: (self: OfficeServiceServer) -> (Vector3, Vector3),
 	whereIs: (self: OfficeServiceServer, position: Vector3) -> (string?, number?, number?),
+	outdoors: (self: OfficeServiceServer) -> { { min: Vector3, max: Vector3 } },
+	entrance: (self: OfficeServiceServer, id: OfficeTypes.EntranceId) -> (CFrame?, CFrame?),
 	truckBed: (self: OfficeServiceServer) -> BasePart?,
 	overtimeSheet: (self: OfficeServiceServer) -> BasePart?,
 	openDoorsNear: (self: OfficeServiceServer, position: Vector3, heading: Vector3?) -> boolean,
@@ -522,15 +529,53 @@ local OfficeServiceServer: OfficeServiceServer = {
 
 	--[=[
 		The room a world position stands in: its name, how many rooms from the loading bay, and its camera number (its
-		index in the layout). Nothing outside the office.
+		index in the layout). On a ground outside (the yard, the car park): its name, depth 0 and no camera. Nothing
+		elsewhere.
 	]=]
 	whereIs = function(_self, position)
 		local localPoint = OfficeConstants.ORIGIN:PointToObjectSpace(position)
 		local room, index = OfficeLayoutUtils.roomAt(LAYOUT, localPoint.X, localPoint.Z)
 		if room == nil then
+			local ground = OfficeGroundsUtils.groundAt(LAYOUT.grounds or {}, localPoint.X, localPoint.Z)
+			if ground ~= nil then
+				return ground.name, 0, nil
+			end
 			return nil, nil, nil
 		end
 		return room.name, depths[room.id], index
+	end,
+
+	--[=[
+		The outside's grounds in the world, min and max corners, floor to OUTSIDE.VOLUME_HEIGHT (the Outdoors safe
+		volumes). Empty when the layout has no grounds (the boot layout).
+	]=]
+	outdoors = function(_self)
+		local boxes: { { min: Vector3, max: Vector3 } } = {}
+		local grounds: { OfficeTypes.Room } = LAYOUT.grounds or {}
+		for _, ground in grounds do
+			local low = OfficeConstants.ORIGIN:PointToWorldSpace(Vector3.new(ground.minX, 0, ground.minZ))
+			local high = OfficeConstants.ORIGIN:PointToWorldSpace(
+				Vector3.new(ground.maxX, OfficeConstants.OUTSIDE.VOLUME_HEIGHT, ground.maxZ)
+			)
+			table.insert(boxes, { min = low:Min(high), max = low:Max(high) })
+		end
+		return boxes
+	end,
+
+	--[=[
+		Where entrance `id` sets a player down, in the world: outside (OfficeGroundsUtils.outsideFrame) and inside, in
+		its exit's room (insideFrame). Nil, nil when the layout has no such entrance (or its exit's room is missing).
+	]=]
+	entrance = function(_self, id)
+		local entrances: { OfficeTypes.Entrance } = LAYOUT.entrances or {}
+		for _, entrance in entrances do
+			local room = OfficeLayoutUtils.room(LAYOUT, entrance.exit.a)
+			if entrance.id == id and room ~= nil then
+				return OfficeConstants.ORIGIN * OfficeGroundsUtils.outsideFrame(entrance),
+					OfficeConstants.ORIGIN * OfficeGroundsUtils.insideFrame(entrance, room)
+			end
+		end
+		return nil, nil
 	end,
 
 	--[=[
