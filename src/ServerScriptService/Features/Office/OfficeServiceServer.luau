@@ -22,6 +22,8 @@
 	still standing (false after `reset`). Shift's transit calls `beginShift` before Shift enters `running`, so by the
 	time ShiftServiceServer.changed reports `running` the office, its route and `container()` are already the new
 	shift's. `seed` is the rebuilt layout's seed (the model's LayoutSeed attribute), which the transit hands clients.
+	When generation from the shift's seed errors, the rebuild warns and tries the next seed up (GENERATE_RETRIES more
+	times) before raising, so `seed` is the seed actually used.
 
 	The office is built only where the shift role runs (QueueServiceServer:runsRole); a hub-only server builds nothing.
 
@@ -139,8 +141,27 @@ for _, id in LAYOUT.route do
 end
 local restMarker = markerById[LAYOUT.rest]
 
-local function rebuild(seed: number)
-	local layout = OfficeLayoutGenerationUtils.generate(OfficeLayoutConstants.LAYOUT, seed)
+-- Seeds tried after the shift's own when generation fails (each the next seed up), before the error is raised.
+local GENERATE_RETRIES = 3
+
+-- The layout generated from `seed`, or, when generation errors (every attempt invalid), from the next seed up, up to
+-- GENERATE_RETRIES more times, so a shift still starts; then the last error is raised. Returns the seed used.
+local function generateLayout(seed: number): (OfficeTypes.Layout, number)
+	local lastError = ""
+	for retry = 0, GENERATE_RETRIES do
+		local tried = seed + retry
+		local ok, result = pcall(OfficeLayoutGenerationUtils.generate, OfficeLayoutConstants.LAYOUT, tried)
+		if ok then
+			return result, tried
+		end
+		lastError = tostring(result)
+		log:warn(`office generation from seed {tried} failed: {lastError}`)
+	end
+	error(`office generation failed from seed {seed} to {seed + GENERATE_RETRIES}: {lastError}`, 0)
+end
+
+local function rebuild(requested: number)
+	local layout, seed = generateLayout(requested)
 	local ok, errors = OfficeLayoutRules.validate(layout)
 	assert(ok, `generated office layout is invalid: {table.concat(errors, "; ")}`)
 	local capacity, reason = OfficeLayoutRules.checkCapacity(layout)
