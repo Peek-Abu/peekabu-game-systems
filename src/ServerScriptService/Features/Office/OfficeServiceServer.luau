@@ -12,11 +12,12 @@
 	M2: Harlow's route, rest point, the loading bay he may walk (`loadingBay`) and the one safe place, the truck's box
 	(`safeZone`).
 
-	Doors: it registers the door prompt (OfficeConstants.DOOR_KIND, "Open / close"), toggles the door on interact
+	Doors: OfficeDoorSystem.listen registers the door prompt (OfficeConstants.DOOR_KIND, "Open / close"); it toggles the door on interact
 	(a player's accepted close slams: a "door" noise, DOOR_SLAM_RADIUS; a close with Harlow about is refused), and
-	`openDoorsNear` lets Harlow open the closed doors he is walking through (within DOOR_REACH, ahead of his heading;
-	true when it opened one, false when no office stands). Facade leaves are locked set dressing: their prompt
-	(OfficeConstants.FACADE_KIND, "Locked") only rattles the leaf.
+	`openDoorsNear` lets Harlow open the closed doors he is walking through (on his line of travel: within DOOR_REACH,
+	ahead of his heading and within a door's half-width plus his agent radius of his heading line; none with no
+	heading; true when it opened one, false when no office stands). Facade leaves are locked set dressing: their
+	prompt (OfficeConstants.FACADE_KIND, "Locked", OfficeDoorSystem.listen) only rattles the leaf.
 
 	Ordering guarantee for anything that spawns into a shift (Occupant's Manager): `ready` fires (deferred, with the shift
 	folder) once `beginShift` has rebuilt the office and placed every spawn, and `isReady` says whether that shift is
@@ -28,9 +29,9 @@
 
 	The office is built only where the shift role runs (QueueServiceServer:runsRole); a hub-only server builds nothing.
 
-	Stray guard: `rebuild` and the first build at `start` destroy every Workspace child named
-	OfficeConstants.MODEL_NAME that is not the tracked model (OfficeBuildSystem.clearStrays) and warn "removed N stray
-	office model(s)" when there were any: a transit whose reset errored (it runs guarded) must never leave an old office,
+	Stray guard: `rebuild` (after destroying the tracked model) and the first build at `start` destroy every Workspace
+	child named OfficeConstants.MODEL_NAME (OfficeBuildSystem.clearStrays, which warns "removed N stray office
+	model(s)" when there were any): a transit whose reset errored (it runs guarded) must never leave an old office,
 	with its door leaves, standing beside the new one. `stop` still destroys the tracked model.
 
 	Spec-exempt shell (Instances, signals); the decisions are the specced OfficeLayoutRules, OfficeLayoutUtils,
@@ -62,12 +63,12 @@ local OfficeSurfaceUtils = require(OfficeServer.Utils.OfficeSurfaceUtils)
 local OfficeSpawnUtils = require(OfficeServer.Utils.OfficeSpawnUtils)
 local OfficeBuildSystem = require(OfficeServer.Systems.OfficeBuildSystem)
 local OfficeDecorSystem = require(OfficeServer.Systems.OfficeDecorSystem)
+local OfficeDoorSystem = require(OfficeServer.Systems.OfficeDoorSystem)
 local OfficeSearchedDressingSystem = require(OfficeServer.Systems.OfficeSearchedDressingSystem)
 local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
 local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
 local QueueServiceServer = require(ServerScriptService.Features.Queue.QueueServiceServer)
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
-local InteractionRegistry = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionRegistry)
 local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
 local NoiseServiceServer = require(ServerScriptService.Features.Noise.NoiseServiceServer)
 
@@ -126,11 +127,8 @@ local function spotFrame(marker: Marker): CFrame
 						or part:GetAttribute("OfficeDeskMarker") == marker.id
 					)
 				then
-					local onArt = OfficeSurfaceUtils.surfaceOnPart(
-						part.CFrame,
-						part.Size,
-						part:GetAttribute("ArtSupportSurfaceY")
-					)
+					local support = part:GetAttribute("ArtSupportSurfaceY")
+					local onArt = OfficeSurfaceUtils.surfaceOnPart(part.CFrame, part.Size, support)
 					if onArt ~= nil then
 						return onArt
 					end
@@ -171,15 +169,6 @@ local function generateLayout(seed: number): (OfficeTypes.Layout, number)
 	error(`office generation failed from seed {seed} to {seed + GENERATE_RETRIES}: {lastError}`, 0)
 end
 
--- Destroys every office model in Workspace except the tracked one, warning with the count (it should never find one).
-local function clearStrays()
-	local current = built
-	local removed = OfficeBuildSystem.clearStrays(if current ~= nil then current.model else nil)
-	if removed > 0 then
-		log:warn(`removed {removed} stray office model(s)`)
-	end
-end
-
 local function rebuild(requested: number)
 	local layout, seed = generateLayout(requested)
 	local ok, errors = OfficeLayoutRules.validate(layout)
@@ -213,7 +202,7 @@ local function rebuild(requested: number)
 		old.model:Destroy()
 	end
 	-- Guard: any other office model in Workspace (one a past cleanup missed) goes too, with a warning as evidence.
-	clearStrays()
+	OfficeBuildSystem.clearStrays()
 	local current = OfficeBuildSystem.build(layout, OfficeConstants.ORIGIN)
 	current.model:SetAttribute("LayoutSeed", seed)
 	built = current
@@ -298,26 +287,8 @@ local OfficeServiceServer: OfficeServiceServer = {
 		assert(capacityOk, `office layout cannot hold a shift: {reason or "?"}`)
 		local routeOk, routeReason = OfficeLayoutRules.checkRoute(LAYOUT)
 		assert(routeOk, `office layout has no usable patrol route: {routeReason or "?"}`)
-		if not InteractionRegistry.has(OfficeConstants.DOOR_KIND) then
-			InteractionRegistry.register(OfficeConstants.DOOR_KIND, {
-				actionText = "Open / close",
-				objectText = "Door",
-				maxDistance = 8,
-			})
-		end
-		if not InteractionRegistry.has(OfficeConstants.FACADE_KIND) then
-			InteractionRegistry.register(OfficeConstants.FACADE_KIND, {
-				actionText = "Locked",
-				objectText = "Door",
-				maxDistance = 8,
-			})
-		end
-		InteractionServiceServer:onInteract(OfficeConstants.FACADE_KIND, function(_player, target)
-			local current = built
-			if current ~= nil and target:IsA("BasePart") then
-				current.doors.rattle(target)
-			end
-		end)
+		-- The door and locked-facade prompts; a facade leaf rattles on interact.
+		OfficeDoorSystem.listen()
 		InteractionServiceServer:onInteract(OfficeConstants.DOOR_KIND, function(player, target)
 			local current = built
 			local id = target:GetAttribute("OfficeDoorId")
@@ -338,7 +309,7 @@ local OfficeServiceServer: OfficeServiceServer = {
 				end
 			end
 		end)
-		clearStrays()
+		OfficeBuildSystem.clearStrays()
 		local current = OfficeBuildSystem.build(LAYOUT, OfficeConstants.ORIGIN)
 		built = current
 		-- The office at night (exit signs, blue monitors, the elevator, ambience emitters), once.
@@ -579,9 +550,9 @@ local OfficeServiceServer: OfficeServiceServer = {
 	end,
 
 	--[=[
-		Opens every closed door within OfficeConstants.DOOR_REACH of `position` and ahead of `heading` (nil: any door
-		counts): the doors Harlow is walking through (his think calls this). True when it opened one; false when none did
-		or no office stands.
+		Opens the closed doors Harlow is walking through (his think calls this): on his line of travel from `position`
+		along `heading` (OfficeDoorUtils.reach with OfficeConstants.DOOR_REACH; nil: he stands still and none opens).
+		True when it opened one; false when none did or no office stands.
 	]=]
 	openDoorsNear = function(_self, position, heading)
 		local current = built

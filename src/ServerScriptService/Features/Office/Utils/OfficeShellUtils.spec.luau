@@ -112,50 +112,54 @@ return function()
 			end
 		end)
 
-		it(
-			"closes outer corners: the outer face reaches the slab end plus its depth, the inner face is unchanged",
-			function()
-				local walls = {
-					{ x1 = 0, z1 = 0, x2 = 20, z2 = 0 },
-					{ x1 = 0, z1 = 0, x2 = 0, z2 = 20 },
-				}
-				local outerX = OfficeShellUtils.outerSide(walls, 0, 0, true)
-				local outerZ = OfficeShellUtils.outerSide(walls, 0, 0, false)
-				expect(outerX).to.equal(-1)
-				expect(outerZ).to.equal(-1)
-				local alongX = OfficeShellUtils.wall(walls[1], 0.5, 0.5, { outerFirst = outerX })
-				local alongZ = OfficeShellUtils.wall(walls[2], 0.5, 0.5, { outerFirst = outerZ })
-				for _, spec in { { "oak", 0.3 }, { "rail", 0.5 }, { "skirt", 0.4 } } do
-					local material, proud = spec[1], spec[2]
-					local a, b, innerA, innerB
-					for _, box in named(alongX, material) do
-						local f = footprint(box)
-						if f.minZ < 0 then
-							a = f
-						else
-							innerA = f
-						end
+		it("closes outer corners once: the run along X wraps the corner, the run along Z butts against it", function()
+			local walls = {
+				{ x1 = 0, z1 = 0, x2 = 20, z2 = 0 },
+				{ x1 = 0, z1 = 0, x2 = 0, z2 = 20 },
+			}
+			local outerX = OfficeShellUtils.outerSide(walls, 0, 0, true)
+			local outerZ = OfficeShellUtils.outerSide(walls, 0, 0, false)
+			expect(outerX).to.equal(-1)
+			expect(outerZ).to.equal(-1)
+			local alongX = OfficeShellUtils.wall(walls[1], 0.5, 0.5, { outerFirst = outerX })
+			local alongZ = OfficeShellUtils.wall(walls[2], 0.5, 0.5, { outerFirst = outerZ })
+			for _, spec in { { "oak", 0.3 }, { "rail", 0.5 }, { "skirt", 0.4 } } do
+				local material, proud = spec[1], spec[2]
+				local a, b, innerA, innerB
+				for _, box in named(alongX, material) do
+					local f = footprint(box)
+					if f.minZ < 0 then
+						a = f
+					else
+						innerA = f
 					end
-					for _, box in named(alongZ, material) do
-						local f = footprint(box)
-						if f.minX < 0 then
-							b = f
-						else
-							innerB = f
-						end
-					end
-					-- The outer runs overlap in both axes: no gap at the corner.
-					expect(a.minX < b.maxX and b.minX < a.maxX).to.equal(true)
-					expect(a.minZ < b.maxZ and b.minZ < a.maxZ).to.equal(true)
-					-- They reach the slab end (-0.5) plus their depth and no further.
-					expect(a.minX).to.be.near(-0.5 - proud, 1e-6)
-					expect(b.minZ).to.be.near(-0.5 - proud, 1e-6)
-					-- The inner face keeps today's reach.
-					expect(innerA.minX).to.be.near(-proud, 1e-6)
-					expect(innerB.minZ).to.be.near(-proud, 1e-6)
 				end
+				for _, box in named(alongZ, material) do
+					local f = footprint(box)
+					if f.minX < 0 then
+						b = f
+					else
+						innerB = f
+					end
+				end
+				-- The X run wraps: it reaches the slab end (-0.5) plus its depth, covering the corner square.
+				expect(a.minX).to.be.near(-0.5 - proud, 1e-6)
+				expect(a.minZ).to.be.near(-0.5 - proud, 1e-6)
+				-- The Z run stops at the slab end, flush against the X run's back: its end meets that face.
+				expect(b.minZ).to.be.near(-0.5, 1e-6)
+				expect(b.minZ).to.be.near(a.maxZ, 1e-6)
+				expect(b.minX).to.be.near(a.minX, 1e-6)
+				-- No overlapping volume (no coplanar faces to flicker) and no gap: the boxes touch in Z and share X.
+				local overlapX = math.min(a.maxX, b.maxX) - math.max(a.minX, b.minX)
+				local overlapZ = math.min(a.maxZ, b.maxZ) - math.max(a.minZ, b.minZ)
+				expect(overlapX > 0).to.equal(true)
+				expect(overlapZ <= 1e-6).to.equal(true)
+				expect(overlapZ >= -1e-6).to.equal(true)
+				-- The inner faces keep today's reach.
+				expect(innerA.minX).to.be.near(-proud, 1e-6)
+				expect(innerB.minZ).to.be.near(-proud, 1e-6)
 			end
-		)
+		end)
 
 		it("leaves a T-junction end unchanged, and names no outer face there", function()
 			local stem = { x1 = 0, z1 = 0, x2 = 20, z2 = 0 }

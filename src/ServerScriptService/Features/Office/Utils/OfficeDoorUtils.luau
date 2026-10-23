@@ -1,8 +1,8 @@
 --!strict
 --[=[
 	OfficeDoorUtils: the maths of the office's real doors. Where a door leaf stands at a fraction of its swing, which
-	way it swings, which closed doors a walker is walking through (in reach and ahead), whether a door lies ahead of a walker, the
-	rattle of a locked door, whether an NPC is near a door, and whether a doorway is clear enough to close. Pure.
+	way it swings, which closed doors a walker is walking through (in reach, ahead and on his line of travel), where the
+	elevator front stands, the rattle of a locked door, whether an NPC is near a door, and whether a doorway is clear enough to close. Pure.
 
 	Frames are in layout space: pass the office origin to get world space. A leaf is the clear opening inside the oak
 	casing, a box (`leafSize`: door.width - 2 x casing by DOOR_HEIGHT - casing, DOOR_LEAF_THICKNESS thick) centred in
@@ -33,12 +33,15 @@ type Edge = OfficeTypes.Edge
 type Room = OfficeTypes.Room
 type Facade = OfficeTypes.Facade
 
-export type DoorState = { id: string, position: Vector3, open: boolean }
+-- A real door's id, world centre, width (along its wall) and whether it stands open.
+export type DoorState = { id: string, position: Vector3, width: number, open: boolean }
 
 -- Bodies this close (studs, each axis) to the doorway keep it from closing.
 local BODY_MARGIN = 1
 -- Back-and-forth jiggles in one rattle.
 local RATTLE_JIGGLES = 3
+-- Mr. Harlow's agent radius (studs): a door is on his line when its centre is within its half-width plus this of it.
+local AGENT_RADIUS = 1
 
 local OfficeDoorUtils = {}
 
@@ -135,6 +138,26 @@ function OfficeDoorUtils.elevatorFrame(facade: Facade, room: Room, origin: CFram
 end
 
 --[=[
+	Where the elevator front stands in `layout` (relative to `origin`): on its first elevator facade (`elevatorFrame`),
+	else, in a layout with none (the authored boot layout), at OfficeDecorConstants.ELEVATOR_POINT with local +Z
+	facing world +X, its fixed pose before elevators stood on facades.
+]=]
+function OfficeDoorUtils.elevatorFrameFor(layout: OfficeTypes.Layout, origin: CFrame): CFrame
+	local facades: { Facade } = layout.facades or {}
+	for _, facade in facades do
+		if facade.kind == "elevator" then
+			local room = OfficeLayoutUtils.room(layout, facade.room)
+			local frame = if room ~= nil then OfficeDoorUtils.elevatorFrame(facade, room, origin) else nil
+			if frame ~= nil then
+				return frame
+			end
+			break
+		end
+	end
+	return origin * CFrame.new(OfficeDecorConstants.ELEVATOR_POINT) * CFrame.Angles(0, math.pi / 2, 0)
+end
+
+--[=[
 	The leaves of a facade, each as `size` (X along the wall, Y height, Z thickness), `offset` from the facade frame
 	(`facadeFrame`: X along the wall, Y down from the frame's half-height) and `side` (-1 / 0 / +1: which half of the
 	facade it hangs on, 0 for a single leaf). They fill the clear opening inside the facade's oak casing, as a real
@@ -158,35 +181,27 @@ function OfficeDoorUtils.facadeLeaves(facade: Facade): { { size: Vector3, offset
 end
 
 --[=[
-	Whether `target` (a door's centre) lies ahead of a walker at `point` heading `heading`: the ground-plane (XZ) dot
-	product of (target - point) and the heading is positive. With no heading, or one with no ground-plane part,
-	every door counts as ahead.
-]=]
-function OfficeDoorUtils.ahead(target: Vector3, point: Vector3, heading: Vector3?): boolean
-	if heading == nil then
-		return true
-	end
-	local hx, hz = heading.X, heading.Z
-	if hx * hx + hz * hz < 1e-8 then
-		return true
-	end
-	return (target.X - point.X) * hx + (target.Z - point.Z) * hz > 0
-end
-
---[=[
-	The ids of the closed doors a walker at `point` heading `heading` is walking through: the door's centre is within
-	`radius` studs on the ground plane (XZ) and ahead of the heading (`ahead`; a nil heading counts every door as ahead).
+	The ids of the closed doors a walker at `point` heading `heading` is walking through: the door lies on his line of
+	travel. Its centre is within `radius` studs on the ground plane (XZ), ahead of him (a positive distance along the
+	heading) and within door.width / 2 + AGENT_RADIUS of his heading line (the perpendicular distance), so a side door
+	he walks past along a corridor is not one. With no heading, or one with no ground-plane part, nothing lies ahead of
+	him and no door is returned.
 ]=]
 function OfficeDoorUtils.reach(doors: { DoorState }, point: Vector3, heading: Vector3?, radius: number): { string }
 	local ids: { string } = {}
-	local limit = radius * radius
+	local flat = if heading ~= nil then Vector3.new(heading.X, 0, heading.Z) else Vector3.zero
+	if flat.Magnitude < 1e-4 then
+		return ids
+	end
+	local ux, uz = flat.Unit.X, flat.Unit.Z
 	for _, state in doors do
-		if not state.open then
-			local dx = state.position.X - point.X
-			local dz = state.position.Z - point.Z
-			if dx * dx + dz * dz <= limit and OfficeDoorUtils.ahead(state.position, point, heading) then
-				table.insert(ids, state.id)
-			end
+		local dx = state.position.X - point.X
+		local dz = state.position.Z - point.Z
+		local forward = dx * ux + dz * uz
+		local lateral = math.abs(dx * uz - dz * ux)
+		local onLine = lateral <= state.width / 2 + AGENT_RADIUS
+		if not state.open and forward > 0 and dx * dx + dz * dz <= radius * radius and onLine then
+			table.insert(ids, state.id)
 		end
 	end
 	return ids

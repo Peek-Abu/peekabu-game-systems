@@ -299,7 +299,8 @@ return table.freeze({
 	-- Real doors (OfficeDoorSystem): the leaf's id kind / path label, size, swing and the noise / reach radii.
 	-- The leaf stops short of the wall top (that gap above the leaf is left open). A leaf carries a
 	-- PathfindingModifier (Label DOOR_PATH_LABEL, PassThrough) so Mr. Harlow's paths ignore it; he opens a door only
-	-- when it lies within DOOR_REACH of him and ahead of his heading (a door he is walking through), a player cannot
+	-- when it lies on his line of travel (within DOOR_REACH, ahead of his heading and within its half-width plus his
+	-- agent radius of his heading line: OfficeDoorUtils.reach; standing still, he opens none), a player cannot
 	-- close a door while an NPC is within DOOR_REACH of it, and a door slammed by a player is heard DOOR_SLAM_RADIUS
 	-- studs away. A facade leaf (locked set dressing) is tagged FACADE_KIND and rattles DOOR_RATTLE_ANGLE for
 	-- DOOR_RATTLE_SECONDS when a player tries it.

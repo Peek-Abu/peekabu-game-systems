@@ -11,7 +11,12 @@
 	it) and, last, Npc with his NpcKind so
 	NpcServiceServer adopts him. `present` publishes what he shows and puts the painted face on his mask.
 
-	Spec-exempt shell (Instances).
+	Twin guard: `sweep` despawns every manager rig (a model tagged OccupantConstants.TAG) but the one kept and warns
+	"removed N stray manager rig(s)": there is only ever one Harlow, so any other is a twin a past cleanup missed (a
+	shift transit whose cleanup errored; it runs guarded). `build` sweeps before it builds; OccupantServiceServer's
+	despawn sweeps after it removes the current rig.
+
+	An Instance builder; `sweep` is specced.
 
 	@class OccupantRigSystem
 ]=]
@@ -25,7 +30,11 @@ local OccupantAssets = require(ReplicatedStorage.Shared.Features.Occupant.Data.O
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local OccupantFaceUtils = require(ReplicatedStorage.Shared.Features.Occupant.Utils.OccupantFaceUtils)
 local OccupantTellRules = require(ReplicatedStorage.Shared.Features.Occupant.Rules.OccupantTellRules)
+local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local NpcConstants = require(ServerScriptService.Features.Npc.Data.NpcConstants)
+local NpcServiceServer = require(ServerScriptService.Features.Npc.NpcServiceServer)
+
+local log = Logger.new("OccupantRigSystem")
 
 export type Rig = {
 	model: Model,
@@ -89,9 +98,34 @@ end
 local OccupantRigSystem = {}
 
 --[=[
-	Builds Harlow at `at` under `parent` and returns his rig. Yields (the rig is generated from a description).
+	Despawns every manager rig in `tagged` (default: every instance tagged OccupantConstants.TAG) that is a Model other
+	than `keep`, through `remove` (default NpcServiceServer:despawn), warns with the count when there were any, and
+	returns it.
+]=]
+function OccupantRigSystem.sweep(keep: Model?, tagged: { Instance }?, remove: ((Model) -> ())?): number
+	local removed = 0
+	for _, instance in tagged or CollectionService:GetTagged(OccupantConstants.TAG) do
+		if instance:IsA("Model") and instance ~= keep then
+			if remove ~= nil then
+				remove(instance)
+			else
+				NpcServiceServer:despawn(instance)
+			end
+			removed += 1
+		end
+	end
+	if removed > 0 then
+		log:warn(`removed {removed} stray manager rig(s)`)
+	end
+	return removed
+end
+
+--[=[
+	Builds Harlow at `at` under `parent` and returns his rig, after sweeping away any manager rig already standing (a
+	twin). Yields (the rig is generated from a description).
 ]=]
 function OccupantRigSystem.build(at: CFrame, parent: Instance): Rig
+	OccupantRigSystem.sweep()
 	local model = body()
 	local humanoid = model:FindFirstChildOfClass("Humanoid")
 	local root = model:FindFirstChild("HumanoidRootPart")

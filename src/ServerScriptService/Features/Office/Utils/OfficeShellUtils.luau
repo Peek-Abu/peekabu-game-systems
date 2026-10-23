@@ -114,8 +114,9 @@ end
 	A wall run: two plaster slabs plus, on both faces, wainscot, rail and skirt. `first` / `last` are how far the run
 	extends past each end (half the wall thickness at a corner, 0 at a door or pane). Trim at a corner end reaches
 	past it by its own depth so two runs meeting at an inside corner close; at a door end it stops flush. `trim` (see
-	WallTrim) lets the OUTER face of an L corner reach the slab end plus its depth so two outer runs overlap and close
-	the corner, and breaks a face's trim at a facade.
+	WallTrim) closes the OUTER face of an L corner once: the run along X reaches the slab end plus its depth and wraps
+	the corner, the run along Z reaches only the slab end and butts against it (no coplanar overlap to flicker, no
+	gap); it also breaks a face's trim at a facade.
 ]=]
 function OfficeShellUtils.wall(segment: Segment, first: number, last: number, extra: WallTrim?): { ShellBox }
 	local shell = OfficeConstants.SHELL
@@ -130,8 +131,19 @@ function OfficeShellUtils.wall(segment: Segment, first: number, last: number, ex
 		table.insert(boxes, box("Plaster", "plaster", true, where, slabRange, slabY, between(0, side * shell.slab)))
 		local face = side * shell.slab
 		local function trim(name: string, material: ShellMaterial, proud: number, y0: number, y1: number)
-			local lo = from - (if first > 0 then (if outerFirst == side then first else 0) + proud else 0)
-			local hi = to + (if last > 0 then (if outerLast == side then last else 0) + proud else 0)
+			-- How far this face's trim reaches past an end that extends `past` (0: stops flush at a door or pane).
+			local function reach(past: number, outer: number?): number
+				if past <= 0 then
+					return 0
+				elseif outer ~= side then
+					return proud
+				end
+				-- An L's outer face: the run along X wraps the corner (slab end plus its depth), the run along Z stops
+				-- at the slab end, flush against the X run's back, so the two never overlap and leave no gap.
+				return if where.horizontal then past + proud else past
+			end
+			local lo = from - reach(first, outerFirst)
+			local hi = to + reach(last, outerLast)
 			for _, piece in cutGaps({ lo, hi }, gaps, side) do
 				table.insert(
 					boxes,

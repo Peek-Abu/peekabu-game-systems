@@ -2,7 +2,7 @@
 --[=[
 	OfficeDoorSystem: the office's real doors. For every layout door of kind "solid" or "glass" a leaf players open
 	and close (an anchored part tagged for Interaction, kind OfficeConstants.DOOR_KIND, swung about its hinge with
-	TweenService), and for every facade a closed, flush, non-interactable leaf on the room side of the wall it fronts
+	TweenService), and for every facade a closed, flush, locked leaf on the room side of the wall it fronts
 	(attribute `OfficeFacade` = its kind; a stairwell is one solid leaf, an entrance a pair of glass leaves, each half
 	its width, hinged at the outer edges: a double door). Door ids are "<a>|<b>".
 
@@ -16,12 +16,14 @@
 	spatial query of the doorway. A player's close is also refused while any NPC root is within
 	DOOR_REACH of the door (he would reopen it at once), so a player can neither close a door on him nor
 	stall him by spamming it, and no false slam is heard. `openNear` opens only the closed doors he is walking
-	through: within DOOR_REACH and ahead of the given heading (OfficeDoorUtils.reach; a nil heading counts every
-	door as ahead). Doors behind him, beside him or farther off stay as they are.
+	through, on his line of travel: within DOOR_REACH, ahead of the given heading and within the door's half-width
+	plus his agent radius of his heading line (OfficeDoorUtils.reach). Doors behind him, beside him (a side door he
+	walks past along a corridor) or farther off stay as they are, and with no heading (he stands still) none opens.
 
 	Facades are locked: each leaf is tagged for Interaction as OfficeConstants.FACADE_KIND ("Locked"), and `rattle`
 	gives it a short yaw jiggle about its own centre (OfficeDoorUtils.rattle) that returns exactly to its frame, with
-	no noise; a rattle ignores interacts while it runs.
+	no noise; a rattle ignores interacts while it runs. `listen` (OfficeServiceServer's start, once) registers the door
+	and locked-door prompts and rattles the facade leaf a player interacts with, whichever office built it.
 
 	The swing tweens a fraction (0 closed .. 1 open) and places the leaf with OfficeDoorUtils.leafFrame each step,
 	so it travels the hinge's arc (tweening the CFrame itself would cut a chord). A door ignores toggles mid-swing.
@@ -54,6 +56,8 @@ local ArtVisualSystem = require(ServerScriptService.Features.Art.Systems.ArtVisu
 local CameraOccluderConstants = require(ReplicatedStorage.Shared.Features.Camera.Data.CameraOccluderConstants)
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionConstants)
+local InteractionRegistry = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionRegistry)
+local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
 local OfficeServer = ServerScriptService.Features.Office
 local OfficeConstants = require(OfficeServer.Data.OfficeConstants)
 local OfficeTypes = require(OfficeServer.Data.OfficeTypes)
@@ -90,8 +94,8 @@ export type DoorSet = {
 	-- stands in the doorway of a door being closed, or, for a player's close, an NPC is within
 	-- DOOR_REACH of it. `by` is the player who asked (nil: Harlow / the harness).
 	toggle: (id: string, by: Player?) -> boolean,
-	-- Opens every closed door within OfficeConstants.DOOR_REACH of `point` (XZ) and ahead of `heading`
-	-- (OfficeDoorUtils.ahead; a nil heading counts every door as ahead). True if it opened one.
+	-- Opens every closed door on the line of travel from `point` along `heading` (OfficeDoorUtils.reach with
+	-- OfficeConstants.DOOR_REACH; a nil heading opens none). True if it opened one.
 	openNear: (point: Vector3, heading: Vector3?) -> boolean,
 	-- Rattles a locked facade leaf. False when `leaf` is not one or is already rattling.
 	rattle: (leaf: BasePart) -> boolean,
@@ -104,6 +108,10 @@ export type DoorSet = {
 }
 
 local OfficeDoorSystem = {}
+
+-- Every standing facade leaf, and the door set that rattles it (for `listen`'s handler). Weak keys.
+local lockedSets: { [BasePart]: DoorSet } = {}
+setmetatable(lockedSets, { __mode = "k" })
 
 local function leafPart(name: string, size: Vector3, glass: boolean, parent: Instance): Part
 	local leaf = Instance.new("Part")
@@ -226,7 +234,7 @@ function OfficeDoorSystem.build(
 		local id = `{door.a}|{door.b}`
 		if (kind == "solid" or kind == "glass") and room ~= nil and edge ~= nil and records[id] ~= nil then
 			-- One leaf per id: a repeat would stack a second leaf on the first (one open, one shut).
-			log:warn(` door {id} is in the layout twice; the repeat is skipped`)
+			log:warn(`door {id} is in the layout twice; the repeat is skipped`)
 		elseif (kind == "solid" or kind == "glass") and room ~= nil and edge ~= nil then
 			local horizontal = edge == "minZ" or edge == "maxZ"
 			local leaf = leafPart("DoorLeaf", OfficeDoorUtils.leafSize(door), kind == "glass", folder)
@@ -250,6 +258,7 @@ function OfficeDoorSystem.build(
 				state = {
 					id = id,
 					position = origin:PointToWorldSpace(Vector3.new(door.x, height / 2, door.z)),
+					width = door.width,
 					open = false,
 				},
 				door = door,
@@ -435,11 +444,35 @@ function OfficeDoorSystem.build(
 				rattle.progress:Destroy()
 			end
 			table.clear(records)
+			for leaf in rattles do
+				lockedSets[leaf] = nil
+			end
 			table.clear(rattles)
 			table.clear(states)
 		end,
 	}
+	for leaf in rattles do
+		lockedSets[leaf] = set
+	end
 	return set
+end
+
+--[=[
+	Registers the door prompt (OfficeConstants.DOOR_KIND, "Open / close") and the locked facade prompt
+	(OfficeConstants.FACADE_KIND, "Locked"), and rattles a facade leaf a player interacts with. Call once.
+]=]
+function OfficeDoorSystem.listen()
+	for kind, action in { [OfficeConstants.DOOR_KIND] = "Open / close", [OfficeConstants.FACADE_KIND] = "Locked" } do
+		if not InteractionRegistry.has(kind) then
+			InteractionRegistry.register(kind, { actionText = action, objectText = "Door", maxDistance = 8 })
+		end
+	end
+	InteractionServiceServer:onInteract(OfficeConstants.FACADE_KIND, function(_player, target)
+		local set = if target:IsA("BasePart") then lockedSets[target] else nil
+		if set ~= nil and target:IsA("BasePart") then
+			set.rattle(target)
+		end
+	end)
 end
 
 return OfficeDoorSystem

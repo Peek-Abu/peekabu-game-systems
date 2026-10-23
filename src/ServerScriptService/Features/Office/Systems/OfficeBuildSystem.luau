@@ -27,6 +27,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local Workspace = game:GetService("Workspace")
 
 local ArtVisualSystem = require(ServerScriptService.Features.Art.Systems.ArtVisualSystem)
+local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 
 local OfficeServer = ServerScriptService.Features.Office
 local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants)
@@ -41,6 +42,8 @@ local OfficeArtKeyUtils = require(OfficeServer.Utils.OfficeArtKeyUtils)
 local OfficeLoadingBayUtils = require(OfficeServer.Utils.OfficeLoadingBayUtils)
 local OfficeLightingUtils = require(OfficeServer.Utils.OfficeLightingUtils)
 local OfficeDoorSystem = require(script.Parent.OfficeDoorSystem)
+
+local log = Logger.new("OfficeBuildSystem")
 
 export type Built = {
 	model: Model,
@@ -322,17 +325,21 @@ function OfficeBuildSystem.build(
 end
 
 --[=[
-	Destroys every office model in Workspace (a child named OfficeConstants.MODEL_NAME) except `keep`, and returns how
-	many it removed. A rebuild calls this so a model its owner lost track of (a failed or interrupted cleanup in a
-	shift transit) can never stand beside the new office as a second set of walls and door leaves.
+	Destroys every office model in `container` (default Workspace: a child named OfficeConstants.MODEL_NAME) except
+	`keep`, warns "removed N stray office model(s)" when there were any, and returns how many it removed.
+	OfficeServiceServer's rebuild and first build call this so a model its owner lost track of (a failed or interrupted
+	cleanup in a shift transit) can never stand beside the new office as a second set of walls and door leaves.
 ]=]
-function OfficeBuildSystem.clearStrays(keep: Model?): number
+function OfficeBuildSystem.clearStrays(keep: Model?, container: Instance?): number
 	local removed = 0
-	for _, child in Workspace:GetChildren() do
+	for _, child in (container or Workspace):GetChildren() do
 		if child.Name == OfficeConstants.MODEL_NAME and child ~= keep then
 			child:Destroy()
 			removed += 1
 		end
+	end
+	if removed > 0 then
+		log:warn(`removed {removed} stray office model(s)`)
 	end
 	return removed
 end

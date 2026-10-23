@@ -331,25 +331,30 @@ return function()
 	end)
 
 	describe("stray offices", function()
-		it("clearStrays removes every office model but the one kept, and counts them", function()
-			local kept = build(Layout)
-			local strayA = Instance.new("Model")
-			strayA.Name = Constants.MODEL_NAME
-			strayA.Parent = workspace
-			local strayB = Instance.new("Model")
-			strayB.Name = Constants.MODEL_NAME
-			strayB.Parent = workspace
-			local other = Instance.new("Model")
-			other.Name = "NotTheOffice"
-			other.Parent = workspace
-			table.insert(models, other)
-			expect(Build.clearStrays(kept.model)).to.equal(2)
+		it("clearStrays removes every office model in its container but the one kept, and counts them", function()
+			-- Its own container: whatever else stands in Workspace (another spec's office, the boot's) is not counted.
+			local container = Instance.new("Folder")
+			container.Name = "StrayOfficeSpec"
+			container.Parent = workspace
+			table.insert(models, container)
+			local function office(name)
+				local model = Instance.new("Model")
+				model.Name = name
+				model.Parent = container
+				return model
+			end
+			local kept = office(Constants.MODEL_NAME)
+			local strayA = office(Constants.MODEL_NAME)
+			local strayB = office(Constants.MODEL_NAME)
+			local other = office("NotTheOffice")
+			expect(Build.clearStrays(kept, container)).to.equal(2)
 			expect(strayA.Parent).to.equal(nil)
 			expect(strayB.Parent).to.equal(nil)
-			expect(kept.model.Parent).to.equal(workspace)
-			expect(other.Parent).to.equal(workspace)
-			expect(Build.clearStrays(kept.model)).to.equal(0)
-			kept.doors.destroy()
+			expect(kept.Parent).to.equal(container)
+			expect(other.Parent).to.equal(container)
+			expect(Build.clearStrays(kept, container)).to.equal(0)
+			expect(Build.clearStrays(nil, container)).to.equal(1)
+			expect(kept.Parent).to.equal(nil)
 		end)
 	end)
 
@@ -554,7 +559,7 @@ return function()
 			built.model:Destroy()
 		end)
 
-		it("builds an entrance facade as two half-width glass leaves hinged at their outer edges", function()
+		it("builds an entrance facade as two glass leaves sharing its casing, hinged at their outer edges", function()
 			template("building", "doorLeafGlass")
 			local layout = twoRooms("open", nil)
 			layout.facades = { { room = "a", x = 0, z = 5, width = 12, kind = "entrance" } }
@@ -567,12 +572,14 @@ return function()
 			end
 			expect(#leaves).to.equal(2)
 			local sides = 0
+			-- Each leaf is half the clear opening inside the casing: (12 - 2 x casing) / 2.
+			local width = (12 - 2 * Constants.SHELL.casing) / 2
 			for _, leaf in leaves do
-				expect(leaf.Size.X).to.equal(6)
+				expect(math.abs(leaf.Size.X - width) < 1e-3).to.equal(true)
 				expect(leaf.Material).to.equal(Enum.Material.Glass)
 				expect(leaf:FindFirstChild("ArtVisual") ~= nil).to.equal(true)
-				-- Side by side, flush on the wall, centred 3 studs either side of the facade's centre.
-				expect(math.abs(math.abs(leaf.Position.Z - 5) - 3) < 1e-3).to.equal(true)
+				-- Side by side, flush on the wall, meeting at the facade's centre: each centred half a leaf either side.
+				expect(math.abs(math.abs(leaf.Position.Z - 5) - width / 2) < 1e-3).to.equal(true)
 				-- The hinge is the leaf's local +X: it lies toward the outer edge, away from the centre.
 				expect((leaf.Position.Z - 5) * leaf.CFrame.RightVector.Z > 0).to.equal(true)
 				sides += if leaf.Position.Z > 5 then 1 else 0
@@ -581,7 +588,7 @@ return function()
 			built.doors.destroy()
 		end)
 
-		it("builds a stairwell facade as one solid leaf of its own width", function()
+		it("builds a stairwell facade as one solid leaf filling its casing", function()
 			local layout = twoRooms("open", nil)
 			layout.facades = { { room = "a", x = 0, z = 5, width = 6, kind = "stairwell" } }
 			local built = build(layout)
@@ -589,7 +596,9 @@ return function()
 			for _, leaf in built.model.Doors:GetChildren() do
 				if leaf:GetAttribute("OfficeFacade") == "stairwell" then
 					count += 1
-					expect(leaf.Size.X).to.equal(6)
+					-- The clear opening inside the casing, centred on the facade.
+					expect(math.abs(leaf.Size.X - (6 - 2 * Constants.SHELL.casing)) < 1e-3).to.equal(true)
+					expect(math.abs(leaf.Position.Z - 5) < 1e-3).to.equal(true)
 					expect(leaf.Material).to.equal(Enum.Material.WoodPlanks)
 				end
 			end
@@ -685,6 +694,22 @@ return function()
 			it("does not open a door 6 studs behind him", function()
 				local built = build(twoRooms("solid", nil))
 				expect(built.doors.openNear(at(6), Vector3.new(0, 0, 1))).to.equal(false)
+				expect(built.model.Doors.DoorLeaf:GetAttribute("OfficeDoorOpen")).to.equal(false)
+				built.doors.destroy()
+			end)
+
+			it("opens nothing for a man with no heading, even a door 6 studs off", function()
+				local built = build(twoRooms("solid", nil))
+				expect(built.doors.openNear(at(-6), nil)).to.equal(false)
+				expect(built.model.Doors.DoorLeaf:GetAttribute("OfficeDoorOpen")).to.equal(false)
+				built.doors.destroy()
+			end)
+
+			it("does not open a side door he walks past: 5 to the side and 3 ahead", function()
+				local built = build(twoRooms("solid", nil))
+				-- Walking along +X past the door (its centre 3 ahead of him and 5 to his side).
+				local point = Vector3.new(50010 - 3, 3, 10 - 5)
+				expect(built.doors.openNear(point, Vector3.new(1, 0, 0))).to.equal(false)
 				expect(built.model.Doors.DoorLeaf:GetAttribute("OfficeDoorOpen")).to.equal(false)
 				built.doors.destroy()
 			end)

@@ -137,6 +137,48 @@ return function()
 		end)
 	end)
 
+	describe("elevatorFrameFor", function()
+		local function same(a, b)
+			return (a.Position - b.Position).Magnitude < 1e-3 and (a.LookVector - b.LookVector).Magnitude < 1e-3
+		end
+
+		it(
+			"keeps ELEVATOR_POINT, +Z facing world +X, in a layout with no elevator facade (the authored boot layout)",
+			function()
+				local point = require(
+					game:GetService("ReplicatedStorage").Shared.Features.Office.Data.OfficeDecorConstants
+				).ELEVATOR_POINT
+				local boot = ORIGIN * CFrame.new(point) * CFrame.Angles(0, math.pi / 2, 0)
+				expect(same(OfficeDoorUtils.elevatorFrameFor({ rooms = { KIT }, doors = {} }, ORIGIN), boot)).to.equal(
+					true
+				)
+				local stairOnly = {
+					rooms = { KIT },
+					doors = {},
+					facades = { { room = "kit", x = 10, z = 10, width = 6, kind = "stairwell" } },
+				}
+				local frame = OfficeDoorUtils.elevatorFrameFor(stairOnly, ORIGIN)
+				expect(same(frame, boot)).to.equal(true)
+				expect(close((frame * CFrame.new(0, 0, 1)).Position.X - frame.Position.X, 1)).to.equal(true)
+			end
+		)
+
+		it("stands on the layout's first elevator facade", function()
+			local first = { room = "kit", x = 10, z = 10, width = 6, kind = "elevator" }
+			local layout = {
+				rooms = { KIT },
+				doors = {},
+				facades = {
+					{ room = "kit", x = 0, z = 5, width = 6, kind = "stairwell" },
+					first,
+					{ room = "kit", x = 20, z = 5, width = 6, kind = "elevator" },
+				},
+			}
+			local expected = OfficeDoorUtils.elevatorFrame(first, KIT, ORIGIN)
+			expect(same(OfficeDoorUtils.elevatorFrameFor(layout, ORIGIN), expected)).to.equal(true)
+		end)
+	end)
+
 	describe("facadeLeaves", function()
 		it("fits an entrance's two leaves inside the casing, side by side", function()
 			local casing = OfficeConstants.SHELL.casing
@@ -166,28 +208,53 @@ return function()
 	describe("reach", function()
 		local point = Vector3.new(0, 3, 0)
 		local heading = Vector3.new(0, 0, 1)
+		-- A closed 6-wide door at (x, 4.7, z): his line's band is width / 2 + 1 = 4 studs either side.
+		local function door(x, z, open)
+			return { id = "a|b", position = Vector3.new(x, 4.7, z), width = 6, open = open == true }
+		end
 		local function ids(doors)
 			return OfficeDoorUtils.reach(doors, point, heading, 8)
 		end
-		it("includes a closed door 6 studs ahead", function()
-			local found = ids({ { id = "a|b", position = Vector3.new(0, 4.7, 6), open = false } })
+		it("includes a closed door 6 studs ahead on his line", function()
+			local found = ids({ door(0, 6) })
 			expect(#found).to.equal(1)
 			expect(found[1]).to.equal("a|b")
 		end)
+		it("includes a door 6 ahead and 2 off his line: inside the band", function()
+			expect(#ids({ door(2, 6) })).to.equal(1)
+			expect(#ids({ door(0.5, 6) })).to.equal(1)
+		end)
+		it("skips a side door along a corridor: 5 to the side and 3 ahead, or 7 to the side and 2 ahead", function()
+			expect(#ids({ door(5, 3) })).to.equal(0)
+			expect(#ids({ door(-5, 3) })).to.equal(0)
+			expect(#ids({ door(7, 2) })).to.equal(0)
+		end)
+		it("widens the band with the door: a 12-wide door 6 off his line is on it", function()
+			local wide = { id = "a|b", position = Vector3.new(6, 4.7, 4), width = 12, open = false }
+			expect(#ids({ wide })).to.equal(1)
+		end)
 		it("skips a door 9 studs ahead: beyond the reach", function()
-			expect(#ids({ { id = "a|b", position = Vector3.new(0, 4.7, 9), open = false } })).to.equal(0)
+			expect(#ids({ door(0, 9) })).to.equal(0)
 		end)
 		it("skips a door 6 studs behind him, and one level beside him", function()
-			expect(#ids({ { id = "a|b", position = Vector3.new(0, 4.7, -6), open = false } })).to.equal(0)
-			expect(#ids({ { id = "a|b", position = Vector3.new(6, 4.7, 0), open = false } })).to.equal(0)
+			expect(#ids({ door(0, -6) })).to.equal(0)
+			expect(#ids({ door(0.5, 0) })).to.equal(0)
+			expect(#ids({ door(6, 0) })).to.equal(0)
 		end)
-		it("skips a door that is already open, and ignores height", function()
-			expect(#ids({ { id = "a|b", position = Vector3.new(0, 4.7, 6), open = true } })).to.equal(0)
-			expect(#ids({ { id = "a|b", position = Vector3.new(0, 90, 6), open = false } })).to.equal(1)
+		it("skips a door that is already open, and ignores height and the heading's height", function()
+			expect(#ids({ door(0, 6, true) })).to.equal(0)
+			local high = { id = "a|b", position = Vector3.new(0, 90, 6), width = 6, open = false }
+			expect(#ids({ high })).to.equal(1)
+			expect(#OfficeDoorUtils.reach({ door(0, 6) }, point, Vector3.new(0, -5, 1), 8)).to.equal(1)
 		end)
-		it("counts every door within reach as ahead with no heading", function()
-			local doors = { { id = "a|b", position = Vector3.new(0, 4.7, -6), open = false } }
-			expect(#OfficeDoorUtils.reach(doors, point, nil, 8)).to.equal(1)
+		it("follows any heading, not only the axes", function()
+			local diagonal = Vector3.new(1, 0, 1).Unit
+			expect(#OfficeDoorUtils.reach({ door(4, 4) }, point, diagonal, 8)).to.equal(1)
+			expect(#OfficeDoorUtils.reach({ door(6, 0) }, point, diagonal, 8)).to.equal(0)
+		end)
+		it("opens nothing with no heading, or a vertical one: nothing lies ahead of a man standing still", function()
+			expect(#OfficeDoorUtils.reach({ door(0, 6), door(0, -6) }, point, nil, 8)).to.equal(0)
+			expect(#OfficeDoorUtils.reach({ door(0, 6) }, point, Vector3.new(0, 1, 0), 8)).to.equal(0)
 		end)
 	end)
 
@@ -240,24 +307,6 @@ return function()
 		it("is false beyond the radius, or with no NPC", function()
 			expect(OfficeDoorUtils.npcNear({ Vector3.new(17, 3, 8) }, centre, 10)).to.equal(false)
 			expect(OfficeDoorUtils.npcNear({}, centre, 10)).to.equal(false)
-		end)
-	end)
-
-	describe("ahead", function()
-		local point = Vector3.new(0, 3, 0)
-		it("is true for a door in front of the heading", function()
-			expect(OfficeDoorUtils.ahead(Vector3.new(2, 4.5, 6), point, Vector3.new(0, 0, 1))).to.equal(true)
-		end)
-		it("is false for a door beside or behind him", function()
-			expect(OfficeDoorUtils.ahead(Vector3.new(6, 4.5, 0), point, Vector3.new(0, 0, 1))).to.equal(false)
-			expect(OfficeDoorUtils.ahead(Vector3.new(1, 4.5, -5), point, Vector3.new(0, 0, 1))).to.equal(false)
-		end)
-		it("ignores the heading's height", function()
-			expect(OfficeDoorUtils.ahead(Vector3.new(0, 4.5, 6), point, Vector3.new(0, -5, 1))).to.equal(true)
-		end)
-		it("treats every door as ahead with no heading, or a vertical one", function()
-			expect(OfficeDoorUtils.ahead(Vector3.new(0, 4.5, -6), point, nil)).to.equal(true)
-			expect(OfficeDoorUtils.ahead(Vector3.new(0, 4.5, -6), point, Vector3.new(0, 1, 0))).to.equal(true)
 		end)
 	end)
 end

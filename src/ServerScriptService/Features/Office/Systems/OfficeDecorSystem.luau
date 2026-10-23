@@ -182,13 +182,10 @@ local function elevator(frame: CFrame, parent: Instance, art: ArtVisualSystem.Co
 			panel.Transparency = 1
 		end
 	end
+	local lampSize = OfficeDecorConstants.ELEVATOR_LAMP_SIZE
 	local lamp = part(
 		"ElevatorLamp",
-		Vector3.new(
-			OfficeDecorConstants.ELEVATOR_LAMP_SIZE.Z,
-			OfficeDecorConstants.ELEVATOR_LAMP_SIZE.Y,
-			OfficeDecorConstants.ELEVATOR_LAMP_SIZE.X
-		),
+		Vector3.new(lampSize.Z, lampSize.Y, lampSize.X),
 		frame * CFrame.new(0, door.Y / 2 + 0.6, 0),
 		OfficeDecorConstants.ELEVATOR_LAMP_COLOR,
 		parent
@@ -229,9 +226,10 @@ local function artOnly(
 	end
 	-- The table is a hiding spot (Hide): under it; the supply cabinet too: inside it. Only the default art: a
 	-- restyled table (the conference table) has no measured hug space under it.
-	local hideKind = if override == nil or override == key then HIDE_KINDS[key] else nil
-	-- A table hides only when the hider fits under its proxy (a low coffee table does not).
-	if hideKind == "table" and not OfficeSurfaceUtils.canHideUnder(size) then
+	local hideKind: HideConstants.FurnitureKind? = if override == nil or override == key then HIDE_KINDS[key] else nil
+	-- Furniture hides only when the hider fits in the free space under it (a low coffee table does not; a taller table
+	-- art would make the break table a hiding spot again).
+	if hideKind ~= nil and not OfficeSurfaceUtils.canHideUnder(hideKind, size) then
 		hideKind = nil
 	end
 	if hideKind ~= nil then
@@ -559,19 +557,7 @@ function OfficeDecorSystem.build(
 		propAt(marker, OfficeArtKeyUtils.roomType(OfficeLayoutUtils.room(layout, marker.room)), origin, folder, art)
 	end
 	-- On the layout's elevator facade; the authored boot layout has none and keeps ELEVATOR_POINT.
-	local elevatorFrame = origin * CFrame.new(OfficeDecorConstants.ELEVATOR_POINT) * CFrame.Angles(0, math.pi / 2, 0)
-	local facades: { OfficeTypes.Facade } = layout.facades or {}
-	for _, facade in facades do
-		if facade.kind == "elevator" then
-			local room = OfficeLayoutUtils.room(layout, facade.room)
-			local frame = if room ~= nil then OfficeDoorUtils.elevatorFrame(facade, room, origin) else nil
-			if frame ~= nil then
-				elevatorFrame = frame
-			end
-			break
-		end
-	end
-	elevator(elevatorFrame, folder, art)
+	elevator(OfficeDoorUtils.elevatorFrameFor(layout, origin), folder, art)
 	folder.Parent = parent
 	return folder
 end

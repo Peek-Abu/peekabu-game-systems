@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	OfficeSurfaceUtils: what stands on, and what fits under, an office furniture proxy: where a spot stands on a part
-	whose art reports its own top, and whether a hider fits under a table proxy. Pure.
+	whose art reports its own top, and whether a hider fits in the free space under a desk or table proxy. Pure.
 
 	@class OfficeSurfaceUtils
 ]=]
@@ -9,6 +9,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideConstants)
+local HideHugFormulas = require(ReplicatedStorage.Shared.Features.Hide.Utils.HideHugFormulas)
 
 local OfficeSurfaceUtils = {}
 
@@ -25,11 +26,18 @@ function OfficeSurfaceUtils.surfaceOnPart(frame: CFrame, size: Vector3, support:
 end
 
 --[=[
-	Whether a hider fits under table furniture of this proxy size: HUG_FREE_MIN of clear room on every axis.
+	Whether a hider fits under furniture of `kind` with this proxy size: HUG_FREE_MIN of clear room on every axis of
+	the free box under it (HideHugFormulas.freeSize of FURNITURE[kind].free: between the legs, under the top and brace),
+	not of its outer size. A kind with no free box (the cabinet: hidden inside, not under) always fits.
 ]=]
-function OfficeSurfaceUtils.canHideUnder(size: Vector3): boolean
+function OfficeSurfaceUtils.canHideUnder(kind: HideConstants.FurnitureKind, size: Vector3): boolean
+	local free = HideConstants.FURNITURE[kind].free
+	if free == nil then
+		return true
+	end
+	local room = HideHugFormulas.freeSize(free, size)
 	local hug = HideConstants.HUG_FREE_MIN
-	return size.X >= hug.X and size.Y >= hug.Y and size.Z >= hug.Z
+	return room.X >= hug.X and room.Y >= hug.Y and room.Z >= hug.Z
 end
 
 return OfficeSurfaceUtils

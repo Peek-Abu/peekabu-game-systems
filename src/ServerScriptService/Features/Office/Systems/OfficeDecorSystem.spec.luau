@@ -421,8 +421,12 @@ return function()
 			local boot = decorOf(propLayout({}))
 			local bootFront = boot:FindFirstChild("ElevatorFront")
 			local point = Constants.ELEVATOR_POINT
-			expect(math.abs(bootFront.Position.X - (60000 + point.X)) < 1e-3).to.equal(true)
+			-- At 60000 studs float32 positions step by 0.0039: 60000.6 is stored as 60000.6016, so the tolerance is a
+			-- hundredth (the frame itself is ELEVATOR_POINT exactly: OfficeDoorUtils.elevatorFrameFor's spec).
+			expect(math.abs(bootFront.Position.X - (60000 + point.X)) < 1e-2).to.equal(true)
 			expect(math.abs(bootFront.Position.Z - point.Z) < 1e-3).to.equal(true)
+			-- Facing into the room (+X), as before the elevator moved to its facade.
+			expect(math.abs(bootFront.CFrame.LookVector.X + 1) < 1e-3).to.equal(true)
 			built.model:Destroy()
 
 			local layout = propLayout({})

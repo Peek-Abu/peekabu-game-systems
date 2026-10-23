@@ -4,8 +4,9 @@
 	skeleton; the loading bay hangs off the dock junction, the reception off the lobby junction, and hand-authored
 	kit rooms (OfficeKitRegistry, placed by OfficeKitUtils) line the corridor segments on both sides, spread round-robin (each segment takes one room per round); a kit's glass
 	pane is clipped to the corridor it faces, so no window looks out of the building. Dead-end
-	corridors that serve no room are pruned (a closet stands in each dead end left), a stairwell facade goes on a
-	free junction wall, and Mr. Harlow's patrol route and rest point are derived from the result.
+	corridors that serve no room are pruned (a closet stands in each dead end left), a stairwell and an elevator
+	facade go on free junction walls (OfficeFacadeUtils), and Mr. Harlow's patrol route and rest point are derived
+	from the result.
 
 	`generate` builds up to GENERATE_ATTEMPTS layouts (seed * 31 + attempt) and returns the first that is valid,
 	has the markers the spawn roll needs, the hiding places and the walking distance the map promises, and the room
@@ -19,6 +20,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local Server = ServerScriptService.Features.Office
 local OfficeConstants = require(Server.Data.OfficeConstants)
 local OfficeCorridorUtils = require(script.Parent.OfficeCorridorUtils)
+local OfficeFacadeUtils = require(script.Parent.OfficeFacadeUtils)
 local OfficeHallDressingUtils = require(script.Parent.OfficeHallDressingUtils)
 local OfficeKitRegistry = require(Server.Data.OfficeKitRegistry)
 local OfficeKitUtils = require(script.Parent.OfficeKitUtils)
@@ -50,8 +52,6 @@ do
 	end
 	SLOT_DEPTH = if count > 0 then total / count else 0
 end
-local STAIR_WIDTH = 6
-local STAIR_DEPTH = 4
 local ENTRANCE_WIDTH = 12
 -- A patrol point keeps this far (Harlow's agent radius) from a closet's front.
 local PATROL_CLEARANCE = 2
@@ -467,79 +467,21 @@ local function markJunctions(build: Build, network: Network, alive: { [string]: 
 	end
 end
 
--- A junction wall: its midpoint and the direction that points out of the junction.
-type Wall = { edge: Edge, x: number, z: number, dx: number, dz: number }
-
--- A 6-wide facade of `kind` (the stairwell, the elevator) on a door-free junction wall whose 6 x 4 probe outside
--- touches no room and that holds no other facade.
+-- A 6-wide facade of `kind` (the stairwell, the elevator) on a live junction's free wall (OfficeFacadeUtils), drawn
+-- from the seed.
 local function addFacade(
 	build: Build,
 	network: Network,
 	alive: { [string]: boolean },
 	kind: "stairwell" | "elevator"
 ): boolean
-	local candidates: { OfficeTypes.Facade } = {}
-	-- A dead end's closet stands against its far wall: no stairwell there.
-	local closeted: { [string]: boolean } = {}
-	for _, marker in build.layout.markers do
-		if marker.kind == "closet" then
-			closeted[marker.room] = true
-		end
-	end
+	local junctions: { Room } = {}
 	for _, junction in network.rooms do
-		if not alive[junction.id] or network.junctions[junction.id] == nil or closeted[junction.id] then
-			continue
-		end
-		local used: { [string]: boolean } = {}
-		for _, door in build.layout.doors do
-			if door.a == junction.id or door.b == junction.id then
-				local edge = OfficeLayoutUtils.doorEdge(junction, door)
-				if edge ~= nil then
-					used[edge] = true
-				end
-			end
-		end
-		for _, facade in build.facades do
-			local edge = if facade.room == junction.id then OfficeLayoutUtils.facadeEdge(junction, facade) else nil
-			if edge ~= nil then
-				used[edge] = true
-			end
-		end
-		-- A fixed order, so the pick replays from the seed.
-		local cx, cz = center(junction)
-		local walls: { Wall } = {
-			{ edge = "minX", x = junction.minX, z = cz, dx = -1, dz = 0 },
-			{ edge = "maxX", x = junction.maxX, z = cz, dx = 1, dz = 0 },
-			{ edge = "minZ", x = cx, z = junction.minZ, dx = 0, dz = -1 },
-			{ edge = "maxZ", x = cx, z = junction.maxZ, dx = 0, dz = 1 },
-		}
-		for _, wall in walls do
-			if used[wall.edge] then
-				continue
-			end
-			local probe: Room = {
-				id = "probe",
-				name = "probe",
-				minX = math.min(wall.x, wall.x + wall.dx * STAIR_DEPTH) - (if wall.dx == 0 then STAIR_WIDTH / 2 else 0),
-				maxX = math.max(wall.x, wall.x + wall.dx * STAIR_DEPTH) + (if wall.dx == 0 then STAIR_WIDTH / 2 else 0),
-				minZ = math.min(wall.z, wall.z + wall.dz * STAIR_DEPTH) - (if wall.dz == 0 then STAIR_WIDTH / 2 else 0),
-				maxZ = math.max(wall.z, wall.z + wall.dz * STAIR_DEPTH) + (if wall.dz == 0 then STAIR_WIDTH / 2 else 0),
-			}
-			local clear = true
-			for _, room in build.layout.rooms do
-				if overlaps(probe, room) then
-					clear = false
-					break
-				end
-			end
-			if clear then
-				table.insert(
-					candidates,
-					{ room = junction.id, x = wall.x, z = wall.z, width = STAIR_WIDTH, kind = kind }
-				)
-			end
+		if alive[junction.id] and network.junctions[junction.id] ~= nil then
+			table.insert(junctions, junction)
 		end
 	end
+	local candidates = OfficeFacadeUtils.candidates(build.layout, junctions, build.facades, kind)
 	if #candidates == 0 then
 		return false
 	end
