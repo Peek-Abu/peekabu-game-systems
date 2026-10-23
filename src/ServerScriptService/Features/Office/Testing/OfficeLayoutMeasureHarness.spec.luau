@@ -1,0 +1,35 @@
+-- The measurement harness the generator is tuned with: one seed's row has sensible numbers, and the summary carries
+-- the means.
+local ServerScriptService = game:GetService("ServerScriptService")
+local Harness = require(ServerScriptService.Features.Office.Testing.OfficeLayoutMeasureHarness)
+return function()
+	it("measures a seed: rooms, floor area, walk, hide spots and Gloom", function()
+		local rows = Harness.run({ 1 })
+		expect(#rows).to.equal(1)
+		local row = rows[1]
+		expect(row.seed).to.equal(1)
+		expect(row.error).to.equal(nil)
+		expect(row.ok).to.equal(true)
+		expect(row.rooms > 0).to.equal(true)
+		expect(row.area > 0).to.equal(true)
+		expect(row.maxWalk > 0).to.equal(true)
+		expect(row.hideSpots > 0).to.equal(true)
+		expect(row.gloom > 0).to.equal(true)
+	end)
+
+	it("formats one line per seed and the means against the targets", function()
+		local text = Harness.format(Harness.run({ 1, 2 }))
+		expect(string.find(text, "mean", 1, true) ~= nil).to.equal(true)
+		expect(string.find(text, "seed 1", 1, true) ~= nil).to.equal(true)
+		expect(string.find(text, "seed 2", 1, true) ~= nil).to.equal(true)
+	end)
+
+	it("records a seed whose generate errors instead of throwing", function()
+		local rows = Harness.run({ 1 }, function()
+			error("boom")
+		end)
+		expect(rows[1].ok).to.equal(false)
+		expect(string.find(rows[1].error, "boom", 1, true) ~= nil).to.equal(true)
+		expect(string.find(Harness.format(rows), "boom", 1, true) ~= nil).to.equal(true)
+	end)
+end

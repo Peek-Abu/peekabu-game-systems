@@ -36,8 +36,19 @@ type Run = OfficeCorridorUtils.Run
 
 -- The kit types that are drawn from KIT_WEIGHTS, in a fixed order so draws replay from the seed.
 local DRAWN: { RoomType } = { "pods", "conference", "storage", "breakout" }
--- The depth assumed for a slot before its kit is chosen, to tell whether its back wall reaches the perimeter.
-local SLOT_DEPTH = 24
+-- The depth assumed for a slot before its kit is chosen, to tell whether its back wall reaches the perimeter: the
+-- mean depth of the drawn kits (OfficeKitRegistry), so it follows the catalogue.
+local SLOT_DEPTH = 0
+do
+	local total, count = 0, 0
+	for _, roomType: RoomType in DRAWN do
+		for _, kit in OfficeKitRegistry.ofType(roomType) do
+			total += kit.depth
+			count += 1
+		end
+	end
+	SLOT_DEPTH = if count > 0 then total / count else 0
+end
 local STAIR_WIDTH = 6
 local STAIR_DEPTH = 4
 local ENTRANCE_WIDTH = 12

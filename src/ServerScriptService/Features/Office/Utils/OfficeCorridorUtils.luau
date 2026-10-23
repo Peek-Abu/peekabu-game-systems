@@ -1,7 +1,7 @@
 --!strict
 --[=[
-	OfficeCorridorUtils: the office's corridor network. A jittered lattice of junction squares joined by straight
-	corridor segments: a wide spine from the loading dock to the lobby, random branches, a loop or two, and one
+	OfficeCorridorUtils: the office's corridor network. A jittered lattice of junction squares (at least JUNCTION_MIN on a side) joined
+	by straight corridor segments: a wide spine from the loading dock to the lobby, random branches, a loop or two, and one
 	atrium where three or more corridors meet. The dock and lobby junctions sit at fixed coordinates. Kit rooms
 	hang off this network (OfficeKitUtils). Pure.
 
@@ -182,14 +182,14 @@ function OfficeCorridorUtils.network(rng: Random): Network
 		end
 	end
 
-	-- 6. Junctions: sized by their widest corridor; one branching junction becomes the atrium.
+	-- 6. Junctions: sized by their widest corridor, at least JUNCTION_MIN; one branching junction becomes the atrium.
 	local degree: { [string]: number } = {}
 	local side: { [string]: number } = {}
 	for _, edge in edges do
 		for _, node in { edge.a, edge.b } do
 			local id = nodeId(node)
 			degree[id] = (degree[id] or 0) + 1
-			side[id] = math.max(side[id] or 0, edge.width)
+			side[id] = math.max(side[id] or OfficeConstants.JUNCTION_MIN, edge.width)
 		end
 	end
 	local dockId, lobbyId = nodeId(dockNode), nodeId(lobbyNode)

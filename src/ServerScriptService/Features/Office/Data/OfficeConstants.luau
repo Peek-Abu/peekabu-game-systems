@@ -216,28 +216,35 @@ return table.freeze({
 	-- The floor number kit rooms are placed on (one floor today).
 	FLOOR_NUMBER = 1,
 	-- The corridor network (OfficeCorridorUtils): a LATTICE_COLS x LATTICE_ROWS grid of junction nodes, each line
-	-- jittered by up to LATTICE_JITTER studs (the dock and lobby lines are never jittered).
-	LATTICE_COLS = 5,
-	LATTICE_ROWS = 4,
-	LATTICE_STEP_X = 64,
-	LATTICE_STEP_Z = 60,
-	LATTICE_JITTER = 6,
+	-- jittered by up to LATTICE_JITTER studs (the dock and lobby lines are never jittered). At the spike's scale
+	-- (docs/superpowers/specs/2026-10-23-odd-hours-office-map-spike-delta-design.md): main halls CORRIDOR_WIDE, side
+	-- halls CORRIDOR_NARROW, every junction at least JUNCTION_MIN on a side. A step leaves a 60-64-stud run between
+	-- junctions, so the 60-wide pods kit fits along a horizontal run and two kits back to back fit between rows; low
+	-- jitter keeps the runs straight. CORRIDOR_EDGES of the lattice's 17 edges are drawn (plus LOOPS).
+	LATTICE_COLS = 4,
+	LATTICE_ROWS = 3,
+	LATTICE_STEP_X = 84,
+	LATTICE_STEP_Z = 76,
+	LATTICE_JITTER = 3,
 	DOCK_NODE = table.freeze({ col = 3, row = 1 }),
 	LOBBY_NODE = table.freeze({ col = 1, row = 3 }),
-	CORRIDOR_WIDE = 10,
-	CORRIDOR_NARROW = 6,
+	CORRIDOR_WIDE = 14,
+	CORRIDOR_NARROW = 10,
 	NARROW_CHANCE = 0.35,
+	JUNCTION_MIN = 20,
 	ATRIUM_SIZE = 26,
-	CORRIDOR_EDGES = table.freeze({ min = 9, max = 12 }),
+	CORRIDOR_EDGES = table.freeze({ min = 8, max = 11 }),
 	LOOPS = table.freeze({ min = 1, max = 2 }),
 	-- The kit generator (OfficeLayoutGenerationUtils): the number of kit rooms per map (reception included), how far
 	-- past the corridor lattice's bounding box a room may reach, the cursor step when no kit fits a slot, the weights
 	-- of the drawn room types (server and reception are fixed: one each), the extra conference weight at the
 	-- perimeter, the attempts before generate gives up, and the area a map's rooms (bay excluded) should total.
-	KIT_ROOMS = table.freeze({ min = 14, max = 20 }),
-	ROOM_MARGIN = 36,
+	-- ROOM_MARGIN 44: the deepest kit (pods_a, 44) can hang off an outer hall (whose face is 3-5 studs inside the
+	-- lattice box). Pods carry the hiding places (12 or 8 desks), so they get the biggest weight.
+	KIT_ROOMS = table.freeze({ min = 6, max = 12 }),
+	ROOM_MARGIN = 44,
 	ROOM_STEP = 4,
-	KIT_WEIGHTS = table.freeze({ pods = 45, conference = 25, storage = 20, breakout = 10 }),
+	KIT_WEIGHTS = table.freeze({ pods = 55, conference = 20, storage = 15, breakout = 10 }),
 	PERIMETER_CONFERENCE_BOOST = 1.5,
 	GENERATE_ATTEMPTS = 8,
 	-- A generated map needs this many hiding places (desks and closets), and every room within WALK_SPEED *

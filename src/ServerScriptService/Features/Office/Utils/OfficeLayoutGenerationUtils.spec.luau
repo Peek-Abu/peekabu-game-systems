@@ -82,33 +82,36 @@ return function()
 			end
 		end)
 
-		it("holds 14-20 kit rooms: one server room, one reception, at least one breakout, 4+ kit ids", function()
-			for seed = 1, SEEDS do
-				if seed % 10 == 0 then
-					task.wait()
-				end
-				local layout = layoutFor(seed)
-				local total, byType, kits = 0, {}, {}
-				for _, room in layout.rooms do
-					if isKit(room) then
-						total += 1
-						expect(room.kit ~= nil).to.equal(true)
-						expect(room.floor).to.equal(1)
-						byType[room.roomType] = (byType[room.roomType] or 0) + 1
-						kits[room.kit] = true
+		it(
+			"holds KIT_ROOMS.min-max kit rooms: one server room, one reception, at least one breakout, 4+ kit ids",
+			function()
+				for seed = 1, SEEDS do
+					if seed % 10 == 0 then
+						task.wait()
 					end
+					local layout = layoutFor(seed)
+					local total, byType, kits = 0, {}, {}
+					for _, room in layout.rooms do
+						if isKit(room) then
+							total += 1
+							expect(room.kit ~= nil).to.equal(true)
+							expect(room.floor).to.equal(1)
+							byType[room.roomType] = (byType[room.roomType] or 0) + 1
+							kits[room.kit] = true
+						end
+					end
+					expect(total >= Constants.KIT_ROOMS.min and total <= Constants.KIT_ROOMS.max).to.equal(true)
+					expect(byType.server).to.equal(1)
+					expect(byType.reception).to.equal(1)
+					expect((byType.breakout or 0) >= 1).to.equal(true)
+					local distinct = 0
+					for _ in kits do
+						distinct += 1
+					end
+					expect(distinct >= 4).to.equal(true)
 				end
-				expect(total >= Constants.KIT_ROOMS.min and total <= Constants.KIT_ROOMS.max).to.equal(true)
-				expect(byType.server).to.equal(1)
-				expect(byType.reception).to.equal(1)
-				expect((byType.breakout or 0) >= 1).to.equal(true)
-				local distinct = 0
-				for _ in kits do
-					distinct += 1
-				end
-				expect(distinct >= 4).to.equal(true)
 			end
-		end)
+		)
 
 		it(
 			"mixes the room types: desk pods are at least a quarter of the kit rooms over seeds 1-50, conference at most 40%",

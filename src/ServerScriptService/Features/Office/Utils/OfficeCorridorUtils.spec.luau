@@ -115,7 +115,7 @@ return function()
 		end)
 	end)
 
-	it("has 9 to 14 segments and at least one cycle", function()
+	it("has CORRIDOR_EDGES segments (plus up to LOOPS.max) and at least one cycle", function()
 		eachSeed(function(_seed, network)
 			local edges = #network.segments
 			expect(edges >= OfficeConstants.CORRIDOR_EDGES.min).to.equal(true)
@@ -159,6 +159,24 @@ return function()
 					end
 				end
 				expect(degree).to.equal(1)
+			end
+		end)
+	end)
+
+	it("makes every corridor run 14 or 10 wide and every junction at least 20 on a side", function()
+		eachSeed(function(seed, network)
+			for _, segment in network.segments do
+				local room = segment.room
+				local width = if segment.horizontal then room.maxZ - room.minZ else room.maxX - room.minX
+				if width ~= 14 and width ~= 10 then
+					error(`seed {seed}: {room.id} is {width} wide`)
+				end
+			end
+			for id, room in network.junctions do
+				local sideX, sideZ = room.maxX - room.minX, room.maxZ - room.minZ
+				if sideX < 20 or sideZ < 20 then
+					error(`seed {seed}: junction {id} is {sideX} x {sideZ}`)
+				end
 			end
 		end)
 	end)
