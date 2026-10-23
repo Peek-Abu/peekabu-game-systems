@@ -5,7 +5,8 @@
 	share, rooms the start room cannot reach, markers outside their room (or within MARKER_MARGIN of a
 	wall), surface furniture (counters, tables, cabinets) crowded by floor loot spots or overlapping desks,
 	lockers or piles, floor `prop` markers (art-only dressing sized by OfficeConstants.PROP_SIZES) treated like surface
-	furniture for those tests, and a truck outside the start room. `checkCapacity` says whether the spawn roll has the markers
+	furniture for those tests (furniture sizes come from OfficeLayoutUtils.markerSize, art-sized where the marker's `art`
+	has an ART_SIZES entry), and a truck outside the start room. `checkCapacity` says whether the spawn roll has the markers
 	it needs. `checkRoute` (M2) says whether Harlow's patrol route and rest point are usable. `checkHideSpots` and `checkWalk` hold generated maps to the hiding-place count and the walking distance from the bay. OfficeServiceServer refuses to build a layout that fails them. Pure.
 
 	@class OfficeLayoutRules
@@ -29,35 +30,19 @@ for _, style in VacuumConstants.PILE_KINDS do
 	PILE_HALF = math.max(PILE_HALF, style.size.X / 2, style.size.Z / 2)
 end
 
--- A prop's size from its art key (nil for a prop naming no sized art); props hung on a wall are above the floor.
-local function propSize(marker: OfficeTypes.Marker): Vector3?
-	if marker.art == nil then
-		return nil
-	end
-	return OfficeConstants.PROP_SIZES[marker.art]
-end
+-- The kinds whose footprint the surface tests use (a floor `prop` too); other kinds are tested as points.
+local SURFACE_KINDS: { [string]: boolean } =
+	{ counter = true, table = true, cabinet = true, desk = true, locker = true }
 
-local function isFloorProp(marker: OfficeTypes.Marker): boolean
-	return marker.kind == "prop" and (marker.art == nil or OfficeConstants.PROP_WALL_HEIGHT[marker.art] == nil)
-end
+-- Props hung on a wall or standing on a desk are above the floor; the rest take floor space.
+local isFloorProp = OfficeLayoutUtils.isFloorProp
 
 local function halfExtents(marker: OfficeTypes.Marker): Vector2?
-	local kind = marker.kind
-	if kind == "prop" then
-		local size = propSize(marker)
-		return if size ~= nil then Vector2.new(size.X / 2, size.Z / 2) else nil
-	elseif kind == "counter" then
-		return Vector2.new(OfficeConstants.COUNTER_SIZE.X / 2, OfficeConstants.COUNTER_SIZE.Z / 2)
-	elseif kind == "table" then
-		return Vector2.new(OfficeConstants.TABLE_SIZE.X / 2, OfficeConstants.TABLE_SIZE.Z / 2)
-	elseif kind == "cabinet" then
-		return Vector2.new(OfficeConstants.CABINET_SIZE.X / 2, OfficeConstants.CABINET_SIZE.Z / 2)
-	elseif kind == "desk" then
-		return Vector2.new(OfficeConstants.DESK_SIZE.X / 2, OfficeConstants.DESK_SIZE.Z / 2)
-	elseif kind == "locker" then
-		return Vector2.new(OfficeConstants.LOCKER_SIZE.X / 2, OfficeConstants.LOCKER_SIZE.Z / 2)
+	if marker.kind ~= "prop" and not SURFACE_KINDS[marker.kind] then
+		return nil
 	end
-	return nil
+	local size = OfficeLayoutUtils.markerSize(marker)
+	return if size ~= nil then Vector2.new(size.X / 2, size.Z / 2) else nil
 end
 
 local function rotatedHalf(marker: OfficeTypes.Marker): Vector2?
@@ -120,17 +105,8 @@ local function inside(room: Room, x: number, z: number, margin: number): boolean
 end
 
 local function markerInside(room: Room, marker: OfficeTypes.Marker): boolean
-	local sizes: { [string]: Vector3 } = {
-		counter = OfficeConstants.COUNTER_SIZE,
-		table = OfficeConstants.TABLE_SIZE,
-		cabinet = OfficeConstants.CABINET_SIZE,
-		closet = OfficeConstants.CLOSET_SIZE,
-		desk = OfficeConstants.DESK_SIZE,
-		locker = OfficeConstants.LOCKER_SIZE,
-		shelf = OfficeConstants.SHELF_SIZE,
-		board = OfficeConstants.BOARD_SIZE,
-	}
-	local size: Vector3? = if marker.kind == "prop" then propSize(marker) else sizes[marker.kind]
+	-- Plants are tested as points; every other furniture kind and prop by its footprint.
+	local size: Vector3? = if marker.kind == "plant" then nil else OfficeLayoutUtils.markerSize(marker)
 	local rotation = marker.rotation or (if marker.kind == "prop" then 0 else nil)
 	if size == nil or rotation == nil then
 		return inside(room, marker.x, marker.z, OfficeConstants.MARKER_MARGIN)

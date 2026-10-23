@@ -404,11 +404,11 @@ function OfficeBuildSystem.build(
 				elseif marker.kind == "counter" then "KitchenCounter"
 				elseif marker.kind == "plant" then "OfficePlant"
 				else "Corkboard"
-			local size = if marker.kind == "shelf"
-				then OfficeConstants.SHELF_SIZE
-				elseif marker.kind == "counter" then OfficeConstants.COUNTER_SIZE
-				elseif marker.kind == "plant" then OfficeConstants.PLANT_SIZE
-				else OfficeConstants.BOARD_SIZE
+			-- The art's own size when the marker restyles it (ART_SIZES), the kind's size otherwise.
+			local size = OfficeLayoutUtils.markerSize(marker)
+			if size == nil then
+				error(`marker "{marker.id}" ({marker.kind}) has no size`)
+			end
 			local part = block(
 				name,
 				size,

@@ -17,6 +17,9 @@ type Room = OfficeTypes.Room
 type Door = OfficeTypes.Door
 type Edge = OfficeTypes.Edge
 
+-- What the size lookups need of a marker: a layout Marker or a kit's KitMarker.
+type Sized = { kind: OfficeTypes.MarkerKind, art: string? }
+
 -- What dropUnfit needs from OfficeLayoutRules (passed in: Rules requires this module).
 type FitRules = { markerFits: (layout: Layout, marker: OfficeTypes.Marker) -> boolean }
 
@@ -51,6 +54,49 @@ function OfficeLayoutUtils.surfaceTopY(kind: OfficeTypes.MarkerKind): number?
 		return OfficeConstants.CABINET_SIZE.Y
 	end
 	return nil
+end
+
+-- The proxy size of each furniture kind with no art override.
+local KIND_SIZES: { [string]: Vector3 } = {
+	desk = OfficeConstants.DESK_SIZE,
+	locker = OfficeConstants.LOCKER_SIZE,
+	closet = OfficeConstants.CLOSET_SIZE,
+	shelf = OfficeConstants.SHELF_SIZE,
+	counter = OfficeConstants.COUNTER_SIZE,
+	cabinet = OfficeConstants.CABINET_SIZE,
+	table = OfficeConstants.TABLE_SIZE,
+	board = OfficeConstants.BOARD_SIZE,
+	plant = OfficeConstants.PLANT_SIZE,
+}
+
+--[=[
+	The size of this marker's furniture (X by Y by Z studs, before yaw), the one lookup builds, decor and the rules
+	share: a prop is sized by PROP_SIZES[art] (nil when it names none), other furniture by ART_SIZES[art] when its
+	`art` override has an entry (the proxy follows the restyled art) and by its kind otherwise; nil for a marker that
+	is no furniture (piles, items, patrol...).
+]=]
+function OfficeLayoutUtils.markerSize(marker: Sized): Vector3?
+	local art = marker.art
+	if marker.kind == "prop" then
+		return if art ~= nil then OfficeConstants.PROP_SIZES[art] else nil
+	end
+	if art ~= nil then
+		local sized = OfficeConstants.ART_SIZES[art]
+		if sized ~= nil then
+			return sized
+		end
+	end
+	return KIND_SIZES[marker.kind]
+end
+
+--[=[
+	Whether `marker` is a prop standing on the floor (not hung on a wall, not on a desk): the ones that take floor
+	space.
+]=]
+function OfficeLayoutUtils.isFloorProp(marker: Sized): boolean
+	local art = marker.art
+	return marker.kind == "prop"
+		and (art == nil or (OfficeConstants.PROP_WALL_HEIGHT[art] == nil and OfficeConstants.PROP_DESK_TOP[art] == nil))
 end
 
 -- The markers of one kind, in layout order.

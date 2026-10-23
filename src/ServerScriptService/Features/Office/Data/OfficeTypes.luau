@@ -78,6 +78,8 @@ export type Marker = {
 	z: number,
 	-- Yaw in radians. The marker faces local -Z; absent means zero.
 	rotation: number?,
+	-- Art template key override for this marker's furniture (a prop marker must name one); absent means the kind's key.
+	art: string?,
 }
 
 -- The truck bed's footprint (the banking zone) and the time clock beside it, inside the start room.

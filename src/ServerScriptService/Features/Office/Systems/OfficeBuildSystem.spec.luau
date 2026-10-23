@@ -520,6 +520,32 @@ return function()
 			expect(racks).to.equal(1)
 		end)
 
+		it("sizes a restyled marker's proxy by its art's ART_SIZES entry", function()
+			for _, key in { "serverRack", "kitchenCounter", "corkboard", "shelf" } do
+				template("furniture", key)
+			end
+			local layout = twoRooms("open", nil)
+			layout.markers = {
+				{ id = "a.shelf.1", room = "a", kind = "shelf", x = 5, z = 5, art = "serverRack" },
+				{ id = "a.counter.1", room = "a", kind = "counter", x = 12, z = 5, art = "kitchenCounter" },
+				{ id = "a.board.1", room = "a", kind = "board", x = 5, z = 12, art = "corkboard" },
+				{ id = "a.shelf.2", room = "a", kind = "shelf", x = 12, z = 12 },
+			}
+			local built = build(layout)
+			local furniture = built.model.Furniture
+			local sizes = {}
+			for _, part in furniture:GetChildren() do
+				local id = part:GetAttribute("OfficeMarkerId")
+				if id ~= nil then
+					sizes[id] = part.Size
+				end
+			end
+			expect(sizes["a.shelf.1"]).to.equal(Vector3.new(2, 7, 3.5))
+			expect(sizes["a.counter.1"]).to.equal(Vector3.new(8, 6.35, 3.08))
+			expect(sizes["a.board.1"]).to.equal(Vector3.new(6.4, 6.1, 1.9))
+			expect(sizes["a.shelf.2"]).to.equal(Constants.SHELF_SIZE)
+		end)
+
 		it("hangs one blue point light on a server rack's LedLight attachment", function()
 			template("furniture", "serverRack")
 			local part = assets["test-map-a"].furniture.serverRack:FindFirstChildOfClass("Part")

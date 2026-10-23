@@ -156,6 +156,28 @@ return function()
 			expect(hasError(errors, 'prop marker "b.prop.2" names no sized art')).to.equal(true)
 		end)
 
+		it("sizes restyled furniture by its art: a conferenceTable crosses a wall its kind size clears", function()
+			local layout = fixture()
+			table.insert(layout.markers, { id = "b.table.1", room = "b", kind = "table", x = 30, z = 10, rotation = 0 })
+			local _, plain = OfficeLayoutRules.validate(layout)
+			expect(hasError(plain, 'marker "b.table.1" is not inside room "b"')).to.equal(false)
+			layout.markers[#layout.markers].x = 33.5
+			layout.markers[#layout.markers].art = "conferenceTable"
+			local _, errors = OfficeLayoutRules.validate(layout)
+			expect(hasError(errors, 'marker "b.table.1" is not inside room "b"')).to.equal(true)
+		end)
+
+		it("takes no floor space for a desk-top prop on a desk", function()
+			local layout = fixture()
+			table.insert(layout.markers, { id = "b.desk.1", room = "b", kind = "desk", x = 30, z = 10, rotation = 0 })
+			table.insert(
+				layout.markers,
+				{ id = "b.prop.1", room = "b", kind = "prop", art = "deskPlant", x = 30, z = 10, rotation = 0 }
+			)
+			local _, errors = OfficeLayoutRules.validate(layout)
+			expect(hasError(errors, "b.prop.1")).to.equal(false)
+		end)
+
 		it("reports a door that is not on a wall both rooms share", function()
 			local layout = fixture()
 			layout.doors[1].x = 10

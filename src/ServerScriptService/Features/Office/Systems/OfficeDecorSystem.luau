@@ -201,8 +201,9 @@ local function artOnly(
 	if key == "officeChair" then
 		CollectionService:AddTag(root, OfficeDecorConstants.CHAIR_TAG)
 	end
-	-- The table is a hiding spot (Hide): under it; the supply cabinet too: inside it.
-	local hideKind = HIDE_KINDS[key]
+	-- The table is a hiding spot (Hide): under it; the supply cabinet too: inside it. Only the default art: a
+	-- restyled table (the conference table) has no measured hug space under it.
+	local hideKind = if override == nil or override == key then HIDE_KINDS[key] else nil
 	if hideKind ~= nil then
 		root:SetAttribute(HideConstants.FURNITURE_KIND_ATTRIBUTE, hideKind)
 		CollectionService:AddTag(root, HideConstants.FURNITURE_TAG)
@@ -226,17 +227,22 @@ local function propAt(
 		error(`prop marker "{marker.id}" names art "{key}" with no PROP_SIZES entry`)
 	end
 	local wallHeight = OfficeConstants.PROP_WALL_HEIGHT[key]
-	local height = if wallHeight ~= nil then wallHeight else size.Y / 2
+	local onDesk = OfficeConstants.PROP_DESK_TOP[key] == true
+	local frame = origin * CFrame.new(marker.x, 0, marker.z) * CFrame.Angles(0, marker.rotation or 0, 0)
+	if onDesk then
+		-- A desk-top prop: the marker is its desk's centre; it stands on the desktop at DESK_PLANT_OFFSET.
+		frame = frame * CFrame.new(OfficeConstants.DESK_PLANT_OFFSET + Vector3.new(0, OfficeConstants.DESK_SIZE.Y, 0))
+	end
 	local root = part(
 		key,
 		size,
-		origin * CFrame.new(marker.x, height, marker.z) * CFrame.Angles(0, marker.rotation or 0, 0),
+		frame * CFrame.new(0, if wallHeight ~= nil then wallHeight else size.Y / 2, 0),
 		OfficeConstants.DESK_COLOR,
 		parent
 	)
 	root.Transparency = 1
 	-- Wall hangings are out of reach and never block: only floor props over a stud tall are solid.
-	root.CanCollide = wallHeight == nil and size.Y > 1
+	root.CanCollide = wallHeight == nil and not onDesk and size.Y > 1
 	root.CanQuery = root.CanCollide
 	root:SetAttribute("OfficeArtKey", key)
 	root:SetAttribute("OfficeMarkerId", marker.id)
@@ -300,15 +306,6 @@ local function chairAt(layout: OfficeTypes.Layout, desk: OfficeTypes.Marker, ori
 		{ x = -alongX, z = 0, turn = -math.pi / 2 },
 		{ x = alongX, z = 0, turn = math.pi / 2 },
 	}
-	local sizes: { [string]: Vector3? } = {
-		desk = OfficeConstants.DESK_SIZE,
-		locker = OfficeConstants.LOCKER_SIZE,
-		shelf = OfficeConstants.SHELF_SIZE,
-		counter = OfficeConstants.COUNTER_SIZE,
-		table = OfficeConstants.TABLE_SIZE,
-		cabinet = OfficeConstants.CABINET_SIZE,
-		closet = OfficeConstants.CLOSET_SIZE,
-	}
 	for _, candidate in candidates do
 		local offset = CFrame.Angles(0, desk.rotation or 0, 0)
 			:VectorToWorldSpace(Vector3.new(candidate.x, 0, candidate.z))
@@ -323,9 +320,14 @@ local function chairAt(layout: OfficeTypes.Layout, desk: OfficeTypes.Marker, ori
 			)
 		if clear then
 			for _, other in layout.markers do
-				local size = sizes[other.kind]
-				if other.kind == "prop" and other.art ~= nil and OfficeConstants.PROP_WALL_HEIGHT[other.art] == nil then
-					size = OfficeConstants.PROP_SIZES[other.art]
+				-- Floor furniture and floor props block a chair; wall hangings, desk-top props, boards and plants do not.
+				local size: Vector3? = nil
+				if
+					other.kind ~= "board"
+					and other.kind ~= "plant"
+					and (other.kind ~= "prop" or OfficeLayoutUtils.isFloorProp(other))
+				then
+					size = OfficeLayoutUtils.markerSize(other)
 				end
 				if other.id ~= desk.id and size ~= nil then
 					if
@@ -498,7 +500,7 @@ function OfficeDecorSystem.build(
 		artOnly(
 			"supplyCabinet",
 			"furniture",
-			OfficeConstants.CLOSET_SIZE,
+			OfficeLayoutUtils.markerSize(marker) or OfficeConstants.CLOSET_SIZE,
 			origin * CFrame.new(marker.x, 0, marker.z) * CFrame.Angles(0, marker.rotation or 0, 0),
 			marker.id,
 			folder,
@@ -511,7 +513,7 @@ function OfficeDecorSystem.build(
 		artOnly(
 			"breakTable",
 			"furniture",
-			OfficeConstants.TABLE_SIZE,
+			OfficeLayoutUtils.markerSize(marker) or OfficeConstants.TABLE_SIZE,
 			origin * CFrame.new(marker.x, 0, marker.z) * CFrame.Angles(0, marker.rotation or 0, 0),
 			marker.id,
 			folder,

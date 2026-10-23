@@ -158,4 +158,35 @@ return function()
 			expect(hasError(loose, "not against a wall")).to.equal(true)
 		end)
 	end)
+
+	it("uses the art's ART_SIZES footprint: a conferenceTable overlaps a desk the kind size would clear", function()
+		local kit = fixture()
+		table.insert(kit.markers, { kind = "table", x = 16, z = 12, rotation = 0 })
+		local _, plainErrors = OfficeKitRules.check(kit)
+		expect(hasError(plainErrors, "overlaps")).to.equal(false)
+		kit.markers[#kit.markers].art = "conferenceTable"
+		local ok, errors = OfficeKitRules.check(kit)
+		expect(ok).to.equal(false)
+		expect(hasError(errors, "desk 1 at (6, 8) overlaps table 1 at (16, 12)")).to.equal(true)
+	end)
+
+	it("keeps a restyled board's footprint inside the walls", function()
+		local kit = fixture()
+		table.insert(kit.markers, { kind = "board", x = 15, z = 23.3, rotation = 0 })
+		local _, plain = OfficeKitRules.check(kit)
+		expect(hasError(plain, "outside the walls")).to.equal(false)
+		kit.markers[#kit.markers].art = "corkboard"
+		local _, errors = OfficeKitRules.check(kit)
+		expect(hasError(errors, "board 1 at (15, 23.3) is outside the walls")).to.equal(true)
+	end)
+
+	it("accepts a desk-top prop on a desk's centre and flags one off a desk", function()
+		local kit = fixture()
+		table.insert(kit.markers, { kind = "prop", art = "deskPlant", x = 6, z = 8, rotation = 0 })
+		local ok = OfficeKitRules.check(kit)
+		expect(ok).to.equal(true)
+		kit.markers[#kit.markers].x = 14
+		local _, errors = OfficeKitRules.check(kit)
+		expect(hasError(errors, "is not on a desk")).to.equal(true)
+	end)
 end

@@ -407,4 +407,49 @@ return function()
 			expect(room.id).to.equal("bay")
 		end)
 	end)
+
+	describe("markerSize", function()
+		local function marker(kind, art)
+			return { id = "r.m.1", room = "r", kind = kind, x = 0, z = 0, art = art }
+		end
+
+		it("is the kind's size without art", function()
+			expect(OfficeLayoutUtils.markerSize(marker("counter"))).to.equal(OfficeConstants.COUNTER_SIZE)
+			expect(OfficeLayoutUtils.markerSize(marker("table"))).to.equal(OfficeConstants.TABLE_SIZE)
+			expect(OfficeLayoutUtils.markerSize(marker("board"))).to.equal(OfficeConstants.BOARD_SIZE)
+			expect(OfficeLayoutUtils.markerSize(marker("closet"))).to.equal(OfficeConstants.CLOSET_SIZE)
+			expect(OfficeLayoutUtils.markerSize(marker("pile"))).to.equal(nil)
+		end)
+
+		it("follows the art's ART_SIZES entry", function()
+			expect(OfficeLayoutUtils.markerSize(marker("table", "conferenceTable"))).to.equal(Vector3.new(14, 4.95, 6))
+			expect(OfficeLayoutUtils.markerSize(marker("board", "corkboard"))).to.equal(
+				OfficeConstants.ART_SIZES.corkboard
+			)
+			expect(OfficeLayoutUtils.markerSize(marker("shelf", "serverRack"))).to.equal(Vector3.new(2, 7, 3.5))
+		end)
+
+		it("keeps the kind's size for art without an entry (desk, breakTable)", function()
+			expect(OfficeLayoutUtils.markerSize(marker("desk", "desk"))).to.equal(OfficeConstants.DESK_SIZE)
+			expect(OfficeLayoutUtils.markerSize(marker("table", "breakTable"))).to.equal(OfficeConstants.TABLE_SIZE)
+		end)
+
+		it("sizes a prop by PROP_SIZES and an unsized prop by nothing", function()
+			expect(OfficeLayoutUtils.markerSize(marker("prop", "sofa"))).to.equal(OfficeConstants.PROP_SIZES.sofa)
+			expect(OfficeLayoutUtils.markerSize(marker("prop", "nonsense"))).to.equal(nil)
+			expect(OfficeLayoutUtils.markerSize(marker("prop"))).to.equal(nil)
+		end)
+	end)
+
+	describe("isFloorProp", function()
+		it("is true only for a prop standing on the floor", function()
+			local function prop(art)
+				return { id = "r.prop.1", room = "r", kind = "prop", x = 0, z = 0, art = art }
+			end
+			expect(OfficeLayoutUtils.isFloorProp(prop("sofa"))).to.equal(true)
+			expect(OfficeLayoutUtils.isFloorProp(prop("artFrame"))).to.equal(false)
+			expect(OfficeLayoutUtils.isFloorProp(prop("deskPlant"))).to.equal(false)
+			expect(OfficeLayoutUtils.isFloorProp({ id = "d", room = "r", kind = "desk", x = 0, z = 0 })).to.equal(false)
+		end)
+	end)
 end

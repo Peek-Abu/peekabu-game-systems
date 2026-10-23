@@ -5,9 +5,12 @@
 	overlap, furniture in the door approach (as deep as a swung-open leaf reaches), a desk without a clear chair
 	strip on its front (local -Z, the knee-hole side HideSpotUtils and OfficeDecorSystem use) or without room to
 	hide under, a missing patrol (or, in a breakout, rest) marker, fewer piles than a dirty room needs, and a pile or item
-	marker crowding furniture. `prop` markers (art-only dressing, sized by OfficeConstants.PROP_SIZES[art]) count as
-	furniture; a wall-mounted prop (PROP_WALL_HEIGHT) hangs above the floor, so it skips the overlap, approach and
-	clearance tests but must lie against a wall; a prop without a sized `art` is an error. Works in the kit's local frame (x along the front wall, z into the room). Pure.
+	marker crowding furniture. Furniture is sized by OfficeLayoutUtils.markerSize, so a marker whose `art` has an
+	OfficeConstants.ART_SIZES entry (a conference table, a server rack) takes that art's footprint. `prop` markers
+	(art-only dressing, sized by OfficeConstants.PROP_SIZES[art]) count as furniture; a wall-mounted prop
+	(PROP_WALL_HEIGHT) hangs above the floor, so it skips the overlap, approach and clearance tests but must lie against
+	a wall; a desk-top prop (PROP_DESK_TOP) must sit at a desk's centre and takes no floor space; a prop without a
+	sized `art` is an error. Works in the kit's local frame (x along the front wall, z into the room). Pure.
 
 	@class OfficeKitRules
 ]=]
@@ -17,6 +20,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local OfficeConstants = require(ServerScriptService.Features.Office.Data.OfficeConstants)
 local OfficeTypes = require(ServerScriptService.Features.Office.Data.OfficeTypes)
+local OfficeLayoutUtils = require(ServerScriptService.Features.Office.Utils.OfficeLayoutUtils)
 local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideConstants)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 
@@ -35,18 +39,6 @@ end
 -- Touching footprints are fine; this much overlap is not.
 local EPSILON = 0.001
 
--- Furniture markers and their sizes (the same table OfficeLayoutRules uses for its in-walls test, plus plants).
-local FURNITURE: { [string]: Vector3? } = {
-	desk = OfficeConstants.DESK_SIZE,
-	locker = OfficeConstants.LOCKER_SIZE,
-	closet = OfficeConstants.CLOSET_SIZE,
-	shelf = OfficeConstants.SHELF_SIZE,
-	counter = OfficeConstants.COUNTER_SIZE,
-	cabinet = OfficeConstants.CABINET_SIZE,
-	table = OfficeConstants.TABLE_SIZE,
-	board = OfficeConstants.BOARD_SIZE,
-	plant = OfficeConstants.PLANT_SIZE,
-}
 -- Kinds OfficeLayoutRules tests as a footprint; the rest (plants included) it tests as a point.
 local FOOTPRINT_IN_WALLS: { [string]: boolean } = {
 	desk = true,
@@ -68,20 +60,20 @@ local function rect(x: number, z: number, sizeX: number, sizeZ: number, rotation
 	return { minX = x - halfX, maxX = x + halfX, minZ = z - halfZ, maxZ = z + halfZ }
 end
 
--- A prop's size from its art key; nil when it names none or an unknown one.
-local function propSize(marker: KitMarker): Vector3?
-	if marker.art == nil then
-		return nil
-	end
-	return OfficeConstants.PROP_SIZES[marker.art]
+-- A prop standing on a desk's top, which takes no floor space.
+local function deskTop(marker: KitMarker): boolean
+	return marker.kind == "prop" and marker.art ~= nil and OfficeConstants.PROP_DESK_TOP[marker.art] == true
 end
 
+-- A prop hung on a wall.
 local function wallMounted(marker: KitMarker): boolean
 	return marker.kind == "prop" and marker.art ~= nil and OfficeConstants.PROP_WALL_HEIGHT[marker.art] ~= nil
 end
 
+-- The footprint of furniture or a prop: its OfficeLayoutUtils.markerSize (art-sized where the art has an ART_SIZES
+-- entry), yawed.
 local function footprint(marker: KitMarker): Rect?
-	local size = if marker.kind == "prop" then propSize(marker) else FURNITURE[marker.kind]
+	local size = OfficeLayoutUtils.markerSize(marker)
 	if size == nil then
 		return nil
 	end
@@ -138,12 +130,24 @@ function OfficeKitRules.check(kit: Kit): (boolean, { string })
 		if marker.kind == "prop" and box == nil then
 			table.insert(errors, `{label}: {names[index]} names no sized art ("{marker.art}")`)
 		end
-		-- Wall-mounted props hang above the floor furniture: they take no part in its overlap tests.
-		if box ~= nil and not wallMounted(marker) then
+		-- Wall-mounted and desk-top props sit above the floor furniture: they take no part in its overlap tests.
+		if box ~= nil and not wallMounted(marker) and not deskTop(marker) then
 			boxes[index] = box
 		end
 		local fits: boolean
-		if box ~= nil and FOOTPRINT_IN_WALLS[marker.kind] then
+		if deskTop(marker) then
+			-- It stands on a desk: that desk's centre.
+			fits = false
+			for _, other in kit.markers do
+				if other.kind == "desk" and other.x == marker.x and other.z == marker.z then
+					fits = true
+				end
+			end
+			if not fits then
+				table.insert(errors, `{label}: {names[index]} is not on a desk`)
+			end
+			continue
+		elseif box ~= nil and FOOTPRINT_IN_WALLS[marker.kind] then
 			fits = insideWalls(kit, box, wall)
 		else
 			fits = insideWalls(kit, { minX = marker.x, maxX = marker.x, minZ = marker.z, maxZ = marker.z }, margin)

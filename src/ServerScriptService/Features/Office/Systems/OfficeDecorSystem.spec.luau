@@ -361,27 +361,48 @@ return function()
 			end).to.throw("PROP_SIZES")
 		end)
 
-		it("lets a table marker's art key win while keeping the table's hiding", function()
+		it("lets a table marker's art key win, and only the default table art hides", function()
 			template("furniture", "breakTable")
 			template("furniture", "conferenceTable")
 			assets["test-map-a"].furniture.conferenceTable:FindFirstChildOfClass("Part").Name = "Conference"
 			local decor = decorOf(propLayout({
 				{ id = "a.table.1", room = "a", kind = "table", art = "conferenceTable", x = 20, z = 20 },
 				{ id = "a.table.2", room = "a", kind = "table", x = 30, z = 30 },
+				{ id = "a.table.3", room = "a", kind = "table", art = "breakTable", x = 10, z = 30 },
 			}))
 			local conference, plain = 0, 0
 			for _, root in decor:GetChildren() do
 				if root:GetAttribute("OfficeArtKey") == "breakTable" then
-					expect(root:GetAttribute("HideFurnitureKind")).to.equal("table")
 					if root:FindFirstChild("ArtVisual"):FindFirstChild("Conference") then
 						conference += 1
+						-- A big table with no measured hug space under it is no hiding spot.
+						expect(root:GetAttribute("HideFurnitureKind")).to.equal(nil)
+						expect(root.Size).to.equal(Vector3.new(14, 4.95, 6))
 					else
 						plain += 1
+						expect(root:GetAttribute("HideFurnitureKind")).to.equal("table")
+						expect(root.Size).to.equal(OfficeConstants.TABLE_SIZE)
 					end
 				end
 			end
 			expect(conference).to.equal(1)
-			expect(plain).to.equal(1)
+			expect(plain).to.equal(2)
+		end)
+
+		it("stands a desk-top prop on its desk's top at the desk plant offset", function()
+			template("furniture", "deskPlant")
+			local decor = decorOf(propLayout({
+				{ id = "a.desk.1", room = "a", kind = "desk", x = 20, z = 20, rotation = 0 },
+				{ id = "a.prop.1", room = "a", kind = "prop", art = "deskPlant", x = 20, z = 20, rotation = 0 },
+			}))
+			local root = decor:FindFirstChild("deskPlant")
+			expect(root ~= nil).to.equal(true)
+			expect(root.CanCollide).to.equal(false)
+			local size = OfficeConstants.PROP_SIZES.deskPlant
+			local expected = Vector3.new(60020, 0, 20)
+				+ OfficeConstants.DESK_PLANT_OFFSET
+				+ Vector3.new(0, OfficeConstants.DESK_SIZE.Y + size.Y / 2, 0)
+			expect((root.Position - expected).Magnitude < 1e-3).to.equal(true)
 		end)
 	end)
 end

@@ -29,22 +29,23 @@ local DESK_PROP_SIZES: { [string]: Vector3 } = {
 	bookStack = Vector3.new(1.007, 0.465, 1.14),
 	stationeryCup = Vector3.new(0.34, 0.721, 0.34),
 }
--- Art-only dressing props (the `prop` marker kind), named by Marker.art: W x H x D studs. Props over 1 stud tall
--- collide. The wall-mounted ones (PROP_WALL_HEIGHT) hang on a wall at that centre height.
+-- Art-only dressing props (the `prop` marker kind), named by Marker.art: W x H x D studs, each the template's own
+-- BaseSize (odd-hours-b1 KIT_MAP) so Uniform fit never shrinks one. Props over 1 stud tall collide. The wall-mounted
+-- ones (PROP_WALL_HEIGHT) hang on a wall at that centre height; the desk-top ones (PROP_DESK_TOP) stand on a desk.
 local PROP_SIZES: { [string]: Vector3 } = {
-	sofa = Vector3.new(7, 3.2, 3.2),
-	vending = Vector3.new(3.6, 7, 3),
-	waterCooler = Vector3.new(1.6, 4.2, 1.6),
-	copier = Vector3.new(3.6, 4, 3),
-	floorLamp = Vector3.new(1.6, 6, 1.6),
-	planter = Vector3.new(2.4, 4.5, 2.4),
-	wasteBin = Vector3.new(1.4, 1.8, 1.4),
-	artFrame = Vector3.new(3.5, 2.5, 0.25),
-	wallScreen = Vector3.new(5, 3, 0.3),
-	sconce = Vector3.new(1, 1.4, 0.6),
-	wallClock = Vector3.new(1.4, 1.4, 0.2),
-	deskPlant = Vector3.new(0.9, 1.2, 0.9),
-	partition = Vector3.new(6, 4.5, 0.4),
+	sofa = Vector3.new(7.64, 3.5, 3.62),
+	vending = Vector3.new(3.43, 7.5, 4.57),
+	waterCooler = Vector3.new(1.34, 5, 1.415),
+	copier = Vector3.new(4.6, 4.6, 3.28),
+	floorLamp = Vector3.new(1.54, 6.52, 1.54),
+	planter = Vector3.new(4.06, 5.97, 3.92),
+	wasteBin = Vector3.new(1.85, 2, 1.86),
+	artFrame = Vector3.new(4, 3, 0.27),
+	wallScreen = Vector3.new(7, 4, 0.34),
+	sconce = Vector3.new(0.88, 1.05, 0.98),
+	wallClock = Vector3.new(1.8, 1.8, 0.25),
+	deskPlant = Vector3.new(1.26, 1.39, 1.26),
+	partition = Vector3.new(6, 5, 1.8),
 	stairwellSign = Vector3.new(2, 1, 0.1),
 }
 local PROP_WALL_HEIGHT: { [string]: number } = {
@@ -53,6 +54,24 @@ local PROP_WALL_HEIGHT: { [string]: number } = {
 	sconce = 7.5,
 	wallClock = 8,
 	stairwellSign = 7,
+}
+-- A desk-top prop's marker sits at its desk's centre (and yaw); the prop stands on the desktop at
+-- DESK_PLANT_OFFSET in the desk's frame (front is local -Z).
+local PROP_DESK_TOP: { [string]: boolean } = { deskPlant = true }
+-- The proxy size of furniture restyled by a marker's `art` override: the template's BaseSize (KIT_MAP), so the proxy
+-- follows the art instead of Uniform fit shrinking it to the slate-tuned kind size. No entry for the desk (it keeps
+-- DESK_SIZE for hide space), the locker (a single locker; the kit's is a bank), the chair (decor-placed) or
+-- breakTable (a hide spot: its 1.8-high art leaves no HUG_FREE_MIN under it, so it stays at TABLE_SIZE).
+-- supplyCabinet equals CLOSET_SIZE.
+local ART_SIZES: { [string]: Vector3 } = {
+	corkboard = Vector3.new(6.4, 6.1, 1.9),
+	shelf = Vector3.new(5.54, 8, 2.08),
+	serverRack = Vector3.new(2, 7, 3.5),
+	kitchenCounter = Vector3.new(8, 6.35, 3.08),
+	receptionDesk = Vector3.new(12.86, 4.6, 5.16),
+	conferenceTable = Vector3.new(14, 4.95, 6),
+	partition = Vector3.new(6, 5, 1.8),
+	supplyCabinet = Vector3.new(4.32, 8, 3.45),
 }
 local FLOOR_COLORS: { Color3 } = {
 	Color3.fromRGB(96, 92, 86),
@@ -75,6 +94,9 @@ return table.freeze({
 	SERVER_LED_BRIGHTNESS = 0.4,
 	PROP_SIZES = table.freeze(PROP_SIZES),
 	PROP_WALL_HEIGHT = table.freeze(PROP_WALL_HEIGHT),
+	PROP_DESK_TOP = table.freeze(PROP_DESK_TOP),
+	DESK_PLANT_OFFSET = Vector3.new(-3.4, 0, 1.7),
+	ART_SIZES = table.freeze(ART_SIZES),
 	-- The floor number kit rooms are placed on (one floor today).
 	FLOOR_NUMBER = 1,
 	-- The corridor network (OfficeCorridorUtils): a LATTICE_COLS x LATTICE_ROWS grid of junction nodes, each line
