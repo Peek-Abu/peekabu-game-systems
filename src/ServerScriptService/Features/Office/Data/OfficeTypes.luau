@@ -90,6 +90,21 @@ export type Truck = {
 	maxZ: number,
 	clockX: number,
 	clockZ: number,
+	-- Radians about +Y (CFrame.Angles(0, yaw, 0)). nil or 0: cab toward +Z, ramp toward -Z; math.pi: cab toward -Z.
+	yaw: number?,
+}
+
+-- Which way into the building: the loading dock's roller door, or the lobby's glass rotunda.
+export type EntranceId = "dock" | "lobby"
+
+-- A teleport entrance between the outside and a room. `outside` is the outside door's centre on the floor; its yaw
+-- faces away from the building, where a player arriving outside looks. `exit` is the inside doorway on room
+-- `exit.a`'s outer wall, with `exit.b` the entrance id.
+export type Entrance = {
+	id: EntranceId,
+	ground: string,
+	outside: { x: number, z: number, yaw: number },
+	exit: Door,
 }
 
 -- A building-front piece on the exterior wall of `room`, centred at (x, z).
@@ -115,6 +130,9 @@ export type Layout = {
 	-- Generated maps only: building-front pieces, and glass wall spans.
 	facades: { Facade }?,
 	panes: { Segment }?,
+	-- Generated maps only: the outdoor boxes (ids "yard" and "carpark"; never built as rooms) and the teleport entrances.
+	grounds: { Room }?,
+	entrances: { Entrance }?,
 }
 
 export type Edge = "minX" | "maxX" | "minZ" | "maxZ"

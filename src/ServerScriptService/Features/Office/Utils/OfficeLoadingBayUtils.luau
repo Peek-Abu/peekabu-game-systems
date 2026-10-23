@@ -80,22 +80,24 @@ end
 ]=]
 function OfficeLoadingBayUtils.arrivals(truck: OfficeTypes.Truck): { Vector3 }
 	local cx, cz = (truck.minX + truck.maxX) / 2, (truck.minZ + truck.maxZ) / 2
+	local turn = CFrame.Angles(0, truck.yaw or 0, 0)
 	local points: { Vector3 } = {}
 	for _, offset in OfficeConstants.ARRIVAL_OFFSETS do
-		table.insert(points, Vector3.new(cx + offset.X, 0, cz + offset.Y))
+		local turned = turn:VectorToWorldSpace(Vector3.new(offset.X, 0, offset.Y))
+		table.insert(points, Vector3.new(cx + turned.X, 0, cz + turned.Z))
 	end
 	return points
 end
 
 --[=[
 	Where the `index`-th crew member appears (layout space, wrapping over the arrival points): SPAWN_HEIGHT over
-	the bed's top, facing -Z, out of the open back and down the ramp.
+	the bed's top, facing out of the open back and down the ramp (-Z at yaw 0, +Z at yaw pi).
 ]=]
 function OfficeLoadingBayUtils.arrivalFrame(truck: OfficeTypes.Truck, index: number): CFrame
 	local points = OfficeLoadingBayUtils.arrivals(truck)
 	local point = points[(math.max(index, 1) - 1) % #points + 1]
 	local at = Vector3.new(point.X, OfficeConstants.BED_HEIGHT + OfficeConstants.SPAWN_HEIGHT, point.Z)
-	return CFrame.lookAt(at, at - Vector3.zAxis)
+	return CFrame.lookAt(at, at + CFrame.Angles(0, truck.yaw or 0, 0):VectorToWorldSpace(-Vector3.zAxis))
 end
 
 --[=[

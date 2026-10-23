@@ -201,7 +201,27 @@ local SHELL_MATERIALS: { [OfficeTypes.ShellMaterial]: { material: Enum.Material,
 		},
 	}
 
+-- The outside (OfficeGroundsUtils), layout space: the spike's world numbers minus ORIGIN plus EXTERIOR_OFFSET.
+local OUTSIDE = table.freeze({
+	EXTERIOR_OFFSET = Vector3.new(0, 0, -1600),
+	yard = table.freeze({ minX = -164, maxX = 322, minZ = -1921, maxZ = -1657 }),
+	carpark = table.freeze({ minX = -164, maxX = -44, minZ = -1657, maxZ = -1370 }),
+	TRUCK_CENTRE = Vector2.new(168, -1876),
+	TRUCK_YAW = math.pi,
+	-- The roller door on the dock block's front face; you arrive facing -Z, toward the truck.
+	DOCK_OUTSIDE = table.freeze({ x = 168, z = -1664, yaw = 0 }),
+	-- The rotunda's doors; you arrive facing -X, out to the car park.
+	LOBBY_OUTSIDE = table.freeze({ x = -62, z = -1448, yaw = math.pi / 2 }),
+	-- How far in front of the outside door a player arrives, and how far into the room from the exit.
+	OUTSIDE_STEP = 5,
+	INSIDE_STEP = 4,
+	ENTRANCE_REACH = 10,
+	DOCK_EXIT_WIDTH = 8,
+	VOLUME_HEIGHT = 120,
+})
+
 return table.freeze({
+	OUTSIDE = OUTSIDE,
 	-- Where the office's local 0, 0 sits in the world: far from the origin, where M4 builds the depot.
 	-- One-stud foundation clears the artist-owned baseplate top at Y=0.
 	ORIGIN = CFrame.new(1000, 1, 0),

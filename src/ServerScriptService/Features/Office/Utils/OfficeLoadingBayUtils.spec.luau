@@ -165,4 +165,44 @@ return function()
 			end
 		end)
 	end)
+
+	describe("yaw", function()
+		local function turned()
+			local bay = OfficeLoadingBayUtils.bay(2, TARGET)
+			local truck = OfficeLoadingBayUtils.truck(bay, 2)
+			local flipped = table.clone(truck)
+			flipped.yaw = math.pi
+			return truck, flipped
+		end
+
+		local function near(a, b)
+			return (a - b).Magnitude < 1e-3
+		end
+
+		it("faces +Z out of the open back at yaw pi and -Z with no yaw", function()
+			local truck, flipped = turned()
+			expect(near(OfficeLoadingBayUtils.arrivalFrame(truck, 1).LookVector, Vector3.new(0, 0, -1))).to.equal(true)
+			expect(near(OfficeLoadingBayUtils.arrivalFrame(flipped, 1).LookVector, Vector3.new(0, 0, 1))).to.equal(true)
+		end)
+
+		it("turns the arrival points 180 degrees about the bed centre", function()
+			local truck, flipped = turned()
+			local cx, cz = (truck.minX + truck.maxX) / 2, (truck.minZ + truck.maxZ) / 2
+			local plain = OfficeLoadingBayUtils.arrivals(truck)
+			local turnedPoints = OfficeLoadingBayUtils.arrivals(flipped)
+			expect(#turnedPoints).to.equal(#plain)
+			for index, point in plain do
+				local expected = Vector3.new(2 * cx - point.X, 0, 2 * cz - point.Z)
+				expect(near(turnedPoints[index], expected)).to.equal(true)
+			end
+		end)
+
+		it("keeps the truck's box the same when turned 180 degrees", function()
+			local truck, flipped = turned()
+			local min1, max1 = OfficeLoadingBayUtils.truckBox(truck)
+			local min2, max2 = OfficeLoadingBayUtils.truckBox(flipped)
+			expect(near(min1, min2)).to.equal(true)
+			expect(near(max1, max2)).to.equal(true)
+		end)
+	end)
 end
