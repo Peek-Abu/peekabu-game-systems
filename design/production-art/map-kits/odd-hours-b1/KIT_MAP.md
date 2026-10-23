@@ -21,9 +21,9 @@ decal-resolved colour/normal/rough images. Every mesh as imported faces -Z (chec
 | floorTile_breakout | building | `OH_Lino` slab | - | - | - | pending (MaterialVariant not made; Task 4) |
 | doorLeaf | building | Task 2 mesh | - | - | - | pending upload (Task 4) |
 | doorLeafGlass | building | Task 2 mesh | - | - | - | pending upload (Task 4) |
-| desk | furniture | c_desk 127882537035090 | 8.8 x 6.69 x 4.6 | NegativeZ | Stretch | built, FAILS hide space (see below) |
+| desk | furniture | c_desk 127882537035090 | 8.8 x 6.69 x 4.6 | - | Stretch | HELD: divider breaks hide space, re-export pending (slate desk via fallback) |
 | officeChair | furniture | c_chair 76140780685205 | 2.71 x 4.60 x 2.79 | NegativeZ | Uniform | built |
-| locker | furniture | c_lockers 80348717249179 | 6 x 8 x 2.52 | NegativeZ | Uniform | built |
+| locker | furniture | c_lockers 80348717249179 | 6 x 8 x 2.52 | - | Uniform | HELD: bank of lockers != single searchable locker (marker is ~2.5 x 7 x 2.5, art would shrink to 0.42x; slate locker via fallback) |
 | shelf | furniture | c_bookshelf 82298001439367 | 5.54 x 8 x 2.08 | NegativeZ | Uniform | built |
 | kitchenCounter | furniture | c_coffeebar 132077928644424 | 8 x 6.35 x 3.08 | NegativeZ | Uniform | built, SupportSurfaceY = 4.60 (measured worktop) |
 | corkboard | furniture | c_whiteboard 118580116232249 | 6.4 x 6.1 x 1.9 | NegativeZ | Uniform | built |
@@ -51,18 +51,18 @@ decal-resolved colour/normal/rough images. Every mesh as imported faces -Z (chec
 ## Coverage and validation report (script run in Edit)
 
 ```
-built 27 (invalid 0), pending 7, failed 0
+built 25 (invalid 0), pending 7, held 2 (desk, locker), failed 0
 ```
 
 Every built template passes `ArtKitRules.validateTemplate` (required through a fresh `:Clone()` of the module).
 Pending: floorTile_server, floorTile_breakout, doorLeaf, doorLeafGlass, serverRack, supplyCabinet, stairwellSign.
 
 Live attach check (Edit, cloned `ArtVisualSystem`, proxies under a Model with `ArtKitId = "odd-hours-b1"`): `attach`
-returned a visual for all 27 built keys (kitchenCounter set `ArtSupportSurfaceY`). exitSign / serverRack / doorLeaf
+returned a visual for all 27 keys built in the first run (before desk and locker were held; the kit now has 25) (kitchenCounter set `ArtSupportSurfaceY`). exitSign / serverRack / doorLeaf
 return nil from the kit (so the slate fallback / greybox applies). The test model and scratch parts were deleted;
 nothing is left in Workspace.
 
-## Desk hide-space measurement (the one failure)
+## Desk hide-space measurement (why desk is held)
 
 `c_desk` as uploaded: 8.8 x 6.69 x 4.6. Its worktop is at Y 4.95, the underside of the top at Y 4.67, and a green
 privacy divider rises to Y 6.69 at the back. Stretch fit maps the whole bounds (divider included) onto
@@ -75,8 +75,7 @@ privacy divider rises to Y 6.69 at the back. Stretch fit maps the whole bounds (
 
 Cause is only the divider in the Y stretch: without it the mesh is 4.95 tall (underside 4.67), scale Y becomes 1.0
 and the free height is 4.67 (>= 4.2). Fixes, none done here: re-export `c_desk` without the divider (separate mesh),
-or let the desk proxy be taller than 4.95. Until then keep the slate desk for hide-critical maps, or delete
-`furniture/desk` from the kit (the fallback then uses the slate desk).
+or let the desk proxy be taller than 4.95. The desk is therefore held (not built); the slate desk covers it through the fallback.
 
 ## Notes and captures
 
@@ -91,3 +90,8 @@ or let the desk proxy be taller than 4.95. Until then keep the slate desk for hi
   `...-1792720670671-9aqgzc.jpg` (attached wall, floors, ceiling), `...-1792720676003-0gqm1f.jpg` (attached troffer),
   `...-1792720679337-5elevv.jpg` (attached furniture, desk stretched).
 - The owner saves the place (Ctrl+S); nothing was saved or published.
+
+## Fix round 1
+
+- desk and locker are held in the script (`HELD` table; remove an entry to rebuild it, e.g. once a no-divider desk id replaces c_desk). Re-run result: built 25, pending 7, held 2, failed 0; `furniture/desk` and `furniture/locker` are absent from the kit.
+- Proportion mismatches (corkboard, counter, tables vs their proxies) are solved in code by Task 5, which adds `ART_SIZES` so the proxy follows the art's BaseSize; templates are left unchanged.

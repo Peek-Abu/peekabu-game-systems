@@ -75,6 +75,12 @@ local MESH = {
 	{ "doorLeafGlass", "building", "t2_doorLeafGlass", "NegativeZ", "Stretch" },
 }
 
+-- Held keys: not built; the slate kit covers them through the attachFirst fallback. Delete the entry to turn one on.
+local HELD = {
+	desk = "held: divider breaks hide space, re-export pending (no-divider desk id turns it back on)",
+	locker = "held: bank of lockers != single searchable locker",
+}
+
 local report = {}
 local deskResult
 local function note(key, family, status, detail)
@@ -389,8 +395,13 @@ local ok, err = pcall(function()
 	-- mesh pieces
 	for _, spec in MESH do
 		local key, family = spec[1], spec[2]
-		local model, why = buildMesh(spec)
-		if model then
+		local model, why
+		if not HELD[key] then
+			model, why = buildMesh(spec)
+		end
+		if HELD[key] then
+			note(key, family, "held", HELD[key])
+		elseif model then
 			add(key, family, model, "asset " .. spec[3] .. " model " .. IDS[spec[3]][1])
 		elseif IDS[spec[3]] then
 			note(key, family, "failed", why)
@@ -446,7 +457,7 @@ for _, f in workspace:GetChildren() do
 end
 
 local lines = { ok and "ASSEMBLE OK" or ("ASSEMBLE ERROR: " .. tostring(err)) }
-local built, pending, failed, invalid = 0, 0, 0, 0
+local built, pending, failed, invalid, held = 0, 0, 0, 0, 0
 for _, r in ipairs(report) do
 	if r.status == "built" then
 		built += 1
@@ -455,6 +466,8 @@ for _, r in ipairs(report) do
 		end
 	elseif r.status == "pending" then
 		pending += 1
+	elseif r.status == "held" then
+		held += 1
 	else
 		failed += 1
 	end
@@ -472,7 +485,7 @@ for _, r in ipairs(report) do
 		)
 	)
 end
-table.insert(lines, ("built %d (invalid %d), pending %d, failed %d"):format(built, invalid, pending, failed))
+table.insert(lines, ("built %d (invalid %d), pending %d, held %d, failed %d"):format(built, invalid, pending, held, failed))
 local d = deskResult
 if type(d) == "string" then
 	table.insert(lines, d)
