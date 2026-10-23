@@ -83,6 +83,8 @@ generated office match the spike. The stage 2 look was rejected; see below for w
 
 ## Studio / place state (important)
 
+- 2026-10-23 evening: removed from the Shift place (owner OK) the unused `OfficeMap` (old hand-built map format, 289 lights), `ClaudeSpike` and `ClaudeMockRoom`, and cleared the Workspace `RunTests` attribute (it ran the full suite on every Play and caused the lag). Set `RunTests = true` only while running specs, then clear it. Owner must save (Ctrl+S).
+
 - **The Shift place must be saved (Ctrl+S) by the owner.** These live only in the open session until it is saved:
   - the odd-hours-b1 kit (`ReplicatedStorage.Assets.CleanupCrew.ArtKits["odd-hours-b1"]`);
   - MaterialVariants `OH_Vinyl` / `OH_Lino`;
