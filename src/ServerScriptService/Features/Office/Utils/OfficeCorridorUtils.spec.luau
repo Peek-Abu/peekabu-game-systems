@@ -64,7 +64,7 @@ return function()
 	end)
 
 	it("puts every door on a wall both its rooms share", function()
-		eachSeed(function(seed, network)
+		eachSeed(function(_seed, network)
 			local byId = roomsById(network)
 			for _, door in network.doors do
 				expect(door.kind).to.equal("open")
@@ -104,7 +104,7 @@ return function()
 
 	it("keeps the dock and lobby fixed across seeds", function()
 		local first = OfficeCorridorUtils.network(Random.new(1))
-		eachSeed(function(seed, network)
+		eachSeed(function(_seed, network)
 			for _, pair in { { network.dock, first.dock }, { network.lobby, first.lobby } } do
 				expect(pair[1].id).to.equal(pair[2].id)
 				expect(pair[1].minX).to.equal(pair[2].minX)
@@ -116,7 +116,7 @@ return function()
 	end)
 
 	it("has 9 to 14 segments and at least one cycle", function()
-		eachSeed(function(seed, network)
+		eachSeed(function(_seed, network)
 			local edges = #network.segments
 			expect(edges >= OfficeConstants.CORRIDOR_EDGES.min).to.equal(true)
 			expect(edges <= OfficeConstants.CORRIDOR_EDGES.max + OfficeConstants.LOOPS.max).to.equal(true)
@@ -125,7 +125,7 @@ return function()
 	end)
 
 	it("keeps the dock-to-lobby spine wide", function()
-		eachSeed(function(seed, network)
+		eachSeed(function(_seed, network)
 			local byId = roomsById(network)
 			expect(#network.spine > 0).to.equal(true)
 			for _, id in network.spine do
@@ -137,7 +137,7 @@ return function()
 	end)
 
 	it("spans segments between junction faces and lists degree-1 junctions as leaves", function()
-		eachSeed(function(seed, network)
+		eachSeed(function(_seed, network)
 			for _, segment in network.segments do
 				expect(segment.from < segment.to).to.equal(true)
 				local room = segment.room
@@ -166,7 +166,7 @@ return function()
 	it("mixes widths and usually builds an atrium", function()
 		local widths = {}
 		local atriums = 0
-		eachSeed(function(seed, network)
+		eachSeed(function(_seed, network)
 			for _, segment in network.segments do
 				local room = segment.room
 				widths[math.min(room.maxX - room.minX, room.maxZ - room.minZ)] = true

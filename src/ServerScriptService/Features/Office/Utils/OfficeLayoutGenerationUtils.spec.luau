@@ -168,7 +168,9 @@ return function()
 						end
 					end
 					if not onHallway then
-						error(`seed {seed}: pane ({pane.x1}, {pane.z1})-({pane.x2}, {pane.z2}) is not on a hallway edge`)
+						error(
+							`seed {seed}: pane ({pane.x1}, {pane.z1})-({pane.x2}, {pane.z2}) is not on a hallway edge`
+						)
 					end
 				end
 			end
