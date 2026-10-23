@@ -155,6 +155,19 @@ return function()
 			expect(hasError(errors, "crowds")).to.equal(true)
 		end)
 
+		it("lets furniture and loot stand on a flat floor prop (a rug), but keeps it inside the walls", function()
+			local kit = fixture()
+			-- A 14 x 13 rug under the desk and its chair strip, reaching into the door approach, with a pile on it.
+			table.insert(kit.markers, { kind = "prop", art = "rug", x = 12, z = 10, rotation = 0 })
+			table.insert(kit.markers, { kind = "pile", x = 15, z = 12 })
+			local ok, errors = OfficeKitRules.check(kit)
+			expect(errors[1]).to.equal(nil)
+			expect(ok).to.equal(true)
+			kit.markers[#kit.markers].x = 26
+			local _, outside = OfficeKitRules.check(kit)
+			expect(hasError(outside, "outside the walls")).to.equal(true)
+		end)
+
 		it("flags a prop with no art or an unsized one", function()
 			local kit = fixture()
 			table.insert(kit.markers, { kind = "prop", x = 20, z = 12 })

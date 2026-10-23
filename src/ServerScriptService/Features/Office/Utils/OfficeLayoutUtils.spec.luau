@@ -500,6 +500,19 @@ return function()
 			expect(OfficeLayoutUtils.isFloorProp(prop("artFrame"))).to.equal(false)
 			expect(OfficeLayoutUtils.isFloorProp(prop("deskPlant"))).to.equal(false)
 			expect(OfficeLayoutUtils.isFloorProp({ id = "d", room = "r", kind = "desk", x = 0, z = 0 })).to.equal(false)
+			-- A rug lies flat: things stand on it, so it takes no floor space.
+			expect(OfficeLayoutUtils.isFloorProp(prop("rug"))).to.equal(false)
+			expect(OfficeLayoutUtils.isFloorProp(prop("column"))).to.equal(true)
+		end)
+
+		it("isFlatProp is true only for a prop under FLAT_PROP_HEIGHT tall", function()
+			local function prop(art)
+				return { id = "r.prop.1", room = "r", kind = "prop", x = 0, z = 0, art = art }
+			end
+			expect(OfficeLayoutUtils.isFlatProp(prop("rug"))).to.equal(true)
+			expect(OfficeLayoutUtils.isFlatProp(prop("sofa"))).to.equal(false)
+			expect(OfficeLayoutUtils.isFlatProp(prop("nonsense"))).to.equal(false)
+			expect(OfficeLayoutUtils.isFlatProp({ id = "d", room = "r", kind = "desk", x = 0, z = 0 })).to.equal(false)
 		end)
 	end)
 end

@@ -10,7 +10,8 @@
 	(art-only dressing, sized by OfficeConstants.PROP_SIZES[art]) count as furniture; a wall-mounted prop
 	(PROP_WALL_HEIGHT) hangs above the floor, so it skips the overlap, approach and clearance tests but must lie against
 	a wall, and not over the door on the front wall; a desk-top prop (PROP_DESK_TOP) must sit at a desk's centre and
-	yaw and takes no floor space; a prop without a
+	yaw and takes no floor space; a flat prop (a rug, OfficeLayoutUtils.isFlatProp) only has to lie inside the walls,
+	since furniture and loot stand on it; a prop without a
 	sized `art` is an error. Works in the kit's local frame (x along the front wall, z into the room). Pure.
 
 	@class OfficeKitRules
@@ -133,8 +134,14 @@ function OfficeKitRules.check(kit: Kit): (boolean, { string })
 		if marker.kind == "prop" and box == nil then
 			table.insert(errors, `{label}: {names[index]} names no sized art ("{marker.art}")`)
 		end
-		-- Wall-mounted and desk-top props sit above the floor furniture: they take no part in its overlap tests.
-		if box ~= nil and not wallMounted(marker) and not deskTop(marker) then
+		-- Wall-mounted and desk-top props sit above the floor furniture, and a flat one (a rug) under it: they take no
+		-- part in its overlap tests.
+		if
+			box ~= nil
+			and not wallMounted(marker)
+			and not deskTop(marker)
+			and not OfficeLayoutUtils.isFlatProp(marker)
+		then
 			boxes[index] = box
 		end
 		local fits: boolean

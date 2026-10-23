@@ -20,6 +20,8 @@ local FLOOR_SIZES: { [string]: Vector3? } = {
 	cabinet = Constants.CABINET_SIZE,
 	closet = Constants.CLOSET_SIZE,
 	table = Constants.TABLE_SIZE,
+	-- A board stands on the floor on its own legs: a floor footprint like any other.
+	board = Constants.BOARD_SIZE,
 	plant = Constants.PLANT_SIZE,
 	-- Preserve authoritative cargo/pile positions and walkable player/NPC route points.
 	item = Vector3.new(3.6, 3.6, 3.6),
@@ -37,10 +39,7 @@ local function clear(candidate: Types.Marker, size: Vector3, layout: Types.Layou
 	for _, other in layout.markers do
 		if other.id ~= candidate.id and other.room == candidate.room then
 			local otherSize = FLOOR_SIZES[other.kind]
-			if
-				otherSize ~= nil
-				and (candidate.kind ~= "board" or otherSize.Y > Constants.BOARD_CENTER_HEIGHT - size.Y / 2)
-			then
+			if otherSize ~= nil then
 				local otherX, otherZ = halfExtents(otherSize, other.rotation or 0)
 				if
 					math.abs(candidate.x - other.x) < halfX + otherX + 0.2

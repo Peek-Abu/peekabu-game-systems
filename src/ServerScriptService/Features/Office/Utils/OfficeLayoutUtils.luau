@@ -108,13 +108,28 @@ function OfficeLayoutUtils.markerSize(marker: Sized): Vector3?
 end
 
 --[=[
-	Whether `marker` is a prop standing on the floor (not hung on a wall, not on a desk): the ones that take floor
-	space.
+	Whether `marker` is a prop lying flat on the floor (a rug: under FLAT_PROP_HEIGHT tall), which furniture and loot
+	stand on.
+]=]
+function OfficeLayoutUtils.isFlatProp(marker: Sized): boolean
+	local art = marker.art
+	if marker.kind ~= "prop" or art == nil then
+		return false
+	end
+	-- An unknown art has no size: the lookup may miss.
+	local size: Vector3? = OfficeConstants.PROP_SIZES[art]
+	return size ~= nil and size.Y < OfficeConstants.FLAT_PROP_HEIGHT
+end
+
+--[=[
+	Whether `marker` is a prop standing on the floor (not hung on a wall, not on a desk, not lying flat): the ones that
+	take floor space.
 ]=]
 function OfficeLayoutUtils.isFloorProp(marker: Sized): boolean
 	local art = marker.art
 	return marker.kind == "prop"
 		and (art == nil or (OfficeConstants.PROP_WALL_HEIGHT[art] == nil and OfficeConstants.PROP_DESK_TOP[art] == nil))
+		and not OfficeLayoutUtils.isFlatProp(marker)
 end
 
 -- The markers of one kind, in layout order.

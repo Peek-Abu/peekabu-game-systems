@@ -35,7 +35,8 @@ end
 local SURFACE_KINDS: { [string]: boolean } =
 	{ counter = true, table = true, cabinet = true, desk = true, locker = true }
 
--- Props hung on a wall or standing on a desk are above the floor; the rest take floor space.
+-- Props hung on a wall or standing on a desk are above the floor, and a flat one (a rug) is under what stands on it;
+-- the rest take floor space.
 local isFloorProp = OfficeLayoutUtils.isFloorProp
 
 local function halfExtents(marker: OfficeTypes.Marker): Vector2?

@@ -12,7 +12,9 @@
 	(OfficeArtKeyUtils), so a `table` marker with art "conferenceTable" gets that template and keeps the table's hiding
 	and collision. `prop` markers are art-only dressing (sofa, vending machine, wall frame...): a transparent proxy sized
 	OfficeConstants.PROP_SIZES[art], solid when over a stud tall, destroyed when no template resolves; the wall-mounted
-	ones (PROP_WALL_HEIGHT) hang at that height, non-colliding.
+	ones (PROP_WALL_HEIGHT) hang at that height, non-colliding. Every Attachment of an attached prop or art-only piece
+	named in OfficeConstants.ACCENT_LIGHTS (a floor lamp's LampLight) gets that accent's point light
+	(OfficeLightingUtils.accentFor).
 
 	Instance specs cover kit dressing, fallback, tabletop bounds and preserved ambiance; OfficeLayoutRules validates placement.
 
@@ -35,6 +37,7 @@ local OfficeConstants = require(OfficeServer.Data.OfficeConstants)
 local OfficeTypes = require(OfficeServer.Data.OfficeTypes)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
 local OfficeArtKeyUtils = require(OfficeServer.Utils.OfficeArtKeyUtils)
+local OfficeLightingUtils = require(OfficeServer.Utils.OfficeLightingUtils)
 
 -- Desk dressing was laid out on a 5x3 top; its spots move with the real top (the props keep their size).
 local DESK_SPREAD = OfficeConstants.DESK_SIZE / Vector3.new(5, 3, 3)
@@ -69,6 +72,22 @@ local function glow(on: BasePart, color: Color3, range: number, brightness: numb
 	point.Range = range
 	point.Brightness = brightness
 	point.Parent = on
+end
+
+-- Templates may not carry lights (ArtKitRules): an accent part holds an Attachment named in ACCENT_LIGHTS for the code
+-- to hang that accent's shadowless glow on.
+local function accentLights(visual: Instance)
+	for _, descendant in visual:GetDescendants() do
+		local accent = if descendant:IsA("Attachment") then OfficeLightingUtils.accentFor(descendant.Name) else nil
+		if accent ~= nil then
+			local light = Instance.new("PointLight")
+			light.Color = accent.color
+			light.Range = accent.range
+			light.Brightness = accent.brightness
+			light.Shadows = false
+			light.Parent = descendant
+		end
+	end
 end
 
 local function exitSign(at: CFrame, parent: Instance, art: ArtVisualSystem.Controller, roomType: string?)
@@ -203,6 +222,7 @@ local function artOnly(
 	end
 	-- The key that actually attached (a restyled table records its own art key, not the default).
 	root:SetAttribute("OfficeArtKey", attached)
+	accentLights(visual)
 	if key == "officeChair" then
 		CollectionService:AddTag(root, OfficeDecorConstants.CHAIR_TAG)
 	end
@@ -260,6 +280,7 @@ local function propAt(
 		return
 	end
 	root:SetAttribute("OfficeArtKey", attached)
+	accentLights(visual)
 	-- A low floor prop (a bin) is no camera occluder: the camera would stop short of it instead of clearing it.
 	if root.CanCollide and size.Y < LOW_PROP_HEIGHT then
 		root:SetAttribute(CameraOccluderConstants.ATTRIBUTE, nil)
@@ -330,13 +351,10 @@ local function chairAt(layout: OfficeTypes.Layout, desk: OfficeTypes.Marker, ori
 			)
 		if clear then
 			for _, other in layout.markers do
-				-- Floor furniture and floor props block a chair; wall hangings, desk-top props, boards and plants do not.
+				-- Floor furniture (a standing board too) and floor props block a chair; wall hangings, desk-top props,
+				-- rugs and plants do not.
 				local size: Vector3? = nil
-				if
-					other.kind ~= "board"
-					and other.kind ~= "plant"
-					and (other.kind ~= "prop" or OfficeLayoutUtils.isFloorProp(other))
-				then
+				if other.kind ~= "plant" and (other.kind ~= "prop" or OfficeLayoutUtils.isFloorProp(other)) then
 					size = OfficeLayoutUtils.markerSize(other)
 				end
 				if other.id ~= desk.id and size ~= nil then

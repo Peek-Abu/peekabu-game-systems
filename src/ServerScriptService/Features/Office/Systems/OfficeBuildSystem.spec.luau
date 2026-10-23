@@ -161,7 +161,7 @@ return function()
 			end
 		end)
 	end)
-	it("honors marker yaw and raises boards to wall height", function()
+	it("honors marker yaw and stands a board on the floor", function()
 		local selected = table.clone(Layout)
 		selected.markers = {
 			{ id = "rotated.desk", room = selected.startRoom, kind = "desk", x = 7, z = 7, rotation = math.pi / 2 },
@@ -170,7 +170,8 @@ return function()
 		local built = build(selected)
 		expect(built.searchables["rotated.desk"].CFrame.LookVector:Dot(Vector3.new(-1, 0, 0)) > 0.99).to.equal(true)
 		local board = built.model:FindFirstChild("Corkboard", true)
-		expect(board.Position.Y - board.Size.Y / 2 >= 3).to.equal(true)
+		-- The build origin is at Y 0: a standing board's bottom is on the floor top.
+		expect(math.abs(board.Position.Y - board.Size.Y / 2) < 1e-4).to.equal(true)
 		expect(board.CFrame.LookVector.Z > 0.99).to.equal(true)
 	end)
 	describe("truck paperwork", function()
@@ -433,6 +434,45 @@ return function()
 			end
 			expect(#lights).to.equal(1)
 			expect(lights[1].Parent.Name).to.equal("LedLight")
+		end)
+
+		it("hangs every ACCENT_LIGHTS attachment's light on furniture, and none on other attachments", function()
+			template("furniture", "shelf")
+			template("furniture", "desk")
+			local shelfBody = assets["test-map-a"].furniture.shelf:FindFirstChildOfClass("Part")
+			local screen = Instance.new("Attachment")
+			screen.Name = "ScreenLight"
+			screen.Parent = shelfBody
+			local other = Instance.new("Attachment")
+			other.Name = "NotALight"
+			other.Parent = shelfBody
+			local lamp = Instance.new("Attachment")
+			lamp.Name = "LampLight"
+			lamp.Parent = assets["test-map-a"].furniture.desk:FindFirstChildOfClass("Part")
+			local layout = twoRooms("open", nil)
+			layout.markers = {
+				{ id = "a.shelf.1", room = "a", kind = "shelf", x = 5, z = 5 },
+				{ id = "a.desk.1", room = "a", kind = "desk", x = 14, z = 5 },
+			}
+			local built = build(layout)
+			local lights = {}
+			for _, descendant in built.model.Furniture:GetDescendants() do
+				if descendant:IsA("PointLight") then
+					lights[descendant.Parent.Name] = descendant
+					expect(descendant.Parent.Name ~= "NotALight").to.equal(true)
+				end
+			end
+			local screenLight = lights.ScreenLight
+			expect(screenLight ~= nil).to.equal(true)
+			expect(math.abs(screenLight.Brightness - 0.7) < 1e-4).to.equal(true)
+			expect(screenLight.Range).to.equal(6)
+			expect(screenLight.Color).to.equal(Color3.fromRGB(190, 215, 255))
+			expect(screenLight.Shadows).to.equal(false)
+			local lampLight = lights.LampLight
+			expect(lampLight ~= nil).to.equal(true)
+			expect(math.abs(lampLight.Brightness - 1.6) < 1e-4).to.equal(true)
+			expect(lampLight.Range).to.equal(11)
+			expect(lampLight.Shadows).to.equal(false)
 		end)
 
 		it("hangs no LED light on a template without the attachment, even a server rack", function()

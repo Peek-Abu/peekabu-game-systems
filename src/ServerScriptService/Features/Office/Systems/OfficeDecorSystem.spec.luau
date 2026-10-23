@@ -330,6 +330,30 @@ return function()
 			expect(root:GetAttribute("ArtWallMounted")).to.equal(nil)
 		end)
 
+		it("hangs an ACCENT_LIGHTS attachment's light on a prop's art (the floor lamp's LampLight)", function()
+			template("furniture", "floorLamp")
+			local attachment = Instance.new("Attachment")
+			attachment.Name = "LampLight"
+			attachment.Parent = assets["test-map-a"].furniture.floorLamp:FindFirstChildOfClass("Part")
+			local decor = decorOf(propLayout({
+				{ id = "a.prop.1", room = "a", kind = "prop", art = "floorLamp", x = 20, z = 20 },
+			}))
+			local root = decor:FindFirstChild("floorLamp")
+			expect(root ~= nil).to.equal(true)
+			local lights = {}
+			for _, descendant in root:GetDescendants() do
+				if descendant:IsA("PointLight") then
+					table.insert(lights, descendant)
+				end
+			end
+			expect(#lights).to.equal(1)
+			expect(lights[1].Parent.Name).to.equal("LampLight")
+			expect(math.abs(lights[1].Brightness - 1.6) < 1e-4).to.equal(true)
+			expect(lights[1].Range).to.equal(11)
+			expect(lights[1].Color).to.equal(Color3.fromRGB(255, 168, 90))
+			expect(lights[1].Shadows).to.equal(false)
+		end)
+
 		it("leaves no root for a prop marker without a template", function()
 			local decor = decorOf(propLayout({
 				{ id = "a.prop.1", room = "a", kind = "prop", art = "sofa", x = 20, z = 20 },

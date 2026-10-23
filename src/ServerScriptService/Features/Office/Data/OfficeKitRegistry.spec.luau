@@ -12,24 +12,67 @@ local FACINGS = { "minZ", "minX", "maxZ", "maxX" }
 -- Per kit: the dressing props it has at least (art -> count) and the art each restyled furniture kind carries.
 -- Boards are always corkboards and shelves shelves unless the kit says otherwise (a server room's are racks).
 local DRESSING = {
-	pods_a = { props = { copier = 1, planter = 1, wasteBin = 2, artFrame = 1, partition = 2 }, art = {} },
-	pods_b = { props = { waterCooler = 1, wasteBin = 1, deskPlant = 2 }, art = {} },
-	pods_c = { props = { wasteBin = 1 }, art = {} },
+	pods_a = {
+		props = {
+			partition = 6,
+			deskPlant = 6,
+			column = 2,
+			rug = 1,
+			copier = 1,
+			planter = 2,
+			windowBay = 1,
+			wallClock = 1,
+			artFrame = 1,
+			wasteBin = 1,
+		},
+		art = {},
+	},
+	pods_b = { props = { partition = 4, deskPlant = 4, rug = 1, waterCooler = 1, planter = 1 }, art = {} },
 	conference_a = {
 		props = { wallScreen = 1, artFrame = 1, planter = 1 },
 		art = { table = "conferenceTable" },
 	},
-	conference_b = { props = { wallScreen = 1, artFrame = 1 }, art = { table = "conferenceTable" } },
+	conference_b = { props = { wallScreen = 1, artFrame = 1, planter = 1 }, art = { table = "conferenceTable" } },
 	breakout_a = {
-		props = { sofa = 1, vending = 1, waterCooler = 1, floorLamp = 1, wallClock = 1 },
+		props = {
+			sofa = 2,
+			rug = 1,
+			vending = 1,
+			waterCooler = 1,
+			planter = 1,
+			floorLamp = 1,
+			artFrame = 1,
+			wallClock = 1,
+		},
 		art = { table = "breakTable", counter = "kitchenCounter" },
 	},
 	storage_a = { props = { wasteBin = 1, sconce = 1 }, art = {} },
-	server_a = { props = { sconce = 1, wasteBin = 1 }, art = { shelf = "serverRack" } },
+	server_a = { props = { sconce = 2, wasteBin = 1 }, art = { shelf = "serverRack" } },
 	reception_a = {
-		props = { sofa = 1, planter = 2, artFrame = 1, wallClock = 1 },
-		art = { counter = "receptionDesk" },
+		props = { receptionGlow = 1, rug = 1, sofa = 1, floorLamp = 1, planter = 4, artFrame = 1, wallClock = 1 },
+		art = { counter = "receptionDesk", table = "breakTable" },
 	},
+}
+-- The spike's room sizes (width along the front wall x depth into the room).
+local SIZES = {
+	pods_a = { 60, 44 },
+	pods_b = { 44, 32 },
+	conference_a = { 32, 24 },
+	conference_b = { 22, 18 },
+	breakout_a = { 32, 26 },
+	server_a = { 20, 18 },
+	storage_a = { 12, 12 },
+	reception_a = { 28, 28 },
+}
+-- Pile and item markers per 100 square studs each room type had before the kits grew to the spike's sizes (its kits'
+-- markers over its kits' floor), so the contract roll holds with fewer, bigger rooms.
+local DENSITY = {
+	pods = { piles = 16 / 2772, items = 7 / 2772 },
+	conference = { piles = 11 / 1164, items = 3 / 1164 },
+	breakout = { piles = 5 / 780, items = 3 / 780 },
+	storage = { piles = 5 / 288, items = 1 / 288 },
+	server = { piles = 6 / 672, items = 2 / 672 },
+	reception = { piles = 6 / 1080, items = 2 / 1080 },
 }
 local DEFAULT_ART = { board = "corkboard", shelf = "shelf" }
 
@@ -97,6 +140,65 @@ return function()
 		end
 	end)
 
+	it("kits match the spike's sizes", function()
+		for id, size in SIZES do
+			local kit = OfficeKitRegistry.get(id)
+			expect(`{id} {kit ~= nil}`).to.equal(`{id} true`)
+			expect(`{id} {kit.width} x {kit.depth}`).to.equal(`{id} {size[1]} x {size[2]}`)
+		end
+		for _, kit in OfficeKitRegistry.KITS do
+			expect(`{kit.id} sized {SIZES[kit.id] ~= nil}`).to.equal(`{kit.id} sized true`)
+		end
+	end)
+
+	it("pods_a holds 12 desks, pods_b 8", function()
+		for id, wanted in { pods_a = 12, pods_b = 8 } do
+			local desks = 0
+			for _, marker in OfficeKitRegistry.get(id).markers do
+				if marker.kind == "desk" then
+					desks += 1
+				end
+			end
+			expect(`{id} {desks}`).to.equal(`{id} {wanted}`)
+		end
+	end)
+
+	it("has no pods_c", function()
+		expect(OfficeKitRegistry.get("pods_c")).to.equal(nil)
+	end)
+
+	it("gives every door with a leaf the 6.8-stud rough opening, and keeps glass beside it", function()
+		for _, kit in OfficeKitRegistry.KITS do
+			if kit.door.kind ~= "open" then
+				expect(`{kit.id} {kit.door.width}`).to.equal(`{kit.id} 6.8`)
+			end
+			local glass = kit.glass
+			if glass ~= nil then
+				local from, to = kit.door.offset - kit.door.width / 2, kit.door.offset + kit.door.width / 2
+				expect(`{kit.id} glass clear of the door {glass.from >= to or glass.to <= from}`).to.equal(
+					`{kit.id} glass clear of the door true`
+				)
+			end
+		end
+	end)
+
+	it("keeps each kit's pile and item density at least its room type's old one", function()
+		for _, kit in OfficeKitRegistry.KITS do
+			local piles, items = 0, 0
+			for _, marker in kit.markers do
+				if marker.kind == "pile" then
+					piles += 1
+				elseif marker.kind == "item" then
+					items += 1
+				end
+			end
+			local area = kit.width * kit.depth
+			local wanted = DENSITY[kit.roomType]
+			expect(`{kit.id} piles {piles >= wanted.piles * area}`).to.equal(`{kit.id} piles true`)
+			expect(`{kit.id} items {items >= wanted.items * area}`).to.equal(`{kit.id} items true`)
+		end
+	end)
+
 	it("covers the lean set", function()
 		for _, roomType in ROOM_TYPES do
 			expect(#OfficeKitRegistry.ofType(roomType) > 0).to.equal(true)
@@ -143,7 +245,7 @@ return function()
 				expect(`{kit.id} {art} {(counts[art] or 0) >= count}`).to.equal(`{kit.id} {art} true`)
 			end
 		end
-		expect(#OfficeKitRegistry.ofType("pods") >= 3).to.equal(true)
+		expect(#OfficeKitRegistry.ofType("pods") >= 2).to.equal(true)
 	end)
 
 	it("gives every restyled furniture marker its art", function()

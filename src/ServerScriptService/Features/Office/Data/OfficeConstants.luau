@@ -31,7 +31,8 @@ local DESK_PROP_SIZES: { [string]: Vector3 } = {
 }
 -- Art-only dressing props (the `prop` marker kind), named by Marker.art: W x H x D studs, each the template's own
 -- BaseSize (odd-hours-b1 KIT_MAP) so Uniform fit never shrinks one. Props over 1 stud tall collide. The wall-mounted
--- ones (PROP_WALL_HEIGHT) hang on a wall at that centre height; the desk-top ones (PROP_DESK_TOP) stand on a desk.
+-- ones (PROP_WALL_HEIGHT) hang on a wall at that centre height; the desk-top ones (PROP_DESK_TOP) stand on a desk; a
+-- flat one (under FLAT_PROP_HEIGHT tall: the rug) lies on the floor and furniture stands on it.
 local PROP_SIZES: { [string]: Vector3 } = {
 	sofa = Vector3.new(7.64, 3.5, 3.62),
 	vending = Vector3.new(3.43, 7.5, 4.57),
@@ -47,6 +48,10 @@ local PROP_SIZES: { [string]: Vector3 } = {
 	deskPlant = Vector3.new(1.26, 1.39, 1.26),
 	partition = Vector3.new(6, 5, 1.8),
 	stairwellSign = Vector3.new(2, 1, 0.1),
+	rug = Vector3.new(14, 0.1, 13),
+	windowBay = Vector3.new(6, 10.3, 0.97),
+	column = Vector3.new(2.8, 13, 2.8),
+	receptionGlow = Vector3.new(14, 6, 0.6),
 }
 local PROP_WALL_HEIGHT: { [string]: number } = {
 	artFrame = 6,
@@ -54,6 +59,9 @@ local PROP_WALL_HEIGHT: { [string]: number } = {
 	sconce = 7.5,
 	wallClock = 8,
 	stairwellSign = 7,
+	-- Its bottom 1.5 above the floor.
+	windowBay = 6.65,
+	receptionGlow = 6.5,
 }
 -- A desk-top prop's marker sits at its desk's centre (and yaw); the prop stands on the desktop at
 -- DESK_PLANT_OFFSET in the desk's frame (front is local -Z).
@@ -90,7 +98,8 @@ local LIGHTING: {
 		server = { panelBrightness = 0.12, panelRange = 14, allLit = false, fillBrightness = 0.6, fillRange = 10 },
 		storage = { panelBrightness = 0.15, panelRange = 14, allLit = true, fillBrightness = 0.8, fillRange = 10 },
 	}
--- Small accent lights by attachment name (they cast no shadows).
+-- Small accent lights by attachment name (they cast no shadows): every template OfficeBuildSystem or OfficeDecorSystem
+-- attaches gets one on each descendant Attachment named here (a server rack's LedLight, a floor lamp's LampLight).
 local ACCENT_LIGHTS: { [string]: { brightness: number, range: number, color: Color3 } } = {
 	LedLight = { brightness = 0.4, range = 6, color = Color3.fromRGB(120, 170, 255) },
 	ScreenLight = { brightness = 0.7, range = 6, color = Color3.fromRGB(190, 215, 255) },
@@ -195,13 +204,11 @@ return table.freeze({
 	ART_KIT_ID = "client-office-slate",
 	-- The art kit every generated map uses (OfficeLayoutGenerationUtils); the authored boot layout keeps ART_KIT_ID.
 	GENERATED_ART_KIT = "odd-hours-b1",
-	-- The server rack's LED glow (a PointLight on the template's LedLight attachment).
-	SERVER_LED_COLOR = Color3.fromRGB(120, 170, 255),
-	SERVER_LED_RANGE = 6,
-	SERVER_LED_BRIGHTNESS = 0.4,
 	PROP_SIZES = table.freeze(PROP_SIZES),
 	PROP_WALL_HEIGHT = table.freeze(PROP_WALL_HEIGHT),
 	PROP_DESK_TOP = table.freeze(PROP_DESK_TOP),
+	-- A prop shorter than this lies flat on the floor (a rug): it takes no floor space in the overlap tests.
+	FLAT_PROP_HEIGHT = 0.5,
 	-- On the left of the desk's front half, in the clear band between the mug (z -1.85) and the folder or paper stack
 	-- (z 1.07) of OfficeDecorSystem.dressDesk (DESK_SPREAD 1.65).
 	DESK_PLANT_OFFSET = Vector3.new(-3.4, 0, -0.6),
@@ -255,8 +262,8 @@ return table.freeze({
 	SHELF_SIZE = Vector3.new(5, 6, 2),
 	COUNTER_SIZE = Vector3.new(6, 3, 2.5),
 	PLANT_SIZE = Vector3.new(2, 4, 2),
+	-- A board (whiteboard or corkboard) stands on the floor on its own legs.
 	BOARD_SIZE = Vector3.new(5, 4, 0.3),
-	BOARD_CENTER_HEIGHT = 6,
 	-- Corner filing cabinets and meeting/break tables: art-sized proxies with lootable tops.
 	CABINET_SIZE = Vector3.new(1.9, 4.2, 2),
 	-- The tall supply cabinet (a secure hiding spot): the supplyCabinet art's own bounds, room inside for a crew member.

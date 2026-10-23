@@ -49,6 +49,16 @@ return function()
 		expect(math.abs(result.x - 12) >= 6.9).to.equal(true)
 		expect(result.z < 1).to.equal(true)
 	end)
+	it("stands a board clear of low floor furniture too, now that it stands on the floor", function()
+		-- A 3-high counter against the front wall where the board asks to go; a wall-hung board used to clear it.
+		local source = layout({
+			{ id = "board", kind = "board", room = "room", x = 12, z = 1 },
+			{ id = "counter", kind = "counter", room = "room", x = 12, z = 1.75, rotation = math.pi },
+		})
+		local result = Utils.normalize(source).markers[1]
+		expect(result.rotation).to.equal(math.pi)
+		expect(math.abs(result.x - 12) >= 5.7 - 1e-6).to.equal(true)
+	end)
 	it("moves floor dressing plants into a corner without moving gameplay markers", function()
 		local source = layout({
 			{ id = "plant", kind = "plant", room = "room", x = 12, z = 12 },

@@ -10,8 +10,9 @@
 	M2: the truck box's PathfindingModifier volume (Harlow walks the loading bay but never paths into the truck's box).
 	Everything is anchored under one Model in Workspace at the layout's origin.
 	Art keys: every furniture attach goes through OfficeArtKeyUtils (a marker's own `art` key, then the default key's
-	room-type variant, then the default key), so a kit may restyle one piece (serverRack for a shelf), and any template
-	with a `LedLight` attachment (the server rack's) gets a dim blue point light on it.
+	room-type variant, then the default key), so a kit may restyle one piece (serverRack for a shelf), and every
+	Attachment of an attached template named in OfficeConstants.ACCENT_LIGHTS (a server rack's LedLight) gets that
+	accent's point light (OfficeLightingUtils.accentFor). A board stands on the floor on its own legs.
 	Doors: OfficeDoorSystem adds a real leaf to each solid or glass door plus a locked flush leaf on every facade
 	(`Built.doors`, destroyed with the office).
 
@@ -38,6 +39,7 @@ local OfficeTypes = require(OfficeServer.Data.OfficeTypes)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
 local OfficeArtKeyUtils = require(OfficeServer.Utils.OfficeArtKeyUtils)
 local OfficeLoadingBayUtils = require(OfficeServer.Utils.OfficeLoadingBayUtils)
+local OfficeLightingUtils = require(OfficeServer.Utils.OfficeLightingUtils)
 local OfficeDoorSystem = require(script.Parent.OfficeDoorSystem)
 
 export type Built = {
@@ -69,6 +71,25 @@ local function interactable(part: BasePart, kind: string, enabled: boolean)
 		part:SetAttribute(InteractionConstants.ENABLED_ATTRIBUTE, false)
 	end
 	CollectionService:AddTag(part, InteractionConstants.TAG)
+end
+
+-- Templates may not carry lights (ArtKitRules): an accent part holds an Attachment named in ACCENT_LIGHTS for the code
+-- to hang that accent's shadowless glow on, whichever template attached.
+local function accentLights(visual: Instance?)
+	if visual == nil then
+		return
+	end
+	for _, descendant in visual:GetDescendants() do
+		local accent = if descendant:IsA("Attachment") then OfficeLightingUtils.accentFor(descendant.Name) else nil
+		if accent ~= nil then
+			local glow = Instance.new("PointLight")
+			glow.Color = accent.color
+			glow.Range = accent.range
+			glow.Brightness = accent.brightness
+			glow.Shadows = false
+			glow.Parent = descendant
+		end
+	end
 end
 
 local function folder(name: string, parent: Instance): Folder
@@ -155,7 +176,7 @@ function OfficeBuildSystem.build(
 				if isDesk then OfficeConstants.DESK_COLOR else OfficeConstants.LOCKER_COLOR,
 				furniture
 			)
-			OfficeArtKeyUtils.attachFirst(
+			local visual = OfficeArtKeyUtils.attachFirst(
 				art,
 				part,
 				"furniture",
@@ -165,6 +186,7 @@ function OfficeBuildSystem.build(
 					OfficeArtKeyUtils.roomType(OfficeLayoutUtils.room(layout, marker.room))
 				)
 			)
+			accentLights(visual)
 			if not isDesk then
 				local room = OfficeLayoutUtils.room(layout, marker.room)
 				if room ~= nil then
@@ -209,13 +231,7 @@ function OfficeBuildSystem.build(
 			local part = block(
 				name,
 				size,
-				origin
-					* CFrame.new(
-						marker.x,
-						if marker.kind == "board" then OfficeConstants.BOARD_CENTER_HEIGHT else size.Y / 2,
-						marker.z
-					)
-					* CFrame.Angles(0, marker.rotation or 0, 0),
+				origin * CFrame.new(marker.x, size.Y / 2, marker.z) * CFrame.Angles(0, marker.rotation or 0, 0),
 				OfficeConstants.DESK_COLOR,
 				furniture
 			)
@@ -226,12 +242,13 @@ function OfficeBuildSystem.build(
 			part:SetAttribute("ArtWallMounted", marker.kind ~= "plant")
 			local roomType = OfficeArtKeyUtils.roomType(OfficeLayoutUtils.room(layout, marker.room))
 			if marker.kind == "plant" then
-				OfficeArtKeyUtils.attachFirst(
+				local visual = OfficeArtKeyUtils.attachFirst(
 					art,
 					part,
 					"cargo",
 					OfficeArtKeyUtils.candidates("officePlant", marker.art, roomType)
 				)
+				accentLights(visual)
 			else
 				local key = if marker.kind == "shelf"
 					then "shelf"
@@ -243,17 +260,7 @@ function OfficeBuildSystem.build(
 					"furniture",
 					OfficeArtKeyUtils.candidates(key, marker.art, roomType)
 				)
-				-- Templates may not carry lights (ArtKitRules): an LED part (a server rack's) holds an attachment named
-				-- LedLight for the code to hang its glow on, whichever template attached.
-				local led = if visual ~= nil then visual:FindFirstChild("LedLight", true) else nil
-				if led ~= nil and led:IsA("Attachment") then
-					local glow = Instance.new("PointLight")
-					glow.Color = OfficeConstants.SERVER_LED_COLOR
-					glow.Range = OfficeConstants.SERVER_LED_RANGE
-					glow.Brightness = OfficeConstants.SERVER_LED_BRIGHTNESS
-					glow.Shadows = false
-					glow.Parent = led
-				end
+				accentLights(visual)
 				local supportY = part:GetAttribute("ArtSupportSurfaceY")
 				if marker.kind == "counter" and type(supportY) == "number" then
 					part.CanCollide = false
