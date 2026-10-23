@@ -248,6 +248,15 @@ return function()
 			local back = { minX = 8, maxX = 12, minZ = 9.23, maxZ = 9.5 }
 			expect(table.concat(OfficeLayoutUtils.wallsAgainst(ROOM, back), ",")).to.equal("maxZ")
 		end)
+
+		it("counts a piece stood off the plaster by the trim clearance (a window bay) as against the wall", function()
+			-- ROOM's back wall line is at 10: plaster face 9.5, trim face 9.0, the bay's back at 9.5 - 0.55.
+			local trim = OfficeConstants.SHELL.trimClearance
+			local bay = { minX = 8, maxX = 14, minZ = 9.5 - trim - 0.97, maxZ = 9.5 - trim }
+			expect(table.concat(OfficeLayoutUtils.wallsAgainst(ROOM, bay), ",")).to.equal("maxZ")
+			local loose = { minX = 8, maxX = 14, minZ = 7, maxZ = 8 }
+			expect(#OfficeLayoutUtils.wallsAgainst(ROOM, loose)).to.equal(0)
+		end)
 	end)
 
 	describe("openingsOn", function()

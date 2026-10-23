@@ -9,7 +9,8 @@
 	OfficeConstants.ART_SIZES entry (a conference table, a server rack) takes that art's footprint. `prop` markers
 	(art-only dressing, sized by OfficeConstants.PROP_SIZES[art]) count as furniture; a wall-mounted prop
 	(PROP_WALL_HEIGHT) hangs above the floor, so it skips the overlap, approach and clearance tests but must lie against
-	a wall, and not over the door on the front wall; a desk-top prop (PROP_DESK_TOP) must sit at a desk's centre and
+	a wall, and not over the door on the front wall; floor furniture and props, and the window bay (it hangs from 1.5
+	up, across the wainscot), keep SHELL.trimClearance off every wall's plaster face so the trim runs behind them; a desk-top prop (PROP_DESK_TOP) must sit at a desk's centre and
 	yaw and takes no floor space; a flat prop (a rug, OfficeLayoutUtils.isFlatProp) only has to lie inside the walls,
 	since furniture and loot stand on it; a prop without a
 	sized `art` is an error. Works in the kit's local frame (x along the front wall, z into the room). Pure.
@@ -100,6 +101,16 @@ local function insideWalls(kit: Kit, a: Rect, wall: number): boolean
 		and a.maxZ <= kit.depth - wall + EPSILON
 end
 
+-- Whether `a` keeps SHELL.trimClearance off the plaster face of all four walls (the wainscot, rail and skirt stand proud of
+-- it, so a piece backed flush on a wall would run into them).
+local function offTrim(kit: Kit, a: Rect, wall: number): boolean
+	local need = OfficeConstants.SHELL.trimClearance - EPSILON
+	return a.minX - wall >= need
+		and kit.width - wall - a.maxX >= need
+		and a.minZ - wall >= need
+		and kit.depth - wall - a.maxZ >= need
+end
+
 local OfficeKitRules = {}
 
 --[=[
@@ -182,6 +193,16 @@ function OfficeKitRules.check(kit: Kit): (boolean, { string })
 			then
 				table.insert(errors, `{label}: {names[index]} hangs over the door`)
 			end
+		end
+		-- Floor furniture and the low window bay stand SHELL.trimClearance off the plaster, clear of the wall trim; the
+		-- other wall props hang above the rail and stay flat on it.
+		if
+			fits
+			and box ~= nil
+			and (boxes[index] ~= nil or marker.art == "windowBay")
+			and not offTrim(kit, box, wall)
+		then
+			table.insert(errors, `{label}: {names[index]} stands inside the wall trim`)
 		end
 	end
 

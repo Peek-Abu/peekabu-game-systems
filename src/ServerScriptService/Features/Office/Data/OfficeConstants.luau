@@ -109,7 +109,9 @@ local ACCENT_LIGHTS: { [string]: { brightness: number, range: number, color: Col
 -- Shell geometry sizes in studs (OfficeShellUtils). slab: one plaster layer (a wall is two); slabOverhang: how far the
 -- slabs run below the floor top and above the ceiling; wainscot/rail/skirt: trim heights and how far each stands off the
 -- slab face; casing: door jamb thickness; pilaster: archway column width; mullion/mullionSpacing/glassFrame/baseRail:
--- framed glass; gridSpacing/gridWidth/gridThickness: ceiling grid strips.
+-- framed glass; gridSpacing/gridWidth/gridThickness: ceiling grid strips; trimClearance: how far off the plaster face a
+-- floor piece (or the window bay) backed against a wall stands, so the wainscot, rail and skirt (all under
+-- railDepth proud) run behind it, as the spike backs every wall piece off by 0.55.
 local SHELL = table.freeze({
 	slab = 0.5,
 	slabOverhang = 1,
@@ -128,6 +130,7 @@ local SHELL = table.freeze({
 	gridSpacing = 4,
 	gridWidth = 0.15,
 	gridThickness = 0.08,
+	trimClearance = 0.55,
 })
 -- What each shell box is made of (a nil variant is none). Values measured from the spike and the mock room.
 local SHELL_MATERIALS: { [OfficeTypes.ShellMaterial]: { material: Enum.Material, variant: string?, color: Color3, transparency: number } } =

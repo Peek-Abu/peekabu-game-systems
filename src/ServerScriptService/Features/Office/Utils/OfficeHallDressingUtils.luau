@@ -8,8 +8,9 @@
 	Walking lanes come first. A collidable prop (planter, sofa, water cooler) stands within MAX_WALL_GAP of its wall, keeps
 	OPENING_CLEAR studs from every door casing and junction mouth and PATROL_CLEAR from a patrol point or other floor
 	furniture, stands COLLIDABLE_SPACING apart from the last one on its wall and OPPOSITE_GAP along from any on the
-	wall across. The loading bay's and the reception's junctions take wall props only. Wall props never cover a door or
-	facade. Layout space; pure and deterministic for a given rng.
+	wall across. The loading bay's and the reception's junctions take wall props only. Wall props never cover a door,
+	facade or glass pane, and collidables keep OPENING_CLEAR from them too (a collidable stands MAX_WALL_GAP =
+	SHELL.trimClearance off the plaster, clear of the trim; wall props hang flat on it). Layout space; pure and deterministic for a given rng.
 
 	@class OfficeHallDressingUtils
 ]=]
@@ -30,9 +31,11 @@ type Rect = { minX: number, maxX: number, minZ: number, maxZ: number }
 -- A prop standing against `edge`, centred at `along` and `half` wide along the wall.
 type Stand = { edge: Edge, along: number, half: number, rect: Rect }
 
-local MAX_WALL_GAP = 0.05
--- Mr. Harlow's lanes come first: a hall narrower than WIDE_HALL keeps NARROW_CLEAR studs clear beside a prop (only a
--- water cooler fits), a WIDE_HALL one keeps WIDE_CLEAR (a planter or sofa fits). Junctions and the atrium are wider.
+-- A collidable stands exactly SHELL.trimClearance off the plaster face: the wainscot, rail and skirt run behind it.
+local MAX_WALL_GAP = OfficeConstants.SHELL.trimClearance
+-- Mr. Harlow's lanes come first: a hall narrower than WIDE_HALL keeps NARROW_CLEAR studs clear beside a prop, a
+-- WIDE_HALL one keeps WIDE_CLEAR; a prop too deep for the hall's width (a planter or sofa off the trim leaves a 14 hall
+-- under 10) gives way to a water cooler. Junctions and the atrium are wider.
 local WIDE_HALL = 14
 local NARROW_CLEAR = 7
 local WIDE_CLEAR = 10
@@ -132,14 +135,33 @@ local function closer(a: Rect, b: Rect, clear: number): boolean
 	return a.minX - clear < b.maxX and b.minX < a.maxX + clear and a.minZ - clear < b.maxZ and b.minZ < a.maxZ + clear
 end
 
--- Every door and facade of `room`, as the wall rectangle it opens with its casing added.
+-- Every gap in `room`'s `edge` wall that props keep off: its doors and facades, and the glass panes on it (a conference
+-- room's front), as spans along the wall.
+local function gapsOn(layout: Layout, room: Room, edge: Edge): { { number } }
+	local spans = OfficeLayoutUtils.openingsOn(layout, room, edge)
+	local line = if edge == "minZ"
+		then room.minZ
+		elseif edge == "maxZ" then room.maxZ
+		elseif edge == "minX" then room.minX
+		else room.maxX
+	for _, pane in OfficeLayoutUtils.panes(layout) do
+		local paneHorizontal = pane.z1 == pane.z2
+		local fixed = if paneHorizontal then pane.z1 else pane.x1
+		if paneHorizontal == horizontal(edge) and math.abs(fixed - line) <= 1e-6 then
+			table.insert(spans, if paneHorizontal then { pane.x1, pane.x2 } else { pane.z1, pane.z2 })
+		end
+	end
+	return spans
+end
+
+-- Every door, facade and glass pane of `room`, as the wall rectangle it opens with its casing added.
 local function openings(layout: Layout, room: Room): { Rect }
 	local rects: { Rect } = {}
 	for _, edge: Edge in ALL_EDGES do
 		local wall = if horizontal(edge)
 			then (if edge == "minZ" then room.minZ else room.maxZ)
 			else (if edge == "minX" then room.minX else room.maxX)
-		for _, opening in OfficeLayoutUtils.openingsOn(layout, room, edge) do
+		for _, opening in gapsOn(layout, room, edge) do
 			local from, to = opening[1] - OfficeConstants.SHELL.casing, opening[2] + OfficeConstants.SHELL.casing
 			if horizontal(edge) then
 				table.insert(rects, { minX = from, maxX = to, minZ = wall - HALF_WALL, maxZ = wall + HALF_WALL })
@@ -190,7 +212,7 @@ local function hangs(state: State, edge: Edge, along: number, half: number, clea
 	if along - half < from or along + half > to then
 		return false
 	end
-	for _, opening in OfficeLayoutUtils.openingsOn(state.layout, state.room, edge) do
+	for _, opening in gapsOn(state.layout, state.room, edge) do
 		local casing = OfficeConstants.SHELL.casing + clear
 		if along - half < opening[2] + casing and opening[1] - casing < along + half then
 			return false
@@ -303,7 +325,8 @@ local function dressWall(state: State, edge: Edge)
 			end
 		elseif rng:NextNumber() >= SLOT_SKIP then
 			local art = if rng:NextInteger(0, 1) == 0 then "planter" else "sofa"
-			if (state.width or WIDE_HALL) < WIDE_HALL then
+			local width = state.width
+			if width ~= nil and width - sizeOf(art).Z - MAX_WALL_GAP < state.clear then
 				art = "waterCooler"
 			end
 			for _, shift in SLOT_SHIFTS do

@@ -1,4 +1,5 @@
 local OfficeKitRules = require(script.Parent.OfficeKitRules)
+local Constants = require(game:GetService("ServerScriptService").Features.Office.Data.OfficeConstants)
 
 -- A clean 30 x 24 kit: a desk (chair strip on its front, local -Z, toward the front wall), a shelf on the back
 -- wall, three piles, a patrol point.
@@ -111,6 +112,36 @@ return function()
 		expect(hasError(errors, "pile")).to.equal(true)
 	end)
 
+	it(
+		"flags floor furniture backed against the wall inside the trim clearance, and passes it one clearance off",
+		function()
+			local trim = Constants.SHELL.trimClearance
+			local kit = fixture()
+			-- The shelf (5 x 2) with its back on the back wall's plaster face (23.5): the wainscot and rail run into it.
+			kit.markers[2].z = 23.5 - 1
+			local ok, errors = OfficeKitRules.check(kit)
+			expect(ok).to.equal(false)
+			expect(hasError(errors, "wall trim")).to.equal(true)
+			kit.markers[2].z = 23.5 - 1 - trim
+			local clear, clearErrors = OfficeKitRules.check(kit)
+			expect(clearErrors[1]).to.equal(nil)
+			expect(clear).to.equal(true)
+		end
+	)
+
+	it("holds a side-wall prop to the trim clearance on the footprint's yawed side", function()
+		local trim = Constants.SHELL.trimClearance
+		local kit = fixture()
+		-- A planter (4.06 x 3.92) turned a quarter against the right wall's plaster face (29.5): 1.96 deep in X.
+		table.insert(kit.markers, { kind = "prop", art = "planter", x = 29.5 - 1.96, z = 14, rotation = math.pi / 2 })
+		local _, flush = OfficeKitRules.check(kit)
+		expect(hasError(flush, "wall trim")).to.equal(true)
+		kit.markers[#kit.markers].x = 29.5 - 1.96 - trim
+		local ok, errors = OfficeKitRules.check(kit)
+		expect(errors[1]).to.equal(nil)
+		expect(ok).to.equal(true)
+	end)
+
 	it("flags a pile crowding furniture", function()
 		local kit = fixture()
 		kit.markers[3].x = 22
@@ -175,6 +206,27 @@ return function()
 			table.insert(kit.markers, { kind = "prop", art = "nonsense", x = 22, z = 12 })
 			local _, errors = OfficeKitRules.check(kit)
 			expect(hasError(errors, "names no sized art")).to.equal(true)
+		end)
+
+		it("stands a window bay off the plaster by the trim clearance, so the trim runs behind it", function()
+			local trim = Constants.SHELL.trimClearance
+			local kit = fixture()
+			-- 0.97 deep, flush on the back wall's plaster face (23.5): the wainscot and rail cross its lower part.
+			table.insert(kit.markers, { kind = "prop", art = "windowBay", x = 22, z = 23.5 - 0.485, rotation = 0 })
+			local _, flush = OfficeKitRules.check(kit)
+			expect(hasError(flush, "wall trim")).to.equal(true)
+			kit.markers[#kit.markers].z = 23.5 - 0.485 - trim
+			local ok, errors = OfficeKitRules.check(kit)
+			expect(errors[1]).to.equal(nil)
+			expect(ok).to.equal(true)
+		end)
+
+		it("leaves a wall prop above the rail flat on the plaster", function()
+			local kit = fixture()
+			table.insert(kit.markers, { kind = "prop", art = "wallScreen", x = 22, z = 23.5 - 0.17, rotation = 0 })
+			local ok, errors = OfficeKitRules.check(kit)
+			expect(errors[1]).to.equal(nil)
+			expect(ok).to.equal(true)
 		end)
 
 		it("lets a wall prop hang over floor furniture but only against a wall", function()

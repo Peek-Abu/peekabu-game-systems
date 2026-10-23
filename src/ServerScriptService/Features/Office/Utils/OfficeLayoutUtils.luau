@@ -295,10 +295,11 @@ end
 
 --[=[
 	The walls of `room` that `box` (a footprint's bound, same frame) lies against: its back within half a wall plus a
-	stud of the wall line. In the order minZ, maxZ, minX, maxX.
+	stud of the wall line, and the SHELL.trimClearance a piece stands off the plaster. In the order minZ, maxZ, minX,
+	maxX.
 ]=]
 function OfficeLayoutUtils.wallsAgainst(room: Bounds, box: Bounds): { Edge }
-	local reach = 0.5 + OfficeConstants.WALL_THICKNESS / 2
+	local reach = 0.5 + OfficeConstants.WALL_THICKNESS / 2 + OfficeConstants.SHELL.trimClearance
 	local edges: { Edge } = {}
 	if box.minZ - room.minZ <= reach then
 		table.insert(edges, "minZ")

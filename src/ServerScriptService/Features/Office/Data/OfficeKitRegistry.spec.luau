@@ -5,6 +5,7 @@ local OfficeKitRegistry = require(script.Parent.OfficeKitRegistry)
 local OfficeKitRules = require(ServerScriptService.Features.Office.Rules.OfficeKitRules)
 local OfficeLayoutRules = require(ServerScriptService.Features.Office.Rules.OfficeLayoutRules)
 local OfficeKitUtils = require(ServerScriptService.Features.Office.Utils.OfficeKitUtils)
+local OfficeLayoutUtils = require(ServerScriptService.Features.Office.Utils.OfficeLayoutUtils)
 
 local ROOM_TYPES = { "pods", "conference", "breakout", "storage", "server", "reception" }
 local FACINGS = { "minZ", "minX", "maxZ", "maxX" }
@@ -46,7 +47,7 @@ local DRESSING = {
 		},
 		art = { table = "breakTable", counter = "kitchenCounter" },
 	},
-	storage_a = { props = { wasteBin = 1, sconce = 1 }, art = {} },
+	storage_a = { props = { sconce = 1 }, art = {} },
 	server_a = { props = { sconce = 2, wasteBin = 1 }, art = { shelf = "serverRack" } },
 	reception_a = {
 		props = { receptionGlow = 1, rug = 1, sofa = 1, floorLamp = 1, planter = 4, artFrame = 1, wallClock = 1 },
@@ -263,6 +264,45 @@ return function()
 				end
 			end
 		end
+	end)
+
+	it("stands every floor piece (and the window bay) at least the trim clearance off every wall's plaster", function()
+		local trim = OfficeConstants.SHELL.trimClearance
+		local checked = 0
+		for _, kit in OfficeKitRegistry.KITS do
+			for index, marker in kit.markers do
+				local size = OfficeLayoutUtils.markerSize(marker)
+				local art = marker.art
+				local aboveRail = marker.kind == "prop"
+					and art ~= nil
+					and OfficeConstants.PROP_WALL_HEIGHT[art] ~= nil
+					and art ~= "windowBay"
+				local skipped = size == nil
+					or aboveRail
+					or OfficeConstants.PROP_DESK_TOP[art or ""] == true
+					or OfficeLayoutUtils.isFlatProp(marker)
+				if not skipped then
+					checked += 1
+					local angle = marker.rotation or 0
+					local c, s = math.abs(math.cos(angle)), math.abs(math.sin(angle))
+					local halfX = (size.X * c + size.Z * s) / 2
+					local halfZ = (size.X * s + size.Z * c) / 2
+					local face = OfficeConstants.WALL_THICKNESS / 2
+					local gaps = {
+						marker.x - halfX - face,
+						kit.width - face - (marker.x + halfX),
+						marker.z - halfZ - face,
+						kit.depth - face - (marker.z + halfZ),
+					}
+					for _, gap in gaps do
+						expect(`{kit.id} {marker.kind} {index} gap {gap >= trim - 0.001}`).to.equal(
+							`{kit.id} {marker.kind} {index} gap true`
+						)
+					end
+				end
+			end
+		end
+		expect(checked > 40).to.equal(true)
 	end)
 
 	it("keeps desk-top props on a desk and wall props against a wall", function()

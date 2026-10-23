@@ -113,6 +113,7 @@ return function()
 					if COLLIDABLE[marker.art] and width <= Dressing.WIDE_HALL then
 						local _, gap, reach = wallAndReach(marker, room)
 						expect(gap <= Dressing.MAX_WALL_GAP + 0.001).to.equal(true)
+						expect(gap >= Constants.SHELL.trimClearance - 0.001).to.equal(true)
 						if width < Dressing.WIDE_HALL then
 							seen.narrow += 1
 							expect(marker.art).to.equal("waterCooler")
@@ -120,12 +121,45 @@ return function()
 							expect(width - reach >= 7).to.equal(true)
 						else
 							seen.wide += 1
+							-- A planter (3.92 deep) or sofa (3.62) standing off the trim would leave under 10 of a 14 hall.
+							expect(marker.art).to.equal("waterCooler")
 							expect(width - reach >= 10).to.equal(true)
 						end
 					end
 				end
 			end
 			expect(seen.narrow + seen.wide > 0).to.equal(true)
+		end)
+
+		it("stands every collidable off the wall trim, in halls and junctions alike", function()
+			local seen = 0
+			for seed = 1, SEEDS do
+				for _, entry in hallProps(layoutFor(seed)) do
+					if COLLIDABLE[entry.marker.art] then
+						seen += 1
+						local _, gap = wallAndReach(entry.marker, entry.room)
+						expect(gap >= Constants.SHELL.trimClearance - 0.001).to.equal(true)
+						expect(gap <= Dressing.MAX_WALL_GAP + 0.001).to.equal(true)
+					end
+				end
+			end
+			expect(seen > 0).to.equal(true)
+		end)
+
+		it("keeps the junction planter and bench off the trim and the lane clear", function()
+			local room = { id = "j1", name = "j", zone = "hallway", minX = 0, maxX = 20, minZ = 0, maxZ = 20 }
+			local layout = { rooms = { room }, doors = {}, markers = {}, facades = {} }
+			local seen = 0
+			for seed = 1, 20 do
+				for _, marker in Dressing.dress(room, layout, Random.new(seed), true) do
+					if COLLIDABLE[marker.art] then
+						seen += 1
+						local _, gap = wallAndReach(marker, room)
+						expect(gap >= Constants.SHELL.trimClearance - 0.001).to.equal(true)
+					end
+				end
+			end
+			expect(seen > 0).to.equal(true)
 		end)
 
 		it("turns every sconce to face into the hall", function()
@@ -322,6 +356,37 @@ return function()
 					end
 				end
 			end
+		end)
+
+		it("leaves a conference glass pane bare: no wall prop or collidable along its span", function()
+			local room = { id = "h1", name = "h", zone = "hallway", minX = 0, maxX = 60, minZ = 0, maxZ = 10 }
+			-- A pane on the maxZ wall line (z 10), 20 studs of it.
+			local pane = { x1 = 15, z1 = 10, x2 = 35, z2 = 10 }
+			local function dressed(seed, withPane)
+				local layout = { rooms = { room }, doors = {}, markers = {}, facades = {} }
+				if withPane then
+					layout.panes = { pane }
+				end
+				return Dressing.dress(room, layout, Random.new(seed))
+			end
+			local function overlapsSpan(marker, pad)
+				local halfX = extents(marker)
+				return marker.z > 5 and marker.x + halfX > pane.x1 - pad and marker.x - halfX < pane.x2 + pad
+			end
+			local control = 0
+			for seed = 1, 30 do
+				for _, marker in dressed(seed, false) do
+					if overlapsSpan(marker, 0) then
+						control += 1
+					end
+				end
+				for _, marker in dressed(seed, true) do
+					local pad = if COLLIDABLE[marker.art] then Dressing.OPENING_CLEAR else 0
+					expect(overlapsSpan(marker, pad - 0.001)).to.equal(false)
+				end
+			end
+			-- Without the pane the same seeds do dress that stretch, so the check above has something to catch.
+			expect(control > 0).to.equal(true)
 		end)
 
 		it("keeps every generated layout valid with dressing", function()
