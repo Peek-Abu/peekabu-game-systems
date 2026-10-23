@@ -172,6 +172,14 @@ Each template:
 
 **Files:** `Office/Data/OfficeKitRegistry.luau` (+ spec), `Office/Data/OfficeConstants.luau` (`PROP_SIZES` values).
 
+**Proxy sizes follow the art (controller ruling during Task 3).** The gameplay proxy sizes (`LOCKER_SIZE`, `COUNTER_SIZE`, `BOARD_SIZE`, `SHELF_SIZE`, `TABLE_SIZE`) were tuned for the slate kit. Uniform fit shrinks mismatched art: a locker bank to 0.42×, the whiteboard to 0.16×, the coffee bar to 0.47×.
+- Add `OfficeConstants.ART_SIZES: { [string]: Vector3 }`, one entry per restyled furniture key, equal to its template `BaseSize` from `KIT_MAP.md`. The desk keeps `DESK_SIZE` for hide space.
+- Whenever a marker carries `art` with an `ART_SIZES` entry, that size is the proxy size in OfficeBuildSystem and OfficeDecorSystem, and the footprint in `OfficeKitRules` and `OfficeLayoutRules`.
+- Kits set `art` on every furniture marker they restyle (`board` → `corkboard`, `shelf` → `shelf` or `serverRack`, `counter` → `kitchenCounter` or `receptionDesk`, `table` → `breakTable` or `conferenceTable`).
+- Surface loot keeps using the template's `SupportSurfaceY` (already honoured by `OfficeServiceServer.spotFrame`).
+- A spec asserts that a marker with `art = "conferenceTable"` builds a 14 × 4.95 × 6 proxy.
+- Re-check hide sizes for tables that are hide spots: `breakTable` stays at `TABLE_SIZE` unless its art leaves HUG_FREE_MIN free.
+
 Per kit, add `art` overrides and `prop` markers, keeping every existing gameplay marker:
 
 | Kit | Overrides | Props (at least) |
