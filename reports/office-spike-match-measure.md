@@ -74,3 +74,35 @@ Full suite: 4,275 passed, 0 failed. Traversal harness, seeds 1-20, every door cl
 - `SLOT_DEPTH` is now derived: the mean depth of the drawn kits in `OfficeKitRegistry`, 26 today.
 - The segments are lined round-robin: each round, every segment gets one room, alternating between its sides. This
   spreads the rooms out, so the clustered dust keeps a clean room between dirty rooms.
+
+## Final state after the whole-branch review fixes (commit 35675550)
+
+The final review moved every wall-backed floor piece 0.55 off its wall so it clears the new trim, kept hall dressing
+off glass panes, and added a kit rule that every patrol point is reachable from the door by a 3-stud path. Re-measured
+in Studio Play:
+
+| Check | Result | Target |
+|---|---|---|
+| Floor area mean (seeds 1-20) | 21,295 (16,632 to 26,622) | 24,300 ±30 % |
+| Longest walk | 479 studs (29.9 s) | at most 640 (40 s) |
+| Hide spots | min 17, mean 34.3 | at least 8 |
+| Pods share | 33 % | at least 25 % |
+| Full suite | 4,295 passed, 0 failed | 0 failed |
+| Traversal harness, every door closed | 946 paths, 0 failures | 0 failures |
+
+## Light density (Task 8)
+
+Enabled PointLight + SurfaceLight per 1,000 square studs of Floor parts, office build plus decor, seeds 1-20 (commit
+424ed595; no lighting code changed after it):
+
+- The spike (`Workspace.ClaudeSpike`): 108 lights over 7,522 square studs = **14.36**.
+- Generated: mean **11.62**, worst **12.55** (seed 3). Every seed is below the spike, so no hall-panel cap is needed.
+
+## Captures (Task 8)
+
+Seed 1 built at (3000, 1, 3000) in Play, the same views as the spike's captures:
+`design/production-art/map-kits/odd-hours-b1/spike-match/` (01 main hallway, 02 junction to side hall, 03 open plan,
+04 conference glass from the hall, 05 breakout, 06 server room, 07 reception). The Studio capture tool sometimes renders
+in a dim mode that drops local lights; 06 and 07 came out that way, and `00_spike_hallway_dimrender_reference.jpg` shows
+the spike in the same mode for a fair comparison. The captures predate the 0.55 trim-clearance shift (pieces sit half a
+stud further from the walls now). Real lighting is judged in the owner's play-check.
