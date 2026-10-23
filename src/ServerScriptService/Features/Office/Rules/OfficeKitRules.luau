@@ -34,7 +34,7 @@ end
 local EPSILON = 0.001
 
 -- Furniture markers and their sizes (the same table OfficeLayoutRules uses for its in-walls test, plus plants).
-local FURNITURE: { [string]: Vector3 } = {
+local FURNITURE: { [string]: Vector3? } = {
 	desk = OfficeConstants.DESK_SIZE,
 	locker = OfficeConstants.LOCKER_SIZE,
 	closet = OfficeConstants.CLOSET_SIZE,

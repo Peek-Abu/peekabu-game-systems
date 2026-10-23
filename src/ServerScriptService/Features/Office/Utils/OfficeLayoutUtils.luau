@@ -163,7 +163,8 @@ function OfficeLayoutUtils.walkDistances(layout: Layout): { [string]: number }
 		if room.id ~= layout.startRoom then
 			local reach = math.huge
 			local cx, cz = (room.minX + room.maxX) / 2, (room.minZ + room.maxZ) / 2
-			for _, index in byRoom[room.id] or {} do
+			local doorIndices: { number } = byRoom[room.id] or {}
+			for _, index in doorIndices do
 				local door = doors[index]
 				reach = math.min(reach, dist[index] + math.sqrt((door.x - cx) ^ 2 + (door.z - cz) ^ 2))
 			end

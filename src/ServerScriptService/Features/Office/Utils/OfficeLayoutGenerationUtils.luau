@@ -100,7 +100,7 @@ end
 local function draw(rng: Random, pool: { RoomType }, boosted: boolean): RoomType
 	local weights: { number } = {}
 	local total = 0
-	for index, roomType in pool do
+	for index, roomType: RoomType in pool do
 		local weight = weightOf(roomType)
 		if boosted and roomType == "conference" then
 			weight *= OfficeConstants.PERIMETER_CONFERENCE_BOOST
@@ -109,7 +109,7 @@ local function draw(rng: Random, pool: { RoomType }, boosted: boolean): RoomType
 		total += weight
 	end
 	local roll = rng:NextNumber() * total
-	for index, roomType in pool do
+	for index, roomType: RoomType in pool do
 		roll -= weights[index]
 		if roll < 0 or index == #pool then
 			table.remove(pool, index)
@@ -204,7 +204,7 @@ local function tryPlace(build: Build, segment: Run, side: number, cursor: number
 	local room = segment.room
 	for _, kit in kitsLargestFirst(roomType) do
 		local mirrored = build.rng:NextInteger(0, 1) == 1
-		local frontX, frontZ, facing = slotFront(segment, side, cursor, kit.width)
+		local frontX: number, frontZ: number, facing: Edge = slotFront(segment, side, cursor, kit.width)
 		local id = nextId(build, roomType)
 		local placement = OfficeKitUtils.place(kit, id, frontX, frontZ, facing, mirrored)
 		-- The whole doorway lies along the segment, and the room clears every room and the margin box.
@@ -252,7 +252,7 @@ local function fillSlot(build: Build, segment: Run, side: number, cursor: number
 	local boosted = atPerimeter(build, segment, side)
 	local pool: { RoomType } = table.clone(DRAWN)
 	local first: RoomType
-	local pending = build.pending
+	local pending: RoomType? = build.pending
 	if pending ~= nil then
 		first = pending
 	elseif build.needServer then
@@ -271,7 +271,7 @@ local function fillSlot(build: Build, segment: Run, side: number, cursor: number
 	while #pool > 0 do
 		table.insert(order, draw(rng, pool, boosted))
 	end
-	for _, roomType in order do
+	for _, roomType: RoomType in order do
 		local width = tryPlace(build, segment, side, cursor, roomType)
 		if width ~= nil then
 			if roomType == first then
@@ -516,7 +516,8 @@ local function buildRoute(layout: Layout, network: Network): { string }
 			end
 		end
 		visit()
-		for _, other in adjacent[id] or {} do
+		local others: { string } = adjacent[id] or {}
+		for _, other in others do
 			if not seen[other] then
 				walk(other)
 				visit()

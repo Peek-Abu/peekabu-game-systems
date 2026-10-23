@@ -175,7 +175,7 @@ function OfficeDoorSystem.build(layout: OfficeTypes.Layout, origin: CFrame, pare
 	for _, door in layout.doors do
 		local kind = door.kind
 		local room = OfficeLayoutUtils.room(layout, door.a)
-		local edge = if room ~= nil then OfficeLayoutUtils.doorEdge(room, door) else nil
+		local edge: OfficeTypes.Edge? = if room ~= nil then OfficeLayoutUtils.doorEdge(room, door) else nil
 		if (kind == "solid" or kind == "glass") and room ~= nil and edge ~= nil then
 			local id = `{door.a}|{door.b}`
 			local horizontal = edge == "minZ" or edge == "maxZ"
@@ -227,7 +227,8 @@ function OfficeDoorSystem.build(layout: OfficeTypes.Layout, origin: CFrame, pare
 	end
 
 	-- Facades: locked fake doors on unbroken walls (closed, flush, not interactable).
-	for index, facade in layout.facades or {} do
+	local facades: { OfficeTypes.Facade } = layout.facades or {}
+	for index, facade in facades do
 		local room = OfficeLayoutUtils.room(layout, facade.room)
 		local frame = if room ~= nil then OfficeDoorUtils.facadeFrame(facade, room, origin) else nil
 		if frame ~= nil then
