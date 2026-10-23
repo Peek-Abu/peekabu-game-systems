@@ -179,6 +179,23 @@ return function()
 		end)
 	end)
 
+	describe("surfaceTopFor", function()
+		local function marker(kind, art)
+			return { id = "r.m.1", room = "r", kind = kind, x = 0, z = 0, art = art }
+		end
+
+		it("is the art's top for a restyled surface and the kind's otherwise", function()
+			expect(OfficeLayoutUtils.surfaceTopFor(marker("counter", "receptionDesk"))).to.equal(4.6)
+			expect(OfficeLayoutUtils.surfaceTopFor(marker("table", "conferenceTable"))).to.equal(4.95)
+			expect(OfficeLayoutUtils.surfaceTopFor(marker("counter"))).to.equal(OfficeConstants.COUNTER_SIZE.Y)
+			expect(OfficeLayoutUtils.surfaceTopFor(marker("table", "breakTable"))).to.equal(
+				OfficeConstants.TABLE_SIZE.Y
+			)
+			expect(OfficeLayoutUtils.surfaceTopFor(marker("desk", "desk"))).to.equal(nil)
+			expect(OfficeLayoutUtils.surfaceTopFor(marker("shelf", "serverRack"))).to.equal(nil)
+		end)
+	end)
+
 	describe("surfaceTopY", function()
 		it("reports the furniture top for surface spots and nil for floor spots", function()
 			expect(OfficeLayoutUtils.surfaceTopY("counter")).to.equal(OfficeConstants.COUNTER_SIZE.Y)

@@ -107,7 +107,7 @@ end
 
 -- Where an item stands: furniture tops for surface markers, the floor otherwise.
 local function spotFrame(marker: Marker): CFrame
-	local top = OfficeLayoutUtils.surfaceTopY(marker.kind)
+	local top = OfficeLayoutUtils.surfaceTopFor(marker)
 	if top ~= nil then
 		local current = built
 		if current ~= nil then

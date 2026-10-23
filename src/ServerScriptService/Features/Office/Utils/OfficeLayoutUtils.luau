@@ -56,6 +56,22 @@ function OfficeLayoutUtils.surfaceTopY(kind: OfficeTypes.MarkerKind): number?
 	return nil
 end
 
+--[=[
+	The furniture top a surface spot stands on for this marker, when its template names no support surface: the art's
+	own top when the marker's `art` has an ART_SIZES entry (a reception desk is 4.6 high, not a counter's 3), the
+	kind's surfaceTopY otherwise; nil for floor spots.
+]=]
+function OfficeLayoutUtils.surfaceTopFor(marker: Sized): number?
+	local top = OfficeLayoutUtils.surfaceTopY(marker.kind)
+	if top ~= nil and marker.art ~= nil and OfficeConstants.ART_SIZES[marker.art] ~= nil then
+		local size = OfficeLayoutUtils.markerSize(marker)
+		if size ~= nil then
+			return size.Y
+		end
+	end
+	return top
+end
+
 -- The proxy size of each furniture kind with no art override.
 local KIND_SIZES: { [string]: Vector3 } = {
 	desk = OfficeConstants.DESK_SIZE,
