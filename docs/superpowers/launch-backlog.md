@@ -90,3 +90,23 @@ To do together on a polish day, not now:
   catch. Find which packet is ID 17 and why its reader fails.
 - **Office map leftovers from the spec (not in stage 4):** the glass lift that moves on its own (no glass lift exists
   yet) and the rare set piece per run.
+
+From the owner's stage 4 play-check (2026-10-24):
+- **Inside sounds heard outside:** standing in the yard you hear the office's sounds, Mr. Harlow's footsteps and
+  more. This is the "Sound groups" item above, now confirmed by the owner in play: the building's sounds must be cut
+  or heavily muffled while the player is outside (and the yard's while inside).
+- **The "TOGETHER WE THRIVE" banner is off-style:** the plain navy cloth with plain text (the `banner` anomaly slot
+  on the podium front) doesn't match the game's look. Restyle it to the Odd Hours art style (drawn detail, the house
+  palette and type, kid-level wording), keeping its default and upside-down states.
+- **Make the outside its own place, not a quiet backdrop:**
+  - its own ambience bed (night wind, distant traffic, buzzing lamps, insects), separate from the office's;
+  - more set dressing and assets in the yard, car park and around the building;
+  - possibly outdoor creatures or monsters (gameplay or just set dressing: to decide);
+  - outdoor footstep surface sounds (asphalt, grass, gravel, puddles) layered on the employee's footsteps, so walking
+    outside doesn't sound like the office carpet.
+- **Truck departure sometimes never arrives (found in stage 4 Studio checks, not yet fixed):** in Studio, `departNow`
+  from the depot truck returns true and the Queue counts a local move, but `arrived` never fires (arrivals stays 0),
+  so no shift starts and the player stays on the truck. Seen on 3 of 5 tries, twice in a row in one session, with no
+  error in the Output. Likely a `departing` listener yields or errors inside `depart` before the deferred `arrived`
+  (`QueueServiceServer` depart: `departing:Fire` → `pads:unlock` → `task.defer(arrived)`). Root-cause before launch:
+  a player could press Go and never leave.
