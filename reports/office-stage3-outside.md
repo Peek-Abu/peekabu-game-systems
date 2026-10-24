@@ -205,3 +205,155 @@ In `design/production-art/map-kits/odd-hours-b1/exterior/captures/`. All are Pla
 - The ooze streak look.
 - The one-off client warning on the first arrival, "transit screen timed out waiting for placed" (revealed anyway; the crew landed): see whether it recurs.
 - The roller door's loud CorrodedMetal and the hedge speckle (Task 8's art notes).
+
+## Play-check 2 verification
+
+Code at HEAD `35e20c0e`: the exterior is back around the office, so each door is a short hop, and the truck is at world (1168, -276). It also has the shadowless fills, the outdoor test that follows the character root, and the entrance cover held until the frames settle. A knocked-out player's Back to depot now goes to the depot, the dock shelves face the room, and every room fits inside the shell. Studio window "Odd Hours: Shift", 2026-10-23.
+
+**Session housekeeping:**
+- `studio-playtest-shift.lock` was created before Play and deleted after.
+- RunTests is cleared to nil.
+- The probe Scripts went with Play.
+- Edit still has `Workspace.OfficeExterior`.
+
+**Starting the solo shift:**
+- A plain Play lands the player at the depot (-960, 2.6, 26).
+- I moved the character onto `CleanupCrewDepot.truck1` (bed at (-980, 2.75, 48)).
+- An injected server Script called `QueueServiceServer:departNow(player)` and it returned true.
+- The player arrived on the yard truck at (1170.75, 7, -276). Shift 1, variant B, quota 640.
+
+**How the hops were driven and timed:**
+- Each hop was a real prompt press from the client: `InputHoldBegin/End` on the entrance's InteractionPrompt, once it had armed to 8 studs.
+- A client Heartbeat logger timed them. It recorded the frame time, the root position, Lighting, and the transit cover's `GroupTransparency` (CanvasGroup `cover`).
+
+| Check | Result |
+|---|---|
+| V1 | **PASS**: `Tests: 4452 passed, 0 failed, 4452 total`; traversal seeds 1-20: **957 paths, 0 failures** |
+| V2 | **PASS in effect, with one literal mismatch** (below): Harlow has no way out of the dock room. z -50 is not inZone; the yard is |
+| V3 | **PASS**: all four hops land on their frames; the cover starts lifting 0.35-0.41 s after the press and is gone by 0.63-0.69 s; FPS 43-60, worst frame 0.023-0.068 s; the carried item travels |
+| V4 | **PASS**: yard 2.2 / 70 (officeExterior) → after Enter 0.35 / 0 (officeTier1) → after Leave 2.2 / 70 |
+| V5 | **PASS**: the built office has 264 lights, **0** with Shadows (104 are PointLight fills). OfficeExterior has 63 lights, 16 with Shadows (15 SpotLights + 1 PointLight, all on `LightAnchor`s) |
+| V6 | **PASS**: knocked out by the third catch (hp 0), voted Back to depot, character re-added at **(-960, 2.77, 26)**: the depot |
+| V7 | **PASS**: both bay shelves' LookVector points at the room centre (dot 1.00) |
+| V8 | **Done**: 4 captures, `pc2v_01..04` |
+
+### V1: suite and traversal (PASS)
+- Suite (RunTests Play): `Tests: 4452 passed, 0 failed, 4452 total`.
+- Traversal harness: run in a later Play after the shift, on the Server, as `run({1..20}, CFrame.new(5000,1,5000))`. Result: **paths 957, failures 0**.
+
+### V2: Harlow can't get out (PASS in effect)
+- **Harlow's agent:** `PathfindingService:CreatePath({AgentCanJump = true, Costs = {[SAFE_ZONE_LABEL] = math.huge}})`. These are the NpcMoverSystem parameters plus OccupantServiceServer's `pathCosts`.
+- **Bay patrol point:** route #2, (1178, 1, -31).
+- **Loading bay box:** (1146, 1, -52)..(1190, 14, -10).
+
+| Path | Harlow's costs | No costs |
+|---|---|---|
+| bay point → truck pad centre (1168, 4, -276) | **NoPath** (3/3 runs) | NoPath |
+| bay point → yard (1168, 4, -74), 10 studs south of the dock door | **Success, 7 waypoints, ending at (1168, 1, -51)** (3/3 runs; same at y 1) | NoPath |
+| yard (1168, 1, -74) → pad | NoPath | Success, 52 waypoints, every one labelled `SafeZone` |
+
+**The literal mismatch:** bay → yard with his costs reports `Success`, not NoPath.
+- It is the engine's partial path. Its last waypoint is (1168, 1, -51), at the dock room's door wall (room face z -51.5).
+- That is **23 studs short of the goal and still inside the room**. Following it leaves him in the dock room; it never reaches the yard.
+- The yard itself is all SafeZone: the no-cost yard → pad path is labelled SafeZone throughout.
+- No walkable link crosses the wall: the no-cost bay → yard path is NoPath.
+- Not a code bug. But any caller that trusts `Status == Success` without checking the last waypoint against the goal would be fooled, so it is flagged here.
+
+**inZone** (`OccupantSenseSystem.layout(route)` + `OccupantBrainRules.inZone`):
+
+| Point | inZone | In the bay box |
+|---|---|---|
+| (1168, 4, -50), just inside the dock room | **false** | true |
+| (1168, 2, -50), just inside the dock room | **false** | true |
+| yard (1168, 4, -74) | **true** | |
+| pad (1168, 4, -276) | **true** | |
+| yard (1100, 4, -150) | **true** | |
+| car park (918, 4, 152) | **true** | |
+
+The boxes behind those answers:
+- `outdoors()`: yard (836, 1, -321)..(1322, 121, -57); car park (836, 1, -57)..(956, 121, 230).
+- `safeZone()`: (1162, 4, -284)..(1174, 12.7, -268).
+
+### V3: real hops (PASS)
+The entrance frames (`OfficeServiceServer:entrance`):
+
+| Entrance | Outside frame | Inside frame |
+|---|---|---|
+| Dock | (1168, 1, -69), look -Z | (1168, 1, -48), look +Z |
+| Lobby | (933, 1, 152), look -X | (966, 1, 152), look +X |
+
+Times are measured from the press.
+
+| Hop | From → landed (root) | Cover on | Teleport | Cover starts lifting | Cover gone | 2 s after the hop: FPS / worst frame |
+|---|---|---|---|---|---|---|
+| Enter dock | (1168, -70) → **(1168, 2.37, -48)**, look +Z | +0.09 s | +0.28 s | **+0.37 s** | +0.66 s | **50.7 / 0.042 s** |
+| Leave dock (carrying the Bottle bag) | (1168, -46) → **(1168, 2.41, -69)**, look -Z | +0.08 | +0.29 | **+0.35** | +0.63 | **47.8 / 0.045** |
+| Enter lobby (carrying) | (932, 152) → **(966, 2.37, 152)**, look +X | +0.10 | +0.27 | **+0.36** | +0.63 | **60.1 / 0.023** |
+| Leave lobby (`Exit_lobby_2`, carrying) | (967, 152) → **(933, 2.73, 152)**, look -X | +0.07 | +0.33 | **+0.41** | +0.69 | **42.7 / 0.068** |
+
+- **Against the earlier long-jump hitch** (worst frame ~0.56 s, FPS 3-7): the worst frame is now 0.023-0.068 s and FPS stays at 43-60. The cover lifted on the settle check's quick-frames rule every time, never on its 1 s cap.
+- **Carried item:** the Bottle bag, picked up through `CarryServiceServer:pickUp`, arrived with the player on every hop, and `CarriedBy` stayed the player throughout:
+  - after Leave dock: (1167.95, 4.24, -70.73);
+  - after Enter lobby: (971.98, 4.19, 154.36);
+  - after Leave lobby: (931.28, 4.56, 151.94).
+- **The P4 carry drift recurred:**
+  - Standing still in reception with the bag, the root moved from x 966 to 970.8 (+X) in about 20 s.
+  - Without the bag, after the dock Enter, the root also moved from z -48 to -40.5. A catch knockdown happened in that window, so that one can't be attributed.
+
+### V4: atmosphere (PASS)
+Client `Lighting`, read right after each hop settled:
+
+| Moment | Brightness | GeographicLatitude | Preset |
+|---|---|---|---|
+| Yard, before Enter | 2.20 | 70 | officeExterior |
+| After Enter dock (Ambient (22, 25, 40), Atmosphere 0.28 / 0.60, ClockTime 0) | 0.35 | 0 | officeTier1 |
+| After Leave dock | 2.20 | 70 | officeExterior |
+| Car park, before Enter lobby | 2.20 | 70 | officeExterior |
+| After Enter lobby | 0.35 | 0 | officeTier1 |
+| After Leave lobby | 2.20 | 70 | officeExterior |
+
+### V5: shadows (PASS)
+- **`CleanupCrewOffice`** (the built office plus the truck): 264 Light instances, **0 with Shadows = true**. 104 of them are PointLight fills.
+- **`OfficeExterior`:** 63 lights, **16 with Shadows = true**: 15 SpotLights and 1 PointLight, all parented to `LightAnchor` parts (the yard and car-park lamps).
+
+### V6: Back to depot after a knockout (PASS)
+1. I set up a server watcher that logged root anchoring, big jumps and CharacterAdded.
+2. I was caught 3 times in the shift. For the third catch, I was placed 6 studs in front of the Manager in the office, at (1098, 151).
+3. The catch anchored the root (+0.3 s), released it (+1.3 s), and the character died: hp 0, body at (1066.3, 1.6, 152.0).
+4. The shift state was `phase=results`, `crew=1`.
+5. An injected Script called `ShiftServiceServer:vote(player, "depot")`, which returned true.
+6. On that same frame, the root moved to (-960, 3.94, 26) with hp 100.
+7. CharacterAdded fired at **(-960, 2.77, 26)**: the depot spawn (x ≈ -960), not the truck or the dock room.
+
+**Note on the first two catches:**
+- The first came just after the dock Enter, in the dock room: the HUD showed "Ice got caught!".
+- The second came somewhere in the ~100 s around the lobby hops. The watcher wasn't running yet, so it isn't attributed: reception or outdoors can't be told.
+- Worth watching in the owner's play-check.
+
+### V7: dock-room shelves (PASS)
+The bay's two `CleanupCrewOffice.Furniture.Shelf` parts (5×6×2):
+
+| Shelf | Position | LookVector | Dot with the direction to the room centre (1168, -31) |
+|---|---|---|---|
+| minX wall | (1148, 4, -31) | (+1, 0, 0) | 1.00 |
+| maxX wall | (1188, 4, -31) | (-1, 0, 0) | 1.00 |
+
+- Each shelf's `ArtVisual` pivot has the same LookVector.
+- I have no capture of the shelves' open side: a camera-positioned capture taken later, while I was outdoors, rendered the bay dark under the exterior lighting.
+
+### V8: captures
+In `design/production-art/map-kits/odd-hours-b1/exterior/captures/`. All are Play captures with the HUD showing.
+
+| Capture | What it shows |
+|---|---|
+| `pc2v_01_dock_door_from_yard.jpg` | the closed roller door from the yard pad, with the "ENTER office" prompt armed and the ooze puddles |
+| `pc2v_02_dock_room_after_enter.jpg` | the dock room right after Enter, looking +Z into the bay (a shelf on the left wall). It rendered this time, not black. The toast reads "Ice got caught!" |
+| `pc2v_03_reception_after_enter.jpg` | reception right after the lobby Enter: the desk and sofa, with the Bottle bag carried (camera close behind the character) |
+| `pc2v_04_lobby_from_carpark.jpg` | the lobby's glass doors between the rotunda columns, seen from the car park, with "ENTER office" armed |
+
+### Other observations
+- **ByteNet errors (not attributed):**
+  - The server logged 10 of these between 168 s and 229 s of the session: `bytenet-max ... process.read:108: No readable entity found for ID: 17 for type: packet` (in `onServerEvent`).
+  - That window covers the dock Enter, the first catch and the lobby captures.
+  - My probes sent no client packets, so they don't explain it.
+- **Transit warning gone:** the client did not log P1's "transit screen timed out" warning this time.
