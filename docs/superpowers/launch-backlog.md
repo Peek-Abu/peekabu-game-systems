@@ -88,3 +88,5 @@ To do together on a polish day, not now:
   and a Bottle bag). Root-cause it in the Carry feature (`CarrySpeedSystem`, `CarryPlacementSystem`).
 - **ByteNet "No readable entity found for ID: 17":** 10 server errors around a teleport-door Enter and a Harlow
   catch. Find which packet is ID 17 and why its reader fails.
+- **Office map leftovers from the spec (not in stage 4):** the glass lift that moves on its own (no glass lift exists
+  yet) and the rare set piece per run.
