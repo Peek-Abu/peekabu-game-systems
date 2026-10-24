@@ -2,7 +2,9 @@
 --[=[
 	OfficeAssets: every asset id the Office feature uses (Cleanup Crew spec §7: "Asset id literals live only in each
 	feature's Data/<Feature>Assets"): the office bed (four looped beds and the sweetener one-shots code scatters round
-	you), a broken light's zap, and the ambient dread (a phone ringing, the elevator's ding, typing). Client-only: nothing on the server plays them. An id is PENDING ("")
+	you), a broken light's zap, the ambient dread (a phone ringing, the elevator's ding, typing), and the exterior
+	anomalies' sounds (a cooling engine's tick, TV static, an automatic door). Client-only: nothing on the server
+	plays them. An id is PENDING ("")
 	until the developer uploads the staged file (the M3 plan's "Asset staging" appendix); a pending sound is never
 	registered, so playing it is silent. Registers the uploaded sounds at load (guarded).
 
@@ -49,6 +51,29 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 		group = "Ambient",
 		volume = 0.7,
 		rollOffMaxDistance = 90,
+		maxConcurrent = 1,
+	},
+	-- The exterior anomalies (OfficeAnomalySystem): a parked car's engine ticking as it cools (looped, at the car), the
+	-- guard booth TV's faint static (looped), and the lobby's automatic doors sliding open for nobody.
+	carTick = {
+		assetId = PENDING,
+		group = "SFX",
+		volume = 0.5,
+		looped = true,
+		rollOffMaxDistance = 40,
+	},
+	tvStatic = {
+		assetId = PENDING,
+		group = "Ambient",
+		volume = 0.3,
+		looped = true,
+		rollOffMaxDistance = 25,
+	},
+	autoDoor = {
+		assetId = PENDING,
+		group = "SFX",
+		volume = 0.6,
+		rollOffMaxDistance = 60,
 		maxConcurrent = 1,
 	},
 	-- Someone typing (looped); it stops when you come close.
@@ -115,4 +140,7 @@ return table.freeze({
 	PHONE = "officePhoneRing",
 	ELEVATOR = "officeElevatorDing",
 	TYPING = "officeTyping",
+	CAR_TICK = "carTick",
+	TV_STATIC = "tvStatic",
+	AUTO_DOOR = "autoDoor",
 })
