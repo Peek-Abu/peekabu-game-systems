@@ -56,21 +56,21 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- The exterior anomalies (OfficeAnomalySystem): a parked car's engine ticking as it cools (looped, at the car), the
 	-- guard booth TV's faint static (looped), and the lobby's automatic doors sliding open for nobody.
 	carTick = {
-		assetId = PENDING,
+		assetId = "rbxassetid://127728592892514",
 		group = "SFX",
 		volume = 0.5,
 		looped = true,
 		rollOffMaxDistance = 40,
 	},
 	tvStatic = {
-		assetId = PENDING,
+		assetId = "rbxassetid://90442376147683",
 		group = "Ambient",
 		volume = 0.3,
 		looped = true,
 		rollOffMaxDistance = 25,
 	},
 	autoDoor = {
-		assetId = PENDING,
+		assetId = "rbxassetid://100859403341825",
 		group = "SFX",
 		volume = 0.6,
 		rollOffMaxDistance = 60,
