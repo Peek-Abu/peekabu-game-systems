@@ -200,7 +200,7 @@ local function exitOnWall(room: OfficeTypes.Room, exit: OfficeTypes.Door): boole
 end
 
 --[=[
-	Every problem with a layout's grounds: the truck lies inside one ground, no ground overlaps a room, and each
+	Every problem with a layout's grounds: every room lies inside OUTSIDE.ENVELOPE (the exterior shell), the truck lies inside one ground, no ground overlaps a room, and each
 	entrance's exit sits on its room's wall (within the wall's span) with its outside door on its ground (or within a
 	stud of it). Empty when the layout has no grounds.
 ]=]
@@ -233,6 +233,17 @@ function OfficeGroundsUtils.problems(layout: OfficeTypes.Layout): { string }
 			then
 				table.insert(errors, `ground "{ground.id}" overlaps room "{room.id}"`)
 			end
+		end
+	end
+	local envelope = OUTSIDE.ENVELOPE
+	for _, room in layout.rooms do
+		if
+			room.minX < envelope.minX
+			or room.maxX > envelope.maxX
+			or room.minZ < envelope.minZ
+			or room.maxZ > envelope.maxZ
+		then
+			table.insert(errors, `room "{room.id}" lies outside the exterior shell`)
 		end
 	end
 	local entrances: { OfficeTypes.Entrance } = layout.entrances or {}

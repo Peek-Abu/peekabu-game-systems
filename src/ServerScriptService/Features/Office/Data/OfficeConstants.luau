@@ -209,6 +209,10 @@ local OUTSIDE = table.freeze({
 	EXTERIOR_OFFSET = Vector3.zero,
 	yard = table.freeze({ minX = -164, maxX = 322, minZ = -321, maxZ = -57 }),
 	carpark = table.freeze({ minX = -164, maxX = -44, minZ = -57, maxZ = 230 }),
+	-- The box every generated room must lie inside. The exterior shell's inner faces stand 2 studs outside it; walls
+	-- are 1 thick centred on room edges and trim stands up to ~0.55 proud, so room boxes inside the envelope keep
+	-- built parts clear of the shell.
+	ENVELOPE = table.freeze({ minX = -39, maxX = 294, minZ = -52, maxZ = 203 }),
 	TRUCK_CENTRE = Vector2.new(168, -276),
 	TRUCK_YAW = math.pi,
 	-- The roller door on the dock block's front face; you arrive facing -Z, toward the truck.

@@ -577,6 +577,22 @@ return function()
 			end
 		end)
 
+		it("fits every room of seeds 1-500 inside the exterior shell's envelope", function()
+			local envelope = Constants.OUTSIDE.ENVELOPE
+			for seed = 1, 500 do
+				local layout = Gen.generate(Base, seed)
+				for _, room in layout.rooms do
+					local fits = room.minX >= envelope.minX
+						and room.maxX <= envelope.maxX
+						and room.minZ >= envelope.minZ
+						and room.maxZ <= envelope.maxZ
+					if not fits then
+						error(`seed {seed}: room "{room.id}" lies outside the envelope`)
+					end
+				end
+			end
+		end)
+
 		it("keeps the input immutable and always selects the generated art kit", function()
 			local selected = table.clone(Base)
 			selected.artKit = "alternate-office-kit"

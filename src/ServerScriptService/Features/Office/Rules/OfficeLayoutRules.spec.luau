@@ -103,6 +103,25 @@ return function()
 			expect(hasError(errors, 'ground "yard" overlaps room "a"')).to.equal(true)
 		end)
 
+		it("refuses a room 1 stud past the shell envelope, only when there are grounds", function()
+			local OfficeConstants = require(ServerScriptService.Features.Office.Data.OfficeConstants)
+			local envelope = OfficeConstants.OUTSIDE.ENVELOPE
+			local layout = outside()
+			layout.rooms[2].maxX = envelope.maxX + 1
+			layout.rooms[2].minX = envelope.maxX - 20
+			local _, errors = OfficeLayoutRules.validate(layout)
+			expect(hasError(errors, 'room "b" lies outside the exterior shell')).to.equal(true)
+			layout.rooms[2].maxX = envelope.maxX
+			layout.rooms[2].minX = envelope.maxX - 20
+			_, errors = OfficeLayoutRules.validate(layout)
+			expect(hasError(errors, "exterior shell")).to.equal(false)
+			layout.rooms[2].maxX = envelope.maxX + 1
+			layout.rooms[2].minX = envelope.maxX - 20
+			layout.grounds = nil
+			_, errors = OfficeLayoutRules.validate(layout)
+			expect(hasError(errors, "exterior shell")).to.equal(false)
+		end)
+
 		it("keeps the authored office valid with no grounds", function()
 			local layout = OfficeLayoutUtils.dropUnfit(OfficeLayoutConstants.LAYOUT, OfficeLayoutRules)
 			expect(layout.grounds).to.equal(nil)
