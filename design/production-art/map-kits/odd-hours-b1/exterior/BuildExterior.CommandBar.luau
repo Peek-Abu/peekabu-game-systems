@@ -12,6 +12,7 @@
 -- Never touches Lighting (the exterior atmosphere is code: OfficeAtmosphereConstants).
 
 local CHS = game:GetService("ChangeHistoryService")
+local CS = game:GetService("CollectionService")
 local MS = game:GetService("MaterialService")
 
 ------------------------------------------------------------------ shared numbers
@@ -30,6 +31,16 @@ local OUTSIDE = {
 local OFFSET = OUTSIDE.EXTERIOR_OFFSET -- every part is built in exterior space and moved by this
 
 local NAME = "OfficeExterior"
+
+-- Copied from src/ReplicatedStorage/Shared/Features/Office/Data/OfficeAnomalyConstants.luau (SLOT_TAG, SLOT_ATTRIBUTE,
+-- IDS). Each slot is ONE Model tagged SLOT_TAG with attribute SLOT_ATTRIBUTE = its id, built in its default (no
+-- anomaly) state; the client's anomaly system applies and resets the anomaly on the parts inside it.
+local ANOMALY = {
+	SLOT_TAG = "OfficeAnomalySlot",
+	SLOT_ATTRIBUTE = "AnomalyId",
+	IDS = { "silhouette", "autoDoors", "carTicking", "welcomeScreen", "boothTv", "wetFloor", "banner" },
+	DOOR_SLIDE = 2.2, -- studs each lobby leaf slides open along its RightVector * Side
+}
 -- The generated office's volume (world; every room fits here over 120 seeds). No exterior part may enter it.
 local KEEP = { x0 = 961, x1 = 1294, z0 = -52, z1 = 203, yTop = 17 }
 
@@ -236,6 +247,38 @@ end
 local function spot(pos, dir, b, r, ang, col, shadows, parent)
 	return lightAt(CFrame.lookAt(pos, pos + dir), "SpotLight", { Brightness = b, Range = r, Angle = ang, Color = col, Face = Enum.NormalId.Front, Shadows = shadows or false }, parent)
 end
+-- an anomaly slot: one Model per id, tagged and attributed (see ANOMALY above)
+local function slot(id, parent)
+	local m = Instance.new("Model")
+	m.Name = "AnomalySlot_" .. id
+	m:SetAttribute(ANOMALY.SLOT_ATTRIBUTE, id)
+	CS:AddTag(m, ANOMALY.SLOT_TAG)
+	m.Parent = parent or CHUNK
+	return m
+end
+-- a SurfaceGui with one TextLabel named "Text" (no uploads: text only)
+local function label(part, face, text, color, bg, font)
+	local g = Instance.new("SurfaceGui")
+	g.Name = "Screen"
+	g.Face = face
+	g.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	g.PixelsPerStud = 40
+	g.LightInfluence = 0
+	local t = Instance.new("TextLabel")
+	t.Name = "Text"
+	t.Size = UDim2.fromScale(1, 1)
+	t.BackgroundTransparency = bg and 0 or 1
+	if bg then t.BackgroundColor3 = bg end
+	t.Text = text
+	t.TextScaled = true
+	t.TextColor3 = color
+	t.Font = font or Enum.Font.GothamBold
+	t.Parent = g
+	g.Parent = part
+	return t
+end
+-- the lit tower windows on the faces toward the yard (-Z): the silhouette slot picks one
+local YARD_WINDOWS = {}
 
 ------------------------------------------------------------------ 1. ground
 begin("Ground")
@@ -535,6 +578,9 @@ local function tower(name, x0, x1, z0, z1, yTop, litP, opts)
 						local v0, v1 = yb + k * STOREY + 0.8, yb + (k + 1) * STOREY - 0.8
 						local lit = r < litP * 0.7
 						fbox("WinLit", uc - bay / 2 + 0.5, uc + bay / 2 - 0.5, v0 + 0.3, v1 - 0.3, 0, 0.12, lit and M.winLit or M.winDim)
+						if lit and f.along == "x" and f.n == -1 then
+							table.insert(YARD_WINDOWS, { tower = name, u = uc, v0 = v0, w = f.w })
+						end
 						-- half-drawn blinds: a few slats across the top of the lit pane
 						local nsl = rng:NextInteger(1, 2)
 						for s = 1, nsl do
@@ -663,6 +709,7 @@ do
 	local TOP = 24
 	-- glass drum: 14 segments over the half circle facing -X, door gap in the middle
 	local N = 14
+	local doors = slot("autoDoors")
 	for i = 0, N - 1 do
 		local a0 = -math.pi / 2 + i * math.pi / N
 		local a1 = a0 + math.pi / N
@@ -674,8 +721,11 @@ do
 		local cf = CFrame.lookAt(pos, pos + d)
 		if isDoor then
 			-- closed glass door leaf (the pair's centre is the LOBBY_OUTSIDE door) and the transom over it
-			mk("LobbyDoorLeaf", Vector3.new(width - 0.3, 10 - 0.6, 0.25), cf * CFrame.new(0, -(TOP - GY) / 2 + (10 - 0.6) / 2, 0), M.lobbyGlass)
-			mk("LobbyDoorStile", Vector3.new(0.3, 10 - 0.6, 0.35), cf * CFrame.new((width - 0.3) / 2 * (i == N / 2 and -1 or 1), -(TOP - GY) / 2 + (10 - 0.6) / 2, 0), M.darkMetal)
+			-- the leaf slides open along its own RightVector * Side (Side points away from the door centre)
+			local leaf = mk("LobbyDoorLeaf", Vector3.new(width - 0.3, 10 - 0.6, 0.25), cf * CFrame.new(0, -(TOP - GY) / 2 + (10 - 0.6) / 2, 0), M.lobbyGlass, doors)
+			local away = leaf.Position - (Vector3.new(cx - R, leaf.Position.Y, cz) + OFFSET)
+			leaf:SetAttribute("Side", (leaf.CFrame.RightVector:Dot(away) >= 0) and 1 or -1)
+			leaf:SetAttribute("SlideStuds", ANOMALY.DOOR_SLIDE)
 			mk("Transom", Vector3.new(width, TOP - (GY + 10), 0.4), cf * CFrame.new(0, (TOP - GY) / 2 - (TOP - (GY + 10)) / 2, 0), M.lobbyGlass)
 			mk("DoorHead", Vector3.new(width, 0.6, 0.8), cf * CFrame.new(0, -(TOP - GY) / 2 + 10, 0), M.darkMetal)
 		else
@@ -683,8 +733,14 @@ do
 		end
 		-- mullion on each joint
 		local dj = Vector3.new(-math.cos(a0), 0, math.sin(a0))
-		local pj = Vector3.new(cx, GY + (TOP - GY) / 2, cz) + dj * R
-		mk("Mullion", Vector3.new(0.35, TOP - GY, 0.6), CFrame.lookAt(pj, pj + dj), M.darkMetal)
+		if i == N / 2 then
+			-- the joint between the two sliding leaves: a mullion over the transom only
+			local pj = Vector3.new(cx, (GY + 10 + TOP) / 2, cz) + dj * R
+			mk("Mullion", Vector3.new(0.35, TOP - GY - 10, 0.6), CFrame.lookAt(pj, pj + dj), M.darkMetal)
+		else
+			local pj = Vector3.new(cx, GY + (TOP - GY) / 2, cz) + dj * R
+			mk("Mullion", Vector3.new(0.35, TOP - GY, 0.6), CFrame.lookAt(pj, pj + dj), M.darkMetal)
+		end
 	end
 	local function disc(name, r, y0, y1, mat)
 		local p = mk(name, Vector3.new(y1 - y0, r * 2, r * 2), CFrame.new(cx, (y0 + y1) / 2, cz) * CFrame.Angles(0, 0, math.pi / 2), mat)
@@ -746,7 +802,9 @@ do
 	box("CounterTop", cx - 6.3, cx - 2.7, GY + 3.6, GY + 3.9, cz + 6.7, cz + 12.3, M.stone)
 	box("CounterGlow", cx - 6.05, cx - 5.95, GY + 0.3, GY + 0.5, cz + 7.1, cz + 11.9, M.pathNeon)
 	-- welcome screen (blank glow; the anomaly would put text on it)
-	box("WelcomeScreen", cx - 0.6, cx - 0.4, GY + 6, GY + 10, cz - R + 1.5, cz - R + 6.5, M.winDim)
+	-- welcome screen: a dark display with an empty text label (the anomaly writes a wrong-word line on it)
+	local screen = box("WelcomeScreen", cx - 0.6, cx - 0.4, GY + 6, GY + 10, cz - R + 1.5, cz - R + 6.5, { Material = Enum.Material.SmoothPlastic, Color = C(18, 20, 26) }, slot("welcomeScreen"))
+	label(screen, Enum.NormalId.Left, "", C(255, 196, 120), nil, Enum.Font.Code)
 end
 flush()
 
@@ -902,7 +960,7 @@ do
 	box("BoothWallW", bx - 4.5, bx - 4, GROUND + 0.6, GROUND + 9, bz - 3.8, bz + 3.8, M.panel)
 	box("BoothGlass", bx - 4, bx + 4, GROUND + 4, GROUND + 8.4, bz - 3.7, bz - 3.4, M.lobbyGlass)
 	box("BoothRoof", bx - 5.5, bx + 5.5, GROUND + 9, GROUND + 9.8, bz - 4.8, bz + 4.8, M.darkMetal)
-	box("BoothTV", bx + 1, bx + 3.6, GROUND + 4.6, GROUND + 6.4, bz + 2.4, bz + 3.2, M.black) -- off (anomaly: on)
+	box("BoothTV", bx + 1, bx + 3.6, GROUND + 4.6, GROUND + 6.4, bz + 2.4, bz + 3.2, M.black, slot("boothTv")) -- dark (the anomaly turns it on)
 	box("BoothDesk", bx - 3.8, bx + 3.8, GROUND + 0.6, GROUND + 3.6, bz + 1.6, bz + 3.3, M.oak)
 	point(Vector3.new(bx, GROUND + 7.5, bz), 0.9, 12, WARM, false)
 	box("BoothLamp", bx - 1, bx + 1, GROUND + 8.7, GROUND + 8.9, bz - 1, bz + 1, M.pathNeon)
@@ -914,6 +972,56 @@ do
 		local p = box("BoundaryWall", w[1], w[2], 0, 90, w[3], w[4], M.invisible, sub())
 		p.CanQuery = false
 		p.CastShadow = false
+	end
+end
+flush()
+
+------------------------------------------------------------------ 8b. anomaly slots built from scratch (default state)
+begin("AnomalySlots")
+do
+	local INV = { Material = Enum.Material.SmoothPlastic, Color = C(10, 10, 12), Transparency = 1 }
+	-- silhouette: a flat, featureless dark figure just in front of the light of one lit tower window facing the yard,
+	-- above the podium's sight line (v0 >= 40); invisible by default
+	local best = nil
+	for _, w in ipairs(YARD_WINDOWS) do
+		if w.v0 >= 40 and (best == nil or w.v0 < best.v0 or (w.v0 == best.v0 and math.abs(w.u - DOCK_X) < math.abs(best.u - DOCK_X))) then best = w end
+	end
+	assert(best, "no lit yard-facing tower window for the silhouette")
+	do
+		local m = slot("silhouette")
+		m:SetAttribute("Tower", best.tower)
+		local z0, z1 = best.w - 0.19, best.w - 0.13
+		local y = best.v0 + 0.3
+		for _, b in ipairs({ { "Legs", 0.6, 0, 2.2 }, { "Body", 1, 2.2, 4.6 }, { "Head", 0.5, 4.75, 5.95 } }) do
+			noCollide(box("Figure" .. b[1], best.u - b[2], best.u + b[2], y + b[3], y + b[4], z0, z1, INV, m))
+		end
+	end
+	-- carTicking: an invisible emitter part on the parked car's engine (the car at world (909, 35), nose +X)
+	do
+		local m = slot("carTicking")
+		noCollide(box("Emitter", 913, 915, GROUND + 2.2, GROUND + 3.2, 34, 36, INV, m))
+	end
+	-- wetFloor: a yellow A-frame sign standing in the yard puddle by the walk to the dock; invisible by default
+	do
+		local m = slot("wetFloor")
+		local x, z = 1174, -168
+		local YEL = { Material = Enum.Material.SmoothPlastic, Color = C(236, 196, 30), Transparency = 1 }
+		for _, s in ipairs({ -1, 1 }) do
+			local cf = CFrame.new(x, GROUND + 1.5, z + s * 0.45) * CFrame.Angles(math.rad(-s * 15), 0, 0)
+			local panel = noCollide(mk(s < 0 and "SignFront" or "SignBack", Vector3.new(2.2, 3, 0.12), cf, YEL, m))
+			local t = label(panel, s < 0 and Enum.NormalId.Front or Enum.NormalId.Back, "CAUTION\nWET FLOOR", C(20, 20, 20), nil, Enum.Font.GothamBlack)
+			t.TextTransparency = 1
+		end
+		noCollide(box("SignHinge", x - 1.1, x + 1.1, GROUND + 2.9, GROUND + 3.1, z - 0.15, z + 0.15, YEL, m))
+	end
+	-- banner: a motivational banner on the podium front, right way up, hung in front of the pilasters
+	do
+		local m = slot("banner")
+		local x0, x1, y0, y1, zf = 1006, 1056, 8, 13.5, SZ0 - 1.3
+		local cloth = box("BannerCloth", x0, x1, y0, y1, zf - 0.15, zf, { Material = Enum.Material.Fabric, Color = C(34, 56, 104) }, m)
+		label(cloth, Enum.NormalId.Front, "TOGETHER WE THRIVE", C(240, 236, 224), nil, Enum.Font.GothamBlack)
+		box("BannerRod", x0 - 0.5, x1 + 0.5, y1, y1 + 0.3, zf - 0.25, zf + 0.05, M.darkMetal, m)
+		for _, x in ipairs({ x0 + 1, x1 - 1 }) do box("BannerBracket", x - 0.2, x + 0.2, y1, y1 + 0.3, zf, SZ0 - 1, M.darkMetal, m) end
 	end
 end
 flush()
@@ -994,10 +1102,17 @@ for _, d in ipairs(ROOT:GetDescendants()) do
 		end
 	end
 end
+local slots = {}
+for _, inst in ipairs(CS:GetTagged(ANOMALY.SLOT_TAG)) do
+	if inst:IsDescendantOf(ROOT) then slots[inst:GetAttribute(ANOMALY.SLOT_ATTRIBUTE)] = (slots[inst:GetAttribute(ANOMALY.SLOT_ATTRIBUTE)] or 0) + 1 end
+end
+for _, id in ipairs(ANOMALY.IDS) do
+	if slots[id] ~= 1 then table.insert(offenders, "anomaly slot " .. id .. " x" .. tostring(slots[id] or 0)) end
+end
 if #offenders > 0 then
 	ROOT:Destroy()
 	if recording then pcall(function() CHS:FinishRecording(recording, Enum.FinishRecordingOperation.Cancel) end) end
-	error(("OfficeExterior NOT built: %d part(s) inside the keep-out, the old set is untouched: %s"):format(#offenders, table.concat(offenders, ", ", 1, math.min(#offenders, 12))))
+	error(("OfficeExterior NOT built: %d problem(s) (keep-out parts / anomaly slots), the old set is untouched: %s"):format(#offenders, table.concat(offenders, ", ", 1, math.min(#offenders, 12))))
 end
 for _, n in ipairs({ NAME, "ClaudeExteriorSpike" }) do
 	local old = workspace:FindFirstChild(n)
@@ -1009,6 +1124,6 @@ ROOT:SetAttribute("LightCount", lights)
 ROOT:SetAttribute("Source", "design/production-art/map-kits/odd-hours-b1/exterior/BuildExterior.CommandBar.luau")
 
 if recording then pcall(function() CHS:FinishRecording(recording, Enum.FinishRecordingOperation.Commit) end) end
-local msg = ("OfficeExterior built: %d parts, %d lights, 0 keep-out hits"):format(count, lights)
+local msg = ("OfficeExterior built: %d parts, %d lights, 0 keep-out hits, %d anomaly slots"):format(count, lights, #ANOMALY.IDS)
 print(msg)
 return msg

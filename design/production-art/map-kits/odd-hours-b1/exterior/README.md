@@ -36,11 +36,31 @@ These come from `src/ServerScriptService/Features/Office/Data/OfficeConstants.lu
 
 Arrival points (5 studs out from each door) stand on flush ground: dock (1168, -69) at y 1.04, lobby (933, 152) at y 1.36.
 
+## Anomaly slots
+These names come from `src/ReplicatedStorage/Shared/Features/Office/Data/OfficeAnomalyConstants.luau`. The builder copies them at its top.
+
+**How a client finds a slot:**
+- Every slot is one Model named `AnomalySlot_<id>`.
+- The Model carries the CollectionService tag `OfficeAnomalySlot` and the attribute `AnomalyId` = `<id>`.
+- Find slots with `CollectionService:GetTagged("OfficeAnomalySlot")`, read `AnomalyId`, then work on the parts inside.
+- The parts themselves are untagged.
+- Each slot is built in its default, no-anomaly state. The client applies the anomaly and resets it to that state.
+
+| `AnomalyId` | Where (under `OfficeExterior`) | Parts inside | Default state |
+|---|---|---|---|
+| `silhouette` | `AnomalySlot_silhouette` (folder `AnomalySlots`) | `FigureLegs`, `FigureBody`, `FigureHead` | Transparency 1. A flat, featureless dark figure about 2 × 6 studs, just in front of the light of one lit tower window facing the yard. The window is the lowest one above the podium's sight line; its tower is in the Model attribute `Tower`. |
+| `autoDoors` | `Lobby/AnomalySlot_autoDoors` | the two `LobbyDoorLeaf` | Closed. Each leaf has `Side` (-1/1) and `SlideStuds` (2.2). The open position is `leaf.CFrame + leaf.CFrame.RightVector * Side * SlideStuds`, which slides along the rotunda's tangent, away from the door centre. |
+| `carTicking` | `AnomalySlot_carTicking` (folder `AnomalySlots`) | `Emitter` | An invisible, non-colliding part over the parked car's engine at world (914, 3.7, 35). Attach sound or particles here. |
+| `welcomeScreen` | `Lobby/AnomalySlot_welcomeScreen` | `WelcomeScreen` | A dark display. Its `SurfaceGui` `Screen` (face Left, toward the rotunda) holds a TextLabel `Text` that is empty by default. |
+| `boothTv` | `Fence/AnomalySlot_boothTv` | `BoothTV` | Dark (black SmoothPlastic). |
+| `wetFloor` | `AnomalySlot_wetFloor` (folder `AnomalySlots`) | `SignFront`, `SignBack`, `SignHinge` | A yellow A-frame sign in the puddle at world (1174, -168), by the walk to the dock. The parts are Transparency 1 and the TextLabel `Text` ("CAUTION / WET FLOOR") is TextTransparency 1. Nothing collides. |
+| `banner` | `AnomalySlot_banner` (folder `AnomalySlots`) | `BannerCloth`, `BannerRod`, `BannerBracket` ×2 | Visible and the right way up. It hangs on the podium front at x 1006..1056, y 8..13.5. The SurfaceGui text "TOGETHER WE THRIVE" sits on the cloth's Front face. |
+
 ## Rebuild
 1. Open the Shift place in Edit.
 2. Paste the whole script into the command bar and run it.
-3. It builds the new set as `OfficeExterior_Building` and checks every part against the keep-out.
-   - **If any part is inside the keep-out:** the half-built set is removed, the recording is cancelled, and the build errors. The old set is left untouched.
+3. It builds the new set as `OfficeExterior_Building`, checks every part against the keep-out, and checks that each of the 7 anomaly slots exists exactly once.
+   - **If either check fails:** the half-built set is removed, the recording is cancelled, and the build errors. The old set is left untouched.
    - **Otherwise:** it destroys the old `OfficeExterior` (and any leftover `ClaudeExteriorSpike`) and renames the new set.
    - All of this is one ChangeHistory step: Ctrl+Z undoes it.
 4. It never touches Lighting. The outside look comes from the `officeExterior` atmosphere preset in code (`OfficeAtmosphereConstants`).
