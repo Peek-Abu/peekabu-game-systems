@@ -1,7 +1,8 @@
 --!strict
 --[=[
-	EmployeeSkinSystem: dresses a freshly spawned employee character in a skin (EmployeeRegistry SkinDef),
-	on the server, so every client sees the same look through normal replication.
+	EmployeeSkinSystem: dresses an employee model in a skin (EmployeeRegistry SkinDef). The server dresses each
+	freshly spawned character (every client sees it through normal replication); the client dresses its own preview
+	models the same way (EmployeePreviewSystem), so a preview never drifts from the real look.
 
 	- Palette: the skin's palette image becomes the TextureID of every MeshPart except the FacePlate (whose
 	  face is a SurfaceAppearance; a TextureID there would render its transparent areas black). A skin with
@@ -18,12 +19,11 @@
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local ServerScriptService = game:GetService("ServerScriptService")
 
 local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
 local EmployeeRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeRegistry)
 local EmployeeSkinRules = require(ReplicatedStorage.Shared.Features.Employee.Rules.EmployeeSkinRules)
-local EmployeeGearSystem = require(ServerScriptService.Features.Employee.Systems.EmployeeGearSystem)
+local EmployeeGearSystem = require(ReplicatedStorage.Shared.Features.Employee.Systems.EmployeeGearSystem)
 
 export type SkinResult = {
 	-- MeshParts given the skin's palette.
