@@ -108,6 +108,27 @@ local function resolve(root: Instance, path: { string }): Instance?
 end
 
 --[=[
+	Scales a prepared model by `factor` (Model:ScaleTo: parts, joints, attachments, HipHeight). ScaleTo also scales the
+	Humanoid's movement (WalkSpeed, JumpHeight, JumpPower); size is cosmetic, so those are put back: the crew's speed
+	and jump are gameplay tuning (the Manager's chase is balanced against them). A factor of 1 does nothing.
+]=]
+function EmployeeSpawnSystem.scale(model: Model, factor: number)
+	if factor == 1 then
+		return
+	end
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+	local walkSpeed = if humanoid ~= nil then humanoid.WalkSpeed else nil
+	local jumpHeight = if humanoid ~= nil then humanoid.JumpHeight else nil
+	local jumpPower = if humanoid ~= nil then humanoid.JumpPower else nil
+	model:ScaleTo(model:GetScale() * factor)
+	if humanoid ~= nil and walkSpeed ~= nil and jumpHeight ~= nil and jumpPower ~= nil then
+		humanoid.WalkSpeed = walkSpeed
+		humanoid.JumpHeight = jumpHeight
+		humanoid.JumpPower = jumpPower
+	end
+end
+
+--[=[
 	Installs a prepared copy of the employee's template as `target`'s StarterCharacter (target is StarterPlayer
 	in the game). Replaces a StarterCharacter an earlier install left, never an authored one.
 	@param source Where the template path starts (ReplicatedStorage in the game).
@@ -130,21 +151,8 @@ function EmployeeSpawnSystem.install(
 	starter.Name = EmployeeConstants.STARTER_CHARACTER_NAME
 	starter:SetAttribute(EmployeeConstants.NAME_ATTRIBUTE, def.name)
 	EmployeeSpawnSystem.prepare(starter)
-	if def.scale ~= 1 then
-		-- After prepare, so the generated rig and grip attachments scale with the joints. ScaleTo also scales the
-		-- Humanoid's movement (WalkSpeed, JumpHeight, JumpPower); size is cosmetic, so those are put back: the
-		-- crew's speed and jump are gameplay tuning (the Manager's chase is balanced against them).
-		local humanoid = starter:FindFirstChildOfClass("Humanoid")
-		local walkSpeed = if humanoid ~= nil then humanoid.WalkSpeed else nil
-		local jumpHeight = if humanoid ~= nil then humanoid.JumpHeight else nil
-		local jumpPower = if humanoid ~= nil then humanoid.JumpPower else nil
-		starter:ScaleTo(starter:GetScale() * def.scale)
-		if humanoid ~= nil and walkSpeed ~= nil and jumpHeight ~= nil and jumpPower ~= nil then
-			humanoid.WalkSpeed = walkSpeed
-			humanoid.JumpHeight = jumpHeight
-			humanoid.JumpPower = jumpPower
-		end
-	end
+	-- After prepare, so the generated rig and grip attachments scale with the joints.
+	EmployeeSpawnSystem.scale(starter, def.scale)
 	-- The crew never wear the engine's overhead name tag or health bar. Hidden here, on the character every
 	-- player spawns as, so it holds alive, damaged and dead (a dead Humanoid's Health 0 is what shows the bar
 	-- under DisplayWhenDamaged); StarterPlayer's Name/HealthDisplayDistance = 0 (default.project.json) hides

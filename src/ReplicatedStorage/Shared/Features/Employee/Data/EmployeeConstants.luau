@@ -26,6 +26,14 @@ local EmployeeConstants = {
 	-- Also stamped on the FacePlate's SurfaceAppearance by the client, to know what is showing.
 	FACE_ATTRIBUTE = "EmployeeFace",
 	STARTER_CHARACTER_NAME = "StarterCharacter",
+	-- On a character the server built: which FootstepAssets set its steps play (the Footstep client reads it; must
+	-- equal FootstepConstants.SET_ATTRIBUTE).
+	FOOTSTEP_SET_ATTRIBUTE = "FootstepSet",
+	-- On a character built to replace the player's current one where it stands (a costume or employee swap): the
+	-- clients play the goo puff on it (EmployeeSwapVfxSystem).
+	SWAP_ATTRIBUTE = "EmployeeSwap",
+	-- How long a joining player's spawn waits for their saved loadout before spawning the default employee.
+	LOADOUT_WAIT = 5,
 	FACE_PLATE = "FacePlate",
 	FACE_APPEARANCE = "Face",
 	FACES_FOLDER = "Faces",

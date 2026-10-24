@@ -42,5 +42,13 @@ return function()
 			expect(EmployeeConstants.EAR_STIFFNESS > 0).to.equal(true)
 			expect(EmployeeConstants.EAR_DAMPING > 0).to.equal(true)
 		end)
+
+		it("stamps the footstep set under the attribute the Footstep client reads", function()
+			local ReplicatedStorage = game:GetService("ReplicatedStorage")
+			local FootstepConstants = require(ReplicatedStorage.Client.Features.Footstep.Data.FootstepConstants)
+			expect(EmployeeConstants.FOOTSTEP_SET_ATTRIBUTE).to.equal(FootstepConstants.SET_ATTRIBUTE)
+			expect(EmployeeConstants.SWAP_ATTRIBUTE).to.be.a("string")
+			expect(EmployeeConstants.LOADOUT_WAIT > 0).to.equal(true)
+		end)
 	end)
 end

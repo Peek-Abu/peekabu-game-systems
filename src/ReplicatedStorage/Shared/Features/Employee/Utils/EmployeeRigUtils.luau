@@ -98,4 +98,12 @@ function EmployeeRigUtils.gripAttachment(side: Side, handSize: Vector3, wristC1:
 	}
 end
 
+--[=[
+	A Humanoid's HipHeight for a rig standing on its feet: the height of the root part's bottom above the lowest
+	point of the body (rest pose, Y up). For art saved with HipHeight 0, which would sink the legs into the floor.
+]=]
+function EmployeeRigUtils.hipHeight(rootBottomY: number, lowestY: number): number
+	return math.max(0, rootBottomY - lowestY)
+end
+
 return EmployeeRigUtils

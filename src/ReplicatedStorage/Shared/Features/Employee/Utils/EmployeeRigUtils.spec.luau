@@ -83,4 +83,12 @@ return function()
 			expect(math.abs(grip.cframe.Position.Y - 0.15) < 1e-4).to.equal(true)
 		end)
 	end)
+
+	describe("hipHeight", function()
+		it("is the gap from the root's bottom down to the lowest foot, never negative", function()
+			expect(EmployeeRigUtils.hipHeight(1.5, 0)).to.be.near(1.5, 1e-6)
+			expect(EmployeeRigUtils.hipHeight(1.5, 0.25)).to.be.near(1.25, 1e-6)
+			expect(EmployeeRigUtils.hipHeight(0.2, 0.5)).to.equal(0)
+		end)
+	end)
 end
