@@ -312,6 +312,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Commands.DailyRewardReset"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.OccupantWork"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.OccupantTurn"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.Anomaly"] = "Cmdr command definition (server impl is specced)",
 
 	-- Cleanup Crew: Cargo
 	["ReplicatedStorage.Shared.Features.Art.Data.ArtTypes"] = "type-only kit/family contracts; behavior covered by ArtKitRegistry, ArtKitRules and ArtVisualSystem specs",

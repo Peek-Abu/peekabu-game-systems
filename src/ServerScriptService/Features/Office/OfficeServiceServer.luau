@@ -54,11 +54,13 @@ local CargoTypes = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoTyp
 local CargoAppraisalFormulas = require(ReplicatedStorage.Shared.Features.Cargo.Utils.CargoAppraisalFormulas)
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
+local OfficeAnomalyConstants = require(ReplicatedStorage.Shared.Features.Office.Data.OfficeAnomalyConstants)
 local OfficeConstants = require(OfficeServer.Data.OfficeConstants)
 local OfficeLayoutConstants = require(OfficeServer.Data.OfficeLayoutConstants)
 local OfficeTypes = require(OfficeServer.Data.OfficeTypes)
 local OfficeLayoutRules = require(OfficeServer.Rules.OfficeLayoutRules)
 local OfficeSpawnRules = require(OfficeServer.Rules.OfficeSpawnRules)
+local OfficeVariationRules = require(OfficeServer.Rules.OfficeVariationRules)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
 local OfficeLayoutGenerationUtils = require(OfficeServer.Utils.OfficeLayoutGenerationUtils)
 local OfficeLoadingBayUtils = require(OfficeServer.Utils.OfficeLoadingBayUtils)
@@ -113,6 +115,8 @@ local overtimeSpawned = false
 local stoppers: { () -> () } = {}
 -- The seed of the layout standing now (nil: the boot layout).
 local layoutSeed: number? = nil
+-- A developer's forced anomaly set (the anomaly command); nil: the seed's pick. A rebuild drops it.
+local forcedAnomalies: { OfficeAnomalyConstants.AnomalyId }? = nil
 -- Fired (with the shift folder) once a shift's office is rebuilt and every spawn placed.
 local ready: SignalTyped.Signal<Folder> = SignalTyped.new()
 
@@ -213,6 +217,11 @@ local function rebuild(requested: number)
 	OfficeBuildSystem.clearStrays()
 	local current = OfficeBuildSystem.build(layout, OfficeConstants.ORIGIN, nil, seed)
 	current.model:SetAttribute("LayoutSeed", seed)
+	forcedAnomalies = nil
+	current.model:SetAttribute(
+		OfficeAnomalyConstants.PUBLISHED_ATTRIBUTE,
+		table.concat(OfficeVariationRules.anomalies(seed), ",")
+	)
 	built = current
 	layoutSeed = seed
 	OfficeDecorSystem.build(layout, OfficeConstants.ORIGIN, current.model, nil, seed)
@@ -250,6 +259,8 @@ export type OfficeServiceServer = {
 	ready: SignalTyped.Signal<Folder>,
 	isReady: (self: OfficeServiceServer) -> boolean,
 	seed: (self: OfficeServiceServer) -> number?,
+	anomalies: (self: OfficeServiceServer) -> { OfficeAnomalyConstants.AnomalyId },
+	forceAnomalies: (self: OfficeServiceServer, ids: { OfficeAnomalyConstants.AnomalyId }?) -> boolean,
 	start: (self: OfficeServiceServer) -> (),
 	stop: (self: OfficeServiceServer) -> (),
 	getState: (self: OfficeServiceServer) -> { [string]: any },
@@ -465,6 +476,27 @@ local OfficeServiceServer: OfficeServiceServer = {
 	]=]
 	seed = function(_self)
 		return layoutSeed
+	end,
+
+	--[=[
+		The exterior anomalies this run shows: a developer's forced set, else the seed's pick (none for the boot layout).
+	]=]
+	anomalies = function(_self)
+		return forcedAnomalies or OfficeVariationRules.anomalies(layoutSeed)
+	end,
+
+	--[=[
+		Developer override (the anomaly command): publishes exactly `ids`, or the seed's pick again for nil. False when
+		no office stands. The next rebuild drops it.
+	]=]
+	forceAnomalies = function(self, ids)
+		local current = built
+		if current == nil then
+			return false
+		end
+		forcedAnomalies = ids
+		current.model:SetAttribute(OfficeAnomalyConstants.PUBLISHED_ATTRIBUTE, table.concat(self:anomalies(), ","))
+		return true
 	end,
 
 	--[=[
