@@ -136,6 +136,12 @@ return table.freeze({
 	TRANSIT_COLD_DISTANCE = 500,
 	TRANSIT_COLD_SETTLE_SECONDS = 6,
 	TRANSIT_COLD_SETTLE_FRAMES = 300,
+	-- An office entrance's teleport (ShiftTransitRules.entranceSettled): once the server's uncover arrives the black
+	-- cover stays up until ENTRANCE_SETTLE_FRAMES frames in a row each took under ENTRANCE_SETTLE_FRAME_SECONDS, or
+	-- ENTRANCE_SETTLE_MAX_SECONDS have passed, so the hitch after the hop is not revealed.
+	ENTRANCE_SETTLE_FRAMES = 3,
+	ENTRANCE_SETTLE_FRAME_SECONDS = 0.05,
+	ENTRANCE_SETTLE_MAX_SECONDS = 1,
 	-- A client starts black until its first shift and transit sync (at most BOOT_SECONDS), so nothing unlit shows.
 	TRANSIT_BOOT_SECONDS = 4,
 	-- A respawn (after a catch) blinks black this long, then fades out: no load screen.

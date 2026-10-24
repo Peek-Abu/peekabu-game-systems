@@ -18,7 +18,8 @@
 	- booting: plain black until the first shift and transit sync, at most TRANSIT_BOOT_SECONDS.
 	- a respawn during a running shift (after a catch): a black blink of TRANSIT_BLINK_SECONDS, no slip.
 	- an office entrance's teleport (ShiftEvents.EntranceFade from OfficeEntranceSystem): black from the cover packet
-	  until the uncover packet (at most ENTRANCE_COVER_SECONDS), fading over the packet's seconds
+	  until the uncover packet (at most ENTRANCE_COVER_SECONDS), then on until the frames settle after the hop
+	  (ShiftTransitRules.entranceSettled: a few quick frames in a row, or a second), fading over the packet's seconds
 	  (ShiftTransitStore.fadeSeconds; any other cover resets it to the transit's own fades).
 
 	Spec-exempt shell (Players, streaming, Workspace, ByteNet, RunService); the decisions are the specced
@@ -72,6 +73,8 @@ local arrivedUntil = 0
 local blinkUntil: number? = nil
 -- An office entrance's black cover runs until this os.clock() time (nil: none).
 local entranceUntil: number? = nil
+-- The frame times since an entrance's uncover arrived, while its cover waits for the frames to settle (nil: none).
+local entranceFrames: { number }? = nil
 local bootUntil = 0
 local synced = false
 local waitingFor = ""
@@ -245,10 +248,30 @@ local function onCharacter()
 end
 
 -- An office entrance's teleport: black over `seconds` while it moves the player, then back over `seconds`.
+-- The uncover keeps the cover up (entranceFrames) until the frames after the hop settle.
 local function onEntranceFade(data: { covered: boolean, seconds: number })
 	ShiftTransitStore.fadeSeconds(math.clamp(data.seconds, 0, 1))
-	entranceUntil = if data.covered then os.clock() + ENTRANCE_COVER_SECONDS else nil
+	if data.covered then
+		entranceUntil = os.clock() + ENTRANCE_COVER_SECONDS
+		entranceFrames = nil
+	elseif entranceUntil ~= nil then
+		entranceFrames = {}
+	end
 	step()
+end
+
+-- One frame of an entrance's settle: lifts the cover once ShiftTransitRules.entranceSettled says so.
+local function settleEntrance(deltaTime: number)
+	local frames = entranceFrames
+	if frames == nil then
+		return
+	end
+	table.insert(frames, deltaTime)
+	if ShiftTransitRules.entranceSettled(frames) then
+		entranceFrames = nil
+		entranceUntil = nil
+		step()
+	end
 end
 
 local ShiftTransitSystem = {}
@@ -261,6 +284,7 @@ function ShiftTransitSystem.start()
 	local elapsed = CHECK_INTERVAL
 	local ticking = RunService.Heartbeat:Connect(function(deltaTime: number)
 		settledFrames += 1
+		settleEntrance(deltaTime)
 		elapsed += deltaTime
 		if elapsed >= CHECK_INTERVAL then
 			elapsed = 0
@@ -290,6 +314,7 @@ function ShiftTransitSystem.stop()
 	ShiftTransitStore.progress(0)
 	ShiftTransitStore.fadeSeconds(nil)
 	entranceUntil = nil
+	entranceFrames = nil
 end
 
 function ShiftTransitSystem.getState(): ShiftTransitState

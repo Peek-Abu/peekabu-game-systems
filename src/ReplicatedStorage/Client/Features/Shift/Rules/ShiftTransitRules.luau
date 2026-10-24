@@ -16,7 +16,10 @@
 	frames so a slow client waits longer. Short of that it waits (with the first condition still missing), until TRANSIT_CLIENT_TIMEOUT, when it
 	reveals anyway (the reason is logged).
 
-	`progress`: how far along those stages the client is (0..1), which the load screen's bar draws. Pure.
+	`progress`: how far along those stages the client is (0..1), which the load screen's bar draws.
+
+	`entranceSettled`: whether an office entrance's black cover may lift, from the frame times since the server's
+	uncover arrived: ENTRANCE_SETTLE_FRAMES quick frames in a row, or ENTRANCE_SETTLE_MAX_SECONDS in all. Pure.
 
 	@class ShiftTransitRules
 ]=]
@@ -168,6 +171,20 @@ function ShiftTransitRules.progress(input: VerdictInput): number
 	end
 	local done = math.clamp(input.shownFor / ShiftConstants.TRANSIT_MIN_SECONDS, 0, 1)
 	return stage.minimum + (stage.minimumEnd - stage.minimum) * done
+end
+
+--[=[
+	Whether an entrance's cover may lift: `frames` are the frame times (s) since the uncover arrived, oldest first. True
+	once the last ENTRANCE_SETTLE_FRAMES were each under ENTRANCE_SETTLE_FRAME_SECONDS, or they total
+	ENTRANCE_SETTLE_MAX_SECONDS or more.
+]=]
+function ShiftTransitRules.entranceSettled(frames: { number }): boolean
+	local total, quick = 0, 0
+	for _, seconds in frames do
+		total += seconds
+		quick = if seconds < ShiftConstants.ENTRANCE_SETTLE_FRAME_SECONDS then quick + 1 else 0
+	end
+	return quick >= ShiftConstants.ENTRANCE_SETTLE_FRAMES or total >= ShiftConstants.ENTRANCE_SETTLE_MAX_SECONDS
 end
 
 return ShiftTransitRules

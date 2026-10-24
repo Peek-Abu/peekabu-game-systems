@@ -193,4 +193,30 @@ return function()
 			expect(value >= 0 and value < 1).to.equal(true)
 		end)
 	end)
+
+	describe("entranceSettled", function()
+		it(
+			"holds the cover until ENTRANCE_SETTLE_FRAMES consecutive frames come in under ENTRANCE_SETTLE_FRAME_SECONDS",
+			function()
+				expect(ShiftConstants.ENTRANCE_SETTLE_FRAMES).to.equal(3)
+				expect(ShiftConstants.ENTRANCE_SETTLE_FRAME_SECONDS).to.equal(0.05)
+				expect(ShiftTransitRules.entranceSettled({})).to.equal(false)
+				expect(ShiftTransitRules.entranceSettled({ 0.016, 0.016 })).to.equal(false)
+				expect(ShiftTransitRules.entranceSettled({ 0.016, 0.016, 0.016 })).to.equal(true)
+			end
+		)
+
+		it("restarts the count on a slow frame", function()
+			expect(ShiftTransitRules.entranceSettled({ 0.016, 0.016, 0.2, 0.016, 0.016 })).to.equal(false)
+			expect(ShiftTransitRules.entranceSettled({ 0.3, 0.2, 0.016, 0.016, 0.016 })).to.equal(true)
+			expect(ShiftTransitRules.entranceSettled({ 0.016, 0.016, 0.05 })).to.equal(false)
+		end)
+
+		it("lets go after ENTRANCE_SETTLE_MAX_SECONDS whatever the frames", function()
+			expect(ShiftConstants.ENTRANCE_SETTLE_MAX_SECONDS).to.equal(1)
+			expect(ShiftTransitRules.entranceSettled({ 0.3, 0.3, 0.3 })).to.equal(false)
+			expect(ShiftTransitRules.entranceSettled({ 0.3, 0.3, 0.3, 0.2 })).to.equal(true)
+			expect(ShiftTransitRules.entranceSettled({ 1.2 })).to.equal(true)
+		end)
+	end)
 end
