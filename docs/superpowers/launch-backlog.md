@@ -74,3 +74,17 @@ plan and are not repeated here.)
   exterior sized to its envelope, or move the interior underground beneath the site (Lethal Company style) so it can
   be any size. Test first how far a door jump can be before Roblox's lighting stalls (20-40 studs: instant;
   1,600: a visible stall; 100-200 untested).
+
+## Polish phase (owner, 2026-10-23)
+
+To do together on a polish day, not now:
+- **Underground interior test (100-200 studs):** measure whether a door jump of 100-200 studs is as quick for Roblox's
+  lighting as the current 12-24-stud hops (see "Future: office map growth" above). If it is, the interior can move
+  under the site and grow freely.
+- **Sound groups in SoundService:** route sounds through SoundGroups by place, e.g. a Building group muted (or heavily
+  muffled) while the player is outside, an Outside group for the yard, so office zaps, phones and ambience don't carry
+  into the yard through the thin shell (seen in the stage 3 review).
+- **Carry drift:** an idle character holding a carried item slowly slides (about 5 studs in 20 s, seen with a Monitor
+  and a Bottle bag). Root-cause it in the Carry feature (`CarrySpeedSystem`, `CarryPlacementSystem`).
+- **ByteNet "No readable entity found for ID: 17":** 10 server errors around a teleport-door Enter and a Harlow
+  catch. Find which packet is ID 17 and why its reader fails.
