@@ -539,4 +539,112 @@ return function()
 			expect((root.Position - expected).Magnitude < 1e-3).to.equal(true)
 		end)
 	end)
+
+	describe("per-run variation", function()
+		local Rules = require(Server.Rules.OfficeVariationRules)
+		local CLUTTER = {
+			mug = true,
+			stationeryCup = true,
+			folder = true,
+			paperTray = true,
+			paperStack = true,
+			bookStack = true,
+		}
+		local function rugLayout()
+			local markers = {}
+			for i = 1, 12 do
+				table.insert(markers, { id = `a.prop.{i}`, room = "a", kind = "prop", art = "rug", x = 3 * i, z = 20 })
+			end
+			return {
+				artKit = "test-map-a",
+				startRoom = "a",
+				rooms = { { id = "a", name = "A", minX = 0, minZ = 0, maxX = 60, maxZ = 40 } },
+				doors = {},
+				markers = markers,
+				truck = Layout.truck,
+			}
+		end
+		local function rugSet(layout, seed)
+			built = Build.build(layout, CFrame.new(60000, 0, 0), art)
+			local decor = Decor.build(layout, CFrame.new(60000, 0, 0), built.model, art, seed)
+			local count = 0
+			for _, root in decor:GetChildren() do
+				if root:GetAttribute("OfficeArtKey") == "rug" then
+					count += 1
+				end
+			end
+			built.model:Destroy()
+			built = nil
+			return count
+		end
+		it("builds every optional prop for a nil seed and a subset that differs between seeds", function()
+			template("furniture", "rug")
+			local layout = rugLayout()
+			expect(rugSet(layout, nil)).to.equal(12)
+			local counts = {}
+			for _, seed in { 101, 202, 303, 404, 505 } do
+				local expected = 0
+				for _, marker in layout.markers do
+					if Rules.keepProp(seed, marker.id, marker.art) then
+						expected += 1
+					end
+				end
+				local got = rugSet(layout, seed)
+				expect(got).to.equal(expected)
+				expect(got <= 12).to.equal(true)
+				counts[got] = true
+			end
+			local distinct = 0
+			for _ in counts do
+				distinct += 1
+			end
+			expect(distinct > 1).to.equal(true)
+		end)
+		it("never removes a desk, cabinet or table proxy and dresses each desk with deskClutter(seed, id)", function()
+			for key in CLUTTER do
+				template("props", key)
+			end
+			template("furniture", "officeChair")
+			template("cargo", "filingCabinet")
+			template("furniture", "breakTable")
+			local layout = table.clone(Layout)
+			layout.artKit = "test-map-a"
+			built = Build.build(layout, CFrame.new(60000, 0, 0), art)
+			local before = 0
+			for _ in built.searchables do
+				before += 1
+			end
+			local seed = 777
+			local decor = Decor.build(layout, CFrame.new(60000, 0, 0), built.model, art, seed)
+			local after = 0
+			for _ in built.searchables do
+				after += 1
+			end
+			expect(after).to.equal(before)
+			local byDesk = {}
+			for _, root in decor:GetChildren() do
+				local key = root:GetAttribute("OfficeArtKey")
+				if key ~= nil and CLUTTER[key] then
+					local id = root:GetAttribute("OfficeDeskMarker")
+					byDesk[id] = byDesk[id] or {}
+					byDesk[id][key] = true
+				end
+			end
+			local checked = 0
+			for _, marker in layout.markers do
+				if marker.kind == "desk" then
+					local want = {}
+					for _, item in Rules.deskClutter(seed, marker.id) do
+						want[item] = true
+					end
+					local got = byDesk[marker.id] or {}
+					for key in CLUTTER do
+						expect(got[key] == true).to.equal(want[key] == true)
+					end
+					checked += 1
+				end
+			end
+			expect(checked > 0).to.equal(true)
+		end)
+	end)
 end

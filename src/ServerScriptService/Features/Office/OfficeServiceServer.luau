@@ -214,7 +214,7 @@ local function rebuild(requested: number)
 	current.model:SetAttribute("LayoutSeed", seed)
 	built = current
 	layoutSeed = seed
-	OfficeDecorSystem.build(layout, OfficeConstants.ORIGIN, current.model)
+	OfficeDecorSystem.build(layout, OfficeConstants.ORIGIN, current.model, nil, seed)
 end
 
 -- A rolled valuable as it spawns (fully grimy, unappraised); nil for trash.

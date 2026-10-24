@@ -40,6 +40,7 @@ local OfficeDoorUtils = require(OfficeServer.Utils.OfficeDoorUtils)
 local OfficeSurfaceUtils = require(OfficeServer.Utils.OfficeSurfaceUtils)
 local OfficeArtKeyUtils = require(OfficeServer.Utils.OfficeArtKeyUtils)
 local OfficeLightingUtils = require(OfficeServer.Utils.OfficeLightingUtils)
+local OfficeVariationRules = require(OfficeServer.Rules.OfficeVariationRules)
 
 -- Desk dressing was laid out on a 5x3 top; its spots move with the real top (the props keep their size).
 local DESK_SPREAD = OfficeConstants.DESK_SIZE / Vector3.new(5, 3, 3)
@@ -294,7 +295,7 @@ end
 
 local function dressDesk(
 	desk: OfficeTypes.Marker,
-	index: number,
+	items: { string },
 	origin: CFrame,
 	parent: Instance,
 	art: ArtVisualSystem.Controller
@@ -314,15 +315,20 @@ local function dressDesk(
 			art
 		)
 	end
-	-- Two side work areas leave the central monitor and keyboard legible. Variants rotate larger paper props.
-	prop("mug", -2.08 * DESK_SPREAD.X, -1.12 * DESK_SPREAD.Z)
-	prop("stationeryCup", 1.95 * DESK_SPREAD.X, -1.12 * DESK_SPREAD.Z)
-	if index % 2 == 1 then
-		prop("folder", -1.85 * DESK_SPREAD.X, 0.65 * DESK_SPREAD.Z)
-		prop("paperTray", 1.85 * DESK_SPREAD.X, 0.65 * DESK_SPREAD.Z)
-	else
-		prop("paperStack", -1.85 * DESK_SPREAD.X, 0.65 * DESK_SPREAD.Z)
-		prop("bookStack", 1.85 * DESK_SPREAD.X, 0.65 * DESK_SPREAD.Z)
+	-- Two side work areas leave the central monitor and keyboard legible. Each item keeps its own slot.
+	local slots: { [string]: { number } } = {
+		mug = { -2.08, -1.12 },
+		stationeryCup = { 1.95, -1.12 },
+		folder = { -1.85, 0.65 },
+		paperStack = { -1.85, 0.65 },
+		paperTray = { 1.85, 0.65 },
+		bookStack = { 1.85, 0.65 },
+	}
+	for _, key in items do
+		local slot = slots[key]
+		if slot ~= nil then
+			prop(key, slot[1] * DESK_SPREAD.X, slot[2] * DESK_SPREAD.Z)
+		end
 	end
 end
 
@@ -407,13 +413,15 @@ local OfficeDecorSystem = {}
 OfficeDecorSystem.exitSign = exitSign
 
 --[=[
-	Builds the night decor for `layout` at `origin` into one folder under `parent`, and returns it.
+	Builds the night decor for `layout` at `origin` into one folder under `parent`, and returns it. A `seed` varies
+	which dressing props stay and each desk's clutter; nil is the authored layout.
 ]=]
 function OfficeDecorSystem.build(
 	layout: OfficeTypes.Layout,
 	origin: CFrame,
 	parent: Instance,
-	visuals: ArtVisualSystem.Controller?
+	visuals: ArtVisualSystem.Controller?,
+	seed: number?
 ): Folder
 	local art = visuals or ArtVisualSystem
 	local folder = Instance.new("Folder")
@@ -500,7 +508,13 @@ function OfficeDecorSystem.build(
 			end
 		end
 		monitor(deskTop, folder, art, deskRoomType)
-		dressDesk(desk, index, origin, folder, art)
+		-- A nil seed keeps the authored boot dressing (global desk parity); a seed varies it per desk.
+		local items = if seed == nil
+			then (if index % 2 == 1
+				then { "mug", "stationeryCup", "folder", "paperTray" }
+				else { "mug", "stationeryCup", "paperStack", "bookStack" })
+			else OfficeVariationRules.deskClutter(seed, desk.id)
+		dressDesk(desk, items, origin, folder, art)
 		local chairFloor = chairAt(layout, desk, origin)
 		if chairFloor ~= nil then
 			artOnly(
@@ -563,7 +577,9 @@ function OfficeDecorSystem.build(
 		)
 	end
 	for _, marker in OfficeLayoutUtils.markersOf(layout, "prop") do
-		propAt(marker, OfficeArtKeyUtils.roomType(OfficeLayoutUtils.room(layout, marker.room)), origin, folder, art)
+		if OfficeVariationRules.keepProp(seed, marker.id, marker.art or "") then
+			propAt(marker, OfficeArtKeyUtils.roomType(OfficeLayoutUtils.room(layout, marker.room)), origin, folder, art)
+		end
 	end
 	-- On the layout's elevator facade; the authored boot layout has none and keeps ELEVATOR_POINT.
 	elevator(OfficeDoorUtils.elevatorFrameFor(layout, origin), folder, art)
