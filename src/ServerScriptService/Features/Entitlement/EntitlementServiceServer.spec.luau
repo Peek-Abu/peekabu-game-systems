@@ -61,6 +61,7 @@ local function makeProfileData()
 			premium = { balance = 0 },
 			receipts = { ids = {} },
 			firstSeen = { at = 0 },
+			loadout = { current = "Pippa", picked = false, looks = {}, stickers = { "", "", "", "" }, seen = {} },
 			entitlements = { owned = {} },
 			settings = { values = {} },
 			dailyReward = { lastDay = 0, streak = 0 },

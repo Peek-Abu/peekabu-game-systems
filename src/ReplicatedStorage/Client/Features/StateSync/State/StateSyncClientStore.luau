@@ -32,6 +32,13 @@ local premium = Charm.atom({ balance = 0 } :: PlayerDataTypes.Premium) -- type t
 local entitlements = Charm.atom({ owned = {} } :: PlayerDataTypes.Entitlements) -- type the atom's initial value
 local settings = Charm.atom({ values = {} } :: PlayerDataTypes.Settings) -- type the atom's initial value
 local dailyReward = Charm.atom({ lastDay = 0, streak = 0 } :: PlayerDataTypes.DailyReward) -- type the atom's initial value
+local loadout = Charm.atom({
+	current = "Pippa",
+	picked = false,
+	looks = {},
+	stickers = { "", "", "", "" },
+	seen = {},
+} :: PlayerDataTypes.Loadout) -- type the atom's initial value (CosmeticConstants.defaultLoadout)
 -- The public slice: other players' public data, already filtered by the server to the players relevant
 -- to this client (plus this client itself). Not a profile slice; synced under StateSyncConstants.publicKey.
 local initialPublicPlayers: PublicPlayerTypes.PublicPlayerMap = {}
@@ -54,6 +61,7 @@ local StateSyncClientStore = {
 	entitlements = entitlements,
 	settings = settings,
 	dailyReward = dailyReward,
+	loadout = loadout,
 	publicPlayers = publicPlayers,
 	world = world,
 }
@@ -71,6 +79,7 @@ local atoms: { [string]: any } = {
 	entitlements = entitlements,
 	settings = settings,
 	dailyReward = dailyReward,
+	loadout = loadout,
 	publicPlayers = publicPlayers,
 	world = world,
 }

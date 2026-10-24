@@ -80,6 +80,12 @@ local DEFINITIONS: { [string]: SliceDefinition } = {
 			return profile.account.dailyReward
 		end,
 	},
+	-- ACCOUNT-WIDE: what the player wears (CosmeticServiceServer); owner-only like every profile slice.
+	loadout = {
+		read = function(profile)
+			return profile.account.loadout
+		end,
+	},
 	-- SLOT-SCOPED: which title the active slot wears; inactive slots' choices never leave the server.
 	equippedTitle = {
 		read = function(profile)

@@ -1,0 +1,325 @@
+--!strict
+--[=[
+	CosmeticServiceServer: what each player owns and wears (design:
+	docs/superpowers/specs/2026-10-24-odd-hours-character-systems-design.md, step 1).
+
+	- Ownership is the existing account slice `entitlements` (EntitlementServiceServer): CosmeticRegistry registers
+	  every item there under its kind. Free defaults are never stored (CosmeticRules.owns).
+	- What the player wears is the account slice `loadout`, owned here, validated by CosmeticRules.validateLoadout,
+	  replicated to its owner.
+	- `equip` and `pick` are refused during a shift (Shift's phase is not "lobby"; owner: no changes in a shift),
+	  then checked by CosmeticRules. `grant` / `grantOps` unlock an item and everything in its bundle (a purchase
+	  passes the ops into its own transaction, so paying and unlocking are one write).
+	- `changed` fires after every committed change or grant (step 2 rebuilds the character on it).
+
+	@class CosmeticServiceServer
+]=]
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
+
+local Cosmetic = ReplicatedStorage.Shared.Features.Cosmetic
+local Guard = require(ReplicatedStorage.Shared.Core.Guard)
+local Logger = require(ReplicatedStorage.Shared.Core.Logger)
+local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
+local Janitor = require(ReplicatedStorage.Packages.Janitor)
+local CosmeticConstants = require(Cosmetic.Data.CosmeticConstants)
+local CosmeticRegistry = require(Cosmetic.Data.CosmeticRegistry)
+local CosmeticTypes = require(Cosmetic.Data.CosmeticTypes)
+local CosmeticEvents = require(Cosmetic.Net.CosmeticEvents)
+local CosmeticRequestRules = require(Cosmetic.Rules.CosmeticRequestRules)
+local CosmeticRules = require(Cosmetic.Rules.CosmeticRules)
+local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
+local EntitlementServiceServer = require(ServerScriptService.Features.Entitlement.EntitlementServiceServer)
+local PlayerDataService = require(ServerScriptService.Features.PlayerData.PlayerDataServiceServer)
+local PlayerDataSliceSystem = require(ServerScriptService.Features.PlayerData.Systems.PlayerDataSliceSystem)
+local ShiftServiceServer = require(ServerScriptService.Features.Shift.ShiftServiceServer)
+
+type Change = CosmeticTypes.Change
+type Look = CosmeticTypes.Look
+type Loadout = CosmeticTypes.Loadout
+
+local loadoutSlice = PlayerDataSliceSystem.registerAccount(
+	CosmeticConstants.SLICE,
+	CosmeticConstants.defaultLoadout(),
+	function(account)
+		return account.loadout
+	end,
+	CosmeticRules.validateLoadout
+)
+
+local log = Logger.new("CosmeticServiceServer")
+local janitor = Janitor.new()
+local changed: SignalTyped.Signal<number> = SignalTyped.new()
+
+-- The player's `owns`, over a snapshot of their entitlements (nil when the profile is not loaded).
+local function ownsFor(userId: number): ((id: string) -> boolean)?
+	local entitlements = EntitlementServiceServer:getEntitlements(userId)
+	if entitlements == nil then
+		return nil
+	end
+	return function(id: string): boolean
+		return CosmeticRules.owns(entitlements, id)
+	end
+end
+
+local function isLocked(): boolean
+	return ShiftServiceServer:getShift().phase ~= "lobby"
+end
+
+-- The item and its bundle, in order, without duplicates or stickers.
+local function grantList(id: string): { string }
+	local item = CosmeticRegistry.get(id)
+	assert(item ~= nil and item.kind ~= "sticker", `{id} is not a grantable cosmetic`)
+	local list = { id }
+	local bundle = item.bundle
+	if bundle ~= nil then
+		for _, part in bundle do
+			if table.find(list, part) == nil then
+				table.insert(list, part)
+			end
+		end
+	end
+	return list
+end
+
+local function grantOps(userId: number, id: string): { PlayerDataService.TransactionOperation }
+	local ops: { PlayerDataService.TransactionOperation } = {}
+	for _, part in grantList(id) do
+		local item = CosmeticRegistry.get(part)
+		if item ~= nil and item.source ~= "default" then
+			table.insert(ops, EntitlementServiceServer:grantOp(userId, item.kind, part))
+		end
+	end
+	return ops
+end
+
+local function equipImpl(userId: number, change: Change): (boolean, string?)
+	Guard.userId(userId)
+	if isLocked() then
+		return false, "locked during a shift"
+	end
+	local loadout = loadoutSlice.get(userId)
+	local owns = ownsFor(userId)
+	if loadout == nil or owns == nil then
+		return false, "no profile loaded"
+	end
+	local allowed, reason = CosmeticRules.checkEquip(loadout, change, owns)
+	if not allowed then
+		return false, reason
+	end
+	local written, writeReason = loadoutSlice.mutate(userId, function(state)
+		return CosmeticRules.applyEquip(state, change, owns)
+	end)
+	if not written then
+		return false, writeReason or "write refused (profile locked or session no longer active)"
+	end
+	changed:Fire(userId)
+	return true, nil
+end
+
+local function pickImpl(userId: number, employee: string): (boolean, string?)
+	Guard.userId(userId)
+	if isLocked() then
+		return false, "locked during a shift"
+	end
+	local loadout = loadoutSlice.get(userId)
+	local owns = ownsFor(userId)
+	if loadout == nil or owns == nil then
+		return false, "no profile loaded"
+	end
+	if loadout.picked then
+		return false, "already picked"
+	end
+	local item = CosmeticRegistry.get(employee)
+	if item == nil or item.kind ~= "employee" then
+		return false, "unknown item"
+	end
+	if not owns(employee) then
+		return false, "not owned"
+	end
+	local written, writeReason = loadoutSlice.mutate(userId, function(state)
+		state.current = employee
+		state.picked = true
+		return true
+	end)
+	if not written then
+		return false, writeReason or "write refused (profile locked or session no longer active)"
+	end
+	changed:Fire(userId)
+	return true, nil
+end
+
+local onEquipRequest = RequestHandler.wrap({
+	name = "CosmeticEquipRequest",
+	rateLimit = { maxRequests = 10, windowSeconds = 10 },
+	handler = function(payload: unknown, player: Player)
+		local change, reason = CosmeticRequestRules.parseEquip(payload)
+		if change == nil then
+			log:warn(`bad EquipRequest from {player.Name}: {reason or "?"}`)
+			return
+		end
+		local ok, refusal = equipImpl(player.UserId, change)
+		if not ok then
+			log:debug(`EquipRequest refused for {player.Name}: {refusal or "?"}`)
+		end
+	end,
+})
+
+local onPickRequest = RequestHandler.wrap({
+	name = "CosmeticPickRequest",
+	rateLimit = { maxRequests = 5, windowSeconds = 10 },
+	handler = function(payload: unknown, player: Player)
+		local employee, reason = CosmeticRequestRules.parsePick(payload)
+		if employee == nil then
+			log:warn(`bad PickRequest from {player.Name}: {reason or "?"}`)
+			return
+		end
+		local ok, refusal = pickImpl(player.UserId, employee)
+		if not ok then
+			log:debug(`PickRequest refused for {player.Name}: {refusal or "?"}`)
+		end
+	end,
+})
+
+export type CosmeticServiceServer = {
+	dependencies: { string },
+	changed: SignalTyped.Signal<number>,
+
+	init: (self: CosmeticServiceServer) -> (),
+	stop: (self: CosmeticServiceServer) -> (),
+	getLoadout: (self: CosmeticServiceServer, userId: number) -> Loadout?,
+	owns: (self: CosmeticServiceServer, userId: number, id: string) -> boolean,
+	currentEmployee: (self: CosmeticServiceServer, userId: number) -> string,
+	lookOf: (self: CosmeticServiceServer, userId: number, employee: string?) -> Look?,
+	isLocked: (self: CosmeticServiceServer) -> boolean,
+	equip: (self: CosmeticServiceServer, userId: number, change: Change) -> (boolean, string?),
+	pick: (self: CosmeticServiceServer, userId: number, employee: string) -> (boolean, string?),
+	grant: (self: CosmeticServiceServer, userId: number, id: string) -> (boolean, string?),
+	grantOps: (self: CosmeticServiceServer, userId: number, id: string) -> { PlayerDataService.TransactionOperation },
+	getState: (self: CosmeticServiceServer) -> { [string]: any },
+	-- TEST SEAMS: the RequestHandler-wrapped handlers (payload, player), as TitleServiceServer exposes its own.
+	_onEquipRequest: (payload: unknown, player: Player) -> any,
+	_onPickRequest: (payload: unknown, player: Player) -> any,
+}
+
+local CosmeticServiceServer: CosmeticServiceServer = {
+	dependencies = { "PlayerDataServiceServer", "EntitlementServiceServer", "ShiftServiceServer" },
+	changed = changed,
+
+	init = function(_self)
+		janitor:Add(
+			CosmeticEvents.packets.EquipRequest.listen(function(payload: unknown, player: Player?)
+				if player then
+					onEquipRequest(payload, player)
+				end
+			end),
+			true
+		)
+		janitor:Add(
+			CosmeticEvents.packets.PickRequest.listen(function(payload: unknown, player: Player?)
+				if player then
+					onPickRequest(payload, player)
+				end
+			end),
+			true
+		)
+	end,
+
+	stop = function(_self)
+		janitor:Cleanup()
+	end,
+
+	-- The saved loadout (a frozen snapshot), nil when the profile is not loaded.
+	getLoadout = function(_self, userId)
+		return loadoutSlice.get(userId)
+	end,
+
+	owns = function(_self, userId, id)
+		local owns = ownsFor(userId)
+		return owns ~= nil and owns(id)
+	end,
+
+	-- The employee the player plays as (the default until the profile loads or when the saved one is not owned).
+	currentEmployee = function(_self, userId)
+		local loadout = loadoutSlice.get(userId)
+		local owns = ownsFor(userId)
+		if loadout == nil or owns == nil then
+			return CosmeticConstants.DEFAULT_EMPLOYEE
+		end
+		return CosmeticRules.currentEmployee(loadout, owns)
+	end,
+
+	--[=[
+		The look `employee` (default: the current one) wears, every fallback applied; nil when the profile is not
+		loaded or the employee is unknown.
+	]=]
+	lookOf = function(self, userId, employee)
+		local loadout = loadoutSlice.get(userId)
+		local owns = ownsFor(userId)
+		if loadout == nil or owns == nil then
+			return nil
+		end
+		local who = employee or self:currentEmployee(userId)
+		local item = CosmeticRegistry.get(who)
+		if item == nil or item.kind ~= "employee" then
+			return nil
+		end
+		return CosmeticRules.lookFor(loadout, who, owns)
+	end,
+
+	isLocked = function(_self)
+		return isLocked()
+	end,
+
+	equip = function(_self, userId, change)
+		return equipImpl(userId, change)
+	end,
+
+	pick = function(_self, userId, employee)
+		return pickImpl(userId, employee)
+	end,
+
+	--[=[
+		Unlocks a registered item and its bundle in one transaction. False "already owned" when nothing new was
+		unlocked. Throws for an unknown id or a sticker (programmer error: stickers come with their pack).
+	]=]
+	grant = function(_self, userId, id)
+		Guard.userId(userId)
+		local list = grantList(id)
+		local owns = ownsFor(userId)
+		if owns == nil then
+			return false, "no profile loaded"
+		end
+		local fresh = false
+		for _, part in list do
+			if not owns(part) then
+				fresh = true
+			end
+		end
+		if not fresh then
+			return false, "already owned"
+		end
+		local ok, result = PlayerDataService:transaction(grantOps(userId, id))
+		if not ok then
+			return false, result.rejectionReason or "transaction failed"
+		end
+		log:audit(`userId={userId}`, "COSMETIC_GRANTED", id)
+		changed:Fire(userId)
+		return true, nil
+	end,
+
+	grantOps = function(_self, userId, id)
+		Guard.userId(userId)
+		return grantOps(userId, id)
+	end,
+
+	getState = function(_self)
+		return { items = #CosmeticRegistry.all(), locked = isLocked() }
+	end,
+
+	_onEquipRequest = onEquipRequest,
+	_onPickRequest = onPickRequest,
+}
+
+return CosmeticServiceServer

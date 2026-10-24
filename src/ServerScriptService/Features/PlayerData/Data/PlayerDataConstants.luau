@@ -60,6 +60,7 @@ local function emptyAccount(): PlayerDataTypes.PlayerAccount
 		dailyReward = { lastDay = 0, streak = 0 },
 		rank = { season = "", xp = 0, lastAwardedRunId = "" },
 		firstSeen = { at = 0 },
+		loadout = { current = "Pippa", picked = false, looks = {}, stickers = { "", "", "", "" }, seen = {} },
 	}
 end
 

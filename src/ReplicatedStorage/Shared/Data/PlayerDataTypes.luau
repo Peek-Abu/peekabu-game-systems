@@ -204,6 +204,7 @@ export type PlayerAccount = {
 	dailyReward: DailyReward,
 	rank: Rank,
 	firstSeen: FirstSeen,
+	loadout: Loadout,
 	-- Extend with other ACCOUNT-WIDE slices here (settings, entitlements, ...)
 }
 

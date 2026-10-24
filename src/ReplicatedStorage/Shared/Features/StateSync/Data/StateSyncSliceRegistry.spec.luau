@@ -38,6 +38,13 @@ return function()
 					premium = { balance = 7 },
 					receipts = { ids = {} },
 					firstSeen = { at = 0 },
+					loadout = {
+						current = "Pippa",
+						picked = false,
+						looks = {},
+						stickers = { "", "", "", "" },
+						seen = {},
+					},
 					entitlements = { owned = {} },
 					settings = { values = {} },
 					dailyReward = { lastDay = 0, streak = 0 },
@@ -50,8 +57,14 @@ return function()
 			-- rather than accepting "whichever scope happens to match", so a reader pointed at the
 			-- wrong SCOPE (account data replicated as if it were per-slot, or vice versa) still
 			-- fails loudly here — that would silently replicate the wrong data.
-			local ACCOUNT_SCOPED: { [string]: boolean } =
-				{ titles = true, premium = true, entitlements = true, settings = true, dailyReward = true }
+			local ACCOUNT_SCOPED: { [string]: boolean } = {
+				titles = true,
+				premium = true,
+				entitlements = true,
+				settings = true,
+				dailyReward = true,
+				loadout = true,
+			}
 
 			for name, definition in StateSyncSliceRegistry.DEFINITIONS do
 				local value = definition.read(fakeProfile)
@@ -67,6 +80,7 @@ return function()
 				"entitlements",
 				"equippedTitle",
 				"inventory",
+				"loadout",
 				"premium",
 				"settings",
 				"titles",
