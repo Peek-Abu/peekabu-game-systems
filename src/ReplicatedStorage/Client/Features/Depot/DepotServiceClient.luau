@@ -48,8 +48,29 @@ local PAD_HUD_KEY = "depotPad"
 local DepotHub = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotHub)
 local DepotHubViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotHubViewModel)
 require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotHubScene)
--- The Inventory (the hub's INVENTORY tile) registers its scene at require.
+-- The Inventory (the hub's INVENTORY tile) and the first-join pick register their scenes at require.
 require(ReplicatedStorage.Client.UI.React.Screens.Inventory.InventoryScene)
+require(ReplicatedStorage.Client.UI.React.Screens.Pick.CharacterPickScene)
+local InventoryViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Inventory.InventoryViewModel)
+local CharacterPickViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Pick.CharacterPickViewModel)
+local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
+
+-- The loadout atom's placeholder (taken at require, before the first sync): until the atom holds another table the
+-- server's loadout has not arrived, and the placeholder always says "not picked".
+local loadoutSeed = StateSyncClientStore.loadout()
+
+-- Opens the first-join pick when the loadout says it is not made and the player is in the depot; closes it once
+-- the pick lands (or a shift takes the player away).
+local function syncPick()
+	local loadout = StateSyncClientStore.loadout()
+	local inDepot = DepotHubViewModel.visible(ShiftStore.snapshot(), Players.LocalPlayer.UserId)
+	local open = CharacterPickViewModel.shouldOpen(loadout, loadout ~= loadoutSeed, inDepot)
+	if open and not SceneStack.isActive(CharacterPickViewModel.SCENE) then
+		SceneStack.push(CharacterPickViewModel.SCENE)
+	elseif not open then
+		SceneStack.remove(CharacterPickViewModel.SCENE)
+	end
+end
 
 local stoppers: { () -> () } = {}
 
@@ -100,9 +121,13 @@ local DepotServiceClient: DepotServiceClient = {
 					SceneStack.remove(DepotHubViewModel.scene("guide"))
 					SceneStack.remove(DepotHubViewModel.scene("gear"))
 					SceneStack.remove(DepotHubViewModel.scene("settings"))
+					SceneStack.remove(InventoryViewModel.SCENE)
 				end
+				syncPick()
 			end)
 		)
+		table.insert(stoppers, Charm.subscribe(StateSyncClientStore.loadout, syncPick))
+		syncPick()
 		table.insert(
 			stoppers,
 			DepotEvents.packets.Card.listen(function(data: DepotTypes.CardMessage)
