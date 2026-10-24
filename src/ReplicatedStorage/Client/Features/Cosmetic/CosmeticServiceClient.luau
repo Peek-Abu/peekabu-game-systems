@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	CosmeticServiceClient: the local player's cosmetics, read off StateSyncClientStore.loadout and .entitlements
-	(charm-sync keeps them current), plus the requests: equip a change, the first-join pick, and marking items seen. Requests are
+	(charm-sync keeps them current), the reveals the server announces (into CosmeticRevealStore), plus the requests: equip a change, the first-join pick, and marking items seen. Requests are
 	fire-and-forget; the server is authoritative and the atoms are the truth of what happened. Reactive UI reads the
 	atoms directly (useAtom); these are point-in-time accessors for everything else.
 
@@ -12,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Cosmetic = ReplicatedStorage.Shared.Features.Cosmetic
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
+local CosmeticRevealStore = require(ReplicatedStorage.Client.Features.Cosmetic.State.CosmeticRevealStore)
 local CosmeticConstants = require(Cosmetic.Data.CosmeticConstants)
 local CosmeticRegistry = require(Cosmetic.Data.CosmeticRegistry)
 local CosmeticTypes = require(Cosmetic.Data.CosmeticTypes)
@@ -29,6 +30,7 @@ end
 
 export type CosmeticServiceClient = {
 	dependencies: { string },
+	init: (self: CosmeticServiceClient) -> (),
 
 	getLoadout: (self: CosmeticServiceClient) -> Loadout,
 	owns: (self: CosmeticServiceClient, id: string) -> boolean,
@@ -42,6 +44,12 @@ export type CosmeticServiceClient = {
 
 local CosmeticServiceClient: CosmeticServiceClient = {
 	dependencies = {},
+	-- Every grant the server announces is queued for the reveal scene.
+	init = function(_self)
+		CosmeticEvents.packets.Granted.listen(function(data: { ids: { string }, source: string })
+			CosmeticRevealStore.push({ ids = data.ids, source = data.source })
+		end)
+	end,
 
 	getLoadout = function(_self)
 		return StateSyncClientStore.loadout()

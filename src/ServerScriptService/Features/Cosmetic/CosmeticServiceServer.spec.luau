@@ -209,6 +209,23 @@ return function()
 			expect(CosmeticService:owns(1, "SheriffPack")).to.equal(true)
 		end)
 
+		it("announces grants and the first-join pick (the client plays a reveal)", function()
+			seed(1)
+			local events = {}
+			local listening = CosmeticService.granted:Connect(function(event)
+				table.insert(events, event)
+			end)
+			CosmeticService:grant(1, "Cappy")
+			CosmeticService:pick(1, "Pippa")
+			settle()
+			listening:Disconnect()
+			expect(#events).to.equal(2)
+			expect(events[1].ids[1]).to.equal("Cappy")
+			expect(events[1].source).to.equal("grant")
+			expect(events[2].ids[1]).to.equal("Pippa")
+			expect(events[2].source).to.equal("pick")
+		end)
+
 		describe("requests (trust boundary)", function()
 			local fakePlayer = { UserId = 1, Name = "TestPlayer" }
 

@@ -15,6 +15,7 @@
 	@class CosmeticServiceServer
 ]=]
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
@@ -51,6 +52,13 @@ local loadoutSlice = PlayerDataSliceSystem.registerAccount(
 local log = Logger.new("CosmeticServiceServer")
 local janitor = Janitor.new()
 local changed: SignalTyped.Signal<number> = SignalTyped.new()
+-- Fired after items reach a player (a grant, a purchase, the first-join pick); the player's client is told so it
+-- can play the reveal.
+local granted: SignalTyped.Signal<CosmeticTypes.Granted> = SignalTyped.new()
+
+local function announce(userId: number, ids: { string }, source: CosmeticTypes.GrantSource)
+	granted:Fire({ userId = userId, ids = table.clone(ids), source = source })
+end
 
 -- The player's `owns`, over a snapshot of their entitlements (nil when the profile is not loaded).
 local function ownsFor(userId: number): ((id: string) -> boolean)?
@@ -147,6 +155,7 @@ local function pickImpl(userId: number, employee: string): (boolean, string?)
 		return false, writeReason or "write refused (profile locked or session no longer active)"
 	end
 	changed:Fire(userId)
+	announce(userId, { employee }, "pick")
 	return true, nil
 end
 
@@ -223,6 +232,8 @@ local onSeenRequest = RequestHandler.wrap({
 export type CosmeticServiceServer = {
 	dependencies: { string },
 	changed: SignalTyped.Signal<number>,
+	granted: SignalTyped.Signal<CosmeticTypes.Granted>,
+	announce: (self: CosmeticServiceServer, userId: number, ids: { string }, source: CosmeticTypes.GrantSource) -> (),
 
 	init: (self: CosmeticServiceServer) -> (),
 	stop: (self: CosmeticServiceServer) -> (),
@@ -246,8 +257,19 @@ export type CosmeticServiceServer = {
 local CosmeticServiceServer: CosmeticServiceServer = {
 	dependencies = { "PlayerDataServiceServer", "EntitlementServiceServer", "ShiftServiceServer" },
 	changed = changed,
+	granted = granted,
 
 	init = function(_self)
+		-- Every grant is told to its player's client (the reveal); a player who left is skipped.
+		janitor:Add(
+			granted:Connect(function(event: CosmeticTypes.Granted)
+				local player = Players:GetPlayerByUserId(event.userId)
+				if player ~= nil then
+					CosmeticEvents.packets.Granted.sendTo({ ids = event.ids, source = event.source }, player)
+				end
+			end),
+			"Disconnect"
+		)
 		janitor:Add(
 			CosmeticEvents.packets.EquipRequest.listen(function(payload: unknown, player: Player?)
 				if player then
@@ -359,7 +381,14 @@ local CosmeticServiceServer: CosmeticServiceServer = {
 		end
 		log:audit(`userId={userId}`, "COSMETIC_GRANTED", id)
 		changed:Fire(userId)
+		announce(userId, { id }, "grant")
 		return true, nil
+	end,
+
+	-- Tells the player's client they got these (for a grant committed elsewhere, like a Shop purchase).
+	announce = function(_self, userId, ids, source)
+		Guard.userId(userId)
+		announce(userId, ids, source)
 	end,
 
 	grantOps = function(_self, userId, id)

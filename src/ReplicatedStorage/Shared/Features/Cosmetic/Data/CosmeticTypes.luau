@@ -48,6 +48,12 @@ export type Item = {
 	pack: string?,
 }
 
+-- Why something was granted (the reveal's flavour): bought in the Shop, the first-join pick, any other grant.
+export type GrantSource = "shop" | "pick" | "grant"
+
+-- One "you got these" moment.
+export type Granted = { userId: number, ids: { string }, source: GrantSource }
+
 export type Look = PlayerDataTypes.Look
 export type Loadout = PlayerDataTypes.Loadout
 

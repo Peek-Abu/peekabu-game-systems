@@ -1,0 +1,46 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
+local ShopRegistry = require(script.Parent.ShopRegistry)
+
+return function()
+	it("sells every priced Credits or Gleam item in the catalogue, at its catalogue price", function()
+		local count = 0
+		for _, item in CosmeticRegistry.all() do
+			local sold = (item.source == "credits" or item.source == "gleam")
+				and item.price ~= nil
+				and item.kind ~= "sticker"
+			local offer = ShopRegistry.get(item.id)
+			if sold then
+				count += 1
+				expect(offer).to.be.ok()
+				expect(offer.price).to.equal(item.price)
+				expect(offer.currency).to.equal(item.source)
+				expect(offer.items[1]).to.equal(item.id)
+			else
+				expect(offer).to.equal(nil)
+			end
+		end
+		expect(#ShopRegistry.all()).to.equal(count)
+	end)
+
+	it("always lists employees, features Legendary skins and rotates the rest", function()
+		expect(ShopRegistry.get("Prickles").pool).to.equal("always")
+		expect(ShopRegistry.get("Pippa.BubbleBuddy").pool).to.equal("featured")
+		expect(ShopRegistry.get("Pippa.Bubbles").pool).to.equal("picks")
+		expect(ShopRegistry.get("CozyPack").pool).to.equal("picks")
+	end)
+
+	it("never carries an invented old price", function()
+		for _, offer in ShopRegistry.all() do
+			expect(offer.was).to.equal(nil)
+		end
+	end)
+
+	it("lists offers in a stable order", function()
+		local all = ShopRegistry.all()
+		for index = 2, #all do
+			expect(all[index - 1].id < all[index].id).to.equal(true)
+		end
+	end)
+end

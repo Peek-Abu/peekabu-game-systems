@@ -39,6 +39,14 @@ local CosmeticEvents = ByteNet.defineNamespace(NAMESPACE, function()
 				value = ByteNet.unknown,
 				reliabilityType = "reliable",
 			}),
+			-- server -> client: "you got these" (a purchase, a pick, a grant): the client plays the reveal.
+			Granted = ByteNet.definePacket({
+				value = ByteNet.struct({
+					ids = ByteNet.array(ByteNet.string),
+					source = ByteNet.string,
+				}),
+				reliabilityType = "reliable",
+			}),
 			-- client -> server: the first-join pick (shape: CosmeticRequestRules.PickRequest)
 			PickRequest = ByteNet.definePacket({
 				value = ByteNet.unknown,

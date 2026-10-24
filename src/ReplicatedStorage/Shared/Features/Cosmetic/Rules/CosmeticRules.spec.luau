@@ -223,19 +223,15 @@ return function()
 			local loadout = CosmeticConstants.defaultLoadout()
 			loadout.seen["Pippa.Gloomkeeper"] = true
 			local owns = ownsOf({ "Pippa.GloomTouched", "Pippa.Gloomkeeper", "Cappy" })
-			local ids = CosmeticRules.unseen(
-				loadout,
-				{
-					"Pippa.GloomTouched",
-					"Pippa.GloomTouched",
-					"Pippa.Gloomkeeper",
-					"Pippa.Default",
-					"Pippa.BubbleBuddy",
-					"Nope",
-					"Cappy",
-				},
-				owns
-			)
+			local ids = CosmeticRules.unseen(loadout, {
+				"Pippa.GloomTouched",
+				"Pippa.GloomTouched",
+				"Pippa.Gloomkeeper",
+				"Pippa.Default",
+				"Pippa.BubbleBuddy",
+				"Nope",
+				"Cappy",
+			}, owns)
 			expect(table.concat(ids, ",")).to.equal("Pippa.GloomTouched,Cappy")
 		end)
 	end)
