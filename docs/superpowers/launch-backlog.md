@@ -66,3 +66,11 @@ plan and are not repeated here.)
   dock, or let crews stage loot by the dock door like Lethal players pile scrap at the entrance.
 - **Measure drop-off.** Extend shift analytics with when each player leaves (shift second) and where (truck, yard,
   inside), to see whether the walk actually loses people.
+
+## Future: office map growth (owner, 2026-10-23)
+
+- The generated office is built inside the fixed exterior shell (wrapped, so door teleports are 12-24-stud hops and
+  Roblox's lighting is already built around you). For bigger or different maps later, either give each map its own
+  exterior sized to its envelope, or move the interior underground beneath the site (Lethal Company style) so it can
+  be any size. Test first how far a door jump can be before Roblox's lighting stalls (20-40 studs: instant;
+  1,600: a visible stall; 100-200 untested).
