@@ -1,6 +1,8 @@
 # Handoff: Odd Hours office map (2026-10-23)
 
-**Status 2026-10-23 (late): stage 3 (the outside) built + play-check 2 fixes (to d3c55656): teleport doors are 12-24-stud hops (exterior wraps the office again), fill lights unshadowed, a 1 s fade hold, knocked-out depot return fixed, dock shelves fixed, rooms must fit the shell. Verified in Studio (4452/0, traversal 957/0). Awaiting the owner's re-check. Details: reports/office-stage3-outside.md; plan docs/superpowers/plans/2026-10-23-odd-hours-office-map-stage3-outside.md (its -1600 numbers are superseded by ledger Ruling 7: exterior at offset 0).**
+**Status 2026-10-24: stage 4 (per-run variation + exterior anomalies) built and verified in Studio (commits 33a77cf9..9431e278; suite 4530/0, traversal 957/0, hide spots min 9 on seeds 1-50, all 7 anomalies checked live, the drawer desk opens in place). Awaiting the owner's play-check. Details: reports/office-stage4-variation.md; plan docs/superpowers/plans/2026-10-24-odd-hours-office-map-stage4-variation.md.**
+
+**Earlier status 2026-10-23 (late): stage 3 (the outside) built + play-check 2 fixes (to d3c55656): teleport doors are 12-24-stud hops (exterior wraps the office again), fill lights unshadowed, a 1 s fade hold, knocked-out depot return fixed, dock shelves fixed, rooms must fit the shell. Verified in Studio (4452/0, traversal 957/0). Awaiting the owner's re-check. Details: reports/office-stage3-outside.md; plan docs/superpowers/plans/2026-10-23-odd-hours-office-map-stage3-outside.md (its -1600 numbers are superseded by ledger Ruling 7: exterior at offset 0).**
 
 **Earlier status 2026-10-23 (evening): spike-match plan built, plus the owner's first play-check fixes (commits 1cf0df77..9f519d95: facades cased + "Locked", Harlow opens only doors on his line, low break tables, elevator on a hall wall, reshift cleanup guards, wall-corner/pilaster trim). Studio at 9f519d95: suite 4354/0, traversal seeds 1-20 957/0. Waiting on the owner's re-check. Deferred: searched-desk art swap (needs a drawer desk template, art pass). Root causes: .superpowers/sdd/2026-10-23-odd-hours-office-map-spike-match/playcheck-rootcauses.md.**
 
@@ -19,7 +21,7 @@ generated office match the spike. The stage 2 look was rejected; see below for w
 | Stage 2: "odd-hours-b1" art kit | Built and green (4243/0 specs; traversal seeds 1–20: 1317 paths, 0 failures). **Owner rejected the look** (details below). Plan: `docs/superpowers/plans/2026-10-22-odd-hours-office-map-stage2.md`. |
 | Spike: hand-built open office in the mock-room style | Built in the Shift place as `Workspace.ClaudeSpike`. Owner loves it. Script: `design/production-art/map-kits/odd-hours-b1/spike/BuildSpike.CommandBar.luau`. Captures are in the same folder. |
 | Stage 3 (outside) | Built and verified in Studio (plan `docs/superpowers/plans/2026-10-23-odd-hours-office-map-stage3-outside.md`, report `reports/office-stage3-outside.md`). Waiting on the owner's play-check. |
-| Stage 4 (per-run toggles/anomalies) | Not started. |
+| Stage 4 (per-run toggles/anomalies) | Built and verified in Studio (plan `docs/superpowers/plans/2026-10-24-odd-hours-office-map-stage4-variation.md`, report `reports/office-stage4-variation.md`). Waiting on the owner's play-check. |
 
 ## Why stage 2 was rejected (owner, 2026-10-23)
 
