@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: superpowers:executing-plans. Steps use checkbox (`- [ ]`) syntax.
 
-**Status:** approved by the owner 2026-10-24 (calls 1, 2, 3, 5 yes; call 4 changed: the Styles row shows only for skins that have more than one style). Every screen is data-driven: employees, skins and items come from CosmeticRegistry / EmployeeRegistry / EmployeeProfileRegistry; nothing is per-character in the UI code.
+**Status:** built 2026-10-24, ready for the owner's play-check (report: `reports/2026-10-24-character-step3.md`). Approved by the owner 2026-10-24 (calls 1, 2, 3, 5 yes; call 4 changed: the Styles row shows only for skins that have more than one style). Every screen is data-driven: employees, skins and items come from CosmeticRegistry / EmployeeRegistry / EmployeeProfileRegistry; nothing is per-character in the UI code.
 
 **Goal:** A new player picks their employee on first join; anyone in the depot opens **Inventory** to see the crew,
 open an employee's page, look at every skin (owned, buyable, earnable, missed, later) and wear one. What you wear
