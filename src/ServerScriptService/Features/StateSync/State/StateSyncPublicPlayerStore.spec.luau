@@ -104,6 +104,7 @@ return function()
 	end)
 
 	it("a partial update preserves the other fields, and explicit falsy values are writes", function()
+		StateSyncPublicPlayerStore.join(A)
 		StateSyncPublicPlayerStore.set(A, { team = "red", score = 5, alive = true })
 		StateSyncPublicPlayerStore.set(A, { score = 0, alive = false })
 		local entry = StateSyncPublicPlayerStore.get(A)
@@ -113,6 +114,7 @@ return function()
 	end)
 
 	it("snapshots an entry: mutating the source afterwards changes nothing", function()
+		StateSyncPublicPlayerStore.join(A)
 		local source = { score = 80 }
 		StateSyncPublicPlayerStore.set(A, source)
 		source.score = 1
@@ -121,10 +123,40 @@ return function()
 	end)
 
 	it("clearField removes one field and leaves the rest", function()
+		StateSyncPublicPlayerStore.join(A)
 		StateSyncPublicPlayerStore.set(A, { carrying = "egg", team = "red" })
 		StateSyncPublicPlayerStore.clearField(A, "carrying")
 		expect(StateSyncPublicPlayerStore.get(A).carrying).to.equal(nil)
 		expect(StateSyncPublicPlayerStore.get(A).team).to.equal("red")
 		StateSyncPublicPlayerStore.clearField(B, "carrying") -- absent entry: no-op, no throw
+	end)
+
+	describe("a player who left", function()
+		it("ignores a late write, so it does not bring back their entry", function()
+			StateSyncPublicPlayerStore.join(A)
+			StateSyncPublicPlayerStore.set(A, { dead = true })
+			StateSyncPublicPlayerStore.remove(A)
+			StateSyncPublicPlayerStore.set(A, { dead = true })
+			StateSyncPublicPlayerStore.clearField(A, "dead")
+			expect(StateSyncPublicPlayerStore.get(A)).to.equal(nil)
+		end)
+
+		it("starts from an empty entry when they come back", function()
+			StateSyncPublicPlayerStore.join(A)
+			StateSyncPublicPlayerStore.remove(A)
+			StateSyncPublicPlayerStore.set(A, { dead = true })
+			StateSyncPublicPlayerStore.join(A)
+			expect(StateSyncPublicPlayerStore.get(A).dead).to.equal(nil)
+			StateSyncPublicPlayerStore.set(A, { dead = true })
+			expect(StateSyncPublicPlayerStore.get(A).dead).to.equal(true)
+		end)
+
+		it("still keeps a write made before a player first joins", function()
+			local early = 970099
+			StateSyncPublicPlayerStore.set(early, { team = "red" })
+			StateSyncPublicPlayerStore.join(early)
+			expect(StateSyncPublicPlayerStore.get(early).team).to.equal("red")
+			StateSyncPublicPlayerStore.remove(early)
+		end)
 	end)
 end

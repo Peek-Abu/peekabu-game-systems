@@ -51,7 +51,7 @@ local ToastServiceClient: ToastServiceClient = {
 				local style = ToastRegistry.get(data.style)
 				local sound = if style ~= nil then style.sound else nil
 				if sound ~= nil and SoundRegistry.has(sound) then
-					SoundServiceClient:play(sound)
+					SoundServiceClient:playOneShot(sound)
 				end
 			end)
 		)

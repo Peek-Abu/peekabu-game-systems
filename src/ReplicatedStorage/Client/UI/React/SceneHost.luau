@@ -15,6 +15,11 @@
 	`Panel` layer is hosted for now — Wheel/Overlay get a SceneHost when a scene actually targets them
 	(no consumer, no mechanism).
 
+	It also renders the mouse-freeing Modal button while `UIStore.mouseFreed` is set (UISuppression's mouse
+	handler): the engine locks the cursor to the centre in first person and in shift lock, and only a visible
+	GuiButton with `Modal` set overrides that lock. The Panel SceneHost is always mounted, so the button is
+	available whichever layer the freeing scene draws on.
+
 	@class SceneHost
 ]=]
 
@@ -47,6 +52,7 @@ export type SceneHostProps = {
 ]=]
 local function SceneHost(props: SceneHostProps): React.ReactNode
 	local stack = useAtom(UIStore.sceneStack)
+	local mouseFreed = useAtom(UIStore.mouseFreed)
 
 	-- Tally renders (no dependency array) so the F4 UI tab shows the host reacting to the stack.
 	React.useEffect(function()
@@ -84,6 +90,19 @@ local function SceneHost(props: SceneHostProps): React.ReactNode
 			BackgroundTransparency = 1,
 			ZIndex = index,
 		}, wrapped)
+	end
+
+	if mouseFreed then
+		-- Zero-size and transparent, so it is never seen and never takes a click; being a visible Modal
+		-- button is all it takes to free the cursor.
+		children.mouseModal = e("TextButton", {
+			Modal = true,
+			Size = UDim2.fromOffset(0, 0),
+			BackgroundTransparency = 1,
+			Text = "",
+			Selectable = false,
+			Active = false,
+		})
 	end
 
 	-- selene: allow(roblox_incorrect_roact_usage)

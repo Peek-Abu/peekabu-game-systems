@@ -132,4 +132,45 @@ return function()
 			expect(sawAllowed).to.equal(true)
 		end)
 	end)
+
+	describe("command scripts", function()
+		local function module(name: string, parent: Instance): ModuleScript
+			local script = Instance.new("ModuleScript")
+			script.Name = name
+			script.Parent = parent
+			return script
+		end
+
+		it("pairs each shared command with its Server half and skips the specs beside them", function()
+			local folder = Instance.new("Folder")
+			local shared = module("CurrencyAdd", folder)
+			local server = module("CurrencyAddServer", folder)
+			module("CurrencyAddServer.spec", folder)
+			module("CurrencyAdd.spec", folder)
+			local lone = module("RoundEnd", folder)
+
+			local found = AdminServiceServer._commandScripts(folder)
+			expect(#found).to.equal(2)
+			local byName = {}
+			for _, entry in found do
+				byName[entry.shared.Name] = entry
+			end
+			expect(byName.CurrencyAdd.shared).to.equal(shared)
+			expect(byName.CurrencyAdd.server).to.equal(server)
+			expect(byName.RoundEnd.shared).to.equal(lone)
+			expect(byName.RoundEnd.server).to.equal(nil)
+			folder:Destroy()
+		end)
+
+		it("looks inside sub-folders", function()
+			local folder = Instance.new("Folder")
+			local sub = Instance.new("Folder")
+			sub.Parent = folder
+			local nested = module("NpcSpawn", sub)
+			local found = AdminServiceServer._commandScripts(folder)
+			expect(#found).to.equal(1)
+			expect(found[1].shared).to.equal(nested)
+			folder:Destroy()
+		end)
+	end)
 end

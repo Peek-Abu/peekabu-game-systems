@@ -15,6 +15,10 @@
 
 	StateSyncServiceServer calls `join` / `remove` as players arrive and leave; game code only calls `set`
 	(and optionally `setRelevant`).
+	- A write for a player who has left (`set` after `remove`, e.g. from a task that finishes
+	  after they leave) is ignored until they join again, so it cannot bring back an entry that nothing would
+	  ever remove (or hand a returning player their stale fields). A write before a player's first `join` is
+	  kept, so the order services see a new player in does not matter.
 
 	@class StateSyncPublicPlayerStore
 ]=]
@@ -31,6 +35,8 @@ type PublicPlayerMap = PublicPlayerTypes.PublicPlayerMap
 local entries: { [number]: Charm.Atom<PublicPlayer?> } = {}
 -- Explicit per-viewer relevance. nil (the default) means "use the roster".
 local overrides: { [number]: Charm.Atom<{ number }?> } = {}
+-- Players removed and not joined again: writes for them are ignored (one entry per departed userId).
+local departed: { [number]: true } = {}
 local initialRoster: { number } = {}
 local roster = Charm.atom(table.freeze(initialRoster))
 
@@ -68,6 +74,7 @@ end
 	@param userId number
 ]=]
 function StateSyncPublicPlayerStore.join(userId: number)
+	departed[userId] = nil
 	local current = roster()
 	if table.find(current, userId) == nil then
 		local nextRoster = table.clone(current)
@@ -83,11 +90,15 @@ end
 
 --[=[
 	Merges `update` into the player's public entry: listed fields are overwritten, unlisted fields keep
-	their value. Stores a frozen copy, so mutating `update` afterwards changes nothing.
+	their value. Stores a frozen copy, so mutating `update` afterwards changes nothing. Ignored for a player
+	who has left.
 	@param userId number
 	@param update PublicPlayer -- the fields to write
 ]=]
 function StateSyncPublicPlayerStore.set(userId: number, update: PublicPlayer)
+	if departed[userId] then
+		return
+	end
 	local atom = entryAtom(userId)
 	local previous = atom()
 	local snapshot: PublicPlayer = if previous ~= nil then table.clone(previous) else {}
@@ -119,10 +130,12 @@ function StateSyncPublicPlayerStore.get(userId: number): PublicPlayer?
 end
 
 --[=[
-	The player left: their entry, their roster membership and their own relevance override go.
+	The player left: their entry, their roster membership and their own relevance override go, and later
+	writes for them are ignored until they join again.
 	@param userId number
 ]=]
 function StateSyncPublicPlayerStore.remove(userId: number)
+	departed[userId] = true
 	local current = roster()
 	local index = table.find(current, userId)
 	if index ~= nil then
