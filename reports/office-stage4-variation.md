@@ -129,10 +129,9 @@ Desk pods, the room type compared (seed 372465689 → 670064893):
 
 ## Observations for the owner (not stage 4 changes)
 
-- **Departure race:** the first `departNow`, sent about 3 s after Play started, counted a local move but never fired
-  `arrived`, so the shift stayed in the lobby. The second try worked, and so did a later session's first try after
-  9 s. It is likely a too-early-after-boot case in the Queue/Depot path. It is worth a look before launch, but it is
-  outside this stage.
+- **Departure "race": not a game bug** (root-caused 2026-10-24). My probe destroyed the injected Script right after
+  `departNow`, which killed the deferred `arrived` thread. With the Script kept alive, it arrives every time, and the
+  real countdown departure worked 3 of 3 times.
 - **Bright lobby:** the lobby rendered in bright daytime light when I teleported straight in (capture
   `s4_welcomeScreen.jpg`). The indoor/outdoor Lighting switch probably runs only through the entrances. A walk-in
   should be checked in the play-check.

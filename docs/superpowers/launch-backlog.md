@@ -104,9 +104,9 @@ From the owner's stage 4 play-check (2026-10-24):
   - possibly outdoor creatures or monsters (gameplay or just set dressing: to decide);
   - outdoor footstep surface sounds (asphalt, grass, gravel, puddles) layered on the employee's footsteps, so walking
     outside doesn't sound like the office carpet.
-- **Truck departure sometimes never arrives (found in stage 4 Studio checks, not yet fixed):** in Studio, `departNow`
-  from the depot truck returns true and the Queue counts a local move, but `arrived` never fires (arrivals stays 0),
-  so no shift starts and the player stays on the truck. Seen on 3 of 5 tries, twice in a row in one session, with no
-  error in the Output. Likely a `departing` listener yields or errors inside `depart` before the deferred `arrived`
-  (`QueueServiceServer` depart: `departing:Fire` → `pads:unlock` → `task.defer(arrived)`). Root-cause before launch:
-  a player could press Go and never leave.
+- ~~**Truck departure sometimes never arrives**~~ **Not a game bug (2026-10-24):** it came from the Studio probe, not
+  the game. The probe called `departNow` from an injected Script and destroyed that Script at once. `depart` hands the
+  arrival to `task.defer`, and the deferred thread belongs to the calling Script, so destroying it killed the arrival.
+  Proven: the same call with the Script kept alive 1 s arrives every time, and the real countdown path arrived 3 of 3
+  times on fresh Play sessions (1-2 s after boot), with the shift running. Probes must keep the calling Script alive
+  for a second or so (`.superpowers/sdd/common-rules.md` notes it).
