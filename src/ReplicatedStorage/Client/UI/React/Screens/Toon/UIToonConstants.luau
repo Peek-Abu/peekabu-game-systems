@@ -14,6 +14,8 @@
 export type Shade = { base: Color3, hi: Color3, lo: Color3 }
 export type Hue = "grape" | "gold" | "mint" | "coral" | "cream" | "night" | "sky" | "lilac" | "steel"
 export type Meaning = "gold" | "mint" | "coral" | "grape" | "white"
+-- The cosmetic rarities (CosmeticTypes.Rarity), restated so the kit stays free of feature requires.
+export type Rarity = "default" | "uncommon" | "rare" | "epic" | "legendary" | "odd"
 
 local function shade(base: string, hi: string, lo: string): Shade
 	return table.freeze({ base = Color3.fromHex(base), hi = Color3.fromHex(hi), lo = Color3.fromHex(lo) })
@@ -41,6 +43,16 @@ local HUE: { [Hue]: Shade } = table.freeze({
 	lilac = shade("B7A4EC", "EDE6FF", "8A73C9"),
 	-- Disabled: the stack desaturated.
 	steel = shade("B9B4C6", "E6E3EE", "8A8499"),
+})
+
+-- The rarity ladder's colours (owner: Odd is red, not purple): card stages, flags, rims and rays.
+local RARITY: { [Rarity]: Shade } = table.freeze({
+	default = shade("A7A3B8", "DCD9E6", "726D86"),
+	uncommon = shade("5CCF5A", "C9F5B8", "2C8F36"),
+	rare = shade("3EA2FF", "BEE2FF", "1B66CC"),
+	epic = shade("A653F5", "DDB9FF", "6C20C2"),
+	legendary = shade("FFB21A", "FFEA8C", "D56800"),
+	odd = shade("FF3B45", "FFB1AA", "B0101E"),
 })
 
 local COLOR = table.freeze({
@@ -162,9 +174,14 @@ local function shadeOf(hue: Hue): Shade
 	return HUE[hue]
 end
 
+local function rarityOf(rarity: Rarity): Shade
+	return RARITY[rarity]
+end
+
 local UIToonConstants = {
 	HUE = HUE,
 	shade = shadeOf,
+	rarity = rarityOf,
 	COLOR = COLOR,
 	NUMBER = NUMBER,
 	FONT = FONT,

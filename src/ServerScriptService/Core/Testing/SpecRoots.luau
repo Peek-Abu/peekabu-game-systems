@@ -499,6 +499,10 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.UI.React.Screens.Toon.ToonGoo"] = "presentational React component (story in ToonGoo.story; layout specced in ToonGooViewModel)",
 	["ReplicatedStorage.Client.UI.React.Screens.Toon.ToonSparkle"] = "presentational React component (story in ToonSparkle.story; twinkle specced in ToonMotionViewModel)",
 	["ReplicatedStorage.Client.UI.React.Screens.Toon.ToonWipe"] = "presentational React component (story in ToonWipe.story; sweep specced in ToonMotionViewModel)",
+	["ReplicatedStorage.Client.UI.React.Screens.Toon.ToonFlag"] = "presentational React component (story in ToonFlag.story)",
+	["ReplicatedStorage.Client.UI.React.Screens.Toon.ToonSourceBand"] = "presentational React component (story in ToonSourceBand.story; which band a card gets is specced in InventoryViewModel)",
+	["ReplicatedStorage.Client.UI.React.Screens.Toon.ToonRarityFrame"] = "presentational React component (story in ToonRarityFrame.story)",
+	["ReplicatedStorage.Client.UI.React.Screens.Toon.ToonViewport"] = "React component over a ViewportFrame (story in ToonViewport.story; the model is built by EmployeePreviewSystem, framing and light specced in PortraitViewModel)",
 	-- Cleanup Crew: the paper UI kit (M3 UI)
 	["ReplicatedStorage.Client.UI.React.Screens.Portrait.CharacterPortrait"] = "React component over a ViewportFrame (story in CharacterPortrait.story; framing, light and fallback specced in PortraitViewModel, pose in EmployeePoseRules, the copy in EmployeePortraitSystem)",
 	["ReplicatedStorage.Client.UI.React.Screens.Portrait.usePortraitCharacter"] = "React hook over live Players/characters (what a rebuild produces is specced in EmployeePortraitSystem)",

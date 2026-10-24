@@ -27,6 +27,8 @@ export type Pattern = "sparkle" | "bubbles"
 
 export type ToonSurfaceProps = {
 	hue: UIToonConstants.Hue,
+	-- A colour of its own (an employee's card, a rarity stage) instead of the hue's; the hue still picks the gloss.
+	shade: UIToonConstants.Shade?,
 	size: UDim2,
 	position: UDim2?,
 	anchor: Vector2?,
@@ -77,7 +79,7 @@ local function corner(radius: number): React.ReactNode
 end
 
 local function ToonSurface(props: ToonSurfaceProps): React.ReactNode
-	local shade = UIToonConstants.shade(props.hue)
+	local shade = props.shade or UIToonConstants.shade(props.hue)
 	local radius = props.radius or DEPTH.buttonRadius
 	local small = props.small == true
 	local outline = if small then 3 else DEPTH.outline
