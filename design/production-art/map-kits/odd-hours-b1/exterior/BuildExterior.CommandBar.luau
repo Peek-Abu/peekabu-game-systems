@@ -2,9 +2,12 @@
 -- Odd Hours B1 office EXTERIOR set (the approved look spike, promoted). Studio art, not Rojo.
 -- Paste into the Studio command bar (Edit) of the Shift place. Idempotent: deletes and rebuilds Workspace.OfficeExterior
 -- and deletes the old Workspace.ClaudeExteriorSpike, all in ONE ChangeHistory step (Ctrl+Z restores the previous state).
--- The set stands alone (Lethal-style teleport entrances): it is NOT wrapped around the generated office. The code
+-- The set wraps the generated office again (EXTERIOR_OFFSET = 0): its closed podium stands 2 studs outside the
+-- interior keep-out (world x 961..1294, z -52..203, y < 17), and the entrances are short teleport hops. The code
 -- builds the truck, the door hit boxes and the ooze at OfficeConstants.OUTSIDE; this art lines up with those numbers.
--- Builds in "exterior space" (the spike's coordinates, front = -Z) and every part is shifted by EXTERIOR_OFFSET.
+-- Builds in "exterior space" (front = -Z) and every part is shifted by EXTERIOR_OFFSET (zero today).
+-- The new set is built under a temporary name and checked against the keep-out BEFORE the old set is destroyed: a
+-- part inside the keep-out fails the build, removes the half-built set and leaves the place as it was.
 -- Creates/updates MaterialVariants OH_ExtStone / OH_ExtPanel (reusing the approved OH_ maps, no uploads).
 -- Never touches Lighting (the exterior atmosphere is code: OfficeAtmosphereConstants).
 
@@ -16,17 +19,19 @@ local MS = game:GetService("MaterialService")
 -- If those change, change them here and rebuild; the asserts below refuse a set that no longer lines up.
 local ORIGIN = Vector3.new(1000, 1, 0) -- OfficeConstants.ORIGIN (world = layout + ORIGIN)
 local OUTSIDE = {
-	EXTERIOR_OFFSET = Vector3.new(0, 0, -1600),
-	yard = { minX = -164, maxX = 322, minZ = -1921, maxZ = -1657 },
-	carpark = { minX = -164, maxX = -44, minZ = -1657, maxZ = -1370 },
-	TRUCK_CENTRE = Vector2.new(168, -1876),
-	DOCK_OUTSIDE = { x = 168, z = -1664, yaw = 0 },
-	LOBBY_OUTSIDE = { x = -62, z = -1448, yaw = math.pi / 2 },
+	EXTERIOR_OFFSET = Vector3.zero,
+	yard = { minX = -164, maxX = 322, minZ = -321, maxZ = -57 },
+	carpark = { minX = -164, maxX = -44, minZ = -57, maxZ = 230 },
+	TRUCK_CENTRE = Vector2.new(168, -276),
+	DOCK_OUTSIDE = { x = 168, z = -64, yaw = 0 },
+	LOBBY_OUTSIDE = { x = -62, z = 152, yaw = math.pi / 2 },
 	DOCK_DOOR_WIDTH = 14,
 }
 local OFFSET = OUTSIDE.EXTERIOR_OFFSET -- every part is built in exterior space and moved by this
 
 local NAME = "OfficeExterior"
+-- The generated office's volume (world; every room fits here over 120 seeds). No exterior part may enter it.
+local KEEP = { x0 = 961, x1 = 1294, z0 = -52, z1 = 203, yTop = 17 }
 
 ------------------------------------------------------------------ key numbers (exterior space = world - OFFSET)
 local PLAZA_Y = 1.36 -- lobby plaza / rotunda floor top
@@ -66,17 +71,20 @@ assert(DOCK_X == ORIGIN.X + OUTSIDE.DOCK_OUTSIDE.x and DOCKBLK.z0 + OFFSET.Z == 
 assert(math.abs(WX0 - ROT_R - (ORIGIN.X + OUTSIDE.LOBBY_OUTSIDE.x)) < 0.5 and LOBBY_Z + OFFSET.Z == OUTSIDE.LOBBY_OUTSIDE.z, "lobby doors misaligned")
 assert(DOCK_X == ORIGIN.X + OUTSIDE.TRUCK_CENTRE.X, "truck pad misaligned")
 assert(SITE.x0 == ORIGIN.X + OUTSIDE.carpark.minX, "car park misaligned")
+-- the podium's inner faces stand outside the keep-out (with OFFSET zero the podium wraps the office)
+assert(WX1 + OFFSET.X <= KEEP.x0 and EX0 + OFFSET.X >= KEEP.x1 and SZ1 + OFFSET.Z <= KEEP.z0 and NZ0 + OFFSET.Z >= KEEP.z1, "podium inside the keep-out")
+assert(ROOF_Y >= KEEP.yTop, "podium roof inside the keep-out")
 
--- only after the asserts pass: the old set is destroyed and the recording opened
+-- only after the asserts pass is the recording opened; the new set is built under a temporary name and the old set is
+-- destroyed only once the new one has passed the keep-out check (section 9)
 local recording = nil
 pcall(function() recording = CHS:TryBeginRecording("Build " .. NAME) end)
 
-for _, n in ipairs({ NAME, "ClaudeExteriorSpike" }) do
-	local old = workspace:FindFirstChild(n)
-	if old then old:Destroy() end
-end
+local TEMP_NAME = NAME .. "_Building"
+local stale = workspace:FindFirstChild(TEMP_NAME)
+if stale then stale:Destroy() end
 local ROOT = Instance.new("Model")
-ROOT.Name = NAME
+ROOT.Name = TEMP_NAME
 ROOT.Parent = workspace
 local ROAD = { z0 = TRUCK_Z - 9, z1 = TRUCK_Z + 9, x0 = PAD.x1 } -- access road: east gate -> truck pad
 
@@ -968,17 +976,39 @@ do
 	end
 end
 
------------------------------------------------------------------- 9. summary
+------------------------------------------------------------------ 9. keep-out check, then swap in the new set
 local count, lights = 0, 0
+local offenders = {}
 for _, d in ipairs(ROOT:GetDescendants()) do
 	if d:IsA("Light") then lights += 1 end
-	if d:IsA("BasePart") then count += 1 end
+	if d:IsA("BasePart") then
+		count += 1
+		-- world AABB of the (possibly rotated) box against the keep-out (touching its faces is allowed)
+		local cf, sz = d.CFrame, d.Size
+		local ex = math.abs(cf.RightVector.X) * sz.X + math.abs(cf.UpVector.X) * sz.Y + math.abs(cf.LookVector.X) * sz.Z
+		local ey = math.abs(cf.RightVector.Y) * sz.X + math.abs(cf.UpVector.Y) * sz.Y + math.abs(cf.LookVector.Y) * sz.Z
+		local ez = math.abs(cf.RightVector.Z) * sz.X + math.abs(cf.UpVector.Z) * sz.Y + math.abs(cf.LookVector.Z) * sz.Z
+		local q, e = cf.Position, 0.01
+		if q.X + ex / 2 > KEEP.x0 + e and q.X - ex / 2 < KEEP.x1 - e and q.Z + ez / 2 > KEEP.z0 + e and q.Z - ez / 2 < KEEP.z1 - e and q.Y - ey / 2 < KEEP.yTop - e then
+			table.insert(offenders, d:GetFullName())
+		end
+	end
 end
+if #offenders > 0 then
+	ROOT:Destroy()
+	if recording then pcall(function() CHS:FinishRecording(recording, Enum.FinishRecordingOperation.Cancel) end) end
+	error(("OfficeExterior NOT built: %d part(s) inside the keep-out, the old set is untouched: %s"):format(#offenders, table.concat(offenders, ", ", 1, math.min(#offenders, 12))))
+end
+for _, n in ipairs({ NAME, "ClaudeExteriorSpike" }) do
+	local old = workspace:FindFirstChild(n)
+	if old then old:Destroy() end
+end
+ROOT.Name = NAME
 ROOT:SetAttribute("PartCount", count)
 ROOT:SetAttribute("LightCount", lights)
 ROOT:SetAttribute("Source", "design/production-art/map-kits/odd-hours-b1/exterior/BuildExterior.CommandBar.luau")
 
 if recording then pcall(function() CHS:FinishRecording(recording, Enum.FinishRecordingOperation.Commit) end) end
-local msg = ("OfficeExterior built: %d parts, %d lights"):format(count, lights)
+local msg = ("OfficeExterior built: %d parts, %d lights, 0 keep-out hits"):format(count, lights)
 print(msg)
 return msg
