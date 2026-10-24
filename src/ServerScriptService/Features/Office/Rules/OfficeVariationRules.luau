@@ -153,7 +153,10 @@ function OfficeVariationRules.anomalies(seed: number?): { AnomalyId }
 	local count = if OfficeSeedUtils.hash01(seed, "anomaly:count") < ONE_ANOMALY_CHANCE then 1 else 2
 	for n = 1, count do
 		local index = math.floor(OfficeSeedUtils.hash01(seed, "anomaly:pick" .. n) * #pool) + 1
-		table.insert(picked, table.remove(pool, index))
+		local id = table.remove(pool, index)
+		if id ~= nil then
+			table.insert(picked, id)
+		end
 	end
 	return picked
 end

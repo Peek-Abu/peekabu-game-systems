@@ -44,4 +44,15 @@ function OfficeSeedUtils.hash01(seed: number, key: string): number
 	return h / TWO_32
 end
 
+--[=[
+	A deterministic element of a non-empty list for a (seed, key) pair, so every machine picks the same one.
+	@param seed number -- the shift's layout seed
+	@param key string -- what is being decided
+	@param list { T } -- non-empty
+	@return T
+]=]
+function OfficeSeedUtils.pick<T>(seed: number, key: string, list: { T }): T
+	return list[math.floor(OfficeSeedUtils.hash01(seed, key) * #list) + 1]
+end
+
 return OfficeSeedUtils

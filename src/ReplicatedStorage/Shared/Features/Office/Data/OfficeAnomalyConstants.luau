@@ -23,7 +23,7 @@ return table.freeze({
 	-- A comma-joined id list on the office model.
 	PUBLISHED_ATTRIBUTE = "OfficeAnomalies",
 	WELCOME_TEXT = "WE VALUE YOUR TIME",
-	-- Picked by hash01(seed, "welcome").
+	-- Consumers (server and client) pick with OfficeSeedUtils.pick(seed, "welcome", WRONG_WORDS).
 	WRONG_WORDS = table.freeze({
 		"WE VALUE YOUR SLEEP",
 		"WE VALUE YOUR SILENCE",
