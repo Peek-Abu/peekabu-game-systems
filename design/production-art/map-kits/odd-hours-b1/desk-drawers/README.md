@@ -1,7 +1,8 @@
 # Desk with drawers that open (stage 4, Task 9)
 
-Status: built and rendered, **not uploaded**. Waiting for the owner's OK on the renders below; upload and kit assembly
-(`AssembleKit.CommandBar.luau`, `KIT_MAP.md`) come after that.
+Status: owner-approved and uploaded 2026-10-23 (Icey Labs group 189923277, all Approved; ids in `upload_log.jsonl` and
+`../KIT_MAP.md`). Kit template `furniture/desk` assembled in the Shift place with all three drawers tagged
+`SearchComponent = "drawer"`; probe `ProbeDeskDrawers.CommandBar.luau` passes (see KIT_MAP "Desk hide-space measurement").
 
 Hand-built in Blender 5.1 (headless; the Blender MCP addon was not reachable this session) with the texture-pipeline
 hard-surface kit (`hardlib.py`: bevelled boxes, oak scan, plaster-bump laminate). No AI meshes. It is `c_desk_nodivider`
@@ -12,7 +13,7 @@ same footprint, no divider.
 - Renders for the owner: `renders/shaded_open_closeup.png` (drawers open, close-up), `renders/shaded_open_tq.png`,
   `renders/shaded_closed_tq.png`, `renders/shaded_kneehole.png`; flat turntables `renders/flat_closed_{front,back,side,below,tq}.png`
   and `renders/flat_open_{front,tq}.png`. Open = every drawer slid by the game's offset (2.07 mesh units; see below).
-- Not committed (binaries, local only): `textures/*.png`, `export/*.fbx|obj|glb|blend`.
+- Not committed (binaries, local only): `textures/*.png`, `export/*.fbx|obj|glb|blend`. Uploaded: see `upload_log.jsonl`.
 
 ## Size and orientation
 
@@ -53,8 +54,7 @@ darkened by the pedestal they sit in, and the pedestal interior keeps its own op
   cavity is real when it opens.
 - `buildTemplate`'s searchable drawer is the upper pedestal drawer at +X (front x 1.73..3.63, y 3.18..4.34 at DESK_SIZE); this
   desk's top drawer front covers x 1.69..3.94, y 3.2..4.59 after the stretch: the same spot. All three drawers here are separate
-  meshes; tag all three `"drawer"` (they slide together, as the system moves every tagged part), or tag only
-  `desk_drawer_1` to match the native prototype (the other two then stay shut as part of the art).
+  meshes; all three are tagged `"drawer"` (the owner's choice) and slide together.
 
 ## Hide-space measurement (closed drawers, at 8.8 x 4.95 x 4.6)
 

@@ -12,7 +12,11 @@ local MaterialService = game:GetService("MaterialService")
 
 local KIT_ID = "odd-hours-b1"
 local IDS = {
-	c_desk_nodivider = {"74890171416031", "81026453399291", "78612349455668", "93828460741235"}, -- the mock-room desk without the privacy divider (replaces c_desk)
+	c_desk_nodivider = {"74890171416031", "81026453399291", "78612349455668", "93828460741235"}, -- the mock-room desk without the privacy divider (superseded by t9_desk_drawers)
+	-- Task 9 (stage 4): the same desk with a hollow pedestal and three separate drawer meshes (desk_drawer_1..3,
+	-- SearchComponent = "drawer"). The model row's textures are the body's; the drawers share t9_desk_drawers_tex.
+	t9_desk_drawers = {"83257653345965", "123842368612124", "80606908058150", "78503818022681"},
+	t9_desk_drawers_tex = {"", "112922977638343", "71294390694507", "99519507784235"},
 	c_chair = {"76140780685205", "133451549732406", "133440041678773", "133033333497328"},
 	c_lockers = {"80348717249179", "83914590869498", "76034031473396", "103555969898410"},
 	c_bookshelf = {"82298001439367", "138256636385004", "112643864130260", "102527266813417"},
@@ -50,7 +54,7 @@ local DESK_FREE_FRAC = { min = Vector3.new(-0.428, -0.5, -0.5), max = Vector3.ne
 
 -- Mesh-based templates: { key, family, asset row, FrontAxis (which way the mesh faces as imported; checked by eye), fit }
 local MESH = {
-	{ "desk", "furniture", "c_desk_nodivider", "NegativeZ", "Stretch" },
+	{ "desk", "furniture", "t9_desk_drawers", "NegativeZ", "Stretch" },
 	{ "officeChair", "furniture", "c_chair", "NegativeZ" },
 	{ "locker", "furniture", "c_lockers", "NegativeZ" },
 	{ "shelf", "furniture", "c_bookshelf", "NegativeZ" },
@@ -96,7 +100,9 @@ local meshCache, imageCache = {}, {}
 local function loadAll()
 	local jobs = {}
 	for name, row in IDS do
-		table.insert(jobs, { "mesh", name, row[1] })
+		if row[1] ~= "" then
+			table.insert(jobs, { "mesh", name, row[1] })
+		end
 		for i = 2, 4 do
 			if row[i] ~= "" then
 				table.insert(jobs, { "image", name .. "#" .. i, row[i] })
@@ -218,6 +224,18 @@ local LED_COLORS = {
 	LED_Amber = Color3.fromRGB(255, 160, 20),
 	LED_Blue = Color3.fromRGB(40, 110, 255),
 }
+-- Pieces that the search moves in place (OfficeSearchedDressingSystem): name prefix -> { component, texture row }.
+local SEARCH_PIECES = {
+	desk_drawer_ = { "drawer", "t9_desk_drawers_tex" },
+}
+local function searchPiece(name)
+	for prefix, info in SEARCH_PIECES do
+		if string.sub(name, 1, #prefix) == prefix then
+			return info
+		end
+	end
+	return nil
+end
 local function buildMesh(spec)
 	local key, asset, front, fit = spec[1], spec[3], spec[4], spec[5]
 	local row = IDS[asset]
@@ -228,11 +246,13 @@ local function buildMesh(spec)
 	if not list then
 		return nil, "model " .. row[1] .. " failed to load"
 	end
+	-- the main piece is the biggest one that is not an LED_*, Glass or searchable piece
 	local main
 	for _, p in list do
-		if not (string.sub(p.Name, 1, 4) == "LED_" or p.Name == "Glass") then
-			main = p
-			break
+		if not (string.sub(p.Name, 1, 4) == "LED_" or p.Name == "Glass" or searchPiece(p.Name)) then
+			if not main or p.Size.X * p.Size.Y * p.Size.Z > main.Size.X * main.Size.Y * main.Size.Z then
+				main = p
+			end
 		end
 	end
 	if not main then
@@ -257,6 +277,15 @@ local function buildMesh(spec)
 			sa.NormalMap = imageCache[asset .. "#3"] or ""
 			sa.RoughnessMap = imageCache[asset .. "#4"] or ""
 			sa.Parent = mp
+		elseif searchPiece(src.Name) then
+			-- a drawer / door piece: its own texture set, tagged so the search slides it instead of the fallback rig
+			local info = searchPiece(src.Name)
+			local sa = Instance.new("SurfaceAppearance")
+			sa.ColorMap = imageCache[info[2] .. "#2"] or ""
+			sa.NormalMap = imageCache[info[2] .. "#3"] or ""
+			sa.RoughnessMap = imageCache[info[2] .. "#4"] or ""
+			sa.Parent = mp
+			mp:SetAttribute("SearchComponent", info[1])
 		elseif LED_COLORS[src.Name] then
 			mp.Material = Enum.Material.Neon
 			mp.Color = LED_COLORS[src.Name]
@@ -329,17 +358,31 @@ local function measureDesk(template)
 	-- Exact-geometry test: every face of the desk's mesh (through an EditableMesh) as an axis-aligned box, scaled to
 	-- DESK_SIZE, floor-up. GetPartBoundsInBox on one big MeshPart answers with the part's bounds, so it can never see a
 	-- knee-hole; the face boxes can (exact for the desk's flat panels, conservative on rounded edges).
-	local mp = template:FindFirstChildWhichIsA("MeshPart")
-	local em = game:GetService("AssetService"):CreateEditableMeshAsync(Content.fromUri(mp.MeshId))
+	-- Every MeshPart of the template (the Task 9 desk is a body plus three drawer meshes), at its offset from the pivot.
 	local tris = {}
-	for _, fid in em:GetFaces() do
-		local lo, hi
-		for _, vid in em:GetFaceVertices(fid) do
-			local p = em:GetPosition(vid) * scale + Vector3.new(0, DESK_SIZE.Y / 2, 0)
-			lo = lo and lo:Min(p) or p
-			hi = hi and hi:Max(p) or p
+	for _, mp in template:GetDescendants() do
+		if mp:IsA("MeshPart") then
+			local em = game:GetService("AssetService"):CreateEditableMeshAsync(Content.fromUri(mp.MeshId))
+			local vlo, vhi
+			for _, vid in em:GetVertices() do
+				local q = em:GetPosition(vid)
+				vlo = vlo and vlo:Min(q) or q
+				vhi = vhi and vhi:Max(q) or q
+			end
+			local meshScale = mp.Size / (vhi - vlo) -- EditableMesh positions are in mesh units; the part may be resized
+			local centre = (vlo + vhi) / 2
+			for _, fid in em:GetFaces() do
+				local lo, hi
+				for _, vid in em:GetFaceVertices(fid) do
+					local local_ = (em:GetPosition(vid) - centre) * meshScale
+					local p = (mp.Position + local_) * scale -- template parts already sit floor-up on the pivot
+					lo = lo and lo:Min(p) or p
+					hi = hi and hi:Max(p) or p
+				end
+				table.insert(tris, { lo, hi })
+			end
+			em:Destroy()
 		end
-		table.insert(tris, { lo, hi })
 	end
 	local function free(centre, size)
 		local a, b = centre - size / 2 + Vector3.one * 0.01, centre + size / 2 - Vector3.one * 0.01

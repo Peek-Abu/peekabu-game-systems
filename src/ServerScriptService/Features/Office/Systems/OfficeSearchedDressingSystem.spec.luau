@@ -98,6 +98,60 @@ return function()
 		dressing.clear()
 		expect(drawer.CFrame).to.equal(closed)
 	end)
+	it("slides every tagged drawer of a kit desk in place and keeps the art", function()
+		-- The odd-hours-b1 desk: one body mesh plus three drawer meshes tagged SearchComponent = "drawer",
+		-- welded to the proxy as ArtVisualSystem.attach does.
+		local desk = proxy("Desk", OfficeConstants.DESK_SIZE)
+		local art = Instance.new("Model")
+		art.Name = "ArtVisual"
+		art.Parent = desk
+		local function artPart(name, size, offset, component)
+			local p = Instance.new("Part")
+			p.Name = name
+			p.Size = size
+			p.CFrame = desk.CFrame * CFrame.new(offset)
+			p.Anchored = true
+			if component then
+				p:SetAttribute("SearchComponent", component)
+			end
+			local weld = Instance.new("WeldConstraint")
+			weld.Name = "ArtRootWeld"
+			weld.Part0 = desk
+			weld.Part1 = p
+			weld.Parent = p
+			p.Parent = art
+			return p
+		end
+		local body = artPart("desk", OfficeConstants.DESK_SIZE, Vector3.zero, nil)
+		local drawers = {}
+		for i, y in { 1.4, 0, -1.4 } do
+			drawers[i] =
+				artPart("desk_drawer_" .. i, Vector3.new(2.25, 1.39, 4.2), Vector3.new(2.8, y, -0.38), "drawer")
+		end
+		local closed = {}
+		for i, d in drawers do
+			closed[i] = d.CFrame
+		end
+		local bodyFrame = body.CFrame
+		local dressing = Dressing.new(0)
+		dressing.apply(desk, "desk")
+		local slide = OfficeConstants.DESK_SIZE.Z * 0.45
+		for i, d in drawers do
+			local moved = closed[i]:ToObjectSpace(d.CFrame).Position
+			expect(math.abs(moved.Z + slide) < 1e-3).to.equal(true)
+			expect(math.abs(moved.X) < 1e-3 and math.abs(moved.Y) < 1e-3).to.equal(true)
+			expect(d:FindFirstChild("ArtRootWeld").Enabled).to.equal(false)
+		end
+		expect(body.CFrame).to.equal(bodyFrame)
+		expect(desk:FindFirstChild("ArtVisual")).to.equal(art)
+		expect(desk:FindFirstChild("SearchedDressing")).to.equal(nil)
+		expect(body.Transparency).to.equal(0)
+		dressing.clear()
+		for i, d in drawers do
+			expect(d.CFrame).to.equal(closed[i])
+			expect(d:FindFirstChild("ArtRootWeld").Enabled).to.equal(true)
+		end
+	end)
 	it("clears every overlay", function()
 		local desk = proxy("Desk", OfficeConstants.DESK_SIZE)
 		local locker = proxy("Locker", OfficeConstants.LOCKER_SIZE)

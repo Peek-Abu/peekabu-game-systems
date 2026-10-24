@@ -20,7 +20,7 @@ decal-resolved colour/normal/rough images. Every mesh as imported faces -Z (chec
 | floorTile_breakout | building | Plastic + `OH_Lino` slab | 4 x 0.092 x 4 | NegativeZ | Stretch | built |
 | doorLeaf | building | t2_doorLeaf 128086321055290 | 5.9 x 9 x 0.3 | NegativeZ | Stretch | built (hinge at local +X, see door note) |
 | doorLeafGlass | building | t2_doorLeafGlass 121018102259344 (+ `Glass` piece: Material Glass, Transparency 0.5) | 5.9 x 9 x 0.3 | NegativeZ | Stretch | built (hinge at local +X, see door note) |
-| desk | furniture | c_desk_nodivider 74890171416031 | 8.8 x 4.95 x 4.6 | NegativeZ | Stretch | built (no divider; hide space passes, see below) |
+| desk | furniture | t9_desk_drawers 83257653345965 (body + `desk_drawer_1..3`, each drawer `SearchComponent = "drawer"`) | 8.8 x 4.95 x 4.6 | NegativeZ | Stretch | built (Task 9: drawers open in place; hide space passes, see below) |
 | officeChair | furniture | c_chair 76140780685205 | 2.71 x 4.60 x 2.79 | NegativeZ | Uniform | built |
 | locker | furniture | c_lockers 80348717249179 | 6 x 8 x 2.52 | - | Uniform | HELD: bank of lockers != single searchable locker (marker is ~2.5 x 7 x 2.5, art would shrink to 0.42x; slate locker via fallback) |
 | shelf | furniture | c_bookshelf 82298001439367 | 5.54 x 8 x 2.08 | NegativeZ | Uniform | built |
@@ -111,7 +111,40 @@ returned a visual for all 27 keys built in the first run (before desk and locker
 return nil from the kit (so the slate fallback / greybox applies). The test model and scratch parts were deleted;
 nothing is left in Workspace.
 
+## Task 9 desk with drawers (`t9_desk_drawers`, owner-approved upload 2026-10-23; Icey Labs group 189923277, all Approved)
+
+Hand-built in Blender (`desk-drawers/build_desk_drawers.py`, README and renders in `desk-drawers/`): `c_desk_nodivider`'s look
+and size with a hollow pedestal and three separate drawer meshes. One FBX model with four objects; the import keeps their
+names and offsets. Creator verified on economy.roblox.com (`CreatorTargetId 189923277`) for the model (type 10) and two images
+(type 13). Raw log: `desk-drawers/upload_log.jsonl`.
+
+| Asset | model | color | normal | rough |
+|---|---|---|---|---|
+| t9_desk_drawers (body: `desk` piece) | 83257653345965 | 123842368612124 | 80606908058150 | 78503818022681 |
+| t9_desk_drawers_tex (`desk_drawer_1..3`, shared atlas) | - | 112922977638343 | 71294390694507 | 99519507784235 |
+
+`AssembleKit` keeps every MeshPart of the import at its offset (the 180 deg FBX yaw is already in the offsets: the pedestal
+lands at +X, the front at -Z, no part rotated). `SEARCH_PIECES` gives each `desk_drawer_*` piece the drawer texture set and
+`SearchComponent = "drawer"`, so `OfficeSearchedDressingSystem` slides all three drawers of the art itself (0.45 x proxy
+depth toward the front) and never builds the native fallback. The main piece is now the biggest non-LED / Glass / search
+piece. `measureDesk` reads every MeshPart's faces at its offset (body + closed drawers). The in-place probe is
+`desk-drawers/ProbeDeskDrawers.CommandBar.luau` (result under "Desk hide-space measurement").
+
 ## Desk hide-space measurement (`c_desk_nodivider`, desk is built)
+
+Task 9 desk (`t9_desk_drawers`, 2026-10-23, Shift place Edit; the kit's `furniture/desk` was rebuilt alone with AssembleKit's
+`buildMesh` logic, other templates untouched; `validateTemplate` true). `desk-drawers/ProbeDeskDrawers.CommandBar.luau`
+attaches it to a DESK_SIZE proxy through `ArtVisualSystem` (Stretch) and runs the real search:
+
+```
+PROBE desk: tagged=3 maps=4/4 moved=3/3 sameArt=true fallback=false | HUG_FREE_MIN after Stretch: 54 placements (x -1.58..-0.33) | slide 2.227: new contacts while sliding=0, contacts when open=0 (closed seat contacts 858), open drawer backs >= 1.97 inside the front
+```
+
+"Closed seat contacts" are face boxes touching when shut (the drawer fronts sit 0.04 into the shell's front edge, plus the
+bevel faces' boxes); none are added while sliding and none remain when open. Spec: `OfficeSearchedDressingSystem.spec`
+"slides every tagged drawer of a kit desk in place and keeps the art" (7/7 pass).
+
+The `c_desk_nodivider` numbers below are the previous desk's:
 
 `c_desk_nodivider` (rebuilt from the mock-room `c_desk` without the divider, `build_set_stage2.py`): 8.8 x 4.95 x 4.6, top
 at 4.95 and underside at 4.67. Stretch to `DESK_SIZE` 8.25 x 4.95 x 4.95 gives scale (0.9375, 1.0, 1.076). Measured on the
