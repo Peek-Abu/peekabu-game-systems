@@ -201,17 +201,20 @@ local SHELL_MATERIALS: { [OfficeTypes.ShellMaterial]: { material: Enum.Material,
 		},
 	}
 
--- The outside (OfficeGroundsUtils), layout space: the spike's world numbers minus ORIGIN plus EXTERIOR_OFFSET.
+-- The outside (OfficeGroundsUtils), layout space: the spike's world numbers minus ORIGIN plus EXTERIOR_OFFSET. The
+-- exterior sits around the office (offset zero), so each door is a short hop: a long teleport made the engine rebuild
+-- the light around the player and the rooms rendered dark for seconds. The yard ends south of the bay (maxZ -57 < the
+-- bay's -52) and the car park west of the reception (maxX -44 < its -38), so no outdoor volume covers a room.
 local OUTSIDE = table.freeze({
-	EXTERIOR_OFFSET = Vector3.new(0, 0, -1600),
-	yard = table.freeze({ minX = -164, maxX = 322, minZ = -1921, maxZ = -1657 }),
-	carpark = table.freeze({ minX = -164, maxX = -44, minZ = -1657, maxZ = -1370 }),
-	TRUCK_CENTRE = Vector2.new(168, -1876),
+	EXTERIOR_OFFSET = Vector3.zero,
+	yard = table.freeze({ minX = -164, maxX = 322, minZ = -321, maxZ = -57 }),
+	carpark = table.freeze({ minX = -164, maxX = -44, minZ = -57, maxZ = 230 }),
+	TRUCK_CENTRE = Vector2.new(168, -276),
 	TRUCK_YAW = math.pi,
 	-- The roller door on the dock block's front face; you arrive facing -Z, toward the truck.
-	DOCK_OUTSIDE = table.freeze({ x = 168, z = -1664, yaw = 0 }),
+	DOCK_OUTSIDE = table.freeze({ x = 168, z = -64, yaw = 0 }),
 	-- The rotunda's doors; you arrive facing -X, out to the car park.
-	LOBBY_OUTSIDE = table.freeze({ x = -62, z = -1448, yaw = math.pi / 2 }),
+	LOBBY_OUTSIDE = table.freeze({ x = -62, z = 152, yaw = math.pi / 2 }),
 	-- How far in front of the outside door a player arrives, and how far into the room from the exit.
 	OUTSIDE_STEP = 5,
 	INSIDE_STEP = 4,
