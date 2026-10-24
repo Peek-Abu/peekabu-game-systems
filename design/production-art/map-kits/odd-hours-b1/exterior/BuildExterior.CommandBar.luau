@@ -551,6 +551,8 @@ local function tower(name, x0, x1, z0, z1, yTop, litP, opts)
 	}
 	for fi, f in ipairs(faces) do
 		if not (opts.skip and opts.skip[fi]) then
+			-- fbox depth d0..d1 runs along the face's OUTWARD normal f.n from the core face f.w: world = f.w + f.n * d,
+			-- so depth 0 is the face of the (solid) glass core and a larger depth is further outside the building
 			local function fbox(nm, u0, u1, v0, v1, d0, d1, mat)
 				local w0, w1 = f.w + f.n * d0, f.w + f.n * d1
 				if f.along == "x" then return box(nm, u0, u1, v0, v1, w0, w1, mat, sub()) end
@@ -578,14 +580,17 @@ local function tower(name, x0, x1, z0, z1, yTop, litP, opts)
 						local v0, v1 = yb + k * STOREY + 0.8, yb + (k + 1) * STOREY - 0.8
 						local lit = r < litP * 0.7
 						fbox("WinLit", uc - bay / 2 + 0.5, uc + bay / 2 - 0.5, v0 + 0.3, v1 - 0.3, 0, 0.12, lit and M.winLit or M.winDim)
+						local entry = nil
 						if lit and f.along == "x" and f.n == -1 then
-							table.insert(YARD_WINDOWS, { tower = name, u = uc, v0 = v0, w = f.w })
+							entry = { tower = name, u = uc, half = bay / 2 - 0.5, v0 = v0, v1 = v1, w = f.w, n = f.n, blinds = {} }
+							table.insert(YARD_WINDOWS, entry)
 						end
-						-- half-drawn blinds: a few slats across the top of the lit pane
+						-- half-drawn blinds: a few slats across the top of the lit pane (depth 0.12..0.2)
 						local nsl = rng:NextInteger(1, 2)
 						for s = 1, nsl do
 							local ys = v1 - 0.3 - s * 1.6
-							fbox("Blind", uc - bay / 2 + 0.5, uc + bay / 2 - 0.5, ys, ys + 0.7, 0.12, 0.2, M.blind)
+							local slat = fbox("Blind", uc - bay / 2 + 0.5, uc + bay / 2 - 0.5, ys, ys + 0.7, 0.12, 0.2, M.blind)
+							if entry then table.insert(entry.blinds, slat) end
 						end
 					end
 				end
@@ -980,20 +985,27 @@ flush()
 begin("AnomalySlots")
 do
 	local INV = { Material = Enum.Material.SmoothPlastic, Color = C(10, 10, 12), Transparency = 1 }
-	-- silhouette: a flat, featureless dark figure just in front of the light of one lit tower window facing the yard,
-	-- above the podium's sight line (v0 >= 40); invisible by default
+	-- silhouette: a flat, featureless dark figure standing in one lit tower window facing the yard, read from the yard
+	-- as someone inside the lit room behind the glass. The window must sit above the podium's sight line from the
+	-- yard (eye y 5 on the walk, over the parapet at y 32.5): its sill at or above SIGHTLINE_MIN_Y.
+	-- That window is re-layered, by depth outward from the core face (see fbox): the room light (WinLit, 0..0.12),
+	-- the figure (0.16..0.22), and a clear glass pane (0.28..0.32) in front of both; its blind slats (0.12..0.2) are
+	-- removed so nothing is coplanar. Invisible by default.
+	local SIGHTLINE_MIN_Y = 40
 	local best = nil
 	for _, w in ipairs(YARD_WINDOWS) do
-		if w.v0 >= 40 and (best == nil or w.v0 < best.v0 or (w.v0 == best.v0 and math.abs(w.u - DOCK_X) < math.abs(best.u - DOCK_X))) then best = w end
+		if w.v0 >= SIGHTLINE_MIN_Y and (best == nil or w.v0 < best.v0 or (w.v0 == best.v0 and math.abs(w.u - DOCK_X) < math.abs(best.u - DOCK_X))) then best = w end
 	end
 	assert(best, "no lit yard-facing tower window for the silhouette")
 	do
+		for _, slat in ipairs(best.blinds) do slat:Destroy() end
+		local function depth(d) return best.w + best.n * d end
+		box("SilhouetteWindowGlass", best.u - best.half, best.u + best.half, best.v0 + 0.3, best.v1 - 0.3, depth(0.28), depth(0.32), { Material = Enum.Material.Glass, Color = C(60, 52, 44), Transparency = 0.55 })
 		local m = slot("silhouette")
 		m:SetAttribute("Tower", best.tower)
-		local z0, z1 = best.w - 0.19, best.w - 0.13
 		local y = best.v0 + 0.3
 		for _, b in ipairs({ { "Legs", 0.6, 0, 2.2 }, { "Body", 1, 2.2, 4.6 }, { "Head", 0.5, 4.75, 5.95 } }) do
-			noCollide(box("Figure" .. b[1], best.u - b[2], best.u + b[2], y + b[3], y + b[4], z0, z1, INV, m))
+			noCollide(box("Figure" .. b[1], best.u - b[2], best.u + b[2], y + b[3], y + b[4], depth(0.16), depth(0.22), INV, m))
 		end
 	end
 	-- carTicking: an invisible emitter part on the parked car's engine (the car at world (909, 35), nose +X)
@@ -1104,7 +1116,10 @@ for _, d in ipairs(ROOT:GetDescendants()) do
 end
 local slots = {}
 for _, inst in ipairs(CS:GetTagged(ANOMALY.SLOT_TAG)) do
-	if inst:IsDescendantOf(ROOT) then slots[inst:GetAttribute(ANOMALY.SLOT_ATTRIBUTE)] = (slots[inst:GetAttribute(ANOMALY.SLOT_ATTRIBUTE)] or 0) + 1 end
+	if inst:IsDescendantOf(ROOT) then
+		local id = inst:GetAttribute(ANOMALY.SLOT_ATTRIBUTE)
+		slots[id] = (slots[id] or 0) + 1
+	end
 end
 for _, id in ipairs(ANOMALY.IDS) do
 	if slots[id] ~= 1 then table.insert(offenders, "anomaly slot " .. id .. " x" .. tostring(slots[id] or 0)) end
