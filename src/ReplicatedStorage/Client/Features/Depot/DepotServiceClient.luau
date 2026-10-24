@@ -51,6 +51,8 @@ require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotHubScene)
 -- The Inventory (the hub's INVENTORY tile) and the first-join pick register their scenes at require.
 require(ReplicatedStorage.Client.UI.React.Screens.Inventory.InventoryScene)
 require(ReplicatedStorage.Client.UI.React.Screens.Pick.CharacterPickScene)
+require(ReplicatedStorage.Client.UI.React.Screens.Shop.ShopScene)
+local ShopViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shop.ShopViewModel)
 local InventoryViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Inventory.InventoryViewModel)
 local CharacterPickViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Pick.CharacterPickViewModel)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
@@ -122,6 +124,7 @@ local DepotServiceClient: DepotServiceClient = {
 					SceneStack.remove(DepotHubViewModel.scene("gear"))
 					SceneStack.remove(DepotHubViewModel.scene("settings"))
 					SceneStack.remove(InventoryViewModel.SCENE)
+					SceneStack.remove(ShopViewModel.SCENE)
 				end
 				syncPick()
 			end)

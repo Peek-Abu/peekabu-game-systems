@@ -55,6 +55,8 @@ export type DepotHubPanelProps = {
 	onGuide: () -> (),
 	onSettings: () -> (),
 	onGift: () -> (),
+	-- The SHOP tile under the gift.
+	onShop: () -> (),
 	onGo: () -> (),
 }
 
@@ -246,6 +248,19 @@ local function topRight(props: DepotHubPanelProps): React.ReactNode
 			radius = if phone then 16 else 24,
 			sound = "confirm",
 			onActivated = props.onGift,
+		}),
+		shop = e(ToonButton, {
+			variant = "danger",
+			layout = "tile",
+			icon = "shopGift",
+			text = "SHOP",
+			textSize = if phone then 13 else 24,
+			anchor = Vector2.new(1, 0),
+			position = UDim2.fromOffset(0, if phone then 140 else 272),
+			size = if phone then UDim2.fromOffset(66, 66) else UDim2.fromOffset(134, 134),
+			small = phone,
+			radius = if phone then 16 else 24,
+			onActivated = props.onShop,
 		}),
 	}
 	if not phone then

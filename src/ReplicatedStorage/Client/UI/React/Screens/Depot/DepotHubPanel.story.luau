@@ -49,6 +49,7 @@ return UILabs.CreateReactStory({
 		newJobs = true,
 		onJobs = noop,
 		onInventory = noop,
+		onShop = noop,
 		onGuide = noop,
 		onSettings = noop,
 		onGift = noop,
