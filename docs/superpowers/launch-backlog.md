@@ -104,6 +104,16 @@ From the owner's stage 4 play-check (2026-10-24):
   - possibly outdoor creatures or monsters (gameplay or just set dressing: to decide);
   - outdoor footstep surface sounds (asphalt, grass, gravel, puddles) layered on the employee's footsteps, so walking
     outside doesn't sound like the office carpet.
+- **Mr. Harlow (the Manager), from the owner's play (2026-10-24):**
+  - **Wide turns get him stuck:** he sometimes swings wide round a corner or doorway and snags on walls and furniture.
+    Look at his turn rate and path-following in the NPC mover (tighter turns at waypoints, and an unstick step).
+  - **Chases start through walls and closed doors:** the chase can begin when he clearly has no line of sight (the
+    player is behind a wall, or behind a door he is not looking through). Check his sight test: a ray that ignores
+    walls or doors, a view range or cone that is too generous, or a sense that starts a chase without a sight check.
+  - **Chases start from sound alone:** vacuuming in another room while he is out of sight can trigger the full chase
+    VFX, screen effects and music. Noise should draw him to *investigate* the spot, not start a chase until he
+    actually sees the player. Check what the Noise feature feeds into his state, and whether the chase effects key off
+    "hunting" rather than "chasing".
 - ~~**Truck departure sometimes never arrives**~~ **Not a game bug (2026-10-24):** it came from the Studio probe, not
   the game. The probe called `departNow` from an injected Script and destroyed that Script at once. `depart` hands the
   arrival to `task.defer`, and the deferred thread belongs to the calling Script, so destroying it killed the arrival.
