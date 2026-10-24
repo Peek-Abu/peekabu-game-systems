@@ -431,6 +431,29 @@ return table.freeze({
 	-- The office's lights (OfficeLightingUtils / OfficeShellVisualSystem): LIGHTING is the per-room-type recipe.
 	LIGHTING = table.freeze(LIGHTING),
 	ACCENT_LIGHTS = table.freeze(ACCENT_LIGHTS),
+	-- Per-run variation (OfficeVariationRules): the chance each dressing prop (by art key) and desk-top item is kept.
+	-- An art key not listed is always kept.
+	PROP_CHANCE = table.freeze({
+		deskPlant = 0.6,
+		planter = 0.75,
+		rug = 0.7,
+		artFrame = 0.8,
+		copier = 0.85,
+		sofa = 0.85,
+		vending = 0.8,
+		waterCooler = 0.8,
+		clock = 0.7,
+		corkboard = 0.8,
+		floorLamp = 0.75,
+	}),
+	DESK_CLUTTER_CHANCE = table.freeze({
+		mug = 0.7,
+		stationeryCup = 0.6,
+		folder = 0.5,
+		paperTray = 0.5,
+		paperStack = 0.5,
+		bookStack = 0.4,
+	}),
 	-- Troffer panel glow and the warm fill light colours (from the spike).
 	PANEL_COLOR = Color3.fromRGB(255, 240, 220),
 	FILL_COLOR = Color3.fromRGB(255, 232, 205),
