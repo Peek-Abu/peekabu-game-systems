@@ -127,7 +127,7 @@ local function CharacterPortrait(props: CharacterPortraitProps): React.ReactNode
 	local light = PortraitViewModel.lighting(props.tone or "light")
 	local corner = if props.round == true then e("UICorner", { CornerRadius = UDim.new(0.5, 0) }) else nil
 	local fallbackImage = props.fallback
-		or PortraitViewModel.fallback(props.userId or 0, if type(employee) == "string" then employee else nil)
+		or PortraitViewModel.fallback(if type(employee) == "string" then employee else nil, nil)
 	return e("Frame", {
 		Size = props.size,
 		Position = props.position,

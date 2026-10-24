@@ -14,6 +14,11 @@ return function()
 			expect(table.find(EmployeeServiceServer.dependencies, "RankServiceServer")).to.be.ok()
 		end)
 
+		it("depends on Death (it builds every join and respawn) and Cosmetic (the loadout it builds from)", function()
+			expect(table.find(EmployeeServiceServer.dependencies, "DeathServiceServer")).to.be.ok()
+			expect(table.find(EmployeeServiceServer.dependencies, "CosmeticServiceServer")).to.be.ok()
+		end)
+
 		it("exposes the lifecycle and a debugger snapshot", function()
 			expect(EmployeeServiceServer.init).to.be.a("function")
 			expect(EmployeeServiceServer.start).to.be.a("function")

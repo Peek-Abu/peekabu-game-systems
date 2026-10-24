@@ -17,7 +17,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local EmployeeShared = ReplicatedStorage.Shared.Features.Employee
 local EmployeeRegistry = require(EmployeeShared.Data.EmployeeRegistry)
-local EmployeeSkinRegistry = require(EmployeeShared.Data.EmployeeSkinRegistry)
 local EmployeeSkinRules = require(EmployeeShared.Rules.EmployeeSkinRules)
 local EmployeePoseFormulas = require(EmployeeShared.Utils.EmployeePoseFormulas)
 
@@ -105,16 +104,16 @@ function PortraitViewModel.lighting(tone: Tone): Lighting
 	return LIGHTING[tone]
 end
 
--- The ID-card headshot of `userId`'s skin of `employee` (nil or unknown = the default employee); "" when even the
--- default employee is missing.
-function PortraitViewModel.fallback(userId: number, employee: string?): string
+-- The ID-card headshot of `employee`'s `skin` (an EmployeeRegistry skin key; nil or unknown = its default look; an
+-- unknown employee = the default employee); "" when even the default employee is missing.
+function PortraitViewModel.fallback(employee: string?, skin: string?): string
 	local def = (if employee ~= nil then EmployeeRegistry.get(employee) else nil)
 		or EmployeeRegistry.get(EmployeeRegistry.DEFAULT)
 	if def == nil then
 		return ""
 	end
-	local skin = EmployeeSkinRules.select(def, EmployeeSkinRegistry.skinFor(userId))
-	return if skin ~= nil then EmployeeSkinRules.portrait(def, skin) else def.portrait
+	local worn = EmployeeSkinRules.select(def, skin)
+	return if worn ~= nil then EmployeeSkinRules.portrait(def, worn) else def.portrait
 end
 
 return PortraitViewModel

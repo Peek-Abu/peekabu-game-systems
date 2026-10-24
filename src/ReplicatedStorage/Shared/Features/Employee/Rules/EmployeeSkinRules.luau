@@ -20,7 +20,7 @@ local EmployeeSkinRules = {}
 --[=[
 	The player's skin when the employee has it, else the employee's default skin; nil only when the
 	default skin itself is missing.
-	@param wanted The player's skin name (EmployeeSkinRegistry.skinFor), nil for none.
+	@param wanted The skin key the player wears (their loadout's skin id after the dot), nil for none.
 ]=]
 function EmployeeSkinRules.select(def: SkinSet, wanted: string?): EmployeeRegistry.SkinDef?
 	if wanted ~= nil then

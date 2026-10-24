@@ -151,7 +151,7 @@ local EMPLOYEES: { [string]: EmployeeDef } = {
 				-- CC ID Portrait Pippa Default v1 (decal 110853442477171).
 				portrait = "rbxassetid://114200006283845",
 			},
-			-- The owner's personal skin (see EmployeeSkinRegistry): lavender fur and round tortoiseshell glasses
+			-- The owner's personal skin (Cosmetic item Pippa.OwnerSpecial, a gift): lavender fur and round tortoiseshell glasses
 			-- (characters/pippa/skins/owner-lavender). Pippa's own faces.
 			OwnerSpecial = {
 				name = "OwnerSpecial",

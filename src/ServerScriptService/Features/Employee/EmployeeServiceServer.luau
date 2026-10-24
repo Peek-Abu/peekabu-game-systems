@@ -5,9 +5,15 @@
 	anyone whose character loaded before that (a player who joined during boot), then runs the expression
 	pass (EmployeeExpressionSystem) every EXPRESSION_INTERVAL from the Manager's mind (Occupant) and each
 	player's activity (Vacuum, Carry, Cargo pockets) and condition (dead or ragdolled: Death). Every employee character that spawns is dressed in
-	its player's skin (EmployeeSkinSystem; who wears what is EmployeeSkinRegistry, MVP only), then in the company
+	its player's skin (EmployeeSkinSystem; who wears what is the player's Cosmetic loadout), then in the company
 	uniform over it (EmployeeGearSystem: the employee's `uniform`), whose lanyard and ID card show the player's name and
 	rank, repainted whenever Rank publishes a new rank for them.
+
+	Each player plays as their own employee (character systems step 2): Death calls `spawnFor` for every join and
+	respawn (setCharacterLoader), which builds the character from the loadout (EmployeeCharacterSystem); the
+	StarterCharacter stays installed only as the engine's fallback. When the loadout changes in the depot
+	(CosmeticServiceServer.changed) and the player wears a different employee or skin than it names, the character is
+	rebuilt where it stands (KeepPlace) and marked for the clients' goo puff (EmployeeConstants.SWAP_ATTRIBUTE).
 
 	@class EmployeeServiceServer
 ]=]
@@ -23,13 +29,15 @@ local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local DeathConstants = require(ReplicatedStorage.Shared.Features.Death.Data.DeathConstants)
 local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
 local EmployeeRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeRegistry)
-local EmployeeSkinRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeSkinRegistry)
 local EmployeeFaceRules = require(ReplicatedStorage.Shared.Features.Employee.Rules.EmployeeFaceRules)
 local EmployeeSkinRules = require(ReplicatedStorage.Shared.Features.Employee.Rules.EmployeeSkinRules)
 local RankFormulas = require(ReplicatedStorage.Shared.Features.Rank.Utils.RankFormulas)
 local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
 local OccupantServiceServer = require(ServerScriptService.Features.Occupant.OccupantServiceServer)
+local CosmeticServiceServer = require(ServerScriptService.Features.Cosmetic.CosmeticServiceServer)
+local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
+local EmployeeCharacterSystem = require(ServerScriptService.Features.Employee.Systems.EmployeeCharacterSystem)
 local EmployeeExpressionSystem = require(ServerScriptService.Features.Employee.Systems.EmployeeExpressionSystem)
 local EmployeeGearSystem = require(ServerScriptService.Features.Employee.Systems.EmployeeGearSystem)
 local EmployeeSkinSystem = require(ServerScriptService.Features.Employee.Systems.EmployeeSkinSystem)
@@ -50,6 +58,11 @@ local photoOf: { [number]: string } = {}
 -- Characters given a uniform piece.
 local uniformed = 0
 local connections: { RBXScriptConnection } = {}
+-- What each player's current character was built as (employee and skin key), to tell whether a loadout change
+-- needs a new character.
+local worn: { [number]: { employee: string, skin: string } } = {}
+local swapped = 0
+local cosmeticConnection: SignalTyped.Connection? = nil
 -- Each player's CharacterAdded watch, disconnected when they leave (one per join otherwise piles up).
 local spawnWatches: { [Player]: RBXScriptConnection } = {}
 local rankConnection: SignalTyped.Connection? = nil
@@ -117,6 +130,17 @@ local function badgeOf(player: Player, photo: string): EmployeeGearSystem.Badge
 	}
 end
 
+-- The skin key (EmployeeRegistry `skins`) the player's loadout puts on `employee`: the Cosmetic skin id after the
+-- dot (Pippa.OwnerSpecial -> OwnerSpecial); nil before the loadout loads. A skin without art yet falls back to the
+-- Default (EmployeeSkinRules.select).
+local function skinKeyOf(userId: number, employee: string): string?
+	local look = CosmeticServiceServer:lookOf(userId, employee)
+	if look == nil then
+		return nil
+	end
+	return string.match(look.skin, "^[^%.]+%.(.+)$")
+end
+
 -- Dresses a spawned employee character in its player's skin, then the uniform over it (server-side, so it
 -- replicates). The skin goes first: its palette is for the body's MeshParts, never the uniform's.
 local function dress(player: Player, character: Model)
@@ -125,12 +149,13 @@ local function dress(player: Player, character: Model)
 	if def == nil then
 		return
 	end
-	local skin = EmployeeSkinRules.select(def, EmployeeSkinRegistry.skinFor(player.UserId))
+	local skin = EmployeeSkinRules.select(def, skinKeyOf(player.UserId, def.name))
 	if skin == nil then
 		log:warn(`{def.name} has no default skin {def.defaultSkin}`)
 		return
 	end
 	skinOf[player.UserId] = skin.name
+	worn[player.UserId] = { employee = def.name, skin = skin.name }
 	local result = EmployeeSkinSystem.apply(character, skin, accessorySource())
 	if result.textured > 0 or result.facesSwapped or result.accessories > 0 then
 		skinned += 1
@@ -141,6 +166,75 @@ local function dress(player: Player, character: Model)
 		photoOf[player.UserId] = photo
 		EmployeeGearSystem.badge(character, badgeOf(player, photo))
 	end
+end
+
+-- The employee the player should be and its built character (falling back to the default employee when this place
+-- has no art for theirs); nil when even that is missing.
+local function buildFor(player: Player): Model?
+	local wanted = CosmeticServiceServer:currentEmployee(player.UserId)
+	local scripts = StarterPlayer:FindFirstChild("StarterCharacterScripts") or Instance.new("Folder")
+	for _, name in { wanted, EmployeeRegistry.DEFAULT } do
+		local def = EmployeeRegistry.get(name)
+		if def ~= nil then
+			local model = EmployeeCharacterSystem.build(def, ReplicatedStorage, scripts)
+			if model ~= nil then
+				return model
+			end
+			log:warn(`no art for employee {name} in this place; trying the default`)
+		end
+	end
+	return nil
+end
+
+--[=[
+	Death's character loader: every join and respawn. Waits (up to LOADOUT_WAIT) for the saved loadout so the first
+	spawn is already the right employee, then builds and assigns it at Death's spawn point. Falls back to the engine
+	(the StarterCharacter) when nothing can be built.
+]=]
+local function spawnFor(player: Player)
+	local waited = 0
+	while CosmeticServiceServer:getLoadout(player.UserId) == nil and waited < EmployeeConstants.LOADOUT_WAIT do
+		waited += task.wait(0.1)
+	end
+	if player.Parent == nil then
+		return
+	end
+	local model = buildFor(player)
+	if model == nil then
+		player:LoadCharacterAsync()
+		return
+	end
+	EmployeeCharacterSystem.assign(player, model, nil, false)
+end
+
+-- Rebuilds the player's character where it stands when their loadout names another employee or skin than they wear.
+local function swapIfChanged(userId: number)
+	local player = Players:GetPlayerByUserId(userId)
+	local character = if player ~= nil then player.Character else nil
+	if player == nil or character == nil or character.Parent == nil or CosmeticServiceServer:isLocked() then
+		return
+	end
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if humanoid == nil or humanoid.Health <= 0 or character:GetAttribute(DeathConstants.KNOCKDOWN_ATTRIBUTE) ~= nil then
+		return
+	end
+	local employee = CosmeticServiceServer:currentEmployee(userId)
+	local def = EmployeeRegistry.get(employee)
+	local current = worn[userId]
+	if def == nil or current == nil then
+		return
+	end
+	local wantedSkin = EmployeeSkinRules.select(def, skinKeyOf(userId, employee))
+	if current.employee == employee and wantedSkin ~= nil and current.skin == wantedSkin.name then
+		return
+	end
+	local model = buildFor(player)
+	if model == nil then
+		return
+	end
+	model:SetAttribute(EmployeeConstants.SWAP_ATTRIBUTE, true)
+	swapped += 1
+	EmployeeCharacterSystem.assign(player, model, character:GetPivot(), true)
 end
 
 local function watchSpawns(player: Player)
@@ -171,6 +265,8 @@ local EmployeeServiceServer: EmployeeServiceServer = {
 		"CarryServiceServer",
 		"CargoServiceServer",
 		"RankServiceServer",
+		"DeathServiceServer",
+		"CosmeticServiceServer",
 	},
 
 	init = function(_self)
@@ -185,6 +281,8 @@ local EmployeeServiceServer: EmployeeServiceServer = {
 		if not installed then
 			log:warn(`players keep their avatars: {installError}`)
 		end
+		-- Before Death starts loading joining players: every join and respawn builds the player's own employee.
+		DeathServiceServer:setCharacterLoader(spawnFor)
 	end,
 
 	start = function(_self)
@@ -194,9 +292,7 @@ local EmployeeServiceServer: EmployeeServiceServer = {
 				local character = player.Character
 				if character ~= nil and character:GetAttribute(EmployeeConstants.NAME_ATTRIBUTE) == nil then
 					respawned += 1
-					task.spawn(function()
-						player:LoadCharacterAsync()
-					end)
+					task.spawn(spawnFor, player)
 				end
 			end
 		end
@@ -213,6 +309,7 @@ local EmployeeServiceServer: EmployeeServiceServer = {
 				EmployeeGearSystem.badge(character, badgeOf(player, photo))
 			end
 		end)
+		cosmeticConnection = CosmeticServiceServer.changed:Connect(swapIfChanged)
 		local elapsed = 0
 		table.insert(
 			connections,
@@ -236,6 +333,7 @@ local EmployeeServiceServer: EmployeeServiceServer = {
 				expressions.forget(player.UserId)
 				skinOf[player.UserId] = nil
 				photoOf[player.UserId] = nil
+				worn[player.UserId] = nil
 			end)
 		)
 	end,
@@ -253,6 +351,11 @@ local EmployeeServiceServer: EmployeeServiceServer = {
 			rankConnection:Disconnect()
 			rankConnection = nil
 		end
+		if cosmeticConnection ~= nil then
+			cosmeticConnection:Disconnect()
+			cosmeticConnection = nil
+		end
+		DeathServiceServer:setCharacterLoader(nil)
 	end,
 
 	getState = function(_self)
@@ -261,6 +364,8 @@ local EmployeeServiceServer: EmployeeServiceServer = {
 			installed = installed,
 			installError = installError,
 			respawned = respawned,
+			swapped = swapped,
+			worn = worn,
 			skinned = skinned,
 			uniformed = uniformed,
 			skins = skinOf,
