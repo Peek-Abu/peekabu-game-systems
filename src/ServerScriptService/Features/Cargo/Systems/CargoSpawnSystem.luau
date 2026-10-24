@@ -24,6 +24,7 @@ local Workspace = game:GetService("Workspace")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local ArtVisualSystem = require(ServerScriptService.Features.Art.Systems.ArtVisualSystem)
+local ArtKitRegistry = require(ReplicatedStorage.Shared.Features.Art.Data.ArtKitRegistry)
 
 local CargoShared = ReplicatedStorage.Shared.Features.Cargo
 local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
@@ -211,7 +212,13 @@ function CargoSpawnSystem.new(visuals: ArtVisualSystem.Controller?): CargoSpawnS
 			end
 			part.Parent = parent
 			local kitId = if options ~= nil then options.artKit else nil
-			art.attach(part, "cargo", kind, kitId, hidden)
+			-- A map's kit may hold no cargo art (the office's odd-hours-b1 has building and furniture only): then
+			-- the item takes the default kit's, as office furniture does (OfficeArtKeyUtils.attachFirst).
+			local visual = art.attach(part, "cargo", kind, kitId, hidden)
+			local usedKit = kitId or art.resolveKit(part)
+			if visual == nil and usedKit ~= ArtKitRegistry.DEFAULT_KIT then
+				art.attach(part, "cargo", kind, ArtKitRegistry.DEFAULT_KIT, hidden)
+			end
 			-- Last: Carry reads the kind, and Interaction the enabled flag, when the tag lands.
 			CollectionService:AddTag(part, CarryConstants.TAG)
 			return part

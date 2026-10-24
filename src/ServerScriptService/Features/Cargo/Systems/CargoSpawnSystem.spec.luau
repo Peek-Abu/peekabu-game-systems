@@ -94,6 +94,28 @@ return function()
 				expect(other:FindFirstChild("ArtVisual"):GetAttribute("ArtKitId")).to.equal("test-map-b")
 			end
 		end)
+		it("falls back to the default kit when the map's kit has no cargo art", function()
+			-- The office's kit (odd-hours-b1) holds building and furniture only; cargo art lives in the default kit.
+			local DefaultKit = require(ReplicatedStorage.Shared.Features.Art.Data.ArtKitRegistry).DEFAULT_KIT
+			kit(DefaultKit)
+			local mapKit = Instance.new("Folder")
+			mapKit.Name = "test-map-no-cargo"
+			mapKit.Parent = assets
+			parent:SetAttribute("ArtKitId", "test-map-no-cargo")
+			local spawn = Spawn.new(art)
+			for _, id in Registry.ids() do
+				local item = spawn:spawn(id, CFrame.new(), parent)
+				local visual = item:FindFirstChild("ArtVisual")
+				expect(visual ~= nil).to.equal(true)
+				expect(visual:GetAttribute("ArtKitId")).to.equal(DefaultKit)
+				expect(item.Transparency).to.equal(1)
+				local buried = spawn:spawn(id, CFrame.new(), parent, { hidden = true })
+				expect(buried:FindFirstChild("ArtVisual") ~= nil).to.equal(true)
+				spawn:reveal(buried)
+				expect(buried.Transparency).to.equal(1)
+			end
+		end)
+
 		it("reveals the approved visual while its authoritative proxy remains invisible and welded", function()
 			kit("test-map-a")
 			parent:SetAttribute("ArtKitId", "test-map-a")
