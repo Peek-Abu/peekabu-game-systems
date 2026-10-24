@@ -45,6 +45,13 @@ event, later), `price`, `lore` (one line, kid reading level), `bundle` (ids it i
 move into the catalog. `EmployeeSkinRegistry` (the MVP owner list) is deleted; the owner's skin becomes a granted item.
 
 ### 2. Saved data: one account slice `cosmetics`
+
+> **As built in step 1 (2026-10-24), changes from the sketch below:** ownership is the existing account slice
+> `entitlements` (each CosmeticRegistry item registered under its kind; Marketplace purchases already grant through
+> `EntitlementServiceServer:grantOp`, so paying and unlocking stay one write), so there is no `owned` map. The new
+> account slice is named `loadout` (current, picked, looks with per-employee idle and emote wheel, stickers, seen).
+> Free defaults are never stored. No migration: existing players see the first-join pick once (Pippa preselected).
+> Plan: `docs/superpowers/plans/2026-10-24-character-step1-cosmetic-data.md`.
 ```
 owned   = { [itemId] = true }                 -- everything you own (employees, skins, emotes, ...)
 current = "Pippa"                             -- employee you play as
