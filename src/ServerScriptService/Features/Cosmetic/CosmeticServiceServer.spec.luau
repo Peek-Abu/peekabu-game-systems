@@ -81,6 +81,11 @@ return function()
 		local fired = 0
 		local connection
 
+		-- `changed` is a SignalPlus signal: handlers run deferred (next resumption point), so count after a yield.
+		local function settle()
+			task.wait()
+		end
+
 		local function seed(userId)
 			PlayerDataService:_setProfileForTesting(userId, makeFakeProfile(makeProfileData()))
 			seeded[userId] = true
@@ -98,6 +103,7 @@ return function()
 		end)
 
 		afterEach(function()
+			settle()
 			connection:Disconnect()
 			ShiftServiceServer.getShift = realGetShift
 			for userId in seeded do
@@ -124,10 +130,12 @@ return function()
 			for _, id in { "Cappy.PJ", "Cappy.CocoaSip", "SleepySway", "CozyPack", "CozyPack.Cocoa" } do
 				expect(CosmeticService:owns(1, id)).to.equal(true)
 			end
+			settle()
 			expect(fired).to.equal(1)
 			local ok, reason = CosmeticService:grant(1, "Cappy.PJ")
 			expect(ok).to.equal(false)
 			expect(reason).to.equal("already owned")
+			settle()
 			expect(fired).to.equal(1)
 		end)
 
@@ -135,6 +143,7 @@ return function()
 			seed(1)
 			CosmeticService:grant(1, "Cappy")
 			CosmeticService:grant(1, "Cappy.PJ")
+			settle()
 			fired = 0
 			expect(CosmeticService:equip(1, { kind = "employee", id = "Cappy" })).to.equal(true)
 			expect(CosmeticService:equip(1, { kind = "skin", id = "Cappy.PJ", style = 2 })).to.equal(true)
@@ -143,6 +152,7 @@ return function()
 			expect(look.skin).to.equal("Cappy.PJ")
 			expect(look.style).to.equal(2)
 			expect(CosmeticService:getLoadout(1).looks.Cappy.skin).to.equal("Cappy.PJ")
+			settle()
 			expect(fired).to.equal(2)
 		end)
 
@@ -166,6 +176,7 @@ return function()
 			expect(reason).to.equal("not owned")
 			local _, wrong = CosmeticService:equip(1, { kind = "idle", employee = "Cappy", id = "Pippa.Classic" })
 			expect(wrong).to.equal("wrong employee")
+			settle()
 			expect(fired).to.equal(0)
 		end)
 

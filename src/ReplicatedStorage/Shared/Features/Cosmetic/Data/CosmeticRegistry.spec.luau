@@ -76,9 +76,9 @@ return function()
 		end
 	end)
 
-	it("prices everything sold for Credits or Gleam, and keeps styles in range", function()
+	it("prices everything sold for Credits or Gleam (stickers are sold in their pack), and keeps styles in range", function()
 		for _, item in all do
-			if item.source == "credits" or item.source == "gleam" then
+			if item.kind ~= "sticker" and (item.source == "credits" or item.source == "gleam") then
 				expect(type(item.price) == "number" and item.price > 0).to.equal(true)
 			end
 			if item.styles ~= nil then
