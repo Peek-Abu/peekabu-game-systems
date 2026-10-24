@@ -6,7 +6,7 @@
 	- `damage(humanoid, amount, source)` records who hit (DeathCreditTracker) and applies the damage;
 	  `kill(humanoid, cause)` kills outright. A death is credited to the last source in `creditWindow`.
 	- Characters get `BreakJointsOnDeath = false` and ragdoll on death (Motor6Ds → limited
-	  BallSocketConstraints). NPCs opt in through `track(model)`.
+	  BallSocketConstraints; the body's parts never collide with each other). NPCs opt in through `track(model)`.
 	- A player's death sets the public `dead` field (cleared on the next spawn), ends their granted
 	  animations (`AnimationServiceServer:stopAll`) and fires `died`; every tracked death fires
 	  `humanoidDied`.
@@ -113,9 +113,20 @@ local function ragdollModel(model: Model): boolean
 			end
 		end
 	end
-	-- Limbs collide so the body lies on the floor; the root follows the torso without colliding.
+	-- Limbs collide with the world so the body lies on the floor, but never with each other: they overlap
+	-- at the joints, and a ball socket (unlike the Motor6D it replaced) lets its two parts collide, so the
+	-- body would fight itself and never settle. The root follows the torso without colliding.
+	local bodyParts: { BasePart } = {}
 	for part in jointParts do
 		part.CanCollide = part.Name ~= "HumanoidRootPart"
+		table.insert(bodyParts, part)
+	end
+	for _, pair in DeathRagdollUtils.selfCollisionPairs(bodyParts) do
+		local noCollision = Instance.new("NoCollisionConstraint")
+		noCollision.Name = DeathConstants.RAGDOLL_NAME
+		noCollision.Part0 = pair[1]
+		noCollision.Part1 = pair[2]
+		noCollision.Parent = pair[1]
 	end
 	local root = model:FindFirstChild("HumanoidRootPart")
 	if root ~= nil and root:IsA("BasePart") then
