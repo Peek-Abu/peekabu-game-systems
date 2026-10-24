@@ -72,14 +72,17 @@ local function card(props: InventoryCrewPanelProps, entry: VM.CrewCard, order: n
 			fit = true,
 			zIndex = 3,
 		}),
-		ability = e(ToonPill, {
-			text = entry.ability,
-			hue = "night",
-			textSize = props.layout.textSize - 2,
-			position = UDim2.fromOffset(14, artHeight + props.layout.headingSize + props.layout.textSize + 24),
-			size = UDim2.fromOffset(math.min(w - 28, if phone then 130 else 200), props.layout.textSize + 16),
-			zIndex = 3,
-		}),
+		-- The phone card has no room for the ability chip between the line and the buttons.
+		ability = if phone
+			then nil
+			else e(ToonPill, {
+				text = entry.ability,
+				hue = "night",
+				textSize = props.layout.textSize - 2,
+				position = UDim2.fromOffset(14, artHeight + props.layout.headingSize + props.layout.textSize + 24),
+				size = UDim2.fromOffset(math.min(w - 28, if phone then 130 else 200), props.layout.textSize + 16),
+				zIndex = 3,
+			}),
 	}
 	local buttonY = h - buttonHeight - 22
 	local half = math.floor((w - 28 - 8) / 2)
@@ -195,10 +198,15 @@ end
 
 local function InventoryCrewPanel(props: InventoryCrewPanelProps): React.ReactNode
 	local layout = props.layout
+	-- Centred when the cards fit; from the left (scrolling) when they do not, so none is cut on both sides.
+	local count = #props.cards + 1
+	local total = count * layout.crewCard.X + (count - 1) * (layout.gap + 8) + 24
 	local rows: { [string]: React.ReactNode } = {
 		list = e("UIListLayout", {
 			FillDirection = Enum.FillDirection.Horizontal,
-			HorizontalAlignment = Enum.HorizontalAlignment.Center,
+			HorizontalAlignment = if total <= layout.content.width
+				then Enum.HorizontalAlignment.Center
+				else Enum.HorizontalAlignment.Left,
 			VerticalAlignment = Enum.VerticalAlignment.Center,
 			Padding = UDim.new(0, layout.gap + 8),
 			SortOrder = Enum.SortOrder.LayoutOrder,

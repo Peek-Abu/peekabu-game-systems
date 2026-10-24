@@ -112,8 +112,10 @@ local function ToonSourceBand(props: ToonSourceBandProps): React.ReactNode
 			label = e(ToonText, {
 				text = props.text,
 				textSize = textSize,
-				size = UDim2.fromOffset(0, props.height),
-				automaticWidth = true,
+				-- Fills what the icon leaves and shrinks to fit (a long "Gleam Locker" on a phone card).
+				size = UDim2.new(1, -(if icon ~= nil then iconSize + 4 else 0) - 12, 1, 0),
+				align = "center",
+				fit = true,
 				zIndex = props.zIndex,
 				layoutOrder = 2,
 			}),

@@ -376,7 +376,7 @@ function VM.layout(virtual: Vector2, phone: boolean): Layout
 		heroWidth = heroWidth,
 		detailWidth = width - gridWidth - heroWidth - 2 * gap,
 		cell = Vector2.new(cellWidth, math.floor(cellWidth * 1.3)),
-		textSize = if phone then 14 else 20,
+		textSize = if phone then 14 else 22,
 		headingSize = if phone then 24 else 40,
 	}
 end

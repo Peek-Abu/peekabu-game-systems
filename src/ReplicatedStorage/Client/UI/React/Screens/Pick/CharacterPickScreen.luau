@@ -51,7 +51,12 @@ local function shadeOf(color: { body: Color3, light: Color3, dark: Color3 }): UI
 	return { base = color.body, hi = color.light, lo = color.dark }
 end
 
-local function aboutCard(employee: string, layout: InventoryViewModel.Layout, width: number): React.ReactNode
+local function aboutCard(
+	employee: string,
+	layout: InventoryViewModel.Layout,
+	width: number,
+	height: number
+): React.ReactNode
 	local profile = EmployeeProfileRegistry.get(employee)
 	if profile == nil then
 		return nil
@@ -82,7 +87,13 @@ local function aboutCard(employee: string, layout: InventoryViewModel.Layout, wi
 		alignY = "top",
 	})
 	y += size * 3 + 6
-	local row = if phone then 22 else 36
+	-- The stats fill the room between the bio and the ability card (pinned to the foot).
+	local abilityHeight = size * 3 + (if phone then 30 else 44)
+	local row = math.clamp(
+		math.floor((height - y - abilityHeight - 24) / 5),
+		if phone then 18 else 30,
+		if phone then 30 else 56
+	)
 	local barX = if phone then 100 else 170
 	for index, stat in InventoryViewModel.stats(employee) do
 		local rowY = y + (index - 1) * row
@@ -115,6 +126,7 @@ local function aboutCard(employee: string, layout: InventoryViewModel.Layout, wi
 		end
 	end
 	y += 5 * row + 8
+	y = math.max(y, height - abilityHeight - 16 - DEPTH.drop)
 	local ability = profile.ability
 	local abilityFace: { [string]: React.ReactNode } = {
 		name = e(ToonText, {
@@ -125,7 +137,8 @@ local function aboutCard(employee: string, layout: InventoryViewModel.Layout, wi
 			fit = true,
 		}),
 		line = e(ToonText, {
-			text = ability.detail,
+			-- The phone card has room for the one-liner only.
+			text = if phone then ability.line else ability.detail,
 			font = "body",
 			color = COLOR.white,
 			textSize = size - 2,
@@ -149,7 +162,7 @@ local function aboutCard(employee: string, layout: InventoryViewModel.Layout, wi
 		radius = 18,
 		small = true,
 		position = UDim2.fromOffset(14, y),
-		size = UDim2.new(1, -28, 1, -y - 16),
+		size = UDim2.new(1, -28, 0, abilityHeight),
 		children = abilityFace,
 	})
 	return e(ToonSurface, {
@@ -178,8 +191,8 @@ local function CharacterPickScreen(props: CharacterPickScreenProps): React.React
 	local layout = InventoryViewModel.layout(virtual, phone)
 	local content = layout.content
 	local gap = layout.gap
-	local listWidth = math.floor(content.width * (if phone then 0.2 else 0.18))
-	local heroWidth = math.floor(content.width * 0.4)
+	local listWidth = math.floor(content.width * (if phone then 0.25 else 0.18))
+	local heroWidth = math.floor(content.width * (if phone then 0.35 else 0.4))
 	local aboutWidth = content.width - listWidth - heroWidth - 2 * gap
 	local startHeight = if phone then 52 else 84
 
@@ -226,8 +239,9 @@ local function CharacterPickScreen(props: CharacterPickScreenProps): React.React
 			lock = if card.locked
 				then e(ToonIcon, {
 					icon = "lockNight",
-					anchor = Vector2.new(1, 0),
-					position = UDim2.new(1, -6, 0, 6),
+					-- On the head's corner, clear of the name.
+					anchor = Vector2.new(1, 1),
+					position = UDim2.fromOffset(cardHeight - 4, cardHeight - 12),
 					size = UDim2.fromOffset(if phone then 22 else 36, if phone then 22 else 36),
 					drop = 2,
 				})
@@ -287,8 +301,8 @@ local function CharacterPickScreen(props: CharacterPickScreenProps): React.React
 		}),
 		platform = e("Frame", {
 			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromScale(0.5, 0.86),
-			Size = UDim2.fromScale(0.75, 0.08),
+			Position = UDim2.fromScale(0.5, 0.84),
+			Size = UDim2.fromScale(0.7, 0.06),
 			BackgroundColor3 = tint.dark,
 			BorderSizePixel = 0,
 			ZIndex = 2,
@@ -362,7 +376,7 @@ local function CharacterPickScreen(props: CharacterPickScreenProps): React.React
 						Position = UDim2.fromOffset(listWidth + heroWidth + 2 * gap, 0),
 						Size = UDim2.new(0, aboutWidth, 1, -startHeight - gap),
 						BackgroundTransparency = 1,
-					}, { card = aboutCard(selected, layout, aboutWidth) }),
+					}, { card = aboutCard(selected, layout, aboutWidth, content.height - startHeight - gap) }),
 					start = e(ToonButton, {
 						variant = "primary",
 						text = start.text,

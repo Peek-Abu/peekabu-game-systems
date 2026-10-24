@@ -51,8 +51,9 @@ export type InventoryScreenProps = {
 	preview: Preview?,
 	viewport: Vector2?,
 	phone: boolean?,
-	-- Open on this employee's page (the story).
+	-- Open on this employee's page, on this page tab (the story).
 	employee: string?,
+	tab: string?,
 }
 
 local function InventoryScreen(props: InventoryScreenProps): React.ReactNode
@@ -65,7 +66,7 @@ local function InventoryScreen(props: InventoryScreenProps): React.ReactNode
 	local page, setPage = React.useState(function(): string?
 		return props.employee
 	end)
-	local tab, setTab = React.useState("skins")
+	local tab, setTab = React.useState(props.tab or "skins")
 	local selected, setSelected = React.useState(function(): string?
 		return nil
 	end)
@@ -106,7 +107,7 @@ local function InventoryScreen(props: InventoryScreenProps): React.ReactNode
 			fit = true,
 		}),
 	}
-	local tabWidth = if phone then 96 else 150
+	local tabWidth = if phone then 100 else 170
 	local tabsX = layout.titleX + (if phone then 180 else 320)
 	for index, entry in VM.tabs() do
 		local current = entry.id == "crew"
@@ -117,8 +118,12 @@ local function InventoryScreen(props: InventoryScreenProps): React.ReactNode
 			textSize = barTextSize,
 			disabled = entry.soon,
 			selected = current,
+			-- The last tab carries the Soon badge and the longest word: it is drawn wider.
 			position = UDim2.fromOffset(tabsX + (index - 1) * (tabWidth + 12), 6),
-			size = UDim2.fromOffset(tabWidth, layout.barHeight - 12),
+			size = UDim2.fromOffset(
+				if entry.soon then tabWidth + (if phone then 30 else 50) else tabWidth,
+				layout.barHeight - 12
+			),
 			onActivated = function()
 				if entry.id == "crew" then
 					setPage(nil)

@@ -348,6 +348,7 @@ local function about(props: InventoryCharacterPanelProps): (React.ReactNode, Rea
 			text = word,
 			hue = "lilac",
 			textSize = size - 2,
+			padX = 6,
 			position = UDim2.fromOffset(18 + (index - 1) * math.floor(leftWidth / 3), y),
 			size = UDim2.fromOffset(math.floor(leftWidth / 3) - 8, size + 16),
 		})
@@ -358,17 +359,20 @@ local function about(props: InventoryCharacterPanelProps): (React.ReactNode, Rea
 	left.factTitle = text("Fun fact", size, 18, y, leftWidth)
 	y += size + 8
 	left.fact = text(profile.funFact, size, 18, y, leftWidth, true)
-	left.everyone = e(ToonText, {
-		text = "Every employee can finish every job, even alone.",
-		font = "body",
-		color = UIToonConstants.shade("grape").lo,
-		textSize = size - 2,
-		anchor = Vector2.new(0, 1),
-		position = UDim2.new(0, 18, 1, -(if phone then 16 else 24)),
-		size = UDim2.new(1, -36, 0, size * 2 + 4),
-		wrapped = true,
-		fit = true,
-	})
+	-- The footer line needs room the phone card does not have.
+	left.everyone = if phone
+		then nil
+		else e(ToonText, {
+			text = "Every employee can finish every job, even alone.",
+			font = "body",
+			color = UIToonConstants.shade("grape").lo,
+			textSize = size - 2,
+			anchor = Vector2.new(0, 1),
+			position = UDim2.new(0, 18, 1, -(if phone then 16 else 24)),
+			size = UDim2.new(1, -36, 0, size * 2 + 4),
+			wrapped = true,
+			fit = true,
+		})
 
 	local rightWidth = layout.detailWidth - 36
 	local right: { [string]: React.ReactNode } = {
@@ -412,7 +416,8 @@ local function about(props: InventoryCharacterPanelProps): (React.ReactNode, Rea
 	local ability = profile.ability
 	local abilityFace: { [string]: React.ReactNode } = {
 		name = text(ability.name, size + 4, 14, 8, rightWidth - 28),
-		line = text(ability.detail, size - 2, 14, size + 16, rightWidth - 28, true),
+		-- The phone card has room for the one-liner only.
+		line = text(if phone then ability.line else ability.detail, size - 2, 14, size + 16, rightWidth - 28, true),
 		cooldown = e(ToonPill, {
 			text = `Every {ability.cooldown}s`,
 			hue = "night",

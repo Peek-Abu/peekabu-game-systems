@@ -8,7 +8,8 @@
 	- `live = true` (the hero): the model in a WorldModel with its idle loop playing. Past the live cap (two at once)
 	  it quietly shows the static copy instead.
 	The model is rebuilt only when the employee, skin, framing or live flag changes, and destroyed with the component.
-	`dim` darkens it (a locked item). Exempt (needs a renderer); story in ToonViewport.story.
+	`dim` darkens it (a locked item). With no art for the employee in the place it shows their ID-card photo
+	(PortraitViewModel.fallback). Exempt (needs a renderer); story in ToonViewport.story.
 
 	@class ToonViewport
 ]=]
@@ -65,6 +66,7 @@ end
 local function ToonViewport(props: ToonViewportProps): React.ReactNode
 	local noFrame: ViewportFrame? = nil
 	local frame, setFrame = React.useState(noFrame)
+	local shown, setShown = React.useState(true)
 
 	local deps: { unknown } = { frame, props.employee, props.skin or "", props.live == true, props.framing }
 	React.useEffect(function(): () -> ()
@@ -72,6 +74,7 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 			return function() end
 		end
 		local model, moving = build(props)
+		setShown(model ~= nil)
 		if model == nil then
 			return function() end
 		end
@@ -110,6 +113,7 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 	end, deps)
 
 	local light = PortraitViewModel.lighting(props.tone or "light")
+	local tint = if props.dim == true then DIM_COLOR else Color3.new(1, 1, 1)
 	return e("ViewportFrame", {
 		AnchorPoint = props.anchor,
 		Position = props.position,
@@ -118,10 +122,25 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 		Ambient = light.ambient,
 		LightColor = light.color,
 		LightDirection = light.direction,
-		ImageColor3 = if props.dim == true then DIM_COLOR else Color3.new(1, 1, 1),
+		ImageColor3 = tint,
 		ZIndex = props.zIndex,
 		LayoutOrder = props.layoutOrder,
 		ref = setFrame,
+	}, {
+		-- No art for this employee in the place yet: their ID-card photo instead.
+		photo = if shown
+			then nil
+			else e("ImageLabel", {
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.5),
+				Size = UDim2.fromScale(1, 1),
+				SizeConstraint = Enum.SizeConstraint.RelativeYY,
+				BackgroundTransparency = 1,
+				Image = PortraitViewModel.fallback(props.employee, props.skin),
+				ImageColor3 = tint,
+				ScaleType = Enum.ScaleType.Fit,
+				ZIndex = props.zIndex,
+			}),
 	})
 end
 
