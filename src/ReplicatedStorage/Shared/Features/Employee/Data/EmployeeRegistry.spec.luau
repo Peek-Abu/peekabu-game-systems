@@ -47,6 +47,30 @@ return function()
 			end
 		end)
 
+		it("registers Cappy and Prickles from their art in ReplicatedStorage.Assets, at Pippa's scale", function()
+			for _, name in { "Cappy", "Prickles" } do
+				local def = EmployeeRegistry.get(name)
+				expect(def).to.be.ok()
+				expect(table.concat(def.templatePath, ".")).to.equal("Assets.CleanupCrew.Characters." .. name)
+				expect(def.scale).to.equal(EmployeeRegistry.get("Pippa").scale)
+				expect(def.skins.Default).to.be.ok()
+				-- Multi-palette art (each garment has its own palette): the Default skin never repaints it.
+				expect(def.skins.Default.paletteTextureId).never.to.be.ok()
+			end
+		end)
+
+		it(
+			"routes footsteps: a set name or nil (Cappy and Prickles borrow Pippa's until they have their own)",
+			function()
+				for _, name in EmployeeRegistry.names() do
+					local set = EmployeeRegistry.get(name).footstepSet
+					expect(set == nil or (type(set) == "string" and set ~= "")).to.equal(true)
+				end
+				expect(EmployeeRegistry.get("Cappy").footstepSet).to.equal("pippa")
+				expect(EmployeeRegistry.get("Prickles").footstepSet).to.equal("pippa")
+			end
+		)
+
 		it("gives every employee a positive, sane scale", function()
 			for _, name in EmployeeRegistry.names() do
 				local def = EmployeeRegistry.get(name)
@@ -166,6 +190,18 @@ return function()
 					expect(locomotion.runMaxRate >= locomotion.minRate).to.equal(true)
 				end
 			end
+		end)
+
+		it("gives Cappy and Prickles their own clips and measured planted speeds", function()
+			local cappy = EmployeeRegistry.get("Cappy").locomotion
+			expect(cappy.walk).to.equal("cappywalk")
+			expect(cappy.crouchWalk).to.equal("cappycrouchwalk")
+			expect(cappy.walkPlantedSpeed).to.be.near(1.06, 1e-6)
+			expect(cappy.runPlantedSpeed).to.be.near(2.06, 1e-6)
+			local prickles = EmployeeRegistry.get("Prickles").locomotion
+			expect(prickles.idle).to.equal("pricklesidle")
+			expect(prickles.walkPlantedSpeed).to.be.near(1.03, 1e-6)
+			expect(prickles.runPlantedSpeed).to.be.near(1.93, 1e-6)
 		end)
 
 		it("gives Pippa her own idle, walk and run with their measured planted speeds", function()

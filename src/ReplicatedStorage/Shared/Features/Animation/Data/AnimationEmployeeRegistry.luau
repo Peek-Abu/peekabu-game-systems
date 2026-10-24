@@ -43,6 +43,22 @@ local AnimationEmployeeRegistry: AnimationDomain = table.freeze({
 	-- Pippa Crouch Walk v2: 1.33 s loop (1 cycle), feet planted at 1.3 st/s at 1x (root 0.27 below standing), the
 	-- same lean and idle arms with a small step counter-swing.
 	pippacrouchwalk = locomotion("rbxassetid://100643609508734"),
+
+	-- Cappy v1 clips (characters/cappy/anim, owner-approved, Icey Labs): loose and unbothered, hands in the hoodie.
+	-- Planted at 1x: walk 1.06, run 2.06, crouch walk 1.32 st/s.
+	cappyidle = locomotion("rbxassetid://124155807682224"),
+	cappywalk = locomotion("rbxassetid://105426576584816"),
+	cappyrun = locomotion("rbxassetid://87388143018692"),
+	cappycrouchidle = locomotion("rbxassetid://78456687803253"),
+	cappycrouchwalk = locomotion("rbxassetid://140157048070101"),
+
+	-- Prickles v1 clips (characters/prickles/anim, owner-approved, Icey Labs): short, stiff and sturdy, arms crossed
+	-- when he stops. Planted at 1x: walk 1.03, run 1.93, crouch walk 1.34 st/s.
+	pricklesidle = locomotion("rbxassetid://108680458550464"),
+	prickleswalk = locomotion("rbxassetid://137832099996706"),
+	pricklesrun = locomotion("rbxassetid://82235036410910"),
+	pricklescrouchidle = locomotion("rbxassetid://126115556970677"),
+	pricklescrouchwalk = locomotion("rbxassetid://112633928289035"),
 })
 
 return AnimationEmployeeRegistry

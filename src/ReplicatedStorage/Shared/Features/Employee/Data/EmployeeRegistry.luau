@@ -108,6 +108,8 @@ export type EmployeeDef = {
 	skins: { [string]: SkinDef },
 	-- "rbxassetid://<image id>" of the ID-card photo for a skin without its own (the default look's headshot).
 	portrait: string,
+	-- The FootstepAssets set its steps play (the client's FootstepSet attribute); nil = its own name in lower case.
+	footstepSet: string?,
 	defaultSkin: string,
 	-- Its own idle/walk/run; nil = the stock locomotion.
 	locomotion: LocomotionDef?,
@@ -194,8 +196,80 @@ local EMPLOYEES: { [string]: EmployeeDef } = {
 	},
 }
 
+-- The Default skin of an employee whose art is multi-palette (every garment its own palette image): it repaints nothing.
+local function plainDefault(): SkinDef
+	return { name = "Default", paletteTextureId = nil, facesFolder = nil, accessories = {}, portrait = nil }
+end
+
+-- Cappy and Prickles walk at Pippa's stride caps (the same base speeds); only the planted speeds are their own.
+local function locomotionOf(prefix: string, walk: number, run: number, crouchWalk: number): LocomotionDef
+	return {
+		idle = `{prefix}idle`,
+		walk = `{prefix}walk`,
+		run = `{prefix}run`,
+		crouchIdle = `{prefix}crouchidle`,
+		crouchWalk = `{prefix}crouchwalk`,
+		walkPlantedSpeed = walk,
+		runPlantedSpeed = run,
+		crouchWalkPlantedSpeed = crouchWalk,
+		minRate = 0.6,
+		walkMaxRate = 2.5,
+		runMaxRate = 2.2,
+		crouchWalkMaxRate = 4,
+	}
+end
+
+-- Pippa's ID-card photo: a PLACEHOLDER for Cappy and Prickles until their headshots are rendered and uploaded.
+local PLACEHOLDER_PORTRAIT = "rbxassetid://114200006283845"
+
+EMPLOYEES.Cappy = {
+	name = "Cappy",
+	-- Built in each place from characters/employees_build/cappy_v6_preview.luau (v6 body, the owner's hair).
+	templatePath = { "Assets", "CleanupCrew", "Characters", "Cappy" },
+	scale = 1.25,
+	faces = FACES,
+	defaultFace = "Content",
+	expressions = {
+		knockedOut = "Dazed",
+		threatened = "Worried",
+		cleaning = "Content",
+		carrying = "Content",
+		idle = "Content",
+	},
+	skins = { Default = plainDefault() },
+	defaultSkin = "Default",
+	portrait = PLACEHOLDER_PORTRAIT,
+	-- No rank lanyard fitted to his body yet.
+	uniform = {},
+	locomotion = locomotionOf("cappy", 1.06, 2.06, 1.32),
+	-- Borrows Pippa's steps until his own sneaker set is made.
+	footstepSet = "pippa",
+}
+
+EMPLOYEES.Prickles = {
+	name = "Prickles",
+	templatePath = { "Assets", "CleanupCrew", "Characters", "Prickles" },
+	scale = 1.25,
+	faces = FACES,
+	defaultFace = "Content",
+	expressions = {
+		knockedOut = "Dazed",
+		threatened = "Worried",
+		cleaning = "Content",
+		carrying = "Content",
+		idle = "Content",
+	},
+	skins = { Default = plainDefault() },
+	defaultSkin = "Default",
+	portrait = PLACEHOLDER_PORTRAIT,
+	uniform = {},
+	locomotion = locomotionOf("prickles", 1.03, 1.93, 1.34),
+	-- Borrows Pippa's steps until his own root-thump set is made.
+	footstepSet = "pippa",
+}
+
 local EmployeeRegistry = {
-	-- The employee every player spawns as (one StarterCharacter serves the whole server).
+	-- The employee a player is until their loadout says otherwise (and the fallback StarterCharacter).
 	DEFAULT = "Pippa",
 	FACES = FACES,
 	STATES = STATES,
