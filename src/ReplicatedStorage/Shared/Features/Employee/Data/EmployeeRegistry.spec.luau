@@ -93,7 +93,7 @@ return function()
 			expect(table.find(owner.accessories, "PippaRoundGlasses")).to.be.ok()
 		end)
 
-		it("puts every employee in a uniform of named gear, Pippa in her vest and lanyard", function()
+		it("puts every employee in a uniform of named gear: Pippa's rank lanyard, no vest", function()
 			for _, name in EmployeeRegistry.names() do
 				local uniform = EmployeeRegistry.get(name).uniform
 				expect(uniform).to.be.a("table")
@@ -102,7 +102,8 @@ return function()
 				end
 			end
 			local uniform = EmployeeRegistry.get("Pippa").uniform
-			expect(table.find(uniform, "PippaVest")).to.be.ok()
+			-- The hi-vis vest was dropped (owner, 2026-10-24); the lanyard stays: it shows the rank.
+			expect(table.find(uniform, "PippaVest")).never.to.be.ok()
 			expect(table.find(uniform, "PippaLanyard")).to.be.ok()
 		end)
 

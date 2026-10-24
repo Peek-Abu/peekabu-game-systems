@@ -14,7 +14,7 @@
 	- `skins` are looks for the same rig: a palette image (every MeshPart but the FacePlate shares one
 	  palette texture), an optional face set, accessories (EmployeeSkinSystem applies one), and the ID-card photo
 	  of that look (`portrait`; the employee's own `portrait` when a skin has none).
-	- `uniform` is the company gear fitted over any skin (the hi-vis vest and the rank lanyard + ID card), as
+	- `uniform` is the company gear fitted over any skin (the rank lanyard + ID card; the hi-vis vest was dropped), as
 	  fitted-gear names (EmployeeGearSystem); the lanyard is painted in the wearer's rank colour.
 	- `locomotion` is the employee's own idle/walk/run (keys in the animation registry's `employee`
 	  domain) and how fast its feet plant in each; the character's Animate script plays them instead of
@@ -163,7 +163,8 @@ local EMPLOYEES: { [string]: EmployeeDef } = {
 		defaultSkin = "Default",
 		portrait = "rbxassetid://114200006283845",
 		-- Fitted to Pippa v10's torso (characters/identity).
-		uniform = { "PippaVest", "PippaLanyard" },
+		-- The rank lanyard only: the hi-vis vest was dropped (owner, 2026-10-24).
+		uniform = { "PippaLanyard" },
 		-- Pippa v1 clips (characters/pippa/anim). Caps tuned by eye in Studio: lively, not frantic.
 		locomotion = {
 			idle = "pippaidle",
