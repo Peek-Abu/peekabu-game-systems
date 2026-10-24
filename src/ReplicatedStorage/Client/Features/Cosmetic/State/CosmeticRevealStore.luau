@@ -41,7 +41,10 @@ function CosmeticRevealStore.push(reveal: Reveal)
 end
 
 function CosmeticRevealStore.next()
-	current(table.remove(queue, 1))
+	-- Through a local: table.remove on an empty queue returns no value at all, and an atom called with no value
+	-- reads instead of clearing.
+	local following: Reveal? = table.remove(queue, 1)
+	current(following)
 end
 
 -- Forgets everything (between specs).
