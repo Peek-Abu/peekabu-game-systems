@@ -1,0 +1,239 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local CosmeticConstants = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticConstants)
+local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
+local VM = require(script.Parent.InventoryViewModel)
+
+return function()
+	-- Owns every free item plus the ids given.
+	local function owner(ids)
+		local set = {}
+		for _, id in ids or {} do
+			set[id] = true
+		end
+		return function(id)
+			local item = CosmeticRegistry.get(id)
+			return item ~= nil and (item.source == "default" or set[id] == true)
+		end
+	end
+
+	local function loadout(patch)
+		local value = CosmeticConstants.defaultLoadout()
+		for key, v in patch or {} do
+			value[key] = v
+		end
+		return value
+	end
+
+	local function find(list, id)
+		for _, entry in list do
+			if entry.id == id then
+				return entry
+			end
+		end
+		return nil
+	end
+
+	describe("crew", function()
+		it("has one card per employee in the catalogue, the free one first", function()
+			local cards = VM.crew(loadout(), owner())
+			expect(#cards).to.equal(#CosmeticRegistry.employees())
+			for _, name in CosmeticRegistry.employees() do
+				expect(find(cards, name)).to.be.ok()
+			end
+			expect(cards[1].id).to.equal("Pippa")
+		end)
+
+		it("marks the current employee wearing, owned ones equippable and the rest locked with a price", function()
+			local cards = VM.crew(loadout({ current = "Pippa" }), owner({ "Prickles" }))
+			expect(find(cards, "Pippa").state).to.equal("wearing")
+			expect(find(cards, "Prickles").state).to.equal("owned")
+			local cappy = find(cards, "Cappy")
+			expect(cappy.state).to.equal("locked")
+			expect(cappy.price).to.equal(2500)
+		end)
+
+		it("shows each employee in the skin they wear, with its name and the art key", function()
+			local value = loadout({
+				looks = {
+					Pippa = {
+						skin = "Pippa.OwnerSpecial",
+						style = 1,
+						idle = "Pippa.Classic",
+						wheel = { "", "", "", "" },
+					},
+				},
+			})
+			local pippa = find(VM.crew(value, owner({ "Pippa.OwnerSpecial" })), "Pippa")
+			expect(pippa.skinName).to.equal("Lavender Specs")
+			expect(pippa.skinKey).to.equal("OwnerSpecial")
+			expect(find(VM.crew(value, owner()), "Pippa").skinKey).to.equal("Default")
+		end)
+
+		it("carries the profile's line, ability and colour", function()
+			local pippa = find(VM.crew(loadout(), owner()), "Pippa")
+			expect(pippa.line).to.equal("Crew speedster")
+			expect(pippa.ability).to.equal("Let's Go!")
+			expect(typeof(pippa.color.body)).to.equal("Color3")
+		end)
+	end)
+
+	describe("band", function()
+		it("gives owned items no band and the worn one a Wearing band", function()
+			expect(VM.band(CosmeticRegistry.get("Pippa.GloomTouched"), true, false)).to.equal(nil)
+			local worn = VM.band(CosmeticRegistry.get("Pippa.Default"), true, true)
+			expect(worn.kind).to.equal("wearing")
+			expect(worn.text).to.equal("Wearing")
+		end)
+
+		it("names where a locked item comes from", function()
+			local gleam = VM.band(CosmeticRegistry.get("Pippa.BubbleBuddy"), false, false)
+			expect(gleam.kind).to.equal("gleam")
+			expect(gleam.text).to.equal("1,500")
+			expect(VM.band(CosmeticRegistry.get("Pippa.Gloomkeeper"), false, false).kind).to.equal("locker")
+			expect(VM.band(CosmeticRegistry.get("Pippa.OwnerSpecial"), false, false).kind).to.equal("missed")
+		end)
+
+		it("covers every source a locked item can have", function()
+			for _, source in { "credits", "gleam", "gloomLocker", "gleamLocker", "goal", "event", "gift", "later" } do
+				local band = VM.band({
+					id = "X",
+					kind = "skin",
+					name = "X",
+					rarity = "rare",
+					source = source,
+					price = 10,
+					lore = "",
+				}, false, false)
+				expect(band).to.be.ok()
+				expect(band.text ~= "").to.equal(true)
+			end
+		end)
+	end)
+
+	describe("action", function()
+		it("says Wear for an owned item and Wearing for the worn one", function()
+			local wear = VM.action(CosmeticRegistry.get("Pippa.GloomTouched"), true, false)
+			expect(wear.text).to.equal("Wear")
+			expect(wear.enabled).to.equal(true)
+			local wearing = VM.action(CosmeticRegistry.get("Pippa.Default"), true, true)
+			expect(wearing.text).to.equal("Wearing")
+			expect(wearing.enabled).to.equal(false)
+		end)
+
+		it("points locked items at where to get them, never as a working button", function()
+			local cases = {
+				["Pippa.BubbleBuddy"] = "In the Shop soon",
+				["Pippa.Gloomkeeper"] = "Gloom Locker",
+				["Pippa.OwnerSpecial"] = "Missed it",
+			}
+			for id, text in cases do
+				local action = VM.action(CosmeticRegistry.get(id), false, false)
+				expect(action.text).to.equal(text)
+				expect(action.enabled).to.equal(false)
+			end
+		end)
+	end)
+
+	describe("items", function()
+		it("lists the employee's skins with the free one first and the worn one marked", function()
+			local list = VM.items("skin", "Pippa", loadout(), owner())
+			expect(list[1].id).to.equal("Pippa.Default")
+			expect(list[1].worn).to.equal(true)
+			expect(list[1].band.kind).to.equal("wearing")
+			for _, entry in list do
+				expect(CosmeticRegistry.get(entry.id).employee).to.equal("Pippa")
+			end
+			local legendary = find(list, "Pippa.BubbleBuddy")
+			expect(legendary.owned).to.equal(false)
+			expect(legendary.dim).to.equal(true)
+		end)
+
+		it("orders by rarity after the free item", function()
+			local list = VM.items("skin", "Pippa", loadout(), owner())
+			local rank = { default = 0, uncommon = 1, rare = 2, epic = 3, legendary = 4, odd = 5 }
+			for index = 3, #list do
+				expect(rank[list[index - 1].rarity] <= rank[list[index].rarity]).to.equal(true)
+			end
+		end)
+
+		it("lists shared idles beside the employee's own", function()
+			local list = VM.items("idle", "Pippa", loadout(), owner())
+			expect(find(list, "Pippa.Classic")).to.be.ok()
+			expect(find(list, "SleepySway")).to.be.ok()
+			expect(find(list, "Cappy.Classic")).never.to.be.ok()
+		end)
+
+		it("flags owned items the player has not seen as New", function()
+			local list = VM.items("skin", "Pippa", loadout(), owner({ "Pippa.GloomTouched" }))
+			expect(find(list, "Pippa.GloomTouched").new).to.equal(true)
+			expect(find(list, "Pippa.Default").new).to.equal(false)
+			local seen = VM.items(
+				"skin",
+				"Pippa",
+				loadout({ seen = { ["Pippa.GloomTouched"] = true } }),
+				owner({ "Pippa.GloomTouched" })
+			)
+			expect(find(seen, "Pippa.GloomTouched").new).to.equal(false)
+		end)
+	end)
+
+	describe("detail", function()
+		it("shows the Styles row only for items with more than one style, disabled until the art exists", function()
+			local bubble = VM.detail(CosmeticRegistry.get("Pippa.BubbleBuddy"), loadout(), owner())
+			expect(bubble.styles.visible).to.equal(true)
+			expect(bubble.styles.count).to.equal(3)
+			expect(bubble.styles.enabled).to.equal(false)
+			expect(VM.detail(CosmeticRegistry.get("Pippa.Default"), loadout(), owner()).styles.visible).to.equal(false)
+		end)
+
+		it("names the bundle's items under Comes with", function()
+			local bubble = VM.detail(CosmeticRegistry.get("Pippa.BubbleBuddy"), loadout(), owner())
+			expect(#bubble.comesWith).to.equal(2)
+			expect(table.find(bubble.comesWith, "Bubbles")).to.be.ok()
+			expect(#VM.detail(CosmeticRegistry.get("Pippa.Default"), loadout(), owner()).comesWith).to.equal(0)
+		end)
+
+		it("carries the lore, the rarity word and the action", function()
+			local view = VM.detail(CosmeticRegistry.get("Pippa.Gloomkeeper"), loadout(), owner())
+			expect(view.name).to.equal("Gloomkeeper")
+			expect(view.rarityText).to.equal("EPIC")
+			expect(view.lore ~= "").to.equal(true)
+			expect(view.action.text).to.equal("Gloom Locker")
+		end)
+
+		it("builds the change Wear sends", function()
+			local skin = VM.change(CosmeticRegistry.get("Pippa.GloomTouched"), "Pippa")
+			expect(skin.kind).to.equal("skin")
+			expect(skin.id).to.equal("Pippa.GloomTouched")
+			expect(skin.style).to.equal(1)
+			local idle = VM.change(CosmeticRegistry.get("SleepySway"), "Cappy")
+			expect(idle.kind).to.equal("idle")
+			expect(idle.employee).to.equal("Cappy")
+		end)
+	end)
+
+	describe("about", function()
+		it("lists the five stats in order with an icon and a 1-5 value", function()
+			local stats = VM.stats("Pippa")
+			expect(#stats).to.equal(5)
+			expect(stats[1].label).to.equal("Speed")
+			expect(stats[1].icon).to.equal("statSpeed")
+			expect(stats[1].value).to.equal(4)
+		end)
+	end)
+
+	describe("tabs", function()
+		it("has Crew, Vacuums and a greyed Chat wheel", function()
+			local tabs = VM.tabs()
+			expect(#tabs).to.equal(3)
+			expect(tabs[1].id).to.equal("crew")
+			expect(tabs[2].id).to.equal("vacuums")
+			expect(tabs[3].soon).to.equal(true)
+		end)
+
+		it("titles the character page tabs Skins, Idles and About", function()
+			expect(table.concat(VM.PAGE_TABS, ",")).to.equal("skins,idles,about")
+		end)
+	end)
+end

@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	ToonSourceBand: the footer band across the bottom of an item card that says where the item comes from, coloured by
-	kind so the grid reads at a glance: gold "price" (a Credits price, coin icon), night "locker" (the Gloom Locker),
+	kind so the grid reads at a glance: gold "credits" / "gleam" (a price, with its currency icon), night "locker" (the Gloom Locker),
 	mint "goal" (earned by playing), steel "missed" (an event that ended), lilac "later" (not out yet), and mint
 	"wearing" on the item you have on. Owned items show no band. It fills its parent's width and squares its top
 	corners, so a card with a rounded foot just lays it along the bottom. Presentational (exempt; story in
@@ -20,7 +20,7 @@ local UIToonConstants = require(ReplicatedStorage.Client.UI.React.Screens.Toon.U
 
 local e = React.createElement
 
-export type Kind = "price" | "locker" | "goal" | "missed" | "later" | "wearing"
+export type Kind = "credits" | "gleam" | "locker" | "goal" | "missed" | "later" | "wearing"
 
 export type ToonSourceBandProps = {
 	kind: Kind,
@@ -34,7 +34,8 @@ export type ToonSourceBandProps = {
 }
 
 local HUE: { [Kind]: UIToonConstants.Hue } = {
-	price = "gold",
+	credits = "gold",
+	gleam = "gold",
 	locker = "night",
 	goal = "mint",
 	missed = "steel",
@@ -43,7 +44,8 @@ local HUE: { [Kind]: UIToonConstants.Hue } = {
 }
 
 local ICON: { [Kind]: UIAssets.ToonIcon? } = {
-	price = "credits",
+	credits = "credits",
+	gleam = "gleam",
 	locker = "lockNight",
 }
 

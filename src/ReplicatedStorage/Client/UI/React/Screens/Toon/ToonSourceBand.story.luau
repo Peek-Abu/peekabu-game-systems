@@ -16,7 +16,8 @@ local ToonSourceBand = require(Toon.ToonSourceBand)
 local e = React.createElement
 
 local BANDS: { { kind: ToonSourceBand.Kind, text: string } } = {
-	{ kind = "price", text = "450" },
+	{ kind = "credits", text = "2,500" },
+	{ kind = "gleam", text = "1,500" },
 	{ kind = "locker", text = "Gloom Locker" },
 	{ kind = "goal", text = "Clean 50 rooms" },
 	{ kind = "missed", text = "Missed it" },
