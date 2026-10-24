@@ -71,6 +71,7 @@ local OfficeOozeSystem = require(OfficeServer.Systems.OfficeOozeSystem)
 local OfficeBuildSystem = require(OfficeServer.Systems.OfficeBuildSystem)
 local OfficeDecorSystem = require(OfficeServer.Systems.OfficeDecorSystem)
 local OfficeDoorSystem = require(OfficeServer.Systems.OfficeDoorSystem)
+local OfficeDressingSystem = require(OfficeServer.Systems.OfficeDressingSystem)
 local OfficeSearchedDressingSystem = require(OfficeServer.Systems.OfficeSearchedDressingSystem)
 local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
 local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
@@ -412,6 +413,8 @@ local OfficeServiceServer: OfficeServiceServer = {
 			end
 		end
 		lastPlan = plan
+		current.doors.openAtStart(layoutSeed)
+		OfficeDressingSystem.build(LAYOUT, plan, layoutSeed, OfficeConstants.ORIGIN, current.model)
 		OfficeOozeSystem.buildAtDock(LAYOUT, OfficeConstants.ORIGIN, OfficeLootUtils.gloomOf(plan).total, current.model)
 		overtimeSpawned = false
 		log:info(`shift spawns: {#plan.piles} piles, {#plan.items} items, worth {plan.value} clean`)

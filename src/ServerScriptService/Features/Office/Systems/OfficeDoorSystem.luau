@@ -66,6 +66,7 @@ local OfficeTypes = require(OfficeServer.Data.OfficeTypes)
 local OfficeDoorUtils = require(OfficeServer.Utils.OfficeDoorUtils)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
 local OfficeArtKeyUtils = require(OfficeServer.Utils.OfficeArtKeyUtils)
+local OfficeVariationRules = require(OfficeServer.Rules.OfficeVariationRules)
 
 local log = Logger.new("OfficeDoorSystem")
 
@@ -106,6 +107,9 @@ export type DoorSet = {
 	states: () -> { DoorState },
 	-- Snaps every door shut (test harness).
 	closeAll: () -> (),
+	-- Opens, instantly and silently (no swing), every solid or glass door OfficeVariationRules.doorStartsOpen picks for
+	-- `seed` (nil: none). Facades never open. Returns the opened ids.
+	openAtStart: (seed: number?) -> { string },
 	-- Cancels swings and forgets every door.
 	destroy: () -> (),
 }
@@ -432,6 +436,24 @@ function OfficeDoorSystem.build(
 
 		states = function()
 			return states
+		end,
+
+		openAtStart = function(seed)
+			local opened: { string } = {}
+			for id, record in records do
+				if not record.state.open and OfficeVariationRules.doorStartsOpen(seed, id) then
+					stopTween(record)
+					record.busy = false
+					record.fraction.Value = 1
+					setOpen(record, true)
+					record.leaf.CanCollide = false
+					if record.occluder then
+						record.leaf:SetAttribute(CameraOccluderConstants.ATTRIBUTE, nil)
+					end
+					table.insert(opened, id)
+				end
+			end
+			return opened
 		end,
 
 		closeAll = function()

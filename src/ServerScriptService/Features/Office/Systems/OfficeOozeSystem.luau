@@ -26,7 +26,10 @@ local LAYER_STEP = 0.012
 local STREAK_OFFSET = 0.2
 local STREAK_WIDTH = 0.45
 
-local function goo(model: Model, name: string, size: Vector3, frame: CFrame, color: Color3): Part
+-- The Gloom palette (game-vfx-design §8), for other flat goo (OfficeDressingSystem's dried stains).
+OfficeOozeSystem.PALETTE = { base = GOO_BASE, dark = GOO_DARK, ink = GOO_INK }
+
+local function goo(model: Instance, name: string, size: Vector3, frame: CFrame, color: Color3): Part
 	local part = Instance.new("Part")
 	part.Name = name
 	part.Anchored = true
@@ -45,7 +48,7 @@ end
 -- A flat oval on the ground, `across` wide (along the door) and `deep` long (out of it), its middle `out` studs from
 -- the door and `side` along it, `layer` blobs up. A cylinder's axis is X, so it is turned up.
 local function puddle(
-	model: Model,
+	model: Instance,
 	door: CFrame,
 	side: number,
 	out: number,
@@ -53,10 +56,19 @@ local function puddle(
 	deep: number,
 	color: Color3,
 	layer: number
-)
+): Part
 	local frame = door * CFrame.new(side, THICK / 2 + layer * LAYER_STEP, -out) * CFrame.Angles(0, 0, math.pi / 2)
 	local part = goo(model, "Puddle", Vector3.new(THICK, across, deep), frame, color)
 	part.Shape = Enum.PartType.Cylinder
+	return part
+end
+
+--[=[
+	A flat round blob of Gloom goo under `parent` with its middle at `frame`'s position on the floor (yaw from the
+	frame), `across` x `deep` studs, `color`; non-colliding, not queried, no shadow. Returns the part.
+]=]
+function OfficeOozeSystem.blob(parent: Instance, frame: CFrame, across: number, deep: number, color: Color3): Part
+	return puddle(parent, frame, 0, 0, across, deep, color, 0)
 end
 
 local function streak(model: Model, door: CFrame, side: number, height: number)
