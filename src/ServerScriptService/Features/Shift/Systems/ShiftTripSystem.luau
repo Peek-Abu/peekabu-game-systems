@@ -32,6 +32,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
+local Workspace = game:GetService("Workspace")
 
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
@@ -138,7 +139,7 @@ function ShiftTripSystem.new(options: Options): ShiftTripSystem
 		end,
 
 		spawnFor = function(player)
-			local index = table.find(members:present(presentIds()), player.UserId)
+			local index = members:seatOf(player.UserId, presentIds(), Workspace:GetServerTimeNow())
 			if index ~= nil or not QueueServiceServer:runsRole(DepotConstants.ROLE_DEPOT) then
 				return OfficeServiceServer:spawnCFrame(index or 1)
 			end

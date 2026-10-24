@@ -5,7 +5,8 @@
 	still here, and replaces one that has gone) plus expected members who came late. A player leaves it by
 	leaving the server or by being moved back to the depot. After Back to depot the crew is "leaving" for a
 	while: `startable` is 0, so no shift starts under a crew whose return trip is still in flight; once the
-	window has passed, `expired` reports it once and the crew still here can work again. Plain bookkeeping
+	window has passed, `expired` reports it once and the crew still here can work again. `seatOf` is a working
+	member's place in the crew (nil once they are heading home, so a respawn sends them to the depot). Plain bookkeeping
 	(pure).
 
 	@class ShiftCrewTracker
@@ -19,6 +20,8 @@ export type ShiftCrewTracker = {
 	present: (self: ShiftCrewTracker, presentIds: { number }) -> { number },
 	leave: (self: ShiftCrewTracker, now: number, wait: number) -> (),
 	isLeaving: (self: ShiftCrewTracker, now: number) -> boolean,
+	-- A working member's place (1-based) among the crew here; nil for a non-member or while the crew is heading home.
+	seatOf: (self: ShiftCrewTracker, userId: number, presentIds: { number }, now: number) -> number?,
 	expired: (self: ShiftCrewTracker, now: number) -> boolean,
 	startable: (self: ShiftCrewTracker, presentIds: { number }, now: number) -> number,
 	clear: (self: ShiftCrewTracker) -> (),
@@ -80,6 +83,13 @@ function ShiftCrewTracker.new(): ShiftCrewTracker
 		isLeaving = function(_self, now)
 			local untilTime = leavingUntil
 			return untilTime ~= nil and now < untilTime
+		end,
+
+		seatOf = function(self, userId, presentIds, now)
+			if self:isLeaving(now) then
+				return nil
+			end
+			return table.find(self:present(presentIds), userId)
 		end,
 
 		expired = function(_self, now)
