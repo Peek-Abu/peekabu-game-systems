@@ -4,7 +4,7 @@
 	crew's shift), the travel card (hidden under it), the player's published rank, their Credits (the `credits` balance),
 	the daily reward slice on the server clock, the contract board's contract and whether they are aboard a truck,
 	and draws DepotHubPanel in the V1 kit. JOBS / the Tonight card / GO! (when not aboard) open the contract board;
-	LOCKER, GUIDE and SETTINGS push the hub pages; the gift asks to claim (`onClaimGift`, from the service: components
+	INVENTORY opens the Inventory; GUIDE and SETTINGS push the hub pages; the gift asks to claim (`onClaimGift`, from the service: components
 	never talk to the server). Aboard a truck the Next shift card is the queue pad's (DepotPad). Values are specced in
 	DepotHubViewModel and DepotPadViewModel.
 
@@ -19,6 +19,7 @@ local React = require(ReplicatedStorage.Packages.React)
 local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local QueueSnapshotUtils = require(ReplicatedStorage.Shared.Features.Queue.Utils.QueueSnapshotUtils)
+local InventoryViewModel = require(script.Parent.Parent.Inventory.InventoryViewModel)
 local CurrencyUtils = require(ReplicatedStorage.Shared.Features.Currency.Utils.CurrencyUtils)
 local DepotStore = require(ReplicatedStorage.Client.Features.Depot.State.DepotStore)
 local QueueStore = require(ReplicatedStorage.Client.Features.Queue.State.QueueStore)
@@ -83,8 +84,8 @@ local function DepotHub(props: DepotHubProps): React.ReactNode
 				cta = if pad == nil then DepotPadViewModel.cta(nil, nil) else nil,
 				newJobs = rank == nil or rank.xp == 0,
 				onJobs = openBoard,
-				onLocker = function()
-					SceneStack.push(VM.scene("gear"))
+				onInventory = function()
+					SceneStack.push(InventoryViewModel.SCENE)
 				end,
 				onGuide = function()
 					SceneStack.push(VM.scene("guide"))

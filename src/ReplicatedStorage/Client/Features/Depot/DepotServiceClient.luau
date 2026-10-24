@@ -48,6 +48,8 @@ local PAD_HUD_KEY = "depotPad"
 local DepotHub = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotHub)
 local DepotHubViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotHubViewModel)
 require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotHubScene)
+-- The Inventory (the hub's INVENTORY tile) registers its scene at require.
+require(ReplicatedStorage.Client.UI.React.Screens.Inventory.InventoryScene)
 
 local stoppers: { () -> () } = {}
 

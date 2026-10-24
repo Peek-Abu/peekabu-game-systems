@@ -1,6 +1,6 @@
 --!strict
 --[=[
-	DepotHubScreen: the hub's GUIDE, LOCKER (the company equipment page) and SETTINGS in the V1 kit: a cream modal
+	DepotHubScreen: the hub's GUIDE, VACUUMS (the company equipment page, the Inventory's Vacuums tab) and SETTINGS in the V1 kit: a cream modal
 	popping in with its grape header (the page's render breaking the corner, Gloom drips from the header's foot, the
 	coral close) over a scrolling body. Guide and Locker are honest briefing pages, a card per section with its
 	render; Settings are the persisted, validated base settings (a ToonSlider per percentage setting, its value on a

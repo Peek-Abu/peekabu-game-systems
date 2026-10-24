@@ -45,7 +45,7 @@ return function()
 
 		it("titles the hub pages for the V1 menus", function()
 			expect(VM.pageTitle("guide")).to.equal("GUIDE")
-			expect(VM.pageTitle("gear")).to.equal("LOCKER")
+			expect(VM.pageTitle("gear")).to.equal("VACUUMS")
 			expect(VM.pageTitle("settings")).to.equal("SETTINGS")
 		end)
 

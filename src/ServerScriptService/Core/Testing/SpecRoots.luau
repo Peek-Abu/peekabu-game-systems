@@ -503,6 +503,10 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.UI.React.Screens.Toon.ToonSourceBand"] = "presentational React component (story in ToonSourceBand.story; which band a card gets is specced in InventoryViewModel)",
 	["ReplicatedStorage.Client.UI.React.Screens.Toon.ToonRarityFrame"] = "presentational React component (story in ToonRarityFrame.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Toon.ToonViewport"] = "React component over a ViewportFrame (story in ToonViewport.story; the model is built by EmployeePreviewSystem, framing and light specced in PortraitViewModel)",
+	["ReplicatedStorage.Client.UI.React.Screens.Inventory.InventoryCrewPanel"] = "presentational React component (crew cards specced in InventoryViewModel; story in InventoryScreen.story)",
+	["ReplicatedStorage.Client.UI.React.Screens.Inventory.InventoryCharacterPanel"] = "presentational React component (cards, detail and stats specced in InventoryViewModel; story in InventoryScreen.story)",
+	["ReplicatedStorage.Client.UI.React.Screens.Inventory.InventoryScreen"] = "React screen wiring the loadout, entitlements and Credits stores (values and layout specced in InventoryViewModel; story in InventoryScreen.story)",
+	["ReplicatedStorage.Client.UI.React.Screens.Inventory.InventoryScene"] = "scene registration at require (no logic)",
 	-- Cleanup Crew: the paper UI kit (M3 UI)
 	["ReplicatedStorage.Client.UI.React.Screens.Portrait.CharacterPortrait"] = "React component over a ViewportFrame (story in CharacterPortrait.story; framing, light and fallback specced in PortraitViewModel, pose in EmployeePoseRules, the copy in EmployeePortraitSystem)",
 	["ReplicatedStorage.Client.UI.React.Screens.Portrait.usePortraitCharacter"] = "React hook over live Players/characters (what a rebuild produces is specced in EmployeePortraitSystem)",

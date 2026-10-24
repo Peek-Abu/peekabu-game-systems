@@ -54,12 +54,12 @@ function VM.sectionIcons(page: Page): { UIAssets.ToonIcon }
 	return { "vacuum", "gloom", "grab", "stamina" }
 end
 
--- The hub page's header title (the gear page is the Locker in the V1 menus).
+-- The hub page's header title (the gear page is the Inventory's Vacuums tab).
 function VM.pageTitle(page: Page): string
 	if page == "guide" then
 		return "GUIDE"
 	elseif page == "gear" then
-		return "LOCKER"
+		return "VACUUMS"
 	end
 	return "SETTINGS"
 end

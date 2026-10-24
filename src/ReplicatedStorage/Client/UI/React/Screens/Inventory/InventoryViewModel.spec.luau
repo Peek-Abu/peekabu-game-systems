@@ -51,6 +51,8 @@ return function()
 			local cappy = find(cards, "Cappy")
 			expect(cappy.state).to.equal("locked")
 			expect(cappy.price).to.equal(2500)
+			expect(cappy.priceText).to.equal("2,500")
+			expect(find(cards, "Pippa").priceText).to.equal(nil)
 		end)
 
 		it("shows each employee in the skin they wear, with its name and the art key", function()
@@ -223,6 +225,29 @@ return function()
 		end)
 	end)
 
+	describe("layout", function()
+		for _, case in
+			{ { size = Vector2.new(1920, 1080), phone = false }, { size = Vector2.new(844, 390), phone = true } }
+		do
+			it(`fits the screen under the bar ({case.size.X}x{case.size.Y})`, function()
+				local layout = VM.layout(case.size, case.phone)
+				local content = layout.content
+				expect(content.y >= layout.barY + layout.barHeight).to.equal(true)
+				expect(content.x + content.width <= case.size.X).to.equal(true)
+				expect(content.y + content.height <= case.size.Y).to.equal(true)
+				expect(layout.crewCard.Y <= content.height).to.equal(true)
+				expect(layout.gridWidth + layout.heroWidth + layout.detailWidth + 2 * layout.gap).to.equal(
+					content.width
+				)
+				expect(layout.detailWidth > 0).to.equal(true)
+				-- Two cards side by side in the grid.
+				expect(2 * layout.cell.X + layout.gap <= layout.gridWidth).to.equal(true)
+				expect(layout.titleX >= 100).to.equal(true)
+				expect(layout.textSize >= (if case.phone then 12 else 16)).to.equal(true)
+			end)
+		end
+	end)
+
 	describe("tabs", function()
 		it("has Crew, Vacuums and a greyed Chat wheel", function()
 			local tabs = VM.tabs()
@@ -230,6 +255,12 @@ return function()
 			expect(tabs[1].id).to.equal("crew")
 			expect(tabs[2].id).to.equal("vacuums")
 			expect(tabs[3].soon).to.equal(true)
+		end)
+
+		it("reads a page tab back from a string, Skins for anything unknown", function()
+			expect(VM.pageTab("idles")).to.equal("idles")
+			expect(VM.pageTab("about")).to.equal("about")
+			expect(VM.pageTab("nope")).to.equal("skins")
 		end)
 
 		it("titles the character page tabs Skins, Idles and About", function()

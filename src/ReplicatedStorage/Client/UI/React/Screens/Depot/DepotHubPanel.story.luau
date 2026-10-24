@@ -48,7 +48,7 @@ return UILabs.CreateReactStory({
 		cta = DepotPadViewModel.cta(if controls.Aboard then pad else nil, 2),
 		newJobs = true,
 		onJobs = noop,
-		onLocker = noop,
+		onInventory = noop,
 		onGuide = noop,
 		onSettings = noop,
 		onGift = noop,

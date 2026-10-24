@@ -24,6 +24,7 @@ local EmployeeProfileRegistry = require(ReplicatedStorage.Shared.Features.Employ
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local ToonSourceBand = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonSourceBand)
 local ToonStyleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonStyleViewModel)
+local UIToonConstants = require(ReplicatedStorage.Client.UI.React.Screens.Toon.UIToonConstants)
 
 type Item = CosmeticTypes.Item
 type Loadout = CosmeticTypes.Loadout
@@ -40,6 +41,7 @@ export type CrewCard = {
 	ability: string,
 	state: CrewState,
 	price: number?,
+	priceText: string?,
 	-- The worn skin: its catalogue name and its EmployeeRegistry art key (the part after the dot).
 	skinName: string,
 	skinKey: string,
@@ -76,6 +78,28 @@ export type StatRow = { stat: EmployeeProfileRegistry.Stat, label: string, icon:
 export type Tab = { id: string, text: string, soon: boolean }
 export type PageTab = "skins" | "idles" | "about"
 
+-- Design px against the virtual screen (PaperHudScaleViewModel.virtual).
+export type Layout = {
+	phone: boolean,
+	barY: number,
+	barHeight: number,
+	-- Where the title starts: clear of Roblox's own top-left buttons.
+	titleX: number,
+	titleSize: number,
+	-- The area under the bar.
+	content: { x: number, y: number, width: number, height: number },
+	crewCard: Vector2,
+	gap: number,
+	-- The character page: its tab row, then grid | hero | detail.
+	tabsHeight: number,
+	gridWidth: number,
+	heroWidth: number,
+	detailWidth: number,
+	cell: Vector2,
+	textSize: number,
+	headingSize: number,
+}
+
 local RARITY_RANK: { [CosmeticTypes.Rarity]: number } = {
 	default = 0,
 	uncommon = 1,
@@ -105,15 +129,10 @@ local PLAIN = Color3.fromRGB(183, 164, 236)
 
 local VM = {}
 
+VM.SCENE = "inventory"
+
 local PAGE_TABS: { PageTab } = { "skins", "idles", "about" }
 VM.PAGE_TABS = table.freeze(PAGE_TABS)
-
--- "1500" -> "1,500".
-function VM.amount(value: number): string
-	local text = tostring(math.floor(value))
-	local result = string.reverse((string.gsub(string.reverse(text), "(%d%d%d)", "%1,")))
-	return (string.gsub(result, "^,", ""))
-end
 
 -- The EmployeeRegistry art key of a skin id ("Pippa.OwnerSpecial" -> "OwnerSpecial").
 function VM.skinKey(id: string): string
@@ -130,7 +149,7 @@ function VM.band(item: Item, owned: boolean, worn: boolean): Band?
 	end
 	local source = item.source
 	if source == "credits" or source == "gleam" then
-		return { kind = source, text = if item.price ~= nil then VM.amount(item.price) else "Shop" }
+		return { kind = source, text = if item.price ~= nil then ToonStyleViewModel.grouped(item.price) else "Shop" }
 	elseif source == "gloomLocker" then
 		return { kind = "locker", text = "Gloom Locker" }
 	elseif source == "gleamLocker" then
@@ -193,6 +212,9 @@ function VM.crew(loadout: Loadout, owns: Owns): { CrewCard }
 				ability = if profile ~= nil then profile.ability.name else "",
 				state = state,
 				price = if state == "locked" then item.price else nil,
+				priceText = if state == "locked" and item.price ~= nil
+					then ToonStyleViewModel.grouped(item.price)
+					else nil,
 				skinName = if skin ~= nil then skin.name else "",
 				skinKey = VM.skinKey(look.skin),
 				color = colorOf(id),
@@ -308,11 +330,54 @@ function VM.stats(employee: string): { StatRow }
 	return rows
 end
 
+-- A page tab from a stored string (anything unknown is Skins).
+function VM.pageTab(value: string): PageTab
+	if value == "idles" then
+		return "idles"
+	elseif value == "about" then
+		return "about"
+	end
+	return "skins"
+end
+
 function VM.tabs(): { Tab }
 	return {
 		{ id = "crew", text = "Crew", soon = false },
 		{ id = "vacuums", text = "Vacuums", soon = false },
 		{ id = "wheel", text = "Chat wheel", soon = true },
+	}
+end
+
+function VM.layout(virtual: Vector2, phone: boolean): Layout
+	local safe = if phone then UIToonConstants.SAFE.phone else UIToonConstants.SAFE.desktop
+	local barY = if phone then 8 else 16
+	local barHeight = if phone then 48 else 68
+	local gap = if phone then 10 else 20
+	local x = safe.left
+	local y = barY + barHeight + gap
+	local width = math.max(0, virtual.X - safe.left - safe.right)
+	local height = math.max(0, virtual.Y - y - safe.bottom)
+	local cardHeight = math.min(height - 16, if phone then 300 else 560)
+	local tabsHeight = if phone then 40 else 56
+	local gridWidth = math.floor(width * 0.36)
+	local heroWidth = math.floor(width * 0.3)
+	local cellWidth = math.floor((gridWidth - 2 * UIToonConstants.DEPTH.outline - 24 - gap) / 2)
+	return {
+		phone = phone,
+		barY = barY,
+		barHeight = barHeight,
+		titleX = if phone then 104 else 150,
+		titleSize = if phone then 30 else 48,
+		content = { x = x, y = y, width = width, height = height },
+		crewCard = Vector2.new(math.floor(cardHeight * 0.66), cardHeight),
+		gap = gap,
+		tabsHeight = tabsHeight,
+		gridWidth = gridWidth,
+		heroWidth = heroWidth,
+		detailWidth = width - gridWidth - heroWidth - 2 * gap,
+		cell = Vector2.new(cellWidth, math.floor(cellWidth * 1.3)),
+		textSize = if phone then 14 else 20,
+		headingSize = if phone then 24 else 40,
 	}
 end
 

@@ -4,7 +4,7 @@
 	(1920x1080 desktop, scaled by PaperHudFrame; 844x390 phone):
 	- top-left, right of Roblox's menu and chat buttons: the profile card (the player's own character in a ring
 	  breaking the card, the player's name, the Clearance Level star, the rank name on desktop and the XP bar);
-	- under it the menu tiles (JOBS, LOCKER, GUIDE, SETTINGS: renders breaking their tiles; a column on desktop, a 2x2
+	- under it the menu tiles (JOBS, INVENTORY, GUIDE, SETTINGS: renders breaking their tiles; a column on desktop, a 2x2
 	  grid on phone, clear of the thumbstick);
 	- top-right: the Credits counter (the coin render overlapping a gold number) and the daily gift (OPEN! with a badge,
 	  else the time to the next day); on desktop the Tonight card (tonight's building photo, the Manager breaking its
@@ -51,7 +51,7 @@ export type DepotHubPanelProps = {
 	cta: DepotPadViewModel.CtaView?,
 	newJobs: boolean,
 	onJobs: () -> (),
-	onLocker: () -> (),
+	onInventory: () -> (),
 	onGuide: () -> (),
 	onSettings: () -> (),
 	onGift: () -> (),
@@ -171,7 +171,7 @@ local function tiles(props: DepotHubPanelProps): React.ReactNode
 	local phone = props.phone
 	local list: { Tile } = {
 		{ key = "jobs", label = "JOBS", icon = "jobs", variant = "gleam", activate = props.onJobs },
-		{ key = "locker", label = "LOCKER", icon = "locker", variant = "grape", activate = props.onLocker },
+		{ key = "inventory", label = "INVENTORY", icon = "locker", variant = "grape", activate = props.onInventory },
 		{ key = "guide", label = "GUIDE", icon = "guide", variant = "primary", activate = props.onGuide },
 		{ key = "settings", label = "SETTINGS", icon = "settings", variant = "lilac", activate = props.onSettings },
 	}

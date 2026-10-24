@@ -292,7 +292,7 @@ local function desktop(props: DepotBoardPanelProps): Nodes
 	type TabSpec = { key: Tab, label: string, width: number }
 	local tabs: { TabSpec } = {
 		{ key = "contracts", label = "CONTRACTS", width = 200 },
-		{ key = "locker", label = "LOCKER", width = 160 },
+		{ key = "locker", label = "VACUUMS", width = 160 },
 		{ key = "guide", label = "GUIDE", width = 140 },
 	}
 	local x = 44
