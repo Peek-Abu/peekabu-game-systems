@@ -237,6 +237,21 @@ return function()
 			expect((built.bed.CFrame.LookVector - Vector3.new(0, 0, -1)).Magnitude < 1e-3).to.equal(true)
 		end)
 	end)
+	describe("light trim", function()
+		it("builds no fill light that casts shadows on a generated layout", function()
+			local Generation = require(Server.Utils.OfficeLayoutGenerationUtils)
+			local built = build(Generation.generate(Layout, 3))
+			local fills, shadowed = 0, 0
+			for _, light in built.model:GetDescendants() do
+				if light:IsA("PointLight") and light.Parent:GetAttribute("OfficeLightFill") == true then
+					fills += 1
+					shadowed += if light.Shadows then 1 else 0
+				end
+			end
+			expect(fills > 0).to.equal(true)
+			expect(shadowed).to.equal(0)
+		end)
+	end)
 	describe("narrow doorway trim", function()
 		local function connectedRooms(vertical)
 			if vertical then

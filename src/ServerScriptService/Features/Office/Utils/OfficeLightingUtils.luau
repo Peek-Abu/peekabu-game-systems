@@ -2,7 +2,7 @@
 --[=[
 	OfficeLightingUtils: where an office room's lights go, from the approved spike. Hallways get troffer panels on
 	the centre line plus alternating wall fills (and the matching sconce spots); rooms get a centred panel grid, about
-	two thirds lit by a fixed pattern, and a coarser fill grid. Only fills cast shadows. Layout space, Y 0 is the
+	two thirds lit by a fixed pattern, and a coarser fill grid. No light casts shadows (the fills stopped too: light trim). Layout space, Y 0 is the
 	floor top. Pure and deterministic.
 
 	@class OfficeLightingUtils
@@ -91,7 +91,7 @@ local function makeFill(position: Vector3, light: Recipe): FillLight
 		brightness = light.fillBrightness,
 		range = light.fillRange,
 		color = OfficeConstants.FILL_COLOR,
-		shadows = true,
+		shadows = false,
 	}
 end
 

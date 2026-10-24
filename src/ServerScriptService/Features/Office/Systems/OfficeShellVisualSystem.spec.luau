@@ -453,7 +453,7 @@ return function()
 			expect(unlit > 0).to.equal(true)
 		end)
 
-		it("gives a lit panel a bottom SurfaceLight with the recipe values and fills shadowed PointLights", function()
+		it("gives a lit panel a bottom SurfaceLight with the recipe values and fills unshadowed PointLights", function()
 			build(never)
 			local panels, fills = 0, 0
 			for _, part in model.Lights:GetDescendants() do
@@ -474,7 +474,7 @@ return function()
 						fills += 1
 						local light = part:FindFirstChildWhichIsA("PointLight")
 						expect(light ~= nil).to.equal(true)
-						expect(light.Shadows).to.equal(true)
+						expect(light.Shadows).to.equal(false)
 						expect(light.Color).to.equal(Constants.FILL_COLOR)
 						expect(part.Transparency).to.equal(1)
 						expect(part:GetAttribute("OfficeLightFill")).to.equal(true)

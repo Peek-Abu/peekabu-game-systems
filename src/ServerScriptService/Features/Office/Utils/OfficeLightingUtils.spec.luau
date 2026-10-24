@@ -85,11 +85,11 @@ return function()
 			end
 		end)
 
-		it("only fills cast shadows; colours are the warm pair", function()
+		it("no light casts shadows (fills included: ruling 9's light trim); colours are the warm pair", function()
 			local plan = OfficeLightingUtils.roomLights(room(0, 60, 0, 44), "pods")
 			expect(#plan.fills > 0).to.equal(true)
 			for _, fill in plan.fills do
-				expect(fill.shadows).to.equal(true)
+				expect(fill.shadows).to.equal(false)
 				expect(fill.color).to.equal(Color3.fromRGB(255, 232, 205))
 				expect(fill.position.Y).to.equal(4)
 			end
