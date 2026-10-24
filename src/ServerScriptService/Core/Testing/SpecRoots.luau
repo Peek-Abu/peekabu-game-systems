@@ -391,6 +391,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Features.Occupant.Systems.OccupantCatchSystem"] = "Instance/ByteNet/Death shell (catch decisions and the launch are specced in OccupantCatchRules)",
 	["ReplicatedStorage.Client.Features.Occupant.OccupantServiceClient"] = "Camera/Vfx/ByteNet shell (tell decisions are specced in OccupantTellRules)",
 	["ReplicatedStorage.Client.Features.Occupant.Systems.OccupantCatchVfxSystem"] = "Charm/Players/VfxBurstSystem shell (one nil-to-set check per player; presets specced in OccupantVfxConstants)",
+	["ReplicatedStorage.Client.Features.Employee.Systems.EmployeeSwapVfxSystem"] = "VfxBurstSystem shell over live characters (preset specced in EmployeeVfxConstants)",
 	["ReplicatedStorage.Client.Features.Occupant.Systems.OccupantScareSystem"] = "Instance/tween/Sound shell (the scare beat; no decisions)",
 	["ReplicatedStorage.Client.Features.Occupant.Systems.OccupantGestureSystem"] = "Motor6D/RunService shell (poses and easing specced in OccupantGestureFormulas)",
 	["ReplicatedStorage.Client.Features.Occupant.Systems.OccupantClearanceSystem"] = "Instance/raycast shell (the paths and the box test are specced in OccupantGestureFormulas)",

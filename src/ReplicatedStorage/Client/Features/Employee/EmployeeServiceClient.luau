@@ -15,6 +15,7 @@ local Observers = require(ReplicatedStorage.Packages.Observers)
 local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
 local EmployeeEarSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeeEarSystem)
 local EmployeeFaceSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeeFaceSystem)
+local EmployeeSwapVfxSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeeSwapVfxSystem)
 
 local ears = EmployeeEarSystem.new()
 local stoppers: { () -> () } = {}
@@ -41,6 +42,9 @@ local EmployeeServiceClient: EmployeeServiceClient = {
 			Observers.observeCharacter(function(_player: Player, character: Model)
 				if character:GetAttribute(EmployeeConstants.NAME_ATTRIBUTE) == nil then
 					return nil
+				end
+				if character:GetAttribute(EmployeeConstants.SWAP_ATTRIBUTE) == true then
+					EmployeeSwapVfxSystem.play(character)
 				end
 				faces += 1
 				local releaseFace = EmployeeFaceSystem.bind(character)
