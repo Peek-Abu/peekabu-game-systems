@@ -230,5 +230,16 @@ return function()
 			end
 			expect(high - low > 0.2).to.equal(true)
 		end)
+
+		it("still moves at server-clock times (Workspace:GetServerTimeNow, ~1.8e9 s)", function()
+			local low, high = math.huge, -math.huge
+			for i = 0, 400 do
+				local b = OfficeAnomalyUtils.tvBrightness(1792811431.25 + i * 0.017)
+				expect(b >= 0.6 - 1e-9 and b <= 1.2 + 1e-9).to.equal(true)
+				low = math.min(low, b)
+				high = math.max(high, b)
+			end
+			expect(high - low > 0.2).to.equal(true)
+		end)
 	end)
 end

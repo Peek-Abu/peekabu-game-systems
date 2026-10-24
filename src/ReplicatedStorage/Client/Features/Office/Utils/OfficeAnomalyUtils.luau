@@ -39,6 +39,8 @@ local WELCOME_WRONG = 1.2
 local TV_MIN = 0.6
 local TV_MAX = 1.2
 local TV_RATE = 8
+-- math.noise repeats every 256 along an axis (checked in Studio: x and x + 256 agree to 2e-5).
+local NOISE_WRAP = 256
 
 local KNOWN: { [string]: boolean } = {}
 for _, id in OfficeAnomalyConstants.IDS do
@@ -227,10 +229,12 @@ function OfficeAnomalyUtils.welcomeText(t: number, wrong: string): string
 end
 
 --[=[
-	The booth TV's SurfaceLight brightness at time `t` (0.6-1.2, smooth noise at about 8 Hz).
+	The booth TV's SurfaceLight brightness at time `t` (0.6-1.2, smooth noise at about 8 Hz). `t` is the server clock
+	(~1.8e9 s), where math.noise has no precision left and goes flat, so the input is wrapped to NOISE_WRAP first
+	(math.noise is lattice noise over a 256-cell table, so the wrap is seamless).
 ]=]
 function OfficeAnomalyUtils.tvBrightness(t: number): number
-	local noise = math.clamp(math.noise(t * TV_RATE, 0.37) + 0.5, 0, 1)
+	local noise = math.clamp(math.noise((t * TV_RATE) % NOISE_WRAP, 0.37) + 0.5, 0, 1)
 	return TV_MIN + (TV_MAX - TV_MIN) * noise
 end
 
