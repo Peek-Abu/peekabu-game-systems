@@ -14,6 +14,8 @@
 	  `respawn(player)`). `holdRespawn(player)` keeps one player down under either policy until
 	  `releaseRespawn(player)`; everyone else still respawns.
 	- `setSpawnPoint(resolver)` chooses where characters appear; `kill(..., { launch })` throws the body as it dies.
+	- `setCharacterLoader(loader)` lets a game build each player's character itself (joins and respawns call it);
+	  a character with the KeepPlace attribute stays where it was put instead of going to the spawn point.
 	- `knockdown(player, launch, seconds)` is the non-lethal take-down: thrown, down `seconds`, then up where they
 	  landed (DeathKnockdownSystem; the owning client plays the pose). `isDown` says whether they are down now;
 	  `standUp` gets them up early. Not the one-way `ragdoll`.
@@ -58,6 +60,8 @@ setmetatable(causes, { __mode = "k" })
 local launches: { [Humanoid]: Vector3 } = {}
 setmetatable(launches, { __mode = "k" })
 local spawnResolver: DeathTypes.SpawnResolver? = nil
+-- A game's own character builder (setCharacterLoader); nil = the engine's LoadCharacterAsync.
+local characterLoader: ((player: Player) -> ())? = nil
 local counters = { playerDeaths = 0, rigDeaths = 0, ragdolls = 0 }
 local stoppers: { () -> () } = {}
 -- Players kept down on purpose; they are not respawned until released.
@@ -174,9 +178,14 @@ local function loadCharacter(player: Player): boolean
 	if player.Parent == nil then
 		return false
 	end
-	task.spawn(function()
-		player:LoadCharacterAsync()
-	end)
+	local loader = characterLoader
+	if loader ~= nil then
+		task.spawn(loader, player)
+	else
+		task.spawn(function()
+			player:LoadCharacterAsync()
+		end)
+	end
 	return true
 end
 
@@ -253,6 +262,7 @@ export type DeathServiceServer = {
 	standUp: (self: DeathServiceServer, player: Player) -> (),
 	isDown: (self: DeathServiceServer, player: Player) -> boolean,
 	setSpawnPoint: (self: DeathServiceServer, resolver: DeathTypes.SpawnResolver?) -> (),
+	setCharacterLoader: (self: DeathServiceServer, loader: ((player: Player) -> ())?) -> (),
 	track: (self: DeathServiceServer, model: Model) -> (),
 	ragdoll: (self: DeathServiceServer, model: Model) -> boolean,
 	respawn: (self: DeathServiceServer, player: Player) -> boolean,
@@ -276,7 +286,10 @@ local DeathServiceServer: DeathServiceServer = {
 			stoppers,
 			Observers.observeCharacter(function(player: Player, character: Model)
 				local resolver = spawnResolver
-				if resolver ~= nil then
+				if
+					resolver ~= nil
+					and not DeathRespawnRules.keepsPlace(character:GetAttribute(DeathConstants.KEEP_PLACE_ATTRIBUTE))
+				then
 					local ok, cframe = pcall(resolver, player)
 					if not ok then
 						log:warn(`spawn resolver failed for {player.Name}: {cframe}`)
@@ -405,6 +418,14 @@ local DeathServiceServer: DeathServiceServer = {
 		Sets where every player's next character appears (a loading bay, a team base); nil restores the
 		engine's choice. A resolver returning nil for a player leaves that spawn alone.
 	]=]
+	--[=[
+		Makes joins and respawns call `loader(player)` instead of the engine's LoadCharacterAsync (a game that builds
+		each player's character itself; it must end by assigning `player.Character`). nil restores the engine.
+	]=]
+	setCharacterLoader = function(_self, loader)
+		characterLoader = loader
+	end,
+
 	setSpawnPoint = function(_self, resolver)
 		spawnResolver = resolver
 	end,

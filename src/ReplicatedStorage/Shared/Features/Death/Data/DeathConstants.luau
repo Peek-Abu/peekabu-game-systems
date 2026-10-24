@@ -53,6 +53,9 @@ local DeathConstants = {
 	-- Character attribute the server sets while a knockdown holds the character down: the throw's velocity
 	-- (Vector3); cleared when they get up. It goes with the character, so a reset never leaves anyone down.
 	KNOCKDOWN_ATTRIBUTE = "Knockdown",
+	-- Character attribute a game sets (true) on a character it built and placed itself, before assigning it: the
+	-- spawn point resolver then leaves it where it stands (DeathRespawnRules.keepsPlace).
+	KEEP_PLACE_ATTRIBUTE = "KeepPlace",
 	-- Spectate Input actions (DeathServiceClient registers them).
 	SPECTATE_NEXT = "spectateNext",
 	SPECTATE_PREV = "spectatePrev",

@@ -15,4 +15,13 @@ return function()
 			expect(DeathRespawnRules.respawns("manual", true)).to.equal(false)
 		end)
 	end)
+
+	describe("keepsPlace", function()
+		it("keeps only a character marked true (a swap where it stands) off the spawn point", function()
+			expect(DeathRespawnRules.keepsPlace(true)).to.equal(true)
+			expect(DeathRespawnRules.keepsPlace(nil)).to.equal(false)
+			expect(DeathRespawnRules.keepsPlace(false)).to.equal(false)
+			expect(DeathRespawnRules.keepsPlace("yes")).to.equal(false)
+		end)
+	end)
 end
