@@ -19,6 +19,15 @@ export type SilhouetteState = {
 	inViewSince: number?,
 }
 export type DoorPhase = "opening" | "open" | "closing" | "closed"
+-- The lobby doors' clock: how many cycles have run, when the next is due (nil: none scheduled, waiting for a player
+-- to come near) and when the running one began.
+export type DoorTimer = {
+	cycle: number,
+	nextAt: number?,
+	startedAt: number?,
+}
+-- What the system does to one slot this frame.
+export type SlotAction = "apply" | "reset" | "reapply" | "refresh" | "keep" | "none"
 
 local DOOR_OPEN = 0.6
 local DOOR_HOLD = 2
@@ -65,17 +74,19 @@ end
 
 --[=[
 	One step of the silhouette: hidden stays hidden (apply makes it visible); visible becomes seen after
-	`visibleFor` unbroken seconds in view; seen becomes gone the first time it is off screen; gone is final.
+	`visibleFor` unbroken seconds in view (`inView`: on screen, in range and not occluded); seen becomes gone only the
+	first time it is off screen (`onScreen` false) — occluded or far but still on screen it stays; gone is final.
 ]=]
 function OfficeAnomalyUtils.silhouette(
 	state: SilhouetteState,
 	onScreen: boolean,
+	inView: boolean,
 	visibleFor: number,
 	now: number
 ): SilhouetteState
 	local phase = state.phase
 	if phase == "visible" then
-		if not onScreen then
+		if not (onScreen and inView) then
 			return { phase = "visible" }
 		end
 		local since = state.inViewSince or now
@@ -110,6 +121,72 @@ function OfficeAnomalyUtils.doorAt(elapsed: number): (DoorPhase, number)
 		return "closing", 1 - (elapsed - DOOR_OPEN - DOOR_HOLD) / DOOR_CLOSE
 	end
 	return "closed", 0
+end
+
+--[=[
+	One step of the lobby doors' clock. A cycle never starts the moment a player comes near: with nothing scheduled,
+	a player near schedules one doorEvery (20-40 s) later; when it comes due it runs only if a player is near then
+	(and the next is scheduled from its start), otherwise nothing is scheduled until a player is near again. A running
+	cycle (DOOR_CYCLE s) always finishes.
+]=]
+function OfficeAnomalyUtils.doorStep(timer: DoorTimer, seed: number, near: boolean, now: number): DoorTimer
+	local startedAt = timer.startedAt
+	if startedAt ~= nil and now - startedAt < OfficeAnomalyUtils.DOOR_CYCLE then
+		return timer
+	end
+	local nextAt = timer.nextAt
+	if nextAt == nil then
+		if near then
+			return { cycle = timer.cycle, nextAt = now + OfficeAnomalyUtils.doorEvery(seed, timer.cycle + 1) }
+		end
+		return { cycle = timer.cycle }
+	end
+	if now < nextAt then
+		return { cycle = timer.cycle, nextAt = nextAt }
+	end
+	if near then
+		local cycle = timer.cycle + 1
+		return { cycle = cycle, nextAt = now + OfficeAnomalyUtils.doorEvery(seed, cycle + 1), startedAt = now }
+	end
+	return { cycle = timer.cycle }
+end
+
+--[=[
+	How open the doors are under `timer` at `now` (0 closed .. 1 open).
+]=]
+function OfficeAnomalyUtils.doorOpen(timer: DoorTimer, now: number): number
+	local startedAt = timer.startedAt
+	if startedAt == nil then
+		return 0
+	end
+	local _, open = OfficeAnomalyUtils.doorAt(now - startedAt)
+	return open
+end
+
+--[=[
+	What to do with one slot this frame. `id` is the slot's anomaly id (nil: not a slot), `appliedSeed` the run it is
+	applied for (nil: not applied), `restreamed` whether a part streamed into it since it was applied.
+	apply (listed, not applied), reset (applied, no longer listed), reapply (applied for another run), refresh
+	(applied, a part streamed in), keep (applied, nothing changed), none (not listed, not applied).
+]=]
+function OfficeAnomalyUtils.slotAction(
+	id: string?,
+	published: { [string]: boolean },
+	seed: number,
+	appliedSeed: number?,
+	restreamed: boolean
+): SlotAction
+	local wanted = id ~= nil and published[id] == true
+	if appliedSeed == nil then
+		return if wanted then "apply" else "none"
+	elseif not wanted then
+		return "reset"
+	elseif appliedSeed ~= seed then
+		return "reapply"
+	elseif restreamed then
+		return "refresh"
+	end
+	return "keep"
 end
 
 --[=[

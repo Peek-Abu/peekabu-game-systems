@@ -3,24 +3,31 @@
 	OfficeAnomalySystem: plays the run's exterior anomalies on this client. The server publishes the run's ids on
 	Workspace.CleanupCrewOffice (OfficeAnomalyConstants.PUBLISHED_ATTRIBUTE, comma-joined; the model is rebuilt every
 	shift and the admin `anomaly` command republishes); the slots are the OfficeExterior Models tagged SLOT_TAG with
-	their id in SLOT_ATTRIBUTE, built in their default state. Every Heartbeat it applies each listed id to its slots
-	and resets every slot whose id is not listed, so a new run or `none` puts each slot back exactly as it was built
-	(every property it touches is captured on apply and written back on reset; what it adds is destroyed).
+	their id in SLOT_ATTRIBUTE, built in their default state. It caches the published set and the run's LayoutSeed
+	from the model's attribute-changed signals (and the model being rebuilt), and every Heartbeat decides per slot
+	(OfficeAnomalyUtils.slotAction) whether to apply, reset, re-apply for a new run or refresh it, so a new run or
+	`none` puts each slot back exactly as it was built (every property it touches is captured on apply and written
+	back on reset; what it adds is destroyed). Time is Workspace:GetServerTimeNow(), so co-op players see the
+	welcome screen's wrong line together.
 
 	Streaming is on: slots are tracked by the tag's added/removed signals; a slot streaming out is reset and
 	forgotten, and one streaming back in is applied afresh. A slot Model can arrive before its parts (it streams in
-	whole only near the player), so a part streaming into an applied slot re-applies it (refreshSlot), and the car's
-	tail lights (outside the slot) are looked for again until found. The silhouette, once gone, stays gone for this player for
-	the run (the office's LayoutSeed), whatever streams.
+	whole only near the player), so a part streaming into an applied slot re-applies it (refreshSlot, keeping the
+	silhouette's progress and the door cycle count), and the car's tail lights (outside the slot) are looked for every
+	TAIL_LOOK_EVERY s (new ones lit, gone ones dropped). The silhouette, once gone, stays gone for this player for the
+	run (the office's LayoutSeed), whatever streams.
 
 	Per id: silhouette (shown; seen after SILHOUETTE_SEEN_AFTER s in view — on screen, within SILHOUETTE_RANGE, not
-	occluded — it hides the next time it is off screen), autoDoors (with a player within DOOR_NEAR the leaves slide
-	open, hold and close every 20-40 s), carTicking (a looped engine tick at the emitter and the car's tail lights
-	dimly on), welcomeScreen (the welcome text, the run's wrong line in the last 1.2 s of every 6 s), boothTv (cold
-	blue Neon, a flickering SurfaceLight and a static loop), wetFloor (the sign shows), banner (turned 180° about its
-	forward axis). Pending sounds (OfficeAssets) are silent.
+	occluded, see-through parts not counting — it hides the next time it is off screen, never while on screen),
+	autoDoors (the leaves slide open, hold and close on OfficeAnomalyUtils.doorStep's clock: never the moment a player
+	comes near; each cycle 20-40 s after the last, or after a player arrives or the slot re-streams, and only with a
+	player within DOOR_NEAR when it comes due), carTicking (a looped engine tick at the emitter and the car's tail
+	lights dimly on), welcomeScreen (the welcome text, the run's wrong line in the last 1.2 s of every 6 s), boothTv
+	(cold blue Neon, a flickering SurfaceLight and a static loop), wetFloor (the sign shows), banner (turned 180° about
+	its forward axis). Pending sounds (OfficeAssets) are silent.
 
-	Systems (Instances, Sound, RunService); the timing and looks are the specced OfficeAnomalyUtils.
+	Systems (Instances, Sound, RunService); the timing, looks and per-slot decisions are the specced
+	OfficeAnomalyUtils.
 
 	@class OfficeAnomalySystem
 ]=]
@@ -41,8 +48,10 @@ local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.Sound
 local OFFICE_NAME = "CleanupCrewOffice"
 -- The parked car's tail lights within this of the carTicking emitter dim on.
 local TAIL_LIGHT_RADIUS = 16
--- While none is found (not streamed in yet), look again this often.
+-- Tail lights stream separately from the slot: look for new (and gone) ones this often.
 local TAIL_LOOK_EVERY = 2
+-- A ray to the figure passes through at most this many see-through parts (glass, invisible walls).
+local SEE_THROUGH_HITS = 6
 local TAIL_LIGHT_COLOR = Color3.fromRGB(255, 45, 35)
 local TV_COLOR = Color3.fromRGB(95, 140, 210)
 local TV_LIGHT_COLOR = Color3.fromRGB(150, 190, 255)
@@ -69,51 +78,63 @@ type Leaf = { part: BasePart, closed: CFrame, side: number, slide: number }
 type Applied = {
 	id: string,
 	seed: number,
-	appliedAt: number,
 	parts: { PartDefault },
 	labels: { LabelDefault },
 	guis: { GuiDefault },
 	-- Instances this system added (lights), destroyed on reset.
 	added: { Instance },
 	sound: SoundServiceClient.SoundHandle?,
-	-- autoDoors
+	-- autoDoors, and how open the leaves were last written (written only when it changes).
 	leaves: { Leaf },
-	cycle: number,
-	nextCycleAt: number,
-	cycleStart: number?,
+	door: OfficeAnomalyUtils.DoorTimer,
+	lastOpen: number,
 	-- welcomeScreen
 	wrong: string,
 	label: TextLabel?,
 	-- boothTv
 	light: SurfaceLight?,
-	-- carTicking: the emitter, and when to look again for tail lights not streamed in yet.
+	-- carTicking: the emitter, and when to look again for tail lights.
 	emitter: BasePart?,
-	tailsLit: boolean,
 	nextTailLook: number,
-	-- silhouette
+	-- silhouette, and whether its parts are drawn now (written only when it changes).
+	silhouette: OfficeAnomalyUtils.SilhouetteState,
+	shown: boolean?,
+}
+
+-- What a refresh keeps from the state it replaces.
+type Carry = {
+	door: OfficeAnomalyUtils.DoorTimer,
 	silhouette: OfficeAnomalyUtils.SilhouetteState,
 }
 
--- Every slot this client has (tag added, not yet removed), and the ones an anomaly is applied to.
--- Each tracked slot's DescendantAdded connection: a part streaming in after the slot was applied re-applies it.
+-- Every slot this client has (tag added, not yet removed), with its DescendantAdded connection: a part streaming
+-- in after the slot was applied marks it restreamed (refreshed next step).
 local tracked: { [Model]: RBXScriptConnection } = {}
 local restreamed: { [Model]: boolean } = {}
 local applied: { [Model]: Applied } = {}
 -- The run whose silhouette this player has already seen go (its LayoutSeed).
 local goneSeed: number? = nil
 local connections: { RBXScriptConnection } = {}
+-- The published set and the run's seed, cached from the office model's attributes.
 local published: { [string]: boolean } = {}
-local counters = { applies = 0, resets = 0, doorCycles = 0, silhouettesGone = 0, pending = 0 }
+local runSeed = 0
+local office: Instance? = nil
+local officeConnections: { RBXScriptConnection } = {}
+local rayParams = RaycastParams.new()
+rayParams.FilterType = Enum.RaycastFilterType.Exclude
+rayParams.IgnoreWater = true
+local counters = { applies = 0, resets = 0, refreshes = 0, doorCycles = 0, silhouettesGone = 0, pending = 0 }
 
 local function slotId(slot: Model): string?
 	local id = slot:GetAttribute(OfficeAnomalyConstants.SLOT_ATTRIBUTE)
 	return if type(id) == "string" then id else nil
 end
 
-local function capturePart(state: Applied, part: BasePart)
+-- Captures `part`'s default once; true when it was not captured yet.
+local function capturePart(state: Applied, part: BasePart): boolean
 	for _, row in state.parts do
 		if row.part == part then
-			return
+			return false
 		end
 	end
 	table.insert(state.parts, {
@@ -123,6 +144,7 @@ local function capturePart(state: Applied, part: BasePart)
 		color = part.Color,
 		material = part.Material,
 	})
+	return true
 end
 
 local function captureLabel(state: Applied, label: TextLabel)
@@ -163,7 +185,11 @@ local function shot(id: string, at: BasePart)
 	SoundServiceClient:playOneShot(id, { at = at })
 end
 
-local function setSilhouette(slot: Model, shown: boolean)
+local function setSilhouette(slot: Model, state: Applied, shown: boolean)
+	if state.shown == shown then
+		return
+	end
+	state.shown = shown
 	for _, d in slot:GetDescendants() do
 		if d:IsA("BasePart") then
 			d.Transparency = if shown then 0 else 1
@@ -190,10 +216,21 @@ local function tailLights(slot: Model, emitter: BasePart): { BasePart }
 	return list
 end
 
--- Dims the car's tail lights on (once found; they stream separately from the slot).
+-- Dims on every tail light in reach not lit yet, and forgets lit ones that streamed out of the exterior (they come
+-- back as new instances, lit on a later look). A light still under the exterior is never re-captured: its captured
+-- row holds the default, and capturing it again while lit would make the lit look its "default".
 local function lightTails(slot: Model, state: Applied, emitter: BasePart)
+	local exterior = slot:FindFirstAncestor("OfficeExterior")
+	for index = #state.parts, 1, -1 do
+		local part = state.parts[index].part
+		if exterior == nil or not part:IsDescendantOf(exterior) then
+			table.remove(state.parts, index)
+		end
+	end
 	for _, light in tailLights(slot, emitter) do
-		capturePart(state, light)
+		if not capturePart(state, light) then
+			continue
+		end
 		light.Color = TAIL_LIGHT_COLOR
 		light.Material = Enum.Material.Neon
 		local glow = Instance.new("PointLight")
@@ -204,18 +241,6 @@ local function lightTails(slot: Model, state: Applied, emitter: BasePart)
 		glow.Shadows = false
 		glow.Parent = light
 		table.insert(state.added, glow)
-		state.tailsLit = true
-	end
-end
-
-local function startDoorCycle(state: Applied, now: number)
-	state.cycle += 1
-	state.cycleStart = now
-	state.nextCycleAt = now + OfficeAnomalyUtils.doorEvery(state.seed, state.cycle)
-	counters.doorCycles += 1
-	local leaf = state.leaves[1]
-	if leaf ~= nil then
-		shot(OfficeAssets.AUTO_DOOR, leaf.part)
 	end
 end
 
@@ -236,42 +261,56 @@ local function someoneNear(slot: Model): boolean
 	return false
 end
 
--- Whether the figure is in view of this client's camera: on screen, within range and not occluded.
-local function inView(slot: Model): boolean
+-- A part the eye sees through: it never hides the figure.
+local function seeThrough(part: BasePart): boolean
+	return part.Transparency >= 0.5 or part.Material == Enum.Material.Glass
+end
+
+-- The figure against this client's camera: on screen (in the frustum, in front), and in view (on screen, within
+-- SILHOUETTE_RANGE and not hidden behind anything solid). A figure not streamed in is off screen.
+local function views(slot: Model): (boolean, boolean)
 	local camera = Workspace.CurrentCamera
 	local body = firstPart(slot, "FigureBody")
 	if camera == nil or body == nil then
-		return false
+		return false, false
+	end
+	local point, visible = camera:WorldToViewportPoint(body.Position)
+	if not visible or point.Z <= 0 then
+		return false, false
 	end
 	local origin = camera.CFrame.Position
 	local offset = body.Position - origin
 	if offset.Magnitude > OfficeAnomalyUtils.SILHOUETTE_RANGE then
-		return false
+		return true, false
 	end
-	local point, onScreen = camera:WorldToViewportPoint(body.Position)
-	if not onScreen or point.Z <= 0 then
-		return false
-	end
-	local params = RaycastParams.new()
-	params.FilterType = Enum.RaycastFilterType.Exclude
 	local exclude: { Instance } = { slot }
 	local character = if Players.LocalPlayer ~= nil then Players.LocalPlayer.Character else nil
 	if character ~= nil then
 		table.insert(exclude, character)
 	end
-	params.FilterDescendantsInstances = exclude
-	params.IgnoreWater = true
-	local hit = Workspace:Raycast(origin, offset, params)
-	return hit == nil
+	for _ = 1, SEE_THROUGH_HITS do
+		rayParams.FilterDescendantsInstances = exclude
+		local hit = Workspace:Raycast(origin, offset, rayParams)
+		if hit == nil then
+			return true, true
+		end
+		local part = hit.Instance
+		if not (part:IsA("BasePart") and seeThrough(part)) then
+			return true, false
+		end
+		table.insert(exclude, part)
+	end
+	return true, false
 end
 
 local OfficeAnomalySystem = {}
 
 --[=[
 	Applies anomaly `id` (the slot's) to `slot` for the run `seed`, beginning at `now`. Captures every property it
-	will touch first; applying an applied slot again does nothing.
+	will touch first; applying an applied slot again does nothing. `carry` (refreshSlot) keeps the silhouette's
+	progress and the door cycle count.
 ]=]
-function OfficeAnomalySystem.applySlot(slot: Model, seed: number, now: number)
+function OfficeAnomalySystem.applySlot(slot: Model, seed: number, now: number, carry: Carry?)
 	if applied[slot] ~= nil then
 		return
 	end
@@ -282,23 +321,22 @@ function OfficeAnomalySystem.applySlot(slot: Model, seed: number, now: number)
 	local state: Applied = {
 		id = id,
 		seed = seed,
-		appliedAt = now,
 		parts = {},
 		labels = {},
 		guis = {},
 		added = {},
 		sound = nil,
 		leaves = {},
-		cycle = 0,
-		nextCycleAt = now,
-		cycleStart = nil,
+		-- Nothing scheduled: the first cycle is 20-40 s after a player is near (also after a re-stream).
+		door = { cycle = if carry ~= nil then carry.door.cycle else 0 },
+		lastOpen = 0,
 		wrong = OfficeAnomalyUtils.wrongLine(seed),
 		label = nil,
 		light = nil,
 		emitter = nil,
-		tailsLit = false,
-		nextTailLook = now,
+		nextTailLook = now + TAIL_LOOK_EVERY,
 		silhouette = { phase = "hidden" },
+		shown = nil,
 	}
 	applied[slot] = state
 	counters.applies += 1
@@ -309,10 +347,14 @@ function OfficeAnomalySystem.applySlot(slot: Model, seed: number, now: number)
 				capturePart(state, d)
 			end
 		end
-		if goneSeed ~= seed then
+		if goneSeed == seed then
+			state.silhouette = { phase = "gone" }
+		elseif carry ~= nil and carry.silhouette.phase ~= "hidden" then
+			state.silhouette = carry.silhouette
+		else
 			state.silhouette = { phase = "visible" }
 		end
-		setSilhouette(slot, OfficeAnomalyUtils.silhouetteShown(state.silhouette))
+		setSilhouette(slot, state, OfficeAnomalyUtils.silhouetteShown(state.silhouette))
 	elseif id == "autoDoors" then
 		for _, leaf in namedParts(slot, "LobbyDoorLeaf") do
 			capturePart(state, leaf)
@@ -343,7 +385,7 @@ function OfficeAnomalySystem.applySlot(slot: Model, seed: number, now: number)
 					-- Lit from within: the night does not dim it.
 					gui.LightInfluence = 0
 				end
-				d.Text = OfficeAnomalyUtils.welcomeText(0, state.wrong)
+				d.Text = OfficeAnomalyUtils.welcomeText(now, state.wrong)
 				break
 			end
 		end
@@ -359,7 +401,7 @@ function OfficeAnomalySystem.applySlot(slot: Model, seed: number, now: number)
 			light.Color = TV_LIGHT_COLOR
 			light.Range = 12
 			light.Angle = 120
-			light.Brightness = OfficeAnomalyUtils.tvBrightness(0)
+			light.Brightness = OfficeAnomalyUtils.tvBrightness(now)
 			light.Shadows = false
 			light.Parent = tv
 			state.light = light
@@ -388,32 +430,40 @@ end
 
 --[=[
 	Moves an applied slot on to `now`. `sensed` overrides the world check where one is made (a player near the
-	doors; the figure in view); nil checks the world.
+	doors; the figure in view) and `onScreen` the figure being on screen (nil: as `sensed`); nil checks the world.
 ]=]
-function OfficeAnomalySystem.stepSlot(slot: Model, now: number, sensed: boolean?)
+function OfficeAnomalySystem.stepSlot(slot: Model, now: number, sensed: boolean?, onScreen: boolean?)
 	local state = applied[slot]
 	if state == nil then
 		return
 	end
 	local id = state.id
 	if id == "autoDoors" then
-		local start = state.cycleStart
-		local running = start ~= nil and now - start < OfficeAnomalyUtils.DOOR_CYCLE
-		if not running and now >= state.nextCycleAt then
-			local near = if sensed ~= nil then sensed else someoneNear(slot)
-			if near then
-				startDoorCycle(state, now)
-				start = state.cycleStart
+		local near = if sensed ~= nil then sensed else someoneNear(slot)
+		local before = state.door.startedAt
+		state.door = OfficeAnomalyUtils.doorStep(state.door, state.seed, near, now)
+		local startedAt = state.door.startedAt
+		if startedAt ~= nil and startedAt ~= before then
+			counters.doorCycles += 1
+			local leaf = state.leaves[1]
+			if leaf ~= nil then
+				shot(OfficeAssets.AUTO_DOOR, leaf.part)
 			end
 		end
-		local _, open = OfficeAnomalyUtils.doorAt(if start ~= nil then now - start else math.huge)
-		for _, leaf in state.leaves do
-			leaf.part.CFrame = OfficeAnomalyUtils.leafAt(leaf.closed, leaf.side, leaf.slide, open)
+		local open = OfficeAnomalyUtils.doorOpen(state.door, now)
+		if open ~= state.lastOpen then
+			state.lastOpen = open
+			for _, leaf in state.leaves do
+				leaf.part.CFrame = OfficeAnomalyUtils.leafAt(leaf.closed, leaf.side, leaf.slide, open)
+			end
 		end
 	elseif id == "welcomeScreen" then
 		local label = state.label
 		if label ~= nil then
-			label.Text = OfficeAnomalyUtils.welcomeText(now - state.appliedAt, state.wrong)
+			local text = OfficeAnomalyUtils.welcomeText(now, state.wrong)
+			if label.Text ~= text then
+				label.Text = text
+			end
 		end
 	elseif id == "boothTv" then
 		local light = state.light
@@ -422,7 +472,7 @@ function OfficeAnomalySystem.stepSlot(slot: Model, now: number, sensed: boolean?
 		end
 	elseif id == "carTicking" then
 		local emitter = state.emitter
-		if emitter ~= nil and not state.tailsLit and now >= state.nextTailLook then
+		if emitter ~= nil and now >= state.nextTailLook then
 			state.nextTailLook = now + TAIL_LOOK_EVERY
 			lightTails(slot, state, emitter)
 		end
@@ -431,16 +481,27 @@ function OfficeAnomalySystem.stepSlot(slot: Model, now: number, sensed: boolean?
 			state.silhouette = { phase = "gone" }
 		end
 		if state.silhouette.phase == "visible" or state.silhouette.phase == "seen" then
-			local seen = if sensed ~= nil then sensed else inView(slot)
-			local nextState =
-				OfficeAnomalyUtils.silhouette(state.silhouette, seen, OfficeAnomalyUtils.SILHOUETTE_SEEN_AFTER, now)
+			local screen, view
+			if sensed ~= nil then
+				view = sensed
+				screen = if onScreen ~= nil then onScreen else sensed
+			else
+				screen, view = views(slot)
+			end
+			local nextState = OfficeAnomalyUtils.silhouette(
+				state.silhouette,
+				screen,
+				view,
+				OfficeAnomalyUtils.SILHOUETTE_SEEN_AFTER,
+				now
+			)
 			state.silhouette = nextState
 			if nextState.phase == "gone" then
 				goneSeed = state.seed
 				counters.silhouettesGone += 1
 			end
 		end
-		setSilhouette(slot, OfficeAnomalyUtils.silhouetteShown(state.silhouette))
+		setSilhouette(slot, state, OfficeAnomalyUtils.silhouetteShown(state.silhouette))
 	end
 end
 
@@ -480,15 +541,18 @@ end
 
 --[=[
 	Re-applies an applied slot from scratch (reset, then apply for the same run): a part that streamed in after the
-	slot was applied gets the anomaly too. Does nothing to a slot that is not applied.
+	slot was applied gets the anomaly too. The silhouette keeps its progress; the doors keep their cycle count and
+	schedule their next cycle afresh (20-40 s after a player is near). Does nothing to a slot that is not applied.
 ]=]
 function OfficeAnomalySystem.refreshSlot(slot: Model, now: number)
 	local state = applied[slot]
 	if state == nil then
 		return
 	end
+	counters.refreshes += 1
+	local carry: Carry = { door = state.door, silhouette = state.silhouette }
 	OfficeAnomalySystem.resetSlot(slot)
-	OfficeAnomalySystem.applySlot(slot, state.seed, now)
+	OfficeAnomalySystem.applySlot(slot, state.seed, now, carry)
 end
 
 --[=[
@@ -505,36 +569,66 @@ function OfficeAnomalySystem.forgetRun()
 	goneSeed = nil
 end
 
-local function office(): Instance?
-	return Workspace:FindFirstChild(OFFICE_NAME)
-end
-
-local function step()
-	local now = os.clock()
-	local model = office()
+-- Re-reads the published set and the seed from the office model (none standing: nothing published).
+local function readOffice()
+	local model = office
 	published = OfficeAnomalyUtils.parse(
 		if model ~= nil then model:GetAttribute(OfficeAnomalyConstants.PUBLISHED_ATTRIBUTE) else nil
 	)
 	local rawSeed = if model ~= nil then model:GetAttribute("LayoutSeed") else nil
-	local seed = if type(rawSeed) == "number" then rawSeed else 0
-	if goneSeed ~= nil and goneSeed ~= seed then
+	runSeed = if type(rawSeed) == "number" then rawSeed else 0
+	if goneSeed ~= nil and goneSeed ~= runSeed then
 		goneSeed = nil
 	end
+end
+
+-- Follows the office model now in Workspace (it is rebuilt every shift) and its two attributes.
+local function bindOffice()
+	for _, connection in officeConnections do
+		connection:Disconnect()
+	end
+	table.clear(officeConnections)
+	local model = Workspace:FindFirstChild(OFFICE_NAME)
+	office = model
+	if model ~= nil then
+		table.insert(
+			officeConnections,
+			model:GetAttributeChangedSignal(OfficeAnomalyConstants.PUBLISHED_ATTRIBUTE):Connect(readOffice)
+		)
+		table.insert(officeConnections, model:GetAttributeChangedSignal("LayoutSeed"):Connect(readOffice))
+	end
+	readOffice()
+end
+
+local function officeChanged(child: Instance)
+	if child.Name == OFFICE_NAME then
+		bindOffice()
+	end
+end
+
+local function step()
+	local now = Workspace:GetServerTimeNow()
 	for slot in tracked do
-		local id = slotId(slot)
 		local state = applied[slot]
-		local wanted = id ~= nil and published[id] == true
-		local stale = state ~= nil and (not wanted or state.seed ~= seed)
-		if stale then
+		local action = OfficeAnomalyUtils.slotAction(
+			slotId(slot),
+			published,
+			runSeed,
+			if state ~= nil then state.seed else nil,
+			restreamed[slot] == true
+		)
+		restreamed[slot] = nil
+		if action == "reset" then
 			OfficeAnomalySystem.resetSlot(slot)
-		elseif state ~= nil and restreamed[slot] then
+		elseif action == "reapply" then
+			OfficeAnomalySystem.resetSlot(slot)
+			OfficeAnomalySystem.applySlot(slot, runSeed, now)
+		elseif action == "apply" then
+			OfficeAnomalySystem.applySlot(slot, runSeed, now)
+		elseif action == "refresh" then
 			OfficeAnomalySystem.refreshSlot(slot, now)
 		end
-		restreamed[slot] = nil
-		if wanted and (state == nil or stale) then
-			OfficeAnomalySystem.applySlot(slot, seed, now)
-		end
-		if wanted then
+		if applied[slot] ~= nil then
 			OfficeAnomalySystem.stepSlot(slot, now)
 		end
 	end
@@ -575,6 +669,9 @@ function OfficeAnomalySystem.start()
 		connections,
 		CollectionService:GetInstanceRemovedSignal(OfficeAnomalyConstants.SLOT_TAG):Connect(untrack)
 	)
+	table.insert(connections, Workspace.ChildAdded:Connect(officeChanged))
+	table.insert(connections, Workspace.ChildRemoved:Connect(officeChanged))
+	bindOffice()
 	table.insert(connections, RunService.Heartbeat:Connect(step))
 end
 
@@ -591,6 +688,12 @@ function OfficeAnomalySystem.stop()
 	end
 	table.clear(tracked)
 	table.clear(restreamed)
+	for _, connection in officeConnections do
+		connection:Disconnect()
+	end
+	table.clear(officeConnections)
+	office = nil
+	table.clear(published)
 end
 
 function OfficeAnomalySystem.getState(): OfficeAnomalyState

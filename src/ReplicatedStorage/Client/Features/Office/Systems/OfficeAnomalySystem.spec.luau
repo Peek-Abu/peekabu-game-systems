@@ -170,8 +170,10 @@ return function()
 				OfficeAnomalySystem.applySlot(slots[id], 7, 0)
 			end
 			-- Doors mid-cycle, the screen in its wrong-line window.
+			-- A player near schedules a cycle 20-40 s on; by 45 s it is due and starts; a second later it is open.
 			OfficeAnomalySystem.stepSlot(slots.autoDoors, 1, true)
-			OfficeAnomalySystem.stepSlot(slots.autoDoors, 2, true)
+			OfficeAnomalySystem.stepSlot(slots.autoDoors, 45, true)
+			OfficeAnomalySystem.stepSlot(slots.autoDoors, 46, true)
 			OfficeAnomalySystem.stepSlot(slots.welcomeScreen, 5)
 			local leaves = slots.autoDoors:GetChildren()
 			expect(leaves[1].CFrame.Position ~= before[leaves[1]].cframe.Position).to.equal(true)
@@ -204,8 +206,9 @@ return function()
 			local before = snapshot(root)
 			for _, id in OfficeAnomalyConstants.IDS do
 				OfficeAnomalySystem.applySlot(slots[id], 7, 0)
-				OfficeAnomalySystem.stepSlot(slots[id], 1, true)
-				OfficeAnomalySystem.stepSlot(slots[id], 2, true)
+				for _, t in { 1, 45, 46 } do
+					OfficeAnomalySystem.stepSlot(slots[id], t, true)
+				end
 				OfficeAnomalySystem.resetSlot(slots[id])
 				local ok, why = same(before, snapshot(root))
 				expect(id .. ": " .. why).to.equal(id .. ": ")
@@ -217,8 +220,9 @@ return function()
 			local before = snapshot(root)
 			for _, id in OfficeAnomalyConstants.IDS do
 				OfficeAnomalySystem.applySlot(slots[id], 7, 0)
-				OfficeAnomalySystem.stepSlot(slots[id], 1, true)
-				OfficeAnomalySystem.stepSlot(slots[id], 2, true)
+				for _, t in { 1, 45, 46 } do
+					OfficeAnomalySystem.stepSlot(slots[id], t, true)
+				end
 			end
 			for _, id in OfficeAnomalyConstants.IDS do
 				OfficeAnomalySystem.resetSlot(slots[id])
@@ -243,6 +247,67 @@ return function()
 			OfficeAnomalySystem.resetSlot(slots.boothTv)
 			local ok = same(before, snapshot(root))
 			expect(ok).to.equal(true)
+		end)
+	end)
+
+	describe("auto doors", function()
+		local function leafPositions()
+			local list = {}
+			for _, leaf in slots.autoDoors:GetChildren() do
+				table.insert(list, leaf.Position)
+			end
+			return list
+		end
+		local function moved(before)
+			for index, position in leafPositions() do
+				if (position - before[index]).Magnitude > 1e-4 then
+					return true
+				end
+			end
+			return false
+		end
+
+		it("do not open the moment a player comes near, only 20-40 s later", function()
+			local before = leafPositions()
+			OfficeAnomalySystem.applySlot(slots.autoDoors, 7, 0)
+			OfficeAnomalySystem.stepSlot(slots.autoDoors, 5, false)
+			OfficeAnomalySystem.stepSlot(slots.autoDoors, 100, true)
+			for t = 100.1, 119.9, 0.5 do
+				OfficeAnomalySystem.stepSlot(slots.autoDoors, t, true)
+				expect(moved(before)).to.equal(false)
+			end
+			local opened = nil
+			for t = 120, 141, 0.25 do
+				OfficeAnomalySystem.stepSlot(slots.autoDoors, t, true)
+				if opened == nil and moved(before) then
+					opened = t
+				end
+			end
+			expect(opened ~= nil and opened >= 120 and opened <= 141).to.equal(true)
+		end)
+
+		it("do not open when a cycle comes due with nobody near", function()
+			local before = leafPositions()
+			OfficeAnomalySystem.applySlot(slots.autoDoors, 7, 0)
+			OfficeAnomalySystem.stepSlot(slots.autoDoors, 1, true)
+			for t = 2, 60, 0.5 do
+				OfficeAnomalySystem.stepSlot(slots.autoDoors, t, false)
+				expect(moved(before)).to.equal(false)
+			end
+			-- Back near: a fresh wait, not an instant open.
+			OfficeAnomalySystem.stepSlot(slots.autoDoors, 61, true)
+			OfficeAnomalySystem.stepSlot(slots.autoDoors, 62, true)
+			expect(moved(before)).to.equal(false)
+		end)
+
+		it("a re-stream schedules afresh instead of opening", function()
+			local before = leafPositions()
+			OfficeAnomalySystem.applySlot(slots.autoDoors, 7, 0)
+			OfficeAnomalySystem.stepSlot(slots.autoDoors, 1, true)
+			OfficeAnomalySystem.refreshSlot(slots.autoDoors, 50)
+			OfficeAnomalySystem.stepSlot(slots.autoDoors, 50, true)
+			OfficeAnomalySystem.stepSlot(slots.autoDoors, 51, true)
+			expect(moved(before)).to.equal(false)
 		end)
 	end)
 
@@ -278,6 +343,46 @@ return function()
 				expect(light:FindFirstChildWhichIsA("PointLight")).to.equal(nil)
 				expect(light.Color).to.equal(Color3.fromRGB(150, 20, 20))
 			end
+		end)
+	end)
+
+	describe("silhouette view", function()
+		local function shown()
+			return slots.silhouette.FigureBody.Transparency == 0
+		end
+
+		it("is seen after 0.5 s in view, stays while on screen but blocked or far, goes once off screen", function()
+			OfficeAnomalySystem.applySlot(slots.silhouette, 9, 0)
+			expect(shown()).to.equal(true)
+			-- Blocked or far while not yet seen: it never goes.
+			OfficeAnomalySystem.stepSlot(slots.silhouette, 0.2, false, true)
+			OfficeAnomalySystem.stepSlot(slots.silhouette, 0.4, false, false)
+			expect(shown()).to.equal(true)
+			OfficeAnomalySystem.stepSlot(slots.silhouette, 1, true, true)
+			OfficeAnomalySystem.stepSlot(slots.silhouette, 1.6, true, true)
+			-- Seen, then blocked but still on screen: it stays.
+			OfficeAnomalySystem.stepSlot(slots.silhouette, 2, false, true)
+			OfficeAnomalySystem.stepSlot(slots.silhouette, 5, false, true)
+			expect(shown()).to.equal(true)
+			OfficeAnomalySystem.stepSlot(slots.silhouette, 6, false, false)
+			expect(shown()).to.equal(false)
+			-- Gone for the run: back on screen it stays hidden, and a re-apply keeps it hidden.
+			OfficeAnomalySystem.stepSlot(slots.silhouette, 7, true, true)
+			expect(shown()).to.equal(false)
+			OfficeAnomalySystem.resetSlot(slots.silhouette)
+			OfficeAnomalySystem.applySlot(slots.silhouette, 9, 8)
+			expect(shown()).to.equal(false)
+		end)
+
+		it("keeps its progress through a re-stream", function()
+			OfficeAnomalySystem.applySlot(slots.silhouette, 9, 0)
+			OfficeAnomalySystem.stepSlot(slots.silhouette, 1, true, true)
+			OfficeAnomalySystem.stepSlot(slots.silhouette, 1.6, true, true)
+			OfficeAnomalySystem.refreshSlot(slots.silhouette, 2)
+			expect(shown()).to.equal(true)
+			-- Already seen: the first time off screen it goes.
+			OfficeAnomalySystem.stepSlot(slots.silhouette, 3, false, false)
+			expect(shown()).to.equal(false)
 		end)
 	end)
 
