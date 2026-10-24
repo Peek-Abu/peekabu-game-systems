@@ -100,6 +100,31 @@ export type Entitlements = {
 }
 
 --[=[
+	One employee's look (Cosmetic): the skin and its colour style, the idle, and the 4 emote-wheel slots (`""` =
+	empty). Ids are plain strings (CosmeticRegistry) so a retired one never breaks a save: CosmeticRules.lookFor
+	falls back to the employee's defaults.
+]=]
+export type Look = {
+	skin: string,
+	style: number,
+	idle: string,
+	wheel: { string },
+}
+
+--[=[
+	The account-wide loadout slice (CosmeticServiceServer): which employee the player plays as, whether they made
+	the first-join pick, each employee's look, the 4 chat-wheel sticker slots (`""` = empty) and the items already
+	seen (for the New! flag). Ownership is NOT here: it is the `entitlements` slice.
+]=]
+export type Loadout = {
+	current: string,
+	picked: boolean,
+	looks: { [string]: Look },
+	stickers: { string },
+	seen: { [string]: boolean },
+}
+
+--[=[
 	The account-wide daily reward slice: the UTC day index (days since the Unix epoch, shifted by
 	DailyRewardConstants.DAY_OFFSET_HOURS) of the last claim (0 = never) and the current streak.
 ]=]
