@@ -219,6 +219,23 @@ function CosmeticRules.checkEquip(loadout: Loadout, change: Change, owns: Owns):
 	end
 end
 
+--[=[
+	The ids worth marking seen (they clear the New! flag): owned, registered, not free (a free item never shows New!)
+	and not seen yet, each once, in the order given.
+]=]
+function CosmeticRules.unseen(loadout: Loadout, ids: { string }, owns: Owns): { string }
+	local result: { string } = {}
+	local taken: { [string]: boolean } = {}
+	for _, id in ids do
+		local item = CosmeticRegistry.get(id)
+		if item ~= nil and item.source ~= "default" and loadout.seen[id] ~= true and not taken[id] and owns(id) then
+			taken[id] = true
+			table.insert(result, id)
+		end
+	end
+	return result
+end
+
 -- The employee's saved look, created from its resolved look when missing.
 local function ensureLook(loadout: Loadout, employee: string, owns: Owns): Look
 	local look = loadout.looks[employee]

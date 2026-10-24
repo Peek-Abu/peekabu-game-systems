@@ -51,6 +51,8 @@ export type InventoryCharacterPanelProps = {
 	onTab: (tab: VM.PageTab) -> (),
 	onSelect: (id: string) -> (),
 	onWear: (change: CosmeticTypes.Change) -> (),
+	-- The shown item was New! and has now been looked at.
+	onSeen: (ids: { string }) -> (),
 }
 
 local TAB_TEXT: { [VM.PageTab]: string } = { skins = "Skins", idles = "Idles", about = "About" }
@@ -112,6 +114,7 @@ local function itemCard(
 				text = entry.band.text,
 				height = bandHeight,
 				radius = CARD_RADIUS - 4,
+				compact = phone,
 				zIndex = 6,
 			})
 			else nil,
@@ -496,6 +499,7 @@ local function InventoryCharacterPanel(props: InventoryCharacterPanelProps): Rea
 	local right: React.ReactNode
 	local heroSkin = VM.skinKey(wornSkin)
 	local heroRarity: CosmeticTypes.Rarity = "default"
+	local seenId = ""
 	if props.tab == "about" then
 		left, right = about(props)
 	else
@@ -516,13 +520,25 @@ local function InventoryCharacterPanel(props: InventoryCharacterPanelProps): Rea
 		end
 		if selectedItem ~= nil then
 			left = grid(props, cards, selectedItem.id)
-			right = detail(props, VM.detail(selectedItem, props.loadout, props.owns), selectedItem)
+			local view = VM.detail(selectedItem, props.loadout, props.owns)
+			right = detail(props, view, selectedItem)
+			if view.new then
+				seenId = selectedItem.id
+			end
 			heroRarity = selectedItem.rarity
 			if selectedItem.kind == "skin" then
 				heroSkin = VM.skinKey(selectedItem.id)
 			end
 		end
 	end
+
+	-- Looking at a New! item clears its flag (the server records it; the flag goes when the loadout syncs).
+	local onSeen = props.onSeen
+	React.useEffect(function()
+		if seenId ~= "" then
+			onSeen({ seenId })
+		end
+	end, { seenId })
 
 	local bodyY = layout.tabsHeight + layout.gap
 	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, {

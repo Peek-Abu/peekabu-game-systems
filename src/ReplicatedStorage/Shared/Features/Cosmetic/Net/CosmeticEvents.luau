@@ -34,6 +34,11 @@ local CosmeticEvents = ByteNet.defineNamespace(NAMESPACE, function()
 				value = ByteNet.unknown,
 				reliabilityType = "reliable",
 			}),
+			-- client -> server: items the player has now looked at (clears New!; shape: CosmeticRequestRules.SeenRequest)
+			SeenRequest = ByteNet.definePacket({
+				value = ByteNet.unknown,
+				reliabilityType = "reliable",
+			}),
 			-- client -> server: the first-join pick (shape: CosmeticRequestRules.PickRequest)
 			PickRequest = ByteNet.definePacket({
 				value = ByteNet.unknown,

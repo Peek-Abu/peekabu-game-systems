@@ -26,6 +26,7 @@ local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync
 local SceneStack = require(ReplicatedStorage.Client.UI.Scenes.SceneStack)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonButton = require(Toon.ToonButton)
+local ToonFlag = require(Toon.ToonFlag)
 local ToonPill = require(Toon.ToonPill)
 local ToonStyleViewModel = require(Toon.ToonStyleViewModel)
 local ToonText = require(Toon.ToonText)
@@ -114,11 +115,10 @@ local function InventoryScreen(props: InventoryScreenProps): React.ReactNode
 		bar[entry.id] = e(ToonButton, {
 			variant = if entry.soon then "secondary" else "grape",
 			text = entry.text,
-			badge = if entry.soon then "Soon" else nil,
 			textSize = barTextSize,
 			disabled = entry.soon,
 			selected = current,
-			-- The last tab carries the Soon badge and the longest word: it is drawn wider.
+			-- The greyed tab has the longest words: it is drawn wider.
 			position = UDim2.fromOffset(tabsX + (index - 1) * (tabWidth + 12), 6),
 			size = UDim2.fromOffset(
 				if entry.soon then tabWidth + (if phone then 30 else 50) else tabWidth,
@@ -132,6 +132,23 @@ local function InventoryScreen(props: InventoryScreenProps): React.ReactNode
 				end
 			end,
 		})
+	end
+	-- "Soon" sits on the greyed tab's top edge as a small flag, clear of its words (a badge covered them).
+	for index, entry in VM.tabs() do
+		if entry.soon then
+			local right = tabsX + (index - 1) * (tabWidth + 12) + tabWidth + (if phone then 30 else 50)
+			bar[`{entry.id}Soon`] = e(ToonFlag, {
+				text = "Soon",
+				hue = "coral",
+				tilt = 6,
+				textSize = if phone then 13 else 16,
+				-- Above the tab's top edge, so it never covers the words.
+				anchor = Vector2.new(1, 0.8),
+				position = UDim2.fromOffset(right + 8, 8),
+				size = UDim2.fromOffset(if phone then 60 else 70, if phone then 22 else 26),
+				zIndex = 5,
+			})
+		end
 	end
 	bar.credits = e(ToonPill, {
 		text = ToonStyleViewModel.grouped(credits),
@@ -188,6 +205,11 @@ local function InventoryScreen(props: InventoryScreenProps): React.ReactNode
 				setSelected(id)
 			end,
 			onWear = equip,
+			onSeen = function(ids: { string })
+				if preview == nil then
+					CosmeticServiceClient:markSeen(ids)
+				end
+			end,
 		})
 	end
 

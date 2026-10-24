@@ -32,6 +32,8 @@ return table.freeze({
 	MAX_STYLES = 9,
 	-- Ids are 1-64 characters (EntitlementRules.isKey).
 	MAX_ID_LENGTH = 64,
+	-- The most ids one "seen" request may carry (one page of cards).
+	MAX_SEEN = 32,
 
 	--[=[
 		A new loadout: Pippa, the first-join pick not made yet, no looks (each falls back to its employee's

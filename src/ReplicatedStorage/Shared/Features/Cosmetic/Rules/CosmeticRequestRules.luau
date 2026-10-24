@@ -83,6 +83,45 @@ function CosmeticRequestRules.parseEquip(payload: unknown): (Change?, string?)
 	return nil, `malformed {tostring(kind)} change`
 end
 
+export type SeenRequest = {
+	ids: { string },
+}
+
+function CosmeticRequestRules.buildSeen(ids: { string }): SeenRequest
+	return { ids = table.clone(ids) }
+end
+
+--[=[
+	A list of 1..MAX_SEEN ids (a plain array). Whether each is owned is CosmeticRules.unseen's job.
+]=]
+function CosmeticRequestRules.parseSeen(payload: unknown): ({ string }?, string?)
+	if type(payload) ~= "table" then
+		return nil, "payload is not a table"
+	end
+	local fields = payload :: { [string]: unknown } -- unknown -> indexable at the trust boundary; the field is shape-checked below
+	local list = fields.ids
+	if type(list) ~= "table" then
+		return nil, "missing ids"
+	end
+	local entries = list :: { [unknown]: unknown } -- unknown -> indexable at the trust boundary; every key and value is checked below
+	local count = 0
+	for _ in entries do
+		count += 1
+	end
+	if count < 1 or count > CosmeticConstants.MAX_SEEN then
+		return nil, `ids must hold 1-{CosmeticConstants.MAX_SEEN} entries`
+	end
+	local ids: { string } = {}
+	for index = 1, count do
+		local id = entries[index]
+		if type(id) ~= "string" or not isId(id) then
+			return nil, "ids must be a list of item ids"
+		end
+		ids[index] = id
+	end
+	return ids, nil
+end
+
 function CosmeticRequestRules.buildPick(employee: string): PickRequest
 	return { employee = employee }
 end

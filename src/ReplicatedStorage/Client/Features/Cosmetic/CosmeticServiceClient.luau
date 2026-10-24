@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	CosmeticServiceClient: the local player's cosmetics, read off StateSyncClientStore.loadout and .entitlements
-	(charm-sync keeps them current), plus the two requests: equip a change, and the first-join pick. Requests are
+	(charm-sync keeps them current), plus the requests: equip a change, the first-join pick, and marking items seen. Requests are
 	fire-and-forget; the server is authoritative and the atoms are the truth of what happened. Reactive UI reads the
 	atoms directly (useAtom); these are point-in-time accessors for everything else.
 
@@ -12,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Cosmetic = ReplicatedStorage.Shared.Features.Cosmetic
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
+local CosmeticConstants = require(Cosmetic.Data.CosmeticConstants)
 local CosmeticRegistry = require(Cosmetic.Data.CosmeticRegistry)
 local CosmeticTypes = require(Cosmetic.Data.CosmeticTypes)
 local CosmeticEvents = require(Cosmetic.Net.CosmeticEvents)
@@ -36,6 +37,7 @@ export type CosmeticServiceClient = {
 	canEquip: (self: CosmeticServiceClient, change: Change) -> (boolean, string?),
 	requestEquip: (self: CosmeticServiceClient, change: Change) -> (),
 	requestPick: (self: CosmeticServiceClient, employee: string) -> (),
+	markSeen: (self: CosmeticServiceClient, ids: { string }) -> (),
 }
 
 local CosmeticServiceClient: CosmeticServiceClient = {
@@ -75,6 +77,17 @@ local CosmeticServiceClient: CosmeticServiceClient = {
 		CosmeticEvents.packets.EquipRequest.send(CosmeticRequestRules.buildEquip(change))
 	end,
 
+	-- Tells the server the player has looked at these items (clears New!); sends only the ones that need it.
+	markSeen = function(_self, ids)
+		local fresh = CosmeticRules.unseen(StateSyncClientStore.loadout(), ids, owns)
+		if #fresh == 0 then
+			return
+		end
+		while #fresh > CosmeticConstants.MAX_SEEN do
+			table.remove(fresh)
+		end
+		CosmeticEvents.packets.SeenRequest.send(CosmeticRequestRules.buildSeen(fresh))
+	end,
 	requestPick = function(_self, employee)
 		if StateSyncClientStore.loadout().picked or not owns(employee) then
 			return

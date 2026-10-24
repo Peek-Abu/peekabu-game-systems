@@ -30,6 +30,8 @@ export type ToonSourceBandProps = {
 	-- The parent card's corner radius, so the band's foot matches it.
 	radius: number?,
 	textSize: number?,
+	-- A narrow card (phone): no icon, so the words keep their size.
+	compact: boolean?,
 	zIndex: number?,
 }
 
@@ -53,7 +55,7 @@ local function ToonSourceBand(props: ToonSourceBandProps): React.ReactNode
 	local shade = UIToonConstants.shade(HUE[props.kind])
 	local radius = props.radius or 0
 	local textSize = props.textSize or math.floor(props.height * 0.58)
-	local icon: UIAssets.ToonIcon? = ICON[props.kind]
+	local icon: UIAssets.ToonIcon? = if props.compact == true then nil else ICON[props.kind]
 	local iconSize = math.floor(props.height * 0.9)
 	return e("Frame", {
 		AnchorPoint = Vector2.new(0, 1),

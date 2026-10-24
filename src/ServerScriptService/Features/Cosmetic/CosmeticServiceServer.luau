@@ -150,6 +150,31 @@ local function pickImpl(userId: number, employee: string): (boolean, string?)
 	return true, nil
 end
 
+-- Marks owned items seen (clears New!). Allowed in a shift too: it changes nothing anyone wears, so `changed` is
+-- not fired.
+local function seenImpl(userId: number, ids: { string }): (boolean, string?)
+	Guard.userId(userId)
+	local loadout = loadoutSlice.get(userId)
+	local owns = ownsFor(userId)
+	if loadout == nil or owns == nil then
+		return false, "no profile loaded"
+	end
+	local fresh = CosmeticRules.unseen(loadout, ids, owns)
+	if #fresh == 0 then
+		return false, "nothing new"
+	end
+	local written, writeReason = loadoutSlice.mutate(userId, function(state)
+		for _, id in fresh do
+			state.seen[id] = true
+		end
+		return true
+	end)
+	if not written then
+		return false, writeReason or "write refused (profile locked or session no longer active)"
+	end
+	return true, nil
+end
+
 local onEquipRequest = RequestHandler.wrap({
 	name = "CosmeticEquipRequest",
 	rateLimit = { maxRequests = 10, windowSeconds = 10 },
@@ -182,6 +207,19 @@ local onPickRequest = RequestHandler.wrap({
 	end,
 })
 
+local onSeenRequest = RequestHandler.wrap({
+	name = "CosmeticSeenRequest",
+	rateLimit = { maxRequests = 20, windowSeconds = 10 },
+	handler = function(payload: unknown, player: Player)
+		local ids, reason = CosmeticRequestRules.parseSeen(payload)
+		if ids == nil then
+			log:warn(`bad SeenRequest from {player.Name}: {reason or "?"}`)
+			return
+		end
+		seenImpl(player.UserId, ids)
+	end,
+})
+
 export type CosmeticServiceServer = {
 	dependencies: { string },
 	changed: SignalTyped.Signal<number>,
@@ -195,12 +233,14 @@ export type CosmeticServiceServer = {
 	isLocked: (self: CosmeticServiceServer) -> boolean,
 	equip: (self: CosmeticServiceServer, userId: number, change: Change) -> (boolean, string?),
 	pick: (self: CosmeticServiceServer, userId: number, employee: string) -> (boolean, string?),
+	markSeen: (self: CosmeticServiceServer, userId: number, ids: { string }) -> (boolean, string?),
 	grant: (self: CosmeticServiceServer, userId: number, id: string) -> (boolean, string?),
 	grantOps: (self: CosmeticServiceServer, userId: number, id: string) -> { PlayerDataService.TransactionOperation },
 	getState: (self: CosmeticServiceServer) -> { [string]: any },
 	-- TEST SEAMS: the RequestHandler-wrapped handlers (payload, player), as TitleServiceServer exposes its own.
 	_onEquipRequest: (payload: unknown, player: Player) -> any,
 	_onPickRequest: (payload: unknown, player: Player) -> any,
+	_onSeenRequest: (payload: unknown, player: Player) -> any,
 }
 
 local CosmeticServiceServer: CosmeticServiceServer = {
@@ -220,6 +260,14 @@ local CosmeticServiceServer: CosmeticServiceServer = {
 			CosmeticEvents.packets.PickRequest.listen(function(payload: unknown, player: Player?)
 				if player then
 					onPickRequest(payload, player)
+				end
+			end),
+			true
+		)
+		janitor:Add(
+			CosmeticEvents.packets.SeenRequest.listen(function(payload: unknown, player: Player?)
+				if player then
+					onSeenRequest(payload, player)
 				end
 			end),
 			true
@@ -280,6 +328,11 @@ local CosmeticServiceServer: CosmeticServiceServer = {
 		return pickImpl(userId, employee)
 	end,
 
+	-- Marks owned items seen (the New! flag); false "nothing new" when none of them needed it.
+	markSeen = function(_self, userId, ids)
+		return seenImpl(userId, ids)
+	end,
+
 	--[=[
 		Unlocks a registered item and its bundle in one transaction. False "already owned" when nothing new was
 		unlocked. Throws for an unknown id or a sticker (programmer error: stickers come with their pack).
@@ -320,6 +373,7 @@ local CosmeticServiceServer: CosmeticServiceServer = {
 
 	_onEquipRequest = onEquipRequest,
 	_onPickRequest = onPickRequest,
+	_onSeenRequest = onSeenRequest,
 }
 
 return CosmeticServiceServer

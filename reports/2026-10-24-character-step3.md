@@ -52,8 +52,16 @@ play-check it).
 - Phone captures were taken in a phone-sized frame on a desktop window, not on a device.
 - Skins without art yet (Gloom-Touched, Gloomkeeper, Bubble Buddy...) preview in the default look.
 - Cappy shows Pippa's placeholder photo (his model is parked); Prickles' head is dark in previews (his art's colours).
-- **New!** never clears: nothing marks items as seen yet (needs a small "seen" request; a later step).
-- The **Gloom Locker** band text shrinks to "Gloom" on small phone cards; the "Chat wheel" tab text is partly under its
-  Soon badge; the phone "Wearing" button text clips. Small polish items.
+- Long skin names still shorten on small phone cards ("Lavender" for Lavender Specs).
 - Gleam has no account balance yet, so only the Credits wallet shows.
 - Studio does not keep save data, so the pick opens on every Studio Play (expected; a live server keeps it).
+
+## Small fixes (same day)
+- **New! now clears.** Looking at a New! item on an employee's page tells the server (a new `SeenRequest`, owned and
+  registered items only, at most 32 per request); the flag goes when the loadout syncs. Verified: Gloom-Touched lost
+  its flag once shown and the server saved it; Lavender Specs (not looked at) kept it
+  (`step3-fix-new-before.jpg` / `step3-fix-new-cleared.jpg`).
+- **Gloom Locker** reads in full on phone cards (the band drops its icon on narrow cards; `step3-fix-band-phone.jpg`).
+- **Chat wheel** tab: the words show in full; "Soon" is a small flag above the tab's edge instead of a badge over it.
+- **Wearing** fits on the phone Crew card (phone cards are a little wider).
+- Full suite: **4629 passed, 0 failed**.

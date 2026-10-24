@@ -1,4 +1,5 @@
 local CosmeticRequestRules = require(script.Parent.CosmeticRequestRules)
+local CosmeticConstants = require(game:GetService("ReplicatedStorage").Shared.Features.Cosmetic.Data.CosmeticConstants)
 
 return function()
 	describe("equip", function()
@@ -39,6 +40,34 @@ return function()
 			}
 			for _, payload in bad do
 				local parsed, reason = CosmeticRequestRules.parseEquip(payload)
+				expect(parsed).never.to.be.ok()
+				expect(reason).to.be.a("string")
+			end
+		end)
+	end)
+
+	describe("seen", function()
+		it("round-trips a short id list and drops anything else", function()
+			local ids =
+				CosmeticRequestRules.parseSeen(CosmeticRequestRules.buildSeen({ "Pippa.GloomTouched", "Cappy" }))
+			expect(table.concat(ids, ",")).to.equal("Pippa.GloomTouched,Cappy")
+			local tooMany = {}
+			for index = 1, CosmeticConstants.MAX_SEEN + 1 do
+				tooMany[index] = "Pippa"
+			end
+			for _, payload in
+				{
+					nil,
+					"x",
+					{},
+					{ ids = {} },
+					{ ids = { "" } },
+					{ ids = { 3 } },
+					{ ids = tooMany },
+					{ ids = { a = "Pippa" } },
+				}
+			do
+				local parsed, reason = CosmeticRequestRules.parseSeen(payload)
 				expect(parsed).never.to.be.ok()
 				expect(reason).to.be.a("string")
 			end

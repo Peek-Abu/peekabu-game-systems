@@ -369,7 +369,8 @@ function VM.layout(virtual: Vector2, phone: boolean): Layout
 		titleX = if phone then 104 else 150,
 		titleSize = if phone then 30 else 48,
 		content = { x = x, y = y, width = width, height = height },
-		crewCard = Vector2.new(math.floor(cardHeight * 0.66), cardHeight),
+		-- Wider on a phone, so two buttons side by side keep readable words ("Wearing").
+		crewCard = Vector2.new(math.floor(cardHeight * (if phone then 0.76 else 0.66)), cardHeight),
 		gap = gap,
 		tabsHeight = tabsHeight,
 		gridWidth = gridWidth,

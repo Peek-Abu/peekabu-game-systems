@@ -76,17 +76,20 @@ return function()
 		end
 	end)
 
-	it("prices everything sold for Credits or Gleam (stickers are sold in their pack), and keeps styles in range", function()
-		for _, item in all do
-			if item.kind ~= "sticker" and (item.source == "credits" or item.source == "gleam") then
-				expect(type(item.price) == "number" and item.price > 0).to.equal(true)
-			end
-			if item.styles ~= nil then
-				expect(item.kind).to.equal("skin")
-				expect(item.styles >= 1 and item.styles <= CosmeticConstants.MAX_STYLES).to.equal(true)
+	it(
+		"prices everything sold for Credits or Gleam (stickers are sold in their pack), and keeps styles in range",
+		function()
+			for _, item in all do
+				if item.kind ~= "sticker" and (item.source == "credits" or item.source == "gleam") then
+					expect(type(item.price) == "number" and item.price > 0).to.equal(true)
+				end
+				if item.styles ~= nil then
+					expect(item.kind).to.equal("skin")
+					expect(item.styles >= 1 and item.styles <= CosmeticConstants.MAX_STYLES).to.equal(true)
+				end
 			end
 		end
-	end)
+	)
 
 	it("registers every ownable item in the entitlements catalogue under its kind", function()
 		for _, item in all do
