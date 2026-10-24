@@ -1,0 +1,210 @@
+{
+ "overall_size_WxHxD": [
+  8.8,
+  4.95,
+  4.6
+ ],
+ "slide_mesh_units": 2.07,
+ "drawer_box_depth": 3.68,
+ "meshes": {
+  "desk_body": {
+   "tris": 2532,
+   "size_WxHxD": [
+    8.8,
+    4.95,
+    4.6
+   ],
+   "bbox_centre_blender": [
+    0.0,
+    0.0,
+    2.475
+   ],
+   "bbox_centre_roblox_after_fbx": [
+    -0.0,
+    2.475,
+    0.0
+   ],
+   "search_component": null
+  },
+  "desk_drawer_1": {
+   "tris": 928,
+   "size_WxHxD": [
+    2.4,
+    1.39,
+    3.9
+   ],
+   "bbox_centre_blender": [
+    -3.0,
+    -0.35,
+    3.895
+   ],
+   "bbox_centre_roblox_after_fbx": [
+    3.0,
+    3.895,
+    -0.35
+   ],
+   "search_component": "drawer"
+  },
+  "desk_drawer_2": {
+   "tris": 928,
+   "size_WxHxD": [
+    2.4,
+    1.39,
+    3.9
+   ],
+   "bbox_centre_blender": [
+    -3.0,
+    -0.35,
+    2.445
+   ],
+   "bbox_centre_roblox_after_fbx": [
+    3.0,
+    2.445,
+    -0.35
+   ],
+   "search_component": "drawer"
+  },
+  "desk_drawer_3": {
+   "tris": 928,
+   "size_WxHxD": [
+    2.4,
+    1.39,
+    3.9
+   ],
+   "bbox_centre_blender": [
+    -3.0,
+    -0.35,
+    0.995
+   ],
+   "bbox_centre_roblox_after_fbx": [
+    3.0,
+    0.995,
+    -0.35
+   ],
+   "search_component": "drawer"
+  }
+ },
+ "tex_stats": {
+  "desk_body": {
+   "color_std": 0.20843665058901176,
+   "normal_dev": 0.005348006639357639,
+   "rough_mean": 0.4543795609797735,
+   "rough_std": 0.011372560096082266
+  },
+  "desk_drawers": {
+   "color_std": 0.21094079013188605,
+   "normal_dev": 0.009321806354184522,
+   "rough_mean": 0.4536131819398369,
+   "rough_std": 0.010440022595972894
+  }
+ },
+ "hide_space": {
+  "knee_clear_width": 5.6,
+  "knee_clear_height": 4.67,
+  "knee_clear_depth_from_front_edge": 4.39,
+  "knee_probe": [
+   {
+    "y": -1.5,
+    "z": 0.5,
+    "x_from": -1.75,
+    "x_to": 3.85
+   },
+   {
+    "y": 0.0,
+    "z": 0.5,
+    "x_from": -1.75,
+    "x_to": 3.85
+   },
+   {
+    "y": 1.5,
+    "z": 0.5,
+    "x_from": -1.75,
+    "x_to": 3.85
+   },
+   {
+    "y": -1.5,
+    "z": 2.0,
+    "x_from": -1.75,
+    "x_to": 3.85
+   },
+   {
+    "y": 0.0,
+    "z": 2.0,
+    "x_from": -1.75,
+    "x_to": 3.85
+   },
+   {
+    "y": 1.5,
+    "z": 2.0,
+    "x_from": -1.75,
+    "x_to": 3.85
+   },
+   {
+    "y": -1.5,
+    "z": 3.5,
+    "x_from": -1.75,
+    "x_to": 3.85
+   },
+   {
+    "y": 0.0,
+    "z": 3.5,
+    "x_from": -1.75,
+    "x_to": 3.85
+   },
+   {
+    "y": 1.5,
+    "z": 3.5,
+    "x_from": -1.75,
+    "x_to": 3.85
+   },
+   {
+    "y": -1.5,
+    "z": 4.4,
+    "x_from": -1.75,
+    "x_to": 3.85
+   },
+   {
+    "y": 0.0,
+    "z": 4.4,
+    "x_from": -1.75,
+    "x_to": 3.85
+   },
+   {
+    "y": 1.5,
+    "z": 4.4,
+    "x_from": -1.75,
+    "x_to": 3.85
+   }
+  ],
+  "hug_box": {
+   "x": [
+    -0.75,
+    2.85
+   ],
+   "y": [
+    -2.3,
+    2.0
+   ],
+   "z": [
+    0.0,
+    4.2
+   ],
+   "triangle_overlaps": 0,
+   "vertices_inside": 0,
+   "free": true
+  }
+ },
+ "renders": [
+  "renders/flat_closed_front.png",
+  "renders/flat_closed_back.png",
+  "renders/flat_closed_side.png",
+  "renders/flat_closed_below.png",
+  "renders/flat_closed_tq.png",
+  "renders/flat_open_tq.png",
+  "renders/flat_open_front.png",
+  "renders/shaded_open_closeup.png",
+  "renders/shaded_open_tq.png",
+  "renders/shaded_closed_tq.png",
+  "renders/shaded_kneehole.png"
+ ]
+}
