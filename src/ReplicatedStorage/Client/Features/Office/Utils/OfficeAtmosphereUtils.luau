@@ -62,27 +62,35 @@ function OfficeAtmosphereUtils.hum(snapshot: ShiftSnapshot?, userId: number, out
 	return snapshot ~= nil and not DepotAtmosphereUtils.inHub(snapshot, userId) and outside ~= true
 end
 
--- Whether `point` is inside any of the axis-aligned outdoor boxes, each grown by `pad` studs on every side (the
--- camera can sit that far from the character, past the box the character stands in).
-function OfficeAtmosphereUtils.outdoors(
-	point: Vector3,
-	boxes: { { min: Vector3, max: Vector3 } },
-	pad: number?
-): boolean
-	local grow = pad or 0
+-- Whether `point` is inside any of the axis-aligned outdoor boxes, unpadded: the yard ends five studs from the dock
+-- room, so any padding would reach indoors.
+function OfficeAtmosphereUtils.outdoors(point: Vector3, boxes: { { min: Vector3, max: Vector3 } }): boolean
 	for _, box in boxes do
 		if
-			point.X >= box.min.X - grow
-			and point.X <= box.max.X + grow
-			and point.Y >= box.min.Y - grow
-			and point.Y <= box.max.Y + grow
-			and point.Z >= box.min.Z - grow
-			and point.Z <= box.max.Z + grow
+			point.X >= box.min.X
+			and point.X <= box.max.X
+			and point.Y >= box.min.Y
+			and point.Y <= box.max.Y
+			and point.Z >= box.min.Z
+			and point.Z <= box.max.Z
 		then
 			return true
 		end
 	end
 	return false
+end
+
+-- Whether the local character stands outdoors: its root (`root`) in a box; without a character, the `previous`
+-- answer.
+function OfficeAtmosphereUtils.rootOutdoors(
+	root: Vector3?,
+	boxes: { { min: Vector3, max: Vector3 } },
+	previous: boolean
+): boolean
+	if root == nil then
+		return previous
+	end
+	return OfficeAtmosphereUtils.outdoors(root, boxes)
 end
 
 return OfficeAtmosphereUtils

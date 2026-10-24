@@ -10,9 +10,10 @@
 	camera (OfficeLightUtils) blink, with a zap as a burst of blinks starts (OfficeLightUtils.zaps: once per burst, spaced
 	per tube and across tubes). It changes only a light's Color, Transparency and
 	lamp (PointLight or SurfaceLight) Color/Brightness; M2's OccupantTellSystem owns Material and Light.Enabled, so the two compose.
-	Outdoors (the camera inside a Workspace.CleanupCrewOffice.Outdoors box, polled every OUTDOOR_POLL in a shift) it
+	Outdoors (the local character's root inside a Workspace.CleanupCrewOffice.Outdoors box, unpadded; polled every
+	OUTDOOR_POLL in a shift; no character keeps the last answer) it
 	blends to the moonlit officeExterior look (red in overtime) and hushes the hum; `expected()` names the preset the
-	camera should show now. Registers the office and depot presets with Vfx at load. Pending sounds (OfficeAssets) are silent. While the transit
+	client should show now. Registers the office and depot presets with Vfx at load. Pending sounds (OfficeAssets) are silent. While the transit
 	screen covers the view (ShiftTransitStore.covered) a preset is applied at once, not blended, and one still blending
 	when the cover comes up is finished at once, so the screen reveals the right light.
 
@@ -29,7 +30,6 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local OfficeClient = ReplicatedStorage.Client.Features.Office
-local CameraConstants = require(ReplicatedStorage.Client.Features.Camera.Data.CameraConstants)
 local Charm = require(ReplicatedStorage.Packages.Charm)
 local DepotAssets = require(ReplicatedStorage.Client.Features.Depot.Data.DepotAssets)
 local DepotAtmosphereConstants = require(ReplicatedStorage.Client.Features.Depot.Data.DepotAtmosphereConstants)
@@ -182,11 +182,6 @@ end
 
 -- The outdoor boxes the server built (Workspace.CleanupCrewOffice.Outdoors: one invisible part per ground). None when
 -- the layout has no grounds (an authored layout, the hub).
--- The camera orbits up to MAX_ZOOM_DISTANCE from the character, and the fence is see-through and not queryable, so the
--- camera can sit past the boxes' edge (the fence line); the test grows them by that and a margin. The outdoor grounds
--- are ~1,600 studs from the office, so the padding never reaches indoors.
-local OUTDOOR_PAD = CameraConstants.MAX_ZOOM_DISTANCE + 2
-
 local function outdoorBoxes(): { { min: Vector3, max: Vector3 } }
 	local boxes: { { min: Vector3, max: Vector3 } } = {}
 	local office = Workspace:FindFirstChild("CleanupCrewOffice")
@@ -203,19 +198,27 @@ local function outdoorBoxes(): { { min: Vector3, max: Vector3 } }
 	return boxes
 end
 
--- Whether the camera is outdoors now; only ever true in a shift (the hub is the depot's evening).
-local function cameraOutside(snapshot: ShiftTypes.ShiftSnapshot?): boolean
-	local camera = Workspace.CurrentCamera
-	if camera == nil or snapshot == nil or DepotAtmosphereUtils.inHub(snapshot, Players.LocalPlayer.UserId) then
-		return false
-	end
-	return OfficeAtmosphereUtils.outdoors(camera.CFrame.Position, outdoorBoxes(), OUTDOOR_PAD)
+-- The local character's root position, nil without one.
+local function rootPosition(): Vector3?
+	local character = Players.LocalPlayer.Character
+	local root = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil
+	return if root ~= nil and root:IsA("BasePart") then root.Position else nil
 end
 
--- Applies the snapshot's look with the camera's current indoors/outdoors. `fade` is the blend when not covered.
+-- Whether the local character stands outdoors now (its root in a box, unpadded: the yard ends five studs from the dock
+-- room, so a camera test padded by the zoom would reach indoors); without a character, the last answer. Only ever
+-- true in a shift (the hub is the depot's evening).
+local function characterOutside(snapshot: ShiftTypes.ShiftSnapshot?): boolean
+	if snapshot == nil or DepotAtmosphereUtils.inHub(snapshot, Players.LocalPlayer.UserId) then
+		return false
+	end
+	return OfficeAtmosphereUtils.rootOutdoors(rootPosition(), outdoorBoxes(), outsideNow)
+end
+
+-- Applies the snapshot's look with the character's current indoors/outdoors. `fade` is the blend when not covered.
 local function apply(snapshot: ShiftTypes.ShiftSnapshot?, fade: number)
 	local userId = Players.LocalPlayer.UserId
-	local outside = cameraOutside(snapshot)
+	local outside = characterOutside(snapshot)
 	outsideNow = outside
 	local preset = OfficeAtmosphereUtils.preset(snapshot, userId, outside)
 	if not applied or preset ~= currentPreset then
@@ -320,7 +323,7 @@ function OfficeAtmosphereSystem.start()
 				-- The cover is lifting after a teleport: switch indoors/outdoors now, before the reveal, not on the
 				-- next poll.
 				local snapshot = ShiftStore.snapshot()
-				if cameraOutside(snapshot) ~= outsideNow then
+				if characterOutside(snapshot) ~= outsideNow then
 					apply(snapshot, 0)
 				end
 			end
@@ -346,7 +349,7 @@ function OfficeAtmosphereSystem.start()
 			outdoorElapsed = 0
 			-- The teleport fade hides the switch, so a short blend; only a change re-applies.
 			local snapshot = ShiftStore.snapshot()
-			if cameraOutside(snapshot) ~= outsideNow then
+			if characterOutside(snapshot) ~= outsideNow then
 				apply(snapshot, OfficeAtmosphereConstants.OUTDOOR_FADE)
 			end
 		end
@@ -382,10 +385,10 @@ function OfficeAtmosphereSystem.stop()
 	outsideNow = false
 end
 
--- The preset this client should be showing now (the snapshot and where the camera is), for ShiftTransitSystem.lit().
+-- The preset this client should be showing now (the snapshot and where the character is), for ShiftTransitSystem.lit().
 function OfficeAtmosphereSystem.expected(): string
 	local snapshot = ShiftStore.snapshot()
-	return OfficeAtmosphereUtils.preset(snapshot, Players.LocalPlayer.UserId, cameraOutside(snapshot))
+	return OfficeAtmosphereUtils.preset(snapshot, Players.LocalPlayer.UserId, characterOutside(snapshot))
 end
 
 function OfficeAtmosphereSystem.getState(): OfficeAtmosphereState

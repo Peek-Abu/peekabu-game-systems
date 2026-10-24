@@ -168,12 +168,26 @@ return function()
 			expect(OfficeAtmosphereUtils.outdoors(Vector3.new(5, 3, 5), {})).to.equal(false)
 		end)
 
-		it("counts a point just past a box edge as outdoors when padded, never one far inside the office", function()
-			local past = Vector3.new(20, 3, 5)
+		it("pads nothing: a stud past a box edge is indoors (the dock room starts five studs past the yard)", function()
+			local past = Vector3.new(11, 3, 5)
 			expect(OfficeAtmosphereUtils.outdoors(past, boxes)).to.equal(false)
-			expect(OfficeAtmosphereUtils.outdoors(past, boxes, 15)).to.equal(true)
-			expect(OfficeAtmosphereUtils.outdoors(past, boxes, 9)).to.equal(false)
-			expect(OfficeAtmosphereUtils.outdoors(Vector3.new(-5000, 3, -5000), boxes, 15)).to.equal(false)
+			-- A pad is no longer taken (it would reach into the dock room now the yard is beside the office).
+			expect(OfficeAtmosphereUtils.outdoors(past, boxes, 15)).to.equal(false)
+			expect(OfficeAtmosphereUtils.outdoors(Vector3.new(10, 3, 5), boxes)).to.equal(true)
+		end)
+	end)
+
+	describe("rootOutdoors", function()
+		local boxes = { { min = Vector3.new(0, 0, 0), max = Vector3.new(10, 120, 10) } }
+
+		it("tests the character root, unpadded", function()
+			expect(OfficeAtmosphereUtils.rootOutdoors(Vector3.new(5, 3, 5), boxes, false)).to.equal(true)
+			expect(OfficeAtmosphereUtils.rootOutdoors(Vector3.new(12, 3, 5), boxes, true)).to.equal(false)
+		end)
+
+		it("keeps the previous answer without a character", function()
+			expect(OfficeAtmosphereUtils.rootOutdoors(nil, boxes, true)).to.equal(true)
+			expect(OfficeAtmosphereUtils.rootOutdoors(nil, boxes, false)).to.equal(false)
 		end)
 	end)
 end
