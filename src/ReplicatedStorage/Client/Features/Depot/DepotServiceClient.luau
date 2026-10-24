@@ -52,6 +52,9 @@ require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotHubScene)
 require(ReplicatedStorage.Client.UI.React.Screens.Inventory.InventoryScene)
 require(ReplicatedStorage.Client.UI.React.Screens.Pick.CharacterPickScene)
 require(ReplicatedStorage.Client.UI.React.Screens.Shop.ShopScene)
+require(ReplicatedStorage.Client.UI.React.Screens.Reveal.RevealScene)
+local RevealViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Reveal.RevealViewModel)
+local CosmeticRevealStore = require(ReplicatedStorage.Client.Features.Cosmetic.State.CosmeticRevealStore)
 local ShopViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shop.ShopViewModel)
 local InventoryViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Inventory.InventoryViewModel)
 local CharacterPickViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Pick.CharacterPickViewModel)
@@ -71,6 +74,18 @@ local function syncPick()
 		SceneStack.push(CharacterPickViewModel.SCENE)
 	elseif not open then
 		SceneStack.remove(CharacterPickViewModel.SCENE)
+	end
+end
+
+-- Shows the reveal scene while a reveal waits and the player is in the depot (a reveal earned in a shift waits for
+-- the depot); takes it off when the queue is empty.
+local function syncReveal()
+	local waiting = CosmeticRevealStore.current() ~= nil
+	local inDepot = DepotHubViewModel.visible(ShiftStore.snapshot(), Players.LocalPlayer.UserId)
+	if waiting and inDepot and not SceneStack.isActive(RevealViewModel.SCENE) then
+		SceneStack.push(RevealViewModel.SCENE)
+	elseif not waiting or not inDepot then
+		SceneStack.remove(RevealViewModel.SCENE)
 	end
 end
 
@@ -127,8 +142,10 @@ local DepotServiceClient: DepotServiceClient = {
 					SceneStack.remove(ShopViewModel.SCENE)
 				end
 				syncPick()
+				syncReveal()
 			end)
 		)
+		table.insert(stoppers, Charm.subscribe(CosmeticRevealStore.current, syncReveal))
 		table.insert(stoppers, Charm.subscribe(StateSyncClientStore.loadout, syncPick))
 		syncPick()
 		table.insert(

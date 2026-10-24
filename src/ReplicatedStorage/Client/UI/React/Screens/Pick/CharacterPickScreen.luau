@@ -6,8 +6,8 @@
 	night padlock when locked); the selected employee LIVE on a raised platform with a two-line name plate; the About
 	card (who they are, the five gold stat bars, the ability card with its render); and the big mint "Start as
 	Pippa!". It sends the pick (CosmeticServiceClient:requestPick); DepotServiceClient takes the scene off when the
-	synced loadout says picked. No close button: everyone picks once. A locked employee can be previewed; hiring is in
-	the Shop. Values: CharacterPickViewModel and InventoryViewModel (layout, stats, colours). Exempt (wires stores;
+	synced loadout says picked. No close button: everyone picks once. A locked employee can be previewed,
+	and hired here for Credits when you have enough ("Hire for 2,500", a Shop purchase). Values: CharacterPickViewModel and InventoryViewModel (layout, stats, colours). Exempt (wires stores;
 	story in CharacterPickScreen.story).
 
 	@class CharacterPickScreen
@@ -20,7 +20,9 @@ local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
 local CosmeticRules = require(ReplicatedStorage.Shared.Features.Cosmetic.Rules.CosmeticRules)
 local EmployeeProfileRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeProfileRegistry)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
+local CurrencyUtils = require(ReplicatedStorage.Shared.Features.Currency.Utils.CurrencyUtils)
 local CosmeticServiceClient = require(ReplicatedStorage.Client.Features.Cosmetic.CosmeticServiceClient)
+local ShopServiceClient = require(ReplicatedStorage.Client.Features.Shop.ShopServiceClient)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonBackdrop = require(Toon.ToonBackdrop)
@@ -310,6 +312,7 @@ local function CharacterPickScreen(props: CharacterPickScreenProps): React.React
 	local liveViewport = usePaperViewport()
 	local livePhone = usePaperLayout() == "phone"
 	local entitlements = ReactCharm.useAtom(StateSyncClientStore.entitlements)
+	local currency = ReactCharm.useAtom(StateSyncClientStore.currency)
 	local selected, setSelected = React.useState(VM.DEFAULT)
 	local owns = props.owns or function(id: string): boolean
 		return CosmeticRules.owns(entitlements, id)
@@ -351,7 +354,7 @@ local function CharacterPickScreen(props: CharacterPickScreenProps): React.React
 
 	local tint = InventoryViewModel.color(selected)
 	local profile = EmployeeProfileRegistry.get(selected)
-	local start = VM.start(selected, owns)
+	local start = VM.start(selected, owns, CurrencyUtils.getCurrencyAmount(currency, "credits"))
 	local plateHeight = if phone then 44 else 104
 	local plate: Nodes = {
 		name = e(ToonText, {
@@ -464,7 +467,13 @@ local function CharacterPickScreen(props: CharacterPickScreenProps): React.React
 						position = UDim2.fromScale(1, 1),
 						size = UDim2.fromOffset(aboutWidth, startHeight),
 						onActivated = function()
-							if start.enabled and props.owns == nil then
+							if not start.enabled or props.owns ~= nil then
+								return
+							end
+							if start.kind == "hire" then
+								-- Hiring is a Shop purchase; once it lands the button says Start.
+								ShopServiceClient:requestBuy(selected)
+							else
 								CosmeticServiceClient:requestPick(selected)
 							end
 						end,

@@ -1,9 +1,9 @@
 --!strict
 --[=[
 	CharacterPickViewModel: the first-join pick screen's values: a card per employee (the free one first: "Free!" or
-	its hire price), the Start button (only for an employee you own; a locked one can be previewed but is hired in
-	the Shop, step 4), and when the screen opens (the loadout has synced, the pick is not made, the player is in the
-	depot). Every employee comes from the catalogue; nothing is per character.
+	its hire price), the main button (Start as an employee you own; Hire for their Credits price when you can afford
+	it; otherwise how many more Credits you need), and when the screen opens (the loadout has synced, the pick is not
+	made, the player is in the depot). Every employee comes from the catalogue; nothing is per character.
 
 	@class CharacterPickViewModel
 ]=]
@@ -26,7 +26,8 @@ export type Card = {
 	tag: string,
 }
 
-export type Start = { text: string, enabled: boolean }
+-- `kind`: start as the selected employee, or hire them first (a Credits purchase through the Shop).
+export type Start = { text: string, enabled: boolean, kind: "start" | "hire" | "none" }
 
 local VM = {
 	SCENE = "characterPick",
@@ -60,12 +61,23 @@ function VM.cards(owns: Owns, selected: string): { Card }
 	return cards
 end
 
-function VM.start(selected: string, owns: Owns): Start
+function VM.start(selected: string, owns: Owns, credits: number): Start
+	local item = CosmeticRegistry.get(selected)
 	if owns(selected) then
-		local item = CosmeticRegistry.get(selected)
-		return { text = `Start as {if item ~= nil then item.name else selected}!`, enabled = true }
+		return { text = `Start as {if item ~= nil then item.name else selected}!`, enabled = true, kind = "start" }
 	end
-	return { text = "Hire in the Shop soon", enabled = false }
+	local price = if item ~= nil then item.price else nil
+	if price == nil then
+		return { text = "Coming later", enabled = false, kind = "none" }
+	end
+	if credits >= price then
+		return { text = `Hire for {ToonStyleViewModel.grouped(price)}`, enabled = true, kind = "hire" }
+	end
+	return {
+		text = `Need {ToonStyleViewModel.grouped(price - credits)} more Credits`,
+		enabled = false,
+		kind = "none",
+	}
 end
 
 --[=[
