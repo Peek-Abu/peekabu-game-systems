@@ -210,7 +210,7 @@ local function rebuild(requested: number)
 	end
 	-- Guard: any other office model in Workspace (one a past cleanup missed) goes too, with a warning as evidence.
 	OfficeBuildSystem.clearStrays()
-	local current = OfficeBuildSystem.build(layout, OfficeConstants.ORIGIN)
+	local current = OfficeBuildSystem.build(layout, OfficeConstants.ORIGIN, nil, seed)
 	current.model:SetAttribute("LayoutSeed", seed)
 	built = current
 	layoutSeed = seed

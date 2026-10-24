@@ -246,6 +246,13 @@ local function restore(light: BasePart)
 	end
 end
 
+-- The standing office's layout seed (nil: the boot layout, or no office yet).
+local function layoutSeedOf(): number?
+	local office = Workspace:FindFirstChild("CleanupCrewOffice")
+	local seed = if office ~= nil then office:GetAttribute("LayoutSeed") else nil
+	return if typeof(seed) == "number" then seed else nil
+end
+
 -- The broken lights near the camera blink; any that left the radius are restored.
 local function stepBroken()
 	local camera = Workspace.CurrentCamera
@@ -265,7 +272,10 @@ local function stepBroken()
 	local near: { [BasePart]: boolean } = {}
 	local center = camera.CFrame.Position
 	local radius = OfficeAtmosphereConstants.BROKEN_RADIUS
-	for _, index in OfficeLightUtils.nearbyBroken(positions, center, radius, OfficeAtmosphereConstants.BROKEN_FRACTION) do
+	local layoutSeed = layoutSeedOf()
+	for _, index in
+		OfficeLightUtils.nearbyBroken(positions, center, radius, OfficeAtmosphereConstants.BROKEN_FRACTION, layoutSeed)
+	do
 		local light = list[index]
 		near[light] = true
 		local base = baseOf(light)

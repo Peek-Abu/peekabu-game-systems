@@ -12,6 +12,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local OfficeConstants = require(ServerScriptService.Features.Office.Data.OfficeConstants)
 local OfficeTypes = require(ServerScriptService.Features.Office.Data.OfficeTypes)
+local OfficeVariationRules = require(ServerScriptService.Features.Office.Rules.OfficeVariationRules)
 
 type LightPanel = OfficeTypes.LightPanel
 type FillLight = OfficeTypes.FillLight
@@ -103,9 +104,18 @@ function OfficeLightingUtils.sconceSpots(room: OfficeTypes.Room): { Spot }
 	return out
 end
 
+-- The darkest mood's fill brightness factor.
+local DARK_FILL_FACTOR = 0.5
+
+--[=[
+	The lights of `room`. `seed` (the shift's layout seed; nil: today's pattern) sets a kit room's mood
+	(OfficeVariationRules.lightMood): normal lights about 2/3 of its panels, dim about 1/3, dark none with its fills
+	at half brightness. Halls and all-lit rooms ignore it.
+]=]
 function OfficeLightingUtils.roomLights(
 	room: OfficeTypes.Room,
-	roomType: string?
+	roomType: string?,
+	seed: number?
 ): { panels: { LightPanel }, fills: { FillLight } }
 	local light = recipe(roomType)
 	local panels: { LightPanel } = {}
@@ -137,6 +147,7 @@ function OfficeLightingUtils.roomLights(
 
 	local width = room.maxX - room.minX
 	local depth = room.maxZ - room.minZ
+	local mood = if light.allLit then "normal" else OfficeVariationRules.lightMood(seed, room.id, room.roomType)
 
 	local nx = math.max(1, round(width / ROOM_PANEL_STEP_X))
 	local nz = math.max(1, round(depth / ROOM_PANEL_STEP_Z))
@@ -145,7 +156,10 @@ function OfficeLightingUtils.roomLights(
 			table.insert(panels, {
 				x = gridAt(centreX, nx, ROOM_PANEL_STEP_X, i + 1),
 				z = gridAt(centreZ, nz, ROOM_PANEL_STEP_Z, j + 1),
-				lit = light.allLit or (i + 2 * j) % 3 ~= 1,
+				lit = light.allLit or (if mood == "normal"
+					then (i + 2 * j) % 3 ~= 1
+					elseif mood == "dim" then (i + 2 * j) % 3 == 0
+					else false),
 				rotated = false,
 				brightness = light.panelBrightness,
 			})
@@ -161,7 +175,11 @@ function OfficeLightingUtils.roomLights(
 				ROOM_FILL_Y,
 				gridAt(centreZ, fz, ROOM_FILL_STEP_Z, j)
 			)
-			table.insert(fills, makeFill(position, light))
+			local fill = makeFill(position, light)
+			if mood == "dark" then
+				fill.brightness *= DARK_FILL_FACTOR
+			end
+			table.insert(fills, fill)
 		end
 	end
 	return { panels = panels, fills = fills }

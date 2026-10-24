@@ -117,7 +117,8 @@ local OfficeBuildSystem = {}
 function OfficeBuildSystem.build(
 	layout: OfficeTypes.Layout,
 	origin: CFrame,
-	visuals: ArtVisualSystem.Controller?
+	visuals: ArtVisualSystem.Controller?,
+	seed: number?
 ): Built
 	local art = visuals or ArtVisualSystem
 	local model = Instance.new("Model")
@@ -142,7 +143,7 @@ function OfficeBuildSystem.build(
 			else OfficeArtKeyUtils.roomType(room)
 		Shell.apply(floor, Shell.floorMaterial(roomType))
 	end
-	Shell.build(layout, origin, model, art)
+	Shell.build(layout, origin, model, art, nil, seed)
 
 	local truckFolder = folder("Truck", model)
 	local truck = layout.truck

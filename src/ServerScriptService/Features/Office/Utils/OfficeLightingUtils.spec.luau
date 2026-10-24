@@ -70,6 +70,51 @@ return function()
 			expect(storage.panels[1].brightness).to.equal(0.15)
 		end)
 
+		it("a nil seed lights the same set as before", function()
+			local a = OfficeLightingUtils.roomLights(room(0, 60, 0, 44), "pods")
+			local b = OfficeLightingUtils.roomLights(room(0, 60, 0, 44), "pods", nil)
+			expect(countLit(b.panels)).to.equal(countLit(a.panels))
+			expect(countLit(a.panels)).to.equal(13)
+		end)
+
+		it("moods: dark lights no panels and halves the fills, dim lights a third", function()
+			local Rules = require(game:GetService("ServerScriptService").Features.Office.Rules.OfficeVariationRules)
+			local seen = {}
+			for seed = 1, 400 do
+				local r = room(0, 60, 0, 44)
+				r.roomType = "pods"
+				local mood = Rules.lightMood(seed, r.id, "pods")
+				if seen[mood] == nil then
+					seen[mood] = true
+					local plan = OfficeLightingUtils.roomLights(r, "pods", seed)
+					if mood == "dark" then
+						expect(countLit(plan.panels)).to.equal(0)
+						for _, fill in plan.fills do
+							expect(fill.brightness).to.be.near(1.7 * 0.5, 0.0001)
+						end
+					elseif mood == "dim" then
+						expect(countLit(plan.panels)).to.equal(7)
+						expect(plan.fills[1].brightness).to.equal(1.7)
+					else
+						expect(countLit(plan.panels)).to.equal(13)
+					end
+				end
+			end
+			expect(seen.dark).to.equal(true)
+			expect(seen.dim).to.equal(true)
+			expect(seen.normal).to.equal(true)
+		end)
+
+		it("halls and allLit rooms ignore the seed", function()
+			for seed = 1, 50 do
+				local hall = OfficeLightingUtils.roomLights(room(0, 80, 0, 14), "hallway", seed)
+				expect(countLit(hall.panels)).to.equal(10)
+				local store = room(0, 12, 0, 12)
+				store.roomType = "storage"
+				expect(countLit(OfficeLightingUtils.roomLights(store, "storage", seed).panels)).to.equal(1)
+			end
+		end)
+
 		it("deterministic", function()
 			local a = OfficeLightingUtils.roomLights(room(0, 60, 0, 44), "pods")
 			local b = OfficeLightingUtils.roomLights(room(0, 60, 0, 44), "pods")

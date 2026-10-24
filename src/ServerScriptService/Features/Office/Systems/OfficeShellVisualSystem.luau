@@ -361,14 +361,16 @@ end
 
 --[=[
 	Builds the shell and the lights of `layout` (placed at `origin`) under `model`. `art` supplies the troffer art;
-	`hasVariant` says whether the place has a MaterialVariant by a name (default: MaterialService does).
+	`hasVariant` says whether the place has a MaterialVariant by a name (default: MaterialService does). `seed` is the
+	shift's layout seed (nil: the authored mood).
 ]=]
 function OfficeShellVisualSystem.build(
 	layout: OfficeTypes.Layout,
 	origin: CFrame,
 	model: Model,
 	art: ArtVisualSystem.Controller,
-	hasVariant: HasVariant?
+	hasVariant: HasVariant?,
+	seed: number?
 )
 	local shell = folder("Shell", model)
 	local lights = folder("Lights", model)
@@ -379,7 +381,7 @@ function OfficeShellVisualSystem.build(
 		end
 		local roomType = OfficeArtKeyUtils.roomType(room)
 		local recipe = OfficeConstants.LIGHTING[roomType or "pods"] or OfficeConstants.LIGHTING.pods
-		local plan = OfficeLightingUtils.roomLights(room, roomType)
+		local plan = OfficeLightingUtils.roomLights(room, roomType, seed)
 		local roomFolder = folder(room.name, lights)
 		for _, panel in plan.panels do
 			buildPanel(panel, recipe.panelRange, roomType, origin, roomFolder, art)

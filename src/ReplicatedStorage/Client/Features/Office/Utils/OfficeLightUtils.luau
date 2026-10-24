@@ -13,6 +13,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local OfficeAtmosphereConstants = require(ReplicatedStorage.Client.Features.Office.Data.OfficeAtmosphereConstants)
 
+local OfficeSeedUtils = require(ReplicatedStorage.Shared.Features.Office.Utils.OfficeSeedUtils)
+
 local OfficeLightUtils = {}
 
 --[=[
@@ -23,8 +25,16 @@ function OfficeLightUtils.hash(position: Vector3): number
 	return value - math.floor(value)
 end
 
-function OfficeLightUtils.broken(position: Vector3, fraction: number): boolean
-	return OfficeLightUtils.hash(position) < fraction
+--[=[
+	Whether a light is broken: with the shift's layout seed, a seeded hash of the tube's rounded x/z (so it varies per
+	run and every client agrees); with no seed, the position hash.
+]=]
+function OfficeLightUtils.broken(position: Vector3, fraction: number, seed: number?): boolean
+	if seed == nil then
+		return OfficeLightUtils.hash(position) < fraction
+	end
+	local key = `tube:{math.floor(position.X + 0.5)}:{math.floor(position.Z + 0.5)}`
+	return OfficeSeedUtils.hash01(seed, key) < fraction
 end
 
 --[=[
@@ -34,11 +44,12 @@ function OfficeLightUtils.nearbyBroken(
 	positions: { Vector3 },
 	center: Vector3,
 	radius: number,
-	fraction: number
+	fraction: number,
+	seed: number?
 ): { number }
 	local list: { number } = {}
 	for index, position in positions do
-		if (position - center).Magnitude <= radius and OfficeLightUtils.broken(position, fraction) then
+		if (position - center).Magnitude <= radius and OfficeLightUtils.broken(position, fraction, seed) then
 			table.insert(list, index)
 		end
 	end

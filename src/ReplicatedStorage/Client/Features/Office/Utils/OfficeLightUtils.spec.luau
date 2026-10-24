@@ -45,6 +45,29 @@ return function()
 		end)
 	end)
 
+	describe("broken with a layout seed", function()
+		local function set(seed)
+			local out = {}
+			for index, position in grid() do
+				if OfficeLightUtils.broken(position, 0.3, seed) then
+					table.insert(out, index)
+				end
+			end
+			return table.concat(out, ",")
+		end
+
+		it("is equal for the same seed and differs between seeds", function()
+			expect(set(11)).to.equal(set(11))
+			expect(set(11) ~= set(12)).to.equal(true)
+		end)
+
+		it("falls back to the position hash with a nil seed", function()
+			for _, position in grid() do
+				expect(OfficeLightUtils.broken(position, 0.3, nil)).to.equal(OfficeLightUtils.broken(position, 0.3))
+			end
+		end)
+	end)
+
 	describe("nearbyBroken", function()
 		it("selects only broken lights within the radius", function()
 			local positions = { Vector3.new(0, 0, 0), Vector3.new(10, 0, 0), Vector3.new(500, 0, 0) }
