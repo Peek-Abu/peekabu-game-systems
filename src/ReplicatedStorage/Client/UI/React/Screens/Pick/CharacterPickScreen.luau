@@ -1,12 +1,14 @@
 --!strict
 --[=[
-	CharacterPickScreen: the first-join pick. Full screen in the selected employee's colour: the title, a column of
-	employee cards (head in 3D, name, "Free!" or the hire price, the night padlock when locked), the selected employee
-	LIVE on a platform with rays behind, and an About card (who they are, the five stats, the ability). The big mint
-	"Start as Pippa!" sends the pick (CosmeticServiceClient:requestPick); the screen closes when the synced loadout
-	says picked (DepotServiceClient takes the scene off). No close button: everyone picks once. A locked employee can
-	be previewed; hiring is in the Shop (step 4). Values: CharacterPickViewModel and InventoryViewModel (layout,
-	stats, colours). Exempt (wires stores; story in CharacterPickScreen.story).
+	CharacterPickScreen: the first-join pick (concept: characters/ui/character-ui/frames2/pick.jpg). On a ToonBackdrop
+	in the selected employee's colour, with rays behind the hero: the big gold "PICK YOUR EMPLOYEE!" and a plate under
+	it; a column of employee cards (their head breaking out of the card, name, line, "Free!" or the hire price, the
+	night padlock when locked); the selected employee LIVE on a raised platform with a two-line name plate; the About
+	card (who they are, the five gold stat bars, the ability card with its render); and the big mint "Start as
+	Pippa!". It sends the pick (CosmeticServiceClient:requestPick); DepotServiceClient takes the scene off when the
+	synced loadout says picked. No close button: everyone picks once. A locked employee can be previewed; hiring is in
+	the Shop. Values: CharacterPickViewModel and InventoryViewModel (layout, stats, colours). Exempt (wires stores;
+	story in CharacterPickScreen.story).
 
 	@class CharacterPickScreen
 ]=]
@@ -21,9 +23,12 @@ local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local CosmeticServiceClient = require(ReplicatedStorage.Client.Features.Cosmetic.CosmeticServiceClient)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
+local ToonBackdrop = require(Toon.ToonBackdrop)
 local ToonButton = require(Toon.ToonButton)
+local ToonFlag = require(Toon.ToonFlag)
 local ToonIcon = require(Toon.ToonIcon)
 local ToonPill = require(Toon.ToonPill)
+local ToonPrice = require(Toon.ToonPrice)
 local ToonSurface = require(Toon.ToonSurface)
 local ToonText = require(Toon.ToonText)
 local ToonViewport = require(Toon.ToonViewport)
@@ -40,6 +45,9 @@ local e = React.createElement
 local COLOR = UIToonConstants.COLOR
 local DEPTH = UIToonConstants.DEPTH
 
+type Nodes = { [string]: React.ReactNode }
+type Tint = { body: Color3, light: Color3, dark: Color3 }
+
 export type CharacterPickScreenProps = {
 	-- Fixed ownership instead of the store (the story).
 	owns: ((id: string) -> boolean)?,
@@ -47,128 +55,252 @@ export type CharacterPickScreenProps = {
 	phone: boolean?,
 }
 
-local function shadeOf(color: { body: Color3, light: Color3, dark: Color3 }): UIToonConstants.Shade
+local function shadeOf(color: Tint): UIToonConstants.Shade
 	return { base = color.body, hi = color.light, lo = color.dark }
 end
 
-local function aboutCard(
-	employee: string,
-	layout: InventoryViewModel.Layout,
-	width: number,
-	height: number
+local function card(
+	entry: VM.Card,
+	height: number,
+	phone: boolean,
+	order: number,
+	onSelect: (id: string) -> ()
 ): React.ReactNode
+	local color = InventoryViewModel.color(entry.id)
+	local profile = EmployeeProfileRegistry.get(entry.id)
+	local head = math.floor(height * 1.15)
+	local nameSize = math.floor(height * 0.34)
+	local face: Nodes = {
+		name = e(ToonText, {
+			text = string.upper(entry.name),
+			textSize = nameSize,
+			position = UDim2.fromOffset(math.floor(head * 0.78), math.floor(height * 0.12)),
+			size = UDim2.new(1, -math.floor(head * 0.78) - 12, 0, nameSize + 6),
+			fit = true,
+		}),
+	}
+	if entry.locked then
+		local price: Nodes = {
+			price = e(ToonPrice, {
+				currency = "credits",
+				amount = entry.tag,
+				textSize = math.floor(height * 0.2),
+				align = "center",
+				size = UDim2.new(1, 0, 1, -4),
+			}),
+		}
+		face.price = e(ToonSurface, {
+			hue = "night",
+			radius = 999,
+			small = true,
+			position = UDim2.fromOffset(math.floor(head * 0.78), math.floor(height * 0.52)),
+			size = UDim2.fromOffset(math.floor(height * 1.2), math.floor(height * 0.32)),
+			children = price,
+		})
+	elseif profile ~= nil then
+		face.line = e(ToonText, {
+			text = profile.line,
+			font = "body",
+			color = COLOR.white,
+			textSize = math.max(if phone then 12 else 18, math.floor(height * 0.15)),
+			position = UDim2.fromOffset(math.floor(head * 0.78), math.floor(height * 0.52)),
+			size = UDim2.new(1, -math.floor(head * 0.78) - 12, 0, math.floor(height * 0.2)),
+			fit = true,
+		})
+	end
+	local nodes: Nodes = {
+		surface = e(ToonSurface, {
+			hue = "grape",
+			shade = shadeOf(color),
+			radius = 22,
+			position = UDim2.fromOffset(0, math.floor(height * 0.18)),
+			size = UDim2.new(1, 0, 0, height),
+			children = face,
+			zIndex = 2,
+		}),
+		-- The head breaks out of the card's top-left.
+		head = e(ToonViewport, {
+			employee = entry.id,
+			framing = "upper",
+			dim = entry.locked,
+			position = UDim2.fromOffset(-math.floor(head * 0.06), 0),
+			size = UDim2.fromOffset(head, head),
+			zIndex = 3,
+		}),
+	}
+	if entry.selected then
+		nodes.ring = e("Frame", {
+			Position = UDim2.fromOffset(-8, math.floor(height * 0.18) - 8),
+			Size = UDim2.new(1, 16, 0, height + DEPTH.drop + 16),
+			BackgroundTransparency = 1,
+			ZIndex = 1,
+		}, {
+			corner = e("UICorner", { CornerRadius = UDim.new(0, 30) }),
+			stroke = e("UIStroke", { Color = COLOR.selected, Thickness = 6 }),
+		})
+	end
+	if entry.locked then
+		local lock = math.floor(height * 0.42)
+		nodes.lock = e(ToonIcon, {
+			icon = "lockNight",
+			position = UDim2.fromOffset(0, math.floor(height * 0.18)),
+			size = UDim2.fromOffset(lock, lock),
+			drop = 3,
+			zIndex = 4,
+		})
+	else
+		nodes.free = e(ToonFlag, {
+			text = entry.tag,
+			hue = "mint",
+			tilt = 8,
+			textSize = if phone then 13 else 22,
+			anchor = Vector2.new(1, 0),
+			position = UDim2.new(1, 10, 0, math.floor(height * 0.08)),
+			size = UDim2.fromOffset(if phone then 64 else 104, if phone then 24 else 38),
+			zIndex = 4,
+		})
+	end
+	return e("TextButton", {
+		Size = UDim2.new(1, 0, 0, math.floor(height * 1.18) + DEPTH.drop),
+		BackgroundTransparency = 1,
+		Text = "",
+		AutoButtonColor = false,
+		LayoutOrder = order,
+		[React.Event.Activated] = function()
+			onSelect(entry.id)
+		end,
+	}, nodes)
+end
+
+local function aboutCard(employee: string, layout: InventoryViewModel.Layout, height: number): React.ReactNode
 	local profile = EmployeeProfileRegistry.get(employee)
 	if profile == nil then
 		return nil
 	end
 	local phone = layout.phone
 	local size = layout.textSize
-	local inner = width - 36
-	local face: { [string]: React.ReactNode } = {}
-	local y = if phone then 10 else 18
-	face.kind = e(ToonText, {
-		text = string.upper(profile.kind) .. "  ·  " .. profile.line,
-		textSize = size + 2,
-		meaning = "grape",
-		position = UDim2.fromOffset(18, y),
-		size = UDim2.fromOffset(inner, size + 8),
+	local gold = UIToonConstants.shade("gold")
+	local face: Nodes = {}
+	local y = if phone then 10 else 20
+	face.title = e(ToonText, {
+		text = `ABOUT {string.upper(employee)}`,
+		textSize = size + 10,
+		position = UDim2.fromOffset(20, y),
+		size = UDim2.new(1, -40, 0, size + 14),
 		fit = true,
 	})
-	y += size + 12
+	y += size + 18
 	face.bio = e(ToonText, {
 		text = profile.bio,
 		font = "body",
-		color = COLOR.ink,
+		color = COLOR.white,
 		textSize = size,
-		position = UDim2.fromOffset(18, y),
-		size = UDim2.fromOffset(inner, size * 3),
+		position = UDim2.fromOffset(20, y),
+		size = UDim2.new(1, -40, 0, size * 3),
 		wrapped = true,
 		fit = true,
 		alignY = "top",
 	})
-	y += size * 3 + 6
-	-- The stats fill the room between the bio and the ability card (pinned to the foot).
-	local abilityHeight = size * 3 + (if phone then 30 else 44)
+	y += size * 3 + 8
+	local abilityHeight = if phone then 64 else 120
 	local row = math.clamp(
-		math.floor((height - y - abilityHeight - 24) / 5),
+		math.floor((height - y - abilityHeight - 30 - DEPTH.drop) / 5),
 		if phone then 18 else 30,
-		if phone then 30 else 56
+		if phone then 26 else 54
 	)
-	local barX = if phone then 100 else 170
+	local barX = if phone then 110 else 200
 	for index, stat in InventoryViewModel.stats(employee) do
 		local rowY = y + (index - 1) * row
 		face[`icon{index}`] = e(ToonIcon, {
 			icon = stat.icon,
-			position = UDim2.fromOffset(14, rowY - 2),
-			size = UDim2.fromOffset(row - 2, row - 2),
+			position = UDim2.fromOffset(16, rowY),
+			size = UDim2.fromOffset(row, row),
 			drop = 2,
 		})
 		face[`label{index}`] = e(ToonText, {
 			text = stat.label,
 			font = "body",
-			color = COLOR.ink,
-			textSize = size - 2,
-			position = UDim2.fromOffset(18 + row, rowY),
-			size = UDim2.fromOffset(barX - row - 24, row - 6),
+			color = COLOR.white,
+			textSize = size,
+			position = UDim2.fromOffset(24 + row, rowY),
+			size = UDim2.fromOffset(barX - row - 16, row),
 			fit = true,
 		})
-		local pipWidth = math.floor((inner - barX + 18) / 5)
+		local pips: Nodes = {}
 		for pip = 1, 5 do
-			face[`pip{index}_{pip}`] = e("Frame", {
-				Position = UDim2.fromOffset(barX + (pip - 1) * pipWidth, rowY + 4),
-				Size = UDim2.fromOffset(pipWidth - 6, row - 14),
-				BackgroundColor3 = if pip <= stat.value then profile.color.body else UIToonConstants.shade("cream").lo,
+			local filled = pip <= stat.value
+			pips[`pip{pip}`] = e("Frame", {
+				AnchorPoint = Vector2.new(0, 0.5),
+				Position = UDim2.new((pip - 1) / 5, 0, 0.5, 0),
+				Size = UDim2.new(0.2, -6, 0.42, 0),
+				BackgroundColor3 = if filled then COLOR.white else UIToonConstants.shade("night").hi,
 				BorderSizePixel = 0,
 			}, {
 				corner = e("UICorner", { CornerRadius = UDim.new(0, 6) }),
 				stroke = e("UIStroke", { Color = COLOR.ink, Thickness = 2 }),
+				gradient = if filled
+					then e("UIGradient", { Rotation = 90, Color = ColorSequence.new(gold.hi, gold.lo) })
+					else nil,
 			})
 		end
+		face[`bar{index}`] = e("Frame", {
+			Position = UDim2.fromOffset(barX + 20, rowY),
+			Size = UDim2.new(1, -barX - 40, 0, row),
+			BackgroundTransparency = 1,
+		}, pips)
 	end
-	y += 5 * row + 8
-	y = math.max(y, height - abilityHeight - 16 - DEPTH.drop)
-	local ability = profile.ability
-	local abilityFace: { [string]: React.ReactNode } = {
+	-- The ability card at the foot, its render breaking the left edge, the cooldown on a round chip.
+	local art = math.floor(abilityHeight * 1.05)
+	local ability: Nodes = {
 		name = e(ToonText, {
-			text = ability.name,
-			textSize = size + 4,
-			position = UDim2.fromOffset(14, 8),
-			size = UDim2.new(1, -150, 0, size + 10),
+			text = profile.ability.name,
+			textSize = size + 10,
+			position = UDim2.fromOffset(math.floor(art * 0.7), 8),
+			size = UDim2.new(1, -math.floor(art * 0.7) - 90, 0, size + 14),
 			fit = true,
 		}),
 		line = e(ToonText, {
-			-- The phone card has room for the one-liner only.
-			text = if phone then ability.line else ability.detail,
+			text = profile.ability.line,
 			font = "body",
 			color = COLOR.white,
 			textSize = size - 2,
-			position = UDim2.fromOffset(14, size + 18),
-			size = UDim2.new(1, -28, 1, -size - 26 - DEPTH.lip),
-			wrapped = true,
+			position = UDim2.fromOffset(math.floor(art * 0.7), size + 24),
+			size = UDim2.new(1, -math.floor(art * 0.7) - 90, 0, size + 4),
 			fit = true,
-			alignY = "top",
 		}),
 		cooldown = e(ToonPill, {
-			text = `Every {ability.cooldown}s`,
-			hue = "night",
-			textSize = size - 4,
-			anchor = Vector2.new(1, 0),
-			position = UDim2.new(1, -10, 0, 8),
-			size = UDim2.fromOffset(if phone then 80 else 120, size + 10),
+			text = `{profile.ability.cooldown}s`,
+			hue = "cream",
+			textSize = size - 2,
+			anchor = Vector2.new(1, 0.5),
+			position = UDim2.new(1, -14, 0.5, -4),
+			size = UDim2.fromOffset(if phone then 46 else 74, if phone then 40 else 66),
 		}),
 	}
 	face.ability = e(ToonSurface, {
 		hue = "grape",
-		radius = 18,
-		small = true,
-		position = UDim2.fromOffset(14, y),
-		size = UDim2.new(1, -28, 0, abilityHeight),
-		children = abilityFace,
+		radius = 20,
+		position = UDim2.fromOffset(16 + math.floor(art * 0.3), height - abilityHeight - 22 - DEPTH.drop),
+		size = UDim2.new(1, -32 - math.floor(art * 0.3), 0, abilityHeight),
+		children = ability,
+	})
+	face.abilityArt = e(ToonIcon, {
+		image = UIAssets.iconImage(profile.ability.icon),
+		anchor = Vector2.new(0, 0.5),
+		position = UDim2.fromOffset(4, height - abilityHeight / 2 - 26 - DEPTH.drop),
+		size = UDim2.fromOffset(art, art),
+		drop = 4,
+		zIndex = 3,
 	})
 	return e(ToonSurface, {
-		hue = "cream",
-		pattern = "sparkle",
-		radius = 24,
+		hue = "lilac",
+		shade = {
+			base = UIToonConstants.shade("grape").lo,
+			hi = UIToonConstants.shade("grape").base,
+			lo = UIToonConstants.shade("night").base,
+		},
+		pattern = "bubbles",
+		radius = 28,
 		size = UDim2.new(1, 0, 1, -DEPTH.drop),
 		children = face,
 	})
@@ -191,176 +323,121 @@ local function CharacterPickScreen(props: CharacterPickScreenProps): React.React
 	local layout = InventoryViewModel.layout(virtual, phone)
 	local content = layout.content
 	local gap = layout.gap
-	local listWidth = math.floor(content.width * (if phone then 0.25 else 0.18))
-	local heroWidth = math.floor(content.width * (if phone then 0.35 else 0.4))
+	local titleSize = if phone then 44 else 104
+	local top = layout.barY + titleSize + (if phone then 30 else 58)
+	local height = math.max(0, virtual.Y - top - (if phone then 12 else 24))
+	local listWidth = math.floor(content.width * (if phone then 0.26 else 0.25))
+	local heroWidth = math.floor(content.width * (if phone then 0.36 else 0.4))
 	local aboutWidth = content.width - listWidth - heroWidth - 2 * gap
-	local startHeight = if phone then 52 else 84
+	local startHeight = if phone then 52 else 96
 
 	-- The employee column.
 	local cards = VM.cards(owns, selected)
 	local cardHeight = math.min(
-		if phone then 84 else 150,
-		math.floor((content.height - (#cards - 1) * gap - DEPTH.drop) / math.max(1, #cards))
+		if phone then 64 else 150,
+		math.floor((height - (#cards - 1) * gap) / math.max(1, #cards) / 1.18 - DEPTH.drop)
 	)
-	local column: { [string]: React.ReactNode } = {
-		list = e("UIListLayout", {
-			Padding = UDim.new(0, gap),
-			SortOrder = Enum.SortOrder.LayoutOrder,
-		}),
+	local column: Nodes = {
+		list = e("UIListLayout", { Padding = UDim.new(0, gap), SortOrder = Enum.SortOrder.LayoutOrder }),
+		pad = e("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) }),
 	}
-	for index, card in cards do
-		local color = InventoryViewModel.color(card.id)
-		local face: { [string]: React.ReactNode } = {
-			head = e(ToonViewport, {
-				employee = card.id,
-				framing = "head",
-				dim = card.locked,
-				position = UDim2.fromOffset(4, 4),
-				size = UDim2.fromOffset(cardHeight - 8, cardHeight - 16),
-				zIndex = 2,
-			}),
-			name = e(ToonText, {
-				text = string.upper(card.name),
-				textSize = if phone then 18 else 30,
-				position = UDim2.fromOffset(cardHeight, if phone then 8 else 16),
-				size = UDim2.new(1, -cardHeight - 10, 0, if phone then 22 else 36),
-				fit = true,
-			}),
-			tag = e(ToonPill, {
-				text = card.tag,
-				hue = if card.locked then "night" else "mint",
-				meaning = if card.locked then "gold" else nil,
-				icon = if card.locked then "credits" else nil,
-				textSize = if phone then 13 else 20,
-				iconSize = if phone then 26 else 40,
-				position = UDim2.fromOffset(cardHeight, if phone then 36 else 62),
-				size = UDim2.fromOffset(if phone then 70 else 120, if phone then 24 else 36),
-			}),
-			lock = if card.locked
-				then e(ToonIcon, {
-					icon = "lockNight",
-					-- On the head's corner, clear of the name.
-					anchor = Vector2.new(1, 1),
-					position = UDim2.fromOffset(cardHeight - 4, cardHeight - 12),
-					size = UDim2.fromOffset(if phone then 22 else 36, if phone then 22 else 36),
-					drop = 2,
-				})
-				else nil,
-		}
-		column[card.id] = e("TextButton", {
-			Size = UDim2.new(1, 0, 0, cardHeight + DEPTH.drop),
-			BackgroundTransparency = 1,
-			Text = "",
-			AutoButtonColor = false,
-			LayoutOrder = index,
-			[React.Event.Activated] = function()
-				setSelected(card.id)
-			end,
-		}, {
-			surface = e(ToonSurface, {
-				hue = "grape",
-				shade = shadeOf(color),
-				radius = 20,
-				size = UDim2.new(1, 0, 0, cardHeight),
-				children = face,
-			}),
-			ring = if card.selected
-				then e("Frame", {
-					Position = UDim2.fromOffset(-6, -6),
-					Size = UDim2.new(1, 12, 0, cardHeight + 12),
-					BackgroundTransparency = 1,
-					ZIndex = 3,
-				}, {
-					corner = e("UICorner", { CornerRadius = UDim.new(0, 26) }),
-					stroke = e("UIStroke", { Color = COLOR.white, Thickness = 5 }),
-				})
-				else nil,
-		})
-	end
-
-	local tint = InventoryViewModel.color(selected)
-	local start = VM.start(selected, owns)
 	local selectedName = selected
-	for _, card in cards do
-		if card.id == selected then
-			selectedName = card.name
+	for index, entry in cards do
+		column[entry.id] = card(entry, cardHeight, phone, index, setSelected)
+		if entry.id == selected then
+			selectedName = entry.name
 		end
 	end
 
-	local hero: { [string]: React.ReactNode } = {
-		rays = e("ImageLabel", {
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromScale(0.5, 0.45),
-			Size = UDim2.fromScale(1.3, 1.3),
-			SizeConstraint = Enum.SizeConstraint.RelativeXX,
-			BackgroundTransparency = 1,
-			Image = UIAssets.toon.rays,
-			ImageColor3 = tint.light,
-			ImageTransparency = 0.5,
-			ZIndex = 1,
+	local tint = InventoryViewModel.color(selected)
+	local profile = EmployeeProfileRegistry.get(selected)
+	local start = VM.start(selected, owns)
+	local plateHeight = if phone then 44 else 104
+	local plate: Nodes = {
+		name = e(ToonText, {
+			text = string.upper(selectedName),
+			textSize = if phone then 22 else 56,
+			position = UDim2.fromOffset(0, if phone then 2 else 6),
+			size = UDim2.new(1, 0, 0, if phone then 24 else 60),
+			align = "center",
+			fit = true,
 		}),
-		platform = e("Frame", {
+		line = if profile ~= nil
+			then e(ToonText, {
+				text = `{profile.kind} · {profile.line}`,
+				font = "body",
+				color = COLOR.white,
+				textSize = if phone then 12 else 24,
+				position = UDim2.fromOffset(10, if phone then 24 else 64),
+				size = UDim2.new(1, -20, 0, if phone then 14 else 28),
+				align = "center",
+				fit = true,
+			})
+			else nil,
+	}
+	local function disc(position: UDim2, a: Color3, b: Color3, zIndex: number): React.ReactNode
+		return e("Frame", {
 			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromScale(0.5, 0.84),
-			Size = UDim2.fromScale(0.7, 0.06),
-			BackgroundColor3 = tint.dark,
+			Position = position,
+			Size = UDim2.fromScale(0.8, 0.1),
+			BackgroundColor3 = COLOR.white,
 			BorderSizePixel = 0,
-			ZIndex = 2,
+			ZIndex = zIndex,
 		}, {
 			corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }),
-			stroke = e("UIStroke", { Color = COLOR.ink, Thickness = 4 }),
-		}),
+			stroke = e("UIStroke", { Color = COLOR.ink, Thickness = 5 }),
+			gradient = e("UIGradient", { Rotation = 90, Color = ColorSequence.new(a, b) }),
+		})
+	end
+	local hero: Nodes = {
+		lip = disc(UDim2.fromScale(0.5, 0.8), tint.dark, tint.dark, 1),
+		top = disc(UDim2.fromScale(0.5, 0.775), tint.light, tint.body, 2),
 		model = e(ToonViewport, {
 			employee = selected,
 			live = true,
 			framing = "full",
-			size = UDim2.fromScale(1, 0.88),
+			size = UDim2.fromScale(1, 0.82),
 			zIndex = 3,
 		}),
-		plate = e(ToonPill, {
-			text = string.upper(selectedName),
-			hue = "night",
-			small = false,
-			textSize = if phone then 22 else 40,
+		plate = e(ToonSurface, {
+			hue = "grape",
+			radius = 22,
 			anchor = Vector2.new(0.5, 1),
 			position = UDim2.fromScale(0.5, 1),
-			size = UDim2.fromOffset(if phone then 160 else 300, if phone then 38 else 64),
+			size = UDim2.fromOffset(if phone then 180 else 380, plateHeight),
 			zIndex = 4,
+			children = plate,
 		}),
 	}
 
-	return e("Frame", {
-		Size = UDim2.fromScale(1, 1),
-		BackgroundColor3 = COLOR.white,
-		BorderSizePixel = 0,
-		Active = true,
-	}, {
-		gradient = e("UIGradient", {
-			Rotation = 90,
-			Color = ColorSequence.new(tint.body, tint.dark),
-		}),
-		pattern = e("ImageLabel", {
-			Size = UDim2.fromScale(1, 1),
-			BackgroundTransparency = 1,
-			Image = UIAssets.toon.patternSparkle,
-			ImageColor3 = COLOR.white,
-			ImageTransparency = 0.9,
-			ScaleType = Enum.ScaleType.Tile,
-			TileSize = UDim2.fromOffset(96, 96),
-		}),
+	local heroX = (content.x + listWidth + gap + heroWidth / 2) / math.max(1, virtual.X)
+	local screen: Nodes = {
 		scaled = e(PaperHudFrame, {
 			scale = scale,
 			children = {
 				title = e(ToonText, {
 					text = "PICK YOUR EMPLOYEE!",
-					textSize = layout.titleSize,
-					position = UDim2.fromOffset(layout.titleX, layout.barY),
-					size = UDim2.fromOffset(if phone then 360 else 700, layout.barHeight),
+					textSize = titleSize,
+					meaning = "gold",
+					rotation = -2,
+					anchor = Vector2.new(0.5, 0),
+					position = UDim2.new(0.5, 0, 0, layout.barY),
+					size = UDim2.fromOffset(math.floor(virtual.X * 0.62), titleSize + 12),
+					align = "center",
 					fit = true,
 				}),
+				sub = e(ToonPill, {
+					text = "You can switch any time in your Inventory at the depot",
+					hue = "night",
+					textSize = if phone then 13 else 22,
+					padX = 24,
+					anchor = Vector2.new(0.5, 0),
+					position = UDim2.new(0.5, 0, 0, layout.barY + titleSize + (if phone then 4 else 8)),
+					size = UDim2.fromOffset(if phone then 420 else 820, if phone then 26 else 48),
+				}),
 				body = e("Frame", {
-					Position = UDim2.fromOffset(content.x, content.y),
-					Size = UDim2.fromOffset(content.width, content.height),
+					Position = UDim2.fromOffset(content.x, top),
+					Size = UDim2.fromOffset(content.width, height),
 					BackgroundTransparency = 1,
 				}, {
 					column = e("Frame", {
@@ -376,11 +453,11 @@ local function CharacterPickScreen(props: CharacterPickScreenProps): React.React
 						Position = UDim2.fromOffset(listWidth + heroWidth + 2 * gap, 0),
 						Size = UDim2.new(0, aboutWidth, 1, -startHeight - gap),
 						BackgroundTransparency = 1,
-					}, { card = aboutCard(selected, layout, aboutWidth, content.height - startHeight - gap) }),
+					}, { card = aboutCard(selected, layout, height - startHeight - gap) }),
 					start = e(ToonButton, {
 						variant = "primary",
 						text = start.text,
-						textSize = if phone then 22 else 38,
+						textSize = if phone then 22 else 46,
 						disabled = not start.enabled,
 						sound = "cta",
 						anchor = Vector2.new(1, 1),
@@ -395,6 +472,12 @@ local function CharacterPickScreen(props: CharacterPickScreenProps): React.React
 				}),
 			},
 		}),
+	}
+	return e(ToonBackdrop, {
+		top = tint.body,
+		bottom = tint.dark,
+		rays = { position = UDim2.fromScale(heroX, 0.55), size = 0.75, color = tint.light, transparency = 0.35 },
+		children = screen,
 	})
 end
 

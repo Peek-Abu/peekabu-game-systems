@@ -1,0 +1,140 @@
+--!strict
+--[=[
+	ToonBackdrop: the full-screen background every character menu sits on (Inventory, the pick, the Shop, reveals):
+	the screen's colour as a top-to-bottom gradient, broad 45-degree stripes over it (the kit's stripe tile), optional
+	rays behind the hero, and a vignette on the edges. `see` lets the world show through the top (0 = opaque), and
+	`blur` blurs the world behind while the backdrop is up (a BlurEffect on the camera, removed on unmount).
+	Presentational (exempt; story in ToonBackdrop.story).
+
+	@class ToonBackdrop
+]=]
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local React = require(ReplicatedStorage.Packages.React)
+local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
+local UIToonConstants = require(ReplicatedStorage.Client.UI.React.Screens.Toon.UIToonConstants)
+
+local e = React.createElement
+
+export type Rays = {
+	-- Where the rays' centre sits on the screen, and their size as a share of the screen width.
+	position: UDim2,
+	size: number,
+	color: Color3,
+	transparency: number?,
+}
+
+export type ToonBackdropProps = {
+	top: Color3,
+	bottom: Color3,
+	-- How much of the world shows through at the top (0 = opaque, default 0).
+	see: number?,
+	stripes: boolean?,
+	rays: Rays?,
+	blur: boolean?,
+	zIndex: number?,
+	children: { [string]: React.ReactNode }?,
+}
+
+local BLUR_SIZE = 14
+
+local function ToonBackdrop(props: ToonBackdropProps): React.ReactNode
+	local blur = props.blur == true
+	React.useEffect(function(): () -> ()
+		if not blur then
+			return function() end
+		end
+		local camera = workspace.CurrentCamera
+		if camera == nil then
+			return function() end
+		end
+		local effect = Instance.new("BlurEffect")
+		effect.Name = "ToonBackdropBlur"
+		effect.Size = BLUR_SIZE
+		effect.Parent = camera
+		return function()
+			effect:Destroy()
+		end
+	end, { blur })
+
+	local see = props.see or 0
+	local nodes: { [string]: React.ReactNode } = {
+		fill = e("Frame", {
+			Size = UDim2.fromScale(1, 1),
+			BackgroundColor3 = UIToonConstants.COLOR.white,
+			BorderSizePixel = 0,
+			ZIndex = 1,
+		}, {
+			gradient = e("UIGradient", {
+				Rotation = 90,
+				Color = ColorSequence.new(props.top, props.bottom),
+				Transparency = NumberSequence.new({
+					NumberSequenceKeypoint.new(0, see),
+					NumberSequenceKeypoint.new(0.6, see * 0.4),
+					NumberSequenceKeypoint.new(1, 0),
+				}),
+			}),
+		}),
+	}
+	if props.stripes ~= false then
+		nodes.stripes = e("ImageLabel", {
+			Size = UDim2.fromScale(1, 1),
+			BackgroundTransparency = 1,
+			Image = UIAssets.toon.stripes,
+			ImageColor3 = UIToonConstants.COLOR.white,
+			ImageTransparency = 0.9,
+			ScaleType = Enum.ScaleType.Tile,
+			TileSize = UDim2.fromOffset(180, 180),
+			ZIndex = 2,
+		})
+	end
+	local rays = props.rays
+	if rays ~= nil then
+		nodes.rays = e("ImageLabel", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = rays.position,
+			Size = UDim2.fromScale(rays.size, rays.size),
+			SizeConstraint = Enum.SizeConstraint.RelativeXX,
+			BackgroundTransparency = 1,
+			Image = UIAssets.toon.rays,
+			ImageColor3 = rays.color,
+			ImageTransparency = rays.transparency or 0.45,
+			ZIndex = 3,
+		})
+	end
+	-- The vignette: the edges darken in ink, top/bottom and left/right.
+	for _, side in { { name = "vignetteY", rotation = 90 }, { name = "vignetteX", rotation = 0 } } do
+		nodes[side.name] = e("Frame", {
+			Size = UDim2.fromScale(1, 1),
+			BackgroundColor3 = UIToonConstants.COLOR.ink,
+			BorderSizePixel = 0,
+			ZIndex = 4,
+		}, {
+			gradient = e("UIGradient", {
+				Rotation = side.rotation,
+				Transparency = NumberSequence.new({
+					NumberSequenceKeypoint.new(0, 0.55),
+					NumberSequenceKeypoint.new(0.18, 1),
+					NumberSequenceKeypoint.new(0.82, 1),
+					NumberSequenceKeypoint.new(1, 0.5),
+				}),
+			}),
+		})
+	end
+	if props.children ~= nil then
+		nodes.content = e("Frame", {
+			Size = UDim2.fromScale(1, 1),
+			BackgroundTransparency = 1,
+			ZIndex = 5,
+		}, props.children)
+	end
+	return e("Frame", {
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		Active = true,
+		ZIndex = props.zIndex,
+	}, nodes)
+end
+
+return ToonBackdrop

@@ -36,7 +36,7 @@ return UILabs.CreateReactStory({
 	local phone = props.controls.Phone == true
 	local employee = props.controls.Employee
 	return e(InventoryScreen, {
-		preview = { loadout = loadout, owns = owns, credits = 3140 },
+		preview = { loadout = loadout, owns = owns, credits = 3140, gleam = 640 },
 		phone = phone,
 		viewport = if phone then Vector2.new(844, 390) else Vector2.new(1920, 1080),
 		employee = if employee ~= "" then employee else nil,

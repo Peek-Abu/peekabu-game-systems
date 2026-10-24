@@ -31,17 +31,30 @@ type Loadout = CosmeticTypes.Loadout
 type Owns = (id: string) -> boolean
 
 export type Band = { kind: ToonSourceBand.Kind, text: string }
-export type Action = { text: string, enabled: boolean, variant: ToonStyleViewModel.Variant }
+-- `kind`: what pressing it does: wear the item, open its Shop page, or nothing (it says where to get the item).
+-- `price`: shown on a Shop button.
+export type Action = {
+	text: string,
+	enabled: boolean,
+	variant: ToonStyleViewModel.Variant,
+	kind: "wear" | "shop" | "none",
+	price: { currency: "gleam" | "credits", amount: string }?,
+}
+export type Bundled = { id: string, name: string, kind: CosmeticTypes.Kind, employee: string? }
 export type CrewState = "wearing" | "owned" | "locked"
 
 export type CrewCard = {
 	id: string,
 	name: string,
+	-- "Bunny", "Cactus".
+	kind: string,
 	line: string,
 	ability: string,
 	state: CrewState,
 	price: number?,
 	priceText: string?,
+	-- The ability's render (UIAssets image id), nil when the profile names none the kit has.
+	abilityImage: string?,
 	-- The worn skin: its catalogue name and its EmployeeRegistry art key (the part after the dot).
 	skinName: string,
 	skinKey: string,
@@ -70,12 +83,12 @@ export type Detail = {
 	line: string,
 	lore: string,
 	styles: { visible: boolean, count: number, enabled: boolean, note: string },
-	comesWith: { string },
+	comesWith: { Bundled },
 	action: Action,
 }
 
 export type StatRow = { stat: EmployeeProfileRegistry.Stat, label: string, icon: UIAssets.ToonIcon, value: number }
-export type Tab = { id: string, text: string, soon: boolean }
+export type Tab = { id: string, text: string, soon: boolean, icon: UIAssets.ToonIcon? }
 export type PageTab = "skins" | "idles" | "about"
 
 -- Design px against the virtual screen (PaperHudScaleViewModel.virtual).
@@ -90,8 +103,7 @@ export type Layout = {
 	content: { x: number, y: number, width: number, height: number },
 	crewCard: Vector2,
 	gap: number,
-	-- The character page: its tab row, then grid | hero | detail.
-	tabsHeight: number,
+	-- The character page (its tabs are in the menu bar): grid | hero | detail.
 	gridWidth: number,
 	heroWidth: number,
 	detailWidth: number,
@@ -168,24 +180,30 @@ end
 -- The detail panel's main button. Only Wear does anything; the rest say where to get the item.
 function VM.action(item: Item, owned: boolean, worn: boolean): Action
 	if worn then
-		return { text = "Wearing", enabled = false, variant = "secondary" }
+		return { text = "Wearing", enabled = false, variant = "secondary", kind = "none" }
 	end
 	if owned then
-		return { text = "Wear", enabled = true, variant = "primary" }
+		return { text = "Wear", enabled = true, variant = "primary", kind = "wear" }
 	end
 	local source = item.source
-	if source == "credits" or source == "gleam" then
-		return { text = "In the Shop soon", enabled = false, variant = "gleam" }
+	if (source == "credits" or source == "gleam") and item.price ~= nil then
+		return {
+			text = "See in Shop",
+			enabled = true,
+			variant = "gleam",
+			kind = "shop",
+			price = { currency = source, amount = ToonStyleViewModel.grouped(item.price) },
+		}
 	elseif source == "gloomLocker" then
-		return { text = "Gloom Locker", enabled = false, variant = "night" }
+		return { text = "Gloom Locker", enabled = false, variant = "night", kind = "none" }
 	elseif source == "gleamLocker" then
-		return { text = "Gleam Locker", enabled = false, variant = "gleam" }
+		return { text = "Gleam Locker", enabled = false, variant = "gleam", kind = "none" }
 	elseif source == "goal" then
-		return { text = "Earn it playing", enabled = false, variant = "primary" }
+		return { text = "Earn it playing", enabled = false, variant = "primary", kind = "none" }
 	elseif source == "event" or source == "gift" then
-		return { text = "Missed it", enabled = false, variant = "secondary" }
+		return { text = "Missed it", enabled = false, variant = "secondary", kind = "none" }
 	end
-	return { text = "Coming later", enabled = false, variant = "lilac" }
+	return { text = "Coming later", enabled = false, variant = "lilac", kind = "none" }
 end
 
 local function colorOf(employee: string): { body: Color3, light: Color3, dark: Color3 }
@@ -208,8 +226,10 @@ function VM.crew(loadout: Loadout, owns: Owns): { CrewCard }
 			table.insert(cards, {
 				id = id,
 				name = item.name,
+				kind = if profile ~= nil then profile.kind else "",
 				line = if profile ~= nil then profile.line else "",
 				ability = if profile ~= nil then profile.ability.name else "",
+				abilityImage = if profile ~= nil then UIAssets.iconImage(profile.ability.icon) else nil,
 				state = state,
 				price = if state == "locked" then item.price else nil,
 				priceText = if state == "locked" and item.price ~= nil
@@ -279,13 +299,16 @@ function VM.detail(item: Item, loadout: Loadout, owns: Owns): Detail
 	if employee ~= nil and (item.kind == "skin" or item.kind == "idle") then
 		worn = wornId(item.kind, employee, loadout, owns) == item.id
 	end
-	local comesWith: { string } = {}
+	local comesWith: { Bundled } = {}
 	local bundle = item.bundle
 	if bundle ~= nil then
 		for _, id in bundle do
 			local other = CosmeticRegistry.get(id)
 			if other ~= nil then
-				table.insert(comesWith, other.name)
+				table.insert(
+					comesWith,
+					{ id = other.id, name = other.name, kind = other.kind, employee = other.employee }
+				)
 			end
 		end
 	end
@@ -342,43 +365,41 @@ end
 
 function VM.tabs(): { Tab }
 	return {
-		{ id = "crew", text = "Crew", soon = false },
-		{ id = "vacuums", text = "Vacuums", soon = false },
+		{ id = "crew", text = "Crew", soon = false, icon = "pippaHappy" },
+		{ id = "vacuums", text = "Vacuums", soon = false, icon = "vacuum" },
 		{ id = "wheel", text = "Chat wheel", soon = true },
 	}
 end
 
 function VM.layout(virtual: Vector2, phone: boolean): Layout
 	local safe = if phone then UIToonConstants.SAFE.phone else UIToonConstants.SAFE.desktop
-	local barY = if phone then 8 else 16
-	local barHeight = if phone then 48 else 68
-	local gap = if phone then 10 else 20
+	local barY = if phone then 6 else 14
+	local barHeight = if phone then 50 else 76
+	local gap = if phone then 10 else 22
 	local x = safe.left
-	local y = barY + barHeight + gap
+	local y = barY + barHeight + gap + (if phone then 4 else 12)
 	local width = math.max(0, virtual.X - safe.left - safe.right)
 	local height = math.max(0, virtual.Y - y - safe.bottom)
-	local cardHeight = math.min(height - 16, if phone then 300 else 560)
-	local tabsHeight = if phone then 40 else 56
-	local gridWidth = math.floor(width * 0.36)
-	local heroWidth = math.floor(width * 0.3)
+	-- The concept's proportions: Crew cards fill the height; the page is grid | hero | detail.
+	local cardHeight = math.min(height - 16, if phone then 290 else 760)
+	local gridWidth = math.floor(width * (if phone then 0.34 else 0.29))
+	local heroWidth = math.floor(width * (if phone then 0.3 else 0.36))
 	local cellWidth = math.floor((gridWidth - 2 * UIToonConstants.DEPTH.outline - 24 - gap) / 2)
 	return {
 		phone = phone,
 		barY = barY,
 		barHeight = barHeight,
 		titleX = if phone then 104 else 150,
-		titleSize = if phone then 30 else 48,
+		titleSize = if phone then 34 else 64,
 		content = { x = x, y = y, width = width, height = height },
-		-- Wider on a phone, so two buttons side by side keep readable words ("Wearing").
-		crewCard = Vector2.new(math.floor(cardHeight * (if phone then 0.76 else 0.66)), cardHeight),
+		crewCard = Vector2.new(math.floor(cardHeight * (if phone then 0.66 else 0.54)), cardHeight),
 		gap = gap,
-		tabsHeight = tabsHeight,
 		gridWidth = gridWidth,
 		heroWidth = heroWidth,
 		detailWidth = width - gridWidth - heroWidth - 2 * gap,
-		cell = Vector2.new(cellWidth, math.floor(cellWidth * 1.3)),
-		textSize = if phone then 14 else 22,
-		headingSize = if phone then 24 else 40,
+		cell = Vector2.new(cellWidth, math.floor(cellWidth * 0.9)),
+		textSize = if phone then 14 else 24,
+		headingSize = if phone then 30 else 64,
 	}
 end
 

@@ -148,6 +148,16 @@ local TOON_ICONS: { [ToonIcon]: string } = {
 }
 UIAssets.toonIcons = table.freeze(TOON_ICONS)
 
+-- The image of a kit icon named by a plain string (data written outside the UI, like an ability's render), or nil.
+function UIAssets.iconImage(name: string): string?
+	for key, image in TOON_ICONS do
+		if key == name then
+			return image
+		end
+	end
+	return nil
+end
+
 -- Graded photos and cut-out renders (the map cards are 960x600, the portraits square, the cut-outs outlined PNGs).
 UIAssets.toonPhotos = table.freeze({
 	officeCard = "rbxassetid://130708209071391",

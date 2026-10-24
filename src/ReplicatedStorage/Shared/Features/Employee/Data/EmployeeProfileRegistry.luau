@@ -19,7 +19,8 @@ export type Profile = {
 	words: { string },
 	bio: string,
 	funFact: string,
-	ability: { name: string, line: string, detail: string, cooldown: number },
+	-- `icon` names the ability's render in the UI kit (UIAssets.toonIcons).
+	ability: { name: string, line: string, detail: string, cooldown: number, icon: string },
 	stats: { [Stat]: number },
 	-- body: the card/page fill; light: its highlight; dark: its band and shadows.
 	color: { body: Color3, light: Color3, dark: Color3 },
@@ -39,6 +40,7 @@ local PROFILES: { [string]: Profile } = {
 			line = "Speed up your team!",
 			detail = "Pippa and the crew near her run faster for 4 seconds.",
 			cooldown = 45,
+			icon = "abilityLetsGo",
 		},
 		stats = { speed = 4, stamina = 4, strength = 2, suction = 3, quiet = 2 },
 		color = {
@@ -58,6 +60,7 @@ local PROFILES: { [string]: Profile } = {
 			line = "Find the good stuff!",
 			detail = "Shows the closest treasure through walls for 5 seconds.",
 			cooldown = 40,
+			icon = "abilitySpotIt",
 		},
 		stats = { speed = 3, stamina = 2, strength = 3, suction = 3, quiet = 4 },
 		color = {
@@ -77,6 +80,7 @@ local PROFILES: { [string]: Profile } = {
 			line = "Pretend to be a plant!",
 			detail = "Stand still as a potted plant for up to 8 seconds. The Manager walks right past.",
 			cooldown = 45,
+			icon = "abilityPottedPlant",
 		},
 		stats = { speed = 2, stamina = 3, strength = 4, suction = 4, quiet = 2 },
 		color = {

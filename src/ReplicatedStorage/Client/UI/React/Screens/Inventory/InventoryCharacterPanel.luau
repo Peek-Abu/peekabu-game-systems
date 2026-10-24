@@ -1,14 +1,16 @@
 --!strict
 --[=[
-	InventoryCharacterPanel: one employee's page in the Inventory, opened from a Crew card. A back button, the
-	employee's name and the page tabs (Skins, Idles, About), then three columns:
-	- left: a grid of item cards (a static 3D preview on the item's rarity stage, the rarity's halo and trim, a rarity
-	  flag, the name and the footer band saying where it comes from); or, on About, who the employee is;
-	- middle: the hero: the selected skin LIVE (idle playing) on a platform with rays in the rarity colour;
-	- right: the selected item's detail (flags, name, lore, the Styles row when it has styles, Comes with, the main
-	  button); or, on About, the stats and the ability.
-	All of it is InventoryViewModel output; nothing is per character. Presentational (exempt; story in
-	InventoryScreen.story).
+	InventoryCharacterPanel: one employee's page in the Inventory, under the menu bar (back, the employee's head and
+	name, the tabs Skins · Idles · About: InventoryScreen draws it). Concepts: characters/ui/character-ui/frames3/
+	char-skins.jpg and char-about.jpg. Three columns:
+	- left: a grid of item cards (rarity-coloured card, an inset stage with the item in 3D, a rarity ribbon, the name,
+	  the footer band saying where it comes from, New! and "On" ribbons), or on About: who they are and a fun fact;
+	- middle: the hero: the selected skin LIVE (idle playing) on a raised platform in the rarity's colour;
+	- right: the selected item's detail (ribbons, the big name, the lore in a quote box, Styles, Comes with tiles, the
+	  main button: Wear / Wearing / See in Shop with its price / where else to get it), or on About: the ability card,
+	  the stat bars and "Every employee can finish every job, even alone."
+	All of it is InventoryViewModel output; nothing is per character. Looking at a New! item marks it seen.
+	Presentational (exempt; story in InventoryScreen.story).
 
 	@class InventoryCharacterPanel
 ]=]
@@ -25,6 +27,7 @@ local ToonButton = require(Toon.ToonButton)
 local ToonFlag = require(Toon.ToonFlag)
 local ToonIcon = require(Toon.ToonIcon)
 local ToonPill = require(Toon.ToonPill)
+local ToonPrice = require(Toon.ToonPrice)
 local ToonRarityFrame = require(Toon.ToonRarityFrame)
 local ToonSourceBand = require(Toon.ToonSourceBand)
 local ToonSurface = require(Toon.ToonSurface)
@@ -47,28 +50,55 @@ export type InventoryCharacterPanelProps = {
 	owns: (id: string) -> boolean,
 	-- The selected item (nil = the worn one).
 	selected: string?,
-	onBack: () -> (),
-	onTab: (tab: VM.PageTab) -> (),
 	onSelect: (id: string) -> (),
 	onWear: (change: CosmeticTypes.Change) -> (),
+	-- Opens the item's Shop page.
+	onShop: (id: string) -> (),
 	-- The shown item was New! and has now been looked at.
 	onSeen: (ids: { string }) -> (),
 }
 
-local TAB_TEXT: { [VM.PageTab]: string } = { skins = "Skins", idles = "Idles", about = "About" }
+type Nodes = { [string]: React.ReactNode }
 
-local function text(value: string, size: number, x: number, y: number, width: number, body: boolean?): React.ReactNode
+local function body(value: string, size: number, color: Color3?): React.ReactNode
 	return e(ToonText, {
 		text = value,
-		font = if body then "body" else "display",
-		color = if body then COLOR.ink else nil,
+		font = "body",
+		color = color or COLOR.ink,
 		textSize = size,
-		position = UDim2.fromOffset(x, y),
-		size = UDim2.fromOffset(width, if body then size * 4 else size + 8),
-		fit = not body,
-		wrapped = body,
+		size = UDim2.fromScale(1, 1),
+		wrapped = true,
 		alignY = "top",
 	})
+end
+
+local function group(children: Nodes): React.ReactNode
+	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, children)
+end
+
+-- A column of blocks laid out top to bottom.
+local function stack(children: Nodes, padding: number, inset: number): React.ReactNode
+	local nodes: Nodes = {
+		list = e("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, padding) }),
+		pad = e("UIPadding", {
+			PaddingLeft = UDim.new(0, inset),
+			PaddingRight = UDim.new(0, inset),
+			PaddingTop = UDim.new(0, inset),
+		}),
+	}
+	for key, node in children do
+		nodes[key] = node
+	end
+	return group(nodes)
+end
+
+-- A block in a stack: a fixed-height frame holding one node.
+local function block(height: number, order: number, node: React.ReactNode): React.ReactNode
+	return e("Frame", {
+		Size = UDim2.new(1, 0, 0, height),
+		BackgroundTransparency = 1,
+		LayoutOrder = order,
+	}, { node = node })
 end
 
 local function itemCard(
@@ -80,23 +110,61 @@ local function itemCard(
 ): React.ReactNode
 	local cell = props.layout.cell
 	local phone = props.layout.phone
-	local bandHeight = if phone then 24 else 34
-	local stage: { [string]: React.ReactNode } = {
+	local bandHeight = if phone then 22 else 34
+	local nameSize = if phone then 13 else 22
+	local shade = UIToonConstants.rarity(entry.rarity)
+	local stageHeight = cell.Y - bandHeight - nameSize - (if phone then 14 else 24)
+	local stage: Nodes = {
+		corner = e("UICorner", { CornerRadius = UDim.new(0, CARD_RADIUS - 6) }),
+		stroke = e("UIStroke", { Color = COLOR.ink, Thickness = 3 }),
+		gradient = e("UIGradient", { Rotation = 90, Color = ColorSequence.new(shade.hi, shade.base) }),
 		art = e(ToonViewport, {
 			employee = props.employee,
 			skin = skinKey,
 			framing = "full",
 			dim = entry.dim,
-			position = UDim2.fromOffset(4, 4),
-			size = UDim2.new(1, -8, 1, -bandHeight - (if phone then 26 else 36)),
+			position = UDim2.fromOffset(0, 6),
+			size = UDim2.new(1, 0, 1, -4),
 			zIndex = 2,
 		}),
+	}
+	if entry.rarity == "epic" or entry.rarity == "legendary" then
+		stage.stripes = e("ImageLabel", {
+			Size = UDim2.fromScale(1, 1),
+			BackgroundTransparency = 1,
+			Image = UIAssets.toon.stripes,
+			ImageColor3 = COLOR.white,
+			ImageTransparency = 0.8,
+			ScaleType = Enum.ScaleType.Tile,
+			TileSize = UDim2.fromOffset(64, 64),
+			ZIndex = 1,
+		})
+	end
+	if entry.dim then
+		stage.lock = e(ToonIcon, {
+			icon = "lockNight",
+			anchor = Vector2.new(1, 1),
+			position = UDim2.new(1, -6, 1, -6),
+			size = UDim2.fromOffset(if phone then 22 else 34, if phone then 22 else 34),
+			drop = 2,
+			zIndex = 3,
+		})
+	end
+	local face: Nodes = {
+		stage = e("Frame", {
+			Position = UDim2.fromOffset(8, 8),
+			Size = UDim2.new(1, -16, 0, stageHeight),
+			BackgroundColor3 = COLOR.white,
+			BorderSizePixel = 0,
+			ClipsDescendants = true,
+			ZIndex = 2,
+		}, stage),
 		name = e(ToonText, {
 			text = entry.name,
-			textSize = if phone then 14 else 20,
+			textSize = nameSize,
 			anchor = Vector2.new(0, 1),
-			position = UDim2.new(0, 8, 1, -bandHeight - 4),
-			size = UDim2.new(1, -16, 0, if phone then 18 else 26),
+			position = UDim2.new(0, 8, 1, -bandHeight - (if phone then 4 else 8)),
+			size = UDim2.new(1, -16, 0, nameSize + 6),
 			align = "center",
 			fit = true,
 			zIndex = 4,
@@ -108,19 +176,75 @@ local function itemCard(
 			radius = CARD_RADIUS,
 			zIndex = 5,
 		}),
-		band = if entry.band ~= nil
-			then e(ToonSourceBand, {
-				kind = entry.band.kind,
-				text = entry.band.text,
-				height = bandHeight,
-				radius = CARD_RADIUS - 4,
-				compact = phone,
-				zIndex = 6,
-			})
-			else nil,
 	}
+	local band = entry.band
+	if band ~= nil then
+		face.band = e(ToonSourceBand, {
+			kind = band.kind,
+			text = band.text,
+			height = bandHeight,
+			radius = CARD_RADIUS - 4,
+			compact = phone,
+			zIndex = 6,
+		})
+	end
+	local flagHeight = if phone then 20 else 30
+	local nodes: Nodes = {
+		halo = e(ToonRarityFrame, {
+			rarity = entry.rarity,
+			part = "halo",
+			width = cell.X,
+			radius = CARD_RADIUS,
+			position = UDim2.fromOffset(0, 8),
+			size = UDim2.fromOffset(cell.X, cell.Y),
+			zIndex = 1,
+		}),
+		surface = e(ToonSurface, {
+			hue = "grape",
+			shade = shade,
+			radius = CARD_RADIUS,
+			small = true,
+			gloss = false,
+			position = UDim2.fromOffset(0, 8),
+			size = UDim2.fromOffset(cell.X, cell.Y),
+			zIndex = 3,
+			children = face,
+		}),
+		rarity = e(ToonFlag, {
+			text = if entry.rarity == "default" then "CLASSIC" else string.upper(entry.rarity),
+			rarity = entry.rarity,
+			tilt = -6,
+			textSize = if phone then 10 else 14,
+			position = UDim2.fromOffset(-6, 0),
+			size = UDim2.fromOffset(if phone then 72 else 132, flagHeight),
+			zIndex = 7,
+		}),
+	}
+	if selected then
+		nodes.ring = e("Frame", {
+			Position = UDim2.fromOffset(-6, 2),
+			Size = UDim2.fromOffset(cell.X + 12, cell.Y + 12),
+			BackgroundTransparency = 1,
+			ZIndex = 2,
+		}, {
+			corner = e("UICorner", { CornerRadius = UDim.new(0, CARD_RADIUS + 6) }),
+			stroke = e("UIStroke", { Color = COLOR.white, Thickness = 5 }),
+		})
+	end
+	if entry.worn or entry.new then
+		nodes.tag = e(ToonFlag, {
+			text = if entry.worn then "On" else "New!",
+			hue = if entry.worn then "mint" else "coral",
+			tilt = 6,
+			textSize = if phone then 11 else 18,
+			anchor = Vector2.new(1, 0),
+			position = UDim2.new(1, 8, 0, 0),
+			size = UDim2.fromOffset(if phone then 52 else 78, flagHeight),
+			zIndex = 7,
+		})
+	end
 	return e("TextButton", {
-		Size = UDim2.fromOffset(cell.X, cell.Y + DEPTH.drop),
+		Size = UDim2.fromOffset(cell.X, cell.Y + DEPTH.drop + 8),
 		BackgroundTransparency = 1,
 		Text = "",
 		AutoButtonColor = false,
@@ -128,60 +252,19 @@ local function itemCard(
 		[React.Event.Activated] = function()
 			props.onSelect(entry.id)
 		end,
-	}, {
-		halo = e(ToonRarityFrame, {
-			rarity = entry.rarity,
-			part = "halo",
-			width = cell.X,
-			radius = CARD_RADIUS,
-			size = UDim2.fromOffset(cell.X, cell.Y),
-			zIndex = 1,
-		}),
-		surface = e(ToonSurface, {
-			hue = "grape",
-			shade = UIToonConstants.rarity(entry.rarity),
-			radius = CARD_RADIUS,
-			small = true,
-			size = UDim2.fromOffset(cell.X, cell.Y),
-			zIndex = 2,
-			children = stage,
-		}),
-		ring = if selected
-			then e("Frame", {
-				Position = UDim2.fromOffset(-6, -6),
-				Size = UDim2.fromOffset(cell.X + 12, cell.Y + 12),
-				BackgroundTransparency = 1,
-				ZIndex = 3,
-			}, {
-				corner = e("UICorner", { CornerRadius = UDim.new(0, CARD_RADIUS + 6) }),
-				stroke = e("UIStroke", { Color = COLOR.selected, Thickness = 5 }),
-			})
-			else nil,
-		new = if entry.new
-			then e(ToonFlag, {
-				text = "New!",
-				hue = "coral",
-				tilt = 6,
-				textSize = if phone then 12 else 16,
-				anchor = Vector2.new(1, 0),
-				position = UDim2.new(1, 6, 0, -6),
-				size = UDim2.fromOffset(if phone then 52 else 70, if phone then 22 else 30),
-				zIndex = 7,
-			})
-			else nil,
-	})
+	}, nodes)
 end
 
 local function grid(props: InventoryCharacterPanelProps, cards: { VM.ItemCard }, selected: string): React.ReactNode
-	local nodes: { [string]: React.ReactNode } = {
+	local nodes: Nodes = {
 		layout = e("UIGridLayout", {
-			CellSize = UDim2.fromOffset(props.layout.cell.X, props.layout.cell.Y + DEPTH.drop),
+			CellSize = UDim2.fromOffset(props.layout.cell.X, props.layout.cell.Y + DEPTH.drop + 8),
 			CellPadding = UDim2.fromOffset(props.layout.gap, props.layout.gap),
 			SortOrder = Enum.SortOrder.LayoutOrder,
 		}),
 		pad = e("UIPadding", {
-			PaddingLeft = UDim.new(0, 12),
-			PaddingTop = UDim.new(0, 12),
+			PaddingLeft = UDim.new(0, 10),
+			PaddingTop = UDim.new(0, 6),
 			PaddingBottom = UDim.new(0, 20),
 		}),
 	}
@@ -204,43 +287,102 @@ local function grid(props: InventoryCharacterPanelProps, cards: { VM.ItemCard },
 	}, nodes)
 end
 
+local function disc(position: UDim2, top: Color3, bottom: Color3, zIndex: number): React.ReactNode
+	return e("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = position,
+		Size = UDim2.fromScale(0.86, 0.11),
+		BackgroundColor3 = COLOR.white,
+		BorderSizePixel = 0,
+		ZIndex = zIndex,
+	}, {
+		corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }),
+		stroke = e("UIStroke", { Color = COLOR.ink, Thickness = 5 }),
+		gradient = e("UIGradient", { Rotation = 90, Color = ColorSequence.new(top, bottom) }),
+	})
+end
+
+-- The hero: the item live on a raised platform (a lip and a top, both in the rarity's colour).
 local function hero(props: InventoryCharacterPanelProps, skinKey: string, rarity: CosmeticTypes.Rarity): React.ReactNode
 	local shade = UIToonConstants.rarity(rarity)
-	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, {
-		rays = e("ImageLabel", {
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromScale(0.5, 0.45),
-			Size = UDim2.fromScale(1.3, 1.3),
-			SizeConstraint = Enum.SizeConstraint.RelativeXX,
-			BackgroundTransparency = 1,
-			Image = UIAssets.toon.rays,
-			ImageColor3 = shade.hi,
-			ImageTransparency = 0.55,
-			ZIndex = 1,
-		}),
-		platform = e("Frame", {
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromScale(0.5, 0.9),
-			Size = UDim2.fromScale(0.8, 0.09),
-			BackgroundColor3 = shade.lo,
-			BorderSizePixel = 0,
-			ZIndex = 2,
-		}, {
-			corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }),
-			stroke = e("UIStroke", { Color = COLOR.ink, Thickness = 4 }),
-			gradient = e("UIGradient", {
-				Rotation = 90,
-				Color = ColorSequence.new(shade.base, shade.lo),
-			}),
-		}),
+	return group({
+		lip = disc(UDim2.fromScale(0.5, 0.88), shade.lo, shade.lo, 1),
+		top = disc(UDim2.fromScale(0.5, 0.855), shade.hi, shade.base, 2),
 		model = e(ToonViewport, {
 			employee = props.employee,
 			skin = skinKey,
 			live = true,
 			framing = "full",
-			position = UDim2.fromScale(0, 0.02),
-			size = UDim2.fromScale(1, 0.92),
+			-- The feet land on the platform's top.
+			size = UDim2.fromScale(1, 0.9),
 			zIndex = 3,
+		}),
+	})
+end
+
+-- A "Comes with" tile: the bundled item on a small stage, its kind and name under it.
+local function bundledTile(
+	props: InventoryCharacterPanelProps,
+	item: VM.Bundled,
+	size: number,
+	order: number
+): React.ReactNode
+	local textSize = if props.layout.phone then 11 else 17
+	local art: React.ReactNode
+	if item.kind == "skin" then
+		art = e(ToonViewport, {
+			employee = item.employee or props.employee,
+			skin = VM.skinKey(item.id),
+			framing = "full",
+			size = UDim2.fromScale(1, 1),
+		})
+	elseif item.kind == "stickerPack" or item.kind == "sticker" then
+		art = e(ToonIcon, {
+			icon = "shopGift",
+			position = UDim2.fromScale(0.07, 0.07),
+			size = UDim2.fromScale(0.86, 0.86),
+		})
+	else
+		art = e(ToonViewport, {
+			employee = item.employee or props.employee,
+			framing = "bust",
+			size = UDim2.fromScale(1, 1),
+		})
+	end
+	local kindWord = if item.kind == "stickerPack"
+		then "Stickers"
+		else string.upper(string.sub(item.kind, 1, 1)) .. string.sub(item.kind, 2)
+	local stage: Nodes = { art = art }
+	return e("Frame", {
+		Size = UDim2.fromOffset(size, size + 2 * textSize + 12),
+		BackgroundTransparency = 1,
+		LayoutOrder = order,
+	}, {
+		stage = e(ToonSurface, {
+			hue = "gold",
+			small = true,
+			radius = 14,
+			size = UDim2.fromOffset(size, size),
+			children = stage,
+		}),
+		kind = e(ToonText, {
+			text = kindWord,
+			textSize = textSize,
+			meaning = "grape",
+			position = UDim2.fromOffset(0, size + 6),
+			size = UDim2.fromOffset(size, textSize + 4),
+			align = "center",
+			fit = true,
+		}),
+		name = e(ToonText, {
+			text = item.name,
+			font = "body",
+			color = COLOR.ink,
+			textSize = textSize - 2,
+			position = UDim2.fromOffset(0, size + textSize + 10),
+			size = UDim2.fromOffset(size, textSize + 2),
+			align = "center",
+			fit = true,
 		}),
 	})
 end
@@ -248,89 +390,267 @@ end
 local function detail(props: InventoryCharacterPanelProps, view: VM.Detail, item: CosmeticTypes.Item): React.ReactNode
 	local layout = props.layout
 	local phone = layout.phone
-	local width = layout.detailWidth - 36
 	local size = layout.textSize
-	local face: { [string]: React.ReactNode } = {}
-	local y = if phone then 12 else 20
-	face.rarity = e(ToonFlag, {
-		text = view.rarityText,
-		rarity = view.rarity,
-		tilt = -3,
-		textSize = if phone then 14 else 18,
-		position = UDim2.fromOffset(18, y),
-		size = UDim2.fromOffset(if phone then 90 else 130, if phone then 26 else 34),
-	})
+	local inset = if phone then 12 else 26
+	local nameSize = math.floor(layout.headingSize * (if phone then 0.9 else 1.15))
+	local flags: Nodes = {
+		rarity = e(ToonFlag, {
+			text = view.rarityText,
+			rarity = view.rarity,
+			tilt = -3,
+			textSize = if phone then 13 else 22,
+			size = UDim2.fromOffset(if phone then 100 else 170, if phone then 26 else 40),
+		}),
+	}
 	if view.new then
-		face.new = e(ToonFlag, {
+		flags.new = e(ToonFlag, {
 			text = "New!",
 			hue = "coral",
-			tilt = 4,
-			textSize = if phone then 14 else 18,
-			position = UDim2.fromOffset(if phone then 116 else 160, y),
-			size = UDim2.fromOffset(if phone then 60 else 80, if phone then 26 else 34),
+			tilt = -3,
+			textSize = if phone then 13 else 22,
+			position = UDim2.fromOffset(if phone then 108 else 184, 0),
+			size = UDim2.fromOffset(if phone then 64 else 100, if phone then 26 else 40),
 		})
 	end
-	y += if phone then 34 else 50
-	face.name = e(ToonText, {
-		text = view.name,
-		textSize = layout.headingSize,
-		meaning = "grape",
-		position = UDim2.fromOffset(18, y),
-		size = UDim2.fromOffset(width, layout.headingSize + 6),
-		fit = true,
-	})
-	y += layout.headingSize + 6
-	face.line = text(view.line, size - 2, 18, y, width, true)
-	y += size + 8
-	face.lore = text(`"{view.lore}"`, size, 18, y, width, true)
-	y += size * 3 + 10
+	local rows: Nodes = {
+		flags = block(if phone then 28 else 42, 1, group(flags)),
+		name = block(
+			nameSize + 6,
+			2,
+			e(ToonText, {
+				text = string.upper(view.name),
+				textSize = nameSize,
+				size = UDim2.fromScale(1, 1),
+				fit = true,
+			})
+		),
+		line = block(size + 6, 3, body(view.line, size, UIToonConstants.shade("grape").lo)),
+	}
+	-- The lore in a white quote box, signed by the employee.
+	local quote: Nodes = {
+		mark = e(ToonText, {
+			text = "\u{201C}",
+			textSize = size * 3,
+			meaning = "grape",
+			position = UDim2.fromOffset(6, -math.floor(size * 0.6)),
+			size = UDim2.fromOffset(size * 2, size * 3),
+		}),
+		lore = e("Frame", {
+			Position = UDim2.fromOffset(size * 2 + 8, 10),
+			Size = UDim2.new(1, -size * 2 - 20, 1, -size - 24),
+			BackgroundTransparency = 1,
+		}, { text = body(view.lore, size) }),
+		who = e(ToonText, {
+			text = string.upper(props.employee),
+			textSize = size - 6,
+			meaning = "grape",
+			anchor = Vector2.new(0, 1),
+			position = UDim2.new(0, size * 2 + 8, 1, -DEPTH.lip - 6),
+			size = UDim2.fromOffset(160, size - 2),
+			fit = true,
+		}),
+	}
+	rows.quote = block(
+		size * 3 + (if phone then 12 else 30),
+		4,
+		e(ToonSurface, {
+			hue = "cream",
+			small = true,
+			radius = 16,
+			size = UDim2.new(1, 0, 1, -DEPTH.drop),
+			children = quote,
+		})
+	)
 	if view.styles.visible then
-		face.stylesLabel = text("Styles", size, 18, y, 110)
-		for index = 1, view.styles.count do
-			face[`style{index}`] = e(ToonSurface, {
-				hue = "steel",
-				small = true,
-				radius = 999,
-				position = UDim2.fromOffset(18 + (if phone then 64 else 96) + (index - 1) * (size + 14), y),
-				size = UDim2.fromOffset(size + 8, size + 8),
+		local styles: Nodes = {
+			label = e(ToonText, {
+				text = "STYLES",
+				textSize = size,
+				meaning = "grape",
+				size = UDim2.fromOffset(size * 5, size + 6),
+			}),
+			note = e(ToonText, {
+				text = view.styles.note,
+				font = "body",
+				color = UIToonConstants.shade("steel").lo,
+				textSize = size - 4,
+				position = UDim2.fromOffset(size * 5 + 6, 4),
+				size = UDim2.fromOffset(200, size),
+				fit = true,
+			}),
+		}
+		local count = view.styles.count
+		local buttonWidth = math.floor((layout.detailWidth - 2 * inset - (count - 1) * 10) / count)
+		for index = 1, count do
+			styles[`style{index}`] = e(ToonButton, {
+				variant = "secondary",
+				text = `Style {index}`,
+				textSize = size - 4,
+				disabled = true,
+				position = UDim2.fromOffset((index - 1) * (buttonWidth + 10), size + 12),
+				size = UDim2.fromOffset(buttonWidth, size + 22),
+				onActivated = function() end,
 			})
 		end
-		face.stylesNote = e(ToonText, {
-			text = view.styles.note,
-			font = "body",
-			color = UIToonConstants.shade("steel").lo,
-			textSize = size - 4,
-			position = UDim2.fromOffset(18 + (if phone then 64 else 96) + view.styles.count * (size + 14) + 6, y + 2),
-			size = UDim2.fromOffset(140, size),
-			fit = true,
-		})
-		y += size + 22
+		rows.styles = block(size * 2 + 44, 5, group(styles))
 	end
 	if #view.comesWith > 0 then
-		face.bundle = text(`Comes with: {table.concat(view.comesWith, ", ")}`, size - 2, 18, y, width, true)
+		local tile = if phone then 50 else 88
+		local row: Nodes = {
+			list = e("UIListLayout", {
+				FillDirection = Enum.FillDirection.Horizontal,
+				Padding = UDim.new(0, 12),
+				SortOrder = Enum.SortOrder.LayoutOrder,
+			}),
+		}
+		for index, bundled in view.comesWith do
+			row[bundled.id] = bundledTile(props, bundled, tile, index)
+		end
+		rows.bundle = block(
+			size + 12 + tile + size * 2 + 16,
+			6,
+			group({
+				label = e(ToonText, {
+					text = "COMES WITH",
+					textSize = size,
+					meaning = "grape",
+					size = UDim2.fromOffset(size * 8, size + 6),
+				}),
+				row = e("Frame", {
+					Position = UDim2.fromOffset(0, size + 12),
+					Size = UDim2.new(1, 0, 1, -size - 12),
+					BackgroundTransparency = 1,
+				}, row),
+			})
+		)
 	end
+
 	local action = view.action
-	face.action = e(ToonButton, {
-		variant = action.variant,
-		text = action.text,
-		textSize = if phone then 18 else 26,
-		disabled = not action.enabled,
-		anchor = Vector2.new(0.5, 1),
-		position = UDim2.new(0.5, 0, 1, -(if phone then 16 else 26)),
-		size = UDim2.new(1, -36, 0, if phone then 44 else 66),
-		onActivated = function()
-			if action.enabled then
-				props.onWear(VM.change(item, props.employee))
-			end
-		end,
-	})
+	local buttonHeight = if phone then 44 else 76
+	local content: Nodes? = nil
+	local price = action.price
+	if price ~= nil then
+		local priced: Nodes = {
+			label = e(ToonText, {
+				text = action.text,
+				textSize = math.floor(buttonHeight * 0.4),
+				position = UDim2.fromOffset(16, -2),
+				size = UDim2.new(0.55, -16, 1, -DEPTH.lip),
+				fit = true,
+			}),
+			price = e(ToonPrice, {
+				currency = price.currency,
+				amount = price.amount,
+				textSize = math.floor(buttonHeight * 0.42),
+				meaning = "white",
+				anchor = Vector2.new(1, 0),
+				position = UDim2.new(1, -16, 0, -2),
+				size = UDim2.new(0.45, 0, 1, -DEPTH.lip),
+			}),
+		}
+		content = priced
+	end
+	local panel: Nodes = {
+		rows = stack(rows, if phone then 6 else 12, inset),
+		action = e(ToonButton, {
+			variant = action.variant,
+			text = if content == nil then action.text else nil,
+			content = content,
+			textSize = if phone then 18 else 30,
+			disabled = not action.enabled,
+			sound = if action.kind == "wear" then "cta" else nil,
+			anchor = Vector2.new(0.5, 1),
+			position = UDim2.new(0.5, 0, 1, -(if phone then 14 else 26)),
+			size = UDim2.new(1, -2 * inset, 0, buttonHeight),
+			onActivated = function()
+				if action.kind == "wear" then
+					props.onWear(VM.change(item, props.employee))
+				elseif action.kind == "shop" then
+					props.onShop(item.id)
+				end
+			end,
+		}),
+	}
 	return e(ToonSurface, {
 		hue = "cream",
 		pattern = "sparkle",
-		radius = 24,
+		radius = 28,
 		size = UDim2.new(1, 0, 1, -DEPTH.drop),
-		children = face,
+		children = panel,
 	})
+end
+
+-- A grape card on the About tab: a title and the blocks under it.
+local function aboutCard(title: string, size: number, inner: Nodes, height: number, order: number): React.ReactNode
+	local rows: Nodes = {
+		title = block(
+			size + 12,
+			0,
+			e(ToonText, { text = string.upper(title), textSize = size + 8, size = UDim2.fromScale(1, 1), fit = true })
+		),
+	}
+	for key, node in inner do
+		rows[key] = node
+	end
+	local face: Nodes = { rows = stack(rows, 8, 20) }
+	return block(
+		height,
+		order,
+		e(ToonSurface, {
+			hue = "grape",
+			pattern = "bubbles",
+			radius = 24,
+			size = UDim2.new(1, 0, 1, -DEPTH.drop),
+			children = face,
+		})
+	)
+end
+
+local function statRows(props: InventoryCharacterPanelProps, row: number, barX: number): Nodes
+	local size = props.layout.textSize
+	local gold = UIToonConstants.shade("gold")
+	local stats: Nodes = {}
+	for index, stat in VM.stats(props.employee) do
+		local y = (index - 1) * row
+		stats[`icon{index}`] = e(ToonIcon, {
+			icon = stat.icon,
+			position = UDim2.fromOffset(0, y),
+			size = UDim2.fromOffset(row, row),
+			drop = 2,
+		})
+		stats[`label{index}`] = e(ToonText, {
+			text = stat.label,
+			font = "body",
+			color = COLOR.white,
+			textSize = size,
+			position = UDim2.fromOffset(row + 8, y),
+			size = UDim2.fromOffset(barX - row - 12, row),
+			fit = true,
+		})
+		local pips: Nodes = {}
+		for pip = 1, 5 do
+			local filled = pip <= stat.value
+			pips[`pip{pip}`] = e("Frame", {
+				AnchorPoint = Vector2.new(0, 0.5),
+				Position = UDim2.new((pip - 1) / 5, 0, 0.5, 0),
+				Size = UDim2.new(0.2, -6, 0.42, 0),
+				BackgroundColor3 = if filled then COLOR.white else UIToonConstants.shade("night").hi,
+				BorderSizePixel = 0,
+			}, {
+				corner = e("UICorner", { CornerRadius = UDim.new(0, 6) }),
+				stroke = e("UIStroke", { Color = COLOR.ink, Thickness = 2 }),
+				gradient = if filled
+					then e("UIGradient", { Rotation = 90, Color = ColorSequence.new(gold.hi, gold.lo) })
+					else nil,
+			})
+		end
+		stats[`bar{index}`] = e("Frame", {
+			Position = UDim2.fromOffset(barX, y),
+			Size = UDim2.new(1, -barX, 0, row),
+			BackgroundTransparency = 1,
+		}, pips)
+	end
+	return stats
 end
 
 local function about(props: InventoryCharacterPanelProps): (React.ReactNode, React.ReactNode)
@@ -341,159 +661,131 @@ local function about(props: InventoryCharacterPanelProps): (React.ReactNode, Rea
 		return nil, nil
 	end
 	local size = layout.textSize
-	local leftWidth = layout.gridWidth - 36
-	local left: { [string]: React.ReactNode } = {
-		kind = text(string.upper(profile.kind), layout.headingSize, 18, 16, leftWidth),
-	}
-	local y = 16 + layout.headingSize + 10
-	for index, word in profile.words do
-		left[`word{index}`] = e(ToonPill, {
-			text = word,
-			hue = "lilac",
-			textSize = size - 2,
-			padX = 6,
-			position = UDim2.fromOffset(18 + (index - 1) * math.floor(leftWidth / 3), y),
-			size = UDim2.fromOffset(math.floor(leftWidth / 3) - 8, size + 16),
-		})
-	end
-	y += size + 28
-	left.bio = text(profile.bio, size, 18, y, leftWidth, true)
-	y += size * 4 + 6
-	left.factTitle = text("Fun fact", size, 18, y, leftWidth)
-	y += size + 8
-	left.fact = text(profile.funFact, size, 18, y, leftWidth, true)
-	-- The footer line needs room the phone card does not have.
-	left.everyone = if phone
-		then nil
-		else e(ToonText, {
-			text = "Every employee can finish every job, even alone.",
-			font = "body",
-			color = UIToonConstants.shade("grape").lo,
-			textSize = size - 2,
-			anchor = Vector2.new(0, 1),
-			position = UDim2.new(0, 18, 1, -(if phone then 16 else 24)),
-			size = UDim2.new(1, -36, 0, size * 2 + 4),
-			wrapped = true,
-			fit = true,
-		})
-
-	local rightWidth = layout.detailWidth - 36
-	local right: { [string]: React.ReactNode } = {
-		title = text("STATS", layout.headingSize - 6, 18, 16, rightWidth),
-	}
-	local row = if phone then 26 else 40
-	local barX = if phone then 110 else 190
-	y = 16 + layout.headingSize + 4
-	for index, stat in VM.stats(props.employee) do
-		local rowY = y + (index - 1) * row
-		right[`icon{index}`] = e(ToonIcon, {
-			icon = stat.icon,
-			position = UDim2.fromOffset(14, rowY - 2),
-			size = UDim2.fromOffset(row - 4, row - 4),
-			drop = 2,
-		})
-		right[`label{index}`] = e(ToonText, {
-			text = stat.label,
-			font = "body",
-			color = COLOR.ink,
-			textSize = size - 2,
-			position = UDim2.fromOffset(18 + row, rowY),
-			size = UDim2.fromOffset(barX - row - 24, row - 8),
-			fit = true,
-		})
-		for pip = 1, 5 do
-			right[`pip{index}_{pip}`] = e("Frame", {
-				Position = UDim2.fromOffset(barX + (pip - 1) * math.floor((rightWidth - barX) / 5), rowY + 4),
-				Size = UDim2.fromOffset(math.floor((rightWidth - barX) / 5) - 6, row - 16),
-				BackgroundColor3 = if pip <= stat.value
-					then VM.color(props.employee).body
-					else UIToonConstants.shade("cream").lo,
-				BorderSizePixel = 0,
-			}, {
-				corner = e("UICorner", { CornerRadius = UDim.new(0, 6) }),
-				stroke = e("UIStroke", { Color = COLOR.ink, Thickness = 2 }),
-			})
-		end
-	end
-	y += 5 * row + 10
-	local ability = profile.ability
-	local abilityFace: { [string]: React.ReactNode } = {
-		name = text(ability.name, size + 4, 14, 8, rightWidth - 28),
-		-- The phone card has room for the one-liner only.
-		line = text(if phone then ability.line else ability.detail, size - 2, 14, size + 16, rightWidth - 28, true),
-		cooldown = e(ToonPill, {
-			text = `Every {ability.cooldown}s`,
-			hue = "night",
-			textSize = size - 4,
-			anchor = Vector2.new(1, 0),
-			position = UDim2.new(1, -10, 0, 8),
-			size = UDim2.fromOffset(if phone then 80 else 120, size + 10),
+	local words: Nodes = {
+		list = e("UIListLayout", {
+			FillDirection = Enum.FillDirection.Horizontal,
+			Padding = UDim.new(0, 10),
+			SortOrder = Enum.SortOrder.LayoutOrder,
 		}),
 	}
-	right.ability = e(ToonSurface, {
-		hue = "grape",
-		radius = 18,
-		small = true,
-		position = UDim2.fromOffset(14, y),
-		size = UDim2.new(1, -28, 1, -y - (if phone then 14 else 22)),
-		children = abilityFace,
-	})
-	return e(ToonSurface, {
-		hue = "cream",
-		pattern = "sparkle",
-		radius = 24,
-		size = UDim2.new(1, 0, 1, -DEPTH.drop),
-		children = left,
-	}),
-		e(ToonSurface, {
-			hue = "cream",
-			pattern = "sparkle",
-			radius = 24,
-			size = UDim2.new(1, 0, 1, -DEPTH.drop),
-			children = right,
+	for index, word in profile.words do
+		words[`word{index}`] = e(ToonPill, {
+			text = word,
+			hue = "gold",
+			textSize = size - 4,
+			padX = 10,
+			size = UDim2.fromOffset(math.floor(#word * (size - 4) * 0.62) + 30, size + 12),
+			layoutOrder = index,
 		})
+	end
+	local whoRows: Nodes = { bio = block(size * 4, 1, body(profile.bio, size, COLOR.white)) }
+	if not phone then
+		whoRows.words = block(size + 14, 2, group(words))
+	end
+	local who = aboutCard(`Who is {props.employee}?`, size, whoRows, size * 5 + (if phone then 30 else size + 60), 1)
+	local fact = aboutCard("Fun fact", size, {
+		fact = block(size * 3, 1, body(profile.funFact, size, COLOR.white)),
+	}, size * 4 + 46, 2)
+	local left = stack({ who = who, fact = fact }, layout.gap, 0)
+
+	-- The ability card (its render breaking the left edge), the stat bars, the everyone line.
+	local abilitySize = if phone then 70 else 120
+	local ability: Nodes = {
+		name = e(ToonText, {
+			text = profile.ability.name,
+			textSize = size + 12,
+			position = UDim2.fromOffset(math.floor(abilitySize * 0.75), 10),
+			size = UDim2.new(1, -math.floor(abilitySize * 0.75) - 100, 0, size + 16),
+			fit = true,
+		}),
+		detail = e("Frame", {
+			Position = UDim2.fromOffset(math.floor(abilitySize * 0.75), size + 30),
+			Size = UDim2.new(1, -math.floor(abilitySize * 0.75) - 20, 1, -size - 40),
+			BackgroundTransparency = 1,
+		}, { text = body(if phone then profile.ability.line else profile.ability.detail, size - 2, COLOR.white) }),
+		cooldown = e(ToonPill, {
+			text = `{profile.ability.cooldown}s`,
+			hue = "cream",
+			textSize = size - 2,
+			anchor = Vector2.new(1, 0),
+			position = UDim2.new(1, -14, 0, 12),
+			size = UDim2.fromOffset(if phone then 50 else 76, if phone then 30 else 48),
+		}),
+	}
+	local row = if phone then 22 else 50
+	local statsFace: Nodes = {
+		rows = e("Frame", {
+			Position = UDim2.fromOffset(18, if phone then 10 else 22),
+			Size = UDim2.new(1, -36, 1, -(if phone then 20 else 44)),
+			BackgroundTransparency = 1,
+		}, statRows(props, row, if phone then 104 else 200)),
+	}
+	local rightRows: Nodes = {
+		ability = block(
+			if phone then 84 else 150,
+			1,
+			group({
+				card = e(ToonSurface, {
+					hue = "grape",
+					radius = 24,
+					position = UDim2.fromOffset(math.floor(abilitySize * 0.3), 0),
+					size = UDim2.new(1, -math.floor(abilitySize * 0.3), 1, -DEPTH.drop),
+					children = ability,
+				}),
+				art = e(ToonIcon, {
+					image = UIAssets.iconImage(profile.ability.icon),
+					anchor = Vector2.new(0, 0.5),
+					position = UDim2.new(0, -8, 0.5, -4),
+					size = UDim2.fromOffset(abilitySize, abilitySize),
+					drop = 4,
+					zIndex = 3,
+				}),
+			})
+		),
+		stats = block(
+			5 * row + (if phone then 24 else 48),
+			2,
+			e(ToonSurface, {
+				hue = "grape",
+				pattern = "bubbles",
+				radius = 24,
+				size = UDim2.new(1, 0, 1, -DEPTH.drop),
+				children = statsFace,
+			})
+		),
+	}
+	if not phone then
+		local everyone: Nodes = {
+			text = e("Frame", {
+				Position = UDim2.fromOffset(18, 10),
+				Size = UDim2.new(1, -36, 1, -20),
+				BackgroundTransparency = 1,
+			}, {
+				text = body(
+					"Every employee can finish every job, even alone. Stats only change how it feels.",
+					size - 2,
+					COLOR.white
+				),
+			}),
+		}
+		rightRows.everyone = block(
+			size * 3 + 20,
+			3,
+			e(ToonSurface, {
+				hue = "night",
+				radius = 20,
+				size = UDim2.new(1, 0, 1, -DEPTH.drop),
+				children = everyone,
+			})
+		)
+	end
+	return left, stack(rightRows, layout.gap, 0)
 end
 
 local function InventoryCharacterPanel(props: InventoryCharacterPanelProps): React.ReactNode
 	local layout = props.layout
-	local phone = layout.phone
-	local employee = CosmeticRegistry.get(props.employee)
 	local look = props.loadout.looks[props.employee]
 	local wornSkin = if look ~= nil then look.skin else CosmeticRegistry.defaultOf(props.employee, "skin").id
-
-	-- The tab row: back, the name, the page tabs.
-	local row: { [string]: React.ReactNode } = {
-		back = e(ToonButton, {
-			variant = "secondary",
-			text = "< Crew",
-			textSize = if phone then 16 else 22,
-			sound = "back",
-			size = UDim2.fromOffset(if phone then 90 else 130, layout.tabsHeight - 6),
-			onActivated = props.onBack,
-		}),
-		name = e(ToonText, {
-			text = string.upper(if employee ~= nil then employee.name else props.employee),
-			textSize = layout.tabsHeight - 12,
-			position = UDim2.fromOffset(if phone then 104 else 150, 0),
-			size = UDim2.fromOffset(if phone then 150 else 260, layout.tabsHeight - 6),
-			fit = true,
-		}),
-	}
-	local tabWidth = if phone then 84 else 130
-	for index, tab: VM.PageTab in VM.PAGE_TABS do
-		row[tab] = e(ToonButton, {
-			variant = "grape",
-			text = TAB_TEXT[tab],
-			textSize = if phone then 16 else 22,
-			selected = props.tab == tab,
-			receded = props.tab ~= tab,
-			position = UDim2.fromOffset((if phone then 264 else 430) + (index - 1) * (tabWidth + 10), 0),
-			size = UDim2.fromOffset(tabWidth, layout.tabsHeight - 6),
-			onActivated = function()
-				props.onTab(tab)
-			end,
-		})
-	end
 
 	local left: React.ReactNode
 	local right: React.ReactNode
@@ -519,15 +811,15 @@ local function InventoryCharacterPanel(props: InventoryCharacterPanelProps): Rea
 			end
 		end
 		if selectedItem ~= nil then
-			left = grid(props, cards, selectedItem.id)
 			local view = VM.detail(selectedItem, props.loadout, props.owns)
+			left = grid(props, cards, selectedItem.id)
 			right = detail(props, view, selectedItem)
-			if view.new then
-				seenId = selectedItem.id
-			end
 			heroRarity = selectedItem.rarity
 			if selectedItem.kind == "skin" then
 				heroSkin = VM.skinKey(selectedItem.id)
+			end
+			if view.new then
+				seenId = selectedItem.id
 			end
 		end
 	end
@@ -540,25 +832,19 @@ local function InventoryCharacterPanel(props: InventoryCharacterPanelProps): Rea
 		end
 	end, { seenId })
 
-	local bodyY = layout.tabsHeight + layout.gap
-	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, {
-		row = e("Frame", {
-			Size = UDim2.new(1, 0, 0, layout.tabsHeight),
-			BackgroundTransparency = 1,
-		}, row),
+	return group({
 		left = e("Frame", {
-			Position = UDim2.fromOffset(0, bodyY),
-			Size = UDim2.new(0, layout.gridWidth, 1, -bodyY),
+			Size = UDim2.new(0, layout.gridWidth, 1, 0),
 			BackgroundTransparency = 1,
 		}, { content = left }),
 		hero = e("Frame", {
-			Position = UDim2.fromOffset(layout.gridWidth + layout.gap, bodyY),
-			Size = UDim2.new(0, layout.heroWidth, 1, -bodyY),
+			Position = UDim2.fromOffset(layout.gridWidth + layout.gap, 0),
+			Size = UDim2.new(0, layout.heroWidth, 1, 0),
 			BackgroundTransparency = 1,
 		}, { content = hero(props, heroSkin, heroRarity) }),
 		right = e("Frame", {
-			Position = UDim2.fromOffset(layout.gridWidth + layout.heroWidth + 2 * layout.gap, bodyY),
-			Size = UDim2.new(0, layout.detailWidth, 1, -bodyY),
+			Position = UDim2.fromOffset(layout.gridWidth + layout.heroWidth + 2 * layout.gap, 0),
+			Size = UDim2.new(0, layout.detailWidth, 1, 0),
 			BackgroundTransparency = 1,
 		}, { content = right }),
 	})

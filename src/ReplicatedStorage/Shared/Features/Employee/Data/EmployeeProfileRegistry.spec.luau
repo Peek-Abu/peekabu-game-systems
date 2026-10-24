@@ -15,6 +15,7 @@ return function()
 					profile.ability.name,
 					profile.ability.line,
 					profile.ability.detail,
+					profile.ability.icon,
 				}
 			do
 				expect(type(text) == "string" and text ~= "").to.equal(true)

@@ -72,7 +72,10 @@ return function()
 			expect(find(VM.crew(value, owner()), "Pippa").skinKey).to.equal("Default")
 		end)
 
-		it("carries the profile's line, ability and colour", function()
+		it("carries the profile's line, ability (with its render) and colour", function()
+			for _, card in VM.crew(loadout(), owner()) do
+				expect(card.abilityImage).to.be.ok()
+			end
 			local pippa = find(VM.crew(loadout(), owner()), "Pippa")
 			expect(pippa.line).to.equal("Crew speedster")
 			expect(pippa.ability).to.equal("Let's Go!")
@@ -123,9 +126,17 @@ return function()
 			expect(wearing.enabled).to.equal(false)
 		end)
 
-		it("points locked items at where to get them, never as a working button", function()
+		it("sends a buyable item to its Shop page, with its price", function()
+			local action = VM.action(CosmeticRegistry.get("Pippa.BubbleBuddy"), false, false)
+			expect(action.text).to.equal("See in Shop")
+			expect(action.kind).to.equal("shop")
+			expect(action.enabled).to.equal(true)
+			expect(action.price.currency).to.equal("gleam")
+			expect(action.price.amount).to.equal("1,500")
+		end)
+
+		it("points other locked items at where to get them, never as a working button", function()
 			local cases = {
-				["Pippa.BubbleBuddy"] = "In the Shop soon",
 				["Pippa.Gloomkeeper"] = "Gloom Locker",
 				["Pippa.OwnerSpecial"] = "Missed it",
 			}
@@ -133,6 +144,7 @@ return function()
 				local action = VM.action(CosmeticRegistry.get(id), false, false)
 				expect(action.text).to.equal(text)
 				expect(action.enabled).to.equal(false)
+				expect(action.kind).to.equal("none")
 			end
 		end)
 	end)
@@ -192,7 +204,9 @@ return function()
 		it("names the bundle's items under Comes with", function()
 			local bubble = VM.detail(CosmeticRegistry.get("Pippa.BubbleBuddy"), loadout(), owner())
 			expect(#bubble.comesWith).to.equal(2)
-			expect(table.find(bubble.comesWith, "Bubbles")).to.be.ok()
+			expect(bubble.comesWith[1].name).to.equal("Bubbles")
+			expect(bubble.comesWith[1].kind).to.equal("emote")
+			expect(bubble.comesWith[2].kind).to.equal("stickerPack")
 			expect(#VM.detail(CosmeticRegistry.get("Pippa.Default"), loadout(), owner()).comesWith).to.equal(0)
 		end)
 
