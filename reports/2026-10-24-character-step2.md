@@ -39,6 +39,12 @@ Plan: `docs/superpowers/plans/2026-10-24-character-step2-spawn-and-swap.md`.
 - **The shift place ("Odd Hours: Shift") still needs the Cappy model** (and its Rojo plugin reconnected): until then a
   player who picked Cappy spawns as Pippa in a shift (warned, falls back).
 
+## Update: Cappy parked (owner, 2026-10-24)
+Another agent is building a better Cappy, so the temporary Cappy copy was removed from the hub's Assets again (the
+archived preview is untouched). His registry entry and clips stay: until his model lands in
+`Assets.CleanupCrew.Characters.Cappy`, choosing him falls back to Pippa (warned in the log). The only art-place change
+left to save in the hub is Prickles' un-anchored root and his `EmployeeName = "Prickles"`.
+
 ## Known / next
 - On a swap the camera snaps to the new character's default angle (not where it was looking). Worth smoothing.
 - Styles (colour variants) are saved but have no art; skins without art (the Legendaries, Gloom skins) fall back to
