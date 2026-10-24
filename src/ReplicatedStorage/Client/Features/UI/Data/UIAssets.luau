@@ -25,13 +25,20 @@ local UIAssets = {}
 
 -- The V1 kit's icon names (the keys of UIAssets.toonIcons).
 export type ToonIcon =
-	"clock"
+	"abilityLetsGo"
+	| "abilityPottedPlant"
+	| "abilitySpotIt"
+	| "clock"
 	| "dust"
 	| "fishtank"
 	| "flashlight"
 	| "gift"
 	| "credits"
 	| "gleam"
+	| "gleamBucket"
+	| "gleamCrate"
+	| "gleamPile"
+	| "gleamTruck"
 	| "globe"
 	| "gloom"
 	| "grab"
@@ -50,6 +57,7 @@ export type ToonIcon =
 	| "pippaHappy"
 	| "pippaWorried"
 	| "settings"
+	| "shopGift"
 	| "spray"
 	| "stamina"
 	| "statQuiet"
@@ -85,6 +93,17 @@ UIAssets.paper = table.freeze(PAPER)
 -- uploaded Decal (characters/ui/shipped-ui-assets.md lists both). Icons are 256 px renders with the 5 px ink outline
 -- baked in (their hard drop is a second, ink-tinted copy, never baked).
 local TOON_ICONS: { [ToonIcon]: string } = {
+	-- Ability renders (character step 4, 2026-10-24; decals in characters/ui/shipped-ui-assets.md). Let's Go! is
+	-- Pippa's own foot (owner pick).
+	abilityLetsGo = "rbxassetid://110925040898866",
+	abilityPottedPlant = "rbxassetid://120058837938191",
+	abilitySpotIt = "rbxassetid://72513443568229",
+	-- Gleam bundle renders, smallest to biggest, and the Shop's gift (character step 4).
+	gleamPile = "rbxassetid://72996667374562",
+	gleamBucket = "rbxassetid://103204196644695",
+	gleamCrate = "rbxassetid://109582574542351",
+	gleamTruck = "rbxassetid://88660287465403",
+	shopGift = "rbxassetid://116419935164686",
 	clock = "rbxassetid://97995675031546",
 	dust = "rbxassetid://87348303383802",
 	fishtank = "rbxassetid://72370733106499",
@@ -155,6 +174,13 @@ UIAssets.toon = table.freeze({
 	patternSparkle = "rbxassetid://97732926490283",
 	patternBubbles = "rbxassetid://90150192373857",
 	sparkle = "rbxassetid://79532536364589",
+	-- Character step 4 (2026-10-24): white shapes tinted per use. `stripes` a 128 px 45-degree stripe tile;
+	-- `ribbon` a 256x80 flag with a notched right end (9-slice centre 24..200 x 16..64; the notch is the right 56 px);
+	-- `burst` a 256 px spiky deal badge with an ink outline; `stamp` a 256 px double ring (the word is text on top).
+	stripes = "rbxassetid://81273976323690",
+	ribbon = "rbxassetid://91735525983207",
+	burst = "rbxassetid://89635821324028",
+	stamp = "rbxassetid://110715103243643",
 })
 
 -- The CCTV overlay's scanlines (M3 UI). PENDING and not drawn yet.
