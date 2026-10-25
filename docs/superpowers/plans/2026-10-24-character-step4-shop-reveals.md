@@ -2,8 +2,10 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: superpowers:executing-plans. Steps use checkbox (`- [ ]`) syntax.
 
-**Status:** written 2026-10-24, waiting on the owner's answers to "Calls for you to check" (reviewed together with
-the step 3 play-check).
+**Status:** built 2026-10-24, ready for the owner's play-check together with step 3 (report:
+`reports/2026-10-24-character-step4.md`). Uploads approved (Let's Go! remade as Pippa's foot); calls 1-5 built with
+the defaults below until the owner answers. Deviation: the reveal queue is `CosmeticRevealStore` (Cosmetic client
+State), not a UI store.
 
 **Goal:** The step 3 screens look like the round 3 concepts, the Shop sells skins / emotes / idles / sticker packs /
 employees for Gleam or Credits in one safe transaction, and every new thing you get plays a reveal.
