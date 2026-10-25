@@ -90,7 +90,7 @@ local function card(props: InventoryCrewPanelProps, entry: VM.CrewCard, order: n
 	local nameSize = math.floor(h * 0.085)
 	local lineSize = math.max(layout.textSize, math.floor(h * 0.032))
 	local buttonHeight = math.max(40, math.floor(h * 0.085))
-	local buttonText = math.max(if phone then 14 else 18, math.floor(buttonHeight * 0.42))
+	local buttonText = if phone then 14 else math.max(18, math.floor(buttonHeight * 0.42))
 	local locked = entry.state == "locked"
 	local wearing = entry.state == "wearing"
 	local pad = 18
@@ -128,16 +128,19 @@ local function card(props: InventoryCrewPanelProps, entry: VM.CrewCard, order: n
 			fit = true,
 			zIndex = 3,
 		}),
-		line = e(ToonText, {
-			text = `{entry.kind} · {entry.line}`,
-			font = "body",
-			color = COLOR.white,
-			textSize = lineSize,
-			position = UDim2.fromOffset(pad, artHeight + 30 + nameSize),
-			size = UDim2.fromOffset(w - 2 * pad, lineSize + 6),
-			fit = true,
-			zIndex = 3,
-		}),
+		-- No room for the line between the name and the buttons on a phone card.
+		line = if phone
+			then nil
+			else e(ToonText, {
+				text = `{entry.kind} · {entry.line}`,
+				font = "body",
+				color = COLOR.white,
+				textSize = lineSize,
+				position = UDim2.fromOffset(pad, artHeight + 30 + nameSize),
+				size = UDim2.fromOffset(w - 2 * pad, lineSize + 6),
+				fit = true,
+				zIndex = 3,
+			}),
 	}
 	-- The ability chip, its render breaking the chip's left end (no room on a phone card).
 	if not phone then

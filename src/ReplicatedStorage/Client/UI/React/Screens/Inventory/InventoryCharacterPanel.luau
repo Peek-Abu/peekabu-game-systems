@@ -216,7 +216,7 @@ local function itemCard(
 			tilt = -6,
 			textSize = if phone then 10 else 14,
 			position = UDim2.fromOffset(-6, 0),
-			size = UDim2.fromOffset(if phone then 72 else 132, flagHeight),
+			size = UDim2.fromOffset(if phone then 92 else 132, flagHeight),
 			zIndex = 7,
 		}),
 	}
@@ -437,18 +437,21 @@ local function detail(props: InventoryCharacterPanelProps, view: VM.Detail, item
 		}),
 		lore = e("Frame", {
 			Position = UDim2.fromOffset(size * 2 + 8, 10),
-			Size = UDim2.new(1, -size * 2 - 20, 1, -size - 24),
+			-- On a phone there is no signature under the lore, so it gets the whole box.
+			Size = UDim2.new(1, -size * 2 - 20, 1, if phone then -16 else -size - 24),
 			BackgroundTransparency = 1,
 		}, { text = body(view.lore, size) }),
-		who = e(ToonText, {
-			text = string.upper(props.employee),
-			textSize = size - 6,
-			meaning = "grape",
-			anchor = Vector2.new(0, 1),
-			position = UDim2.new(0, size * 2 + 8, 1, -DEPTH.lip - 6),
-			size = UDim2.fromOffset(160, size - 2),
-			fit = true,
-		}),
+		who = if phone
+			then nil
+			else e(ToonText, {
+				text = string.upper(props.employee),
+				textSize = size - 6,
+				meaning = "grape",
+				anchor = Vector2.new(0, 1),
+				position = UDim2.new(0, size * 2 + 8, 1, -DEPTH.lip - 6),
+				size = UDim2.fromOffset(160, size - 2),
+				fit = true,
+			}),
 	}
 	rows.quote = block(
 		size * 3 + (if phone then 12 else 30),
@@ -461,7 +464,8 @@ local function detail(props: InventoryCharacterPanelProps, view: VM.Detail, item
 			children = quote,
 		})
 	)
-	if view.styles.visible then
+	-- A phone's detail panel has room for the name, the lore and the button only.
+	if view.styles.visible and not phone then
 		local styles: Nodes = {
 			label = e(ToonText, {
 				text = "STYLES",
@@ -494,7 +498,7 @@ local function detail(props: InventoryCharacterPanelProps, view: VM.Detail, item
 		end
 		rows.styles = block(size * 2 + 44, 5, group(styles))
 	end
-	if #view.comesWith > 0 then
+	if #view.comesWith > 0 and not phone then
 		local tile = if phone then 50 else 88
 		local row: Nodes = {
 			list = e("UIListLayout", {
