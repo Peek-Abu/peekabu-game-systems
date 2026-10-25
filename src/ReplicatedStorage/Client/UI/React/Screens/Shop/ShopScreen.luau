@@ -195,35 +195,71 @@ local function offerCard(
 end
 
 local function bundleCard(bundle: VM.Bundle, size: Vector2, phone: boolean, order: number): React.ReactNode
+	-- Tall cards (the Gleam tab) stack the render, the amount and the price; short ones (the Featured row) put the
+	-- render on the left and the amount over the price on the right.
+	local wide = size.Y < size.X * 0.62
 	local amountSize = if phone then 18 else 40
-	local face: Nodes = {
-		icon = e(ToonIcon, {
-			icon = bundle.icon,
-			anchor = Vector2.new(0.5, 0),
-			position = UDim2.new(0.5, 0, 0, if phone then 2 else 6),
-			size = UDim2.fromOffset(math.floor(size.Y * 0.52), math.floor(size.Y * 0.52)),
-			drop = 4,
-			greyed = not bundle.available,
-		}),
-		amount = e(ToonText, {
-			text = bundle.amount,
-			textSize = amountSize,
-			meaning = "white",
-			anchor = Vector2.new(0.5, 0),
-			position = UDim2.new(0.5, 0, 0.56, 0),
-			size = UDim2.new(1, -16, 0, amountSize + 4),
-			align = "center",
-			fit = true,
-		}),
-		robux = e(ToonPill, {
-			text = if bundle.available then bundle.robux else "Soon",
-			hue = if bundle.available then "mint" else "steel",
-			textSize = if phone then 12 else 24,
-			anchor = Vector2.new(0.5, 1),
-			position = UDim2.new(0.5, 0, 1, -DEPTH.lip - 6),
-			size = UDim2.fromOffset(math.floor(size.X * 0.56), if phone then 22 else 44),
-		}),
-	}
+	local pillHeight = if phone then 22 else 44
+	local face: Nodes
+	if wide then
+		local art = math.floor((size.Y - DEPTH.drop - DEPTH.lip) * 0.92)
+		face = {
+			icon = e(ToonIcon, {
+				icon = bundle.icon,
+				anchor = Vector2.new(0, 0.5),
+				position = UDim2.new(0, 8, 0.5, -DEPTH.lip / 2),
+				size = UDim2.fromOffset(art, art),
+				drop = 4,
+				greyed = not bundle.available,
+			}),
+			amount = e(ToonText, {
+				text = bundle.amount,
+				textSize = amountSize,
+				meaning = "white",
+				position = UDim2.new(0, art + 14, 0, 6),
+				size = UDim2.new(1, -art - 24, 0, amountSize + 4),
+				align = "center",
+				fit = true,
+			}),
+			robux = e(ToonPill, {
+				text = if bundle.available then bundle.robux else "Soon",
+				hue = if bundle.available then "mint" else "steel",
+				textSize = if phone then 12 else 22,
+				anchor = Vector2.new(0.5, 1),
+				position = UDim2.new(0, art + 14 + math.floor((size.X - art - 24) / 2), 1, -DEPTH.lip - 6),
+				size = UDim2.fromOffset(math.floor((size.X - art - 24) * 0.8), pillHeight),
+			}),
+		}
+	else
+		face = {
+			icon = e(ToonIcon, {
+				icon = bundle.icon,
+				anchor = Vector2.new(0.5, 0),
+				position = UDim2.new(0.5, 0, 0, if phone then 2 else 6),
+				size = UDim2.fromOffset(math.floor(size.Y * 0.5), math.floor(size.Y * 0.5)),
+				drop = 4,
+				greyed = not bundle.available,
+			}),
+			amount = e(ToonText, {
+				text = bundle.amount,
+				textSize = amountSize,
+				meaning = "white",
+				anchor = Vector2.new(0.5, 1),
+				position = UDim2.new(0.5, 0, 1, -DEPTH.lip - pillHeight - 16),
+				size = UDim2.new(1, -16, 0, amountSize + 4),
+				align = "center",
+				fit = true,
+			}),
+			robux = e(ToonPill, {
+				text = if bundle.available then bundle.robux else "Soon",
+				hue = if bundle.available then "mint" else "steel",
+				textSize = if phone then 12 else 24,
+				anchor = Vector2.new(0.5, 1),
+				position = UDim2.new(0.5, 0, 1, -DEPTH.lip - 6),
+				size = UDim2.fromOffset(math.floor(size.X * 0.56), pillHeight),
+			}),
+		}
+	end
 	local nodes: Nodes = {
 		surface = e(ToonSurface, {
 			hue = "sky",
@@ -238,7 +274,7 @@ local function bundleCard(bundle: VM.Bundle, size: Vector2, phone: boolean, orde
 			text = bundle.bonus,
 			sub = "BONUS",
 			hue = "mint",
-			size = if phone then 46 else 96,
+			size = if phone then 46 else if wide then 84 else 96,
 			anchor = Vector2.new(1, 0),
 			position = UDim2.new(1, 12, 0, -14),
 			zIndex = 5,
@@ -534,7 +570,8 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 		-- Featured: the banner, Today's picks, the Gleam row.
 		local live = ShopRotationUtils.live(ShopRegistry.all(), now)
 		local bannerWidth = math.floor(content.width * 0.47)
-		local topHeight = math.floor(content.height * (if phone then 0.66 else 0.64))
+		-- On a phone the Gleam row is left to the Gleam tab: the banner and the picks take the whole height.
+		local topHeight = if phone then content.height else math.floor(content.height * 0.64)
 		local nodes: Nodes = {}
 		local featured = live.featured
 		if featured ~= nil then
@@ -627,14 +664,23 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 		local picksX = bannerWidth + gap + 10
 		local picksWidth = content.width - picksX
 		local headingSize = math.floor(layout.headingSize * 0.75)
-		local cellWidth = math.floor((picksWidth - 2 * gap) / 3)
-		local cellHeight = math.floor((topHeight - headingSize - 20 - gap) / 2)
+		-- Desktop: a 3 x 2 grid. Phone: one row of bigger cards that scrolls sideways.
+		local cellHeight = if phone
+			then topHeight - headingSize - 30
+			else math.floor((topHeight - headingSize - 20 - gap) / 2)
+		local cellWidth = if phone then math.floor(cellHeight * 0.8) else math.floor((picksWidth - 2 * gap) / 3)
 		local grid: Nodes = {
-			layout = e("UIGridLayout", {
-				CellSize = UDim2.fromOffset(cellWidth, cellHeight),
-				CellPadding = UDim2.fromOffset(gap, gap),
-				SortOrder = Enum.SortOrder.LayoutOrder,
-			}),
+			layout = if phone
+				then e("UIListLayout", {
+					FillDirection = Enum.FillDirection.Horizontal,
+					Padding = UDim.new(0, gap),
+					SortOrder = Enum.SortOrder.LayoutOrder,
+				})
+				else e("UIGridLayout", {
+					CellSize = UDim2.fromOffset(cellWidth, cellHeight),
+					CellPadding = UDim2.fromOffset(gap, gap),
+					SortOrder = Enum.SortOrder.LayoutOrder,
+				}),
 		}
 		for index, pick in live.picks do
 			grid[pick.id] =
@@ -650,21 +696,28 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 			position = UDim2.new(1, 0, 0, 4),
 			size = UDim2.fromOffset(if phone then 130 else 240, if phone then 24 else 44),
 		})
-		nodes.picks = e("Frame", {
+		nodes.picks = e("ScrollingFrame", {
 			Position = UDim2.fromOffset(picksX, headingSize + 20),
 			Size = UDim2.fromOffset(picksWidth, topHeight - headingSize - 20),
 			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			CanvasSize = UDim2.fromOffset(0, 0),
+			AutomaticCanvasSize = if phone then Enum.AutomaticSize.X else Enum.AutomaticSize.None,
+			ScrollingDirection = Enum.ScrollingDirection.X,
+			ScrollBarThickness = if phone then 4 else 0,
 		}, grid)
-		-- The Gleam row along the bottom.
-		local rowY = topHeight + gap + 6
-		nodes.gleamHeading = heading("GET GLEAM", headingSize, UDim2.fromOffset(0, rowY), 400)
-		nodes.gleam = e("Frame", {
-			Position = UDim2.fromOffset(0, rowY + headingSize + 14),
-			Size = UDim2.new(1, 0, 1, -rowY - headingSize - 14),
-			BackgroundTransparency = 1,
-		}, {
-			row = bundleRow(content.width, content.height - rowY - headingSize - 14, phone, gap + 10),
-		})
+		-- The Gleam row along the bottom (desktop).
+		if not phone then
+			local rowY = topHeight + gap + 6
+			nodes.gleamHeading = heading("GET GLEAM", headingSize, UDim2.fromOffset(0, rowY), 400)
+			nodes.gleam = e("Frame", {
+				Position = UDim2.fromOffset(0, rowY + headingSize + 14),
+				Size = UDim2.new(1, 0, 1, -rowY - headingSize - 14),
+				BackgroundTransparency = 1,
+			}, {
+				row = bundleRow(content.width, content.height - rowY - headingSize - 14, phone, gap + 10),
+			})
+		end
 		body = group(nodes)
 	end
 

@@ -204,8 +204,14 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 		BackgroundTransparency = 1,
 		ZIndex = 3,
 	}, {
-		lip = disc(UDim2.fromScale(0.5, 0.82), shade.lo, shade.lo, 1),
-		top = disc(UDim2.fromScale(0.5, 0.795), shade.hi, shade.base, 2),
+		-- A hire stands on their own colour; an item on its rarity's.
+		lip = disc(UDim2.fromScale(0.5, 0.82), bottom, bottom, 1),
+		top = disc(
+			UDim2.fromScale(0.5, 0.795),
+			if tint ~= nil then tint.light else shade.hi,
+			if tint ~= nil then tint.body else shade.base,
+			2
+		),
 		model = e(ToonViewport, {
 			employee = view.employee,
 			skin = view.skinKey,
@@ -351,29 +357,42 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 				art = if extra.kind == "Sticker pack"
 					then e(
 						ToonIcon,
-						{ icon = "shopGift", position = UDim2.fromScale(0.08, 0.08), size = UDim2.fromScale(0.84, 0.84) }
+						{
+							icon = "shopGift",
+							position = UDim2.fromScale(0.08, 0.08),
+							size = UDim2.fromScale(0.84, 0.84),
+						}
 					)
 					else e(
 						ToonViewport,
 						{ employee = view.employee, framing = "bust", size = UDim2.fromScale(1, 1) }
 					),
+			}
+			local label = if phone then 11 else 18
+			-- The tile, its kind under it (inside, the word was squeezed out).
+			tiles[extra.id] = e("Frame", {
+				Size = UDim2.fromOffset(tile + 20, tile + label + 10),
+				BackgroundTransparency = 1,
+				LayoutOrder = index,
+			}, {
+				tile = e(ToonSurface, {
+					hue = "gold",
+					small = true,
+					radius = 14,
+					position = UDim2.fromOffset(10, 0),
+					size = UDim2.fromOffset(tile, tile),
+					children = stage,
+				}),
 				kind = e(ToonText, {
 					text = extra.kind,
-					textSize = if phone then 10 else 18,
-					anchor = Vector2.new(0.5, 1),
-					position = UDim2.new(0.5, 0, 1, -DEPTH.lip),
-					size = UDim2.new(1, -6, 0, if phone then 12 else 22),
+					textSize = label,
+					meaning = "grape",
+					anchor = Vector2.new(0.5, 0),
+					position = UDim2.new(0.5, 0, 0, tile + 4),
+					size = UDim2.new(1, 0, 0, label + 4),
 					align = "center",
 					fit = true,
 				}),
-			}
-			tiles[extra.id] = e(ToonSurface, {
-				hue = "gold",
-				small = true,
-				radius = 14,
-				size = UDim2.fromOffset(tile, tile),
-				layoutOrder = index,
-				children = stage,
 			})
 		end
 		local face: Nodes = {
@@ -387,7 +406,7 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 			}),
 			row = e("Frame", {
 				Position = UDim2.fromOffset(18, size + 30),
-				Size = UDim2.new(1, -36, 0, tile + DEPTH.drop),
+				Size = UDim2.new(1, -36, 0, tile + (if phone then 22 else 34)),
 				BackgroundTransparency = 1,
 			}, tiles),
 		}
@@ -397,7 +416,7 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 			radius = 22,
 			anchor = Vector2.new(0, 1),
 			position = UDim2.new(0, margin, 1, -(if phone then 12 else 50)),
-			size = UDim2.fromOffset(leftWidth, size + tile + 70),
+			size = UDim2.fromOffset(leftWidth, size + tile + (if phone then 60 else 100)),
 			zIndex = 4,
 			children = face,
 		})

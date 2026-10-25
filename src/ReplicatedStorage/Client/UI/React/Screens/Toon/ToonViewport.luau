@@ -131,10 +131,8 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 		photo = if shown
 			then nil
 			else e("ImageLabel", {
-				AnchorPoint = Vector2.new(0.5, 0.5),
-				Position = UDim2.fromScale(0.5, 0.5),
+				-- Fitted inside the frame (never spilling past it).
 				Size = UDim2.fromScale(1, 1),
-				SizeConstraint = Enum.SizeConstraint.RelativeYY,
 				BackgroundTransparency = 1,
 				Image = PortraitViewModel.fallback(props.employee, props.skin),
 				ImageColor3 = tint,
