@@ -62,4 +62,11 @@
   lock_night_v2.png); upload waits for your OK.
 - **Idles per crew**: each crew shows its own idle plus Sleepy Sway, the one idle made for everyone (design: idles can
   be shared). Your call whether shared idles should exist.
-- **Vacuums tab**: two layouts in Figma, "Character UI round 5 · Vacuums" (Character UI page), with 6 questions.
+- **Vacuums tab** (2026-10-25, commit 9db8c0b6): option A built. Inventory > Vacuums lists every vacuum; the
+  middle shows YOU (your employee, rank lanyard and all) from behind in the selected one; Wear swaps your pack on
+  the spot (one vacuum for the whole crew). Brass Bellows is in the Shop (Featured rotation, Gleam 600, price not
+  final) with its page and reveal on you. The old Company Equipment page is gone. Test: `cosmeticgrant me
+  Vacuum.BrassBellows`, then Inventory > Vacuums > Wear; Shop > Skins > Brass Bellows.
+- **Cappy's model** (Workspace.Cappy) is now the template in ReplicatedStorage.Assets.CleanupCrew.Characters.Cappy
+  in the Odd Hours place: save/publish the place to keep it. In menus his shorts don't bend with his legs (their
+  bend comes from a script on the model, and previews never run scripts).
