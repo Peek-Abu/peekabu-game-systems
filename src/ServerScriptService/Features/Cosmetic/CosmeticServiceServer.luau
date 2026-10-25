@@ -28,6 +28,7 @@ local CosmeticConstants = require(Cosmetic.Data.CosmeticConstants)
 local CosmeticRegistry = require(Cosmetic.Data.CosmeticRegistry)
 local CosmeticTypes = require(Cosmetic.Data.CosmeticTypes)
 local CosmeticEvents = require(Cosmetic.Net.CosmeticEvents)
+local CosmeticOutfitRules = require(Cosmetic.Rules.CosmeticOutfitRules)
 local CosmeticRequestRules = require(Cosmetic.Rules.CosmeticRequestRules)
 local CosmeticRules = require(Cosmetic.Rules.CosmeticRules)
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
@@ -241,6 +242,7 @@ export type CosmeticServiceServer = {
 	owns: (self: CosmeticServiceServer, userId: number, id: string) -> boolean,
 	currentEmployee: (self: CosmeticServiceServer, userId: number) -> string,
 	lookOf: (self: CosmeticServiceServer, userId: number, employee: string?) -> Look?,
+	outfitOf: (self: CosmeticServiceServer, userId: number) -> CosmeticTypes.Outfit?,
 	isLocked: (self: CosmeticServiceServer) -> boolean,
 	equip: (self: CosmeticServiceServer, userId: number, change: Change) -> (boolean, string?),
 	pick: (self: CosmeticServiceServer, userId: number, employee: string) -> (boolean, string?),
@@ -336,6 +338,16 @@ local CosmeticServiceServer: CosmeticServiceServer = {
 			return nil
 		end
 		return CosmeticRules.lookFor(loadout, who, owns)
+	end,
+
+	-- Everything the player wears (CosmeticOutfitRules.current); nil when the profile is not loaded.
+	outfitOf = function(_self, userId)
+		local loadout = loadoutSlice.get(userId)
+		local owns = ownsFor(userId)
+		if loadout == nil or owns == nil then
+			return nil
+		end
+		return CosmeticOutfitRules.current(loadout, owns)
 	end,
 
 	isLocked = function(_self)

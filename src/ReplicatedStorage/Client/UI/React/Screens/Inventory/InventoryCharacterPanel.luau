@@ -34,6 +34,7 @@ local ToonSurface = require(Toon.ToonSurface)
 local ToonText = require(Toon.ToonText)
 local ToonViewport = require(Toon.ToonViewport)
 local UIToonConstants = require(Toon.UIToonConstants)
+local CosmeticOutfitRules = require(ReplicatedStorage.Shared.Features.Cosmetic.Rules.CosmeticOutfitRules)
 local VM = require(script.Parent.InventoryViewModel)
 
 local e = React.createElement
@@ -41,6 +42,8 @@ local e = React.createElement
 local COLOR = UIToonConstants.COLOR
 local DEPTH = UIToonConstants.DEPTH
 local CARD_RADIUS = 18
+-- The Vacuums tab shows your employee from behind (a little round, so the face still shows): the pack is on the back.
+local BACK_TURN = 150
 
 export type InventoryCharacterPanelProps = {
 	employee: string,
@@ -119,7 +122,9 @@ local function itemCard(
 		stroke = e("UIStroke", { Color = COLOR.ink, Thickness = 3 }),
 		gradient = e("UIGradient", { Rotation = 90, Color = ColorSequence.new(shade.hi, shade.base) }),
 		art = e(ToonViewport, {
-			employee = props.employee,
+			-- A vacuum card shows the vacuum on its own; a skin or idle card shows the employee.
+			employee = if props.tab == "vacuums" then nil else props.employee,
+			vacuum = if props.tab == "vacuums" then VM.skinKey(entry.id) else nil,
 			skin = skinKey,
 			framing = "full",
 			dim = entry.dim,
@@ -289,12 +294,23 @@ local function grid(props: InventoryCharacterPanelProps, cards: { VM.ItemCard },
 	}, nodes)
 end
 
--- The hero: the item live on a 3D platform in the rarity's colour.
-local function hero(props: InventoryCharacterPanelProps, skinKey: string, rarity: CosmeticTypes.Rarity): React.ReactNode
+-- The hero: the item live on a 3D platform in the rarity's colour. On the Vacuums tab: you (your employee as you
+-- are now, rank lanyard and all) wearing the selected vacuum, from behind.
+local function hero(
+	props: InventoryCharacterPanelProps,
+	skinKey: string,
+	rarity: CosmeticTypes.Rarity,
+	tryOn: string?
+): React.ReactNode
 	local shade = UIToonConstants.rarity(rarity)
+	local outfit = if tryOn ~= nil
+		then CosmeticOutfitRules.tryOn(CosmeticOutfitRules.current(props.loadout, props.owns), tryOn)
+		else nil
 	return group({
 		model = e(ToonViewport, {
-			employee = props.employee,
+			employee = if outfit == nil then props.employee else nil,
+			outfit = outfit,
+			turn = if outfit ~= nil then BACK_TURN else nil,
 			skin = skinKey,
 			live = true,
 			framing = "full",
@@ -790,11 +806,15 @@ local function InventoryCharacterPanel(props: InventoryCharacterPanelProps): Rea
 	local right: React.ReactNode
 	local heroSkin = VM.skinKey(wornSkin)
 	local heroRarity: CosmeticTypes.Rarity = "default"
+	local tryOn: string? = nil
 	local seenId = ""
 	if props.tab == "about" then
 		left, right = about(props)
 	else
-		local kind: "skin" | "idle" = if props.tab == "skins" then "skin" else "idle"
+		local kind: VM.ListKind = if props.tab == "skins"
+			then "skin"
+			elseif props.tab == "vacuums" then "vacuum"
+			else "idle"
 		local cards = VM.items(kind, props.employee, props.loadout, props.owns)
 		local selectedId = props.selected
 		local selectedItem = if selectedId ~= nil then CosmeticRegistry.get(selectedId) else nil
@@ -816,6 +836,8 @@ local function InventoryCharacterPanel(props: InventoryCharacterPanelProps): Rea
 			heroRarity = selectedItem.rarity
 			if selectedItem.kind == "skin" then
 				heroSkin = VM.skinKey(selectedItem.id)
+			elseif selectedItem.kind == "vacuum" then
+				tryOn = selectedItem.id
 			end
 			if view.new then
 				seenId = selectedItem.id
@@ -840,7 +862,7 @@ local function InventoryCharacterPanel(props: InventoryCharacterPanelProps): Rea
 			Position = UDim2.fromOffset(layout.gridWidth + layout.gap, 0),
 			Size = UDim2.new(0, layout.heroWidth, 1, 0),
 			BackgroundTransparency = 1,
-		}, { content = hero(props, heroSkin, heroRarity) }),
+		}, { content = hero(props, heroSkin, heroRarity, tryOn) }),
 		right = e("Frame", {
 			Position = UDim2.fromOffset(layout.gridWidth + layout.heroWidth + 2 * layout.gap, 0),
 			Size = UDim2.new(0, layout.detailWidth, 1, 0),

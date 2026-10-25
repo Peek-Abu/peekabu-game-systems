@@ -30,11 +30,4 @@ function VacuumSkinRules.select(wanted: string?): VacuumSkinRegistry.SkinDef
 	return default()
 end
 
---[=[
-	The skin the player with `userId` wears (VacuumSkinRegistry's allowlist, MVP only), else Standard Issue.
-]=]
-function VacuumSkinRules.forPlayer(userId: number): VacuumSkinRegistry.SkinDef
-	return VacuumSkinRules.select(VacuumSkinRegistry.skinFor(userId))
-end
-
 return VacuumSkinRules

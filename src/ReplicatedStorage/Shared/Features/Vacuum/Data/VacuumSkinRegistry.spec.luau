@@ -32,15 +32,4 @@ return function()
 			expect(VacuumSkinRegistry.get("Nope")).never.to.be.ok()
 		end)
 	end)
-
-	describe("skinFor", function()
-		it("gives the owner (icemonkey1) Brass Bellows", function()
-			expect(VacuumSkinRegistry.skinFor(20661908)).to.equal("BrassBellows")
-		end)
-
-		it("gives everyone else nothing (Standard Issue)", function()
-			expect(VacuumSkinRegistry.skinFor(1)).never.to.be.ok()
-			expect(VacuumSkinRegistry.skinFor(-1)).never.to.be.ok()
-		end)
-	end)
 end

@@ -123,6 +123,18 @@ return function()
 			expect(copy:FindFirstChild("VacuumBackpack")).never.to.be.ok()
 		end)
 
+		it("keeps the worn vacuum when asked (an outfit preview), welded where it was", function()
+			local rig = makeRig()
+			local canister = rig.VacuumBackpack.Canister
+			local weld = Instance.new("WeldConstraint")
+			weld.Part0 = rig.UpperTorso
+			weld.Part1 = canister
+			weld.Parent = canister
+			local copy = EmployeePortraitSystem.build(rig, nil, true)
+			expect(copy:FindFirstChild("VacuumBackpack")).to.be.ok()
+			expect(copy.VacuumBackpack:FindFirstChild("Canister")).to.be.ok()
+		end)
+
 		it("drops parts no joint ties to the root", function()
 			local copy = EmployeePortraitSystem.build(makeRig(), nil)
 			expect(copy:FindFirstChild("Loose")).never.to.be.ok()

@@ -273,6 +273,25 @@ local ITEMS: { Item } = {
 		quote = true,
 	},
 
+	-- Vacuums (one for the whole crew; the part after the dot is the VacuumSkinRegistry skin)
+	{
+		id = "Vacuum.StandardIssue",
+		kind = "vacuum",
+		name = "Standard Issue",
+		rarity = "default",
+		source = "default",
+		lore = "The company vacuum. It is teal, it is loud, and it never gives up.",
+	},
+	{
+		id = "Vacuum.BrassBellows",
+		kind = "vacuum",
+		name = "Brass Bellows",
+		rarity = "rare",
+		source = "gleam",
+		price = 600,
+		lore = "A brass vacuum under a glass dome. Nobody knows how old it is. The gauges still work. Mostly.",
+	},
+
 	-- Shared idles
 	{
 		id = "SleepySway",
@@ -411,7 +430,16 @@ table.sort(sorted, function(a, b)
 end)
 table.freeze(sorted)
 
-local CosmeticRegistry = {}
+local CosmeticRegistry = {
+	-- Everyone's vacuum until they wear another.
+	DEFAULT_VACUUM = "Vacuum.StandardIssue",
+}
+
+-- The art key after an id's first dot ("Pippa.OwnerSpecial" -> "OwnerSpecial", "Vacuum.BrassBellows" ->
+-- "BrassBellows"); an id with no dot is its own key.
+function CosmeticRegistry.keyOf(id: string): string
+	return string.match(id, "^[^%.]+%.(.+)$") or id
+end
 
 function CosmeticRegistry.get(id: string): Item?
 	return byId[id]

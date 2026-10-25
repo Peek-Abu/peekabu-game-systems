@@ -3,7 +3,7 @@
 	CosmeticRequestRules: the build/parse contract for CosmeticEvents packets. The client BUILDS a request, the
 	server PARSES it at the trust boundary (packets carry `unknown`, the TitleRequestRules precedent).
 
-	Parsing checks SHAPE only: one of the five change kinds, ids of 1-64 characters (`""` allowed only to clear an
+	Parsing checks SHAPE only: one of the six change kinds, ids of 1-64 characters (`""` allowed only to clear an
 	emote or sticker slot), whole-number slots and styles. Whether an item exists, is owned and fits is
 	CosmeticRules' job in the service.
 
@@ -72,6 +72,10 @@ function CosmeticRequestRules.parseEquip(payload: unknown): (Change?, string?)
 			and isWhole(slot)
 		then
 			return { kind = "emote", employee = employee, slot = slot, id = id }, nil
+		end
+	elseif kind == "vacuum" then
+		if type(id) == "string" and isId(id) then
+			return { kind = "vacuum", id = id }, nil
 		end
 	elseif kind == "sticker" then
 		if type(id) == "string" and isSlotId(id) and type(slot) == "number" and isWhole(slot) then

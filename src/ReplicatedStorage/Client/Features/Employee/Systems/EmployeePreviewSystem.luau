@@ -10,6 +10,11 @@
 	  scripts: put it in a WorldModel and `playIdle` it. At most LIVE_CAP exist at once (the hero and one hovered
 	  card); `live` returns nil past the cap, and a destroyed live preview frees its slot.
 	- `skin` is an EmployeeRegistry skin key (nil = the default look); an unknown one falls back to the default.
+	- `outfit(outfit, source, character, live, pose?)`: a whole player's look (CosmeticOutfitRules): a clone of
+	  `character` (your own, live one) when it is that employee in that skin, so everything the server put on it
+	  comes along (the rank lanyard and badge, the vacuum pack), else the dressed template; then the outfit's vacuum
+	  goes on the pack (VacuumPreviewSystem.swap). Live (and its second result true) when asked and a slot is free,
+	  else posed and frozen like `static`.
 
 	@class EmployeePreviewSystem
 ]=]
@@ -23,7 +28,11 @@ local EmployeePoseRegistry = require(EmployeeShared.Data.EmployeePoseRegistry)
 local EmployeeRegistry = require(EmployeeShared.Data.EmployeeRegistry)
 local EmployeeSkinRules = require(EmployeeShared.Rules.EmployeeSkinRules)
 local EmployeeSkinSystem = require(EmployeeShared.Systems.EmployeeSkinSystem)
+local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
+local CosmeticTypes = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticTypes)
+local VacuumSkinRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumSkinRules)
 local EmployeePortraitSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeePortraitSystem)
+local VacuumPreviewSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumPreviewSystem)
 
 local LIVE_CAP = 2
 
@@ -84,14 +93,8 @@ function EmployeePreviewSystem.static(
 	return copy
 end
 
-function EmployeePreviewSystem.live(employee: string, skin: string?, source: Instance): Model?
-	if liveCount >= LIVE_CAP then
-		return nil
-	end
-	local model = dressed(employee, skin, source)
-	if model == nil then
-		return nil
-	end
+-- Readies `model` to animate in a WorldModel (root held, body free, an Animator) and takes a live slot.
+local function makeLive(model: Model): Model
 	for _, descendant in model:GetDescendants() do
 		if descendant:IsA("BasePart") then
 			descendant.Anchored = descendant.Name == "HumanoidRootPart"
@@ -111,6 +114,65 @@ function EmployeePreviewSystem.live(employee: string, skin: string?, source: Ins
 		end
 	end)
 	return model
+end
+
+function EmployeePreviewSystem.live(employee: string, skin: string?, source: Instance): Model?
+	if liveCount >= LIVE_CAP then
+		return nil
+	end
+	local model = dressed(employee, skin, source)
+	return if model ~= nil then makeLive(model) else nil
+end
+
+-- A copy of a live character for a preview: scripts, tools and overhead labels left out.
+local function cloneCharacter(character: Model): Model
+	-- A player's character is not Archivable; it is made so just for the copy.
+	local archivable = character.Archivable
+	character.Archivable = true
+	local copy = character:Clone()
+	character.Archivable = archivable
+	for _, descendant in copy:GetDescendants() do
+		if
+			descendant:IsA("LuaSourceContainer")
+			or descendant:IsA("Tool")
+			or descendant:IsA("BillboardGui")
+			or descendant:IsA("ForceField")
+		then
+			descendant:Destroy()
+		end
+	end
+	return copy
+end
+
+function EmployeePreviewSystem.outfit(
+	outfit: CosmeticTypes.Outfit,
+	source: Instance,
+	character: Model?,
+	wantLive: boolean,
+	pose: EmployeePoseRegistry.PoseDef?
+): (Model?, boolean)
+	local skinKey = CosmeticRegistry.keyOf(outfit.look.skin)
+	local model: Model? = nil
+	if
+		character ~= nil
+		and character:GetAttribute(EmployeeConstants.NAME_ATTRIBUTE) == outfit.employee
+		and character:GetAttribute(EmployeeConstants.SKIN_ATTRIBUTE) == skinKey
+	then
+		model = cloneCharacter(character)
+	end
+	if model == nil then
+		model = dressed(outfit.employee, skinKey, source)
+	end
+	if model == nil then
+		return nil, false
+	end
+	VacuumPreviewSystem.swap(model, VacuumSkinRules.select(CosmeticRegistry.keyOf(outfit.vacuum)), source)
+	if wantLive and liveCount < LIVE_CAP then
+		return makeLive(model), true
+	end
+	local copy = EmployeePortraitSystem.build(model, pose, true)
+	model:Destroy()
+	return copy, false
 end
 
 -- The animation registry key of the employee's idle loop (nil = no own locomotion).

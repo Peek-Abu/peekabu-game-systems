@@ -47,21 +47,13 @@ function VM.gift(state: PlayerDataTypes.DailyReward, now: number): GiftView
 end
 
 -- The render beside each guide / locker section, in VM.copy's order.
-function VM.sectionIcons(page: Page): { UIAssets.ToonIcon }
-	if page == "guide" then
-		return { "truck", "vacuum", "managerHunt", "clock" }
-	end
-	return { "vacuum", "gloom", "grab", "stamina" }
+function VM.sectionIcons(_page: Page): { UIAssets.ToonIcon }
+	return { "truck", "vacuum", "managerHunt", "clock" }
 end
 
--- The hub page's header title (the gear page is the Inventory's Vacuums tab).
+-- The hub page's header title.
 function VM.pageTitle(page: Page): string
-	if page == "guide" then
-		return "GUIDE"
-	elseif page == "gear" then
-		return "VACUUMS"
-	end
-	return "SETTINGS"
+	return if page == "guide" then "GUIDE" else "SETTINGS"
 end
 
 -- The Tonight card: tonight's building (the board's contract; the first contract until the board is found).
@@ -76,8 +68,9 @@ function VM.tonight(id: string?): TonightView
 	client = string.gsub(client, "%s+LTD%.?$", "")
 	return { title = client, site = DepotConstants.SITE }
 end
-export type Page = "guide" | "gear" | "settings"
-VM.PAGES = { "guide", "gear", "settings" }
+-- (The old Company Equipment page is gone: the Inventory's Vacuums tab is the vacuum's page now.)
+export type Page = "guide" | "settings"
+VM.PAGES = { "guide", "settings" }
 VM.SETTINGS = {
 	-- musicVolume drives the Music and Ambient groups, sfxVolume the SFX and UI groups (SettingConstants.VOLUME_SETTINGS).
 	{ id = "musicVolume", label = "Music & ambience" },
@@ -144,7 +137,7 @@ function VM.copy(
 				},
 				{
 					title = "03 / WATCH YOUR NOISE",
-					body = "The Manager hears vacuums and dropped cargo. Put things down carefully. Empty hands let you run faster.",
+					body = "The Manager hears vacuums and dropped cargo. Put things down carefully. Bulky things need both hands, and your vacuum goes on your back while you carry. Empty hands let you run faster.",
 				},
 				{
 					title = "04 / CLOCK OFF",
@@ -153,27 +146,7 @@ function VM.copy(
 			},
 		}
 	end
-	return {
-		title = "COMPANY EQUIPMENT",
-		subtitle = "ISSUED FOR EVERY SHIFT / NO PURCHASE REQUIRED",
-		sections = {
-			{
-				title = "STANDARD VACUUM",
-				body = "Your vacuum is issued when a shift starts. Equip it from slot 1 of your hotbar; its canister gauge shows the crew's Gloom against the contract.",
-			},
-			{
-				title = "NO DUST BAGS",
-				body = "The canister never fills up and there is nothing to carry back: the Gloom counts the moment it is vacuumed. Clean a valuable before you lift it; once lifted, its grime locks.",
-			},
-			{
-				title = "HANDS & LOAD",
-				body = "Bulky assets need both hands. Your vacuum stows while you carry it; put the load down to use your equipment again.",
-			},
-			{
-				title = "TRAVEL LIGHT",
-				body = "Heavy cargo slows you down. Bank Recoverable Assets early, keep a clear escape route, and help crew members get back.",
-			},
-		},
-	}
+	-- Settings draws its own rows; it has no copy of its own.
+	return { title = "SETTINGS", subtitle = "", sections = {} }
 end
 return VM

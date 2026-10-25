@@ -2,7 +2,7 @@
 --[=[
 	ShopRegistry: the Shop's offers, built from the catalogue (CosmeticRegistry) so a new priced item is on sale by
 	itself: every item sold for Credits or Gleam with a price (stickers come in their pack) is one offer at its
-	catalogue price. Employees are always listed, Legendary skins take turns in the Featured banner, everything
+	catalogue price. Employees are always listed, Legendary skins and vacuums take turns in the Featured banner, everything
 	else rotates through Today's picks (ShopRotationUtils). Event offers (dates) and real sales (`was`) are added
 	here when the owner runs one; there are none yet. It also registers the Gleam bundles' developer products with the
 	Marketplace (MarketplaceRegistry) at load.
@@ -23,7 +23,7 @@ type Offer = ShopTypes.Offer
 local function poolOf(item: CosmeticTypes.Item): ShopTypes.Pool
 	if item.kind == "employee" then
 		return "always"
-	elseif item.kind == "skin" and item.rarity == "legendary" then
+	elseif (item.kind == "skin" and item.rarity == "legendary") or item.kind == "vacuum" then
 		return "featured"
 	end
 	return "picks"

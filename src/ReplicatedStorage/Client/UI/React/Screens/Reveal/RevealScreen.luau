@@ -17,7 +17,10 @@ local TweenService = game:GetService("TweenService")
 
 local React = require(ReplicatedStorage.Packages.React)
 local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
+local CosmeticOutfitRules = require(ReplicatedStorage.Shared.Features.Cosmetic.Rules.CosmeticOutfitRules)
+local CosmeticRules = require(ReplicatedStorage.Shared.Features.Cosmetic.Rules.CosmeticRules)
 local CosmeticServiceClient = require(ReplicatedStorage.Client.Features.Cosmetic.CosmeticServiceClient)
+local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local CosmeticRevealStore = require(ReplicatedStorage.Client.Features.Cosmetic.State.CosmeticRevealStore)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonBackdrop = require(Toon.ToonBackdrop)
@@ -102,6 +105,8 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 	local liveViewport = usePaperViewport()
 	local livePhone = usePaperLayout() == "phone"
 	local stored = ReactCharm.useAtom(CosmeticRevealStore.current)
+	local loadout = ReactCharm.useAtom(StateSyncClientStore.loadout)
+	local entitlements = ReactCharm.useAtom(StateSyncClientStore.entitlements)
 	local reveal = props.reveal or stored
 	local noScale: UIScale? = nil
 	local pop, setPop = React.useState(noScale)
@@ -202,6 +207,15 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 			fit = true,
 		}),
 	}
+	local newVacuum = view.vacuum
+	local tryOn = if newVacuum ~= nil
+		then CosmeticOutfitRules.tryOn(
+			CosmeticOutfitRules.current(loadout, function(id: string): boolean
+				return CosmeticRules.owns(entitlements, id)
+			end),
+			newVacuum
+		)
+		else nil
 	nodes.hero = e("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.new(heroX, 0, 0, heroTop),
@@ -215,7 +229,10 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 			end),
 		}),
 		model = e(ToonViewport, {
-			employee = view.employee,
+			-- A new vacuum is shown on you, from behind.
+			employee = if tryOn == nil then view.employee else nil,
+			outfit = tryOn,
+			turn = if tryOn ~= nil then 150 else nil,
 			skin = view.skinKey,
 			live = true,
 			framing = "full",

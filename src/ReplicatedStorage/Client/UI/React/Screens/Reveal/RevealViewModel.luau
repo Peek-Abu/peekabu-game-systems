@@ -36,6 +36,8 @@ export type View = {
 	name: string,
 	employee: string,
 	skinKey: string?,
+	-- A vacuum (Cosmetic id): shown on the player's own employee (CosmeticOutfitRules.tryOn), from behind.
+	vacuum: string?,
 	alsoGot: { { id: string, name: string, kind: string } },
 	effects: Effects,
 	primary: string,
@@ -66,6 +68,7 @@ local KIND_WORD: { [CosmeticTypes.Kind]: string } = {
 	emote = "Emote",
 	stickerPack = "Sticker pack",
 	sticker = "Sticker",
+	vacuum = "Vacuum",
 }
 
 local VM = { SCENE = "reveal" }
@@ -137,6 +140,7 @@ function VM.view(reveal: Reveal): View
 	local word = string.lower(KIND_WORD[item.kind])
 	local ribbon = if item.kind == "stickerPack"
 		then "New sticker pack"
+		elseif item.kind == "vacuum" then "New vacuum for your crew"
 		elseif item.employee ~= nil then `New {word} for {item.employee}`
 		else `New {word} for everyone`
 	local change: CosmeticTypes.Change? = nil
@@ -145,6 +149,8 @@ function VM.view(reveal: Reveal): View
 		change = { kind = "skin", id = item.id, style = 1 }
 	elseif item.kind == "idle" then
 		change = { kind = "idle", employee = employee, id = item.id }
+	elseif item.kind == "vacuum" then
+		change = { kind = "vacuum", id = item.id }
 	end
 	return {
 		kind = "item",
@@ -154,6 +160,7 @@ function VM.view(reveal: Reveal): View
 		name = item.name,
 		employee = employee,
 		skinKey = if item.kind == "skin" then string.match(item.id, "^[^%.]+%.(.+)$") else nil,
+		vacuum = if item.kind == "vacuum" then item.id else nil,
 		alsoGot = alsoGot,
 		effects = effectsOf(item.rarity),
 		primary = if change ~= nil then "Wear it!" else "Nice!",

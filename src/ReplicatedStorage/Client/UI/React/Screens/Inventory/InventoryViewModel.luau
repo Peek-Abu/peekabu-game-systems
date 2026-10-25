@@ -91,7 +91,10 @@ export type Detail = {
 
 export type StatRow = { stat: EmployeeProfileRegistry.Stat, label: string, icon: UIAssets.ToonIcon, value: number }
 export type Tab = { id: string, text: string, soon: boolean, icon: UIAssets.ToonIcon? }
-export type PageTab = "skins" | "idles" | "about"
+-- "vacuums" is the Inventory's Vacuums tab (the same panel, for the vacuum every employee wears).
+export type PageTab = "skins" | "idles" | "about" | "vacuums"
+-- The kinds a page lists.
+export type ListKind = "skin" | "idle" | "vacuum"
 
 -- Design px against the virtual screen (PaperHudScaleViewModel.virtual).
 export type Layout = {
@@ -252,7 +255,10 @@ function VM.crew(loadout: Loadout, owns: Owns): { CrewCard }
 	return cards
 end
 
-local function wornId(kind: "skin" | "idle", employee: string, loadout: Loadout, owns: Owns): string
+local function wornId(kind: ListKind, employee: string, loadout: Loadout, owns: Owns): string
+	if kind == "vacuum" then
+		return CosmeticRules.vacuumFor(loadout, owns)
+	end
 	local look = CosmeticRules.lookFor(loadout, employee, owns)
 	return if kind == "skin" then look.skin else look.idle
 end
@@ -262,12 +268,12 @@ local function isNew(item: Item, owned: boolean, loadout: Loadout): boolean
 end
 
 -- The employee's skins or idles (idles include the shared ones), the free one first, then by rarity.
-function VM.items(kind: "skin" | "idle", employee: string, loadout: Loadout, owns: Owns): { ItemCard }
+function VM.items(kind: ListKind, employee: string, loadout: Loadout, owns: Owns): { ItemCard }
 	local worn = wornId(kind, employee, loadout, owns)
 	local list = table.clone(CosmeticRegistry.ofKind(kind, employee))
 	table.sort(list, function(a: Item, b: Item): boolean
-		local fa = a.source == "default" and a.employee == employee
-		local fb = b.source == "default" and b.employee == employee
+		local fa = a.source == "default" and (a.employee == employee or a.employee == nil)
+		local fb = b.source == "default" and (b.employee == employee or b.employee == nil)
 		if fa ~= fb then
 			return fa
 		end
@@ -300,6 +306,8 @@ function VM.detail(item: Item, loadout: Loadout, owns: Owns): Detail
 	local worn = false
 	if employee ~= nil and (item.kind == "skin" or item.kind == "idle") then
 		worn = wornId(item.kind, employee, loadout, owns) == item.id
+	elseif item.kind == "vacuum" then
+		worn = CosmeticRules.vacuumFor(loadout, owns) == item.id
 	end
 	local comesWith: { Bundled } = {}
 	local bundle = item.bundle
@@ -314,7 +322,11 @@ function VM.detail(item: Item, loadout: Loadout, owns: Owns): Detail
 			end
 		end
 	end
-	local kindWord = if item.kind == "idle" then "idle" elseif item.kind == "emote" then "emote" else "skin"
+	local kindWord = if item.kind == "idle"
+		then "idle"
+		elseif item.kind == "emote" then "emote"
+		elseif item.kind == "vacuum" then "vacuum"
+		else "skin"
 	local styles = item.styles or 1
 	return {
 		id = item.id,
@@ -322,7 +334,10 @@ function VM.detail(item: Item, loadout: Loadout, owns: Owns): Detail
 		rarity = item.rarity,
 		rarityText = if item.rarity == "default" then "CLASSIC" else string.upper(item.rarity),
 		new = isNew(item, owned, loadout),
-		line = if employee ~= nil then `{employee} {kindWord}` else `{kindWord} for everyone`,
+		line = if employee ~= nil
+			then `{employee} {kindWord}`
+			elseif item.kind == "vacuum" then "Vacuum for every employee"
+			else `{kindWord} for everyone`,
 		lore = item.lore,
 		quote = item.quote == true,
 		styles = { visible = styles > 1, count = styles, enabled = false, note = "Coming soon" },
@@ -335,7 +350,9 @@ end
 	The change Wear sends for `item` on `employee`'s page (a skin in its first style; an idle for that employee).
 ]=]
 function VM.change(item: Item, employee: string): CosmeticTypes.Change
-	if item.kind == "idle" then
+	if item.kind == "vacuum" then
+		return { kind = "vacuum", id = item.id }
+	elseif item.kind == "idle" then
 		return { kind = "idle", employee = employee, id = item.id }
 	end
 	return { kind = "skin", id = item.id, style = 1 }
@@ -362,6 +379,8 @@ function VM.pageTab(value: string): PageTab
 		return "idles"
 	elseif value == "about" then
 		return "about"
+	elseif value == "vacuums" then
+		return "vacuums"
 	end
 	return "skins"
 end

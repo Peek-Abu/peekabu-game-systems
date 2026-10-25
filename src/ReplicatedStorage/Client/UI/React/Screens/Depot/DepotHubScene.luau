@@ -24,6 +24,5 @@ local function register(page: VM.Page)
 	end
 end
 register("guide")
-register("gear")
 register("settings")
 return {}

@@ -27,6 +27,8 @@ local StarterPlayer = game:GetService("StarterPlayer")
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local DeathConstants = require(ReplicatedStorage.Shared.Features.Death.Data.DeathConstants)
+local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
+local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
 local EmployeeRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeRegistry)
 local EmployeeFaceRules = require(ReplicatedStorage.Shared.Features.Employee.Rules.EmployeeFaceRules)
@@ -141,6 +143,18 @@ local function skinKeyOf(userId: number, employee: string): string?
 	return string.match(look.skin, "^[^%.]+%.(.+)$")
 end
 
+-- Names the vacuum the player's outfit wants on their character (VacuumServiceServer wears it, and swaps the pack
+-- when it changes); nothing before the loadout loads (Standard Issue).
+local function markVacuum(userId: number, character: Model)
+	local outfit = CosmeticServiceServer:outfitOf(userId)
+	if outfit ~= nil then
+		local key = CosmeticRegistry.keyOf(outfit.vacuum)
+		if character:GetAttribute(VacuumConstants.SKIN_ATTRIBUTE) ~= key then
+			character:SetAttribute(VacuumConstants.SKIN_ATTRIBUTE, key)
+		end
+	end
+end
+
 -- Dresses a spawned employee character in its player's skin, then the uniform over it (server-side, so it
 -- replicates). The skin goes first: its palette is for the body's MeshParts, never the uniform's.
 local function dress(player: Player, character: Model)
@@ -156,6 +170,8 @@ local function dress(player: Player, character: Model)
 	end
 	skinOf[player.UserId] = skin.name
 	worn[player.UserId] = { employee = def.name, skin = skin.name }
+	-- The skin the outfit asks for (its art may still be the Default's): a preview of the outfit matches on it.
+	character:SetAttribute(EmployeeConstants.SKIN_ATTRIBUTE, skinKeyOf(player.UserId, def.name) or skin.name)
 	local result = EmployeeSkinSystem.apply(character, skin, accessorySource())
 	if result.textured > 0 or result.facesSwapped or result.accessories > 0 then
 		skinned += 1
@@ -204,6 +220,7 @@ local function spawnFor(player: Player)
 		player:LoadCharacterAsync()
 		return
 	end
+	markVacuum(player.UserId, model)
 	EmployeeCharacterSystem.assign(player, model, nil, false)
 end
 
@@ -218,6 +235,8 @@ local function swapIfChanged(userId: number)
 	if humanoid == nil or humanoid.Health <= 0 or character:GetAttribute(DeathConstants.KNOCKDOWN_ATTRIBUTE) ~= nil then
 		return
 	end
+	-- A new vacuum needs no rebuild: the pack is swapped on the character as it stands.
+	markVacuum(userId, character)
 	local employee = CosmeticServiceServer:currentEmployee(userId)
 	local def = EmployeeRegistry.get(employee)
 	local current = worn[userId]
@@ -233,6 +252,7 @@ local function swapIfChanged(userId: number)
 		return
 	end
 	model:SetAttribute(EmployeeConstants.SWAP_ATTRIBUTE, true)
+	markVacuum(userId, model)
 	swapped += 1
 	EmployeeCharacterSystem.assign(player, model, character:GetPivot(), true)
 end

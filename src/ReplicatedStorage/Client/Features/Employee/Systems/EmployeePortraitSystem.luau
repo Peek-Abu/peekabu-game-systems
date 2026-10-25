@@ -7,7 +7,8 @@
 	- Copy: the character is cloned (a player's character is not Archivable: the flag is lifted for the clone and
 	  put back), so the live character is never touched otherwise.
 	- Strip: scripts, sounds, Tools, effects (particles, beams, trails, lights, fire, highlights), GUIs, IK, the
-	  Animator and the equipment EmployeePoseRegistry.STRIP names leave the copy.
+	  Animator and the equipment EmployeePoseRegistry.STRIP names leave the copy (the equipment stays when
+	  `keepEquipment`: an outfit preview shows the vacuum on its back).
 	- Pose: every Motor6D's offset is rebuilt from its C0/C1 under the pose's turn (rest for joints the pose does
 	  not name, so the live animation frame never leaks in); welds keep their offsets. The parts are placed by
 	  forward kinematics from the root (EmployeePoseFormulas.solve), standing at the origin facing -Z. A part no
@@ -66,11 +67,13 @@ local function copyOf(character: Model): Model?
 	return nil
 end
 
-local function strip(copy: Model)
-	for _, name in EmployeePoseRegistry.STRIP do
-		local equipment = copy:FindFirstChild(name)
-		if equipment ~= nil then
-			equipment:Destroy()
+local function strip(copy: Model, keepEquipment: boolean)
+	if not keepEquipment then
+		for _, name in EmployeePoseRegistry.STRIP do
+			local equipment = copy:FindFirstChild(name)
+			if equipment ~= nil then
+				equipment:Destroy()
+			end
 		end
 	end
 	for _, descendant in copy:GetDescendants() do
@@ -144,8 +147,13 @@ end
 	A posed, static portrait copy of `character`, or nil when it has no root part yet (not streamed in). The caller
 	owns the copy (parents it into a ViewportFrame and destroys it).
 	@param pose nil = the rig's rest pose with its current face.
+	@param keepEquipment true keeps the worn equipment (the vacuum backpack).
 ]=]
-function EmployeePortraitSystem.build(character: Model, pose: EmployeePoseRegistry.PoseDef?): Model?
+function EmployeePortraitSystem.build(
+	character: Model,
+	pose: EmployeePoseRegistry.PoseDef?,
+	keepEquipment: boolean?
+): Model?
 	if character:FindFirstChild(ROOT) == nil then
 		return nil
 	end
@@ -158,7 +166,7 @@ function EmployeePortraitSystem.build(character: Model, pose: EmployeePoseRegist
 		copy:Destroy()
 		return nil
 	end
-	strip(copy)
+	strip(copy, keepEquipment == true)
 	local graph = linksOf(copy, pose)
 	local rootIndex = table.find(graph.parts, root)
 	local placed: { [number]: CFrame } = if rootIndex ~= nil

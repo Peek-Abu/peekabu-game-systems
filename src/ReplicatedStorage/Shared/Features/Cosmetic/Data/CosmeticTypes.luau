@@ -12,7 +12,7 @@ local PlayerDataTypes = require(ReplicatedStorage.Shared.Data.PlayerDataTypes)
 
 -- What the item is. Every kind but `sticker` is owned through the entitlements slice under its kind as the
 -- category; a sticker is owned through its pack.
-export type Kind = "employee" | "skin" | "idle" | "emote" | "stickerPack" | "sticker"
+export type Kind = "employee" | "skin" | "idle" | "emote" | "stickerPack" | "sticker" | "vacuum"
 
 export type Rarity = "default" | "uncommon" | "rare" | "epic" | "legendary" | "odd"
 
@@ -34,7 +34,7 @@ export type Item = {
 	name: string,
 	rarity: Rarity,
 	source: Source,
-	-- The employee it belongs to; nil = works on every employee (shared idles, sticker packs, stickers).
+	-- The employee it belongs to; nil = works on every employee (shared idles, sticker packs, stickers, vacuums).
 	employee: string?,
 	-- In the source's currency (Credits for `credits`, Gleam for `gleam`); nil when it can't be bought.
 	price: number?,
@@ -67,5 +67,17 @@ export type Change =
 	| { kind: "idle", employee: string, id: string }
 	| { kind: "emote", employee: string, slot: number, id: string }
 	| { kind: "sticker", slot: number, id: string }
+	| { kind: "vacuum", id: string }
+
+--[=[
+	Everything one player wears, resolved (CosmeticOutfitRules.current): what to build to show or spawn them.
+	`vacuum` is account-wide (one vacuum for the whole crew), the look is the employee's own.
+]=]
+export type Outfit = {
+	employee: string,
+	look: Look,
+	vacuum: string,
+	stickers: { string },
+}
 
 return {}

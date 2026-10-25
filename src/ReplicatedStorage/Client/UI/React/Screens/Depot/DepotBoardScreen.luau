@@ -23,6 +23,7 @@ local usePaperViewport = require(ReplicatedStorage.Client.UI.React.Screens.Paper
 local DepotBoardPanel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotBoardPanel)
 local DepotBoardViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotBoardViewModel)
 local DepotHubViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotHubViewModel)
+local InventoryViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Inventory.InventoryViewModel)
 
 local e = React.createElement
 local useAtom = ReactCharm.useAtom
@@ -34,7 +35,8 @@ end
 -- The Jobs menu's other tabs (and READ THE BRIEF): leave the board for that hub page.
 local function openTab(tab: DepotBoardPanel.Tab)
 	SceneStack.remove(DepotConstants.BOARD_SCENE)
-	SceneStack.push(DepotHubViewModel.scene(if tab == "locker" then "gear" else "guide"))
+	-- The Locker tab is the Inventory now (the vacuum and the crew live there).
+	SceneStack.push(if tab == "locker" then InventoryViewModel.SCENE else DepotHubViewModel.scene("guide"))
 end
 
 local function DepotBoardScreen(): React.ReactNode

@@ -35,17 +35,17 @@ return function()
 			expect(waiting.text).to.equal("23:00:00")
 		end)
 
-		it("gives each guide and locker section its render, one per section", function()
-			for _, page in { "guide", "gear" } do
-				expect(#VM.sectionIcons(page)).to.equal(#VM.copy(page).sections)
-			end
+		it("gives each guide section its render, one per section", function()
+			expect(#VM.sectionIcons("guide")).to.equal(#VM.copy("guide").sections)
 			expect(VM.sectionIcons("guide")[1]).to.equal("truck")
-			expect(VM.sectionIcons("gear")[1]).to.equal("vacuum")
+		end)
+
+		it("has no Company Equipment page any more (the Inventory's Vacuums tab replaced it)", function()
+			expect(table.find(VM.PAGES, "gear")).never.to.be.ok()
 		end)
 
 		it("titles the hub pages for the V1 menus", function()
 			expect(VM.pageTitle("guide")).to.equal("GUIDE")
-			expect(VM.pageTitle("gear")).to.equal("VACUUMS")
 			expect(VM.pageTitle("settings")).to.equal("SETTINGS")
 		end)
 
@@ -73,7 +73,7 @@ return function()
 			expect(VM.panelLayout(Vector2.new(844, 390), true).compact).to.equal(false)
 		end)
 		it("teaches that Gloom counts on the spot, with no dust bag to carry and no empty action", function()
-			for _, page in { "guide", "gear" } do
+			for _, page in { "guide" } do
 				local copy = VM.copy(page)
 				local text = ""
 				for _, section in copy.sections do
@@ -91,7 +91,6 @@ return function()
 			expect(
 				string.find(VM.copy("guide", "Hold R2 to clean.").sections[2].body, "Hold R2 to clean.", 1, true) ~= nil
 			).to.equal(true)
-			expect(string.find(VM.copy("gear").sections[1].body, "press 1", 1, true)).to.equal(nil)
 		end)
 		it("does not put shortcuts over running or results crew", function()
 			expect(VM.visible({ phase = "running", crew = { 1 } }, 1)).to.equal(false)

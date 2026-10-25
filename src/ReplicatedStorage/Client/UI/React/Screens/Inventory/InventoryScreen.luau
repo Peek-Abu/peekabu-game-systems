@@ -3,7 +3,9 @@
 	InventoryScreen: the hub's Inventory (the INVENTORY tile). Full screen on a ToonBackdrop (night over the blurred
 	depot on the Crew tab; the employee's colour with rays behind the hero on their page) under a ToonMenuBar:
 	- Crew tab: the locker render on the title plate, tabs Crew / Vacuums / Chat wheel ("Soon"), then
-	  InventoryCrewPanel. Vacuums opens the equipment page over it.
+	  InventoryCrewPanel.
+	- Vacuums tab: the same bar, then InventoryCharacterPanel on its "vacuums" tab: every vacuum, your employee
+	  wearing the selected one (seen from behind), its lore and Wear. One vacuum for the whole crew.
 	- An employee's page: a back button, the employee's head breaking their name plate, tabs Skins / Idles / About,
 	  then InventoryCharacterPanel.
 	Both wallets (Credits and Gleam) and the close sit on the right.
@@ -36,7 +38,6 @@ local PaperHudFrame = require(script.Parent.Parent.Paper.PaperHudFrame)
 local PaperHudScaleViewModel = require(script.Parent.Parent.Paper.PaperHudScaleViewModel)
 local usePaperLayout = require(script.Parent.Parent.Paper.usePaperLayout)
 local usePaperViewport = require(script.Parent.Parent.Paper.usePaperViewport)
-local DepotHubViewModel = require(script.Parent.Parent.Depot.DepotHubViewModel)
 local InventoryCharacterPanel = require(script.Parent.InventoryCharacterPanel)
 local InventoryCrewPanel = require(script.Parent.InventoryCrewPanel)
 local VM = require(script.Parent.InventoryViewModel)
@@ -77,6 +78,8 @@ local function InventoryScreen(props: InventoryScreenProps): React.ReactNode
 		return props.employee
 	end)
 	local tab, setTab = React.useState(props.tab or "skins")
+	-- The top-level tab while no employee's page is open: "crew" or "vacuums".
+	local area, setArea = React.useState(if props.tab == "vacuums" and props.employee == nil then "vacuums" else "crew")
 	local selected, setSelected = React.useState(function(): string?
 		return props.item
 	end)
@@ -110,6 +113,11 @@ local function InventoryScreen(props: InventoryScreenProps): React.ReactNode
 	local bar: React.ReactNode
 	local body: React.ReactNode
 	local backdrop: ToonBackdrop.ToonBackdropProps
+	local function seen(ids: { string })
+		if preview == nil then
+			CosmeticServiceClient:markSeen(ids)
+		end
+	end
 	if page == nil then
 		local tabs: { ToonMenuBar.Tab } = {}
 		for _, entry in VM.tabs() do
@@ -119,10 +127,11 @@ local function InventoryScreen(props: InventoryScreenProps): React.ReactNode
 			title = "INVENTORY",
 			icon = "locker",
 			tabs = tabs,
-			current = "crew",
+			current = area,
 			onTab = function(id: string)
-				if id == "vacuums" and preview == nil then
-					SceneStack.push(DepotHubViewModel.scene("gear"))
+				if id == "crew" or id == "vacuums" then
+					setArea(id)
+					setSelected(nil)
 				end
 			end,
 			credits = credits,
@@ -132,20 +141,51 @@ local function InventoryScreen(props: InventoryScreenProps): React.ReactNode
 			height = layout.barHeight,
 			phone = phone,
 		})
-		body = e(InventoryCrewPanel, {
-			cards = VM.crew(loadout, owns),
-			layout = layout,
-			onEquip = function(employee: string)
-				equip({ kind = "employee", id = employee })
-			end,
-			onOpen = function(employee: string)
-				setPage(employee)
-				setTab("skins")
-				setSelected(nil)
-			end,
-		})
-		local night = UIToonConstants.shade("night")
-		backdrop = { top = night.hi, bottom = UIToonConstants.COLOR.ink, see = 0.45, blur = preview == nil }
+		if area == "vacuums" then
+			body = e(InventoryCharacterPanel, {
+				employee = CosmeticRules.currentEmployee(loadout, owns),
+				tab = "vacuums",
+				layout = layout,
+				loadout = loadout,
+				owns = owns,
+				selected = selected,
+				onSelect = function(id: string)
+					setSelected(id)
+				end,
+				onWear = equip,
+				onShop = function(id: string)
+					local onShop = props.onShop
+					if onShop ~= nil then
+						onShop(id)
+					end
+				end,
+				onSeen = seen,
+			})
+			local mint = UIToonConstants.shade("mint")
+			local heroX = (layout.content.x + layout.gridWidth + layout.gap + layout.heroWidth / 2)
+				/ math.max(1, virtual.X)
+			backdrop = {
+				top = mint.base,
+				bottom = mint.lo,
+				rays = { position = UDim2.fromScale(heroX, 0.5), size = 0.7, color = mint.hi, transparency = 0.4 },
+				blur = preview == nil,
+			}
+		else
+			body = e(InventoryCrewPanel, {
+				cards = VM.crew(loadout, owns),
+				layout = layout,
+				onEquip = function(employee: string)
+					equip({ kind = "employee", id = employee })
+				end,
+				onOpen = function(employee: string)
+					setPage(employee)
+					setTab("skins")
+					setSelected(nil)
+				end,
+			})
+			local night = UIToonConstants.shade("night")
+			backdrop = { top = night.hi, bottom = UIToonConstants.COLOR.ink, see = 0.45, blur = preview == nil }
+		end
 	else
 		local employee = page
 		local tabs: { ToonMenuBar.Tab } = {}
@@ -202,11 +242,7 @@ local function InventoryScreen(props: InventoryScreenProps): React.ReactNode
 					onShop(id)
 				end
 			end,
-			onSeen = function(ids: { string })
-				if preview == nil then
-					CosmeticServiceClient:markSeen(ids)
-				end
-			end,
+			onSeen = seen,
 		})
 		local tint = VM.color(employee)
 		-- The rays sit behind the hero (the middle column), in screen terms.

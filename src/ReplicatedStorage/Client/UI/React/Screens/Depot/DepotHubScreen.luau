@@ -222,180 +222,109 @@ local function DepotHubScreen(
 		body.settings = e(SettingsRows, { width = layout.bodyWidth - 2 * EDGE, phone = phone, preview = props.preview })
 	else
 		local icons = VM.sectionIcons(props.page)
-		if props.page == "gear" then
-			-- The Locker: a card per piece of issued equipment, its render on a gold stage (the V1 locker cards).
-			body.grid = e("UIGridLayout", {
-				-- Each cell holds its card AND the card's hard drop (the card is drawn DEPTH.drop short of it).
-				CellSize = UDim2.new(if phone then 1 else 0.5, -10, 0, if phone then 262 else 312),
-				CellPadding = UDim2.fromOffset(16, 16),
-				SortOrder = Enum.SortOrder.LayoutOrder,
-			})
-			-- Room on every side for the cards' ink outline and their drop, so the scroll frame never cuts them.
-			body.pad = e("UIPadding", {
-				PaddingLeft = UDim.new(0, EDGE),
-				PaddingRight = UDim.new(0, EDGE),
-				PaddingTop = UDim.new(0, 12),
-				PaddingBottom = UDim.new(0, 20),
-			})
-			for index, section in copy.sections do
-				local stage: { [string]: React.ReactNode } = {
-					art = e(ToonIcon, {
-						icon = icons[index],
-						anchor = Vector2.new(0.5, 0.5),
-						position = UDim2.fromScale(0.5, 0.5),
-						size = UDim2.fromOffset(if phone then 88 else 124, if phone then 88 else 124),
-						drop = 5,
-					}),
-				}
-				local face: { [string]: React.ReactNode } = {
-					stage = e(ToonSurface, {
-						hue = "gold",
-						small = true,
-						radius = 14,
-						position = UDim2.fromOffset(10, 10),
-						size = UDim2.new(1, -20, 0, if phone then 96 else 130),
-						children = stage,
-					}),
-					title = e(ToonText, {
-						text = section.title,
-						textSize = if phone then 20 else 24,
-						position = UDim2.fromOffset(16, if phone then 114 else 150),
-						size = UDim2.new(1, -32, 0, 30),
-						fit = true,
-					}),
-					text = e(ToonText, {
-						text = section.body,
-						font = "body",
-						textSize = if phone then 15 else 18,
-						position = UDim2.fromOffset(16, if phone then 146 else 184),
-						size = UDim2.new(1, -32, 0, if phone then 92 else 104),
-						wrapped = true,
-						fit = true,
-						alignY = "top",
-					}),
-				}
-				body[`section{index}`] = e("Frame", {
-					LayoutOrder = index,
+		body.list = e("UIListLayout", {
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			Padding = UDim.new(0, 16),
+		})
+		body.pad = e("UIPadding", {
+			PaddingLeft = UDim.new(0, if phone then 34 else 52),
+			PaddingRight = UDim.new(0, EDGE),
+			PaddingTop = UDim.new(0, 14),
+			PaddingBottom = UDim.new(0, 20),
+		})
+		local iconSize = if phone then 64 else 92
+		for index, section in copy.sections do
+			-- A card per section on the depth stack, its render breaking the card's left edge. The card is as tall as
+			-- its measured copy (TextService) plus the surface's lip and drop: an automatic size would also count the
+			-- surface's selected glow and ring, which reach past the card, and leave every card padded to the tallest.
+			-- The scroll content is the body width plus the panel padding (see DepotHubViewModel.panelLayout).
+			local textWidth = layout.bodyWidth
+				+ layout.padding
+				- (if phone then 34 else 52)
+				- 2 * EDGE
+				- iconSize * 0.66
+				- 14
+			local titleHeight = TextService:GetTextSize(
+				section.title,
+				if phone then 18 else 24,
+				Enum.Font.LuckiestGuy,
+				Vector2.new(textWidth, math.huge)
+			).Y
+			local bodyHeight = TextService:GetTextSize(
+				section.body,
+				if phone then 15 else 20,
+				Enum.Font.FredokaOne,
+				Vector2.new(textWidth, math.huge)
+			).Y
+			local cardHeight = math.max(iconSize * 0.8, 12 + titleHeight + 4 + bodyHeight + 14 + DEPTH.lip + DEPTH.drop)
+			body[`section{index}`] = e("Frame", {
+				LayoutOrder = index,
+				Size = UDim2.new(1, -EDGE, 0, math.ceil(cardHeight)),
+				BackgroundTransparency = 1,
+			}, {
+				surface = e(ToonSurface, {
+					hue = "cream",
+					radius = 18,
+					pattern = "sparkle",
+					size = UDim2.new(1, 0, 1, -DEPTH.drop),
+					zIndex = 1,
+				}),
+				icon = e(ToonIcon, {
+					icon = icons[index],
+					position = UDim2.fromOffset(-iconSize * 0.42, -8),
+					size = UDim2.fromOffset(iconSize, iconSize),
+					drop = 4,
+					zIndex = 3,
+				}),
+				text = e("Frame", {
+					Size = UDim2.fromScale(1, 0),
+					AutomaticSize = Enum.AutomaticSize.Y,
 					BackgroundTransparency = 1,
+					ZIndex = 2,
 				}, {
-					card = e(ToonSurface, {
-						hue = "cream",
-						radius = 20,
-						pattern = "sparkle",
-						size = UDim2.new(1, 0, 1, -DEPTH.drop),
-						children = face,
+					pad = e("UIPadding", {
+						PaddingLeft = UDim.new(0, iconSize * 0.66),
+						PaddingRight = UDim.new(0, 14),
+						PaddingTop = UDim.new(0, 12),
+						-- The surface's lip and the card's drop sit under the copy.
+						PaddingBottom = UDim.new(0, 14 + DEPTH.lip + DEPTH.drop),
 					}),
-				})
-			end
-		else
-			body.list = e("UIListLayout", {
-				SortOrder = Enum.SortOrder.LayoutOrder,
-				Padding = UDim.new(0, 16),
-			})
-			body.pad = e("UIPadding", {
-				PaddingLeft = UDim.new(0, if phone then 34 else 52),
-				PaddingRight = UDim.new(0, EDGE),
-				PaddingTop = UDim.new(0, 14),
-				PaddingBottom = UDim.new(0, 20),
-			})
-			local iconSize = if phone then 64 else 92
-			for index, section in copy.sections do
-				-- A card per section on the depth stack, its render breaking the card's left edge. The card is as tall as
-				-- its measured copy (TextService) plus the surface's lip and drop: an automatic size would also count the
-				-- surface's selected glow and ring, which reach past the card, and leave every card padded to the tallest.
-				-- The scroll content is the body width plus the panel padding (see DepotHubViewModel.panelLayout).
-				local textWidth = layout.bodyWidth
-					+ layout.padding
-					- (if phone then 34 else 52)
-					- 2 * EDGE
-					- iconSize * 0.66
-					- 14
-				local titleHeight = TextService:GetTextSize(
-					section.title,
-					if phone then 18 else 24,
-					Enum.Font.LuckiestGuy,
-					Vector2.new(textWidth, math.huge)
-				).Y
-				local bodyHeight = TextService:GetTextSize(
-					section.body,
-					if phone then 15 else 20,
-					Enum.Font.FredokaOne,
-					Vector2.new(textWidth, math.huge)
-				).Y
-				local cardHeight =
-					math.max(iconSize * 0.8, 12 + titleHeight + 4 + bodyHeight + 14 + DEPTH.lip + DEPTH.drop)
-				body[`section{index}`] = e("Frame", {
-					LayoutOrder = index,
-					Size = UDim2.new(1, -EDGE, 0, math.ceil(cardHeight)),
-					BackgroundTransparency = 1,
-				}, {
-					surface = e(ToonSurface, {
-						hue = "cream",
-						radius = 18,
-						pattern = "sparkle",
-						size = UDim2.new(1, 0, 1, -DEPTH.drop),
-						zIndex = 1,
-					}),
-					icon = e(ToonIcon, {
-						icon = icons[index],
-						position = UDim2.fromOffset(-iconSize * 0.42, -8),
-						size = UDim2.fromOffset(iconSize, iconSize),
-						drop = 4,
-						zIndex = 3,
-					}),
-					text = e("Frame", {
+					list = e("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4) }),
+					title = e("TextLabel", {
+						LayoutOrder = 1,
 						Size = UDim2.fromScale(1, 0),
 						AutomaticSize = Enum.AutomaticSize.Y,
 						BackgroundTransparency = 1,
+						Text = section.title,
+						TextWrapped = true,
+						FontFace = UIToonConstants.FONT.display,
+						TextSize = if phone then 18 else 24,
+						TextColor3 = UIToonConstants.shade("grape").lo,
+						TextXAlignment = Enum.TextXAlignment.Left,
 						ZIndex = 2,
-					}, {
-						pad = e("UIPadding", {
-							PaddingLeft = UDim.new(0, iconSize * 0.66),
-							PaddingRight = UDim.new(0, 14),
-							PaddingTop = UDim.new(0, 12),
-							-- The surface's lip and the card's drop sit under the copy.
-							PaddingBottom = UDim.new(0, 14 + DEPTH.lip + DEPTH.drop),
-						}),
-						list = e("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4) }),
-						title = e("TextLabel", {
-							LayoutOrder = 1,
-							Size = UDim2.fromScale(1, 0),
-							AutomaticSize = Enum.AutomaticSize.Y,
-							BackgroundTransparency = 1,
-							Text = section.title,
-							TextWrapped = true,
-							FontFace = UIToonConstants.FONT.display,
-							TextSize = if phone then 18 else 24,
-							TextColor3 = UIToonConstants.shade("grape").lo,
-							TextXAlignment = Enum.TextXAlignment.Left,
-							ZIndex = 2,
-						}),
-						body = e("TextLabel", {
-							LayoutOrder = 2,
-							Size = UDim2.fromScale(1, 0),
-							AutomaticSize = Enum.AutomaticSize.Y,
-							BackgroundTransparency = 1,
-							Text = section.body,
-							TextWrapped = true,
-							FontFace = UIToonConstants.FONT.body,
-							TextSize = if phone then 15 else 20,
-							TextColor3 = COLOR.ink,
-							TextXAlignment = Enum.TextXAlignment.Left,
-							ZIndex = 2,
-						}),
 					}),
-				})
-			end
+					body = e("TextLabel", {
+						LayoutOrder = 2,
+						Size = UDim2.fromScale(1, 0),
+						AutomaticSize = Enum.AutomaticSize.Y,
+						BackgroundTransparency = 1,
+						Text = section.body,
+						TextWrapped = true,
+						FontFace = UIToonConstants.FONT.body,
+						TextSize = if phone then 15 else 20,
+						TextColor3 = COLOR.ink,
+						TextXAlignment = Enum.TextXAlignment.Left,
+						ZIndex = 2,
+					}),
+				}),
+			})
 		end
 	end
 	local headerHeight = if layout.compact then 84 else 104
 	local subtitle = if props.page == "settings"
 		then (if props.preview then "Local preview · does not save" else "Saved to your account")
 		else copy.subtitle
-	local icon: "guide" | "locker" | "settings" = if props.page == "guide"
-		then "guide"
-		elseif props.page == "gear" then "locker"
-		else "settings"
+	local icon: "guide" | "settings" = if props.page == "guide" then "guide" else "settings"
 	local children: { [string]: React.ReactNode } = {
 		scroll = e("ScrollingFrame", {
 			Position = UDim2.fromOffset(layout.padding * 0.5, headerHeight + 44),

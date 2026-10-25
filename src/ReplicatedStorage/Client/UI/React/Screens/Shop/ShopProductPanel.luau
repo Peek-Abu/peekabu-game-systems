@@ -13,6 +13,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
+local CosmeticOutfitRules = require(ReplicatedStorage.Shared.Features.Cosmetic.Rules.CosmeticOutfitRules)
+local CosmeticTypes = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticTypes)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonButton = require(Toon.ToonButton)
 local ToonFlag = require(Toon.ToonFlag)
@@ -34,6 +36,8 @@ type Nodes = { [string]: React.ReactNode }
 
 export type ShopProductPanelProps = {
 	product: VM.Product,
+	-- What the player wears now (a vacuum is shown on them, from behind).
+	outfit: CosmeticTypes.Outfit?,
 	layout: InventoryViewModel.Layout,
 	-- A refused buy's words (nil when there is nothing to say).
 	note: string?,
@@ -67,6 +71,11 @@ local function insideRow(
 			ToonIcon,
 			{ icon = "shopGift", position = UDim2.fromScale(0.08, 0.08), size = UDim2.fromScale(0.84, 0.84) }
 		)
+		elseif entry.kind == "Vacuum" then e(ToonViewport, {
+			vacuum = string.match(entry.id, "^[^%.]+%.(.+)$"),
+			framing = "full",
+			size = UDim2.fromScale(1, 1),
+		})
 		else e(ToonViewport, {
 			employee = card.employee,
 			skin = if entry.kind == "Skin" then card.skinKey else nil,
@@ -269,6 +278,9 @@ local function ShopProductPanel(props: ShopProductPanelProps): React.ReactNode
 	end
 
 	local shade = UIToonConstants.rarity(card.rarity)
+	local outfit = props.outfit
+	local vacuum = card.vacuum
+	local tryOn = if outfit ~= nil and vacuum ~= nil then CosmeticOutfitRules.tryOn(outfit, vacuum) else nil
 	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, {
 		panel = e(ToonSurface, {
 			hue = "cream",
@@ -283,7 +295,9 @@ local function ShopProductPanel(props: ShopProductPanelProps): React.ReactNode
 			BackgroundTransparency = 1,
 		}, {
 			model = e(ToonViewport, {
-				employee = card.employee,
+				employee = if tryOn == nil then card.employee else nil,
+				outfit = tryOn,
+				turn = if tryOn ~= nil then 150 else nil,
 				skin = card.skinKey,
 				live = true,
 				framing = "full",

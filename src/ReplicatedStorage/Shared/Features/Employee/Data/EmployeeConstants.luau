@@ -25,6 +25,9 @@ local EmployeeConstants = {
 	-- On the character model, written by the server: the expression to show (an EmployeeRegistry.Face).
 	-- Also stamped on the FacePlate's SurfaceAppearance by the client, to know what is showing.
 	FACE_ATTRIBUTE = "EmployeeFace",
+	-- On a player's character, written by the server as it dresses it: the EmployeeRegistry skin key it wears (a
+	-- preview of the player's own outfit clones the character only when it matches).
+	SKIN_ATTRIBUTE = "EmployeeSkin",
 	STARTER_CHARACTER_NAME = "StarterCharacter",
 	-- On a character the server built: which FootstepAssets set its steps play (the Footstep client reads it; must
 	-- equal FootstepConstants.SET_ATTRIBUTE).

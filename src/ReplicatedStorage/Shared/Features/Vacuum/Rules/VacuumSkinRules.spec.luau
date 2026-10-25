@@ -14,11 +14,4 @@ return function()
 			expect(VacuumSkinRules.select("Nope").name).to.equal(VacuumSkinRegistry.DEFAULT)
 		end)
 	end)
-
-	describe("forPlayer", function()
-		it("puts the owner in Brass Bellows and everyone else in Standard Issue", function()
-			expect(VacuumSkinRules.forPlayer(20661908).name).to.equal("BrassBellows")
-			expect(VacuumSkinRules.forPlayer(1).name).to.equal("StandardIssue")
-		end)
-	end)
 end

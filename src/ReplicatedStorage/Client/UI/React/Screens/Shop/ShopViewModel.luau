@@ -40,6 +40,8 @@ export type OfferCard = {
 	employee: string,
 	-- The EmployeeRegistry skin key for a skin.
 	skinKey: string?,
+	-- A vacuum (Cosmetic id): its card shows the vacuum alone, its page shows it on your employee.
+	vacuum: string?,
 }
 
 export type Button = {
@@ -81,6 +83,7 @@ local KIND_WORD: { [CosmeticTypes.Kind]: string } = {
 	emote = "Emote",
 	stickerPack = "Sticker pack",
 	sticker = "Sticker",
+	vacuum = "Vacuum",
 }
 
 local RARITY_RANK: { [CosmeticTypes.Rarity]: number } = {
@@ -119,6 +122,8 @@ local function lineOf(item: CosmeticTypes.Item): string
 	local word = KIND_WORD[item.kind]
 	if item.kind == "employee" or item.kind == "stickerPack" then
 		return word
+	elseif item.kind == "vacuum" then
+		return `{word} · every employee`
 	end
 	return `{word} · {item.employee or "any employee"}`
 end
@@ -144,6 +149,7 @@ function VM.card(offer: Offer, owns: Owns, balances: Balances): OfferCard
 		state = state,
 		employee = employee,
 		skinKey = if item ~= nil and item.kind == "skin" then string.match(item.id, "^[^%.]+%.(.+)$") else nil,
+		vacuum = if item ~= nil and item.kind == "vacuum" then item.id else nil,
 	}
 end
 
@@ -195,7 +201,10 @@ function VM.product(offer: Offer, owns: Owns, balances: Balances): Product
 			end
 		end
 	end
-	local who = if item ~= nil and item.employee ~= nil then ` for {item.employee}` else ""
+	local who = if item ~= nil and item.employee ~= nil
+		then ` for {item.employee}`
+		elseif item ~= nil and item.kind == "vacuum" then " for every employee"
+		else ""
 	local what = if bundle ~= nil and #bundle > 0
 		then `Bundle{who}`
 		elseif item ~= nil and item.kind == "employee" then "A new employee"

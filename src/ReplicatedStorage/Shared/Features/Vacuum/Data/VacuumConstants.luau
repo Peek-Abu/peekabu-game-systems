@@ -98,6 +98,9 @@ return table.freeze({
 	-- by each client to the crew's contract progress, Gloom removed of the contract, its Weld moved so its bottom
 	-- stays put), the lamp that lights once the contract is met, and the wand's floor head (where suction streams to).
 	BACKPACK_NAME = "VacuumBackpack",
+	-- On a player's character: the VacuumSkinRegistry skin their outfit wants (Employee writes it from the Cosmetic
+	-- loadout, Vacuum wears it and swaps the pack when it changes; nil = Standard Issue).
+	SKIN_ATTRIBUTE = "VacuumSkinWanted",
 	GAUGE_FILL_NAME = "GaugeFill",
 	GAUGE_WELD_NAME = "GaugeWeld",
 	LAMP_NAME = "FullLamp",

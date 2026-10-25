@@ -10,6 +10,10 @@
 	The model is rebuilt only when the employee, skin, framing or live flag changes, and destroyed with the component.
 	`platform` stands the model on a round 3D platform in the given colours (built in the viewport, so it is lit and
 	turns with the model's world, never a flat shape behind it); the camera frames the two together.
+	`outfit` shows a whole player's look instead (EmployeePreviewSystem.outfit: your own character cloned, with the
+	rank lanyard and the outfit's vacuum on its pack); `vacuum` with no employee or outfit shows that vacuum skin's
+	canister on its own (VacuumPreviewSystem.alone); `turn` swings the camera round (180 = from behind, to see a
+	vacuum on the back).
 	`dim` darkens it (a locked item). With no art for the employee in the place it shows their ID-card photo
 	(PortraitViewModel.fallback). Exempt (needs a renderer); story in ToonViewport.story.
 
@@ -18,7 +22,12 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Players = game:GetService("Players")
+
 local React = require(ReplicatedStorage.Packages.React)
+local CosmeticTypes = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticTypes)
+local VacuumSkinRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumSkinRules)
+local VacuumPreviewSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumPreviewSystem)
 local EmployeeShared = ReplicatedStorage.Shared.Features.Employee
 local EmployeePoseRegistry = require(EmployeeShared.Data.EmployeePoseRegistry)
 local EmployeePoseRules = require(EmployeeShared.Rules.EmployeePoseRules)
@@ -37,7 +46,13 @@ local DIM_COLOR = Color3.fromRGB(70, 60, 96)
 export type Platform = { top: Color3, side: Color3 }
 
 export type ToonViewportProps = {
-	employee: string,
+	employee: string?,
+	-- A whole player's look (takes the place of employee + skin).
+	outfit: CosmeticTypes.Outfit?,
+	-- A VacuumSkinRegistry key: with no employee or outfit, that vacuum alone.
+	vacuum: string?,
+	-- Degrees round the model (180 = from behind).
+	turn: number?,
 	-- An EmployeeRegistry skin key (nil = the default look).
 	skin: string?,
 	live: boolean?,
@@ -112,14 +127,43 @@ end
 
 -- The model to show and whether it moves: a live one when asked and a slot is free, else the static posed copy.
 local function build(props: ToonViewportProps): (Model?, boolean)
+	local outfit = props.outfit
+	if outfit ~= nil then
+		local pose = EmployeePoseRules.select(EmployeePoseRegistry.get(outfit.employee), props.context or "crew", {})
+		local mine = Players.LocalPlayer
+		return EmployeePreviewSystem.outfit(
+			outfit,
+			ReplicatedStorage,
+			if mine ~= nil then mine.Character else nil,
+			props.live == true,
+			pose
+		)
+	end
+	local employee = props.employee
+	if employee == nil then
+		local vacuum = props.vacuum
+		return if vacuum ~= nil
+			then VacuumPreviewSystem.alone(VacuumSkinRules.select(vacuum), ReplicatedStorage)
+			else nil,
+			false
+	end
 	if props.live == true then
-		local model = EmployeePreviewSystem.live(props.employee, props.skin, ReplicatedStorage)
+		local model = EmployeePreviewSystem.live(employee, props.skin, ReplicatedStorage)
 		if model ~= nil then
 			return model, true
 		end
 	end
-	local pose = EmployeePoseRules.select(EmployeePoseRegistry.get(props.employee), props.context or "crew", {})
-	return EmployeePreviewSystem.static(props.employee, props.skin, ReplicatedStorage, pose), false
+	local pose = EmployeePoseRules.select(EmployeePoseRegistry.get(employee), props.context or "crew", {})
+	return EmployeePreviewSystem.static(employee, props.skin, ReplicatedStorage, pose), false
+end
+
+-- What the model shows, as one string (the effect rebuilds only when it changes).
+local function lookKey(props: ToonViewportProps): string
+	local outfit = props.outfit
+	if outfit ~= nil then
+		return `{outfit.employee}|{outfit.look.skin}|{outfit.vacuum}`
+	end
+	return `{props.employee or ""}|{props.skin or ""}|{props.vacuum or ""}`
 end
 
 local function ToonViewport(props: ToonViewportProps): React.ReactNode
@@ -129,8 +173,7 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 
 	local platform = props.platform
 	local platformKey = if platform ~= nil then platform.top:ToHex() .. platform.side:ToHex() else ""
-	local deps: { unknown } =
-		{ frame, props.employee, props.skin or "", props.live == true, props.framing, platformKey }
+	local deps: { unknown } = { frame, lookKey(props), props.live == true, props.framing, platformKey, props.turn or 0 }
 	React.useEffect(function(): () -> ()
 		if frame == nil then
 			return function() end
@@ -149,7 +192,7 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 		local camera = Instance.new("Camera")
 		local function fit()
 			if bounds ~= nil then
-				local view = PortraitViewModel.camera(bounds, props.framing, aspectOf(frame))
+				local view = PortraitViewModel.camera(bounds, props.framing, aspectOf(frame), props.turn)
 				camera.FieldOfView = view.fov
 				camera.CFrame = view.cframe
 			end
@@ -167,8 +210,9 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 		if stand ~= nil then
 			stand.Parent = frame
 		end
-		if moving then
-			EmployeePreviewSystem.playIdle(model, props.employee)
+		local who = if props.outfit ~= nil then props.outfit.employee else props.employee
+		if moving and who ~= nil then
+			EmployeePreviewSystem.playIdle(model, who)
 		end
 		local resized = frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
 		return function()
@@ -184,6 +228,8 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 		end
 	end, deps)
 
+	local photoOf = if props.outfit ~= nil then props.outfit.employee else props.employee
+	local photoSkin = if props.outfit ~= nil then string.match(props.outfit.look.skin, "^[^%.]+%.(.+)$") else props.skin
 	local light = PortraitViewModel.lighting(props.tone or "light")
 	local tint = if props.dim == true then DIM_COLOR else Color3.new(1, 1, 1)
 	return e("ViewportFrame", {
@@ -199,14 +245,14 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 		LayoutOrder = props.layoutOrder,
 		ref = setFrame,
 	}, {
-		-- No art for this employee in the place yet: their ID-card photo instead.
-		photo = if shown
+		-- No art for this employee in the place yet: their ID-card photo instead (a vacuum alone shows nothing).
+		photo = if shown or photoOf == nil
 			then nil
 			else e("ImageLabel", {
 				-- Fitted inside the frame (never spilling past it).
 				Size = UDim2.fromScale(1, 1),
 				BackgroundTransparency = 1,
-				Image = PortraitViewModel.fallback(props.employee, props.skin),
+				Image = PortraitViewModel.fallback(photoOf, photoSkin),
 				ImageColor3 = tint,
 				ScaleType = Enum.ScaleType.Fit,
 				ZIndex = props.zIndex,

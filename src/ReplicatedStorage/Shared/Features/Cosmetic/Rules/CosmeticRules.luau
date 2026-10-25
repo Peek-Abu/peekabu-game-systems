@@ -4,6 +4,7 @@
 
 	- `owns`: free defaults always; a sticker through its pack; everything else through the `entitlements` slice
 	  under its kind.
+	- `vacuumFor`: the account's vacuum (Standard Issue when the saved one is unknown or not owned).
 	- `lookFor`: one employee's look with every fallback applied (a retired, unowned or other employee's item and an
 	  out-of-range style fall back to that employee's defaults), so a save can never put an employee in something
 	  invalid.
@@ -145,8 +146,35 @@ local function checkSlotItem(
 	return true, nil
 end
 
+-- The vacuum every employee wears: the saved one when it is an owned vacuum, else Standard Issue.
+function CosmeticRules.vacuumFor(loadout: Loadout, owns: Owns): string
+	local saved = loadout.vacuum
+	if saved ~= nil then
+		local item = CosmeticRegistry.get(saved)
+		if item ~= nil and item.kind == "vacuum" and owns(saved) then
+			return saved
+		end
+	end
+	return CosmeticRegistry.DEFAULT_VACUUM
+end
+
 function CosmeticRules.checkEquip(loadout: Loadout, change: Change, owns: Owns): (boolean, string?)
-	if change.kind == "employee" then
+	if change.kind == "vacuum" then
+		local item = CosmeticRegistry.get(change.id)
+		if item == nil then
+			return false, "unknown item"
+		end
+		if item.kind ~= "vacuum" then
+			return false, "wrong kind"
+		end
+		if not owns(change.id) then
+			return false, "not owned"
+		end
+		if CosmeticRules.vacuumFor(loadout, owns) == change.id then
+			return false, "no change"
+		end
+		return true, nil
+	elseif change.kind == "employee" then
 		if not CosmeticRegistry.has(change.id) then
 			return false, "unknown item"
 		end
@@ -262,7 +290,9 @@ end
 	Writes a change that `checkEquip` allowed, in place. Returns true (the mutator's "changed").
 ]=]
 function CosmeticRules.applyEquip(loadout: Loadout, change: Change, owns: Owns): boolean
-	if change.kind == "employee" then
+	if change.kind == "vacuum" then
+		loadout.vacuum = change.id
+	elseif change.kind == "employee" then
 		loadout.current = change.id
 	elseif change.kind == "skin" then
 		local item = CosmeticRegistry.get(change.id)
@@ -338,6 +368,10 @@ function CosmeticRules.validateLoadout(loadout: Loadout): (boolean, string?)
 	end
 	if type(loadout.seen) ~= "table" then
 		return false, "loadout.seen must be a table"
+	end
+	-- Optional: saves from before vacuums were cosmetics have none.
+	if loadout.vacuum ~= nil and not isId(loadout.vacuum) then
+		return false, "loadout.vacuum must be a 1-64 character id"
 	end
 	for id, value in loadout.seen do
 		if not isId(id) or value ~= true then

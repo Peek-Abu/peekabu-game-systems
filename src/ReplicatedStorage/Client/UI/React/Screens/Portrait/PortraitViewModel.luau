@@ -74,13 +74,19 @@ end
 	The camera that fits `bounds` (the framed parts' box, rig at the origin facing -Z, reaching down by the preset's
 	`extend`) in a frame `aspect` wide per unit high: every corner inside the view with the preset's margin.
 ]=]
-function PortraitViewModel.camera(bounds: EmployeePoseFormulas.Bounds, framing: Framing, aspect: number): Camera
+-- `turn` (degrees, default 0) swings the camera round the model on top of the usual angle (180 = from behind).
+function PortraitViewModel.camera(
+	bounds: EmployeePoseFormulas.Bounds,
+	framing: Framing,
+	aspect: number,
+	turn: number?
+): Camera
 	local ratio = if aspect > 0 then aspect else 1
 	local preset = PRESETS[framing]
 	local low = bounds.min - Vector3.new(0, (bounds.max.Y - bounds.min.Y) * preset.extend, 0)
 	local box: EmployeePoseFormulas.Bounds = { min = low, max = bounds.max }
 	local centre = (box.min + box.max) / 2
-	local yaw, pitch = math.rad(YAW), math.rad(PITCH)
+	local yaw, pitch = math.rad(YAW + (turn or 0)), math.rad(PITCH)
 	local away = Vector3.new(math.sin(yaw) * math.cos(pitch), math.sin(pitch), -math.cos(yaw) * math.cos(pitch))
 	local facing = CFrame.lookAt(Vector3.zero, -away)
 	local margin = preset.margin

@@ -19,7 +19,9 @@
 	  2026-10-15-cleanup-crew-loot-loop-design.md §3.2: a grimy valuable, tagged GRIME_TAG, is vacuumed exactly like a
 	  pile; Cargo's CargoGrimeSystem owns the channel and the cleanliness), and pulses the same noise for it;
 	- dresses every character in the canister backpack as it spawns (VacuumVisualSystem.wear), in the depot as on
-	  a shift: it is part of the employee's look, its wand clipped on, in its player's skin (VacuumSkinRules). A
+	  a shift: it is part of the employee's look, its wand clipped on, in the skin the character's
+	  VacuumConstants.SKIN_ATTRIBUTE names (EmployeeServiceServer writes it from the player's Cosmetic outfit), and
+	  puts the pack on again when that attribute changes (the player picked another vacuum). A
 	  shift's crew are given the vacuum Tool (VacuumToolSystem), which takes the wand off that same pack while held
 	  (never a second pack).
 
@@ -50,6 +52,7 @@ local VacuumChannelTracker = require(ServerScriptService.Features.Vacuum.State.V
 local VacuumToolSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumToolSystem)
 local VacuumVisualSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumVisualSystem)
 local VacuumEquipmentRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumEquipmentRules)
+local VacuumSkinRegistry = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumSkinRegistry)
 local VacuumSkinRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumSkinRules)
 local VacuumTargetRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumTargetRules)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
@@ -114,6 +117,12 @@ local function publishActive(character: Model?, active: boolean)
 	end
 end
 
+-- The skin `character` should wear (its SKIN_ATTRIBUTE; Standard Issue when unset or unknown).
+local function wantedSkin(character: Model): VacuumSkinRegistry.SkinDef
+	local wanted = character:GetAttribute(VacuumConstants.SKIN_ATTRIBUTE)
+	return VacuumSkinRules.select(if type(wanted) == "string" then wanted else nil)
+end
+
 -- `character`'s backpack, put on now if it has none (nil when it cannot wear one: no UpperTorso yet).
 local function wornFor(character: Model): VacuumVisualSystem.WornBackpack?
 	local current = worn[character]
@@ -124,10 +133,7 @@ local function wornFor(character: Model): VacuumVisualSystem.WornBackpack?
 		current.destroy()
 		worn[character] = nil
 	end
-	-- In its player's skin (VacuumSkinRules: the owner's MVP allowlist, else Standard Issue).
-	local player = Players:GetPlayerFromCharacter(character)
-	local backpack =
-		VacuumVisualSystem.wear(character, if player ~= nil then VacuumSkinRules.forPlayer(player.UserId) else nil)
+	local backpack = VacuumVisualSystem.wear(character, wantedSkin(character))
 	if backpack ~= nil then
 		worn[character] = backpack
 	end
@@ -270,7 +276,19 @@ local VacuumServiceServer: VacuumServiceServer = {
 			stoppers,
 			Observers.observeCharacter(function(_player: Player, character: Model)
 				wornFor(character)
+				-- Another vacuum picked in the depot (Cosmetic refuses changes in a shift): the new pack goes on.
+				local skinChanged = character
+					:GetAttributeChangedSignal(VacuumConstants.SKIN_ATTRIBUTE)
+					:Connect(function()
+						local current = worn[character]
+						if current ~= nil and current.skin.name ~= wantedSkin(character).name then
+							current.destroy()
+							worn[character] = nil
+							wornFor(character)
+						end
+					end)
 				return function()
+					skinChanged:Disconnect()
 					local backpack = worn[character]
 					worn[character] = nil
 					if backpack ~= nil then

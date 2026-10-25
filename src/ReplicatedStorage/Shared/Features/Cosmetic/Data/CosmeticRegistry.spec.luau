@@ -25,6 +25,22 @@ return function()
 		expect(CosmeticRegistry.has("Nope.Nothing")).to.equal(false)
 	end)
 
+	it("has the vacuums: Standard Issue free, each one a built vacuum skin, shared by every employee", function()
+		local VacuumSkinRegistry = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumSkinRegistry)
+		local vacuums = CosmeticRegistry.ofKind("vacuum")
+		expect(#vacuums >= 2).to.equal(true)
+		for _, item in vacuums do
+			expect(item.employee).never.to.be.ok()
+			expect(VacuumSkinRegistry.get(CosmeticRegistry.keyOf(item.id))).to.be.ok()
+		end
+		local standard = CosmeticRegistry.get(CosmeticRegistry.DEFAULT_VACUUM)
+		expect(standard.kind).to.equal("vacuum")
+		expect(standard.source).to.equal("default")
+		expect(CosmeticRegistry.get("Vacuum.BrassBellows").rarity).to.equal("rare")
+		expect(CosmeticRegistry.keyOf("Vacuum.BrassBellows")).to.equal("BrassBellows")
+		expect(CosmeticRegistry.keyOf("Plain")).to.equal("Plain")
+	end)
+
 	it("has Pippa, Cappy and Prickles, with only Pippa free", function()
 		local employees = CosmeticRegistry.employees()
 		for _, name in { "Pippa", "Cappy", "Prickles" } do

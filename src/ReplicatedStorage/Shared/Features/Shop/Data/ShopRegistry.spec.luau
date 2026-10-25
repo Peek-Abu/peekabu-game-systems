@@ -29,6 +29,8 @@ return function()
 		expect(ShopRegistry.get("Pippa.BubbleBuddy").pool).to.equal("featured")
 		expect(ShopRegistry.get("Pippa.Bubbles").pool).to.equal("picks")
 		expect(ShopRegistry.get("CozyPack").pool).to.equal("picks")
+		expect(ShopRegistry.get("Vacuum.BrassBellows").pool).to.equal("featured")
+		expect(ShopRegistry.get("Vacuum.StandardIssue")).never.to.be.ok()
 	end)
 
 	it("never carries an invented old price", function()
@@ -38,8 +40,7 @@ return function()
 	end)
 
 	it("registers every Gleam bundle that has a product id with the Marketplace", function()
-		local MarketplaceRegistry =
-			require(ReplicatedStorage.Shared.Features.Marketplace.Data.MarketplaceRegistry)
+		local MarketplaceRegistry = require(ReplicatedStorage.Shared.Features.Marketplace.Data.MarketplaceRegistry)
 		local ShopConstants = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopConstants)
 		for _, bundle in ShopConstants.BUNDLES do
 			local id = ShopConstants.PRODUCT_IDS[bundle.key]

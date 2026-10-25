@@ -236,6 +236,49 @@ return function()
 		end)
 	end)
 
+	describe("vacuum", function()
+		it("wears Standard Issue until an owned vacuum is saved; an unowned or unknown one falls back", function()
+			local loadout = CosmeticConstants.defaultLoadout()
+			expect(CosmeticRules.vacuumFor(loadout, ownsOf({}))).to.equal("Vacuum.StandardIssue")
+			loadout.vacuum = "Vacuum.BrassBellows"
+			expect(CosmeticRules.vacuumFor(loadout, ownsOf({}))).to.equal("Vacuum.StandardIssue")
+			expect(CosmeticRules.vacuumFor(loadout, ownsOf({ "Vacuum.BrassBellows" }))).to.equal("Vacuum.BrassBellows")
+			loadout.vacuum = "Pippa.Default"
+			expect(CosmeticRules.vacuumFor(loadout, ownsOf({}))).to.equal("Vacuum.StandardIssue")
+		end)
+
+		it("equips an owned vacuum for the whole account, and refuses the rest", function()
+			local loadout = CosmeticConstants.defaultLoadout()
+			local owns = ownsOf({ "Vacuum.BrassBellows" })
+			local change = { kind = "vacuum", id = "Vacuum.BrassBellows" }
+			expect(CosmeticRules.checkEquip(loadout, change, ownsOf({}))).to.equal(false)
+			expect(select(2, CosmeticRules.checkEquip(loadout, change, ownsOf({})))).to.equal("not owned")
+			expect(select(2, CosmeticRules.checkEquip(loadout, { kind = "vacuum", id = "Pippa.Default" }, owns))).to.equal(
+				"wrong kind"
+			)
+			expect(select(2, CosmeticRules.checkEquip(loadout, { kind = "vacuum", id = "Nope" }, owns))).to.equal(
+				"unknown item"
+			)
+			expect(select(2, CosmeticRules.checkEquip(loadout, { kind = "vacuum", id = "Vacuum.StandardIssue" }, owns))).to.equal(
+				"no change"
+			)
+			expect(CosmeticRules.checkEquip(loadout, change, owns)).to.equal(true)
+			expect(CosmeticRules.applyEquip(loadout, change, owns)).to.equal(true)
+			expect(loadout.vacuum).to.equal("Vacuum.BrassBellows")
+			expect(CosmeticRules.vacuumFor(loadout, owns)).to.equal("Vacuum.BrassBellows")
+		end)
+
+		it("keeps an old save without a vacuum valid, and refuses a bad one", function()
+			local loadout = CosmeticConstants.defaultLoadout()
+			loadout.vacuum = nil
+			expect(CosmeticRules.validateLoadout(loadout)).to.equal(true)
+			loadout.vacuum = ""
+			expect(CosmeticRules.validateLoadout(loadout)).to.equal(false)
+			loadout.vacuum = 4
+			expect(CosmeticRules.validateLoadout(loadout)).to.equal(false)
+		end)
+	end)
+
 	describe("validateLoadout", function()
 		it("accepts the default loadout and unknown (retired) ids", function()
 			expect(CosmeticRules.validateLoadout(CosmeticConstants.defaultLoadout())).to.equal(true)

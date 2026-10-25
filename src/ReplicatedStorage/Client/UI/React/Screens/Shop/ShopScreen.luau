@@ -19,6 +19,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
 local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
+local CosmeticConstants = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticConstants)
+local CosmeticOutfitRules = require(ReplicatedStorage.Shared.Features.Cosmetic.Rules.CosmeticOutfitRules)
+local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
 local CosmeticRules = require(ReplicatedStorage.Shared.Features.Cosmetic.Rules.CosmeticRules)
 local CurrencyUtils = require(ReplicatedStorage.Shared.Features.Currency.Utils.CurrencyUtils)
 local ShopRegistry = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopRegistry)
@@ -87,8 +90,11 @@ local function art(card: VM.OfferCard, live: boolean?): React.ReactNode
 			drop = 4,
 		})
 	end
+	local vacuum = card.vacuum
 	return e(ToonViewport, {
-		employee = card.employee,
+		-- A vacuum's card shows the vacuum on its own.
+		employee = if vacuum ~= nil then nil else card.employee,
+		vacuum = if vacuum ~= nil then CosmeticRegistry.keyOf(vacuum) else nil,
 		skin = card.skinKey,
 		framing = "full",
 		live = live,
@@ -343,6 +349,7 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 	local liveViewport = usePaperViewport()
 	local livePhone = usePaperLayout() == "phone"
 	local entitlements = ReactCharm.useAtom(StateSyncClientStore.entitlements)
+	local loadout = ReactCharm.useAtom(StateSyncClientStore.loadout)
 	local currency = ReactCharm.useAtom(StateSyncClientStore.currency)
 	local premium = ReactCharm.useAtom(StateSyncClientStore.premium)
 	local storeProduct = ReactCharm.useAtom(ShopStore.product)
@@ -408,11 +415,18 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 		table.insert(tabs, { id = entry.id, text = entry.text, icon = entry.icon, soon = entry.soon })
 	end
 	local offer = if productId ~= nil then ShopRegistry.get(productId) else nil
+	local backText = "Back"
+	for _, entry in VM.tabs() do
+		if entry.id == tab then
+			backText = entry.text
+		end
+	end
 	local bar = e(ToonMenuBar, {
 		title = "SHOP",
 		icon = "shopGift",
 		hue = "coral",
-		tabs = tabs,
+		-- A product page has its back button instead of the tabs (the bar has no room for both).
+		tabs = if offer ~= nil then {} else tabs,
 		current = if offer ~= nil then nil else tab,
 		onTab = function(id: string)
 			setTab(id)
@@ -420,9 +434,10 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 				ShopStore.close()
 			end
 		end,
+		-- Back to the tab the page was opened from (named, so it never repeats the SHOP plate beside it).
 		back = if offer ~= nil
 			then {
-				text = "Shop",
+				text = backText,
 				onActivated = function()
 					if preview == nil then
 						ShopStore.close()
@@ -445,6 +460,11 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 		local resultNow = if result ~= nil and result.offer == offer.id then VM.resultText(result.reason) else nil
 		body = e(ShopProductPanel, {
 			product = product,
+			-- What you wear now: a vacuum's page shows it on you.
+			outfit = CosmeticOutfitRules.current(
+				if preview ~= nil then CosmeticConstants.defaultLoadout() else loadout,
+				owns
+			),
 			layout = layout,
 			note = resultNow,
 			onBuy = function()

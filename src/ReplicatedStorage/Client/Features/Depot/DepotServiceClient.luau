@@ -136,7 +136,6 @@ local DepotServiceClient: DepotServiceClient = {
 				if not DepotHubViewModel.visible(snapshot, Players.LocalPlayer.UserId) then
 					SceneStack.remove(DepotConstants.BOARD_SCENE)
 					SceneStack.remove(DepotHubViewModel.scene("guide"))
-					SceneStack.remove(DepotHubViewModel.scene("gear"))
 					SceneStack.remove(DepotHubViewModel.scene("settings"))
 					SceneStack.remove(InventoryViewModel.SCENE)
 					SceneStack.remove(ShopViewModel.SCENE)
@@ -215,7 +214,6 @@ local DepotServiceClient: DepotServiceClient = {
 		table.clear(stoppers)
 		SceneStack.remove(DepotConstants.BOARD_SCENE)
 		SceneStack.remove(DepotHubViewModel.scene("guide"))
-		SceneStack.remove(DepotHubViewModel.scene("gear"))
 		SceneStack.remove(DepotHubViewModel.scene("settings"))
 		DepotStore.clear()
 	end,

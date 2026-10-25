@@ -12,6 +12,7 @@ return function()
 				{ kind = "emote", employee = "Cappy", slot = 3, id = "" },
 				{ kind = "sticker", slot = 1, id = "CozyPack.Cocoa" },
 				{ kind = "sticker", slot = 1, id = "" },
+				{ kind = "vacuum", id = "Vacuum.BrassBellows" },
 			}
 			for _, change in changes do
 				local parsed, reason = CosmeticRequestRules.parseEquip(CosmeticRequestRules.buildEquip(change))
@@ -37,6 +38,8 @@ return function()
 				{ kind = "emote", slot = 2, id = "Cappy.CocoaSip" },
 				{ kind = "sticker", slot = 1 },
 				{ kind = "employee", id = 7 },
+				{ kind = "vacuum", id = "" },
+				{ kind = "vacuum" },
 			}
 			for _, payload in bad do
 				local parsed, reason = CosmeticRequestRules.parseEquip(payload)

@@ -113,8 +113,8 @@ export type Look = {
 
 --[=[
 	The account-wide loadout slice (CosmeticServiceServer): which employee the player plays as, whether they made
-	the first-join pick, each employee's look, the 4 chat-wheel sticker slots (`""` = empty) and the items already
-	seen (for the New! flag). Ownership is NOT here: it is the `entitlements` slice.
+	the first-join pick, each employee's look, the 4 chat-wheel sticker slots (`""` = empty), the items already
+	seen (for the New! flag) and the vacuum. Ownership is NOT here: it is the `entitlements` slice.
 ]=]
 export type Loadout = {
 	current: string,
@@ -122,6 +122,8 @@ export type Loadout = {
 	looks: { [string]: Look },
 	stickers: { string },
 	seen: { [string]: boolean },
+	-- The vacuum (a Cosmetic id) every employee wears; nil in saves from before vacuums were cosmetics.
+	vacuum: string?,
 }
 
 --[=[

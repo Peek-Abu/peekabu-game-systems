@@ -95,6 +95,65 @@ return function()
 		src:Destroy()
 	end)
 
+	describe("outfit", function()
+		local CosmeticOutfitRules =
+			require(game:GetService("ReplicatedStorage").Shared.Features.Cosmetic.Rules.CosmeticOutfitRules)
+		local CosmeticConstants =
+			require(game:GetService("ReplicatedStorage").Shared.Features.Cosmetic.Data.CosmeticConstants)
+		local function pippa()
+			return CosmeticOutfitRules.current(CosmeticConstants.defaultLoadout(), function()
+				return false
+			end)
+		end
+
+		-- The player's own character as the server built it: dressed, a lanyard, a script, a tool.
+		local function character(employee, skin)
+			local model = template(employee)
+			model:SetAttribute("EmployeeName", employee)
+			model:SetAttribute("EmployeeSkin", skin)
+			local lanyard = Instance.new("Part")
+			lanyard.Name = "Lanyard"
+			lanyard.Parent = model
+			-- Worn: welded to the body (a loose part never makes it into a posed copy).
+			local weld = Instance.new("Weld")
+			weld.Part0 = model.LowerTorso
+			weld.Part1 = lanyard
+			weld.Parent = lanyard
+			Instance.new("Tool").Parent = model
+			model.Archivable = false
+			return model
+		end
+
+		it("clones your own character when it wears the outfit, keeping what the server put on it", function()
+			local src = source({ "Pippa" })
+			local mine = character("Pippa", "Default")
+			local model, moving = EmployeePreviewSystem.outfit(pippa(), src, mine, false)
+			expect(moving).to.equal(false)
+			expect(model:FindFirstChild("Lanyard", true)).to.be.ok()
+			expect(model:FindFirstChildOfClass("Tool")).never.to.be.ok()
+			expect(mine.Archivable).to.equal(false)
+			for _, d in model:GetDescendants() do
+				expect(d:IsA("LuaSourceContainer")).to.equal(false)
+			end
+			model:Destroy()
+			mine:Destroy()
+			src:Destroy()
+		end)
+
+		it("dresses the template when your character is someone else, and goes live when asked", function()
+			local src = source({ "Pippa" })
+			local other = character("Cappy", "Default")
+			local model, moving = EmployeePreviewSystem.outfit(pippa(), src, other, true)
+			expect(moving).to.equal(true)
+			expect(model:FindFirstChild("Lanyard")).never.to.be.ok()
+			expect(model:FindFirstChildOfClass("Humanoid"):FindFirstChildOfClass("Animator")).to.be.ok()
+			expect(EmployeePreviewSystem.liveCount()).to.equal(1)
+			model:Destroy()
+			other:Destroy()
+			src:Destroy()
+		end)
+	end)
+
 	it("returns nil for an employee with no art or no registry entry", function()
 		local src = source({})
 		expect(EmployeePreviewSystem.static("Pippa", nil, src)).never.to.be.ok()
