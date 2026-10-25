@@ -57,6 +57,8 @@ export type Product = {
 	rarityText: string,
 	line: string,
 	lore: string,
+	-- The lore in a quote box: only for rarer items (Epic and up).
+	quote: boolean,
 	styles: { visible: boolean, count: number },
 	inside: { Inside },
 	button: Button,
@@ -90,15 +92,21 @@ local RARITY_RANK: { [CosmeticTypes.Rarity]: number } = {
 	odd = 5,
 }
 
+-- Lore gets the quote box from Epic up (rarer items speak; the rest have a plain line).
+local QUOTE_RANK = 3
+
 local VM = {}
 
 VM.SCENE = "shop"
 
-function VM.tabs(): { { id: string, text: string, icon: UIAssets.ToonIcon? } }
+-- The Shop's tabs; Lockers and Passes show greyed ("Soon") until they are built.
+function VM.tabs(): { { id: string, text: string, icon: UIAssets.ToonIcon?, soon: boolean } }
 	return {
-		{ id = "featured", text = "Featured", icon = "shopGift" },
-		{ id = "skins", text = "Skins", icon = "pippaHappy" },
-		{ id = "gleam", text = "Gleam", icon = "gleam" },
+		{ id = "featured", text = "Featured", icon = "shopGift", soon = false },
+		{ id = "skins", text = "Skins", icon = "pippaHappy", soon = false },
+		{ id = "gleam", text = "Gleam", icon = "gleam", soon = false },
+		{ id = "lockers", text = "Lockers", icon = "locker", soon = true },
+		{ id = "passes", text = "Passes", soon = true },
 	}
 end
 
@@ -202,6 +210,7 @@ function VM.product(offer: Offer, owns: Owns, balances: Balances): Product
 		rarityText = if card.rarity == "default" then "CLASSIC" else string.upper(card.rarity),
 		line = if item ~= nil and item.kind == "employee" then what else `{what} · cosmetic only`,
 		lore = if item ~= nil then item.lore else "",
+		quote = RARITY_RANK[card.rarity] >= QUOTE_RANK,
 		styles = { visible = styles > 1, count = styles },
 		inside = inside,
 		button = VM.button(offer, owns, balances),

@@ -82,6 +82,8 @@ export type Detail = {
 	-- "Pippa skin", "Idle for everyone".
 	line: string,
 	lore: string,
+	-- The lore in a signed quote box: only for rarer items (Epic and up); otherwise it is a plain line.
+	quote: boolean,
 	styles: { visible: boolean, count: number, enabled: boolean, note: string },
 	comesWith: { Bundled },
 	action: Action,
@@ -120,6 +122,9 @@ local RARITY_RANK: { [CosmeticTypes.Rarity]: number } = {
 	legendary = 4,
 	odd = 5,
 }
+
+-- Lore gets the quote box from Epic up (rarer items speak; the rest have a plain line).
+local QUOTE_RANK = 3
 
 local STAT_LABEL: { [EmployeeProfileRegistry.Stat]: string } = {
 	speed = "Speed",
@@ -322,6 +327,7 @@ function VM.detail(item: Item, loadout: Loadout, owns: Owns): Detail
 		new = isNew(item, owned, loadout),
 		line = if employee ~= nil then `{employee} {kindWord}` else `{kindWord} for everyone`,
 		lore = item.lore,
+		quote = RARITY_RANK[item.rarity] >= QUOTE_RANK,
 		styles = { visible = styles > 1, count = styles, enabled = false, note = "Coming soon" },
 		comesWith = comesWith,
 		action = VM.action(item, owned, worn),

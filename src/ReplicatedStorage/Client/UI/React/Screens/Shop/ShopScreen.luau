@@ -24,6 +24,7 @@ local CurrencyUtils = require(ReplicatedStorage.Shared.Features.Currency.Utils.C
 local ShopRegistry = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopRegistry)
 local ShopRotationUtils = require(ReplicatedStorage.Shared.Features.Shop.Utils.ShopRotationUtils)
 local ShopServiceClient = require(ReplicatedStorage.Client.Features.Shop.ShopServiceClient)
+local MarketplaceServiceClient = require(ReplicatedStorage.Client.Features.Marketplace.MarketplaceServiceClient)
 local ShopStore = require(ReplicatedStorage.Client.Features.Shop.State.ShopStore)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local SceneStack = require(ReplicatedStorage.Client.UI.Scenes.SceneStack)
@@ -194,7 +195,13 @@ local function offerCard(
 	}, nodes)
 end
 
-local function bundleCard(bundle: VM.Bundle, size: Vector2, phone: boolean, order: number): React.ReactNode
+local function bundleCard(
+	bundle: VM.Bundle,
+	size: Vector2,
+	phone: boolean,
+	order: number,
+	onBuy: (key: string) -> ()
+): React.ReactNode
 	-- Tall cards (the Gleam tab) stack the render, the amount and the price; short ones (the Featured row) put the
 	-- render on the left and the amount over the price on the right.
 	local wide = size.Y < size.X * 0.62
@@ -221,13 +228,18 @@ local function bundleCard(bundle: VM.Bundle, size: Vector2, phone: boolean, orde
 				align = "center",
 				fit = true,
 			}),
-			robux = e(ToonPill, {
+			robux = e(ToonButton, {
+				variant = if bundle.available then "primary" else "secondary",
 				text = if bundle.available then bundle.robux else "Soon",
-				hue = if bundle.available then "mint" else "steel",
 				textSize = if phone then 12 else 22,
+				disabled = not bundle.available,
+				small = true,
 				anchor = Vector2.new(0.5, 1),
 				position = UDim2.new(0, art + 14 + math.floor((size.X - art - 24) / 2), 1, -DEPTH.lip - 6),
 				size = UDim2.fromOffset(math.floor((size.X - art - 24) * 0.8), pillHeight),
+				onActivated = function()
+					onBuy(bundle.key)
+				end,
 			}),
 		}
 	else
@@ -250,13 +262,18 @@ local function bundleCard(bundle: VM.Bundle, size: Vector2, phone: boolean, orde
 				align = "center",
 				fit = true,
 			}),
-			robux = e(ToonPill, {
+			robux = e(ToonButton, {
+				variant = if bundle.available then "primary" else "secondary",
 				text = if bundle.available then bundle.robux else "Soon",
-				hue = if bundle.available then "mint" else "steel",
 				textSize = if phone then 12 else 24,
+				disabled = not bundle.available,
+				small = true,
 				anchor = Vector2.new(0.5, 1),
 				position = UDim2.new(0.5, 0, 1, -DEPTH.lip - 6),
 				size = UDim2.fromOffset(math.floor(size.X * 0.56), pillHeight),
+				onActivated = function()
+					onBuy(bundle.key)
+				end,
 			}),
 		}
 	end
@@ -287,7 +304,14 @@ local function bundleCard(bundle: VM.Bundle, size: Vector2, phone: boolean, orde
 	}, nodes)
 end
 
-local function bundleRow(width: number, height: number, phone: boolean, gap: number): React.ReactNode
+-- `onBuy` opens Roblox's purchase prompt for a bundle (nothing in the story).
+local function bundleRow(
+	width: number,
+	height: number,
+	phone: boolean,
+	gap: number,
+	onBuy: (key: string) -> ()
+): React.ReactNode
 	local nodes: Nodes = {
 		list = e("UIListLayout", {
 			FillDirection = Enum.FillDirection.Horizontal,
@@ -298,7 +322,7 @@ local function bundleRow(width: number, height: number, phone: boolean, gap: num
 	local bundles = VM.bundles()
 	local cardWidth = math.floor((width - (#bundles - 1) * gap) / #bundles)
 	for index, bundle in bundles do
-		nodes[bundle.key] = bundleCard(bundle, Vector2.new(cardWidth, height), phone, index)
+		nodes[bundle.key] = bundleCard(bundle, Vector2.new(cardWidth, height), phone, index, onBuy)
 	end
 	return group(nodes)
 end
@@ -366,6 +390,11 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 	local function close()
 		SceneStack.remove(VM.SCENE)
 	end
+	local function buyBundle(key: string)
+		if preview == nil then
+			MarketplaceServiceClient:promptProduct(key)
+		end
+	end
 	local function open(id: string)
 		if preview == nil then
 			ShopStore.open(id)
@@ -374,7 +403,7 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 
 	local tabs: { ToonMenuBar.Tab } = {}
 	for _, entry in VM.tabs() do
-		table.insert(tabs, { id = entry.id, text = entry.text, icon = entry.icon })
+		table.insert(tabs, { id = entry.id, text = entry.text, icon = entry.icon, soon = entry.soon })
 	end
 	local offer = if productId ~= nil then ShopRegistry.get(productId) else nil
 	local bar = e(ToonMenuBar, {
@@ -563,7 +592,7 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 				Size = UDim2.new(1, 0, 0, math.floor(content.height * 0.6)),
 				BackgroundTransparency = 1,
 			}, {
-				row = bundleRow(content.width, math.floor(content.height * 0.6), phone, gap + 10),
+				row = bundleRow(content.width, math.floor(content.height * 0.6), phone, gap + 10, buyBundle),
 			}),
 		})
 	else
@@ -715,7 +744,7 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 				Size = UDim2.new(1, 0, 1, -rowY - headingSize - 14),
 				BackgroundTransparency = 1,
 			}, {
-				row = bundleRow(content.width, content.height - rowY - headingSize - 14, phone, gap + 10),
+				row = bundleRow(content.width, content.height - rowY - headingSize - 14, phone, gap + 10, buyBundle),
 			})
 		end
 		body = group(nodes)

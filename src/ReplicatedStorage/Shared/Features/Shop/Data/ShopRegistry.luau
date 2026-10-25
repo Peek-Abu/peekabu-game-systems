@@ -4,7 +4,8 @@
 	itself: every item sold for Credits or Gleam with a price (stickers come in their pack) is one offer at its
 	catalogue price. Employees are always listed, Legendary skins take turns in the Featured banner, everything
 	else rotates through Today's picks (ShopRotationUtils). Event offers (dates) and real sales (`was`) are added
-	here when the owner runs one; there are none yet.
+	here when the owner runs one; there are none yet. It also registers the Gleam bundles' developer products with the
+	Marketplace (MarketplaceRegistry) at load.
 
 	@class ShopRegistry
 ]=]
@@ -13,6 +14,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
 local CosmeticTypes = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticTypes)
+local MarketplaceRegistry = require(ReplicatedStorage.Shared.Features.Marketplace.Data.MarketplaceRegistry)
+local ShopConstants = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopConstants)
 local ShopTypes = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopTypes)
 
 type Offer = ShopTypes.Offer
@@ -47,6 +50,15 @@ table.sort(offers, function(a: Offer, b: Offer): boolean
 	return a.id < b.id
 end)
 table.freeze(offers)
+
+-- The Gleam bundles with a product id are registered with the Marketplace at load, in both realms: the client prompts
+-- by the same key the server grants by.
+for _, bundle in ShopConstants.BUNDLES do
+	local productId = ShopConstants.PRODUCT_IDS[bundle.key]
+	if productId ~= nil and MarketplaceRegistry.product(bundle.key) == nil then
+		MarketplaceRegistry.registerProduct(bundle.key, { productId = productId })
+	end
+end
 
 local ShopRegistry = {}
 

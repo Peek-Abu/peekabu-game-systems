@@ -171,15 +171,21 @@ local function ShopProductPanel(props: ShopProductPanelProps): React.ReactNode
 		}),
 		lore = text(product.lore, size, size * 2 + 8, 10, inner - size * 2 - 24),
 	}
-	face.quote = e(ToonSurface, {
-		hue = "cream",
-		small = true,
-		radius = 16,
-		position = UDim2.fromOffset(pad, y),
-		size = UDim2.fromOffset(inner, quoteHeight),
-		children = quote,
-	})
-	y += quoteHeight + DEPTH.drop + 10
+	-- Rarer items speak in a quote box; the rest have their lore as a plain line.
+	if product.quote then
+		face.quote = e(ToonSurface, {
+			hue = "cream",
+			small = true,
+			radius = 16,
+			position = UDim2.fromOffset(pad, y),
+			size = UDim2.fromOffset(inner, quoteHeight),
+			children = quote,
+		})
+		y += quoteHeight + DEPTH.drop + 10
+	else
+		face.quote = text(product.lore, size, pad, y, inner)
+		y += size * 2 + 14
+	end
 	if product.styles.visible then
 		face.styles = e(ToonText, {
 			text = `STYLES  ·  all {product.styles.count} come with it (art coming soon)`,

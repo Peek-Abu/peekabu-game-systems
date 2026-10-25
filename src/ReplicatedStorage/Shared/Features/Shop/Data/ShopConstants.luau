@@ -1,8 +1,8 @@
 --!strict
 --[=[
 	ShopConstants: how many picks a day, the UTC hour they change, how long an item counts as New! / its event's
-	last day, and the four Gleam bundles (Robux developer products; registered only once their product ids exist,
-	until then the Gleam tab shows them greyed "Soon").
+	last day, and the four Gleam bundles (Robux developer products; a bundle without a product id shows greyed
+	"Soon").
 
 	@class ShopConstants
 ]=]
@@ -18,8 +18,14 @@ local BUNDLES: { ShopTypes.GleamBundle } = {
 	{ key = "gleam1500", gleam = 1500, robux = 549, bonus = 35, icon = "gleamTruck" },
 }
 
--- The developer product id of each bundle (owner creates them in the Creator Dashboard). Empty until then.
-local PRODUCT_IDS: { [string]: number } = {}
+-- The developer product id of each bundle (owner, Creator Dashboard, 2026-10-24). The Gleam amounts and Robux prices
+-- above are not final: change them here and on the products together.
+local PRODUCT_IDS: { [string]: number } = {
+	gleam100 = 3722076056,
+	gleam275 = 3722076494,
+	gleam600 = 3722076599,
+	gleam1500 = 3722076697,
+}
 
 return table.freeze({
 	PICKS = 6,

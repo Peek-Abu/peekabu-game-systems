@@ -453,17 +453,20 @@ local function detail(props: InventoryCharacterPanelProps, view: VM.Detail, item
 				fit = true,
 			}),
 	}
-	rows.quote = block(
-		size * 3 + (if phone then 12 else 30),
-		4,
-		e(ToonSurface, {
-			hue = "cream",
-			small = true,
-			radius = 16,
-			size = UDim2.new(1, 0, 1, -DEPTH.drop),
-			children = quote,
-		})
-	)
+	-- Rarer items speak in a signed quote box; the rest have their lore as a plain line.
+	rows.quote = if view.quote
+		then block(
+			size * 3 + (if phone then 12 else 30),
+			4,
+			e(ToonSurface, {
+				hue = "cream",
+				small = true,
+				radius = 16,
+				size = UDim2.new(1, 0, 1, -DEPTH.drop),
+				children = quote,
+			})
+		)
+		else block(size * 2 + 8, 4, body(view.lore, size))
 	-- A phone's detail panel has room for the name, the lore and the button only.
 	if view.styles.visible and not phone then
 		local styles: Nodes = {

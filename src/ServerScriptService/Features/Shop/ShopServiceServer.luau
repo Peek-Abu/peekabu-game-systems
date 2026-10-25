@@ -128,12 +128,11 @@ local onBuyRequest = RequestHandler.wrap({
 	end,
 })
 
--- Registers each Gleam bundle that has a product id with the Marketplace receipts.
+-- Each Gleam bundle registered with the Marketplace (ShopRegistry, at load) gets its receipt handler: the receipt adds
+-- the bundle's Gleam in the same save that records it (exactly once).
 local function registerBundles()
 	for _, bundle in ShopConstants.BUNDLES do
-		local productId = ShopConstants.PRODUCT_IDS[bundle.key]
-		if productId ~= nil and MarketplaceRegistry.product(bundle.key) == nil then
-			MarketplaceRegistry.registerProduct(bundle.key, { productId = productId })
+		if MarketplaceRegistry.product(bundle.key) ~= nil then
 			local gleam = bundle.gleam
 			MarketplaceServiceServer:onProduct(bundle.key, function(player: Player)
 				return {

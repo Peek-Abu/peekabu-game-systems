@@ -37,6 +37,18 @@ return function()
 		end
 	end)
 
+	it("registers every Gleam bundle that has a product id with the Marketplace", function()
+		local MarketplaceRegistry =
+			require(ReplicatedStorage.Shared.Features.Marketplace.Data.MarketplaceRegistry)
+		local ShopConstants = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopConstants)
+		for _, bundle in ShopConstants.BUNDLES do
+			local id = ShopConstants.PRODUCT_IDS[bundle.key]
+			if id ~= nil then
+				expect(MarketplaceRegistry.product(bundle.key).productId).to.equal(id)
+			end
+		end
+	end)
+
 	it("lists offers in a stable order", function()
 		local all = ShopRegistry.all()
 		for index = 2, #all do

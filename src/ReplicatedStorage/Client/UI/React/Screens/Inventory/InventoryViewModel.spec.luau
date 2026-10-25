@@ -210,6 +210,13 @@ return function()
 			expect(#VM.detail(CosmeticRegistry.get("Pippa.Default"), loadout(), owner()).comesWith).to.equal(0)
 		end)
 
+		it("puts only rarer items' lore in a quote", function()
+			expect(VM.detail(CosmeticRegistry.get("Pippa.Default"), loadout(), owner()).quote).to.equal(false)
+			expect(VM.detail(CosmeticRegistry.get("Pippa.OwnerSpecial"), loadout(), owner()).quote).to.equal(false)
+			expect(VM.detail(CosmeticRegistry.get("Pippa.Gloomkeeper"), loadout(), owner()).quote).to.equal(true)
+			expect(VM.detail(CosmeticRegistry.get("Pippa.BubbleBuddy"), loadout(), owner()).quote).to.equal(true)
+		end)
+
 		it("carries the lore, the rarity word and the action", function()
 			local view = VM.detail(CosmeticRegistry.get("Pippa.Gloomkeeper"), loadout(), owner())
 			expect(view.name).to.equal("Gloomkeeper")
