@@ -53,7 +53,13 @@
 - **Shift place**: Cappy's model and the Rojo hookup there.
 - **Base**: the Death respawn hooks need their own base pull request.
 
-### New from your notes (not in any plan yet)
-- **Gleam art match**: the bundle pictures are being remade from the real Gleam gem (sheet sent for your OK).
-- **Vacuums tab**: still the old equipment page. Your call below on what it becomes.
-- **Lore**: done: only Epic and up get the quote box; the rest is a plain line.
+### New from your notes
+- **Gleam art match**: done (v2 bundle pictures made from the real Gleam gem, live).
+- **Fixed 2026-10-25** (commit 0fd9145e): ribbons no longer cut at list edges, "Soon" shows the whole word; Prickles
+  and Cappy posed on cards (no T-pose); a 3D platform under every hero (pick, Inventory, Shop page, reveal); lore told
+  about the employee, with a quote mark only on lines picked as spoken (`quote = true`), else a lore book icon.
+- **Locker padlock icon**: the white inside the shackle is now see-through (characters/ui/character-ui/upload/
+  lock_night_v2.png); upload waits for your OK.
+- **Idles per crew**: each crew shows its own idle plus Sleepy Sway, the one idle made for everyone (design: idles can
+  be shared). Your call whether shared idles should exist.
+- **Vacuums tab**: two layouts in Figma, "Character UI round 5 · Vacuums" (Character UI page), with 6 questions.
