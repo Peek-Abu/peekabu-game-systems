@@ -33,9 +33,18 @@
    skin on their character.
 
 ## What's still left for these systems
+### Step 5 (built 2026-10-25, commit 6845c036)
+- **Emotes**: Pippa's page > **Emotes** tab: cards show their slot; **Add to wheel** / the **Your wheel** row put
+  an emote in a slot. In game **hold B** (L1; a round button on phones): the wheel shows your current employee's 4
+  slots. Every emote says **Soon** for now: the clips are yours to supply (AnimationEmoteRegistry); without a clip
+  the server refuses it. Emotes work in shifts too; moving stops one.
+- **Chat wheel**: Inventory > **Chat wheel** tab: your 4 sticker slots (press a slot, then a sticker), the pings,
+  every pack. In game **hold T** (d-pad up; a round button on phones), let go over a ping (marks where you aimed,
+  with a sound, 6 s) or a sticker (pops over your head and beside your name in the crew list, 2.5 s, silent).
+  Test: `cosmeticgrant me BubblePack`, put Ducky in a slot, then T. **Two players** to see each other's.
+- Sticker pictures are stand-ins (kit icons) until the sticker sheets are approved and uploaded.
+
 ### Planned, not built yet
-- **Step 5: emotes and the chat wheel**: Emotes tab, the per-employee emote wheel, stickers (PNG art popping over
-  your head), pings (Gloom here!, Help me!, ...), the Chat wheel tab.
 - **Lockers** (Gloom Locker / Gleam Locker): keys, odds, pity, the opening reveal. The tab is greyed until then.
 - **Passes**: the tab is greyed until there are passes to sell.
 - **Idles in the game**: an idle you wear is saved, but **no idle plays in the game yet, for anyone**; the idle
