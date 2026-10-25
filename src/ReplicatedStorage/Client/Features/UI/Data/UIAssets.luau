@@ -121,7 +121,7 @@ local TOON_ICONS: { [ToonIcon]: string } = {
 	key = "rbxassetid://99994665542005",
 	lock = "rbxassetid://83785061837290",
 	-- Padlock C, the night lock (owner pick for now, 2026-10-24; decal 135775868127022): a not-owned-yet card.
-	lockNight = "rbxassetid://76973181173582",
+	lockNight = "rbxassetid://102433972832334",
 	locker = "rbxassetid://132365115657905",
 	managerCalm = "rbxassetid://79215225592922",
 	managerHunt = "rbxassetid://126690679697372",
