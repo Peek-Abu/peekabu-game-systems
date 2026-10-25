@@ -98,11 +98,11 @@ local TOON_ICONS: { [ToonIcon]: string } = {
 	abilityLetsGo = "rbxassetid://110925040898866",
 	abilityPottedPlant = "rbxassetid://120058837938191",
 	abilitySpotIt = "rbxassetid://72513443568229",
-	-- Gleam bundle renders, smallest to biggest, and the Shop's gift (character step 4).
-	gleamPile = "rbxassetid://72996667374562",
-	gleamBucket = "rbxassetid://103204196644695",
-	gleamCrate = "rbxassetid://109582574542351",
-	gleamTruck = "rbxassetid://88660287465403",
+	-- Gleam bundle renders, smallest to biggest, made from the Gleam gem itself (v2, 2026-10-24), and the Shop's gift.
+	gleamPile = "rbxassetid://112951566480973",
+	gleamBucket = "rbxassetid://120954864254019",
+	gleamCrate = "rbxassetid://71294352475481",
+	gleamTruck = "rbxassetid://86130539333417",
 	shopGift = "rbxassetid://116419935164686",
 	clock = "rbxassetid://97995675031546",
 	dust = "rbxassetid://87348303383802",
