@@ -20,6 +20,9 @@ local Cosmetic = ReplicatedStorage.Shared.Features.Cosmetic
 local CosmeticRegistry = require(Cosmetic.Data.CosmeticRegistry)
 local CosmeticRules = require(Cosmetic.Rules.CosmeticRules)
 local CosmeticTypes = require(Cosmetic.Data.CosmeticTypes)
+local AnimationRegistry = require(ReplicatedStorage.Shared.Features.Animation.Data.AnimationRegistry)
+local EmoteRules = require(ReplicatedStorage.Shared.Features.Emote.Rules.EmoteRules)
+local CalloutAssets = require(ReplicatedStorage.Client.Features.Callout.Data.CalloutAssets)
 local EmployeeProfileRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeProfileRegistry)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local ToonSourceBand = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonSourceBand)
@@ -87,14 +90,35 @@ export type Detail = {
 	styles: { visible: boolean, count: number, enabled: boolean, note: string },
 	comesWith: { Bundled },
 	action: Action,
+	-- Emotes: the employee's 4 wheel slots, the free slot "Add to wheel" uses (nil = none free), and whether its clip
+	-- is still to come (it can be put on the wheel but does not play yet).
+	wheel: { WheelSlot }?,
+	wheelSlot: number?,
+	comingSoon: boolean,
 }
+
+-- The Chat wheel tab: the player's 4 sticker slots and every sticker pack (owned ones list their stickers).
+export type StickerSlot = { slot: number, id: string?, name: string, image: string?, empty: boolean }
+export type Sticker = { id: string, name: string, image: string }
+export type Pack = {
+	id: string,
+	name: string,
+	rarity: CosmeticTypes.Rarity,
+	owned: boolean,
+	price: string?,
+	stickers: { Sticker },
+}
+export type ChatView = { slots: { StickerSlot }, packs: { Pack } }
+
+-- One emote-wheel slot on the detail panel: what is in it (`mine` = the item shown).
+export type WheelSlot = { slot: number, id: string?, name: string, empty: boolean, mine: boolean }
 
 export type StatRow = { stat: EmployeeProfileRegistry.Stat, label: string, icon: UIAssets.ToonIcon, value: number }
 export type Tab = { id: string, text: string, soon: boolean, icon: UIAssets.ToonIcon? }
 -- "vacuums" is the Inventory's Vacuums tab (the same panel, for the vacuum every employee wears).
-export type PageTab = "skins" | "idles" | "about" | "vacuums"
+export type PageTab = "skins" | "emotes" | "idles" | "about" | "vacuums"
 -- The kinds a page lists.
-export type ListKind = "skin" | "idle" | "vacuum"
+export type ListKind = "skin" | "emote" | "idle" | "vacuum"
 
 -- Design px against the virtual screen (PaperHudScaleViewModel.virtual).
 export type Layout = {
@@ -148,7 +172,7 @@ local VM = {}
 
 VM.SCENE = "inventory"
 
-local PAGE_TABS: { PageTab } = { "skins", "idles", "about" }
+local PAGE_TABS: { PageTab } = { "skins", "emotes", "idles", "about" }
 VM.PAGE_TABS = table.freeze(PAGE_TABS)
 
 -- The EmployeeRegistry art key of a skin id ("Pippa.OwnerSpecial" -> "OwnerSpecial").
@@ -255,8 +279,22 @@ function VM.crew(loadout: Loadout, owns: Owns): { CrewCard }
 	return cards
 end
 
+-- The wheel slot `id` sits in on `employee`'s emote wheel (nil = not on it).
+local function slotOf(id: string, employee: string, loadout: Loadout, owns: Owns): number?
+	local wheel = CosmeticRules.lookFor(loadout, employee, owns).wheel
+	for slot, other in wheel do
+		if other == id then
+			return slot
+		end
+	end
+	return nil
+end
+
 local function wornId(kind: ListKind, employee: string, loadout: Loadout, owns: Owns): string
-	if kind == "vacuum" then
+	if kind == "emote" then
+		-- Emotes are "worn" by slot (several at once): see `items`.
+		return ""
+	elseif kind == "vacuum" then
 		return CosmeticRules.vacuumFor(loadout, owns)
 	end
 	local look = CosmeticRules.lookFor(loadout, employee, owns)
@@ -285,7 +323,10 @@ function VM.items(kind: ListKind, employee: string, loadout: Loadout, owns: Owns
 	local cards: { ItemCard } = {}
 	for _, item in list do
 		local owned = owns(item.id)
-		local isWorn = item.id == worn
+		local slot = if kind == "emote" then slotOf(item.id, employee, loadout, owns) else nil
+		local isWorn = item.id == worn or slot ~= nil
+		local onSlot: Band? = if slot ~= nil then { kind = "wearing", text = `Slot {slot}` } else nil
+		local band = onSlot or VM.band(item, owned, isWorn)
 		table.insert(cards, {
 			id = item.id,
 			name = item.name,
@@ -294,13 +335,13 @@ function VM.items(kind: ListKind, employee: string, loadout: Loadout, owns: Owns
 			worn = isWorn,
 			dim = not owned,
 			new = isNew(item, owned, loadout),
-			band = VM.band(item, owned, isWorn),
+			band = band,
 		})
 	end
 	return cards
 end
 
-function VM.detail(item: Item, loadout: Loadout, owns: Owns): Detail
+function VM.detail(item: Item, loadout: Loadout, owns: Owns, page: string?): Detail
 	local owned = owns(item.id)
 	local employee = item.employee
 	local worn = false
@@ -328,6 +369,44 @@ function VM.detail(item: Item, loadout: Loadout, owns: Owns): Detail
 		elseif item.kind == "vacuum" then "vacuum"
 		else "skin"
 	local styles = item.styles or 1
+	local action = VM.action(item, owned, worn)
+	local wheel: { WheelSlot }? = nil
+	local wheelSlot: number? = nil
+	local comingSoon = false
+	local wheelOf = item.employee or page
+	if item.kind == "emote" and wheelOf ~= nil then
+		local slots: { WheelSlot } = {}
+		local mine: number? = nil
+		for slot, id in CosmeticRules.lookFor(loadout, wheelOf, owns).wheel do
+			local other = if id ~= "" then CosmeticRegistry.get(id) else nil
+			if id == item.id then
+				mine = mine or slot
+			end
+			if other == nil and wheelSlot == nil then
+				wheelSlot = slot
+			end
+			table.insert(slots, {
+				slot = slot,
+				id = if other ~= nil then other.id else nil,
+				name = if other ~= nil then other.name else "Empty",
+				empty = other == nil,
+				mine = id == item.id,
+			})
+		end
+		wheel = slots
+		comingSoon = AnimationRegistry.get(EmoteRules.clipKey(item.id)) == nil
+		if mine ~= nil then
+			wheelSlot = nil
+			action = { text = `On slot {mine}`, enabled = false, variant = "secondary", kind = "none" }
+		elseif owned and wheelSlot ~= nil then
+			action = { text = "Add to wheel", enabled = true, variant = "primary", kind = "wear" }
+		elseif owned then
+			action = { text = "Pick a slot below", enabled = false, variant = "secondary", kind = "none" }
+		end
+		if not owned then
+			wheelSlot = nil
+		end
+	end
 	return {
 		id = item.id,
 		name = item.name,
@@ -342,20 +421,77 @@ function VM.detail(item: Item, loadout: Loadout, owns: Owns): Detail
 		quote = item.quote == true,
 		styles = { visible = styles > 1, count = styles, enabled = false, note = "Coming soon" },
 		comesWith = comesWith,
-		action = VM.action(item, owned, worn),
+		action = action,
+		wheel = wheel,
+		wheelSlot = wheelSlot,
+		comingSoon = comingSoon,
 	}
 end
 
 --[=[
 	The change Wear sends for `item` on `employee`'s page (a skin in its first style; an idle for that employee).
 ]=]
-function VM.change(item: Item, employee: string): CosmeticTypes.Change
-	if item.kind == "vacuum" then
+function VM.change(item: Item, employee: string, slot: number?): CosmeticTypes.Change
+	if item.kind == "emote" then
+		return { kind = "emote", employee = item.employee or employee, slot = slot or 1, id = item.id }
+	elseif item.kind == "vacuum" then
 		return { kind = "vacuum", id = item.id }
 	elseif item.kind == "idle" then
 		return { kind = "idle", employee = employee, id = item.id }
 	end
 	return { kind = "skin", id = item.id, style = 1 }
+end
+
+function VM.chat(loadout: Loadout, owns: Owns): ChatView
+	local slots: { StickerSlot } = {}
+	for slot, id in loadout.stickers do
+		local item = if id ~= "" then CosmeticRegistry.get(id) else nil
+		-- A sticker is owned through its pack.
+		local pack = if item ~= nil then item.pack else nil
+		local usable = item ~= nil and item.kind == "sticker" and (owns(id) or (pack ~= nil and owns(pack)))
+		table.insert(slots, {
+			slot = slot,
+			id = if usable and item ~= nil then item.id else nil,
+			name = if usable and item ~= nil then item.name else "Empty",
+			image = if usable then CalloutAssets.stickerImage(id) else nil,
+			empty = not usable,
+		})
+	end
+	local packs: { Pack } = {}
+	for _, pack in CosmeticRegistry.ofKind("stickerPack") do
+		local stickers: { Sticker } = {}
+		for _, sticker in CosmeticRegistry.ofKind("sticker") do
+			if sticker.pack == pack.id then
+				table.insert(
+					stickers,
+					{ id = sticker.id, name = sticker.name, image = CalloutAssets.stickerImage(sticker.id) }
+				)
+			end
+		end
+		local price = pack.price
+		table.insert(packs, {
+			id = pack.id,
+			name = pack.name,
+			rarity = pack.rarity,
+			owned = owns(pack.id),
+			price = if price ~= nil then ToonStyleViewModel.grouped(price) else nil,
+			stickers = stickers,
+		})
+	end
+	return { slots = slots, packs = packs }
+end
+
+-- The slot a picked sticker goes in: the chosen one, else the first empty one, else slot 1.
+function VM.stickerSlotFor(slots: { StickerSlot }, chosen: number?): number
+	if chosen ~= nil then
+		return chosen
+	end
+	for _, slot in slots do
+		if slot.empty then
+			return slot.slot
+		end
+	end
+	return 1
 end
 
 function VM.stats(employee: string): { StatRow }
@@ -381,6 +517,8 @@ function VM.pageTab(value: string): PageTab
 		return "about"
 	elseif value == "vacuums" then
 		return "vacuums"
+	elseif value == "emotes" then
+		return "emotes"
 	end
 	return "skins"
 end
@@ -389,7 +527,7 @@ function VM.tabs(): { Tab }
 	return {
 		{ id = "crew", text = "Crew", soon = false, icon = "pippaHappy" },
 		{ id = "vacuums", text = "Vacuums", soon = false, icon = "vacuum" },
-		{ id = "wheel", text = "Chat wheel", soon = true },
+		{ id = "wheel", text = "Chat wheel", soon = false, icon = "shopGift" },
 	}
 end
 

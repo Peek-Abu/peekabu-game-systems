@@ -11,7 +11,7 @@
 	   `toggleKey` (SceneRegistry) opens or closes that scene. They gate on a focused TextBox rather than
 	   `gameProcessed`, because the engine marks Escape processed for its own menu (and so a search box
 	   keeps its keystrokes). A future Input system can take these over as keymaps-as-data.
-	3. **Mounts the always-on roots** at start — the HUD on the `Hud` layer, the `SceneHost` on `Panel` — and starts the
+	3. **Mounts the always-on roots** at start — the HUD on the `Hud` layer, a `SceneHost` on `Panel` and on `Wheel` — and starts the
 	   UI's sounds (UISoundSystem: the tiers PaperButton plays, the hold prompts' wind-up and done).
 
 	The shared state it drives lives elsewhere and is required directly (UISuppression, SceneStack,
@@ -106,8 +106,8 @@ local UIServiceClient: UIServiceClient = {
 	end,
 
 	--[=[
-		Mounts the framework's two always-on roots: the persistent HUD on the `Hud` layer, and the
-		`SceneHost` on the `Panel` layer (which renders whatever panel scenes the stack opens). Each layer
+		Mounts the framework's always-on roots: the persistent HUD on the `Hud` layer, and a `SceneHost` on the
+		`Panel` and `Wheel` layers (each renders whatever scenes on the stack target it). Each layer
 		owns its root and respawn survival; the HUD derives its own visibility, and the SceneHost renders
 		nothing until a scene is pushed.
 		@param self UIServiceClient -- The service instance
@@ -120,7 +120,11 @@ local UIServiceClient: UIServiceClient = {
 		local panelRender = UIRoot.acquire("Panel")
 		panelRender(React.createElement(SceneHost, { layer = "Panel" }))
 
-		log:debug("HUD and Panel SceneHost mounted")
+		-- The radial wheels (emotes, the chat wheel) sit over the panels and the HUD.
+		local wheelRender = UIRoot.acquire("Wheel")
+		wheelRender(React.createElement(SceneHost, { layer = "Wheel" }))
+
+		log:debug("HUD, Panel and Wheel SceneHosts mounted")
 		UISoundSystem.start()
 	end,
 

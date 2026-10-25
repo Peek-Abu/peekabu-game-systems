@@ -12,7 +12,7 @@
 	preserving their state).
 
 	Presentational shell over the specced selection; exempt from spec-first (needs a renderer). Only the
-	`Panel` layer is hosted for now — Wheel/Overlay get a SceneHost when a scene actually targets them
+	`Panel` and `Wheel` layers are hosted (the Wheel layer for the emote and chat wheels) — Overlay gets a SceneHost when a scene actually targets it
 	(no consumer, no mechanism).
 
 	@class SceneHost

@@ -192,6 +192,103 @@ return function()
 		end)
 	end)
 
+	describe("emotes", function()
+		local function wheel(a, b, c, d)
+			return { a or "", b or "", c or "", d or "" }
+		end
+
+		it("lists the employee's emotes, those on the wheel marked with their slot", function()
+			local cards = VM.items("emote", "Pippa", loadout(), owner())
+			expect(cards[1].id).to.equal("Pippa.Wave")
+			expect(cards[1].worn).to.equal(true)
+			expect(cards[1].band.text).to.equal("Slot 1")
+			local bubbles = find(cards, "Pippa.Bubbles")
+			expect(bubbles.worn).to.equal(false)
+			expect(bubbles.dim).to.equal(true)
+			expect(find(cards, "Cappy.CocoaSip")).never.to.be.ok()
+		end)
+
+		it("adds an owned emote to the first free slot, says which slot a worn one is on", function()
+			local owns = owner({ "Pippa.Bubbles" })
+			local item = CosmeticRegistry.get("Pippa.Bubbles")
+			local view = VM.detail(item, loadout(), owns, "Pippa")
+			expect(view.action.text).to.equal("Add to wheel")
+			expect(view.wheelSlot).to.equal(2)
+			local change = VM.change(item, "Pippa", view.wheelSlot)
+			expect(change.kind).to.equal("emote")
+			expect(change.slot).to.equal(2)
+			expect(change.employee).to.equal("Pippa")
+			local on = loadout({
+				looks = {
+					Pippa = {
+						skin = "Pippa.Default",
+						style = 1,
+						idle = "Pippa.Classic",
+						wheel = wheel("Pippa.Wave", "", "Pippa.Bubbles"),
+					},
+				},
+			})
+			local worn = VM.detail(item, on, owns, "Pippa")
+			expect(worn.action.text).to.equal("On slot 3")
+			expect(worn.action.kind).to.equal("none")
+			expect(#worn.wheel).to.equal(4)
+			expect(worn.wheel[1].name).to.equal("Big Wave")
+			expect(worn.wheel[3].mine).to.equal(true)
+			expect(worn.wheel[2].empty).to.equal(true)
+		end)
+
+		it("asks for a slot when the wheel is full, and flags a clip not made yet", function()
+			local owns = owner({ "Pippa.Bubbles" })
+			local full = loadout({
+				looks = {
+					Pippa = {
+						skin = "Pippa.Default",
+						style = 1,
+						idle = "Pippa.Classic",
+						wheel = wheel("Pippa.Wave", "Pippa.Wave", "Pippa.Wave", "Pippa.Wave"),
+					},
+				},
+			})
+			local view = VM.detail(CosmeticRegistry.get("Pippa.Bubbles"), full, owns, "Pippa")
+			expect(view.action.text).to.equal("Pick a slot below")
+			expect(view.wheelSlot).never.to.be.ok()
+			expect(view.comingSoon).to.equal(true)
+		end)
+
+		it("has an Emotes page tab", function()
+			expect(VM.pageTab("emotes")).to.equal("emotes")
+			expect(table.find(VM.PAGE_TABS, "emotes")).to.equal(2)
+		end)
+	end)
+
+	describe("chat wheel", function()
+		it("shows the 4 sticker slots and every pack, owned ones with their stickers to pick", function()
+			local owns = owner({ "CozyPack" })
+			local view = VM.chat(loadout({ stickers = { "CozyPack.Cocoa", "", "", "" } }), owns)
+			expect(#view.slots).to.equal(4)
+			expect(view.slots[1].name).to.equal("Cocoa")
+			expect(view.slots[2].empty).to.equal(true)
+			local cozy = find(view.packs, "CozyPack")
+			expect(cozy.owned).to.equal(true)
+			expect(#cozy.stickers).to.equal(3)
+			expect(cozy.stickers[1].image ~= "").to.equal(true)
+			local bubble = find(view.packs, "BubblePack")
+			expect(bubble.owned).to.equal(false)
+			expect(bubble.price).to.be.ok()
+		end)
+
+		it("puts a sticker in the chosen slot, else the first empty one, else slot 1", function()
+			local slots = VM.chat(loadout({ stickers = { "CozyPack.Cocoa", "", "", "" } }), owner({ "CozyPack" })).slots
+			expect(VM.stickerSlotFor(slots, 4)).to.equal(4)
+			expect(VM.stickerSlotFor(slots, nil)).to.equal(2)
+			local full = VM.chat(
+				loadout({ stickers = { "CozyPack.Cocoa", "CozyPack.Cocoa", "CozyPack.Cocoa", "CozyPack.Cocoa" } }),
+				owner({ "CozyPack" })
+			).slots
+			expect(VM.stickerSlotFor(full, nil)).to.equal(1)
+		end)
+	end)
+
 	describe("vacuums", function()
 		it("lists every vacuum for whoever you are, Standard Issue first and worn, the rest locked", function()
 			local cards = VM.items("vacuum", "Cappy", loadout(), owner())
@@ -301,12 +398,13 @@ return function()
 	end)
 
 	describe("tabs", function()
-		it("has Crew, Vacuums and a greyed Chat wheel", function()
+		it("has Crew, Vacuums and the Chat wheel", function()
 			local tabs = VM.tabs()
 			expect(#tabs).to.equal(3)
 			expect(tabs[1].id).to.equal("crew")
 			expect(tabs[2].id).to.equal("vacuums")
-			expect(tabs[3].soon).to.equal(true)
+			expect(tabs[3].id).to.equal("wheel")
+			expect(tabs[3].soon).to.equal(false)
 		end)
 
 		it("reads a page tab back from a string, Skins for anything unknown", function()
@@ -315,8 +413,8 @@ return function()
 			expect(VM.pageTab("nope")).to.equal("skins")
 		end)
 
-		it("titles the character page tabs Skins, Idles and About", function()
-			expect(table.concat(VM.PAGE_TABS, ",")).to.equal("skins,idles,about")
+		it("titles the character page tabs Skins, Emotes, Idles and About", function()
+			expect(table.concat(VM.PAGE_TABS, ",")).to.equal("skins,emotes,idles,about")
 		end)
 	end)
 end

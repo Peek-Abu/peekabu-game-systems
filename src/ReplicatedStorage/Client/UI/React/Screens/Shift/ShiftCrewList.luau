@@ -4,6 +4,7 @@
 	character's head (CharacterPortrait), their name, their Gloom-life hearts (ShiftLivesPips) at the row's right (OUT takes their place for a member knocked out for the shift; the local player's name is gold) and, on a row without lives, a sticker for what matters at a glance (YOU in gold, CAUGHT in
 	coral; a caught member's name is struck through and faded). Every pill is as wide as its measured label
 	(TextService, ToonStyleViewModel.pillWidth), so no label is ever cut, and the name keeps clear of the tag's column.
+	A member's fresh sticker (CalloutStore: the chat wheel's last 2.5 s) pops beside their row.
 	Tapping it opens the detail (`open`): each member's status in words, beside it. Desktop: top-left under Roblox's buttons. Phone: top-right. Presentational (exempt;
 	story in ShiftCompactHudPanel.story; the roster is specced in ShiftCrewViewModel).
 
@@ -14,6 +15,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TextService = game:GetService("TextService")
 
 local React = require(ReplicatedStorage.Packages.React)
+local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
+local CalloutAssets = require(ReplicatedStorage.Client.Features.Callout.Data.CalloutAssets)
+local CalloutStore = require(ReplicatedStorage.Client.Features.Callout.State.CalloutStore)
 local CharacterPortrait = require(ReplicatedStorage.Client.UI.React.Screens.Portrait.CharacterPortrait)
 local ShiftCrewViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftCrewViewModel)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
@@ -56,7 +60,14 @@ export type ShiftCrewListProps = {
 	width: number?,
 }
 
-local function row(member: ShiftCrewViewModel.MemberView, you: boolean, phone: boolean, width: number, order: number)
+local function row(
+	member: ShiftCrewViewModel.MemberView,
+	you: boolean,
+	phone: boolean,
+	width: number,
+	order: number,
+	sticker: string?
+)
 	local height = (if phone then ShiftCrewViewModel.LIST.phone else ShiftCrewViewModel.LIST.desktop).row
 	local roomy = height > 34
 	-- With Gloom lives (none for a member not in a shift) the right column holds the hearts, or OUT in their place, and
@@ -142,6 +153,19 @@ local function row(member: ShiftCrewViewModel.MemberView, you: boolean, phone: b
 			tilt = if tag == "YOU" then -3 else 3,
 		})
 	end
+	if sticker ~= nil then
+		-- Beside the row, outside the plate (on a phone the list sits at the right edge: the sticker goes left).
+		local stickerSize = height + 10
+		children.sticker = e("ImageLabel", {
+			AnchorPoint = Vector2.new(if phone then 1 else 0, 0.5),
+			Position = if phone then UDim2.new(0, -14, 0.5, 0) else UDim2.new(1, 14, 0.5, 0),
+			Size = UDim2.fromOffset(stickerSize, stickerSize),
+			BackgroundTransparency = 1,
+			Image = CalloutAssets.stickerImage(sticker),
+			ScaleType = Enum.ScaleType.Fit,
+			ZIndex = 5,
+		})
+	end
 	return e("Frame", {
 		Size = UDim2.fromOffset(width, height),
 		BackgroundTransparency = 1,
@@ -150,6 +174,8 @@ local function row(member: ShiftCrewViewModel.MemberView, you: boolean, phone: b
 end
 
 local function ShiftCrewList(props: ShiftCrewListProps): React.ReactNode
+	-- Each member's sticker while it is fresh (CalloutServiceClient forgets it after STICKER_SECONDS).
+	local stickers = ReactCharm.useAtom(CalloutStore.stickers)
 	local phone = props.phone
 	local list = if phone then ShiftCrewViewModel.LIST.phone else ShiftCrewViewModel.LIST.desktop
 	local padding = list.padding
@@ -163,7 +189,15 @@ local function ShiftCrewList(props: ShiftCrewListProps): React.ReactNode
 		}),
 	}
 	for index, member in members do
-		rows[`m{index}`] = row(member, member.userId == props.myId, phone, width - 2 * padding, index)
+		local latest = stickers[member.userId]
+		rows[`m{index}`] = row(
+			member,
+			member.userId == props.myId,
+			phone,
+			width - 2 * padding,
+			index,
+			if latest ~= nil then latest.id else nil
+		)
 	end
 	local body: { [string]: React.ReactNode } = {
 		rows = e("Frame", {

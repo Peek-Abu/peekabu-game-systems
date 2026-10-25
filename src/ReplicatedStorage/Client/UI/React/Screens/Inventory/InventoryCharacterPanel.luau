@@ -425,7 +425,15 @@ local function detail(props: InventoryCharacterPanelProps, view: VM.Detail, item
 				fit = true,
 			})
 		),
-		line = block(size + 6, 3, body(view.line, size, UIToonConstants.shade("grape").lo)),
+		line = block(
+			size + 6,
+			3,
+			body(
+				if view.comingSoon then `{view.line} · moves coming soon` else view.line,
+				size,
+				UIToonConstants.shade("grape").lo
+			)
+		),
 	}
 	-- The lore in a cream box: a quote mark and the employee's signature when the employee is speaking (the item's
 	-- choice), else the lore book (told about them).
@@ -509,6 +517,51 @@ local function detail(props: InventoryCharacterPanelProps, view: VM.Detail, item
 		end
 		rows.styles = block(size * 2 + 44, 5, group(styles))
 	end
+	-- An emote's wheel: the employee's 4 slots; pressing one puts the shown emote there (when it is owned).
+	local wheel = view.wheel
+	if wheel ~= nil then
+		local owned = props.owns(item.id)
+		local slotHeight = if phone then 40 else 64
+		local slots: Nodes = {
+			label = e(ToonText, {
+				text = "YOUR WHEEL",
+				textSize = size,
+				meaning = "grape",
+				size = UDim2.fromOffset(size * 8, size + 6),
+			}),
+			hint = if phone
+				then nil
+				else e(ToonText, {
+					text = if owned then "press a slot to put it there" else "get it to put it on your wheel",
+					font = "body",
+					color = UIToonConstants.shade("steel").lo,
+					textSize = size - 6,
+					position = UDim2.fromOffset(size * 8, 4),
+					size = UDim2.new(1, -size * 8, 0, size),
+					fit = true,
+				}),
+		}
+		local count = #wheel
+		local gap = 10
+		local width = math.floor((layout.detailWidth - 2 * inset - (count - 1) * gap) / count)
+		for index, slot in wheel do
+			slots[`slot{index}`] = e(ToonButton, {
+				variant = if slot.mine then "gleam" elseif slot.empty then "secondary" else "grape",
+				text = `{slot.slot}  {slot.name}`,
+				textSize = if phone then 11 else size - 6,
+				selected = slot.mine,
+				disabled = not owned or slot.mine,
+				position = UDim2.fromOffset((index - 1) * (width + gap), size + 12),
+				size = UDim2.fromOffset(width, slotHeight),
+				onActivated = function()
+					if owned and not slot.mine then
+						props.onWear(VM.change(item, props.employee, slot.slot))
+					end
+				end,
+			})
+		end
+		rows.wheel = block(size + 12 + slotHeight + DEPTH.drop + 8, 5, group(slots))
+	end
 	if #view.comesWith > 0 and not phone then
 		local tile = if phone then 50 else 88
 		local row: Nodes = {
@@ -579,7 +632,7 @@ local function detail(props: InventoryCharacterPanelProps, view: VM.Detail, item
 			size = UDim2.new(1, -2 * inset, 0, buttonHeight),
 			onActivated = function()
 				if action.kind == "wear" then
-					props.onWear(VM.change(item, props.employee))
+					props.onWear(VM.change(item, props.employee, view.wheelSlot))
 				elseif action.kind == "shop" then
 					props.onShop(item.id)
 				end
@@ -814,6 +867,7 @@ local function InventoryCharacterPanel(props: InventoryCharacterPanelProps): Rea
 		local kind: VM.ListKind = if props.tab == "skins"
 			then "skin"
 			elseif props.tab == "vacuums" then "vacuum"
+			elseif props.tab == "emotes" then "emote"
 			else "idle"
 		local cards = VM.items(kind, props.employee, props.loadout, props.owns)
 		local selectedId = props.selected
@@ -830,7 +884,7 @@ local function InventoryCharacterPanel(props: InventoryCharacterPanelProps): Rea
 			end
 		end
 		if selectedItem ~= nil then
-			local view = VM.detail(selectedItem, props.loadout, props.owns)
+			local view = VM.detail(selectedItem, props.loadout, props.owns, props.employee)
 			left = grid(props, cards, selectedItem.id)
 			right = detail(props, view, selectedItem)
 			heroRarity = selectedItem.rarity
