@@ -378,28 +378,13 @@ local function CharacterPickScreen(props: CharacterPickScreenProps): React.React
 			})
 			else nil,
 	}
-	local function disc(position: UDim2, a: Color3, b: Color3, zIndex: number): React.ReactNode
-		return e("Frame", {
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = position,
-			Size = UDim2.fromScale(0.8, 0.1),
-			BackgroundColor3 = COLOR.white,
-			BorderSizePixel = 0,
-			ZIndex = zIndex,
-		}, {
-			corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }),
-			stroke = e("UIStroke", { Color = COLOR.ink, Thickness = 5 }),
-			gradient = e("UIGradient", { Rotation = 90, Color = ColorSequence.new(a, b) }),
-		})
-	end
 	local hero: Nodes = {
-		lip = disc(UDim2.fromScale(0.5, 0.8), tint.dark, tint.dark, 1),
-		top = disc(UDim2.fromScale(0.5, 0.775), tint.light, tint.body, 2),
 		model = e(ToonViewport, {
 			employee = selected,
 			live = true,
 			framing = "full",
-			size = UDim2.fromScale(1, 0.82),
+			platform = { top = tint.body, side = tint.dark },
+			size = UDim2.fromScale(1, 0.84),
 			zIndex = 3,
 		}),
 		plate = e(ToonSurface, {

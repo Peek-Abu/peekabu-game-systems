@@ -161,31 +161,34 @@ local function ShopProductPanel(props: ShopProductPanelProps): React.ReactNode
 	face.line = text(product.line, size, pad, y, inner, UIToonConstants.shade("grape").lo)
 	y += size + 10
 	local quoteHeight = size * 3 + (if phone then 12 else 30)
+	-- The lore in a cream box: a quote mark when the employee is speaking (the item's choice), else the lore book.
 	local quote: Nodes = {
-		mark = e(ToonText, {
-			text = "\u{201C}",
-			textSize = size * 3,
-			meaning = "grape",
-			position = UDim2.fromOffset(6, -math.floor(size * 0.6)),
-			size = UDim2.fromOffset(size * 2, size * 3),
-		}),
+		mark = if product.quote
+			then e(ToonText, {
+				text = "\u{201C}",
+				textSize = size * 3,
+				meaning = "grape",
+				position = UDim2.fromOffset(6, -math.floor(size * 0.6)),
+				size = UDim2.fromOffset(size * 2, size * 3),
+			})
+			else e(ToonIcon, {
+				icon = "guide",
+				rotation = -8,
+				drop = 3,
+				position = UDim2.fromOffset(4, 6),
+				size = UDim2.fromOffset(size * 2, size * 2),
+			}),
 		lore = text(product.lore, size, size * 2 + 8, 10, inner - size * 2 - 24),
 	}
-	-- Rarer items speak in a quote box; the rest have their lore as a plain line.
-	if product.quote then
-		face.quote = e(ToonSurface, {
-			hue = "cream",
-			small = true,
-			radius = 16,
-			position = UDim2.fromOffset(pad, y),
-			size = UDim2.fromOffset(inner, quoteHeight),
-			children = quote,
-		})
-		y += quoteHeight + DEPTH.drop + 10
-	else
-		face.quote = text(product.lore, size, pad, y, inner)
-		y += size * 2 + 14
-	end
+	face.quote = e(ToonSurface, {
+		hue = "cream",
+		small = true,
+		radius = 16,
+		position = UDim2.fromOffset(pad, y),
+		size = UDim2.fromOffset(inner, quoteHeight),
+		children = quote,
+	})
+	y += quoteHeight + DEPTH.drop + 10
 	if product.styles.visible then
 		face.styles = e(ToonText, {
 			text = `STYLES  ·  all {product.styles.count} come with it (art coming soon)`,
@@ -266,20 +269,6 @@ local function ShopProductPanel(props: ShopProductPanelProps): React.ReactNode
 	end
 
 	local shade = UIToonConstants.rarity(card.rarity)
-	local function disc(position: UDim2, a: Color3, b: Color3, zIndex: number): React.ReactNode
-		return e("Frame", {
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = position,
-			Size = UDim2.fromScale(0.62, 0.1),
-			BackgroundColor3 = COLOR.white,
-			BorderSizePixel = 0,
-			ZIndex = zIndex,
-		}, {
-			corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }),
-			stroke = e("UIStroke", { Color = COLOR.ink, Thickness = 5 }),
-			gradient = e("UIGradient", { Rotation = 90, Color = ColorSequence.new(a, b) }),
-		})
-	end
 	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, {
 		panel = e(ToonSurface, {
 			hue = "cream",
@@ -293,14 +282,13 @@ local function ShopProductPanel(props: ShopProductPanelProps): React.ReactNode
 			Size = UDim2.new(1, -width - layout.gap, 1, 0),
 			BackgroundTransparency = 1,
 		}, {
-			lip = disc(UDim2.fromScale(0.5, 0.9), shade.lo, shade.lo, 1),
-			top = disc(UDim2.fromScale(0.5, 0.875), shade.hi, shade.base, 2),
 			model = e(ToonViewport, {
 				employee = card.employee,
 				skin = card.skinKey,
 				live = true,
 				framing = "full",
-				size = UDim2.fromScale(1, 0.92),
+				platform = { top = shade.base, side = shade.lo },
+				size = UDim2.fromScale(1, 0.96),
 				zIndex = 3,
 			}),
 		}),

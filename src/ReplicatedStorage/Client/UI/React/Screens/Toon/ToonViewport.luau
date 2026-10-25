@@ -8,6 +8,8 @@
 	- `live = true` (the hero): the model in a WorldModel with its idle loop playing. Past the live cap (two at once)
 	  it quietly shows the static copy instead.
 	The model is rebuilt only when the employee, skin, framing or live flag changes, and destroyed with the component.
+	`platform` stands the model on a round 3D platform in the given colours (built in the viewport, so it is lit and
+	turns with the model's world, never a flat shape behind it); the camera frames the two together.
 	`dim` darkens it (a locked item). With no art for the employee in the place it shows their ID-card photo
 	(PortraitViewModel.fallback). Exempt (needs a renderer); story in ToonViewport.story.
 
@@ -24,11 +26,15 @@ local EmployeePoseFormulas = require(EmployeeShared.Utils.EmployeePoseFormulas)
 local EmployeePortraitSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeePortraitSystem)
 local EmployeePreviewSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeePreviewSystem)
 local PortraitViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Portrait.PortraitViewModel)
+local UIToonConstants = require(ReplicatedStorage.Client.UI.React.Screens.Toon.UIToonConstants)
 
 local e = React.createElement
 
 -- A locked item's art: darkened, a little cool.
 local DIM_COLOR = Color3.fromRGB(70, 60, 96)
+
+-- The platform's colours: its top face and its side.
+export type Platform = { top: Color3, side: Color3 }
 
 export type ToonViewportProps = {
 	employee: string,
@@ -39,6 +45,7 @@ export type ToonViewportProps = {
 	context: EmployeePoseRegistry.PortraitContext?,
 	tone: PortraitViewModel.Tone?,
 	dim: boolean?,
+	platform: Platform?,
 	size: UDim2,
 	position: UDim2?,
 	anchor: Vector2?,
@@ -49,6 +56,58 @@ export type ToonViewportProps = {
 local function aspectOf(frame: ViewportFrame): number
 	local size = frame.AbsoluteSize
 	return if size.X > 0 and size.Y > 0 then size.X / size.Y else 1
+end
+
+-- The platform's radius and thickness as shares of the model's height.
+local PLATFORM_RADIUS = 0.34
+local PLATFORM_HEIGHT = 0.07
+
+-- One flat round slab (a Roblox cylinder lies along X: turned upright), its top face at `topY`.
+local function slab(name: string, centre: Vector3, topY: number, radius: number, height: number, color: Color3): Part
+	local part = Instance.new("Part")
+	part.Name = name
+	part.Shape = Enum.PartType.Cylinder
+	part.Anchored = true
+	part.CanCollide = false
+	part.CastShadow = false
+	part.Material = Enum.Material.SmoothPlastic
+	part.Color = color
+	part.Size = Vector3.new(height, radius * 2, radius * 2)
+	part.CFrame = CFrame.new(centre.X, topY - height / 2, centre.Z) * CFrame.Angles(0, 0, math.pi / 2)
+	return part
+end
+
+--[=[
+	The platform under the model's feet (the bounds' bottom): a light top, a thin ink line at its rim, the side, and
+	an ink foot (the kit's outline and drop, in 3D). Returns it and the bounds grown to hold it.
+]=]
+local function platformFor(bounds: EmployeePoseFormulas.Bounds, colors: Platform): (Model, EmployeePoseFormulas.Bounds)
+	local tall = bounds.max.Y - bounds.min.Y
+	local radius = tall * PLATFORM_RADIUS
+	local height = tall * PLATFORM_HEIGHT
+	local centre = (bounds.min + bounds.max) / 2
+	local feet = bounds.min.Y
+	local line = height * 0.12
+	local model = Instance.new("Model")
+	model.Name = "Platform"
+	slab("Top", centre, feet, radius, line * 1.5, colors.top).Parent = model
+	slab("Rim", centre, feet - line * 1.5, radius * 1.025, line, UIToonConstants.COLOR.ink).Parent = model
+	slab("Side", centre, feet - line * 2.5, radius, height - line * 3.5, colors.side).Parent = model
+	slab("Foot", centre, feet - height + line, radius * 1.05, line * 1.4, UIToonConstants.COLOR.ink).Parent = model
+	local reach = radius * 1.05
+	local grown: EmployeePoseFormulas.Bounds = {
+		min = Vector3.new(
+			math.min(bounds.min.X, centre.X - reach),
+			feet - height - line,
+			math.min(bounds.min.Z, centre.Z - reach)
+		),
+		max = Vector3.new(
+			math.max(bounds.max.X, centre.X + reach),
+			bounds.max.Y,
+			math.max(bounds.max.Z, centre.Z + reach)
+		),
+	}
+	return model, grown
 end
 
 -- The model to show and whether it moves: a live one when asked and a slot is free, else the static posed copy.
@@ -68,7 +127,10 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 	local frame, setFrame = React.useState(noFrame)
 	local shown, setShown = React.useState(true)
 
-	local deps: { unknown } = { frame, props.employee, props.skin or "", props.live == true, props.framing }
+	local platform = props.platform
+	local platformKey = if platform ~= nil then platform.top:ToHex() .. platform.side:ToHex() else ""
+	local deps: { unknown } =
+		{ frame, props.employee, props.skin or "", props.live == true, props.framing, platformKey }
 	React.useEffect(function(): () -> ()
 		if frame == nil then
 			return function() end
@@ -80,6 +142,10 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 		end
 		local bounds =
 			EmployeePoseFormulas.bounds(EmployeePortraitSystem.boxes(model, PortraitViewModel.parts(props.framing)))
+		local stand: Model? = nil
+		if platform ~= nil and bounds ~= nil then
+			stand, bounds = platformFor(bounds, platform)
+		end
 		local camera = Instance.new("Camera")
 		local function fit()
 			if bounds ~= nil then
@@ -98,6 +164,9 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 			holder = world
 		end
 		model.Parent = holder
+		if stand ~= nil then
+			stand.Parent = frame
+		end
 		if moving then
 			EmployeePreviewSystem.playIdle(model, props.employee)
 		end
@@ -105,6 +174,9 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 		return function()
 			resized:Disconnect()
 			model:Destroy()
+			if stand ~= nil then
+				stand:Destroy()
+			end
 			if holder ~= frame then
 				holder:Destroy()
 			end

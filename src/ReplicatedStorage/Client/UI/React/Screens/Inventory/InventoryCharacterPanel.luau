@@ -6,7 +6,7 @@
 	- left: a grid of item cards (rarity-coloured card, an inset stage with the item in 3D, a rarity ribbon, the name,
 	  the footer band saying where it comes from, New! and "On" ribbons), or on About: who they are and a fun fact;
 	- middle: the hero: the selected skin LIVE (idle playing) on a raised platform in the rarity's colour;
-	- right: the selected item's detail (ribbons, the big name, the lore in a quote box, Styles, Comes with tiles, the
+	- right: the selected item's detail (ribbons, the big name, the lore box (a quote when the employee speaks), Styles, Comes with tiles, the
 	  main button: Wear / Wearing / See in Shop with its price / where else to get it), or on About: the ability card,
 	  the stat bars and "Every employee can finish every job, even alone."
 	All of it is InventoryViewModel output; nothing is per character. Looking at a New! item marks it seen.
@@ -262,9 +262,11 @@ local function grid(props: InventoryCharacterPanelProps, cards: { VM.ItemCard },
 			CellPadding = UDim2.fromOffset(props.layout.gap, props.layout.gap),
 			SortOrder = Enum.SortOrder.LayoutOrder,
 		}),
+		-- Room for what sticks out past a card (the tilted flags, the selected ring), which the list would cut.
 		pad = e("UIPadding", {
-			PaddingLeft = UDim.new(0, 10),
-			PaddingTop = UDim.new(0, 6),
+			PaddingLeft = UDim.new(0, 12),
+			PaddingRight = UDim.new(0, 18),
+			PaddingTop = UDim.new(0, 16),
 			PaddingBottom = UDim.new(0, 20),
 		}),
 	}
@@ -287,34 +289,17 @@ local function grid(props: InventoryCharacterPanelProps, cards: { VM.ItemCard },
 	}, nodes)
 end
 
-local function disc(position: UDim2, top: Color3, bottom: Color3, zIndex: number): React.ReactNode
-	return e("Frame", {
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = position,
-		Size = UDim2.fromScale(0.86, 0.11),
-		BackgroundColor3 = COLOR.white,
-		BorderSizePixel = 0,
-		ZIndex = zIndex,
-	}, {
-		corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }),
-		stroke = e("UIStroke", { Color = COLOR.ink, Thickness = 5 }),
-		gradient = e("UIGradient", { Rotation = 90, Color = ColorSequence.new(top, bottom) }),
-	})
-end
-
--- The hero: the item live on a raised platform (a lip and a top, both in the rarity's colour).
+-- The hero: the item live on a 3D platform in the rarity's colour.
 local function hero(props: InventoryCharacterPanelProps, skinKey: string, rarity: CosmeticTypes.Rarity): React.ReactNode
 	local shade = UIToonConstants.rarity(rarity)
 	return group({
-		lip = disc(UDim2.fromScale(0.5, 0.88), shade.lo, shade.lo, 1),
-		top = disc(UDim2.fromScale(0.5, 0.855), shade.hi, shade.base, 2),
 		model = e(ToonViewport, {
 			employee = props.employee,
 			skin = skinKey,
 			live = true,
 			framing = "full",
-			-- The feet land on the platform's top.
-			size = UDim2.fromScale(1, 0.9),
+			platform = { top = shade.base, side = shade.lo },
+			size = UDim2.fromScale(1, 0.94),
 			zIndex = 3,
 		}),
 	})
@@ -426,22 +411,32 @@ local function detail(props: InventoryCharacterPanelProps, view: VM.Detail, item
 		),
 		line = block(size + 6, 3, body(view.line, size, UIToonConstants.shade("grape").lo)),
 	}
-	-- The lore in a white quote box, signed by the employee.
+	-- The lore in a cream box: a quote mark and the employee's signature when the employee is speaking (the item's
+	-- choice), else the lore book (told about them).
+	local signed = view.quote and not phone
 	local quote: Nodes = {
-		mark = e(ToonText, {
-			text = "\u{201C}",
-			textSize = size * 3,
-			meaning = "grape",
-			position = UDim2.fromOffset(6, -math.floor(size * 0.6)),
-			size = UDim2.fromOffset(size * 2, size * 3),
-		}),
+		mark = if view.quote
+			then e(ToonText, {
+				text = "\u{201C}",
+				textSize = size * 3,
+				meaning = "grape",
+				position = UDim2.fromOffset(6, -math.floor(size * 0.6)),
+				size = UDim2.fromOffset(size * 2, size * 3),
+			})
+			else e(ToonIcon, {
+				icon = "guide",
+				rotation = -8,
+				drop = 3,
+				position = UDim2.fromOffset(4, 6),
+				size = UDim2.fromOffset(size * 2, size * 2),
+			}),
 		lore = e("Frame", {
 			Position = UDim2.fromOffset(size * 2 + 8, 10),
-			-- On a phone there is no signature under the lore, so it gets the whole box.
-			Size = UDim2.new(1, -size * 2 - 20, 1, if phone then -16 else -size - 24),
+			-- Unsigned (or on a phone), the lore gets the whole box.
+			Size = UDim2.new(1, -size * 2 - 20, 1, if signed then -size - 24 else -16),
 			BackgroundTransparency = 1,
 		}, { text = body(view.lore, size) }),
-		who = if phone
+		who = if not signed
 			then nil
 			else e(ToonText, {
 				text = string.upper(props.employee),
@@ -453,20 +448,17 @@ local function detail(props: InventoryCharacterPanelProps, view: VM.Detail, item
 				fit = true,
 			}),
 	}
-	-- Rarer items speak in a signed quote box; the rest have their lore as a plain line.
-	rows.quote = if view.quote
-		then block(
-			size * 3 + (if phone then 12 else 30),
-			4,
-			e(ToonSurface, {
-				hue = "cream",
-				small = true,
-				radius = 16,
-				size = UDim2.new(1, 0, 1, -DEPTH.drop),
-				children = quote,
-			})
-		)
-		else block(size * 2 + 8, 4, body(view.lore, size))
+	rows.quote = block(
+		size * 3 + (if phone then 12 else 30),
+		4,
+		e(ToonSurface, {
+			hue = "cream",
+			small = true,
+			radius = 16,
+			size = UDim2.new(1, 0, 1, -DEPTH.drop),
+			children = quote,
+		})
+	)
 	-- A phone's detail panel has room for the name, the lore and the button only.
 	if view.styles.visible and not phone then
 		local styles: Nodes = {

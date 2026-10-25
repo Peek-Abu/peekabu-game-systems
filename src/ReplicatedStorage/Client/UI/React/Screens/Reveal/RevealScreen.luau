@@ -191,20 +191,6 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 	local heroTop = layout.barY + titleSize + (if phone then 46 else 90)
 	local heroHeight = virtual.Y - heroTop - (if phone then 10 else 30)
 	local heroWidth = math.floor(virtual.X * 0.36)
-	local function disc(position: UDim2, a: Color3, b: Color3, zIndex: number): React.ReactNode
-		return e("Frame", {
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = position,
-			Size = UDim2.fromScale(0.86, 0.12),
-			BackgroundColor3 = COLOR.white,
-			BorderSizePixel = 0,
-			ZIndex = zIndex,
-		}, {
-			corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }),
-			stroke = e("UIStroke", { Color = COLOR.ink, Thickness = 5 }),
-			gradient = e("UIGradient", { Rotation = 90, Color = ColorSequence.new(a, b) }),
-		})
-	end
 	local heroX = if view.kind == "hire" then 0.6 else 0.5
 	local plate: Nodes = {
 		name = e(ToonText, {
@@ -228,20 +214,14 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 				return if alpha <= 0 then 0.01 else ToonMotionViewModel.pop(alpha)
 			end),
 		}),
-		-- A hire stands on their own colour; an item on its rarity's.
-		lip = disc(UDim2.fromScale(0.5, 0.82), bottom, bottom, 1),
-		top = disc(
-			UDim2.fromScale(0.5, 0.795),
-			if tint ~= nil then tint.light else shade.hi,
-			if tint ~= nil then tint.body else shade.base,
-			2
-		),
 		model = e(ToonViewport, {
 			employee = view.employee,
 			skin = view.skinKey,
 			live = true,
 			framing = "full",
-			size = UDim2.fromScale(1, 0.83),
+			-- A hire stands on their own colour; an item on its rarity's.
+			platform = { top = if tint ~= nil then tint.body else shade.base, side = bottom },
+			size = UDim2.fromScale(1, 0.85),
 			zIndex = 3,
 		}),
 		plate = e(ToonSurface, {

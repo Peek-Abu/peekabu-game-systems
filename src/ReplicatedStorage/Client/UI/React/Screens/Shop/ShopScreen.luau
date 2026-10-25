@@ -54,6 +54,8 @@ local e = React.createElement
 
 local COLOR = UIToonConstants.COLOR
 local DEPTH = UIToonConstants.DEPTH
+-- Space inside the picks list for the flags that stick out over its cards.
+local PICK_PAD = 14
 
 type Nodes = { [string]: React.ReactNode }
 
@@ -543,7 +545,7 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 			})
 		end
 		local columns = if phone then 4 else 5
-		local cellWidth = math.floor((content.width - (columns - 1) * gap - 20) / columns)
+		local cellWidth = math.floor((content.width - (columns - 1) * gap - 32) / columns)
 		local cell = Vector2.new(cellWidth, math.floor(cellWidth * 1.15))
 		local grid: Nodes = {
 			layout = e("UIGridLayout", {
@@ -551,7 +553,13 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 				CellPadding = UDim2.fromOffset(gap, gap + 6),
 				SortOrder = Enum.SortOrder.LayoutOrder,
 			}),
-			pad = e("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingTop = UDim.new(0, 14) }),
+			-- Room for the rarity flags that stick out over the cards' top-left corners.
+			pad = e("UIPadding", {
+				PaddingLeft = UDim.new(0, 12),
+				PaddingRight = UDim.new(0, 8),
+				PaddingTop = UDim.new(0, 16),
+				PaddingBottom = UDim.new(0, 12),
+			}),
 		}
 		for index, card in VM.skins(owns, balances, filter) do
 			grid[card.id] = offerCard(card, cell, phone, index, open)
@@ -694,11 +702,18 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 		local picksWidth = content.width - picksX
 		local headingSize = math.floor(layout.headingSize * 0.75)
 		-- Desktop: a 3 x 2 grid. Phone: one row of bigger cards that scrolls sideways.
+		-- PICK_PAD keeps the rarity flags (they stick out over the cards' top-left corners) inside the list.
 		local cellHeight = if phone
-			then topHeight - headingSize - 30
-			else math.floor((topHeight - headingSize - 20 - gap) / 2)
-		local cellWidth = if phone then math.floor(cellHeight * 0.8) else math.floor((picksWidth - 2 * gap) / 3)
+			then topHeight - headingSize - 30 - PICK_PAD
+			else math.floor((topHeight - headingSize - 20 - gap - PICK_PAD) / 2)
+		local cellWidth = if phone
+			then math.floor(cellHeight * 0.8)
+			else math.floor((picksWidth - 2 * gap - PICK_PAD) / 3)
 		local grid: Nodes = {
+			pad = e("UIPadding", {
+				PaddingLeft = UDim.new(0, PICK_PAD),
+				PaddingTop = UDim.new(0, PICK_PAD),
+			}),
 			layout = if phone
 				then e("UIListLayout", {
 					FillDirection = Enum.FillDirection.Horizontal,

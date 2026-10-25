@@ -142,14 +142,17 @@ local function ToonMenuBar(props: ToonMenuBarProps): React.ReactNode
 			end,
 		})
 		if soon then
+			-- Over the tab's top-right corner, kept inside the bar (the screen's edge would cut a flag above it),
+			-- and wide enough for the whole word next to the notch.
+			local flagText = if phone then 13 else 16
 			nodes[`soon{index}`] = e(ToonFlag, {
 				text = "Soon",
 				hue = "coral",
 				tilt = 6,
-				textSize = if phone then 13 else 16,
-				anchor = Vector2.new(1, 0.8),
-				position = UDim2.fromOffset(x + width + 8, 8),
-				size = UDim2.fromOffset(if phone then 60 else 70, if phone then 22 else 26),
+				textSize = flagText,
+				anchor = Vector2.new(1, 0),
+				position = UDim2.fromOffset(x + width + 16, -8),
+				size = UDim2.fromOffset(math.floor(4 * flagText * 0.75) + 44, if phone then 22 else 28),
 				zIndex = 5,
 			})
 		end

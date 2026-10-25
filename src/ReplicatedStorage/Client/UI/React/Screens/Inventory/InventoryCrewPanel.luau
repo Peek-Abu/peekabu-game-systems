@@ -352,9 +352,12 @@ local function InventoryCrewPanel(props: InventoryCrewPanelProps): React.ReactNo
 			Padding = UDim.new(0, spacing),
 			SortOrder = Enum.SortOrder.LayoutOrder,
 		}),
+		-- Room for the tilted flags that stick out over the cards' top corners.
 		pad = e("UIPadding", {
 			PaddingLeft = UDim.new(0, 20),
 			PaddingRight = UDim.new(0, 20),
+			PaddingTop = UDim.new(0, 16),
+			PaddingBottom = UDim.new(0, 8),
 		}),
 	}
 	for index, entry in props.cards do

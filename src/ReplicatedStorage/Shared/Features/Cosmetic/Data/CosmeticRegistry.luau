@@ -59,7 +59,7 @@ local ITEMS: { Item } = {
 		name = "Classic",
 		rarity = "default",
 		source = "default",
-		lore = "My favourite bow and my lucky bell!",
+		lore = "Pippa's favourite bow and her lucky bell. She never cleans without them.",
 	},
 	{
 		id = "Cappy.Default",
@@ -68,7 +68,7 @@ local ITEMS: { Item } = {
 		name = "Classic",
 		rarity = "default",
 		source = "default",
-		lore = "Comfy hoodie. Cap on backwards. Ready.",
+		lore = "A comfy hoodie and a cap on backwards. Cappy is ready for anything.",
 	},
 	{
 		id = "Prickles.Default",
@@ -77,7 +77,7 @@ local ITEMS: { Item } = {
 		name = "Classic",
 		rarity = "default",
 		source = "default",
-		lore = "Hard hat on. Flower on. Let's go.",
+		lore = "A hard hat with a flower on top. Prickles is ready to work.",
 	},
 	{
 		id = "Pippa.Classic",
@@ -86,7 +86,7 @@ local ITEMS: { Item } = {
 		name = "Classic",
 		rarity = "default",
 		source = "default",
-		lore = "Bouncing, always bouncing.",
+		lore = "Pippa can't stand still. She bounces, always.",
 	},
 	{
 		id = "Cappy.Classic",
@@ -95,7 +95,7 @@ local ITEMS: { Item } = {
 		name = "Classic",
 		rarity = "default",
 		source = "default",
-		lore = "Hands in the pocket. Totally chill.",
+		lore = "Hands in his pocket. Cappy is totally chill.",
 	},
 	{
 		id = "Prickles.Classic",
@@ -104,7 +104,7 @@ local ITEMS: { Item } = {
 		name = "Classic",
 		rarity = "default",
 		source = "default",
-		lore = "Arms crossed. Not impressed.",
+		lore = "Arms crossed. Prickles is not impressed.",
 	},
 	{
 		id = "Pippa.Wave",
@@ -114,6 +114,7 @@ local ITEMS: { Item } = {
 		rarity = "default",
 		source = "default",
 		lore = "Hi, crew! Over here!",
+		quote = true,
 	},
 	{
 		id = "Cappy.FistBump",
@@ -123,6 +124,7 @@ local ITEMS: { Item } = {
 		rarity = "default",
 		source = "default",
 		lore = "Nice work. Don't make it weird.",
+		quote = true,
 	},
 	{
 		id = "Prickles.Huff",
@@ -131,7 +133,7 @@ local ITEMS: { Item } = {
 		name = "Huff",
 		rarity = "default",
 		source = "default",
-		lore = "Hmph.",
+		lore = "Prickles lets out a big huff. Hmph!",
 	},
 
 	-- Pippa
@@ -142,7 +144,7 @@ local ITEMS: { Item } = {
 		name = "Lavender Specs",
 		rarity = "rare",
 		source = "gift",
-		lore = "A gift from the boss. Very fancy glasses.",
+		lore = "A gift from the boss: lavender fur and very fancy glasses.",
 	},
 	{
 		id = "Pippa.BubbleBuddy",
@@ -154,7 +156,7 @@ local ITEMS: { Item } = {
 		price = 1500,
 		styles = 3,
 		bundle = { "Pippa.Bubbles", "BubblePack" },
-		lore = "Rain or shine, bubbles make cleaning fun!",
+		lore = "Rain or shine, Pippa thinks bubbles make cleaning fun.",
 	},
 	{
 		id = "Pippa.GloomTouched",
@@ -163,7 +165,7 @@ local ITEMS: { Item } = {
 		name = "Gloom-Touched",
 		rarity = "uncommon",
 		source = "gloomLocker",
-		lore = "I stepped in the purple stuff. Oops.",
+		lore = "Pippa stepped in the purple stuff, and now it's all over her. Oops.",
 	},
 	{
 		id = "Pippa.Gloomkeeper",
@@ -172,7 +174,7 @@ local ITEMS: { Item } = {
 		name = "Gloomkeeper",
 		rarity = "epic",
 		source = "gloomLocker",
-		lore = "I keep the Gloom in line. Mostly.",
+		lore = "Pippa keeps the Gloom in line. Mostly.",
 	},
 	{
 		id = "Pippa.Bubbles",
@@ -182,7 +184,7 @@ local ITEMS: { Item } = {
 		rarity = "legendary",
 		source = "gleam",
 		price = 400,
-		lore = "Watch them float away!",
+		lore = "Pippa blows bubbles and watches them float away.",
 	},
 
 	-- Cappy
@@ -196,7 +198,7 @@ local ITEMS: { Item } = {
 		price = 1500,
 		styles = 3,
 		bundle = { "Cappy.CocoaSip", "SleepySway", "CozyPack" },
-		lore = "Who says you can't clean in your PJs? The shark slippers are for speed. Probably.",
+		lore = "Cappy cleans in his PJs. He says the shark slippers are for speed. Probably.",
 	},
 	{
 		id = "Cappy.GloomTouched",
@@ -205,7 +207,7 @@ local ITEMS: { Item } = {
 		name = "Gloom-Touched",
 		rarity = "uncommon",
 		source = "gloomLocker",
-		lore = "It's just paint. It's fine.",
+		lore = "Cappy got Gloom all over him. He says it's just paint.",
 	},
 	{
 		id = "Cappy.GhostDebunker",
@@ -215,6 +217,7 @@ local ITEMS: { Item } = {
 		rarity = "epic",
 		source = "gloomLocker",
 		lore = "Ghosts are not real. I have the gear to prove it.",
+		quote = true,
 	},
 	{
 		id = "Cappy.CocoaSip",
@@ -224,7 +227,7 @@ local ITEMS: { Item } = {
 		rarity = "legendary",
 		source = "gleam",
 		price = 400,
-		lore = "A slow sip, a happy sigh. Ahh.",
+		lore = "A slow sip of cocoa, then a happy sigh. Ahh.",
 	},
 
 	-- Prickles
@@ -238,7 +241,7 @@ local ITEMS: { Item } = {
 		price = 1500,
 		styles = 3,
 		bundle = { "Prickles.Lasso", "SheriffPack" },
-		lore = "There's a new sheriff on the night shift.",
+		lore = "There's a new sheriff on the night shift, and he is very prickly.",
 	},
 	{
 		id = "Prickles.GloomTouched",
@@ -247,7 +250,7 @@ local ITEMS: { Item } = {
 		name = "Gloom-Touched",
 		rarity = "uncommon",
 		source = "gloomLocker",
-		lore = "Purple is fine. I guess.",
+		lore = "Prickles got covered in Gloom. Purple is fine, he guesses.",
 	},
 	{
 		id = "Prickles.PotKnight",
@@ -256,7 +259,7 @@ local ITEMS: { Item } = {
 		name = "Pot Knight",
 		rarity = "epic",
 		source = "gloomLocker",
-		lore = "Armour made from a flower pot. Very brave.",
+		lore = "Armour made from a flower pot. Prickles is very brave.",
 	},
 	{
 		id = "Prickles.Lasso",
@@ -267,6 +270,7 @@ local ITEMS: { Item } = {
 		source = "gleam",
 		price = 400,
 		lore = "Yee-haw. Don't tell anyone I said that.",
+		quote = true,
 	},
 
 	-- Shared idles

@@ -57,7 +57,7 @@ export type Product = {
 	rarityText: string,
 	line: string,
 	lore: string,
-	-- The lore in a quote box: only for rarer items (Epic and up).
+	-- The lore is the employee speaking (the item's choice): drawn with a quote mark; otherwise a book.
 	quote: boolean,
 	styles: { visible: boolean, count: number },
 	inside: { Inside },
@@ -91,9 +91,6 @@ local RARITY_RANK: { [CosmeticTypes.Rarity]: number } = {
 	legendary = 4,
 	odd = 5,
 }
-
--- Lore gets the quote box from Epic up (rarer items speak; the rest have a plain line).
-local QUOTE_RANK = 3
 
 local VM = {}
 
@@ -210,7 +207,7 @@ function VM.product(offer: Offer, owns: Owns, balances: Balances): Product
 		rarityText = if card.rarity == "default" then "CLASSIC" else string.upper(card.rarity),
 		line = if item ~= nil and item.kind == "employee" then what else `{what} · cosmetic only`,
 		lore = if item ~= nil then item.lore else "",
-		quote = RARITY_RANK[card.rarity] >= QUOTE_RANK,
+		quote = item ~= nil and item.quote == true,
 		styles = { visible = styles > 1, count = styles },
 		inside = inside,
 		button = VM.button(offer, owns, balances),

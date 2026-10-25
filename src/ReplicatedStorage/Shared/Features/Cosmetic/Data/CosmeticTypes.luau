@@ -40,8 +40,11 @@ export type Item = {
 	price: number?,
 	-- How many colour styles a skin has (1 when nil).
 	styles: number?,
-	-- One short line in the employee's voice, kid reading level.
+	-- A short line or two about it, kid reading level, usually told about the employee (third person).
 	lore: string,
+	-- True when the lore is the employee speaking (first person): drawn as a quote. A choice per item (some lines
+	-- only sound right spoken), never tied to rarity.
+	quote: boolean?,
 	-- Items that come with this one (a Legendary skin's emote, idle and sticker pack).
 	bundle: { string }?,
 	-- A sticker's pack.

@@ -3,7 +3,9 @@
 	EmployeePoseRegistry: how each employee stands in a UI portrait (CharacterPortrait), as data.
 
 	A pose is a set of joint turns (Motor6D name -> degrees about X, Y, Z, applied as the joint's Transform over the
-	rig's REST pose) plus the face it wears. Pippa's rest is a T-pose (arms straight out along X, facing -Z), so every
+	rig's REST pose) plus the face it wears. Every employee is built on the shared kit rig (Pippa's), so they all share
+	one set (`KIT_POSES`): an employee in EmployeeRegistry poses from it, and a new employee needs no entry here.
+	The kit rig's rest is a T-pose (arms straight out along X, facing -Z), so every
 	pose of hers lowers the arms, and her arms are short next to her head: an arm raised higher than level hides
 	behind it, so raised paws come from a level upper arm and a bent elbow. A stock R15 avatar rests arms-down and
 	has no set here (it is shown at rest). The axes, in the joint's parent space at rest: X pitches (+ tips the top back), Y yaws (+ swings the right arm
@@ -74,7 +76,7 @@ end
 local SIDE_SHOULDER = Vector3.new(0, 10, -72)
 local SIDE_ELBOW = Vector3.new(0, 12, 0)
 
-local PIPPA_POSES: { [string]: PoseDef } = {
+local KIT_POSES: { [string]: PoseDef } = {
 	-- Arms at her sides, content: the roster's default.
 	stand = pose("stand", "Content", arms(SIDE_SHOULDER, SIDE_ELBOW, {})),
 	-- The right upper arm out level and the paw up beside her head (higher, the huge head hides it), the left at
@@ -131,15 +133,13 @@ local PIPPA_POSES: { [string]: PoseDef } = {
 	),
 }
 
-local PORTRAITS: { [string]: PortraitSet } = {
-	Pippa = {
-		poses = PIPPA_POSES,
-		contexts = {
-			profile = { pose = "wave", byLevel = { [1] = "shy", [2] = "wave", [3] = "proud" } },
-			crew = { pose = "stand" },
-			caught = { pose = "scared" },
-			award = { pose = "cheer", byGrade = { A = "cheer", B = "wave", C = "slump" } },
-		},
+local KIT_SET: PortraitSet = {
+	poses = KIT_POSES,
+	contexts = {
+		profile = { pose = "wave", byLevel = { [1] = "shy", [2] = "wave", [3] = "proud" } },
+		crew = { pose = "stand" },
+		caught = { pose = "scared" },
+		award = { pose = "cheer", byGrade = { A = "cheer", B = "wave", C = "slump" } },
 	},
 }
 
@@ -150,17 +150,14 @@ local EmployeePoseRegistry = {
 	mirror = mirror,
 }
 
+-- The employee's set: the kit's for every registered employee (without one, a stock avatar stays at rest).
 function EmployeePoseRegistry.get(employee: string): PortraitSet?
-	return PORTRAITS[employee]
+	return if EmployeeRegistry.get(employee) ~= nil then KIT_SET else nil
 end
 
+-- The employees that have a set (every registered one), sorted.
 function EmployeePoseRegistry.names(): { string }
-	local names = {}
-	for name in PORTRAITS do
-		table.insert(names, name)
-	end
-	table.sort(names)
-	return names
+	return EmployeeRegistry.names()
 end
 
 return EmployeePoseRegistry

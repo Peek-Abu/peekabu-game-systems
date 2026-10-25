@@ -27,6 +27,11 @@ return function()
 			expect(EmployeePoseRegistry.get("Pippa")).to.be.ok()
 		end)
 
+		it("gives every employee on the kit rig the same set, so none shows the rig's T-pose", function()
+			expect(EmployeePoseRegistry.get("Prickles")).to.equal(EmployeePoseRegistry.get("Pippa"))
+			expect(EmployeePoseRegistry.get("Cappy")).to.equal(EmployeePoseRegistry.get("Pippa"))
+		end)
+
 		it("returns nil for an employee with no portrait set", function()
 			expect(EmployeePoseRegistry.get("Nobody")).never.to.be.ok()
 		end)
