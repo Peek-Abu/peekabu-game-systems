@@ -18,7 +18,15 @@ local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 
 export type Reveal = { ids: { string }, source: string }
 
-export type Effects = { rays: boolean, stripes: boolean, sparkles: boolean, confetti: boolean, goo: boolean }
+-- `foil`: a bright sweep across the screen as it opens (Legendary, Odd and hires).
+export type Effects = {
+	rays: boolean,
+	stripes: boolean,
+	sparkles: boolean,
+	confetti: boolean,
+	goo: boolean,
+	foil: boolean,
+}
 
 export type View = {
 	kind: "hire" | "item",
@@ -70,6 +78,7 @@ local function effectsOf(rarity: CosmeticTypes.Rarity): Effects
 		sparkles = rank >= 3,
 		confetti = rarity == "legendary",
 		goo = rarity == "odd",
+		foil = rank >= 4,
 	}
 end
 
@@ -101,7 +110,7 @@ function VM.view(reveal: Reveal): View
 			name = item.name,
 			employee = item.id,
 			alsoGot = {},
-			effects = { rays = true, stripes = false, sparkles = true, confetti = true, goo = false },
+			effects = { rays = true, stripes = false, sparkles = true, confetti = true, goo = false, foil = true },
 			primary = if fromPick then "Start!" else "Equip!",
 			change = if fromPick then nil else { kind = "employee", id = item.id },
 			later = not fromPick,

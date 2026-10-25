@@ -20,6 +20,9 @@ return function()
 		expect(epic.confetti).to.equal(false)
 		local legendary = VM.view({ ids = { "Pippa.BubbleBuddy" }, source = "shop" }).effects
 		expect(legendary.confetti).to.equal(true)
+		expect(legendary.foil).to.equal(true)
+		expect(epic.foil).to.equal(false)
+		expect(VM.view({ ids = { "Pippa" }, source = "pick" }).effects.foil).to.equal(true)
 	end)
 
 	it("says what it is and whose, and lists what came with it", function()

@@ -3,7 +3,8 @@
 	ToonBackdrop: the full-screen background every character menu sits on (Inventory, the pick, the Shop, reveals):
 	the screen's colour as a top-to-bottom gradient, broad 45-degree stripes over it (the kit's stripe tile), optional
 	rays behind the hero, and a vignette on the edges. `see` lets the world show through the top (0 = opaque), and
-	`blur` blurs the world behind while the backdrop is up (a BlurEffect on the camera, removed on unmount).
+	`blur` blurs the world behind while the backdrop is up (a BlurEffect on the camera, removed on unmount). The
+	stripes drift slowly and the rays turn (both still under Roblox's Reduce Motion setting).
 	Presentational (exempt; story in ToonBackdrop.story).
 
 	@class ToonBackdrop
@@ -14,6 +15,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage.Packages.React)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local UIToonConstants = require(ReplicatedStorage.Client.UI.React.Screens.Toon.UIToonConstants)
+local useToonPlay = require(ReplicatedStorage.Client.UI.React.Screens.Toon.useToonPlay)
 
 local e = React.createElement
 
@@ -38,9 +40,16 @@ export type ToonBackdropProps = {
 }
 
 local BLUR_SIZE = 14
+-- The stripes drift one tile down-right every STRIPE_SECONDS; the rays turn once every RAYS_SECONDS.
+local STRIPE_TILE = 180
+local STRIPE_SECONDS = 9
+local RAYS_SECONDS = 48
 
 local function ToonBackdrop(props: ToonBackdropProps): React.ReactNode
 	local blur = props.blur == true
+	-- Two looping 0 -> 1 clocks (Reduced Motion holds them still).
+	local drift = useToonPlay(STRIPE_SECONDS, 0, nil, true)
+	local turn = useToonPlay(RAYS_SECONDS, 0, nil, true)
 	React.useEffect(function(): () -> ()
 		if not blur then
 			return function() end
@@ -78,14 +87,19 @@ local function ToonBackdrop(props: ToonBackdropProps): React.ReactNode
 		}),
 	}
 	if props.stripes ~= false then
+		-- One tile larger than the screen, sliding by exactly one tile, so the loop is seamless.
 		nodes.stripes = e("ImageLabel", {
-			Size = UDim2.fromScale(1, 1),
+			Position = drift:map(function(alpha: number): UDim2
+				local offset = -STRIPE_TILE + alpha * STRIPE_TILE
+				return UDim2.fromOffset(offset, offset)
+			end),
+			Size = UDim2.new(1, STRIPE_TILE, 1, STRIPE_TILE),
 			BackgroundTransparency = 1,
 			Image = UIAssets.toon.stripes,
 			ImageColor3 = UIToonConstants.COLOR.white,
 			ImageTransparency = 0.9,
 			ScaleType = Enum.ScaleType.Tile,
-			TileSize = UDim2.fromOffset(180, 180),
+			TileSize = UDim2.fromOffset(STRIPE_TILE, STRIPE_TILE),
 			ZIndex = 2,
 		})
 	end
@@ -100,6 +114,9 @@ local function ToonBackdrop(props: ToonBackdropProps): React.ReactNode
 			Image = UIAssets.toon.rays,
 			ImageColor3 = rays.color,
 			ImageTransparency = rays.transparency or 0.45,
+			Rotation = turn:map(function(alpha: number): number
+				return alpha * 360
+			end),
 			ZIndex = 3,
 		})
 	end
@@ -133,6 +150,7 @@ local function ToonBackdrop(props: ToonBackdropProps): React.ReactNode
 		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
 		Active = true,
+		ClipsDescendants = true,
 		ZIndex = props.zIndex,
 	}, nodes)
 end

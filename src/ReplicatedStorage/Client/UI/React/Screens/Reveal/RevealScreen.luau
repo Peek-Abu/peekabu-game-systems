@@ -30,6 +30,8 @@ local ToonSurface = require(Toon.ToonSurface)
 local ToonText = require(Toon.ToonText)
 local ToonViewport = require(Toon.ToonViewport)
 local UIToonConstants = require(Toon.UIToonConstants)
+local ToonMotionViewModel = require(Toon.ToonMotionViewModel)
+local useToonPlay = require(Toon.useToonPlay)
 local PaperHudFrame = require(script.Parent.Parent.Paper.PaperHudFrame)
 local PaperHudScaleViewModel = require(script.Parent.Parent.Paper.PaperHudScaleViewModel)
 local usePaperLayout = require(script.Parent.Parent.Paper.usePaperLayout)
@@ -59,19 +61,32 @@ local CONFETTI_COLORS = {
 	Color3.fromHex("B48BFF"),
 }
 
--- Confetti scattered the same way every time (a fixed pattern, not random per frame).
-local function confetti(count: number): Nodes
+-- Confetti falling for good: each piece has its own column, speed, start and sway, driven by one looping clock (a
+-- fixed pattern, the same every time; still under Reduce Motion).
+local FALL_SECONDS = 6
+
+local function Confetti(props: { count: number }): React.ReactNode
+	local clock = useToonPlay(FALL_SECONDS, 0, nil, true)
 	local nodes: Nodes = {}
 	local state = 7
 	local function nextNumber(): number
 		state = (state * 1103515245 + 12345) % 2147483648
 		return state / 2147483648
 	end
-	for index = 1, count do
+	for index = 1, props.count do
+		local x = nextNumber()
+		local start = nextNumber()
+		local speed = 1 + math.floor(nextNumber() * 2)
+		local spin = math.floor(nextNumber() * 360)
 		nodes[`c{index}`] = e("Frame", {
-			Position = UDim2.fromScale(nextNumber(), nextNumber()),
+			Position = clock:map(function(alpha: number): UDim2
+				local fall = (start + alpha * speed) % 1
+				return UDim2.fromScale(x + 0.02 * math.sin((alpha * speed + start) * math.pi * 4), fall * 1.1 - 0.05)
+			end),
+			Rotation = clock:map(function(alpha: number): number
+				return spin + alpha * 360 * speed
+			end),
 			Size = UDim2.fromOffset(14, 26),
-			Rotation = math.floor(nextNumber() * 180),
 			BackgroundColor3 = CONFETTI_COLORS[index % #CONFETTI_COLORS + 1],
 			BorderSizePixel = 0,
 			ZIndex = 2,
@@ -80,7 +95,7 @@ local function confetti(count: number): Nodes
 			stroke = e("UIStroke", { Color = COLOR.ink, Thickness = 3 }),
 		})
 	end
-	return nodes
+	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 1 }, nodes)
 end
 
 local function RevealScreen(props: RevealScreenProps): React.ReactNode
@@ -92,6 +107,10 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 	local pop, setPop = React.useState(noScale)
 
 	local key = if reveal ~= nil then table.concat(reveal.ids, ",") else ""
+	-- The opening, replayed for each reveal: a white flash fading, the character popping in, a bright sweep.
+	local flash = useToonPlay(0.5, 0, key)
+	local hero = useToonPlay(0.55, 0.15, key)
+	local sweep = useToonPlay(0.9, 0.35, key)
 	-- The title pops in: 0.4 -> 1 with an overshoot.
 	local deps: { unknown } = { pop, key }
 	React.useEffect(function(): () -> ()
@@ -204,6 +223,11 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 		BackgroundTransparency = 1,
 		ZIndex = 3,
 	}, {
+		pop = e("UIScale", {
+			Scale = hero:map(function(alpha: number): number
+				return if alpha <= 0 then 0.01 else ToonMotionViewModel.pop(alpha)
+			end),
+		}),
 		-- A hire stands on their own colour; an item on its rarity's.
 		lip = disc(UDim2.fromScale(0.5, 0.82), bottom, bottom, 1),
 		top = disc(
@@ -355,14 +379,11 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 		for index, extra in view.alsoGot do
 			local stage: Nodes = {
 				art = if extra.kind == "Sticker pack"
-					then e(
-						ToonIcon,
-						{
-							icon = "shopGift",
-							position = UDim2.fromScale(0.08, 0.08),
-							size = UDim2.fromScale(0.84, 0.84),
-						}
-					)
+					then e(ToonIcon, {
+						icon = "shopGift",
+						position = UDim2.fromScale(0.08, 0.08),
+						size = UDim2.fromScale(0.84, 0.84),
+					})
 					else e(
 						ToonViewport,
 						{ employee = view.employee, framing = "bust", size = UDim2.fromScale(1, 1) }
@@ -460,8 +481,37 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 	end
 
 	local screen: Nodes = {
-		confetti = if view.effects.confetti
-			then e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 1 }, confetti(34))
+		confetti = if view.effects.confetti then e(Confetti, { count = 34 }) else nil,
+		flash = e("Frame", {
+			Size = UDim2.fromScale(1, 1),
+			BackgroundColor3 = COLOR.white,
+			BackgroundTransparency = flash:map(function(alpha: number): number
+				return 0.15 + 0.85 * alpha
+			end),
+			BorderSizePixel = 0,
+			ZIndex = 30,
+		}),
+		-- The foil: a bright diagonal band crossing the screen once.
+		sweep = if view.effects.foil
+			then e("Frame", {
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = sweep:map(function(alpha: number): UDim2
+					return UDim2.fromScale(-0.4 + 1.8 * alpha, 0.5)
+				end),
+				Size = UDim2.fromScale(0.35, 2),
+				Rotation = 18,
+				BackgroundColor3 = COLOR.white,
+				BorderSizePixel = 0,
+				ZIndex = 29,
+			}, {
+				gradient = e("UIGradient", {
+					Transparency = NumberSequence.new({
+						NumberSequenceKeypoint.new(0, 1),
+						NumberSequenceKeypoint.new(0.5, 0.55),
+						NumberSequenceKeypoint.new(1, 1),
+					}),
+				}),
+			})
 			else nil,
 		scaled = e(PaperHudFrame, {
 			scale = scale,
