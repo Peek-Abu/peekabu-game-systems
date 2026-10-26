@@ -32,6 +32,7 @@ local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data
 local CosmeticTypes = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticTypes)
 local VacuumSkinRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumSkinRules)
 local EmployeePortraitSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeePortraitSystem)
+local EmployeeLanyardSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeeLanyardSystem)
 local VacuumPreviewSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumPreviewSystem)
 
 local LIVE_CAP = 2
@@ -75,6 +76,7 @@ local function dressed(employee: string, skin: string?, source: Instance): Model
 	if look ~= nil then
 		EmployeeSkinSystem.apply(model, look, resolve(source, EmployeeConstants.ACCESSORIES_PATH))
 	end
+	EmployeeLanyardSystem.attachPreview(model)
 	return model
 end
 

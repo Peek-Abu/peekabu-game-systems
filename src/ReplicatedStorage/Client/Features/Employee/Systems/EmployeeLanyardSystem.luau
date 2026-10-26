@@ -126,32 +126,33 @@ local function buildStrapMesh(fit: Fit, rank: number, scale: number, ut: BasePar
 		end
 	end
 	local cx, cy, cz = (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2, (lo[3] + hi[3]) / 2
-	local okEm, em = pcall(function()
-		return AssetService:CreateEditableMesh()
-	end)
-	if not okEm or em == nil then
-		return nil, nil
-	end
-	local ids = table.create(#g.pos)
-	for i, p in g.pos do
-		ids[i] = em:AddVertex(Vector3.new(p[1] - cx, p[2] - cy, p[3] - cz))
-	end
-	local col = EmployeeLanyardConstants.COLOURS[rank] or EmployeeLanyardConstants.COLOURS[1]
-	local cMain = em:AddColor(rgb(col.main), 1)
-	local cEdge = em:AddColor(rgb(col.edge or col.main), 1)
-	for t, tri in g.tris do
-		local f = em:AddTriangle(ids[tri[1]], ids[tri[2]], ids[tri[3]])
-		local c = if g.triBand[t] == 1 then cEdge else cMain
-		em:SetFaceColors(f, { c, c, c })
-	end
-	local okMp, mp = pcall(function()
+	local createdEm: EditableMesh? = nil
+	local ok, mp = pcall(function(): MeshPart
+		local em = AssetService:CreateEditableMesh()
+		createdEm = em
+		local ids = table.create(#g.pos)
+		for i, p in g.pos do
+			ids[i] = em:AddVertex(Vector3.new(p[1] - cx, p[2] - cy, p[3] - cz))
+		end
+		local col = EmployeeLanyardConstants.COLOURS[rank] or EmployeeLanyardConstants.COLOURS[1]
+		local cMain = em:AddColor(rgb(col.main), 1)
+		local cEdge = em:AddColor(rgb(col.edge or col.main), 1)
+		for t, tri in g.tris do
+			local f = em:AddTriangle(ids[tri[1]], ids[tri[2]], ids[tri[3]])
+			local c = if g.triBand[t] == 1 then cEdge else cMain
+			em:SetFaceColors(f, { c, c, c })
+		end
 		return AssetService:CreateMeshPartAsync(Content.fromObject(em), {
 			CollisionFidelity = Enum.CollisionFidelity.Box,
 			RenderFidelity = Enum.RenderFidelity.Precise,
 		})
 	end)
-	if not okMp or mp == nil then
-		em:Destroy()
+	if not ok or not mp then
+		if createdEm ~= nil then
+			pcall(function()
+				createdEm:Destroy()
+			end)
+		end
 		return nil, nil
 	end
 	mp.Name = EmployeeConstants.LANYARD_STRAP
@@ -162,44 +163,46 @@ local function buildStrapMesh(fit: Fit, rank: number, scale: number, ut: BasePar
 	local w = Instance.new("WeldConstraint")
 	w.Part0, w.Part1 = ut, mp
 	w.Parent = mp
-	return mp, em
+	return mp, createdEm
 end
 
-local function fallbackBeams(fit: Fit, rank: number, scale: number, ut: BasePart, parent: Instance)
+-- Synchronous 3D part-ribbon fallback along the fitted stations: renders in both Workspace and ViewportFrames even
+-- when EditableMesh is disabled in Experience Settings -> Security.
+local function fallbackRibbonParts(fit: Fit, rank: number, scale: number, ut: BasePart, parent: Instance)
 	local rb = fit.ribbon
 	local n = #rb.centre
-	local atts: { Attachment } = {}
-	local idx: { number } = {}
-	for i = 1, n, 4 do
-		table.insert(idx, i)
-	end
-	if idx[#idx] ~= n then
-		table.insert(idx, n)
-	end
-	for j, i in idx do
-		local c = v3(rb.centre[i]) + v3(rb.normal[i]) * (EmployeeLanyardConstants.STRAP_T * 0.5 + 0.004)
-		local x = (v3(rb.centre[math.min(i + 1, n)]) - v3(rb.centre[math.max(i - 1, 1)])).Unit
-		local y = v3(rb.binormal[i])
-		y = (y - x * x:Dot(y)).Unit
-		local att = Instance.new("Attachment")
-		att.Name = `LanyardV4_{j}`
-		att.CFrame = CFrame.fromMatrix(c * scale, x, y)
-		att.Parent = ut
-		atts[j] = att
-	end
 	local col = EmployeeLanyardConstants.COLOURS[rank] or EmployeeLanyardConstants.COLOURS[1]
+	local color = rgb(col.main)
 	local w = EmployeeLanyardFormulas.width(fit, rank) * scale
-	for j = 1, #atts - 1 do
-		local bm = Instance.new("Beam")
-		bm.Attachment0, bm.Attachment1 = atts[j], atts[j + 1]
-		local chord = (atts[j + 1].Position - atts[j].Position).Magnitude
-		bm.CurveSize0, bm.CurveSize1 = chord / 3, chord / 3
-		bm.Width0, bm.Width1 = w, w
-		bm.Color = ColorSequence.new(rgb(col.main))
-		bm.FaceCamera = false
-		bm.LightInfluence = 1
-		bm.Segments = 4
-		bm.Parent = parent
+	local thickness = math.max(0.012, EmployeeLanyardConstants.STRAP_T * scale * 2)
+	for i = 1, n - 1 do
+		local p0 = (v3(rb.centre[i]) + v3(rb.offset[i][3])) * scale
+		local p1 = (v3(rb.centre[i + 1]) + v3(rb.offset[i + 1][3])) * scale
+		local delta = p1 - p0
+		local len = delta.Magnitude
+		if len > 1e-4 then
+			local mid = (p0 + p1) * 0.5
+			local nrm = (v3(rb.normal[i]) + v3(rb.normal[i + 1])).Unit
+			local tan = delta / len
+			local bin = tan:Cross(nrm)
+			if bin.Magnitude < 1e-4 then
+				bin = v3(rb.binormal[i]).Unit
+			else
+				bin = bin.Unit
+			end
+			local trueNrm = bin:Cross(tan).Unit
+			local seg = Instance.new("Part")
+			seg.Name = EmployeeConstants.LANYARD_STRAP
+			seg.Material = Enum.Material.SmoothPlastic
+			seg.Color = color
+			seg.Size = Vector3.new(w, thickness, len + 0.008 * scale)
+			quiet(seg)
+			seg.CFrame = ut.CFrame * CFrame.fromMatrix(mid + trueNrm * (thickness * 0.5), bin, trueNrm, -tan)
+			local wc = Instance.new("WeldConstraint")
+			wc.Part0, wc.Part1 = ut, seg
+			wc.Parent = seg
+			seg.Parent = parent
+		end
 	end
 end
 
@@ -208,7 +211,8 @@ function EmployeeLanyardSystem.attach(
 	fit: Fit,
 	rank: number,
 	badgeTemplate: Model?,
-	flipped: boolean?
+	flipped: boolean?,
+	syncOnly: boolean?
 ): Handle?
 	local ut = character:FindFirstChild("UpperTorso")
 	if ut == nil or not ut:IsA("BasePart") then
@@ -217,11 +221,15 @@ function EmployeeLanyardSystem.attach(
 	local scale = ut.Size.X / fit.ut_size[1]
 	local folder = Instance.new("Folder")
 	folder.Name = EmployeeConstants.LANYARD_FOLDER
-	local strap, em = buildStrapMesh(fit, rank, scale, ut)
+	local strap: MeshPart? = nil
+	local em: EditableMesh? = nil
+	if not syncOnly then
+		strap, em = buildStrapMesh(fit, rank, scale, ut)
+	end
 	if strap ~= nil then
 		strap.Parent = folder
 	else
-		fallbackBeams(fit, rank, scale, ut, folder)
+		fallbackRibbonParts(fit, rank, scale, ut, folder)
 	end
 	local badgeWeld: Weld? = nil
 	local badgeRoot: BasePart? = nil
@@ -492,6 +500,33 @@ local function stripLegacyPiece(descendant: Instance)
 			if descendant.Parent then
 				descendant:Destroy()
 			end
+		end)
+	end
+end
+
+function EmployeeLanyardSystem.attachPreview(model: Model)
+	local ut = model:FindFirstChild("UpperTorso")
+	if ut == nil or not ut:IsA("BasePart") or model:FindFirstChild(EmployeeConstants.LANYARD_FOLDER) ~= nil then
+		return
+	end
+	local localPlayer = Players.LocalPlayer
+	local rank = resolveRank(localPlayer, model)
+	local empAttr = model:GetAttribute(EmployeeConstants.NAME_ATTRIBUTE)
+	local empName = if type(empAttr) == "string" then empAttr else nil
+	local fit = EmployeeLanyardFormulas.fitForTorso(empName, ut.Size)
+	local set = badgeFolder()
+	local badgeTemplate = if set ~= nil then set:FindFirstChild(`R{rank}`) else nil
+	local handle = EmployeeLanyardSystem.attach(
+		model,
+		fit,
+		rank,
+		if badgeTemplate ~= nil and badgeTemplate:IsA("Model") then badgeTemplate else nil,
+		false,
+		true
+	)
+	if handle ~= nil then
+		model.Destroying:Connect(function()
+			handle.destroy()
 		end)
 	end
 end
