@@ -75,4 +75,17 @@ return function()
 		expect(view.title).to.equal("NEW!")
 		expect(view.primary).to.equal("Nice!")
 	end)
+
+	it("tells you when a Locker roll was a duplicate and how much came back", function()
+		local view = VM.view({
+			ids = { "Pippa.GloomTouched" },
+			source = "locker",
+			duplicate = true,
+			refund = 90,
+			currency = "gloom",
+		})
+		expect(view.ribbon).to.equal("You already have this! +90 Gloom back")
+		expect(view.primary).to.equal("Nice!")
+		expect(view.later).to.equal(false)
+	end)
 end

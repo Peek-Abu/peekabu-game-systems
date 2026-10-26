@@ -61,6 +61,7 @@ local function emptyAccount(): PlayerDataTypes.PlayerAccount
 		rank = { season = "", xp = 0, lastAwardedRunId = "" },
 		firstSeen = { at = 0 },
 		loadout = { current = "Pippa", picked = false, looks = {}, stickers = { "", "", "", "" }, seen = {} },
+		lockers = { keys = {}, pity = {}, opened = 0 },
 	}
 end
 

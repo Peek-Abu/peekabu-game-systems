@@ -24,7 +24,11 @@
    - **Skins** tab: the employee filters; owned items stamped OWNED.
    - **Gleam** tab: the 4 bundles should now be real buttons -> Roblox's purchase prompt (a test purchase in
      Studio) -> the Gleam goes up once.
-   - **Lockers** and **Passes** greyed with Soon.
+   - **Lockers** tab: Gloom Locker (300 Gloom) and Gleam Locker (100 Gleam) cards with key count, live pity line,
+     **Odds** button (shows real scaled rarity/item chances and duplicate refunds), and **What's inside** list.
+     Test: `currencyadd me gloom 1200`, open Gloom Locker -> stage-1 opening (shaking Locker, flying key, Skip after
+     1s) -> reveal (or duplicate refund ribbon `"You already have this! +45 Gloom back"`).
+   - **Passes** greyed with Soon.
    - Buy with enough Gleam: **Yes / No** question -> **Yes** -> the **reveal** (LEGENDARY! with confetti) -> **Wear
      it!** (your character changes) or **Later**.
    - Not enough Gleam: the button says **Need X more** and takes you to the Gleam tab.

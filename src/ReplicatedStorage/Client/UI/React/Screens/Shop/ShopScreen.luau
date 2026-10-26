@@ -50,6 +50,7 @@ local PaperHudScaleViewModel = require(script.Parent.Parent.Paper.PaperHudScaleV
 local usePaperLayout = require(script.Parent.Parent.Paper.usePaperLayout)
 local usePaperViewport = require(script.Parent.Parent.Paper.usePaperViewport)
 local InventoryViewModel = require(script.Parent.Parent.Inventory.InventoryViewModel)
+local LockerPanel = require(script.Parent.Parent.Locker.LockerPanel)
 local ShopProductPanel = require(script.Parent.ShopProductPanel)
 local VM = require(script.Parent.ShopViewModel)
 
@@ -596,6 +597,17 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 				AutomaticCanvasSize = Enum.AutomaticSize.Y,
 				ScrollBarThickness = 6,
 			}, grid),
+		})
+	elseif tab == "lockers" then
+		local gloom = if preview ~= nil then preview.credits else CurrencyUtils.getCurrencyAmount(currency, "gloom")
+		body = e(LockerPanel, {
+			owns = owns,
+			balances = { gloom = gloom, gleam = balances.gleam },
+			layout = layout,
+			preview = preview ~= nil,
+			onGetGleam = function()
+				setTab("gleam")
+			end,
 		})
 	elseif tab == "gleam" then
 		local note = e(ToonText, {

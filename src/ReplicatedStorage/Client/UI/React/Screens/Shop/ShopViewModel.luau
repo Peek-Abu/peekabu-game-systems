@@ -99,13 +99,13 @@ local VM = {}
 
 VM.SCENE = "shop"
 
--- The Shop's tabs; Lockers and Passes show greyed ("Soon") until they are built.
+-- The Shop's tabs; Passes shows greyed ("Soon") until it is built.
 function VM.tabs(): { { id: string, text: string, icon: UIAssets.ToonIcon?, soon: boolean } }
 	return {
 		{ id = "featured", text = "Featured", icon = "shopGift", soon = false },
 		{ id = "skins", text = "Skins", icon = "pippaHappy", soon = false },
 		{ id = "gleam", text = "Gleam", icon = "gleam", soon = false },
-		{ id = "lockers", text = "Lockers", icon = "locker", soon = true },
+		{ id = "lockers", text = "Lockers", icon = "locker", soon = false },
 		{ id = "passes", text = "Passes", soon = true },
 	}
 end

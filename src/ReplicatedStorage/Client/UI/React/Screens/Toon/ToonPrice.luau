@@ -16,7 +16,7 @@ local UIToonConstants = require(ReplicatedStorage.Client.UI.React.Screens.Toon.U
 
 local e = React.createElement
 
-export type Currency = "gleam" | "credits"
+export type Currency = "gleam" | "credits" | "gloom"
 
 export type ToonPriceProps = {
 	currency: Currency,

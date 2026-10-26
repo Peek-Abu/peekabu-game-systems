@@ -39,6 +39,7 @@ local loadout = Charm.atom({
 	stickers = { "", "", "", "" },
 	seen = {},
 } :: PlayerDataTypes.Loadout) -- type the atom's initial value (CosmeticConstants.defaultLoadout)
+local lockers = Charm.atom({ keys = {}, pity = {}, opened = 0 } :: PlayerDataTypes.Lockers) -- type the atom's initial value
 -- The public slice: other players' public data, already filtered by the server to the players relevant
 -- to this client (plus this client itself). Not a profile slice; synced under StateSyncConstants.publicKey.
 local initialPublicPlayers: PublicPlayerTypes.PublicPlayerMap = {}
@@ -62,6 +63,7 @@ local StateSyncClientStore = {
 	settings = settings,
 	dailyReward = dailyReward,
 	loadout = loadout,
+	lockers = lockers,
 	publicPlayers = publicPlayers,
 	world = world,
 }
@@ -80,6 +82,7 @@ local atoms: { [string]: any } = {
 	settings = settings,
 	dailyReward = dailyReward,
 	loadout = loadout,
+	lockers = lockers,
 	publicPlayers = publicPlayers,
 	world = world,
 }

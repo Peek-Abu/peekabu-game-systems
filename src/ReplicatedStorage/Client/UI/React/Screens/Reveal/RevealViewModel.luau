@@ -15,8 +15,15 @@ local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data
 local CosmeticTypes = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticTypes)
 local EmployeeProfileRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeProfileRegistry)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
+local ToonStyleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonStyleViewModel)
 
-export type Reveal = { ids: { string }, source: string }
+export type Reveal = {
+	ids: { string },
+	source: string,
+	duplicate: boolean?,
+	refund: number?,
+	currency: ("gloom" | "gleam")?,
+}
 
 -- `foil`: a bright sweep across the screen as it opens (Legendary, Odd and hires).
 export type Effects = {
@@ -138,19 +145,24 @@ function VM.view(reveal: Reveal): View
 		end
 	end
 	local word = string.lower(KIND_WORD[item.kind])
-	local ribbon = if item.kind == "stickerPack"
-		then "New sticker pack"
+	local duplicate = reveal.duplicate == true
+	local currencyWord = if reveal.currency == "gleam" then "Gleam" else "Gloom"
+	local ribbon = if duplicate
+		then `You already have this! +{ToonStyleViewModel.grouped(reveal.refund or 0)} {currencyWord} back`
+		elseif item.kind == "stickerPack" then "New sticker pack"
 		elseif item.kind == "vacuum" then "New vacuum for your crew"
 		elseif item.employee ~= nil then `New {word} for {item.employee}`
 		else `New {word} for everyone`
 	local change: CosmeticTypes.Change? = nil
 	local employee = item.employee or "Pippa"
-	if item.kind == "skin" then
-		change = { kind = "skin", id = item.id, style = 1 }
-	elseif item.kind == "idle" then
-		change = { kind = "idle", employee = employee, id = item.id }
-	elseif item.kind == "vacuum" then
-		change = { kind = "vacuum", id = item.id }
+	if not duplicate then
+		if item.kind == "skin" then
+			change = { kind = "skin", id = item.id, style = 1 }
+		elseif item.kind == "idle" then
+			change = { kind = "idle", employee = employee, id = item.id }
+		elseif item.kind == "vacuum" then
+			change = { kind = "vacuum", id = item.id }
+		end
 	end
 	return {
 		kind = "item",

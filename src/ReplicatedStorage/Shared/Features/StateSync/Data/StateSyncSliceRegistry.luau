@@ -86,6 +86,12 @@ local DEFINITIONS: { [string]: SliceDefinition } = {
 			return profile.account.loadout
 		end,
 	},
+	-- ACCOUNT-WIDE: keys and pity per Locker (LockerServiceServer); owner-only.
+	lockers = {
+		read = function(profile)
+			return profile.account.lockers
+		end,
+	},
 	-- SLOT-SCOPED: which title the active slot wears; inactive slots' choices never leave the server.
 	equippedTitle = {
 		read = function(profile)

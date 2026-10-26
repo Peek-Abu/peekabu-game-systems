@@ -127,6 +127,16 @@ export type Loadout = {
 }
 
 --[=[
+	The account-wide Lockers slice (LockerServiceServer): keys held per Locker, opens since the last Epic-or-better per
+	Locker (the pity counter) and the total opens. Keyed by Locker id ("gloom", "gleam").
+]=]
+export type Lockers = {
+	keys: { [string]: number },
+	pity: { [string]: number },
+	opened: number,
+}
+
+--[=[
 	The account-wide daily reward slice: the UTC day index (days since the Unix epoch, shifted by
 	DailyRewardConstants.DAY_OFFSET_HOURS) of the last claim (0 = never) and the current streak.
 ]=]
@@ -207,6 +217,7 @@ export type PlayerAccount = {
 	rank: Rank,
 	firstSeen: FirstSeen,
 	loadout: Loadout,
+	lockers: Lockers,
 	-- Extend with other ACCOUNT-WIDE slices here (settings, entitlements, ...)
 }
 

@@ -17,16 +17,7 @@ export type Kind = "employee" | "skin" | "idle" | "emote" | "stickerPack" | "sti
 export type Rarity = "default" | "uncommon" | "rare" | "epic" | "legendary" | "odd"
 
 -- Where it comes from. `default` items are free and never stored: every player owns them.
-export type Source =
-	"default"
-	| "credits"
-	| "gleam"
-	| "gloomLocker"
-	| "gleamLocker"
-	| "goal"
-	| "event"
-	| "gift"
-	| "later"
+export type Source = "default" | "credits" | "gleam" | "gloomLocker" | "gleamLocker" | "goal" | "event" | "gift" | "later"
 
 export type Item = {
 	id: string,
@@ -51,8 +42,8 @@ export type Item = {
 	pack: string?,
 }
 
--- Why something was granted (the reveal's flavour): bought in the Shop, the first-join pick, any other grant.
-export type GrantSource = "shop" | "pick" | "grant"
+-- Why something was granted (the reveal's flavour): bought in the Shop, opened from a Locker, the first-join pick, any other grant.
+export type GrantSource = "shop" | "locker" | "pick" | "grant"
 
 -- One "you got these" moment.
 export type Granted = { userId: number, ids: { string }, source: GrantSource }

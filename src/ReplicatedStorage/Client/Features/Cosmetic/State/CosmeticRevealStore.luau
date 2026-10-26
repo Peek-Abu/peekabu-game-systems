@@ -12,7 +12,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Charm = require(ReplicatedStorage.Packages.Charm)
 
-export type Reveal = { ids: { string }, source: string }
+export type Reveal = {
+	ids: { string },
+	source: string,
+	-- A duplicate from a Locker open: the ribbon says what was refunded instead of "New ...".
+	duplicate: boolean?,
+	refund: number?,
+	currency: ("gloom" | "gleam")?,
+}
 
 local MAX_QUEUED = 4
 
@@ -29,7 +36,13 @@ function CosmeticRevealStore.push(reveal: Reveal)
 	if #reveal.ids == 0 then
 		return
 	end
-	local copy: Reveal = { ids = table.clone(reveal.ids), source = reveal.source }
+	local copy: Reveal = {
+		ids = table.clone(reveal.ids),
+		source = reveal.source,
+		duplicate = reveal.duplicate,
+		refund = reveal.refund,
+		currency = reveal.currency,
+	}
 	if current() == nil then
 		current(copy)
 		return
