@@ -1,11 +1,17 @@
 --!strict
 --[=[
-	LockerOpeningScreen: stage-1 Locker opening over the depot (design:
-	docs/superpowers/specs/2026-10-25-odd-hours-lockers-design.md). The Locker render shakes, the key flies in, the
-	screen flashes the rolled rarity's colour, rays spin behind the Locker, and when the opening finishes (or the
-	player taps Skip after the first second) it hands off to the existing `RevealScreen` via `onFinish`.
+	LockerOpeningScreen: Locker opening before the reveal (design:
+	docs/superpowers/specs/2026-10-25-odd-hours-lockers-design.md).
+	- Stage 2 (when `Workspace.LockerStage_Ref` or `ReplicatedStorage.Assets.CleanupCrew.LockerStage` is present): runs
+	  `LockerCutsceneSystem.start(outcome)` so the 3D Lost & Found room, the player's own employee, the flying key and
+	  the bursting Locker door play in the world, with the title, `PITY GUARANTEE!` flag, end-of-door-burst flash and
+	  `Skip` button drawn over the 3D view.
+	- Stage 1 fallback (when the 3D stage is absent): the 2D Locker card shakes on a `ToonBackdrop`, the key flies in,
+	  the screen flashes the rarity colour and rays spin.
+	When the opening finishes (or the player taps Skip after the first second) it hands off to `RevealScreen` via
+	`onFinish`.
 
-	Presentational React screen over `LockerStore.opening` (exempt; values specced in `LockerViewModel`).
+	Presentational React screen over `LockerStore.opening` (exempt; values and 3D poses specced in `LockerViewModel`).
 
 	@class LockerOpeningScreen
 ]=]
@@ -16,6 +22,7 @@ local React = require(ReplicatedStorage.Packages.React)
 local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
 local LockerTypes = require(ReplicatedStorage.Shared.Features.Locker.Data.LockerTypes)
 local LockerStore = require(ReplicatedStorage.Client.Features.Locker.State.LockerStore)
+local LockerCutsceneSystem = require(ReplicatedStorage.Client.Features.Locker.Systems.LockerCutsceneSystem)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonBackdrop = require(Toon.ToonBackdrop)
 local ToonButton = require(Toon.ToonButton)
@@ -58,6 +65,7 @@ local function LockerOpeningScreen(props: LockerOpeningScreenProps): React.React
 	local stored = ReactCharm.useAtom(LockerStore.opening)
 	local outcome = props.outcome or stored
 	local canSkip, setCanSkip = React.useState(false)
+	local cutscene3d, setCutscene3d = React.useState(false)
 
 	local key = if outcome ~= nil then `{outcome.locker}:{outcome.item}:{outcome.pity}` else ""
 	local progress = useToonPlay(VM.OPENING_DURATION, 0, key)
@@ -66,8 +74,11 @@ local function LockerOpeningScreen(props: LockerOpeningScreenProps): React.React
 	React.useEffect(function(): () -> ()
 		setCanSkip(false)
 		if outcome == nil then
+			setCutscene3d(false)
 			return function() end
 		end
+		local stopCutscene = LockerCutsceneSystem.start(outcome)
+		setCutscene3d(stopCutscene ~= nil)
 		local running = true
 		local skipThread = task.delay(VM.SKIP_AFTER, function()
 			if running then
@@ -88,6 +99,9 @@ local function LockerOpeningScreen(props: LockerOpeningScreenProps): React.React
 			task.cancel(skipThread)
 			if finishThread ~= nil then
 				task.cancel(finishThread)
+			end
+			if stopCutscene ~= nil then
+				stopCutscene()
 			end
 		end
 	end, deps)
@@ -147,48 +161,52 @@ local function LockerOpeningScreen(props: LockerOpeningScreenProps): React.React
 				zIndex = 6,
 			})
 			else nil,
-		lockerBox = e("Frame", {
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = progress:map(function(alpha: number): UDim2
-				local shake = if alpha < 0.72 then math.sin(alpha * math.pi * 22) * (1 - alpha) * 14 else 0
-				return UDim2.new(0.5, math.floor(shake), 0.52, 0)
-			end),
-			Rotation = progress:map(function(alpha: number): number
-				return if alpha < 0.72 then math.sin(alpha * math.pi * 18) * 5 else 0
-			end),
-			Size = UDim2.fromOffset(boxSize, boxSize),
-			BackgroundTransparency = 1,
-			ZIndex = 5,
-		}, {
-			card = e(ToonSurface, {
-				hue = lockerHue,
-				pattern = "sparkle",
-				radius = 30,
-				size = UDim2.fromScale(1, 1),
-				children = boxChildren,
-			}),
-			sparkles = e(ToonSparkle, { spots = SPARKLES, zIndex = 8 }),
-		}),
-		flyingKey = e("Frame", {
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = progress:map(function(alpha: number): UDim2
-				local t = math.clamp(alpha / 0.45, 0, 1)
-				return UDim2.fromScale(0.18 + 0.32 * t, 0.78 - 0.26 * t)
-			end),
-			Rotation = progress:map(function(alpha: number): number
-				local t = math.clamp(alpha / 0.45, 0, 1)
-				return -28 + 28 * t
-			end),
-			Size = UDim2.fromOffset(keySize, keySize),
-			BackgroundTransparency = 1,
-			ZIndex = 8,
-		}, {
-			icon = e(ToonIcon, {
-				icon = "key",
-				size = UDim2.fromScale(1, 1),
-				drop = 5,
-			}),
-		}),
+		lockerBox = if not cutscene3d
+			then e("Frame", {
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = progress:map(function(alpha: number): UDim2
+					local shake = if alpha < 0.72 then math.sin(alpha * math.pi * 22) * (1 - alpha) * 14 else 0
+					return UDim2.new(0.5, math.floor(shake), 0.52, 0)
+				end),
+				Rotation = progress:map(function(alpha: number): number
+					return if alpha < 0.72 then math.sin(alpha * math.pi * 18) * 5 else 0
+				end),
+				Size = UDim2.fromOffset(boxSize, boxSize),
+				BackgroundTransparency = 1,
+				ZIndex = 5,
+			}, {
+				card = e(ToonSurface, {
+					hue = lockerHue,
+					pattern = "sparkle",
+					radius = 30,
+					size = UDim2.fromScale(1, 1),
+					children = boxChildren,
+				}),
+				sparkles = e(ToonSparkle, { spots = SPARKLES, zIndex = 8 }),
+			})
+			else nil,
+		flyingKey = if not cutscene3d
+			then e("Frame", {
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = progress:map(function(alpha: number): UDim2
+					local t = math.clamp(alpha / 0.45, 0, 1)
+					return UDim2.fromScale(0.18 + 0.32 * t, 0.78 - 0.26 * t)
+				end),
+				Rotation = progress:map(function(alpha: number): number
+					local t = math.clamp(alpha / 0.45, 0, 1)
+					return -28 + 28 * t
+				end),
+				Size = UDim2.fromOffset(keySize, keySize),
+				BackgroundTransparency = 1,
+				ZIndex = 8,
+			}, {
+				icon = e(ToonIcon, {
+					icon = "key",
+					size = UDim2.fromScale(1, 1),
+					drop = 5,
+				}),
+			})
+			else nil,
 		skip = if canSkip
 			then e(ToonButton, {
 				variant = "secondary",
@@ -209,6 +227,9 @@ local function LockerOpeningScreen(props: LockerOpeningScreenProps): React.React
 			Size = UDim2.fromScale(1, 1),
 			BackgroundColor3 = shade.hi,
 			BackgroundTransparency = progress:map(function(alpha: number): number
+				if cutscene3d then
+					return VM.cutscenePose(view.locker, alpha).flashTransparency
+				end
 				if alpha < 0.62 then
 					return 1
 				end
@@ -225,6 +246,10 @@ local function LockerOpeningScreen(props: LockerOpeningScreenProps): React.React
 			},
 		}),
 	}
+
+	if cutscene3d then
+		return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, screen)
+	end
 
 	return e(ToonBackdrop, {
 		top = lockerShade.base,

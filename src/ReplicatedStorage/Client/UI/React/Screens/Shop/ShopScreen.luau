@@ -29,6 +29,7 @@ local ShopRotationUtils = require(ReplicatedStorage.Shared.Features.Shop.Utils.S
 local ShopServiceClient = require(ReplicatedStorage.Client.Features.Shop.ShopServiceClient)
 local MarketplaceServiceClient = require(ReplicatedStorage.Client.Features.Marketplace.MarketplaceServiceClient)
 local ShopStore = require(ReplicatedStorage.Client.Features.Shop.State.ShopStore)
+local LockerStore = require(ReplicatedStorage.Client.Features.Locker.State.LockerStore)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local SceneStack = require(ReplicatedStorage.Client.UI.Scenes.SceneStack)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
@@ -355,6 +356,7 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 	local premium = ReactCharm.useAtom(StateSyncClientStore.premium)
 	local storeProduct = ReactCharm.useAtom(ShopStore.product)
 	local result = ReactCharm.useAtom(ShopStore.result)
+	local lockerOpening = ReactCharm.useAtom(LockerStore.opening)
 	local tab, setTab = React.useState(props.tab or "featured")
 	local filter, setFilter = React.useState(function(): string?
 		return nil
@@ -377,6 +379,9 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 	end, {})
 
 	local preview = props.preview
+	if preview == nil and lockerOpening ~= nil then
+		return nil
+	end
 	local owns = if preview ~= nil
 		then preview.owns
 		else function(id: string): boolean

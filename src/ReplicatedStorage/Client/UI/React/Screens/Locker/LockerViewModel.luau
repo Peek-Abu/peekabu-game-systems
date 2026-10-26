@@ -95,6 +95,21 @@ export type OpeningView = {
 	duration: number,
 }
 
+export type CutsceneBeat = "establishing" | "approach" | "key_turn" | "burst_open"
+
+export type CutscenePose = {
+	beat: CutsceneBeat,
+	camPos: Vector3,
+	camLook: Vector3,
+	fov: number,
+	employeeCFrame: CFrame,
+	keyCFrame: CFrame,
+	keyRollDeg: number,
+	doorDeg: number,
+	glow: boolean,
+	flashTransparency: number,
+}
+
 local KIND_WORD: { [CosmeticTypes.Kind]: string } = {
 	employee = "Employee",
 	skin = "Skin",
@@ -126,7 +141,8 @@ local RARITY_LABEL: { [Rarity]: string } = {
 local VM = {
 	OPENING_SCENE = "lockerOpening",
 	SKIP_AFTER = 1.0,
-	OPENING_DURATION = 2.2,
+	OPENING_DURATION = 2.8,
+	STAGE_ORIGIN = CFrame.new(3000, 0, 0),
 }
 
 local function currencyWord(currency: LockerTypes.Currency): string
@@ -329,6 +345,88 @@ function VM.openingView(outcome: LockerTypes.Outcome): OpeningView
 			else nil,
 		skipAfter = VM.SKIP_AFTER,
 		duration = VM.OPENING_DURATION,
+	}
+end
+
+function VM.cutscenePose(lockerId: LockerId, alpha: number): CutscenePose
+	local a = math.clamp(alpha, 0, 1)
+	local sign = if lockerId == "gleam" then -1 else 1
+	local lx = 6.5 * sign
+	local kx = if lockerId == "gleam" then -6.35 else 6.65
+	local keyHole = Vector3.new(kx, 5.2, 3.42)
+
+	local beat: CutsceneBeat = "establishing"
+	local camPos: Vector3
+	local camLook: Vector3
+	local fov = 50
+	local empPos = Vector3.new(lx - sign * 1.5, 3.1, 1.35)
+	local keyPos = Vector3.new(kx, 5.2, 2.3)
+	local keyRollDeg = 0
+	local doorDeg = 0
+	local glow = false
+	local flashTransparency = 1
+
+	if a < 0.24 then
+		beat = "establishing"
+		local t = a / 0.24
+		camPos = Vector3.new(0, 6.2, -9.5):Lerp(Vector3.new(lx * 0.55, 5.6, -6.2), t)
+		camLook = Vector3.new(0, 6.2, 6.0):Lerp(Vector3.new(lx, 5.2, 4.5), t)
+		fov = 52 - 6 * t
+		empPos = Vector3.new(lx * 0.35, 3.0, -2.0):Lerp(Vector3.new(lx - sign * 1.6, 3.0, 0.6), t)
+		keyPos = empPos + Vector3.new(sign * 0.45, 1.3, 0.85)
+	elseif a < 0.50 then
+		beat = "approach"
+		local t = (a - 0.24) / 0.26
+		camPos = Vector3.new(lx - sign * 3.1, 5.4, -3.8):Lerp(Vector3.new(lx - sign * 2.1, 5.3, -1.5), t)
+		camLook = Vector3.new(lx, 5.1, 4.0):Lerp(keyHole, t)
+		fov = 46 - 4 * t
+		empPos = Vector3.new(lx - sign * 1.6, 3.0, 0.6):Lerp(Vector3.new(lx - sign * 1.5, 3.1, 1.35), t)
+		keyPos = (empPos + Vector3.new(sign * 0.5, 1.5, 0.95)):Lerp(Vector3.new(kx, 5.2, 2.25), t)
+	elseif a < 0.76 then
+		beat = "key_turn"
+		local t = (a - 0.50) / 0.26
+		camPos = Vector3.new(kx - sign * 1.15, 5.35, 0.5):Lerp(Vector3.new(kx - sign * 0.85, 5.25, 1.1), t)
+		camLook = keyHole
+		fov = 38
+		if t < 0.45 then
+			local fly = t / 0.45
+			keyPos = Vector3.new(kx, 5.2, 2.25 + 0.83 * fly)
+		else
+			local turn = (t - 0.45) / 0.55
+			keyPos = Vector3.new(kx, 5.2, 3.08)
+			keyRollDeg = math.sin(turn * math.pi * 0.5) * 90
+		end
+	else
+		beat = "burst_open"
+		local t = (a - 0.76) / 0.24
+		local swing = 1 - (1 - math.min(1, t * 1.25)) ^ 3
+		doorDeg = 115 * swing
+		glow = true
+		keyPos = Vector3.new(kx, 5.2, -100)
+		camPos = Vector3.new(lx - sign * 0.6, 5.3, -1.2):Lerp(Vector3.new(lx, 5.2, 1.2), t)
+		camLook = Vector3.new(lx, 5.2, 5.0)
+		fov = 46 - 10 * t
+		if t > 0.55 then
+			local burst = (t - 0.55) / 0.45
+			flashTransparency = math.clamp(1 - math.sin(burst * math.pi) * 0.85, 0.15, 1)
+		end
+	end
+
+	local empLook = Vector3.new(lx, empPos.Y, 4.2)
+	local employeeCFrame = CFrame.lookAt(empPos, empLook)
+	local keyCFrame = CFrame.lookAt(keyPos, keyPos + Vector3.new(0, 0, 1)) * CFrame.Angles(0, 0, math.rad(keyRollDeg))
+
+	return {
+		beat = beat,
+		camPos = camPos,
+		camLook = camLook,
+		fov = fov,
+		employeeCFrame = employeeCFrame,
+		keyCFrame = keyCFrame,
+		keyRollDeg = keyRollDeg,
+		doorDeg = doorDeg,
+		glow = glow,
+		flashTransparency = flashTransparency,
 	}
 end
 

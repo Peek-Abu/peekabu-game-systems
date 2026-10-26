@@ -534,6 +534,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.UI.React.Screens.ChatWheel.ChatWheelScreen"] = "React screen wiring the loadout, entitlements and CalloutWheelStore (pings, slots, layout and picking specced in ChatWheelViewModel)",
 	["ReplicatedStorage.Client.Features.Callout.CalloutServiceClient"] = "shell over input, the camera ray and packets (rules in CalloutRules, the wheel in ChatWheelViewModel, the effects in CalloutStickerSystem / CalloutPingSystem, state in CalloutStore / CalloutWheelStore)",
 	["ReplicatedStorage.Client.Features.Locker.LockerServiceClient"] = "shell over LockerEvents packets, SceneStack and CosmeticRevealStore (values specced in LockerViewModel, state in LockerStore)",
+	["ReplicatedStorage.Client.Features.Locker.Systems.LockerCutsceneSystem"] = "Instance/Camera/RunService shell over Workspace.LockerStage_Ref (timeline, camera, key and door poses specced in LockerViewModel)",
 	["ReplicatedStorage.Client.UI.React.Screens.Locker.LockerPanel"] = "presentational React component (Locker cards and inside list specced in LockerViewModel; story in ShopScreen.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Locker.LockerOddsSheet"] = "presentational React component (odds and refund rows specced in LockerViewModel)",
 	["ReplicatedStorage.Client.UI.React.Screens.Locker.LockerOpeningScreen"] = "presentational React screen over LockerStore.opening (values specced in LockerViewModel)",
