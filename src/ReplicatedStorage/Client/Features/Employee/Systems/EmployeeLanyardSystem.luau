@@ -233,7 +233,7 @@ function EmployeeLanyardSystem.attach(
 	end
 	local badgeWeld: Weld? = nil
 	local badgeRoot: BasePart? = nil
-	local turn = if flipped then CFrame.identity else CFrame.Angles(0, math.pi, 0)
+	local turn = if flipped then CFrame.Angles(0, math.pi, 0) else CFrame.identity
 	if badgeTemplate ~= nil then
 		local root = Instance.new("Part")
 		root.Name = "BadgePivot"
@@ -380,17 +380,17 @@ local function mountInfoCard(character: Model, handle: Handle, rank: number, hol
 	host.Size = Vector3.new(lay.size[1] * s, lay.size[2] * s, 0.001 * s)
 	host.Transparency = 1
 	quiet(host)
-	local z = -lay.centre[3]
+	local z = lay.centre[3]
 	host.CFrame = badgeRoot.CFrame
 		* handle.badgeTurn
-		* CFrame.new(lay.centre[1] * s, lay.centre[2] * s, (z + (if z > 0 then 0.0012 else -0.0012)) * s)
+		* CFrame.new(lay.centre[1] * s, lay.centre[2] * s, (z - 0.0012) * s)
 	local wc = Instance.new("WeldConstraint")
 	wc.Part0, wc.Part1 = badgeRoot, host
 	wc.Parent = host
 
 	local gui = Instance.new("SurfaceGui")
 	gui.Name = "InfoCard"
-	gui.Face = if z > 0 then Enum.NormalId.Back else Enum.NormalId.Front
+	gui.Face = Enum.NormalId.Front
 	gui.SizingMode = Enum.SurfaceGuiSizingMode.FixedSize
 	gui.CanvasSize = Vector2.new(lay.canvas[1], lay.canvas[2])
 	gui.LightInfluence = 1

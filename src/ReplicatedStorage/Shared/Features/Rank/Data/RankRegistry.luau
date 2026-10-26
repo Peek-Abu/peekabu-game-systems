@@ -3,9 +3,10 @@
 	RankRegistry: the company ladder, looked up by level (Cleanup Crew "Clearance Level"). Data-driven: a level is one
 	row in LEVELS, so later levels are appended here without touching any logic. Levels are cosmetic only.
 
-	MVP ships levels 1-3. Planned next rows (append when approved):
-	  { level = 4, name = "Senior Clearance Associate", xp = 300, ... },
-	  { level = 5, name = "Regional Clearance Lead", xp = 600, ... },
+	7 ranks: New Kid → Sweeper → Cleaner → Super Cleaner → Little Boss → Boss → Big Boss.
+	Big Boss in about 6 weeks of regular play (5 days/week, ~4 shifts/day). After Big Boss, XP feeds
+	the Clearance Level (an endless track, added later). The lanyard colours match the v6 badge palette
+	(EmployeeLanyardConstants.COLOURS).
 
 	The ladder is checked at load (`check`): level n is row n, level 1 needs 0 XP, thresholds strictly rise.
 
@@ -21,24 +22,52 @@ type Level = RankTypes.Level
 local LEVELS: { Level } = {
 	{
 		level = 1,
-		name = "Intern (Unpaid)",
+		name = "New Kid",
 		xp = 0,
-		lanyard = Color3.fromHex("8A8F98"),
+		lanyard = Color3.fromHex("6F737B"),
 		lanyardName = "grey",
 	},
 	{
 		level = 2,
-		name = "Probationary Associate",
-		xp = 40,
-		lanyard = Color3.fromHex("1E7A46"),
+		name = "Sweeper",
+		xp = 75,
+		lanyard = Color3.fromHex("2E9B43"),
 		lanyardName = "green",
 	},
 	{
 		level = 3,
-		name = "Clearance Associate",
-		xp = 120,
-		lanyard = Color3.fromHex("1F4E9A"),
+		name = "Cleaner",
+		xp = 300,
+		lanyard = Color3.fromHex("2C6FD9"),
 		lanyardName = "blue",
+	},
+	{
+		level = 4,
+		name = "Super Cleaner",
+		xp = 800,
+		lanyard = Color3.fromHex("7C3FCB"),
+		lanyardName = "purple",
+	},
+	{
+		level = 5,
+		name = "Little Boss",
+		xp = 1800,
+		lanyard = Color3.fromHex("C8262E"),
+		lanyardName = "red",
+	},
+	{
+		level = 6,
+		name = "Boss",
+		xp = 3400,
+		lanyard = Color3.fromHex("1F2C68"),
+		lanyardName = "navy",
+	},
+	{
+		level = 7,
+		name = "Big Boss",
+		xp = 5200,
+		lanyard = Color3.fromHex("E9A923"),
+		lanyardName = "gold",
 	},
 }
 
