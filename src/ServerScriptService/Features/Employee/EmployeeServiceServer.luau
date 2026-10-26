@@ -118,11 +118,16 @@ local function accessorySource(): Instance?
 	return current
 end
 
+-- The player's general account rank level (1..7; level 1 until Rank has loaded it).
+local function rankLevelOf(userId: number)
+	local progress = RankServiceServer:progressOf(userId)
+	return if progress ~= nil then progress.level else RankFormulas.progress(0).level
+end
+
 -- The player's lanyard: their name, their published rank (level 1 until Rank has loaded it) and the photo of the
 -- skin they wear.
 local function badgeOf(player: Player, photo: string): EmployeeGearSystem.Badge
-	local progress = RankServiceServer:progressOf(player.UserId)
-	local level = if progress ~= nil then progress.level else RankFormulas.progress(0).level
+	local level = rankLevelOf(player.UserId)
 	return {
 		holder = player.DisplayName,
 		title = level.name,
@@ -172,6 +177,13 @@ local function dress(player: Player, character: Model)
 	worn[player.UserId] = { employee = def.name, skin = skin.name }
 	-- The skin the outfit asks for (its art may still be the Default's): a preview of the outfit matches on it.
 	character:SetAttribute(EmployeeConstants.SKIN_ATTRIBUTE, skinKeyOf(player.UserId, def.name) or skin.name)
+	character:SetAttribute(EmployeeConstants.RANK_ATTRIBUTE, rankLevelOf(player.UserId).level)
+	for _, legacyName in { "PippaVest", "PippaLanyard" } do
+		local legacy = character:FindFirstChild(legacyName)
+		if legacy ~= nil then
+			legacy:Destroy()
+		end
+	end
 	local result = EmployeeSkinSystem.apply(character, skin, accessorySource())
 	if result.textured > 0 or result.facesSwapped or result.accessories > 0 then
 		skinned += 1
@@ -320,13 +332,16 @@ local EmployeeServiceServer: EmployeeServiceServer = {
 			watchSpawns(player)
 		end
 		table.insert(connections, Players.PlayerAdded:Connect(watchSpawns))
-		-- A promotion (or the rank loading after the spawn) repaints that player's lanyard at once.
+		-- A promotion (or the rank loading after the spawn) updates that player's general rank attribute and lanyard at once.
 		rankConnection = RankServiceServer.changed:Connect(function(userId: number)
 			local player = Players:GetPlayerByUserId(userId)
 			local character = if player ~= nil then player.Character else nil
-			local photo = photoOf[userId]
-			if player ~= nil and character ~= nil and photo ~= nil then
-				EmployeeGearSystem.badge(character, badgeOf(player, photo))
+			if player ~= nil and character ~= nil then
+				character:SetAttribute(EmployeeConstants.RANK_ATTRIBUTE, rankLevelOf(userId).level)
+				local photo = photoOf[userId]
+				if photo ~= nil then
+					EmployeeGearSystem.badge(character, badgeOf(player, photo))
+				end
 			end
 		end)
 		cosmeticConnection = CosmeticServiceServer.changed:Connect(swapIfChanged)

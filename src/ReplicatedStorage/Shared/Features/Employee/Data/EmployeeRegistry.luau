@@ -164,9 +164,9 @@ local EMPLOYEES: { [string]: EmployeeDef } = {
 		},
 		defaultSkin = "Default",
 		portrait = "rbxassetid://114200006283845",
-		-- Fitted to Pippa v10's torso (characters/identity).
-		-- The rank lanyard only: the hi-vis vest was dropped (owner, 2026-10-24).
-		uniform = { "PippaLanyard" },
+		-- Company vest and static PippaLanyard removed: all employees wear the client-fitted v4 lanyard + v6 rank badge
+		-- driven by the player's general rank (EmployeeLanyardSystem; gates/7f_badges_v6_info_front_icon_back.md).
+		uniform = {},
 		-- Pippa v1 clips (characters/pippa/anim). Caps tuned by eye in Studio: lively, not frantic.
 		locomotion = {
 			idle = "pippaidle",

@@ -35,6 +35,12 @@ local EmployeeConstants = {
 	-- On a character built to replace the player's current one where it stands (a costume or employee swap): the
 	-- clients play the goo puff on it (EmployeeSwapVfxSystem).
 	SWAP_ATTRIBUTE = "EmployeeSwap",
+	-- On a player's character, written by the server from the player's general account rank (1..7, RankServiceServer):
+	-- drives the v4 strap + v6 rank badge on every employee body (EmployeeLanyardSystem).
+	RANK_ATTRIBUTE = "EmployeeRank",
+	LANYARD_FLIP_ATTRIBUTE = "EmployeeLanyardFlip",
+	LANYARD_FOLDER = "LanyardV4",
+	LANYARD_BADGES_PATH = { "Assets", "CleanupCrew", "LanyardBadges" },
 	-- How long a joining player's spawn waits for their saved loadout before spawning the default employee.
 	LOADOUT_WAIT = 5,
 	FACE_PLATE = "FacePlate",

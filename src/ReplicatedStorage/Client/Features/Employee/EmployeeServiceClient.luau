@@ -15,6 +15,7 @@ local Observers = require(ReplicatedStorage.Packages.Observers)
 local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
 local EmployeeEarSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeeEarSystem)
 local EmployeeFaceSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeeFaceSystem)
+local EmployeeLanyardSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeeLanyardSystem)
 local EmployeeSwapVfxSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeeSwapVfxSystem)
 
 local ears = EmployeeEarSystem.new()
@@ -39,7 +40,7 @@ local EmployeeServiceClient: EmployeeServiceClient = {
 	start = function(_self)
 		table.insert(
 			stoppers,
-			Observers.observeCharacter(function(_player: Player, character: Model)
+			Observers.observeCharacter(function(player: Player, character: Model)
 				if character:GetAttribute(EmployeeConstants.NAME_ATTRIBUTE) == nil then
 					return nil
 				end
@@ -49,10 +50,12 @@ local EmployeeServiceClient: EmployeeServiceClient = {
 				faces += 1
 				local releaseFace = EmployeeFaceSystem.bind(character)
 				local releaseEars = ears.track(character)
+				local releaseLanyard = EmployeeLanyardSystem.bind(player, character)
 				return function()
 					faces -= 1
 					releaseFace()
 					releaseEars()
+					releaseLanyard()
 				end
 			end)
 		)

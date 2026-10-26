@@ -117,18 +117,13 @@ return function()
 			expect(table.find(owner.accessories, "PippaRoundGlasses")).to.be.ok()
 		end)
 
-		it("puts every employee in a uniform of named gear: Pippa's rank lanyard, no vest", function()
+		it("drops the legacy company vest and static uniform pieces (v6 lanyards are fitted per body)", function()
 			for _, name in EmployeeRegistry.names() do
 				local uniform = EmployeeRegistry.get(name).uniform
 				expect(uniform).to.be.a("table")
-				for _, gear in uniform do
-					expect(gear).to.be.a("string")
-				end
+				expect(table.find(uniform, "PippaVest")).never.to.be.ok()
+				expect(table.find(uniform, "PippaLanyard")).never.to.be.ok()
 			end
-			local uniform = EmployeeRegistry.get("Pippa").uniform
-			-- The hi-vis vest was dropped (owner, 2026-10-24); the lanyard stays: it shows the rank.
-			expect(table.find(uniform, "PippaVest")).never.to.be.ok()
-			expect(table.find(uniform, "PippaLanyard")).to.be.ok()
 		end)
 
 		it("gives every employee an ID-card portrait, and each skin that has its own a well-formed one", function()
