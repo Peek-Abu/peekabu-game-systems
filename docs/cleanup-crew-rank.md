@@ -3,17 +3,22 @@
 The MVP's career goal: a company rank earned by working shifts. Cosmetic only, never power: a level changes how a
 player is labelled, not what they can do. Rank only goes up (XP is never taken away).
 
-## The ladder (MVP: levels 1-3)
+## The ladder (7 ranks)
 
 | Level | Rank | XP to reach | Lanyard |
 |---|---|---|---|
-| 1 | Intern (Unpaid) | 0 | grey |
-| 2 | Probationary Associate | 40 | green |
-| 3 | Clearance Associate | 120 | blue |
+| 1 | New Kid | 0 | grey |
+| 2 | Sweeper | 75 | green |
+| 3 | Cleaner | 300 | blue |
+| 4 | Super Cleaner | 800 | purple |
+| 5 | Little Boss | 1800 | red |
+| 6 | Boss | 3400 | navy |
+| 7 | Big Boss | 5200 | gold |
 
-The ladder is data: one row per level in `RankRegistry` (`ReplicatedStorage/Shared/Features/Rank/Data/`). Levels 4
-("Senior Clearance Associate", 300) and 5 ("Regional Clearance Lead", 600) are added later as two more rows; nothing
-else changes. The registry checks the ladder at load (level n is row n, level 1 needs 0 XP, thresholds strictly rise).
+The ladder is data: one row per level in `RankRegistry` (`ReplicatedStorage/Shared/Features/Rank/Data/`). Big Boss is
+the top of the ladder, reached in about six weeks of regular play (five days a week, ~four shifts a day); past it, XP
+feeds the endless Clearance Level track that comes later. The registry checks the ladder at load (level n is row n,
+level 1 needs 0 XP, thresholds strictly rise).
 The lanyard colour paints the uniform's lanyard strap and the ID card's band.
 
 ## XP per shift

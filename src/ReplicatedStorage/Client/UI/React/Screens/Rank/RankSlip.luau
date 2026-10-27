@@ -40,7 +40,7 @@ local function levelOf(heading: string): string
 	return string.match(heading, "(%d+)%s*$") or ""
 end
 
--- "PROBATIONARY ASSOCIATE" -> "Probationary Associate".
+-- "NEW KID" -> "New Kid".
 local function titleCase(text: string): string
 	local words: { string } = {}
 	for word in string.gmatch(string.lower(text), "%S+") do
