@@ -46,6 +46,8 @@ export type Handle = {
 	badgeWeld: Weld?,
 	badgeRoot: BasePart?,
 	badgeTurn: CFrame,
+	-- Local z of the plane the info card sits on: in front of the badge's own front-most part (nil without a badge).
+	cardZ: number?,
 	scale: number,
 	destroy: () -> (),
 }
@@ -233,6 +235,7 @@ function EmployeeLanyardSystem.attach(
 	end
 	local badgeWeld: Weld? = nil
 	local badgeRoot: BasePart? = nil
+	local cardZ: number? = nil
 	local turn = if flipped then CFrame.Angles(0, math.pi, 0) else CFrame.identity
 	if badgeTemplate ~= nil then
 		local root = Instance.new("Part")
@@ -254,8 +257,14 @@ function EmployeeLanyardSystem.attach(
 		if scale ~= 1 then
 			m:ScaleTo(m:GetScale() * scale)
 		end
+		-- The opaque parts in badge space, before they are moved into world: the info card has to sit in front of the
+		-- front-most of them, and that depth differs per rank (R1 -0.0203, R5 -0.0240, ...).
+		local faces: { EmployeeLanyardFormulas.BadgePart } = {}
 		for _, d in m:GetDescendants() do
 			if d:IsA("BasePart") then
+				if d.Transparency < 1 then
+					table.insert(faces, { cframe = d.CFrame, size = d.Size })
+				end
 				quiet(d)
 				d.CFrame = root.CFrame * turn * d.CFrame
 				local wc = Instance.new("WeldConstraint")
@@ -263,6 +272,7 @@ function EmployeeLanyardSystem.attach(
 				wc.Parent = d
 			end
 		end
+		cardZ = EmployeeLanyardFormulas.cardZ(faces)
 		m.Parent = folder
 		badgeWeld = weld
 		badgeRoot = root
@@ -274,6 +284,7 @@ function EmployeeLanyardSystem.attach(
 		badgeWeld = badgeWeld,
 		badgeRoot = badgeRoot,
 		badgeTurn = turn,
+		cardZ = cardZ,
 		scale = scale,
 		destroy = function()
 			folder:Destroy()
@@ -375,15 +386,19 @@ local function mountInfoCard(character: Model, handle: Handle, rank: number, hol
 	end
 	local lay = EmployeeLanyardConstants.INFO_FRONT[rank] or EmployeeLanyardConstants.INFO_FRONT[1]
 	local s = handle.scale
+	local thickness = 0.001 * s
 	local host = Instance.new("Part")
 	host.Name = "InfoCardHost"
-	host.Size = Vector3.new(lay.size[1] * s, lay.size[2] * s, 0.001 * s)
+	host.Size = Vector3.new(lay.size[1] * s, lay.size[2] * s, thickness)
 	host.Transparency = 1
 	quiet(host)
-	local z = lay.centre[3]
+	-- On the badge's own front-most face (per rank), not at the model origin: the badge body is up to 0.02 studs
+	-- deep, so the old fixed depth buried the card and its portrait inside it and they vanished as the camera
+	-- came close. The SurfaceGui draws on the host's Front (-Z) face, half a thickness in front of its centre.
+	local plane = handle.cardZ or lay.centre[3] * s
 	host.CFrame = badgeRoot.CFrame
 		* handle.badgeTurn
-		* CFrame.new(lay.centre[1] * s, lay.centre[2] * s, (z - 0.0012) * s)
+		* CFrame.new(lay.centre[1] * s, lay.centre[2] * s, plane + thickness / 2)
 	local wc = Instance.new("WeldConstraint")
 	wc.Part0, wc.Part1 = badgeRoot, host
 	wc.Parent = host

@@ -156,6 +156,9 @@ local ACROSS: { number } = { -1, -0.5, 0, 0.5, 1 }
 return table.freeze({
 	CORD_FRAC = 0.0759,
 	STRAP_T = 0.006,
+	-- Studs the info card's face sits in front of the badge's front-most part. The badge is only ~0.03-0.08 studs
+	-- thick, so a buried card is hidden outright up close; this keeps it flush but always in front.
+	CARD_CLEARANCE = 0.002,
 	RANK_RATIO = table.freeze(RANK_RATIO),
 	ACROSS = table.freeze(ACROSS),
 	COLOURS = table.freeze(COLOURS),

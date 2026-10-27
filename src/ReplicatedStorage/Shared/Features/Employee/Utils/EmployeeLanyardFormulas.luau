@@ -9,6 +9,7 @@
 	  two side edges, two end caps, and rank 7's dark edge bands) in UpperTorso-local studs.
 	- `step(fit, rank, spring, accel, dt)`: integrates the badge's pitch/roll/yaw spring and clamps pitch against the
 	  fitted chest depth map so the badge never pokes into the body.
+	- `cardZ(parts)`: the plane the info card must sit on to stay in front of the badge's own geometry.
 
 	@class EmployeeLanyardFormulas
 ]=]
@@ -60,6 +61,9 @@ export type Geometry = {
 }
 
 export type Spring = { p: number, r: number, y: number, vp: number, vr: number, vy: number }
+
+-- One opaque part of a badge model, in the badge's own space (pivot at the origin).
+export type BadgePart = { cframe: CFrame, size: Vector3 }
 
 local EmployeeLanyardFormulas = {}
 
@@ -269,6 +273,26 @@ function EmployeeLanyardFormulas.chestZ(fit: Fit, x: number, y: number): number
 	local a = zs[j0 + 1][i0 + 1] * (1 - tx) + zs[j0 + 1][i0 + 2] * tx
 	local b = zs[j0 + 2][i0 + 1] * (1 - tx) + zs[j0 + 2][i0 + 2] * tx
 	return a * (1 - ty) + b * ty
+end
+
+-- The plane the badge's front face sits on, `CARD_CLEARANCE` further front than the deepest part: the local z the
+-- info card must use so the card (and the portrait inside it) is never buried in the badge. Nil for no parts.
+function EmployeeLanyardFormulas.cardZ(parts: { BadgePart }): number?
+	local front: number? = nil
+	for _, part in parts do
+		local _, _, z, _, _, _, _, _, _, r20, r21, r22 = part.cframe:GetComponents()
+		local half = part.size * 0.5
+		-- A box's reach along z once its rotation is applied (support function of its half extents).
+		local reach = math.abs(r20) * half.X + math.abs(r21) * half.Y + math.abs(r22) * half.Z
+		local face = z - reach
+		if front == nil or face < front then
+			front = face
+		end
+	end
+	if front == nil then
+		return nil
+	end
+	return front - EmployeeLanyardConstants.CARD_CLEARANCE
 end
 
 function EmployeeLanyardFormulas.clampPitch(

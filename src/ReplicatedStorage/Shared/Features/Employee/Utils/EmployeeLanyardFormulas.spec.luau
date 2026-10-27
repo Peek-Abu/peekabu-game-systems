@@ -60,4 +60,36 @@ return function()
 			expect(#EmployeeLanyardConstants.RANK_NAMES).to.equal(7)
 		end)
 	end)
+
+	describe("info card front plane", function()
+		-- R1's real parts (ReplicatedStorage.Assets.CleanupCrew.LanyardBadges.R1, measured in Studio). The old layout
+		-- put the card face at z -0.0047, buried behind the badge's front-most face (z -0.0203) and inside rank 1's
+		-- Sleeve, so the card and its portrait vanished as soon as the camera came close.
+		local r1 = {
+			{ cframe = CFrame.new(0, -0.3581, 0.0008), size = Vector3.new(0.2796, 0.5650, 0.0317) },
+			{ cframe = CFrame.new(0, -0.1372, 0.0000), size = Vector3.new(0.0860, 0.2640, 0.0406) },
+			{ cframe = CFrame.new(0, -0.4400, 0.0000), size = Vector3.new(0.2783, 0.4000, 0.0300) },
+		}
+
+		it("puts the card in front of the badge's front-most face", function()
+			local z = EmployeeLanyardFormulas.cardZ(r1)
+			expect(z).to.be.ok()
+			expect(z < -0.0203).to.equal(true)
+			expect(z).to.be.near(-0.0203 - EmployeeLanyardConstants.CARD_CLEARANCE, 1e-6)
+		end)
+
+		it("clears every part of the badge, including rotated ones", function()
+			local parts = {
+				{ cframe = CFrame.new(0, 0, 0), size = Vector3.new(0.4, 0.1, 0.01) },
+				{ cframe = CFrame.Angles(0, math.pi / 2, 0), size = Vector3.new(0.4, 0.1, 0.01) },
+			}
+			-- Turned a quarter turn, the second part's 0.4-stud width runs along z, so its face is at -0.2.
+			local z = EmployeeLanyardFormulas.cardZ(parts)
+			expect(z).to.be.near(-0.2 - EmployeeLanyardConstants.CARD_CLEARANCE, 1e-6)
+		end)
+
+		it("has no plane for a badge with no parts", function()
+			expect(EmployeeLanyardFormulas.cardZ({})).to.equal(nil)
+		end)
+	end)
 end
