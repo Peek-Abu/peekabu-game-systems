@@ -91,6 +91,8 @@ export type CrewStats = {
 	overtimeSalvage: number?,
 	-- Out of lives this shift (ShiftRosterTracker.markOut); absent reads false.
 	knockedOut: boolean?,
+	-- Another crew member is their Roblox friend (ShiftReviewSystem, from SocialFriendTracker); absent reads false.
+	friend: boolean?,
 }
 
 export type CrewLine = {
@@ -105,6 +107,8 @@ export type CrewLine = {
 	overtimeSalvage: number?,
 	-- Knocked out for the rest of the shift (CrewStats); absent reads false.
 	knockedOut: boolean?,
+	-- Played with a Roblox friend on the crew (CrewStats), for the rank's "Friends x2" line; absent reads false.
+	friend: boolean?,
 }
 
 -- A joke award: its title (upper case, as stamped), who won it and the one-line reason ("hauled 140").

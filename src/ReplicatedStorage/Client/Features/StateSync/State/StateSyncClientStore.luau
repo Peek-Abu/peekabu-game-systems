@@ -43,6 +43,9 @@ local loadout = Charm.atom({
 	seen = {},
 } :: PlayerDataTypes.Loadout) -- type the atom's initial value (CosmeticConstants.defaultLoadout)
 local lockers = Charm.atom({ keys = {}, pity = {}, opened = 0 } :: PlayerDataTypes.Lockers) -- type the atom's initial value
+local initialSocial: PlayerDataTypes.Social =
+	{ groupPaid = false, referredBy = 0, referralPaid = false, referrals = 0, askedAt = 0 }
+local social = Charm.atom(initialSocial)
 -- The public slice: other players' public data, already filtered by the server to the players relevant
 -- to this client (plus this client itself). Not a profile slice; synced under StateSyncConstants.publicKey.
 local initialPublicPlayers: PublicPlayerTypes.PublicPlayerMap = {}
@@ -69,6 +72,7 @@ local StateSyncClientStore = {
 	workOrder = workOrder,
 	loadout = loadout,
 	lockers = lockers,
+	social = social,
 	publicPlayers = publicPlayers,
 	world = world,
 }
@@ -90,6 +94,7 @@ local atoms: { [string]: any } = {
 	workOrder = workOrder,
 	loadout = loadout,
 	lockers = lockers,
+	social = social,
 	publicPlayers = publicPlayers,
 	world = world,
 }

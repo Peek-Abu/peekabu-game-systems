@@ -174,6 +174,8 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Shared.Features.Voice.Data.VoiceConstants"] = "static names and tuning (no logic)",
 	["ReplicatedStorage.Shared.Features.DailyReward.Data.DailyRewardConstants"] = "static tuning (no logic)",
 	["ReplicatedStorage.Shared.Features.DailyReward.Net.DailyRewardEvents"] = "ByteNet packet definitions (no logic)",
+	["ReplicatedStorage.Shared.Features.Social.Data.SocialConstants"] = "static tuning (no logic)",
+	["ReplicatedStorage.Shared.Features.Social.Net.SocialEvents"] = "ByteNet packet definitions (no logic)",
 	["ReplicatedStorage.Shared.Features.Loot.Data.LootTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Features.Title.Net.TitleEvents"] = "ByteNet packet definitions (no logic)",
 	["ReplicatedStorage.Shared.Features.Debugger.Net.DebuggerEvents"] = "ByteNet packet definitions (no logic)",
@@ -263,6 +265,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Features.Analytics.Systems.AnalyticsEconomySystem"] = "CurrencyServiceServer/MarketplaceServiceServer signal shell (the event decision is specced in AnalyticsEconomyUtils)",
 	["ServerScriptService.Features.Analytics.Data.AnalyticsTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Client.Features.DailyReward.DailyRewardServiceClient"] = "read facade and request sender (DailyRewardRules is specced)",
+	["ReplicatedStorage.Client.Features.Social.SocialServiceClient"] = "Roblox prompt shell (invite, group join, favorite); SocialRules and SocialAskStore are specced",
 	["ReplicatedStorage.Client.Features.Timecard.TimecardServiceClient"] = "read facade and request sender (TimecardRules is specced)",
 	["ReplicatedStorage.Client.Features.Marketplace.MarketplaceServiceClient"] = "MarketplaceService prompt shell (the server grants; the registry is specced)",
 

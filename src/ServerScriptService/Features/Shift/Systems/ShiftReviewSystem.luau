@@ -15,6 +15,8 @@
 	even with nothing done yet (leavers stay from the roster); a bare review when building it throws, so the shift can
 	always end (moved from ShiftServiceServer).
 
+	Both mark each member who has a Roblox friend on the crew (SocialFriendTracker), for the rank's "Friends x2" line.
+
 	`crew()` reads the running roster back (copies) for the company rank's award at the end of the shift
 	(RankShiftSystem); empty when the system is not running.
 
@@ -43,6 +45,7 @@ local ShiftRosterTracker = require(ServerScriptService.Features.Shift.State.Shif
 local ShiftAnalyticsSystem = require(ServerScriptService.Features.Shift.Systems.ShiftAnalyticsSystem)
 local ShiftAnalyticsWatchSystem = require(ServerScriptService.Features.Shift.Systems.ShiftAnalyticsWatchSystem)
 local ShiftResultsUtils = require(ServerScriptService.Features.Shift.Utils.ShiftResultsUtils)
+local SocialFriendTracker = require(ServerScriptService.Features.Social.State.SocialFriendTracker)
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 
 local log = Logger.new("ShiftReviewSystem")
@@ -69,10 +72,24 @@ local current: ShiftRosterTracker.ShiftRosterTracker? = nil
 
 local ShiftReviewSystem = {}
 
--- Every crew member's run this shift (copies; ShiftRosterTracker.list), or empty when the system is not running.
+-- Marks (in place) each member with a Roblox friend among the others (SocialFriendTracker), for the rank's
+-- "Friends x2" line. Left absent otherwise.
+local function withFriends(list: { ShiftTypes.CrewStats }): { ShiftTypes.CrewStats }
+	local ids: { number } = {}
+	for _, member in list do
+		table.insert(ids, member.userId)
+	end
+	for _, member in list do
+		member.friend = if SocialFriendTracker.shared:anyFriend(member.userId, ids) then true else nil
+	end
+	return list
+end
+
+-- Every crew member's run this shift (copies; ShiftRosterTracker.list), friends marked, or empty when the system is
+-- not running.
 function ShiftReviewSystem.crew(): { ShiftTypes.CrewStats }
 	local roster = current
-	return if roster ~= nil then roster:list() else {}
+	return if roster ~= nil then withFriends(roster:list()) else {}
 end
 
 local function build(input: ReviewInput): ShiftTypes.ShiftResults
@@ -86,7 +103,7 @@ local function build(input: ReviewInput): ShiftTypes.ShiftResults
 		dust = RoundServiceServer:teamValue(ShiftConstants.DUST),
 		bonus = RoundServiceServer:teamValue(ShiftConstants.BONUS),
 		quotaMet = input.quotaMet,
-		crew = input.roster:list(),
+		crew = withFriends(input.roster:list()),
 		offered = input.offered,
 		lookup = CargoRegistry.get,
 	})

@@ -4,7 +4,7 @@
 	crew's shift), the travel card (hidden under it), the player's published rank, their Credits (the `credits` balance),
 	the daily reward slice on the server clock, the contract board's contract and whether they are aboard a truck,
 	and draws DepotHubPanel in the V1 kit. JOBS / the Tonight card / GO! (when not aboard) open the contract board;
-	INVENTORY opens the Inventory, SHOP the Shop; GUIDE and SETTINGS push the hub pages; the gift asks to claim (`onClaimGift`, from the service: components
+	INVENTORY opens the Inventory, SHOP the Shop; GUIDE and SETTINGS push the hub pages; INVITE FRIENDS / JOIN GROUP call SocialServiceClient (SocialPerksPanel, hidden under the open clipboard); the gift asks to claim (`onClaimGift`, from the service: components
 	never talk to the server). Aboard a truck the Next shift card is the queue pad's (DepotPad). Values are specced in
 	DepotHubViewModel and DepotPadViewModel.
 
@@ -33,6 +33,7 @@ local CurrencyUtils = require(ReplicatedStorage.Shared.Features.Currency.Utils.C
 local DepotStore = require(ReplicatedStorage.Client.Features.Depot.State.DepotStore)
 local QueueStore = require(ReplicatedStorage.Client.Features.Queue.State.QueueStore)
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
+local SocialService = require(ReplicatedStorage.Client.Features.Social.SocialServiceClient)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local SceneStack = require(ReplicatedStorage.Client.UI.Scenes.SceneStack)
 local useServerClock = require(ReplicatedStorage.Client.UI.React.Hooks.useServerClock)
@@ -42,6 +43,7 @@ local VM = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotHubViewM
 local PaperHudFrame = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudFrame)
 local usePaperHudScale = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperHudScale)
 local RankViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Rank.RankViewModel)
+local SocialPerksPanel = require(ReplicatedStorage.Client.UI.React.Screens.Social.SocialPerksPanel)
 local ToonStyleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonStyleViewModel)
 
 export type DepotHubProps = {
@@ -80,6 +82,7 @@ local function DepotHub(props: DepotHubProps): React.ReactNode
 	local punchFeedback = ReactCharm.useAtom(TimecardService.feedback)
 	local punchPending = ReactCharm.useAtom(TimecardService.pending)
 	local stamp = ReactCharm.useAtom(TimecardMomentStore.stamp)
+	local social = ReactCharm.useAtom(StateSyncClientStore.social)
 	local scale = usePaperHudScale()
 	local player = Players.LocalPlayer
 	if not VM.visible(snapshot, player.UserId) or card ~= nil then
@@ -149,6 +152,18 @@ local function DepotHub(props: DepotHubProps): React.ReactNode
 				onGift = props.onClaimGift,
 				onGo = openBoard,
 			}),
+			social = if clipboardOpen
+				then nil
+				else React.createElement(SocialPerksPanel, {
+					phone = phone,
+					showGroup = not social.groupPaid,
+					onInvite = function()
+						SocialService:invite()
+					end,
+					onJoinGroup = function()
+						SocialService:joinGroup()
+					end,
+				}),
 		},
 	})
 end

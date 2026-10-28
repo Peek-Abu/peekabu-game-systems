@@ -47,6 +47,7 @@ return function()
 					timecard = { week = 0, punched = {}, weeks = 0 },
 					workOrder = { day = 0, progress = 0, claimed = false },
 					lockers = { keys = {}, pity = {}, opened = 0 },
+					social = { groupPaid = false, referredBy = 0, referralPaid = false, referrals = 0, askedAt = 0 },
 					loadout = {
 						current = "Pippa",
 						picked = false,
@@ -76,6 +77,7 @@ return function()
 				timecard = true,
 				workOrder = true,
 				lockers = true,
+				social = true,
 			}
 
 			for name, definition in StateSyncSliceRegistry.DEFINITIONS do
@@ -96,6 +98,7 @@ return function()
 				"lockers",
 				"premium",
 				"settings",
+				"social",
 				"timecard",
 				"titles",
 				"workOrder",

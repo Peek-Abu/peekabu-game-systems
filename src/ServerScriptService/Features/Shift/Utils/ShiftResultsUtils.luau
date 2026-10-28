@@ -194,6 +194,7 @@ function ShiftResultsUtils.build(input: ResultsInput): ShiftTypes.ShiftResults
 			items = member.items or 0,
 			overtimeSalvage = member.overtimeSalvage or 0,
 			knockedOut = member.knockedOut,
+			friend = member.friend,
 		})
 		salvage += member.salvage
 		piles += member.piles

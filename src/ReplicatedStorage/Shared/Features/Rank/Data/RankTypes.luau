@@ -43,6 +43,8 @@ export type CrewEntry = {
 	caught: number,
 	items: number,
 	overtimeSalvage: number,
+	-- Another crew member is their Roblox friend.
+	friend: boolean,
 }
 
 -- What one player did in one shift, as the XP rules read it (RankFormulas.factsFor builds it from the crew).
@@ -59,9 +61,18 @@ export type ShiftFacts = {
 	caught: boolean,
 	-- Every crew member on the review extracted.
 	crewExtracted: boolean,
+	-- Played with a Roblox friend on the crew (the shift's XP is multiplied).
+	withFriend: boolean,
 }
 
-export type AwardKey = "shiftWorked" | "quotaMet" | "items" | "overtimeSalvage" | "extracted" | "crewExtracted"
+export type AwardKey =
+	"shiftWorked"
+	| "quotaMet"
+	| "items"
+	| "overtimeSalvage"
+	| "extracted"
+	| "crewExtracted"
+	| "friends"
 
 export type AwardLine = {
 	key: AwardKey,

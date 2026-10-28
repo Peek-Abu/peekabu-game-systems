@@ -1,0 +1,33 @@
+local SocialAskStore = require(script.Parent.SocialAskStore)
+
+return function()
+	describe("SocialAskStore", function()
+		afterEach(function()
+			SocialAskStore.reset()
+		end)
+
+		it("shows the ask once per shift", function()
+			expect(SocialAskStore.visible()).to.equal(false)
+			expect(SocialAskStore.show(3)).to.equal(true)
+			expect(SocialAskStore.visible()).to.equal(true)
+			SocialAskStore.hide()
+			expect(SocialAskStore.visible()).to.equal(false)
+			expect(SocialAskStore.show(3)).to.equal(false)
+			expect(SocialAskStore.visible()).to.equal(false)
+		end)
+
+		it("remembers which shift asked", function()
+			SocialAskStore.show(3)
+			expect(SocialAskStore.askedShift()).to.equal(3)
+			expect(SocialAskStore.show(4)).to.equal(true)
+			expect(SocialAskStore.askedShift()).to.equal(4)
+		end)
+
+		it("resets", function()
+			SocialAskStore.show(3)
+			SocialAskStore.reset()
+			expect(SocialAskStore.visible()).to.equal(false)
+			expect(SocialAskStore.show(3)).to.equal(true)
+		end)
+	end)
+end

@@ -68,6 +68,7 @@ local function entriesOf(crew: { ShiftTypes.CrewStats }): { RankTypes.CrewEntry 
 			caught = member.caught or 0,
 			items = member.items or 0,
 			overtimeSalvage = member.overtimeSalvage or 0,
+			friend = member.friend == true,
 		})
 	end
 	return entries

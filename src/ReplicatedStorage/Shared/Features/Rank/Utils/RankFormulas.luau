@@ -7,7 +7,8 @@
 	- `entriesOf`: the crew lines of a published review (ShiftTypes.ShiftResults) as RankTypes.CrewEntry.
 	- `factsFor`: one player's shift, from the crew's entries, whether the quota was met, the crew still present at
 	  the end and how the shift ended (the review's `outcome`).
-	- `award`: the XP lines for those facts (RankConstants.XP).
+	- `award`: the XP lines for those facts (RankConstants.XP). Played with a Roblox friend on the crew, the shift's
+	  XP is multiplied (`friendMultiplier`): a "Friends x2" line adds the difference.
 
 	"Extracted" (the "Clocked out" line) means the shift ended through the clock-out (ShiftConstants.OUTCOME_CLOCKOUT:
 	everyone still in punched, or the truck-leaves countdown ran out) and the player was still with the crew then and
@@ -74,6 +75,7 @@ function RankFormulas.entriesOf(results: ShiftTypes.ShiftResults): { CrewEntry }
 			caught = line.caught,
 			items = line.items or 0,
 			overtimeSalvage = line.overtimeSalvage or 0,
+			friend = line.friend == true,
 		})
 	end
 	return entries
@@ -110,6 +112,7 @@ function RankFormulas.factsFor(
 		extracted = outcome == ShiftConstants.OUTCOME_CLOCKOUT and not caught and table.find(present, userId) ~= nil,
 		caught = caught,
 		crewExtracted = everyone and outcome == ShiftConstants.OUTCOME_CLOCKOUT,
+		withFriend = mine.friend,
 	}
 end
 
@@ -136,6 +139,11 @@ function RankFormulas.award(facts: ShiftFacts): RankTypes.Award
 	local total = 0
 	for _, line in lines do
 		total += line.xp
+	end
+	if facts.withFriend and total > 0 then
+		local extra = total * (xp.friendMultiplier - 1)
+		add("friends", extra)
+		total += math.max(extra, 0)
 	end
 	return { total = total, lines = lines, incident = facts.worked and facts.caught }
 end

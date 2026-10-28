@@ -97,6 +97,12 @@ local DEFINITIONS: { [string]: SliceDefinition } = {
 			return profile.account.loadout
 		end,
 	},
+	-- ACCOUNT-WIDE: the social perks (SocialServiceServer); owner-only.
+	social = {
+		read = function(profile)
+			return profile.account.social
+		end,
+	},
 	-- ACCOUNT-WIDE: keys and pity per Locker (LockerServiceServer); owner-only.
 	lockers = {
 		read = function(profile)

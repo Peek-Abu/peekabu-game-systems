@@ -18,6 +18,7 @@ return function()
 			expect(xp.overtimeSalvage).to.equal(5)
 			expect(xp.extracted).to.equal(5)
 			expect(xp.crewExtracted).to.equal(5)
+			expect(xp.friendMultiplier).to.equal(2)
 		end)
 
 		it("has no overhead name tag (the lanyard's ID card shows the rank)", function()
@@ -26,11 +27,12 @@ return function()
 
 		it("labels every award line", function()
 			for key in RankConstants.XP do
-				if key ~= "perItem" and key ~= "itemCap" then
+				if key ~= "perItem" and key ~= "itemCap" and key ~= "friendMultiplier" then
 					expect(type(RankConstants.LABELS[key])).to.equal("string")
 				end
 			end
 			expect(type(RankConstants.LABELS.items)).to.equal("string")
+			expect(RankConstants.LABELS.friends).to.equal("Friends x2")
 		end)
 	end)
 end

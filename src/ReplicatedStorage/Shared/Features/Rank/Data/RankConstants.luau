@@ -35,6 +35,9 @@ local RankConstants = {
 		extracted = 5,
 		-- Each, when the whole crew extracted.
 		crewExtracted = 5,
+		-- The shift's XP is multiplied by this when another crew member is a Roblox friend (the "friends" line adds
+		-- the difference).
+		friendMultiplier = 2,
 	}),
 
 	-- The results card's breakdown label for each award (short: the whole breakdown is one typed line).
@@ -45,6 +48,7 @@ local RankConstants = {
 		overtimeSalvage = "Overtime loot",
 		extracted = "Clocked out",
 		crewExtracted = "Whole crew out",
+		friends = "Friends x2",
 	}),
 	INCIDENT_LINE = "Incident Report filed",
 

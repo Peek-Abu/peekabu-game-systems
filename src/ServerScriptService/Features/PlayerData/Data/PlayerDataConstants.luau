@@ -64,6 +64,7 @@ local function emptyAccount(): PlayerDataTypes.PlayerAccount
 		firstSeen = { at = 0 },
 		loadout = { current = "Pippa", picked = false, looks = {}, stickers = { "", "", "", "" }, seen = {} },
 		lockers = { keys = {}, pity = {}, opened = 0 },
+		social = { groupPaid = false, referredBy = 0, referralPaid = false, referrals = 0, askedAt = 0 },
 	}
 end
 

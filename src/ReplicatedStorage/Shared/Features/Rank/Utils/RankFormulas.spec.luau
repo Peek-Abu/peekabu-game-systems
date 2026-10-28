@@ -9,6 +9,7 @@ local function facts(overrides)
 		extracted = false,
 		caught = false,
 		crewExtracted = false,
+		withFriend = false,
 	}
 	for key, value in overrides or {} do
 		base[key] = value
@@ -106,6 +107,22 @@ return function()
 			expect(amountOf(award, "extracted")).to.equal(5)
 			expect(amountOf(award, "crewExtracted")).to.equal(5)
 			expect(award.total).to.equal(10 + 15 + 10 + 5 + 5 + 5)
+		end)
+
+		it("doubles the shift with a Roblox friend on the crew, as its own line", function()
+			local award = RankFormulas.award(facts({ quotaMet = true, withFriend = true }))
+			expect(amountOf(award, "friends")).to.equal(25)
+			expect(award.total).to.equal(50)
+			expect(award.lines[#award.lines].label).to.equal("Friends x2")
+		end)
+
+		it("marks a crew entry as with a friend from its line", function()
+			local crew = {
+				{ userId = 1, caught = 0, items = 0, overtimeSalvage = 0, friend = true },
+				{ userId = 2, caught = 0, items = 0, overtimeSalvage = 0, friend = false },
+			}
+			expect(RankFormulas.factsFor(crew, true, { 1, 2 }, 1, "").withFriend).to.equal(true)
+			expect(RankFormulas.factsFor(crew, true, { 1, 2 }, 2, "").withFriend).to.equal(false)
 		end)
 
 		it("gives a caught player no extraction bonus and files an incident report", function()

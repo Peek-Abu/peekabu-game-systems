@@ -4,7 +4,8 @@
 	vote from ShiftStore, the device layout, the server clock and the viewport, and draws ShiftReviewPanel from
 	ShiftReviewViewModel, scaled to the viewport, with the local player's company rank (their public entry,
 	RankViewModel.slip over the same review). A vote writes ShiftStore.myVote, which ShiftServiceClient sends
-	(components never talk to the server). No logic of its own.
+	(components never talk to the server). Over it, the favorite/like ask (SocialAskCard) while SocialAskStore says it
+	is up. No logic of its own.
 
 	@class ShiftReviewScreen
 ]=]
@@ -24,6 +25,9 @@ local usePaperViewport = require(ReplicatedStorage.Client.UI.React.Screens.Paper
 local ShiftReviewPanel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftReviewPanel)
 local ShiftReviewViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftReviewViewModel)
 local RankViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Rank.RankViewModel)
+local SocialService = require(ReplicatedStorage.Client.Features.Social.SocialServiceClient)
+local SocialAskStore = require(ReplicatedStorage.Client.Features.Social.State.SocialAskStore)
+local SocialAskCard = require(ReplicatedStorage.Client.UI.React.Screens.Social.SocialAskCard)
 
 local e = React.createElement
 local useAtom = ReactCharm.useAtom
@@ -36,6 +40,7 @@ local function ShiftReviewScreen(): React.ReactNode
 	local snapshot = useAtom(ShiftStore.snapshot)
 	local myVote = useAtom(ShiftStore.myVote)
 	local publicPlayers = useAtom(StateSyncClientStore.publicPlayers)
+	local asking = useAtom(SocialAskStore.visible)
 	local layout: UIPaperConstants.Layout = usePaperLayout()
 	local now = useServerClock()
 	local viewport = usePaperViewport()
@@ -54,7 +59,20 @@ local function ShiftReviewScreen(): React.ReactNode
 		onVote = vote,
 		rank = rank,
 	}
-	return e(ShiftReviewPanel, props)
+	return e(React.Fragment, nil, {
+		review = e(ShiftReviewPanel, props),
+		ask = if asking
+			then e(SocialAskCard, {
+				phone = phone,
+				onFavorite = function()
+					SocialService:favorite()
+				end,
+				onDismiss = function()
+					SocialService:dismissAsk()
+				end,
+			})
+			else nil,
+	})
 end
 
 return ShiftReviewScreen

@@ -137,6 +137,19 @@ export type Lockers = {
 }
 
 --[=[
+	The account-wide social slice (SocialServiceServer, SocialRules): the one-time group perk, the invite referral
+	(who invited this player, 0 = nobody; whether their own pay-out is done; how many friends paid the inviter) and
+	when the favorite/like ask was last shown (os.time, 0 = never).
+]=]
+export type Social = {
+	groupPaid: boolean,
+	referredBy: number,
+	referralPaid: boolean,
+	referrals: number,
+	askedAt: number,
+}
+
+--[=[
 	The account-wide daily reward slice: the UTC day index (days since the Unix epoch, shifted by
 	DailyRewardConstants.DAY_OFFSET_HOURS) of the last claim (0 = never) and the current streak.
 ]=]
@@ -237,6 +250,7 @@ export type PlayerAccount = {
 	firstSeen: FirstSeen,
 	loadout: Loadout,
 	lockers: Lockers,
+	social: Social,
 	-- Extend with other ACCOUNT-WIDE slices here (settings, entitlements, ...)
 }
 
