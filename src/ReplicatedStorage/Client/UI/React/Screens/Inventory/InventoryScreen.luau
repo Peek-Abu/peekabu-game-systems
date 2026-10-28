@@ -195,6 +195,12 @@ local function InventoryScreen(props: InventoryScreenProps): React.ReactNode
 			body = e(InventoryCrewPanel, {
 				cards = VM.crew(loadout, owns),
 				layout = layout,
+				onHire = function(employee: string)
+					local onShop = props.onShop
+					if preview == nil and onShop ~= nil then
+						onShop(employee)
+					end
+				end,
 				onEquip = function(employee: string)
 					equip({ kind = "employee", id = employee })
 				end,

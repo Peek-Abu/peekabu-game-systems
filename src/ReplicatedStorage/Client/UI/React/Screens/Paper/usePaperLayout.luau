@@ -9,17 +9,14 @@
 local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
-local Workspace = game:GetService("Workspace")
 
-local React = require(ReplicatedStorage.Packages.React)
+local usePaperViewport = require(script.Parent.usePaperViewport)
 local ShiftPlatformRules = require(ReplicatedStorage.Shared.Features.Shift.Rules.ShiftPlatformRules)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 
--- Whether this device is a phone. Kept as a boolean in state because React's useState widens a string-literal
--- union to `string`; the hook maps it back to a Layout.
-local function readIsPhone(): boolean
-	local camera = Workspace.CurrentCamera
-	local viewport = if camera ~= nil then camera.ViewportSize else Vector2.new(1920, 1080)
+-- Derive layout from the same lifecycle-safe viewport hook used for screen sizing.
+local function usePaperLayout(): UIPaperConstants.Layout
+	local viewport = usePaperViewport()
 	local platform = ShiftPlatformRules.detect({
 		touch = UserInputService.TouchEnabled,
 		keyboard = UserInputService.KeyboardEnabled,
@@ -27,24 +24,6 @@ local function readIsPhone(): boolean
 		tenFoot = GuiService:IsTenFootInterface(),
 		shortSide = math.min(viewport.X, viewport.Y),
 	})
-	return platform == "phone"
+	return if platform == "phone" then "phone" else "desktop"
 end
-
-local function usePaperLayout(): UIPaperConstants.Layout
-	local isPhone, setIsPhone = React.useState(readIsPhone)
-	React.useEffect(function(): () -> ()
-		local camera = Workspace.CurrentCamera
-		if camera == nil then
-			return function() end
-		end
-		local connection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
-			setIsPhone(readIsPhone())
-		end)
-		return function()
-			connection:Disconnect()
-		end
-	end, {})
-	return if isPhone then "phone" else "desktop"
-end
-
 return usePaperLayout

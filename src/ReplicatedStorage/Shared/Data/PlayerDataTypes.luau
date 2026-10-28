@@ -146,6 +146,23 @@ export type DailyReward = {
 }
 
 --[=[
+	The account-wide weekly timecard (TimecardServiceServer, shape: TimecardCalendarFormulas.Card): the Monday
+	00:00 UTC the card covers as a Unix timestamp (0 = no card yet), the days punched on it (Monday = 1 ...
+	Sunday = 7, ascending and unique) and the consecutive filled weeks so far (the paycheque run).
+]=]
+export type WorkOrder = {
+	day: number,
+	progress: number,
+	claimed: boolean,
+}
+
+export type Timecard = {
+	week: number,
+	punched: { number },
+	weeks: number,
+}
+
+--[=[
 	The account-wide company rank ("Clearance Level", Cleanup Crew; RankServiceServer): the season it was earned in,
 	the XP earned (the level is derived from it through RankRegistry, so rank only goes up) and the last shift run
 	that paid out (the double-award guard). A stored `season` that differs from RankConstants.RANK_SEASON resets the
@@ -214,6 +231,8 @@ export type PlayerAccount = {
 	entitlements: Entitlements,
 	settings: Settings,
 	dailyReward: DailyReward,
+	timecard: Timecard,
+	workOrder: WorkOrder,
 	rank: Rank,
 	firstSeen: FirstSeen,
 	loadout: Loadout,

@@ -4,10 +4,10 @@
 
 	These atoms are the client-side mirror of the server's StateSyncServerStore slices. StateSyncServiceClient
 	registers them as charm-sync setters (via `setterFor`); the UI layer (React) reads them reactively
-	with `useAtom`. The UI never writes here — the server is authoritative, and writes arrive only as
+	with `useAtom`. The UI never writes here â€” the server is authoritative, and writes arrive only as
 	charm-sync patches.
 
-	Adding a synced slice here is two lines: declare its atom (narrowly typed — these are the values
+	Adding a synced slice here is two lines: declare its atom (narrowly typed â€” these are the values
 	UI code consumes) and add one `atoms` registry entry closing over it. `setterFor`/`readSlice`
 	derive from the registry, so neither grows a branch. The rest of the add-a-slice recipe lives in
 	StateSyncSliceRegistry's header; the boot assert below catches a manifest/registry drift loudly.
@@ -32,6 +32,9 @@ local premium = Charm.atom({ balance = 0 } :: PlayerDataTypes.Premium) -- type t
 local entitlements = Charm.atom({ owned = {} } :: PlayerDataTypes.Entitlements) -- type the atom's initial value
 local settings = Charm.atom({ values = {} } :: PlayerDataTypes.Settings) -- type the atom's initial value
 local dailyReward = Charm.atom({ lastDay = 0, streak = 0 } :: PlayerDataTypes.DailyReward) -- type the atom's initial value
+local initialWorkOrder: PlayerDataTypes.WorkOrder = { day = 0, progress = 0, claimed = false }
+local workOrder = Charm.atom(initialWorkOrder)
+local timecard = Charm.atom({ week = 0, punched = {}, weeks = 0 } :: PlayerDataTypes.Timecard) -- type the atom's initial value
 local loadout = Charm.atom({
 	current = "Pippa",
 	picked = false,
@@ -62,6 +65,8 @@ local StateSyncClientStore = {
 	entitlements = entitlements,
 	settings = settings,
 	dailyReward = dailyReward,
+	timecard = timecard,
+	workOrder = workOrder,
 	loadout = loadout,
 	lockers = lockers,
 	publicPlayers = publicPlayers,
@@ -69,7 +74,7 @@ local StateSyncClientStore = {
 }
 
 -- The slice registry: one entry per synced slice, the atom itself (a Charm atom is callable both
--- ways: `atom()` reads, `atom(value)` writes). Values are type-erased at this generic boundary —
+-- ways: `atom()` reads, `atom(value)` writes). Values are type-erased at this generic boundary â€”
 -- the registry is inherently string-keyed and dynamic (same documented rationale as StateSyncServerStore's
 -- registry); narrow typing lives on the exported atoms above.
 local atoms: { [string]: any } = {
@@ -81,6 +86,8 @@ local atoms: { [string]: any } = {
 	entitlements = entitlements,
 	settings = settings,
 	dailyReward = dailyReward,
+	timecard = timecard,
+	workOrder = workOrder,
 	loadout = loadout,
 	lockers = lockers,
 	publicPlayers = publicPlayers,
@@ -100,7 +107,7 @@ end
 --[=[
 	Returns a charm-sync setter for a slice: a function that writes an inbound value into the
 	matching atom. StateSyncServiceClient calls this while iterating `StateSyncConstants.SLICES`, so the
-	slice→atom mapping lives here (next to the atoms) instead of being duplicated in the service.
+	sliceâ†’atom mapping lives here (next to the atoms) instead of being duplicated in the service.
 	@param slice string -- The synced slice name (see StateSyncSliceRegistry)
 	@return SliceSetter -- A charm-sync setter over this slice's atom
 ]=]

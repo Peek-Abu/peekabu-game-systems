@@ -68,7 +68,8 @@ local function ShiftHud(): React.ReactNode
 	local staminaShown = useAtom(SprintStore.shown)
 	-- The desktop HUD is drawn scaled to the window; `viewport` is the window in HUD design px.
 	local hudScale = usePaperHudScale()
-	local crewOpen, setCrewOpen = React.useState(false)
+	local crewOpen = useAtom(ShiftStore.crewOpen)
+	local setCrewOpen = ShiftStore.crewOpen
 	React.useEffect(function()
 		setCrewOpen(false)
 	end, { if snapshot ~= nil then snapshot.shift else 0 })

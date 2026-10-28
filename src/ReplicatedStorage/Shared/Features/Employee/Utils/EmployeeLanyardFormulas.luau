@@ -275,6 +275,11 @@ function EmployeeLanyardFormulas.chestZ(fit: Fit, x: number, y: number): number
 	return a * (1 - ty) + b * ty
 end
 
+-- The uploaded v6 front faces +Z: the live unflipped badge otherwise exposes its rear NEW! over the front GUI.
+-- Normalize mesh geometry alone into the fit's -Z front before bounds/attachment; explicit flips still turn both.
+function EmployeeLanyardFormulas.badgePartCFrame(imported: CFrame): CFrame
+	return CFrame.Angles(0, math.pi, 0) * imported
+end
 -- The plane the badge's front face sits on, `CARD_CLEARANCE` further front than the deepest part: the local z the
 -- info card must use so the card (and the portrait inside it) is never buried in the badge. Nil for no parts.
 function EmployeeLanyardFormulas.cardZ(parts: { BadgePart }): number?

@@ -263,6 +263,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Features.Analytics.Systems.AnalyticsEconomySystem"] = "CurrencyServiceServer/MarketplaceServiceServer signal shell (the event decision is specced in AnalyticsEconomyUtils)",
 	["ServerScriptService.Features.Analytics.Data.AnalyticsTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Client.Features.DailyReward.DailyRewardServiceClient"] = "read facade and request sender (DailyRewardRules is specced)",
+	["ReplicatedStorage.Client.Features.Timecard.TimecardServiceClient"] = "read facade and request sender (TimecardRules is specced)",
 	["ReplicatedStorage.Client.Features.Marketplace.MarketplaceServiceClient"] = "MarketplaceService prompt shell (the server grants; the registry is specced)",
 
 	-- The Instance-touching half of animation playback: every verb needs a live Animator and real
@@ -431,6 +432,9 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.Features.Crouch.CrouchServiceClient"] = "Input/ByteNet/attribute/camera-offset shell (the request is specced in CrouchRequestUtils; the server decides)",
 	["ReplicatedStorage.Client.Features.Hide.Systems.HidePoseSystem"] = "Players/Motor6D/RunService shell (the pose and its easing are specced in HidePoseFormulas)",
 	["ReplicatedStorage.Client.Features.Hide.Systems.HideDoorSystem"] = "CollectionService/Instance/RunService shell (a cabinet door's local swing; the timing is HideConstants')",
+	-- Cleanup Crew: Timecard
+	["ReplicatedStorage.Shared.Features.Timecard.Data.TimecardConstants"] = "static tuning values (no logic; the rules they feed are specced in TimecardCalendarFormulas and TimecardRules)",
+	["ReplicatedStorage.Shared.Features.Timecard.Net.TimecardEvents"] = "ByteNet packet definitions (no logic)",
 	-- Cleanup Crew: Shift
 	["ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants"] = "static pacing and names (no logic)",
@@ -516,7 +520,6 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.UI.React.Screens.Toon.ToonStamp"] = "presentational React component (story in ToonShopKit.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Toon.ToonPrice"] = "presentational React component (story in ToonShopKit.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Toon.ToonMenuBar"] = "presentational React component (story in ToonMenuBar.story)",
-	["ReplicatedStorage.Client.UI.React.Screens.Inventory.InventoryCrewPanel"] = "presentational React component (crew cards specced in InventoryViewModel; story in InventoryScreen.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Pick.CharacterPickScreen"] = "React screen wiring the entitlements store (cards, start button and when it opens specced in CharacterPickViewModel; story in CharacterPickScreen.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Shop.ShopScreen"] = "React screen wiring the entitlements, currency, premium and Shop stores (values specced in ShopViewModel; story in ShopScreen.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Reveal.RevealScreen"] = "React screen wiring the reveal store (values specced in RevealViewModel; story in RevealScreen.story)",

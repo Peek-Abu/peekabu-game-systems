@@ -119,6 +119,49 @@ return function()
 			expect(CosmeticService:owns(1, "Prickles")).to.equal(true)
 		end)
 
+		it("hires Cappy for exactly 2500 Credits and refuses a repeated request without spending again", function()
+			seed(1, 0, 5000)
+			local player = { UserId = 1, Name = "CappyBuyer" }
+			ShopService._onBuyRequest({ offer = "Cappy" }, player)
+			expect(CosmeticService:owns(1, "Cappy")).to.equal(true)
+			expect(CurrencyService:getCurrencyAmount(1, "credits")).to.equal(2500)
+			ShopService._onBuyRequest({ offer = "Cappy" }, player)
+			expect(CurrencyService:getCurrencyAmount(1, "credits")).to.equal(2500)
+		end)
+
+		it("rejects Cappy below 2500 Credits without granting or spending", function()
+			seed(1, 0, 2499)
+			local ok, reason = ShopService:buy(1, "Cappy")
+			expect(ok).to.equal(false)
+			expect(reason).to.equal("short")
+			expect(CurrencyService:getCurrencyAmount(1, "credits")).to.equal(2499)
+			expect(CosmeticService:owns(1, "Cappy")).to.equal(false)
+		end)
+
+		it("leaves Credits unchanged when the entitlement write fails", function()
+			seed(1, 0, 2500)
+			local original = CosmeticService.grantOps
+			CosmeticService.grantOps = function()
+				return {
+					{
+						userId = 1,
+						path = "account.entitlements",
+						mutator = function()
+							return false
+						end,
+					},
+				}
+			end
+			local called, ok = pcall(function()
+				return ShopService:buy(1, "Cappy")
+			end)
+			CosmeticService.grantOps = original
+			expect(called).to.equal(true)
+			expect(ok).to.equal(false)
+			expect(CurrencyService:getCurrencyAmount(1, "credits")).to.equal(2500)
+			expect(CosmeticService:owns(1, "Cappy")).to.equal(false)
+		end)
+
 		it("changes nothing when the balance is short", function()
 			seed(1, 1499, 0)
 			local ok, reason = ShopService:buy(1, "Pippa.BubbleBuddy")

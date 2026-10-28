@@ -262,6 +262,8 @@ function EmployeeLanyardSystem.attach(
 		local faces: { EmployeeLanyardFormulas.BadgePart } = {}
 		for _, d in m:GetDescendants() do
 			if d:IsA("BasePart") then
+				-- Imported +Z front becomes fitted -Z front, keeping the rear relief behind the information card.
+				d.CFrame = EmployeeLanyardFormulas.badgePartCFrame(d.CFrame)
 				if d.Transparency < 1 then
 					table.insert(faces, { cframe = d.CFrame, size = d.Size })
 				end

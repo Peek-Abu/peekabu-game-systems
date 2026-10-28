@@ -28,6 +28,7 @@ local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.Depo
 local DepotTypes = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotTypes)
 local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionConstants)
 local QueueConstants = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueConstants)
+local TimecardConstants = require(ReplicatedStorage.Shared.Features.Timecard.Data.TimecardConstants)
 local DepotLayoutConstants = require(ServerScriptService.Features.Depot.Data.DepotLayoutConstants)
 local DepotMarkingUtils = require(ServerScriptService.Features.Depot.Utils.DepotMarkingUtils)
 
@@ -333,6 +334,48 @@ function DepotBuildSystem.build(
 	CollectionService:AddTag(resultSign, DepotConstants.BILLBOARD_TAGS.result)
 	resultSign.Parent = boards
 
+	-- A small physical clock, clear of both board silhouettes and the spawn lane.
+	local clock = block(
+		"WeeklyTimeClock",
+		Vector3.new(3, 4, 1),
+		origin * CFrame.new(contractPoint.x - 10, 2, contractPoint.z),
+		Color3.fromHex("1f6e66"),
+		boards
+	)
+	clock:SetAttribute(InteractionConstants.KIND_ATTRIBUTE, TimecardConstants.CLOCK_KIND)
+	CollectionService:AddTag(clock, InteractionConstants.TAG)
+	local clockFace = surface("ClockFace", clock, Vector2.new(300, 400))
+	local clockText = Instance.new("TextLabel")
+	clockText.Size = UDim2.fromScale(1, 1)
+	clockText.BackgroundColor3 = Color3.fromHex("f1dfa9")
+	clockText.TextColor3 = Color3.fromHex("2e3536")
+	clockText.Font = Enum.Font.GothamBold
+	clockText.TextSize = 32
+	clockText.TextWrapped = true
+	clockText.Text = "WEEKLY\nTIMECARD\n\nVIEW YOUR CARD\n\nANY 5 OF 7 DAYS"
+	clockText.Parent = clockFace
+	clockFace.Parent = clock
+	local daily = block(
+		"DailyWorkOrderSheet",
+		Vector3.new(2.8, 3.6, 0.18),
+		origin * CFrame.new(contractPoint.x - 5.3, 2.2, contractPoint.z - 0.6),
+		Color3.fromHex("f1dfa9"),
+		boards
+	)
+	daily.CanCollide = false
+	daily:SetAttribute(InteractionConstants.KIND_ATTRIBUTE, TimecardConstants.DAILY_KIND)
+	CollectionService:AddTag(daily, InteractionConstants.TAG)
+	local sheet = surface("DailyOrderFace", daily, Vector2.new(280, 360))
+	local text = Instance.new("TextLabel")
+	text.Size = UDim2.fromScale(1, 1)
+	text.BackgroundTransparency = 1
+	text.Font = Enum.Font.GothamBold
+	text.TextSize = 28
+	text.TextColor3 = Color3.fromHex("2e3536")
+	text.TextWrapped = true
+	text.Text = "DAILY\nWORK ORDER\n\nBONUS CREDITS\n\nREAD YOUR ASSIGNMENT"
+	text.Parent = sheet
+	sheet.Parent = daily
 	model.Parent = Workspace
 	return { model = model, trucks = trucks, resultBoard = resultBoard, contractBoard = contractBoard }
 end

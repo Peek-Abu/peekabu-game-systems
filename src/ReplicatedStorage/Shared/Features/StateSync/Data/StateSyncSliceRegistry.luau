@@ -80,6 +80,17 @@ local DEFINITIONS: { [string]: SliceDefinition } = {
 			return profile.account.dailyReward
 		end,
 	},
+	-- ACCOUNT-WIDE: this week's timecard (TimecardServiceServer); owner-only like every profile slice.
+	workOrder = {
+		read = function(profile)
+			return profile.account.workOrder
+		end,
+	},
+	timecard = {
+		read = function(profile)
+			return profile.account.timecard
+		end,
+	},
 	-- ACCOUNT-WIDE: what the player wears (CosmeticServiceServer); owner-only like every profile slice.
 	loadout = {
 		read = function(profile)

@@ -24,6 +24,12 @@ return function()
 	end)
 
 	describe("DEFINITIONS", function()
+		it("replicates the account-wide daily work order", function()
+			local order = { day = 20752, progress = 4, claimed = false }
+			expect(StateSyncSliceRegistry.DEFINITIONS.workOrder.read({ account = { workOrder = order } })).to.equal(
+				order
+			)
+		end)
 		it("each entry's read() extracts its own slice off the active slot", function()
 			local fakeSlot = {
 				currency = { credits = 5 },
@@ -38,6 +44,9 @@ return function()
 					premium = { balance = 7 },
 					receipts = { ids = {} },
 					firstSeen = { at = 0 },
+					timecard = { week = 0, punched = {}, weeks = 0 },
+					workOrder = { day = 0, progress = 0, claimed = false },
+					lockers = { keys = {}, pity = {}, opened = 0 },
 					loadout = {
 						current = "Pippa",
 						picked = false,
@@ -64,6 +73,9 @@ return function()
 				settings = true,
 				dailyReward = true,
 				loadout = true,
+				timecard = true,
+				workOrder = true,
+				lockers = true,
 			}
 
 			for name, definition in StateSyncSliceRegistry.DEFINITIONS do
@@ -81,9 +93,12 @@ return function()
 				"equippedTitle",
 				"inventory",
 				"loadout",
+				"lockers",
 				"premium",
 				"settings",
+				"timecard",
 				"titles",
+				"workOrder",
 			}
 			expect(#StateSyncSliceRegistry.NAMES).to.equal(#expected)
 			for i, name in expected do

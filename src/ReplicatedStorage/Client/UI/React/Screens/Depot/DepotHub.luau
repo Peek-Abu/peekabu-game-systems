@@ -16,6 +16,12 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
+local TimecardPanel = require(script.Parent.DepotTimecardPanel)
+local TimecardRules = require(ReplicatedStorage.Shared.Features.Timecard.Rules.TimecardRules)
+local TimecardService = require(ReplicatedStorage.Client.Features.Timecard.TimecardServiceClient)
+local WorkOrderRules = require(ReplicatedStorage.Shared.Features.WorkOrder.Rules.WorkOrderRules)
+local WorkOrderRegistry = require(ReplicatedStorage.Shared.Features.WorkOrder.Data.WorkOrderRegistry)
+local Company = require(ReplicatedStorage.Client.Features.UI.State.UICompanyStore)
 local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local QueueSnapshotUtils = require(ReplicatedStorage.Shared.Features.Queue.Utils.QueueSnapshotUtils)
@@ -65,6 +71,13 @@ local function DepotHub(props: DepotHubProps): React.ReactNode
 	local daily = ReactCharm.useAtom(StateSyncClientStore.dailyReward)
 	local queue = ReactCharm.useAtom(QueueStore.snapshot)
 	local now = useServerClock(1)
+	local timecard = ReactCharm.useAtom(StateSyncClientStore.timecard)
+	local workOrder = ReactCharm.useAtom(StateSyncClientStore.workOrder)
+	local clipboardOpen = ReactCharm.useAtom(Company.visible)
+	local clipboardTab = ReactCharm.useAtom(Company.selectedTab)
+	local pinned = ReactCharm.useAtom(Company.pinned)
+	local punchFeedback = ReactCharm.useAtom(TimecardService.feedback)
+	local punchPending = ReactCharm.useAtom(TimecardService.pending)
 	local scale = usePaperHudScale()
 	local player = Players.LocalPlayer
 	if not VM.visible(snapshot, player.UserId) or card ~= nil then
@@ -76,6 +89,37 @@ local function DepotHub(props: DepotHubProps): React.ReactNode
 	return React.createElement(PaperHudFrame, {
 		scale = scale.scale,
 		children = {
+			calendar = React.createElement(TimecardPanel, {
+				phone = phone,
+				open = clipboardOpen,
+				view = if clipboardTab == "workOrder" then "workOrder" else "timecard",
+				pinned = pinned,
+				onPin = Company.togglePin,
+				onTimecard = function()
+					Company.select("timecard")
+				end,
+				now = now,
+				kind = WorkOrderRegistry.orderFor(now).kind,
+				status = TimecardRules.status(timecard, now),
+				progress = WorkOrderRules.roll(workOrder, now).progress,
+				target = WorkOrderRegistry.orderFor(now).target,
+				order = WorkOrderRegistry.orderFor(now).label,
+				claimed = WorkOrderRules.roll(workOrder, now).claimed,
+				feedback = punchFeedback,
+				pending = punchPending,
+				onToggle = function()
+					Company.toggle()
+				end,
+				onWorkOrder = function()
+					Company.select("workOrder")
+				end,
+				onClose = function()
+					Company.close()
+				end,
+				onPunch = function()
+					TimecardService:punch()
+				end,
+			}),
 			hub = React.createElement(DepotHubPanel, {
 				phone = phone,
 				userId = player.UserId,

@@ -3,6 +3,25 @@ local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.Depo
 local DepotPlaceUtils = require(script.Parent.DepotPlaceUtils)
 
 return function()
+	describe("timecard hub authorization", function()
+		local floor = { minX = 0, maxX = 96, minZ = 0, maxZ = 72 }
+		local here = Vector3.new(40, 3, 26)
+		it("allows hub players while another local crew works", function()
+			expect(DepotPlaceUtils.canPunchTimecard(true, "running", false, here, floor, 22)).to.equal(true)
+		end)
+		it("rejects departed crew, wrong role, missing roots and outside native positions", function()
+			expect(DepotPlaceUtils.canPunchTimecard(true, "running", true, here, floor, 22)).to.equal(false)
+			expect(DepotPlaceUtils.canPunchTimecard(false, "lobby", false, here, floor, 22)).to.equal(false)
+			expect(DepotPlaceUtils.canPunchTimecard(true, "lobby", false, nil, floor, 22)).to.equal(false)
+			expect(DepotPlaceUtils.canPunchTimecard(true, "lobby", false, Vector3.new(2000, 3, 26), floor, 22)).to.equal(
+				false
+			)
+			expect(DepotPlaceUtils.canPunchTimecard(true, "lobby", false, Vector3.new(40, 40, 26), floor, 22)).to.equal(
+				false
+			)
+		end)
+	end)
+
 	describe("roles", function()
 		it("maps both real ids to their roles", function()
 			local roles = DepotPlaceUtils.roles(113354563835664, 222)

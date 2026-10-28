@@ -4,7 +4,7 @@
 	employee in their colour: a bright art window with rays and the employee in 3D in the skin they wear (a static
 	ToonViewport), the skin's name on a ribbon over the window's top edge, "You!" on the one you play; under it the
 	name, "Bunny · Crew speedster", the ability chip with its render, and the buttons for the card's state (Wearing +
-	Skins, Equip + Skins, or locked: the hire price + Look, with the night padlock on the art). Then the "???" card.
+	Skins, Equip + Skins, or locked: an interactive hire price + Look, with the night padlock on the art). Then the "???" card.
 	The cards come from InventoryViewModel.crew; nothing here is per character. Presentational (exempt; story in
 	InventoryScreen.story).
 
@@ -38,6 +38,7 @@ export type InventoryCrewPanelProps = {
 	cards: { VM.CrewCard },
 	layout: VM.Layout,
 	onEquip: (employee: string) -> (),
+	onHire: (employee: string) -> (),
 	onOpen: (employee: string) -> (),
 }
 
@@ -178,14 +179,17 @@ local function card(props: InventoryCrewPanelProps, entry: VM.CrewCard, order: n
 				size = UDim2.new(1, 0, 1, -4),
 			}),
 		}
-		face.price = e(ToonSurface, {
-			hue = "gold",
+		face.price = e(ToonButton, {
+			variant = "gleam",
+			content = price,
+			onActivated = function()
+				props.onHire(entry.id)
+			end,
 			radius = 999,
 			small = true,
 			position = UDim2.fromOffset(pad, buttonY),
 			size = UDim2.fromOffset(half + 16, buttonHeight),
 			zIndex = 3,
-			children = price,
 		})
 		face.look = e(ToonButton, {
 			variant = "night",

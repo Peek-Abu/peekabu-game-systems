@@ -23,6 +23,8 @@ local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local CurrencyUtils = require(ReplicatedStorage.Shared.Features.Currency.Utils.CurrencyUtils)
 local CosmeticServiceClient = require(ReplicatedStorage.Client.Features.Cosmetic.CosmeticServiceClient)
 local ShopServiceClient = require(ReplicatedStorage.Client.Features.Shop.ShopServiceClient)
+local ShopStore = require(ReplicatedStorage.Client.Features.Shop.State.ShopStore)
+local ShopViewModel = require(script.Parent.Parent.Shop.ShopViewModel)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonBackdrop = require(Toon.ToonBackdrop)
@@ -313,7 +315,13 @@ local function CharacterPickScreen(props: CharacterPickScreenProps): React.React
 	local livePhone = usePaperLayout() == "phone"
 	local entitlements = ReactCharm.useAtom(StateSyncClientStore.entitlements)
 	local currency = ReactCharm.useAtom(StateSyncClientStore.currency)
+	local buyResult = ReactCharm.useAtom(ShopStore.result)
 	local selected, setSelected = React.useState(VM.DEFAULT)
+	local buyNote = if props.owns == nil
+			and buyResult ~= nil
+			and buyResult.offer == selected
+		then ShopViewModel.resultText(buyResult.reason)
+		else nil
 	local owns = props.owns or function(id: string): boolean
 		return CosmeticRules.owns(entitlements, id)
 	end
@@ -442,6 +450,18 @@ local function CharacterPickScreen(props: CharacterPickScreenProps): React.React
 						Size = UDim2.new(0, aboutWidth, 1, -startHeight - gap),
 						BackgroundTransparency = 1,
 					}, { card = aboutCard(selected, layout, height - startHeight - gap) }),
+					note = if buyNote ~= nil
+						then e(ToonText, {
+							text = buyNote,
+							textSize = layout.textSize,
+							meaning = "white",
+							anchor = Vector2.new(1, 1),
+							position = UDim2.new(1, 0, 1, -startHeight - 4),
+							size = UDim2.fromOffset(aboutWidth, layout.textSize + 8),
+							fit = true,
+							align = "center",
+						})
+						else nil,
 					start = e(ToonButton, {
 						variant = "primary",
 						text = start.text,

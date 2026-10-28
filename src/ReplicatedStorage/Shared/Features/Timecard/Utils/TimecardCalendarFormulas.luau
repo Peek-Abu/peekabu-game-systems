@@ -8,13 +8,19 @@
 	paycheque run; every fourth consecutive completed week pays a paycheque. The run breaks when the week that passed
 	was not completed, or when more than one week went by.
 
-	- `dayOfWeek`, `weekStart`, `weekKey`: where a moment sits in the UTC week.
+	- `dayOfWeek`, `weekStart`, `weekEnd`, `weekKey`: where a moment sits in the UTC week.
 	- `roll`: the card brought up to a moment's week (the only place a run can break).
 	- `punch`: roll, then record the day, reporting the third punch's key and the fifth's stars.
 	- `complete`: five of the seven days punched.
 
+	The counts (days in a week, punches to fill, the key punch, weeks to the paycheque) are TimecardConstants'.
+
 	@class TimecardCalendarFormulas
 ]=]
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local TimecardConstants = require(ReplicatedStorage.Shared.Features.Timecard.Data.TimecardConstants)
 
 export type Card = {
 	week: number, -- the Monday 00:00 UTC this card covers, as a Unix timestamp
@@ -37,10 +43,10 @@ export type PunchResult = {
 
 local DAY_SECONDS = 86400
 local WEEK_SECONDS = 7 * DAY_SECONDS
-local DAYS = 7
-local GOAL = 5
-local KEY_PUNCH = 3
-local PAYCHEQUE_WEEKS = 4
+local DAYS = TimecardConstants.DAYS_PER_WEEK
+local GOAL = TimecardConstants.PUNCHES_TO_FILL
+local KEY_PUNCH = TimecardConstants.KEY_PUNCH
+local PAYCHEQUE_WEEKS = TimecardConstants.PAYCHEQUE_WEEKS
 
 local TimecardCalendarFormulas = {}
 
@@ -52,6 +58,11 @@ end
 -- The Monday 00:00 UTC of the week `now` falls in.
 function TimecardCalendarFormulas.weekStart(now: number): number
 	return (math.floor(now / DAY_SECONDS) - (TimecardCalendarFormulas.dayOfWeek(now) - 1)) * DAY_SECONDS
+end
+
+-- The first second that is NOT the week `now` falls in (the next Monday 00:00 UTC).
+function TimecardCalendarFormulas.weekEnd(now: number): number
+	return TimecardCalendarFormulas.weekStart(now) + WEEK_SECONDS
 end
 
 -- That Monday's UTC date ("2026-10-26"): what the card is called on screen, and a stable key for logs.

@@ -13,6 +13,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local QueueConstants = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueConstants)
 
+local DepotTypes = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotTypes)
+local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
+
 local DepotPlaceUtils = {}
 
 function DepotPlaceUtils.roles(hubPlaceId: number, shiftPlaceId: number): { [string]: number }
@@ -37,4 +40,23 @@ function DepotPlaceUtils.depotOwnsSpawns(runsDepot: boolean, runsShift: boolean)
 	return runsDepot and not runsShift
 end
 
+-- Local servers host both roles; native position separates hub bystanders from the active crew.
+function DepotPlaceUtils.canPunchTimecard(
+	runsDepot: boolean,
+	phase: ShiftTypes.ShiftPhase,
+	departed: boolean,
+	position: Vector3?,
+	floor: DepotTypes.Rect,
+	height: number
+): boolean
+	if not runsDepot or position == nil or (phase ~= "lobby" and departed) then
+		return false
+	end
+	return position.X >= floor.minX
+		and position.X <= floor.maxX
+		and position.Z >= floor.minZ
+		and position.Z <= floor.maxZ
+		and position.Y >= 0
+		and position.Y <= height
+end
 return DepotPlaceUtils

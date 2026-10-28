@@ -40,6 +40,14 @@ return function()
 			expect(TimecardCalendarFormulas.weekKey(MONDAY - 1)).to.equal("2026-10-19")
 			expect(TimecardCalendarFormulas.weekKey(MONDAY + WEEK)).to.equal("2026-11-02")
 		end)
+
+		it("ends a week at the next Monday 00:00 UTC", function()
+			expect(TimecardCalendarFormulas.weekEnd(MONDAY)).to.equal(MONDAY + WEEK)
+			expect(TimecardCalendarFormulas.weekEnd(MONDAY + 6 * DAY + 3599)).to.equal(MONDAY + WEEK)
+			expect(TimecardCalendarFormulas.weekEnd(MONDAY + WEEK)).to.equal(MONDAY + 2 * WEEK)
+			-- One second before the end is still this week; the end itself already rolls over.
+			expect(TimecardCalendarFormulas.weekEnd(MONDAY + WEEK - 1) - (MONDAY + WEEK - 1)).to.equal(1)
+		end)
 	end)
 
 	describe("roll", function()

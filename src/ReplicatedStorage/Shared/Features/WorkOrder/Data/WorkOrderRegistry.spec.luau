@@ -6,6 +6,26 @@ local DAY = 86400
 
 return function()
 	describe("the catalog", function()
+		it("preserves today and activates shorter normal-shift dailies at the next reset", function()
+			expect(WorkOrderRegistry.orderFor(1793145599).id).to.equal("double-shift")
+			local day = 1793145600
+			local foundShift = false
+			for i = 0, 11 do
+				local order = WorkOrderRegistry.orderFor(day + i * DAY)
+				expect(order.kind == "salvage").to.equal(false)
+				if order.kind == "shifts" then
+					expect(order.target).to.equal(1)
+					foundShift = true
+				end
+				if order.kind == "piles" then
+					expect(order.target <= 12).to.equal(true)
+				end
+				if order.kind == "cargo" then
+					expect(order.target <= 4).to.equal(true)
+				end
+			end
+			expect(foundShift).to.equal(true)
+		end)
 		it("is a valid ladder of orders", function()
 			expect(WorkOrderRegistry.check(WorkOrderRegistry.all())).to.equal(true)
 			expect(#WorkOrderRegistry.all() >= 4).to.equal(true)
@@ -38,6 +58,9 @@ return function()
 				false
 			)
 			expect(WorkOrderRegistry.check({ { id = "a", kind = "dance", target = 2, label = "Dance" } })).to.equal(
+				false
+			)
+			expect(WorkOrderRegistry.check({ { id = "a", kind = "piles", target = math.huge, label = "Clear" } })).to.equal(
 				false
 			)
 			expect(WorkOrderRegistry.check({})).to.equal(false)
@@ -82,7 +105,7 @@ return function()
 			local seen = {}
 			local count = #WorkOrderRegistry.all()
 			for day = 0, count - 1 do
-				local id = WorkOrderRegistry.orderFor(MONDAY + day * DAY).id
+				local id = WorkOrderRegistry.orderFor((MONDAY + 14 * DAY) + day * DAY).id
 				expect(seen[id]).never.to.be.ok()
 				seen[id] = true
 			end
@@ -94,7 +117,7 @@ return function()
 		end)
 
 		it("is the same order for the same day however far away it is", function()
-			local far = MONDAY + 400 * DAY
+			local far = (MONDAY + 14 * DAY) + 400 * DAY
 			expect(WorkOrderRegistry.orderFor(far).id).to.equal(WorkOrderRegistry.orderFor(far + DAY - 1).id)
 		end)
 	end)

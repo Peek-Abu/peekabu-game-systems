@@ -27,4 +27,5 @@ local myVote = Charm.atom(initialVote)
 return {
 	snapshot = snapshot,
 	myVote = myVote,
+	crewOpen = Charm.atom(false),
 }

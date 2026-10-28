@@ -75,6 +75,9 @@ local ShiftAnalyticsWatchSystem = require(ShiftServer.Systems.ShiftAnalyticsWatc
 local ShiftReviewSystem = require(ShiftServer.Systems.ShiftReviewSystem)
 local ShiftCrewStatusSystem = require(ShiftServer.Systems.ShiftCrewStatusSystem)
 local ShiftLivesSystem = require(ShiftServer.Systems.ShiftLivesSystem)
+local ShiftAnalyticsSystem = require(ServerScriptService.Features.Shift.Systems.ShiftAnalyticsSystem)
+local ShiftWorkOrderSystem = require(ServerScriptService.Features.Shift.Systems.ShiftWorkOrderSystem)
+local WorkOrderServiceServer = require(ServerScriptService.Features.WorkOrder.WorkOrderServiceServer)
 local ShiftPaySystem = require(ShiftServer.Systems.ShiftPaySystem)
 local CurrencyServiceServer = require(ServerScriptService.Features.Currency.CurrencyServiceServer)
 local OfficeServiceServer = require(ServerScriptService.Features.Office.OfficeServiceServer)
@@ -463,6 +466,7 @@ local ShiftServiceServer: ShiftServiceServer = {
 		"DepotServiceServer",
 		"CurrencyServiceServer",
 		"AnalyticsServiceServer",
+		"WorkOrderServiceServer",
 	},
 
 	--[=[
@@ -474,6 +478,20 @@ local ShiftServiceServer: ShiftServiceServer = {
 			log:info("not a shift server: the shift does not run here")
 			return
 		end
+		table.insert(
+			stoppers,
+			ShiftWorkOrderSystem.start({
+				piles = VacuumServiceServer.pileCleared,
+				loaded = ShiftAnalyticsSystem.loaded,
+				changed = changed,
+				eligible = banking.canBank,
+				crew = function()
+					return ShiftAnalyticsSystem.crew()
+				end,
+			}, function(player, kind, amount)
+				WorkOrderServiceServer:record(player, kind, amount)
+			end)
+		)
 		started = true
 		RoundServiceServer:configure({
 			minPlayers = ShiftConstants.MIN_PLAYERS,

@@ -42,11 +42,13 @@ local DepotShared = ReplicatedStorage.Shared.Features.Depot
 local DepotServer = ServerScriptService.Features.Depot
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local DepotConstants = require(DepotShared.Data.DepotConstants)
+local TimecardConstants = require(ReplicatedStorage.Shared.Features.Timecard.Data.TimecardConstants)
 local DepotTypes = require(DepotShared.Data.DepotTypes)
 local DepotEvents = require(DepotShared.Net.DepotEvents)
 local InteractionRegistry = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionRegistry)
 local QueueTypes = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueTypes)
 local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
+local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local DepotLayoutConstants = require(DepotServer.Data.DepotLayoutConstants)
 local DepotLayoutRules = require(DepotServer.Rules.DepotLayoutRules)
 local DepotContractUtils = require(DepotServer.Utils.DepotContractUtils)
@@ -70,9 +72,23 @@ end
 
 -- The contract board's prompt (M3 UI): registered at load, before the board is built and tagged.
 if not InteractionRegistry.has(DepotConstants.BOARD_KIND) then
-	InteractionRegistry.register(DepotConstants.BOARD_KIND, { actionText = "Read", objectText = "Work order" })
+	InteractionRegistry.register(DepotConstants.BOARD_KIND, { actionText = "Read", objectText = "Tonight’s job" })
 end
 
+if not InteractionRegistry.has(TimecardConstants.CLOCK_KIND) then
+	InteractionRegistry.register(
+		TimecardConstants.CLOCK_KIND,
+		{ actionText = "View timecard", objectText = "Weekly time clock", maxDistance = 8 }
+	)
+end
+
+if not InteractionRegistry.has(TimecardConstants.DAILY_KIND) then
+	InteractionRegistry.register(
+		TimecardConstants.DAILY_KIND,
+		{ actionText = "Read", objectText = "Daily work order", maxDistance = 8 }
+	)
+end
+local TimecardEvents = require(ReplicatedStorage.Shared.Features.Timecard.Net.TimecardEvents)
 local LAYOUT = DepotLayoutConstants.LAYOUT
 
 local log = Logger.new("DepotServiceServer")
@@ -97,6 +113,8 @@ local held: { [Player]: DepotTypes.CardMessage } = {}
 local heldLast: { [Player]: DepotTypes.LastShift } = {}
 -- The truck each player's public field currently says (refreshTrucks writes it on change).
 local truckOf: { [number]: number } = {}
+local departedForShift: { [number]: boolean } = {}
+local timecardShiftPhase: (() -> ShiftTypes.ShiftPhase)? = nil
 
 -- The truck number (layout order) of a pad, or nil before the garage is built.
 local function truckIndexOf(pad: BasePart): number?
@@ -202,6 +220,8 @@ export type DepotServiceServer = {
 	getState: (self: DepotServiceServer) -> { [string]: string | number | boolean },
 	spawnCFrame: (self: DepotServiceServer, index: number) -> CFrame,
 	contract: (self: DepotServiceServer) -> DepotTypes.Contract,
+	canPunchTimecard: (self: DepotServiceServer, player: Player) -> boolean,
+	setTimecardPhaseReader: (self: DepotServiceServer, phaseReader: (() -> ShiftTypes.ShiftPhase)?) -> (),
 }
 
 local DepotServiceServer: DepotServiceServer = {
@@ -218,6 +238,12 @@ local DepotServiceServer: DepotServiceServer = {
 		the garage where this server runs the depot role.
 	]=]
 	start = function(self)
+		InteractionServiceServer:onInteract(TimecardConstants.CLOCK_KIND, function(player, _target)
+			TimecardEvents.packets.OpenClipboard.sendTo(true, player)
+		end)
+		InteractionServiceServer:onInteract(TimecardConstants.DAILY_KIND, function(player, _target)
+			TimecardEvents.packets.OpenClipboard.sendTo(false, player)
+		end)
 		QueueServiceServer:setDepartData(function(pad, _party)
 			local payload: QueueTypes.QueuePayload = { contract = contract.id }
 			-- The payload type allows no nil, so the key is only added for a known truck.
@@ -237,21 +263,30 @@ local DepotServiceServer: DepotServiceServer = {
 			sendCard(party, DepotContractUtils.driveCard(contract, truckIndexOf(pad)))
 		end)
 		local arrived = QueueServiceServer.arrived:Connect(function(party, payload)
+			-- Only accepted arrivals mark a player away; a failed departure leaves hub access intact.
+			for _, player in party do
+				departedForShift[player.UserId] = true
+			end
 			crewContract = DepotContractUtils.resolve(DepotConstants.CONTRACTS, payload.contract)
 			crewTruck = DepotContractUtils.truckOf(payload.truck, DepotConstants.MAX_TRUCKS)
 			crewQuota = ShiftQuotaFormulas.quota(#party)
 			sendCard(party, DepotContractUtils.arrivalCard(crewContract, crewQuota, crewTruck))
 		end)
 		local late = QueueServiceServer.joinedLate:Connect(function(player)
+			departedForShift[player.UserId] = true
 			sendCard({ player }, DepotContractUtils.arrivalCard(crewContract, crewQuota, crewTruck))
 		end)
-		local returned = QueueServiceServer.returned:Connect(pinResultCard)
+		local returned = QueueServiceServer.returned:Connect(function(player, payload)
+			departedForShift[player.UserId] = nil
+			pinResultCard(player, payload)
+		end)
 		local listening = DepotEvents.packets.Ready.listen(function(data: boolean, player: Player?)
 			if player then
 				onReady(data, player)
 			end
 		end)
 		local leaving = Players.PlayerRemoving:Connect(function(player)
+			departedForShift[player.UserId] = nil
 			ready[player] = nil
 			held[player] = nil
 			heldLast[player] = nil
@@ -297,6 +332,7 @@ local DepotServiceServer: DepotServiceServer = {
 	end,
 
 	stop = function(_self)
+		timecardShiftPhase = nil
 		for _, stopFn in stoppers do
 			stopFn()
 		end
@@ -305,6 +341,7 @@ local DepotServiceServer: DepotServiceServer = {
 		table.clear(held)
 		table.clear(heldLast)
 		table.clear(truckOf)
+		table.clear(departedForShift)
 		QueueServiceServer:setDepartData(nil)
 		QueueServiceServer:setArrivalPoint(DepotConstants.ROLE_DEPOT, nil)
 		if ownsSpawns then
@@ -327,6 +364,29 @@ local DepotServiceServer: DepotServiceServer = {
 		return DepotLayoutConstants.ORIGIN * CFrame.new(point.x, DepotLayoutConstants.SPAWN_HEIGHT, point.z)
 	end,
 
+	canPunchTimecard = function(_self, player)
+		local phaseReader = timecardShiftPhase
+		if built == nil or player.Parent ~= Players or phaseReader == nil then
+			return false
+		end
+		local character = player.Character
+		local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
+		local position = if root and root:IsA("BasePart")
+			then DepotLayoutConstants.ORIGIN:PointToObjectSpace(root.Position)
+			else nil
+		return DepotPlaceUtils.canPunchTimecard(
+			QueueServiceServer:runsRole(DepotConstants.ROLE_DEPOT),
+			phaseReader(),
+			departedForShift[player.UserId] == true,
+			position,
+			LAYOUT.floor,
+			DepotLayoutConstants.WALL_HEIGHT
+		)
+	end,
+	-- Only callbacks cross into Depot; it does not require Timecard or Shift services.
+	setTimecardPhaseReader = function(_self, phaseReader)
+		timecardShiftPhase = phaseReader
+	end,
 	contract = function(_self)
 		return contract
 	end,

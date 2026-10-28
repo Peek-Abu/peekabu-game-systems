@@ -61,6 +61,26 @@ return function()
 		end)
 	end)
 
+	describe("imported badge orientation", function()
+		it("puts the uploaded front outward and rear relief behind the front information", function()
+			-- Verified on the live unflipped R1: imported -Z shows the 3D NEW! over the front GUI.
+			local front = EmployeeLanyardFormulas.badgePartCFrame(CFrame.new(0, -0.44, 0.003))
+			local rearIcon = EmployeeLanyardFormulas.badgePartCFrame(CFrame.new(0, -0.44, -0.015))
+			expect(front.Position.Z < 0).to.equal(true)
+			expect(rearIcon.Position.Z > 0).to.equal(true)
+			local flippedRear = CFrame.Angles(0, math.pi, 0) * rearIcon
+			expect(flippedRear.Position.Z < 0).to.equal(true)
+		end)
+
+		it("restores the authored asymmetric rank-5 part and clears its front plane", function()
+			local part = EmployeeLanyardFormulas.badgePartCFrame(CFrame.new(0, -0.34417, 0.0186666))
+			expect(part.Position.Y).to.be.near(-0.34417, 1e-6)
+			expect(part.Position.Z).to.be.near(-0.0186666, 1e-6)
+			local z =
+				EmployeeLanyardFormulas.cardZ({ { cframe = part, size = Vector3.new(0.29667, 0.575, 0.0673334) } })
+			expect(z).to.be.near(-0.0523333 - EmployeeLanyardConstants.CARD_CLEARANCE, 1e-6)
+		end)
+	end)
 	describe("info card front plane", function()
 		-- R1's real parts (ReplicatedStorage.Assets.CleanupCrew.LanyardBadges.R1, measured in Studio). The old layout
 		-- put the card face at z -0.0047, buried behind the badge's front-most face (z -0.0203) and inside rank 1's

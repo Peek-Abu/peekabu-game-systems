@@ -1,9 +1,7 @@
 # Cleanup Crew: the weekly Timecard and the daily Work Order
 
 Two retention pieces from the first-launch handoff ("Weekly Timecard (any 5 of 7 days, punched at the hub time
-clock) plus a daily Work Order"). This page records the rules both features are built on. Only the pure layer
-exists so far; the service, the profile slice, the hub time clock and the HUD come next, and they must not need
-to change a rule here.
+clock) plus a daily Work Order"). This page records the rules both features are built on. The runtime includes validated account slices, atomic rewards, the hub time clock, calendar and daily-order views.
 
 ## The weekly Timecard
 
@@ -46,10 +44,45 @@ change to the boundary shows up as a failing case, not as a bug found in play.
   boundary as the Timecard's weeks, so nobody has to reason about two "days".
 - `get(id)` is the lookup, nil for an unknown id; `all()` is the catalog as a copy.
 
-## Not built yet
+## Runtime and rewards
 
-- The profile slices (the Timecard card, the Work Order day + progress), their validators and the server services
-  that punch, count and pay.
-- The hub time clock (the punch prompt), the paycheque, and the key/stars grants.
-- The HUD: this week's card, today's order and its progress.
-- Analytics for punches, filled cards, paycheques and order completions (every launch experiment needs its event).
+The account-wide slices are `timecard = { week, punched, weeks }` and `workOrder = { day, progress, claimed }`.
+Their validators run on every data-layer write. Profiles reconcile new slices from the template; no schema reset is required.
+The hub has one COMPANY CLIPBOARD shortcut. Its Timecard and Daily Work Order tabs share a620x390 card using the normal global UI scale. Close/reopen remembers the selected tab for the client session. The physical weekly clock opens Timecard; the daily sheet beside the contract board opens Daily Work Order. Tonight's Job remains the existing Jobs/contract flow. Opening an entrance does not punch or grant rewards.
+PUNCH TODAY requests a server punch; reliable feedback reports accepted/refused requests, and replicated state confirms the result.
+
+Tunable MVP reward defaults (implementation defaults, subject to future balance review):
+
+| Trigger | Reward |
+|---|---|
+| Third weekly punch | 1 actual Gloom Locker key (`account.lockers.keys.gloom`) |
+| Fifth weekly punch | 5 Gleam (`account.premium.balance`; the design's stars use the existing premium currency) |
+| Fourth consecutive filled week | 500 Credits, alongside that week's fifth-punch Gleam |
+| Daily Work Order completion | 100 Credits |
+
+TimecardConstants owns weekly values; WorkOrderRegistry.REWARD_CREDITS owns the daily value. No premium currency is invented.
+The weekly punch and all milestone payouts commit in one PlayerData transaction. A refused payout rolls the card back.
+Repeated requests cannot pay the same punch again. `setPayout(nil)` restores the default payout; custom payout handlers must return transaction operations.
+
+`WorkOrderServiceServer:record(player, kind, amount)` accepts positive finite whole increments from server gameplay only.
+There is no client progress/reward packet. Only today's matching kind counts. Progress caps at the catalog target;
+reaching it commits progress, `claimed = true` and the Credits reward atomically. Further increments are ignored.
+The first real progress after UTC midnight starts today's order at zero. Load reconciles yesterday's state;
+clients also roll the display on the server clock so a midnight wait cannot show yesterday's reward as ready.
+ShiftWorkOrderSystem feeds individual real pile clears, banked cargo/overtime salvage, and completed shifts; no client claim authorizes progress.
+
+## Verification
+
+Sibling specs cover UTC week/day boundaries, five-of-seven behavior, skipped weeks, duplicate punches,
+actual milestone balances, transaction rollback, daily target cap/once-only payment, unrelated counters and invalid amounts.
+TestEZ requires a dedicated Studio test session; gameplay verification uses a fresh normal session afterwards.
+Studio mock profiles prove session transactions only. Persistence requires a published authorized profile environment;
+API/security settings are not changed for these checks. Parent report records actual runtime evidence and the physical clock integration.
+
+Hub authorization is injected by the game through TimecardServiceServer:setCanPunch(predicate). Nil fails closed; both the hub UI request and physical prompt use the same server punch method. Stopping the service clears the predicate.
+
+The physical WeeklyTimeClock is built beside the contract board (local x = contractBoard.x - 10); DailyWorkOrderSheet sits between them (x - 5.3). Both use the standard distance/aim-validated Interaction prompt. The weekly clock sends the cosmetic clipboard-open event for Timecard; the daily sheet selects Daily Work Order. PUNCH TODAY still uses TimecardServiceServer:punch and the existing native hub authorization. Depot accepts a phase-reader callback from Timecard during init and never requires Timecard or Shift, keeping the dependency graph acyclic.
+
+Daily progress notices appear on first progress, halfway and completion. Rewards commit before notices; completion adds a PAID stamp and100Credit notification. PIN FOR SHIFTS is optional. The tracker appears only for active crew during running shifts, hides during clock-out/scares/catches, and hides on phone while the crew details are expanded. Phone tracking is compact above the thumbstick and clear of action controls. No persistent tracker is forced onto players.
+
+Starting2026-10-28 00:00UTC (day20754), the basic daily catalog uses8piles,4cargo,1shift or12piles. These are tunable first pacing values against roughly19piles/site (ShiftConstants measured data), not a claim that every crew/playstyle completes them in one shift. Overtime salvage is excluded from the required basic pool and remains a possible future optional stretch objective. Historical days retain their frozen catalog/targets so existing progress and claims remain valid; today's order is never reinterpreted during rollout.
