@@ -45,6 +45,22 @@ return function()
 		end)
 	end)
 
+	describe("piecePalette", function()
+		it("returns a piece's well-formed palette id", function()
+			local withPieces = skin("A", nil)
+			withPieces.piecePalettes = { Hoodie = "rbxassetid://7" }
+			expect(EmployeeSkinRules.piecePalette(withPieces, "Hoodie")).to.equal("rbxassetid://7")
+		end)
+
+		it("returns nil for a piece without one, a malformed one, or a skin with none", function()
+			local withPieces = skin("A", nil)
+			expect(EmployeeSkinRules.piecePalette(withPieces, "Hoodie")).never.to.be.ok()
+			withPieces.piecePalettes = { Hoodie = "rbxassetid://x" }
+			expect(EmployeeSkinRules.piecePalette(withPieces, "Hoodie")).never.to.be.ok()
+			expect(EmployeeSkinRules.piecePalette(withPieces, "Cap")).never.to.be.ok()
+		end)
+	end)
+
 	describe("portrait", function()
 		local employee = { portrait = "rbxassetid://10" }
 

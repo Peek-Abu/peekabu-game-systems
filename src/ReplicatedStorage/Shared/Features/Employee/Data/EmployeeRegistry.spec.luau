@@ -59,6 +59,23 @@ return function()
 			end
 		end)
 
+		it("gives every employee a Gloom-Touched skin with well-formed art ids", function()
+			local function wellFormed(id)
+				return type(id) == "string" and string.match(id, "^rbxassetid://%d+$") ~= nil
+			end
+			for _, name in { "Pippa", "Cappy", "Prickles" } do
+				local skin = EmployeeRegistry.get(name).skins.GloomTouched
+				expect(skin).to.be.ok()
+				expect(skin.paletteTextureId ~= nil or skin.piecePalettes ~= nil).to.equal(true)
+				if skin.paletteTextureId ~= nil then
+					expect(wellFormed(skin.paletteTextureId)).to.equal(true)
+				end
+				for _, id in skin.piecePalettes or {} do
+					expect(wellFormed(id)).to.equal(true)
+				end
+			end
+		end)
+
 		it(
 			"routes footsteps: a set name or nil (Cappy and Prickles borrow Pippa's until they have their own)",
 			function()

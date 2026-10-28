@@ -120,4 +120,70 @@ return function()
 			source:Destroy()
 		end)
 	end)
+
+	describe("pieces", function()
+		-- A character whose own clothes sit in its pieces folder: a Hoodie model of two MeshParts and a plain Shorts part.
+		local function dressed()
+			local model, head = makeCharacter()
+			local pieces = Instance.new("Folder")
+			pieces.Name = EmployeeConstants.PIECES_FOLDER
+			local hoodie = Instance.new("Model")
+			hoodie.Name = "Hoodie"
+			local torso = meshPart(hoodie, "Hoodie_UpperTorso")
+			local sleeve = meshPart(hoodie, "Hoodie_LeftUpperArm")
+			hoodie.Parent = pieces
+			local shorts = meshPart(pieces, "Shorts")
+			shorts.Color = Color3.new(0, 0, 0)
+			pieces.Parent = model
+			return model, head, torso, sleeve, shorts
+		end
+
+		local function pieceSkin(palette, piecePalettes, pieceColors)
+			local def = skin(palette)
+			def.piecePalettes = piecePalettes
+			def.pieceColors = pieceColors
+			return def
+		end
+
+		it("keeps the body palette off the clothes", function()
+			local model, head, torso, _, shorts = dressed()
+			local result = EmployeeSkinSystem.apply(model, pieceSkin("rbxassetid://200"), nil)
+			expect(result.textured).to.equal(2)
+			expect(head.TextureID).to.equal("rbxassetid://200")
+			expect(torso.TextureID).to.equal(ORIGINAL)
+			expect(shorts.TextureID).to.equal(ORIGINAL)
+			model:Destroy()
+		end)
+
+		it("puts a piece's palette on every MeshPart of that piece", function()
+			local model, head, torso, sleeve = dressed()
+			local result = EmployeeSkinSystem.apply(model, pieceSkin(nil, { Hoodie = "rbxassetid://300" }), nil)
+			expect(result.pieces).to.equal(2)
+			expect(torso.TextureID).to.equal("rbxassetid://300")
+			expect(sleeve.TextureID).to.equal("rbxassetid://300")
+			expect(head.TextureID).to.equal(ORIGINAL)
+			model:Destroy()
+		end)
+
+		it("paints a plain piece in its colour", function()
+			local model, _, _, _, shorts = dressed()
+			local lilac = Color3.fromRGB(196, 148, 232)
+			local result = EmployeeSkinSystem.apply(model, pieceSkin(nil, nil, { Shorts = lilac }), nil)
+			expect(result.pieces).to.equal(1)
+			expect(shorts.Color).to.equal(lilac)
+			model:Destroy()
+		end)
+
+		it("skips a missing piece and a malformed piece palette", function()
+			local model, _, torso = dressed()
+			local result = EmployeeSkinSystem.apply(
+				model,
+				pieceSkin(nil, { Hoodie = "not-an-id", Cape = "rbxassetid://400" }, { Gloves = Color3.new(1, 1, 1) }),
+				nil
+			)
+			expect(result.pieces).to.equal(0)
+			expect(torso.TextureID).to.equal(ORIGINAL)
+			model:Destroy()
+		end)
+	end)
 end

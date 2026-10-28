@@ -34,9 +34,16 @@ export type GameplayState = "knockedOut" | "threatened" | "cleaning" | "carrying
 export type SkinDef = {
 	-- Its key in the employee's `skins`.
 	name: string,
-	-- "rbxassetid://<id>" of the palette image set as TextureID on every MeshPart but the FacePlate.
+	-- "rbxassetid://<id>" of the palette image set as TextureID on every body MeshPart (all but the FacePlate and
+	-- the pieces in EmployeeConstants.PIECES_FOLDER).
 	-- nil while the art does not exist yet: the skin then leaves the model's own palette alone.
 	paletteTextureId: string?,
+	-- Per clothing piece (a child of the template's EmployeeConstants.PIECES_FOLDER, by name): "rbxassetid://<id>" of
+	-- the palette image set as TextureID on the piece's MeshParts. nil or a missing piece keeps its own palette.
+	piecePalettes: { [string]: string }?,
+	-- Per plain-coloured piece MeshPart in that folder, by name (a part with no palette image, e.g. Cappy's shorts):
+	-- its Color.
+	pieceColors: { [string]: Color3 }?,
 	-- The name of a Folder on the model (beside `Faces`) holding this skin's face SurfaceAppearances, one
 	-- per Face; it replaces `Faces` on the character. nil keeps the employee's own faces.
 	facesFolder: string?,
@@ -161,6 +168,14 @@ local EMPLOYEES: { [string]: EmployeeDef } = {
 				-- CC ID Portrait Pippa Owner Lavender v1 (decal 106237445017897): lavender, glasses on.
 				portrait = "rbxassetid://73949141158412",
 			},
+			-- Gloom Locker Uncommon (Cosmetic Pippa.GloomTouched): purple recolour of the body palette
+			-- (characters/skins/gloom_touched/pippa). Icey Labs image (decal 87592976466632). Default portrait for now.
+			GloomTouched = {
+				name = "GloomTouched",
+				paletteTextureId = "rbxassetid://105960382796018",
+				facesFolder = nil,
+				accessories = {},
+			},
 		},
 		defaultSkin = "Default",
 		portrait = "rbxassetid://114200006283845",
@@ -236,7 +251,27 @@ EMPLOYEES.Cappy = {
 		carrying = "Content",
 		idle = "Content",
 	},
-	skins = { Default = plainDefault() },
+	skins = {
+		Default = plainDefault(),
+		-- Gloom Locker Uncommon (Cosmetic Cappy.GloomTouched): his clothes recoloured, skin and hair kept
+		-- (characters/skins/gloom_touched/cappy). Icey Labs images (decals 89086860170857, 96407929546482,
+		-- 121567969019770). The shorts carry no palette image, so they take the skin's Cloth and Waist colours.
+		GloomTouched = {
+			name = "GloomTouched",
+			paletteTextureId = nil,
+			piecePalettes = {
+				Hoodie = "rbxassetid://114377324832769",
+				Cap = "rbxassetid://79479179553474",
+				Sneakers = "rbxassetid://84973217304648",
+			},
+			pieceColors = {
+				Shorts_ConnectedSkinned = Color3.fromHex("C494E8"),
+				VisibleWaist = Color3.fromHex("AE7DD6"),
+			},
+			facesFolder = nil,
+			accessories = {},
+		},
+	},
 	defaultSkin = "Default",
 	portrait = PLACEHOLDER_PORTRAIT,
 	-- No rank lanyard fitted to his body yet.
@@ -259,7 +294,22 @@ EMPLOYEES.Prickles = {
 		carrying = "Content",
 		idle = "Content",
 	},
-	skins = { Default = plainDefault() },
+	skins = {
+		Default = plainDefault(),
+		-- Gloom Locker Uncommon (Cosmetic Prickles.GloomTouched): purple body, hard hat and flower
+		-- (characters/skins/gloom_touched/prickles). Icey Labs images (decals 73185602446942, 90130560350634,
+		-- 130179849546153).
+		GloomTouched = {
+			name = "GloomTouched",
+			paletteTextureId = "rbxassetid://78420217452858",
+			piecePalettes = {
+				HardHat = "rbxassetid://88978189767599",
+				Flower = "rbxassetid://105879279073974",
+			},
+			facesFolder = nil,
+			accessories = {},
+		},
+	},
 	defaultSkin = "Default",
 	portrait = PLACEHOLDER_PORTRAIT,
 	uniform = {},

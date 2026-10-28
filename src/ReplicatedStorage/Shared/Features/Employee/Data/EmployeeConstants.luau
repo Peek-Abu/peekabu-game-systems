@@ -46,6 +46,9 @@ local EmployeeConstants = {
 	FACE_PLATE = "FacePlate",
 	FACE_APPEARANCE = "Face",
 	FACES_FOLDER = "Faces",
+	-- On an employee template: the Folder holding its own clothes and hair (a Model or MeshPart per piece, e.g. Hoodie,
+	-- Cap, Shorts). A skin recolours these by piece (EmployeeSkinSystem); the body palette never reaches them.
+	PIECES_FOLDER = "Accessories",
 	-- Under ReplicatedStorage: art-owned Accessory instances a skin can name (EmployeeSkinSystem).
 	ACCESSORIES_PATH = { "Assets", "CleanupCrew", "Accessories" },
 	-- On a fitted-gear Model there (EmployeeGearSystem): the name of the body part it sits on. The Model's WorldPivot

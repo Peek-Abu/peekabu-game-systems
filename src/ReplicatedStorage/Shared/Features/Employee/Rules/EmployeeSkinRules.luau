@@ -32,16 +32,28 @@ function EmployeeSkinRules.select(def: SkinSet, wanted: string?): EmployeeRegist
 	return def.skins[def.defaultSkin]
 end
 
+local function wellFormed(id: string?): string?
+	if id ~= nil and string.match(id, "^rbxassetid://%d+$") ~= nil then
+		return id
+	end
+	return nil
+end
+
 --[=[
 	The skin's palette texture id when it is a well-formed asset id; nil when the art is pending or the id
 	is malformed (applying the skin then leaves the palette alone).
 ]=]
 function EmployeeSkinRules.palette(skin: EmployeeRegistry.SkinDef): string?
-	local id = skin.paletteTextureId
-	if id ~= nil and string.match(id, "^rbxassetid://%d+$") ~= nil then
-		return id
-	end
-	return nil
+	return wellFormed(skin.paletteTextureId)
+end
+
+--[=[
+	The palette texture id the skin gives clothing piece `piece`, when it gives one and it is well-formed; nil keeps
+	the piece's own palette.
+]=]
+function EmployeeSkinRules.piecePalette(skin: EmployeeRegistry.SkinDef, piece: string): string?
+	local palettes = skin.piecePalettes
+	return if palettes ~= nil then wellFormed(palettes[piece]) else nil
 end
 
 --[=[

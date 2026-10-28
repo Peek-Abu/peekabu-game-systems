@@ -4,9 +4,12 @@
 	freshly spawned character (every client sees it through normal replication); the client dresses its own preview
 	models the same way (EmployeePreviewSystem), so a preview never drifts from the real look.
 
-	- Palette: the skin's palette image becomes the TextureID of every MeshPart except the FacePlate (whose
-	  face is a SurfaceAppearance; a TextureID there would render its transparent areas black). A skin with
-	  no palette yet (art pending) or a malformed id leaves the model's own palette alone.
+	- Palette: the skin's palette image becomes the TextureID of every body MeshPart, so every one except the
+	  FacePlate (whose face is a SurfaceAppearance; a TextureID there would render its transparent areas black) and
+	  the clothes in the template's pieces folder. A skin with no palette yet (art pending) or a malformed id leaves
+	  the model's own palette alone.
+	- Pieces: each clothing piece the skin names (a child of EmployeeConstants.PIECES_FOLDER) gets its own palette
+	  image on all its MeshParts, or, for a plain-coloured part, its Color. Missing pieces are skipped.
 	- Faces: when the skin names a face set and the character carries that folder, it replaces `Faces`
 	  (the client re-shows the current face from it, EmployeeFaceSystem).
 	- Accessories: each named Accessory found under `accessorySource` is cloned onto the Humanoid; a named
@@ -28,6 +31,8 @@ local EmployeeGearSystem = require(ReplicatedStorage.Shared.Features.Employee.Sy
 export type SkinResult = {
 	-- MeshParts given the skin's palette.
 	textured: number,
+	-- Clothing pieces' MeshParts given the skin's piece palette or colour.
+	pieces: number,
 	facesSwapped: boolean,
 	accessories: number,
 }
@@ -61,14 +66,45 @@ function EmployeeSkinSystem.apply(
 	skin: EmployeeRegistry.SkinDef,
 	accessorySource: Instance?
 ): SkinResult
-	local result: SkinResult = { textured = 0, facesSwapped = false, accessories = 0 }
+	local result: SkinResult = { textured = 0, facesSwapped = false, accessories = 0, pieces = 0 }
+	local pieces = character:FindFirstChild(EmployeeConstants.PIECES_FOLDER)
 
 	local palette = EmployeeSkinRules.palette(skin)
 	if palette ~= nil then
 		for _, descendant in character:GetDescendants() do
-			if descendant:IsA("MeshPart") and descendant.Name ~= EmployeeConstants.FACE_PLATE then
+			if
+				descendant:IsA("MeshPart")
+				and descendant.Name ~= EmployeeConstants.FACE_PLATE
+				and (pieces == nil or not descendant:IsDescendantOf(pieces))
+			then
 				descendant.TextureID = palette
 				result.textured += 1
+			end
+		end
+	end
+
+	local piecePalettes: { [string]: string } = skin.piecePalettes or {}
+	local pieceColors: { [string]: Color3 } = skin.pieceColors or {}
+	if pieces ~= nil then
+		for name in piecePalettes do
+			local piecePalette = EmployeeSkinRules.piecePalette(skin, name)
+			local piece = pieces:FindFirstChild(name)
+			if piecePalette ~= nil and piece ~= nil then
+				local parts: { Instance } = piece:GetDescendants()
+				table.insert(parts, piece)
+				for _, part in parts do
+					if part:IsA("MeshPart") then
+						part.TextureID = piecePalette
+						result.pieces += 1
+					end
+				end
+			end
+		end
+		for name, color in pieceColors do
+			local part = pieces:FindFirstChild(name)
+			if part ~= nil and part:IsA("MeshPart") then
+				part.Color = color
+				result.pieces += 1
 			end
 		end
 	end
