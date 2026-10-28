@@ -8,6 +8,8 @@
 	few retries. One award per player and key is in flight at a time. `awarded(player, key)` fires on a new
 	award. `has(player, key)` yields for a first check and then reads the cache.
 
+	`start` also starts BadgeMilestoneSystem, which awards the game's badges (BadgeConstants.GAME) as they are earned.
+
 	Spec-exempt shell (BadgeService, Players); the bookkeeping is the specced BadgeAwardTracker and the
 	catalogue BadgeRegistry.
 
@@ -23,6 +25,7 @@ local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local BadgeRegistry = require(ReplicatedStorage.Shared.Features.Badge.Data.BadgeRegistry)
 local BadgeAwardTracker = require(ServerScriptService.Features.Badge.State.BadgeAwardTracker)
+local BadgeMilestoneSystem = require(ServerScriptService.Features.Badge.Systems.BadgeMilestoneSystem)
 
 local ATTEMPTS = 3
 local RETRY_SECONDS = 2
@@ -73,16 +76,30 @@ export type BadgeServiceServer = {
 }
 
 local BadgeServiceServer: BadgeServiceServer = {
-	dependencies = {},
+	-- The game's badges follow these (BadgeMilestoneSystem).
+	dependencies = {
+		"PlayerDataServiceServer",
+		"RankServiceServer",
+		"CosmeticServiceServer",
+		"LockerServiceServer",
+		"OccupantServiceServer",
+		"ShiftServiceServer",
+	},
 	awarded = awarded,
 
-	start = function(_self)
+	start = function(self)
 		table.insert(
 			stoppers,
 			Observers.observePlayer(function(player: Player)
 				return function()
 					tracker:forget(player.UserId)
 				end
+			end)
+		)
+		table.insert(
+			stoppers,
+			BadgeMilestoneSystem.start(function(player: Player, key: string)
+				self:award(player, key)
 			end)
 		)
 	end,

@@ -21,6 +21,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local Janitor = require(ReplicatedStorage.Packages.Janitor)
 local Guard = require(ReplicatedStorage.Shared.Core.Guard)
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
+local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local CosmeticTypes = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticTypes)
 local CurrencyConstants = require(ReplicatedStorage.Shared.Features.Currency.Data.CurrencyConstants)
 local Locker = ReplicatedStorage.Shared.Features.Locker
@@ -63,6 +64,8 @@ export type Deps = {
 }
 
 local log = Logger.new("LockerServiceServer")
+-- Fired after a Locker open commits, with the opener's userId and what they pulled (the Locker badges).
+local opened: SignalTyped.Signal<number, Outcome> = SignalTyped.new()
 local janitor = Janitor.new()
 local rng = Random.new()
 local lastOpen: { [number]: number } = {}
@@ -202,6 +205,7 @@ local function openImpl(player: Player, lockerId: string): (Outcome?, string?)
 	if not outcome.duplicate then
 		CosmeticServiceServer.changed:Fire(userId)
 	end
+	opened:Fire(userId, outcome)
 	return outcome, nil
 end
 
@@ -290,6 +294,7 @@ local onBuyRequest = RequestHandler.wrap({
 
 export type LockerServiceServer = {
 	dependencies: { string },
+	opened: SignalTyped.Signal<number, Outcome>,
 	init: (self: LockerServiceServer) -> (),
 	stop: (self: LockerServiceServer) -> (),
 	getLockers: (self: LockerServiceServer, userId: number) -> LockerTypes.Lockers?,
@@ -304,6 +309,7 @@ export type LockerServiceServer = {
 }
 
 local LockerServiceServer: LockerServiceServer = {
+	opened = opened,
 	dependencies = {
 		"PlayerDataServiceServer",
 		"CosmeticServiceServer",

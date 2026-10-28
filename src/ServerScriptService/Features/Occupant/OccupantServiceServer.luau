@@ -32,6 +32,8 @@
 	  (OfficeServiceServer:openDoorsNear, handed his heading: OccupantDoorRules.heading of his velocity, else his last
 	  walk target; with neither he opens only a door he stands at, DOOR_CLOSE_REACH) and, when he opened one, stands still for a DOOR_BEAT_SECONDS (0.5 s)
 	  beat (OccupantDoorRules); a catch is never held.
+	- Escapes: a chased or stared-down player he stops tracking while they are still hidden fires `escaped`
+	  (OccupantEscapeRules; the Hide and Squeak badge).
 	- Role: he exists only where the shift role runs (QueueServiceServer:runsRole); a hub-only server spawns no Harlow.
 
 	Twin guard: OccupantRigSystem.build (before it builds) and `despawn` (after it removes the current rig) sweep away
@@ -45,6 +47,7 @@
 	@class OccupantServiceServer
 ]=]
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -52,6 +55,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local OccupantShared = ReplicatedStorage.Shared.Features.Occupant
 local OccupantServer = ServerScriptService.Features.Occupant
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
+local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local AnimationRegistry = require(ReplicatedStorage.Shared.Features.Animation.Data.AnimationRegistry)
 local NoiseRules = require(ReplicatedStorage.Shared.Features.Noise.Rules.NoiseRules)
 local NoiseTypes = require(ReplicatedStorage.Shared.Features.Noise.Data.NoiseTypes)
@@ -67,6 +71,7 @@ local NpcTypes = require(ServerScriptService.Features.Npc.Data.NpcTypes)
 local OccupantAlertRules = require(OccupantServer.Rules.OccupantAlertRules)
 local OccupantBrainRules = require(OccupantServer.Rules.OccupantBrainRules)
 local OccupantDoorRules = require(OccupantServer.Rules.OccupantDoorRules)
+local OccupantEscapeRules = require(OccupantServer.Rules.OccupantEscapeRules)
 local OccupantTurnRules = require(OccupantServer.Rules.OccupantTurnRules)
 local OccupantMindUtils = require(OccupantServer.Utils.OccupantMindUtils)
 local OccupantWorkRules = require(OccupantServer.Rules.OccupantWorkRules)
@@ -131,6 +136,9 @@ local ROLLS = 6
 local pendingForce: { kind: OccupantTypes.TurnKind | "auto", userId: number }? = nil
 local lastLine: string? = nil
 -- (watchThinks / watchJerks: the per-frame watch during a slow turn, behaviours design §11.4.)
+-- A player he stopped chasing or staring down while they were still hidden (OccupantEscapeRules): the Hide and
+-- Squeak badge.
+local escaped: SignalTyped.Signal<Player> = SignalTyped.new()
 local counters = { spawned = 0, heard = 0, chases = 0, catches = 0, watchThinks = 0, watchJerks = 0 }
 local stoppers: { () -> () } = {}
 
@@ -288,6 +296,13 @@ local function think(def: NpcTypes.NpcDef, now: number, position: Vector3): NpcT
 			catchPlayer(player, before, true)
 		end)
 	end
+	-- After the effects, so a catch (which evicts them) is never an escape.
+	for _, userId in OccupantEscapeRules.lost(before, mind or result.mind) do
+		local player = Players:GetPlayerByUserId(userId)
+		if player ~= nil and HideServiceServer:isHidden(player) then
+			escaped:Fire(player)
+		end
+	end
 	-- His hands type only while he types (never through the sit-in's motion, an ambush or a slow turn from the chair).
 	OccupantSeatSystem.typing(current, mind or result.mind)
 	local intent = result.intent
@@ -438,6 +453,7 @@ end
 
 export type OccupantServiceServer = {
 	dependencies: { string },
+	escaped: SignalTyped.Signal<Player>,
 	start: (self: OccupantServiceServer) -> (),
 	stop: (self: OccupantServiceServer) -> (),
 	getState: (self: OccupantServiceServer) -> { [string]: any },
@@ -453,6 +469,7 @@ export type OccupantServiceServer = {
 }
 
 local OccupantServiceServer: OccupantServiceServer = {
+	escaped = escaped,
 	dependencies = {
 		"NpcServiceServer",
 		"ShiftServiceServer",

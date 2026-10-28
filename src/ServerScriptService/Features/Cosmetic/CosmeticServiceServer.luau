@@ -56,6 +56,8 @@ local changed: SignalTyped.Signal<number> = SignalTyped.new()
 -- Fired after items reach a player (a grant, a purchase, the first-join pick); the player's client is told so it
 -- can play the reveal.
 local granted: SignalTyped.Signal<CosmeticTypes.Granted> = SignalTyped.new()
+-- Fired after an equip is written, with the player's userId and the change (the New Look badge reads skins).
+local equipped: SignalTyped.Signal<number, Change> = SignalTyped.new()
 
 local function announce(userId: number, ids: { string }, source: CosmeticTypes.GrantSource)
 	granted:Fire({ userId = userId, ids = table.clone(ids), source = source })
@@ -124,6 +126,7 @@ local function equipImpl(userId: number, change: Change): (boolean, string?)
 		return false, writeReason or "write refused (profile locked or session no longer active)"
 	end
 	changed:Fire(userId)
+	equipped:Fire(userId, change)
 	return true, nil
 end
 
@@ -234,6 +237,7 @@ export type CosmeticServiceServer = {
 	dependencies: { string },
 	changed: SignalTyped.Signal<number>,
 	granted: SignalTyped.Signal<CosmeticTypes.Granted>,
+	equipped: SignalTyped.Signal<number, Change>,
 	announce: (self: CosmeticServiceServer, userId: number, ids: { string }, source: CosmeticTypes.GrantSource) -> (),
 
 	init: (self: CosmeticServiceServer) -> (),
@@ -260,6 +264,7 @@ local CosmeticServiceServer: CosmeticServiceServer = {
 	dependencies = { "PlayerDataServiceServer", "EntitlementServiceServer", "ShiftServiceServer" },
 	changed = changed,
 	granted = granted,
+	equipped = equipped,
 
 	init = function(_self)
 		-- Every grant is told to its player's client (the reveal); a player who left is skipped.
