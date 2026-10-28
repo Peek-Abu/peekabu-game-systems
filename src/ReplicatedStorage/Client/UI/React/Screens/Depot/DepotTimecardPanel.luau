@@ -13,6 +13,8 @@ local ToonFlag = require(Toon.ToonFlag)
 local ToonIcon = require(Toon.ToonIcon)
 local UIToonConstants = require(Toon.UIToonConstants)
 local PaperScaleContext = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperScaleContext)
+local TimecardMomentUtils = require(ReplicatedStorage.Client.Features.Timecard.Utils.TimecardMomentUtils)
+local DepotTimecardStamp = require(script.Parent.DepotTimecardStamp)
 local e = React.createElement
 local function nodes(value: { [string]: React.ReactNode }): { [string]: React.ReactNode }
 	return value
@@ -37,6 +39,8 @@ export type Props = {
 	pending: boolean?,
 	onToggle: () -> (),
 	onPunch: () -> (),
+	-- Today's punch landing (TimecardMomentStore.stamp): drawn over the Timecard face while it shows.
+	stamp: TimecardMomentUtils.Moment?,
 }
 -- Inherit the shared HUD scale; reserve phone clearance for the header art and hard drop.
 local function CardScale(props: { factor: number, content: { [string]: React.ReactNode } }): React.ReactNode
@@ -309,6 +313,10 @@ local function Panel(props: Props): React.ReactNode
 				fit = true,
 				color = UIToonConstants.COLOR.ink,
 			})
+		end
+		local stamp = props.stamp
+		if stamp ~= nil then
+			face.stamp = e(DepotTimecardStamp, { moment = stamp, banner = TimecardMomentUtils.banner(stamp) })
 		end
 		if props.view == "workOrder" then
 			face = workOrderFace(props)

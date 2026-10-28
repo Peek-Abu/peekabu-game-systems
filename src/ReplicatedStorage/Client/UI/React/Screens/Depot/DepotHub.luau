@@ -22,6 +22,7 @@ local TimecardService = require(ReplicatedStorage.Client.Features.Timecard.Timec
 local WorkOrderRules = require(ReplicatedStorage.Shared.Features.WorkOrder.Rules.WorkOrderRules)
 local WorkOrderRegistry = require(ReplicatedStorage.Shared.Features.WorkOrder.Data.WorkOrderRegistry)
 local Company = require(ReplicatedStorage.Client.Features.UI.State.UICompanyStore)
+local TimecardMomentStore = require(ReplicatedStorage.Client.Features.Timecard.State.TimecardMomentStore)
 local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local QueueSnapshotUtils = require(ReplicatedStorage.Shared.Features.Queue.Utils.QueueSnapshotUtils)
@@ -78,6 +79,7 @@ local function DepotHub(props: DepotHubProps): React.ReactNode
 	local pinned = ReactCharm.useAtom(Company.pinned)
 	local punchFeedback = ReactCharm.useAtom(TimecardService.feedback)
 	local punchPending = ReactCharm.useAtom(TimecardService.pending)
+	local stamp = ReactCharm.useAtom(TimecardMomentStore.stamp)
 	local scale = usePaperHudScale()
 	local player = Players.LocalPlayer
 	if not VM.visible(snapshot, player.UserId) or card ~= nil then
@@ -107,6 +109,7 @@ local function DepotHub(props: DepotHubProps): React.ReactNode
 				claimed = WorkOrderRules.roll(workOrder, now).claimed,
 				feedback = punchFeedback,
 				pending = punchPending,
+				stamp = stamp,
 				onToggle = function()
 					Company.toggle()
 				end,

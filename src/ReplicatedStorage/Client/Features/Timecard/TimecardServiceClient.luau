@@ -27,6 +27,10 @@ local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.D
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
 local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudRegistry)
 local Tracker = require(ReplicatedStorage.Client.UI.React.Screens.Depot.CompanyWorkOrderTracker)
+local TrackerViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.CompanyTrackerViewModel)
+local DepotHubViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotHubViewModel)
+local DepotStore = require(ReplicatedStorage.Client.Features.Depot.State.DepotStore)
+local UIStore = require(ReplicatedStorage.Client.UI.Scenes.UIStore)
 local PaperHudFrame = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudFrame)
 local usePaperHudScale = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperHudScale)
 local useServerClock = require(ReplicatedStorage.Client.UI.React.Hooks.useServerClock)
@@ -41,44 +45,59 @@ local TimecardCalendarFormulas = require(TimecardShared.Utils.TimecardCalendarFo
 local TimecardEvents = require(TimecardShared.Net.TimecardEvents)
 local TimecardRules = require(TimecardShared.Rules.TimecardRules)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
+local TimecardMomentStore = require(ReplicatedStorage.Client.Features.Timecard.State.TimecardMomentStore)
+local TimecardMomentSystem = require(ReplicatedStorage.Client.Features.Timecard.Systems.TimecardMomentSystem)
 
 local function tracker(): React.ReactNode
 	local pinned = ReactCharm.useAtom(Company.pinned)
 	local visible = ReactCharm.useAtom(Company.visible)
 	local state = ReactCharm.useAtom(StateSyncClientStore.workOrder)
+	local card = ReactCharm.useAtom(StateSyncClientStore.timecard)
 	local shift = ReactCharm.useAtom(ShiftStore.snapshot)
 	local crewOpen = ReactCharm.useAtom(ShiftStore.crewOpen)
 	local publicPlayers = ReactCharm.useAtom(StateSyncClientStore.publicPlayers)
 	local scaring = ReactCharm.useAtom(CatchStore.scaring)
+	local travel = ReactCharm.useAtom(DepotStore.card)
+	local scenes = ReactCharm.useAtom(UIStore.sceneStack)
 	local scale = usePaperHudScale()
 	local now = useServerClock(1)
-	if
-		not pinned
-		or visible
-		or shift == nil
-		or shift.phase ~= "running"
-		or shift.sub == "clockout"
-		or (scale.layout == "phone" and crewOpen)
-		or ShiftHudViewModel.hidden(
-			publicPlayers[StateSyncConstants.publicEntryKey(Players.LocalPlayer.UserId)],
-			scaring
-		)
-		or table.find(shift.crew, Players.LocalPlayer.UserId) == nil
-	then
+	local userId = Players.LocalPlayer.UserId
+	local inShift = shift ~= nil
+		and shift.phase == "running"
+		and shift.sub ~= "clockout"
+		and not (scale.layout == "phone" and crewOpen)
+		and not ShiftHudViewModel.hidden(publicPlayers[StateSyncConstants.publicEntryKey(userId)], scaring)
+		and table.find(shift.crew, userId) ~= nil
+	local found: TrackerViewModel.Where? = TrackerViewModel.where({
+		pinned = pinned,
+		clipboardOpen = visible,
+		inHub = DepotHubViewModel.visible(shift, userId),
+		hubBusy = travel ~= nil or #scenes > 0,
+		inShift = inShift,
+	})
+	if found == nil then
 		return nil
 	end
-	local current = WorkRules.roll(state, now)
-	local order = Registry.orderFor(now)
+	local where: TrackerViewModel.Where = found
 	return React.createElement(PaperHudFrame, {
 		scale = scale.scale,
 		children = {
 			daily = React.createElement(Tracker, {
 				phone = scale.layout == "phone",
-				order = order.label,
-				progress = current.progress,
-				target = order.target,
-				claimed = current.claimed,
+				where = where,
+				lines = TrackerViewModel.lines(
+					where,
+					TimecardRules.status(card, now),
+					WorkRules.roll(state, now),
+					Registry.orderFor(now),
+					now
+				),
 				onUnpin = Company.togglePin,
+				onOpen = if where == "hub"
+					then function()
+						Company.open(nil)
+					end
+					else nil,
 			}),
 		},
 	})
@@ -134,6 +153,7 @@ local TimecardServiceClient: TimecardServiceClient = {
 			oldOpen()
 		end
 		stopOpening = TimecardEvents.packets.OpenClipboard.listen(receiveOpen)
+		TimecardMomentSystem.start()
 		if not HudRegistry.has("dailyWorkOrderTracker") then
 			HudRegistry.register("dailyWorkOrderTracker", tracker, 70)
 		end
@@ -150,6 +170,7 @@ local TimecardServiceClient: TimecardServiceClient = {
 		end
 		stopOpening = nil
 		Company.reset()
+		TimecardMomentSystem.stop()
 		generation += 1
 		pending(false)
 		feedback("")
@@ -189,11 +210,13 @@ local TimecardServiceClient: TimecardServiceClient = {
 		generation += 1
 		local request = generation
 		pending(true)
+		TimecardMomentStore.expect(true)
 		feedback("Punching...")
 		deps.send()
 		deps.delay(10, function()
 			if request == generation and pending() then
 				pending(false)
+				TimecardMomentStore.expect(false)
 				feedback("No response. Please try again.")
 			end
 		end)

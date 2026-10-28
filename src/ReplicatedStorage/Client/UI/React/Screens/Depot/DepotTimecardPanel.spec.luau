@@ -3,6 +3,26 @@ local Panel = require(script.Parent.DepotTimecardPanel)
 local Rules = require(ReplicatedStorage.Shared.Features.Timecard.Rules.TimecardRules)
 return function()
 	describe("DepotTimecardPanel", function()
+		it("draws today's stamp over the Timecard face only while one shows", function()
+			local function face(stamp)
+				return Panel({
+					phone = false,
+					open = true,
+					status = Rules.status({ week = 1792972800, punched = { 1 }, weeks = 0 }, 1792972800),
+					progress = 0,
+					target = 2,
+					order = "Work 2 shifts",
+					claimed = false,
+					feedback = "",
+					stamp = stamp,
+					onToggle = function() end,
+					onPunch = function() end,
+				}).props.children.card.props.content.card.props.children
+			end
+			expect(face(nil).stamp).to.equal(nil)
+			local shown = face({ day = 1, count = 1, paycheque = false, id = "1792972800:1" }).stamp
+			expect(shown.props.banner).to.equal("DAY 1! 2 MORE FOR A GLOOM KEY")
+		end)
 		it("keeps the clock button accessible and disables today's recorded punch", function()
 			local tree = Panel({
 				phone = false,

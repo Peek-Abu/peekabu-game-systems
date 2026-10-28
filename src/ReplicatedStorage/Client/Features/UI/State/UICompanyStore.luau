@@ -7,7 +7,8 @@ local selectedTab = Charm.computed(function(): Tab
 	return if tab() == "workOrder" then "workOrder" else "timecard"
 end)
 local visible = Charm.atom(false)
-local pinned = Charm.atom(false)
+-- The Today tracker is on by default; × unpins it for the session.
+local pinned = Charm.atom(true)
 local Store = { selectedTab = selectedTab, visible = visible, pinned = pinned }
 function Store.open(nextTab: Tab?)
 	if nextTab then
@@ -31,6 +32,6 @@ end
 function Store.reset()
 	visible(false)
 	tab("timecard")
-	pinned(false)
+	pinned(true)
 end
 return Store
