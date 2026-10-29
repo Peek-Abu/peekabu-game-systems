@@ -14,8 +14,8 @@
 	Level (looked up from the published rank unless `level` is given) and the results' `grade`.
 	The frame: `framing` (head, bust, upper body or full figure) fitted to the frame's aspect
 	(PortraitViewModel.camera), refitted without a rebuild when the frame is resized. The light: PortraitViewModel.lighting for the plate's `tone`.
-	Until there is a character to show (not spawned, streamed out) it shows the ID-card photo of the player's own skin
-	(PortraitViewModel.fallback). Exempt (needs a renderer and live characters); story in CharacterPortrait.story.
+	Until there is a character to show (not spawned, streamed out) it stays blank, then shows the loud error tile
+	(PortraitError, timing in PortraitViewModel.missing). Exempt (needs a renderer and live characters); story in CharacterPortrait.story.
 
 	@class CharacterPortrait
 ]=]
@@ -32,6 +32,7 @@ local EmployeePoseFormulas = require(EmployeeShared.Utils.EmployeePoseFormulas)
 local RankFormulas = require(ReplicatedStorage.Shared.Features.Rank.Utils.RankFormulas)
 local EmployeePortraitSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeePortraitSystem)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
+local PortraitError = require(ReplicatedStorage.Client.UI.React.Screens.Portrait.PortraitError)
 local PortraitViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Portrait.PortraitViewModel)
 local usePortraitCharacter = require(ReplicatedStorage.Client.UI.React.Screens.Portrait.usePortraitCharacter)
 local RankViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Rank.RankViewModel)
@@ -60,8 +61,6 @@ export type CharacterPortraitProps = {
 	-- Clip to a circle (a ring portrait).
 	round: boolean?,
 	dim: boolean?,
-	-- The image while there is no character (default: the player's skin's ID-card photo).
-	fallback: string?,
 }
 
 local function aspectOf(frame: ViewportFrame): number
@@ -126,8 +125,6 @@ local function CharacterPortrait(props: CharacterPortraitProps): React.ReactNode
 
 	local light = PortraitViewModel.lighting(props.tone or "light")
 	local corner = if props.round == true then e("UICorner", { CornerRadius = UDim.new(0.5, 0) }) else nil
-	local fallbackImage = props.fallback
-		or PortraitViewModel.fallback(if type(employee) == "string" then employee else nil, nil)
 	return e("Frame", {
 		Size = props.size,
 		Position = props.position,
@@ -146,16 +143,14 @@ local function CharacterPortrait(props: CharacterPortraitProps): React.ReactNode
 			ZIndex = props.zIndex,
 			ref = setFrame,
 		}, { corner = corner }),
-		photo = if shown
-			then nil
-			else e("ImageLabel", {
-				Size = UDim2.fromScale(1, 1),
-				BackgroundTransparency = 1,
-				Image = fallbackImage,
-				ImageColor3 = if props.dim == true then DIM_COLOR else Color3.new(1, 1, 1),
-				ScaleType = Enum.ScaleType.Crop,
-				ZIndex = props.zIndex,
-			}, { corner = if props.round == true then e("UICorner", { CornerRadius = UDim.new(0.5, 0) }) else nil }),
+		missing = e(PortraitError, {
+			shown = shown,
+			subject = if type(employee) == "string"
+				then employee
+				else if props.userId ~= nil then `player {props.userId}` else nil,
+			round = props.round,
+			zIndex = props.zIndex,
+		}),
 	})
 end
 

@@ -30,8 +30,6 @@ export type Badge = {
 	-- The text on the card's colour band.
 	band: string,
 	colour: Color3,
-	-- The card's photo: "rbxassetid://<image id>" (EmployeeSkinRules.portrait).
-	photo: string,
 }
 
 local EmployeeGearSystem = {}
@@ -114,9 +112,6 @@ function EmployeeGearSystem.badge(character: Model, badge: Badge): number
 			end
 		elseif descendant:IsA("Frame") and name == EmployeeConstants.BADGE_BAND then
 			descendant.BackgroundColor3 = badge.colour
-			painted += 1
-		elseif descendant:IsA("ImageLabel") and name == EmployeeConstants.BADGE_PHOTO then
-			descendant.Image = badge.photo
 			painted += 1
 		end
 	end

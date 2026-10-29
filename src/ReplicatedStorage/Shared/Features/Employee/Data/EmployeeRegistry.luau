@@ -12,8 +12,8 @@
 	  face this employee shows in it. Not every employee is cheerful at work: Pippa enjoys cleaning, but
 	  hauling cargo is just the job.
 	- `skins` are looks for the same rig: a palette image (every MeshPart but the FacePlate shares one
-	  palette texture), an optional face set, accessories (EmployeeSkinSystem applies one), and the ID-card photo
-	  of that look (`portrait`; the employee's own `portrait` when a skin has none).
+	  palette texture), an optional face set, and accessories (EmployeeSkinSystem applies one). A
+	  portrait that cannot draw shows the shared error tile (PortraitError), never a per-skin photo.
 	- `uniform` is the company gear fitted over any skin (the rank lanyard + ID card; the hi-vis vest was dropped), as
 	  fitted-gear names (EmployeeGearSystem); the lanyard is painted in the wearer's rank colour.
 	- `locomotion` is the employee's own idle/walk/run (keys in the animation registry's `employee`
@@ -50,9 +50,6 @@ export type SkinDef = {
 	-- Names of Accessory instances, or fitted-gear Models (EmployeeGearSystem), under
 	-- EmployeeConstants.ACCESSORIES_PATH to put on the character.
 	accessories: { string },
-	-- "rbxassetid://<image id>" of this look's ID-card photo (a headshot rendered in Blender,
-	-- characters/identity/render_portraits.py). nil = the employee's `portrait`.
-	portrait: string?,
 }
 
 --[=[
@@ -113,8 +110,6 @@ export type EmployeeDef = {
 	expressions: { [GameplayState]: Face },
 	-- The looks this employee can wear, by name, and the one everyone gets by default.
 	skins: { [string]: SkinDef },
-	-- "rbxassetid://<image id>" of the ID-card photo for a skin without its own (the default look's headshot).
-	portrait: string,
 	-- The FootstepAssets set its steps play (the client's FootstepSet attribute); nil = its own name in lower case.
 	footstepSet: string?,
 	defaultSkin: string,
@@ -155,8 +150,6 @@ local EMPLOYEES: { [string]: EmployeeDef } = {
 				paletteTextureId = "rbxassetid://123317546570312",
 				facesFolder = nil,
 				accessories = {},
-				-- CC ID Portrait Pippa Default v1 (decal 110853442477171).
-				portrait = "rbxassetid://114200006283845",
 			},
 			-- The owner's personal skin (Cosmetic item Pippa.OwnerSpecial, a gift): lavender fur and round tortoiseshell glasses
 			-- (characters/pippa/skins/owner-lavender). Pippa's own faces.
@@ -165,11 +158,9 @@ local EMPLOYEES: { [string]: EmployeeDef } = {
 				paletteTextureId = "rbxassetid://96382499106680",
 				facesFolder = nil,
 				accessories = { "PippaRoundGlasses" },
-				-- CC ID Portrait Pippa Owner Lavender v1 (decal 106237445017897): lavender, glasses on.
-				portrait = "rbxassetid://73949141158412",
 			},
 			-- Gloom Locker Uncommon (Cosmetic Pippa.GloomTouched): purple recolour of the body palette
-			-- (characters/skins/gloom_touched/pippa). Icey Labs image (decal 87592976466632). Default portrait for now.
+			-- (characters/skins/gloom_touched/pippa). Icey Labs image (decal 87592976466632).
 			GloomTouched = {
 				name = "GloomTouched",
 				paletteTextureId = "rbxassetid://105960382796018",
@@ -178,7 +169,6 @@ local EMPLOYEES: { [string]: EmployeeDef } = {
 			},
 		},
 		defaultSkin = "Default",
-		portrait = "rbxassetid://114200006283845",
 		-- Company vest and static PippaLanyard removed: all employees wear the client-fitted v4 lanyard + v6 rank badge
 		-- driven by the player's general rank (EmployeeLanyardSystem; gates/7f_badges_v6_info_front_icon_back.md).
 		uniform = {},
@@ -213,7 +203,7 @@ local EMPLOYEES: { [string]: EmployeeDef } = {
 
 -- The Default skin of an employee whose art is multi-palette (every garment its own palette image): it repaints nothing.
 local function plainDefault(): SkinDef
-	return { name = "Default", paletteTextureId = nil, facesFolder = nil, accessories = {}, portrait = nil }
+	return { name = "Default", paletteTextureId = nil, facesFolder = nil, accessories = {} }
 end
 
 -- Cappy and Prickles walk at Pippa's stride caps (the same base speeds); only the planted speeds are their own.
@@ -233,9 +223,6 @@ local function locomotionOf(prefix: string, walk: number, run: number, crouchWal
 		crouchWalkMaxRate = 4,
 	}
 end
-
--- Pippa's ID-card photo: a PLACEHOLDER for Cappy and Prickles until their headshots are rendered and uploaded.
-local PLACEHOLDER_PORTRAIT = "rbxassetid://114200006283845"
 
 EMPLOYEES.Cappy = {
 	name = "Cappy",
@@ -273,7 +260,6 @@ EMPLOYEES.Cappy = {
 		},
 	},
 	defaultSkin = "Default",
-	portrait = PLACEHOLDER_PORTRAIT,
 	-- No rank lanyard fitted to his body yet.
 	uniform = {},
 	locomotion = locomotionOf("cappy", 1.06, 2.06, 1.32),
@@ -311,7 +297,6 @@ EMPLOYEES.Prickles = {
 		},
 	},
 	defaultSkin = "Default",
-	portrait = PLACEHOLDER_PORTRAIT,
 	uniform = {},
 	locomotion = locomotionOf("prickles", 1.03, 1.93, 1.34),
 	-- Borrows Pippa's steps until his own root-thump set is made.

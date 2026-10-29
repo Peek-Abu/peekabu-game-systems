@@ -7,8 +7,8 @@
 	- `lighting`: the viewport's one directional light and ambient for the V1 Gloom & Gleam kit: a warm key from the
 	  front, above and the camera's left over lilac shadows (the kit grades shadows violet), lifted more on a dark
 	  plate so the character never sinks into it.
-	- `fallback`: the image while there is no character to show (not spawned, or streamed out): the ID-card
-	  headshot of the player's own skin, never one fixed look.
+	- `missing`: what a frame with no character drawn shows: nothing through ERROR_GRACE (a respawn or a stream-in
+	  fills it in that time), then PortraitError's loud error tile. There are no per-skin stand-in photos.
 
 	@class PortraitViewModel
 ]=]
@@ -16,8 +16,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local EmployeeShared = ReplicatedStorage.Shared.Features.Employee
-local EmployeeRegistry = require(EmployeeShared.Data.EmployeeRegistry)
-local EmployeeSkinRules = require(EmployeeShared.Rules.EmployeeSkinRules)
 local EmployeePoseFormulas = require(EmployeeShared.Utils.EmployeePoseFormulas)
 
 -- head: the face (a small ring); bust: head and chest, ear tips cut (a ring clips them anyway); upper: head, ears and
@@ -110,16 +108,16 @@ function PortraitViewModel.lighting(tone: Tone): Lighting
 	return LIGHTING[tone]
 end
 
--- The ID-card headshot of `employee`'s `skin` (an EmployeeRegistry skin key; nil or unknown = its default look; an
--- unknown employee = the default employee); "" when even the default employee is missing.
-function PortraitViewModel.fallback(employee: string?, skin: string?): string
-	local def = (if employee ~= nil then EmployeeRegistry.get(employee) else nil)
-		or EmployeeRegistry.get(EmployeeRegistry.DEFAULT)
-	if def == nil then
-		return ""
+-- Seconds a frame may stay blank before it shows the error: long enough for a respawn or a stream-in.
+PortraitViewModel.ERROR_GRACE = 3
+
+-- What a portrait frame shows: the character when it is drawn, else nothing until it has been missing for
+-- ERROR_GRACE seconds, then the error.
+function PortraitViewModel.missing(shown: boolean, waited: number): "view" | "wait" | "error"
+	if shown then
+		return "view"
 	end
-	local worn = EmployeeSkinRules.select(def, skin)
-	return if worn ~= nil then EmployeeSkinRules.portrait(def, worn) else def.portrait
+	return if waited >= PortraitViewModel.ERROR_GRACE then "error" else "wait"
 end
 
 return PortraitViewModel

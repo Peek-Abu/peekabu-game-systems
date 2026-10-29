@@ -1,6 +1,6 @@
 --!strict
 --[=[
-	EmployeeSkinRules: which skin a character wears, whether its palette is usable, and its ID-card photo.
+	EmployeeSkinRules: which skin a character wears, and whether its palette is usable.
 
 	@class EmployeeSkinRules
 ]=]
@@ -54,17 +54,6 @@ end
 function EmployeeSkinRules.piecePalette(skin: EmployeeRegistry.SkinDef, piece: string): string?
 	local palettes = skin.piecePalettes
 	return if palettes ~= nil then wellFormed(palettes[piece]) else nil
-end
-
---[=[
-	The ID-card photo for `skin`: its own portrait when it is a well-formed asset id, else the employee's.
-]=]
-function EmployeeSkinRules.portrait(def: { portrait: string }, skin: EmployeeRegistry.SkinDef): string
-	local id = skin.portrait
-	if id ~= nil and string.match(id, "^rbxassetid://%d+$") ~= nil then
-		return id
-	end
-	return def.portrait
 end
 
 return EmployeeSkinRules

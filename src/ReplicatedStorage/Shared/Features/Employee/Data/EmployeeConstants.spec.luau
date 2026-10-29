@@ -26,7 +26,6 @@ return function()
 					EmployeeConstants.BADGE_TITLE,
 					EmployeeConstants.BADGE_BAND,
 					EmployeeConstants.BADGE_BAND_TEXT,
-					EmployeeConstants.BADGE_PHOTO,
 				}
 			do
 				expect(seen[name]).never.to.be.ok()

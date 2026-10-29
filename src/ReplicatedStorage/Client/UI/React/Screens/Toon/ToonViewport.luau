@@ -14,8 +14,8 @@
 	rank lanyard and the outfit's vacuum on its pack); `vacuum` with no employee or outfit shows that vacuum skin's
 	canister on its own (VacuumPreviewSystem.alone); `turn` swings the camera round (180 = from behind, to see a
 	vacuum on the back).
-	`dim` darkens it (a locked item). With no art for the employee in the place it shows their ID-card photo
-	(PortraitViewModel.fallback). Exempt (needs a renderer); story in ToonViewport.story.
+	`dim` darkens it (a locked item). With no art for the employee in the place it stays blank, then shows the loud error
+	tile (PortraitError, timing in PortraitViewModel.missing). Exempt (needs a renderer); story in ToonViewport.story.
 
 	@class ToonViewport
 ]=]
@@ -34,6 +34,7 @@ local EmployeePoseRules = require(EmployeeShared.Rules.EmployeePoseRules)
 local EmployeePoseFormulas = require(EmployeeShared.Utils.EmployeePoseFormulas)
 local EmployeePortraitSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeePortraitSystem)
 local EmployeePreviewSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeePreviewSystem)
+local PortraitError = require(ReplicatedStorage.Client.UI.React.Screens.Portrait.PortraitError)
 local PortraitViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Portrait.PortraitViewModel)
 local UIToonConstants = require(ReplicatedStorage.Client.UI.React.Screens.Toon.UIToonConstants)
 
@@ -228,8 +229,7 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 		end
 	end, deps)
 
-	local photoOf = if props.outfit ~= nil then props.outfit.employee else props.employee
-	local photoSkin = if props.outfit ~= nil then string.match(props.outfit.look.skin, "^[^%.]+%.(.+)$") else props.skin
+	local subject = if props.outfit ~= nil then props.outfit.employee else props.employee
 	local light = PortraitViewModel.lighting(props.tone or "light")
 	local tint = if props.dim == true then DIM_COLOR else Color3.new(1, 1, 1)
 	return e("ViewportFrame", {
@@ -245,18 +245,10 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 		LayoutOrder = props.layoutOrder,
 		ref = setFrame,
 	}, {
-		-- No art for this employee in the place yet: their ID-card photo instead (a vacuum alone shows nothing).
-		photo = if shown or photoOf == nil
+		-- No art for this employee in the place: the loud error (a vacuum alone shows nothing).
+		missing = if subject == nil
 			then nil
-			else e("ImageLabel", {
-				-- Fitted inside the frame (never spilling past it).
-				Size = UDim2.fromScale(1, 1),
-				BackgroundTransparency = 1,
-				Image = PortraitViewModel.fallback(photoOf, photoSkin),
-				ImageColor3 = tint,
-				ScaleType = Enum.ScaleType.Fit,
-				ZIndex = props.zIndex,
-			}),
+			else e(PortraitError, { shown = shown, subject = subject, zIndex = props.zIndex }),
 	})
 end
 

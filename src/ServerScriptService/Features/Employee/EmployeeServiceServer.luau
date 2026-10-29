@@ -55,8 +55,6 @@ local respawned = 0
 -- Characters dressed in a skin that changed something, and the last skin each player was given.
 local skinned = 0
 local skinOf: { [number]: string } = {}
--- The ID-card photo of each player's skin, for repainting their lanyard on a promotion.
-local photoOf: { [number]: string } = {}
 -- Characters given a uniform piece.
 local uniformed = 0
 local connections: { RBXScriptConnection } = {}
@@ -124,16 +122,14 @@ local function rankLevelOf(userId: number)
 	return if progress ~= nil then progress.level else RankFormulas.progress(0).level
 end
 
--- The player's lanyard: their name, their published rank (level 1 until Rank has loaded it) and the photo of the
--- skin they wear.
-local function badgeOf(player: Player, photo: string): EmployeeGearSystem.Badge
+-- The player's lanyard: their name and their published rank (level 1 until Rank has loaded it).
+local function badgeOf(player: Player): EmployeeGearSystem.Badge
 	local level = rankLevelOf(player.UserId)
 	return {
 		holder = player.DisplayName,
 		title = level.name,
 		band = `RANK: {string.upper(level.name)}`,
 		colour = level.lanyard,
-		photo = photo,
 	}
 end
 
@@ -190,9 +186,7 @@ local function dress(player: Player, character: Model)
 	end
 	if EmployeeGearSystem.wear(character, def.uniform, accessorySource()) > 0 then
 		uniformed += 1
-		local photo = EmployeeSkinRules.portrait(def, skin)
-		photoOf[player.UserId] = photo
-		EmployeeGearSystem.badge(character, badgeOf(player, photo))
+		EmployeeGearSystem.badge(character, badgeOf(player))
 	end
 end
 
@@ -338,10 +332,7 @@ local EmployeeServiceServer: EmployeeServiceServer = {
 			local character = if player ~= nil then player.Character else nil
 			if player ~= nil and character ~= nil then
 				character:SetAttribute(EmployeeConstants.RANK_ATTRIBUTE, rankLevelOf(userId).level)
-				local photo = photoOf[userId]
-				if photo ~= nil then
-					EmployeeGearSystem.badge(character, badgeOf(player, photo))
-				end
+				EmployeeGearSystem.badge(character, badgeOf(player))
 			end
 		end)
 		cosmeticConnection = CosmeticServiceServer.changed:Connect(swapIfChanged)
@@ -367,7 +358,6 @@ local EmployeeServiceServer: EmployeeServiceServer = {
 				end
 				expressions.forget(player.UserId)
 				skinOf[player.UserId] = nil
-				photoOf[player.UserId] = nil
 				worn[player.UserId] = nil
 			end)
 		)

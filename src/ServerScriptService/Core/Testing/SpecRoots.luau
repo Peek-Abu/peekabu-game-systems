@@ -548,7 +548,8 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.UI.React.Screens.Locker.LockerPanel"] = "presentational React component (Locker cards and inside list specced in LockerViewModel; story in ShopScreen.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Locker.LockerOddsSheet"] = "presentational React component (odds and refund rows specced in LockerViewModel)",
 	["ReplicatedStorage.Client.UI.React.Screens.Locker.LockerOpeningScreen"] = "presentational React screen over LockerStore.opening (values specced in LockerViewModel)",
-	["ReplicatedStorage.Client.UI.React.Screens.Portrait.CharacterPortrait"] = "React component over a ViewportFrame (story in CharacterPortrait.story; framing, light and fallback specced in PortraitViewModel, pose in EmployeePoseRules, the copy in EmployeePortraitSystem)",
+	["ReplicatedStorage.Client.UI.React.Screens.Portrait.CharacterPortrait"] = "React component over a ViewportFrame (story in CharacterPortrait.story; framing, light and the missing-portrait timing specced in PortraitViewModel, pose in EmployeePoseRules, the copy in EmployeePortraitSystem)",
+	["ReplicatedStorage.Client.UI.React.Screens.Portrait.PortraitError"] = "presentational React component (the wait / error choice is specced in PortraitViewModel.missing; seen in CharacterPortrait.story with Missing on)",
 	["ReplicatedStorage.Client.UI.React.Screens.Portrait.usePortraitCharacter"] = "React hook over live Players/characters (what a rebuild produces is specced in EmployeePortraitSystem)",
 	-- Cleanup Crew: the paper UI kit (M3 UI)
 	["ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants"] = "static palette, fonts and sizes (no logic; inkColor is a frozen lookup)",

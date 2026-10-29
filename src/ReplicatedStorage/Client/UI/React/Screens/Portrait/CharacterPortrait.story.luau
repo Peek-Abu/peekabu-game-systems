@@ -3,7 +3,7 @@
 	CharacterPortrait.story: every portrait context (profile, crew, caught, award) in each framing (head, bust, upper, full),
 	on a light and a dark plate, from the employee's template in the place (edit mode has no players). Controls: the
 	Clearance Level and the results' grade (they change the profile and award poses), a dimmed (caught) portrait, and
-	the fallback photo (no character). In Studio's edit mode (UI Labs).
+	the missing-portrait error (no character, after the grace). In Studio's edit mode (UI Labs).
 
 	@class CharacterPortrait.story
 ]=]
@@ -44,7 +44,7 @@ local function template(): Model?
 	return copy
 end
 
-local function Grid(props: { level: number, grade: string, dim: boolean, fallback: boolean }): React.ReactNode
+local function Grid(props: { level: number, grade: string, dim: boolean, missing: boolean }): React.ReactNode
 	local model = React.useMemo(template, {})
 	React.useEffect(function(): () -> ()
 		return function()
@@ -68,7 +68,7 @@ local function Grid(props: { level: number, grade: string, dim: boolean, fallbac
 					corner = e("UICorner", { CornerRadius = UDim.new(0, 18) }),
 					stroke = e("UIStroke", { Color = UIToonConstants.COLOR.ink, Thickness = 4 }),
 					portrait = e(CharacterPortrait, {
-						model = if props.fallback then nil else model,
+						model = if props.missing then nil else model,
 						userId = 1,
 						context = context,
 						framing = framing,
@@ -103,13 +103,13 @@ end
 return UILabs.CreateReactStory({
 	react = React,
 	reactRoblox = ReactRoblox,
-	controls = { Level = 2, Grade = "A", Dim = false, Fallback = false },
+	controls = { Level = 2, Grade = "A", Dim = false, Missing = false },
 }, function(props)
 	local controls = props.controls
 	return e(Grid, {
 		level = controls.Level,
 		grade = controls.Grade,
 		dim = controls.Dim,
-		fallback = controls.Fallback,
+		missing = controls.Missing,
 	})
 end)

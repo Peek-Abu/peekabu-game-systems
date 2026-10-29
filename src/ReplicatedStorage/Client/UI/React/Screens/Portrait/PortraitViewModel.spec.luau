@@ -1,6 +1,5 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local EmployeeRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeRegistry)
 local PortraitViewModel = require(script.Parent.PortraitViewModel)
 
 return function()
@@ -93,18 +92,18 @@ return function()
 		end)
 	end)
 
-	describe("fallback", function()
-		local pippa = EmployeeRegistry.get("Pippa")
-
-		it("is the ID-card photo of the named skin, else the employee's default look", function()
-			expect(PortraitViewModel.fallback(nil, nil)).to.equal(pippa.skins.Default.portrait)
-			expect(PortraitViewModel.fallback("Pippa", "OwnerSpecial")).to.equal(pippa.skins.OwnerSpecial.portrait)
-			expect(PortraitViewModel.fallback("Pippa", "NoSuchSkin")).to.equal(pippa.skins.Default.portrait)
+	describe("missing", function()
+		it("shows the character whenever there is one", function()
+			expect(PortraitViewModel.missing(true, 0)).to.equal("view")
+			expect(PortraitViewModel.missing(true, 60)).to.equal("view")
 		end)
 
-		it("uses the named employee, else the default one", function()
-			expect(PortraitViewModel.fallback("Pippa", nil)).to.equal(pippa.skins.Default.portrait)
-			expect(PortraitViewModel.fallback("Nobody", nil)).to.equal(pippa.skins.Default.portrait)
+		it("stays blank through the grace (a respawn, a stream-in), then shows the error", function()
+			expect(PortraitViewModel.ERROR_GRACE > 0).to.equal(true)
+			expect(PortraitViewModel.missing(false, 0)).to.equal("wait")
+			expect(PortraitViewModel.missing(false, PortraitViewModel.ERROR_GRACE - 0.01)).to.equal("wait")
+			expect(PortraitViewModel.missing(false, PortraitViewModel.ERROR_GRACE)).to.equal("error")
+			expect(PortraitViewModel.missing(false, 600)).to.equal("error")
 		end)
 	end)
 end
