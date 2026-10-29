@@ -11,8 +11,16 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local HostConstants = require(ReplicatedStorage.Shared.Features.Host.Data.HostConstants)
 local HostEvents = require(ReplicatedStorage.Shared.Features.Host.Net.HostEvents)
+local HostRules = require(ReplicatedStorage.Shared.Features.Host.Rules.HostRules)
+local MarketplaceRegistry = require(ReplicatedStorage.Shared.Features.Marketplace.Data.MarketplaceRegistry)
 local HostStore = require(ReplicatedStorage.Client.Features.Host.State.HostStore)
+
+-- The Big Crew pass, at load, so the host's chip prompts it by key (HostServiceServer registers it the same way).
+if HostRules.passLive(HostConstants.PASS_ID) and MarketplaceRegistry.pass(HostConstants.PASS_KEY) == nil then
+	MarketplaceRegistry.registerPass(HostConstants.PASS_KEY, { passId = HostConstants.PASS_ID })
+end
 
 export type HostServiceClient = {
 	dependencies: { string },

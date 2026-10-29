@@ -30,6 +30,26 @@ return function()
 		end)
 	end)
 
+	describe("seatsFor", function()
+		it("seats the host's pass size while it covers everyone aboard", function()
+			expect(HostRules.seatsFor(false, 2)).to.equal(4)
+			expect(HostRules.seatsFor(true, 2)).to.equal(6)
+		end)
+
+		it("never drops under the crew aboard: a hand-over to a host without the pass keeps 5 aboard", function()
+			expect(HostRules.seatsFor(false, 5)).to.equal(5)
+			expect(HostRules.seatsFor(false, 6)).to.equal(6)
+			expect(HostRules.seatsFor(false, 4)).to.equal(4)
+		end)
+	end)
+
+	describe("passLive", function()
+		it("is off while the pass id is 0 (not created on the Dashboard yet)", function()
+			expect(HostRules.passLive(0)).to.equal(false)
+			expect(HostRules.passLive(123456)).to.equal(true)
+		end)
+	end)
+
 	describe("canAct", function()
 		local MEMBERS = { 7, 8, 9 }
 

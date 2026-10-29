@@ -90,14 +90,21 @@ return function()
 			expect(hasError(errors, "a truck has no id")).to.equal(true)
 		end)
 
-		it("refuses a capacity outside 1-4 or not whole", function()
-			for _, bad in { 0, 5, 2.5 } do
+		it("refuses a capacity outside 1-6 (a Big Crew truck seats 6) or not whole", function()
+			for _, bad in { 0, 7, 2.5 } do
 				local layout = fixture()
 				layout.trucks[1].capacity = bad
 				local ok, errors = DepotLayoutRules.validate(layout)
 				expect(ok).to.equal(false)
 				expect(hasError(errors, 'truck "t1": capacity')).to.equal(true)
 			end
+		end)
+
+		it("accepts a six-seat truck bed", function()
+			local layout = fixture()
+			layout.trucks[1].capacity = 6
+			local ok = DepotLayoutRules.validate(layout)
+			expect(ok).to.equal(true)
 		end)
 
 		it("refuses a countdown outside 5-60 seconds", function()

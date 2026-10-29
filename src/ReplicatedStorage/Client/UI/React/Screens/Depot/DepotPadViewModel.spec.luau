@@ -188,6 +188,21 @@ return function()
 			expect(cta.seats[4].kickable).to.equal(false) -- an open seat
 		end)
 
+		it("offers a host without the Big Crew pass the upgrade, once the pass exists", function()
+			local view = DepotPadViewModel.pad(unstarted(), 3, NAMES, 2, 100, false, 3, false)
+			expect(DepotPadViewModel.cta(view, 2, true).hostControls.upgrade).to.equal(true)
+			expect(DepotPadViewModel.cta(view, 2, false).hostControls.upgrade).to.equal(false)
+			expect(DepotPadViewModel.cta(view, 2).hostControls.upgrade).to.equal(false)
+		end)
+
+		it("draws a seat per live seat: six on a Big Crew truck", function()
+			local big = unstarted()
+			big.capacity = 6
+			local view = DepotPadViewModel.pad(big, 3, NAMES, 2, 100, false, 3, false)
+			expect(view.count).to.equal("3 / 6")
+			expect(#DepotPadViewModel.cta(view, 2).seats).to.equal(6)
+		end)
+
 		it("gives a rider no host controls and nobody to kick", function()
 			local view = DepotPadViewModel.pad(unstarted(), 3, NAMES, 2, 100, false, 1, false)
 			local cta = DepotPadViewModel.cta(view, 2)

@@ -420,6 +420,9 @@ return table.freeze({
 		Vector2.new(2.75, 0),
 		Vector2.new(-2.75, 4),
 		Vector2.new(2.75, 4),
+		-- A Big Crew's fifth and sixth (crew hosting): the open back's row.
+		Vector2.new(-2.75, -4),
+		Vector2.new(2.75, -4),
 	}),
 	WALL_COLOR = Color3.fromRGB(200, 198, 190),
 	DESK_COLOR = Color3.fromRGB(140, 110, 80),

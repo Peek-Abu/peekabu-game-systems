@@ -45,8 +45,9 @@ export type PadView = {
 
 export type SeatView = { open: boolean, you: boolean, userId: number?, host: boolean, kickable: boolean }
 
--- The host's own controls on a hosted truck: the friends-only lock (and Invite beside it).
-export type HostControls = { locked: boolean }
+-- The host's own controls on a hosted truck: the friends-only lock (and Invite beside it), and `upgrade` (the Big
+-- Crew pass's "Get 6 seats", for a host who could buy it).
+export type HostControls = { locked: boolean, upgrade: boolean }
 
 -- What the card's button does: open the Jobs board, depart now (an unhosted truck), or a hosted truck's START,
 -- CANCEL or LEAVE.
@@ -130,7 +131,8 @@ function DepotPadViewModel.pad(
 	}
 end
 
-function DepotPadViewModel.cta(view: PadView?, truck: number?): CtaView
+-- `canUpgrade`: the Big Crew pass exists and the local player does not own it.
+function DepotPadViewModel.cta(view: PadView?, truck: number?, canUpgrade: boolean?): CtaView
 	if view == nil then
 		return {
 			title = "NEXT SHIFT",
@@ -186,7 +188,7 @@ function DepotPadViewModel.cta(view: PadView?, truck: number?): CtaView
 		canGo = not view.departing,
 		action = action,
 		variant = variant,
-		hostControls = if hosting then { locked = view.locked } else nil,
+		hostControls = if hosting then { locked = view.locked, upgrade = canUpgrade == true } else nil,
 	}
 end
 

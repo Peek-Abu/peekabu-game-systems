@@ -4,7 +4,8 @@
 
 	- `hostAfter`: the first player in hosts; the host stays host while others come and go; when the host leaves,
 	  the earliest member left takes over (Queue keeps members in boarding order); an empty truck has none.
-	- `seats`: 4, or 6 when the host owns the Big Crew pass.
+	- `seats`: 4, or 6 when the host owns the Big Crew pass; `seatsFor` never under the crew aboard (a hand-over to a
+	  host without the pass keeps a 5- or 6-player crew seated); `passLive`: the pass exists (its id is not 0).
 	- `canAct`: only the host starts, cancels, kicks and locks; any member may leave; the host kicks only another
 	  member.
 	- `canBoard`: a kicked player never (a kicked member is taken off); on a friends-only truck only the host's
@@ -31,6 +32,14 @@ end
 
 function HostRules.seats(ownsPass: boolean): number
 	return if ownsPass then HostConstants.PASS_SEATS else HostConstants.SEATS
+end
+
+function HostRules.seatsFor(ownsPass: boolean, aboard: number): number
+	return math.max(HostRules.seats(ownsPass), aboard)
+end
+
+function HostRules.passLive(passId: number): boolean
+	return passId > 0
 end
 
 function HostRules.canAct(

@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local DepotBoardViewModel = require(script.Parent.DepotBoardViewModel)
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
+local HostConstants = require(ReplicatedStorage.Shared.Features.Host.Data.HostConstants)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
 
@@ -58,8 +59,9 @@ return function()
 	end)
 
 	describe("quota", function()
+		-- The posted range is for a regular truck (1 to SEATS); a Big Crew's bigger contract is not posted.
 		local low = ShiftQuotaFormulas.quota(1)
-		local high = ShiftQuotaFormulas.quota(#ShiftConstants.QUOTA_BY_CREW)
+		local high = ShiftQuotaFormulas.quota(HostConstants.SEATS)
 
 		it("posts the quota for the crew in your truck", function()
 			local view = DepotBoardViewModel.board(nil, nil, false, 3)
@@ -204,7 +206,7 @@ return function()
 		it("gives the quota chip the range by crew size when the reader is not in a truck", function()
 			local view = DepotBoardViewModel.board(nil, nil, false, nil)
 			local low = ShiftQuotaFormulas.quota(1)
-			local high = ShiftQuotaFormulas.quota(#ShiftConstants.QUOTA_BY_CREW)
+			local high = ShiftQuotaFormulas.quota(HostConstants.SEATS)
 			expect(view.chips[1].value).to.equal(`{low}–{high} Gloom`)
 		end)
 

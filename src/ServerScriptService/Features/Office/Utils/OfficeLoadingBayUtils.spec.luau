@@ -95,11 +95,11 @@ return function()
 	end)
 
 	describe("arrivals", function()
-		it("gives four spread points on the bed, at least 4 studs apart and clear of its edges", function()
+		it("gives six spread points on the bed (a Big Crew), at least 4 studs apart and clear of its edges", function()
 			local bay = OfficeLoadingBayUtils.bay(4, TARGET)
 			local truck = OfficeLoadingBayUtils.truck(bay, 4)
 			local points = OfficeLoadingBayUtils.arrivals(truck)
-			expect(#points).to.equal(4)
+			expect(#points).to.equal(6)
 			for index, point in points do
 				expect(point.X > truck.minX + 1.5 and point.X < truck.maxX - 1.5).to.equal(true)
 				expect(point.Z > truck.minZ + 1.5 and point.Z < truck.maxZ - 1.5).to.equal(true)

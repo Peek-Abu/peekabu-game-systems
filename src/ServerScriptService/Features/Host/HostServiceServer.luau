@@ -15,6 +15,9 @@
 	  host's Roblox friends, from Social's SocialFriendTracker; a pair not checked yet counts as not friends). Queue's
 	  board filter asks HostRules.canBoard every sample; a refused player (a kicked member included) is put outside
 	  with a toast saying why.
+	- Seats: every held pad seats HostRules.seatsFor(the host owns the Big Crew pass, crew aboard), 4 or 6, never under
+	  the crew already aboard (Queue's live seats; an empty truck seats SEATS). The pass is registered at load once
+	  HostConstants.PASS_ID is filled in; while it is 0 the pass is off and the server warns once at start.
 	- A friend who joins from an invite (Social's LaunchData, SocialRules.referrerFrom) is told, once their screen has
 	  loaded, when the inviter is waiting in a truck.
 
@@ -39,6 +42,8 @@ local HostRules = require(HostShared.Rules.HostRules)
 local HostTypes = require(HostShared.Data.HostTypes)
 local HostTruckTracker = require(ServerScriptService.Features.Host.State.HostTruckTracker)
 local Guard = require(ReplicatedStorage.Shared.Core.Guard)
+local MarketplaceRegistry = require(ReplicatedStorage.Shared.Features.Marketplace.Data.MarketplaceRegistry)
+local MarketplaceServiceServer = require(ServerScriptService.Features.Marketplace.MarketplaceServiceServer)
 local QueueServiceServer = require(ServerScriptService.Features.Queue.QueueServiceServer)
 local SocialFriendTracker = require(ServerScriptService.Features.Social.State.SocialFriendTracker)
 local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
@@ -47,6 +52,11 @@ local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local StateSyncWorldStore = require(ServerScriptService.Features.StateSync.State.StateSyncWorldStore)
 
 local log = Logger.new("HostServiceServer")
+
+-- The Big Crew pass, at load (before Marketplace checks each player's passes), once its id exists.
+if HostRules.passLive(HostConstants.PASS_ID) and MarketplaceRegistry.pass(HostConstants.PASS_KEY) == nil then
+	MarketplaceRegistry.registerPass(HostConstants.PASS_KEY, { passId = HostConstants.PASS_ID })
+end
 
 local tracker = HostTruckTracker.new()
 -- The held pads seen at the last tick, by Queue pad id.
@@ -72,6 +82,15 @@ local function isHeld(pad: BasePart): boolean
 	return pad:GetAttribute(QueueConstants.HOLD_ATTRIBUTE) == true
 end
 
+-- Whether `host` (a UserId) owns the Big Crew pass; false while the pass does not exist.
+local function hasBigCrew(host: number?): boolean
+	if host == nil or MarketplaceRegistry.pass(HostConstants.PASS_KEY) == nil then
+		return false
+	end
+	local player = Players:GetPlayerByUserId(host)
+	return player ~= nil and MarketplaceServiceServer:ownsPass(player, HostConstants.PASS_KEY)
+end
+
 local function publish()
 	StateSyncWorldStore.set(HostConstants.WORLD_ENTRY, tracker:snapshot())
 end
@@ -90,6 +109,7 @@ local function tick(now: number)
 				changed = true
 			end
 			local host = tracker:hostOf(padId)
+			pads:setSeats(instance, HostRules.seatsFor(hasBigCrew(host), #members))
 			if instance:GetAttribute(HostConstants.HOST_ATTRIBUTE) ~= host then
 				instance:SetAttribute(HostConstants.HOST_ATTRIBUTE, host)
 			end
@@ -261,12 +281,17 @@ export type HostServiceServer = {
 }
 
 local HostServiceServer: HostServiceServer = {
-	dependencies = { "QueueServiceServer", "StateSyncServiceServer", "ToastServiceServer" },
+	dependencies = { "QueueServiceServer", "StateSyncServiceServer", "ToastServiceServer", "MarketplaceServiceServer" },
 
 	--[=[
 		Listens for Start, Cancel, Leave, Kick and SetLock, sets Queue's board filter, and ticks the trucks.
 	]=]
 	start = function(_self)
+		if not HostRules.passLive(HostConstants.PASS_ID) then
+			log:warn(
+				`the Big Crew pass is not created yet (HostConstants.PASS_ID is 0): every truck seats {HostConstants.SEATS}`
+			)
+		end
 		publish()
 		QueueServiceServer.pads:setBoardFilter(boardFilter)
 		local refusedConnection = QueueServiceServer.pads.refused:Connect(onRefused)

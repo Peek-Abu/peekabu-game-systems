@@ -23,6 +23,9 @@ local QueueSnapshotUtils = require(ReplicatedStorage.Shared.Features.Queue.Utils
 local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
 local DepotStore = require(ReplicatedStorage.Client.Features.Depot.State.DepotStore)
 local HostStore = require(ReplicatedStorage.Client.Features.Host.State.HostStore)
+local HostConstants = require(ReplicatedStorage.Shared.Features.Host.Data.HostConstants)
+local MarketplaceConstants = require(ReplicatedStorage.Shared.Features.Marketplace.Data.MarketplaceConstants)
+local MarketplaceRegistry = require(ReplicatedStorage.Shared.Features.Marketplace.Data.MarketplaceRegistry)
 local HostSnapshotUtils = require(ReplicatedStorage.Shared.Features.Host.Utils.HostSnapshotUtils)
 local QueueStore = require(ReplicatedStorage.Client.Features.Queue.State.QueueStore)
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
@@ -41,6 +44,7 @@ export type DepotPadProps = {
 	onKick: (userId: number) -> (),
 	onLock: (locked: boolean) -> (),
 	onInvite: () -> (),
+	onUpgrade: () -> (),
 }
 
 local function DepotPad(props: DepotPadProps): React.ReactNode
@@ -78,7 +82,11 @@ local function DepotPad(props: DepotPadProps): React.ReactNode
 	if view == nil then
 		return nil
 	end
-	local cta = DepotPadViewModel.cta(view, truckNumber)
+	-- The Big Crew pass is on offer once it exists (registered) and the local player has not bought it (their public
+	-- `pass:` field).
+	local passLive = MarketplaceRegistry.pass(HostConstants.PASS_KEY) ~= nil
+	local owns = me ~= nil and me[MarketplaceConstants.passField(HostConstants.PASS_KEY)] == true
+	local cta = DepotPadViewModel.cta(view, truckNumber, passLive and not owns)
 	return React.createElement(PaperHudFrame, {
 		scale = hudScale.scale,
 		children = {
@@ -91,6 +99,7 @@ local function DepotPad(props: DepotPadProps): React.ReactNode
 				onKick = props.onKick,
 				onLock = props.onLock,
 				onInvite = props.onInvite,
+				onUpgrade = props.onUpgrade,
 			}),
 		},
 	})

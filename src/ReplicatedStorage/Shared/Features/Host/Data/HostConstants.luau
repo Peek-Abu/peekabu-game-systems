@@ -14,6 +14,11 @@ return table.freeze({
 	-- Seats on a truck, and on a truck whose host owns the Big Crew pass (only the host needs it).
 	SEATS = 4,
 	PASS_SEATS = 6,
+	-- The Big Crew game pass (the host's 6 seats). PASS_ID 0 = not created on the Creator Dashboard yet: the pass is
+	-- off (not registered, never prompted, every truck seats SEATS) and the server warns once at boot. Fill the id in
+	-- to turn it on.
+	PASS_KEY = "bigCrew",
+	PASS_ID = 2058797732,
 	-- START's countdown (seconds); the host may cancel it, and others may still hop in.
 	START_SECONDS = 5,
 	-- A truck with anyone aboard that nobody starts for this long starts on its own (an away host can't trap kids).
@@ -32,6 +37,8 @@ return table.freeze({
 		hostFallback = "the host",
 		-- To a friend who came from an invite while the inviter waits in a truck (the inviter's name).
 		invited = "%s is waiting in a truck. Walk in to join!",
+		-- The host's chip to buy the Big Crew pass.
+		upgrade = "Get 6 seats",
 	}),
 	-- Seconds after an invited friend joins before they are told (their screen is still loading before that).
 	INVITED_TOAST_DELAY = 6,

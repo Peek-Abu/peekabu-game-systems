@@ -15,9 +15,10 @@ local DepotTypes = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotTyp
 local LAYOUT: DepotTypes.Layout = {
 	floor = { minX = 0, minZ = 0, maxX = 96, maxZ = 72 },
 	trucks = {
-		{ id = "truck1", x = 20, z = 48, capacity = 4, countdown = 15 },
-		{ id = "truck2", x = 48, z = 48, capacity = 4, countdown = 15 },
-		{ id = "truck3", x = 76, z = 48, capacity = 4, countdown = 15 },
+		-- Capacity is the bed's most seats (a Big Crew host's 6); Host lowers the live seats to the host's (4 or 6).
+		{ id = "truck1", x = 20, z = 48, capacity = 6, countdown = 15 },
+		{ id = "truck2", x = 48, z = 48, capacity = 6, countdown = 15 },
+		{ id = "truck3", x = 76, z = 48, capacity = 6, countdown = 15 },
 	},
 	contractBoard = { x = 34, z = 12 },
 	resultBoard = { x = 62, z = 12 },
@@ -93,7 +94,7 @@ return table.freeze({
 	-- Spec §3: 3-4 trucks of 1-4 players, a ~15 s countdown.
 	MIN_TRUCKS = 3,
 	MAX_TRUCKS = 4,
-	MAX_CAPACITY = 4,
+	MAX_CAPACITY = 6,
 	MIN_COUNTDOWN = 5,
 	MAX_COUNTDOWN = 60,
 	-- Players appear this high above a spawn point.

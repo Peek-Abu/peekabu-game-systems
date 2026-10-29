@@ -38,6 +38,8 @@ local QueueServiceClient = require(ReplicatedStorage.Client.Features.Queue.Queue
 local HostServiceClient = require(ReplicatedStorage.Client.Features.Host.HostServiceClient)
 local DepotTruckGhostSystem = require(ReplicatedStorage.Client.Features.Depot.Systems.DepotTruckGhostSystem)
 local SocialServiceClient = require(ReplicatedStorage.Client.Features.Social.SocialServiceClient)
+local MarketplaceServiceClient = require(ReplicatedStorage.Client.Features.Marketplace.MarketplaceServiceClient)
+local HostConstants = require(ReplicatedStorage.Shared.Features.Host.Data.HostConstants)
 local DailyRewardServiceClient = require(ReplicatedStorage.Client.Features.DailyReward.DailyRewardServiceClient)
 local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudRegistry)
 local DepotCard = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotCard)
@@ -109,6 +111,7 @@ local DepotServiceClient: DepotServiceClient = {
 		"QueueServiceClient",
 		"HostServiceClient",
 		"SocialServiceClient",
+		"MarketplaceServiceClient",
 		"StateSyncServiceClient",
 		"DailyRewardServiceClient",
 	},
@@ -151,6 +154,9 @@ local DepotServiceClient: DepotServiceClient = {
 					end,
 					onInvite = function()
 						SocialServiceClient:invite()
+					end,
+					onUpgrade = function()
+						MarketplaceServiceClient:promptPass(HostConstants.PASS_KEY)
 					end,
 				})
 			end, DepotConstants.HUD_ORDER - 1)

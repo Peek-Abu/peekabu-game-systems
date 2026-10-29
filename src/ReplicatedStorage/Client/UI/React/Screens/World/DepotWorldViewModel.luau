@@ -18,6 +18,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PublicPlayerTypes = require(ReplicatedStorage.Shared.Data.PublicPlayerTypes)
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
+local HostConstants = require(ReplicatedStorage.Shared.Features.Host.Data.HostConstants)
 local QueueTypes = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueTypes)
 local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
@@ -186,7 +187,7 @@ function DepotWorldViewModel.workOrder(attributes: { [string]: unknown }, crew: 
 	local clear: string
 	local who: string
 	if crew == nil then
-		clear = `REMOVE {ShiftQuotaFormulas.quota(1)}–{ShiftQuotaFormulas.quota(#ShiftConstants.QUOTA_BY_CREW)} GLOOM`
+		clear = `REMOVE {ShiftQuotaFormulas.quota(1)}–{ShiftQuotaFormulas.quota(HostConstants.SEATS)} GLOOM`
 		who = "more crew, more Gloom"
 	else
 		clear = string.upper(ShiftCurrencyUtils.contract(ShiftQuotaFormulas.quota(crew)))

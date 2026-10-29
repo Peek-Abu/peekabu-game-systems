@@ -15,6 +15,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
+local HostConstants = require(ReplicatedStorage.Shared.Features.Host.Data.HostConstants)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local DepotPadViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotPadViewModel)
 local CharacterPortrait = require(ReplicatedStorage.Client.UI.React.Screens.Portrait.CharacterPortrait)
@@ -38,6 +39,7 @@ export type DepotNextShiftCardProps = {
 	onKick: ((userId: number) -> ())?,
 	onLock: ((locked: boolean) -> ())?,
 	onInvite: (() -> ())?,
+	onUpgrade: (() -> ())?,
 }
 
 -- How long a seat's "Kick?" waits for the second tap.
@@ -178,19 +180,42 @@ local function seatRow(
 	return seats
 end
 
--- The host's chips: the friends-only lock and Invite.
+-- How tall the host's chips are, per layout (a phone host's seats sit above them).
+local function chipHeight(phone: boolean): number
+	return if phone then 34 else 44
+end
+
+-- The host's chips: the friends-only lock, Invite and, for a host without it, the Big Crew pass ("Get 6 seats").
 local function hostChips(props: DepotNextShiftCardProps, controls: DepotPadViewModel.HostControls): React.ReactNode
-	local height = if props.phone then 34 else 44
+	local height = chipHeight(props.phone)
 	-- Sized for their words at this text size (the button's default 28 leaves the label too little room: "INVIT").
 	local textSize = if props.phone then 14 else 20
 	local onLock = props.onLock
 	local onInvite = props.onInvite
+	local onUpgrade = props.onUpgrade
+	local upgrade: React.ReactNode = nil
+	if controls.upgrade then
+		upgrade = e(ToonButton, {
+			variant = "grape",
+			text = HostConstants.TEXT.upgrade,
+			small = true,
+			textSize = textSize,
+			size = UDim2.fromOffset(if props.phone then 138 else 180, height),
+			onActivated = function()
+				if onUpgrade ~= nil then
+					onUpgrade()
+				end
+			end,
+			layoutOrder = 3,
+		})
+	end
 	return e("Frame", {
 		AnchorPoint = Vector2.new(1, 1),
 		Position = UDim2.new(1, -8, 0, -8),
-		Size = UDim2.fromOffset(if props.phone then 320 else 440, height),
+		Size = UDim2.fromOffset(if props.phone then 440 else 640, height),
 		BackgroundTransparency = 1,
 	}, {
+		upgrade = upgrade,
 		layout = e("UIListLayout", {
 			FillDirection = Enum.FillDirection.Horizontal,
 			HorizontalAlignment = Enum.HorizontalAlignment.Right,
@@ -203,7 +228,7 @@ local function hostChips(props: DepotNextShiftCardProps, controls: DepotPadViewM
 			icon = if controls.locked then "friendsLock" else "friendsLockOpen",
 			small = true,
 			textSize = textSize,
-			size = UDim2.fromOffset(if props.phone then 190 else 260, height),
+			size = UDim2.fromOffset(if props.phone then 176 else 260, height),
 			selected = controls.locked,
 			onActivated = function()
 				if onLock ~= nil then
@@ -218,7 +243,7 @@ local function hostChips(props: DepotNextShiftCardProps, controls: DepotPadViewM
 			icon = "invite",
 			small = true,
 			textSize = textSize,
-			size = UDim2.fromOffset(if props.phone then 120 else 160, height),
+			size = UDim2.fromOffset(if props.phone then 104 else 160, height),
 			onActivated = function()
 				if onInvite ~= nil then
 					onInvite()
@@ -317,10 +342,11 @@ local function DepotNextShiftCard(props: DepotNextShiftCardProps): React.ReactNo
 	if controls ~= nil then
 		face.hostChips = hostChips(props, controls)
 		if props.phone and #cta.seats > 0 then
-			-- The phone card has no seat row: the host's seats sit above it, left, so kicking works there.
+			-- The phone card has no seat row: the host's seats sit above it, a row over the chips, so kicking works
+			-- there and the two never overlap.
 			face.hostSeats = e("Frame", {
 				AnchorPoint = Vector2.new(0, 1),
-				Position = UDim2.fromOffset(g.textLeft, -14),
+				Position = UDim2.fromOffset(g.textLeft, -(chipHeight(true) + 22)),
 				Size = UDim2.fromOffset(#cta.seats * (PHONE_HOST_SEAT + 8), PHONE_HOST_SEAT),
 				BackgroundTransparency = 1,
 			}, seatRow(cta, PHONE_HOST_SEAT, asking, setAsking, props.onKick))

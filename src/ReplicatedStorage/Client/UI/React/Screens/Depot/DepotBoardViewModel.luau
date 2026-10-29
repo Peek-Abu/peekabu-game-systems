@@ -12,6 +12,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
+local HostConstants = require(ReplicatedStorage.Shared.Features.Host.Data.HostConstants)
 local DepotTypes = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotTypes)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local QueueSnapshotUtils = require(ReplicatedStorage.Shared.Features.Queue.Utils.QueueSnapshotUtils)
@@ -140,8 +141,9 @@ end
 local function quotaText(crew: number?, phone: boolean): string
 	local copy = DepotConstants.BOARD_COPY
 	if crew == nil then
+		-- A regular truck's range (1 to SEATS): a Big Crew's bigger contract is not posted.
 		local low = ShiftQuotaFormulas.quota(1)
-		local high = ShiftQuotaFormulas.quota(#ShiftConstants.QUOTA_BY_CREW)
+		local high = ShiftQuotaFormulas.quota(HostConstants.SEATS)
 		return string.format(if phone then copy.quotaPhoneRange else copy.quotaRange, low, high)
 	end
 	local quota = ShiftQuotaFormulas.quota(crew)
@@ -161,7 +163,7 @@ local BUILDINGS: { BuildingView } = {
 local function quotaChip(crew: number?): string
 	if crew == nil then
 		local low = ShiftQuotaFormulas.quota(1)
-		local high = ShiftQuotaFormulas.quota(#ShiftConstants.QUOTA_BY_CREW)
+		local high = ShiftQuotaFormulas.quota(HostConstants.SEATS)
 		return `{low}–{high} Gloom`
 	end
 	return `{ShiftQuotaFormulas.quota(crew)} Gloom`

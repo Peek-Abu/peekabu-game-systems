@@ -25,6 +25,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local Workspace = game:GetService("Workspace")
 
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
+local HostConstants = require(ReplicatedStorage.Shared.Features.Host.Data.HostConstants)
 local DepotTypes = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotTypes)
 local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionConstants)
 local QueueConstants = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueConstants)
@@ -290,7 +291,8 @@ function DepotBuildSystem.build(
 		TruckVisual.build(pad, truckFolder)
 		local tag = shell("PadTag", pad, DepotConstants.BILLBOARD_PX.truck, DepotLayoutConstants.PAD_TAG_OFFSET)
 		tag:SetAttribute(DepotConstants.TRUCK_ATTRIBUTE, index)
-		tag:SetAttribute(DepotConstants.CAPACITY_ATTRIBUTE, truck.capacity)
+		-- The sign of an empty truck shows a regular truck's seats; a hosted one shows its live seats (Queue's).
+		tag:SetAttribute(DepotConstants.CAPACITY_ATTRIBUTE, math.min(truck.capacity, HostConstants.SEATS))
 		CollectionService:AddTag(tag, DepotConstants.BILLBOARD_TAGS.truck)
 		tag.Parent = truckFolder
 		table.insert(trucks, { id = truck.id, index = index, capacity = truck.capacity, pad = pad })
