@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local AnimationRegistry = require(ReplicatedStorage.Shared.Features.Animation.Data.AnimationRegistry)
+local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
 local EmployeeRegistry = require(script.Parent.EmployeeRegistry)
 
 return function()
@@ -43,6 +44,35 @@ return function()
 				for key, skin in def.skins do
 					expect(skin.name).to.equal(key)
 					expect(skin.accessories).to.be.a("table")
+				end
+			end
+		end)
+
+		it("gives Pippa a Bubble Buddy skin wearing its outfit, in its catalogue's 3 styles", function()
+			local skin = EmployeeRegistry.get("Pippa").skins.BubbleBuddy
+			expect(skin).to.be.ok()
+			expect(skin.outfit).to.equal("PippaBubbleBuddy")
+			expect(#skin.styles).to.equal(CosmeticRegistry.get("Pippa.BubbleBuddy").styles)
+			for index, folder in { "BlueYellow", "PinkTurquoise", "LilacOrange" } do
+				expect(skin.styles[index].folder).to.equal(folder)
+				expect(string.match(skin.styles[index].paletteTextureId, "^rbxassetid://%d+$")).to.be.ok()
+			end
+			-- The style's palette wins: the skin has no palette of its own.
+			expect(skin.paletteTextureId).never.to.be.ok()
+		end)
+
+		it("gives every styled skin as many styles as its catalogue item, each naming a folder", function()
+			for _, name in EmployeeRegistry.names() do
+				local def = EmployeeRegistry.get(name)
+				for key, skin in def.skins do
+					if skin.styles ~= nil then
+						local item = CosmeticRegistry.get(`{name}.{key}`)
+						expect(item).to.be.ok()
+						expect(#skin.styles).to.equal(item.styles or 1)
+						for _, style in skin.styles do
+							expect(#style.folder > 0).to.equal(true)
+						end
+					end
 				end
 			end
 		end)

@@ -31,6 +31,15 @@ export type Face = "Happy" | "Worried" | "Content" | "Dazed"
 -- What the employee is doing, as far as its face is concerned (EmployeeFaceRules.stateOf).
 export type GameplayState = "knockedOut" | "threatened" | "cleaning" | "carrying" | "idle"
 
+-- One colour style of a skin's outfit.
+export type StyleDef = {
+	-- The folder under the outfit's `Styles` whose SurfaceAppearances the outfit meshes and props wear.
+	folder: string,
+	-- "rbxassetid://<id>" of the body palette this style gives the character (each style recolours the fur); it wins
+	-- over the skin's own paletteTextureId.
+	paletteTextureId: string,
+}
+
 export type SkinDef = {
 	-- Its key in the employee's `skins`.
 	name: string,
@@ -50,6 +59,12 @@ export type SkinDef = {
 	-- Names of Accessory instances, or fitted-gear Models (EmployeeGearSystem), under
 	-- EmployeeConstants.ACCESSORIES_PATH to put on the character.
 	accessories: { string },
+	-- The name of a skinned outfit Model under EmployeeConstants.OUTFITS_PATH that EmployeeOutfitSystem fits onto the
+	-- character (its Outfit meshes, Rig bones, Styles looks and Props). nil = no outfit.
+	outfit: string?,
+	-- The outfit's colour styles, in catalogue order (CosmeticRegistry `styles`); the player's look picks one. nil = one
+	-- look only.
+	styles: { StyleDef }?,
 }
 
 --[=[
@@ -166,6 +181,21 @@ local EMPLOYEES: { [string]: EmployeeDef } = {
 				paletteTextureId = "rbxassetid://105960382796018",
 				facesFolder = nil,
 				accessories = {},
+			},
+			-- Legendary (Cosmetic Pippa.BubbleBuddy): the skinned raincoat, goggles and boots outfit, plus the bubble wand and
+			-- duck float the Bubbles emote shows (characters/skins/runtime-candidates-2026-10-26/bubble_buddy/v2-2026-10-28).
+			-- Each style recolours her fur too. Icey Labs images.
+			BubbleBuddy = {
+				name = "BubbleBuddy",
+				paletteTextureId = nil,
+				facesFolder = nil,
+				accessories = {},
+				outfit = "PippaBubbleBuddy",
+				styles = {
+					{ folder = "BlueYellow", paletteTextureId = "rbxassetid://74284182744492" },
+					{ folder = "PinkTurquoise", paletteTextureId = "rbxassetid://111714697439083" },
+					{ folder = "LilacOrange", paletteTextureId = "rbxassetid://127175944720666" },
+				},
 			},
 		},
 		defaultSkin = "Default",

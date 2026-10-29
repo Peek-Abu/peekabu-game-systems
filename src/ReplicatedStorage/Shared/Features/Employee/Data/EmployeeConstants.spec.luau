@@ -33,6 +33,39 @@ return function()
 			end
 		end)
 
+		it("names the outfit's place, the character's outfit folders and the outfit contract distinctly", function()
+			expect(table.concat(EmployeeConstants.OUTFITS_PATH, ".")).to.equal("Assets.CleanupCrew.Outfits")
+			local seen = {}
+			for _, name in
+				{
+					EmployeeConstants.OUTFIT_FOLDER,
+					EmployeeConstants.PROPS_FOLDER,
+					EmployeeConstants.PIECES_FOLDER,
+					EmployeeConstants.FACES_FOLDER,
+				}
+			do
+				expect(seen[name]).never.to.be.ok()
+				seen[name] = true
+			end
+			for _, name in
+				{
+					EmployeeConstants.OUTFIT_MESHES,
+					EmployeeConstants.OUTFIT_RIG,
+					EmployeeConstants.OUTFIT_STYLES,
+					EmployeeConstants.OUTFIT_PROPS,
+					EmployeeConstants.STYLE_SLOT_ATTRIBUTE,
+					EmployeeConstants.PROP_HAND_ATTRIBUTE,
+					EmployeeConstants.HIDE_PARTS_ATTRIBUTE,
+					EmployeeConstants.HIDE_ACCESSORIES_ATTRIBUTE,
+					EmployeeConstants.OUTFIT_BONE_ATTRIBUTE,
+					EmployeeConstants.STYLE_ATTRIBUTE,
+				}
+			do
+				expect(type(name)).to.equal("string")
+				expect(#name > 0).to.equal(true)
+			end
+		end)
+
 		it("uses positive radii, intervals and spring gains", function()
 			expect(EmployeeConstants.WORRIED_RADIUS > 0).to.equal(true)
 			expect(EmployeeConstants.EAR_RADIUS > 0).to.equal(true)

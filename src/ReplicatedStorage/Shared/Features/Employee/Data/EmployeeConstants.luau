@@ -51,6 +51,31 @@ local EmployeeConstants = {
 	PIECES_FOLDER = "Accessories",
 	-- Under ReplicatedStorage: art-owned Accessory instances a skin can name (EmployeeSkinSystem).
 	ACCESSORIES_PATH = { "Assets", "CleanupCrew", "Accessories" },
+	-- On a player's character, written by the server as it dresses it: the colour style of the skin it wears (1..n,
+	-- EmployeeSkinRules.styleIndex).
+	STYLE_ATTRIBUTE = "EmployeeSkinStyle",
+	-- Under ReplicatedStorage: art-owned skinned outfits, one Model per outfit, named by a SkinDef's `outfit`
+	-- (EmployeeOutfitSystem). Each holds OUTFIT_MESHES (skinned MeshParts, StyleSlot attribute), OUTFIT_RIG (one
+	-- placeholder Part per body part holding its Bones, at the template's rest), OUTFIT_STYLES (a Folder per style of
+	-- SurfaceAppearances named by StyleSlot or prop name) and OUTFIT_PROPS (MeshParts, each with a Motor6D whose Hand
+	-- attribute names its body part).
+	OUTFITS_PATH = { "Assets", "CleanupCrew", "Outfits" },
+	OUTFIT_MESHES = "Outfit",
+	OUTFIT_RIG = "Rig",
+	OUTFIT_STYLES = "Styles",
+	OUTFIT_PROPS = "Props",
+	STYLE_SLOT_ATTRIBUTE = "StyleSlot",
+	PROP_HAND_ATTRIBUTE = "Hand",
+	-- On an outfit Model: comma-separated body parts it covers (made invisible) and template pieces or Accessories it
+	-- replaces (hidden), e.g. PricklesSheriff's boots and hat.
+	HIDE_PARTS_ATTRIBUTE = "HideParts",
+	HIDE_ACCESSORIES_ATTRIBUTE = "HideAccessories",
+	-- On the character once fitted: the Folder of skinned outfit meshes (a Folder directly under the character: in a
+	-- sub-Model they do not find the bones) and the Folder of the outfit's emote props (hidden until an emote shows
+	-- them). Bones the fit adds carry OUTFIT_BONE_ATTRIBUTE so a refit removes exactly them.
+	OUTFIT_FOLDER = "Outfit",
+	PROPS_FOLDER = "EmoteProps",
+	OUTFIT_BONE_ATTRIBUTE = "EmployeeOutfitBone",
 	-- On a fitted-gear Model there (EmployeeGearSystem): the name of the body part it sits on. The Model's WorldPivot
 	-- is that part's frame at the template's authored size.
 	GEAR_MOUNT_ATTRIBUTE = "MountPart",

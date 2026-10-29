@@ -14,7 +14,9 @@
 	  forward kinematics from the root (EmployeePoseFormulas.solve), standing at the origin facing -Z. A part no
 	  joint ties to the root (something carried loose) is dropped.
 	- Freeze: every joint is removed and every part anchored: with no WorldModel and nothing animated, the
-	  viewport renders the copy once and then only when it is resized, instead of every frame.
+	  viewport renders the copy once and then only when it is resized, instead of every frame. A copy wearing a
+	  skinned outfit is then welded into one (still anchored) assembly on LowerTorso, or its coat would not follow the
+	  pose.
 	- Face: the pose's face goes on the FacePlate (EmployeeFaceSystem.apply) and the unused face set is dropped.
 
 	@class EmployeePortraitSystem
@@ -143,6 +145,25 @@ local function linksOf(copy: Model, pose: EmployeePoseRegistry.PoseDef?): Links
 	return { parts = parts, links = links }
 end
 
+-- A copy wearing a skinned outfit (EmployeeOutfitSystem) gets every part welded to its LowerTorso, all still anchored.
+-- A skinned mesh only follows Bones whose parts share its assembly joined at LowerTorso (found in Play, 2026-10-29):
+-- frozen as separate anchored parts, the coat stays in its T-posed bind while the body is posed.
+local function joinOutfit(copy: Model)
+	local outfit = copy:FindFirstChild(EmployeeConstants.OUTFIT_FOLDER)
+	local lower = copy:FindFirstChild("LowerTorso")
+	if outfit == nil or not outfit:IsA("Folder") or lower == nil or not lower:IsA("BasePart") then
+		return
+	end
+	for _, descendant in copy:GetDescendants() do
+		if descendant:IsA("BasePart") and descendant ~= lower then
+			local weld = Instance.new("WeldConstraint")
+			weld.Part0 = lower
+			weld.Part1 = descendant
+			weld.Parent = descendant
+		end
+	end
+end
+
 --[=[
 	A posed, static portrait copy of `character`, or nil when it has no root part yet (not streamed in). The caller
 	owns the copy (parents it into a ViewportFrame and destroys it).
@@ -196,6 +217,7 @@ function EmployeePortraitSystem.build(
 			end
 		end
 	end
+	joinOutfit(copy)
 	if pose ~= nil and pose.face ~= nil then
 		EmployeeFaceSystem.apply(copy, pose.face, true)
 	end

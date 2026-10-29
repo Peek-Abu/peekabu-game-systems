@@ -45,6 +45,108 @@ return function()
 		end)
 	end)
 
+	-- A skin with an outfit in three colour styles, each with its own body palette.
+	local function styled()
+		local styledSkin = skin("Styled", "rbxassetid://9")
+		styledSkin.outfit = "Outfit"
+		styledSkin.styles = {
+			{ folder = "Blue", paletteTextureId = "rbxassetid://11" },
+			{ folder = "Pink", paletteTextureId = "rbxassetid://12" },
+			{ folder = "Lilac", paletteTextureId = "rbxassetid://13" },
+		}
+		return styledSkin
+	end
+
+	describe("style", function()
+		it("returns the style for 1..n", function()
+			local styledSkin = styled()
+			for index, want in { "Blue", "Pink", "Lilac" } do
+				expect(EmployeeSkinRules.style(styledSkin, index).folder).to.equal(want)
+			end
+		end)
+
+		it("falls back to style 1 for nil, 0, n+1 and a non-integer", function()
+			local styledSkin = styled()
+			expect(EmployeeSkinRules.style(styledSkin, nil).folder).to.equal("Blue")
+			for _, index in { 0, 4, 1.5, -2 } do
+				expect(EmployeeSkinRules.style(styledSkin, index).folder).to.equal("Blue")
+			end
+		end)
+
+		it("returns nil for a skin with no styles", function()
+			expect(EmployeeSkinRules.style(def.skins.Default, 1)).never.to.be.ok()
+			local empty = skin("Empty", nil)
+			empty.styles = {}
+			expect(EmployeeSkinRules.style(empty, 1)).never.to.be.ok()
+		end)
+	end)
+
+	describe("styleIndex", function()
+		it("keeps a style the skin has and clamps anything else to 1", function()
+			local styledSkin = styled()
+			expect(EmployeeSkinRules.styleIndex(styledSkin, 3)).to.equal(3)
+			expect(EmployeeSkinRules.styleIndex(styledSkin, 9)).to.equal(1)
+			expect(EmployeeSkinRules.styleIndex(styledSkin, nil)).to.equal(1)
+		end)
+
+		it("is 1 for a skin with no styles", function()
+			expect(EmployeeSkinRules.styleIndex(def.skins.Default, 2)).to.equal(1)
+		end)
+	end)
+
+	describe("hasStyles", function()
+		it("is false for no styles, none and a single style", function()
+			expect(EmployeeSkinRules.hasStyles(def.skins.Default)).to.equal(false)
+			local empty = skin("Empty", nil)
+			empty.styles = {}
+			expect(EmployeeSkinRules.hasStyles(empty)).to.equal(false)
+			local one = styled()
+			one.styles = { one.styles[1] }
+			expect(EmployeeSkinRules.hasStyles(one)).to.equal(false)
+		end)
+
+		it("is true for three", function()
+			expect(EmployeeSkinRules.hasStyles(styled())).to.equal(true)
+		end)
+	end)
+
+	describe("palette with a style", function()
+		it("returns style n's palette for a styled skin", function()
+			local styledSkin = styled()
+			expect(EmployeeSkinRules.palette(styledSkin, 2)).to.equal("rbxassetid://12")
+			expect(EmployeeSkinRules.palette(styledSkin, nil)).to.equal("rbxassetid://11")
+			expect(EmployeeSkinRules.palette(styledSkin, 7)).to.equal("rbxassetid://11")
+		end)
+
+		it("keeps the skin's own palette for every other skin", function()
+			expect(EmployeeSkinRules.palette(def.skins.Special, 2)).to.equal("rbxassetid://2")
+		end)
+
+		it("refuses a style's malformed palette", function()
+			local styledSkin = styled()
+			styledSkin.styles[1].paletteTextureId = "rbxassetid://TBD"
+			expect(EmployeeSkinRules.palette(styledSkin, 1)).never.to.be.ok()
+		end)
+	end)
+
+	describe("wornChanged", function()
+		local current = { employee = "Pippa", skin = "Styled", style = 2 }
+
+		it("is false when the employee, skin and style are all the same", function()
+			expect(EmployeeSkinRules.wornChanged(current, "Pippa", "Styled", 2)).to.equal(false)
+		end)
+
+		it("is true for a style-only change, and for another skin or employee", function()
+			expect(EmployeeSkinRules.wornChanged(current, "Pippa", "Styled", 3)).to.equal(true)
+			expect(EmployeeSkinRules.wornChanged(current, "Pippa", "Default", 2)).to.equal(true)
+			expect(EmployeeSkinRules.wornChanged(current, "Cappy", "Styled", 2)).to.equal(true)
+		end)
+
+		it("is true when nothing is worn yet", function()
+			expect(EmployeeSkinRules.wornChanged(nil, "Pippa", "Styled", 1)).to.equal(true)
+		end)
+	end)
+
 	describe("piecePalette", function()
 		it("returns a piece's well-formed palette id", function()
 			local withPieces = skin("A", nil)

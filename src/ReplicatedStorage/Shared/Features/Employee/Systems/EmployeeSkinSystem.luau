@@ -15,6 +15,9 @@
 	- Accessories: each named Accessory found under `accessorySource` is cloned onto the Humanoid; a named
 	  fitted-gear Model is fitted onto its mount part instead (EmployeeGearSystem: scaled with the character, which an
 	  Accessory is not); missing ones are skipped.
+	- Outfit: a skin naming a skinned outfit has it fitted from `outfitSource` (the folder at
+	  EmployeeConstants.OUTFITS_PATH) in the player's colour style (EmployeeOutfitSystem). A styled skin's palette is its
+	  style's (each style recolours the body); the palette never reaches the outfit's meshes or props.
 
 	Every part is optional: a skin that names nothing changes nothing.
 
@@ -27,6 +30,7 @@ local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Dat
 local EmployeeRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeRegistry)
 local EmployeeSkinRules = require(ReplicatedStorage.Shared.Features.Employee.Rules.EmployeeSkinRules)
 local EmployeeGearSystem = require(ReplicatedStorage.Shared.Features.Employee.Systems.EmployeeGearSystem)
+local EmployeeOutfitSystem = require(ReplicatedStorage.Shared.Features.Employee.Systems.EmployeeOutfitSystem)
 
 export type SkinResult = {
 	-- MeshParts given the skin's palette.
@@ -35,6 +39,8 @@ export type SkinResult = {
 	pieces: number,
 	facesSwapped: boolean,
 	accessories: number,
+	-- Whether the skin's skinned outfit was fitted.
+	outfit: boolean,
 }
 
 local EmployeeSkinSystem = {}
@@ -60,22 +66,35 @@ end
 	Applies `skin` to `character`.
 	@param accessorySource Where the skin's accessories are looked up by name (the folder at
 	EmployeeConstants.ACCESSORIES_PATH in the game); nil skips accessories.
+	@param style The player's colour style of the skin (clamped: EmployeeSkinRules.styleIndex); nil = style 1.
+	@param outfitSource Where the skin's outfit is looked up by name (the folder at EmployeeConstants.OUTFITS_PATH);
+	nil skips the outfit.
 ]=]
 function EmployeeSkinSystem.apply(
 	character: Model,
 	skin: EmployeeRegistry.SkinDef,
-	accessorySource: Instance?
+	accessorySource: Instance?,
+	style: number?,
+	outfitSource: Instance?
 ): SkinResult
-	local result: SkinResult = { textured = 0, facesSwapped = false, accessories = 0, pieces = 0 }
+	local result: SkinResult = { textured = 0, facesSwapped = false, accessories = 0, pieces = 0, outfit = false }
 	local pieces = character:FindFirstChild(EmployeeConstants.PIECES_FOLDER)
 
-	local palette = EmployeeSkinRules.palette(skin)
+	local outfitName = skin.outfit
+	local outfit = if outfitName ~= nil and outfitSource ~= nil then outfitSource:FindFirstChild(outfitName) else nil
+	if outfit ~= nil and outfit:IsA("Model") then
+		local styleDef = EmployeeSkinRules.style(skin, style)
+		result.outfit = EmployeeOutfitSystem.fit(character, outfit, if styleDef ~= nil then styleDef.folder else nil)
+	end
+
+	local palette = EmployeeSkinRules.palette(skin, style)
 	if palette ~= nil then
 		for _, descendant in character:GetDescendants() do
 			if
 				descendant:IsA("MeshPart")
 				and descendant.Name ~= EmployeeConstants.FACE_PLATE
 				and (pieces == nil or not descendant:IsDescendantOf(pieces))
+				and not EmployeeOutfitSystem.isOutfitPart(character, descendant)
 			then
 				descendant.TextureID = palette
 				result.textured += 1

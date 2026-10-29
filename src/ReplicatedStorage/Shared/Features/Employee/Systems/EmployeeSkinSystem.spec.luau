@@ -121,6 +121,140 @@ return function()
 		end)
 	end)
 
+	describe("outfit", function()
+		-- A character with a LowerTorso on its Root joint, and an Outfits source holding a one-mesh outfit "Coat" in a
+		-- Blue style, with a Wand prop.
+		local function outfitted()
+			local model, head = makeCharacter()
+			local hrp = Instance.new("Part")
+			hrp.Name = "HumanoidRootPart"
+			hrp.Anchored = true
+			hrp.Parent = model
+			local lower = meshPart(model, "LowerTorso")
+			lower.Anchored = true
+			local root = Instance.new("Motor6D")
+			root.Name = "Root"
+			root.Part0 = hrp
+			root.Part1 = lower
+			root.Parent = lower
+			local source = Instance.new("Folder")
+			local outfit = Instance.new("Model")
+			outfit.Name = "Coat"
+			local meshes = Instance.new("Folder")
+			meshes.Name = EmployeeConstants.OUTFIT_MESHES
+			meshes.Parent = outfit
+			local coat = meshPart(meshes, "CoatMesh")
+			coat:SetAttribute(EmployeeConstants.STYLE_SLOT_ATTRIBUTE, "Opaque")
+			local rig = Instance.new("Folder")
+			rig.Name = EmployeeConstants.OUTFIT_RIG
+			rig.Parent = outfit
+			local holder = Instance.new("Part")
+			holder.Name = "LowerTorso"
+			holder.Parent = rig
+			local bone = Instance.new("Bone")
+			bone.Name = "LowerTorsoBone"
+			bone.Parent = holder
+			local styles = Instance.new("Folder")
+			styles.Name = EmployeeConstants.OUTFIT_STYLES
+			styles.Parent = outfit
+			local blue = Instance.new("Folder")
+			blue.Name = "Blue"
+			local look = Instance.new("SurfaceAppearance")
+			look.Name = "Opaque"
+			look.Parent = blue
+			blue.Parent = styles
+			local props = Instance.new("Folder")
+			props.Name = EmployeeConstants.OUTFIT_PROPS
+			props.Parent = outfit
+			local wand = meshPart(props, "Wand")
+			local joint = Instance.new("Motor6D")
+			joint.Part1 = wand
+			joint:SetAttribute(EmployeeConstants.PROP_HAND_ATTRIBUTE, "RightUpperArm")
+			joint.Parent = wand
+			outfit.Parent = source
+			return model, head, source
+		end
+
+		local function outfitSkin(styles)
+			local def = skin(nil)
+			def.outfit = "Coat"
+			def.styles = styles
+			return def
+		end
+
+		local STYLES = {
+			{ folder = "Blue", paletteTextureId = "rbxassetid://501" },
+			{ folder = "Pink", paletteTextureId = "rbxassetid://502" },
+		}
+
+		it("fits the skin's outfit in the chosen style and reports it", function()
+			local model, _, source = outfitted()
+			local result = EmployeeSkinSystem.apply(model, outfitSkin(STYLES), nil, 1, source)
+			expect(result.outfit).to.equal(true)
+			local fitted = model:FindFirstChild(EmployeeConstants.OUTFIT_FOLDER)
+			expect(fitted).to.be.ok()
+			expect(fitted.CoatMesh:FindFirstChildOfClass("SurfaceAppearance")).to.be.ok()
+			model:Destroy()
+			source:Destroy()
+		end)
+
+		it("gives the body the style's palette and skips the outfit meshes and the props", function()
+			local model, head, source = outfitted()
+			local result = EmployeeSkinSystem.apply(model, outfitSkin(STYLES), nil, 2, source)
+			expect(head.TextureID).to.equal("rbxassetid://502")
+			expect(model.Outfit.CoatMesh.TextureID).to.equal(ORIGINAL)
+			expect(model.EmoteProps.Wand.TextureID).to.equal(ORIGINAL)
+			-- Head, RightUpperArm and LowerTorso: the body, never the outfit.
+			expect(result.textured).to.equal(3)
+			model:Destroy()
+			source:Destroy()
+		end)
+
+		it("reports no outfit without a source, or for an outfit the source lacks", function()
+			local model, _, source = outfitted()
+			expect(EmployeeSkinSystem.apply(model, outfitSkin(STYLES), nil, 1, nil).outfit).to.equal(false)
+			local missing = outfitSkin(STYLES)
+			missing.outfit = "Nowhere"
+			expect(EmployeeSkinSystem.apply(model, missing, nil, 1, source).outfit).to.equal(false)
+			expect(model:FindFirstChild(EmployeeConstants.OUTFIT_FOLDER)).never.to.be.ok()
+			model:Destroy()
+			source:Destroy()
+		end)
+
+		it("leaves exactly one outfit when the skin is applied twice (a re-dress never doubles the coat)", function()
+			local model, _, source = outfitted()
+			EmployeeSkinSystem.apply(model, outfitSkin(STYLES), nil, 1, source)
+			EmployeeSkinSystem.apply(model, outfitSkin(STYLES), nil, 2, source)
+			local outfits, props, meshes, bones = 0, 0, 0, 0
+			for _, child in model:GetChildren() do
+				if child.Name == EmployeeConstants.OUTFIT_FOLDER then
+					outfits += 1
+					meshes += #child:GetChildren()
+				elseif child.Name == EmployeeConstants.PROPS_FOLDER then
+					props += 1
+				end
+			end
+			for _, d in model:GetDescendants() do
+				if d:IsA("Bone") then
+					bones += 1
+				end
+			end
+			expect(outfits).to.equal(1)
+			expect(props).to.equal(1)
+			expect(meshes).to.equal(1)
+			expect(bones).to.equal(1)
+			model:Destroy()
+			source:Destroy()
+		end)
+
+		it("reports no outfit for a skin without one", function()
+			local model, _, source = outfitted()
+			expect(EmployeeSkinSystem.apply(model, skin("rbxassetid://200"), nil, 1, source).outfit).to.equal(false)
+			model:Destroy()
+			source:Destroy()
+		end)
+	end)
+
 	describe("pieces", function()
 		-- A character whose own clothes sit in its pieces folder: a Hoodie model of two MeshParts and a plain Shorts part.
 		local function dressed()

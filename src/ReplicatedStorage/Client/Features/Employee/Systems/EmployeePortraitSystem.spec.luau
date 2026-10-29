@@ -167,6 +167,60 @@ return function()
 			expect(near(copy.RightUpperArm.Position, Vector3.new(0.5, 1.5, 0))).to.equal(true)
 		end)
 
+		-- A rig wearing a skinned outfit (EmployeeOutfitSystem): a LowerTorso on the root, a Bone under the arm and a
+		-- coat mesh in the Outfit Folder welded to LowerTorso.
+		local function outfitted()
+			local rig = makeRig()
+			local at = rig.HumanoidRootPart.CFrame
+			local lower = part("LowerTorso", rig, at * CFrame.new(0, -0.2, 0))
+			motor("Root", rig.HumanoidRootPart, lower, CFrame.new(0, -0.2, 0), CFrame.identity)
+			local bone = Instance.new("Bone")
+			bone.Name = "RightUpperArm"
+			bone.Parent = rig.RightUpperArm
+			local outfit = Instance.new("Folder")
+			outfit.Name = EmployeeConstants.OUTFIT_FOLDER
+			outfit.Parent = rig
+			local coat = part("Coat", outfit, at, "MeshPart")
+			local weld = Instance.new("WeldConstraint")
+			weld.Part0 = lower
+			weld.Part1 = coat
+			weld.Parent = coat
+			return rig
+		end
+
+		it(
+			"joins a copy wearing an outfit into one anchored assembly on LowerTorso, so the coat follows the pose",
+			function()
+				-- A skinned mesh only follows Bones whose parts share its assembly, joined at LowerTorso (on
+				-- HumanoidRootPart it stays rigid): found in Play, 2026-10-29.
+				local pose = { name = "up", joints = { RightShoulder = Vector3.new(0, 0, 90) } }
+				local copy = EmployeePortraitSystem.build(outfitted(), pose)
+				local lower = copy.LowerTorso
+				local joined = {}
+				for _, d in copy:GetDescendants() do
+					if d:IsA("WeldConstraint") then
+						expect(d.Part0).to.equal(lower)
+						joined[d.Part1] = true
+					end
+				end
+				for _, d in copy:GetDescendants() do
+					if d:IsA("BasePart") then
+						expect(d.Anchored).to.equal(true)
+						if d ~= lower then
+							expect(joined[d]).to.equal(true)
+						end
+					end
+				end
+				expect(copy.Outfit:FindFirstChild("Coat")).to.be.ok()
+				expect(copy.RightUpperArm:FindFirstChildOfClass("Bone")).to.be.ok()
+				-- The pose still places the parts.
+				expect(near(copy.RightUpperArm.Position, Vector3.new(0.5, 1.5, 0))).to.equal(true)
+				expect(count(copy, function(d)
+					return d:IsA("JointInstance")
+				end)).to.equal(0)
+			end
+		)
+
 		it("puts on the pose's face and drops the unused face set", function()
 			local pose = { name = "worried", face = "Worried", joints = {} }
 			local copy = EmployeePortraitSystem.build(makeRig(), pose)

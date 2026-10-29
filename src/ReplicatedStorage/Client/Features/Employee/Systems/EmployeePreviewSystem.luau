@@ -74,7 +74,14 @@ local function dressed(employee: string, skin: string?, source: Instance): Model
 	end
 	local look = EmployeeSkinRules.select(def, skin)
 	if look ~= nil then
-		EmployeeSkinSystem.apply(model, look, resolve(source, EmployeeConstants.ACCESSORIES_PATH))
+		-- Style 1 until the previews take a style (WIRING-PLAN batch 2); the outfit is fitted like the server's.
+		EmployeeSkinSystem.apply(
+			model,
+			look,
+			resolve(source, EmployeeConstants.ACCESSORIES_PATH),
+			nil,
+			resolve(source, EmployeeConstants.OUTFITS_PATH)
+		)
 	end
 	EmployeeLanyardSystem.attachPreview(model)
 	return model

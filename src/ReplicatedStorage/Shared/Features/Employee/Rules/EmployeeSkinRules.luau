@@ -15,7 +15,22 @@ export type SkinSet = {
 	defaultSkin: string,
 }
 
+-- What a character was built as: its employee, skin key and colour style (EmployeeServiceServer).
+export type Worn = {
+	employee: string,
+	skin: string,
+	style: number,
+}
+
 local EmployeeSkinRules = {}
+
+--[=[
+	Whether a character built as `current` must be rebuilt to wear `employee` / `skin` / `style`: any of the three
+	changed, or nothing is worn yet. A style-only change rebuilds too (the outfit's looks and the body palette change).
+]=]
+function EmployeeSkinRules.wornChanged(current: Worn?, employee: string, skin: string, style: number): boolean
+	return current == nil or current.employee ~= employee or current.skin ~= skin or current.style ~= style
+end
 
 --[=[
 	The player's skin when the employee has it, else the employee's default skin; nil only when the
@@ -40,10 +55,47 @@ local function wellFormed(id: string?): string?
 end
 
 --[=[
-	The skin's palette texture id when it is a well-formed asset id; nil when the art is pending or the id
-	is malformed (applying the skin then leaves the palette alone).
+	The colour style a player's `wanted` style resolves to: itself when the skin has that style, else 1 (nil, 0, past
+	the end, or not a whole number). 1 for a skin with no styles.
 ]=]
-function EmployeeSkinRules.palette(skin: EmployeeRegistry.SkinDef): string?
+function EmployeeSkinRules.styleIndex(skin: EmployeeRegistry.SkinDef, wanted: number?): number
+	local styles = skin.styles
+	if styles ~= nil and wanted ~= nil and wanted == math.floor(wanted) and styles[wanted] ~= nil then
+		return wanted
+	end
+	return 1
+end
+
+--[=[
+	The skin's colour style for `wanted` (clamped by `styleIndex`); nil for a skin with no styles.
+]=]
+function EmployeeSkinRules.style(skin: EmployeeRegistry.SkinDef, wanted: number?): EmployeeRegistry.StyleDef?
+	local styles = skin.styles
+	if styles == nil then
+		return nil
+	end
+	return styles[EmployeeSkinRules.styleIndex(skin, wanted)]
+end
+
+--[=[
+	Whether the skin has real colour styles to pick between (more than one with art): only then does the UI show a
+	style row.
+]=]
+function EmployeeSkinRules.hasStyles(skin: EmployeeRegistry.SkinDef): boolean
+	local styles = skin.styles
+	return styles ~= nil and #styles > 1
+end
+
+--[=[
+	The body palette texture id the skin gives the character, when it is a well-formed asset id: a styled skin's
+	`style` palette (each style recolours the body), else the skin's own. nil when the art is pending or the id is
+	malformed (applying the skin then leaves the palette alone).
+]=]
+function EmployeeSkinRules.palette(skin: EmployeeRegistry.SkinDef, style: number?): string?
+	local styleDef = EmployeeSkinRules.style(skin, style)
+	if styleDef ~= nil then
+		return wellFormed(styleDef.paletteTextureId)
+	end
 	return wellFormed(skin.paletteTextureId)
 end
 

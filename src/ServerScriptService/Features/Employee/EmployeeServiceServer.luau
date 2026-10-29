@@ -58,9 +58,9 @@ local skinOf: { [number]: string } = {}
 -- Characters given a uniform piece.
 local uniformed = 0
 local connections: { RBXScriptConnection } = {}
--- What each player's current character was built as (employee and skin key), to tell whether a loadout change
--- needs a new character.
-local worn: { [number]: { employee: string, skin: string } } = {}
+-- What each player's current character was built as (employee, skin key and colour style), to tell whether a
+-- loadout change needs a new character.
+local worn: { [number]: EmployeeSkinRules.Worn } = {}
 local swapped = 0
 local cosmeticConnection: SignalTyped.Connection? = nil
 -- Each player's CharacterAdded watch, disconnected when they leave (one per join otherwise piles up).
@@ -105,15 +105,24 @@ local function subjects(): { EmployeeExpressionSystem.Subject }
 	return list
 end
 
-local function accessorySource(): Instance?
+local function resolve(path: { string }): Instance?
 	local current: Instance? = ReplicatedStorage
-	for _, name in EmployeeConstants.ACCESSORIES_PATH do
+	for _, name in path do
 		if current == nil then
 			return nil
 		end
 		current = current:FindFirstChild(name)
 	end
 	return current
+end
+
+local function accessorySource(): Instance?
+	return resolve(EmployeeConstants.ACCESSORIES_PATH)
+end
+
+-- The art-owned skinned outfits a skin can name (EmployeeOutfitSystem).
+local function outfitSource(): Instance?
+	return resolve(EmployeeConstants.OUTFITS_PATH)
 end
 
 -- The player's general account rank level (1..7; level 1 until Rank has loaded it).
@@ -144,6 +153,13 @@ local function skinKeyOf(userId: number, employee: string): string?
 	return string.match(look.skin, "^[^%.]+%.(.+)$")
 end
 
+-- The colour style the player's loadout picks for `skin` on `employee`, clamped to one the skin has (1 before the
+-- loadout loads, or for a skin with no styles).
+local function styleOf(userId: number, employee: string, skin: EmployeeRegistry.SkinDef): number
+	local look = CosmeticServiceServer:lookOf(userId, employee)
+	return EmployeeSkinRules.styleIndex(skin, if look ~= nil then look.style else nil)
+end
+
 -- Names the vacuum the player's outfit wants on their character (VacuumServiceServer wears it, and swaps the pack
 -- when it changes); nothing before the loadout loads (Standard Issue).
 local function markVacuum(userId: number, character: Model)
@@ -169,10 +185,12 @@ local function dress(player: Player, character: Model)
 		log:warn(`{def.name} has no default skin {def.defaultSkin}`)
 		return
 	end
+	local style = styleOf(player.UserId, def.name, skin)
 	skinOf[player.UserId] = skin.name
-	worn[player.UserId] = { employee = def.name, skin = skin.name }
+	worn[player.UserId] = { employee = def.name, skin = skin.name, style = style }
 	-- The skin the outfit asks for (its art may still be the Default's): a preview of the outfit matches on it.
 	character:SetAttribute(EmployeeConstants.SKIN_ATTRIBUTE, skinKeyOf(player.UserId, def.name) or skin.name)
+	character:SetAttribute(EmployeeConstants.STYLE_ATTRIBUTE, style)
 	character:SetAttribute(EmployeeConstants.RANK_ATTRIBUTE, rankLevelOf(player.UserId).level)
 	for _, legacyName in { "PippaVest", "PippaLanyard" } do
 		local legacy = character:FindFirstChild(legacyName)
@@ -180,8 +198,11 @@ local function dress(player: Player, character: Model)
 			legacy:Destroy()
 		end
 	end
-	local result = EmployeeSkinSystem.apply(character, skin, accessorySource())
-	if result.textured > 0 or result.facesSwapped or result.accessories > 0 then
+	local result = EmployeeSkinSystem.apply(character, skin, accessorySource(), style, outfitSource())
+	if skin.outfit ~= nil and not result.outfit then
+		log:warn(`{def.name} skin {skin.name}: outfit {skin.outfit} could not be fitted`)
+	end
+	if result.textured > 0 or result.facesSwapped or result.accessories > 0 or result.outfit then
 		skinned += 1
 	end
 	if EmployeeGearSystem.wear(character, def.uniform, accessorySource()) > 0 then
@@ -230,7 +251,7 @@ local function spawnFor(player: Player)
 	EmployeeCharacterSystem.assign(player, model, nil, false)
 end
 
--- Rebuilds the player's character where it stands when their loadout names another employee or skin than they wear.
+-- Rebuilds the player's character where it stands when their loadout names another employee, skin or style than they wear.
 local function swapIfChanged(userId: number)
 	local player = Players:GetPlayerByUserId(userId)
 	local character = if player ~= nil then player.Character else nil
@@ -250,7 +271,10 @@ local function swapIfChanged(userId: number)
 		return
 	end
 	local wantedSkin = EmployeeSkinRules.select(def, skinKeyOf(userId, employee))
-	if current.employee == employee and wantedSkin ~= nil and current.skin == wantedSkin.name then
+	if
+		wantedSkin ~= nil
+		and not EmployeeSkinRules.wornChanged(current, employee, wantedSkin.name, styleOf(userId, employee, wantedSkin))
+	then
 		return
 	end
 	local model = buildFor(player)
