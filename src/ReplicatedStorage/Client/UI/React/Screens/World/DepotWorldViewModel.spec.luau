@@ -31,7 +31,7 @@ end
 
 return function()
 	describe("truckTag", function()
-		it("shows an empty truck with open seats and how to join", function()
+		it("shows an empty truck with open seats and asks someone to host it", function()
 			local tag = DepotWorldViewModel.truckTag(1, 4, nil, NOW)
 			expect(tag.title).to.equal("TRUCK 1")
 			expect(#tag.seats).to.equal(4)
@@ -39,8 +39,37 @@ return function()
 				expect(filled).to.equal(false)
 			end
 			expect(tag.count).to.equal("0 / 4 ABOARD")
-			expect(tag.line).to.equal("Stand in the bed to join")
+			expect(tag.line).to.equal("Step in to host!")
+			expect(tag.icon).to.equal(nil)
 			expect(tag.warn).to.equal(false)
+		end)
+
+		it("names a hosted truck's host with a crown", function()
+			local tag = DepotWorldViewModel.truckTag(2, 4, pad({ 11, 12 }), NOW, { name = "Sam", locked = false })
+			expect(tag.line).to.equal("Sam's truck")
+			expect(tag.icon).to.equal("hostCrown")
+			expect(tag.warn).to.equal(false)
+		end)
+
+		it("says when a hosted truck is friends only, with a lock", function()
+			local tag = DepotWorldViewModel.truckTag(2, 4, pad({ 11 }), NOW, { name = "Sam", locked = true })
+			expect(tag.line).to.equal("Sam's friends only")
+			expect(tag.icon).to.equal("friendsLock")
+		end)
+
+		it("still counts down a hosted truck once its host starts", function()
+			local tag = DepotWorldViewModel.truckTag(2, 4, pad({ 11 }, 5), NOW, { name = "Sam", locked = false })
+			expect(tag.line).to.equal("Leaving in 0:05")
+			expect(tag.icon).to.equal(nil)
+			expect(tag.warn).to.equal(true)
+		end)
+
+		it("draws the pad's live seats (a Big Crew truck has 6)", function()
+			local big = pad({ 11, 12 })
+			big.capacity = 6
+			local tag = DepotWorldViewModel.truckTag(2, 4, big, NOW, { name = "Sam", locked = false })
+			expect(#tag.seats).to.equal(6)
+			expect(tag.count).to.equal("2 / 6 ABOARD")
 		end)
 
 		it("fills a seat per player aboard and keeps the join line while time is left", function()
@@ -86,8 +115,9 @@ return function()
 	describe("padFor", function()
 		it("finds the pad whose crew stand in the truck", function()
 			local snapshot = { pads = { a = pad({ 11 }, 10), b = pad({ 21, 22 }, 12) } }
-			local found = DepotWorldViewModel.padFor(snapshot, 2, players({ [11] = 1, [21] = 2, [22] = 2 }))
+			local found, padId = DepotWorldViewModel.padFor(snapshot, 2, players({ [11] = 1, [21] = 2, [22] = 2 }))
 			expect(found).to.equal(snapshot.pads.b)
+			expect(padId).to.equal("b")
 		end)
 
 		it("finds nothing for an empty truck, no snapshot, or crew without a truck field", function()
@@ -117,6 +147,12 @@ return function()
 			expect(DepotWorldViewModel.sameTag(a, DepotWorldViewModel.truckTag(1, 4, pad({ 1, 2 }, 9), NOW))).to.equal(
 				false
 			)
+			-- Same words, but the truck went friends only: the icon changed.
+			local open = DepotWorldViewModel.truckTag(2, 4, pad({ 1, 2 }), NOW, { name = "Sam", locked = false })
+			local hosted = DepotWorldViewModel.truckTag(2, 4, pad({ 1, 2 }), NOW, { name = "Sam", locked = false })
+			expect(DepotWorldViewModel.sameTag(open, hosted)).to.equal(true)
+			hosted.icon = "friendsLock"
+			expect(DepotWorldViewModel.sameTag(open, hosted)).to.equal(false)
 			expect(DepotWorldViewModel.sameTag(nil, a)).to.equal(false)
 			expect(DepotWorldViewModel.sameTag(a, nil)).to.equal(false)
 			expect(DepotWorldViewModel.sameTag(nil, nil)).to.equal(true)

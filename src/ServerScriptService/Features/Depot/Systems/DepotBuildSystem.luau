@@ -284,6 +284,8 @@ function DepotBuildSystem.build(
 		pad:SetAttribute(QueueConstants.CAPACITY_ATTRIBUTE, truck.capacity)
 		pad:SetAttribute(QueueConstants.COUNTDOWN_ATTRIBUTE, truck.countdown)
 		pad:SetAttribute(QueueConstants.DESTINATION_ATTRIBUTE, DepotConstants.ROLE_SHIFT)
+		-- Crew hosting: the first player in hosts the truck and starts the trip (HostServiceServer).
+		pad:SetAttribute(QueueConstants.HOLD_ATTRIBUTE, true)
 		CollectionService:AddTag(pad, QueueConstants.TAG)
 		TruckVisual.build(pad, truckFolder)
 		local tag = shell("PadTag", pad, DepotConstants.BILLBOARD_PX.truck, DepotLayoutConstants.PAD_TAG_OFFSET)

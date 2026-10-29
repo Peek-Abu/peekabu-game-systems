@@ -10,6 +10,8 @@ export type PadConfig = {
 	capacity: number,
 	countdown: number,
 	destination: string,
+	-- A held pad starts no countdown on its own: the game starts one (QueueServiceServer:startCountdown).
+	hold: boolean,
 }
 
 export type PadStatus = "open" | "departing"
@@ -39,6 +41,7 @@ export type PadSnapshot = {
 	destination: string,
 	endsAt: number?,
 	departing: boolean,
+	held: boolean,
 }
 
 export type QueueSnapshot = {
@@ -70,6 +73,10 @@ export type QueueConfigUpdate = {
 -- Builds the payload for a departing party (a match id). An error or a payload over the limits
 -- sends `{}` instead. Runs inside the Heartbeat tick: it MUST NOT yield.
 export type DepartDataResolver = (pad: BasePart, party: { Player }) -> QueuePayload
+
+-- Whether `player` may be aboard `pad` (a kick, a friends-only truck), asked every sample for each player standing on
+-- it, members included. `members` is the party before this sample. Runs inside the Heartbeat tick: it MUST NOT yield.
+export type BoardFilter = (pad: BasePart, player: Player, members: { Player }) -> boolean
 
 -- Where a player lands when a local move takes them to a role. `index` is their place in the party
 -- (1-based), so a game can spread them out. Runs inside the Heartbeat tick: it MUST NOT yield. Returning

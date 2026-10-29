@@ -45,6 +45,18 @@ return function()
 			expect(QueuePadRules.config(4, 0 / 0, "away")).to.equal(nil)
 		end)
 
+		it("reads hold, off when absent", function()
+			expect(QueuePadRules.config(4, 15, "away").hold).to.equal(false)
+			expect(QueuePadRules.config(4, 15, "away", true).hold).to.equal(true)
+			expect(QueuePadRules.config(4, 15, "away", false).hold).to.equal(false)
+		end)
+
+		it("refuses a hold that is not true or false", function()
+			local config, reason = QueuePadRules.config(4, 15, "away", "yes")
+			expect(config).to.equal(nil)
+			expect(reason).never.to.equal(nil)
+		end)
+
 		it("refuses a pad with no destination", function()
 			expect(QueuePadRules.config(4, 15, nil)).to.equal(nil)
 			expect(QueuePadRules.config(4, 15, "")).to.equal(nil)
@@ -91,6 +103,15 @@ return function()
 		it("never goes over capacity; the earliest keep their seats", function()
 			expect(same(QueuePadRules.admit({ 3, 1 }, { 1, 2, 3, 4 }, 3), { 3, 1, 2 })).to.equal(true)
 		end)
+
+		it("keeps seated members when the seats drop below them, and admits nobody new", function()
+			expect(same(QueuePadRules.admit({ 1, 2, 3 }, { 1, 2, 3, 4 }, 2), { 1, 2, 3 })).to.equal(true)
+		end)
+
+		it("leaves out refused players, newcomers and members alike", function()
+			local refused = { [2] = true, [4] = true }
+			expect(same(QueuePadRules.admit({ 1, 2 }, { 1, 2, 3, 4 }, 4, refused), { 1, 3 })).to.equal(true)
+		end)
 	end)
 
 	describe("deadline", function()
@@ -109,6 +130,19 @@ return function()
 		it("stops the countdown when the pad empties", function()
 			expect(QueuePadRules.deadline({ 1 }, {}, 110, 105, 15)).to.equal(nil)
 		end)
+
+		it("starts no countdown on a held pad", function()
+			expect(QueuePadRules.deadline({}, { 1 }, nil, 100, 15, true)).to.equal(nil)
+			expect(QueuePadRules.deadline({ 1 }, { 1, 2 }, nil, 105, 15, true)).to.equal(nil)
+		end)
+
+		it("keeps a held pad's started countdown when someone joins", function()
+			expect(QueuePadRules.deadline({ 1 }, { 1, 2 }, 110, 105, 15, true)).to.equal(110)
+		end)
+
+		it("stops a held pad's countdown when it empties", function()
+			expect(QueuePadRules.deadline({ 1 }, {}, 110, 105, 15, true)).to.equal(nil)
+		end)
 	end)
 
 	describe("canDepart", function()
@@ -122,6 +156,10 @@ return function()
 
 		it("refuses while the pad is already departing", function()
 			expect(QueuePadRules.canDepart({ 1 }, "departing", 1)).to.equal(false)
+		end)
+
+		it("refuses on a held pad: the game decides when it leaves", function()
+			expect(QueuePadRules.canDepart({ 1 }, "open", 1, true)).to.equal(false)
 		end)
 	end)
 end

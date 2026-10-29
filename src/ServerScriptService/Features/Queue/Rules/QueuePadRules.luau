@@ -5,11 +5,12 @@
 	- `config`: a pad's attributes, defaulted and checked.
 	- `isAboard`: whether a point (a HumanoidRootPart) stands on the pad, measured in the pad's own space so
 	  a rotated pad works.
-	- `admit`: the party after a sample: members still aboard keep their place, newcomers follow, never
-	  past capacity.
+	- `admit`: the party after a sample: members still aboard keep their place (even past a lowered seat count),
+	  newcomers follow while seats are free, and refused players are left out.
 	- `deadline`: the countdown starts when the first player boards, resets on every join, stays when
-	  someone leaves and stops when the pad empties.
-	- `canDepart`: anyone aboard an open pad may Depart now.
+	  someone leaves and stops when the pad empties. A held pad starts none on its own: a started one stays
+	  through joins and stops when the pad empties.
+	- `canDepart`: anyone aboard an open pad may Depart now, except on a held pad.
 
 	@class QueuePadRules
 ]=]
@@ -25,7 +26,8 @@ local QueuePadRules = {}
 function QueuePadRules.config(
 	capacity: unknown,
 	countdown: unknown,
-	destination: unknown
+	destination: unknown,
+	hold: unknown?
 ): (QueueTypes.PadConfig?, string?)
 	local seats = if capacity == nil then QueueConstants.DEFAULT_CAPACITY else capacity
 	if type(seats) ~= "number" or seats ~= math.floor(seats) or seats < 1 or seats > QueueConstants.MAX_CAPACITY then
@@ -38,10 +40,15 @@ function QueuePadRules.config(
 	if type(destination) ~= "string" or destination == "" then
 		return nil, `{QueueConstants.DESTINATION_ATTRIBUTE} must name a role`
 	end
+	local held = if hold == nil then false else hold
+	if type(held) ~= "boolean" then
+		return nil, `{QueueConstants.HOLD_ATTRIBUTE} must be true or false`
+	end
 	return {
 		capacity = seats,
 		countdown = math.clamp(seconds, 0, QueueConstants.MAX_COUNTDOWN),
 		destination = destination,
+		hold = held,
 	},
 		nil
 end
@@ -56,16 +63,24 @@ function QueuePadRules.isAboard(padCFrame: CFrame, padSize: Vector3, point: Vect
 		and offset.Y <= half.Y + height
 end
 
--- The party after a sample: `existing` members still in `aboard` (in their order), then newcomers from
--- `aboard` (in its order), up to `capacity`.
-function QueuePadRules.admit(existing: { number }, aboard: { number }, capacity: number): { number }
+-- The party after a sample: `existing` members still in `aboard` (in their order, all of them: a seat count lowered
+-- under the party unseats nobody), then newcomers from `aboard` (in its order) while fewer than `capacity` are
+-- aboard. Anyone in `refused` is left out.
+function QueuePadRules.admit(
+	existing: { number },
+	aboard: { number },
+	capacity: number,
+	refused: { [number]: boolean }?
+): { number }
 	local present: { [number]: boolean } = {}
 	for _, userId in aboard do
-		present[userId] = true
+		if refused == nil or not refused[userId] then
+			present[userId] = true
+		end
 	end
 	local result: { number } = {}
 	for _, userId in existing do
-		if present[userId] and #result < capacity then
+		if present[userId] then
 			table.insert(result, userId)
 		end
 	end
@@ -73,7 +88,7 @@ function QueuePadRules.admit(existing: { number }, aboard: { number }, capacity:
 		if #result >= capacity then
 			break
 		end
-		if table.find(result, userId) == nil then
+		if present[userId] and table.find(result, userId) == nil then
 			table.insert(result, userId)
 		end
 	end
@@ -86,10 +101,14 @@ function QueuePadRules.deadline(
 	current: { number },
 	deadline: number?,
 	now: number,
-	countdown: number
+	countdown: number,
+	held: boolean?
 ): number?
 	if #current == 0 then
 		return nil
+	end
+	if held then
+		return deadline
 	end
 	for _, userId in current do
 		if table.find(previous, userId) == nil then
@@ -99,8 +118,13 @@ function QueuePadRules.deadline(
 	return deadline or now + countdown
 end
 
-function QueuePadRules.canDepart(members: { number }, status: QueueTypes.PadStatus, userId: number): boolean
-	return status == "open" and table.find(members, userId) ~= nil
+function QueuePadRules.canDepart(
+	members: { number },
+	status: QueueTypes.PadStatus,
+	userId: number,
+	held: boolean?
+): boolean
+	return not held and status == "open" and table.find(members, userId) ~= nil
 end
 
 return QueuePadRules

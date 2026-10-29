@@ -1,0 +1,128 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local HostTruckTracker = require(script.Parent.HostTruckTracker)
+local HostConstants = require(ReplicatedStorage.Shared.Features.Host.Data.HostConstants)
+local HostSnapshotUtils = require(ReplicatedStorage.Shared.Features.Host.Utils.HostSnapshotUtils)
+
+local IDLE = HostConstants.IDLE_SECONDS
+
+local function has(list, value)
+	return table.find(list, value) ~= nil
+end
+
+return function()
+	local tracker
+
+	beforeEach(function()
+		tracker = HostTruckTracker.new()
+	end)
+
+	it("makes the first player in the host and says it changed", function()
+		expect(tracker:sync("pad1", { 7 }, false, 100)).to.equal(true)
+		expect(tracker:hostOf("pad1")).to.equal(7)
+		expect(tracker:sync("pad1", { 7, 8 }, false, 101)).to.equal(false)
+	end)
+
+	it("hands the truck to the next member when the host leaves", function()
+		tracker:sync("pad1", { 7, 8 }, false, 100)
+		expect(tracker:sync("pad1", { 8 }, false, 101)).to.equal(true)
+		expect(tracker:hostOf("pad1")).to.equal(8)
+	end)
+
+	it("forgets an emptied truck", function()
+		tracker:sync("pad1", { 7 }, false, 100)
+		expect(tracker:sync("pad1", {}, false, 101)).to.equal(true)
+		expect(tracker:hostOf("pad1")).to.equal(nil)
+		expect(tracker:sync("pad1", {}, false, 102)).to.equal(false)
+	end)
+
+	it("auto-starts a truck left unstarted for the idle time", function()
+		tracker:sync("pad1", { 7 }, false, 100)
+		expect(has(tracker:idleDue(100 + IDLE - 1), "pad1")).to.equal(false)
+		expect(has(tracker:idleDue(100 + IDLE), "pad1")).to.equal(true)
+	end)
+
+	it("restarts the idle wait when the host changes", function()
+		tracker:sync("pad1", { 7, 8 }, false, 100)
+		tracker:sync("pad1", { 8 }, false, 130)
+		expect(has(tracker:idleDue(100 + IDLE), "pad1")).to.equal(false)
+		expect(has(tracker:idleDue(130 + IDLE), "pad1")).to.equal(true)
+	end)
+
+	it("waits while a countdown runs, and restarts the idle wait when it stops without leaving", function()
+		tracker:sync("pad1", { 7 }, false, 100)
+		tracker:sync("pad1", { 7 }, true, 110)
+		expect(has(tracker:idleDue(100 + IDLE), "pad1")).to.equal(false)
+		-- Cancelled (or a failed trip put the crew back): a fresh idle wait, not an instant restart.
+		tracker:sync("pad1", { 7 }, false, 120)
+		expect(has(tracker:idleDue(120 + IDLE - 1), "pad1")).to.equal(false)
+		expect(has(tracker:idleDue(120 + IDLE), "pad1")).to.equal(true)
+	end)
+
+	it("publishes the hosted trucks for clients", function()
+		tracker:sync("pad1", { 7 }, false, 100)
+		tracker:sync("pad2", {}, false, 100)
+		local snapshot = HostSnapshotUtils.decode(tracker:snapshot())
+		expect(snapshot.trucks.pad1.host).to.equal(7)
+		expect(snapshot.trucks.pad1.locked).to.equal(false)
+		expect(snapshot.trucks.pad2).to.equal(nil)
+	end)
+
+	describe("kick", function()
+		it("keeps a kicked player out until the truck empties", function()
+			tracker:sync("pad1", { 7, 8 }, false, 100)
+			expect(tracker:kick("pad1", 8)).to.equal(true)
+			expect(tracker:isKicked("pad1", 8)).to.equal(true)
+			expect(tracker:isKicked("pad1", 9)).to.equal(false)
+			tracker:sync("pad1", { 7 }, false, 101)
+			expect(tracker:isKicked("pad1", 8)).to.equal(true)
+			tracker:sync("pad1", {}, false, 102)
+			expect(tracker:isKicked("pad1", 8)).to.equal(false)
+		end)
+
+		it("keeps the kick when the host changes", function()
+			tracker:sync("pad1", { 7, 8, 9 }, false, 100)
+			tracker:kick("pad1", 9)
+			tracker:sync("pad1", { 8 }, false, 101)
+			expect(tracker:isKicked("pad1", 9)).to.equal(true)
+		end)
+
+		it("does nothing on an unhosted truck", function()
+			expect(tracker:kick("pad1", 8)).to.equal(false)
+		end)
+	end)
+
+	describe("lock", function()
+		it("turns on and off, says whether it changed, and is published", function()
+			tracker:sync("pad1", { 7 }, false, 100)
+			expect(tracker:setLocked("pad1", true)).to.equal(true)
+			expect(tracker:setLocked("pad1", true)).to.equal(false)
+			expect(tracker:locked("pad1")).to.equal(true)
+			expect(HostSnapshotUtils.decode(tracker:snapshot()).trucks.pad1.locked).to.equal(true)
+			tracker:setLocked("pad1", false)
+			expect(tracker:locked("pad1")).to.equal(false)
+		end)
+
+		it("turns off when the host changes: it was the old host's friends", function()
+			tracker:sync("pad1", { 7, 8 }, false, 100)
+			tracker:setLocked("pad1", true)
+			expect(tracker:sync("pad1", { 8 }, false, 101)).to.equal(true)
+			expect(tracker:locked("pad1")).to.equal(false)
+		end)
+
+		it("turns off when the truck empties, and can't be set on an unhosted truck", function()
+			tracker:sync("pad1", { 7 }, false, 100)
+			tracker:setLocked("pad1", true)
+			tracker:sync("pad1", {}, false, 101)
+			expect(tracker:locked("pad1")).to.equal(false)
+			expect(tracker:setLocked("pad1", true)).to.equal(false)
+		end)
+	end)
+
+	it("drops a removed truck", function()
+		tracker:sync("pad1", { 7 }, false, 100)
+		tracker:remove("pad1")
+		expect(tracker:hostOf("pad1")).to.equal(nil)
+		expect(#tracker:idleDue(100 + IDLE)).to.equal(0)
+	end)
+end

@@ -93,6 +93,7 @@ return UILabs.CreateReactStory({
 			destination = DepotConstants.ROLE_SHIFT,
 			endsAt = if departing then nil else NOW + secondsLeft,
 			departing = departing,
+			held = false,
 		}
 		else nil
 	local full: QueueTypes.PadSnapshot = {
@@ -101,6 +102,7 @@ return UILabs.CreateReactStory({
 		destination = DepotConstants.ROLE_SHIFT,
 		endsAt = NOW + 8,
 		departing = false,
+		held = false,
 	}
 	local contract = DepotConstants.CONTRACTS[1]
 	local client = if props.controls.LongClient then string.rep("Pemberton ", 6) else "Pemberton Dental"

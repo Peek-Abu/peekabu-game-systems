@@ -1,8 +1,9 @@
 --!strict
 --[=[
 	QueuePadSystem: the pads in the world. Every BasePart tagged QueuePad has its attributes read once when
-	tagged (QueueCapacity, QueueCountdown, QueueDestination; set them first) and is sampled every tick: a
-	living player whose HumanoidRootPart is over the pad is aboard (QueuePadRules.isAboard). Membership,
+	tagged (QueueCapacity, QueueCountdown, QueueDestination, QueueHold; set them first) and is sampled every tick: a
+	living player whose HumanoidRootPart is over the pad is aboard (QueuePadRules.isAboard), unless the game's board
+	filter refuses them (`setBoardFilter`); `refused` fires for each refused player once per visit to the pad. Membership,
 	countdowns and Depart now are the specced QueuePadTracker; this module turns Instances into its ids,
 	hands a due pad's party to `onDue` and publishes the pads as the `queue` world entry (at most once per
 	frame, and never after `stop`). A misconfigured pad is warned about and ignored.
@@ -21,6 +22,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local Observers = require(ReplicatedStorage.Packages.Observers)
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
+local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local QueueConstants = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueConstants)
 local QueueTypes = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueTypes)
 local QueuePadRules = require(ServerScriptService.Features.Queue.Rules.QueuePadRules)
@@ -30,6 +32,7 @@ local StateSyncWorldStore = require(ServerScriptService.Features.StateSync.State
 export type OnDue = (pad: BasePart, config: QueueTypes.PadConfig, party: { Player }) -> ()
 
 export type QueuePadSystem = {
+	refused: SignalTyped.Signal<BasePart, Player>,
 	start: (self: QueuePadSystem) -> (),
 	stop: (self: QueuePadSystem) -> (),
 	step: (self: QueuePadSystem, now: number) -> (),
@@ -40,6 +43,14 @@ export type QueuePadSystem = {
 	padOf: (self: QueuePadSystem, player: Player) -> BasePart?,
 	firstMisroute: (self: QueuePadSystem, pad: BasePart) -> boolean,
 	count: (self: QueuePadSystem) -> number,
+	setBoardFilter: (self: QueuePadSystem, filter: QueueTypes.BoardFilter?) -> (),
+	padIdOf: (self: QueuePadSystem, pad: BasePart) -> string?,
+	membersOf: (self: QueuePadSystem, pad: BasePart) -> { Player },
+	seatsOf: (self: QueuePadSystem, pad: BasePart) -> number?,
+	endsAtOf: (self: QueuePadSystem, pad: BasePart) -> number?,
+	setSeats: (self: QueuePadSystem, pad: BasePart, seats: number) -> boolean,
+	startCountdown: (self: QueuePadSystem, pad: BasePart, now: number, seconds: number) -> boolean,
+	cancelCountdown: (self: QueuePadSystem, pad: BasePart) -> boolean,
 }
 
 local log = Logger.new("QueuePadSystem")
@@ -75,6 +86,10 @@ local QueuePadSystem = {}
 
 function QueuePadSystem.new(onDue: OnDue): QueuePadSystem
 	local tracker = QueuePadTracker.new()
+	local refusedSignal: SignalTyped.Signal<BasePart, Player> = SignalTyped.new()
+	local boardFilter: QueueTypes.BoardFilter? = nil
+	-- Per pad: the players refused at the last sample, so `refused` fires once per visit.
+	local refusedBefore: { [string]: { [number]: boolean } } = {}
 	local padById: { [string]: BasePart } = {}
 	local idByPad: { [BasePart]: string } = {}
 	local misrouted: { [BasePart]: boolean } = {}
@@ -123,7 +138,8 @@ function QueuePadSystem.new(onDue: OnDue): QueuePadSystem
 		local config, reason = QueuePadRules.config(
 			pad:GetAttribute(QueueConstants.CAPACITY_ATTRIBUTE),
 			pad:GetAttribute(QueueConstants.COUNTDOWN_ATTRIBUTE),
-			pad:GetAttribute(QueueConstants.DESTINATION_ATTRIBUTE)
+			pad:GetAttribute(QueueConstants.DESTINATION_ATTRIBUTE),
+			pad:GetAttribute(QueueConstants.HOLD_ATTRIBUTE)
 		)
 		if config == nil then
 			log:warn(`{pad:GetFullName()} is not a usable queue pad: {reason or "?"}`)
@@ -138,6 +154,7 @@ function QueuePadSystem.new(onDue: OnDue): QueuePadSystem
 		publish()
 		return function()
 			tracker:remove(padId)
+			refusedBefore[padId] = nil
 			padById[padId] = nil
 			idByPad[pad] = nil
 			misrouted[pad] = nil
@@ -149,8 +166,39 @@ function QueuePadSystem.new(onDue: OnDue): QueuePadSystem
 		end
 	end
 
+	-- The players aboard `pad` its board filter refuses (an erroring filter refuses nobody); `refused` fires for
+	-- each one not refused at the last sample.
+	local function refusedOn(pad: BasePart, padId: string, aboard: { number }): { [number]: boolean }?
+		local filter = boardFilter
+		if filter == nil then
+			refusedBefore[padId] = nil
+			return nil
+		end
+		local members = playersOf(tracker:members(padId))
+		local refused: { [number]: boolean } = {}
+		local before = refusedBefore[padId] or {}
+		for _, userId in aboard do
+			local player = Players:GetPlayerByUserId(userId)
+			if player ~= nil then
+				local ok, allowed = pcall(filter, pad, player, members)
+				if not ok then
+					log:error(`board filter errored: {tostring(allowed)}`)
+				elseif allowed ~= true then
+					refused[userId] = true
+					if not before[userId] then
+						refusedSignal:Fire(pad, player)
+					end
+				end
+			end
+		end
+		refusedBefore[padId] = refused
+		return refused
+	end
+
 	local system: QueuePadSystem
 	system = {
+		refused = refusedSignal,
+
 		start = function(_self)
 			running = true
 			stopObserving = Observers.observeTag(QueueConstants.TAG, observe)
@@ -182,7 +230,8 @@ function QueuePadSystem.new(onDue: OnDue): QueuePadSystem
 						end
 					end
 					table.sort(aboard)
-					if tracker:sync(padId, aboard, now) then
+					local refused = refusedOn(pad, padId, aboard)
+					if tracker:sync(padId, aboard, now, refused) then
 						changed = true
 					end
 				end
@@ -242,6 +291,58 @@ function QueuePadSystem.new(onDue: OnDue): QueuePadSystem
 
 		count = function(_self)
 			return #order
+		end,
+
+		setBoardFilter = function(_self, filter)
+			boardFilter = filter
+		end,
+
+		padIdOf = function(_self, pad)
+			return idByPad[pad]
+		end,
+
+		membersOf = function(_self, pad)
+			local padId = idByPad[pad]
+			return if padId ~= nil then playersOf(tracker:members(padId)) else {}
+		end,
+
+		seatsOf = function(_self, pad)
+			local padId = idByPad[pad]
+			return if padId ~= nil then tracker:seats(padId) else nil
+		end,
+
+		endsAtOf = function(_self, pad)
+			local padId = idByPad[pad]
+			return if padId ~= nil then tracker:endsAt(padId) else nil
+		end,
+
+		setSeats = function(_self, pad, seats)
+			local padId = idByPad[pad]
+			if padId == nil or not tracker:setSeats(padId, seats) then
+				return false
+			end
+			publish()
+			return true
+		end,
+
+		startCountdown = function(_self, pad, now, seconds)
+			local padId = idByPad[pad]
+			if padId == nil or not tracker:startCountdown(padId, now, seconds) then
+				return false
+			end
+			-- A zero-second countdown is due now: it departs in this call, like Depart now.
+			departDue(now)
+			publish()
+			return true
+		end,
+
+		cancelCountdown = function(_self, pad)
+			local padId = idByPad[pad]
+			if padId == nil or not tracker:cancelCountdown(padId) then
+				return false
+			end
+			publish()
+			return true
 		end,
 	}
 	return system

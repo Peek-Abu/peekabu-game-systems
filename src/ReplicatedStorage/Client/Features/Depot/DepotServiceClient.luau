@@ -8,7 +8,8 @@
 	the Next shift card) claims its gift through DailyRewardServiceClient. The truck queue pad card (DepotPad, with GO!
 	to depart now) replaces Queue's placeholder pad widget, which init hides
 	with QueueServiceClient:setDefaultWidget(false); the depot's world signs (truck tags, the boards) are drawn by DepotBillboardSystem into the shells the server builds;
-	the trucks' scanner arches flash on each bank (DepotTruckScannerSystem). While Shift's transit screen covers the view
+	the trucks' scanner arches flash on each bank (DepotTruckScannerSystem), and an empty hub bay shows a ghost truck
+	that pops in solid when a host steps in (DepotTruckGhostSystem). While Shift's transit screen covers the view
 	(ShiftTransitStore.covered) no card runs out: the drive card is dropped when the route slip comes up, and the card
 	behind the screen (the arrival folder) gets its full time once it clears.
 
@@ -34,6 +35,9 @@ local DepotStore = require(ReplicatedStorage.Client.Features.Depot.State.DepotSt
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
 local ShiftTransitStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftTransitStore)
 local QueueServiceClient = require(ReplicatedStorage.Client.Features.Queue.QueueServiceClient)
+local HostServiceClient = require(ReplicatedStorage.Client.Features.Host.HostServiceClient)
+local DepotTruckGhostSystem = require(ReplicatedStorage.Client.Features.Depot.Systems.DepotTruckGhostSystem)
+local SocialServiceClient = require(ReplicatedStorage.Client.Features.Social.SocialServiceClient)
 local DailyRewardServiceClient = require(ReplicatedStorage.Client.Features.DailyReward.DailyRewardServiceClient)
 local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudRegistry)
 local DepotCard = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotCard)
@@ -101,7 +105,13 @@ export type DepotServiceClient = {
 }
 
 local DepotServiceClient: DepotServiceClient = {
-	dependencies = { "QueueServiceClient", "StateSyncServiceClient", "DailyRewardServiceClient" },
+	dependencies = {
+		"QueueServiceClient",
+		"HostServiceClient",
+		"SocialServiceClient",
+		"StateSyncServiceClient",
+		"DailyRewardServiceClient",
+	},
 
 	init = function(_self)
 		if not HudRegistry.has("depotHub") then
@@ -122,8 +132,25 @@ local DepotServiceClient: DepotServiceClient = {
 		if not HudRegistry.has(PAD_HUD_KEY) then
 			HudRegistry.register(PAD_HUD_KEY, function()
 				return React.createElement(DepotPad, {
-					onDepart = function()
-						QueueServiceClient:departNow()
+					onAction = function(action)
+						if action == "depart" then
+							QueueServiceClient:departNow()
+						elseif action == "start" then
+							HostServiceClient:startTrip()
+						elseif action == "cancel" then
+							HostServiceClient:cancelTrip()
+						elseif action == "leave" then
+							HostServiceClient:leaveTruck()
+						end
+					end,
+					onKick = function(userId)
+						HostServiceClient:kick(userId)
+					end,
+					onLock = function(locked)
+						HostServiceClient:setLock(locked)
+					end,
+					onInvite = function()
+						SocialServiceClient:invite()
 					end,
 				})
 			end, DepotConstants.HUD_ORDER - 1)
@@ -206,6 +233,7 @@ local DepotServiceClient: DepotServiceClient = {
 		end)
 		DepotBillboardSystem.start()
 		table.insert(stoppers, DepotTruckScannerSystem.start())
+		table.insert(stoppers, DepotTruckGhostSystem.start())
 	end,
 
 	stop = function(_self)

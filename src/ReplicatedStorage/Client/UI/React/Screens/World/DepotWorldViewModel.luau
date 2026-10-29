@@ -2,8 +2,11 @@
 --[=[
 	DepotWorldViewModel: what the depot's world signs say (Figma World UI 2a). The truck pad tag (W1): "TRUCK n", a seat
 	per place (filled = aboard), "n / 4 ABOARD" and line 3: the red "Leaving in m:ss" when the truck is full or
-	DepotConstants.TAG_WARN_SECONDS or fewer remain, "Leaving now" while it departs, else how to join. `padFor` finds the
-	Queue pad whose crew stand in a truck (by their public `truck` field); `sameTag` says whether two tags draw the same,
+	DepotConstants.TAG_WARN_SECONDS or fewer remain, "Leaving now" while it departs, else how to join: an empty truck
+	asks someone to host it, a hosted one names its host ("Sam's truck" with the crown icon, or "Sam's friends only"
+	with the lock; `icon` names the kit icon, never an emoji in the words). The seats are the pad's live seats (4, or 6
+	for a Big Crew host). `padFor` finds the Queue pad (and its id) whose crew stand in a
+	truck (by their public `truck` field); `sameTag` says whether two tags draw the same,
 	so an unchanged tag is not re-rendered. The contract board (W2): the work order from the board's attributes, its CLEAR
 	line for the crew in the viewer's truck (else the range by crew size). Your review
 	card (W4): the card from its attributes, with the award stickies; nil for anything that is not a card. Pure.
@@ -20,15 +23,21 @@ local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.D
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftCurrencyUtils = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftCurrencyUtils)
 local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
+local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local DepotBoardViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotBoardViewModel)
 local WorldBillboardViewModel = require(ReplicatedStorage.Client.UI.React.Screens.World.WorldBillboardViewModel)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
+
+-- A hosted truck's host, for its tag: their name and whether the truck is friends only.
+export type TruckHost = { name: string, locked: boolean }
 
 export type TruckTagView = {
 	title: string,
 	seats: { boolean },
 	count: string,
 	line: string,
+	-- The kit icon before line 3 (a hosted truck's crown or lock), nil for none.
+	icon: UIAssets.ToonIcon?,
 	warn: boolean,
 }
 
@@ -58,6 +67,7 @@ export type ReviewView = {
 }
 
 local JOIN_LINE = "Stand in the bed to join"
+local HOST_LINE = "Step in to host!"
 local LEAVING_NOW = "Leaving now"
 
 local DepotWorldViewModel = {}
@@ -75,23 +85,32 @@ function DepotWorldViewModel.truckTag(
 	truck: number,
 	capacity: number,
 	pad: QueueTypes.PadSnapshot?,
-	now: number
+	now: number,
+	host: TruckHost?
 ): TruckTagView
 	local aboard = if pad ~= nil then #pad.members else 0
+	capacity = if pad ~= nil then pad.capacity else capacity
 	local seats: { boolean } = {}
 	for seat = 1, capacity do
 		table.insert(seats, seat <= aboard)
 	end
 	local endsAt = if pad ~= nil then pad.endsAt else nil
-	local line = JOIN_LINE
+	local line = if aboard == 0 then HOST_LINE else JOIN_LINE
+	local icon: UIAssets.ToonIcon? = nil
+	if host ~= nil then
+		line = if host.locked then `{host.name}'s friends only` else `{host.name}'s truck`
+		icon = if host.locked then "friendsLock" else "hostCrown"
+	end
 	local warn = false
 	if pad ~= nil and pad.departing then
 		line = LEAVING_NOW
+		icon = nil
 		warn = true
 	elseif endsAt ~= nil then
 		local left = endsAt - now
 		if aboard >= capacity or left <= DepotConstants.TAG_WARN_SECONDS then
 			line = `Leaving in {ShiftHudViewModel.clock(left)}`
+			icon = nil
 			warn = true
 		end
 	end
@@ -100,6 +119,7 @@ function DepotWorldViewModel.truckTag(
 		seats = seats,
 		count = `{aboard} / {capacity} ABOARD`,
 		line = line,
+		icon = icon,
 		warn = warn,
 	}
 end
@@ -109,19 +129,19 @@ function DepotWorldViewModel.padFor(
 	snapshot: QueueTypes.QueueSnapshot?,
 	truck: number,
 	players: PublicPlayerTypes.PublicPlayerMap
-): QueueTypes.PadSnapshot?
+): (QueueTypes.PadSnapshot?, string?)
 	if snapshot == nil then
-		return nil
+		return nil, nil
 	end
-	for _, pad in snapshot.pads do
+	for padId, pad in snapshot.pads do
 		for _, userId in pad.members do
 			local entry = players[StateSyncConstants.publicEntryKey(userId)]
 			if entry ~= nil and entry[DepotConstants.PUBLIC_TRUCK] == truck then
-				return pad
+				return pad, padId
 			end
 		end
 	end
-	return nil
+	return nil, nil
 end
 
 -- A whole, non-negative number read off an attribute; nil for anything else.
@@ -136,7 +156,14 @@ function DepotWorldViewModel.sameTag(a: TruckTagView?, b: TruckTagView?): boolea
 	if a == nil or b == nil then
 		return a == nil and b == nil
 	end
-	if a.title ~= b.title or a.count ~= b.count or a.line ~= b.line or a.warn ~= b.warn or #a.seats ~= #b.seats then
+	if
+		a.title ~= b.title
+		or a.count ~= b.count
+		or a.line ~= b.line
+		or a.icon ~= b.icon
+		or a.warn ~= b.warn
+		or #a.seats ~= #b.seats
+	then
 		return false
 	end
 	for index, filled in a.seats do

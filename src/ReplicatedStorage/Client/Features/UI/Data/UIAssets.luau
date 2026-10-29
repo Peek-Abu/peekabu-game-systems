@@ -32,6 +32,8 @@ export type ToonIcon =
 	| "dust"
 	| "fishtank"
 	| "flashlight"
+	| "friendsLock"
+	| "friendsLockOpen"
 	| "gift"
 	| "credits"
 	| "gleam"
@@ -45,6 +47,8 @@ export type ToonIcon =
 	| "guide"
 	| "heart"
 	| "heartGloomed"
+	| "hostCrown"
+	| "invite"
 	| "jobs"
 	| "key"
 	| "lock"
@@ -140,6 +144,12 @@ local TOON_ICONS: { [ToonIcon]: string } = {
 	statSuction = "rbxassetid://81351809446614",
 	stapler = "rbxassetid://91446482823859",
 	stopwatch = "rbxassetid://79924913809502",
+	-- Crew hosting (GPT renders, ink outline; 2026-10-29; decals in characters/ui/crew-hosting-icons/assets.json): the
+	-- host's crown, the friends-only heart lock and its open twin (one canvas, so they swap without a jump), Invite.
+	hostCrown = "rbxassetid://96399141220976",
+	friendsLock = "rbxassetid://92886567928655",
+	friendsLockOpen = "rbxassetid://111986114299986",
+	invite = "rbxassetid://85689612944793",
 	trophy = "rbxassetid://123624581133724",
 	truck = "rbxassetid://114161028640916",
 	vacuum = "rbxassetid://95204983643911",

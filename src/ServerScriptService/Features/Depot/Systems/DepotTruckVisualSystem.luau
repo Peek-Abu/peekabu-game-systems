@@ -18,7 +18,9 @@
 	- the time clock on the inside of the front wall (template CLOCK_TEMPLATE_PATH or a graybox). The office's
 	  Clock out and Start overtime parts go at `paperwork(bed, which)`;
 	- the box-side livery (a SurfaceGui per side), a warm lamp under the roof, and the scanner arch light tagged
-	  for the client's bank flash (DepotTruckScannerSystem) with its sweep path.
+	  for the client's bank flash (DepotTruckScannerSystem) with its sweep path;
+	- the art tagged DepotConstants.TRUCK_ART_TAG with a link to its bed, and the shell cores marked, for the hub's
+	  ghost bays (the client's DepotTruckGhostSystem; it draws only trucks on a held Queue pad).
 
 	@class DepotTruckVisualSystem
 ]=]
@@ -193,6 +195,7 @@ local function shell(deck: CFrame, bed: BasePart)
 		part.CanCollide = true
 		part.CanQuery = true
 		part.CanTouch = false
+		part:SetAttribute(DepotConstants.TRUCK_SHELL_ATTRIBUTE, true)
 		part.Parent = bed
 	end
 end
@@ -229,6 +232,11 @@ function DepotTruckVisualSystem.buildWith(bed: BasePart, parent: Instance, sourc
 	bed.Transparency = Constants.BED_TRANSPARENCY
 	collision(deck, bed)
 	shell(deck, bed)
+	local link = Instance.new("ObjectValue")
+	link.Name = DepotConstants.TRUCK_BED_LINK
+	link.Value = bed
+	link.Parent = model
+	CollectionService:AddTag(model, DepotConstants.TRUCK_ART_TAG)
 	model.Parent = parent
 	return model
 end

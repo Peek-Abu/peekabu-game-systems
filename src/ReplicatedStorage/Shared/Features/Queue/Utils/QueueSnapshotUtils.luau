@@ -43,6 +43,10 @@ local function padFrom(value: WorldValue?): PadSnapshot?
 	local destination = value.destination
 	local endsAt = value.endsAt
 	local departing = value.departing
+	local held = value.held
+	if held ~= nil and type(held) ~= "boolean" then
+		return nil
+	end
 	if members == nil or type(capacity) ~= "number" or type(destination) ~= "string" then
 		return nil
 	end
@@ -58,6 +62,7 @@ local function padFrom(value: WorldValue?): PadSnapshot?
 		destination = destination,
 		endsAt = if type(endsAt) == "number" then endsAt else nil,
 		departing = departing,
+		held = held == true,
 	}
 end
 

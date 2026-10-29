@@ -7,6 +7,12 @@
 	  a party. Standing on it joins, leaving leaves; with anyone aboard a countdown runs (reset on each
 	  join) and anyone aboard can Depart now (`departNow`, or the client's button). Published to every
 	  client as the `queue` world entry.
+	- Held pads (attribute QueueHold = true): no countdown runs and Depart now is refused; the game starts one
+	  (`startCountdown`, joins don't reset it) or stops it (`cancelCountdown`). A game may lower a pad's live seats
+	  under its QueueCapacity (`setSeats`; members aboard keep theirs), and refuse players with a board filter
+	  (`setBoardFilter`; its `refused` signal fires once each time a refused player steps on). The ticket's capacity
+	  is the live seats. These controls are the `pads` field (QueuePadSystem: setBoardFilter, refused, padIdOf,
+	  membersOf, seatsOf, endsAtOf, setSeats, startCountdown with server time, cancelCountdown).
 	- Roles: a game registers its place-role table in QueueRegistry ("lobby", "match", any strings). In
 	  Studio or on an unknown PlaceId every role runs in this one server ("local" mode) and a teleport
 	  becomes a move to the role's arrival point (`setArrivalPoint`), so the loop plays through rojo serve.
@@ -162,7 +168,7 @@ local function sendParty(
 		from = currentRole(),
 		role = padConfig.destination,
 		party = idsOf(party),
-		capacity = padConfig.capacity,
+		capacity = pads:seatsOf(pad) or padConfig.capacity,
 		payload = payload,
 	}
 	local sent = teleports:send({
@@ -303,6 +309,8 @@ export type QueueServiceServer = {
 	setArrivalPoint: (self: QueueServiceServer, role: string, resolver: QueueTypes.ArrivalPoint?) -> (),
 	departNow: (self: QueueServiceServer, player: Player) -> boolean,
 	padOf: (self: QueueServiceServer, player: Player) -> BasePart?,
+	-- The pads' game-side controls (held pads, seats, the board filter).
+	pads: QueuePadSystem.QueuePadSystem,
 	returnParty: (self: QueueServiceServer, players: { Player }, role: string, payload: QueuePayload?) -> boolean,
 	returnPayloadOf: (self: QueueServiceServer, player: Player) -> QueuePayload?,
 	mode: (self: QueueServiceServer) -> QueueTypes.Mode,
@@ -421,6 +429,8 @@ local QueueServiceServer: QueueServiceServer = {
 	padOf = function(_self, player)
 		return pads:padOf(player)
 	end,
+
+	pads = pads,
 
 	--[=[
 		Sends `players` to any public server of `role` with `payload` (a result summary). False, with a

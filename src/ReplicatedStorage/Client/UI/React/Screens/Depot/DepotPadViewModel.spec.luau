@@ -119,5 +119,91 @@ return function()
 			expect(cta.time).to.equal(nil)
 			expect(cta.line).to.equal("Truck 2 is leaving!")
 		end)
+
+		it("departs now on an unhosted truck and opens the jobs board off a truck", function()
+			expect(DepotPadViewModel.cta(DepotPadViewModel.pad(pad(), 3, NAMES, 2, 100, false), 2).action).to.equal(
+				"depart"
+			)
+			expect(DepotPadViewModel.cta(nil, nil).action).to.equal("jobs")
+		end)
+	end)
+
+	describe("a hosted truck", function()
+		-- A hosted truck nobody has started: no countdown (a nil in the overrides table would not clear it).
+		local function unstarted()
+			local value = pad({ held = true })
+			value.endsAt = nil
+			return value
+		end
+
+		it("offers the host START and crowns their seat", function()
+			local view = DepotPadViewModel.pad(unstarted(), 3, NAMES, 2, 100, false, 3)
+			local cta = DepotPadViewModel.cta(view, 2)
+			expect(cta.line).to.equal("You're the host!")
+			expect(cta.go).to.equal("START")
+			expect(cta.action).to.equal("start")
+			expect(cta.variant).to.equal("primary")
+			expect(cta.canGo).to.equal(true)
+			expect(cta.seats[3].host).to.equal(true)
+			expect(cta.seats[1].host).to.equal(false)
+		end)
+
+		it("offers the host CANCEL while the countdown runs", function()
+			local view = DepotPadViewModel.pad(pad({ held = true, endsAt = 104 }), 3, NAMES, 2, 100, false, 3)
+			local cta = DepotPadViewModel.cta(view, 2)
+			expect(cta.line).to.equal("Truck 2 departs in")
+			expect(cta.time).to.equal(view.departsIn)
+			expect(cta.go).to.equal("CANCEL")
+			expect(cta.action).to.equal("cancel")
+		end)
+
+		it("tells a rider who they wait for and offers LEAVE", function()
+			local view = DepotPadViewModel.pad(unstarted(), 3, NAMES, 2, 100, false, 1)
+			local cta = DepotPadViewModel.cta(view, 2)
+			expect(cta.line).to.equal("Waiting for Sam to start")
+			expect(cta.go).to.equal("LEAVE")
+			expect(cta.action).to.equal("leave")
+			expect(cta.variant).to.equal("secondary")
+			expect(cta.seats[1].host).to.equal(true)
+		end)
+
+		it("shows a rider the countdown once the host starts", function()
+			local view = DepotPadViewModel.pad(pad({ held = true, endsAt = 104 }), 3, NAMES, 2, 100, false, 1)
+			local cta = DepotPadViewModel.cta(view, 2)
+			expect(cta.line).to.equal("Truck 2 departs in")
+			expect(cta.go).to.equal("LEAVE")
+		end)
+
+		it("names an unknown host plainly", function()
+			local view = DepotPadViewModel.pad(unstarted(), 3, NAMES, 2, 100, false, 9)
+			expect(DepotPadViewModel.cta(view, 2).line).to.equal("Waiting for the host to start")
+		end)
+
+		it("gives the host the lock and lets them pick another crew member to kick", function()
+			local view = DepotPadViewModel.pad(unstarted(), 3, NAMES, 2, 100, false, 3, true)
+			local cta = DepotPadViewModel.cta(view, 2)
+			expect(cta.hostControls.locked).to.equal(true)
+			expect(cta.seats[1].kickable).to.equal(true)
+			expect(cta.seats[3].kickable).to.equal(false) -- themself
+			expect(cta.seats[4].kickable).to.equal(false) -- an open seat
+		end)
+
+		it("gives a rider no host controls and nobody to kick", function()
+			local view = DepotPadViewModel.pad(unstarted(), 3, NAMES, 2, 100, false, 1, false)
+			local cta = DepotPadViewModel.cta(view, 2)
+			expect(cta.hostControls).to.equal(nil)
+			for _, seat in cta.seats do
+				expect(seat.kickable).to.equal(false)
+			end
+		end)
+
+		it("offers nothing once the truck is leaving", function()
+			local view = DepotPadViewModel.pad(pad({ held = true, departing = true }), 3, NAMES, 2, 100, false, 3)
+			local cta = DepotPadViewModel.cta(view, 2)
+			expect(cta.canGo).to.equal(false)
+			expect(cta.line).to.equal("Truck 2 is leaving!")
+			expect(cta.hostControls).to.equal(nil)
+			expect(cta.seats[1].kickable).to.equal(false)
+		end)
 	end)
 end

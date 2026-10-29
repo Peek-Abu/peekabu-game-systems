@@ -36,6 +36,7 @@ return UILabs.CreateReactStory({
 		destination = "shift",
 		endsAt = 112,
 		departing = false,
+		held = false,
 	}, 1, { [2] = "Biscuit" }, 2, 100, phone)
 	local now = 20000 * 86400 + 3600
 	local daily = if controls.GiftReady then { lastDay = 19999, streak = 2 } else { lastDay = 20000, streak = 3 }

@@ -4,7 +4,10 @@
 	Jump: a cream bar with the company truck render breaking its top-left corner, NEXT SHIFT, a line ("Walk into a truck
 	bed to join", or the truck's countdown in a coral pill), a seat per place with each crew member's own character
 	(desktop) and the mint GO! with Gleam sparkles. What it says is DepotPadViewModel.cta; GO! is `onGo` (the hub opens
-	the Jobs board, the queue pad departs now). Presentational (exempt; story in DepotHubPanel.story).
+	the Jobs board, the queue pad departs now). On a hosted truck the host also gets two chips above the card (the
+	friends-only lock, `onLock`, and Invite, `onInvite`) and may kick another crew member: tap their seat, then tap
+	again while it asks "Kick?" (`onKick`; the ask clears after KICK_CONFIRM_SECONDS). On a phone the host's seats sit
+	above the card too, so kicking works there. Presentational (exempt; story in DepotHubPanel.story).
 
 	@class DepotNextShiftCard
 ]=]
@@ -32,7 +35,15 @@ export type DepotNextShiftCardProps = {
 	cta: DepotPadViewModel.CtaView,
 	phone: boolean,
 	onGo: () -> (),
+	onKick: ((userId: number) -> ())?,
+	onLock: ((locked: boolean) -> ())?,
+	onInvite: (() -> ())?,
 }
+
+-- How long a seat's "Kick?" waits for the second tap.
+local KICK_CONFIRM_SECONDS = 3
+-- A phone host's seat size (the seat row sits above the card there).
+local PHONE_HOST_SEAT = 40
 
 type Geometry = {
 	size: Vector2,
@@ -66,14 +77,43 @@ local PHONE: Geometry = {
 	seat = 0,
 }
 
-local function seat(view: DepotPadViewModel.SeatView, side: number, order: number): React.ReactNode
+local function seat(
+	view: DepotPadViewModel.SeatView,
+	side: number,
+	order: number,
+	asking: boolean,
+	onTap: (() -> ())?
+): React.ReactNode
 	local children: { [string]: React.ReactNode } = {
 		corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }),
 		stroke = e("UIStroke", {
-			Color = if view.you then COLOR.selected else COLOR.ink,
-			Thickness = if view.you then 5 else 4,
+			Color = if asking
+				then UIToonConstants.shade("coral").base
+				elseif view.you then COLOR.selected
+				else COLOR.ink,
+			Thickness = if view.you or asking then 5 else 4,
 		}),
 	}
+	if asking then
+		children.ask = e(ToonPill, {
+			text = "Kick?",
+			hue = "coral",
+			textSize = math.max(12, math.floor(side * 0.3)),
+			size = UDim2.fromOffset(side * 1.3, side * 0.45),
+			position = UDim2.new(0.5, -side * 0.65, 1, 2),
+		})
+	end
+	if view.host then
+		-- The host's crown sits on the seat's top edge, breaking it.
+		children.crown = e(ToonIcon, {
+			icon = "hostCrown",
+			anchor = Vector2.new(0.5, 1),
+			position = UDim2.new(0.5, 0, 0, side * 0.28),
+			size = UDim2.fromOffset(side * 0.7, side * 0.7),
+			drop = 3,
+			zIndex = 3,
+		})
+	end
 	if not view.open and view.userId ~= nil then
 		children.face = e(CharacterPortrait, {
 			userId = view.userId,
@@ -83,17 +123,132 @@ local function seat(view: DepotPadViewModel.SeatView, side: number, order: numbe
 			round = true,
 		})
 	end
-	return e("Frame", {
+	local look = {
 		Size = UDim2.fromOffset(side, side),
 		BackgroundColor3 = if view.open then UIToonConstants.shade("cream").base else UIToonConstants.shade("lilac").hi,
 		BackgroundTransparency = if view.open then 1 else 0,
 		LayoutOrder = order,
+	}
+	if onTap == nil then
+		return e("Frame", look, children)
+	end
+	return e("TextButton", {
+		Size = look.Size,
+		BackgroundColor3 = look.BackgroundColor3,
+		BackgroundTransparency = look.BackgroundTransparency,
+		LayoutOrder = look.LayoutOrder,
+		Text = "",
+		AutoButtonColor = false,
+		[React.Event.Activated] = onTap,
 	}, children)
+end
+
+-- A row of seats; a kickable one asks "Kick?" on the first tap and kicks on the second.
+local function seatRow(
+	cta: DepotPadViewModel.CtaView,
+	side: number,
+	asking: number?,
+	setAsking: (number?) -> (),
+	onKick: ((userId: number) -> ())?
+): { [string]: React.ReactNode }
+	local seats: { [string]: React.ReactNode } = {
+		layout = e("UIListLayout", {
+			FillDirection = Enum.FillDirection.Horizontal,
+			VerticalAlignment = Enum.VerticalAlignment.Center,
+			HorizontalAlignment = Enum.HorizontalAlignment.Right,
+			Padding = UDim.new(0, 8),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+		}),
+	}
+	for index, view in cta.seats do
+		local userId = view.userId
+		local onTap: (() -> ())? = nil
+		if view.kickable and userId ~= nil and onKick ~= nil then
+			onTap = function()
+				if asking == userId then
+					setAsking(nil)
+					onKick(userId)
+				else
+					setAsking(userId)
+				end
+			end
+		end
+		seats[`seat{index}`] = seat(view, side, index, asking ~= nil and asking == userId, onTap)
+	end
+	return seats
+end
+
+-- The host's chips: the friends-only lock and Invite.
+local function hostChips(props: DepotNextShiftCardProps, controls: DepotPadViewModel.HostControls): React.ReactNode
+	local height = if props.phone then 34 else 44
+	-- Sized for their words at this text size (the button's default 28 leaves the label too little room: "INVIT").
+	local textSize = if props.phone then 14 else 20
+	local onLock = props.onLock
+	local onInvite = props.onInvite
+	return e("Frame", {
+		AnchorPoint = Vector2.new(1, 1),
+		Position = UDim2.new(1, -8, 0, -8),
+		Size = UDim2.fromOffset(if props.phone then 320 else 440, height),
+		BackgroundTransparency = 1,
+	}, {
+		layout = e("UIListLayout", {
+			FillDirection = Enum.FillDirection.Horizontal,
+			HorizontalAlignment = Enum.HorizontalAlignment.Right,
+			Padding = UDim.new(0, 8),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+		}),
+		lock = e(ToonButton, {
+			variant = if controls.locked then "night" else "secondary",
+			text = if controls.locked then "Friends only" else "Anyone can join",
+			icon = if controls.locked then "friendsLock" else "friendsLockOpen",
+			small = true,
+			textSize = textSize,
+			size = UDim2.fromOffset(if props.phone then 190 else 260, height),
+			selected = controls.locked,
+			onActivated = function()
+				if onLock ~= nil then
+					onLock(not controls.locked)
+				end
+			end,
+			layoutOrder = 1,
+		}),
+		invite = e(ToonButton, {
+			variant = "gleam",
+			text = "Invite",
+			icon = "invite",
+			small = true,
+			textSize = textSize,
+			size = UDim2.fromOffset(if props.phone then 120 else 160, height),
+			onActivated = function()
+				if onInvite ~= nil then
+					onInvite()
+				end
+			end,
+			layoutOrder = 2,
+		}),
+	})
 end
 
 local function DepotNextShiftCard(props: DepotNextShiftCardProps): React.ReactNode
 	local cta = props.cta
 	local g = if props.phone then PHONE else DESKTOP
+	-- The seat waiting for its second tap ("Kick?"), by UserId.
+	local nobody: number? = nil
+	local asking, setAskingState = React.useState(nobody)
+	local function setAsking(userId: number?)
+		setAskingState(userId)
+	end
+	React.useEffect(function(): (() -> ())?
+		if asking == nil then
+			return nil
+		end
+		local thread = task.delay(KICK_CONFIRM_SECONDS, function()
+			setAskingState(nil)
+		end)
+		return function()
+			task.cancel(thread)
+		end
+	end, { asking })
 	local height = g.size.Y
 	local lineChildren: { [string]: React.ReactNode } = {
 		layout = e("UIListLayout", {
@@ -137,7 +292,7 @@ local function DepotNextShiftCard(props: DepotNextShiftCardProps): React.ReactNo
 			BackgroundTransparency = 1,
 		}, lineChildren),
 		go = e(ToonButton, {
-			variant = "primary",
+			variant = cta.variant,
 			text = cta.go,
 			textSize = if props.phone then 34 else 50,
 			anchor = Vector2.new(1, 0.5),
@@ -150,24 +305,26 @@ local function DepotNextShiftCard(props: DepotNextShiftCardProps): React.ReactNo
 		}),
 	}
 	if g.seat > 0 and #cta.seats > 0 then
-		local seats: { [string]: React.ReactNode } = {
-			layout = e("UIListLayout", {
-				FillDirection = Enum.FillDirection.Horizontal,
-				VerticalAlignment = Enum.VerticalAlignment.Center,
-				HorizontalAlignment = Enum.HorizontalAlignment.Right,
-				Padding = UDim.new(0, 8),
-				SortOrder = Enum.SortOrder.LayoutOrder,
-			}),
-		}
-		for index, view in cta.seats do
-			seats[`seat{index}`] = seat(view, g.seat, index)
-		end
+		local seats = seatRow(cta, g.seat, asking, setAsking, props.onKick)
 		face.seats = e("Frame", {
 			AnchorPoint = Vector2.new(1, 0.5),
 			Position = UDim2.new(1, -g.go.X - 30, 0.5, 4),
 			Size = UDim2.fromOffset(seatsWidth, g.seat + 8),
 			BackgroundTransparency = 1,
 		}, seats)
+	end
+	local controls = cta.hostControls
+	if controls ~= nil then
+		face.hostChips = hostChips(props, controls)
+		if props.phone and #cta.seats > 0 then
+			-- The phone card has no seat row: the host's seats sit above it, left, so kicking works there.
+			face.hostSeats = e("Frame", {
+				AnchorPoint = Vector2.new(0, 1),
+				Position = UDim2.fromOffset(g.textLeft, -14),
+				Size = UDim2.fromOffset(#cta.seats * (PHONE_HOST_SEAT + 8), PHONE_HOST_SEAT),
+				BackgroundTransparency = 1,
+			}, seatRow(cta, PHONE_HOST_SEAT, asking, setAsking, props.onKick))
+		end
 	end
 	local truckSize = g.truck
 	face.truck = e(ToonIcon, {

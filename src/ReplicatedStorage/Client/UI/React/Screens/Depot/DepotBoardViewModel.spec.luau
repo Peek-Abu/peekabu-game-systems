@@ -146,7 +146,7 @@ return function()
 		local desktop = DepotBoardViewModel.board(nil, nil, false)
 		local phone = DepotBoardViewModel.board(nil, nil, true)
 		expect(desktop.dispatchSteps).to.equal(
-			"1.  Walk up a truck ramp in any bay.\n2.  Anyone aboard presses DEPART NOW."
+			"1.  Walk up a truck ramp in any bay.\n2.  The first one in is the host. The host presses START."
 		)
 		expect(phone.dispatchSteps).to.equal("Walk up a truck ramp in any bay.")
 		expect(string.find(desktop.dispatchSteps, "outside", 1, true)).to.equal(nil)

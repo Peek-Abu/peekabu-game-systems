@@ -3,17 +3,20 @@
 	DepotTruckTag: the truck pad tag in the V1 kit at its 340x310 design size: a 60 px ink wire down to a cream panel on
 	the depth stack with a grape header band ("TRUCK n" in stroked white, the truck render breaking its top-left
 	corner), a seat per place (a round mint seat once taken, an empty night one otherwise), "n / 4 ABOARD" and line 3 (how to
-	join, or a coral "Leaving in m:ss" pill when `warn`). Presentational; the words and the warn rule are
+	join, or a coral "Leaving in m:ss" pill when `warn`). A hosted truck's line leads with its kit icon (the crown or the
+	lock), the icon and the words centred together as one row. Presentational; the words and the warn rule are
 	DepotWorldViewModel.truckTag.
 
 	@class DepotTruckTag
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TextService = game:GetService("TextService")
 
 local React = require(ReplicatedStorage.Packages.React)
 local DepotWorldViewModel = require(ReplicatedStorage.Client.UI.React.Screens.World.DepotWorldViewModel)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
+local ToonIcon = require(Toon.ToonIcon)
 local ToonPanel = require(Toon.ToonPanel)
 local ToonPill = require(Toon.ToonPill)
 local ToonSurface = require(Toon.ToonSurface)
@@ -32,6 +35,9 @@ local TAG = Vector2.new(332, 240)
 local HEADER = 72
 local SEAT = 38
 local SEAT_GAP = 14
+local LINE_SIZE = 20
+local LINE_ICON = 34
+local LINE_GAP = 6
 
 local function seatsOf(seats: { boolean }): React.ReactNode
 	local children: { [string]: React.ReactNode } = {
@@ -81,11 +87,37 @@ local function DepotTruckTag(props: DepotTruckTagProps): React.ReactNode
 			position = UDim2.new(0.5, 0, 0, HEADER + 102),
 			size = UDim2.fromOffset(TAG.X - 64, 36),
 		})
+	elseif view.icon ~= nil then
+		-- The row is as wide as the icon and the words (capped to the panel), so the pair sits centred.
+		local room = TAG.X - 32
+		local words = TextService:GetTextSize(view.line, LINE_SIZE, Enum.Font.FredokaOne, Vector2.new(10000, 1000)).X
+		local width = math.min(room, LINE_ICON + LINE_GAP + words + 4)
+		face.line = e("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0),
+			Position = UDim2.new(0.5, 0, 0, HEADER + 100),
+			Size = UDim2.fromOffset(width, LINE_ICON),
+			BackgroundTransparency = 1,
+		}, {
+			icon = e(ToonIcon, {
+				icon = view.icon,
+				size = UDim2.fromOffset(LINE_ICON, LINE_ICON),
+				drop = 3,
+			}),
+			words = e(ToonText, {
+				text = view.line,
+				font = "body",
+				textSize = LINE_SIZE,
+				position = UDim2.fromOffset(LINE_ICON + LINE_GAP, 3),
+				size = UDim2.new(1, -(LINE_ICON + LINE_GAP), 0, 28),
+				align = "left",
+				fit = true,
+			}),
+		})
 	else
 		face.line = e(ToonText, {
 			text = view.line,
 			font = "body",
-			textSize = 20,
+			textSize = LINE_SIZE,
 			position = UDim2.fromOffset(16, HEADER + 104),
 			size = UDim2.new(1, -32, 0, 28),
 			align = "center",

@@ -26,6 +26,12 @@ return function()
 		})
 		expect(#snapshot.pads.pad1.members).to.equal(0)
 		expect(snapshot.pads.pad1.endsAt).to.equal(nil)
+		expect(snapshot.pads.pad1.held).to.equal(false)
+	end)
+
+	it("decodes a held pad", function()
+		local snapshot = QueueSnapshotUtils.decode({ pads = { pad1 = pad({ held = true }) } })
+		expect(snapshot.pads.pad1.held).to.equal(true)
 	end)
 
 	it("rejects a malformed entry", function()
@@ -39,6 +45,7 @@ return function()
 				{ departing = "no" },
 				{ endsAt = "soon" },
 				{ destination = 3 },
+				{ held = "yes" },
 			}
 		do
 			expect(QueueSnapshotUtils.decode({ pads = { pad1 = pad(bad) } })).to.equal(nil)

@@ -6,7 +6,8 @@
 
 	A player is aboard at most one pad (the first that claims them). While a pad departs its party is
 	frozen; `unlock` reopens it empty and the next sample re-boards whoever still stands there, which is
-	how a failed teleport puts the party back on its pad. A party that did leave is unlocked with `hold`: a local
+	how a failed teleport puts the party back on its pad. A held pad (config `hold`) runs only the countdown the game
+	starts (`startCountdown`), and its live seat count (`setSeats`) may sit under its capacity. A party that did leave is unlocked with `hold`: a local
 	move can leave them standing on the pad, so each held player boards no pad until a sample of the pad they left
 	shows them off it (they step off and on again to queue anew).
 
@@ -27,6 +28,8 @@ type Pad = {
 	members: { number },
 	endsAt: number?,
 	status: QueueTypes.PadStatus,
+	-- Live seats, 1 .. config.capacity.
+	seats: number,
 }
 
 export type QueuePadTracker = {
@@ -34,7 +37,18 @@ export type QueuePadTracker = {
 	remove: (self: QueuePadTracker, padId: string) -> { number },
 	has: (self: QueuePadTracker, padId: string) -> boolean,
 	config: (self: QueuePadTracker, padId: string) -> PadConfig?,
-	sync: (self: QueuePadTracker, padId: string, aboard: { number }, now: number) -> boolean,
+	sync: (
+		self: QueuePadTracker,
+		padId: string,
+		aboard: { number },
+		now: number,
+		refused: { [number]: boolean }?
+	) -> boolean,
+	seats: (self: QueuePadTracker, padId: string) -> number?,
+	endsAt: (self: QueuePadTracker, padId: string) -> number?,
+	setSeats: (self: QueuePadTracker, padId: string, seats: number) -> boolean,
+	startCountdown: (self: QueuePadTracker, padId: string, now: number, seconds: number) -> boolean,
+	cancelCountdown: (self: QueuePadTracker, padId: string) -> boolean,
 	members: (self: QueuePadTracker, padId: string) -> { number },
 	padOf: (self: QueuePadTracker, userId: number) -> string?,
 	departNow: (self: QueuePadTracker, userId: number, now: number) -> string?,
@@ -68,7 +82,7 @@ function QueuePadTracker.new(): QueuePadTracker
 	tracker = {
 		add = function(_self, padId, config)
 			assert(pads[padId] == nil, `pad "{padId}" is already tracked`)
-			pads[padId] = { config = config, members = {}, endsAt = nil, status = "open" }
+			pads[padId] = { config = config, members = {}, endsAt = nil, status = "open", seats = config.capacity }
 		end,
 
 		remove = function(_self, padId)
@@ -92,10 +106,10 @@ function QueuePadTracker.new(): QueuePadTracker
 		end,
 
 		--[=[
-			Applies one sample: the user ids standing on the pad now (sorted). Returns whether the members or
-			the countdown changed. A departing pad ignores samples.
+			Applies one sample: the user ids standing on the pad now (sorted), less `refused` (the game's board
+			filter). Returns whether the members or the countdown changed. A departing pad ignores samples.
 		]=]
-		sync = function(self, padId, aboard, now)
+		sync = function(self, padId, aboard, now, refused)
 			local pad = pads[padId]
 			if pad == nil or pad.status ~= "open" then
 				return false
@@ -116,12 +130,58 @@ function QueuePadTracker.new(): QueuePadTracker
 					table.insert(free, userId)
 				end
 			end
-			local members = QueuePadRules.admit(pad.members, free, pad.config.capacity)
-			local endsAt = QueuePadRules.deadline(pad.members, members, pad.endsAt, now, pad.config.countdown)
+			local members = QueuePadRules.admit(pad.members, free, pad.seats, refused)
+			local endsAt =
+				QueuePadRules.deadline(pad.members, members, pad.endsAt, now, pad.config.countdown, pad.config.hold)
 			local changed = not sameList(members, pad.members) or endsAt ~= pad.endsAt
 			pad.members = members
 			pad.endsAt = endsAt
 			return changed
+		end,
+
+		seats = function(_self, padId)
+			local pad = pads[padId]
+			return if pad ~= nil then pad.seats else nil
+		end,
+
+		-- When the pad's countdown ends (server time), or nil when none runs.
+		endsAt = function(_self, padId)
+			local pad = pads[padId]
+			return if pad ~= nil then pad.endsAt else nil
+		end,
+
+		-- Sets the live seats (clamped to 1 .. capacity). Members already aboard keep their seats. Whether it changed.
+		setSeats = function(_self, padId, seats)
+			local pad = pads[padId]
+			if pad == nil then
+				return false
+			end
+			local clamped = math.clamp(math.floor(seats), 1, pad.config.capacity)
+			if clamped == pad.seats then
+				return false
+			end
+			pad.seats = clamped
+			return true
+		end,
+
+		-- A held, open pad with someone aboard leaves `seconds` from `now`. False when refused.
+		startCountdown = function(_self, padId, now, seconds)
+			local pad = pads[padId]
+			if pad == nil or not pad.config.hold or pad.status ~= "open" or #pad.members == 0 then
+				return false
+			end
+			pad.endsAt = now + math.max(0, seconds)
+			return true
+		end,
+
+		-- Stops a held pad's started countdown. Whether one was running.
+		cancelCountdown = function(_self, padId)
+			local pad = pads[padId]
+			if pad == nil or not pad.config.hold or pad.status ~= "open" or pad.endsAt == nil then
+				return false
+			end
+			pad.endsAt = nil
+			return true
 		end,
 
 		members = function(_self, padId)
@@ -142,7 +202,11 @@ function QueuePadTracker.new(): QueuePadTracker
 		departNow = function(self, userId, now)
 			local padId = self:padOf(userId)
 			local pad = if padId ~= nil then pads[padId] else nil
-			if padId == nil or pad == nil or not QueuePadRules.canDepart(pad.members, pad.status, userId) then
+			if
+				padId == nil
+				or pad == nil
+				or not QueuePadRules.canDepart(pad.members, pad.status, userId, pad.config.hold)
+			then
 				return nil
 			end
 			pad.endsAt = now
@@ -209,9 +273,10 @@ function QueuePadTracker.new(): QueuePadTracker
 				local members: WorldTypes.WorldTable = table.clone(pad.members)
 				local entry: WorldTypes.WorldTable = {
 					members = members,
-					capacity = pad.config.capacity,
+					capacity = pad.seats,
 					destination = pad.config.destination,
 					departing = pad.status == "departing",
+					held = pad.config.hold,
 				}
 				local endsAt = pad.endsAt
 				if endsAt ~= nil then

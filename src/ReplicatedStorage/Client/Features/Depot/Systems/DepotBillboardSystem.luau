@@ -23,6 +23,7 @@ local Workspace = game:GetService("Workspace")
 
 local React = require(ReplicatedStorage.Packages.React)
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
+local HostStore = require(ReplicatedStorage.Client.Features.Host.State.HostStore)
 local QueueStore = require(ReplicatedStorage.Client.Features.Queue.State.QueueStore)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local UIBillboardHost = require(ReplicatedStorage.Client.UI.Layers.UIBillboardHost)
@@ -56,14 +57,25 @@ local function sign(design: Vector2, child: React.ReactNode): React.ReactNode
 	return e(WorldBillboard, { design = design, sizing = "studs" }, { sign = child })
 end
 
+-- The host of the truck on Queue pad `padId` (crew hosting), for its tag; nil while nobody hosts it.
+local function hostOf(padId: string?): DepotWorldViewModel.TruckHost?
+	local snapshot = HostStore.snapshot()
+	local truck = if padId ~= nil and snapshot ~= nil then snapshot.trucks[padId] else nil
+	if truck == nil then
+		return nil
+	end
+	local player = Players:GetPlayerByUserId(truck.host)
+	return { name = if player ~= nil then player.DisplayName else "Crew", locked = truck.locked }
+end
+
 local function drawTruck(shell: UIBillboards.WorldShell)
 	local truck = shell:GetAttribute(DepotConstants.TRUCK_ATTRIBUTE)
 	local capacity = shell:GetAttribute(DepotConstants.CAPACITY_ATTRIBUTE)
 	if type(truck) ~= "number" or type(capacity) ~= "number" then
 		return
 	end
-	local pad = DepotWorldViewModel.padFor(QueueStore.snapshot(), truck, StateSyncClientStore.publicPlayers())
-	local view = DepotWorldViewModel.truckTag(truck, capacity, pad, Workspace:GetServerTimeNow())
+	local pad, padId = DepotWorldViewModel.padFor(QueueStore.snapshot(), truck, StateSyncClientStore.publicPlayers())
+	local view = DepotWorldViewModel.truckTag(truck, capacity, pad, Workspace:GetServerTimeNow(), hostOf(padId))
 	if DepotWorldViewModel.sameTag(drawn[shell], view) then
 		return
 	end

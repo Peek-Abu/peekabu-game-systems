@@ -35,7 +35,7 @@ local BOARD_COPY = table.freeze({
 	approved = "APPROVED",
 	dispatchLabel = "DISPATCH · HOW TO START",
 	dispatchTitle = "JOIN A SHIFT",
-	dispatchSteps = "1.  Walk up a truck ramp in any bay.\n2.  Anyone aboard presses DEPART NOW.",
+	dispatchSteps = "1.  Walk up a truck ramp in any bay.\n2.  The first one in is the host. The host presses START.",
 	dispatchPhone = "Walk up a truck ramp in any bay.",
 	close = "CLOSE  [Esc]",
 })
@@ -115,6 +115,12 @@ return table.freeze({
 	-- its sweep runs from the SCANNER_SWEEP_TOP attachment down to SCANNER_SWEEP_BOTTOM, SCANNER_WIDTH wide, and it
 	-- settles back to its SCANNER_IDLE colour.
 	SCANNER_TAG = "DepotTruckScanner",
+	-- Crew hosting (batch 4): a truck's art model is tagged TRUCK_ART_TAG with an ObjectValue TRUCK_BED_LINK to its bed,
+	-- and its opaque camera-shell cores carry TRUCK_SHELL_ATTRIBUTE, so the client draws an empty held bay as a ghost
+	-- and pops the host's truck in (DepotTruckGhostSystem).
+	TRUCK_ART_TAG = "DepotTruckArt",
+	TRUCK_BED_LINK = "Bed",
+	TRUCK_SHELL_ATTRIBUTE = "DepotTruckShell",
 	SCANNER_SWEEP_TOP = "ScanSweepTop",
 	SCANNER_SWEEP_BOTTOM = "ScanSweepBottom",
 	SCANNER_WIDTH_ATTRIBUTE = "ScanSweepWidth",

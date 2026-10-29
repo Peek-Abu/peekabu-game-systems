@@ -13,6 +13,8 @@ return table.freeze({
 	CAPACITY_ATTRIBUTE = "QueueCapacity",
 	COUNTDOWN_ATTRIBUTE = "QueueCountdown",
 	DESTINATION_ATTRIBUTE = "QueueDestination",
+	-- true: the pad starts no countdown on its own and refuses Depart now; the game decides when it leaves.
+	HOLD_ATTRIBUTE = "QueueHold",
 	DEFAULT_CAPACITY = 4,
 	-- TeleportAsync moves at most 50 players at once.
 	MAX_CAPACITY = 50,
