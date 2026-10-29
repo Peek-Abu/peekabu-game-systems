@@ -1,8 +1,9 @@
 --!strict
 --[=[
 	ShopConstants: how many picks a day, the UTC hour they change, how long an item counts as New! / its event's
-	last day, and the four Gleam bundles (Robux developer products; a bundle without a product id shows greyed
-	"Soon").
+	last day, the four Gleam bundles (Robux developer products; a bundle without a product id shows greyed
+	"Soon"), and the Passes tab's words for each game pass (PASS_COPY, by its MarketplaceRegistry key; a registered
+	pass with no copy shows its Dashboard name). A pass's price and icon come from Roblox, never from here.
 
 	@class ShopConstants
 ]=]
@@ -27,6 +28,11 @@ local PRODUCT_IDS: { [string]: number } = {
 	gleam1500 = 3722076697,
 }
 
+-- The Passes tab's card words (kid reading level), by MarketplaceRegistry pass key.
+local PASS_COPY: { [string]: { name: string, line: string } } = {
+	bigCrew = { name = "Big Crew", line = "Your truck holds 6 friends! Only you need it." },
+}
+
 return table.freeze({
 	PICKS = 6,
 	-- Today's picks change at 00:00 UTC.
@@ -38,4 +44,5 @@ return table.freeze({
 	MAX_ID_LENGTH = 64,
 	BUNDLES = table.freeze(BUNDLES),
 	PRODUCT_IDS = table.freeze(PRODUCT_IDS),
+	PASS_COPY = table.freeze(PASS_COPY),
 })

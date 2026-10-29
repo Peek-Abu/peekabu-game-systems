@@ -535,6 +535,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.UI.React.Screens.Shop.ShopScreen"] = "React screen wiring the entitlements, currency, premium and Shop stores (values specced in ShopViewModel; story in ShopScreen.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Reveal.RevealScreen"] = "React screen wiring the reveal store (values specced in RevealViewModel; story in RevealScreen.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Reveal.RevealScene"] = "scene registration at require (no logic)",
+	["ReplicatedStorage.Client.UI.React.Screens.Shop.ShopPassesPanel"] = "presentational React component (pass cards specced in ShopViewModel; story in ShopPassesPanel.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Shop.ShopProductPanel"] = "presentational React component (product page specced in ShopViewModel; story in ShopScreen.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Shop.ShopScene"] = "scene registration at require (no logic)",
 	["ReplicatedStorage.Client.UI.React.Screens.Pick.CharacterPickScene"] = "scene registration at require (no logic)",

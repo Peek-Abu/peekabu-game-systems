@@ -7,6 +7,8 @@
 	  changes) and Today's picks (6 cards), with the Gleam bundles along the bottom;
 	- Skins: every item for sale, filterable by employee, owned ones stamped OWNED;
 	- Gleam: the four Gleam bundles (greyed "Soon" until their Robux products exist);
+	- Passes: every registered game pass (ShopPassesPanel), its price and icon as Roblox reported them, Owned once the
+	  player's public `pass:` field says so (live after a purchase); greyed "Soon" while no pass is registered;
 	- a product page (ShopProductPanel) when ShopStore.product is set (a card, or "See in Shop" in the Inventory).
 	Buying asks Yes / No first, then sends ShopServiceClient:requestBuy; what was bought arrives through the synced
 	entitlements and the reveal. Values are ShopViewModel's. `preview` swaps the stores for fixed data (the story).
@@ -15,6 +17,7 @@
 	@class ShopScreen
 ]=]
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
@@ -29,6 +32,9 @@ local ShopRotationUtils = require(ReplicatedStorage.Shared.Features.Shop.Utils.S
 local ShopServiceClient = require(ReplicatedStorage.Client.Features.Shop.ShopServiceClient)
 local MarketplaceServiceClient = require(ReplicatedStorage.Client.Features.Marketplace.MarketplaceServiceClient)
 local ShopStore = require(ReplicatedStorage.Client.Features.Shop.State.ShopStore)
+local MarketplaceConstants = require(ReplicatedStorage.Shared.Features.Marketplace.Data.MarketplaceConstants)
+local MarketplaceRegistry = require(ReplicatedStorage.Shared.Features.Marketplace.Data.MarketplaceRegistry)
+local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
 local LockerStore = require(ReplicatedStorage.Client.Features.Locker.State.LockerStore)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local SceneStack = require(ReplicatedStorage.Client.UI.Scenes.SceneStack)
@@ -52,6 +58,7 @@ local usePaperLayout = require(script.Parent.Parent.Paper.usePaperLayout)
 local usePaperViewport = require(script.Parent.Parent.Paper.usePaperViewport)
 local InventoryViewModel = require(script.Parent.Parent.Inventory.InventoryViewModel)
 local LockerPanel = require(script.Parent.Parent.Locker.LockerPanel)
+local ShopPassesPanel = require(script.Parent.ShopPassesPanel)
 local ShopProductPanel = require(script.Parent.ShopProductPanel)
 local VM = require(script.Parent.ShopViewModel)
 
@@ -357,6 +364,9 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 	local storeProduct = ReactCharm.useAtom(ShopStore.product)
 	local result = ReactCharm.useAtom(ShopStore.result)
 	local lockerOpening = ReactCharm.useAtom(LockerStore.opening)
+	local passInfo = ReactCharm.useAtom(ShopStore.passInfo)
+	local publicPlayers = ReactCharm.useAtom(StateSyncClientStore.publicPlayers)
+	local passKeys = MarketplaceRegistry.passKeys()
 	local tab, setTab = React.useState(props.tab or "featured")
 	local filter, setFilter = React.useState(function(): string?
 		return nil
@@ -410,6 +420,16 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 			MarketplaceServiceClient:promptProduct(key)
 		end
 	end
+	local function buyPass(key: string)
+		if preview == nil then
+			MarketplaceServiceClient:promptPass(key)
+		end
+	end
+	-- Owned: the server publishes each pass the player has as their public `pass:<key>` field (never in a preview).
+	local function ownsPass(key: string): boolean
+		local me = publicPlayers[StateSyncConstants.publicEntryKey(Players.LocalPlayer.UserId)]
+		return preview == nil and me ~= nil and me[MarketplaceConstants.passField(key)] == true
+	end
 	local function open(id: string)
 		if preview == nil then
 			ShopStore.open(id)
@@ -417,12 +437,12 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 	end
 
 	local tabs: { ToonMenuBar.Tab } = {}
-	for _, entry in VM.tabs() do
+	for _, entry in VM.tabs(#passKeys > 0) do
 		table.insert(tabs, { id = entry.id, text = entry.text, icon = entry.icon, soon = entry.soon })
 	end
 	local offer = if productId ~= nil then ShopRegistry.get(productId) else nil
 	local backText = "Back"
-	for _, entry in VM.tabs() do
+	for _, entry in VM.tabs(#passKeys > 0) do
 		if entry.id == tab then
 			backText = entry.text
 		end
@@ -613,6 +633,16 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 			onGetGleam = function()
 				setTab("gleam")
 			end,
+		})
+	elseif tab == "passes" then
+		body = e(ShopPassesPanel, {
+			cards = VM.passes(passKeys, passInfo, ownsPass),
+			width = content.width,
+			height = content.height,
+			headingSize = layout.headingSize,
+			textSize = size,
+			phone = phone,
+			onBuy = buyPass,
 		})
 	elseif tab == "gleam" then
 		local note = e(ToonText, {

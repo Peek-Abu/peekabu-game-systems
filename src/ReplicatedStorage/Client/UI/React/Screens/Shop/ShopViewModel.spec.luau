@@ -127,6 +127,64 @@ return function()
 		end)
 	end)
 
+	describe("passes", function()
+		local function info(price, forSale)
+			return { price = price, icon = "rbxassetid://5", name = "Dashboard name", forSale = forSale ~= false }
+		end
+		local function none()
+			return false
+		end
+
+		it("opens the Passes tab once a pass is registered, greyed Soon before", function()
+			local function passes(tabs)
+				for _, tab in tabs do
+					if tab.id == "passes" then
+						return tab
+					end
+				end
+				return nil
+			end
+			expect(passes(VM.tabs(false)).soon).to.equal(true)
+			expect(passes(VM.tabs(true)).soon).to.equal(false)
+		end)
+
+		it("shows a pass with its kid-level name and line and its Robux price", function()
+			local cards = VM.passes({ "bigCrew" }, { bigCrew = info(149) }, none)
+			expect(#cards).to.equal(1)
+			local card = cards[1]
+			expect(card.key).to.equal("bigCrew")
+			expect(card.name).to.equal(ShopConstants.PASS_COPY.bigCrew.name)
+			expect(card.line).to.equal(ShopConstants.PASS_COPY.bigCrew.line)
+			expect(card.icon).to.equal("rbxassetid://5")
+			expect(card.state).to.equal("buy")
+			expect(card.button).to.equal("R$ 149")
+		end)
+
+		it("says Owned for a pass the player has", function()
+			local card = VM.passes({ "bigCrew" }, { bigCrew = info(149) }, function(key)
+				return key == "bigCrew"
+			end)[1]
+			expect(card.state).to.equal("owned")
+			expect(card.button).to.equal("Owned")
+		end)
+
+		it("waits while the price loads, and says Soon for a pass not on sale", function()
+			local loading = VM.passes({ "bigCrew" }, {}, none)[1]
+			expect(loading.state).to.equal("loading")
+			expect(loading.icon).to.equal(nil)
+			local offSale = VM.passes({ "bigCrew" }, { bigCrew = info(nil, false) }, none)[1]
+			expect(offSale.state).to.equal("unavailable")
+			expect(offSale.button).to.equal("Soon")
+		end)
+
+		it("shows a pass with no copy by its Dashboard name, in the order given", function()
+			local cards = VM.passes({ "bigCrew", "zNew" }, { bigCrew = info(149), zNew = info(99) }, none)
+			expect(cards[2].key).to.equal("zNew")
+			expect(cards[2].name).to.equal("Dashboard name")
+			expect(cards[2].line).to.equal("")
+		end)
+	end)
+
 	it("counts time down in plain units", function()
 		expect(VM.timer(2 * 86400 + 14 * 3600 + 5)).to.equal("2d 14h")
 		expect(VM.timer(6 * 3600 + 12 * 60)).to.equal("6h 12m")

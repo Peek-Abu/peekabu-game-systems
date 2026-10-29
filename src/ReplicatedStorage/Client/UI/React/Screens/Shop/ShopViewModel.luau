@@ -3,8 +3,9 @@
 	ShopViewModel: everything the Shop screens show, from the offers (ShopRegistry / today's ShopRotationUtils.live),
 	the catalogue and what the player owns and has: offer cards (name, "Skin · Pippa", price, owned / affordable /
 	too dear), the buy button (Buy / Owned / "Need 300 more"), the Yes/No question before spending, the product page
-	(lore, styles, what's inside with each extra's own price), the Skins tab list, the Gleam bundles, the countdowns,
-	and a refused buy in kid words. Nothing here is per item: a new offer shows up by itself.
+	(lore, styles, what's inside with each extra's own price), the Skins tab list, the Gleam bundles, the Passes cards
+	(every registered game pass: its words from ShopConstants.PASS_COPY, its price and icon as Roblox reported them,
+	Owned once bought), the countdowns, and a refused buy in kid words. Nothing here is per item: a new offer shows up by itself.
 
 	@class ShopViewModel
 ]=]
@@ -18,6 +19,7 @@ local ShopConstants = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopCo
 local ShopRegistry = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopRegistry)
 local ShopRules = require(ReplicatedStorage.Shared.Features.Shop.Rules.ShopRules)
 local ShopTypes = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopTypes)
+local ShopStore = require(ReplicatedStorage.Client.Features.Shop.State.ShopStore)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local ToonStyleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonStyleViewModel)
 
@@ -25,6 +27,18 @@ type Offer = ShopTypes.Offer
 type Owns = (id: string) -> boolean
 
 export type Balances = { gleam: number, credits: number }
+
+-- A game pass card: what its button says follows `state` (loading the price, on sale, owned, not for sale).
+export type PassState = "loading" | "buy" | "owned" | "unavailable"
+export type PassCard = {
+	key: string,
+	name: string,
+	line: string,
+	-- The pass's own icon (rbxassetid), once Roblox reported it.
+	icon: string?,
+	state: PassState,
+	button: string,
+}
 -- One colour style's chip on a product page: a short name and its colours (the fur, then the outfit).
 export type StyleChip = { name: string, swatch: { Color3 } }
 export type CardState = "owned" | "afford" | "short"
@@ -103,14 +117,14 @@ local VM = {}
 
 VM.SCENE = "shop"
 
--- The Shop's tabs; Passes shows greyed ("Soon") until it is built.
-function VM.tabs(): { { id: string, text: string, icon: UIAssets.ToonIcon?, soon: boolean } }
+-- The Shop's tabs; Passes shows greyed ("Soon") until a game pass is registered (`hasPasses`).
+function VM.tabs(hasPasses: boolean): { { id: string, text: string, icon: UIAssets.ToonIcon?, soon: boolean } }
 	return {
 		{ id = "featured", text = "Featured", icon = "shopGift", soon = false },
 		{ id = "skins", text = "Skins", icon = "pippaHappy", soon = false },
 		{ id = "gleam", text = "Gleam", icon = "gleam", soon = false },
 		{ id = "lockers", text = "Lockers", icon = "locker", soon = false },
-		{ id = "passes", text = "Passes", soon = true },
+		{ id = "passes", text = "Passes", soon = not hasPasses },
 	}
 end
 
@@ -283,6 +297,41 @@ function VM.bundles(): { Bundle }
 		})
 	end
 	return list
+end
+
+-- The Passes tab's cards, one per pass key (in `keys`' order): its words (PASS_COPY, else its Dashboard name), its
+-- icon and price from `infos`, Owned when `owns(key)`.
+function VM.passes(
+	keys: { string },
+	infos: { [string]: ShopStore.PassInfo },
+	owns: (key: string) -> boolean
+): { PassCard }
+	local cards: { PassCard } = {}
+	for _, key in keys do
+		local info = infos[key]
+		local copy = ShopConstants.PASS_COPY[key]
+		local state: PassState
+		local button: string
+		local price = if info ~= nil then info.price else nil
+		if owns(key) then
+			state, button = "owned", "Owned"
+		elseif info == nil then
+			state, button = "loading", "..."
+		elseif not info.forSale or price == nil then
+			state, button = "unavailable", "Soon"
+		else
+			state, button = "buy", `R$ {ToonStyleViewModel.grouped(price)}`
+		end
+		table.insert(cards, {
+			key = key,
+			name = if copy ~= nil then copy.name elseif info ~= nil and info.name ~= nil then info.name else key,
+			line = if copy ~= nil then copy.line else "",
+			icon = if info ~= nil then info.icon else nil,
+			state = state,
+			button = button,
+		})
+	end
+	return cards
 end
 
 -- "2d 14h", "6h 12m", "12m".
