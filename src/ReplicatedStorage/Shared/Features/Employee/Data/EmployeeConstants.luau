@@ -65,6 +65,9 @@ local EmployeeConstants = {
 	OUTFIT_STYLES = "Styles",
 	OUTFIT_PROPS = "Props",
 	STYLE_SLOT_ATTRIBUTE = "StyleSlot",
+	-- The StyleSlot of an outfit mesh painted with the body palette (e.g. trousers): it takes the style's body palette
+	-- like the body does, instead of a SurfaceAppearance from the style folder.
+	BODY_STYLE_SLOT = "Body",
 	PROP_HAND_ATTRIBUTE = "Hand",
 	-- On an outfit Model: comma-separated body parts it covers (made invisible) and template pieces or Accessories it
 	-- replaces (hidden), e.g. PricklesSheriff's boots and hat.

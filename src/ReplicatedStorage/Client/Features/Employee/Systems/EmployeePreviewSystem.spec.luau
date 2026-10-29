@@ -50,6 +50,75 @@ return function()
 		EmployeePreviewSystem.reset()
 	end)
 
+	-- Adds Assets/CleanupCrew/Outfits/PippaBubbleBuddy to `src`: one coat mesh (StyleSlot Opaque), a LowerTorso bone,
+	-- and the first two styles, each an "Opaque" look in its own colour.
+	local STYLE_COLOURS = { BlueYellow = Color3.new(0, 0, 1), PinkTurquoise = Color3.new(1, 0, 1) }
+	local function withOutfit(src)
+		local outfits = Instance.new("Folder")
+		outfits.Name = "Outfits"
+		outfits.Parent = src.Assets.CleanupCrew
+		local outfit = Instance.new("Model")
+		outfit.Name = "PippaBubbleBuddy"
+		local meshes = Instance.new("Folder")
+		meshes.Name = "Outfit"
+		meshes.Parent = outfit
+		local coat = Instance.new("MeshPart")
+		coat.Name = "Coat"
+		coat:SetAttribute("StyleSlot", "Opaque")
+		coat.Parent = meshes
+		local rig = Instance.new("Folder")
+		rig.Name = "Rig"
+		rig.Parent = outfit
+		local holder = Instance.new("Part")
+		holder.Name = "LowerTorso"
+		holder.Parent = rig
+		local bone = Instance.new("Bone")
+		bone.Name = "LowerTorsoBone"
+		bone.Parent = holder
+		local styles = Instance.new("Folder")
+		styles.Name = "Styles"
+		styles.Parent = outfit
+		for name, colour in STYLE_COLOURS do
+			local folder = Instance.new("Folder")
+			folder.Name = name
+			local look = Instance.new("SurfaceAppearance")
+			look.Name = "Opaque"
+			look.Color = colour
+			look.Parent = folder
+			folder.Parent = styles
+		end
+		outfit.Parent = outfits
+		return src
+	end
+
+	local function coatColour(model)
+		local outfit = model:FindFirstChild("Outfit")
+		local coat = outfit and outfit:FindFirstChild("Coat")
+		local look = coat and coat:FindFirstChildOfClass("SurfaceAppearance")
+		return look and look.Color
+	end
+
+	describe("styles", function()
+		it("dresses a static preview in the asked colour style", function()
+			local src = withOutfit(source({ "Pippa" }))
+			local first = EmployeePreviewSystem.static("Pippa", "BubbleBuddy", src, nil, 1)
+			local second = EmployeePreviewSystem.static("Pippa", "BubbleBuddy", src, nil, 2)
+			expect(coatColour(first)).to.equal(STYLE_COLOURS.BlueYellow)
+			expect(coatColour(second)).to.equal(STYLE_COLOURS.PinkTurquoise)
+			first:Destroy()
+			second:Destroy()
+			src:Destroy()
+		end)
+
+		it("dresses a live preview in the asked colour style", function()
+			local src = withOutfit(source({ "Pippa" }))
+			local model = EmployeePreviewSystem.live("Pippa", "BubbleBuddy", src, 2)
+			expect(coatColour(model)).to.equal(STYLE_COLOURS.PinkTurquoise)
+			model:Destroy()
+			src:Destroy()
+		end)
+	end)
+
 	it("builds a static, posed copy: every part anchored, no Animator, no scripts", function()
 		local src = source({ "Pippa" })
 		local model = EmployeePreviewSystem.static("Pippa", nil, src)
@@ -95,6 +164,26 @@ return function()
 		src:Destroy()
 	end)
 
+	it("frees a live slot at once on release, so a rebuild in the same frame is still live", function()
+		-- Destroying alone frees the slot only when the deferred Destroying signal runs (next frame): a viewport that
+		-- rebuilt at once (a style chip) got the frozen copy (owner report, 2026-10-29).
+		local src = source({ "Pippa" })
+		local a = EmployeePreviewSystem.live("Pippa", nil, src)
+		local b = EmployeePreviewSystem.live("Pippa", nil, src)
+		EmployeePreviewSystem.release(b)
+		expect(EmployeePreviewSystem.liveCount()).to.equal(1)
+		expect(b.Parent).to.equal(nil)
+		local c = EmployeePreviewSystem.live("Pippa", nil, src)
+		expect(c).to.be.ok()
+		-- Releasing twice, or a model that is not live, changes nothing.
+		EmployeePreviewSystem.release(b)
+		EmployeePreviewSystem.release(Instance.new("Model"))
+		expect(EmployeePreviewSystem.liveCount()).to.equal(2)
+		a:Destroy()
+		c:Destroy()
+		src:Destroy()
+	end)
+
 	describe("outfit", function()
 		local CosmeticOutfitRules =
 			require(game:GetService("ReplicatedStorage").Shared.Features.Cosmetic.Rules.CosmeticOutfitRules)
@@ -135,6 +224,21 @@ return function()
 			for _, d in model:GetDescendants() do
 				expect(d:IsA("LuaSourceContainer")).to.equal(false)
 			end
+			model:Destroy()
+			mine:Destroy()
+			src:Destroy()
+		end)
+
+		it("dresses the template instead of cloning your character when it wears another colour style", function()
+			local src = withOutfit(source({ "Pippa" }))
+			local mine = character("Pippa", "BubbleBuddy")
+			mine:SetAttribute("EmployeeSkinStyle", 1)
+			local look = pippa()
+			look.look.skin = "Pippa.BubbleBuddy"
+			look.look.style = 2
+			local model = EmployeePreviewSystem.outfit(look, src, mine, false)
+			-- A clone would carry the server's lanyard; the dressed template does not.
+			expect(model:FindFirstChild("Lanyard", true)).never.to.be.ok()
 			model:Destroy()
 			mine:Destroy()
 			src:Destroy()

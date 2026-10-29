@@ -38,6 +38,9 @@ export type StyleDef = {
 	-- "rbxassetid://<id>" of the body palette this style gives the character (each style recolours the fur); it wins
 	-- over the skin's own paletteTextureId.
 	paletteTextureId: string,
+	-- Its chip in the Shop and the locker: a short name (easy words) and its colours, the fur then the outfit.
+	name: string,
+	swatch: { Color3 },
 }
 
 export type SkinDef = {
@@ -192,9 +195,24 @@ local EMPLOYEES: { [string]: EmployeeDef } = {
 				accessories = {},
 				outfit = "PippaBubbleBuddy",
 				styles = {
-					{ folder = "BlueYellow", paletteTextureId = "rbxassetid://74284182744492" },
-					{ folder = "PinkTurquoise", paletteTextureId = "rbxassetid://111714697439083" },
-					{ folder = "LilacOrange", paletteTextureId = "rbxassetid://127175944720666" },
+					{
+						folder = "BlueYellow",
+						paletteTextureId = "rbxassetid://74284182744492",
+						name = "Blue",
+						swatch = { Color3.fromRGB(34, 150, 220), Color3.fromRGB(250, 205, 45) },
+					},
+					{
+						folder = "PinkTurquoise",
+						paletteTextureId = "rbxassetid://111714697439083",
+						name = "Pink",
+						swatch = { Color3.fromRGB(241, 109, 165), Color3.fromRGB(60, 200, 190) },
+					},
+					{
+						folder = "LilacOrange",
+						paletteTextureId = "rbxassetid://127175944720666",
+						name = "Purple",
+						swatch = { Color3.fromRGB(154, 100, 231), Color3.fromRGB(240, 140, 40) },
+					},
 				},
 			},
 		},
@@ -324,6 +342,37 @@ EMPLOYEES.Prickles = {
 			},
 			facesFolder = nil,
 			accessories = {},
+		},
+		-- Legendary (Cosmetic Prickles.Sheriff): the skinned sheriff outfit (hat, vest, boots) over his body, plus the hose
+		-- lasso the emote shows (characters/skins/runtime-candidates-2026-10-26/sheriff_prickles). The outfit covers
+		-- his legs and replaces his hard hat and flower (its HideParts / HideAccessories). Each style has its own body
+		-- palette (the style folders' BodyPalette). Icey Labs images.
+		Sheriff = {
+			name = "Sheriff",
+			paletteTextureId = nil,
+			facesFolder = nil,
+			accessories = {},
+			outfit = "PricklesSheriff",
+			styles = {
+				{
+					folder = "BrownRed",
+					paletteTextureId = "rbxassetid://114520650616235",
+					name = "Brown",
+					swatch = { Color3.fromRGB(150, 100, 60), Color3.fromRGB(200, 55, 45) },
+				},
+				{
+					folder = "CharcoalBlue",
+					paletteTextureId = "rbxassetid://104416112460699",
+					name = "Gray",
+					swatch = { Color3.fromRGB(70, 75, 85), Color3.fromRGB(60, 110, 200) },
+				},
+				{
+					folder = "IvoryTeal",
+					paletteTextureId = "rbxassetid://118528786842498",
+					name = "Cream",
+					swatch = { Color3.fromRGB(235, 225, 200), Color3.fromRGB(30, 150, 150) },
+				},
+			},
 		},
 	},
 	defaultSkin = "Default",

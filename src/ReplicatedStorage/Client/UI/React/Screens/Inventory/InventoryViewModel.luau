@@ -24,6 +24,7 @@ local AnimationRegistry = require(ReplicatedStorage.Shared.Features.Animation.Da
 local EmoteRules = require(ReplicatedStorage.Shared.Features.Emote.Rules.EmoteRules)
 local CalloutAssets = require(ReplicatedStorage.Client.Features.Callout.Data.CalloutAssets)
 local EmployeeProfileRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeProfileRegistry)
+local EmployeeSkinRules = require(ReplicatedStorage.Shared.Features.Employee.Rules.EmployeeSkinRules)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local ToonSourceBand = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonSourceBand)
 local ToonStyleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonStyleViewModel)
@@ -76,6 +77,9 @@ export type ItemCard = {
 	band: Band?,
 }
 
+-- One colour style's chip: a short name and its colours (the fur, then the outfit).
+export type StyleChip = { name: string, swatch: { Color3 } }
+
 export type Detail = {
 	id: string,
 	name: string,
@@ -87,7 +91,10 @@ export type Detail = {
 	lore: string,
 	-- The lore is the employee speaking (the item's choice): drawn with a quote mark and signed; otherwise a book.
 	quote: boolean,
-	styles: { visible: boolean, count: number, enabled: boolean, note: string },
+	-- The colour styles: a chip each (its name and colours) only for a skin with real styles (no row otherwise).
+	-- Chips preview the style on the hero (never equip: Wear does). `selected` is the style shown: the previewed one,
+	-- else the worn one, else 1.
+	styles: { visible: boolean, count: number, enabled: boolean, selected: number, chips: { StyleChip } },
 	comesWith: { Bundled },
 	action: Action,
 	-- Emotes: the employee's 4 wheel slots, the free slot "Add to wheel" uses (nil = none free), and whether its clip
@@ -341,7 +348,11 @@ function VM.items(kind: ListKind, employee: string, loadout: Loadout, owns: Owns
 	return cards
 end
 
-function VM.detail(item: Item, loadout: Loadout, owns: Owns, page: string?): Detail
+--[=[
+	The detail panel for `item`. `style` is the colour style previewed on a chip (nil = the worn style, else 1): each
+	style acts like its own skin, so a worn skin previewed in another style offers Wear for it (chips never equip).
+]=]
+function VM.detail(item: Item, loadout: Loadout, owns: Owns, page: string?, style: number?): Detail
 	local owned = owns(item.id)
 	local employee = item.employee
 	local worn = false
@@ -368,8 +379,19 @@ function VM.detail(item: Item, loadout: Loadout, owns: Owns, page: string?): Det
 		elseif item.kind == "emote" then "emote"
 		elseif item.kind == "vacuum" then "vacuum"
 		else "skin"
-	local styles = item.styles or 1
-	local action = VM.action(item, owned, worn)
+	local chips: { StyleChip } = {}
+	if item.kind == "skin" then
+		for _, styleDef in EmployeeSkinRules.stylesFor(employee, CosmeticRegistry.keyOf(item.id)) do
+			table.insert(chips, { name = styleDef.name, swatch = styleDef.swatch })
+		end
+	end
+	local wornStyle = 1
+	if worn and employee ~= nil and #chips > 0 then
+		local look = CosmeticRules.lookFor(loadout, employee, owns).style
+		wornStyle = if chips[look] ~= nil then look else 1
+	end
+	local selectedStyle = if style ~= nil and chips[style] ~= nil then style else wornStyle
+	local action = VM.action(item, owned, worn and selectedStyle == wornStyle)
 	local wheel: { WheelSlot }? = nil
 	local wheelSlot: number? = nil
 	local comingSoon = false
@@ -419,7 +441,13 @@ function VM.detail(item: Item, loadout: Loadout, owns: Owns, page: string?): Det
 			else `{kindWord} for everyone`,
 		lore = item.lore,
 		quote = item.quote == true,
-		styles = { visible = styles > 1, count = styles, enabled = false, note = "Coming soon" },
+		styles = {
+			visible = #chips > 0,
+			count = #chips,
+			enabled = owned and #chips > 0,
+			selected = selectedStyle,
+			chips = chips,
+		},
 		comesWith = comesWith,
 		action = action,
 		wheel = wheel,
@@ -429,9 +457,10 @@ function VM.detail(item: Item, loadout: Loadout, owns: Owns, page: string?): Det
 end
 
 --[=[
-	The change Wear sends for `item` on `employee`'s page (a skin in its first style; an idle for that employee).
+	The change Wear sends for `item` on `employee`'s page (a skin in colour style `style`, default 1; an idle for that
+	employee).
 ]=]
-function VM.change(item: Item, employee: string, slot: number?): CosmeticTypes.Change
+function VM.change(item: Item, employee: string, slot: number?, style: number?): CosmeticTypes.Change
 	if item.kind == "emote" then
 		return { kind = "emote", employee = item.employee or employee, slot = slot or 1, id = item.id }
 	elseif item.kind == "vacuum" then
@@ -439,7 +468,7 @@ function VM.change(item: Item, employee: string, slot: number?): CosmeticTypes.C
 	elseif item.kind == "idle" then
 		return { kind = "idle", employee = employee, id = item.id }
 	end
-	return { kind = "skin", id = item.id, style = 1 }
+	return { kind = "skin", id = item.id, style = style or 1 }
 end
 
 function VM.chat(loadout: Loadout, owns: Owns): ChatView

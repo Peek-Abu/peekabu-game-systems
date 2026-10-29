@@ -321,12 +321,77 @@ return function()
 	end)
 
 	describe("detail", function()
-		it("shows the Styles row only for items with more than one style, disabled until the art exists", function()
-			local bubble = VM.detail(CosmeticRegistry.get("Pippa.BubbleBuddy"), loadout(), owner())
-			expect(bubble.styles.visible).to.equal(true)
-			expect(bubble.styles.count).to.equal(3)
-			expect(bubble.styles.enabled).to.equal(false)
-			expect(VM.detail(CosmeticRegistry.get("Pippa.Default"), loadout(), owner()).styles.visible).to.equal(false)
+		it(
+			"shows the Styles row only for skins with real styles: one chip per style with its name and colours",
+			function()
+				local bubble = VM.detail(CosmeticRegistry.get("Pippa.BubbleBuddy"), loadout(), owner())
+				expect(bubble.styles.visible).to.equal(true)
+				expect(bubble.styles.count).to.equal(3)
+				expect(#bubble.styles.chips).to.equal(3)
+				for _, chip in bubble.styles.chips do
+					expect(#chip.name > 0).to.equal(true)
+					expect(#chip.swatch).to.equal(2)
+				end
+				expect(VM.detail(CosmeticRegistry.get("Pippa.Default"), loadout(), owner()).styles.visible).to.equal(
+					false
+				)
+			end
+		)
+
+		it(
+			"treats each colour style like its own skin: Wear for another style, Wearing only for the worn one",
+			function()
+				-- Picking a chip only previews; the player presses Wear to change style (owner, 2026-10-29).
+				local owns = owner({ "Pippa.BubbleBuddy" })
+				local worn = loadout({
+					looks = {
+						Pippa = {
+							skin = "Pippa.BubbleBuddy",
+							style = 2,
+							idle = CosmeticRegistry.defaultOf("Pippa", "idle").id,
+							wheel = { "", "", "", "" },
+						},
+					},
+				})
+				local item = CosmeticRegistry.get("Pippa.BubbleBuddy")
+				local same = VM.detail(item, worn, owns, "Pippa", 2)
+				expect(same.action.text).to.equal("Wearing")
+				expect(same.action.enabled).to.equal(false)
+				local other = VM.detail(item, worn, owns, "Pippa", 3)
+				expect(other.action.text).to.equal("Wear")
+				expect(other.action.enabled).to.equal(true)
+				expect(other.action.kind).to.equal("wear")
+				expect(other.styles.selected).to.equal(3)
+				-- No preview picked: the worn style.
+				expect(VM.detail(item, worn, owns, "Pippa").action.text).to.equal("Wearing")
+			end
+		)
+
+		it("shows nothing for a catalogue item with styles but no style art (no row, no note)", function()
+			local pj = VM.detail(CosmeticRegistry.get("Cappy.PJ"), loadout(), owner())
+			expect(pj.styles.visible).to.equal(false)
+			expect(pj.styles.count).to.equal(0)
+			expect(#pj.styles.chips).to.equal(0)
+		end)
+
+		it("enables the chips on an owned skin and marks the worn style; a skin you lack still previews", function()
+			local owns = owner({ "Pippa.BubbleBuddy" })
+			local worn = loadout({
+				looks = {
+					Pippa = {
+						skin = "Pippa.BubbleBuddy",
+						style = 2,
+						idle = CosmeticRegistry.defaultOf("Pippa", "idle").id,
+						wheel = { "", "", "", "" },
+					},
+				},
+			})
+			local mine = VM.detail(CosmeticRegistry.get("Pippa.BubbleBuddy"), worn, owns)
+			expect(mine.styles.enabled).to.equal(true)
+			expect(mine.styles.selected).to.equal(2)
+			local theirs = VM.detail(CosmeticRegistry.get("Pippa.BubbleBuddy"), loadout(), owner())
+			expect(theirs.styles.enabled).to.equal(false)
+			expect(theirs.styles.selected).to.equal(1)
 		end)
 
 		it("names the bundle's items under Comes with", function()
@@ -358,6 +423,8 @@ return function()
 			expect(skin.kind).to.equal("skin")
 			expect(skin.id).to.equal("Pippa.GloomTouched")
 			expect(skin.style).to.equal(1)
+			-- The chosen colour style rides along.
+			expect(VM.change(CosmeticRegistry.get("Pippa.BubbleBuddy"), "Pippa", nil, 3).style).to.equal(3)
 			local idle = VM.change(CosmeticRegistry.get("SleepySway"), "Cappy")
 			expect(idle.kind).to.equal("idle")
 			expect(idle.employee).to.equal("Cappy")

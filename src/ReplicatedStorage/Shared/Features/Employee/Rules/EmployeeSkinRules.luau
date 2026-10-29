@@ -87,6 +87,19 @@ function EmployeeSkinRules.hasStyles(skin: EmployeeRegistry.SkinDef): boolean
 end
 
 --[=[
+	The real colour styles of `employee`'s skin `skinKey` (a catalogue skin id after the dot), in order: what the Shop
+	and the locker show as chips. Empty when the skin has fewer than two styles with art, or is not registered.
+]=]
+function EmployeeSkinRules.stylesFor(employee: string?, skinKey: string): { EmployeeRegistry.StyleDef }
+	local def = if employee ~= nil then EmployeeRegistry.get(employee) else nil
+	local skin = if def ~= nil then def.skins[skinKey] else nil
+	if skin == nil or not EmployeeSkinRules.hasStyles(skin) then
+		return {}
+	end
+	return skin.styles or {}
+end
+
+--[=[
 	The body palette texture id the skin gives the character, when it is a well-formed asset id: a styled skin's
 	`style` palette (each style recolours the body), else the skin's own. nil when the art is pending or the id is
 	malformed (applying the skin then leaves the palette alone).

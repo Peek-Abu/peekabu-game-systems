@@ -3,7 +3,8 @@
 	RevealViewModel: what the reveal screen shows for a grant (CosmeticRevealStore.Reveal): one screen, louder up the
 	rarity ladder (Uncommon a quick pop; Rare adds rays; Epic stripes and sparkles; Legendary confetti; Odd red goo),
 	the title ("LEGENDARY!"), the ribbon ("New skin for Pippa"), the item to show in 3D, what came with it, and the
-	buttons: Wear it! + Later for something you can wear, Nice! otherwise. An employee is a hire: "YOU'RE HIRED!",
+	buttons: Wear it! + Later for something you can wear (a new skin with colour styles shows a chip per style first,
+	to pick which one to wear), Nice! otherwise. An employee is a hire: "YOU'RE HIRED!",
 	their ID card and ability, Start! after the first-join pick, Equip! + Later after a purchase.
 
 	@class RevealViewModel
@@ -14,6 +15,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
 local CosmeticTypes = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticTypes)
 local EmployeeProfileRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeProfileRegistry)
+local EmployeeSkinRules = require(ReplicatedStorage.Shared.Features.Employee.Rules.EmployeeSkinRules)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local ToonStyleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonStyleViewModel)
 
@@ -35,6 +37,9 @@ export type Effects = {
 	foil: boolean,
 }
 
+-- One colour style's chip: a short name and its colours (the fur, then the outfit).
+export type StyleChip = { name: string, swatch: { Color3 } }
+
 export type View = {
 	kind: "hire" | "item",
 	title: string,
@@ -48,8 +53,10 @@ export type View = {
 	alsoGot: { { id: string, name: string, kind: string } },
 	effects: Effects,
 	primary: string,
-	-- What the primary button equips (nil: it only closes).
+	-- What the primary button equips (nil: it only closes); a skin's colour style comes from VM.wear.
 	change: CosmeticTypes.Change?,
+	-- A new skin's colour styles, a chip each (name and colours): pick which one Wear it! puts on. Empty otherwise.
+	styles: { StyleChip },
 	later: boolean,
 	-- A hire's ID card line and ability.
 	job: string,
@@ -106,6 +113,7 @@ function VM.view(reveal: Reveal): View
 			effects = effectsOf("default"),
 			primary = "Nice!",
 			later = false,
+			styles = {},
 			job = "",
 		}
 	end
@@ -124,6 +132,7 @@ function VM.view(reveal: Reveal): View
 			primary = if fromPick then "Start!" else "Equip!",
 			change = if fromPick then nil else { kind = "employee", id = item.id },
 			later = not fromPick,
+			styles = {},
 			job = "Night cleaner",
 			ability = if profile ~= nil
 				then {
@@ -164,6 +173,12 @@ function VM.view(reveal: Reveal): View
 			change = { kind = "vacuum", id = item.id }
 		end
 	end
+	local styles: { StyleChip } = {}
+	if item.kind == "skin" and not duplicate then
+		for _, style in EmployeeSkinRules.stylesFor(item.employee, CosmeticRegistry.keyOf(item.id)) do
+			table.insert(styles, { name = style.name, swatch = style.swatch })
+		end
+	end
 	return {
 		kind = "item",
 		title = TITLE[item.rarity],
@@ -178,8 +193,21 @@ function VM.view(reveal: Reveal): View
 		primary = if change ~= nil then "Wear it!" else "Nice!",
 		change = change,
 		later = change ~= nil,
+		styles = styles,
 		job = "",
 	}
+end
+
+--[=[
+	What Wear it! sends: the view's change, a skin in colour style `style` when it has that style (else its first).
+	nil when there is nothing to wear.
+]=]
+function VM.wear(view: View, style: number): CosmeticTypes.Change?
+	local change = view.change
+	if change ~= nil and change.kind == "skin" then
+		return { kind = "skin", id = change.id, style = if view.styles[style] ~= nil then style else 1 }
+	end
+	return change
 end
 
 return VM

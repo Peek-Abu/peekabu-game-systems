@@ -300,7 +300,8 @@ local function hero(
 	props: InventoryCharacterPanelProps,
 	skinKey: string,
 	rarity: CosmeticTypes.Rarity,
-	tryOn: string?
+	tryOn: string?,
+	style: number
 ): React.ReactNode
 	local shade = UIToonConstants.rarity(rarity)
 	local outfit = if tryOn ~= nil
@@ -312,6 +313,7 @@ local function hero(
 			outfit = outfit,
 			turn = if outfit ~= nil then BACK_TURN else nil,
 			skin = skinKey,
+			style = style,
 			live = true,
 			framing = "full",
 			platform = { top = shade.base, side = shade.lo },
@@ -388,7 +390,41 @@ local function bundledTile(
 	})
 end
 
-local function detail(props: InventoryCharacterPanelProps, view: VM.Detail, item: CosmeticTypes.Item): React.ReactNode
+-- A colour style chip's face: its two colours (the fur, then the outfit) as dots, then its name.
+local function chipFace(chip: VM.StyleChip, size: number): { [string]: React.ReactNode }
+	local dot = size - 2
+	local face: { [string]: React.ReactNode } = {
+		name = e(ToonText, {
+			text = chip.name,
+			textSize = size - 4,
+			meaning = "grape",
+			position = UDim2.fromOffset(dot * 2 + 14, 0),
+			size = UDim2.new(1, -(dot * 2 + 18), 1, 0),
+			fit = true,
+		}),
+	}
+	for index, colour in chip.swatch do
+		face[`dot{index}`] = e("Frame", {
+			AnchorPoint = Vector2.new(0, 0.5),
+			Position = UDim2.new(0, 6 + (index - 1) * (dot + 2), 0.5, 0),
+			Size = UDim2.fromOffset(dot, dot),
+			BackgroundColor3 = colour,
+			BorderSizePixel = 0,
+		}, {
+			round = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }),
+			edge = e("UIStroke", { Color = COLOR.ink, Thickness = 2 }),
+		})
+	end
+	return face
+end
+
+local function detail(
+	props: InventoryCharacterPanelProps,
+	view: VM.Detail,
+	item: CosmeticTypes.Item,
+	style: number,
+	onStyle: (index: number) -> ()
+): React.ReactNode
 	local layout = props.layout
 	local phone = layout.phone
 	local size = layout.textSize
@@ -492,27 +528,20 @@ local function detail(props: InventoryCharacterPanelProps, view: VM.Detail, item
 				meaning = "grape",
 				size = UDim2.fromOffset(size * 5, size + 6),
 			}),
-			note = e(ToonText, {
-				text = view.styles.note,
-				font = "body",
-				color = UIToonConstants.shade("steel").lo,
-				textSize = size - 4,
-				position = UDim2.fromOffset(size * 5 + 6, 4),
-				size = UDim2.fromOffset(200, size),
-				fit = true,
-			}),
 		}
+		-- One chip per style: pressing it shows that style on the hero; Wear puts it on.
 		local count = view.styles.count
 		local buttonWidth = math.floor((layout.detailWidth - 2 * inset - (count - 1) * 10) / count)
-		for index = 1, count do
+		for index, chip in view.styles.chips do
 			styles[`style{index}`] = e(ToonButton, {
 				variant = "secondary",
-				text = `Style {index}`,
-				textSize = size - 4,
-				disabled = true,
+				selected = index == style,
+				content = chipFace(chip, size),
 				position = UDim2.fromOffset((index - 1) * (buttonWidth + 10), size + 12),
 				size = UDim2.fromOffset(buttonWidth, size + 22),
-				onActivated = function() end,
+				onActivated = function()
+					onStyle(index)
+				end,
 			})
 		end
 		rows.styles = block(size * 2 + 44, 5, group(styles))
@@ -632,7 +661,7 @@ local function detail(props: InventoryCharacterPanelProps, view: VM.Detail, item
 			size = UDim2.new(1, -2 * inset, 0, buttonHeight),
 			onActivated = function()
 				if action.kind == "wear" then
-					props.onWear(VM.change(item, props.employee, view.wheelSlot))
+					props.onWear(VM.change(item, props.employee, view.wheelSlot, style))
 				elseif action.kind == "shop" then
 					props.onShop(item.id)
 				end
@@ -852,6 +881,8 @@ end
 
 local function InventoryCharacterPanel(props: InventoryCharacterPanelProps): React.ReactNode
 	local layout = props.layout
+	-- The colour style picked on a chip, for the item it was picked on (another item shows its worn style again).
+	local picked, setPicked = React.useState({ id = "", style = 1 })
 	local look = props.loadout.looks[props.employee]
 	local wornSkin = if look ~= nil then look.skin else CosmeticRegistry.defaultOf(props.employee, "skin").id
 
@@ -860,6 +891,7 @@ local function InventoryCharacterPanel(props: InventoryCharacterPanelProps): Rea
 	local heroSkin = VM.skinKey(wornSkin)
 	local heroRarity: CosmeticTypes.Rarity = "default"
 	local tryOn: string? = nil
+	local heroStyle = 1
 	local seenId = ""
 	if props.tab == "about" then
 		left, right = about(props)
@@ -884,9 +916,20 @@ local function InventoryCharacterPanel(props: InventoryCharacterPanelProps): Rea
 			end
 		end
 		if selectedItem ~= nil then
-			local view = VM.detail(selectedItem, props.loadout, props.owns, props.employee)
-			left = grid(props, cards, selectedItem.id)
-			right = detail(props, view, selectedItem)
+			local item = selectedItem
+			local view = VM.detail(
+				item,
+				props.loadout,
+				props.owns,
+				props.employee,
+				if picked.id == item.id then picked.style else nil
+			)
+			heroStyle = view.styles.selected
+			left = grid(props, cards, item.id)
+			-- A chip only previews the style; Wear (enabled for another style of a worn skin) puts it on.
+			right = detail(props, view, item, heroStyle, function(index: number)
+				setPicked({ id = item.id, style = index })
+			end)
 			heroRarity = selectedItem.rarity
 			if selectedItem.kind == "skin" then
 				heroSkin = VM.skinKey(selectedItem.id)
@@ -916,7 +959,7 @@ local function InventoryCharacterPanel(props: InventoryCharacterPanelProps): Rea
 			Position = UDim2.fromOffset(layout.gridWidth + layout.gap, 0),
 			Size = UDim2.new(0, layout.heroWidth, 1, 0),
 			BackgroundTransparency = 1,
-		}, { content = hero(props, heroSkin, heroRarity, tryOn) }),
+		}, { content = hero(props, heroSkin, heroRarity, tryOn, heroStyle) }),
 		right = e("Frame", {
 			Position = UDim2.fromOffset(layout.gridWidth + layout.heroWidth + 2 * layout.gap, 0),
 			Size = UDim2.new(0, layout.detailWidth, 1, 0),

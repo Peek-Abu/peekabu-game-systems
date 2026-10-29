@@ -2,7 +2,8 @@
 --[=[
 	ShopProductPanel: one offer's page in the Shop (concept: characters/ui/character-ui/frames3/product.jpg). Left, a
 	cream panel: the rarity ribbon, the big name, "Bundle for Pippa · cosmetic only", the lore in a quote box, Styles
-	(greyed until style art exists), a row per item inside (its kind, name and own price "alone 400"), and the big buy
+	(a chip per colour style: pressing one shows that style on the 3D preview, so you see it before buying; only for a
+	skin with real styles), a row per item inside (its kind, name and own price "alone 400"), and the big buy
 	button (the price, Owned, or "Need 300 more"), with a refused buy's words under it. Right: the item LIVE on a
 	raised platform in its rarity's colour. All of it is ShopViewModel.product; nothing is per item. Presentational
 	(exempt; story in ShopScreen.story).
@@ -138,8 +139,38 @@ local function insideRow(
 	})
 end
 
+-- A colour style chip's face: its two colours (the fur, then the outfit) as dots, then its name.
+local function chipFace(chip: VM.StyleChip, size: number): Nodes
+	local dot = size - 2
+	local face: Nodes = {
+		name = e(ToonText, {
+			text = chip.name,
+			textSize = size - 4,
+			meaning = "grape",
+			position = UDim2.fromOffset(dot * 2 + 14, 0),
+			size = UDim2.new(1, -(dot * 2 + 18), 1, 0),
+			fit = true,
+		}),
+	}
+	for index, colour in chip.swatch do
+		face[`dot{index}`] = e("Frame", {
+			AnchorPoint = Vector2.new(0, 0.5),
+			Position = UDim2.new(0, 6 + (index - 1) * (dot + 2), 0.5, 0),
+			Size = UDim2.fromOffset(dot, dot),
+			BackgroundColor3 = colour,
+			BorderSizePixel = 0,
+		}, {
+			round = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }),
+			edge = e("UIStroke", { Color = COLOR.ink, Thickness = 2 }),
+		})
+	end
+	return face
+end
+
 local function ShopProductPanel(props: ShopProductPanelProps): React.ReactNode
 	local layout = props.layout
+	-- The colour style picked on a chip, for the product it was picked on (another product starts at style 1).
+	local picked, setPicked = React.useState({ id = "", style = 1 })
 	local phone = layout.phone
 	local product = props.product
 	local card = product.card
@@ -198,16 +229,34 @@ local function ShopProductPanel(props: ShopProductPanelProps): React.ReactNode
 		children = quote,
 	})
 	y += quoteHeight + DEPTH.drop + 10
+	local style = if picked.id == card.id then picked.style else 1
 	if product.styles.visible then
 		face.styles = e(ToonText, {
-			text = `STYLES  ·  all {product.styles.count} come with it (art coming soon)`,
+			text = product.styles.text,
 			textSize = size - 4,
 			meaning = "grape",
 			position = UDim2.fromOffset(pad, y),
 			size = UDim2.fromOffset(inner, size),
 			fit = true,
 		})
-		y += size + 10
+		-- Room for the chips' raised lip above them, clear of the line.
+		y += size + 16
+		local count = product.styles.count
+		local chipWidth = math.floor((inner - (count - 1) * 10) / count)
+		local chipHeight = size + 22
+		for index, chip in product.styles.chips do
+			face[`style{index}`] = e(ToonButton, {
+				variant = "secondary",
+				selected = index == style,
+				content = chipFace(chip, size),
+				position = UDim2.fromOffset(pad + (index - 1) * (chipWidth + 10), y),
+				size = UDim2.fromOffset(chipWidth, chipHeight),
+				onActivated = function()
+					setPicked({ id = card.id, style = index })
+				end,
+			})
+		end
+		y += chipHeight + DEPTH.drop + 10
 	end
 	local rowHeight = if phone then 40 else 84
 	local rows: Nodes = {
@@ -299,6 +348,7 @@ local function ShopProductPanel(props: ShopProductPanelProps): React.ReactNode
 				outfit = tryOn,
 				turn = if tryOn ~= nil then 150 else nil,
 				skin = card.skinKey,
+				style = style,
 				live = true,
 				framing = "full",
 				platform = { top = shade.base, side = shade.lo },

@@ -13,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
 local CosmeticTypes = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticTypes)
+local EmployeeSkinRules = require(ReplicatedStorage.Shared.Features.Employee.Rules.EmployeeSkinRules)
 local ShopConstants = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopConstants)
 local ShopRegistry = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopRegistry)
 local ShopRules = require(ReplicatedStorage.Shared.Features.Shop.Rules.ShopRules)
@@ -24,6 +25,8 @@ type Offer = ShopTypes.Offer
 type Owns = (id: string) -> boolean
 
 export type Balances = { gleam: number, credits: number }
+-- One colour style's chip on a product page: a short name and its colours (the fur, then the outfit).
+export type StyleChip = { name: string, swatch: { Color3 } }
 export type CardState = "owned" | "afford" | "short"
 
 export type OfferCard = {
@@ -61,7 +64,8 @@ export type Product = {
 	lore: string,
 	-- The lore is the employee speaking (the item's choice): drawn with a quote mark; otherwise a book.
 	quote: boolean,
-	styles: { visible: boolean, count: number },
+	-- The colour styles: a chip each (name and colours) that swaps the preview, only for a skin with real styles.
+	styles: { visible: boolean, count: number, text: string, chips: { StyleChip } },
 	inside: { Inside },
 	button: Button,
 	confirm: string,
@@ -210,14 +214,24 @@ function VM.product(offer: Offer, owns: Owns, balances: Balances): Product
 		elseif item ~= nil and item.kind == "employee" then "A new employee"
 		elseif item ~= nil then `{KIND_WORD[item.kind]}{who}`
 		else ""
-	local styles = if item ~= nil then item.styles or 1 else 1
+	local chips: { StyleChip } = {}
+	if item ~= nil and item.kind == "skin" then
+		for _, style in EmployeeSkinRules.stylesFor(item.employee, CosmeticRegistry.keyOf(item.id)) do
+			table.insert(chips, { name = style.name, swatch = style.swatch })
+		end
+	end
 	return {
 		card = card,
 		rarityText = if card.rarity == "default" then "CLASSIC" else string.upper(card.rarity),
 		line = if item ~= nil and item.kind == "employee" then what else `{what} · cosmetic only`,
 		lore = if item ~= nil then item.lore else "",
 		quote = item ~= nil and item.quote == true,
-		styles = { visible = styles > 1, count = styles },
+		styles = {
+			visible = #chips > 0,
+			count = #chips,
+			text = `STYLES  ·  all {#chips} come with it`,
+			chips = chips,
+		},
 		inside = inside,
 		button = VM.button(offer, owns, balances),
 		confirm = VM.confirm(offer),

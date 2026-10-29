@@ -7,7 +7,7 @@
 	  an image. The pose is the employee's `context` pose (EmployeePoseRules; default "crew").
 	- `live = true` (the hero): the model in a WorldModel with its idle loop playing. Past the live cap (two at once)
 	  it quietly shows the static copy instead.
-	The model is rebuilt only when the employee, skin, framing or live flag changes, and destroyed with the component.
+	The model is rebuilt only when the employee, skin, colour style, framing or live flag changes, and destroyed with the component.
 	`platform` stands the model on a round 3D platform in the given colours (built in the viewport, so it is lit and
 	turns with the model's world, never a flat shape behind it); the camera frames the two together.
 	`outfit` shows a whole player's look instead (EmployeePreviewSystem.outfit: your own character cloned, with the
@@ -56,6 +56,8 @@ export type ToonViewportProps = {
 	turn: number?,
 	-- An EmployeeRegistry skin key (nil = the default look).
 	skin: string?,
+	-- The skin's colour style (nil = 1); an outfit look carries its own.
+	style: number?,
 	live: boolean?,
 	framing: PortraitViewModel.Framing,
 	context: EmployeePoseRegistry.PortraitContext?,
@@ -149,22 +151,22 @@ local function build(props: ToonViewportProps): (Model?, boolean)
 			false
 	end
 	if props.live == true then
-		local model = EmployeePreviewSystem.live(employee, props.skin, ReplicatedStorage)
+		local model = EmployeePreviewSystem.live(employee, props.skin, ReplicatedStorage, props.style)
 		if model ~= nil then
 			return model, true
 		end
 	end
 	local pose = EmployeePoseRules.select(EmployeePoseRegistry.get(employee), props.context or "crew", {})
-	return EmployeePreviewSystem.static(employee, props.skin, ReplicatedStorage, pose), false
+	return EmployeePreviewSystem.static(employee, props.skin, ReplicatedStorage, pose, props.style), false
 end
 
 -- What the model shows, as one string (the effect rebuilds only when it changes).
 local function lookKey(props: ToonViewportProps): string
 	local outfit = props.outfit
 	if outfit ~= nil then
-		return `{outfit.employee}|{outfit.look.skin}|{outfit.vacuum}`
+		return `{outfit.employee}|{outfit.look.skin}|{outfit.look.style}|{outfit.vacuum}`
 	end
-	return `{props.employee or ""}|{props.skin or ""}|{props.vacuum or ""}`
+	return `{props.employee or ""}|{props.skin or ""}|{props.style or 1}|{props.vacuum or ""}`
 end
 
 local function ToonViewport(props: ToonViewportProps): React.ReactNode
@@ -218,7 +220,8 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 		local resized = frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
 		return function()
 			resized:Disconnect()
-			model:Destroy()
+			-- Frees a live slot at once: the rebuild that follows (another style, skin or framing) may need it now.
+			EmployeePreviewSystem.release(model)
 			if stand ~= nil then
 				stand:Destroy()
 			end

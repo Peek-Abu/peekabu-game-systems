@@ -82,6 +82,14 @@ return function()
 			expect(view.inside[1].name).to.equal("Bubble Buddy")
 			expect(view.inside[2].alone).to.equal("alone 400")
 			expect(view.styles.visible).to.equal(true)
+			-- Every style is a chip that swaps the preview; the line no longer says the art is coming.
+			expect(#view.styles.chips).to.equal(3)
+			expect(view.styles.chips[1].name).to.equal("Blue")
+			expect(string.find(string.lower(view.styles.text), "coming", 1, true)).never.to.be.ok()
+			-- A catalogue item with styles but no style art shows nothing.
+			local pj = VM.product(ShopRegistry.get("Cappy.PJ"), owner(), rich)
+			expect(pj.styles.visible).to.equal(false)
+			expect(#pj.styles.chips).to.equal(0)
 			-- Quoted only where the item chose it (a spoken line), never by rarity.
 			expect(view.quote).to.equal(false)
 			expect(VM.product(ShopRegistry.get("Prickles.Lasso"), owner(), rich).quote).to.equal(true)

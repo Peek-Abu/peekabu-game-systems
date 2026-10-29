@@ -129,6 +129,21 @@ return function()
 		end)
 	end)
 
+	describe("stylesFor", function()
+		it("lists a registered skin's real styles, in order", function()
+			local styles = EmployeeSkinRules.stylesFor("Pippa", "BubbleBuddy")
+			expect(#styles).to.equal(3)
+			expect(styles[1].folder).to.equal("BlueYellow")
+		end)
+
+		it("is empty for a skin with no styles, an unknown skin and an unknown employee", function()
+			expect(#EmployeeSkinRules.stylesFor("Pippa", "Default")).to.equal(0)
+			expect(#EmployeeSkinRules.stylesFor("Cappy", "PJ")).to.equal(0)
+			expect(#EmployeeSkinRules.stylesFor("Pippa", "Nope")).to.equal(0)
+			expect(#EmployeeSkinRules.stylesFor(nil, "BubbleBuddy")).to.equal(0)
+		end)
+	end)
+
 	describe("wornChanged", function()
 		local current = { employee = "Pippa", skin = "Styled", style = 2 }
 

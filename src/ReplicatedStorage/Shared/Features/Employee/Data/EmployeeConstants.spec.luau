@@ -54,6 +54,7 @@ return function()
 					EmployeeConstants.OUTFIT_STYLES,
 					EmployeeConstants.OUTFIT_PROPS,
 					EmployeeConstants.STYLE_SLOT_ATTRIBUTE,
+					EmployeeConstants.BODY_STYLE_SLOT,
 					EmployeeConstants.PROP_HAND_ATTRIBUTE,
 					EmployeeConstants.HIDE_PARTS_ATTRIBUTE,
 					EmployeeConstants.HIDE_ACCESSORIES_ATTRIBUTE,

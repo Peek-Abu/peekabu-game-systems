@@ -17,7 +17,8 @@
 	  Accessory is not); missing ones are skipped.
 	- Outfit: a skin naming a skinned outfit has it fitted from `outfitSource` (the folder at
 	  EmployeeConstants.OUTFITS_PATH) in the player's colour style (EmployeeOutfitSystem). A styled skin's palette is its
-	  style's (each style recolours the body); the palette never reaches the outfit's meshes or props.
+	  style's (each style recolours the body); the palette never reaches the outfit's meshes or props, except an
+	  outfit mesh in the Body StyleSlot (painted with the body palette, e.g. trousers).
 
 	Every part is optional: a skin that names nothing changes nothing.
 
@@ -94,7 +95,11 @@ function EmployeeSkinSystem.apply(
 				descendant:IsA("MeshPart")
 				and descendant.Name ~= EmployeeConstants.FACE_PLATE
 				and (pieces == nil or not descendant:IsDescendantOf(pieces))
-				and not EmployeeOutfitSystem.isOutfitPart(character, descendant)
+				and (
+					not EmployeeOutfitSystem.isOutfitPart(character, descendant)
+					or descendant:GetAttribute(EmployeeConstants.STYLE_SLOT_ATTRIBUTE)
+						== EmployeeConstants.BODY_STYLE_SLOT
+				)
 			then
 				descendant.TextureID = palette
 				result.textured += 1

@@ -145,6 +145,9 @@ return function()
 			meshes.Parent = outfit
 			local coat = meshPart(meshes, "CoatMesh")
 			coat:SetAttribute(EmployeeConstants.STYLE_SLOT_ATTRIBUTE, "Opaque")
+			-- Trousers painted with the body palette (like PricklesSheriff's Legs): they follow the style's palette.
+			local legs = meshPart(meshes, "LegsMesh")
+			legs:SetAttribute(EmployeeConstants.STYLE_SLOT_ATTRIBUTE, EmployeeConstants.BODY_STYLE_SLOT)
 			local rig = Instance.new("Folder")
 			rig.Name = EmployeeConstants.OUTFIT_RIG
 			rig.Parent = outfit
@@ -204,8 +207,10 @@ return function()
 			expect(head.TextureID).to.equal("rbxassetid://502")
 			expect(model.Outfit.CoatMesh.TextureID).to.equal(ORIGINAL)
 			expect(model.EmoteProps.Wand.TextureID).to.equal(ORIGINAL)
-			-- Head, RightUpperArm and LowerTorso: the body, never the outfit.
-			expect(result.textured).to.equal(3)
+			-- An outfit mesh in the Body slot wears the body palette too.
+			expect(model.Outfit.LegsMesh.TextureID).to.equal("rbxassetid://502")
+			-- Head, RightUpperArm and LowerTorso, plus the Body-slot trousers; never the rest of the outfit.
+			expect(result.textured).to.equal(4)
 			model:Destroy()
 			source:Destroy()
 		end)
@@ -241,7 +246,7 @@ return function()
 			end
 			expect(outfits).to.equal(1)
 			expect(props).to.equal(1)
-			expect(meshes).to.equal(1)
+			expect(meshes).to.equal(2)
 			expect(bones).to.equal(1)
 			model:Destroy()
 			source:Destroy()

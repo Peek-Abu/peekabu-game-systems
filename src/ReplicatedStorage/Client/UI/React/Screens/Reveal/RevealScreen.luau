@@ -101,6 +101,34 @@ local function Confetti(props: { count: number }): React.ReactNode
 	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 1 }, nodes)
 end
 
+-- A colour style chip's face: its two colours (the fur, then the outfit) as dots, then its name.
+local function chipFace(chip: VM.StyleChip, size: number): Nodes
+	local dot = size - 2
+	local face: Nodes = {
+		name = e(ToonText, {
+			text = chip.name,
+			textSize = size - 4,
+			meaning = "grape",
+			position = UDim2.fromOffset(dot * 2 + 14, 0),
+			size = UDim2.new(1, -(dot * 2 + 18), 1, 0),
+			fit = true,
+		}),
+	}
+	for index, colour in chip.swatch do
+		face[`dot{index}`] = e("Frame", {
+			AnchorPoint = Vector2.new(0, 0.5),
+			Position = UDim2.new(0, 6 + (index - 1) * (dot + 2), 0.5, 0),
+			Size = UDim2.fromOffset(dot, dot),
+			BackgroundColor3 = colour,
+			BorderSizePixel = 0,
+		}, {
+			round = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }),
+			edge = e("UIStroke", { Color = COLOR.ink, Thickness = 2 }),
+		})
+	end
+	return face
+end
+
 local function RevealScreen(props: RevealScreenProps): React.ReactNode
 	local liveViewport = usePaperViewport()
 	local livePhone = usePaperLayout() == "phone"
@@ -112,6 +140,9 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 	local pop, setPop = React.useState(noScale)
 
 	local key = if reveal ~= nil then table.concat(reveal.ids, ",") else ""
+	-- The colour style picked to wear, for the reveal it was picked on (a new reveal starts at style 1).
+	local picked, setPicked = React.useState({ key = "", style = 1 })
+	local style = if picked.key == key then picked.style else 1
 	-- The opening, replayed for each reveal: a white flash fading, the character popping in, a bright sweep.
 	local flash = useToonPlay(0.5, 0, key)
 	local hero = useToonPlay(0.55, 0.15, key)
@@ -149,7 +180,7 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 	local bottom = if tint ~= nil then tint.dark else shade.lo
 
 	local function finish(equip: boolean)
-		local change = view.change
+		local change = VM.wear(view, style)
 		if props.reveal == nil then
 			if equip and change ~= nil then
 				CosmeticServiceClient:requestEquip(change)
@@ -234,6 +265,7 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 			outfit = tryOn,
 			turn = if tryOn ~= nil then 150 else nil,
 			skin = view.skinKey,
+			style = style,
 			live = true,
 			framing = "full",
 			-- A hire stands on their own colour; an item on its rarity's.
@@ -461,6 +493,39 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 			finish(true)
 		end,
 	})
+	-- A new skin with colour styles: a chip per style above the buttons; the pick shows on the hero and Wear it! puts
+	-- it on.
+	local chips = view.styles
+	if #chips > 0 then
+		local chipSize = if phone then 14 else 26
+		local chipHeight = chipSize + 22
+		local rowWidth = math.floor(buttonWidth * 1.6)
+		local chipWidth = math.floor((rowWidth - (#chips - 1) * 10) / #chips)
+		local above = (if view.later then buttonHeight + (if phone then 24 else 70) else (if phone then 12 else 50))
+			+ buttonHeight
+			+ (if phone then 12 else 24)
+		local row: Nodes = {}
+		for index, chip in chips do
+			row[`style{index}`] = e(ToonButton, {
+				variant = "secondary",
+				selected = index == style,
+				content = chipFace(chip, chipSize),
+				position = UDim2.fromOffset((index - 1) * (chipWidth + 10), 0),
+				size = UDim2.fromOffset(chipWidth, chipHeight),
+				zIndex = 6,
+				onActivated = function()
+					setPicked({ key = key, style = index })
+				end,
+			})
+		end
+		nodes.styles = e("Frame", {
+			AnchorPoint = Vector2.new(1, 1),
+			Position = UDim2.new(1, -margin, 1, -above),
+			Size = UDim2.fromOffset(rowWidth, chipHeight),
+			BackgroundTransparency = 1,
+			ZIndex = 6,
+		}, row)
+	end
 	if view.later then
 		nodes.later = e(ToonButton, {
 			variant = "secondary",

@@ -61,6 +61,17 @@ return function()
 			expect(skin.paletteTextureId).never.to.be.ok()
 		end)
 
+		it("gives Prickles a Sheriff skin wearing its outfit, in its catalogue's 3 styles", function()
+			local skin = EmployeeRegistry.get("Prickles").skins.Sheriff
+			expect(skin).to.be.ok()
+			expect(skin.outfit).to.equal("PricklesSheriff")
+			expect(#skin.styles).to.equal(CosmeticRegistry.get("Prickles.Sheriff").styles)
+			for index, folder in { "BrownRed", "CharcoalBlue", "IvoryTeal" } do
+				expect(skin.styles[index].folder).to.equal(folder)
+				expect(string.match(skin.styles[index].paletteTextureId, "^rbxassetid://%d+$")).to.be.ok()
+			end
+		end)
+
 		it("gives every styled skin as many styles as its catalogue item, each naming a folder", function()
 			for _, name in EmployeeRegistry.names() do
 				local def = EmployeeRegistry.get(name)
@@ -71,6 +82,12 @@ return function()
 						expect(#skin.styles).to.equal(item.styles or 1)
 						for _, style in skin.styles do
 							expect(#style.folder > 0).to.equal(true)
+							-- A chip in the Shop and the locker: a short name and the fur and outfit colours.
+							expect(#style.name > 0).to.equal(true)
+							expect(#style.swatch).to.equal(2)
+							for _, colour in style.swatch do
+								expect(typeof(colour)).to.equal("Color3")
+							end
 						end
 					end
 				end

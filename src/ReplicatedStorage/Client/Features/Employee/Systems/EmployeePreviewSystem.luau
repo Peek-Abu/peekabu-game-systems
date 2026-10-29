@@ -4,12 +4,14 @@
 	later the Shop and reveals): any employee in any skin, built on the client from the art in ReplicatedStorage and
 	dressed by the same EmployeeSkinSystem the server dresses real characters with, so a preview never drifts.
 
-	- `static(employee, skin, source, pose?)`: posed once and frozen (EmployeePortraitSystem.build): every part
+	- `static(employee, skin, source, pose?, style?)`: posed once and frozen (EmployeePortraitSystem.build): every part
 	  anchored, no Animator, no scripts. The engine renders it once: cards and grids.
-	- `live(employee, skin, source)`: the dressed model with its root held and the body free, an Animator, no
+	- `live(employee, skin, source, style?)`: the dressed model with its root held and the body free, an Animator, no
 	  scripts: put it in a WorldModel and `playIdle` it. At most LIVE_CAP exist at once (the hero and one hovered
-	  card); `live` returns nil past the cap, and a destroyed live preview frees its slot.
+	  card); `live` returns nil past the cap. `release` destroys one and frees its slot at once (destroying it alone
+	  frees the slot a frame later).
 	- `skin` is an EmployeeRegistry skin key (nil = the default look); an unknown one falls back to the default.
+	  `style` is its colour style (nil = 1; clamped to one the skin has).
 	- `outfit(outfit, source, character, live, pose?)`: a whole player's look (CosmeticOutfitRules): a clone of
 	  `character` (your own, live one) when it is that employee in that skin, so everything the server put on it
 	  comes along (the rank lanyard and badge, the vacuum pack), else the dressed template; then the outfit's vacuum
@@ -55,8 +57,8 @@ local function resolve(root: Instance, path: { string }): Instance?
 	return current
 end
 
--- A dressed clone of the employee's art (scripts removed), or nil.
-local function dressed(employee: string, skin: string?, source: Instance): Model?
+-- A dressed clone of the employee's art (scripts removed) in colour style `style` (nil = 1), or nil.
+local function dressed(employee: string, skin: string?, source: Instance, style: number?): Model?
 	local def = EmployeeRegistry.get(employee)
 	if def == nil then
 		return nil
@@ -74,12 +76,12 @@ local function dressed(employee: string, skin: string?, source: Instance): Model
 	end
 	local look = EmployeeSkinRules.select(def, skin)
 	if look ~= nil then
-		-- Style 1 until the previews take a style (WIRING-PLAN batch 2); the outfit is fitted like the server's.
+		-- The outfit is fitted in the style, as the server dresses a real character.
 		EmployeeSkinSystem.apply(
 			model,
 			look,
 			resolve(source, EmployeeConstants.ACCESSORIES_PATH),
-			nil,
+			style,
 			resolve(source, EmployeeConstants.OUTFITS_PATH)
 		)
 	end
@@ -91,15 +93,26 @@ function EmployeePreviewSystem.static(
 	employee: string,
 	skin: string?,
 	source: Instance,
-	pose: EmployeePoseRegistry.PoseDef?
+	pose: EmployeePoseRegistry.PoseDef?,
+	style: number?
 ): Model?
-	local model = dressed(employee, skin, source)
+	local model = dressed(employee, skin, source, style)
 	if model == nil then
 		return nil
 	end
 	local copy = EmployeePortraitSystem.build(model, pose)
 	model:Destroy()
 	return copy
+end
+
+-- Gives back `model`'s live slot (once).
+local function free(model: Model)
+	local connection: RBXScriptConnection? = live[model]
+	if connection then
+		connection:Disconnect()
+		live[model] = nil
+		liveCount -= 1
+	end
 end
 
 -- Readies `model` to animate in a WorldModel (root held, body free, an Animator) and takes a live slot.
@@ -114,22 +127,28 @@ local function makeLive(model: Model): Model
 		Instance.new("Animator").Parent = humanoid
 	end
 	liveCount += 1
+	-- A backstop for a live preview destroyed without `release` (its slot frees when the deferred signal runs).
 	live[model] = model.Destroying:Connect(function()
-		local connection: RBXScriptConnection? = live[model]
-		if connection then
-			connection:Disconnect()
-			live[model] = nil
-			liveCount -= 1
-		end
+		free(model)
 	end)
 	return model
 end
 
-function EmployeePreviewSystem.live(employee: string, skin: string?, source: Instance): Model?
+--[=[
+	Destroys a live preview and frees its slot at once. Destroying alone frees it only when the deferred Destroying
+	signal runs, a frame later, so a viewport rebuilding in the same frame (a colour style chip) got the frozen copy.
+	Safe for a model that is not live, or released twice.
+]=]
+function EmployeePreviewSystem.release(model: Model)
+	free(model)
+	model:Destroy()
+end
+
+function EmployeePreviewSystem.live(employee: string, skin: string?, source: Instance, style: number?): Model?
 	if liveCount >= LIVE_CAP then
 		return nil
 	end
-	local model = dressed(employee, skin, source)
+	local model = dressed(employee, skin, source, style)
 	return if model ~= nil then makeLive(model) else nil
 end
 
@@ -161,16 +180,21 @@ function EmployeePreviewSystem.outfit(
 	pose: EmployeePoseRegistry.PoseDef?
 ): (Model?, boolean)
 	local skinKey = CosmeticRegistry.keyOf(outfit.look.skin)
+	local def = EmployeeRegistry.get(outfit.employee)
+	local skin = if def ~= nil then EmployeeSkinRules.select(def, skinKey) else nil
+	local style = if skin ~= nil then EmployeeSkinRules.styleIndex(skin, outfit.look.style) else 1
 	local model: Model? = nil
+	-- Your own character only when it wears this employee, skin and colour style (the server stamps all three).
 	if
 		character ~= nil
 		and character:GetAttribute(EmployeeConstants.NAME_ATTRIBUTE) == outfit.employee
 		and character:GetAttribute(EmployeeConstants.SKIN_ATTRIBUTE) == skinKey
+		and (character:GetAttribute(EmployeeConstants.STYLE_ATTRIBUTE) or 1) == style
 	then
 		model = cloneCharacter(character)
 	end
 	if model == nil then
-		model = dressed(outfit.employee, skinKey, source)
+		model = dressed(outfit.employee, skinKey, source, style)
 	end
 	if model == nil then
 		return nil, false
