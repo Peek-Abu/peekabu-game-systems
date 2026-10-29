@@ -16,6 +16,9 @@
 	  named after the prop; an unknown style keeps the outfit's own looks.
 	- Props: cloned into EmployeeConstants.PROPS_FOLDER, hidden (Transparency 1: the emote shows them), on their
 	  Motor6D from the hand its `Hand` attribute names, with C0/C1 scaled. A prop whose hand is missing is skipped.
+	- Worn props: a prop with a `Holster` body part and `HolsterOffset` frame also gets a shown twin in
+	  EmployeeConstants.HOLSTER_FOLDER, welded there at the scaled offset (the duck ring at the waist, the hose on the
+	  hip). The emote hides it while the hand copy shows.
 	- Covering: the body parts and template pieces or Accessories the outfit's HideParts / HideAccessories attributes
 	  name are made invisible.
 	A second fit replaces the first. An outfit missing its meshes or Rig, an outfit whose Bone is named like a body part
@@ -102,12 +105,44 @@ local function hide(root: Instance)
 	end
 end
 
+-- A hidden copy of the hand prop `prop` on its Motor6D from the hand its `Hand` attribute names, C0/C1 and size scaled,
+-- in the style folder's look; nil without a Motor6D or that hand. Unparented.
+local function mountProp(character: Model, prop: BasePart, scale: number, styleFolder: Instance?): BasePart?
+	local joint = prop:FindFirstChildOfClass("Motor6D")
+	local handName = if joint ~= nil then joint:GetAttribute(EmployeeConstants.PROP_HAND_ATTRIBUTE) else nil
+	local hand = if type(handName) == "string" then bodyPart(character, handName) else nil
+	if joint == nil or hand == nil then
+		return nil
+	end
+	local copy = prop:Clone()
+	local copyJoint = copy:FindFirstChildOfClass("Motor6D")
+	if copyJoint == nil then
+		copy:Destroy()
+		return nil
+	end
+	local c0, c1 = EmployeeOutfitFormulas.joint(joint.C0, joint.C1, scale)
+	copy.Size = prop.Size * scale
+	copy.CFrame = EmployeeOutfitFormulas.rest(hand.CFrame, c0, c1)
+	weightless(copy)
+	copy.Transparency = 1
+	restyle(copy, styleFolder, prop.Name)
+	copyJoint.Part0 = hand
+	copyJoint.Part1 = copy
+	copyJoint.C0 = c0
+	copyJoint.C1 = c1
+	return copy
+end
+
 -- Removes an earlier fit: the outfit and props folders, and the Bones it added.
 local function unfit(character: Model)
 	for _, child in character:GetChildren() do
 		if
 			child:IsA("Folder")
-			and (child.Name == EmployeeConstants.OUTFIT_FOLDER or child.Name == EmployeeConstants.PROPS_FOLDER)
+			and (
+				child.Name == EmployeeConstants.OUTFIT_FOLDER
+				or child.Name == EmployeeConstants.PROPS_FOLDER
+				or child.Name == EmployeeConstants.HOLSTER_FOLDER
+			)
 		then
 			child:Destroy()
 		end
@@ -188,30 +223,42 @@ function EmployeeOutfitSystem.fit(character: Model, outfit: Model, style: string
 
 	local propsFolder = Instance.new("Folder")
 	propsFolder.Name = EmployeeConstants.PROPS_FOLDER
+	local holsterFolder = Instance.new("Folder")
+	holsterFolder.Name = EmployeeConstants.HOLSTER_FOLDER
 	local props = outfit:FindFirstChild(EmployeeConstants.OUTFIT_PROPS)
 	if props ~= nil then
 		for _, prop in props:GetChildren() do
-			local joint = prop:FindFirstChildOfClass("Motor6D")
-			local handName = if joint ~= nil then joint:GetAttribute(EmployeeConstants.PROP_HAND_ATTRIBUTE) else nil
-			local hand = if type(handName) == "string" then bodyPart(character, handName) else nil
-			local copy = if prop:IsA("BasePart") and joint ~= nil and hand ~= nil then prop:Clone() else nil
-			local copyJoint = if copy ~= nil then copy:FindFirstChildOfClass("Motor6D") else nil
-			if copy ~= nil and copyJoint ~= nil and joint ~= nil and hand ~= nil and prop:IsA("BasePart") then
-				local c0, c1 = EmployeeOutfitFormulas.joint(joint.C0, joint.C1, scale)
-				copy.Size = prop.Size * scale
-				copy.CFrame = EmployeeOutfitFormulas.rest(hand.CFrame, c0, c1)
-				weightless(copy)
-				copy.Transparency = 1
-				restyle(copy, styleFolder, prop.Name)
-				copyJoint.Part0 = hand
-				copyJoint.Part1 = copy
-				copyJoint.C0 = c0
-				copyJoint.C1 = c1
+			local holsterName = prop:GetAttribute(EmployeeConstants.PROP_HOLSTER_ATTRIBUTE)
+			local offset = prop:GetAttribute(EmployeeConstants.PROP_HOLSTER_OFFSET_ATTRIBUTE)
+			local holster = if type(holsterName) == "string" then bodyPart(character, holsterName) else nil
+			if prop:IsA("BasePart") and holster ~= nil and typeof(offset) == "CFrame" then
+				local worn = prop:Clone()
+				for _, child in worn:GetChildren() do
+					if child:IsA("JointInstance") then
+						child:Destroy()
+					end
+				end
+				local c0 = EmployeeOutfitFormulas.scaled(offset, scale)
+				worn.Size = prop.Size * scale
+				worn.CFrame = holster.CFrame * c0
+				weightless(worn)
+				worn.Transparency = 0
+				restyle(worn, styleFolder, prop.Name)
+				local weld = Instance.new("Weld")
+				weld.Part0 = holster
+				weld.Part1 = worn
+				weld.C0 = c0
+				weld.Parent = worn
+				worn.Parent = holsterFolder
+			end
+			local copy = if prop:IsA("BasePart") then mountProp(character, prop, scale, styleFolder) else nil
+			if copy ~= nil then
 				copy.Parent = propsFolder
 			end
 		end
 	end
 	propsFolder.Parent = character
+	holsterFolder.Parent = character
 
 	for _, name in names(outfit, EmployeeConstants.HIDE_PARTS_ATTRIBUTE) do
 		local covered = bodyPart(character, name)
@@ -233,10 +280,27 @@ function EmployeeOutfitSystem.fit(character: Model, outfit: Model, style: string
 end
 
 --[=[
-	Whether `part` is one of the outfit pieces fitted onto `character` (a mesh or a prop): the body palette skips them.
+	A hidden copy of the hand prop `prop` (a BasePart with a Motor6D whose `Hand` attribute names a body part) mounted on
+	`character` at its scale, in `styleFolder`'s look (nil keeps its own), unparented: the caller parents it. Nil when
+	the prop has no Motor6D or the character lacks that hand. EmotePropSystem mounts an emote's own props with it.
+]=]
+function EmployeeOutfitSystem.mountProp(character: Model, prop: BasePart, styleFolder: Instance?): BasePart?
+	return mountProp(character, prop, character:GetScale(), styleFolder)
+end
+
+--[=[
+	Whether `part` is one of the outfit pieces fitted onto `character` (a mesh or a prop, or an emote's own mounted prop):
+	the body palette skips them.
 ]=]
 function EmployeeOutfitSystem.isOutfitPart(character: Model, part: Instance): boolean
-	for _, name in { EmployeeConstants.OUTFIT_FOLDER, EmployeeConstants.PROPS_FOLDER } do
+	for _, name in
+		{
+			EmployeeConstants.OUTFIT_FOLDER,
+			EmployeeConstants.PROPS_FOLDER,
+			EmployeeConstants.HOLSTER_FOLDER,
+			EmployeeConstants.EMOTE_MOUNTED_FOLDER,
+		}
+	do
 		local folder = character:FindFirstChild(name)
 		if folder ~= nil and folder:IsA("Folder") and part:IsDescendantOf(folder) then
 			return true

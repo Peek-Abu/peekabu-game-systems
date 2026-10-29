@@ -69,6 +69,11 @@ local EmployeeConstants = {
 	-- like the body does, instead of a SurfaceAppearance from the style folder.
 	BODY_STYLE_SLOT = "Body",
 	PROP_HAND_ATTRIBUTE = "Hand",
+	-- On an outfit prop worn at all times (Bubble Buddy's duck ring at the waist, Prickles' hose on the hip): the body
+	-- part it hangs from and its frame there at the template's size (a CFrame). The fit wears a shown twin of the prop
+	-- in HOLSTER_FOLDER; the emote hides it while the hand copy shows (EmotePropSystem).
+	PROP_HOLSTER_ATTRIBUTE = "Holster",
+	PROP_HOLSTER_OFFSET_ATTRIBUTE = "HolsterOffset",
 	-- On an outfit Model: comma-separated body parts it covers (made invisible) and template pieces or Accessories it
 	-- replaces (hidden), e.g. PricklesSheriff's boots and hat.
 	HIDE_PARTS_ATTRIBUTE = "HideParts",
@@ -78,6 +83,11 @@ local EmployeeConstants = {
 	-- them). Bones the fit adds carry OUTFIT_BONE_ATTRIBUTE so a refit removes exactly them.
 	OUTFIT_FOLDER = "Outfit",
 	PROPS_FOLDER = "EmoteProps",
+	-- On the character once fitted: the shown twins of the props worn at a holster, each named like its prop.
+	HOLSTER_FOLDER = "HolsterProps",
+	-- On a character, made by each client: an emote's own props (EmotePropRegistry templates) mounted for the emote when
+	-- the skin has no prop of that name (EmotePropSystem), so the emote works in any skin.
+	EMOTE_MOUNTED_FOLDER = "EmoteMountedProps",
 	OUTFIT_BONE_ATTRIBUTE = "EmployeeOutfitBone",
 	-- On a fitted-gear Model there (EmployeeGearSystem): the name of the body part it sits on. The Model's WorldPivot
 	-- is that part's frame at the template's authored size.

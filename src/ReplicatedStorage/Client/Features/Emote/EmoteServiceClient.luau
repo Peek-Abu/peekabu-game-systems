@@ -7,6 +7,9 @@
 	  to play it. A click or tap on a slot plays it too (`play`), and the phone's HUD button opens the wheel.
 	- `play(slot)` asks the server (EmoteEvents.PlayRequest); the server decides and grants the replicated clip.
 	- While an emote may be playing, moving or jumping asks the server to stop it (EmoteEvents.StopRequest), once.
+	- Every character's emote props show and hide from its clip's markers (EmotePropSystem), and its Legendary
+	  emote effects (bubbles, faces) run on them (EmoteEffectSystem, EmoteVfxSystem), started and stopped with this
+	  service.
 
 	Spec-exempt shell (input, RunService, packets); the decisions live in EmoteRules and EmoteWheelViewModel.
 
@@ -18,10 +21,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Janitor = require(ReplicatedStorage.Packages.Janitor)
+local Observers = require(ReplicatedStorage.Packages.Observers)
 local EmoteConstants = require(ReplicatedStorage.Shared.Features.Emote.Data.EmoteConstants)
 local EmoteEvents = require(ReplicatedStorage.Shared.Features.Emote.Net.EmoteEvents)
 local EmoteRequestRules = require(ReplicatedStorage.Shared.Features.Emote.Rules.EmoteRequestRules)
 local EmoteWheelStore = require(ReplicatedStorage.Client.Features.Emote.State.EmoteWheelStore)
+local EmoteEffectSystem = require(ReplicatedStorage.Client.Features.Emote.Systems.EmoteEffectSystem)
+local EmotePropSystem = require(ReplicatedStorage.Client.Features.Emote.Systems.EmotePropSystem)
+local EmoteVfxSystem = require(ReplicatedStorage.Client.Features.Emote.Systems.EmoteVfxSystem)
 local InputActionRegistry = require(ReplicatedStorage.Client.Features.Input.Data.InputActionRegistry)
 local InputServiceClient = require(ReplicatedStorage.Client.Features.Input.InputServiceClient)
 local SceneStack = require(ReplicatedStorage.Client.UI.Scenes.SceneStack)
@@ -34,6 +41,8 @@ local EmoteWheelViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Em
 local WATCH_SECONDS = 12
 
 local janitor = Janitor.new()
+local props = EmotePropSystem.new()
+local effects = EmoteEffectSystem.live(EmoteVfxSystem.start)
 local watching: RBXScriptConnection? = nil
 
 local function unwatch()
@@ -136,6 +145,17 @@ local EmoteServiceClient: EmoteServiceClient = {
 		end)
 		janitor:Add(unbind, true)
 		janitor:Add(unwatch, true)
+		janitor:Add(
+			Observers.observeCharacter(function(_player: Player, character: Model)
+				local releaseProps = props.track(character)
+				local releaseEffects = effects.track(character)
+				return function()
+					releaseEffects()
+					releaseProps()
+				end
+			end),
+			true
+		)
 	end,
 
 	stop = function(_self)

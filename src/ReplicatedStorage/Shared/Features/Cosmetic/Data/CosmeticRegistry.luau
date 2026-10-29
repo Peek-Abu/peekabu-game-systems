@@ -180,11 +180,11 @@ local ITEMS: { Item } = {
 		id = "Pippa.Bubbles",
 		kind = "emote",
 		employee = "Pippa",
-		name = "Bubbles",
+		name = "Bubble Ride",
 		rarity = "legendary",
 		source = "gleam",
 		price = 400,
-		lore = "Pippa blows bubbles and watches them float away.",
+		lore = "Pippa blows one giant bubble and floats away inside it. Pop!",
 	},
 
 	-- Cappy
@@ -265,11 +265,11 @@ local ITEMS: { Item } = {
 		id = "Prickles.Lasso",
 		kind = "emote",
 		employee = "Prickles",
-		name = "Hose Lasso",
+		name = "Big Roundup",
 		rarity = "legendary",
 		source = "gleam",
 		price = 400,
-		lore = "Yee-haw. Don't tell anyone I said that.",
+		lore = "Spin it, throw it, yank it back. Yee-haw!",
 		quote = true,
 	},
 

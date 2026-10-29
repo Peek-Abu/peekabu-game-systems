@@ -302,6 +302,65 @@ return function()
 			outfit:Destroy()
 		end)
 
+		it("wears a prop with a holster at its body part, shown, on a Weld at the scaled offset", function()
+			local character, outfit = makeCharacter(), makeOutfit()
+			character:ScaleTo(1.25)
+			local wand = outfit.Props.Wand
+			wand:SetAttribute(EmployeeConstants.PROP_HOLSTER_ATTRIBUTE, "LowerTorso")
+			wand:SetAttribute(
+				EmployeeConstants.PROP_HOLSTER_OFFSET_ATTRIBUTE,
+				CFrame.new(0.6, -0.2, 0) * CFrame.Angles(0, 0, 1)
+			)
+			EmployeeOutfitSystem.fit(character, outfit, "Red")
+			local worn = character[EmployeeConstants.HOLSTER_FOLDER].Wand
+			expect(worn.Transparency).to.equal(0)
+			expect(worn.Anchored).to.equal(false)
+			expect(worn.Massless).to.equal(true)
+			expect(worn.CanCollide).to.equal(false)
+			expect(worn:FindFirstChildOfClass("Motor6D")).never.to.be.ok()
+			expect(worn.SurfaceAppearance.Color).to.equal(RED)
+			local weld = worn:FindFirstChildOfClass("Weld")
+			expect(weld.Part0).to.equal(character.LowerTorso)
+			expect(weld.Part1).to.equal(worn)
+			expect(near(weld.C0, CFrame.new(0.6 * 1.25, -0.2 * 1.25, 0) * CFrame.Angles(0, 0, 1))).to.equal(true)
+			expect(near(worn.CFrame, character.LowerTorso.CFrame * weld.C0)).to.equal(true)
+			-- the hand copy is still there, hidden, for the emote
+			expect(character.EmoteProps.Wand.Transparency).to.equal(1)
+			character:Destroy()
+			outfit:Destroy()
+		end)
+
+		it("wears no twin for a prop without a holster, or whose holster part the character lacks", function()
+			local character, outfit = makeCharacter(), makeOutfit()
+			EmployeeOutfitSystem.fit(character, outfit, "Red")
+			expect(#character[EmployeeConstants.HOLSTER_FOLDER]:GetChildren()).to.equal(0)
+			outfit.Props.Wand:SetAttribute(EmployeeConstants.PROP_HOLSTER_ATTRIBUTE, "Tail")
+			outfit.Props.Wand:SetAttribute(EmployeeConstants.PROP_HOLSTER_OFFSET_ATTRIBUTE, CFrame.identity)
+			EmployeeOutfitSystem.fit(character, outfit, "Red")
+			expect(#character[EmployeeConstants.HOLSTER_FOLDER]:GetChildren()).to.equal(0)
+			character:Destroy()
+			outfit:Destroy()
+		end)
+
+		it("replaces the worn twins on a refit", function()
+			local character, outfit = makeCharacter(), makeOutfit()
+			outfit.Props.Wand:SetAttribute(EmployeeConstants.PROP_HOLSTER_ATTRIBUTE, "LowerTorso")
+			outfit.Props.Wand:SetAttribute(EmployeeConstants.PROP_HOLSTER_OFFSET_ATTRIBUTE, CFrame.identity)
+			EmployeeOutfitSystem.fit(character, outfit, "Red")
+			EmployeeOutfitSystem.fit(character, outfit, "Blue")
+			local count = 0
+			for _, child in character:GetChildren() do
+				if child.Name == EmployeeConstants.HOLSTER_FOLDER then
+					count += 1
+				end
+			end
+			expect(count).to.equal(1)
+			expect(#character[EmployeeConstants.HOLSTER_FOLDER]:GetChildren()).to.equal(1)
+			expect(character[EmployeeConstants.HOLSTER_FOLDER].Wand.SurfaceAppearance.Color).to.equal(BLUE)
+			character:Destroy()
+			outfit:Destroy()
+		end)
+
 		it("skips a prop whose hand the character lacks", function()
 			local character, outfit = makeCharacter(), makeOutfit()
 			outfit.Props.Wand.Wand:SetAttribute(EmployeeConstants.PROP_HAND_ATTRIBUTE, "LeftHand")
@@ -334,13 +393,60 @@ return function()
 		end)
 	end)
 
+	describe("mountProp", function()
+		it(
+			"returns a hidden, weightless copy on a Motor6D from its hand at the character's scale, unparented",
+			function()
+				local character, outfit = makeCharacter(), makeOutfit()
+				character:ScaleTo(1.25)
+				local copy = EmployeeOutfitSystem.mountProp(character, outfit.Props.Wand, nil)
+				expect(copy).to.be.ok()
+				expect(copy.Parent).to.equal(nil)
+				expect(copy.Transparency).to.equal(1)
+				expect(copy.Anchored).to.equal(false)
+				expect(copy.Massless).to.equal(true)
+				expect(copy.Size).to.equal(outfit.Props.Wand.Size * 1.25)
+				local joint = copy:FindFirstChildOfClass("Motor6D")
+				expect(joint.Part0).to.equal(character.RightHand)
+				expect(joint.Part1).to.equal(copy)
+				expect(near(joint.C0, CFrame.new(0, 0.5 * 1.25, 0))).to.equal(true)
+				-- the template keeps its own joint and parent
+				expect(outfit.Props.Wand.Wand.Part1).to.equal(outfit.Props.Wand)
+				copy:Destroy()
+				character:Destroy()
+				outfit:Destroy()
+			end
+		)
+
+		it("is nil for a prop without a Motor6D or whose hand the character lacks", function()
+			local character, outfit = makeCharacter(), makeOutfit()
+			outfit.Props.Wand.Wand:SetAttribute(EmployeeConstants.PROP_HAND_ATTRIBUTE, "LeftHand")
+			expect(EmployeeOutfitSystem.mountProp(character, outfit.Props.Wand, nil)).never.to.be.ok()
+			outfit.Props.Wand.Wand:Destroy()
+			expect(EmployeeOutfitSystem.mountProp(character, outfit.Props.Wand, nil)).never.to.be.ok()
+			character:Destroy()
+			outfit:Destroy()
+		end)
+	end)
+
 	describe("isOutfitPart", function()
 		it("is true for a fitted mesh and prop, false for the body", function()
 			local character, outfit = makeCharacter(), makeOutfit()
 			EmployeeOutfitSystem.fit(character, outfit, "Red")
 			expect(EmployeeOutfitSystem.isOutfitPart(character, character.Outfit.Coat)).to.equal(true)
 			expect(EmployeeOutfitSystem.isOutfitPart(character, character.EmoteProps.Wand)).to.equal(true)
+			outfit.Props.Wand:SetAttribute(EmployeeConstants.PROP_HOLSTER_ATTRIBUTE, "LowerTorso")
+			outfit.Props.Wand:SetAttribute(EmployeeConstants.PROP_HOLSTER_OFFSET_ATTRIBUTE, CFrame.identity)
+			EmployeeOutfitSystem.fit(character, outfit, "Red")
+			local worn = character[EmployeeConstants.HOLSTER_FOLDER].Wand
+			expect(EmployeeOutfitSystem.isOutfitPart(character, worn)).to.equal(true)
 			expect(EmployeeOutfitSystem.isOutfitPart(character, character.UpperTorso)).to.equal(false)
+			-- an emote's own prop, mounted by a client
+			local mounted = Instance.new("Folder")
+			mounted.Name = EmployeeConstants.EMOTE_MOUNTED_FOLDER
+			mounted.Parent = character
+			local own = part(mounted, "Lasso", CFrame.identity)
+			expect(EmployeeOutfitSystem.isOutfitPart(character, own)).to.equal(true)
 			character:Destroy()
 			outfit:Destroy()
 		end)
