@@ -82,7 +82,6 @@ local BadgeServiceServer: BadgeServiceServer = {
 		"RankServiceServer",
 		"CosmeticServiceServer",
 		"LockerServiceServer",
-		"OccupantServiceServer",
 		"ShiftServiceServer",
 	},
 	awarded = awarded,

@@ -10,9 +10,8 @@
 	- Shifts: when a shift reaches its review, each crew member's facts (RankFormulas.factsFor, as the rank's award)
 	  and the crew size.
 	- Lockers: LockerServiceServer.opened's rarity. New Look: CosmeticServiceServer.equipped with a non-default skin.
-	- Hide and Squeak: OccupantServiceServer.escaped.
 
-	Spec-exempt shell (signals, Players); the decisions are the specced BadgeMilestoneRules and OccupantEscapeRules.
+	Spec-exempt shell (signals, Players); the decisions are the specced BadgeMilestoneRules.
 
 	@class BadgeMilestoneSystem
 ]=]
@@ -34,7 +33,6 @@ local RankFormulas = require(ReplicatedStorage.Shared.Features.Rank.Utils.RankFo
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local CosmeticServiceServer = require(ServerScriptService.Features.Cosmetic.CosmeticServiceServer)
 local LockerServiceServer = require(ServerScriptService.Features.Locker.LockerServiceServer)
-local OccupantServiceServer = require(ServerScriptService.Features.Occupant.OccupantServiceServer)
 local PlayerDataService = require(ServerScriptService.Features.PlayerData.PlayerDataServiceServer)
 local RankServiceServer = require(ServerScriptService.Features.Rank.RankServiceServer)
 local ShiftServiceServer = require(ServerScriptService.Features.Shift.ShiftServiceServer)
@@ -127,12 +125,6 @@ function BadgeMilestoneSystem.start(award: Award): () -> ()
 			give(userId, BadgeMilestoneRules.pullKeys(outcome.rarity))
 		end)
 	)
-	table.insert(
-		connections,
-		OccupantServiceServer.escaped:Connect(function(player: Player)
-			give(player.UserId, { "hide-and-squeak" })
-		end)
-	)
 	local reviewed: { [number]: true } = {}
 	table.insert(
 		connections,
@@ -157,10 +149,20 @@ function BadgeMilestoneSystem.start(award: Award): () -> ()
 			end
 			local outcome = state.outcome or ""
 			local met = ShiftResultsUtils.met(outcome, state.quotaMet)
+			local review = ShiftServiceServer:getResults()
+			local allSalvage = review ~= nil and BadgeMilestoneRules.allSalvage(review.salvage, review.offered)
 			for _, entry in entries do
 				local facts = RankFormulas.factsFor(entries, met, present, entry.userId, outcome)
 				if facts ~= nil then
-					give(entry.userId, BadgeMilestoneRules.shiftKeys(facts, #entries))
+					give(
+						entry.userId,
+						BadgeMilestoneRules.shiftKeys({
+							worked = facts.worked,
+							quotaMet = facts.quotaMet,
+							crewExtracted = facts.crewExtracted,
+							allSalvage = allSalvage,
+						}, #entries)
+					)
 				end
 			end
 		end)

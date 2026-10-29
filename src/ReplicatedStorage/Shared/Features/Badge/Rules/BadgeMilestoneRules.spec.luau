@@ -34,13 +34,33 @@ return function()
 			expect(#keys).to.equal(1)
 			expect(keys[1]).to.equal("clocked-in")
 
-			local sweep = { worked = true, quotaMet = true, crewExtracted = true, caught = false }
+			local sweep = { worked = true, quotaMet = true, crewExtracted = true, allSalvage = true, caught = false }
 			keys = BadgeMilestoneRules.shiftKeys(sweep, BadgeConstants.SQUAD_SIZE)
 			expect(has(keys, "clean-sweep")).to.equal(true)
 			expect(has(keys, "night-shift-squad")).to.equal(true)
 
-			local missed = { worked = true, quotaMet = false, crewExtracted = true, caught = false }
+			local missed = { worked = true, quotaMet = false, crewExtracted = true, allSalvage = true, caught = false }
 			expect(has(BadgeMilestoneRules.shiftKeys(missed, 1), "clean-sweep")).to.equal(false)
+		end)
+
+		it("gives Clean Sweep only when every valuable was loaded too", function()
+			local leftSome = { worked = true, quotaMet = true, crewExtracted = true, allSalvage = false }
+			expect(has(BadgeMilestoneRules.shiftKeys(leftSome, 1), "clean-sweep")).to.equal(false)
+			local unknown = { worked = true, quotaMet = true, crewExtracted = true }
+			expect(has(BadgeMilestoneRules.shiftKeys(unknown, 1), "clean-sweep")).to.equal(false)
+		end)
+
+		it("counts every valuable loaded only when the shift offered some", function()
+			expect(BadgeMilestoneRules.allSalvage(5, 5)).to.equal(true)
+			expect(BadgeMilestoneRules.allSalvage(6, 5)).to.equal(true)
+			expect(BadgeMilestoneRules.allSalvage(4, 5)).to.equal(false)
+			expect(BadgeMilestoneRules.allSalvage(0, 0)).to.equal(false)
+		end)
+
+		it("has no Hide and Squeak badge", function()
+			for _, entry in BadgeConstants.GAME do
+				expect(entry.key).never.to.equal("hide-and-squeak")
+			end
 		end)
 
 		it("awards nothing for a shift not worked", function()

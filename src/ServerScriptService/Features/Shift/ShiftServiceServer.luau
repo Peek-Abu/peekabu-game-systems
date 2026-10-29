@@ -442,6 +442,8 @@ export type ShiftServiceServer = {
 	stop: (self: ShiftServiceServer) -> (),
 	getState: (self: ShiftServiceServer) -> { [string]: any },
 	getShift: (self: ShiftServiceServer) -> ShiftTypes.ShiftState,
+	-- The current shift's review, once it has one (from the clock out or the timeout until the next shift starts).
+	getResults: (self: ShiftServiceServer) -> ShiftTypes.ShiftResults?,
 	clockOut: (self: ShiftServiceServer, player: Player?) -> boolean,
 	vote: (self: ShiftServiceServer, player: Player, choice: ShiftTypes.Vote) -> boolean,
 	resetShift: (self: ShiftServiceServer) -> (),
@@ -566,6 +568,10 @@ local ShiftServiceServer: ShiftServiceServer = {
 
 	getShift = function(_self)
 		return table.clone(state)
+	end,
+
+	getResults = function(_self)
+		return results
 	end,
 
 	--[=[

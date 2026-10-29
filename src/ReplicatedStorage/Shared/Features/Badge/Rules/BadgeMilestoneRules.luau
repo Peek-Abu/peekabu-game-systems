@@ -4,7 +4,8 @@
 	the player already owns is a no-op (BadgeServiceServer), so these only say what the moment qualifies for.
 
 	- `rankKeys`: every rank badge up to the level reached (level 1 has none).
-	- `shiftKeys`: Clocked In for a worked shift; Clean Sweep when the contract was met and the whole crew got out;
+	- `shiftKeys`: Clocked In for a worked shift; Clean Sweep when the contract was met, every valuable the shift
+	  offered was loaded (`allSalvage`) and the whole crew got out;
 	  Night Shift Squad with SQUAD_SIZE or more on the crew.
 	- `pullKeys`: a Locker pull's rarity; Lucky Locker for Epic or better, Super Lucky Locker for Legendary or better.
 	- `skinKey`: New Look for equipping a skin that is not a default one.
@@ -21,6 +22,8 @@ export type ShiftFacts = {
 	worked: boolean,
 	quotaMet: boolean?,
 	crewExtracted: boolean?,
+	-- Every valuable the shift offered was loaded (BadgeMilestoneRules.allSalvage of the review's totals).
+	allSalvage: boolean?,
 }
 
 local EPIC_PLUS = table.freeze({ epic = true, legendary = true, odd = true })
@@ -42,13 +45,19 @@ function BadgeMilestoneRules.shiftKeys(facts: ShiftFacts, crewSize: number): { s
 		return keys
 	end
 	table.insert(keys, "clocked-in")
-	if facts.quotaMet == true and facts.crewExtracted == true then
+	if facts.quotaMet == true and facts.crewExtracted == true and facts.allSalvage == true then
 		table.insert(keys, "clean-sweep")
 	end
 	if crewSize >= BadgeConstants.SQUAD_SIZE then
 		table.insert(keys, "night-shift-squad")
 	end
 	return keys
+end
+
+-- Whether the crew loaded every valuable the shift offered (`salvage` of `offered`, ShiftResults); a shift that
+-- offered none never counts.
+function BadgeMilestoneRules.allSalvage(salvage: number, offered: number): boolean
+	return offered > 0 and salvage >= offered
 end
 
 function BadgeMilestoneRules.pullKeys(rarity: string): { string }
