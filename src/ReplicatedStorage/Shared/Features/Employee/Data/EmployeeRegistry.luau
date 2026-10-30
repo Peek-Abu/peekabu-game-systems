@@ -190,10 +190,10 @@ local EMPLOYEES: { [string]: EmployeeDef } = {
 				accessories = { "PippaRoundGlasses" },
 			},
 			-- Gloom Locker Uncommon (Cosmetic Pippa.GloomTouched): purple recolour of the body palette
-			-- (characters/skins/gloom_touched/pippa). Icey Labs image (decal 87592976466632).
+			-- (characters/skins/gloom_touched/pippa), gold bell kept (owner, 2026-10-23). Icey Labs image (decal 80439388958871).
 			GloomTouched = {
 				name = "GloomTouched",
-				paletteTextureId = "rbxassetid://105960382796018",
+				paletteTextureId = "rbxassetid://87318460677557",
 				facesFolder = nil,
 				accessories = {},
 			},
@@ -374,16 +374,12 @@ EMPLOYEES.Prickles = {
 	},
 	skins = {
 		Default = plainDefault(),
-		-- Gloom Locker Uncommon (Cosmetic Prickles.GloomTouched): purple body, hard hat and flower
-		-- (characters/skins/gloom_touched/prickles). Icey Labs images (decals 73185602446942, 90130560350634,
-		-- 130179849546153).
+		-- Gloom Locker Uncommon (Cosmetic Prickles.GloomTouched): purple body; his hard hat and flower keep their own
+		-- yellow and pink palettes (owner, 2026-10-23), so no piece palette is set
+		-- (characters/skins/gloom_touched/prickles). Icey Labs image (decal 73185602446942).
 		GloomTouched = {
 			name = "GloomTouched",
 			paletteTextureId = "rbxassetid://78420217452858",
-			piecePalettes = {
-				HardHat = "rbxassetid://88978189767599",
-				Flower = "rbxassetid://105879279073974",
-			},
 			facesFolder = nil,
 			accessories = {},
 		},
