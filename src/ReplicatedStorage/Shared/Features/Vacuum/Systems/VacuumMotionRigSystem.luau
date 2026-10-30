@@ -276,7 +276,7 @@ function VacuumMotionRigSystem.bind(character: Model): Rig?
 			right.CFrame = wand * rightRest
 			if left ~= nil and leftRest ~= nil then
 				-- The left paw's wrap point is the pivot: it goes where the wand takes it, turned only part way.
-				local turned = CFrame.identity:Lerp(wand.Rotation, Constants.leftTurn)
+				local turned = CFrame.new():Lerp(wand.Rotation, Constants.leftTurn)
 				left.CFrame = CFrame.new(wand * rest.pivot) * turned * CFrame.new(-rest.pivot) * leftRest
 			end
 			return motion
