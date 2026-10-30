@@ -370,10 +370,20 @@ return function()
 		)
 
 		it("shows nothing for a catalogue item with styles but no style art (no row, no note)", function()
+			-- A fixture item: the catalogue says 3 styles, but no skin by that name has style art.
+			local fake = table.clone(CosmeticRegistry.get("Cappy.PJ"))
+			fake.id = "Cappy.NoArtYet"
+			local view = VM.detail(fake, loadout(), owner())
+			expect(view.styles.visible).to.equal(false)
+			expect(view.styles.count).to.equal(0)
+			expect(#view.styles.chips).to.equal(0)
+		end)
+
+		it("shows PJ Cappy's three styles as chips now its style art exists", function()
 			local pj = VM.detail(CosmeticRegistry.get("Cappy.PJ"), loadout(), owner())
-			expect(pj.styles.visible).to.equal(false)
-			expect(pj.styles.count).to.equal(0)
-			expect(#pj.styles.chips).to.equal(0)
+			expect(pj.styles.visible).to.equal(true)
+			expect(#pj.styles.chips).to.equal(3)
+			expect(pj.styles.chips[1].name).to.equal("Blue")
 		end)
 
 		it("enables the chips on an owned skin and marks the worn style; a skin you lack still previews", function()

@@ -90,6 +90,8 @@ To do together on a polish day, not now:
   catch. Find which packet is ID 17 and why its reader fails.
 - **Office map leftovers from the spec (not in stage 4):** the glass lift that moves on its own (no glass lift exists
   yet) and the rare set piece per run.
+- **Skin reveal clips (2026-10-29):** PJ Cappy's Cozy Unlock reveal clip (86895730118507, with the pillow and mug) is
+  uploaded, but nothing in the game plays reveal clips yet; the reveal shows the skin's showcase idle.
 
 From the owner's stage 4 play-check (2026-10-24):
 - **Inside sounds heard outside:** standing in the yard you hear the office's sounds, Mr. Harlow's footsteps and

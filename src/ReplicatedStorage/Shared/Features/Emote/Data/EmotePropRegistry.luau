@@ -23,6 +23,10 @@ export type Entry = {
 }
 
 local entries: { [string]: Entry } = {
+	-- PJ Cappy's Cocoa Sip: the pillow in the left hand, the cocoa mug in the right, posed every frame against the hand.
+	["emote:Cappy.CocoaSip"] = { props = { "Pillow", "Cocoa" } },
+	-- PJ Cappy's showcase idle (previews only): both out from the first frame, for as long as the loop plays.
+	cappypjidle = { props = { "Pillow", "Cocoa" } },
 	-- Bubble Buddy's Bubble Ride: the kit bubble wand in the right hand. The duck ring stays worn at her waist.
 	["emote:Pippa.Bubbles"] = { props = { "BubbleWand" } },
 	-- Sheriff Prickles' Big Roundup: the hose coil in the right hand, shaken out into the LassoLoop for the spin and

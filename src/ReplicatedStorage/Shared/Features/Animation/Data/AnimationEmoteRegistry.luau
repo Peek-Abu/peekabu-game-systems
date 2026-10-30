@@ -38,6 +38,9 @@ local AnimationEmoteRegistry: AnimationTypes.AnimationDomain = table.freeze({
 	-- frame clear of his head and hat; markers drive the dust, the tumbleweed and faces (EmoteEffectRegistry).
 	-- legendary-v2-2026-10-29/prickles_big_roundup.
 	["emote:Prickles.Lasso"] = emote("rbxassetid://110122539503132", 5, 5633),
+	-- PJ Cappy's Cocoa Sip (Legendary): 121 frames at 30 fps, the pillow (left hand) and cocoa mug (right hand) out
+	-- frames 8-113, posed every frame against the hand. legendary-clips-2026-10-29/cappy_prop_clips.py.
+	["emote:Cappy.CocoaSip"] = emote("rbxassetid://83337271778720", 6, 4000),
 })
 
 return AnimationEmoteRegistry

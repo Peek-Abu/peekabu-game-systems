@@ -72,6 +72,22 @@ return function()
 			end
 		end)
 
+		it("gives Cappy a PJ skin wearing its outfit in 3 styles, over his own palettes", function()
+			local skin = EmployeeRegistry.get("Cappy").skins.PJ
+			expect(skin).to.be.ok()
+			expect(skin.outfit).to.equal("CappyPJ")
+			expect(#skin.styles).to.equal(CosmeticRegistry.get("Cappy.PJ").styles)
+			for index, folder in { "BlueButter", "MintRose", "CoralCream" } do
+				expect(skin.styles[index].folder).to.equal(folder)
+				-- The PJs cover him; his skin, hair and face keep their own palettes in every style.
+				expect(skin.styles[index].paletteTextureId).never.to.be.ok()
+			end
+			expect(skin.paletteTextureId).never.to.be.ok()
+			local idle = AnimationRegistry.get(skin.showcaseIdle)
+			expect(idle).to.be.ok()
+			expect(idle.looped).to.equal(true)
+		end)
+
 		it("gives every styled skin as many styles as its catalogue item, each naming a folder", function()
 			for _, name in EmployeeRegistry.names() do
 				local def = EmployeeRegistry.get(name)

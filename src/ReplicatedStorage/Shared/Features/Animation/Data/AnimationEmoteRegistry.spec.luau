@@ -16,4 +16,14 @@ return function()
 			expect(def.interruption).to.equal("protected")
 		end
 	end)
+
+	it("gives every clip its own wire id, and plays PJ Cappy's Cocoa Sip", function()
+		local seen = {}
+		for _, def in Registry do
+			expect(seen[def.wireId]).to.equal(nil)
+			seen[def.wireId] = true
+		end
+		expect(Registry["emote:Cappy.CocoaSip"]).to.be.ok()
+		expect(Registry["emote:Cappy.CocoaSip"].looped).to.equal(false)
+	end)
 end

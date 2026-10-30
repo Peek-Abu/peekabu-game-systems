@@ -57,6 +57,10 @@ local AnimationEmployeeRegistry: AnimationDomain = table.freeze({
 	cappycrouchidle = locomotion("rbxassetid://78456687803253"),
 	cappycrouchwalk = locomotion("rbxassetid://140157048070101"),
 
+	-- PJ Cappy's showcase idle (EmployeeRegistry `showcaseIdle`): Sleepy Sway, holding the pillow and cocoa mug, a
+	-- PropsShow at frame 1. legendary-clips-2026-10-29/cappy_prop_clips.py.
+	cappypjidle = locomotion("rbxassetid://75476202945517"),
+
 	-- Prickles v1 clips (characters/prickles/anim, owner-approved, Icey Labs): short, stiff and sturdy, arms crossed
 	-- when he stops. Planted at 1x: walk 1.03, run 1.93, crouch walk 1.34 st/s.
 	pricklesidle = locomotion("rbxassetid://108680458550464"),

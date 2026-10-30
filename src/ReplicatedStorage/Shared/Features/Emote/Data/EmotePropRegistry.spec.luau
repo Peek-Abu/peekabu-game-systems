@@ -11,6 +11,13 @@ return function()
 		end
 	end)
 
+	it("brings out PJ Cappy's pillow and cocoa mug in Cocoa Sip and in his showcase idle", function()
+		for _, key in { "emote:Cappy.CocoaSip", "cappypjidle" } do
+			expect(table.find(Registry.get(key).props, "Pillow")).to.be.ok()
+			expect(table.find(Registry.get(key).props, "Cocoa")).to.be.ok()
+		end
+	end)
+
 	it("lists unique, non-empty prop names", function()
 		for _, entry in Registry.entries do
 			expect(#entry.props > 0).to.equal(true)

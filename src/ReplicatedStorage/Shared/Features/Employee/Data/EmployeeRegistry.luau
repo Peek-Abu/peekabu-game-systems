@@ -36,8 +36,9 @@ export type StyleDef = {
 	-- The folder under the outfit's `Styles` whose SurfaceAppearances the outfit meshes and props wear.
 	folder: string,
 	-- "rbxassetid://<id>" of the body palette this style gives the character (each style recolours the fur); it wins
-	-- over the skin's own paletteTextureId.
-	paletteTextureId: string,
+	-- over the skin's own paletteTextureId. nil = the body keeps its own palettes (an outfit that covers it, as PJ
+	-- Cappy's: his skin, hair and face are the same in every style).
+	paletteTextureId: string?,
 	-- Its chip in the Shop and the locker: a short name (easy words) and its colours, the fur then the outfit.
 	name: string,
 	swatch: { Color3 },
@@ -309,6 +310,35 @@ EMPLOYEES.Cappy = {
 			},
 			facesFolder = nil,
 			accessories = {},
+		},
+		-- Legendary (Cosmetic Cappy.PJ): the skinned fleece onesie, bear hood with sleep mask and shark slippers
+		-- (characters/skins/runtime-candidates-2026-10-26/pj_cappy/v6-2026-10-29), over his own skin and hair: no
+		-- style repaints the body. The outfit hides his hoodie, cap, socks, sneakers and shorts (its HideAccessories).
+		-- Previews hold the pillow and cocoa mug in his Sleepy Sway idle. Icey Labs assets.
+		PJ = {
+			name = "PJ",
+			paletteTextureId = nil,
+			facesFolder = nil,
+			accessories = {},
+			outfit = "CappyPJ",
+			showcaseIdle = "cappypjidle",
+			styles = {
+				{
+					folder = "BlueButter",
+					name = "Blue",
+					swatch = { Color3.fromHex("6796DF"), Color3.fromHex("F0B955") },
+				},
+				{
+					folder = "MintRose",
+					name = "Mint",
+					swatch = { Color3.fromHex("7ABE84"), Color3.fromHex("EFA69A") },
+				},
+				{
+					folder = "CoralCream",
+					name = "Coral",
+					swatch = { Color3.fromHex("E77D6B"), Color3.fromHex("FCD6B8") },
+				},
+			},
 		},
 	},
 	defaultSkin = "Default",

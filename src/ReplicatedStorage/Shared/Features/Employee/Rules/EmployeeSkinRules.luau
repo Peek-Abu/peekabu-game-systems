@@ -101,8 +101,9 @@ end
 
 --[=[
 	The body palette texture id the skin gives the character, when it is a well-formed asset id: a styled skin's
-	`style` palette (each style recolours the body), else the skin's own. nil when the art is pending or the id is
-	malformed (applying the skin then leaves the palette alone).
+	`style` palette (each style recolours the body), else the skin's own. nil when the art is pending, the id is
+	malformed, or the style has no palette (an outfit over the body's own palettes): applying the skin then leaves the
+	palette alone.
 ]=]
 function EmployeeSkinRules.palette(skin: EmployeeRegistry.SkinDef, style: number?): string?
 	local styleDef = EmployeeSkinRules.style(skin, style)

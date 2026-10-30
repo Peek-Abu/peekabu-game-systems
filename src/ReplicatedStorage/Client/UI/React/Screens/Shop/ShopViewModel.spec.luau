@@ -91,10 +91,17 @@ return function()
 			expect(#view.styles.chips).to.equal(3)
 			expect(view.styles.chips[1].name).to.equal("Blue")
 			expect(string.find(string.lower(view.styles.text), "coming", 1, true)).never.to.be.ok()
-			-- A catalogue item with styles but no style art shows nothing.
+			-- A skin with no colour styles shows nothing, not even "coming soon" (a fixture offer for such a skin).
+			local plain = table.clone(ShopRegistry.get("Cappy.PJ"))
+			plain.items = { "Cappy.GloomTouched" }
+			local none = VM.product(plain, owner(), rich)
+			expect(none.styles.visible).to.equal(false)
+			expect(#none.styles.chips).to.equal(0)
+			-- PJ Cappy's styles have art: three chips.
 			local pj = VM.product(ShopRegistry.get("Cappy.PJ"), owner(), rich)
-			expect(pj.styles.visible).to.equal(false)
-			expect(#pj.styles.chips).to.equal(0)
+			expect(pj.styles.visible).to.equal(true)
+			expect(#pj.styles.chips).to.equal(3)
+			expect(pj.styles.chips[1].name).to.equal("Blue")
 			-- Quoted only where the item chose it (a spoken line), never by rarity.
 			expect(view.quote).to.equal(false)
 			expect(VM.product(ShopRegistry.get("Prickles.Lasso"), owner(), rich).quote).to.equal(true)
