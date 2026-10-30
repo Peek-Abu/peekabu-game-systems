@@ -21,6 +21,25 @@ return function()
 		end
 	end)
 
+	it("holds the reveals as one-shot Action clips no one else sees (previews only)", function()
+		for _, key in
+			{
+				"pippahirereveal",
+				"prickleshirereveal",
+				"pippabubblebuddyreveal",
+				"pricklessheriffreveal",
+				"cappypjreveal",
+			}
+		do
+			local def = AnimationEmployeeRegistry[key]
+			expect(def).to.be.ok()
+			expect(AnimationTypes.isCanonicalAssetId(def.assetId)).to.equal(true)
+			expect(def.looped).to.equal(false)
+			expect(def.priority).to.equal(Enum.AnimationPriority.Action)
+			expect(def.replicable).never.to.equal(true)
+		end
+	end)
+
 	it("is composed as the employee domain", function()
 		expect(AnimationRegistry.domain("employee")).to.equal(AnimationEmployeeRegistry)
 		expect(AnimationRegistry.domainOf("pippawalk")).to.equal("employee")

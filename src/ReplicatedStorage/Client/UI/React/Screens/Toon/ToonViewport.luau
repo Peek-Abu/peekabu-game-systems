@@ -11,6 +11,9 @@
 	  (EmployeeStageSystem; owner, 2026-10-29: a ViewportFrame draws no particles, so its effects would not show): the
 	  viewport stays empty and the stage's camera puts the model in this frame's place on the screen.
 	  A live hero's props follow its clip's markers (EmotePropSystem): a skin's showcase idle holds them out.
+	- `reveal` (live only): the hero plays its reveal once (EmployeePreviewSystem.playReveal: the skin's unlock reveal,
+	  else the employee's hire reveal in the skin), then its idle; its faces follow the clip's Face markers
+	  (EmoteEffectSystem, faces only here). Closing cancels it: the props hide and the clip's listeners go.
 	The model is rebuilt only when the employee, skin, colour style, framing or live flag changes, and destroyed with the component.
 	`platform` stands the model on a round 3D platform in the given colours (built in the viewport, so it is lit and
 	turns with the model's world, never a flat shape behind it); the camera frames the two together.
@@ -32,7 +35,9 @@ local React = require(ReplicatedStorage.Packages.React)
 local CosmeticTypes = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticTypes)
 local VacuumSkinRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumSkinRules)
 local VacuumPreviewSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumPreviewSystem)
+local EmoteEffectSystem = require(ReplicatedStorage.Client.Features.Emote.Systems.EmoteEffectSystem)
 local EmotePropSystem = require(ReplicatedStorage.Client.Features.Emote.Systems.EmotePropSystem)
+local EmoteVfxSystem = require(ReplicatedStorage.Client.Features.Emote.Systems.EmoteVfxSystem)
 local EmployeeStageSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeeStageSystem)
 local EmployeeShared = ReplicatedStorage.Shared.Features.Employee
 local EmployeePoseRegistry = require(EmployeeShared.Data.EmployeePoseRegistry)
@@ -67,6 +72,8 @@ export type ToonViewportProps = {
 	live: boolean?,
 	-- A Cosmetic emote id: a live hero loops it.
 	emote: string?,
+	-- A live hero plays its reveal once, then its idle.
+	reveal: boolean?,
 	framing: PortraitViewModel.Framing,
 	context: EmployeePoseRegistry.PortraitContext?,
 	tone: PortraitViewModel.Tone?,
@@ -79,8 +86,12 @@ export type ToonViewportProps = {
 	layoutOrder: number?,
 }
 
--- Live heroes' prop tracking (a skin's showcase idle holds its props out).
+-- Live heroes' prop and face tracking (a skin's showcase idle holds its props out; a reveal changes faces). Only the
+-- face effect runs here: particles do not render in a ViewportFrame (emotes play on EmployeeStageSystem instead).
 local previewProps = EmotePropSystem.new()
+local previewFaces = EmoteEffectSystem.live(function(id: string, character: Model, value: string): (() -> ())?
+	return if id == "face" then EmoteVfxSystem.start(id, character, value) else nil
+end)
 -- How much taller than the model at rest an emote hero's frame is (Bubble Ride floats up inside her bubble).
 local EMOTE_HEADROOM = 0.35
 
@@ -189,8 +200,16 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 
 	local platform = props.platform
 	local platformKey = if platform ~= nil then platform.top:ToHex() .. platform.side:ToHex() else ""
-	local deps: { unknown } =
-		{ frame, lookKey(props), props.live == true, props.framing, platformKey, props.turn or 0, props.emote or "" }
+	local deps: { unknown } = {
+		frame,
+		lookKey(props),
+		props.live == true,
+		props.framing,
+		platformKey,
+		props.turn or 0,
+		props.emote or "",
+		props.reveal == true,
+	}
 	React.useEffect(function(): () -> ()
 		if frame == nil then
 			return function() end
@@ -286,7 +305,13 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 		local untrack: { () -> () } = {}
 		if moving and who ~= nil then
 			table.insert(untrack, previewProps.track(model))
-			EmployeePreviewSystem.playIdle(model, who, skin)
+			table.insert(untrack, previewFaces.track(model))
+			local stopReveal = if props.reveal == true then EmployeePreviewSystem.playReveal(model, who, skin) else nil
+			if stopReveal ~= nil then
+				table.insert(untrack, stopReveal)
+			else
+				EmployeePreviewSystem.playIdle(model, who, skin)
+			end
 		end
 		local resized = frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
 		return function()

@@ -241,6 +241,37 @@ return function()
 		end)
 	end)
 
+	describe("reveals", function()
+		it("names only one-shot clips the animation registry knows", function()
+			for _, name in EmployeeRegistry.names() do
+				local def = EmployeeRegistry.get(name)
+				local keys = { def.hireReveal }
+				for _, skin in def.skins do
+					table.insert(keys, skin.unlockReveal)
+				end
+				for _, key in keys do
+					local clip = AnimationRegistry.get(key)
+					expect(clip).to.be.ok()
+					expect(clip.looped).to.equal(false)
+				end
+			end
+		end)
+
+		it("gives Pippa and Prickles their hire reveals, and leaves Cappy's slot empty until his is fixed", function()
+			expect(EmployeeRegistry.get("Pippa").hireReveal).to.equal("pippahirereveal")
+			expect(EmployeeRegistry.get("Prickles").hireReveal).to.equal("prickleshirereveal")
+			expect(EmployeeRegistry.get("Cappy").hireReveal).never.to.be.ok()
+		end)
+
+		it("gives no skin its own unlock reveal yet: every skin plays the hire reveal (owner, 2026-10-29)", function()
+			for _, name in EmployeeRegistry.names() do
+				for _, skin in EmployeeRegistry.get(name).skins do
+					expect(skin.unlockReveal).never.to.be.ok()
+				end
+			end
+		end)
+	end)
+
 	describe("showcase idle", function()
 		it("names only looped clips the animation registry knows", function()
 			for _, name in EmployeeRegistry.names() do

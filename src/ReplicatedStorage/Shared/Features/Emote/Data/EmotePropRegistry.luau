@@ -27,6 +27,10 @@ local entries: { [string]: Entry } = {
 	["emote:Cappy.CocoaSip"] = { props = { "Pillow", "Cocoa" } },
 	-- PJ Cappy's showcase idle (previews only): both out from the first frame, for as long as the loop plays.
 	cappypjidle = { props = { "Pillow", "Cocoa" } },
+	-- The Legendary unlock reveals: each skin's props, between the clip's PropsShow and PropsStow.
+	pippabubblebuddyreveal = { props = { "BubbleWand", "DuckRing" } },
+	pricklessheriffreveal = { props = { "HoseLasso" } },
+	cappypjreveal = { props = { "Pillow", "Cocoa" } },
 	-- Bubble Buddy's Bubble Ride: the kit bubble wand in the right hand. The duck ring stays worn at her waist.
 	["emote:Pippa.Bubbles"] = { props = { "BubbleWand" } },
 	-- Sheriff Prickles' Big Roundup: the hose coil in the right hand, shaken out into the LassoLoop for the spin and

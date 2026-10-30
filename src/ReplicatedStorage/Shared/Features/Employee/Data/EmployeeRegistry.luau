@@ -72,6 +72,10 @@ export type SkinDef = {
 	-- An AnimationRegistry key: the skin's own looped idle that previews (shop, inventory, reveal) play in place of the
 	-- employee's idle, holding the skin's props (EmotePropRegistry). nil = the employee's idle.
 	showcaseIdle: string?,
+	-- An AnimationRegistry key: the one-shot clip the reveal screen plays when this skin is unlocked. nil = the
+	-- employee's hireReveal, worn in this skin (owner, 2026-10-29: every skin purchase gets a reveal, the Legendaries'
+	-- too for now; a skin may get its own later, e.g. the registered pippabubblebuddyreveal).
+	unlockReveal: string?,
 }
 
 --[=[
@@ -137,6 +141,9 @@ export type EmployeeDef = {
 	defaultSkin: string,
 	-- Its own idle/walk/run; nil = the stock locomotion.
 	locomotion: LocomotionDef?,
+	-- An AnimationRegistry key: the one-shot clip the reveal screen plays when this employee is hired (and for a skin
+	-- with no unlockReveal of its own). nil = no reveal: the idle only.
+	hireReveal: string?,
 	-- Where the vacuum's backpack sits; nil = fitted from the torso's size.
 	backpack: BackpackFit?,
 	-- The company uniform it wears over every skin: names of fitted-gear Models under
@@ -150,6 +157,7 @@ local STATES: { GameplayState } = { "knockedOut", "threatened", "cleaning", "car
 local EMPLOYEES: { [string]: EmployeeDef } = {
 	Pippa = {
 		name = "Pippa",
+		hireReveal = "pippahirereveal",
 		templatePath = { "Assets", "CleanupCrew", "Characters", "Pippa" },
 		-- Authored at 3.9 studs to the head top (5.4 with ears); 1.25 puts the head at ~4.9, a stock avatar's
 		-- height, so the crew reads at eye level with props and the Manager. Tunable: everything follows it
@@ -279,6 +287,7 @@ end
 
 EMPLOYEES.Cappy = {
 	name = "Cappy",
+	-- No hire reveal yet: his is being fixed (face, mouth and the phone's grip); he shows his idle until it lands.
 	-- Built in each place from characters/employees_build/cappy_v6_preview.luau (v6 body, the owner's hair).
 	templatePath = { "Assets", "CleanupCrew", "Characters", "Cappy" },
 	scale = 1.25,
@@ -351,6 +360,7 @@ EMPLOYEES.Cappy = {
 
 EMPLOYEES.Prickles = {
 	name = "Prickles",
+	hireReveal = "prickleshirereveal",
 	templatePath = { "Assets", "CleanupCrew", "Characters", "Prickles" },
 	scale = 1.25,
 	faces = FACES,

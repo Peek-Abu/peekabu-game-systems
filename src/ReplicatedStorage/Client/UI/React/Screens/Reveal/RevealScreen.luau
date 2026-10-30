@@ -267,6 +267,8 @@ local function RevealScreen(props: RevealScreenProps): React.ReactNode
 			skin = view.skinKey,
 			style = style,
 			live = true,
+			-- A hire, and every new skin (owner, 2026-10-29), plays its reveal once, then its idle.
+			reveal = tryOn == nil and (view.kind == "hire" or view.skinKey ~= nil),
 			framing = "full",
 			-- A hire stands on their own colour; an item on its rarity's.
 			platform = { top = if tint ~= nil then tint.body else shade.base, side = bottom },

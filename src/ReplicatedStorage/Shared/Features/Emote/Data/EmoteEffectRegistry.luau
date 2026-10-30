@@ -45,6 +45,9 @@ local entries: { [string]: Entry } = {
 			{ id = "face", on = "Face" },
 		},
 	},
+	-- The hire reveals: their face timelines as Face markers (hire_markers.py), on the reveal screen's preview.
+	pippahirereveal = { effects = { { id = "face", on = "Face" } } },
+	prickleshirereveal = { effects = { { id = "face", on = "Face" } } },
 }
 for _, entry in entries do
 	for _, effect in entry.effects do

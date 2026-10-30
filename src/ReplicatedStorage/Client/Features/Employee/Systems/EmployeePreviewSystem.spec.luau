@@ -277,6 +277,19 @@ return function()
 		expect(EmployeePreviewSystem.idleOf("Pippa", "NoSuchSkin")).to.equal("pippaidle")
 	end)
 
+	it("reveals every skin with the employee's hire reveal, worn in that skin (no skin has its own yet)", function()
+		-- the Legendaries too, for now (owner, 2026-10-29)
+		expect(EmployeePreviewSystem.revealOf("Pippa", "BubbleBuddy")).to.equal("pippahirereveal")
+		expect(EmployeePreviewSystem.revealOf("Prickles", "Sheriff")).to.equal("prickleshirereveal")
+		expect(EmployeePreviewSystem.revealOf("Cappy", "PJ")).never.to.be.ok()
+		-- a skin without its own clip, and a hire (no skin): the hire reveal, worn in that skin
+		expect(EmployeePreviewSystem.revealOf("Pippa", "Default")).to.equal("pippahirereveal")
+		expect(EmployeePreviewSystem.revealOf("Prickles", nil)).to.equal("prickleshirereveal")
+		-- Cappy's hire reveal is not in yet: nothing, so the preview stays on his idle
+		expect(EmployeePreviewSystem.revealOf("Cappy", "Default")).never.to.be.ok()
+		expect(EmployeePreviewSystem.revealOf("Nobody", nil)).never.to.be.ok()
+	end)
+
 	it("names the clip an emote item loops in a preview, only for an emote with a clip", function()
 		expect(EmployeePreviewSystem.emoteOf("Pippa.Bubbles")).to.equal("emote:Pippa.Bubbles")
 		expect(EmployeePreviewSystem.emoteOf("Prickles.Lasso")).to.equal("emote:Prickles.Lasso")

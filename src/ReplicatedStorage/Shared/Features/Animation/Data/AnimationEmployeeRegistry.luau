@@ -30,6 +30,17 @@ local function locomotion(assetId: string): AnimationTypes.AnimationDef
 	return table.freeze(def)
 end
 
+-- A reveal: played once on a preview (the reveal screen), above its idle, never replicated.
+local function reveal(assetId: string): AnimationTypes.AnimationDef
+	local def: AnimationTypes.AnimationDef = {
+		assetId = assetId,
+		priority = Enum.AnimationPriority.Action,
+		looped = false,
+		interruption = "protected",
+	}
+	return table.freeze(def)
+end
+
 local AnimationEmployeeRegistry: AnimationDomain = table.freeze({
 	-- Pippa Idle v1: 3.0 s loop, feet fixed.
 	pippaidle = locomotion("rbxassetid://75845395212929"),
@@ -60,6 +71,18 @@ local AnimationEmployeeRegistry: AnimationDomain = table.freeze({
 	-- PJ Cappy's showcase idle (EmployeeRegistry `showcaseIdle`): Sleepy Sway, holding the pillow and cocoa mug, a
 	-- PropsShow at frame 1. legendary-clips-2026-10-29/cappy_prop_clips.py.
 	cappypjidle = locomotion("rbxassetid://75476202945517"),
+
+	-- Reveals (EmployeeRegistry `hireReveal` / a skin's `unlockReveal`; the reveal screen plays one, then the idle).
+	-- Hire reveals, owner-approved (launch-finish-2026-10-25/<who>/hire, faces as Face markers by hire_markers.py);
+	-- Cappy's is being fixed, so he has none yet. 101 frames at 30 fps.
+	pippahirereveal = reveal("rbxassetid://121771751200181"),
+	prickleshirereveal = reveal("rbxassetid://140175715881141"),
+	-- Unlock reveals a skin can name later (no skin does yet: every skin plays the hire reveal for now, owner
+	-- 2026-10-29): the Legendary skins', props glued in the paw (legendary-clips-2026-10-29/glue_idles.py), and PJ
+	-- Cappy's Cozy Unlock (pj_cappy/v6-2026-10-29).
+	pippabubblebuddyreveal = reveal("rbxassetid://131200183097709"),
+	pricklessheriffreveal = reveal("rbxassetid://130789932413457"),
+	cappypjreveal = reveal("rbxassetid://86895730118507"),
 
 	-- Prickles v1 clips (characters/prickles/anim, owner-approved, Icey Labs): short, stiff and sturdy, arms crossed
 	-- when he stops. Planted at 1x: walk 1.03, run 1.93, crouch walk 1.34 st/s.

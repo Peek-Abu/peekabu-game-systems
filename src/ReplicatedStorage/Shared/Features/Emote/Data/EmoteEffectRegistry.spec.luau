@@ -57,6 +57,17 @@ return function()
 		end)
 	end)
 
+	describe("hire reveals", function()
+		it("change the face on the clip's Face markers", function()
+			for _, key in { "pippahirereveal", "prickleshirereveal" } do
+				local entry = EmoteEffectRegistry.get(key)
+				expect(entry).to.be.ok()
+				expect(entry.effects[1].id).to.equal("face")
+				expect(entry.effects[1].on).to.equal("Face")
+			end
+		end)
+	end)
+
 	describe("lookup", function()
 		it("is nil for a clip without effects", function()
 			expect(EmoteEffectRegistry.get("emote:Nobody.Nothing")).never.to.be.ok()

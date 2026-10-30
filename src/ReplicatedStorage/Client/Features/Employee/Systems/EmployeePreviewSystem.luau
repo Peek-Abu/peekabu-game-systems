@@ -21,6 +21,7 @@
 	@class EmployeePreviewSystem
 ]=]
 
+local ContentProvider = game:GetService("ContentProvider")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local EmployeeShared = ReplicatedStorage.Shared.Features.Employee
@@ -40,6 +41,8 @@ local VacuumPreviewSystem = require(ReplicatedStorage.Client.Features.Vacuum.Sys
 local LIVE_CAP = 2
 -- Seconds an emote preview rests on the idle between two plays.
 local EMOTE_PAUSE = 1
+-- The longest a reveal waits for its faces to load before it starts anyway.
+local REVEAL_PRELOAD = 2
 
 local EmployeePreviewSystem = {
 	LIVE_CAP = LIVE_CAP,
@@ -230,6 +233,20 @@ function EmployeePreviewSystem.idleOf(employee: string, skin: string?): string?
 end
 
 --[=[
+	The animation registry key of the reveal the reveal screen plays for `employee` in `skin` (nil = a hire): the
+	skin's own unlock reveal, else the employee's hire reveal worn in that skin; nil when there is none (its idle only).
+]=]
+function EmployeePreviewSystem.revealOf(employee: string, skin: string?): string?
+	local def = EmployeeRegistry.get(employee)
+	if def == nil then
+		return nil
+	end
+	local look = if skin ~= nil then def.skins[skin] else nil
+	local own = if look ~= nil then look.unlockReveal else nil
+	return own or def.hireReveal
+end
+
+--[=[
 	The animation registry key of the clip an emote item (a CosmeticRegistry id) loops in a preview; nil when the id is
 	not an emote or its clip is not made yet.
 ]=]
@@ -266,6 +283,62 @@ function EmployeePreviewSystem.playIdle(model: Model, employee: string, skin: st
 	track.Looped = true
 	track:Play(0)
 	return track
+end
+
+--[=[
+	Plays the reveal (`revealOf`) once on a live preview, then its idle (`playIdle`, the skin's showcase idle when it
+	has one). Its props and faces come from the clip's markers (EmotePropSystem / EmoteEffectSystem tracking the
+	model). Returns the stop (it cancels the reveal or the idle that followed), or nil when there is no reveal (the
+	caller plays the idle instead).
+]=]
+function EmployeePreviewSystem.playReveal(model: Model, employee: string, skin: string?): (() -> ())?
+	local reveal = load(model, EmployeePreviewSystem.revealOf(employee, skin))
+	if reveal == nil then
+		return nil
+	end
+	-- The idle holds until the faces the reveal swaps in are loaded (a first swap drew a blank white face for a
+	-- moment, Studio probe 2026-10-29), at most REVEAL_PRELOAD seconds.
+	local idle = EmployeePreviewSystem.playIdle(model, employee, skin)
+	local stopped = false
+	local started = false
+	local connection = reveal.Stopped:Connect(function()
+		if not stopped and model.Parent ~= nil then
+			idle = EmployeePreviewSystem.playIdle(model, employee, skin)
+		end
+	end)
+	local function start()
+		if stopped or started or model.Parent == nil then
+			return
+		end
+		started = true
+		local holding = idle
+		if holding ~= nil then
+			holding:Stop(0)
+			idle = nil
+		end
+		reveal:Play(0)
+	end
+	local faces = model:FindFirstChild(EmployeeConstants.FACES_FOLDER)
+	if faces ~= nil then
+		task.spawn(function()
+			pcall(function()
+				ContentProvider:PreloadAsync({ faces })
+			end)
+			start()
+		end)
+		task.delay(REVEAL_PRELOAD, start)
+	else
+		start()
+	end
+	return function()
+		stopped = true
+		connection:Disconnect()
+		reveal:Stop(0)
+		local settled = idle
+		if settled ~= nil then
+			settled:Stop(0)
+		end
+	end
 end
 
 --[=[
