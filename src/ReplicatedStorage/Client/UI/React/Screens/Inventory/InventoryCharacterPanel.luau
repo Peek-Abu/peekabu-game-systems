@@ -301,7 +301,8 @@ local function hero(
 	skinKey: string,
 	rarity: CosmeticTypes.Rarity,
 	tryOn: string?,
-	style: number
+	style: number,
+	emote: string?
 ): React.ReactNode
 	local shade = UIToonConstants.rarity(rarity)
 	local outfit = if tryOn ~= nil
@@ -315,6 +316,8 @@ local function hero(
 			skin = skinKey,
 			style = style,
 			live = true,
+			-- On the Emotes tab the hero loops the selected emote, in the skin you wear.
+			emote = emote,
 			framing = "full",
 			platform = { top = shade.base, side = shade.lo },
 			size = UDim2.fromScale(1, 0.94),
@@ -892,6 +895,7 @@ local function InventoryCharacterPanel(props: InventoryCharacterPanelProps): Rea
 	local heroRarity: CosmeticTypes.Rarity = "default"
 	local tryOn: string? = nil
 	local heroStyle = 1
+	local heroEmote: string? = nil
 	local seenId = ""
 	if props.tab == "about" then
 		left, right = about(props)
@@ -931,6 +935,7 @@ local function InventoryCharacterPanel(props: InventoryCharacterPanelProps): Rea
 				setPicked({ id = item.id, style = index })
 			end)
 			heroRarity = selectedItem.rarity
+			heroEmote = if selectedItem.kind == "emote" then selectedItem.id else nil
 			if selectedItem.kind == "skin" then
 				heroSkin = VM.skinKey(selectedItem.id)
 			elseif selectedItem.kind == "vacuum" then
@@ -959,7 +964,7 @@ local function InventoryCharacterPanel(props: InventoryCharacterPanelProps): Rea
 			Position = UDim2.fromOffset(layout.gridWidth + layout.gap, 0),
 			Size = UDim2.new(0, layout.heroWidth, 1, 0),
 			BackgroundTransparency = 1,
-		}, { content = hero(props, heroSkin, heroRarity, tryOn, heroStyle) }),
+		}, { content = hero(props, heroSkin, heroRarity, tryOn, heroStyle, heroEmote) }),
 		right = e("Frame", {
 			Position = UDim2.fromOffset(layout.gridWidth + layout.heroWidth + 2 * layout.gap, 0),
 			Size = UDim2.new(0, layout.detailWidth, 1, 0),

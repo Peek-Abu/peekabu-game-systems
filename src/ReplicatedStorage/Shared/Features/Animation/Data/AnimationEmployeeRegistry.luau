@@ -44,6 +44,11 @@ local AnimationEmployeeRegistry: AnimationDomain = table.freeze({
 	-- same lean and idle arms with a small step counter-swing.
 	pippacrouchwalk = locomotion("rbxassetid://100643609508734"),
 
+	-- Legendary skins' showcase idles (EmployeeRegistry `showcaseIdle`; the shop, inventory and reveal previews play
+	-- them): Sheriff Prickles holds his hose coil, glued in the paw.
+	-- characters/skins/runtime-candidates-2026-10-26/legendary-clips-2026-10-29/glue_idles.py.
+	pricklessheriffidle = locomotion("rbxassetid://103766062745572"),
+
 	-- Cappy v1 clips (characters/cappy/anim, owner-approved, Icey Labs): loose and unbothered, hands in the hoodie.
 	-- Planted at 1x: walk 1.06, run 2.06, crouch walk 1.32 st/s.
 	cappyidle = locomotion("rbxassetid://124155807682224"),

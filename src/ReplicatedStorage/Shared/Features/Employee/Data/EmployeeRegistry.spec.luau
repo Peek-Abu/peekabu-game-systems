@@ -225,6 +225,27 @@ return function()
 		end)
 	end)
 
+	describe("showcase idle", function()
+		it("names only looped clips the animation registry knows", function()
+			for _, name in EmployeeRegistry.names() do
+				for _, skin in EmployeeRegistry.get(name).skins do
+					local key = skin.showcaseIdle
+					if key ~= nil then
+						local def = AnimationRegistry.get(key)
+						expect(def).to.be.ok()
+						expect(def.looped).to.equal(true)
+					end
+				end
+			end
+		end)
+
+		it("gives the Legendary skins their own idle", function()
+			-- Bubble Buddy's batch-3 idle was rejected (owner, 2026-10-29): she plays Pippa's own for now.
+			expect(EmployeeRegistry.get("Pippa").skins.BubbleBuddy.showcaseIdle).never.to.be.ok()
+			expect(EmployeeRegistry.get("Prickles").skins.Sheriff.showcaseIdle).to.equal("pricklessheriffidle")
+		end)
+	end)
+
 	describe("locomotion", function()
 		it("names only looped clips the animation registry knows, with positive speeds and caps", function()
 			for _, name in EmployeeRegistry.names() do

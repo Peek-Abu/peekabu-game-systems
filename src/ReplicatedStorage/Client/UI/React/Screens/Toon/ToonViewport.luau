@@ -5,8 +5,12 @@
 	PortraitViewModel.camera (refitted on resize without a rebuild).
 	- `live = false` (default, cards): a static posed copy, every part anchored, no Animator: drawn once, the cost of
 	  an image. The pose is the employee's `context` pose (EmployeePoseRules; default "crew").
-	- `live = true` (the hero): the model in a WorldModel with its idle loop playing. Past the live cap (two at once)
-	  it quietly shows the static copy instead.
+	- `live = true` (the hero): the model in a WorldModel with its idle loop playing (the skin's own showcase idle when
+	  it has one). Past the live cap (two at once) it quietly shows the static copy instead.
+	- `emote` (a Cosmetic emote id, live only): the hero loops that emote on the 3D preview stage instead
+	  (EmployeeStageSystem; owner, 2026-10-29: a ViewportFrame draws no particles, so its effects would not show): the
+	  viewport stays empty and the stage's camera puts the model in this frame's place on the screen.
+	  A live hero's props follow its clip's markers (EmotePropSystem): a skin's showcase idle holds them out.
 	The model is rebuilt only when the employee, skin, colour style, framing or live flag changes, and destroyed with the component.
 	`platform` stands the model on a round 3D platform in the given colours (built in the viewport, so it is lit and
 	turns with the model's world, never a flat shape behind it); the camera frames the two together.
@@ -28,6 +32,8 @@ local React = require(ReplicatedStorage.Packages.React)
 local CosmeticTypes = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticTypes)
 local VacuumSkinRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumSkinRules)
 local VacuumPreviewSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumPreviewSystem)
+local EmotePropSystem = require(ReplicatedStorage.Client.Features.Emote.Systems.EmotePropSystem)
+local EmployeeStageSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeeStageSystem)
 local EmployeeShared = ReplicatedStorage.Shared.Features.Employee
 local EmployeePoseRegistry = require(EmployeeShared.Data.EmployeePoseRegistry)
 local EmployeePoseRules = require(EmployeeShared.Rules.EmployeePoseRules)
@@ -59,6 +65,8 @@ export type ToonViewportProps = {
 	-- The skin's colour style (nil = 1); an outfit look carries its own.
 	style: number?,
 	live: boolean?,
+	-- A Cosmetic emote id: a live hero loops it.
+	emote: string?,
 	framing: PortraitViewModel.Framing,
 	context: EmployeePoseRegistry.PortraitContext?,
 	tone: PortraitViewModel.Tone?,
@@ -70,6 +78,11 @@ export type ToonViewportProps = {
 	zIndex: number?,
 	layoutOrder: number?,
 }
+
+-- Live heroes' prop tracking (a skin's showcase idle holds its props out).
+local previewProps = EmotePropSystem.new()
+-- How much taller than the model at rest an emote hero's frame is (Bubble Ride floats up inside her bubble).
+local EMOTE_HEADROOM = 0.35
 
 local function aspectOf(frame: ViewportFrame): number
 	local size = frame.AbsoluteSize
@@ -176,7 +189,8 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 
 	local platform = props.platform
 	local platformKey = if platform ~= nil then platform.top:ToHex() .. platform.side:ToHex() else ""
-	local deps: { unknown } = { frame, lookKey(props), props.live == true, props.framing, platformKey, props.turn or 0 }
+	local deps: { unknown } =
+		{ frame, lookKey(props), props.live == true, props.framing, platformKey, props.turn or 0, props.emote or "" }
 	React.useEffect(function(): () -> ()
 		if frame == nil then
 			return function() end
@@ -188,9 +202,65 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 		end
 		local bounds =
 			EmployeePoseFormulas.bounds(EmployeePortraitSystem.boxes(model, PortraitViewModel.parts(props.framing)))
+		local emote = if moving then props.emote else nil
+		if emote ~= nil and bounds ~= nil then
+			local height = bounds.max.Y - bounds.min.Y
+			bounds = { min = bounds.min, max = bounds.max + Vector3.new(0, height * EMOTE_HEADROOM, 0) }
+		end
+		local unplatformed = bounds
 		local stand: Model? = nil
 		if platform ~= nil and bounds ~= nil then
 			stand, bounds = platformFor(bounds, platform)
+		end
+		local who = if props.outfit ~= nil then props.outfit.employee else props.employee
+		local skin = if props.outfit ~= nil then nil else props.skin
+		local cleanups: { () -> () } = {}
+		local pose = if emote ~= nil and who ~= nil
+			then EmployeePoseRules.select(EmployeePoseRegistry.get(who), props.context or "crew", {})
+			else nil
+		-- The live model goes to the stage; until the stage is live (its assets loaded), this viewport shows a posed copy
+		-- of it on its own platform, dropped in the frame the stage takes over.
+		local standIn = if pose ~= nil then EmployeePortraitSystem.build(model, pose, true) else nil
+		if emote ~= nil and who ~= nil and bounds ~= nil and standIn ~= nil then
+			local standInPlatform: Model? = nil
+			if platform ~= nil and unplatformed ~= nil then
+				standInPlatform = platformFor(unplatformed, platform)
+			end
+			local stage = EmployeeStageSystem.show({
+				model = model,
+				platform = stand,
+				bounds = bounds,
+				employee = who,
+				skin = skin,
+				emote = emote,
+				onReady = function()
+					standIn:Destroy()
+					if standInPlatform ~= nil then
+						standInPlatform:Destroy()
+					end
+				end,
+			})
+			if stage ~= nil then
+				local window: ViewportFrame = frame
+				local function place()
+					stage.place({ position = window.AbsolutePosition, size = window.AbsoluteSize })
+				end
+				place()
+				local moved = window:GetPropertyChangedSignal("AbsolutePosition"):Connect(place)
+				local sized = window:GetPropertyChangedSignal("AbsoluteSize"):Connect(place)
+				table.insert(cleanups, function()
+					moved:Disconnect()
+					sized:Disconnect()
+					-- Destroys the live model and its platform and puts the camera back.
+					stage.release()
+				end)
+				model, moving, stand = standIn, false, standInPlatform
+			else
+				standIn:Destroy()
+				if standInPlatform ~= nil then
+					standInPlatform:Destroy()
+				end
+			end
 		end
 		local camera = Instance.new("Camera")
 		local function fit()
@@ -213,13 +283,20 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 		if stand ~= nil then
 			stand.Parent = frame
 		end
-		local who = if props.outfit ~= nil then props.outfit.employee else props.employee
+		local untrack: { () -> () } = {}
 		if moving and who ~= nil then
-			EmployeePreviewSystem.playIdle(model, who)
+			table.insert(untrack, previewProps.track(model))
+			EmployeePreviewSystem.playIdle(model, who, skin)
 		end
 		local resized = frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
 		return function()
 			resized:Disconnect()
+			for _, cleanup in cleanups do
+				cleanup()
+			end
+			for _, release in untrack do
+				release()
+			end
 			-- Frees a live slot at once: the rebuild that follows (another style, skin or framing) may need it now.
 			EmployeePreviewSystem.release(model)
 			if stand ~= nil then

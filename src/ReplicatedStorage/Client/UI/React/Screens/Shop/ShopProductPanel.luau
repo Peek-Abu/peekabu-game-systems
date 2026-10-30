@@ -350,6 +350,8 @@ local function ShopProductPanel(props: ShopProductPanelProps): React.ReactNode
 				skin = card.skinKey,
 				style = style,
 				live = true,
+				-- An emote's page loops it on its employee.
+				emote = card.emote,
 				framing = "full",
 				platform = { top = shade.base, side = shade.lo },
 				size = UDim2.fromScale(1, 0.96),

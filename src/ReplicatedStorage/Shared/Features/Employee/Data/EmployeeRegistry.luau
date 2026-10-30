@@ -68,6 +68,9 @@ export type SkinDef = {
 	-- The outfit's colour styles, in catalogue order (CosmeticRegistry `styles`); the player's look picks one. nil = one
 	-- look only.
 	styles: { StyleDef }?,
+	-- An AnimationRegistry key: the skin's own looped idle that previews (shop, inventory, reveal) play in place of the
+	-- employee's idle, holding the skin's props (EmotePropRegistry). nil = the employee's idle.
+	showcaseIdle: string?,
 }
 
 --[=[
@@ -194,6 +197,7 @@ local EMPLOYEES: { [string]: EmployeeDef } = {
 				facesFolder = nil,
 				accessories = {},
 				outfit = "PippaBubbleBuddy",
+				-- No showcase idle (owner, 2026-10-29: the batch-3 one was rejected): Pippa's own idle, ring at her waist.
 				styles = {
 					{
 						folder = "BlueYellow",
@@ -353,6 +357,7 @@ EMPLOYEES.Prickles = {
 			facesFolder = nil,
 			accessories = {},
 			outfit = "PricklesSheriff",
+			showcaseIdle = "pricklessheriffidle",
 			styles = {
 				{
 					folder = "BrownRed",

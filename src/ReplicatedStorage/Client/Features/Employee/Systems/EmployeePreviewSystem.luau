@@ -38,9 +38,12 @@ local EmployeeLanyardSystem = require(ReplicatedStorage.Client.Features.Employee
 local VacuumPreviewSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumPreviewSystem)
 
 local LIVE_CAP = 2
+-- Seconds an emote preview rests on the idle between two plays.
+local EMOTE_PAUSE = 1
 
 local EmployeePreviewSystem = {
 	LIVE_CAP = LIVE_CAP,
+	EMOTE_PAUSE = EMOTE_PAUSE,
 }
 
 local live: { [Model]: RBXScriptConnection } = {}
@@ -208,19 +211,38 @@ function EmployeePreviewSystem.outfit(
 	return copy, false
 end
 
--- The animation registry key of the employee's idle loop (nil = no own locomotion).
-function EmployeePreviewSystem.idleOf(employee: string): string?
+--[=[
+	The animation registry key of the idle loop a preview plays: the skin's own showcase idle when it has one
+	(EmployeeRegistry `showcaseIdle`), else the employee's idle (nil = no own locomotion).
+]=]
+function EmployeePreviewSystem.idleOf(employee: string, skin: string?): string?
 	local def = EmployeeRegistry.get(employee)
-	local locomotion = if def ~= nil then def.locomotion else nil
+	if def == nil then
+		return nil
+	end
+	local look = if skin ~= nil then def.skins[skin] else nil
+	local showcase = if look ~= nil then look.showcaseIdle else nil
+	if showcase ~= nil then
+		return showcase
+	end
+	local locomotion = def.locomotion
 	return if locomotion ~= nil then locomotion.idle else nil
 end
 
 --[=[
-	Plays the employee's idle loop on a live preview (call after it is parented into a WorldModel). Returns the
-	track, nil when there is nothing to play.
+	The animation registry key of the clip an emote item (a CosmeticRegistry id) loops in a preview; nil when the id is
+	not an emote or its clip is not made yet.
 ]=]
-function EmployeePreviewSystem.playIdle(model: Model, employee: string): AnimationTrack?
-	local key = EmployeePreviewSystem.idleOf(employee)
+function EmployeePreviewSystem.emoteOf(itemId: string): string?
+	local item = CosmeticRegistry.get(itemId)
+	if item == nil or item.kind ~= "emote" then
+		return nil
+	end
+	local key = "emote:" .. itemId
+	return if AnimationRegistry.get(key) ~= nil then key else nil
+end
+
+local function load(model: Model, key: string?): AnimationTrack?
 	local def = if key ~= nil then AnimationRegistry.get(key) else nil
 	local humanoid = model:FindFirstChildOfClass("Humanoid")
 	local animator = if humanoid ~= nil then humanoid:FindFirstChildOfClass("Animator") else nil
@@ -229,10 +251,58 @@ function EmployeePreviewSystem.playIdle(model: Model, employee: string): Animati
 	end
 	local animation = Instance.new("Animation")
 	animation.AnimationId = def.assetId
-	local track = animator:LoadAnimation(animation)
+	return animator:LoadAnimation(animation)
+end
+
+--[=[
+	Plays the idle loop (`idleOf`) on a live preview (call after it is parented into a WorldModel). Returns the track,
+	nil when there is nothing to play.
+]=]
+function EmployeePreviewSystem.playIdle(model: Model, employee: string, skin: string?): AnimationTrack?
+	local track = load(model, EmployeePreviewSystem.idleOf(employee, skin))
+	if track == nil then
+		return nil
+	end
 	track.Looped = true
 	track:Play(0)
 	return track
+end
+
+--[=[
+	Loops an emote item's clip on a live preview (owner, 2026-10-29): the emote, EMOTE_PAUSE seconds of the idle, the
+	emote again. Its props and faces come from the clip's markers (EmotePropSystem / EmoteEffectSystem tracking the
+	model). Returns the stop, or nil when the emote has no clip (the caller plays the idle instead).
+]=]
+function EmployeePreviewSystem.playEmote(model: Model, employee: string, skin: string?, itemId: string): (() -> ())?
+	local emote = load(model, EmployeePreviewSystem.emoteOf(itemId))
+	if emote == nil then
+		return nil
+	end
+	local idle = EmployeePreviewSystem.playIdle(model, employee, skin)
+	local stopped = false
+	local again: thread? = nil
+	local connection = emote.Stopped:Connect(function()
+		if not stopped then
+			again = task.delay(EMOTE_PAUSE, function()
+				if not stopped and model.Parent ~= nil then
+					emote:Play()
+				end
+			end)
+		end
+	end)
+	emote:Play()
+	return function()
+		stopped = true
+		connection:Disconnect()
+		local pending = again
+		if pending ~= nil then
+			task.cancel(pending)
+		end
+		emote:Stop(0)
+		if idle ~= nil then
+			idle:Stop(0)
+		end
+	end
 end
 
 function EmployeePreviewSystem.liveCount(): number

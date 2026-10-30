@@ -3,8 +3,8 @@
 	ShopScreen: the Shop (concepts: characters/ui/character-ui/frames3/shop.jpg and product.jpg). On a coral-to-grape
 	ToonBackdrop over the blurred depot, under a ToonMenuBar (the gift render, tabs Featured · Skins · Gleam, both
 	wallets, close; a back button on a product page):
-	- Featured: the day's Featured banner (the item LIVE, its name, what's inside, its price button, when the shop
-	  changes) and Today's picks (6 cards), with the Gleam bundles along the bottom;
+	- Featured: the day's Featured banner (the item posed, its name, what's inside, its price button, when the shop
+	  changes; owner, 2026-10-29: only a product page animates) and Today's picks (6 cards), with the Gleam bundles along the bottom;
 	- Skins: every item for sale, filterable by employee, owned ones stamped OWNED;
 	- Gleam: the four Gleam bundles (greyed "Soon" until their Robux products exist);
 	- Passes: every registered game pass (ShopPassesPanel), its price and icon as Roblox reported them, Owned once the
@@ -699,7 +699,7 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 					Size = UDim2.fromScale(0.55, 1.1),
 					BackgroundTransparency = 1,
 					ZIndex = 2,
-				}, { model = art(card, true) }),
+				}, { model = art(card) }),
 				ribbon = e(ToonFlag, {
 					text = "Today's banner",
 					hue = "mint",

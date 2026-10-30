@@ -5,6 +5,9 @@
 	rays behind the hero, and a vignette on the edges. `see` lets the world show through the top (0 = opaque), and
 	`blur` blurs the world behind while the backdrop is up (a BlurEffect on the camera, removed on unmount). The
 	stripes drift slowly and the rays turn (both still under Roblox's Reduce Motion setting).
+	While the 3D preview stage is up (EmployeeStageSystem.wall), everything but the children is drawn on the stage's
+	backdrop wall too (opaque, no blur), and once the stage is live (EmployeeStageSystem.live: its camera is held) only
+	there: the stage shows in the screen's middle with the same backdrop round it, and never the world in between.
 	Presentational (exempt; story in ToonBackdrop.story).
 
 	@class ToonBackdrop
@@ -13,6 +16,9 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
+local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
+local ReactRoblox = require(ReplicatedStorage.Packages.ReactRoblox)
+local EmployeeStageSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeeStageSystem)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local UIToonConstants = require(ReplicatedStorage.Client.UI.React.Screens.Toon.UIToonConstants)
 local useToonPlay = require(ReplicatedStorage.Client.UI.React.Screens.Toon.useToonPlay)
@@ -46,7 +52,10 @@ local STRIPE_SECONDS = 9
 local RAYS_SECONDS = 48
 
 local function ToonBackdrop(props: ToonBackdropProps): React.ReactNode
-	local blur = props.blur == true
+	local wall = ReactCharm.useAtom(EmployeeStageSystem.wall)
+	local staged = ReactCharm.useAtom(EmployeeStageSystem.live) and wall ~= nil
+	-- On the stage's wall the world behind is the stage itself: no blur, and nothing see-through.
+	local blur = props.blur == true and not staged
 	-- Two looping 0 -> 1 clocks (Reduced Motion holds them still).
 	local drift = useToonPlay(STRIPE_SECONDS, 0, nil, true)
 	local turn = useToonPlay(RAYS_SECONDS, 0, nil, true)
@@ -67,7 +76,7 @@ local function ToonBackdrop(props: ToonBackdropProps): React.ReactNode
 		end
 	end, { blur })
 
-	local see = props.see or 0
+	local see = if wall ~= nil then 0 else props.see or 0
 	local nodes: { [string]: React.ReactNode } = {
 		fill = e("Frame", {
 			Size = UDim2.fromScale(1, 1),
@@ -138,6 +147,15 @@ local function ToonBackdrop(props: ToonBackdropProps): React.ReactNode
 				}),
 			}),
 		})
+	end
+	if wall ~= nil then
+		local onWall = ReactRoblox.createPortal(
+			e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ClipsDescendants = true }, nodes),
+			wall
+		)
+		-- Drawn on both until the stage is live, so the camera moves only once the wall is ready.
+		nodes = if staged then { stage = onWall } else table.clone(nodes)
+		nodes.stage = onWall
 	end
 	if props.children ~= nil then
 		nodes.content = e("Frame", {

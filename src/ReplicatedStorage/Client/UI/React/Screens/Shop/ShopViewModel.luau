@@ -59,6 +59,8 @@ export type OfferCard = {
 	skinKey: string?,
 	-- A vacuum (Cosmetic id): its card shows the vacuum alone, its page shows it on your employee.
 	vacuum: string?,
+	-- An emote (Cosmetic id): its page loops the emote on its employee.
+	emote: string?,
 }
 
 export type Button = {
@@ -168,6 +170,7 @@ function VM.card(offer: Offer, owns: Owns, balances: Balances): OfferCard
 		employee = employee,
 		skinKey = if item ~= nil and item.kind == "skin" then string.match(item.id, "^[^%.]+%.(.+)$") else nil,
 		vacuum = if item ~= nil and item.kind == "vacuum" then item.id else nil,
+		emote = if item ~= nil and item.kind == "emote" then item.id else nil,
 	}
 end
 

@@ -269,4 +269,21 @@ return function()
 		expect(EmployeePreviewSystem.idleOf("Pippa")).to.equal("pippaidle")
 		expect(EmployeePreviewSystem.idleOf("Nobody")).never.to.be.ok()
 	end)
+
+	it("plays a skin's own showcase idle when it has one, else the employee's", function()
+		expect(EmployeePreviewSystem.idleOf("Pippa", "BubbleBuddy")).to.equal("pippaidle")
+		expect(EmployeePreviewSystem.idleOf("Prickles", "Sheriff")).to.equal("pricklessheriffidle")
+		expect(EmployeePreviewSystem.idleOf("Pippa", "Default")).to.equal("pippaidle")
+		expect(EmployeePreviewSystem.idleOf("Pippa", "NoSuchSkin")).to.equal("pippaidle")
+	end)
+
+	it("names the clip an emote item loops in a preview, only for an emote with a clip", function()
+		expect(EmployeePreviewSystem.emoteOf("Pippa.Bubbles")).to.equal("emote:Pippa.Bubbles")
+		expect(EmployeePreviewSystem.emoteOf("Prickles.Lasso")).to.equal("emote:Prickles.Lasso")
+		-- an emote whose clip is not made yet, a skin, an unknown id
+		expect(EmployeePreviewSystem.emoteOf("Pippa.Wave")).never.to.be.ok()
+		expect(EmployeePreviewSystem.emoteOf("Pippa.BubbleBuddy")).never.to.be.ok()
+		expect(EmployeePreviewSystem.emoteOf("Nobody.Nothing")).never.to.be.ok()
+		expect(EmployeePreviewSystem.EMOTE_PAUSE > 0).to.equal(true)
+	end)
 end

@@ -53,6 +53,10 @@ return function()
 		expect(Registry.get("emote:Nobody.Nothing")).to.equal(nil)
 	end)
 
+	it("holds Sheriff Prickles' coil out in his showcase idle", function()
+		expect(table.find(Registry.get("pricklessheriffidle").props, "HoseLasso")).to.be.ok()
+	end)
+
 	it("finds an entry's key from its clip's asset id, and nothing for other clips", function()
 		for key in Registry.entries do
 			expect(Registry.keyForAsset(AnimationRegistry.get(key).assetId)).to.equal(key)

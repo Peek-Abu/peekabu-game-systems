@@ -28,6 +28,9 @@ local entries: { [string]: Entry } = {
 	-- Sheriff Prickles' Big Roundup: the hose coil in the right hand, shaken out into the LassoLoop for the spin and
 	-- the throw, then coiled back up (PROP_HIDE / PROP_SHOW markers).
 	["emote:Prickles.Lasso"] = { props = { "HoseLasso" }, swaps = { "LassoLoop" } },
+	-- Sheriff Prickles' showcase idle (previews only): a PropsShow at the first frame and no stow, so the props
+	-- stay out for as long as the loop plays; the coil leaves his hip while it does.
+	pricklessheriffidle = { props = { "HoseLasso" } },
 }
 for _, entry in entries do
 	table.freeze(entry.props)
