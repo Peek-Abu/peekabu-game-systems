@@ -90,8 +90,9 @@ To do together on a polish day, not now:
   catch. Find which packet is ID 17 and why its reader fails.
 - **Office map leftovers from the spec (not in stage 4):** the glass lift that moves on its own (no glass lift exists
   yet) and the rare set piece per run.
-- **Skin reveal clips (2026-10-29):** PJ Cappy's Cozy Unlock reveal clip (86895730118507, with the pillow and mug) is
-  uploaded, but nothing in the game plays reveal clips yet; the reveal shows the skin's showcase idle.
+- **Per-skin reveal clips (2026-10-29):** every skin purchase now plays the employee's hire reveal in that skin
+  (owner, 2026-10-29). The Legendary unlock reveals (Bubble Buddy, Sheriff, PJ Cappy's Cozy Unlock 86895730118507) are
+  uploaded and registered but unused; a skin's own reveal slot stays for a later, separate Legendary reveal.
 
 From the owner's stage 4 play-check (2026-10-24):
 - **Inside sounds heard outside:** standing in the yard you hear the office's sounds, Mr. Harlow's footsteps and
@@ -122,3 +123,9 @@ From the owner's stage 4 play-check (2026-10-24):
   Proven: the same call with the Script kept alive 1 s arrives every time, and the real countdown path arrived 3 of 3
   times on fresh Play sessions (1-2 s after boot), with the shift running. Probes must keep the calling Script alive
   for a second or so (`.superpowers/sdd/common-rules.md` notes it).
+
+From the owner (2026-10-29), for polish, not now:
+- **Clock out at once still pays XP:** a player can clock out right after a shift starts and still earn rank XP, so
+  XP can be farmed by joining and leaving fast. Look at how the rank award reads a shift as "worked"
+  (`RankFormulas.factsFor`) and what a clock-out with nothing done should earn. Check the other quick-leave paths too
+  (leaving the server, a fast clock-out vote), and Credits and badges (Clocked In) that ride the same "worked" fact.
