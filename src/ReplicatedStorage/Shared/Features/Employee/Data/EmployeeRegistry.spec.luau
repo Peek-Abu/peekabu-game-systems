@@ -257,10 +257,10 @@ return function()
 			end
 		end)
 
-		it("gives Pippa and Prickles their hire reveals, and leaves Cappy's slot empty until his is fixed", function()
+		it("gives every employee their hire reveal", function()
 			expect(EmployeeRegistry.get("Pippa").hireReveal).to.equal("pippahirereveal")
 			expect(EmployeeRegistry.get("Prickles").hireReveal).to.equal("prickleshirereveal")
-			expect(EmployeeRegistry.get("Cappy").hireReveal).never.to.be.ok()
+			expect(EmployeeRegistry.get("Cappy").hireReveal).to.equal("cappyhirereveal")
 		end)
 
 		it("gives no skin its own unlock reveal yet: every skin plays the hire reveal (owner, 2026-10-29)", function()

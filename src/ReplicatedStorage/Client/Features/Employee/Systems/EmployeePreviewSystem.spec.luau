@@ -281,12 +281,11 @@ return function()
 		-- the Legendaries too, for now (owner, 2026-10-29)
 		expect(EmployeePreviewSystem.revealOf("Pippa", "BubbleBuddy")).to.equal("pippahirereveal")
 		expect(EmployeePreviewSystem.revealOf("Prickles", "Sheriff")).to.equal("prickleshirereveal")
-		expect(EmployeePreviewSystem.revealOf("Cappy", "PJ")).never.to.be.ok()
+		expect(EmployeePreviewSystem.revealOf("Cappy", "PJ")).to.equal("cappyhirereveal")
 		-- a skin without its own clip, and a hire (no skin): the hire reveal, worn in that skin
 		expect(EmployeePreviewSystem.revealOf("Pippa", "Default")).to.equal("pippahirereveal")
 		expect(EmployeePreviewSystem.revealOf("Prickles", nil)).to.equal("prickleshirereveal")
-		-- Cappy's hire reveal is not in yet: nothing, so the preview stays on his idle
-		expect(EmployeePreviewSystem.revealOf("Cappy", "Default")).never.to.be.ok()
+		expect(EmployeePreviewSystem.revealOf("Cappy", "Default")).to.equal("cappyhirereveal")
 		expect(EmployeePreviewSystem.revealOf("Nobody", nil)).never.to.be.ok()
 	end)
 

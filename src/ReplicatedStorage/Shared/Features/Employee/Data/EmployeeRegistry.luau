@@ -287,7 +287,7 @@ end
 
 EMPLOYEES.Cappy = {
 	name = "Cappy",
-	-- No hire reveal yet: his is being fixed (face, mouth and the phone's grip); he shows his idle until it lands.
+	hireReveal = "cappyhirereveal",
 	-- Built in each place from characters/employees_build/cappy_v6_preview.luau (v6 body, the owner's hair).
 	templatePath = { "Assets", "CleanupCrew", "Characters", "Cappy" },
 	scale = 1.25,

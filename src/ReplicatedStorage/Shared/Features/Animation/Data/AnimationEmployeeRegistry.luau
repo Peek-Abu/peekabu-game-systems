@@ -73,10 +73,11 @@ local AnimationEmployeeRegistry: AnimationDomain = table.freeze({
 	cappypjidle = locomotion("rbxassetid://75476202945517"),
 
 	-- Reveals (EmployeeRegistry `hireReveal` / a skin's `unlockReveal`; the reveal screen plays one, then the idle).
-	-- Hire reveals, owner-approved (launch-finish-2026-10-25/<who>/hire, faces as Face markers by hire_markers.py);
-	-- Cappy's is being fixed, so he has none yet. 101 frames at 30 fps.
+	-- Hire reveals, owner-approved (launch-finish-2026-10-25/<who>/hire, faces as Face markers by hire_markers.py; Cappy's
+	-- v2 from cappy/hire/v2-2026-10-29/cappy_hire_game.py, with his phone). 101 frames at 30 fps.
 	pippahirereveal = reveal("rbxassetid://121771751200181"),
 	prickleshirereveal = reveal("rbxassetid://140175715881141"),
+	cappyhirereveal = reveal("rbxassetid://100703500122066"),
 	-- Unlock reveals a skin can name later (no skin does yet: every skin plays the hire reveal for now, owner
 	-- 2026-10-29): the Legendary skins', props glued in the paw (legendary-clips-2026-10-29/glue_idles.py), and PJ
 	-- Cappy's Cozy Unlock (pj_cappy/v6-2026-10-29).

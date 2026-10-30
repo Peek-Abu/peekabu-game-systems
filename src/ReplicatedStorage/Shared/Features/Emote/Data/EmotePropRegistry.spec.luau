@@ -69,6 +69,10 @@ return function()
 		expect(table.find(Registry.get("cappypjreveal").props, "Cocoa")).to.be.ok()
 	end)
 
+	it("brings out Cappy's phone in his hire reveal", function()
+		expect(table.find(Registry.get("cappyhirereveal").props, "Phone")).to.be.ok()
+	end)
+
 	it("holds Sheriff Prickles' coil out in his showcase idle", function()
 		expect(table.find(Registry.get("pricklessheriffidle").props, "HoseLasso")).to.be.ok()
 	end)

@@ -26,6 +26,7 @@ return function()
 			{
 				"pippahirereveal",
 				"prickleshirereveal",
+				"cappyhirereveal",
 				"pippabubblebuddyreveal",
 				"pricklessheriffreveal",
 				"cappypjreveal",

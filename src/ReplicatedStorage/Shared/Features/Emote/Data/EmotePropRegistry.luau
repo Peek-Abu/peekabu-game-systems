@@ -27,6 +27,8 @@ local entries: { [string]: Entry } = {
 	["emote:Cappy.CocoaSip"] = { props = { "Pillow", "Cocoa" } },
 	-- PJ Cappy's showcase idle (previews only): both out from the first frame, for as long as the loop plays.
 	cappypjidle = { props = { "Pillow", "Cocoa" } },
+	-- Cappy's hire reveal: his phone (an emote prop template, so every skin has it), PropsShow f1 to PropsStow f58.
+	cappyhirereveal = { props = { "Phone" } },
 	-- The Legendary unlock reveals: each skin's props, between the clip's PropsShow and PropsStow.
 	pippabubblebuddyreveal = { props = { "BubbleWand", "DuckRing" } },
 	pricklessheriffreveal = { props = { "HoseLasso" } },

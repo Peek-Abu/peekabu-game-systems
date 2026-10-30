@@ -59,7 +59,7 @@ return function()
 
 	describe("hire reveals", function()
 		it("change the face on the clip's Face markers", function()
-			for _, key in { "pippahirereveal", "prickleshirereveal" } do
+			for _, key in { "pippahirereveal", "prickleshirereveal", "cappyhirereveal" } do
 				local entry = EmoteEffectRegistry.get(key)
 				expect(entry).to.be.ok()
 				expect(entry.effects[1].id).to.equal("face")
