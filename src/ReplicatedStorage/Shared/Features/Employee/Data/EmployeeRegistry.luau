@@ -92,6 +92,8 @@ export type LocomotionDef = {
 	-- Its crouch (the Crouch feature): crouched still and crouched moving. nil = it never crouches visibly.
 	crouchIdle: string?,
 	crouchWalk: string?,
+	-- Its rare standing move (AnimationFidgetSystem). nil = it never fidgets.
+	fidget: string?,
 	-- Studs/s at which the clip's feet stay planted at 1x playback (measured on the rig).
 	walkPlantedSpeed: number,
 	runPlantedSpeed: number,
@@ -144,6 +146,9 @@ export type EmployeeDef = {
 	-- An AnimationRegistry key: the one-shot clip the reveal screen plays when this employee is hired (and for a skin
 	-- with no unlockReveal of its own). nil = no reveal: the idle only.
 	hireReveal: string?,
+	-- An AnimationRegistry key: the one-shot clip a menu hero plays when you click this employee's pick card or open
+	-- their Inventory page (never on Equip or in the Shop: owner, 2026-10-29). nil = no reaction.
+	selectReaction: string?,
 	-- Where the vacuum's backpack sits; nil = fitted from the torso's size.
 	backpack: BackpackFit?,
 	-- The company uniform it wears over every skin: names of fitted-gear Models under
@@ -158,6 +163,7 @@ local EMPLOYEES: { [string]: EmployeeDef } = {
 	Pippa = {
 		name = "Pippa",
 		hireReveal = "pippahirereveal",
+		selectReaction = "pippaselect",
 		templatePath = { "Assets", "CleanupCrew", "Characters", "Pippa" },
 		-- Authored at 3.9 studs to the head top (5.4 with ears); 1.25 puts the head at ~4.9, a stock avatar's
 		-- height, so the crew reads at eye level with props and the Manager. Tunable: everything follows it
@@ -240,6 +246,7 @@ local EMPLOYEES: { [string]: EmployeeDef } = {
 			run = "pipparun",
 			crouchIdle = "pippacrouchidle",
 			crouchWalk = "pippacrouchwalk",
+			fidget = "pippafidget",
 			walkPlantedSpeed = 1.27,
 			runPlantedSpeed = 1.52,
 			-- 1.625 st/s at her 1.25 scale: planted up to 6.5 st/s at the 4x cap (about 6 steps a second, a quick
@@ -268,13 +275,20 @@ local function plainDefault(): SkinDef
 end
 
 -- Cappy and Prickles walk at Pippa's stride caps (the same base speeds); only the planted speeds are their own.
-local function locomotionOf(prefix: string, walk: number, run: number, crouchWalk: number): LocomotionDef
+local function locomotionOf(
+	prefix: string,
+	walk: number,
+	run: number,
+	crouchWalk: number,
+	fidget: string?
+): LocomotionDef
 	return {
 		idle = `{prefix}idle`,
 		walk = `{prefix}walk`,
 		run = `{prefix}run`,
 		crouchIdle = `{prefix}crouchidle`,
 		crouchWalk = `{prefix}crouchwalk`,
+		fidget = fidget,
 		walkPlantedSpeed = walk,
 		runPlantedSpeed = run,
 		crouchWalkPlantedSpeed = crouchWalk,
@@ -288,6 +302,7 @@ end
 EMPLOYEES.Cappy = {
 	name = "Cappy",
 	hireReveal = "cappyhirereveal",
+	selectReaction = "cappyselect",
 	-- Built in each place from characters/employees_build/cappy_v6_preview.luau (v6 body, the owner's hair).
 	templatePath = { "Assets", "CleanupCrew", "Characters", "Cappy" },
 	scale = 1.25,
@@ -353,7 +368,7 @@ EMPLOYEES.Cappy = {
 	defaultSkin = "Default",
 	-- No rank lanyard fitted to his body yet.
 	uniform = {},
-	locomotion = locomotionOf("cappy", 1.06, 2.06, 1.32),
+	locomotion = locomotionOf("cappy", 1.06, 2.06, 1.32, "cappyfidget"),
 	-- Borrows Pippa's steps until his own sneaker set is made.
 	footstepSet = "pippa",
 }
@@ -361,6 +376,7 @@ EMPLOYEES.Cappy = {
 EMPLOYEES.Prickles = {
 	name = "Prickles",
 	hireReveal = "prickleshirereveal",
+	selectReaction = "pricklesselect",
 	templatePath = { "Assets", "CleanupCrew", "Characters", "Prickles" },
 	scale = 1.25,
 	faces = FACES,
@@ -418,7 +434,7 @@ EMPLOYEES.Prickles = {
 	},
 	defaultSkin = "Default",
 	uniform = {},
-	locomotion = locomotionOf("prickles", 1.03, 1.93, 1.34),
+	locomotion = locomotionOf("prickles", 1.03, 1.93, 1.34, "pricklesfidget"),
 	-- Borrows Pippa's steps until his own root-thump set is made.
 	footstepSet = "pippa",
 }

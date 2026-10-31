@@ -53,6 +53,8 @@ export type InventoryCharacterPanelProps = {
 	owns: (id: string) -> boolean,
 	-- The selected item (nil = the worn one).
 	selected: string?,
+	-- When this page was opened from the crew: the hero reacts to it (ToonViewport `react`).
+	openedAt: number?,
 	onSelect: (id: string) -> (),
 	onWear: (change: CosmeticTypes.Change) -> (),
 	-- Opens the item's Shop page.
@@ -316,6 +318,7 @@ local function hero(
 			skin = skinKey,
 			style = style,
 			live = true,
+			react = props.openedAt,
 			-- On the Emotes tab the hero loops the selected emote, in the skin you wear.
 			emote = emote,
 			framing = "full",

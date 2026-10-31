@@ -294,6 +294,30 @@ return function()
 	end)
 
 	describe("locomotion", function()
+		it("names menu reactions the animation registry holds", function()
+			for _, name in EmployeeRegistry.names() do
+				local reaction = EmployeeRegistry.get(name).selectReaction
+				if reaction ~= nil then
+					expect(AnimationRegistry.get(reaction)).to.be.ok()
+				end
+			end
+			expect(EmployeeRegistry.get("Pippa").selectReaction).to.equal("pippaselect")
+			expect(EmployeeRegistry.get("Cappy").selectReaction).to.equal("cappyselect")
+			expect(EmployeeRegistry.get("Prickles").selectReaction).to.equal("pricklesselect")
+		end)
+
+		it("names fidgets the animation registry holds", function()
+			for _, name in EmployeeRegistry.names() do
+				local locomotion = EmployeeRegistry.get(name).locomotion
+				if locomotion ~= nil and locomotion.fidget ~= nil then
+					expect(AnimationRegistry.get(locomotion.fidget)).to.be.ok()
+				end
+			end
+			expect(EmployeeRegistry.get("Pippa").locomotion.fidget).to.equal("pippafidget")
+			expect(EmployeeRegistry.get("Cappy").locomotion.fidget).to.equal("cappyfidget")
+			expect(EmployeeRegistry.get("Prickles").locomotion.fidget).to.equal("pricklesfidget")
+		end)
+
 		it("names only looped clips the animation registry knows, with positive speeds and caps", function()
 			for _, name in EmployeeRegistry.names() do
 				local locomotion = EmployeeRegistry.get(name).locomotion

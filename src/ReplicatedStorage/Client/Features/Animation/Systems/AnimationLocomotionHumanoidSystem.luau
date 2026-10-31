@@ -13,6 +13,9 @@
 	Stance: when `options.crouchAttribute` names a character attribute, the core crouches while it is `true` (a game's
 	crouch feature sets it on the server; the engine replicates it, so every client poses every character the same).
 
+	Fidgets: `options.fidgets` names the clips AnimationFidgetSystem plays on this rig while it stands still;
+	`options.fidgetBlocked` is what else stops them, beside a playing Action clip.
+
 	May yield: `AnimationPlayerEngineSystem.forCharacter` waits up to 5 s for an Animator.
 
 	Spec-exempt shell (needs a live Humanoid + Animator); the core is specced in AnimationLocomotionSystem.spec.
@@ -28,6 +31,7 @@ local AnimationPlayerEngineSystem =
 	require(ReplicatedStorage.Shared.Features.Animation.Systems.AnimationPlayerEngineSystem)
 local AnimationRegistry = require(ReplicatedStorage.Shared.Features.Animation.Data.AnimationRegistry)
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
+local AnimationFidgetSystem = require(ReplicatedStorage.Client.Features.Animation.Systems.AnimationFidgetSystem)
 local AnimationLocomotionSystem = require(ReplicatedStorage.Client.Features.Animation.Systems.AnimationLocomotionSystem)
 
 local ENABLED_ATTRIBUTE = "LocomotionEnabled"
@@ -39,6 +43,10 @@ local AnimationLocomotionHumanoidSystem = {}
 export type BindOptions = {
 	-- A character attribute: `true` = crouched (AnimationLocomotionSystem:setStance).
 	crouchAttribute: string?,
+	-- AnimationRegistry keys of the rig's fidgets (nil or empty = it never fidgets).
+	fidgets: { string }?,
+	-- True while something other than a pose or an Action clip stops its fidgets (hiding, carrying).
+	fidgetBlocked: (() -> boolean)?,
 }
 
 local function isEnabled(): boolean
@@ -67,6 +75,20 @@ function AnimationLocomotionHumanoidSystem.bind(
 	local animator = AnimationLocomotionSystem.new(player, config)
 	local poseIds = if config ~= nil then config.poseIds else nil
 
+	local fidgets: { string } = if options ~= nil and options.fidgets ~= nil then options.fidgets else {}
+	local fidgetBlocked = if options ~= nil then options.fidgetBlocked else nil
+	local fidget = if #fidgets > 0 then AnimationFidgetSystem.new(player, { clips = fidgets }) else nil
+	local fidgetAssets: { string } = {}
+	for _, id in fidgets do
+		local def = AnimationRegistry.get(id)
+		if def ~= nil then
+			table.insert(fidgetAssets, def.assetId)
+		end
+	end
+	local engineAnimator = humanoid:FindFirstChildOfClass("Animator")
+	local idleDef = if poseIds ~= nil and poseIds.idle ~= nil then AnimationRegistry.get(poseIds.idle) else nil
+	local idleAsset = if idleDef ~= nil then idleDef.assetId else nil
+
 	-- Warm the locomotion set up front (spec Decision 6): a pose's first play must be a cache hit.
 	task.spawn(function()
 		local locomotion = AnimationRegistry.domain("locomotion")
@@ -83,6 +105,9 @@ function AnimationLocomotionHumanoidSystem.bind(
 			end
 		end
 		player:warm("idle")
+		for _, id in fidgets do
+			player:warm(id)
+		end
 		for id in locomotion do
 			if id ~= "idle" then
 				player:warm(id)
@@ -129,7 +154,19 @@ function AnimationLocomotionHumanoidSystem.bind(
 		end),
 		-- Applies a freefall that arrived inside the jump window once the window ends.
 		RunService.Heartbeat:Connect(function()
-			animator:update(os.clock())
+			local now = os.clock()
+			animator:update(now)
+			if fidget ~= nil then
+				local pose = animator:currentPose()
+				local tracks = if engineAnimator ~= nil then engineAnimator:GetPlayingAnimationTracks() else {}
+				local blocked = (fidgetBlocked ~= nil and fidgetBlocked())
+					or AnimationFidgetSystem.actionPlaying(tracks, fidgetAssets)
+				fidget:update(now, {
+					pose = pose,
+					blocked = blocked,
+					idlePhase = AnimationFidgetSystem.loopTime(tracks, idleAsset),
+				})
+			end
 		end),
 	}
 
@@ -155,6 +192,9 @@ function AnimationLocomotionHumanoidSystem.bind(
 		bound = false
 		for _, connection in connections do
 			connection:Disconnect()
+		end
+		if fidget ~= nil then
+			fidget:destroy()
 		end
 		animator:destroy()
 	end

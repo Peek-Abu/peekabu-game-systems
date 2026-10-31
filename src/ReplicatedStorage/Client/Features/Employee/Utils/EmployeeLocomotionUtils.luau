@@ -51,6 +51,19 @@ function EmployeeLocomotionUtils.fromDef(def: EmployeeRegistry.EmployeeDef): Con
 end
 
 --[=[
+	The fidget clips (AnimationRegistry keys) of the employee a character's EmployeeName attribute names; empty for a
+	non-employee, an unknown name, or one without a fidget.
+	@param name unknown -- the attribute value (untrusted type)
+	@return { string }
+]=]
+function EmployeeLocomotionUtils.fidgetsFor(name: unknown): { string }
+	local def = if type(name) == "string" then EmployeeRegistry.get(name) else nil
+	local locomotion = if def ~= nil then def.locomotion else nil
+	local fidget = if locomotion ~= nil then locomotion.fidget else nil
+	return if fidget ~= nil then { fidget } else {}
+end
+
+--[=[
 	The locomotion config for the employee a character's EmployeeName attribute names; nil for a
 	non-employee, an unknown name, or an employee without its own set.
 	@param name unknown -- the attribute value (untrusted type)

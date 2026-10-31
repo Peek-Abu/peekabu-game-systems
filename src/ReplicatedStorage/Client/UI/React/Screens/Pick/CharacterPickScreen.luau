@@ -317,6 +317,8 @@ local function CharacterPickScreen(props: CharacterPickScreenProps): React.React
 	local currency = ReactCharm.useAtom(StateSyncClientStore.currency)
 	local buyResult = ReactCharm.useAtom(ShopStore.result)
 	local selected, setSelected = React.useState(VM.DEFAULT)
+	local noClick: number? = nil
+	local clickedAt, setClickedAt = React.useState(noClick)
 	local buyNote = if props.owns == nil
 			and buyResult ~= nil
 			and buyResult.offer == selected
@@ -354,7 +356,10 @@ local function CharacterPickScreen(props: CharacterPickScreenProps): React.React
 	}
 	local selectedName = selected
 	for index, entry in cards do
-		column[entry.id] = card(entry, cardHeight, phone, index, setSelected)
+		column[entry.id] = card(entry, cardHeight, phone, index, function(id: string)
+			setSelected(id)
+			setClickedAt(os.clock())
+		end)
 		if entry.id == selected then
 			selectedName = entry.name
 		end
@@ -390,6 +395,7 @@ local function CharacterPickScreen(props: CharacterPickScreenProps): React.React
 		model = e(ToonViewport, {
 			employee = selected,
 			live = true,
+			react = clickedAt,
 			framing = "full",
 			platform = { top = tint.body, side = tint.dark },
 			size = UDim2.fromScale(1, 0.84),

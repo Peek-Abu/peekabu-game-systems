@@ -41,6 +41,11 @@ local AnimationEmoteRegistry: AnimationTypes.AnimationDomain = table.freeze({
 	-- PJ Cappy's Cocoa Sip (Legendary): 121 frames at 30 fps, the pillow (left hand) and cocoa mug (right hand) out
 	-- frames 8-113, posed every frame against the hand. legendary-clips-2026-10-29/cappy_prop_clips.py.
 	["emote:Cappy.CocoaSip"] = emote("rbxassetid://83337271778720", 6, 4000),
+	-- The free default emotes, no props or markers (workflow/default-emotes-v3, owner-approved 2026-10-30). Their ids
+	-- keep the old names because saved wheels hold them: Pippa's One-Paw Wave, Cappy's Shrug, Prickles' Grumpy Fist Pump.
+	["emote:Pippa.Wave"] = emote("rbxassetid://91311666978822", 7, 2967),
+	["emote:Cappy.FistBump"] = emote("rbxassetid://92402338271088", 8, 3433),
+	["emote:Prickles.Huff"] = emote("rbxassetid://99795638343617", 9, 2700),
 })
 
 return AnimationEmoteRegistry

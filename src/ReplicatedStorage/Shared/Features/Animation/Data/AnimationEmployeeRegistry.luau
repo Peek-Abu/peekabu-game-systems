@@ -41,9 +41,23 @@ local function reveal(assetId: string): AnimationTypes.AnimationDef
 	return table.freeze(def)
 end
 
+-- A fidget: one rare move above the idle (AnimationFidgetSystem). The Animator replicates a client's own character.
+local function fidget(assetId: string): AnimationTypes.AnimationDef
+	local def: AnimationTypes.AnimationDef = {
+		assetId = assetId,
+		priority = Enum.AnimationPriority.Action,
+		looped = false,
+		interruption = "ambient",
+	}
+	return table.freeze(def)
+end
+
 local AnimationEmployeeRegistry: AnimationDomain = table.freeze({
-	-- Pippa Idle v1: 3.0 s loop, feet fixed.
-	pippaidle = locomotion("rbxassetid://75845395212929"),
+	-- Pippa lore idle v2: 4.0 s loop, feet fixed, a small bounce and a look around (owner-approved 2026-10-29;
+	-- launch/production-batch-2026-10-25 Pippa_Idle; v1 75845395212929 superseded).
+	pippaidle = locomotion("rbxassetid://118670136851083"),
+	-- Pippa's fidget, two hops: 6.0 s (fidgets-v2, owner-approved 2026-10-23).
+	pippafidget = fidget("rbxassetid://133361579221208"),
 	-- Pippa Walk v1: 1.9 s loop (2 cycles), feet planted at 1.27 st/s at 1x.
 	pippawalk = locomotion("rbxassetid://93025706307245"),
 	-- Pippa Run v1: 1.03 s loop (2 cycles), feet planted at 1.52 st/s at 1x.
@@ -62,7 +76,10 @@ local AnimationEmployeeRegistry: AnimationDomain = table.freeze({
 
 	-- Cappy v1 clips (characters/cappy/anim, owner-approved, Icey Labs): loose and unbothered, hands in the hoodie.
 	-- Planted at 1x: walk 1.06, run 2.06, crouch walk 1.32 st/s.
-	cappyidle = locomotion("rbxassetid://124155807682224"),
+	-- Lore idle v2: 4.0 s loop, bobbing to his earbuds (owner-approved 2026-10-29; v1 124155807682224 superseded).
+	cappyidle = locomotion("rbxassetid://108700334463820"),
+	-- His fidget, fixing an earbud and grooving: 8.0 s (fidgets-v2, owner-approved 2026-10-23).
+	cappyfidget = fidget("rbxassetid://120652353962976"),
 	cappywalk = locomotion("rbxassetid://105426576584816"),
 	cappyrun = locomotion("rbxassetid://87388143018692"),
 	cappycrouchidle = locomotion("rbxassetid://78456687803253"),
@@ -74,10 +91,18 @@ local AnimationEmployeeRegistry: AnimationDomain = table.freeze({
 
 	-- Reveals (EmployeeRegistry `hireReveal` / a skin's `unlockReveal`; the reveal screen plays one, then the idle).
 	-- Hire reveals, owner-approved (launch-finish-2026-10-25/<who>/hire, faces as Face markers by hire_markers.py; Cappy's
-	-- v2 from cappy/hire/v2-2026-10-29/cappy_hire_game.py, with his phone). 101 frames at 30 fps.
+	-- v2 from cappy/hire/v2-2026-10-29/cappy_hire_game.py, with his phone). 101 frames at 30 fps; Prickles' 136, its tail
+	-- settling into his old idle (workflow/menu-reactions-idle-seam-2026-10-30/prickles-hire; 140175715881141 superseded).
 	pippahirereveal = reveal("rbxassetid://121771751200181"),
-	prickleshirereveal = reveal("rbxassetid://140175715881141"),
+	prickleshirereveal = reveal("rbxassetid://112352734198136"),
 	cappyhirereveal = reveal("rbxassetid://100703500122066"),
+	-- Menu reactions (EmployeeRegistry `selectReaction`; a click on an employee's pick card, or opening their Inventory
+	-- page, plays one on the hero): launch/production-batch-2026-10-25 selection_reaction, owner-approved. Cappy's is
+	-- a fist bump offered to you, not his free emote (the Shrug).
+	pippaselect = reveal("rbxassetid://88439470380372"),
+	cappyselect = reveal("rbxassetid://115461604220450"),
+	-- His guarded nod, re-posed to his old idle (workflow/prickles-old-idle-2026-10-29, owner-approved 2026-10-30).
+	pricklesselect = reveal("rbxassetid://137811464482102"),
 	-- Unlock reveals a skin can name later (no skin does yet: every skin plays the hire reveal for now, owner
 	-- 2026-10-29): the Legendary skins', props glued in the paw (legendary-clips-2026-10-29/glue_idles.py), and PJ
 	-- Cappy's Cozy Unlock (pj_cappy/v6-2026-10-29).
@@ -88,6 +113,8 @@ local AnimationEmployeeRegistry: AnimationDomain = table.freeze({
 	-- Prickles v1 clips (characters/prickles/anim, owner-approved, Icey Labs): short, stiff and sturdy, arms crossed
 	-- when he stops. Planted at 1x: walk 1.03, run 1.93, crouch walk 1.34 st/s.
 	pricklesidle = locomotion("rbxassetid://108680458550464"),
+	-- His fidget, impatient root taps: 6.0 s, re-posed to this idle (owner-approved 2026-10-30).
+	pricklesfidget = fidget("rbxassetid://71661621842416"),
 	prickleswalk = locomotion("rbxassetid://137832099996706"),
 	pricklesrun = locomotion("rbxassetid://82235036410910"),
 	pricklescrouchidle = locomotion("rbxassetid://126115556970677"),

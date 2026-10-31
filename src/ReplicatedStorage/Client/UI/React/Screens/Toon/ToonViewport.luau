@@ -74,6 +74,9 @@ export type ToonViewportProps = {
 	emote: string?,
 	-- A live hero plays its reveal once, then its idle.
 	reveal: boolean?,
+	-- A click's time: a live hero plays its menu reaction, once per time, then its idle. The same model waits out
+	-- REACT_COOLDOWN between two clicks; a click that rebuilds the model reacts on the new one.
+	react: number?,
 	framing: PortraitViewModel.Framing,
 	context: EmployeePoseRegistry.PortraitContext?,
 	tone: PortraitViewModel.Tone?,
@@ -94,6 +97,11 @@ local previewFaces = EmoteEffectSystem.live(function(id: string, character: Mode
 end)
 -- How much taller than the model at rest an emote hero's frame is (Bubble Ride floats up inside her bubble).
 local EMOTE_HEADROOM = 0.35
+-- Seconds before a hero reacts to another click, so spam-clicking does not restart it every frame.
+local REACT_COOLDOWN = 1.5
+
+-- The click the last reaction answered. It lives here so a hero rebuilt on a tab change does not react to it again.
+local reactAnswered: number? = nil
 
 local function aspectOf(frame: ViewportFrame): number
 	local size = frame.AbsoluteSize
@@ -193,10 +201,38 @@ local function lookKey(props: ToonViewportProps): string
 	return `{props.employee or ""}|{props.skin or ""}|{props.style or 1}|{props.vacuum or ""}`
 end
 
+-- The live hero a reaction plays on.
+type Hero = { model: Model, who: string, skin: string? }
+
 local function ToonViewport(props: ToonViewportProps): React.ReactNode
 	local noFrame: ViewportFrame? = nil
 	local frame, setFrame = React.useState(noFrame)
 	local shown, setShown = React.useState(true)
+	local noHero: Hero? = nil
+	local hero = React.useRef(noHero)
+	local noStop: (() -> ())? = nil
+	local stopReaction = React.useRef(noStop)
+	local reactedAt = React.useRef(0)
+
+	local function answerClick(cooled: boolean)
+		local click = props.react
+		local live = hero.current
+		-- With no live hero yet (a page still mounting) the click waits for the build.
+		if click == nil or click == reactAnswered or live == nil then
+			return
+		end
+		reactAnswered = click
+		local now = os.clock()
+		if cooled and now - reactedAt.current < REACT_COOLDOWN then
+			return
+		end
+		reactedAt.current = now
+		local stop = stopReaction.current
+		if stop ~= nil then
+			stop()
+		end
+		stopReaction.current = EmployeePreviewSystem.playReaction(live.model, live.who, live.skin)
+	end
 
 	local platform = props.platform
 	local platformKey = if platform ~= nil then platform.top:ToHex() .. platform.side:ToHex() else ""
@@ -312,9 +348,23 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 			else
 				EmployeePreviewSystem.playIdle(model, who, skin)
 			end
+			local stopFidgets = EmployeePreviewSystem.playFidgets(model, who, skin)
+			if stopFidgets ~= nil then
+				table.insert(untrack, stopFidgets)
+			end
+			if props.reveal ~= true then
+				hero.current = { model = model, who = who, skin = skin }
+				answerClick(false)
+			end
 		end
 		local resized = frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
 		return function()
+			hero.current = nil
+			local stop = stopReaction.current
+			if stop ~= nil then
+				stop()
+				stopReaction.current = nil
+			end
 			resized:Disconnect()
 			for _, cleanup in cleanups do
 				cleanup()
@@ -333,6 +383,11 @@ local function ToonViewport(props: ToonViewportProps): React.ReactNode
 			camera:Destroy()
 		end
 	end, deps)
+
+	-- A click on the model already live. Declared after the build, so a click that rebuilds it finds the new one.
+	React.useEffect(function()
+		answerClick(true)
+	end, { props.react or 0 })
 
 	local subject = if props.outfit ~= nil then props.outfit.employee else props.employee
 	local light = PortraitViewModel.lighting(props.tone or "light")

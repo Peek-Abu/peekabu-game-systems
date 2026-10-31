@@ -14,6 +14,20 @@ local function defWith(locomotion, scale)
 end
 
 return function()
+	describe("fidgetsFor", function()
+		it("gives an employee's fidget clip", function()
+			expect(EmployeeLocomotionUtils.fidgetsFor("Pippa")[1]).to.equal("pippafidget")
+			expect(EmployeeLocomotionUtils.fidgetsFor("Cappy")[1]).to.equal("cappyfidget")
+			expect(EmployeeLocomotionUtils.fidgetsFor("Prickles")[1]).to.equal("pricklesfidget")
+		end)
+
+		it("is empty for a non-employee or an untrusted value", function()
+			expect(#EmployeeLocomotionUtils.fidgetsFor("Nobody")).to.equal(0)
+			expect(#EmployeeLocomotionUtils.fidgetsFor(nil)).to.equal(0)
+			expect(#EmployeeLocomotionUtils.fidgetsFor(7)).to.equal(0)
+		end)
+	end)
+
 	describe("fromDef", function()
 		it("maps idle/walk/run to the employee's clips and scales strides by their planted speeds", function()
 			local config = EmployeeLocomotionUtils.fromDef(defWith({

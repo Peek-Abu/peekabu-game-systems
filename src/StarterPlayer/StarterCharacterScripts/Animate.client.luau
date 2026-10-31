@@ -12,13 +12,20 @@
 	fresh copy per character, and the binding is released when the character goes.
 ]=]
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local AnimationLocomotionHumanoidSystem =
 	require(ReplicatedStorage.Client.Features.Animation.Systems.AnimationLocomotionHumanoidSystem)
+local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
 local CrouchConstants = require(ReplicatedStorage.Shared.Features.Crouch.Data.CrouchConstants)
+local DeathConstants = require(ReplicatedStorage.Shared.Features.Death.Data.DeathConstants)
 local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
 local EmployeeLocomotionUtils = require(ReplicatedStorage.Client.Features.Employee.Utils.EmployeeLocomotionUtils)
+local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideConstants)
+local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
+local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
+local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
 
 local character = script.Parent
 assert(character ~= nil and character:IsA("Model"), "[Animate] script must be a direct child of a character Model")
@@ -28,10 +35,30 @@ character:WaitForChild("Humanoid")
 
 -- An employee character (Cleanup Crew) plays its own idle/walk/run when its EmployeeRegistry entry has
 -- them; the server stamps the attribute on the StarterCharacter template, so it is here at spawn.
-local config = EmployeeLocomotionUtils.forName(character:GetAttribute(EmployeeConstants.NAME_ATTRIBUTE))
+local employee = character:GetAttribute(EmployeeConstants.NAME_ATTRIBUTE)
+local config = EmployeeLocomotionUtils.forName(employee)
+
+-- What stops a fidget beside a move, a crouch or an Action clip (a Gloom nearby does not: owner, 2026-10-29).
+local function fidgetBlocked(): boolean
+	local player = Players.LocalPlayer
+	if player:GetAttribute(HideConstants.PLAYER_SPOT_ATTRIBUTE) ~= nil then
+		return true
+	end
+	local entry = StateSyncClientStore.publicPlayers()[StateSyncConstants.publicEntryKey(player.UserId)]
+	return entry ~= nil
+		and (
+			entry[CarryConstants.PUBLIC_FIELD] ~= nil
+			or entry[ShiftConstants.PUBLIC_VACUUMING] == true
+			or entry[DeathConstants.PUBLIC_FIELD] == true
+		)
+end
+
 -- Crouched (the server's Crouching attribute): the employee's crouch idle / walk.
-local unbind =
-	AnimationLocomotionHumanoidSystem.bind(character, config, { crouchAttribute = CrouchConstants.CROUCHING_ATTRIBUTE })
+local unbind = AnimationLocomotionHumanoidSystem.bind(character, config, {
+	crouchAttribute = CrouchConstants.CROUCHING_ATTRIBUTE,
+	fidgets = EmployeeLocomotionUtils.fidgetsFor(employee),
+	fidgetBlocked = fidgetBlocked,
+})
 if unbind ~= nil then
 	local release = unbind
 	character.Destroying:Connect(release)

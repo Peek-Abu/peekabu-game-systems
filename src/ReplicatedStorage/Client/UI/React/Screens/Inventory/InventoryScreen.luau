@@ -81,6 +81,8 @@ local function InventoryScreen(props: InventoryScreenProps): React.ReactNode
 		return props.employee
 	end)
 	local tab, setTab = React.useState(props.tab or "skins")
+	local noOpen: number? = nil
+	local openedAt, setOpenedAt = React.useState(noOpen)
 	-- The top-level tab while no employee's page is open: "crew" or "vacuums".
 	local area, setArea = React.useState(
 		if props.employee == nil and (props.tab == "vacuums" or props.tab == "wheel") then props.tab else "crew"
@@ -206,6 +208,7 @@ local function InventoryScreen(props: InventoryScreenProps): React.ReactNode
 				end,
 				onOpen = function(employee: string)
 					setPage(employee)
+					setOpenedAt(os.clock())
 					setTab("skins")
 					setSelected(nil)
 				end,
@@ -259,6 +262,7 @@ local function InventoryScreen(props: InventoryScreenProps): React.ReactNode
 			loadout = loadout,
 			owns = owns,
 			selected = selected,
+			openedAt = openedAt,
 			onSelect = function(id: string)
 				setSelected(id)
 			end,

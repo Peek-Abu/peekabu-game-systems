@@ -21,7 +21,7 @@ return function()
 		end
 	end)
 
-	it("holds the reveals as one-shot Action clips no one else sees (previews only)", function()
+	it("holds the reveals and menu reactions as one-shot Action clips no one else sees (previews only)", function()
 		for _, key in
 			{
 				"pippahirereveal",
@@ -30,6 +30,9 @@ return function()
 				"pippabubblebuddyreveal",
 				"pricklessheriffreveal",
 				"cappypjreveal",
+				"pippaselect",
+				"cappyselect",
+				"pricklesselect",
 			}
 		do
 			local def = AnimationEmployeeRegistry[key]
@@ -37,6 +40,18 @@ return function()
 			expect(AnimationTypes.isCanonicalAssetId(def.assetId)).to.equal(true)
 			expect(def.looped).to.equal(false)
 			expect(def.priority).to.equal(Enum.AnimationPriority.Action)
+			expect(def.replicable).never.to.equal(true)
+		end
+	end)
+
+	it("holds the fidgets as one-shot Action clips the idle can drop", function()
+		for _, key in { "pippafidget", "cappyfidget", "pricklesfidget" } do
+			local def = AnimationEmployeeRegistry[key]
+			expect(def).to.be.ok()
+			expect(AnimationTypes.isCanonicalAssetId(def.assetId)).to.equal(true)
+			expect(def.looped).to.equal(false)
+			expect(def.priority).to.equal(Enum.AnimationPriority.Action)
+			expect(def.interruption).to.equal("ambient")
 			expect(def.replicable).never.to.equal(true)
 		end
 	end)
