@@ -111,6 +111,18 @@ return function()
 		end)
 	end)
 
+	describe("reacts", function()
+		it("is true on a page that shows an employee", function()
+			expect(VM.reacts(VM.card(ShopRegistry.get("Pippa.BubbleBuddy"), owner(), rich))).to.equal(true)
+			expect(VM.reacts(VM.card(ShopRegistry.get("Cappy.PJ"), owner(), rich))).to.equal(true)
+		end)
+
+		it("is false on a vacuum's page (the hero is seen from behind) and an emote's (it loops the emote)", function()
+			expect(VM.reacts(VM.card(ShopRegistry.get("Vacuum.BrassBellows"), owner(), rich))).to.equal(false)
+			expect(VM.reacts(VM.card(ShopRegistry.get("Prickles.Lasso"), owner(), rich))).to.equal(false)
+		end)
+	end)
+
 	describe("skins tab", function()
 		it("lists every offer but employees, filters by employee, puts what you own last", function()
 			local all = VM.skins(owner({ "Pippa.BubbleBuddy" }), rich, nil)

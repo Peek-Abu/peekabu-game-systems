@@ -50,6 +50,9 @@ local REVEAL_PRELOAD = 2
 -- Seconds a menu reaction fades in; a click lands anywhere in the idle's loop, up to 29 degrees from the reaction's
 -- first pose at a joint (measured 2026-10-30).
 local REACTION_FADE = 0.25
+-- Seconds a reaction blends into a showcase idle before it ends: it lands on the employee's own idle, up to 75 degrees
+-- from the showcase idle's first pose at a joint (measured 2026-10-30).
+local SHOWCASE_RETURN = 0.4
 
 local EmployeePreviewSystem = {
 	LIVE_CAP = LIVE_CAP,
@@ -305,16 +308,16 @@ local function load(model: Model, key: string?): AnimationTrack?
 end
 
 --[=[
-	Plays the idle loop (`idleOf`) on a live preview (call after it is parented into a WorldModel). Returns the track,
-	nil when there is nothing to play.
+	Plays the idle loop (`idleOf`) on a live preview (call after it is parented into a WorldModel), over `fade` seconds
+	(nil = at once). Returns the track, nil when there is nothing to play.
 ]=]
-function EmployeePreviewSystem.playIdle(model: Model, employee: string, skin: string?): AnimationTrack?
+function EmployeePreviewSystem.playIdle(model: Model, employee: string, skin: string?, fade: number?): AnimationTrack?
 	local track = load(model, EmployeePreviewSystem.idleOf(employee, skin))
 	if track == nil then
 		return nil
 	end
 	track.Looped = true
-	track:Play(0)
+	track:Play(fade or 0)
 	return track
 end
 
@@ -390,11 +393,27 @@ function EmployeePreviewSystem.playReaction(model: Model, employee: string, skin
 	local humanoid = model:FindFirstChildOfClass("Humanoid")
 	local animator = if humanoid ~= nil then humanoid:FindFirstChildOfClass("Animator") else nil
 	local stopped = false
+	local handedOver = false
 	local connection = reaction.Stopped:Connect(function()
-		if not stopped and model.Parent ~= nil then
+		if not stopped and not handedOver and model.Parent ~= nil then
 			EmployeePreviewSystem.playIdle(model, employee, skin)
 		end
 	end)
+	local returning: RBXScriptConnection? = nil
+	if idleKey ~= EmployeePreviewSystem.idleOf(employee, nil) then
+		returning = RunService.Heartbeat:Connect(function()
+			if reaction.Length == 0 or reaction.TimePosition < reaction.Length - SHOWCASE_RETURN then
+				return
+			end
+			local waiting = returning
+			if waiting ~= nil then
+				waiting:Disconnect()
+			end
+			handedOver = true
+			EmployeePreviewSystem.playIdle(model, employee, skin, SHOWCASE_RETURN)
+			reaction:Stop(SHOWCASE_RETURN)
+		end)
+	end
 	-- The click lands anywhere in the idle's loop, so the reaction fades in over it; it covers the whole body, so the
 	-- idle can stop unseen once it is in. The reaction's last pose is the idle's first, which is where the idle resumes.
 	local covering: RBXScriptConnection? = nil
@@ -421,6 +440,10 @@ function EmployeePreviewSystem.playReaction(model: Model, employee: string, skin
 		local waiting = covering
 		if waiting ~= nil then
 			waiting:Disconnect()
+		end
+		local handing = returning
+		if handing ~= nil then
+			handing:Disconnect()
 		end
 		reaction:Stop(REACTION_FADE)
 	end

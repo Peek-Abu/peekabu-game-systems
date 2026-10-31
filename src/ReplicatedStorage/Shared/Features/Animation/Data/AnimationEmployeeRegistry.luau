@@ -97,8 +97,8 @@ local AnimationEmployeeRegistry: AnimationDomain = table.freeze({
 	prickleshirereveal = reveal("rbxassetid://112352734198136"),
 	cappyhirereveal = reveal("rbxassetid://100703500122066"),
 	-- Menu reactions (EmployeeRegistry `selectReaction`; a click on an employee's pick card, or opening their Inventory
-	-- page, plays one on the hero): launch/production-batch-2026-10-25 selection_reaction, owner-approved. Cappy's is
-	-- a fist bump offered to you, not his free emote (the Shrug).
+	-- page or a Shop page that shows them, plays one on the hero): launch/production-batch-2026-10-25
+	-- selection_reaction, owner-approved. Cappy's is a fist bump offered to you, not his free emote (the Shrug).
 	pippaselect = reveal("rbxassetid://88439470380372"),
 	cappyselect = reveal("rbxassetid://115461604220450"),
 	-- His guarded nod, re-posed to his old idle (workflow/prickles-old-idle-2026-10-29, owner-approved 2026-10-30).

@@ -174,6 +174,10 @@ local function ShopProductPanel(props: ShopProductPanelProps): React.ReactNode
 	local phone = layout.phone
 	local product = props.product
 	local card = product.card
+	-- When this product's page opened: the hero reacts to it (ToonViewport `react`).
+	local openedAt = React.useMemo(function(): number
+		return os.clock()
+	end, { card.id })
 	local size = layout.textSize
 	local width = math.floor(layout.content.width * (if phone then 0.52 else 0.4))
 	local inner = width - 2 * (if phone then 12 else 26)
@@ -350,6 +354,7 @@ local function ShopProductPanel(props: ShopProductPanelProps): React.ReactNode
 				skin = card.skinKey,
 				style = style,
 				live = true,
+				react = if VM.reacts(card) then openedAt else nil,
 				-- An emote's page loops it on its employee.
 				emote = card.emote,
 				framing = "full",

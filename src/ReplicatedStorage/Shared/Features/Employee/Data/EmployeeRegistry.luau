@@ -146,8 +146,8 @@ export type EmployeeDef = {
 	-- An AnimationRegistry key: the one-shot clip the reveal screen plays when this employee is hired (and for a skin
 	-- with no unlockReveal of its own). nil = no reveal: the idle only.
 	hireReveal: string?,
-	-- An AnimationRegistry key: the one-shot clip a menu hero plays when you click this employee's pick card or open
-	-- their Inventory page (never on Equip or in the Shop: owner, 2026-10-29). nil = no reaction.
+	-- An AnimationRegistry key: the one-shot clip a menu hero plays when you click this employee's pick card, or open
+	-- their Inventory page or a Shop page that shows them (never on Equip; owner, 2026-10-30). nil = no reaction.
 	selectReaction: string?,
 	-- Where the vacuum's backpack sits; nil = fitted from the torso's size.
 	backpack: BackpackFit?,

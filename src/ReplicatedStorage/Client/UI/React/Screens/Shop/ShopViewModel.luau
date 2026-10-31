@@ -174,6 +174,11 @@ function VM.card(offer: Offer, owns: Owns, balances: Balances): OfferCard
 	}
 end
 
+-- The page's hero plays its menu reaction when the page opens: not on a vacuum's page (seen from behind) or an emote's.
+function VM.reacts(card: OfferCard): boolean
+	return card.vacuum == nil and card.emote == nil
+end
+
 function VM.button(offer: Offer, owns: Owns, balances: Balances): Button
 	local price = ToonStyleViewModel.grouped(offer.price)
 	if ShopRules.owned(offer, owns) then
