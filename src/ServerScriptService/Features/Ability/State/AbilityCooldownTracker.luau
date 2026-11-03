@@ -1,7 +1,8 @@
 --!strict
 --[=[
 	AbilityCooldownTracker: when each player's ability is ready again (server time), and each running Potted Plant
-	(when it began, where the root stood, whether the client asked to stop). Plain bookkeeping for AbilityServiceServer.
+	(when it began, where the root stood, whether the client asked to stop), and who an admin put in no-cooldown mode
+	(a use spends nothing; testing). Plain bookkeeping for AbilityServiceServer.
 
 	@class AbilityCooldownTracker
 ]=]
@@ -16,6 +17,9 @@ export type AbilityCooldownTracker = {
 	readyAt: (self: AbilityCooldownTracker, userId: number) -> number,
 	spend: (self: AbilityCooldownTracker, userId: number, now: number, cooldown: number) -> number,
 	resetAll: (self: AbilityCooldownTracker) -> { number },
+	reset: (self: AbilityCooldownTracker, userId: number) -> boolean,
+	setFree: (self: AbilityCooldownTracker, userId: number, on: boolean) -> (),
+	isFree: (self: AbilityCooldownTracker, userId: number) -> boolean,
 	startPlant: (self: AbilityCooldownTracker, userId: number, plant: Plant) -> (),
 	plantOf: (self: AbilityCooldownTracker, userId: number) -> Plant?,
 	endPlant: (self: AbilityCooldownTracker, userId: number) -> (),
@@ -28,13 +32,19 @@ local AbilityCooldownTracker = {}
 function AbilityCooldownTracker.new(): AbilityCooldownTracker
 	local ready: { [number]: number } = {}
 	local plants: { [number]: Plant } = {}
+	local free: { [number]: true } = {}
 
 	local tracker: AbilityCooldownTracker = {
 		readyAt = function(_self, userId)
 			return ready[userId] or 0
 		end,
 
+		-- A use: ready again a cooldown later (at once, 0, in no-cooldown mode).
 		spend = function(_self, userId, now, cooldown)
+			if free[userId] then
+				ready[userId] = nil
+				return 0
+			end
 			local at = now + cooldown
 			ready[userId] = at
 			return at
@@ -48,6 +58,26 @@ function AbilityCooldownTracker.new(): AbilityCooldownTracker
 			end
 			table.clear(ready)
 			return reset
+		end,
+
+		-- One player ready again now (an admin's reset); false when they were not waiting.
+		reset = function(_self, userId)
+			local was = ready[userId] ~= nil
+			ready[userId] = nil
+			return was
+		end,
+
+		-- No-cooldown mode for one player (kept across shifts, dropped when they leave).
+		setFree = function(_self, userId, on)
+			if on then
+				free[userId] = true
+			else
+				free[userId] = nil
+			end
+		end,
+
+		isFree = function(_self, userId)
+			return free[userId] == true
 		end,
 
 		startPlant = function(_self, userId, plant)
@@ -73,6 +103,7 @@ function AbilityCooldownTracker.new(): AbilityCooldownTracker
 		clear = function(_self, userId)
 			ready[userId] = nil
 			plants[userId] = nil
+			free[userId] = nil
 		end,
 	}
 	return tracker

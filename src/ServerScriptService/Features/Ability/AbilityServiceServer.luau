@@ -15,8 +15,10 @@
 	  asks, dies, is caught or the cap passes, and then he is revealed.
 
 	The character's AbilityActive names the effect while it runs (others' clients draw it). Clips play over the
-	effect (AnimationServiceServer:play) and never gate it: a refused or cut clip changes nothing; a full-body clip is
-	stopped when its user moves (the upper-body one plays instead when they were already moving).
+	effect (AnimationServiceServer:play) and never gate it: a refused, skipped or cut clip changes nothing
+	(AbilityClipUtils): the full-body clip only standing still with empty hands, the upper-body cut on the move,
+	nothing while the vacuum's wand is out or something is carried (their IK grip holds the arms); a playing clip
+	stops the moment that stops being true. Potted Plant puts the wand away as he plants, so the pot shows.
 
 	Spec-exempt shell (Players, Humanoids, ByteNet, RunService, CollectionService); the decisions are the specced
 	AbilityRules, AbilityRegistry, AbilityCooldownTracker and AbilityTreasureUtils.
@@ -40,6 +42,7 @@ local AbilityRegistry = require(AbilityShared.Data.AbilityRegistry)
 local AbilityTypes = require(AbilityShared.Data.AbilityTypes)
 local AbilityEvents = require(AbilityShared.Net.AbilityEvents)
 local AbilityRules = require(AbilityShared.Rules.AbilityRules)
+local AbilityClipUtils = require(AbilityShared.Utils.AbilityClipUtils)
 local AbilityCooldownTracker = require(AbilityServer.State.AbilityCooldownTracker)
 local AbilityTreasureUtils = require(AbilityServer.Utils.AbilityTreasureUtils)
 local AnimationRegistry = require(ReplicatedStorage.Shared.Features.Animation.Data.AnimationRegistry)
@@ -61,13 +64,14 @@ local ShiftServiceServer = require(ServerScriptService.Features.Shift.ShiftServi
 local SprintServiceServer = require(ServerScriptService.Features.Sprint.SprintServiceServer)
 local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
 local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
+local VacuumToolSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumToolSystem)
 
 type AbilityDef = AbilityTypes.AbilityDef
 
 -- A timed effect's AbilityActive (Let's Go!, Spot It!): cleared at `untilTime` (os.clock).
 type Timed = { character: Model, untilTime: number }
--- A full-body clip that a move stops (os.clock until it would end on its own).
-type FullBody = { key: string, untilTime: number }
+-- A playing ability clip (Let's Go!, Spot It!): its kind, and os.clock until it would end on its own.
+type Playing = { key: string, kind: AbilityClipUtils.ClipKind, untilTime: number }
 
 -- Above this flat speed (studs/s) a user counts as moving: the upper-body clip, and a full-body clip stops.
 local MOVING_SPEED = 1.5
@@ -75,7 +79,7 @@ local MOVING_SPEED = 1.5
 local log = Logger.new("AbilityServiceServer")
 local tracker = AbilityCooldownTracker.new()
 local timed: { [number]: Timed } = {}
-local fullBodies: { [number]: FullBody } = {}
+local playing: { [number]: Playing } = {}
 local stoppers: { () -> () } = {}
 local elapsed = 0
 local counters = { used = 0, refused = 0, plantsEnded = 0 }
@@ -144,12 +148,16 @@ local function closestTreasure(origin: Vector3): (number?, BasePart?)
 	return best, if best ~= nil then parts[best] else nil
 end
 
--- Plays an ability clip over the effect (never gates it): the full-body one standing still, else the upper-body one.
-local function playClip(player: Player, root: BasePart, clips: AbilityTypes.AbilityClips)
-	local full, upper = clips.full, clips.upper
-	local moving = flatSpeed(root) > MOVING_SPEED
-	local key = if moving or full == nil then upper else full
-	if key == nil then
+-- Whether `player`'s hands are busy: the vacuum's wand out, or something carried (their arms are on an IK grip).
+local function handsBusy(player: Player, character: Model?): boolean
+	return VacuumToolSystem.isEquipped(character) or CarryServiceServer:getCarried(player) ~= nil
+end
+
+-- Plays an ability clip over the effect (never gates it), as AbilityClipUtils picks: the full-body one standing still,
+-- the upper-body one moving, none with busy hands.
+local function playClip(player: Player, character: Model, root: BasePart, clips: AbilityTypes.AbilityClips)
+	local key, kind = AbilityClipUtils.pick(clips, flatSpeed(root) > MOVING_SPEED, handsBusy(player, character))
+	if key == nil or kind == nil then
 		return
 	end
 	local ok, reason = AnimationServiceServer:play(player, key)
@@ -158,8 +166,10 @@ local function playClip(player: Player, root: BasePart, clips: AbilityTypes.Abil
 		return
 	end
 	local def = AnimationRegistry.get(key)
-	if key == full and def ~= nil and def.durationMs ~= nil then
-		fullBodies[player.UserId] = { key = key, untilTime = os.clock() + def.durationMs / 1000 }
+	if def ~= nil and def.durationMs ~= nil then
+		local clipKind: AbilityClipUtils.ClipKind = if kind == "full" then "full" else "upper"
+		local entry: Playing = { key = key, kind = clipKind, untilTime = os.clock() + def.durationMs / 1000 }
+		playing[player.UserId] = entry
 	end
 end
 
@@ -183,13 +193,13 @@ local function letsGo(player: Player, character: Model, root: BasePart, def: Abi
 		end
 	end
 	markTimed(player, character, def)
-	playClip(player, root, def.clips)
+	playClip(player, character, root, def.clips)
 end
 
 local function spotIt(player: Player, character: Model, root: BasePart, def: AbilityDef, cargoId: number)
 	AbilityEvents.packets.Spotted.sendTo({ cargoId = cargoId }, player)
 	markTimed(player, character, def)
-	playClip(player, root, def.clips)
+	playClip(player, character, root, def.clips)
 end
 
 -- The plant's clips: enter, then the hold looping once the enter is done (if the same plant still runs).
@@ -216,6 +226,10 @@ local function pottedPlant(player: Player, character: Model, root: BasePart, def
 	local startedAt = os.clock()
 	tracker:startPlant(player.UserId, { startedAt = startedAt, origin = root.Position, cancelled = false })
 	character:SetAttribute(AbilityConstants.ACTIVE_ATTRIBUTE, def.id)
+	-- The wand goes away as he plants (its IK grip would fight the clip that brings out the pot); slot 1 brings it back.
+	if VacuumToolSystem.isEquipped(character) then
+		VacuumServiceServer:setEquipped(player, false)
+	end
 	plantClips(player, def, startedAt)
 end
 
@@ -248,6 +262,10 @@ local function endPlant(player: Player, reason: AbilityTypes.EndReason, calm: bo
 end
 
 local function onUse(player: Player)
+	-- A second press while planted (no-cooldown mode) never restarts the plant: moving ends it.
+	if tracker:plantOf(player.UserId) ~= nil then
+		return
+	end
 	local character, humanoid, root = bodyOf(player)
 	local name = if character ~= nil then character:GetAttribute(EmployeeConstants.NAME_ATTRIBUTE) else nil
 	local def = if type(name) == "string" then AbilityRegistry.forEmployee(name) else nil
@@ -352,16 +370,17 @@ local function stepTimed(now: number)
 			entry.character:SetAttribute(AbilityConstants.ACTIVE_ATTRIBUTE, nil)
 		end
 	end
-	for userId, entry in fullBodies do
+	for userId, entry in playing do
 		local player = Players:GetPlayerByUserId(userId)
 		if now >= entry.untilTime or player == nil then
-			fullBodies[userId] = nil
+			playing[userId] = nil
 			continue
 		end
-		local _, _, root = bodyOf(player)
-		if root ~= nil and flatSpeed(root) > MOVING_SPEED then
-			-- Moving cancels the full-body clip (its contract); the effect is untouched.
-			fullBodies[userId] = nil
+		local character, _, root = bodyOf(player)
+		local moving = root ~= nil and flatSpeed(root) > MOVING_SPEED
+		if not AbilityClipUtils.keeps(entry.kind, moving, handsBusy(player, character)) then
+			-- Moving cuts a full-body clip; busy hands cut any clip. The effect is untouched.
+			playing[userId] = nil
 			AnimationServiceServer:stop(player, entry.key)
 		end
 	end
@@ -410,6 +429,9 @@ export type AbilityServiceServer = {
 	getState: (self: AbilityServiceServer) -> { [string]: any },
 	readyAt: (self: AbilityServiceServer, player: Player) -> number,
 	isPlanted: (self: AbilityServiceServer, player: Player) -> boolean,
+	resetCooldown: (self: AbilityServiceServer, player: Player) -> boolean,
+	setNoCooldown: (self: AbilityServiceServer, player: Player, on: boolean) -> (),
+	hasNoCooldown: (self: AbilityServiceServer, player: Player) -> boolean,
 }
 
 local AbilityServiceServer: AbilityServiceServer = {
@@ -453,7 +475,7 @@ local AbilityServiceServer: AbilityServiceServer = {
 			NpcServiceServer:reveal(player, AbilityConstants.PLANT_SOURCE)
 			tracker:clear(player.UserId)
 			timed[player.UserId] = nil
-			fullBodies[player.UserId] = nil
+			playing[player.UserId] = nil
 		end)
 		table.insert(
 			stoppers,
@@ -491,6 +513,31 @@ local AbilityServiceServer: AbilityServiceServer = {
 
 	isPlanted = function(_self, player)
 		return tracker:plantOf(player.UserId) ~= nil
+	end,
+
+	--[=[
+		Makes `player`'s ability ready now (the admin command abilityreset). False when it was not cooling down.
+	]=]
+	resetCooldown = function(_self, player)
+		local was = tracker:reset(player.UserId)
+		publishReady(player, 0)
+		return was
+	end,
+
+	--[=[
+		Turns no-cooldown mode on or off for `player` (the admin command abilitynocooldown): every use is ready again
+		at once. Turning it on also makes the ability ready now. Kept across shifts; dropped when they leave.
+	]=]
+	setNoCooldown = function(_self, player, on)
+		tracker:setFree(player.UserId, on)
+		if on then
+			tracker:reset(player.UserId)
+			publishReady(player, 0)
+		end
+	end,
+
+	hasNoCooldown = function(_self, player)
+		return tracker:isFree(player.UserId)
 	end,
 
 	getState = function(_self)
