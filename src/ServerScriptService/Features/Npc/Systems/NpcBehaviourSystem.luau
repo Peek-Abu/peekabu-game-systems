@@ -61,14 +61,20 @@ export type ThinkDeps = {
 	attackHandlers: { [string]: AttackHandler },
 	brains: { [string]: NpcTypes.Brain },
 	targetFilter: ((player: Player) -> boolean)?,
+	-- Whether `userId` is concealed from the NPC `npcId` (NpcConcealTracker): never a candidate for it.
+	concealedFrom: (userId: number, npcId: number) -> boolean,
 	onAttack: () -> (),
 }
 
 local log = Logger.new("NpcBehaviourSystem")
 local random = Random.new()
 
--- Players an NPC may target: a living character, not dead, passing the game's filter.
-local function candidates(targetFilter: ((player: Player) -> boolean)?): { Candidate }
+-- Players NPC `agentId` may target: a living character, not dead, not concealed from it, passing the game's filter.
+local function candidates(
+	targetFilter: ((player: Player) -> boolean)?,
+	concealedFrom: (userId: number, npcId: number) -> boolean,
+	agentId: number
+): { Candidate }
 	local list: { Candidate } = {}
 	for _, player in Players:GetPlayers() do
 		local character = player.Character
@@ -81,6 +87,7 @@ local function candidates(targetFilter: ((player: Player) -> boolean)?): { Candi
 			and root ~= nil
 			and root:IsA("BasePart")
 			and not DeathServiceServer:isDead(player)
+			and not concealedFrom(player.UserId, agentId)
 		then
 			local filter = targetFilter
 			if filter == nil or filter(player) then
@@ -194,12 +201,44 @@ local function attack(agent: Agent, target: Candidate, now: number, deps: ThinkD
 end
 
 --[=[
+	Whether the NPC sees `player` right now by the default senses: in its sight cone and range, with a clear line of
+	sight. The witness check for kinds without their own (NpcServiceServer:conceal). Never yields.
+]=]
+function NpcBehaviourSystem.sees(agent: Agent, player: Player): boolean
+	local character = player.Character
+	local found = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil
+	if character == nil or found == nil or not found:IsA("BasePart") then
+		return false
+	end
+	local candidate: Candidate? = nil
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if humanoid ~= nil then
+		candidate = {
+			id = player.UserId,
+			position = found.Position,
+			player = player,
+			character = character,
+			humanoid = humanoid,
+		}
+	end
+	return candidate ~= nil
+		and NpcSenseRules.inSight(
+			agent.root.Position,
+			agent.root.CFrame.LookVector,
+			candidate.position,
+			agent.def.sightRange,
+			agent.def.sightAngle
+		)
+		and lineOfSight(agent, candidate)
+end
+
+--[=[
 	One think for one NPC at `now` (os.clock).
 ]=]
 function NpcBehaviourSystem.think(agent: Agent, now: number, deps: ThinkDeps)
 	local def = agent.def
 	local position = agent.root.Position
-	local list = candidates(deps.targetFilter)
+	local list = candidates(deps.targetFilter, deps.concealedFrom, agent.id)
 
 	-- Perception: a hostile NPC hunts what it sees (or still remembers); a timid one notes the nearest.
 	local target: Candidate? = nil

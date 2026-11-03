@@ -15,6 +15,10 @@
 	- Poses play through AnimationServiceServer:playOnRig from the kind's `animations`.
 	- A game can replace a kind's decisions (`setBrain`), send it to a point (the `goTo` intent), tune one NPC at
 	  runtime (`setTuning`), and mark zones it avoids (`pathCosts`).
+	- Concealment (stealth): `conceal(player, source)` hides a player from every NPC that does not see them at that
+	  moment (each kind's witness check: the default senses, or the game's own via `setWitness`); a witness keeps
+	  seeing them. A concealed player is never a candidate for the NPCs it is concealed from (no sight, no chase, no
+	  attack); a game with its own senses reads `isConcealedFrom`. `reveal` ends one source.
 
 	Spec-exempt shell (Instances, physics, raycasts, signals); the decisions are the specced NpcRegistry,
 	NpcSenseRules, NpcBrainRules, NpcPathRules and NpcRosterTracker.
@@ -23,6 +27,7 @@
 ]=]
 
 local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -38,6 +43,7 @@ local NpcConstants = require(NpcServer.Data.NpcConstants)
 local NpcRegistry = require(NpcServer.Data.NpcRegistry)
 local NpcTypes = require(NpcServer.Data.NpcTypes)
 local NpcBrainRules = require(NpcServer.Rules.NpcBrainRules)
+local NpcConcealTracker = require(NpcServer.State.NpcConcealTracker)
 local NpcRosterTracker = require(NpcServer.State.NpcRosterTracker)
 local NpcBehaviourSystem = require(NpcServer.Systems.NpcBehaviourSystem)
 local NpcMoverSystem = require(NpcServer.Systems.NpcMoverSystem)
@@ -54,6 +60,9 @@ local spawned: SignalTyped.Signal<Model, string> = SignalTyped.new()
 local died: SignalTyped.Signal<Model, string, DeathTypes.DeathInfo> = SignalTyped.new()
 
 local roster = NpcRosterTracker.new()
+local concealment = NpcConcealTracker.new()
+-- A kind's own witness check (its game's senses); absent = the default senses (NpcBehaviourSystem.sees).
+local witnessChecks: { [string]: (npc: Model, player: Player) -> boolean } = {}
 local agents: { [number]: Agent } = {}
 local attackHandlers: { [string]: AttackHandler } = {}
 local brains: { [string]: NpcTypes.Brain } = {}
@@ -65,6 +74,9 @@ local thinkDeps: NpcBehaviourSystem.ThinkDeps = {
 	attackHandlers = attackHandlers,
 	brains = brains,
 	targetFilter = nil,
+	concealedFrom = function(userId: number, npcId: number): boolean
+		return concealment:isConcealedFrom(userId, npcId)
+	end,
 	onAttack = function()
 		counters.attacks += 1
 	end,
@@ -106,6 +118,7 @@ local function removeAgent(model: Model)
 		return
 	end
 	roster:remove(id)
+	concealment:forgetNpc(id)
 	local agent = agents[id]
 	agents[id] = nil
 	if agent ~= nil then
@@ -207,6 +220,11 @@ export type NpcServiceServer = {
 	setBrain: (self: NpcServiceServer, kind: string, brain: NpcTypes.Brain?) -> (),
 	setTuning: (self: NpcServiceServer, npc: Model, tuning: NpcTypes.NpcTuning?) -> boolean,
 	wake: (self: NpcServiceServer, npc: Model) -> boolean,
+	conceal: (self: NpcServiceServer, player: Player, source: string) -> (),
+	reveal: (self: NpcServiceServer, player: Player, source: string) -> (),
+	isConcealed: (self: NpcServiceServer, player: Player) -> boolean,
+	isConcealedFrom: (self: NpcServiceServer, player: Player, npc: Model) -> boolean,
+	setWitness: (self: NpcServiceServer, kind: string, check: ((npc: Model, player: Player) -> boolean)?) -> (),
 }
 
 local NpcServiceServer: NpcServiceServer = {
@@ -237,6 +255,13 @@ local NpcServiceServer: NpcServiceServer = {
 		end)
 		table.insert(stoppers, function()
 			deaths:Disconnect()
+		end)
+
+		local leaving = Players.PlayerRemoving:Connect(function(player: Player)
+			concealment:clear(player.UserId)
+		end)
+		table.insert(stoppers, function()
+			leaving:Disconnect()
 		end)
 
 		local heartbeat = RunService.Heartbeat:Connect(function()
@@ -397,6 +422,57 @@ local NpcServiceServer: NpcServiceServer = {
 		end
 		agent.nextThinkAt = -math.huge
 		return true
+	end,
+
+	--[=[
+		Conceals `player` from every live NPC that does not see them right now (its kind's witness check), under
+		`source` (a stealth move, a hiding spot). Concealing the same source again re-asks the witnesses. Never yields.
+	]=]
+	conceal = function(_self, player, source)
+		local witnesses: { number } = {}
+		for id, agent in agents do
+			if agent.humanoid.Health > 0 then
+				local check = witnessChecks[agent.kind]
+				local ok, saw = pcall(function(): boolean
+					return if check ~= nil then check(agent.model, player) else NpcBehaviourSystem.sees(agent, player)
+				end)
+				if not ok then
+					log:error(`witness check for "{agent.kind}" errored: {saw}`)
+				elseif saw then
+					table.insert(witnesses, id)
+				end
+			end
+		end
+		concealment:conceal(player.UserId, source, witnesses)
+	end,
+
+	reveal = function(_self, player, source)
+		concealment:reveal(player.UserId, source)
+	end,
+
+	isConcealed = function(_self, player)
+		return concealment:isConcealed(player.UserId)
+	end,
+
+	--[=[
+		Whether `player` is concealed from `npc` (false for a model that is not a live NPC).
+	]=]
+	isConcealedFrom = function(_self, player, npc)
+		local id = roster:idOf(npc)
+		return id ~= nil and concealment:isConcealedFrom(player.UserId, id)
+	end,
+
+	--[=[
+		Gives a kind with its own senses its own witness check for `conceal` (must not yield). Nil restores the
+		default senses.
+	]=]
+	setWitness = function(_self, kind, check)
+		assert(NpcRegistry.has(kind), `setWitness: "{kind}" is not a registered npc kind`)
+		if check == nil then
+			witnessChecks[kind] = nil
+		else
+			witnessChecks[kind] = check
+		end
 	end,
 
 	getState = function(_self)

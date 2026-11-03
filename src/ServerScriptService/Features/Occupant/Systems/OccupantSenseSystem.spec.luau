@@ -114,4 +114,24 @@ return function()
 		expect(Sense.feetY(root, h)).to.equal(7)
 		model:Destroy()
 	end)
+	it("marks a crew member concealed from him as hidden where he did not see them go", function()
+		local list = {
+			{ userId = -101, position = Vector3.zero, clear = true },
+			{ userId = -102, position = Vector3.zero, clear = true },
+			{ userId = -103, position = Vector3.zero, clear = true },
+		}
+		Sense.markHidden(list, function(userId)
+			return userId == -102
+		end)
+		expect(list[1].hidden).to.equal(nil)
+		expect(list[2].hidden).to.equal(true)
+		expect(list[2].seen).to.equal(false)
+		expect(list[3].hidden).to.equal(nil)
+	end)
+
+	it("marks nobody concealed without a concealment check", function()
+		local list = { { userId = -101, position = Vector3.zero, clear = true } }
+		Sense.markHidden(list)
+		expect(list[1].hidden).to.equal(nil)
+	end)
 end

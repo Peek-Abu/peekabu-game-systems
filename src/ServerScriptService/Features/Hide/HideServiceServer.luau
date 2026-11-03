@@ -54,8 +54,12 @@ local HideOccupancyTracker = require(ServerScriptService.Features.Hide.State.Hid
 local HideSpotSystem = require(ServerScriptService.Features.Hide.Systems.HideSpotSystem)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
+local NpcServiceServer = require(ServerScriptService.Features.Npc.NpcServiceServer)
 local SoundServiceServer = require(ServerScriptService.Features.Sound.SoundServiceServer)
 local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
+
+-- The stealth source a hiding spot conceals its occupant under (NpcServiceServer:conceal).
+local CONCEAL_SOURCE = "hide"
 
 type Spot = HideTypes.Spot
 type SpotInfo = HideTypes.SpotInfo
@@ -209,6 +213,7 @@ local function leave(player: Player, reason: ExitReason): boolean
 	end
 	lastLeft[player.UserId] = os.clock()
 	holds[player.UserId] = nil
+	NpcServiceServer:reveal(player, CONCEAL_SOURCE)
 	player:SetAttribute(HideConstants.PLAYER_SPOT_ATTRIBUTE, nil)
 	player:SetAttribute(HideConstants.PLAYER_SINCE_ATTRIBUTE, nil)
 	player:SetAttribute(HideConstants.PLAYER_HELD_ATTRIBUTE, nil)
@@ -305,6 +310,9 @@ local function enter(player: Player, spot: Spot): (boolean, string?)
 		body.tween = settled
 		settled:Play()
 	end)
+	-- Concealed from every NPC that did not see them go in (NpcServiceServer's witnesses), so any monster on the shared
+	-- senses respects a hiding spot; the Manager reads Hide's own state as well (OccupantSenseSystem.markHidden).
+	NpcServiceServer:conceal(player, CONCEAL_SOURCE)
 	spotSystem:setOpen(spot.id, false)
 	player:SetAttribute(HideConstants.PLAYER_SPOT_ATTRIBUTE, spot.id)
 	player:SetAttribute(HideConstants.PLAYER_SINCE_ATTRIBUTE, Workspace:GetServerTimeNow())
@@ -386,7 +394,13 @@ export type HideServiceServer = {
 }
 
 local HideServiceServer: HideServiceServer = {
-	dependencies = { "CarryServiceServer", "DeathServiceServer", "SoundServiceServer", "ToastServiceServer" },
+	dependencies = {
+		"CarryServiceServer",
+		"DeathServiceServer",
+		"NpcServiceServer",
+		"SoundServiceServer",
+		"ToastServiceServer",
+	},
 	entered = entered,
 	exited = exited,
 	noiseMade = noiseMade,
@@ -479,6 +493,10 @@ local HideServiceServer: HideServiceServer = {
 		are not hiding.
 	]=]
 	setSeen = function(_self, player, seen)
+		if seen then
+			-- Found: no NPC is fooled by the spot any more.
+			NpcServiceServer:reveal(player, CONCEAL_SOURCE)
+		end
 		return tracker:setSeen(player.UserId, seen)
 	end,
 

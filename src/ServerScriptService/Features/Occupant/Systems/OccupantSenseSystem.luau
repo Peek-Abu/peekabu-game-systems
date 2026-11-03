@@ -135,13 +135,18 @@ function System.world(place: World?, resting: boolean): World
 	world.resting = resting
 	return world
 end
--- Marks who in `list` hides (Hide) and whether he saw them go in. Returns `list`.
-function System.markHidden(list: { Types.Glimpse }): { Types.Glimpse }
+-- Marks who in `list` hides (Hide) and whether he saw them go in, then who else is concealed from him (`concealed`:
+-- NpcServiceServer's stealth, e.g. a Potted Plant he did not see begin) as hidden where he did not see them go:
+-- invisible to every sight and uncatchable. Hide's own marking wins for someone in a spot. Returns `list`.
+function System.markHidden(list: { Types.Glimpse }, concealed: ((userId: number) -> boolean)?): { Types.Glimpse }
 	for _, glimpse in list do
 		local player = Players:GetPlayerByUserId(glimpse.userId)
 		if player ~= nil and HideServiceServer:isHidden(player) then
 			glimpse.hidden = true
 			glimpse.seen = HideServiceServer:seenEntering(player)
+		elseif concealed ~= nil and concealed(glimpse.userId) then
+			glimpse.hidden = true
+			glimpse.seen = false
 		end
 	end
 	return list
@@ -357,6 +362,8 @@ end
 export type Gathering = {
 	participants: { Player },
 	eligible: (Player) -> boolean,
+	-- Whether a crew member is concealed from him (NpcServiceServer:isConcealedFrom).
+	concealed: (userId: number) -> boolean,
 	world: World,
 	heard: Vector3?,
 	rolls: { number },
@@ -374,8 +381,10 @@ function System.gather(
 	position: Vector3,
 	input: Gathering
 ): Types.Senses
-	local players =
-		System.markHidden(System.glimpses(rig, System.rayRange(sight.sightRange), input.participants, input.eligible))
+	local players = System.markHidden(
+		System.glimpses(rig, System.rayRange(sight.sightRange), input.participants, input.eligible),
+		input.concealed
+	)
 	local senses = System.senses(rig, sight, now, players, input.world)
 	senses.position = position
 	senses.heard = input.heard

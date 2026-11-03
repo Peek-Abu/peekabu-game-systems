@@ -59,6 +59,7 @@ local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServi
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
 local HideServiceServer = require(ServerScriptService.Features.Hide.HideServiceServer)
+local NpcServiceServer = require(ServerScriptService.Features.Npc.NpcServiceServer)
 local OfficeServiceServer = require(ServerScriptService.Features.Office.OfficeServiceServer)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftServiceServer = require(ServerScriptService.Features.Shift.ShiftServiceServer)
@@ -231,7 +232,9 @@ function OccupantCatchSystem.attempt(
 			OccupantCatchRules.reach(attempt.found)
 		),
 		clear = attempt.inView,
-		hidden = HideServiceServer:isHidden(player) and not HideServiceServer:seenEntering(player),
+		-- Hidden where he did not see them go in, or concealed from him (a stealth move he did not see begin).
+		hidden = (HideServiceServer:isHidden(player) and not HideServiceServer:seenEntering(player))
+			or NpcServiceServer:isConcealedFrom(player, rig.model),
 		position = if root ~= nil then root.Position else rig.root.Position,
 		alive = humanoid ~= nil and humanoid.Health > 0 and not DeathServiceServer:isDead(player),
 		catching = catching[player.UserId] == true,

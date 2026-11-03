@@ -177,8 +177,19 @@ local function eligible(player: Player): boolean
 	return not DeathServiceServer:isDead(player) and not OccupantCatchSystem.isCatching(player.UserId)
 end
 
+-- Whether a crew member is concealed from him (NpcServiceServer's stealth, e.g. a Potted Plant he did not see begin).
+local function concealedFrom(current: OccupantRigSystem.Rig): (userId: number) -> boolean
+	return function(userId: number): boolean
+		local player = Players:GetPlayerByUserId(userId)
+		return player ~= nil and NpcServiceServer:isConcealedFrom(player, current.model)
+	end
+end
+
 local function glimpses(current: OccupantRigSystem.Rig, sightRange: number): { OccupantTypes.Glimpse }
-	return Sense.markHidden(Sense.glimpses(current, sightRange, RoundServiceServer:participants(), eligible))
+	return Sense.markHidden(
+		Sense.glimpses(current, sightRange, RoundServiceServer:participants(), eligible),
+		concealedFrom(current)
+	)
 end
 
 local function world(): Sense.World
@@ -268,6 +279,7 @@ local function think(def: NpcTypes.NpcDef, now: number, position: Vector3): NpcT
 	local senses = Sense.gather(current, def, now, position, {
 		participants = participants,
 		eligible = eligible,
+		concealed = concealedFrom(current),
 		world = world(),
 		heard = pendingNoise,
 		rolls = rolls,
@@ -492,6 +504,11 @@ local OccupantServiceServer: OccupantServiceServer = {
 		end
 		NpcServiceServer:setBrain(OccupantConstants.NPC_KIND, brain)
 		HideServiceServer:setWitness(witness)
+		-- The same witness for stealth (NpcServiceServer:conceal): he is never fooled by a plant he saw, or one he chases.
+		NpcServiceServer:setWitness(OccupantConstants.NPC_KIND, function(npc: Model, player: Player): boolean
+			local current = rig
+			return current ~= nil and npc == current.model and witness(player)
+		end)
 		NpcServiceServer:onAttack(OccupantConstants.NPC_KIND, onCatch)
 		-- ~8 s of spectating before the respawn (spec §4); Shift's resolver respawns in the loading bay.
 		DeathServiceServer:configure({ respawnDelay = OccupantConstants.SPECTATE_SECONDS })
@@ -517,6 +534,7 @@ local OccupantServiceServer: OccupantServiceServer = {
 		shift = nil
 		NpcServiceServer:setBrain(OccupantConstants.NPC_KIND, nil)
 		HideServiceServer:setWitness(nil)
+		NpcServiceServer:setWitness(OccupantConstants.NPC_KIND, nil)
 		despawn()
 	end,
 
