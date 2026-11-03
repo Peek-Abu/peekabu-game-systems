@@ -94,6 +94,10 @@ To do together on a polish day, not now:
   (owner, 2026-10-29). The Legendary unlock reveals (Bubble Buddy, Sheriff, PJ Cappy's Cozy Unlock 86895730118507) are
   uploaded and registered but unused; a skin's own reveal slot stays for a later, separate Legendary reveal.
 
+- **Legendary skins get their own idles and fidgets (owner, 2026-11-03):** each Legendary skin (Bubble Buddy,
+  Sheriff Prickles, PJ Cappy) gets its own idle and fidget. A skin whose showcase idle holds props skips the employee's
+  default fidget, because it will have its own. Fidgets stop while vacuuming or knocked out (already built).
+
 From the owner's stage 4 play-check (2026-10-24):
 - **Inside sounds heard outside:** standing in the yard you hear the office's sounds, Mr. Harlow's footsteps and
   more. This is the "Sound groups" item above, now confirmed by the owner in play: the building's sounds must be cut
