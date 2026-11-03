@@ -103,7 +103,8 @@ local SETS: { [string]: FootstepSet } = {
 			concrete = {},
 		},
 	},
-	-- Cappy: his lazy sneaker shuffle, the sole drags and catches (2026-10-31 pick B; files at -26.5 LUFS).
+	-- Cappy: his lazy sneaker shuffle, the sole sliding as soft noise (2026-11-03 set C, replacing B, whose scuff
+	-- recording rang at 2 kHz and whose creak drag rattled: "a piece of plastic in his pocket"; files at -26.5 LUFS).
 	cappy = {
 		volume = 0.9,
 		pitch = { min = 0.96, max = 1.04 },
@@ -119,12 +120,12 @@ local SETS: { [string]: FootstepSet } = {
 		},
 		surfaces = {
 			default = {
-				"rbxassetid://90679887169453",
-				"rbxassetid://107402234909364",
-				"rbxassetid://128402359119922",
-				"rbxassetid://131385561533984",
-				"rbxassetid://109270047602991",
-				"rbxassetid://85737991516890",
+				"rbxassetid://92375082140546",
+				"rbxassetid://117020539211737",
+				"rbxassetid://122480027583276",
+				"rbxassetid://76322660484070",
+				"rbxassetid://128786665938875",
+				"rbxassetid://125694770377557",
 			},
 			carpet = {},
 			tile = {},
@@ -260,37 +261,37 @@ local BODY_SOUNDS: { [string]: SoundTypes.SoundDef } = {
 		pitch = JUMP_PITCH,
 		rollOffMaxDistance = 50,
 	},
-	-- Cappy's (the shuffle B) and Prickles' (roots A) jumps and lands. Their lands measure within 1 dB of Pippa's, so all play at 0.9.
+	-- Cappy's (the shuffle, set C) and Prickles' (roots A) jumps and lands. Their lands measure within 1 dB of Pippa's, so all play at 0.9.
 	footstepJump_cappy_1 = {
-		assetId = "rbxassetid://103949395176641",
+		assetId = "rbxassetid://102041040422298",
 		group = "SFX",
 		volume = 0.9,
 		pitch = JUMP_PITCH,
 		rollOffMaxDistance = 50,
 	},
 	footstepJump_cappy_2 = {
-		assetId = "rbxassetid://99110782456130",
+		assetId = "rbxassetid://134205180375692",
 		group = "SFX",
 		volume = 0.9,
 		pitch = JUMP_PITCH,
 		rollOffMaxDistance = 50,
 	},
 	footstepJump_cappy_3 = {
-		assetId = "rbxassetid://110654231122206",
+		assetId = "rbxassetid://117292305416586",
 		group = "SFX",
 		volume = 0.9,
 		pitch = JUMP_PITCH,
 		rollOffMaxDistance = 50,
 	},
 	footstepJump_cappy_4 = {
-		assetId = "rbxassetid://114616184549366",
+		assetId = "rbxassetid://76252590538496",
 		group = "SFX",
 		volume = 0.9,
 		pitch = JUMP_PITCH,
 		rollOffMaxDistance = 50,
 	},
 	footstepLand_cappy = {
-		assetId = "rbxassetid://86992195233638",
+		assetId = "rbxassetid://139676980813049",
 		group = "SFX",
 		volume = 0.9,
 		rollOffMaxDistance = 50,
