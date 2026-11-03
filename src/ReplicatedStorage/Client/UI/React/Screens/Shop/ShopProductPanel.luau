@@ -271,8 +271,11 @@ local function ShopProductPanel(props: ShopProductPanelProps): React.ReactNode
 			{ Padding = UDim.new(0, if phone then 4 else 8), SortOrder = Enum.SortOrder.LayoutOrder }
 		),
 	}
+	local buttonHeight = if phone then 46 else 96
+	local listGap = if phone then 34 else 70
 	if #product.stats > 0 then
-		for key, node in ShopHireRows.rows(product, size, phone) do
+		local listHeight = layout.content.height - DEPTH.drop - y - buttonHeight - listGap
+		for key, node in ShopHireRows.rows(product, size, phone, listHeight) do
 			rows[key] = node
 		end
 	else
@@ -280,10 +283,9 @@ local function ShopProductPanel(props: ShopProductPanelProps): React.ReactNode
 			rows[entry.id] = insideRow(entry, card, if phone then 13 else 24, rowHeight, index)
 		end
 	end
-	local buttonHeight = if phone then 46 else 96
 	face.inside = e("ScrollingFrame", {
 		Position = UDim2.fromOffset(pad, y),
-		Size = UDim2.new(0, inner, 1, -y - buttonHeight - (if phone then 34 else 70)),
+		Size = UDim2.new(0, inner, 1, -y - buttonHeight - listGap),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		CanvasSize = UDim2.fromOffset(0, 0),
