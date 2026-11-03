@@ -3,7 +3,7 @@
 	ShopViewModel: everything the Shop screens show, from the offers (ShopRegistry / today's ShopRotationUtils.live),
 	the catalogue and what the player owns and has: offer cards (name, "Skin · Pippa", price, owned / affordable /
 	too dear), the buy button (Buy / Owned / "Need 300 more"), the Yes/No question before spending, the product page
-	(lore, styles, what's inside with each extra's own price), the Skins tab list, the Gleam bundles, the Passes cards
+	(lore, styles, what's inside with each extra's own price, an employee's ability and five display stats), the Skins tab list, the Gleam bundles, the Passes cards
 	(every registered game pass: its words from ShopConstants.PASS_COPY, its price and icon as Roblox reported them,
 	Owned once bought), the countdowns, and a refused buy in kid words. Nothing here is per item: a new offer shows up by itself.
 
@@ -14,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
 local CosmeticTypes = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticTypes)
+local EmployeeProfileRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeProfileRegistry)
 local EmployeeSkinRules = require(ReplicatedStorage.Shared.Features.Employee.Rules.EmployeeSkinRules)
 local ShopConstants = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopConstants)
 local ShopRegistry = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopRegistry)
@@ -22,6 +23,7 @@ local ShopTypes = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopTypes)
 local ShopStore = require(ReplicatedStorage.Client.Features.Shop.State.ShopStore)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local ToonStyleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonStyleViewModel)
+local InventoryViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Inventory.InventoryViewModel)
 
 type Offer = ShopTypes.Offer
 type Owns = (id: string) -> boolean
@@ -83,6 +85,10 @@ export type Product = {
 	-- The colour styles: a chip each (name and colours) that swaps the preview, only for a skin with real styles.
 	styles: { visible: boolean, count: number, text: string, chips: { StyleChip } },
 	inside: { Inside },
+	-- An employee's hire page: their five display stats (the same rows as the About tab); empty for anything else.
+	stats: { InventoryViewModel.StatRow },
+	-- An employee's hire page: their ability card (`icon` names its render, UIAssets.iconImage); nil for anything else.
+	ability: { name: string, line: string, cooldown: string, icon: string }?,
 	button: Button,
 	confirm: string,
 }
@@ -236,6 +242,7 @@ function VM.product(offer: Offer, owns: Owns, balances: Balances): Product
 		elseif item ~= nil and item.kind == "employee" then "A new employee"
 		elseif item ~= nil then `{KIND_WORD[item.kind]}{who}`
 		else ""
+	local profile = if item ~= nil and item.kind == "employee" then EmployeeProfileRegistry.get(item.id) else nil
 	local chips: { StyleChip } = {}
 	if item ~= nil and item.kind == "skin" then
 		for _, style in EmployeeSkinRules.stylesFor(item.employee, CosmeticRegistry.keyOf(item.id)) do
@@ -255,6 +262,15 @@ function VM.product(offer: Offer, owns: Owns, balances: Balances): Product
 			chips = chips,
 		},
 		inside = inside,
+		stats = if profile ~= nil and item ~= nil then InventoryViewModel.stats(item.id) else {},
+		ability = if profile ~= nil
+			then {
+				name = profile.ability.name,
+				line = profile.ability.line,
+				cooldown = `{profile.ability.cooldown}s`,
+				icon = profile.ability.icon,
+			}
+			else nil,
 		button = VM.button(offer, owns, balances),
 		confirm = VM.confirm(offer),
 	}

@@ -33,6 +33,7 @@ local ToonFlag = require(Toon.ToonFlag)
 local ToonIcon = require(Toon.ToonIcon)
 local ToonPill = require(Toon.ToonPill)
 local ToonPrice = require(Toon.ToonPrice)
+local ToonStatRows = require(Toon.ToonStatRows)
 local ToonSurface = require(Toon.ToonSurface)
 local ToonText = require(Toon.ToonText)
 local ToonViewport = require(Toon.ToonViewport)
@@ -183,7 +184,6 @@ local function aboutCard(employee: string, layout: InventoryViewModel.Layout, he
 	end
 	local phone = layout.phone
 	local size = layout.textSize
-	local gold = UIToonConstants.shade("gold")
 	local face: Nodes = {}
 	local y = if phone then 10 else 20
 	face.title = e(ToonText, {
@@ -213,46 +213,14 @@ local function aboutCard(employee: string, layout: InventoryViewModel.Layout, he
 		if phone then 26 else 54
 	)
 	local barX = if phone then 110 else 200
-	for index, stat in InventoryViewModel.stats(employee) do
-		local rowY = y + (index - 1) * row
-		face[`icon{index}`] = e(ToonIcon, {
-			icon = stat.icon,
-			position = UDim2.fromOffset(16, rowY),
-			size = UDim2.fromOffset(row, row),
-			drop = 2,
-		})
-		face[`label{index}`] = e(ToonText, {
-			text = stat.label,
-			font = "body",
-			color = COLOR.white,
-			textSize = size,
-			position = UDim2.fromOffset(24 + row, rowY),
-			size = UDim2.fromOffset(barX - row - 16, row),
-			fit = true,
-		})
-		local pips: Nodes = {}
-		for pip = 1, 5 do
-			local filled = pip <= stat.value
-			pips[`pip{pip}`] = e("Frame", {
-				AnchorPoint = Vector2.new(0, 0.5),
-				Position = UDim2.new((pip - 1) / 5, 0, 0.5, 0),
-				Size = UDim2.new(0.2, -6, 0.42, 0),
-				BackgroundColor3 = if filled then COLOR.white else UIToonConstants.shade("night").hi,
-				BorderSizePixel = 0,
-			}, {
-				corner = e("UICorner", { CornerRadius = UDim.new(0, 6) }),
-				stroke = e("UIStroke", { Color = COLOR.ink, Thickness = 2 }),
-				gradient = if filled
-					then e("UIGradient", { Rotation = 90, Color = ColorSequence.new(gold.hi, gold.lo) })
-					else nil,
-			})
-		end
-		face[`bar{index}`] = e("Frame", {
-			Position = UDim2.fromOffset(barX + 20, rowY),
-			Size = UDim2.new(1, -barX - 40, 0, row),
-			BackgroundTransparency = 1,
-		}, pips)
-	end
+	face.stats = e(ToonStatRows, {
+		rows = InventoryViewModel.stats(employee),
+		row = row,
+		barX = barX + 4,
+		textSize = size,
+		position = UDim2.fromOffset(16, y),
+		size = UDim2.new(1, -36, 0, row * 5),
+	})
 	-- The ability card at the foot, its render breaking the left edge, the cooldown on a round chip.
 	local art = math.floor(abilityHeight * 1.05)
 	local ability: Nodes = {

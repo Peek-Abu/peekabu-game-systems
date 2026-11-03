@@ -3,7 +3,8 @@
 	ShopProductPanel: one offer's page in the Shop (concept: characters/ui/character-ui/frames3/product.jpg). Left, a
 	cream panel: the rarity ribbon, the big name, "Bundle for Pippa · cosmetic only", the lore in a quote box, Styles
 	(a chip per colour style: pressing one shows that style on the 3D preview, so you see it before buying; only for a
-	skin with real styles), a row per item inside (its kind, name and own price "alone 400"), and the big buy
+	skin with real styles), a row per item inside (its kind, name and own price "alone 400"; on an employee's hire
+	page, their ability card and five stats instead), and the big buy
 	button (the price, Owned, or "Need 300 more"), with a refused buy's words under it. Right: the item LIVE on a
 	raised platform in its rarity's colour. All of it is ShopViewModel.product; nothing is per item. Presentational
 	(exempt; story in ShopScreen.story).
@@ -26,6 +27,7 @@ local ToonText = require(Toon.ToonText)
 local ToonViewport = require(Toon.ToonViewport)
 local UIToonConstants = require(Toon.UIToonConstants)
 local InventoryViewModel = require(script.Parent.Parent.Inventory.InventoryViewModel)
+local ShopHireRows = require(script.Parent.ShopHireRows)
 local VM = require(script.Parent.ShopViewModel)
 
 local e = React.createElement
@@ -269,8 +271,14 @@ local function ShopProductPanel(props: ShopProductPanelProps): React.ReactNode
 			{ Padding = UDim.new(0, if phone then 4 else 8), SortOrder = Enum.SortOrder.LayoutOrder }
 		),
 	}
-	for index, entry in product.inside do
-		rows[entry.id] = insideRow(entry, card, if phone then 13 else 24, rowHeight, index)
+	if #product.stats > 0 then
+		for key, node in ShopHireRows.rows(product, size, phone) do
+			rows[key] = node
+		end
+	else
+		for index, entry in product.inside do
+			rows[entry.id] = insideRow(entry, card, if phone then 13 else 24, rowHeight, index)
+		end
 	end
 	local buttonHeight = if phone then 46 else 96
 	face.inside = e("ScrollingFrame", {

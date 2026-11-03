@@ -27,6 +27,7 @@ local EmployeeProfileRegistry = require(ReplicatedStorage.Shared.Features.Employ
 local EmployeeSkinRules = require(ReplicatedStorage.Shared.Features.Employee.Rules.EmployeeSkinRules)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local ToonSourceBand = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonSourceBand)
+local ToonStatRows = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonStatRows)
 local ToonStyleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonStyleViewModel)
 local UIToonConstants = require(ReplicatedStorage.Client.UI.React.Screens.Toon.UIToonConstants)
 
@@ -120,7 +121,8 @@ export type ChatView = { slots: { StickerSlot }, packs: { Pack } }
 -- One emote-wheel slot on the detail panel: what is in it (`mine` = the item shown).
 export type WheelSlot = { slot: number, id: string?, name: string, empty: boolean, mine: boolean }
 
-export type StatRow = { stat: EmployeeProfileRegistry.Stat, label: string, icon: UIAssets.ToonIcon, value: number }
+-- One stat's row, in the shape ToonStatRows draws (its render, its name, its 1-5 value).
+export type StatRow = ToonStatRows.ToonStatRow
 export type Tab = { id: string, text: string, soon: boolean, icon: UIAssets.ToonIcon? }
 -- "vacuums" is the Inventory's Vacuums tab (the same panel, for the vacuum every employee wears).
 export type PageTab = "skins" | "emotes" | "idles" | "about" | "vacuums"
@@ -530,10 +532,7 @@ function VM.stats(employee: string): { StatRow }
 		return rows
 	end
 	for _, stat: EmployeeProfileRegistry.Stat in EmployeeProfileRegistry.STATS do
-		table.insert(
-			rows,
-			{ stat = stat, label = STAT_LABEL[stat], icon = STAT_ICON[stat], value = profile.stats[stat] }
-		)
+		table.insert(rows, { label = STAT_LABEL[stat], icon = STAT_ICON[stat], value = profile.stats[stat] })
 	end
 	return rows
 end

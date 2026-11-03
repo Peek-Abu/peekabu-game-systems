@@ -44,6 +44,29 @@ return function()
 		end
 	end)
 
+	it("keeps every stat in the narrow 2-4 band (no one is very weak at anything)", function()
+		for _, name in EmployeeRegistry.names() do
+			for _, stat in EmployeeProfileRegistry.STATS do
+				local value = EmployeeProfileRegistry.get(name).stats[stat]
+				expect(value >= 2 and value <= 4).to.equal(true)
+			end
+		end
+	end)
+
+	it("keeps the owner's spreads: Pippa quick, Cappy quiet, Prickles the all-rounder", function()
+		local function spread(name)
+			local stats = EmployeeProfileRegistry.get(name).stats
+			local values = {}
+			for _, stat in EmployeeProfileRegistry.STATS do
+				table.insert(values, stats[stat])
+			end
+			return table.concat(values, ",")
+		end
+		expect(spread("Pippa")).to.equal("4,4,2,3,2")
+		expect(spread("Cappy")).to.equal("3,2,3,3,4")
+		expect(spread("Prickles")).to.equal("3,3,3,3,3")
+	end)
+
 	it("lists the five stats in display order", function()
 		expect(table.concat(EmployeeProfileRegistry.STATS, ",")).to.equal("speed,stamina,strength,suction,quiet")
 	end)

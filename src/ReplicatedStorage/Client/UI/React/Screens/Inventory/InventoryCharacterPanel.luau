@@ -30,6 +30,7 @@ local ToonPill = require(Toon.ToonPill)
 local ToonPrice = require(Toon.ToonPrice)
 local ToonRarityFrame = require(Toon.ToonRarityFrame)
 local ToonSourceBand = require(Toon.ToonSourceBand)
+local ToonStatRows = require(Toon.ToonStatRows)
 local ToonSurface = require(Toon.ToonSurface)
 local ToonText = require(Toon.ToonText)
 local ToonViewport = require(Toon.ToonViewport)
@@ -709,53 +710,6 @@ local function aboutCard(title: string, size: number, inner: Nodes, height: numb
 	)
 end
 
-local function statRows(props: InventoryCharacterPanelProps, row: number, barX: number): Nodes
-	local size = props.layout.textSize
-	local gold = UIToonConstants.shade("gold")
-	local stats: Nodes = {}
-	for index, stat in VM.stats(props.employee) do
-		local y = (index - 1) * row
-		stats[`icon{index}`] = e(ToonIcon, {
-			icon = stat.icon,
-			position = UDim2.fromOffset(0, y),
-			size = UDim2.fromOffset(row, row),
-			drop = 2,
-		})
-		stats[`label{index}`] = e(ToonText, {
-			text = stat.label,
-			font = "body",
-			color = COLOR.white,
-			textSize = size,
-			position = UDim2.fromOffset(row + 8, y),
-			size = UDim2.fromOffset(barX - row - 12, row),
-			fit = true,
-		})
-		local pips: Nodes = {}
-		for pip = 1, 5 do
-			local filled = pip <= stat.value
-			pips[`pip{pip}`] = e("Frame", {
-				AnchorPoint = Vector2.new(0, 0.5),
-				Position = UDim2.new((pip - 1) / 5, 0, 0.5, 0),
-				Size = UDim2.new(0.2, -6, 0.42, 0),
-				BackgroundColor3 = if filled then COLOR.white else UIToonConstants.shade("night").hi,
-				BorderSizePixel = 0,
-			}, {
-				corner = e("UICorner", { CornerRadius = UDim.new(0, 6) }),
-				stroke = e("UIStroke", { Color = COLOR.ink, Thickness = 2 }),
-				gradient = if filled
-					then e("UIGradient", { Rotation = 90, Color = ColorSequence.new(gold.hi, gold.lo) })
-					else nil,
-			})
-		end
-		stats[`bar{index}`] = e("Frame", {
-			Position = UDim2.fromOffset(barX, y),
-			Size = UDim2.new(1, -barX, 0, row),
-			BackgroundTransparency = 1,
-		}, pips)
-	end
-	return stats
-end
-
 local function about(props: InventoryCharacterPanelProps): (React.ReactNode, React.ReactNode)
 	local layout = props.layout
 	local phone = layout.phone
@@ -817,11 +771,14 @@ local function about(props: InventoryCharacterPanelProps): (React.ReactNode, Rea
 	}
 	local row = if phone then 22 else 50
 	local statsFace: Nodes = {
-		rows = e("Frame", {
-			Position = UDim2.fromOffset(18, if phone then 10 else 22),
-			Size = UDim2.new(1, -36, 1, -(if phone then 20 else 44)),
-			BackgroundTransparency = 1,
-		}, statRows(props, row, if phone then 104 else 200)),
+		rows = e(ToonStatRows, {
+			rows = VM.stats(props.employee),
+			row = row,
+			barX = if phone then 104 else 200,
+			textSize = size,
+			position = UDim2.fromOffset(18, if phone then 10 else 22),
+			size = UDim2.new(1, -36, 1, -(if phone then 20 else 44)),
+		}),
 	}
 	local rightRows: Nodes = {
 		ability = block(

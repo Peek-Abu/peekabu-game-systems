@@ -4,7 +4,7 @@
 	tab): a kind line, three personality words, a short bio, a fun fact, the ability's card text and the five display
 	stats, plus the employee's UI colour (their card, page and pick screen are tinted in it).
 
-	The stats are DISPLAY ONLY (the stat hooks are a later step). The ability's words live here, but the ability itself
+	The stats are DISPLAY ONLY (EmployeeStatFormulas is the seam for the later hooks; every effect is 1 today). The ability's words live here, but the ability itself
 	(and its cooldown, read from there) is AbilityRegistry's: the card can never promise a number the game does not
 	keep. The words come from characters/launch/new-employee-requirements.md and the owner can edit them here. Copy is
 	kid reading level. Every employee's stats add up to the same total (requirements: equal point totals).
@@ -93,7 +93,8 @@ local PROFILES: { [string]: Profile } = {
 			cooldown = cooldownOf("Prickles"),
 			icon = "abilityPottedPlant",
 		},
-		stats = { speed = 2, stamina = 3, strength = 4, suction = 4, quiet = 2 },
+		-- The all-rounder (owner, 2026-11-03): his ability is the sneaky part, not his stats.
+		stats = { speed = 3, stamina = 3, strength = 3, suction = 3, quiet = 3 },
 		color = {
 			body = Color3.fromRGB(127, 191, 77),
 			light = Color3.fromRGB(194, 235, 143),
