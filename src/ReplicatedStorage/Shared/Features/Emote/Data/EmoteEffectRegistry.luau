@@ -29,7 +29,7 @@ local entries: { [string]: Entry } = {
 			{ id = "bubbleStream", on = "BubbleBlow", off = "BubbleBlowEnd" },
 			{ id = "giantBubble", on = "BubbleGrow", off = "BubblePop" },
 			{ id = "bubbleLand", on = "Land" },
-			{ id = "bubbleWobbleSound", on = "BubbleGrow" },
+			{ id = "bubbleGrowSound", on = "BubbleGrow" },
 			{ id = "bubblePopSound", on = "BubblePop" },
 			{ id = "face", on = "Face" },
 		},

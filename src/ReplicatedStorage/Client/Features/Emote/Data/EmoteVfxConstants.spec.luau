@@ -78,7 +78,16 @@ return function()
 		expect(cocoa[1].after).to.equal(0)
 		expect(math.abs(0.233 + cocoa[2].after - 1.2) < 0.01).to.equal(true)
 		-- the owner: the wobble "at the peak / post inflate", the bloop on the pop
-		expect(EmoteVfxConstants.SOUND_CUES.bubbleWobbleSound[1].after).to.equal(EmoteVfxConstants.GIANT.growSeconds)
+		local grow = EmoteVfxConstants.SOUND_CUES.bubbleGrowSound
+		expect(grow[1].sound).to.equal("slideWhistle6")
+		expect(grow[1].after).to.equal(0)
+		expect(grow[2].after).to.equal(EmoteVfxConstants.GIANT.growSeconds)
+		-- the owner: the inflate runs as long as the bubble grows. Slide Whistle 6's sound lasts 0.96 s (measured), so its
+		-- speed fits it to growSeconds
+		local speed = EmoteVfxConstants.SOUNDS.slideWhistle6.pitch
+		expect(speed).to.be.ok()
+		expect(math.abs(0.96 / speed.min - EmoteVfxConstants.GIANT.growSeconds) < 0.02).to.equal(true)
+		expect(speed.max).to.equal(speed.min)
 		expect(EmoteVfxConstants.SOUND_CUES.bubblePopSound[1].after).to.equal(0)
 	end)
 

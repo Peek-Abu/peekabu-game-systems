@@ -70,9 +70,9 @@ return function()
 			expect(on("emote:Cappy.CocoaSip").cocoaSounds).to.equal("PropsShow")
 		end)
 
-		it("plays Bubble Ride's wobble from the bubble's growth and the bloop on the pop", function()
+		it("plays Bubble Ride's inflate and wobble from the bubble's growth and the bloop on the pop", function()
 			local byId = on("emote:Pippa.Bubbles")
-			expect(byId.bubbleWobbleSound).to.equal("BubbleGrow")
+			expect(byId.bubbleGrowSound).to.equal("BubbleGrow")
 			expect(byId.bubblePopSound).to.equal("BubblePop")
 		end)
 
