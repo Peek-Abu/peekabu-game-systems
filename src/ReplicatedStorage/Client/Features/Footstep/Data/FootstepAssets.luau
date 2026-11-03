@@ -18,13 +18,14 @@
 	set fills only its `default` pool, which every surface falls back to. Six walk variants each, at their real pitch
 	(jitter about +-4 %); a run is the same files at the sprint gait's volume and pitch (measured: the run files are
 	only +1.7 dB, 15 % shorter and 4 % brighter than the walk ones, which the sprint scale covers).
-	- pippa: family CB1 (round-3 final pick), the carpet set: felt taps, a light heel, a cloth/fur swish, and on three
-	  of the six variants (walk 2, 5, 7) a soft tink of her neck bell, 14 dB under the step.
+	- pippa (and `default`): the lazy rubber slap (character sounds round 3, 2026-11-03), her mascot-suit feet. Replaces CB1.
+	- cappy: the lazy sneaker shuffle; prickles: the hollow root knock (characters/launch/sounds-2026-10-30).
 	- harlow: family B (porcelain heel), the tile set: a hard heel with a faint glassy porcelain ring.
 
-	Also the body's other contacts with the floor (FootstepLandingSystem): JUMPS (round-3 final pick J4 "ears + bell",
-	four variants, one at random each jump, +-4 % speed), LAND (final pick A) and BODY_FALL (pick C, a plush flop +
-	cushion + a tiny toy squeak, for a ragdoll landing).
+	Also the body's other contacts with the floor (FootstepLandingSystem), per character in BODY_SETS: `default`
+	(Pippa's: JUMPS, round-3 final pick J4 "ears + bell", four variants, one at random each jump, +-4 % speed, and LAND,
+	final pick A), `cappy` (his shuffle's jump and skid-free land) and `prickles` (roots pulling free, a stump landing).
+	BODY_FALL (pick C, a plush flop + cushion + a tiny toy squeak) is everyone's ragdoll landing.
 
 	Registers each id in SoundRegistry at load (as `footstep_<set>_<surface>_<n>`, guarded) and exposes those names as
 	SOUND_IDS[set][surface]. Static data + registration (spec-exempt).
@@ -42,7 +43,7 @@ type FootstepSet = FootstepTypes.FootstepSet
 type SurfacePools = FootstepTypes.SurfacePools
 
 local SETS: { [string]: FootstepSet } = {
-	-- Pippa: a small bunny in work shoes (family CB1, felt + fur + her bell; the files sit at -28 LUFS, soft on purpose).
+	-- Pippa: soft mascot feet, a loose rubber slap (2026-11-03 pick A, replacing CB1; the files sit at -28 LUFS, soft on purpose).
 	pippa = {
 		volume = 0.9,
 		pitch = { min = 0.96, max = 1.04 },
@@ -59,12 +60,12 @@ local SETS: { [string]: FootstepSet } = {
 		},
 		surfaces = {
 			default = {
-				"rbxassetid://126409527457209",
-				"rbxassetid://87375007877182",
-				"rbxassetid://93721794323245",
-				"rbxassetid://135564243024307",
-				"rbxassetid://95336618787312",
-				"rbxassetid://89410455740771",
+				"rbxassetid://85921470911661",
+				"rbxassetid://103073773249953",
+				"rbxassetid://136933591550176",
+				"rbxassetid://84107764915238",
+				"rbxassetid://103868367453978",
+				"rbxassetid://116347944280045",
 			},
 			carpet = {},
 			tile = {},
@@ -102,7 +103,65 @@ local SETS: { [string]: FootstepSet } = {
 			concrete = {},
 		},
 	},
-	-- Any other player character: Pippa's steps (every employee is a Pippa today).
+	-- Cappy: his lazy sneaker shuffle, the sole drags and catches (2026-10-31 pick B; files at -26.5 LUFS).
+	cappy = {
+		volume = 0.9,
+		pitch = { min = 0.96, max = 1.04 },
+		rollOffMaxDistance = 45,
+		walkSpeed = 16,
+		runSpeed = 23,
+		gaits = {
+			walk = { volume = 1, pitch = 1 },
+			sprint = { volume = 1.5, pitch = 1.05 },
+			-- Crouched (CrouchConstants): -9.1 dB and 8 % lower (softer, duller), at the crouch walk's slower foot-falls.
+			crouch = { volume = 0.35, pitch = 0.92 },
+			hidden = { volume = 0, pitch = 1 },
+		},
+		surfaces = {
+			default = {
+				"rbxassetid://90679887169453",
+				"rbxassetid://107402234909364",
+				"rbxassetid://128402359119922",
+				"rbxassetid://131385561533984",
+				"rbxassetid://109270047602991",
+				"rbxassetid://85737991516890",
+			},
+			carpet = {},
+			tile = {},
+			wood = {},
+			concrete = {},
+		},
+	},
+	-- Prickles: root thumps with a hollow log knock and a leaf shake (2026-10-30 pick B; files at -25 LUFS).
+	prickles = {
+		volume = 0.9,
+		pitch = { min = 0.96, max = 1.04 },
+		rollOffMaxDistance = 45,
+		walkSpeed = 16,
+		runSpeed = 23,
+		gaits = {
+			walk = { volume = 1, pitch = 1 },
+			sprint = { volume = 1.5, pitch = 1.05 },
+			-- Crouched (CrouchConstants): -9.1 dB and 8 % lower (softer, duller), at the crouch walk's slower foot-falls.
+			crouch = { volume = 0.35, pitch = 0.92 },
+			hidden = { volume = 0, pitch = 1 },
+		},
+		surfaces = {
+			default = {
+				"rbxassetid://120091853501996",
+				"rbxassetid://80432045416522",
+				"rbxassetid://87749034425486",
+				"rbxassetid://135446384435545",
+				"rbxassetid://115313145293094",
+				"rbxassetid://83508990746815",
+			},
+			carpet = {},
+			tile = {},
+			wood = {},
+			concrete = {},
+		},
+	},
+	-- Any other player character: Pippa's steps.
 	default = {
 		volume = 0.9,
 		pitch = { min = 0.96, max = 1.04 },
@@ -118,12 +177,12 @@ local SETS: { [string]: FootstepSet } = {
 		},
 		surfaces = {
 			default = {
-				"rbxassetid://126409527457209",
-				"rbxassetid://87375007877182",
-				"rbxassetid://93721794323245",
-				"rbxassetid://135564243024307",
-				"rbxassetid://95336618787312",
-				"rbxassetid://89410455740771",
+				"rbxassetid://85921470911661",
+				"rbxassetid://103073773249953",
+				"rbxassetid://136933591550176",
+				"rbxassetid://84107764915238",
+				"rbxassetid://103868367453978",
+				"rbxassetid://116347944280045",
 			},
 			carpet = {},
 			tile = {},
@@ -201,11 +260,102 @@ local BODY_SOUNDS: { [string]: SoundTypes.SoundDef } = {
 		pitch = JUMP_PITCH,
 		rollOffMaxDistance = 50,
 	},
+	-- Cappy's (the shuffle B) and Prickles' (roots A) jumps and lands. Their lands measure within 1 dB of Pippa's, so all play at 0.9.
+	footstepJump_cappy_1 = {
+		assetId = "rbxassetid://103949395176641",
+		group = "SFX",
+		volume = 0.9,
+		pitch = JUMP_PITCH,
+		rollOffMaxDistance = 50,
+	},
+	footstepJump_cappy_2 = {
+		assetId = "rbxassetid://99110782456130",
+		group = "SFX",
+		volume = 0.9,
+		pitch = JUMP_PITCH,
+		rollOffMaxDistance = 50,
+	},
+	footstepJump_cappy_3 = {
+		assetId = "rbxassetid://110654231122206",
+		group = "SFX",
+		volume = 0.9,
+		pitch = JUMP_PITCH,
+		rollOffMaxDistance = 50,
+	},
+	footstepJump_cappy_4 = {
+		assetId = "rbxassetid://114616184549366",
+		group = "SFX",
+		volume = 0.9,
+		pitch = JUMP_PITCH,
+		rollOffMaxDistance = 50,
+	},
+	footstepLand_cappy = {
+		assetId = "rbxassetid://86992195233638",
+		group = "SFX",
+		volume = 0.9,
+		rollOffMaxDistance = 50,
+	},
+	footstepJump_prickles_1 = {
+		assetId = "rbxassetid://98559040398080",
+		group = "SFX",
+		volume = 0.9,
+		pitch = JUMP_PITCH,
+		rollOffMaxDistance = 50,
+	},
+	footstepJump_prickles_2 = {
+		assetId = "rbxassetid://82600384396505",
+		group = "SFX",
+		volume = 0.9,
+		pitch = JUMP_PITCH,
+		rollOffMaxDistance = 50,
+	},
+	footstepJump_prickles_3 = {
+		assetId = "rbxassetid://131517456957543",
+		group = "SFX",
+		volume = 0.9,
+		pitch = JUMP_PITCH,
+		rollOffMaxDistance = 50,
+	},
+	footstepJump_prickles_4 = {
+		assetId = "rbxassetid://104478192930648",
+		group = "SFX",
+		volume = 0.9,
+		pitch = JUMP_PITCH,
+		rollOffMaxDistance = 50,
+	},
+	footstepLand_prickles = {
+		assetId = "rbxassetid://89284924285103",
+		group = "SFX",
+		volume = 0.9,
+		rollOffMaxDistance = 50,
+	},
 }
 for id, def in BODY_SOUNDS do
 	if not SoundRegistry.has(id) then
 		SoundRegistry.register(id, def)
 	end
+end
+
+-- Each character's jump and land (FootstepLandingFormulas.bodySet picks the set; `default` is Pippa's, for everyone else).
+local BODY_SETS: { [string]: FootstepTypes.BodySet } = {
+	default = { land = LAND, jumps = JUMPS },
+	cappy = {
+		land = "footstepLand_cappy",
+		jumps = { "footstepJump_cappy_1", "footstepJump_cappy_2", "footstepJump_cappy_3", "footstepJump_cappy_4" },
+	},
+	prickles = {
+		land = "footstepLand_prickles",
+		jumps = {
+			"footstepJump_prickles_1",
+			"footstepJump_prickles_2",
+			"footstepJump_prickles_3",
+			"footstepJump_prickles_4",
+		},
+	},
+}
+for _, bodySet in BODY_SETS do
+	table.freeze(bodySet.jumps)
+	table.freeze(bodySet)
 end
 
 return table.freeze({
@@ -214,4 +364,5 @@ return table.freeze({
 	LAND = LAND,
 	BODY_FALL = BODY_FALL,
 	JUMPS = table.freeze(JUMPS),
+	BODY_SETS = table.freeze(BODY_SETS),
 })

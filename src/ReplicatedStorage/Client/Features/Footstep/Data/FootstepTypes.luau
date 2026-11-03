@@ -51,4 +51,10 @@ export type FootstepSet = {
 	surfaces: SurfacePools,
 }
 
+-- One character's body sounds (FootstepAssets.BODY_SETS): SoundRegistry names of its land and its jump variants.
+export type BodySet = {
+	land: string,
+	jumps: { string },
+}
+
 return {}

@@ -47,6 +47,25 @@ function FootstepLandingFormulas.variant(roll: number, count: number, last: numb
 end
 
 --[=[
+	Which jump-and-land set a character uses (a key of `known`): its FootstepSet attribute when `known` has it, else its
+	EmployeeName in lower case when `known` has that, else `fallback`. The attributes arrive as unknowns (any type).
+]=]
+function FootstepLandingFormulas.bodySet(
+	footstepSet: unknown,
+	employeeName: unknown,
+	known: { [string]: unknown },
+	fallback: string
+): string
+	if type(footstepSet) == "string" and known[footstepSet] ~= nil then
+		return footstepSet
+	end
+	if type(employeeName) == "string" and known[string.lower(employeeName)] ~= nil then
+		return string.lower(employeeName)
+	end
+	return fallback
+end
+
+--[=[
 	The land's volume scale for a fall at `fallSpeed` studs/s (positive).
 ]=]
 function FootstepLandingFormulas.landScale(fallSpeed: number): number

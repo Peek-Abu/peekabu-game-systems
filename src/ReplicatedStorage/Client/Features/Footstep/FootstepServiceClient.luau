@@ -91,9 +91,12 @@ local function preload()
 		table.insert(warm, sound)
 		table.insert(sounds, sound)
 	end
-	local bodyIds: { string } = { FootstepAssets.LAND, FootstepAssets.BODY_FALL }
-	for _, id in FootstepAssets.JUMPS do
-		table.insert(bodyIds, id)
+	local bodyIds: { string } = { FootstepAssets.BODY_FALL }
+	for _, bodySet in FootstepAssets.BODY_SETS do
+		table.insert(bodyIds, bodySet.land)
+		for _, id in bodySet.jumps do
+			table.insert(bodyIds, id)
+		end
 	end
 	for _, id in bodyIds do
 		local def = SoundRegistry.get(id)

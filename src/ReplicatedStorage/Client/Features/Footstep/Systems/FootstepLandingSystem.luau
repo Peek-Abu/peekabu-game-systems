@@ -5,8 +5,9 @@
 	The game's own character sounds (round-3 default-sounds audit): FootstepServiceClient mutes the engine's (its running
 	loop, free-fall wind, jump, landing, climb, swim, get-up and death "oof"), and these play instead:
 
-	- a land (FootstepAssets.LAND, 3D on the root, louder the faster the fall), at most one per LAND_GAP;
-	- the jump: one of FootstepAssets.JUMPS at random (never the same twice running), 3D on the root;
+	- a land (the character's BODY_SETS land, 3D on the root, louder the faster the fall), at most one per LAND_GAP;
+	- the jump: one of the character's BODY_SETS jumps at random (never the same twice running), 3D on the root.
+	  The set is the character's own (Cappy, Prickles), else `default` (Pippa's), by FootstepLandingFormulas.bodySet;
 	- a dead body's first impact within BODY_FALL_WINDOW of the death (the catch's throw, any ragdoll): the plush
 	  body-fall (FootstepAssets.BODY_FALL), once. (The caught player's "FIRED" stamp at the throw is
 	  OccupantScareSystem's.)
@@ -23,6 +24,8 @@ local RunService = game:GetService("RunService")
 local FootstepAssets = require(ReplicatedStorage.Client.Features.Footstep.Data.FootstepAssets)
 local FootstepConstants = require(ReplicatedStorage.Client.Features.Footstep.Data.FootstepConstants)
 local FootstepLandingFormulas = require(ReplicatedStorage.Client.Features.Footstep.Utils.FootstepLandingFormulas)
+local FootstepTypes = require(ReplicatedStorage.Client.Features.Footstep.Data.FootstepTypes)
+local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
 local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundRegistry)
 local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
 
@@ -54,9 +57,20 @@ local function play(id: string, at: BasePart, volumeScale: number?)
 	end
 end
 
+-- The character's own jump and land (FootstepAssets.BODY_SETS), read when it plays: EmployeeName can arrive after spawn.
+local function bodySetOf(model: Model): FootstepTypes.BodySet
+	local name = FootstepLandingFormulas.bodySet(
+		model:GetAttribute(FootstepConstants.SET_ATTRIBUTE),
+		model:GetAttribute(EmployeeConstants.NAME_ATTRIBUTE),
+		FootstepAssets.BODY_SETS,
+		FootstepConstants.DEFAULT_SET
+	)
+	return FootstepAssets.BODY_SETS[name]
+end
+
 -- One jump variant at random (never the one this body played last), 3D on its root.
-local function playJump(body: Body)
-	local jumps = FootstepAssets.JUMPS
+local function playJump(model: Model, body: Body)
+	local jumps = bodySetOf(model).jumps
 	local index = FootstepLandingFormulas.variant(rng:NextNumber(), #jumps, body.lastJump)
 	body.lastJump = index
 	counters.jumps += 1
@@ -122,14 +136,14 @@ local function step()
 		end
 		local speed = body.root.AssemblyLinearVelocity.Y
 		if FootstepLandingFormulas.jumped(body.lastSpeed, speed, FootstepConstants.JUMP_SPEED) then
-			playJump(body)
+			playJump(model, body)
 		elseif
 			FootstepLandingFormulas.impact(body.lastSpeed, speed, FootstepConstants.LAND_SPEED)
 			and now - body.lastLand >= FootstepConstants.LAND_GAP
 		then
 			body.lastLand = now
 			counters.lands += 1
-			play(FootstepAssets.LAND, body.root, FootstepLandingFormulas.landScale(-body.lastSpeed))
+			play(bodySetOf(model).land, body.root, FootstepLandingFormulas.landScale(-body.lastSpeed))
 		end
 		body.lastSpeed = speed
 	end

@@ -40,6 +40,26 @@ return function()
 		end)
 	end)
 
+	describe("bodySet", function()
+		local known = { default = true, cappy = true, prickles = true }
+
+		it("uses the character's own jump and land when it has a set", function()
+			expect(FootstepLandingFormulas.bodySet(nil, "Cappy", known, "default")).to.equal("cappy")
+			expect(FootstepLandingFormulas.bodySet(nil, "Prickles", known, "default")).to.equal("prickles")
+		end)
+
+		it("lets a FootstepSet attribute name the set first", function()
+			expect(FootstepLandingFormulas.bodySet("prickles", "Cappy", known, "default")).to.equal("prickles")
+		end)
+
+		it("falls back to the default set for an unknown or missing name", function()
+			expect(FootstepLandingFormulas.bodySet(nil, "Pippa", known, "default")).to.equal("default")
+			expect(FootstepLandingFormulas.bodySet("nobody", nil, known, "default")).to.equal("default")
+			expect(FootstepLandingFormulas.bodySet(nil, nil, known, "default")).to.equal("default")
+			expect(FootstepLandingFormulas.bodySet(42, 7, known, "default")).to.equal("default")
+		end)
+	end)
+
 	describe("landScale", function()
 		it("lands louder the faster the fall, within its bounds", function()
 			expect(FootstepLandingFormulas.landScale(0)).to.equal(FootstepLandingFormulas.SOFTEST)
