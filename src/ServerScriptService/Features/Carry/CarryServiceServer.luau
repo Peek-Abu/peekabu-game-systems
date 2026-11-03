@@ -178,6 +178,7 @@ export type CarryServiceServer = {
 	forceDrop: (self: CarryServiceServer, player: Player, reason: CarryTypes.DropReason?) -> boolean,
 	getCarried: (self: CarryServiceServer, player: Player) -> Instance?,
 	setSpeedBase: (self: CarryServiceServer, source: ((player: Player) -> number?)?) -> (),
+	setSpeedScale: (self: CarryServiceServer, source: ((player: Player) -> number)?) -> (),
 	setPickUpRoute: (self: CarryServiceServer, route: ((player: Player, target: Instance) -> boolean)?) -> (),
 }
 
@@ -486,6 +487,14 @@ CarryServiceServer = {
 	]=]
 	setSpeedBase = function(_self, source)
 		CarrySpeedSystem.setSpeedBase(source)
+	end,
+
+	--[=[
+		Sets THE source of a carrier's speed scale (a game's speed boost: WalkSpeed = plain x scale), so the carry
+		slow multiplies by it and never reads a boost back as the carrier's own walk; nil = no scale. It must not yield.
+	]=]
+	setSpeedScale = function(_self, source)
+		CarrySpeedSystem.setSpeedScale(source)
 	end,
 
 	--[=[

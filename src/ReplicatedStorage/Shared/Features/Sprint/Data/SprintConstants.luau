@@ -34,6 +34,10 @@ return table.freeze({
 	STAMINA_ATTRIBUTE = "SprintStamina",
 	SPRINTING_ATTRIBUTE = "Sprinting",
 	STAMINA_STEP = 0.01,
+	-- Replicated on the character while a speed boost (Let's Go!) is on: its scale on every speed, and when it ends
+	-- (server time, Workspace:GetServerTimeNow). Absent = no boost.
+	SPEED_SCALE_ATTRIBUTE = "SpeedScale",
+	BOOST_UNTIL_ATTRIBUTE = "SpeedBoostUntil",
 	-- How often the server steps everyone's stamina.
 	TICK = 0.05,
 	-- Sprint requests are rate limited (a held key sends two).

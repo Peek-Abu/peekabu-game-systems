@@ -17,6 +17,13 @@
 	the player up first (CrouchServiceServer), so a sprint always starts from the walk, never the crouch's speed.
 	Crouch composes Carry's speed base with this one (`unboostedSpeed`).
 
+	A speed boost (`boost`, an ability's Let's Go!) is ONE scale on top of every speed, owned here
+	(SprintBoostTracker): WalkSpeed = plain speed x scale, always. Every WalkSpeed writer (this service, Crouch, Carry
+	through `setSpeedScale`) multiplies by `speedScale` and every base read back from WalkSpeed divides it out, so a
+	boost never leaks into a base; starting and ending one rescales the live WalkSpeed (SprintSpeedFormulas.rescale).
+	A boost given again keeps the bigger scale and the later end (never stacks). The character carries SpeedScale and
+	SpeedBoostUntil while it lasts (other clients draw the trails).
+
 	Spec-exempt shell (Humanoids, Players, ByteNet, RunService); the decisions are the specced SprintRules,
 	SprintSpeedFormulas and SprintStaminaFormulas.
 
@@ -27,6 +34,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
+local Workspace = game:GetService("Workspace")
 
 local SprintShared = ReplicatedStorage.Shared.Features.Sprint
 local CrouchConstants = require(ReplicatedStorage.Shared.Features.Crouch.Data.CrouchConstants)
@@ -43,6 +51,7 @@ local CarrySpeedSystem = require(ServerScriptService.Features.Carry.Systems.Carr
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
 local HideServiceServer = require(ServerScriptService.Features.Hide.HideServiceServer)
 local NoiseServiceServer = require(ServerScriptService.Features.Noise.NoiseServiceServer)
+local SprintBoostTracker = require(ServerScriptService.Features.Sprint.State.SprintBoostTracker)
 
 type Runner = {
 	requested: boolean,
@@ -58,6 +67,7 @@ type Runner = {
 }
 
 local runners: { [number]: Runner } = {}
+local boosts = SprintBoostTracker.new()
 local stoppers: { () -> () } = {}
 local elapsed = 0
 local counters = { sprints = 0, steps = 0, refused = 0 }
@@ -91,7 +101,7 @@ local function unboost(player: Player, runner: Runner)
 	runner.boosted = nil
 	runner.base = nil
 	if humanoid ~= nil and base ~= nil and humanoid.Parent ~= nil then
-		humanoid.WalkSpeed = CarryFormulas.carrierSpeed(base, weightOf(player))
+		humanoid.WalkSpeed = CarryFormulas.carrierSpeed(base, weightOf(player)) * boosts:scaleOf(player.UserId)
 	end
 	player:SetAttribute(SprintConstants.SPRINTING_ATTRIBUTE, nil)
 end
@@ -124,17 +134,19 @@ local function stepOne(player: Player, runner: Runner, dt: number)
 		unboost(player, runner)
 	end
 	local weight = weightOf(player)
+	local scale = boosts:scaleOf(player.UserId)
 	if ok and humanoid ~= nil and runner.boosted == nil then
 		runner.boosted = humanoid
-		-- The unloaded walk: the walk now, un-slowed by the load (Carry's slow is a plain factor).
-		runner.base = humanoid.WalkSpeed / CarryFormulas.carrierSpeed(1, weight)
+		-- The unloaded walk: the walk now, un-slowed by the load (Carry's slow is a plain factor) and un-scaled by a
+		-- speed boost (never baked into the base).
+		runner.base = humanoid.WalkSpeed / (CarryFormulas.carrierSpeed(1, weight) * scale)
 		player:SetAttribute(SprintConstants.SPRINTING_ATTRIBUTE, true)
 		counters.sprints += 1
 	elseif not ok and runner.requested then
 		counters.refused += 1
 	end
 	-- While sprinting, the speed follows the load every tick (a pick-up, a pocketing or a drop mid-sprint included).
-	local sprintSpeed = SprintSpeedFormulas.speed(weight)
+	local sprintSpeed = SprintSpeedFormulas.speed(weight) * scale
 	if runner.boosted ~= nil and humanoid ~= nil and humanoid.WalkSpeed ~= sprintSpeed then
 		humanoid.WalkSpeed = sprintSpeed
 	end
@@ -177,6 +189,19 @@ local function onHeartbeat(deltaTime: number)
 	end
 	local dt = elapsed
 	elapsed = 0
+	-- Ended boosts first: the walk drops back to plain before anyone's speed is read this tick.
+	for _, ended in boosts:expired(os.clock()) do
+		local player = Players:GetPlayerByUserId(ended.userId)
+		local character = if player ~= nil then player.Character else nil
+		local humanoid = if character ~= nil then character:FindFirstChildOfClass("Humanoid") else nil
+		if humanoid ~= nil then
+			humanoid.WalkSpeed = SprintSpeedFormulas.rescale(humanoid.WalkSpeed, ended.scale, 1)
+		end
+		if character ~= nil then
+			character:SetAttribute(SprintConstants.SPEED_SCALE_ATTRIBUTE, nil)
+			character:SetAttribute(SprintConstants.BOOST_UNTIL_ATTRIBUTE, nil)
+		end
+	end
 	for _, player in Players:GetPlayers() do
 		stepOne(player, runnerOf(player), dt)
 	end
@@ -191,6 +216,8 @@ export type SprintServiceServer = {
 	wantsToSprint: (self: SprintServiceServer, player: Player) -> boolean,
 	unboostedSpeed: (self: SprintServiceServer, player: Player) -> number?,
 	stamina: (self: SprintServiceServer, player: Player) -> number,
+	boost: (self: SprintServiceServer, player: Player, scale: number, seconds: number) -> boolean,
+	speedScale: (self: SprintServiceServer, player: Player) -> number,
 }
 
 local SprintServiceServer: SprintServiceServer = {
@@ -203,6 +230,9 @@ local SprintServiceServer: SprintServiceServer = {
 		CarryServiceServer:setSpeedBase(function(player: Player): number?
 			return self:unboostedSpeed(player)
 		end)
+		CarryServiceServer:setSpeedScale(function(player: Player): number
+			return self:speedScale(player)
+		end)
 		table.insert(
 			stoppers,
 			SprintEvents.packets.Sprint.listen(function(data: boolean, player: Player?)
@@ -214,6 +244,7 @@ local SprintServiceServer: SprintServiceServer = {
 		local heartbeat = RunService.Heartbeat:Connect(onHeartbeat)
 		local leaving = Players.PlayerRemoving:Connect(function(player: Player)
 			runners[player.UserId] = nil
+			boosts:clear(player.UserId)
 		end)
 		table.insert(
 			stoppers,
@@ -224,6 +255,8 @@ local SprintServiceServer: SprintServiceServer = {
 				runner.base = nil
 				runner.bar = SprintStaminaFormulas.fresh()
 				runner.lastPosition = nil
+				-- The boost went with the old body too (a fresh body walks at its plain speed).
+				boosts:clear(player.UserId)
 				return nil
 			end)
 		)
@@ -239,6 +272,7 @@ local SprintServiceServer: SprintServiceServer = {
 		end
 		table.clear(stoppers)
 		CarryServiceServer:setSpeedBase(nil)
+		CarryServiceServer:setSpeedScale(nil)
 		for userId, runner in runners do
 			local player = Players:GetPlayerByUserId(userId)
 			if player ~= nil then
@@ -278,6 +312,35 @@ local SprintServiceServer: SprintServiceServer = {
 	stamina = function(_self, player)
 		local runner = runners[player.UserId]
 		return if runner ~= nil then runner.bar.stamina else 1
+	end,
+
+	--[=[
+		Boosts `player`'s every speed by `scale` for `seconds` (Let's Go!): the live WalkSpeed is rescaled at once and
+		back when it ends. A boost on top of one keeps the bigger scale and the later end. False without a character.
+	]=]
+	boost = function(_self, player, scale, seconds)
+		local character = player.Character
+		local humanoid = if character ~= nil then character:FindFirstChildOfClass("Humanoid") else nil
+		if character == nil or humanoid == nil then
+			return false
+		end
+		local before = boosts:scaleOf(player.UserId)
+		local after = boosts:boost(player.UserId, scale, os.clock() + seconds)
+		humanoid.WalkSpeed = SprintSpeedFormulas.rescale(humanoid.WalkSpeed, before, after)
+		character:SetAttribute(SprintConstants.SPEED_SCALE_ATTRIBUTE, after)
+		local untilAt = Workspace:GetServerTimeNow() + seconds
+		local shown = character:GetAttribute(SprintConstants.BOOST_UNTIL_ATTRIBUTE)
+		if type(shown) ~= "number" or untilAt > shown then
+			character:SetAttribute(SprintConstants.BOOST_UNTIL_ATTRIBUTE, untilAt)
+		end
+		return true
+	end,
+
+	--[=[
+		The scale on every speed of `player` now (1 without a boost).
+	]=]
+	speedScale = function(_self, player)
+		return boosts:scaleOf(player.UserId)
 	end,
 
 	getState = function(_self)

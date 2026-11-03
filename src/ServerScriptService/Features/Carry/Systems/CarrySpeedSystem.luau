@@ -5,7 +5,9 @@
 	a game that boosts WalkSpeed itself (a sprint) names a carrier's unboosted speed (`setSpeedBase`). `apply` sets the
 	walk for the load now: the unloaded speed (the speed base, else the walk as it was when the load began) slowed by
 	CarryFormulas.carrierSpeed, and given back once the load is gone (an old body gets its own speed back). Sprint reads
-	the same load (`weightFor`), so a sprint is slowed exactly as the walk is.
+	the same load (`weightFor`), so a sprint is slowed exactly as the walk is. A game with a speed boost names its scale
+	(`setSpeedScale`): every speed here is multiplied by it and the walk read back is divided by it, so the boost is
+	never remembered as the carrier's own walk.
 
 	Module state, shared by Carry, the game's inventory and Sprint (one source of truth for the load).
 
@@ -23,6 +25,7 @@ local held: { [number]: number } = {}
 local loads: { [number]: Load } = {}
 local loadSource: ((player: Player) -> number?)? = nil
 local speedBase: ((player: Player) -> number?)? = nil
+local speedScale: ((player: Player) -> number)? = nil
 
 local CarrySpeedSystem = {}
 
@@ -53,6 +56,13 @@ function CarrySpeedSystem.setSpeedBase(source: ((player: Player) -> number?)?)
 end
 
 --[=[
+	Sets THE source of a carrier's speed scale (a game's speed boost); nil = no scale (1). It must not yield.
+]=]
+function CarrySpeedSystem.setSpeedScale(source: ((player: Player) -> number)?)
+	speedScale = source
+end
+
+--[=[
 	The load `player` carries: the load source's answer (never below 0), else the hands item's weight, else 0.
 ]=]
 function CarrySpeedSystem.weightFor(player: Player): number
@@ -68,7 +78,8 @@ end
 	Sets `humanoid`'s walk for `weight`, starting a load from `base` (else its WalkSpeed now) and giving the unloaded
 	speed back when `weight` reaches 0. A load remembered for another humanoid (an old body) is given back to it first.
 ]=]
-function CarrySpeedSystem.applyTo(userId: number, humanoid: Humanoid?, weight: number, base: number?)
+function CarrySpeedSystem.applyTo(userId: number, humanoid: Humanoid?, weight: number, base: number?, scale: number?)
+	local factor = scale or 1
 	local load: Load? = loads[userId]
 	if load ~= nil and load.humanoid ~= humanoid then
 		if load.humanoid.Parent ~= nil then
@@ -82,7 +93,7 @@ function CarrySpeedSystem.applyTo(userId: number, humanoid: Humanoid?, weight: n
 	end
 	if weight <= 0 then
 		if load ~= nil then
-			humanoid.WalkSpeed = load.rest
+			humanoid.WalkSpeed = load.rest * factor
 			loads[userId] = nil
 		end
 		return
@@ -91,10 +102,10 @@ function CarrySpeedSystem.applyTo(userId: number, humanoid: Humanoid?, weight: n
 	if load ~= nil then
 		active = load
 	else
-		active = { humanoid = humanoid, rest = base or humanoid.WalkSpeed }
+		active = { humanoid = humanoid, rest = base or humanoid.WalkSpeed / factor }
 		loads[userId] = active
 	end
-	humanoid.WalkSpeed = CarryFormulas.carrierSpeed(active.rest, weight)
+	humanoid.WalkSpeed = CarryFormulas.carrierSpeed(active.rest, weight) * factor
 end
 
 --[=[
@@ -109,7 +120,8 @@ function CarrySpeedSystem.apply(player: Player)
 	local loaded = current ~= nil and current.humanoid == humanoid
 	-- The base is only read when a load begins (it may name a boost's unboosted speed).
 	local start = if not loaded and weight > 0 and base ~= nil then base(player) else nil
-	CarrySpeedSystem.applyTo(player.UserId, humanoid, weight, start)
+	local scaleOf = speedScale
+	CarrySpeedSystem.applyTo(player.UserId, humanoid, weight, start, if scaleOf ~= nil then scaleOf(player) else 1)
 end
 
 --[=[

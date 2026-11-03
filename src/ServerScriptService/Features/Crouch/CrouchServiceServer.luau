@@ -84,6 +84,7 @@ local function stand(player: Player, croucher: Croucher)
 	croucher.base = nil
 	if humanoid ~= nil and base ~= nil and humanoid.Parent ~= nil then
 		humanoid.WalkSpeed = CarryFormulas.carrierSpeed(base, CarrySpeedSystem.weightFor(player))
+			* SprintServiceServer:speedScale(player)
 	end
 	local body = if humanoid ~= nil then humanoid.Parent else nil
 	if body ~= nil then
@@ -127,18 +128,20 @@ local function stepOne(player: Player, croucher: Croucher)
 		stand(player, croucher)
 	end
 	local weight = CarrySpeedSystem.weightFor(player)
+	-- A speed boost (Let's Go!) scales the crouch too, and is never baked into the base (SprintServiceServer).
+	local scale = SprintServiceServer:speedScale(player)
 	if ok and humanoid ~= nil and character ~= nil and croucher.lowered == nil then
 		croucher.lowered = humanoid
-		-- The unloaded walk: the walk now, un-slowed by the load (Carry's slow is a plain factor). Sprint is not
-		-- boosting (a crouch never starts while it does).
-		croucher.base = humanoid.WalkSpeed / CarryFormulas.carrierSpeed(1, weight)
+		-- The unloaded walk: the walk now, un-slowed by the load (Carry's slow is a plain factor) and un-scaled by a
+		-- boost. Sprint is not boosting (a crouch never starts while it does).
+		croucher.base = humanoid.WalkSpeed / (CarryFormulas.carrierSpeed(1, weight) * scale)
 		character:SetAttribute(CrouchConstants.CROUCHING_ATTRIBUTE, true)
 		counters.crouches += 1
 	elseif not ok and croucher.requested then
 		counters.refused += 1
 	end
 	-- While crouched, the speed follows the load every tick (a pocketing or a small pick-up included).
-	local speed = CrouchSpeedFormulas.speed(weight)
+	local speed = CrouchSpeedFormulas.speed(weight) * scale
 	if croucher.lowered ~= nil and humanoid ~= nil and humanoid.WalkSpeed ~= speed then
 		humanoid.WalkSpeed = speed
 	end

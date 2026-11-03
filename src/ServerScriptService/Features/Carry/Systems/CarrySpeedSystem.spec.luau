@@ -65,4 +65,16 @@ return function()
 		CarrySpeedSystem.setHeld(1, nil)
 		expect(CarrySpeedSystem.weightFor({ UserId = 1 })).to.equal(0)
 	end)
+
+	it("scales a load by a speed boost and never remembers the boost as the walk", function()
+		-- Walking 16 under a 1.25 boost: 20. Loaded: 12.8 x 1.25.
+		local h, model = humanoid(20)
+		CarrySpeedSystem.applyTo(1, h, 4, nil, 1.25)
+		expect(h.WalkSpeed).to.be.near(16, 1e-6)
+		-- The boost ended (rescaled to 1) before the drop: the walk comes back plain.
+		h.WalkSpeed = h.WalkSpeed / 1.25
+		CarrySpeedSystem.applyTo(1, h, 0, nil, 1)
+		expect(h.WalkSpeed).to.be.near(16, 1e-6)
+		model:Destroy()
+	end)
 end
