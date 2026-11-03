@@ -46,9 +46,14 @@ return table.freeze({
 			name = "Super Cleaner",
 			description = "Reach the Super Cleaner rank.",
 		},
-		{ key = "rank-5", badgeId = 0, name = "Little Boss", description = "Reach the Little Boss rank." },
-		{ key = "rank-6", badgeId = 0, name = "Boss", description = "Reach the Boss rank." },
-		{ key = "rank-7", badgeId = 0, name = "Big Boss", description = "Reach the Big Boss rank." },
+		{
+			key = "rank-5",
+			badgeId = 337849215581698,
+			name = "Little Boss",
+			description = "Reach the Little Boss rank.",
+		},
+		{ key = "rank-6", badgeId = 4103837610081221, name = "Boss", description = "Reach the Boss rank." },
+		{ key = "rank-7", badgeId = 163670104251362, name = "Big Boss", description = "Reach the Big Boss rank." },
 		{
 			key = "epic-pull",
 			badgeId = 3516727949322324,
