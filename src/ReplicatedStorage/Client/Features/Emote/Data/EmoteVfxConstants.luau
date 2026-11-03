@@ -182,11 +182,42 @@ local PRESETS: { [string]: Burst } = {
 	},
 }
 
--- Typed as sound definitions, as FootstepAssets' are: SoundRegistry.register takes exactly that shape.
-local COCOA_MUG: SoundTypes.SoundDef =
-	{ assetId = "rbxassetid://9117037749", group = "SFX", volume = 0.8, rollOffMaxDistance = 50 }
-local COCOA_SIP: SoundTypes.SoundDef =
-	{ assetId = "rbxassetid://9119956292", group = "SFX", volume = 0.8, rollOffMaxDistance = 50 }
+export type SoundCue = { sound: string, after: number, start: number? }
+
+local function library(assetId: string, volume: number): SoundTypes.SoundDef
+	return { assetId = assetId, group = "SFX", volume = volume, rollOffMaxDistance = 50 }
+end
+
+-- Named for their library titles.
+local SOUNDS: { [string]: SoundTypes.SoundDef } = {
+	mugQuieterAtTail8 = library("rbxassetid://9117037749", 0.8),
+	teaSip2 = library("rbxassetid://9119956292", 0.8),
+	bubbleWobbleComicBloops4 = library("rbxassetid://9112752910", 0.8),
+	bubbleBloopHighPitchedCute6 = library("rbxassetid://9112751731", 0.8),
+	clothMovement24 = library("rbxassetid://9113824230", 0.6),
+	woodWhooshQuickSwings4 = library("rbxassetid://9120972321", 0.7),
+	buggyWhipLightCrack6 = library("rbxassetid://9113611449", 0.9),
+	ropeImpacts4 = library("rbxassetid://9118717475", 0.8),
+}
+
+local SOUND_CUES: { [string]: { SoundCue } } = {
+	-- Cocoa Sip, from PropsShow (0.233 s): the mug as it appears, the sip as it reaches his mouth (1.2 s).
+	cocoaSounds = { { sound = "mugQuieterAtTail8", after = 0 }, { sound = "teaSip2", after = 0.967 } },
+	-- Bubble Ride: the wobble once the bubble is full (BubbleGrow + its growth), the bloop on BubblePop.
+	bubbleWobbleSound = { { sound = "bubbleWobbleComicBloops4", after = 0.8 } },
+	bubblePopSound = { { sound = "bubbleBloopHighPitchedCute6", after = 0 } },
+	-- Big Roundup: the coil off his hip (PropsShow 0.367 s), a whoosh as the loop shakes out (LoopOut 0.9 s) and on
+	-- each of its two turns overhead (DustSwirl 1.167 s; the turns pass the front at 1.25 s and 2.09 s, from the clip's
+	-- prop timeline), the crack on the throw, the rope pulled tight on the yank.
+	lassoCoilSound = { { sound = "clothMovement24", after = 0 } },
+	lassoShakeSound = { { sound = "woodWhooshQuickSwings4", after = 0 } },
+	lassoSpinSound = {
+		{ sound = "woodWhooshQuickSwings4", after = 0.083 },
+		{ sound = "woodWhooshQuickSwings4", after = 0.923 },
+	},
+	lassoCrackSound = { { sound = "buggyWhipLightCrack6", after = 0 } },
+	lassoYankSound = { { sound = "ropeImpacts4", after = 0 } },
+}
 
 return table.freeze({
 	TEXTURES = TEXTURES,
@@ -241,13 +272,11 @@ return table.freeze({
 	}),
 	-- The tumbleweed starts this far (times his scale) to his left and rolls past to his right, at this height.
 	TUMBLEWEED = table.freeze({ from = 6, height = 0.75 }),
-	-- Cocoa Sip's sounds (owner's pick, 2026-11-03): two Roblox library sounds (ProSoundEffects, play in place, no
-	-- upload). The mug on PropsShow (0.233 s), the sip sipDelay later (1.2 s, the mug at his mouth), then nothing. A clip
-	-- cut short fades what is still playing over fadeOut.
-	COCOA = table.freeze({
-		mug = COCOA_MUG,
-		sip = COCOA_SIP,
-		sipDelay = 0.967,
-		fadeOut = 0.3,
-	}),
+	-- The Legendary emotes' sounds: Roblox library sounds (ProSoundEffects; they play in place, no upload), the owner's
+	-- picks of 2026-11-03. SOUND_CUES[effect id] = what plays when that effect starts (EmoteEffectRegistry names the
+	-- marker): each `sound` (a SOUNDS key) `after` seconds, from `start` seconds into its file (a library file's lead-in,
+	-- measured in Studio). A clip cut short cancels what has not started and fades what plays over SOUND_FADE.
+	SOUNDS = SOUNDS,
+	SOUND_CUES = SOUND_CUES,
+	SOUND_FADE = 0.3,
 })

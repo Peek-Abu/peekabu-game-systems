@@ -56,16 +56,30 @@ return function()
 		expect(EmoteVfxConstants.PRESETS.emoteTumbleweed.layers[1].count).to.equal(1)
 	end)
 
-	it("gives Cocoa Sip its two library sounds, the sip landing at 1.2 s from the mug's marker", function()
-		local cocoa = EmoteVfxConstants.COCOA
-		for _, def in { cocoa.mug, cocoa.sip } do
-			expect(string.match(def.assetId, "^rbxassetid://%d+$")).to.be.ok()
-			expect(def.group).to.equal("SFX")
-			expect(def.volume > 0 and def.volume <= 2).to.equal(true)
+	it("gives every sound cue a known sound, a delay of zero or more and an optional start inside the file", function()
+		for _, cues in EmoteVfxConstants.SOUND_CUES do
+			expect(#cues > 0).to.equal(true)
+			for _, cue in cues do
+				local def = EmoteVfxConstants.SOUNDS[cue.sound]
+				expect(def).to.be.ok()
+				expect(string.match(def.assetId, "^rbxassetid://%d+$")).to.be.ok()
+				expect(def.group).to.equal("SFX")
+				expect(def.volume > 0 and def.volume <= 3).to.equal(true)
+				expect(cue.after >= 0).to.equal(true)
+				expect(cue.start == nil or cue.start >= 0).to.equal(true)
+			end
 		end
+		expect(EmoteVfxConstants.SOUND_FADE > 0 and EmoteVfxConstants.SOUND_FADE <= 0.5).to.equal(true)
+	end)
+
+	it("times Cocoa Sip's sip to 1.2 s and Bubble Ride's wobble to the end of the bubble's growth", function()
+		local cocoa = EmoteVfxConstants.SOUND_CUES.cocoaSounds
 		-- PropsShow is at 0.233 s in the clip; the sip belongs at 1.2 s, as the mug reaches his mouth
-		expect(math.abs(0.233 + cocoa.sipDelay - 1.2) < 0.01).to.equal(true)
-		expect(cocoa.fadeOut > 0 and cocoa.fadeOut <= 0.5).to.equal(true)
+		expect(cocoa[1].after).to.equal(0)
+		expect(math.abs(0.233 + cocoa[2].after - 1.2) < 0.01).to.equal(true)
+		-- the owner: the wobble "at the peak / post inflate", the bloop on the pop
+		expect(EmoteVfxConstants.SOUND_CUES.bubbleWobbleSound[1].after).to.equal(EmoteVfxConstants.GIANT.growSeconds)
+		expect(EmoteVfxConstants.SOUND_CUES.bubblePopSound[1].after).to.equal(0)
 	end)
 
 	it("grows the giant bubble big enough to hold a character, quickly, and never flashes", function()

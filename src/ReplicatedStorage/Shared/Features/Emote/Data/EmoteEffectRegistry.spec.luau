@@ -57,12 +57,32 @@ return function()
 		end)
 	end)
 
-	describe("Cocoa Sip", function()
-		it("plays its sounds from the marker where the mug appears", function()
-			local entry = EmoteEffectRegistry.get("emote:Cappy.CocoaSip")
-			expect(entry).to.be.ok()
-			expect(entry.effects[1].id).to.equal("cocoaSounds")
-			expect(entry.effects[1].on).to.equal("PropsShow")
+	describe("sounds", function()
+		local function on(key: string): { [string]: string }
+			local byId = {}
+			for _, effect in EmoteEffectRegistry.get(key).effects do
+				byId[effect.id] = effect.on
+			end
+			return byId
+		end
+
+		it("plays Cocoa Sip's sounds from the marker where the mug appears", function()
+			expect(on("emote:Cappy.CocoaSip").cocoaSounds).to.equal("PropsShow")
+		end)
+
+		it("plays Bubble Ride's wobble from the bubble's growth and the bloop on the pop", function()
+			local byId = on("emote:Pippa.Bubbles")
+			expect(byId.bubbleWobbleSound).to.equal("BubbleGrow")
+			expect(byId.bubblePopSound).to.equal("BubblePop")
+		end)
+
+		it("plays Big Roundup's coil, swings, crack and yank on their markers", function()
+			local byId = on("emote:Prickles.Lasso")
+			expect(byId.lassoCoilSound).to.equal("PropsShow")
+			expect(byId.lassoShakeSound).to.equal("LoopOut")
+			expect(byId.lassoSpinSound).to.equal("DustSwirl")
+			expect(byId.lassoCrackSound).to.equal("Throw")
+			expect(byId.lassoYankSound).to.equal("Yank")
 		end)
 	end)
 

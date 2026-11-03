@@ -35,6 +35,7 @@ local Charm = require(ReplicatedStorage.Packages.Charm)
 local EmployeePoseFormulas = require(ReplicatedStorage.Shared.Features.Employee.Utils.EmployeePoseFormulas)
 local EmoteEffectSystem = require(ReplicatedStorage.Client.Features.Emote.Systems.EmoteEffectSystem)
 local EmotePropSystem = require(ReplicatedStorage.Client.Features.Emote.Systems.EmotePropSystem)
+local EmoteVfxConstants = require(ReplicatedStorage.Client.Features.Emote.Data.EmoteVfxConstants)
 local EmoteVfxSystem = require(ReplicatedStorage.Client.Features.Emote.Systems.EmoteVfxSystem)
 local EmployeePreviewSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeePreviewSystem)
 local EmployeeStageFormulas = require(ReplicatedStorage.Client.Features.Employee.Utils.EmployeeStageFormulas)
@@ -73,7 +74,11 @@ export type Stage = {
 }
 
 local props = EmotePropSystem.new()
-local effects = EmoteEffectSystem.live(EmoteVfxSystem.start)
+-- The emote's effects, but not its sounds: a preview loops, so a sound would repeat on every loop (the menus stay
+-- silent; the sounds are for a real emote in the world).
+local effects = EmoteEffectSystem.live(function(id: string, character: Model, value: string): (() -> ())?
+	return if EmoteVfxConstants.SOUND_CUES[id] ~= nil then nil else EmoteVfxSystem.start(id, character, value)
+end)
 
 local EmployeeStageSystem = {}
 

@@ -29,6 +29,8 @@ local entries: { [string]: Entry } = {
 			{ id = "bubbleStream", on = "BubbleBlow", off = "BubbleBlowEnd" },
 			{ id = "giantBubble", on = "BubbleGrow", off = "BubblePop" },
 			{ id = "bubbleLand", on = "Land" },
+			{ id = "bubbleWobbleSound", on = "BubbleGrow" },
+			{ id = "bubblePopSound", on = "BubblePop" },
 			{ id = "face", on = "Face" },
 		},
 	},
@@ -42,10 +44,15 @@ local entries: { [string]: Entry } = {
 			{ id = "lassoThrow", on = "Throw" },
 			{ id = "lassoPuff", on = "Yank" },
 			{ id = "tumbleweed", on = "Tumbleweed" },
+			{ id = "lassoCoilSound", on = "PropsShow" },
+			{ id = "lassoShakeSound", on = "LoopOut" },
+			{ id = "lassoSpinSound", on = "DustSwirl" },
+			{ id = "lassoCrackSound", on = "Throw" },
+			{ id = "lassoYankSound", on = "Yank" },
 			{ id = "face", on = "Face" },
 		},
 	},
-	-- PJ Cappy's Cocoa Sip: a mug sound as the mug appears, then a sip as it reaches his mouth (EmoteVfxConstants.COCOA).
+	-- PJ Cappy's Cocoa Sip: a mug sound as the mug appears, then a sip as it reaches his mouth (EmoteVfxConstants.SOUND_CUES).
 	["emote:Cappy.CocoaSip"] = {
 		effects = {
 			{ id = "cocoaSounds", on = "PropsShow" },

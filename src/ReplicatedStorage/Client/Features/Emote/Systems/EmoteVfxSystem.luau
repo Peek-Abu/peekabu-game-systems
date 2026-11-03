@@ -9,8 +9,8 @@
 	- bubbleLand: a splash of bubbles at her feet.
 	- lassoPuff, lassoThrow, dustSwirl, tumbleweed: Big Roundup's dust (the coil shaking out and the yank, the throw,
 	  a dust ring orbiting his feet under the spin) and one tumbleweed rolling past in front of him.
-	- cocoaSounds: Cocoa Sip's mug sound now and its sip EmoteVfxConstants.COCOA.sipDelay later, 3D on the root;
-	  ending it (the clip stopped) cancels the sip if it has not started and fades whatever still plays.
+	- any id in EmoteVfxConstants.SOUND_CUES (Cocoa Sip's, Bubble Ride's and Big Roundup's sounds): its library sounds,
+	  each at its delay, 3D on the root; ending it (the clip stopped) cancels what has not started and fades the rest.
 	- face: the FacePlate wears the `Faces` folder's expression named by the marker's value; ending it puts the
 	  gameplay face (the EmployeeFace attribute) back.
 	Everything is client-local (nothing replicates) and sized by the character's scale. Presets and numbers:
@@ -44,14 +44,13 @@ for id, preset in EmoteVfxConstants.PRESETS do
 	end
 end
 
--- Cocoa Sip's sounds, registered at load like the presets.
-local COCOA = EmoteVfxConstants.COCOA
-local COCOA_MUG, COCOA_SIP = "emoteCocoaMug", "emoteCocoaSip"
-if not SoundRegistry.has(COCOA_MUG) then
-	SoundRegistry.register(COCOA_MUG, COCOA.mug)
-end
-if not SoundRegistry.has(COCOA_SIP) then
-	SoundRegistry.register(COCOA_SIP, COCOA.sip)
+-- The emotes' sounds, registered at load like the presets.
+local SOUND_CUES = EmoteVfxConstants.SOUND_CUES
+for name, def in EmoteVfxConstants.SOUNDS do
+	local id = `emote_{name}`
+	if not SoundRegistry.has(id) then
+		SoundRegistry.register(id, def)
+	end
 end
 
 local STREAM = EmoteVfxConstants.STREAM
@@ -315,31 +314,39 @@ local function tumbleweed(character: Model): (() -> ())?
 	return nil
 end
 
-local function cocoaSounds(character: Model): (() -> ())?
+-- Plays an effect's SOUND_CUES, 3D on the root; ending it cancels what has not started and fades what plays.
+local function soundCues(character: Model, cues: { EmoteVfxConstants.SoundCue }): (() -> ())?
 	local root = part(character, "HumanoidRootPart")
 	if root == nil then
 		return nil
 	end
 	local handles: { SoundServiceClient.SoundHandle } = {}
-	local function play(id: string)
-		local handle = SoundServiceClient:play(id, { at = root })
+	local pending: { thread } = {}
+	local function play(cue: EmoteVfxConstants.SoundCue)
+		local handle = SoundServiceClient:play(`emote_{cue.sound}`, { at = root })
 		if handle ~= nil then
+			if cue.start ~= nil then
+				handle.sound.TimePosition = cue.start
+			end
 			table.insert(handles, handle)
 		end
 	end
-	play(COCOA_MUG)
-	local sip: thread? = nil
-	sip = task.delay(COCOA.sipDelay, function()
-		sip = nil
-		play(COCOA_SIP)
-	end)
-	return function()
-		if sip ~= nil then
-			task.cancel(sip)
-			sip = nil
+	for _, cue in cues do
+		if cue.after <= 0 then
+			play(cue)
+		else
+			table.insert(pending, task.delay(cue.after, play, cue))
 		end
+	end
+	return function()
+		for _, thread in pending do
+			if coroutine.status(thread) == "suspended" then
+				task.cancel(thread)
+			end
+		end
+		table.clear(pending)
 		for _, handle in handles do
-			handle:stop(COCOA.fadeOut)
+			handle:stop(EmoteVfxConstants.SOUND_FADE)
 		end
 		table.clear(handles)
 	end
@@ -375,7 +382,10 @@ end
 	Starts effect `id` on `character` (EmoteEffectSystem's `start`); returns how to end it, or nil.
 ]=]
 function EmoteVfxSystem.start(id: string, character: Model, value: string): (() -> ())?
-	if id == "bubbleStream" then
+	local cues = SOUND_CUES[id]
+	if cues ~= nil then
+		return soundCues(character, cues)
+	elseif id == "bubbleStream" then
 		return bubbleStream(character)
 	elseif id == "giantBubble" then
 		return giantBubble(character)
@@ -389,8 +399,6 @@ function EmoteVfxSystem.start(id: string, character: Model, value: string): (() 
 		return dustSwirl(character)
 	elseif id == "tumbleweed" then
 		return tumbleweed(character)
-	elseif id == "cocoaSounds" then
-		return cocoaSounds(character)
 	elseif id == "face" then
 		return face(character, value)
 	end
