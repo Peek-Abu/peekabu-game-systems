@@ -353,6 +353,7 @@ local BODY_SETS: { [string]: FootstepTypes.BodySet } = {
 		},
 	},
 }
+-- This freezes JUMPS too (BODY_SETS.default shares it), so the return below must not freeze it again.
 for _, bodySet in BODY_SETS do
 	table.freeze(bodySet.jumps)
 	table.freeze(bodySet)
@@ -363,6 +364,6 @@ return table.freeze({
 	SOUND_IDS = table.freeze(SOUND_IDS),
 	LAND = LAND,
 	BODY_FALL = BODY_FALL,
-	JUMPS = table.freeze(JUMPS),
+	JUMPS = JUMPS,
 	BODY_SETS = table.freeze(BODY_SETS),
 })
