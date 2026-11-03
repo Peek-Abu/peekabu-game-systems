@@ -139,17 +139,15 @@ return function()
 			end
 		end)
 
-		it(
-			"routes footsteps: a set name or nil (Cappy and Prickles borrow Pippa's until they have their own)",
-			function()
-				for _, name in EmployeeRegistry.names() do
-					local set = EmployeeRegistry.get(name).footstepSet
-					expect(set == nil or (type(set) == "string" and set ~= "")).to.equal(true)
-				end
-				expect(EmployeeRegistry.get("Cappy").footstepSet).to.equal("pippa")
-				expect(EmployeeRegistry.get("Prickles").footstepSet).to.equal("pippa")
+		it("routes footsteps: a set name or nil (Cappy and Prickles walk on their own sets, by their names)", function()
+			for _, name in EmployeeRegistry.names() do
+				local set = EmployeeRegistry.get(name).footstepSet
+				expect(set == nil or (type(set) == "string" and set ~= "")).to.equal(true)
 			end
-		)
+			-- An override here beats the name: "pippa" made everyone sound like Pippa (owner, 2026-11-03).
+			expect(EmployeeRegistry.get("Cappy").footstepSet).to.equal(nil)
+			expect(EmployeeRegistry.get("Prickles").footstepSet).to.equal(nil)
+		end)
 
 		it("gives every employee a positive, sane scale", function()
 			for _, name in EmployeeRegistry.names() do

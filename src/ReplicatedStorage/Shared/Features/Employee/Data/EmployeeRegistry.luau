@@ -369,8 +369,6 @@ EMPLOYEES.Cappy = {
 	-- No rank lanyard fitted to his body yet.
 	uniform = {},
 	locomotion = locomotionOf("cappy", 1.06, 2.06, 1.32, "cappyfidget"),
-	-- Borrows Pippa's steps until his own sneaker set is made.
-	footstepSet = "pippa",
 }
 
 EMPLOYEES.Prickles = {
@@ -435,8 +433,6 @@ EMPLOYEES.Prickles = {
 	defaultSkin = "Default",
 	uniform = {},
 	locomotion = locomotionOf("prickles", 1.03, 1.93, 1.34, "pricklesfidget"),
-	-- Borrows Pippa's steps until his own root-thump set is made.
-	footstepSet = "pippa",
 }
 
 local EmployeeRegistry = {
