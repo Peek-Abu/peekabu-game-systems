@@ -56,6 +56,18 @@ return function()
 		expect(EmoteVfxConstants.PRESETS.emoteTumbleweed.layers[1].count).to.equal(1)
 	end)
 
+	it("gives Cocoa Sip its two library sounds, the sip landing at 1.2 s from the mug's marker", function()
+		local cocoa = EmoteVfxConstants.COCOA
+		for _, def in { cocoa.mug, cocoa.sip } do
+			expect(string.match(def.assetId, "^rbxassetid://%d+$")).to.be.ok()
+			expect(def.group).to.equal("SFX")
+			expect(def.volume > 0 and def.volume <= 2).to.equal(true)
+		end
+		-- PropsShow is at 0.233 s in the clip; the sip belongs at 1.2 s, as the mug reaches his mouth
+		expect(math.abs(0.233 + cocoa.sipDelay - 1.2) < 0.01).to.equal(true)
+		expect(cocoa.fadeOut > 0 and cocoa.fadeOut <= 0.5).to.equal(true)
+	end)
+
 	it("grows the giant bubble big enough to hold a character, quickly, and never flashes", function()
 		local giant = EmoteVfxConstants.GIANT
 		expect(giant.growSeconds > 0 and giant.growSeconds <= 1.2).to.equal(true)

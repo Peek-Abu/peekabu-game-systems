@@ -45,6 +45,12 @@ local entries: { [string]: Entry } = {
 			{ id = "face", on = "Face" },
 		},
 	},
+	-- PJ Cappy's Cocoa Sip: a mug sound as the mug appears, then a sip as it reaches his mouth (EmoteVfxConstants.COCOA).
+	["emote:Cappy.CocoaSip"] = {
+		effects = {
+			{ id = "cocoaSounds", on = "PropsShow" },
+		},
+	},
 	-- The hire reveals: their face timelines as Face markers (hire_markers.py), on the reveal screen's preview.
 	pippahirereveal = { effects = { { id = "face", on = "Face" } } },
 	prickleshirereveal = { effects = { { id = "face", on = "Face" } } },

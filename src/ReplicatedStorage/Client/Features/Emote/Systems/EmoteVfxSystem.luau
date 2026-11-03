@@ -9,6 +9,8 @@
 	- bubbleLand: a splash of bubbles at her feet.
 	- lassoPuff, lassoThrow, dustSwirl, tumbleweed: Big Roundup's dust (the coil shaking out and the yank, the throw,
 	  a dust ring orbiting his feet under the spin) and one tumbleweed rolling past in front of him.
+	- cocoaSounds: Cocoa Sip's mug sound now and its sip EmoteVfxConstants.COCOA.sipDelay later, 3D on the root;
+	  ending it (the clip stopped) cancels the sip if it has not started and fades whatever still plays.
 	- face: the FacePlate wears the `Faces` folder's expression named by the marker's value; ending it puts the
 	  gameplay face (the EmployeeFace attribute) back.
 	Everything is client-local (nothing replicates) and sized by the character's scale. Presets and numbers:
@@ -30,6 +32,8 @@ local VfxBurstRegistry = require(ReplicatedStorage.Shared.Features.Vfx.Data.VfxB
 local VfxTypes = require(ReplicatedStorage.Shared.Features.Vfx.Data.VfxTypes)
 local EmployeeFaceSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeeFaceSystem)
 local EmoteVfxConstants = require(ReplicatedStorage.Client.Features.Emote.Data.EmoteVfxConstants)
+local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundRegistry)
+local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
 local EmotePropSystem = require(ReplicatedStorage.Client.Features.Emote.Systems.EmotePropSystem)
 local VfxBurstSystem = require(ReplicatedStorage.Client.Features.Vfx.Systems.VfxBurstSystem)
 
@@ -38,6 +42,16 @@ for id, preset in EmoteVfxConstants.PRESETS do
 	if not VfxBurstRegistry.has(id) then
 		VfxBurstRegistry.register(id, preset)
 	end
+end
+
+-- Cocoa Sip's sounds, registered at load like the presets.
+local COCOA = EmoteVfxConstants.COCOA
+local COCOA_MUG, COCOA_SIP = "emoteCocoaMug", "emoteCocoaSip"
+if not SoundRegistry.has(COCOA_MUG) then
+	SoundRegistry.register(COCOA_MUG, COCOA.mug)
+end
+if not SoundRegistry.has(COCOA_SIP) then
+	SoundRegistry.register(COCOA_SIP, COCOA.sip)
 end
 
 local STREAM = EmoteVfxConstants.STREAM
@@ -301,6 +315,36 @@ local function tumbleweed(character: Model): (() -> ())?
 	return nil
 end
 
+local function cocoaSounds(character: Model): (() -> ())?
+	local root = part(character, "HumanoidRootPart")
+	if root == nil then
+		return nil
+	end
+	local handles: { SoundServiceClient.SoundHandle } = {}
+	local function play(id: string)
+		local handle = SoundServiceClient:play(id, { at = root })
+		if handle ~= nil then
+			table.insert(handles, handle)
+		end
+	end
+	play(COCOA_MUG)
+	local sip: thread? = nil
+	sip = task.delay(COCOA.sipDelay, function()
+		sip = nil
+		play(COCOA_SIP)
+	end)
+	return function()
+		if sip ~= nil then
+			task.cancel(sip)
+			sip = nil
+		end
+		for _, handle in handles do
+			handle:stop(COCOA.fadeOut)
+		end
+		table.clear(handles)
+	end
+end
+
 local function face(character: Model, name: string): (() -> ())?
 	local plate = part(character, EmployeeConstants.FACE_PLATE)
 	local faces = character:FindFirstChild(EmployeeConstants.FACES_FOLDER)
@@ -345,6 +389,8 @@ function EmoteVfxSystem.start(id: string, character: Model, value: string): (() 
 		return dustSwirl(character)
 	elseif id == "tumbleweed" then
 		return tumbleweed(character)
+	elseif id == "cocoaSounds" then
+		return cocoaSounds(character)
 	elseif id == "face" then
 		return face(character, value)
 	end

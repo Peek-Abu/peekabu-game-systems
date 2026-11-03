@@ -25,6 +25,7 @@ local VfxAssets = require(VfxShared.Data.VfxAssets)
 local VfxConstants = require(VfxShared.Data.VfxConstants)
 local VfxFormulas = require(VfxShared.Utils.VfxFormulas)
 local VfxTypes = require(VfxShared.Data.VfxTypes)
+local SoundTypes = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundTypes)
 
 type Burst = VfxTypes.Burst
 
@@ -181,6 +182,12 @@ local PRESETS: { [string]: Burst } = {
 	},
 }
 
+-- Typed as sound definitions, as FootstepAssets' are: SoundRegistry.register takes exactly that shape.
+local COCOA_MUG: SoundTypes.SoundDef =
+	{ assetId = "rbxassetid://9117037749", group = "SFX", volume = 0.8, rollOffMaxDistance = 50 }
+local COCOA_SIP: SoundTypes.SoundDef =
+	{ assetId = "rbxassetid://9119956292", group = "SFX", volume = 0.8, rollOffMaxDistance = 50 }
+
 return table.freeze({
 	TEXTURES = TEXTURES,
 	PRESETS = table.freeze(PRESETS),
@@ -234,4 +241,13 @@ return table.freeze({
 	}),
 	-- The tumbleweed starts this far (times his scale) to his left and rolls past to his right, at this height.
 	TUMBLEWEED = table.freeze({ from = 6, height = 0.75 }),
+	-- Cocoa Sip's sounds (owner's pick, 2026-11-03): two Roblox library sounds (ProSoundEffects, play in place, no
+	-- upload). The mug on PropsShow (0.233 s), the sip sipDelay later (1.2 s, the mug at his mouth), then nothing. A clip
+	-- cut short fades what is still playing over fadeOut.
+	COCOA = table.freeze({
+		mug = COCOA_MUG,
+		sip = COCOA_SIP,
+		sipDelay = 0.967,
+		fadeOut = 0.3,
+	}),
 })

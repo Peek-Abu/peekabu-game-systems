@@ -57,6 +57,15 @@ return function()
 		end)
 	end)
 
+	describe("Cocoa Sip", function()
+		it("plays its sounds from the marker where the mug appears", function()
+			local entry = EmoteEffectRegistry.get("emote:Cappy.CocoaSip")
+			expect(entry).to.be.ok()
+			expect(entry.effects[1].id).to.equal("cocoaSounds")
+			expect(entry.effects[1].on).to.equal("PropsShow")
+		end)
+	end)
+
 	describe("hire reveals", function()
 		it("change the face on the clip's Face markers", function()
 			for _, key in { "pippahirereveal", "prickleshirereveal", "cappyhirereveal" } do
