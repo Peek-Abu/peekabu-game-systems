@@ -64,7 +64,7 @@ return function()
 				expect(def).to.be.ok()
 				expect(string.match(def.assetId, "^rbxassetid://%d+$")).to.be.ok()
 				expect(def.group).to.equal("SFX")
-				expect(def.volume > 0 and def.volume <= 3).to.equal(true)
+				expect(def.volume > 0 and def.volume <= 10).to.equal(true) -- the Sound.Volume range: a quiet library file needs a high volume
 				expect(cue.after >= 0).to.equal(true)
 				expect(cue.start == nil or cue.start >= 0).to.equal(true)
 			end

@@ -188,35 +188,39 @@ local function library(assetId: string, volume: number): SoundTypes.SoundDef
 	return { assetId = assetId, group = "SFX", volume = volume, rollOffMaxDistance = 50 }
 end
 
--- Named for their library titles.
+-- Named for their library titles. Volumes put each one's peak near 120 (PlaybackLoudness x Volume, measured in Studio
+-- 2026-11-03; a step of Pippa's peaks at 153 in game): the files themselves peak from 13 (the tea sip) to 673 (the rope).
 local SOUNDS: { [string]: SoundTypes.SoundDef } = {
-	mugQuieterAtTail8 = library("rbxassetid://9117037749", 0.8),
-	teaSip2 = library("rbxassetid://9119956292", 0.8),
-	bubbleWobbleComicBloops4 = library("rbxassetid://9112752910", 0.8),
-	bubbleBloopHighPitchedCute6 = library("rbxassetid://9112751731", 0.8),
-	clothMovement24 = library("rbxassetid://9113824230", 0.6),
-	woodWhooshQuickSwings4 = library("rbxassetid://9120972321", 0.7),
-	buggyWhipLightCrack6 = library("rbxassetid://9113611449", 0.9),
-	ropeImpacts4 = library("rbxassetid://9118717475", 0.8),
+	mugQuieterAtTail8 = library("rbxassetid://9117037749", 1.5),
+	teaSip2 = library("rbxassetid://9119956292", 8),
+	bubbleWobbleComicBloops4 = library("rbxassetid://9112752910", 0.6),
+	bubbleBloopHighPitchedCute6 = library("rbxassetid://9112751731", 0.9),
+	-- Kept subtle (peaks near 47): the owner has turned down cloth sounds before. Drop lassoCoilSound to remove it.
+	clothMovement24 = library("rbxassetid://9113824230", 1.2),
+	woodWhooshQuickSwings4 = library("rbxassetid://9120972321", 1),
+	buggyWhipLightCrack6 = library("rbxassetid://9113611449", 1.2),
+	ropeImpacts4 = library("rbxassetid://9118717475", 0.2),
 }
 
 local SOUND_CUES: { [string]: { SoundCue } } = {
 	-- Cocoa Sip, from PropsShow (0.233 s): the mug as it appears, the sip as it reaches his mouth (1.2 s).
-	cocoaSounds = { { sound = "mugQuieterAtTail8", after = 0 }, { sound = "teaSip2", after = 0.967 } },
+	-- start = where the file's sound begins (its lead-in, measured): the sip starts 0.19 s into its file.
+	cocoaSounds = { { sound = "mugQuieterAtTail8", after = 0 }, { sound = "teaSip2", after = 0.967, start = 0.17 } },
 	-- Bubble Ride: the wobble once the bubble is full (BubbleGrow + its growth), the bloop on BubblePop.
 	bubbleWobbleSound = { { sound = "bubbleWobbleComicBloops4", after = 0.8 } },
 	bubblePopSound = { { sound = "bubbleBloopHighPitchedCute6", after = 0 } },
 	-- Big Roundup: the coil off his hip (PropsShow 0.367 s), a whoosh as the loop shakes out (LoopOut 0.9 s) and on
 	-- each of its two turns overhead (DustSwirl 1.167 s; the turns pass the front at 1.25 s and 2.09 s, from the clip's
 	-- prop timeline), the crack on the throw, the rope pulled tight on the yank.
-	lassoCoilSound = { { sound = "clothMovement24", after = 0 } },
-	lassoShakeSound = { { sound = "woodWhooshQuickSwings4", after = 0 } },
+	lassoCoilSound = { { sound = "clothMovement24", after = 0, start = 0.25 } },
+	lassoShakeSound = { { sound = "woodWhooshQuickSwings4", after = 0, start = 0.03 } },
 	lassoSpinSound = {
-		{ sound = "woodWhooshQuickSwings4", after = 0.083 },
-		{ sound = "woodWhooshQuickSwings4", after = 0.923 },
+		{ sound = "woodWhooshQuickSwings4", after = 0.083, start = 0.03 },
+		{ sound = "woodWhooshQuickSwings4", after = 0.923, start = 0.03 },
 	},
-	lassoCrackSound = { { sound = "buggyWhipLightCrack6", after = 0 } },
-	lassoYankSound = { { sound = "ropeImpacts4", after = 0 } },
+	lassoCrackSound = { { sound = "buggyWhipLightCrack6", after = 0, start = 0.04 } },
+	-- Rope Impacts 4 is silent for its first 0.68 s.
+	lassoYankSound = { { sound = "ropeImpacts4", after = 0, start = 0.66 } },
 }
 
 return table.freeze({
