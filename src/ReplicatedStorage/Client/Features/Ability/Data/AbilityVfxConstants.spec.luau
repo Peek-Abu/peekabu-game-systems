@@ -28,7 +28,9 @@ return function()
 		end
 	end)
 
-	it("keeps the speed trail short", function()
-		expect(AbilityVfxConstants.TRAIL_LIFETIME <= 0.5).to.equal(true)
+	it("draws no speed trail on boosted runners (owner, 2026-11-03)", function()
+		for key in AbilityVfxConstants do
+			expect(string.find(key, "^TRAIL_")).to.equal(nil)
+		end
 	end)
 end

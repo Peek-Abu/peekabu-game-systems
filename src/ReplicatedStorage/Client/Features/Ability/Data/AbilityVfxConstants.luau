@@ -1,12 +1,11 @@
 --!strict
 --[=[
-	AbilityVfxConstants: the abilities' functional world effects (VfxBurstRegistry bursts and the trail, spot and
+	AbilityVfxConstants: the abilities' functional world effects (VfxBurstRegistry bursts and the spot and
 	plant looks). Functional on purpose: the real VFX polish is a later phase (game-vfx-design). Kid-safe: no red, no
 	flash, no light. Static data (validated by VfxBurstRegistry at load).
 
 	- abilityLetsGo (tier 2): Pippa's rally: a gold ring of stars bursting out at her feet.
 	- abilityPlantPuff (tier 2): a puff of leaves and dust as Prickles becomes a plant, and again as he pops out.
-	- The speed trail: a short gold streak behind every boosted runner, seen by everyone.
 	- The spot: Cappy's treasure outlined in gold through walls, with a star over it (his client only).
 
 	@class AbilityVfxConstants
@@ -107,13 +106,6 @@ local PRESETS: { [string]: Burst } = {
 
 return table.freeze({
 	PRESETS = table.freeze(PRESETS),
-	-- The trail behind a boosted runner: gold fading out, LIFETIME seconds long, between two root attachments
-	-- TRAIL_HEIGHT studs apart (centred on the root).
-	TRAIL_COLOR = gradient({ P.gleamLight, P.gleam }),
-	TRAIL_TRANSPARENCY = seq({ { 0, 0.35 }, { 1, 1 } }),
-	TRAIL_LIFETIME = 0.3,
-	TRAIL_HEIGHT = 2.4,
-	TRAIL_NAME = "AbilitySpeedTrail",
 	-- Cappy's spot: the outline and fill through walls, and the star over it (studs above the item, size in studs).
 	SPOT_OUTLINE = P.gleam,
 	SPOT_FILL = P.gleamLight,

@@ -19,6 +19,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
+local AbilityAssets = require(ReplicatedStorage.Shared.Features.Ability.Data.AbilityAssets)
 local AbilityConstants = require(ReplicatedStorage.Shared.Features.Ability.Data.AbilityConstants)
 local AbilityRegistry = require(ReplicatedStorage.Shared.Features.Ability.Data.AbilityRegistry)
 local AbilityEvents = require(ReplicatedStorage.Shared.Features.Ability.Net.AbilityEvents)
@@ -32,6 +33,7 @@ local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudReg
 local AbilityStore = require(ReplicatedStorage.Client.Features.Ability.State.AbilityStore)
 local AbilitySpotSystem = require(ReplicatedStorage.Client.Features.Ability.Systems.AbilitySpotSystem)
 local AbilityVfxSystem = require(ReplicatedStorage.Client.Features.Ability.Systems.AbilityVfxSystem)
+local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
 
 local player = Players.LocalPlayer
 local stoppers: { () -> () } = {}
@@ -88,7 +90,7 @@ export type AbilityServiceClient = {
 }
 
 local AbilityServiceClient: AbilityServiceClient = {
-	dependencies = { "InputServiceClient" },
+	dependencies = { "InputServiceClient", "SoundServiceClient" },
 
 	init = function(self)
 		if not InputActionRegistry.has(AbilityConstants.ACTION) then
@@ -121,7 +123,10 @@ local AbilityServiceClient: AbilityServiceClient = {
 		local spotted = AbilityEvents.packets.Spotted.listen(function(data: { cargoId: number })
 			counters.spotted += 1
 			local def = AbilityRegistry.get("spotIt")
-			AbilitySpotSystem.show(data.cargoId, if def ~= nil then def.duration else 5)
+			if AbilitySpotSystem.show(data.cargoId, if def ~= nil then def.duration else 5) then
+				-- The ping with the glow: 2D, Cappy's ears only.
+				SoundServiceClient:play(AbilityAssets.SPOT_PING)
+			end
 		end)
 		local readyChanged = player:GetAttributeChangedSignal(AbilityConstants.READY_AT_ATTRIBUTE):Connect(sync)
 		local characterWatch: { RBXScriptConnection } = {}

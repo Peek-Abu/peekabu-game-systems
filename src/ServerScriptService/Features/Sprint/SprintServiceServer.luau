@@ -22,7 +22,7 @@
 	through `setSpeedScale`) multiplies by `speedScale` and every base read back from WalkSpeed divides it out, so a
 	boost never leaks into a base; starting and ending one rescales the live WalkSpeed (SprintSpeedFormulas.rescale).
 	A boost given again keeps the bigger scale and the later end (never stacks). The character carries SpeedScale and
-	SpeedBoostUntil while it lasts (other clients draw the trails).
+	SpeedBoostUntil while it lasts.
 
 	Spec-exempt shell (Humanoids, Players, ByteNet, RunService); the decisions are the specced SprintRules,
 	SprintSpeedFormulas and SprintStaminaFormulas.

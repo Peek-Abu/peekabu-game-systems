@@ -471,6 +471,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.Features.Shift.State.ShiftStore"] = "Charm computed facade over the shift world entry (decoding is specced in ShiftSnapshotUtils)",
 	["ReplicatedStorage.Client.Features.Shift.ShiftServiceClient"] = "HUD registration + Charm/ByteNet shell (the server decides)",
 	["ReplicatedStorage.Shared.Features.Shift.Data.ShiftAssets"] = "asset id slots; registers the uploaded sounds at load (no decisions)",
+	["ReplicatedStorage.Shared.Features.Ability.Data.AbilityAssets"] = "asset id list; registers the ability sounds at load (no decisions)",
 	["ReplicatedStorage.Client.Features.Shift.Systems.ShiftFeedbackSystem"] = "Sound/Camera/Charm shell (cue choices are specced in ShiftCueUtils)",
 	["ReplicatedStorage.Client.UI.React.Hooks.useServerClock"] = "React hook — re-renders on the server clock (no logic)",
 	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHud"] = "React HUD widget wiring stores to ShiftCompactHudPanel (view models specced)",

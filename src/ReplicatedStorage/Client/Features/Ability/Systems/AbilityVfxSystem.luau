@@ -3,25 +3,31 @@
 	AbilityVfxSystem: the abilities' world effects on every client, read from the server's character attributes (so
 	everyone sees the same thing; nothing here is sent back):
 
-	- SpeedBoostUntil (Sprint's speed boost): a gold trail behind that runner until the boost ends.
-	- AbilityActive = "letsGo" appearing: Pippa's star ring at her feet.
+	- AbilityActive = "letsGo" appearing: Pippa's star ring at her feet. The boost itself draws nothing on the
+	  runners (owner, 2026-11-03: the speed trail "looks simulator esque" and was removed).
 	- AbilityActive = "pottedPlant" appearing or going: the leaf puff at Prickles' feet (in, and popping out).
 
-	Functional looks (AbilityVfxConstants); real polish is a later phase. Spec-exempt shell (VfxBurstSystem, Trails,
-	live characters).
+	And the ability sounds (AbilityAssets), 3D on the character's root: Let's Go! as Pippa's effect begins (the effect,
+	so it plays whatever her clip does), and each clip-timed sound (Cappy's phone, Prickles into and out of the pot) as
+	its clip starts on the character's Animator, faded over CUT_FADE when that clip is cut short; a clip that ends on
+	its own lets the tail ring.
+
+	Functional looks (AbilityVfxConstants); real polish is a later phase. Spec-exempt shell (VfxBurstSystem, live
+	characters).
 
 	@class AbilityVfxSystem
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
 
 local Observers = require(ReplicatedStorage.Packages.Observers)
+local AbilityAssets = require(ReplicatedStorage.Shared.Features.Ability.Data.AbilityAssets)
 local AbilityConstants = require(ReplicatedStorage.Shared.Features.Ability.Data.AbilityConstants)
-local SprintConstants = require(ReplicatedStorage.Shared.Features.Sprint.Data.SprintConstants)
+local AnimationRegistry = require(ReplicatedStorage.Shared.Features.Animation.Data.AnimationRegistry)
 local VfxBurstRegistry = require(ReplicatedStorage.Shared.Features.Vfx.Data.VfxBurstRegistry)
 local AbilityVfxConstants = require(ReplicatedStorage.Client.Features.Ability.Data.AbilityVfxConstants)
 local VfxBurstSystem = require(ReplicatedStorage.Client.Features.Vfx.Systems.VfxBurstSystem)
+local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
 
 local C = AbilityVfxConstants
 
@@ -35,6 +41,18 @@ end
 local AbilityVfxSystem = {}
 
 local played = 0
+
+-- A clip that plays a sound from its first frame, by the clip's asset id: the sound and the clip's own length.
+type ClipSound = { sound: string, seconds: number }
+local clipSounds: { [string]: ClipSound } = {}
+for key, sound in AbilityAssets.CLIP_SOUNDS do
+	local def = AnimationRegistry.get(key)
+	if def ~= nil then
+		clipSounds[def.assetId] = { sound = sound, seconds = (def.durationMs or 0) / 1000 }
+	end
+end
+-- A clip counts as cut short when it stops more than this many seconds before its own end.
+local CUT_SLACK = 0.15
 
 local function feetOf(character: Model): Vector3?
 	local root = character:FindFirstChild("HumanoidRootPart")
@@ -53,69 +71,44 @@ local function burstAt(character: Model, id: string)
 	end
 end
 
--- The trail on `character` while its boost lasts; returns its cleanup.
-local function trail(character: Model): () -> ()
+-- The character's root, for a sound that follows it.
+local function rootOf(character: Model): BasePart?
 	local root = character:FindFirstChild("HumanoidRootPart")
-	if root == nil or not root:IsA("BasePart") then
+	return if root ~= nil and root:IsA("BasePart") then root else nil
+end
+
+-- Plays each clip-timed ability sound as its clip starts on `character`; returns the cleanup.
+local function watchClips(character: Model): () -> ()
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	local animator = if humanoid ~= nil then humanoid:FindFirstChildOfClass("Animator") else nil
+	if animator == nil then
 		return function() end
 	end
-	local half = C.TRAIL_HEIGHT / 2
-	local top = Instance.new("Attachment")
-	top.Name = C.TRAIL_NAME
-	top.Position = Vector3.new(0, half, 0)
-	top.Parent = root
-	local bottom = Instance.new("Attachment")
-	bottom.Name = C.TRAIL_NAME
-	bottom.Position = Vector3.new(0, -half, 0)
-	bottom.Parent = root
-	local streak = Instance.new("Trail")
-	streak.Name = C.TRAIL_NAME
-	streak.Attachment0 = top
-	streak.Attachment1 = bottom
-	streak.Color = C.TRAIL_COLOR
-	streak.Transparency = C.TRAIL_TRANSPARENCY
-	streak.Lifetime = C.TRAIL_LIFETIME
-	streak.LightEmission = 0.4
-	streak.LightInfluence = 0.2
-	streak.FaceCamera = true
-	streak.Parent = root
+	local connection = animator.AnimationPlayed:Connect(function(track: AnimationTrack)
+		local entry = clipSounds[track.Animation.AnimationId]
+		local root = rootOf(character)
+		if entry == nil or root == nil then
+			return
+		end
+		local handle = SoundServiceClient:play(entry.sound, { at = root })
+		if handle == nil then
+			return
+		end
+		local started = os.clock()
+		track.Stopped:Once(function()
+			-- Cut short (moving, busy hands, a popped plant): fade, never stop dead. Ended on its own: let it ring.
+			if os.clock() - started < entry.seconds - CUT_SLACK then
+				handle:stop(AbilityAssets.CUT_FADE)
+			end
+		end)
+	end)
 	return function()
-		streak:Destroy()
-		top:Destroy()
-		bottom:Destroy()
+		connection:Disconnect()
 	end
 end
 
 -- Follows one character's ability attributes for as long as it exists.
 local function watch(character: Model): () -> ()
-	local endTrail: (() -> ())? = nil
-	local trailToken = 0
-	local function syncTrail()
-		local untilAt = character:GetAttribute(SprintConstants.BOOST_UNTIL_ATTRIBUTE)
-		local remaining = if type(untilAt) == "number" then untilAt - Workspace:GetServerTimeNow() else 0
-		trailToken += 1
-		local token = trailToken
-		if remaining > 0 then
-			if endTrail == nil then
-				endTrail = trail(character)
-			end
-			task.delay(remaining, function()
-				if token == trailToken then
-					local stop = endTrail
-					endTrail = nil
-					if stop ~= nil then
-						stop()
-					end
-				end
-			end)
-		else
-			local stop = endTrail
-			endTrail = nil
-			if stop ~= nil then
-				stop()
-			end
-		end
-	end
 	local active = character:GetAttribute(AbilityConstants.ACTIVE_ATTRIBUTE)
 	local function syncActive()
 		local now = character:GetAttribute(AbilityConstants.ACTIVE_ATTRIBUTE)
@@ -126,22 +119,19 @@ local function watch(character: Model): () -> ()
 		end
 		if now == "letsGo" then
 			burstAt(character, "abilityLetsGo")
+			local root = rootOf(character)
+			if root ~= nil then
+				SoundServiceClient:play(AbilityAssets.LETS_GO, { at = root })
+			end
 		elseif now == "pottedPlant" or was == "pottedPlant" then
 			burstAt(character, "abilityPlantPuff")
 		end
 	end
-	syncTrail()
-	local boost = character:GetAttributeChangedSignal(SprintConstants.BOOST_UNTIL_ATTRIBUTE):Connect(syncTrail)
 	local ability = character:GetAttributeChangedSignal(AbilityConstants.ACTIVE_ATTRIBUTE):Connect(syncActive)
+	local stopClips = watchClips(character)
 	return function()
-		boost:Disconnect()
 		ability:Disconnect()
-		trailToken += 1
-		local stop = endTrail
-		endTrail = nil
-		if stop ~= nil then
-			stop()
-		end
+		stopClips()
 	end
 end
 
