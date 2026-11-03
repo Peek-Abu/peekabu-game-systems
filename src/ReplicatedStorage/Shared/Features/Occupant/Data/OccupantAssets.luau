@@ -92,11 +92,11 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- bar, then five stems from one score with one common gain, so they sum to the mix (OccupantChaseMusicSystem):
 	-- intensity 1 = ostinato + low, intensity 2 adds motif, ticks and pulse as he closes (CHASE_STEMS).
 	harlowChaseSting = { assetId = "rbxassetid://136144780062166", group = "SFX", volume = 0.9 },
-	harlowChase_ostinato = { assetId = "rbxassetid://76713573491371", group = "Music", volume = 0.9, looped = true },
-	harlowChase_low = { assetId = "rbxassetid://87740742060998", group = "Music", volume = 0.9, looped = true },
-	harlowChase_motif = { assetId = "rbxassetid://94072671705529", group = "Music", volume = 0.9, looped = true },
-	harlowChase_ticks = { assetId = "rbxassetid://112793987544288", group = "Music", volume = 0.9, looped = true },
-	harlowChase_pulse = { assetId = "rbxassetid://112510222070935", group = "Music", volume = 0.9, looped = true },
+	harlowChase_ostinato = { assetId = "rbxassetid://124748025140120", group = "Music", volume = 0.9, looped = true },
+	harlowChase_low = { assetId = "rbxassetid://139872525713729", group = "Music", volume = 0.9, looped = true },
+	harlowChase_motif = { assetId = "rbxassetid://82959779790252", group = "Music", volume = 0.9, looped = true },
+	harlowChase_ticks = { assetId = "rbxassetid://89441335118534", group = "Music", volume = 0.9, looped = true },
+	harlowChase_pulse = { assetId = "rbxassetid://105316282966706", group = "Music", volume = 0.9, looped = true },
 	harlowSigh = { assetId = "rbxassetid://126145488520317", group = "SFX", volume = 0.8, rollOffMaxDistance = 80 },
 	-- His 'voice': him scribbling you up on his clipboard, one clip per line (OccupantFeedbackUtils.clipFor picks among
 	-- the uploaded ones, so one clip covers every line until more are added).

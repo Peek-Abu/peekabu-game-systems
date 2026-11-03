@@ -28,7 +28,7 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- The performance review's jingle as it opens (2D, once; JINGLE_SOUNDS by ShiftCueUtils.jingle), in-house: met (round-2
 	-- C, spooky-first waltz into the relief), met with overtime pay (round-3 O1: C bigger, harp gliss, timpani, coins), and
 	-- missed (round-3 F3: the same record slowing to a stop before the relief lands).
-	shiftResultsMet = { assetId = "rbxassetid://74050052665633", group = "SFX", volume = 0.9 },
+	shiftResultsMet = { assetId = "rbxassetid://109779942246814", group = "SFX", volume = 0.9 },
 	shiftResultsOvertime = { assetId = "rbxassetid://122358530335366", group = "SFX", volume = 0.9 },
 	shiftResultsMissed = { assetId = "rbxassetid://136628215898951", group = "SFX", volume = 0.9 },
 	-- A low brass sting when the pressure tier rises.

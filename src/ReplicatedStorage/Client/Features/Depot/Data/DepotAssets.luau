@@ -17,7 +17,7 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- The depot lounge record (round-2 pick A, in-house): F major, 96 bpm cha-cha, the company motif F-A-C-Bb on
 	-- clarinet over harpsichord and pizz; a bar-exact 60 s OGG loop. 2D, the music slot, while you are in the hub
 	-- (OfficeAtmosphereSystem).
-	depotHubTheme = { assetId = "rbxassetid://127824044953174", group = "Music", volume = 1, looped = true },
+	depotHubTheme = { assetId = "rbxassetid://113418650275760", group = "Music", volume = 1, looped = true },
 }
 
 for id, def in SOUNDS do
