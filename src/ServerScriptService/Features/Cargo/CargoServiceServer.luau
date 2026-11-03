@@ -287,6 +287,7 @@ export type CargoServiceServer = {
 	search: (self: CargoServiceServer, player: Player, part: BasePart) -> (boolean, string?),
 	scatterPockets: (self: CargoServiceServer, player: Player, origin: CFrame) -> (),
 	pocketsOf: (self: CargoServiceServer, player: Player) -> { CargoTypes.CargoEntry },
+	isClaimed: (self: CargoServiceServer, object: Instance) -> boolean,
 	reset: (self: CargoServiceServer) -> (),
 }
 
@@ -456,6 +457,15 @@ CargoServiceServer = {
 	]=]
 	pocketsOf = function(_self, player)
 		return inventory:list(player.UserId)
+	end,
+
+	--[=[
+		Whether a cargo item is claimed (banked, pocketed, stashed): no longer loose in the office. False for a part
+		that is not cargo.
+	]=]
+	isClaimed = function(_self, object)
+		local id = idOf(object)
+		return id ~= nil and claims:isClaimed(id)
 	end,
 
 	--[=[

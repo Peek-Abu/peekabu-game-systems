@@ -4,12 +4,17 @@
 	tab): a kind line, three personality words, a short bio, a fun fact, the ability's card text and the five display
 	stats, plus the employee's UI colour (their card, page and pick screen are tinted in it).
 
-	DISPLAY ONLY: no gameplay reads these stats or the ability yet (the stat hooks and the ability system are later
-	steps); they come from characters/launch/new-employee-requirements.md and the owner can edit them here. Copy is
+	The stats are DISPLAY ONLY (the stat hooks are a later step). The ability's words live here, but the ability itself
+	(and its cooldown, read from there) is AbilityRegistry's: the card can never promise a number the game does not
+	keep. The words come from characters/launch/new-employee-requirements.md and the owner can edit them here. Copy is
 	kid reading level. Every employee's stats add up to the same total (requirements: equal point totals).
 
 	@class EmployeeProfileRegistry
 ]=]
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local AbilityRegistry = require(ReplicatedStorage.Shared.Features.Ability.Data.AbilityRegistry)
 
 export type Stat = "speed" | "stamina" | "strength" | "suction" | "quiet"
 
@@ -28,6 +33,12 @@ export type Profile = {
 
 local STATS: { Stat } = { "speed", "stamina", "strength", "suction", "quiet" }
 
+-- The employee's ability cooldown (AbilityRegistry), 0 when they have none.
+local function cooldownOf(employee: string): number
+	local def = AbilityRegistry.forEmployee(employee)
+	return if def ~= nil then def.cooldown else 0
+end
+
 local PROFILES: { [string]: Profile } = {
 	Pippa = {
 		kind = "Bunny",
@@ -39,7 +50,7 @@ local PROFILES: { [string]: Profile } = {
 			name = "Let's Go!",
 			line = "Speed up your team!",
 			detail = "Pippa and the crew near her run faster for 4 seconds.",
-			cooldown = 45,
+			cooldown = cooldownOf("Pippa"),
 			icon = "abilityLetsGo",
 		},
 		stats = { speed = 4, stamina = 4, strength = 2, suction = 3, quiet = 2 },
@@ -59,7 +70,7 @@ local PROFILES: { [string]: Profile } = {
 			name = "Spot It!",
 			line = "Find the good stuff!",
 			detail = "Shows the closest treasure through walls for 5 seconds.",
-			cooldown = 40,
+			cooldown = cooldownOf("Cappy"),
 			icon = "abilitySpotIt",
 		},
 		stats = { speed = 3, stamina = 2, strength = 3, suction = 3, quiet = 4 },
@@ -79,7 +90,7 @@ local PROFILES: { [string]: Profile } = {
 			name = "Potted Plant",
 			line = "Pretend to be a plant!",
 			detail = "Stand still as a potted plant for up to 8 seconds. The Manager walks right past.",
-			cooldown = 45,
+			cooldown = cooldownOf("Prickles"),
 			icon = "abilityPottedPlant",
 		},
 		stats = { speed = 2, stamina = 3, strength = 4, suction = 4, quiet = 2 },

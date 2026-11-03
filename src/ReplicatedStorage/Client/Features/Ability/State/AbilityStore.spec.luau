@@ -1,0 +1,37 @@
+local AbilityStore = require(script.Parent.AbilityStore)
+
+return function()
+	afterEach(function()
+		AbilityStore.apply(nil, nil, nil)
+	end)
+
+	it("copies the server's ready time, the running effect and the employee's ability", function()
+		AbilityStore.apply(145, "pottedPlant", "Prickles")
+		expect(AbilityStore.readyAt()).to.equal(145)
+		expect(AbilityStore.active()).to.equal("pottedPlant")
+		expect(AbilityStore.abilityId()).to.equal("pottedPlant")
+	end)
+
+	it("reads broken attributes as ready, nothing running and no ability", function()
+		AbilityStore.apply("soon", 7, 12)
+		expect(AbilityStore.readyAt()).to.equal(0)
+		expect(AbilityStore.active()).to.equal(nil)
+		expect(AbilityStore.abilityId()).to.equal(nil)
+		AbilityStore.apply(nil, nil, "Nobody")
+		expect(AbilityStore.abilityId()).to.equal(nil)
+	end)
+
+	it("counts whole seconds left, never below zero", function()
+		expect(AbilityStore.secondsLeft(10, 4.2)).to.equal(6)
+		expect(AbilityStore.secondsLeft(10, 9.99)).to.equal(1)
+		expect(AbilityStore.secondsLeft(10, 10)).to.equal(0)
+		expect(AbilityStore.secondsLeft(10, 12)).to.equal(0)
+	end)
+
+	it("tells how much of the cooldown is still to go, 0 to 1", function()
+		expect(AbilityStore.remaining(145, 100, 45)).to.equal(1)
+		expect(AbilityStore.remaining(145, 122.5, 45)).to.equal(0.5)
+		expect(AbilityStore.remaining(145, 150, 45)).to.equal(0)
+		expect(AbilityStore.remaining(0, 150, 0)).to.equal(0)
+	end)
+end

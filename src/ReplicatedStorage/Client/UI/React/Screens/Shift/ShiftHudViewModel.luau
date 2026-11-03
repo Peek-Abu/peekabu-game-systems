@@ -104,6 +104,8 @@ export type ArcView = {
 	sprint: ArcSpot,
 	-- CROUCH: right above the engine's Jump button.
 	crouch: ArcSpot,
+	-- The employee's ability (AbilityButton).
+	ability: ArcSpot,
 	-- The engine's Jump button the arc keeps clear of.
 	jump: ArcSpot,
 }
@@ -348,6 +350,9 @@ local PHONE_ARC: ArcView = table.freeze({
 	sprint = spot(-380, -196, 72),
 	-- CROUCH: over the Jump button, 18 px above it (the thumb's natural reach: jump and crouch on one column).
 	crouch = spot(-95, -180, 72),
+	-- ABILITY: 64 px, in the pocket between THROW, CROUCH and the big button, under the crew list (top-right) and
+	-- right of the clock-out board on a 667 px phone; above CROUCH it would run into the crew list.
+	ability = spot(-168, -222, 64),
 	jump = spot(-95, -90, 70),
 })
 
@@ -363,6 +368,8 @@ local TABLET_ARC: ArcView = table.freeze({
 	sprint = spot(-262, -408, 72),
 	-- CROUCH: centred over the large Jump button, 20 px above it.
 	crouch = spot(-146, -302, 72),
+	-- ABILITY: 20 px above CROUCH.
+	ability = spot(-146, -394, 72),
 	jump = spot(-170, -210, 120),
 })
 

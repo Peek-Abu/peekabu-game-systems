@@ -49,6 +49,12 @@ local entries: { [string]: Entry } = {
 	pippahirereveal = { effects = { { id = "face", on = "Face" } } },
 	prickleshirereveal = { effects = { { id = "face", on = "Face" } } },
 	cappyhirereveal = { effects = { { id = "face", on = "Face" } } },
+	-- The ability clips: their faces as Face markers.
+	cappyspotit = { effects = { { id = "face", on = "Face" } } },
+	cappyspotitupper = { effects = { { id = "face", on = "Face" } } },
+	pricklesplantenter = { effects = { { id = "face", on = "Face" } } },
+	pricklesplanthold = { effects = { { id = "face", on = "Face" } } },
+	pricklesplantexit = { effects = { { id = "face", on = "Face" } } },
 }
 for _, entry in entries do
 	for _, effect in entry.effects do

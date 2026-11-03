@@ -432,6 +432,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.Features.Hide.HideServiceClient"] = "ProximityPrompt/Camera/PlayerModule/ByteNet shell (words specced in HideViewModel, state in HideStore)",
 	["ReplicatedStorage.Client.UI.React.Screens.Hide.HideChip"] = "presentational React component (words specced in HideViewModel)",
 	["ReplicatedStorage.Client.UI.React.Screens.Hide.HidePeekOverlay"] = "presentational React component (overlay choice specced in HideViewModel)",
+	["ReplicatedStorage.Client.UI.React.Screens.Ability.AbilityButton"] = "presentational React component (button specced in AbilityViewModel; story in AbilityButton.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Dread.DreadOverlay"] = "React HUD widget (layers specced in DreadViewModel)",
 	-- Cleanup Crew: Sprint
 	["ReplicatedStorage.Shared.Features.Sprint.Data.SprintConstants"] = "static tuning and names (no logic)",
@@ -442,7 +443,14 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Shared.Features.Crouch.Data.CrouchConstants"] = "static tuning and names (no logic)",
 	["ReplicatedStorage.Shared.Features.Crouch.Net.CrouchEvents"] = "ByteNet packet definitions (no logic)",
 	["ServerScriptService.Features.Crouch.CrouchServiceServer"] = "Humanoid/Players/ByteNet/RunService shell (decisions specced in CrouchRules and CrouchSpeedFormulas)",
+	["ServerScriptService.Features.Ability.AbilityServiceServer"] = "Players/Humanoid/ByteNet/RunService/CollectionService shell (decisions specced in AbilityRules, AbilityRegistry, AbilityCooldownTracker and AbilityTreasureUtils)",
+	["ReplicatedStorage.Shared.Features.Ability.Data.AbilityTypes"] = "type definitions only (no runtime logic)",
+	["ReplicatedStorage.Shared.Features.Ability.Data.AbilityConstants"] = "static names and tuning (no logic)",
+	["ReplicatedStorage.Shared.Features.Ability.Net.AbilityEvents"] = "ByteNet packet definitions (no logic)",
 	["ReplicatedStorage.Client.Features.Crouch.CrouchServiceClient"] = "Input/ByteNet/attribute/camera-offset shell (the request is specced in CrouchRequestUtils; the server decides)",
+	["ReplicatedStorage.Client.Features.Ability.AbilityServiceClient"] = "Input/ByteNet/attribute/UserInputService shell (the HUD state is specced in AbilityStore; the server decides)",
+	["ReplicatedStorage.Client.Features.Ability.Systems.AbilitySpotSystem"] = "Highlight/BillboardGui shell over live cargo parts (the server picks the target, specced in AbilityTreasureUtils)",
+	["ReplicatedStorage.Client.Features.Ability.Systems.AbilityVfxSystem"] = "VfxBurstSystem/Trail shell over live characters (presets specced in AbilityVfxConstants)",
 	["ReplicatedStorage.Client.Features.Hide.Systems.HidePoseSystem"] = "Players/Motor6D/RunService shell (the pose and its easing are specced in HidePoseFormulas)",
 	["ReplicatedStorage.Client.Features.Hide.Systems.HideDoorSystem"] = "CollectionService/Instance/RunService shell (a cabinet door's local swing; the timing is HideConstants')",
 	-- Cleanup Crew: Timecard

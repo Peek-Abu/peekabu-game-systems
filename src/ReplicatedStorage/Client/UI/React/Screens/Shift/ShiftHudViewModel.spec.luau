@@ -39,7 +39,7 @@ local function rectGap(button, rect)
 	return math.sqrt(dx * dx + dy * dy) - button.size / 2
 end
 
-local BUTTONS = { "primary", "drop", "throw", "sprint", "crouch" }
+local BUTTONS = { "primary", "drop", "throw", "sprint", "crouch", "ability" }
 
 -- Every gap the arc must keep, as a list of the ones it breaks (empty when clear): >= 16 px from the Jump button and
 -- between buttons, and right of the thumbstick zone (the left 40% of a `width` px screen). Pure, so it can live
@@ -265,6 +265,16 @@ return function()
 				local jumpCentre = arc.jump.x + arc.jump.size / 2
 				expect(math.abs(crouchCentre - jumpCentre) <= 1).to.equal(true)
 				expect(arc.crouch.y + arc.crouch.size <= arc.jump.y).to.equal(true)
+			end
+		end)
+
+		it("keeps ABILITY clear of the other buttons, a full touch target, inside the screen", function()
+			expect(arcFailures(ShiftHudViewModel.arcFor(390), 844)).to.equal("")
+			expect(arcFailures(ShiftHudViewModel.arcFor(768), 1024)).to.equal("")
+			for _, short in { 375, 390, 768 } do
+				local arc = ShiftHudViewModel.arcFor(short)
+				expect(arc.ability.size >= 44).to.equal(true)
+				expect(-arc.ability.y <= short).to.equal(true)
 			end
 		end)
 

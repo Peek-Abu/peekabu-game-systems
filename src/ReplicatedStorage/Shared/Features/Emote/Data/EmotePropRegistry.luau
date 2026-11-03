@@ -29,6 +29,14 @@ local entries: { [string]: Entry } = {
 	cappypjidle = { props = { "Pillow", "Cocoa" } },
 	-- Cappy's hire reveal: his phone (an emote prop template, so every skin has it), PropsShow f1 to PropsStow f58.
 	cappyhirereveal = { props = { "Phone" } },
+	-- Cappy's Spot It! ability (both cuts): the same phone, PropsShow f12 to PropsStow f95.
+	cappyspotit = { props = { "Phone" } },
+	cappyspotitupper = { props = { "Phone" } },
+	-- Prickles' Potted Plant: the pot and its soil at his feet (mounted on his root), out from the enter's PropsShow
+	-- through the hold to the exit's PropsStow; a cut plant stows them with its clip.
+	pricklesplantenter = { props = { "PottedPlantPot", "PottedPlantSoil" } },
+	pricklesplanthold = { props = { "PottedPlantPot", "PottedPlantSoil" } },
+	pricklesplantexit = { props = { "PottedPlantPot", "PottedPlantSoil" } },
 	-- The Legendary unlock reveals: each skin's props, between the clip's PropsShow and PropsStow.
 	pippabubblebuddyreveal = { props = { "BubbleWand", "DuckRing" } },
 	pricklessheriffreveal = { props = { "HoseLasso" } },
