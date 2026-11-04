@@ -4,7 +4,8 @@
 	bookkeeping keyed by numbers (UserIds, target ids); InteractionChannelSystem owns the Instances.
 
 	A player channels at most one target. Progress is kept when everyone stops. `advance` returns the
-	players on a target exactly once, the tick it reaches 1, and forgets the target.
+	players on a target exactly once, the tick it reaches 1, and forgets the target. Each player adds
+	`dt / duration` times their rate (`rateOf`, absent = 1; a missing, non-finite or non-positive rate counts as 1).
 
 	@class InteractionChannelTracker
 ]=]
@@ -15,12 +16,24 @@ export type InteractionChannelTracker = {
 	targetOf: (self: InteractionChannelTracker, userId: number) -> number?,
 	channelers: (self: InteractionChannelTracker, targetId: number) -> { number },
 	progress: (self: InteractionChannelTracker, targetId: number) -> number,
-	advance: (self: InteractionChannelTracker, targetId: number, dt: number, duration: number) -> { number }?,
+	advance: (
+		self: InteractionChannelTracker,
+		targetId: number,
+		dt: number,
+		duration: number,
+		rateOf: ((userId: number) -> number?)?
+	) -> { number }?,
 	reset: (self: InteractionChannelTracker, targetId: number) -> (),
 	activeTargets: (self: InteractionChannelTracker) -> { number },
 }
 
 local InteractionChannelTracker = {}
+
+-- A player's rate: a positive finite number, else 1.
+local function rateFor(rateOf: ((userId: number) -> number?)?, userId: number): number
+	local rate = if rateOf ~= nil then rateOf(userId) else nil
+	return if rate ~= nil and rate > 0 and rate < math.huge then rate else 1
+end
 
 function InteractionChannelTracker.new(): InteractionChannelTracker
 	local targetByUser: { [number]: number } = {}
@@ -57,12 +70,16 @@ function InteractionChannelTracker.new(): InteractionChannelTracker
 			return progressByTarget[targetId] or 0
 		end,
 
-		advance = function(self, targetId, dt, duration)
+		advance = function(self, targetId, dt, duration, rateOf)
 			local players = self:channelers(targetId)
 			if #players == 0 then
 				return nil
 			end
-			local nextProgress = (progressByTarget[targetId] or 0) + dt * #players / duration
+			local rates = 0
+			for _, userId in players do
+				rates += rateFor(rateOf, userId)
+			end
+			local nextProgress = (progressByTarget[targetId] or 0) + dt * rates / duration
 			if nextProgress < 1 then
 				progressByTarget[targetId] = nextProgress
 				return nil
