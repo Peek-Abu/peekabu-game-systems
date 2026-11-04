@@ -35,7 +35,7 @@ return function()
 		local ping = CalloutRequestRules.shown({ userId = 1, kind = "ping", id = "help", x = 1, y = 2, z = 3 })
 		expect(ping.at).to.equal(Vector3.new(1, 2, 3))
 		local sticker =
-			CalloutRequestRules.shown({ userId = 1, kind = "sticker", id = "CozyPack.Cocoa", x = 0, y = 0, z = 0 })
+			CalloutRequestRules.shown({ userId = 1, kind = "sticker", id = "CozyPack.CocoaBreak", x = 0, y = 0, z = 0 })
 		expect(sticker.at).never.to.be.ok()
 		expect(CalloutRequestRules.shown({ userId = 1, kind = "nope", id = "x", x = 0, y = 0, z = 0 })).never.to.be.ok()
 	end)

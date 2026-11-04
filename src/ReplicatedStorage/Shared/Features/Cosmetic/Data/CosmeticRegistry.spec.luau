@@ -129,10 +129,11 @@ return function()
 		expect(#CosmeticRegistry.ofKind("skin") >= #CosmeticRegistry.ofKind("skin", "Cappy")).to.equal(true)
 	end)
 
-	it("holds the owner's 4 picks in the Bubble Buddy and Sheriff Prickles sticker packs", function()
+	it("holds the owner's 4 picks in each Legendary skin's sticker pack", function()
 		local picks = {
 			BubblePack = { "BubblePack.GoodJob", "BubblePack.ThankYou", "BubblePack.UhOh", "BubblePack.Yay" },
 			SheriffPack = { "SheriffPack.Aww", "SheriffPack.GotIt", "SheriffPack.Howdy", "SheriffPack.Oops" },
+			CozyPack = { "CozyPack.CocoaBreak", "CozyPack.Facepalm", "CozyPack.Sleepy", "CozyPack.Whatever" },
 		}
 		for pack, ids in picks do
 			local found = {}
@@ -146,5 +147,6 @@ return function()
 		end
 		expect(table.find(CosmeticRegistry.get("Pippa.BubbleBuddy").bundle, "BubblePack")).to.be.ok()
 		expect(table.find(CosmeticRegistry.get("Prickles.Sheriff").bundle, "SheriffPack")).to.be.ok()
+		expect(table.find(CosmeticRegistry.get("Cappy.PJ").bundle, "CozyPack")).to.be.ok()
 	end)
 end

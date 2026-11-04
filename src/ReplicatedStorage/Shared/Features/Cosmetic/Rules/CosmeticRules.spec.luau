@@ -29,7 +29,7 @@ return function()
 			expect(CosmeticRules.owns(none, "Nope")).to.equal(false)
 			local some = { owned = { employee = { Cappy = true }, stickerPack = { CozyPack = true } } }
 			expect(CosmeticRules.owns(some, "Cappy")).to.equal(true)
-			expect(CosmeticRules.owns(some, "CozyPack.Cocoa")).to.equal(true)
+			expect(CosmeticRules.owns(some, "CozyPack.CocoaBreak")).to.equal(true)
 			expect(CosmeticRules.owns(some, "BubblePack.Yay")).to.equal(false)
 		end)
 	end)
@@ -201,11 +201,11 @@ return function()
 			expect(notOwned).to.equal("not owned")
 			local _, kind = CosmeticRules.checkEquip(loadout, { kind = "sticker", slot = 1, id = "CozyPack" }, owns)
 			expect(kind).to.equal("wrong kind")
-			expect(CosmeticRules.checkEquip(loadout, { kind = "sticker", slot = 5, id = "CozyPack.Cocoa" }, owns)).to.equal(
+			expect(CosmeticRules.checkEquip(loadout, { kind = "sticker", slot = 5, id = "CozyPack.CocoaBreak" }, owns)).to.equal(
 				false
 			)
-			CosmeticRules.applyEquip(loadout, { kind = "sticker", slot = 2, id = "CozyPack.Cocoa" }, owns)
-			expect(loadout.stickers[2]).to.equal("CozyPack.Cocoa")
+			CosmeticRules.applyEquip(loadout, { kind = "sticker", slot = 2, id = "CozyPack.CocoaBreak" }, owns)
+			expect(loadout.stickers[2]).to.equal("CozyPack.CocoaBreak")
 		end)
 
 		it("refuses unknown ids", function()

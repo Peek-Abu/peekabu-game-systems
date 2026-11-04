@@ -11,7 +11,7 @@ return function()
 	local sent, clock, owned, body
 
 	local function install(stickers)
-		sent, clock, owned, body = {}, 100, { ["CozyPack.Cocoa"] = true }, Vector3.new(0, 0, 0)
+		sent, clock, owned, body = {}, 100, { ["CozyPack.CocoaBreak"] = true }, Vector3.new(0, 0, 0)
 		CalloutService._setDeps({
 			outfitOf = function()
 				return {
@@ -41,10 +41,10 @@ return function()
 	end)
 
 	it("tells everyone an owned sticker from a slot", function()
-		install({ "", "CozyPack.Cocoa", "", "" })
+		install({ "", "CozyPack.CocoaBreak", "", "" })
 		expect(CalloutService:callout(player, { kind = "sticker", slot = 2 })).to.equal(true)
 		expect(sent[1].kind).to.equal("sticker")
-		expect(sent[1].id).to.equal("CozyPack.Cocoa")
+		expect(sent[1].id).to.equal("CozyPack.CocoaBreak")
 		expect(sent[1].userId).to.equal(7)
 	end)
 

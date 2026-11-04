@@ -2,8 +2,7 @@
 --[=[
 	CalloutAssets: the art a callout shows, by name (the image ids themselves live in UIAssets).
 	- `PING_ICON`: each ping's kit render (CalloutRegistry ids).
-	- `stickerImage(id)`: a sticker's picture: its uploaded art (UIAssets.stickers); a sticker with none yet (the
-	  Cozy Pack, waiting on the owner's picks) borrows a kit render that hints at it.
+	- `stickerImage(id)`: a sticker's picture: its uploaded art (UIAssets.stickers); the shop gift for one with none.
 	- `PING_SOUND`: the UI sound tier a ping plays (stickers are silent).
 
 	@class CalloutAssets
@@ -23,13 +22,6 @@ local PING_ICON: { [string]: UIAssets.ToonIcon } = {
 	okay = "heart",
 }
 
--- Stand-ins for stickers with no uploaded art yet (see above).
-local STICKER_STAND_IN: { [string]: UIAssets.ToonIcon } = {
-	["CozyPack.Cocoa"] = "heart",
-	["CozyPack.Sleepy"] = "clock",
-	["CozyPack.Pillow"] = "gift",
-}
-
 local PING_SOUND: UISoundFormulas.Tier = "confirm"
 
 local CalloutAssets = {
@@ -37,14 +29,9 @@ local CalloutAssets = {
 	PING_SOUND = PING_SOUND,
 }
 
--- The sticker's image: its uploaded art, else its stand-in, else the shop gift.
+-- The sticker's image: its uploaded art, else the shop gift.
 function CalloutAssets.stickerImage(id: string): string
-	local art = UIAssets.stickers[id]
-	if art ~= nil then
-		return art
-	end
-	local icon: UIAssets.ToonIcon = STICKER_STAND_IN[id] or "shopGift"
-	return UIAssets.toonIcons[icon]
+	return UIAssets.stickers[id] or UIAssets.toonIcons.shopGift
 end
 
 -- The ping's image.

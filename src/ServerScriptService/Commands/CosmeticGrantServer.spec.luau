@@ -47,7 +47,7 @@ return function()
 
 		it("refuses unknown ids and single stickers without calling the service", function()
 			command(nil, fakePlayer, "Nope")
-			command(nil, fakePlayer, "CozyPack.Cocoa")
+			command(nil, fakePlayer, "CozyPack.CocoaBreak")
 			expect(#calls).to.equal(0)
 		end)
 	end)

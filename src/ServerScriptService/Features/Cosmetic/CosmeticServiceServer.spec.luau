@@ -139,7 +139,7 @@ return function()
 			seed(1)
 			expect(CosmeticService:owns(1, "Cappy.PJ")).to.equal(false)
 			expect(CosmeticService:grant(1, "Cappy.PJ")).to.equal(true)
-			for _, id in { "Cappy.PJ", "Cappy.CocoaSip", "SleepySway", "CozyPack", "CozyPack.Cocoa" } do
+			for _, id in { "Cappy.PJ", "Cappy.CocoaSip", "SleepySway", "CozyPack", "CozyPack.CocoaBreak" } do
 				expect(CosmeticService:owns(1, id)).to.equal(true)
 			end
 			settle()

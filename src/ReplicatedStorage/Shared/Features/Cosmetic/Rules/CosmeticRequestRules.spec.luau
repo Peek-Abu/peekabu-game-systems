@@ -10,7 +10,7 @@ return function()
 				{ kind = "idle", employee = "Cappy", id = "SleepySway" },
 				{ kind = "emote", employee = "Cappy", slot = 3, id = "Cappy.CocoaSip" },
 				{ kind = "emote", employee = "Cappy", slot = 3, id = "" },
-				{ kind = "sticker", slot = 1, id = "CozyPack.Cocoa" },
+				{ kind = "sticker", slot = 1, id = "CozyPack.CocoaBreak" },
 				{ kind = "sticker", slot = 1, id = "" },
 				{ kind = "vacuum", id = "Vacuum.BrassBellows" },
 			}

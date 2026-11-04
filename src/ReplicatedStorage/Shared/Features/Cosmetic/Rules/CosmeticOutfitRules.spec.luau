@@ -32,14 +32,14 @@ return function()
 			loadout.current = "Cappy"
 			loadout.vacuum = "Vacuum.BrassBellows"
 			loadout.looks.Cappy = { skin = "Cappy.PJ", style = 2, idle = "SleepySway", wheel = { "", "", "", "" } }
-			loadout.stickers[2] = "CozyPack.Cocoa"
+			loadout.stickers[2] = "CozyPack.CocoaBreak"
 			local owns = ownsOf({ "Cappy", "Cappy.PJ", "SleepySway", "Vacuum.BrassBellows", "CozyPack" })
 			local outfit = CosmeticOutfitRules.current(loadout, owns)
 			expect(outfit.employee).to.equal("Cappy")
 			expect(outfit.look.skin).to.equal("Cappy.PJ")
 			expect(outfit.look.style).to.equal(2)
 			expect(outfit.vacuum).to.equal("Vacuum.BrassBellows")
-			expect(outfit.stickers[2]).to.equal("CozyPack.Cocoa")
+			expect(outfit.stickers[2]).to.equal("CozyPack.CocoaBreak")
 			-- Not owned: back to the free ones.
 			local poor = CosmeticOutfitRules.current(loadout, ownsOf({}))
 			expect(poor.employee).to.equal("Pippa")

@@ -266,13 +266,13 @@ return function()
 	describe("chat wheel", function()
 		it("shows the 4 sticker slots and every pack, owned ones with their stickers to pick", function()
 			local owns = owner({ "CozyPack" })
-			local view = VM.chat(loadout({ stickers = { "CozyPack.Cocoa", "", "", "" } }), owns)
+			local view = VM.chat(loadout({ stickers = { "CozyPack.CocoaBreak", "", "", "" } }), owns)
 			expect(#view.slots).to.equal(4)
-			expect(view.slots[1].name).to.equal("Cocoa")
+			expect(view.slots[1].name).to.equal("Cocoa Break")
 			expect(view.slots[2].empty).to.equal(true)
 			local cozy = find(view.packs, "CozyPack")
 			expect(cozy.owned).to.equal(true)
-			expect(#cozy.stickers).to.equal(3)
+			expect(#cozy.stickers).to.equal(4)
 			expect(cozy.stickers[1].image ~= "").to.equal(true)
 			local bubble = find(view.packs, "BubblePack")
 			expect(bubble.owned).to.equal(false)
@@ -280,11 +280,19 @@ return function()
 		end)
 
 		it("puts a sticker in the chosen slot, else the first empty one, else slot 1", function()
-			local slots = VM.chat(loadout({ stickers = { "CozyPack.Cocoa", "", "", "" } }), owner({ "CozyPack" })).slots
+			local slots =
+				VM.chat(loadout({ stickers = { "CozyPack.CocoaBreak", "", "", "" } }), owner({ "CozyPack" })).slots
 			expect(VM.stickerSlotFor(slots, 4)).to.equal(4)
 			expect(VM.stickerSlotFor(slots, nil)).to.equal(2)
 			local full = VM.chat(
-				loadout({ stickers = { "CozyPack.Cocoa", "CozyPack.Cocoa", "CozyPack.Cocoa", "CozyPack.Cocoa" } }),
+				loadout({
+					stickers = {
+						"CozyPack.CocoaBreak",
+						"CozyPack.CocoaBreak",
+						"CozyPack.CocoaBreak",
+						"CozyPack.CocoaBreak",
+					},
+				}),
 				owner({ "CozyPack" })
 			).slots
 			expect(VM.stickerSlotFor(full, nil)).to.equal(1)

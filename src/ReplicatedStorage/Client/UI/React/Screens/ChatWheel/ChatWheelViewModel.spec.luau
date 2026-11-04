@@ -16,11 +16,11 @@ return function()
 
 	it("shows the six pings and the 4 sticker slots, owned stickers with their picture", function()
 		local loadout = CosmeticConstants.defaultLoadout()
-		loadout.stickers = { "CozyPack.Cocoa", "", "BubblePack.Yay", "" }
-		local view = VM.view(loadout, owns({ "CozyPack.Cocoa" }))
+		loadout.stickers = { "CozyPack.CocoaBreak", "", "BubblePack.Yay", "" }
+		local view = VM.view(loadout, owns({ "CozyPack.CocoaBreak" }))
 		expect(#view.pings).to.equal(6)
 		expect(view.pings[1].word).to.equal("Gloom here")
-		expect(view.stickers[1].name).to.equal("Cocoa")
+		expect(view.stickers[1].name).to.equal("Cocoa Break")
 		expect(view.stickers[1].image).to.be.ok()
 		expect(view.stickers[2].empty).to.equal(true)
 		-- In a slot but not owned (any more): shown empty.

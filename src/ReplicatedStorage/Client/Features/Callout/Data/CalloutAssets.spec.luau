@@ -19,14 +19,12 @@ return function()
 		end
 	end)
 
-	it("draws the Bubble Buddy and Sheriff Prickles stickers with their own uploaded art", function()
+	it("draws every sticker with its own uploaded art", function()
 		for _, item in CosmeticRegistry.ofKind("sticker") do
-			if item.pack == "BubblePack" or item.pack == "SheriffPack" then
-				local image = UIAssets.stickers[item.id]
-				expect(image).to.be.ok()
-				expect(string.match(image, "^rbxassetid://%d+$")).to.be.ok()
-				expect(CalloutAssets.stickerImage(item.id)).to.equal(image)
-			end
+			local image = UIAssets.stickers[item.id]
+			expect(image).to.be.ok()
+			expect(string.match(image, "^rbxassetid://%d+$")).to.be.ok()
+			expect(CalloutAssets.stickerImage(item.id)).to.equal(image)
 		end
 	end)
 

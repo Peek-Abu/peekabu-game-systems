@@ -27,11 +27,11 @@ return function()
 
 	describe("sticker", function()
 		it("gives an owned sticker in a slot, and refuses an empty or unowned one", function()
-			local stickers = { "CozyPack.Cocoa", "", "Nope", "" }
+			local stickers = { "CozyPack.CocoaBreak", "", "Nope", "" }
 			local owns = function(id)
-				return id == "CozyPack.Cocoa"
+				return id == "CozyPack.CocoaBreak"
 			end
-			expect(CalloutRules.sticker(stickers, 1, owns)).to.equal("CozyPack.Cocoa")
+			expect(CalloutRules.sticker(stickers, 1, owns)).to.equal("CozyPack.CocoaBreak")
 			expect(select(2, CalloutRules.sticker(stickers, 2, owns))).to.equal("empty slot")
 			expect(select(2, CalloutRules.sticker(stickers, 3, owns))).to.equal("empty slot")
 			expect(select(2, CalloutRules.sticker({ "BubblePack.Yay", "", "", "" }, 1, owns))).to.equal("not owned")
