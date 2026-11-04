@@ -45,7 +45,10 @@ return function()
 			expect(entry).to.be.ok()
 			local on = {}
 			for _, effect in entry.effects do
-				on[effect.on] = effect
+				-- The sound cues share these markers; the sounds test covers them.
+				if string.find(effect.id, "Sound", 1, true) == nil then
+					on[effect.on] = effect
+				end
 			end
 			expect(on.LoopOut.id).to.equal("lassoPuff")
 			expect(on.Yank.id).to.equal("lassoPuff")
