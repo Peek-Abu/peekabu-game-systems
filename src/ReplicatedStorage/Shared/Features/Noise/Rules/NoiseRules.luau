@@ -8,6 +8,10 @@
 	@class NoiseRules
 ]=]
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local NoiseConstants = require(ReplicatedStorage.Shared.Features.Noise.Data.NoiseConstants)
+
 local NoiseRules = {}
 
 local function finite(value: number): boolean
@@ -41,6 +45,13 @@ end
 function NoiseRules.hears(listener: Vector3, origin: Vector3, radius: number, scale: number): boolean
 	local reach = NoiseRules.heardRadius(radius, scale)
 	return reach > 0 and (listener - origin).Magnitude <= reach
+end
+
+--[=[
+	Whether the makers' Quiet stat shrinks a noise from `source` (NoiseConstants.QUIET_SOURCES).
+]=]
+function NoiseRules.quietens(source: string): boolean
+	return NoiseConstants.QUIET_SOURCES[source] == true
 end
 
 return NoiseRules

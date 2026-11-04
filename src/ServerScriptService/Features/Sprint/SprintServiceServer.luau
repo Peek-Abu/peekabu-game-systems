@@ -26,7 +26,7 @@
 
 	Employee stats (EmployeeStatFormulas, read from the character's stat bars every tick): Speed scales SPRINT_SPEED
 	(the plain walk is already scaled when the character is built, so the boost multiplies on top of both), Stamina
-	lengthens the bar and speeds its refill, Quiet shrinks the sprinting feet's noise.
+	lengthens the bar and speeds its refill (Noise applies Quiet to the sprinting feet's noise).
 
 	Spec-exempt shell (Humanoids, Players, ByteNet, RunService); the decisions are the specced SprintRules,
 	SprintSpeedFormulas and SprintStaminaFormulas.
@@ -180,8 +180,7 @@ local function stepOne(player: Player, runner: Runner, dt: number)
 			counters.steps += 1
 			NoiseServiceServer:emit(
 				root.Position,
-				SprintConstants.SPRINT_NOISE_RADIUS
-					* EmployeeStatFormulas.cut("quiet", EmployeeStatFormulas.barsOn(character, "quiet")),
+				SprintConstants.SPRINT_NOISE_RADIUS,
 				SprintConstants.NOISE_SOURCE,
 				{ player.UserId }
 			)

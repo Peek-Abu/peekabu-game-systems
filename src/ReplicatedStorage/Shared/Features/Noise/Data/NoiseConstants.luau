@@ -8,6 +8,9 @@
 	@class NoiseConstants
 ]=]
 
+-- The sources the makers' Quiet stat shrinks (EmployeeStatFormulas.noiseCut).
+local QUIET_SOURCES: { [string]: boolean } = { sprint = true, vacuum = true }
+
 return table.freeze({
 	RIPPLE_NAME = "NoiseRipple",
 	-- Seconds from the noise to the ring vanishing at the heard radius.
@@ -27,4 +30,7 @@ return table.freeze({
 	RIPPLE_MAX_DISTANCE = 200,
 	-- How far down the floor is looked for under a noise.
 	FLOOR_PROBE = 12,
+	-- Your own sprinting feet and your vacuum (SprintConstants.NOISE_SOURCE and Vacuum's pulse); a drop, a search, a
+	-- rattle or a hide exit is not.
+	QUIET_SOURCES = table.freeze(QUIET_SOURCES),
 })

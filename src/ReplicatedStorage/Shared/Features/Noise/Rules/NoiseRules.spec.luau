@@ -5,6 +5,7 @@ local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.Carg
 local CargoRegistry = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoRegistry)
 local CargoHandlingRules = require(ReplicatedStorage.Shared.Features.Cargo.Rules.CargoHandlingRules)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
+local SprintConstants = require(ReplicatedStorage.Shared.Features.Sprint.Data.SprintConstants)
 
 local ORIGIN = Vector3.new(0, 0, 0)
 
@@ -91,6 +92,13 @@ return function()
 			expect(NoiseRules.valid(Vector3.new(math.huge, 0, 0), 10)).to.equal(false)
 			expect(NoiseRules.valid(Vector3.new(0, 0 / 0, 0), 10)).to.equal(false)
 			expect(NoiseRules.valid(Vector3.new(0, 0, -math.huge), 10)).to.equal(false)
+		end)
+
+		it("lets Quiet shrink only your own sprinting feet and vacuum", function()
+			expect(NoiseRules.quietens(SprintConstants.NOISE_SOURCE)).to.equal(true)
+			expect(NoiseRules.quietens("vacuum")).to.equal(true)
+			expect(NoiseRules.quietens("drop")).to.equal(false)
+			expect(NoiseRules.quietens("hideExit")).to.equal(false)
 		end)
 
 		it("validScale wants a finite positive scale", function()

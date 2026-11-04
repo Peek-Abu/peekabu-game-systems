@@ -18,7 +18,8 @@
 	- `take` empties the inventory for a Load; `scatter` empties it and puts the pocketed items back in the world
 	  (CargoScatterSystem).
 	- `loadOf` is the player's whole load for Carry's walk (CarrySpeedSystem.setLoadSource): SMALL_LOAD per small item
-	  plus the big hands item's weight (CargoInventoryRules.load).
+	  plus the big hands item's weight (CargoInventoryRules.load), with the carrier's Strength taken off
+	  (EmployeeStatFormulas.carriedWeight) before Carry's slowdown.
 	- Published per player: CargoInventoryUtils.published (each item slot's kind, known value and jackpot name, the
 	  hands slot and the empty-hands choice).
 
@@ -35,6 +36,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local CargoShared = ReplicatedStorage.Shared.Features.Cargo
 local CargoServer = ServerScriptService.Features.Cargo
 local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
+local EmployeeStatFormulas = require(ReplicatedStorage.Shared.Features.Employee.Utils.EmployeeStatFormulas)
 local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionConstants)
 local CargoConstants = require(CargoShared.Data.CargoConstants)
 local CargoRegistry = require(CargoShared.Data.CargoRegistry)
@@ -252,7 +254,9 @@ function CargoInventorySystem.new(deps: Deps): CargoInventorySystem
 				return true
 			end)
 			CarrySpeedSystem.setLoadSource(function(player: Player): number?
-				return self:loadOf(player)
+				local load = self:loadOf(player)
+				local strength = EmployeeStatFormulas.barsOn(player.Character, "strength")
+				return if load ~= nil then EmployeeStatFormulas.carriedWeight(load, strength) else nil
 			end)
 			local onSelect = RequestHandler.wrap({
 				name = "CargoSelect",

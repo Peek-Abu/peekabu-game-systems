@@ -56,6 +56,27 @@ return function()
 		character:Destroy()
 	end)
 
+	it("takes Strength off a carried load's weight", function()
+		expect(EmployeeStatFormulas.carriedWeight(7, 1)).to.equal(7)
+		expect(EmployeeStatFormulas.carriedWeight(7, 5)).to.be.near(5.88)
+		expect(EmployeeStatFormulas.carriedWeight(0, 5)).to.equal(0)
+	end)
+
+	it("cleans at the vacuum holder's Suction, today's speed without a character", function()
+		local character = Instance.new("Model")
+		character:SetAttribute(EmployeeConstants.STAT_ATTRIBUTES.suction, 5)
+		expect(EmployeeStatFormulas.suctionRate({ Character = character }, nil)).to.be.near(1.16)
+		expect(EmployeeStatFormulas.suctionRate({ Character = nil }, nil)).to.equal(1)
+		character:Destroy()
+	end)
+
+	it("makes a shared noise as loud as its loudest maker (the lowest Quiet)", function()
+		expect(EmployeeStatFormulas.noiseCut({})).to.equal(1)
+		expect(EmployeeStatFormulas.noiseCut({ 5 })).to.be.near(0.84)
+		expect(EmployeeStatFormulas.noiseCut({ 5, 2, 4 })).to.be.near(0.96)
+		expect(EmployeeStatFormulas.noiseCut({ 1, 5 })).to.equal(1)
+	end)
+
 	it("gives every employee's spread the same total", function()
 		local total = nil
 		for _, name in EmployeeRegistry.names() do

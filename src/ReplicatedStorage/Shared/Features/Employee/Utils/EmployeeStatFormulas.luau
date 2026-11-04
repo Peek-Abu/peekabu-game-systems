@@ -11,6 +11,11 @@
 	  server's EmployeeStatSystem), clamped and rounded to 1-5; FLOOR when there is none.
 	- `gain(stat, bars)`: the step times the bars above 1. `effect` is 1 + gain (Speed, Stamina, Suction: more is
 	  better), `cut` is 1 - gain (Strength takes it off a load's weight, Quiet off a noise's radius).
+	- `carriedWeight(weight, bars)`: a load's weight with Strength taken off (before Carry's slowdown).
+	- `suctionRate(player, target)`: how fast the player's vacuum cleans (the Suction effect; an Interaction channel's
+	  `rate`, for Vacuum's piles and Cargo's grime).
+	- `noiseCut(bars)`: the radius factor of a noise several players make at once (a shared pile): the loudest
+	  maker's, so a quiet employee never hides a loud one; 1 with no maker.
 
 	The owner of each value reads it: Sprint (Speed, Stamina, Quiet on sprint feet), Cargo's load (Strength), Vacuum and
 	Cargo's grime (Suction, Quiet on the vacuum).
@@ -72,6 +77,22 @@ end
 
 function EmployeeStatFormulas.cut(stat: Stat, bars: number): number
 	return 1 - EmployeeStatFormulas.gain(stat, bars)
+end
+
+function EmployeeStatFormulas.carriedWeight(weight: number, bars: number): number
+	return weight * EmployeeStatFormulas.cut("strength", bars)
+end
+
+function EmployeeStatFormulas.suctionRate(player: Player, _target: Instance?): number
+	return EmployeeStatFormulas.effect("suction", EmployeeStatFormulas.barsOn(player.Character, "suction"))
+end
+
+function EmployeeStatFormulas.noiseCut(makers: { number }): number
+	local loudest = 0
+	for _, bars in makers do
+		loudest = math.max(loudest, EmployeeStatFormulas.cut("quiet", bars))
+	end
+	return if #makers > 0 then loudest else 1
 end
 
 return EmployeeStatFormulas

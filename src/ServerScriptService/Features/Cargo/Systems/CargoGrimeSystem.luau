@@ -37,6 +37,7 @@ local CargoAppraisalFormulas = require(ReplicatedStorage.Shared.Features.Cargo.U
 local CargoRegistry = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoRegistry)
 local CargoFeedbackUtils = require(ReplicatedStorage.Shared.Features.Cargo.Utils.CargoFeedbackUtils)
 local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
+local EmployeeStatFormulas = require(ReplicatedStorage.Shared.Features.Employee.Utils.EmployeeStatFormulas)
 local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionConstants)
 local InteractionRegistry = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionRegistry)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
@@ -232,6 +233,7 @@ function CargoGrimeSystem.new(deps: Deps): CargoGrimeSystem
 								and target:HasTag(VacuumConstants.GRIME_TAG)
 								and VacuumServiceServer:canVacuum(player, target)
 						end,
+						rate = EmployeeStatFormulas.suctionRate,
 						onComplete = function(_players, target)
 							if target.Parent ~= nil then
 								self:finish(target)

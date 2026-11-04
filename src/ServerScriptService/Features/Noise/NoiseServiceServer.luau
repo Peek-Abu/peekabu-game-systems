@@ -4,13 +4,16 @@
 	pulses, Cargo's drops, splashes, searches and rattles, and Hide's coming out of a spot (the Manager's behaviours
 	design §10.3) arrive on their `noiseMade` signals; anything else
 	may call `emit`. Every noise fires `made` (Occupant decides whether Harlow hears it, through NoiseRules) and
-	shows every client a ripple at the radius Harlow hears it at (the hearing scale Occupant keeps current).
+	shows every client a ripple at the radius Harlow hears it at (the hearing scale Occupant keeps current). A noise from
+	a Quiet source (NoiseRules.quietens: sprinting feet, a vacuum) carries as far as its loudest maker's Quiet stat
+	allows (EmployeeStatFormulas.noiseCut), so a quiet employee never hides a loud one.
 
 	Spec-exempt shell (signals, ByteNet); the hearing rule is the specced NoiseRules.
 
 	@class NoiseServiceServer
 ]=]
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
@@ -19,6 +22,7 @@ local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local NoiseTypes = require(NoiseShared.Data.NoiseTypes)
 local NoiseEvents = require(NoiseShared.Net.NoiseEvents)
 local NoiseRules = require(NoiseShared.Rules.NoiseRules)
+local EmployeeStatFormulas = require(ReplicatedStorage.Shared.Features.Employee.Utils.EmployeeStatFormulas)
 local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
 local HideServiceServer = require(ServerScriptService.Features.Hide.HideServiceServer)
 local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
@@ -28,6 +32,16 @@ local hearingScale = 1
 local total = 0
 local bySource: { [string]: number } = {}
 local stoppers: { () -> () } = {}
+
+-- The Quiet bars of each maker (their character's stat bars; the floor for anyone without a character).
+local function quietOf(makers: { number }): { number }
+	local bars: { number } = {}
+	for _, userId in makers do
+		local player = Players:GetPlayerByUserId(userId)
+		table.insert(bars, EmployeeStatFormulas.barsOn(if player ~= nil then player.Character else nil, "quiet"))
+	end
+	return bars
+end
 
 export type NoiseServiceServer = {
 	dependencies: { string },
@@ -83,6 +97,9 @@ local NoiseServiceServer: NoiseServiceServer = {
 	emit = function(_self, position, radius, source, makers)
 		if not NoiseRules.valid(position, radius) then
 			return
+		end
+		if makers ~= nil and NoiseRules.quietens(source) then
+			radius *= EmployeeStatFormulas.noiseCut(quietOf(makers))
 		end
 		total += 1
 		bySource[source] = (bySource[source] or 0) + 1

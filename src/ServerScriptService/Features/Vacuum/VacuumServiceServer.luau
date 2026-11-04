@@ -18,6 +18,8 @@
 	- answers `canVacuum` for Cargo's grime channels (the loot loop, docs/superpowers/specs/
 	  2026-10-15-cleanup-crew-loot-loop-design.md §3.2: a grimy valuable, tagged GRIME_TAG, is vacuumed exactly like a
 	  pile; Cargo's CargoGrimeSystem owns the channel and the cleanliness), and pulses the same noise for it;
+	- employee stats: the pile channel cleans at each holder's Suction (EmployeeStatFormulas.suctionRate, as Cargo's
+	  grime channels do); Noise applies Quiet to the pulses' makers;
 	- dresses every character in the canister backpack as it spawns (VacuumVisualSystem.wear), in the depot as on
 	  a shift: it is part of the employee's look, its wand clipped on, in the skin the character's
 	  VacuumConstants.SKIN_ATTRIBUTE names (EmployeeServiceServer writes it from the player's Cosmetic outfit), and
@@ -39,6 +41,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local Observers = require(ReplicatedStorage.Packages.Observers)
 local AnimationRegistry = require(ReplicatedStorage.Shared.Features.Animation.Data.AnimationRegistry)
 local DeathKnockdownUtils = require(ReplicatedStorage.Shared.Features.Death.Utils.DeathKnockdownUtils)
+local EmployeeStatFormulas = require(ReplicatedStorage.Shared.Features.Employee.Utils.EmployeeStatFormulas)
 local AnimationServiceServer = require(ServerScriptService.Features.Animation.AnimationServiceServer)
 local AnimationVacuumSystem = require(ServerScriptService.Features.Animation.Systems.AnimationVacuumSystem)
 local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
@@ -140,21 +143,15 @@ local function wornFor(character: Model): VacuumVisualSystem.WornBackpack?
 	return backpack
 end
 
-local function rootOf(player: Player): BasePart?
-	local character = player.Character
-	local root = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil
-	return if root ~= nil and root:IsA("BasePart") then root else nil
-end
-
 -- The client's pick re-checked (VacuumTargetRules, with TARGET_SLACK): `pile` is near the held wand's floor
 -- head, underfoot, or in front of the body.
 local SERVER_REACH = VacuumTargetRules.widened(VacuumConstants.TARGET, VacuumConstants.TARGET_SLACK)
 local function inReach(player: Player, pile: Instance): boolean
-	local root = rootOf(player)
-	if root == nil or not pile:IsA("BasePart") then
+	local character = player.Character
+	local root = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil
+	if root == nil or not root:IsA("BasePart") or not pile:IsA("BasePart") then
 		return false
 	end
-	local character = player.Character
 	local tool = if character ~= nil then character:FindFirstChild(VacuumConstants.TOOL_NAME) else nil
 	local head = if tool ~= nil then tool:FindFirstChild(VacuumConstants.FLOOR_HEAD_NAME) else nil
 	return VacuumTargetRules.reaches(
@@ -268,6 +265,7 @@ local VacuumServiceServer: VacuumServiceServer = {
 	start = function(self)
 		InteractionServiceServer:channel(VacuumConstants.CHANNEL_KIND, {
 			canChannel = canVacuum,
+			rate = EmployeeStatFormulas.suctionRate,
 			onComplete = clear,
 		})
 
