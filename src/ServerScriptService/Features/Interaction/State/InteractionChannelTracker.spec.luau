@@ -26,6 +26,31 @@ return function()
 		expect(tracker:progress(10)).to.be.near(0.6)
 	end)
 
+	it("advances each player at their own rate when one is given", function()
+		local tracker = InteractionChannelTracker.new()
+		tracker:start(1, 10)
+		tracker:start(2, 10)
+		local rates = { [1] = 1.2, [2] = 0.8 }
+		tracker:advance(10, 0.5, 2.5, function(userId)
+			return rates[userId]
+		end)
+		-- (1.2 + 0.8) x 0.5 / 2.5
+		expect(tracker:progress(10)).to.be.near(0.4)
+	end)
+
+	it("treats a missing, non-finite or non-positive rate as 1", function()
+		local tracker = InteractionChannelTracker.new()
+		tracker:start(1, 10)
+		tracker:start(2, 10)
+		tracker:start(3, 10)
+		tracker:start(4, 10)
+		local rates = { [2] = 0 / 0, [3] = -2, [4] = math.huge }
+		tracker:advance(10, 0.25, 2.5, function(userId)
+			return rates[userId]
+		end)
+		expect(tracker:progress(10)).to.be.near(0.4)
+	end)
+
 	it("keeps progress when everyone stops", function()
 		local tracker = InteractionChannelTracker.new()
 		tracker:start(1, 10)
