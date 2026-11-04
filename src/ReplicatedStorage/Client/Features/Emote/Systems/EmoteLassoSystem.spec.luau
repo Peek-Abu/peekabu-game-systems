@@ -105,6 +105,37 @@ return function()
 		release()
 	end)
 
+	it(
+		"wears the worn coil's colours: the skin style's hose on every beam and joint, its metal on the nozzle",
+		function()
+			local system, frame, _, container = setup()
+			local character, loop = makeCharacter()
+			character:SetAttribute(EmployeeConstants.SKIN_ATTRIBUTE, "Sheriff")
+			character:SetAttribute(EmployeeConstants.STYLE_ATTRIBUTE, 3)
+			local look = EmoteLassoConstants.LOOKS[3]
+			local release = system.track(character)
+			loop.Transparency = 0
+			frame()
+			local beams, nozzles = 0, 0
+			for _, child in container:GetDescendants() do
+				if child:IsA("Beam") then
+					expect(child.Color.Keypoints[1].Value).to.equal(look.hose)
+					beams += 1
+				elseif child:IsA("BasePart") then
+					if child.Shape == Enum.PartType.Ball then
+						expect(child.Color).to.equal(look.hose)
+					else
+						expect(child.Color).to.equal(look.nozzle)
+						nozzles += 1
+					end
+				end
+			end
+			expect(beams).to.equal(T.ropePoints + T.ringPoints)
+			expect(nozzles).to.equal(1)
+			release()
+		end
+	)
+
 	it("clears the drawing and gives the prop back when the clip hides the loop (the coil swap, a stop)", function()
 		local system, frame, beams = setup()
 		local character, loop = makeCharacter()

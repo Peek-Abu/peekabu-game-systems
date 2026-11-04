@@ -28,6 +28,18 @@ return function()
 		expect(T.maxSubsteps >= 4).to.equal(true)
 	end)
 
+	it("colours the hose and nozzle like the worn coil, per Sheriff style (the skin's palette, in sRGB)", function()
+		local looks = EmoteLassoConstants.LOOKS
+		expect(EmoteLassoConstants.LOOK_SKIN).to.equal("Sheriff")
+		expect(#looks).to.equal(3)
+		expect(looks[1].hose).to.equal(Color3.fromRGB(66, 53, 60))
+		expect(looks[1].nozzle).to.equal(Color3.fromRGB(237, 184, 80))
+		expect(looks[2].hose).to.equal(Color3.fromRGB(53, 63, 85))
+		expect(looks[2].nozzle).to.equal(Color3.fromRGB(214, 221, 230))
+		expect(looks[3].hose).to.equal(Color3.fromRGB(33, 108, 118))
+		expect(looks[3].nozzle).to.equal(Color3.fromRGB(231, 151, 97))
+	end)
+
 	it("matches the LassoLoop mesh: the knot sits the rope's length straight above the grip", function()
 		local rise = EmoteLassoConstants.KNOT - EmoteLassoConstants.GRIP
 		expect(math.abs(rise.X) < 1e-6 and math.abs(rise.Z) < 1e-6).to.equal(true)

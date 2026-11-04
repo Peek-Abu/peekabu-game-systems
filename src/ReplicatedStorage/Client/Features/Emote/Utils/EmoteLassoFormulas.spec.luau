@@ -44,6 +44,27 @@ return function()
 		end)
 	end)
 
+	describe("lookOf", function()
+		local LOOKS = EmoteLassoConstants.LOOKS
+
+		it("takes the Sheriff style's own hose and nozzle colours", function()
+			for style = 1, #LOOKS do
+				expect(EmoteLassoFormulas.lookOf("Sheriff", style)).to.equal(LOOKS[style])
+			end
+		end)
+
+		it("falls back to the first style for another skin (the emote's own default-look props)", function()
+			expect(EmoteLassoFormulas.lookOf("Default", 2)).to.equal(LOOKS[1])
+			expect(EmoteLassoFormulas.lookOf(nil, nil)).to.equal(LOOKS[1])
+		end)
+
+		it("falls back to the first style for a style it does not know", function()
+			expect(EmoteLassoFormulas.lookOf("Sheriff", 9)).to.equal(LOOKS[1])
+			expect(EmoteLassoFormulas.lookOf("Sheriff", 0)).to.equal(LOOKS[1])
+			expect(EmoteLassoFormulas.lookOf("Sheriff", 1.5)).to.equal(LOOKS[1])
+		end)
+	end)
+
 	describe("driverOf", function()
 		it("reads the grip, the knot above it and the scale from the part", function()
 			local d = EmoteLassoFormulas.driverOf(CFrame.new(), HEIGHT * 2, Vector3.new(0, 0, -1))

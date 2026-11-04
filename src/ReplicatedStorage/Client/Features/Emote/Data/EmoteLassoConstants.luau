@@ -10,6 +10,12 @@
 	@class EmoteLassoConstants
 ]=]
 
+-- The hose's and the nozzle's colours.
+export type Look = {
+	hose: Color3,
+	nozzle: Color3,
+}
+
 export type Tuning = {
 	-- LassoLoop v3 geometry: the rope stands ropeLength above the grip; the ring's radius.
 	ropeLength: number,
@@ -101,9 +107,19 @@ local EmoteLassoConstants = {
 	GRIP = Vector3.new(1.091, -1.31, 0),
 	KNOT = Vector3.new(1.091, 1.19, 0),
 	TUNING = TUNING,
-	-- The look: the hose's slate blue and the nozzle's brass, from the LassoLoop texture.
-	HOSE = Color3.fromRGB(52, 58, 88),
-	BRASS = Color3.fromRGB(201, 151, 62),
+	-- The look matches the coil he wears (owner, 2026-11-03: a mismatch is a bug): the skin whose styles these are,
+	-- and per style (EmployeeConstants.STYLE_ATTRIBUTE) its hose and nozzle metal, from the Sheriff skin's palette
+	-- (characters/skins/release/sheriff_prickles/manifest.json `hose` / `metal`, linear -> sRGB). Any other skin
+	-- wears the emote's default-look props, style 1.
+	LOOK_SKIN = "Sheriff",
+	LOOKS = table.freeze({
+		-- Brown (BrownRed): dark plum hose, brass nozzle.
+		table.freeze({ hose = Color3.fromRGB(66, 53, 60), nozzle = Color3.fromRGB(237, 184, 80) }),
+		-- Gray (CharcoalBlue): slate hose, silver nozzle.
+		table.freeze({ hose = Color3.fromRGB(53, 63, 85), nozzle = Color3.fromRGB(214, 221, 230) }),
+		-- IvoryTeal: teal hose, copper nozzle.
+		table.freeze({ hose = Color3.fromRGB(33, 108, 118), nozzle = Color3.fromRGB(231, 151, 97) }),
+	}),
 	-- Beam and ring-joint width, and the nozzle's size (template units).
 	WIDTH = 0.17,
 	NOZZLE = Vector3.new(0.26, 0.19, 0.19),

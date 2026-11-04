@@ -6,7 +6,8 @@
 	The clip still poses the rigid LassoLoop prop, and EmotePropSystem still shows and hides it from the clip's markers
 	(late joiners included). While it shows, this system hides it on this client only (LocalTransparencyModifier, so
 	it never fights EmotePropSystem's Transparency) and draws over it: a rope of beams from the hand to the knot, a
-	ring of beams through the knot with small balls at its joints, and the brass nozzle at the knot. Every frame the
+	ring of beams through the knot with small balls at its joints, and the nozzle at the knot, all in the colours of
+	the coil he wears (his skin style's hose and metal). Every frame the
 	chain and ring move by EmoteLassoFormulas on fixed substeps, from the prop's pose. When the prop hides (the coil
 	swap, a stop) or the character is released, the drawing goes and the prop's view is given back.
 
@@ -21,6 +22,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
 local EmoteLassoConstants = require(ReplicatedStorage.Client.Features.Emote.Data.EmoteLassoConstants)
 local EmoteLassoFormulas = require(ReplicatedStorage.Client.Features.Emote.Utils.EmoteLassoFormulas)
 local EmotePropSystem = require(ReplicatedStorage.Client.Features.Emote.Systems.EmotePropSystem)
@@ -95,11 +97,11 @@ local function newAttachment(parent: BasePart): Attachment
 	return attachment
 end
 
-local function newBeam(a0: Attachment, a1: Attachment, parent: Instance): Beam
+local function newBeam(a0: Attachment, a1: Attachment, color: Color3, parent: Instance): Beam
 	local beam = Instance.new("Beam")
 	beam.Name = "EmoteLasso"
 	beam.Attachment0, beam.Attachment1 = a0, a1
-	beam.Color = ColorSequence.new(EmoteLassoConstants.HOSE)
+	beam.Color = ColorSequence.new(color)
 	beam.Transparency = NumberSequence.new(0)
 	beam.LightInfluence = 1
 	beam.LightEmission = 0
@@ -109,7 +111,7 @@ local function newBeam(a0: Attachment, a1: Attachment, parent: Instance): Beam
 	return beam
 end
 
-local function build(container: BasePart): Drawing
+local function build(container: BasePart, look: EmoteLassoConstants.Look): Drawing
 	local ropeAttachments, ringAttachments, ropeBeams, ringBeams, joints = {}, {}, {}, {}, {}
 	for i = 1, M + 1 do
 		ropeAttachments[i] = newAttachment(container)
@@ -118,14 +120,14 @@ local function build(container: BasePart): Drawing
 		ringAttachments[i] = newAttachment(container)
 	end
 	for i = 1, M do
-		ropeBeams[i] = newBeam(ropeAttachments[i], ropeAttachments[i + 1], container)
+		ropeBeams[i] = newBeam(ropeAttachments[i], ropeAttachments[i + 1], look.hose, container)
 	end
 	for i = 1, K do
-		ringBeams[i] = newBeam(ringAttachments[i], ringAttachments[i % K + 1], container)
+		ringBeams[i] = newBeam(ringAttachments[i], ringAttachments[i % K + 1], look.hose, container)
 		-- Small balls hide the seams where the ring's beams meet (none on the rope: its joints are smooth).
-		joints[i] = newPart(Enum.PartType.Ball, EmoteLassoConstants.HOSE, Enum.Material.SmoothPlastic, container)
+		joints[i] = newPart(Enum.PartType.Ball, look.hose, Enum.Material.SmoothPlastic, container)
 	end
-	local nozzle = newPart(Enum.PartType.Cylinder, EmoteLassoConstants.BRASS, Enum.Material.Metal, container)
+	local nozzle = newPart(Enum.PartType.Cylinder, look.nozzle, Enum.Material.Metal, container)
 	return {
 		ropeAttachments = ropeAttachments,
 		ringAttachments = ringAttachments,
@@ -257,7 +259,15 @@ function EmoteLassoSystem.new(deps: Deps?): EmoteLassoSystem
 		if not record.state.live then
 			return
 		end
-		local drawing = record.drawing or build(use.container)
+		-- In the colours of the coil he wears (the skin style he has on as the loop comes out).
+		local drawing = record.drawing
+			or build(
+				use.container,
+				EmoteLassoFormulas.lookOf(
+					character:GetAttribute(EmployeeConstants.SKIN_ATTRIBUTE),
+					character:GetAttribute(EmployeeConstants.STYLE_ATTRIBUTE)
+				)
+			)
 		record.drawing = drawing
 		draw(drawing, record.state, driver.scale)
 	end

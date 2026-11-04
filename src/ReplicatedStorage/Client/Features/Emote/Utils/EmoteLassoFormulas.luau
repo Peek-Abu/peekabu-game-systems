@@ -76,6 +76,21 @@ function EmoteLassoFormulas.newState(): State
 end
 
 --[=[
+	The hose and nozzle colours for a character wearing `skin` in `style` (its attributes): the Sheriff style's own,
+	else the first style (another skin wears the emote's default-look props).
+]=]
+function EmoteLassoFormulas.lookOf(skin: unknown, style: unknown): EmoteLassoConstants.Look
+	local looks = EmoteLassoConstants.LOOKS
+	if skin == EmoteLassoConstants.LOOK_SKIN and type(style) == "number" then
+		local look = looks[style]
+		if look ~= nil then
+			return look
+		end
+	end
+	return looks[1]
+end
+
+--[=[
 	The clip's lasso pose from the LassoLoop part's CFrame, its height and his look direction.
 ]=]
 function EmoteLassoFormulas.driverOf(cf: CFrame, height: number, look: Vector3): Driver
