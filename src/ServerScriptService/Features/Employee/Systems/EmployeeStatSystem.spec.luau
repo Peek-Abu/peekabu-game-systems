@@ -12,6 +12,9 @@ local function body(walk: number)
 	return model, humanoid
 end
 
+-- Humanoid.WalkSpeed is stored as a 32-bit float, so a speed reads back within about 1e-6 of what was written.
+local FLOAT32 = 1e-4
+
 local BARS = { speed = 5, stamina = 2, strength = 3, suction = 4, quiet = 1 }
 
 return function()
@@ -28,7 +31,7 @@ return function()
 	it("scales the plain walk by Speed", function()
 		local model, humanoid = body(16)
 		EmployeeStatSystem.apply(model, BARS)
-		expect(humanoid.WalkSpeed).to.be.near(16 * 1.06)
+		expect(humanoid.WalkSpeed).to.be.near(16 * 1.06, FLOAT32)
 		model:Destroy()
 	end)
 
@@ -43,9 +46,9 @@ return function()
 		local model, humanoid = body(16)
 		EmployeeStatSystem.apply(model, BARS)
 		EmployeeStatSystem.apply(model, BARS)
-		expect(humanoid.WalkSpeed).to.be.near(16 * 1.06)
+		expect(humanoid.WalkSpeed).to.be.near(16 * 1.06, FLOAT32)
 		EmployeeStatSystem.apply(model, { speed = 1, stamina = 1, strength = 1, suction = 1, quiet = 1 })
-		expect(humanoid.WalkSpeed).to.be.near(16)
+		expect(humanoid.WalkSpeed).to.be.near(16, FLOAT32)
 		model:Destroy()
 	end)
 
