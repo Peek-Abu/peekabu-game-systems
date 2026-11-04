@@ -119,7 +119,27 @@ return function()
 		end)
 	end)
 
-	describe("skin fidgets", function()
+	describe("skin idles and fidgets", function()
+		local function byId(key)
+			local out = {}
+			for _, effect in EmoteEffectRegistry.get(key).effects do
+				out[effect.id] = effect
+			end
+			return out
+		end
+
+		it("keeps PJ Cappy's eyes shut while he sleeps, and changes them through his pillow slip", function()
+			expect(byId("cappypjidle").face.on).to.equal("Face")
+			expect(byId("cappypjfidget").face.on).to.equal("Face")
+		end)
+
+		it("gives Bubble Buddy's fidget a few light bubbles while she blows, and her faces", function()
+			local effects = byId("pippabubblebuddyfidget")
+			expect(effects.fidgetBubbles.on).to.equal("BubbleBlow")
+			expect(effects.fidgetBubbles.off).to.equal("BubbleBlowEnd")
+			expect(effects.face.on).to.equal("Face")
+		end)
+
 		it("change Sheriff Prickles' face on his quick draw's Face markers", function()
 			local entry = EmoteEffectRegistry.get("pricklessherifffidget")
 			expect(entry).to.be.ok()

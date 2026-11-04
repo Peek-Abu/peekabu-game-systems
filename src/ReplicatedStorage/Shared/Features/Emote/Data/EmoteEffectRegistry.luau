@@ -65,6 +65,16 @@ local entries: { [string]: Entry } = {
 	pippahirereveal = { effects = { { id = "face", on = "Face" } } },
 	prickleshirereveal = { effects = { { id = "face", on = "Face" } } },
 	cappyhirereveal = { effects = { { id = "face", on = "Face" } } },
+	-- PJ Cappy asleep (his skin's idle: eyes shut on its first frame) and his pillow slip (startled, awake, asleep).
+	cappypjidle = { effects = { { id = "face", on = "Face" } } },
+	cappypjfidget = { effects = { { id = "face", on = "Face" } } },
+	-- Bubble Buddy's fidget: a few light bubbles while she blows (not Bubble Ride's stream), and her faces.
+	pippabubblebuddyfidget = {
+		effects = {
+			{ id = "fidgetBubbles", on = "BubbleBlow", off = "BubbleBlowEnd" },
+			{ id = "face", on = "Face" },
+		},
+	},
 	-- Sheriff Prickles' quick draw (his skin's fidget): a squint while he checks for trouble, then his usual face.
 	pricklessherifffidget = { effects = { { id = "face", on = "Face" } } },
 	-- The ability clips: their faces as Face markers.

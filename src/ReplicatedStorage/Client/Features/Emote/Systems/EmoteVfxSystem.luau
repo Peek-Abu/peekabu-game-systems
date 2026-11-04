@@ -7,6 +7,7 @@
 	- giantBubble: a giant bubble grows from the wand loop round her body and rides her LowerTorso (the clip lifts
 	  it), wobbling and shedding small bubbles; ending it pops it (emoteBubblePop), also when the emote is cut short.
 	- bubbleLand: a splash of bubbles at her feet.
+	- fidgetBubbles: Bubble Buddy's fidget, the same wand stream much lighter (LIGHT_STREAM: fewer, smaller bubbles).
 	- cocoaSteam: a few warm steam wisps rise off PJ Cappy's mug (Cocoa Sip) while it is out; ending it lets the last
 	  ones fade.
 	- lassoPuff, lassoThrow, dustSwirl, tumbleweed: Big Roundup's dust (the coil shaking out and the yank, the throw,
@@ -160,7 +161,7 @@ local function cocoaSteam(character: Model): (() -> ())?
 	end
 end
 
-local function bubbleStream(character: Model): (() -> ())?
+local function bubbleStream(character: Model, light: boolean?): (() -> ())?
 	local wandPart = wand(character)
 	local head = part(character, "Head")
 	if wandPart == nil or head == nil then
@@ -171,8 +172,9 @@ local function bubbleStream(character: Model): (() -> ())?
 	anchor.Name = "EmoteBubbleStream"
 	local emitter = Instance.new("ParticleEmitter")
 	VfxBurstSystem.configure(emitter, streamLayer())
-	emitter.Size = scaled(STREAM.size, scale)
-	emitter.Rate = rate(STREAM.rateHigh, STREAM.rateLow)
+	local lighter = EmoteVfxConstants.LIGHT_STREAM
+	emitter.Size = scaled(STREAM.size, if light then scale * lighter.sizeScale else scale)
+	emitter.Rate = if light then rate(lighter.rateHigh, lighter.rateLow) else rate(STREAM.rateHigh, STREAM.rateLow)
 	emitter.Enabled = true
 	emitter.Parent = anchor
 	anchor.Parent = wandPart
@@ -440,6 +442,8 @@ function EmoteVfxSystem.start(id: string, character: Model, value: string): (() 
 		return soundCues(character, cues)
 	elseif id == "bubbleStream" then
 		return bubbleStream(character)
+	elseif id == "fidgetBubbles" then
+		return bubbleStream(character, true)
 	elseif id == "cocoaSteam" then
 		return cocoaSteam(character)
 	elseif id == "giantBubble" then

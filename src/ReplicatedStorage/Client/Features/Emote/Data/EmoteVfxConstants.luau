@@ -273,6 +273,13 @@ return table.freeze({
 		shedRate = 5,
 	}),
 	BUBBLE_TINT = BUBBLE_TINT,
+	-- Bubble Buddy's fidget (owner, 2026-11-03: bubbles, but light; sparkle is for rare moments): STREAM's look at a
+	-- third of its rate or less and smaller bubbles.
+	LIGHT_STREAM = table.freeze({
+		rateHigh = 7,
+		rateLow = 3,
+		sizeScale = 0.7,
+	}),
 	-- Cocoa Sip's steam (owner, 2026-11-03: "a few small warm steam wisps", subtle): game-vfx-design tier 0, an emitter
 	-- just above the mug's rim while the mug is out. Warm cream curls (the Gloom wisp texture, tinted), rising slowly,
 	-- see-through, no glow. Sizes at the template's size (times the character's scale); `rimHeight` is the share of

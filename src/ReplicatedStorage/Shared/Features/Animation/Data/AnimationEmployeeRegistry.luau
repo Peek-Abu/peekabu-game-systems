@@ -88,9 +88,17 @@ local AnimationEmployeeRegistry: AnimationDomain = table.freeze({
 	cappycrouchidle = locomotion("rbxassetid://78456687803253"),
 	cappycrouchwalk = locomotion("rbxassetid://140157048070101"),
 
-	-- PJ Cappy's showcase idle (EmployeeRegistry `showcaseIdle`): Sleepy Sway, holding the pillow and cocoa mug, a
-	-- PropsShow at frame 1. legendary-clips-2026-10-29/cappy_prop_clips.py.
+	-- PJ Cappy's showcase idle, revision 2 (owner pick 2026-11-03, "asleep standing up"; revision 1 Sleepy Sway with
+	-- the pillow and mug): asleep on his feet, chin on the pillow held under it in both paws, eyes shut (Face marker),
+	-- the mug put away; 6.0 s. His fidget, the pillow slip: it slides out of his arms, he jolts awake and catches it,
+	-- looks round, snuggles back in (6.0 s, Face markers). workflow/legendary-idles-2026-11-03/pj.
 	cappypjidle = locomotion("rbxassetid://75476202945517"),
+	cappypjfidget = fidget("rbxassetid://70473288014563"),
+	-- Bubble Buddy's showcase idle (owner pick 2026-11-03, "duck ring float"): Pippa's own bouncy idle, both paws on the
+	-- duck ring she wears at her waist (no props); 4.0 s. Her fidget: the wand out at her side, a few bubbles, back
+	-- (8.0 s; PropsShow/PropsStow, BubbleBlow .. BubbleBlowEnd, Face markers). workflow/legendary-idles-2026-11-03/bubble.
+	pippabubblebuddyidle = locomotion("rbxassetid://135311387362712"),
+	pippabubblebuddyfidget = fidget("rbxassetid://112807601879936"),
 
 	-- Reveals (EmployeeRegistry `hireReveal` / a skin's `unlockReveal`; the reveal screen plays one, then the idle).
 	-- Hire reveals, owner-approved (launch-finish-2026-10-25/<who>/hire, faces as Face markers by hire_markers.py; Cappy's

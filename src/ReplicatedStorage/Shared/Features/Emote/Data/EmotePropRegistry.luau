@@ -30,8 +30,12 @@ local entries: { [string]: Entry } = {
 	-- PJ Cappy's Cocoa Sip: the cocoa mug in the right hand, posed every frame against the hand; his left paw rests on
 	-- his tummy (no pillow: owner, 2026-11-03; the clip's revision 2 has no pillow poses).
 	["emote:Cappy.CocoaSip"] = { props = { "Cocoa" } },
-	-- PJ Cappy's showcase idle: both out from the first frame, for as long as the loop plays.
-	cappypjidle = { props = { "Pillow", "Cocoa" }, idle = true },
+	-- PJ Cappy's showcase idle: the pillow out from the first frame, for as long as the loop plays (the mug is Cocoa
+	-- Sip's). His pillow slip is not here: it plays over the idle, which keeps the pillow out.
+	cappypjidle = { props = { "Pillow" }, idle = true },
+	-- Bubble Buddy's fidget: the wand out between its PropsShow and PropsStow (her idle holds the worn duck ring and
+	-- brings out nothing, so the fidget owns the wand).
+	pippabubblebuddyfidget = { props = { "BubbleWand" } },
 	-- Cappy's hire reveal: his phone (an emote prop template, so every skin has it), PropsShow f1 to PropsStow f58.
 	cappyhirereveal = { props = { "Phone" } },
 	-- Cappy's Spot It! ability (both cuts): the same phone, PropsShow f12 to PropsStow f95.

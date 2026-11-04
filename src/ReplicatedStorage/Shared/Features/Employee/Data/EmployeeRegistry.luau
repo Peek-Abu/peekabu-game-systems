@@ -216,7 +216,10 @@ local EMPLOYEES: { [string]: EmployeeDef } = {
 				facesFolder = nil,
 				accessories = {},
 				outfit = "PippaBubbleBuddy",
-				-- No showcase idle (owner, 2026-10-29: the batch-3 one was rejected): Pippa's own idle, ring at her waist.
+				-- Her own idle and fidget (owner pick 2026-11-03): paws on the duck ring at her waist; the fidget blows a
+				-- few bubbles.
+				showcaseIdle = "pippabubblebuddyidle",
+				showcaseFidget = "pippabubblebuddyfidget",
 				styles = {
 					{
 						folder = "BlueYellow",
@@ -350,6 +353,7 @@ EMPLOYEES.Cappy = {
 			accessories = {},
 			outfit = "CappyPJ",
 			showcaseIdle = "cappypjidle",
+			showcaseFidget = "cappypjfidget",
 			styles = {
 				{
 					folder = "BlueButter",

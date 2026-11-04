@@ -11,9 +11,17 @@ return function()
 		end
 	end)
 
-	it("brings out PJ Cappy's pillow and cocoa mug in his showcase idle", function()
+	it("brings out only PJ Cappy's pillow in his showcase idle (asleep on it; the mug is Cocoa Sip's)", function()
 		expect(table.find(Registry.get("cappypjidle").props, "Pillow")).to.be.ok()
-		expect(table.find(Registry.get("cappypjidle").props, "Cocoa")).to.be.ok()
+		expect(table.find(Registry.get("cappypjidle").props, "Cocoa")).never.to.be.ok()
+	end)
+
+	it("brings Bubble Buddy's wand out only in her fidget: her idle holds the worn duck ring, no props", function()
+		expect(Registry.get("pippabubblebuddyidle")).to.equal(nil)
+		local fidget = Registry.get("pippabubblebuddyfidget")
+		expect(fidget).to.be.ok()
+		expect(table.find(fidget.props, "BubbleWand")).to.be.ok()
+		expect(fidget.idle).never.to.be.ok()
 	end)
 
 	it("brings out only the cocoa mug in Cocoa Sip, no pillow", function()
@@ -92,6 +100,7 @@ return function()
 		"leaves a skin's fidget out: it plays over the idle, which keeps the props (a prop track would take them over)",
 		function()
 			expect(Registry.get("pricklessherifffidget")).to.equal(nil)
+			expect(Registry.get("cappypjfidget")).to.equal(nil)
 		end
 	)
 

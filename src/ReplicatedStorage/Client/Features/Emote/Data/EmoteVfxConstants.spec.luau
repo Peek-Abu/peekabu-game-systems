@@ -48,6 +48,14 @@ return function()
 		expect(stream.rateHigh * stream.lifetime.Max <= 60).to.equal(true)
 	end)
 
+	it("keeps the fidget's bubbles much lighter than Bubble Ride's stream (sparkle is for rare moments)", function()
+		local light, full = EmoteVfxConstants.LIGHT_STREAM, EmoteVfxConstants.STREAM
+		expect(light.rateHigh * 3 <= full.rateHigh).to.equal(true)
+		expect(light.rateLow > 0 and light.rateLow <= light.rateHigh).to.equal(true)
+		expect(light.sizeScale > 0 and light.sizeScale < 1).to.equal(true)
+		expect(light.rateHigh * full.lifetime.Max <= 20).to.equal(true)
+	end)
+
 	it("keeps the cocoa steam ambient: a few slow, see-through cream wisps, never bright", function()
 		local steam = EmoteVfxConstants.STEAM
 		expect(steam.rateLow > 0 and steam.rateLow <= steam.rateHigh).to.equal(true)

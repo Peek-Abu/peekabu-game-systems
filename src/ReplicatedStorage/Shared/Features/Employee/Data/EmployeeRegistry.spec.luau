@@ -285,8 +285,8 @@ return function()
 		end)
 
 		it("gives the Legendary skins their own idle", function()
-			-- Bubble Buddy's batch-3 idle was rejected (owner, 2026-10-29): she plays Pippa's own for now.
-			expect(EmployeeRegistry.get("Pippa").skins.BubbleBuddy.showcaseIdle).never.to.be.ok()
+			expect(EmployeeRegistry.get("Pippa").skins.BubbleBuddy.showcaseIdle).to.equal("pippabubblebuddyidle")
+			expect(EmployeeRegistry.get("Cappy").skins.PJ.showcaseIdle).to.equal("cappypjidle")
 			expect(EmployeeRegistry.get("Prickles").skins.Sheriff.showcaseIdle).to.equal("pricklessheriffidle")
 		end)
 
@@ -303,6 +303,8 @@ return function()
 				end
 			end
 			expect(EmployeeRegistry.get("Prickles").skins.Sheriff.showcaseFidget).to.equal("pricklessherifffidget")
+			expect(EmployeeRegistry.get("Pippa").skins.BubbleBuddy.showcaseFidget).to.equal("pippabubblebuddyfidget")
+			expect(EmployeeRegistry.get("Cappy").skins.PJ.showcaseFidget).to.equal("cappypjfidget")
 		end)
 	end)
 
