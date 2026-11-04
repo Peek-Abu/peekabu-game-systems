@@ -70,6 +70,25 @@ return function()
 			expect(on("emote:Cappy.CocoaSip").cocoaSounds).to.equal("PropsShow")
 		end)
 
+		it(
+			"steams Cocoa Sip's mug for as long as it is out, and changes his face on the clip's Face markers",
+			function()
+				local steam, face
+				for _, effect in EmoteEffectRegistry.get("emote:Cappy.CocoaSip").effects do
+					if effect.id == "cocoaSteam" then
+						steam = effect
+					elseif effect.id == "face" then
+						face = effect
+					end
+				end
+				expect(steam).to.be.ok()
+				expect(steam.on).to.equal("PropsShow")
+				expect(steam.off).to.equal("PropsStow")
+				expect(face).to.be.ok()
+				expect(face.on).to.equal("Face")
+			end
+		)
+
 		it("plays Bubble Ride's inflate and wobble from the bubble's growth and the bloop on the pop", function()
 			local byId = on("emote:Pippa.Bubbles")
 			expect(byId.bubbleGrowSound).to.equal("BubbleGrow")

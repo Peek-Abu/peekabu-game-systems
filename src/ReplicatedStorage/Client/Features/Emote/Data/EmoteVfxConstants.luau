@@ -273,6 +273,26 @@ return table.freeze({
 		shedRate = 5,
 	}),
 	BUBBLE_TINT = BUBBLE_TINT,
+	-- Cocoa Sip's steam (owner, 2026-11-03: "a few small warm steam wisps", subtle): game-vfx-design tier 0, an emitter
+	-- just above the mug's rim while the mug is out. Warm cream curls (the Gloom wisp texture, tinted), rising slowly,
+	-- see-through, no glow. Sizes at the template's size (times the character's scale); `rimHeight` is the share of
+	-- the mug part's height above its centre where the wisps start.
+	STEAM = table.freeze({
+		texture = T.wisp,
+		color = gradient({ P.porcelain, Color3.fromRGB(240, 222, 200) }),
+		size = seq({ { 0, 0.12 }, { 0.4, 0.3 }, { 1, 0.42 } }),
+		transparency = seq({ { 0, 1 }, { 0.2, 0.55 }, { 0.6, 0.7 }, { 1, 1 } }),
+		lifetime = NumberRange.new(1.2, 1.6),
+		speed = NumberRange.new(0.35, 0.7),
+		spread = Vector2.new(12, 12),
+		acceleration = Vector3.new(0, 0.5, 0),
+		drag = 0.8,
+		rotSpeed = NumberRange.new(-35, 35),
+		lightEmission = 0,
+		rateHigh = 3,
+		rateLow = 2,
+		rimHeight = 0.5,
+	}),
 	-- Big Roundup's dust ring: an emitter orbiting his feet while the loop spins, leaving a circle of dust.
 	DUST_SWIRL = table.freeze({
 		texture = T.puff,

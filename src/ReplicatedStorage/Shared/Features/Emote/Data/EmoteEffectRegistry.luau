@@ -52,10 +52,13 @@ local entries: { [string]: Entry } = {
 			{ id = "face", on = "Face" },
 		},
 	},
-	-- PJ Cappy's Cocoa Sip: a mug sound as the mug appears, then a sip as it reaches his mouth (EmoteVfxConstants.SOUND_CUES).
+	-- PJ Cappy's Cocoa Sip: a mug sound as the mug appears, then a sip as it reaches his mouth (EmoteVfxConstants.SOUND_CUES);
+	-- a few steam wisps off the mug while it is out; his eyes shut on the sip, then a happy face (Face markers).
 	["emote:Cappy.CocoaSip"] = {
 		effects = {
 			{ id = "cocoaSounds", on = "PropsShow" },
+			{ id = "cocoaSteam", on = "PropsShow", off = "PropsStow" },
+			{ id = "face", on = "Face" },
 		},
 	},
 	-- The hire reveals: their face timelines as Face markers (hire_markers.py), on the reveal screen's preview.

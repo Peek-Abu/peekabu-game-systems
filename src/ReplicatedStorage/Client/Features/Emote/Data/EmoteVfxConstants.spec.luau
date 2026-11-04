@@ -48,6 +48,24 @@ return function()
 		expect(stream.rateHigh * stream.lifetime.Max <= 60).to.equal(true)
 	end)
 
+	it("keeps the cocoa steam ambient: a few slow, see-through cream wisps, never bright", function()
+		local steam = EmoteVfxConstants.STEAM
+		expect(steam.rateLow > 0 and steam.rateLow <= steam.rateHigh).to.equal(true)
+		-- Tier 0 (game-vfx-design): a handful alive at once, never more than about six.
+		expect(steam.rateHigh * steam.lifetime.Max <= 6).to.equal(true)
+		expect(steam.lightEmission).to.equal(0)
+		-- Never more solid than half see-through, and gone by the end of a wisp's life.
+		for _, point in steam.transparency.Keypoints do
+			expect(point.Value >= 0.5).to.equal(true)
+		end
+		expect(steam.transparency.Keypoints[#steam.transparency.Keypoints].Value).to.equal(1)
+		-- Smaller than the mug's own height (about 0.45 studs on the template) times 1.5, the ambient size cap.
+		for _, point in steam.size.Keypoints do
+			expect(point.Value <= 0.45 * 1.5).to.equal(true)
+		end
+		expect(steam.speed.Max <= 1).to.equal(true)
+	end)
+
 	it("keeps the dust ring inside the stream budget, and the tumbleweed to one", function()
 		local dust = EmoteVfxConstants.DUST_SWIRL
 		expect(dust.rateHigh <= 60 and dust.rateLow <= 25 and dust.rateLow <= dust.rateHigh).to.equal(true)

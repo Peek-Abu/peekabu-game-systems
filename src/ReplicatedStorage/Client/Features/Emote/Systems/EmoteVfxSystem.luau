@@ -7,6 +7,8 @@
 	- giantBubble: a giant bubble grows from the wand loop round her body and rides her LowerTorso (the clip lifts
 	  it), wobbling and shedding small bubbles; ending it pops it (emoteBubblePop), also when the emote is cut short.
 	- bubbleLand: a splash of bubbles at her feet.
+	- cocoaSteam: a few warm steam wisps rise off PJ Cappy's mug (Cocoa Sip) while it is out; ending it lets the last
+	  ones fade.
 	- lassoPuff, lassoThrow, dustSwirl, tumbleweed: Big Roundup's dust (the coil shaking out and the yank, the throw,
 	  a dust ring orbiting his feet under the spin) and one tumbleweed rolling past in front of him.
 	- any id in EmoteVfxConstants.SOUND_CUES (Cocoa Sip's, Bubble Ride's and Big Roundup's sounds): its library sounds,
@@ -54,6 +56,7 @@ for name, def in EmoteVfxConstants.SOUNDS do
 end
 
 local STREAM = EmoteVfxConstants.STREAM
+local STEAM = EmoteVfxConstants.STEAM
 local GIANT = EmoteVfxConstants.GIANT
 
 local EmoteVfxSystem = {}
@@ -105,6 +108,56 @@ local function streamLayer(): VfxTypes.BurstLayer
 		rotSpeed = STREAM.rotSpeed,
 		lightInfluence = 0,
 	}
+end
+
+local function steamLayer(): VfxTypes.BurstLayer
+	return {
+		texture = STEAM.texture,
+		color = STEAM.color,
+		size = STEAM.size,
+		transparency = STEAM.transparency,
+		lifetime = STEAM.lifetime,
+		speed = STEAM.speed,
+		rate = STEAM.rateHigh,
+		spread = STEAM.spread,
+		direction = Enum.NormalId.Top,
+		acceleration = STEAM.acceleration,
+		drag = STEAM.drag,
+		rotation = NumberRange.new(0, 360),
+		rotSpeed = STEAM.rotSpeed,
+		lightEmission = STEAM.lightEmission,
+		lightInfluence = 0,
+	}
+end
+
+-- Steam off the mug's rim, always rising straight up (the mug tilts while he sips; the steam does not).
+local function cocoaSteam(character: Model): (() -> ())?
+	local mug = EmotePropSystem.findProp(character, "Cocoa")
+	if mug == nil then
+		return nil
+	end
+	local anchor = Instance.new("Attachment")
+	anchor.Name = "EmoteCocoaSteam"
+	local emitter = Instance.new("ParticleEmitter")
+	VfxBurstSystem.configure(emitter, steamLayer())
+	emitter.Size = scaled(STEAM.size, character:GetScale())
+	emitter.Rate = rate(STEAM.rateHigh, STEAM.rateLow)
+	emitter.Enabled = true
+	emitter.Parent = anchor
+	anchor.Parent = mug
+	local follow = RunService.RenderStepped:Connect(function()
+		if mug.Parent == nil then
+			return
+		end
+		anchor.WorldCFrame = CFrame.new(mug.Position + Vector3.yAxis * (STEAM.rimHeight * mug.Size.Y))
+	end)
+	return function()
+		follow:Disconnect()
+		emitter.Enabled = false
+		task.delay(STEAM.lifetime.Max, function()
+			anchor:Destroy()
+		end)
+	end
 end
 
 local function bubbleStream(character: Model): (() -> ())?
@@ -387,6 +440,8 @@ function EmoteVfxSystem.start(id: string, character: Model, value: string): (() 
 		return soundCues(character, cues)
 	elseif id == "bubbleStream" then
 		return bubbleStream(character)
+	elseif id == "cocoaSteam" then
+		return cocoaSteam(character)
 	elseif id == "giantBubble" then
 		return giantBubble(character)
 	elseif id == "bubbleLand" then
