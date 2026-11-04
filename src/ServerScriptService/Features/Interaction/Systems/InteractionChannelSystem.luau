@@ -26,6 +26,8 @@ local InteractionChannelTracker = require(ServerScriptService.Features.Interacti
 export type ChannelHandler = {
 	-- Asked when a player starts and every tick after; false refuses or ends their channel. Must not yield.
 	canChannel: ((player: Player, target: Instance) -> boolean)?,
+	-- How fast `player` works on `target` (1 = the def's duration; absent = 1 for everyone). Must not yield.
+	rate: ((player: Player, target: Instance) -> number)?,
 	-- Once, when progress reaches full; `players` are everyone on the target at that moment. Runs on its
 	-- own thread, so it may yield.
 	onComplete: (players: { Player }, target: Instance) -> (),
@@ -53,6 +55,26 @@ end
 local function kindOf(target: Instance): string?
 	local kind = target:GetAttribute(InteractionConstants.CHANNEL_KIND_ATTRIBUTE)
 	return if type(kind) == "string" and InteractionRegistry.hasChannel(kind) then kind else nil
+end
+
+-- A tracker rate lookup that asks the game's `rate` for each channeler of `target` (nil when it errors).
+local function rateOn(
+	rate: (player: Player, target: Instance) -> number,
+	kind: string,
+	target: Instance
+): (userId: number) -> number?
+	return function(userId)
+		local player = Players:GetPlayerByUserId(userId)
+		if player == nil then
+			return nil
+		end
+		local called, result = pcall(rate, player, target)
+		if not called then
+			log:error(`channel "{kind}" rate failed: {result}`)
+			return nil
+		end
+		return result
+	end
 end
 
 local InteractionChannelSystem = {}
@@ -182,7 +204,11 @@ function InteractionChannelSystem.new(handlers: { [string]: ChannelHandler }): I
 					end
 					continue
 				end
-				local done = tracker:advance(targetId, dt, def.duration)
+				local handler = handlers[kind]
+				local rateOf = if handler ~= nil and handler.rate ~= nil
+					then rateOn(handler.rate, kind, target)
+					else nil
+				local done = tracker:advance(targetId, dt, def.duration, rateOf)
 				publish(targetId)
 				if done ~= nil then
 					-- Completed: forget the target (its progress is reset and published as nil).
