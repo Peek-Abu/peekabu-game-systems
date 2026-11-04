@@ -49,7 +49,7 @@ return function()
 	end)
 
 	it("refuses an empty slot and an unowned sticker", function()
-		install({ "", "BubblePack.Ducky", "", "" })
+		install({ "", "BubblePack.Yay", "", "" })
 		expect(select(2, CalloutService:callout(player, { kind = "sticker", slot = 1 }))).to.equal("empty slot")
 		expect(select(2, CalloutService:callout(player, { kind = "sticker", slot = 2 }))).to.equal("not owned")
 		expect(#sent).to.equal(0)

@@ -30,7 +30,7 @@ return function()
 			local some = { owned = { employee = { Cappy = true }, stickerPack = { CozyPack = true } } }
 			expect(CosmeticRules.owns(some, "Cappy")).to.equal(true)
 			expect(CosmeticRules.owns(some, "CozyPack.Cocoa")).to.equal(true)
-			expect(CosmeticRules.owns(some, "BubblePack.Ducky")).to.equal(false)
+			expect(CosmeticRules.owns(some, "BubblePack.Yay")).to.equal(false)
 		end)
 	end)
 
@@ -197,7 +197,7 @@ return function()
 		it("puts stickers from owned packs in the 4 sticker slots", function()
 			local loadout = CosmeticConstants.defaultLoadout()
 			local _, notOwned =
-				CosmeticRules.checkEquip(loadout, { kind = "sticker", slot = 1, id = "BubblePack.Ducky" }, owns)
+				CosmeticRules.checkEquip(loadout, { kind = "sticker", slot = 1, id = "BubblePack.Yay" }, owns)
 			expect(notOwned).to.equal("not owned")
 			local _, kind = CosmeticRules.checkEquip(loadout, { kind = "sticker", slot = 1, id = "CozyPack" }, owns)
 			expect(kind).to.equal("wrong kind")

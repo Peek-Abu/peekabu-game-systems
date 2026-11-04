@@ -34,7 +34,7 @@ return function()
 			expect(CalloutRules.sticker(stickers, 1, owns)).to.equal("CozyPack.Cocoa")
 			expect(select(2, CalloutRules.sticker(stickers, 2, owns))).to.equal("empty slot")
 			expect(select(2, CalloutRules.sticker(stickers, 3, owns))).to.equal("empty slot")
-			expect(select(2, CalloutRules.sticker({ "BubblePack.Ducky", "", "", "" }, 1, owns))).to.equal("not owned")
+			expect(select(2, CalloutRules.sticker({ "BubblePack.Yay", "", "", "" }, 1, owns))).to.equal("not owned")
 		end)
 	end)
 

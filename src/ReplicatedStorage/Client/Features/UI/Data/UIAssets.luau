@@ -181,6 +181,21 @@ UIAssets.toonPhotos = table.freeze({
 	pippaSaluteCut = "rbxassetid://77407692720114",
 })
 
+-- Chat-wheel sticker art by CosmeticRegistry sticker id (2026-11-03, owner picks; style C, waist up): 512 px
+-- die-cut PNGs, Icey Labs. Each id is the Image under the uploaded Decal (decals in
+-- characters/ui/stickers/legendary-2026-11-03/v2/final/upload.log). A sticker missing here uses its stand-in.
+local STICKERS: { [string]: string } = {
+	["BubblePack.Yay"] = "rbxassetid://120902819081466",
+	["BubblePack.ThankYou"] = "rbxassetid://109721451516779",
+	["BubblePack.UhOh"] = "rbxassetid://128102627826955",
+	["BubblePack.GoodJob"] = "rbxassetid://132887262885944",
+	["SheriffPack.Howdy"] = "rbxassetid://86455381930875",
+	["SheriffPack.GotIt"] = "rbxassetid://138267781398143",
+	["SheriffPack.Aww"] = "rbxassetid://117243301577418",
+	["SheriffPack.Oops"] = "rbxassetid://114811908848269",
+}
+UIAssets.stickers = table.freeze(STICKERS)
+
 -- The kit's drawn pieces (implemented/tools/make_toon_assets.py, all at 2x). The goo: `capTile` (256x112) and
 -- `poolTile` (256x80) are one whole tile each; `gooEnds` is the atlas of their ends (cap ends at y 0, 256x112 each;
 -- pool ends at y 128, 256x80 each). `glow` is a 128 px white 9-slice (centre 48..80) tinted per use; `patternSparkle`
