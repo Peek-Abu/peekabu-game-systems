@@ -11,11 +11,15 @@ return function()
 		end
 	end)
 
-	it("brings out PJ Cappy's pillow and cocoa mug in Cocoa Sip and in his showcase idle", function()
-		for _, key in { "emote:Cappy.CocoaSip", "cappypjidle" } do
-			expect(table.find(Registry.get(key).props, "Pillow")).to.be.ok()
-			expect(table.find(Registry.get(key).props, "Cocoa")).to.be.ok()
-		end
+	it("brings out PJ Cappy's pillow and cocoa mug in his showcase idle", function()
+		expect(table.find(Registry.get("cappypjidle").props, "Pillow")).to.be.ok()
+		expect(table.find(Registry.get("cappypjidle").props, "Cocoa")).to.be.ok()
+	end)
+
+	it("brings out only the cocoa mug in Cocoa Sip, no pillow", function()
+		local props = Registry.get("emote:Cappy.CocoaSip").props
+		expect(table.find(props, "Cocoa")).to.be.ok()
+		expect(table.find(props, "Pillow")).never.to.be.ok()
 	end)
 
 	it("lists unique, non-empty prop names", function()

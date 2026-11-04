@@ -23,8 +23,9 @@ export type Entry = {
 }
 
 local entries: { [string]: Entry } = {
-	-- PJ Cappy's Cocoa Sip: the pillow in the left hand, the cocoa mug in the right, posed every frame against the hand.
-	["emote:Cappy.CocoaSip"] = { props = { "Pillow", "Cocoa" } },
+	-- PJ Cappy's Cocoa Sip: the cocoa mug in the right hand, posed every frame against the hand; his left paw rests on
+	-- his tummy (no pillow: owner, 2026-11-03; the clip's revision 2 has no pillow poses).
+	["emote:Cappy.CocoaSip"] = { props = { "Cocoa" } },
 	-- PJ Cappy's showcase idle (previews only): both out from the first frame, for as long as the loop plays.
 	cappypjidle = { props = { "Pillow", "Cocoa" } },
 	-- Cappy's hire reveal: his phone (an emote prop template, so every skin has it), PropsShow f1 to PropsStow f58.
