@@ -9,7 +9,8 @@ return function()
 	local BUBBLES = "rbxassetid://111"
 	local LASSO = "rbxassetid://222"
 	local OTHER = "rbxassetid://333"
-	local KEYS = { [BUBBLES] = "emote:Pippa.Bubbles", [LASSO] = "emote:Prickles.Lasso" }
+	local IDLE = "rbxassetid://444"
+	local KEYS = { [BUBBLES] = "emote:Pippa.Bubbles", [LASSO] = "emote:Prickles.Lasso", [IDLE] = "pricklessheriffidle" }
 
 	local function makeCharacter()
 		local model = Instance.new("Model")
@@ -527,6 +528,85 @@ return function()
 			expect(parts.BubbleWand.Transparency).to.equal(0)
 			release()
 			model:Destroy()
+		end)
+	end)
+
+	describe("a skin's showcase idle in the world", function()
+		local function blockable(source)
+			local state = { blocked = false, ticks = {} }
+			state.system = EmotePropSystem.new({
+				sourceOf = function()
+					return source.api
+				end,
+				keyForAsset = function(assetId)
+					return KEYS[assetId]
+				end,
+				blocked = function()
+					return state.blocked
+				end,
+				onTick = function(callback)
+					return connectList(state.ticks, callback)
+				end,
+			})
+			function state.tick()
+				for _, callback in table.clone(state.ticks) do
+					callback()
+				end
+			end
+			return state
+		end
+
+		it("shows its prop while standing idle, puts it away while blocked and brings it back after", function()
+			local character, parts, worn = makeCharacter()
+			local source = fakeSource()
+			local state = blockable(source)
+			local release = state.system.track(character)
+			local idle = fakeTrack(IDLE, 0, { [SHOW] = 0 })
+			source.play(idle)
+			idle.fire(SHOW)
+			expect(parts.HoseLasso.Transparency).to.equal(0)
+			expect(worn.HoseLasso.Transparency).to.equal(1)
+			-- vacuuming, carrying, hiding or knocked out
+			state.blocked = true
+			state.tick()
+			expect(parts.HoseLasso.Transparency).to.equal(1)
+			expect(worn.HoseLasso.Transparency).to.equal(0)
+			state.blocked = false
+			state.tick()
+			expect(parts.HoseLasso.Transparency).to.equal(0)
+			expect(worn.HoseLasso.Transparency).to.equal(1)
+			-- moving stops the idle: away
+			idle.stop()
+			expect(parts.HoseLasso.Transparency).to.equal(1)
+			expect(worn.HoseLasso.Transparency).to.equal(0)
+			release()
+		end)
+
+		it("never shows the prop when the idle starts while blocked", function()
+			local character, parts = makeCharacter()
+			local source = fakeSource()
+			local state = blockable(source)
+			state.blocked = true
+			local release = state.system.track(character)
+			local idle = fakeTrack(IDLE, 0, { [SHOW] = 0 })
+			source.play(idle)
+			idle.fire(SHOW)
+			expect(parts.HoseLasso.Transparency).to.equal(1)
+			release()
+		end)
+
+		it("leaves an emote's props alone: only a showcase idle is blocked", function()
+			local character, parts = makeCharacter()
+			local source = fakeSource()
+			local state = blockable(source)
+			state.blocked = true
+			local release = state.system.track(character)
+			local emote = fakeTrack(LASSO, 0)
+			source.play(emote)
+			emote.fire(SHOW)
+			state.tick()
+			expect(parts.HoseLasso.Transparency).to.equal(0)
+			release()
 		end)
 	end)
 end

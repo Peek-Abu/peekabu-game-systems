@@ -81,14 +81,11 @@ return function()
 		expect(table.find(Registry.get("pricklessheriffidle").props, "HoseLasso")).to.be.ok()
 	end)
 
-	it("keeps the showcase idles' props to menus (props stay put away in a shift for now)", function()
+	it("marks the showcase idles: their props show while standing idle, in menus and in a shift", function()
 		for _, key in { "pricklessheriffidle", "cappypjidle" } do
-			local entry = Registry.get(key)
-			expect(entry).to.be.ok()
-			expect(entry.menusOnly).to.equal(true)
-			expect(Registry.keyForAsset(AnimationRegistry.get(key).assetId)).to.equal(key)
-			expect(Registry.worldKeyForAsset(AnimationRegistry.get(key).assetId)).to.equal(nil)
+			expect(Registry.get(key).idle).to.equal(true)
 		end
+		expect(Registry.get("emote:Prickles.Lasso").idle).never.to.be.ok()
 	end)
 
 	it(
@@ -97,15 +94,6 @@ return function()
 			expect(Registry.get("pricklessherifffidget")).to.equal(nil)
 		end
 	)
-
-	it("finds every other entry in the world too: emotes and abilities show their props in a shift", function()
-		for key, entry in Registry.entries do
-			if not entry.menusOnly then
-				expect(Registry.worldKeyForAsset(AnimationRegistry.get(key).assetId)).to.equal(key)
-			end
-		end
-		expect(Registry.worldKeyForAsset("rbxassetid://1")).to.equal(nil)
-	end)
 
 	it("finds an entry's key from its clip's asset id, and nothing for other clips", function()
 		for key in Registry.entries do

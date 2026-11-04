@@ -21,6 +21,10 @@
 	  EmployeeConstants.EMOTE_MOUNTED_FOLDER, on its hand's Motor6D at the character's scale
 	  (EmployeeOutfitSystem.mountProp), for as long as the clip owns the props. The skin's own (styled) prop always
 	  wins: one arriving later replaces the mounted copy.
+	- A skin's showcase idle (an `idle` entry, owner 2026-11-03: "show while idle") in the world: its props are out only
+	  while `blocked` says nothing stops them (vacuuming, carrying, hiding, knocked out), checked every `onTick`, and
+	  come back when it clears. Moving stops the idle, which puts them away too. `fade` turns showing and hiding into a
+	  short fade (forWorld), so the prop and its holster twin swap tidily.
 	Visibility is cosmetic and per client: a client can only change its own view.
 
 	`deps` is a test seam: the character's Animator as a source of tracks, the clip lookup and the prop templates.
@@ -29,6 +33,8 @@
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
 local EmployeeOutfitSystem = require(ReplicatedStorage.Shared.Features.Employee.Systems.EmployeeOutfitSystem)
@@ -58,6 +64,11 @@ export type Deps = {
 	keyForAsset: (assetId: string) -> string?,
 	-- The emote's own template of a prop, by name (nil: none).
 	templateOf: ((name: string) -> BasePart?)?,
+	-- What puts a showcase idle's props away on this character (nil: nothing). Polled on `onTick`.
+	blocked: ((character: Model) -> boolean)?,
+	onTick: ((callback: () -> ()) -> () -> ())?,
+	-- Seconds a prop fades in or out (nil: at once).
+	fade: number?,
 }
 
 export type EmotePropState = {
@@ -163,7 +174,10 @@ local function skinProp(character: Model, name: string): BasePart?
 	return if found ~= nil and found:IsA("BasePart") then found else nil
 end
 
-local EmotePropSystem = {}
+local EmotePropSystem = {
+	-- Seconds a prop fades in or out in the world (a tidy appear and disappear).
+	FADE = 0.15,
+}
 
 --[=[
 	The character's Animator as a TrackSource (nil until it exists): EmoteEffectSystem watches the same tracks.
@@ -185,20 +199,31 @@ function EmotePropSystem.findProp(character: Model, name: string): BasePart?
 end
 
 --[=[
-	The system for characters in the world (EmoteServiceClient): a menus-only clip (a skin's showcase idle, which plays
-	in a shift too) never brings out props there (EmotePropRegistry `menusOnly`). Previews use `new()`.
+	The system for characters in the world (EmoteServiceClient): a skin's showcase idle shows its props only while
+	`blocked` is false for that character (checked every Heartbeat), and props fade in and out over FADE. Previews use
+	`new()`.
 ]=]
-function EmotePropSystem.forWorld(): EmotePropSystem
+function EmotePropSystem.forWorld(blocked: (character: Model) -> boolean): EmotePropSystem
 	return EmotePropSystem.new({
 		sourceOf = realSource,
-		keyForAsset = EmotePropRegistry.worldKeyForAsset,
+		keyForAsset = EmotePropRegistry.keyForAsset,
 		templateOf = realTemplate,
+		blocked = blocked,
+		onTick = function(callback)
+			local connection = RunService.Heartbeat:Connect(callback)
+			return function()
+				connection:Disconnect()
+			end
+		end,
+		fade = EmotePropSystem.FADE,
 	})
 end
 
 function EmotePropSystem.new(deps: Deps?): EmotePropSystem
 	local use: Deps = deps or defaults
 	local templateOf = use.templateOf
+	local blockedOf = use.blocked
+	local fade = use.fade
 	local tracked = 0
 	local showing: { [Model]: boolean } = {}
 
@@ -211,6 +236,9 @@ function EmotePropSystem.new(deps: Deps?): EmotePropSystem
 			-- PROP_SHOW / PROP_HIDE overrides for this clip, by prop name (unset: shown with the window if in `props`).
 			local overrides: { [string]: boolean } = {}
 			local visible = false
+			-- The owning clip is a showcase idle (its props yield to `blocked`), and whether they were blocked last check.
+			local idleOwner = false
+			local wasBlocked = false
 			local owner: PropTrack? = nil
 			local ownerCleanups: { () -> () } = {}
 			local cleanups: { () -> () } = {}
@@ -219,7 +247,13 @@ function EmotePropSystem.new(deps: Deps?): EmotePropSystem
 				local folder = character:FindFirstChild(folderName)
 				local part = if folder ~= nil then folder:FindFirstChild(name) else nil
 				if part ~= nil and part:IsA("BasePart") then
-					part.Transparency = if shown then 0 else 1
+					local goal = if shown then 0 else 1
+					if fade ~= nil and fade > 0 and part.Transparency ~= goal then
+						TweenService:Create(part, TweenInfo.new(fade, Enum.EasingStyle.Quad), { Transparency = goal })
+							:Play()
+					else
+						part.Transparency = goal
+					end
 				end
 			end
 
@@ -257,16 +291,21 @@ function EmotePropSystem.new(deps: Deps?): EmotePropSystem
 
 			-- The hand props show while visible (a swap marker can hide one or bring a swap prop out); the worn twins
 			-- at the holster show while not (the coil stays off the hip while it is a loop in the hand, too).
+			local function isBlocked(): boolean
+				return idleOwner and blockedOf ~= nil and blockedOf(character)
+			end
 			local function apply()
+				wasBlocked = isBlocked()
+				local out = visible and not wasBlocked
 				for _, name in props do
 					local override = overrides[name]
-					local shown = visible and (override == nil or override)
+					local shown = out and (override == nil or override)
 					paint(EmployeeConstants.PROPS_FOLDER, name, shown)
 					paint(EmployeeConstants.EMOTE_MOUNTED_FOLDER, name, shown)
-					paint(EmployeeConstants.HOLSTER_FOLDER, name, not visible)
+					paint(EmployeeConstants.HOLSTER_FOLDER, name, not out)
 				end
 				for _, name in swaps do
-					local shown = visible and overrides[name] == true
+					local shown = out and overrides[name] == true
 					paint(EmployeeConstants.PROPS_FOLDER, name, shown)
 					paint(EmployeeConstants.EMOTE_MOUNTED_FOLDER, name, shown)
 				end
@@ -288,6 +327,7 @@ function EmotePropSystem.new(deps: Deps?): EmotePropSystem
 				end
 				table.clear(ownerCleanups)
 				owner = nil
+				idleOwner = false
 				table.clear(overrides)
 				setVisible(false)
 				unmount()
@@ -301,6 +341,7 @@ function EmotePropSystem.new(deps: Deps?): EmotePropSystem
 				end
 				disown()
 				owner = track
+				idleOwner = entry.idle == true
 				props = entry.props
 				swaps = entry.swaps or {}
 				mount(props)
@@ -353,6 +394,19 @@ function EmotePropSystem.new(deps: Deps?): EmotePropSystem
 				local now = track.timePosition()
 				local inWindow = show ~= nil and now >= show and (stow == nil or now < stow)
 				setVisible(track.isPlaying() and inWindow == true)
+			end
+
+			-- A showcase idle's props follow `blocked` (vacuuming, carrying, hiding, knocked out) while it owns them.
+			local onTick = use.onTick
+			if blockedOf ~= nil and onTick ~= nil then
+				table.insert(
+					cleanups,
+					onTick(function()
+						if idleOwner and visible and isBlocked() ~= wasBlocked then
+							apply()
+						end
+					end)
+				)
 			end
 
 			-- A prop that arrives later (replication, a refit) takes the current state.

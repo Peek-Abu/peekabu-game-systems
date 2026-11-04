@@ -9,7 +9,9 @@
 	- While an emote may be playing, moving or jumping asks the server to stop it (EmoteEvents.StopRequest), once.
 	- Every character's emote props show and hide from its clip's markers (EmotePropSystem), and its Legendary
 	  emote effects (bubbles, faces) run on them (EmoteEffectSystem, EmoteVfxSystem), started and stopped with this
-	  service. Sheriff Prickles' lasso loop is drawn bendy over its clip-posed prop (EmoteLassoSystem).
+	  service. Sheriff Prickles' lasso loop is drawn bendy over its clip-posed prop (EmoteLassoSystem). A skin's
+	  showcase idle shows its prop while that character stands idle, away while it vacuums, carries, hides or is knocked
+	  out (`propsBlocked`).
 
 	Spec-exempt shell (input, RunService, packets); the decisions live in EmoteRules and EmoteWheelViewModel.
 
@@ -21,6 +23,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Janitor = require(ReplicatedStorage.Packages.Janitor)
+local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
+local DeathConstants = require(ReplicatedStorage.Shared.Features.Death.Data.DeathConstants)
+local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideConstants)
+local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
+local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
+local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
 local Observers = require(ReplicatedStorage.Packages.Observers)
 local EmoteConstants = require(ReplicatedStorage.Shared.Features.Emote.Data.EmoteConstants)
 local EmoteEvents = require(ReplicatedStorage.Shared.Features.Emote.Net.EmoteEvents)
@@ -42,7 +50,29 @@ local EmoteWheelViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Em
 local WATCH_SECONDS = 12
 
 local janitor = Janitor.new()
-local props = EmotePropSystem.forWorld()
+-- What puts a character's showcase-idle prop away (owner, 2026-11-03): its player vacuuming, carrying, hiding or
+-- knocked out (the same public state the fidget waits on; moving stops the idle itself).
+local function propsBlocked(character: Model): boolean
+	if character:GetAttribute(DeathConstants.KNOCKDOWN_ATTRIBUTE) ~= nil then
+		return true
+	end
+	local player = Players:GetPlayerFromCharacter(character)
+	if player == nil then
+		return false
+	end
+	if player:GetAttribute(HideConstants.PLAYER_SPOT_ATTRIBUTE) ~= nil then
+		return true
+	end
+	local entry = StateSyncClientStore.publicPlayers()[StateSyncConstants.publicEntryKey(player.UserId)]
+	return entry ~= nil
+		and (
+			entry[CarryConstants.PUBLIC_FIELD] ~= nil
+			or entry[ShiftConstants.PUBLIC_VACUUMING] == true
+			or entry[DeathConstants.PUBLIC_FIELD] == true
+		)
+end
+
+local props = EmotePropSystem.forWorld(propsBlocked)
 local effects = EmoteEffectSystem.live(EmoteVfxSystem.start)
 local lasso = EmoteLassoSystem.new()
 local watching: RBXScriptConnection? = nil

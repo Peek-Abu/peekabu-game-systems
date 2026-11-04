@@ -20,18 +20,18 @@ export type Entry = {
 	props: { string },
 	-- Hand props only a PROP_SHOW marker (Value = the prop's name) brings out, e.g. the coil shaken out into a loop.
 	swaps: { string }?,
-	-- Its props show in menu previews only, never on a character in the world (`worldKeyForAsset` skips it): a skin's
-	-- showcase idle plays in a shift too, while the rule that props stay put away in a shift (hands free for the
-	-- vacuum and cargo) stands. Flip it per entry to show the props in a shift.
-	menusOnly: boolean?,
+	-- A skin's showcase idle (owner, 2026-11-03: "show while idle"): its props are out while the character stands idle,
+	-- in menus and in a shift, and put away while something blocks them in the world (vacuuming, carrying, hiding,
+	-- knocked out; EmotePropSystem.forWorld). Moving stops the idle, which puts them away anyway.
+	idle: boolean?,
 }
 
 local entries: { [string]: Entry } = {
 	-- PJ Cappy's Cocoa Sip: the cocoa mug in the right hand, posed every frame against the hand; his left paw rests on
 	-- his tummy (no pillow: owner, 2026-11-03; the clip's revision 2 has no pillow poses).
 	["emote:Cappy.CocoaSip"] = { props = { "Cocoa" } },
-	-- PJ Cappy's showcase idle: both out from the first frame, for as long as the loop plays (menus only).
-	cappypjidle = { props = { "Pillow", "Cocoa" }, menusOnly = true },
+	-- PJ Cappy's showcase idle: both out from the first frame, for as long as the loop plays.
+	cappypjidle = { props = { "Pillow", "Cocoa" }, idle = true },
 	-- Cappy's hire reveal: his phone (an emote prop template, so every skin has it), PropsShow f1 to PropsStow f58.
 	cappyhirereveal = { props = { "Phone" } },
 	-- Cappy's Spot It! ability (both cuts): the same phone, PropsShow f12 to PropsStow f95.
@@ -52,9 +52,9 @@ local entries: { [string]: Entry } = {
 	-- the throw, then coiled back up (PROP_HIDE / PROP_SHOW markers).
 	["emote:Prickles.Lasso"] = { props = { "HoseLasso" }, swaps = { "LassoLoop" } },
 	-- Sheriff Prickles' showcase idle: a PropsShow at the first frame and no stow, so the props stay out for as long as
-	-- the loop plays; the coil leaves his hip while it does (menus only). His quick draw is not here: it plays over the
+	-- the loop plays; the coil leaves his hip while it does. His quick draw is not here: it plays over the
 	-- idle, which keeps the coil out (a prop clip of its own would take the props over and hide them at its end).
-	pricklessheriffidle = { props = { "HoseLasso" }, menusOnly = true },
+	pricklessheriffidle = { props = { "HoseLasso" }, idle = true },
 }
 for _, entry in entries do
 	table.freeze(entry.props)
@@ -66,10 +66,9 @@ for _, entry in entries do
 end
 table.freeze(entries)
 
--- Every asset id (the entry's own and its variants) of a registered clip -> its key; `inWorld` without the menus-only.
+-- Every asset id (the entry's own and its variants) of a registered clip -> its key.
 local byAsset: { [string]: string } = {}
-local inWorld: { [string]: string } = {}
-for key, entry in entries do
+for key in entries do
 	local def = AnimationRegistry.get(key)
 	if def ~= nil then
 		local ids = { def.assetId }
@@ -81,9 +80,6 @@ for key, entry in entries do
 		end
 		for _, id in ids do
 			byAsset[id] = key
-			if not entry.menusOnly then
-				inWorld[id] = key
-			end
 		end
 	end
 end
@@ -109,15 +105,6 @@ end
 ]=]
 function EmotePropRegistry.keyForAsset(assetId: string): string?
 	return byAsset[assetId]
-end
-
---[=[
-	`keyForAsset` for a character in the world: nil for a menus-only entry (a skin's showcase idle in a shift).
-	@param assetId string
-	@return string?
-]=]
-function EmotePropRegistry.worldKeyForAsset(assetId: string): string?
-	return inWorld[assetId]
 end
 
 return table.freeze(EmotePropRegistry)
