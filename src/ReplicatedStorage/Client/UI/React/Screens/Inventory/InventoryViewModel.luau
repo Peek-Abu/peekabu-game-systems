@@ -121,7 +121,7 @@ export type ChatView = { slots: { StickerSlot }, packs: { Pack } }
 -- One emote-wheel slot on the detail panel: what is in it (`mine` = the item shown).
 export type WheelSlot = { slot: number, id: string?, name: string, empty: boolean, mine: boolean }
 
--- One stat's row, in the shape ToonStatRows draws (its render, its name, its 1-5 value).
+-- One stat's row, in the shape ToonStatRows draws (its render, its name, its short line, its 1-5 value).
 export type StatRow = ToonStatRows.ToonStatRow
 export type Tab = { id: string, text: string, soon: boolean, icon: UIAssets.ToonIcon? }
 -- "vacuums" is the Inventory's Vacuums tab (the same panel, for the vacuum every employee wears).
@@ -165,6 +165,15 @@ local STAT_LABEL: { [EmployeeProfileRegistry.Stat]: string } = {
 	strength = "Strength",
 	suction = "Suction",
 	quiet = "Quiet",
+}
+
+-- What each stat does, in one short line (kid reading level; the design's approved words).
+local STAT_HINT: { [EmployeeProfileRegistry.Stat]: string } = {
+	speed = "Run faster.",
+	stamina = "Run longer.",
+	strength = "Carry big stuff faster.",
+	suction = "Clean faster.",
+	quiet = "Mr. Harlow hears you less.",
 }
 
 local STAT_ICON: { [EmployeeProfileRegistry.Stat]: UIAssets.ToonIcon } = {
@@ -532,7 +541,10 @@ function VM.stats(employee: string): { StatRow }
 		return rows
 	end
 	for _, stat: EmployeeProfileRegistry.Stat in EmployeeProfileRegistry.STATS do
-		table.insert(rows, { label = STAT_LABEL[stat], icon = STAT_ICON[stat], value = profile.stats[stat] })
+		table.insert(
+			rows,
+			{ label = STAT_LABEL[stat], hint = STAT_HINT[stat], icon = STAT_ICON[stat], value = profile.stats[stat] }
+		)
 	end
 	return rows
 end

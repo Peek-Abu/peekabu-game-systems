@@ -1,6 +1,6 @@
 # Employee stats that change play: design (2026-11-03)
 
-Status: **plan only, waiting for the owner's yes.** Nothing is built.
+Status: **approved by the owner (2026-11-03, "Yes to all stat stuff!") and built.** See "As built" at the end.
 
 Today the five stats (Speed, Stamina, Strength, Suction, Quiet; 1 to 5 bars) are display only:
 `EmployeeStatFormulas` has `STEP = 0`, so every effect is 1. This plan turns them on.
@@ -201,3 +201,22 @@ survives a respawn.
 3. Speed and Stamina in Sprint; then Strength in Carry; then Quiet in Sprint/Vacuum noise; then Suction.
 4. The stat-row hints.
 5. Owner play-check (section 8). Board status "Ready to check", never Done until the owner says so.
+
+## 10. As built (2026-11-03)
+
+Differences from the plan above, all within what was approved:
+
+- **Command syntax:** `employeestatset <stat|all> <1-5|reset> [player]` (Cmdr wants the optional player last), for
+  example `employeestatset all 1`, `employeestatset speed 5`, `employeestatset all reset`. Alias `stat-set`. It
+  rebuilds the character where it stands (like a skin swap, the goo puff included). Drop what you carry first.
+- **Quiet lives in Noise:** `NoiseServiceServer.emit` shrinks a noise from a Quiet source (`NoiseConstants.QUIET_SOURCES`:
+  `sprint`, `vacuum`) by its loudest maker's Quiet. Drops, searches, rattles and hide exits are unchanged.
+- **Strength applies to the whole load**, small pocketed items included (they weigh a little: four small items take a
+  sprint from 23 to 20.7), through Cargo's load source (`CargoInventorySystem`). Carry itself (a base feature) is
+  unchanged.
+- **Suction** is `EmployeeStatFormulas.suctionRate`, the channel `rate` for Vacuum's piles and Cargo's grime, through
+  Interaction's new per-player channel rate (base PR #12, ported to the game branch by hand in 9be42939).
+- **Stat lines** show only where a row is at least 40 px tall (desktop). Phone rows (18-26 px) show the name alone.
+- A character built by the engine fallback (no employee art in the place) has no stat attributes, so it plays at
+  1 bar (today's game).
+

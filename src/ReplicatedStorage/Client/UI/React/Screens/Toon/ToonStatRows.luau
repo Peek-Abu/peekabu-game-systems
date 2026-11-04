@@ -2,7 +2,8 @@
 --[=[
 	ToonStatRows: an employee's five stats, one row each: the stat's render, its name, and five pips filled gold up to
 	its 1-5 value (the rest night-dark), each pip with an ink outline. Drawn on a dark plate (the About tab, the pick
-	card, the Shop's hire page), so the names are white. The rows come from InventoryViewModel.stats; nothing is per
+	card, the Shop's hire page), so the names are white. A row tall enough (HINT_MIN_ROW) shows the stat's short line
+	("Run faster.") under its name, smaller and in lilac; a short row (phones) shows the name alone. The rows come from InventoryViewModel.stats; nothing is per
 	employee here. Presentational (exempt; story in ToonStatRows.story).
 
 	@class ToonStatRows
@@ -23,7 +24,7 @@ local COLOR = UIToonConstants.COLOR
 
 type Nodes = { [string]: React.ReactNode }
 
-export type ToonStatRow = { icon: UIAssets.ToonIcon, label: string, value: number }
+export type ToonStatRow = { icon: UIAssets.ToonIcon, label: string, hint: string?, value: number }
 
 export type ToonStatRowsProps = {
 	rows: { ToonStatRow },
@@ -37,6 +38,8 @@ export type ToonStatRowsProps = {
 }
 
 local PIPS = 5
+-- The shortest row (px) with room for the short line under the name.
+local HINT_MIN_ROW = 40
 
 local function ToonStatRows(props: ToonStatRowsProps): React.ReactNode
 	local row = props.row
@@ -52,15 +55,30 @@ local function ToonStatRows(props: ToonStatRowsProps): React.ReactNode
 			size = UDim2.fromOffset(row, row),
 			drop = 2,
 		})
+		local hint = if row >= HINT_MIN_ROW then stat.hint else nil
+		local labelHeight = if hint ~= nil then math.floor(row * 0.58) else row
 		face[`label{index}`] = e(ToonText, {
 			text = stat.label,
 			font = "body",
 			color = COLOR.white,
 			textSize = props.textSize,
 			position = UDim2.fromOffset(row + 8, y),
-			size = UDim2.fromOffset(barX - row - 12, row),
+			size = UDim2.fromOffset(barX - row - 12, labelHeight),
+			alignY = if hint ~= nil then "bottom" else nil,
 			fit = true,
 		})
+		face[`hint{index}`] = if hint ~= nil
+			then e(ToonText, {
+				text = hint,
+				font = "body",
+				color = UIToonConstants.shade("lilac").hi,
+				textSize = math.floor(props.textSize * 0.62),
+				position = UDim2.fromOffset(row + 8, y + labelHeight),
+				size = UDim2.fromOffset(barX - row - 12, row - labelHeight),
+				alignY = "top",
+				fit = true,
+			})
+			else nil
 		local pips: Nodes = {}
 		for pip = 1, PIPS do
 			local filled = pip <= stat.value
