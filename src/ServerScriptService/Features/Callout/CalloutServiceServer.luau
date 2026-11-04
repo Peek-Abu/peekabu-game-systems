@@ -7,7 +7,12 @@
 	an allowed callout is told to every client (CalloutEvents.Shown): a shift server holds only its crew, and in the
 	depot everyone is close by. Stickers and pings work in shifts and in the depot; stickers make no sound.
 
-	`deps` is a test seam: the outfit, what the player owns, where their body is, the clock and the broadcast.
+	A sticker is thrown to a spot above and in front of where its sender's head was when it was sent
+	(CalloutRules.stickerSpot), decided here so every client shows it landing in the same place; it stays there while
+	its sender moves on (owner, 2026-11-04). With no head it is still told (the crew list shows it), with no spot.
+
+	`deps` is a test seam: the outfit, what the player owns, where their body and sticker spot are, the clock and the
+	broadcast.
 
 	@class CalloutServiceServer
 ]=]
@@ -30,6 +35,7 @@ export type Deps = {
 	outfitOf: (player: Player) -> CosmeticTypes.Outfit?,
 	owns: (player: Player, id: string) -> boolean,
 	bodyAt: (player: Player) -> Vector3?,
+	stickerAt: (player: Player) -> Vector3?,
 	now: () -> number,
 	broadcast: (shown: CalloutConstants.Shown) -> (),
 }
@@ -50,17 +56,22 @@ local defaults: Deps = {
 		local root = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil
 		return if root ~= nil and root:IsA("BasePart") then root.Position else nil
 	end,
+	stickerAt = function(player)
+		local character = player.Character
+		if character == nil then
+			return nil
+		end
+		local head = character:FindFirstChild("Head")
+		if head == nil or not head:IsA("BasePart") then
+			return nil
+		end
+		local root = character:FindFirstChild("HumanoidRootPart")
+		local facing = if root ~= nil and root:IsA("BasePart") then root.CFrame.LookVector else head.CFrame.LookVector
+		return CalloutRules.stickerSpot(head.Position, head.Size.Y, facing)
+	end,
 	now = os.clock,
 	broadcast = function(shown)
-		local at = shown.at or Vector3.zero
-		CalloutEvents.packets.Shown.sendToAll({
-			userId = shown.userId,
-			kind = shown.kind,
-			id = shown.id,
-			x = at.X,
-			y = at.Y,
-			z = at.Z,
-		})
+		CalloutEvents.packets.Shown.sendToAll(CalloutRequestRules.shownPacket(shown))
 	end,
 }
 local deps: Deps = defaults
@@ -87,7 +98,7 @@ local function calloutImpl(player: Player, request: CalloutRequestRules.Request)
 		if id == nil then
 			return false, refusal
 		end
-		shown = { userId = player.UserId, kind = "sticker", id = id }
+		shown = { userId = player.UserId, kind = "sticker", id = id, at = deps.stickerAt(player) }
 	else
 		local ok, refusal = CalloutRules.ping(request.id, request.at, deps.bodyAt(player))
 		if not ok then

@@ -2,7 +2,7 @@
 --[=[
 	CalloutEvents: the ByteNet packets for pings and stickers. Client -> server: a Request (shape:
 	CalloutRequestRules.Request, checked at the trust boundary). Server -> every client: Shown (who, which callout,
-	and a ping's spot; `x/y/z` are 0 for a sticker).
+	and where: a ping's spot, a sticker's when `placed`; CalloutRequestRules.shownPacket / shown).
 
 	@class CalloutEvents
 ]=]
@@ -38,6 +38,7 @@ local CalloutEvents = ByteNet.defineNamespace(NAMESPACE, function()
 					x = ByteNet.float32,
 					y = ByteNet.float32,
 					z = ByteNet.float32,
+					placed = ByteNet.bool,
 				}),
 				reliabilityType = "reliable",
 			}),

@@ -1,0 +1,25 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local EmployeeBusyUtils = require(script.Parent.EmployeeBusyUtils)
+local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
+local DeathConstants = require(ReplicatedStorage.Shared.Features.Death.Data.DeathConstants)
+local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
+
+return function()
+	it("is busy carrying, vacuuming or dead, by the player's public entry", function()
+		expect(EmployeeBusyUtils.entryBusy(nil)).to.equal(false)
+		expect(EmployeeBusyUtils.entryBusy({})).to.equal(false)
+		expect(EmployeeBusyUtils.entryBusy({ [CarryConstants.PUBLIC_FIELD] = "box" })).to.equal(true)
+		expect(EmployeeBusyUtils.entryBusy({ [ShiftConstants.PUBLIC_VACUUMING] = true })).to.equal(true)
+		expect(EmployeeBusyUtils.entryBusy({ [DeathConstants.PUBLIC_FIELD] = true })).to.equal(true)
+		expect(EmployeeBusyUtils.entryBusy({ [ShiftConstants.PUBLIC_VACUUMING] = false })).to.equal(false)
+	end)
+
+	it("is busy knocked out, and not for a body with no player and nothing on it", function()
+		local body = Instance.new("Model")
+		expect(EmployeeBusyUtils.busy(body)).to.equal(false)
+		body:SetAttribute(DeathConstants.KNOCKDOWN_ATTRIBUTE, 1)
+		expect(EmployeeBusyUtils.busy(body)).to.equal(true)
+		body:Destroy()
+	end)
+end

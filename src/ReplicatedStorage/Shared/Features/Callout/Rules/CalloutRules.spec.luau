@@ -47,4 +47,23 @@ return function()
 			expect(select(2, CalloutRules.ping("gloom", Vector3.zero, nil))).to.equal("no body")
 		end)
 	end)
+
+	describe("stickerSpot", function()
+		it("lands the sticker a lift above the head top and a little ahead of where the sender faces", function()
+			local spot = CalloutRules.stickerSpot(Vector3.new(10, 5, -2), 1, Vector3.new(0, 0, -1))
+			expect(spot).to.equal(
+				Vector3.new(10, 5 + 0.5 + CalloutConstants.STICKER_LIFT, -2 - CalloutConstants.STICKER_AHEAD)
+			)
+		end)
+
+		it("only uses the level part of the facing, and none when it points straight up or down", function()
+			local tilted = CalloutRules.stickerSpot(Vector3.zero, 2, Vector3.new(3, 4, 0))
+			expect(
+				(tilted - Vector3.new(CalloutConstants.STICKER_AHEAD, 1 + CalloutConstants.STICKER_LIFT, 0)).Magnitude
+					< 1e-4
+			).to.equal(true)
+			local straightUp = CalloutRules.stickerSpot(Vector3.zero, 2, Vector3.yAxis)
+			expect(straightUp).to.equal(Vector3.new(0, 1 + CalloutConstants.STICKER_LIFT, 0))
+		end)
+	end)
 end

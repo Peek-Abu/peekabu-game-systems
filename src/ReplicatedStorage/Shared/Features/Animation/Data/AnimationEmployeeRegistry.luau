@@ -130,6 +130,12 @@ local AnimationEmployeeRegistry: AnimationDomain = table.freeze({
 	pricklesrun = locomotion("rbxassetid://82235036410910"),
 	pricklescrouchidle = locomotion("rbxassetid://126115556970677"),
 	pricklescrouchwalk = locomotion("rbxassetid://112633928289035"),
+
+	-- The sticker toss, one clip for every employee (owner-approved v6, 2026-11-04; source
+	-- characters/ui/stickers/legendary-2026-11-03/toss): the right arm only, a dip then a throw forward and up with the
+	-- hand clear of every head, so a walk or jump carries on underneath. No rest pose: CalloutServiceClient fades it
+	-- in over the employee's own idle and back out (CalloutConstants.TOSS_*).
+	stickertoss = fidget("rbxassetid://125049963246426"),
 })
 
 return AnimationEmployeeRegistry

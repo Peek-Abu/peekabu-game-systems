@@ -8,6 +8,8 @@
 	  "not owned".
 	- `ping(id, at, from)`: whether a ping may go there. Refusals: "unknown ping", "too far" (PING_RANGE from `from`,
 	  the body), "no body".
+	- `stickerSpot(head, height, facing)`: where a thrown sticker floats: STICKER_LIFT above the top of a head at `head`
+	  and STICKER_AHEAD along the level part of `facing`.
 
 	@class CalloutRules
 ]=]
@@ -66,6 +68,12 @@ function CalloutRules.ping(id: string, at: Vector3, from: Vector3?): (boolean, s
 		return false, "too far"
 	end
 	return true, nil
+end
+
+function CalloutRules.stickerSpot(head: Vector3, height: number, facing: Vector3): Vector3
+	local level = Vector3.new(facing.X, 0, facing.Z)
+	local ahead = if level.Magnitude > 1e-3 then level.Unit * CalloutConstants.STICKER_AHEAD else Vector3.zero
+	return head + Vector3.new(0, height / 2 + CalloutConstants.STICKER_LIFT, 0) + ahead
 end
 
 return CalloutRules

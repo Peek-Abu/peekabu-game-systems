@@ -31,12 +31,40 @@ return function()
 		end
 	end)
 
-	it("reads a Shown packet back, with a spot only for a ping", function()
-		local ping = CalloutRequestRules.shown({ userId = 1, kind = "ping", id = "help", x = 1, y = 2, z = 3 })
+	it("reads a Shown packet back: a ping's spot, a sticker's spot only when it was placed", function()
+		local ping =
+			CalloutRequestRules.shown({ userId = 1, kind = "ping", id = "help", x = 1, y = 2, z = 3, placed = true })
 		expect(ping.at).to.equal(Vector3.new(1, 2, 3))
-		local sticker =
-			CalloutRequestRules.shown({ userId = 1, kind = "sticker", id = "CozyPack.CocoaBreak", x = 0, y = 0, z = 0 })
-		expect(sticker.at).never.to.be.ok()
-		expect(CalloutRequestRules.shown({ userId = 1, kind = "nope", id = "x", x = 0, y = 0, z = 0 })).never.to.be.ok()
+		local placed = CalloutRequestRules.shown({
+			userId = 1,
+			kind = "sticker",
+			id = "CozyPack.CocoaBreak",
+			x = 4,
+			y = 5,
+			z = 6,
+			placed = true,
+		})
+		expect(placed.at).to.equal(Vector3.new(4, 5, 6))
+		local bodiless = CalloutRequestRules.shown({
+			userId = 1,
+			kind = "sticker",
+			id = "CozyPack.CocoaBreak",
+			x = 0,
+			y = 0,
+			z = 0,
+			placed = false,
+		})
+		expect(bodiless.at).never.to.be.ok()
+		expect(CalloutRequestRules.shown({ userId = 1, kind = "nope", id = "x", x = 0, y = 0, z = 0, placed = false })).never.to.be.ok()
+	end)
+
+	it("packs a Shown for the wire and reads it back the same", function()
+		local sticker = { userId = 3, kind = "sticker", id = "BubblePack.Yay", at = Vector3.new(1, 2, 3) }
+		local back = CalloutRequestRules.shown(CalloutRequestRules.shownPacket(sticker))
+		expect(back.at).to.equal(Vector3.new(1, 2, 3))
+		expect(back.id).to.equal("BubblePack.Yay")
+		local bodiless = CalloutRequestRules.shownPacket({ userId = 3, kind = "sticker", id = "BubblePack.Yay" })
+		expect(bodiless.placed).to.equal(false)
+		expect(CalloutRequestRules.shown(bodiless).at).never.to.be.ok()
 	end)
 end

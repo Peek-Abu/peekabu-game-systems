@@ -62,19 +62,37 @@ function CalloutRequestRules.parse(payload: unknown): (Request?, string?)
 	return nil, `unknown callout kind {tostring(kind)}`
 end
 
--- A Shown packet's fields as a Shown (`at` only for a ping).
-function CalloutRequestRules.shown(packet: {
+export type ShownPacket = {
 	userId: number,
 	kind: string,
 	id: string,
 	x: number,
 	y: number,
 	z: number,
-}): CalloutConstants.Shown?
+	placed: boolean,
+}
+
+-- A Shown for the wire: x/y/z is its spot, `placed` whether it has one (a sticker from a body with no head has none).
+function CalloutRequestRules.shownPacket(shown: CalloutConstants.Shown): ShownPacket
+	local at = shown.at or Vector3.zero
+	return {
+		userId = shown.userId,
+		kind = shown.kind,
+		id = shown.id,
+		x = at.X,
+		y = at.Y,
+		z = at.Z,
+		placed = shown.at ~= nil,
+	}
+end
+
+-- A Shown packet's fields as a Shown: a ping's spot, and a sticker's when it was placed.
+function CalloutRequestRules.shown(packet: ShownPacket): CalloutConstants.Shown?
+	local at = Vector3.new(packet.x, packet.y, packet.z)
 	if packet.kind == "ping" then
-		return { userId = packet.userId, kind = "ping", id = packet.id, at = Vector3.new(packet.x, packet.y, packet.z) }
+		return { userId = packet.userId, kind = "ping", id = packet.id, at = at }
 	elseif packet.kind == "sticker" then
-		return { userId = packet.userId, kind = "sticker", id = packet.id }
+		return { userId = packet.userId, kind = "sticker", id = packet.id, at = if packet.placed then at else nil }
 	end
 	return nil
 end

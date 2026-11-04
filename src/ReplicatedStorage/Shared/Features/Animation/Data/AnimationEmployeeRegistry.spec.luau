@@ -65,6 +65,16 @@ return function()
 		end
 	end)
 
+	it("holds the sticker toss: one shared one-shot Action clip on the right arm for every employee", function()
+		local def = AnimationEmployeeRegistry.stickertoss
+		expect(def).to.be.ok()
+		expect(AnimationTypes.isCanonicalAssetId(def.assetId)).to.equal(true)
+		expect(def.looped).to.equal(false)
+		expect(def.priority).to.equal(Enum.AnimationPriority.Action)
+		expect(def.interruption).to.equal("ambient")
+		expect(def.replicable).never.to.equal(true)
+	end)
+
 	it("is composed as the employee domain", function()
 		expect(AnimationRegistry.domain("employee")).to.equal(AnimationEmployeeRegistry)
 		expect(AnimationRegistry.domainOf("pippawalk")).to.equal("employee")

@@ -31,7 +31,8 @@ local CalloutAssets = {
 
 -- The sticker's image: its uploaded art, else the shop gift.
 function CalloutAssets.stickerImage(id: string): string
-	return UIAssets.stickers[id] or UIAssets.toonIcons.shopGift
+	local fallback: UIAssets.ToonIcon = "shopGift"
+	return UIAssets.stickers[id] or UIAssets.toonIcons[fallback]
 end
 
 -- The ping's image.

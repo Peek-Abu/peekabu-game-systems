@@ -8,10 +8,10 @@ local CalloutService = require(ServerScriptService.Features.Callout.CalloutServi
 
 return function()
 	local player = { Name = "TestPlayer", UserId = 7 }
-	local sent, clock, owned, body
+	local sent, clock, owned, body, head
 
 	local function install(stickers)
-		sent, clock, owned, body = {}, 100, { ["CozyPack.CocoaBreak"] = true }, Vector3.new(0, 0, 0)
+		sent, clock, owned, body, head = {}, 100, { ["CozyPack.CocoaBreak"] = true }, Vector3.new(0, 0, 0), nil
 		CalloutService._setDeps({
 			outfitOf = function()
 				return {
@@ -26,6 +26,9 @@ return function()
 			end,
 			bodyAt = function()
 				return body
+			end,
+			stickerAt = function()
+				return head
 			end,
 			now = function()
 				return clock
@@ -46,6 +49,19 @@ return function()
 		expect(sent[1].kind).to.equal("sticker")
 		expect(sent[1].id).to.equal("CozyPack.CocoaBreak")
 		expect(sent[1].userId).to.equal(7)
+	end)
+
+	it("pins a sticker where its sender's head was, for everyone alike", function()
+		install({ "", "CozyPack.CocoaBreak", "", "" })
+		head = Vector3.new(3, 9, -4)
+		expect(CalloutService:callout(player, { kind = "sticker", slot = 2 })).to.equal(true)
+		expect(sent[1].at).to.equal(Vector3.new(3, 9, -4))
+	end)
+
+	it("still tells a sticker with no head to pin it to (the crew list shows it)", function()
+		install({ "", "CozyPack.CocoaBreak", "", "" })
+		expect(CalloutService:callout(player, { kind = "sticker", slot = 2 })).to.equal(true)
+		expect(sent[1].at).never.to.be.ok()
 	end)
 
 	it("refuses an empty slot and an unowned sticker", function()
