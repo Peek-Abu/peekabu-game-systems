@@ -69,9 +69,13 @@ export type SkinDef = {
 	-- The outfit's colour styles, in catalogue order (CosmeticRegistry `styles`); the player's look picks one. nil = one
 	-- look only.
 	styles: { StyleDef }?,
-	-- An AnimationRegistry key: the skin's own looped idle that previews (shop, inventory, reveal) play in place of the
-	-- employee's idle, holding the skin's props (EmotePropRegistry). nil = the employee's idle.
+	-- An AnimationRegistry key: the skin's own looped idle, played in place of the employee's idle wherever the skin is
+	-- worn (previews, and a shift: owner, 2026-11-03, "it's whatever is equipped"). Its props (EmotePropRegistry) show
+	-- in previews. nil = the employee's idle.
 	showcaseIdle: string?,
+	-- An AnimationRegistry key: the skin's own rare fidget over its showcase idle (AnimationFidgetSystem). A skin with a
+	-- showcase idle and no fidget of its own never fidgets: the employee's fidget would not fit its idle.
+	showcaseFidget: string?,
 	-- An AnimationRegistry key: the one-shot clip the reveal screen plays when this skin is unlocked. nil = the
 	-- employee's hireReveal, worn in this skin (owner, 2026-10-29: every skin purchase gets a reveal, the Legendaries'
 	-- too for now; a skin may get its own later, e.g. the registered pippabubblebuddyreveal).
@@ -408,6 +412,7 @@ EMPLOYEES.Prickles = {
 			accessories = {},
 			outfit = "PricklesSheriff",
 			showcaseIdle = "pricklessheriffidle",
+			showcaseFidget = "pricklessherifffidget",
 			styles = {
 				{
 					folder = "BrownRed",

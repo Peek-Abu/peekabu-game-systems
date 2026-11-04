@@ -42,7 +42,7 @@ local EmoteWheelViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Em
 local WATCH_SECONDS = 12
 
 local janitor = Janitor.new()
-local props = EmotePropSystem.new()
+local props = EmotePropSystem.forWorld()
 local effects = EmoteEffectSystem.live(EmoteVfxSystem.start)
 local lasso = EmoteLassoSystem.new()
 local watching: RBXScriptConnection? = nil

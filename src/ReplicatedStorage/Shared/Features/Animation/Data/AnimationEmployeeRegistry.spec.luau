@@ -45,7 +45,7 @@ return function()
 	end)
 
 	it("holds the fidgets as one-shot Action clips the idle can drop", function()
-		for _, key in { "pippafidget", "cappyfidget", "pricklesfidget" } do
+		for _, key in { "pippafidget", "cappyfidget", "pricklesfidget", "pricklessherifffidget" } do
 			local def = AnimationEmployeeRegistry[key]
 			expect(def).to.be.ok()
 			expect(AnimationTypes.isCanonicalAssetId(def.assetId)).to.equal(true)

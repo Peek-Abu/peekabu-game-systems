@@ -1,6 +1,7 @@
 --!strict
 --[=[
-	EmployeeSkinRules: which skin a character wears, and whether its palette is usable.
+	EmployeeSkinRules: which skin a character wears, whether its palette is usable, and which idle and fidget it plays
+	(the same in menus and in a shift: owner, 2026-11-03).
 
 	@class EmployeeSkinRules
 ]=]
@@ -13,6 +14,12 @@ local EmployeeRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data
 export type SkinSet = {
 	skins: { [string]: EmployeeRegistry.SkinDef },
 	defaultSkin: string,
+}
+
+-- The fields `idleOf` / `fidgetOf` read (an EmployeeDef has them).
+export type LocomotionSet = {
+	skins: { [string]: EmployeeRegistry.SkinDef },
+	locomotion: EmployeeRegistry.LocomotionDef?,
 }
 
 -- What a character was built as: its employee, skin key and colour style (EmployeeServiceServer).
@@ -30,6 +37,32 @@ local EmployeeSkinRules = {}
 ]=]
 function EmployeeSkinRules.wornChanged(current: Worn?, employee: string, skin: string, style: number): boolean
 	return current == nil or current.employee ~= employee or current.skin ~= skin or current.style ~= style
+end
+
+--[=[
+	The AnimationRegistry key of the idle loop a character or preview wearing `skinKey` plays: the skin's own showcase
+	idle when it has one, else the employee's idle; nil for an employee without its own locomotion.
+]=]
+function EmployeeSkinRules.idleOf(def: LocomotionSet, skinKey: string?): string?
+	local skin = if skinKey ~= nil then def.skins[skinKey] else nil
+	if skin ~= nil and skin.showcaseIdle ~= nil then
+		return skin.showcaseIdle
+	end
+	local locomotion = def.locomotion
+	return if locomotion ~= nil then locomotion.idle else nil
+end
+
+--[=[
+	The AnimationRegistry key of the fidget that goes with `idleOf`: a skin with a showcase idle has its own fidget or
+	none (the employee's would not fit that idle); any other skin plays the employee's. nil = no fidget.
+]=]
+function EmployeeSkinRules.fidgetOf(def: LocomotionSet, skinKey: string?): string?
+	local skin = if skinKey ~= nil then def.skins[skinKey] else nil
+	if skin ~= nil and skin.showcaseIdle ~= nil then
+		return skin.showcaseFidget
+	end
+	local locomotion = def.locomotion
+	return if locomotion ~= nil then locomotion.fidget else nil
 end
 
 --[=[

@@ -34,9 +34,10 @@ assert(character ~= nil and character:IsA("Model"), "[Animate] script must be a 
 character:WaitForChild("Humanoid")
 
 -- An employee character (Cleanup Crew) plays its own idle/walk/run when its EmployeeRegistry entry has
--- them; the server stamps the attribute on the StarterCharacter template, so it is here at spawn.
+-- them; the server stamps the attribute on the StarterCharacter template, so it is here at spawn. The worn skin's own
+-- idle and fidget stand in when it has them (owner, 2026-11-03: in a shift too); the server dresses the character
+-- just after it spawns, so the skin attribute may land a moment later and rebinds.
 local employee = character:GetAttribute(EmployeeConstants.NAME_ATTRIBUTE)
-local config = EmployeeLocomotionUtils.forName(employee)
 
 -- What stops a fidget beside a move, a crouch or an Action clip (a Gloom nearby does not: owner, 2026-10-29).
 local function fidgetBlocked(): boolean
@@ -54,13 +55,28 @@ local function fidgetBlocked(): boolean
 end
 
 -- Crouched (the server's Crouching attribute): the employee's crouch idle / walk.
-local unbind = AnimationLocomotionHumanoidSystem.bind(character, config, {
-	crouchAttribute = CrouchConstants.CROUCHING_ATTRIBUTE,
-	fidgets = EmployeeLocomotionUtils.fidgetsFor(employee),
-	fidgetBlocked = fidgetBlocked,
-})
-if unbind ~= nil then
+local unbind: (() -> ())? = nil
+local function bind()
 	local release = unbind
-	character.Destroying:Connect(release)
-	script.Destroying:Connect(release)
+	if release ~= nil then
+		release()
+	end
+	local skin = character:GetAttribute(EmployeeConstants.SKIN_ATTRIBUTE)
+	unbind = AnimationLocomotionHumanoidSystem.bind(character, EmployeeLocomotionUtils.forName(employee, skin), {
+		crouchAttribute = CrouchConstants.CROUCHING_ATTRIBUTE,
+		fidgets = EmployeeLocomotionUtils.fidgetsFor(employee, skin),
+		fidgetBlocked = fidgetBlocked,
+	})
 end
+bind()
+local skinChanged = character:GetAttributeChangedSignal(EmployeeConstants.SKIN_ATTRIBUTE):Connect(bind)
+local function releaseAll()
+	skinChanged:Disconnect()
+	local release = unbind
+	if release ~= nil then
+		release()
+		unbind = nil
+	end
+end
+character.Destroying:Connect(releaseAll)
+script.Destroying:Connect(releaseAll)

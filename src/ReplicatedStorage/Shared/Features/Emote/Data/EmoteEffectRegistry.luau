@@ -65,6 +65,8 @@ local entries: { [string]: Entry } = {
 	pippahirereveal = { effects = { { id = "face", on = "Face" } } },
 	prickleshirereveal = { effects = { { id = "face", on = "Face" } } },
 	cappyhirereveal = { effects = { { id = "face", on = "Face" } } },
+	-- Sheriff Prickles' quick draw (his skin's fidget): a squint while he checks for trouble, then his usual face.
+	pricklessherifffidget = { effects = { { id = "face", on = "Face" } } },
 	-- The ability clips: their faces as Face markers.
 	cappyspotit = { effects = { { id = "face", on = "Face" } } },
 	cappyspotitupper = { effects = { { id = "face", on = "Face" } } },

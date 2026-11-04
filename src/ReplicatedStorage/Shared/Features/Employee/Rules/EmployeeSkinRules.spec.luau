@@ -14,6 +14,46 @@ return function()
 		},
 	}
 
+	describe("idleOf / fidgetOf", function()
+		local function emp(skins)
+			return {
+				defaultSkin = "Default",
+				skins = skins,
+				locomotion = { idle = "ownidle", fidget = "ownfidget" },
+			}
+		end
+		local plain = skin("Default", nil)
+		local legendary = skin("Legendary", nil)
+		legendary.showcaseIdle = "skinidle"
+		legendary.showcaseFidget = "skinfidget"
+		local idleOnly = skin("IdleOnly", nil)
+		idleOnly.showcaseIdle = "skinidle"
+		local e = emp({ Default = plain, Legendary = legendary, IdleOnly = idleOnly })
+
+		it("plays the skin's own idle and fidget when it has them, in menus and in a shift alike", function()
+			expect(EmployeeSkinRules.idleOf(e, "Legendary")).to.equal("skinidle")
+			expect(EmployeeSkinRules.fidgetOf(e, "Legendary")).to.equal("skinfidget")
+		end)
+
+		it("plays the employee's own for a skin without them, an unknown skin or none", function()
+			for _, key in { "Default", "Nope", nil } do
+				expect(EmployeeSkinRules.idleOf(e, key)).to.equal("ownidle")
+				expect(EmployeeSkinRules.fidgetOf(e, key)).to.equal("ownfidget")
+			end
+		end)
+
+		it("never plays the employee's fidget over a skin's own idle (it would not fit it)", function()
+			expect(EmployeeSkinRules.idleOf(e, "IdleOnly")).to.equal("skinidle")
+			expect(EmployeeSkinRules.fidgetOf(e, "IdleOnly")).never.to.be.ok()
+		end)
+
+		it("is nil for an employee without its own locomotion", function()
+			local stock = { defaultSkin = "Default", skins = { Default = plain } }
+			expect(EmployeeSkinRules.idleOf(stock, "Default")).never.to.be.ok()
+			expect(EmployeeSkinRules.fidgetOf(stock, "Default")).never.to.be.ok()
+		end)
+	end)
+
 	describe("select", function()
 		it("uses the employee's default skin when the player has none", function()
 			expect(EmployeeSkinRules.select(def, nil).name).to.equal("Default")

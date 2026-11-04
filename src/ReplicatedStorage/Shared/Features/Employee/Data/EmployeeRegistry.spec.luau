@@ -289,6 +289,21 @@ return function()
 			expect(EmployeeRegistry.get("Pippa").skins.BubbleBuddy.showcaseIdle).never.to.be.ok()
 			expect(EmployeeRegistry.get("Prickles").skins.Sheriff.showcaseIdle).to.equal("pricklessheriffidle")
 		end)
+
+		it("names showcase fidgets only beside a showcase idle, as one-shot clips the registry knows", function()
+			for _, name in EmployeeRegistry.names() do
+				for _, skin in EmployeeRegistry.get(name).skins do
+					local key = skin.showcaseFidget
+					if key ~= nil then
+						expect(skin.showcaseIdle).to.be.ok()
+						local def = AnimationRegistry.get(key)
+						expect(def).to.be.ok()
+						expect(def.looped).to.equal(false)
+					end
+				end
+			end
+			expect(EmployeeRegistry.get("Prickles").skins.Sheriff.showcaseFidget).to.equal("pricklessherifffidget")
+		end)
 	end)
 
 	describe("locomotion", function()

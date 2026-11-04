@@ -184,6 +184,18 @@ function EmotePropSystem.findProp(character: Model, name: string): BasePart?
 	return if found ~= nil and found:IsA("BasePart") then found else nil
 end
 
+--[=[
+	The system for characters in the world (EmoteServiceClient): a menus-only clip (a skin's showcase idle, which plays
+	in a shift too) never brings out props there (EmotePropRegistry `menusOnly`). Previews use `new()`.
+]=]
+function EmotePropSystem.forWorld(): EmotePropSystem
+	return EmotePropSystem.new({
+		sourceOf = realSource,
+		keyForAsset = EmotePropRegistry.worldKeyForAsset,
+		templateOf = realTemplate,
+	})
+end
+
 function EmotePropSystem.new(deps: Deps?): EmotePropSystem
 	local use: Deps = deps or defaults
 	local templateOf = use.templateOf

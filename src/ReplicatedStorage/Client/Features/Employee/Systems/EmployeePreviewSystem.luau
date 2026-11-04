@@ -53,10 +53,15 @@ local REACTION_FADE = 0.25
 -- Seconds a reaction blends into a showcase idle before it ends: it lands on the employee's own idle, up to 75 degrees
 -- from the showcase idle's first pose at a joint (measured 2026-10-30).
 local SHOWCASE_RETURN = 0.4
+-- Seconds a reveal crossfades into a skin's own idle (owner, 2026-11-03: a fade, not a new reveal ending per skin). The
+-- reveal lands on the employee's idle, up to 94 degrees at a joint from a showcase idle's first pose; over 0.5 s the
+-- arms move at most 4.5 degrees a frame, calmer than the reveal itself (measured on Sheriff Prickles, 2026-11-03).
+local REVEAL_FADE = 0.5
 
 local EmployeePreviewSystem = {
 	LIVE_CAP = LIVE_CAP,
 	EMOTE_PAUSE = EMOTE_PAUSE,
+	REVEAL_FADE = REVEAL_FADE,
 }
 
 local live: { [Model]: RBXScriptConnection } = {}
@@ -230,33 +235,16 @@ end
 ]=]
 function EmployeePreviewSystem.idleOf(employee: string, skin: string?): string?
 	local def = EmployeeRegistry.get(employee)
-	if def == nil then
-		return nil
-	end
-	local look = if skin ~= nil then def.skins[skin] else nil
-	local showcase = if look ~= nil then look.showcaseIdle else nil
-	if showcase ~= nil then
-		return showcase
-	end
-	local locomotion = def.locomotion
-	return if locomotion ~= nil then locomotion.idle else nil
+	return if def ~= nil then EmployeeSkinRules.idleOf(def, skin) else nil
 end
 
 --[=[
-	The animation registry key of the fidget a preview plays: the employee's, belonging to its idle (owner, 2026-10-29);
-	nil when it has none, or the skin's showcase idle holds props the fidget does not know about.
+	The animation registry key of the fidget a preview plays, the one that belongs to its idle (EmployeeSkinRules
+	`fidgetOf`: a skin's own over its showcase idle, else the employee's); nil when there is none.
 ]=]
 function EmployeePreviewSystem.fidgetOf(employee: string, skin: string?): string?
 	local def = EmployeeRegistry.get(employee)
-	if def == nil then
-		return nil
-	end
-	local look = if skin ~= nil then def.skins[skin] else nil
-	if look ~= nil and look.showcaseIdle ~= nil then
-		return nil
-	end
-	local locomotion = def.locomotion
-	return if locomotion ~= nil then locomotion.fidget else nil
+	return if def ~= nil then EmployeeSkinRules.fidgetOf(def, skin) else nil
 end
 
 --[=[
@@ -323,9 +311,10 @@ end
 
 --[=[
 	Plays the reveal (`revealOf`) once on a live preview, then its idle (`playIdle`, the skin's showcase idle when it
-	has one). Its props and faces come from the clip's markers (EmotePropSystem / EmoteEffectSystem tracking the
-	model). Returns the stop (it cancels the reveal or the idle that followed), or nil when there is no reveal (the
-	caller plays the idle instead).
+	has one). A reveal ends on the employee's own idle, so a skin's own idle takes over with a REVEAL_FADE crossfade
+	before the reveal's end. Its props and faces come from the clip's markers (EmotePropSystem / EmoteEffectSystem
+	tracking the model). Returns the stop (it cancels the reveal or the idle that followed), or nil when there is no
+	reveal (the caller plays the idle instead).
 ]=]
 function EmployeePreviewSystem.playReveal(model: Model, employee: string, skin: string?): (() -> ())?
 	local reveal = load(model, EmployeePreviewSystem.revealOf(employee, skin))
@@ -337,11 +326,28 @@ function EmployeePreviewSystem.playReveal(model: Model, employee: string, skin: 
 	local idle = EmployeePreviewSystem.playIdle(model, employee, skin)
 	local stopped = false
 	local started = false
+	local handedOver = false
 	local connection = reveal.Stopped:Connect(function()
-		if not stopped and model.Parent ~= nil then
+		if not stopped and not handedOver and model.Parent ~= nil then
 			idle = EmployeePreviewSystem.playIdle(model, employee, skin)
 		end
 	end)
+	-- A skin's own idle: crossfade into it before the reveal ends (the reveal ends on the employee's idle).
+	local fading: RBXScriptConnection? = nil
+	if EmployeePreviewSystem.idleOf(employee, skin) ~= EmployeePreviewSystem.idleOf(employee, nil) then
+		fading = RunService.Heartbeat:Connect(function()
+			if not started or reveal.Length == 0 or reveal.TimePosition < reveal.Length - REVEAL_FADE then
+				return
+			end
+			local waiting = fading
+			if waiting ~= nil then
+				waiting:Disconnect()
+			end
+			handedOver = true
+			idle = EmployeePreviewSystem.playIdle(model, employee, skin, REVEAL_FADE)
+			reveal:Stop(REVEAL_FADE)
+		end)
+	end
 	local function start()
 		if stopped or started or model.Parent == nil then
 			return
@@ -369,6 +375,10 @@ function EmployeePreviewSystem.playReveal(model: Model, employee: string, skin: 
 	return function()
 		stopped = true
 		connection:Disconnect()
+		local waiting = fading
+		if waiting ~= nil then
+			waiting:Disconnect()
+		end
 		reveal:Stop(0)
 		local settled = idle
 		if settled ~= nil then
