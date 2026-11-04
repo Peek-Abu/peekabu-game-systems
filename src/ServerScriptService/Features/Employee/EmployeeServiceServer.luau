@@ -15,6 +15,9 @@
 	(CosmeticServiceServer.changed) and the player wears a different employee or skin than it names, the character is
 	rebuilt where it stands (KeepPlace) and marked for the clients' goo puff (EmployeeConstants.SWAP_ATTRIBUTE).
 
+	Every character built gets its player's five stat bars (EmployeeStatSystem: the employee's own, with any admin
+	override from `overrideStats`, the `employeestatset` command, which rebuilds the character where it stands).
+
 	@class EmployeeServiceServer
 ]=]
 
@@ -44,6 +47,9 @@ local EmployeeExpressionSystem = require(ServerScriptService.Features.Employee.S
 local EmployeeGearSystem = require(ReplicatedStorage.Shared.Features.Employee.Systems.EmployeeGearSystem)
 local EmployeeSkinSystem = require(ReplicatedStorage.Shared.Features.Employee.Systems.EmployeeSkinSystem)
 local EmployeeSpawnSystem = require(ServerScriptService.Features.Employee.Systems.EmployeeSpawnSystem)
+local EmployeeStatSystem = require(ServerScriptService.Features.Employee.Systems.EmployeeStatSystem)
+local EmployeeStatOverrideTracker = require(ServerScriptService.Features.Employee.State.EmployeeStatOverrideTracker)
+local EmployeeProfileRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeProfileRegistry)
 local RankServiceServer = require(ServerScriptService.Features.Rank.RankServiceServer)
 local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
 
@@ -66,6 +72,8 @@ local cosmeticConnection: SignalTyped.Connection? = nil
 -- Each player's CharacterAdded watch, disconnected when they leave (one per join otherwise piles up).
 local spawnWatches: { [Player]: RBXScriptConnection } = {}
 local rankConnection: SignalTyped.Connection? = nil
+-- Admin stat overrides for testing (employeestatset).
+local statOverrides = EmployeeStatOverrideTracker.new()
 
 local expressions = EmployeeExpressionSystem.new({
 	mind = function()
@@ -221,6 +229,7 @@ local function buildFor(player: Player): Model?
 		if def ~= nil then
 			local model = EmployeeCharacterSystem.build(def, ReplicatedStorage, scripts)
 			if model ~= nil then
+				EmployeeStatSystem.apply(model, statOverrides:barsFor(player.UserId, def.name))
 				return model
 			end
 			log:warn(`no art for employee {name} in this place; trying the default`)
@@ -306,6 +315,12 @@ export type EmployeeServiceServer = {
 	start: (self: EmployeeServiceServer) -> (),
 	stop: (self: EmployeeServiceServer) -> (),
 	getState: (self: EmployeeServiceServer) -> { [string]: unknown },
+	overrideStats: (
+		self: EmployeeServiceServer,
+		player: Player,
+		stats: { EmployeeProfileRegistry.Stat },
+		bars: number?
+	) -> (boolean, string?),
 }
 
 local EmployeeServiceServer: EmployeeServiceServer = {
@@ -383,6 +398,7 @@ local EmployeeServiceServer: EmployeeServiceServer = {
 				expressions.forget(player.UserId)
 				skinOf[player.UserId] = nil
 				worn[player.UserId] = nil
+				statOverrides:forget(player.UserId)
 			end)
 		)
 	end,
@@ -418,8 +434,41 @@ local EmployeeServiceServer: EmployeeServiceServer = {
 			skinned = skinned,
 			uniformed = uniformed,
 			skins = skinOf,
+			statOverrides = statOverrides:count(),
 			expressions = expressions.getState(),
 		}
+	end,
+
+	--[=[
+		Admin testing (employeestatset): overrides `stats` to `bars` for `player` (nil = back to their employee's own),
+		then rebuilds their character where it stands so every speed starts from the new bars. False with the reason
+		when the character cannot be rebuilt now (dead, knocked down, no character); the override still holds for
+		their next spawn.
+	]=]
+	overrideStats = function(_self, player, stats, bars)
+		for _, stat: EmployeeProfileRegistry.Stat in stats do
+			if bars ~= nil then
+				statOverrides:set(player.UserId, stat, bars)
+			else
+				statOverrides:clear(player.UserId, stat)
+			end
+		end
+		local character = player.Character
+		local humanoid = if character ~= nil then character:FindFirstChildOfClass("Humanoid") else nil
+		if character == nil or character.Parent == nil or humanoid == nil or humanoid.Health <= 0 then
+			return false, "no living character; it applies on the next spawn"
+		end
+		if character:GetAttribute(DeathConstants.KNOCKDOWN_ATTRIBUTE) ~= nil then
+			return false, "knocked down; it applies on the next spawn"
+		end
+		local model = buildFor(player)
+		if model == nil then
+			return false, "no employee art in this place"
+		end
+		model:SetAttribute(EmployeeConstants.SWAP_ATTRIBUTE, true)
+		markVacuum(player.UserId, model)
+		EmployeeCharacterSystem.assign(player, model, character:GetPivot(), true)
+		return true, nil
 	end,
 }
 

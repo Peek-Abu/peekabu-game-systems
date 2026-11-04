@@ -3,6 +3,8 @@
 	SprintStaminaFormulas: the stamina bar (docs/superpowers/specs/2026-10-15-cleanup-crew-chase-kit-design.md §3).
 	Sprinting drains a full bar in STAMINA_SECONDS; after REGEN_DELAY seconds without draining it refills, empty to full
 	in REGEN_SECONDS. A bar run dry is exhausted until it refills to RESTART_FRACTION (no stutter-sprinting on a sliver).
+	The Stamina stat's `effect` (EmployeeStatFormulas.effect; nil = 1, today's game) makes the bar last STAMINA_SECONDS
+	x effect and refill in REGEN_SECONDS / effect; the delay and the restart fraction do not change.
 	Pure: `step` returns a new state.
 
 	@class SprintStaminaFormulas
@@ -27,15 +29,16 @@ function SprintStaminaFormulas.fresh(): Stamina
 end
 
 --[=[
-	The bar `dt` seconds on, drained when `draining` (sprinting and moving). A non-finite or negative `dt` changes
-	nothing.
+	The bar `dt` seconds on, drained when `draining` (sprinting and moving), with the Stamina stat's `effect`. A
+	non-finite or negative `dt` changes nothing.
 ]=]
-function SprintStaminaFormulas.step(state: Stamina, dt: number, draining: boolean): Stamina
+function SprintStaminaFormulas.step(state: Stamina, dt: number, draining: boolean, effect: number?): Stamina
 	if not (dt > 0 and dt < math.huge) then
 		return table.clone(state)
 	end
+	local scale = effect or 1
 	if draining then
-		local stamina = math.max(0, state.stamina - dt / SprintConstants.STAMINA_SECONDS)
+		local stamina = math.max(0, state.stamina - dt / (SprintConstants.STAMINA_SECONDS * scale))
 		-- A hair of floating-point leftover counts as dry.
 		if stamina < 1e-6 then
 			stamina = 0
@@ -46,7 +49,7 @@ function SprintStaminaFormulas.step(state: Stamina, dt: number, draining: boolea
 	local stamina = state.stamina
 	if rested > SprintConstants.REGEN_DELAY then
 		local refilling = math.min(dt, rested - SprintConstants.REGEN_DELAY)
-		stamina = math.min(1, stamina + refilling / SprintConstants.REGEN_SECONDS)
+		stamina = math.min(1, stamina + refilling * scale / SprintConstants.REGEN_SECONDS)
 		if stamina > 1 - 1e-6 then
 			stamina = 1
 		end

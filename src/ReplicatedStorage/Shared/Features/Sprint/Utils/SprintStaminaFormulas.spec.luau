@@ -3,15 +3,33 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SprintStaminaFormulas = require(script.Parent.SprintStaminaFormulas)
 local SprintConstants = require(ReplicatedStorage.Shared.Features.Sprint.Data.SprintConstants)
 
-local function run(state, seconds, draining)
+local function run(state, seconds, draining, effect)
 	local steps = math.round(seconds / 0.05)
 	for _ = 1, steps do
-		state = SprintStaminaFormulas.step(state, 0.05, draining)
+		state = SprintStaminaFormulas.step(state, 0.05, draining, effect)
 	end
 	return state
 end
 
 return function()
+	it("lasts longer and refills faster with the Stamina stat's effect", function()
+		-- 5 bars: 6 x 1.2 = 7.2 s of sprint.
+		local state = run(SprintStaminaFormulas.fresh(), 7, true, 1.2)
+		expect(state.stamina > 0).to.equal(true)
+		state = run(state, 0.2, true, 1.2)
+		expect(state.stamina).to.equal(0)
+		-- Empty to full in 3.5 / 1.2 s after the regen delay.
+		state = run(state, SprintConstants.REGEN_DELAY + SprintConstants.REGEN_SECONDS / 1.2 + 0.05, false, 1.2)
+		expect(state.stamina).to.equal(1)
+	end)
+
+	it("plays like today with no effect or an effect of 1", function()
+		local a = run(SprintStaminaFormulas.fresh(), 2, true, nil)
+		local b = run(SprintStaminaFormulas.fresh(), 2, true, 1)
+		expect(a.stamina).to.be.near(b.stamina, 1e-9)
+		expect(a.stamina).to.be.near(1 - 2 / SprintConstants.STAMINA_SECONDS, 1e-6)
+	end)
+
 	it("starts full and rested", function()
 		local state = SprintStaminaFormulas.fresh()
 		expect(state.stamina).to.equal(1)

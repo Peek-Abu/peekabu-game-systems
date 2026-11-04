@@ -29,6 +29,13 @@ return function()
 		expect(SprintSpeedFormulas.speed(WEIGHT.medium) < 20).to.equal(true)
 	end)
 
+	it("scales the sprint by the Speed stat's effect, under the load's slow", function()
+		expect(SprintSpeedFormulas.speed(0, 1.06)).to.be.near(24.38, 1e-6)
+		expect(SprintSpeedFormulas.speed(nil, 1)).to.equal(23)
+		local WEIGHT = CargoConstants.WEIGHT
+		expect(SprintSpeedFormulas.speed(WEIGHT.bulky, 1.06)).to.be.near(11.5 * 1.06, 1e-6)
+	end)
+
 	it("reads a speed scale, 1 for anything that is not a positive number", function()
 		expect(SprintSpeedFormulas.scaleFrom(nil)).to.equal(1)
 		expect(SprintSpeedFormulas.scaleFrom("fast")).to.equal(1)

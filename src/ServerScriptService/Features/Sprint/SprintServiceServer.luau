@@ -24,6 +24,10 @@
 	A boost given again keeps the bigger scale and the later end (never stacks). The character carries SpeedScale and
 	SpeedBoostUntil while it lasts.
 
+	Employee stats (EmployeeStatFormulas, read from the character's stat bars every tick): Speed scales SPRINT_SPEED
+	(the plain walk is already scaled when the character is built, so the boost multiplies on top of both), Stamina
+	lengthens the bar and speeds its refill, Quiet shrinks the sprinting feet's noise.
+
 	Spec-exempt shell (Humanoids, Players, ByteNet, RunService); the decisions are the specced SprintRules,
 	SprintSpeedFormulas and SprintStaminaFormulas.
 
@@ -45,6 +49,7 @@ local SprintRules = require(SprintShared.Rules.SprintRules)
 local SprintStaminaFormulas = require(SprintShared.Utils.SprintStaminaFormulas)
 local SprintSpeedFormulas = require(SprintShared.Utils.SprintSpeedFormulas)
 local CarryFormulas = require(ReplicatedStorage.Shared.Features.Carry.Utils.CarryFormulas)
+local EmployeeStatFormulas = require(ReplicatedStorage.Shared.Features.Employee.Utils.EmployeeStatFormulas)
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
 local CarrySpeedSystem = require(ServerScriptService.Features.Carry.Systems.CarrySpeedSystem)
@@ -146,7 +151,10 @@ local function stepOne(player: Player, runner: Runner, dt: number)
 		counters.refused += 1
 	end
 	-- While sprinting, the speed follows the load every tick (a pick-up, a pocketing or a drop mid-sprint included).
-	local sprintSpeed = SprintSpeedFormulas.speed(weight) * scale
+	local sprintSpeed = SprintSpeedFormulas.speed(
+		weight,
+		EmployeeStatFormulas.effect("speed", EmployeeStatFormulas.barsOn(character, "speed"))
+	) * scale
 	if runner.boosted ~= nil and humanoid ~= nil and humanoid.WalkSpeed ~= sprintSpeed then
 		humanoid.WalkSpeed = sprintSpeed
 	end
@@ -159,7 +167,12 @@ local function stepOne(player: Player, runner: Runner, dt: number)
 		and last ~= nil
 		and Vector3.new(position.X - last.X, 0, position.Z - last.Z).Magnitude / dt >= SprintConstants.MOVING_SPEED
 	local draining = runner.boosted ~= nil and moving
-	runner.bar = SprintStaminaFormulas.step(runner.bar, dt, draining)
+	runner.bar = SprintStaminaFormulas.step(
+		runner.bar,
+		dt,
+		draining,
+		EmployeeStatFormulas.effect("stamina", EmployeeStatFormulas.barsOn(character, "stamina"))
+	)
 	if draining and root ~= nil and root:IsA("BasePart") then
 		runner.stepClock += dt
 		if runner.stepClock >= SprintConstants.SPRINT_NOISE_INTERVAL then
@@ -167,7 +180,8 @@ local function stepOne(player: Player, runner: Runner, dt: number)
 			counters.steps += 1
 			NoiseServiceServer:emit(
 				root.Position,
-				SprintConstants.SPRINT_NOISE_RADIUS,
+				SprintConstants.SPRINT_NOISE_RADIUS
+					* EmployeeStatFormulas.cut("quiet", EmployeeStatFormulas.barsOn(character, "quiet")),
 				SprintConstants.NOISE_SOURCE,
 				{ player.UserId }
 			)

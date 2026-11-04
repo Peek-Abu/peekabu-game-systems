@@ -18,6 +18,15 @@ local EAR_JOINTS: { EarJoint } = {
 	{ name = "RightEarBase", side = 1 },
 }
 
+-- The character attribute for each stat (EmployeeProfileRegistry.Stat).
+local STAT_ATTRIBUTES: { [string]: string } = {
+	speed = "StatSpeed",
+	stamina = "StatStamina",
+	strength = "StatStrength",
+	suction = "StatSuction",
+	quiet = "StatQuiet",
+}
+
 local EmployeeConstants = {
 	-- On the character model: which EmployeeRegistry entry it is. Stamped by the server's install
 	-- (EmployeeSpawnSystem) from the registry, so the template's own attribute is informational.
@@ -28,6 +37,9 @@ local EmployeeConstants = {
 	-- On a player's character, written by the server as it dresses it: the EmployeeRegistry skin key it wears (a
 	-- preview of the player's own outfit clones the character only when it matches).
 	SKIN_ATTRIBUTE = "EmployeeSkin",
+	-- On a player's character, written by the server as it builds it (EmployeeStatSystem): the five stat bars (1-5)
+	-- the game reads (EmployeeStatFormulas.barsOn), by EmployeeProfileRegistry.Stat.
+	STAT_ATTRIBUTES = table.freeze(STAT_ATTRIBUTES),
 	STARTER_CHARACTER_NAME = "StarterCharacter",
 	-- On a character the server built: which FootstepAssets set its steps play (the Footstep client reads it; must
 	-- equal FootstepConstants.SET_ATTRIBUTE).

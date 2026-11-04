@@ -4,7 +4,8 @@
 	Empty-handed it is SPRINT_SPEED; a load slows it by exactly the factor it slows the walk, through Carry's own formula
 	(CarryFormulas.carrierSpeed): sprint = SPRINT_SPEED x (carried walk speed / walk speed). A speed boost is one scale
 	on top of every speed (WalkSpeed = plain speed x scale, always): `scaleFrom` reads it, `rescale` moves a walk from
-	one scale to another. Pure.
+	one scale to another. The Speed stat's effect (EmployeeStatFormulas.effect) scales SPRINT_SPEED as it scales the
+	plain walk, and the boost multiplies on top of both. Pure.
 
 	@class SprintSpeedFormulas
 ]=]
@@ -17,10 +18,11 @@ local SprintConstants = require(ReplicatedStorage.Shared.Features.Sprint.Data.Sp
 local SprintSpeedFormulas = {}
 
 --[=[
-	The sprint speed carrying a load of `weight` (Carry's weight; nil or 0 when empty-handed).
+	The sprint speed carrying a load of `weight` (Carry's weight; nil or 0 when empty-handed), with the Speed stat's
+	`effect` (nil = 1, today's game).
 ]=]
-function SprintSpeedFormulas.speed(weight: number?): number
-	return CarryFormulas.carrierSpeed(SprintConstants.SPRINT_SPEED, weight or 0)
+function SprintSpeedFormulas.speed(weight: number?, effect: number?): number
+	return CarryFormulas.carrierSpeed(SprintConstants.SPRINT_SPEED * (effect or 1), weight or 0)
 end
 
 --[=[

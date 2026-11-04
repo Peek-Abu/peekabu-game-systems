@@ -4,7 +4,7 @@
 	tab): a kind line, three personality words, a short bio, a fun fact, the ability's card text and the five display
 	stats, plus the employee's UI colour (their card, page and pick screen are tinted in it).
 
-	The stats are DISPLAY ONLY (EmployeeStatFormulas is the seam for the later hooks; every effect is 1 today). The ability's words live here, but the ability itself
+	The stats change play through EmployeeStatFormulas (1 bar plays like today; each bar above adds a small step). The ability's words live here, but the ability itself
 	(and its cooldown, read from there) is AbilityRegistry's: the card can never promise a number the game does not
 	keep. The words come from characters/launch/new-employee-requirements.md and the owner can edit them here. Copy is
 	kid reading level. Every employee's stats add up to the same total (requirements: equal point totals).

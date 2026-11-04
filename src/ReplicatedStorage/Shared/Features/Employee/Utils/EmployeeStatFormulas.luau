@@ -1,47 +1,77 @@
 --!strict
 --[=[
-	EmployeeStatFormulas: the seam where an employee's five stats (EmployeeProfileRegistry, 1-5 bars) will one day
-	change play. Stats are DISPLAY ONLY today: `STEP` is 0, so every `effect` is exactly 1 and nothing reads it yet.
+	EmployeeStatFormulas: how an employee's five stats (EmployeeProfileRegistry, 1-5 bars) change play
+	(docs/superpowers/specs/2026-11-03-employee-stat-effects-design.md, owner-approved 2026-11-03).
 
-	- `level(employee, stat)`: the employee's bars, `MIDDLE` for anyone without a profile.
-	- `effectOf(level)` / `effect(employee, stat)`: a multiplier around 1, `STEP` per bar away from the middle,
-	  clamped to the narrow band (requirements: about ±15%).
+	1 bar plays exactly like today's game, and each bar above it adds its stat's STEP, so a stat only ever helps and the
+	maps (tuned for the lowest values) stay clearable solo by a 1-bar employee. Every 1-to-5 spread stays inside BAND.
 
-	Turning stats on later means a non-zero `STEP` (or a per-stat table) and a call from the system that owns the
-	value (Sprint for speed and stamina, Carry for strength, Vacuum for suction, Noise for quiet). Every map is tuned
-	for the lowest values, so a 1-bar employee must still clear it solo (characters/launch/new-employee-requirements.md).
+	- `level(employee, stat)`: the employee's own bars, FLOOR for anyone without a profile.
+	- `barsFrom(value)` / `barsOn(character, stat)`: bars from a value / a character's stat attribute (written by the
+	  server's EmployeeStatSystem), clamped and rounded to 1-5; FLOOR when there is none.
+	- `gain(stat, bars)`: the step times the bars above 1. `effect` is 1 + gain (Speed, Stamina, Suction: more is
+	  better), `cut` is 1 - gain (Strength takes it off a load's weight, Quiet off a noise's radius).
+
+	The owner of each value reads it: Sprint (Speed, Stamina, Quiet on sprint feet), Cargo's load (Strength), Vacuum and
+	Cargo's grime (Suction, Quiet on the vacuum).
 
 	@class EmployeeStatFormulas
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
 local EmployeeProfileRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeProfileRegistry)
 
 type Stat = EmployeeProfileRegistry.Stat
 
+-- The change per bar above 1 (the approved sizes): Speed +1.5% walk and sprint, Stamina +5% sprint length and refill
+-- speed, Strength 4% off a load's weight, Suction +4% cleaning speed, Quiet 4% off your own noises' radius.
+local STEP: { [Stat]: number } = {
+	speed = 0.015,
+	stamina = 0.05,
+	strength = 0.04,
+	suction = 0.04,
+	quiet = 0.04,
+}
+
 local EmployeeStatFormulas = {
 	-- The bar count that plays like today's tuning.
-	MIDDLE = 3,
-	-- The change per bar away from the middle. 0 while stats are display only.
-	STEP = 0,
-	-- The furthest any effect may move from 1.
-	BAND = 0.15,
+	FLOOR = 1,
+	MAX = 5,
+	STEP = table.freeze(STEP),
+	-- The most any stat may move from 1 to 5 bars (about ±8% round the middle; requirements: about ±15%).
+	BAND = 0.16,
 }
+
+function EmployeeStatFormulas.barsFrom(value: unknown): number
+	if type(value) ~= "number" or value ~= value then
+		return EmployeeStatFormulas.FLOOR
+	end
+	return math.clamp(math.round(value), EmployeeStatFormulas.FLOOR, EmployeeStatFormulas.MAX)
+end
 
 function EmployeeStatFormulas.level(employee: string, stat: Stat): number
 	local profile = EmployeeProfileRegistry.get(employee)
-	return if profile ~= nil then profile.stats[stat] else EmployeeStatFormulas.MIDDLE
+	return if profile ~= nil then EmployeeStatFormulas.barsFrom(profile.stats[stat]) else EmployeeStatFormulas.FLOOR
 end
 
-function EmployeeStatFormulas.effectOf(level: number): number
-	local offset = (math.clamp(level, 1, 5) - EmployeeStatFormulas.MIDDLE) * EmployeeStatFormulas.STEP
-	local band = EmployeeStatFormulas.BAND
-	return 1 + math.clamp(offset, -band, band)
+function EmployeeStatFormulas.barsOn(character: Instance?, stat: Stat): number
+	local value = if character ~= nil then character:GetAttribute(EmployeeConstants.STAT_ATTRIBUTES[stat]) else nil
+	return EmployeeStatFormulas.barsFrom(value)
 end
 
-function EmployeeStatFormulas.effect(employee: string, stat: Stat): number
-	return EmployeeStatFormulas.effectOf(EmployeeStatFormulas.level(employee, stat))
+function EmployeeStatFormulas.gain(stat: Stat, bars: number): number
+	local above = EmployeeStatFormulas.barsFrom(bars) - EmployeeStatFormulas.FLOOR
+	return math.min(above * STEP[stat], EmployeeStatFormulas.BAND)
+end
+
+function EmployeeStatFormulas.effect(stat: Stat, bars: number): number
+	return 1 + EmployeeStatFormulas.gain(stat, bars)
+end
+
+function EmployeeStatFormulas.cut(stat: Stat, bars: number): number
+	return 1 - EmployeeStatFormulas.gain(stat, bars)
 end
 
 return EmployeeStatFormulas
