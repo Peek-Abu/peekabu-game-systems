@@ -9,7 +9,7 @@
 	- While an emote may be playing, moving or jumping asks the server to stop it (EmoteEvents.StopRequest), once.
 	- Every character's emote props show and hide from its clip's markers (EmotePropSystem), and its Legendary
 	  emote effects (bubbles, faces) run on them (EmoteEffectSystem, EmoteVfxSystem), started and stopped with this
-	  service.
+	  service. Sheriff Prickles' lasso loop is drawn bendy over its clip-posed prop (EmoteLassoSystem).
 
 	Spec-exempt shell (input, RunService, packets); the decisions live in EmoteRules and EmoteWheelViewModel.
 
@@ -27,6 +27,7 @@ local EmoteEvents = require(ReplicatedStorage.Shared.Features.Emote.Net.EmoteEve
 local EmoteRequestRules = require(ReplicatedStorage.Shared.Features.Emote.Rules.EmoteRequestRules)
 local EmoteWheelStore = require(ReplicatedStorage.Client.Features.Emote.State.EmoteWheelStore)
 local EmoteEffectSystem = require(ReplicatedStorage.Client.Features.Emote.Systems.EmoteEffectSystem)
+local EmoteLassoSystem = require(ReplicatedStorage.Client.Features.Emote.Systems.EmoteLassoSystem)
 local EmotePropSystem = require(ReplicatedStorage.Client.Features.Emote.Systems.EmotePropSystem)
 local EmoteVfxSystem = require(ReplicatedStorage.Client.Features.Emote.Systems.EmoteVfxSystem)
 local InputActionRegistry = require(ReplicatedStorage.Client.Features.Input.Data.InputActionRegistry)
@@ -43,6 +44,7 @@ local WATCH_SECONDS = 12
 local janitor = Janitor.new()
 local props = EmotePropSystem.new()
 local effects = EmoteEffectSystem.live(EmoteVfxSystem.start)
+local lasso = EmoteLassoSystem.new()
 local watching: RBXScriptConnection? = nil
 
 local function unwatch()
@@ -149,7 +151,9 @@ local EmoteServiceClient: EmoteServiceClient = {
 			Observers.observeCharacter(function(_player: Player, character: Model)
 				local releaseProps = props.track(character)
 				local releaseEffects = effects.track(character)
+				local releaseLasso = lasso.track(character)
 				return function()
+					releaseLasso()
 					releaseEffects()
 					releaseProps()
 				end
