@@ -403,14 +403,15 @@ return function()
 			expect(#spans(OfficeLayoutUtils.mergedWallSegments(layout), false, 10)).to.equal(0)
 		end)
 
-		it("builds the real layout from 18 pieces totalling 692 studs", function()
+		-- The loading bay runs on south to z = -14 (the Moving Van): its own south wall, and 14 more studs on x = 0 and x = 40.
+		it("builds the real layout from 19 pieces totalling 720 studs", function()
 			local segments = OfficeLayoutUtils.mergedWallSegments(LAYOUT)
 			local total = 0
 			for _, segment in segments do
 				total += (segment.x2 - segment.x1) + (segment.z2 - segment.z1)
 			end
-			expect(#segments).to.equal(18)
-			expect(total).to.equal(692)
+			expect(#segments).to.equal(19)
+			expect(total).to.equal(720)
 		end)
 	end)
 

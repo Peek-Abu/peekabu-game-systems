@@ -135,8 +135,11 @@ return function()
 		end
 		afterEach(discard)
 
+		-- Each call builds a whole office; yield first, or the 20-seed loops below hold the one test thread for
+		-- seconds and, with the specs around them, run past Studio's script timeout.
 		local function open(seed)
 			discard()
+			task.wait()
 			built = Build.build(Generate.generate(Layout, seed or 1), CFrame.new(71000, 0, 0), Visuals.new(assets))
 			return built.doors.openAtStart(seed)
 		end

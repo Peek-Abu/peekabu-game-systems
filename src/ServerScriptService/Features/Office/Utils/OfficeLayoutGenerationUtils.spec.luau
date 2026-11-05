@@ -580,6 +580,9 @@ return function()
 		it("fits every room of seeds 1-500 inside the exterior shell's envelope", function()
 			local envelope = Constants.OUTSIDE.ENVELOPE
 			for seed = 1, 500 do
+				if seed % 10 == 0 then
+					task.wait()
+				end
 				local layout = Gen.generate(Base, seed)
 				for _, room in layout.rooms do
 					local fits = room.minX >= envelope.minX
