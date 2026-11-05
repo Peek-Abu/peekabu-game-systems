@@ -30,6 +30,10 @@ export type SoundDef = {
 	-- A rare positional world sound that must carry everywhere (an alarm, a horn): never cut by the places. Absent =
 	-- false.
 	heardEverywhere: boolean?,
+	-- Pins the sound to one place wherever it plays, 2D included: a 2D bed of the yard (Outside) or of the office
+	-- (Building) is then heard only there, and the place switch crossfades the two at every door (design:
+	-- docs/superpowers/specs/2026-11-04-yard-place-design.md). Absent = placed by where it plays (2D: placeless).
+	place: SoundPlace?,
 }
 
 -- Where a sound plays from: nothing (2D), a part or attachment (follows it), or a fixed point.

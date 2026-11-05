@@ -4,15 +4,17 @@
 	dim, buzzing fluorescents (some flickering)"; "Overtime: lighting shifts dim red"). Follows ShiftStore's
 	snapshot: blends Lighting to OfficeAtmosphereUtils.preset (night, darker per tier, lighter on Harlow's break,
 	dim red in overtime; the depot's warm evening while the local player is in the hub); in overtime a red screen
-	tint and red ceiling lights; the office bed (its four looped beds, OfficeAssets.BED) while the local player's crew
-	is in a shift, and the hub's record (DepotAssets.HUB_THEME, the music slot) while they are in the hub. It is the
+	tint and red ceiling lights; the office bed (its four looped beds, OfficeAssets.BED, pinned Building) while the
+	local player's crew is in a shift, with the yard bed (OfficeAssets.YARD_BED, pinned Outside) beside it when the
+	layout has grounds, so the place cut's door fade crossfades the two; and the hub's record (DepotAssets.HUB_THEME, the music slot) while they are in the hub. It is the
 	one owner of Lighting and of the place's bed, so the hub and the office never fight over them. Every ATMOSPHERE_INTERVAL the broken lights near the
 	camera (OfficeLightUtils) blink, with a zap as a burst of blinks starts (OfficeLightUtils.zaps: once per burst, spaced
 	per tube and across tubes). It changes only a light's Color, Transparency and
 	lamp (PointLight or SurfaceLight) Color/Brightness; M2's OccupantTellSystem owns Material and Light.Enabled, so the two compose.
 	Outdoors (the local character's root inside a Workspace.CleanupCrewOffice.Outdoors box, unpadded; polled every
 	OUTDOOR_POLL in a shift; no character keeps the last answer) it
-	blends to the moonlit officeExterior look (red in overtime) and hushes the hum; `expected()` names the preset the
+	blends to the moonlit officeExterior look (red in overtime), and the place cut hears the yard bed, not the hum;
+	`expected()` names the preset the
 	client should show now. Registers the office and depot presets with Vfx at load. Pending sounds (OfficeAssets) are silent. While the transit
 	screen covers the view (ShiftTransitStore.covered) a preset is applied at once, not blended, and one still blending
 	when the cover comes up is finished at once, so the screen reveals the right light.
@@ -65,6 +67,7 @@ export type OfficeAtmosphereState = {
 	preset: string,
 	overtime: boolean,
 	hum: boolean,
+	yard: boolean,
 	hub: boolean,
 	dimNow: number,
 	counters: { [string]: number },
@@ -91,6 +94,7 @@ local currentPreset: string? = nil
 local overtimeOn = false
 local overtimeToken: number? = nil
 local humOn = false
+local yardOn = false
 local hubOn = false
 local outsideNow = false
 local stoppers: { () -> () } = {}
@@ -153,13 +157,9 @@ local function setOvertime(on: boolean)
 	end
 end
 
--- The office bed: each looped bed in its own ambience layer (named by its id), so they run on their own lengths.
-local function setHum(on: boolean)
-	if on == humOn then
-		return
-	end
-	humOn = on
-	for _, id in OfficeAssets.BED do
+-- A bed: each of its looped layers in its own ambience layer (named by its id), so they run on their own lengths.
+local function setBed(ids: { string }, on: boolean)
+	for _, id in ids do
 		if not on then
 			SoundServiceClient:setAmbience(id, nil)
 		elseif SoundRegistry.has(id) then
@@ -168,6 +168,24 @@ local function setHum(on: boolean)
 			counters.pending += 1
 		end
 	end
+end
+
+-- The office bed (pinned Building).
+local function setHum(on: boolean)
+	if on == humOn then
+		return
+	end
+	humOn = on
+	setBed(OfficeAssets.BED, on)
+end
+
+-- The yard bed (pinned Outside).
+local function setYard(on: boolean)
+	if on == yardOn then
+		return
+	end
+	yardOn = on
+	setBed(OfficeAssets.YARD_BED, on)
 end
 
 -- The hub's record while the local player is in the depot (the music slot: never on while a chase could play).
@@ -234,6 +252,8 @@ local function apply(snapshot: ShiftTypes.ShiftSnapshot?, fade: number)
 	local userId = Players.LocalPlayer.UserId
 	local outside = characterOutside(snapshot)
 	outsideNow = outside
+	-- The listener's place first, so a bed starting below joins its place group at the right gain.
+	syncPlaces(snapshot)
 	local preset = OfficeAtmosphereUtils.preset(snapshot, userId, outside)
 	if not applied or preset ~= currentPreset then
 		applied = true
@@ -243,9 +263,9 @@ local function apply(snapshot: ShiftTypes.ShiftSnapshot?, fade: number)
 		VfxServiceClient:setAtmosphere(preset, if covered then 0 else fade)
 	end
 	setOvertime(OfficeAtmosphereUtils.overtime(snapshot, userId))
-	setHum(OfficeAtmosphereUtils.hum(snapshot, userId, outside))
+	setHum(OfficeAtmosphereUtils.hum(snapshot, userId))
+	setYard(OfficeAtmosphereUtils.yardBed(snapshot, userId, #outdoorBoxes() > 0))
 	setHub(DepotAtmosphereUtils.inHub(snapshot, userId))
-	syncPlaces(snapshot)
 end
 
 local function onSnapshot(snapshot: ShiftTypes.ShiftSnapshot?)
@@ -406,6 +426,7 @@ function OfficeAtmosphereSystem.stop()
 	lastAnyZap = nil
 	setOvertime(false)
 	setHum(false)
+	setYard(false)
 	setHub(false)
 	VfxServiceClient:setAtmosphere(nil, 0)
 	SoundServiceClient:setPlaces({}, nil, 0)
@@ -431,6 +452,7 @@ function OfficeAtmosphereSystem.getState(): OfficeAtmosphereState
 		preset = currentPreset or "place",
 		overtime = overtimeOn,
 		hum = humOn,
+		yard = yardOn,
 		hub = hubOn,
 		dimNow = blinking,
 		counters = table.clone(counters),

@@ -27,8 +27,14 @@
 	final pick A), `cappy` (his shuffle's jump and skid-free land) and `prickles` (roots pulling free, a stump landing).
 	BODY_FALL (pick C, a plush flop + cushion + a tiny toy squeak) is everyone's ragdoll landing.
 
-	Registers each id in SoundRegistry at load (as `footstep_<set>_<surface>_<n>`, guarded) and exposes those names as
-	SOUND_IDS[set][surface]. Static data + registration (spec-exempt).
+	Outside, LAYERS (yard design Y2): one shared surface layer per outdoor surface (asphalt grit, a grass swish, a
+	gravel crunch, a cartoony puddle "plap", the loudest), six variants each, played on the same foot-fall at the same
+	gait scale under the character's own step, so Pippa still sounds like Pippa, now on gravel. Indoors no layer
+	plays. A PENDING ("") id is not registered (silent until its upload).
+
+	Registers each id in SoundRegistry at load (as `footstep_<set>_<surface>_<n>`, the layers as
+	`footstepLayer_<surface>_<n>`, guarded) and exposes those names as SOUND_IDS[set][surface] and
+	LAYER_SOUND_IDS[surface]. Static data + registration (spec-exempt).
 
 	@class FootstepAssets
 ]=]
@@ -41,6 +47,11 @@ local SoundTypes = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundTyp
 
 type FootstepSet = FootstepTypes.FootstepSet
 type SurfacePools = FootstepTypes.SurfacePools
+type LayerPools = FootstepTypes.LayerPools
+
+local PENDING = ""
+
+type LayerVolumes = { asphalt: number, grass: number, gravel: number, puddle: number }
 
 local SETS: { [string]: FootstepSet } = {
 	-- Pippa: soft mascot feet, a loose rubber slap (2026-11-03 pick A, replacing CB1; the files sit at -28 LUFS, soft on purpose).
@@ -225,6 +236,52 @@ for setName, set in SETS do
 	SOUND_IDS[setName] = named
 end
 
+-- The outdoor surface layers: their asset ids, and each surface's Sound.Volume before the gait scale (the puddle
+-- loudest). The same jitter and roll-off as a step.
+local LAYERS: { volume: LayerVolumes, pitch: { min: number, max: number }, rollOffMaxDistance: number, surfaces: LayerPools } =
+	{
+		volume = { asphalt = 0.5, grass = 0.6, gravel = 0.7, puddle = 1 },
+		pitch = { min = 0.95, max = 1.05 },
+		rollOffMaxDistance = 45,
+		surfaces = {
+			asphalt = { PENDING, PENDING, PENDING, PENDING, PENDING, PENDING },
+			grass = { PENDING, PENDING, PENDING, PENDING, PENDING, PENDING },
+			gravel = { PENDING, PENDING, PENDING, PENDING, PENDING, PENDING },
+			puddle = { PENDING, PENDING, PENDING, PENDING, PENDING, PENDING },
+		},
+	}
+
+-- LAYER_SOUND_IDS[surface] = the SoundRegistry names of that layer's uploaded variants, in order.
+local LAYER_SOUND_IDS: LayerPools = { asphalt = {}, grass = {}, gravel = {}, puddle = {} }
+
+-- Registers a layer's uploaded ids as `footstepLayer_<surface>_<n>` and lists those names in `into`.
+local function registerLayer(surface: string, volume: number, from: { string }, into: { string })
+	for index, assetId in from do
+		if assetId == PENDING then
+			continue
+		end
+		local id = `footstepLayer_{surface}_{index}`
+		if not SoundRegistry.has(id) then
+			SoundRegistry.register(id, {
+				assetId = assetId,
+				group = "SFX",
+				volume = volume,
+				pitch = LAYERS.pitch,
+				rollOffMaxDistance = LAYERS.rollOffMaxDistance,
+			})
+		end
+		table.insert(into, id)
+	end
+end
+registerLayer("asphalt", LAYERS.volume.asphalt, LAYERS.surfaces.asphalt, LAYER_SOUND_IDS.asphalt)
+registerLayer("grass", LAYERS.volume.grass, LAYERS.surfaces.grass, LAYER_SOUND_IDS.grass)
+registerLayer("gravel", LAYERS.volume.gravel, LAYERS.surfaces.gravel, LAYER_SOUND_IDS.gravel)
+registerLayer("puddle", LAYERS.volume.puddle, LAYERS.surfaces.puddle, LAYER_SOUND_IDS.puddle)
+table.freeze(LAYER_SOUND_IDS.asphalt)
+table.freeze(LAYER_SOUND_IDS.grass)
+table.freeze(LAYER_SOUND_IDS.gravel)
+table.freeze(LAYER_SOUND_IDS.puddle)
+
 -- The body meeting the floor (FootstepLandingSystem): 3D on the root, every character this client sees.
 local LAND = "footstepLand"
 local BODY_FALL = "footstepBodyFall"
@@ -363,6 +420,8 @@ end
 return table.freeze({
 	SETS = table.freeze(SETS),
 	SOUND_IDS = table.freeze(SOUND_IDS),
+	LAYERS = table.freeze(LAYERS),
+	LAYER_SOUND_IDS = table.freeze(LAYER_SOUND_IDS),
 	LAND = LAND,
 	BODY_FALL = BODY_FALL,
 	JUMPS = JUMPS,

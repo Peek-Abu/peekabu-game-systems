@@ -5,7 +5,9 @@
 	lowest corner, which dips below the stance as the foot rolls heel to toe) goes through
 	FootstepPlantFormulas; on the frame a foot lands, and only while the character is moving on the ground (its root
 	really crossing the floor, a floor under it, alive, not seated), it plays one variant of its set's pool for the
-	surface under it (FootstepSurfaceUtils), scaled by its gait (FootstepGaitFormulas), 3D on that foot. Steps are
+	surface under it (FootstepSurfaceUtils), scaled by its gait (FootstepGaitFormulas), 3D on that foot; on an outdoor
+	surface (the floor in the yard: SoundServiceClient:placeAt) the shared surface layer (FootstepAssets.LAYERS:
+	asphalt, grass, gravel, puddle) plays with it, on the same foot at the same gait scale. Steps are
 	one-shots (SoundServiceClient:playOneShot): each foot reuses the Sounds of its earlier steps (a walk keeps one a
 	foot, a sprint's overlapping steps two) rather than creating one a step; they go with the character.
 
@@ -39,8 +41,9 @@ local FOOT_NAMES: { { string } } = { { "LeftFoot", "RightFoot" }, { "Left Leg", 
 type FootTrack = {
 	part: BasePart,
 	foot: FootstepPlantFormulas.Foot?,
-	-- The variant this foot played last (never twice in a row).
+	-- The variant this foot played last (never twice in a row), and its last surface layer variant.
 	last: number?,
+	lastLayer: number?,
 }
 
 export type Rig = {
@@ -64,6 +67,8 @@ export type StepRecord = {
 	foot: string,
 	gait: Gait,
 	surface: Surface,
+	-- The surface layer played under the step (nil indoors, or while its layer is pending).
+	layer: string?,
 	speed: number,
 	volume: number,
 }
@@ -104,7 +109,11 @@ local function floorUnder(rig: Rig): Surface?
 		end
 		floor = floor.Parent
 	end
-	return FootstepSurfaceUtils.surfaceFor(hit.Material, override)
+	return FootstepSurfaceUtils.surfaceFor(
+		hit.Material,
+		override,
+		SoundServiceClient:placeAt(hit.Position) == "Outside"
+	)
 end
 
 local FootstepEmitterSystem = {}
@@ -201,17 +210,27 @@ function FootstepEmitterSystem.update(rig: Rig, dt: number, counters: Counters):
 		return played
 	end
 	local pool = FootstepSurfaceUtils.poolFor(FootstepAssets.SOUND_IDS[rig.setName], surface)
+	local layer: FootstepTypes.LayerSurface? = FootstepSurfaceUtils.layerFor(surface)
+	local layerPool: { string } = {}
+	if layer ~= nil then
+		layerPool = FootstepSurfaceUtils.layerPool(FootstepAssets.LAYER_SOUND_IDS, layer)
+	end
 	for _, track in landed do
 		local index = FootstepSurfaceUtils.pick(#pool, rng:NextNumber(), track.last)
 		if index == nil then
 			continue
 		end
 		track.last = index
-		SoundServiceClient:playOneShot(
-			pool[index],
-			{ at = track.part, volumeScale = gaitScale.volume, pitchScale = gaitScale.pitch }
-		)
+		local options = { at = track.part, volumeScale = gaitScale.volume, pitchScale = gaitScale.pitch }
+		SoundServiceClient:playOneShot(pool[index], options)
 		counters.steps += 1
+		local layerIndex = FootstepSurfaceUtils.pick(#layerPool, rng:NextNumber(), track.lastLayer)
+		local layered: string? = nil
+		if layer ~= nil and layerIndex ~= nil then
+			track.lastLayer = layerIndex
+			SoundServiceClient:playOneShot(layerPool[layerIndex], options)
+			layered = layer
+		end
 		local record: StepRecord = {
 			at = os.clock(),
 			model = rig.model.Name,
@@ -219,6 +238,7 @@ function FootstepEmitterSystem.update(rig: Rig, dt: number, counters: Counters):
 			foot = track.part.Name,
 			gait = gait,
 			surface = surface,
+			layer = layered,
 			speed = rig.speed,
 			volume = gaitScale.volume,
 		}

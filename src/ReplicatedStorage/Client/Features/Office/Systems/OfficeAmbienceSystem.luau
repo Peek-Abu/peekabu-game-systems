@@ -5,9 +5,13 @@
 	AMBIENCE_INTERVAL: when the phone's wait is up, a phone rings on a desk with nobody near it (OfficeAmbienceUtils
 	.pick over the OfficeAmbient emitters); the elevator dings on the same rule on its own wait; each typist types
 	(a loop) while nobody is near and stops the moment you come within TYPING_STOP_RADIUS, staying quiet
-	TYPING_QUIET_SECONDS; and the office bed's sweeteners (a ceiling tick, a pipe knock, a far typewriter key, a lift
-	ding...), each kind on its own wait (SWEETENER_EVERY), one variant on a ring SWEETENER_NEAR..FAR studs round the
-	camera (OfficeAmbienceUtils.sweetenerAt). Per client, no packets: each player hears their own office. Pending sounds (OfficeAssets)
+	TYPING_QUIET_SECONDS; the bed sweeteners of the listener's place (SoundServiceClient:listener): inside the
+	office's (a ceiling tick, a pipe knock, a far typewriter key, a lift ding...), in the yard the yard's (an owl, a
+	fence rattle, a can rolling, a far car...), each kind on its own wait (SWEETENER_EVERY), one variant (never the
+	same twice running) on a ring SWEETENER_NEAR..FAR studs round the camera (OfficeAmbienceUtils.sweetenerAt); and
+	the yard's fixed emitters (a sodium pole, the vending machine, the gate booth's radio: OfficeAssets.EMITTER_LOOPS)
+	each loop while the camera is within their sound's roll-off (OfficeAmbienceUtils.loopOn). Per client, no
+	packets: each player hears their own office. Pending sounds (OfficeAssets)
 	are skipped silently and counted.
 	No play creates a Sound: the rings and sweeteners are fire-and-forget one-shots (SoundServiceClient:playOneShot,
 	the sweeteners on the shared fixed-point anchors), and each emitter gets one idle voice the first time the running
@@ -35,6 +39,7 @@ local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.Sound
 
 export type OfficeAmbienceState = {
 	typing: number,
+	loops: number,
 	counters: { [string]: number },
 }
 
@@ -43,19 +48,37 @@ type Typist = {
 	quietUntil: number,
 }
 
+-- A fixed emitter's loop.
+type Loop = {
+	handle: SoundServiceClient.SoundHandle?,
+}
+
 -- A plain map (iterated and cleared). The office is rebuilt every shift, and a client only sees the old
 -- emitters leave the DataModel (never Destroying), so stepTypists drops the ones that have gone.
 local typists: { [BasePart]: Typist } = {}
+local loops: { [BasePart]: Loop } = {}
 local rng = Random.new()
 local nextPhone = 0
 local nextElevator = 0
 -- When each sweetener kind next sounds (os.clock()).
 local nextSweetener: { [string]: number } = {}
+-- The variant each sweetener kind played last (never twice running).
+local lastSweetener: { [string]: number } = {}
 local connection: RBXScriptConnection? = nil
 -- The emitters already given their idle voice (a rebuilt office's old ones are dropped with the typists').
 local warmed: { [BasePart]: boolean } = {}
-local counters =
-	{ phones = 0, elevators = 0, typingStarts = 0, typingStops = 0, sweeteners = 0, pending = 0, warmed = 0 }
+local counters = {
+	phones = 0,
+	elevators = 0,
+	typingStarts = 0,
+	typingStops = 0,
+	sweeteners = 0,
+	yardSweeteners = 0,
+	loopStarts = 0,
+	loopStops = 0,
+	pending = 0,
+	warmed = 0,
+}
 
 local function play(id: string, at: BasePart | Vector3): SoundServiceClient.SoundHandle?
 	if not SoundRegistry.has(id) then
@@ -119,9 +142,21 @@ local function silence(typist: Typist)
 	typist.handle = nil
 end
 
+local function silenceLoop(loop: Loop)
+	local handle = loop.handle
+	if handle ~= nil then
+		handle:stop(OfficeAtmosphereConstants.EMITTER_FADE)
+		counters.loopStops += 1
+	end
+	loop.handle = nil
+end
+
 local function silenceAll()
 	for _, typist in typists do
 		silence(typist)
+	end
+	for _, loop in loops do
+		silenceLoop(loop)
 	end
 end
 
@@ -129,22 +164,27 @@ local function schedule(now: number)
 	local constants = OfficeAtmosphereConstants
 	nextPhone = now + OfficeAmbienceUtils.delay(rng:NextNumber(), constants.PHONE_MIN, constants.PHONE_MAX)
 	nextElevator = now + OfficeAmbienceUtils.delay(rng:NextNumber(), constants.ELEVATOR_MIN, constants.ELEVATOR_MAX)
-	for kind in OfficeAssets.SWEETENERS do
-		local every = constants.SWEETENER_EVERY[kind]
-		if every ~= nil then
-			nextSweetener[kind] = now + OfficeAmbienceUtils.delay(rng:NextNumber(), every.min, every.max)
+	for _, set in { OfficeAssets.SWEETENERS, OfficeAssets.YARD_SWEETENERS } do
+		for kind in set do
+			local every = constants.SWEETENER_EVERY[kind]
+			if every ~= nil then
+				nextSweetener[kind] = now + OfficeAmbienceUtils.delay(rng:NextNumber(), every.min, every.max)
+			end
 		end
 	end
 end
 
--- Each sweetener kind whose wait is up sounds one of its variants somewhere round the camera.
+-- Each sweetener kind of the listener's place whose wait is up sounds one of its variants somewhere round the camera
+-- (the other place's kinds keep their waits: a kind due while you were away sounds as you come back).
 local function stepSweeteners(now: number)
 	local camera = Workspace.CurrentCamera
 	if camera == nil then
 		return
 	end
 	local constants = OfficeAtmosphereConstants
-	for kind, ids in OfficeAssets.SWEETENERS do
+	local yard = SoundServiceClient:listener() == "Outside"
+	local set: { [string]: { string } } = if yard then OfficeAssets.YARD_SWEETENERS else OfficeAssets.SWEETENERS
+	for kind, ids in set do
 		local every = constants.SWEETENER_EVERY[kind]
 		local due = nextSweetener[kind]
 		if every ~= nil and due ~= nil and now >= due and #ids > 0 then
@@ -156,8 +196,14 @@ local function stepSweeteners(now: number)
 				constants.SWEETENER_NEAR,
 				constants.SWEETENER_FAR
 			)
-			if shot(ids[OfficeAmbienceUtils.variant(rng:NextNumber(), #ids)], at) then
-				counters.sweeteners += 1
+			local index = OfficeAmbienceUtils.variant(rng:NextNumber(), #ids, lastSweetener[kind])
+			lastSweetener[kind] = index
+			if shot(ids[index], at) then
+				if yard then
+					counters.yardSweeteners += 1
+				else
+					counters.sweeteners += 1
+				end
 			end
 		end
 	end
@@ -229,6 +275,49 @@ local function stepTypists(
 	end
 end
 
+-- Each fixed emitter loops while the camera is near (its sound's roll-off); a rebuilt office's old ones stop.
+local function stepLoops(list: { OfficeAmbienceUtils.Emitter }, parts: { BasePart })
+	for part, loop in loops do
+		if not part:IsDescendantOf(Workspace) then
+			silenceLoop(loop)
+			loops[part] = nil
+		end
+	end
+	local camera = Workspace.CurrentCamera
+	if camera == nil then
+		return
+	end
+	local center = camera.CFrame.Position
+	for index, emitter in list do
+		local id = OfficeAssets.EMITTER_LOOPS[emitter.kind]
+		local def = if id ~= nil then SoundRegistry.get(id) else nil
+		if id ~= nil and def ~= nil then
+			local part = parts[index]
+			local loop = loops[part]
+			if loop == nil then
+				loop = { handle = nil }
+				loops[part] = loop
+			end
+			local radius = def.rollOffMaxDistance or 0
+			local on = OfficeAmbienceUtils.loopOn(
+				(center - emitter.position).Magnitude,
+				radius,
+				OfficeAtmosphereConstants.EMITTER_MARGIN,
+				loop.handle ~= nil
+			)
+			if on and loop.handle == nil then
+				loop.handle = SoundServiceClient:play(id, { at = part })
+				counters.loopStarts += 1
+			elseif not on then
+				silenceLoop(loop)
+			end
+		elseif id ~= nil then
+			-- Pending: silent until its upload.
+			counters.pending += 1
+		end
+	end
+end
+
 local function step()
 	local now = os.clock()
 	local snapshot = ShiftStore.snapshot()
@@ -263,6 +352,7 @@ local function step()
 			)
 	end
 	stepTypists(list, parts, positions, now)
+	stepLoops(list, parts)
 	stepSweeteners(now)
 end
 
@@ -291,7 +381,9 @@ function OfficeAmbienceSystem.stop()
 	end
 	silenceAll()
 	table.clear(typists)
+	table.clear(loops)
 	table.clear(warmed)
+	table.clear(lastSweetener)
 end
 
 function OfficeAmbienceSystem.getState(): OfficeAmbienceState
@@ -301,7 +393,13 @@ function OfficeAmbienceSystem.getState(): OfficeAmbienceState
 			typing += 1
 		end
 	end
-	return { typing = typing, counters = table.clone(counters) }
+	local looping = 0
+	for _, loop in loops do
+		if loop.handle ~= nil then
+			looping += 1
+		end
+	end
+	return { typing = typing, loops = looping, counters = table.clone(counters) }
 end
 
 return OfficeAmbienceSystem

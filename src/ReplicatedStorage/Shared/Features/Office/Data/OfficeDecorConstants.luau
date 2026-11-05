@@ -9,7 +9,9 @@
 	@class OfficeDecorConstants
 ]=]
 
-export type AmbientKind = "phone" | "typing" | "elevator"
+-- The yard's fixed emitters (yard design Y1: a sodium pole's buzz, the vending machine's hum, the gate booth's radio)
+-- loop while the camera is near; the builder tags their invisible parts (Workspace.YardDressing).
+export type AmbientKind = "phone" | "typing" | "elevator" | "lampBuzz" | "vendingHum" | "boothRadio"
 
 return table.freeze({
 	DECOR_FOLDER = "NightDecor",

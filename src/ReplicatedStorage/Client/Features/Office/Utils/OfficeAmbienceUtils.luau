@@ -3,7 +3,8 @@
 	OfficeAmbienceUtils: the ambient dread's choices (Cleanup Crew spec §7 "phones ringing in empty rooms, an
 	elevator dinging on its own, typing that stops when you enter"). A spot is empty when no crew member is within
 	the radius; a phone (or the elevator) is picked by roll among the empty spots of its kind; typing stops when
-	you come within its radius; the wait before the next one is a roll between a minimum and a maximum. Pure.
+	you come within its radius; the wait before the next one is a roll between a minimum and a maximum; a fixed
+	emitter's loop plays while the camera is near (with a margin, so it never flickers). Pure.
 
 	@class OfficeAmbienceUtils
 ]=]
@@ -71,10 +72,24 @@ function OfficeAmbienceUtils.sweetenerAt(
 end
 
 --[=[
-	Which of `count` variants a roll (0-1) picks (1-based).
+	Which of `count` variants a roll (0-1) picks (1-based), never `last` again when there is a choice.
 ]=]
-function OfficeAmbienceUtils.variant(roll: number, count: number): number
-	return math.clamp(math.floor(math.clamp(roll, 0, 1) * count) + 1, 1, count)
+function OfficeAmbienceUtils.variant(roll: number, count: number, last: number?): number
+	local r = math.clamp(roll, 0, 1)
+	if count <= 1 or last == nil or last < 1 or last > count then
+		return math.clamp(math.floor(r * count) + 1, 1, count)
+	end
+	-- Choose among the others, then step over `last`.
+	local index = math.clamp(math.floor(r * (count - 1)) + 1, 1, count - 1)
+	return if index >= last then index + 1 else index
+end
+
+--[=[
+	Whether a fixed emitter's loop plays with the camera `distance` studs away: it starts within `radius` and, once
+	`playing`, keeps on until `radius + margin`.
+]=]
+function OfficeAmbienceUtils.loopOn(distance: number, radius: number, margin: number, playing: boolean): boolean
+	return distance <= (if playing then radius + margin else radius)
 end
 
 return OfficeAmbienceUtils

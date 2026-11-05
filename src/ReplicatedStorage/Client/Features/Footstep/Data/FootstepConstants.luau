@@ -29,6 +29,16 @@ local MATERIAL_SURFACES: { [Enum.Material]: Surface } = {
 	[Enum.Material.Asphalt] = "concrete",
 	[Enum.Material.Brick] = "concrete",
 	[Enum.Material.Cobblestone] = "concrete",
+	[Enum.Material.Grass] = "grass",
+	[Enum.Material.LeafyGrass] = "grass",
+	[Enum.Material.Ground] = "grass",
+	[Enum.Material.Pebble] = "gravel",
+}
+
+-- Outside (the sound place of the floor under the step), these materials are the yard's asphalt, not concrete.
+local OUTSIDE_ASPHALT: { [Enum.Material]: boolean } = {
+	[Enum.Material.Asphalt] = true,
+	[Enum.Material.Pavement] = true,
 }
 
 return table.freeze({
@@ -70,12 +80,14 @@ return table.freeze({
 	-- The set for a player character without an employee set of its own.
 	DEFAULT_SET = "default",
 	MATERIAL_SURFACES = table.freeze(MATERIAL_SURFACES),
+	OUTSIDE_ASPHALT = table.freeze(OUTSIDE_ASPHALT),
 	-- How many recent steps getState keeps (the live sync check reads them).
 	RECENT = 64,
 	-- Idle one-shot Sounds made on each foot (and a player's root, for the jump and land) as its character is
 	-- followed: a walk reuses one a foot, a sprint's overlapping steps two or three (measured 2026-10-18: a sprint
-	-- still made a third on each foot), so steady play never creates a Sound (SoundServiceClient:prewarm).
-	PREWARM_PER_ANCHOR = 3,
+	-- still made a third on each foot), and outside each step brings its surface layer (two Sounds a foot-fall), so
+	-- steady play never creates a Sound (SoundServiceClient:prewarm).
+	PREWARM_PER_ANCHOR = 5,
 	-- Roblox's own character sounds (RbxCharacterSounds' Sounds in each character's root), all muted on every
 	-- followed character: the game plays its own steps, jump, land and body-fall, and the caught "FIRED" replaces the
 	-- "oof". Measured 2026-10-17: an empty RbxCharacterSounds override no longer holds (SoundService

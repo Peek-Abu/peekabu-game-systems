@@ -25,7 +25,8 @@ local SoundRegistry = {}
 --[=[
 	Registers a new sound. Asserts: the id is new; the asset id is canonical; the group is known; the
 	volume is within 0..10; a pitch range is positive and min <= max; maxConcurrent is a positive
-	integer; rollOffMaxDistance is positive; heardEverywhere is a boolean.
+	integer; rollOffMaxDistance is positive; heardEverywhere is a boolean; a pinned place is Building or Outside, and
+	never on a heardEverywhere sound (that one is in no place).
 	@param id string
 	@param def SoundDef
 ]=]
@@ -53,6 +54,11 @@ function SoundRegistry.register(id: string, def: SoundDef)
 		def.heardEverywhere == nil or type(def.heardEverywhere) == "boolean",
 		`sound "{id}": heardEverywhere must be a boolean`
 	)
+	local place = def.place
+	if place ~= nil then
+		assert(place == "Building" or place == "Outside", `sound "{id}": place must be "Building" or "Outside"`)
+		assert(def.heardEverywhere ~= true, `sound "{id}": a heardEverywhere sound cannot be pinned to a place`)
+	end
 	definitions[id] = def
 end
 

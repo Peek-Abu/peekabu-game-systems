@@ -5,8 +5,10 @@
 	crew: DepotAtmosphereUtils) it is the depot's warm evening, so a shift's lighting never outlasts the shift; for
 	the crew, from the transit (`starting`) through the results it is night; while running, each pressure tier darkens
 	it a step, Harlow's break lifts it a little and overtime turns it dim red (and the lights red). The fluorescent
-	hum plays whenever the crew is in a shift, except outside (`outside`: the yard and car park get a moonlit exterior
-	look, red in overtime, whatever the tier or break; the hub stays the depot's evening). Pure.
+	hum (the office bed, pinned Building) plays whenever the crew is in a shift, and the yard bed (pinned Outside) too
+	when the layout has grounds: the sound place cut hears only the listener's one, crossfading them at the doors.
+	Outside (`outside`) the yard and car park get a moonlit exterior look, red in overtime, whatever the tier or break;
+	the hub stays the depot's evening. Pure.
 
 	@class OfficeAtmosphereUtils
 ]=]
@@ -58,8 +60,14 @@ function OfficeAtmosphereUtils.overtime(snapshot: ShiftSnapshot?, userId: number
 		and snapshot.stage == "overtime"
 end
 
-function OfficeAtmosphereUtils.hum(snapshot: ShiftSnapshot?, userId: number, outside: boolean?): boolean
-	return snapshot ~= nil and not DepotAtmosphereUtils.inHub(snapshot, userId) and outside ~= true
+function OfficeAtmosphereUtils.hum(snapshot: ShiftSnapshot?, userId: number): boolean
+	return snapshot ~= nil and not DepotAtmosphereUtils.inHub(snapshot, userId)
+end
+
+-- The yard bed: in a shift, on a layout with grounds (`grounds`: outdoor boxes exist). Without them nothing is
+-- placed, so a pinned bed would be heard indoors too.
+function OfficeAtmosphereUtils.yardBed(snapshot: ShiftSnapshot?, userId: number, grounds: boolean): boolean
+	return grounds and OfficeAtmosphereUtils.hum(snapshot, userId)
 end
 
 -- Whether `point` is inside any of the axis-aligned outdoor boxes, unpadded: the yard ends five studs from the dock

@@ -76,5 +76,31 @@ return function()
 			expect(OfficeAmbienceUtils.variant(1, 3)).to.equal(3)
 			expect(OfficeAmbienceUtils.variant(0.4, 1)).to.equal(1)
 		end)
+
+		it("never repeats the last variant when there is a choice", function()
+			for roll = 0, 0.99, 0.07 do
+				local index = OfficeAmbienceUtils.variant(roll, 3, 2)
+				expect(index).never.to.equal(2)
+				expect(index >= 1 and index <= 3).to.equal(true)
+			end
+			expect(OfficeAmbienceUtils.variant(0, 3, 1)).to.equal(2)
+			expect(OfficeAmbienceUtils.variant(0.999, 3, 3)).to.equal(2)
+			-- A lone variant repeats; a last out of range is ignored.
+			expect(OfficeAmbienceUtils.variant(0.5, 1, 1)).to.equal(1)
+			expect(OfficeAmbienceUtils.variant(0, 3, 9)).to.equal(1)
+		end)
+	end)
+
+	describe("loopOn", function()
+		it("starts a fixed emitter's loop within the radius", function()
+			expect(OfficeAmbienceUtils.loopOn(40, 40, 10, false)).to.equal(true)
+			expect(OfficeAmbienceUtils.loopOn(41, 40, 10, false)).to.equal(false)
+		end)
+
+		it("keeps a playing loop until the radius plus the margin, so it does not flicker at the edge", function()
+			expect(OfficeAmbienceUtils.loopOn(45, 40, 10, true)).to.equal(true)
+			expect(OfficeAmbienceUtils.loopOn(50, 40, 10, true)).to.equal(true)
+			expect(OfficeAmbienceUtils.loopOn(51, 40, 10, true)).to.equal(false)
+		end)
 	end)
 end

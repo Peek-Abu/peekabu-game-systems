@@ -51,6 +51,21 @@ return function()
 		refuses("spec-everywhere-string", def({ heardEverywhere = "yes" }))
 	end)
 
+	it("accepts a pinned place", function()
+		ensure("spec-yard-bed", def({ group = "Ambient", place = "Outside", looped = true }))
+		expect(SoundRegistry.get("spec-yard-bed").place).to.equal("Outside")
+		ensure("spec-office-bed", def({ group = "Ambient", place = "Building", looped = true }))
+		expect(SoundRegistry.get("spec-office-bed").place).to.equal("Building")
+	end)
+
+	it("rejects an unknown place", function()
+		refuses("spec-place-roof", def({ place = "Roof" }))
+	end)
+
+	it("rejects a place on a heardEverywhere sound (it is in no place)", function()
+		refuses("spec-place-everywhere", def({ place = "Outside", heardEverywhere = true }))
+	end)
+
 	it("returns nil for an unknown id", function()
 		expect(SoundRegistry.get("spec-none")).to.equal(nil)
 	end)

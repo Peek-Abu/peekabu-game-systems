@@ -68,6 +68,24 @@ function SoundFormulas.placeOf(point: Vector3?, boxes: { SoundTypes.SoundPlaceBo
 end
 
 --[=[
+	The place one play of a sound is in: none for a `heardEverywhere` sound; its pinned `place` wherever it plays (a 2D
+	bed pinned to the yard or the office); else where its `point` is (placeOf: 2D or no boxes = placeless).
+]=]
+function SoundFormulas.placeOfPlay(
+	def: { place: SoundPlace?, heardEverywhere: boolean? },
+	point: Vector3?,
+	boxes: { SoundTypes.SoundPlaceBox }
+): SoundPlace?
+	if def.heardEverywhere == true then
+		return nil
+	end
+	if def.place ~= nil then
+		return def.place
+	end
+	return SoundFormulas.placeOf(point, boxes)
+end
+
+--[=[
 	The volume a sound in place `source` plays at for a listener in place `listener`: 1 in the same place, 0 across
 	places (the owner's Lethal Company rule: nothing from inside reaches the yard, nor the other way). 1 when either
 	is placeless.

@@ -102,7 +102,8 @@ local PRESETS: { [string]: VfxTypes.Atmosphere } = {
 	},
 }
 
--- Seconds between two sounds of each office bed sweetener kind (OfficeAssets.SWEETENERS).
+-- Seconds between two sounds of each bed sweetener kind (OfficeAssets.SWEETENERS inside, YARD_SWEETENERS in the yard:
+-- six kinds whose waits add up to one sound every ~7 s, the yard design's 6-15).
 local SWEETENER_EVERY: { [string]: { min: number, max: number } } = {
 	ceilingTick = table.freeze({ min = 5, max = 12 }),
 	drawer = table.freeze({ min = 18, max = 30 }),
@@ -111,6 +112,12 @@ local SWEETENER_EVERY: { [string]: { min: number, max: number } } = {
 	floorCreak = table.freeze({ min = 8, max = 18 }),
 	musicBox = table.freeze({ min = 20, max = 35 }),
 	pipeKnock = table.freeze({ min = 9, max = 20 }),
+	owl = table.freeze({ min = 30, max = 60 }),
+	fenceRattle = table.freeze({ min = 25, max = 50 }),
+	canRoll = table.freeze({ min = 40, max = 80 }),
+	farCar = table.freeze({ min = 30, max = 60 }),
+	mothTick = table.freeze({ min = 20, max = 40 }),
+	trolleyCreak = table.freeze({ min = 45, max = 90 }),
 }
 
 return table.freeze({
@@ -131,8 +138,9 @@ return table.freeze({
 	OVERTIME_TINT = Color3.fromRGB(255, 185, 185),
 	OVERTIME_SATURATION = -0.2,
 	OVERTIME_LIGHT_COLOR = Color3.fromRGB(255, 95, 80),
-	-- The office bed's sweeteners (OfficeAmbienceSystem): each kind waits its own `min`..`max` seconds (the round-2 bed
-	-- plan A), then one variant sounds SWEETENER_NEAR..SWEETENER_FAR studs from the listener, on a level ring.
+	-- The beds' sweeteners (OfficeAmbienceSystem): each kind waits its own `min`..`max` seconds (the round-2 bed plan A,
+	-- the yard plan), then one variant (never the last one again) sounds SWEETENER_NEAR..SWEETENER_FAR studs from the
+	-- listener, on a level ring; only the listener's place's kinds sound.
 	SWEETENER_EVERY = table.freeze(SWEETENER_EVERY),
 	SWEETENER_NEAR = 12,
 	SWEETENER_FAR = 30,
@@ -163,4 +171,8 @@ return table.freeze({
 	TYPING_QUIET_SECONDS = 25,
 	TYPING_FADE = 0.2,
 	AMBIENCE_INTERVAL = 0.25,
+	-- The yard's fixed emitters (OfficeAssets.EMITTER_LOOPS): a loop starts once the camera is within its sound's
+	-- roll-off and stops past it plus EMITTER_MARGIN studs (no flicker at the edge), fading EMITTER_FADE seconds.
+	EMITTER_MARGIN = 10,
+	EMITTER_FADE = 0.5,
 })

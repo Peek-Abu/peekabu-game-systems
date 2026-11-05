@@ -68,6 +68,30 @@ return function()
 		end)
 	end)
 
+	describe("placeOfPlay", function()
+		local boxes = { { min = Vector3.new(0, 0, 0), max = Vector3.new(10, 10, 10) } }
+
+		it("is where a positional play's point is, as placeOf", function()
+			expect(SoundFormulas.placeOfPlay({}, Vector3.new(5, 5, 5), boxes)).to.equal("Outside")
+			expect(SoundFormulas.placeOfPlay({}, Vector3.new(50, 5, 5), boxes)).to.equal("Building")
+			expect(SoundFormulas.placeOfPlay({}, nil, boxes)).to.equal(nil)
+		end)
+
+		it("is the pinned place for a pinned sound, 2D or wherever it plays", function()
+			expect(SoundFormulas.placeOfPlay({ place = "Outside" }, nil, boxes)).to.equal("Outside")
+			expect(SoundFormulas.placeOfPlay({ place = "Building" }, nil, boxes)).to.equal("Building")
+			expect(SoundFormulas.placeOfPlay({ place = "Building" }, Vector3.new(5, 5, 5), boxes)).to.equal("Building")
+		end)
+
+		it("keeps a pin without boxes (a placeless listener hears every place)", function()
+			expect(SoundFormulas.placeOfPlay({ place = "Outside" }, nil, {})).to.equal("Outside")
+		end)
+
+		it("is nil for a heardEverywhere sound", function()
+			expect(SoundFormulas.placeOfPlay({ heardEverywhere = true }, Vector3.new(5, 5, 5), boxes)).to.equal(nil)
+		end)
+	end)
+
 	describe("placeGain", function()
 		it("is 1 when the sound and the listener share a place", function()
 			expect(SoundFormulas.placeGain("Building", "Building")).to.equal(1)

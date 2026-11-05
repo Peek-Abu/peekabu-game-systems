@@ -24,7 +24,11 @@
 	  positional play is placed as it starts (SoundFormulas.placeOf its point in the outdoor `boxes`: Building or
 	  Outside) and joins its place's group nested in its volume group (`SFX/Building`); only the `listener`'s place is
 	  heard (SoundFormulas.placeGain), the other's group fades to 0 over `fade`. A looping positional play is placed
-	  again on every call (it may move through a door). 2D plays, tracks and `heardEverywhere` sounds are never placed.
+	  again on every call (it may move through a door). 2D plays and tracks are placeless, and `heardEverywhere` sounds
+	  never placed, unless the sound is pinned (`SoundDef.place`): a pinned sound, a 2D bed or a track included, is
+	  always in its place's group (the yard bed Outside, the office bed Building), so the same switch crossfades them.
+	- `listener()` / `placeAt(point)` — the listener's place now, and the place of a point in the world (nil without
+	  boxes), for features that choose what to play by place (the yard's sweeteners, the outdoor footstep layer).
 	- Listens for the server's `SoundEvents.Play` (one-shots: the server never makes a Sound).
 	- A non-looped sound whose asset never loads (LOAD_TIMEOUT after its play), or whose place is removed from the game
 	  without being destroyed, is released: its Ended never fires, so it would otherwise keep its Sound, its anchor and
@@ -182,12 +186,9 @@ local function pointOf(at: SoundTypes.PlayAt?): Vector3?
 	return nil
 end
 
--- The place a play of `def` at `at` is in now (nil: placeless, heard everywhere).
+-- The place a play of `def` at `at` is in now (nil: placeless, heard everywhere; a pinned sound is in its place).
 local function placeFor(def: SoundTypes.SoundDef, at: SoundTypes.PlayAt?): SoundPlace?
-	if def.heardEverywhere == true then
-		return nil
-	end
-	return SoundFormulas.placeOf(pointOf(at), placeBoxes)
+	return SoundFormulas.placeOfPlay(def, pointOf(at), placeBoxes)
 end
 
 -- Fades `sound` to `volume` over `duration`, then calls `done` (immediately when duration <= 0; never for a fade
@@ -412,7 +413,7 @@ local function start(
 	local sound = current.sound
 	configure(sound, id, def, scale, pitchScale, placeFor(def, at))
 	sound.TimePosition = 0
-	if at ~= nil and def.looped == true and def.heardEverywhere ~= true then
+	if at ~= nil and def.looped == true and def.heardEverywhere ~= true and def.place == nil then
 		placedLoops[sound] = { group = def.group, at = at }
 	end
 
@@ -467,7 +468,7 @@ local function crossfade(current: Sound?, slot: string, id: string?, fade: numbe
 			local sound: Sound
 			if kept == nil then
 				local made = Instance.new("Sound")
-				configure(made, id, def, 1, 1)
+				configure(made, id, def, 1, 1, placeFor(def, nil))
 				made.Looped = true
 				made.Volume = 0
 				made.Parent = SoundService
@@ -484,7 +485,7 @@ local function crossfade(current: Sound?, slot: string, id: string?, fade: numbe
 				-- Still sounding (fading out): it fades back up from where it is, without restarting.
 				local sounding = sound.IsPlaying
 				local from = sound.Volume
-				configure(sound, id, def, 1, 1)
+				configure(sound, id, def, 1, 1, placeFor(def, nil))
 				sound.Looped = true
 				if sounding then
 					sound.Volume = from
@@ -525,6 +526,8 @@ export type SoundServiceClient = {
 		listener: SoundPlace?,
 		fade: number?
 	) -> (),
+	listener: (self: SoundServiceClient) -> SoundPlace?,
+	placeAt: (self: SoundServiceClient, point: Vector3) -> SoundPlace?,
 }
 
 local SoundServiceClient: SoundServiceClient = {
@@ -654,10 +657,24 @@ local SoundServiceClient: SoundServiceClient = {
 			fadePlace(buildingGroups, "Building", fade or 0)
 			fadePlace(outsideGroups, "Outside", fade or 0)
 		end
-		-- (A heardEverywhere loop is never in placedLoops.)
+		-- (A heardEverywhere or pinned loop is never in placedLoops.)
 		for sound, loop in placedLoops do
 			sound.SoundGroup = placeGroupFor(loop.group, SoundFormulas.placeOf(pointOf(loop.at), placeBoxes))
 		end
+	end,
+
+	--[=[
+		The local player's place now (setPlaces); nil while nothing is placed (the hub, a layout with no grounds).
+	]=]
+	listener = function(_self)
+		return listenerPlace
+	end,
+
+	--[=[
+		The place of `point` among the outdoor boxes (SoundFormulas.placeOf); nil without boxes.
+	]=]
+	placeAt = function(_self, point)
+		return SoundFormulas.placeOf(point, placeBoxes)
 	end,
 
 	getState = function(_self)

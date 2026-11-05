@@ -5,8 +5,11 @@
 	@class FootstepTypes
 ]=]
 
+-- The outdoor surfaces (yard design Y2): each adds a shared layer under the character's own step.
+export type LayerSurface = "asphalt" | "grass" | "gravel" | "puddle"
+
 -- What a step lands on (FootstepSurfaceUtils.surfaceFor). `default` is every floor not named here.
-export type Surface = "default" | "carpet" | "tile" | "wood" | "concrete"
+export type Surface = "default" | "carpet" | "tile" | "wood" | "concrete" | LayerSurface
 
 -- How the character moves (FootstepGaitFormulas.gaitFor).
 export type Gait = "walk" | "sprint" | "crouch" | "hidden"
@@ -32,6 +35,15 @@ export type SurfacePools = {
 	tile: { string },
 	wood: { string },
 	concrete: { string },
+}
+
+-- One list of strings per outdoor surface (asset ids in FootstepAssets.LAYERS, sound names in
+-- FootstepAssets.LAYER_SOUND_IDS).
+export type LayerPools = {
+	asphalt: { string },
+	grass: { string },
+	gravel: { string },
+	puddle: { string },
 }
 
 -- One character's footsteps (FootstepAssets.SETS): the sound and its variant pools per surface.
