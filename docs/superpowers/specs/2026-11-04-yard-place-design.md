@@ -164,6 +164,8 @@ truck.
 - 2026-11-05: **critters cut** ("remove critters - we don't need this"). The cat, crows and raccoon, their code
   (`OfficeCritterSystem`, `OfficeCritterConstants`) and their placement are removed. The moths and fireflies stay
   (particle dressing on the poles and verges).
+- 2026-11-05: **keep the moths and fireflies** ("Sure, keep them!"), after the look renders in
+  `design/production-art/yard-dressing/turntables/particles/`.
 
 ## Y3 result (2026-11-05)
 
