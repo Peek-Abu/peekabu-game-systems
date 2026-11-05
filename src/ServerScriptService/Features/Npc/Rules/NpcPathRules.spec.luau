@@ -155,4 +155,48 @@ return function()
 			expect(NpcPathRules.nextPatrolIndex(3, 3)).to.equal(1)
 		end)
 	end)
+	describe("slide", function()
+		local function near(a, b)
+			return (a - b).Magnitude < 1e-6
+		end
+		it("leaves a heading alone when nothing is ahead, or the surface faces away", function()
+			local heading = Vector3.new(0, 0, -1)
+			expect(NpcPathRules.slide(heading, nil)).to.equal(heading)
+			expect(NpcPathRules.slide(heading, Vector3.new(0, 0, -1))).to.equal(heading)
+		end)
+		it("drops the part of the heading into a wall: he runs along it, never into it", function()
+			-- Heading south-east into a wall facing north: east along the wall.
+			local slid = NpcPathRules.slide(Vector3.new(1, 0, -1).Unit, Vector3.new(0, 0, 1))
+			expect(near(slid, Vector3.new(1, 0, 0))).to.equal(true)
+		end)
+		it(
+			"slides round a door jamb's corner toward the opening (measured: he pushed south into its corner)",
+			function()
+				-- The corner faces him, a little west; he heads mostly south, a little east; the doorway lies south-east.
+				local normal = Vector3.new(-0.3, 0, 1).Unit
+				local slid = NpcPathRules.slide(Vector3.new(0.29, 0, -0.96).Unit, normal, Vector3.new(2, 0, -4))
+				expect(slid:Dot(normal) >= -1e-6).to.equal(true)
+				expect(slid.X > 0.9).to.equal(true)
+				expect(slid.Y).to.equal(0)
+				expect(math.abs(slid.Magnitude - 1) < 1e-6).to.equal(true)
+			end
+		)
+		it("a mostly head-on push turns to the steering point's side, not whichever way the angle leans", function()
+			-- Barely east of head-on, but the point lies west: west along the wall.
+			local slid = NpcPathRules.slide(Vector3.new(0.05, 0, -1).Unit, Vector3.new(0, 0, 1), Vector3.new(-3, 0, -5))
+			expect(near(slid, Vector3.new(-1, 0, 0))).to.equal(true)
+		end)
+		it("head-on into a flat wall picks the side `toward` lies on", function()
+			local wall = Vector3.new(0, 0, 1)
+			local east = NpcPathRules.slide(Vector3.new(0, 0, -1), wall, Vector3.new(3, 0, -5))
+			local west = NpcPathRules.slide(Vector3.new(0, 0, -1), wall, Vector3.new(-3, 0, -5))
+			expect(near(east, Vector3.new(1, 0, 0))).to.equal(true)
+			expect(near(west, Vector3.new(-1, 0, 0))).to.equal(true)
+		end)
+		it("ignores a surface's tilt: only its flat normal counts (a ramp or a desk's bevel)", function()
+			local slid = NpcPathRules.slide(Vector3.new(1, 0, -1).Unit, Vector3.new(0, 0.8, 0.6))
+			expect(near(slid, Vector3.new(1, 0, 0))).to.equal(true)
+			expect(NpcPathRules.slide(Vector3.new(1, 0, 0), Vector3.new(0, 1, 0))).to.equal(Vector3.new(1, 0, 0))
+		end)
+	end)
 end

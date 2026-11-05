@@ -6,6 +6,8 @@
 	A fresh move (from standing) to a goal the caller saw in clear line (`moveTo`'s `inLine`) heads straight at it until
 	its first path computation finishes (NpcPathRules.headStraight), so a bolt never stands waiting for the pathfinder;
 	the route takes over when it arrives, and a costed kind whose computation found none stands as before.
+	Each steer slides along a solid surface just ahead (a wall, a door jamb's corner, furniture: NpcPathRules.slide), so a
+	path cut close to a corner never wedges the body there.
 	Pure progress/recovery decisions live in NpcPathRules; this native shell is spec-exempt.
 	@class NpcMoverSystem
 ]=]
@@ -49,11 +51,59 @@ function NpcMoverSystem.new(humanoid: Humanoid, root: BasePart, costs: { [string
 	local awaitingRoute = false
 	local hasCosts = costs ~= nil and next(costs) ~= nil
 
+	local slideParams = RaycastParams.new()
+	slideParams.FilterType = Enum.RaycastFilterType.Exclude
+	slideParams.RespectCanCollide = true
+	local slideIgnoreAt = -math.huge
+
+	-- A part the path walks through (a PathfindingModifier with PassThrough: a door he opens) is never slid along.
+	local function passThrough(part: Instance): boolean
+		for _, child in part:GetChildren() do
+			if child:IsA("PathfindingModifier") and child.PassThrough then
+				return true
+			end
+		end
+		return false
+	end
+
+	-- The normal of a solid surface just ahead along `heading` (a wall, a jamb's corner, furniture), or nil.
+	local function surfaceAhead(heading: Vector3): Vector3?
+		local now = os.clock()
+		if now - slideIgnoreAt >= NpcConstants.SLIDE_IGNORE_REFRESH then
+			slideIgnoreAt = now
+			local ignore: { Instance } = { root.Parent or root }
+			for _, player in Players:GetPlayers() do
+				if player.Character ~= nil then
+					table.insert(ignore, player.Character)
+				end
+			end
+			for _, npc in CollectionService:GetTagged(NpcConstants.TAG) do
+				table.insert(ignore, npc)
+			end
+			slideParams.FilterDescendantsInstances = ignore
+		end
+		local hit = Workspace:Spherecast(
+			root.Position,
+			NpcConstants.SLIDE_RADIUS,
+			heading * NpcConstants.SLIDE_PROBE,
+			slideParams
+		)
+		if hit ~= nil and passThrough(hit.Instance) then
+			return nil
+		end
+		return if hit ~= nil then hit.Normal else nil
+	end
+
 	local function steer(position: Vector3?)
 		local delta = if position ~= nil then position - root.Position else Vector3.zero
 		local flat = Vector3.new(delta.X, 0, delta.Z)
+		local heading = if flat.Magnitude > 0.1 then flat.Unit else Vector3.zero
+		if heading ~= Vector3.zero then
+			-- Along a wall or round a jamb's corner, never pushing into it (a snag he would otherwise never leave).
+			heading = NpcPathRules.slide(heading, surfaceAhead(heading), flat)
+		end
 		-- MoveTo terminates each leg near its destination; Move keeps steering across intermediate points.
-		humanoid:Move(if flat.Magnitude > 0.1 then flat.Unit else Vector3.zero, false)
+		humanoid:Move(heading, false)
 	end
 
 	local function clearPath()

@@ -50,6 +50,11 @@ local NpcConstants = {
 	WAYPOINT_REACHED_DISTANCE = 1,
 	STUCK_SECONDS = 1.5,
 	STUCK_PROGRESS = 1,
+	-- Steering slides along a solid surface a sphere of SLIDE_RADIUS from the root meets within SLIDE_PROBE studs ahead
+	-- (NpcPathRules.slide); what it looks through (characters, NPCs) is re-read every SLIDE_IGNORE_REFRESH seconds.
+	SLIDE_RADIUS = 1,
+	SLIDE_PROBE = 1.5,
+	SLIDE_IGNORE_REFRESH = 1,
 	-- Pause between wander legs (seconds, min and max).
 	WANDER_PAUSE = { 2, 5 },
 	-- Below this horizontal speed the NPC counts as standing.

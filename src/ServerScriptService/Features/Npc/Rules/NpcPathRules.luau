@@ -6,6 +6,9 @@
 ]=]
 
 local NpcPathRules = {}
+
+-- `slide`: the share of the heading left along a surface below which the push counts as head-on.
+local HEAD_ON = 0.35
 function NpcPathRules.supportedGoal(goal: Vector3, supportY: number?, rootHeight: number): Vector3
 	return if supportY ~= nil then Vector3.new(goal.X, supportY + rootHeight, goal.Z) else goal
 end
@@ -114,6 +117,35 @@ function NpcPathRules.resumeIndex(
 		end
 	end
 	return best
+end
+
+--[=[
+	The flat unit `heading` with its part into a surface just ahead removed (`normal`, the surface's normal; nil when
+	nothing is ahead), so the NPC runs along a wall or round a door jamb's corner instead of pushing into it. Only the
+	normal's flat part counts. Mostly head-on (less than HEAD_ON of the heading left along the surface) it turns to the
+	side `toward` (the steering point, relative to the NPC) lies on. A surface facing away, or flat ground, leaves the
+	heading as it is.
+]=]
+function NpcPathRules.slide(heading: Vector3, normal: Vector3?, toward: Vector3?): Vector3
+	if normal == nil then
+		return heading
+	end
+	local wall = Vector3.new(normal.X, 0, normal.Z)
+	if wall.Magnitude < 1e-3 then
+		return heading
+	end
+	wall = wall.Unit
+	local into = heading:Dot(wall)
+	if into >= 0 then
+		return heading
+	end
+	local along = heading - wall * into
+	if along.Magnitude >= HEAD_ON or (toward == nil and along.Magnitude > 1e-3) then
+		return along.Unit
+	end
+	local side = wall:Cross(Vector3.yAxis)
+	local pick = if toward ~= nil then toward elseif along.Magnitude > 1e-3 then along else side
+	return if pick:Dot(side) < 0 then -side else side
 end
 
 -- Steering must advance even when a fast frame crosses the arrival disc. The lateral bound preserves corners.
