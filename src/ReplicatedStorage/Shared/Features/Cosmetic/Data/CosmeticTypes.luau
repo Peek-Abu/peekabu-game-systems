@@ -17,7 +17,16 @@ export type Kind = "employee" | "skin" | "idle" | "emote" | "stickerPack" | "sti
 export type Rarity = "default" | "uncommon" | "rare" | "epic" | "legendary" | "odd"
 
 -- Where it comes from. `default` items are free and never stored: every player owns them.
-export type Source = "default" | "credits" | "gleam" | "gloomLocker" | "gleamLocker" | "goal" | "event" | "gift" | "later"
+export type Source =
+	"default"
+	| "credits"
+	| "gleam"
+	| "gloomLocker"
+	| "gleamLocker"
+	| "goal"
+	| "event"
+	| "gift"
+	| "later"
 
 export type Item = {
 	id: string,
