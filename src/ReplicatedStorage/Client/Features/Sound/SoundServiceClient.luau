@@ -231,6 +231,9 @@ local function configure(
 	sound.PlaybackSpeed = SoundFormulas.pickPitch(def.pitch, rng:NextNumber()) * pitchScale
 	sound.Looped = def.looped == true
 	sound.SoundGroup = placeGroupFor(def.group, place)
+	-- Max first at its widest, so the min never meets a reused voice's smaller max on the way.
+	sound.RollOffMaxDistance = SoundConstants.DEFAULT_ROLL_OFF_MAX
+	sound.RollOffMinDistance = def.rollOffMinDistance or SoundConstants.DEFAULT_ROLL_OFF_MIN
 	sound.RollOffMaxDistance = def.rollOffMaxDistance or SoundConstants.DEFAULT_ROLL_OFF_MAX
 end
 

@@ -5,13 +5,16 @@
 	AMBIENCE_INTERVAL: when the phone's wait is up, a phone rings on a desk with nobody near it (OfficeAmbienceUtils
 	.pick over the OfficeAmbient emitters); the elevator dings on the same rule on its own wait; each typist types
 	(a loop) while nobody is near and stops the moment you come within TYPING_STOP_RADIUS, staying quiet
-	TYPING_QUIET_SECONDS; the bed sweeteners of the listener's place (SoundServiceClient:listener): inside the
-	office's (a ceiling tick, a pipe knock, a far typewriter key, a lift ding...), in the yard the yard's (an owl, a
-	fence rattle, a can rolling, a far car...), each kind on its own wait (SWEETENER_EVERY), one variant (never the
-	same twice running) on a ring SWEETENER_NEAR..FAR studs round the camera (OfficeAmbienceUtils.sweetenerAt); and
-	the yard's fixed emitters (a sodium pole, the vending machine, the gate booth's radio: OfficeAssets.EMITTER_LOOPS)
-	each loop while the camera is within their sound's roll-off (OfficeAmbienceUtils.loopOn). Per client, no
-	packets: each player hears their own office. Pending sounds (OfficeAssets)
+	TYPING_QUIET_SECONDS; the bed sweeteners of the listener's place (SoundServiceClient:listener), each kind on its own
+	wait (SWEETENER_EVERY), one variant (never the same twice running): inside the office's (a ceiling tick, a pipe
+	knock, a far typewriter key, a lift ding...) on a ring SWEETENER_NEAR..FAR studs round the camera
+	(OfficeAmbienceUtils.sweetenerAt), in the yard the yard's (an owl, a fence rattle, a can rolling, a far car) FROM
+	their source: a rolled point inside one of the emitter volumes tagged with that kind within the sound's reach
+	(OfficeAmbienceUtils.pickNear / pointInReach), quiet when none is; and the yard's fixed emitters (a sodium pole, the
+	vending machine, the gate booth's radio, the road side: OfficeAssets.EMITTER_LOOPS) each loop while the camera is
+	within their sound's roll-off of the volume (OfficeAmbienceUtils.loopOn), playing from its point nearest the camera
+	(an anchor moved every tick, so a long road side sounds from the road's direction). Per client, no packets: each
+	player hears their own office. Pending sounds (OfficeAssets)
 	are skipped silently and counted.
 	No play creates a Sound: the rings and sweeteners are fire-and-forget one-shots (SoundServiceClient:playOneShot,
 	the sweeteners on the shared fixed-point anchors), and each emitter gets one idle voice the first time the running
@@ -48,9 +51,10 @@ type Typist = {
 	quietUntil: number,
 }
 
--- A fixed emitter's loop.
+-- A fixed emitter's loop, and the anchor it plays from (the volume's point nearest the camera).
 type Loop = {
 	handle: SoundServiceClient.SoundHandle?,
+	anchor: Attachment,
 }
 
 -- A plain map (iterated and cleared). The office is rebuilt every shift, and a client only sees the old
@@ -74,6 +78,7 @@ local counters = {
 	typingStops = 0,
 	sweeteners = 0,
 	yardSweeteners = 0,
+	unsourced = 0,
 	loopStarts = 0,
 	loopStops = 0,
 	pending = 0,
@@ -151,6 +156,15 @@ local function silenceLoop(loop: Loop)
 	loop.handle = nil
 end
 
+-- Lets an emitter go: its loop fades, then its anchor (the loop's voice with it) is removed.
+local function dropLoop(loop: Loop)
+	silenceLoop(loop)
+	local anchor = loop.anchor
+	task.delay(OfficeAtmosphereConstants.EMITTER_FADE + 0.1, function()
+		anchor:Destroy()
+	end)
+end
+
 local function silenceAll()
 	for _, typist in typists do
 		silence(typist)
@@ -174,14 +188,50 @@ local function schedule(now: number)
 	end
 end
 
--- Each sweetener kind of the listener's place whose wait is up sounds one of its variants somewhere round the camera
--- (the other place's kinds keep their waits: a kind due while you were away sounds as you come back).
-local function stepSweeteners(now: number)
+-- Where a yard one-shot of `kind` sounds: a rolled point inside one of its source volumes within `reach` of the
+-- camera; nil when none is (it stays quiet rather than play from the wrong place).
+local function yardSource(
+	kind: string,
+	reach: number,
+	center: Vector3,
+	list: { OfficeAmbienceUtils.Emitter },
+	parts: { BasePart }
+): Vector3?
+	local sources: { BasePart } = {}
+	local distances: { number } = {}
+	for index, emitter in list do
+		if emitter.kind == kind then
+			local part = parts[index]
+			table.insert(sources, part)
+			table.insert(distances, OfficeAmbienceUtils.boxDistance(center, part.CFrame, part.Size))
+		end
+	end
+	local picked = OfficeAmbienceUtils.pickNear(distances, reach, rng:NextNumber())
+	if picked == nil then
+		return nil
+	end
+	local part = sources[picked]
+	return OfficeAmbienceUtils.pointInReach(
+		center,
+		part.CFrame,
+		part.Size,
+		reach,
+		rng:NextNumber(),
+		rng:NextNumber(),
+		rng:NextNumber()
+	)
+end
+
+-- Each sweetener kind of the listener's place whose wait is up sounds one of its variants: indoors somewhere round the
+-- camera, in the yard from its source (the other place's kinds keep their waits: a kind due while you were away sounds
+-- as you come back).
+local function stepSweeteners(now: number, list: { OfficeAmbienceUtils.Emitter }, parts: { BasePart })
 	local camera = Workspace.CurrentCamera
 	if camera == nil then
 		return
 	end
 	local constants = OfficeAtmosphereConstants
+	local center = camera.CFrame.Position
 	local yard = SoundServiceClient:listener() == "Outside"
 	local set: { [string]: { string } } = if yard then OfficeAssets.YARD_SWEETENERS else OfficeAssets.SWEETENERS
 	for kind, ids in set do
@@ -189,13 +239,23 @@ local function stepSweeteners(now: number)
 		local due = nextSweetener[kind]
 		if every ~= nil and due ~= nil and now >= due and #ids > 0 then
 			nextSweetener[kind] = now + OfficeAmbienceUtils.delay(rng:NextNumber(), every.min, every.max)
-			local at = OfficeAmbienceUtils.sweetenerAt(
-				camera.CFrame.Position,
-				rng:NextNumber(),
-				rng:NextNumber(),
-				constants.SWEETENER_NEAR,
-				constants.SWEETENER_FAR
-			)
+			local at: Vector3? = nil
+			if yard then
+				local def = SoundRegistry.get(ids[1])
+				at = yardSource(kind, if def ~= nil then def.rollOffMaxDistance or 0 else 0, center, list, parts)
+			else
+				at = OfficeAmbienceUtils.sweetenerAt(
+					center,
+					rng:NextNumber(),
+					rng:NextNumber(),
+					constants.SWEETENER_NEAR,
+					constants.SWEETENER_FAR
+				)
+			end
+			if at == nil then
+				counters.unsourced += 1
+				continue
+			end
 			local index = OfficeAmbienceUtils.variant(rng:NextNumber(), #ids, lastSweetener[kind])
 			lastSweetener[kind] = index
 			if shot(ids[index], at) then
@@ -279,7 +339,7 @@ end
 local function stepLoops(list: { OfficeAmbienceUtils.Emitter }, parts: { BasePart })
 	for part, loop in loops do
 		if not part:IsDescendantOf(Workspace) then
-			silenceLoop(loop)
+			dropLoop(loop)
 			loops[part] = nil
 		end
 	end
@@ -295,18 +355,24 @@ local function stepLoops(list: { OfficeAmbienceUtils.Emitter }, parts: { BasePar
 			local part = parts[index]
 			local loop = loops[part]
 			if loop == nil then
-				loop = { handle = nil }
+				local anchor = Instance.new("Attachment")
+				anchor.Name = "YardEmitterAnchor"
+				anchor.Parent = Workspace.Terrain
+				loop = { handle = nil, anchor = anchor }
 				loops[part] = loop
 			end
+			-- The volume's point nearest the camera: the sound comes from the lamp head, the booth, the road's direction.
+			local nearest = OfficeAmbienceUtils.nearestInBox(center, part.CFrame, part.Size)
+			loop.anchor.WorldPosition = nearest
 			local radius = def.rollOffMaxDistance or 0
 			local on = OfficeAmbienceUtils.loopOn(
-				(center - emitter.position).Magnitude,
+				(center - nearest).Magnitude,
 				radius,
 				OfficeAtmosphereConstants.EMITTER_MARGIN,
 				loop.handle ~= nil
 			)
 			if on and loop.handle == nil then
-				loop.handle = SoundServiceClient:play(id, { at = part })
+				loop.handle = SoundServiceClient:play(id, { at = loop.anchor })
 				counters.loopStarts += 1
 			elseif not on then
 				silenceLoop(loop)
@@ -353,7 +419,7 @@ local function step()
 	end
 	stepTypists(list, parts, positions, now)
 	stepLoops(list, parts)
-	stepSweeteners(now)
+	stepSweeteners(now, list, parts)
 end
 
 local OfficeAmbienceSystem = {}
@@ -381,6 +447,9 @@ function OfficeAmbienceSystem.stop()
 	end
 	silenceAll()
 	table.clear(typists)
+	for _, loop in loops do
+		dropLoop(loop)
+	end
 	table.clear(loops)
 	table.clear(warmed)
 	table.clear(lastSweetener)

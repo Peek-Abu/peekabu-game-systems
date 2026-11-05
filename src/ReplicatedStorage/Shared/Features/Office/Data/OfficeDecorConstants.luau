@@ -9,9 +9,22 @@
 	@class OfficeDecorConstants
 ]=]
 
--- The yard's fixed emitters (yard design Y1: a sodium pole's buzz, the vending machine's hum, the gate booth's radio)
--- loop while the camera is near; the builder tags their invisible parts (Workspace.YardDressing).
-export type AmbientKind = "phone" | "typing" | "elevator" | "lampBuzz" | "vendingHum" | "boothRadio"
+-- The yard's sound sources (yard design Y1), invisible parts the builder tags in Workspace.YardDressing, each a box
+-- the sound comes from: loops while the camera is near (a sodium pole's buzz at its lamp head, the vending machine's
+-- hum, the gate booth's radio, the far road's wash along the road side), and the one-shots now and then (owls in the
+-- treeline, the fence line's rattle, a can on the asphalt, a far car on the road).
+export type AmbientKind =
+	"phone"
+	| "typing"
+	| "elevator"
+	| "lampBuzz"
+	| "vendingHum"
+	| "boothRadio"
+	| "roadSide"
+	| "owl"
+	| "fenceRattle"
+	| "canRoll"
+	| "farCar"
 
 return table.freeze({
 	DECOR_FOLDER = "NightDecor",

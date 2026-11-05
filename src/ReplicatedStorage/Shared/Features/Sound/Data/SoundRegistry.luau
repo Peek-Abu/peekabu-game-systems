@@ -25,7 +25,8 @@ local SoundRegistry = {}
 --[=[
 	Registers a new sound. Asserts: the id is new; the asset id is canonical; the group is known; the
 	volume is within 0..10; a pitch range is positive and min <= max; maxConcurrent is a positive
-	integer; rollOffMaxDistance is positive; heardEverywhere is a boolean; a pinned place is Building or Outside, and
+	integer; rollOffMaxDistance is positive; rollOffMinDistance is positive and under the max (the sound's, else the
+	engine default); heardEverywhere is a boolean; a pinned place is Building or Outside, and
 	never on a heardEverywhere sound (that one is in no place).
 	@param id string
 	@param def SoundDef
@@ -49,6 +50,13 @@ function SoundRegistry.register(id: string, def: SoundDef)
 	local rollOff = def.rollOffMaxDistance
 	if rollOff ~= nil then
 		assert(rollOff > 0, `sound "{id}": rollOffMaxDistance must be positive`)
+	end
+	local rollOffMin = def.rollOffMinDistance
+	if rollOffMin ~= nil then
+		assert(
+			rollOffMin > 0 and rollOffMin < (rollOff or SoundConstants.DEFAULT_ROLL_OFF_MAX),
+			`sound "{id}": rollOffMinDistance must be positive and under the max distance`
+		)
 	end
 	assert(
 		def.heardEverywhere == nil or type(def.heardEverywhere) == "boolean",

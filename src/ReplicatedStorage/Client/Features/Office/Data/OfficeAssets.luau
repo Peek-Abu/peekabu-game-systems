@@ -55,18 +55,11 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 		place = "Building",
 	},
 	-- The yard bed (yard design Y1, in-house, the owner's pick B, 2026-11-04): the quiet, slightly lonely half of the
-	-- night. Four looped beds of co-prime lengths (17.33 / 23.99 / 31.09 / 37.97 s) mixed together to -21 LUFS: a
-	-- sodium lamp's hum on B (the office's tonic, so the doors stay in one key), a far road's wash at F#, darker wind
-	-- in the pines, and sparse crickets. Pinned Outside: silent in the building.
+	-- night. Looped beds of co-prime lengths (17.33 / 31.09 / 37.97 s), 2D because they come from everywhere: a far
+	-- sodium hum on B (the office's tonic, so the doors stay in one key), darker wind in the pines, and sparse crickets.
+	-- Pinned Outside: silent in the building. (Its fourth layer, the far road, plays from the road side: yardTraffic.)
 	yardBedLamp = {
 		assetId = "rbxassetid://75472286543334",
-		group = "Ambient",
-		volume = 1,
-		looped = true,
-		place = "Outside",
-	},
-	yardBedTraffic = {
-		assetId = "rbxassetid://105519274707699",
 		group = "Ambient",
 		volume = 1,
 		looped = true,
@@ -86,29 +79,46 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 		looped = true,
 		place = "Outside",
 	},
-	-- The yard's fixed emitters (looped, at their tagged part; placed Outside by where they play): a sodium pole's
-	-- buzz near its lamp (pick A), the vending machine's hum, and the gate booth's tiny radio playing the hub's record,
-	-- faint and a little warped ("a record left playing after closing": pick B, the harmony and hook, -55 cents).
+	-- The yard's fixed emitters (looped, 3D from the nearest point of their tagged part, pinned Outside so a source
+	-- past the yard's boxes still plays there): a sodium pole's buzz at its lamp (pick A), the vending machine's hum
+	-- (round-2 pick A2), the gate booth's tiny radio playing the hub's record, faint and a little warped ("a record left
+	-- playing after closing": pick B, the harmony and hook, -55 cents), and the far road's wash from the road side
+	-- (the bed's traffic layer, pick B). Full volume within rollOffMinDistance, gone at rollOffMaxDistance.
 	yardLampBuzz = {
 		assetId = "rbxassetid://78296703052028",
 		group = "Ambient",
 		volume = 0.5,
 		looped = true,
-		rollOffMaxDistance = 22,
+		rollOffMinDistance = 3,
+		rollOffMaxDistance = 24,
+		place = "Outside",
 	},
 	yardVendingHum = {
-		assetId = PENDING,
+		assetId = "rbxassetid://83580452543839",
 		group = "Ambient",
-		volume = 0.6,
+		volume = 0.7,
 		looped = true,
-		rollOffMaxDistance = 28,
+		rollOffMinDistance = 4,
+		rollOffMaxDistance = 30,
+		place = "Outside",
 	},
 	yardBoothRadio = {
 		assetId = "rbxassetid://121655014715673",
 		group = "Ambient",
-		volume = 0.5,
+		volume = 0.6,
 		looped = true,
-		rollOffMaxDistance = 30,
+		rollOffMinDistance = 4,
+		rollOffMaxDistance = 32,
+		place = "Outside",
+	},
+	yardTraffic = {
+		assetId = "rbxassetid://105519274707699",
+		group = "Ambient",
+		volume = 1.2,
+		looped = true,
+		rollOffMinDistance = 40,
+		rollOffMaxDistance = 360,
+		place = "Outside",
 	},
 	-- A broken tube's electric zap as it blinks.
 	officeLightZap = {
@@ -180,14 +190,15 @@ local SWEETENERS: { [string]: { string } } = {
 	musicBox = { "officeMusicBox" },
 	pipeKnock = { "officePipeKnock1", "officePipeKnock3" },
 }
--- The yard's: no voice, no bark, no sparkle.
+-- The yard's (round-2 picks, each the cleaned event alone; the moth and the trolley were dropped): no voice, no
+-- bark, no sparkle. Each plays FROM its source, not round the listener: a point in one of the emitter volumes
+-- tagged with its kind (OfficeDecorConstants.AmbientKind: owls in the treeline, the fence line, the asphalt, the
+-- road side) within the sound's rollOffMaxDistance; with none in reach it stays quiet.
 local YARD_SWEETENERS: { [string]: { string } } = {
 	owl = { "yardOwl1", "yardOwl2", "yardOwl3" },
 	fenceRattle = { "yardFence1", "yardFence2", "yardFence3" },
 	canRoll = { "yardCan1", "yardCan2", "yardCan3" },
 	farCar = { "yardFarCar1", "yardFarCar2", "yardFarCar3" },
-	mothTick = { "yardMoth1", "yardMoth2", "yardMoth3" },
-	trolleyCreak = { "yardTrolley1", "yardTrolley2", "yardTrolley3" },
 }
 local SWEETENER_IDS: { [string]: { assetId: string, volume: number } } = {
 	officeCeilingTick1 = { assetId = "rbxassetid://90054667378931", volume = 1 },
@@ -204,44 +215,50 @@ local SWEETENER_IDS: { [string]: { assetId: string, volume: number } } = {
 	officePipeKnock1 = { assetId = "rbxassetid://130272101989143", volume = 1.41 },
 	officePipeKnock3 = { assetId = "rbxassetid://96147688698929", volume = 1.41 },
 }
-local YARD_SWEETENER_IDS: { [string]: { assetId: string, volume: number } } = {
-	yardOwl1 = { assetId = PENDING, volume = 1 },
-	yardOwl2 = { assetId = PENDING, volume = 1 },
-	yardOwl3 = { assetId = PENDING, volume = 1 },
-	yardFence1 = { assetId = PENDING, volume = 1 },
-	yardFence2 = { assetId = PENDING, volume = 1 },
-	yardFence3 = { assetId = PENDING, volume = 1 },
-	yardCan1 = { assetId = PENDING, volume = 1 },
-	yardCan2 = { assetId = PENDING, volume = 1 },
-	yardCan3 = { assetId = PENDING, volume = 1 },
-	yardFarCar1 = { assetId = PENDING, volume = 1 },
-	yardFarCar2 = { assetId = PENDING, volume = 1 },
-	yardFarCar3 = { assetId = PENDING, volume = 1 },
-	yardMoth1 = { assetId = PENDING, volume = 1 },
-	yardMoth2 = { assetId = PENDING, volume = 1 },
-	yardMoth3 = { assetId = PENDING, volume = 1 },
-	yardTrolley1 = { assetId = PENDING, volume = 1 },
-	yardTrolley2 = { assetId = PENDING, volume = 1 },
-	yardTrolley3 = { assetId = PENDING, volume = 1 },
+-- Per kind: the full-volume and the silent distance (an owl carries from the trees, a can only across the asphalt).
+local YARD_ROLL_OFF: { [string]: { min: number, max: number } } = {
+	owl = { min = 25, max = 220 },
+	fenceRattle = { min = 6, max = 70 },
+	canRoll = { min = 5, max = 50 },
+	farCar = { min = 40, max = 300 },
 }
--- Each set of sweeteners and the place it is pinned to.
-local SWEETENER_PLACES: { { rows: { [string]: { assetId: string, volume: number } }, place: SoundTypes.SoundPlace } } =
-	{
-		{ rows = SWEETENER_IDS, place = "Building" },
-		{ rows = YARD_SWEETENER_IDS, place = "Outside" },
+local YARD_SWEETENER_IDS: { [string]: { assetId: string, volume: number, kind: string } } = {
+	yardOwl1 = { assetId = "rbxassetid://137993527520416", volume = 1.2, kind = "owl" },
+	yardOwl2 = { assetId = "rbxassetid://87944183924375", volume = 1.2, kind = "owl" },
+	yardOwl3 = { assetId = "rbxassetid://83757279069045", volume = 1.2, kind = "owl" },
+	yardFence1 = { assetId = "rbxassetid://125440827106466", volume = 1, kind = "fenceRattle" },
+	yardFence2 = { assetId = "rbxassetid://107004648452810", volume = 1, kind = "fenceRattle" },
+	yardFence3 = { assetId = "rbxassetid://83171628900193", volume = 1, kind = "fenceRattle" },
+	yardCan1 = { assetId = "rbxassetid://139162091233759", volume = 0.9, kind = "canRoll" },
+	yardCan2 = { assetId = "rbxassetid://100041370534179", volume = 0.9, kind = "canRoll" },
+	yardCan3 = { assetId = "rbxassetid://100260984763684", volume = 0.9, kind = "canRoll" },
+	yardFarCar1 = { assetId = "rbxassetid://121373335447550", volume = 1, kind = "farCar" },
+	yardFarCar2 = { assetId = "rbxassetid://137537067308905", volume = 1, kind = "farCar" },
+	yardFarCar3 = { assetId = "rbxassetid://96717361744878", volume = 1, kind = "farCar" },
+}
+for id, row in SWEETENER_IDS do
+	SOUNDS[id] = {
+		assetId = row.assetId,
+		group = "Ambient",
+		volume = row.volume,
+		pitch = { min = 0.95, max = 1.05 },
+		rollOffMaxDistance = 80,
+		maxConcurrent = 2,
+		place = "Building",
 	}
-for _, entry in SWEETENER_PLACES do
-	for id, row in entry.rows do
-		SOUNDS[id] = {
-			assetId = row.assetId,
-			group = "Ambient",
-			volume = row.volume,
-			pitch = { min = 0.95, max = 1.05 },
-			rollOffMaxDistance = 80,
-			maxConcurrent = 2,
-			place = entry.place,
-		}
-	end
+end
+for id, row in YARD_SWEETENER_IDS do
+	local rollOff = YARD_ROLL_OFF[row.kind]
+	SOUNDS[id] = {
+		assetId = row.assetId,
+		group = "Ambient",
+		volume = row.volume,
+		pitch = { min = 0.95, max = 1.05 },
+		rollOffMinDistance = rollOff.min,
+		rollOffMaxDistance = rollOff.max,
+		maxConcurrent = 2,
+		place = "Outside",
+	}
 end
 
 -- The loop each fixed emitter kind plays (OfficeDecorConstants.AmbientKind), by the emitter's AmbientKind attribute.
@@ -249,6 +266,7 @@ local EMITTER_LOOPS: { [string]: string } = {
 	lampBuzz = "yardLampBuzz",
 	vendingHum = "yardVendingHum",
 	boothRadio = "yardBoothRadio",
+	roadSide = "yardTraffic",
 }
 
 for id, def in SOUNDS do
@@ -262,7 +280,7 @@ return table.freeze({
 	SOUNDS = table.freeze(SOUNDS),
 	-- The bed's looped layers (each its own SoundServiceClient ambience layer, named by its id).
 	BED = table.freeze({ "officeBedHum", "officeBedTube", "officeBedAir", "officeBedColour" }),
-	YARD_BED = table.freeze({ "yardBedLamp", "yardBedTraffic", "yardBedWind", "yardBedCrickets" }),
+	YARD_BED = table.freeze({ "yardBedLamp", "yardBedWind", "yardBedCrickets" }),
 	SWEETENERS = table.freeze(SWEETENERS),
 	YARD_SWEETENERS = table.freeze(YARD_SWEETENERS),
 	EMITTER_LOOPS = table.freeze(EMITTER_LOOPS),

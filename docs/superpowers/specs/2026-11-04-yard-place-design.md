@@ -173,6 +173,47 @@ which sit on Y3's props.
 | Y4 | **Critters (dressing only).** Moths and fireflies as particles on the poles and verges. A cat on the dumpster, crows on the fence and a raccoon in a bin, each hopping or flying off when a player comes near, on this client only. | art session (models), code session |
 | Y5 | **Check in real play.** Walk truck → dock → lobby → truck with a second client: the bed crossfades at each door, the steps change on grass, gravel and puddles, and nothing blocks the walk. | owner |
 
+### Y3b: the sound emitters the builder places (owner, 2026-11-04: "ensure sounds are played from correct directions and locations")
+
+Every yard sound that comes from a thing plays from that thing, as a 3D sound. Only the wide bed (the far sodium hum,
+wind and crickets) is 2D. The code is in (`OfficeAmbienceSystem`): it plays from invisible parts that carry the tag
+`OfficeAmbient` and the attribute `AmbientKind`, so the builder places them with the props. Each part is a **box**:
+- a loop plays from the box's point nearest the listener (a lamp head, the booth window, or the road's direction);
+- a one-shot plays from a random point inside the box.
+
+All emitter parts are `Anchored`, `CanCollide`, `CanQuery` and `CanTouch` false, and `Transparency = 1`, in
+`Workspace.YardDressing.SoundEmitters`.
+
+| AmbientKind | Where | Size (studs) | Count | Sound (full volume within / silent beyond) |
+|---|---|---|---|---|
+| `lampBuzz` | at each sodium pole's lamp head | 1 x 1 x 1 | 12 (one per pole) | lamp buzz loop (3 / 24) |
+| `vendingHum` | inside the vending machine by the dock | the machine's box | 1 | vending hum loop (4 / 30) |
+| `boothRadio` | on the guard booth's desk, by the window | 1 x 1 x 1 | 1 | the warped hub record (4 / 32) |
+| `roadSide` | along the road past the fence, the whole length the yard faces | about 400 x 4 x 8 | 1-2 | far traffic wash loop (40 / 360) |
+| `owl` | in the pine treeline, about 20 studs up | treeline length x 10 x 20 | 1-3 | an owl hoot, now and then (25 / 220) |
+| `fenceRattle` | along the chain-link fence, waist to head height | each fence run x 4 x 1 | 1 per run | a fence rattle, now and then (6 / 70) |
+| `canRoll` | low on the asphalt near the dumpster, the bins and the car park | 20 x 1 x 20 | 2-3 | a can rolling, now and then (5 / 50) |
+| `farCar` | over the road, same box as `roadSide` | about 400 x 4 x 8 | 1 | a far car passing, now and then (40 / 300) |
+
+The puddle discs get `FootstepSurface = "puddle"` (the footsteps already play at the feet).
+
+Where the 2026-11-04 real-play check put temporary emitters (Play only, never saved), so the builder has numbers to
+start from. Coordinates are Shift-place world studs.
+
+| AmbientKind | Centre | Size |
+|---|---|---|
+| `lampBuzz` | each `OfficeExterior.SiteLights` part that holds a Light (20 today) | 1 x 1 x 1 |
+| `boothRadio` | (1308, 4, -255), on `Fence.BoothDesk` | 1 x 1 x 1 |
+| `vendingHum` | (1243, 3.5, -66), stand-in until the Y3 machine is placed | 3 x 6 x 3 |
+| `roadSide`, `farCar` | (1425, 2, -276), the road east of the gate | 190 x 4 x 18 |
+| `owl` | (1080, 22, -345) south pines; (815, 22, -46) west pines; (1345, 22, 0) east pines | 480 x 10 x 20; 20 x 10 x 540; 20 x 10 x 400 |
+| `fenceRattle` | (1079, 5, -321) south run; (836, 5, -46) west run; (1322, 5, -150) east run | 486 x 6 x 1; 1 x 6 x 551; 1 x 6 x 330 |
+| `canRoll` | (1100, 1, -95) by the dock; (965, 1, -100) the car park | 30 x 1 x 20; 40 x 1 x 60 |
+
+Result of the check: each loop played from its emitter, and was gone past its silent distance. Every one-shot played
+from inside its source, within reach. Each step's layer played on the foot that landed. Real-play numbers are in the
+session notes (`yard-sounds-2026-11-04.md`).
+
 **New modules (Y4 only):**
 
 | Feature | Realm | Subfolder | Name | Job |

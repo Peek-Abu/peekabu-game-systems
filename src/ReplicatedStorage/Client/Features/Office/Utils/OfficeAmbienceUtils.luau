@@ -4,7 +4,9 @@
 	elevator dinging on its own, typing that stops when you enter"). A spot is empty when no crew member is within
 	the radius; a phone (or the elevator) is picked by roll among the empty spots of its kind; typing stops when
 	you come within its radius; the wait before the next one is a roll between a minimum and a maximum; a fixed
-	emitter's loop plays while the camera is near (with a margin, so it never flickers). Pure.
+	emitter's loop plays while the camera is near (with a margin, so it never flickers); a yard sound comes from its
+	emitter volume (the nearest point of it for a loop, a rolled point inside it for a one-shot), picked among those
+	within the sound's reach. Pure.
 
 	@class OfficeAmbienceUtils
 ]=]
@@ -14,7 +16,10 @@ export type Emitter = {
 	position: Vector3,
 }
 
-local OfficeAmbienceUtils = {}
+local OfficeAmbienceUtils = {
+	-- A rolled one-shot point stays within this share of its sound's reach (well inside the silent edge).
+	REACH_SHARE = 0.8,
+}
 
 function OfficeAmbienceUtils.empty(position: Vector3, crew: { Vector3 }, radius: number): boolean
 	for _, member in crew do
@@ -90,6 +95,97 @@ end
 ]=]
 function OfficeAmbienceUtils.loopOn(distance: number, radius: number, margin: number, playing: boolean): boolean
 	return distance <= (if playing then radius + margin else radius)
+end
+
+--[=[
+	The point of an emitter volume (a box at `cframe` of `size`) nearest to `point`: `point` itself when inside. A
+	traffic loop plays from the road side's nearest point, so it comes from the road's direction wherever you stand.
+]=]
+function OfficeAmbienceUtils.nearestInBox(point: Vector3, cframe: CFrame, size: Vector3): Vector3
+	local half = size / 2
+	local rel = cframe:PointToObjectSpace(point)
+	local clamped = Vector3.new(
+		math.clamp(rel.X, -half.X, half.X),
+		math.clamp(rel.Y, -half.Y, half.Y),
+		math.clamp(rel.Z, -half.Z, half.Z)
+	)
+	return cframe:PointToWorldSpace(clamped)
+end
+
+--[=[
+	How far `point` is from an emitter volume (0 inside it).
+]=]
+function OfficeAmbienceUtils.boxDistance(point: Vector3, cframe: CFrame, size: Vector3): number
+	return (point - OfficeAmbienceUtils.nearestInBox(point, cframe, size)).Magnitude
+end
+
+--[=[
+	A point inside an emitter volume by three rolls (0-1 along its X, Y and Z): where a one-shot from a long source (a
+	fence line, a treeline, a stretch of road) sounds.
+]=]
+function OfficeAmbienceUtils.pointInBox(cframe: CFrame, size: Vector3, rx: number, ry: number, rz: number): Vector3
+	local half = size / 2
+	return cframe:PointToWorldSpace(
+		Vector3.new(
+			(math.clamp(rx, 0, 1) * 2 - 1) * half.X,
+			(math.clamp(ry, 0, 1) * 2 - 1) * half.Y,
+			(math.clamp(rz, 0, 1) * 2 - 1) * half.Z
+		)
+	)
+end
+
+--[=[
+	Where a one-shot from a long source sounds for a listener: the rolled point inside the volume (pointInBox) when it is
+	within REACH_SHARE of the sound's `reach`; else the point on the way from the volume's nearest point to it where it
+	is, so a far car on a 400-stud road is never rolled past where it can be heard (the nearest point itself when even
+	that is too far).
+]=]
+function OfficeAmbienceUtils.pointInReach(
+	listener: Vector3,
+	cframe: CFrame,
+	size: Vector3,
+	reach: number,
+	rx: number,
+	ry: number,
+	rz: number
+): Vector3
+	local limit = reach * OfficeAmbienceUtils.REACH_SHARE
+	local rolled = OfficeAmbienceUtils.pointInBox(cframe, size, rx, ry, rz)
+	if (rolled - listener).Magnitude <= limit then
+		return rolled
+	end
+	local nearest = OfficeAmbienceUtils.nearestInBox(listener, cframe, size)
+	if (nearest - listener).Magnitude >= limit then
+		return nearest
+	end
+	-- The distance grows from the nearest point toward the rolled one (the box is convex): halve to the limit.
+	local low, high = 0, 1
+	for _ = 1, 16 do
+		local mid = (low + high) / 2
+		if (nearest:Lerp(rolled, mid) - listener).Magnitude <= limit then
+			low = mid
+		else
+			high = mid
+		end
+	end
+	return nearest:Lerp(rolled, low)
+end
+
+--[=[
+	Which of the sources (their `distances` from the listener) a roll (0-1) picks among those within `radius`; nil
+	when none is.
+]=]
+function OfficeAmbienceUtils.pickNear(distances: { number }, radius: number, roll: number): number?
+	local eligible: { number } = {}
+	for index, distance in distances do
+		if distance <= radius then
+			table.insert(eligible, index)
+		end
+	end
+	if #eligible == 0 then
+		return nil
+	end
+	return eligible[OfficeAmbienceUtils.variant(roll, #eligible)]
 end
 
 return OfficeAmbienceUtils

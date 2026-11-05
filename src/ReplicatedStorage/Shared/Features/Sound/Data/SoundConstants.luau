@@ -31,6 +31,7 @@ local SoundConstants: {
 	PREWARM_POINTS: number,
 	LOAD_TIMEOUT: number,
 	DEFAULT_ROLL_OFF_MAX: number,
+	DEFAULT_ROLL_OFF_MIN: number,
 } =
 	table.freeze({
 		GROUPS = table.freeze(groups),
@@ -54,6 +55,8 @@ local SoundConstants: {
 		LOAD_TIMEOUT = 8,
 		-- The engine's Sound.RollOffMaxDistance, restored on a reused voice whose sound gives none.
 		DEFAULT_ROLL_OFF_MAX = 10000,
+		-- The engine's Sound.RollOffMinDistance, likewise.
+		DEFAULT_ROLL_OFF_MIN = 10,
 	})
 
 return SoundConstants

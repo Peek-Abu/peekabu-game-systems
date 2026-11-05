@@ -236,18 +236,47 @@ for setName, set in SETS do
 	SOUND_IDS[setName] = named
 end
 
--- The outdoor surface layers: their asset ids, and each surface's Sound.Volume before the gait scale (the puddle
--- loudest). The same jitter and roll-off as a step.
+-- The outdoor surface layers (round-2 picks A, 2026-11-04: each the cleaned footfall + a soft synth thump; the
+-- puddle's round-3 pick D: water only, no bubble tone): their asset ids, and each surface's Sound.Volume before the gait scale (the puddle
+-- loudest). The same jitter and roll-off as a step, 3D on the foot that landed.
 local LAYERS: { volume: LayerVolumes, pitch: { min: number, max: number }, rollOffMaxDistance: number, surfaces: LayerPools } =
 	{
 		volume = { asphalt = 0.5, grass = 0.6, gravel = 0.7, puddle = 1 },
 		pitch = { min = 0.95, max = 1.05 },
 		rollOffMaxDistance = 45,
 		surfaces = {
-			asphalt = { PENDING, PENDING, PENDING, PENDING, PENDING, PENDING },
-			grass = { PENDING, PENDING, PENDING, PENDING, PENDING, PENDING },
-			gravel = { PENDING, PENDING, PENDING, PENDING, PENDING, PENDING },
-			puddle = { PENDING, PENDING, PENDING, PENDING, PENDING, PENDING },
+			asphalt = {
+				"rbxassetid://127470636669430",
+				"rbxassetid://103189294812991",
+				"rbxassetid://118840612405238",
+				"rbxassetid://102075731394329",
+				"rbxassetid://84063660933406",
+				"rbxassetid://112998045575387",
+			},
+			grass = {
+				"rbxassetid://133051356313402",
+				"rbxassetid://117496606800435",
+				"rbxassetid://139326429651227",
+				"rbxassetid://132899071340959",
+				"rbxassetid://120288737650256",
+				"rbxassetid://90448686955680",
+			},
+			gravel = {
+				"rbxassetid://72798589555612",
+				"rbxassetid://133074149371887",
+				"rbxassetid://81608709102573",
+				"rbxassetid://91653292061128",
+				"rbxassetid://81154048846010",
+				"rbxassetid://131305365948691",
+			},
+			puddle = {
+				"rbxassetid://85199929994145",
+				"rbxassetid://139202002418048",
+				"rbxassetid://76014123167983",
+				"rbxassetid://111948453111821",
+				"rbxassetid://78947827046167",
+				"rbxassetid://107972646397964",
+			},
 		},
 	}
 

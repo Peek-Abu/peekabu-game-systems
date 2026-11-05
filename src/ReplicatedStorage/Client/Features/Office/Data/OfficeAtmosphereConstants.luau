@@ -103,7 +103,7 @@ local PRESETS: { [string]: VfxTypes.Atmosphere } = {
 }
 
 -- Seconds between two sounds of each bed sweetener kind (OfficeAssets.SWEETENERS inside, YARD_SWEETENERS in the yard:
--- six kinds whose waits add up to one sound every ~7 s, the yard design's 6-15).
+-- four kinds whose waits add up to one sound every ~11 s, the yard design's 6-15).
 local SWEETENER_EVERY: { [string]: { min: number, max: number } } = {
 	ceilingTick = table.freeze({ min = 5, max = 12 }),
 	drawer = table.freeze({ min = 18, max = 30 }),
@@ -116,8 +116,6 @@ local SWEETENER_EVERY: { [string]: { min: number, max: number } } = {
 	fenceRattle = table.freeze({ min = 25, max = 50 }),
 	canRoll = table.freeze({ min = 40, max = 80 }),
 	farCar = table.freeze({ min = 30, max = 60 }),
-	mothTick = table.freeze({ min = 20, max = 40 }),
-	trolleyCreak = table.freeze({ min = 45, max = 90 }),
 }
 
 return table.freeze({

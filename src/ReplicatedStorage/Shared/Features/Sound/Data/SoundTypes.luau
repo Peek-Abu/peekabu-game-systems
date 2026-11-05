@@ -27,6 +27,9 @@ export type SoundDef = {
 	maxConcurrent: number?,
 	-- Positional sounds: the distance at which the sound is inaudible. Absent = the engine default.
 	rollOffMaxDistance: number?,
+	-- Positional sounds: the distance within which the sound plays at full volume (it fades beyond it). A far source
+	-- (an owl in the trees, the road) needs a large one, a small hum a small one. Absent = the engine default.
+	rollOffMinDistance: number?,
 	-- A rare positional world sound that must carry everywhere (an alarm, a horn): never cut by the places. Absent =
 	-- false.
 	heardEverywhere: boolean?,

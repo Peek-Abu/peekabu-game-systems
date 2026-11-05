@@ -103,4 +103,64 @@ return function()
 			expect(OfficeAmbienceUtils.loopOn(51, 40, 10, true)).to.equal(false)
 		end)
 	end)
+	describe("sources", function()
+		local box = CFrame.new(100, 5, 0)
+		local size = Vector3.new(40, 10, 2)
+
+		it("measures the distance to an emitter volume's nearest point (0 inside)", function()
+			expect(OfficeAmbienceUtils.boxDistance(Vector3.new(100, 5, 0), box, size)).to.equal(0)
+			expect(OfficeAmbienceUtils.boxDistance(Vector3.new(110, 5, 11), box, size)).to.be.near(10)
+			expect(OfficeAmbienceUtils.boxDistance(Vector3.new(130, 5, 0), box, size)).to.be.near(10)
+		end)
+
+		it("measures along a turned volume", function()
+			local turned = CFrame.new(0, 0, 0) * CFrame.Angles(0, math.rad(90), 0)
+			-- Turned 90 degrees, the 40-stud length runs along Z.
+			expect(OfficeAmbienceUtils.boxDistance(Vector3.new(0, 0, 25), turned, size)).to.be.near(5)
+		end)
+
+		it("finds the volume's nearest point to a listener (the road side's traffic plays from there)", function()
+			local near = OfficeAmbienceUtils.nearestInBox(Vector3.new(110, 50, 30), box, size)
+			expect(near.X).to.be.near(110)
+			expect(near.Y).to.be.near(10)
+			expect(near.Z).to.be.near(1)
+		end)
+
+		it("places a one-shot inside the volume by three rolls", function()
+			local low = OfficeAmbienceUtils.pointInBox(box, size, 0, 0, 0)
+			local high = OfficeAmbienceUtils.pointInBox(box, size, 1, 1, 1)
+			expect(low.X).to.be.near(80)
+			expect(high.X).to.be.near(120)
+			expect(high.Y).to.be.near(10)
+			for _, r in { 0.1, 0.5, 0.9 } do
+				expect(OfficeAmbienceUtils.boxDistance(OfficeAmbienceUtils.pointInBox(box, size, r, r, r), box, size)).to.equal(
+					0
+				)
+			end
+		end)
+
+		it("keeps a rolled point within the sound's reach, pulled toward the volume's nearest point", function()
+			-- A 400-stud road: a roll at its far end is beyond a 100-stud reach from a listener near one end.
+			local road = CFrame.new(200, 0, 0)
+			local roadSize = Vector3.new(400, 2, 10)
+			local listener = Vector3.new(-30, 0, 0)
+			local far = OfficeAmbienceUtils.pointInReach(listener, road, roadSize, 100, 1, 0.5, 0.5)
+			expect((far - listener).Magnitude <= 100 * 0.8 + 1e-6).to.equal(true)
+			expect(OfficeAmbienceUtils.boxDistance(far, road, roadSize)).to.be.near(0)
+			-- A roll already in reach is kept.
+			local near = OfficeAmbienceUtils.pointInReach(listener, road, roadSize, 100, 0, 0.5, 0.5)
+			expect(near.X).to.be.near(0)
+			-- Out of reach altogether: the volume's nearest point.
+			local edge = OfficeAmbienceUtils.pointInReach(Vector3.new(-500, 0, 0), road, roadSize, 100, 1, 0.5, 0.5)
+			expect(edge.X).to.be.near(0)
+		end)
+
+		it("picks among the sources within the radius by a roll, none when all are too far", function()
+			expect(OfficeAmbienceUtils.pickNear({ 50, 10, 200, 30 }, 60, 0)).to.equal(1)
+			expect(OfficeAmbienceUtils.pickNear({ 50, 10, 200, 30 }, 60, 0.999)).to.equal(4)
+			expect(OfficeAmbienceUtils.pickNear({ 50, 10, 200, 30 }, 60, 0.5)).to.equal(2)
+			expect(OfficeAmbienceUtils.pickNear({ 200, 300 }, 60, 0.5)).to.equal(nil)
+			expect(OfficeAmbienceUtils.pickNear({}, 60, 0.5)).to.equal(nil)
+		end)
+	end)
 end
