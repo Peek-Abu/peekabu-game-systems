@@ -1,5 +1,13 @@
 # Odd Hours: first-launch backlog
 
+> **The live list is now the Odd Hours Launch List: https://claude.ai/artifact/Ax27MKsdzqr2gkX1b9dESB**
+> (rebuilt 2026-11-05 from this file, the pre-launch inventory, the Launch Board, the old checklist and the
+> git log). Its rows live in the page's db collection `items` (statuses check / decide / doing / todo / cut /
+> done) and the play-check route in `steps`. Update rows there with ArtifactData; only the owner sets done,
+> after real play. This file keeps the history and the reasoning. The route is also in
+> [odd-hours-play-check-2026-11-05.md](odd-hours-play-check-2026-11-05.md).
+> Tags below: **[built, waiting for check: sha]**, **[not a bug]**, **[cut]**, **[passed]** (the owner played it).
+
 These are kept separate from the MVP board, as the user asked. Writing an item here does not mean
 building it now. Each one is planned in the first-launch ideation, after the remaining MVP board items.
 
@@ -9,14 +17,16 @@ building it now. Each one is planned in the first-launch ideation, after the rem
   - The game uses the routed proximity voice (Audio API, `VoiceChatService.UseAudioApi = Enabled`).
   - Check the experience's voice settings on the Creator Dashboard, account eligibility (voice needs an
     ID-verified 13+ account), and the routing in a live server.
-- **Map quality, the big one.**
+- ~~**Map quality, the big one.**~~ **[passed]** Office stages 1-4 (kit generator, real halls, outside,
+  per-run variety) signed off by the owner on 2026-10-24. Polish rounds and lighting stay open on the list.
   - The office is a code-generated blockout. It looks low quality next to the characters and UI, and it
     has no real hallways.
   - It probably needs a full rework, built by hand in Studio.
   - Check props and valuables to the same quality bar.
-- **Hiding looks bad to other players.** There's a lot of clipping and the poses look wrong from outside.
-  The local view is fine.
-- **Separate places for maps.** Running the hub and office in the same place causes many bugs. Use
+- ~~**Hiding looks bad to other players.**~~ **[passed]** (old checklist, 2026-10-24). There's a lot of
+  clipping and the poses look wrong from outside. The local view is fine.
+- **Separate places for maps.** Built in code (hub + one Shift place); the real hop still needs a test on the
+  published places. Running the hub and office in the same place causes many bugs. Use
   TeleportService: one lobby/hub place plus one place per map. The base Queue already does
   reserved-server teleports, arrivals and return trips, so this is mostly setup.
 - **Hub built in Studio, and a team-friendly workflow.** If the game earns enough, the user will hire
@@ -39,15 +49,18 @@ building it now. Each one is planned in the first-launch ideation, after the rem
 - Faked party in the teleport ticket: the departing server should store the real party server-side
   (MemoryStore), since a cheater can edit the ticket.
 - Movement anti-cheat: speed and teleport checks.
-- Per-player rate limit on interaction prompts (base Interaction).
+- Per-player rate limit on interaction prompts (base Interaction). **[built, waiting for check: 9be42939]**
 - `InputControlsSystem` movement lock needs reference counting (base).
 - About 1,300 decor props cast shadows. Check whether turning shadows off on small props is worth the
   visual change on phones.
 - Stamina is sent to every player 20 times a second.
 - Measure on a real low-end phone or tablet: the MicroProfiler, and the cost of the screen-effects fix.
-- `SpecRoots.luau` is over the 400-line limit and needs splitting.
+- `SpecRoots.luau` is over the 400-line limit and needs splitting (653 lines on 2026-11-05).
 - `UISuppression.luau` fails `check_pr_rules` on the game branch. Port PR #11's Modal approach.
-- Merge base PRs #10 and #11.
+- ~~Merge base PRs #10 and #11.~~ **[done]** merged 2026-10-24.
+- `RankServiceServer.spec:178` fails in every full suite run (2026-11-04).
+- `TeleportOptions.ReservedServerAccessCode` is deprecated; move the base Queue to `ReservedServerId` (base fix,
+  test on the published places).
 
 ## Future updates: keeping the first minutes engaging (owner, 2026-10-23)
 
@@ -81,10 +94,11 @@ To do together on a polish day, not now:
 - **Underground interior test (100-200 studs):** measure whether a door jump of 100-200 studs is as quick for Roblox's
   lighting as the current 12-24-stud hops (see "Future: office map growth" above). If it is, the interior can move
   under the site and grow freely.
-- **Sound groups in SoundService:** route sounds through SoundGroups by place, e.g. a Building group muted (or heavily
+- **Sound groups in SoundService:** **[built, waiting for check: 0d278e4d]** (sound places: each player hears only
+  their own place). route sounds through SoundGroups by place, e.g. a Building group muted (or heavily
   muffled) while the player is outside, an Outside group for the yard, so office zaps, phones and ambience don't carry
   into the yard through the thin shell (seen in the stage 3 review).
-- **Carry drift: not reproduced (2026-11-04).** Eight clean 20-30 s idle windows in the shift place held still at
+- **[not a bug]** **Carry drift: not reproduced (2026-11-04).** Eight clean 20-30 s idle windows in the shift place held still at
   0.00 studs: Monitor, fish tank, mug, plaque, Bottle bag; with and without an Enter teleport; arm IK on and off; no
   Harlow. Every drift in the stage 3 report came right after an Enter, along the player's facing, once without any item,
   in a probe session (server `pickUp`, a camera override). Two sudden jumps (not a slow slide) were seen only in probe
@@ -103,18 +117,22 @@ To do together on a polish day, not now:
   (owner, 2026-10-29). The Legendary unlock reveals (Bubble Buddy, Sheriff, PJ Cappy's Cozy Unlock 86895730118507) are
   uploaded and registered but unused; a skin's own reveal slot stays for a later, separate Legendary reveal.
 
-- **Legendary skins get their own idles and fidgets (owner, 2026-11-03):** each Legendary skin (Bubble Buddy,
+- **Legendary skins get their own idles and fidgets (owner, 2026-11-03):** **[built, waiting for check:
+  f957a755, b1d92351, 8b91ea1f]** each Legendary skin (Bubble Buddy,
   Sheriff Prickles, PJ Cappy) gets its own idle and fidget. A skin whose showcase idle holds props skips the employee's
   default fidget, because it will have its own. Fidgets stop while vacuuming or knocked out (already built).
 
 From the owner's stage 4 play-check (2026-10-24):
-- **Inside sounds heard outside:** standing in the yard you hear the office's sounds, Mr. Harlow's footsteps and
+- **Inside sounds heard outside:** **[built, waiting for check: 0d278e4d]** standing in the yard you hear the office's sounds, Mr. Harlow's footsteps and
   more. This is the "Sound groups" item above, now confirmed by the owner in play: the building's sounds must be cut
   or heavily muffled while the player is outside (and the yard's while inside).
-- **The "TOGETHER WE THRIVE" banner is off-style:** the plain navy cloth with plain text (the `banner` anomaly slot
+- ~~**The "TOGETHER WE THRIVE" banner is off-style:**~~ **[cut, 2026-11-04]** the anomaly became a leaning lamp
+  post on the walk (59357c2c, waiting for check). the plain navy cloth with plain text (the `banner` anomaly slot
   on the podium front) doesn't match the game's look. Restyle it to the Odd Hours art style (drawn detail, the house
   palette and type, kid-level wording), keeping its default and upside-down states.
-- **Make the outside its own place, not a quiet backdrop:**
+- **Make the outside its own place, not a quiet backdrop:** **[built, waiting for check]** yard bed, booth radio and
+  lamp buzz (06e3db6f, 781bcf96, 3fdeeea8), yard dressing (c0437e6d), cars (726c7464), outdoor footsteps with the
+  asphalt fix (52a802c4). Creatures **[cut, 2026-11-05]** (a46332da); the moths and fireflies stay (7b0ec759).
   - its own ambience bed (night wind, distant traffic, buzzing lamps, insects), separate from the office's;
   - more set dressing and assets in the yard, car park and around the building;
   - possibly outdoor creatures or monsters (gameplay or just set dressing: to decide);
@@ -130,7 +148,7 @@ From the owner's stage 4 play-check (2026-10-24):
     VFX, screen effects and music. Noise should draw him to *investigate* the spot, not start a chase until he
     actually sees the player. Check what the Noise feature feeds into his state, and whether the chase effects key off
     "hunting" rather than "chasing".
-  - **Fixed, awaiting the owner's play-check (2026-11-04):** he slides along walls and jambs instead of wedging
+  - **[built, waiting for check: 68c71954, 41957a32, c897828a]** **Fixed, awaiting the owner's play-check (2026-11-04):** he slides along walls and jambs instead of wedging
     (NpcPathRules.slide); searching, he sees the one he lost all round only within CERTAIN_RANGE; a noise gives only
     the near look (OccupantDreadFormulas). The pure brain never chased on noise, and walls and closed doors do block
     his ray.
@@ -142,7 +160,13 @@ From the owner's stage 4 play-check (2026-10-24):
   for a second or so (`.superpowers/sdd/common-rules.md` notes it).
 
 From the owner (2026-10-29), for polish, not now:
-- **Clock out at once still pays XP:** a player can clock out right after a shift starts and still earn rank XP, so
+- **Clock out at once still pays XP:** **[built, waiting for check: 832b3ab2]** a shift counts as worked only after
+  a cleaned pile or a banked item, and 180 s or a made contract. a player can clock out right after a shift starts and still earn rank XP, so
   XP can be farmed by joining and leaving fast. Look at how the rank award reads a shift as "worked"
   (`RankFormulas.factsFor`) and what a clock-out with nothing done should earn. Check the other quick-leave paths too
   (leaving the server, a fast clock-out vote), and Credits and badges (Clocked In) that ride the same "worked" fact.
+
+## Added 2026-11-05 (truck remake)
+
+- **Truck v3 Moving Van, size B (16 x 24 floor):** **[built, waiting for check: 91f9db7a, 06a86e74]** one template for the
+  hub bays and the yard truck, livery line "WE CLEAN UP THE NIGHT!" on the band. Both places must be saved in Studio.
