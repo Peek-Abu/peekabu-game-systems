@@ -54,18 +54,43 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 		looped = true,
 		place = "Building",
 	},
-	-- The yard bed (yard design Y1, in-house): the quiet, slightly lonely half of the night. Four looped beds of
-	-- co-prime lengths: a sodium lamp's hum on B (the office's tonic, so the doors stay in one key), a far road's wash,
-	-- wind in the pines, and sparse crickets. Pinned Outside: silent in the building.
-	yardBedLamp = { assetId = PENDING, group = "Ambient", volume = 1, looped = true, place = "Outside" },
-	yardBedTraffic = { assetId = PENDING, group = "Ambient", volume = 1, looped = true, place = "Outside" },
-	yardBedWind = { assetId = PENDING, group = "Ambient", volume = 1, looped = true, place = "Outside" },
-	yardBedCrickets = { assetId = PENDING, group = "Ambient", volume = 1, looped = true, place = "Outside" },
+	-- The yard bed (yard design Y1, in-house, the owner's pick B, 2026-11-04): the quiet, slightly lonely half of the
+	-- night. Four looped beds of co-prime lengths (17.33 / 23.99 / 31.09 / 37.97 s) mixed together to -21 LUFS: a
+	-- sodium lamp's hum on B (the office's tonic, so the doors stay in one key), a far road's wash at F#, darker wind
+	-- in the pines, and sparse crickets. Pinned Outside: silent in the building.
+	yardBedLamp = {
+		assetId = "rbxassetid://75472286543334",
+		group = "Ambient",
+		volume = 1,
+		looped = true,
+		place = "Outside",
+	},
+	yardBedTraffic = {
+		assetId = "rbxassetid://105519274707699",
+		group = "Ambient",
+		volume = 1,
+		looped = true,
+		place = "Outside",
+	},
+	yardBedWind = {
+		assetId = "rbxassetid://110525679324475",
+		group = "Ambient",
+		volume = 1,
+		looped = true,
+		place = "Outside",
+	},
+	yardBedCrickets = {
+		assetId = "rbxassetid://139015816808505",
+		group = "Ambient",
+		volume = 1,
+		looped = true,
+		place = "Outside",
+	},
 	-- The yard's fixed emitters (looped, at their tagged part; placed Outside by where they play): a sodium pole's
-	-- buzz near its lamp, the vending machine's hum, and the gate booth's tiny radio playing the hub's record, faint
-	-- and a little warped ("a record left playing after closing").
+	-- buzz near its lamp (pick A), the vending machine's hum, and the gate booth's tiny radio playing the hub's record,
+	-- faint and a little warped ("a record left playing after closing": pick B, the harmony and hook, -55 cents).
 	yardLampBuzz = {
-		assetId = PENDING,
+		assetId = "rbxassetid://78296703052028",
 		group = "Ambient",
 		volume = 0.5,
 		looped = true,
@@ -79,7 +104,7 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 		rollOffMaxDistance = 28,
 	},
 	yardBoothRadio = {
-		assetId = PENDING,
+		assetId = "rbxassetid://121655014715673",
 		group = "Ambient",
 		volume = 0.5,
 		looped = true,
