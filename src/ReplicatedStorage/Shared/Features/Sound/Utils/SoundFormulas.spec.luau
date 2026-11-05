@@ -42,4 +42,47 @@ return function()
 			expect(#heard).to.equal(0)
 		end)
 	end)
+
+	describe("placeOf", function()
+		local boxes = {
+			{ min = Vector3.new(0, 0, 0), max = Vector3.new(10, 10, 10) },
+			{ min = Vector3.new(100, 0, 0), max = Vector3.new(110, 10, 10) },
+		}
+
+		it("is Outside for a point in any box, edges included", function()
+			expect(SoundFormulas.placeOf(Vector3.new(5, 5, 5), boxes)).to.equal("Outside")
+			expect(SoundFormulas.placeOf(Vector3.new(110, 0, 10), boxes)).to.equal("Outside")
+		end)
+
+		it("is Building for a point in no box", function()
+			expect(SoundFormulas.placeOf(Vector3.new(50, 5, 5), boxes)).to.equal("Building")
+			expect(SoundFormulas.placeOf(Vector3.new(5, 11, 5), boxes)).to.equal("Building")
+		end)
+
+		it("is nil without boxes (the hub, a layout with no grounds)", function()
+			expect(SoundFormulas.placeOf(Vector3.new(5, 5, 5), {})).to.equal(nil)
+		end)
+
+		it("is nil without a point (a 2D sound)", function()
+			expect(SoundFormulas.placeOf(nil, boxes)).to.equal(nil)
+		end)
+	end)
+
+	describe("placeGain", function()
+		it("is 1 when the sound and the listener share a place", function()
+			expect(SoundFormulas.placeGain("Building", "Building")).to.equal(1)
+			expect(SoundFormulas.placeGain("Outside", "Outside")).to.equal(1)
+		end)
+
+		it("is 0 across places: nothing from inside reaches the yard, nor the other way", function()
+			expect(SoundFormulas.placeGain("Building", "Outside")).to.equal(0)
+			expect(SoundFormulas.placeGain("Outside", "Building")).to.equal(0)
+		end)
+
+		it("is 1 when either has no place", function()
+			expect(SoundFormulas.placeGain(nil, "Outside")).to.equal(1)
+			expect(SoundFormulas.placeGain("Building", nil)).to.equal(1)
+			expect(SoundFormulas.placeGain(nil, nil)).to.equal(1)
+		end)
+	end)
 end

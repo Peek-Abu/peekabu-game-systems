@@ -20,6 +20,11 @@
 	- `playMusic(id?, fade?)` / `setAmbience(layer, id?, fade?)` — looping tracks that crossfade. Each track's Sound is
 	  made once per slot and kept: a fade-out stops it, the next start plays it again.
 	- `setGroupVolume(group, volume)` — the per-group sliders (Music / SFX / UI / Ambient).
+	- `setPlaces(boxes, listener, fade?)` — the place cut (docs/superpowers/specs/2026-11-04-sound-places.md): a
+	  positional play is placed as it starts (SoundFormulas.placeOf its point in the outdoor `boxes`: Building or
+	  Outside) and joins its place's group nested in its volume group (`SFX/Building`); only the `listener`'s place is
+	  heard (SoundFormulas.placeGain), the other's group fades to 0 over `fade`. A looping positional play is placed
+	  again on every call (it may move through a door). 2D plays, tracks and `heardEverywhere` sounds are never placed.
 	- Listens for the server's `SoundEvents.Play` (one-shots: the server never makes a Sound).
 	- A non-looped sound whose asset never loads (LOAD_TIMEOUT after its play), or whose place is removed from the game
 	  without being destroyed, is released: its Ended never fires, so it would otherwise keep its Sound, its anchor and
@@ -49,6 +54,7 @@ local SoundIdlePool = require(ReplicatedStorage.Client.Features.Sound.State.Soun
 local SoundVoiceTracker = require(ReplicatedStorage.Client.Features.Sound.State.SoundVoiceTracker)
 
 type SoundGroupName = SoundTypes.SoundGroupName
+type SoundPlace = SoundTypes.SoundPlace
 
 export type SoundHandle = {
 	sound: Sound,
@@ -74,6 +80,18 @@ local idle: SoundIdlePool.SoundIdlePool<Instance, Voice> = SoundIdlePool.new()
 -- The idle cap of each place pre-warmed above its default (a place that left the world is forgotten by the sweep).
 local caps: { [Instance]: number } = {}
 local groups: { [string]: SoundGroup? } = {}
+-- The place groups, by "<volume group>/<place>", nested in their volume group, and each one's running fade.
+local placeGroups: { [string]: SoundGroup? } = {}
+-- Each place's groups (one per volume group). Kept per place, not in one map by place: iterating a map's literal-typed
+-- values widens them to string.
+local buildingGroups: { SoundGroup } = {}
+local outsideGroups: { SoundGroup } = {}
+local placeFades: { [SoundGroup]: Tween? } = {}
+-- The outdoor boxes and the local player's place (setPlaces); none = nothing is placed.
+local placeBoxes: { SoundTypes.SoundPlaceBox } = {}
+local listenerPlace: SoundPlace? = nil
+-- The looping positional plays, placed again on every setPlaces: their volume group and where they play from.
+local placedLoops: { [Sound]: { group: SoundGroupName, at: SoundTypes.PlayAt } } = {}
 -- token -> how to stop the sound playing for it (so an evicted voice can be stopped).
 local playing: { [number]: () -> () } = {}
 local music: Sound? = nil
@@ -110,6 +128,68 @@ local function groupFor(name: SoundGroupName): SoundGroup
 	return created
 end
 
+-- The group a sound of volume group `name` joins in `place`: its place group nested in the volume group (made on
+-- first use, at the listener's gain), or the volume group itself when placeless.
+local function placeGroupFor(name: SoundGroupName, place: SoundPlace?): SoundGroup
+	local parent = groupFor(name)
+	if place == nil then
+		return parent
+	end
+	local key = `{name}/{place}`
+	local existing = placeGroups[key]
+	if existing ~= nil then
+		return existing
+	end
+	local created = Instance.new("SoundGroup")
+	created.Name = place
+	created.Volume = SoundFormulas.placeGain(place, listenerPlace)
+	created.Parent = parent
+	placeGroups[key] = created
+	table.insert(if place == "Outside" then outsideGroups else buildingGroups, created)
+	return created
+end
+
+-- Fades each of `place`'s groups to its gain for the listener's place over `fade` (0: at once).
+local function fadePlace(list: { SoundGroup }, place: SoundPlace, fade: number)
+	local gain = SoundFormulas.placeGain(place, listenerPlace)
+	for _, group in list do
+		local running = placeFades[group]
+		if running ~= nil then
+			placeFades[group] = nil
+			running:Cancel()
+		end
+		if fade <= 0 then
+			group.Volume = gain
+		else
+			local tween = TweenService:Create(group, TweenInfo.new(fade), { Volume = gain })
+			placeFades[group] = tween
+			tween:Play()
+		end
+	end
+end
+
+-- Where a play at `at` sounds from in the world; nil for a 2D play.
+local function pointOf(at: SoundTypes.PlayAt?): Vector3?
+	if typeof(at) == "Vector3" then
+		return at
+	elseif typeof(at) == "Instance" then
+		if at:IsA("BasePart") then
+			return at.Position
+		elseif at:IsA("Attachment") then
+			return at.WorldPosition
+		end
+	end
+	return nil
+end
+
+-- The place a play of `def` at `at` is in now (nil: placeless, heard everywhere).
+local function placeFor(def: SoundTypes.SoundDef, at: SoundTypes.PlayAt?): SoundPlace?
+	if def.heardEverywhere == true then
+		return nil
+	end
+	return SoundFormulas.placeOf(pointOf(at), placeBoxes)
+end
+
 -- Fades `sound` to `volume` over `duration`, then calls `done` (immediately when duration <= 0; never for a fade
 -- that is cancelled). Returns the running tween, if any.
 local function fadeTo(sound: Sound, volume: number, duration: number, done: (() -> ())?): Tween?
@@ -133,8 +213,15 @@ local function fadeTo(sound: Sound, volume: number, duration: number, done: (() 
 	return tween
 end
 
--- Points `sound` at a registry entry: its asset, volume, a picked pitch, loop and group.
-local function configure(sound: Sound, id: string, def: SoundTypes.SoundDef, volumeScale: number, pitchScale: number)
+-- Points `sound` at a registry entry: its asset, volume, a picked pitch, loop and group (its `place`'s, if any).
+local function configure(
+	sound: Sound,
+	id: string,
+	def: SoundTypes.SoundDef,
+	volumeScale: number,
+	pitchScale: number,
+	place: SoundPlace?
+)
 	sound.Name = id
 	if sound.SoundId ~= def.assetId then
 		sound.SoundId = def.assetId
@@ -142,7 +229,7 @@ local function configure(sound: Sound, id: string, def: SoundTypes.SoundDef, vol
 	sound.Volume = def.volume * volumeScale
 	sound.PlaybackSpeed = SoundFormulas.pickPitch(def.pitch, rng:NextNumber()) * pitchScale
 	sound.Looped = def.looped == true
-	sound.SoundGroup = groupFor(def.group)
+	sound.SoundGroup = placeGroupFor(def.group, place)
 	sound.RollOffMaxDistance = def.rollOffMaxDistance or SoundConstants.DEFAULT_ROLL_OFF_MAX
 end
 
@@ -221,6 +308,7 @@ local function release(voice: Voice, keep: boolean)
 		fade:Cancel()
 	end
 	local sound = voice.sound
+	placedLoops[sound] = nil
 	sound:Stop()
 	for _, child in sound:GetChildren() do
 		if child:IsA("SoundEffect") then
@@ -278,6 +366,7 @@ local function newVoice(at: Instance, point: Vector3?): Voice
 			playing[token] = nil
 		end
 		idle:remove(voice.place, voice)
+		placedLoops[sound] = nil
 	end)
 	return voice
 end
@@ -303,7 +392,8 @@ local function start(
 	options: SoundTypes.PlayOptions?,
 	handled: boolean
 ): (Voice, number)
-	local where, point = placeOf(if options ~= nil then options.at else nil)
+	local at = if options ~= nil then options.at else nil
+	local where, point = placeOf(at)
 	local current: Voice
 	local idleVoice = idle:take(where)
 	if idleVoice ~= nil then
@@ -320,8 +410,11 @@ local function start(
 	local scale = if options ~= nil and options.volumeScale ~= nil then options.volumeScale else 1
 	local pitchScale = if options ~= nil and options.pitchScale ~= nil then options.pitchScale else 1
 	local sound = current.sound
-	configure(sound, id, def, scale, pitchScale)
+	configure(sound, id, def, scale, pitchScale, placeFor(def, at))
 	sound.TimePosition = 0
+	if at ~= nil and def.looped == true and def.heardEverywhere ~= true then
+		placedLoops[sound] = { group = def.group, at = at }
+	end
 
 	local token = claim(id, def)
 	current.token = token
@@ -426,6 +519,12 @@ export type SoundServiceClient = {
 	playMusic: (self: SoundServiceClient, id: string?, fade: number?) -> (),
 	setAmbience: (self: SoundServiceClient, layer: string, id: string?, fade: number?) -> (),
 	setGroupVolume: (self: SoundServiceClient, group: SoundGroupName, volume: number) -> (),
+	setPlaces: (
+		self: SoundServiceClient,
+		boxes: { SoundTypes.SoundPlaceBox },
+		listener: SoundPlace?,
+		fade: number?
+	) -> (),
 }
 
 local SoundServiceClient: SoundServiceClient = {
@@ -543,6 +642,24 @@ local SoundServiceClient: SoundServiceClient = {
 		groupFor(group).Volume = math.clamp(volume, 0, 10)
 	end,
 
+	--[=[
+		The place cut: `boxes` are the outdoor volumes (none = nothing is placed), `listener` the local player's place.
+		A change of listener fades each place group to its gain over `fade` (0: at once, under a cover); every looping
+		positional play is placed again.
+	]=]
+	setPlaces = function(_self, boxes, listener, fade)
+		placeBoxes = boxes
+		if listener ~= listenerPlace then
+			listenerPlace = listener
+			fadePlace(buildingGroups, "Building", fade or 0)
+			fadePlace(outsideGroups, "Outside", fade or 0)
+		end
+		-- (A heardEverywhere loop is never in placedLoops.)
+		for sound, loop in placedLoops do
+			sound.SoundGroup = placeGroupFor(loop.group, SoundFormulas.placeOf(pointOf(loop.at), placeBoxes))
+		end
+	end,
+
 	getState = function(_self)
 		local layers: { string } = {}
 		for layer in ambience do
@@ -553,7 +670,13 @@ local SoundServiceClient: SoundServiceClient = {
 		for _ in tracks do
 			kept += 1
 		end
+		local loops = 0
+		for _ in placedLoops do
+			loops += 1
+		end
 		return {
+			listenerPlace = listenerPlace or "none",
+			placedLoops = loops,
 			music = if music ~= nil then music.Name else "none",
 			ambience = layers,
 			counters = table.clone(counters),

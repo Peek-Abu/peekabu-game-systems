@@ -5,6 +5,12 @@
 	@class SoundFormulas
 ]=]
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local SoundTypes = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundTypes)
+
+type SoundPlace = SoundTypes.SoundPlace
+
 local SoundFormulas = {}
 
 --[=[
@@ -36,6 +42,41 @@ function SoundFormulas.listenersInRange(origin: Vector3, radius: number, listene
 	end
 	table.sort(heard)
 	return heard
+end
+
+--[=[
+	Where a sound playing at `point` is: Outside when the point is in any of the outdoor `boxes` (edges included), else
+	Building. Nil without a point (a 2D sound) or without boxes (the hub, a layout with no grounds): placeless.
+]=]
+function SoundFormulas.placeOf(point: Vector3?, boxes: { SoundTypes.SoundPlaceBox }): SoundPlace?
+	if point == nil or #boxes == 0 then
+		return nil
+	end
+	for _, box in boxes do
+		if
+			point.X >= box.min.X
+			and point.X <= box.max.X
+			and point.Y >= box.min.Y
+			and point.Y <= box.max.Y
+			and point.Z >= box.min.Z
+			and point.Z <= box.max.Z
+		then
+			return "Outside"
+		end
+	end
+	return "Building"
+end
+
+--[=[
+	The volume a sound in place `source` plays at for a listener in place `listener`: 1 in the same place, 0 across
+	places (the owner's Lethal Company rule: nothing from inside reaches the yard, nor the other way). 1 when either
+	is placeless.
+]=]
+function SoundFormulas.placeGain(source: SoundPlace?, listener: SoundPlace?): number
+	if source == nil or listener == nil or source == listener then
+		return 1
+	end
+	return 0
 end
 
 return SoundFormulas

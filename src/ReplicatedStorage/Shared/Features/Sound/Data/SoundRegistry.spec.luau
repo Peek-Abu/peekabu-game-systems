@@ -42,6 +42,15 @@ return function()
 		expect(SoundRegistry.get("spec-step").maxConcurrent).to.equal(3)
 	end)
 
+	it("accepts heardEverywhere", function()
+		ensure("spec-horn", def({ heardEverywhere = true }))
+		expect(SoundRegistry.get("spec-horn").heardEverywhere).to.equal(true)
+	end)
+
+	it("rejects a heardEverywhere that is not a boolean", function()
+		refuses("spec-everywhere-string", def({ heardEverywhere = "yes" }))
+	end)
+
 	it("returns nil for an unknown id", function()
 		expect(SoundRegistry.get("spec-none")).to.equal(nil)
 	end)

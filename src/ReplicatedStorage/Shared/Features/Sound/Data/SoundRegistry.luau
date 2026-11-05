@@ -25,7 +25,7 @@ local SoundRegistry = {}
 --[=[
 	Registers a new sound. Asserts: the id is new; the asset id is canonical; the group is known; the
 	volume is within 0..10; a pitch range is positive and min <= max; maxConcurrent is a positive
-	integer; rollOffMaxDistance is positive.
+	integer; rollOffMaxDistance is positive; heardEverywhere is a boolean.
 	@param id string
 	@param def SoundDef
 ]=]
@@ -49,6 +49,10 @@ function SoundRegistry.register(id: string, def: SoundDef)
 	if rollOff ~= nil then
 		assert(rollOff > 0, `sound "{id}": rollOffMaxDistance must be positive`)
 	end
+	assert(
+		def.heardEverywhere == nil or type(def.heardEverywhere) == "boolean",
+		`sound "{id}": heardEverywhere must be a boolean`
+	)
 	definitions[id] = def
 end
 

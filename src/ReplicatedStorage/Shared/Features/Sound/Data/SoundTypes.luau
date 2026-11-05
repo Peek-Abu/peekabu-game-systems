@@ -7,6 +7,13 @@
 
 export type SoundGroupName = "Music" | "SFX" | "UI" | "Ambient"
 
+-- Where a positional sound plays, for the place cut (design: docs/superpowers/specs/2026-11-04-sound-places.md):
+-- inside the building, or out in the yard and car park. Only the listener's own place is heard.
+export type SoundPlace = "Building" | "Outside"
+
+-- An outdoor volume in the world, min and max corners: a point in one is Outside.
+export type SoundPlaceBox = { min: Vector3, max: Vector3 }
+
 export type SoundDef = {
 	-- Canonical `rbxassetid://N`.
 	assetId: string,
@@ -20,6 +27,9 @@ export type SoundDef = {
 	maxConcurrent: number?,
 	-- Positional sounds: the distance at which the sound is inaudible. Absent = the engine default.
 	rollOffMaxDistance: number?,
+	-- A rare positional world sound that must carry everywhere (an alarm, a horn): never cut by the places. Absent =
+	-- false.
+	heardEverywhere: boolean?,
 }
 
 -- Where a sound plays from: nothing (2D), a part or attachment (follows it), or a fixed point.

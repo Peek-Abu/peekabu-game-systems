@@ -16,6 +16,10 @@
 	client should show now. Registers the office and depot presets with Vfx at load. Pending sounds (OfficeAssets) are silent. While the transit
 	screen covers the view (ShiftTransitStore.covered) a preset is applied at once, not blended, and one still blending
 	when the cover comes up is finished at once, so the screen reveals the right light.
+	The same indoors/outdoors answer drives the sound place cut (SoundServiceClient:setPlaces, design:
+	docs/superpowers/specs/2026-11-04-sound-places.md): every apply and every poll hands Sound the outdoor boxes and the
+	local player's place, Building or Outside (none in the hub), so only that place's sounds are heard; the switch
+	fades over OUTDOOR_FADE, so nothing clicks.
 
 	Spec-exempt shell (Lighting via Vfx, Instances, Sound, Charm, RunService); the choices are the specced
 	OfficeAtmosphereUtils and OfficeLightUtils.
@@ -37,6 +41,7 @@ local DepotAtmosphereUtils = require(ReplicatedStorage.Client.Features.Depot.Uti
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundRegistry)
+local SoundTypes = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundTypes)
 local VfxAtmosphereRegistry = require(ReplicatedStorage.Shared.Features.Vfx.Data.VfxAtmosphereRegistry)
 local OfficeAssets = require(OfficeClient.Data.OfficeAssets)
 local OfficeAtmosphereConstants = require(OfficeClient.Data.OfficeAtmosphereConstants)
@@ -215,6 +220,15 @@ local function characterOutside(snapshot: ShiftTypes.ShiftSnapshot?): boolean
 	return OfficeAtmosphereUtils.rootOutdoors(rootPosition(), outdoorBoxes(), outsideNow)
 end
 
+-- Hands Sound the outdoor boxes and the local player's place (outsideNow), in a shift; nothing in the hub or with no
+-- grounds, so nothing is cut there.
+local function syncPlaces(snapshot: ShiftTypes.ShiftSnapshot?)
+	local inShift = snapshot ~= nil and not DepotAtmosphereUtils.inHub(snapshot, Players.LocalPlayer.UserId)
+	local boxes: { SoundTypes.SoundPlaceBox } = if inShift then outdoorBoxes() else {}
+	local listener: SoundTypes.SoundPlace? = if #boxes == 0 then nil elseif outsideNow then "Outside" else "Building"
+	SoundServiceClient:setPlaces(boxes, listener, OfficeAtmosphereConstants.OUTDOOR_FADE)
+end
+
 -- Applies the snapshot's look with the character's current indoors/outdoors. `fade` is the blend when not covered.
 local function apply(snapshot: ShiftTypes.ShiftSnapshot?, fade: number)
 	local userId = Players.LocalPlayer.UserId
@@ -231,6 +245,7 @@ local function apply(snapshot: ShiftTypes.ShiftSnapshot?, fade: number)
 	setOvertime(OfficeAtmosphereUtils.overtime(snapshot, userId))
 	setHum(OfficeAtmosphereUtils.hum(snapshot, userId, outside))
 	setHub(DepotAtmosphereUtils.inHub(snapshot, userId))
+	syncPlaces(snapshot)
 end
 
 local function onSnapshot(snapshot: ShiftTypes.ShiftSnapshot?)
@@ -361,6 +376,9 @@ function OfficeAtmosphereSystem.start()
 			local snapshot = ShiftStore.snapshot()
 			if characterOutside(snapshot) ~= outsideNow then
 				apply(snapshot, OfficeAtmosphereConstants.OUTDOOR_FADE)
+			else
+				-- Moving loops re-check their place.
+				syncPlaces(snapshot)
 			end
 		end
 		elapsed += deltaTime
@@ -390,6 +408,7 @@ function OfficeAtmosphereSystem.stop()
 	setHum(false)
 	setHub(false)
 	VfxServiceClient:setAtmosphere(nil, 0)
+	SoundServiceClient:setPlaces({}, nil, 0)
 	applied = false
 	currentPreset = nil
 	outsideNow = false
