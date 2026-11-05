@@ -123,6 +123,13 @@ clear.
     bench, cars;
   - bushes and grass tufts as TRELLIS + `rebake.py`, or simple stylized primitives;
   - textures through the style filter (calm surfaces, detail in the normal map).
+- **Keep clear: the bigger truck.** The owner approved truck size B, "Moving Van", on 2026-11-04. It is not in the
+  places yet; see `2026-11-04-truck-size-design.md`. In the office layout space the truck is centred at
+  `OUTSIDE.TRUCK_CENTRE` (168, -276), turned yaw pi: the cab faces -Z and the ramp faces +Z, toward the dock.
+  - Body: x 158.7 to 177.3 (19 wide), z -296.2 (cab bumper) to -259.8 (ramp foot), top about 14.8 studs up.
+  - No props in x 155.7 to 180.3, z -299.2 to -256.8 (the body plus a 3-stud walk margin). Keep the ramp approach
+    clear from z -256.8 toward the dock.
+  - Keep a 3-stud circle clear round the time clock post, at about (154, -266).
 - **Both places:** this is Shift-place art only. The lobby place has no yard.
 - **Who builds it:** a Studio art session (or a hired builder, per the team handoff workflow), tag-driven where code
   needs it (puddles' attribute, emitter parts tagged for the bed system).
