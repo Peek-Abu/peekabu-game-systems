@@ -5,9 +5,6 @@
 
 	- `bay(side, target)`: the BAY_WIDTH x BAY_DEPTH room on one exterior side of `target` (1 -X, 2 +X, 3 -Z,
 	  4 +Z) and the 10-stud door between them, centred on their shared wall.
-	- `truck(bay, side)`: the truck bed and time clock. The truck runs along Z, cab toward +Z (DepotTruckVisual's
-	  deck space), its bumper just off the +Z wall, so the ramp has RAMP_CLEARANCE of floor or more behind it; it
-	  stands to the side away from a side door, or beside (not in front of) a door in a Z wall.
 	- `arrivals(truck)` / `arrivalFrame(truck, index)`: where the crew stands on the bed at the start of a shift,
 	  facing the open back and the ramp.
 	- `truckBox(truck)`: the inside of the truck's box (the bed's footprint, from its top to the truck's top): the one
@@ -55,27 +52,6 @@ function OfficeLoadingBayUtils.bay(side: number, target: OfficeTypes.Room): (Off
 end
 
 --[=[
-	The truck bed's footprint and the time clock in `bay`, which sits on side `side` of the building.
-]=]
-function OfficeLoadingBayUtils.truck(bay: OfficeTypes.Room, side: number): OfficeTypes.Truck
-	local bed = TruckVisual.BED_SIZE
-	-- Side 2's door is in the -X wall, so the truck keeps to +X; otherwise it keeps to -X.
-	local towardMax = side == 2
-	local cx = if towardMax
-		then bay.maxX - OfficeConstants.TRUCK_SIDE_INSET
-		else bay.minX + OfficeConstants.TRUCK_SIDE_INSET
-	local cz = bay.maxZ - OfficeConstants.TRUCK_CAB_INSET
-	return {
-		minX = cx - bed.X / 2,
-		maxX = cx + bed.X / 2,
-		minZ = cz - bed.Z / 2,
-		maxZ = cz + bed.Z / 2,
-		clockX = cx + (if towardMax then -1 else 1) * OfficeConstants.CLOCK_SIDE,
-		clockZ = cz - OfficeConstants.CLOCK_BACK,
-	}
-end
-
---[=[
 	The crew's arrival points on the bed (layout x, 0, z), spread so a full crew never overlaps.
 ]=]
 function OfficeLoadingBayUtils.arrivals(truck: OfficeTypes.Truck): { Vector3 }
@@ -110,13 +86,13 @@ function OfficeLoadingBayUtils.truckBox(truck: OfficeTypes.Truck): (Vector3, Vec
 end
 
 --[=[
-	Where Harlow's patrol route visits the bay (layout x as X, z as Y): its centre line across, TRUCK_SIDE_INSET from
-	the side wall away from the truck (the open side, by the door into the office).
+	Where Harlow's patrol route visits the bay (layout x as X, z as Y): its centre line across, PATROL_SIDE_INSET from
+	the side wall away from the door's (the open side, by the door into the office).
 ]=]
 function OfficeLoadingBayUtils.patrolPoint(bay: OfficeTypes.Room, side: number): Vector2
 	local x = if side == 2
-		then bay.minX + OfficeConstants.TRUCK_SIDE_INSET
-		else bay.maxX - OfficeConstants.TRUCK_SIDE_INSET
+		then bay.minX + OfficeConstants.PATROL_SIDE_INSET
+		else bay.maxX - OfficeConstants.PATROL_SIDE_INSET
 	return Vector2.new(x, (bay.minZ + bay.maxZ) / 2)
 end
 

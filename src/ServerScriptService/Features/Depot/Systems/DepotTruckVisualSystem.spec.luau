@@ -76,7 +76,8 @@ return function()
 					end
 				end
 			end
-			expect(tires).to.equal(4)
+			-- The Moving Van: a tandem pair under the box and a pair under the cab.
+			expect(tires).to.equal(6)
 		end)
 
 		it(
@@ -96,18 +97,21 @@ return function()
 			end
 		)
 
-		it("flags the cab's collision as a camera wall (no shell core stands in it) and nothing else", function()
-			Visual.buildWith(bed, folder, nil)
-			for _, entry in Constants.COLLISION do
-				local part = bed:FindFirstChild(entry.name)
-				local flagged = part:GetAttribute(CameraOccluderConstants.ATTRIBUTE)
-				if entry.name == "TruckCab" then
-					expect(flagged).to.equal(true)
-				else
-					expect(flagged).to.equal(nil)
+		it(
+			"flags the cab's and the Luton's collision as camera walls (no shell core stands in them), nothing else",
+			function()
+				Visual.buildWith(bed, folder, nil)
+				for _, entry in Constants.COLLISION do
+					local part = bed:FindFirstChild(entry.name)
+					local flagged = part:GetAttribute(CameraOccluderConstants.ATTRIBUTE)
+					if entry.name == "TruckCab" or entry.name == "TruckLuton" then
+						expect(flagged).to.equal(true)
+					else
+						expect(flagged).to.equal(nil)
+					end
 				end
 			end
-		end)
+		)
 
 		it("builds an opaque camera shell under the bed, which the default camera stops at", function()
 			Visual.buildWith(bed, folder, nil)
@@ -179,9 +183,9 @@ return function()
 			local low =
 				deckPoint(bed, ramp.CFrame:PointToWorldSpace(Vector3.new(0, -ramp.Size.Y / 2, -ramp.Size.Z / 2)))
 			expect(high.Y).to.be.near(0, 1e-3)
-			expect(high.Z).to.be.near(-8, 1e-3)
-			expect(low.Y).to.be.near(-3, 1e-3)
-			expect(low.Z).to.be.near(-12, 1e-3)
+			expect(high.Z).to.be.near(-Constants.BED_SIZE.Z / 2, 1e-3)
+			expect(low.Y).to.be.near(-Constants.DECK, 1e-3)
+			expect(low.Z).to.be.near(-Constants.BED_SIZE.Z / 2 - Constants.RAMP_LENGTH, 1e-3)
 		end)
 
 		it("puts the art on the bed with the cab toward +Z", function()

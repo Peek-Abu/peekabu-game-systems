@@ -13,7 +13,7 @@ local DepotTypes = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotTyp
 
 -- A closed garage: three trucks along the back wall, the boards at the front, spawns between.
 local LAYOUT: DepotTypes.Layout = {
-	floor = { minX = 0, minZ = 0, maxX = 96, maxZ = 72 },
+	floor = { minX = 0, minZ = 0, maxX = 96, maxZ = 78 },
 	trucks = {
 		-- Capacity is the bed's most seats (a Big Crew host's 6); Host lowers the live seats to the host's (4 or 6).
 		{ id = "truck1", x = 20, z = 48, capacity = 6, countdown = 15 },
@@ -22,11 +22,12 @@ local LAYOUT: DepotTypes.Layout = {
 	},
 	contractBoard = { x = 34, z = 12 },
 	resultBoard = { x = 62, z = 12 },
+	-- The Moving Van's ramp foot is at z 31.8: the spawn row stays well in front of the bays' painted fronts.
 	spawns = {
-		{ x = 40, z = 26 },
-		{ x = 46, z = 26 },
-		{ x = 52, z = 26 },
-		{ x = 58, z = 26 },
+		{ x = 40, z = 22 },
+		{ x = 46, z = 22 },
+		{ x = 52, z = 22 },
+		{ x = 58, z = 22 },
 	},
 }
 
@@ -38,17 +39,17 @@ return table.freeze({
 	ORIGIN = CFrame.new(-1000, 1.25, 0),
 	MODEL_NAME = "CleanupCrewDepot",
 	LAYOUT = LAYOUT,
-	-- Tall enough for a truck's tag sign above the box (the truck is ~11.7 studs high on its 3-stud bed).
+	-- Tall enough for a truck's tag sign above the box (the truck is ~14.8 studs high on its 3-stud bed).
 	WALL_HEIGHT = 22,
 	WALL_THICKNESS = 1,
 	FLOOR_THICKNESS = 1,
 	-- A truck's bed (the queue pad, boarded up the ramp; the same height as the office truck's, so one truck art
 	-- fits both), the cab behind it (+z), the ramp and scanner arch in front of it (-z), and the truck's full width
 	-- (DepotTruckVisualConstants checks its art fits these).
-	BED_SIZE = Vector3.new(12, 3, 16),
-	CAB_SIZE = Vector3.new(12, 10, 7),
+	BED_SIZE = Vector3.new(16, 3, 24),
+	CAB_SIZE = Vector3.new(13, 11, 9),
 	RAMP_DEPTH = 4.5,
-	TRUCK_WIDTH = 15,
+	TRUCK_WIDTH = 19,
 	BOARD_SIZE = Vector3.new(12, 8, 1),
 	-- The contract board's body (DepotBoardVisualSystem): its sign is drawn on the board part's front face, so this is
 	-- everything behind it, INSET from the part's outline so the work-order card's rounded corners cover it from the
@@ -103,7 +104,7 @@ return table.freeze({
 	TRUCK_INTERVAL = 0.5,
 	-- World sign shells are sized from their design (DepotConstants.BILLBOARD_PX); offsets from the part's centre.
 	-- The truck tag floats over the box: its wire's tip clears the arch (DepotTruckVisualConstants.TOP above the bed).
-	PAD_TAG_OFFSET = Vector3.new(0, 14.5, 0),
+	PAD_TAG_OFFSET = Vector3.new(0, 17.5, 0),
 	CONTRACT_OFFSET = Vector3.new(0, 2, 0),
 	RESULT_OFFSET = Vector3.new(0, 2.5, 0),
 	LABEL_MAX_DISTANCE = 120,
@@ -133,12 +134,12 @@ return table.freeze({
 		THICKNESS = 0.04,
 		LIFT = 0.01,
 		LINE_WIDTH = 0.5,
-		BAY_HALF_WIDTH = 9,
+		BAY_HALF_WIDTH = 10.5,
 		BAY_BACK_GAP = 1,
 		-- The bay's front: this far in front of the ramp's foot (the stencil sits in between).
 		BAY_FRONT = 6,
 		LABEL_SIZE = Vector2.new(10, 4.5),
-		HAZARD_WIDTH = 9,
+		HAZARD_WIDTH = 11,
 		HAZARD_DEPTH = 1.5,
 		STRIPE = 1,
 		LANE_START_Z = 18,

@@ -2,6 +2,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local Constants = require(script.Parent.DepotTruckVisualConstants)
 local DepotLayoutConstants = require(ServerScriptService.Features.Depot.Data.DepotLayoutConstants)
+local CargoConstants = require(game:GetService("ReplicatedStorage").Shared.Features.Cargo.Data.CargoConstants)
 
 local function solid(name)
 	for _, entry in Constants.COLLISION do
@@ -37,9 +38,25 @@ return function()
 			end
 		end)
 
-		it("leaves headroom for a crew member and the boarding height under the roof", function()
-			expect(extent(solid("TruckRoof"), "Y", -1) >= 6.5).to.equal(true)
-			expect(Constants.DOOR_HEIGHT >= 5.6).to.equal(true)
+		it("is the Moving Van: a 16 x 24 floor the whole crew can stand, walk and drop loot on", function()
+			expect(Constants.BED_SIZE.X).to.equal(16)
+			expect(Constants.BED_SIZE.Z).to.equal(24)
+		end)
+
+		it("leaves headroom over the tallest crew member (Pippa's ears, 6.7) and through the doorway", function()
+			expect(extent(solid("TruckRoof"), "Y", -1) >= 9.5).to.equal(true)
+			expect(Constants.DOOR_HEIGHT >= 9).to.equal(true)
+		end)
+
+		it("counts a crew member jumping under the ceiling as aboard (CargoConstants.BED_HEIGHT)", function()
+			expect(CargoConstants.BED_HEIGHT >= extent(solid("TruckRoof"), "Y", -1)).to.equal(true)
+		end)
+
+		it("lets the camera stop at the Luton over the cab", function()
+			local luton = solid("TruckLuton")
+			expect(luton).to.be.ok()
+			expect(luton.occludes).to.equal(true)
+			expect(extent(luton, "Y", -1) >= extent(solid("TruckCab"), "Y", 1) - 1e-6).to.equal(true)
 		end)
 
 		it("has a walkable ramp from the ground to the bed's back edge", function()

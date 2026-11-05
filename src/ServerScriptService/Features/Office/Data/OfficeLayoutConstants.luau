@@ -21,7 +21,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local OfficeTypes = require(ServerScriptService.Features.Office.Data.OfficeTypes)
 
 local rooms: { OfficeTypes.Room } = {
-	{ id = "bay", name = "Loading bay", minX = 0, minZ = 0, maxX = 40, maxZ = 30 },
+	{ id = "bay", name = "Loading bay", minX = 0, minZ = -14, maxX = 40, maxZ = 30 },
 	{ id = "lobby", name = "Reception", minX = 0, minZ = 30, maxX = 40, maxZ = 60 },
 	{ id = "open", name = "Open-plan office", minX = 40, minZ = 0, maxX = 100, maxZ = 60 },
 	{ id = "breakRoom", name = "Break room", minX = 0, minZ = 60, maxX = 30, maxZ = 90 },
@@ -141,8 +141,9 @@ local LAYOUT: OfficeTypes.Layout = {
 	rooms = rooms,
 	doors = doors,
 	markers = markers,
-	-- The bed (the banking zone) and the time clock, inside the loading bay.
-	truck = { minX = 4, minZ = 4, maxX = 16, maxZ = 20, clockX = 24, clockZ = 6 },
+	-- The bed (the banking zone, the Moving Van's 16 x 24) and the time clock, inside the loading bay: the bay runs
+	-- on south (minZ -14) so the ramp's foot and the cab's bumper both keep ~3 studs of floor.
+	truck = { minX = 2.5, minZ = -6, maxX = 18.5, maxZ = 18, clockX = 26, clockZ = 6 },
 	-- Walked as a loop from a random point in a random direction (Occupant rolls both each shift).
 	route = {
 		"lobby.patrol.1",

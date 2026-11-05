@@ -8,7 +8,7 @@ local DepotLayoutConstants = require(ServerScriptService.Features.Depot.Data.Dep
 -- A small valid depot: three trucks along the back, boards at the front, spawns between them.
 local function fixture()
 	return {
-		floor = { minX = 0, minZ = 0, maxX = 96, maxZ = 72 },
+		floor = { minX = 0, minZ = 0, maxX = 96, maxZ = 78 },
 		trucks = {
 			{ id = "t1", x = 20, z = 48, capacity = 4, countdown = 15 },
 			{ id = "t2", x = 48, z = 48, capacity = 2, countdown = 10 },
@@ -16,7 +16,7 @@ local function fixture()
 		},
 		contractBoard = { x = 34, z = 12 },
 		resultBoard = { x = 62, z = 12 },
-		spawns = { { x = 40, z = 26 }, { x = 56, z = 26 } },
+		spawns = { { x = 40, z = 22 }, { x = 56, z = 22 } },
 	}
 end
 

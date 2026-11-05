@@ -400,29 +400,25 @@ return table.freeze({
 	OVERTIME_OFFSET = Vector3.new(-4, 0, 0),
 	-- Players appear this high above a spawn marker (and above the truck bed's top, where a shift starts).
 	SPAWN_HEIGHT = 3,
-	-- The loading bay (the start room; Harlow may walk it, only the truck's box is safe), studs along X and Z
-	-- (OfficeLoadingBayUtils). The truck runs along Z, cab toward +Z: the depth fits the whole truck plus
-	-- RAMP_CLEARANCE of floor behind its ramp.
+	-- The loading bay (the dock room behind the roller door; Harlow may walk it), studs along X and Z
+	-- (OfficeLoadingBayUtils). The truck stands outside in the yard (OfficeGroundsUtils), not in the bay.
 	BAY_WIDTH = 44,
 	BAY_DEPTH = 42,
-	RAMP_CLEARANCE = 12,
-	-- The bed's centre: TRUCK_SIDE_INSET from the bay's side wall away from a side door, TRUCK_CAB_INSET from the
-	-- +Z wall (the bumper then stands 1.6 studs off its face).
-	TRUCK_SIDE_INSET = 12,
-	TRUCK_CAB_INSET = 17,
-	-- The time clock from the bed's centre: CLOCK_SIDE toward the open side of the bay, CLOCK_BACK toward the ramp.
+	-- Harlow's patrol point in the bay: this far from the side wall away from the bay's door.
+	PATROL_SIDE_INSET = 12,
+	-- The time clock from the bed's centre: CLOCK_SIDE to the truck's side, CLOCK_BACK toward the ramp.
 	CLOCK_SIDE = 14,
 	CLOCK_BACK = 10,
 	-- Where the crew stands on the bed at the start of a shift (offsets from the bed's centre, X and Z), facing the
 	-- open back and the ramp (-Z).
 	ARRIVAL_OFFSETS = table.freeze({
-		Vector2.new(-2.75, 0),
-		Vector2.new(2.75, 0),
-		Vector2.new(-2.75, 4),
-		Vector2.new(2.75, 4),
+		Vector2.new(-4, 0),
+		Vector2.new(4, 0),
+		Vector2.new(-4, 6),
+		Vector2.new(4, 6),
 		-- A Big Crew's fifth and sixth (crew hosting): the open back's row.
-		Vector2.new(-2.75, -4),
-		Vector2.new(2.75, -4),
+		Vector2.new(-4, -6),
+		Vector2.new(4, -6),
 	}),
 	WALL_COLOR = Color3.fromRGB(200, 198, 190),
 	DESK_COLOR = Color3.fromRGB(140, 110, 80),

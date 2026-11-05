@@ -5,17 +5,11 @@ local OfficeConstants = require(ServerScriptService.Features.Office.Data.OfficeC
 local TruckVisual = require(ServerScriptService.Features.Depot.Data.DepotTruckVisualConstants)
 
 local TARGET = { id = "work1", name = "Work", minX = 100, maxX = 134, minZ = 200, maxZ = 230 }
-local HALF_WALL = OfficeConstants.WALL_THICKNESS / 2
 
--- The whole truck's footprint in layout space (arch, ramp foot, bumper), cab toward +Z.
-local function footprint(truck)
-	local cx, cz = (truck.minX + truck.maxX) / 2, (truck.minZ + truck.maxZ) / 2
-	return {
-		minX = cx - TruckVisual.HALF_WIDTH,
-		maxX = cx + TruckVisual.HALF_WIDTH,
-		rampFoot = cz - TruckVisual.BACK,
-		bumper = cz + TruckVisual.FRONT,
-	}
+-- A truck bed in layout space, its minimum corner at the origin.
+local function bedTruck()
+	local bed = TruckVisual.BED_SIZE
+	return { minX = 0, maxX = bed.X, minZ = 0, maxZ = bed.Z, clockX = bed.X + 8, clockZ = 0 }
 end
 
 return function()
@@ -47,57 +41,9 @@ return function()
 		end)
 	end)
 
-	describe("truck", function()
-		it("keeps the whole truck inside the bay with RAMP_CLEARANCE of floor behind the ramp", function()
-			for side = 1, 4 do
-				local bay = OfficeLoadingBayUtils.bay(side, TARGET)
-				local truck = OfficeLoadingBayUtils.truck(bay, side)
-				local shape = footprint(truck)
-				expect(truck.maxX - truck.minX).to.equal(TruckVisual.BED_SIZE.X)
-				expect(truck.maxZ - truck.minZ).to.equal(TruckVisual.BED_SIZE.Z)
-				expect(shape.minX > bay.minX + HALF_WALL).to.equal(true)
-				expect(shape.maxX < bay.maxX - HALF_WALL).to.equal(true)
-				expect(shape.bumper < bay.maxZ - HALF_WALL).to.equal(true)
-				expect(shape.rampFoot - (bay.minZ + HALF_WALL) >= OfficeConstants.RAMP_CLEARANCE).to.equal(true)
-			end
-		end)
-
-		it("keeps the truck off the door's approach", function()
-			for side = 1, 4 do
-				local bay, door = OfficeLoadingBayUtils.bay(side, TARGET)
-				local truck = OfficeLoadingBayUtils.truck(bay, side)
-				if side == 1 then
-					expect(bay.maxX - truck.maxX >= 20).to.equal(true)
-				elseif side == 2 then
-					expect(truck.minX - bay.minX >= 20).to.equal(true)
-				else
-					expect(truck.maxX <= door.x - 4).to.equal(true)
-				end
-			end
-		end)
-
-		it("puts the time clock and overtime sheet on the floor clear of the truck, inside the bay", function()
-			local clock = OfficeConstants.CLOCK_SIZE
-			for side = 1, 4 do
-				local bay = OfficeLoadingBayUtils.bay(side, TARGET)
-				local truck = OfficeLoadingBayUtils.truck(bay, side)
-				local shape = footprint(truck)
-				for _, x in { truck.clockX, truck.clockX + OfficeConstants.OVERTIME_OFFSET.X } do
-					local z = truck.clockZ + OfficeConstants.OVERTIME_OFFSET.Z
-					expect(x - clock.X / 2 > bay.minX + HALF_WALL).to.equal(true)
-					expect(x + clock.X / 2 < bay.maxX - HALF_WALL).to.equal(true)
-					expect(z > bay.minZ + HALF_WALL and z < bay.maxZ - HALF_WALL).to.equal(true)
-					local clear = x - clock.X / 2 > shape.maxX + 1 or x + clock.X / 2 < shape.minX - 1
-					expect(clear).to.equal(true)
-				end
-			end
-		end)
-	end)
-
 	describe("arrivals", function()
 		it("gives six spread points on the bed (a Big Crew), at least 4 studs apart and clear of its edges", function()
-			local bay = OfficeLoadingBayUtils.bay(4, TARGET)
-			local truck = OfficeLoadingBayUtils.truck(bay, 4)
+			local truck = bedTruck()
 			local points = OfficeLoadingBayUtils.arrivals(truck)
 			expect(#points).to.equal(6)
 			for index, point in points do
@@ -137,8 +83,7 @@ return function()
 		end)
 
 		it("holds every arrival point (a respawn lands safe) and leaves the ramp outside", function()
-			local bay = OfficeLoadingBayUtils.bay(2, TARGET)
-			local truck = OfficeLoadingBayUtils.truck(bay, 2)
+			local truck = bedTruck()
 			local min, max = OfficeLoadingBayUtils.truckBox(truck)
 			for index = 1, 4 do
 				local at = OfficeLoadingBayUtils.arrivalFrame(truck, index).Position - Vector3.new(0, 1, 0)
@@ -151,25 +96,21 @@ return function()
 	end)
 
 	describe("patrolPoint", function()
-		it("stands in the bay, on the open side away from the truck and its ramp", function()
+		it("stands in the bay, on its open side by the door", function()
 			for side = 1, 4 do
 				local bay = OfficeLoadingBayUtils.bay(side, TARGET)
-				local truck = OfficeLoadingBayUtils.truck(bay, side)
 				local point = OfficeLoadingBayUtils.patrolPoint(bay, side)
 				expect(point.X > bay.minX + OfficeConstants.MARKER_MARGIN).to.equal(true)
 				expect(point.X < bay.maxX - OfficeConstants.MARKER_MARGIN).to.equal(true)
 				expect(point.Y > bay.minZ + OfficeConstants.MARKER_MARGIN).to.equal(true)
 				expect(point.Y < bay.maxZ - OfficeConstants.MARKER_MARGIN).to.equal(true)
-				local cx = (truck.minX + truck.maxX) / 2
-				expect(math.abs(point.X - cx) >= TruckVisual.HALF_WIDTH + 6).to.equal(true)
 			end
 		end)
 	end)
 
 	describe("yaw", function()
 		local function turned()
-			local bay = OfficeLoadingBayUtils.bay(2, TARGET)
-			local truck = OfficeLoadingBayUtils.truck(bay, 2)
+			local truck = bedTruck()
 			local flipped = table.clone(truck)
 			flipped.yaw = math.pi
 			return truck, flipped

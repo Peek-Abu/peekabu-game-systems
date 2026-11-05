@@ -1,9 +1,10 @@
 --!strict
 --[=[
-	DepotTruckVisualConstants: the crew truck (v2, look A "Night Shift", characters/truck/build_truck_v2.py) in DECK
+	DepotTruckVisualConstants: the crew truck (v3, look A "Night Shift" at size B "Moving Van",
+	characters/truck/build_truck_v3.py; docs/superpowers/specs/2026-11-04-truck-size-design.md) in DECK
 	SPACE: studs from the middle of the bed's top face, +Y up, +Z toward the cab, -Z the open back and the ramp. The
-	bed (12 x DECK x 16, the queue pad / banking bed) is the floor; everything here sits round it, so the bed's
-	whole footprint stays clear inside the box (walls outside x = +-6, the doorway 12 wide and under the roll drum).
+	bed (16 x DECK x 24, the queue pad / banking bed) is the floor; everything here sits round it, so the bed's
+	whole footprint stays clear inside the box (walls outside x = +-8, the doorway 16 wide and under the roll drum).
 
 	- COLLISION: native parts the art never replaces: box walls, roof, arch posts, the cab and the ramp (a wedge from
 	  the ground to the bed's back edge). The cab's (`occludes`) is also the camera's wall there. A collidable part is always queryable, so they are parented to the bed:
@@ -79,28 +80,29 @@ local function piece(
 end
 
 local GRAYBOX: { Piece } = {
-	piece("BoxSideLeft", Vector3.new(-6.215, 3.65, 0.3), Vector3.new(0.57, 7.9, 16.4), IVORY),
-	piece("BoxSideRight", Vector3.new(6.215, 3.65, 0.3), Vector3.new(0.57, 7.9, 16.4), IVORY),
-	piece("BoxFront", Vector3.new(0, 3.65, 8.22), Vector3.new(13, 7.9, 0.56), IVORY),
-	piece("BoxRoof", Vector3.new(0, 7.3275, 0.3), Vector3.new(13.4, 0.795, 16.9), TEAL),
-	piece("BoxFloor", Vector3.new(0, 0.03, 0), Vector3.new(11.9, 0.06, 15.9), FLOOR),
-	piece("RollDrum", Vector3.new(0, 6.55, -7.45), Vector3.new(11.8, 0.9, 0.9), GRAPHITE, nil, "Cylinder"),
-	piece("ScannerPostLeft", Vector3.new(-6.6, 3.2, -8.3), Vector3.new(1.2, 7.6, 1.3), TEAL),
-	piece("ScannerPostRight", Vector3.new(6.6, 3.2, -8.3), Vector3.new(1.2, 7.6, 1.3), TEAL),
-	piece("ScannerBeam", Vector3.new(0, 7.85, -8.3), Vector3.new(14.4, 1.7, 1.5), TEAL),
-	piece("ScannerLight", Vector3.new(0, 8, -9.1), Vector3.new(9, 0.55, 0.14), SCANNER_IDLE, Enum.Material.Neon),
-	piece("CabBody", Vector3.new(0, 2.65, 11.55), Vector3.new(10.4, 8.1, 5.9), TEAL),
-	piece("CabWindows", Vector3.new(0, 4.4, 14.52), Vector3.new(8.4, 2.6, 0.1), GLASS, Enum.Material.Glass),
-	piece("Chassis", Vector3.new(0, -1, 1.6), Vector3.new(9, 1.2, 19.6), GRAPHITE),
-	piece("Ramp", Vector3.new(0, -1.5, -10), Vector3.new(7, 3, 4), RAMP_GREY, nil, "Wedge"),
-	piece("BandLeft", Vector3.new(-6.525, 3.6, 0.15), Vector3.new(0.07, 1.8, 15.8), BAND),
-	piece("BandRight", Vector3.new(6.525, 3.6, 0.15), Vector3.new(0.07, 1.8, 15.8), BAND),
+	piece("BoxSideLeft", Vector3.new(-8.215, 5.185, 0.3), Vector3.new(0.57, 10.97, 24.4), IVORY),
+	piece("BoxSideRight", Vector3.new(8.215, 5.185, 0.3), Vector3.new(0.57, 10.97, 24.4), IVORY),
+	piece("BoxFront", Vector3.new(0, 5.185, 12.22), Vector3.new(17, 10.97, 0.56), IVORY),
+	piece("BoxRoof", Vector3.new(0, 10.3975, 0.3), Vector3.new(17.4, 0.795, 24.9), TEAL),
+	piece("BoxFloor", Vector3.new(0, 0.03, 0), Vector3.new(15.9, 0.06, 23.9), FLOOR),
+	piece("RollDrum", Vector3.new(0, 9.62, -11.45), Vector3.new(15.8, 0.9, 0.9), GRAPHITE, nil, "Cylinder"),
+	piece("ScannerPostLeft", Vector3.new(-8.6, 4.735, -12.3), Vector3.new(1.2, 10.67, 1.3), TEAL),
+	piece("ScannerPostRight", Vector3.new(8.6, 4.735, -12.3), Vector3.new(1.2, 10.67, 1.3), TEAL),
+	piece("ScannerBeam", Vector3.new(0, 10.92, -12.3), Vector3.new(18.4, 1.7, 1.5), TEAL),
+	piece("ScannerLight", Vector3.new(0, 10.94, -13.1), Vector3.new(9.6, 0.55, 0.14), SCANNER_IDLE, Enum.Material.Neon),
+	piece("CabBody", Vector3.new(0, 3.78, 16.14), Vector3.new(12.48, 9.72, 7.08), TEAL),
+	piece("CabWindows", Vector3.new(0, 5.88, 19.7), Vector3.new(10.08, 3.12, 0.1), GLASS, Enum.Material.Glass),
+	piece("Chassis", Vector3.new(0, -1, 3.53), Vector3.new(10.4, 1.2, 30.86), GRAPHITE),
+	piece("Ramp", Vector3.new(0, -1.5, -14), Vector3.new(9.4, 3, 4), RAMP_GREY, nil, "Wedge"),
+	piece("BandLeft", Vector3.new(-8.525, 5.2, 0.15), Vector3.new(0.07, 2.6, 23.8), BAND),
+	piece("BandRight", Vector3.new(8.525, 5.2, 0.15), Vector3.new(0.07, 2.6, 23.8), BAND),
 }
-for _, z in { -4, 11.2 } do
+-- The tandem rear axles under the box and the front axle under the cab (x: the wheel's centre).
+for _, axle in { { z = -6, x = 7.7 }, { z = -9.3, x = 7.7 }, { z = 15.72, x = 6.9 } } do
 	for _, side in { -1, 1 } do
 		table.insert(
 			GRAYBOX,
-			piece("Tire", Vector3.new(side * 5.6, -1.55, z), Vector3.new(1.3, 2.9, 2.9), GRAPHITE, nil, "Cylinder")
+			piece("Tire", Vector3.new(side * axle.x, -1.5, axle.z), Vector3.new(1.6, 3, 3), GRAPHITE, nil, "Cylinder")
 		)
 	end
 end
@@ -110,71 +112,73 @@ local function solid(name: string, centre: Vector3, size: Vector3, shape: Shape,
 end
 
 local COLLISION: { Solid } = {
-	solid("TruckWallLeft", Vector3.new(-6.25, 3.8, 0.3), Vector3.new(0.5, 7.6, 16.4), "Block"),
-	solid("TruckWallRight", Vector3.new(6.25, 3.8, 0.3), Vector3.new(0.5, 7.6, 16.4), "Block"),
-	solid("TruckWallFront", Vector3.new(0, 3.8, 8.25), Vector3.new(13, 7.6, 0.5), "Block"),
-	solid("TruckRoof", Vector3.new(0, 7.35, 0.3), Vector3.new(13.4, 0.75, 16.9), "Block"),
-	solid("TruckArchPostLeft", Vector3.new(-6.6, 3.5, -8.3), Vector3.new(1.2, 7, 1.3), "Block"),
-	solid("TruckArchPostRight", Vector3.new(6.6, 3.5, -8.3), Vector3.new(1.2, 7, 1.3), "Block"),
+	solid("TruckWallLeft", Vector3.new(-8.25, 5.3, 0.3), Vector3.new(0.5, 10.6, 24.4), "Block"),
+	solid("TruckWallRight", Vector3.new(8.25, 5.3, 0.3), Vector3.new(0.5, 10.6, 24.4), "Block"),
+	solid("TruckWallFront", Vector3.new(0, 5.3, 12.25), Vector3.new(17, 10.6, 0.5), "Block"),
+	solid("TruckRoof", Vector3.new(0, 10.42, 0.3), Vector3.new(17.4, 0.75, 24.9), "Block"),
+	solid("TruckArchPostLeft", Vector3.new(-8.6, 5.035, -12.3), Vector3.new(1.2, 10.07, 1.3), "Block"),
+	solid("TruckArchPostRight", Vector3.new(8.6, 5.035, -12.3), Vector3.new(1.2, 10.07, 1.3), "Block"),
 	-- The cab has no shell core (its art is not a plain box), so its proxy is the camera's wall: without it the camera
 	-- went through the cab, and stood inside or behind it, whenever a player had the truck's front behind them.
-	solid("TruckCab", Vector3.new(0, 2.4, 11.7), Vector3.new(10.6, 8.6, 6.4), "Block", true),
+	solid("TruckCab", Vector3.new(0, 3.4, 16.35), Vector3.new(12.8, 10.6, 7.7), "Block", true),
+	-- The Luton (the box running on over the cab roof) sits on the cab: the camera's wall up there too.
+	solid("TruckLuton", Vector3.new(0, 9.75, 14.925), Vector3.new(17, 2.1, 4.85), "Block", true),
 	-- A wedge rises toward +Z: its tall face meets the bed's back edge, its foot is on the ground RAMP_LENGTH out.
-	solid("TruckRamp", Vector3.new(0, -1.5, -10), Vector3.new(7, 3, 4), "Wedge"),
+	solid("TruckRamp", Vector3.new(0, -1.5, -14), Vector3.new(9.4, 3, 4), "Wedge"),
 }
 
 -- A camera shell core: always a block, inside the GRAYBOX (or, for the clock, CLOCK_GRAYBOX) piece named `inside`.
 -- The clock's back centre on the front wall's lining (z 7.94), facing the open back (deck space, unrotated).
-local CLOCK_MOUNT = Vector3.new(-2.2, 3.6, 7.94)
+local CLOCK_MOUNT = Vector3.new(-3, 3.6, 11.94)
 
 export type ShellCore = { name: string, centre: Vector3, size: Vector3, inside: string }
 
--- Each core's inner face sits just behind the visible inner surface (the mesh's lining: x +-5.93, z 7.94, y 6.93), so
+-- Each core's inner face sits just behind the visible inner surface (the mesh's lining: x +-7.93, z 11.94, y 10), so
 -- the camera stops in front of the lining, not inside the wall; the walls reach below the deck so no ray slips
 -- through the seam with the floor; the rest stays clear of the outer faces' bevels.
 local SHELL: { ShellCore } = {
 	{
 		name = "TruckShellLeft",
-		centre = Vector3.new(-6.165, 3.64, 0.25),
-		size = Vector3.new(0.43, 7.68, 16.26),
+		centre = Vector3.new(-8.165, 5.175, 0.25),
+		size = Vector3.new(0.43, 10.75, 24.26),
 		inside = "BoxSideLeft",
 	},
 	{
 		name = "TruckShellRight",
-		centre = Vector3.new(6.165, 3.64, 0.25),
-		size = Vector3.new(0.43, 7.68, 16.26),
+		centre = Vector3.new(8.165, 5.175, 0.25),
+		size = Vector3.new(0.43, 10.75, 24.26),
 		inside = "BoxSideRight",
 	},
 	{
 		name = "TruckShellFront",
-		centre = Vector3.new(0, 3.64, 8.165),
-		size = Vector3.new(12.76, 7.68, 0.43),
+		centre = Vector3.new(0, 5.175, 12.165),
+		size = Vector3.new(16.76, 10.75, 0.43),
 		inside = "BoxFront",
 	},
 	{
 		name = "TruckShellRoof",
-		centre = Vector3.new(0, 7.1875, 0.3),
-		size = Vector3.new(12.8, 0.475, 16.3),
+		centre = Vector3.new(0, 10.2575, 0.3),
+		size = Vector3.new(16.8, 0.475, 24.3),
 		inside = "BoxRoof",
 	},
 	-- The scanner arch's posts at the open back's corners: without them the camera peeks round the walls' ends.
 	{
 		name = "TruckShellPostLeft",
-		centre = Vector3.new(-6.6, 3.2, -8.3),
-		size = Vector3.new(0.48, 6.88, 0.58),
+		centre = Vector3.new(-8.6, 4.735, -12.3),
+		size = Vector3.new(0.48, 9.95, 0.58),
 		inside = "ScannerPostLeft",
 	},
 	{
 		name = "TruckShellPostRight",
-		centre = Vector3.new(6.6, 3.2, -8.3),
-		size = Vector3.new(0.48, 6.88, 0.58),
+		centre = Vector3.new(8.6, 4.735, -12.3),
+		size = Vector3.new(0.48, 9.95, 0.58),
 		inside = "ScannerPostRight",
 	},
 	-- The roll-up door's drum over the doorway: a block inscribed in it, so the camera cannot slip out above the door.
 	{
 		name = "TruckShellDrum",
-		centre = Vector3.new(0, 6.55, -7.45),
-		size = Vector3.new(11.6, 0.6, 0.6),
+		centre = Vector3.new(0, 9.62, -11.45),
+		size = Vector3.new(15.6, 0.6, 0.6),
 		inside = "RollDrum",
 	},
 	-- The time clock's housing stands 0.6 off the wall: a core inside it (CLOCK_GRAYBOX's ClockBody, clock space).
@@ -187,7 +191,7 @@ local SHELL: { ShellCore } = {
 	{
 		name = "TruckShellFloor",
 		centre = Vector3.new(0, 0.03, 0),
-		size = Vector3.new(11.8, 0.03, 15.8),
+		size = Vector3.new(15.8, 0.03, 23.8),
 		inside = "BoxFloor",
 	},
 }
@@ -199,7 +203,7 @@ local PAPERWORK: { [Paperwork]: Frame } = {
 	-- The clock's hit box round the housing and its card rack (clock space x -0.65..1.55, y -0.85..1.2).
 	clock = { centre = CLOCK_MOUNT + Vector3.new(0.45, 0.15, -0.45), size = Vector3.new(2.4, 2.1, 0.8) },
 	-- The overtime sheet: a clipboard on the wall across the doorway's middle from the clock.
-	sheet = { centre = Vector3.new(2.4, 3.8, 7.88), size = Vector3.new(1.2, 1.6, 0.12) },
+	sheet = { centre = Vector3.new(3.2, 3.8, 11.88), size = Vector3.new(1.2, 1.6, 0.12) },
 }
 
 local CLOCK_GRAYBOX: { Piece } = {
@@ -243,15 +247,15 @@ return table.freeze({
 	ART_KIND_ATTRIBUTE = "TruckArtKind",
 	-- The bed height the art is modelled for (the ground is at y = -DECK). Depot and office beds are this tall.
 	DECK = 3,
-	BED_SIZE = Vector3.new(12, 3, 16),
+	BED_SIZE = Vector3.new(16, 3, 24),
 	RAMP_LENGTH = 4,
 	-- Deck-space extents of the whole truck (arch, ramp foot, bumper): what a layout must keep clear.
-	HALF_WIDTH = 7.4,
-	BACK = 12,
-	FRONT = 14.9,
-	TOP = 8.7,
+	HALF_WIDTH = 9.3,
+	BACK = 16.2,
+	FRONT = 20.2,
+	TOP = 11.8,
 	-- The doorway under the roll drum and the arch's light strip.
-	DOOR_HEIGHT = 6.1,
+	DOOR_HEIGHT = 9.1,
 	GRAYBOX = table.freeze(GRAYBOX),
 	COLLISION = table.freeze(COLLISION),
 	SHELL = table.freeze(SHELL),
@@ -261,9 +265,9 @@ return table.freeze({
 	CLOCK_MOUNT = CLOCK_MOUNT,
 	CLOCK_GRAYBOX = table.freeze(CLOCK_GRAYBOX),
 	PAPERWORK = table.freeze(PAPERWORK),
-	-- The band's side line (characters/truck/v2/livery_v2_1.png, "WE CLEAN UP THE NIGHT!"; Icey Labs decal
-	-- 124374101661258 -> this image).
-	LIVERY_IMAGE = "rbxassetid://88638476950706",
+	-- The band's side line (characters/truck/v3/livery_v3.png, "WE CLEAN UP THE NIGHT!"; Icey Labs decal
+	-- 76089610185696 -> this image).
+	LIVERY_IMAGE = "rbxassetid://86901531935857",
 	BAND_PIECE = BAND_PIECE,
 	LIVERY_FACES = table.freeze(LIVERY_FACES),
 	SOCKETS = table.freeze(SOCKETS),
@@ -273,16 +277,16 @@ return table.freeze({
 	ROOF_PIECE = "BoxRoof",
 	LAMP_COLOR = Color3.fromRGB(255, 226, 170),
 	LAMP_BRIGHTNESS = 0.4,
-	LAMP_RANGE = 10,
+	LAMP_RANGE = 15,
 	-- The scanner arch's light (the client flashes it on each bank, DepotTruckScannerSystem).
 	SCANNER_PIECE = "ScannerLight",
 	SCANNER_IDLE = SCANNER_IDLE,
 	SCANNER_GLOW_NAME = "ScanGlow",
-	SCANNER_GLOW_RANGE = 14,
+	SCANNER_GLOW_RANGE = 16,
 	-- The sweep runs down the doorway, just inside the arch, from under the roll drum to the deck.
-	SWEEP_TOP = Vector3.new(0, 5.9, -8.3),
-	SWEEP_BOTTOM = Vector3.new(0, 0.15, -8.3),
-	SWEEP_WIDTH = 11.8,
+	SWEEP_TOP = Vector3.new(0, 8.97, -12.3),
+	SWEEP_BOTTOM = Vector3.new(0, 0.15, -12.3),
+	SWEEP_WIDTH = 15.8,
 	-- The truck's own parts are invisible (the art draws them); the bed is hidden behind the art's floor.
 	BED_TRANSPARENCY = 1,
 	TEAL = TEAL,

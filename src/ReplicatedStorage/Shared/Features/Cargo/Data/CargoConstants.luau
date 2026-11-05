@@ -91,7 +91,7 @@ return table.freeze({
 	-- Interaction kinds Cargo registers (the truck bed and the desks / lockers carry them).
 	LOAD_KIND = "cargo-load",
 	SEARCH_KIND = "cargo-search",
-	LOAD_DISTANCE = 16,
+	LOAD_DISTANCE = 20,
 	SEARCH_DISTANCE = 8,
 	SEARCH_HOLD = 0.8,
 	-- The truck bed counts this far past its footprint, and this high above its top.
@@ -102,7 +102,7 @@ return table.freeze({
 	REST_SECONDS = 0.3,
 	THROW_MIN_FLIGHT = 0.35,
 	THROW_MAX_FLIGHT = 8,
-	BED_HEIGHT = 8,
+	BED_HEIGHT = 11,
 	-- Noise: a jug's splash, a search, a rattle pulse (every RATTLE_INTERVAL while carried).
 	SPLASH_NOISE = 70,
 	SEARCH_NOISE = 12,
