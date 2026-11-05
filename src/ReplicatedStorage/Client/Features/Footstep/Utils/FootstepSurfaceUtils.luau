@@ -3,8 +3,9 @@
 	FootstepSurfaceUtils: what a step lands on and which sound it plays. `surfaceFor` turns the floor under the foot
 	into a surface (carpet, tile, wood, concrete, the outdoor asphalt, grass, gravel and puddle, or default): its
 	FootstepSurface attribute when it names one (the hook for a builder whose carpet is a SmoothPlastic part, or the
-	yard's puddle discs), else its material (FootstepConstants.MATERIAL_SURFACES; Asphalt and Pavement are asphalt
-	only `outside`, concrete inside). `poolFor` is a character's variants for that surface, the default pool when it
+	yard's puddle discs), else its material (FootstepConstants.MATERIAL_SURFACES; Asphalt and Pavement are asphalt,
+	concrete only when the floor's sound `place` is the Building: no place, as before a shift when the yard has no
+	boxes yet, is the yard's asphalt, since no indoor floor uses them). `poolFor` is a character's variants for that surface, the default pool when it
 	has none (every outdoor surface: each character keeps its own step). `layerFor` is the shared outdoor layer that
 	plays under it (yard design Y2), none indoors, and `layerPool` that layer's variants. `pick` chooses one variant
 	by a roll, never the one this foot played last when there is a choice. Pure.
@@ -16,6 +17,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local FootstepConstants = require(ReplicatedStorage.Client.Features.Footstep.Data.FootstepConstants)
 local FootstepTypes = require(ReplicatedStorage.Client.Features.Footstep.Data.FootstepTypes)
+local SoundTypes = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundTypes)
 
 type Surface = FootstepTypes.Surface
 type SurfacePools = FootstepTypes.SurfacePools
@@ -25,10 +27,14 @@ type LayerPools = FootstepTypes.LayerPools
 local FootstepSurfaceUtils = {}
 
 --[=[
-	The surface of a floor of `material` whose FootstepSurface attribute is `override` (any attribute value), `outside`
-	when the floor is in the yard.
+	The surface of a floor of `material` whose FootstepSurface attribute is `override` (any attribute value), at the
+	sound `place` of the floor (SoundServiceClient:placeAt; nil without a place cut).
 ]=]
-function FootstepSurfaceUtils.surfaceFor(material: Enum.Material, override: unknown, outside: boolean?): Surface
+function FootstepSurfaceUtils.surfaceFor(
+	material: Enum.Material,
+	override: unknown,
+	place: SoundTypes.SoundPlace?
+): Surface
 	if override == "asphalt" then
 		return "asphalt"
 	elseif override == "grass" then
@@ -48,7 +54,7 @@ function FootstepSurfaceUtils.surfaceFor(material: Enum.Material, override: unkn
 	elseif override == "default" then
 		return "default"
 	end
-	if outside == true and FootstepConstants.OUTSIDE_ASPHALT[material] == true then
+	if place ~= "Building" and FootstepConstants.OUTSIDE_ASPHALT[material] == true then
 		return "asphalt"
 	end
 	return FootstepConstants.MATERIAL_SURFACES[material] or "default"

@@ -35,7 +35,7 @@ local MATERIAL_SURFACES: { [Enum.Material]: Surface } = {
 	[Enum.Material.Pebble] = "gravel",
 }
 
--- Outside (the sound place of the floor under the step), these materials are the yard's asphalt, not concrete.
+-- These materials are the yard's asphalt, concrete only in the Building (the sound place of the floor under the step).
 local OUTSIDE_ASPHALT: { [Enum.Material]: boolean } = {
 	[Enum.Material.Asphalt] = true,
 	[Enum.Material.Pavement] = true,

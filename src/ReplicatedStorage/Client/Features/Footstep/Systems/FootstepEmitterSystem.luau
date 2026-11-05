@@ -109,11 +109,7 @@ local function floorUnder(rig: Rig): Surface?
 		end
 		floor = floor.Parent
 	end
-	return FootstepSurfaceUtils.surfaceFor(
-		hit.Material,
-		override,
-		SoundServiceClient:placeAt(hit.Position) == "Outside"
-	)
+	return FootstepSurfaceUtils.surfaceFor(hit.Material, override, SoundServiceClient:placeAt(hit.Position))
 end
 
 local FootstepEmitterSystem = {}

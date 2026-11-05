@@ -10,7 +10,6 @@ return function()
 			expect(FootstepSurfaceUtils.surfaceFor(Enum.Material.WoodPlanks, nil)).to.equal("wood")
 			expect(FootstepSurfaceUtils.surfaceFor(Enum.Material.Wood, nil)).to.equal("wood")
 			expect(FootstepSurfaceUtils.surfaceFor(Enum.Material.Concrete, nil)).to.equal("concrete")
-			expect(FootstepSurfaceUtils.surfaceFor(Enum.Material.Pavement, nil)).to.equal("concrete")
 		end)
 
 		it("is the default for anything else", function()
@@ -35,14 +34,22 @@ return function()
 			expect(FootstepSurfaceUtils.surfaceFor(Enum.Material.Pebble, nil)).to.equal("gravel")
 		end)
 
-		it("is asphalt for Asphalt and Pavement only outside, concrete inside", function()
-			expect(FootstepSurfaceUtils.surfaceFor(Enum.Material.Asphalt, nil, true)).to.equal("asphalt")
-			expect(FootstepSurfaceUtils.surfaceFor(Enum.Material.Pavement, nil, true)).to.equal("asphalt")
-			expect(FootstepSurfaceUtils.surfaceFor(Enum.Material.Asphalt, nil, false)).to.equal("concrete")
-			expect(FootstepSurfaceUtils.surfaceFor(Enum.Material.Pavement, nil)).to.equal("concrete")
+		it("is asphalt for Asphalt and Pavement outside, concrete in the building", function()
+			expect(FootstepSurfaceUtils.surfaceFor(Enum.Material.Asphalt, nil, "Outside")).to.equal("asphalt")
+			expect(FootstepSurfaceUtils.surfaceFor(Enum.Material.Pavement, nil, "Outside")).to.equal("asphalt")
+			expect(FootstepSurfaceUtils.surfaceFor(Enum.Material.Asphalt, nil, "Building")).to.equal("concrete")
+			expect(FootstepSurfaceUtils.surfaceFor(Enum.Material.Pavement, nil, "Building")).to.equal("concrete")
 			-- Indoor materials stay themselves outside.
-			expect(FootstepSurfaceUtils.surfaceFor(Enum.Material.Concrete, nil, true)).to.equal("concrete")
+			expect(FootstepSurfaceUtils.surfaceFor(Enum.Material.Concrete, nil, "Outside")).to.equal("concrete")
 		end)
+
+		it(
+			"is asphalt for Asphalt and Pavement with no place cut (before a shift: the yard has no boxes yet)",
+			function()
+				expect(FootstepSurfaceUtils.surfaceFor(Enum.Material.Asphalt, nil)).to.equal("asphalt")
+				expect(FootstepSurfaceUtils.surfaceFor(Enum.Material.Pavement, nil, nil)).to.equal("asphalt")
+			end
+		)
 
 		it("takes the outdoor names from the FootstepSurface attribute (the yard's puddle discs)", function()
 			expect(FootstepSurfaceUtils.surfaceFor(Enum.Material.Glass, "puddle")).to.equal("puddle")
