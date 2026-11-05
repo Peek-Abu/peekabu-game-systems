@@ -1,0 +1,7 @@
+Use your image generation tool to make ONE image from the prompt below. Do not run shell commands or read files. Afterwards, reply with the full local path where the generated image was saved.
+
+A clean prop sheet of TWELVE outdoor yard props, arranged in three rows of four, evenly spaced, each one standing alone, plain flat dark violet-grey background, no text, no letters, no logos.
+Style: stylized 3D toy-like props for a spooky-but-cartoony Roblox cleaning game set at night, chunky rounded proportions, satin painted surfaces with soft bevels, soft key light from top left with a lilac (#B79CFF) rim light.
+Row 1: a dumpster with a lid half open; two wheelie bins; a stack of wooden pallets; an orange traffic cone and a striped A-frame barrier.
+Row 2: a parked boxy little hatchback car; a shopping trolley; a glowing vending machine; a picnic bench with an ash-can bin.
+Row 3: a sodium lamp post with three cartoon moths; a security booth with a striped barrier arm; a puddle decal with a lamp reflection; a grass verge tuft with dandelions and a small crooked bush.

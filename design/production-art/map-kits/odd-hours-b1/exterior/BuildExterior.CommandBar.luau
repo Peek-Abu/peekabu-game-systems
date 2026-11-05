@@ -363,7 +363,9 @@ do
 			local s = 1 - k * 0.22
 			local d = mk("Puddle", Vector3.new(0.04, p[4] * s, p[3] * s), CFrame.new(p[1] + dx, GROUND + 0.08 + k * 0.004, p[2] + dz) * CFrame.Angles(0, rng:NextNumber(0, math.pi), math.pi / 2), M.puddle)
 			d.Shape = Enum.PartType.Cylinder
+			d:SetAttribute("FootstepSurface", "puddle") -- the footsteps' puddle layer (yard design doc, Y2)
 			noCollide(d)
+			d.CanQuery = true -- the footsteps find the floor with a downward ray, which skips CanQuery-off parts
 		end
 	end
 end

@@ -1,0 +1,257 @@
+[
+ {
+  "type": "model",
+  "path": "export/yd_dumpster.fbx",
+  "name": "OH yard dumpster"
+ },
+ {
+  "type": "model",
+  "path": "export/yd_wheeliebin.fbx",
+  "name": "OH yard wheeliebin"
+ },
+ {
+  "type": "model",
+  "path": "export/yd_pallet.fbx",
+  "name": "OH yard pallet"
+ },
+ {
+  "type": "model",
+  "path": "export/yd_crate.fbx",
+  "name": "OH yard crate"
+ },
+ {
+  "type": "model",
+  "path": "export/yd_cone.fbx",
+  "name": "OH yard cone"
+ },
+ {
+  "type": "model",
+  "path": "export/yd_barrier.fbx",
+  "name": "OH yard barrier"
+ },
+ {
+  "type": "model",
+  "path": "export/yd_trolley.fbx",
+  "name": "OH yard trolley"
+ },
+ {
+  "type": "model",
+  "path": "export/yd_vending.fbx",
+  "name": "OH yard vending"
+ },
+ {
+  "type": "model",
+  "path": "export/yd_bench.fbx",
+  "name": "OH yard bench"
+ },
+ {
+  "type": "model",
+  "path": "export/yd_litterbin.fbx",
+  "name": "OH yard litterbin"
+ },
+ {
+  "type": "model",
+  "path": "export/yd_bush.fbx",
+  "name": "OH yard bush"
+ },
+ {
+  "type": "model",
+  "path": "export/yd_grasstuft.fbx",
+  "name": "OH yard grasstuft"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_dumpster_color.png",
+  "name": "OH yard dumpster color"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_dumpster_normal.png",
+  "name": "OH yard dumpster normal"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_dumpster_rough.png",
+  "name": "OH yard dumpster rough"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_wheeliebin_green_color.png",
+  "name": "OH yard wheeliebin_green color"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_wheeliebin_green_normal.png",
+  "name": "OH yard wheeliebin normal"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_wheeliebin_green_rough.png",
+  "name": "OH yard wheeliebin rough"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_wheeliebin_blue_color.png",
+  "name": "OH yard wheeliebin_blue color"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_wheeliebin_grey_color.png",
+  "name": "OH yard wheeliebin_grey color"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_pallet_color.png",
+  "name": "OH yard pallet color"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_pallet_normal.png",
+  "name": "OH yard pallet normal"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_pallet_rough.png",
+  "name": "OH yard pallet rough"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_crate_color.png",
+  "name": "OH yard crate color"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_crate_normal.png",
+  "name": "OH yard crate normal"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_crate_rough.png",
+  "name": "OH yard crate rough"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_cone_color.png",
+  "name": "OH yard cone color"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_cone_normal.png",
+  "name": "OH yard cone normal"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_cone_rough.png",
+  "name": "OH yard cone rough"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_barrier_color.png",
+  "name": "OH yard barrier color"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_barrier_normal.png",
+  "name": "OH yard barrier normal"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_barrier_rough.png",
+  "name": "OH yard barrier rough"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_trolley_color.png",
+  "name": "OH yard trolley color"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_trolley_normal.png",
+  "name": "OH yard trolley normal"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_trolley_rough.png",
+  "name": "OH yard trolley rough"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_vending_color.png",
+  "name": "OH yard vending color"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_vending_normal.png",
+  "name": "OH yard vending normal"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_vending_rough.png",
+  "name": "OH yard vending rough"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_bench_color.png",
+  "name": "OH yard bench color"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_bench_normal.png",
+  "name": "OH yard bench normal"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_bench_rough.png",
+  "name": "OH yard bench rough"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_litterbin_color.png",
+  "name": "OH yard litterbin color"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_litterbin_normal.png",
+  "name": "OH yard litterbin normal"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_litterbin_rough.png",
+  "name": "OH yard litterbin rough"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_bush_color.png",
+  "name": "OH yard bush color"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_bush_normal.png",
+  "name": "OH yard bush normal"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_bush_rough.png",
+  "name": "OH yard bush rough"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_grasstuft_color.png",
+  "name": "OH yard grasstuft color"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_grasstuft_normal.png",
+  "name": "OH yard grasstuft normal"
+ },
+ {
+  "type": "image",
+  "path": "out/yd_grasstuft_rough.png",
+  "name": "OH yard grasstuft rough"
+ },
+ {
+  "type": "image",
+  "path": "export/yd_moth.png",
+  "name": "OH yard moth sprite"
+ }
+]

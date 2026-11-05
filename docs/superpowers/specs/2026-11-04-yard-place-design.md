@@ -156,6 +156,28 @@ truck.
   (6), and creatures as harmless dressing only (7).
 - 2026-11-04: **yes** to the set dressing as listed (2, 3): bins and a dumpster by the dock, pallets, cones, a
   trolley, real parked cars, grass strips, a vending machine, moths. The walk and the truck pad stay clear.
+- 2026-11-05: the props sheet (`design/production-art/yard-dressing/turntables/yard_props_sheet.jpg`): "props yes,
+  fix critters AND cars". Cars and critters were remade (v2 sheet `yard_cars_critters_v2.jpg`), waiting on the
+  owner's look. The CC0 scans (ambientCG Wood049, PaintedPlaster017) are OK; the pallet and bench use the oak scan,
+  everything else is procedural.
+
+## Y3 / Y4 result (2026-11-05)
+
+- **Props (Y3a):** hand-built in `design/production-art/yard-dressing/build_yard.py` (texture-pipeline kit, no AI
+  meshes). The 12 approved props, their maps and the moth and firefly sprites are uploaded to Icey Labs (52 assets,
+  all Approved, owner verified); ids in `yard-dressing/upload_log.jsonl`.
+- **Placement (Y3b):** `yard-dressing/PlaceYardDressing.CommandBar.luau` builds `Workspace.YardDressing` in the Shift
+  place (Dock, Walk, Verges, Moths, Cars, Booth, Plaza, Critters, SoundEmitters). It fails the build if a prop lands
+  on the walk, the size-B truck footprint or the time clock. 33 emitters at the Y3b spots, one new light (the drinks
+  machine). Cars and critters are placed once their v2 meshes are approved and uploaded.
+- **Puddles:** the footsteps find the floor with a downward ray, which skips `CanQuery`-off parts, and the exterior
+  builder made every puddle `CanQuery = false`, so the puddle layer could never play from a real puddle. Both scripts
+  now set `FootstepSurface = "puddle"` and `CanQuery = true`. Real play: grass and puddle layers play on Pippa's steps.
+- **Hazard lights:** the parked car's amber corner lights blink as glow particles (0.8 s), no code.
+- **Critters (Y4):** `OfficeCritterSystem` + `OfficeCritterConstants` (Office, client), started by
+  `OfficeServiceClient`. Tag `OfficeCritter`, attributes `CritterKind` (cat, crow, raccoon), `FleeDirection`,
+  `FleeDrop`. A critter flees on this client when any player comes within its kind's `near`, is hidden
+  (LocalTransparencyModifier), and comes back home after `returnAfter` with nobody within 30 studs.
 
 ## Build plan
 

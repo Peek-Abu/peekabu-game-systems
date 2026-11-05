@@ -1,0 +1,52 @@
+{"path": "export/yd_firefly.png", "name": "OH yard firefly sprite", "assetId": "rbxassetid://117088947509602", "status": "ok", "moderation": "Approved"}
+{"path": "export/yd_dumpster.fbx", "name": "OH yard dumpster", "assetId": "rbxassetid://114997248879558", "status": "ok", "moderation": "Approved"}
+{"path": "export/yd_wheeliebin.fbx", "name": "OH yard wheeliebin", "assetId": "rbxassetid://98844215820757", "status": "ok", "moderation": "Approved"}
+{"path": "export/yd_pallet.fbx", "name": "OH yard pallet", "assetId": "rbxassetid://89472207242261", "status": "ok", "moderation": "Approved"}
+{"path": "export/yd_crate.fbx", "name": "OH yard crate", "assetId": "rbxassetid://115108966153333", "status": "ok", "moderation": "Approved"}
+{"path": "export/yd_cone.fbx", "name": "OH yard cone", "assetId": "rbxassetid://140123719893363", "status": "ok", "moderation": "Approved"}
+{"path": "export/yd_barrier.fbx", "name": "OH yard barrier", "assetId": "rbxassetid://107059430327819", "status": "ok", "moderation": "Approved"}
+{"path": "export/yd_trolley.fbx", "name": "OH yard trolley", "assetId": "rbxassetid://129292713286698", "status": "ok", "moderation": "Approved"}
+{"path": "export/yd_vending.fbx", "name": "OH yard vending", "assetId": "rbxassetid://78850651177438", "status": "ok", "moderation": "Approved"}
+{"path": "export/yd_bench.fbx", "name": "OH yard bench", "assetId": "rbxassetid://99129171058320", "status": "ok", "moderation": "Approved"}
+{"path": "export/yd_litterbin.fbx", "name": "OH yard litterbin", "assetId": "rbxassetid://87243277234466", "status": "ok", "moderation": "Approved"}
+{"path": "export/yd_bush.fbx", "name": "OH yard bush", "assetId": "rbxassetid://114571124724181", "status": "ok", "moderation": "Approved"}
+{"path": "export/yd_grasstuft.fbx", "name": "OH yard grasstuft", "assetId": "rbxassetid://111453906114963", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_dumpster_color.png", "name": "OH yard dumpster color", "assetId": "rbxassetid://77020746587484", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_dumpster_normal.png", "name": "OH yard dumpster normal", "assetId": "rbxassetid://140365030432984", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_dumpster_rough.png", "name": "OH yard dumpster rough", "assetId": "rbxassetid://115402919982042", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_wheeliebin_green_color.png", "name": "OH yard wheeliebin_green color", "assetId": "rbxassetid://76792255976618", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_wheeliebin_green_normal.png", "name": "OH yard wheeliebin normal", "assetId": "rbxassetid://109145701732022", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_wheeliebin_green_rough.png", "name": "OH yard wheeliebin rough", "assetId": "rbxassetid://104131614731105", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_wheeliebin_blue_color.png", "name": "OH yard wheeliebin_blue color", "assetId": "rbxassetid://74551611307593", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_wheeliebin_grey_color.png", "name": "OH yard wheeliebin_grey color", "assetId": "rbxassetid://99262432947391", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_pallet_color.png", "name": "OH yard pallet color", "assetId": "rbxassetid://85356196337483", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_pallet_normal.png", "name": "OH yard pallet normal", "assetId": "rbxassetid://111069891457077", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_pallet_rough.png", "name": "OH yard pallet rough", "assetId": "rbxassetid://102075710834044", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_crate_color.png", "name": "OH yard crate color", "assetId": "rbxassetid://135899822188897", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_crate_normal.png", "name": "OH yard crate normal", "assetId": "rbxassetid://107554063448886", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_crate_rough.png", "name": "OH yard crate rough", "assetId": "rbxassetid://88629089768109", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_cone_color.png", "name": "OH yard cone color", "assetId": "rbxassetid://108089628903286", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_cone_normal.png", "name": "OH yard cone normal", "assetId": "rbxassetid://139056808647485", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_cone_rough.png", "name": "OH yard cone rough", "assetId": "rbxassetid://119755604015542", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_barrier_color.png", "name": "OH yard barrier color", "assetId": "rbxassetid://79841143876258", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_barrier_normal.png", "name": "OH yard barrier normal", "assetId": "rbxassetid://126318193742699", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_barrier_rough.png", "name": "OH yard barrier rough", "assetId": "rbxassetid://101427770107594", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_trolley_color.png", "name": "OH yard trolley color", "assetId": "rbxassetid://110050424738913", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_trolley_normal.png", "name": "OH yard trolley normal", "assetId": "rbxassetid://108391649396107", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_trolley_rough.png", "name": "OH yard trolley rough", "assetId": "rbxassetid://118079193200125", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_vending_color.png", "name": "OH yard vending color", "assetId": "rbxassetid://112699350030878", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_vending_normal.png", "name": "OH yard vending normal", "assetId": "rbxassetid://102946587953183", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_vending_rough.png", "name": "OH yard vending rough", "assetId": "rbxassetid://138497350541945", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_bench_color.png", "name": "OH yard bench color", "assetId": "rbxassetid://127541960898299", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_bench_normal.png", "name": "OH yard bench normal", "assetId": "rbxassetid://79650145156260", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_bench_rough.png", "name": "OH yard bench rough", "assetId": "rbxassetid://78270077375260", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_litterbin_color.png", "name": "OH yard litterbin color", "assetId": "rbxassetid://112008270790963", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_litterbin_normal.png", "name": "OH yard litterbin normal", "assetId": "rbxassetid://112108794306893", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_litterbin_rough.png", "name": "OH yard litterbin rough", "assetId": "rbxassetid://89632921209144", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_bush_color.png", "name": "OH yard bush color", "assetId": "rbxassetid://95821687539559", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_bush_normal.png", "name": "OH yard bush normal", "assetId": "rbxassetid://92007558861805", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_bush_rough.png", "name": "OH yard bush rough", "assetId": "rbxassetid://90480410491905", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_grasstuft_color.png", "name": "OH yard grasstuft color", "assetId": "rbxassetid://137200269164953", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_grasstuft_normal.png", "name": "OH yard grasstuft normal", "assetId": "rbxassetid://135835380441757", "status": "ok", "moderation": "Approved"}
+{"path": "out/yd_grasstuft_rough.png", "name": "OH yard grasstuft rough", "assetId": "rbxassetid://133928926463275", "status": "ok", "moderation": "Approved"}
+{"path": "export/yd_moth.png", "name": "OH yard moth sprite", "assetId": "rbxassetid://104684850183899", "status": "ok", "moderation": "Approved"}
