@@ -32,7 +32,13 @@ return function()
 			local emote = VM.card(ShopRegistry.get("Pippa.Bubbles"), owner(), rich)
 			expect(emote.emote).to.equal("Pippa.Bubbles")
 			expect(emote.employee).to.equal("Pippa")
-			expect(VM.card(ShopRegistry.get("SleepySway"), owner(), rich).line).to.equal("Idle · any employee")
+			-- No idle is on sale right now: fixture offers for an employee's idle and a shared one (a sticker).
+			local idle = table.clone(ShopRegistry.get("Pippa.Bubbles"))
+			idle.items = { "Cappy.Classic" }
+			expect(VM.card(idle, owner(), rich).line).to.equal("Idle · Cappy")
+			local shared = table.clone(ShopRegistry.get("CozyPack"))
+			shared.items = { "CozyPack.CocoaBreak" }
+			expect(VM.card(shared, owner(), rich).line).to.equal("Sticker · any employee")
 			expect(VM.card(ShopRegistry.get("CozyPack"), owner(), rich).line).to.equal("Sticker pack")
 			expect(VM.card(ShopRegistry.get("Prickles"), owner(), rich).line).to.equal("Employee")
 		end)

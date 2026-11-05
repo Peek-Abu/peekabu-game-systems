@@ -345,7 +345,7 @@ EMPLOYEES.Cappy = {
 		-- Legendary (Cosmetic Cappy.PJ): the skinned fleece onesie, bear hood with sleep mask and shark slippers
 		-- (characters/skins/runtime-candidates-2026-10-26/pj_cappy/v6-2026-10-29), over his own skin and hair: no
 		-- style repaints the body. The outfit hides his hoodie, cap, socks, sneakers and shorts (its HideAccessories).
-		-- Previews hold the pillow and cocoa mug in his Sleepy Sway idle. Icey Labs assets.
+		-- Previews hold the pillow in his showcase idle (cappypjidle). Icey Labs assets.
 		PJ = {
 			name = "PJ",
 			paletteTextureId = nil,

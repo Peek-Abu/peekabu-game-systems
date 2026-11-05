@@ -6,6 +6,6 @@ return {
 	Group = "Admins",
 	Args = {
 		{ Type = "player", Name = "target", Description = "The player to unlock it for" },
-		{ Type = "string", Name = "id", Description = "A CosmeticRegistry id, e.g. Cappy, Cappy.PJ, SleepySway" },
+		{ Type = "string", Name = "id", Description = "A CosmeticRegistry id, e.g. Cappy, Cappy.PJ, CozyPack" },
 	},
 }

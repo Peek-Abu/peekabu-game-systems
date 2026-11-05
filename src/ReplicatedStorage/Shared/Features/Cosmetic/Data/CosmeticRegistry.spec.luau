@@ -118,14 +118,12 @@ return function()
 			expect(item.kind).to.equal("skin")
 			expect(item.employee).to.equal("Cappy")
 		end
-		local idles = CosmeticRegistry.ofKind("idle", "Cappy")
-		local shared = false
-		for _, item in idles do
-			if item.employee == nil then
-				shared = true
-			end
+		for _, item in CosmeticRegistry.ofKind("idle", "Cappy") do
+			expect(item.employee == nil or item.employee == "Cappy").to.equal(true)
 		end
-		expect(shared).to.equal(true)
+		-- The vacuums are shared: every employee's list has them.
+		expect(#CosmeticRegistry.ofKind("vacuum", "Cappy")).to.equal(#CosmeticRegistry.ofKind("vacuum"))
+		expect(#CosmeticRegistry.ofKind("vacuum", "Pippa") >= 2).to.equal(true)
 		expect(#CosmeticRegistry.ofKind("skin") >= #CosmeticRegistry.ofKind("skin", "Cappy")).to.equal(true)
 	end)
 
@@ -148,5 +146,7 @@ return function()
 		expect(table.find(CosmeticRegistry.get("Pippa.BubbleBuddy").bundle, "BubblePack")).to.be.ok()
 		expect(table.find(CosmeticRegistry.get("Prickles.Sheriff").bundle, "SheriffPack")).to.be.ok()
 		expect(table.find(CosmeticRegistry.get("Cappy.PJ").bundle, "CozyPack")).to.be.ok()
+		-- PJ Cappy's bundle: his cocoa emote and the pack (the owner cut its idle).
+		expect(table.concat(CosmeticRegistry.get("Cappy.PJ").bundle, ",")).to.equal("Cappy.CocoaSip,CozyPack")
 	end)
 end

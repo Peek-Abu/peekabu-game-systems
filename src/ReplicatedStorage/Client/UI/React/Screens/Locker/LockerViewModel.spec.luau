@@ -31,9 +31,9 @@ return function()
 			lore = "",
 		},
 		{
-			id = "SleepySway",
+			id = "Fixture.SharedIdle",
 			kind = "idle",
-			name = "Sleepy Sway",
+			name = "Shared Idle",
 			rarity = "epic",
 			source = "gleamLocker",
 			lore = "",
@@ -110,7 +110,7 @@ return function()
 			expect(directItems[1].id).to.equal("Pippa.BubbleBuddy")
 			expect(directItems[1].directPrice).to.equal("1,500")
 			expect(directItems[1].canBuyDirect).to.equal(false)
-			expect(directItems[2].id).to.equal("SleepySway")
+			expect(directItems[2].id).to.equal("Fixture.SharedIdle")
 			expect(directItems[2].directPrice).to.equal("750")
 			expect(directItems[2].canBuyDirect).to.equal(true)
 		end)

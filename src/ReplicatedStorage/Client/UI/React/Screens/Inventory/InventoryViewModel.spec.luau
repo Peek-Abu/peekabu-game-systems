@@ -171,10 +171,14 @@ return function()
 			end
 		end)
 
-		it("lists shared idles beside the employee's own", function()
+		it("lists the employee's own idles (and any shared ones), never another employee's", function()
 			local list = VM.items("idle", "Pippa", loadout(), owner())
-			expect(find(list, "Pippa.Classic")).to.be.ok()
-			expect(find(list, "SleepySway")).to.be.ok()
+			expect(list[1].id).to.equal("Pippa.Classic")
+			expect(list[1].worn).to.equal(true)
+			for _, entry in list do
+				local employee = CosmeticRegistry.get(entry.id).employee
+				expect(employee == nil or employee == "Pippa").to.equal(true)
+			end
 			expect(find(list, "Cappy.Classic")).never.to.be.ok()
 		end)
 
@@ -445,9 +449,11 @@ return function()
 			expect(skin.style).to.equal(1)
 			-- The chosen colour style rides along.
 			expect(VM.change(CosmeticRegistry.get("Pippa.BubbleBuddy"), "Pippa", nil, 3).style).to.equal(3)
-			local idle = VM.change(CosmeticRegistry.get("SleepySway"), "Cappy")
+			-- An idle goes on the page's employee (a fixture shared idle: the catalogue has none right now).
+			local idle = VM.change({ id = "Fixture.SharedIdle", kind = "idle", name = "Shared Idle" }, "Cappy")
 			expect(idle.kind).to.equal("idle")
 			expect(idle.employee).to.equal("Cappy")
+			expect(idle.id).to.equal("Fixture.SharedIdle")
 		end)
 	end)
 

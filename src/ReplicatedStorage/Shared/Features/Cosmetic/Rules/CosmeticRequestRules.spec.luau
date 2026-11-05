@@ -7,7 +7,7 @@ return function()
 			local changes = {
 				{ kind = "employee", id = "Cappy" },
 				{ kind = "skin", id = "Cappy.PJ", style = 2 },
-				{ kind = "idle", employee = "Cappy", id = "SleepySway" },
+				{ kind = "idle", employee = "Cappy", id = "Cappy.Classic" },
 				{ kind = "emote", employee = "Cappy", slot = 3, id = "Cappy.CocoaSip" },
 				{ kind = "emote", employee = "Cappy", slot = 3, id = "" },
 				{ kind = "sticker", slot = 1, id = "CozyPack.CocoaBreak" },
@@ -33,7 +33,7 @@ return function()
 				{ kind = "skin", id = "Cappy.PJ", style = 1.5 },
 				{ kind = "skin", id = "", style = 1 },
 				{ kind = "employee", id = string.rep("x", 65) },
-				{ kind = "idle", id = "SleepySway" },
+				{ kind = "idle", id = "Cappy.Classic" },
 				{ kind = "emote", employee = "Cappy", slot = "2", id = "Cappy.CocoaSip" },
 				{ kind = "emote", slot = 2, id = "Cappy.CocoaSip" },
 				{ kind = "sticker", slot = 1 },

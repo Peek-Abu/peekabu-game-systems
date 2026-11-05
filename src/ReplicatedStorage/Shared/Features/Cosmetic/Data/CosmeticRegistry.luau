@@ -10,7 +10,7 @@
 	are first drafts (owner: prices may change).
 
 	The lists live in CosmeticEmployeeRegistry (employees, their defaults, skins and emotes) and CosmeticStickerRegistry
-	(sticker packs and stickers); the vacuums and shared idles stay here.
+	(sticker packs and stickers); the vacuums and shared idles (none right now) stay here.
 
 	Art and animation ids are NOT here yet: the rig facts stay in EmployeeRegistry (step 2 wires skins to palettes).
 
@@ -48,16 +48,8 @@ local SHARED: { Item } = {
 		lore = "A brass vacuum under a glass dome. Nobody knows how old it is. The gauges still work. Mostly.",
 	},
 
-	-- Shared idles
-	{
-		id = "SleepySway",
-		kind = "idle",
-		name = "Sleepy Sway",
-		rarity = "epic",
-		source = "gleam",
-		price = 400,
-		lore = "Night shifts are long. A tiny nap standing up never hurt anybody.",
-	},
+	-- Shared idles: none right now. A retired idle still saved in a look falls back to the employee's free idle
+	-- (CosmeticRules.lookFor), so removing one needs no migration.
 }
 
 -- The catalogue, in its order: the employees' items, the shared ones, then the stickers.

@@ -31,6 +31,7 @@ return function()
 			local loadout = CosmeticConstants.defaultLoadout()
 			loadout.current = "Cappy"
 			loadout.vacuum = "Vacuum.BrassBellows"
+			-- SleepySway left the catalogue; a save that still wears (and owns) it reads Cappy's free idle.
 			loadout.looks.Cappy = { skin = "Cappy.PJ", style = 2, idle = "SleepySway", wheel = { "", "", "", "" } }
 			loadout.stickers[2] = "CozyPack.CocoaBreak"
 			local owns = ownsOf({ "Cappy", "Cappy.PJ", "SleepySway", "Vacuum.BrassBellows", "CozyPack" })
@@ -38,6 +39,7 @@ return function()
 			expect(outfit.employee).to.equal("Cappy")
 			expect(outfit.look.skin).to.equal("Cappy.PJ")
 			expect(outfit.look.style).to.equal(2)
+			expect(outfit.look.idle).to.equal("Cappy.Classic")
 			expect(outfit.vacuum).to.equal("Vacuum.BrassBellows")
 			expect(outfit.stickers[2]).to.equal("CozyPack.CocoaBreak")
 			-- Not owned: back to the free ones.
@@ -59,8 +61,12 @@ return function()
 			expect(skin.look.skin).to.equal("Cappy.PJ")
 			expect(skin.look.idle).to.equal("Cappy.Classic")
 			expect(skin.vacuum).to.equal("Vacuum.StandardIssue")
-			local idle = CosmeticOutfitRules.tryOn(base, "SleepySway")
-			expect(idle.look.idle).to.equal("SleepySway")
+			-- An employee's own idle brings that employee, in their free look.
+			local idle = CosmeticOutfitRules.tryOn(base, "Cappy.Classic")
+			expect(idle.employee).to.equal("Cappy")
+			expect(idle.look.idle).to.equal("Cappy.Classic")
+			expect(idle.look.skin).to.equal("Cappy.Default")
+			expect(idle.vacuum).to.equal("Vacuum.StandardIssue")
 			local hire = CosmeticOutfitRules.tryOn(base, "Prickles")
 			expect(hire.employee).to.equal("Prickles")
 			expect(hire.look.skin).to.equal("Prickles.Default")

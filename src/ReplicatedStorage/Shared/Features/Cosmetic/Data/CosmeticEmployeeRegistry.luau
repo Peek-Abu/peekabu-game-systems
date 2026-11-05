@@ -186,7 +186,7 @@ local ITEMS: { CosmeticTypes.Item } = {
 		source = "gleam",
 		price = 1500,
 		styles = 3,
-		bundle = { "Cappy.CocoaSip", "SleepySway", "CozyPack" },
+		bundle = { "Cappy.CocoaSip", "CozyPack" },
 		lore = "Cappy cleans in his PJs. He says the shark slippers are for speed. Probably.",
 	},
 	{

@@ -46,13 +46,33 @@ return function()
 
 		it("keeps an owned look and clamps nothing that is in range", function()
 			local loadout = CosmeticConstants.defaultLoadout()
-			loadout.looks.Cappy = { skin = "Cappy.PJ", style = 3, idle = "SleepySway", wheel = wheel("Cappy.CocoaSip") }
-			local look = CosmeticRules.lookFor(loadout, "Cappy", ownsOf({ "Cappy.PJ", "SleepySway", "Cappy.CocoaSip" }))
+			loadout.looks.Cappy =
+				{ skin = "Cappy.PJ", style = 3, idle = "Cappy.Classic", wheel = wheel("Cappy.CocoaSip") }
+			local look = CosmeticRules.lookFor(loadout, "Cappy", ownsOf({ "Cappy.PJ", "Cappy.CocoaSip" }))
 			expect(look.skin).to.equal("Cappy.PJ")
 			expect(look.style).to.equal(3)
-			expect(look.idle).to.equal("SleepySway")
+			expect(look.idle).to.equal("Cappy.Classic")
 			expect(look.wheel[1]).to.equal("Cappy.CocoaSip")
 		end)
+
+		it(
+			"falls back to the default idle for a retired idle the player still owns, and the save stays valid",
+			function()
+				-- SleepySway was sold (and came with PJ Cappy) before it was cut: old saves still wear and own it.
+				local loadout = CosmeticConstants.defaultLoadout()
+				loadout.looks.Cappy =
+					{ skin = "Cappy.PJ", style = 2, idle = "SleepySway", wheel = wheel("Cappy.CocoaSip") }
+				expect(CosmeticRules.validateLoadout(loadout)).to.equal(true)
+				local look =
+					CosmeticRules.lookFor(loadout, "Cappy", ownsOf({ "Cappy.PJ", "SleepySway", "Cappy.CocoaSip" }))
+				expect(look.idle).to.equal("Cappy.Classic")
+				expect(look.skin).to.equal("Cappy.PJ")
+				expect(look.style).to.equal(2)
+				expect(look.wheel[1]).to.equal("Cappy.CocoaSip")
+				-- The real ownership check never answers yes for an id the catalogue no longer has.
+				expect(CosmeticRules.owns({ owned = { idle = { SleepySway = true } } }, "SleepySway")).to.equal(false)
+			end
+		)
 
 		it("falls back on a retired, unowned or other employee's item, and a style out of range", function()
 			local loadout = CosmeticConstants.defaultLoadout()
@@ -98,7 +118,7 @@ return function()
 	end)
 
 	describe("checkEquip / applyEquip", function()
-		local owns = ownsOf({ "Cappy", "Cappy.PJ", "Cappy.CocoaSip", "SleepySway", "CozyPack" })
+		local owns = ownsOf({ "Cappy", "Cappy.PJ", "Cappy.CocoaSip", "CozyPack" })
 
 		it("switches to an owned employee only", function()
 			local loadout = CosmeticConstants.defaultLoadout()
@@ -123,9 +143,9 @@ return function()
 			local _, notOwned =
 				CosmeticRules.checkEquip(loadout, { kind = "skin", id = "Cappy.GhostDebunker", style = 1 }, owns)
 			expect(notOwned).to.equal("not owned")
-			expect(CosmeticRules.checkEquip(loadout, { kind = "skin", id = "SleepySway", style = 1 }, owns)).to.equal(
-				false
-			)
+			local _, idleAsSkin =
+				CosmeticRules.checkEquip(loadout, { kind = "skin", id = "Cappy.Classic", style = 1 }, owns)
+			expect(idleAsSkin).to.equal("wrong kind")
 			expect(CosmeticRules.checkEquip(loadout, { kind = "skin", id = "Cappy.PJ", style = 2 }, owns)).to.equal(
 				true
 			)
@@ -137,17 +157,25 @@ return function()
 			expect(same).to.equal("no change")
 		end)
 
-		it("puts an idle on its own employee or a shared one, never another employee's", function()
+		it("puts an idle on its own employee only, never another employee's", function()
+			-- The catalogue has only the free idles now, so each employee already wears the one idle they may use.
 			local loadout = CosmeticConstants.defaultLoadout()
 			local _, wrong =
 				CosmeticRules.checkEquip(loadout, { kind = "idle", employee = "Cappy", id = "Pippa.Classic" }, owns)
 			expect(wrong).to.equal("wrong employee")
-			expect(CosmeticRules.checkEquip(loadout, { kind = "idle", employee = "Pippa", id = "SleepySway" }, owns)).to.equal(
+			local _, same =
+				CosmeticRules.checkEquip(loadout, { kind = "idle", employee = "Cappy", id = "Cappy.Classic" }, owns)
+			expect(same).to.equal("no change")
+			local _, nobody =
+				CosmeticRules.checkEquip(loadout, { kind = "idle", employee = "Nobody", id = "Cappy.Classic" }, owns)
+			expect(nobody).to.equal("unknown item")
+			local _, skin =
+				CosmeticRules.checkEquip(loadout, { kind = "idle", employee = "Cappy", id = "Cappy.PJ" }, owns)
+			expect(skin).to.equal("wrong kind")
+			expect(CosmeticRules.applyEquip(loadout, { kind = "idle", employee = "Cappy", id = "Cappy.Classic" }, owns)).to.equal(
 				true
 			)
-			expect(CosmeticRules.checkEquip(loadout, { kind = "idle", employee = "Nobody", id = "SleepySway" }, owns)).to.equal(
-				false
-			)
+			expect(loadout.looks.Cappy.idle).to.equal("Cappy.Classic")
 		end)
 
 		it("fills, moves and clears emote-wheel slots", function()
