@@ -38,7 +38,8 @@ local NAME = "OfficeExterior"
 local ANOMALY = {
 	SLOT_TAG = "OfficeAnomalySlot",
 	SLOT_ATTRIBUTE = "AnomalyId",
-	IDS = { "silhouette", "autoDoors", "carTicking", "welcomeScreen", "boothTv", "wetFloor", "banner" },
+	IDS = { "silhouette", "autoDoors", "carTicking", "welcomeScreen", "boothTv", "wetFloor", "leaningLamp" },
+	LEAN_DIRECTION_ATTRIBUTE = "LeanDirection",
 	DOOR_SLIDE = 2.2, -- studs each lobby leaf slides open along its RightVector * Side
 }
 -- The generated office's volume (world; every room fits here over 120 seeds). No exterior part may enter it.
@@ -854,16 +855,16 @@ flush()
 ------------------------------------------------------------------ 6. car park lights, wall packs, cars
 begin("SiteLights")
 do
-	local function pole(x, z, armDir)
-		vcyl("PoleBase", x, z, GROUND, 1.6, 2.2, M.concrete)
-		vcyl("Pole", x, z, GROUND + 1.6, 22, 0.7, M.darkMetal)
+	local function pole(x, z, armDir, parent)
+		vcyl("PoleBase", x, z, GROUND, 1.6, 2.2, M.concrete, parent)
+		vcyl("Pole", x, z, GROUND + 1.6, 22, 0.7, M.darkMetal, parent)
 		local ad = armDir or Vector3.new(1, 0, 0)
 		local top = Vector3.new(x, GROUND + 23.2, z)
 		local head = top + ad * 3.2
-		mk("PoleArm", Vector3.new(0.4, 0.4, 3.4), CFrame.lookAt((top + head) / 2, head), M.darkMetal)
-		mk("PoleHead", Vector3.new(2.2, 0.7, 3.6), CFrame.lookAt(head, head + ad), M.darkMetal)
-		mk("PoleLens", Vector3.new(1.8, 0.1, 3), CFrame.lookAt(head - Vector3.new(0, 0.4, 0), head - Vector3.new(0, 0.4, 0) + ad), M.lampNeon)
-		spot(head - Vector3.new(0, 0.6, 0), Vector3.new(0, -1, 0), 6, 60, 120, SODIUM, true)
+		mk("PoleArm", Vector3.new(0.4, 0.4, 3.4), CFrame.lookAt((top + head) / 2, head), M.darkMetal, parent)
+		mk("PoleHead", Vector3.new(2.2, 0.7, 3.6), CFrame.lookAt(head, head + ad), M.darkMetal, parent)
+		mk("PoleLens", Vector3.new(1.8, 0.1, 3), CFrame.lookAt(head - Vector3.new(0, 0.4, 0), head - Vector3.new(0, 0.4, 0) + ad), M.lampNeon, parent)
+		spot(head - Vector3.new(0, 0.6, 0), Vector3.new(0, -1, 0), 6, 60, 120, SODIUM, true, parent)
 	end
 	pole(898, -30, Vector3.new(1, 0, 0))
 	pole(898, 70, Vector3.new(1, 0, 0))
@@ -873,7 +874,15 @@ do
 	pole(1262, -112, Vector3.new(0, 0, 1))
 	pole(896, 135, Vector3.new(1, 0, 0))
 	-- the walk: sodium poles beside (never on) the straight line truck -> dock, then the truck pad
-	for z = -110, RAMP_Z + 20, -50 do pole(DOCK_X - 26, z, Vector3.new(1, 0, 0)) end
+	-- leaningLamp: the middle walk pole is an anomaly slot; on some runs it leans 15 degrees away from the walk (-X)
+	for z = -110, RAMP_Z + 20, -50 do
+		local m = nil
+		if z == -160 then
+			m = slot("leaningLamp")
+			m:SetAttribute(ANOMALY.LEAN_DIRECTION_ATTRIBUTE, Vector3.new(-1, 0, 0))
+		end
+		pole(DOCK_X - 26, z, Vector3.new(1, 0, 0), m)
+	end
 	pole(PAD.x1 + 3, PAD.z1 - 4, Vector3.new(-1, 0, 0))
 	pole(PAD.x0 - 3, PAD.z0 + 6, Vector3.new(1, 0, 0))
 	-- wall packs on the podium (west, south, east and north)
@@ -1025,15 +1034,6 @@ do
 			t.TextTransparency = 1
 		end
 		noCollide(box("SignHinge", x - 1.1, x + 1.1, GROUND + 2.9, GROUND + 3.1, z - 0.15, z + 0.15, YEL, m))
-	end
-	-- banner: a motivational banner on the podium front, right way up, hung in front of the pilasters
-	do
-		local m = slot("banner")
-		local x0, x1, y0, y1, zf = 1006, 1056, 8, 13.5, SZ0 - 1.3
-		local cloth = box("BannerCloth", x0, x1, y0, y1, zf - 0.15, zf, { Material = Enum.Material.Fabric, Color = C(34, 56, 104) }, m)
-		label(cloth, Enum.NormalId.Front, "TOGETHER WE THRIVE", C(240, 236, 224), nil, Enum.Font.GothamBlack)
-		box("BannerRod", x0 - 0.5, x1 + 0.5, y1, y1 + 0.3, zf - 0.25, zf + 0.05, M.darkMetal, m)
-		for _, x in ipairs({ x0 + 1, x1 - 1 }) do box("BannerBracket", x - 0.2, x + 0.2, y1, y1 + 0.3, zf, SZ0 - 1, M.darkMetal, m) end
 	end
 end
 flush()

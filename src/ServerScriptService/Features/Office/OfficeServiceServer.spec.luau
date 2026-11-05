@@ -69,7 +69,7 @@ return function()
 				return
 			end
 			begin(11)
-			OfficeServiceServer:forceAnomalies({ "banner" })
+			OfficeServiceServer:forceAnomalies({ "leaningLamp" })
 			begin(11)
 			expect(model():GetAttribute(ATTRIBUTE)).to.equal(
 				table.concat(OfficeVariationRules.anomalies(OfficeServiceServer:seed()), ",")

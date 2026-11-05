@@ -1,6 +1,6 @@
 # Podium banner: cut, and its anomaly moves to a leaning lamp post (design)
 
-Status: **banner cut** (owner, 2026-11-04). The replacement anomaly waits for one yes/no. Nothing is built.
+Status: **banner cut; leaning lamp built** (owner yes, 2026-11-04). Steps 1-4 done (see Result); the owner's real-play look is still to do.
 
 Backlog item: "The 'TOGETHER WE THRIVE' banner is off-style ... keeping its default and upside-down states."
 
@@ -35,16 +35,16 @@ lies off-centre on the asphalt.
 
 **Details:**
 - The pole leans **away** from the walk, so its head never hangs over players.
-- The concrete base stays put; only the shaft, arm, head and lens turn, about the top of the base.
-- The light (a child of the head) moves with it.
+- The concrete base stays put; the shaft, arm, head, lens and light anchor turn about the shaft's lower end.
+- The light (its own invisible anchor part in the slot) moves with it.
 - Reset restores the captured CFrames, as for the banner.
 
 ## Build plan
 
 | Step | What | Who |
 |---|---|---|
-| 1 | **Code, spec first.** The id `banner` becomes `leaningLamp` in `OfficeAnomalyConstants` (`AnomalyId`, `IDS`), with a `LEAN_DEGREES = 15` tuning value there. In `OfficeAnomalySystem`, the `banner` branch becomes `leaningLamp`: it turns every part in the slot except `LampBase` about the base's top by `LEAN_DEGREES`, away from the walk (the slot model's `LeanAxis` attribute gives the direction). Update the specs that name the id: `OfficeAnomalySystem.spec`, `OfficeAnomalyUtils.spec`, `AnomalyServer.spec`, `OfficeServiceServer.spec`. | code session |
-| 2 | **Builder script.** In `BuildExterior.CommandBar.luau`, remove the banner block. Wrap the middle walk pole (z -160) in `AnomalySlot_leaningLamp` (tagged `OfficeAnomalySlot`, `AnomalyId = "leaningLamp"`, `LeanAxis`), with its parts named `LampBase` / `LampPole` / `LampArm` / `LampHead` / `LampLens`. Update the exterior README's slot table. | code session |
+| 1 | **Code, spec first.** The id `banner` becomes `leaningLamp` in `OfficeAnomalyConstants` (`AnomalyId`, `IDS`), with a `LEAN_DEGREES = 15` tuning value there. In `OfficeAnomalySystem`, the `banner` branch becomes `leaningLamp`: it turns every part in the slot except `PoleBase` by `LEAN_DEGREES` about the shaft's lower end, toward the slot model's `LeanDirection` attribute (away from the walk). Update the specs that name the id: `OfficeAnomalySystem.spec`, `OfficeAnomalyUtils.spec`, `AnomalyServer.spec`, `OfficeServiceServer.spec`. | code session |
+| 2 | **Builder script.** In `BuildExterior.CommandBar.luau`, remove the banner block. Wrap the middle walk pole (z -160) in `AnomalySlot_leaningLamp` (tagged `OfficeAnomalySlot`, `AnomalyId = "leaningLamp"`, `LeanDirection = (-1, 0, 0)`). Its parts keep their names: `PoleBase`, `Pole`, `PoleArm`, `PoleHead`, `PoleLens`, `LightAnchor`. Update the exterior README's slot table. | code session |
 | 3 | **The place.** In the Shift place only, in Edit: delete `AnomalySlot_banner`, and apply step 2 to the live pole. One Studio session, after the coordinator frees Studio; the lobby place has no exterior. | Studio session (Claude via Studio MCP) |
 | 4 | **Check.** Force the anomaly with the Cmdr `anomaly` command, capture both states, run the Office specs in Studio, and do a real-play walk with a second client. | Studio session, then the owner |
 
@@ -54,3 +54,16 @@ New modules: none. No upload.
 
 1. **Rules:** replace the banner clue with a **sodium lamp post on the walk that leans about 15°** on some runs?
    (No: the car parked backwards in the west car park.)
+
+## Result (2026-11-04)
+
+- Steps 1-3 are done. In the Shift place, `AnomalySlot_banner` is deleted. The walk pole at (1142, -160) is now
+  `OfficeExterior/SiteLights/AnomalySlot_leaningLamp`, made by a targeted edit, not a full rebuild. The owner must
+  save the place.
+- **Specs** (Studio, with the changes synced): 5443 passed, 1 failed. The failure is the known old
+  `RankServiceServer.spec:178`, not from this change. All Office specs pass.
+- **Live check:** the server forced the anomaly through `OfficeServiceServer:forceAnomalies`, the same path the Cmdr
+  `anomaly` command uses. On the client the pole leaned 15.00° toward -X, its base stayed put, and its head moved
+  about 5.7 studs away from the walk. Clearing the anomaly stood it upright again (0.00°).
+- **Captures:** `design/production-art/map-kits/odd-hours-b1/exterior/captures/s5_leaningLamp_on.jpg` and `_off.jpg`.
+- **Still open:** the owner's own look in real play. A second-client check was not run.

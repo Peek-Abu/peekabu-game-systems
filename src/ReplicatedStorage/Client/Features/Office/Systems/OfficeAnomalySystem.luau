@@ -23,8 +23,9 @@
 	comes near; each cycle 20-40 s after the last, or after a player arrives or the slot re-streams, and only with a
 	player within DOOR_NEAR when it comes due), carTicking (a looped engine tick at the emitter and the car's tail
 	lights dimly on), welcomeScreen (the welcome text, the run's wrong line in the last 1.2 s of every 6 s), boothTv
-	(cold blue Neon, a flickering SurfaceLight and a static loop), wetFloor (the sign shows), banner (turned 180° about
-	its forward axis). Pending sounds (OfficeAssets) are silent.
+	(cold blue Neon, a flickering SurfaceLight and a static loop), wetFloor (the sign shows), leaningLamp (the walk's
+	lamp post leans LEAN_DEGREES toward the slot's LeanDirection, its base left standing). Pending sounds
+	(OfficeAssets) are silent.
 
 	Systems (Instances, Sound, RunService); the timing, looks and per-slot decisions are the specced
 	OfficeAnomalyUtils.
@@ -418,12 +419,26 @@ function OfficeAnomalySystem.applySlot(slot: Model, seed: number, now: number, c
 				d.TextTransparency = 0
 			end
 		end
-	elseif id == "banner" then
-		local cloth = firstPart(slot, "BannerCloth")
-		if cloth ~= nil then
-			capturePart(state, cloth)
-			-- Turned about its own forward axis: upside down, the text still on the same face.
-			cloth.CFrame = cloth.CFrame * CFrame.Angles(0, 0, math.pi)
+	elseif id == "leaningLamp" then
+		local pole = firstPart(slot, "Pole")
+		local toward = slot:GetAttribute(OfficeAnomalyConstants.LEAN_DIRECTION_ATTRIBUTE)
+		if pole ~= nil and typeof(toward) == "Vector3" then
+			-- About the shaft's lower end (a cylinder's axis is its X), tipping the top toward `toward`.
+			local a = pole.CFrame * Vector3.new(pole.Size.X / 2, 0, 0)
+			local b = pole.CFrame * Vector3.new(-pole.Size.X / 2, 0, 0)
+			local foot = if a.Y < b.Y then a else b
+			local axis = Vector3.new(0, 1, 0):Cross(Vector3.new(toward.X, 0, toward.Z))
+			if axis.Magnitude > 1e-6 then
+				local turn = CFrame.new(foot)
+					* CFrame.fromAxisAngle(axis.Unit, math.rad(OfficeAnomalyConstants.LEAN_DEGREES))
+					* CFrame.new(-foot)
+				for _, d in slot:GetDescendants() do
+					if d:IsA("BasePart") and d.Name ~= "PoleBase" then
+						capturePart(state, d)
+						d.CFrame = turn * d.CFrame
+					end
+				end
+			end
 		end
 	end
 end

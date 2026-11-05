@@ -54,7 +54,7 @@ These names come from `src/ReplicatedStorage/Shared/Features/Office/Data/OfficeA
 | `welcomeScreen` | `Lobby/AnomalySlot_welcomeScreen` | `WelcomeScreen` | A dark display. Its `SurfaceGui` `Screen` (face Left, toward the rotunda) holds a TextLabel `Text` that is empty by default. |
 | `boothTv` | `Fence/AnomalySlot_boothTv` | `BoothTV` | Dark (black SmoothPlastic). |
 | `wetFloor` | `AnomalySlot_wetFloor` (folder `AnomalySlots`) | `SignFront`, `SignBack`, `SignHinge` | A yellow A-frame sign in the puddle at world (1174, -168), by the walk to the dock. The parts are Transparency 1 and the TextLabel `Text` ("CAUTION / WET FLOOR") is TextTransparency 1. Nothing collides. |
-| `banner` | `AnomalySlot_banner` (folder `AnomalySlots`) | `BannerCloth`, `BannerRod`, `BannerBracket` ×2 | Visible and the right way up. It hangs on the podium front at x 1006..1056, y 8..13.5. The SurfaceGui text "TOGETHER WE THRIVE" sits on the cloth's Front face. |
+| `leaningLamp` | `AnomalySlot_leaningLamp` (folder `SiteLights`) | `PoleBase`, `Pole`, `PoleArm`, `PoleHead`, `PoleLens`, `LightAnchor` (its SpotLight) | Upright. It is the middle sodium pole beside the walk at world (1142, -160). The Model's attribute `LeanDirection` = (-1, 0, 0): on the anomaly, everything but `PoleBase` leans 15° that way (away from the walk) about the shaft's lower end. It replaced the podium banner on 2026-11-04 (`docs/superpowers/specs/2026-11-04-podium-banner-design.md`). |
 
 ## Rebuild
 1. Open the Shift place in Edit.

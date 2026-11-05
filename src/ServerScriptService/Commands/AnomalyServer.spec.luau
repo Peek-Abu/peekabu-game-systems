@@ -56,7 +56,7 @@ return function()
 
 		it("reports when no office stands", function()
 			built = false
-			local message = anomaly({ Executor = {} }, "banner")
+			local message = anomaly({ Executor = {} }, "leaningLamp")
 			expect(message:find("Nothing changed")).to.be.ok()
 		end)
 	end)

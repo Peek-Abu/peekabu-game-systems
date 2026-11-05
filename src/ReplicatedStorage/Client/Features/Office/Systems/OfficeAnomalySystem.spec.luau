@@ -84,11 +84,35 @@ local function exterior()
 	part("SignHinge", s, { Transparency = 1 })
 	slots.wetFloor = s
 
-	s = slot(root, "banner")
-	local cloth = part("BannerCloth", s, { CFrame = CFrame.new(1030, 10, 0), Size = Vector3.new(50, 5.5, 0.15) })
-	label(cloth, Enum.NormalId.Front, "TOGETHER WE THRIVE", 0)
-	part("BannerRod", s, { CFrame = CFrame.new(1030, 13.6, 0) })
-	slots.banner = s
+	-- The walk's leaning lamp: a shaft (a cylinder, its axis along X, stood up) on a fixed base, an arm, a head and
+	-- the invisible light anchor, leaning toward -X when applied.
+	s = slot(root, "leaningLamp")
+	s:SetAttribute(OfficeAnomalyConstants.LEAN_DIRECTION_ATTRIBUTE, Vector3.new(-1, 0, 0))
+	local up = CFrame.Angles(0, 0, math.pi / 2)
+	part(
+		"PoleBase",
+		s,
+		{ Shape = Enum.PartType.Cylinder, Size = Vector3.new(1.6, 2.2, 2.2), CFrame = CFrame.new(1142, 1.8, -160) * up }
+	)
+	part(
+		"Pole",
+		s,
+		{ Shape = Enum.PartType.Cylinder, Size = Vector3.new(22, 0.7, 0.7), CFrame = CFrame.new(1142, 13.6, -160) * up }
+	)
+	part("PoleArm", s, {
+		Size = Vector3.new(0.4, 0.4, 3.4),
+		CFrame = CFrame.lookAt(Vector3.new(1143.6, 25.2, -160), Vector3.new(1145.2, 25.2, -160)),
+	})
+	part("PoleHead", s, {
+		Size = Vector3.new(2.2, 0.7, 3.6),
+		CFrame = CFrame.lookAt(Vector3.new(1145.2, 25.2, -160), Vector3.new(1146.2, 25.2, -160)),
+	})
+	part(
+		"LightAnchor",
+		s,
+		{ Transparency = 1, Size = Vector3.new(0.2, 0.2, 0.2), CFrame = CFrame.new(1145.2, 24.6, -160) }
+	)
+	slots.leaningLamp = s
 	return root, slots
 end
 
@@ -159,8 +183,11 @@ return function()
 		root:Destroy()
 	end)
 
-	local function cloth()
-		return slots.banner.BannerCloth
+	-- The shaft's lower end: the lean's pivot, which must not move.
+	local function foot(pole)
+		local a = pole.CFrame * Vector3.new(pole.Size.X / 2, 0, 0)
+		local b = pole.CFrame * Vector3.new(-pole.Size.X / 2, 0, 0)
+		return if a.Y < b.Y then a else b
 	end
 
 	describe("apply", function()
@@ -183,8 +210,16 @@ return function()
 			expect(slots.boothTv.BoothTV.Material).to.equal(Enum.Material.Neon)
 			expect(slots.boothTv.BoothTV:FindFirstChildWhichIsA("SurfaceLight") ~= nil).to.equal(true)
 			expect(slots.welcomeScreen.WelcomeScreen.Screen.Text.Text).to.equal(OfficeAnomalyUtils.wrongLine(7))
-			expect(cloth().CFrame.UpVector:FuzzyEq(-before[cloth()].cframe.UpVector, 1e-4)).to.equal(true)
-			expect(cloth().CFrame.LookVector:FuzzyEq(before[cloth()].cframe.LookVector, 1e-4)).to.equal(true)
+			local lamp = slots.leaningLamp
+			expect(lamp.PoleBase.CFrame.Position:FuzzyEq(before[lamp.PoleBase].cframe.Position, 1e-4)).to.equal(true)
+			expect(foot(lamp.Pole):FuzzyEq(Vector3.new(1142, 2.6, -160), 1e-3)).to.equal(true)
+			-- The shaft leans LEAN_DEGREES from upright, toward -X; the head and its light go with it.
+			local axis = lamp.Pole.CFrame.RightVector
+			local tilt = math.deg(math.acos(math.clamp(math.abs(axis.Y), 0, 1)))
+			expect(math.abs(tilt - OfficeAnomalyConstants.LEAN_DEGREES) < 0.01).to.equal(true)
+			expect(lamp.PoleHead.Position.X < before[lamp.PoleHead].cframe.Position.X - 3).to.equal(true)
+			expect(lamp.LightAnchor.Position.X < before[lamp.LightAnchor].cframe.Position.X - 3).to.equal(true)
+			expect(math.abs(lamp.PoleHead.Position.Z - -160) < 1e-3).to.equal(true)
 			local lit = 0
 			for _, light in root.Cars:GetChildren() do
 				if light:FindFirstChildWhichIsA("PointLight") ~= nil then
@@ -234,9 +269,9 @@ return function()
 
 		it("applying twice then resetting still restores the default", function()
 			local before = snapshot(root)
-			OfficeAnomalySystem.applySlot(slots.banner, 7, 0)
-			OfficeAnomalySystem.applySlot(slots.banner, 7, 0)
-			OfficeAnomalySystem.resetSlot(slots.banner)
+			OfficeAnomalySystem.applySlot(slots.leaningLamp, 7, 0)
+			OfficeAnomalySystem.applySlot(slots.leaningLamp, 7, 0)
+			OfficeAnomalySystem.resetSlot(slots.leaningLamp)
 			local ok, why = same(before, snapshot(root))
 			expect(why).to.equal("")
 			expect(ok).to.equal(true)
