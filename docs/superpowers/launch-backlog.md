@@ -84,10 +84,19 @@ To do together on a polish day, not now:
 - **Sound groups in SoundService:** route sounds through SoundGroups by place, e.g. a Building group muted (or heavily
   muffled) while the player is outside, an Outside group for the yard, so office zaps, phones and ambience don't carry
   into the yard through the thin shell (seen in the stage 3 review).
-- **Carry drift:** an idle character holding a carried item slowly slides (about 5 studs in 20 s, seen with a Monitor
-  and a Bottle bag). Root-cause it in the Carry feature (`CarrySpeedSystem`, `CarryPlacementSystem`).
-- **ByteNet "No readable entity found for ID: 17":** 10 server errors around a teleport-door Enter and a Harlow
-  catch. Find which packet is ID 17 and why its reader fails.
+- **Carry drift: not reproduced (2026-11-04).** Eight clean 20-30 s idle windows in the shift place held still at
+  0.00 studs: Monitor, fish tank, mug, plaque, Bottle bag; with and without an Enter teleport; arm IK on and off; no
+  Harlow. Every drift in the stage 3 report came right after an Enter, along the player's facing, once without any item,
+  in a probe session (server `pickUp`, a camera override). Two sudden jumps (not a slow slide) were seen only in probe
+  runs right after server-side pickups. Watch for it in the owner's real-input play; nothing to fix until it shows there.
+- ~~**ByteNet "No readable entity found for ID: 17"**~~ **Not a game bug (2026-11-04):** a Studio-tooling artifact. A
+  Studio MCP `execute_luau` call runs in the plugin VM with its own module cache. Requiring any module there that loads
+  ByteNet (a service, an Events module) starts a second ByteNet copy. That copy makes a second `BytenetStorage` folder
+  and hooks the same `ByteNetReliable` remote, with a packet table holding only what it loaded. Every client packet it
+  doesn't know then logs `process.read:108 ... No readable entity found for ID: N` from `onServerEvent`, the report's
+  exact stack. Reproduced: one plugin-VM `require(CarryEvents)`, then a real client `Sprint` packet (ID 38) gave that
+  error, while the game's own reader read it fine. A live server has no plugin VM. In Studio probes, require game
+  modules only from an injected Script (the game VM), never from `execute_luau` itself.
 - **Office map leftovers from the spec (not in stage 4):** the glass lift that moves on its own (no glass lift exists
   yet) and the rare set piece per run.
 - **Per-skin reveal clips (2026-10-29):** every skin purchase now plays the employee's hire reveal in that skin
@@ -121,6 +130,10 @@ From the owner's stage 4 play-check (2026-10-24):
     VFX, screen effects and music. Noise should draw him to *investigate* the spot, not start a chase until he
     actually sees the player. Check what the Noise feature feeds into his state, and whether the chase effects key off
     "hunting" rather than "chasing".
+  - **Fixed, awaiting the owner's play-check (2026-11-04):** he slides along walls and jambs instead of wedging
+    (NpcPathRules.slide); searching, he sees the one he lost all round only within CERTAIN_RANGE; a noise gives only
+    the near look (OccupantDreadFormulas). The pure brain never chased on noise, and walls and closed doors do block
+    his ray.
 - ~~**Truck departure sometimes never arrives**~~ **Not a game bug (2026-10-24):** it came from the Studio probe, not
   the game. The probe called `departNow` from an injected Script and destroyed that Script at once. `depart` hands the
   arrival to `task.defer`, and the deferred thread belongs to the calling Script, so destroying it killed the arrival.
