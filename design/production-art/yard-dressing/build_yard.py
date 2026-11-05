@@ -1,4 +1,4 @@
-# Odd Hours yard set dressing (Y3a) and critters (Y4): hand-built props on the texture-pipeline hard-surface kit.
+# Odd Hours yard set dressing (Y3a): hand-built props on the texture-pipeline hard-surface kit.
 #
 # HOW TO RUN (Blender 5.1 headless, one heavy job at a time):
 #   "C:/Program Files/Blender Foundation/Blender 5.1/blender.exe" --background --python build_yard.py -- dumpster wheeliebin:green ...
@@ -126,20 +126,6 @@ H._SPEC.update({
     "bark": lambda: _paint("bark", (0.10, 0.06, 0.035), 0.9, 0.6, scale=20),
     "petal_yel": lambda: _paint("petal_yel", (0.85, 0.62, 0.04), 0.6, 0.1),
     "seed_white": lambda: _paint("seed_white", (0.85, 0.85, 0.82), 0.8, 0.3, scale=30),
-    "catfur": lambda: _paint("catfur", (0.025, 0.022, 0.03), 0.75, 0.5, scale=25),
-    "crowfeather": lambda: _paint("crowfeather", (0.02, 0.022, 0.035), 0.4, 0.4, scale=30),
-    "beak": lambda: _paint("beak", (0.08, 0.08, 0.085), 0.4, 0.05),
-    "eye_glow": lambda: _flat("eye_glow", (0.75, 0.80, 0.18), 0.1),
-    "catfur_l": lambda: _paint("catfur_l", (0.05, 0.045, 0.06), 0.8, 0.6, scale=25),
-    "crowfeather_l": lambda: _paint("crowfeather_l", (0.035, 0.04, 0.06), 0.35, 0.4, scale=30),
-    "pink": lambda: _flat("pink", (0.55, 0.22, 0.25), 0.5),
-    "coon_belly": lambda: _flat("coon_belly", (0.60, 0.58, 0.54), 0.85),
-    "white": lambda: _flat("white", (0.85, 0.85, 0.82), 0.3),
-    "glint": lambda: _flat("glint", (1.0, 1.0, 1.0), 0.1),
-    "eye_dark": lambda: _flat("eye_dark", (0.01, 0.01, 0.01), 0.05),
-    "coon_fur": lambda: _paint("coon_fur", (0.22, 0.21, 0.20), 0.8, 0.5, scale=25),
-    "coon_light": lambda: _paint("coon_light", (0.62, 0.60, 0.56), 0.8, 0.15, scale=25),
-    "coon_mask": lambda: _paint("coon_mask", (0.025, 0.025, 0.03), 0.8, 0.4, scale=25),
 })
 
 
@@ -500,92 +486,6 @@ def grasstuft():
         rod(f"stem{i}", (x, y, 0), (x, y, h), 0.035, "leaf_light", 6)
         sphere(f"head{i}", x, y, h + 0.1, 0.16 if m == "petal_yel" else 0.22, m, 1, 1, 0.6 if m == "petal_yel" else 1)
     S2.finish2("yd_grasstuft", tex=512)
-
-
-@prop
-def cat():
-    """Fluffy black cat sitting, toy-like: big round head and cheek fluff, chunky paws, a thick tail curled round its
-    feet, big glowing eyes (an animal, never Gloom). About 2 W x 1.9 D x 2.75 H, facing -Y."""
-    sphere("body", 0, 0.1, 0.78, 0.72, "catfur", 1.0, 1.05, 1.05)
-    sphere("chest", 0, -0.3, 1.05, 0.48, "catfur_l", 1.0, 0.7, 1.1)
-    for s in (-1, 1):
-        sphere(f"haunch{s}", s * 0.5, 0.3, 0.45, 0.42, "catfur", 0.9, 1.15, 0.95)
-        sphere(f"leg{s}", s * 0.26, -0.48, 0.42, 0.21, "catfur", 1, 1, 1.9)
-        sphere(f"paw{s}", s * 0.27, -0.62, 0.13, 0.22, "catfur", 1.1, 1.3, 0.62)
-        sphere(f"cheek{s}", s * 0.42, -0.35, 1.78, 0.32, "catfur", 1.0, 0.8, 0.8)
-        ear = cone(f"ear{s}", s * 0.36, -0.15, 2.18, 2.72, 0.26, 0.04, "catfur", 12)
-        rot(ear, s * -16, "Y", (s * 0.36, -0.15, 2.18))
-        inner = cone(f"earin{s}", s * 0.35, -0.24, 2.24, 2.6, 0.15, 0.02, "pink", 10)
-        rot(inner, s * -16, "Y", (s * 0.35, -0.24, 2.24))
-        sphere(f"eye{s}", s * 0.25, -0.79, 1.98, 0.17, "eye_glow", 1, 0.45, 1.15)
-        sphere(f"pupil{s}", s * 0.25, -0.85, 1.98, 0.05, "eye_dark", 1, 0.5, 2.6)
-        sphere(f"glint{s}", s * 0.21, -0.87, 2.07, 0.035, "glint")
-    sphere("head", 0, -0.18, 1.98, 0.66, "catfur", 1.1, 1.0, 0.92)
-    sphere("muzzle", 0, -0.8, 1.74, 0.2, "catfur_l", 1.35, 0.7, 0.75)
-    sphere("nose", 0, -0.93, 1.83, 0.07, "pink", 1.3, 1, 0.8)
-    # the tail: from behind, round the right side, curling up in front of the paws
-    pts = [(0.35, 0.75, 0.2), (0.85, 0.55, 0.18), (1.05, 0.05, 0.18), (0.9, -0.5, 0.2), (0.55, -0.85, 0.28), (0.28, -0.9, 0.5)]
-    prev = (0.0, 0.8, 0.3)
-    for i, p in enumerate(pts):
-        r = 0.2 - i * 0.012
-        rod(f"tail{i}", prev, p, r, "catfur", 12)
-        sphere(f"tj{i}", *p, r, "catfur")
-        prev = p
-    S2.finish2("yd_cat", tex=512)
-
-
-@prop
-def crow():
-    """Round crow perched, toy-like: a ball body, a big round head, a chunky readable beak, white-ringed eyes, a fan
-    tail and stubby feet. About 0.9 W x 1.6 D x 1.45 H, facing -Y."""
-    sphere("body", 0, 0.12, 0.62, 0.48, "crowfeather", 0.95, 1.15, 0.9)
-    sphere("head", 0, -0.32, 1.08, 0.36, "crowfeather")
-    beak = cone("beak", 0, -0.62, 0.0, 0.5, 0.15, 0.02, "beak", 14)
-    rot(beak, 84, "X", (0, -0.62, 0.0))
-    for v in beak.data.vertices:
-        v.co.z += 1.02
-    for s in (-1, 1):
-        sphere(f"wing{s}", s * 0.4, 0.22, 0.66, 0.36, "crowfeather_l", 0.4, 1.35, 0.8)
-        sphere(f"eyew{s}", s * 0.2, -0.56, 1.17, 0.1, "white", 1, 0.5, 1)
-        sphere(f"eye{s}", s * 0.21, -0.61, 1.17, 0.055, "eye_dark")
-        sphere(f"glint{s}", s * 0.19, -0.64, 1.2, 0.02, "glint")
-        cyl(f"leg{s}", s * 0.16, 0.0, 0.08, 0.25, 0.06, "beak", verts=10, bevel=0)
-        sphere(f"foot{s}", s * 0.16, -0.08, 0.06, 0.13, "beak", 0.9, 1.4, 0.45)
-    tail = sphere("tail", 0, 0.75, 0.48, 0.3, "crowfeather", 0.9, 1.2, 0.3)
-    rot(tail, 22, "X", (0, 0.5, 0.55))
-    S2.finish2("yd_crow", tex=512)
-
-
-@prop
-def raccoon():
-    """Raccoon sitting, toy-like: round grey body and pale belly, a proper black mask with white brows, round ears, a
-    pointed pale snout, and a big fluffy ringed tail curling up behind. About 1.9 W x 2.2 D x 2.1 H, facing -Y."""
-    sphere("body", 0, 0.1, 0.72, 0.68, "coon_fur", 1.0, 1.0, 1.05)
-    sphere("belly", 0, -0.3, 0.72, 0.46, "coon_belly", 1.0, 0.6, 1.1)
-    for s in (-1, 1):
-        sphere(f"haunch{s}", s * 0.48, 0.25, 0.4, 0.38, "coon_fur", 0.9, 1.15, 0.95)
-        sphere(f"arm{s}", s * 0.4, -0.42, 0.75, 0.17, "coon_fur", 1, 1, 1.8)
-        sphere(f"hand{s}", s * 0.36, -0.58, 0.42, 0.17, "coon_mask", 1.1, 1.2, 0.8)
-        sphere(f"foot{s}", s * 0.3, -0.55, 0.1, 0.2, "coon_mask", 1.1, 1.35, 0.55)
-        sphere(f"ear{s}", s * 0.45, -0.05, 2.0, 0.2, "coon_fur", 1, 0.55, 1.05)
-        sphere(f"earin{s}", s * 0.45, -0.12, 2.0, 0.13, "coon_light", 1, 0.4, 1)
-        sphere(f"brow{s}", s * 0.24, -0.76, 1.86, 0.16, "coon_light", 1.4, 0.6, 0.55)
-        sphere(f"cheek{s}", s * 0.36, -0.66, 1.42, 0.2, "coon_light", 1.2, 0.7, 0.8)
-        sphere(f"eye{s}", s * 0.24, -0.86, 1.64, 0.11, "eye_glow", 1, 0.5, 1.05)
-        sphere(f"pupil{s}", s * 0.24, -0.92, 1.64, 0.055, "eye_dark")
-        sphere(f"glint{s}", s * 0.21, -0.95, 1.69, 0.025, "glint")
-    sphere("head", 0, -0.2, 1.62, 0.56, "coon_fur", 1.15, 1.0, 0.92)
-    sphere("mask", 0, -0.55, 1.63, 0.42, "coon_mask", 1.5, 0.78, 0.42)
-    snout = cone("snout", 0, -0.6, 0, 0.42, 0.22, 0.07, "coon_light", 16)
-    rot(snout, 90, "X", (0, -0.6, 0))
-    for v in snout.data.vertices:
-        v.co.z += 1.38
-    sphere("nose", 0, -1.02, 1.4, 0.08, "eye_dark", 1.2, 1, 0.9)
-    # the ringed tail: alternating dark and grey segments curling up behind
-    pts = [(-0.55, 0.55, 0.25), (-0.95, 0.65, 0.35), (-1.2, 0.6, 0.6), (-1.3, 0.45, 0.92), (-1.22, 0.25, 1.22), (-1.05, 0.1, 1.45)]
-    for i, p in enumerate(pts):
-        sphere(f"ring{i}", *p, 0.3 - i * 0.02, "coon_mask" if i % 2 else "coon_fur")
-    S2.finish2("yd_raccoon", tex=512)
 
 
 if __name__ == "__main__":

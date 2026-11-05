@@ -1,6 +1,6 @@
 --!nocheck
--- Odd Hours: Shift place, Edit only. Builds Workspace.YardDressing (Y3b + Y4): the uploaded yard props, the grass verges,
--- the critters (tagged for OfficeCritterSystem), moths and fireflies, and the yard's sound emitters (OfficeAmbient +
+-- Odd Hours: Shift place, Edit only. Builds Workspace.YardDressing (Y3b): the uploaded yard props, the grass verges,
+-- moths and fireflies, the parked cars, and the yard's sound emitters (OfficeAmbient +
 -- AmbientKind, replacing the yard-sounds check's Play-only stand-ins). It also marks every OfficeExterior puddle
 -- FootstepSurface = "puddle". Idempotent: rebuilds the folder each run, as one ChangeHistory step (Ctrl+Z undoes it).
 -- It never touches OfficeExterior's parts except the puddles' attribute.
@@ -226,18 +226,6 @@ local function emitter(kind, centre, size, parent)
 	return p
 end
 
-local function critter(parent, mesh, kind, x, z, face, baseY, flee, drop)
-	local m =
-		prop(parent, mesh, nil, x, z, face, baseY, { collide = false, name = "Critter_" .. kind, keepClear = false })
-	m:SetAttribute("CritterKind", kind)
-	m:SetAttribute("FleeDirection", flee)
-	if drop then
-		m:SetAttribute("FleeDrop", drop)
-	end
-	CS:AddTag(m, "OfficeCritter")
-	return m
-end
-
 local function particles(name, size, cf, parent, sprite, props)
 	local p = invisible(name, size, cf, parent)
 	local e = Instance.new("ParticleEmitter")
@@ -257,7 +245,7 @@ local function build()
 
 	-- Dock apron: dumpster (lid propped open on its -X half), three wheelie bins, pallets, crates, the drinks machine.
 	local dock = folder("Dock")
-	local dumpster = prop(dock, "dumpster", nil, 1106, -70.6, S, DOCK_PAD)
+	prop(dock, "dumpster", nil, 1106, -70.6, S, DOCK_PAD)
 	prop(dock, "wheeliebin", "wheeliebin", 1136, -68, Vector3.new(0.1, 0, -1).Unit, DOCK_PAD)
 	prop(dock, "wheeliebin", "wheeliebin_blue", 1139.2, -68.3, S, DOCK_PAD)
 	prop(dock, "wheeliebin", "wheeliebin_grey", 1142.4, -67.9, Vector3.new(-0.12, 0, -1).Unit, DOCK_PAD)
@@ -377,7 +365,7 @@ local function build()
 
 	-- West car park (noses toward the building, the carTicking blockout car at z 35 stays) and the front row.
 	local cars = folder("Cars")
-	if IDS.car then -- the cars and critters are placed once their meshes are approved and uploaded
+	if IDS.car then -- the cars are placed once their mesh is uploaded
 		prop(cars, "car", "car", 910, -15, E)
 		prop(cars, "car", "car_slate", 910, 15, E, nil, { hazard = true, name = "car_hazards" })
 		prop(cars, "car", "car_red", 910, 65, E)
@@ -410,20 +398,6 @@ local function build()
 	-- the free strip between the two planters (z 178..186): the planters, hedges and topiaries fill the rest
 	prop(plaza, "bench", nil, 932, 181.5, N, PLAZA_Y)
 	prop(plaza, "litterbin", nil, 938.6, 182, S, PLAZA_Y)
-
-	-- Critters (dressing only): the cat on the dumpster's closed lid half, the raccoon in its open half, crows on the
-	-- south fence rail behind the truck pad.
-	local crit = folder("Critters")
-	if IDS.cat then
-		local d = dumpster.PrimaryPart
-		local base = d.Position.Y - d.Size.Y / 2
-		-- the mesh is X-mirrored: the propped-open lid half is the dumpster's world -X half here
-		critter(crit, "cat", "cat", d.Position.X + 2.3, d.Position.Z + 0.3, S, base + 5.62, W, 5.62)
-		critter(crit, "raccoon", "raccoon", d.Position.X - 2.4, d.Position.Z - 0.6, S, base + 5.0, S)
-		for i, x in { 1139, 1144.5, 1150 } do
-			critter(crit, "crow", "crow", x, -321, Vector3.new(0.2 * (i - 2), 0, 1).Unit, GROUND + 8.9, S)
-		end
-	end
 
 	-- Sound emitters (yard design doc, Y3b table): placed with the props.
 	local se = folder("SoundEmitters")

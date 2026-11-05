@@ -389,7 +389,6 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Features.Office.OfficeServiceServer"] = "Instance/signal shell (layout rules, spawn roll and spawn rules are specced)",
 	["ReplicatedStorage.Shared.Features.Office.Data.OfficeDecorConstants"] = "static decor look and emitter names (no logic)",
 	["ReplicatedStorage.Client.Features.Office.OfficeServiceClient"] = "client service shell (starts the atmosphere and ambience systems)",
-	["ReplicatedStorage.Client.Features.Office.Data.OfficeCritterConstants"] = "static critter names and tuning (no logic)",
 	["ReplicatedStorage.Client.Features.Depot.Data.DepotAssets"] = "asset id slots; registers the hub's record at load (no decisions)",
 	["ReplicatedStorage.Client.Features.Office.Data.OfficeAssets"] = "asset id slots; registers the uploaded sounds at load (no decisions)",
 	["ReplicatedStorage.Client.Features.Office.Data.OfficeAtmosphereConstants"] = "static presets and timing (no logic)",

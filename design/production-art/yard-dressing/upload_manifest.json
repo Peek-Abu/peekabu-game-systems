@@ -65,21 +65,6 @@
   "name": "OH yard grasstuft"
  },
  {
-  "type": "model",
-  "path": "export/yd_cat.fbx",
-  "name": "OH yard cat"
- },
- {
-  "type": "model",
-  "path": "export/yd_crow.fbx",
-  "name": "OH yard crow"
- },
- {
-  "type": "model",
-  "path": "export/yd_raccoon.fbx",
-  "name": "OH yard raccoon"
- },
- {
   "type": "image",
   "path": "out/yd_dumpster_color.png",
   "name": "OH yard dumpster color"
@@ -293,51 +278,6 @@
   "type": "image",
   "path": "out/yd_grasstuft_rough.png",
   "name": "OH yard grasstuft rough"
- },
- {
-  "type": "image",
-  "path": "out/yd_cat_color.png",
-  "name": "OH yard cat color"
- },
- {
-  "type": "image",
-  "path": "out/yd_cat_normal.png",
-  "name": "OH yard cat normal"
- },
- {
-  "type": "image",
-  "path": "out/yd_cat_rough.png",
-  "name": "OH yard cat rough"
- },
- {
-  "type": "image",
-  "path": "out/yd_crow_color.png",
-  "name": "OH yard crow color"
- },
- {
-  "type": "image",
-  "path": "out/yd_crow_normal.png",
-  "name": "OH yard crow normal"
- },
- {
-  "type": "image",
-  "path": "out/yd_crow_rough.png",
-  "name": "OH yard crow rough"
- },
- {
-  "type": "image",
-  "path": "out/yd_raccoon_color.png",
-  "name": "OH yard raccoon color"
- },
- {
-  "type": "image",
-  "path": "out/yd_raccoon_normal.png",
-  "name": "OH yard raccoon normal"
- },
- {
-  "type": "image",
-  "path": "out/yd_raccoon_rough.png",
-  "name": "OH yard raccoon rough"
  },
  {
   "type": "image",

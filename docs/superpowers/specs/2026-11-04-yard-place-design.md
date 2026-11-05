@@ -160,24 +160,26 @@ truck.
   fix critters AND cars". Cars and critters were remade (v2 sheet `yard_cars_critters_v2.jpg`), waiting on the
   owner's look. The CC0 scans (ambientCG Wood049, PaintedPlaster017) are OK; the pallet and bench use the oak scan,
   everything else is procedural.
+- 2026-11-05: v2 cars **approved** ("Ye cars are good"); uploaded and placed.
+- 2026-11-05: **critters cut** ("remove critters - we don't need this"). The cat, crows and raccoon, their code
+  (`OfficeCritterSystem`, `OfficeCritterConstants`) and their placement are removed. The moths and fireflies stay
+  (particle dressing on the poles and verges).
 
-## Y3 / Y4 result (2026-11-05)
+## Y3 result (2026-11-05)
 
 - **Props (Y3a):** hand-built in `design/production-art/yard-dressing/build_yard.py` (texture-pipeline kit, no AI
   meshes). The 12 approved props, their maps and the moth and firefly sprites are uploaded to Icey Labs (52 assets,
   all Approved, owner verified); ids in `yard-dressing/upload_log.jsonl`.
 - **Placement (Y3b):** `yard-dressing/PlaceYardDressing.CommandBar.luau` builds `Workspace.YardDressing` in the Shift
-  place (Dock, Walk, Verges, Moths, Cars, Booth, Plaza, Critters, SoundEmitters). It fails the build if a prop lands
+  place (Dock, Walk, Verges, Moths, Cars, Booth, Plaza, SoundEmitters). It fails the build if a prop lands
   on the walk, the size-B truck footprint or the time clock. 33 emitters at the Y3b spots, one new light (the drinks
-  machine). Cars and critters are placed once their v2 meshes are approved and uploaded.
+  machine). The 5 v2 cars are uploaded and placed (the slate one by the car park blinks its hazards).
 - **Puddles:** the footsteps find the floor with a downward ray, which skips `CanQuery`-off parts, and the exterior
   builder made every puddle `CanQuery = false`, so the puddle layer could never play from a real puddle. Both scripts
   now set `FootstepSurface = "puddle"` and `CanQuery = true`. Real play: grass and puddle layers play on Pippa's steps.
 - **Hazard lights:** the parked car's amber corner lights blink as glow particles (0.8 s), no code.
-- **Critters (Y4):** `OfficeCritterSystem` + `OfficeCritterConstants` (Office, client), started by
-  `OfficeServiceClient`. Tag `OfficeCritter`, attributes `CritterKind` (cat, crow, raccoon), `FleeDirection`,
-  `FleeDrop`. A critter flees on this client when any player comes within its kind's `near`, is hidden
-  (LocalTransparencyModifier), and comes back home after `returnAfter` with nobody within 30 studs.
+- **Critters (Y4): cut by the owner on 2026-11-05.** The fleeing cat, crows and raccoon and their client code were
+  built, then removed; only the moths and fireflies (particles) remain.
 
 ## Build plan
 
@@ -192,7 +194,7 @@ which sit on Y3's props.
 | Y2b | **Code, spec first.** `FootstepTypes` gains the 4 surfaces and `LayerPools`. `FootstepConstants` gains the material map (Grass, LeafyGrass, Ground → grass; Pebble → gravel; Asphalt and Pavement → asphalt only outside, by the `FootstepSurface` attribute or the place). `FootstepSurfaceUtils` decides the surface. `FootstepAssets` gains `LAYERS`. `FootstepEmitterSystem` plays the layer with the step. | code session |
 | Y3a | **Props.** Hand-built hard props (`hardlib.py`): dumpster, wheelie bins, pallets, crates, cones, A-frame barrier, trolley, vending machine, picnic bench, plain litter bin, 5 toy-like cars. Bushes and grass tufts. Through the texture style filter. Owner checks the turntables. Upload. | art session (Claude, Blender) |
 | Y3b | **Placement.** In the Shift place, in a new top-level `Workspace.YardDressing` folder, so a rebuild of `OfficeExterior` never deletes it. Puddles get `FootstepSurface = "puddle"` (in the builder script too). The vending machine, booth radio and walk poles get invisible `OfficeAmbient` emitters with their `AmbientKind`. Within budget: about 1,100 parts and 7 lights. The walk line, the truck pad, the arrivals and the pathing stay clear. | Studio builder (hired) or a Studio session (Claude via Studio MCP), coordinator first |
-| Y4 | **Critters (dressing only).** Moths and fireflies as particles on the poles and verges. A cat on the dumpster, crows on the fence and a raccoon in a bin, each hopping or flying off when a player comes near, on this client only. | art session (models), code session |
+| Y4 | **Moths and fireflies** as particles on the poles and verges. (The fleeing cat, crows and raccoon were cut by the owner on 2026-11-05.) | art session |
 | Y5 | **Check in real play.** Walk truck → dock → lobby → truck with a second client: the bed crossfades at each door, the steps change on grass, gravel and puddles, and nothing blocks the walk. | owner |
 
 ### Y3b: the sound emitters the builder places (owner, 2026-11-04: "ensure sounds are played from correct directions and locations")
@@ -236,14 +238,8 @@ Result of the check: each loop played from its emitter, and was gone past its si
 from inside its source, within reach. Each step's layer played on the foot that landed. Real-play numbers are in the
 session notes (`yard-sounds-2026-11-04.md`).
 
-**New modules (Y4 only):**
-
-| Feature | Realm | Subfolder | Name | Job |
-|---|---|---|---|---|
-| Office | client | Systems | `OfficeCritterSystem` | Plays the yard critters' idle and flee on this client when a player comes near (tag-driven). |
-| Office | client | Data | `OfficeCritterConstants` | The critter tag, the flee distance, and each critter's idle and flee clips. |
-
-Y1 and Y2 change existing modules only. No new subfolder kind, role word or service.
+**New modules:** none. Y4's `OfficeCritterSystem` and `OfficeCritterConstants` were removed with the critters
+(2026-11-05). Y1 and Y2 change existing modules only. No new subfolder kind, role word or service.
 
 ## Questions for the owner
 
