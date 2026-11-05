@@ -19,6 +19,7 @@ local function fakeTemplate(approved)
 		{
 			{ "BoxShell", Vector3.new(0, 3.65, 0.3), Vector3.new(13, 7.9, 16.4) },
 			{ "BoxRoof", Vector3.new(0, 7.35, 0.3), Vector3.new(13.4, 0.75, 16.9) },
+			{ "BoxBand", Vector3.new(0, 3.6, 0.15), Vector3.new(13.12, 1.8, 15.8) },
 			{ "ScannerLight", Vector3.new(0, 4.5, -8.6), Vector3.new(12, 7.6, 1) },
 		}
 	do
@@ -224,7 +225,10 @@ return function()
 			expect((deckPoint(bed, shell.Position) - Vector3.new(0, 3.65, 0.3)).Magnitude < 1e-3).to.equal(true)
 			expect(shell.CanCollide).to.equal(false)
 			expect(shell.Anchored).to.equal(true)
-			expect(#shell:GetChildren()).to.equal(2)
+			expect(#shell:GetChildren()).to.equal(0)
+			local band = art:FindFirstChild(Constants.BAND_PIECE)
+			expect(#band:GetChildren()).to.equal(2)
+			expect(band:FindFirstChildWhichIsA("SurfaceGui")).to.be.ok()
 			expect(CollectionService:HasTag(art:FindFirstChild("ScannerLight"), DepotConstants.SCANNER_TAG)).to.equal(
 				true
 			)

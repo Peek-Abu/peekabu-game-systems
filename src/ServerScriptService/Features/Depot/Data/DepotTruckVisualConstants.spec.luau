@@ -111,6 +111,50 @@ return function()
 			expect(Constants.CLOCK_MOUNT.Z).to.be.near(wall - 0.06, 1e-6)
 		end)
 
+		it("names the art's sockets and its interior slots, on the walls and ceiling only", function()
+			local seen = {}
+			for _, name in Constants.SOCKETS do
+				expect(string.sub(name, 1, 7)).to.equal("Socket_")
+				expect(seen[name]).to.equal(nil)
+				seen[name] = true
+			end
+			for _, slot in { "roof", "front", "sideL", "sideR", "mirror", "horn" } do
+				expect(Constants.SOCKETS[slot]).to.be.ok()
+			end
+			local count = 0
+			for _, name in Constants.INTERIOR_SLOTS do
+				expect(string.sub(name, 1, 9)).to.equal("Interior_")
+				expect(seen[name]).to.equal(nil)
+				seen[name] = true
+				count += 1
+			end
+			expect(count).to.equal(3)
+			for _, slot in { "ceiling", "wallL", "wallR" } do
+				expect(Constants.INTERIOR_SLOTS[slot]).to.be.ok()
+			end
+		end)
+
+		it("paints the livery on the band's outer faces, on the art and the graybox alike", function()
+			local graybox = {}
+			for _, entry in Constants.GRAYBOX do
+				graybox[entry.name] = true
+			end
+			local sides = { art = {}, graybox = {} }
+			for _, target in Constants.LIVERY_FACES do
+				expect(target.face == Enum.NormalId.Left or target.face == Enum.NormalId.Right).to.equal(true)
+				if target.piece == Constants.BAND_PIECE then
+					sides.art[target.face] = true
+				else
+					expect(graybox[target.piece]).to.equal(true)
+					sides.graybox[target.face] = true
+				end
+			end
+			for _, found in sides do
+				expect(found[Enum.NormalId.Left]).to.equal(true)
+				expect(found[Enum.NormalId.Right]).to.equal(true)
+			end
+		end)
+
 		it("gives every graybox piece a name, a size and a known shape", function()
 			for _, list in { Constants.GRAYBOX, Constants.CLOCK_GRAYBOX } do
 				for _, entry in list do

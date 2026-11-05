@@ -1,6 +1,6 @@
 --!strict
 --[=[
-	DepotTruckVisualConstants: the Mobile Recovery Unit (truck design A, characters/truck/build_truck.py) in DECK
+	DepotTruckVisualConstants: the crew truck (v2, look A "Night Shift", characters/truck/build_truck_v2.py) in DECK
 	SPACE: studs from the middle of the bed's top face, +Y up, +Z toward the cab, -Z the open back and the ramp. The
 	bed (12 x DECK x 16, the queue pad / banking bed) is the floor; everything here sits round it, so the bed's
 	whole footprint stays clear inside the box (walls outside x = +-6, the doorway 12 wide and under the roll drum).
@@ -20,6 +20,9 @@
 	  of the front wall at CLOCK_MOUNT (its back centre, facing the open back); PAPERWORK frames the office's
 	  interactable parts there: the clock's hit box round the art, and the overtime sheet on the other side.
 	- GRAYBOX: the fallback look when the approved template (TEMPLATE_PATH, RuntimeApproved) is missing.
+	- LIVERY: the side line on the band's outer faces (BAND_PIECE on the art, BandLeft/BandRight on the graybox).
+	- SOCKETS / INTERIOR_SLOTS: the attachments the template carries for truck parts (crew hosting batch 6; unused
+	  until then). Interior slots are on the walls and ceiling only: the box's floor is the bed, always clear.
 
 	Static data (checked by DepotTruckVisualConstants.spec).
 
@@ -55,6 +58,7 @@ local GRAPHITE = Color3.fromRGB(46, 53, 54)
 local GLASS = Color3.fromRGB(62, 94, 102)
 local RAMP_GREY = Color3.fromRGB(126, 138, 140)
 local SCANNER_IDLE = Color3.fromRGB(36, 112, 76)
+local BAND = Color3.fromRGB(123, 63, 242)
 
 local function piece(
 	name: string,
@@ -89,6 +93,8 @@ local GRAYBOX: { Piece } = {
 	piece("CabWindows", Vector3.new(0, 4.4, 14.52), Vector3.new(8.4, 2.6, 0.1), GLASS, Enum.Material.Glass),
 	piece("Chassis", Vector3.new(0, -1, 1.6), Vector3.new(9, 1.2, 19.6), GRAPHITE),
 	piece("Ramp", Vector3.new(0, -1.5, -10), Vector3.new(7, 3, 4), RAMP_GREY, nil, "Wedge"),
+	piece("BandLeft", Vector3.new(-6.525, 3.6, 0.15), Vector3.new(0.07, 1.8, 15.8), BAND),
+	piece("BandRight", Vector3.new(6.525, 3.6, 0.15), Vector3.new(0.07, 1.8, 15.8), BAND),
 }
 for _, z in { -4, 11.2 } do
 	for _, side in { -1, 1 } do
@@ -202,11 +208,30 @@ local CLOCK_GRAYBOX: { Piece } = {
 	piece("ClockCards", Vector3.new(1.2, -0.15, -0.15), Vector3.new(0.7, 1.2, 0.3), TEAL),
 }
 
+-- The art's band strip: one mesh across both sides, so its Left/Right faces are the band's outer faces.
+local BAND_PIECE = "BoxBand"
+
 local LIVERY_FACES: { LiveryFace } = {
-	{ piece = "BoxShell", face = Enum.NormalId.Left },
-	{ piece = "BoxShell", face = Enum.NormalId.Right },
-	{ piece = "BoxSideLeft", face = Enum.NormalId.Left },
-	{ piece = "BoxSideRight", face = Enum.NormalId.Right },
+	{ piece = BAND_PIECE, face = Enum.NormalId.Left },
+	{ piece = BAND_PIECE, face = Enum.NormalId.Right },
+	{ piece = "BandLeft", face = Enum.NormalId.Left },
+	{ piece = "BandRight", face = Enum.NormalId.Right },
+}
+
+-- Attachment names on the template (characters/truck/v2/Truck_v2.json has where each one sits).
+local SOCKETS = {
+	roof = "Socket_Roof",
+	front = "Socket_Front",
+	sideL = "Socket_SideL",
+	sideR = "Socket_SideR",
+	mirror = "Socket_Mirror",
+	horn = "Socket_Horn",
+}
+
+local INTERIOR_SLOTS = {
+	ceiling = "Interior_Ceiling",
+	wallL = "Interior_WallL",
+	wallR = "Interior_WallR",
 }
 
 return table.freeze({
@@ -236,10 +261,14 @@ return table.freeze({
 	CLOCK_MOUNT = CLOCK_MOUNT,
 	CLOCK_GRAYBOX = table.freeze(CLOCK_GRAYBOX),
 	PAPERWORK = table.freeze(PAPERWORK),
-	-- The box-side livery (characters/truck/truck_livery.png; Icey Labs decal 116426639844539 -> this image).
-	LIVERY_IMAGE = "rbxassetid://133126605608436",
+	-- The band's side line (characters/truck/v2/livery_v2_1.png, "WE CLEAN UP THE NIGHT!"; Icey Labs decal
+	-- 124374101661258 -> this image).
+	LIVERY_IMAGE = "rbxassetid://88638476950706",
+	BAND_PIECE = BAND_PIECE,
 	LIVERY_FACES = table.freeze(LIVERY_FACES),
-	LIVERY_PIXELS_PER_STUD = 40,
+	SOCKETS = table.freeze(SOCKETS),
+	INTERIOR_SLOTS = table.freeze(INTERIOR_SLOTS),
+	LIVERY_PIXELS_PER_STUD = 100,
 	-- The warm lamp under the roof.
 	ROOF_PIECE = "BoxRoof",
 	LAMP_COLOR = Color3.fromRGB(255, 226, 170),
