@@ -24,4 +24,18 @@ return function()
 			expect(DeathRespawnRules.keepsPlace("yes")).to.equal(false)
 		end)
 	end)
+	describe("watches", function()
+		it("watches the player's live character, in the world", function()
+			expect(DeathRespawnRules.watches(true, true)).to.equal(true)
+		end)
+
+		it(
+			"skips a character already replaced or removed (a rebuild right after a spawn): no wait, no warning",
+			function()
+				expect(DeathRespawnRules.watches(false, true)).to.equal(false)
+				expect(DeathRespawnRules.watches(true, false)).to.equal(false)
+				expect(DeathRespawnRules.watches(false, false)).to.equal(false)
+			end
+		)
+	end)
 end

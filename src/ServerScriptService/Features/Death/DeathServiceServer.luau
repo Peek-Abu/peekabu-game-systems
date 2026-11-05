@@ -285,6 +285,10 @@ local DeathServiceServer: DeathServiceServer = {
 		table.insert(
 			stoppers,
 			Observers.observeCharacter(function(player: Player, character: Model)
+				-- Deferred: a character rebuilt right after it spawned arrives here already destroyed (no Humanoid).
+				if not DeathRespawnRules.watches(player.Character == character, character.Parent ~= nil) then
+					return nil
+				end
 				local resolver = spawnResolver
 				if
 					resolver ~= nil
@@ -309,6 +313,9 @@ local DeathServiceServer: DeathServiceServer = {
 				if humanoid == nil then
 					local found = character:WaitForChild("Humanoid", 5)
 					humanoid = if found ~= nil and found:IsA("Humanoid") then found else nil
+				end
+				if not DeathRespawnRules.watches(player.Character == character, character.Parent ~= nil) then
+					return nil
 				end
 				if humanoid == nil then
 					log:warn(`{player.Name}'s character has no Humanoid; death is not tracked`)
