@@ -59,6 +59,13 @@ return function()
 			expect(OccupantDreadFormulas.stage(input({ active = false, mode = "chase", target = ME }))).to.equal("none")
 		end)
 
+		it("is only near while a noise draws him (investigate, or a head turn at nobody): no hunt look yet", function()
+			expect(OccupantDreadFormulas.stage(input({ mode = "investigate" }))).to.equal("near")
+			expect(OccupantDreadFormulas.stage(input({ mode = "alert" }))).to.equal("near")
+			expect(OccupantDreadFormulas.stage(input({ mode = "alert", target = 99 }))).to.equal("near")
+			expect(OccupantDreadFormulas.stage(input({ mode = "investigate", proximity = 0 }))).to.equal("none")
+		end)
+
 		it("is near while he walks or works unaware, and nothing on his break", function()
 			expect(OccupantDreadFormulas.stage(input({ mode = "patrol" }))).to.equal("near")
 			expect(OccupantDreadFormulas.stage(input({ mode = "work", phase = "type" }))).to.equal("near")
@@ -69,9 +76,11 @@ return function()
 		end)
 
 		it("is aware while he hunts, stares or turns on you", function()
-			for _, mode in { "investigate", "search", "stare", "alert" } do
+			for _, mode in { "search", "stare" } do
 				expect(OccupantDreadFormulas.stage(input({ mode = mode }))).to.equal("aware")
 			end
+			expect(OccupantDreadFormulas.stage(input({ mode = "alert", target = ME }))).to.equal("aware")
+			expect(OccupantDreadFormulas.stage(input({ mode = "investigate", target = ME }))).to.equal("aware")
 			expect(OccupantDreadFormulas.stage(input({ mode = "chase", target = 99 }))).to.equal("aware")
 			expect(OccupantDreadFormulas.stage(input({ mode = "work", phase = "ambush", target = ME }))).to.equal(
 				"aware"

@@ -4,7 +4,8 @@
 	scary"; "him nearby should have screen effects or heartbeats or both"). Every knob is OccupantConstants.DREAD.
 
 	- `stage`: none (outside a shift, in the hub, him far or on his break, or catching you), near (he is within
-	  RANGE_FAR and unaware), aware (he hunts, stares or turns on you), chase (he chases you), crew (a crewmate is chased
+	  RANGE_FAR and unaware, or only following a noise), aware (he hunts, stares or turns on you), chase (he chases you),
+	  crew (a crewmate is chased
 	  near you or the crewmate you spectate). A spectator only ever gets the crew look.
 	- `proximity`: 0 at RANGE_FAR, 1 within RANGE_FULL; with no line of sight he counts OCCLUDED_SCALE times farther.
 	- `target`: the stage's look (DREAD.LOOKS) at that proximity, chase closeness or crew weight; hiding near him makes
@@ -93,11 +94,11 @@ local function blend(from: DreadLook, to: DreadLook, alpha: number): DreadLook
 end
 
 -- Modes in which he is hunting someone (or about to): "sees you or hunting".
--- `alert`: his head turned to something he half noticed (behaviours design §10.2).
-local HUNTING: { [string]: boolean } =
-	{ investigate = true, search = true, stare = true, chase = true, catch = true, alert = true }
--- Modes in which he goes about his business, unaware.
-local UNAWARE: { [string]: boolean } = { patrol = true, work = true }
+local HUNTING: { [string]: boolean } = { search = true, stare = true, chase = true, catch = true }
+-- Modes in which he goes about his business unaware, or only follows a noise: walking to it (investigate) or his head
+-- turned to it or to someone else (alert, behaviours design §10.2). A noise is not a hunt (owner's play, 2026-10-24):
+-- only near, until he turns on you (`onMe`) or sees you and chases.
+local UNAWARE: { [string]: boolean } = { patrol = true, work = true, investigate = true, alert = true }
 
 -- The slow turns' phases (behaviours design §11.2), standing (alert) or seated (work).
 local SLOW_PHASES: { [string]: boolean } = { slowTurn = true, staring = true }
