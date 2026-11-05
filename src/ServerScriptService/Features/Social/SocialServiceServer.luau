@@ -27,6 +27,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local Observers = require(ReplicatedStorage.Packages.Observers)
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local PlayerDataTypes = require(ReplicatedStorage.Shared.Data.PlayerDataTypes)
+local RankFormulas = require(ReplicatedStorage.Shared.Features.Rank.Utils.RankFormulas)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local SocialConstants = require(ReplicatedStorage.Shared.Features.Social.Data.SocialConstants)
 local SocialEvents = require(ReplicatedStorage.Shared.Features.Social.Net.SocialEvents)
@@ -36,7 +37,6 @@ local MarketplaceServiceServer = require(ServerScriptService.Features.Marketplac
 local PlayerDataService = require(ServerScriptService.Features.PlayerData.PlayerDataServiceServer)
 local PlayerDataSliceSystem = require(ServerScriptService.Features.PlayerData.Systems.PlayerDataSliceSystem)
 local ShiftServiceServer = require(ServerScriptService.Features.Shift.ShiftServiceServer)
-local ShiftReviewSystem = require(ServerScriptService.Features.Shift.Systems.ShiftReviewSystem)
 local SocialFriendTracker = require(ServerScriptService.Features.Social.State.SocialFriendTracker)
 local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
 
@@ -207,11 +207,9 @@ SocialServiceServer = {
 				return
 			end
 			paidRuns[state.shift] = true
-			local ids: { number } = {}
-			for _, member in ShiftReviewSystem.crew() do
-				table.insert(ids, member.userId)
-			end
-			self:payReferrals(ids)
+			-- Only a worked shift pays (RankFormulas.worked), so clocking out at once earns no referral Gleam.
+			local review = ShiftServiceServer:getResults()
+			self:payReferrals(if review ~= nil then RankFormulas.workedIds(review) else {})
 		end)
 		table.insert(stoppers, function()
 			reviewed:Disconnect()

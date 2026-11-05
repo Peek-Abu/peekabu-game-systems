@@ -41,6 +41,8 @@ export type Progress = {
 export type CrewEntry = {
 	userId: number,
 	caught: number,
+	-- Piles cleared and cargo items banked (either one counts as doing something; RankFormulas.worked).
+	piles: number,
 	items: number,
 	overtimeSalvage: number,
 	-- Another crew member is their Roblox friend.

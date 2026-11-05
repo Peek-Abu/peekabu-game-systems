@@ -25,6 +25,8 @@ local function results(lines, quotaMet)
 		quotaMet = quotaMet,
 		crew = lines,
 		awards = {},
+		-- Long enough to count as worked (RankFormulas.worked).
+		ranFor = RankConstants.MIN_WORKED_SECONDS + 60,
 	}
 end
 
@@ -76,7 +78,7 @@ return function()
 		it("stamps PROMOTED once the award that crossed a level has landed", function()
 			-- The review pays 35 XP (shift 10 + contract 15 + clocked out 5 + whole crew 5), so 70 -> 105 crosses
 			-- level 1 (New Kid, 0) into level 2 (Sweeper, 75).
-			local review = results({ line(1) }, true)
+			local review = results({ line(1, { piles = 1 }) }, true)
 			local landed = RankViewModel.slip({ xp = 105, prevXp = 70 }, review, { 1 }, 1)
 			expect(landed.promoted).to.equal(true)
 			local pending = RankViewModel.slip({ xp = 105, prevXp = 105 }, review, { 1 }, 1)
@@ -84,10 +86,18 @@ return function()
 		end)
 
 		it("files an incident report for a caught player", function()
-			local review = results({ line(1, { caught = 1 }) }, false)
+			local review = results({ line(1, { caught = 1, piles = 1 }) }, false)
 			local view = RankViewModel.slip({ xp = 10, prevXp = 0 }, review, { 1 }, 1)
 			expect(view.incident).to.equal("Incident Report filed")
 			expect(view.gain).to.equal("+10 XP this shift")
+		end)
+
+		it("shows no XP for a shift clocked out at once with nothing done", function()
+			local review = results({ line(1) }, false)
+			review.ranFor = 5
+			local view = RankViewModel.slip({ xp = 10, prevXp = 10 }, review, { 1 }, 1)
+			expect(view.gain).to.equal("+0 XP this shift")
+			expect(view.breakdown).to.equal("")
 		end)
 
 		it("says so at the top of the ladder", function()

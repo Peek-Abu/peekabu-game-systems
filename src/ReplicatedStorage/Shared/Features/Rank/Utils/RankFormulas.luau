@@ -5,8 +5,12 @@
 
 	- `levelFor` / `progress`: where an XP total sits on RankRegistry's ladder.
 	- `entriesOf`: the crew lines of a published review (ShiftTypes.ShiftResults) as RankTypes.CrewEntry.
+	- `worked`: whether a crew member worked the shift: they cleared a pile or banked a cargo item, AND the shift ran
+	  RankConstants.MIN_WORKED_SECONDS or the contract was made (docs/superpowers/specs/2026-11-04-worked-shift-rule-design.md).
+	  A shift not worked pays no XP, no Clocked In badge, no "Work N shifts" progress and no referral Gleam, so
+	  clocking out at once cannot be farmed. `workedIds`: the crew of a published review who worked it.
 	- `factsFor`: one player's shift, from the crew's entries, whether the quota was met, the crew still present at
-	  the end and how the shift ended (the review's `outcome`).
+	  the end, how the shift ended (the review's `outcome`) and how long it ran.
 	- `award`: the XP lines for those facts (RankConstants.XP). Played with a Roblox friend on the crew, the shift's
 	  XP is multiplied (`friendMultiplier`): a "Friends x2" line adds the difference.
 
@@ -73,6 +77,7 @@ function RankFormulas.entriesOf(results: ShiftTypes.ShiftResults): { CrewEntry }
 		table.insert(entries, {
 			userId = line.userId,
 			caught = line.caught,
+			piles = line.piles,
 			items = line.items or 0,
 			overtimeSalvage = line.overtimeSalvage or 0,
 			friend = line.friend == true,
@@ -81,14 +86,33 @@ function RankFormulas.entriesOf(results: ShiftTypes.ShiftResults): { CrewEntry }
 	return entries
 end
 
+-- Whether `entry` worked the shift: did something (a pile or a banked item), and the shift ran long enough
+-- (`ranFor` seconds) or the contract was made.
+function RankFormulas.worked(entry: CrewEntry, quotaMet: boolean, ranFor: number): boolean
+	local didSomething = entry.piles > 0 or entry.items > 0
+	return didSomething and (quotaMet or ranFor >= RankConstants.MIN_WORKED_SECONDS)
+end
+
+-- The userIds of a published review's crew who worked it.
+function RankFormulas.workedIds(results: ShiftTypes.ShiftResults): { number }
+	local ids: { number } = {}
+	for _, entry in RankFormulas.entriesOf(results) do
+		if RankFormulas.worked(entry, results.quotaMet, results.ranFor or 0) then
+			table.insert(ids, entry.userId)
+		end
+	end
+	return ids
+end
+
 -- `userId`'s shift facts, or nil when they are not in `crew`. `present`: the crew still there at the end; `outcome`:
--- how the shift ended (ShiftResults.outcome).
+-- how the shift ended (ShiftResults.outcome); `ranFor`: seconds the shift ran (ShiftResults.ranFor).
 function RankFormulas.factsFor(
 	crew: { CrewEntry },
 	quotaMet: boolean,
 	present: { number },
 	userId: number,
-	outcome: string
+	outcome: string,
+	ranFor: number
 ): ShiftFacts?
 	local mine: CrewEntry? = nil
 	local everyone = #crew > 0
@@ -105,7 +129,7 @@ function RankFormulas.factsFor(
 	end
 	local caught = mine.caught > 0
 	return {
-		worked = true,
+		worked = RankFormulas.worked(mine, quotaMet, ranFor),
 		quotaMet = quotaMet,
 		items = mine.items,
 		overtimeSalvage = mine.overtimeSalvage,

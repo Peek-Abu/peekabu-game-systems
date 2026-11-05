@@ -60,6 +60,8 @@ export type ReviewInput = {
 	roster: ShiftRosterTracker.ShiftRosterTracker,
 	-- Salvage the run's roll offered.
 	offered: number,
+	-- Seconds the shift ran (ShiftResults.ranFor).
+	ranFor: number,
 }
 
 local function nameOf(userId: number): string?
@@ -106,6 +108,7 @@ local function build(input: ReviewInput): ShiftTypes.ShiftResults
 		crew = withFriends(input.roster:list()),
 		offered = input.offered,
 		lookup = CargoRegistry.get,
+		ranFor = input.ranFor,
 	})
 end
 

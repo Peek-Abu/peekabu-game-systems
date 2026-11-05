@@ -4,8 +4,9 @@
 	(`ShiftServiceServer.changed`): when a shift it has not paid reaches its review (phase "results"), every crew
 	member on the shift's roster (ShiftReviewSystem.crew) gets `award(userId, runId, facts)` once, with facts from
 	RankFormulas.factsFor: the roster's catches, cargo items and overtime salvage, whether the quota was met, and who is
-	still with the crew (ShiftAnalyticsSystem.crew), and how the shift ended (the results state's `outcome`: the
-	"Clocked out" line is paid only after a clock-out). A run that ends in a reset never reaches "results" and pays nothing.
+	still with the crew (ShiftAnalyticsSystem.crew), how the shift ended (the results state's `outcome`: the
+	"Clocked out" line is paid only after a clock-out) and how long it ran (the review's `ranFor`: a crew member who
+	did not work the shift, RankFormulas.worked, is paid nothing). A run that ends in a reset never reaches "results" and pays nothing.
 
 	The run id is `<session>:<shift>`: the session is a GUID per server start (Shift's counter restarts with the
 	server), so a run id never repeats; RankRules.applyAward refuses a run already paid, so even a replayed state cannot
@@ -38,14 +39,19 @@ export type Source = {
 	crew: () -> { ShiftTypes.CrewStats },
 	-- The crew members still in the server.
 	present: () -> { number },
+	-- Seconds the shift ran (the review's `ranFor`).
+	ranFor: () -> number,
 }
 
 local log = Logger.new("RankShiftSystem")
 
 local RankShiftSystem = {}
 
--- Shift's real source: its state signal, the review roster and the crew still present.
-function RankShiftSystem.shiftSource(changed: SignalTyped.Signal<ShiftTypes.ShiftState>): Source
+-- Shift's real source: its state signal, the review roster, the crew still present and the review's length.
+function RankShiftSystem.shiftSource(
+	changed: SignalTyped.Signal<ShiftTypes.ShiftState>,
+	results: () -> ShiftTypes.ShiftResults?
+): Source
 	return {
 		changed = changed,
 		crew = ShiftReviewSystem.crew,
@@ -55,6 +61,10 @@ function RankShiftSystem.shiftSource(changed: SignalTyped.Signal<ShiftTypes.Shif
 				table.insert(ids, player.UserId)
 			end
 			return ids
+		end,
+		ranFor = function(): number
+			local review = results()
+			return if review ~= nil then review.ranFor or 0 else 0
 		end,
 	}
 end
@@ -66,6 +76,7 @@ local function entriesOf(crew: { ShiftTypes.CrewStats }): { RankTypes.CrewEntry 
 		table.insert(entries, {
 			userId = member.userId,
 			caught = member.caught or 0,
+			piles = member.piles,
 			items = member.items or 0,
 			overtimeSalvage = member.overtimeSalvage or 0,
 			friend = member.friend == true,
@@ -91,13 +102,15 @@ function RankShiftSystem.start(source: Source, award: Award, session: string?): 
 		local entries = entriesOf(source.crew())
 		local present = source.present()
 		local outcome = state.outcome or ""
+		local ranFor = source.ranFor()
 		for _, entry in entries do
 			local facts = RankFormulas.factsFor(
 				entries,
 				ShiftResultsUtils.met(outcome, state.quotaMet),
 				present,
 				entry.userId,
-				outcome
+				outcome,
+				ranFor
 			)
 			if facts ~= nil then
 				xpcall(award, function(err: unknown): unknown

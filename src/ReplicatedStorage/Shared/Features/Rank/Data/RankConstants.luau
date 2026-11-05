@@ -40,6 +40,10 @@ local RankConstants = {
 		friendMultiplier = 2,
 	}),
 
+	-- A shift counts as worked (RankFormulas.worked) only when it ran at least this long, unless the contract was
+	-- made. The one knob for the clock-out farm (docs/superpowers/specs/2026-11-04-worked-shift-rule-design.md).
+	MIN_WORKED_SECONDS = 180,
+
 	-- The results card's breakdown label for each award (short: the whole breakdown is one typed line).
 	LABELS = table.freeze({
 		shiftWorked = "Shift",

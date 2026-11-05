@@ -92,6 +92,11 @@ return function()
 			expect(results.crew[2].overtimeSalvage).to.equal(0)
 		end)
 
+		it("carries how long the shift ran, for who worked it", function()
+			expect(ShiftResultsUtils.build(input(CREW, { ranFor = 200 })).ranFor).to.equal(200)
+			expect(ShiftResultsUtils.build(input(CREW)).ranFor).never.to.be.ok()
+		end)
+
 		it("builds a bare review for when the real one cannot be built", function()
 			local results = ShiftResultsUtils.bare("clockout", 350, true)
 			expect(results.cleared).to.equal(0)

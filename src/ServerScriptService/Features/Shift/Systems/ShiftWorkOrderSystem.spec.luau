@@ -32,6 +32,9 @@ return function()
 				crew = function()
 					return { player, player }
 				end,
+				worked = function()
+					return { 7 }
+				end,
 			}
 			calls = {}
 			stop = System.start(source, function(p, kind, amount)
@@ -62,6 +65,19 @@ return function()
 			source.changed:Fire({ phase = "running", shift = 1 })
 			source.changed:Fire({ phase = "results", shift = 1 })
 			source.changed:Fire({ phase = "results", shift = 1 })
+			expect(#calls).to.equal(1)
+			expect(calls[1].kind).to.equal("shifts")
+		end)
+		it("counts a shift only for crew members who worked it", function()
+			source.worked = function()
+				return {}
+			end
+			source.changed:Fire({ phase = "results", shift = 2 })
+			expect(#calls).to.equal(0)
+			source.worked = function()
+				return { 7 }
+			end
+			source.changed:Fire({ phase = "results", shift = 3 })
 			expect(#calls).to.equal(1)
 			expect(calls[1].kind).to.equal("shifts")
 		end)

@@ -136,7 +136,9 @@ RankServiceServer = {
 		table.insert(
 			stoppers,
 			RankShiftSystem.start(
-				RankShiftSystem.shiftSource(ShiftServiceServer.changed),
+				RankShiftSystem.shiftSource(ShiftServiceServer.changed, function()
+					return ShiftServiceServer:getResults()
+				end),
 				function(userId: number, runId: string, facts: RankTypes.ShiftFacts)
 					local ok, award = self:awardShift(userId, runId, facts)
 					log:info(`run {runId}: {userId} +{if award ~= nil then award.total else 0} XP (paid: {ok})`)

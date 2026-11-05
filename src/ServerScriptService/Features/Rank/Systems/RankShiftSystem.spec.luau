@@ -1,3 +1,6 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local RankConstants = require(ReplicatedStorage.Shared.Features.Rank.Data.RankConstants)
 local RankShiftSystem = require(script.Parent.RankShiftSystem)
 
 local function fakeSignal()
@@ -44,7 +47,7 @@ end
 
 return function()
 	describe("RankShiftSystem", function()
-		local changed, crew, present, calls, stop
+		local changed, crew, present, ranFor, calls, stop
 
 		local function begin(award)
 			stop = RankShiftSystem.start({
@@ -55,6 +58,9 @@ return function()
 				present = function()
 					return present
 				end,
+				ranFor = function()
+					return ranFor
+				end,
 			}, award or function(userId, runId, facts)
 				table.insert(calls, { userId = userId, runId = runId, facts = facts })
 			end, "spec")
@@ -64,6 +70,7 @@ return function()
 			changed = fakeSignal()
 			crew = { member(1), member(2) }
 			present = { 1, 2 }
+			ranFor = RankConstants.MIN_WORKED_SECONDS + 60
 			calls = {}
 			begin()
 		end)
@@ -135,6 +142,21 @@ return function()
 			changed:Fire(unknown)
 			expect(#calls).to.equal(2)
 			expect(calls[1].facts.extracted).to.equal(false)
+		end)
+
+		it("marks an instant clock-out with nothing done as not worked", function()
+			crew = { member(1, { items = 0 }) }
+			present = { 1 }
+			ranFor = 5
+			changed:Fire(state("results", 1, false))
+			expect(#calls).to.equal(1)
+			expect(calls[1].facts.worked).to.equal(false)
+		end)
+
+		it("marks a short shift that made the contract as worked", function()
+			ranFor = 60
+			changed:Fire(state("results", 1, true))
+			expect(calls[1].facts.worked).to.equal(true)
 		end)
 
 		it("stops listening when stopped", function()

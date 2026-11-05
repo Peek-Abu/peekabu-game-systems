@@ -31,6 +31,8 @@ export type ResultsInput = {
 	offered: number,
 	-- The cargo catalog (CargoRegistry.get), for item names in award details.
 	lookup: Lookup,
+	-- Seconds the shift ran (ShiftResults.ranFor).
+	ranFor: number?,
 }
 
 local ShiftResultsUtils = {}
@@ -215,6 +217,7 @@ function ShiftResultsUtils.build(input: ResultsInput): ShiftTypes.ShiftResults
 		quotaMet = quotaMade,
 		crew = lines,
 		awards = ShiftResultsUtils.awards(crew, input.lookup),
+		ranFor = input.ranFor,
 	}
 end
 

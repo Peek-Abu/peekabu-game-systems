@@ -139,6 +139,8 @@ export type ShiftResults = {
 	quotaMet: boolean,
 	crew: { CrewLine },
 	awards: { Award },
+	-- Seconds from the shift's start to its end (who worked it: RankFormulas.worked). Absent reads 0.
+	ranFor: number?,
 }
 
 -- What every client sees (the `shift` world entry).

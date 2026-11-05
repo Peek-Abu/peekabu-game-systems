@@ -1,4 +1,10 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local RankConstants = require(ReplicatedStorage.Shared.Features.Rank.Data.RankConstants)
 local RankFormulas = require(script.Parent.RankFormulas)
+
+-- Long enough to count as worked (RankConstants.MIN_WORKED_SECONDS).
+local LONG = RankConstants.MIN_WORKED_SECONDS + 60
 
 local function facts(overrides)
 	local base = {
@@ -118,11 +124,11 @@ return function()
 
 		it("marks a crew entry as with a friend from its line", function()
 			local crew = {
-				{ userId = 1, caught = 0, items = 0, overtimeSalvage = 0, friend = true },
-				{ userId = 2, caught = 0, items = 0, overtimeSalvage = 0, friend = false },
+				{ userId = 1, caught = 0, piles = 0, items = 0, overtimeSalvage = 0, friend = true },
+				{ userId = 2, caught = 0, piles = 0, items = 0, overtimeSalvage = 0, friend = false },
 			}
-			expect(RankFormulas.factsFor(crew, true, { 1, 2 }, 1, "").withFriend).to.equal(true)
-			expect(RankFormulas.factsFor(crew, true, { 1, 2 }, 2, "").withFriend).to.equal(false)
+			expect(RankFormulas.factsFor(crew, true, { 1, 2 }, 1, "", LONG).withFriend).to.equal(true)
+			expect(RankFormulas.factsFor(crew, true, { 1, 2 }, 2, "", LONG).withFriend).to.equal(false)
 		end)
 
 		it("gives a caught player no extraction bonus and files an incident report", function()
@@ -144,7 +150,8 @@ return function()
 	describe("factsFor", function()
 		it("reads a crew member's run from the review", function()
 			local review = results({ line(1, { items = 4, overtimeSalvage = 1 }), line(2) }, true)
-			local f = RankFormulas.factsFor(RankFormulas.entriesOf(review), review.quotaMet, { 1, 2 }, 1, "clockout")
+			local f =
+				RankFormulas.factsFor(RankFormulas.entriesOf(review), review.quotaMet, { 1, 2 }, 1, "clockout", LONG)
 			expect(f.worked).to.equal(true)
 			expect(f.quotaMet).to.equal(true)
 			expect(f.items).to.equal(4)
@@ -156,35 +163,42 @@ return function()
 
 		it("is nil for someone not on the review", function()
 			expect(
-				RankFormulas.factsFor(RankFormulas.entriesOf(results({ line(1) }, false)), false, { 1 }, 9, "clockout")
+				RankFormulas.factsFor(
+					RankFormulas.entriesOf(results({ line(1) }, false)),
+					false,
+					{ 1 },
+					9,
+					"clockout",
+					LONG
+				)
 			).never.to.be.ok()
 		end)
 
 		it("treats a caught or departed crew member as not extracted, for them and the crew", function()
 			local review = results({ line(1), line(2, { caught = 1 }), line(3) }, false)
 			local caught =
-				RankFormulas.factsFor(RankFormulas.entriesOf(review), review.quotaMet, { 1, 2 }, 2, "clockout")
+				RankFormulas.factsFor(RankFormulas.entriesOf(review), review.quotaMet, { 1, 2 }, 2, "clockout", LONG)
 			expect(caught.caught).to.equal(true)
 			expect(caught.extracted).to.equal(false)
 			local other =
-				RankFormulas.factsFor(RankFormulas.entriesOf(review), review.quotaMet, { 1, 2 }, 1, "clockout")
+				RankFormulas.factsFor(RankFormulas.entriesOf(review), review.quotaMet, { 1, 2 }, 1, "clockout", LONG)
 			expect(other.extracted).to.equal(true)
 			expect(other.crewExtracted).to.equal(false)
 			-- Player 3 is on the review but left before the end.
 			expect(
-				RankFormulas.factsFor(RankFormulas.entriesOf(review), review.quotaMet, { 1, 2 }, 3, "clockout").extracted
+				RankFormulas.factsFor(RankFormulas.entriesOf(review), review.quotaMet, { 1, 2 }, 3, "clockout", LONG).extracted
 			).to.equal(false)
 		end)
 
 		it("pays the clock-out line only when the shift ended through the clock-out", function()
-			local review = results({ line(1), line(2) }, true)
+			local review = results({ line(1, { piles = 1 }), line(2, { piles = 1 }) }, false)
 			local entries = RankFormulas.entriesOf(review)
 			-- Everyone punched, or the truck-leaves countdown ran out: the whole crew still in is paid, punched or not.
-			local out = RankFormulas.factsFor(entries, true, { 1, 2 }, 2, "clockout")
+			local out = RankFormulas.factsFor(entries, false, { 1, 2 }, 2, "clockout", LONG)
 			expect(out.extracted).to.equal(true)
 			-- The shift timer ran out with no clock-out (or any other end): no clock-out line for anyone.
 			for _, outcome in { "timeout", "abandoned", "wiped", "cancelled" } do
-				local f = RankFormulas.factsFor(entries, true, { 1, 2 }, 1, outcome)
+				local f = RankFormulas.factsFor(entries, false, { 1, 2 }, 1, outcome, LONG)
 				expect(f.extracted).to.equal(false)
 				expect(f.worked).to.equal(true)
 				local award = RankFormulas.award(f)
@@ -196,19 +210,84 @@ return function()
 
 		it("pays the whole-crew line only when the shift ended through the clock-out", function()
 			local entries = RankFormulas.entriesOf(results({ line(1), line(2) }, true))
-			expect(RankFormulas.factsFor(entries, true, { 1, 2 }, 1, "clockout").crewExtracted).to.equal(true)
+			expect(RankFormulas.factsFor(entries, true, { 1, 2 }, 1, "clockout", LONG).crewExtracted).to.equal(true)
 			for _, outcome in { "timeout", "abandoned", "wiped", "cancelled" } do
-				local f = RankFormulas.factsFor(entries, true, { 1, 2 }, 1, outcome)
+				local f = RankFormulas.factsFor(entries, true, { 1, 2 }, 1, outcome, LONG)
 				expect(f.crewExtracted).to.equal(false)
 				expect(amountOf(RankFormulas.award(f), "crewExtracted")).never.to.be.ok()
 			end
 		end)
 
 		it("reads absent cargo counts as zero", function()
-			local f =
-				RankFormulas.factsFor(RankFormulas.entriesOf(results({ line(1) }, false)), false, { 1 }, 1, "clockout")
+			local f = RankFormulas.factsFor(
+				RankFormulas.entriesOf(results({ line(1) }, false)),
+				false,
+				{ 1 },
+				1,
+				"clockout",
+				LONG
+			)
 			expect(f.items).to.equal(0)
 			expect(f.overtimeSalvage).to.equal(0)
+		end)
+
+		it("pays nothing for an instant solo clock-out with nothing done", function()
+			local entries = RankFormulas.entriesOf(results({ line(1) }, false))
+			local f = RankFormulas.factsFor(entries, false, { 1 }, 1, "clockout", 5)
+			expect(f.worked).to.equal(false)
+			local award = RankFormulas.award(f)
+			expect(award.total).to.equal(0)
+			expect(#award.lines).to.equal(0)
+		end)
+
+		it("pays a short shift that cleaned something once it ran long enough", function()
+			local entries = RankFormulas.entriesOf(results({ line(1, { piles = 1 }) }, false))
+			local f = RankFormulas.factsFor(entries, false, { 1 }, 1, "clockout", RankConstants.MIN_WORKED_SECONDS)
+			expect(f.worked).to.equal(true)
+			expect(RankFormulas.award(f).total).to.equal(20)
+		end)
+	end)
+
+	describe("worked", function()
+		local MIN = RankConstants.MIN_WORKED_SECONDS
+
+		it("needs a pile or a banked item, however long the shift ran", function()
+			expect(RankFormulas.worked(RankFormulas.entriesOf(results({ line(1) }, true))[1], true, LONG)).to.equal(
+				false
+			)
+		end)
+
+		it("counts a pile or a banked item after the minimum time", function()
+			local pile = RankFormulas.entriesOf(results({ line(1, { piles = 1 }) }, false))[1]
+			local item = RankFormulas.entriesOf(results({ line(1, { items = 1 }) }, false))[1]
+			expect(RankFormulas.worked(pile, false, MIN)).to.equal(true)
+			expect(RankFormulas.worked(item, false, MIN)).to.equal(true)
+			expect(RankFormulas.worked(pile, false, MIN - 1)).to.equal(false)
+			expect(RankFormulas.worked(item, false, 0)).to.equal(false)
+		end)
+
+		it("counts a short shift when the contract was made", function()
+			local pile = RankFormulas.entriesOf(results({ line(1, { piles = 1 }) }, true))[1]
+			expect(RankFormulas.worked(pile, true, 30)).to.equal(true)
+		end)
+
+		it("lists who worked a review, from its crew lines, quota and length", function()
+			local review = results({ line(1, { piles = 2 }), line(2), line(3, { items = 1 }) }, false)
+			review.ranFor = MIN
+			local ids = RankFormulas.workedIds(review)
+			table.sort(ids)
+			expect(#ids).to.equal(2)
+			expect(ids[1]).to.equal(1)
+			expect(ids[2]).to.equal(3)
+			review.ranFor = MIN - 1
+			expect(#RankFormulas.workedIds(review)).to.equal(0)
+			review.quotaMet = true
+			expect(#RankFormulas.workedIds(review)).to.equal(2)
+		end)
+
+		it("reads a review with no length as an instant shift", function()
+			local review = results({ line(1, { piles = 2 }) }, false)
+			expect(#RankFormulas.workedIds(review)).to.equal(0)
 		end)
 	end)
 end

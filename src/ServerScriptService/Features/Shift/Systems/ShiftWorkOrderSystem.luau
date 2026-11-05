@@ -10,6 +10,8 @@ export type Source = {
 	changed: SignalTyped.Signal<ShiftTypes.ShiftState>,
 	eligible: (Player) -> boolean,
 	crew: () -> { Player },
+	-- The userIds who worked the shift just reviewed (RankFormulas.workedIds); only they get "shifts" progress.
+	worked: () -> { number },
 }
 local System = {}
 function System.start(source: Source, record: (Player, Registry.Kind, number) -> ()): () -> ()
@@ -39,9 +41,10 @@ function System.start(source: Source, record: (Player, Registry.Kind, number) ->
 			return
 		end
 		completed[state.shift] = true
+		local worked = source.worked()
 		local seen: { [number]: boolean } = {}
 		for _, player in source.crew() do
-			if player.Parent ~= nil and not seen[player.UserId] then
+			if player.Parent ~= nil and not seen[player.UserId] and table.find(worked, player.UserId) ~= nil then
 				seen[player.UserId] = true
 				record(player, "shifts", 1)
 			end

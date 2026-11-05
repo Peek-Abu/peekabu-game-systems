@@ -138,6 +138,7 @@ function BadgeMilestoneSystem.start(award: Award): () -> ()
 				table.insert(entries, {
 					userId = member.userId,
 					caught = member.caught or 0,
+					piles = member.piles,
 					items = member.items or 0,
 					overtimeSalvage = member.overtimeSalvage or 0,
 					friend = member.friend == true,
@@ -151,8 +152,9 @@ function BadgeMilestoneSystem.start(award: Award): () -> ()
 			local met = ShiftResultsUtils.met(outcome, state.quotaMet)
 			local review = ShiftServiceServer:getResults()
 			local allSalvage = review ~= nil and BadgeMilestoneRules.allSalvage(review.salvage, review.offered)
+			local ranFor = if review ~= nil then review.ranFor or 0 else 0
 			for _, entry in entries do
-				local facts = RankFormulas.factsFor(entries, met, present, entry.userId, outcome)
+				local facts = RankFormulas.factsFor(entries, met, present, entry.userId, outcome, ranFor)
 				if facts ~= nil then
 					give(
 						entry.userId,

@@ -53,6 +53,7 @@ local ShiftShared = ReplicatedStorage.Shared.Features.Shift
 local ShiftServer = ServerScriptService.Features.Shift
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
+local RankFormulas = require(ReplicatedStorage.Shared.Features.Rank.Utils.RankFormulas)
 local RoundTypes = require(ReplicatedStorage.Shared.Features.Round.Data.RoundTypes)
 local ToastRegistry = require(ReplicatedStorage.Shared.Features.Toast.Data.ToastRegistry)
 local ShiftConstants = require(ShiftShared.Data.ShiftConstants)
@@ -279,6 +280,7 @@ local function safeResults(outcome: string): ShiftTypes.ShiftResults
 		crew = trip:crew(),
 		roster = roster,
 		offered = site:offered(),
+		ranFor = math.max(0, now() - (state.startedAt or now())),
 	})
 end
 
@@ -489,6 +491,9 @@ local ShiftServiceServer: ShiftServiceServer = {
 				eligible = banking.canBank,
 				crew = function()
 					return ShiftAnalyticsSystem.crew()
+				end,
+				worked = function()
+					return if results ~= nil then RankFormulas.workedIds(results) else {}
 				end,
 			}, function(player, kind, amount)
 				WorkOrderServiceServer:record(player, kind, amount)
