@@ -1,7 +1,8 @@
 --!strict
 --[=[
 	OccupantSightUtils: what the Manager sees (docs/superpowers/specs/2026-10-16-cleanup-crew-manager-chase-tuning-
-	design.md §2). Near: a clear ray within sightRange in the sightAngle cone (his chase or search target all round).
+	design.md §2). Near: a clear ray within sightRange in the sightAngle cone (his chase target all round, his search
+	target all round only within CERTAIN_RANGE).
 	Far: a clear ray out to longRange in the narrow longAngle cone straight ahead, noticed over a beat that grows with
 	the distance (`noticeDelay`) unless it is his target. Never someone hiding, in their grace or in the truck's box.
 	Beside him (behaviours design §10.1): `peripheral`, a clear ray within PERIPHERAL_RANGE outside the front cone but
@@ -66,15 +67,29 @@ end
 
 export type Sight = "near" | "far"
 
--- His chase or search target: seen all round (near), and down his long cone without a notice beat (far).
+-- His chase or search target: seen all round (near: `allRound`), and down his long cone without a notice beat (far).
 local function tracked(mind: Mind, userId: number): boolean
 	return userId == mind.target and (mind.mode == "chase" or mind.mode == "search")
 end
 
+-- Whether he sees `glimpse` all round (not only in his cone): his chase target anywhere in sightRange; the one he lost
+-- and searches for only within CERTAIN_RANGE (owner's play, 2026-10-24: all round to sightRange re-started chases
+-- through doorways at his back).
+local function allRound(mind: Mind, senses: Senses, glimpse: Glimpse): boolean
+	if not tracked(mind, glimpse.userId) then
+		return false
+	end
+	if mind.mode == "chase" then
+		return true
+	end
+	local flat = Vector3.new(glimpse.position.X - senses.position.X, 0, glimpse.position.Z - senses.position.Z)
+	return flat.Magnitude <= OccupantConstants.CERTAIN_RANGE
+end
+
 --[=[
-	How he sees `glimpse` this think: "near" (a clear ray within sightRange in the sightAngle cone; his chase or search
-	target all round), "far" (a clear ray out to longRange in the narrow longAngle cone straight ahead), or nil. Never
-	someone hiding, in their grace or in the safe zone.
+	How he sees `glimpse` this think: "near" (a clear ray within sightRange in the sightAngle cone; his chase target all
+	round, his search target all round within CERTAIN_RANGE), "far" (a clear ray out to longRange in the narrow
+	longAngle cone straight ahead), or nil. Never someone hiding, in their grace or in the safe zone.
 ]=]
 function Sight.sightOf(mind: Mind, senses: Senses, glimpse: Glimpse): Sight?
 	if
@@ -87,7 +102,7 @@ function Sight.sightOf(mind: Mind, senses: Senses, glimpse: Glimpse): Sight?
 	end
 	local distance = (glimpse.position - senses.position).Magnitude
 	local level = Vector3.new(glimpse.position.X, senses.position.Y, glimpse.position.Z)
-	local angle = if tracked(mind, glimpse.userId) then 360 else senses.sightAngle
+	local angle = if allRound(mind, senses, glimpse) then 360 else senses.sightAngle
 	if
 		distance <= senses.sightRange
 		and NpcSenseRules.inSight(senses.position, senses.look, level, senses.sightRange, angle)

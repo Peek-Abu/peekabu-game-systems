@@ -72,6 +72,22 @@ return function()
 			expect(Sight.sightOf(mind(), s, behind)).to.equal(nil)
 			expect(Sight.sightOf(mind({ mode = "chase", target = 7 }), s, behind)).to.equal("near")
 		end)
+		it("searching, sees the one he lost all round only within CERTAIN_RANGE; farther, only in his cone", function()
+			local s = senses()
+			local searching = mind({ mode = "search", target = 7 })
+			-- 20 studs straight behind him: through a doorway at his back, not seen.
+			expect(Sight.sightOf(searching, s, glimpse(7, Vector3.new(40, 3, 60)))).to.equal(nil)
+			-- Right behind him, within CERTAIN_RANGE: he feels them there.
+			local close = Vector3.new(60 - (C.CERTAIN_RANGE - 1), 3, 60)
+			expect(Sight.sightOf(searching, s, glimpse(7, close))).to.equal("near")
+			-- In front: his plain sight, near and far down his long cone without the notice beat.
+			expect(Sight.sightOf(searching, s, glimpse(7, Vector3.new(100, 3, 60)))).to.equal("near")
+			expect(#Sight.visible(searching, senses({ glimpse(7, Vector3.new(170, 3, 60)) }))).to.equal(1)
+			-- The chase itself keeps them all round.
+			expect(Sight.sightOf(mind({ mode = "chase", target = 7 }), s, glimpse(7, Vector3.new(40, 3, 60)))).to.equal(
+				"near"
+			)
+		end)
 	end)
 
 	describe("visible and distant", function()
