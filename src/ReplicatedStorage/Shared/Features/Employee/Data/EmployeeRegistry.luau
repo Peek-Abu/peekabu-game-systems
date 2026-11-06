@@ -259,9 +259,8 @@ local EMPLOYEES: { [string]: EmployeeDef } = {
 			fidget = "pippafidget",
 			walkPlantedSpeed = 1.27,
 			runPlantedSpeed = 1.52,
-			-- 1.625 st/s at her 1.25 scale: planted up to 6.5 st/s at the 4x cap (about 6 steps a second, a quick
-			-- scurrying sneak), which is exactly the crouch speed (CrouchConstants.CROUCH_SPEED), so the feet plant
-			-- (her walk at 16 still slides 4x).
+			-- 1.625 st/s at her 1.25 scale: the crouch speed (CrouchConstants.CROUCH_SPEED, 4.5) plays it at about 2.8x,
+			-- under the 4x cap, so the feet plant at a calm sneak (her walk at 16 still slides 4x).
 			crouchWalkPlantedSpeed = 1.3,
 			minRate = 0.6,
 			walkMaxRate = 2.5,

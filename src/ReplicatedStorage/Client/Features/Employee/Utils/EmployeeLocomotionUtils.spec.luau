@@ -158,6 +158,20 @@ return function()
 			expect(CrouchConstants.CROUCH_SPEED / planted <= 1.1).to.equal(true)
 		end)
 
+		it(
+			"plays every employee's crouch walk at about 2.8x, under its cap (owner 11-06: not a frantic scurry)",
+			function()
+				for _, name in { "Pippa", "Cappy", "Prickles" } do
+					local config = EmployeeLocomotionUtils.forName(name)
+					expect(config).to.be.ok()
+					expect(config.crouchScale).to.be.ok()
+					local rate = CrouchConstants.CROUCH_SPEED / config.crouchScale
+					expect(rate >= 2.5 and rate <= 3).to.equal(true)
+					expect(rate < config.crouchMaxRate).to.equal(true)
+				end
+			end
+		)
+
 		it("keeps a loaded crouch above the minimum rate (no backward slide)", function()
 			local config = EmployeeLocomotionUtils.forName("Pippa")
 			expect(config).to.be.ok()

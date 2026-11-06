@@ -3,7 +3,7 @@
 	CrouchConstants: crouching (Cleanup Crew, 2026-10-17: "let's add crouch, ensure to quiet and slow footsteps to match
 	animation"). Every number is a tuning hypothesis. Static data (spec-exempt).
 
-	The crouch is the sneak: CROUCH_SPEED is 40 % of the walk (16), so it never outruns anything; it is quiet (no sprint
+	The crouch is the sneak: CROUCH_SPEED is about 28 % of the walk (16), so it never outruns anything; it is quiet (no sprint
 	noise, quieter footsteps: the Footstep feature's crouch gait) and slows the Manager's peripheral notice
 	(OccupantConstants.GLANCE_CROUCH), both from the character's CROUCHING_ATTRIBUTE.
 
@@ -17,9 +17,10 @@ return table.freeze({
 	KEYBOARD_KEY = Enum.KeyCode.LeftControl,
 	TOGGLE_ACTION = "crouchToggle",
 	GAMEPAD_KEY = Enum.KeyCode.ButtonB,
-	-- 6.5 st/s is exactly what Pippa's crouch walk plants at her 4x crouchWalkMaxRate (1.3 x 1.25 x 4), so the feet
-	-- do not slide (2026-10-19; was 9, which slid 2.8x).
-	CROUCH_SPEED = 6.5,
+	-- 4.5 st/s (owner 2026-11-06, fix A): every employee's crouch walk plays at about 2.8x its authored stride (Pippa
+	-- 4.5 / (1.3 x 1.25) = 2.77x, under the 4x cap, so the feet still plant) instead of the frantic 4x scurry that
+	-- 6.5 gave (2026-10-19; 9 before that slid 2.8x).
+	CROUCH_SPEED = 4.5,
 	-- Replicated on the character while it crouches (true, else unset): the one contract Animation (the crouch poses),
 	-- Footstep (the crouch gait), Occupant (the slower glance) and the camera read.
 	CROUCHING_ATTRIBUTE = "Crouching",
