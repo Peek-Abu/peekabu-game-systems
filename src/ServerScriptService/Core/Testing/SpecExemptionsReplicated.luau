@@ -18,6 +18,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Shared.Features.Leaderboard.Data.LeaderboardConstants"] = "static names and tuning (no logic)",
 	["ReplicatedStorage.Shared.Features.Leaderboard.Data.LeaderboardTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Client.UI.React.Screens.Leaderboard.LeaderboardBoard"] = "presentational React component (words specced in LeaderboardBoardViewModel)",
+	["ReplicatedStorage.Client.Features.Social.Systems.SocialPromptSystem"] = "SocialService / ExperienceNotificationService prompt shell (SocialPromptUtils is specced)",
 	["ReplicatedStorage.Shared.Data.PlayerDataTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Data.PublicPlayerTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Data.WorldTypes"] = "type definitions only (no runtime logic)",

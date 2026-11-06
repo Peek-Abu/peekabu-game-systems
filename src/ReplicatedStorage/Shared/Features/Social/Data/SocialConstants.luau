@@ -16,6 +16,9 @@ return table.freeze({
 	REFERRAL_CAP = 5,
 	-- Seconds between two favorite/like asks.
 	ASK_SPACING = 3 * 86400,
+	-- Seconds after a player is back in the hub with their review card before the one Roblox prompt (event RSVP or
+	-- notifications, SocialPromptSystem): time to read the board first.
+	PROMPT_DELAY = 6,
 	-- An invite's LaunchData: this prefix and the inviter's userId.
 	LAUNCH_PREFIX = "ref:",
 	-- Requests per player per window (the group check and the ask mark).

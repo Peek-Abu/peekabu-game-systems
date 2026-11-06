@@ -27,6 +27,7 @@ local SocialEvents = require(ReplicatedStorage.Shared.Features.Social.Net.Social
 local SocialRules = require(ReplicatedStorage.Shared.Features.Social.Rules.SocialRules)
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
 local SocialAskStore = require(ReplicatedStorage.Client.Features.Social.State.SocialAskStore)
+local SocialPromptSystem = require(ReplicatedStorage.Client.Features.Social.Systems.SocialPromptSystem)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 
 local log = Logger.new("SocialServiceClient")
@@ -85,6 +86,9 @@ local SocialServiceClient: SocialServiceClient = {
 
 	start = function(_self)
 		table.insert(stoppers, Charm.subscribe(ShiftStore.snapshot, onSnapshot))
+		-- The event RSVP / notification prompt after a finished shift, back in the hub.
+		SocialPromptSystem.start()
+		table.insert(stoppers, SocialPromptSystem.stop)
 		local completed = AvatarEditorService.PromptSetFavoriteCompleted:Connect(function(result)
 			if result == Enum.AvatarPromptResult.Success then
 				favorited = true
