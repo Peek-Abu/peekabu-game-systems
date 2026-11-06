@@ -343,6 +343,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.UI.React.Screens.Inventory.InventoryChatPanel"] = "presentational React component (slots and packs specced in InventoryViewModel.chat / stickerSlotFor)",
 	["ReplicatedStorage.Client.UI.React.Screens.ChatWheel.ChatWheelButtons"] = "presentational HUD buttons (touch only; their callbacks open the wheels)",
 	["ReplicatedStorage.Client.UI.React.Screens.ChatWheel.ChatWheelScreen"] = "React screen wiring the loadout, entitlements and CalloutWheelStore (pings, slots, layout and picking specced in ChatWheelViewModel)",
+	["ReplicatedStorage.Client.UI.React.Screens.Film.FilmCameraStatus"] = "presentational React widget (shows FilmCameraStore.status, specced)",
 	["ReplicatedStorage.Client.Features.Film.Systems.FilmCameraSystem"] = "input/camera/RunService shell (flight and glide maths specced in FilmFlyFormulas / FilmPathFormulas, marks in FilmMarkTracker)",
 	["ReplicatedStorage.Client.Features.Film.FilmServiceClient"] = "shell over input, the core UI and prompts (the hide specced in FilmHideSystem, the camera maths in FilmFlyFormulas / FilmPathFormulas)",
 	["ReplicatedStorage.Client.Features.Callout.CalloutServiceClient"] = "shell over input, the camera ray and packets (rules in CalloutRules, the wheel in ChatWheelViewModel, the effects in CalloutStickerSystem / CalloutPingSystem, state in CalloutStore / CalloutWheelStore)",

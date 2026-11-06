@@ -16,16 +16,15 @@
 	- F follows the next target (Mr. Harlow, then each player), looking at it; flying moves the offset. O orbits the
 	  target. G goes back to free flight.
 
-	A small status line shows on screen while the UI shows; F6 hides it with the rest.
+	A small status line shows in the HUD (FilmCameraStatus); F6 hides it with the rest.
 
-	Spec-exempt shell (input, camera, RunService, a status label); the maths is specced in FilmFlyFormulas and
+	Spec-exempt shell (input, camera, RunService); the maths is specced in FilmFlyFormulas and
 	FilmPathFormulas, the marks in FilmMarkTracker.
 
 	@class FilmCameraSystem
 ]=]
 
 local ContextActionService = game:GetService("ContextActionService")
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -45,6 +44,8 @@ export type Deps = {
 	silence: (silenced: boolean) -> (),
 	-- What F can follow, in order.
 	targets: () -> { Target },
+	-- The status line (nil: none; FilmCameraStore through the FilmCameraStatus HUD widget).
+	setStatus: (text: string?) -> (),
 }
 
 export type FilmCameraSystem = {
@@ -127,8 +128,6 @@ function FilmCameraSystem.new(deps: Deps): FilmCameraSystem
 	local followIndex = 0
 	local offset = Vector3.zero
 	local orbiting = false
-	local hud: ScreenGui? = nil
-	local status: TextLabel? = nil
 	local frame: RBXScriptConnection? = nil
 
 	local function lookVector(): Vector3
@@ -147,8 +146,7 @@ function FilmCameraSystem.new(deps: Deps): FilmCameraSystem
 	end
 
 	local function refresh()
-		local label = status
-		if label == nil then
+		if not active then
 			return
 		end
 		local parts = {
@@ -165,7 +163,7 @@ function FilmCameraSystem.new(deps: Deps): FilmCameraSystem
 		if glide ~= nil then
 			table.insert(parts, "playing")
 		end
-		label.Text = table.concat(parts, "   ")
+		deps.setStatus(table.concat(parts, "   "))
 	end
 
 	local function startGlide(list: { FilmPathFormulas.Mark }, seconds: number)
@@ -305,30 +303,6 @@ function FilmCameraSystem.new(deps: Deps): FilmCameraSystem
 		return Enum.ContextActionResult.Sink
 	end
 
-	local function makeHud()
-		local playerGui = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
-		if playerGui == nil then
-			return
-		end
-		local gui = Instance.new("ScreenGui")
-		gui.Name = "FilmCameraStatus"
-		gui.ResetOnSpawn = false
-		gui.DisplayOrder = 1000
-		local label = Instance.new("TextLabel")
-		label.AnchorPoint = Vector2.new(0, 1)
-		label.Position = UDim2.new(0, 12, 1, -12)
-		label.Size = UDim2.fromOffset(640, 22)
-		label.BackgroundTransparency = 0.4
-		label.BackgroundColor3 = Color3.new(0, 0, 0)
-		label.TextColor3 = Color3.new(1, 1, 1)
-		label.TextXAlignment = Enum.TextXAlignment.Left
-		label.Font = Enum.Font.GothamMedium
-		label.TextSize = 14
-		label.Parent = gui
-		gui.Parent = playerGui
-		hud, status = gui, label
-	end
-
 	local system: FilmCameraSystem
 	system = {
 		toggle = function()
@@ -367,7 +341,6 @@ function FilmCameraSystem.new(deps: Deps): FilmCameraSystem
 					then Enum.MouseBehavior.LockCurrentPosition
 					else Enum.MouseBehavior.Default
 			end)
-			makeHud()
 			refresh()
 		end,
 
@@ -393,11 +366,7 @@ function FilmCameraSystem.new(deps: Deps): FilmCameraSystem
 				frame = nil
 			end
 			UserInputService.MouseBehavior = Enum.MouseBehavior.Default
-			local gui = hud
-			if gui ~= nil then
-				gui:Destroy()
-				hud, status = nil, nil
-			end
+			deps.setStatus(nil)
 			table.clear(held)
 			deps.silence(false)
 		end,

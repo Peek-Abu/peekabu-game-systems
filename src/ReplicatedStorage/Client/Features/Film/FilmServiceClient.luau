@@ -30,12 +30,18 @@ local AdminRules = require(ReplicatedStorage.Shared.Features.Admin.Rules.AdminRu
 local FilmConstants = require(ReplicatedStorage.Shared.Features.Film.Data.FilmConstants)
 local FilmHideSystem = require(ReplicatedStorage.Client.Features.Film.Systems.FilmHideSystem)
 local FilmCameraSystem = require(ReplicatedStorage.Client.Features.Film.Systems.FilmCameraSystem)
+local FilmCameraStore = require(ReplicatedStorage.Client.Features.Film.State.FilmCameraStore)
+local FilmCameraStatus = require(ReplicatedStorage.Client.UI.React.Screens.Film.FilmCameraStatus)
+local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudRegistry)
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local CameraServiceClient = require(ReplicatedStorage.Client.Features.Camera.CameraServiceClient)
 local InputServiceClient = require(ReplicatedStorage.Client.Features.Input.InputServiceClient)
 local InputControlsSystem = require(ReplicatedStorage.Client.Features.Input.Systems.InputControlsSystem)
 
 local janitor = Janitor.new()
+-- The film camera's status line in the HUD, drawn over every other widget.
+local FILM_STATUS_KEY = "filmCameraStatus"
+local FILM_STATUS_ORDER = 5000
 
 -- What the hide turned off outside the instance tree, to put back exactly: each core UI type, the prompt limit and
 -- the mouse cursor.
@@ -125,7 +131,13 @@ local FilmServiceClient: FilmServiceClient = {
 			end,
 			silence = silence,
 			targets = targets,
+			setStatus = function(text)
+				FilmCameraStore.status(text)
+			end,
 		})
+		if not HudRegistry.has(FILM_STATUS_KEY) then
+			HudRegistry.register(FILM_STATUS_KEY, FilmCameraStatus, FILM_STATUS_ORDER)
+		end
 		janitor:Add(function()
 			if hide ~= nil then
 				hide.show()
