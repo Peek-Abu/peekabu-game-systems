@@ -30,6 +30,9 @@
 	(the plain walk is already scaled when the character is built, so the boost multiplies on top of both), Stamina
 	lengthens the bar and speeds its refill (Noise applies Quiet to the sprinting feet's noise).
 
+	Movement anti-cheat: the same tick checks each body's ground speed against the walk the server set
+	(SprintSpeedCheckRules); a run kept far over it is sent back to where it began (logged, `counters.speedChecks`).
+
 	Spec-exempt shell (Humanoids, Players, ByteNet, RunService); the decisions are the specced SprintRules,
 	SprintSpeedFormulas and SprintStaminaFormulas.
 
@@ -47,6 +50,7 @@ local CrouchConstants = require(ReplicatedStorage.Shared.Features.Crouch.Data.Cr
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local VacuumMotionConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumMotionConstants)
 local Observers = require(ReplicatedStorage.Packages.Observers)
+local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local SprintConstants = require(SprintShared.Data.SprintConstants)
 local SprintEvents = require(SprintShared.Net.SprintEvents)
 local SprintRules = require(SprintShared.Rules.SprintRules)
@@ -62,6 +66,7 @@ local HideServiceServer = require(ServerScriptService.Features.Hide.HideServiceS
 local NoiseServiceServer = require(ServerScriptService.Features.Noise.NoiseServiceServer)
 local SprintBoostTracker = require(ServerScriptService.Features.Sprint.State.SprintBoostTracker)
 local SprintDragTracker = require(ServerScriptService.Features.Sprint.State.SprintDragTracker)
+local SprintSpeedCheckRules = require(ServerScriptService.Features.Sprint.Rules.SprintSpeedCheckRules)
 
 type Runner = {
 	requested: boolean,
@@ -74,14 +79,17 @@ type Runner = {
 	published: number,
 	-- Where the body was at the last tick.
 	lastPosition: Vector3?,
+	-- The speed check's run over the limit (SprintSpeedCheckRules).
+	check: SprintSpeedCheckRules.State,
 }
 
+local log = Logger.new("SprintServiceServer")
 local runners: { [number]: Runner } = {}
 local boosts = SprintBoostTracker.new()
 local drags = SprintDragTracker.new()
 local stoppers: { () -> () } = {}
 local elapsed = 0
-local counters = { sprints = 0, steps = 0, refused = 0 }
+local counters = { sprints = 0, steps = 0, refused = 0, speedChecks = 0 }
 
 local function runnerOf(player: Player): Runner
 	local runner = runners[player.UserId]
@@ -94,6 +102,7 @@ local function runnerOf(player: Player): Runner
 			stepClock = 0,
 			published = 1,
 			lastPosition = nil,
+			check = SprintSpeedCheckRules.fresh(),
 		}
 		runners[player.UserId] = runner
 	end
@@ -193,6 +202,27 @@ local function stepOne(player: Player, runner: Runner, dt: number)
 	local position = if root ~= nil and root:IsA("BasePart") then root.Position else nil
 	local last = runner.lastPosition
 	runner.lastPosition = position
+	if position ~= nil and last ~= nil and humanoid ~= nil and root ~= nil and root:IsA("BasePart") then
+		local verdict, anchor = SprintSpeedCheckRules.step(runner.check, {
+			dt = dt,
+			last = last,
+			position = position,
+			limit = humanoid.WalkSpeed,
+			exempt = not alive
+				or DeathServiceServer:isDown(player)
+				or root.Anchored
+				or humanoid.Sit
+				or humanoid.PlatformStand
+				or HideServiceServer:isHidden(player),
+		})
+		if verdict == "rubberband" and anchor ~= nil and character ~= nil then
+			counters.speedChecks += 1
+			log:warn(`{player.Name} ({player.UserId}) moved too fast for too long: sent back`)
+			character:PivotTo(CFrame.new(anchor) * root.CFrame.Rotation)
+			root.AssemblyLinearVelocity = Vector3.zero
+			runner.lastPosition = anchor
+		end
+	end
 	local moving = position ~= nil
 		and last ~= nil
 		and Vector3.new(position.X - last.X, 0, position.Z - last.Z).Magnitude / dt >= SprintConstants.MOVING_SPEED
