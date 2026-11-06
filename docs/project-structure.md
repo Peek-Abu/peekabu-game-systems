@@ -209,7 +209,7 @@ The reference pair to copy when porting a new domain is `CurrencyServiceServer` 
 5. **Name it** `<Feature><What><RoleWord>` with a role word its subfolder allows.
 6. **Nothing fits?** Stop and ask. A new subfolder kind needs three modules that share it and the
    developer's approval; a new role word needs approval.
-7. **Write its spec** beside it, or add it to `SpecRoots.EXEMPT_MODULES` with a reason.
+7. **Write its spec** beside it, or add it to `SpecRoots`' exemption lists (`Core/Testing/SpecExemptions*`) with a reason.
 8. Run `python3 scripts/python/module_map.py --write`.
 
 ---
@@ -229,7 +229,7 @@ justified exemption. This isn't just a convention — it's enforced at test-run 
   it finds outside them.
 - **`SpecRoots.assertAllModulesSpecced`** is the inverse: it **fails the build** if a first-party
   module under a scanned root has no `.spec` sibling and isn't listed (with a reason) in
-  `SpecRoots.EXEMPT_MODULES`.
+  `SpecRoots`' exemption lists (`Core/Testing/SpecExemptions*`).
 
 Adding a new spec location = add the root to `SpecRoots.get()` — one edit covers Studio and CI. Full
 writing/running guidance is in [testing.md](testing.md).

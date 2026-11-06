@@ -1,0 +1,119 @@
+--!strict
+--[=[
+	SpecExemptionsServer: the first-party modules SpecRoots.assertAllModulesSpecced lets go without a `.spec` sibling, each
+	with its reason (full instance name -> why). Split out of SpecRoots (the list alone was over the file-length cap): this one holds the ServerScriptService modules; SpecRoots joins it with the other.
+
+	First-party modules that intentionally have NO `.spec` sibling, keyed by full DataModel name with
+	the reason as the value (for self-documentation). This is the escape hatch for
+	`assertAllModulesSpecced`: a module belongs here only when a unit test would be tautological or
+	genuinely can't run under TestEZ. Everything else must have a spec — that's what makes the TDD
+	rule enforceable instead of aspirational. Adding a NEW module forces a choice: write its spec, or
+	add a line here justifying why not.
+
+	@class SpecExemptionsServer
+]=]
+
+local EXEMPT_MODULES: { [string]: string } = {
+	["ServerScriptService.Core.Testing.SpecExemptionsReplicated"] = "static data: the exemption list itself (no logic)",
+	["ServerScriptService.Core.Testing.SpecExemptionsServer"] = "static data: the exemption list itself (no logic)",
+	["ServerScriptService.Features.Npc.Data.NpcTypes"] = "type definitions only (no runtime logic)",
+	["ServerScriptService.Features.Npc.Data.NpcConstants"] = "static names and tuning (no logic)",
+	["ServerScriptService.Features.Badge.Systems.BadgeMilestoneSystem"] = "signal shell (BadgeMilestoneRules and OccupantEscapeRules are specced)",
+	["ServerScriptService.Features.Sound.SoundServiceServer"] = "Players/ByteNet shell (listener selection is specced in SoundFormulas)",
+	["ServerScriptService.Features.Vfx.VfxServiceServer"] = "Players/ByteNet shell (listener selection is specced in SoundFormulas)",
+	["ServerScriptService.Features.Interaction.InteractionServiceServer"] = "CollectionService/ProximityPrompt shell (InteractionRules and the cooldown tracker are specced)",
+	["ServerScriptService.Features.Interaction.Systems.InteractionChannelSystem"] = "Players/Instance/attribute shell (InteractionChannelTracker and InteractionRules are specced)",
+	["ServerScriptService.Features.Toast.ToastServiceServer"] = "ByteNet shell (ToastRules is specced)",
+	["ServerScriptService.Features.Queue.Systems.QueuePadSystem"] = "CollectionService/character shell (QueuePadRules and QueuePadTracker are specced)",
+	["ServerScriptService.Features.Queue.Systems.QueueTeleportSystem"] = "TeleportService shell; teleports cannot run in Studio (QueueDepartureTracker and QueueTeleportRules are specced)",
+	["ServerScriptService.Features.Queue.Systems.QueueArrivalSystem"] = "Players/join-data shell; join data exists only after a live teleport (QueueArrivalTracker is specced)",
+	["ServerScriptService.Features.Queue.Systems.QueueLandingSystem"] = "character/Players/phase shell (QueueTeleportRules decodes the ticket)",
+	["ServerScriptService.Features.Host.HostServiceServer"] = "CollectionService/character/ByteNet tick shell (HostRules, HostTruckTracker and HostSnapshotUtils are specced)",
+	["ServerScriptService.Features.Queue.QueueServiceServer"] = "TeleportService/Players/HttpService/signal shell (rules and trackers are specced)",
+	["ServerScriptService.Features.Carry.CarryServiceServer"] = "Instance/physics/ByteNet shell (registry, formulas and hold tracker are specced)",
+	["ServerScriptService.Features.Round.RoundServiceServer"] = "Players/RunService/signal shell (phase rules, run tracker and container utils are specced)",
+	["ServerScriptService.Features.Death.DeathServiceServer"] = "Humanoid/joint/Players shell (credit tracker, ragdoll limits and spectate rules are specced)",
+	["ServerScriptService.Features.Death.Systems.DeathKnockdownSystem"] = "character attribute/network ownership/task.delay shell (the knockdown decisions are specced in DeathKnockdownUtils)",
+	["ServerScriptService.Features.Npc.NpcServiceServer"] = "Instance/physics/raycast shell (registry, sense, brain, path rules and roster are specced)",
+	["ServerScriptService.Features.Npc.Systems.NpcBehaviourSystem"] = "Players/raycast/Humanoid shell (every decision is a specced rule module)",
+	["ServerScriptService.Features.Npc.Systems.NpcMoverSystem"] = "PathfindingService/Humanoid shell (repath decisions are specced in NpcPathRules)",
+	["ServerScriptService.Features.Voice.VoiceServiceServer"] = "Players/audio Instance shell (routing is specced in VoiceRoutingRules)",
+	["ServerScriptService.Features.Leaderstat.LeaderstatServiceServer"] = "Instance/Players shell (the column catalogue is specced)",
+	["ServerScriptService.Features.Badge.BadgeServiceServer"] = "BadgeService shell (BadgeAwardTracker and BadgeRegistry are specced)",
+	["ServerScriptService.Features.Analytics.AnalyticsServiceServer"] = "AnalyticsService shell; starts AnalyticsSessionSystem (AnalyticsRules is specced)",
+	["ServerScriptService.Features.Analytics.Systems.AnalyticsSessionSystem"] = "Players/ByteNet/Queue/PlayerData shell (context, cohort, tags and dedupe are specced in AnalyticsContextUtils, AnalyticsContextTracker, ExperimentServiceServer)",
+	["ServerScriptService.Features.Analytics.Systems.AnalyticsEconomySystem"] = "CurrencyServiceServer/MarketplaceServiceServer signal shell (the event decision is specced in AnalyticsEconomyUtils)",
+	["ServerScriptService.Features.Analytics.Data.AnalyticsTypes"] = "type definitions only (no runtime logic)",
+	["ServerScriptService.Features.Tip.TipServiceServer"] = "data layer, Setting and Toast shell (TipRules and TipRegistry are specced)",
+	["ServerScriptService.Core.ProfileStoreTyped"] = "typed wrapper over ProfileStore (no logic)",
+
+	-- Cmdr command DEFINITIONS (declarative arg schemas). Their `*Server` implementations carry the
+	-- logic and ARE specced (AddCurrencyServer.spec, etc.).
+	["ServerScriptService.Commands.CurrencyAdd"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.AnimationPlay"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.AnimationStop"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.AnimationStopClass"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.AnimationTracks"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.AnimationReport"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.InventoryGiveItem"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.InventoryRemoveItem"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.CurrencySet"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.TitleAward"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.CosmeticGrant"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.CosmeticEquip"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.TitleRevoke"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.TitleEquip"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.RoundStart"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.RoundEnd"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.MarketplacePremiumAdd"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.EntitlementGrant"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.EntitlementRevoke"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.NpcSpawn"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.NpcClear"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.AbilityNoCooldown"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.AbilityReset"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.EmployeeStatSet"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.DailyRewardReset"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.OccupantWork"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.OccupantTurn"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Commands.OfficeAnomaly"] = "Cmdr command definition (server impl is specced)",
+	["ServerScriptService.Features.Cargo.Systems.CargoScatterSystem"] = "Players/Heartbeat/Instance shell (the entries are the specced CargoInventoryTracker's; placement is CarryPlacementSystem's)",
+	["ServerScriptService.Features.Cargo.Systems.CargoInventorySystem"] = "Carry/Vacuum/Instance/public-state/ByteNet/Heartbeat shell (pick-up, slot choice, lock and load decisions are specced in CargoInventoryRules, the slots in CargoInventoryTracker)",
+	["ServerScriptService.Features.Cargo.Systems.CargoTraitSystem"] = "Players/Carry/Instance/Sound shell (rattle, puddle and sound decisions are specced in CargoHandlingRules and CargoFeedbackUtils)",
+	["ServerScriptService.Features.Cargo.CargoServiceServer"] = "Instance/Players/ByteNet/signal shell (handling, inventory and bank rules, claim and inventory trackers are specced)",
+	["ServerScriptService.Features.Vacuum.VacuumServiceServer"] = "Instance/Players/RunService/signal shell (VacuumTargetRules is specced)",
+	["ServerScriptService.Features.Noise.NoiseServiceServer"] = "signal/ByteNet relay shell (the hearing rule NoiseRules is specced)",
+
+	-- Cleanup Crew: Office
+	["ServerScriptService.Features.Office.Data.OfficeTypes"] = "type definitions only (no runtime logic)",
+	["ServerScriptService.Features.Office.Data.OfficeConstants"] = "static placement, sizes and roll knobs (no logic)",
+	["ServerScriptService.Features.Office.Data.OfficeLayoutConstants"] = "authored layout data; validated by OfficeLayoutRules.spec",
+	["ServerScriptService.Features.Office.Systems.OfficeBuildSystem"] = "Instance builder (the layout is validated by the specced OfficeLayoutRules)",
+	["ServerScriptService.Features.Office.Systems.OfficeDoorSystem"] = "Instance/TweenService/Interaction shell (door maths is specced in OfficeDoorUtils)",
+	["ServerScriptService.Features.Office.OfficeServiceServer"] = "Instance/signal shell (layout rules, spawn roll and spawn rules are specced)",
+	["ServerScriptService.Features.Occupant.OccupantServiceServer"] = "NPC/raycast/signal shell (brain, tuning and tell decisions are specced in OccupantBrainRules, OccupantCatchRules, OccupantTuningFormulas, OccupantTellRules)",
+	["ServerScriptService.Features.Occupant.Systems.OccupantCatchSystem"] = "Instance/ByteNet/Death shell (catch decisions and the launch are specced in OccupantCatchRules)",
+	["ServerScriptService.Features.Occupant.Systems.OccupantEffectSystem"] = "Players/ByteNet/Hide shell (which effects a think makes is specced in OccupantBrainRules and its rules)",
+	["ServerScriptService.Features.Occupant.Systems.OccupantSeatSystem"] = "Instance/tween/clip shell (when to sit, stand, plant or let go is specced in OccupantBrainRules and OccupantMindUtils)",
+	["ServerScriptService.Features.Hide.Systems.HideSpotSystem"] = "CollectionService/ProximityPrompt builder (spot frames specced in HideSpotUtils)",
+	["ServerScriptService.Features.Hide.HideServiceServer"] = "Instance/Players/ByteNet/signal shell (entry, camping and frames specced in HideRules, HideSpotUtils, HideOccupancyTracker)",
+	["ServerScriptService.Features.Sprint.SprintServiceServer"] = "Humanoid/Players/ByteNet/RunService shell (decisions specced in SprintRules and SprintStaminaFormulas)",
+	["ServerScriptService.Features.Crouch.CrouchServiceServer"] = "Humanoid/Players/ByteNet/RunService shell (decisions specced in CrouchRules and CrouchSpeedFormulas)",
+	["ServerScriptService.Features.Ability.AbilityServiceServer"] = "Players/Humanoid/ByteNet/RunService/CollectionService shell (decisions specced in AbilityRules, AbilityRegistry, AbilityCooldownTracker and AbilityTreasureUtils)",
+	["ServerScriptService.Features.Shift.Systems.ShiftCrewStatusSystem"] = "RunService/character/public-store shell (fields and diffs specced in ShiftCrewStatusUtils, rooms in OfficeLayoutUtils)",
+	["ServerScriptService.Features.Shift.Systems.ShiftReviewSystem"] = "signal subscription shell (counting specced in ShiftRosterTracker, awards in ShiftResultsUtils)",
+	["ServerScriptService.Features.Shift.Systems.ShiftBankingSystem"] = "Round banking shell (salvage multiplier and quota are specced in ShiftPhaseRules)",
+	["ServerScriptService.Features.Shift.Data.ShiftAnalyticsConstants"] = "static analytics vocabulary and limits (no logic; exercised by ShiftAnalyticsUtils.spec)",
+	["ServerScriptService.Features.Shift.Systems.ShiftAnalyticsSystem"] = "AnalyticsService/Players/ByteNet/Workspace shell (payloads, tokens, variant, platform and attempts are specced)",
+	["ServerScriptService.Features.Shift.Systems.ShiftAnalyticsWatchSystem"] = "signal/attribute subscription shell (every decision is specced in ShiftAnalyticsUtils and the trackers)",
+	["ServerScriptService.Features.Shift.ShiftServiceServer"] = "Players/RunService/service-orchestration shell (phase, vote, results and snapshot rules are specced)",
+	["ServerScriptService.Features.Shift.Systems.ShiftTripSystem"] = "Players/Queue-signal/teleport shell (ShiftCrewTracker, ShiftPlaceRules, ShiftCardUtils and DepotContractUtils are specced)",
+	["ServerScriptService.Features.Shift.Systems.ShiftVoteSystem"] = "RequestHandler/ByteNet vote shell (the vote decisions are specced in ShiftVoteRules)",
+	["ServerScriptService.Features.Shift.Systems.ShiftSiteSystem"] = "Office/Vacuum/Cargo/Round orchestration shell (variant, quota and the spawn roll are specced in ShiftVariantRules, ShiftQuotaFormulas and OfficeSpawnUtils)",
+	["ServerScriptService.Features.Shift.Systems.ShiftTransitSystem"] = "Players/character/streaming/ByteNet/timer shell (holds, readiness and deadlines specced in ShiftTransitTracker, the entry in ShiftTransitUtils)",
+	["ServerScriptService.Features.Depot.Data.DepotLayoutConstants"] = "authored layout data; validated by DepotLayoutRules.spec",
+	["ServerScriptService.Features.Depot.Systems.DepotBuildSystem"] = "Instance builder (the layout is validated by the specced DepotLayoutRules)",
+	["ServerScriptService.Features.Depot.DepotServiceServer"] = "Players/RunService/ByteNet/Queue-signal shell (layout rules, contract utils and the result card are specced)",
+}
+
+return table.freeze(EXEMPT_MODULES)

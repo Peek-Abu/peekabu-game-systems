@@ -38,7 +38,7 @@ comes next.
   API behaves a certain way without verifying it against the docs or the code.
 - **Spec-first TDD.** Write `<Name>.spec.luau` before the implementation.
   `SpecRoots.assertAllModulesSpecced` **fails the build** if a first-party module has no `.spec`
-  sibling and isn't in `SpecRoots.EXEMPT_MODULES` (with a reason). Spec files are intentionally
+  sibling and isn't in `SpecRoots`' exemption lists (`Core/Testing/SpecExemptions*`) (with a reason). Spec files are intentionally
   untyped — that is fine and expected.
 - **Module placement.** Every new module's feature, realm, subfolder and name are stated in the plan
   before it is written, and follow [docs/project-structure.md](docs/project-structure.md). Use the

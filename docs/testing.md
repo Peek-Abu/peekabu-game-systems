@@ -424,7 +424,7 @@ not — for a concrete reason:
 - **Presentational components → exempt, verified visually.** Design tokens (`Tokens`), primitives
   (`Button`, `Panel`), and screen components hold no business logic — they map props/state to
   instances. A unit test would only assert "it rendered", which is low-value, and TestEZ has no
-  renderer besides a live Studio session. These are listed in `SpecRoots.EXEMPT_MODULES` with a
+  renderer besides a live Studio session. These are listed in `SpecRoots`' exemption lists (`Core/Testing/SpecExemptions*`) with a
   reason and verified at the visual checkpoints.
 
 **The rule that keeps the exemption honest:** logic must live in the view-model, not the component.
@@ -633,7 +633,7 @@ end
    spec outside the roots** rather than silently skipping it. If you legitimately need a new spec
    location, add the root to `SpecRoots.luau` (one edit covers Studio and CI). The runners also call
    `assertAllModulesSpecced`, the inverse guard: it **errors on any first-party module under a root
-   that has no `.spec` sibling** and isn't in `SpecRoots.EXEMPT_MODULES` — so a new module can't ship
+   that has no `.spec` sibling** and isn't in `SpecRoots`' exemption lists (`Core/Testing/SpecExemptions*`) — so a new module can't ship
    untested (see [Test Coverage](#test-coverage--whats-enforced)).
 
 ### Testing Lifecycle Methods
