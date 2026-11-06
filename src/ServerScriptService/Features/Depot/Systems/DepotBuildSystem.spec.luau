@@ -88,7 +88,7 @@ return function()
 		end)
 	end)
 	describe("hub lighting", function()
-		it("hangs a lit strip over each board as well as over the trucks", function()
+		it("hangs a lit strip over each board (the crew board too) as well as over the trucks", function()
 			built = Build.build(Layout, CFrame.new(50000, 0, 0), {})
 			local lights = built.model:FindFirstChild("Lights")
 			expect(lights ~= nil).to.equal(true)
@@ -99,12 +99,14 @@ return function()
 				if fixture.Name == "BoardLight" then
 					boardLights += 1
 					local lamp = fixture.Position - CFrame.new(50000, 0, 0).Position
+					local crew = Layout.crewBoard
 					local near = math.abs(lamp.X - Layout.contractBoard.x) < 1
 						or math.abs(lamp.X - Layout.resultBoard.x) < 1
+						or (crew ~= nil and math.abs(lamp.X - crew.x) < 1)
 					expect(near).to.equal(true)
 				end
 			end
-			expect(boardLights).to.equal(2)
+			expect(boardLights).to.equal(if Layout.crewBoard ~= nil then 3 else 2)
 		end)
 	end)
 	describe("floor bays", function()
