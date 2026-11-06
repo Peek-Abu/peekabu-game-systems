@@ -22,8 +22,9 @@ export type QueuePayload = { [string]: string | number | boolean }
 
 export type TicketKind = "depart" | "return"
 
--- What a teleport carries (JSON teleport data). `party` lists the user ids the arrival server expects;
--- the reserved server's access code, not this list, is what keeps strangers out.
+-- What a teleport carries (JSON teleport data). `party` lists the user ids the arrival server expects. A departure's
+-- `server` is the reserved server's id (TeleportOptions.ReservedServerId), the key its ticket is stored under server to
+-- server (QueueTicketSystem): the arrival server believes that stored copy, never the party list the player carried.
 export type QueueTicket = {
 	kind: TicketKind,
 	from: string?,
@@ -31,7 +32,12 @@ export type QueueTicket = {
 	party: { number },
 	capacity: number,
 	payload: QueuePayload,
+	server: string?,
 }
+
+-- What the arrival server learned when it looked a departure's stored ticket up: found (with the ticket), missing
+-- (nothing stored under that key: forged, or expired), or error (MemoryStore failed).
+export type StoredLookup = { status: "found", ticket: QueueTicket? } | { status: "missing" } | { status: "error" }
 
 -- One pad as every client sees it (the `queue` world entry). `endsAt` is server time
 -- (workspace:GetServerTimeNow()); absent while nobody is aboard and while departing.

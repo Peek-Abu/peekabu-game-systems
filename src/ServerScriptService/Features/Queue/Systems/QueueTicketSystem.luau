@@ -1,11 +1,13 @@
 --!strict
 --[=[
-	QueueTicketSystem: the departure ticket kept server to server. A departing server stores each party's ticket in a
-	MemoryStore hash map under the id of the reserved server it reserved (`put`, before anyone is teleported), and that
-	reserved server loads it once at boot (`prefetch`). `ticketOf` then answers with QueueTeleportRules.pick: the stored
-	ticket over the copy the player carried in their join data, which passes through their client and could be edited
-	(a longer party, a bigger capacity, someone else's perks). The carried copy is still read, as the fallback for an
-	older hub build or a store outage, and for a trip home (a return ticket to a public server is never stored).
+	QueueTicketSystem: the departure ticket kept server to server. A departing server signs each party's ticket with the
+	new reserved server's id (TeleportOptions.ReservedServerId, a GUID) and stores the ticket in a MemoryStore hash map
+	under that id before anyone is teleported (`put`; a refused store fails the departure). On the reserved server, a
+	joining player's carried ticket only names that key: `ready` looks the stored copy up (once per key, in the
+	background, retried on QueueConstants.RETRY_DELAYS) and the arrival side waits for it, then `ticketOf` answers with
+	QueueTeleportRules.pick, so the party list, capacity and perks come from the stored copy and an edited join-data
+	ticket counts for nothing. Only a MemoryStore failure lets the carried copy stand. A return ticket (a trip home to
+	a public server) is never stored and is read from the join data as before.
 
 	Spec-exempt shell (MemoryStoreService, HttpService, join data); the choice is the specced QueueTeleportRules.pick
 	and every ticket, stored or carried, goes through the specced QueueTeleportRules.decode.
@@ -25,11 +27,12 @@ local QueueTypes = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueTyp
 local QueueTeleportRules = require(ServerScriptService.Features.Queue.Rules.QueueTeleportRules)
 
 type QueueTicket = QueueTypes.QueueTicket
+type StoredLookup = QueueTypes.StoredLookup
 
 local log = Logger.new("QueueTicketSystem")
 
--- This reserved server's own stored ticket, once loaded (nil: none, not loaded yet, or not a reserved server).
-local stored: QueueTicket? = nil
+-- Each key's lookup: absent = not started, "pending" while it runs, else what it found.
+local lookups: { [string]: StoredLookup | "pending" } = {}
 
 -- A ticket from its JSON, or nil (none, not JSON, or failing the decode checks).
 local function parse(raw: unknown): QueueTicket?
@@ -49,58 +52,83 @@ local function map(): MemoryStoreHashMap
 	return MemoryStoreService:GetHashMap(QueueConstants.TICKET_MAP)
 end
 
-local QueueTicketSystem = {}
-
---[=[
-	Stores `data` (the ticket's JSON) for the reserved server `serverId`. Yields; false (logged) when the store
-	refused, in which case the arrival server falls back to the carried ticket.
-]=]
-function QueueTicketSystem.put(serverId: string, data: string): boolean
-	if serverId == "" then
-		return false
-	end
-	local ok, err = pcall(function()
-		map():SetAsync(serverId, data, QueueConstants.TICKET_SECONDS)
-	end)
-	if not ok then
-		log:warn(`storing the ticket for {serverId} failed: {tostring(err)}`)
-	end
-	return ok
+local function carriedOf(player: Player): QueueTicket?
+	return parse(player:GetJoinData().TeleportData)
 end
 
---[=[
-	Loads this reserved server's own ticket (`serverId` = game.PrivateServerId) in the background, retrying on
-	QueueConstants.RETRY_DELAYS. Players who join before it lands are judged on their carried ticket.
-]=]
-function QueueTicketSystem.prefetch(serverId: string)
-	if serverId == "" then
+-- Starts looking `key` up (once).
+local function look(key: string)
+	if lookups[key] ~= nil then
 		return
 	end
+	lookups[key] = "pending"
 	task.spawn(function()
 		for attempt = 0, #QueueConstants.RETRY_DELAYS do
 			if attempt > 0 then
 				task.wait(QueueConstants.RETRY_DELAYS[attempt])
 			end
 			local ok, raw = pcall(function(): unknown
-				return map():GetAsync(serverId)
+				return map():GetAsync(key)
 			end)
 			if ok then
-				stored = parse(raw)
+				local stored = parse(raw)
 				if stored == nil then
-					log:info("no stored ticket for this server: carried tickets are used")
+					log:warn(`no stored ticket under {key}: its carriers are treated as strangers`)
+					lookups[key] = { status = "missing" }
+				else
+					lookups[key] = { status = "found", ticket = stored }
 				end
 				return
 			end
-			log:warn(`loading the stored ticket failed: {tostring(raw)}`)
+			log:warn(`looking up the stored ticket failed: {tostring(raw)}`)
 		end
+		log:warn(`the ticket store is down: trusting carried tickets for {key}`)
+		lookups[key] = { status = "error" }
 	end)
 end
 
+local QueueTicketSystem = {}
+
 --[=[
-	The Queue ticket to believe for `player`: this server's stored ticket over their carried one (QueueTeleportRules.pick).
+	Stores `data` (the ticket's JSON) under the reserved server id `key`. Yields; false (logged) when the store
+	refused.
+]=]
+function QueueTicketSystem.put(key: string, data: string): boolean
+	if key == "" then
+		return false
+	end
+	local ok, err = pcall(function()
+		map():SetAsync(key, data, QueueConstants.TICKET_SECONDS)
+	end)
+	if not ok then
+		log:warn(`storing the ticket under {key} failed: {tostring(err)}`)
+	end
+	return ok
+end
+
+--[=[
+	Whether `player`'s ticket can be judged now: true unless the stored copy their carried ticket names is still being
+	looked up (the first call starts that lookup). Never yields.
+]=]
+function QueueTicketSystem.ready(player: Player): boolean
+	local carried = carriedOf(player)
+	local key = if carried ~= nil and carried.kind == "depart" then carried.server else nil
+	if key == nil then
+		return true
+	end
+	look(key)
+	return lookups[key] ~= "pending"
+end
+
+--[=[
+	The Queue ticket to believe for `player` (QueueTeleportRules.pick over their carried copy and its stored lookup).
 ]=]
 function QueueTicketSystem.ticketOf(player: Player): QueueTicket?
-	return QueueTeleportRules.pick(stored, parse(player:GetJoinData().TeleportData))
+	local carried = carriedOf(player)
+	local key = if carried ~= nil then carried.server else nil
+	local found = if key ~= nil then lookups[key] else nil
+	local lookup: StoredLookup? = if type(found) == "table" then found else nil
+	return QueueTeleportRules.pick(carried, lookup)
 end
 
 return QueueTicketSystem

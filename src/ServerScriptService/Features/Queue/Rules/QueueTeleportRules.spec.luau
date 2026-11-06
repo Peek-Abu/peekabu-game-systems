@@ -151,25 +151,62 @@ return function()
 		end)
 	end)
 
+	describe("server key", function()
+		it("carries the reserved server's key through the wire", function()
+			local signed = ticket()
+			signed.server = "0b1c-key"
+			expect(QueueTeleportRules.decode(wire(signed)).server).to.equal("0b1c-key")
+			expect(QueueTeleportRules.decode(wire(ticket())).server).to.equal(nil)
+		end)
+
+		it("rejects an empty or overlong key", function()
+			local empty = wire(ticket())
+			empty.server = ""
+			expect(QueueTeleportRules.decode(empty)).to.equal(nil)
+			local long = wire(ticket())
+			long.server = string.rep("a", QueueConstants.MAX_SERVER_KEY + 1)
+			expect(QueueTeleportRules.decode(long)).to.equal(nil)
+		end)
+	end)
+
 	describe("pick", function()
-		it("trusts the ticket the departing server stored over the one the player carried", function()
-			local stored = ticket()
-			local carried = ticket()
+		local function signed(key)
+			local value = ticket()
+			value.server = key
+			return value
+		end
+
+		it("believes the stored copy under the carried key, never the carried party list", function()
+			local stored = signed("k1")
+			local carried = signed("k1")
+			carried.party = { 7, 8, 99 }
 			carried.capacity = QueueConstants.MAX_CAPACITY
-			expect(QueueTeleportRules.pick(stored, carried)).to.equal(stored)
+			expect(QueueTeleportRules.pick(carried, { status = "found", ticket = stored })).to.equal(stored)
 		end)
 
-		it("falls back to the carried ticket when nothing was stored (an older hub, a store outage)", function()
-			local carried = ticket()
-			expect(QueueTeleportRules.pick(nil, carried)).to.equal(carried)
-			expect(QueueTeleportRules.pick(nil, nil)).to.equal(nil)
+		it("gives no ticket when nothing is stored under the key (forged or expired)", function()
+			expect(QueueTeleportRules.pick(signed("forged"), { status = "missing" })).to.equal(nil)
 		end)
 
-		it("keeps a carried return ticket even when a depart ticket was stored", function()
-			local stored = ticket()
+		it("gives no ticket when the stored copy names another key", function()
+			local other = signed("k2")
+			expect(QueueTeleportRules.pick(signed("k1"), { status = "found", ticket = other })).to.equal(nil)
+		end)
+
+		it("gives no ticket for a departure that carries no key", function()
+			expect(QueueTeleportRules.pick(ticket(), { status = "error" })).to.equal(nil)
+			expect(QueueTeleportRules.pick(ticket(), nil)).to.equal(nil)
+		end)
+
+		it("lets the carried copy stand only when the store itself failed", function()
+			local carried = signed("k1")
+			expect(QueueTeleportRules.pick(carried, { status = "error" })).to.equal(carried)
+		end)
+
+		it("keeps a carried return ticket (trips home are never stored)", function()
 			local back = ticket()
 			back.kind = "return"
-			expect(QueueTeleportRules.pick(stored, back)).to.equal(back)
+			expect(QueueTeleportRules.pick(back, nil)).to.equal(back)
 		end)
 	end)
 end

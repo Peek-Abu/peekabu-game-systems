@@ -1,15 +1,16 @@
 --!strict
 --[=[
-	QueueTeleportSystem: sends players to another place and sees each teleport through. A departure that
-	reserves reserves ONE server (ReserveServer) and keeps its access code, so every retry, including a
-	retry for only the players a partial failure hit, lands in that same server. A failure (ReserveServer or
-	TeleportAsync erroring, TeleportInitFailed, or a player still here TELEPORT_WATCHDOG seconds after the
+	QueueTeleportSystem: sends players to another place and sees each teleport through. A departure to a reserved
+	server names ONE id (TeleportOptions.ReservedServerId: the first teleport with a new id creates that server), so
+	every retry, including a retry for only the players a partial failure hit, lands in that same server; its ticket is
+	stored (`onReserved`) before anyone leaves. A failure (the store refusing, TeleportAsync erroring,
+	TeleportInitFailed, or a player still here TELEPORT_WATCHDOG seconds after the
 	attempt) is retried on QueueTeleportRules' schedule; after the last retry the player is given up on.
 	`onFinished` runs once per departure with the players given up on (empty when everyone left). A request
 	whose players are all already in flight with an earlier departure starts nothing: `send` returns false
 	and `onFinished` never runs.
 
-	ReserveServer and TeleportAsync error in Studio; that is why QueueServiceServer routes Studio as a local
+	TeleportAsync errors in Studio; that is why QueueServiceServer routes Studio as a local
 	move. Spec-exempt shell (TeleportService, Players); the bookkeeping is the specced QueueDepartureTracker
 	and the schedule the specced QueueTeleportRules.
 
@@ -31,13 +32,15 @@ export type OnFinished = (gaveUp: { Player }, reason: string?) -> ()
 export type Request = {
 	players: { Player },
 	placeId: number,
-	-- Reserve a fresh server (a party going out), or join any public server (a trip home, a redirect).
-	reserve: boolean,
+	-- A fresh reserved server's id (a party going out: TeleportOptions.ReservedServerId; the first teleport with a new
+	-- id creates the server and every retry reuses it), or nil to join any public server (a trip home, a redirect).
+	reservedId: string?,
 	-- JSON teleport data, or nil for none.
 	data: string?,
-	-- A reserving departure: called once with the reserved server's id after it is reserved and before anyone is
-	-- teleported (the service stores the ticket under it, QueueTicketSystem). May yield.
-	onReserved: ((serverId: string) -> ())?,
+	-- A reserving departure: called once before anyone is teleported (the service stores the ticket under
+	-- `reservedId`, QueueTicketSystem); false fails the departure, so a party never leaves with an unstored ticket.
+	-- May yield.
+	onReserved: (() -> boolean)?,
 	onFinished: OnFinished,
 }
 
@@ -51,7 +54,8 @@ export type QueueTeleportSystem = {
 
 type Record = {
 	request: Request,
-	accessCode: string?,
+	-- Whether this departure's ticket is stored (its `onReserved` succeeded).
+	stored: boolean,
 	players: { [number]: Player },
 }
 
@@ -133,33 +137,20 @@ function QueueTeleportSystem.new(): QueueTeleportSystem
 			return
 		end
 		local request = record.request
-		if request.reserve and record.accessCode == nil then
-			local ok, result, serverId = pcall(function(): (string, string)
-				return TeleportService:ReserveServer(request.placeId)
-			end)
-			if not ok then
-				fail(id, present, `ReserveServer failed: {tostring(result)}`)
+		local onReserved = request.onReserved
+		if request.reservedId ~= nil and not record.stored and onReserved ~= nil then
+			local ok, result = pcall(onReserved)
+			if not ok or result ~= true then
+				fail(id, present, `storing the ticket failed: {if ok then "refused" else tostring(result)}`)
 				return
 			end
-			-- ReserveServer yields: a slow call and its watchdog retry can both get here. Keep the first code so
-			-- the party never splits across two reserved servers.
-			if record.accessCode == nil then
-				record.accessCode = result
-				local onReserved = request.onReserved
-				if onReserved ~= nil then
-					local stored, err = pcall(function()
-						onReserved(serverId)
-					end)
-					if not stored then
-						log:warn(`onReserved failed: {tostring(err)}`)
-					end
-				end
-			end
+			-- The store yields: a slow call and its watchdog retry can both get here; storing twice is harmless.
+			record.stored = true
 		end
 		local options = Instance.new("TeleportOptions")
-		local code = record.accessCode
-		if code ~= nil then
-			options.ReservedServerAccessCode = code
+		local reservedId = request.reservedId
+		if reservedId ~= nil then
+			options.ReservedServerId = reservedId
 		end
 		local data = request.data
 		if data ~= nil then
@@ -186,7 +177,7 @@ function QueueTeleportSystem.new(): QueueTeleportSystem
 			if id == nil then
 				return false
 			end
-			records[id] = { request = request, accessCode = nil, players = byId }
+			records[id] = { request = request, stored = false, players = byId }
 			task.spawn(attempt, id, request.players)
 			return true
 		end,

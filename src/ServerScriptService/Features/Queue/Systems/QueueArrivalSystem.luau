@@ -28,6 +28,9 @@ type QueueTicket = QueueTypes.QueueTicket
 
 export type Hooks = {
 	ticketOf: (player: Player) -> QueueTicket?,
+	-- Whether the player's ticket can be judged yet (its stored copy looked up); absent = always. A player not ready is
+	-- left waiting for the next step.
+	ready: ((player: Player) -> boolean)?,
 	onArrived: (crew: { Player }, ticket: QueueTicket?) -> (),
 	onLate: (player: Player) -> (),
 	onRedirect: (player: Player, ticket: QueueTicket?) -> (),
@@ -98,9 +101,14 @@ function QueueArrivalSystem.new(hooks: Hooks): QueueArrivalSystem
 			end
 			local joining = waiting
 			waiting = {}
+			local ready = hooks.ready
 			for _, player in joining do
 				if player.Parent == Players then
-					admit(player, now)
+					if ready ~= nil and not ready(player) then
+						table.insert(waiting, player)
+					else
+						admit(player, now)
+					end
 				end
 			end
 			if tracker:ready(now) then

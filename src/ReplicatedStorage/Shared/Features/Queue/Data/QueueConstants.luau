@@ -38,6 +38,8 @@ return table.freeze({
 	-- and how long an entry lives (a reserved server reads it at boot, seconds after the departure).
 	TICKET_MAP = "QueueTickets",
 	TICKET_SECONDS = 600,
+	-- The longest reserved-server key a ticket may carry (a GUID is 36 characters).
+	MAX_SERVER_KEY = 64,
 	MAX_PAYLOAD_KEYS = 32,
 	MAX_PAYLOAD_KEY_LENGTH = 64,
 	MAX_PAYLOAD_STRING = 1000,

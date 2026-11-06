@@ -163,6 +163,8 @@ local function sendParty(
 	payload: QueuePayload,
 	placeId: number
 )
+	-- The new reserved server's id, which the ticket names and is stored under (QueueTicketSystem).
+	local serverId = HttpService:GenerateGUID(false)
 	local ticket: QueueTicket = {
 		kind = "depart",
 		from = currentRole(),
@@ -170,15 +172,16 @@ local function sendParty(
 		party = idsOf(party),
 		capacity = pads:seatsOf(pad) or padConfig.capacity,
 		payload = payload,
+		server = serverId,
 	}
 	local data = HttpService:JSONEncode(QueueTeleportRules.encode(ticket))
 	local sent = teleports:send({
 		players = party,
 		placeId = placeId,
-		reserve = true,
+		reservedId = serverId,
 		data = data,
-		onReserved = function(serverId: string)
-			QueueTicketSystem.put(serverId, data)
+		onReserved = function(): boolean
+			return QueueTicketSystem.put(serverId, data)
 		end,
 		onFinished = function(gaveUp, reason)
 			pads:unlock(pad)
@@ -240,7 +243,6 @@ local function redirect(player: Player, ticket: QueueTicket?)
 		teleports:send({
 			players = { player },
 			placeId = route.placeId,
-			reserve = false,
 			data = nil,
 			onFinished = function(gaveUp)
 				for _, stuck in gaveUp do
@@ -256,6 +258,7 @@ end
 
 local arrivals = QueueArrivalSystem.new({
 	ticketOf = ticketOf,
+	ready = QueueTicketSystem.ready,
 	onArrived = function(crew, ticket)
 		counters.arrivals += 1
 		arrived:Fire(crew, if ticket ~= nil then ticket.payload else {})
@@ -327,7 +330,6 @@ local QueueServiceServer: QueueServiceServer = {
 		local reserved = QueuePlaceRules.isReservedServer(game.PrivateServerId, game.PrivateServerOwnerId)
 		pads:start()
 		if mode == "live" and reserved then
-			QueueTicketSystem.prefetch(game.PrivateServerId)
 			arrivalsActive = true
 			arrivals:start()
 		elseif mode == "live" then
@@ -459,7 +461,6 @@ local QueueServiceServer: QueueServiceServer = {
 			teleports:send({
 				players = players,
 				placeId = route.placeId,
-				reserve = false,
 				data = HttpService:JSONEncode(QueueTeleportRules.encode(ticket)),
 				onFinished = function(gaveUp, failReason)
 					if #gaveUp > 0 then

@@ -76,6 +76,10 @@ function QueueTeleportRules.encode(ticket: QueueTicket): WorldTable
 	if from ~= nil then
 		wire.from = from
 	end
+	local server = ticket.server
+	if server ~= nil then
+		wire.server = server
+	end
 	return wire
 end
 
@@ -136,19 +140,6 @@ end
 --[=[
 	Decodes teleport data (already JSON-decoded) into a ticket, or nil when it is not a valid one.
 ]=]
---[=[
-	Which ticket an arrival server believes: the one the departing server stored under this reserved server's id
-	(server to server, so nobody can edit it) wins over the one the player carried in their join data, which passes
-	through their client. Without a stored one (an older hub build, a MemoryStore outage) the carried ticket stands;
-	a carried return ticket (a trip home to a public server, never stored) is always the carried one.
-]=]
-function QueueTeleportRules.pick(stored: QueueTicket?, carried: QueueTicket?): QueueTicket?
-	if carried ~= nil and carried.kind == "return" then
-		return carried
-	end
-	return stored or carried
-end
-
 function QueueTeleportRules.decode(value: WorldValue?): QueueTicket?
 	if type(value) ~= "table" or value.v ~= QueueConstants.TICKET_VERSION then
 		return nil
@@ -166,6 +157,10 @@ function QueueTeleportRules.decode(value: WorldValue?): QueueTicket?
 		return nil
 	end
 	if from ~= nil and type(from) ~= "string" then
+		return nil
+	end
+	local server = value.server
+	if server ~= nil and (type(server) ~= "string" or server == "" or #server > QueueConstants.MAX_SERVER_KEY) then
 		return nil
 	end
 	if
@@ -188,7 +183,36 @@ function QueueTeleportRules.decode(value: WorldValue?): QueueTicket?
 		party = party,
 		capacity = capacity,
 		payload = payload,
+		server = if type(server) == "string" then server else nil,
 	}
+end
+
+--[=[
+	Which ticket an arrival server believes for a joining player, from the copy they carried in their join data (it
+	passed through their client, so only its `server` key is used) and the lookup of the copy the departing server
+	stored under that key. A return ticket (a trip home to a public server, never stored) is the carried one. A
+	departure is the stored copy, and only when it names the same key; nothing stored under the key (forged, expired)
+	or no key at all means no ticket (the player is a stranger). Only when MemoryStore itself failed does the carried
+	copy stand, so an outage never strands a real party.
+]=]
+function QueueTeleportRules.pick(carried: QueueTicket?, lookup: QueueTypes.StoredLookup?): QueueTicket?
+	if carried == nil then
+		return nil
+	end
+	if carried.kind == "return" then
+		return carried
+	end
+	local key = carried.server
+	if key == nil or lookup == nil then
+		return nil
+	end
+	if lookup.status == "error" then
+		return carried
+	elseif lookup.status == "found" then
+		local stored = lookup.ticket
+		return if stored ~= nil and stored.kind == "depart" and stored.server == key then stored else nil
+	end
+	return nil
 end
 
 return QueueTeleportRules
