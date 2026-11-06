@@ -55,10 +55,14 @@ return function()
 			expect(near(middle.Position, Vector3.new(10, 0, 0), 0.05)).to.equal(true)
 		end)
 
-		it("moves at an even speed along a straight line", function()
-			local path = FilmPathFormulas.build({ mark(Vector3.new(0, 0, 0)), mark(Vector3.new(30, 0, 0)) })
-			local quarter = FilmPathFormulas.sample(path, 0.25)
-			expect(near(quarter.Position, Vector3.new(7.5, 0, 0), 0.05)).to.equal(true)
+		it("goes by distance, not by mark: halfway in time is halfway along, however the marks are spaced", function()
+			local path = FilmPathFormulas.build({
+				mark(Vector3.new(0, 0, 0)),
+				mark(Vector3.new(5, 0, 0)),
+				mark(Vector3.new(30, 0, 0)),
+			})
+			local half = FilmPathFormulas.sample(path, 0.5)
+			expect(near(half.Position, Vector3.new(15, 0, 0), 0.3)).to.equal(true)
 		end)
 
 		it("never rolls the camera", function()

@@ -66,6 +66,8 @@ return function()
 		it("hides guis that appear while hidden, and brings them back too", function()
 			system.hide()
 			local late = gui("BillboardGui", "Late", root)
+			-- Signals are deferred: the watcher runs at the next resumption point.
+			task.wait()
 			expect(late.Enabled).to.equal(false)
 			system.show()
 			expect(late.Enabled).to.equal(true)
@@ -75,6 +77,7 @@ return function()
 			local hud = gui("ScreenGui", "Hud", root)
 			system.hide()
 			hud.Enabled = true
+			task.wait()
 			expect(hud.Enabled).to.equal(false)
 			system.show()
 			expect(hud.Enabled).to.equal(true)
@@ -86,8 +89,9 @@ return function()
 			system.show()
 			hud.Enabled = false
 			hud.Enabled = true
-			expect(hud.Enabled).to.equal(true)
 			local late = gui("ScreenGui", "Late", root)
+			task.wait()
+			expect(hud.Enabled).to.equal(true)
 			expect(late.Enabled).to.equal(true)
 		end)
 
