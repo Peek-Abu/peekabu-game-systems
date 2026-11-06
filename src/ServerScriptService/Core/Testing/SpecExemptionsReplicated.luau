@@ -15,6 +15,9 @@
 
 local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.Features.Office.Systems.OfficeShadowSystem"] = "Instances and UserGameSettings shell (OfficeShadowUtils is specced)",
+	["ReplicatedStorage.Shared.Features.Leaderboard.Data.LeaderboardConstants"] = "static names and tuning (no logic)",
+	["ReplicatedStorage.Shared.Features.Leaderboard.Data.LeaderboardTypes"] = "type definitions only (no runtime logic)",
+	["ReplicatedStorage.Client.UI.React.Screens.Leaderboard.LeaderboardBoard"] = "presentational React component (words specced in LeaderboardBoardViewModel)",
 	["ReplicatedStorage.Shared.Data.PlayerDataTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Data.PublicPlayerTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Data.WorldTypes"] = "type definitions only (no runtime logic)",

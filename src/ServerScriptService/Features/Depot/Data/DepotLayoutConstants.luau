@@ -22,6 +22,8 @@ local LAYOUT: DepotTypes.Layout = {
 	},
 	contractBoard = { x = 34, z = 12 },
 	resultBoard = { x = 62, z = 12 },
+	-- Right of the result board, near the side wall (its 9-stud sign spans x 82-91).
+	crewBoard = { x = 86.5, z = 12 },
 	-- The Moving Van's ramp foot is at z 31.8: the spawn row stays well in front of the bays' painted fronts.
 	spawns = {
 		{ x = 40, z = 22 },

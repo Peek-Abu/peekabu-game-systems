@@ -134,6 +134,15 @@ function DepotLayoutRules.validate(layout: DepotTypes.Layout): (boolean, { strin
 	if overlaps(boardRect(layout.contractBoard), boardRect(layout.resultBoard)) then
 		table.insert(errors, "the contract and result boards overlap")
 	end
+	local crewBoard = layout.crewBoard
+	if crewBoard ~= nil then
+		checkBoard("crew board", crewBoard)
+		for _, other in { layout.contractBoard, layout.resultBoard } do
+			if overlaps(boardRect(crewBoard), boardRect(other)) then
+				table.insert(errors, "the crew board overlaps another board")
+			end
+		end
+	end
 
 	if #layout.spawns == 0 then
 		table.insert(errors, "no spawn points")

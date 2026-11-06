@@ -159,6 +159,19 @@ return function()
 			expect(hasError(errors, "boards overlap")).to.equal(true)
 		end)
 
+		it("checks the crew board when there is one: inside the floor, clear of the other boards", function()
+			local layout = fixture()
+			layout.crewBoard = { x = 86, z = 12 }
+			local ok = DepotLayoutRules.validate(layout)
+			expect(ok).to.equal(true)
+			layout.crewBoard = { x = 64, z = 12 }
+			local _, overlapping = DepotLayoutRules.validate(layout)
+			expect(hasError(overlapping, "crew board overlaps")).to.equal(true)
+			layout.crewBoard = { x = 300, z = 12 }
+			local _, outside = DepotLayoutRules.validate(layout)
+			expect(hasError(outside, "crew board is not inside")).to.equal(true)
+		end)
+
 		it("refuses a spawn on or beside a truck bed, so nobody spawns into a queue", function()
 			local layout = fixture()
 			layout.spawns[1] = { x = 20, z = 38 }

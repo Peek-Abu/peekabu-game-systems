@@ -257,7 +257,11 @@ function DepotBuildSystem.build(
 			DepotLayoutConstants.LIGHT_BRIGHTNESS
 		)
 	end
-	for _, board in { layout.contractBoard, layout.resultBoard } do
+	local lit: { DepotTypes.Point } = { layout.contractBoard, layout.resultBoard }
+	if layout.crewBoard ~= nil then
+		table.insert(lit, layout.crewBoard)
+	end
+	for _, board in lit do
 		fixture(
 			"BoardLight",
 			board.x,
@@ -337,6 +341,22 @@ function DepotBuildSystem.build(
 	local resultSign = surface("ResultSign", resultBoard, DepotConstants.BILLBOARD_PX.result)
 	CollectionService:AddTag(resultSign, DepotConstants.BILLBOARD_TAGS.result)
 	resultSign.Parent = boards
+	-- The weekly crew leaderboard beside it (drawn by the client from the `crewBoard` world entry).
+	local crewPoint = layout.crewBoard
+	if crewPoint ~= nil then
+		local crewPx = DepotConstants.BILLBOARD_PX.crew
+		local crewBoard = block(
+			"CrewBoard",
+			-- The result board's scale (80 px a stud), so the two signs read as a pair.
+			Vector3.new(crewPx.X / 80, crewPx.Y / 80, 1),
+			origin * CFrame.new(crewPoint.x, crewPx.Y / 160, crewPoint.z),
+			DepotLayoutConstants.BOARD_COLOR,
+			boards
+		)
+		local crewSign = surface("CrewSign", crewBoard, crewPx)
+		CollectionService:AddTag(crewSign, DepotConstants.BILLBOARD_TAGS.crew)
+		crewSign.Parent = boards
+	end
 
 	-- A small physical clock, clear of both board silhouettes and the spawn lane.
 	local clock = block(

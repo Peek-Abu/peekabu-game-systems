@@ -8,7 +8,9 @@
 	board (W2) draws from its shell's attributes and the local player's truck crew (its CLEAR line is that crew's quota),
 	redrawn on the same tick when the crew changes; the result board (W3) draws from its shell's attributes; your review card's shell (W4, in your
 	PlayerGui) draws the whole result board with your card and award stickies, and while it exists the shared board draws
-	nothing (DepotWorldViewModel.drawsSharedBoard).
+	nothing (DepotWorldViewModel.drawsSharedBoard). The crew board draws the weekly crew leaderboard from the
+	`crewBoard` world entry (LeaderboardBoardViewModel), checked on the same tick and redrawn only when its words change
+	(the countdown moves once a minute).
 
 	Spec-exempt shell (CollectionService, RunService, React roots); the decisions are the specced DepotWorldViewModel and
 	the UIBillboards core.
@@ -33,6 +35,11 @@ local DepotBoardViewModel = require(ReplicatedStorage.Client.UI.React.Screens.De
 local DepotTruckTag = require(ReplicatedStorage.Client.UI.React.Screens.World.DepotTruckTag)
 local DepotWorkOrderBoard = require(ReplicatedStorage.Client.UI.React.Screens.World.DepotWorkOrderBoard)
 local DepotWorldViewModel = require(ReplicatedStorage.Client.UI.React.Screens.World.DepotWorldViewModel)
+local LeaderboardBoard = require(ReplicatedStorage.Client.UI.React.Screens.Leaderboard.LeaderboardBoard)
+local LeaderboardBoardViewModel =
+	require(ReplicatedStorage.Client.UI.React.Screens.Leaderboard.LeaderboardBoardViewModel)
+local LeaderboardConstants = require(ReplicatedStorage.Shared.Features.Leaderboard.Data.LeaderboardConstants)
+local LeaderboardCrewUtils = require(ReplicatedStorage.Shared.Features.Leaderboard.Utils.LeaderboardCrewUtils)
 local WorldBillboard = require(ReplicatedStorage.Client.UI.React.Screens.World.WorldBillboard)
 
 export type DepotBillboardState = {
@@ -122,6 +129,35 @@ local function drawContract(shell: UIBillboards.WorldShell)
 	roots.show(shell, if view ~= nil then sign(PX.contract, e(DepotWorkOrderBoard, { view = view })) else nil)
 end
 
+local crewBoards: { [UIBillboards.WorldShell]: true } = {}
+-- The crew board's words as last drawn (one string), so an unchanged board is not redrawn.
+local drawnCrewBoard: string? = nil
+
+local function crewView(): LeaderboardBoardViewModel.View
+	local board = LeaderboardCrewUtils.decodeBoard(StateSyncClientStore.world()[LeaderboardConstants.WORLD_ENTRY])
+	return LeaderboardBoardViewModel.view(board, Workspace:GetServerTimeNow())
+end
+
+local function crewWords(view: LeaderboardBoardViewModel.View): string
+	local parts = { view.title, view.subtitle, view.empty or "" }
+	for _, row in view.rows do
+		table.insert(parts, `{row.rank}|{row.names}|{row.score}`)
+	end
+	return table.concat(parts, "|")
+end
+
+local function drawCrewBoards(force: boolean)
+	local view = crewView()
+	local words = crewWords(view)
+	if not force and words == drawnCrewBoard then
+		return
+	end
+	drawnCrewBoard = words
+	for shell in crewBoards do
+		roots.show(shell, sign(PX.crew, e(LeaderboardBoard, { view = view })))
+	end
+end
+
 local function count(set: { [UIBillboards.WorldShell]: true }): number
 	local total = 0
 	for _ in set do
@@ -165,6 +201,12 @@ function DepotBillboardSystem.start()
 	end, function(shell)
 		results[shell] = nil
 	end)
+	watch(TAGS.crew, function(shell)
+		crewBoards[shell] = true
+		drawCrewBoards(true)
+	end, function(shell)
+		crewBoards[shell] = nil
+	end)
 	watch(TAGS.review, function(shell)
 		reviews[shell] = true
 		drawReview(shell)
@@ -187,6 +229,9 @@ function DepotBillboardSystem.start()
 			for shell in contracts do
 				drawContract(shell)
 			end
+		end
+		if next(crewBoards) ~= nil then
+			drawCrewBoards(false)
 		end
 	end)
 	table.insert(stoppers, function()

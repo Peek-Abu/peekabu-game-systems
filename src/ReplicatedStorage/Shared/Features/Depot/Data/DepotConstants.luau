@@ -100,6 +100,8 @@ return table.freeze({
 		truck = Vector2.new(340, 310),
 		contract = Vector2.new(600, 420),
 		result = Vector2.new(1140, 446),
+		-- The weekly crew leaderboard (LeaderboardBoard).
+		crew = Vector2.new(720, 560),
 	}),
 	-- The tags the client finds each kind of depot shell by (DepotBillboardSystem); `review` is your own card's shell.
 	BILLBOARD_TAGS = table.freeze({
@@ -107,6 +109,7 @@ return table.freeze({
 		contract = "DepotContractBoard",
 		result = "DepotResultBoard",
 		review = "DepotReviewCard",
+		crew = "DepotCrewBoard",
 	}),
 	-- A truck tag shell's truck number and seats, written once by the server.
 	TRUCK_ATTRIBUTE = "DepotTruck",

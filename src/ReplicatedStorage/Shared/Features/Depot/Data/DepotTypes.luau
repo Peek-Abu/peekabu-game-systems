@@ -66,6 +66,8 @@ export type Layout = {
 	trucks: { Truck },
 	contractBoard: Point,
 	resultBoard: Point,
+	-- The weekly crew leaderboard (LeaderboardServiceServer's `crewBoard` world entry); absent = no board.
+	crewBoard: Point?,
 	spawns: { Point },
 }
 
