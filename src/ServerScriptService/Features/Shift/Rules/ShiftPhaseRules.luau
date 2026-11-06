@@ -182,6 +182,23 @@ function ShiftPhaseRules.startOvertime(state: ShiftState, now: number): ShiftSta
 end
 
 --[=[
+	A filmmaker's skip (the admin-only `shiftovertime` command): straight into overtime now, at the top tier, with the
+	quota counted as met (overtime only ever follows it). Nil in overtime, while the crew clocks out, or outside a
+	running shift.
+]=]
+function ShiftPhaseRules.forceOvertime(state: ShiftState, now: number): ShiftState?
+	if state.phase ~= "running" or state.sub == "clockout" or state.stage == "overtime" then
+		return nil
+	end
+	local nextState = table.clone(state)
+	nextState.stage = "overtime"
+	nextState.stageEndsAt = nil
+	nextState.quotaMet = true
+	nextState.tier = tierFor("overtime", state.startedAt, now)
+	return nextState
+end
+
+--[=[
 	Moves the pacing on to `now`: the break ends at its deadline (back to normal, never into overtime), the
 	warning becomes overtime at its deadline, and the tier. Nil when nothing changed or the shift is not running.
 ]=]

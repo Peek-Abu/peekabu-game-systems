@@ -449,6 +449,7 @@ export type ShiftServiceServer = {
 	clockOut: (self: ShiftServiceServer, player: Player?) -> boolean,
 	vote: (self: ShiftServiceServer, player: Player, choice: ShiftTypes.Vote) -> boolean,
 	resetShift: (self: ShiftServiceServer) -> (),
+	forceOvertime: (self: ShiftServiceServer) -> boolean,
 	noteCatch: (self: ShiftServiceServer, player: Player) -> boolean,
 	spendLife: (self: ShiftServiceServer, player: Player) -> boolean,
 	addLivesModifier: (self: ShiftServiceServer, modify: (number) -> number) -> () -> (),
@@ -606,6 +607,19 @@ local ShiftServiceServer: ShiftServiceServer = {
 			return
 		end
 		finishReset()
+	end,
+
+	--[=[
+		A filmmaker's skip straight into overtime (the `shiftovertime` command, Admins only; ShiftPhaseRules.forceOvertime).
+		False when it cannot.
+	]=]
+	forceOvertime = function(_self)
+		local nextState = ShiftPhaseRules.forceOvertime(state, now())
+		if nextState == nil then
+			return false
+		end
+		setState(nextState)
+		return true
 	end,
 
 	--[=[

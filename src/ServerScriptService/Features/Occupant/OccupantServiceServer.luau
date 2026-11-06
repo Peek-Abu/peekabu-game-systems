@@ -75,6 +75,8 @@ local OccupantEscapeRules = require(OccupantServer.Rules.OccupantEscapeRules)
 local OccupantTurnRules = require(OccupantServer.Rules.OccupantTurnRules)
 local OccupantMindUtils = require(OccupantServer.Utils.OccupantMindUtils)
 local OccupantWorkRules = require(OccupantServer.Rules.OccupantWorkRules)
+local OccupantStageRules = require(OccupantServer.Rules.OccupantStageRules)
+local OccupantStageSystem = require(OccupantServer.Systems.OccupantStageSystem)
 local Sense = require(OccupantServer.Systems.OccupantSenseSystem)
 local OccupantTuningFormulas = require(OccupantServer.Utils.OccupantTuningFormulas)
 local OccupantRigSystem = require(OccupantServer.Systems.OccupantRigSystem)
@@ -293,6 +295,10 @@ local function think(def: NpcTypes.NpcDef, now: number, position: Vector3): NpcT
 		pendingForce = nil
 		before = OccupantAlertRules.force(before, senses, force.kind, force.userId)
 	end
+	local chaseId = OccupantStageSystem.takeChase()
+	if chaseId ~= nil then
+		before = (OccupantStageRules.chase(before, senses, chaseId))
+	end
 	-- The developer's ForceSlowTurn attribute (Studio only): every head turn that variant while it is set.
 	before = OccupantTurnRules.arm(before, Sense.forcedTurn())
 	local result = OccupantBrainRules.step(before, senses)
@@ -329,6 +335,10 @@ local function brain(def: NpcTypes.NpcDef, context: NpcTypes.BrainContext, npc: 
 	local current = rig
 	if current == nil or npc ~= current.model then
 		return { kind = "idle" }
+	end
+	local staged = OccupantStageSystem.intent(context.position)
+	if staged ~= nil then
+		return staged
 	end
 	return think(def, context.now, context.position)
 end
@@ -373,6 +383,7 @@ local function despawn()
 	local current = rig
 	rig = nil
 	mind = nil
+	OccupantStageSystem.reset()
 	holdUntil = 0
 	lastGoal = nil
 	pendingNoise = nil
@@ -480,6 +491,12 @@ export type OccupantServiceServer = {
 		player: Player,
 		kind: OccupantTypes.TurnKind | "auto"
 	) -> (boolean, string),
+	stage: (
+		self: OccupantServiceServer,
+		player: Player,
+		action: OccupantStageRules.Action,
+		target: Player?
+	) -> (boolean, string),
 }
 
 local OccupantServiceServer: OccupantServiceServer = {
@@ -579,6 +596,30 @@ local OccupantServiceServer: OccupantServiceServer = {
 		end
 		pendingForce = { kind = kind, userId = player.UserId }
 		return true, "queued"
+	end,
+
+	--[=[
+		A filmmaker's staging (the `harlow` command, Admins only; OccupantStageRules): freeze, free, come or rush to
+		`player`, here (moved to `player`, frozen), calm, or chase `target`. False and why when it cannot.
+	]=]
+	stage = function(_self, player, action, target)
+		local current, currentMind = rig, mind
+		local character = player.Character
+		local root = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil
+		local humanoid = if character ~= nil then character:FindFirstChildOfClass("Humanoid") else nil
+		if current == nil or currentMind == nil or root == nil or not root:IsA("BasePart") then
+			return false, "no shift is running, or you have no character"
+		end
+		local ok, message, nextMind = OccupantStageSystem.command({
+			rig = current,
+			mind = currentMind,
+			caller = root,
+			callerHip = if humanoid ~= nil then humanoid.HipHeight else 2,
+			action = action,
+			target = target,
+		})
+		mind = nextMind or currentMind
+		return ok, message
 	end,
 
 	getMind = function(_self)
