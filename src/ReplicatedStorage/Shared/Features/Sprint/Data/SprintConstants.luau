@@ -29,9 +29,8 @@ return table.freeze({
 	SPRINT_NOISE_RADIUS = 10,
 	SPRINT_NOISE_INTERVAL = 0.7,
 	NOISE_SOURCE = "sprint",
-	-- Replicated on the Player: stamina 0-1 (rounded to STAMINA_STEP, written only when it changes) and whether they
-	-- sprint now.
-	STAMINA_ATTRIBUTE = "SprintStamina",
+	-- Replicated on the Player: whether they sprint now (other clients' footsteps read it). Their stamina goes to them
+	-- alone (SprintEvents.Stamina), in whole percent: STAMINA_STEP, sent only when it changes.
 	SPRINTING_ATTRIBUTE = "Sprinting",
 	STAMINA_STEP = 0.01,
 	-- Replicated on the character while a speed boost (Let's Go!) is on: its scale on every speed, and when it ends

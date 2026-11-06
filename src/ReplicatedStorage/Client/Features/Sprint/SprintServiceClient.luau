@@ -2,8 +2,8 @@
 --[=[
 	SprintServiceClient: the local side of sprinting (docs/superpowers/specs/2026-10-15-cleanup-crew-chase-kit-design.md
 	§3). Holding the base Input action `sprint` (Shift / L3), or the phone's SPRINT button (`setHeld`), tells the server
-	the key is held; the server decides whether that sprints and sets the speed. The Player's SprintStamina / Sprinting
-	attributes feed SprintStore; the shift HUD draws the stamina bar from it (ShiftCompactHudPanel, over the
+	the key is held; the server decides whether that sprints and sets the speed. The server's Stamina packet (to this
+	player only) and the Player's Sprinting attribute feed SprintStore; the shift HUD draws the stamina bar from it (ShiftCompactHudPanel, over the
 	hotbar).
 
 	Spec-exempt shell (Input, ByteNet, attributes); the decisions are the server's specced SprintRules and
@@ -26,6 +26,8 @@ local stoppers: { () -> () } = {}
 local keyHeld = false
 local buttonHeld = false
 local sent = false
+-- The last stamina the server sent (0-1; nil until the first, which reads as a full bar).
+local lastStamina: number? = nil
 
 local function send()
 	local held = keyHeld or buttonHeld
@@ -36,10 +38,7 @@ local function send()
 end
 
 local function mirror()
-	SprintStore.apply(
-		player:GetAttribute(SprintConstants.STAMINA_ATTRIBUTE),
-		player:GetAttribute(SprintConstants.SPRINTING_ATTRIBUTE)
-	)
+	SprintStore.apply(lastStamina, player:GetAttribute(SprintConstants.SPRINTING_ATTRIBUTE))
 end
 
 export type SprintServiceClient = {
@@ -61,11 +60,14 @@ local SprintServiceClient: SprintServiceClient = {
 			keyHeld = phase == "begin"
 			send()
 		end)
-		local stamina = player:GetAttributeChangedSignal(SprintConstants.STAMINA_ATTRIBUTE):Connect(mirror)
+		local stopStamina = SprintEvents.packets.Stamina.listen(function(percent: number)
+			lastStamina = percent / 100
+			mirror()
+		end)
 		local sprinting = player:GetAttributeChangedSignal(SprintConstants.SPRINTING_ATTRIBUTE):Connect(mirror)
 		table.insert(stoppers, function()
 			unbind()
-			stamina:Disconnect()
+			stopStamina()
 			sprinting:Disconnect()
 		end)
 		mirror()

@@ -1,7 +1,8 @@
 --!strict
 --[=[
-	SprintEvents: the ByteNet packet contract for sprinting (client → server only). The client says whether the sprint
-	key is held; the server decides whether that sprints, and sets the speed.
+	SprintEvents: the ByteNet packet contract for sprinting. The client says whether the sprint key is held; the server
+	decides whether that sprints, and sets the speed. The server sends each player their own stamina (whole percent,
+	only when it changes): nobody else's client needs it, so it is not a replicated attribute.
 
 	Boot-timing note (the AnimationEvents precedent): the client waits for the per-namespace replicated value the
 	server creates when IT requires this module (at SprintServiceServer load).
@@ -26,6 +27,11 @@ local SprintEvents = ByteNet.defineNamespace(NAMESPACE, function()
 			-- True while the sprint key (or the phone's SPRINT button) is held.
 			Sprint = ByteNet.definePacket({
 				value = ByteNet.bool,
+				reliabilityType = "reliable",
+			}),
+			-- Server -> the owner only: their stamina, 0-100 (reliable: the last value, a full bar, must arrive).
+			Stamina = ByteNet.definePacket({
+				value = ByteNet.uint8,
 				reliabilityType = "reliable",
 			}),
 		},

@@ -6,8 +6,8 @@
 	while sprinting: SPRINT_SPEED slowed by the load exactly as the walk is (SprintSpeedFormulas, through Carry's own
 	formula and Carry's whole load, the hotbar inventory included: empty 23, four small items 20.7, medium 18.4, heavy 15,
 	bulky 11.5), and the player's own (carried) walk otherwise. The bar (SprintStaminaFormulas) drains
-	only while they move at a sprint and is published as the Player's SprintStamina / Sprinting attributes (the HUD's
-	bar). Sprinting feet are heard: a small noise every SPRINT_NOISE_INTERVAL while moving at a sprint (NoiseServiceServer;
+	only while they move at a sprint; it is sent to its player alone (SprintEvents.Stamina, the HUD's bar) and whether
+	they sprint is the Player's Sprinting attribute. Sprinting feet are heard: a small noise every SPRINT_NOISE_INTERVAL while moving at a sprint (NoiseServiceServer;
 	walking stays silent).
 
 	Carry is told the unboosted walk (CarryServiceServer:setSpeedBase), so an item picked up or dropped mid-sprint
@@ -221,7 +221,7 @@ local function stepOne(player: Player, runner: Runner, dt: number)
 	local shown = math.round(runner.bar.stamina / SprintConstants.STAMINA_STEP) * SprintConstants.STAMINA_STEP
 	if shown ~= runner.published then
 		runner.published = shown
-		player:SetAttribute(SprintConstants.STAMINA_ATTRIBUTE, shown)
+		SprintEvents.packets.Stamina.sendTo(math.clamp(math.round(shown * 100), 0, 100), player)
 	end
 end
 
