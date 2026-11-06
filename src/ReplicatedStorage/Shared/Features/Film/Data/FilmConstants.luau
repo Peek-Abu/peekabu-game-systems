@@ -15,6 +15,9 @@ return table.freeze({
 	CAMERA_PRIORITY = 1000,
 	-- ScreenGuis the hide leaves showing: the admin console, so the UI can always be brought back.
 	KEEP_GUIS = table.freeze({ Cmdr = true }),
+	-- The open screen's root, kept by Shift+F6's "keep the screen" mode: the Panel layer (UILayerHost names each layer
+	-- root `UILayer_<name>`), where the results card, the Locker, the reveal and the shop draw.
+	SCREEN_LAYER_GUI = "UILayer_Panel",
 	-- The `filmlight` presets: added to the place's own Lighting.ExposureCompensation.
 	LIGHT_PRESETS = table.freeze({ normal = 0, dark = -0.8, bright = 0.8 }),
 })

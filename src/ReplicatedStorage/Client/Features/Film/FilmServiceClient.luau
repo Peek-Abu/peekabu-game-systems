@@ -6,6 +6,8 @@
 	- F6 (FilmConstants.HIDE_KEY) hides every screen, floating label and prompt, the Roblox core UI and the mouse
 	  cursor (FilmHideSystem), and brings them back. The admin console (F2) stays usable, so a hidden UI can always be
 	  restored. Ignored while typing (`gameProcessed`).
+	- Shift+F6 switches what the hide keeps and hides: first press keeps the open screen (the results card, the Locker,
+	  the reveal, the shop: FilmKeepRules) and hides the rest; the next press hides that too. F6 shows everything.
 	- F8 (FilmConstants.CAMERA_KEY) turns the film camera on and off (FilmCameraSystem: fly, marks, glides, follow and
 	  orbit). While it is on, the character and gameplay keys are silenced.
 
@@ -29,6 +31,7 @@ local Janitor = require(ReplicatedStorage.Packages.Janitor)
 local AdminRules = require(ReplicatedStorage.Shared.Features.Admin.Rules.AdminRules)
 local FilmConstants = require(ReplicatedStorage.Shared.Features.Film.Data.FilmConstants)
 local FilmHideSystem = require(ReplicatedStorage.Client.Features.Film.Systems.FilmHideSystem)
+local FilmKeepRules = require(ReplicatedStorage.Client.Features.Film.Rules.FilmKeepRules)
 local FilmCameraSystem = require(ReplicatedStorage.Client.Features.Film.Systems.FilmCameraSystem)
 local FilmCameraStore = require(ReplicatedStorage.Client.Features.Film.State.FilmCameraStore)
 local FilmCameraStatus = require(ReplicatedStorage.Client.UI.React.Screens.Film.FilmCameraStatus)
@@ -122,6 +125,7 @@ local FilmServiceClient: FilmServiceClient = {
 	init = function(_self)
 		-- Built on the first F6, so init never waits for the PlayerGui.
 		local hide: FilmHideSystem.FilmHideSystem? = nil
+		local keepMode: FilmKeepRules.Mode = "none"
 		local camera = FilmCameraSystem.new({
 			pushMode = function(update)
 				return CameraServiceClient:pushMode({ kind = "custom", update = update }, FilmConstants.CAMERA_PRIORITY)
@@ -168,15 +172,27 @@ local FilmServiceClient: FilmServiceClient = {
 					current = FilmHideSystem.new({
 						roots = { playerGui, Workspace },
 						keep = function(gui: LayerCollector): boolean
-							return FilmConstants.KEEP_GUIS[gui.Name] == true
+							return FilmKeepRules.keeps(gui.Name, keepMode)
 						end,
 						onHidden = setOutside,
 					})
 					hide = current
 				end
-				if current ~= nil then
-					current.toggle()
+				if current == nil then
+					return
 				end
+				local shift = UserInputService:IsKeyDown(Enum.KeyCode.LeftShift)
+					or UserInputService:IsKeyDown(Enum.KeyCode.RightShift)
+				if not shift then
+					current.toggle()
+					return
+				end
+				-- Shift+F6: switch what the hide keeps and hide with it (re-hiding when already hidden).
+				keepMode = FilmKeepRules.nextMode(keepMode)
+				if current.isHidden() then
+					current.show()
+				end
+				current.hide()
 			end),
 			"Disconnect"
 		)
