@@ -28,11 +28,11 @@ function Rules.feedback(before: number, after: number, claimed: boolean, order: 
 		return nil
 	end
 	if claimed then
-		return `WORK ORDER COMPLETE • +{Registry.REWARD_CREDITS} Credits`
+		return `TODAY'S JOB DONE • +{Registry.REWARD_CREDITS} Credits`
 	end
 	local halfway = math.ceil(order.target / 2)
 	if before == 0 or (before < halfway and after >= halfway) then
-		return `Daily work order: {after}/{order.target}`
+		return `Today's job: {after}/{order.target}`
 	end
 	return nil
 end

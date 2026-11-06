@@ -194,14 +194,14 @@ function DepotWorldViewModel.workOrder(attributes: { [string]: unknown }, crew: 
 		who = if crew <= 1 then "for one player" else `for a crew of {crew}`
 	end
 	return {
-		number = `WORK ORDER {DepotBoardViewModel.workOrder(id)}`,
+		number = `JOB {DepotBoardViewModel.workOrder(id)}`,
 		kicker = DepotConstants.BOARD_COPY.title,
 		client = WorldBillboardViewModel.clip(client, DepotWorldViewModel.WORK_CLIENT_MAX),
 		job = job,
 		clear = clear,
 		before = `{who} · {ShiftHudViewModel.clock(ShiftConstants.SHIFT_SECONDS)} on the clock`,
 		key = "E",
-		action = "Read the work order",
+		action = "Read today's job",
 	}
 end
 
@@ -266,7 +266,7 @@ function DepotWorldViewModel.review(attributes: { [string]: unknown }): ReviewVi
 			{ label = "CREW CAUGHT", value = tostring(catches) },
 			{ label = "ASSETS", value = `{salvage} of {offered}` },
 		},
-		headline = if met then "CONTRACT MET" else "CONTRACT MISSED",
+		headline = if met then "GOAL DONE!" else "GOAL MISSED",
 		met = met,
 		rating = stamp,
 		crew = if #names > 0 then `Crew: {table.concat(names, " · ")}` else "",

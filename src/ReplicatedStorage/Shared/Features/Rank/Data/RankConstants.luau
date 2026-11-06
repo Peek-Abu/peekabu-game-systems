@@ -54,7 +54,7 @@ local RankConstants = {
 		crewExtracted = "Whole crew out",
 		friends = "Friends x2",
 	}),
-	INCIDENT_LINE = "Incident Report filed",
+	INCIDENT_LINE = "You got caught",
 
 	-- The public-entry fields every client reads a player's rank from (the results card): the XP now, and
 	-- the XP before the latest award (equal to it after a load), which tells the card a promotion has landed.

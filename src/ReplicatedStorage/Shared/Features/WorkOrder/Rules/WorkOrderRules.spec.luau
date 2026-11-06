@@ -3,10 +3,10 @@ local Registry = require(script.Parent.Parent.Data.WorkOrderRegistry)
 return function()
 	it("notifies progress milestones and completion without repeating payment", function()
 		local order = { target = 10, label = "Clear 10 piles", kind = "piles", id = "test" }
-		expect(Rules.feedback(0, 1, false, order)).to.equal("Daily work order: 1/10")
+		expect(Rules.feedback(0, 1, false, order)).to.equal("Today's job: 1/10")
 		expect(Rules.feedback(1, 2, false, order)).to.equal(nil)
-		expect(Rules.feedback(4, 5, false, order)).to.equal("Daily work order: 5/10")
-		expect(Rules.feedback(9, 10, true, order)).to.equal("WORK ORDER COMPLETE • +100 Credits")
+		expect(Rules.feedback(4, 5, false, order)).to.equal("Today's job: 5/10")
+		expect(Rules.feedback(9, 10, true, order)).to.equal("TODAY'S JOB DONE • +100 Credits")
 	end)
 
 	describe("WorkOrderRules", function()

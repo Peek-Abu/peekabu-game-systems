@@ -85,7 +85,7 @@ end
 if not InteractionRegistry.has(TimecardConstants.DAILY_KIND) then
 	InteractionRegistry.register(
 		TimecardConstants.DAILY_KIND,
-		{ actionText = "Read", objectText = "Daily work order", maxDistance = 8 }
+		{ actionText = "Read", objectText = "Today's job", maxDistance = 8 }
 	)
 end
 local TimecardEvents = require(ReplicatedStorage.Shared.Features.Timecard.Net.TimecardEvents)

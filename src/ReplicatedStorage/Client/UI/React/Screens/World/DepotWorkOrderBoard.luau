@@ -4,7 +4,7 @@
 	panel on the depth stack, inset so its silhouette breaks stay on the board, under a grape header band (the order's
 	number, the clipboard render breaking its top-left corner, Gloom dripping from its foot: the job is the Gloom). On
 	it: TONIGHT'S JOB, the client in stroked display type, the job line, a lilac rule, the Gloom to remove as a big
-	stroked grape number, its deadline, and the E key cap with "Read the work order" (always shown: prompt range is not
+	stroked grape number, its deadline, and the E key cap with "Read today's job" (always shown: prompt range is not
 	tracked at the depot). Presentational; the words are DepotWorldViewModel.workOrder.
 
 	@class DepotWorkOrderBoard

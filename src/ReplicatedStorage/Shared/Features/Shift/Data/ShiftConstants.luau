@@ -57,9 +57,9 @@ local TIER_TIMES: { number } = { 120, 240 }
 
 -- The review's rating stamp text (Figma 5a/5c) per ShiftTypes.Rating.
 local RATING_TEXT: { [string]: string } = {
-	needsImprovement = "NEEDS IMPROVEMENT",
-	satisfactory = "SATISFACTORY",
-	exceeds = "EXCEEDS EXPECTATIONS",
+	needsImprovement = "TRY AGAIN",
+	satisfactory = "GOOD JOB",
+	exceeds = "SUPER JOB",
 }
 
 -- The joke awards' titles (Figma 5a/5c sticky notes).

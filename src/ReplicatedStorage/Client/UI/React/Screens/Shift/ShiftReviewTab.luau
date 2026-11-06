@@ -1,7 +1,7 @@
 --!strict
 --[=[
 	ShiftReviewTab: the HUD widget that reopens the performance review (registered by ShiftServiceClient). While the
-	crew votes and the review scene is off the stack (Escape closed it), a mint "PERFORMANCE REVIEW · OPEN" button on
+	crew votes and the review scene is off the stack (Escape closed it), a mint "HOW YOU DID · OPEN" button on
 	the V1 depth stack, the trophy render breaking its left end, sits bottom-centre; pressing it pushes the scene again. Whether it shows is ShiftReviewViewModel.reopen. No logic of its
 	own.
 

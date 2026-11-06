@@ -18,14 +18,14 @@ local BOARD_COPY = table.freeze({
 	-- The contract is Gloom removed (docs/superpowers/specs/2026-10-16-cleanup-crew-gloom-gleam-economy-design.md §5):
 	-- dust counts the moment it is vacuumed, a valuable only for the grime cleaned off it.
 	-- string.format patterns: the contract, then the crew size (or the largest crew's contract).
-	quotaCrew = "Remove %d Gloom for your crew of %d. Vacuum the dust; clean valuables before you lift them.",
-	quotaSolo = "Remove %d Gloom on your own. Vacuum the dust; clean valuables before you lift them.",
-	quotaRange = "Remove %d Gloom for one player, up to %d for four. Vacuum the dust; clean valuables before you lift them.",
+	quotaCrew = "Remove %d Gloom for your crew of %d. Vacuum the dust; clean treasure before you pick it up.",
+	quotaSolo = "Remove %d Gloom on your own. Vacuum the dust; clean treasure before you pick it up.",
+	quotaRange = "Remove %d Gloom for one player, up to %d for four. Vacuum the dust; clean treasure before you pick it up.",
 	quotaPhoneCrew = "Remove %d Gloom",
 	quotaPhoneRange = "Remove %d–%d Gloom",
 	-- The PAY row: Credits per Gloom at the end of the shift, plus the valuables banked.
-	pay = "1 Credit per Gloom removed, paid at the end of the shift, plus every valuable you bank at its appraised value (x1.5 in overtime).",
-	payPhone = "1 Credit per Gloom, plus valuables",
+	pay = "1 Credit per Gloom removed, paid at the end of the shift, plus every treasure you load, at its value (x1.5 in overtime).",
+	payPhone = "1 Credit per Gloom, plus treasure",
 	shift = "on the clock. Clock out at the truck any time.",
 	shiftPhone = "clock out at the truck",
 	crew = "1–4 per truck. 6 with Big Crew.",
@@ -79,7 +79,7 @@ return table.freeze({
 	MAX_QUEUED_CARDS = 3,
 	-- HUD widget order: above Queue's pad widget (900), under the toasts (1000).
 	HUD_ORDER = 950,
-	RESULT_BOARD_TITLE = "PERFORMANCE REVIEWS",
+	RESULT_BOARD_TITLE = "HOW YOU DID",
 	-- M3 UI. The most trucks a depot layout has (the truck number riding the teleport is checked against it).
 	MAX_TRUCKS = 4,
 	-- Public player field: the truck whose bed a player stands in (the queue pad card's "TRUCK 2").
@@ -92,7 +92,7 @@ return table.freeze({
 	SITE = "4th floor offices",
 	JOB_TITLE = "HARLOW & FINCH JOB",
 	BOARD_COPY = BOARD_COPY,
-	RETURN_TEXT = "Back at the depot. Your performance review is pinned on the board.",
+	RETURN_TEXT = "Back at the depot. See how you did on the board.",
 	-- M3b world UI. The depot's signs are drawn at Figma's "1 px ≈ 1/40 stud": a shell's size in studs is its design
 	-- size in px times STUDS_PER_PX. BILLBOARD_PX is each sign's design size (the truck tag includes its 60 px wire).
 	STUDS_PER_PX = 1 / 40,

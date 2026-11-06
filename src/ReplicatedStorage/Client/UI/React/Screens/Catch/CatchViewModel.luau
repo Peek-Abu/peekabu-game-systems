@@ -73,7 +73,7 @@ export type RehiredView = {
 }
 
 -- The approved headline (Figma 4c/4e).
-local REHIRED_TITLE = "Rehired."
+local REHIRED_TITLE = "Back in!"
 -- A report whose `backAt` is more than this before the current deadline belongs to an earlier catch (the server sends
 -- the same number for both; the slack only absorbs serialisation rounding).
 local STALE_SLACK = 1
@@ -187,7 +187,7 @@ function CatchViewModel.cctv(input: CctvInput): CctvView?
 		details = details,
 		stamp = `{ShiftConstants.NIGHT_DAY} {CatchViewModel.nightClock(elapsed)}`,
 		back = back,
-		incidentTitle = if input.phone then "INCIDENT REPORT" else "INCIDENT REPORT · YOU",
+		incidentTitle = if input.phone then "WHAT HAPPENED" else "WHAT HAPPENED · YOU",
 		incident = incidentOf(report, input.phone),
 		prevKey = input.prevKey,
 		nextKey = input.nextKey,
@@ -268,18 +268,18 @@ function CatchViewModel.rehired(input: RehiredInput): RehiredView?
 		then { `Caught at {ended} by the Manager`, dropped }
 		else {
 			`Name: {input.name}`,
-			`Employment ended: {ended} (caught by the Manager)`,
-			`Re-hired: {back}, no questions asked`,
+			`Caught! {ended}, by the Manager`,
+			`Back in! {back}`,
 			dropped,
 		}
 	local shown: boolean = before or holding
 	return {
 		shown = shown,
-		header = `{ShiftConstants.EMPLOYER_BAND} — HUMAN RESOURCES`,
-		notice = "NOTICE OF RE-EMPLOYMENT",
+		header = `{ShiftConstants.EMPLOYER_BAND} — CREW DESK`,
+		notice = "YOU'RE BACK",
 		title = REHIRED_TITLE,
 		rows = rows,
-		stamp = "REHIRED",
+		stamp = "BACK IN!",
 		footer = "Respawning at the loading bay…",
 	}
 end

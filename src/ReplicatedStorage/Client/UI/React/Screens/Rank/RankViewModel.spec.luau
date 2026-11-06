@@ -88,7 +88,7 @@ return function()
 		it("files an incident report for a caught player", function()
 			local review = results({ line(1, { caught = 1, piles = 1 }) }, false)
 			local view = RankViewModel.slip({ xp = 10, prevXp = 0 }, review, { 1 }, 1)
-			expect(view.incident).to.equal("Incident Report filed")
+			expect(view.incident).to.equal("You got caught")
 			expect(view.gain).to.equal("+10 XP this shift")
 		end)
 

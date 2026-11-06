@@ -107,7 +107,7 @@ local function contractOf(id: string?): DepotTypes.Contract
 end
 
 local function lastOf(last: DepotTypes.LastShift, phone: boolean): LastView
-	local stamp = if last.quotaMet then "CONTRACT MET" else "CONTRACT MISSED"
+	local stamp = if last.quotaMet then "GOAL DONE!" else "GOAL MISSED"
 	local title = if phone
 		then "LAST SHIFT"
 		elseif last.truck > 0 then `YOUR LAST SHIFT — TRUCK {last.truck}`
@@ -119,14 +119,14 @@ local function lastOf(last: DepotTypes.LastShift, phone: boolean): LastView
 		rows = {
 			{ label = "Gloom removed", value = `{last.cleared} / {last.quota}` },
 			{ label = "Earned", value = ShiftCurrencyUtils.amount(earned) },
-			{ label = "Times rehired", value = tostring(last.catches) },
+			{ label = "Crew caught", value = tostring(last.catches) },
 			{ label = "Assets recovered", value = `{last.salvage} of {last.offered}` },
 		},
 		stamp = stamp,
 		met = last.quotaMet,
 		lines = {
 			`Gloom {last.cleared}/{last.quota}  ·  {ShiftCurrencyUtils.gain(earned)}`,
-			`Rehired {last.catches}  ·  Assets {last.salvage} of {last.offered}`,
+			`Caught {last.catches}  ·  Assets {last.salvage} of {last.offered}`,
 		},
 	}
 end
@@ -220,7 +220,7 @@ function DepotBoardViewModel.board(id: string?, last: DepotTypes.LastShift?, pho
 		tip = copy.hazard,
 		lastLine = if last ~= nil then `Last shift: {lastOf(last, true).lines[1]}` else nil,
 		title = copy.title,
-		workOrder = if phone then `WORK ORDER {number} · {string.upper(contract.client)}` else `WORK ORDER {number}`,
+		workOrder = if phone then `JOB {number} · {string.upper(contract.client)}` else `JOB {number}`,
 		headline = `{string.upper(contract.client)} — {string.upper(DepotConstants.SITE)}`,
 		subline = contract.job,
 		rows = rows,

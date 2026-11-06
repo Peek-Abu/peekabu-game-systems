@@ -51,7 +51,7 @@ function ShiftNoticeUtils.notices(before: ShiftTypes.ShiftState, after: ShiftTyp
 	end
 	local multiplier = ShiftConstants.OVERTIME_SALVAGE_MULTIPLIER
 	if after.quotaMet and not before.quotaMet then
-		table.insert(list, stamp("CONTRACT MET"))
+		table.insert(list, stamp("GOAL DONE!"))
 		table.insert(list, note(COMPANY_THRESHOLD))
 		table.insert(
 			list,

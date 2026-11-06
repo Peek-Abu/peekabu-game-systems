@@ -32,7 +32,7 @@ return UILabs.CreateReactStory({
 	local nodes: { [string]: React.ReactNode } = {}
 	type Sample = { text: string, meaning: UIToonConstants.Meaning }
 	local samples: { Sample } = {
-		{ text = "CONTRACT MET!", meaning = "gold" },
+		{ text = "GOAL DONE!", meaning = "gold" },
 		{ text = "+36", meaning = "mint" },
 		{ text = "4:27", meaning = "coral" },
 		{ text = "312", meaning = "grape" },

@@ -264,7 +264,7 @@ local function beginRun(wasPrepared: boolean)
 	log:info(`shift {state.shift} started: variant {state.variant}, quota {state.quota}`)
 	VacuumServiceServer:setCrew(RoundServiceServer:participants())
 	ToastServiceServer:send("all", {
-		text = `Shift {state.shift}: remove {state.quota} Gloom before the clock runs out. Vacuum the dust; clean valuables, then bank them for Credits.`,
+		text = `Shift {state.shift}: remove {state.quota} Gloom before the clock runs out. Vacuum the dust; clean treasure, then load it for Credits.`,
 		style = ShiftConstants.TOAST_STICKY,
 		duration = 6,
 	})

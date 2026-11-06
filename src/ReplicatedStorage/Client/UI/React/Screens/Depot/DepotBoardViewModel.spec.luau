@@ -37,7 +37,7 @@ return function()
 		local contract = DepotConstants.CONTRACTS[1]
 		local view = DepotBoardViewModel.board(contract.id, nil, false)
 		expect(view.title).to.equal("TONIGHT'S JOB")
-		expect(view.workOrder).to.equal("WORK ORDER #2802")
+		expect(view.workOrder).to.equal("JOB #2802")
 		expect(view.headline).to.equal(`{string.upper(contract.client)} — 4TH FLOOR OFFICES`)
 		expect(view.subline).to.equal(contract.job)
 	end)
@@ -55,7 +55,7 @@ return function()
 	it("keeps the phone to four short rows", function()
 		local view = DepotBoardViewModel.board(nil, nil, true)
 		expect(#view.rows).to.equal(4)
-		expect(rowOf(view, "PAY").text).to.equal("1 Credit per Gloom, plus valuables")
+		expect(rowOf(view, "PAY").text).to.equal("1 Credit per Gloom, plus treasure")
 	end)
 
 	describe("quota", function()
@@ -66,7 +66,7 @@ return function()
 		it("posts the quota for the crew in your truck", function()
 			local view = DepotBoardViewModel.board(nil, nil, false, 3)
 			expect(rowOf(view, "CONTRACT").text).to.equal(
-				`Remove {ShiftQuotaFormulas.quota(3)} Gloom for your crew of 3. Vacuum the dust; clean valuables before you lift them.`
+				`Remove {ShiftQuotaFormulas.quota(3)} Gloom for your crew of 3. Vacuum the dust; clean treasure before you pick it up.`
 			)
 			expect(rowOf(DepotBoardViewModel.board(nil, nil, true, 3), "CONTRACT").text).to.equal(
 				`Remove {ShiftQuotaFormulas.quota(3)} Gloom`
@@ -76,14 +76,14 @@ return function()
 		it("speaks to a solo player", function()
 			local view = DepotBoardViewModel.board(nil, nil, false, 1)
 			expect(rowOf(view, "CONTRACT").text).to.equal(
-				`Remove {low} Gloom on your own. Vacuum the dust; clean valuables before you lift them.`
+				`Remove {low} Gloom on your own. Vacuum the dust; clean treasure before you pick it up.`
 			)
 		end)
 
 		it("shows the range by crew size when you are not in a truck", function()
 			local view = DepotBoardViewModel.board(nil, nil, false)
 			expect(rowOf(view, "CONTRACT").text).to.equal(
-				`Remove {low} Gloom for one player, up to {high} for four. Vacuum the dust; clean valuables before you lift them.`
+				`Remove {low} Gloom for one player, up to {high} for four. Vacuum the dust; clean treasure before you pick it up.`
 			)
 			expect(rowOf(DepotBoardViewModel.board(nil, nil, true), "CONTRACT").text).to.equal(
 				`Remove {low}–{high} Gloom`
@@ -131,7 +131,7 @@ return function()
 		expect(last.rows[2].value).to.equal("577 Credits")
 		expect(last.rows[3].value).to.equal("2")
 		expect(last.rows[4].value).to.equal("6 of 9")
-		expect(last.stamp).to.equal("CONTRACT MET")
+		expect(last.stamp).to.equal("GOAL DONE!")
 	end)
 
 	it("drops the truck from the title when unknown and stamps a missed quota", function()
@@ -140,7 +140,7 @@ return function()
 		missed.quotaMet = false
 		local last = DepotBoardViewModel.board(nil, missed, false).last
 		expect(last.title).to.equal("YOUR LAST SHIFT")
-		expect(last.stamp).to.equal("CONTRACT MISSED")
+		expect(last.stamp).to.equal("GOAL MISSED")
 		expect(last.met).to.equal(false)
 	end)
 
@@ -159,7 +159,7 @@ return function()
 		local last = DepotBoardViewModel.board(nil, LAST, true).last
 		expect(last.title).to.equal("LAST SHIFT")
 		expect(last.lines[1]).to.equal("Gloom 362/350  ·  +577 Credits")
-		expect(last.lines[2]).to.equal("Rehired 2  ·  Assets 6 of 9")
+		expect(last.lines[2]).to.equal("Caught 2  ·  Assets 6 of 9")
 	end)
 
 	describe("fit", function()

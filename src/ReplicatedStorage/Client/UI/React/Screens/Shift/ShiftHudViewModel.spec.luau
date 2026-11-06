@@ -368,8 +368,7 @@ return function()
 
 	describe("prompt chip", function()
 		local function prompt(extra)
-			local value =
-				{ id = 1, action = "Bank cargo", object = "Recovery Unit", key = "E", hold = 0, kind = "cargo-load" }
+			local value = { id = 1, action = "Load", object = "Crew Truck", key = "E", hold = 0, kind = "cargo-load" }
 			for key, item in extra or {} do
 				value[key] = item
 			end
@@ -516,7 +515,7 @@ return function()
 		end)
 
 		it("celebrates a met contract, and calls out overtime", function()
-			expect(ShiftHudViewModel.meter({ quotaMet = true, overtime = false }).title).to.equal("CONTRACT MET!")
+			expect(ShiftHudViewModel.meter({ quotaMet = true, overtime = false }).title).to.equal("GOAL DONE!")
 			expect(ShiftHudViewModel.meter({ quotaMet = true, overtime = false }).met).to.equal(true)
 			expect(ShiftHudViewModel.meter({ quotaMet = true, overtime = true }).title).to.equal("OVERTIME!")
 		end)

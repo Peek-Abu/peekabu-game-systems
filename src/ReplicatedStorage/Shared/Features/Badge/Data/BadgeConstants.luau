@@ -30,7 +30,7 @@ return table.freeze({
 			key = "clean-sweep",
 			badgeId = 2665321212868602,
 			name = "Clean Sweep",
-			description = "Meet the contract, load every valuable and get the whole crew out.",
+			description = "Meet the goal, load every treasure and get the whole crew out.",
 		},
 		{
 			key = "night-shift-squad",

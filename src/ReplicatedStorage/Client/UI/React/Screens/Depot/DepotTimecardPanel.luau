@@ -339,7 +339,7 @@ local function Panel(props: Props): React.ReactNode
 							zIndex = 3,
 						}),
 						title = e(ToonText, {
-							text = if props.view == "workOrder" then "DAILY WORK ORDER" else "YOUR TIMECARD",
+							text = if props.view == "workOrder" then "TODAY'S JOB" else "YOUR TIMECARD",
 							textSize = 36,
 							position = UDim2.fromOffset(92, 8),
 							size = UDim2.new(1, -112, 0, 42),
@@ -362,7 +362,7 @@ local function Panel(props: Props): React.ReactNode
 						onActivated = props.onTimecard or props.onToggle,
 					}),
 					daily = e(ToonButton, {
-						text = "DAILY WORK ORDER",
+						text = "TODAY'S JOB",
 						textSize = 22,
 						variant = "secondary",
 						selected = props.view == "workOrder",

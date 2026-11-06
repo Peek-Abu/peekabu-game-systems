@@ -377,7 +377,7 @@ function DepotBuildSystem.build(
 	text.TextSize = 28
 	text.TextColor3 = Color3.fromHex("2e3536")
 	text.TextWrapped = true
-	text.Text = "DAILY\nWORK ORDER\n\nBONUS CREDITS\n\nREAD YOUR ASSIGNMENT"
+	text.Text = "TODAY'S\nJOB\n\nBONUS CREDITS\n\nREAD IT HERE"
 	text.Parent = sheet
 	sheet.Parent = daily
 	model.Parent = Workspace

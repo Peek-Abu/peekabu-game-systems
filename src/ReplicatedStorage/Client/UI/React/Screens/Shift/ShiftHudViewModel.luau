@@ -573,7 +573,7 @@ export type MeterView = { title: string, site: string, met: boolean }
 -- The V1 Gloom meter's words: the job until the contract is met, then the win, then overtime's push. Every contract is
 -- the one office (DepotConstants.SITE), so the site line is fixed.
 function ShiftHudViewModel.meter(view: { quotaMet: boolean, overtime: boolean }): MeterView
-	local title = if view.overtime then "OVERTIME!" elseif view.quotaMet then "CONTRACT MET!" else "CLEAN THE GLOOM"
+	local title = if view.overtime then "OVERTIME!" elseif view.quotaMet then "GOAL DONE!" else "CLEAN THE GLOOM"
 	return { title = title, site = "Harlow & Finch · offices", met = view.quotaMet }
 end
 

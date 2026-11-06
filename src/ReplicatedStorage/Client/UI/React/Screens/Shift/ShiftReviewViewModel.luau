@@ -62,7 +62,7 @@ export type VoteView = {
 }
 
 export type ReviewView = {
-	-- V1: the big title ("CONTRACT MET!"), the grade medallion's letter and the four stat cards.
+	-- V1: the big title ("GOAL DONE!"), the grade medallion's letter and the four stat cards.
 	title: string,
 	grade: string,
 	cards: { CardView },
@@ -331,7 +331,7 @@ function ShiftReviewViewModel.review(
 	local saved = ShiftQuotaFormulas.savedGloom(results.cleared)
 	local crewText = if truck ~= nil then `Crew of Truck {truck}` else "Crew"
 	return {
-		title = if met then "CONTRACT MET!" else "CONTRACT MISSED",
+		title = if met then "GOAL DONE!" else "GOAL MISSED",
 		grade = GRADE[rating],
 		cards = {
 			{
@@ -350,16 +350,16 @@ function ShiftReviewViewModel.review(
 				gold = false,
 			},
 			{
-				label = "Valuables banked",
+				label = "Treasure loaded",
 				value = `{results.salvage} OF {results.offered}`,
 				icon = "fishtank",
 				meaning = "mint",
 				gold = false,
 			},
 		},
-		tab = if phone then "PERFORMANCE REVIEW" else "PERFORMANCE REVIEW — NIGHT SHIFT",
+		tab = if phone then "HOW YOU DID" else "HOW YOU DID — NIGHT SHIFT",
 		subtitle = `{crewText} · {DepotConstants.CONTRACTS[1].client} · {DepotConstants.SITE}`,
-		headline = if met then "CONTRACT MET" else "CONTRACT MISSED",
+		headline = if met then "GOAL DONE!" else "GOAL MISSED",
 		met = met,
 		rows = {
 			{
@@ -370,7 +370,7 @@ function ShiftReviewViewModel.review(
 			{
 				label = ShiftCurrencyUtils.earnedLabel(),
 				value = ShiftCurrencyUtils.amount(split.credits),
-				detail = `Dust {split.dustCredits} · Cleaning {split.grimeCredits} · Valuables {split.valuables} · Saved Gloom {saved}`,
+				detail = `Dust {split.dustCredits} · Cleaning {split.grimeCredits} · Treasure {split.valuables} · Saved Gloom {saved}`,
 			},
 			{ label = "CREW CAUGHT", value = tostring(results.catches) },
 			{ label = "ASSETS RECOVERED", value = `{results.salvage} of {results.offered}` },
@@ -405,7 +405,7 @@ function ShiftReviewViewModel.reopen(snapshot: ShiftTypes.ShiftSnapshot?, stack:
 	if table.find(stack, ShiftConstants.REVIEW_SCENE) ~= nil then
 		return nil
 	end
-	return "PERFORMANCE REVIEW · OPEN"
+	return "HOW YOU DID · OPEN"
 end
 
 return ShiftReviewViewModel
