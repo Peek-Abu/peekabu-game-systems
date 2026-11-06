@@ -14,6 +14,7 @@
 ]=]
 
 local EXEMPT_MODULES: { [string]: string } = {
+	["ReplicatedStorage.Client.Features.Office.Systems.OfficeShadowSystem"] = "Instances and UserGameSettings shell (OfficeShadowUtils is specced)",
 	["ReplicatedStorage.Shared.Data.PlayerDataTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Data.PublicPlayerTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Data.WorldTypes"] = "type definitions only (no runtime logic)",

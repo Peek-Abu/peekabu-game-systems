@@ -4,7 +4,8 @@
 	presets"; §7 "The office at night"). Starts OfficeAtmosphereSystem (presets per phase and tier, overtime red,
 	broken fluorescents, the hum) and OfficeAmbienceSystem (phones ringing in empty rooms, the
 	elevator, typing that stops when you come close) and OfficeAnomalySystem (the run's exterior anomalies the server
-	publishes on the office model) and OfficeHazardSystem (the yard's parked car blinking its hazards). Everything it
+	publishes on the office model) and OfficeHazardSystem (the yard's parked car blinking its hazards) and
+	OfficeShadowSystem (small props stop casting shadows on phones and low graphics). Everything it
 	does is client-local presentation; the office itself is the server's.
 
 	Spec-exempt shell (starts the systems).
@@ -18,12 +19,14 @@ local OfficeAmbienceSystem = require(ReplicatedStorage.Client.Features.Office.Sy
 local OfficeAnomalySystem = require(ReplicatedStorage.Client.Features.Office.Systems.OfficeAnomalySystem)
 local OfficeAtmosphereSystem = require(ReplicatedStorage.Client.Features.Office.Systems.OfficeAtmosphereSystem)
 local OfficeHazardSystem = require(ReplicatedStorage.Client.Features.Office.Systems.OfficeHazardSystem)
+local OfficeShadowSystem = require(ReplicatedStorage.Client.Features.Office.Systems.OfficeShadowSystem)
 
 export type OfficeClientState = {
 	atmosphere: OfficeAtmosphereSystem.OfficeAtmosphereState,
 	ambience: OfficeAmbienceSystem.OfficeAmbienceState,
 	anomalies: OfficeAnomalySystem.OfficeAnomalyState,
 	hazards: OfficeHazardSystem.OfficeHazardState,
+	shadows: OfficeShadowSystem.OfficeShadowState,
 }
 
 export type OfficeServiceClient = {
@@ -41,9 +44,11 @@ local OfficeServiceClient: OfficeServiceClient = {
 		OfficeAmbienceSystem.start()
 		OfficeAnomalySystem.start()
 		OfficeHazardSystem.start()
+		OfficeShadowSystem.start()
 	end,
 
 	stop = function(_self)
+		OfficeShadowSystem.stop()
 		OfficeHazardSystem.stop()
 		OfficeAnomalySystem.stop()
 		OfficeAmbienceSystem.stop()
@@ -56,6 +61,7 @@ local OfficeServiceClient: OfficeServiceClient = {
 			ambience = OfficeAmbienceSystem.getState(),
 			anomalies = OfficeAnomalySystem.getState(),
 			hazards = OfficeHazardSystem.getState(),
+			shadows = OfficeShadowSystem.getState(),
 		}
 	end,
 }
