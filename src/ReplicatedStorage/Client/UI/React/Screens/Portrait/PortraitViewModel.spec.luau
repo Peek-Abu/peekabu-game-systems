@@ -1,5 +1,3 @@
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
 local PortraitViewModel = require(script.Parent.PortraitViewModel)
 
 return function()

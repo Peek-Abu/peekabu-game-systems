@@ -226,13 +226,13 @@ local function bundleCard(
 	local pillHeight = if phone then 22 else 44
 	local face: Nodes
 	if wide then
-		local art = math.floor((size.Y - DEPTH.drop - DEPTH.lip) * 0.92)
+		local artSize = math.floor((size.Y - DEPTH.drop - DEPTH.lip) * 0.92)
 		face = {
 			icon = e(ToonIcon, {
 				icon = bundle.icon,
 				anchor = Vector2.new(0, 0.5),
 				position = UDim2.new(0, 8, 0.5, -DEPTH.lip / 2),
-				size = UDim2.fromOffset(art, art),
+				size = UDim2.fromOffset(artSize, artSize),
 				drop = 4,
 				greyed = not bundle.available,
 			}),
@@ -240,8 +240,8 @@ local function bundleCard(
 				text = bundle.amount,
 				textSize = amountSize,
 				meaning = "white",
-				position = UDim2.new(0, art + 14, 0, 6),
-				size = UDim2.new(1, -art - 24, 0, amountSize + 4),
+				position = UDim2.fromOffset(artSize + 14, 6),
+				size = UDim2.new(1, -artSize - 24, 0, amountSize + 4),
 				align = "center",
 				fit = true,
 			}),
@@ -252,8 +252,8 @@ local function bundleCard(
 				disabled = not bundle.available,
 				small = true,
 				anchor = Vector2.new(0.5, 1),
-				position = UDim2.new(0, art + 14 + math.floor((size.X - art - 24) / 2), 1, -DEPTH.lip - 6),
-				size = UDim2.fromOffset(math.floor((size.X - art - 24) * 0.8), pillHeight),
+				position = UDim2.new(0, artSize + 14 + math.floor((size.X - artSize - 24) / 2), 1, -DEPTH.lip - 6),
+				size = UDim2.fromOffset(math.floor((size.X - artSize - 24) * 0.8), pillHeight),
 				onActivated = function()
 					onBuy(bundle.key)
 				end,
