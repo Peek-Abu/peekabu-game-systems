@@ -266,8 +266,17 @@ function EmployeeOutfitSystem.fit(character: Model, outfit: Model, style: string
 			covered.Transparency = 1
 		end
 	end
+	EmployeeOutfitSystem.hidePieces(character, names(outfit, EmployeeConstants.HIDE_ACCESSORIES_ATTRIBUTE))
+	return true
+end
+
+--[=[
+	Hides each of `character`'s own pieces named in `pieceNames`: a child of its EmployeeConstants.PIECES_FOLDER, else an
+	Accessory on the character; a missing name is skipped. An outfit's HideAccessories and a skin's `hidePieces` use it.
+]=]
+function EmployeeOutfitSystem.hidePieces(character: Model, pieceNames: { string })
 	local pieces = character:FindFirstChild(EmployeeConstants.PIECES_FOLDER)
-	for _, name in names(outfit, EmployeeConstants.HIDE_ACCESSORIES_ATTRIBUTE) do
+	for _, name in pieceNames do
 		local piece = if pieces ~= nil then pieces:FindFirstChild(name) else nil
 		local accessory = character:FindFirstChild(name)
 		if piece ~= nil then
@@ -276,7 +285,6 @@ function EmployeeOutfitSystem.fit(character: Model, outfit: Model, style: string
 			hide(accessory)
 		end
 	end
-	return true
 end
 
 --[=[

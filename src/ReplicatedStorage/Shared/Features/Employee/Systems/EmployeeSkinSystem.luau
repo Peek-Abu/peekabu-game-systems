@@ -20,6 +20,11 @@
 	  style's (each style recolours the body); the palette never reaches the outfit's meshes or props, except an
 	  outfit mesh in the Body StyleSlot (painted with the body palette, e.g. trousers).
 
+	- Covered pieces: the employee's own pieces the skin's `hidePieces` names are hidden (EmployeeOutfitSystem.hidePieces,
+	  the outfit's HideAccessories rule), e.g. Cappy's hoodie under a layered-clothing jacket. A layered garment is an
+	  ordinary Accessory (a WrapLayer on its Handle) in `accessories`: the engine wraps it over the employee's body cages,
+	  baked into every template.
+
 	Every part is optional: a skin that names nothing changes nothing.
 
 	@class EmployeeSkinSystem
@@ -131,6 +136,11 @@ function EmployeeSkinSystem.apply(
 				result.pieces += 1
 			end
 		end
+	end
+
+	local hidePieces = skin.hidePieces
+	if hidePieces ~= nil then
+		EmployeeOutfitSystem.hidePieces(character, hidePieces)
 	end
 
 	local facesFolder = skin.facesFolder

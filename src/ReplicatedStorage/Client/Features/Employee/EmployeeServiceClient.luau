@@ -1,8 +1,9 @@
 --!strict
 --[=[
 	EmployeeServiceClient: employee presentation on this client. For every employee character (an EmployeeName attribute) it
-	shows the server's chosen face (EmployeeFaceSystem) and drives the springy ears (EmployeeEarSystem) once per
-	frame in RunService.PreSimulation, after the frame's animations are applied.
+	shows the server's chosen face (EmployeeFaceSystem), drives the springy ears (EmployeeEarSystem) once per
+	frame in RunService.PreSimulation, after the frame's animations are applied, and keeps its layered clothing wrapped
+	(EmployeeGarmentGuardSystem) on the same step.
 
 	@class EmployeeServiceClient
 ]=]
@@ -15,16 +16,20 @@ local Observers = require(ReplicatedStorage.Packages.Observers)
 local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
 local EmployeeEarSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeeEarSystem)
 local EmployeeFaceSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeeFaceSystem)
+local EmployeeGarmentGuardSystem =
+	require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeeGarmentGuardSystem)
 local EmployeeLanyardSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeeLanyardSystem)
 local EmployeeSwapVfxSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeeSwapVfxSystem)
 
 local ears = EmployeeEarSystem.new()
+local garments = EmployeeGarmentGuardSystem.new()
 local stoppers: { () -> () } = {}
 local faces = 0
 
 export type EmployeeClientState = {
 	faces: number,
 	ears: EmployeeEarSystem.EmployeeEarState,
+	garments: EmployeeGarmentGuardSystem.EmployeeGarmentGuardState,
 }
 
 export type EmployeeServiceClient = {
@@ -50,11 +55,13 @@ local EmployeeServiceClient: EmployeeServiceClient = {
 				faces += 1
 				local releaseFace = EmployeeFaceSystem.bind(character)
 				local releaseEars = ears.track(character)
+				local releaseGarments = garments.track(character, os.clock())
 				local releaseLanyard = EmployeeLanyardSystem.bind(player, character)
 				return function()
 					faces -= 1
 					releaseFace()
 					releaseEars()
+					releaseGarments()
 					releaseLanyard()
 				end
 			end)
@@ -64,6 +71,7 @@ local EmployeeServiceClient: EmployeeServiceClient = {
 			if camera ~= nil then
 				ears.step(dt, camera.CFrame.Position, os.clock())
 			end
+			garments.step(os.clock())
 		end)
 		table.insert(stoppers, function()
 			connection:Disconnect()
@@ -78,7 +86,7 @@ local EmployeeServiceClient: EmployeeServiceClient = {
 	end,
 
 	getState = function(_self)
-		return { faces = faces, ears = ears.getState() }
+		return { faces = faces, ears = ears.getState(), garments = garments.getState() }
 	end,
 }
 

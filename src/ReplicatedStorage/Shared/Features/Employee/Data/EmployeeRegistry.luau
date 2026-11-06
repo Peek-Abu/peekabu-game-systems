@@ -63,6 +63,9 @@ export type SkinDef = {
 	-- Names of Accessory instances, or fitted-gear Models (EmployeeGearSystem), under
 	-- EmployeeConstants.ACCESSORIES_PATH to put on the character.
 	accessories: { string },
+	-- Names of the employee's own pieces (children of the template's EmployeeConstants.PIECES_FOLDER, or Accessories
+	-- on the character) this skin covers and so hides, e.g. Cappy's Hoodie under a layered jacket. nil hides nothing.
+	hidePieces: { string }?,
 	-- The name of a skinned outfit Model under EmployeeConstants.OUTFITS_PATH that EmployeeOutfitSystem fits onto the
 	-- character (its Outfit meshes, Rig bones, Styles looks and Props). nil = no outfit.
 	outfit: string?,

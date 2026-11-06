@@ -150,6 +150,14 @@ local EmployeeConstants = {
 	-- Idle sway: amplitude (rad) and angular rate (rad/s).
 	EAR_SWAY_AMPLITUDE = math.rad(3),
 	EAR_SWAY_RATE = 1.7,
+
+	-- Layered clothing (EmployeeGarmentGuardSystem). A garment is re-wrapped at most once per this many seconds.
+	GARMENT_REWRAP_COOLDOWN = 0.5,
+	-- A root that moves more than this (studs) in one step teleported (truck boarding, a respawn spot): re-wrap.
+	GARMENT_MOVE_JUMP = 8,
+	-- A garment that appeared is re-wrapped once its and the body's cage meshes have loaded, or after this many
+	-- seconds whatever their state.
+	GARMENT_LOAD_TIMEOUT = 10,
 }
 
 return EmployeeConstants
