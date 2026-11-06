@@ -55,6 +55,42 @@ function System.feetY(root: BasePart, humanoid: Humanoid): number
 	end
 	return root.Position.Y - humanoid.HipHeight - root.Size.Y / 2 - legHeight
 end
+-- His sight's ray params: excludes `exclude` (him, the characters, the glass he sees through); respects CanCollide, so
+-- an open door leaf never blocks and a closed one always does.
+function System.sightParams(exclude: { Instance }): RaycastParams
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = exclude
+	params.RespectCanCollide = true
+	return params
+end
+-- The ray params that look only for the SightThrough glass `glass` (nil when there is none).
+function System.glassParams(glass: { Instance }): RaycastParams?
+	if #glass == 0 then
+		return nil
+	end
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterDescendantsInstances = glass
+	return params
+end
+--[=[
+	The line from his eyes at `origin` to `target`: `clear` when nothing his sight respects is in the way (`sight`), and
+	`glassed` when that clear line passes glass he sees through (`glass`): he sees them, but he cannot reach them
+	(sight is not reach: OccupantCatchRules refuses a grab "behind glass").
+]=]
+function System.sightLine(
+	origin: Vector3,
+	target: Vector3,
+	sight: RaycastParams,
+	glass: RaycastParams?
+): (boolean, boolean)
+	local offset = target - origin
+	if Workspace:Raycast(origin, offset, sight) ~= nil then
+		return false, false
+	end
+	return true, glass ~= nil and Workspace:Raycast(origin, offset, glass) ~= nil
+end
 function System.glimpses(
 	rig: { model: Model, head: BasePart },
 	sightRange: number,
@@ -67,28 +103,30 @@ function System.glimpses(
 			table.insert(exclude, player.Character)
 		end
 	end
-	-- Glass he sees through (SIGHT_THROUGH_TAG) never blocks the ray, though it still blocks his walking.
-	for _, glass in CollectionService:GetTagged(OccupantConstants.SIGHT_THROUGH_TAG) do
-		table.insert(exclude, glass)
+	-- Glass he sees through (SIGHT_THROUGH_TAG) never blocks the ray, though it still blocks his walking (and his grab).
+	local glass = CollectionService:GetTagged(OccupantConstants.SIGHT_THROUGH_TAG)
+	for _, pane in glass do
+		table.insert(exclude, pane)
 	end
-	local params = RaycastParams.new()
-	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = exclude
-	params.RespectCanCollide = true
+	local sight = System.sightParams(exclude)
+	local glassRay = System.glassParams(glass)
 	local list: { Types.Glimpse } = {}
 	for _, player in participants do
 		local character = player.Character
 		local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
 		local h = if character then character:FindFirstChildOfClass("Humanoid") else nil
 		if root and root:IsA("BasePart") and h and h.Health > 0 and eligible(player) then
-			local offset = root.Position - rig.head.Position
-			local clear = offset.Magnitude <= sightRange and Workspace:Raycast(rig.head.Position, offset, params) == nil
+			local clear, glassed = false, false
+			if (root.Position - rig.head.Position).Magnitude <= sightRange then
+				clear, glassed = System.sightLine(rig.head.Position, root.Position, sight, glassRay)
+			end
 			local velocity = root.AssemblyLinearVelocity
 			table.insert(list, {
 				userId = player.UserId,
 				position = root.Position,
 				feetY = System.feetY(root, h),
 				clear = clear,
+				glassed = glassed,
 				crouched = character ~= nil and character:GetAttribute(CROUCH_ATTRIBUTE) == true,
 				-- Moving during a slow turn or a stare sets off the jerk (behaviours design §11.2).
 				speed = Vector3.new(velocity.X, 0, velocity.Z).Magnitude,
@@ -156,6 +194,15 @@ function System.inView(list: { Types.Glimpse }, userId: number): boolean
 	for _, glimpse in list do
 		if glimpse.userId == userId then
 			return glimpse.clear or (glimpse.hidden == true and glimpse.seen == true)
+		end
+	end
+	return false
+end
+-- Whether he sees `userId` in `list` only through glass (he cannot grab them there).
+function System.glassed(list: { Types.Glimpse }, userId: number): boolean
+	for _, glimpse in list do
+		if glimpse.userId == userId then
+			return glimpse.glassed == true
 		end
 	end
 	return false

@@ -2,7 +2,8 @@
 --[=[
 	OccupantCatchRules: whether Harlow may catch a player right now (Cleanup Crew spec §4 "Catch", "Grace",
 	§6.4 "Catches are decided on the server tick"): alive, not already being caught, not on his break, not in
-	their grace, outside the truck's box, not hidden where he did not see them go in, and within reach (`reach`:
+	their grace, outside the truck's box, not hidden where he did not see them go in, never behind glass he sees through
+	only (sight is not reach), and within reach (`reach`:
 	CATCH_RANGE plus CATCH_SLACK, since the base checks the range a moment earlier; FOUND_REACH more for a found hider). `launch` is the throw: away from him, flat, plus an upward kick. Pure.
 
 	@class OccupantCatchRules
@@ -41,6 +42,10 @@ function OccupantCatchRules.canCatch(input: OccupantTypes.CatchInput): (boolean,
 	end
 	if input.clear == false then
 		return false, "blocked"
+	end
+	-- He sees through the glass, but his hands do not go through it.
+	if input.glassed == true then
+		return false, "behind glass"
 	end
 	if not (input.distance <= OccupantCatchRules.reach(input.found == true)) then
 		return false, "too far"

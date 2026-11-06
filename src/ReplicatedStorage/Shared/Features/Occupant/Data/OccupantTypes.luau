@@ -199,6 +199,8 @@ export type Glimpse = {
 	userId: number,
 	position: Vector3,
 	clear: boolean,
+	-- The clear line passes SightThrough glass: he sees them, but cannot grab them through it.
+	glassed: boolean?,
 	-- In a hiding spot (Hide), and whether he saw them go in: unseen, he cannot see them at all; seen, he knows exactly
 	-- where they are (through the furniture).
 	hidden: boolean?,
@@ -244,6 +246,8 @@ export type Senses = {
 export type CatchInput = {
 	reachable: boolean?,
 	clear: boolean?,
+	-- His line to them passes glass he sees through: no grab through it.
+	glassed: boolean?,
 	distance: number,
 	position: Vector3,
 	alive: boolean,

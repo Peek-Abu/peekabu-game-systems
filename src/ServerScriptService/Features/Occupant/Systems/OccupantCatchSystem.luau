@@ -73,6 +73,8 @@ export type Attempt = {
 	zone: OccupantTypes.Zone,
 	-- A clear ray to them, or a hider he found (he knows where they are).
 	inView: boolean,
+	-- He sees them only through glass (SightThrough): no grab through it, found hider or not.
+	glassed: boolean,
 	-- A hider he found at their spot (the brain's catch effect: a check, a cabinet he opened, a sit-in), not a chase grab.
 	found: boolean,
 }
@@ -232,6 +234,7 @@ function OccupantCatchSystem.attempt(
 			OccupantCatchRules.reach(attempt.found)
 		),
 		clear = attempt.inView,
+		glassed = attempt.glassed,
 		-- Hidden where he did not see them go in, or concealed from him (a stealth move he did not see begin).
 		hidden = (HideServiceServer:isHidden(player) and not HideServiceServer:seenEntering(player))
 			or NpcServiceServer:isConcealedFrom(player, rig.model),

@@ -229,12 +229,14 @@ local function catchPlayer(player: Player, from: OccupantTypes.Mind?, found: boo
 	end
 	local now = os.clock()
 	local graceUntil = before.grace[player.UserId]
+	local sight = glimpses(current, math.huge)
 	local ok, reason = OccupantCatchSystem.attempt(current, player, {
 		inGrace = graceUntil ~= nil and now < graceUntil,
 		resting = state.stage == "break",
 		zone = world().zone,
 		-- A player he found in a hiding spot is in plain view to him (he knows where they are).
-		inView = Sense.inView(glimpses(current, math.huge), player.UserId),
+		inView = Sense.inView(sight, player.UserId),
+		glassed = Sense.glassed(sight, player.UserId),
 		found = found,
 	}, catchHooks)
 	if not ok then

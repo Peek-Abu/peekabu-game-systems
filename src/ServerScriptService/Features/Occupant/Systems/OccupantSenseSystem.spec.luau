@@ -3,6 +3,7 @@ local Workspace = game:GetService("Workspace")
 
 local OfficeDecorConstants = require(ReplicatedStorage.Shared.Features.Office.Data.OfficeDecorConstants)
 local Sense = require(script.Parent.OccupantSenseSystem)
+local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 return function()
 	it("knows each hiding spot and seats a desk on its tagged art chair in its own office, facing the desk", function()
 		local office = Instance.new("Model")
@@ -127,6 +128,75 @@ return function()
 		expect(list[2].hidden).to.equal(true)
 		expect(list[2].seen).to.equal(false)
 		expect(list[3].hidden).to.equal(nil)
+	end)
+
+	describe("sightLine (his eyes vs. his reach)", function()
+		local made = {}
+		local function part(name, cframe, size, collide, glass)
+			local p = Instance.new("Part")
+			p.Name = name
+			p.Anchored = true
+			p.Size = size
+			p.CFrame = cframe
+			p.CanCollide = collide
+			p.CanQuery = true
+			if glass then
+				p:AddTag(OccupantConstants.SIGHT_THROUGH_TAG)
+			end
+			p.Parent = Workspace
+			table.insert(made, p)
+			return p
+		end
+		-- The same params his glimpses use: sight skips glass; the glass ray looks only for glass.
+		local function line(from, to, glass)
+			local list = if glass ~= nil then { glass } else {}
+			return Sense.sightLine(from, to, Sense.sightParams(list), Sense.glassParams(list))
+		end
+		local BASE = Vector3.new(5000, 500, 5000)
+		afterEach(function()
+			for _, p in made do
+				p:Destroy()
+			end
+			table.clear(made)
+		end)
+		it("a wall blocks both his sight and his grab", function()
+			part("Wall", CFrame.new(BASE + Vector3.new(0, 0, 2)), Vector3.new(10, 10, 1), true, false)
+			local clear, glassed = line(BASE, BASE + Vector3.new(0, 0, 4), nil)
+			expect(clear).to.equal(false)
+			expect(glassed).to.equal(false)
+		end)
+		it("a closed door leaf (colliding) blocks both", function()
+			part("DoorLeaf", CFrame.new(BASE + Vector3.new(20, 0, 2)), Vector3.new(6, 9, 0.3), true, false)
+			local clear = line(BASE + Vector3.new(20, 0, 0), BASE + Vector3.new(20, 0, 4), nil)
+			expect(clear).to.equal(false)
+		end)
+		it("he sees through glass, but the line is marked glassed (no grab)", function()
+			local glass = part("Glass", CFrame.new(BASE + Vector3.new(40, 0, 2)), Vector3.new(6, 9, 0.3), true, true)
+			local clear, glassed = line(BASE + Vector3.new(40, 0, 0), BASE + Vector3.new(40, 0, 4), glass)
+			expect(clear).to.equal(true)
+			expect(glassed).to.equal(true)
+		end)
+		it("a clear line is clear and not glassed", function()
+			local clear, glassed = line(BASE + Vector3.new(60, 0, 0), BASE + Vector3.new(60, 0, 4), nil)
+			expect(clear).to.equal(true)
+			expect(glassed).to.equal(false)
+		end)
+		it("an open door leaf (not colliding) blocks neither", function()
+			part("DoorLeaf", CFrame.new(BASE + Vector3.new(80, 0, 2)), Vector3.new(6, 9, 0.3), false, false)
+			local clear, glassed = line(BASE + Vector3.new(80, 0, 0), BASE + Vector3.new(80, 0, 4), nil)
+			expect(clear).to.equal(true)
+			expect(glassed).to.equal(false)
+		end)
+	end)
+
+	it("knows who he sees only through glass", function()
+		local list = {
+			{ userId = -101, position = Vector3.zero, clear = true, glassed = true },
+			{ userId = -102, position = Vector3.zero, clear = true },
+		}
+		expect(Sense.glassed(list, -101)).to.equal(true)
+		expect(Sense.glassed(list, -102)).to.equal(false)
+		expect(Sense.glassed(list, -103)).to.equal(false)
 	end)
 
 	it("marks nobody concealed without a concealment check", function()

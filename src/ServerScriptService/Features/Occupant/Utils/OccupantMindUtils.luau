@@ -408,7 +408,7 @@ end
 
 --[=[
 	Into (or on with) a chase of `glimpse`; `startled`: a hider bolting, so a STARTLE_SECONDS beat before he moves.
-	Within reach the intent is the catch.
+	Within reach the intent is the catch, unless he sees them only through glass: then he walks round to them.
 ]=]
 function M.chase(current: Mind, senses: Senses, glimpse: Glimpse, startled: boolean): Step
 	local now = senses.now
@@ -429,7 +429,8 @@ function M.chase(current: Mind, senses: Senses, glimpse: Glimpse, startled: bool
 		return { mind = nextMind, intent = IDLE, cue = cue }
 	end
 	if
-		Reach.canReach(
+		glimpse.glassed ~= true
+		and Reach.canReach(
 			senses.position,
 			glimpse.position,
 			glimpse.feetY or glimpse.position.Y - 3,
