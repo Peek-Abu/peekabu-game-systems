@@ -15,16 +15,19 @@ export type AnomalyId =
 	| "wetFloor"
 	| "leaningLamp"
 
+-- Annotated so each id keeps its AnomalyId type (a plain list literal widens them to string).
+local IDS: { AnomalyId } = {
+	"silhouette",
+	"autoDoors",
+	"carTicking",
+	"welcomeScreen",
+	"boothTv",
+	"wetFloor",
+	"leaningLamp",
+}
+
 return table.freeze({
-	IDS = table.freeze({
-		"silhouette",
-		"autoDoors",
-		"carTicking",
-		"welcomeScreen",
-		"boothTv",
-		"wetFloor",
-		"leaningLamp",
-	}),
+	IDS = table.freeze(IDS),
 	SLOT_TAG = "OfficeAnomalySlot",
 	SLOT_ATTRIBUTE = "AnomalyId",
 	-- A comma-joined id list on the office model.

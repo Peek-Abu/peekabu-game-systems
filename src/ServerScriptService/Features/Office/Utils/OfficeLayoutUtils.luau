@@ -65,7 +65,9 @@ end
 ]=]
 function OfficeLayoutUtils.surfaceTopFor(marker: Sized): number?
 	local top = OfficeLayoutUtils.surfaceTopY(marker.kind)
-	if top ~= nil and marker.art ~= nil and OfficeConstants.ART_SIZES[marker.art] ~= nil then
+	-- Read into an optional: an indexer's value type has no nil, so comparing the lookup itself does not typecheck.
+	local artSize: Vector3? = if marker.art ~= nil then OfficeConstants.ART_SIZES[marker.art] else nil
+	if top ~= nil and artSize ~= nil then
 		local size = OfficeLayoutUtils.markerSize(marker)
 		if size ~= nil then
 			return size.Y
@@ -99,7 +101,7 @@ function OfficeLayoutUtils.markerSize(marker: Sized): Vector3?
 		return if art ~= nil then OfficeConstants.PROP_SIZES[art] else nil
 	end
 	if art ~= nil then
-		local sized = OfficeConstants.ART_SIZES[art]
+		local sized: Vector3? = OfficeConstants.ART_SIZES[art]
 		if sized ~= nil then
 			return sized
 		end

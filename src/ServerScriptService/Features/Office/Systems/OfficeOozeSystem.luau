@@ -128,7 +128,8 @@ function OfficeOozeSystem.buildAtDock(
 	gloom: number,
 	parent: Instance
 ): Model?
-	for _, entrance in layout.entrances or {} do
+	local entrances: { OfficeTypes.Entrance } = layout.entrances or {}
+	for _, entrance in entrances do
 		if entrance.id == "dock" then
 			local at = entrance.outside
 			local door = origin * CFrame.new(at.x, 0, at.z) * CFrame.Angles(0, at.yaw, 0)

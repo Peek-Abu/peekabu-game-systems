@@ -297,7 +297,8 @@ local function swapIfChanged(userId: number)
 end
 
 local function watchSpawns(player: Player)
-	if spawnWatches[player] ~= nil then
+	local watching: RBXScriptConnection? = spawnWatches[player]
+	if watching ~= nil then
 		return
 	end
 	spawnWatches[player] = player.CharacterAdded:Connect(function(character: Model)
@@ -390,7 +391,7 @@ local EmployeeServiceServer: EmployeeServiceServer = {
 		table.insert(
 			connections,
 			Players.PlayerRemoving:Connect(function(player: Player)
-				local watch = spawnWatches[player]
+				local watch: RBXScriptConnection? = spawnWatches[player]
 				if watch ~= nil then
 					watch:Disconnect()
 					spawnWatches[player] = nil

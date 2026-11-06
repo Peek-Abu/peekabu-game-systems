@@ -93,7 +93,8 @@ function HideDoorSystem.start(): () -> ()
 			return
 		end
 		local root = instance
-		if doors[root] ~= nil then
+		local watching: RBXScriptConnection? = doors[root]
+		if watching ~= nil then
 			return
 		end
 		doors[root] = root:GetAttributeChangedSignal(HideConstants.DOOR_OPEN_ATTRIBUTE):Connect(function()
@@ -106,7 +107,7 @@ function HideDoorSystem.start(): () -> ()
 		if not instance:IsA("BasePart") then
 			return
 		end
-		local connection = doors[instance]
+		local connection: RBXScriptConnection? = doors[instance]
 		if connection ~= nil then
 			connection:Disconnect()
 			doors[instance] = nil
