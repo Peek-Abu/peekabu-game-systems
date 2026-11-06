@@ -62,6 +62,7 @@ local OccupantCatchSystem = require(ServerScriptService.Features.Occupant.System
 local RoundServiceServer = require(ServerScriptService.Features.Round.RoundServiceServer)
 local ShiftServiceServer = require(ServerScriptService.Features.Shift.ShiftServiceServer)
 local SprintServiceServer = require(ServerScriptService.Features.Sprint.SprintServiceServer)
+local TipServiceServer = require(ServerScriptService.Features.Tip.TipServiceServer)
 local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
 local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
 local VacuumToolSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumToolSystem)
@@ -296,6 +297,7 @@ local function onUse(player: Player)
 	end
 	counters.used += 1
 	publishReady(player, tracker:spend(player.UserId, now, def.cooldown))
+	TipServiceServer:first(player, "firstAbility")
 	if def.id == "letsGo" then
 		letsGo(player, character, root, def)
 	elseif def.id == "spotIt" and cargoId ~= nil then

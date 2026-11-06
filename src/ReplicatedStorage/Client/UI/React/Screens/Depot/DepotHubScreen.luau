@@ -4,7 +4,7 @@
 	popping in with its grape header (the page's render breaking the corner, Gloom drips from the header's foot, the
 	coral close) over a scrolling body. Guide and Locker are honest briefing pages, a card per section with its
 	render; Settings are the persisted, validated base settings (a ToonSlider per percentage setting, its value on a
-	pill, RESTORE DEFAULTS). Sizes follow the specced DepotHubViewModel.panelLayout in HUD design px, laid out against the virtual
+	pill; an ON/OFF button per switch such as Tips; RESTORE DEFAULTS). Sizes follow the specced DepotHubViewModel.panelLayout in HUD design px, laid out against the virtual
 	viewport and drawn at the game's one UI scale (PaperHudScaleViewModel, inside PaperHudFrame), so the sheet keeps
 	the same share of the screen as the hub on a small laptop and on a 4K monitor.
 ]=]
@@ -36,6 +36,9 @@ local PaperHudScaleViewModel = require(script.Parent.Parent.Paper.PaperHudScaleV
 local usePaperLayout = require(script.Parent.Parent.Paper.usePaperLayout)
 local VM = require(script.Parent.DepotHubViewModel)
 local e = React.createElement
+-- A settings row's value: a percentage (a slider) or a switch (a toggle button).
+type RowValue = number | boolean
+type RowValues = { [string]: RowValue }
 local function label(
 	text: string,
 	size: number,
@@ -56,10 +59,10 @@ local function label(
 	})
 end
 local function SettingsRows(props: { width: number, phone: boolean, preview: boolean? }): React.ReactNode
-	local initial: { [string]: number } = {}
+	local initial: RowValues = {}
 	for _, setting in VM.SETTINGS do
 		local value = SettingServiceClient:get(setting.id)
-		if type(value) == "number" then
+		if type(value) == "number" or type(value) == "boolean" then
 			initial[setting.id] = value
 		end
 	end
@@ -73,8 +76,8 @@ local function SettingsRows(props: { width: number, phone: boolean, preview: boo
 			table.insert(
 				stoppers,
 				SettingServiceClient:observe(setting.id, function(value)
-					if type(value) == "number" then
-						setValues(function(previous: { [string]: number }): { [string]: number }
+					if type(value) == "number" or type(value) == "boolean" then
+						setValues(function(previous: RowValues): RowValues
 							local nextValues = table.clone(previous)
 							nextValues[setting.id] = value
 							return nextValues
@@ -107,7 +110,7 @@ local function SettingsRows(props: { width: number, phone: boolean, preview: boo
 		if def ~= nil and def.kind == "number" then
 			-- A slider per percentage setting (ToonSlider): drag, click to jump, or step with the keys / d-pad.
 			nodes[`slider{index}`] = e(ToonSlider, {
-				value = value or def.default,
+				value = if type(value) == "number" then value else def.default,
 				min = def.min,
 				max = def.max,
 				step = def.step,
@@ -119,13 +122,38 @@ local function SettingsRows(props: { width: number, phone: boolean, preview: boo
 				size = UDim2.fromOffset(if compact then props.width else props.width - VM.SLIDER_LABEL_WIDTH - 16, 48),
 				onChange = function(next: number)
 					if props.preview then
-						setValues(function(previous: { [string]: number }): { [string]: number }
+						setValues(function(previous: RowValues): RowValues
 							local nextValues = table.clone(previous)
 							nextValues[setting.id] = next
 							return nextValues
 						end)
 					else
 						SettingServiceClient:set(setting.id, next)
+					end
+				end,
+			})
+		elseif def ~= nil and def.kind == "boolean" then
+			-- A switch: one button that reads ON (mint) or OFF (lilac) and flips it.
+			local on = if type(value) == "boolean" then value else def.default
+			nodes[`switch{index}`] = e(ToonButton, {
+				text = VM.switchText(on),
+				variant = if on then "gleam" else "lilac",
+				disabled = value == nil,
+				size = UDim2.fromOffset(140, 48),
+				position = UDim2.fromOffset(
+					if compact then 0 else VM.SLIDER_LABEL_WIDTH + 16,
+					y + (if compact then 32 else 10)
+				),
+				textSize = 20,
+				onActivated = function()
+					if props.preview then
+						setValues(function(previous: RowValues): RowValues
+							local nextValues = table.clone(previous)
+							nextValues[setting.id] = not on
+							return nextValues
+						end)
+					else
+						SettingServiceClient:set(setting.id, not on)
 					end
 				end,
 			})
@@ -146,10 +174,10 @@ local function SettingsRows(props: { width: number, phone: boolean, preview: boo
 		textSize = 18,
 		onActivated = function()
 			if props.preview then
-				local defaults: { [string]: number } = {}
+				local defaults: RowValues = {}
 				for _, setting in VM.SETTINGS do
 					local def = SettingRegistry.get(setting.id)
-					if def ~= nil and type(def.default) == "number" then
+					if def ~= nil and (type(def.default) == "number" or type(def.default) == "boolean") then
 						defaults[setting.id] = def.default
 					end
 				end

@@ -63,6 +63,7 @@ local NpcServiceServer = require(ServerScriptService.Features.Npc.NpcServiceServ
 local OfficeServiceServer = require(ServerScriptService.Features.Office.OfficeServiceServer)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftServiceServer = require(ServerScriptService.Features.Shift.ShiftServiceServer)
+local TipServiceServer = require(ServerScriptService.Features.Tip.TipServiceServer)
 local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
 local StateSyncPublicPlayerStore = require(ServerScriptService.Features.StateSync.State.StateSyncPublicPlayerStore)
 
@@ -310,6 +311,7 @@ function OccupantCatchSystem.caught(player: Player, knockedOut: boolean)
 		style = ShiftConstants.TOAST_STICKY,
 		duration = 4,
 	})
+	TipServiceServer:first(player, "firstCatch")
 end
 
 --[=[

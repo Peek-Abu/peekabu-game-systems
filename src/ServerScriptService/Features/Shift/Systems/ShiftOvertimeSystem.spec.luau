@@ -18,7 +18,7 @@ end
 
 -- A system over a fake shift: `state` is what getState returns; every setState is recorded.
 local function harness(state, eligible, reaches)
-	local log = { state = state, sets = {}, announced = {}, enabled = {} }
+	local log = { state = state, sets = {}, announced = {}, enabled = {}, offered = {} }
 	local sheet = Instance.new("Part")
 	log.system = ShiftOvertimeSystem.new({
 		getState = function()
@@ -46,6 +46,9 @@ local function harness(state, eligible, reaches)
 		end,
 		reaches = function()
 			return reaches ~= false
+		end,
+		offered = function(player)
+			table.insert(log.offered, player)
 		end,
 	})
 	log.sheet = sheet
@@ -117,6 +120,18 @@ return function()
 			log.state = ShiftPhaseRules.startOvertime(log.state, 160)
 			log.system.sync()
 			expect(log.enabled[3].enabled).to.equal(false)
+		end)
+
+		it("offers overtime (the tip) to the crew once, as the sheet opens", function()
+			local log = harness(running())
+			log.system.sync()
+			expect(#log.offered).to.equal(0)
+			log.state = ShiftPhaseRules.markQuota(running(), 350, 150)
+			log.system.sync()
+			local opened = #log.offered
+			expect(opened).to.equal(#game:GetService("Players"):GetPlayers())
+			log.system.sync()
+			expect(#log.offered).to.equal(opened)
 		end)
 	end)
 end

@@ -274,6 +274,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Features.Analytics.Data.AnalyticsTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Client.Features.DailyReward.DailyRewardServiceClient"] = "read facade and request sender (DailyRewardRules is specced)",
 	["ReplicatedStorage.Client.Features.Social.SocialServiceClient"] = "Roblox prompt shell (invite, group join, favorite); SocialRules and SocialAskStore are specced",
+	["ServerScriptService.Features.Tip.TipServiceServer"] = "data layer, Setting and Toast shell (TipRules and TipRegistry are specced)",
 	["ReplicatedStorage.Client.Features.Timecard.TimecardServiceClient"] = "read facade and request sender (TimecardRules is specced)",
 	["ReplicatedStorage.Client.Features.Marketplace.MarketplaceServiceClient"] = "MarketplaceService prompt shell (the server grants; the registry is specced)",
 

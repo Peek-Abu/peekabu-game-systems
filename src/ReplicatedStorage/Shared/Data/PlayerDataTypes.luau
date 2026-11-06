@@ -150,6 +150,14 @@ export type Social = {
 }
 
 --[=[
+	The account-wide tips slice (TipServiceServer, TipRules): the one-line first-time tips this player has seen
+	(TipRegistry ids), so each shows once. Server-only, never synced.
+]=]
+export type Tips = {
+	seen: { [string]: boolean },
+}
+
+--[=[
 	The account-wide daily reward slice: the UTC day index (days since the Unix epoch, shifted by
 	DailyRewardConstants.DAY_OFFSET_HOURS) of the last claim (0 = never) and the current streak.
 ]=]
@@ -251,6 +259,7 @@ export type PlayerAccount = {
 	loadout: Loadout,
 	lockers: Lockers,
 	social: Social,
+	tips: Tips,
 	-- Extend with other ACCOUNT-WIDE slices here (settings, entitlements, ...)
 }
 

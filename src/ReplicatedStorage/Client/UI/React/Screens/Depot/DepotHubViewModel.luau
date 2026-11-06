@@ -6,6 +6,7 @@ local DailyRewardConstants = require(ReplicatedStorage.Shared.Features.DailyRewa
 local DailyRewardRules = require(ReplicatedStorage.Shared.Features.DailyReward.Rules.DailyRewardRules)
 local PlayerDataTypes = require(ReplicatedStorage.Shared.Data.PlayerDataTypes)
 local RankFormulas = require(ReplicatedStorage.Shared.Features.Rank.Utils.RankFormulas)
+local TipRegistry = require(ReplicatedStorage.Shared.Features.Tip.Data.TipRegistry)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local VM = {}
 
@@ -76,7 +77,13 @@ VM.SETTINGS = {
 	{ id = "musicVolume", label = "Music & ambience" },
 	{ id = "sfxVolume", label = "Sound effects" },
 	{ id = "cameraShake", label = "Camera shake" },
+	-- A switch (TipRegistry registers it): the one-line tips for a player's firsts.
+	{ id = TipRegistry.SETTING, label = "Tips" },
 }
+-- A switch setting's button text.
+function VM.switchText(on: boolean): string
+	return if on then "ON" else "OFF"
+end
 -- The settings rows' heights: a wide row (label beside its slider) and a compact one (label over it).
 VM.SETTINGS_ROW = 68
 VM.SETTINGS_ROW_COMPACT = 88

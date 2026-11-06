@@ -16,6 +16,7 @@
 	@class ShiftOvertimeSystem
 ]=]
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
@@ -28,6 +29,7 @@ local ShiftTimeClockSystem = require(ServerScriptService.Features.Shift.Systems.
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
 local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
 local OfficeServiceServer = require(ServerScriptService.Features.Office.OfficeServiceServer)
+local TipServiceServer = require(ServerScriptService.Features.Tip.TipServiceServer)
 local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
 
 -- Registered at load: the office builds the overtime sheet with this kind (its prompt off until overtime may start).
@@ -57,6 +59,8 @@ export type Deps = {
 	announce: ((text: string) -> ())?,
 	-- Whether a player may use the sheet now (empty hands, in front of it in the box); absent = the time clock's rule.
 	reaches: ((player: Player, target: Instance) -> boolean)?,
+	-- Each crew member who may sign, once each time the sheet opens (the overtime tip); absent = TipServiceServer.
+	offered: ((player: Player) -> ())?,
 }
 
 export type ShiftOvertimeSystem = {
@@ -83,6 +87,10 @@ local function realReaches(player: Player, target: Instance): boolean
 	return ShiftTimeClockSystem.reaches(player, target, CarryServiceServer:getCarried(player) ~= nil)
 end
 
+local function realOffered(player: Player)
+	TipServiceServer:first(player, "overtime")
+end
+
 local function realAnnounce(text: string)
 	ToastServiceServer:send("all", {
 		text = text,
@@ -98,6 +106,9 @@ function ShiftOvertimeSystem.new(deps: Deps): ShiftOvertimeSystem
 	local setEnabled: (BasePart, boolean) -> () = deps.setEnabled or realSetEnabled
 	local announce: (string) -> () = deps.announce or realAnnounce
 	local reaches: (Player, Instance) -> boolean = deps.reaches or realReaches
+	local offered: (Player) -> () = deps.offered or realOffered
+	-- Whether the sheet's prompt was showing at the last `sync`, so the offer is told once as it opens.
+	local open = false
 
 	local system: ShiftOvertimeSystem
 	system = {
@@ -116,9 +127,19 @@ function ShiftOvertimeSystem.new(deps: Deps): ShiftOvertimeSystem
 
 		sync = function()
 			local target = sheet()
-			if target ~= nil then
-				setEnabled(target, ShiftPhaseRules.canStartOvertime(deps.getState()))
+			if target == nil then
+				return
 			end
+			local canStart = ShiftPhaseRules.canStartOvertime(deps.getState())
+			setEnabled(target, canStart)
+			if canStart and not open then
+				for _, player in Players:GetPlayers() do
+					if deps.eligible(player) then
+						offered(player)
+					end
+				end
+			end
+			open = canStart
 		end,
 
 		sign = function(player, target)
