@@ -62,6 +62,9 @@ return table.freeze({
 	NOISE_INTERVAL = 1,
 	-- Seconds a vacuuming player stays counted after their channel's last tick (the channel asks every 0.1 s).
 	MAKER_WINDOW = 0.5,
+	-- Every speed (walk, sprint, crouch, carry) is multiplied by this while the vacuum sucks a pile or a grimy item
+	-- (SprintServiceServer's drag). 1 = no slow-down. THE one number to tune.
+	VACUUMING_WALK_SCALE = 0.75,
 	NOISE_RADIUS = 40,
 	-- A pile shrinks to this fraction of its size as progress reaches full.
 	MIN_SCALE = 0.35,

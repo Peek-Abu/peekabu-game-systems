@@ -22,7 +22,9 @@
 	through `setSpeedScale`) multiplies by `speedScale` and every base read back from WalkSpeed divides it out, so a
 	boost never leaks into a base; starting and ending one rescales the live WalkSpeed (SprintSpeedFormulas.rescale).
 	A boost given again keeps the bigger scale and the later end (never stacks). The character carries SpeedScale and
-	SpeedBoostUntil while it lasts.
+	SpeedBoostUntil while it lasts. Vacuuming is a drag in the same scale (SprintDragTracker): while the server marks
+	the character's vacuum as sucking (VacuumMotionConstants.ACTIVE_ATTRIBUTE) every speed is multiplied by
+	VacuumConstants.VACUUMING_WALK_SCALE, checked every TICK and rescaled live as it starts and stops.
 
 	Employee stats (EmployeeStatFormulas, read from the character's stat bars every tick): Speed scales SPRINT_SPEED
 	(the plain walk is already scaled when the character is built, so the boost multiplies on top of both), Stamina
@@ -42,6 +44,8 @@ local Workspace = game:GetService("Workspace")
 
 local SprintShared = ReplicatedStorage.Shared.Features.Sprint
 local CrouchConstants = require(ReplicatedStorage.Shared.Features.Crouch.Data.CrouchConstants)
+local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
+local VacuumMotionConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumMotionConstants)
 local Observers = require(ReplicatedStorage.Packages.Observers)
 local SprintConstants = require(SprintShared.Data.SprintConstants)
 local SprintEvents = require(SprintShared.Net.SprintEvents)
@@ -57,6 +61,7 @@ local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServi
 local HideServiceServer = require(ServerScriptService.Features.Hide.HideServiceServer)
 local NoiseServiceServer = require(ServerScriptService.Features.Noise.NoiseServiceServer)
 local SprintBoostTracker = require(ServerScriptService.Features.Sprint.State.SprintBoostTracker)
+local SprintDragTracker = require(ServerScriptService.Features.Sprint.State.SprintDragTracker)
 
 type Runner = {
 	requested: boolean,
@@ -73,6 +78,7 @@ type Runner = {
 
 local runners: { [number]: Runner } = {}
 local boosts = SprintBoostTracker.new()
+local drags = SprintDragTracker.new()
 local stoppers: { () -> () } = {}
 local elapsed = 0
 local counters = { sprints = 0, steps = 0, refused = 0 }
@@ -99,6 +105,30 @@ local function weightOf(player: Player): number
 	return CarrySpeedSystem.weightFor(player)
 end
 
+local function humanoidOf(player: Player): Humanoid?
+	local character = player.Character
+	return if character ~= nil then character:FindFirstChildOfClass("Humanoid") else nil
+end
+
+-- The one scale on every speed of `player`: their boost times their drag (vacuuming).
+local function scaleOf(player: Player): number
+	return boosts:scaleOf(player.UserId) * drags:scaleOf(player.UserId, humanoidOf(player))
+end
+
+-- Drags (or frees) the body's every speed while its vacuum sucks, rescaling the live walk as that changes.
+local function applyDrag(player: Player)
+	local character = player.Character
+	local humanoid = humanoidOf(player)
+	if character == nil or humanoid == nil then
+		return
+	end
+	local sucking = character:GetAttribute(VacuumMotionConstants.ACTIVE_ATTRIBUTE) == true
+	local from, to = drags:set(player.UserId, humanoid, if sucking then VacuumConstants.VACUUMING_WALK_SCALE else 1)
+	if from ~= nil and to ~= nil then
+		humanoid.WalkSpeed = SprintSpeedFormulas.rescale(humanoid.WalkSpeed, from, to)
+	end
+end
+
 -- Ends a boost: the humanoid walks again, at its own speed slowed by whatever it carries (Carry's formula).
 local function unboost(player: Player, runner: Runner)
 	local humanoid = runner.boosted
@@ -106,7 +136,7 @@ local function unboost(player: Player, runner: Runner)
 	runner.boosted = nil
 	runner.base = nil
 	if humanoid ~= nil and base ~= nil and humanoid.Parent ~= nil then
-		humanoid.WalkSpeed = CarryFormulas.carrierSpeed(base, weightOf(player)) * boosts:scaleOf(player.UserId)
+		humanoid.WalkSpeed = CarryFormulas.carrierSpeed(base, weightOf(player)) * scaleOf(player)
 	end
 	player:SetAttribute(SprintConstants.SPRINTING_ATTRIBUTE, nil)
 end
@@ -139,7 +169,7 @@ local function stepOne(player: Player, runner: Runner, dt: number)
 		unboost(player, runner)
 	end
 	local weight = weightOf(player)
-	local scale = boosts:scaleOf(player.UserId)
+	local scale = scaleOf(player)
 	if ok and humanoid ~= nil and runner.boosted == nil then
 		runner.boosted = humanoid
 		-- The unloaded walk: the walk now, un-slowed by the load (Carry's slow is a plain factor) and un-scaled by a
@@ -216,6 +246,7 @@ local function onHeartbeat(deltaTime: number)
 		end
 	end
 	for _, player in Players:GetPlayers() do
+		applyDrag(player)
 		stepOne(player, runnerOf(player), dt)
 	end
 end
@@ -258,6 +289,7 @@ local SprintServiceServer: SprintServiceServer = {
 		local leaving = Players.PlayerRemoving:Connect(function(player: Player)
 			runners[player.UserId] = nil
 			boosts:clear(player.UserId)
+			drags:clear(player.UserId)
 		end)
 		table.insert(
 			stoppers,
@@ -353,7 +385,7 @@ local SprintServiceServer: SprintServiceServer = {
 		The scale on every speed of `player` now (1 without a boost).
 	]=]
 	speedScale = function(_self, player)
-		return boosts:scaleOf(player.UserId)
+		return scaleOf(player)
 	end,
 
 	getState = function(_self)
