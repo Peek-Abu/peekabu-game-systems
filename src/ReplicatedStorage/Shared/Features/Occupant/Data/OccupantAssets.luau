@@ -215,15 +215,18 @@ local ANIMATIONS: { [string]: AnimationSlot } = {
 		priority = Enum.AnimationPriority.Action,
 		interruption = "protected",
 	},
-	-- The catch: grab, then throw.
+	-- The catch (Icey Labs, 2026-11-06). CC Manager Grab v1, 1.0 s = SNAP_SECONDS: arms up as the tell, a lunge onto the
+	-- caught player's head while his neck cranes his mask toward their catch camera, then a crouch that loads the
+	-- throw. CC Manager Throw v1, 0.8 s: the heave up and forward starts on frame 1 (the launch fires as it starts),
+	-- then he settles back onto his idle's first pose.
 	harlowGrab = {
-		assetId = PENDING,
+		assetId = "rbxassetid://89596494245921",
 		looped = false,
 		priority = Enum.AnimationPriority.Action,
 		interruption = "protected",
 	},
 	harlowThrow = {
-		assetId = PENDING,
+		assetId = "rbxassetid://118640921042554",
 		looped = false,
 		priority = Enum.AnimationPriority.Action,
 		interruption = "protected",
