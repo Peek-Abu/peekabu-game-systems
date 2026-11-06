@@ -5,6 +5,11 @@ return function()
 		expect(FilmConstants.HIDE_KEY).to.equal(Enum.KeyCode.F7)
 	end)
 
+	it("turns the film camera on F8, above every other camera mode", function()
+		expect(FilmConstants.CAMERA_KEY).to.equal(Enum.KeyCode.F8)
+		expect(FilmConstants.CAMERA_PRIORITY > 100).to.equal(true)
+	end)
+
 	it("keeps the admin console showing so the UI can be brought back", function()
 		expect(FilmConstants.KEEP_GUIS.Cmdr).to.equal(true)
 	end)

@@ -1,0 +1,42 @@
+local FilmMarkTracker = require(script.Parent.FilmMarkTracker)
+
+local function mark(x)
+	return { position = Vector3.new(x, 0, 0), look = Vector3.new(0, 0, -1), fov = 70 }
+end
+
+return function()
+	describe("FilmMarkTracker", function()
+		it("saves and reads marks 1 to 9 only", function()
+			local tracker = FilmMarkTracker.new()
+			expect(tracker:set(1, mark(1))).to.equal(true)
+			expect(tracker:set(9, mark(9))).to.equal(true)
+			expect(tracker:set(0, mark(0))).to.equal(false)
+			expect(tracker:set(10, mark(10))).to.equal(false)
+			expect(tracker:set(1.5, mark(1))).to.equal(false)
+			expect(tracker:get(1).position.X).to.equal(1)
+			expect(tracker:get(2)).to.equal(nil)
+		end)
+
+		it("lists the saved marks in slot order, skipping gaps", function()
+			local tracker = FilmMarkTracker.new()
+			tracker:set(5, mark(5))
+			tracker:set(2, mark(2))
+			tracker:set(7, mark(7))
+			local ordered = tracker:ordered()
+			expect(#ordered).to.equal(3)
+			expect(ordered[1].position.X).to.equal(2)
+			expect(ordered[2].position.X).to.equal(5)
+			expect(ordered[3].position.X).to.equal(7)
+			expect(tracker:count()).to.equal(3)
+		end)
+
+		it("overwrites a slot and clears them all", function()
+			local tracker = FilmMarkTracker.new()
+			tracker:set(3, mark(3))
+			tracker:set(3, mark(30))
+			expect(tracker:get(3).position.X).to.equal(30)
+			tracker:clear()
+			expect(tracker:count()).to.equal(0)
+		end)
+	end)
+end
