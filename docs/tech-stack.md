@@ -22,7 +22,7 @@ prompts for tool trust non-interactively).
 | [wally-package-types](https://github.com/JohnnyMorganz/wally-package-types) | 1.6.2 | Generates `.d.luau` type exports for installed packages so `luau-lsp analyze` can type-check across the package boundary. **Not idempotent** — see the gotcha in AGENTS.md. |
 | [selene](https://github.com/Kampfkarren/selene) | 0.31.0 | Lints `src` (`selene src`); its `std = "roblox+testez"` config recognizes TestEZ's injected globals in spec files. |
 | [stylua](https://github.com/JohnnyMorganz/StyLua) | 2.5.2 | Enforces/auto-fixes formatting (`stylua --check src` / `stylua src`). |
-| [luau-lsp](https://github.com/JohnnyMorganz/luau-lsp) | 1.68.1 | Provides `luau-lsp analyze`, the blocking `--!strict` type-check gate; also powers editor tooling. Its release tag must stay in lockstep with the `globalTypes.d.luau` fetch in CI (see below). |
+| [luau-lsp](https://github.com/JohnnyMorganz/luau-lsp) | 1.70.1 | Provides `luau-lsp analyze`, the blocking `--!strict` type-check gate; also powers editor tooling. Its release tag must stay in lockstep with the `globalTypes.d.luau` fetch in CI (see below). |
 
 `scripts/check.sh` runs the full local gate (lint + format + typecheck + the Python `ruff` checks)
 in one command; see the [Commands table in AGENTS.md](../AGENTS.md#commands).

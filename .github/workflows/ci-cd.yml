@@ -62,7 +62,7 @@ jobs:
         # Pinned to the same luau-lsp release as rokit.toml (defs must match the analyzer, and an
         # unpinned `main` fetch lets upstream silently change the type-check surface). Bump this
         # tag together with the luau-lsp entry in rokit.toml.
-        run: curl -fsSL "https://raw.githubusercontent.com/JohnnyMorganz/luau-lsp/1.68.1/scripts/globalTypes.d.luau" -o globalTypes.d.luau
+        run: curl -fsSL "https://raw.githubusercontent.com/JohnnyMorganz/luau-lsp/1.70.1/scripts/globalTypes.d.luau" -o globalTypes.d.luau
       - name: Analyze
         # `tasks/` is included alongside `src`: runTests.luau is the CI test entry point, so a type
         # error there would otherwise surface only as an opaque Open Cloud task failure.

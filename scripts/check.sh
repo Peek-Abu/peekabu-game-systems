@@ -43,7 +43,7 @@ if [ -d DevPackages ]; then wally-package-types -s sourcemap.json DevPackages/; 
 # rokit.toml's luau-lsp entry, and delete the local globalTypes.d.luau so it re-downloads.
 if [ ! -f globalTypes.d.luau ]; then
 	echo "    downloading Roblox global type definitions"
-	curl -fsSL "https://raw.githubusercontent.com/JohnnyMorganz/luau-lsp/1.68.1/scripts/globalTypes.d.luau" -o globalTypes.d.luau
+	curl -fsSL "https://raw.githubusercontent.com/JohnnyMorganz/luau-lsp/1.70.1/scripts/globalTypes.d.luau" -o globalTypes.d.luau
 fi
 # Spec files are excluded: they rely on TestEZ globals (describe/it/expect). Everything else must be
 # clean. `tasks/` is included alongside `src` (mirrors CI): runTests.luau is the CI test entry point.
