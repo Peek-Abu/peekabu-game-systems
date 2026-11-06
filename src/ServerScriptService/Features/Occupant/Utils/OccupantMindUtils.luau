@@ -93,6 +93,7 @@ end
 -- Fills in a copy: forgets who he chased and what he heard.
 function M.forget(mind: Mind)
 	mind.target = nil
+	mind.chaseAt = nil
 	mind.lastSeen = nil
 	mind.noise = nil
 	mind.searchPoints = nil
@@ -408,12 +409,15 @@ end
 
 --[=[
 	Into (or on with) a chase of `glimpse`; `startled`: a hider bolting, so a STARTLE_SECONDS beat before he moves.
-	Within reach the intent is the catch, unless he sees them only through glass: then he walks round to them.
+	Within reach the intent is the catch, unless he sees them only through glass: then he walks round to them. The chase
+	clock (`chaseAt`) starts with a new target and runs on through a chase or a search of the same one.
 ]=]
 function M.chase(current: Mind, senses: Senses, glimpse: Glimpse, startled: boolean): Step
 	local now = senses.now
 	local chasing = current.mode == "chase"
 	local nextMind: Mind = if chasing then table.clone(current) else M.enter(current, "chase", now)
+	local sameRunner = current.target == glimpse.userId and (chasing or current.mode == "search")
+	nextMind.chaseAt = if sameRunner and current.chaseAt ~= nil then current.chaseAt else now
 	nextMind.target = glimpse.userId
 	nextMind.lastSeen = glimpse.position
 	nextMind.noise = nil

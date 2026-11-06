@@ -437,6 +437,11 @@ return table.freeze({
 	-- After a catch he stands CATCH_HOLD seconds, then walks on; he ignores that player GRACE_SECONDS.
 	CATCH_HOLD = 1.5,
 	GRACE_SECONDS = 10,
+	-- A runner as fast as he is (his chase speed barely beats a sprint) could be chased forever: after
+	-- CHASE_GIVE_UP_SECONDS on the same player without a catch (the clock runs on through a search for them) he sighs,
+	-- goes back to patrol and ignores that player CHASE_COOLDOWN_SECONDS (their grace), so he does not re-chase at once.
+	CHASE_GIVE_UP_SECONDS = 25,
+	CHASE_COOLDOWN_SECONDS = 8,
 	-- The catch: camera on his face ~1 s (the jumpscare), then the launch. A catch that leaves a life is a hit: down
 	-- KNOCKDOWN_SECONDS (Death's knockdown), then up where they landed. The last life's catch kills: ~8 s spectating
 	-- (Death's respawn delay), or held down for the shift once knocked out.

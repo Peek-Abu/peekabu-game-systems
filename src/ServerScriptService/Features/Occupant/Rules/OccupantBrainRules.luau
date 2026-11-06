@@ -12,6 +12,8 @@
 	  still see is kept over a nearer player; within CATCH_RANGE the intent is `attack` (the catch). Far down a clear
 	  line (longRange, the narrow longAngle cone) he first stops and turns his head to look for a notice beat that
 	  grows with the distance (OccupantMindUtils.noticeDelay), then chases; his target stays seen down that cone;
+	  after CHASE_GIVE_UP_SECONDS on the same runner without a catch he sighs, patrols and leaves them be
+	  CHASE_COOLDOWN_SECONDS (their grace);
 	- search: lost sight → run to where he last saw them, look around SEARCH_SECONDS, sigh, patrol; a hiding spot
 	  right there gets a short hunch stare (he did not see where they went: OccupantStareRules, HUNCH_CHECK);
 	- rest: the shift's break → walk to the rest point and ignore everyone and everything;
@@ -206,6 +208,19 @@ local function leaveBay(mind: Mind, senses: Senses): Step
 	return { mind = nextMind, intent = { kind = "goTo", position = senses.route[best], run = false }, cue = "giveUp" }
 end
 
+-- Chased one runner CHASE_GIVE_UP_SECONDS without a catch (as fast as him): a sigh, back to patrol, and that runner in
+-- their grace CHASE_COOLDOWN_SECONDS so he does not chase them again at once.
+local function tire(current: Mind, senses: Senses): Step
+	local nextMind = table.clone(current)
+	local target = current.target
+	if target ~= nil then
+		local grace = table.clone(current.grace)
+		grace[target] = senses.now + OccupantConstants.CHASE_COOLDOWN_SECONDS
+		nextMind.grace = grace
+	end
+	return M.giveUp(nextMind, senses)
+end
+
 -- Walking to the noise / last-seen point, looking around, giving up; a noise by the spots ends in a stare.
 local function lookAround(current: Mind, senses: Senses): Step
 	local now = senses.now
@@ -354,6 +369,16 @@ local function think(mind: Mind, senses: Senses): Step
 		if step ~= nil then
 			return step
 		end
+	end
+
+	-- Chased (or searched for) the same runner too long without a catch: he gives up and lets them be a while.
+	local chaseAt = current.chaseAt
+	if
+		(current.mode == "chase" or current.mode == "search")
+		and chaseAt ~= nil
+		and now - chaseAt >= OccupantConstants.CHASE_GIVE_UP_SECONDS
+	then
+		return tire(current, senses)
 	end
 
 	-- Sight beats everything else.

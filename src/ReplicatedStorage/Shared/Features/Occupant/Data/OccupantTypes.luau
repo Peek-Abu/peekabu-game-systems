@@ -111,6 +111,8 @@ export type Mind = {
 	routeStep: number,
 	-- The UserId he is chasing.
 	target: number?,
+	-- When he began chasing `target` (kept through a search for the same player; CHASE_GIVE_UP_SECONDS).
+	chaseAt: number?,
 	-- Where he last saw his target (always outside the truck's box).
 	lastSeen: Vector3?,
 	-- Bounded, authored nearby locations checked after the last sighting; never live hidden positions.
@@ -120,7 +122,7 @@ export type Mind = {
 	noise: Vector3?,
 	-- When he reached the investigate / search point (looking around since).
 	arrivedAt: number?,
-	-- UserId → the os.clock() until which he ignores them (after a catch).
+	-- UserId → the os.clock() until which he ignores them (after a catch, or a chase he gave up).
 	grace: { [number]: number },
 	-- When he walked into the loading bay (nil while outside it), and until when he keeps out of it after lingering
 	-- there BAY_LINGER_SECONDS (he never body-blocks the truck's ramp).
