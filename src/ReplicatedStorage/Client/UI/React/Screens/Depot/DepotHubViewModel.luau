@@ -141,7 +141,7 @@ function VM.copy(
 				},
 				{
 					title = "02 / VACUUM & BANK",
-					body = `Equip your vacuum. {cleanControl or "Hold the cleaning action near dust."} Every pile you vacuum removes Gloom toward the contract on the spot, and so does cleaning the grime off a valuable. Bank the valuables at the truck (the Mobile Recovery Unit) for Credits.`,
+					body = `Equip your vacuum. {cleanControl or "Hold the vacuum button near dust."} Every pile you vacuum removes Gloom toward the contract on the spot, and so does cleaning the grime off a valuable. Bank the valuables at the truck (the Mobile Recovery Unit) for Credits.`,
 				},
 				{
 					title = "03 / WATCH YOUR NOISE",

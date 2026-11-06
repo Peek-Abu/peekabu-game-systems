@@ -29,7 +29,7 @@ local BOARD_COPY = table.freeze({
 	shift = "on the clock. Clock out at the truck any time.",
 	shiftPhone = "clock out at the truck",
 	crew = "1–4 per truck. 6 with Big Crew.",
-	hazard = "The Manager is on site. Hears vacuums and dropped items. Empty hands run faster.",
+	hazard = "The Manager is here. He hears vacuums and things you drop. Empty hands run faster.",
 	hazardPhone = "The Manager hears vacuums and drops",
 	sticky = "Lights on the 4th floor again?? — night guard",
 	approved = "APPROVED",
@@ -57,7 +57,7 @@ local CONTRACTS: { DepotTypes.Contract } = {
 		id = "harlow-finch-2",
 		client = "Harlow & Finch Ltd.",
 		job = "The bank wants every floor spotless.",
-		note = "Someone reported lights on after midnight.",
+		note = "Someone saw lights on after midnight.",
 	},
 	{
 		id = "harlow-finch-3",

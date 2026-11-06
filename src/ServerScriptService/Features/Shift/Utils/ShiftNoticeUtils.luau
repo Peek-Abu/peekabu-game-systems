@@ -3,7 +3,7 @@
 	ShiftNoticeUtils: what the crew is told when the pacing moves (Cleanup Crew spec §3 step 5, §4 "Pacing", §7, and the
 	opt-in overtime of docs/cleanup-crew-lore.md "Contract sequence"): the quota met, with the company's notice
 	(COMPANY_THRESHOLD) and the choice (clock out, or start overtime at the truck); the end of the break; the overtime
-	warning once a crew member starts it; overtime itself; and each pressure tier ("Site activity is picking up…"). Clocking
+	warning once a crew member starts it; overtime itself; and each pressure tier ("Things are getting busier…"). Clocking
 	out (ShiftClockOutRules): who punched and how many are on the truck, and the truck's countdown.
 	Since 2026-10-16 they speak of "site activity", never of the Manager, so any anomaly on site can share them. The two big moments are a rubber stamp (QUOTA MET, OVERTIME) followed by sticky notes with the
 	detail; the rest are sticky notes (spec §6.1, §7 "sticky-note toasts, rubber-stamp announcements"). Pure: the
@@ -21,8 +21,7 @@ local ToastTypes = require(ReplicatedStorage.Shared.Features.Toast.Data.ToastTyp
 type ToastRequest = ToastTypes.ToastRequest
 
 -- Morrow & Morrow's announcement when the clearance quota is met (docs/cleanup-crew-lore.md).
-local COMPANY_THRESHOLD =
-	"Clearance threshold reached. Optional recovery remains available. Extended-site coverage is not guaranteed."
+local COMPANY_THRESHOLD = "Great job, you cleaned enough Gloom! You can go home now, or stay longer for more treasure."
 
 -- "m:ss", seconds rounded up.
 local function clock(seconds: number): string
@@ -57,30 +56,27 @@ function ShiftNoticeUtils.notices(before: ShiftTypes.ShiftState, after: ShiftTyp
 		table.insert(
 			list,
 			note(
-				`Site activity has settled for now. Clock out at the truck to leave, or start overtime there: new shimmering loot ×{multiplier}, more activity.`
+				`It is quiet for now. Clock out at the truck to go home, or start overtime there: new sparkly treasure ×{multiplier}, but more scary stuff.`
 			)
 		)
 	end
 	local breakOver = before.stage == "break" and after.stage == "normal"
 	if breakOver then
-		table.insert(list, note("Site activity is picking up again. Overtime is still your call."))
+		table.insert(list, note("Things are getting busy again. Overtime is still up to you."))
 	end
 	if after.stage == "warning" and before.stage ~= "warning" then
 		table.insert(
 			list,
 			note(
-				`Overtime in {clock(ShiftConstants.WARNING_SECONDS)}: new loot appears, ×{multiplier}. Bank your cargo and regroup.`
+				`Overtime in {clock(ShiftConstants.WARNING_SECONDS)}: new treasure shows up, ×{multiplier}. Bank your loot and meet up.`
 			)
 		)
 	end
 	if after.stage == "overtime" and before.stage ~= "overtime" then
 		table.insert(list, stamp("OVERTIME"))
-		table.insert(
-			list,
-			note(`Shimmering loot ×{multiplier} until the clock runs out. Site activity is heavier now.`)
-		)
+		table.insert(list, note(`Shimmering loot ×{multiplier} until the clock runs out. It is spookier now.`))
 	elseif after.tier > before.tier and after.stage ~= "break" and after.stage ~= "warning" and not breakOver then
-		table.insert(list, note("Site activity is picking up…"))
+		table.insert(list, note("Things are getting busier…"))
 	end
 	return list
 end

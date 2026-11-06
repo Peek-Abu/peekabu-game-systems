@@ -82,7 +82,7 @@ return table.freeze({
 	-- card, dispatch, HR) and its slogan. The client whose site is cleared is the contract's (DepotConstants.CONTRACTS).
 	EMPLOYER = "Morrow & Morrow Clearance",
 	EMPLOYER_BAND = "MORROW & MORROW",
-	EMPLOYER_SLOGAN = "A clean site is a compliant site.",
+	EMPLOYER_SLOGAN = "A clean office is a happy office.",
 	-- The economy (docs/superpowers/specs/2026-10-16-cleanup-crew-gloom-gleam-economy-design.md): the contract is
 	-- counted in Gloom (the anomaly's residue: the dust, and the grime on valuables), and the company pays in Credits,
 	-- saved to the player's account at shift end (Gleam is the separate premium balance). Rename them here and every

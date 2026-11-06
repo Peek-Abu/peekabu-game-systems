@@ -35,26 +35,26 @@ return function()
 		expect(list[1].duration).to.equal(ShiftConstants.STAMP_SECONDS)
 		expect(list[2].style).to.equal(ShiftConstants.TOAST_STICKY)
 		expect(list[2].text).to.equal(
-			"Clearance threshold reached. Optional recovery remains available. Extended-site coverage is not guaranteed."
+			"Great job, you cleaned enough Gloom! You can go home now, or stay longer for more treasure."
 		)
 		expect(list[2].duration).to.equal(ShiftConstants.NOTICE_SECONDS)
 		expect(list[3].style).to.equal(ShiftConstants.TOAST_STICKY)
 		expect(list[3].text).to.equal(
-			"Site activity has settled for now. Clock out at the truck to leave, or start overtime there: new shimmering loot ×1.5, more activity."
+			"It is quiet for now. Clock out at the truck to go home, or start overtime there: new sparkly treasure ×1.5, more activity."
 		)
 	end)
 
 	it("says when the break is over, and that overtime has not started", function()
 		local list = ShiftNoticeUtils.notices(onBreak(), ShiftPhaseRules.advance(onBreak(), 180))
 		expect(#list).to.equal(1)
-		expect(list[1].text).to.equal("Site activity is picking up again. Overtime is still your call.")
+		expect(list[1].text).to.equal("Things are getting busy again. Overtime is still up to you.")
 		expect(list[1].style).to.equal(ShiftConstants.TOAST_STICKY)
 	end)
 
 	it("warns before overtime on a sticky note, with time to bank and regroup", function()
 		local list = ShiftNoticeUtils.notices(onBreak(), warning())
 		expect(#list).to.equal(1)
-		expect(list[1].text).to.equal("Overtime in 0:30: new loot appears, ×1.5. Bank your cargo and regroup.")
+		expect(list[1].text).to.equal("Overtime in 0:30: new treasure shows up, ×1.5. Bank your loot and meet up.")
 		expect(list[1].style).to.equal(ShiftConstants.TOAST_STICKY)
 	end)
 
@@ -64,13 +64,13 @@ return function()
 		expect(list[1].text).to.equal("OVERTIME")
 		expect(list[1].style).to.equal(ShiftConstants.TOAST_STAMP)
 		expect(list[2].style).to.equal(ShiftConstants.TOAST_STICKY)
-		expect(list[2].text).to.equal("Shimmering loot ×1.5 until the clock runs out. Site activity is heavier now.")
+		expect(list[2].text).to.equal("Shimmering loot ×1.5 until the clock runs out. It is spookier now.")
 	end)
 
 	it("notes each pressure tier on a sticky note", function()
 		local list = ShiftNoticeUtils.notices(running(), ShiftPhaseRules.advance(running(), 220))
 		expect(#list).to.equal(1)
-		expect(list[1].text).to.equal("Site activity is picking up…")
+		expect(list[1].text).to.equal("Things are getting busier…")
 		expect(list[1].style).to.equal(ShiftConstants.TOAST_STICKY)
 	end)
 
@@ -89,7 +89,7 @@ return function()
 		expect(back.tier).to.equal(1)
 		local list = ShiftNoticeUtils.notices(early, back)
 		expect(#list).to.equal(1)
-		expect(list[1].text).to.equal("Site activity is picking up again. Overtime is still your call.")
+		expect(list[1].text).to.equal("Things are getting busy again. Overtime is still up to you.")
 	end)
 
 	it("holds the tier note back during the warning", function()

@@ -223,7 +223,7 @@ local function DepotHubScreen(
 	local width, height = layout.width, layout.height
 	local bindings = InputServiceClient:bindingsFor(VacuumConstants.ACTION)
 	local input = UserInputService:GetLastInputType()
-	local control = "Hold the cleaning action near dust."
+	local control = "Hold the vacuum button near dust."
 	if input == Enum.UserInputType.Touch then
 		control = "Hold VACUUM on the shift's touch controls near dust."
 	elseif bindings ~= nil then

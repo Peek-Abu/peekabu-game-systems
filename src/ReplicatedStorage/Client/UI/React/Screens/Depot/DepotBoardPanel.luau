@@ -254,7 +254,7 @@ local function managerCard(size: Vector2, position: UDim2): React.ReactNode
 				zIndex = 3,
 			}),
 			line = e(ToonText, {
-				text = "Hears vacuums and dropped things",
+				text = "Hears vacuums and things you drop",
 				font = "body",
 				color = UIToonConstants.shade("coral").hi,
 				textSize = 17,

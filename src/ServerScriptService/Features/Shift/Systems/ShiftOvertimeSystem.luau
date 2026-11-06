@@ -36,7 +36,7 @@ local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServi
 if not InteractionRegistry.has(ShiftConstants.OVERTIME_KIND) then
 	InteractionRegistry.register(ShiftConstants.OVERTIME_KIND, {
 		actionText = "Start overtime",
-		objectText = "Optional recovery",
+		objectText = "More treasure, more danger",
 		holdDuration = ShiftConstants.OVERTIME_HOLD,
 		maxDistance = ShiftConstants.PAPERWORK_DISTANCE,
 	})

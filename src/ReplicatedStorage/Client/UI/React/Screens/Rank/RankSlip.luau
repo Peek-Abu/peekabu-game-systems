@@ -138,9 +138,9 @@ local function RankSlip(props: RankSlipProps): React.ReactNode
 	if view.promoted then
 		-- Desktop: above the gain, clear of its digits. Phone: the strip sits right under the stat cards, so the sticker
 		-- hangs on its bottom-right edge instead (its top clear of the bar), as wide as its measured label.
-		local promotedWidth = if phone then ToonStyleViewModel.pillWidth(measure("PROMOTED!", 13), 13, 8) else 170
+		local promotedWidth = if phone then ToonStyleViewModel.pillWidth(measure("RANK UP!", 13), 13, 8) else 170
 		face.promoted = e(ToonPill, {
-			text = "PROMOTED!",
+			text = "RANK UP!",
 			hue = "gold",
 			textSize = if phone then 13 else 22,
 			tilt = -6,
