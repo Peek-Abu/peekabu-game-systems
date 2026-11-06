@@ -343,7 +343,7 @@ function ShiftReviewViewModel.review(
 			},
 			{ label = "Credits earned", value = `+{split.credits}`, icon = "credits", meaning = "gold", gold = true },
 			{
-				label = "Times caught",
+				label = "Crew caught",
 				value = tostring(results.catches),
 				icon = "managerHunt",
 				meaning = "coral",
