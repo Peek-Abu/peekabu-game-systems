@@ -273,6 +273,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftStoryFixtures"] = "story fixtures (static sample data)",
 	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftActionButton"] = "presentational React component (story in ShiftActionButton.story; the arc and the states specced in ShiftHudViewModel.arcFor / buttons, the press pose in ToonStyleViewModel.pose)",
 	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftMobileButtons"] = "React HUD widget: stores to the touch arc and client-service calls (show/hide, VACUUM/LOAD, lit and usable buttons, LOAD readiness and the phone/tablet arc specced in ShiftHudViewModel.mobileButtons / buttons / loadReady / hidden / arcFor)",
+	["ReplicatedStorage.Client.Features.Shift.Systems.ShiftOutlineSystem"] = "Highlight/Players/RunService shell (when and how strong are specced in ShiftOutlineRules)",
 	["ReplicatedStorage.Client.Features.Shift.Systems.ShiftPromptSystem"] = "ProximityPromptService/Instance shell (the chip's words are specced in ShiftHudViewModel.prompt, the bookkeeping in ShiftPromptStore)",
 	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftPromptChip"] = "React HUD widget (words, fill and hidden rule specced in ShiftHudViewModel.prompt)",
 	["ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftReviewPanel"] = "presentational React component (review specced in ShiftReviewViewModel; story in ShiftReviewPanel.story)",

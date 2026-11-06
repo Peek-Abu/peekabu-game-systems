@@ -34,6 +34,7 @@ local VacuumServiceClient = require(ReplicatedStorage.Client.Features.Vacuum.Vac
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
 local ShiftFeedbackSystem = require(ReplicatedStorage.Client.Features.Shift.Systems.ShiftFeedbackSystem)
 local ShiftPromptSystem = require(ReplicatedStorage.Client.Features.Shift.Systems.ShiftPromptSystem)
+local ShiftOutlineSystem = require(ReplicatedStorage.Client.Features.Shift.Systems.ShiftOutlineSystem)
 local ShiftTransitSystem = require(ReplicatedStorage.Client.Features.Shift.Systems.ShiftTransitSystem)
 local ShiftTransitScreen = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftTransitScreen)
 local UIRoot = require(ReplicatedStorage.Client.UI.Layers.UIRoot)
@@ -165,6 +166,7 @@ local ShiftServiceClient: ShiftServiceClient = {
 		onSnapshot(ShiftStore.snapshot())
 		ShiftFeedbackSystem.start()
 		table.insert(unsubscribers, ShiftPromptSystem.start())
+		table.insert(unsubscribers, ShiftOutlineSystem.start())
 	end,
 
 	stop = function(_self)
