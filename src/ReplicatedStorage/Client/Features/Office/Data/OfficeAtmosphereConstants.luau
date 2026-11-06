@@ -173,4 +173,12 @@ return table.freeze({
 	-- roll-off and stops past it plus EMITTER_MARGIN studs (no flicker at the edge), fading EMITTER_FADE seconds.
 	EMITTER_MARGIN = 10,
 	EMITTER_FADE = 0.5,
+	-- The yard's parked car with its hazards on (OfficeHazardSystem): its corner lights, the artist-owned "HazardLamp"
+	-- attachments on the lamp part in Workspace.YardDressing, blink HAZARD_ON_SECONDS on, the rest of each
+	-- HAZARD_PERIOD off (a classic hazard blink), every corner in step; lit, the lamp part glows HAZARD_ON_COLOR.
+	HAZARD_ROOT = "YardDressing",
+	HAZARD_LAMP = "HazardLamp",
+	HAZARD_PERIOD = 1,
+	HAZARD_ON_SECONDS = 0.5,
+	HAZARD_ON_COLOR = Color3.fromRGB(255, 150, 30),
 })

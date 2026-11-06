@@ -394,6 +394,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.Features.Office.Data.OfficeAtmosphereConstants"] = "static presets and timing (no logic)",
 	["ReplicatedStorage.Client.Features.Office.Systems.OfficeAtmosphereSystem"] = "Lighting/Instance/Sound/Charm shell (choices specced in OfficeAtmosphereUtils, OfficeLightUtils)",
 	["ReplicatedStorage.Client.Features.Office.Systems.OfficeAmbienceSystem"] = "Sound/Instance/RunService shell (choices specced in OfficeAmbienceUtils)",
+	["ReplicatedStorage.Client.Features.Office.Systems.OfficeHazardSystem"] = "Instance/RunService shell (blink timing and the lamp test specced in OfficeHazardUtils)",
 
 	-- Cleanup Crew: Footstep
 	["ReplicatedStorage.Client.Features.Footstep.Data.FootstepAssets"] = "asset id pools; registers the footstep sounds at load (no decisions)",
