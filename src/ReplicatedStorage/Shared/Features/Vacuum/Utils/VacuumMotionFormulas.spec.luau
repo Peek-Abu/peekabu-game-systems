@@ -111,6 +111,61 @@ return function()
 		end)
 	end)
 
+	describe("aim left and right (feel pass)", function()
+		it("measures where the camera looks left (positive) or right of the body", function()
+			local body = Vector3.new(0, 0, -1)
+			local left = Vector3.new(-1, -0.3, -1).Unit
+			local right = Vector3.new(1, 0, -1).Unit
+			expect(VacuumMotionFormulas.relativeYaw(left, body)).to.be.near(math.rad(45), 1e-4)
+			expect(VacuumMotionFormulas.relativeYaw(right, body)).to.be.near(math.rad(-45), 1e-4)
+			expect(VacuumMotionFormulas.relativeYaw(body, body)).to.be.near(0, 1e-6)
+		end)
+
+		it("wraps the angle across the back", function()
+			local body = Vector3.new(0, 0, -1)
+			local behindLeft = Vector3.new(-0.1, 0, 1).Unit
+			local yaw = VacuumMotionFormulas.relativeYaw(behindLeft, body)
+			expect(yaw > math.rad(170) and yaw <= math.pi).to.equal(true)
+		end)
+
+		it("turns the wand part of the way toward the look, never past its most", function()
+			local tuning = Constants.aim
+			expect(VacuumMotionFormulas.aimYaw(math.rad(20))).to.be.near(math.rad(20) * tuning.yawGain, 1e-6)
+			expect(VacuumMotionFormulas.aimYaw(math.rad(-20))).to.be.near(-math.rad(20) * tuning.yawGain, 1e-6)
+			expect(VacuumMotionFormulas.aimYaw(math.pi)).to.equal(tuning.maxYaw)
+			expect(VacuumMotionFormulas.aimYaw(-math.pi)).to.equal(-tuning.maxYaw)
+		end)
+
+		it("sends the look yaw as a byte and reads it back in whole quanta, refusing anything else", function()
+			local byte = VacuumMotionFormulas.encodeYaw(math.rad(23))
+			expect(VacuumMotionFormulas.decodeYaw(byte)).to.equal(25)
+			expect(VacuumMotionFormulas.decodeYaw(VacuumMotionFormulas.encodeYaw(math.rad(-200)))).to.equal(-60)
+			expect(VacuumMotionFormulas.decodeYaw(VacuumMotionFormulas.encodeYaw(math.rad(200)))).to.equal(60)
+			expect(VacuumMotionFormulas.decodeYaw(-1)).to.equal(nil)
+			expect(VacuumMotionFormulas.decodeYaw(25)).to.equal(nil)
+			expect(VacuumMotionFormulas.decodeYaw(1.5)).to.equal(nil)
+		end)
+
+		it("turns the wand by the aim's yaw on top of the other turns", function()
+			local turned = VacuumMotionFormulas.offsetOf(layers({ aimYaw = 0.2, swayYaw = 0.1 }))
+			expect(turned.yaw).to.be.near(0.3, 1e-9)
+			expect(VacuumMotionFormulas.offsetOf(layers({})).yaw).to.equal(0)
+		end)
+
+		it("twists the upper body a share of the aim, about the waist", function()
+			expect(VacuumMotionFormulas.twist(0.4)).to.be.near(0.4 * Constants.aim.twistShare, 1e-9)
+			local waist = Vector3.new(0, 0.2, 0)
+			local twisted = VacuumMotionFormulas.motion(waist, 0, 0, math.rad(20))
+			local shoulder = Vector3.new(-0.5, 1, 0)
+			-- Turning left (positive) brings the left shoulder back (+Z), keeping its height.
+			expect((twisted * shoulder).Z > shoulder.Z + 0.1).to.equal(true)
+			expect((twisted * shoulder).Y).to.be.near(shoulder.Y, 1e-6)
+			expect(VacuumMotionFormulas.motion(waist, 0.2, 0.3)).to.equal(
+				VacuumMotionFormulas.motion(waist, 0.2, 0.3, 0)
+			)
+		end)
+	end)
+
 	describe("encodeAim / decodeAim", function()
 		it("quantises the look pitch to a byte and back, in whole quanta of degrees", function()
 			local byte = VacuumMotionFormulas.encodeAim(math.rad(-22))

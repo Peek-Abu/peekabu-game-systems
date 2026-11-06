@@ -12,7 +12,7 @@
 	  2026-10-16-cleanup-crew-gloom-gleam-economy-design.md: no canister capacity, no dust bags) and, every second a
 	  pile is being vacuumed, `noiseMade` (the M2 Noise seam; nothing listens in M1).
 	- marks each holder's character with whether its vacuum is sucking (VacuumMotionConstants.ACTIVE_ATTRIBUTE) and
-	  where its camera looks (AIM_ATTRIBUTE, from VacuumEvents.Aim, checked and rate limited), for every client's
+	  where its camera looks (VacuumAimSystem: AIM_ATTRIBUTE and AIM_YAW_ATTRIBUTE, checked and rate limited), for every client's
 	  visual motion layers (VacuumMotionSystem); suction targeting never reads either;
 	- fires `vacuumStarted(player, pile)` when a player starts vacuuming a pile (Shift's analytics: first_cleanup_started);
 	- answers `canVacuum` for Cargo's grime channels (the loot loop, docs/superpowers/specs/
@@ -49,10 +49,9 @@ local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interacti
 local InteractionRegistry = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionRegistry)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local VacuumMotionConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumMotionConstants)
-local VacuumEvents = require(ReplicatedStorage.Shared.Features.Vacuum.Net.VacuumEvents)
-local VacuumMotionFormulas = require(ReplicatedStorage.Shared.Features.Vacuum.Utils.VacuumMotionFormulas)
 local VacuumChannelTracker = require(ServerScriptService.Features.Vacuum.State.VacuumChannelTracker)
 local VacuumToolSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumToolSystem)
+local VacuumAimSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumAimSystem)
 local VacuumVisualSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumVisualSystem)
 local VacuumEquipmentRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumEquipmentRules)
 local VacuumSkinRegistry = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumSkinRegistry)
@@ -77,8 +76,6 @@ local vacuumStarted: SignalTyped.Signal<Player, BasePart> = SignalTyped.new()
 
 local tools: { [Player]: VacuumToolSystem.Controller } = {}
 local equipped: { [Player]: boolean } = {}
--- When each player's last aim was taken (VacuumEvents.Aim, rate limited).
-local aimedAt: { [Player]: number } = {}
 local animations: { [Player]: AnimationVacuumSystem.Controller } = {}
 -- Who is vacuuming which pile (vacuumStarted fires when a player's pile changes; the makers of each noise pulse).
 local channels = VacuumChannelTracker.new(VacuumConstants.MAKER_WINDOW)
@@ -93,24 +90,6 @@ local function publishEquipped(player: Player, selected: boolean)
 		equipped[player] = selected
 		StateSyncPublicPlayerStore.set(player.UserId, { [VacuumConstants.PUBLIC_EQUIPPED_FIELD] = selected })
 	end
-end
-
--- A client's camera pitch (VacuumEvents.Aim), put on its character for every client's aim layer: visual only
--- (suction targeting never reads it), a whole number of degrees, at most aim.rate a second (a little slack for
--- jitter); anything else is dropped.
-local function onAim(player: Player, byte: number)
-	local now = os.clock()
-	local last = aimedAt[player]
-	if last ~= nil and now - last < 0.8 / VacuumMotionConstants.aim.rate then
-		return
-	end
-	local degrees = VacuumMotionFormulas.decodeAim(byte)
-	local character = player.Character
-	if degrees == nil or character == nil then
-		return
-	end
-	aimedAt[player] = now
-	character:SetAttribute(VacuumMotionConstants.AIM_ATTRIBUTE, degrees)
 end
 
 -- Marks whether `character`'s vacuum is sucking now (every client's brace and shimmy read it), when that changed.
@@ -354,14 +333,7 @@ local VacuumServiceServer: VacuumServiceServer = {
 				pulse()
 			end
 		end)
-		table.insert(
-			stoppers,
-			VacuumEvents.packets.Aim.listen(function(byte: number, player: Player?)
-				if player ~= nil then
-					onAim(player, byte)
-				end
-			end)
-		)
+		table.insert(stoppers, VacuumAimSystem.start())
 		local leaving = Players.PlayerRemoving:Connect(function(player)
 			local controller = tools[player]
 			if controller ~= nil then
@@ -374,7 +346,6 @@ local VacuumServiceServer: VacuumServiceServer = {
 				tools[player] = nil
 			end
 			equipped[player] = nil
-			aimedAt[player] = nil
 			channels:forget(player.UserId)
 		end)
 		table.insert(stoppers, function()

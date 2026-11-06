@@ -17,9 +17,17 @@ return table.freeze({
 	-- the hands, fully at `fullDown`, the wand flattening so the head stays on the floor further out.
 	-- The look pitch is replicated quantised to `quantum`, at most `rate` times a second, only when it changes; every
 	-- client eases toward it with a critically damped spring.
+	-- Left and right (feel pass 2026-11-06, visual only): the wand turns `yawGain` of the way toward where its holder
+	-- looks, left or right of the body, at most `maxYaw`; the upper body turns `twistShare` of that over the waist. The
+	-- dead band is narrow (a few degrees round the default view) so the wand answers every look.
 	aim = table.freeze({
-		deadLow = math.rad(-32),
-		deadHigh = math.rad(-8),
+		deadLow = math.rad(-23),
+		deadHigh = math.rad(-17),
+		yawGain = 0.75,
+		maxYaw = math.rad(32),
+		twistShare = 0.35,
+		-- The left-right turn's spring damping (below 1: a little overshoot reads as weight).
+		yawDamping = 0.75,
 		gainUp = 0.9,
 		maxUp = math.rad(38),
 		fullDown = math.rad(-70),
@@ -107,6 +115,8 @@ return table.freeze({
 	-- Replicated state on the character (set by the server): the look pitch in degrees, and whether its vacuum is
 	-- sucking.
 	AIM_ATTRIBUTE = "VacuumAim",
+	-- The look yaw relative to the body, in degrees (left positive).
+	AIM_YAW_ATTRIBUTE = "VacuumAimYaw",
 	ACTIVE_ATTRIBUTE = "VacuumActive",
 	-- The rest frame each IK target attachment was created at (the server's plan; clients move their copies).
 	REST_ATTRIBUTE = "VacuumRest",

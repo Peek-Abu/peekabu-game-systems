@@ -88,6 +88,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Features.Cargo.Systems.CargoInventorySystem"] = "Carry/Vacuum/Instance/public-state/ByteNet/Heartbeat shell (pick-up, slot choice, lock and load decisions are specced in CargoInventoryRules, the slots in CargoInventoryTracker)",
 	["ServerScriptService.Features.Cargo.Systems.CargoTraitSystem"] = "Players/Carry/Instance/Sound shell (rattle, puddle and sound decisions are specced in CargoHandlingRules and CargoFeedbackUtils)",
 	["ServerScriptService.Features.Cargo.CargoServiceServer"] = "Instance/Players/ByteNet/signal shell (handling, inventory and bank rules, claim and inventory trackers are specced)",
+	["ServerScriptService.Features.Vacuum.Systems.VacuumAimSystem"] = "ByteNet/Players/attribute shell (decoding the looks is specced in VacuumMotionFormulas)",
 	["ServerScriptService.Features.Vacuum.VacuumServiceServer"] = "Instance/Players/RunService/signal shell (VacuumTargetRules is specced)",
 	["ServerScriptService.Features.Noise.NoiseServiceServer"] = "signal/ByteNet relay shell (the hearing rule NoiseRules is specced)",
 

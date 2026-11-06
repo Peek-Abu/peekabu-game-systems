@@ -57,6 +57,8 @@ export type Layers = {
 	shimmyRoll: number,
 	swayYaw: number,
 	swayPitch: number,
+	-- The aim's turn toward where its holder looks, left or right (radians; nil reads 0).
+	aimYaw: number?,
 }
 
 export type AimTuning = {
@@ -75,6 +77,9 @@ local BISECTIONS = 24
 -- The look pitch on the wire: whole quanta of degrees from -90.
 local AIM_LOW = -90
 local AIM_STEPS = 36
+-- The look yaw on the wire: whole quanta of degrees from -YAW_RANGE.
+local YAW_RANGE = 60
+local YAW_STEPS = 24
 
 --[=[
 	Advances a damped spring (`frequency` Hz, `damping` ratio) toward `target` by `dt`, exactly (the closed-form
@@ -147,6 +152,43 @@ function VacuumMotionFormulas.decodeAim(byte: number): number?
 end
 
 --[=[
+	Where the camera looks relative to the body, left or right (radians, left positive, -pi..pi): the flat headings of
+	the camera's look and the body's look.
+]=]
+function VacuumMotionFormulas.relativeYaw(cameraLook: Vector3, bodyLook: Vector3): number
+	local camera = math.atan2(-cameraLook.X, -cameraLook.Z)
+	local body = math.atan2(-bodyLook.X, -bodyLook.Z)
+	return (camera - body + math.pi) % (2 * math.pi) - math.pi
+end
+
+--[=[
+	The wand's turn toward a look `relative` radians left of the body: `yawGain` of it, at most `maxYaw` either way.
+	Purely visual (the suction aims by the body, not the camera).
+]=]
+function VacuumMotionFormulas.aimYaw(relative: number): number
+	local aim = Constants.aim
+	return math.clamp(relative * aim.yawGain, -aim.maxYaw, aim.maxYaw)
+end
+
+--[=[
+	The look yaw (radians, relative to the body) as the byte the client sends: whole quanta of degrees from -60, clamped.
+]=]
+function VacuumMotionFormulas.encodeYaw(relative: number): number
+	local quantum = math.deg(Constants.aim.quantum)
+	return math.clamp(math.round((math.deg(relative) + YAW_RANGE) / quantum), 0, YAW_STEPS)
+end
+
+--[=[
+	The look yaw in degrees a sent byte stands for; nil for anything the client cannot send.
+]=]
+function VacuumMotionFormulas.decodeYaw(byte: number): number?
+	if byte ~= byte or byte ~= math.floor(byte) or byte < 0 or byte > YAW_STEPS then
+		return nil
+	end
+	return -YAW_RANGE + byte * math.deg(Constants.aim.quantum)
+end
+
+--[=[
 	The wand's offset for the layers' state: the aim's raise turns it about its pivot; its reach and the brace
 	move the hands (down and out for the reach, down and in toward the body for the brace); the kick jolts them back
 	and up and hops the floor head; the shimmy turns and rolls it; the sway turns and tips it.
@@ -160,7 +202,7 @@ function VacuumMotionFormulas.offsetOf(layers: Layers): WandOffset
 			-layers.reach * aim.reachForward + layers.brace * brace.pull + layers.kick * kick.lift * kick.back
 		),
 		pitch = layers.raise + layers.kick * kick.pitch + layers.swayPitch,
-		yaw = layers.shimmyYaw + layers.swayYaw,
+		yaw = layers.shimmyYaw + layers.swayYaw + (layers.aimYaw or 0),
 		roll = layers.shimmyRoll,
 	}
 end
@@ -253,11 +295,22 @@ end
 	The upper body's root-space motion for a brace that drops the hips `drop` and leans `lean` forward over the waist
 	joint at `waist` (identity without one): the left shoulder rides it.
 ]=]
-function VacuumMotionFormulas.motion(waist: Vector3?, drop: number, lean: number): CFrame
+function VacuumMotionFormulas.motion(waist: Vector3?, drop: number, lean: number, twist: number?): CFrame
 	if waist == nil then
 		return CFrame.identity
 	end
-	return CFrame.new(0, -drop, 0) * CFrame.new(waist) * CFrame.Angles(-lean, 0, 0) * CFrame.new(-waist)
+	return CFrame.new(0, -drop, 0)
+		* CFrame.new(waist)
+		* CFrame.Angles(-lean, 0, 0)
+		* CFrame.Angles(0, twist or 0, 0)
+		* CFrame.new(-waist)
+end
+
+--[=[
+	How far the upper body turns over the waist with the wand's aim turn (radians): `twistShare` of it.
+]=]
+function VacuumMotionFormulas.twist(aimYaw: number): number
+	return aimYaw * Constants.aim.twistShare
 end
 
 --[=[

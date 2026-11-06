@@ -35,9 +35,9 @@ local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.Va
 local Constants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumMotionConstants)
 local VacuumMotionFormulas = require(ReplicatedStorage.Shared.Features.Vacuum.Utils.VacuumMotionFormulas)
 
--- What `apply` lays on: the wand's root-space transform (VacuumMotionFormulas.wand), the hip drop (studs) and the
--- torso's forward lean (radians).
-export type Pose = { wand: CFrame, drop: number, lean: number }
+-- What `apply` lays on: the wand's root-space transform (VacuumMotionFormulas.wand), the hip drop (studs), the
+-- torso's forward lean and its turn toward the aim over the waist (radians; nil reads 0).
+export type Pose = { wand: CFrame, drop: number, lean: number, twist: number? }
 
 export type Rig = {
 	character: Model,
@@ -124,6 +124,11 @@ end
 -- A turn of `angle` about the root's X axis through `point`.
 local function turnAbout(point: Vector3, angle: number): CFrame
 	return CFrame.new(point) * CFrame.Angles(angle, 0, 0) * CFrame.new(-point)
+end
+
+-- The waist's lean then its twist, about the same point (matches VacuumMotionFormulas.motion).
+local function leanAndTwist(point: Vector3, lean: number, twist: number): CFrame
+	return CFrame.new(point) * CFrame.Angles(lean, 0, 0) * CFrame.Angles(0, twist, 0) * CFrame.new(-point)
 end
 
 local function legOf(character: Model, side: string): Leg?
@@ -225,8 +230,8 @@ function VacuumMotionRigSystem.bind(character: Model): Rig?
 	local posed = false
 
 	-- Writes the brace's Transforms; returns the upper body's root-space motion.
-	local function lean(drop: number, angle: number): CFrame
-		if rootJoint == nil or waist == nil or (drop < 1e-4 and math.abs(angle) < 1e-5) then
+	local function lean(drop: number, angle: number, twist: number): CFrame
+		if rootJoint == nil or waist == nil or (drop < 1e-4 and math.abs(angle) < 1e-5 and math.abs(twist) < 1e-5) then
 			if posed then
 				for _, joint in joints do
 					unwrite(joint)
@@ -241,7 +246,7 @@ function VacuumMotionRigSystem.bind(character: Model): Rig?
 		local upperTorso = through(lower, waist.motor, waistT)
 		local down = CFrame.new(0, -drop, 0)
 		-- Forward over the waist joint (a negative turn about X tips the top toward -Z).
-		local motion = down * turnAbout((lower * waist.motor.C0).Position, -angle)
+		local motion = down * leanAndTwist((lower * waist.motor.C0).Position, -angle, twist)
 		local lowerNew = down * lower
 		write(rootJoint, rootT, transformFor(CFrame.identity, rootJoint.motor, lowerNew))
 		write(waist, waistT, transformFor(lowerNew, waist.motor, motion * upperTorso))
@@ -271,7 +276,7 @@ function VacuumMotionRigSystem.bind(character: Model): Rig?
 			if released then
 				return CFrame.identity
 			end
-			local motion = lean(pose.drop, pose.lean)
+			local motion = lean(pose.drop, pose.lean, pose.twist or 0)
 			local wand = pose.wand
 			right.CFrame = wand * rightRest
 			if left ~= nil and leftRest ~= nil then

@@ -30,6 +30,11 @@ local VacuumEvents = ByteNet.defineNamespace(NAMESPACE, function()
 				value = ByteNet.uint8,
 				reliabilityType = "reliable",
 			}),
+			-- Where the camera looks left or right of the body, quantised (VacuumMotionFormulas.encodeYaw).
+			AimYaw = ByteNet.definePacket({
+				value = ByteNet.uint8,
+				reliabilityType = "reliable",
+			}),
 		},
 		queries = {},
 		structs = {},

@@ -28,14 +28,13 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
 
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local Constants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumMotionConstants)
-local VacuumEvents = require(ReplicatedStorage.Shared.Features.Vacuum.Net.VacuumEvents)
 local VacuumMotionRigSystem = require(ReplicatedStorage.Shared.Features.Vacuum.Systems.VacuumMotionRigSystem)
 local VacuumMotionFormulas = require(ReplicatedStorage.Shared.Features.Vacuum.Utils.VacuumMotionFormulas)
 local VacuumFeedbackSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumFeedbackSystem)
+local VacuumLookSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumLookSystem)
 
 type Spring = { x: number, v: number }
 type Holder = {
@@ -47,6 +46,7 @@ type Holder = {
 	kick: Spring,
 	swayYaw: Spring,
 	swayPitch: Spring,
+	aimYaw: Spring,
 	pack: Spring,
 	-- When it last sucked (a pop within the kick's window of it kicks its wand).
 	activeAt: number,
@@ -86,8 +86,6 @@ local VacuumMotionSystem = {}
 
 -- How far from a holder's floor head the pile they suck is looked for (studs).
 local PILE_RANGE = 6
--- A remote holder who has sent no aim yet looks the default third-person way.
-local DEFAULT_LOOK = math.rad(-20)
 -- Measured speeds and accelerations are smoothed over this many seconds (a replicated body moves in steps).
 local SMOOTHING = 0.08
 -- A jump further than this in one frame is a teleport, not motion (studs).
@@ -96,10 +94,10 @@ local TELEPORT = 4
 local holders: { [Player]: Holder } = {}
 local connection: RBXScriptConnection? = nil
 local stopPops: (() -> ())? = nil
+local stopTugs: (() -> ())? = nil
+-- A tug (a puff of goo leaving the pile) jerks the wand by this share of a reference pile's pop kick.
+local TUG_KICK = 0.35
 local options: Options? = nil
-local lastSent: number? = nil
-local sentAt = -math.huge
-local sent = 0
 
 local function spring(): Spring
 	return { x = 0, v = 0 }
@@ -108,19 +106,6 @@ end
 local function ease(s: Spring, target: number, dt: number, frequency: number, damping: number): number
 	s.x, s.v = VacuumMotionFormulas.step(s.x, s.v, target, dt, frequency, damping)
 	return s.x
-end
-
-local function cameraLook(): number
-	local camera = Workspace.CurrentCamera
-	return if camera ~= nil then math.asin(math.clamp(camera.CFrame.LookVector.Y, -1, 1)) else DEFAULT_LOOK
-end
-
-local function lookOf(player: Player, character: Model): number
-	if player == Players.LocalPlayer then
-		return cameraLook()
-	end
-	local degrees = character:GetAttribute(Constants.AIM_ATTRIBUTE)
-	return if type(degrees) == "number" then math.rad(degrees) else DEFAULT_LOOK
 end
 
 local function activeOf(player: Player, character: Model): boolean
@@ -139,21 +124,6 @@ local function release(holder: Holder)
 	holder.rig = nil
 end
 
--- Sends the local player's look pitch when it changed, at most aim.rate a second.
-local function sendAim(now: number)
-	if now - sentAt < 1 / Constants.aim.rate then
-		return
-	end
-	local byte = VacuumMotionFormulas.encodeAim(cameraLook())
-	if byte == lastSent then
-		return
-	end
-	lastSent = byte
-	sentAt = now
-	sent += 1
-	VacuumEvents.packets.Aim.send(byte)
-end
-
 -- The holder's bound rig: rebound when its Tool or targets changed, nil while it holds no vacuum.
 local function rigOf(holder: Holder): VacuumMotionRigSystem.Rig?
 	local current = holder.rig
@@ -168,7 +138,7 @@ local function rigOf(holder: Holder): VacuumMotionRigSystem.Rig?
 	if bound ~= nil then
 		holder.rig = bound
 		holder.raise, holder.reach, holder.brace, holder.kick = spring(), spring(), spring(), spring()
-		holder.swayYaw, holder.swayPitch = spring(), spring()
+		holder.swayYaw, holder.swayPitch, holder.aimYaw = spring(), spring(), spring()
 	end
 	return bound
 end
@@ -201,7 +171,7 @@ local function stepHolder(player: Player, holder: Holder, dt: number)
 	end
 	local aim, brace, kick, sway = Constants.aim, Constants.brace, Constants.kick, Constants.sway
 	local swayYaw, swayPitch = VacuumMotionFormulas.swayTargets(holder.motion.yawRate, holder.motion.accel)
-	local raiseTarget, reachTarget = VacuumMotionFormulas.aim(lookOf(player, character), aim)
+	local raiseTarget, reachTarget = VacuumMotionFormulas.aim(VacuumLookSystem.pitchOf(player, character), aim)
 	local head = floorHead(holder, rig)
 	local active = activeOf(player, character)
 	if active then
@@ -224,15 +194,23 @@ local function stepHolder(player: Player, holder: Holder, dt: number)
 		shimmyRoll = shimmyRoll,
 		swayYaw = ease(holder.swayYaw, swayYaw, dt, sway.frequency, sway.damping),
 		swayPitch = ease(holder.swayPitch, swayPitch, dt, sway.frequency, sway.damping),
+		aimYaw = ease(
+			holder.aimYaw,
+			VacuumMotionFormulas.aimYaw(VacuumLookSystem.yawOf(player, character, holder.root)),
+			dt,
+			aim.frequency,
+			aim.yawDamping
+		),
 	}
 	local drop, lean = VacuumMotionFormulas.body(math.max(layers.brace, 0))
+	local twist = VacuumMotionFormulas.twist(layers.aimYaw or 0)
 	local wand = VacuumMotionFormulas.wand(
 		rig.rest,
 		VacuumMotionFormulas.offsetOf(layers),
 		Constants.floorMargin,
-		VacuumMotionFormulas.motion(rig.rest.waist, drop, lean)
+		VacuumMotionFormulas.motion(rig.rest.waist, drop, lean, twist)
 	)
-	rig.apply({ wand = wand, drop = drop, lean = lean })
+	rig.apply({ wand = wand, drop = drop, lean = lean, twist = twist })
 end
 
 -- Smooths a measured rate toward `value` over SMOOTHING seconds.
@@ -334,6 +312,23 @@ local function onPop(position: Vector3, size: number)
 	end
 end
 
+-- A tug on a pile: every holder sucking it just now, close to it, jerks a little.
+local function onTug(position: Vector3)
+	local tuning = Constants.kick
+	local now = os.clock()
+	for _, holder in holders do
+		local root = bodyPart(holder, holder.root, "HumanoidRootPart")
+		if
+			holder.rig ~= nil
+			and root ~= nil
+			and now - holder.activeAt <= tuning.window
+			and (root.Position - position).Magnitude <= tuning.range
+		then
+			holder.kick.v += VacuumMotionFormulas.kickImpulse(TUG_KICK)
+		end
+	end
+end
+
 local function step(dt: number)
 	if dt <= 0 then
 		return
@@ -362,6 +357,7 @@ local function step(dt: number)
 				kick = spring(),
 				swayYaw = spring(),
 				swayPitch = spring(),
+				aimYaw = spring(),
 				pack = spring(),
 				activeAt = -math.huge,
 				motion = {
@@ -386,7 +382,7 @@ local function step(dt: number)
 		bob(holder, dt)
 		stepHolder(player, holder, dt)
 		if player == Players.LocalPlayer and holder.rig ~= nil then
-			sendAim(now)
+			VacuumLookSystem.send(now, holder.character, holder.root)
 		end
 	end
 end
@@ -398,6 +394,7 @@ function VacuumMotionSystem.start(given: Options)
 	options = given
 	connection = RunService.PreSimulation:Connect(step)
 	stopPops = VacuumFeedbackSystem.onPop(onPop)
+	stopTugs = VacuumFeedbackSystem.onTug(onTug)
 end
 
 function VacuumMotionSystem.stop()
@@ -411,13 +408,18 @@ function VacuumMotionSystem.stop()
 		pops()
 	end
 	stopPops = nil
+	local tugs = stopTugs
+	if tugs ~= nil then
+		tugs()
+	end
+	stopTugs = nil
 	for _, holder in holders do
 		release(holder)
 		unbob(holder)
 	end
 	table.clear(holders)
 	options = nil
-	lastSent = nil
+	VacuumLookSystem.reset()
 end
 
 function VacuumMotionSystem.getState(): VacuumMotionState
@@ -428,7 +430,7 @@ function VacuumMotionSystem.getState(): VacuumMotionState
 			bound += 1
 		end
 	end
-	return { holders = count, bound = bound, sent = sent }
+	return { holders = count, bound = bound, sent = VacuumLookSystem.sentCount() }
 end
 
 return VacuumMotionSystem

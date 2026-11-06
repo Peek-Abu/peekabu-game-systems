@@ -25,6 +25,8 @@ local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.Va
 local VacuumTargetRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumTargetRules)
 local VacuumFeedbackSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumFeedbackSystem)
 local VacuumMotionSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumMotionSystem)
+local VacuumPullSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumPullSystem)
+local VacuumCameraSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumCameraSystem)
 local CarryServiceClient = require(ReplicatedStorage.Client.Features.Carry.CarryServiceClient)
 local InputActionRegistry = require(ReplicatedStorage.Client.Features.Input.Data.InputActionRegistry)
 local InputServiceClient = require(ReplicatedStorage.Client.Features.Input.InputServiceClient)
@@ -151,8 +153,14 @@ local VacuumServiceClient: VacuumServiceClient = {
 				end
 			end)
 		)
+		VacuumPullSystem.start()
 		VacuumFeedbackSystem.start()
 		VacuumMotionSystem.start({
+			localActive = function()
+				return holding and lastTarget ~= nil
+			end,
+		})
+		VacuumCameraSystem.start({
 			localActive = function()
 				return holding and lastTarget ~= nil
 			end,
@@ -161,8 +169,10 @@ local VacuumServiceClient: VacuumServiceClient = {
 
 	stop = function(self)
 		self:endVacuum()
+		VacuumCameraSystem.stop()
 		VacuumFeedbackSystem.stop()
 		VacuumMotionSystem.stop()
+		VacuumPullSystem.stop()
 		for _, unbind in unbinders do
 			unbind()
 		end

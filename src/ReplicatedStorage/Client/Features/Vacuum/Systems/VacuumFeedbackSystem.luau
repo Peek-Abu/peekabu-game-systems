@@ -45,6 +45,8 @@ local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftSt
 local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
 local VacuumGaugeSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumGaugeSystem)
 local VacuumVfxSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumVfxSystem)
+local VacuumPullSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumPullSystem)
+local VacuumVfxConstants = require(ReplicatedStorage.Client.Features.Vacuum.Data.VacuumVfxConstants)
 local VfxBurstSystem = require(ReplicatedStorage.Client.Features.Vfx.Systems.VfxBurstSystem)
 
 type PileFeel = {
@@ -56,6 +58,8 @@ type PileFeel = {
 	peak: number,
 	count: number,
 	activeAt: number,
+	-- The progress at the last tug (a pile tugs each PUFF_STEP, as it puffs).
+	tugAt: number,
 	whine: SoundServiceClient.SoundHandle?,
 	anchor: Attachment?,
 	emitter: ParticleEmitter?,
@@ -82,6 +86,7 @@ local wasMet = true
 local gaugeTarget = 0
 -- Who hears a pile pop (its position, and its size across in studs): the wand's kick (VacuumMotionSystem).
 local popListeners: { (position: Vector3, size: number) -> () } = {}
+local tugListeners: { (position: Vector3) -> () } = {}
 
 local function play(id: string, options: SoundTypes.PlayOptions?): SoundServiceClient.SoundHandle?
 	if VacuumAssets.SOUNDS[id] == nil then
@@ -190,6 +195,7 @@ local function stopSuction(feel: PileFeel)
 		whine:stop(0.15)
 	end
 	feel.whine = nil
+	VacuumPullSystem.release(feel.pile)
 end
 
 -- Reads the pile's channel attributes and updates its suction and whine.
@@ -208,6 +214,14 @@ local function update(feel: PileFeel)
 	if stream ~= nil then
 		stream:update(feel.progress, feel.count)
 	end
+	-- A tug as each puff of goo leaves a pile (the wand jerks, the pile hops, the camera nudges).
+	if not feel.grime and VacuumFeedbackFormulas.pastStep(feel.tugAt, feel.progress, VacuumVfxConstants.PUFF_STEP) then
+		VacuumPullSystem.tug(feel.pile)
+		for _, listener in tugListeners do
+			task.spawn(listener, feel.position)
+		end
+	end
+	feel.tugAt = math.max(feel.tugAt, feel.progress)
 	if feel.whine == nil and SoundRegistry.has(VacuumAssets.WHINE) then
 		-- At the pile's spot (it never moves), so the whine reuses a fixed-point voice instead of making one per pile.
 		feel.whine = play(VacuumAssets.WHINE, { at = feel.position })
@@ -267,6 +281,7 @@ local function observe(instance: Instance, grime: boolean): (() -> ())?
 		peak = 0,
 		count = 0,
 		activeAt = -math.huge,
+		tugAt = 0,
 	}
 	active[pile] = feel
 	update(feel)
@@ -306,6 +321,9 @@ local function aim()
 			if target ~= nil then
 				stream:aim(target)
 			end
+		end
+		if not feel.grime and feel.count > 0 then
+			VacuumPullSystem.follow(feel.pile, vacuumerPoint(feel.position), feel.progress)
 		end
 		local anchor = feel.anchor
 		local emitter = feel.emitter
@@ -382,6 +400,20 @@ end
 ]=]
 function VacuumFeedbackSystem.gaugeShare(): number
 	return gaugeTarget
+end
+
+--[=[
+	Calls `listener` with the pile's position at every tug (a puff of goo leaving a pile being sucked, each PUFF_STEP of
+	its progress); returns its disconnect.
+]=]
+function VacuumFeedbackSystem.onTug(listener: (position: Vector3) -> ()): () -> ()
+	table.insert(tugListeners, listener)
+	return function()
+		local index = table.find(tugListeners, listener)
+		if index ~= nil then
+			table.remove(tugListeners, index)
+		end
+	end
 end
 
 --[=[
