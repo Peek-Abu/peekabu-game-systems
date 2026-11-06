@@ -40,7 +40,7 @@ return function()
 		expect(list[2].duration).to.equal(ShiftConstants.NOTICE_SECONDS)
 		expect(list[3].style).to.equal(ShiftConstants.TOAST_STICKY)
 		expect(list[3].text).to.equal(
-			"It is quiet for now. Clock out at the truck to go home, or start overtime there: new sparkly treasure ×1.5, more activity."
+			"It is quiet for now. Clock out at the truck to go home, or start overtime there: new sparkly treasure ×1.5, but more scary stuff."
 		)
 	end)
 
