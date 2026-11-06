@@ -197,7 +197,7 @@ return function()
 			local overridden = makeAnimator(makeFakePlayer(), { jumpDuration = 0.3 })
 			overridden:handleEvent("jumping", nil, 10)
 			overridden:handleEvent("freefall", nil, 10.1)
-			overridden:setPoseOverride("sneakidle")
+			overridden:setPoseOverride("sit")
 			overridden:clearPoseOverride()
 			overridden:update(11)
 			expect(overridden:currentPose()).to.equal("idle")
@@ -465,11 +465,11 @@ return function()
 			local fake = makeFakePlayer()
 			local animator = makeAnimator(fake)
 			animator:handleEvent("running", 0, 0)
-			local ok = animator:setPoseOverride("sneakidle")
+			local ok = animator:setPoseOverride("sit")
 			expect(ok).to.equal(true)
-			expect(animator:currentPose()).to.equal("sneakidle")
+			expect(animator:currentPose()).to.equal("sit")
 			animator:handleEvent("running", 20, 1)
-			expect(animator:currentPose()).to.equal("sneakidle")
+			expect(animator:currentPose()).to.equal("sit")
 			animator:clearPoseOverride()
 			expect(animator:currentPose()).to.equal("idle")
 			animator:handleEvent("running", 20, 2)
@@ -494,12 +494,12 @@ return function()
 			local fake = makeFakePlayer()
 			local animator = makeAnimator(fake)
 			animator:handleEvent("running", 0, 0)
-			animator:setPoseOverride("sneakidle")
+			animator:setPoseOverride("sit")
 			animator:setEnabled(false)
 			expect(animator:currentPose()).to.equal(nil)
 			local stoppedOverride = false
 			for _, stop in fake.stops do
-				if stop.id == "sneakidle" then
+				if stop.id == "sit" then
 					stoppedOverride = true
 				end
 			end
@@ -516,12 +516,12 @@ return function()
 			local fake = makeFakePlayer()
 			local animator = makeAnimator(fake)
 			animator:handleEvent("running", 0, 0)
-			animator:setPoseOverride("sneakidle")
+			animator:setPoseOverride("sit")
 			animator:handleEvent("died", nil, 1)
 			expect(animator:currentPose()).to.equal(nil)
 			local stoppedOverride = false
 			for _, stop in fake.stops do
-				if stop.id == "sneakidle" then
+				if stop.id == "sit" then
 					stoppedOverride = true
 				end
 			end

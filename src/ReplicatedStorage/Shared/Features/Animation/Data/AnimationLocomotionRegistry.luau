@@ -44,8 +44,11 @@ local AnimationLocomotionRegistry: AnimationDomain = table.freeze({
 	-- CORE poses (the AnimationLocomotionSystem contract).
 	-- Stock R15 idle: the inherited Venture clip raised both arms on native engine avatars.
 	idle = entry("rbxassetid://507766666", true),
-	walk = entry("rbxassetid://11257118786", true),
-	run = entry("rbxassetid://11525748624", true),
+	-- Stock R15 walk and run (Roblox-owned, so they load in any experience; 2026-11-06). The inherited Venture clips
+	-- were owned by the VentureMMO group, which an Icey Labs game cannot load. Every Odd Hours employee plays its own
+	-- walk and run (EmployeeRegistry locomotion); these are only the fallback for a rig without them.
+	walk = entry("rbxassetid://507777826", true),
+	run = entry("rbxassetid://507767714", true),
 	-- Stock R15 jump and fall (2026-10-13). The inherited clips (jump 9126863232, fall 11525896362) were
 	-- authored for the old game's custom controller: the jump opens on a ground crouch (hips 0.6-0.9 studs
 	-- down, knees ~90 degrees) and the fall holds a deep tuck with the hips 0.89 down. A native Humanoid fires
@@ -61,14 +64,8 @@ local AnimationLocomotionRegistry: AnimationDomain = table.freeze({
 	-- death, locomotion just stops and latches; what death LOOKS like belongs to the future
 	-- Death/Ragdoll phase, in its own domain.
 
-	-- Movement-phase seeds — carried from the fork, unused until Movement adds their poses.
-	jumpland = entry("rbxassetid://11525764926", false),
-	sprintjump = entry("rbxassetid://11525667271", false, { "rbxassetid://128472778455853" }),
-	sprintturnleft = entry("rbxassetid://137597624157257", false),
-	sprintturnright = entry("rbxassetid://81393384686501", false),
-	sneakidle = entry("rbxassetid://11868152140", true),
-	sneakwalk = entry("rbxassetid://11868165270", true),
-	slowwalk = entry("rbxassetid://11245709896", true),
+	-- The Movement-phase seeds the fork carried (jumpland, sprintjump, sprintturns, sneak, slowwalk) are gone
+	-- (2026-11-06): never played, and owned by the VentureMMO group. A game that adds those poses adds its own clips.
 })
 
 return AnimationLocomotionRegistry

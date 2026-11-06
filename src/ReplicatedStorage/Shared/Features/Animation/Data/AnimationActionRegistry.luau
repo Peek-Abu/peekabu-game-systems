@@ -33,10 +33,13 @@ local function freezeDef(def: AnimationDef): AnimationDef
 	return table.freeze(def)
 end
 
+-- The three test* actions are the base's debug and spec fixtures for the interruption classes (attack, protected, an
+-- upper-body ambient loop) and what `animationplay` demonstrates. Their clips are Roblox's stock R15 jump (cheer as
+-- its variant), point and wave (2026-11-06; the inherited Venture clips were owned by the VentureMMO group).
 local AnimationActionRegistry: AnimationDomain = table.freeze({
 	testleap = freezeDef({
-		assetId = "rbxassetid://11525667271",
-		variants = { "rbxassetid://128472778455853" },
+		assetId = "rbxassetid://507765000",
+		variants = { "rbxassetid://507770677" },
 		priority = Enum.AnimationPriority.Action2,
 		looped = false,
 		interruption = "attack",
@@ -46,7 +49,7 @@ local AnimationActionRegistry: AnimationDomain = table.freeze({
 		durationMs = 1200,
 	}),
 	testguard = freezeDef({
-		assetId = "rbxassetid://11525764926",
+		assetId = "rbxassetid://507770453",
 		priority = Enum.AnimationPriority.Action2,
 		looped = false,
 		interruption = "protected",
@@ -56,7 +59,7 @@ local AnimationActionRegistry: AnimationDomain = table.freeze({
 		durationMs = 1433,
 	}),
 	testpose = freezeDef({
-		assetId = "rbxassetid://11868152140",
+		assetId = "rbxassetid://507770239",
 		priority = Enum.AnimationPriority.Action,
 		looped = true,
 		interruption = "ambient",
