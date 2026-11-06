@@ -5,7 +5,8 @@
 	broken fluorescents, the hum) and OfficeAmbienceSystem (phones ringing in empty rooms, the
 	elevator, typing that stops when you come close) and OfficeAnomalySystem (the run's exterior anomalies the server
 	publishes on the office model) and OfficeHazardSystem (the yard's parked car blinking its hazards) and
-	OfficeShadowSystem (small props stop casting shadows on phones and low graphics). Everything it
+	OfficeShadowSystem (small props stop casting shadows on phones and low graphics) and OfficeGlowSystem (cleaned
+	rooms glow, the crew's lanterns). Everything it
 	does is client-local presentation; the office itself is the server's.
 
 	Spec-exempt shell (starts the systems).
@@ -20,6 +21,10 @@ local OfficeAnomalySystem = require(ReplicatedStorage.Client.Features.Office.Sys
 local OfficeAtmosphereSystem = require(ReplicatedStorage.Client.Features.Office.Systems.OfficeAtmosphereSystem)
 local OfficeHazardSystem = require(ReplicatedStorage.Client.Features.Office.Systems.OfficeHazardSystem)
 local OfficeShadowSystem = require(ReplicatedStorage.Client.Features.Office.Systems.OfficeShadowSystem)
+local OfficeGlowSystem = require(ReplicatedStorage.Client.Features.Office.Systems.OfficeGlowSystem)
+
+-- Stops the glow system (nil while stopped).
+local stopGlow: (() -> ())? = nil
 
 export type OfficeClientState = {
 	atmosphere: OfficeAtmosphereSystem.OfficeAtmosphereState,
@@ -45,9 +50,17 @@ local OfficeServiceClient: OfficeServiceClient = {
 		OfficeAnomalySystem.start()
 		OfficeHazardSystem.start()
 		OfficeShadowSystem.start()
+		if stopGlow == nil then
+			stopGlow = OfficeGlowSystem.start()
+		end
 	end,
 
 	stop = function(_self)
+		local glow = stopGlow
+		if glow ~= nil then
+			glow()
+			stopGlow = nil
+		end
 		OfficeShadowSystem.stop()
 		OfficeHazardSystem.stop()
 		OfficeAnomalySystem.stop()
