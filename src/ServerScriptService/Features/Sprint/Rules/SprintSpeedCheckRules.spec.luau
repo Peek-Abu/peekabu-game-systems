@@ -75,4 +75,27 @@ return function()
 		local state = SprintSpeedCheckRules.fresh()
 		expect(run(state, 200, 200, 16, true)).to.equal("ok")
 	end)
+
+	it("gives a grace after an exempt state ends (the throw's leftover speed, positions arriving late)", function()
+		local state = SprintSpeedCheckRules.fresh()
+		run(state, 1, 0, 16, true)
+		local graceTicks = math.floor(SprintSpeedCheckRules.GRACE_SECONDS / DT)
+		-- The grace plus a streak just short of the limit: still fine.
+		local ticks = graceTicks + math.floor(SprintSpeedCheckRules.STREAK_SECONDS / DT) - 2
+		expect(run(state, ticks, 60, 16)).to.equal("ok")
+	end)
+
+	it("gives the same grace after a jump (a server teleport may take a few steps)", function()
+		local state = SprintSpeedCheckRules.fresh()
+		SprintSpeedCheckRules.step(state, {
+			dt = DT,
+			last = Vector3.zero,
+			position = Vector3.new(SprintSpeedCheckRules.JUMP_STUDS + 1, 0, 0),
+			limit = 16,
+			exempt = false,
+		})
+		expect(state.grace).to.equal(SprintSpeedCheckRules.GRACE_SECONDS)
+		local ticks = math.floor(SprintSpeedCheckRules.GRACE_SECONDS / DT) - 1
+		expect(run(state, ticks, 200, 16)).to.equal("ok")
+	end)
 end
