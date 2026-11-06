@@ -6,8 +6,9 @@
 ]=]
 
 return table.freeze({
-	-- Hides every screen, label and prompt on this client (admins only), and brings them back.
-	HIDE_KEY = Enum.KeyCode.F7,
+	-- Hides every screen, label and prompt on this client (admins only), and brings them back. Not F7: Roblox reserves
+	-- it (every F7 arrives with gameProcessed true, measured in a Studio play session 2026-11-06).
+	HIDE_KEY = Enum.KeyCode.F6,
 	-- Turns the film camera on and off (admins only).
 	CAMERA_KEY = Enum.KeyCode.F8,
 	-- The film camera's mode priority: above every gameplay and UI camera mode.

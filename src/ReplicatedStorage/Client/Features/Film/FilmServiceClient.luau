@@ -3,7 +3,7 @@
 	FilmServiceClient: the trailer filming tools on this client, for admins only (AdminRules.isAdmin, the same
 	allowlist the Cmdr gate uses; Studio counts as admin).
 
-	- F7 (FilmConstants.HIDE_KEY) hides every screen, floating label and prompt, the Roblox core UI and the mouse
+	- F6 (FilmConstants.HIDE_KEY) hides every screen, floating label and prompt, the Roblox core UI and the mouse
 	  cursor (FilmHideSystem), and brings them back. The admin console (F2) stays usable, so a hidden UI can always be
 	  restored. Ignored while typing (`gameProcessed`).
 	- F8 (FilmConstants.CAMERA_KEY) turns the film camera on and off (FilmCameraSystem: fly, marks, glides, follow and
@@ -111,10 +111,10 @@ local FilmServiceClient: FilmServiceClient = {
 	dependencies = { "CameraServiceClient", "InputServiceClient" },
 
 	--[=[
-		Wires F7 to the hide and F8 to the film camera, for admins only.
+		Wires F6 to the hide and F8 to the film camera, for admins only.
 	]=]
 	init = function(_self)
-		-- Built on the first F7, so init never waits for the PlayerGui.
+		-- Built on the first F6, so init never waits for the PlayerGui.
 		local hide: FilmHideSystem.FilmHideSystem? = nil
 		local camera = FilmCameraSystem.new({
 			pushMode = function(update)

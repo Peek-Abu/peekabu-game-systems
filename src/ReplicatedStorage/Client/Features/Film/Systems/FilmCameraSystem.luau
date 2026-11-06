@@ -16,7 +16,7 @@
 	- F follows the next target (Mr. Harlow, then each player), looking at it; flying moves the offset. O orbits the
 	  target. G goes back to free flight.
 
-	A small status line shows on screen while the UI shows; F7 hides it with the rest.
+	A small status line shows on screen while the UI shows; F6 hides it with the rest.
 
 	Spec-exempt shell (input, camera, RunService, a status label); the maths is specced in FilmFlyFormulas and
 	FilmPathFormulas, the marks in FilmMarkTracker.

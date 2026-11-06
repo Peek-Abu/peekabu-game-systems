@@ -1,8 +1,8 @@
 local FilmConstants = require(script.Parent.FilmConstants)
 
 return function()
-	it("hides the UI on F7, a key the game does not use elsewhere", function()
-		expect(FilmConstants.HIDE_KEY).to.equal(Enum.KeyCode.F7)
+	it("hides the UI on F6: a key the game does not use, and not F7, which Roblox reserves", function()
+		expect(FilmConstants.HIDE_KEY).to.equal(Enum.KeyCode.F6)
 	end)
 
 	it("turns the film camera on F8, above every other camera mode", function()
