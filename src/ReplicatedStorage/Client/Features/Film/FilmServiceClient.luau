@@ -71,14 +71,14 @@ local silenceToken: number? = nil
 local function silence(silenced: boolean)
 	if silenced and silenceToken == nil then
 		silenceToken = InputServiceClient:pushContext("ui", { sink = true })
-		task.spawn(InputControlsSystem.setEnabled, false)
+		task.spawn(InputControlsSystem.setLocked, "film", true)
 	elseif not silenced then
 		local token = silenceToken
 		if token ~= nil then
 			InputServiceClient:removeContext(token)
 			silenceToken = nil
 		end
-		task.spawn(InputControlsSystem.setEnabled, true)
+		task.spawn(InputControlsSystem.setLocked, "film", false)
 	end
 end
 

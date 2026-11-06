@@ -247,7 +247,7 @@ local function onHiddenChanged()
 		HideStore.setHidden(nil)
 		setBodyShown(true)
 		ProximityPromptService.Enabled = true
-		task.spawn(InputControlsSystem.setEnabled, true)
+		task.spawn(InputControlsSystem.setLocked, "hide", false)
 		settleRanges()
 		return
 	end
@@ -271,7 +271,7 @@ local function onHiddenChanged()
 	end
 	setBodyShown(false)
 	ProximityPromptService.Enabled = false
-	task.spawn(InputControlsSystem.setEnabled, false)
+	task.spawn(InputControlsSystem.setLocked, "hide", true)
 	settleRanges()
 end
 

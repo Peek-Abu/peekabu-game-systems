@@ -68,15 +68,16 @@ return function()
 		end)
 	end)
 
-	describe("setEnabled", function()
+	describe("setLocked", function()
 		it("no-ops without yielding outside a client, on every call", function()
-			for _, enabled in { false, true, false } do
-				local thread = coroutine.create(InputControlsSystem.setEnabled)
-				local ok, err = coroutine.resume(thread, enabled)
+			for _, locked in { true, false, true, false } do
+				local thread = coroutine.create(InputControlsSystem.setLocked)
+				local ok, err = coroutine.resume(thread, "spec", locked)
 				expect(ok).to.equal(true)
 				expect(err).to.equal(nil)
 				expect(coroutine.status(thread)).to.equal("dead")
 			end
+			expect(#InputControlsSystem.lockedBy()).to.equal(0)
 		end)
 	end)
 end

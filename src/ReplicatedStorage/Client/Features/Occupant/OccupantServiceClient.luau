@@ -117,7 +117,7 @@ local function releaseHold()
 	end
 	holdToken = nil
 	InputServiceClient:removeContext(token)
-	task.spawn(InputControlsSystem.setEnabled, true)
+	task.spawn(InputControlsSystem.setLocked, "rehire", false)
 end
 
 -- Holds the rehired player still while the card is up (REHIRED_HOLD), then gives control back.
@@ -127,7 +127,7 @@ local function holdStill()
 	if holdToken == nil then
 		holdToken = InputServiceClient:pushContext("ui", { sink = true })
 	end
-	task.spawn(InputControlsSystem.setEnabled, false)
+	task.spawn(InputControlsSystem.setLocked, "rehire", true)
 	task.delay(OccupantConstants.REHIRED_HOLD, function()
 		if holds == mine then
 			releaseHold()

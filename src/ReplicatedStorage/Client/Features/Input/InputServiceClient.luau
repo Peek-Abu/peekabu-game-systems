@@ -181,7 +181,7 @@ local InputServiceClient: InputServiceClient = {
 		UISuppression.registerHandler("movement", {
 			engage = function()
 				uiToken = self:pushContext("ui", { sink = true })
-				task.spawn(InputControlsSystem.setEnabled, false)
+				task.spawn(InputControlsSystem.setLocked, "ui", true)
 			end,
 			disengage = function()
 				local token = uiToken
@@ -189,7 +189,7 @@ local InputServiceClient: InputServiceClient = {
 					self:removeContext(token)
 					uiToken = nil
 				end
-				task.spawn(InputControlsSystem.setEnabled, true)
+				task.spawn(InputControlsSystem.setLocked, "ui", false)
 			end,
 		})
 	end,

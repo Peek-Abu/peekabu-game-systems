@@ -19,6 +19,10 @@
 	Where neither exists (not a real client: the server, a test runner, a story) every call is a
 	silent no-op that never yields; a client missing both warns once.
 
+	Several systems lock movement at once (a menu, hiding, the film camera, the rehire hold), so each locks under its
+	own name (`setLocked(owner, locked)`) and the controls are on only while nobody holds them
+	(InputMovementLockTracker): one owner letting go never frees a player another still holds.
+
 	@class InputControlsSystem
 ]=]
 
@@ -29,6 +33,9 @@ local StarterPlayer = game:GetService("StarterPlayer")
 -- Upper bound on waiting for the legacy PlayerModule, which the engine copies into PlayerScripts on
 -- join; a bounded wait never raises the "Infinite yield possible" warning.
 local LEGACY_WAIT_SECONDS = 10
+
+local InputMovementLockTracker = require(script.Parent.Parent.State.InputMovementLockTracker)
+local locks = InputMovementLockTracker.new()
 
 local InputControlsSystem = {}
 
@@ -112,13 +119,8 @@ local function resolve(player: Player)
 	end
 end
 
---[=[
-	Enables or disables the local character's movement controls. The first call may yield briefly
-	(legacy layout only) while the controls are located; calls made meanwhile are coalesced (the
-	latest wins). A no-op where there are no controls.
-	@param enabled boolean
-]=]
-function InputControlsSystem.setEnabled(enabled: boolean)
+-- Turns the controls on or off now (resolving them on the first call).
+local function apply(enabled: boolean)
 	wanted = enabled
 	if state == "ready" then
 		toggle(enabled)
@@ -140,6 +142,25 @@ function InputControlsSystem.setEnabled(enabled: boolean)
 	end
 	state = "ready"
 	toggle(wanted)
+end
+
+--[=[
+	`owner` locks (true) or lets go of (false) the local character's movement; the controls are off while any owner
+	holds them. The first call may yield briefly (legacy layout only) while the controls are located; calls made
+	meanwhile are coalesced (the latest state wins). A no-op where there are no controls.
+	@param owner string
+	@param locked boolean
+]=]
+function InputControlsSystem.setLocked(owner: string, locked: boolean)
+	locks:set(owner, locked)
+	apply(not locks:isLocked())
+end
+
+--[=[
+	The owners holding movement locked now (the debugger's view).
+]=]
+function InputControlsSystem.lockedBy(): { string }
+	return locks:owners()
 end
 
 return InputControlsSystem
