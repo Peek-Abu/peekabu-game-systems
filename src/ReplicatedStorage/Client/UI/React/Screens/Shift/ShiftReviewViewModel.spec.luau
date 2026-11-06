@@ -106,7 +106,7 @@ return function()
 			expect(view.rows[2].label).to.equal("EARNED")
 			-- 362 Gloom at 1 Credit each, plus 215 Credits of valuables.
 			expect(view.rows[2].value).to.equal("577 Credits")
-			expect(view.rows[3].label).to.equal("TIMES CAUGHT")
+			expect(view.rows[3].label).to.equal("CREW CAUGHT")
 			expect(view.rows[3].value).to.equal("3")
 			expect(view.rows[4].label).to.equal("ASSETS RECOVERED")
 			expect(view.rows[4].value).to.equal("6 of 9")

@@ -263,7 +263,7 @@ function DepotWorldViewModel.review(attributes: { [string]: unknown }): ReviewVi
 				label = ShiftCurrencyUtils.earnedLabel(),
 				value = ShiftCurrencyUtils.amount(ShiftQuotaFormulas.breakdown(cleared, 0, bonus).credits),
 			},
-			{ label = "TIMES CAUGHT", value = tostring(catches) },
+			{ label = "CREW CAUGHT", value = tostring(catches) },
 			{ label = "ASSETS", value = `{salvage} of {offered}` },
 		},
 		headline = if met then "CONTRACT MET" else "CONTRACT MISSED",

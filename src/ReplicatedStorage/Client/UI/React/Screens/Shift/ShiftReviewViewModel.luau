@@ -372,7 +372,7 @@ function ShiftReviewViewModel.review(
 				value = ShiftCurrencyUtils.amount(split.credits),
 				detail = `Dust {split.dustCredits} · Cleaning {split.grimeCredits} · Valuables {split.valuables} · Saved Gloom {saved}`,
 			},
-			{ label = "TIMES CAUGHT", value = tostring(results.catches) },
+			{ label = "CREW CAUGHT", value = tostring(results.catches) },
 			{ label = "ASSETS RECOVERED", value = `{results.salvage} of {results.offered}` },
 		},
 		ratingLabel = if phone then "Rating:" else "Overall rating:",
