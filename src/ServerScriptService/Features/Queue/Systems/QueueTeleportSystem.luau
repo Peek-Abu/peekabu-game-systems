@@ -35,6 +35,9 @@ export type Request = {
 	reserve: boolean,
 	-- JSON teleport data, or nil for none.
 	data: string?,
+	-- A reserving departure: called once with the reserved server's id after it is reserved and before anyone is
+	-- teleported (the service stores the ticket under it, QueueTicketSystem). May yield.
+	onReserved: ((serverId: string) -> ())?,
 	onFinished: OnFinished,
 }
 
@@ -131,9 +134,8 @@ function QueueTeleportSystem.new(): QueueTeleportSystem
 		end
 		local request = record.request
 		if request.reserve and record.accessCode == nil then
-			local ok, result = pcall(function(): string
-				local code = TeleportService:ReserveServer(request.placeId)
-				return code
+			local ok, result, serverId = pcall(function(): (string, string)
+				return TeleportService:ReserveServer(request.placeId)
 			end)
 			if not ok then
 				fail(id, present, `ReserveServer failed: {tostring(result)}`)
@@ -143,6 +145,15 @@ function QueueTeleportSystem.new(): QueueTeleportSystem
 			-- the party never splits across two reserved servers.
 			if record.accessCode == nil then
 				record.accessCode = result
+				local onReserved = request.onReserved
+				if onReserved ~= nil then
+					local stored, err = pcall(function()
+						onReserved(serverId)
+					end)
+					if not stored then
+						log:warn(`onReserved failed: {tostring(err)}`)
+					end
+				end
 			end
 		end
 		local options = Instance.new("TeleportOptions")

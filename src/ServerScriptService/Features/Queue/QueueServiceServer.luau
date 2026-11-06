@@ -53,7 +53,6 @@ local QueueShared = ReplicatedStorage.Shared.Features.Queue
 local QueueServer = ServerScriptService.Features.Queue
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
-local WorldTypes = require(ReplicatedStorage.Shared.Data.WorldTypes)
 local QueueConstants = require(QueueShared.Data.QueueConstants)
 local QueueEvents = require(QueueShared.Net.QueueEvents)
 local QueueTypes = require(QueueShared.Data.QueueTypes)
@@ -64,6 +63,7 @@ local QueueArrivalSystem = require(QueueServer.Systems.QueueArrivalSystem)
 local QueueLandingSystem = require(QueueServer.Systems.QueueLandingSystem)
 local QueuePadSystem = require(QueueServer.Systems.QueuePadSystem)
 local QueueTeleportSystem = require(QueueServer.Systems.QueueTeleportSystem)
+local QueueTicketSystem = require(QueueServer.Systems.QueueTicketSystem)
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
 
@@ -171,11 +171,15 @@ local function sendParty(
 		capacity = pads:seatsOf(pad) or padConfig.capacity,
 		payload = payload,
 	}
+	local data = HttpService:JSONEncode(QueueTeleportRules.encode(ticket))
 	local sent = teleports:send({
 		players = party,
 		placeId = placeId,
 		reserve = true,
-		data = HttpService:JSONEncode(QueueTeleportRules.encode(ticket)),
+		data = data,
+		onReserved = function(serverId: string)
+			QueueTicketSystem.put(serverId, data)
+		end,
 		onFinished = function(gaveUp, reason)
 			pads:unlock(pad)
 			if #gaveUp > 0 then
@@ -217,20 +221,8 @@ end
 
 pads = QueuePadSystem.new(depart)
 
--- The Queue ticket in a player's join data, or nil (none, not ours, or forged).
-local function ticketOf(player: Player): QueueTicket?
-	local raw = player:GetJoinData().TeleportData
-	if type(raw) ~= "string" then
-		return nil
-	end
-	local ok, parsed = pcall(HttpService.JSONDecode, HttpService, raw)
-	if not ok then
-		return nil
-	end
-	-- JSONDecode is typed `any`; QueueTeleportRules.decode checks every field, so it is the trust boundary.
-	local value: WorldTypes.WorldValue? = parsed
-	return QueueTeleportRules.decode(value)
-end
+-- The Queue ticket to believe for a player: this server's stored one over their carried copy (QueueTicketSystem).
+local ticketOf = QueueTicketSystem.ticketOf
 
 local function noteReturn(player: Player)
 	local ticket = ticketOf(player)
@@ -335,6 +327,7 @@ local QueueServiceServer: QueueServiceServer = {
 		local reserved = QueuePlaceRules.isReservedServer(game.PrivateServerId, game.PrivateServerOwnerId)
 		pads:start()
 		if mode == "live" and reserved then
+			QueueTicketSystem.prefetch(game.PrivateServerId)
 			arrivalsActive = true
 			arrivals:start()
 		elseif mode == "live" then

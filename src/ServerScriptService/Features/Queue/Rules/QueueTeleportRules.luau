@@ -136,6 +136,19 @@ end
 --[=[
 	Decodes teleport data (already JSON-decoded) into a ticket, or nil when it is not a valid one.
 ]=]
+--[=[
+	Which ticket an arrival server believes: the one the departing server stored under this reserved server's id
+	(server to server, so nobody can edit it) wins over the one the player carried in their join data, which passes
+	through their client. Without a stored one (an older hub build, a MemoryStore outage) the carried ticket stands;
+	a carried return ticket (a trip home to a public server, never stored) is always the carried one.
+]=]
+function QueueTeleportRules.pick(stored: QueueTicket?, carried: QueueTicket?): QueueTicket?
+	if carried ~= nil and carried.kind == "return" then
+		return carried
+	end
+	return stored or carried
+end
+
 function QueueTeleportRules.decode(value: WorldValue?): QueueTicket?
 	if type(value) ~= "table" or value.v ~= QueueConstants.TICKET_VERSION then
 		return nil

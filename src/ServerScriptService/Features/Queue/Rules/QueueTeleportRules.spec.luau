@@ -150,4 +150,26 @@ return function()
 			expect(QueueTeleportRules.decode(holey)).to.equal(nil)
 		end)
 	end)
+
+	describe("pick", function()
+		it("trusts the ticket the departing server stored over the one the player carried", function()
+			local stored = ticket()
+			local carried = ticket()
+			carried.capacity = QueueConstants.MAX_CAPACITY
+			expect(QueueTeleportRules.pick(stored, carried)).to.equal(stored)
+		end)
+
+		it("falls back to the carried ticket when nothing was stored (an older hub, a store outage)", function()
+			local carried = ticket()
+			expect(QueueTeleportRules.pick(nil, carried)).to.equal(carried)
+			expect(QueueTeleportRules.pick(nil, nil)).to.equal(nil)
+		end)
+
+		it("keeps a carried return ticket even when a depart ticket was stored", function()
+			local stored = ticket()
+			local back = ticket()
+			back.kind = "return"
+			expect(QueueTeleportRules.pick(stored, back)).to.equal(back)
+		end)
+	end)
 end

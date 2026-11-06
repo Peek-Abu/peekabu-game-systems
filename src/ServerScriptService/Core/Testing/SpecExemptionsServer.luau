@@ -49,6 +49,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 
 	-- Cmdr command DEFINITIONS (declarative arg schemas). Their `*Server` implementations carry the
 	-- logic and ARE specced (AddCurrencyServer.spec, etc.).
+	["ServerScriptService.Features.Queue.Systems.QueueTicketSystem"] = "MemoryStore and join-data shell (QueueTeleportRules.pick and decode are specced)",
 	["ServerScriptService.Commands.CurrencyAdd"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.AdminBan"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.AdminUnban"] = "Cmdr command definition (server impl is specced)",

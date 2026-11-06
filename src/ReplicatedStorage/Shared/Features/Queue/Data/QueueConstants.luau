@@ -34,6 +34,10 @@ return table.freeze({
 	-- A role's PlaceId before its place exists; reached by a local move.
 	PLACEHOLDER_PLACE_ID = 0,
 	TICKET_VERSION = 1,
+	-- The MemoryStore hash map a departing server stores each party's ticket in, keyed by the reserved server's id,
+	-- and how long an entry lives (a reserved server reads it at boot, seconds after the departure).
+	TICKET_MAP = "QueueTickets",
+	TICKET_SECONDS = 600,
 	MAX_PAYLOAD_KEYS = 32,
 	MAX_PAYLOAD_KEY_LENGTH = 64,
 	MAX_PAYLOAD_STRING = 1000,
