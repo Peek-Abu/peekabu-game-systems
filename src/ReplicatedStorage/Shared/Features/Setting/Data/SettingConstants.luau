@@ -22,6 +22,9 @@ local BASE: { BaseSetting } = {
 	-- Accessibility: scales every camera shake (0 = none).
 	{ id = "cameraShake", def = { kind = "number", default = 1, min = 0, max = 1, step = 0.05 } },
 	{ id = "keybinds", def = { kind = "keybinds", default = "" } },
+	-- Accessibility: lifts the picture for a dark screen or a dim room (0 = the game's own look, 1 = brightest, a
+	-- ColorCorrection brightness of BRIGHTNESS_MAX_OFFSET).
+	{ id = "brightness", def = { kind = "number", default = 0, min = 0, max = 1, step = 0.05 } },
 }
 
 -- The volume setting that drives each Sound group (one setting may drive several groups).
@@ -38,6 +41,8 @@ local SettingConstants: {
 	VOLUME_SETTINGS: { [SoundTypes.SoundGroupName]: string },
 	CAMERA_SHAKE: string,
 	KEYBINDS: string,
+	BRIGHTNESS: string,
+	BRIGHTNESS_MAX_OFFSET: number,
 	MAX_KEY_LENGTH: number,
 	MAX_KEYBINDS_LENGTH: number,
 	MAX_KEYS_PER_DEVICE: number,
@@ -50,6 +55,9 @@ local SettingConstants: {
 		VOLUME_SETTINGS = volumeSettings,
 		CAMERA_SHAKE = "cameraShake",
 		KEYBINDS = "keybinds",
+		BRIGHTNESS = "brightness",
+		-- The ColorCorrection brightness the slider's top gives (a lift, not a white-out).
+		BRIGHTNESS_MAX_OFFSET = 0.25,
 		-- Setting ids, action ids and choice options are 1-64 characters.
 		MAX_KEY_LENGTH = 64,
 		-- The keybinds string's length cap, and keys per device per action.

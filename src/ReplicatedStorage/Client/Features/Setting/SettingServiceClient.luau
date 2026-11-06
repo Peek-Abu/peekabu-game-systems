@@ -9,7 +9,8 @@
 	  once, and sends it after SEND_DEBOUNCE. The server's confirmation (the replicated slice) replaces the
 	  local value; if none arrives within PENDING_TIMEOUT the slice's value wins again.
 	- `observe(id, fn)` calls `fn(value)` now and on every change. The base settings are applied here:
-	  volumes → Sound groups, `cameraShake` → Camera, `keybinds` → Input overrides.
+	  volumes → Sound groups, `cameraShake` → Camera, `keybinds` → Input overrides, `brightness` → one held Vfx screen
+	  request (a ColorCorrection brightness lift; released at 0, so the neutral picture costs no effect).
 
 	Spec-exempt shell (Charm subscription, timers, ByteNet, the other services); the rules are the specced
 	SettingRules, SettingRegistry and SettingKeybindUtils.
@@ -34,6 +35,7 @@ local InputActionRegistry = require(ReplicatedStorage.Client.Features.Input.Data
 local InputTypes = require(ReplicatedStorage.Client.Features.Input.Data.InputTypes)
 local InputServiceClient = require(ReplicatedStorage.Client.Features.Input.InputServiceClient)
 local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
+local VfxServiceClient = require(ReplicatedStorage.Client.Features.Vfx.VfxServiceClient)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 
 type SettingValue = PlayerDataTypes.SettingValue
@@ -144,7 +146,13 @@ export type SettingServiceClient = {
 }
 
 local SettingServiceClient: SettingServiceClient = {
-	dependencies = { "StateSyncServiceClient", "SoundServiceClient", "CameraServiceClient", "InputServiceClient" },
+	dependencies = {
+		"StateSyncServiceClient",
+		"SoundServiceClient",
+		"CameraServiceClient",
+		"InputServiceClient",
+		"VfxServiceClient",
+	},
 
 	--[=[
 		Follows the replicated slice (clearing local values the server has confirmed) and applies the base
@@ -190,6 +198,32 @@ local SettingServiceClient: SettingServiceClient = {
 			end)
 		)
 		table.insert(stoppers, self:observe(SettingConstants.KEYBINDS, applyKeybinds))
+		-- Brightness: one screen request held while the slider is above 0.
+		local brightnessToken: number? = nil
+		table.insert(
+			stoppers,
+			self:observe(SettingConstants.BRIGHTNESS, function(value)
+				local offset = if type(value) == "number" then value * SettingConstants.BRIGHTNESS_MAX_OFFSET else 0
+				local token = brightnessToken
+				if offset <= 0 then
+					if token ~= nil then
+						VfxServiceClient:releaseScreen(token)
+						brightnessToken = nil
+					end
+				elseif token ~= nil then
+					VfxServiceClient:updateScreen(token, { brightness = offset })
+				else
+					brightnessToken = VfxServiceClient:requestScreen({ brightness = offset })
+				end
+			end)
+		)
+		table.insert(stoppers, function()
+			local token = brightnessToken
+			if token ~= nil then
+				VfxServiceClient:releaseScreen(token)
+				brightnessToken = nil
+			end
+		end)
 	end,
 
 	stop = function(_self)

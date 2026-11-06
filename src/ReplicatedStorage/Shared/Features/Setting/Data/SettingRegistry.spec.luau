@@ -16,6 +16,17 @@ return function()
 		expect(SettingRegistry.get("keybinds").kind).to.equal("keybinds")
 	end)
 
+	it("has a brightness slider that starts at the game's own look (0) and only brightens", function()
+		local def = SettingRegistry.get(SettingConstants.BRIGHTNESS)
+		expect(def).to.be.ok()
+		expect(def.kind).to.equal("number")
+		expect(def.default).to.equal(0)
+		expect(def.min).to.equal(0)
+		expect(def.max).to.equal(1)
+		expect(SettingConstants.BRIGHTNESS_MAX_OFFSET > 0).to.equal(true)
+		expect(SettingConstants.BRIGHTNESS_MAX_OFFSET <= 0.5).to.equal(true)
+	end)
+
 	it("drives every Sound group from a registered volume: music with ambience, effects with UI", function()
 		for _, group in SoundConstants.GROUPS do
 			local id = SettingConstants.VOLUME_SETTINGS[group]

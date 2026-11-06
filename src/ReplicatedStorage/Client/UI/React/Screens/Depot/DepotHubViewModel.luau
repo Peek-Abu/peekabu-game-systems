@@ -77,6 +77,7 @@ VM.SETTINGS = {
 	{ id = "musicVolume", label = "Music & ambience" },
 	{ id = "sfxVolume", label = "Sound effects" },
 	{ id = "cameraShake", label = "Camera shake" },
+	{ id = "brightness", label = "Brightness" },
 	-- A switch (TipRegistry registers it): the one-line tips for a player's firsts.
 	{ id = TipRegistry.SETTING, label = "Tips" },
 }
