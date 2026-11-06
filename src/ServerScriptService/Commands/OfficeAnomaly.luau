@@ -1,7 +1,7 @@
 --!strict
 return {
-	Name = "anomaly",
-	Aliases = {},
+	Name = "officeanomaly",
+	Aliases = { "anomaly" },
 	Description = "Dev: forces the run's exterior anomaly to exactly one id (see OfficeAnomalyConstants.IDS), none clears them, reroll restores the seed's pick.",
 	Group = "Admins",
 	Args = {

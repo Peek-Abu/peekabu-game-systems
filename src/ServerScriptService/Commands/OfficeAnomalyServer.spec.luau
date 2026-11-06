@@ -6,10 +6,10 @@
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local OfficeServiceServer = require(ServerScriptService.Features.Office.OfficeServiceServer)
-local anomaly = require(ServerScriptService.Commands.AnomalyServer)
+local anomaly = require(ServerScriptService.Commands.OfficeAnomalyServer)
 
 return function()
-	describe("AnomalyServer", function()
+	describe("OfficeAnomalyServer", function()
 		local original
 		local built = true
 		local asked = "untouched"

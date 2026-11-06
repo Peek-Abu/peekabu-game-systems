@@ -1,6 +1,6 @@
 --!strict
 --[=[
-	anomaly: a developer's repro of the run's exterior anomalies. `<id>` forces exactly that one anomaly, `none` clears
+	officeanomaly (alias anomaly): a developer's repro of the run's exterior anomalies. `<id>` forces exactly that one anomaly, `none` clears
 	them all and `reroll` restores the seed's pick, through OfficeServiceServer:forceAnomalies (the published
 	attribute the client reads). A rebuild drops a forced set. Admins only (the Admins group fails closed in
 	AdminServiceServer).
@@ -20,7 +20,7 @@ return function(_context: { Executor: Player }, choice: string)
 		summary = "No anomalies this run."
 	elseif word ~= "reroll" then
 		local found: OfficeAnomalyConstants.AnomalyId? = nil
-		for _, id in OfficeAnomalyConstants.IDS do
+		for _, id: OfficeAnomalyConstants.AnomalyId in OfficeAnomalyConstants.IDS do
 			if string.lower(id) == word then
 				found = id
 			end
