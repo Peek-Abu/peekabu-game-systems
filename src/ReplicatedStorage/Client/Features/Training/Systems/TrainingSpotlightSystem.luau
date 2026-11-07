@@ -19,7 +19,6 @@
 ]=]
 
 local CollectionService = game:GetService("CollectionService")
-local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -94,15 +93,13 @@ local function guiTarget(tag: string): GuiObject?
 	return nil
 end
 
--- Where `target` is on the Coach layer's screen (which ignores the top bar's inset): a target in a ScreenGui that does
--- not ignore it sits that inset lower than its AbsolutePosition says.
+-- Where `target` is on the Coach layer: AbsolutePosition is measured from below the top bar, while the Coach layer
+-- (and the offsets it is drawn in) starts at the screen's top, so the layer's own AbsolutePosition is taken off.
 local function screenPosition(target: GuiObject): Vector2
-	local gui = target:FindFirstAncestorOfClass("ScreenGui")
-	if gui ~= nil and not gui.IgnoreGuiInset then
-		local inset = GuiService:GetGuiInset()
-		return target.AbsolutePosition + inset
-	end
-	return target.AbsolutePosition
+	local playerGui = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
+	local coach = if playerGui ~= nil then playerGui:FindFirstChild("UILayer_Coach") else nil
+	local origin = if coach ~= nil and coach:IsA("ScreenGui") then coach.AbsolutePosition else Vector2.zero
+	return target.AbsolutePosition - origin
 end
 
 local function worldTarget(step: Step, from: Vector3): BasePart?
