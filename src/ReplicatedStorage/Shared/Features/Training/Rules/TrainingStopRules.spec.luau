@@ -1,5 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local TrainingStopRules = require(ReplicatedStorage.Shared.Features.Training.Rules.TrainingStopRules)
 
 return function()
@@ -66,8 +67,10 @@ return function()
 			expect(TrainingStopRules.enter(state, 4)).to.equal(true)
 			expect(TrainingStopRules.isDone(state, 3)).to.equal(true)
 			expect(state.finished).to.equal(false)
+			-- The hide stop is an escape: walking on does not pass it, getting away does.
+			expect(TrainingStopRules.enter(state, 5)).to.equal(false)
+			expect(TrainingStopRules.complete(state, 4, "escape")).to.equal(true)
 			expect(TrainingStopRules.enter(state, 5)).to.equal(true)
-			expect(TrainingStopRules.isDone(state, 4)).to.equal(true)
 			expect(state.finished).to.equal(true)
 			expect(TrainingStopRules.enter(state, 6)).to.equal(false)
 		end)
@@ -81,6 +84,58 @@ return function()
 			local open = TrainingStopRules.openDoors(state)
 			expect(#open).to.equal(1)
 			expect(open[1]).to.equal(1)
+		end)
+	end)
+
+	describe("escapeStep", function()
+		local function sense(over)
+			local base = { near = false, chasing = false, hidden = false, seen = true, far = false }
+			for key, value in over do
+				base[key] = value
+			end
+			return base
+		end
+		local seconds = TrainingConstants.ESCAPE.seconds
+
+		it("passes once he came close and the player stayed hidden from him, away from him", function()
+			local escape = TrainingStopRules.newEscape()
+			expect(TrainingStopRules.escapeStep(escape, 1, sense({ near = true, hidden = true }))).to.equal(false)
+			expect(TrainingStopRules.escapeStep(escape, seconds / 2, sense({ hidden = true, seen = false }))).to.equal(
+				false
+			)
+			expect(TrainingStopRules.escapeStep(escape, seconds, sense({ hidden = true, seen = false }))).to.equal(true)
+		end)
+
+		it("passes when the player outruns him: far ahead, or out of his sight", function()
+			local escape = TrainingStopRules.newEscape()
+			TrainingStopRules.escapeStep(escape, 0.2, sense({ chasing = true, near = true }))
+			expect(TrainingStopRules.escapeStep(escape, seconds + 0.1, sense({ far = true }))).to.equal(true)
+			local other = TrainingStopRules.newEscape()
+			TrainingStopRules.escapeStep(other, 0.2, sense({ chasing = true }))
+			expect(TrainingStopRules.escapeStep(other, seconds + 0.1, sense({ seen = false }))).to.equal(true)
+		end)
+
+		it("never passes while he still chases the player or stands close", function()
+			local escape = TrainingStopRules.newEscape()
+			TrainingStopRules.escapeStep(escape, 0.2, sense({ near = true }))
+			expect(TrainingStopRules.escapeStep(escape, 10, sense({ chasing = true, far = true }))).to.equal(false)
+			expect(TrainingStopRules.escapeStep(escape, 10, sense({ near = true, hidden = true }))).to.equal(false)
+		end)
+
+		it("starts the safe count again when he comes back", function()
+			local escape = TrainingStopRules.newEscape()
+			TrainingStopRules.escapeStep(escape, 0.2, sense({ near = true }))
+			TrainingStopRules.escapeStep(escape, seconds - 0.1, sense({ far = true }))
+			TrainingStopRules.escapeStep(escape, 0.1, sense({ near = true }))
+			expect(TrainingStopRules.escapeStep(escape, seconds - 0.1, sense({ far = true }))).to.equal(false)
+		end)
+
+		it("passes after a while if he never comes, so nobody is stuck", function()
+			local escape = TrainingStopRules.newEscape()
+			expect(TrainingStopRules.escapeStep(escape, TrainingConstants.ESCAPE.timeout - 1, sense({ far = true }))).to.equal(
+				false
+			)
+			expect(TrainingStopRules.escapeStep(escape, 2, sense({ far = true }))).to.equal(true)
 		end)
 	end)
 end

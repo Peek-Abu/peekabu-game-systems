@@ -4,7 +4,8 @@
 	A stop with its own goal (its piles cleared, its treasure loaded) is done when `complete` reports that goal; the
 	next stop can only be entered once it is. A walk stop is done by walking into the next stop. Walking into the last
 	stop finishes the run. A door opens once its stop is done. The player is never moved backwards: a catch sends
-	them to the start of `state.stop`.
+	them to the start of `state.stop`. The escape stop (goal "escape") is done once the player got away from Mr. Harlow
+	(`escapeStep`, from what the server senses every poll).
 
 	@class TrainingStopRules
 ]=]
@@ -17,6 +18,30 @@ export type State = {
 	stop: number,
 	done: { [number]: boolean },
 	finished: boolean,
+}
+
+-- The escape stop's running count.
+export type Escape = {
+	-- He came within ESCAPE.near or chased the player at this stop.
+	threatened: boolean,
+	-- How long the player has been safe without a break (seconds).
+	safeFor: number,
+	-- How long the player has been at this stop (seconds).
+	waited: number,
+}
+
+-- What the server senses at a poll.
+export type Sense = {
+	-- He is within ESCAPE.near studs of the player.
+	near: boolean,
+	-- He is chasing (or searching for) this player.
+	chasing: boolean,
+	-- The player is in a hiding spot.
+	hidden: boolean,
+	-- He has a clear line of sight to the player.
+	seen: boolean,
+	-- He is at least ESCAPE.far studs away.
+	far: boolean,
 }
 
 local STOPS = TrainingConstants.STOPS
@@ -72,6 +97,36 @@ function TrainingStopRules.enter(state: State, stop: number): boolean
 		state.finished = true
 	end
 	return true
+end
+
+--[=[
+	A fresh escape count (the player just reached the escape stop, or was caught and sent back to it).
+]=]
+function TrainingStopRules.newEscape(): Escape
+	return { threatened = false, safeFor = 0, waited = 0 }
+end
+
+--[=[
+	Adds `deltaTime` seconds with `sense` to the escape count. True once the player got away: Mr. Harlow came for them
+	and they then stayed safe (he is not chasing them, not near, and they are hidden, out of his sight, or far ahead)
+	for ESCAPE.seconds without a break; or he never came within ESCAPE.timeout seconds.
+]=]
+function TrainingStopRules.escapeStep(escape: Escape, deltaTime: number, sense: Sense): boolean
+	local rules = TrainingConstants.ESCAPE
+	escape.waited += deltaTime
+	if sense.chasing or sense.near then
+		escape.threatened = true
+	end
+	local safe = not sense.chasing and not sense.near and (sense.hidden or not sense.seen or sense.far)
+	if safe and escape.threatened then
+		escape.safeFor += deltaTime
+	else
+		escape.safeFor = 0
+	end
+	if escape.threatened then
+		return escape.safeFor >= rules.seconds
+	end
+	return escape.waited >= rules.timeout
 end
 
 --[=[

@@ -6,6 +6,11 @@
 	the next stop's zone (checked every POLL_SECONDS) moves the player on. The stop is published as the `training` world
 	entry for the client's hall effects (signs, lights out, the Gloom creeping, the glowing desk).
 
+	The escape stop (goal "escape") is passed by getting away from Mr. Harlow, by hiding or by outrunning him: every
+	poll senses him (near, chasing this player, a clear line of sight, far) and the player (hidden) into
+	TrainingStopRules.escapeStep. Getting away completes the stop and publishes the stop in the CLEAR_ENTRY world entry,
+	which the client turns into the "He's gone! Go now!" cue. A catch there starts the count again.
+
 	A catch (ShiftServiceServer.caught) costs a life as usual, but the lives floor (ShiftServiceServer:setLivesFloor)
 	means it never knocks the player out: the client plays the catch beat (TrainingEvents.Caught: the goo splat on a
 	heart, the red card, the dark), and the player is moved back to the start of their stop while the screen is dark.
@@ -20,11 +25,14 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
+local Workspace = game:GetService("Workspace")
 
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local TrainingEvents = require(ReplicatedStorage.Shared.Features.Training.Net.TrainingEvents)
 local TrainingStopRules = require(ReplicatedStorage.Shared.Features.Training.Rules.TrainingStopRules)
+local HideServiceServer = require(ServerScriptService.Features.Hide.HideServiceServer)
+local OccupantServiceServer = require(ServerScriptService.Features.Occupant.OccupantServiceServer)
 local ShiftServiceServer = require(ServerScriptService.Features.Shift.ShiftServiceServer)
 local StateSyncWorldStore = require(ServerScriptService.Features.StateSync.State.StateSyncWorldStore)
 local TrainingMapRules = require(ServerScriptService.Features.Training.Rules.TrainingMapRules)
@@ -41,6 +49,41 @@ export type Run = {
 local POLL_SECONDS = 0.2
 
 local log = Logger.new("TrainingRunSystem")
+
+-- What the escape stop senses of Mr. Harlow and the player at `root` (TrainingStopRules.Sense). No Harlow: far and
+-- unseen.
+local function sense(player: Player, root: BasePart): TrainingStopRules.Sense
+	local rules = TrainingConstants.ESCAPE
+	local hidden = HideServiceServer:isHidden(player)
+	local harlow = OccupantServiceServer:getHarlow()
+	local head = if harlow ~= nil then harlow:FindFirstChild("Head") else nil
+	local from = if head ~= nil and head:IsA("BasePart")
+		then head.Position
+		elseif harlow ~= nil then harlow:GetPivot().Position
+		else nil
+	if harlow == nil or from == nil then
+		return { near = false, chasing = false, hidden = hidden, seen = false, far = true }
+	end
+	local mind = OccupantServiceServer:getMind()
+	local chasing = mind ~= nil and (mind.mode == "chase" or mind.mode == "search") and mind.target == player.UserId
+	local distance = (root.Position - from).Magnitude
+	local params = RaycastParams.new()
+	local ignore: { Instance } = { harlow }
+	if player.Character ~= nil then
+		table.insert(ignore, player.Character)
+	end
+	params.FilterDescendantsInstances = ignore
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.RespectCanCollide = true
+	local blocked = Workspace:Raycast(from, root.Position - from, params) ~= nil
+	return {
+		near = distance < rules.near,
+		chasing = chasing,
+		hidden = hidden,
+		seen = not hidden and not blocked,
+		far = distance >= rules.far,
+	}
+end
 
 -- Opens a door: it and everything in it stops blocking and fades out.
 local function clearOut(part: BasePart)
@@ -68,6 +111,7 @@ function TrainingRunSystem.new(
 	finished: (player: Player) -> ()
 ): Run
 	local state = TrainingStopRules.new()
+	local escape = TrainingStopRules.newEscape()
 	local stoppers: { () -> () } = {}
 	local remaining: { [number]: { [BasePart]: true } } = {}
 	local stopped = false
@@ -116,13 +160,31 @@ function TrainingRunSystem.new(
 		return if root ~= nil and root:IsA("BasePart") then root else nil
 	end
 
+	-- The escape stop: getting away from him completes it (and tells the client he is gone).
+	local function escapePoll(root: BasePart)
+		local def = TrainingConstants.STOPS[state.stop]
+		if def == nil or def.goal ~= "escape" or TrainingStopRules.isDone(state, state.stop) then
+			return
+		end
+		if TrainingStopRules.escapeStep(escape, POLL_SECONDS, sense(player, root)) then
+			local at = state.stop
+			complete(at, "escape")
+			StateSyncWorldStore.set(TrainingConstants.CLEAR_ENTRY, at)
+		end
+	end
+
 	local function poll()
 		local root = rootOf()
+		if root == nil then
+			return
+		end
+		escapePoll(root)
 		local zone = plan.zones[state.stop + 1]
-		if root == nil or zone == nil or not TrainingMapRules.inside(zone, root.Position) then
+		if zone == nil or not TrainingMapRules.inside(zone, root.Position) then
 			return
 		end
 		if TrainingStopRules.enter(state, state.stop + 1) then
+			escape = TrainingStopRules.newEscape()
 			publish()
 			openDone()
 			if state.finished then
@@ -153,6 +215,8 @@ function TrainingRunSystem.new(
 		-- The catch's only message on a training run (OccupantCatchUtils.feedback leaves it to training): the beat.
 		TrainingEvents.packets.Caught.sendTo(math.clamp(livesLeft, 0, 255), player)
 		local back: CFrame? = plan.stops[state.stop]
+		-- Caught at the escape stop: the count starts again from the stop's start.
+		escape = TrainingStopRules.newEscape()
 		task.delay(TrainingConstants.RETURN_DELAY, function()
 			local character = player.Character
 			if not stopped and back ~= nil and character ~= nil and character.Parent ~= nil then
@@ -209,6 +273,7 @@ function TrainingRunSystem.new(
 			end
 			table.clear(stoppers)
 			StateSyncWorldStore.clear(TrainingConstants.WORLD_ENTRY)
+			StateSyncWorldStore.clear(TrainingConstants.CLEAR_ENTRY)
 		end,
 
 		state = function(_self)

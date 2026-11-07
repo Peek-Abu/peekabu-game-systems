@@ -24,9 +24,10 @@ return function()
 			expect(TrainingGuideRules.target(3, at())).to.equal("next")
 		end)
 
-		it("points at the desk until the player has hidden, then on", function()
+		it("points at the desk (one way to get away), nothing while hidden, then on once he is gone", function()
 			expect(TrainingGuideRules.target(4, at())).to.equal("desk")
-			expect(TrainingGuideRules.target(4, at(false, false, true))).to.equal("next")
+			expect(TrainingGuideRules.target(4, at(false, false, true))).to.equal("none")
+			expect(TrainingGuideRules.target(4, at(true, false, true))).to.equal("next")
 		end)
 
 		it("points at nothing once training is done, or outside the stops", function()
@@ -78,6 +79,17 @@ return function()
 			expect(TrainingGuideRules.coach(3, at()).pose).to.equal("warn")
 			expect(TrainingGuideRules.coach(4, at()).pose).to.equal("hide")
 			expect(TrainingGuideRules.coach(5, at()).pose).to.equal("cheer")
+		end)
+
+		it("offers running or hiding, says wait while hidden, and cheers 'go now' once he is gone", function()
+			expect(TrainingGuideRules.coach(4, at()).text).to.equal(TrainingConstants.COACH.hide.text)
+			expect(TrainingGuideRules.coach(4, at(false, false, true)).text).to.equal(
+				TrainingConstants.COACH.hidden.text
+			)
+			local clear = TrainingGuideRules.coach(4, at(true, false, true))
+			expect(clear.text).to.equal(TrainingConstants.COACH.clear.text)
+			expect(clear.pose).to.equal("cheer")
+			expect(TrainingGuideRules.coach(4, at(true)).text).to.equal(TrainingConstants.COACH.clear.text)
 		end)
 	end)
 

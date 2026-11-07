@@ -30,7 +30,7 @@ export type Role =
 	| "sign" -- where a stop's sign hangs (STOP; client)
 
 -- What finishes a stop: its piles cleared, its treasure loaded, or walking into the next stop.
-export type Goal = "piles" | "banked" | "walk" | "finish"
+export type Goal = "piles" | "banked" | "walk" | "escape" | "finish"
 
 -- Pippa's pose for a line (EmployeePoseRegistry's coach poses: shared, so any employee could coach).
 export type CoachPose = "point" | "warn" | "cheer" | "shh" | "hide"
@@ -68,7 +68,7 @@ local STOPS: { Stop } = {
 	{ id = "dust", goal = "piles", sign = "Hold to vacuum the Gloom!" },
 	{ id = "treasure", goal = "banked", sign = "Clean the treasure. Leave the trash!" },
 	{ id = "quiet", goal = "walk", sign = "Shh! He hears running." },
-	{ id = "hide", goal = "walk", sign = "He's coming! Hide!" },
+	{ id = "hide", goal = "escape", sign = "He's coming! Run or hide!" },
 	{ id = "done", goal = "finish", sign = "You did it! Time for a real shift." },
 }
 for _, stop in STOPS do
@@ -82,11 +82,12 @@ local COACH: { [string]: CoachLine } = {
 	treasure = { text = "Grab the mug and take it to the truck. Leave the trash!", pose = "point" },
 	carrying = { text = "Now put it in the truck!", pose = "point" },
 	quiet = { text = "Uh oh, the lights! Don't stop. Stay on the arrows.", pose = "warn" },
-	hide = { text = "I hear him! Run to the glowing desk and hide!", pose = "hide" },
-	hidden = { text = "Shh! Wait for him to go. Then follow the arrows.", pose = "shh" },
+	hide = { text = "He's coming! Run away, or hide under the glowing desk!", pose = "hide" },
+	hidden = { text = "Shh! Stay still. I'll tell you when he's gone.", pose = "shh" },
+	clear = { text = "He's gone! Go now! Follow the arrows.", pose = "cheer" },
 	done = { text = "You did it! You're ready for a real shift!", pose = "cheer" },
 	open = { text = "The door is open! Follow the arrows.", pose = "point" },
-	caught = { text = "Try again! Run to the glowing desk before he sees you.", pose = "shh" },
+	caught = { text = "Try again! Run away, or hide before he sees you.", pose = "shh" },
 	shop = { text = "This is the Shop! Spend your Gleam here.", pose = "point" },
 	trucks = { text = "Hop on a truck with your crew!", pose = "cheer" },
 	vacuum = { text = "This is your vacuum! Pick it, then hold to suck up Gloom.", pose = "point" },
@@ -97,7 +98,7 @@ local GOALS: { [string]: GoalCard } = {
 	dust = { title = "SUCK UP THE GLOOM!", line = "Walk to the purple goo. Hold to vacuum it.", icon = "vacuum" },
 	treasure = { title = "SAVE THE TREASURE!", line = "Take the mug to the truck. Leave the trash.", icon = "monitor" },
 	quiet = { title = "FOLLOW THE ARROWS!", line = "The lights are going out. Keep going!", icon = "flashlight" },
-	hide = { title = "HIDE UNDER THE DESK!", line = "Mr. Harlow is coming. Hide and stay still.", icon = "!" },
+	hide = { title = "GET AWAY FROM HIM!", line = "Run away, or hide under the glowing desk.", icon = "!" },
 	done = { title = "TRAINING DONE!", line = "You're ready for a real shift.", icon = "trophy" },
 }
 
@@ -131,6 +132,12 @@ local TrainingConstants = {
 	-- After a catch's knock-down, the player is moved back to the start of their stop (while the screen is dark:
 	-- CATCH_BEAT.dark to .back).
 	RETURN_DELAY = 2.0,
+	-- The escape stop (stop 4): passed once Mr. Harlow came within `near` studs (or chased the player) and the player
+	-- then stayed safe for `seconds`: he is not chasing them, not within `near`, and they are hidden, out of his sight,
+	-- or `far` studs away. If he never comes, it passes after `timeout` seconds. (TrainingStopRules.escapeStep)
+	ESCAPE = table.freeze({ near = 20, far = 35, seconds = 2.5, timeout = 25 }),
+	-- The world entry holding the last stop the player escaped at (the client's "He's gone!" cue).
+	CLEAR_ENTRY = "trainingClear",
 	-- After "Play training again", how long the hub's chevron trail leads a trained player to the pad (seconds).
 	AGAIN_TRAIL_SECONDS = 60,
 	-- The catch beat, in seconds from the grab: a goo splat on a heart, the red card, the screen going dark (the move
@@ -166,6 +173,8 @@ local TrainingConstants = {
 		arrow = "rbxassetid://130801617656931",
 		calm = Color3.fromRGB(255, 205, 64),
 		danger = Color3.fromRGB(255, 84, 112),
+		-- The escape stop once he has gone: the desk's glow turns this, safe to come out.
+		clear = Color3.fromRGB(96, 226, 128),
 		-- The trail: studs per chevron, scroll speed (studs a second toward the goal), width, lift off the floor.
 		chevronLength = 3,
 		speed = 1.6,

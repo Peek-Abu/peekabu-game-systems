@@ -4,8 +4,10 @@
 	arrow point at, whether the stop is calm (gold) or dangerous (red, the hide stop), the goal bar's card, and Pippa's
 	line and pose. Plus the catch beat's phase at a time since the grab.
 
-	A stop's guide moves on to the next stop once the stop is done (its door is open), at the treasure stop to the truck
-	while the player carries the treasure, and at the hide stop to the next stop once the player has hidden.
+	A stop's guide moves on to the next stop once the stop is done (its door is open, or the player got away at the
+	escape stop), and at the treasure stop to the truck while the player carries the treasure. At the escape stop it
+	points at the glowing desk (one way to get away; running is the other), shows nothing while the player hides, and
+	once he has gone Pippa cheers "He's gone! Go now!" and the arrows come back toward the next stop.
 
 	@class TrainingGuideRules
 ]=]
@@ -22,7 +24,7 @@ export type Tone = "calm" | "danger"
 
 -- What the client knows about the player at their stop.
 export type Situation = {
-	-- The stop's own goal is met (its door stands open).
+	-- The stop's own goal is met (its door stands open; at the escape stop, the player got away).
 	stopDone: boolean,
 	-- The player is carrying the stop's treasure.
 	carrying: boolean,
@@ -50,12 +52,12 @@ function TrainingGuideRules.target(stop: number, situation: Situation): Target
 		return "none"
 	elseif situation.stopDone then
 		return "next"
+	elseif id == "hide" then
+		return if situation.hidden then "none" else "desk"
 	elseif id == "dust" then
 		return "pile"
 	elseif id == "treasure" then
 		return if situation.carrying then "truck" else "treasure"
-	elseif id == "hide" then
-		return if situation.hidden then "next" else "desk"
 	end
 	return "next"
 end
@@ -88,6 +90,8 @@ function TrainingGuideRules.coach(stop: number, situation: Situation): TrainingC
 		return lines.done
 	elseif id == "treasure" and situation.carrying and not situation.stopDone then
 		return lines.carrying
+	elseif id == "hide" and situation.stopDone then
+		return lines.clear
 	elseif id == "hide" and situation.hidden then
 		return lines.hidden
 	elseif situation.stopDone then
