@@ -8,7 +8,11 @@
 	  everything else (TrainingSpotlightUtils) and moves on when the button goes away or a page opens over it (it
 	  was pressed), when the dark is tapped, or when the button never shows up (GUI_WAIT seconds).
 	- A "world" step points an arrow at the nearest part with its tag that `accept` takes, and moves on when `done`
-	  says so or after `seconds`.
+	  says so or after `seconds`. Off the screen the arrow sits on the edge on the target's side, worked out in the
+	  camera's own space (TrainingSpotlightUtils.offscreen); it waits until the camera has settled after a spawn.
+	- A "do" step shows only its line (nothing dimmed: the player has to move) and moves on when `done` says so.
+	- A step the player must do (`mustDo`: run, use the crew move) moves on ONLY when `done` says so: tapping the
+	  dark, another key, a page opening or its time running out never pass it.
 
 	`point` replaces whatever is showing; `clear` hides it. Redrawn every FRAME_SECONDS (the arrow follows the camera).
 
@@ -32,7 +36,7 @@ local SceneStack = require(ReplicatedStorage.Client.UI.Scenes.SceneStack)
 local TrainingSpotlight = require(ReplicatedStorage.Client.UI.React.Screens.Training.TrainingSpotlight)
 
 export type Step = {
-	kind: "gui" | "world",
+	kind: "gui" | "world" | "do",
 	tag: string,
 	line: string,
 	-- World steps: which tagged parts count (default: all). Any step: when it is over (checked after DONE_AFTER, so a
@@ -40,6 +44,8 @@ export type Step = {
 	accept: ((part: BasePart) -> boolean)?,
 	done: (() -> boolean)?,
 	seconds: number?,
+	-- Passed only by `done` (the player really did it), never skipped or timed out.
+	mustDo: boolean?,
 }
 
 local FRAME_SECONDS = 1 / 30
@@ -53,6 +59,10 @@ local ARROW_MARGIN = 70
 local ARROW_LIFT = Vector3.new(0, 6, 0)
 local WORLD_SECONDS = 20
 local DONE_AFTER = 2.5
+-- After a spawn the camera snaps into place: a world arrow waits this long so it never points from the old view.
+local SETTLE_SECONDS = 0.75
+-- Where a "do" step's line sits: centred, this far down the screen.
+local DO_LINE_Y = 0.2
 
 -- The Coach layer's root, acquired on first use (the layer's ScreenGui is made then).
 local renderRoot: ((React.ReactNode) -> ())? = nil
@@ -75,6 +85,11 @@ local seenAt: number? = nil
 local skipped = false
 local connection: RBXScriptConnection? = nil
 local elapsed = 0
+-- When the local character last spawned (os.clock).
+local spawnedAt = os.clock()
+Players.LocalPlayer.CharacterAdded:Connect(function()
+	spawnedAt = os.clock()
+end)
 
 local function guiTarget(tag: string): GuiObject?
 	local playerGui = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
@@ -157,7 +172,9 @@ local function draw(step: Step, now: number)
 			skipped = true
 		end,
 	}
-	if step.kind == "gui" then
+	if step.kind == "do" then
+		props.linePosition = Vector2.new(math.max((screen.X - LINE_SIZE.X) / 2, 0), screen.Y * DO_LINE_Y)
+	elseif step.kind == "gui" then
 		local target = guiTarget(step.tag)
 		if target == nil then
 			render(nil)
@@ -168,15 +185,26 @@ local function draw(step: Step, now: number)
 		props.linePosition = TrainingSpotlightUtils.lineAt(hole, screen, LINE_SIZE, LINE_GAP)
 	else
 		local character = Players.LocalPlayer.Character
+		local humanoid = if character ~= nil then character:FindFirstChildOfClass("Humanoid") else nil
+		-- The camera is not following this character yet (just spawned): wait rather than point from the old view.
+		if humanoid == nil or camera.CameraSubject ~= humanoid or now - spawnedAt < SETTLE_SECONDS then
+			render(nil)
+			return
+		end
 		local from = if character ~= nil then character:GetPivot().Position else camera.CFrame.Position
 		local target = worldTarget(step, from)
 		if target == nil then
 			render(nil)
 			return
 		end
-		local point, inFront = camera:WorldToViewportPoint(target.Position + ARROW_LIFT)
-		local at, rotation =
+		local world = target.Position + ARROW_LIFT
+		local point, inFront = camera:WorldToViewportPoint(world)
+		local at, rotation, onEdge =
 			TrainingSpotlightUtils.edge(Vector2.new(point.X, point.Y), inFront and point.Z > 0, screen, ARROW_MARGIN)
+		if onEdge then
+			at, rotation =
+				TrainingSpotlightUtils.offscreen(camera.CFrame:PointToObjectSpace(world), screen, ARROW_MARGIN)
+		end
 		props.arrow = { position = at, rotation = rotation }
 		props.linePosition = Vector2.new(
 			math.clamp(at.X - LINE_SIZE.X / 2, 0, math.max(screen.X - LINE_SIZE.X, 0)),
@@ -193,14 +221,18 @@ local function tick(deltaTime: number)
 		return
 	end
 	local now = os.clock()
+	local must = step.mustDo == true
 	if skipped then
-		advance()
-		return
+		skipped = false
+		if not must then
+			advance()
+			return
+		end
 	end
 	-- A page is open over the hub (the employee pick, the Shop, a board): the spotlight waits behind it, its clock
 	-- paused. A button already shown that is now covered by a page was pressed (its page opened).
 	if SceneStack.depth() > 0 then
-		if step.kind == "gui" and seenAt ~= nil then
+		if step.kind == "gui" and seenAt ~= nil and not must then
 			advance()
 			return
 		end
@@ -210,7 +242,7 @@ local function tick(deltaTime: number)
 	end
 	local age = now - startedAt
 	local done = step.done
-	if (done ~= nil and age > DONE_AFTER and done()) or age > (step.seconds or math.huge) then
+	if (done ~= nil and age > DONE_AFTER and done()) or (not must and age > (step.seconds or math.huge)) then
 		advance()
 		return
 	end
@@ -221,12 +253,12 @@ local function tick(deltaTime: number)
 		else
 			-- Gone a moment after it showed (pressed: its page opened), or it never showed up.
 			local over = if last ~= nil then now - last > GONE_SECONDS else age > GUI_WAIT
-			if over then
+			if over and not must then
 				advance()
 				return
 			end
 		end
-	elseif age > (step.seconds or WORLD_SECONDS) then
+	elseif step.kind == "world" and not must and age > (step.seconds or WORLD_SECONDS) then
 		advance()
 		return
 	end

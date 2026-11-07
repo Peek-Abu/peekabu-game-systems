@@ -87,4 +87,26 @@ function TrainingSpotlightUtils.edge(
 	return edge, math.deg(math.atan2(direction.Y, direction.X)) - 90, true
 end
 
+--[=[
+	Where a world arrow goes for a target off the screen, from the target in the camera's own space (`localPoint`:
+	+X right, +Y up, -Z ahead): on the screen's edge, `margin` in, on the target's side, rotated to point that way.
+	A target behind the camera keeps its side (left stays left), and one straight behind points down ("turn around").
+	This uses the camera's space, not a viewport projection, which flips sides for points behind the camera.
+]=]
+function TrainingSpotlightUtils.offscreen(localPoint: Vector3, screen: Vector2, margin: number): (Vector2, number)
+	local centre = screen / 2
+	local direction = Vector2.new(localPoint.X, -localPoint.Y)
+	if localPoint.Z > 0 then
+		-- Behind: lean down (turn around) while keeping the side.
+		direction = Vector2.new(direction.X, math.abs(direction.Y) + localPoint.Z * 0.25)
+	end
+	if direction.Magnitude < 1e-3 then
+		direction = Vector2.new(0, 1)
+	end
+	local scaleX = if math.abs(direction.X) > 1e-6 then (centre.X - margin) / math.abs(direction.X) else math.huge
+	local scaleY = if math.abs(direction.Y) > 1e-6 then (centre.Y - margin) / math.abs(direction.Y) else math.huge
+	local at = centre + direction * math.min(scaleX, scaleY)
+	return at, math.deg(math.atan2(direction.Y, direction.X)) - 90
+end
+
 return TrainingSpotlightUtils
