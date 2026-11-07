@@ -244,6 +244,7 @@ local TrainingConstants = {
 		tourPower = "This is your power! Tap it now to try it.",
 		tourRun = "Run! Hold Shift to run fast.",
 		tourRunPad = "Run! Press the left stick to run fast.",
+		tourRunTouch = "Run! Hold the SPRINT button.",
 	}),
 }
 

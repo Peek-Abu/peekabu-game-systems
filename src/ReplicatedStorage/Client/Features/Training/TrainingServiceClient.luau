@@ -66,8 +66,8 @@ local function vacuumOut(): boolean
 	return entry ~= nil and entry[VacuumConstants.PUBLIC_EQUIPPED_FIELD] == true
 end
 
--- The hotbar tour: the vacuum's slot; a run they must do (only with a keyboard or a gamepad: a phone has no run
--- control); their power, which they must really use (skipped for an employee with none).
+-- The hotbar tour: the vacuum's slot; a run they must do (Shift, the left stick, or the phone's SPRINT button,
+-- ShiftMobileButtons); their power, which they must really use (skipped for an employee with none).
 local function hotbarTour(): { TrainingSpotlightSystem.Step }
 	local sprinted = 0
 	local lastCheck: number? = nil
@@ -81,24 +81,25 @@ local function hotbarTour(): { TrainingSpotlightSystem.Step }
 			done = vacuumOut,
 		},
 	}
-	local keyboard = UserInputService.KeyboardEnabled
-	if keyboard or UserInputService.GamepadEnabled then
-		table.insert(steps, {
-			kind = "do",
-			tag = "",
-			line = if keyboard then TrainingConstants.TEXT.tourRun else TrainingConstants.TEXT.tourRunPad,
-			mustDo = true,
-			done = function()
-				local now = os.clock()
-				local last = lastCheck
-				if last ~= nil and SprintStore.sprinting() then
-					sprinted += now - last
-				end
-				lastCheck = now
-				return TrainingGuideRules.ranEnough(sprinted)
-			end,
-		})
-	end
+	local runLine = if UserInputService.KeyboardEnabled
+		then TrainingConstants.TEXT.tourRun
+		elseif UserInputService.TouchEnabled then TrainingConstants.TEXT.tourRunTouch
+		else TrainingConstants.TEXT.tourRunPad
+	table.insert(steps, {
+		kind = "do",
+		tag = "",
+		line = runLine,
+		mustDo = true,
+		done = function()
+			local now = os.clock()
+			local last = lastCheck
+			if last ~= nil and SprintStore.sprinting() then
+				sprinted += now - last
+			end
+			lastCheck = now
+			return TrainingGuideRules.ranEnough(sprinted)
+		end,
+	})
 	if AbilityStore.abilityId() ~= nil then
 		table.insert(steps, {
 			kind = "gui",
