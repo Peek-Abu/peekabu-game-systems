@@ -105,6 +105,22 @@ return table.freeze({
 		max = 0.18,
 		tilt = 0.9,
 	}),
+	-- The live hose (feel pass batch 2, 2026-11-06; VacuumHoseSystem, the maths VacuumFeelFormulas.hose): while the
+	-- wand is out its curve swings with the wand's move (`gain` swing per stud/s of the inlet's move against the body,
+	-- at most `max`, on an underdamped spring) and wiggles while sucking (`wiggle` of the curve at `wiggleHz`).
+	-- `enabled = false` restores the server's fixed curve exactly.
+	hose = table.freeze({
+		enabled = true,
+		gain = 0.12,
+		max = 0.8,
+		frequency = 2.4,
+		damping = 0.35,
+		swing0 = 0.6,
+		swing1 = 0.9,
+		wiggle = 0.22,
+		wiggleHz = 3.2,
+		floor = 0.2,
+	}),
 	-- Never let the floor head under the floor: its lowest corner stays `floorMargin` above it.
 	floorMargin = 0.01,
 	-- Never move the wand where the left paw cannot follow: its grip stays within `reachUse` of the left arm's reach

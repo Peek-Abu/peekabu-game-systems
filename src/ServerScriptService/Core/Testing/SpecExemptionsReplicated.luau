@@ -185,6 +185,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumMotionConstants"] = "static tuning and names (no logic)",
 	["ReplicatedStorage.Shared.Features.Vacuum.Net.VacuumEvents"] = "ByteNet packet definitions (no logic)",
 	["ReplicatedStorage.Shared.Features.Vacuum.Systems.VacuumMotionRigSystem"] = "Instance/Motor6D shell (the maths is specced in VacuumMotionFormulas; judged live by AnimationVacuumHarness)",
+	["ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumHoseSystem"] = "Beam/attachment shell (the maths is specced in VacuumFeelFormulas.hose and VacuumMotionFormulas.step)",
 	["ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumMotionSystem"] = "Players/Camera/RunService/ByteNet shell (the maths is specced in VacuumMotionFormulas)",
 	["ReplicatedStorage.Client.Features.Vacuum.VacuumServiceClient"] = "Input shell (VacuumTargetRules is specced; the server decides)",
 

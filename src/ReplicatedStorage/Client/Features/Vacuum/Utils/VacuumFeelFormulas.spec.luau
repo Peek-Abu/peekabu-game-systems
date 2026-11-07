@@ -65,4 +65,32 @@ return function()
 			expect(VacuumFeelFormulas.popTrauma(0) > 0).to.equal(true)
 		end)
 	end)
+
+	describe("hose", function()
+		local tuning = { swing0 = 0.6, swing1 = 0.9, wiggle = 0.25, wiggleHz = 3, floor = 0.2 }
+
+		it("is the planned curve when the wand is still and not sucking", function()
+			local c0, c1 = VacuumFeelFormulas.hose(0.8, 0.24, 0, 1.3, 5, 0, tuning)
+			expect(c0).to.equal(0.8)
+			expect(c1).to.equal(0.24)
+		end)
+
+		it("swings the curve with the wand's move, both ends the other way", function()
+			local up0, up1 = VacuumFeelFormulas.hose(0.8, 0.24, 0.5, 0, 0, 0, tuning)
+			local down0, down1 = VacuumFeelFormulas.hose(0.8, 0.24, -0.5, 0, 0, 0, tuning)
+			expect(up0 > 0.8 and down0 < 0.8).to.equal(true)
+			expect(up1 < 0.24 and down1 > 0.24).to.equal(true)
+		end)
+
+		it("wiggles while sucking, within its share, and never folds the hose flat", function()
+			local most = 0
+			for step = 0, 120 do
+				local c0 = VacuumFeelFormulas.hose(0.8, 0.24, 0, step / 60, 3, 1, tuning)
+				most = math.max(most, math.abs(c0 - 0.8))
+			end
+			expect(most > 0.05 and most <= 0.8 * tuning.wiggle + 1e-9).to.equal(true)
+			local c0, c1 = VacuumFeelFormulas.hose(0.8, 0.24, -10, 0, 0, 1, tuning)
+			expect(c0 >= 0.8 * tuning.floor - 1e-9 and c1 >= 0.24 * tuning.floor - 1e-9).to.equal(true)
+		end)
+	end)
 end
