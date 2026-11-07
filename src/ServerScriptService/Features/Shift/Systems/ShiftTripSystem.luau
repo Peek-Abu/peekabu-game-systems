@@ -40,6 +40,7 @@ local DepotTypes = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotTyp
 local QueueTypes = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueTypes)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
+local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local DepotContractUtils = require(ServerScriptService.Features.Depot.Utils.DepotContractUtils)
 local DepotServiceServer = require(ServerScriptService.Features.Depot.DepotServiceServer)
 local OfficeServiceServer = require(ServerScriptService.Features.Office.OfficeServiceServer)
@@ -162,7 +163,10 @@ function ShiftTripSystem.new(options: Options): ShiftTripSystem
 					return
 				end
 				members:join(idsOf(party), presentIds())
-				contract = DepotContractUtils.resolve(DepotConstants.CONTRACTS, payload.contract)
+				-- A training trip goes to the training room, not the night's client (its route slip says so).
+				contract = if payload[TrainingConstants.MODE_KEY] == TrainingConstants.MODE
+					then TrainingConstants.CONTRACT
+					else DepotContractUtils.resolve(DepotConstants.CONTRACTS, payload.contract)
 				truck = DepotContractUtils.truckOf(payload.truck, DepotConstants.MAX_TRUCKS)
 				log:info(`a crew of {#party} arrived for {contract.id}`)
 				changed()

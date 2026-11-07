@@ -149,7 +149,7 @@ local function TrainingFinish(): React.ReactNode
 			meaning = "gold",
 			textSize = math.floor(36 * s),
 			anchor = Vector2.new(0.5, 0),
-			position = UDim2.fromOffset(awardAt.X - 340 * s, awardAt.Y + 580 * s),
+			position = UDim2.fromOffset(awardAt.X - 340 * s, awardAt.Y + 440 * s),
 			size = UDim2.fromOffset(170 * s, 64 * s),
 			zIndex = 8,
 		}),

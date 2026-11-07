@@ -13,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
+local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local WorldBillboardViewModel = require(ReplicatedStorage.Client.UI.React.Screens.World.WorldBillboardViewModel)
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local PaperHudScaleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudScaleViewModel)
@@ -92,7 +93,10 @@ function ShiftTransitViewModel.slip(snapshot: ShiftTypes.TransitSnapshot?, arriv
 	return {
 		heading = if arrived then "ARRIVED AT" else "EN ROUTE TO",
 		client = (string.gsub(string.upper(to), "%s+LTD%.?$", "")),
-		site = `{DepotConstants.SITE} · {ShiftHudViewModel.clock(ShiftConstants.SHIFT_SECONDS)} shift`,
+		-- A training trip's slip names the training room and says what it is for, not the night's site and clock.
+		site = if client == TrainingConstants.CONTRACT.client
+			then TrainingConstants.ROOM_SITE
+			else `{DepotConstants.SITE} · {ShiftHudViewModel.clock(ShiftConstants.SHIFT_SECONDS)} shift`,
 		tip = DepotConstants.BOARD_COPY.hazard,
 		bar = if arrived then "DOORS OPEN!" else "DRIVING TO THE SITE...",
 		band = `{ShiftConstants.EMPLOYER_BAND} — DISPATCH`,

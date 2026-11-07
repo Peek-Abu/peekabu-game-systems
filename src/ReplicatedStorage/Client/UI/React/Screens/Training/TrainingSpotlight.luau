@@ -62,7 +62,10 @@ end
 -- Pippa says the line, placed near the layout's line spot and kept on the screen.
 local function Coach(props: TrainingSpotlightProps): React.ReactNode
 	local phone = props.screen.Y < 500
-	local size = if phone then COACH_PHONE else COACH_DESKTOP
+	-- The Coach layer is in screen px: the coach is drawn at the HUD's scale for this screen (desktop sizes are for
+	-- 1920x1080), never bigger than designed.
+	local scale = if phone then 1 else math.clamp(math.min(props.screen.X / 1920, props.screen.Y / 1080), 0.5, 1)
+	local size = (if phone then COACH_PHONE else COACH_DESKTOP) * scale
 	local x = math.clamp(props.linePosition.X - size.X * 0.3, 8, math.max(8, props.screen.X - size.X - 8))
 	local bottom = math.clamp(props.linePosition.Y + size.Y * 0.7, size.Y + 8, props.screen.Y - 8)
 	return e(TrainingCoach, {
@@ -70,6 +73,7 @@ local function Coach(props: TrainingSpotlightProps): React.ReactNode
 		phone = phone,
 		position = UDim2.fromOffset(x, bottom),
 		zIndex = 22,
+		scale = scale,
 	})
 end
 local function TrainingSpotlight(props: TrainingSpotlightProps): React.ReactNode

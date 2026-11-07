@@ -13,6 +13,12 @@ return function()
 			expect(view.arrived).to.equal(false)
 		end)
 
+		it("names the training room on a training trip, not the night's site", function()
+			local view = ShiftTransitViewModel.slip({ holds = {}, client = "Training Room", truck = nil }, false)
+			expect(view.client).to.equal("TRAINING ROOM")
+			expect(view.site).to.equal("Morrow & Morrow · learn the job")
+		end)
+
 		it("stamps ARRIVED", function()
 			local view = ShiftTransitViewModel.slip({ holds = {}, client = "Harlow & Finch Ltd." }, true)
 			expect(view.stamp).to.equal("ARRIVED")

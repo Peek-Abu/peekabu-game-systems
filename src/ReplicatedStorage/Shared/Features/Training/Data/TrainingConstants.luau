@@ -191,6 +191,16 @@ local TrainingConstants = {
 	-- The goal bar per stop (TrainingGoalBar), in place of the Gloom meter.
 	GOALS = table.freeze(GOALS),
 
+	-- A training trip's contract (in place of the night's client): the ride's route slip says where you are going.
+	CONTRACT = table.freeze({
+		id = "training",
+		client = "Training Room",
+		job = "Learn the job",
+		note = "No rush. Pippa will show you.",
+	}),
+	-- The route slip's site line on a training trip.
+	ROOM_SITE = "Morrow & Morrow · learn the job",
+
 	-- If the player picks nothing on the finish screen, the ride home leaves after this long.
 	FINISH_WAIT = 30,
 

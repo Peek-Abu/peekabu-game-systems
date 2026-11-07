@@ -115,6 +115,8 @@ local function TrainingGuideHud(): React.ReactNode
 	local stop = useAtom(TrainingCoachStore.stop)
 	local said = useAtom(TrainingCoachStore.said)
 	local catch = useAtom(TrainingCoachStore.catch)
+	-- The finish screen covers the run: nothing of the guide shows under it.
+	local finished = useAtom(TrainingCoachStore.finish) ~= nil
 	-- Read so the coach follows the situation (TrainingCoachStore.line reads it).
 	useAtom(TrainingCoachStore.situation)
 	local hudScale = usePaperHudScale()
@@ -124,7 +126,7 @@ local function TrainingGuideHud(): React.ReactNode
 	local beatRunning = catch ~= nil and TrainingGuideRules.catchPhase(clock - catch.at) ~= "done"
 	local timedLine = said ~= nil and said.untilAt ~= nil and clock < said.untilAt
 	local now = useTicking(beatRunning or timedLine)
-	if stop == nil then
+	if stop == nil or finished then
 		return nil
 	end
 	local line = TrainingCoachStore.line(now)

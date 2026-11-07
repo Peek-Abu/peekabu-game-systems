@@ -29,6 +29,8 @@ export type TrainingCoachProps = {
 	position: UDim2,
 	anchor: Vector2?,
 	zIndex: number?,
+	-- Drawn at this scale (a screen-px layer, the hub tour's Coach layer); nil = 1 (inside a scaled HUD frame).
+	scale: number?,
 }
 
 -- Who coaches (an EmployeeRegistry key).
@@ -91,6 +93,7 @@ local function TrainingCoach(props: TrainingCoachProps): React.ReactNode
 		BackgroundTransparency = 1,
 		ZIndex = z,
 	}, {
+		scale = if props.scale ~= nil then e("UIScale", { Scale = props.scale }) else nil,
 		pippa = e(ToonViewport, {
 			employee = COACH,
 			framing = "upper",
