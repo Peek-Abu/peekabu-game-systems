@@ -193,18 +193,21 @@ local KIT_POSES: { [string]: PoseDef } = {
 		RightEarBase = Vector3.new(55, 0, -10),
 		LeftEarBase = Vector3.new(60, 0, 12),
 	}, "Shh"),
-	-- Hide!: can't look! Both ears fold forward down over her eyes (her paws can't reach past her muzzle), her face
-	-- tipped back so the ears hang in front of it (not through it), paws tucked up, her scared face peeking out (Pippa's "Scared" face; Worried where an employee has none).
-	hide = pose("hide", "Worried", {
+	-- Hide!: can't look! Both ears fold forward down over her eyes, twisted flat side out so each one covers a whole
+	-- eye (checked front-on with a long lens: folded further they sink behind her cheeks; her left ear rests bent, so
+	-- it rolls in further than the right). Her paws can't reach past her muzzle, so they stay tucked up. Her eyes are
+	-- wider than her ears, so the face under them is Dazed: only the squeezed lid ends peek out (an open eye showed
+	-- white), with its wobbly mouth.
+	hide = pose("hide", "Dazed", {
 		RightShoulder = Vector3.new(0, 64, -40),
 		RightElbow = Vector3.new(0, 0, 100),
 		LeftShoulder = mirror(Vector3.new(0, 58, -46)),
 		LeftElbow = mirror(Vector3.new(0, 0, 92)),
 		Waist = Vector3.new(-8, 0, 6),
-		Neck = Vector3.new(14, 6, -8),
-		RightEarBase = Vector3.new(-122, 0, -6),
-		LeftEarBase = Vector3.new(-118, 0, -24),
-	}, "Scared"),
+		Neck = Vector3.new(14, 0, 0),
+		RightEarBase = Vector3.new(-129, 45, 3),
+		LeftEarBase = Vector3.new(-130, -45, -40),
+	}),
 	-- You did it!: both paws up beside her head (the right higher, out clear of her face), leaning back, head tipped.
 	coachCheer = pose("coachCheer", "Happy", {
 		RightShoulder = Vector3.new(0, -30, 12),
