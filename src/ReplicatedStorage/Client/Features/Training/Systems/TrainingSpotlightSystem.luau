@@ -19,6 +19,7 @@
 ]=]
 
 local CollectionService = game:GetService("CollectionService")
+local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -93,6 +94,17 @@ local function guiTarget(tag: string): GuiObject?
 	return nil
 end
 
+-- Where `target` is on the Coach layer's screen (which ignores the top bar's inset): a target in a ScreenGui that does
+-- not ignore it sits that inset lower than its AbsolutePosition says.
+local function screenPosition(target: GuiObject): Vector2
+	local gui = target:FindFirstAncestorOfClass("ScreenGui")
+	if gui ~= nil and not gui.IgnoreGuiInset then
+		local inset = GuiService:GetGuiInset()
+		return target.AbsolutePosition + inset
+	end
+	return target.AbsolutePosition
+end
+
 local function worldTarget(step: Step, from: Vector3): BasePart?
 	local best: BasePart? = nil
 	local bestDistance = math.huge
@@ -152,7 +164,7 @@ local function draw(step: Step, now: number)
 			render(nil)
 			return
 		end
-		local hole = TrainingSpotlightUtils.hole(target.AbsolutePosition, target.AbsoluteSize, screen, PAD)
+		local hole = TrainingSpotlightUtils.hole(screenPosition(target), target.AbsoluteSize, screen, PAD)
 		props.hole = hole
 		props.linePosition = TrainingSpotlightUtils.lineAt(hole, screen, LINE_SIZE, LINE_GAP)
 	else
