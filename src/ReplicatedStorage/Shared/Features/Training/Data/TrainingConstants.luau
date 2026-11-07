@@ -154,7 +154,7 @@ local TrainingConstants = {
 	-- The guide (tutorial v3): a floor trail of chevrons scrolling toward the goal, a bobbing arrow over it and a ring
 	-- on the floor under it. Gold, red at the hide stop. The images are Icey Labs uploads, white so they tint.
 	GUIDE = table.freeze({
-		chevron = "rbxassetid://89473415754109",
+		chevron = "rbxassetid://137999532377528",
 		arrow = "rbxassetid://130801617656931",
 		calm = Color3.fromRGB(255, 205, 64),
 		danger = Color3.fromRGB(255, 84, 112),
