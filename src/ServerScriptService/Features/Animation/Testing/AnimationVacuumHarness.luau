@@ -64,6 +64,9 @@ export type Entry = {
 	frames: { Frame },
 	problems: { string },
 	ok: boolean,
+	-- The wand's aim turn about its pivot (degrees, left positive) looking straight ahead, and at the look's most
+	-- left and right (VacuumMotionFormulas.aimYaw).
+	turns: { ahead: number, left: number, right: number }?,
 }
 export type Result = { ok: boolean, entries: { Entry }, notes: { string } }
 -- The worst of a layer's frames: the furthest each paw sat from its grip, and the floor head's least clearance.
@@ -315,6 +318,13 @@ local function hold(carrier: Carrier, skin: VacuumSkinRegistry.SkinDef): Entry
 	local rig = VacuumMotionRigSystem.bind(model)
 	if rig == nil then
 		table.insert(entry.problems, "the motion layers could not bind the held vacuum")
+	else
+		local far, most = VacuumMotionConstants.aim.far, VacuumMotionConstants.aim.maxLook
+		entry.turns = {
+			ahead = math.deg(VacuumMotionFormulas.aimYaw(rig.rest, 0, far)),
+			left = math.deg(VacuumMotionFormulas.aimYaw(rig.rest, most, far)),
+			right = math.deg(VacuumMotionFormulas.aimYaw(rig.rest, -most, far)),
+		}
 	end
 	local pose: VacuumMotionRigSystem.Pose? = nil
 	local layering = RunService.PreSimulation:Connect(function()
@@ -451,6 +461,18 @@ function AnimationVacuumHarness.format(result: Result): string
 	end
 	for _, entry in result.entries do
 		table.insert(lines, `{if entry.ok then "PASS" else "FAIL"} {entry.rig} {entry.skin}`)
+		local turns = entry.turns
+		if turns ~= nil then
+			table.insert(
+				lines,
+				string.format(
+					"  aim turn: ahead %+.1f deg, look left %+.1f, look right %+.1f",
+					turns.ahead,
+					turns.left,
+					turns.right
+				)
+			)
+		end
 		local worst: { [string]: Worst } = {}
 		for _, frame in entry.frames do
 			table.insert(
