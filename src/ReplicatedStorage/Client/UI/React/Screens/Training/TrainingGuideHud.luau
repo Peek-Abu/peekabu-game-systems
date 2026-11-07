@@ -117,6 +117,8 @@ local function TrainingGuideHud(): React.ReactNode
 	local catch = useAtom(TrainingCoachStore.catch)
 	-- The finish screen covers the run: nothing of the guide shows under it.
 	local finished = useAtom(TrainingCoachStore.finish) ~= nil
+	-- A spotlight tour step shows its own Pippa: the run's coach steps aside meanwhile.
+	local touring = useAtom(TrainingCoachStore.touring)
 	-- Read so the coach follows the situation (TrainingCoachStore.line reads it).
 	useAtom(TrainingCoachStore.situation)
 	local hudScale = usePaperHudScale()
@@ -135,7 +137,7 @@ local function TrainingGuideHud(): React.ReactNode
 	local metrics = if phone then ShiftHudViewModel.METER.phone else ShiftHudViewModel.METER.desktop
 	local underBar = metrics.top + metrics.size.Y + (if phone then 34 else 70)
 	local children: { [string]: React.ReactNode } = {}
-	if line ~= nil and phase ~= "dark" then
+	if line ~= nil and phase ~= "dark" and not touring then
 		children.coach = e(TrainingCoach, {
 			line = line,
 			phone = phone,

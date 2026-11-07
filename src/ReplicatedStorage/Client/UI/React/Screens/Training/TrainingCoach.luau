@@ -86,21 +86,7 @@ local function TrainingCoach(props: TrainingCoachProps): React.ReactNode
 			}),
 		}),
 	}
-	return e("Frame", {
-		AnchorPoint = props.anchor or Vector2.new(0, 1),
-		Position = props.position,
-		Size = UDim2.fromOffset(width, portrait),
-		BackgroundTransparency = 1,
-		ZIndex = z,
-	}, {
-		scale = if props.scale ~= nil then e("UIScale", { Scale = props.scale }) else nil,
-		pippa = e(ToonViewport, {
-			employee = COACH,
-			framing = "upper",
-			context = CONTEXTS[props.line.pose],
-			size = UDim2.fromOffset(portrait, portrait),
-			zIndex = z + 2,
-		}),
+	local children: { [string]: React.ReactNode } = {
 		bubble = e(ToonPanel, {
 			size = bubble,
 			anchor = Vector2.new(0, 1),
@@ -111,7 +97,25 @@ local function TrainingCoach(props: TrainingCoachProps): React.ReactNode
 			zIndex = z + 1,
 			children = bubbleFace,
 		}),
+	}
+	if props.scale ~= nil then
+		children.scale = e("UIScale", { Scale = props.scale })
+	end
+	-- Keyed by the pose: ToonViewport rebuilds its model only when the employee or look changes, not the pose.
+	children[`pippa_{props.line.pose}`] = e(ToonViewport, {
+		employee = COACH,
+		framing = "upper",
+		context = CONTEXTS[props.line.pose],
+		size = UDim2.fromOffset(portrait, portrait),
+		zIndex = z + 2,
 	})
+	return e("Frame", {
+		AnchorPoint = props.anchor or Vector2.new(0, 1),
+		Position = props.position,
+		Size = UDim2.fromOffset(width, portrait),
+		BackgroundTransparency = 1,
+		ZIndex = z,
+	}, children)
 end
 
 return TrainingCoach

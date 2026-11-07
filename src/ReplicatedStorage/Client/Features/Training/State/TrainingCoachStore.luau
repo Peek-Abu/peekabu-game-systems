@@ -36,6 +36,8 @@ local said = Charm.atom(initialSaid)
 local catch = Charm.atom(initialCatch)
 local finish = Charm.atom(initialFinish)
 local picked = Charm.atom(initialPick)
+-- A spotlight tour step is showing (it has its own Pippa): the run's coach steps aside.
+local touring = Charm.atom(false)
 
 local TrainingCoachStore = {
 	stop = stop,
@@ -44,7 +46,14 @@ local TrainingCoachStore = {
 	catch = catch,
 	finish = finish,
 	picked = picked,
+	touring = touring,
 }
+
+function TrainingCoachStore.setTouring(on: boolean)
+	if touring() ~= on then
+		touring(on)
+	end
+end
 
 -- The run's stop (nil off a run); a new stop starts calm.
 function TrainingCoachStore.setStop(value: number?)

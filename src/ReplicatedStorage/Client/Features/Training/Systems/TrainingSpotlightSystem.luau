@@ -27,6 +27,7 @@ local Workspace = game:GetService("Workspace")
 local React = require(ReplicatedStorage.Packages.React)
 local TrainingSpotlightUtils = require(ReplicatedStorage.Client.Features.Training.Utils.TrainingSpotlightUtils)
 local UIRoot = require(ReplicatedStorage.Client.UI.Layers.UIRoot)
+local TrainingCoachStore = require(ReplicatedStorage.Client.Features.Training.State.TrainingCoachStore)
 local SceneStack = require(ReplicatedStorage.Client.UI.Scenes.SceneStack)
 local TrainingSpotlight = require(ReplicatedStorage.Client.UI.React.Screens.Training.TrainingSpotlight)
 
@@ -124,6 +125,7 @@ local function stopTicking()
 		current:Disconnect()
 	end
 	render(nil)
+	TrainingCoachStore.setTouring(false)
 end
 
 local function advance()
@@ -239,6 +241,7 @@ local TrainingSpotlightSystem = {}
 function TrainingSpotlightSystem.point(list: { Step })
 	steps = table.clone(list)
 	index = 0
+	TrainingCoachStore.setTouring(true)
 	advance()
 	if steps[index] ~= nil and connection == nil then
 		elapsed = 0
