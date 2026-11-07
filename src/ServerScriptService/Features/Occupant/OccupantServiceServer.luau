@@ -156,7 +156,8 @@ local function applyTuning()
 	if current == nil or state == nil then
 		return
 	end
-	local tuning = OccupantTuningFormulas.tuning(state.tier, #RoundServiceServer:participants())
+	local tuning =
+		OccupantTuningFormulas.tuning(state.tier, #RoundServiceServer:participants(), ShiftServiceServer:isTraining())
 	NpcServiceServer:setTuning(current.model, { walkSpeed = tuning.walkSpeed, runSpeed = tuning.runSpeed })
 	NoiseServiceServer:setHearingScale(tuning.hearing)
 end

@@ -15,6 +15,17 @@ end
 
 return function()
 	describe("tuning", function()
+		it("is a little easier on a training run: slower, and hears less", function()
+			local shift = OccupantTuningFormulas.tuning(0, 1)
+			local training = OccupantTuningFormulas.tuning(0, 1, true)
+			expect(training.walkSpeed < shift.walkSpeed).to.equal(true)
+			expect(training.runSpeed < shift.runSpeed).to.equal(true)
+			expect(training.hearing < shift.hearing).to.equal(true)
+			-- Still a chase: he runs faster than he walks.
+			expect(training.runSpeed > training.walkSpeed).to.equal(true)
+			expect(OccupantTuningFormulas.tuning(0, 1, false).runSpeed).to.equal(shift.runSpeed)
+		end)
+
 		it("starts at patrol 10, chase 20 and plain hearing for a crew", function()
 			local tuning = OccupantTuningFormulas.tuning(0, 3)
 			expect(tuning.walkSpeed).to.equal(10)

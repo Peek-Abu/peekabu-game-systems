@@ -179,6 +179,9 @@ return table.freeze({
 	-- A solo player gets a gentler Harlow.
 	SOLO_HEARING = 0.75,
 	SOLO_CHASE_SPEED = -0.5,
+	-- A training run is a little easier (owner 11-07): Harlow's speeds and hearing scaled by these.
+	TRAINING_SPEED = 0.85,
+	TRAINING_HEARING = 0.75,
 	-- Round team counters and per-player scores. CLEARANCE is the Gloom removed (the contract's progress, Round's
 	-- target), DUST the part of it from piles (the rest is item cleaning), BONUS the Credits for banked valuables.
 	CLEARANCE = "clearance",
