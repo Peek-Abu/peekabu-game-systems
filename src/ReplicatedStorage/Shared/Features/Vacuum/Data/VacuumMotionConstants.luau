@@ -10,11 +10,12 @@
 ]=]
 
 return table.freeze({
-	-- Aim with the camera. The camera's look pitch (VacuumMotionFormulas.aim): between `deadLow` and `deadHigh` (the
-	-- default third-person view sits about 20 degrees down) the wand holds its planned pose. Looking up past
-	-- `deadHigh` raises the floor head about the wand's pivot, `gainUp` per radian, to `maxUp` (the nozzle points
-	-- ahead). Looking down past `deadLow` reaches for the floor: up to `reachDrop` down and `reachForward` forward with
-	-- the hands, fully at `fullDown`, the wand flattening so the head stays on the floor further out.
+	-- Aim with the camera (aim fix 2026-11-06: the tilt moves the floor head out and in). The camera's look pitch
+	-- (VacuumMotionFormulas.aim) against the default third-person view (`neutral`, about 20 degrees down; no dead
+	-- band): tilting up toward `deadHigh` moves the head out (the hands go `reachDrop` down and `reachForward` forward,
+	-- the wand flattening so the head slides further out), fully there; past it the floor head rises about the wand's
+	-- pivot, `gainUp` per radian, to `maxUp` (the nozzle points ahead). Tilting down toward `fullDown` brings the
+	-- head in (the hands go `inLift` up and `inBack` back toward the body), fully there.
 	-- The look pitch is replicated quantised to `quantum`, at most `rate` times a second, only when it changes; every
 	-- client eases toward it with a critically damped spring.
 	-- Left and right (aim fix 2026-11-06, visual only): the floor head points at where its holder looks on the floor.
@@ -24,8 +25,8 @@ return table.freeze({
 	-- `maxYawRight`. The upper body turns `twistShare` of the look's heading over the waist (as far as the left paw
 	-- can follow, VacuumMotionFormulas.fitTwist).
 	aim = table.freeze({
-		deadLow = math.rad(-23),
-		deadHigh = math.rad(-17),
+		neutral = math.rad(-20),
+		deadHigh = math.rad(-5),
 		maxLook = math.rad(45),
 		near = 2.5,
 		far = 4,
@@ -41,6 +42,8 @@ return table.freeze({
 		fullDown = math.rad(-70),
 		reachDrop = 0.16,
 		reachForward = 0.14,
+		inLift = 0.12,
+		inBack = 0.16,
 		quantum = math.rad(5),
 		rate = 10,
 		frequency = 3,

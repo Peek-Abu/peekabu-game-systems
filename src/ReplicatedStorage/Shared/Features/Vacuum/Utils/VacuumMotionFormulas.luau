@@ -9,7 +9,7 @@
 	goes. The floor head is never let under the floor: a pose that would sink it is flattened out about the pivot
 	(the head slides further out along the floor) until it just clears.
 
-	- `aim`: the camera's look pitch to a raise (radians) and a reach (0..1). `encodeAim` / `decodeAim`: the byte the
+	- `aim`: the camera's look pitch to a raise (radians) and a reach (-1..1, out positive). `encodeAim` / `decodeAim`: the byte the
 	  client sends and the server checks.
 	- `offsetOf`: the layers' state to the wand's offset (`wand`'s input).
 	- `kickScale` / `kickImpulse`: how hard a pile's pop kicks, as the spring's starting speed; `shimmy` the suction
@@ -45,7 +45,7 @@ export type WandRest = {
 -- the root's Z).
 export type WandOffset = { offset: Vector3, pitch: number, yaw: number, roll: number }
 
--- The layers' state: the aim's raise (radians) and reach (0..1), the brace's weight (0..1), the pop kick (its
+-- The layers' state: the aim's raise (radians) and reach (-1..1, out positive), the brace's weight (0..1), the pop kick (its
 -- spring: 1 is a reference pile's peak), the suction shimmy's turn and roll and the wand's lag (its turn and tip;
 -- radians).
 export type Layers = {
@@ -64,7 +64,7 @@ export type Layers = {
 }
 
 export type AimTuning = {
-	deadLow: number,
+	neutral: number,
 	deadHigh: number,
 	gainUp: number,
 	maxUp: number,
@@ -124,14 +124,15 @@ function VacuumMotionFormulas.step(
 end
 
 --[=[
-	The camera's look pitch (radians, up positive) to the wand's raise (radians about the wand's pivot) and its reach for
-	the floor (0..1); both 0 in the dead band round the default third-person view.
+	The camera's look pitch (radians, up positive) to the wand's raise (radians about the wand's pivot) and its reach
+	(-1..1: out positive, in negative): 0 and 0 at the default third-person view (`neutral`), the reach out toward
+	`deadHigh` and in toward `fullDown`, the raise past `deadHigh`.
 ]=]
 function VacuumMotionFormulas.aim(look: number, tuning: AimTuning): (number, number)
 	local raise = if look > tuning.deadHigh then math.min(tuning.maxUp, (look - tuning.deadHigh) * tuning.gainUp) else 0
-	local reach = if look < tuning.deadLow
-		then math.min(1, (tuning.deadLow - look) / (tuning.deadLow - tuning.fullDown))
-		else 0
+	local reach = if look >= tuning.neutral
+		then math.min(1, (look - tuning.neutral) / (tuning.deadHigh - tuning.neutral))
+		else -math.min(1, (tuning.neutral - look) / (tuning.neutral - tuning.fullDown))
 	return raise, reach
 end
 
@@ -250,16 +251,22 @@ end
 
 --[=[
 	The wand's offset for the layers' state: the aim's raise turns it about its pivot; its reach and the brace
-	move the hands (down and out for the reach, down and in toward the body for the brace); the kick jolts them back
+	move the hands (down and out for a reach out, up and back for a reach in, down and in toward the body for
+	the brace); the kick jolts them back
 	and up and hops the floor head; the shimmy turns and rolls it; the sway turns and tips it.
 ]=]
 function VacuumMotionFormulas.offsetOf(layers: Layers): WandOffset
 	local aim, brace, kick = Constants.aim, Constants.brace, Constants.kick
+	-- The reach out (positive) and in (negative).
+	local out, inward = math.max(layers.reach, 0), math.max(-layers.reach, 0)
 	return {
 		offset = Vector3.new(
 			0,
-			-(layers.reach * aim.reachDrop + layers.brace * brace.handDrop) + layers.kick * kick.lift,
-			-layers.reach * aim.reachForward + layers.brace * brace.pull + layers.kick * kick.lift * kick.back
+			-(out * aim.reachDrop + layers.brace * brace.handDrop) + inward * aim.inLift + layers.kick * kick.lift,
+			-out * aim.reachForward
+				+ inward * aim.inBack
+				+ layers.brace * brace.pull
+				+ layers.kick * kick.lift * kick.back
 		),
 		pitch = layers.raise + layers.kick * kick.pitch + layers.swayPitch,
 		yaw = layers.shimmyYaw + layers.swayYaw + (layers.aimYaw or 0),

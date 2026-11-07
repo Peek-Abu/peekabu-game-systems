@@ -16,7 +16,7 @@
 	   walk (two), sprint (two) and vacuuming (the vacuum's use clip over the idle and the walk when one is
 	   registered, else the locomotion it plays over); each frame is shown once its clip has loaded and confirmed
 	   shown at its time and full weight (AnimationCarryClipHarness);
-	4. in each frame, lays every motion layer on the rig at its extremes (LAYERS: rest, aim up, aim down, the brace
+	4. in each frame, lays every motion layer on the rig at its extremes (LAYERS: rest, aim up, out and in, the brace
 	   and the brace with each aim, the pop's recoil and its rebound, the shimmy each way, the wand's sway each way,
 	   aimed at the look point each way and all at once; the wand always aimed at the look point, as every client
 	   aims it; VacuumMotionRigSystem, exactly as every client does, in PreSimulation after the
@@ -115,9 +115,11 @@ local LOOK = VacuumMotionConstants.aim.maxLook
 local LAYERS: { { name: string, layers: VacuumMotionFormulas.Layers } } = {
 	{ name = "rest", layers = layered({}) },
 	{ name = "aim up", layers = layered({ raise = UP }) },
-	{ name = "aim down", layers = layered({ reach = 1 }) },
+	{ name = "aim out", layers = layered({ reach = 1 }) },
+	{ name = "aim in", layers = layered({ reach = -1 }) },
 	{ name = "brace", layers = layered({ brace = 1 }) },
-	{ name = "brace+down", layers = layered({ reach = 1, brace = 1 }) },
+	{ name = "brace+out", layers = layered({ reach = 1, brace = 1 }) },
+	{ name = "brace+in", layers = layered({ reach = -1, brace = 1 }) },
 	{ name = "brace+up", layers = layered({ raise = UP, brace = 1 }) },
 	-- The pop: the kick's peak, and the spring's rebound the other way.
 	{ name = "recoil", layers = layered({ brace = 1, kick = KICK }) },

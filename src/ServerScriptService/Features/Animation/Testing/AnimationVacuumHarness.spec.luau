@@ -59,9 +59,11 @@ return function()
 						{
 							"rest",
 							"aim up",
-							"aim down",
+							"aim out",
+							"aim in",
 							"brace",
-							"brace+down",
+							"brace+out",
+							"brace+in",
 							"brace+up",
 							"recoil",
 							"recoil back",

@@ -7,8 +7,8 @@
 	  heading off the body and its pitch's floor distance, VacuumMotionFormulas.aimYaw), the upper body twisting a
 	  share of the way; the local player's body also turns to face their camera (VacuumFaceSystem).
 	- Aim: the wand pitches with where its holder looks, about the left paw's grip: looking up raises the floor head (the
-	  nozzle points ahead), looking down reaches for the floor (the hands go down and out, the wand flattens so the head
-	  slides further out). The local player's own camera drives theirs at once; it is sent to the server
+	  nozzle points ahead); tilting the camera moves the floor head out (up toward the horizon: the hands go down and
+	  out, the wand flattens so the head slides further out) and in (down: the hands come up and back). The local player's own camera drives theirs at once; it is sent to the server
 	  (VacuumEvents.Aim, quantised, throttled, only on change), which puts it on the character for everyone else
 	  (VacuumMotionConstants.AIM_ATTRIBUTE).
 	- Lean and brace: while a holder sucks (the server's ACTIVE_ATTRIBUTE, or the local player's own trigger at once),
