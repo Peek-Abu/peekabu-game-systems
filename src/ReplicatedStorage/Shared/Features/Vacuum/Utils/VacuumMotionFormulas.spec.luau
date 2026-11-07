@@ -225,10 +225,19 @@ return function()
 			expect(VacuumMotionFormulas.offsetOf(layers({})).yaw).to.equal(0)
 		end)
 
-		it("twists the upper body with the wand's whole turn (aim and sway), as far as the left paw follows", function()
-			local turned = layers({ aimYaw = 0.3, swayYaw = -0.1 })
+		it("never turns the wand past its most either way, all its turns together", function()
+			local tuning = Constants.aim
+			local right = VacuumMotionFormulas.offsetOf(layers({ aimYaw = -tuning.maxYawRight, swayYaw = -0.3 }))
+			expect(right.yaw).to.be.near(-tuning.maxYawRight, 1e-9)
+			local left = VacuumMotionFormulas.offsetOf(layers({ aimYaw = tuning.maxYawLeft, shimmyYaw = 0.05 }))
+			expect(left.yaw).to.be.near(tuning.maxYawLeft, 1e-9)
+		end)
+
+		it("twists the upper body with the wand's turn off its aim straight ahead (and its sway)", function()
+			local ahead = VacuumMotionFormulas.aimYaw(REST, 0, Constants.aim.far)
+			local turned = layers({ aimYaw = ahead + 0.3, swayYaw = -0.1 })
 			expect(VacuumMotionFormulas.bodyTwist(REST, turned, 0, 0)).to.be.near(0.2 * Constants.aim.twistShare, 1e-9)
-			expect(VacuumMotionFormulas.bodyTwist(REST, layers({}), 0, 0)).to.equal(0)
+			expect(VacuumMotionFormulas.bodyTwist(REST, layers({ aimYaw = ahead }), 0, 0)).to.be.near(0, 1e-9)
 		end)
 
 		it("twists the upper body a share of a turn, about the waist", function()

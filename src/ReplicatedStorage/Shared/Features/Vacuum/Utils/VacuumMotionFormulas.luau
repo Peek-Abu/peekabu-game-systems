@@ -257,7 +257,8 @@ function VacuumMotionFormulas.decodeYaw(byte: number): number?
 end
 
 --[=[
-	The wand's offset for the layers' state: the aim's raise turns it about its pivot; its reach and the brace
+	The wand's offset for the layers' state (its turns together within Constants.aim's maxYawLeft / maxYawRight):
+	the aim's raise turns it about its pivot; its reach and the brace
 	move the hands (down and out for a reach out, up and back for a reach in, down and in toward the body for
 	the brace); the kick jolts them back
 	and up and hops the floor head; the shimmy turns and rolls it; the sway turns and tips it.
@@ -276,7 +277,7 @@ function VacuumMotionFormulas.offsetOf(layers: Layers): WandOffset
 				+ layers.kick * kick.lift * kick.back
 		),
 		pitch = layers.raise + layers.kick * kick.pitch + layers.swayPitch,
-		yaw = layers.shimmyYaw + layers.swayYaw + (layers.aimYaw or 0),
+		yaw = math.clamp(layers.shimmyYaw + layers.swayYaw + (layers.aimYaw or 0), -aim.maxYawRight, aim.maxYawLeft),
 		roll = layers.shimmyRoll,
 	}
 end
@@ -393,13 +394,12 @@ function VacuumMotionFormulas.twist(heading: number): number
 end
 
 --[=[
-	The upper body's twist for the layers' state (with the brace's `drop` and `lean`): a share of the wand's whole
-	turn (its aim and its sway), so the shoulders square to the wand and the left one stays with its grip (a turn
-	about the grip with the body still swings the right hand across and draws the left shoulder away), fitted by
-	`fitTwist`.
+	The upper body's twist for the layers' state (with the brace's `drop` and `lean`): a share of the wand's turn off
+	its aim straight ahead (and its sway), so the shoulders follow the wand round, fitted by `fitTwist`.
 ]=]
 function VacuumMotionFormulas.bodyTwist(rest: WandRest, layers: Layers, drop: number, lean: number): number
-	local turn = (layers.aimYaw or 0) + layers.swayYaw
+	local ahead = VacuumMotionFormulas.aimYaw(rest, 0, Constants.aim.far)
+	local turn = (layers.aimYaw or ahead) - ahead + layers.swayYaw
 	return VacuumMotionFormulas.fitTwist(rest, drop, lean, VacuumMotionFormulas.twist(turn))
 end
 

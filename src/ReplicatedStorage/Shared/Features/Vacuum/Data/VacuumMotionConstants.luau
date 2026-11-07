@@ -22,8 +22,9 @@ return table.freeze({
 	-- The look's heading off the body (`maxLook` at most either way) and the look pitch's floor distance (`near` studs
 	-- from the root looking down at `nearPitch`, `far` looking out at `farPitch`) make a look point; the wand turns
 	-- about its pivot until the floor head points at it (VacuumMotionFormulas.aimYaw), at most `maxYawLeft` /
-	-- `maxYawRight`. The upper body turns `twistShare` of the wand's whole turn (aim and sway) over the waist (as
-	-- far as the left paw can follow, VacuumMotionFormulas.bodyTwist).
+	-- `maxYawRight` (the aim, sway and shimmy together: past it the right hand swings too far across for the left paw
+	-- to stay on its grip). The upper body turns `twistShare` of the wand's turn off its aim straight ahead (and its
+	-- sway) over the waist (as far as the left paw can follow, VacuumMotionFormulas.bodyTwist).
 	aim = table.freeze({
 		neutral = math.rad(-20),
 		deadHigh = math.rad(-5),
