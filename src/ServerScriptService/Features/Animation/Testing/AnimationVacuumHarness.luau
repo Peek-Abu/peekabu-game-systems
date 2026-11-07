@@ -17,8 +17,9 @@
 	   registered, else the locomotion it plays over); each frame is shown once its clip has loaded and confirmed
 	   shown at its time and full weight (AnimationCarryClipHarness);
 	4. in each frame, lays every motion layer on the rig at its extremes (LAYERS: rest, aim up, aim down, the brace
-	   and the brace with each aim, the pop's recoil and its rebound, the shimmy each way, the wand's sway each way
-	   and all at once; VacuumMotionRigSystem, exactly as every client does, in PreSimulation after the
+	   and the brace with each aim, the pop's recoil and its rebound, the shimmy each way, the wand's sway each way,
+	   aimed at the look point each way and all at once; the wand always aimed at the look point, as every client
+	   aims it; VacuumMotionRigSystem, exactly as every client does, in PreSimulation after the
 	   Animator's IK) and judges each: each paw's wrap point (VacuumVisualSystem.wrapOf, inside the paw) must be on
 	   its grip, the right on the wand's GripUpper and the left on its GripLower (the grip contract), within
 	   GRIP_TOLERANCE (the left also within reachSlack: it may slip); each grip must lie inside its paw (the paw closes round the wand); and the floor head's
@@ -88,6 +89,8 @@ type Given = {
 	shimmy: number?,
 	swayYaw: number?,
 	swayPitch: number?,
+	-- The look's heading off the body (radians, left positive): the wand aims at it, the upper body twists toward it.
+	look: number?,
 }
 local function layered(given: Given): VacuumMotionFormulas.Layers
 	local shimmy = given.shimmy or 0
@@ -100,6 +103,7 @@ local function layered(given: Given): VacuumMotionFormulas.Layers
 		shimmyRoll = shimmy * VacuumMotionConstants.shimmy.roll,
 		swayYaw = given.swayYaw or 0,
 		swayPitch = given.swayPitch or 0,
+		lookYaw = given.look or 0,
 	}
 end
 local UP = VacuumMotionConstants.aim.maxUp
@@ -107,6 +111,7 @@ local UP = VacuumMotionConstants.aim.maxUp
 local KICK = VacuumMotionConstants.kick.maxScale
 local SWAY_YAW = VacuumMotionConstants.sway.maxYaw
 local SWAY_PITCH = VacuumMotionConstants.sway.maxPitch
+local LOOK = VacuumMotionConstants.aim.maxLook
 local LAYERS: { { name: string, layers: VacuumMotionFormulas.Layers } } = {
 	{ name = "rest", layers = layered({}) },
 	{ name = "aim up", layers = layered({ raise = UP }) },
@@ -126,6 +131,12 @@ local LAYERS: { { name: string, layers: VacuumMotionFormulas.Layers } } = {
 	{ name = "sway right", layers = layered({ swayYaw = -SWAY_YAW, reach = 1 }) },
 	{ name = "sway stop", layers = layered({ swayPitch = SWAY_PITCH, swayYaw = SWAY_YAW }) },
 	{ name = "sway+up", layers = layered({ raise = UP, swayPitch = -SWAY_PITCH, swayYaw = -SWAY_YAW }) },
+	-- Aimed at the look point at its most each way (aim fix 2026-11-06: the floor head points at it, the upper
+	-- body twists toward it), and braced.
+	{ name = "aim left", layers = layered({ look = LOOK }) },
+	{ name = "aim right", layers = layered({ look = -LOOK }) },
+	{ name = "brace+left", layers = layered({ look = LOOK, brace = 1 }) },
+	{ name = "brace+right", layers = layered({ look = -LOOK, brace = 1, reach = 1 }) },
 	-- Everything at once.
 	{
 		name = "all",
@@ -192,20 +203,26 @@ local function clearance(model: Model, head: BasePart?): number?
 end
 
 --[=[
-	The pose VacuumMotionSystem lays on a bound rig for `layers` (its springs settled there).
+	The pose VacuumMotionSystem lays on a bound rig for `layers` (its springs settled there): the wand aimed at the
+	look point (the look's heading, `distance` studs out; the far one by default), the upper body twisted toward it.
 ]=]
 function AnimationVacuumHarness.poseOf(
 	rig: VacuumMotionRigSystem.Rig,
-	layers: VacuumMotionFormulas.Layers
+	layers: VacuumMotionFormulas.Layers,
+	distance: number?
 ): VacuumMotionRigSystem.Pose
+	local look = layers.lookYaw or 0
+	local aimed = table.clone(layers)
+	aimed.aimYaw = VacuumMotionFormulas.aimYaw(rig.rest, look, distance or VacuumMotionConstants.aim.far)
 	local drop, lean = VacuumMotionFormulas.body(layers.brace)
+	local twist = VacuumMotionFormulas.fitTwist(rig.rest, drop, lean, VacuumMotionFormulas.twist(look))
 	local wand = VacuumMotionFormulas.wand(
 		rig.rest,
-		VacuumMotionFormulas.offsetOf(layers),
+		VacuumMotionFormulas.offsetOf(aimed),
 		VacuumMotionConstants.floorMargin,
-		VacuumMotionFormulas.motion(rig.rest.waist, drop, lean)
+		VacuumMotionFormulas.motion(rig.rest.waist, drop, lean, twist)
 	)
-	return { wand = wand, drop = drop, lean = lean }
+	return { wand = wand, drop = drop, lean = lean, twist = twist }
 end
 
 --[=[

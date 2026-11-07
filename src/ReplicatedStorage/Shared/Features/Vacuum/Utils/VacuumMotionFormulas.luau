@@ -59,6 +59,8 @@ export type Layers = {
 	swayPitch: number,
 	-- The aim's turn toward where its holder looks, left or right (radians; nil reads 0).
 	aimYaw: number?,
+	-- The look's heading off the body (radians, left positive; nil reads 0): the upper body twists toward it.
+	lookYaw: number?,
 }
 
 export type AimTuning = {
@@ -186,12 +188,46 @@ function VacuumMotionFormulas.relativeYaw(cameraLook: Vector3, bodyLook: Vector3
 end
 
 --[=[
-	The wand's turn toward a look `relative` radians left of the body: `yawGain` of it, at most `maxYaw` either way.
+	The look's heading off the body (radians, left positive) the wand aims at: `relative` within Constants.aim.maxLook
+	either way.
+]=]
+function VacuumMotionFormulas.lookHeading(relative: number): number
+	local most = Constants.aim.maxLook
+	return math.clamp(relative, -most, most)
+end
+
+--[=[
+	How far out on the floor (studs from the root) a look `pitch` (radians, up positive) lands, within near..far:
+	near at nearPitch and below, far at farPitch and above.
+]=]
+function VacuumMotionFormulas.lookDistance(pitch: number): number
+	local aim = Constants.aim
+	local share = math.clamp((pitch - aim.nearPitch) / (aim.farPitch - aim.nearPitch), 0, 1)
+	return aim.near + (aim.far - aim.near) * share
+end
+
+-- The floor head's centre at rest (root space): the middle of its bottom corners.
+local function headCentre(rest: WandRest): Vector3
+	local sum = Vector3.zero
+	for _, corner in rest.corners do
+		sum += corner
+	end
+	return if #rest.corners > 0 then sum / #rest.corners else rest.pivot
+end
+
+--[=[
+	The wand's turn about its pivot (radians, left positive) that points the floor head at the look point `distance`
+	studs out along the look's `heading` from the root, within Constants.aim's maxYawLeft / maxYawRight.
 	Purely visual (the suction aims by the body, not the camera).
 ]=]
-function VacuumMotionFormulas.aimYaw(relative: number): number
+function VacuumMotionFormulas.aimYaw(rest: WandRest, heading: number, distance: number): number
 	local aim = Constants.aim
-	return math.clamp(relative * aim.yawGain, -aim.maxYaw, aim.maxYaw)
+	local pivot = rest.pivot
+	local head = headCentre(rest)
+	local target = Vector3.new(-math.sin(heading) * distance, 0, -math.cos(heading) * distance)
+	local want = VacuumMotionFormulas.heading(Vector3.new(target.X - pivot.X, 0, target.Z - pivot.Z))
+	local now = VacuumMotionFormulas.heading(Vector3.new(head.X - pivot.X, 0, head.Z - pivot.Z))
+	return math.clamp(wrapAngle(want - now), -aim.maxYawRight, aim.maxYawLeft)
 end
 
 --[=[
@@ -310,6 +346,11 @@ local function clamped(rest: WandRest, offset: WandOffset, margin: number): (CFr
 	return frameAt(rest, offset, high), high
 end
 
+-- The offset with only its move scaled by `k` (the turns whole).
+local function movedBy(offset: WandOffset, k: number): WandOffset
+	return { offset = offset.offset * k, pitch = offset.pitch, yaw = offset.yaw, roll = offset.roll }
+end
+
 -- The offset scaled by `k` (every layer together).
 local function scaledBy(offset: WandOffset, k: number): WandOffset
 	return { offset = offset.offset * k, pitch = offset.pitch * k, yaw = offset.yaw * k, roll = offset.roll * k }
@@ -331,10 +372,41 @@ function VacuumMotionFormulas.motion(waist: Vector3?, drop: number, lean: number
 end
 
 --[=[
-	How far the upper body turns over the waist with the wand's aim turn (radians): `twistShare` of it.
+	How far the upper body turns over the waist toward the look's heading (radians): `twistShare` of it.
 ]=]
-function VacuumMotionFormulas.twist(aimYaw: number): number
-	return aimYaw * Constants.aim.twistShare
+function VacuumMotionFormulas.twist(heading: number): number
+	return heading * Constants.aim.twistShare
+end
+
+--[=[
+	The body's `twist` (with the brace's `drop` and `lean`) scaled back as far as it must so the left shoulder stays
+	within reach of its grip at rest (`reaches`); whole when it does, or with no left paw.
+]=]
+function VacuumMotionFormulas.fitTwist(rest: WandRest, drop: number, lean: number, twist: number): number
+	local waist = rest.waist
+	local function fits(k: number): boolean
+		return VacuumMotionFormulas.reaches(
+			rest,
+			CFrame.identity,
+			VacuumMotionFormulas.motion(waist, drop, lean, twist * k)
+		)
+	end
+	if rest.left == nil or fits(1) then
+		return twist
+	end
+	if not fits(0) then
+		return 0
+	end
+	local low, high = 0, 1
+	for _ = 1, BISECTIONS do
+		local middle = (low + high) / 2
+		if fits(middle) then
+			low = middle
+		else
+			high = middle
+		end
+	end
+	return twist * low
 end
 
 --[=[
@@ -353,7 +425,8 @@ end
 	The root-space transform that moves the rest hold by `offset` (both IK targets are moved by it), with the floor
 	head's lowest corner kept `margin` over the floor (flattened about the pivot by the least pitch that clears,
 	else lifted), and the left paw's grip kept within its arm's reach (`reaches`, the upper body moved by `body`): if
-	it would not be, every layer is scaled back together until it is. Also returns the pitch used.
+	it would not be, its move is scaled back (the turns kept whole) until it is, every layer together only if no move
+	can help. Also returns the pitch used.
 ]=]
 function VacuumMotionFormulas.wand(rest: WandRest, offset: WandOffset, margin: number, body: CFrame?): (CFrame, number)
 	local moved = body or CFrame.identity
@@ -361,17 +434,23 @@ function VacuumMotionFormulas.wand(rest: WandRest, offset: WandOffset, margin: n
 	if VacuumMotionFormulas.reaches(rest, transform, moved) then
 		return transform, pitch
 	end
+	-- First scale back only the move (the turns kept whole: about the left paw's own grip they never take it away);
+	-- only if even no move cannot keep it in reach is every layer scaled back together.
+	local scale = movedBy
+	if not VacuumMotionFormulas.reaches(rest, clamped(rest, movedBy(offset, 0), margin), moved) then
+		scale = scaledBy
+	end
 	local low, high = 0, 1
 	for _ = 1, BISECTIONS do
 		local middle = (low + high) / 2
-		local candidate = clamped(rest, scaledBy(offset, middle), margin)
+		local candidate = clamped(rest, scale(offset, middle), margin)
 		if VacuumMotionFormulas.reaches(rest, candidate, moved) then
 			low = middle
 		else
 			high = middle
 		end
 	end
-	return clamped(rest, scaledBy(offset, low), margin)
+	return clamped(rest, scale(offset, low), margin)
 end
 
 --[=[

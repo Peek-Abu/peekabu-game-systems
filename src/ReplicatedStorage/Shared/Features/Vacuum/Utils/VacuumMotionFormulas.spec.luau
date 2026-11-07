@@ -128,12 +128,59 @@ return function()
 			expect(yaw > math.rad(170) and yaw <= math.pi).to.equal(true)
 		end)
 
-		it("turns the wand part of the way toward the look, never past its most", function()
+		it("keeps the look's heading within its most either way", function()
+			local most = Constants.aim.maxLook
+			expect(VacuumMotionFormulas.lookHeading(math.rad(20))).to.be.near(math.rad(20), 1e-9)
+			expect(VacuumMotionFormulas.lookHeading(math.rad(-30))).to.be.near(math.rad(-30), 1e-9)
+			expect(VacuumMotionFormulas.lookHeading(math.rad(80))).to.be.near(most, 1e-9)
+			expect(VacuumMotionFormulas.lookHeading(math.rad(-80))).to.be.near(-most, 1e-9)
+		end)
+
+		it("puts the floor look point between near and far, further as the camera looks up", function()
 			local tuning = Constants.aim
-			expect(VacuumMotionFormulas.aimYaw(math.rad(20))).to.be.near(math.rad(20) * tuning.yawGain, 1e-6)
-			expect(VacuumMotionFormulas.aimYaw(math.rad(-20))).to.be.near(-math.rad(20) * tuning.yawGain, 1e-6)
-			expect(VacuumMotionFormulas.aimYaw(math.pi)).to.equal(tuning.maxYaw)
-			expect(VacuumMotionFormulas.aimYaw(-math.pi)).to.equal(-tuning.maxYaw)
+			expect(VacuumMotionFormulas.lookDistance(math.rad(-89))).to.equal(tuning.near)
+			expect(VacuumMotionFormulas.lookDistance(math.rad(10))).to.equal(tuning.far)
+			local low = VacuumMotionFormulas.lookDistance(math.rad(-40))
+			local high = VacuumMotionFormulas.lookDistance(math.rad(-20))
+			expect(low > tuning.near and high > low and high < tuning.far).to.equal(true)
+		end)
+
+		-- Where the floor head's centre is after the wand turns `yaw` about the pivot (root space, flat).
+		local function headAfter(yaw)
+			local centre = Vector3.zero
+			for _, corner in REST.corners do
+				centre += corner / #REST.corners
+			end
+			return CFrame.new(PIVOT) * CFrame.Angles(0, yaw, 0) * CFrame.new(-PIVOT) * centre
+		end
+		local function flatHeading(from, to)
+			return VacuumMotionFormulas.heading(Vector3.new(to.X - from.X, 0, to.Z - from.Z))
+		end
+
+		it("turns the wand about its pivot so the floor head points at the look point", function()
+			for _, degrees in { 0, 25, -25, 40 } do
+				local look = math.rad(degrees)
+				local distance = 3.5
+				local target = Vector3.new(-math.sin(look) * distance, 0, -math.cos(look) * distance)
+				local yaw = VacuumMotionFormulas.aimYaw(REST, look, distance)
+				expect(flatHeading(PIVOT, headAfter(yaw))).to.be.near(flatHeading(PIVOT, target), 1e-4)
+			end
+		end)
+
+		it("does not turn a wand whose floor head already points at the look point", function()
+			local centre = headAfter(0)
+			local along = Vector3.new(centre.X - PIVOT.X, 0, centre.Z - PIVOT.Z).Unit
+			local target = Vector3.new(PIVOT.X, 0, PIVOT.Z) + along * 3
+			local look = VacuumMotionFormulas.heading(target)
+			local yaw = VacuumMotionFormulas.aimYaw(REST, look, Vector3.new(target.X, 0, target.Z).Magnitude)
+			expect(yaw).to.be.near(0, 1e-4)
+		end)
+
+		it("never turns the wand past its most either way", function()
+			local tuning = Constants.aim
+			local far = math.rad(170)
+			expect(VacuumMotionFormulas.aimYaw(REST, far, 0.3) <= tuning.maxYawLeft + 1e-9).to.equal(true)
+			expect(VacuumMotionFormulas.aimYaw(REST, -far, 0.3) >= -tuning.maxYawRight - 1e-9).to.equal(true)
 		end)
 
 		it("sends the look yaw as a byte and reads it back in whole quanta, refusing anything else", function()
@@ -152,7 +199,7 @@ return function()
 			expect(VacuumMotionFormulas.offsetOf(layers({})).yaw).to.equal(0)
 		end)
 
-		it("twists the upper body a share of the aim, about the waist", function()
+		it("twists the upper body a share of the look, about the waist", function()
 			expect(VacuumMotionFormulas.twist(0.4)).to.be.near(0.4 * Constants.aim.twistShare, 1e-9)
 			local waist = Vector3.new(0, 0.2, 0)
 			local twisted = VacuumMotionFormulas.motion(waist, 0, 0, math.rad(20))
@@ -257,6 +304,40 @@ return function()
 				expect(heldAngle).to.be.near(freeAngle, 1e-4)
 			end
 		)
+
+		it("keeps a turn about the left paw's own grip whole when only a move takes the paw out of reach", function()
+			-- The real hold: the wand turns about GripLower, so a turn alone never moves the grip.
+			local at = PIVOT
+			local shoulder = at + Vector3.new(-0.4, 1.1, 0.5)
+			local reach = (at - shoulder).Magnitude / Constants.reachUse
+			local holding = table.clone(REST)
+			holding.left = { at = at, shoulder = shoulder, reach = reach }
+			local swing = { offset = Vector3.new(0, 0, -0.6), pitch = 0, yaw = 0.6, roll = 0 }
+			local held = VacuumMotionFormulas.wand(holding, swing, MARGIN)
+			expect(((held * at) - shoulder).Magnitude <= limitOf(reach) + 1e-4).to.equal(true)
+			local _, y = held:ToOrientation()
+			expect(y).to.be.near(0.6, 1e-4)
+		end)
+
+		it("fits the body's twist so the left shoulder stays in reach of the grip", function()
+			local waist = Vector3.new(0, 0.2, 0)
+			local at = Vector3.new(-0.1, 0.4, -1.0)
+			local shoulder = Vector3.new(-0.55, 1.0, -0.3)
+			local reach = ((at - shoulder).Magnitude + 0.05 - Constants.reachSlack) / Constants.reachUse
+			local holding = table.clone(REST)
+			holding.left = { at = at, shoulder = shoulder, reach = reach }
+			holding.waist = waist
+			local wanted = math.rad(30)
+			local twisted = VacuumMotionFormulas.motion(waist, 0, 0, wanted)
+			expect(((twisted * shoulder) - at).Magnitude > limitOf(reach)).to.equal(true)
+			local fitted = VacuumMotionFormulas.fitTwist(holding, 0, 0, wanted)
+			expect(fitted > 0 and fitted < wanted).to.equal(true)
+			local moved = VacuumMotionFormulas.motion(waist, 0, 0, fitted)
+			expect(((moved * shoulder) - at).Magnitude).to.be.near(limitOf(reach), 2e-3)
+			-- A twist that keeps it in reach (or no left paw) is left whole.
+			expect(VacuumMotionFormulas.fitTwist(holding, 0, 0, -math.rad(10))).to.be.near(-math.rad(10), 1e-9)
+			expect(VacuumMotionFormulas.fitTwist(REST, 0, 0, wanted)).to.equal(wanted)
+		end)
 
 		it("counts the brace's lean: the shoulder drops and tips forward with it", function()
 			local motion = VacuumMotionFormulas.motion(Vector3.new(0, 0.2, 0), 0.2, math.rad(11))

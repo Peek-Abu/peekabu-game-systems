@@ -47,7 +47,8 @@ function VacuumLookSystem.pitchOf(player: Player, character: Model): number
 end
 
 --[=[
-	Where `player` looks left or right of their body (radians, left positive).
+	Where `player` looks left or right of their body (radians, left positive), as the wand aims at it
+	(VacuumMotionFormulas.lookHeading; the local player's is sent so, so every client sees the same).
 ]=]
 function VacuumLookSystem.yawOf(player: Player, character: Model, root: BasePart?): number
 	if player == Players.LocalPlayer then
@@ -55,7 +56,9 @@ function VacuumLookSystem.yawOf(player: Player, character: Model, root: BasePart
 		if camera == nil or root == nil then
 			return 0
 		end
-		return VacuumMotionFormulas.relativeYaw(camera.CFrame.LookVector, root.CFrame.LookVector)
+		return VacuumMotionFormulas.lookHeading(
+			VacuumMotionFormulas.relativeYaw(camera.CFrame.LookVector, root.CFrame.LookVector)
+		)
 	end
 	local degrees = character:GetAttribute(Constants.AIM_YAW_ATTRIBUTE)
 	return if type(degrees) == "number" then math.rad(degrees) else 0

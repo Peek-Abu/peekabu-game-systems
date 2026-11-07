@@ -3,6 +3,9 @@
 	VacuumMotionSystem: the held vacuum's motion layers on this client, for every holder it sees (docs: characters/qa/
 	vacuum-dynamic-ideas.md). Purely visual; the server's hold, suction and targeting are untouched.
 
+	- Aim left and right (aim fix 2026-11-06): the floor head points at where its holder looks on the floor (the look's
+	  heading off the body and its pitch's floor distance, VacuumMotionFormulas.aimYaw), the upper body twisting a
+	  share of the way; the local player's body also turns to face their camera (VacuumFaceSystem).
 	- Aim: the wand pitches with where its holder looks, about the left paw's grip: looking up raises the floor head (the
 	  nozzle points ahead), looking down reaches for the floor (the hands go down and out, the wand flattens so the head
 	  slides further out). The local player's own camera drives theirs at once; it is sent to the server
@@ -47,7 +50,8 @@ type Holder = {
 	kick: Spring,
 	swayYaw: Spring,
 	swayPitch: Spring,
-	aimYaw: Spring,
+	look: Spring,
+	distance: Spring,
 	pack: Spring,
 	-- When it last sucked (a pop within the kick's window of it kicks its wand).
 	activeAt: number,
@@ -139,7 +143,8 @@ local function rigOf(holder: Holder): VacuumMotionRigSystem.Rig?
 	if bound ~= nil then
 		holder.rig = bound
 		holder.raise, holder.reach, holder.brace, holder.kick = spring(), spring(), spring(), spring()
-		holder.swayYaw, holder.swayPitch, holder.aimYaw = spring(), spring(), spring()
+		holder.swayYaw, holder.swayPitch = spring(), spring()
+		holder.look, holder.distance = spring(), { x = Constants.aim.far, v = 0 }
 	end
 	return bound
 end
@@ -172,7 +177,8 @@ local function stepHolder(player: Player, holder: Holder, dt: number)
 	end
 	local aim, brace, kick, sway = Constants.aim, Constants.brace, Constants.kick, Constants.sway
 	local swayYaw, swayPitch = VacuumMotionFormulas.swayTargets(holder.motion.yawRate, holder.motion.accel)
-	local raiseTarget, reachTarget = VacuumMotionFormulas.aim(VacuumLookSystem.pitchOf(player, character), aim)
+	local pitch = VacuumLookSystem.pitchOf(player, character)
+	local raiseTarget, reachTarget = VacuumMotionFormulas.aim(pitch, aim)
 	local head = floorHead(holder, rig)
 	local active = activeOf(player, character)
 	if active then
@@ -186,6 +192,15 @@ local function stepHolder(player: Player, holder: Holder, dt: number)
 	-- The shimmy fades in and out with the brace (0 upright, 1 at the brace's start depth).
 	local shimmyYaw, shimmyRoll =
 		VacuumMotionFormulas.shimmy(os.clock(), player.UserId % 997, progress, braced / brace.base)
+	-- Where the holder looks on the floor: the floor head points at it.
+	local lookYaw = ease(
+		holder.look,
+		VacuumMotionFormulas.lookHeading(VacuumLookSystem.yawOf(player, character, holder.root)),
+		dt,
+		aim.frequency,
+		aim.yawDamping
+	)
+	local distance = ease(holder.distance, VacuumMotionFormulas.lookDistance(pitch), dt, aim.frequency, aim.damping)
 	local layers: VacuumMotionFormulas.Layers = {
 		raise = ease(holder.raise, raiseTarget, dt, aim.frequency, aim.damping),
 		reach = ease(holder.reach, reachTarget, dt, aim.frequency, aim.damping),
@@ -195,16 +210,11 @@ local function stepHolder(player: Player, holder: Holder, dt: number)
 		shimmyRoll = shimmyRoll,
 		swayYaw = ease(holder.swayYaw, swayYaw, dt, sway.frequency, sway.damping),
 		swayPitch = ease(holder.swayPitch, swayPitch, dt, sway.frequency, sway.damping),
-		aimYaw = ease(
-			holder.aimYaw,
-			VacuumMotionFormulas.aimYaw(VacuumLookSystem.yawOf(player, character, holder.root)),
-			dt,
-			aim.frequency,
-			aim.yawDamping
-		),
+		aimYaw = VacuumMotionFormulas.aimYaw(rig.rest, lookYaw, distance),
+		lookYaw = lookYaw,
 	}
 	local drop, lean = VacuumMotionFormulas.body(math.max(layers.brace, 0))
-	local twist = VacuumMotionFormulas.twist(layers.aimYaw or 0)
+	local twist = VacuumMotionFormulas.fitTwist(rig.rest, drop, lean, VacuumMotionFormulas.twist(lookYaw))
 	local wand = VacuumMotionFormulas.wand(
 		rig.rest,
 		VacuumMotionFormulas.offsetOf(layers),
@@ -359,7 +369,8 @@ local function step(dt: number)
 				kick = spring(),
 				swayYaw = spring(),
 				swayPitch = spring(),
-				aimYaw = spring(),
+				look = spring(),
+				distance = { x = Constants.aim.far, v = 0 },
 				pack = spring(),
 				activeAt = -math.huge,
 				motion = {

@@ -17,15 +17,22 @@ return table.freeze({
 	-- the hands, fully at `fullDown`, the wand flattening so the head stays on the floor further out.
 	-- The look pitch is replicated quantised to `quantum`, at most `rate` times a second, only when it changes; every
 	-- client eases toward it with a critically damped spring.
-	-- Left and right (feel pass 2026-11-06, visual only): the wand turns `yawGain` of the way toward where its holder
-	-- looks, left or right of the body, at most `maxYaw`; the upper body turns `twistShare` of that over the waist. The
-	-- dead band is narrow (a few degrees round the default view) so the wand answers every look.
+	-- Left and right (aim fix 2026-11-06, visual only): the floor head points at where its holder looks on the floor.
+	-- The look's heading off the body (`maxLook` at most either way) and the look pitch's floor distance (`near` studs
+	-- from the root looking down at `nearPitch`, `far` looking out at `farPitch`) make a look point; the wand turns
+	-- about its pivot until the floor head points at it (VacuumMotionFormulas.aimYaw), at most `maxYawLeft` /
+	-- `maxYawRight`. The upper body turns `twistShare` of the look's heading over the waist (as far as the left paw
+	-- can follow, VacuumMotionFormulas.fitTwist).
 	aim = table.freeze({
 		deadLow = math.rad(-23),
 		deadHigh = math.rad(-17),
-		-- Batch 2 (2026-11-06) bigger and looser: was 0.75.
-		yawGain = 0.9,
-		maxYaw = math.rad(32),
+		maxLook = math.rad(45),
+		near = 2.5,
+		far = 4,
+		nearPitch = math.rad(-60),
+		farPitch = math.rad(-5),
+		maxYawLeft = math.rad(50),
+		maxYawRight = math.rad(70),
 		twistShare = 0.35,
 		-- The left-right turn's spring damping (below 1: a little overshoot reads as weight).
 		yawDamping = 0.75,
