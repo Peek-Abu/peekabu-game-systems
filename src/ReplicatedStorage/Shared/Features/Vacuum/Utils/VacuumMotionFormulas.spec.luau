@@ -148,6 +148,20 @@ return function()
 			expect(VacuumMotionFormulas.lookHeading(math.rad(-80))).to.be.near(-most, 1e-9)
 		end)
 
+		it("eases the look back to straight ahead behind the back instead of snapping side to side", function()
+			local most = Constants.aim.maxLook
+			expect(VacuumMotionFormulas.lookHeading(math.pi)).to.be.near(0, 1e-9)
+			expect(VacuumMotionFormulas.lookHeading(-math.pi)).to.be.near(0, 1e-9)
+			expect(VacuumMotionFormulas.lookHeading(math.rad(135))).to.be.near(most / 2, 1e-6)
+			-- All the way round in 1 degree steps, no step jumps more than a degree and a half.
+			local last = VacuumMotionFormulas.lookHeading(-math.pi)
+			for degrees = -179, 180 do
+				local now = VacuumMotionFormulas.lookHeading(math.rad(degrees))
+				expect(math.abs(now - last) <= math.rad(1.5)).to.equal(true)
+				last = now
+			end
+		end)
+
 		it("puts the floor look point between near and far, further as the camera looks up", function()
 			local tuning = Constants.aim
 			expect(VacuumMotionFormulas.lookDistance(math.rad(-89))).to.equal(tuning.near)

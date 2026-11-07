@@ -190,11 +190,18 @@ end
 
 --[=[
 	The look's heading off the body (radians, left positive) the wand aims at: `relative` within Constants.aim.maxLook
-	either way.
+	either way; looking back past the side, it eases back to straight ahead (0 straight behind), so a look swung
+	across the back never snaps the wand from one side to the other.
 ]=]
 function VacuumMotionFormulas.lookHeading(relative: number): number
 	local most = Constants.aim.maxLook
-	return math.clamp(relative, -most, most)
+	local turn = wrapAngle(relative)
+	local size = math.abs(turn)
+	if size <= math.pi / 2 then
+		return math.clamp(turn, -most, most)
+	end
+	local side = if turn >= 0 then 1 else -1
+	return side * most * (math.pi - size) / (math.pi / 2)
 end
 
 --[=[
