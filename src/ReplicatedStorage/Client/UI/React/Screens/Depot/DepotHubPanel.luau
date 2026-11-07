@@ -202,6 +202,8 @@ local function tiles(props: DepotHubPanelProps): React.ReactNode
 		Position = if phone then UDim2.fromOffset(16, 76) else UDim2.fromOffset(34, 270),
 		Size = UDim2.fromOffset(if phone then 2 * side + gap else side, 4 * (side + gap)),
 		BackgroundTransparency = 1,
+		-- The training spotlight's arrow and coach keep clear of the menu column.
+		[React.Tag] = TrainingConstants.SPOTLIGHT_TAGS.menu,
 	}, nodes)
 end
 

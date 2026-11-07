@@ -29,6 +29,7 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local React = require(ReplicatedStorage.Packages.React)
+local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local TrainingSpotlightUtils = require(ReplicatedStorage.Client.Features.Training.Utils.TrainingSpotlightUtils)
 local UIRoot = require(ReplicatedStorage.Client.UI.Layers.UIRoot)
 local TrainingCoachStore = require(ReplicatedStorage.Client.Features.Training.State.TrainingCoachStore)
@@ -118,6 +119,28 @@ local function screenPosition(target: GuiObject): Vector2
 	return target.AbsolutePosition - origin
 end
 
+-- How far in from the left the arrow and coach stay: clear of a visible button column tagged
+-- SPOTLIGHT_TAGS.menu (TrainingSpotlightUtils.leftInset).
+local MENU_GAP = 12
+local function menuInset(screen: Vector2): number
+	local playerGui = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
+	if playerGui == nil then
+		return 0
+	end
+	local rects: { TrainingSpotlightUtils.Rect } = {}
+	for _, tagged in CollectionService:GetTagged(TrainingConstants.SPOTLIGHT_TAGS.menu) do
+		if
+			tagged:IsA("GuiObject")
+			and tagged:IsDescendantOf(playerGui)
+			and tagged.Visible
+			and tagged.AbsoluteSize.X > 0
+		then
+			table.insert(rects, { position = screenPosition(tagged), size = tagged.AbsoluteSize })
+		end
+	end
+	return TrainingSpotlightUtils.leftInset(rects, screen, MENU_GAP)
+end
+
 local function worldTarget(step: Step, from: Vector3): BasePart?
 	local best: BasePart? = nil
 	local bestDistance = math.huge
@@ -171,6 +194,7 @@ local function draw(step: Step, now: number)
 		onSkip = function()
 			skipped = true
 		end,
+		leftInset = menuInset(screen),
 	}
 	if step.kind == "do" then
 		props.linePosition = Vector2.new(math.max((screen.X - LINE_SIZE.X) / 2, 0), screen.Y * DO_LINE_Y)
@@ -204,6 +228,10 @@ local function draw(step: Step, now: number)
 		if onEdge then
 			at, rotation =
 				TrainingSpotlightUtils.offscreen(camera.CFrame:PointToObjectSpace(world), screen, ARROW_MARGIN)
+		end
+		local inset = props.leftInset or 0
+		if at.X < inset + ARROW_MARGIN then
+			at = Vector2.new(inset + ARROW_MARGIN, at.Y)
 		end
 		props.arrow = { position = at, rotation = rotation }
 		props.linePosition = Vector2.new(

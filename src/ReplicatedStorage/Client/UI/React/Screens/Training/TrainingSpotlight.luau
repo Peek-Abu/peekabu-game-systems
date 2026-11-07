@@ -33,6 +33,8 @@ export type TrainingSpotlightProps = {
 	-- 0..1, the ring's pulse.
 	pulse: number,
 	onSkip: () -> (),
+	-- Screen px from the left edge the coach keeps clear of (a button column there); nil = 0.
+	leftInset: number?,
 }
 
 local GOLD = TrainingConstants.GUIDE.calm
@@ -66,7 +68,8 @@ local function Coach(props: TrainingSpotlightProps): React.ReactNode
 	-- 1920x1080), never bigger than designed.
 	local scale = if phone then 1 else math.clamp(math.min(props.screen.X / 1920, props.screen.Y / 1080), 0.5, 1)
 	local size = (if phone then COACH_PHONE else COACH_DESKTOP) * scale
-	local x = math.clamp(props.linePosition.X - size.X * 0.3, 8, math.max(8, props.screen.X - size.X - 8))
+	local left = (props.leftInset or 0) + 8
+	local x = math.clamp(props.linePosition.X - size.X * 0.3, left, math.max(left, props.screen.X - size.X - 8))
 	local bottom = math.clamp(props.linePosition.Y + size.Y * 0.7, size.Y + 8, props.screen.Y - 8)
 	return e(TrainingCoach, {
 		line = { text = props.line, pose = "point" },

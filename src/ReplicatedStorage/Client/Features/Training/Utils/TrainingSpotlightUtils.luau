@@ -109,4 +109,19 @@ function TrainingSpotlightUtils.offscreen(localPoint: Vector3, screen: Vector2, 
 	return at, math.deg(math.atan2(direction.Y, direction.X)) - 90
 end
 
+--[=[
+	How far in from the screen's left edge the spotlight's arrow and coach start so they never cover a button column on
+	the left (the hub's menu tiles): the right edge of the `rects` that start in the screen's left quarter, plus `gap`;
+	0 when there are none.
+]=]
+function TrainingSpotlightUtils.leftInset(rects: { Rect }, screen: Vector2, gap: number): number
+	local inset = 0
+	for _, rect in rects do
+		if rect.position.X < screen.X / 4 then
+			inset = math.max(inset, rect.position.X + rect.size.X + gap)
+		end
+	end
+	return inset
+end
+
 return TrainingSpotlightUtils

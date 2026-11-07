@@ -106,4 +106,20 @@ return function()
 			expect(rotation).to.equal(0)
 		end)
 	end)
+
+	describe("leftInset", function()
+		it("keeps clear of a button column on the left side of the screen", function()
+			local column = { position = Vector2.new(30, 180), size = Vector2.new(90, 360) }
+			expect(TrainingSpotlightUtils.leftInset({ column }, SCREEN, 12)).to.equal(132)
+		end)
+
+		it("ignores buttons that are not on the left", function()
+			local right = { position = Vector2.new(800, 100), size = Vector2.new(90, 90) }
+			expect(TrainingSpotlightUtils.leftInset({ right }, SCREEN, 12)).to.equal(0)
+		end)
+
+		it("is 0 with nothing to avoid", function()
+			expect(TrainingSpotlightUtils.leftInset({}, SCREEN, 12)).to.equal(0)
+		end)
+	end)
 end
