@@ -26,8 +26,19 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local EmployeeRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeRegistry)
 
 -- Where a portrait is shown: the hub's profile card, a crew roster or truck seat, the rehire notice, the results'
--- featured award.
-export type PortraitContext = "profile" | "crew" | "caught" | "award"
+-- featured award; the training coach, one per kind of line (go this way, careful, cheer, shh, hide); the training
+-- finish screen's victory.
+export type PortraitContext =
+	"profile"
+	| "crew"
+	| "caught"
+	| "award"
+	| "coachPoint"
+	| "coachWarn"
+	| "coachCheer"
+	| "coachShh"
+	| "coachHide"
+	| "victory"
 
 export type PoseDef = {
 	name: string,
@@ -51,7 +62,18 @@ export type PortraitSet = {
 	contexts: { [PortraitContext]: ContextPoses },
 }
 
-local CONTEXTS: { PortraitContext } = { "profile", "crew", "caught", "award" }
+local CONTEXTS: { PortraitContext } = {
+	"profile",
+	"crew",
+	"caught",
+	"award",
+	"coachPoint",
+	"coachWarn",
+	"coachCheer",
+	"coachShh",
+	"coachHide",
+	"victory",
+}
 
 -- The right side's turn, mirrored onto the left (Y and Z flip; X, the pitch, is shared).
 local function mirror(right: Vector3): Vector3
@@ -131,6 +153,52 @@ local KIT_POSES: { [string]: PoseDef } = {
 			Neck = Vector3.new(-6, 0, 0),
 		})
 	),
+	-- The coach's poses (training v3, seen from the front, belly and up): the left arm (screen right) points level
+	-- and a little forward, the right paw on her hip, a small lean into it.
+	point = pose("point", "Happy", {
+		LeftShoulder = mirror(Vector3.new(0, 14, 2)),
+		LeftElbow = mirror(Vector3.new(0, 6, 0)),
+		RightShoulder = Vector3.new(0, -20, -45),
+		RightElbow = Vector3.new(0, -30, -95),
+		Waist = Vector3.new(0, 0, 4),
+		Neck = Vector3.new(0, 0, -5),
+	}),
+	-- Careful!: the right paw up by her cheek and toward you, the left arm out low, a lean back.
+	warn = pose("warn", "Worried", {
+		RightShoulder = Vector3.new(0, 24, 2),
+		RightElbow = Vector3.new(0, 0, 80),
+		LeftShoulder = mirror(Vector3.new(0, 18, -48)),
+		LeftElbow = mirror(Vector3.new(0, 20, 0)),
+		Waist = Vector3.new(5, 0, 0),
+		Neck = Vector3.new(0, 0, 8),
+	}),
+	-- Shh: the right paw at her mouth, the left arm down, a small hunch with the head up to you.
+	shh = pose("shh", "Content", {
+		RightShoulder = Vector3.new(0, 58, -18),
+		RightElbow = Vector3.new(0, 0, 116),
+		LeftShoulder = mirror(SIDE_SHOULDER),
+		LeftElbow = mirror(SIDE_ELBOW),
+		Waist = Vector3.new(-6, 0, 0),
+		Neck = Vector3.new(6, 0, 0),
+	}),
+	-- Hide!: both paws pulled up over her mouth, hunched, eyes over them.
+	hide = pose(
+		"hide",
+		"Worried",
+		arms(Vector3.new(0, 64, -12), Vector3.new(0, 0, 120), {
+			Waist = Vector3.new(-8, 0, 0),
+			Neck = Vector3.new(4, 0, 0),
+		})
+	),
+	-- The training finish: the right fist up high, the left arm out, leaning back, proud.
+	victory = pose("victory", "Happy", {
+		RightShoulder = Vector3.new(0, 6, 30),
+		RightElbow = Vector3.new(0, 0, 58),
+		LeftShoulder = mirror(Vector3.new(0, 20, -22)),
+		LeftElbow = mirror(Vector3.new(0, 30, 0)),
+		Waist = Vector3.new(6, 0, 0),
+		Neck = Vector3.new(6, 0, -6),
+	}),
 }
 
 local KIT_SET: PortraitSet = {
@@ -140,6 +208,12 @@ local KIT_SET: PortraitSet = {
 		crew = { pose = "stand" },
 		caught = { pose = "scared" },
 		award = { pose = "cheer", byGrade = { A = "cheer", B = "wave", C = "slump" } },
+		coachPoint = { pose = "point" },
+		coachWarn = { pose = "warn" },
+		coachCheer = { pose = "cheer" },
+		coachShh = { pose = "shh" },
+		coachHide = { pose = "hide" },
+		victory = { pose = "victory" },
 	},
 }
 

@@ -32,6 +32,15 @@ export type Role =
 -- What finishes a stop: its piles cleared, its treasure loaded, or walking into the next stop.
 export type Goal = "piles" | "banked" | "walk" | "finish"
 
+-- Pippa's pose for a line (EmployeePoseRegistry's coach poses: shared, so any employee could coach).
+export type CoachPose = "point" | "warn" | "cheer" | "shh" | "hide"
+
+-- One thing Pippa says, and how she stands while she says it.
+export type CoachLine = { text: string, pose: CoachPose }
+
+-- A stop's goal bar: its title, one short line, and its icon (a ToonIcon name; "!" = the coral danger mark).
+export type GoalCard = { title: string, line: string, icon: string }
+
 export type Stop = {
 	id: string,
 	goal: Goal,
@@ -66,10 +75,39 @@ for _, stop in STOPS do
 	table.freeze(stop)
 end
 
+local COACH_POSES: { CoachPose } = { "point", "warn", "cheer", "shh", "hide" }
+
+local COACH: { [string]: CoachLine } = {
+	dust = { text = "Follow the gold arrows! Then hold the vacuum on the purple goo.", pose = "point" },
+	treasure = { text = "Grab the mug and take it to the truck. Leave the trash!", pose = "point" },
+	carrying = { text = "Now put it in the truck!", pose = "point" },
+	quiet = { text = "Uh oh, the lights! Don't stop. Stay on the arrows.", pose = "warn" },
+	hide = { text = "I hear him! Run to the glowing desk and hide!", pose = "hide" },
+	hidden = { text = "Shh! Wait for him to go. Then follow the arrows.", pose = "shh" },
+	done = { text = "You did it! You're ready for a real shift!", pose = "cheer" },
+	open = { text = "The door is open! Follow the arrows.", pose = "point" },
+	caught = { text = "Try again! Run to the glowing desk before he sees you.", pose = "shh" },
+	shop = { text = "This is the Shop! Spend your Gleam here.", pose = "point" },
+	trucks = { text = "Hop on a truck with your crew!", pose = "cheer" },
+	vacuum = { text = "This is your vacuum! Pick it, then hold to suck up Gloom.", pose = "point" },
+	power = { text = "This is your power! Tap it to help your crew.", pose = "point" },
+}
+
+local GOALS: { [string]: GoalCard } = {
+	dust = { title = "SUCK UP THE GLOOM!", line = "Walk to the purple goo. Hold to vacuum it.", icon = "vacuum" },
+	treasure = { title = "SAVE THE TREASURE!", line = "Take the mug to the truck. Leave the trash.", icon = "monitor" },
+	quiet = { title = "FOLLOW THE ARROWS!", line = "The lights are going out. Keep going!", icon = "flashlight" },
+	hide = { title = "HIDE UNDER THE DESK!", line = "Mr. Harlow is coming. Hide and stay still.", icon = "!" },
+	done = { title = "TRAINING DONE!", line = "You're ready for a real shift.", icon = "trophy" },
+}
+
 local TrainingConstants = {
 	-- The ticket payload key and value a Training truck departs with (QueueTypes.QueuePayload).
 	MODE_KEY = "mode",
 	MODE = "training",
+	-- The return payload's value (under MODE_KEY) after PLAY AGAIN on the finish screen: the hub points the player
+	-- at the Training pad.
+	AGAIN = "trainingAgain",
 
 	-- The hub's Training truck: the pad's tag (DepotBuildSystem builds one today; a Studio-built hub tags its own).
 	TRUCK_TAG = "TrainingTruck",
@@ -90,8 +128,12 @@ local TrainingConstants = {
 
 	-- Never fewer lives than this in training: the last catch costs nothing, so nobody is knocked out.
 	LIVES_FLOOR = 1,
-	-- After a catch's knock-down, the player is moved back to the start of their stop.
-	RETURN_DELAY = 1.4,
+	-- After a catch's knock-down, the player is moved back to the start of their stop (while the screen is dark:
+	-- CATCH_BEAT.dark to .back).
+	RETURN_DELAY = 2.0,
+	-- The catch beat, in seconds from the grab: a goo splat on a heart, the red card, the screen going dark (the move
+	-- back happens here), back at the stop with Pippa's tip, done.
+	CATCH_BEAT = table.freeze({ splat = 0.3, card = 0.6, dark = 1.6, back = 2.4, done = 5.4 }),
 	-- Seconds from finishing to the ride back to the hub.
 	HOME_DELAY = 5,
 
@@ -109,6 +151,49 @@ local TrainingConstants = {
 	-- How long each hotbar step shows at most.
 	HOTBAR_SECONDS = 8,
 
+	-- The guide (tutorial v3): a floor trail of chevrons scrolling toward the goal, a bobbing arrow over it and a ring
+	-- on the floor under it. Gold, red at the hide stop. The images are Icey Labs uploads, white so they tint.
+	GUIDE = table.freeze({
+		chevron = "rbxassetid://89473415754109",
+		arrow = "rbxassetid://130801617656931",
+		calm = Color3.fromRGB(255, 205, 64),
+		danger = Color3.fromRGB(255, 84, 112),
+		-- The trail: studs per chevron, scroll speed (studs a second toward the goal), width, lift off the floor.
+		chevronLength = 3,
+		speed = 1.6,
+		width = 2.4,
+		lift = 0.12,
+		-- Re-path when the player has moved this far, or this often.
+		repathDistance = 4,
+		repathSeconds = 0.75,
+		-- The arrow: size (px), height over the target (studs), bob height (studs) and speed.
+		arrowSize = 72,
+		arrowHeight = 5,
+		bob = 0.6,
+		bobSpeed = 3,
+		-- The ring under the target: diameter (studs).
+		ring = 5,
+		-- Within this distance of the treasure, the player counts as carrying it (the guide moves on to the truck).
+		carryRange = 6,
+	}),
+
+	-- The hide stop's screen on top of DARK_SCREEN: redder.
+	DANGER_SCREEN = table.freeze({
+		tint = Color3.fromRGB(255, 196, 204),
+		saturation = -0.1,
+	}),
+
+	COACH_POSES = table.freeze(COACH_POSES),
+
+	-- Pippa's lines (the stop's own line first; `open` once its door is open). Kid reading level.
+	COACH = table.freeze(COACH),
+
+	-- The goal bar per stop (TrainingGoalBar), in place of the Gloom meter.
+	GOALS = table.freeze(GOALS),
+
+	-- If the player picks nothing on the finish screen, the ride home leaves after this long.
+	FINISH_WAIT = 30,
+
 	-- The one-time thank-you (owner: 100 Gleam).
 	REWARD_GLEAM = 100,
 
@@ -125,9 +210,16 @@ local TrainingConstants = {
 	TEXT = table.freeze({
 		truckSign = "New here? Start training!",
 		truckTag = "TRAINING",
-		caught = "Caught! You lost a life. Hide under a desk!",
-		lastLife = "Caught! Hide under the glowing desk!",
 		finished = "Great job! You're ready.",
+		finishTitle = "TRAINING DONE!",
+		finishGleam = "Gleam for finishing training!",
+		finishAgain = "You already got your Gleam. Nice practice!",
+		finishLine = "You're ready for a real shift! Spend your Gleam in the Shop.",
+		back = "BACK TO THE DEPOT",
+		playAgain = "PLAY AGAIN",
+		caughtCard = "CAUGHT! YOU LOST A LIFE",
+		caughtLine = "It's OK! Try again from the start of this stop.",
+		you = "YOU",
 		reward = "Training done!",
 		failed = "Training could not start. Try again soon.",
 		tourShop = "You got 100 Gleam! Spend it in the Shop.",

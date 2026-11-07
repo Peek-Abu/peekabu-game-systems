@@ -11,9 +11,12 @@
 	  back from the run.
 	- **The run** (the shift role): a party of one arriving with the training mode plays the shift on the Studio-built
 	  Training map (TrainingSiteSystem as Office's site, TrainingRunSystem following the stops), with a lives floor of
-	  TrainingConstants.LIVES_FLOOR, so a catch never knocks them out, marked as training (no Manager speed-ups; a catch shows training's one line). Finishing records the run and pays REWARD_GLEAM
-	  the first time (one transaction), then rides them home. A map that is missing or does not check out sends them
-	  straight home with a note, and logs every problem.
+	  TrainingConstants.LIVES_FLOOR, so a catch never knocks them out, marked as training (no Manager speed-ups; a
+	  catch plays training's own beat, TrainingEvents.Caught). Finishing records the run and pays REWARD_GLEAM the
+	  first time (one transaction), then shows the finish screen (TrainingEvents.Finish, the Gleam paid). The player
+	  picks BACK TO THE DEPOT (TrainingEvents.Back: the ride home now) or PLAY AGAIN (TrainingEvents.Again: the ride
+	  home, where the hub points them at the Training pad); picking nothing, the ride leaves after FINISH_WAIT. A map
+	  that is missing or does not check out sends them straight home with a note, and logs every problem.
 	- **The hotbar tour** (the shift role): when a run starts, each player there who has never had it (the tips slice,
 	  TipServiceServer:once) is sent TrainingEvents.Hotbar: the spotlight on the vacuum's slot, then the power.
 
@@ -114,12 +117,12 @@ local function tourIfDue(player: Player)
 	end
 end
 
--- Records the finished run; the first time, with the Gleam, in one transaction. Yields.
-local function record(player: Player)
+-- Records the finished run; the first time, with the Gleam, in one transaction. Returns the Gleam paid. Yields.
+local function record(player: Player): number
 	local userId = player.UserId
 	local state: PlayerDataTypes.Training? = trainingSlice.get(userId)
 	if state == nil then
-		return
+		return 0
 	end
 	counters.finished += 1
 	if state.finished then
@@ -127,7 +130,7 @@ local function record(player: Player)
 			TrainingRules.finish(slice)
 			return true
 		end)
-		return
+		return 0
 	end
 	local committed = PlayerDataService:transaction({
 		trainingSlice.op(userId, function(slice)
@@ -140,17 +143,30 @@ local function record(player: Player)
 	})
 	if committed then
 		counters.rewarded += 1
-		toast(player, `{TrainingConstants.TEXT.reward} +{TrainingConstants.REWARD_GLEAM} Gleam`)
+		return TrainingConstants.REWARD_GLEAM
+	end
+	return 0
+end
+
+-- The return payload that tells the hub to point the player back at the Training pad (display only: the hub only
+-- shows an arrow for it).
+local AGAIN_PAYLOAD: QueueTypes.QueuePayload = { [TrainingConstants.MODE_KEY] = TrainingConstants.AGAIN }
+
+local function home(player: Player, payload: QueueTypes.QueuePayload?)
+	if player.Parent == Players then
+		QueueServiceServer:returnParty({ player }, DepotConstants.ROLE_DEPOT, payload or {})
 	end
 end
 
-local function home(player: Player)
-	if player.Parent == Players then
-		QueueServiceServer:returnParty({ player }, DepotConstants.ROLE_DEPOT, {})
-	end
-end
+-- The finished run's ride home, waiting on the player's pick (or FINISH_WAIT).
+local leaving: thread? = nil
 
 local function finishRun()
+	local waiting = leaving
+	leaving = nil
+	if waiting ~= nil and coroutine.status(waiting) == "suspended" then
+		task.cancel(waiting)
+	end
 	local run = current
 	current = nil
 	if run ~= nil then
@@ -159,6 +175,16 @@ local function finishRun()
 	OfficeServiceServer:useSite(nil)
 	ShiftServiceServer:setLivesFloor(0)
 	ShiftServiceServer:setTraining(false)
+end
+
+-- Ends the finished run of `player` and rides them home (`payload` for the hub).
+local function leave(player: Player, payload: QueueTypes.QueuePayload?)
+	local run = current
+	if run == nil or run.player ~= player or leaving == nil then
+		return
+	end
+	home(player, payload)
+	finishRun()
 end
 
 local function begin(player: Player)
@@ -177,10 +203,14 @@ local function begin(player: Player)
 	end
 	counters.runs += 1
 	local run = TrainingRunSystem.new(player, model, plan, function(done: Player)
-		task.spawn(record, done)
-		task.delay(TrainingConstants.HOME_DELAY, function()
-			home(done)
-			finishRun()
+		task.spawn(function()
+			local paid = record(done)
+			if done.Parent == Players then
+				TrainingEvents.packets.Finish.sendTo(paid, done)
+			end
+		end)
+		leaving = task.delay(TrainingConstants.FINISH_WAIT, function()
+			leave(done, nil)
 		end)
 	end)
 	current = { player = player, run = run }
@@ -243,8 +273,12 @@ local TrainingServiceServer: TrainingServiceServer = {
 					tourIfDue(player)
 				end
 			end)
-			local returned = QueueServiceServer.returned:Connect(function(player: Player, _payload)
+			local returned = QueueServiceServer.returned:Connect(function(player: Player, payload)
 				tourIfDue(player)
+				-- PLAY AGAIN on the finish screen: point them at the Training pad (display only).
+				if payload[TrainingConstants.MODE_KEY] == TrainingConstants.AGAIN then
+					TrainingEvents.packets.Again.sendTo(true, player)
+				end
 			end)
 			table.insert(stoppers, function()
 				loaded:Disconnect()
@@ -274,16 +308,29 @@ local TrainingServiceServer: TrainingServiceServer = {
 				end
 				wasRunning = running
 			end)
-			local leaving = Players.PlayerRemoving:Connect(function(player: Player)
+			local gone = Players.PlayerRemoving:Connect(function(player: Player)
 				local run = current
 				if run ~= nil and run.player == player then
 					finishRun()
 				end
 			end)
+			-- The finish screen's picks (only the running player's, only once the run is finished).
+			local back = TrainingEvents.packets.Back.listen(function(_value: boolean, player: Player?)
+				if player ~= nil then
+					leave(player, nil)
+				end
+			end)
+			local again = TrainingEvents.packets.Again.listen(function(_value: boolean, player: Player?)
+				if player ~= nil then
+					leave(player, AGAIN_PAYLOAD)
+				end
+			end)
 			table.insert(stoppers, function()
 				arrived:Disconnect()
 				following:Disconnect()
-				leaving:Disconnect()
+				gone:Disconnect()
+				back()
+				again()
 			end)
 		end
 	end,

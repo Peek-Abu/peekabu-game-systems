@@ -7,8 +7,9 @@
 	entry for the client's hall effects (signs, lights out, the Gloom creeping, the glowing desk).
 
 	A catch (ShiftServiceServer.caught) costs a life as usual, but the lives floor (ShiftServiceServer:setLivesFloor)
-	means it never knocks the player out: they are told, then moved back to the start of their stop after the
-	knock-down. Walking into the last stop finishes the run: `finished` is called once (the reward, the ride home).
+	means it never knocks the player out: the client plays the catch beat (TrainingEvents.Caught: the goo splat on a
+	heart, the red card, the dark), and the player is moved back to the start of their stop while the screen is dark.
+	Walking into the last stop finishes the run: `finished` is called once (the reward, the finish screen).
 
 	Spec-exempt shell (Instances, signals, Shift and Vacuum); the decisions are the specced TrainingStopRules and
 	TrainingMapRules.
@@ -21,13 +22,11 @@ local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
-local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
-local TrainingRules = require(ReplicatedStorage.Shared.Features.Training.Rules.TrainingRules)
+local TrainingEvents = require(ReplicatedStorage.Shared.Features.Training.Net.TrainingEvents)
 local TrainingStopRules = require(ReplicatedStorage.Shared.Features.Training.Rules.TrainingStopRules)
 local ShiftServiceServer = require(ServerScriptService.Features.Shift.ShiftServiceServer)
 local StateSyncWorldStore = require(ServerScriptService.Features.StateSync.State.StateSyncWorldStore)
-local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
 local TrainingMapRules = require(ServerScriptService.Features.Training.Rules.TrainingMapRules)
 local TrainingSiteSystem = require(ServerScriptService.Features.Training.Systems.TrainingSiteSystem)
 local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
@@ -40,13 +39,8 @@ export type Run = {
 }
 
 local POLL_SECONDS = 0.2
-local TOAST_SECONDS = 4
 
 local log = Logger.new("TrainingRunSystem")
-
-local function tell(player: Player, text: string)
-	ToastServiceServer:send(player, { text = text, style = ShiftConstants.TOAST_STICKY, duration = TOAST_SECONDS })
-end
 
 -- Opens a door: it and everything in it stops blocking and fades out.
 local function clearOut(part: BasePart)
@@ -133,7 +127,6 @@ function TrainingRunSystem.new(
 			openDone()
 			if state.finished then
 				stopped = true
-				tell(player, TrainingConstants.TEXT.finished)
 				finished(player)
 			end
 		end
@@ -157,8 +150,8 @@ function TrainingRunSystem.new(
 		if caught ~= player or stopped then
 			return
 		end
-		-- The catch's only message on a training run (OccupantCatchUtils.feedback leaves it to training).
-		tell(player, TrainingRules.catchLine(livesLeft))
+		-- The catch's only message on a training run (OccupantCatchUtils.feedback leaves it to training): the beat.
+		TrainingEvents.packets.Caught.sendTo(math.clamp(livesLeft, 0, 255), player)
 		local back: CFrame? = plan.stops[state.stop]
 		task.delay(TrainingConstants.RETURN_DELAY, function()
 			local character = player.Character

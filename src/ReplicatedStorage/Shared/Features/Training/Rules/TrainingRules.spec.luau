@@ -1,6 +1,5 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local TrainingRules = require(ReplicatedStorage.Shared.Features.Training.Rules.TrainingRules)
 
 return function()
@@ -77,13 +76,6 @@ return function()
 			expect(TrainingRules.offered(0)).to.equal(false)
 			expect(TrainingRules.offered(1)).to.equal(true)
 			expect(TrainingRules.offered(2)).to.equal(false)
-		end)
-	end)
-
-	describe("catchLine", function()
-		it("tells the player they lost a life, and at the last one points to the glowing desk", function()
-			expect(TrainingRules.catchLine(2)).to.equal(TrainingConstants.TEXT.caught)
-			expect(TrainingRules.catchLine(1)).to.equal(TrainingConstants.TEXT.lastLife)
 		end)
 	end)
 end
