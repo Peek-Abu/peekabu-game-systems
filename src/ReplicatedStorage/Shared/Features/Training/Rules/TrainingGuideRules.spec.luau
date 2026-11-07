@@ -1,5 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local TrainingGuideRules = require(ReplicatedStorage.Shared.Features.Training.Rules.TrainingGuideRules)
 
@@ -114,10 +115,19 @@ return function()
 			expect(TrainingGuideRules.catchPhase(-1)).to.equal("done")
 		end)
 
-		it("moves the player back while the screen is dark", function()
+		it("moves the player back while the screen is fully dark", function()
 			local beat = TrainingConstants.CATCH_BEAT
-			expect(TrainingConstants.RETURN_DELAY > beat.dark).to.equal(true)
+			expect(TrainingConstants.RETURN_DELAY >= beat.dark + beat.fade).to.equal(true)
 			expect(TrainingConstants.RETURN_DELAY < beat.back).to.equal(true)
+		end)
+
+		it("is one beat: the player is moved back and the screen clears while they are still down", function()
+			local beat = TrainingConstants.CATCH_BEAT
+			local down = OccupantConstants.KNOCKDOWN_SECONDS
+			expect(TrainingConstants.RETURN_DELAY < down).to.equal(true)
+			expect(beat.back + beat.fade <= down).to.equal(true)
+			-- A quick wipe (about 0.4 s dark to clear).
+			expect(beat.back + beat.fade - beat.dark <= 0.5).to.equal(true)
 		end)
 	end)
 

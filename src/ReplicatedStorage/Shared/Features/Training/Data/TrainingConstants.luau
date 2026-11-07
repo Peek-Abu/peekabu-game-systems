@@ -129,9 +129,10 @@ local TrainingConstants = {
 
 	-- Never fewer lives than this in training: the last catch costs nothing, so nobody is knocked out.
 	LIVES_FLOOR = 1,
-	-- After a catch's knock-down, the player is moved back to the start of their stop (while the screen is dark:
-	-- CATCH_BEAT.dark to .back).
-	RETURN_DELAY = 2.0,
+	-- After a catch the player is moved back to the start of their stop this long after the throw: while they are still
+	-- knocked down and the screen is fully dark (CATCH_BEAT.dark + .fade to .back), so they stand up there and control
+	-- comes back once (option A, owner 11-07).
+	RETURN_DELAY = 0.62,
 	-- The escape stop (stop 4): passed once Mr. Harlow came within `near` studs (or chased the player) and the player
 	-- then stayed safe for `seconds`: he is not chasing them, not within `near`, and they are hidden, out of his sight,
 	-- or `far` studs away. If he never comes, it passes after `timeout` seconds. (TrainingStopRules.escapeStep)
@@ -140,9 +141,10 @@ local TrainingConstants = {
 	CLEAR_ENTRY = "trainingClear",
 	-- After "Play training again", how long the hub's chevron trail leads a trained player to the pad (seconds).
 	AGAIN_TRAIL_SECONDS = 60,
-	-- The catch beat, in seconds from the grab: a goo splat on a heart, the red card, the screen going dark (the move
-	-- back happens here), back at the stop with Pippa's tip, done.
-	CATCH_BEAT = table.freeze({ splat = 0.3, card = 0.6, dark = 1.6, back = 2.4, done = 5.4 }),
+	-- The catch beat, in seconds from the throw (the Caught packet): a goo splat on a heart, the red card, a quick dark
+	-- wipe (in over `fade`, the move back while dark, out over `fade` from `back`), back at the stop with Pippa's tip,
+	-- done. The wipe ends before the knock-down does, so the player stands up at the stop start.
+	CATCH_BEAT = table.freeze({ splat = 0.1, card = 0.2, dark = 0.4, fade = 0.15, back = 0.7, done = 4.0 }),
 	-- Seconds from finishing to the ride back to the hub.
 	HOME_DELAY = 5,
 

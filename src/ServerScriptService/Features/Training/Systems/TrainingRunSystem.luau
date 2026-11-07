@@ -13,7 +13,9 @@
 
 	A catch (ShiftServiceServer.caught) costs a life as usual, but the lives floor (ShiftServiceServer:setLivesFloor)
 	means it never knocks the player out: the client plays the catch beat (TrainingEvents.Caught: the goo splat on a
-	heart, the red card, the dark), and the player is moved back to the start of their stop while the screen is dark.
+	heart, the red card, a quick dark wipe), and the player is moved back to the start of their stop while still knocked
+	down and the screen dark, so they stand up there (one beat). Harlow is then sent off to work at a desk away from
+	them (OccupantServiceServer:summonToDesk), so there is no catch straight after.
 	Walking into the last stop finishes the run: `finished` is called once (the reward, the finish screen).
 
 	Spec-exempt shell (Instances, signals, Shift and Vacuum); the decisions are the specced TrainingStopRules and
@@ -221,6 +223,8 @@ function TrainingRunSystem.new(
 			local character = player.Character
 			if not stopped and back ~= nil and character ~= nil and character.Parent ~= nil then
 				character:PivotTo(back * CFrame.new(0, 3, 0))
+				-- He walks off to a desk away from the stop start (nothing when he has none free).
+				OccupantServiceServer:summonToDesk(player)
 			end
 		end)
 	end)

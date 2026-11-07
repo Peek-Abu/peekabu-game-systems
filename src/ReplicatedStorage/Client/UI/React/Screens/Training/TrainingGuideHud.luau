@@ -35,7 +35,7 @@ local useAtom = ReactCharm.useAtom
 
 local BEAT = TrainingConstants.CATCH_BEAT
 -- The dark's fade in and out (seconds).
-local DARK_FADE = 0.35
+local DARK_FADE = BEAT.fade
 -- The card's slide (seconds).
 local CARD_SLIDE = 0.18
 
