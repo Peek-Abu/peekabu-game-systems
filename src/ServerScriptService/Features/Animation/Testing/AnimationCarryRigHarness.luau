@@ -217,8 +217,8 @@ end
 	The default employee (Pippa) at `at`, from its art template as EmployeeSpawnSystem installs it (prepared, then
 	scaled to its registry scale). Nil when the place has no template (a test place without the art).
 ]=]
-function AnimationCarryRigHarness.employee(at: Vector3): Model?
-	local def = EmployeeRegistry.get(EmployeeRegistry.DEFAULT)
+function AnimationCarryRigHarness.employee(at: Vector3, id: string?): Model?
+	local def = EmployeeRegistry.get(id or EmployeeRegistry.DEFAULT)
 	if def == nil then
 		return nil
 	end
@@ -246,7 +246,8 @@ local function clip(key: string?): string?
 end
 
 --[=[
-	The test carriers that this place can build: Pippa (with her own idle and walk) and a stock R15 (the stock idle
+	The test carriers that this place can build: Pippa (with her own idle and walk; Cappy and Prickles too when `only`
+	names them) and a stock R15 (the stock idle
 	and walk). `only` limits them by name.
 ]=]
 function AnimationCarryRigHarness.carriers(only: { string }?): { Carrier }
@@ -266,6 +267,23 @@ function AnimationCarryRigHarness.carriers(only: { string }?): { Carrier }
 				walk = clip(if locomotion ~= nil then locomotion.walk else nil),
 				run = clip(if locomotion ~= nil then locomotion.run else nil),
 			})
+		end
+	end
+	-- The other employees only when named (their bodies differ, so the vacuum hold is judged on each).
+	for index, id in { "Cappy", "Prickles" } do
+		if only ~= nil and table.find(only, id) ~= nil then
+			local model = AnimationCarryRigHarness.employee(ORIGIN + Vector3.new(0, 0, 20 * index), id)
+			local def = EmployeeRegistry.get(id)
+			local locomotion = if def ~= nil then def.locomotion else nil
+			if model ~= nil then
+				table.insert(carriers, {
+					name = id,
+					model = model,
+					idle = clip(if locomotion ~= nil then locomotion.idle else nil),
+					walk = clip(if locomotion ~= nil then locomotion.walk else nil),
+					run = clip(if locomotion ~= nil then locomotion.run else nil),
+				})
+			end
 		end
 	end
 	if wanted("StockR15") then

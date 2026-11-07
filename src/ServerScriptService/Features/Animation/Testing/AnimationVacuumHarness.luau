@@ -140,7 +140,8 @@ local PLAN_AT = 0.5
 -- The holders validated unless `Options.rigs` names others. A stock R15 is not one (every player spawns as an
 -- employee); its left hand does not reach GripLower (2.18 studs from its shoulder at rest, 2.02 of reach), so it
 -- holds the wand one-handed.
-local DEFAULT_RIGS = { "Pippa" }
+-- All three employees (batch 2, 2026-11-06): the left arm's reach differs per body.
+local DEFAULT_RIGS = { "Pippa", "Cappy", "Prickles" }
 -- The vacuum's use clip (AnimationVacuumSystem), when registered.
 local USE_CLIP = "cleanupVacuumUse"
 
