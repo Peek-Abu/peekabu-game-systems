@@ -172,12 +172,14 @@ return function()
 			local inHandle = handle.CFrame:PointToObjectSpace(upper.WorldPosition)
 			local wrap = Visual.arm(holder, "Right").wrap
 			expect((inHandle - hold.toolGrip:PointToWorldSpace(wrap)).Magnitude < 1e-3).to.equal(true)
-			-- GripLower stays its modelled distance below the tube's top, however long the tube telescopes, and
+			-- GripLower sits where the left paw holds (hold.lower below the tube's top, however long the tube
+			-- telescopes): its modelled distance, or nearer the top when the paw slid up to reach it (batch 2.6), and
 			-- lies below and in front of GripUpper.
 			local tube = find(tool, "WandTube")
 			local size = VisualConstants.GENERIC_SIZE
 			local below = (0.5 - VisualConstants.grips.lower.position.Y) * size
-			expect(tube.Size.Y / 2 - lower.Position.Y).to.be.near(below, 1e-4)
+			expect(tube.Size.Y / 2 - lower.Position.Y).to.be.near(hold.lower, 1e-4)
+			expect(hold.lower <= below + 1e-4).to.equal(true)
 			local lowerInHandle = handle.CFrame:PointToObjectSpace(lower.WorldPosition)
 			expect(lowerInHandle.Y < inHandle.Y - 0.3).to.equal(true)
 			expect(lowerInHandle.Z < inHandle.Z).to.equal(true)
