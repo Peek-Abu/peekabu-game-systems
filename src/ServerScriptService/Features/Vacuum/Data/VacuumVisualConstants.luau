@@ -140,6 +140,11 @@ return table.freeze({
 		yaw = math.rad(65),
 		clearance = 0.06,
 		minTube = 0.3,
+		-- Feel pass batch 2.6 (2026-11-06): a left paw that cannot reach GripLower slides its hold along the wand,
+		-- and if no point of it is in reach the hold shifts toward the left shoulder, at most `maxShift` of the right
+		-- arm's reach (Cappy's left paw had no hold at all). false restores the old plan exactly.
+		leftSlide = true,
+		maxShift = 0.3,
 	}),
 	-- Where a paw holds the wand (VacuumHoldFormulas.Arm.wrap): this far from its wrist toward its grip attachment.
 	-- Pippa's grip attachments sit on the very tip of her paws (0.34 stud from the paw's middle), so a hold on them

@@ -147,6 +147,63 @@ return function()
 			expect(VacuumHoldFormulas.hold(RIGHT, nil, FLOOR, WAND, TUNING).left).to.equal(nil)
 		end)
 
+		describe("a left paw that cannot reach GripLower (batch 2.6)", function()
+			local SLIDE = table.clone(TUNING)
+			SLIDE.leftSlide = true
+			SLIDE.maxShift = 0.3
+			local function onWand(h, point)
+				-- On the wand's axis below the grip's bottom.
+				local top = h.rightAt + ALONG * (WAND.upper + WAND.gripHalf)
+				local s = (point - top):Dot(ALONG)
+				return s >= -1e-6 and (top + ALONG * s - point).Magnitude < 1e-4, s
+			end
+
+			it("keeps the plan exactly when the paw reaches GripLower", function()
+				local slid = VacuumHoldFormulas.hold(RIGHT, LEFT, FLOOR, WAND, SLIDE)
+				expect((slid.leftAt - hold.leftAt).Magnitude < 1e-6).to.equal(true)
+				expect((slid.rightAt - hold.rightAt).Magnitude < 1e-6).to.equal(true)
+				expect(slid.lower).to.be.near(WAND.lower, 1e-6)
+			end)
+
+			it("slides the hold up the wand to where the paw reaches", function()
+				local shorter = { shoulder = LEFT.shoulder, upper = 0.525, lower = 0.95 }
+				expect(VacuumHoldFormulas.hold(RIGHT, shorter, FLOOR, WAND, TUNING).left).to.equal(nil)
+				local slid = VacuumHoldFormulas.hold(RIGHT, shorter, FLOOR, WAND, SLIDE)
+				expect(slid.left).to.be.ok()
+				local ok, s = onWand(slid, slid.leftAt)
+				expect(ok).to.equal(true)
+				expect(s < WAND.lower).to.equal(true)
+				expect(slid.lower).to.be.near(s, 1e-6)
+				expect((slid.leftAt - shorter.shoulder).Magnitude <= 0.93 * (shorter.upper + shorter.lower) + 1e-6).to.equal(
+					true
+				)
+				-- The right hand stays where it was planned.
+				expect((slid.rightAt - hold.rightAt).Magnitude < 1e-6).to.equal(true)
+			end)
+
+			it("shifts the whole hold toward the left shoulder when no point of the wand is in reach", function()
+				local short = { shoulder = LEFT.shoulder, upper = 0.45, lower = 0.65 }
+				local slid = VacuumHoldFormulas.hold(RIGHT, short, FLOOR, WAND, SLIDE)
+				expect(slid.left).to.be.ok()
+				expect(onWand(slid, slid.leftAt)).to.equal(true)
+				expect((slid.leftAt - short.shoulder).Magnitude <= 0.95 * (short.upper + short.lower) + 1e-6).to.equal(
+					true
+				)
+				-- Moved toward the left, by no more than maxShift of the right arm's reach, still in the right's reach.
+				local moved = slid.rightAt - hold.rightAt
+				local reach = RIGHT.upper + RIGHT.lower
+				expect(moved.X < 0).to.equal(true)
+				expect(moved.Magnitude <= 0.3 * reach + 1e-6).to.equal(true)
+				expect((slid.rightAt - RIGHT.shoulder).Magnitude <= 0.95 * reach + 1e-6).to.equal(true)
+			end)
+
+			it("still leaves a paw that no shift brings in reach off the wand", function()
+				local tiny = { shoulder = LEFT.shoulder, upper = 0.2, lower = 0.2 }
+				expect(VacuumHoldFormulas.hold(RIGHT, tiny, FLOOR, WAND, SLIDE).left).to.equal(nil)
+				expect(VacuumHoldFormulas.hold(RIGHT, tiny, FLOOR, WAND, SLIDE).lower).to.be.near(WAND.lower, 1e-6)
+			end)
+		end)
+
 		it(
 			"puts each paw's wrap point, not its grip attachment's tip, on its grip (the paw closes round the wand)",
 			function()

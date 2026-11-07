@@ -261,6 +261,8 @@ local function holdFor(holder: Model, dims: VacuumHoldFormulas.WandDims, size: n
 		yaw = tuning.yaw,
 		clearance = tuning.clearance * size,
 		minTube = tuning.minTube * size,
+		leftSlide = tuning.leftSlide,
+		maxShift = tuning.maxShift,
 	})
 end
 
@@ -289,7 +291,16 @@ function Visual.build(
 	local hold = if holder ~= nil then holdFor(holder, dims, size) else nil
 	local tube = if hold ~= nil then hold.tube else Constants.DEFAULT_TUBE * size
 	local frames = VacuumHoldFormulas.wand(dims, tube, Constants.hold.angle, nil, Constants.hold.yaw)
-	layWand(parts, frames, lipOffset, CFrame.identity, tube, dims)
+	-- GripLower where the left paw holds (the hold may slide it to reach: batch 2.6).
+	local held: VacuumHoldFormulas.WandDims = {
+		gripHalf = dims.gripHalf,
+		inlet = dims.inlet,
+		swivel = dims.swivel,
+		head = dims.head,
+		upper = dims.upper,
+		lower = if hold ~= nil then hold.lower else dims.lower,
+	}
+	layWand(parts, frames, lipOffset, CFrame.identity, tube, held)
 	for _, part in parts do
 		prepare(part)
 		local weld = Instance.new("WeldConstraint")

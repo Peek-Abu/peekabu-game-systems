@@ -51,6 +51,12 @@ export type Tuning = {
 	yaw: number,
 	clearance: number,
 	minTube: number,
+	-- Feel pass batch 2.6 (2026-11-06): when the left paw cannot reach GripLower, slide its hold along the wand to
+	-- the nearest point it reaches, and if no point on the wand is in reach, shift the whole hold toward the left
+	-- shoulder by at most `maxShift` of the right arm's reach (Cappy's left paw got no hold at all). nil or false: the
+	-- old plan (the left hand left off the wand).
+	leftSlide: boolean?,
+	maxShift: number?,
 }
 
 export type Hold = {
@@ -72,6 +78,9 @@ export type Hold = {
 	-- Root-space frame for the LeftGripAttachment, its wrap point on the wand's GripLower (its hand turned along
 	-- its forearm, like the right), nil when the left arm cannot reach it.
 	left: CFrame?,
+	-- How far down the tube from its top the left hand holds (the wand's GripLower goes there): `WandDims.lower`
+	-- unless the hold slid it to reach.
+	lower: number,
 	-- The wand tube's length, and the grip's height above the floor.
 	tube: number,
 	height: number,
@@ -100,6 +109,8 @@ local RIGHT_POLE = Vector3.new(1, -0.3, -0.3).Unit
 local LEFT_POLE = Vector3.new(-1, 0, -1).Unit
 -- Never plan the left hand at the arm's full stretch.
 local REACH_USE = 0.95
+-- A slid or shifted left hold is planned this far into the arm's reach, so the motion layers have room.
+local SLIDE_REACH = 0.93
 local X_AXIS = Vector3.new(1, 0, 0)
 
 --[=[
@@ -182,19 +193,65 @@ function VacuumHoldFormulas.stowTube(
 	return math.min(maxTube, VacuumHoldFormulas.tube(gripAboveHip, wand, lean, 0, minTube))
 end
 
+-- How far down the wand (from the grip's bottom, at most `tube`) a hold reaches within `reach` of `shoulder` and nearest
+-- `want`, the wand starting at `from` along `along`; nil when no point of it is that close.
+local function slide(
+	from: Vector3,
+	along: Vector3,
+	tube: number,
+	shoulder: Vector3,
+	reach: number,
+	want: number
+): number?
+	-- |from + along * s - shoulder| = reach: s^2 + 2bs + c = 0 (along is a unit vector).
+	local d = from - shoulder
+	local b = d:Dot(along)
+	local c = d:Dot(d) - reach * reach
+	local disc = b * b - c
+	if disc < 0 then
+		return nil
+	end
+	local root = math.sqrt(disc)
+	local low, high = math.max(0, -b - root), math.min(tube, -b + root)
+	if low > high then
+		return nil
+	end
+	return math.clamp(want, low, high)
+end
+
+-- The point of the wand line (from `from` along `along`, at least 0 down it) nearest `point`.
+local function nearest(from: Vector3, along: Vector3, point: Vector3): Vector3
+	return from + along * math.max(0, (point - from):Dot(along))
+end
+
 --[=[
 	The hold for a holder's arms (root space) over a floor `floorY` below the root.
 ]=]
 function VacuumHoldFormulas.hold(right: Arm, left: Arm?, floorY: number, wand: WandDims, tuning: Tuning): Hold
 	local reach = right.upper + right.lower
+	local along = VacuumHoldFormulas.axis(tuning.angle, tuning.yaw)
 	local target = right.shoulder + Vector3.new(tuning.out, -tuning.down, -tuning.forward) * reach
+	-- Batch 2.6: a left paw that reaches neither GripLower nor any other point of the wand moves the whole hold
+	-- toward its shoulder (a hold it reaches is never moved).
+	if left ~= nil and tuning.leftSlide == true then
+		local armReach = left.upper + left.lower
+		local from = target + along * (wand.upper + wand.gripHalf)
+		local closest = nearest(from, along, left.shoulder)
+		local short = (closest - left.shoulder).Magnitude - SLIDE_REACH * armReach
+		local reaches = (from + along * wand.lower - left.shoulder).Magnitude <= REACH_USE * armReach
+		if not reaches and short > 0 then
+			local shift = (left.shoulder - closest).Unit * math.min(short + 0.02, (tuning.maxShift or 0) * reach)
+			if (target + shift - right.shoulder).Magnitude <= REACH_USE * reach then
+				target += shift
+			end
+		end
+	end
 	local rightPole = right.shoulder + RIGHT_POLE * reach
 	-- The grip attachment sits `wrap` past the wrap point, which is on GripUpper.
 	local grip = gripFrame(
 		target,
 		VacuumHoldFormulas.elbow(right.shoulder, target, right.upper, right.lower, RIGHT_POLE)
 	) * CFrame.new(-(right.wrap or Vector3.zero))
-	local along = VacuumHoldFormulas.axis(tuning.angle, tuning.yaw)
 	-- The handle (the grip's centre) is `upper` down the wand from the right hand.
 	local handle = target + along * wand.upper
 	local height = handle.Y - floorY
@@ -203,11 +260,20 @@ function VacuumHoldFormulas.hold(right: Arm, left: Arm?, floorY: number, wand: W
 	local leftAt: Vector3? = nil
 	local leftShoulder: Vector3? = nil
 	local leftReach: number? = nil
+	local lower = math.min(wand.lower, tube)
 	local leftPole = right.shoulder * Vector3.new(-1, 1, 1) + LEFT_POLE * reach
 	if left ~= nil then
-		leftPole = left.shoulder + LEFT_POLE * (left.upper + left.lower)
-		local candidate = handle + along * (wand.gripHalf + math.min(wand.lower, tube))
-		if (candidate - left.shoulder).Magnitude <= REACH_USE * (left.upper + left.lower) then
+		local armReach = left.upper + left.lower
+		leftPole = left.shoulder + LEFT_POLE * armReach
+		local top = handle + along * wand.gripHalf
+		local down: number? = lower
+		if (top + along * lower - left.shoulder).Magnitude > REACH_USE * armReach then
+			down = if tuning.leftSlide == true
+				then slide(top, along, tube, left.shoulder, SLIDE_REACH * armReach, lower)
+				else nil
+		end
+		if down ~= nil then
+			local candidate = top + along * down
 			-- A Transform target: the engine's Position-only solve left this hand ~0.75 studs off (Studio).
 			leftTarget = gripFrame(
 				candidate,
@@ -215,7 +281,8 @@ function VacuumHoldFormulas.hold(right: Arm, left: Arm?, floorY: number, wand: W
 			) * CFrame.new(-(left.wrap or Vector3.zero))
 			leftAt = candidate
 			leftShoulder = left.shoulder
-			leftReach = left.upper + left.lower
+			leftReach = armReach
+			lower = down
 		end
 	end
 	return {
@@ -229,6 +296,7 @@ function VacuumHoldFormulas.hold(right: Arm, left: Arm?, floorY: number, wand: W
 		rightPole = rightPole,
 		leftPole = leftPole,
 		left = leftTarget,
+		lower = lower,
 		tube = tube,
 		height = height,
 	}
