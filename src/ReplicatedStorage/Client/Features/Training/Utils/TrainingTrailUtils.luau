@@ -87,4 +87,15 @@ function TrainingTrailUtils.repath(
 	return (from - lastFrom).Magnitude >= distance or now - lastAt >= seconds
 end
 
+--[=[
+	A trail point's height: the last one kept (`level`) unless the floor `sample` differs by more than `tolerance`
+	(a real step up or down), so bumps, props and rounding under the path do not make the chevrons twitch.
+]=]
+function TrainingTrailUtils.steady(level: number?, sample: number, tolerance: number): number
+	if level == nil or math.abs(sample - level) > tolerance then
+		return sample
+	end
+	return level
+end
+
 return TrainingTrailUtils

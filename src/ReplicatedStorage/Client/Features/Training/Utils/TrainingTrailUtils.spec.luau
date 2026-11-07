@@ -71,4 +71,19 @@ return function()
 			expect(TrainingTrailUtils.repath(here, here, 0, 0.8, 4, 0.75)).to.equal(true)
 		end)
 	end)
+
+	describe("steady", function()
+		it("keeps the last height through small bumps, so the trail does not twitch", function()
+			expect(TrainingTrailUtils.steady(10, 10.3, 0.6)).to.equal(10)
+			expect(TrainingTrailUtils.steady(10, 9.5, 0.6)).to.equal(10)
+		end)
+
+		it("takes a real step up or down", function()
+			expect(TrainingTrailUtils.steady(10, 12, 0.6)).to.equal(12)
+		end)
+
+		it("takes the first height it sees", function()
+			expect(TrainingTrailUtils.steady(nil, 4, 0.6)).to.equal(4)
+		end)
+	end)
 end

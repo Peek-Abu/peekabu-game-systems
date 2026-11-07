@@ -4,7 +4,9 @@
 	on a training stop it draws:
 	- a floor trail of chevrons (Beams with the uploaded chevron texture, scrolling toward the goal) from just ahead of
 	  the player's feet to what the guide points at, along a PathfindingService path (a straight line when there is
-	  none), re-pathed as the player moves (TrainingTrailUtils);
+	  none), re-pathed as the player moves (TrainingTrailUtils). Its points sit on the floor found by a ray that
+	  skips characters, parts nothing collides with and small props, at steady heights (TrainingTrailUtils.steady:
+	  bumps and rounding never make it twitch), and the old path stays drawn until a new one comes back;
 	- a bobbing arrow over the target (a BillboardGui, always on top) and a ring on the floor under it.
 	Gold on calm stops, red at the hide stop (TrainingGuideRules.tone). Off a run, the hub can hand it a goal of its own
 	(`setHub`: the Training pad, TrainingHubSystem), drawn the same way in gold. The target follows TrainingGuideRules.target
@@ -43,6 +45,11 @@ local START_AHEAD = 2.5
 local MIN_LEG = 1
 -- The most legs drawn (a path rarely has more corners).
 local MAX_LEGS = 12
+-- The floor ray skips parts smaller than this on every side (props, piles, cargo) and tries this many times.
+local SMALL_PART = 1.5
+local FLOOR_TRIES = 6
+-- A floor height change under this is a bump, not a step (studs).
+local STEADY_TOLERANCE = 0.75
 
 local folder: Folder? = nil
 local beams: { Beam } = {}
@@ -56,6 +63,8 @@ local stop: number? = nil
 -- The hub's goal (a floor point), used only off a run.
 local hubGoal: Vector3? = nil
 local hiddenHere = false
+-- The trail's kept floor height (TrainingTrailUtils.steady).
+local level: number? = nil
 local legs: { TrainingTrailUtils.Leg } = {}
 local lastFrom: Vector3? = nil
 local lastAt = -math.huge
@@ -72,21 +81,42 @@ local function rootOf(): BasePart?
 	return if root ~= nil and root:IsA("BasePart") then root else nil
 end
 
--- The floor under the player (a ray down, the character and the guide left out); a guess under the root without one.
-local function floorUnder(root: BasePart): Vector3
+-- The floor under `position`: a ray down that skips every character, the guide itself, parts nothing collides with
+-- and small props (a pile, a mug, a desk lamp), so the trail lies on the real floor. A guess 3 studs under without one.
+local function floorAt(position: Vector3): Vector3
 	local params = RaycastParams.new()
-	local character = root.Parent
 	local ignore: { Instance } = {}
-	if character ~= nil then
-		table.insert(ignore, character)
+	for _, player in Players:GetPlayers() do
+		if player.Character ~= nil then
+			table.insert(ignore, player.Character)
+		end
 	end
 	if folder ~= nil then
 		table.insert(ignore, folder)
 	end
-	params.FilterDescendantsInstances = ignore
 	params.FilterType = Enum.RaycastFilterType.Exclude
-	local hit = Workspace:Raycast(root.Position, Vector3.new(0, -12, 0), params)
-	return if hit ~= nil then hit.Position else root.Position - Vector3.new(0, 3, 0)
+	params.RespectCanCollide = true
+	for _ = 1, FLOOR_TRIES do
+		params.FilterDescendantsInstances = ignore
+		local hit = Workspace:Raycast(position + Vector3.new(0, 3, 0), Vector3.new(0, -15, 0), params)
+		if hit == nil then
+			break
+		end
+		local part = hit.Instance
+		if not part:IsA("BasePart") or part:IsA("Terrain") then
+			return hit.Position
+		end
+		local size = part.Size
+		if math.max(size.X, size.Y, size.Z) >= SMALL_PART then
+			return hit.Position
+		end
+		table.insert(ignore, part)
+	end
+	return position - Vector3.new(0, 3, 0)
+end
+
+local function floorUnder(root: BasePart): Vector3
+	return floorAt(root.Position)
 end
 
 local function mapOf(): Model?
@@ -340,9 +370,23 @@ local function hideAll()
 	end
 end
 
--- Asks for a path from `from` to `to` (in the background); a straight line until it comes back, or when it fails.
+-- The points on the floor at steady heights, then the legs from them (the start trimmed ahead of the feet).
+local function legsThrough(points: { Vector3 }): { TrainingTrailUtils.Leg }
+	local settled: { Vector3 } = {}
+	for _, point in points do
+		local height = TrainingTrailUtils.steady(level, floorAt(point).Y, STEADY_TOLERANCE)
+		level = height
+		table.insert(settled, Vector3.new(point.X, height, point.Z))
+	end
+	return TrainingTrailUtils.trimStart(TrainingTrailUtils.segments(settled, MIN_LEG), START_AHEAD)
+end
+
+-- Asks for a path from `from` to `to` (in the background). The drawn path stays until it comes back (a straight line
+-- only when nothing is drawn yet, or when the path fails), so the trail does not jump between the two.
 local function repath(from: Vector3, to: Vector3)
-	legs = TrainingTrailUtils.trimStart(TrainingTrailUtils.segments({ from, to }, MIN_LEG), START_AHEAD)
+	if #legs == 0 then
+		legs = legsThrough({ from, to })
+	end
 	if pathing then
 		return
 	end
@@ -354,6 +398,7 @@ local function repath(from: Vector3, to: Vector3)
 		end)
 		pathing = false
 		if not ok or path.Status ~= Enum.PathStatus.Success then
+			legs = legsThrough({ from, to })
 			return
 		end
 		local points: { Vector3 } = {}
@@ -361,7 +406,7 @@ local function repath(from: Vector3, to: Vector3)
 			table.insert(points, waypoint.Position)
 		end
 		table.insert(points, to)
-		legs = TrainingTrailUtils.trimStart(TrainingTrailUtils.segments(points, MIN_LEG), START_AHEAD)
+		legs = legsThrough(points)
 	end)
 end
 
@@ -449,6 +494,7 @@ end
 local function forget()
 	lastFrom = nil
 	legs = {}
+	level = nil
 end
 
 --[=[
