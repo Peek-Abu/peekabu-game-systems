@@ -23,7 +23,8 @@ return table.freeze({
 	aim = table.freeze({
 		deadLow = math.rad(-23),
 		deadHigh = math.rad(-17),
-		yawGain = 0.75,
+		-- Batch 2 (2026-11-06) bigger and looser: was 0.75.
+		yawGain = 0.9,
 		maxYaw = math.rad(32),
 		twistShare = 0.35,
 		-- The left-right turn's spring damping (below 1: a little overshoot reads as weight).
@@ -55,9 +56,10 @@ return table.freeze({
 	-- `pitch`, then settles in about 0.3 s. A bigger pile kicks harder: its size against `sizeRef`, between `minScale`
 	-- and `maxScale`. Only holders who were sucking within `window` seconds, within `range` studs of the pile, kick.
 	kick = table.freeze({
-		lift = 0.15,
+		-- Batch 2 (2026-11-06) bigger and looser: lift was 0.15, pitch 7 degrees.
+		lift = 0.3,
 		back = 0.6,
-		pitch = math.rad(7),
+		pitch = math.rad(12),
 		frequency = 4.5,
 		damping = 0.42,
 		sizeRef = 5.8,
@@ -73,15 +75,17 @@ return table.freeze({
 		yaw = math.rad(2.6),
 		roll = math.rad(2.2),
 		frequency = 5.5,
-		base = 0.15,
+		-- Batch 2 (2026-11-06) bigger and looser: was 0.15.
+		base = 0.35,
 	}),
 	-- The wand's lag: its head trails a turn (`yawPerRate` radians per radian a second of turning, at most `maxYaw`)
 	-- and slides on when she stops (`pitchPerAccel` radians per stud/s/s of braking, at most `maxPitch`; starting off it
 	-- would trail into the floor, which the floor clamp holds it out of), on an underdamped spring so it overshoots and
 	-- settles. The hands stay on the wand: it turns as one rigid piece.
 	sway = table.freeze({
-		yawPerRate = 0.075,
-		maxYaw = math.rad(14),
+		-- Batch 2 (2026-11-06) bigger and looser: yawPerRate was 0.075, maxYaw 14 degrees.
+		yawPerRate = 0.1,
+		maxYaw = math.rad(20),
 		pitchPerAccel = 0.006,
 		maxPitch = math.rad(9),
 		frequency = 2.2,
