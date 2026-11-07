@@ -8,6 +8,9 @@
 	- A player who still needs training gets an arrow to the nearest Training pad (a world spotlight step) until they
 	  step on one or finish training.
 	- "Play training again" from the Guide (`again`): an arrow to the Training pad.
+	- The gold chevron trail on the floor from the player to the nearest Training pad (TrainingTrailSystem's hub
+	  goal): while this player still needs training, and after "Play training again" for AGAIN_TRAIL_SECONDS; never
+	  while they stand on a pad (TrainingRules.hubTrail).
 	- The after-training tour (`tour`, sent once by the server): the Shop button spotlighted with the 100 Gleam line,
 	  then an arrow to the real trucks until they step on one.
 
@@ -19,21 +22,29 @@
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local QueueConstants = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueConstants)
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
+local TrainingRules = require(ReplicatedStorage.Shared.Features.Training.Rules.TrainingRules)
 local TrainingSignSystem = require(ReplicatedStorage.Client.Features.Training.Systems.TrainingSignSystem)
 local TrainingSpotlightSystem = require(ReplicatedStorage.Client.Features.Training.Systems.TrainingSpotlightSystem)
+local TrainingTrailSystem = require(ReplicatedStorage.Client.Features.Training.Systems.TrainingTrailSystem)
 
 local SIGN_LIFT = 7
 -- How far over a pad's edge, and above it, still counts as standing on it.
 local PAD_SLACK = 1.5
 local PAD_HEIGHT = 8
+-- How often the hub trail checks whether to show and where the nearest pad is (seconds).
+local TRAIL_SECONDS = 0.2
 
 local pads: { [BasePart]: true } = {}
 local connections: { RBXScriptConnection } = {}
 local isNew = false
 local pointed = false
+-- "Play training again": the trail leads to the pad until this clock time (nil: not asked).
+local againUntil: number? = nil
+local trailClock = 0
 
 -- A Training pad the server made a queue pad (it does so only while the place offers training).
 local function isTrainingPad(part: BasePart): boolean
@@ -62,6 +73,39 @@ local function standingOn(accept: (BasePart) -> boolean): boolean
 		end
 	end
 	return false
+end
+
+-- The top of the Training pad nearest the player.
+local function nearestPadTop(): Vector3?
+	local character = Players.LocalPlayer.Character
+	if character == nil then
+		return nil
+	end
+	local from = character:GetPivot().Position
+	local best: BasePart? = nil
+	local bestDistance = math.huge
+	for pad in pads do
+		local distance = (pad.Position - from).Magnitude
+		if distance < bestDistance then
+			best, bestDistance = pad, distance
+		end
+	end
+	return if best ~= nil then best.Position + Vector3.new(0, best.Size.Y / 2, 0) else nil
+end
+
+local function trailTick(deltaTime: number)
+	trailClock += deltaTime
+	if trailClock < TRAIL_SECONDS then
+		return
+	end
+	trailClock = 0
+	local onPad = standingOn(isTrainingPad)
+	if onPad then
+		-- Reached: "Play training again" is answered, so stepping off does not bring the trail back.
+		againUntil = nil
+	end
+	local show = next(pads) ~= nil and TrainingRules.hubTrail(isNew, againUntil, os.clock(), onPad)
+	TrainingTrailSystem.setHub(if show then nearestPadTop() else nil)
 end
 
 local function sign(pad: BasePart)
@@ -120,6 +164,8 @@ function TrainingHubSystem.start()
 	for _, instance in CollectionService:GetTagged(TrainingConstants.TRUCK_TAG) do
 		added(instance)
 	end
+	trailClock = TRAIL_SECONDS
+	table.insert(connections, RunService.Heartbeat:Connect(trailTick))
 end
 
 --[=[
@@ -167,9 +213,11 @@ function TrainingHubSystem.offered(): boolean
 end
 
 --[=[
-	"Play training again" (the Guide): an arrow to the nearest Training pad until the player steps on it.
+	"Play training again" (the Guide): an arrow to the nearest Training pad until the player steps on it, and the
+	chevron trail to it for AGAIN_TRAIL_SECONDS (or until they step on it).
 ]=]
 function TrainingHubSystem.again()
+	againUntil = os.clock() + TrainingConstants.AGAIN_TRAIL_SECONDS
 	TrainingSpotlightSystem.point({
 		{
 			kind = "world",
@@ -194,6 +242,8 @@ function TrainingHubSystem.stop()
 	end
 	table.clear(pads)
 	pointed = false
+	againUntil = nil
+	TrainingTrailSystem.setHub(nil)
 end
 
 return TrainingHubSystem

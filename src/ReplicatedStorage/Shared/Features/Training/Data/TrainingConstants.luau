@@ -131,6 +131,8 @@ local TrainingConstants = {
 	-- After a catch's knock-down, the player is moved back to the start of their stop (while the screen is dark:
 	-- CATCH_BEAT.dark to .back).
 	RETURN_DELAY = 2.0,
+	-- After "Play training again", how long the hub's chevron trail leads a trained player to the pad (seconds).
+	AGAIN_TRAIL_SECONDS = 60,
 	-- The catch beat, in seconds from the grab: a goo splat on a heart, the red card, the screen going dark (the move
 	-- back happens here), back at the stop with Pippa's tip, done.
 	CATCH_BEAT = table.freeze({ splat = 0.3, card = 0.6, dark = 1.6, back = 2.4, done = 5.4 }),

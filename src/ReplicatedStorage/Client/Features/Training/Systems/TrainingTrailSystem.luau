@@ -6,7 +6,8 @@
 	  the player's feet to what the guide points at, along a PathfindingService path (a straight line when there is
 	  none), re-pathed as the player moves (TrainingTrailUtils);
 	- a bobbing arrow over the target (a BillboardGui, always on top) and a ring on the floor under it.
-	Gold on calm stops, red at the hide stop (TrainingGuideRules.tone). The target follows TrainingGuideRules.target
+	Gold on calm stops, red at the hide stop (TrainingGuideRules.tone). Off a run, the hub can hand it a goal of its own
+	(`setHub`: the Training pad, TrainingHubSystem), drawn the same way in gold. The target follows TrainingGuideRules.target
 	from what this system sees of the player (the stop's door open, the treasure carried, hidden at the hide stop),
 	which it also hands to TrainingCoachStore so Pippa's line follows. The targets are found in the Training map by
 	its parts' attributes and in the run's spawned piles and cargo by their tags.
@@ -52,6 +53,8 @@ local arrowImage: ImageLabel? = nil
 local ring: Part? = nil
 local stepping: RBXScriptConnection? = nil
 local stop: number? = nil
+-- The hub's goal (a floor point), used only off a run.
+local hubGoal: Vector3? = nil
 local hiddenHere = false
 local legs: { TrainingTrailUtils.Leg } = {}
 local lastFrom: Vector3? = nil
@@ -364,21 +367,34 @@ end
 
 local function step()
 	local at = stop
-	local map = mapOf()
 	local root = rootOf()
-	if at == nil or map == nil or root == nil then
+	if root == nil then
 		hideAll()
 		return
 	end
 	local feet = floorUnder(root)
 	local now = os.clock()
-	if now - targetAt >= TARGET_SECONDS then
-		targetAt = now
-		local found, situation = targetNow(map, at, feet)
-		target = found
-		TrainingCoachStore.setSituation(situation)
+	local goal: Vector3? = nil
+	local color = GUIDE.calm
+	if at ~= nil then
+		local map = mapOf()
+		if map == nil then
+			hideAll()
+			return
+		end
+		if now - targetAt >= TARGET_SECONDS then
+			targetAt = now
+			local found, situation = targetNow(map, at, feet)
+			target = found
+			TrainingCoachStore.setSituation(situation)
+		end
+		goal = target
+		if TrainingGuideRules.tone(at) == "danger" then
+			color = GUIDE.danger
+		end
+	else
+		goal = hubGoal
 	end
-	local goal = target
 	if goal == nil then
 		hideAll()
 		return
@@ -387,7 +403,6 @@ local function step()
 		lastFrom, lastAt = feet, now
 		repath(feet, goal)
 	end
-	local color = if TrainingGuideRules.tone(at) == "danger" then GUIDE.danger else GUIDE.calm
 	for index, beam in beams do
 		local leg = legs[index]
 		if leg ~= nil then
@@ -412,24 +427,15 @@ end
 
 local TrainingTrailSystem = {}
 
---[=[
-	Follows the run's stop (nil off a run: the guide hides).
-]=]
-function TrainingTrailSystem.setStop(value: number?)
-	if value ~= stop then
-		hiddenHere = false
-		lastFrom = nil
-		legs = {}
-		target = nil
-		targetAt = -math.huge
-	end
-	stop = value
-	if value ~= nil and folder == nil then
+-- Draws while there is something to follow (a run's stop, else the hub's goal); stops and hides otherwise.
+local function refresh()
+	local wanted = stop ~= nil or hubGoal ~= nil
+	if wanted and folder == nil then
 		build()
 	end
-	if value ~= nil and not stepping then
+	if wanted and not stepping then
 		stepping = RunService.RenderStepped:Connect(step)
-	elseif value == nil then
+	elseif not wanted then
 		local connection = stepping
 		stepping = nil
 		if connection then
@@ -439,10 +445,43 @@ function TrainingTrailSystem.setStop(value: number?)
 	end
 end
 
+-- Forgets the drawn path (the goal changed).
+local function forget()
+	lastFrom = nil
+	legs = {}
+end
+
+--[=[
+	Follows the run's stop (nil off a run: the guide hides, or follows the hub's goal).
+]=]
+function TrainingTrailSystem.setStop(value: number?)
+	if value ~= stop then
+		hiddenHere = false
+		forget()
+		target = nil
+		targetAt = -math.huge
+	end
+	stop = value
+	refresh()
+end
+
+--[=[
+	The hub's goal, a floor point (nil: none). Shown only off a run.
+]=]
+function TrainingTrailSystem.setHub(point: Vector3?)
+	local previous = hubGoal
+	if point == nil or previous == nil or (point - previous).Magnitude > 0.5 then
+		forget()
+	end
+	hubGoal = point
+	refresh()
+end
+
 --[=[
 	Removes everything it made.
 ]=]
 function TrainingTrailSystem.teardown()
+	hubGoal = nil
 	TrainingTrailSystem.setStop(nil)
 	for _, attachment in attachments do
 		attachment:Destroy()

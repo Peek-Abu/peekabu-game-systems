@@ -62,6 +62,17 @@ function TrainingRules.offered(maps: number): boolean
 end
 
 --[=[
+	Whether the hub's chevron trail leads this player to the Training pad: a new player until they stand on the pad;
+	anyone else only after "Play training again" (`againUntil`, a clock time), until then or until they stand on it.
+]=]
+function TrainingRules.hubTrail(isNew: boolean, againUntil: number?, now: number, onPad: boolean): boolean
+	if onPad then
+		return false
+	end
+	return isNew or (againUntil ~= nil and now < againUntil)
+end
+
+--[=[
 	Records a finished run in place. True when this is the first finish (the reward is due).
 ]=]
 function TrainingRules.finish(value: PlayerDataTypes.Training): boolean
