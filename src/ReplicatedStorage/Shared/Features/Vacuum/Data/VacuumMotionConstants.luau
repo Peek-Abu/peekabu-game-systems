@@ -98,9 +98,11 @@ return table.freeze({
 		frequency = 3.6,
 		fullFrequency = 2.2,
 		damping = 0.32,
-		gain = 0.0035,
-		fullGain = 0.0065,
-		max = 0.09,
+		-- Batch 2 (2026-11-06) heavier canister, about 3x the bob (it measured 0.04 studs walking): gain was 0.0035,
+		-- fullGain 0.0065, max 0.09.
+		gain = 0.01,
+		fullGain = 0.018,
+		max = 0.18,
 		tilt = 0.9,
 	}),
 	-- Never let the floor head under the floor: its lowest corner stays `floorMargin` above it.
