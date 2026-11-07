@@ -20,6 +20,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local React = require(ReplicatedStorage.Packages.React)
+local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
 local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
 local AbilityStore = require(ReplicatedStorage.Client.Features.Ability.State.AbilityStore)
@@ -162,6 +163,12 @@ local function AbilityButton(props: AbilityButtonProps): React.ReactNode
 			end
 		end,
 	}, {
+		-- The training spotlight's target (TrainingHubSystem's hotbar tour), the button's own box.
+		spot = e("Frame", {
+			Size = UDim2.fromScale(1, 1),
+			BackgroundTransparency = 1,
+			[React.Tag] = TrainingConstants.SPOTLIGHT_TAGS.power,
+		}),
 		plate = e(ToonSurface, {
 			hue = hue,
 			radius = 999,

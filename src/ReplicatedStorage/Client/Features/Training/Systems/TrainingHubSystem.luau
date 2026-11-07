@@ -7,6 +7,7 @@
 	  player still needs training, plain "TRAINING" once they have done it (anyone can play it again).
 	- A player who still needs training gets an arrow to the nearest Training pad (a world spotlight step) until they
 	  step on one or finish training.
+	- "Play training again" from the Guide (`again`): an arrow to the Training pad.
 	- The after-training tour (`tour`, sent once by the server): the Shop button spotlighted with the 100 Gleam line,
 	  then an arrow to the real trucks until they step on one.
 
@@ -153,6 +154,31 @@ function TrainingHubSystem.tour()
 				return standingOn(function(part: BasePart)
 					return not isTrainingPad(part)
 				end)
+			end,
+		},
+	})
+end
+
+--[=[
+	Whether this hub has a Training pad (the place offers training).
+]=]
+function TrainingHubSystem.offered(): boolean
+	return next(pads) ~= nil
+end
+
+--[=[
+	"Play training again" (the Guide): an arrow to the nearest Training pad until the player steps on it.
+]=]
+function TrainingHubSystem.again()
+	TrainingSpotlightSystem.point({
+		{
+			kind = "world",
+			tag = TrainingConstants.TRUCK_TAG,
+			line = TrainingConstants.TEXT.again,
+			seconds = 30,
+			accept = isTrainingPad,
+			done = function()
+				return standingOn(isTrainingPad)
 			end,
 		},
 	})

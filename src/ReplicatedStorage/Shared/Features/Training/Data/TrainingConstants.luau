@@ -98,7 +98,16 @@ local TrainingConstants = {
 	-- The tags the spotlight finds its UI targets by (React.Tag on the button).
 	SPOTLIGHT_TAGS = table.freeze({
 		shop = "TrainingSpotShop",
+		vacuum = "TrainingSpotVacuum",
+		power = "TrainingSpotPower",
 	}),
+
+	-- The hotbar tour's mark in the tips slice (TipServiceServer:once): shown once per account, on the first run.
+	HOTBAR_TIP = "hotbarTour",
+	-- Seconds after a run starts before the hotbar tour shows (the load screen lifts first).
+	HOTBAR_DELAY = 2,
+	-- How long each hotbar step shows at most.
+	HOTBAR_SECONDS = 8,
 
 	-- The one-time thank-you (owner: 100 Gleam).
 	REWARD_GLEAM = 100,
@@ -123,6 +132,10 @@ local TrainingConstants = {
 		failed = "Training could not start. Try again soon.",
 		tourShop = "You got 100 Gleam! Spend it in the Shop.",
 		tourTrucks = "Hop on a truck with your crew!",
+		again = "Step on the TRAINING pad to play again!",
+		againButton = "PLAY TRAINING AGAIN",
+		tourVacuum = "This is your vacuum! Pick it, then hold to suck up Gloom.",
+		tourPower = "This is your power! Tap it to help your crew.",
 	}),
 }
 

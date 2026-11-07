@@ -12,6 +12,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TextService = game:GetService("TextService")
 local UserInputService = game:GetService("UserInputService")
 local React = require(ReplicatedStorage.Packages.React)
+local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
+local TrainingHubSystem = require(ReplicatedStorage.Client.Features.Training.Systems.TrainingHubSystem)
 local InputServiceClient = require(ReplicatedStorage.Client.Features.Input.InputServiceClient)
 local SettingRegistry = require(ReplicatedStorage.Shared.Features.Setting.Data.SettingRegistry)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
@@ -344,6 +346,28 @@ local function DepotHubScreen(
 						TextXAlignment = Enum.TextXAlignment.Left,
 						ZIndex = 2,
 					}),
+				}),
+			})
+		end
+		-- The Guide's way back into training (only where the hub has a Training pad).
+		if props.page == "guide" and TrainingHubSystem.offered() then
+			body.training = e("Frame", {
+				LayoutOrder = #copy.sections + 1,
+				Size = UDim2.new(1, -EDGE, 0, if phone then 56 else 72),
+				BackgroundTransparency = 1,
+			}, {
+				button = e(ToonButton, {
+					variant = "gleam",
+					text = TrainingConstants.TEXT.againButton,
+					textSize = if phone then 18 else 24,
+					anchor = Vector2.new(0.5, 0),
+					position = UDim2.fromScale(0.5, 0),
+					size = UDim2.new(0, if phone then 260 else 360, 1, -8),
+					sound = "confirm",
+					onActivated = function()
+						SceneStack.remove(VM.scene(props.page))
+						TrainingHubSystem.again()
+					end,
 				}),
 			})
 		end

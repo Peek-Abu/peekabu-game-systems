@@ -17,6 +17,7 @@ local Workspace = game:GetService("Workspace")
 local React = require(ReplicatedStorage.Packages.React)
 local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
 local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
+local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local InputServiceClient = require(ReplicatedStorage.Client.Features.Input.InputServiceClient)
 local OccupantCatchStore = require(ReplicatedStorage.Client.Features.Occupant.State.OccupantCatchStore)
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
@@ -81,7 +82,13 @@ local function ShiftHud(): React.ReactNode
 	-- The panel is drawn (and hidden with a prop) rather than unmounted while hidden, so its stamps keep their state
 	-- and do not pop again when the scare beat or the catch ends.
 	local hidden = ShiftHudViewModel.hidden(me, scaring)
-	local view = ShiftHudViewModel.hud(snapshot, me, now, false)
+	local world = useAtom(StateSyncClientStore.world)
+	local base = ShiftHudViewModel.hud(snapshot, me, now, false)
+	-- A training run counts its stops (the `training` world entry) instead of the Gloom goal.
+	local stop = world[TrainingConstants.WORLD_ENTRY]
+	local view = if base ~= nil and type(stop) == "number"
+		then ShiftHudViewModel.training(base, stop, #TrainingConstants.STOPS)
+		else base
 	if view == nil or snapshot == nil then
 		return nil
 	end

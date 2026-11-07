@@ -11,9 +11,11 @@
 	  back from the run.
 	- **The run** (the shift role): a party of one arriving with the training mode plays the shift on the Studio-built
 	  Training map (TrainingSiteSystem as Office's site, TrainingRunSystem following the stops), with a lives floor of
-	  TrainingConstants.LIVES_FLOOR, so a catch never knocks them out. Finishing records the run and pays REWARD_GLEAM
+	  TrainingConstants.LIVES_FLOOR, so a catch never knocks them out, and a calm clock (no Manager speed-ups). Finishing records the run and pays REWARD_GLEAM
 	  the first time (one transaction), then rides them home. A map that is missing or does not check out sends them
 	  straight home with a note, and logs every problem.
+	- **The hotbar tour** (the shift role): when a run starts, each player there who has never had it (the tips slice,
+	  TipServiceServer:once) is sent TrainingEvents.Hotbar: the spotlight on the vacuum's slot, then the power.
 
 	Spec-exempt shell (the data layer, Queue, Office, Shift, Instances); the decisions are the specced TrainingRules,
 	TrainingStopRules and TrainingMapRules.
@@ -33,6 +35,7 @@ local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.Depo
 local QueueConstants = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueConstants)
 local QueueTypes = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueTypes)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
+local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local TrainingEvents = require(ReplicatedStorage.Shared.Features.Training.Net.TrainingEvents)
 local TrainingRules = require(ReplicatedStorage.Shared.Features.Training.Rules.TrainingRules)
@@ -43,6 +46,7 @@ local PlayerDataService = require(ServerScriptService.Features.PlayerData.Player
 local PlayerDataSliceSystem = require(ServerScriptService.Features.PlayerData.Systems.PlayerDataSliceSystem)
 local QueueServiceServer = require(ServerScriptService.Features.Queue.QueueServiceServer)
 local ShiftServiceServer = require(ServerScriptService.Features.Shift.ShiftServiceServer)
+local TipServiceServer = require(ServerScriptService.Features.Tip.TipServiceServer)
 local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
 local TrainingRunSystem = require(ServerScriptService.Features.Training.Systems.TrainingRunSystem)
 local TrainingSiteSystem = require(ServerScriptService.Features.Training.Systems.TrainingSiteSystem)
@@ -154,6 +158,7 @@ local function finishRun()
 	end
 	OfficeServiceServer:useSite(nil)
 	ShiftServiceServer:setLivesFloor(0)
+	ShiftServiceServer:setCalm(false)
 end
 
 local function begin(player: Player)
@@ -183,6 +188,8 @@ local function begin(player: Player)
 		run:track(piles, items)
 	end))
 	ShiftServiceServer:setLivesFloor(TrainingConstants.LIVES_FLOOR)
+	-- No speed-ups in training: the Manager keeps his first pace.
+	ShiftServiceServer:setCalm(true)
 	log:info(`training for {player.Name}`)
 end
 
@@ -203,6 +210,7 @@ local TrainingServiceServer: TrainingServiceServer = {
 		"OfficeServiceServer",
 		"ShiftServiceServer",
 		"ToastServiceServer",
+		"TipServiceServer",
 		"StateSyncServiceServer",
 		"DepotServiceServer",
 	},
@@ -251,6 +259,21 @@ local TrainingServiceServer: TrainingServiceServer = {
 					end
 				end
 			)
+			-- The hotbar tour, once per account, on a player's first run (training's or a shift's).
+			local wasRunning = false
+			local following = ShiftServiceServer.changed:Connect(function(state: ShiftTypes.ShiftState)
+				local running = state.phase == "running"
+				if running and not wasRunning then
+					task.delay(TrainingConstants.HOTBAR_DELAY, function()
+						for _, player in Players:GetPlayers() do
+							if TipServiceServer:once(player, TrainingConstants.HOTBAR_TIP) then
+								TrainingEvents.packets.Hotbar.sendTo(true, player)
+							end
+						end
+					end)
+				end
+				wasRunning = running
+			end)
 			local leaving = Players.PlayerRemoving:Connect(function(player: Player)
 				local run = current
 				if run ~= nil and run.player == player then
@@ -259,6 +282,7 @@ local TrainingServiceServer: TrainingServiceServer = {
 			end)
 			table.insert(stoppers, function()
 				arrived:Disconnect()
+				following:Disconnect()
 				leaving:Disconnect()
 			end)
 		end

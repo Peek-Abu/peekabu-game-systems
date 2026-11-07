@@ -140,6 +140,8 @@ local changed: SignalTyped.Signal<ShiftTypes.ShiftState> = SignalTyped.new()
 -- Every counted catch with the lives the player has left after it (0 = knocked out) and the seconds into the shift at
 -- the catch, for analytics.
 local caught: SignalTyped.Signal<Player, number, number> = SignalTyped.new()
+-- A calm shift (training, setCalm) never raises the pressure tier.
+local calm = false
 
 local function now(): number
 	return Workspace:GetServerTimeNow()
@@ -412,7 +414,7 @@ transit = ShiftTransitSystem.new({
 })
 
 function step()
-	local advanced = ShiftPhaseRules.advance(state, now())
+	local advanced = ShiftPhaseRules.advance(state, now(), calm)
 	if advanced ~= nil then
 		setState(advanced)
 	end
@@ -453,6 +455,7 @@ export type ShiftServiceServer = {
 	noteCatch: (self: ShiftServiceServer, player: Player) -> boolean,
 	spendLife: (self: ShiftServiceServer, player: Player) -> boolean,
 	setLivesFloor: (self: ShiftServiceServer, floor: number) -> (),
+	setCalm: (self: ShiftServiceServer, on: boolean) -> (),
 	addLivesModifier: (self: ShiftServiceServer, modify: (number) -> number) -> () -> (),
 }
 
@@ -655,6 +658,14 @@ local ShiftServiceServer: ShiftServiceServer = {
 	]=]
 	setLivesFloor = function(_self, floor)
 		lives:setFloor(floor)
+	end,
+
+	--[=[
+		A calm shift keeps the pressure tier at 0 (training): the clock never speeds the Manager up. Holds until set
+		again.
+	]=]
+	setCalm = function(_self, on)
+		calm = on
 	end,
 
 	--[=[

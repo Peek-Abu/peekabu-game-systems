@@ -34,6 +34,7 @@ export type TipServiceServer = {
 	dependencies: { string },
 	getState: (self: TipServiceServer) -> { [string]: any },
 	first: (self: TipServiceServer, player: Player, id: string) -> boolean,
+	once: (self: TipServiceServer, player: Player, id: string) -> boolean,
 }
 
 local TipServiceServer: TipServiceServer = {
@@ -68,6 +69,25 @@ local TipServiceServer: TipServiceServer = {
 			style = ShiftConstants.TOAST_STICKY,
 			duration = TipRegistry.SECONDS,
 		})
+	end,
+
+	--[=[
+		Marks `id` seen for `player` without showing anything, for a first-time moment another feature draws (the
+		training's hotbar tour). True only the first time, while tips are on and the save is loaded.
+	]=]
+	once = function(_self, player, id)
+		local enabled = SettingServiceServer:get(player.UserId, TipRegistry.SETTING) ~= false
+		local tips: PlayerDataTypes.Tips? = tipsSlice.get(player.UserId)
+		if not enabled or tips == nil or tips.seen[id] == true then
+			return false
+		end
+		return tipsSlice.mutate(player.UserId, function(slice)
+			if slice.seen[id] == true then
+				return false
+			end
+			slice.seen[id] = true
+			return true
+		end)
 	end,
 
 	getState = function(_self)

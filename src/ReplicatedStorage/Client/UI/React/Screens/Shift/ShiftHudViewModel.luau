@@ -74,6 +74,8 @@ export type HudView = {
 	-- the HUD does not re-render each second).
 	endsAt: number?,
 	truck: number?,
+	-- On a training run: the stop the player is on (the meter shows the stops, not the shift's Gloom goal).
+	training: number?,
 }
 
 export type ButtonsView = {
@@ -568,11 +570,29 @@ function ShiftHudViewModel.compact(view: HudView, bindings: KeyBindings): Compac
 	}
 end
 
+--[=[
+	The HUD on a training run, on stop `stop` of `stops`: the meter counts the stops (STOP 2 / 5, filled by the stops
+	done) instead of the shift's Gloom goal, which training never asks for.
+]=]
+function ShiftHudViewModel.training(view: HudView, stop: number, stops: number): HudView
+	local copy = table.clone(view)
+	copy.training = stop
+	copy.cleared = tostring(stop)
+	copy.quotaText = `/ {stops} STOPS`
+	copy.clearedShort = `STOP {stop} / {stops}`
+	copy.fill = if stops > 0 then math.clamp((stop - 1) / stops, 0, 1) else 0
+	copy.quotaMet = false
+	return copy
+end
+
 export type MeterView = { title: string, site: string, met: boolean }
 
 -- The V1 Gloom meter's words: the job until the contract is met, then the win, then overtime's push. Every contract is
--- the one office (DepotConstants.SITE), so the site line is fixed.
-function ShiftHudViewModel.meter(view: { quotaMet: boolean, overtime: boolean }): MeterView
+-- the one office (DepotConstants.SITE), so the site line is fixed. A training run is TRAINING.
+function ShiftHudViewModel.meter(view: { quotaMet: boolean, overtime: boolean, training: number? }): MeterView
+	if view.training ~= nil then
+		return { title = "TRAINING", site = "Harlow & Finch · training", met = false }
+	end
 	local title = if view.overtime then "OVERTIME!" elseif view.quotaMet then "GOAL DONE!" else "CLEAN THE GLOOM"
 	return { title = title, site = "Harlow & Finch · offices", met = view.quotaMet }
 end

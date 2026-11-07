@@ -4,18 +4,23 @@
 
 	- In the hub: the Training pad signs and the new-player arrow (TrainingHubSystem), from this player's synced
 	  "training" slice (TrainingRules.isNew), and the after-training tour when the server sends it (TrainingEvents.Tour).
+	- On a player's first run (training's or a shift's): the hotbar tour when the server sends it
+	  (TrainingEvents.Hotbar): the vacuum's slot, then the power button.
 	- On a training run: the hall's signs, lights out, creeping Gloom and glowing desk (TrainingHallSystem), from the
 	  stop in the `training` world entry; the hall is put back when the entry goes.
 
 	@class TrainingServiceClient
 ]=]
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Charm = require(ReplicatedStorage.Packages.Charm)
 local PlayerDataTypes = require(ReplicatedStorage.Shared.Data.PlayerDataTypes)
 local WorldTypes = require(ReplicatedStorage.Shared.Data.WorldTypes)
+local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
+local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local TrainingEvents = require(ReplicatedStorage.Shared.Features.Training.Net.TrainingEvents)
 local TrainingRules = require(ReplicatedStorage.Shared.Features.Training.Rules.TrainingRules)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
@@ -32,6 +37,12 @@ local function onWorld(world: WorldTypes.WorldMap)
 	else
 		TrainingHallSystem.clear()
 	end
+end
+
+-- Whether this player's vacuum is out (their public entry), which ends the hotbar tour's vacuum step.
+local function vacuumOut(): boolean
+	local entry = StateSyncClientStore.publicPlayers()[StateSyncConstants.publicEntryKey(Players.LocalPlayer.UserId)]
+	return entry ~= nil and entry[VacuumConstants.PUBLIC_EQUIPPED_FIELD] == true
 end
 
 local function onTraining(training: PlayerDataTypes.Training?)
@@ -58,6 +69,26 @@ local TrainingServiceClient: TrainingServiceClient = {
 			stoppers,
 			TrainingEvents.packets.Tour.listen(function(_value: boolean)
 				TrainingHubSystem.tour()
+			end)
+		)
+		table.insert(
+			stoppers,
+			TrainingEvents.packets.Hotbar.listen(function(_value: boolean)
+				TrainingSpotlightSystem.point({
+					{
+						kind = "gui",
+						tag = TrainingConstants.SPOTLIGHT_TAGS.vacuum,
+						line = TrainingConstants.TEXT.tourVacuum,
+						seconds = TrainingConstants.HOTBAR_SECONDS,
+						done = vacuumOut,
+					},
+					{
+						kind = "gui",
+						tag = TrainingConstants.SPOTLIGHT_TAGS.power,
+						line = TrainingConstants.TEXT.tourPower,
+						seconds = TrainingConstants.HOTBAR_SECONDS,
+					},
+				})
 			end)
 		)
 	end,

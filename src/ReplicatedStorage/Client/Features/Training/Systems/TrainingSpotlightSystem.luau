@@ -34,7 +34,8 @@ export type Step = {
 	kind: "gui" | "world",
 	tag: string,
 	line: string,
-	-- World steps: which tagged parts count (default: all), when the step is over, and its longest time.
+	-- World steps: which tagged parts count (default: all). Any step: when it is over (checked after DONE_AFTER, so a
+	-- step already done still shows a moment), and its longest time.
 	accept: ((part: BasePart) -> boolean)?,
 	done: (() -> boolean)?,
 	seconds: number?,
@@ -50,6 +51,7 @@ local LINE_GAP = 16
 local ARROW_MARGIN = 70
 local ARROW_LIFT = Vector3.new(0, 6, 0)
 local WORLD_SECONDS = 20
+local DONE_AFTER = 2.5
 
 -- The Coach layer's root, acquired on first use (the layer's ScreenGui is made then).
 local renderRoot: ((React.ReactNode) -> ())? = nil
@@ -196,6 +198,11 @@ local function tick(deltaTime: number)
 		return
 	end
 	local age = now - startedAt
+	local done = step.done
+	if (done ~= nil and age > DONE_AFTER and done()) or age > (step.seconds or math.huge) then
+		advance()
+		return
+	end
 	if step.kind == "gui" then
 		local last = seenAt
 		if guiTarget(step.tag) ~= nil then
@@ -208,12 +215,9 @@ local function tick(deltaTime: number)
 				return
 			end
 		end
-	else
-		local done = step.done
-		if (done ~= nil and done()) or age > (step.seconds or WORLD_SECONDS) then
-			advance()
-			return
-		end
+	elseif age > (step.seconds or WORLD_SECONDS) then
+		advance()
+		return
 	end
 	draw(step, now)
 end

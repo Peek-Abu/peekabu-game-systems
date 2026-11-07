@@ -14,6 +14,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
+local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local ArtKitRegistry = require(ReplicatedStorage.Shared.Features.Art.Data.ArtKitRegistry)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local ToonSlot = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonSlot)
@@ -107,6 +108,14 @@ local function Card(props: CardProps): React.ReactNode
 		Size = UDim2.fromOffset(side, size.height + size.lift),
 		BackgroundTransparency = 1,
 	}, {
+		-- The vacuum's slot is the training spotlight's target (TrainingHubSystem's hotbar tour).
+		spot = if slot.vacuum
+			then e("Frame", {
+				Size = UDim2.fromScale(1, 1),
+				BackgroundTransparency = 1,
+				[React.Tag] = TrainingConstants.SPOTLIGHT_TAGS.vacuum,
+			})
+			else nil,
 		slot = e(ToonSlot, {
 			side = side,
 			position = UDim2.fromOffset(0, size.lift),
