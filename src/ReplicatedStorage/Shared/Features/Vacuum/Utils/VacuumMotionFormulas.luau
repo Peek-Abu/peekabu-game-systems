@@ -59,7 +59,7 @@ export type Layers = {
 	swayPitch: number,
 	-- The aim's turn toward where its holder looks, left or right (radians; nil reads 0).
 	aimYaw: number?,
-	-- The look's heading off the body (radians, left positive; nil reads 0): the upper body twists toward it.
+	-- The look's heading off the body (radians, left positive; nil reads 0): the wand aims at it (`aimYaw`).
 	lookYaw: number?,
 }
 
@@ -386,10 +386,21 @@ function VacuumMotionFormulas.motion(waist: Vector3?, drop: number, lean: number
 end
 
 --[=[
-	How far the upper body turns over the waist toward the look's heading (radians): `twistShare` of it.
+	How far the upper body turns over the waist with a turn of `heading` (radians): `twistShare` of it.
 ]=]
 function VacuumMotionFormulas.twist(heading: number): number
 	return heading * Constants.aim.twistShare
+end
+
+--[=[
+	The upper body's twist for the layers' state (with the brace's `drop` and `lean`): a share of the wand's whole
+	turn (its aim and its sway), so the shoulders square to the wand and the left one stays with its grip (a turn
+	about the grip with the body still swings the right hand across and draws the left shoulder away), fitted by
+	`fitTwist`.
+]=]
+function VacuumMotionFormulas.bodyTwist(rest: WandRest, layers: Layers, drop: number, lean: number): number
+	local turn = (layers.aimYaw or 0) + layers.swayYaw
+	return VacuumMotionFormulas.fitTwist(rest, drop, lean, VacuumMotionFormulas.twist(turn))
 end
 
 --[=[

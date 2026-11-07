@@ -206,7 +206,7 @@ end
 
 --[=[
 	The pose VacuumMotionSystem lays on a bound rig for `layers` (its springs settled there): the wand aimed at the
-	look point (the look's heading, `distance` studs out; the far one by default), the upper body twisted toward it.
+	look point (the look's heading, `distance` studs out; the far one by default), the upper body twisted with the wand's turn.
 ]=]
 function AnimationVacuumHarness.poseOf(
 	rig: VacuumMotionRigSystem.Rig,
@@ -217,7 +217,7 @@ function AnimationVacuumHarness.poseOf(
 	local aimed = table.clone(layers)
 	aimed.aimYaw = VacuumMotionFormulas.aimYaw(rig.rest, look, distance or VacuumMotionConstants.aim.far)
 	local drop, lean = VacuumMotionFormulas.body(layers.brace)
-	local twist = VacuumMotionFormulas.fitTwist(rig.rest, drop, lean, VacuumMotionFormulas.twist(look))
+	local twist = VacuumMotionFormulas.bodyTwist(rig.rest, aimed, drop, lean)
 	local wand = VacuumMotionFormulas.wand(
 		rig.rest,
 		VacuumMotionFormulas.offsetOf(aimed),
