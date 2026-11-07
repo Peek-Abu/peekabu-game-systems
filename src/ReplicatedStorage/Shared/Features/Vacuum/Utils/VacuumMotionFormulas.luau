@@ -152,13 +152,37 @@ function VacuumMotionFormulas.decodeAim(byte: number): number?
 end
 
 --[=[
+	A look's flat heading (radians, left positive, -pi..pi; 0 is the -Z axis).
+]=]
+function VacuumMotionFormulas.heading(look: Vector3): number
+	return math.atan2(-look.X, -look.Z)
+end
+
+local function wrapAngle(angle: number): number
+	return (angle + math.pi) % (2 * math.pi) - math.pi
+end
+
+--[=[
+	The body's next heading as it eases from `heading` toward the camera's `target` over `dt` (Constants.face): the
+	short way round, a share of the gap each frame (time constant `ease`), never faster than `maxRate`.
+]=]
+function VacuumMotionFormulas.faceToward(heading: number, target: number, dt: number): number
+	if dt <= 0 then
+		return heading
+	end
+	local tuning = Constants.face
+	local gap = wrapAngle(target - heading)
+	local turn = gap * (1 - math.exp(-math.min(dt, Constants.maxStep) / tuning.ease))
+	local most = tuning.maxRate * dt
+	return wrapAngle(heading + math.clamp(turn, -most, most))
+end
+
+--[=[
 	Where the camera looks relative to the body, left or right (radians, left positive, -pi..pi): the flat headings of
 	the camera's look and the body's look.
 ]=]
 function VacuumMotionFormulas.relativeYaw(cameraLook: Vector3, bodyLook: Vector3): number
-	local camera = math.atan2(-cameraLook.X, -cameraLook.Z)
-	local body = math.atan2(-bodyLook.X, -bodyLook.Z)
-	return (camera - body + math.pi) % (2 * math.pi) - math.pi
+	return wrapAngle(VacuumMotionFormulas.heading(cameraLook) - VacuumMotionFormulas.heading(bodyLook))
 end
 
 --[=[

@@ -456,4 +456,37 @@ return function()
 			expect(deep <= math.rad(80) + 1e-6).to.equal(true)
 		end)
 	end)
+	describe("faceToward (the body faces the camera while the wand is out)", function()
+		local tuning = Constants.face
+
+		it("reads a look's flat heading, left positive", function()
+			expect(VacuumMotionFormulas.heading(Vector3.new(0, 0, -1))).to.be.near(0, 1e-9)
+			expect(VacuumMotionFormulas.heading(Vector3.new(-1, -0.5, 0))).to.be.near(math.pi / 2, 1e-6)
+			expect(VacuumMotionFormulas.heading(Vector3.new(1, 0, 0))).to.be.near(-math.pi / 2, 1e-6)
+		end)
+
+		it("eases toward the camera's heading without overshooting, and gets there", function()
+			local heading, last = 0, 0
+			for _ = 1, 120 do
+				heading = VacuumMotionFormulas.faceToward(heading, math.rad(40), 1 / 60)
+				expect(heading >= last - 1e-9 and heading <= math.rad(40) + 1e-9).to.equal(true)
+				last = heading
+			end
+			expect(heading).to.be.near(math.rad(40), 1e-3)
+			-- Eased, not snapped: one frame covers only part of a small turn.
+			local first = VacuumMotionFormulas.faceToward(0, math.rad(10), 1 / 60)
+			expect(first > 0 and first < math.rad(10)).to.equal(true)
+		end)
+
+		it("turns the short way across the back", function()
+			local heading = VacuumMotionFormulas.faceToward(math.rad(170), math.rad(-170), 1 / 60)
+			expect(heading > math.rad(170) or heading < math.rad(-170)).to.equal(true)
+		end)
+
+		it("never turns faster than its most, and not at all in no time", function()
+			local heading = VacuumMotionFormulas.faceToward(0, math.rad(179), 1 / 60)
+			expect(heading <= tuning.maxRate / 60 + 1e-9).to.equal(true)
+			expect(VacuumMotionFormulas.faceToward(0.3, 1, 0)).to.equal(0.3)
+		end)
+	end)
 end

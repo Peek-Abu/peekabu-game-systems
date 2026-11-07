@@ -143,6 +143,16 @@ return table.freeze({
 	-- restore the old welded hands exactly.
 	handSmooth = 0.05,
 	poleFollow = 0.5,
+	-- Aim fix (2026-11-06): while the wand is out the local player's body eases to face where their camera looks (a
+	-- soft shift-lock, VacuumFaceSystem): Humanoid.AutoRotate is off and the root turns toward the camera's heading,
+	-- closing the gap with a time constant of `ease` seconds, at most `maxRate` radians a second. The suction already
+	-- aims by the body, so the nozzle, the camera and the suction agree. `enabled = false` restores AutoRotate's
+	-- face-the-way-you-walk exactly.
+	face = table.freeze({
+		enabled = true,
+		ease = 0.08,
+		maxRate = math.rad(540),
+	}),
 	-- A frame longer than `maxStep` only advances the springs that far.
 	maxStep = 0.1,
 	-- Replicated state on the character (set by the server): the look pitch in degrees, and whether its vacuum is

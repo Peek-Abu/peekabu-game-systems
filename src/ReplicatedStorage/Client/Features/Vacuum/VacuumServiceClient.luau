@@ -9,6 +9,7 @@
 	vacuuming it cleans it (the loot loop).
 	The server decides everything. VacuumFeedbackSystem plays the suction, whine, pop and canister sounds;
 	VacuumMotionSystem moves every holder's wand and body (aim, brace) on this client.
+	VacuumFaceSystem turns the local body to face the camera while the wand is out.
 
 	Spec-exempt shell (Input, CollectionService); the aim is the specced VacuumTargetRules.
 
@@ -24,6 +25,7 @@ local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.Carr
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local VacuumTargetRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumTargetRules)
 local VacuumFeedbackSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumFeedbackSystem)
+local VacuumFaceSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumFaceSystem)
 local VacuumMotionSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumMotionSystem)
 local VacuumPullSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumPullSystem)
 local VacuumCameraSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumCameraSystem)
@@ -160,6 +162,7 @@ local VacuumServiceClient: VacuumServiceClient = {
 				return holding and lastTarget ~= nil
 			end,
 		})
+		VacuumFaceSystem.start()
 		VacuumCameraSystem.start({
 			localActive = function()
 				return holding and lastTarget ~= nil
@@ -170,6 +173,7 @@ local VacuumServiceClient: VacuumServiceClient = {
 	stop = function(self)
 		self:endVacuum()
 		VacuumCameraSystem.stop()
+		VacuumFaceSystem.stop()
 		VacuumFeedbackSystem.stop()
 		VacuumMotionSystem.stop()
 		VacuumPullSystem.stop()
