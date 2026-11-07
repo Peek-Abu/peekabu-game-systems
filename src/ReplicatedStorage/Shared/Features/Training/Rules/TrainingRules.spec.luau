@@ -70,4 +70,12 @@ return function()
 			expect(TrainingRules.tour(slice)).to.equal(false)
 		end)
 	end)
+
+	describe("offered", function()
+		it("offers training only when the place holds exactly one Training map", function()
+			expect(TrainingRules.offered(0)).to.equal(false)
+			expect(TrainingRules.offered(1)).to.equal(true)
+			expect(TrainingRules.offered(2)).to.equal(false)
+		end)
+	end)
 end

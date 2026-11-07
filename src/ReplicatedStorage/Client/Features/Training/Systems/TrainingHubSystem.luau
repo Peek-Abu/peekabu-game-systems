@@ -2,7 +2,8 @@
 --[=[
 	TrainingHubSystem: training in the hub on this client.
 
-	- Every Training pad (TrainingConstants.TRUCK_TAG) carries a sign: gold "New here? Start training!" while this
+	- Every Training pad (TrainingConstants.TRUCK_TAG, made a queue pad by the server only while the place offers
+	  training) carries a sign: gold "New here? Start training!" while this
 	  player still needs training, plain "TRAINING" once they have done it (anyone can play it again).
 	- A player who still needs training gets an arrow to the nearest Training pad (a world spotlight step) until they
 	  step on one or finish training.
@@ -33,8 +34,10 @@ local connections: { RBXScriptConnection } = {}
 local isNew = false
 local pointed = false
 
+-- A Training pad the server made a queue pad (it does so only while the place offers training).
 local function isTrainingPad(part: BasePart): boolean
 	return CollectionService:HasTag(part, TrainingConstants.TRUCK_TAG)
+		and CollectionService:HasTag(part, QueueConstants.TAG)
 end
 
 local function standingOn(accept: (BasePart) -> boolean): boolean
@@ -79,6 +82,7 @@ local function pointToTraining()
 			tag = TrainingConstants.TRUCK_TAG,
 			line = TrainingConstants.TEXT.truckSign,
 			seconds = math.huge,
+			accept = isTrainingPad,
 			done = function()
 				return not isNew or standingOn(isTrainingPad)
 			end,
@@ -87,7 +91,7 @@ local function pointToTraining()
 end
 
 local function added(instance: Instance)
-	if instance:IsA("BasePart") then
+	if instance:IsA("BasePart") and isTrainingPad(instance) and pads[instance] == nil then
 		pads[instance] = true
 		sign(instance)
 		pointToTraining()
@@ -100,7 +104,9 @@ function TrainingHubSystem.start()
 	if #connections > 0 then
 		return
 	end
+	-- A pad counts once it carries both tags, whichever arrives last.
 	table.insert(connections, CollectionService:GetInstanceAddedSignal(TrainingConstants.TRUCK_TAG):Connect(added))
+	table.insert(connections, CollectionService:GetInstanceAddedSignal(QueueConstants.TAG):Connect(added))
 	table.insert(
 		connections,
 		CollectionService:GetInstanceRemovedSignal(TrainingConstants.TRUCK_TAG):Connect(function(instance: Instance)

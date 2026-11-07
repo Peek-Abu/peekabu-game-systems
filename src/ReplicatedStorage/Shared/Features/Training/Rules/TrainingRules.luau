@@ -53,6 +53,15 @@ function TrainingRules.isNew(value: PlayerDataTypes.Training?): boolean
 end
 
 --[=[
+	Whether the hub offers training at all: only when the place holds exactly one Training map (a Model tagged
+	TrainingConstants.MAP_TAG). The map is built into both places together, so a place published before it lands
+	shows no Training pad rather than one that cannot start a run.
+]=]
+function TrainingRules.offered(maps: number): boolean
+	return maps == 1
+end
+
+--[=[
 	Records a finished run in place. True when this is the first finish (the reward is due).
 ]=]
 function TrainingRules.finish(value: PlayerDataTypes.Training): boolean

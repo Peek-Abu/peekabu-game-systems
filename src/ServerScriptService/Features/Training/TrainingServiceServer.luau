@@ -3,7 +3,8 @@
 	TrainingServiceServer: training (tutorial design v2). It owns the "training" account slice (TrainingRules; synced
 	to its owner for the hub's arrow and spotlight).
 
-	- **The hub** (the depot role): every part tagged TrainingConstants.TRUCK_TAG becomes a one-seat queue pad to the
+	- **The hub** (the depot role), only when this place holds the Training map (TrainingRules.offered; the map is
+	  built into both places together, so a place published without it shows no pad): every part tagged TrainingConstants.TRUCK_TAG becomes a one-seat queue pad to the
 	  shift place that departs with the training mode in its payload (DepotServiceServer adds it). The code-built
 	  depot has no such part, so one is made by its left wall (a Studio-built hub tags its own). A player who has just
 	  finished training is sent the after-training tour once (TrainingEvents.Tour), when their save loads or they come
@@ -207,7 +208,17 @@ local TrainingServiceServer: TrainingServiceServer = {
 	},
 
 	start = function(_self)
-		if QueueServiceServer:runsRole(DepotConstants.ROLE_DEPOT) then
+		local maps = 0
+		for _, tagged in CollectionService:GetTagged(TrainingConstants.MAP_TAG) do
+			if tagged:IsA("Model") then
+				maps += 1
+			end
+		end
+		local offered = TrainingRules.offered(maps)
+		if QueueServiceServer:runsRole(DepotConstants.ROLE_DEPOT) and not offered then
+			log:info(`no single Training map in this place ({maps} found): no Training pad`)
+		end
+		if QueueServiceServer:runsRole(DepotConstants.ROLE_DEPOT) and offered then
 			table.insert(
 				stoppers,
 				Observers.observeTag(TrainingConstants.TRUCK_TAG, function(pad: Instance)
