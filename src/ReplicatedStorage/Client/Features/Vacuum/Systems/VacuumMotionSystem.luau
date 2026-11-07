@@ -5,7 +5,7 @@
 
 	- Aim left and right (aim fix 2026-11-06): the floor head points at where its holder looks on the floor (the look's
 	  heading off the body and its pitch's floor distance, VacuumMotionFormulas.aimYaw), the upper body twisting a
-	  share of the wand's turn; the local player's body also turns to face their camera (VacuumFaceSystem).
+	  share of the wand's turn (VacuumFaceSystem's body turn toward the camera is off, face.enabled).
 	- Aim: the wand pitches with where its holder looks, about the left paw's grip: looking up raises the floor head (the
 	  nozzle points ahead); tilting the camera moves the floor head out (up toward the horizon: the hands go down and
 	  out, the wand flattens so the head slides further out) and in (down: the hands come up and back). The local player's own camera drives theirs at once; it is sent to the server

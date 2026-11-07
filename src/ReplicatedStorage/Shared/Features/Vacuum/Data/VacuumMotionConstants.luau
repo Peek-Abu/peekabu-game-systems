@@ -159,8 +159,10 @@ return table.freeze({
 	-- closing the gap with a time constant of `ease` seconds, at most `maxRate` radians a second. The suction already
 	-- aims by the body, so the nozzle, the camera and the suction agree. `enabled = false` restores AutoRotate's
 	-- face-the-way-you-walk exactly.
+	-- OFF (owner, 2026-11-07: "I dont like the change that moves whole body"): the body turns as AutoRotate turns it,
+	-- and the nozzle aims at the look point on its own (aim.maxLook either way of the body).
 	face = table.freeze({
-		enabled = true,
+		enabled = false,
 		ease = 0.08,
 		maxRate = math.rad(540),
 	}),

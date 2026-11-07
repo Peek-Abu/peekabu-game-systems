@@ -589,6 +589,10 @@ return function()
 	describe("faceToward (the body faces the camera while the wand is out)", function()
 		local tuning = Constants.face
 
+		it("is off: the body turns as AutoRotate turns it (owner, 2026-11-07)", function()
+			expect(tuning.enabled).to.equal(false)
+		end)
+
 		it("reads a look's flat heading, left positive", function()
 			expect(VacuumMotionFormulas.heading(Vector3.new(0, 0, -1))).to.be.near(0, 1e-9)
 			expect(VacuumMotionFormulas.heading(Vector3.new(-1, -0.5, 0))).to.be.near(math.pi / 2, 1e-6)

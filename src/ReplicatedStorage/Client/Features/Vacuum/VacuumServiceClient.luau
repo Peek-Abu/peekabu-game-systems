@@ -9,7 +9,7 @@
 	vacuuming it cleans it (the loot loop).
 	The server decides everything. VacuumFeedbackSystem plays the suction, whine, pop and canister sounds;
 	VacuumMotionSystem moves every holder's wand and body (aim, brace) on this client.
-	VacuumFaceSystem turns the local body to face the camera while the wand is out.
+	VacuumFaceSystem turns the local body to face the camera while the wand is out (off: face.enabled).
 
 	Spec-exempt shell (Input, CollectionService); the aim is the specced VacuumTargetRules.
 
