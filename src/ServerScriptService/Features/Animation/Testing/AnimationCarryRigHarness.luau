@@ -247,8 +247,7 @@ end
 
 --[=[
 	The test carriers that this place can build: Pippa (with her own idle and walk; Cappy and Prickles too when `only`
-	names them) and a stock R15 (the stock idle
-	and walk). `only` limits them by name.
+	names them) and a stock R15 (the stock idle and walk). `only` limits them by name.
 ]=]
 function AnimationCarryRigHarness.carriers(only: { string }?): { Carrier }
 	local carriers: { Carrier } = {}
