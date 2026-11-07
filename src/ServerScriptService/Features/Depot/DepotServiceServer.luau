@@ -33,6 +33,7 @@
 	@class DepotServiceServer
 ]=]
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -49,6 +50,7 @@ local InteractionRegistry = require(ReplicatedStorage.Shared.Features.Interactio
 local QueueTypes = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueTypes)
 local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
+local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local DepotLayoutConstants = require(DepotServer.Data.DepotLayoutConstants)
 local DepotLayoutRules = require(DepotServer.Rules.DepotLayoutRules)
 local DepotContractUtils = require(DepotServer.Utils.DepotContractUtils)
@@ -250,6 +252,10 @@ local DepotServiceServer: DepotServiceServer = {
 			local index = truckIndexOf(pad)
 			if index ~= nil then
 				payload.truck = index
+			end
+			-- The Training truck's run plays the Training map (TrainingServiceServer).
+			if CollectionService:HasTag(pad, TrainingConstants.TRUCK_TAG) then
+				payload[TrainingConstants.MODE_KEY] = TrainingConstants.MODE
 			end
 			return payload
 		end)

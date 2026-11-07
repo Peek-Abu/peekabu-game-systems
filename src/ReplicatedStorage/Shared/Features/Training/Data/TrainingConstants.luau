@@ -1,0 +1,123 @@
+--!strict
+--[=[
+	TrainingConstants: the training run (tutorial design v2, owner-approved 11-06). A new player rides the one-seat
+	Training truck from the hub to a small Training map in the Shift place: one hall of 5 stops, built in Studio and
+	read by its tags and attributes (so a builder can restyle it), run as a real shift on the real vacuum, cargo, hiding
+	spots and Mr. Harlow. A catch costs one life but never knocks the player out; finishing pays REWARD_GLEAM once.
+
+	The authored map: one Model tagged MAP_TAG; each gameplay part inside it carries ROLE_ATTRIBUTE (a Role) and, where
+	its role needs them, STOP_ATTRIBUTE (which stop, 1-5), ORDER_ATTRIBUTE (its place in a sequence) and KIND_ATTRIBUTE
+	(a pile or cargo kind). The map also holds a "Truck" folder with a "TruckBed" part (the cargo bed). Hiding furniture
+	uses the game's own HideFurniture tag. TrainingMapRules checks all of it.
+
+	@class TrainingConstants
+]=]
+
+-- What a part in the Training map is for.
+export type Role =
+	"spawn" -- where the player lands (CFrame)
+	| "stop" -- where a stop starts: a catch sends the player back here (STOP)
+	| "zone" -- a box: walking into it starts its stop (STOP)
+	| "door" -- shuts the way on until its stop is done (STOP)
+	| "pile" -- a Gloom pile spawns here (STOP, KIND: a pile kind)
+	| "item" -- a cargo item spawns here (STOP, KIND: a cargo id)
+	| "route" -- one of Mr. Harlow's patrol points (ORDER)
+	| "rest" -- where Mr. Harlow takes his break
+	| "safe" -- a box Mr. Harlow never enters (the start)
+	| "bay" -- a box he walks but never lingers in
+	| "light" -- a hall light; they go out in ORDER at stop 3 (client)
+	| "creep" -- a Gloom patch that creeps in at stop 3, in ORDER (client)
+	| "sign" -- where a stop's sign hangs (STOP; client)
+
+-- What finishes a stop: its piles cleared, its treasure loaded, or walking into the next stop.
+export type Goal = "piles" | "banked" | "walk" | "finish"
+
+export type Stop = {
+	id: string,
+	goal: Goal,
+	-- The stop's sign, at a kid's reading level.
+	sign: string,
+}
+
+local ROLES: { Role } = {
+	"spawn",
+	"stop",
+	"zone",
+	"door",
+	"pile",
+	"item",
+	"route",
+	"rest",
+	"safe",
+	"bay",
+	"light",
+	"creep",
+	"sign",
+}
+
+local STOPS: { Stop } = {
+	{ id = "dust", goal = "piles", sign = "Hold to vacuum the Gloom!" },
+	{ id = "treasure", goal = "banked", sign = "Clean the treasure. Leave the trash!" },
+	{ id = "quiet", goal = "walk", sign = "Shh! He hears running." },
+	{ id = "hide", goal = "walk", sign = "He's coming! Hide!" },
+	{ id = "done", goal = "finish", sign = "You did it! Time for a real shift." },
+}
+for _, stop in STOPS do
+	table.freeze(stop)
+end
+
+local TrainingConstants = {
+	-- The ticket payload key and value a Training truck departs with (QueueTypes.QueuePayload).
+	MODE_KEY = "mode",
+	MODE = "training",
+
+	-- The hub's Training truck: the pad's tag (DepotBuildSystem builds one today; a Studio-built hub tags its own).
+	TRUCK_TAG = "TrainingTruck",
+	TRUCK_CAPACITY = 1,
+	TRUCK_COUNTDOWN = 3,
+
+	-- The authored map.
+	MAP_TAG = "TrainingMap",
+	ROLE_ATTRIBUTE = "TrainingRole",
+	STOP_ATTRIBUTE = "TrainingStop",
+	ORDER_ATTRIBUTE = "TrainingOrder",
+	KIND_ATTRIBUTE = "TrainingKind",
+	ROLES = table.freeze(ROLES),
+	STOPS = table.freeze(STOPS),
+
+	-- The training run's world entry (StateSyncWorldStore): the stop the player is on, for the client's hall effects.
+	WORLD_ENTRY = "training",
+
+	-- Never fewer lives than this in training: the last catch costs nothing, so nobody is knocked out.
+	LIVES_FLOOR = 1,
+	-- After a catch's knock-down, the player is moved back to the start of their stop.
+	RETURN_DELAY = 1.4,
+	-- Seconds from finishing to the ride back to the hub.
+	HOME_DELAY = 5,
+
+	-- The tags the spotlight finds its UI targets by (React.Tag on the button).
+	SPOTLIGHT_TAGS = table.freeze({
+		shop = "TrainingSpotShop",
+	}),
+
+	-- The one-time thank-you (owner: 100 Gleam).
+	REWARD_GLEAM = 100,
+
+	-- Seconds between two hall lights going out at stop 3, and a creep patch's grow time.
+	LIGHT_STEP = 0.45,
+	CREEP_SECONDS = 2.5,
+
+	TEXT = table.freeze({
+		truckSign = "New here? Start training!",
+		truckTag = "TRAINING",
+		caught = "Caught! You lost a life. Try hiding!",
+		lastLife = "Hide under the glowing desk!",
+		finished = "Great job! You're ready.",
+		reward = "Training done!",
+		failed = "Training could not start. Try again soon.",
+		tourShop = "You got 100 Gleam! Spend it in the Shop.",
+		tourTrucks = "Hop on a truck with your crew!",
+	}),
+}
+
+return TrainingConstants

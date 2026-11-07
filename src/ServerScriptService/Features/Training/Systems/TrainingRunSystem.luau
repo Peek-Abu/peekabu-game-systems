@@ -1,0 +1,231 @@
+--!strict
+--[=[
+	TrainingRunSystem: one player's training run on the Training map, while the shift runs on it (TrainingSiteSystem is
+	the site). It follows the run's stops (TrainingStopRules): a stop's piles cleared (Vacuum's pileCleared) or its
+	treasure loaded (the item is destroyed when the truck banks it) finish that stop and open its doors; walking into
+	the next stop's zone (checked every POLL_SECONDS) moves the player on. The stop is published as the `training` world
+	entry for the client's hall effects (signs, lights out, the Gloom creeping, the glowing desk).
+
+	A catch (ShiftServiceServer.caught) costs a life as usual, but the lives floor (ShiftServiceServer:setLivesFloor)
+	means it never knocks the player out: they are told, then moved back to the start of their stop after the
+	knock-down. Walking into the last stop finishes the run: `finished` is called once (the reward, the ride home).
+
+	Spec-exempt shell (Instances, signals, Shift and Vacuum); the decisions are the specced TrainingStopRules and
+	TrainingMapRules.
+
+	@class TrainingRunSystem
+]=]
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local ServerScriptService = game:GetService("ServerScriptService")
+
+local Logger = require(ReplicatedStorage.Shared.Core.Logger)
+local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
+local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
+local TrainingStopRules = require(ReplicatedStorage.Shared.Features.Training.Rules.TrainingStopRules)
+local ShiftServiceServer = require(ServerScriptService.Features.Shift.ShiftServiceServer)
+local StateSyncWorldStore = require(ServerScriptService.Features.StateSync.State.StateSyncWorldStore)
+local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
+local TrainingMapRules = require(ServerScriptService.Features.Training.Rules.TrainingMapRules)
+local TrainingSiteSystem = require(ServerScriptService.Features.Training.Systems.TrainingSiteSystem)
+local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
+
+export type Run = {
+	-- The run's piles and items, once the site has spawned them.
+	track: (self: Run, piles: { TrainingSiteSystem.Spawned }, items: { TrainingSiteSystem.Spawned }) -> (),
+	stop: (self: Run) -> (),
+	state: (self: Run) -> TrainingStopRules.State,
+}
+
+local POLL_SECONDS = 0.2
+local TOAST_SECONDS = 4
+
+local log = Logger.new("TrainingRunSystem")
+
+local function tell(player: Player, text: string)
+	ToastServiceServer:send(player, { text = text, style = ShiftConstants.TOAST_STICKY, duration = TOAST_SECONDS })
+end
+
+-- Opens a door: it and everything in it stops blocking and fades out.
+local function clearOut(part: BasePart)
+	part.CanCollide = false
+	part.CanQuery = false
+	part.Transparency = 1
+end
+
+local function open(door: BasePart)
+	clearOut(door)
+	for _, part in door:GetDescendants() do
+		if part:IsA("BasePart") then
+			clearOut(part)
+		end
+	end
+	door:SetAttribute("TrainingOpen", true)
+end
+
+local TrainingRunSystem = {}
+
+function TrainingRunSystem.new(
+	player: Player,
+	model: Model,
+	plan: TrainingMapRules.Plan,
+	finished: (player: Player) -> ()
+): Run
+	local state = TrainingStopRules.new()
+	local stoppers: { () -> () } = {}
+	local remaining: { [number]: { [BasePart]: true } } = {}
+	local stopped = false
+
+	local doors: { [number]: { BasePart } } = {}
+	for _, part in model:GetDescendants() do
+		local stop = part:GetAttribute(TrainingConstants.STOP_ATTRIBUTE)
+		if
+			part:IsA("BasePart")
+			and part:GetAttribute(TrainingConstants.ROLE_ATTRIBUTE) == "door"
+			and type(stop) == "number"
+		then
+			local list = doors[stop] or {}
+			doors[stop] = list
+			table.insert(list, part)
+		end
+	end
+
+	local function publish()
+		StateSyncWorldStore.set(TrainingConstants.WORLD_ENTRY, state.stop)
+	end
+
+	local function openDone()
+		for _, stop in TrainingStopRules.openDoors(state) do
+			local list: { BasePart }? = doors[stop]
+			if list ~= nil then
+				for _, door in list do
+					if door:GetAttribute("TrainingOpen") ~= true then
+						open(door)
+					end
+				end
+			end
+		end
+	end
+
+	local function complete(stop: number, goal: TrainingConstants.Goal)
+		if not stopped and TrainingStopRules.complete(state, stop, goal) then
+			log:info(`stop {stop} done`)
+			openDone()
+		end
+	end
+
+	local function rootOf(): BasePart?
+		local character = player.Character
+		local root = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil
+		return if root ~= nil and root:IsA("BasePart") then root else nil
+	end
+
+	local function poll()
+		local root = rootOf()
+		local zone = plan.zones[state.stop + 1]
+		if root == nil or zone == nil or not TrainingMapRules.inside(zone, root.Position) then
+			return
+		end
+		if TrainingStopRules.enter(state, state.stop + 1) then
+			publish()
+			openDone()
+			if state.finished then
+				stopped = true
+				tell(player, TrainingConstants.TEXT.finished)
+				finished(player)
+			end
+		end
+	end
+
+	local clearing = VacuumServiceServer.pileCleared:Connect(function(pile: BasePart)
+		for stop, set in remaining do
+			if set[pile] then
+				set[pile] = nil
+				if next(set) == nil then
+					complete(stop, "piles")
+				end
+			end
+		end
+	end)
+	table.insert(stoppers, function()
+		clearing:Disconnect()
+	end)
+
+	local catching = ShiftServiceServer.caught:Connect(function(caught: Player, livesLeft: number)
+		if caught ~= player or stopped then
+			return
+		end
+		tell(
+			player,
+			if livesLeft <= TrainingConstants.LIVES_FLOOR
+				then TrainingConstants.TEXT.lastLife
+				else TrainingConstants.TEXT.caught
+		)
+		local back: CFrame? = plan.stops[state.stop]
+		task.delay(TrainingConstants.RETURN_DELAY, function()
+			local character = player.Character
+			if not stopped and back ~= nil and character ~= nil and character.Parent ~= nil then
+				character:PivotTo(back * CFrame.new(0, 3, 0))
+			end
+		end)
+	end)
+	table.insert(stoppers, function()
+		catching:Disconnect()
+	end)
+
+	local elapsed = 0
+	local polling = RunService.Heartbeat:Connect(function(deltaTime: number)
+		elapsed += deltaTime
+		if elapsed < POLL_SECONDS or stopped then
+			return
+		end
+		elapsed = 0
+		poll()
+	end)
+	table.insert(stoppers, function()
+		polling:Disconnect()
+	end)
+	publish()
+
+	local run: Run = {
+		track = function(_self, piles, items)
+			for _, pile in piles do
+				local set = remaining[pile.stop] or {}
+				remaining[pile.stop] = set
+				set[pile.part] = true
+			end
+			for _, item in items do
+				if item.treasure then
+					local part = item.part
+					local folder = part.Parent
+					local banking = part.Destroying:Connect(function()
+						-- Banked: the truck destroys what it takes. A shift reset destroys the folder first.
+						if folder ~= nil and folder.Parent ~= nil then
+							complete(item.stop, "banked")
+						end
+					end)
+					table.insert(stoppers, function()
+						banking:Disconnect()
+					end)
+				end
+			end
+		end,
+
+		stop = function(_self)
+			stopped = true
+			for _, stopper in stoppers do
+				stopper()
+			end
+			table.clear(stoppers)
+			StateSyncWorldStore.clear(TrainingConstants.WORLD_ENTRY)
+		end,
+
+		state = function(_self)
+			return state
+		end,
+	}
+	return run
+end
+
+return TrainingRunSystem

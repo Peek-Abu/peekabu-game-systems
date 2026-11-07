@@ -18,7 +18,7 @@
 --[=[
 	The name of a UI layer. A closed set — new layers are added here, never invented at a call site.
 ]=]
-export type LayerName = "Hud" | "Panel" | "Wheel" | "Overlay" | "Debug"
+export type LayerName = "Hud" | "Panel" | "Wheel" | "Coach" | "Overlay" | "Debug"
 
 export type LayerDef = {
 	name: LayerName,
@@ -32,6 +32,8 @@ local LAYERS: { LayerDef } = {
 	{ name = "Hud", displayOrder = 10 },
 	{ name = "Panel", displayOrder = 100 },
 	{ name = "Wheel", displayOrder = 200 },
+	-- The training spotlight: over the panels and wheels it points into, under the load screen.
+	{ name = "Coach", displayOrder = 250 },
 	{ name = "Overlay", displayOrder = 300 },
 	{ name = "Debug", displayOrder = 1000 },
 }

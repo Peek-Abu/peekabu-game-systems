@@ -46,7 +46,7 @@ end
 -- "receipts", EntitlementServiceServer owns "entitlements", SettingServiceServer owns "settings", and
 -- DailyRewardServiceServer owns "dailyReward", RankServiceServer owns "rank" (its season string is stamped
 -- by the registration; the empty season here is only the skeleton), TimecardServiceServer owns "timecard", and
--- AnalyticsFirstSeenSystem owns "firstSeen" (server-only, never synced), and TipServiceServer owns "tips" (server-only too).
+-- AnalyticsFirstSeenSystem owns "firstSeen" (server-only, never synced), and TipServiceServer owns "tips" (server-only too), and TrainingServiceServer owns "training".
 -- `nextUid` starts at 1, not 0: uid 0 would be indistinguishable from an absent/falsy value at any
 -- callsite that checks truthiness.
 local function emptyAccount(): PlayerDataTypes.PlayerAccount
@@ -66,6 +66,7 @@ local function emptyAccount(): PlayerDataTypes.PlayerAccount
 		lockers = { keys = {}, pity = {}, opened = 0 },
 		social = { groupPaid = false, referredBy = 0, referralPaid = false, referrals = 0, askedAt = 0 },
 		tips = { seen = {} },
+		training = { finished = false, runs = 0, toured = false },
 	}
 end
 

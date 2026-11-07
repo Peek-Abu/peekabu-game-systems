@@ -19,6 +19,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
+local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local DepotHubViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotHubViewModel)
 local DepotNextShiftCard = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotNextShiftCard)
@@ -249,18 +250,25 @@ local function topRight(props: DepotHubPanelProps): React.ReactNode
 			sound = "confirm",
 			onActivated = props.onGift,
 		}),
-		shop = e(ToonButton, {
-			variant = "danger",
-			layout = "tile",
-			icon = "shopGift",
-			text = "SHOP",
-			textSize = if phone then 13 else 24,
-			anchor = Vector2.new(1, 0),
-			position = UDim2.fromOffset(0, if phone then 140 else 272),
-			size = if phone then UDim2.fromOffset(66, 66) else UDim2.fromOffset(134, 134),
-			small = phone,
-			radius = if phone then 16 else 24,
-			onActivated = props.onShop,
+		-- Tagged, so the after-training tour can point at the Shop (TrainingSpotlightSystem).
+		shop = e("Frame", {
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.fromOffset(0, if phone then 140 else 272),
+			Size = if phone then UDim2.fromOffset(66, 66) else UDim2.fromOffset(134, 134),
+			BackgroundTransparency = 1,
+			[React.Tag] = TrainingConstants.SPOTLIGHT_TAGS.shop,
+		}, {
+			button = e(ToonButton, {
+				variant = "danger",
+				layout = "tile",
+				icon = "shopGift",
+				text = "SHOP",
+				textSize = if phone then 13 else 24,
+				size = UDim2.fromScale(1, 1),
+				small = phone,
+				radius = if phone then 16 else 24,
+				onActivated = props.onShop,
+			}),
 		}),
 	}
 	if not phone then

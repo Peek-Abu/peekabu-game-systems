@@ -34,6 +34,11 @@ return function()
 			end
 		end)
 
+		it("puts the training spotlight over the wheels and under the load screen", function()
+			expect(UILayerConstants.orderOf("Coach") > UILayerConstants.orderOf("Wheel")).to.equal(true)
+			expect(UILayerConstants.orderOf("Coach") < UILayerConstants.orderOf("Overlay")).to.equal(true)
+		end)
+
 		it("puts Hud lowest and Debug highest", function()
 			local first = UILayerConstants.LAYERS[1]
 			local last = UILayerConstants.LAYERS[#UILayerConstants.LAYERS]

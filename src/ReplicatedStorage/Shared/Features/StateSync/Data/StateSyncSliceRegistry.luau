@@ -103,6 +103,12 @@ local DEFINITIONS: { [string]: SliceDefinition } = {
 			return profile.account.social
 		end,
 	},
+	-- ACCOUNT-WIDE: whether the player has finished training (TrainingServiceServer); owner-only.
+	training = {
+		read = function(profile)
+			return profile.account.training
+		end,
+	},
 	-- ACCOUNT-WIDE: keys and pity per Locker (LockerServiceServer); owner-only.
 	lockers = {
 		read = function(profile)

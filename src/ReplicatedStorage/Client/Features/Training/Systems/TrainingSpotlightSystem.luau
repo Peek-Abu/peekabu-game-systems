@@ -1,0 +1,246 @@
+--!strict
+--[=[
+	TrainingSpotlightSystem: drives the training spotlight (TrainingSpotlight on the Coach layer) through a list of
+	steps, one at a time.
+
+	- A "gui" step finds its button by CollectionService tag (the first visible one in this player's PlayerGui), dims
+	  everything else (TrainingSpotlightUtils) and moves on when the button goes away (it was pressed and a page
+	  opened), when the dark is tapped, or when the button never shows up (GUI_WAIT seconds).
+	- A "world" step points an arrow at the nearest part with its tag that `accept` takes, and moves on when `done`
+	  says so or after `seconds`.
+
+	`point` replaces whatever is showing; `clear` hides it. Redrawn every FRAME_SECONDS (the arrow follows the camera).
+
+	Spec-exempt shell (the camera, PlayerGui, CollectionService, the React root); the layout is the specced
+	TrainingSpotlightUtils.
+
+	@class TrainingSpotlightSystem
+]=]
+
+local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
+local React = require(ReplicatedStorage.Packages.React)
+local TrainingSpotlightUtils = require(ReplicatedStorage.Client.Features.Training.Utils.TrainingSpotlightUtils)
+local UIRoot = require(ReplicatedStorage.Client.UI.Layers.UIRoot)
+local TrainingSpotlight = require(ReplicatedStorage.Client.UI.React.Screens.Training.TrainingSpotlight)
+
+export type Step = {
+	kind: "gui" | "world",
+	tag: string,
+	line: string,
+	-- World steps: which tagged parts count (default: all), when the step is over, and its longest time.
+	accept: ((part: BasePart) -> boolean)?,
+	done: (() -> boolean)?,
+	seconds: number?,
+}
+
+local FRAME_SECONDS = 1 / 30
+local GUI_WAIT = 5
+-- A pressed button may flicker away for a frame or two while its page opens: gone this long means pressed.
+local GONE_SECONDS = 0.4
+local PAD = 12
+local LINE_SIZE = Vector2.new(460, 84)
+local LINE_GAP = 16
+local ARROW_MARGIN = 70
+local ARROW_LIFT = Vector3.new(0, 6, 0)
+local WORLD_SECONDS = 20
+
+-- The Coach layer's root, acquired on first use (the layer's ScreenGui is made then).
+local renderRoot: ((React.ReactNode) -> ())? = nil
+local function render(element: React.ReactNode)
+	if renderRoot == nil then
+		if element == nil then
+			return
+		end
+		renderRoot = UIRoot.acquire("Coach")
+	end
+	local root = renderRoot
+	if root ~= nil then
+		root(element)
+	end
+end
+local steps: { Step } = {}
+local index = 0
+local startedAt = 0
+local seenAt: number? = nil
+local skipped = false
+local connection: RBXScriptConnection? = nil
+local elapsed = 0
+
+local function guiTarget(tag: string): GuiObject?
+	local playerGui = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
+	if playerGui == nil then
+		return nil
+	end
+	for _, tagged in CollectionService:GetTagged(tag) do
+		if
+			tagged:IsA("GuiObject")
+			and tagged:IsDescendantOf(playerGui)
+			and tagged.Visible
+			and tagged.AbsoluteSize.X > 0
+		then
+			return tagged
+		end
+	end
+	return nil
+end
+
+local function worldTarget(step: Step, from: Vector3): BasePart?
+	local best: BasePart? = nil
+	local bestDistance = math.huge
+	for _, tagged in CollectionService:GetTagged(step.tag) do
+		local accept = step.accept
+		if tagged:IsA("BasePart") and (accept == nil or accept(tagged)) then
+			local distance = (tagged.Position - from).Magnitude
+			if distance < bestDistance then
+				best, bestDistance = tagged, distance
+			end
+		end
+	end
+	return best
+end
+
+local function stopTicking()
+	local current = connection
+	connection = nil
+	if current ~= nil then
+		current:Disconnect()
+	end
+	render(nil)
+end
+
+local function advance()
+	index += 1
+	startedAt = os.clock()
+	seenAt = nil
+	skipped = false
+	if steps[index] == nil then
+		stopTicking()
+	end
+end
+
+local function draw(step: Step, now: number)
+	local camera = Workspace.CurrentCamera
+	if camera == nil then
+		return
+	end
+	local screen = camera.ViewportSize
+	local pulse = (math.sin(now * 4) + 1) / 2
+	local props: TrainingSpotlight.TrainingSpotlightProps = {
+		hole = nil,
+		arrow = nil,
+		line = step.line,
+		linePosition = Vector2.zero,
+		lineSize = LINE_SIZE,
+		screen = screen,
+		pulse = pulse,
+		onSkip = function()
+			skipped = true
+		end,
+	}
+	if step.kind == "gui" then
+		local target = guiTarget(step.tag)
+		if target == nil then
+			render(nil)
+			return
+		end
+		local hole = TrainingSpotlightUtils.hole(target.AbsolutePosition, target.AbsoluteSize, screen, PAD)
+		props.hole = hole
+		props.linePosition = TrainingSpotlightUtils.lineAt(hole, screen, LINE_SIZE, LINE_GAP)
+	else
+		local character = Players.LocalPlayer.Character
+		local from = if character ~= nil then character:GetPivot().Position else camera.CFrame.Position
+		local target = worldTarget(step, from)
+		if target == nil then
+			render(nil)
+			return
+		end
+		local point, inFront = camera:WorldToViewportPoint(target.Position + ARROW_LIFT)
+		local at, rotation =
+			TrainingSpotlightUtils.edge(Vector2.new(point.X, point.Y), inFront and point.Z > 0, screen, ARROW_MARGIN)
+		props.arrow = { position = at, rotation = rotation }
+		props.linePosition = Vector2.new(
+			math.clamp(at.X - LINE_SIZE.X / 2, 0, math.max(screen.X - LINE_SIZE.X, 0)),
+			math.clamp(at.Y + LINE_GAP, 0, math.max(screen.Y - LINE_SIZE.Y, 0))
+		)
+	end
+	render(React.createElement(TrainingSpotlight, props))
+end
+
+local function tick()
+	local step = steps[index]
+	if step == nil then
+		stopTicking()
+		return
+	end
+	local now = os.clock()
+	local age = now - startedAt
+	if skipped then
+		advance()
+		return
+	end
+	if step.kind == "gui" then
+		local last = seenAt
+		if guiTarget(step.tag) ~= nil then
+			seenAt = now
+		else
+			-- Gone a moment after it showed (pressed: its page opened), or it never showed up.
+			local over = if last ~= nil then now - last > GONE_SECONDS else age > GUI_WAIT
+			if over then
+				advance()
+				return
+			end
+		end
+	else
+		local done = step.done
+		if (done ~= nil and done()) or age > (step.seconds or WORLD_SECONDS) then
+			advance()
+			return
+		end
+	end
+	draw(step, now)
+end
+
+local TrainingSpotlightSystem = {}
+
+--[=[
+	Shows `list`'s steps in order, replacing whatever is showing.
+]=]
+function TrainingSpotlightSystem.point(list: { Step })
+	steps = table.clone(list)
+	index = 0
+	advance()
+	if steps[index] ~= nil and connection == nil then
+		elapsed = 0
+		connection = RunService.RenderStepped:Connect(function(deltaTime: number)
+			elapsed += deltaTime
+			if elapsed < FRAME_SECONDS then
+				return
+			end
+			elapsed = 0
+			tick()
+		end)
+	end
+end
+
+--[=[
+	Hides the spotlight and forgets its steps.
+]=]
+function TrainingSpotlightSystem.clear()
+	table.clear(steps)
+	index = 0
+	stopTicking()
+end
+
+--[=[
+	Whether a step is showing.
+]=]
+function TrainingSpotlightSystem.active(): boolean
+	return steps[index] ~= nil
+end
+
+return TrainingSpotlightSystem

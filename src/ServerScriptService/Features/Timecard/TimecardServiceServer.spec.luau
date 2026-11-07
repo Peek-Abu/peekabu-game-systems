@@ -72,6 +72,7 @@ local function makeProfileData()
 			timecard = { week = 0, punched = {}, weeks = 0 },
 			lockers = { keys = {}, pity = {}, opened = 0 },
 			social = { groupPaid = false, referredBy = 0, referralPaid = false, referrals = 0, askedAt = 0 },
+			training = { finished = false, runs = 0, toured = false },
 			workOrder = { day = 0, progress = 0, claimed = false },
 			rank = { season = "mvp-1", xp = 0, lastAwardedRunId = "" },
 		},

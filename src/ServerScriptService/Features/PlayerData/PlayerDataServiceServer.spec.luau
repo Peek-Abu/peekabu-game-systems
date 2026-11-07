@@ -141,6 +141,7 @@ local function makeSlotData(credits: number): PlayerDataTypes.PlayerProfile
 			lockers = { keys = {}, pity = {}, opened = 0 },
 			social = { groupPaid = false, referredBy = 0, referralPaid = false, referrals = 0, askedAt = 0 },
 			tips = { seen = {} },
+			training = { finished = false, runs = 0, toured = false },
 			rank = { season = "mvp-1", xp = 0, lastAwardedRunId = "" },
 			titles = { earned = {} },
 		},

@@ -48,6 +48,7 @@ return function()
 					workOrder = { day = 0, progress = 0, claimed = false },
 					lockers = { keys = {}, pity = {}, opened = 0 },
 					social = { groupPaid = false, referredBy = 0, referralPaid = false, referrals = 0, askedAt = 0 },
+					training = { finished = false, runs = 0, toured = false },
 					loadout = {
 						current = "Pippa",
 						picked = false,
@@ -78,6 +79,7 @@ return function()
 				workOrder = true,
 				lockers = true,
 				social = true,
+				training = true,
 			}
 
 			for name, definition in StateSyncSliceRegistry.DEFINITIONS do
@@ -101,6 +103,7 @@ return function()
 				"social",
 				"timecard",
 				"titles",
+				"training",
 				"workOrder",
 			}
 			expect(#StateSyncSliceRegistry.NAMES).to.equal(#expected)

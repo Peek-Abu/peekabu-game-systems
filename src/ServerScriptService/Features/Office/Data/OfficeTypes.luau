@@ -228,6 +228,24 @@ export type SpawnPlan = {
 	value: number,
 }
 
+--[=[
+	An authored site that stands in for the generated office for a run (OfficeServiceServer:useSite; the Training map).
+	Its model holds a "Truck" folder with the "TruckBed" (Cargo finds the bed beside the shift folder). Office asks it
+	for everything the generated layout would give, and `spawn` places the run's spawns in the shift folder (already
+	Cargo's container) and returns what it placed. A site has no grounds, entrances, doors or overtime.
+]=]
+export type Site = {
+	model: Model,
+	spawnCFrame: (index: number) -> CFrame,
+	route: () -> { Vector3 },
+	restPoint: () -> Vector3,
+	safeZone: () -> (Vector3, Vector3),
+	loadingBay: () -> (Vector3, Vector3),
+	whereIs: (position: Vector3) -> (string?, number?, number?),
+	truckBed: () -> BasePart?,
+	spawn: (folder: Folder) -> SpawnPlan,
+}
+
 export type ShellMaterial =
 	"plaster"
 	| "oak"

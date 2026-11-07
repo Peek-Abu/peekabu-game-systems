@@ -31,6 +31,9 @@
 	When generation from the shift's seed errors, the rebuild warns and tries the next seed up (GENERATE_RETRIES more
 	times) before raising, so `seed` is the seed actually used.
 
+	Authored sites (`useSite`, OfficeTypes.Site): a run can use a Studio-built map instead (the Training map); every
+	accessor answers from it and `beginShift` lets it place its own spawns. The generated office still stands unused.
+
 	The office is built only where the shift role runs (QueueServiceServer:runsRole); a hub-only server builds nothing.
 
 	Stray guard: `rebuild` (after destroying the tracked model) and the first build at `start` destroy every Workspace
@@ -119,6 +122,8 @@ local layoutSeed: number? = nil
 local forcedAnomalies: { OfficeAnomalyConstants.AnomalyId }? = nil
 -- Fired (with the shift folder) once a shift's office is rebuilt and every spawn placed.
 local ready: SignalTyped.Signal<Folder> = SignalTyped.new()
+-- An authored site standing in for the generated office (useSite; the Training map); nil: the office.
+local site: OfficeTypes.Site? = nil
 
 -- The floor point under a marker, in the world.
 local function floorAt(marker: Marker): CFrame
@@ -282,6 +287,7 @@ export type OfficeServiceServer = {
 	truckBed: (self: OfficeServiceServer) -> BasePart?,
 	overtimeSheet: (self: OfficeServiceServer) -> BasePart?,
 	openDoorsNear: (self: OfficeServiceServer, position: Vector3, heading: Vector3?) -> boolean,
+	useSite: (self: OfficeServiceServer, next: OfficeTypes.Site?) -> (),
 }
 
 local OfficeServiceServer: OfficeServiceServer = {
@@ -377,6 +383,22 @@ local OfficeServiceServer: OfficeServiceServer = {
 	]=]
 	beginShift = function(self, options)
 		self:reset()
+		local authored = site
+		if authored ~= nil then
+			local folder = Instance.new("Folder")
+			folder.Name = OfficeConstants.SHIFT_FOLDER_NAME
+			folder.Parent = authored.model
+			shiftJanitor:Add(folder, "Destroy")
+			shiftFolder = folder
+			CargoServiceServer:useContainer(folder)
+			local placed = authored.spawn(folder)
+			lastPlan = placed
+			-- A site has no overtime batch.
+			overtimeSpawned = true
+			log:info(`site spawns: {#placed.piles} piles, {#placed.items} items`)
+			ready:Fire(folder)
+			return placed
+		end
 		assert(built ~= nil, "OfficeServiceServer:beginShift before start")
 		rebuild(options.seed)
 		local current = built
@@ -518,6 +540,10 @@ local OfficeServiceServer: OfficeServiceServer = {
 		(OfficeLoadingBayUtils.arrivalFrame). Shift arrivals, the shift start and crew respawns all land here.
 	]=]
 	spawnCFrame = function(_self, index)
+		local authored = site
+		if authored ~= nil then
+			return authored.spawnCFrame(index)
+		end
 		return OfficeConstants.ORIGIN * OfficeLoadingBayUtils.arrivalFrame(LAYOUT.truck, index)
 	end,
 
@@ -529,6 +555,10 @@ local OfficeServiceServer: OfficeServiceServer = {
 		Harlow's patrol points in the world, in walking order (a loop).
 	]=]
 	route = function(_self)
+		local authored = site
+		if authored ~= nil then
+			return authored.route()
+		end
 		return table.clone(routePoints)
 	end,
 
@@ -536,6 +566,10 @@ local OfficeServiceServer: OfficeServiceServer = {
 		Where Harlow takes his break (the break room).
 	]=]
 	restPoint = function(_self)
+		local authored = site
+		if authored ~= nil then
+			return authored.restPoint()
+		end
 		if restMarker == nil then
 			error("OfficeServiceServer:restPoint: the layout has no rest marker")
 		end
@@ -547,6 +581,10 @@ local OfficeServiceServer: OfficeServiceServer = {
 		or walks into.
 	]=]
 	safeZone = function(_self)
+		local authored = site
+		if authored ~= nil then
+			return authored.safeZone()
+		end
 		local min, max = OfficeLoadingBayUtils.truckBox(LAYOUT.truck)
 		local low = OfficeConstants.ORIGIN:PointToWorldSpace(min)
 		local high = OfficeConstants.ORIGIN:PointToWorldSpace(max)
@@ -557,6 +595,10 @@ local OfficeServiceServer: OfficeServiceServer = {
 		The loading bay in the world: its min and max corners, floor to wall top. Harlow may walk it, but never lingers.
 	]=]
 	loadingBay = function(_self)
+		local authored = site
+		if authored ~= nil then
+			return authored.loadingBay()
+		end
 		local start = OfficeLayoutUtils.room(LAYOUT, LAYOUT.startRoom)
 		if start == nil then
 			error("OfficeServiceServer:loadingBay: the layout has no start room")
@@ -571,6 +613,10 @@ local OfficeServiceServer: OfficeServiceServer = {
 		elsewhere.
 	]=]
 	whereIs = function(_self, position)
+		local authored = site
+		if authored ~= nil then
+			return authored.whereIs(position)
+		end
 		local localPoint = OfficeConstants.ORIGIN:PointToObjectSpace(position)
 		local room, index = OfficeLayoutUtils.roomAt(LAYOUT, localPoint.X, localPoint.Z)
 		if room == nil then
@@ -589,6 +635,9 @@ local OfficeServiceServer: OfficeServiceServer = {
 	]=]
 	outdoors = function(_self)
 		local boxes: { { min: Vector3, max: Vector3 } } = {}
+		if site ~= nil then
+			return boxes
+		end
 		local grounds: { OfficeTypes.Room } = LAYOUT.grounds or {}
 		for _, ground in grounds do
 			local low = OfficeConstants.ORIGIN:PointToWorldSpace(Vector3.new(ground.minX, 0, ground.minZ))
@@ -605,6 +654,9 @@ local OfficeServiceServer: OfficeServiceServer = {
 		its exit's room (insideFrame). Nil, nil when the layout has no such entrance (or its exit's room is missing).
 	]=]
 	entrance = function(_self, id)
+		if site ~= nil then
+			return nil, nil
+		end
 		local entrances: { OfficeTypes.Entrance } = LAYOUT.entrances or {}
 		for _, entrance in entrances do
 			local room = OfficeLayoutUtils.room(LAYOUT, entrance.exit.a)
@@ -620,6 +672,10 @@ local OfficeServiceServer: OfficeServiceServer = {
 		The truck bed in the loading bay (Cargo's Load zone), once the office is built.
 	]=]
 	truckBed = function(_self)
+		local authored = site
+		if authored ~= nil then
+			return authored.truckBed()
+		end
 		local current = built
 		return if current ~= nil then current.bed else nil
 	end,
@@ -628,6 +684,9 @@ local OfficeServiceServer: OfficeServiceServer = {
 		The overtime sheet beside the time clock (Shift's Start overtime prompt), once the office is built.
 	]=]
 	overtimeSheet = function(_self)
+		if site ~= nil then
+			return nil
+		end
 		local current = built
 		return if current ~= nil then current.overtime else nil
 	end,
@@ -639,8 +698,22 @@ local OfficeServiceServer: OfficeServiceServer = {
 		otherwise or when no office stands.
 	]=]
 	openDoorsNear = function(_self, position, heading)
+		if site ~= nil then
+			return false
+		end
 		local current = built
 		return if current ~= nil then current.doors.openNear(position, heading) else false
+	end,
+
+	--[=[
+		Puts an authored site (OfficeTypes.Site) in the generated office's place for the next `beginShift`, or the office
+		back for nil. Every accessor (spawns, route, rest point, safe zone, loading bay, rooms, truck bed) then answers
+		from the site; grounds, entrances, doors and overtime are absent. Takes effect from the next run: set it before
+		the run's `beginShift`, and clear it once the run is over.
+	]=]
+	useSite = function(_self, next)
+		site = next
+		log:info(if next ~= nil then `using the site {next.model.Name}` else "back to the office")
 	end,
 
 	getState = function(_self)
@@ -658,6 +731,7 @@ local OfficeServiceServer: OfficeServiceServer = {
 			greed = if plan ~= nil and plan.greed ~= nil then `{plan.greed.kind} @ {plan.greed.marker}` else nil,
 			hiddenUnderPiles = hiddenCount,
 			routePoints = #routePoints,
+			site = if site ~= nil then site.model.Name else nil,
 		}
 	end,
 }

@@ -62,6 +62,8 @@ export type ShiftLivesSystem = {
 	clear: (self: ShiftLivesSystem) -> (),
 	-- Shapes the starting lives (ShiftLivesRules.starting); returns the function that removes it.
 	addModifier: (self: ShiftLivesSystem, modify: (number) -> number) -> () -> (),
+	-- The fewest lives a catch can leave (ShiftLivesTracker.setFloor).
+	setFloor: (self: ShiftLivesSystem, floor: number) -> (),
 }
 
 local function realSetFields(userId: number, fields: Fields)
@@ -243,6 +245,10 @@ function ShiftLivesSystem.new(deps: Deps): ShiftLivesSystem
 			end
 			table.clear(published)
 			tracker:clear()
+		end,
+
+		setFloor = function(_self, floor)
+			tracker:setFloor(floor)
 		end,
 
 		addModifier = function(_self, modify)

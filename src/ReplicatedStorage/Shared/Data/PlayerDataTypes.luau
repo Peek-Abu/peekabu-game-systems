@@ -158,6 +158,17 @@ export type Tips = {
 }
 
 --[=[
+	The account-wide training slice (TrainingServiceServer, TrainingRules): whether the player has finished training
+	(a player is new until they have), how many training runs they have finished, and whether the hub has shown them
+	its after-training spotlight tour. Owner-only sync, for the hub's arrow and spotlight.
+]=]
+export type Training = {
+	finished: boolean,
+	runs: number,
+	toured: boolean,
+}
+
+--[=[
 	The account-wide daily reward slice: the UTC day index (days since the Unix epoch, shifted by
 	DailyRewardConstants.DAY_OFFSET_HOURS) of the last claim (0 = never) and the current streak.
 ]=]
@@ -260,6 +271,7 @@ export type PlayerAccount = {
 	lockers: Lockers,
 	social: Social,
 	tips: Tips,
+	training: Training,
 	-- Extend with other ACCOUNT-WIDE slices here (settings, entitlements, ...)
 }
 

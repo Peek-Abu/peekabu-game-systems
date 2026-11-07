@@ -452,6 +452,7 @@ export type ShiftServiceServer = {
 	forceOvertime: (self: ShiftServiceServer) -> boolean,
 	noteCatch: (self: ShiftServiceServer, player: Player) -> boolean,
 	spendLife: (self: ShiftServiceServer, player: Player) -> boolean,
+	setLivesFloor: (self: ShiftServiceServer, floor: number) -> (),
 	addLivesModifier: (self: ShiftServiceServer, modify: (number) -> number) -> () -> (),
 }
 
@@ -646,6 +647,14 @@ local ShiftServiceServer: ShiftServiceServer = {
 	]=]
 	spendLife = function(_self, player)
 		return lives:spend(player)
+	end,
+
+	--[=[
+		The fewest lives a catch can leave a player (0, the default: the last catch knocks them out). Training sets 1,
+		so a catch there never knocks anyone out. Holds until set again.
+	]=]
+	setLivesFloor = function(_self, floor)
+		lives:setFloor(floor)
 	end,
 
 	--[=[

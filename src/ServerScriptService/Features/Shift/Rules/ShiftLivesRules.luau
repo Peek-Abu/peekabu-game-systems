@@ -20,10 +20,11 @@ function ShiftLivesRules.starting(base: number, modifiers: { (number) -> number 
 end
 
 --[=[
-	One catch: the lives left (never below 0), and whether that knocks the player out (they have none left).
+	One catch: the lives left (never below `floor`, 0 when absent), and whether that knocks the player out (they have
+	none left). A floor of 1 (training) means a catch never knocks anyone out.
 ]=]
-function ShiftLivesRules.spend(remaining: number): (number, boolean)
-	local left = math.max(remaining - 1, 0)
+function ShiftLivesRules.spend(remaining: number, floor: number?): (number, boolean)
+	local left = math.max(remaining - 1, floor or 0, 0)
 	return left, left == 0
 end
 

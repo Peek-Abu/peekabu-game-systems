@@ -22,6 +22,8 @@ export type ShiftLivesTracker = {
 	-- The players who are out, as a new sorted list.
 	out: (self: ShiftLivesTracker) -> { number },
 	clear: (self: ShiftLivesTracker) -> (),
+	-- The fewest lives a catch can leave (ShiftLivesRules.spend's floor; 0 = the last catch knocks out). Kept by clear.
+	setFloor: (self: ShiftLivesTracker, floor: number) -> (),
 }
 
 local ShiftLivesTracker = {}
@@ -29,6 +31,7 @@ local ShiftLivesTracker = {}
 function ShiftLivesTracker.new(): ShiftLivesTracker
 	local lives: { [number]: number } = {}
 	local maxes: { [number]: number } = {}
+	local floor = 0
 
 	local tracker: ShiftLivesTracker = {
 		reset = function(_self, entries)
@@ -53,13 +56,17 @@ function ShiftLivesTracker.new(): ShiftLivesTracker
 			if remaining == nil or remaining <= 0 then
 				return nil, nil
 			end
-			local left, knockedOut = ShiftLivesRules.spend(remaining)
+			local left, knockedOut = ShiftLivesRules.spend(remaining, floor)
 			lives[userId] = left
 			return left, knockedOut
 		end,
 
 		get = function(_self, userId)
 			return lives[userId]
+		end,
+
+		setFloor = function(_self, next)
+			floor = math.max(next, 0)
 		end,
 
 		max = function(_self, userId)
