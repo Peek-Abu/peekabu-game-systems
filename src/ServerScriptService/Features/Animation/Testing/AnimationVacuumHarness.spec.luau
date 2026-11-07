@@ -47,7 +47,7 @@ return function()
 	end)
 
 	it(
-		"lays every motion layer on every frame: rest, both aim extremes, the brace, the recoil and the shimmy",
+		"lays every motion layer on every frame: rest, every aim extreme, the brace, the recoil and the shimmy",
 		function()
 			for _, entry in result.entries do
 				local seen = {}
@@ -68,6 +68,8 @@ return function()
 							"recoil+up",
 							"shimmy+",
 							"shimmy-",
+							"aim left",
+							"aim right",
 						}
 					do
 						expect(seen[`{frame.name}/{layer}`]).to.equal(true)
