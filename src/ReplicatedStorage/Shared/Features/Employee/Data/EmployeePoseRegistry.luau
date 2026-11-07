@@ -153,43 +153,54 @@ local KIT_POSES: { [string]: PoseDef } = {
 			Neck = Vector3.new(-6, 0, 0),
 		})
 	),
-	-- The coach's poses (training v3, seen from the front, belly and up): the left arm (screen right) points level
-	-- and a little forward, the right paw on her hip, a small lean into it.
+	-- The coach's poses (training v3, seen from the front, belly and up; checked on the rig from the coach camera for
+	-- clipping: her muzzle sticks out past her short arms, so no paw goes near her mouth). Go this way: the left arm
+	-- (screen right) points out and a little up, the right paw on her hip, leaning and twisting into it, head tipped.
 	point = pose("point", "Happy", {
-		LeftShoulder = mirror(Vector3.new(0, 14, 2)),
-		LeftElbow = mirror(Vector3.new(0, 6, 0)),
+		LeftShoulder = mirror(Vector3.new(0, 16, 18)),
+		LeftElbow = mirror(Vector3.new(0, 0, 0)),
 		RightShoulder = Vector3.new(0, -20, -45),
 		RightElbow = Vector3.new(0, -30, -95),
-		Waist = Vector3.new(0, 0, 4),
-		Neck = Vector3.new(0, 0, -5),
+		Waist = Vector3.new(-3, -12, 8),
+		Neck = Vector3.new(5, 10, -12),
 	}),
-	-- Careful!: the right paw up by her cheek and toward you, the left arm out low, a lean back.
+	-- Careful!: the right paw up beside her head, the left arm out low and forward, leaning back, head tipped away.
 	warn = pose("warn", "Worried", {
-		RightShoulder = Vector3.new(0, 24, 2),
-		RightElbow = Vector3.new(0, 0, 80),
-		LeftShoulder = mirror(Vector3.new(0, 18, -48)),
-		LeftElbow = mirror(Vector3.new(0, 20, 0)),
-		Waist = Vector3.new(5, 0, 0),
-		Neck = Vector3.new(0, 0, 8),
+		RightShoulder = Vector3.new(0, -8, 14),
+		RightElbow = Vector3.new(0, 6, 70),
+		LeftShoulder = mirror(Vector3.new(0, 40, -36)),
+		LeftElbow = mirror(Vector3.new(0, 30, 0)),
+		Waist = Vector3.new(10, 10, -6),
+		Neck = Vector3.new(-6, -10, 14),
 	}),
-	-- Shh: the right paw at her mouth, the left arm down, a small hunch with the head up to you.
+	-- Shh, sneak: a cartoon tiptoe, both paws held up in front of her chest (not at her mouth: it would clip),
+	-- leaning in and twisting, head up to you with a sly smile.
 	shh = pose("shh", "Content", {
-		RightShoulder = Vector3.new(0, 58, -18),
-		RightElbow = Vector3.new(0, 0, 116),
-		LeftShoulder = mirror(SIDE_SHOULDER),
-		LeftElbow = mirror(SIDE_ELBOW),
-		Waist = Vector3.new(-6, 0, 0),
-		Neck = Vector3.new(6, 0, 0),
+		RightShoulder = Vector3.new(0, 60, -30),
+		RightElbow = Vector3.new(0, 0, 60),
+		LeftShoulder = mirror(Vector3.new(0, 50, -38)),
+		LeftElbow = mirror(Vector3.new(0, 0, 48)),
+		Waist = Vector3.new(-14, 12, 4),
+		Neck = Vector3.new(10, -10, 8),
 	}),
-	-- Hide!: both paws pulled up over her mouth, hunched, eyes over them.
-	hide = pose(
-		"hide",
-		"Worried",
-		arms(Vector3.new(0, 64, -12), Vector3.new(0, 0, 120), {
-			Waist = Vector3.new(-8, 0, 0),
-			Neck = Vector3.new(4, 0, 0),
-		})
-	),
+	-- Hide!: cowering, paws tucked up in front of her chest, hunched, head ducked with her eyes peeking.
+	hide = pose("hide", "Worried", {
+		RightShoulder = Vector3.new(0, 64, -40),
+		RightElbow = Vector3.new(0, 0, 100),
+		LeftShoulder = mirror(Vector3.new(0, 58, -46)),
+		LeftElbow = mirror(Vector3.new(0, 0, 92)),
+		Waist = Vector3.new(-16, 0, 6),
+		Neck = Vector3.new(-12, 6, -8),
+	}),
+	-- You did it!: both paws up beside her head (the right higher, out clear of her face), leaning back, head tipped.
+	coachCheer = pose("coachCheer", "Happy", {
+		RightShoulder = Vector3.new(0, -12, 22),
+		RightElbow = Vector3.new(0, 0, 60),
+		LeftShoulder = mirror(Vector3.new(0, 12, 12)),
+		LeftElbow = mirror(Vector3.new(0, 0, 52)),
+		Waist = Vector3.new(10, 4, 6),
+		Neck = Vector3.new(8, -6, -10),
+	}),
 	-- The training finish: the right fist up high, the left arm out, leaning back, proud.
 	victory = pose("victory", "Happy", {
 		RightShoulder = Vector3.new(0, 6, 30),
@@ -210,7 +221,7 @@ local KIT_SET: PortraitSet = {
 		award = { pose = "cheer", byGrade = { A = "cheer", B = "wave", C = "slump" } },
 		coachPoint = { pose = "point" },
 		coachWarn = { pose = "warn" },
-		coachCheer = { pose = "cheer" },
+		coachCheer = { pose = "coachCheer" },
 		coachShh = { pose = "shh" },
 		coachHide = { pose = "hide" },
 		victory = { pose = "victory" },

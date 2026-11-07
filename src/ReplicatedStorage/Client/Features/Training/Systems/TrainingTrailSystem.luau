@@ -69,6 +69,23 @@ local function rootOf(): BasePart?
 	return if root ~= nil and root:IsA("BasePart") then root else nil
 end
 
+-- The floor under the player (a ray down, the character and the guide left out); a guess under the root without one.
+local function floorUnder(root: BasePart): Vector3
+	local params = RaycastParams.new()
+	local character = root.Parent
+	local ignore: { Instance } = {}
+	if character ~= nil then
+		table.insert(ignore, character)
+	end
+	if folder ~= nil then
+		table.insert(ignore, folder)
+	end
+	params.FilterDescendantsInstances = ignore
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	local hit = Workspace:Raycast(root.Position, Vector3.new(0, -12, 0), params)
+	return if hit ~= nil then hit.Position else root.Position - Vector3.new(0, 3, 0)
+end
+
 local function mapOf(): Model?
 	for _, tagged in CollectionService:GetTagged(TrainingConstants.MAP_TAG) do
 		if tagged:IsA("Model") then
@@ -353,7 +370,7 @@ local function step()
 		hideAll()
 		return
 	end
-	local feet = root.Position - Vector3.new(0, 3, 0)
+	local feet = floorUnder(root)
 	local now = os.clock()
 	if now - targetAt >= TARGET_SECONDS then
 		targetAt = now
