@@ -21,7 +21,7 @@
 	   and all at once; VacuumMotionRigSystem, exactly as every client does, in PreSimulation after the
 	   Animator's IK) and judges each: each paw's wrap point (VacuumVisualSystem.wrapOf, inside the paw) must be on
 	   its grip, the right on the wand's GripUpper and the left on its GripLower (the grip contract), within
-	   GRIP_TOLERANCE; each grip must lie inside its paw (the paw closes round the wand); and the floor head's
+	   GRIP_TOLERANCE (the left also within reachSlack: it may slip); each grip must lie inside its paw (the paw closes round the wand); and the floor head's
 	   lowest corner must be over the floor (FLOOR_TOLERANCE).
 	`format` prints the report; the spec asserts it. Needs a real runtime (TestEZ in Studio): run it with
 	`Workspace.RunTests = true`, or from a server Script: `print(Harness.format(Harness.run({})))`.
@@ -73,6 +73,9 @@ local AnimationVacuumHarness = {}
 
 -- How far a paw's wrap point may sit from its grip on the wand (studs).
 local GRIP_TOLERANCE = 0.05
+-- The left paw may also slip along the wand by up to the reach guard's slack (VacuumMotionConstants.reachSlack,
+-- feel pass batch 2 2026-11-06): its arm goes straight instead of the move being cancelled.
+local LEFT_TOLERANCE = GRIP_TOLERANCE + VacuumMotionConstants.reachSlack
 -- How far the floor head's lowest corner may dip under the floor (studs).
 local FLOOR_TOLERANCE = 0.02
 -- Each motion layer at its extremes (VacuumMotionFormulas.Layers), laid on every frame.
@@ -331,15 +334,15 @@ local function hold(carrier: Carrier, skin: VacuumSkinRegistry.SkinDef): Entry
 				local leftGap, leftInside = onPaw(leftHand, leftWrap, lower)
 				frame.right, frame.left = rightGap, leftGap
 				frame.clear = clearance(model, head)
-				local checks: { { side: string, distance: number?, inside: boolean } } = {
-					{ side = "right", distance = rightGap, inside = rightInside },
-					{ side = "left", distance = leftGap, inside = leftInside },
+				local checks: { { side: string, distance: number?, inside: boolean, tolerance: number } } = {
+					{ side = "right", distance = rightGap, inside = rightInside, tolerance = GRIP_TOLERANCE },
+					{ side = "left", distance = leftGap, inside = leftInside, tolerance = LEFT_TOLERANCE },
 				}
 				for _, check in checks do
 					local side, distance = check.side, check.distance
 					if distance == nil then
 						table.insert(frame.problems, `{side} hand not measured`)
-					elseif distance > GRIP_TOLERANCE then
+					elseif distance > check.tolerance then
 						table.insert(
 							frame.problems,
 							string.format("%s hand %.3f stud off its grip on the wand", side, distance)
