@@ -200,10 +200,10 @@ end
 
 --[=[
 	Moves the pacing on to `now`: the break ends at its deadline (back to normal, never into overtime), the
-	warning becomes overtime at its deadline, and the tier. A `calm` shift (training) keeps tier 0, so the clock never
-	speeds the Manager up. Nil when nothing changed or the shift is not running.
+	warning becomes overtime at its deadline, and the tier. A `training` run keeps tier 0, so the clock never speeds
+	the Manager up. Nil when nothing changed or the shift is not running.
 ]=]
-function ShiftPhaseRules.advance(state: ShiftState, now: number, calm: boolean?): ShiftState?
+function ShiftPhaseRules.advance(state: ShiftState, now: number, training: boolean?): ShiftState?
 	if state.phase ~= "running" then
 		return nil
 	end
@@ -217,7 +217,7 @@ function ShiftPhaseRules.advance(state: ShiftState, now: number, calm: boolean?)
 		stage = "overtime"
 		stageEndsAt = nil
 	end
-	local tier = if calm then 0 else tierFor(stage, state.startedAt, now)
+	local tier = if training then 0 else tierFor(stage, state.startedAt, now)
 	local sameStage = stage == state.stage
 	if sameStage and stageEndsAt == state.stageEndsAt and tier == state.tier then
 		return nil

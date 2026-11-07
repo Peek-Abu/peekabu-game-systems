@@ -30,4 +30,19 @@ function OccupantCatchUtils.afterCatch(knockedOut: boolean): AfterCatch
 	return { kill = false, publishBack = nil, toast = "hit", rehire = false }
 end
 
+export type Feedback = {
+	-- The "got caught!" toast to the whole crew.
+	crewToast: boolean,
+	-- The first-catch tip.
+	tip: boolean,
+}
+
+--[=[
+	Who is told about a catch: on a shift, the crew (the toast) and the caught player (their first-catch tip); on a
+	training run, nobody here, because training sends the player its one line itself (TrainingRunSystem).
+]=]
+function OccupantCatchUtils.feedback(training: boolean): Feedback
+	return { crewToast = not training, tip = not training }
+end
+
 return OccupantCatchUtils

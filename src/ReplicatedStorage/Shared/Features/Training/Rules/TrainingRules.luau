@@ -10,6 +10,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PlayerDataTypes = require(ReplicatedStorage.Shared.Data.PlayerDataTypes)
+local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 
 local TrainingRules = {}
 
@@ -59,6 +60,15 @@ end
 ]=]
 function TrainingRules.offered(maps: number): boolean
 	return maps == 1
+end
+
+--[=[
+	The one line a training catch shows (the catch's only message there): the last life's points at the glowing desk.
+]=]
+function TrainingRules.catchLine(livesLeft: number): string
+	return if livesLeft <= TrainingConstants.LIVES_FLOOR
+		then TrainingConstants.TEXT.lastLife
+		else TrainingConstants.TEXT.caught
 end
 
 --[=[

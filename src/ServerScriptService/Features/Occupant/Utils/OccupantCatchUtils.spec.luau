@@ -18,4 +18,18 @@ return function()
 			expect(after.rehire).to.equal(false)
 		end)
 	end)
+
+	describe("feedback", function()
+		it("tells the crew and shows the first-catch tip on a shift", function()
+			local feedback = OccupantCatchUtils.feedback(false)
+			expect(feedback.crewToast).to.equal(true)
+			expect(feedback.tip).to.equal(true)
+		end)
+
+		it("leaves a training catch to training's one line", function()
+			local feedback = OccupantCatchUtils.feedback(true)
+			expect(feedback.crewToast).to.equal(false)
+			expect(feedback.tip).to.equal(false)
+		end)
+	end)
 end

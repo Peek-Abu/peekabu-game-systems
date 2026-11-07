@@ -11,7 +11,7 @@
 	  back from the run.
 	- **The run** (the shift role): a party of one arriving with the training mode plays the shift on the Studio-built
 	  Training map (TrainingSiteSystem as Office's site, TrainingRunSystem following the stops), with a lives floor of
-	  TrainingConstants.LIVES_FLOOR, so a catch never knocks them out, and a calm clock (no Manager speed-ups). Finishing records the run and pays REWARD_GLEAM
+	  TrainingConstants.LIVES_FLOOR, so a catch never knocks them out, marked as training (no Manager speed-ups; a catch shows training's one line). Finishing records the run and pays REWARD_GLEAM
 	  the first time (one transaction), then rides them home. A map that is missing or does not check out sends them
 	  straight home with a note, and logs every problem.
 	- **The hotbar tour** (the shift role): when a run starts, each player there who has never had it (the tips slice,
@@ -158,7 +158,7 @@ local function finishRun()
 	end
 	OfficeServiceServer:useSite(nil)
 	ShiftServiceServer:setLivesFloor(0)
-	ShiftServiceServer:setCalm(false)
+	ShiftServiceServer:setTraining(false)
 end
 
 local function begin(player: Player)
@@ -188,8 +188,8 @@ local function begin(player: Player)
 		run:track(piles, items)
 	end))
 	ShiftServiceServer:setLivesFloor(TrainingConstants.LIVES_FLOOR)
-	-- No speed-ups in training: the Manager keeps his first pace.
-	ShiftServiceServer:setCalm(true)
+	-- No speed-ups in training (the Manager keeps his first pace), and a catch's feedback is training's one line.
+	ShiftServiceServer:setTraining(true)
 	log:info(`training for {player.Name}`)
 end
 

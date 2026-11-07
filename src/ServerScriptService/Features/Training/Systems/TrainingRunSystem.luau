@@ -23,6 +23,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
+local TrainingRules = require(ReplicatedStorage.Shared.Features.Training.Rules.TrainingRules)
 local TrainingStopRules = require(ReplicatedStorage.Shared.Features.Training.Rules.TrainingStopRules)
 local ShiftServiceServer = require(ServerScriptService.Features.Shift.ShiftServiceServer)
 local StateSyncWorldStore = require(ServerScriptService.Features.StateSync.State.StateSyncWorldStore)
@@ -156,12 +157,8 @@ function TrainingRunSystem.new(
 		if caught ~= player or stopped then
 			return
 		end
-		tell(
-			player,
-			if livesLeft <= TrainingConstants.LIVES_FLOOR
-				then TrainingConstants.TEXT.lastLife
-				else TrainingConstants.TEXT.caught
-		)
+		-- The catch's only message on a training run (OccupantCatchUtils.feedback leaves it to training).
+		tell(player, TrainingRules.catchLine(livesLeft))
 		local back: CFrame? = plan.stops[state.stop]
 		task.delay(TrainingConstants.RETURN_DELAY, function()
 			local character = player.Character

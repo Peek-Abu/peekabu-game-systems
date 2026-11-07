@@ -233,10 +233,10 @@ return function()
 	end)
 
 	describe("advance", function()
-		it("keeps a calm shift at tier 0 past every tier time", function()
+		it("keeps a training run at tier 0 past every tier time", function()
 			expect(ShiftPhaseRules.advance(running(), 100 + 300).tier > 0).to.equal(true)
-			local calm = ShiftPhaseRules.advance(running(), 100 + 300, true)
-			expect(calm == nil or calm.tier == 0).to.equal(true)
+			local training = ShiftPhaseRules.advance(running(), 100 + 300, true)
+			expect(training == nil or training.tier == 0).to.equal(true)
 		end)
 
 		it("ends the break at its deadline without starting overtime", function()

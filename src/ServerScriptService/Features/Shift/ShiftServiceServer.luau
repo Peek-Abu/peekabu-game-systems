@@ -140,8 +140,8 @@ local changed: SignalTyped.Signal<ShiftTypes.ShiftState> = SignalTyped.new()
 -- Every counted catch with the lives the player has left after it (0 = knocked out) and the seconds into the shift at
 -- the catch, for analytics.
 local caught: SignalTyped.Signal<Player, number, number> = SignalTyped.new()
--- A calm shift (training, setCalm) never raises the pressure tier.
-local calm = false
+-- A training run (setTraining): the pressure tier never rises, and a catch's crew feedback is training's own.
+local training = false
 
 local function now(): number
 	return Workspace:GetServerTimeNow()
@@ -414,7 +414,7 @@ transit = ShiftTransitSystem.new({
 })
 
 function step()
-	local advanced = ShiftPhaseRules.advance(state, now(), calm)
+	local advanced = ShiftPhaseRules.advance(state, now(), training)
 	if advanced ~= nil then
 		setState(advanced)
 	end
@@ -455,7 +455,8 @@ export type ShiftServiceServer = {
 	noteCatch: (self: ShiftServiceServer, player: Player) -> boolean,
 	spendLife: (self: ShiftServiceServer, player: Player) -> boolean,
 	setLivesFloor: (self: ShiftServiceServer, floor: number) -> (),
-	setCalm: (self: ShiftServiceServer, on: boolean) -> (),
+	setTraining: (self: ShiftServiceServer, on: boolean) -> (),
+	isTraining: (self: ShiftServiceServer) -> boolean,
 	addLivesModifier: (self: ShiftServiceServer, modify: (number) -> number) -> () -> (),
 }
 
@@ -661,11 +662,19 @@ local ShiftServiceServer: ShiftServiceServer = {
 	end,
 
 	--[=[
-		A calm shift keeps the pressure tier at 0 (training): the clock never speeds the Manager up. Holds until set
-		again.
+		Marks this server's run as a training run (TrainingServiceServer): the pressure tier stays 0, so the clock
+		never speeds the Manager up, and a catch leaves its feedback to training (OccupantCatchUtils.feedback). Holds
+		until set again.
 	]=]
-	setCalm = function(_self, on)
-		calm = on
+	setTraining = function(_self, on)
+		training = on
+	end,
+
+	--[=[
+		Whether this server's run is a training run (setTraining).
+	]=]
+	isTraining = function(_self)
+		return training
 	end,
 
 	--[=[

@@ -292,7 +292,8 @@ local rehire: { [number]: boolean } = {}
 
 --[=[
 	A catch went through (the service's `onCaught` hook): Shift counts it (every catch, hit or not) and the crew is
-	told: "got caught!" for a hit, "out for the shift" when it knocked the player out (`knockedOut`). The player is owed
+	told: "got caught!" for a hit, "out for the shift" when it knocked the player out (`knockedOut`); on a training
+	run only training's own line is sent (OccupantCatchUtils.feedback). The player is owed
 	the Rehired notice only when afterCatch says so (OccupantCatchUtils.afterCatch).
 ]=]
 function OccupantCatchSystem.caught(player: Player, knockedOut: boolean)
@@ -303,15 +304,21 @@ function OccupantCatchSystem.caught(player: Player, knockedOut: boolean)
 		rehire[player.UserId] = nil
 	end
 	ShiftServiceServer:noteCatch(player)
-	local text = if after.toast == "out"
-		then OccupantFeedbackUtils.outText(player.DisplayName)
-		else OccupantFeedbackUtils.hitText(player.DisplayName)
-	ToastServiceServer:send("all", {
-		text = text,
-		style = ShiftConstants.TOAST_STICKY,
-		duration = 4,
-	})
-	TipServiceServer:first(player, "firstCatch")
+	-- A training run sends its own one line (OccupantCatchUtils.feedback).
+	local feedback = OccupantCatchUtils.feedback(ShiftServiceServer:isTraining())
+	if feedback.crewToast then
+		local text = if after.toast == "out"
+			then OccupantFeedbackUtils.outText(player.DisplayName)
+			else OccupantFeedbackUtils.hitText(player.DisplayName)
+		ToastServiceServer:send("all", {
+			text = text,
+			style = ShiftConstants.TOAST_STICKY,
+			duration = 4,
+		})
+	end
+	if feedback.tip then
+		TipServiceServer:first(player, "firstCatch")
+	end
 end
 
 --[=[
