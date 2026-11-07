@@ -216,23 +216,47 @@ return function()
 			expect((transform * before).Z < before.Z).to.equal(true)
 		end)
 
-		it("scales every layer back together until the left paw can still reach its grip", function()
+		-- How far the left paw's grip may be from its shoulder before the guard scales the layers back.
+		local function limitOf(reach)
+			return Constants.reachUse * reach + Constants.reachSlack
+		end
+
+		it("scales every layer back together until the left paw can still reach its grip (with its slack)", function()
 			-- GripLower down the wand from the right hand, the left shoulder above and behind it, the arm just long enough.
 			local at = PIVOT + Vector3.new(-0.5, -0.6, -0.5)
 			local shoulder = at + Vector3.new(-0.4, 1.1, 0.5)
-			local reach = (at - shoulder).Magnitude / Constants.reachUse + 0.02
+			local reach = ((at - shoulder).Magnitude + 0.02 - Constants.reachSlack) / Constants.reachUse
 			local holding = table.clone(REST)
 			holding.left = { at = at, shoulder = shoulder, reach = reach }
 			local swing = { offset = Vector3.new(0, 0, -0.3), pitch = 0.5, yaw = -0.4, roll = 0 }
 			local free = VacuumMotionFormulas.wand(REST, swing, MARGIN)
-			expect(((free * at) - shoulder).Magnitude > Constants.reachUse * reach).to.equal(true)
+			expect(((free * at) - shoulder).Magnitude > limitOf(reach)).to.equal(true)
 			local held = VacuumMotionFormulas.wand(holding, swing, MARGIN)
 			local distance = ((held * at) - shoulder).Magnitude
-			expect(distance <= Constants.reachUse * reach + 1e-4).to.equal(true)
+			expect(distance <= limitOf(reach) + 1e-4).to.equal(true)
 			-- Scaled back only as far as it must: right at the edge, still moved.
-			expect(distance).to.be.near(Constants.reachUse * reach, 2e-3)
+			expect(distance).to.be.near(limitOf(reach), 2e-3)
 			expect(held.Position.Magnitude > 1e-3).to.equal(true)
 		end)
+
+		it(
+			"lets a move through whole when the left paw only gives within its slack (the grip at the limit at rest)",
+			function()
+				-- At rest the grip sits exactly at reachUse of the arm (Pippa's hold, measured 2026-11-06).
+				local at = PIVOT + Vector3.new(-0.5, -0.6, -0.5)
+				local shoulder = at + Vector3.new(-0.4, 1.1, 0.5)
+				local reach = (at - shoulder).Magnitude / Constants.reachUse
+				local holding = table.clone(REST)
+				holding.left = { at = at, shoulder = shoulder, reach = reach }
+				local nudge = { offset = Vector3.new(0, 0, 0), pitch = 0, yaw = 0.15, roll = 0 }
+				local free = VacuumMotionFormulas.wand(REST, nudge, MARGIN)
+				local held = VacuumMotionFormulas.wand(holding, nudge, MARGIN)
+				expect(((free * at) - shoulder).Magnitude <= limitOf(reach)).to.equal(true)
+				local _, freeAngle = free:ToAxisAngle()
+				local _, heldAngle = held:ToAxisAngle()
+				expect(heldAngle).to.be.near(freeAngle, 1e-4)
+			end
+		)
 
 		it("counts the brace's lean: the shoulder drops and tips forward with it", function()
 			local motion = VacuumMotionFormulas.motion(Vector3.new(0, 0.2, 0), 0.2, math.rad(11))

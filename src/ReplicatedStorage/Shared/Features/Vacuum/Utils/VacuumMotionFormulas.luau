@@ -321,7 +321,8 @@ function VacuumMotionFormulas.reaches(rest: WandRest, transform: CFrame, body: C
 	if left == nil then
 		return true
 	end
-	return (transform * left.at - body * left.shoulder).Magnitude <= Constants.reachUse * left.reach
+	return (transform * left.at - body * left.shoulder).Magnitude
+		<= Constants.reachUse * left.reach + Constants.reachSlack
 end
 
 --[=[

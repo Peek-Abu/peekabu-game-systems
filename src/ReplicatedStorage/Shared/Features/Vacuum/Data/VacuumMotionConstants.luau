@@ -107,6 +107,11 @@ return table.freeze({
 	-- Pippa's left arm (AnimationVacuumHarness, Studio 2026-10-17), and capped there the aim all but vanished; so the
 	-- wand turns about the left paw's grip, and this only guards the translations.
 	reachUse = 0.95,
+	-- Feel pass batch 2 (2026-11-06): the left paw may give this much (studs) past `reachUse` before any layer is
+	-- scaled back: the arm goes straight and the paw slips a little on the wand instead of the whole move being
+	-- cancelled (at rest Pippa's grip already sat at the limit, so aim left, the floor reach and the pop kick were
+	-- wiped to nothing). 0 restores the old guard exactly.
+	reachSlack = 0.18,
 	-- The left paw turns `leftTurn` of the wand's turn about its own grip (it stays on it): Pippa's left wrist,
 	-- near its full reach, could not follow the whole of the aim's 38 degrees (0.053 stud off, vacuum idle).
 	leftTurn = 0.5,
