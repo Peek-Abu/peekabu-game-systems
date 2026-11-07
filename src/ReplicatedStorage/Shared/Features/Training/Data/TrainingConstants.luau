@@ -90,7 +90,7 @@ local COACH: { [string]: CoachLine } = {
 	shop = { text = "This is the Shop! Spend your Gleam here.", pose = "point" },
 	trucks = { text = "Hop on a truck with your crew!", pose = "cheer" },
 	vacuum = { text = "This is your vacuum! Pick it, then hold to suck up Gloom.", pose = "point" },
-	power = { text = "This is your power! Tap it to help your crew.", pose = "point" },
+	power = { text = "This is your power! Tap it now to try it.", pose = "point" },
 }
 
 local GOALS: { [string]: GoalCard } = {
@@ -150,8 +150,10 @@ local TrainingConstants = {
 	HOTBAR_TIP = "hotbarTour",
 	-- Seconds after a run starts before the hotbar tour shows (the load screen lifts first).
 	HOTBAR_DELAY = 2,
-	-- How long each hotbar step shows at most.
+	-- How long each hotbar step shows at most (the steps the player must do wait for it instead).
 	HOTBAR_SECONDS = 8,
+	-- The run step passes after this many seconds of real sprinting.
+	RUN_SECONDS = 1,
 
 	-- The guide (tutorial v3): a floor trail of chevrons scrolling toward the goal, a bobbing arrow over it and a ring
 	-- on the floor under it. Gold, red at the hide stop. The images are Icey Labs uploads, white so they tint.
@@ -239,7 +241,9 @@ local TrainingConstants = {
 		again = "Step on the TRAINING pad to play again!",
 		againButton = "PLAY TRAINING AGAIN",
 		tourVacuum = "This is your vacuum! Pick it, then hold to suck up Gloom.",
-		tourPower = "This is your power! Tap it to help your crew.",
+		tourPower = "This is your power! Tap it now to try it.",
+		tourRun = "Run! Hold Shift to run fast.",
+		tourRunPad = "Run! Press the left stick to run fast.",
 	}),
 }
 

@@ -5,7 +5,8 @@
 	- In the hub: the Training pad signs and the new-player arrow (TrainingHubSystem), from this player's synced
 	  "training" slice (TrainingRules.isNew), and the after-training tour when the server sends it (TrainingEvents.Tour).
 	- On a player's first run (training's or a shift's): the hotbar tour when the server sends it
-	  (TrainingEvents.Hotbar): the vacuum's slot, then the power button.
+	  (TrainingEvents.Hotbar): the vacuum's slot, then a run the player must do (hold Shift / RUN), then the power
+	  button, which passes only when they really use their crew move (TrainingGuideRules.ranEnough / powerUsed).
 	- On a training run (tutorial v3): from the stop in the `training` world entry, the hall's lights out, creeping
 	  Gloom, red danger screen and glowing desk (TrainingHallSystem), the floor trail, arrow and ring
 	  (TrainingTrailSystem), and Pippa's lines and the goal bar (TrainingCoachStore, read by the TrainingGuideHud
@@ -18,6 +19,8 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
 
 local Charm = require(ReplicatedStorage.Packages.Charm)
 local PlayerDataTypes = require(ReplicatedStorage.Shared.Data.PlayerDataTypes)
@@ -26,7 +29,10 @@ local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.D
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local TrainingEvents = require(ReplicatedStorage.Shared.Features.Training.Net.TrainingEvents)
+local TrainingGuideRules = require(ReplicatedStorage.Shared.Features.Training.Rules.TrainingGuideRules)
 local TrainingRules = require(ReplicatedStorage.Shared.Features.Training.Rules.TrainingRules)
+local AbilityStore = require(ReplicatedStorage.Client.Features.Ability.State.AbilityStore)
+local SprintStore = require(ReplicatedStorage.Client.Features.Sprint.State.SprintStore)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local TrainingHallSystem = require(ReplicatedStorage.Client.Features.Training.Systems.TrainingHallSystem)
 local TrainingHubSystem = require(ReplicatedStorage.Client.Features.Training.Systems.TrainingHubSystem)
@@ -58,6 +64,58 @@ end
 local function vacuumOut(): boolean
 	local entry = StateSyncClientStore.publicPlayers()[StateSyncConstants.publicEntryKey(Players.LocalPlayer.UserId)]
 	return entry ~= nil and entry[VacuumConstants.PUBLIC_EQUIPPED_FIELD] == true
+end
+
+-- The hotbar tour: the vacuum's slot; a run they must do (only with a keyboard or a gamepad: a phone has no run
+-- control); their power, which they must really use (skipped for an employee with none).
+local function hotbarTour(): { TrainingSpotlightSystem.Step }
+	local sprinted = 0
+	local lastCheck: number? = nil
+	local startReady = AbilityStore.readyAt()
+	local steps: { TrainingSpotlightSystem.Step } = {
+		{
+			kind = "gui",
+			tag = TrainingConstants.SPOTLIGHT_TAGS.vacuum,
+			line = TrainingConstants.TEXT.tourVacuum,
+			seconds = TrainingConstants.HOTBAR_SECONDS,
+			done = vacuumOut,
+		},
+	}
+	local keyboard = UserInputService.KeyboardEnabled
+	if keyboard or UserInputService.GamepadEnabled then
+		table.insert(steps, {
+			kind = "do",
+			tag = "",
+			line = if keyboard then TrainingConstants.TEXT.tourRun else TrainingConstants.TEXT.tourRunPad,
+			mustDo = true,
+			done = function()
+				local now = os.clock()
+				local last = lastCheck
+				if last ~= nil and SprintStore.sprinting() then
+					sprinted += now - last
+				end
+				lastCheck = now
+				return TrainingGuideRules.ranEnough(sprinted)
+			end,
+		})
+	end
+	if AbilityStore.abilityId() ~= nil then
+		table.insert(steps, {
+			kind = "gui",
+			tag = TrainingConstants.SPOTLIGHT_TAGS.power,
+			line = TrainingConstants.TEXT.tourPower,
+			mustDo = true,
+			done = function()
+				return TrainingGuideRules.powerUsed(
+					startReady,
+					AbilityStore.readyAt(),
+					Workspace:GetServerTimeNow(),
+					AbilityStore.active()
+				)
+			end,
+		})
+	end
+	return steps
 end
 
 local function onTraining(training: PlayerDataTypes.Training?)
@@ -131,21 +189,7 @@ local TrainingServiceClient: TrainingServiceClient = {
 		table.insert(
 			stoppers,
 			TrainingEvents.packets.Hotbar.listen(function(_value: boolean)
-				TrainingSpotlightSystem.point({
-					{
-						kind = "gui",
-						tag = TrainingConstants.SPOTLIGHT_TAGS.vacuum,
-						line = TrainingConstants.TEXT.tourVacuum,
-						seconds = TrainingConstants.HOTBAR_SECONDS,
-						done = vacuumOut,
-					},
-					{
-						kind = "gui",
-						tag = TrainingConstants.SPOTLIGHT_TAGS.power,
-						line = TrainingConstants.TEXT.tourPower,
-						seconds = TrainingConstants.HOTBAR_SECONDS,
-					},
-				})
+				TrainingSpotlightSystem.point(hotbarTour())
 			end)
 		)
 	end,

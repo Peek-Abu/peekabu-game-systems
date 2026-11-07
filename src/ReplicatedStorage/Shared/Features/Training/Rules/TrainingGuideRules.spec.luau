@@ -99,4 +99,23 @@ return function()
 			expect(TrainingConstants.RETURN_DELAY < beat.back).to.equal(true)
 		end)
 	end)
+
+	describe("powerUsed", function()
+		it("counts the crew move only when the player really uses it", function()
+			expect(TrainingGuideRules.powerUsed(0, 0, 100, nil)).to.equal(false)
+			expect(TrainingGuideRules.powerUsed(0, 130, 100, nil)).to.equal(true)
+			expect(TrainingGuideRules.powerUsed(0, 0, 100, "Hug")).to.equal(true)
+		end)
+
+		it("does not count a cooldown that was already running when the step began", function()
+			expect(TrainingGuideRules.powerUsed(130, 130, 100, nil)).to.equal(false)
+		end)
+	end)
+
+	describe("ranEnough", function()
+		it("passes the run step after a real run, not a tap", function()
+			expect(TrainingGuideRules.ranEnough(0.2)).to.equal(false)
+			expect(TrainingGuideRules.ranEnough(TrainingConstants.RUN_SECONDS)).to.equal(true)
+		end)
+	end)
 end

@@ -116,4 +116,20 @@ function TrainingGuideRules.catchPhase(elapsed: number): CatchPhase
 	return "grab"
 end
 
+--[=[
+	Whether the player really used their crew move since the step began: an effect is running, or the ready time moved
+	on from the one the step began with (`startReady`) into the future (a cooldown that was already running does not
+	count). Server times.
+]=]
+function TrainingGuideRules.powerUsed(startReady: number, ready: number, serverNow: number, active: string?): boolean
+	return active ~= nil or (ready ~= startReady and ready > serverNow)
+end
+
+--[=[
+	Whether the player has run long enough to pass the run step (seconds sprinted, added up).
+]=]
+function TrainingGuideRules.ranEnough(sprintSeconds: number): boolean
+	return sprintSeconds >= TrainingConstants.RUN_SECONDS
+end
+
 return TrainingGuideRules
