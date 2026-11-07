@@ -70,6 +70,17 @@ function TrainingGuideRules.tone(stop: number): Tone
 end
 
 --[=[
+	The floor trail's tone: the stop's tone, except gold again once the player got away at the escape stop (the way on
+	is safe now).
+]=]
+function TrainingGuideRules.trailTone(stop: number, situation: Situation): Tone
+	if situation.stopDone then
+		return "calm"
+	end
+	return TrainingGuideRules.tone(stop)
+end
+
+--[=[
 	The goal bar's card for `stop`; nil outside the stops.
 ]=]
 function TrainingGuideRules.goal(stop: number): TrainingConstants.GoalCard?

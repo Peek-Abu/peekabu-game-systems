@@ -65,6 +65,8 @@ local hubGoal: Vector3? = nil
 local hiddenHere = false
 -- The last stop the player escaped at (the server's CLEAR_ENTRY): that stop counts as done.
 local clearStop: number? = nil
+-- What the guide last saw of the player (TrainingGuideRules.Situation), for the trail's colour.
+local seen: TrainingGuideRules.Situation = { stopDone = false, carrying = false, hidden = false }
 -- The trail's kept floor height (TrainingTrailUtils.steady).
 local level: number? = nil
 local legs: { TrainingTrailUtils.Leg } = {}
@@ -433,10 +435,11 @@ local function step()
 			targetAt = now
 			local found, situation = targetNow(map, at, feet)
 			target = found
+			seen = situation
 			TrainingCoachStore.setSituation(situation)
 		end
 		goal = target
-		if TrainingGuideRules.tone(at) == "danger" then
+		if TrainingGuideRules.trailTone(at, seen) == "danger" then
 			color = GUIDE.danger
 		end
 	else

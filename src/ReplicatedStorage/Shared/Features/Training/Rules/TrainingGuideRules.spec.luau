@@ -46,6 +46,15 @@ return function()
 		end)
 	end)
 
+	describe("trailTone", function()
+		it("is red at the escape stop until the player got away, then gold", function()
+			expect(TrainingGuideRules.trailTone(4, at())).to.equal("danger")
+			expect(TrainingGuideRules.trailTone(4, at(false, false, true))).to.equal("danger")
+			expect(TrainingGuideRules.trailTone(4, at(true, false, true))).to.equal("calm")
+			expect(TrainingGuideRules.trailTone(1, at())).to.equal("calm")
+		end)
+	end)
+
 	describe("goal", function()
 		it("has a title, a line and an icon for every stop", function()
 			for stop = 1, #TrainingConstants.STOPS do
