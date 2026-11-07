@@ -180,7 +180,7 @@ local KIT_POSES: { [string]: PoseDef } = {
 		Neck = Vector3.new(-6, -10, 14),
 	}),
 	-- Shh, sneak: ears pinned flat back, hunched on a diagonal, tiptoe paws drooping in front (not at her mouth: it
-	-- would clip), head cocked the other way; the sly "shh" face where she has it.
+	-- would clip), head cocked the other way; her sly "Shh" face (Content where an employee has none).
 	shh = pose("shh", "Content", {
 		RightShoulder = Vector3.new(0, 50, -8),
 		RightElbow = Vector3.new(0, 0, 70),
@@ -194,7 +194,7 @@ local KIT_POSES: { [string]: PoseDef } = {
 		LeftEarBase = Vector3.new(60, 0, 12),
 	}, "Shh"),
 	-- Hide!: can't look! Both ears fold forward down over her eyes (her paws can't reach past her muzzle), her face
-	-- tipped back so the ears hang in front of it (not through it), paws tucked up, the startled "o" mouth peeking out.
+	-- tipped back so the ears hang in front of it (not through it), paws tucked up, her scared face peeking out (Pippa's "Scared" face; Worried where an employee has none).
 	hide = pose("hide", "Worried", {
 		RightShoulder = Vector3.new(0, 64, -40),
 		RightElbow = Vector3.new(0, 0, 100),
@@ -204,7 +204,7 @@ local KIT_POSES: { [string]: PoseDef } = {
 		Neck = Vector3.new(14, 6, -8),
 		RightEarBase = Vector3.new(-122, 0, -6),
 		LeftEarBase = Vector3.new(-118, 0, -24),
-	}, "RevealStartled"),
+	}, "Scared"),
 	-- You did it!: both paws up beside her head (the right higher, out clear of her face), leaning back, head tipped.
 	coachCheer = pose("coachCheer", "Happy", {
 		RightShoulder = Vector3.new(0, -30, 12),
