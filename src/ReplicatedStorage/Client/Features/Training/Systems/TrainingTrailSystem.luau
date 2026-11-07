@@ -63,6 +63,8 @@ local stop: number? = nil
 -- The hub's goal (a floor point), used only off a run.
 local hubGoal: Vector3? = nil
 local hiddenHere = false
+-- The last stop the player escaped at (the server's CLEAR_ENTRY): that stop counts as done.
+local clearStop: number? = nil
 -- The trail's kept floor height (TrainingTrailUtils.steady).
 local level: number? = nil
 local legs: { TrainingTrailUtils.Leg } = {}
@@ -237,7 +239,7 @@ local function targetNow(map: Model, stopNumber: number, from: Vector3): (Vector
 		hiddenHere = true
 	end
 	local situation: TrainingGuideRules.Situation = {
-		stopDone = doorOpen(map, stopNumber),
+		stopDone = doorOpen(map, stopNumber) or clearStop == stopNumber,
 		carrying = carrying,
 		hidden = hiddenHere,
 	}
@@ -509,6 +511,17 @@ function TrainingTrailSystem.setStop(value: number?)
 	end
 	stop = value
 	refresh()
+end
+
+--[=[
+	The last stop the player escaped at (the server's CLEAR_ENTRY; nil: none): that stop counts as done, so the guide
+	moves on and Pippa says he is gone.
+]=]
+function TrainingTrailSystem.setClear(value: number?)
+	if value ~= clearStop then
+		clearStop = value
+		targetAt = -math.huge
+	end
 end
 
 --[=[

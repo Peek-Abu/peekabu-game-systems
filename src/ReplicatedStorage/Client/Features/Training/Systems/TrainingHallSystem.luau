@@ -8,6 +8,7 @@
 	  off, a Neon part to plain plastic), and the "creep" patches of Gloom fade and grow in, in ORDER.
 	- Stop 4 ("hide"): red and dark (a second, redder screen request on top), and the hiding furniture glows red (a
 	  Highlight), so the way to hide is plain. (Tutorial v3: no hall signs; Pippa's lines and the goal bar say it.)
+	  Once the player got away (`setClear`), the glow turns green, the red lifts and a small all-clear sound plays.
 	- Stop 5 ("done"): every light pops back on, the Gloom fades away, the glow goes, and a happy sound plays.
 
 	The hall's "light" parts are the training's own (not OfficeLight-tagged), so nothing else switches them.
@@ -34,8 +35,11 @@ local STOP_QUIET = 3
 local STOP_HIDE = 4
 local STOP_DONE = 5
 local GLOW = TrainingConstants.GUIDE.danger
+local CLEAR_GLOW = TrainingConstants.GUIDE.clear
 
 local shown = 0
+-- The player got away at the shown stop (the desk's glow is green, the red is off).
+local cleared = false
 local saved: { [BasePart]: Saved } = {}
 local creeps: { Creep } = {}
 local glows: { Highlight } = {}
@@ -169,12 +173,13 @@ local function glow(model: Model, on: boolean)
 	if not on then
 		return
 	end
+	local color = if cleared then CLEAR_GLOW else GLOW
 	for _, part in model:GetDescendants() do
 		if CollectionService:HasTag(part, HideConstants.FURNITURE_TAG) then
 			local highlight = Instance.new("Highlight")
-			highlight.FillColor = GLOW
+			highlight.FillColor = color
 			highlight.FillTransparency = 0.75
-			highlight.OutlineColor = GLOW
+			highlight.OutlineColor = color
 			highlight.DepthMode = Enum.HighlightDepthMode.Occluded
 			highlight.Adornee = part
 			highlight.Parent = part
@@ -195,6 +200,7 @@ function TrainingHallSystem.apply(stop: number)
 	end
 	local before = shown
 	shown = stop
+	cleared = false
 	generation += 1
 	local mine = generation
 	hideCreep(model)
@@ -211,11 +217,31 @@ function TrainingHallSystem.apply(stop: number)
 	end
 	glow(model, stop == STOP_HIDE)
 	dark(stop >= STOP_QUIET and stop < STOP_DONE)
-	danger(stop == STOP_HIDE)
+	danger(stop == STOP_HIDE and not cleared)
 	if stop >= STOP_DONE then
 		lightsOn()
 		creepOut()
 		UISoundSystem.play("done")
+	end
+end
+
+--[=[
+	The player got away at stop `stop` (the server's CLEAR_ENTRY): at the hide stop the desk's glow turns green, the
+	red lifts and a small all-clear sound plays, once.
+]=]
+function TrainingHallSystem.setClear(stop: number?)
+	local now = stop ~= nil and stop == shown and shown == STOP_HIDE
+	if now == cleared then
+		return
+	end
+	cleared = now
+	local model = map()
+	if model ~= nil then
+		glow(model, shown == STOP_HIDE)
+	end
+	danger(shown == STOP_HIDE and not cleared)
+	if cleared then
+		UISoundSystem.play("confirm")
 	end
 end
 
@@ -225,6 +251,7 @@ end
 function TrainingHallSystem.clear()
 	generation += 1
 	shown = 0
+	cleared = false
 	lightsOn()
 	dark(false)
 	danger(false)

@@ -48,13 +48,18 @@ local stoppers: { () -> () } = {}
 
 local function onWorld(world: WorldTypes.WorldMap)
 	local stop = world[TrainingConstants.WORLD_ENTRY]
+	local rawClear = world[TrainingConstants.CLEAR_ENTRY]
+	local clear = if type(rawClear) == "number" then rawClear else nil
 	if type(stop) == "number" then
 		TrainingHallSystem.apply(stop)
+		TrainingHallSystem.setClear(clear)
 		TrainingTrailSystem.setStop(stop)
+		TrainingTrailSystem.setClear(clear)
 		TrainingCoachStore.setStop(stop)
 	else
 		TrainingHallSystem.clear()
 		TrainingTrailSystem.setStop(nil)
+		TrainingTrailSystem.setClear(nil)
 		-- The run's entry goes when the player picks on the finish screen (or its wait runs out): the screen goes too.
 		TrainingCoachStore.reset()
 	end
