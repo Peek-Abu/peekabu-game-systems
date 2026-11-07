@@ -140,9 +140,10 @@ local PLAN_AT = 0.5
 -- The holders validated unless `Options.rigs` names others. A stock R15 is not one (every player spawns as an
 -- employee); its left hand does not reach GripLower (2.18 studs from its shoulder at rest, 2.02 of reach), so it
 -- holds the wand one-handed.
--- Cappy and Prickles can be judged by name (`Options.rigs`), but are not yet clean (Studio, 2026-11-06): Cappy's left
--- paw gets no hold at all (the plan puts GripLower out of its reach, so it holds one-handed and the left hand is
--- 0.3-1.9 studs off the wand), and Prickles' floor head dips 0.021-0.026 stud under the floor in the sprint brace.
+-- Cappy and Prickles can be judged by name (`Options.rigs`); both hold the wand two-handed (Cappy since batch 2.6:
+-- left paw at most 0.142 stud off), but their floor heads still dip under the floor in the brace (Studio,
+-- 2026-11-06: Cappy 0.037-0.083 stud in idle B / walk B, Prickles 0.021-0.026 in sprint B), so they join the default
+-- once that is fixed (Launch List g-prickles-floor-dip).
 local DEFAULT_RIGS = { "Pippa" }
 -- The vacuum's use clip (AnimationVacuumSystem), when registered.
 local USE_CLIP = "cleanupVacuumUse"
