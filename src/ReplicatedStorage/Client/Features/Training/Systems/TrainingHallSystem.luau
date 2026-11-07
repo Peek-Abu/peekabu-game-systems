@@ -3,11 +3,11 @@
 	TrainingHallSystem: the Training hall's look on this client, from the stop the server publishes (the `training`
 	world entry, TrainingConstants.WORLD_ENTRY). Fun, then dark, then scary, then safe:
 
-	- Each "sign" part shows its stop's sign (TrainingSign); the stop the player is on is gold.
 	- Stop 3 ("quiet"): the screen darkens and greys (a Vfx screen request, so it reads dark whatever the place's
 	  lighting), the hall's "light" parts go out one by one, in their ORDER, LIGHT_STEP apart (their lights
 	  off, a Neon part to plain plastic), and the "creep" patches of Gloom fade and grow in, in ORDER.
-	- Stop 4 ("hide"): the hiding furniture in the hall glows (a Highlight), so the way to hide is plain.
+	- Stop 4 ("hide"): red and dark (a second, redder screen request on top), and the hiding furniture glows red (a
+	  Highlight), so the way to hide is plain. (Tutorial v3: no hall signs; Pippa's lines and the goal bar say it.)
 	- Stop 5 ("done"): every light pops back on, the Gloom fades away, the glow goes, and a happy sound plays.
 
 	The hall's "light" parts are the training's own (not OfficeLight-tagged), so nothing else switches them.
@@ -26,7 +26,6 @@ local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideCo
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local UISoundSystem = require(ReplicatedStorage.Client.Features.UI.Systems.UISoundSystem)
 local VfxServiceClient = require(ReplicatedStorage.Client.Features.Vfx.VfxServiceClient)
-local TrainingSignSystem = require(ReplicatedStorage.Client.Features.Training.Systems.TrainingSignSystem)
 
 type Saved = { material: Enum.Material, lights: { Light } }
 type Creep = { part: BasePart, transparency: number, size: Vector3 }
@@ -34,8 +33,7 @@ type Creep = { part: BasePart, transparency: number, size: Vector3 }
 local STOP_QUIET = 3
 local STOP_HIDE = 4
 local STOP_DONE = 5
-local SIGN_LIFT = 4
-local GLOW = Color3.fromHex("FFC93A")
+local GLOW = TrainingConstants.GUIDE.danger
 
 local shown = 0
 local saved: { [BasePart]: Saved } = {}
@@ -43,8 +41,20 @@ local creeps: { Creep } = {}
 local glows: { Highlight } = {}
 -- Bumped by every apply, so a light-out sequence from an older stop stops.
 local generation = 0
--- The dark screen at stops 3-4 (a Vfx screen request), while it is held.
+-- The dark screen at stops 3-4 and the hide stop's red on top (Vfx screen requests), while they are held.
 local darkToken: number? = nil
+local dangerToken: number? = nil
+
+local function danger(on: boolean)
+	local token = dangerToken
+	if on and token == nil then
+		local shade = TrainingConstants.DANGER_SCREEN
+		dangerToken = VfxServiceClient:requestScreen({ saturation = shade.saturation, tint = shade.tint })
+	elseif not on and token ~= nil then
+		VfxServiceClient:releaseScreen(token)
+		dangerToken = nil
+	end
+end
 
 local function dark(on: boolean)
 	local token = darkToken
@@ -85,11 +95,6 @@ local function parts(model: Model, role: string): { BasePart }
 	return found
 end
 
-local function stopOf(part: BasePart): number?
-	local stop = part:GetAttribute(TrainingConstants.STOP_ATTRIBUTE)
-	return if type(stop) == "number" then stop else nil
-end
-
 local function lightsOf(part: BasePart): { Light }
 	local lights: { Light } = {}
 	for _, child in part:GetDescendants() do
@@ -122,16 +127,6 @@ local function lightsOn()
 		end
 	end
 	table.clear(saved)
-end
-
-local function signs(model: Model, stop: number)
-	for _, part in parts(model, "sign") do
-		local at = stopOf(part)
-		local def = if at ~= nil then TrainingConstants.STOPS[at] else nil
-		if at ~= nil and def ~= nil then
-			TrainingSignSystem.show(part, { text = def.sign, number = tostring(at), active = at == stop }, SIGN_LIFT)
-		end
-	end
 end
 
 local function hideCreep(model: Model)
@@ -203,7 +198,6 @@ function TrainingHallSystem.apply(stop: number)
 	generation += 1
 	local mine = generation
 	hideCreep(model)
-	signs(model, stop)
 	if stop >= STOP_QUIET and stop < STOP_DONE and before < STOP_QUIET then
 		for index, part in parts(model, "light") do
 			task.delay((index - 1) * TrainingConstants.LIGHT_STEP, function()
@@ -217,6 +211,7 @@ function TrainingHallSystem.apply(stop: number)
 	end
 	glow(model, stop == STOP_HIDE)
 	dark(stop >= STOP_QUIET and stop < STOP_DONE)
+	danger(stop == STOP_HIDE)
 	if stop >= STOP_DONE then
 		lightsOn()
 		creepOut()
@@ -232,12 +227,10 @@ function TrainingHallSystem.clear()
 	shown = 0
 	lightsOn()
 	dark(false)
+	danger(false)
 	local model = map()
 	if model ~= nil then
 		glow(model, false)
-		for _, part in parts(model, "sign") do
-			TrainingSignSystem.hide(part)
-		end
 	end
 	for _, creep in creeps do
 		creep.part.Transparency = creep.transparency

@@ -6,8 +6,12 @@
 	  "training" slice (TrainingRules.isNew), and the after-training tour when the server sends it (TrainingEvents.Tour).
 	- On a player's first run (training's or a shift's): the hotbar tour when the server sends it
 	  (TrainingEvents.Hotbar): the vacuum's slot, then the power button.
-	- On a training run: the hall's signs, lights out, creeping Gloom and glowing desk (TrainingHallSystem), from the
-	  stop in the `training` world entry; the hall is put back when the entry goes.
+	- On a training run (tutorial v3): from the stop in the `training` world entry, the hall's lights out, creeping
+	  Gloom, red danger screen and glowing desk (TrainingHallSystem), the floor trail, arrow and ring
+	  (TrainingTrailSystem), and Pippa's lines and the goal bar (TrainingCoachStore, read by the TrainingGuideHud
+	  widget and the HUD); all put back when the entry goes. A catch (TrainingEvents.Caught) plays the catch beat; the
+	  finish (TrainingEvents.Finish) shows the finish screen (the TrainingFinish widget).
+	- Back in the hub after PLAY AGAIN (TrainingEvents.Again): the arrow to the Training pad.
 
 	@class TrainingServiceClient
 ]=]
@@ -27,6 +31,12 @@ local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync
 local TrainingHallSystem = require(ReplicatedStorage.Client.Features.Training.Systems.TrainingHallSystem)
 local TrainingHubSystem = require(ReplicatedStorage.Client.Features.Training.Systems.TrainingHubSystem)
 local TrainingSpotlightSystem = require(ReplicatedStorage.Client.Features.Training.Systems.TrainingSpotlightSystem)
+local TrainingTrailSystem = require(ReplicatedStorage.Client.Features.Training.Systems.TrainingTrailSystem)
+local TrainingCoachStore = require(ReplicatedStorage.Client.Features.Training.State.TrainingCoachStore)
+local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudRegistry)
+local TrainingFinish = require(ReplicatedStorage.Client.UI.React.Screens.Training.TrainingFinish)
+local TrainingGuideHud = require(ReplicatedStorage.Client.UI.React.Screens.Training.TrainingGuideHud)
+local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 
 local stoppers: { () -> () } = {}
 
@@ -34,8 +44,13 @@ local function onWorld(world: WorldTypes.WorldMap)
 	local stop = world[TrainingConstants.WORLD_ENTRY]
 	if type(stop) == "number" then
 		TrainingHallSystem.apply(stop)
+		TrainingTrailSystem.setStop(stop)
+		TrainingCoachStore.setStop(stop)
 	else
 		TrainingHallSystem.clear()
+		TrainingTrailSystem.setStop(nil)
+		-- The run's entry goes when the player picks on the finish screen (or its wait runs out): the screen goes too.
+		TrainingCoachStore.reset()
 	end
 end
 
@@ -51,12 +66,23 @@ end
 
 export type TrainingServiceClient = {
 	dependencies: { string },
+	init: (self: TrainingServiceClient) -> (),
 	start: (self: TrainingServiceClient) -> (),
 	stop: (self: TrainingServiceClient) -> (),
 }
 
 local TrainingServiceClient: TrainingServiceClient = {
 	dependencies = { "StateSyncServiceClient", "UIServiceClient" },
+
+	init = function(_self)
+		if not HudRegistry.has("trainingGuide") then
+			-- Over the shift HUD and the catch cards, under the finish screen.
+			HudRegistry.register("trainingGuide", TrainingGuideHud, ShiftConstants.HUD_ORDER + 8)
+		end
+		if not HudRegistry.has("trainingFinish") then
+			HudRegistry.register("trainingFinish", TrainingFinish, ShiftConstants.HUD_ORDER + 9)
+		end
+	end,
 
 	start = function(_self)
 		TrainingHubSystem.start()
@@ -69,6 +95,26 @@ local TrainingServiceClient: TrainingServiceClient = {
 			stoppers,
 			TrainingEvents.packets.Tour.listen(function(_value: boolean)
 				TrainingHubSystem.tour()
+			end)
+		)
+		table.insert(
+			stoppers,
+			TrainingEvents.packets.Caught.listen(function(lives: number)
+				local now = os.clock()
+				TrainingCoachStore.caught(now, lives)
+				TrainingCoachStore.say(TrainingConstants.COACH.caught, now, TrainingConstants.CATCH_BEAT.done)
+			end)
+		)
+		table.insert(
+			stoppers,
+			TrainingEvents.packets.Finish.listen(function(gleam: number)
+				TrainingCoachStore.finished(gleam)
+			end)
+		)
+		table.insert(
+			stoppers,
+			TrainingEvents.packets.Again.listen(function(_value: boolean)
+				TrainingHubSystem.again()
 			end)
 		)
 		table.insert(
@@ -100,6 +146,8 @@ local TrainingServiceClient: TrainingServiceClient = {
 		table.clear(stoppers)
 		TrainingHallSystem.clear()
 		TrainingSpotlightSystem.clear()
+		TrainingTrailSystem.teardown()
+		TrainingCoachStore.reset()
 	end,
 }
 

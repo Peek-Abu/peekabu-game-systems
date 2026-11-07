@@ -25,6 +25,7 @@ local React = require(ReplicatedStorage.Packages.React)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local ShiftCountdown = require(script.Parent.ShiftCountdown)
 local ShiftCrewList = require(script.Parent.ShiftCrewList)
+local TrainingGoalBar = require(ReplicatedStorage.Client.UI.React.Screens.Training.TrainingGoalBar)
 local ShiftGloomMeter = require(script.Parent.ShiftGloomMeter)
 local ShiftHotbar = require(script.Parent.ShiftHotbar)
 local ShiftHotbarViewModel = require(script.Parent.ShiftHotbarViewModel)
@@ -155,14 +156,23 @@ local function ShiftCompactHudPanel(props: Props): React.ReactNode
 	local live = props.live == true
 	-- Phone: the meter and the crew list share the top band; on a narrow screen both give up width so they never overlap.
 	local fit = CrewVM.phoneFit(props.viewport.X)
+	-- A training run shows its goal bar in the meter's place (same size, so the hearts under it stay put).
+	local stop = view.training
 	local nodes: { [string]: React.ReactNode } = {
-		clearance = e(ShiftGloomMeter, {
-			view = view,
-			phone = phone,
-			top = meterTop,
-			width = if phone then fit.meter else nil,
-			deadline = if live then view.endsAt else nil,
-		}),
+		clearance = if stop ~= nil
+			then e(TrainingGoalBar, {
+				stop = stop,
+				phone = phone,
+				top = meterTop,
+				width = if phone then fit.meter else nil,
+			})
+			else e(ShiftGloomMeter, {
+				view = view,
+				phone = phone,
+				top = meterTop,
+				width = if phone then fit.meter else nil,
+				deadline = if live then view.endsAt else nil,
+			}),
 	}
 	-- The local player's Gloom-life pips just under the meter (ShiftHudViewModel.livesFrame), from their roster entry.
 	local roster = props.roster
