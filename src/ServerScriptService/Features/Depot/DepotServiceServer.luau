@@ -266,6 +266,10 @@ local DepotServiceServer: DepotServiceServer = {
 			return self:spawnCFrame(index)
 		end)
 		local departing = QueueServiceServer.departing:Connect(function(pad, party)
+			-- A training trip has no contract to brief (training's own HUD and signs say what to do).
+			if CollectionService:HasTag(pad, TrainingConstants.TRUCK_TAG) then
+				return
+			end
 			sendCard(party, DepotContractUtils.driveCard(contract, truckIndexOf(pad)))
 		end)
 		local arrived = QueueServiceServer.arrived:Connect(function(party, payload)
@@ -276,7 +280,9 @@ local DepotServiceServer: DepotServiceServer = {
 			crewContract = DepotContractUtils.resolve(DepotConstants.CONTRACTS, payload.contract)
 			crewTruck = DepotContractUtils.truckOf(payload.truck, DepotConstants.MAX_TRUCKS)
 			crewQuota = ShiftQuotaFormulas.quota(#party)
-			sendCard(party, DepotContractUtils.arrivalCard(crewContract, crewQuota, crewTruck))
+			if payload[TrainingConstants.MODE_KEY] ~= TrainingConstants.MODE then
+				sendCard(party, DepotContractUtils.arrivalCard(crewContract, crewQuota, crewTruck))
+			end
 		end)
 		local late = QueueServiceServer.joinedLate:Connect(function(player)
 			departedForShift[player.UserId] = true
