@@ -115,6 +115,12 @@ return table.freeze({
 	-- The left paw turns `leftTurn` of the wand's turn about its own grip (it stays on it): Pippa's left wrist,
 	-- near its full reach, could not follow the whole of the aim's 38 degrees (0.053 stud off, vacuum idle).
 	leftTurn = 0.5,
+	-- Feel pass batch 2 (2026-11-06): soft hands. Each client gives the hold's two IKControls this SmoothTime
+	-- (seconds) while it moves the vacuum, so the paws trail the wand a hair instead of being welded to it (the server
+	-- plans them with 0); the elbow poles follow `poleFollow` of the wand's move so the elbows swing with it. 0 and 0
+	-- restore the old welded hands exactly.
+	handSmooth = 0.05,
+	poleFollow = 0.5,
 	-- A frame longer than `maxStep` only advances the springs that far.
 	maxStep = 0.1,
 	-- Replicated state on the character (set by the server): the look pitch in degrees, and whether its vacuum is

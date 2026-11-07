@@ -22,7 +22,9 @@
 	A Transform it wrote is recognised next frame: a joint the Animator did not rewrite is posed from the animation's
 	value again, never on top of its own last write. Setting an Attachment's CFrame and a Motor6D's Transform locally
 	is never replicated (the server never rewrites either after creating them), so nothing authoritative moves.
-	`release` puts the targets back at rest and the joints back on the animation.
+	On clients the hold is softened (feel pass batch 2, 2026-11-06): the two IKControls get
+	VacuumMotionConstants.handSmooth so the paws trail the wand a hair, and the elbow poles follow `poleFollow` of the
+	wand's move. `release` puts the targets back at rest and the joints back on the animation.
 
 	Spec-exempt shell (Instances, Motor6Ds); the maths is the specced VacuumMotionFormulas.
 
@@ -30,6 +32,7 @@
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local Constants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumMotionConstants)
@@ -51,6 +54,7 @@ export type Rig = {
 }
 
 type Joint = { motor: Motor6D, base: CFrame?, wrote: CFrame? }
+type Pole = { attachment: Attachment, rest: CFrame }
 type Leg = { hip: Joint, knee: Joint, ankle: Joint, thigh: number, shin: number }
 
 local VacuumMotionRigSystem = {}
@@ -58,6 +62,10 @@ local VacuumMotionRigSystem = {}
 -- The IK targets AnimationVacuumHoldSystem makes on the root.
 local RIGHT_TARGET = "VacuumHoldTarget"
 local LEFT_TARGET = "VacuumSupportTarget"
+-- Their elbow poles and IKControls (on the root and the Humanoid).
+local RIGHT_POLE = "VacuumHoldPole"
+local LEFT_POLE = "VacuumSupportPole"
+local IK_NAMES = { "VacuumHoldIK", "VacuumSupportIK" }
 
 local function part(container: Instance, name: string): BasePart?
 	local found = container:FindFirstChild(name)
@@ -228,6 +236,25 @@ function VacuumMotionRigSystem.bind(character: Model): Rig?
 		table.insert(joints, leg.ankle)
 	end
 	local posed = false
+	-- Soft hands (VacuumMotionConstants.handSmooth), on clients only: the harness measures the welded hold.
+	local smoothed: { IKControl } = {}
+	if RunService:IsClient() and Constants.handSmooth > 0 then
+		for _, name in IK_NAMES do
+			local ik = humanoid:FindFirstChild(name)
+			if ik ~= nil and ik:IsA("IKControl") then
+				ik.SmoothTime = Constants.handSmooth
+				table.insert(smoothed, ik)
+			end
+		end
+	end
+	-- The elbow poles at rest, each following part of the wand's move (VacuumMotionConstants.poleFollow).
+	local poles: { Pole } = {}
+	for _, name in { RIGHT_POLE, LEFT_POLE } do
+		local pole = attachmentOn(root, name)
+		if pole ~= nil then
+			table.insert(poles, { attachment = pole, rest = restOf(pole) })
+		end
+	end
 
 	-- Writes the brace's Transforms; returns the upper body's root-space motion.
 	local function lean(drop: number, angle: number, twist: number): CFrame
@@ -284,6 +311,12 @@ function VacuumMotionRigSystem.bind(character: Model): Rig?
 				local turned = CFrame.new():Lerp(wand.Rotation, Constants.leftTurn)
 				left.CFrame = CFrame.new(wand * rest.pivot) * turned * CFrame.new(-rest.pivot) * leftRest
 			end
+			if Constants.poleFollow > 0 then
+				for _, pole in poles do
+					local moved = wand * pole.rest.Position
+					pole.attachment.CFrame = pole.rest.Rotation + pole.rest.Position:Lerp(moved, Constants.poleFollow)
+				end
+			end
 			return motion
 		end,
 		valid = function()
@@ -304,6 +337,12 @@ function VacuumMotionRigSystem.bind(character: Model): Rig?
 			end
 			for _, joint in joints do
 				unwrite(joint)
+			end
+			for _, ik in smoothed do
+				ik.SmoothTime = 0
+			end
+			for _, pole in poles do
+				pole.attachment.CFrame = pole.rest
 			end
 		end,
 	}
