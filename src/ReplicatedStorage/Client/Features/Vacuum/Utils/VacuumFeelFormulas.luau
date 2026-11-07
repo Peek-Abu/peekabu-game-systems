@@ -54,41 +54,6 @@ function VacuumFeelFormulas.wobble(t: number, seed: number, progress: number): n
 	local weight = WOBBLE_BASE + (1 - WOBBLE_BASE) * p
 	local wave = 0.65 * math.sin(2 * math.pi * WOBBLE_HZ * t + seed)
 		+ 0.35 * math.sin(2 * math.pi * WOBBLE_HZ * 1.7 * t + seed * 2.3)
-	export type HoseTuning = {
-		-- How much each end's curve grows per unit of swing (the far end the other way).
-		swing0: number,
-		swing1: number,
-		-- The suction wiggle's share of the curve, and its rate (Hz).
-		wiggle: number,
-		wiggleHz: number,
-		-- Neither curve goes under this share of its planned size.
-		floor: number,
-	}
-
-	--[=[
-	The hose's two curve sizes from the planned ones (`base0` at the pack, `base1` at the wand) with the wand's `swing`
-	(a spring on its move, about -1..1), its wiggle at time `t` (seeded) by `suck` (0..1).
-]=]
-	function VacuumFeelFormulas.hose(
-		base0: number,
-		base1: number,
-		swing: number,
-		t: number,
-		seed: number,
-		suck: number,
-		tuning: HoseTuning
-	): (number, number)
-		local s = math.clamp(suck, 0, 1)
-		local wave = if s > 0
-			then tuning.wiggle * s * (0.7 * math.sin(2 * math.pi * tuning.wiggleHz * t + seed) + 0.3 * math.sin(
-				2 * math.pi * tuning.wiggleHz * 2.3 * t + seed * 1.7
-			))
-			else 0
-		local c0 = base0 * math.max(tuning.floor, 1 + tuning.swing0 * swing + wave)
-		local c1 = base1 * math.max(tuning.floor, 1 - tuning.swing1 * swing - wave)
-		return c0, c1
-	end
-
 	return VacuumFeelFormulas.MAX_WOBBLE * weight * wave
 end
 
@@ -115,6 +80,41 @@ end
 ]=]
 function VacuumFeelFormulas.popTrauma(size: number): number
 	return math.clamp(0.15 + size * 0.03, 0.15, 0.45)
+end
+
+export type HoseTuning = {
+	-- How much each end's curve grows per unit of swing (the far end the other way).
+	swing0: number,
+	swing1: number,
+	-- The suction wiggle's share of the curve, and its rate (Hz).
+	wiggle: number,
+	wiggleHz: number,
+	-- Neither curve goes under this share of its planned size.
+	floor: number,
+}
+
+--[=[
+	The hose's two curve sizes from the planned ones (`base0` at the pack, `base1` at the wand) with the wand's `swing`
+	(a spring on its move, about -1..1), its wiggle at time `t` (seeded) by `suck` (0..1).
+]=]
+function VacuumFeelFormulas.hose(
+	base0: number,
+	base1: number,
+	swing: number,
+	t: number,
+	seed: number,
+	suck: number,
+	tuning: HoseTuning
+): (number, number)
+	local s = math.clamp(suck, 0, 1)
+	local wave = if s > 0
+		then tuning.wiggle * s * (0.7 * math.sin(2 * math.pi * tuning.wiggleHz * t + seed) + 0.3 * math.sin(
+			2 * math.pi * tuning.wiggleHz * 2.3 * t + seed * 1.7
+		))
+		else 0
+	local c0 = base0 * math.max(tuning.floor, 1 + tuning.swing0 * swing + wave)
+	local c1 = base1 * math.max(tuning.floor, 1 - tuning.swing1 * swing - wave)
+	return c0, c1
 end
 
 return VacuumFeelFormulas
