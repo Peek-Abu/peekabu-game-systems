@@ -9,6 +9,7 @@
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Cosmetic = ReplicatedStorage.Shared.Features.Cosmetic
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
@@ -17,6 +18,7 @@ local CosmeticConstants = require(Cosmetic.Data.CosmeticConstants)
 local CosmeticRegistry = require(Cosmetic.Data.CosmeticRegistry)
 local CosmeticTypes = require(Cosmetic.Data.CosmeticTypes)
 local CosmeticEvents = require(Cosmetic.Net.CosmeticEvents)
+local CosmeticDevPickRules = require(Cosmetic.Rules.CosmeticDevPickRules)
 local CosmeticRequestRules = require(Cosmetic.Rules.CosmeticRequestRules)
 local CosmeticRules = require(Cosmetic.Rules.CosmeticRules)
 
@@ -47,6 +49,11 @@ local CosmeticServiceClient: CosmeticServiceClient = {
 	-- Every grant the server announces is queued for the reveal scene.
 	init = function(_self)
 		CosmeticEvents.packets.Granted.listen(function(data: { ids: { string }, source: string })
+			-- Studio's dev auto-pick (CosmeticDevPickRules) skips its own "You're hired!" reveal.
+			local devAttribute = workspace:GetAttribute(CosmeticConstants.DEV_PICK_ATTRIBUTE)
+			if CosmeticDevPickRules.skipsReveal(RunService:IsStudio(), devAttribute, data.source) then
+				return
+			end
 			CosmeticRevealStore.push({ ids = data.ids, source = data.source })
 		end)
 	end,

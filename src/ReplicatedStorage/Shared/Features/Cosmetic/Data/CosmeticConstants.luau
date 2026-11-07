@@ -25,6 +25,10 @@ return table.freeze({
 	SLICE = "loadout",
 	-- Everyone owns this employee; the first-join pick preselects it.
 	DEFAULT_EMPLOYEE = "Pippa",
+	-- Studio only: a Workspace string attribute naming an employee (e.g. "Pippa") makes the server pick it for every
+	-- player who has not picked yet, through the real pick path, and the client skip that pick's "You're hired!"
+	-- reveal (CosmeticDevPickRules). For agents and testers in Studio; never active in a published server.
+	DEV_PICK_ATTRIBUTE = "DevAutoPick",
 	-- Emote-wheel slots per employee, sticker slots per account.
 	WHEEL_SLOTS = WHEEL_SLOTS,
 	STICKER_SLOTS = STICKER_SLOTS,
