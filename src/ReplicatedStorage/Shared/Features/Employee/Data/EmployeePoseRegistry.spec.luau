@@ -69,6 +69,12 @@ return function()
 					if pose.face ~= nil then
 						expect(FACES[pose.face]).to.equal(true)
 					end
+					-- A portrait-only look names a face in the model's Faces folder; the face is its fallback.
+					if pose.look ~= nil then
+						expect(type(pose.look)).to.equal("string")
+						expect(#pose.look > 0).to.equal(true)
+						expect(pose.face ~= nil).to.equal(true)
+					end
 				end
 			end)
 		end

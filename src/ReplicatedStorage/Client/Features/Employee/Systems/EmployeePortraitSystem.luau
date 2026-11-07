@@ -17,7 +17,8 @@
 	  viewport renders the copy once and then only when it is resized, instead of every frame. A copy wearing a
 	  skinned outfit is then welded into one (still anchored) assembly on LowerTorso, or its coat would not follow the
 	  pose.
-	- Face: the pose's face goes on the FacePlate (EmployeeFaceSystem.apply) and the unused face set is dropped.
+	- Face: the pose's look (a face by name, when the employee has it) or else its face goes on the FacePlate
+	  (EmployeeFaceSystem) and the unused face set is dropped.
 
 	@class EmployeePortraitSystem
 ]=]
@@ -218,7 +219,10 @@ function EmployeePortraitSystem.build(
 		end
 	end
 	joinOutfit(copy)
-	if pose ~= nil and pose.face ~= nil then
+	local look = if pose ~= nil then pose.look else nil
+	if look ~= nil and EmployeeFaceSystem.applyNamed(copy, look, true) then
+		-- The pose's portrait-only face (this employee has it).
+	elseif pose ~= nil and pose.face ~= nil then
 		EmployeeFaceSystem.apply(copy, pose.face, true)
 	end
 	local faces = copy:FindFirstChild(EmployeeConstants.FACES_FOLDER)

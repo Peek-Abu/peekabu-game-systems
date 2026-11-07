@@ -44,6 +44,9 @@ export type PoseDef = {
 	name: string,
 	-- The face it wears; nil keeps whatever the character shows.
 	face: EmployeeRegistry.Face?,
+	-- A portrait-only face by its name in the model's Faces folder (a reveal face, a coach face), worn instead of
+	-- `face` when the employee has it; `face` is the fallback for one that does not.
+	look: string?,
 	-- Motor6D name -> turn in degrees (X, Y, Z) over the rest pose. Joints not named stay at rest.
 	joints: { [string]: Vector3 },
 }
@@ -89,8 +92,8 @@ local function arms(shoulder: Vector3, elbow: Vector3, joints: { [string]: Vecto
 	return joints
 end
 
-local function pose(name: string, face: EmployeeRegistry.Face?, joints: { [string]: Vector3 }): PoseDef
-	local def: PoseDef = { name = name, face = face, joints = table.freeze(joints) }
+local function pose(name: string, face: EmployeeRegistry.Face?, joints: { [string]: Vector3 }, look: string?): PoseDef
+	local def: PoseDef = { name = name, face = face, joints = table.freeze(joints), look = look }
 	return table.freeze(def)
 end
 
@@ -173,17 +176,22 @@ local KIT_POSES: { [string]: PoseDef } = {
 		Waist = Vector3.new(10, 10, -6),
 		Neck = Vector3.new(-6, -10, 14),
 	}),
-	-- Shh, sneak: a cartoon tiptoe, both paws held up in front of her chest (not at her mouth: it would clip),
-	-- leaning in and twisting, head up to you with a sly smile.
+	-- Shh, sneak: ears pinned flat back, hunched on a diagonal, tiptoe paws drooping in front (not at her mouth: it
+	-- would clip), head cocked the other way; the sly "shh" face where she has it.
 	shh = pose("shh", "Content", {
-		RightShoulder = Vector3.new(0, 60, -30),
-		RightElbow = Vector3.new(0, 0, 60),
-		LeftShoulder = mirror(Vector3.new(0, 50, -38)),
-		LeftElbow = mirror(Vector3.new(0, 0, 48)),
-		Waist = Vector3.new(-14, 12, 4),
-		Neck = Vector3.new(10, -10, 8),
-	}),
-	-- Hide!: cowering, paws tucked up in front of her chest, hunched, head ducked with her eyes peeking.
+		RightShoulder = Vector3.new(0, 62, -28),
+		RightElbow = Vector3.new(0, 0, 66),
+		RightWrist = Vector3.new(-75, 0, 0),
+		LeftShoulder = mirror(Vector3.new(0, 48, -40)),
+		LeftElbow = mirror(Vector3.new(0, 0, 52)),
+		LeftWrist = mirror(Vector3.new(-70, 0, 0)),
+		Waist = Vector3.new(-16, 14, 14),
+		Neck = Vector3.new(6, -12, -16),
+		RightEarBase = Vector3.new(55, 0, -10),
+		LeftEarBase = Vector3.new(60, 0, 12),
+	}, "Shh"),
+	-- Hide!: can't look! Both ears fold forward down over her eyes (her paws can't reach past her muzzle), paws
+	-- tucked up at her chest, hunched, the startled "o" mouth peeking out under the ears.
 	hide = pose("hide", "Worried", {
 		RightShoulder = Vector3.new(0, 64, -40),
 		RightElbow = Vector3.new(0, 0, 100),
@@ -191,7 +199,9 @@ local KIT_POSES: { [string]: PoseDef } = {
 		LeftElbow = mirror(Vector3.new(0, 0, 92)),
 		Waist = Vector3.new(-16, 0, 6),
 		Neck = Vector3.new(-12, 6, -8),
-	}),
+		RightEarBase = Vector3.new(-120, 0, 0),
+		LeftEarBase = Vector3.new(-115, 0, -30),
+	}, "RevealStartled"),
 	-- You did it!: both paws up beside her head (the right higher, out clear of her face), leaning back, head tipped.
 	coachCheer = pose("coachCheer", "Happy", {
 		RightShoulder = Vector3.new(0, -12, 22),
@@ -200,7 +210,7 @@ local KIT_POSES: { [string]: PoseDef } = {
 		LeftElbow = mirror(Vector3.new(0, 0, 52)),
 		Waist = Vector3.new(10, 4, 6),
 		Neck = Vector3.new(8, -6, -10),
-	}),
+	}, "RevealExcited"),
 	-- The training finish: the right fist up high, the left arm out, leaning back, proud.
 	victory = pose("victory", "Happy", {
 		RightShoulder = Vector3.new(0, 6, 30),

@@ -19,11 +19,8 @@ local EmployeeRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data
 
 local EmployeeFaceSystem = {}
 
---[=[
-	Puts `face` on the character's FacePlate. False when the plate or that face is missing.
-	@param force Rebuild even when that face is already showing (the face set changed under it).
-]=]
-function EmployeeFaceSystem.apply(character: Model, face: EmployeeRegistry.Face, force: boolean?): boolean
+-- Puts the face named `face` (a child of the character's Faces folder) on its FacePlate.
+local function put(character: Model, face: string, force: boolean?): boolean
 	local plate = character:FindFirstChild(EmployeeConstants.FACE_PLATE)
 	local faces = character:FindFirstChild(EmployeeConstants.FACES_FOLDER)
 	if plate == nil or not plate:IsA("BasePart") or faces == nil then
@@ -48,6 +45,22 @@ function EmployeeFaceSystem.apply(character: Model, face: EmployeeRegistry.Face,
 	end
 	copy.Parent = plate
 	return true
+end
+
+--[=[
+	Puts `face` on the character's FacePlate. False when the plate or that face is missing.
+	@param force Rebuild even when that face is already showing (the face set changed under it).
+]=]
+function EmployeeFaceSystem.apply(character: Model, face: EmployeeRegistry.Face, force: boolean?): boolean
+	return put(character, face, force)
+end
+
+--[=[
+	Puts a face by its name in the character's Faces folder (a pose's portrait-only look: a reveal or coach face).
+	False when the character has no face of that name (the caller falls back to a regular face).
+]=]
+function EmployeeFaceSystem.applyNamed(character: Model, name: string, force: boolean?): boolean
+	return put(character, name, force)
 end
 
 --[=[

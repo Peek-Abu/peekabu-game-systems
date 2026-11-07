@@ -16,7 +16,7 @@ return function()
 		local faces = Instance.new("Folder")
 		faces.Name = EmployeeConstants.FACES_FOLDER
 		faces.Parent = model
-		for _, face in { "Happy", "Worried", "Content" } do
+		for _, face in { "Happy", "Worried", "Content", "RevealStartled" } do
 			local appearance = Instance.new("SurfaceAppearance")
 			appearance.Name = face
 			appearance.Parent = faces
@@ -33,6 +33,23 @@ return function()
 		end
 		return appearances
 	end
+
+	describe("applyNamed", function()
+		it("puts a face by its name in the Faces folder (a portrait's look)", function()
+			local model, plate = makeEmployee()
+			expect(EmployeeFaceSystem.applyNamed(model, "RevealStartled", true)).to.equal(true)
+			local appearances = faceOf(plate)
+			expect(#appearances).to.equal(1)
+			expect(appearances[1]:GetAttribute(EmployeeConstants.FACE_ATTRIBUTE)).to.equal("RevealStartled")
+			model:Destroy()
+		end)
+
+		it("says false for a face this employee does not have, so the caller falls back", function()
+			local model = makeEmployee()
+			expect(EmployeeFaceSystem.applyNamed(model, "Shh", true)).to.equal(false)
+			model:Destroy()
+		end)
+	end)
 
 	describe("apply", function()
 		it("puts a copy of the chosen face on the FacePlate as its only SurfaceAppearance", function()
