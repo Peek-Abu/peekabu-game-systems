@@ -1,10 +1,11 @@
 --!strict
 --[=[
-	TrainingSpotlight: the training spotlight (tutorial design v2), drawn on the Coach layer over everything it points
-	into. A UI step dims the whole screen except a hole round the one button to press, with a gold ring round the hole
-	and one line of words beside it; tapping the dark skips the step (the hole itself lets the tap through to the
-	button). A world step dims nothing: a gold arrow points down at the target, or from the screen's edge towards it,
-	with its line under it. Presentational; the layout is the specced TrainingSpotlightUtils.
+	TrainingSpotlight: the training spotlight (tutorial v3 look), drawn on the Coach layer over everything it points
+	into. A UI step dims the whole screen except a hole round the one button to press, with a gold ring (ink edged)
+	round the hole and the gold arrow bobbing over it; tapping the dark skips the step (the hole itself lets the tap
+	through to the button). A world step dims nothing: the gold arrow points down at the target, or from the screen's
+	edge towards it. Either way Pippa says the line (TrainingCoach, pointing). Presentational; the layout is the
+	specced TrainingSpotlightUtils.
 
 	@class TrainingSpotlight
 ]=]
@@ -12,9 +13,10 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
+local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
+local TrainingCoach = require(ReplicatedStorage.Client.UI.React.Screens.Training.TrainingCoach)
 local TrainingSpotlightUtils = require(ReplicatedStorage.Client.Features.Training.Utils.TrainingSpotlightUtils)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
-local ToonText = require(Toon.ToonText)
 local UIToonConstants = require(Toon.UIToonConstants)
 
 local e = React.createElement
@@ -33,37 +35,45 @@ export type TrainingSpotlightProps = {
 	onSkip: () -> (),
 }
 
--- The kit's gold (UIToonConstants' gold hue, its base shade).
-local GOLD = Color3.fromHex("FFC93A")
-local SHADE_TRANSPARENCY = 0.3
-local RING_THICKNESS = 5
+local GOLD = TrainingConstants.GUIDE.calm
+local SHADE_TRANSPARENCY = 0.35
+local RING_THICKNESS = 6
+local RING_INK = 12
 local ARROW_SIZE = 64
+-- The coach's size on screen (TrainingCoach's desktop / phone sizes).
+local COACH_DESKTOP = Vector2.new(706, 230)
+local COACH_PHONE = Vector2.new(342, 110)
 
-local function LineCard(props: TrainingSpotlightProps): React.ReactNode
-	return e("Frame", {
-		Position = UDim2.fromOffset(props.linePosition.X, props.linePosition.Y),
-		Size = UDim2.fromOffset(props.lineSize.X, props.lineSize.Y),
-		BackgroundColor3 = UIToonConstants.COLOR.ink,
-		BackgroundTransparency = 0.15,
+-- The gold arrow image, its tip at `at`, rotated `rotation` degrees (0 = pointing down).
+local function arrowAt(at: Vector2, rotation: number, bob: number): React.ReactNode
+	local height = math.floor(ARROW_SIZE * 1.29)
+	return e("ImageLabel", {
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.fromOffset(at.X, at.Y - bob),
+		Size = UDim2.fromOffset(ARROW_SIZE, height),
+		BackgroundTransparency = 1,
+		Image = TrainingConstants.GUIDE.arrow,
+		ImageColor3 = GOLD,
+		Rotation = rotation,
 		ZIndex = 20,
-	}, {
-		corner = e("UICorner", { CornerRadius = UDim.new(0, 18) }),
-		stroke = e("UIStroke", { Color = GOLD, Thickness = 3 }),
-		words = e(ToonText, {
-			text = props.line,
-			textSize = 30,
-			position = UDim2.fromOffset(14, 6),
-			size = UDim2.new(1, -28, 1, -12),
-			align = "center",
-			wrapped = true,
-			fit = true,
-			zIndex = 21,
-		}),
 	})
 end
 
+-- Pippa says the line, placed near the layout's line spot and kept on the screen.
+local function Coach(props: TrainingSpotlightProps): React.ReactNode
+	local phone = props.screen.Y < 500
+	local size = if phone then COACH_PHONE else COACH_DESKTOP
+	local x = math.clamp(props.linePosition.X - size.X * 0.3, 8, math.max(8, props.screen.X - size.X - 8))
+	local bottom = math.clamp(props.linePosition.Y + size.Y * 0.7, size.Y + 8, props.screen.Y - 8)
+	return e(TrainingCoach, {
+		line = { text = props.line, pose = "point" },
+		phone = phone,
+		position = UDim2.fromOffset(x, bottom),
+		zIndex = 22,
+	})
+end
 local function TrainingSpotlight(props: TrainingSpotlightProps): React.ReactNode
-	local children: { [string]: React.ReactNode } = { line = e(LineCard, props) }
+	local children: { [string]: React.ReactNode } = { line = e(Coach, props) }
 	local hole = props.hole
 	if hole ~= nil then
 		for index, shade in TrainingSpotlightUtils.shades(hole, props.screen) do
@@ -80,33 +90,45 @@ local function TrainingSpotlight(props: TrainingSpotlightProps): React.ReactNode
 			})
 		end
 		local grow = props.pulse * 8
+		local ring = {
+			position = UDim2.fromOffset(hole.position.X - grow, hole.position.Y - grow),
+			size = UDim2.fromOffset(hole.size.X + grow * 2, hole.size.Y + grow * 2),
+		}
+		children.ringInk = e("Frame", {
+			Position = ring.position,
+			Size = ring.size,
+			BackgroundTransparency = 1,
+			ZIndex = 14,
+		}, {
+			corner = e("UICorner", { CornerRadius = UDim.new(0, 26) }),
+			stroke = e("UIStroke", { Color = UIToonConstants.COLOR.ink, Thickness = RING_INK }),
+		})
 		children.ring = e("Frame", {
-			Position = UDim2.fromOffset(hole.position.X - grow, hole.position.Y - grow),
-			Size = UDim2.fromOffset(hole.size.X + grow * 2, hole.size.Y + grow * 2),
+			Position = ring.position,
+			Size = ring.size,
 			BackgroundTransparency = 1,
 			ZIndex = 15,
 		}, {
-			corner = e("UICorner", { CornerRadius = UDim.new(0, 24) }),
+			corner = e("UICorner", { CornerRadius = UDim.new(0, 26) }),
 			stroke = e("UIStroke", {
 				Color = GOLD,
 				Thickness = RING_THICKNESS,
-				Transparency = props.pulse * 0.4,
+				Transparency = props.pulse * 0.3,
 			}),
 		})
+		-- The arrow bobs over the hole, pointing down at it (under it when the hole is at the top of the screen).
+		local above = hole.position.Y > ARROW_SIZE * 1.6
+		local tip = if above
+			then Vector2.new(hole.position.X + hole.size.X / 2, hole.position.Y - RING_INK)
+			else Vector2.new(
+				hole.position.X + hole.size.X / 2,
+				hole.position.Y + hole.size.Y + RING_INK + ARROW_SIZE * 1.29
+			)
+		children.pointer = arrowAt(tip, if above then 0 else 180, props.pulse * 10)
 	end
 	local arrow = props.arrow
 	if arrow ~= nil then
-		children.arrow = e(ToonText, {
-			text = "▼",
-			meaning = "gold",
-			textSize = ARROW_SIZE,
-			anchor = Vector2.new(0.5, 1),
-			position = UDim2.fromOffset(arrow.position.X, arrow.position.Y - props.pulse * 10),
-			size = UDim2.fromOffset(ARROW_SIZE, ARROW_SIZE),
-			align = "center",
-			rotation = arrow.rotation,
-			zIndex = 20,
-		})
+		children.arrow = arrowAt(arrow.position, arrow.rotation, props.pulse * 10)
 	end
 	return e("Frame", {
 		Size = UDim2.fromScale(1, 1),
