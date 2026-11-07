@@ -3,9 +3,9 @@
 	TrainingFinish: the training run's finish screen (tutorial v3), the results look: a grape scrim with turning gold
 	rays, a big gold TRAINING DONE! title on a clean wipe band, YOUR employee in your skin (your current outfit,
 	ToonViewport, in the victory pose) with a YOU tag, the award card (+100 Gleam the first time, a practice line on a
-	repeat) and two buttons: BACK TO THE DEPOT (TrainingEvents.Back) and PLAY AGAIN (TrainingEvents.Again: the ride
-	home, where the hub points at the Training pad). Shown while TrainingCoachStore.finish is set; a pick disables
-	both. A registered HUD widget (TrainingServiceClient). Presentational (exempt).
+	repeat) and two buttons: BACK TO THE DEPOT and PLAY AGAIN (the ride home, where the hub points at the Training
+	pad). Shown while TrainingCoachStore.finish is set; a pick goes to TrainingCoachStore.pick (TrainingServiceClient
+	sends it) and disables both. A registered HUD widget (TrainingServiceClient). Presentational (exempt).
 
 	@class TrainingFinish
 ]=]
@@ -18,7 +18,6 @@ local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
 local CosmeticOutfitRules = require(ReplicatedStorage.Shared.Features.Cosmetic.Rules.CosmeticOutfitRules)
 local CosmeticRules = require(ReplicatedStorage.Shared.Features.Cosmetic.Rules.CosmeticRules)
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
-local TrainingEvents = require(ReplicatedStorage.Shared.Features.Training.Net.TrainingEvents)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local TrainingCoachStore = require(ReplicatedStorage.Client.Features.Training.State.TrainingCoachStore)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
@@ -62,7 +61,7 @@ local function TrainingFinish(): React.ReactNode
 	local finish = useAtom(TrainingCoachStore.finish)
 	local loadout = useAtom(StateSyncClientStore.loadout)
 	local entitlements = useAtom(StateSyncClientStore.entitlements)
-	local picked, setPicked = React.useState(false)
+	local picked = useAtom(TrainingCoachStore.picked) ~= nil
 	local hudScale = usePaperHudScale()
 	local layout: UIPaperConstants.Layout = hudScale.layout
 	local phone = layout == "phone"
@@ -79,16 +78,8 @@ local function TrainingFinish(): React.ReactNode
 	end
 	local paid = finish.gleam > 0
 	local W = if phone then 844 else 1920
-	local function pick(packet: "Back" | "Again")
-		if picked then
-			return
-		end
-		setPicked(true)
-		if packet == "Back" then
-			TrainingEvents.packets.Back.send(true)
-		else
-			TrainingEvents.packets.Again.send(true)
-		end
+	local function pick(value: TrainingCoachStore.Pick)
+		TrainingCoachStore.pick(value)
 	end
 	local s = if phone then 0.44 else 1
 	local award = Vector2.new(820 * s, 280 * s)
@@ -178,7 +169,7 @@ local function TrainingFinish(): React.ReactNode
 			position = UDim2.fromOffset(awardAt.X, awardAt.Y + award.Y + 60 * s),
 			disabled = picked,
 			onActivated = function()
-				pick("Back")
+				pick("back")
 			end,
 			zIndex = 8,
 		}),
@@ -190,7 +181,7 @@ local function TrainingFinish(): React.ReactNode
 			position = UDim2.fromOffset(awardAt.X + 520 * s, awardAt.Y + award.Y + 60 * s),
 			disabled = picked,
 			onActivated = function()
-				pick("Again")
+				pick("again")
 			end,
 			zIndex = 8,
 		}),

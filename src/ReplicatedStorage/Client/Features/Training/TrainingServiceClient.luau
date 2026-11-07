@@ -117,6 +117,17 @@ local TrainingServiceClient: TrainingServiceClient = {
 				TrainingHubSystem.again()
 			end)
 		)
+		-- The finish screen's pick, to the server.
+		table.insert(
+			stoppers,
+			Charm.subscribe(TrainingCoachStore.picked, function(value: string?)
+				if value == "back" then
+					TrainingEvents.packets.Back.send(true)
+				elseif value == "again" then
+					TrainingEvents.packets.Again.send(true)
+				end
+			end)
+		)
 		table.insert(
 			stoppers,
 			TrainingEvents.packets.Hotbar.listen(function(_value: boolean)

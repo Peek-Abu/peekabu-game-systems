@@ -59,5 +59,12 @@ return function()
 			expect(TrainingCoachStore.catch()).to.equal(nil)
 			expect(TrainingCoachStore.finish()).to.equal(nil)
 		end)
+
+		it("takes the finish screen's first pick only", function()
+			TrainingCoachStore.finished(0)
+			TrainingCoachStore.pick("again")
+			TrainingCoachStore.pick("back")
+			expect(TrainingCoachStore.picked()).to.equal("again")
+		end)
 	end)
 end

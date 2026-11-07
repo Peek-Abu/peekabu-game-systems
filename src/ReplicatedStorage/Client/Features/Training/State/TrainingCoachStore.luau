@@ -20,6 +20,8 @@ local TrainingGuideRules = require(ReplicatedStorage.Shared.Features.Training.Ru
 export type Said = { line: TrainingConstants.CoachLine, untilAt: number? }
 export type Catch = { at: number, lives: number }
 export type Finish = { gleam: number }
+-- The finish screen's pick: ride home now, or play again (TrainingServiceClient sends it).
+export type Pick = "back" | "again"
 
 local CALM: TrainingGuideRules.Situation = table.freeze({ stopDone = false, carrying = false, hidden = false })
 
@@ -27,11 +29,13 @@ local initialStop: number? = nil
 local initialSaid: Said? = nil
 local initialCatch: Catch? = nil
 local initialFinish: Finish? = nil
+local initialPick: Pick? = nil
 local stop = Charm.atom(initialStop)
 local situation = Charm.atom(CALM)
 local said = Charm.atom(initialSaid)
 local catch = Charm.atom(initialCatch)
 local finish = Charm.atom(initialFinish)
+local picked = Charm.atom(initialPick)
 
 local TrainingCoachStore = {
 	stop = stop,
@@ -39,6 +43,7 @@ local TrainingCoachStore = {
 	said = said,
 	catch = catch,
 	finish = finish,
+	picked = picked,
 }
 
 -- The run's stop (nil off a run); a new stop starts calm.
@@ -85,6 +90,14 @@ end
 
 function TrainingCoachStore.finished(gleam: number)
 	finish({ gleam = gleam })
+	picked(nil)
+end
+
+-- The finish screen's pick (once: a second pick is ignored).
+function TrainingCoachStore.pick(value: Pick)
+	if picked() == nil then
+		picked(value)
+	end
 end
 
 -- Back to nothing (off a run, or a test).
@@ -94,6 +107,7 @@ function TrainingCoachStore.reset()
 	said(nil)
 	catch(nil)
 	finish(nil)
+	picked(nil)
 end
 
 return TrainingCoachStore
