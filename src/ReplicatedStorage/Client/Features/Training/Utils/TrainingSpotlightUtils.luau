@@ -124,4 +124,12 @@ function TrainingSpotlightUtils.leftInset(rects: { Rect }, screen: Vector2, gap:
 	return inset
 end
 
+--[=[
+	Whether the spotlight waits (hidden, its clock paused): a page is open over the hub (`pageDepth`, SceneStack) or a
+	popup tagged SPOTLIGHT_TAGS.popup is showing (`popupsOpen`), so Pippa never sits on top of either.
+]=]
+function TrainingSpotlightUtils.waits(pageDepth: number, popupsOpen: number): boolean
+	return pageDepth > 0 or popupsOpen > 0
+end
+
 return TrainingSpotlightUtils

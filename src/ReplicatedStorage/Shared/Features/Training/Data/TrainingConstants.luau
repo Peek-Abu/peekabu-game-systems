@@ -146,6 +146,8 @@ local TrainingConstants = {
 		power = "TrainingSpotPower",
 		-- Not a target: a button column the spotlight's arrow and coach keep clear of (the hub's menu tiles).
 		menu = "TrainingSpotMenu",
+		-- Not a target: an open popup (the hub's Timecard card); the spotlight waits until it closes.
+		popup = "TrainingSpotPopup",
 	}),
 
 	-- The hotbar tour's mark in the tips slice (TipServiceServer:once): shown once per account, on the first run.

@@ -141,6 +141,21 @@ local function menuInset(screen: Vector2): number
 	return TrainingSpotlightUtils.leftInset(rects, screen, MENU_GAP)
 end
 
+-- How many tagged popups are showing in this player's PlayerGui (SPOTLIGHT_TAGS.popup).
+local function popupsOpen(): number
+	local playerGui = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
+	if playerGui == nil then
+		return 0
+	end
+	local count = 0
+	for _, tagged in CollectionService:GetTagged(TrainingConstants.SPOTLIGHT_TAGS.popup) do
+		if tagged:IsA("GuiObject") and tagged:IsDescendantOf(playerGui) and tagged.Visible then
+			count += 1
+		end
+	end
+	return count
+end
+
 local function worldTarget(step: Step, from: Vector3): BasePart?
 	local best: BasePart? = nil
 	local bestDistance = math.huge
@@ -259,8 +274,9 @@ local function tick(deltaTime: number)
 	end
 	-- A page is open over the hub (the employee pick, the Shop, a board): the spotlight waits behind it, its clock
 	-- paused. A button already shown that is now covered by a page was pressed (its page opened).
-	if SceneStack.depth() > 0 then
-		if step.kind == "gui" and seenAt ~= nil and not must then
+	if TrainingSpotlightUtils.waits(SceneStack.depth(), popupsOpen()) then
+		-- A page (not a popup) opening over a button already shown means it was pressed.
+		if step.kind == "gui" and seenAt ~= nil and not must and SceneStack.depth() > 0 then
 			advance()
 			return
 		end

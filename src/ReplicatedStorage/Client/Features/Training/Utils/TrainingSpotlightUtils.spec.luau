@@ -122,4 +122,15 @@ return function()
 			expect(TrainingSpotlightUtils.leftInset({}, SCREEN, 12)).to.equal(0)
 		end)
 	end)
+
+	describe("waits", function()
+		it("waits behind an open page or an open popup (the Timecard on a first spawn)", function()
+			expect(TrainingSpotlightUtils.waits(1, 0)).to.equal(true)
+			expect(TrainingSpotlightUtils.waits(0, 1)).to.equal(true)
+		end)
+
+		it("shows when nothing is open over the hub", function()
+			expect(TrainingSpotlightUtils.waits(0, 0)).to.equal(false)
+		end)
+	end)
 end

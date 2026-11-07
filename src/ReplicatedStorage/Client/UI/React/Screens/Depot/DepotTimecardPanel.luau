@@ -15,6 +15,7 @@ local UIToonConstants = require(Toon.UIToonConstants)
 local PaperScaleContext = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperScaleContext)
 local TimecardMomentUtils = require(ReplicatedStorage.Client.Features.Timecard.Utils.TimecardMomentUtils)
 local DepotTimecardStamp = require(script.Parent.DepotTimecardStamp)
+local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local e = React.createElement
 local function nodes(value: { [string]: React.ReactNode }): { [string]: React.ReactNode }
 	return value
@@ -381,6 +382,12 @@ local function Panel(props: Props): React.ReactNode
 			},
 		})
 	end
-	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 20 }, children)
+	return e("Frame", {
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		ZIndex = 20,
+		-- While the card is open the training spotlight waits (Pippa never sits on it).
+		[React.Tag] = if props.open then TrainingConstants.SPOTLIGHT_TAGS.popup else nil,
+	}, children)
 end
 return Panel
