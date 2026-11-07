@@ -106,6 +106,12 @@ local TrainingConstants = {
 	-- Seconds between two hall lights going out at stop 3, and a creep patch's grow time.
 	LIGHT_STEP = 0.45,
 	CREEP_SECONDS = 2.5,
+	-- The screen at stops 3-4 (a Vfx screen request): darker, greyer and cold, whatever the place's own lighting.
+	DARK_SCREEN = table.freeze({
+		brightness = -0.22,
+		saturation = -0.35,
+		tint = Color3.fromRGB(190, 182, 232),
+	}),
 
 	TEXT = table.freeze({
 		truckSign = "New here? Start training!",

@@ -4,7 +4,8 @@
 	world entry, TrainingConstants.WORLD_ENTRY). Fun, then dark, then scary, then safe:
 
 	- Each "sign" part shows its stop's sign (TrainingSign); the stop the player is on is gold.
-	- Stop 3 ("quiet"): the hall's "light" parts go out one by one, in their ORDER, LIGHT_STEP apart (their lights
+	- Stop 3 ("quiet"): the screen darkens and greys (a Vfx screen request, so it reads dark whatever the place's
+	  lighting), the hall's "light" parts go out one by one, in their ORDER, LIGHT_STEP apart (their lights
 	  off, a Neon part to plain plastic), and the "creep" patches of Gloom fade and grow in, in ORDER.
 	- Stop 4 ("hide"): the hiding furniture in the hall glows (a Highlight), so the way to hide is plain.
 	- Stop 5 ("done"): every light pops back on, the Gloom fades away, the glow goes, and a happy sound plays.
@@ -24,6 +25,7 @@ local TweenService = game:GetService("TweenService")
 local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideConstants)
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local UISoundSystem = require(ReplicatedStorage.Client.Features.UI.Systems.UISoundSystem)
+local VfxServiceClient = require(ReplicatedStorage.Client.Features.Vfx.VfxServiceClient)
 local TrainingSignSystem = require(ReplicatedStorage.Client.Features.Training.Systems.TrainingSignSystem)
 
 type Saved = { material: Enum.Material, lights: { Light } }
@@ -41,6 +43,23 @@ local creeps: { Creep } = {}
 local glows: { Highlight } = {}
 -- Bumped by every apply, so a light-out sequence from an older stop stops.
 local generation = 0
+-- The dark screen at stops 3-4 (a Vfx screen request), while it is held.
+local darkToken: number? = nil
+
+local function dark(on: boolean)
+	local token = darkToken
+	if on and token == nil then
+		local shade = TrainingConstants.DARK_SCREEN
+		darkToken = VfxServiceClient:requestScreen({
+			brightness = shade.brightness,
+			saturation = shade.saturation,
+			tint = shade.tint,
+		})
+	elseif not on and token ~= nil then
+		VfxServiceClient:releaseScreen(token)
+		darkToken = nil
+	end
+end
 
 local function map(): Model?
 	for _, tagged in CollectionService:GetTagged(TrainingConstants.MAP_TAG) do
@@ -197,6 +216,7 @@ function TrainingHallSystem.apply(stop: number)
 		creepIn(mine)
 	end
 	glow(model, stop == STOP_HIDE)
+	dark(stop >= STOP_QUIET and stop < STOP_DONE)
 	if stop >= STOP_DONE then
 		lightsOn()
 		creepOut()
@@ -211,6 +231,7 @@ function TrainingHallSystem.clear()
 	generation += 1
 	shown = 0
 	lightsOn()
+	dark(false)
 	local model = map()
 	if model ~= nil then
 		glow(model, false)

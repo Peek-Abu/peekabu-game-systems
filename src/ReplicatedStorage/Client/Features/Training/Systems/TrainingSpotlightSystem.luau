@@ -3,9 +3,10 @@
 	TrainingSpotlightSystem: drives the training spotlight (TrainingSpotlight on the Coach layer) through a list of
 	steps, one at a time.
 
+	- Nothing shows while a page is open over the hub (SceneStack): the step waits, its clock paused.
 	- A "gui" step finds its button by CollectionService tag (the first visible one in this player's PlayerGui), dims
-	  everything else (TrainingSpotlightUtils) and moves on when the button goes away (it was pressed and a page
-	  opened), when the dark is tapped, or when the button never shows up (GUI_WAIT seconds).
+	  everything else (TrainingSpotlightUtils) and moves on when the button goes away or a page opens over it (it
+	  was pressed), when the dark is tapped, or when the button never shows up (GUI_WAIT seconds).
 	- A "world" step points an arrow at the nearest part with its tag that `accept` takes, and moves on when `done`
 	  says so or after `seconds`.
 
@@ -26,6 +27,7 @@ local Workspace = game:GetService("Workspace")
 local React = require(ReplicatedStorage.Packages.React)
 local TrainingSpotlightUtils = require(ReplicatedStorage.Client.Features.Training.Utils.TrainingSpotlightUtils)
 local UIRoot = require(ReplicatedStorage.Client.UI.Layers.UIRoot)
+local SceneStack = require(ReplicatedStorage.Client.UI.Scenes.SceneStack)
 local TrainingSpotlight = require(ReplicatedStorage.Client.UI.React.Screens.Training.TrainingSpotlight)
 
 export type Step = {
@@ -171,18 +173,29 @@ local function draw(step: Step, now: number)
 	render(React.createElement(TrainingSpotlight, props))
 end
 
-local function tick()
+local function tick(deltaTime: number)
 	local step = steps[index]
 	if step == nil then
 		stopTicking()
 		return
 	end
 	local now = os.clock()
-	local age = now - startedAt
 	if skipped then
 		advance()
 		return
 	end
+	-- A page is open over the hub (the employee pick, the Shop, a board): the spotlight waits behind it, its clock
+	-- paused. A button already shown that is now covered by a page was pressed (its page opened).
+	if SceneStack.depth() > 0 then
+		if step.kind == "gui" and seenAt ~= nil then
+			advance()
+			return
+		end
+		startedAt += deltaTime
+		render(nil)
+		return
+	end
+	local age = now - startedAt
 	if step.kind == "gui" then
 		local last = seenAt
 		if guiTarget(step.tag) ~= nil then
@@ -221,8 +234,9 @@ function TrainingSpotlightSystem.point(list: { Step })
 			if elapsed < FRAME_SECONDS then
 				return
 			end
+			local step = elapsed
 			elapsed = 0
-			tick()
+			tick(step)
 		end)
 	end
 end
