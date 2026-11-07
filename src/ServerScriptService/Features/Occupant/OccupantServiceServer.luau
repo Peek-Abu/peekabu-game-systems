@@ -60,6 +60,7 @@ local AnimationRegistry = require(ReplicatedStorage.Shared.Features.Animation.Da
 local NoiseRules = require(ReplicatedStorage.Shared.Features.Noise.Rules.NoiseRules)
 local NoiseTypes = require(ReplicatedStorage.Shared.Features.Noise.Data.NoiseTypes)
 local OccupantConstants = require(OccupantShared.Data.OccupantConstants)
+local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local OccupantTypes = require(OccupantShared.Data.OccupantTypes)
 local OccupantEvents = require(OccupantShared.Net.OccupantEvents)
 local OccupantTellRules = require(OccupantShared.Rules.OccupantTellRules)
@@ -246,7 +247,9 @@ local function catchPlayer(player: Player, from: OccupantTypes.Mind?, found: boo
 		log:debug(`catch of {player.Name} refused: {reason or "?"}`)
 		return
 	end
-	local nextMind = OccupantBrainRules.caught(before, player.UserId, now, from)
+	-- A training run gives a longer grace, so a caught player is not caught again straight away.
+	local grace = if ShiftServiceServer:isTraining() then ShiftConstants.TRAINING_GRACE else nil
+	local nextMind = OccupantBrainRules.caught(before, player.UserId, now, from, grace)
 	mind = nextMind
 	counters.catches += 1
 	-- The catch line comes from OccupantCatchSystem; this clears the "!" and shows the catch (face, tilt).

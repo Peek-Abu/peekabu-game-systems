@@ -162,12 +162,13 @@ end
 --[=[
 	The mind after he catches `userId`: standing over the catch (targeting them), that player in their grace. A catch
 	made from a sit-in or a stare (`from`, the mind of the think that asked for it; default `mind`) keeps that, so the
-	gesture holds through the jumpscare; the menace gauge jumps.
+	gesture holds through the jumpscare; the menace gauge jumps. `graceSeconds` overrides GRACE_SECONDS (a training run
+	is gentler).
 ]=]
-function OccupantBrainRules.caught(mind: Mind, userId: number, now: number, from: Mind?): Mind
+function OccupantBrainRules.caught(mind: Mind, userId: number, now: number, from: Mind?, graceSeconds: number?): Mind
 	local nextMind = M.enter(mind, "catch", now)
 	local grace = table.clone(mind.grace)
-	grace[userId] = now + OccupantConstants.GRACE_SECONDS
+	grace[userId] = now + (graceSeconds or OccupantConstants.GRACE_SECONDS)
 	nextMind.grace = grace
 	M.forget(nextMind)
 	local origin = from or mind

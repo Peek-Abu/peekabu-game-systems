@@ -144,7 +144,8 @@ local function TrainingGuideHud(): React.ReactNode
 			position = if phone then UDim2.fromOffset(8, underBar + 120) else UDim2.new(0, 24, 1, -170),
 		})
 	end
-	if phase == "card" or phase == "dark" then
+	-- The card stays through the move back, so the player stands up at the stop start with it and Pippa's tip.
+	if phase == "card" or phase == "dark" or phase == "back" then
 		children.card = catchCard(phone, underBar, elapsed)
 	end
 	local dark = darkness(elapsed)

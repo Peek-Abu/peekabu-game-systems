@@ -182,6 +182,8 @@ return table.freeze({
 	-- A training run is a little easier (owner 11-07): Harlow's speeds and hearing scaled by these.
 	TRAINING_SPEED = 0.85,
 	TRAINING_HEARING = 0.75,
+	-- How long Harlow ignores a player he just caught on a training run (seconds; a shift uses GRACE_SECONDS).
+	TRAINING_GRACE = 25,
 	-- Round team counters and per-player scores. CLEARANCE is the Gloom removed (the contract's progress, Round's
 	-- target), DUST the part of it from piles (the rest is item cleaning), BONUS the Credits for banked valuables.
 	CLEARANCE = "clearance",

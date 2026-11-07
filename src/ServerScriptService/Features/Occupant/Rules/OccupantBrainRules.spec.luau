@@ -454,6 +454,11 @@ return function()
 	end)
 
 	describe("catch and grace", function()
+		it("gives a longer grace when asked (a training run)", function()
+			local caught = OccupantBrainRules.caught(fresh(), 7, 100, nil, 25)
+			expect(caught.grace[7]).to.equal(125)
+		end)
+
 		it("stands after a catch, then walks on to his next point", function()
 			local caught = OccupantBrainRules.caught(fresh(), 7, 100)
 			expect(caught.mode).to.equal("catch")
