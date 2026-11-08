@@ -76,6 +76,14 @@ return function()
 			expect(EmployeeConstants.EAR_DAMPING > 0).to.equal(true)
 		end)
 
+		it("keeps the head look subtle: at most 40 degrees of turn and 25 of tip, eased, near the camera", function()
+			local look = EmployeeConstants.HEAD_LOOK
+			expect(look.maxYaw > 0 and look.maxYaw <= math.rad(40) + 1e-9).to.equal(true)
+			expect(look.maxPitch > 0 and look.maxPitch <= math.rad(25) + 1e-9).to.equal(true)
+			expect(look.pitchShare > 0 and look.pitchShare <= 1).to.equal(true)
+			expect(look.ease > 0 and look.radius > 0).to.equal(true)
+		end)
+
 		it("stamps the footstep set under the attribute the Footstep client reads", function()
 			local ReplicatedStorage = game:GetService("ReplicatedStorage")
 			local FootstepConstants = require(ReplicatedStorage.Client.Features.Footstep.Data.FootstepConstants)

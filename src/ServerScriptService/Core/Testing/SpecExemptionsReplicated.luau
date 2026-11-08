@@ -375,6 +375,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.Features.Locker.LockerServiceClient"] = "shell over LockerEvents packets, SceneStack and CosmeticRevealStore (values specced in LockerViewModel, state in LockerStore)",
 	["ReplicatedStorage.Client.Features.Locker.Systems.LockerCutsceneSystem"] = "Instance/Camera/RunService shell over Workspace.LockerStage_Ref (timeline, camera, key and door poses specced in LockerViewModel)",
 	["ReplicatedStorage.Shared.Features.Employee.Data.EmployeeLanyardConstants"] = "static fitted v4 strap data and v6 front card layouts (checked through EmployeeLanyardFormulas.spec)",
+	["ReplicatedStorage.Client.Features.Employee.Systems.EmployeeHeadLookSystem"] = "Motor6D/Animator/RunService shell for the head look (the angles, easing and head-owning rule are specced in EmployeeHeadLookFormulas)",
 	["ReplicatedStorage.Client.Features.Employee.Systems.EmployeeLanyardSystem"] = "EditableMesh/SurfaceGui/RunService shell for the v4 strap and v6 rank badge (geometry, widths and spring specced in EmployeeLanyardFormulas)",
 	["ReplicatedStorage.Client.UI.React.Screens.Locker.LockerPanel"] = "presentational React component (Locker cards and inside list specced in LockerViewModel; story in ShopScreen.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Locker.LockerOddsSheet"] = "presentational React component (odds and refund rows specced in LockerViewModel)",

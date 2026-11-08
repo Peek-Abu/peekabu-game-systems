@@ -65,10 +65,11 @@ function VacuumLookSystem.yawOf(player: Player, character: Model, root: BasePart
 end
 
 --[=[
-	Sends the local player's look (pitch and yaw) where it changed, at most aim.rate a second each.
+	Sends the local player's look (pitch and yaw) where it changed, at most aim.rate a second each while the wand is
+	`holding` out, else at most aim.idleRate (the head look, EmployeeHeadLookSystem, reads it on every character).
 ]=]
-function VacuumLookSystem.send(now: number, character: Model, root: BasePart?)
-	local interval = 1 / Constants.aim.rate
+function VacuumLookSystem.send(now: number, character: Model, root: BasePart?, holding: boolean)
+	local interval = 1 / (if holding then Constants.aim.rate else Constants.aim.idleRate)
 	if now - pitchAt >= interval then
 		local byte = VacuumMotionFormulas.encodeAim(cameraPitch())
 		if byte ~= lastPitch then

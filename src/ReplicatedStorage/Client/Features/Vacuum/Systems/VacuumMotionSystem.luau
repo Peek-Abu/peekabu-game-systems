@@ -395,8 +395,8 @@ local function step(dt: number)
 		bob(holder, dt)
 		stepHolder(player, holder, dt)
 		VacuumHoseSystem.step(character, holder.root, activeOf(player, character), dt, player.UserId % 997)
-		if player == Players.LocalPlayer and holder.rig ~= nil then
-			VacuumLookSystem.send(now, holder.character, holder.root)
+		if player == Players.LocalPlayer then
+			VacuumLookSystem.send(now, holder.character, holder.root, holder.rig ~= nil)
 		end
 	end
 end

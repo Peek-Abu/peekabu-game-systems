@@ -53,6 +53,8 @@ return table.freeze({
 		reachLean = math.rad(12),
 		quantum = math.rad(5),
 		rate = 10,
+		-- While the wand is stowed the look is still sent (the head look reads it), at most this many times a second.
+		idleRate = 4,
 		frequency = 3,
 		damping = 1,
 	}),

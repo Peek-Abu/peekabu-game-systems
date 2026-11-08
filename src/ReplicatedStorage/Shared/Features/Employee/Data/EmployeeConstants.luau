@@ -125,6 +125,20 @@ local EmployeeConstants = {
 	EAR_JOINTS = EAR_JOINTS,
 	-- Employees farther than this (studs) from the camera keep their ears at rest.
 	EAR_RADIUS = 100,
+	-- The head look (owner note 2026-11-08; EmployeeHeadLookSystem, the maths EmployeeHeadLookFormulas): every
+	-- employee's head turns toward where its player looks, at most `maxYaw` either way and tips `pitchShare` of the
+	-- look's pitch off the default view (`neutral`), at most `maxPitch`, easing with a time constant of `ease`
+	-- seconds; only within `radius` studs of this client's camera. `enabled = false` leaves every Neck to its
+	-- animations.
+	HEAD_LOOK = table.freeze({
+		enabled = true,
+		maxYaw = math.rad(40),
+		maxPitch = math.rad(25),
+		neutral = math.rad(-17),
+		pitchShare = 0.7,
+		ease = 0.15,
+		radius = 80,
+	}),
 	-- The ears are rigid one-piece meshes: past this the bend reads as broken.
 	EAR_MAX_ANGLE = math.rad(30),
 	-- Spring gains (1/s^2, 1/s): damping ratio ~0.45, a little bounce.
