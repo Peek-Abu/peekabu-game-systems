@@ -531,10 +531,12 @@ function VacuumMotionFormulas.braceTarget(active: boolean, progress: number): nu
 end
 
 --[=[
-	The hip drop (studs) and forward lean (radians) of a brace this deep.
+	The hip drop (studs) and forward lean (radians) of a brace this deep, the torso leaning in further (aim.reachLean)
+	for a reach out (`reach` positive), so the shoulders follow the hands.
 ]=]
-function VacuumMotionFormulas.body(brace: number): (number, number)
-	return brace * Constants.brace.drop, brace * Constants.brace.lean
+function VacuumMotionFormulas.body(brace: number, reach: number?): (number, number)
+	local out = math.max(reach or 0, 0)
+	return brace * Constants.brace.drop, brace * Constants.brace.lean + out * Constants.aim.reachLean
 end
 
 --[=[

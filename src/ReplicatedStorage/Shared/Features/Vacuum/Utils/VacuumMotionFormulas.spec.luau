@@ -88,6 +88,13 @@ return function()
 	describe("aim", function()
 		local tuning = Constants.aim
 
+		it("moves the floor head a clear range: out and in by at least a third of a stud of hands", function()
+			expect(tuning.reachForward >= 0.35 and tuning.inBack >= 0.3).to.equal(true)
+			expect(tuning.reachDrop >= 0.25 and tuning.inLift >= 0.25).to.equal(true)
+			-- The lift starts soon after the head is fully out, well under the horizon.
+			expect(tuning.deadHigh <= math.rad(-8)).to.equal(true)
+		end)
+
 		it("holds the planned pose at the default third-person view", function()
 			local raise, reach = VacuumMotionFormulas.aim(tuning.neutral, tuning)
 			expect(raise).to.equal(0)
@@ -563,6 +570,15 @@ return function()
 			local drop, lean = VacuumMotionFormulas.body(0.5)
 			expect(drop).to.be.near(Constants.brace.drop / 2, 1e-6)
 			expect(lean).to.be.near(Constants.brace.lean / 2, 1e-6)
+		end)
+
+		it("leans in further for a reach out (the shoulders follow the hands), never for a reach in", function()
+			local _, out = VacuumMotionFormulas.body(0, 1)
+			local _, inward = VacuumMotionFormulas.body(0, -1)
+			local _, both = VacuumMotionFormulas.body(1, 0.5)
+			expect(out).to.be.near(Constants.aim.reachLean, 1e-9)
+			expect(inward).to.equal(0)
+			expect(both).to.be.near(Constants.brace.lean + Constants.aim.reachLean / 2, 1e-9)
 		end)
 	end)
 

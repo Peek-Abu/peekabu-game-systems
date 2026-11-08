@@ -27,7 +27,9 @@ return table.freeze({
 	-- sway) over the waist (as far as the left paw can follow, VacuumMotionFormulas.bodyTwist).
 	aim = table.freeze({
 		neutral = math.rad(-20),
-		deadHigh = math.rad(-5),
+		-- Owner note 2026-11-08 (the tilt read as nothing, about 0.3 stud of travel): out fully at -10 degrees (was
+		-- -5) and the lift starts there, steeper (gainUp was 0.9).
+		deadHigh = math.rad(-10),
 		maxLook = math.rad(45),
 		near = 2.5,
 		far = 4,
@@ -38,13 +40,17 @@ return table.freeze({
 		twistShare = 0.35,
 		-- The left-right turn's spring damping (below 1: a little overshoot reads as weight).
 		yawDamping = 0.75,
-		gainUp = 0.9,
+		gainUp = 1.2,
 		maxUp = math.rad(38),
 		fullDown = math.rad(-70),
-		reachDrop = 0.16,
-		reachForward = 0.14,
-		inLift = 0.12,
-		inBack = 0.16,
+		-- Owner note 2026-11-08, bigger tilt travel (were 0.16, 0.14, 0.12, 0.16): the reach guard still scales a
+		-- move the left paw cannot follow back to what it can; reaching out, the torso leans in `reachLean` so the
+		-- shoulders follow the hands.
+		reachDrop = 0.3,
+		reachForward = 0.45,
+		inLift = 0.28,
+		inBack = 0.35,
+		reachLean = math.rad(12),
 		quantum = math.rad(5),
 		rate = 10,
 		frequency = 3,

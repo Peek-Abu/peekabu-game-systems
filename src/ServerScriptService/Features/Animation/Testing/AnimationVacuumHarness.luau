@@ -273,7 +273,7 @@ function AnimationVacuumHarness.poseOf(
 	local look = layers.lookYaw or 0
 	local aimed = table.clone(layers)
 	aimed.aimYaw = VacuumMotionFormulas.aimYaw(rig.rest, look, distance or VacuumMotionConstants.aim.far)
-	local drop, lean = VacuumMotionFormulas.body(layers.brace)
+	local drop, lean = VacuumMotionFormulas.body(layers.brace, layers.reach)
 	local twist = VacuumMotionFormulas.bodyTwist(rig.rest, aimed, drop, lean)
 	local wand = VacuumMotionFormulas.wand(
 		rig.rest,

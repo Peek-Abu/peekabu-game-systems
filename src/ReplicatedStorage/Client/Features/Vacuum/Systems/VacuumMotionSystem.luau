@@ -213,7 +213,7 @@ local function stepHolder(player: Player, holder: Holder, dt: number)
 		aimYaw = VacuumMotionFormulas.aimYaw(rig.rest, lookYaw, distance),
 		lookYaw = lookYaw,
 	}
-	local drop, lean = VacuumMotionFormulas.body(math.max(layers.brace, 0))
+	local drop, lean = VacuumMotionFormulas.body(math.max(layers.brace, 0), layers.reach)
 	local twist = VacuumMotionFormulas.bodyTwist(rig.rest, layers, drop, lean)
 	local wand = VacuumMotionFormulas.wand(
 		rig.rest,
