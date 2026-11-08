@@ -5,8 +5,8 @@
 	- Every Training pad (TrainingConstants.TRUCK_TAG, made a queue pad by the server only while the place offers
 	  training) carries a sign: gold "New here? Start training!" while this
 	  player still needs training, plain "TRAINING" once they have done it (anyone can play it again).
-	- A player who still needs training gets an arrow to the nearest Training pad (a world spotlight step) until they
-	  step on one or finish training.
+	- A player who still needs training gets Pippa's hint and an arrow to the nearest Training pad (a world spotlight
+	  step) whenever they are off the pad (TrainingRules.hubTrail): stepping on hides it, stepping off brings it back.
 	- "Play training again" from the Guide (`again`): an arrow to the Training pad.
 	- The gold chevron trail on the floor from the player to the nearest Training pad (TrainingTrailSystem's hub
 	  goal): while this player still needs training, and after "Play training again" for AGAIN_TRAIL_SECONDS; never
@@ -41,7 +41,6 @@ local TRAIL_SECONDS = 0.2
 local pads: { [BasePart]: true } = {}
 local connections: { RBXScriptConnection } = {}
 local isNew = false
-local pointed = false
 -- "Play training again": the trail leads to the pad until this clock time (nil: not asked).
 local againUntil: number? = nil
 local trailClock = 0
@@ -93,6 +92,32 @@ local function nearestPadTop(): Vector3?
 	return if best ~= nil then best.Position + Vector3.new(0, best.Size.Y / 2, 0) else nil
 end
 
+local function sign(pad: BasePart)
+	TrainingSignSystem.show(pad, {
+		text = if isNew then TrainingConstants.TEXT.truckSign else TrainingConstants.TEXT.truckTag,
+		number = nil,
+		active = isNew,
+	}, SIGN_LIFT)
+end
+
+local function pointToTraining()
+	if not isNew or next(pads) == nil or TrainingSpotlightSystem.active() then
+		return
+	end
+	TrainingSpotlightSystem.point({
+		{
+			kind = "world",
+			tag = TrainingConstants.TRUCK_TAG,
+			line = TrainingConstants.TEXT.truckSign,
+			seconds = math.huge,
+			accept = isTrainingPad,
+			done = function()
+				return not isNew or standingOn(isTrainingPad)
+			end,
+		},
+	})
+end
+
 local function trailTick(deltaTime: number)
 	trailClock += deltaTime
 	if trailClock < TRAIL_SECONDS then
@@ -106,33 +131,10 @@ local function trailTick(deltaTime: number)
 	end
 	local show = next(pads) ~= nil and TrainingRules.hubTrail(isNew, againUntil, os.clock(), onPad)
 	TrainingTrailSystem.setHub(if show then nearestPadTop() else nil)
-end
-
-local function sign(pad: BasePart)
-	TrainingSignSystem.show(pad, {
-		text = if isNew then TrainingConstants.TEXT.truckSign else TrainingConstants.TEXT.truckTag,
-		number = nil,
-		active = isNew,
-	}, SIGN_LIFT)
-end
-
-local function pointToTraining()
-	if not isNew or pointed or next(pads) == nil or TrainingSpotlightSystem.active() then
-		return
+	-- The hint comes back whenever a new player is off the pad (it ends while they stand on it).
+	if show and isNew then
+		pointToTraining()
 	end
-	pointed = true
-	TrainingSpotlightSystem.point({
-		{
-			kind = "world",
-			tag = TrainingConstants.TRUCK_TAG,
-			line = TrainingConstants.TEXT.truckSign,
-			seconds = math.huge,
-			accept = isTrainingPad,
-			done = function()
-				return not isNew or standingOn(isTrainingPad)
-			end,
-		},
-	})
 end
 
 local function added(instance: Instance)
@@ -241,7 +243,6 @@ function TrainingHubSystem.stop()
 		TrainingSignSystem.hide(pad)
 	end
 	table.clear(pads)
-	pointed = false
 	againUntil = nil
 	TrainingTrailSystem.setHub(nil)
 end

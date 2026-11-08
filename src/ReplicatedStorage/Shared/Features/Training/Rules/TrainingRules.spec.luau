@@ -55,6 +55,11 @@ return function()
 			expect(TrainingRules.hubTrail(true, nil, 10, true)).to.equal(false)
 		end)
 
+		it("comes back when a new player steps off the pad again (the hint, the trail and the arrow)", function()
+			expect(TrainingRules.hubTrail(true, nil, 10, true)).to.equal(false)
+			expect(TrainingRules.hubTrail(true, nil, 11, false)).to.equal(true)
+		end)
+
 		it("leads a trained player only after Play training again, until its time runs out", function()
 			expect(TrainingRules.hubTrail(false, nil, 10, false)).to.equal(false)
 			expect(TrainingRules.hubTrail(false, 20, 10, false)).to.equal(true)
