@@ -21,6 +21,11 @@ export type Props = {
 	showGroup: boolean,
 	onInvite: () -> (),
 	onJoinGroup: () -> (),
+	-- Where the row sits (design px; default: under the Today tracker), and whether INVITE FRIENDS is in it (false
+	-- when the hub's menu column has its own INVITE tile).
+	position: UDim2?,
+	size: UDim2?,
+	invite: boolean?,
 }
 
 local GAP = 8
@@ -28,23 +33,27 @@ local GAP = 8
 local function SocialPerksPanel(props: Props): React.ReactNode
 	local phone = props.phone
 	local textSize = if phone then 13 else 17
+	local inviting = props.invite ~= false
+	local both = inviting and props.showGroup
 	local half = UDim2.new(0.5, -GAP / 2, 1, 0)
 	return e("Frame", {
 		-- Under the Today tracker (CompanyWorkOrderTracker's hub spot: 840,134 300x132; phone 410,62 220x84).
-		Position = if phone then UDim2.fromOffset(410, 154) else UDim2.fromOffset(840, 280),
-		Size = if phone then UDim2.fromOffset(220, 38) else UDim2.fromOffset(300, 48),
+		Position = props.position or (if phone then UDim2.fromOffset(410, 154) else UDim2.fromOffset(840, 280)),
+		Size = props.size or (if phone then UDim2.fromOffset(220, 38) else UDim2.fromOffset(300, 48)),
 		BackgroundTransparency = 1,
 	}, {
-		invite = e(Button, {
-			variant = "sky",
-			text = "INVITE FRIENDS",
-			textSize = textSize,
-			icon = "heart",
-			layout = "inline",
-			small = true,
-			size = if props.showGroup then half else UDim2.fromScale(1, 1),
-			onActivated = props.onInvite,
-		}),
+		invite = if inviting
+			then e(Button, {
+				variant = "sky",
+				text = "INVITE FRIENDS",
+				textSize = textSize,
+				icon = "heart",
+				layout = "inline",
+				small = true,
+				size = if both then half else UDim2.fromScale(1, 1),
+				onActivated = props.onInvite,
+			})
+			else nil,
 		group = if props.showGroup
 			then e(Button, {
 				variant = "gleam",
@@ -53,8 +62,8 @@ local function SocialPerksPanel(props: Props): React.ReactNode
 				icon = "gleam",
 				layout = "inline",
 				small = true,
-				position = UDim2.new(0.5, GAP / 2, 0, 0),
-				size = half,
+				position = if both then UDim2.new(0.5, GAP / 2, 0, 0) else UDim2.fromScale(0, 0),
+				size = if both then half else UDim2.fromScale(1, 1),
 				onActivated = props.onJoinGroup,
 			})
 			else nil,

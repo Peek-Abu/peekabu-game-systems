@@ -28,6 +28,8 @@ export type Props = {
 	onWorkOrder: (() -> ())?,
 	onTimecard: (() -> ())?,
 	onPin: (() -> ())?,
+	-- Draw the mid-top COMPANY CLIPBOARD button (default true).
+	button: boolean?,
 	pinned: boolean?,
 	onClose: (() -> ())?,
 	open: boolean,
@@ -194,14 +196,17 @@ local function workOrderFace(props: Props): { [string]: React.ReactNode }
 end
 local function Panel(props: Props): React.ReactNode
 	local children: { [string]: React.ReactNode } = {
-		toggle = e(ToonButton, {
-			text = "COMPANY CLIPBOARD",
-			textSize = 22,
-			variant = "secondary",
-			size = UDim2.fromOffset(if props.phone then 220 else 300, 48),
-			position = UDim2.fromOffset(if props.phone then 410 else 840, if props.phone then 8 else 78),
-			onActivated = props.onToggle,
-		}),
+		-- The mid-top COMPANY CLIPBOARD button (a minimized hub layout opens the card from its own button instead).
+		toggle = if props.button == false
+			then nil
+			else e(ToonButton, {
+				text = "COMPANY CLIPBOARD",
+				textSize = 22,
+				variant = "secondary",
+				size = UDim2.fromOffset(if props.phone then 220 else 300, 48),
+				position = UDim2.fromOffset(if props.phone then 410 else 840, if props.phone then 8 else 78),
+				onActivated = props.onToggle,
+			}),
 	}
 	if props.open then
 		local face: { [string]: React.ReactNode } = {

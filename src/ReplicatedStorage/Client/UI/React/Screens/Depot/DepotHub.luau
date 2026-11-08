@@ -4,7 +4,7 @@
 	crew's shift), the travel card (hidden under it), the player's published rank, their Credits (the `credits` balance),
 	the daily reward slice on the server clock, the contract board's contract and whether they are aboard a truck,
 	and draws DepotHubPanel in the V1 kit. JOBS / the Tonight card / GO! (when not aboard) open the contract board;
-	INVENTORY opens the Inventory, SHOP the Shop; GUIDE and SETTINGS push the hub pages; INVITE FRIENDS / JOIN GROUP call SocialServiceClient (SocialPerksPanel, hidden under the open clipboard); the gift asks to claim (`onClaimGift`, from the service: components
+	INVENTORY opens the Inventory, SHOP the Shop; GUIDE and SETTINGS push the hub pages; INVITE FRIENDS / JOIN GROUP call SocialServiceClient (SocialPerksPanel, hidden under the open clipboard); where the clipboard and the invite sit follows DepotHubViewModel.clipboardLayout (Studio's layout switch while the owner compares A/B/C; no clipboard before training is done); the gift asks to claim (`onClaimGift`, from the service: components
 	never talk to the server). Aboard a truck the Next shift card is the queue pad's (DepotPad). Values are specced in
 	DepotHubViewModel and DepotPadViewModel.
 
@@ -14,6 +14,8 @@
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 
 local React = require(ReplicatedStorage.Packages.React)
 local TimecardPanel = require(script.Parent.DepotTimecardPanel)
@@ -45,6 +47,7 @@ local usePaperHudScale = require(ReplicatedStorage.Client.UI.React.Screens.Paper
 local RankViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Rank.RankViewModel)
 local SocialPerksPanel = require(ReplicatedStorage.Client.UI.React.Screens.Social.SocialPerksPanel)
 local ToonStyleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonStyleViewModel)
+local TrainingRules = require(ReplicatedStorage.Shared.Features.Training.Rules.TrainingRules)
 
 export type DepotHubProps = {
 	onClaimGift: () -> (),
@@ -83,12 +86,28 @@ local function DepotHub(props: DepotHubProps): React.ReactNode
 	local punchPending = ReactCharm.useAtom(TimecardService.pending)
 	local stamp = ReactCharm.useAtom(TimecardMomentStore.stamp)
 	local social = ReactCharm.useAtom(StateSyncClientStore.social)
+	local training = ReactCharm.useAtom(StateSyncClientStore.training)
 	local scale = usePaperHudScale()
 	local player = Players.LocalPlayer
 	if not VM.visible(snapshot, player.UserId) or card ~= nil then
 		return nil
 	end
 	local phone = scale.layout == "phone"
+	local layout = VM.clipboardLayout(
+		if RunService:IsStudio() then Workspace:GetAttribute(DepotConstants.HUB_LAYOUT_ATTRIBUTE) else nil,
+		TrainingRules.isNew(training)
+	)
+	local status = TimecardRules.status(timecard, now)
+	-- Where the social row sits for this layout (design px; nil: its own spot mid-screen).
+	local socialAt: UDim2? = nil
+	local socialSize: UDim2? = nil
+	if layout.invite == "tonight" or layout.invite == "menu" then
+		socialAt = if phone then UDim2.new(1, -234, 0, 288) else UDim2.new(1, -520, 0, 364)
+		socialSize = if phone then UDim2.fromOffset(220, 34) else UDim2.fromOffset(336, 48)
+	elseif layout.invite == "profile" then
+		socialAt = if phone then UDim2.fromOffset(298, 64) else UDim2.fromOffset(394, 226)
+		socialSize = if phone then UDim2.fromOffset(200, 34) else UDim2.fromOffset(330, 52)
+	end
 	local rank = RankViewModel.rankOf(publicPlayers, player.UserId)
 	local _, pad = QueueSnapshotUtils.padOf(queue, player.UserId)
 	return React.createElement(PaperHudFrame, {
@@ -97,6 +116,7 @@ local function DepotHub(props: DepotHubProps): React.ReactNode
 			calendar = React.createElement(TimecardPanel, {
 				phone = phone,
 				open = clipboardOpen,
+				button = layout.clipboard == "pill",
 				view = if clipboardTab == "workOrder" then "workOrder" else "timecard",
 				pinned = pinned,
 				onPin = Company.togglePin,
@@ -105,7 +125,7 @@ local function DepotHub(props: DepotHubProps): React.ReactNode
 				end,
 				now = now,
 				kind = WorkOrderRegistry.orderFor(now).kind,
-				status = TimecardRules.status(timecard, now),
+				status = status,
 				progress = WorkOrderRules.roll(workOrder, now).progress,
 				target = WorkOrderRegistry.orderFor(now).target,
 				order = WorkOrderRegistry.orderFor(now).label,
@@ -151,12 +171,25 @@ local function DepotHub(props: DepotHubProps): React.ReactNode
 				end,
 				onGift = props.onClaimGift,
 				onGo = openBoard,
+				clipboard = layout.clipboard,
+				clipboardBadge = status.canPunch,
+				onClipboard = function()
+					Company.open(nil)
+				end,
+				onInviteTile = if layout.invite == "menu"
+					then function()
+						SocialService:invite()
+					end
+					else nil,
 			}),
-			social = if clipboardOpen
+			social = if clipboardOpen or (layout.invite == "menu" and social.groupPaid)
 				then nil
 				else React.createElement(SocialPerksPanel, {
 					phone = phone,
 					showGroup = not social.groupPaid,
+					position = socialAt,
+					size = socialSize,
+					invite = layout.invite ~= "menu",
 					onInvite = function()
 						SocialService:invite()
 					end,

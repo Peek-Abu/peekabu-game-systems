@@ -8,7 +8,8 @@
 	  reward, and takes the stamp down after STAMP_SECONDS. The server already paid; this only shows it.
 	- **The greeting.** In the hub, on the real card, with no other screen up (a waiting reveal counts), it opens the
 	  clipboard on the Timecard once a UTC day while today is still free (TimecardMomentUtils.shouldGreet), after
-	  the hub has stayed free for GREET_SETTLE.
+	  the hub has stayed free for GREET_SETTLE; never before training is done, nor in a minimized hub layout
+	  (DepotHubViewModel.clipboardLayout).
 
 	`start` subscribes to the stores both read; `punched` and `greet` take their effects as deps so specs drive them.
 
@@ -17,6 +18,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local Charm = require(ReplicatedStorage.Packages.Charm)
@@ -24,6 +26,8 @@ local PlayerDataTypes = require(ReplicatedStorage.Shared.Data.PlayerDataTypes)
 -- Registers the shift's punch clock, stamp and fanfare sounds this reuses.
 require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftAssets)
 local TimecardRules = require(ReplicatedStorage.Shared.Features.Timecard.Rules.TimecardRules)
+local TrainingRules = require(ReplicatedStorage.Shared.Features.Training.Rules.TrainingRules)
+local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local WorkOrderRegistry = require(ReplicatedStorage.Shared.Features.WorkOrder.Data.WorkOrderRegistry)
 local TimecardMomentStore = require(ReplicatedStorage.Client.Features.Timecard.State.TimecardMomentStore)
 local TimecardMomentUtils = require(ReplicatedStorage.Client.Features.Timecard.Utils.TimecardMomentUtils)
@@ -150,15 +154,23 @@ local function greetInput(): TimecardMomentUtils.GreetInput
 	}
 end
 
--- Checks again after GREET_SETTLE and greets only if the hub is still free then.
+-- The hub's clipboard layout (DepotHubViewModel.clipboardLayout): Studio's layout switch, and whether this player still
+-- needs training.
+local function hubLayout(): DepotHubViewModel.ClipboardLayout
+	local option = if RunService:IsStudio() then Workspace:GetAttribute(DepotConstants.HUB_LAYOUT_ATTRIBUTE) else nil
+	return DepotHubViewModel.clipboardLayout(option, TrainingRules.isNew(StateSyncClientStore.training()))
+end
+
+-- Checks again after GREET_SETTLE and greets only if the hub is still free then (and the hub layout greets at all:
+-- not before training is done, and not in a minimized layout).
 local function syncGreeting()
-	if not TimecardMomentUtils.shouldGreet(greetInput()) then
+	if not hubLayout().greet or not TimecardMomentUtils.shouldGreet(greetInput()) then
 		return
 	end
 	greetRound += 1
 	local round = greetRound
 	task.delay(GREET_SETTLE, function()
-		if round == greetRound then
+		if round == greetRound and hubLayout().greet then
 			TimecardMomentSystem.greet(greetInput())
 		end
 	end)
