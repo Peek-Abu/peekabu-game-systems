@@ -209,6 +209,45 @@ return function()
 			expect(yaw).to.be.near(0, 1e-4)
 		end)
 
+		describe("turnLimit (owner note 2026-11-08: no right arm into the chest)", function()
+			-- A chest 1.2 wide and 1.2 deep centred over the root; the right grip 0.6 right of the pivot.
+			local function holding(right)
+				local rest = table.clone(REST)
+				rest.right = right
+				rest.torso = { centre = Vector3.new(0, 0.6, 0), half = Vector3.new(0.6, 1.2, 0.6) }
+				return rest
+			end
+
+			it("stops the turn right before the right paw would enter the chest", function()
+				local rest = holding(PIVOT + Vector3.new(0.6, 0.2, 0.3))
+				local limit = VacuumMotionFormulas.turnLimit(rest)
+				expect(limit > 0 and limit < Constants.aim.maxYawRight).to.equal(true)
+				local function inside(yaw)
+					local p = CFrame.new(PIVOT) * CFrame.Angles(0, -yaw, 0) * CFrame.new(-PIVOT) * rest.right
+					local a = rest.torso.half.X + Constants.armClear
+					local b = rest.torso.half.Z + Constants.armClear
+					return (p.X / a) ^ 2 + (p.Z / b) ^ 2 < 1
+				end
+				expect(inside(limit)).to.equal(false)
+				expect(inside(limit + math.rad(3))).to.equal(true)
+			end)
+
+			it("allows the whole turn with no right grip or chest known, and none when already inside", function()
+				expect(VacuumMotionFormulas.turnLimit(REST)).to.equal(Constants.aim.maxYawRight)
+				expect(VacuumMotionFormulas.turnLimit(holding(Vector3.new(0.1, 0.6, -0.2)))).to.equal(0)
+			end)
+
+			it("holds the aim and the wand's turns together to it", function()
+				local rest = holding(PIVOT + Vector3.new(0.6, 0.2, 0.3))
+				local limit = VacuumMotionFormulas.turnLimit(rest)
+				expect(VacuumMotionFormulas.aimYaw(rest, -math.rad(45), 3) >= -limit - 1e-9).to.equal(true)
+				local turned =
+					VacuumMotionFormulas.wand(rest, { offset = Vector3.zero, pitch = 0, yaw = -1.2, roll = 0 }, MARGIN)
+				local _, y = turned:ToOrientation()
+				expect(y >= -limit - 1e-6).to.equal(true)
+			end)
+		end)
+
 		it("never turns the wand past its most either way", function()
 			local tuning = Constants.aim
 			local far = math.rad(170)

@@ -194,6 +194,7 @@ function VacuumMotionRigSystem.bind(character: Model): Rig?
 	end
 	local rootJoint = jointOf(character, "LowerTorso", "Root")
 	local waist = jointOf(character, "UpperTorso", "Waist")
+	local chest = part(character, "UpperTorso")
 	-- The left paw's hold, as the server planned it (on its target).
 	local leftHold: VacuumMotionFormulas.LeftHold? = nil
 	if left ~= nil then
@@ -215,6 +216,21 @@ function VacuumMotionRigSystem.bind(character: Model): Rig?
 		-- The waist joint at rest (the brace leans over it).
 		waist = if rootJoint ~= nil and waist ~= nil
 			then (rootJoint.motor.C0 * rootJoint.motor.C1:Inverse() * waist.motor.C0).Position
+			else nil,
+		-- The right paw's grip and the chest it must stay out of (VacuumMotionFormulas.turnLimit).
+		right = rightRest.Position,
+		torso = if rootJoint ~= nil
+				and waist ~= nil
+				and chest ~= nil
+			then {
+				centre = (
+					rootJoint.motor.C0
+					* rootJoint.motor.C1:Inverse()
+					* waist.motor.C0
+					* waist.motor.C1:Inverse()
+				).Position,
+				half = chest.Size / 2,
+			}
 			else nil,
 	}
 	local legs: { Leg } = {}

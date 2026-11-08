@@ -38,6 +38,10 @@ export type WandRest = {
 	floorY: number,
 	left: LeftHold?,
 	waist: Vector3?,
+	-- The right paw's grip (root space, at rest) and the chest it must stay out of (the UpperTorso's centre and half
+	-- size, root space): `turnLimit`. Nil: the turn right is not limited by the body.
+	right: Vector3?,
+	torso: { centre: Vector3, half: Vector3 }?,
 }
 
 -- How the wand is moved off its rest: the pivot translated `offset` (root space), and turned about it by `yaw`
@@ -224,6 +228,36 @@ local function headCentre(rest: WandRest): Vector3
 end
 
 --[=[
+	The most the wand may turn right about its pivot (radians, positive) before the right paw's grip, swung round
+	with it, comes within Constants.armClear of the chest (an ellipse filling the UpperTorso, seen from above): its
+	forearm would pass into the body (owner note 2026-11-08). At most aim.maxYawRight; 0 when it is there at rest.
+]=]
+function VacuumMotionFormulas.turnLimit(rest: WandRest): number
+	local most = Constants.aim.maxYawRight
+	local right, torso = rest.right, rest.torso
+	if right == nil or torso == nil then
+		return most
+	end
+	local a, b = torso.half.X + Constants.armClear, torso.half.Z + Constants.armClear
+	local function inside(yaw: number): boolean
+		local p = CFrame.new(rest.pivot) * CFrame.Angles(0, -yaw, 0) * CFrame.new(-rest.pivot) * right
+		return ((p.X - torso.centre.X) / a) ^ 2 + ((p.Z - torso.centre.Z) / b) ^ 2 < 1
+	end
+	if inside(0) then
+		return 0
+	end
+	local step = math.rad(1)
+	local yaw = 0
+	while yaw + step <= most do
+		if inside(yaw + step) then
+			return yaw
+		end
+		yaw += step
+	end
+	return most
+end
+
+--[=[
 	The wand's turn about its pivot (radians, left positive) that points the floor head at the look point `distance`
 	studs out along the look's `heading` from the root, within Constants.aim's maxYawLeft / maxYawRight.
 	Purely visual (the suction aims by the body, not the camera).
@@ -235,7 +269,7 @@ function VacuumMotionFormulas.aimYaw(rest: WandRest, heading: number, distance: 
 	local target = Vector3.new(-math.sin(heading) * distance, 0, -math.cos(heading) * distance)
 	local want = VacuumMotionFormulas.heading(Vector3.new(target.X - pivot.X, 0, target.Z - pivot.Z))
 	local now = VacuumMotionFormulas.heading(Vector3.new(head.X - pivot.X, 0, head.Z - pivot.Z))
-	return math.clamp(wrapAngle(want - now), -aim.maxYawRight, aim.maxYawLeft)
+	return math.clamp(wrapAngle(want - now), -VacuumMotionFormulas.turnLimit(rest), aim.maxYawLeft)
 end
 
 --[=[
@@ -453,8 +487,13 @@ end
 	it would not be, its move is scaled back (the turns kept whole) until it is, every layer together only if no move
 	can help. Also returns the pitch used.
 ]=]
-function VacuumMotionFormulas.wand(rest: WandRest, offset: WandOffset, margin: number, body: CFrame?): (CFrame, number)
+function VacuumMotionFormulas.wand(rest: WandRest, given: WandOffset, margin: number, body: CFrame?): (CFrame, number)
 	local moved = body or CFrame.identity
+	-- The turns together never take the right paw into the chest (turnLimit).
+	local limit = VacuumMotionFormulas.turnLimit(rest)
+	local offset = if given.yaw < -limit
+		then { offset = given.offset, pitch = given.pitch, yaw = -limit, roll = given.roll }
+		else given
 	local transform, pitch = clamped(rest, offset, margin)
 	if VacuumMotionFormulas.reaches(rest, transform, moved) then
 		return transform, pitch

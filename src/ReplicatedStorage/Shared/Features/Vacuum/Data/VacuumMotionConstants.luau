@@ -153,6 +153,9 @@ return table.freeze({
 	-- cancelled (at rest Pippa's grip already sat at the limit, so aim left, the floor reach and the pop kick were
 	-- wiped to nothing). 0 restores the old guard exactly.
 	reachSlack = 0.18,
+	-- Owner note 2026-11-08 (arms clipped into the body at the side extremes): the wand turns right only as far as
+	-- keeps the right paw's grip this far (studs) outside the chest (VacuumMotionFormulas.turnLimit), per body.
+	armClear = 0.2,
 	-- The left paw turns `leftTurn` of the wand's turn about its own grip (it stays on it): Pippa's left wrist,
 	-- near its full reach, could not follow the whole of the aim's 38 degrees (0.053 stud off, vacuum idle).
 	leftTurn = 0.5,
