@@ -22,8 +22,10 @@
 	   aims it; VacuumMotionRigSystem, exactly as every client does, in PreSimulation after the
 	   Animator's IK) and judges each: each paw's wrap point (VacuumVisualSystem.wrapOf, inside the paw) must be on
 	   its grip, the right on the wand's GripUpper and the left on its GripLower (the grip contract), within
-	   GRIP_TOLERANCE (the left also within reachSlack: it may slip); each grip must lie inside its paw (the paw closes round the wand); and the floor head's
-	   lowest corner must be over the floor (FLOOR_TOLERANCE).
+	   GRIP_TOLERANCE (the left also within reachSlack: it may slip); each grip must lie inside its paw (the paw closes round the wand); the floor head's
+	   lowest corner must be over the floor (FLOOR_TOLERANCE); and no hand or forearm may sit inside the torso
+	   (CLIP_TOLERANCE, an ellipsoid per torso part). Each layer's worst line also gives how far out the floor head
+	   sits on average (the camera tilt's travel).
 	`format` prints the report; the spec asserts it. Needs a real runtime (TestEZ in Studio): run it with
 	`Workspace.RunTests = true`, or from a server Script: `print(Harness.format(Harness.run({})))`.
 
@@ -56,6 +58,10 @@ export type Frame = {
 	left: number?,
 	-- The floor head's lowest corner over the floor (studs).
 	clear: number?,
+	-- How far out the floor head sits from the root, flat (studs).
+	out: number?,
+	-- How deep the deepest hand or forearm point sits inside the torso (studs; 0 when none is).
+	clip: number?,
 	problems: { string },
 }
 export type Entry = {
@@ -70,7 +76,7 @@ export type Entry = {
 }
 export type Result = { ok: boolean, entries: { Entry }, notes: { string } }
 -- The worst of a layer's frames: the furthest each paw sat from its grip, and the floor head's least clearance.
-type Worst = { right: number, left: number, clear: number }
+type Worst = { right: number, left: number, clear: number, clip: number, out: number, count: number }
 export type Options = { rigs: { string }?, skins: { string }? }
 
 local AnimationVacuumHarness = {}
@@ -80,6 +86,8 @@ local GRIP_TOLERANCE = 0.05
 -- The left paw may also slip along the wand by up to the reach guard's slack (VacuumMotionConstants.reachSlack,
 -- feel pass batch 2 2026-11-06): its arm goes straight instead of the move being cancelled.
 local LEFT_TOLERANCE = GRIP_TOLERANCE + VacuumMotionConstants.reachSlack
+-- How deep a hand or forearm may sit inside the torso (studs): the paws rest against a round belly.
+local CLIP_TOLERANCE = 0.03
 -- How far the floor head's lowest corner may dip under the floor (studs).
 local FLOOR_TOLERANCE = 0.02
 -- Each motion layer at its extremes (VacuumMotionFormulas.Layers), laid on every frame.
@@ -185,6 +193,52 @@ local function onPaw(hand: BasePart?, wrap: Vector3?, grip: Attachment?): (numbe
 	local half = hand.Size / 2
 	local inside = math.abs(inHand.X) <= half.X and math.abs(inHand.Y) <= half.Y and math.abs(inHand.Z) <= half.Z
 	return (hand.CFrame:PointToWorldSpace(wrap) - grip.WorldPosition).Magnitude, inside
+end
+
+-- How deep the deepest hand or forearm point sits inside the torso (studs): each arm part's centre and the ends of
+-- its long axis, against an ellipsoid filling each torso part (round bodies).
+local function armClip(model: Model): number
+	local deepest = 0
+	local torsos: { BasePart } = {}
+	for _, name in { "UpperTorso", "LowerTorso" } do
+		local part = model:FindFirstChild(name)
+		if part ~= nil and part:IsA("BasePart") then
+			table.insert(torsos, part)
+		end
+	end
+	for _, name in { "RightHand", "RightLowerArm", "LeftHand", "LeftLowerArm" } do
+		local part = model:FindFirstChild(name)
+		if part ~= nil and part:IsA("BasePart") then
+			local size = part.Size
+			local along = if size.Y >= size.X and size.Y >= size.Z
+				then Vector3.new(0, size.Y / 2, 0)
+				elseif size.X >= size.Z then Vector3.new(size.X / 2, 0, 0)
+				else Vector3.new(0, 0, size.Z / 2)
+			for _, offset in { Vector3.zero, along, -along } do
+				local point = part.CFrame:PointToWorldSpace(offset)
+				for _, torso in torsos do
+					local local_ = torso.CFrame:PointToObjectSpace(point)
+					local half = torso.Size / 2
+					local reach = (local_.X / half.X) ^ 2 + (local_.Y / half.Y) ^ 2 + (local_.Z / half.Z) ^ 2
+					if reach < 1 then
+						local smallest = math.min(half.X, half.Y, half.Z)
+						deepest = math.max(deepest, (1 - math.sqrt(reach)) * smallest)
+					end
+				end
+			end
+		end
+	end
+	return deepest
+end
+
+-- How far out the floor head sits from `model`'s root, flat (studs).
+local function outOf(model: Model, head: BasePart?): number?
+	local root = model:FindFirstChild("HumanoidRootPart")
+	if head == nil or root == nil or not root:IsA("BasePart") then
+		return nil
+	end
+	local flat = root.CFrame:PointToObjectSpace(head.Position)
+	return Vector2.new(flat.X, flat.Z).Magnitude
 end
 
 -- The floor head's lowest corner over the floor under `model`'s root (studs).
@@ -367,6 +421,11 @@ local function hold(carrier: Carrier, skin: VacuumSkinRegistry.SkinDef): Entry
 				local leftGap, leftInside = onPaw(leftHand, leftWrap, lower)
 				frame.right, frame.left = rightGap, leftGap
 				frame.clear = clearance(model, head)
+				frame.out = outOf(model, head)
+				frame.clip = armClip(model)
+				if (frame.clip or 0) > CLIP_TOLERANCE then
+					table.insert(frame.problems, string.format("arm %.3f stud into the body", frame.clip or 0))
+				end
 				local checks: { { side: string, distance: number?, inside: boolean, tolerance: number } } = {
 					{ side = "right", distance = rightGap, inside = rightInside, tolerance = GRIP_TOLERANCE },
 					{ side = "left", distance = leftGap, inside = leftInside, tolerance = LEFT_TOLERANCE },
@@ -487,10 +546,16 @@ function AnimationVacuumHarness.format(result: Result): string
 					if #frame.problems > 0 then "  " .. table.concat(frame.problems, "; ") else ""
 				)
 			)
-			local w: Worst = worst[frame.layer] or { right = 0, left = 0, clear = math.huge }
+			local w: Worst = worst[frame.layer]
+				or { right = 0, left = 0, clear = math.huge, clip = 0, out = 0, count = 0 }
 			w.right = math.max(w.right, frame.right or 0)
 			w.left = math.max(w.left, frame.left or 0)
 			w.clear = math.min(w.clear, frame.clear or math.huge)
+			w.clip = math.max(w.clip, frame.clip or 0)
+			if frame.out ~= nil then
+				w.out += frame.out
+				w.count += 1
+			end
 			worst[frame.layer] = w
 		end
 		for _, layer in LAYERS do
@@ -499,11 +564,13 @@ function AnimationVacuumHarness.format(result: Result): string
 				table.insert(
 					lines,
 					string.format(
-						"  worst %-11s right %.3f  left %.3f  floor %+.3f",
+						"  worst %-11s right %.3f  left %.3f  floor %+.3f  clip %.3f  head out %.2f",
 						layer.name,
 						w.right,
 						w.left,
-						w.clear
+						w.clear,
+						w.clip,
+						if w.count > 0 then w.out / w.count else 0
 					)
 				)
 			end
