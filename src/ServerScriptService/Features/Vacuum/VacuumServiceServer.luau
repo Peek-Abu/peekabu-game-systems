@@ -147,10 +147,23 @@ local function inReach(player: Player, pile: Instance): boolean
 			if type(pitch) == "number" then math.rad(pitch) else VacuumMotionConstants.aim.neutral
 		) or measured
 	end
-	return VacuumTargetRules.reaches(root.Position, root.CFrame.LookVector, measured, {
-		position = pile.Position,
-		radius = VacuumTargetRules.radius(pile.Size, pile:GetAttribute(VacuumConstants.BASE_SIZE_ATTRIBUTE)),
-	}, SERVER_REACH)
+	return VacuumTargetRules.reaches(
+		root.Position,
+		root.CFrame.LookVector,
+		measured,
+		{
+			position = pile.Position,
+			radius = VacuumTargetRules.radius(pile.Size, pile:GetAttribute(VacuumConstants.BASE_SIZE_ATTRIBUTE)),
+		},
+		VacuumTargetRules.withCone(
+			SERVER_REACH,
+			VacuumTargetRules.coneOn(
+				RunService:IsStudio(),
+				workspace:GetAttribute(VacuumConstants.DEV_CONE_ATTRIBUTE),
+				VacuumConstants.TARGET.cone ~= false
+			)
+		)
+	)
 end
 
 -- Scales a pile down with its progress, keeping it on the floor.

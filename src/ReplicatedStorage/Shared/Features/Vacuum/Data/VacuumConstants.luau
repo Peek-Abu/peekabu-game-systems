@@ -75,13 +75,17 @@ return table.freeze({
 	-- or 1 of the feet, or 5 of the feet inside a cone (dot 0.5, 60 degrees each side) round the body's facing;
 	-- never one more than 6 up or down. The server re-checks every tick with TARGET_SLACK more studs, as it
 	-- sees the vacuumer a moment later than the client that picked the pile.
-	TARGET = table.freeze({ head = 2, underfoot = 1, range = 5, minDot = 0.5, height = 6 }),
+	-- `cone`: whether the short cone in front of the body still picks piles while the nozzle is known (shipped on; in
+	-- Studio only, the Workspace attribute DEV_CONE_ATTRIBUTE, a boolean, overrides it on the server and every client
+	-- for the owner's side-by-side comparison, 2026-11-08).
+	TARGET = table.freeze({ head = 2, underfoot = 1, range = 5, minDot = 0.5, height = 6, cone = true }),
 	TARGET_SLACK = 2,
 	-- The owner's call 2026-11-08: the floor head the target rule measures from is the nozzle where the aim lays it
 	-- (VacuumMotionRigSystem.nozzleHead, from the look the client sent; the server never trusts a client position),
 	-- not the Tool's floor-head part (which the server holds at the planned hold). `false` measures from the part
 	-- again.
 	SUCTION_FOLLOWS_NOZZLE = true,
+	DEV_CONE_ATTRIBUTE = "DevSuctionCone",
 	-- Feel (spec §7 "Vacuuming: suction particles into the nozzle, pile shrinks, rising whine, pop + sparkle,
 	-- canister fills"). The whine rises with the pile's progress.
 	WHINE_PITCH_MIN = 0.85,

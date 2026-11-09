@@ -25,6 +25,28 @@ return function()
 			expect(VacuumTargetRules.reaches(ROOT, FACING, HEAD, pile(0, -6.5), REACH)).to.equal(true)
 		end)
 
+		it("drops the cone when it is switched off: only the floor head and underfoot reach", function()
+			local noCone = VacuumTargetRules.withCone(REACH, false)
+			-- In the cone, past the floor head's reach: taken with the cone, not without it.
+			expect(VacuumTargetRules.reaches(ROOT, FACING, HEAD, pile(0, -6.5), noCone)).to.equal(false)
+			-- Near the floor head, and underfoot, still taken.
+			expect(VacuumTargetRules.reaches(ROOT, Vector3.new(0, 0, 1), HEAD, pile(-4.2, -2.2), noCone)).to.equal(true)
+			expect(VacuumTargetRules.reaches(ROOT, FACING, HEAD, pile(0.5, 0.5), noCone)).to.equal(true)
+			-- With no floor head known the cone still counts (nothing else to aim with).
+			expect(VacuumTargetRules.reaches(ROOT, FACING, nil, pile(0, -6.5), noCone)).to.equal(true)
+			-- Switched back on, and the server's widened reach keeps the switch.
+			expect(VacuumTargetRules.withCone(noCone, true).cone).to.equal(true)
+			expect(VacuumTargetRules.widened(noCone, 2).cone).to.equal(false)
+		end)
+
+		it("lets a Studio-only boolean override the shipped cone setting, nothing else", function()
+			expect(VacuumTargetRules.coneOn(true, false, true)).to.equal(false)
+			expect(VacuumTargetRules.coneOn(true, true, false)).to.equal(true)
+			expect(VacuumTargetRules.coneOn(false, false, true)).to.equal(true)
+			expect(VacuumTargetRules.coneOn(true, "off", true)).to.equal(true)
+			expect(VacuumTargetRules.coneOn(true, nil, false)).to.equal(false)
+		end)
+
 		it("refuses a pile off to the side or past the cone's range", function()
 			expect(VacuumTargetRules.reaches(ROOT, FACING, HEAD, pile(6, 1), REACH)).to.equal(false)
 			expect(VacuumTargetRules.reaches(ROOT, FACING, HEAD, pile(0, -7.5), REACH)).to.equal(false)

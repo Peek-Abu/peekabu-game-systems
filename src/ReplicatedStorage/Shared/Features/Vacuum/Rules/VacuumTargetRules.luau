@@ -8,7 +8,8 @@
 	  floor head is measured as the line across its width (`Head`), so a wide head reaches as far from its ends
 	  as from its middle; or
 	- the vacuumer stands on it (its rim within `underfoot` of the root, flat); or
-	- its rim is within `range` of the root and it lies in a cone (`minDot`) around the body's facing.
+	- its rim is within `range` of the root and it lies in a cone (`minDot`) around the body's facing (unless
+	  `cone` is false and a floor head is known: then the suction follows the floor head alone).
 	The camera never counts: where the character and the wand are decide it. Distances are to a pile's rim (a
 	circle `radius` round its centre), so a big pile counts from its edge, not its middle.
 
@@ -21,7 +22,9 @@
 export type Pile = { position: Vector3, radius: number }
 -- The wand's floor head: its centre and the half of its width (a vector across it, from the centre to one end).
 export type Head = { centre: Vector3, half: Vector3 }
-export type Reach = { head: number, underfoot: number, range: number, minDot: number, height: number }
+-- `cone` (nil reads true): whether the cone in front of the body counts while a floor head is known (the owner's
+-- comparison 2026-11-08: the suction follows the nozzle alone when it is false).
+export type Reach = { head: number, underfoot: number, range: number, minDot: number, height: number, cone: boolean? }
 
 local VacuumTargetRules = {}
 
@@ -70,6 +73,9 @@ function VacuumTargetRules.reaches(root: Vector3, facing: Vector3, head: Head?, 
 	local fromRoot = rim(root, pile)
 	if fromRoot <= reach.underfoot then
 		return true
+	end
+	if head ~= nil and reach.cone == false then
+		return false
 	end
 	if fromRoot > reach.range then
 		return false
@@ -134,6 +140,32 @@ function VacuumTargetRules.widened(reach: Reach, slack: number): Reach
 		range = reach.range + slack,
 		minDot = math.max(-1, reach.minDot - DOT_SLACK),
 		height = reach.height,
+		cone = reach.cone,
+	}
+end
+
+--[=[
+	Whether the cone in front of the body counts: the shipped `default`, unless in Studio (`isStudio`) a boolean
+	`attribute` (VacuumConstants.DEV_CONE_ATTRIBUTE on the Workspace) says otherwise.
+]=]
+function VacuumTargetRules.coneOn(isStudio: boolean, attribute: unknown, default: boolean): boolean
+	if isStudio and type(attribute) == "boolean" then
+		return attribute
+	end
+	return default
+end
+
+--[=[
+	`reach` with the cone in front of the body switched `on` or off.
+]=]
+function VacuumTargetRules.withCone(reach: Reach, on: boolean): Reach
+	return {
+		head = reach.head,
+		underfoot = reach.underfoot,
+		range = reach.range,
+		minDot = reach.minDot,
+		height = reach.height,
+		cone = on,
 	}
 end
 

@@ -19,6 +19,8 @@
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 
 local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants)
 local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
@@ -105,7 +107,14 @@ local function aimedPile(current: Instance?): Instance?
 		root.CFrame.LookVector,
 		nozzleOf(character, root, head),
 		piles,
-		VacuumConstants.TARGET,
+		VacuumTargetRules.withCone(
+			VacuumConstants.TARGET,
+			VacuumTargetRules.coneOn(
+				RunService:IsStudio(),
+				Workspace:GetAttribute(VacuumConstants.DEV_CONE_ATTRIBUTE),
+				VacuumConstants.TARGET.cone ~= false
+			)
+		),
 		currentIndex
 	)
 	return if index ~= nil then parts[index] else nil
