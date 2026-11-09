@@ -82,6 +82,7 @@ local function makeProfileData(): PlayerDataTypes.PlayerProfile
 			rank = { season = "mvp-1", xp = 0, lastAwardedRunId = "" },
 			titles = { earned = {} },
 			coffee = { vouchers = 0 },
+			deals = { bought = {}, picks = {} },
 		},
 		slots = slots,
 	}

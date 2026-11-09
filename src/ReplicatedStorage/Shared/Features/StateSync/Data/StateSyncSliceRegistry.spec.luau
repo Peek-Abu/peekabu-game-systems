@@ -50,6 +50,7 @@ return function()
 					social = { groupPaid = false, referredBy = 0, referralPaid = false, referrals = 0, askedAt = 0 },
 					training = { finished = false, runs = 0, toured = false },
 					coffee = { vouchers = 0 },
+					deals = { bought = {}, picks = {} },
 					loadout = {
 						current = "Pippa",
 						picked = false,
@@ -82,6 +83,7 @@ return function()
 				social = true,
 				training = true,
 				coffee = true,
+				deals = true,
 			}
 
 			for name, definition in StateSyncSliceRegistry.DEFINITIONS do
@@ -96,6 +98,7 @@ return function()
 				"coffee",
 				"currency",
 				"dailyReward",
+				"deals",
 				"entitlements",
 				"equippedTitle",
 				"inventory",

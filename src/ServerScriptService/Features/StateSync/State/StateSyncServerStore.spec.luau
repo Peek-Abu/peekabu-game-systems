@@ -71,6 +71,7 @@ return function()
 					rank = { season = "mvp-1", xp = 0, lastAwardedRunId = "" },
 					titles = { earned = {} },
 					coffee = { vouchers = 0 },
+					deals = { bought = {}, picks = {} },
 				},
 				slots = {
 					{
@@ -113,6 +114,7 @@ return function()
 					rank = { season = "mvp-1", xp = 0, lastAwardedRunId = "" },
 					titles = { earned = {} },
 					coffee = { vouchers = 0 },
+					deals = { bought = {}, picks = {} },
 				},
 				slots = {
 					{
@@ -161,6 +163,7 @@ return function()
 					rank = { season = "mvp-1", xp = 0, lastAwardedRunId = "" },
 					titles = { earned = {} },
 					coffee = { vouchers = 0 },
+					deals = { bought = {}, picks = {} },
 				},
 				slots = {
 					{

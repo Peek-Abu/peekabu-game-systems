@@ -21,6 +21,7 @@ local CosmeticRules = require(ReplicatedStorage.Shared.Features.Cosmetic.Rules.C
 local EmployeeProfileRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeProfileRegistry)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local CurrencyUtils = require(ReplicatedStorage.Shared.Features.Currency.Utils.CurrencyUtils)
+local DealServiceClient = require(ReplicatedStorage.Client.Features.Deal.DealServiceClient)
 local CosmeticServiceClient = require(ReplicatedStorage.Client.Features.Cosmetic.CosmeticServiceClient)
 local ShopServiceClient = require(ReplicatedStorage.Client.Features.Shop.ShopServiceClient)
 local ShopStore = require(ReplicatedStorage.Client.Features.Shop.State.ShopStore)
@@ -43,6 +44,7 @@ local PaperHudScaleViewModel = require(script.Parent.Parent.Paper.PaperHudScaleV
 local usePaperLayout = require(script.Parent.Parent.Paper.usePaperLayout)
 local usePaperViewport = require(script.Parent.Parent.Paper.usePaperViewport)
 local InventoryViewModel = require(script.Parent.Parent.Inventory.InventoryViewModel)
+local DealViewModel = require(script.Parent.Parent.Deal.DealViewModel)
 local VM = require(script.Parent.CharacterPickViewModel)
 
 local e = React.createElement
@@ -284,6 +286,7 @@ local function CharacterPickScreen(props: CharacterPickScreenProps): React.React
 	local entitlements = ReactCharm.useAtom(StateSyncClientStore.entitlements)
 	local currency = ReactCharm.useAtom(StateSyncClientStore.currency)
 	local buyResult = ReactCharm.useAtom(ShopStore.result)
+	local deals = ReactCharm.useAtom(StateSyncClientStore.deals)
 	local selected, setSelected = React.useState(VM.DEFAULT)
 	local noClick: number? = nil
 	local clickedAt, setClickedAt = React.useState(noClick)
@@ -336,6 +339,11 @@ local function CharacterPickScreen(props: CharacterPickScreenProps): React.React
 	local tint = InventoryViewModel.color(selected)
 	local profile = EmployeeProfileRegistry.get(selected)
 	local start = VM.start(selected, owns, CurrencyUtils.getCurrencyAmount(currency, "credits"))
+	-- Pick a New Hire for a locked employee: hire them now with their Legendary skin (a Robux deal, once).
+	local dealText = if props.owns == nil
+		then DealViewModel.hireButton(selected, owns, deals, DealServiceClient:productReady("pickNewHire"))
+		else nil
+	local dealHeight = if phone then 40 else 76
 	local plateHeight = if phone then 44 else 104
 	local plate: Nodes = {
 		name = e(ToonText, {
@@ -421,9 +429,34 @@ local function CharacterPickScreen(props: CharacterPickScreenProps): React.React
 					}, hero),
 					about = e("Frame", {
 						Position = UDim2.fromOffset(listWidth + heroWidth + 2 * gap, 0),
-						Size = UDim2.new(0, aboutWidth, 1, -startHeight - gap),
+						Size = UDim2.new(
+							0,
+							aboutWidth,
+							1,
+							-startHeight - gap - (if dealText ~= nil then dealHeight + gap else 0)
+						),
 						BackgroundTransparency = 1,
-					}, { card = aboutCard(selected, layout, height - startHeight - gap) }),
+					}, {
+						card = aboutCard(
+							selected,
+							layout,
+							height - startHeight - gap - (if dealText ~= nil then dealHeight + gap else 0)
+						),
+					}),
+					deal = if dealText ~= nil
+						then e(ToonButton, {
+							variant = "gleam",
+							text = dealText,
+							textSize = if phone then 18 else 36,
+							sound = "cta",
+							anchor = Vector2.new(1, 1),
+							position = UDim2.new(1, 0, 1, -startHeight - gap),
+							size = UDim2.fromOffset(aboutWidth, dealHeight),
+							onActivated = function()
+								DealServiceClient:buy("pickNewHire", selected)
+							end,
+						})
+						else nil,
 					note = if buyNote ~= nil
 						then e(ToonText, {
 							text = buyNote,

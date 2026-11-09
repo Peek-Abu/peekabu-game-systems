@@ -27,6 +27,9 @@ local CosmeticOutfitRules = require(ReplicatedStorage.Shared.Features.Cosmetic.R
 local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
 local CosmeticRules = require(ReplicatedStorage.Shared.Features.Cosmetic.Rules.CosmeticRules)
 local CurrencyUtils = require(ReplicatedStorage.Shared.Features.Currency.Utils.CurrencyUtils)
+local DealConstants = require(ReplicatedStorage.Shared.Features.Deal.Data.DealConstants)
+local DealRules = require(ReplicatedStorage.Shared.Features.Deal.Rules.DealRules)
+local DealServiceClient = require(ReplicatedStorage.Client.Features.Deal.DealServiceClient)
 local ShopRegistry = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopRegistry)
 local ShopRotationUtils = require(ReplicatedStorage.Shared.Features.Shop.Utils.ShopRotationUtils)
 local ShopServiceClient = require(ReplicatedStorage.Client.Features.Shop.ShopServiceClient)
@@ -59,6 +62,8 @@ local usePaperViewport = require(script.Parent.Parent.Paper.usePaperViewport)
 local InventoryViewModel = require(script.Parent.Parent.Inventory.InventoryViewModel)
 local LockerPanel = require(script.Parent.Parent.Locker.LockerPanel)
 local ShopPassesPanel = require(script.Parent.ShopPassesPanel)
+local DealBanner = require(script.Parent.Parent.Deal.DealBanner)
+local DealViewModel = require(script.Parent.Parent.Deal.DealViewModel)
 local ShopProductPanel = require(script.Parent.ShopProductPanel)
 local VM = require(script.Parent.ShopViewModel)
 
@@ -366,6 +371,9 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 	local lockerOpening = ReactCharm.useAtom(LockerStore.opening)
 	local passInfo = ReactCharm.useAtom(ShopStore.passInfo)
 	local publicPlayers = ReactCharm.useAtom(StateSyncClientStore.publicPlayers)
+	local deals = ReactCharm.useAtom(StateSyncClientStore.deals)
+	-- Which thing the Featured banner spot shows: the offered one-time deals first, then today's banner.
+	local slot, setSlot = React.useState(1)
 	local passKeys = MarketplaceRegistry.passKeys()
 	local tab, setTab = React.useState(props.tab or "featured")
 	local filter, setFilter = React.useState(function(): string?
@@ -678,7 +686,28 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 		local topHeight = if phone then content.height else math.floor(content.height * 0.64)
 		local nodes: Nodes = {}
 		local featured = live.featured
-		if featured ~= nil then
+		local dealIds: { DealConstants.DealId } = if preview ~= nil then {} else DealRules.offeredList(deals, owns)
+		local spots = #dealIds + (if featured ~= nil then 1 else 0)
+		local spot = ((slot - 1) % math.max(1, spots)) + 1
+		local onNext = if spots > 1
+			then function()
+				setSlot(spot + 1)
+			end
+			else nil
+		local dealId = dealIds[spot]
+		if dealId ~= nil then
+			nodes.banner = e(DealBanner, {
+				banner = DealViewModel.banner(dealId, DealServiceClient:productReady(dealId)),
+				phone = phone,
+				textSize = size,
+				headingSize = layout.headingSize,
+				size = UDim2.fromOffset(bannerWidth, topHeight),
+				onBuy = function()
+					DealServiceClient:buy(dealId, nil)
+				end,
+				onNext = onNext,
+			})
+		elseif featured ~= nil then
 			local product = VM.product(featured, owns, balances)
 			local card = product.card
 			local nameSize = math.floor(layout.headingSize * (if phone then 1 else 1.4))
@@ -741,6 +770,19 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 					end,
 					zIndex = 4,
 				}),
+				next = if onNext ~= nil
+					then e(ToonButton, {
+						variant = "night",
+						text = "Next",
+						textSize = if phone then 13 else 22,
+						small = true,
+						anchor = Vector2.new(1, 0),
+						position = UDim2.new(1, if phone then -12 else -28, 0, if phone then 10 else 24),
+						size = UDim2.fromOffset(if phone then 64 else 110, if phone then 28 else 46),
+						onActivated = onNext,
+						zIndex = 6,
+					})
+					else nil,
 				timer = e(ToonPill, {
 					text = `Changes in {VM.timer(live.nextRotation - now)}`,
 					hue = "night",

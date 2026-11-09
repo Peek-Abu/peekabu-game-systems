@@ -75,6 +75,7 @@ local function makeProfileData(gloom, gleam, keys, pity)
 			rank = { season = "mvp-1", xp = 0, lastAwardedRunId = "" },
 			titles = { earned = {} },
 			coffee = { vouchers = 0 },
+			deals = { bought = {}, picks = {} },
 		},
 		slots = slots,
 	}

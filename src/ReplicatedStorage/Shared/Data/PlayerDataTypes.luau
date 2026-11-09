@@ -178,6 +178,15 @@ export type Coffee = {
 }
 
 --[=[
+	The account-wide deals slice (DealServiceServer, DealRules): the one-time deals bought (deal id -> true) and the
+	picks not chosen yet (deal id -> count). Owner-only sync, for the shop's deal cards and the chooser.
+]=]
+export type Deals = {
+	bought: { [string]: boolean },
+	picks: { [string]: number },
+}
+
+--[=[
 	The account-wide daily reward slice: the UTC day index (days since the Unix epoch, shifted by
 	DailyRewardConstants.DAY_OFFSET_HOURS) of the last claim (0 = never) and the current streak.
 ]=]
@@ -282,6 +291,7 @@ export type PlayerAccount = {
 	tips: Tips,
 	training: Training,
 	coffee: Coffee,
+	deals: Deals,
 	-- Extend with other ACCOUNT-WIDE slices here (settings, entitlements, ...)
 }
 

@@ -115,6 +115,12 @@ local DEFINITIONS: { [string]: SliceDefinition } = {
 			return profile.account.coffee
 		end,
 	},
+	-- ACCOUNT-WIDE: one-time deals bought and picks waiting (DealServiceServer); owner-only.
+	deals = {
+		read = function(profile)
+			return profile.account.deals
+		end,
+	},
 	-- ACCOUNT-WIDE: keys and pity per Locker (LockerServiceServer); owner-only.
 	lockers = {
 		read = function(profile)

@@ -62,6 +62,7 @@ local function makeProfileData()
 			itemMint = { nextUid = 1 },
 			titles = { earned = {} },
 			coffee = { vouchers = 0 },
+			deals = { bought = {}, picks = {} },
 			premium = { balance = 0 },
 			receipts = { ids = {} },
 			firstSeen = { at = 0 },
