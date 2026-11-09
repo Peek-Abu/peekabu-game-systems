@@ -51,6 +51,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	-- logic and ARE specced (AddCurrencyServer.spec, etc.).
 	["ServerScriptService.Features.Queue.Systems.QueueTicketSystem"] = "MemoryStore and join-data shell (QueueTeleportRules.pick and decode are specced)",
 	["ServerScriptService.Features.Leaderboard.LeaderboardServiceServer"] = "DataStore, Shift signal and StateSync shell (LeaderboardCrewUtils is specced)",
+	["ServerScriptService.Features.Coffee.CoffeeServiceServer"] = "Marketplace, Shift, StateSync and Toast shell (CoffeeRules is specced)",
 	["ServerScriptService.Features.Training.TrainingServiceServer"] = "data layer, Queue, Office and Shift shell (TrainingRules, TrainingStopRules and TrainingMapRules are specced)",
 	["ServerScriptService.Features.Training.Systems.TrainingSiteSystem"] = "Instance/Vacuum/Cargo shell (the map is read and checked by the specced TrainingMapRules)",
 	["ServerScriptService.Features.Training.Systems.TrainingRunSystem"] = "Instance/signal shell (progress is the specced TrainingStopRules)",

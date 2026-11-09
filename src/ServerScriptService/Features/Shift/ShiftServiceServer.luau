@@ -57,6 +57,7 @@ local RankFormulas = require(ReplicatedStorage.Shared.Features.Rank.Utils.RankFo
 local RoundTypes = require(ReplicatedStorage.Shared.Features.Round.Data.RoundTypes)
 local ToastRegistry = require(ReplicatedStorage.Shared.Features.Toast.Data.ToastRegistry)
 local ShiftConstants = require(ShiftShared.Data.ShiftConstants)
+local CoffeeRules = require(ReplicatedStorage.Shared.Features.Coffee.Rules.CoffeeRules)
 local ShiftTypes = require(ShiftShared.Data.ShiftTypes)
 local ShiftSnapshotUtils = require(ShiftShared.Utils.ShiftSnapshotUtils)
 local ShiftEvents = require(ShiftShared.Net.ShiftEvents)
@@ -142,6 +143,8 @@ local changed: SignalTyped.Signal<ShiftTypes.ShiftState> = SignalTyped.new()
 local caught: SignalTyped.Signal<Player, number, number> = SignalTyped.new()
 -- A training run (setTraining): the pressure tier never rises, and a catch's crew feedback is training's own.
 local training = false
+-- Who bought this shift's Coffee for the crew (setCoffee); nil = none. Cleared with the run.
+local coffeeBy: string? = nil
 
 local function now(): number
 	return Workspace:GetServerTimeNow()
@@ -210,6 +213,7 @@ local function clearRun()
 	roster:clear()
 	results = nil
 	endingRun = false
+	coffeeBy = nil
 end
 
 -- Clears everything the shift made (each step guarded: a throwing reset never stops the next shift).
@@ -275,7 +279,7 @@ end
 -- The review (ShiftReviewSystem.results: never throws, so the shift can always end), from Round's counters, which are
 -- cleared once Round returns to its lobby; leavers stay from the roster.
 local function safeResults(outcome: string): ShiftTypes.ShiftResults
-	return ShiftReviewSystem.results({
+	local built = ShiftReviewSystem.results({
 		outcome = outcome,
 		quota = state.quota,
 		quotaMet = state.quotaMet,
@@ -284,6 +288,10 @@ local function safeResults(outcome: string): ShiftTypes.ShiftResults
 		offered = site:offered(),
 		ranFor = math.max(0, now() - (state.startedAt or now())),
 	})
+	-- Coffee for the crew (CoffeeServiceServer:setCoffee): the buyer, and the pay it doubles.
+	built.coffee = coffeeBy
+	built.payScale = CoffeeRules.payScale(coffeeBy ~= nil)
+	return built
 end
 
 local function onRoundPhase(roundState: RoundTypes.RoundState)
@@ -456,6 +464,8 @@ export type ShiftServiceServer = {
 	spendLife: (self: ShiftServiceServer, player: Player) -> boolean,
 	setLivesFloor: (self: ShiftServiceServer, floor: number) -> (),
 	setTraining: (self: ShiftServiceServer, on: boolean) -> (),
+	setCoffee: (self: ShiftServiceServer, buyer: string) -> (),
+	coffee: (self: ShiftServiceServer) -> string?,
 	isTraining: (self: ShiftServiceServer) -> boolean,
 	addLivesModifier: (self: ShiftServiceServer, modify: (number) -> number) -> () -> (),
 }
@@ -668,6 +678,21 @@ local ShiftServiceServer: ShiftServiceServer = {
 	]=]
 	setTraining = function(_self, on)
 		training = on
+	end,
+
+	--[=[
+		Coffee for the crew (CoffeeServiceServer): `buyer` bought this shift's coffee, so the review doubles the crew's
+		Credits (CoffeeRules.payScale). Forgotten when the run is cleared.
+	]=]
+	setCoffee = function(_self, buyer)
+		coffeeBy = buyer
+	end,
+
+	--[=[
+		Who bought this shift's coffee (setCoffee), or nil.
+	]=]
+	coffee = function(_self)
+		return coffeeBy
 	end,
 
 	--[=[

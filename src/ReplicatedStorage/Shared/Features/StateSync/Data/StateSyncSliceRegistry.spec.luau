@@ -49,6 +49,7 @@ return function()
 					lockers = { keys = {}, pity = {}, opened = 0 },
 					social = { groupPaid = false, referredBy = 0, referralPaid = false, referrals = 0, askedAt = 0 },
 					training = { finished = false, runs = 0, toured = false },
+					coffee = { vouchers = 0 },
 					loadout = {
 						current = "Pippa",
 						picked = false,
@@ -80,6 +81,7 @@ return function()
 				lockers = true,
 				social = true,
 				training = true,
+				coffee = true,
 			}
 
 			for name, definition in StateSyncSliceRegistry.DEFINITIONS do
@@ -91,6 +93,7 @@ return function()
 
 		it("declares exactly the replicated profile slices", function()
 			local expected = {
+				"coffee",
 				"currency",
 				"dailyReward",
 				"entitlements",

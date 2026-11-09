@@ -124,6 +124,13 @@ return function()
 			expect(view.rows[3].detail).to.equal(nil)
 		end)
 
+		it("shows the doubled pay and who bought the crew's coffee", function()
+			local view =
+				ShiftReviewViewModel.review(snapshot({}, review({ coffee = "Ice", payScale = 2 })), nil, 4, 100, false)
+			expect(view.rows[2].value).to.equal("1154 Credits")
+			expect(view.rows[2].detail).to.equal("Coffee by Ice: 2x")
+		end)
+
 		it("stamps CONTRACT MISSED, still pays what was done, and HR's line", function()
 			local view = ShiftReviewViewModel.review(
 				snapshot({}, review({ quotaMet = false, rating = "needsImprovement" })),

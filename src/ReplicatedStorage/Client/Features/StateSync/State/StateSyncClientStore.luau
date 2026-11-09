@@ -49,6 +49,8 @@ local social = Charm.atom(initialSocial)
 local initialTraining: PlayerDataTypes.Training? = nil
 -- nil until the save loads, so a not-yet-known player never sees the new-player arrow (TrainingRules.isNew).
 local training = Charm.atom(initialTraining)
+local initialCoffee: PlayerDataTypes.Coffee = { vouchers = 0 }
+local coffee = Charm.atom(initialCoffee)
 -- The public slice: other players' public data, already filtered by the server to the players relevant
 -- to this client (plus this client itself). Not a profile slice; synced under StateSyncConstants.publicKey.
 local initialPublicPlayers: PublicPlayerTypes.PublicPlayerMap = {}
@@ -77,6 +79,7 @@ local StateSyncClientStore = {
 	lockers = lockers,
 	social = social,
 	training = training,
+	coffee = coffee,
 	publicPlayers = publicPlayers,
 	world = world,
 }
@@ -100,6 +103,7 @@ local atoms: { [string]: any } = {
 	lockers = lockers,
 	social = social,
 	training = training,
+	coffee = coffee,
 	publicPlayers = publicPlayers,
 	world = world,
 }

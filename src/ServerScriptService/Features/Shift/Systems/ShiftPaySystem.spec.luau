@@ -111,6 +111,15 @@ return function()
 			stop()
 		end)
 
+		it("doubles the Credits (not the saved Gloom) when the crew had coffee", function()
+			local plain = ShiftPaySystem.amounts(review(340, 260, 420))
+			local coffee = review(340, 260, 420)
+			coffee.payScale = 2
+			local doubled = ShiftPaySystem.amounts(coffee)
+			expect(doubled.credits).to.equal(plain.credits * 2)
+			expect(doubled.gloom).to.equal(plain.gloom)
+		end)
+
 		it("saves a tenth of the Gloom removed, rounded down", function()
 			expect(ShiftConstants.SAVED_GLOOM_PER_CLEARED).to.equal(0.1)
 			expect(ShiftPaySystem.amounts(review(340, 260, 420)).gloom).to.equal(34)

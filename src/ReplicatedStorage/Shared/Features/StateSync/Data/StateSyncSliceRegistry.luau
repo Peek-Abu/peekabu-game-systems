@@ -109,6 +109,12 @@ local DEFINITIONS: { [string]: SliceDefinition } = {
 			return profile.account.training
 		end,
 	},
+	-- ACCOUNT-WIDE: unspent Coffee for the crew purchases (CoffeeServiceServer); owner-only.
+	coffee = {
+		read = function(profile)
+			return profile.account.coffee
+		end,
+	},
 	-- ACCOUNT-WIDE: keys and pity per Locker (LockerServiceServer); owner-only.
 	lockers = {
 		read = function(profile)

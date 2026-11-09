@@ -16,6 +16,7 @@ local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.Depo
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local ShiftCurrencyUtils = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftCurrencyUtils)
+local CoffeeConstants = require(ReplicatedStorage.Shared.Features.Coffee.Data.CoffeeConstants)
 local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local PaperHudScaleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudScaleViewModel)
@@ -329,6 +330,10 @@ function ShiftReviewViewModel.review(
 	-- from dust and from cleaning valuables, plus the valuables banked; paid whether or not the contract was met.
 	local split = ShiftQuotaFormulas.breakdown(results.cleared, results.dust or 0, results.bonus)
 	local saved = ShiftQuotaFormulas.savedGloom(results.cleared)
+	-- Coffee for the crew doubles the pay (the server pays the same: ShiftPaySystem.amounts).
+	local scale = results.payScale or 1
+	local paid = math.floor(split.credits * scale)
+	local coffee = results.coffee
 	local crewText = if truck ~= nil then `Crew of Truck {truck}` else "Crew"
 	return {
 		title = if met then "GOAL DONE!" else "GOAL MISSED",
@@ -341,7 +346,7 @@ function ShiftReviewViewModel.review(
 				meaning = "grape",
 				gold = false,
 			},
-			{ label = "Credits earned", value = `+{split.credits}`, icon = "credits", meaning = "gold", gold = true },
+			{ label = "Credits earned", value = `+{paid}`, icon = "credits", meaning = "gold", gold = true },
 			{
 				label = "Crew caught",
 				value = tostring(results.catches),
@@ -369,8 +374,10 @@ function ShiftReviewViewModel.review(
 			},
 			{
 				label = ShiftCurrencyUtils.earnedLabel(),
-				value = ShiftCurrencyUtils.amount(split.credits),
-				detail = `Dust {split.dustCredits} · Cleaning {split.grimeCredits} · Treasure {split.valuables} · Saved Gloom {saved}`,
+				value = ShiftCurrencyUtils.amount(paid),
+				detail = if coffee ~= nil
+					then string.format(CoffeeConstants.TEXT.review, coffee, scale)
+					else `Dust {split.dustCredits} · Cleaning {split.grimeCredits} · Treasure {split.valuables} · Saved Gloom {saved}`,
 			},
 			{ label = "CREW CAUGHT", value = tostring(results.catches) },
 			{ label = "ASSETS RECOVERED", value = `{results.salvage} of {results.offered}` },

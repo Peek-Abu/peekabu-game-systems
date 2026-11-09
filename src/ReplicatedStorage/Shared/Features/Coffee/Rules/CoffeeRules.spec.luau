@@ -1,0 +1,56 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local CoffeeConstants = require(ReplicatedStorage.Shared.Features.Coffee.Data.CoffeeConstants)
+local CoffeeRules = require(ReplicatedStorage.Shared.Features.Coffee.Rules.CoffeeRules)
+
+return function()
+	describe("fresh and validate", function()
+		it("starts with no vouchers and accepts whole numbers 0 or more", function()
+			local slice = CoffeeRules.fresh()
+			expect(slice.vouchers).to.equal(0)
+			expect((CoffeeRules.validate(slice))).to.equal(true)
+			expect((CoffeeRules.validate({ vouchers = 2 }))).to.equal(true)
+			expect((CoffeeRules.validate({ vouchers = -1 }))).to.equal(false)
+			expect((CoffeeRules.validate({ vouchers = 1.5 }))).to.equal(false)
+		end)
+	end)
+
+	describe("offered", function()
+		it("shows the coffee button only while a real shift runs and nobody bought coffee yet", function()
+			expect(CoffeeRules.offered("running", false, false)).to.equal(true)
+			expect(CoffeeRules.offered("running", true, false)).to.equal(false)
+			expect(CoffeeRules.offered("running", false, true)).to.equal(false)
+			expect(CoffeeRules.offered("lobby", false, false)).to.equal(false)
+			expect(CoffeeRules.offered("results", false, false)).to.equal(false)
+		end)
+	end)
+
+	describe("spends", function()
+		it("spends a voucher on a running shift with no coffee yet", function()
+			expect(CoffeeRules.spends("running", false, false, 1)).to.equal(true)
+		end)
+
+		it("keeps the voucher when there is no shift, in training, when coffee is on, or with none", function()
+			expect(CoffeeRules.spends("lobby", false, false, 1)).to.equal(false)
+			expect(CoffeeRules.spends("running", true, false, 1)).to.equal(false)
+			expect(CoffeeRules.spends("running", false, true, 1)).to.equal(false)
+			expect(CoffeeRules.spends("running", false, false, 0)).to.equal(false)
+		end)
+	end)
+
+	describe("payScale", function()
+		it("doubles the shift's pay with coffee, and leaves it without", function()
+			expect(CoffeeRules.payScale(true)).to.equal(CoffeeConstants.PAY_SCALE)
+			expect(CoffeeConstants.PAY_SCALE).to.equal(2)
+			expect(CoffeeRules.payScale(false)).to.equal(1)
+		end)
+	end)
+
+	describe("paLine", function()
+		it("names the buyer on the PA", function()
+			expect(CoffeeRules.paLine("Ice")).to.equal(
+				"PA: Ice bought coffee for the crew! Everyone gets 2x pay this shift!"
+			)
+		end)
+	end)
+end

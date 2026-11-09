@@ -169,6 +169,15 @@ export type Training = {
 }
 
 --[=[
+	The account-wide coffee slice (CoffeeServiceServer, CoffeeRules): unspent Coffee for the crew purchases (a second
+	coffee bought in the same shift, or one whose receipt landed with no shift running). Owner-only sync, for the
+	shift HUD's FREE button.
+]=]
+export type Coffee = {
+	vouchers: number,
+}
+
+--[=[
 	The account-wide daily reward slice: the UTC day index (days since the Unix epoch, shifted by
 	DailyRewardConstants.DAY_OFFSET_HOURS) of the last claim (0 = never) and the current streak.
 ]=]
@@ -272,6 +281,7 @@ export type PlayerAccount = {
 	social: Social,
 	tips: Tips,
 	training: Training,
+	coffee: Coffee,
 	-- Extend with other ACCOUNT-WIDE slices here (settings, entitlements, ...)
 }
 
