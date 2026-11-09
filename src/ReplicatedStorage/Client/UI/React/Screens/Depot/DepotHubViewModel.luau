@@ -97,48 +97,12 @@ VM.SLIDER_LABEL_WIDTH = 280
 function VM.visible(snapshot: ShiftTypes.ShiftSnapshot?, userId: number): boolean
 	return snapshot == nil or snapshot.phase == "lobby" or table.find(snapshot.crew, userId) == nil
 end
--- Where the hub puts the Company Clipboard and Invite (owner 11-08: the clipboard is too invasive). "now" is today's
--- hub; A, B and C are the layouts being compared (Studio's DepotConstants.HUB_LAYOUT_ATTRIBUTE picks one), all with the
--- clipboard minimized: no Today tracker in the middle and no daily pop-up. Before training is done there is no
--- clipboard at all.
--- pill: the COMPANY CLIPBOARD button mid-top; tab: a tile under SHOP; corner: a strip left of the Credits;
--- chip: a strip under the profile card; hidden: none.
-export type ClipboardKind = "pill" | "tab" | "corner" | "chip" | "hidden"
-export type ClipboardLayout = {
-	option: "now" | "A" | "B" | "C",
-	clipboard: ClipboardKind,
-	-- center: mid-screen under the tracker; tonight: under the Tonight card; menu: a tile in the left column;
-	-- profile: beside the clipboard chip under the profile card.
-	invite: "center" | "tonight" | "menu" | "profile",
-	-- The Today tracker in the hub.
-	tracker: boolean,
-	-- The clipboard opens by itself once a day.
-	greet: boolean,
-}
-function VM.clipboardLayout(option: unknown, isNew: boolean): ClipboardLayout
-	local layout: ClipboardLayout = if option == "A"
-		then { option = "A", clipboard = "tab", invite = "tonight", tracker = false, greet = false }
-		elseif option == "B" then {
-			option = "B",
-			clipboard = "corner",
-			invite = "menu",
-			tracker = false,
-			greet = false,
-		}
-		elseif option == "C" then {
-			option = "C",
-			clipboard = "chip",
-			invite = "profile",
-			tracker = false,
-			greet = false,
-		}
-		else { option = "now", clipboard = "pill", invite = "center", tracker = true, greet = true }
-	if isNew then
-		layout.clipboard = "hidden"
-		layout.tracker = false
-		layout.greet = false
-	end
-	return layout
+--[=[
+	Whether the hub shows the CLIPBOARD tile (under SHOP; owner 11-08, layout A): not before training is done. The
+	clipboard never opens by itself and its Today tracker lives inside the card.
+]=]
+function VM.clipboardShown(isNew: boolean): boolean
+	return not isNew
 end
 function VM.cardSize(phone: boolean): Vector2
 	return if phone then Vector2.new(62, 72) else Vector2.new(86, 106)

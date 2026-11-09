@@ -220,9 +220,9 @@ function EmployeePortraitSystem.build(
 	end
 	joinOutfit(copy)
 	local look = if pose ~= nil then pose.look else nil
-	if look ~= nil and EmployeeFaceSystem.applyNamed(copy, look, true) then
-		-- The pose's portrait-only face (this employee has it).
-	elseif pose ~= nil and pose.face ~= nil then
+	-- The pose's portrait-only face when this employee has it, else its fallback face.
+	local named = look ~= nil and EmployeeFaceSystem.applyNamed(copy, look, true)
+	if not named and pose ~= nil and pose.face ~= nil then
 		EmployeeFaceSystem.apply(copy, pose.face, true)
 	end
 	local faces = copy:FindFirstChild(EmployeeConstants.FACES_FOLDER)

@@ -59,14 +59,10 @@ export type DepotHubPanelProps = {
 	-- The SHOP tile under the gift.
 	onShop: () -> (),
 	onGo: () -> (),
-	-- The minimized Company Clipboard's own button (DepotHubViewModel.clipboardLayout): a tile under SHOP ("tab"), a
-	-- strip left of the Credits ("corner") or a strip under the profile card ("chip"); nil or anything else: none.
-	-- `clipboardBadge`: today's punch is still free.
-	clipboard: DepotHubViewModel.ClipboardKind?,
+	-- The Company Clipboard's tile under SHOP (owner 11-08, layout A; DepotHubViewModel.clipboardShown), its "!" while
+	-- today's punch is still free, and what it opens. No tile without `onClipboard`.
 	clipboardBadge: boolean?,
 	onClipboard: (() -> ())?,
-	-- An INVITE tile at the end of the menu column.
-	onInviteTile: (() -> ())?,
 }
 
 type Tile = {
@@ -186,10 +182,6 @@ local function tiles(props: DepotHubPanelProps): React.ReactNode
 		{ key = "guide", label = "GUIDE", icon = "guide", variant = "primary", activate = props.onGuide },
 		{ key = "settings", label = "SETTINGS", icon = "settings", variant = "lilac", activate = props.onSettings },
 	}
-	local onInvite = props.onInviteTile
-	if onInvite ~= nil then
-		table.insert(list, { key = "invite", label = "INVITE", icon = "heart", variant = "sky", activate = onInvite })
-	end
 	local side = if phone then 68 else 136
 	local gap = if phone then 12 else 18
 	local nodes: { [string]: React.ReactNode } = {}
@@ -222,46 +214,26 @@ local function tiles(props: DepotHubPanelProps): React.ReactNode
 	}, nodes)
 end
 
--- The minimized clipboard's button in `kind`'s look, or nil.
-local function clipboardButton(props: DepotHubPanelProps, kind: DepotHubViewModel.ClipboardKind): React.ReactNode
+-- The Company Clipboard's tile under SHOP, or nil (DepotHubViewModel.clipboardShown).
+local function clipboardTile(props: DepotHubPanelProps): React.ReactNode
 	local onOpen = props.onClipboard
-	if props.clipboard ~= kind or onOpen == nil then
+	if onOpen == nil then
 		return nil
 	end
 	local phone = props.phone
-	local badge = if props.clipboardBadge then "!" else nil
-	if kind == "tab" then
-		return e(ToonButton, {
-			variant = "lilac",
-			layout = "tile",
-			icon = "clock",
-			text = "CLIPBOARD",
-			textSize = if phone then 11 else 20,
-			badge = badge,
-			anchor = Vector2.new(1, 0),
-			position = UDim2.fromOffset(0, if phone then 214 else 424),
-			size = if phone then UDim2.fromOffset(66, 66) else UDim2.fromOffset(134, 134),
-			small = phone,
-			radius = if phone then 16 else 24,
-			onActivated = onOpen,
-		})
-	end
 	return e(ToonButton, {
 		variant = "lilac",
-		layout = "inline",
+		layout = "tile",
 		icon = "clock",
-		text = "CLIPBOARD",
-		textSize = if phone then 13 else 24,
-		badge = badge,
-		small = true,
-		anchor = if kind == "corner" then Vector2.new(1, 0) else Vector2.zero,
-		position = if kind == "corner"
-			then UDim2.fromOffset(if phone then -186 else -348, 0)
-			elseif phone then UDim2.fromOffset(168, 64)
-			else UDim2.fromOffset(150, 226),
-		size = if phone
-			then UDim2.fromOffset(122, if kind == "corner" then 46 else 34)
-			else UDim2.fromOffset(232, if kind == "corner" then 70 else 52),
+		-- The phone tile is 66 px: a short word that fits at a readable size.
+		text = if phone then "CARD" else "CLIPBOARD",
+		textSize = if phone then 13 else 20,
+		badge = if props.clipboardBadge then "!" else nil,
+		anchor = Vector2.new(1, 0),
+		position = UDim2.fromOffset(0, if phone then 214 else 424),
+		size = if phone then UDim2.fromOffset(66, 66) else UDim2.fromOffset(134, 134),
+		small = phone,
+		radius = if phone then 16 else 24,
 		onActivated = onOpen,
 	})
 end
@@ -332,8 +304,7 @@ local function topRight(props: DepotHubPanelProps): React.ReactNode
 			}),
 		}),
 	}
-	nodes.clipboardTab = clipboardButton(props, "tab")
-	nodes.clipboardCorner = clipboardButton(props, "corner")
+	nodes.clipboard = clipboardTile(props)
 	if not phone then
 		local tonight = props.tonight
 		local card: { [string]: React.ReactNode } = {
@@ -423,7 +394,6 @@ local function DepotHubPanel(props: DepotHubPanelProps): React.ReactNode
 		profile = profileCard(props),
 		tiles = tiles(props),
 		topRight = topRight(props),
-		clipboardChip = clipboardButton(props, "chip"),
 	}
 	if props.cta ~= nil then
 		nodes.cta = e(DepotNextShiftCard, { cta = props.cta, phone = props.phone, onGo = props.onGo })

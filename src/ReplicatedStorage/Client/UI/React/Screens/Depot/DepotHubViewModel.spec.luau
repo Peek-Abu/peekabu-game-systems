@@ -135,40 +135,10 @@ return function()
 		end)
 	end)
 
-	describe("clipboardLayout", function()
-		it("keeps today's hub when no option is picked", function()
-			local layout = VM.clipboardLayout(nil, false)
-			expect(layout.clipboard).to.equal("pill")
-			expect(layout.invite).to.equal("center")
-			expect(layout.tracker).to.equal(true)
-			expect(layout.greet).to.equal(true)
-		end)
-
-		it("minimizes the clipboard in every option: no tracker in the middle, no daily pop-up", function()
-			for _, option in { "A", "B", "C" } do
-				local layout = VM.clipboardLayout(option, false)
-				expect(layout.option).to.equal(option)
-				expect(layout.tracker).to.equal(false)
-				expect(layout.greet).to.equal(false)
-				expect(layout.invite ~= "center").to.equal(true)
-			end
-			expect(VM.clipboardLayout("A", false).clipboard).to.equal("tab")
-			expect(VM.clipboardLayout("B", false).clipboard).to.equal("corner")
-			expect(VM.clipboardLayout("C", false).clipboard).to.equal("chip")
-		end)
-
-		it("shows no clipboard at all before training is done, in every option", function()
-			for _, option in { nil, "A", "B", "C" } do
-				local layout = VM.clipboardLayout(option, true)
-				expect(layout.clipboard).to.equal("hidden")
-				expect(layout.tracker).to.equal(false)
-				expect(layout.greet).to.equal(false)
-			end
-		end)
-
-		it("treats anything unknown as no option", function()
-			expect(VM.clipboardLayout("Z", false).option).to.equal("now")
-			expect(VM.clipboardLayout(3, false).option).to.equal("now")
+	describe("clipboardShown", function()
+		it("shows the CLIPBOARD tile only once training is done", function()
+			expect(VM.clipboardShown(false)).to.equal(true)
+			expect(VM.clipboardShown(true)).to.equal(false)
 		end)
 	end)
 end

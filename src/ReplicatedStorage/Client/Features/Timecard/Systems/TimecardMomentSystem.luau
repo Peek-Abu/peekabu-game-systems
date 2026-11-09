@@ -8,38 +8,26 @@
 	  reward, and takes the stamp down after STAMP_SECONDS. The server already paid; this only shows it.
 	- **The greeting.** In the hub, on the real card, with no other screen up (a waiting reveal counts), it opens the
 	  clipboard on the Timecard once a UTC day while today is still free (TimecardMomentUtils.shouldGreet), after
-	  the hub has stayed free for GREET_SETTLE; never before training is done, nor in a minimized hub layout
-	  (DepotHubViewModel.clipboardLayout).
+	  the hub has stayed free for GREET_SETTLE. Not wired since 11-08: the owner wants no pop-up; the hub's CLIPBOARD
+	  tile shows a "!" instead. `greet` stays (specced) in case a game wants the greeting back.
 
 	`start` subscribes to the stores both read; `punched` and `greet` take their effects as deps so specs drive them.
 
 	@class TimecardMomentSystem
 ]=]
 
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local Charm = require(ReplicatedStorage.Packages.Charm)
 local PlayerDataTypes = require(ReplicatedStorage.Shared.Data.PlayerDataTypes)
 -- Registers the shift's punch clock, stamp and fanfare sounds this reuses.
 require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftAssets)
-local TimecardRules = require(ReplicatedStorage.Shared.Features.Timecard.Rules.TimecardRules)
-local TrainingRules = require(ReplicatedStorage.Shared.Features.Training.Rules.TrainingRules)
-local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
-local WorkOrderRegistry = require(ReplicatedStorage.Shared.Features.WorkOrder.Data.WorkOrderRegistry)
 local TimecardMomentStore = require(ReplicatedStorage.Client.Features.Timecard.State.TimecardMomentStore)
 local TimecardMomentUtils = require(ReplicatedStorage.Client.Features.Timecard.Utils.TimecardMomentUtils)
 local Company = require(ReplicatedStorage.Client.Features.UI.State.UICompanyStore)
-local CosmeticRevealStore = require(ReplicatedStorage.Client.Features.Cosmetic.State.CosmeticRevealStore)
-local DepotStore = require(ReplicatedStorage.Client.Features.Depot.State.DepotStore)
-local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
 local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
-local DepotHubViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotHubViewModel)
-local SceneStack = require(ReplicatedStorage.Client.UI.Scenes.SceneStack)
-local UIStore = require(ReplicatedStorage.Client.UI.Scenes.UIStore)
 
 export type Deps = {
 	play: (id: string) -> (),
@@ -54,7 +42,6 @@ local STAMP_LANDS = 0.22
 local REWARD_AT = 0.55
 -- The hub settles this long (no other screen up) before the greeting opens: the pick closing and the hire reveal
 -- that follows it land a moment apart, and the greeting must not slip into that gap.
-local GREET_SETTLE = 1.5
 
 local SOUNDS = table.freeze({
 	clock = "shiftPunchIn",
@@ -76,7 +63,6 @@ local defaults: Deps = {
 
 -- The timecard atom's placeholder (taken at require, before the first sync): until the atom holds another table the
 -- server's card has not arrived, and the placeholder always says "today is free".
-local timecardSeed = StateSyncClientStore.timecard()
 local stoppers: { () -> () } = {}
 -- Bumped by every sync and by stop, so only the latest scheduled check (of a running system) acts.
 local greetRound = 0
@@ -138,44 +124,6 @@ local function now(): number
 	return Workspace:GetServerTimeNow()
 end
 
-local function greetInput(): TimecardMomentUtils.GreetInput
-	local card = StateSyncClientStore.timecard()
-	local moment = now()
-	return {
-		synced = card ~= timecardSeed,
-		inHub = DepotHubViewModel.visible(ShiftStore.snapshot(), Players.LocalPlayer.UserId),
-		busy = DepotStore.card() ~= nil
-			or SceneStack.depth() > 0
-			or Company.visible()
-			or CosmeticRevealStore.current() ~= nil,
-		canPunch = TimecardRules.canPunch(card, moment),
-		greeted = TimecardMomentStore.greeted(),
-		day = WorkOrderRegistry.dayIndex(moment),
-	}
-end
-
--- The hub's clipboard layout (DepotHubViewModel.clipboardLayout): Studio's layout switch, and whether this player still
--- needs training.
-local function hubLayout(): DepotHubViewModel.ClipboardLayout
-	local option = if RunService:IsStudio() then Workspace:GetAttribute(DepotConstants.HUB_LAYOUT_ATTRIBUTE) else nil
-	return DepotHubViewModel.clipboardLayout(option, TrainingRules.isNew(StateSyncClientStore.training()))
-end
-
--- Checks again after GREET_SETTLE and greets only if the hub is still free then (and the hub layout greets at all:
--- not before training is done, and not in a minimized layout).
-local function syncGreeting()
-	if not hubLayout().greet or not TimecardMomentUtils.shouldGreet(greetInput()) then
-		return
-	end
-	greetRound += 1
-	local round = greetRound
-	task.delay(GREET_SETTLE, function()
-		if round == greetRound and hubLayout().greet then
-			TimecardMomentSystem.greet(greetInput())
-		end
-	end)
-end
-
 function TimecardMomentSystem.start()
 	TimecardMomentSystem.stop()
 	table.insert(
@@ -184,12 +132,6 @@ function TimecardMomentSystem.start()
 			TimecardMomentSystem.punched(before, after, now())
 		end)
 	)
-	table.insert(stoppers, Charm.subscribe(StateSyncClientStore.timecard, syncGreeting))
-	table.insert(stoppers, Charm.subscribe(ShiftStore.snapshot, syncGreeting))
-	table.insert(stoppers, Charm.subscribe(DepotStore.card, syncGreeting))
-	table.insert(stoppers, Charm.subscribe(UIStore.sceneStack, syncGreeting))
-	table.insert(stoppers, Charm.subscribe(CosmeticRevealStore.current, syncGreeting))
-	syncGreeting()
 end
 
 function TimecardMomentSystem.stop()

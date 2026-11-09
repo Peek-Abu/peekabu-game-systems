@@ -104,9 +104,6 @@ return table.freeze({
 		crew = Vector2.new(720, 560),
 	}),
 	-- The tags the client finds each kind of depot shell by (DepotBillboardSystem); `review` is your own card's shell.
-	-- Studio only: which hub clipboard layout to show ("A", "B", "C"; DepotHubViewModel.clipboardLayout), while the
-	-- owner compares them.
-	HUB_LAYOUT_ATTRIBUTE = "DevHubLayout",
 	BILLBOARD_TAGS = table.freeze({
 		truck = "DepotTruckTag",
 		contract = "DepotContractBoard",

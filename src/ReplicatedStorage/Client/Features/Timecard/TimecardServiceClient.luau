@@ -11,7 +11,6 @@
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local PlayerDataTypes = require(ReplicatedStorage.Shared.Data.PlayerDataTypes)
@@ -21,8 +20,6 @@ local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
 local Players = game:GetService("Players")
 local Company = require(ReplicatedStorage.Client.Features.UI.State.UICompanyStore)
 local Registry = require(ReplicatedStorage.Shared.Features.WorkOrder.Data.WorkOrderRegistry)
-local TrainingRules = require(ReplicatedStorage.Shared.Features.Training.Rules.TrainingRules)
-local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local WorkRules = require(ReplicatedStorage.Shared.Features.WorkOrder.Rules.WorkOrderRules)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 local CatchStore = require(ReplicatedStorage.Client.Features.Occupant.State.OccupantCatchStore)
@@ -51,13 +48,6 @@ local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync
 local TimecardMomentStore = require(ReplicatedStorage.Client.Features.Timecard.State.TimecardMomentStore)
 local TimecardMomentSystem = require(ReplicatedStorage.Client.Features.Timecard.Systems.TimecardMomentSystem)
 
--- The hub's clipboard layout (DepotHubViewModel.clipboardLayout): Studio's layout switch, and whether this player still
--- needs training.
-local function hubLayout(): DepotHubViewModel.ClipboardLayout
-	local option = if RunService:IsStudio() then Workspace:GetAttribute(DepotConstants.HUB_LAYOUT_ATTRIBUTE) else nil
-	return DepotHubViewModel.clipboardLayout(option, TrainingRules.isNew(StateSyncClientStore.training()))
-end
-
 local function tracker(): React.ReactNode
 	local pinned = ReactCharm.useAtom(Company.pinned)
 	local visible = ReactCharm.useAtom(Company.visible)
@@ -71,8 +61,6 @@ local function tracker(): React.ReactNode
 	local scenes = ReactCharm.useAtom(UIStore.sceneStack)
 	local scale = usePaperHudScale()
 	local now = useServerClock(1)
-	-- Read so the tracker follows training finishing (hubLayout reads it).
-	ReactCharm.useAtom(StateSyncClientStore.training)
 	local userId = Players.LocalPlayer.UserId
 	local inShift = shift ~= nil
 		and shift.phase == "running"
@@ -87,7 +75,8 @@ local function tracker(): React.ReactNode
 		hubBusy = travel ~= nil or #scenes > 0,
 		inShift = inShift,
 	})
-	if found == nil or (found == "hub" and not hubLayout().tracker) then
+	-- In the hub the Today tracker lives inside the clipboard card (owner 11-08); it shows only in a shift.
+	if found == nil or found == "hub" then
 		return nil
 	end
 	local where: TrackerViewModel.Where = found
