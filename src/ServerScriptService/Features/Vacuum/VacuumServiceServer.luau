@@ -49,6 +49,7 @@ local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interacti
 local InteractionRegistry = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionRegistry)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local VacuumMotionConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumMotionConstants)
+local VacuumMotionRigSystem = require(ReplicatedStorage.Shared.Features.Vacuum.Systems.VacuumMotionRigSystem)
 local VacuumChannelTracker = require(ServerScriptService.Features.Vacuum.State.VacuumChannelTracker)
 local VacuumToolSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumToolSystem)
 local VacuumAimSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumAimSystem)
@@ -133,16 +134,23 @@ local function inReach(player: Player, pile: Instance): boolean
 	end
 	local tool = if character ~= nil then character:FindFirstChild(VacuumConstants.TOOL_NAME) else nil
 	local head = if tool ~= nil then tool:FindFirstChild(VacuumConstants.FLOOR_HEAD_NAME) else nil
-	return VacuumTargetRules.reaches(
-		root.Position,
-		root.CFrame.LookVector,
-		if head ~= nil and head:IsA("BasePart") then VacuumTargetRules.head(head.CFrame, head.Size) else nil,
-		{
-			position = pile.Position,
-			radius = VacuumTargetRules.radius(pile.Size, pile:GetAttribute(VacuumConstants.BASE_SIZE_ATTRIBUTE)),
-		},
-		SERVER_REACH
-	)
+	local measured = if head ~= nil and head:IsA("BasePart")
+		then VacuumTargetRules.head(head.CFrame, head.Size)
+		else nil
+	-- The nozzle where the client's aim lays it, computed here from the look it sent (never a client position).
+	if VacuumConstants.SUCTION_FOLLOWS_NOZZLE and character ~= nil then
+		local yaw = character:GetAttribute(VacuumMotionConstants.AIM_YAW_ATTRIBUTE)
+		local pitch = character:GetAttribute(VacuumMotionConstants.AIM_ATTRIBUTE)
+		measured = VacuumMotionRigSystem.nozzleHead(
+			character,
+			math.rad(if type(yaw) == "number" then yaw else 0),
+			if type(pitch) == "number" then math.rad(pitch) else VacuumMotionConstants.aim.neutral
+		) or measured
+	end
+	return VacuumTargetRules.reaches(root.Position, root.CFrame.LookVector, measured, {
+		position = pile.Position,
+		radius = VacuumTargetRules.radius(pile.Size, pile:GetAttribute(VacuumConstants.BASE_SIZE_ATTRIBUTE)),
+	}, SERVER_REACH)
 end
 
 -- Scales a pile down with its progress, keeping it on the floor.

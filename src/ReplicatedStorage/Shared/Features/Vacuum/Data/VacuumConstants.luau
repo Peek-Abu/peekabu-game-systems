@@ -77,6 +77,11 @@ return table.freeze({
 	-- sees the vacuumer a moment later than the client that picked the pile.
 	TARGET = table.freeze({ head = 2, underfoot = 1, range = 5, minDot = 0.5, height = 6 }),
 	TARGET_SLACK = 2,
+	-- The owner's call 2026-11-08: the floor head the target rule measures from is the nozzle where the aim lays it
+	-- (VacuumMotionRigSystem.nozzleHead, from the look the client sent; the server never trusts a client position),
+	-- not the Tool's floor-head part (which the server holds at the planned hold). `false` measures from the part
+	-- again.
+	SUCTION_FOLLOWS_NOZZLE = true,
 	-- Feel (spec §7 "Vacuuming: suction particles into the nozzle, pile shrinks, rising whine, pop + sparkle,
 	-- canister fills"). The whine rises with the pile's progress.
 	WHINE_PITCH_MIN = 0.85,

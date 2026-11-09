@@ -24,7 +24,9 @@ local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.Carg
 local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local VacuumTargetRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumTargetRules)
+local VacuumMotionRigSystem = require(ReplicatedStorage.Shared.Features.Vacuum.Systems.VacuumMotionRigSystem)
 local VacuumFeedbackSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumFeedbackSystem)
+local VacuumLookSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumLookSystem)
 local VacuumFaceSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumFaceSystem)
 local VacuumMotionSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumMotionSystem)
 local VacuumPullSystem = require(ReplicatedStorage.Client.Features.Vacuum.Systems.VacuumPullSystem)
@@ -44,6 +46,22 @@ local unbinders: { () -> () } = {}
 
 -- The pile the local player's vacuum is on (VacuumTargetRules: near the wand's floor head, underfoot, or in
 -- front of the body; never the camera), keeping `current` while it is in reach; nil when none is.
+-- The floor head the pick measures from: the nozzle where the aim lays it (the same rule the server re-checks with,
+-- VacuumConstants.SUCTION_FOLLOWS_NOZZLE), else the Tool's floor-head part.
+local function nozzleOf(character: Model, root: BasePart, head: Instance?): VacuumTargetRules.Head?
+	if VacuumConstants.SUCTION_FOLLOWS_NOZZLE then
+		local nozzle = VacuumMotionRigSystem.nozzleHead(
+			character,
+			VacuumLookSystem.yawOf(Players.LocalPlayer, character, root),
+			VacuumLookSystem.pitchOf(Players.LocalPlayer, character)
+		)
+		if nozzle ~= nil then
+			return nozzle
+		end
+	end
+	return if head ~= nil and head:IsA("BasePart") then VacuumTargetRules.head(head.CFrame, head.Size) else nil
+end
+
 local function aimedPile(current: Instance?): Instance?
 	local character = Players.LocalPlayer.Character
 	local root = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil
@@ -85,7 +103,7 @@ local function aimedPile(current: Instance?): Instance?
 	local index = VacuumTargetRules.pick(
 		root.Position,
 		root.CFrame.LookVector,
-		if head ~= nil and head:IsA("BasePart") then VacuumTargetRules.head(head.CFrame, head.Size) else nil,
+		nozzleOf(character, root, head),
 		piles,
 		VacuumConstants.TARGET,
 		currentIndex

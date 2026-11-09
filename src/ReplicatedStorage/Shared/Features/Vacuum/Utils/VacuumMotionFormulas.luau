@@ -611,4 +611,38 @@ function VacuumMotionFormulas.legFold(thigh: number, shin: number, drop: number)
 	return low, -(low + ankle), ankle
 end
 
+--[=[
+	Where the floor head sits (root space) for a look `heading` radians off the body at `pitch` (radians): its
+	centre and the half of its width (a vector across it), with the aim's turn toward the look point and its reach
+	out or in laid on the rest hold (the other layers, the brace, kick, shimmy and sway, left off). The suction picks
+	piles from here (VacuumTargetRules, the owner's call 2026-11-08), on the server from the look the client sent, so
+	it never trusts a position from a client.
+]=]
+function VacuumMotionFormulas.nozzle(rest: WandRest, heading: number, pitch: number): (Vector3, Vector3)
+	local look = VacuumMotionFormulas.lookHeading(heading)
+	local raise, reach = VacuumMotionFormulas.aim(pitch, Constants.aim)
+	local layers: Layers = {
+		raise = raise,
+		reach = reach,
+		brace = 0,
+		kick = 0,
+		shimmyYaw = 0,
+		shimmyRoll = 0,
+		swayYaw = 0,
+		swayPitch = 0,
+		aimYaw = VacuumMotionFormulas.aimYaw(rest, look, VacuumMotionFormulas.lookDistance(pitch)),
+		lookYaw = look,
+	}
+	local transform = VacuumMotionFormulas.wand(rest, VacuumMotionFormulas.offsetOf(layers), Constants.floorMargin)
+	-- The head's width: the longer of the two ways across its four bottom corners.
+	local corners = rest.corners
+	local half = Vector3.zero
+	if #corners >= 4 then
+		local one = ((corners[3] + corners[4]) - (corners[1] + corners[2])) / 4
+		local other = ((corners[2] + corners[4]) - (corners[1] + corners[3])) / 4
+		half = if one.Magnitude >= other.Magnitude then one else other
+	end
+	return transform * headCentre(rest), transform:VectorToWorldSpace(half)
+end
+
 return VacuumMotionFormulas

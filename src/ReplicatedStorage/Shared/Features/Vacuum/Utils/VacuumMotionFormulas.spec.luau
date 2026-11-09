@@ -641,6 +641,38 @@ return function()
 			expect(deep <= math.rad(80) + 1e-6).to.equal(true)
 		end)
 	end)
+	describe("nozzle (the suction follows it: owner, 2026-11-08)", function()
+		local tuning = Constants.aim
+		local function flatHeading(v)
+			return VacuumMotionFormulas.heading(Vector3.new(v.X - PIVOT.X, 0, v.Z - PIVOT.Z))
+		end
+
+		it("is the floor head's centre where the aim lays it: turned toward the look about the pivot", function()
+			local ahead = VacuumMotionFormulas.nozzle(REST, 0, tuning.neutral)
+			local left = VacuumMotionFormulas.nozzle(REST, math.rad(30), tuning.neutral)
+			local right = VacuumMotionFormulas.nozzle(REST, math.rad(-30), tuning.neutral)
+			expect(flatHeading(left) > flatHeading(ahead)).to.equal(true)
+			expect(flatHeading(right) < flatHeading(ahead)).to.equal(true)
+		end)
+
+		it("comes in when the camera tilts down and goes out when it tilts up", function()
+			local function out(pitch)
+				local c = VacuumMotionFormulas.nozzle(REST, 0, pitch)
+				return Vector2.new(c.X, c.Z).Magnitude
+			end
+			expect(out(tuning.fullDown) < out(tuning.neutral)).to.equal(true)
+			expect(out(tuning.deadHigh) > out(tuning.neutral)).to.equal(true)
+		end)
+
+		it("gives the head's width across, turned with it", function()
+			local _, half = VacuumMotionFormulas.nozzle(REST, 0, tuning.neutral)
+			local _, turned = VacuumMotionFormulas.nozzle(REST, math.rad(40), tuning.neutral)
+			-- REST's head is 1.2 wide.
+			expect(Vector3.new(half.X, 0, half.Z).Magnitude).to.be.near(0.6, 0.05)
+			expect(half:Dot(turned) < half.Magnitude * turned.Magnitude - 1e-3).to.equal(true)
+		end)
+	end)
+
 	describe("faceToward (the body faces the camera while the wand is out)", function()
 		local tuning = Constants.face
 

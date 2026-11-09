@@ -37,6 +37,7 @@ local RunService = game:GetService("RunService")
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local Constants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumMotionConstants)
 local VacuumMotionFormulas = require(ReplicatedStorage.Shared.Features.Vacuum.Utils.VacuumMotionFormulas)
+local VacuumTargetRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumTargetRules)
 
 -- What `apply` lays on: the wand's root-space transform (VacuumMotionFormulas.wand), the hip drop (studs), the
 -- torso's forward lean and its turn toward the aim over the waist (radians; nil reads 0).
@@ -164,11 +165,24 @@ local function headCorners(handle: BasePart, head: BasePart): { Vector3 }
 	return corners
 end
 
---[=[
-	Binds `character`'s held vacuum: nil unless it holds the vacuum Tool (with its floor head and GripUpper) and its
-	root carries the hold's right IK target.
-]=]
-function VacuumMotionRigSystem.bind(character: Model): Rig?
+-- What `readRest` reads of a held vacuum (bind's inputs).
+type Reading = {
+	humanoid: Humanoid,
+	root: BasePart,
+	tool: Tool,
+	handle: BasePart,
+	right: Attachment,
+	left: Attachment?,
+	rightRest: CFrame,
+	leftRest: CFrame?,
+	rootJoint: Joint?,
+	waist: Joint?,
+	rest: VacuumMotionFormulas.WandRest,
+}
+
+-- Reads `character`'s held vacuum at rest (nothing is written): nil unless it holds the vacuum Tool (with its floor
+-- head and GripUpper) and its root carries the hold's right IK target.
+local function readRest(character: Model): Reading?
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	local root = part(character, "HumanoidRootPart")
 	local found = character:FindFirstChild(VacuumConstants.TOOL_NAME)
@@ -233,6 +247,71 @@ function VacuumMotionRigSystem.bind(character: Model): Rig?
 			}
 			else nil,
 	}
+	return {
+		humanoid = humanoid,
+		root = root,
+		tool = tool,
+		handle = handle,
+		right = right,
+		left = left,
+		rightRest = rightRest,
+		leftRest = leftRest,
+		rootJoint = rootJoint,
+		waist = waist,
+		rest = rest,
+	}
+end
+
+--[=[
+	`character`'s held vacuum at rest (VacuumMotionFormulas.WandRest, root space), read without binding or writing
+	anything (the suction's nozzle point reads it on the server and the client alike); nil while it holds none.
+]=]
+function VacuumMotionRigSystem.restOf(character: Model): VacuumMotionFormulas.WandRest?
+	local reading = readRest(character)
+	return if reading ~= nil then reading.rest else nil
+end
+
+-- Each held Tool's rest, re-read every REST_REFRESH seconds (the hold can be replanned while held).
+local REST_REFRESH = 2
+local rests: { [Tool]: { rest: VacuumMotionFormulas.WandRest, at: number } } = setmetatable({}, { __mode = "k" })
+
+--[=[
+	Where `character`'s nozzle sits on the floor (world space, VacuumTargetRules' Head) for a look `heading` radians
+	off the body at `pitch` (VacuumMotionFormulas.nozzle on its rest hold); nil while it holds no vacuum. The suction
+	picks piles from here (VacuumConstants.SUCTION_FOLLOWS_NOZZLE).
+]=]
+function VacuumMotionRigSystem.nozzleHead(character: Model, heading: number, pitch: number): VacuumTargetRules.Head?
+	local found = character:FindFirstChild(VacuumConstants.TOOL_NAME)
+	local root = part(character, "HumanoidRootPart")
+	if found == nil or not found:IsA("Tool") or root == nil then
+		return nil
+	end
+	local now = os.clock()
+	local cached = rests[found]
+	if cached == nil or now - cached.at > REST_REFRESH then
+		local rest = VacuumMotionRigSystem.restOf(character)
+		if rest == nil then
+			return nil
+		end
+		cached = { rest = rest, at = now }
+		rests[found] = cached
+	end
+	local centre, half = VacuumMotionFormulas.nozzle(cached.rest, heading, pitch)
+	return { centre = root.CFrame * centre, half = root.CFrame:VectorToWorldSpace(half) }
+end
+
+--[=[
+	Binds `character`'s held vacuum: nil unless it holds the vacuum Tool (with its floor head and GripUpper) and its
+	root carries the hold's right IK target.
+]=]
+function VacuumMotionRigSystem.bind(character: Model): Rig?
+	local reading = readRest(character)
+	if reading == nil then
+		return nil
+	end
+	local humanoid, root, tool, handle = reading.humanoid, reading.root, reading.tool, reading.handle
+	local right, left, rightRest, leftRest = reading.right, reading.left, reading.rightRest, reading.leftRest
+	local rootJoint, waist, rest = reading.rootJoint, reading.waist, reading.rest
 	local legs: { Leg } = {}
 	for _, side in { "Right", "Left" } do
 		local leg = legOf(character, side)
