@@ -129,6 +129,8 @@ return function()
 				ShiftReviewViewModel.review(snapshot({}, review({ coffee = "Ice", payScale = 2 })), nil, 4, 100, false)
 			expect(view.rows[2].value).to.equal("1154 Credits")
 			expect(view.rows[2].detail).to.equal("Coffee by Ice: 2x")
+			expect(view.cards[2].label).to.equal("Credits earned · Coffee 2x")
+			expect(view.cards[2].value).to.equal("+1154")
 		end)
 
 		it("stamps CONTRACT MISSED, still pays what was done, and HR's line", function()

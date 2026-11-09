@@ -48,9 +48,7 @@ return function()
 
 	describe("paLine", function()
 		it("names the buyer on the PA", function()
-			expect(CoffeeRules.paLine("Ice")).to.equal(
-				"PA: Ice bought coffee for the crew! Everyone gets 2x pay this shift!"
-			)
+			expect(CoffeeRules.paLine("Ice")).to.equal("PA: Ice bought coffee! 2x pay for the crew!")
 		end)
 	end)
 end

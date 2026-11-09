@@ -346,7 +346,13 @@ function ShiftReviewViewModel.review(
 				meaning = "grape",
 				gold = false,
 			},
-			{ label = "Credits earned", value = `+{paid}`, icon = "credits", meaning = "gold", gold = true },
+			{
+				label = if coffee ~= nil then string.format(CoffeeConstants.TEXT.card, scale) else "Credits earned",
+				value = `+{paid}`,
+				icon = "credits",
+				meaning = "gold",
+				gold = true,
+			},
 			{
 				label = "Crew caught",
 				value = tostring(results.catches),

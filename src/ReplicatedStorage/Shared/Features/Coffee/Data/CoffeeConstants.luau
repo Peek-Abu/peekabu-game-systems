@@ -24,11 +24,12 @@ local CoffeeConstants = {
 	SPEND_TRIES = 10,
 	SPEND_RETRY_SECONDS = 1,
 	TEXT = table.freeze({
-		pa = "PA: %s bought coffee for the crew! Everyone gets 2x pay this shift!",
+		pa = "PA: %s bought coffee! 2x pay for the crew!",
 		button = "2x PAY",
 		free = "FREE",
 		badge = "2x PAY",
 		review = "Coffee by %s: %dx",
+		card = "Credits earned · Coffee %dx",
 	}),
 }
 
