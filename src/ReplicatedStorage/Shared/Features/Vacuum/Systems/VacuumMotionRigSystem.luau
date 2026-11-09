@@ -271,9 +271,11 @@ function VacuumMotionRigSystem.restOf(character: Model): VacuumMotionFormulas.Wa
 	return if reading ~= nil then reading.rest else nil
 end
 
--- Each held Tool's rest, re-read every REST_REFRESH seconds (the hold can be replanned while held).
+-- Each held Tool's rest, re-read every REST_REFRESH seconds (the hold can be replanned while held); a Tool no
+-- longer in the game is dropped whenever another is read.
 local REST_REFRESH = 2
-local rests: { [Tool]: { rest: VacuumMotionFormulas.WandRest, at: number } } = setmetatable({}, { __mode = "k" })
+type CachedRest = { rest: VacuumMotionFormulas.WandRest, at: number }
+local rests: { [Tool]: CachedRest } = {}
 
 --[=[
 	Where `character`'s nozzle sits on the floor (world space, VacuumTargetRules' Head) for a look `heading` radians
@@ -292,6 +294,11 @@ function VacuumMotionRigSystem.nozzleHead(character: Model, heading: number, pit
 		local rest = VacuumMotionRigSystem.restOf(character)
 		if rest == nil then
 			return nil
+		end
+		for tool in rests do
+			if tool.Parent == nil then
+				rests[tool] = nil
+			end
 		end
 		cached = { rest = rest, at = now }
 		rests[found] = cached
