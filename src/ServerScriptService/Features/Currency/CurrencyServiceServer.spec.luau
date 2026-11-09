@@ -56,6 +56,7 @@ local function makeProfile(credits: number?)
 			dailyReward = { lastDay = 0, streak = 0 },
 			rank = { season = "mvp-1", xp = 0, lastAwardedRunId = "" },
 			titles = { earned = {} },
+			coffee = { vouchers = 0 },
 		},
 		slots = slots,
 	}

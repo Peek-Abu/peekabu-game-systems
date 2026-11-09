@@ -94,6 +94,7 @@ local function makeProfileData(
 		account = {
 			itemMint = { nextUid = nextUid or 1 },
 			titles = { earned = {} },
+			coffee = { vouchers = 0 },
 		},
 		slots = slots,
 	}
