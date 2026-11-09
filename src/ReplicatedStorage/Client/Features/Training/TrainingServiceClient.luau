@@ -50,6 +50,7 @@ local function onWorld(world: WorldTypes.WorldMap)
 	local stop = world[TrainingConstants.WORLD_ENTRY]
 	local rawClear = world[TrainingConstants.CLEAR_ENTRY]
 	local clear = if type(rawClear) == "number" then rawClear else nil
+	TrainingHubSystem.setRun(type(stop) == "number")
 	if type(stop) == "number" then
 		TrainingHallSystem.apply(stop)
 		TrainingHallSystem.setClear(clear)

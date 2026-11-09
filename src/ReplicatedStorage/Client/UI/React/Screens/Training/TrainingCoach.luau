@@ -109,6 +109,32 @@ local function TrainingCoach(props: TrainingCoachProps): React.ReactNode
 		size = UDim2.fromOffset(portrait, portrait),
 		zIndex = z + 2,
 	})
+	-- A ledge across the bottom of the portrait (owner 11-09): Pippa stands behind it, so the model's cut at the belly
+	-- reads as framed instead of chopped off. Only the bottom is edged; nothing caps her head or ears.
+	local ledgeHeight = if phone then 12 else 22
+	children.ledge = e("Frame", {
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0, portrait / 2, 1, 0),
+		Size = UDim2.fromOffset(portrait * 0.92, ledgeHeight),
+		BackgroundColor3 = UIToonConstants.COLOR.selected,
+		ZIndex = z + 3,
+	}, {
+		corner = e("UICorner", { CornerRadius = UDim.new(0, ledgeHeight / 2) }),
+		stroke = e("UIStroke", {
+			Color = UIToonConstants.COLOR.ink,
+			Thickness = if phone then 3 else 5,
+		}),
+		shine = e("Frame", {
+			Position = UDim2.fromOffset(ledgeHeight / 2, if phone then 2 else 4),
+			Size = UDim2.new(1, -ledgeHeight, 0, if phone then 3 else 5),
+			BackgroundColor3 = UIToonConstants.COLOR.white,
+			BackgroundTransparency = 0.45,
+			BorderSizePixel = 0,
+			ZIndex = z + 3,
+		}, {
+			corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
+		}),
+	})
 	return e("Frame", {
 		AnchorPoint = props.anchor or Vector2.new(0, 1),
 		Position = props.position,

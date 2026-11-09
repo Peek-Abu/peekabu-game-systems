@@ -64,9 +64,17 @@ end
 --[=[
 	Whether the hub's chevron trail leads this player to the Training pad: a new player until they stand on the pad;
 	anyone else only after "Play training again" (`againUntil`, a clock time), until then or until they stand on it.
+	Never while a training run is on (`onRun`): a place that offers training can also host the run, and the run has
+	its own hints.
 ]=]
-function TrainingRules.hubTrail(isNew: boolean, againUntil: number?, now: number, onPad: boolean): boolean
-	if onPad then
+function TrainingRules.hubTrail(
+	isNew: boolean,
+	againUntil: number?,
+	now: number,
+	onPad: boolean,
+	onRun: boolean
+): boolean
+	if onPad or onRun then
 		return false
 	end
 	return isNew or (againUntil ~= nil and now < againUntil)

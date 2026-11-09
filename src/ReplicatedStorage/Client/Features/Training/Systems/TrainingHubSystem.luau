@@ -41,6 +41,8 @@ local TRAIL_SECONDS = 0.2
 local pads: { [BasePart]: true } = {}
 local connections: { RBXScriptConnection } = {}
 local isNew = false
+-- A training run is on in this place (its own hints run; the hub's hint and trail stay away).
+local onRun = false
 -- "Play training again": the trail leads to the pad until this clock time (nil: not asked).
 local againUntil: number? = nil
 local trailClock = 0
@@ -101,7 +103,7 @@ local function sign(pad: BasePart)
 end
 
 local function pointToTraining()
-	if not isNew or next(pads) == nil or TrainingSpotlightSystem.active() then
+	if not isNew or onRun or next(pads) == nil or TrainingSpotlightSystem.active() then
 		return
 	end
 	TrainingSpotlightSystem.point({
@@ -112,7 +114,7 @@ local function pointToTraining()
 			seconds = math.huge,
 			accept = isTrainingPad,
 			done = function()
-				return not isNew or standingOn(isTrainingPad)
+				return not isNew or onRun or standingOn(isTrainingPad)
 			end,
 		},
 	})
@@ -129,7 +131,7 @@ local function trailTick(deltaTime: number)
 		-- Reached: "Play training again" is answered, so stepping off does not bring the trail back.
 		againUntil = nil
 	end
-	local show = next(pads) ~= nil and TrainingRules.hubTrail(isNew, againUntil, os.clock(), onPad)
+	local show = next(pads) ~= nil and TrainingRules.hubTrail(isNew, againUntil, os.clock(), onPad, onRun)
 	TrainingTrailSystem.setHub(if show then nearestPadTop() else nil)
 	-- The hint comes back whenever a new player is off the pad (it ends while they stand on it).
 	if show and isNew then
@@ -182,6 +184,13 @@ function TrainingHubSystem.setNew(next: boolean)
 		sign(pad)
 	end
 	pointToTraining()
+end
+
+--[=[
+	Whether a training run is on in this place (the world's training entry): while it is, no hub hint or trail.
+]=]
+function TrainingHubSystem.setRun(next: boolean)
+	onRun = next
 end
 
 --[=[
@@ -244,6 +253,7 @@ function TrainingHubSystem.stop()
 	end
 	table.clear(pads)
 	againUntil = nil
+	onRun = false
 	TrainingTrailSystem.setHub(nil)
 end
 
