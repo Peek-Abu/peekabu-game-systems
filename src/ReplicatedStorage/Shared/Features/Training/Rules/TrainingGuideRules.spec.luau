@@ -146,6 +146,32 @@ return function()
 		end)
 	end)
 
+	describe("tour and stop lines", function()
+		local hold = TrainingConstants.COACH_HOLD
+
+		it("counts the first line of a run, and every new line, as a change", function()
+			expect(TrainingGuideRules.lineChanged(nil, "Follow the gold arrows!")).to.equal(true)
+			expect(TrainingGuideRules.lineChanged("Follow the gold arrows!", "You hid! So brave!")).to.equal(true)
+		end)
+
+		it("never counts the same line, or no line, as a change", function()
+			expect(TrainingGuideRules.lineChanged("Shh!", "Shh!")).to.equal(false)
+			expect(TrainingGuideRules.lineChanged("Shh!", nil)).to.equal(false)
+		end)
+
+		-- The owner's bug (11-10): a first-run tour step ('Run! Hold Shift') hid every stop line until the player
+		-- sprinted, so a player who hid never saw 'You hid! So brave!'.
+		it("holds the tour aside while a new stop line shows, then lets it come back", function()
+			expect(TrainingGuideRules.tourHeld(10, 10)).to.equal(true)
+			expect(TrainingGuideRules.tourHeld(10, 10 + hold - 0.1)).to.equal(true)
+			expect(TrainingGuideRules.tourHeld(10, 10 + hold)).to.equal(false)
+		end)
+
+		it("does not hold the tour before any line changed", function()
+			expect(TrainingGuideRules.tourHeld(nil, 50)).to.equal(false)
+		end)
+	end)
+
 	describe("ranEnough", function()
 		it("passes the run step after a real run, not a tap", function()
 			expect(TrainingGuideRules.ranEnough(0.2)).to.equal(false)

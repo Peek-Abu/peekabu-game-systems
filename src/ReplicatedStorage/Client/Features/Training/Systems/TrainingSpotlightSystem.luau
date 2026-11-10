@@ -4,6 +4,8 @@
 	steps, one at a time.
 
 	- Nothing shows while a page is open over the hub (SceneStack): the step waits, its clock paused.
+	- `hold(untilAt)`: the tour stands aside until `untilAt` (os.clock), its clock paused and the run's own coach shown
+	  (TrainingCoachStore.touring off), so a new stop line of Pippa's is never hidden by a tour step (owner, 11-10).
 	- A "gui" step finds its button by CollectionService tag (the first visible one in this player's PlayerGui), dims
 	  everything else (TrainingSpotlightUtils) and moves on when the button goes away or a page opens over it (it
 	  was pressed), when the dark is tapped, or when the button never shows up (GUI_WAIT seconds).
@@ -88,6 +90,7 @@ local index = 0
 local startedAt = 0
 local seenAt: number? = nil
 local skipped = false
+local holdUntil = 0
 local connection: RBXScriptConnection? = nil
 local elapsed = 0
 -- When the local character last spawned (os.clock).
@@ -270,6 +273,14 @@ local function tick(deltaTime: number)
 		return
 	end
 	local now = os.clock()
+	-- Held aside for a new stop line: the run's coach shows, this step waits with its clock paused.
+	if now < holdUntil then
+		startedAt += deltaTime
+		TrainingCoachStore.setTouring(false)
+		render(nil)
+		return
+	end
+	TrainingCoachStore.setTouring(true)
 	local must = step.mustDo == true
 	if skipped then
 		skipped = false
@@ -316,6 +327,13 @@ local function tick(deltaTime: number)
 end
 
 local TrainingSpotlightSystem = {}
+
+--[=[
+	Holds the tour aside until `untilAt` (os.clock): nothing of it shows and its step's clock waits.
+]=]
+function TrainingSpotlightSystem.hold(untilAt: number)
+	holdUntil = math.max(holdUntil, untilAt)
+end
 
 --[=[
 	Shows `list`'s steps in order, replacing whatever is showing.

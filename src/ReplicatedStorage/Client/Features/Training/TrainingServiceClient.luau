@@ -125,6 +125,19 @@ local function hotbarTour(): { TrainingSpotlightSystem.Step }
 	return steps
 end
 
+-- Pippa's last run line: a new one holds the spotlight tour aside (TrainingGuideRules.tourHeld), so a tour step never
+-- hides a stop line (owner, 11-10: "Run! Hold Shift" covered every stop line until the player sprinted).
+local lastLine: string? = nil
+local function onCoachLine()
+	local now = os.clock()
+	local line = if TrainingCoachStore.stop() ~= nil then TrainingCoachStore.line(now) else nil
+	local text = if line ~= nil then line.text else nil
+	if TrainingGuideRules.lineChanged(lastLine, text) then
+		TrainingSpotlightSystem.hold(now + TrainingConstants.COACH_HOLD)
+	end
+	lastLine = text
+end
+
 local function onTraining(training: PlayerDataTypes.Training?)
 	TrainingHubSystem.setNew(TrainingRules.isNew(training))
 end
@@ -156,6 +169,10 @@ local TrainingServiceClient: TrainingServiceClient = {
 		onTraining(StateSyncClientStore.training())
 		table.insert(stoppers, Charm.subscribe(StateSyncClientStore.world, onWorld))
 		onWorld(StateSyncClientStore.world())
+		table.insert(stoppers, Charm.subscribe(TrainingCoachStore.stop, onCoachLine))
+		table.insert(stoppers, Charm.subscribe(TrainingCoachStore.situation, onCoachLine))
+		table.insert(stoppers, Charm.subscribe(TrainingCoachStore.said, onCoachLine))
+		onCoachLine()
 		table.insert(
 			stoppers,
 			TrainingEvents.packets.Tour.listen(function(_value: boolean)

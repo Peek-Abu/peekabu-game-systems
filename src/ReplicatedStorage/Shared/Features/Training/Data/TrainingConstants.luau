@@ -188,6 +188,8 @@ local TrainingConstants = {
 	HOTBAR_SECONDS = 8,
 	-- The run step passes after this many seconds of real sprinting.
 	RUN_SECONDS = 1,
+	-- Seconds a new stop line of Pippa's shows before a spotlight tour step comes back over it (TrainingGuideRules).
+	COACH_HOLD = 6,
 
 	-- The guide (tutorial v3): a floor trail of chevrons scrolling toward the goal, a bobbing arrow over it and a ring
 	-- on the floor under it. Gold, red at the hide stop. The images are Icey Labs uploads, white so they tint.
