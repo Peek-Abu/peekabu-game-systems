@@ -10,6 +10,8 @@
 	- His two doors swing open and shut on their -X edge (PASS.swing; while open they do not block). Each door's
 	  TrainingSwingOpen attribute says it is open, so the client plays the creak and the slam (TrainingHallSystem).
 	  The offstage spot's lights (the light spilling through the STAFF door) shine only while that door is open.
+	- While he is in the room he carries a flashlight (a warm spot from his head and a faint glow), so a hidden player
+	  can watch him walk past in the dark; it goes when he is parked offstage.
 	- `caught` marks a catch this pass; `clean` is true once he left without one (the stop is done).
 
 	Spec-exempt shell (Instances, tweens, Occupant, Hide); the decisions are the specced TrainingPassRules.
@@ -108,6 +110,37 @@ function TrainingHarlowSystem.new(player: Player, model: Model, plan: TrainingMa
 		end
 	end
 
+	-- His flashlight while he walks the room (made on his current rig, removed when he is parked).
+	local torch: { Instance } = {}
+	local function flashlight(on: boolean)
+		for _, light in torch do
+			light:Destroy()
+		end
+		table.clear(torch)
+		local harlow = OccupantServiceServer:getHarlow()
+		local head = if harlow ~= nil then harlow:FindFirstChild("Head") else nil
+		if not on or head == nil or not head:IsA("BasePart") then
+			return
+		end
+		local beam = Instance.new("SpotLight")
+		beam.Name = "TrainingFlashlight"
+		beam.Face = Enum.NormalId.Front
+		beam.Angle = 55
+		beam.Range = 30
+		beam.Brightness = 4
+		beam.Color = Color3.fromRGB(255, 226, 170)
+		beam.Shadows = true
+		beam.Parent = head
+		local glow = Instance.new("PointLight")
+		glow.Name = "TrainingGlow"
+		glow.Range = 9
+		glow.Brightness = 0.8
+		glow.Color = Color3.fromRGB(255, 214, 160)
+		glow.Parent = head
+		table.insert(torch, beam)
+		table.insert(torch, glow)
+	end
+
 	local function rootOf(): BasePart?
 		local character = player.Character
 		local root = if character ~= nil then character:FindFirstChild("HumanoidRootPart") else nil
@@ -174,6 +207,7 @@ function TrainingHarlowSystem.new(player: Player, model: Model, plan: TrainingMa
 			if command.kind == "openStaff" then
 				swing(staff, true)
 				spilling(true)
+				flashlight(true)
 			elseif command.kind == "closeStaff" then
 				swing(staff, false)
 				spilling(false)
@@ -189,6 +223,7 @@ function TrainingHarlowSystem.new(player: Player, model: Model, plan: TrainingMa
 				OccupantServiceServer:direct({ kind = "chase", userId = player.UserId })
 			elseif command.kind == "park" then
 				OccupantServiceServer:direct({ kind = "park", cframe = plan.offstage })
+				flashlight(false)
 			end
 		end
 	end
@@ -230,6 +265,7 @@ function TrainingHarlowSystem.new(player: Player, model: Model, plan: TrainingMa
 		end,
 
 		stop = function(_self)
+			flashlight(false)
 			swing(staff, false)
 			swing(exit, false)
 			spilling(false)
