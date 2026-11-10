@@ -42,6 +42,9 @@ function TrainingSignSystem.show(part: BasePart, props: TrainingSign.TrainingSig
 		made.StudsOffsetWorldSpace = Vector3.new(0, lift, 0)
 		made.MaxDistance = MAX_DISTANCE
 		made.LightInfluence = 0
+		-- The kit stacks its layers by sibling ZIndex (drop, lip, body, gloss, words): under the default Global order
+		-- the ink drop drew over the whole card, an empty dark bar (owner, 11-10).
+		made.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 		made.ResetOnSpawn = false
 		made.Adornee = part
 		made.Parent = part
