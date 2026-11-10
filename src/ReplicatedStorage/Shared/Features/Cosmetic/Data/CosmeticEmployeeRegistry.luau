@@ -251,6 +251,15 @@ local ITEMS: { CosmeticTypes.Item } = {
 		lore = "Armour made from a flower pot. Prickles is very brave.",
 	},
 	{
+		id = "Prickles.Showstopper",
+		kind = "skin",
+		employee = "Prickles",
+		name = "Showstopper",
+		rarity = "epic",
+		source = "gloomLocker",
+		lore = "A top hat, a fancy coat and a big scowl. The show starts now.",
+	},
+	{
 		id = "Prickles.Lasso",
 		kind = "emote",
 		employee = "Prickles",

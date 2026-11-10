@@ -72,6 +72,22 @@ return function()
 			end
 		end)
 
+		it("gives Prickles a Showstopper skin: its whole-body outfit and top hat, his own flower kept", function()
+			local skin = EmployeeRegistry.get("Prickles").skins.Showstopper
+			expect(skin).to.be.ok()
+			expect(skin.outfit).to.equal("PricklesShowstopper")
+			expect(table.concat(skin.accessories, ",")).to.equal("PricklesShowstopperHat")
+			-- The outfit hides his hard hat itself (its HideAccessories), so without the art he stays Classic; his
+			-- flower is never hidden (owner, 2026-11-10: "keep flower exactly how it is in base skin").
+			expect(skin.hidePieces).never.to.be.ok()
+			-- One look: no styles, and his body keeps its own palette under the outfit.
+			expect(skin.styles).never.to.be.ok()
+			expect(skin.paletteTextureId).never.to.be.ok()
+			local item = CosmeticRegistry.get("Prickles.Showstopper")
+			expect(item).to.be.ok()
+			expect(item.styles).never.to.be.ok()
+		end)
+
 		it("gives Cappy a PJ skin wearing its outfit in 3 styles, over his own palettes", function()
 			local skin = EmployeeRegistry.get("Cappy").skins.PJ
 			expect(skin).to.be.ok()

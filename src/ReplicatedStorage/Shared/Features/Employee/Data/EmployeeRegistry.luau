@@ -407,6 +407,19 @@ EMPLOYEES.Prickles = {
 			facesFolder = nil,
 			accessories = {},
 		},
+		-- Gloom Locker Epic (Cosmetic Prickles.Showstopper), the first Gloom Carnival skin: a whole-body ringmaster outfit
+		-- (jacket, trousers, boots; it hides his body under it and his hard hat: its HideParts / HideAccessories) and a
+		-- top hat as fitted gear on his head. His own flower stays where the base skin has it (owner, 2026-11-10), so
+		-- nothing is listed in hidePieces, and a place without the art leaves him Classic. One look, no styles; the
+		-- outfit's meshes carry their own textures. Icey Labs models 123759504597910 (outfit) and 130595513137797 (hat);
+		-- built in characters/skins/release/gloom_carnival/route2_whole.
+		Showstopper = {
+			name = "Showstopper",
+			paletteTextureId = nil,
+			facesFolder = nil,
+			accessories = { "PricklesShowstopperHat" },
+			outfit = "PricklesShowstopper",
+		},
 		-- Legendary (Cosmetic Prickles.Sheriff): the skinned sheriff outfit (hat, vest, boots) over his body, plus the hose
 		-- lasso the emote shows (characters/skins/runtime-candidates-2026-10-26/sheriff_prickles). The outfit covers
 		-- his legs and replaces his hard hat and flower (its HideParts / HideAccessories). Each style has its own body

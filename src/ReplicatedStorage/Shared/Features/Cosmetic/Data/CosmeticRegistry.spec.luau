@@ -75,6 +75,20 @@ return function()
 		end
 	end)
 
+	it("has Showstopper Prickles: an Epic skin of his from the Gloom Locker", function()
+		local item = CosmeticRegistry.get("Prickles.Showstopper")
+		expect(item).to.be.ok()
+		expect(item.kind).to.equal("skin")
+		expect(item.employee).to.equal("Prickles")
+		expect(item.name).to.equal("Showstopper")
+		expect(item.rarity).to.equal("epic")
+		expect(item.source).to.equal("gloomLocker")
+		-- A Locker prize: it has no shop price and comes with nothing else.
+		expect(item.price).never.to.be.ok()
+		expect(item.bundle).never.to.be.ok()
+		expect(#item.lore > 0).to.equal(true)
+	end)
+
 	it("only points at things that exist", function()
 		for _, item in all do
 			if item.employee ~= nil then
