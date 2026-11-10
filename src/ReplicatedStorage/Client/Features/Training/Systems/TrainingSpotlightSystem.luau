@@ -73,6 +73,11 @@ local DO_LINE_Y = 0.2
 
 -- The Coach layer's root, acquired on first use (the layer's ScreenGui is made then).
 local renderRoot: ((React.ReactNode) -> ())? = nil
+-- The tour card's place on screen, for the phone's sticky notes (stable, so the card's effect never re-subscribes).
+local function tourArea(area: TrainingCoachStore.Area?)
+	TrainingCoachStore.setArea("tour", area)
+end
+
 local function render(element: React.ReactNode)
 	if renderRoot == nil then
 		if element == nil then
@@ -217,6 +222,7 @@ local function draw(step: Step, now: number)
 			skipped = true
 		end,
 		leftInset = menuInset(screen),
+		onArea = tourArea,
 	}
 	if step.kind == "do" then
 		props.linePosition = Vector2.new(math.max((screen.X - LINE_SIZE.X) / 2, 0), screen.Y * DO_LINE_Y)

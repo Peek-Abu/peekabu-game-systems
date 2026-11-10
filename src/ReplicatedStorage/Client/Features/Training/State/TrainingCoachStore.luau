@@ -38,6 +38,17 @@ local finish = Charm.atom(initialFinish)
 local picked = Charm.atom(initialPick)
 -- A spotlight tour step is showing (it has its own Pippa): the run's coach steps aside.
 local touring = Charm.atom(false)
+-- Where each of Pippa's cards is on screen (screen px) while it shows, keyed by who draws it ("guide": the run's
+-- coach in the HUD, "tour": the spotlight tour's on the Coach layer). The phone's sticky notes keep clear of them
+-- (PaperToastViewModel.phoneNotesTop): the Coach layer is drawn over the HUD.
+export type Area = {
+	left: number,
+	top: number,
+	right: number,
+	bottom: number,
+}
+local initialAreas: { [string]: Area } = {}
+local areas = Charm.atom(initialAreas)
 
 local TrainingCoachStore = {
 	stop = stop,
@@ -47,7 +58,34 @@ local TrainingCoachStore = {
 	finish = finish,
 	picked = picked,
 	touring = touring,
+	areas = areas,
 }
+
+-- Where `owner`'s card is now (nil: it is gone).
+function TrainingCoachStore.setArea(owner: string, area: Area?)
+	local current = areas()
+	local old = current[owner]
+	if old == area then
+		return
+	end
+	if
+		old ~= nil
+		and area ~= nil
+		and old.left == area.left
+		and old.top == area.top
+		and old.right == area.right
+		and old.bottom == area.bottom
+	then
+		return
+	end
+	local nextAreas = table.clone(current)
+	if area == nil then
+		nextAreas[owner] = nil
+	else
+		nextAreas[owner] = area
+	end
+	areas(nextAreas)
+end
 
 function TrainingCoachStore.setTouring(on: boolean)
 	if touring() ~= on then

@@ -30,6 +30,14 @@ export type SlipView = {
 	jackpot: boolean,
 }
 
+-- A screen rectangle (screen px), such as Pippa's coach card while it shows (TrainingCoachStore.area).
+export type Area = {
+	left: number,
+	top: number,
+	right: number,
+	bottom: number,
+}
+
 export type ToastView = {
 	stamp: NoteView?,
 	notes: { NoteView },
@@ -75,6 +83,40 @@ function PaperToastViewModel.layout(toasts: { ToastTypes.Toast }, maxNotes: numb
 		end
 	end
 	return { stamp = stamp, notes = notes, slips = slips }
+end
+
+-- The phone's sticky-note column (design px): centred, 250 wide, from y 86 (Figma 1d), reaching at most this far down
+-- (three notes).
+PaperToastViewModel.PHONE_NOTES_TOP = 86
+local PHONE_NOTES_WIDTH = 250
+local PHONE_NOTES_REACH = 220
+local PHONE_NOTES_GAP = 10
+
+--[=[
+	Where the phone's sticky notes start (design px from the HUD frame's top): their top-centre spot, or, when Pippa's
+	coach card (`coach`, screen px; nil = not showing) covers that spot, just under the card, so a note is never
+	hidden behind her (the card is on the Coach layer, over the HUD). `screenWidth` is the screen's width (px), `scale`
+	and `shift` the HUD frame's scale and top shift (PaperHudFrame): design px = (screen px - shift) / scale.
+]=]
+function PaperToastViewModel.phoneNotesTop(coach: Area?, screenWidth: number, scale: number, shift: number): number
+	local top = PaperToastViewModel.PHONE_NOTES_TOP
+	if coach == nil or scale <= 0 then
+		return top
+	end
+	local centre = screenWidth / scale / 2
+	local left = centre - PHONE_NOTES_WIDTH / 2
+	local right = centre + PHONE_NOTES_WIDTH / 2
+	local coachLeft = coach.left / scale
+	local coachRight = coach.right / scale
+	local coachTop = (coach.top - shift) / scale
+	local coachBottom = (coach.bottom - shift) / scale
+	if coachRight <= left or coachLeft >= right then
+		return top
+	end
+	if coachBottom <= top or coachTop >= top + PHONE_NOTES_REACH then
+		return top
+	end
+	return math.ceil(coachBottom + PHONE_NOTES_GAP)
 end
 
 return PaperToastViewModel

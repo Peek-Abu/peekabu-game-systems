@@ -40,6 +40,11 @@ local DARK_FADE = BEAT.fade
 local CARD_SLIDE = 0.18
 
 -- Re-renders every frame while `running`.
+
+-- The run coach's place on screen, for the phone's sticky notes (stable, so the card's effect never re-subscribes).
+local function guideArea(area: TrainingCoachStore.Area?)
+	TrainingCoachStore.setArea("guide", area)
+end
 local function useTicking(running: boolean): number
 	local now, setNow = React.useState(os.clock())
 	React.useEffect(function()
@@ -142,6 +147,7 @@ local function TrainingGuideHud(): React.ReactNode
 			line = line,
 			phone = phone,
 			position = if phone then UDim2.fromOffset(8, underBar + 120) else UDim2.new(0, 24, 1, -170),
+			onArea = guideArea,
 		})
 	end
 	-- The card stays through the move back, so the player stands up at the stop start with it and Pippa's tip.

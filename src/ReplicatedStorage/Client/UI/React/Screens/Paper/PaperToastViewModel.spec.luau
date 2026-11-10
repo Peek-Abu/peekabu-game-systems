@@ -103,4 +103,38 @@ return function()
 			expect(math.abs(view.slips[1].tilt) <= math.abs(UIPaperConstants.STICKY_TILT)).to.equal(true)
 		end)
 	end)
+
+	describe("phoneNotesTop", function()
+		-- A phone 844 px wide at scale 1 with no top shift: the note column is x 297..547 from y 86.
+		local function area(left, top, right, bottom)
+			return { left = left, top = top, right = right, bottom = bottom }
+		end
+
+		it("keeps the notes at the top centre with no coach card", function()
+			expect(PaperToastViewModel.phoneNotesTop(nil, 844, 1, 0)).to.equal(PaperToastViewModel.PHONE_NOTES_TOP)
+			expect(PaperToastViewModel.PHONE_NOTES_TOP).to.equal(86)
+		end)
+
+		it("moves the notes just under Pippa's card when it covers their spot", function()
+			-- The tour's run card (seen live: x 258..608, y 85..195).
+			expect(PaperToastViewModel.phoneNotesTop(area(258, 85, 608, 195), 844, 1, 0)).to.equal(195 + 10)
+			-- The training guide's card on the left edge still reaches the column (x 8..338).
+			expect(PaperToastViewModel.phoneNotesTop(area(8, 150, 338, 228), 844, 1, 0)).to.equal(228 + 10)
+		end)
+
+		it("leaves the notes where they are when the card is clear of them", function()
+			-- Beside the column.
+			expect(PaperToastViewModel.phoneNotesTop(area(8, 85, 280, 195), 844, 1, 0)).to.equal(86)
+			-- Well below the column (the hotbar tour's card over the hotbar).
+			expect(PaperToastViewModel.phoneNotesTop(area(258, 320, 608, 380), 844, 1, 0)).to.equal(86)
+			-- Above it.
+			expect(PaperToastViewModel.phoneNotesTop(area(258, 0, 608, 80), 844, 1, 0)).to.equal(86)
+		end)
+
+		it("works in the HUD's design px: screen px less the top shift, over the scale", function()
+			-- At scale 0.5 with a 20 px shift, a card from screen y 60 to 120 is design y 80..200, over the column
+			-- (design width 1688: x 719..969, so screen x 360..484).
+			expect(PaperToastViewModel.phoneNotesTop(area(300, 60, 500, 120), 844, 0.5, 20)).to.equal(200 + 10)
+		end)
+	end)
 end

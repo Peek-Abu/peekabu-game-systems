@@ -48,6 +48,22 @@ return function()
 		end)
 	end)
 
+	describe("areas", function()
+		it("remembers where each of Pippa's cards is on screen until it goes", function()
+			local tour = { left = 258, top = 85, right = 608, bottom = 195 }
+			local guide = { left = 8, top = 150, right = 338, bottom = 228 }
+			TrainingCoachStore.setArea("tour", tour)
+			TrainingCoachStore.setArea("guide", guide)
+			expect(TrainingCoachStore.areas().tour).to.equal(tour)
+			expect(TrainingCoachStore.areas().guide).to.equal(guide)
+			TrainingCoachStore.setArea("tour", nil)
+			expect(TrainingCoachStore.areas().tour).to.equal(nil)
+			expect(TrainingCoachStore.areas().guide).to.equal(guide)
+			TrainingCoachStore.setArea("guide", nil)
+			expect(next(TrainingCoachStore.areas())).to.equal(nil)
+		end)
+	end)
+
 	describe("situation", function()
 		it("forgets the last stop's situation on a new stop", function()
 			TrainingCoachStore.setStop(4)

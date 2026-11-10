@@ -36,6 +36,16 @@ export type TrainingCoachProps = {
 	zIndex: number?,
 	-- Drawn at this scale (a screen-px layer, the hub tour's Coach layer); nil = 1 (inside a scaled HUD frame).
 	scale: number?,
+	-- Told where the card is on screen (screen px) whenever it moves or resizes, and nil when it goes (so the phone's
+	-- sticky notes can keep clear of it: TrainingCoachStore.setArea).
+	onArea: ((area: Area?) -> ())?,
+}
+
+export type Area = {
+	left: number,
+	top: number,
+	right: number,
+	bottom: number,
 }
 
 -- Who coaches (an EmployeeRegistry key).
@@ -127,7 +137,35 @@ local function Tape(props: TapeProps): React.ReactNode
 	}, stripes)
 end
 
+-- Reports `frame`'s screen rectangle to `onArea` now and whenever it moves or resizes, and nil when it goes.
+local function useArea(onArea: ((area: Area?) -> ())?): { current: Frame? }
+	local none: Frame? = nil
+	local ref = React.useRef(none)
+	React.useEffect(function(): (() -> ())?
+		local frame = ref.current
+		if onArea == nil or frame == nil then
+			return nil
+		end
+		local report = onArea
+		local function send()
+			local at = frame.AbsolutePosition
+			local size = frame.AbsoluteSize
+			report({ left = at.X, top = at.Y, right = at.X + size.X, bottom = at.Y + size.Y })
+		end
+		send()
+		local moved = frame:GetPropertyChangedSignal("AbsolutePosition"):Connect(send)
+		local resized = frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(send)
+		return function()
+			moved:Disconnect()
+			resized:Disconnect()
+			report(nil)
+		end
+	end, { onArea })
+	return ref
+end
+
 local function TrainingCoach(props: TrainingCoachProps): React.ReactNode
+	local ref = useArea(props.onArea)
 	local phone = props.phone
 	local z = props.zIndex or 30
 	local k = if phone then 0.48 else 1
@@ -269,6 +307,7 @@ local function TrainingCoach(props: TrainingCoachProps): React.ReactNode
 		zIndex = z + 4,
 	})
 	return e("Frame", {
+		ref = ref,
 		AnchorPoint = props.anchor or Vector2.new(0, 1),
 		Position = props.position,
 		Size = UDim2.fromOffset(card.X, tall),

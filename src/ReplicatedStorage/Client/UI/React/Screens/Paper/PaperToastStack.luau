@@ -20,8 +20,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage.Packages.React)
 local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
 local OccupantCatchStore = require(ReplicatedStorage.Client.Features.Occupant.State.OccupantCatchStore)
+local TrainingCoachStore = require(ReplicatedStorage.Client.Features.Training.State.TrainingCoachStore)
 local ToastStore = require(ReplicatedStorage.Client.Features.Toast.State.ToastStore)
 local PaperHudFrame = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudFrame)
+local PaperHudScaleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudScaleViewModel)
 local PaperToastViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperToastViewModel)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonMotionViewModel = require(Toon.ToonMotionViewModel)
@@ -44,6 +46,8 @@ export type LayerProps = {
 	slipBottom: number?,
 	slipRight: number?,
 	slipTop: number?,
+	-- Phone: where the sticky notes start (design px; nil = PaperToastViewModel.PHONE_NOTES_TOP).
+	phoneTop: number?,
 	view: PaperToastViewModel.ToastView,
 	layout: UIPaperConstants.Layout,
 }
@@ -204,7 +208,10 @@ local function Layer(props: LayerProps): React.ReactNode
 		notes = e("Frame", {
 			-- Desktop: top-right under the top bar (1a/1b at x 1520, y 80). Phone: centre-top (1d at x 304, y 86).
 			AnchorPoint = if phone then Vector2.new(0.5, 0) else Vector2.new(1, 0),
-			Position = if phone then UDim2.new(0.5, 0, 0, 86) else UDim2.new(1, -60, 0, props.top or 80),
+			-- On phones the column drops under Pippa's coach card while it covers this spot (phoneNotesTop).
+			Position = if phone
+				then UDim2.new(0.5, 0, 0, props.phoneTop or PaperToastViewModel.PHONE_NOTES_TOP)
+				else UDim2.new(1, -60, 0, props.top or 80),
 			Size = UDim2.fromOffset(if phone then 250 else 340, 0),
 			AutomaticSize = Enum.AutomaticSize.Y,
 			BackgroundTransparency = 1,
@@ -259,11 +266,21 @@ local SLIP_LIMIT_PHONE = 2
 local function Widget(): React.ReactNode
 	local toasts = ReactCharm.useAtom(ToastStore.toasts)
 	local scaring = ReactCharm.useAtom(OccupantCatchStore.scaring)
+	-- Pippa's coach cards on screen: the phone's notes keep clear of them (the Coach layer draws over the HUD).
+	local coachAreas = ReactCharm.useAtom(TrainingCoachStore.areas)
 	-- Drawn scaled to the window on desktop, with the rest of the HUD (PaperHudFrame).
 	local hudScale = usePaperHudScale()
 	local layout: UIPaperConstants.Layout = hudScale.layout
 	-- Typed up front: inline in e() the Layout literal union widens to string.
 	local scale = hudScale.scale
+	local phoneTop = PaperToastViewModel.PHONE_NOTES_TOP
+	if layout == "phone" then
+		local screenWidth = hudScale.viewport.X * scale
+		local shift = PaperHudScaleViewModel.topShift(scale)
+		for _, area in coachAreas do
+			phoneTop = math.max(phoneTop, PaperToastViewModel.phoneNotesTop(area, screenWidth, scale, shift))
+		end
+	end
 	local layerProps: LayerProps = {
 		view = PaperToastViewModel.layout(
 			toasts,
@@ -278,6 +295,7 @@ local function Widget(): React.ReactNode
 		slipBottom = if layout == "desktop" then SLIP_CLEAR_DESKTOP / scale else nil,
 		slipRight = (if layout == "desktop" then 24 else 12) / scale,
 		slipTop = if layout == "phone" then SLIP_CLEAR_PHONE / scale else nil,
+		phoneTop = if layout == "phone" then phoneTop else nil,
 	}
 	-- Figma 4a: no HUD and no text during the scare beat. The layer stays mounted and is hidden with a prop, so the
 	-- notes and the stamp do not remount (and replay their entrance) when the beat ends.

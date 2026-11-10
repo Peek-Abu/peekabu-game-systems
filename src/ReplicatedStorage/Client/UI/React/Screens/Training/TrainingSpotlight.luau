@@ -35,6 +35,8 @@ export type TrainingSpotlightProps = {
 	onSkip: () -> (),
 	-- Screen px from the left edge the coach keeps clear of (a button column there); nil = 0.
 	leftInset: number?,
+	-- Told where Pippa's card is on screen (TrainingCoach.onArea); nil = not reported.
+	onArea: ((area: TrainingCoach.Area?) -> ())?,
 }
 
 local GOLD = TrainingConstants.GUIDE.calm
@@ -77,6 +79,7 @@ local function Coach(props: TrainingSpotlightProps): React.ReactNode
 		position = UDim2.fromOffset(x, bottom),
 		zIndex = 22,
 		scale = scale,
+		onArea = props.onArea,
 	})
 end
 local function TrainingSpotlight(props: TrainingSpotlightProps): React.ReactNode
