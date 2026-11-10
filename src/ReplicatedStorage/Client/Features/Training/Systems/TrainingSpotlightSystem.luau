@@ -273,8 +273,14 @@ local function tick(deltaTime: number)
 		return
 	end
 	local now = os.clock()
-	-- Held aside for a new stop line: the run's coach shows, this step waits with its clock paused.
+	-- Held aside for a new stop line: the run's coach shows, this step waits with its clock paused. What the player
+	-- does meanwhile still counts (a sprint while held passes the run step), so a step already done never comes back.
 	if now < holdUntil then
+		local held = step.done
+		if held ~= nil and held() then
+			advance()
+			return
+		end
 		startedAt += deltaTime
 		TrainingCoachStore.setTouring(false)
 		render(nil)

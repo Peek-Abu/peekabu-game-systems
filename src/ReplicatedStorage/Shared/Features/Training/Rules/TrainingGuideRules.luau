@@ -163,6 +163,14 @@ function TrainingGuideRules.tourHeld(changedAt: number?, now: number): boolean
 	return changedAt ~= nil and now - changedAt < TrainingConstants.COACH_HOLD
 end
 
+--[=[
+	Whether the first-run tips (the hotbar tour: vacuum, run, power) still run at run stop `stop` (nil = the run's stop
+	not known yet): only at the first stop; once the player moves on they end, so a tip never comes back later.
+]=]
+function TrainingGuideRules.tourLasts(stop: number?): boolean
+	return stop == nil or stop <= 1
+end
+
 -- How a line of Pippa's feels: her card is calm (yellow caution tape) or danger (red emergency tape and glow).
 export type Mood = "calm" | "danger"
 

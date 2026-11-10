@@ -187,6 +187,14 @@ return function()
 			expect(TrainingGuideRules.tourHeld(10, 10 + hold)).to.equal(false)
 		end)
 
+		-- The owner's bug (11-10): the first-run tips (vacuum, run, power) came back at later stops and while hiding.
+		it("keeps the first-run tips to the first stop: they end once the player moves on", function()
+			expect(TrainingGuideRules.tourLasts(nil)).to.equal(true)
+			expect(TrainingGuideRules.tourLasts(1)).to.equal(true)
+			expect(TrainingGuideRules.tourLasts(2)).to.equal(false)
+			expect(TrainingGuideRules.tourLasts(4)).to.equal(false)
+		end)
+
 		it("does not hold the tour before any line changed", function()
 			expect(TrainingGuideRules.tourHeld(nil, 50)).to.equal(false)
 		end)

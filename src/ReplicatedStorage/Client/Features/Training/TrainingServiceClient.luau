@@ -133,6 +133,11 @@ end
 local lastLine: string? = nil
 local function onCoachLine()
 	local now = os.clock()
+	-- The first-run tips belong to the first stop: once the player moves on they end and never come back.
+	local stop = TrainingCoachStore.stop()
+	if stop ~= nil and not TrainingGuideRules.tourLasts(stop) and TrainingSpotlightSystem.active() then
+		TrainingSpotlightSystem.clear()
+	end
 	local line = if TrainingCoachStore.stop() ~= nil then TrainingCoachStore.line(now) else nil
 	local text = if line ~= nil then line.text else nil
 	if TrainingGuideRules.lineChanged(lastLine, text) then
