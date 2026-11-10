@@ -10,6 +10,8 @@
 	- A "world" step points an arrow at the nearest part with its tag that `accept` takes, and moves on when `done`
 	  says so or after `seconds`. Off the screen the arrow sits on the edge on the target's side, worked out in the
 	  camera's own space (TrainingSpotlightUtils.offscreen); it waits until the camera has settled after a spawn.
+	  An `edgeOnly` step draws its arrow only on the edge: on the screen the target already has its own world marker
+	  (the Training pad's bobbing arrow), so a second arrow on it would be a duplicate (owner, 11-10).
 	- A "do" step shows only its line (nothing dimmed: the player has to move) and moves on when `done` says so.
 	- A step the player must do (`mustDo`: run, use the crew move) moves on ONLY when `done` says so: tapping the
 	  dark, another key, a page opening or its time running out never pass it.
@@ -47,6 +49,8 @@ export type Step = {
 	seconds: number?,
 	-- Passed only by `done` (the player really did it), never skipped or timed out.
 	mustDo: boolean?,
+	-- World steps: the arrow shows only on the screen's edge (the target has its own marker on the screen).
+	edgeOnly: boolean?,
 }
 
 local FRAME_SECONDS = 1 / 30
@@ -248,7 +252,9 @@ local function draw(step: Step, now: number)
 		if at.X < inset + ARROW_MARGIN then
 			at = Vector2.new(inset + ARROW_MARGIN, at.Y)
 		end
-		props.arrow = { position = at, rotation = rotation }
+		if onEdge or step.edgeOnly ~= true then
+			props.arrow = { position = at, rotation = rotation }
+		end
 		props.linePosition = Vector2.new(
 			math.clamp(at.X - LINE_SIZE.X / 2, 0, math.max(screen.X - LINE_SIZE.X, 0)),
 			math.clamp(at.Y + LINE_GAP, 0, math.max(screen.Y - LINE_SIZE.Y, 0))

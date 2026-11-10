@@ -9,7 +9,8 @@
 	- Stop 4 ("hide"): red and dark (a second, redder screen request on top), and the hiding furniture glows red (a
 	  Highlight), so the way to hide is plain. (Tutorial v3: no hall signs; Pippa's lines and the goal bar say it.)
 	  Mr. Harlow's two doors (staffDoor, exitDoor) creak as they swing open and slam shut (their TrainingSwingOpen
-	  attribute, set by the server's TrainingHarlowSystem; 3D at the door). Once he has gone (`setClear`): the relief
+	  attribute, set by the server's TrainingHarlowSystem; 3D at the door); as the STAFF door opens the dark lifts (his
+	  light spills in; the red stays), so the player can watch him pass. Once he has gone (`setClear`): the relief
 	  sting, the glow turns green, the red and the dark lift, and the hall's lights pop back on one by one, in ORDER.
 	- Stop 5 ("done"): every light pops back on, the Gloom fades away, the glow goes, and a happy sound plays.
 
@@ -207,6 +208,10 @@ local function watchDoors(model: Model)
 				doorWatch,
 				door:GetAttributeChangedSignal("TrainingSwingOpen"):Connect(function()
 					local open = door:GetAttribute("TrainingSwingOpen") == true
+					-- His light spills in: the dark lifts (the red stays), so the player sees him walk past.
+					if open and role == "staffDoor" and shown == STOP_HIDE then
+						dark(false)
+					end
 					SoundServiceClient:playOneShot(if open then TrainingAssets.CREAK else TrainingAssets.SLAM, {
 						at = door,
 						volumeScale = if not open and role == "staffDoor" then 0.5 else 1,

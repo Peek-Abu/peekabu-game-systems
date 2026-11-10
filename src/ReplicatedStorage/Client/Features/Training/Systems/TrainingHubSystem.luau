@@ -96,7 +96,8 @@ end
 
 local function sign(pad: BasePart)
 	TrainingSignSystem.show(pad, {
-		text = if isNew then TrainingConstants.TEXT.truckSign else TrainingConstants.TEXT.truckTag,
+		-- The short tag: Pippa's line already says "New here? Start training!" (one sentence, never two).
+		text = TrainingConstants.TEXT.truckTag,
 		number = nil,
 		active = isNew,
 	}, SIGN_LIFT)
@@ -113,6 +114,7 @@ local function pointToTraining()
 			line = TrainingConstants.TEXT.truckSign,
 			seconds = math.huge,
 			accept = isTrainingPad,
+			edgeOnly = true,
 			done = function()
 				return not isNew or onRun or standingOn(isTrainingPad)
 			end,
@@ -236,6 +238,7 @@ function TrainingHubSystem.again()
 			line = TrainingConstants.TEXT.again,
 			seconds = 30,
 			accept = isTrainingPad,
+			edgeOnly = true,
 			done = function()
 				return standingOn(isTrainingPad)
 			end,
