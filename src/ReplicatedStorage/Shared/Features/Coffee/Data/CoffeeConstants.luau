@@ -19,6 +19,8 @@ local CoffeeConstants = {
 	PAY_SCALE = 2,
 	-- One coffee: seconds of shift time (30 minutes).
 	SECONDS = 1800,
+	-- The Gleam price of the same coffee (owner 11-10), next to the Robux product.
+	GLEAM_PRICE = 250,
 	-- How often the server takes a second off the coffee time it is spending.
 	TICK_SECONDS = 1,
 	-- How often the spent seconds are written to the buyer's slice (each write is an audited profile mutation; a crash
@@ -37,6 +39,11 @@ local CoffeeConstants = {
 		button = "2x PAY",
 		badge = "2x PAY",
 		review = "Coffee by %s: %sx",
+		short = "Not enough Gleam! Coffee is %d Gleam.",
+		choiceTitle = "COFFEE FOR THE CREW",
+		choiceLine = "2x pay for 30 minutes",
+		robux = "99 R$",
+		gleam = "%d",
 		card = "Credits earned · Coffee %sx",
 	}),
 }

@@ -5,7 +5,8 @@
 	adds CoffeeConstants.SECONDS (`add`) in the same save as its receipt (exactly once). The time counts down only
 	while a real shift runs with players in the server (`runs`), one buyer at a time: the earliest buyer in the server
 	(`spender`), so two coffees never stack past 2x. While it runs the crew's Credits pay is doubled; the review pays
-	2x for the part of the shift the coffee ran (`payScale`). Pure.
+	2x for the part of the shift the coffee ran (`payScale`). A coffee costs 99 R$ (the developer product) or
+	CoffeeConstants.GLEAM_PRICE Gleam (`affords`, `payGleam`). Pure.
 
 	@class CoffeeRules
 ]=]
@@ -160,6 +161,32 @@ end
 ]=]
 function CoffeeRules.badgeText(buyer: string, seconds: number): string
 	return `{CoffeeConstants.TEXT.badge} · {string.upper(buyer)} · {CoffeeRules.clock(seconds)}`
+end
+
+--[=[
+	Whether a Gleam `balance` (nil: not loaded) pays for a coffee.
+]=]
+function CoffeeRules.affords(balance: number?): boolean
+	return balance ~= nil and balance >= CoffeeConstants.GLEAM_PRICE
+end
+
+--[=[
+	The Gleam half of a Gleam purchase (a premium-slice mutator, in place): takes CoffeeConstants.GLEAM_PRICE off, or
+	refuses (false) and leaves the balance when it is short.
+]=]
+function CoffeeRules.payGleam(premium: PlayerDataTypes.Premium): boolean
+	if premium.balance < CoffeeConstants.GLEAM_PRICE then
+		return false
+	end
+	premium.balance -= CoffeeConstants.GLEAM_PRICE
+	return true
+end
+
+--[=[
+	The toast for a player who is short of Gleam.
+]=]
+function CoffeeRules.shortLine(): string
+	return string.format(CoffeeConstants.TEXT.short, CoffeeConstants.GLEAM_PRICE)
 end
 
 --[=[

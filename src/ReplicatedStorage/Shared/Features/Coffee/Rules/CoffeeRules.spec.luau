@@ -161,6 +161,32 @@ return function()
 		end)
 	end)
 
+	describe("Gleam", function()
+		it("costs 250 Gleam for the same 30 minutes", function()
+			expect(CoffeeConstants.GLEAM_PRICE).to.equal(250)
+		end)
+
+		it("is affordable with 250 Gleam or more", function()
+			expect(CoffeeRules.affords(250)).to.equal(true)
+			expect(CoffeeRules.affords(900)).to.equal(true)
+			expect(CoffeeRules.affords(249)).to.equal(false)
+			expect(CoffeeRules.affords(nil)).to.equal(false)
+		end)
+
+		it("takes 250 Gleam off the balance, or refuses and leaves it", function()
+			local rich = { balance = 300 }
+			expect(CoffeeRules.payGleam(rich)).to.equal(true)
+			expect(rich.balance).to.equal(50)
+			local poor = { balance = 249 }
+			expect(CoffeeRules.payGleam(poor)).to.equal(false)
+			expect(poor.balance).to.equal(249)
+		end)
+
+		it("tells a player who is short how much coffee costs", function()
+			expect(CoffeeRules.shortLine()).to.equal("Not enough Gleam! Coffee is 250 Gleam.")
+		end)
+	end)
+
 	describe("paLine", function()
 		it("names the buyer and says it is 30 minutes", function()
 			expect(CoffeeRules.paLine("Ice")).to.equal("PA: Ice bought coffee! The crew gets 2x pay for 30 minutes!")

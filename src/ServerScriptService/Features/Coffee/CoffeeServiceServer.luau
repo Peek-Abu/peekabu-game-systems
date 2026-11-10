@@ -4,6 +4,11 @@
 	product gives the buyer 30 minutes of coffee time; while it runs the whole crew's Credits pay is doubled, and the
 	office PA names the buyer.
 
+	- **Gleam.** The same coffee costs CoffeeConstants.GLEAM_PRICE Gleam (owner 11-10): CoffeeEvents.BuyGleam, rate
+	  limited, checked on the server (CoffeeRules.affords), then ONE PlayerData transaction takes the Gleam
+	  (CoffeeRules.payGleam over the premium slice) and adds the coffee time, so neither lands without the other. A
+	  player who is short gets a toast and nothing changes. Coffee is a known item, not a random one, so no
+	  PolicyService (paid random items) gate applies.
 	- **Exactly once.** The product's receipt (MarketplaceServiceServer:onProduct) adds CoffeeConstants.SECONDS to the
 	  buyer's `coffee` account slice (CoffeeRules.add) in the SAME save that records the receipt, so coffee time is never
 	  lost or doubled. Buying again adds 30 minutes. Once that save lands, every player in the server hears the PA.
@@ -28,10 +33,13 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local CoffeeConstants = require(ReplicatedStorage.Shared.Features.Coffee.Data.CoffeeConstants)
+local CoffeeEvents = require(ReplicatedStorage.Shared.Features.Coffee.Net.CoffeeEvents)
 local CoffeeRules = require(ReplicatedStorage.Shared.Features.Coffee.Rules.CoffeeRules)
 local MarketplaceRegistry = require(ReplicatedStorage.Shared.Features.Marketplace.Data.MarketplaceRegistry)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
+local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local MarketplaceServiceServer = require(ServerScriptService.Features.Marketplace.MarketplaceServiceServer)
+local PlayerDataService = require(ServerScriptService.Features.PlayerData.PlayerDataServiceServer)
 local PlayerDataSliceSystem = require(ServerScriptService.Features.PlayerData.Systems.PlayerDataSliceSystem)
 local ShiftServiceServer = require(ServerScriptService.Features.Shift.ShiftServiceServer)
 local StateSyncWorldStore = require(ServerScriptService.Features.StateSync.State.StateSyncWorldStore)
@@ -50,7 +58,7 @@ local log = Logger.new("CoffeeServiceServer")
 local PA_SECONDS = 6
 
 local stoppers: { () -> () } = {}
-local counters = { granted = 0, announced = 0, spent = 0 }
+local counters = { granted = 0, announced = 0, spent = 0, gleamBought = 0, gleamShort = 0 }
 -- Whose coffee the badge shows now (nil = none), so the world entry is cleared once, not every second.
 local showing: string? = nil
 -- Seconds spent but not yet written to each buyer's slice (userId -> seconds).
@@ -104,6 +112,42 @@ local function announceSoon(player: Player, before: number, tries: number)
 		task.delay(CoffeeConstants.PA_RETRY_SECONDS, announceSoon, player, before, tries - 1)
 	end
 end
+
+-- One coffee bought with Gleam: the Gleam and the coffee time in ONE transaction (both or neither). Coffee is a known
+-- item, not a random one, so the PolicyService paid-random-items gate does not apply here.
+local function buyWithGleam(player: Player)
+	local userId = player.UserId
+	if not CoffeeRules.affords(MarketplaceServiceServer:getPremium(userId)) then
+		counters.gleamShort += 1
+		ToastServiceServer:send(player, { text = CoffeeRules.shortLine() })
+		return
+	end
+	local committed, result = PlayerDataService:transaction({
+		MarketplaceServiceServer:premiumOp(userId, CoffeeRules.payGleam),
+		coffeeSlice.op(userId, function(value): boolean
+			CoffeeRules.add(value, os.time())
+			return true
+		end),
+	})
+	if not committed then
+		-- The balance changed under us (spent elsewhere) or the profile is busy: nothing was taken.
+		counters.gleamShort += 1
+		log:warn(`{player.Name}'s Gleam coffee was refused: {result.rejectionReason or "transaction failed"}`)
+		ToastServiceServer:send(player, { text = CoffeeRules.shortLine() })
+		return
+	end
+	counters.gleamBought += 1
+	log:audit(`userId={userId}`, "COFFEE_GLEAM_BOUGHT", CoffeeConstants.GLEAM_PRICE)
+	announce(player.DisplayName)
+end
+
+local onBuyGleam = RequestHandler.wrap({
+	name = "CoffeeBuyGleam",
+	rateLimit = { maxRequests = 3, windowSeconds = 5 },
+	handler = function(_payload: unknown, player: Player)
+		buyWithGleam(player)
+	end,
+})
 
 local function clearBadge()
 	if showing ~= nil then
@@ -209,6 +253,11 @@ local CoffeeServiceServer: CoffeeServiceServer = {
 				log:error(`coffee tick failed: {err}`)
 			end
 		end)
+		local buying = CoffeeEvents.packets.BuyGleam.listen(function(payload: unknown, player: Player?)
+			if player ~= nil then
+				onBuyGleam(payload, player)
+			end
+		end)
 		-- A leaving buyer's spent seconds are written before their profile is released.
 		local leaving = Players.PlayerRemoving:Connect(function(player: Player)
 			save(player.UserId)
@@ -217,6 +266,7 @@ local CoffeeServiceServer: CoffeeServiceServer = {
 		table.insert(stoppers, function()
 			ticking:Disconnect()
 			leaving:Disconnect()
+			buying()
 		end)
 	end,
 
