@@ -67,7 +67,7 @@ local function emptyAccount(): PlayerDataTypes.PlayerAccount
 		social = { groupPaid = false, referredBy = 0, referralPaid = false, referrals = 0, askedAt = 0 },
 		tips = { seen = {} },
 		training = { finished = false, runs = 0, toured = false },
-		coffee = { vouchers = 0 },
+		coffee = { seconds = 0, since = 0 },
 		deals = { bought = {}, picks = {} },
 	}
 end

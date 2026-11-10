@@ -17,6 +17,7 @@ local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.Shif
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local ShiftCurrencyUtils = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftCurrencyUtils)
 local CoffeeConstants = require(ReplicatedStorage.Shared.Features.Coffee.Data.CoffeeConstants)
+local CoffeeRules = require(ReplicatedStorage.Shared.Features.Coffee.Rules.CoffeeRules)
 local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local PaperHudScaleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudScaleViewModel)
@@ -330,7 +331,7 @@ function ShiftReviewViewModel.review(
 	-- from dust and from cleaning valuables, plus the valuables banked; paid whether or not the contract was met.
 	local split = ShiftQuotaFormulas.breakdown(results.cleared, results.dust or 0, results.bonus)
 	local saved = ShiftQuotaFormulas.savedGloom(results.cleared)
-	-- Coffee for the crew doubles the pay (the server pays the same: ShiftPaySystem.amounts).
+	-- Coffee for the crew doubles the pay for the part of the shift it ran (the server pays the same: ShiftPaySystem.amounts).
 	local scale = results.payScale or 1
 	local paid = math.floor(split.credits * scale)
 	local coffee = results.coffee
@@ -347,7 +348,9 @@ function ShiftReviewViewModel.review(
 				gold = false,
 			},
 			{
-				label = if coffee ~= nil then string.format(CoffeeConstants.TEXT.card, scale) else "Credits earned",
+				label = if coffee ~= nil
+					then string.format(CoffeeConstants.TEXT.card, CoffeeRules.scaleText(scale))
+					else "Credits earned",
 				value = `+{paid}`,
 				icon = "credits",
 				meaning = "gold",
@@ -382,7 +385,7 @@ function ShiftReviewViewModel.review(
 				label = ShiftCurrencyUtils.earnedLabel(),
 				value = ShiftCurrencyUtils.amount(paid),
 				detail = if coffee ~= nil
-					then string.format(CoffeeConstants.TEXT.review, coffee, scale)
+					then string.format(CoffeeConstants.TEXT.review, coffee, CoffeeRules.scaleText(scale))
 					else `Dust {split.dustCredits} · Cleaning {split.grimeCredits} · Treasure {split.valuables} · Saved Gloom {saved}`,
 			},
 			{ label = "CREW CAUGHT", value = tostring(results.catches) },

@@ -60,7 +60,7 @@ local function makeProfileData(xp)
 		account = {
 			itemMint = { nextUid = 1 },
 			titles = { earned = {} },
-			coffee = { vouchers = 0 },
+			coffee = { seconds = 0, since = 0 },
 			deals = { bought = {}, picks = {} },
 			premium = { balance = 0 },
 			receipts = { ids = {} },

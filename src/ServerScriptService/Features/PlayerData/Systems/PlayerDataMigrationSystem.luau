@@ -90,6 +90,21 @@ local MIGRATIONS: { Migration } = {
 			end
 		end
 	end,
+	-- v3 -> v4: Coffee for the crew became 30 minutes of shift time (owner 11-10). Each saved coffee voucher becomes
+	-- 1,800 seconds (the number is written here, not read from CoffeeConstants: a migration stays as it shipped).
+	-- `since` 0 puts the migrated time first in line (it was bought before any new coffee). Runs after Reconcile, which
+	-- may already have added `seconds` and `since` next to the old `vouchers`.
+	function(data)
+		local account = data.account
+		local coffee = if type(account) == "table" then account.coffee else nil
+		if type(coffee) == "table" then
+			local vouchers = if type(coffee.vouchers) == "number" then math.max(0, math.floor(coffee.vouchers)) else 0
+			local seconds = if type(coffee.seconds) == "number" then coffee.seconds else 0
+			coffee.vouchers = nil
+			coffee.seconds = seconds + vouchers * 1800
+			coffee.since = 0
+		end
+	end,
 }
 
 local PlayerDataMigrationSystem = {}

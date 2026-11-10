@@ -1,7 +1,8 @@
 --!strict
 --[=[
-	CoffeeConstants: Coffee for the crew (owner 11-08): a Robux developer product bought during a shift that doubles the
-	whole crew's Credits pay for that one shift, the buyer named on the office PA. Static data (spec-exempt).
+	CoffeeConstants: Coffee for the crew (owner 11-08; 30 minutes, owner 11-10): a Robux developer product that gives
+	the buyer 30 minutes of coffee time, spent only while a shift runs; while it runs the whole crew's Credits pay is
+	doubled, and the buyer is named on the office PA. Static data (spec-exempt).
 
 	@class CoffeeConstants
 ]=]
@@ -14,22 +15,26 @@ local CoffeeConstants = {
 	-- The product's MarketplaceRegistry key and id.
 	PRODUCT_KEY = "coffeeCrew",
 	PRODUCT_ID = PRODUCT_ID,
-	-- What coffee multiplies the shift's Credits pay by.
+	-- What coffee multiplies the Credits pay by while it runs.
 	PAY_SCALE = 2,
-	-- The account slice of unspent coffees (a second buy in the same shift, or one that lands with no shift running).
+	-- One coffee: seconds of shift time (30 minutes).
+	SECONDS = 1800,
+	-- How often the server takes a second off the coffee time it is spending.
+	TICK_SECONDS = 1,
+	-- The account slice of the buyer's coffee time left (seconds) and when it started (their place in line).
 	SLICE = "coffee",
-	-- The world entry naming who bought this shift's coffee (the HUD badge); absent = no coffee.
+	-- The world entry naming whose coffee runs now and how long it has left ({ buyer, seconds }; the HUD badge).
+	-- Absent = no coffee running.
 	WORLD_ENTRY = "coffee",
-	-- After a purchase, how long the server keeps trying to spend the new voucher (its save may still be landing).
-	SPEND_TRIES = 10,
-	SPEND_RETRY_SECONDS = 1,
+	-- After a purchase, how long the server waits for its save before the PA (a receipt saves before it is told).
+	PA_TRIES = 10,
+	PA_RETRY_SECONDS = 1,
 	TEXT = table.freeze({
-		pa = "PA: %s bought coffee! 2x pay for the crew!",
+		pa = "PA: %s bought coffee! The crew gets 2x pay for 30 minutes!",
 		button = "2x PAY",
-		free = "FREE",
 		badge = "2x PAY",
-		review = "Coffee by %s: %dx",
-		card = "Credits earned · Coffee %dx",
+		review = "Coffee by %s: %sx",
+		card = "Credits earned · Coffee %sx",
 	}),
 }
 

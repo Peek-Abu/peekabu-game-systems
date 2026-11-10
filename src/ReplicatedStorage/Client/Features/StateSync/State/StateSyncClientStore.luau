@@ -49,7 +49,7 @@ local social = Charm.atom(initialSocial)
 local initialTraining: PlayerDataTypes.Training? = nil
 -- nil until the save loads, so a not-yet-known player never sees the new-player arrow (TrainingRules.isNew).
 local training = Charm.atom(initialTraining)
-local initialCoffee: PlayerDataTypes.Coffee = { vouchers = 0 }
+local initialCoffee: PlayerDataTypes.Coffee = { seconds = 0, since = 0 }
 local coffee = Charm.atom(initialCoffee)
 local initialDeals: PlayerDataTypes.Deals = { bought = {}, picks = {} }
 local deals = Charm.atom(initialDeals)

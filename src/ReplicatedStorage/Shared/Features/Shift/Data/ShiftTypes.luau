@@ -141,7 +141,8 @@ export type ShiftResults = {
 	awards: { Award },
 	-- Seconds from the shift's start to its end (who worked it: RankFormulas.worked). Absent reads 0.
 	ranFor: number?,
-	-- Coffee for the crew: who bought it, and what it multiplies the Credits pay by (absent: no coffee, 1).
+	-- Coffee for the crew: whose coffee ran first, and what it multiplies the Credits pay by (2x for the part of the
+	-- shift it ran; absent: no coffee, 1).
 	coffee: string?,
 	payScale: number?,
 }

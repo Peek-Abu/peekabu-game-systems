@@ -109,7 +109,7 @@ local DEFINITIONS: { [string]: SliceDefinition } = {
 			return profile.account.training
 		end,
 	},
-	-- ACCOUNT-WIDE: unspent Coffee for the crew purchases (CoffeeServiceServer); owner-only.
+	-- ACCOUNT-WIDE: the buyer's Coffee for the crew time left (CoffeeServiceServer); owner-only.
 	coffee = {
 		read = function(profile)
 			return profile.account.coffee

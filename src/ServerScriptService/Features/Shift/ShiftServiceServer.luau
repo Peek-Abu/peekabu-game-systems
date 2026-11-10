@@ -143,8 +143,10 @@ local changed: SignalTyped.Signal<ShiftTypes.ShiftState> = SignalTyped.new()
 local caught: SignalTyped.Signal<Player, number, number> = SignalTyped.new()
 -- A training run (setTraining): the pressure tier never rises, and a catch's crew feedback is training's own.
 local training = false
--- Who bought this shift's Coffee for the crew (setCoffee); nil = none. Cleared with the run.
+-- Coffee for the crew this shift (addCoffee): whose coffee ran first (nil = none) and how many seconds of the shift
+-- it ran. Cleared with the run.
 local coffeeBy: string? = nil
+local coffeeSeconds = 0
 
 local function now(): number
 	return Workspace:GetServerTimeNow()
@@ -214,6 +216,7 @@ local function clearRun()
 	results = nil
 	endingRun = false
 	coffeeBy = nil
+	coffeeSeconds = 0
 end
 
 -- Clears everything the shift made (each step guarded: a throwing reset never stops the next shift).
@@ -288,9 +291,9 @@ local function safeResults(outcome: string): ShiftTypes.ShiftResults
 		offered = site:offered(),
 		ranFor = math.max(0, now() - (state.startedAt or now())),
 	})
-	-- Coffee for the crew (CoffeeServiceServer:setCoffee): the buyer, and the pay it doubles.
+	-- Coffee for the crew (CoffeeServiceServer:addCoffee): the buyer, and 2x pay for the part of the shift it ran.
 	built.coffee = coffeeBy
-	built.payScale = CoffeeRules.payScale(coffeeBy ~= nil)
+	built.payScale = CoffeeRules.payScale(coffeeSeconds, built.ranFor or 0)
 	return built
 end
 
@@ -464,7 +467,7 @@ export type ShiftServiceServer = {
 	spendLife: (self: ShiftServiceServer, player: Player) -> boolean,
 	setLivesFloor: (self: ShiftServiceServer, floor: number) -> (),
 	setTraining: (self: ShiftServiceServer, on: boolean) -> (),
-	setCoffee: (self: ShiftServiceServer, buyer: string) -> (),
+	addCoffee: (self: ShiftServiceServer, buyer: string, seconds: number) -> (),
 	coffee: (self: ShiftServiceServer) -> string?,
 	isTraining: (self: ShiftServiceServer) -> boolean,
 	addLivesModifier: (self: ShiftServiceServer, modify: (number) -> number) -> () -> (),
@@ -681,15 +684,20 @@ local ShiftServiceServer: ShiftServiceServer = {
 	end,
 
 	--[=[
-		Coffee for the crew (CoffeeServiceServer): `buyer` bought this shift's coffee, so the review doubles the crew's
-		Credits (CoffeeRules.payScale). Forgotten when the run is cleared.
+		Coffee for the crew (CoffeeServiceServer): `buyer`'s coffee ran for `seconds` more of this shift, so the review
+		pays 2x for that part of the shift (CoffeeRules.payScale). Counts only while the shift runs; forgotten when the
+		run is cleared.
 	]=]
-	setCoffee = function(_self, buyer)
-		coffeeBy = buyer
+	addCoffee = function(_self, buyer, seconds)
+		if not isRunning() or seconds <= 0 then
+			return
+		end
+		coffeeBy = coffeeBy or buyer
+		coffeeSeconds += seconds
 	end,
 
 	--[=[
-		Who bought this shift's coffee (setCoffee), or nil.
+		Whose coffee ran first this shift (addCoffee), or nil.
 	]=]
 	coffee = function(_self)
 		return coffeeBy

@@ -49,7 +49,7 @@ return function()
 					lockers = { keys = {}, pity = {}, opened = 0 },
 					social = { groupPaid = false, referredBy = 0, referralPaid = false, referrals = 0, askedAt = 0 },
 					training = { finished = false, runs = 0, toured = false },
-					coffee = { vouchers = 0 },
+					coffee = { seconds = 0, since = 0 },
 					deals = { bought = {}, picks = {} },
 					loadout = {
 						current = "Pippa",

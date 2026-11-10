@@ -81,7 +81,7 @@ local function makeProfileData(): PlayerDataTypes.PlayerProfile
 			dailyReward = { lastDay = 0, streak = 0 },
 			rank = { season = "mvp-1", xp = 0, lastAwardedRunId = "" },
 			titles = { earned = {} },
-			coffee = { vouchers = 0 },
+			coffee = { seconds = 0, since = 0 },
 			deals = { bought = {}, picks = {} },
 		},
 		slots = slots,

@@ -169,12 +169,13 @@ export type Training = {
 }
 
 --[=[
-	The account-wide coffee slice (CoffeeServiceServer, CoffeeRules): unspent Coffee for the crew purchases (a second
-	coffee bought in the same shift, or one whose receipt landed with no shift running). Owner-only sync, for the
-	shift HUD's FREE button.
+	The account-wide coffee slice (CoffeeServiceServer, CoffeeRules): the buyer's Coffee for the crew time left
+	(`seconds` of shift time, 30 minutes a purchase) and when that time started (`since`, os.time; 0 = no time, or
+	saved before tracking). Owner-only sync.
 ]=]
 export type Coffee = {
-	vouchers: number,
+	seconds: number,
+	since: number,
 }
 
 --[=[

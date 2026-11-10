@@ -15,8 +15,8 @@ local PlayerDataMigrationSystem = require(ServerScriptService.Features.PlayerDat
 return function()
 	describe("PlayerDataMigrationSystem", function()
 		describe("apply (production list)", function()
-			it("has CURRENT_VERSION = 3 (two migrations registered)", function()
-				expect(PlayerDataMigrationSystem.CURRENT_VERSION).to.equal(3)
+			it("has CURRENT_VERSION = 4 (three migrations registered)", function()
+				expect(PlayerDataMigrationSystem.CURRENT_VERSION).to.equal(4)
 			end)
 
 			it("migrates unversioned data to current and leaves unrelated fields intact", function()
@@ -74,7 +74,7 @@ return function()
 					expect(slot.currency.credits).to.equal(0)
 					expect(CurrencyUtils.validateCurrency(slot.currency)).to.equal(true)
 				end
-				expect(data._schemaVersion).to.equal(3)
+				expect(data._schemaVersion).to.equal(PlayerDataMigrationSystem.CURRENT_VERSION)
 			end)
 
 			it("v2 -> v3 is safe on a profile without slots or currency", function()
@@ -92,7 +92,27 @@ return function()
 				expect(PlayerDataMigrationSystem.apply(data, 1)).to.equal("ok")
 				expect(data.account.settings.values.uiVolume).to.equal(nil)
 				expect(data.slots[1].currency.coins).to.equal(nil)
-				expect(data._schemaVersion).to.equal(3)
+				expect(data._schemaVersion).to.equal(PlayerDataMigrationSystem.CURRENT_VERSION)
+			end)
+
+			it("v3 -> v4 turns each saved coffee voucher into 30 minutes of coffee time", function()
+				-- After Reconcile: the old vouchers next to the template's new fields.
+				local data = { account = { coffee = { vouchers = 2, seconds = 0, since = 0 } } }
+				expect(PlayerDataMigrationSystem.apply(data, 3)).to.equal("ok")
+				expect(data.account.coffee.vouchers).to.equal(nil)
+				expect(data.account.coffee.seconds).to.equal(3600)
+				expect(data.account.coffee.since).to.equal(0)
+				expect(data._schemaVersion).to.equal(4)
+			end)
+
+			it("v3 -> v4 leaves no coffee time for no vouchers, and is safe without the slice", function()
+				local data = { account = { coffee = { seconds = 0, since = 0 } } }
+				expect(PlayerDataMigrationSystem.apply(data, 3)).to.equal("ok")
+				expect(data.account.coffee.vouchers).to.equal(nil)
+				expect(data.account.coffee.seconds).to.equal(0)
+				expect(data.account.coffee.since).to.equal(0)
+				expect(PlayerDataMigrationSystem.apply({ account = {} }, 3)).to.equal("ok")
+				expect(PlayerDataMigrationSystem.apply({}, 3)).to.equal("ok")
 			end)
 		end)
 
