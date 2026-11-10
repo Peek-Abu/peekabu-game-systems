@@ -74,6 +74,9 @@ end
 
 -- The hotbar tour: the vacuum's slot; a run they must do (Shift, the left stick, or the phone's SPRINT button,
 -- ShiftMobileButtons); their power, which they must really use (skipped for an employee with none).
+-- The finish screen's HUD order: above every other widget (the paper toasts are 1000, the hide chip 1010).
+local TRAINING_FINISH_HUD_ORDER = 2000
+
 local function hotbarTour(): { TrainingSpotlightSystem.Step }
 	local sprinted = 0
 	local lastCheck: number? = nil
@@ -158,7 +161,8 @@ local TrainingServiceClient: TrainingServiceClient = {
 			HudRegistry.register("trainingGuide", TrainingGuideHud, ShiftConstants.HUD_ORDER + 8)
 		end
 		if not HudRegistry.has("trainingFinish") then
-			HudRegistry.register("trainingFinish", TrainingFinish, ShiftConstants.HUD_ORDER + 9)
+			-- Over the whole HUD (its dim covers every widget, toasts included): the registry order is the stacking order.
+			HudRegistry.register("trainingFinish", TrainingFinish, TRAINING_FINISH_HUD_ORDER)
 		end
 	end,
 

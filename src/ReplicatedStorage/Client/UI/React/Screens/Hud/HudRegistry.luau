@@ -20,8 +20,15 @@ export type HudWidget = () -> React.ReactNode
 export type HudEntry = {
 	key: string,
 	component: HudWidget,
-	-- Render order among siblings (lower first); ties break by key. Defaults to 0.
+	-- Render order among siblings (lower first, so a higher order draws on top); ties break by key. Defaults to 0.
 	order: number,
+}
+
+-- A widget's layer in HudRoot: the entry and the ZIndex its layer draws at (its rank in `list`, from 1).
+export type HudLayer = {
+	key: string,
+	component: HudWidget,
+	zIndex: number,
 }
 
 local entries: { [string]: HudEntry } = {}
@@ -66,6 +73,20 @@ function HudRegistry.list(): { HudEntry }
 		return a.key < b.key
 	end)
 	return list
+end
+
+--[=[
+	Every widget's layer, in `list` order, with the ZIndex HudRoot draws it at (its rank, from 1): a higher order draws
+	on top of a lower one, whatever ZIndex the widget's own root has (HudRoot's layers are siblings under
+	ZIndexBehavior.Sibling, so a widget's ZIndexes only order things inside its own layer).
+	@return { HudLayer }
+]=]
+function HudRegistry.layers(): { HudLayer }
+	local layers: { HudLayer } = {}
+	for index, entry in HudRegistry.list() do
+		table.insert(layers, { key = entry.key, component = entry.component, zIndex = index })
+	end
+	return layers
 end
 
 return HudRegistry

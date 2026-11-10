@@ -138,6 +138,16 @@ function ToonStyleViewModel.pillWidth(textWidth: number, textSize: number, padX:
 	return math.ceil(math.max(0, textWidth) + 2 * padX + 2 * ToonStyleViewModel.stroke(textSize) + 4)
 end
 
+-- An inline button's label side padding (each side, px) for a button `width` design px wide (nil: not a fixed width):
+-- 12, or a tenth of a narrow button's width (at least 2), so a small button's label (the panel's close X, 44 px) keeps
+-- most of its width instead of being squeezed to a sliver by a fixed 24 px.
+function ToonStyleViewModel.labelPad(width: number?): number
+	if width == nil then
+		return 12
+	end
+	return math.clamp(math.floor(width / 10), 2, 12)
+end
+
 -- The size (whole px) a one-line label measured `textWidth` px wide at `textSize` is drawn at to fit `room` px: its
 -- own size when it fits, else scaled down to fit, never below `minSize` (the text floor). Drawn at this size (not
 -- TextScaled), a label fits at any UI scale: a fitted label can not shrink under the readable floor on a small window

@@ -121,13 +121,16 @@ local function face(props: ToonButtonProps, disabled: boolean): { [string]: Reac
 			})
 		end
 		if props.text ~= nil then
-			local inset = if hasIcon then textSize * 1.9 + 8 else 12
+			-- A narrow button (a fixed width in design px) keeps most of its width for the label.
+			local width = if props.size.X.Scale == 0 then props.size.X.Offset else nil
+			local pad = ToonStyleViewModel.labelPad(width)
+			local inset = if hasIcon then textSize * 1.9 + 8 else pad
 			children.label = e(ToonText, {
 				text = props.text,
 				textSize = textSize,
 				anchor = Vector2.new(0, 0.5),
 				position = UDim2.new(0, inset, 0.5, -2),
-				size = UDim2.new(1, -inset - 12, 1, -6),
+				size = UDim2.new(1, -inset - pad, 1, -6),
 				align = "center",
 				fit = true,
 				zIndex = 3,

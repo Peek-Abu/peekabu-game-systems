@@ -37,10 +37,19 @@ local function HudRoot(): React.ReactNode
 	local hidden = SceneStack.hudHiddenIn(stack)
 
 	local widgets: { [string]: React.ReactNode } = {}
-	for _, entry in HudRegistry.list() do
-		-- Keyed by registry key, so each widget keeps its identity across re-renders. Each widget
-		-- positions itself.
-		widgets[entry.key] = e(entry.component)
+	for _, layer in HudRegistry.layers() do
+		-- Keyed by registry key, so each widget keeps its identity across re-renders. Each widget positions
+		-- itself inside its own full-screen layer, and the layer's ZIndex is the widget's registry rank: the
+		-- registered order IS the stacking order. (Without the layer every widget root sat at ZIndex 1, so which
+		-- one drew on top was up to the engine: the shift's sticky notes, order 1000, could land under the Today
+		-- card, order 70.) The layer is transparent and not Active, so it never takes input.
+		widgets[layer.key] = e("Frame", {
+			Size = UDim2.fromScale(1, 1),
+			BackgroundTransparency = 1,
+			ZIndex = layer.zIndex,
+		}, {
+			widget = e(layer.component),
+		})
 	end
 
 	-- selene: allow(roblox_incorrect_roact_usage)

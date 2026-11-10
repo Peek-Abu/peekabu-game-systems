@@ -48,6 +48,27 @@ return function()
 		expect(indexOf("HudSpec.B") < indexOf("HudSpec.Late")).to.equal(true)
 	end)
 
+	it("stacks widgets by their order: a later widget draws over an earlier one", function()
+		ensure("HudSpec.Under", -20)
+		ensure("HudSpec.Over", 2500)
+		local zOf = {}
+		for _, layer in HudRegistry.layers() do
+			zOf[layer.key] = layer.zIndex
+		end
+		expect(zOf["HudSpec.Under"] < zOf["HudSpec.A"]).to.equal(true)
+		expect(zOf["HudSpec.A"] < zOf["HudSpec.B"]).to.equal(true)
+		expect(zOf["HudSpec.B"] < zOf["HudSpec.Over"]).to.equal(true)
+	end)
+
+	it("gives every widget its own layer, numbered from 1", function()
+		local layers = HudRegistry.layers()
+		expect(#layers).to.equal(#HudRegistry.list())
+		for index, layer in layers do
+			expect(layer.zIndex).to.equal(index)
+			expect(layer.component).to.be.ok()
+		end
+	end)
+
 	it("errors on a duplicate key", function()
 		ensure("HudSpec.Dup")
 		expect(function()

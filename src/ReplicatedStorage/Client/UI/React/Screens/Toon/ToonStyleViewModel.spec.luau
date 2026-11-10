@@ -130,6 +130,26 @@ return function()
 		end)
 	end)
 
+	describe("labelPad", function()
+		it("keeps the 12 px side padding on a normal button, and when its width is not fixed", function()
+			expect(VM.labelPad(200)).to.equal(12)
+			expect(VM.labelPad(120)).to.equal(12)
+			expect(VM.labelPad(nil)).to.equal(12)
+		end)
+
+		it("shrinks it on a narrow button so its label keeps room (a 44 px close X)", function()
+			expect(VM.labelPad(44)).to.equal(4)
+			expect(VM.labelPad(30)).to.equal(3)
+			expect(VM.labelPad(10)).to.equal(2)
+		end)
+
+		it("leaves a narrow button's label most of its width", function()
+			for _, width in { 24, 36, 44, 60 } do
+				expect(width - 2 * VM.labelPad(width) >= width * 0.75).to.equal(true)
+			end
+		end)
+	end)
+
 	describe("fitSize", function()
 		it("keeps the label's own size when it fits its room", function()
 			expect(VM.fitSize(180, 15, 228, 12)).to.equal(15)
