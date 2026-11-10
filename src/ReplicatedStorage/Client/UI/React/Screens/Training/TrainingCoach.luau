@@ -1,9 +1,11 @@
 --!strict
 --[=[
 	TrainingCoach: Pippa telling the player what to do (tutorial v3). Pippa is her real 3D model, her whole figure
-	standing on a gold ledge (owner, 11-10: a belly-up crop read as cut off at the bottom), facing the player, in the pose for her kind of line (EmployeePoseRegistry's coach poses: go this way, careful, cheer, shh,
-	hide; shared poses on the kit rig, so any employee could coach); beside her a cream bubble with her name and the
-	line, its tail pointing at her. Presentational (exempt; the line and pose are the specced TrainingGuideRules.coach
+	standing on the gold floor of a lilac plate that sits over the left edge of her words' card, so plate and card read
+	as one piece (owner, 11-10: a belly-up crop read as cut off; the portrait and the card must look like one UI), her
+	head and ears breaking out above the plate, facing the player, in the pose for her kind of line (EmployeePoseRegistry's coach poses: go this way, careful, cheer, shh,
+	hide; shared poses on the kit rig, so any employee could coach); beside her the cream card with her name and the
+	line. Presentational (exempt; the line and pose are the specced TrainingGuideRules.coach
 	via TrainingCoachStore).
 
 	@class TrainingCoach
@@ -42,28 +44,35 @@ local CONTEXTS: { [TrainingConstants.CoachPose]: EmployeePoseRegistry.PortraitCo
 	shh = "coachShh",
 	hide = "coachHide",
 }
-local CREAM = Color3.fromHex("FFFCF6")
--- The figure frame's height per unit of the portrait's width.
-local FIGURE_TALL = 1.25
+-- Her figure frame's height per unit of its width, and the plate she stands in, per unit of the figure's width.
+local FIGURE_TALL = 1.15
+local PLATE = Vector2.new(0.86, 0.82)
 
 local function TrainingCoach(props: TrainingCoachProps): React.ReactNode
 	local phone = props.phone
 	local z = props.zIndex or 30
-	local portrait = if phone then 110 else 230
+	local k = if phone then 0.48 else 1
+	local ink = UIToonConstants.COLOR.ink
+	local line = if phone then 3 else 5
+	local drop = if phone then 3 else 6
+	local figure = Vector2.new(math.floor(230 * k), math.floor(230 * k * FIGURE_TALL))
+	local plate = Vector2.new(math.floor(figure.X * PLATE.X), math.floor(figure.X * PLATE.Y))
 	local bubble = if phone then Vector2.new(250, 74) else Vector2.new(520, 140)
-	local overlap = if phone then 18 else 44
-	local tail = if phone then 16 else 28
-	local width = portrait + bubble.X - overlap
-	-- Her whole figure (ears to feet) is taller than wide: the frame is taller than the portrait's width, so she stays
-	-- as big as the old belly-up crop's head reads at.
-	local tall = math.floor(portrait * FIGURE_TALL)
-	local ledgeHeight = if phone then 12 else 22
+	-- How far the plate sits over the card's left edge (the two read as one piece, like the hub's profile card).
+	local overlap = math.floor(34 * k)
+	local radius = if phone then 14 else 24
+	local floor = math.floor(26 * k)
+	local width = plate.X - overlap + bubble.X
+	-- Her feet stand on the plate's gold floor; her head and ears break out above the plate's top.
+	local feet = drop + floor - math.floor(8 * k)
+	local tall = math.max(plate.Y, feet + figure.Y) + drop
+	local textLeft = overlap + (if phone then 12 else 24)
 	local bubbleFace: { [string]: React.ReactNode } = {
 		name = e(ToonText, {
 			text = "PIPPA",
 			meaning = "coral",
 			textSize = if phone then 13 else 22,
-			position = UDim2.fromOffset(if phone then 14 else 26, if phone then 5 else 12),
+			position = UDim2.fromOffset(textLeft, if phone then 5 else 12),
 			size = UDim2.fromOffset(bubble.X / 2, if phone then 15 else 26),
 			zIndex = z + 3,
 		}),
@@ -71,37 +80,96 @@ local function TrainingCoach(props: TrainingCoachProps): React.ReactNode
 			text = props.line.text,
 			font = "body",
 			textSize = if phone then 15 else 28,
-			position = UDim2.fromOffset(if phone then 14 else 26, if phone then 21 else 40),
-			size = UDim2.new(1, if phone then -24 else -46, 1, if phone then -28 else -54),
+			position = UDim2.fromOffset(textLeft, if phone then 21 else 40),
+			size = UDim2.new(1, -textLeft - (if phone then 10 else 20), 1, if phone then -28 else -54),
 			wrapped = true,
 			fit = true,
 			alignY = "top",
 			zIndex = z + 3,
 		}),
-		tail = e("Frame", {
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.new(0, 0, 1, if phone then -22 else -40),
-			Size = UDim2.fromOffset(tail, tail),
-			Rotation = 45,
-			BackgroundColor3 = CREAM,
-			ZIndex = z,
-		}, {
-			stroke = e("UIStroke", {
-				Color = UIToonConstants.COLOR.ink,
-				Thickness = if phone then 3 else 5,
-			}),
-		}),
 	}
 	local children: { [string]: React.ReactNode } = {
+		-- The card her words are on: its left edge runs under her plate, so plate and card are one shape.
 		bubble = e(ToonPanel, {
 			size = bubble,
 			anchor = Vector2.new(0, 1),
-			position = UDim2.new(0, portrait - overlap, 1, if phone then -8 else -18),
+			position = UDim2.new(0, plate.X - overlap, 1, -drop),
 			hue = "cream",
-			radius = if phone then 14 else 24,
+			radius = radius,
 			pop = true,
 			zIndex = z + 1,
 			children = bubbleFace,
+		}),
+		-- The plate's hard ink drop, the same as the card's.
+		plateDrop = e("Frame", {
+			AnchorPoint = Vector2.new(0, 1),
+			Position = UDim2.fromScale(0, 1),
+			Size = UDim2.fromOffset(plate.X, plate.Y),
+			BackgroundColor3 = ink,
+			ZIndex = z + 1,
+		}, {
+			corner = e("UICorner", { CornerRadius = UDim.new(0, radius) }),
+		}),
+		-- Her lilac window: ink outline, a white inner rim, lit from the top, a gold floor she stands on.
+		plate = e("Frame", {
+			AnchorPoint = Vector2.new(0, 1),
+			Position = UDim2.new(0, 0, 1, -drop),
+			Size = UDim2.fromOffset(plate.X, plate.Y),
+			BackgroundColor3 = Color3.new(1, 1, 1),
+			ZIndex = z + 2,
+		}, {
+			corner = e("UICorner", { CornerRadius = UDim.new(0, radius) }),
+			stroke = e("UIStroke", { Color = ink, Thickness = line }),
+			light = e("UIGradient", {
+				Color = ColorSequence.new(UIToonConstants.shade("lilac").hi, UIToonConstants.shade("lilac").base),
+				Rotation = 90,
+			}),
+			rim = e("Frame", {
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.5),
+				Size = UDim2.new(1, -line * 2, 1, -line * 2),
+				BackgroundTransparency = 1,
+				ZIndex = z + 2,
+			}, {
+				corner = e("UICorner", { CornerRadius = UDim.new(0, radius - line) }),
+				stroke = e("UIStroke", {
+					Color = UIToonConstants.COLOR.white,
+					Thickness = if phone then 2 else 3,
+					Transparency = 0.25,
+				}),
+			}),
+			floor = e("Frame", {
+				AnchorPoint = Vector2.new(0.5, 1),
+				Position = UDim2.fromScale(0.5, 1),
+				Size = UDim2.new(1, 0, 0, floor),
+				BackgroundColor3 = UIToonConstants.COLOR.selected,
+				ZIndex = z + 3,
+			}, {
+				corner = e("UICorner", { CornerRadius = UDim.new(0, radius) }),
+				-- Squares the floor's top corners off (only the plate's bottom corners are round).
+				top = e("Frame", {
+					Size = UDim2.fromScale(1, 0.5),
+					BackgroundColor3 = UIToonConstants.COLOR.selected,
+					BorderSizePixel = 0,
+					ZIndex = z + 3,
+				}),
+				edge = e("Frame", {
+					Size = UDim2.new(1, 0, 0, line),
+					BackgroundColor3 = ink,
+					BorderSizePixel = 0,
+					ZIndex = z + 3,
+				}),
+				shine = e("Frame", {
+					Position = UDim2.fromOffset(floor / 2, line + (if phone then 1 else 3)),
+					Size = UDim2.new(1, -floor, 0, if phone then 2 else 4),
+					BackgroundColor3 = UIToonConstants.COLOR.white,
+					BackgroundTransparency = 0.45,
+					BorderSizePixel = 0,
+					ZIndex = z + 3,
+				}, {
+					corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
+				}),
+			}),
 		}),
 	}
 	if props.scale ~= nil then
@@ -112,35 +180,10 @@ local function TrainingCoach(props: TrainingCoachProps): React.ReactNode
 		employee = COACH,
 		framing = "full",
 		context = CONTEXTS[props.line.pose],
-		-- Her feet stand on the ledge's top (the full framing leaves a sliver under them).
-		anchor = Vector2.new(0, 1),
-		position = UDim2.new(0, 0, 1, -math.floor(ledgeHeight * 0.7)),
-		size = UDim2.fromOffset(portrait, tall),
-		zIndex = z + 2,
-	})
-	-- The gold ledge she stands on (owner 11-09). Only the bottom is edged; nothing caps her head or ears.
-	children.ledge = e("Frame", {
-		AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0, portrait / 2, 1, 0),
-		Size = UDim2.fromOffset(portrait * 0.92, ledgeHeight),
-		BackgroundColor3 = UIToonConstants.COLOR.selected,
-		ZIndex = z + 3,
-	}, {
-		corner = e("UICorner", { CornerRadius = UDim.new(0, ledgeHeight / 2) }),
-		stroke = e("UIStroke", {
-			Color = UIToonConstants.COLOR.ink,
-			Thickness = if phone then 3 else 5,
-		}),
-		shine = e("Frame", {
-			Position = UDim2.fromOffset(ledgeHeight / 2, if phone then 2 else 4),
-			Size = UDim2.new(1, -ledgeHeight, 0, if phone then 3 else 5),
-			BackgroundColor3 = UIToonConstants.COLOR.white,
-			BackgroundTransparency = 0.45,
-			BorderSizePixel = 0,
-			ZIndex = z + 3,
-		}, {
-			corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
-		}),
+		anchor = Vector2.new(0.5, 1),
+		position = UDim2.new(0, plate.X / 2, 1, -feet),
+		size = UDim2.fromOffset(figure.X, figure.Y),
+		zIndex = z + 4,
 	})
 	return e("Frame", {
 		AnchorPoint = props.anchor or Vector2.new(0, 1),
