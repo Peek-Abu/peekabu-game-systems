@@ -183,7 +183,7 @@ return function()
 		end)
 
 		it("tells a player who is short how much coffee costs", function()
-			expect(CoffeeRules.shortLine()).to.equal("Not enough Gleam! Coffee is 250 Gleam.")
+			expect(CoffeeRules.shortLine()).to.equal("You need 250 Gleam!")
 		end)
 	end)
 
