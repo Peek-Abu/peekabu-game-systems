@@ -4,7 +4,7 @@
 	chest, in a warm window set into the card's left end (cropped at the window's bottom, never cut at the top), her
 	name on a tab on the card's top edge and her line beside her. The card reacts to the line's mood
 	(TrainingGuideRules.mood; owner pick 11-10, "caution tape"): calm lines wear the crew's yellow caution tape on the
-	top-right corner and a mint tab; danger lines (careful, hide, shh) red emergency tape on two corners, a red tab, a
+	top-right corner and a mint tab; danger lines (careful, hide, shh) red emergency tape on two opposite corners (top-right, bottom-left), a red tab, a
 	pink tint and a red glow. Her pose fits her kind of line (EmployeePoseRegistry's coach poses: go this way,
 	careful, cheer, shh, hide). Presentational (exempt; the line, pose and mood are the specced TrainingGuideRules via
 	TrainingCoachStore).
@@ -216,7 +216,7 @@ local function TrainingCoach(props: TrainingCoachProps): React.ReactNode
 				zIndex = z + 7,
 			}),
 		}),
-		-- The tape across the card's top-right corner (and, in danger, its bottom-right too).
+		-- The tape across the card's top-right corner (and, in danger, the bottom-left too).
 		tape = e(Tape, {
 			colors = look.tape,
 			size = Vector2.new(math.floor(170 * k), math.floor(28 * k)),
@@ -227,11 +227,12 @@ local function TrainingCoach(props: TrainingCoachProps): React.ReactNode
 		}),
 	}
 	if look.tapes > 1 then
+		-- The second strip on the diagonally opposite corner, bottom-left (owner, 11-10).
 		children.tapeLow = e(Tape, {
 			colors = look.tape,
 			size = Vector2.new(math.floor(150 * k), math.floor(26 * k)),
-			position = UDim2.fromOffset(card.X - math.floor(30 * k), tall - math.floor(10 * k)),
-			rotation = -14,
+			position = UDim2.fromOffset(math.floor(34 * k), tall - math.floor(8 * k)),
+			rotation = 18,
 			line = math.max(2, line - 2),
 			zIndex = z + 8,
 		})
