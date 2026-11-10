@@ -1,7 +1,7 @@
 --!strict
 --[=[
-	TrainingCoach: Pippa telling the player what to do (tutorial v3). Pippa is her real 3D model, belly and up, facing
-	the player, in the pose for her kind of line (EmployeePoseRegistry's coach poses: go this way, careful, cheer, shh,
+	TrainingCoach: Pippa telling the player what to do (tutorial v3). Pippa is her real 3D model, her whole figure
+	standing on a gold ledge (owner, 11-10: a belly-up crop read as cut off at the bottom), facing the player, in the pose for her kind of line (EmployeePoseRegistry's coach poses: go this way, careful, cheer, shh,
 	hide; shared poses on the kit rig, so any employee could coach); beside her a cream bubble with her name and the
 	line, its tail pointing at her. Presentational (exempt; the line and pose are the specced TrainingGuideRules.coach
 	via TrainingCoachStore).
@@ -43,6 +43,8 @@ local CONTEXTS: { [TrainingConstants.CoachPose]: EmployeePoseRegistry.PortraitCo
 	hide = "coachHide",
 }
 local CREAM = Color3.fromHex("FFFCF6")
+-- The figure frame's height per unit of the portrait's width.
+local FIGURE_TALL = 1.25
 
 local function TrainingCoach(props: TrainingCoachProps): React.ReactNode
 	local phone = props.phone
@@ -52,6 +54,10 @@ local function TrainingCoach(props: TrainingCoachProps): React.ReactNode
 	local overlap = if phone then 18 else 44
 	local tail = if phone then 16 else 28
 	local width = portrait + bubble.X - overlap
+	-- Her whole figure (ears to feet) is taller than wide: the frame is taller than the portrait's width, so she stays
+	-- as big as the old belly-up crop's head reads at.
+	local tall = math.floor(portrait * FIGURE_TALL)
+	local ledgeHeight = if phone then 12 else 22
 	local bubbleFace: { [string]: React.ReactNode } = {
 		name = e(ToonText, {
 			text = "PIPPA",
@@ -104,14 +110,15 @@ local function TrainingCoach(props: TrainingCoachProps): React.ReactNode
 	-- Keyed by the pose: ToonViewport rebuilds its model only when the employee or look changes, not the pose.
 	children[`pippa_{props.line.pose}`] = e(ToonViewport, {
 		employee = COACH,
-		framing = "upper",
+		framing = "full",
 		context = CONTEXTS[props.line.pose],
-		size = UDim2.fromOffset(portrait, portrait),
+		-- Her feet stand on the ledge's top (the full framing leaves a sliver under them).
+		anchor = Vector2.new(0, 1),
+		position = UDim2.new(0, 0, 1, -math.floor(ledgeHeight * 0.7)),
+		size = UDim2.fromOffset(portrait, tall),
 		zIndex = z + 2,
 	})
-	-- A ledge across the bottom of the portrait (owner 11-09): Pippa stands behind it, so the model's cut at the belly
-	-- reads as framed instead of chopped off. Only the bottom is edged; nothing caps her head or ears.
-	local ledgeHeight = if phone then 12 else 22
+	-- The gold ledge she stands on (owner 11-09). Only the bottom is edged; nothing caps her head or ears.
 	children.ledge = e("Frame", {
 		AnchorPoint = Vector2.new(0.5, 1),
 		Position = UDim2.new(0, portrait / 2, 1, 0),
@@ -138,7 +145,7 @@ local function TrainingCoach(props: TrainingCoachProps): React.ReactNode
 	return e("Frame", {
 		AnchorPoint = props.anchor or Vector2.new(0, 1),
 		Position = props.position,
-		Size = UDim2.fromOffset(width, portrait),
+		Size = UDim2.fromOffset(width, tall),
 		BackgroundTransparency = 1,
 		ZIndex = z,
 	}, children)

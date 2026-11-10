@@ -22,6 +22,7 @@ local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync
 local TrainingCoachStore = require(ReplicatedStorage.Client.Features.Training.State.TrainingCoachStore)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local PaperHudFrame = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudFrame)
+local PaperScaleContext = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperScaleContext)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local usePaperHudScale = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperHudScale)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
@@ -31,6 +32,7 @@ local ToonPanel = require(Toon.ToonPanel)
 local ToonPill = require(Toon.ToonPill)
 local ToonText = require(Toon.ToonText)
 local ToonViewport = require(Toon.ToonViewport)
+local TrainingFinishViewModel = require(script.Parent.TrainingFinishViewModel)
 
 local e = React.createElement
 local useAtom = ReactCharm.useAtom
@@ -57,6 +59,35 @@ local function useSpin(running: boolean): React.Binding<number>
 	return angle
 end
 
+type FittedCanvasProps = {
+	fit: TrainingFinishViewModel.Fit,
+	size: Vector2,
+	children: { [string]: React.ReactNode },
+}
+
+-- The design canvas drawn at the fit's scale and offset, with the text-size scale context following it.
+local function FittedCanvas(props: FittedCanvasProps): React.ReactNode
+	local fitScale = props.fit.scale
+	local outer = React.useContext(PaperScaleContext.Context)
+	local deps: { unknown } = { outer, fitScale }
+	local combined = React.useMemo(function(): React.Binding<number>
+		return outer:map(function(value: number): number
+			return value * fitScale
+		end)
+	end, deps)
+	local inside: { [string]: React.ReactNode } = { fitScale = e("UIScale", { Scale = fitScale }) }
+	for key, node in props.children do
+		inside[key] = node
+	end
+	return e(PaperScaleContext.Context.Provider, { value = combined }, {
+		canvas = e("Frame", {
+			Position = UDim2.fromOffset(props.fit.offset.X, props.fit.offset.Y),
+			Size = UDim2.fromOffset(props.size.X, props.size.Y),
+			BackgroundTransparency = 1,
+		}, inside),
+	})
+end
+
 local function TrainingFinish(): React.ReactNode
 	local finish = useAtom(TrainingCoachStore.finish)
 	local loadout = useAtom(StateSyncClientStore.loadout)
@@ -78,6 +109,10 @@ local function TrainingFinish(): React.ReactNode
 	end
 	local paid = finish.gleam > 0
 	local W = if phone then 844 else 1920
+	-- The composition is laid out on the design canvas and fitted into the area the HUD really has (a short laptop
+	-- window or a small phone has less than the canvas: the employee's feet were drawn off the screen's bottom).
+	local canvas = TrainingFinishViewModel.canvas(phone)
+	local fit = TrainingFinishViewModel.fit(hudScale.viewport, phone)
 	local function pick(value: TrainingCoachStore.Pick)
 		TrainingCoachStore.pick(value)
 	end
@@ -227,7 +262,9 @@ local function TrainingFinish(): React.ReactNode
 		}, {
 			frame = e(PaperHudFrame, {
 				scale = hudScale.scale,
-				children = face,
+				children = {
+					canvas = e(FittedCanvas, { fit = fit, size = canvas, children = face }),
+				},
 			}),
 		}),
 	})
