@@ -21,6 +21,9 @@ local CoffeeConstants = {
 	SECONDS = 1800,
 	-- How often the server takes a second off the coffee time it is spending.
 	TICK_SECONDS = 1,
+	-- How often the spent seconds are written to the buyer's slice (each write is an audited profile mutation; a crash
+	-- loses at most this many spent seconds, in the buyer's favour).
+	SAVE_SECONDS = 10,
 	-- The account slice of the buyer's coffee time left (seconds) and when it started (their place in line).
 	SLICE = "coffee",
 	-- The world entry naming whose coffee runs now and how long it has left ({ buyer, seconds }; the HUD badge).

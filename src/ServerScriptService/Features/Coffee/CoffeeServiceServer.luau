@@ -10,7 +10,8 @@
 	- **Countdown.** Once a second, while CoffeeRules.runs (a real shift running, players in the server), the server
 	  takes a second off ONE buyer's saved time: the earliest buyer in the server (CoffeeRules.spender), so two coffees
 	  never stack past 2x. The hub, the truck ride, the review and training never count. The time left is saved, so it
-	  carries across shifts, servers and rejoins.
+	  carries across shifts, servers and rejoins: spent seconds are written every CoffeeConstants.SAVE_SECONDS (each
+	  write is an audited profile mutation), and whenever the countdown stops, the spender changes or the buyer leaves.
 	- **The effect.** Each spent second goes to ShiftServiceServer:addCoffee, and the review pays 2x for that part of the
 	  shift (CoffeeRules.payScale, ShiftPaySystem). The CoffeeConstants.WORLD_ENTRY world entry ({ buyer, seconds })
 	  drives every client's badge countdown; it is cleared whenever no coffee runs.
@@ -52,6 +53,30 @@ local stoppers: { () -> () } = {}
 local counters = { granted = 0, announced = 0, spent = 0 }
 -- Whose coffee the badge shows now (nil = none), so the world entry is cleared once, not every second.
 local showing: string? = nil
+-- Seconds spent but not yet written to each buyer's slice (userId -> seconds).
+local pending: { [number]: number } = {}
+
+-- Writes `userId`'s spent seconds to their slice. A refused write (the profile is busy or gone) keeps them pending.
+local function save(userId: number)
+	local spent = pending[userId]
+	if spent == nil or spent <= 0 then
+		pending[userId] = nil
+		return
+	end
+	local ok = coffeeSlice.mutate(userId, function(value)
+		CoffeeRules.spend(value, spent)
+		return true
+	end)
+	if ok then
+		pending[userId] = nil
+	end
+end
+
+local function saveAll()
+	for userId in table.clone(pending) do
+		save(userId)
+	end
+end
 
 -- The PA: every player in this server (the crew) hears who bought the coffee.
 local function announce(buyer: string)
@@ -93,35 +118,38 @@ local function tick()
 	local shift = ShiftServiceServer:getShift()
 	if not CoffeeRules.runs(shift.phase, ShiftServiceServer:isTraining(), #players) then
 		clearBadge()
+		saveAll()
 		return
 	end
 	local candidates: { CoffeeRules.Candidate } = {}
 	local byId: { [number]: Player } = {}
 	for _, player in players do
 		local saved = coffeeSlice.get(player.UserId)
-		if saved ~= nil and saved.seconds > 0 then
-			table.insert(candidates, { userId = player.UserId, seconds = saved.seconds, since = saved.since })
+		-- What is left: the saved time minus the seconds spent since the last write.
+		local seconds = if saved ~= nil then saved.seconds - (pending[player.UserId] or 0) else 0
+		if saved ~= nil and seconds > 0 then
+			table.insert(candidates, { userId = player.UserId, seconds = seconds, since = saved.since })
 			byId[player.UserId] = player
 		end
 	end
 	local picked = CoffeeRules.spender(candidates)
 	local player = if picked ~= nil then byId[picked.userId] else nil
+	-- Anyone else's spent seconds (the spender changed, or theirs ran out) are written now.
+	for userId in table.clone(pending) do
+		if picked == nil or userId ~= picked.userId then
+			save(userId)
+		end
+	end
 	if picked == nil or player == nil then
 		clearBadge()
 		return
 	end
-	local left = picked.seconds
-	local ok = coffeeSlice.mutate(player.UserId, function(value)
-		if value.seconds <= 0 then
-			return false
-		end
-		CoffeeRules.spend(value, CoffeeConstants.TICK_SECONDS)
-		left = value.seconds
-		return true
-	end)
-	-- A refused write (the profile is busy) spends nothing this second; the badge keeps the last time.
-	if not ok then
-		return
+	local userId = player.UserId
+	local spent = (pending[userId] or 0) + CoffeeConstants.TICK_SECONDS
+	pending[userId] = spent
+	local left = math.max(0, picked.seconds - CoffeeConstants.TICK_SECONDS)
+	if spent >= CoffeeConstants.SAVE_SECONDS or left <= 0 then
+		save(userId)
 	end
 	counters.spent += 1
 	local buyer = player.DisplayName
@@ -181,8 +209,14 @@ local CoffeeServiceServer: CoffeeServiceServer = {
 				log:error(`coffee tick failed: {err}`)
 			end
 		end)
+		-- A leaving buyer's spent seconds are written before their profile is released.
+		local leaving = Players.PlayerRemoving:Connect(function(player: Player)
+			save(player.UserId)
+			pending[player.UserId] = nil
+		end)
 		table.insert(stoppers, function()
 			ticking:Disconnect()
+			leaving:Disconnect()
 		end)
 	end,
 
@@ -191,6 +225,8 @@ local CoffeeServiceServer: CoffeeServiceServer = {
 			stopper()
 		end
 		table.clear(stoppers)
+		saveAll()
+		table.clear(pending)
 		showing = nil
 		StateSyncWorldStore.clear(CoffeeConstants.WORLD_ENTRY)
 	end,
@@ -208,6 +244,7 @@ local CoffeeServiceServer: CoffeeServiceServer = {
 			product = productId,
 			showing = showing,
 			saved = saved,
+			pending = table.clone(pending),
 			coffee = ShiftServiceServer:coffee(),
 		}
 	end,

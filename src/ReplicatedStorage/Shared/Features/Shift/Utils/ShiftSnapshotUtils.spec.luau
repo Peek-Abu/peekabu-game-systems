@@ -170,6 +170,36 @@ return function()
 		expect(ShiftSnapshotUtils.decode(plain).results.catches).to.equal(0)
 	end)
 
+	it("round-trips the crew's coffee, its pay scale and how long the shift ran in the results", function()
+		local review = table.clone(RESULTS)
+		review.coffee = "Ice"
+		review.payScale = 1.5
+		review.ranFor = 312.5
+		local value = ShiftSnapshotUtils.build(state({ phase = "results", voteEndsAt = 1000 }), 380, 95, 0, 0, review)
+		local decoded = ShiftSnapshotUtils.decode(value).results
+		expect(decoded.coffee).to.equal("Ice")
+		expect(decoded.payScale).to.equal(1.5)
+		expect(decoded.ranFor).to.equal(312.5)
+		local plain = ShiftSnapshotUtils.build(state({ phase = "results", voteEndsAt = 1000 }), 380, 95, 0, 0, RESULTS)
+		local bare = ShiftSnapshotUtils.decode(plain).results
+		expect(bare.coffee).to.equal(nil)
+		expect(bare.payScale).to.equal(nil)
+	end)
+
+	it("refuses results whose coffee or pay scale has the wrong type", function()
+		local badCoffee = table.clone(RESULTS)
+		badCoffee.coffee = 5
+		local badScale = table.clone(RESULTS)
+		badScale.payScale = "2"
+		for _, bad in { badCoffee, badScale } do
+			expect(
+				ShiftSnapshotUtils.decode(
+					ShiftSnapshotUtils.build(state({ phase = "results", voteEndsAt = 1000 }), 380, 95, 0, 0, bad)
+				)
+			).to.equal(nil)
+		end
+	end)
+
 	it("round-trips the Gloom from piles in the results, absent reading 0, text refused", function()
 		local review = table.clone(RESULTS)
 		review.dust = 260

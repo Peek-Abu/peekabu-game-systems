@@ -242,6 +242,16 @@ local function resultsOf(value: WorldValue?): (ShiftResults?, boolean)
 	if not offeredOk or not rating then
 		return nil, false
 	end
+	-- Coffee for the crew (who, and the pay scale) and how long the shift ran: optional, but typed when present.
+	local coffee = value.coffee
+	local payScale = value.payScale
+	local ranFor = value.ranFor
+	if coffee ~= nil and type(coffee) ~= "string" then
+		return nil, false
+	end
+	if (payScale ~= nil and type(payScale) ~= "number") or (ranFor ~= nil and type(ranFor) ~= "number") then
+		return nil, false
+	end
 	return {
 		outcome = outcome,
 		quota = quota,
@@ -256,6 +266,9 @@ local function resultsOf(value: WorldValue?): (ShiftResults?, boolean)
 		quotaMet = quotaMet,
 		crew = crew,
 		awards = awards,
+		coffee = if type(coffee) == "string" then coffee else nil,
+		payScale = numberField(payScale),
+		ranFor = numberField(ranFor),
 	},
 		true
 end
