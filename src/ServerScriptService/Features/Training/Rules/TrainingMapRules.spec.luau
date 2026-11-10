@@ -27,7 +27,7 @@ local function entry(role, fields)
 end
 
 -- A whole, valid hall: one of each single part, 5 stops with zones, the stop-1 pile, the stop-2 mug, two doors and
--- a 3-point route.
+-- a 3-point route, Harlow's 3-point lane with his offstage spot, and his two doors.
 local function hall()
 	local list = {
 		entry("spawn"),
@@ -42,6 +42,12 @@ local function hall()
 		entry("route", { order = 2, cframe = at(0, 60) }),
 		entry("route", { order = 1, cframe = at(0, 50) }),
 		entry("route", { order = 3, cframe = at(0, 70) }),
+		entry("lane", { order = 2, cframe = at(5, 62) }),
+		entry("lane", { order = 1, cframe = at(5, 55) }),
+		entry("lane", { order = 3, cframe = at(-5, 75) }),
+		entry("offstage", { cframe = at(10, 55) }),
+		entry("staffDoor", { cframe = at(8, 55) }),
+		entry("exitDoor", { cframe = at(-8, 75) }),
 		entry("light", { order = 1 }),
 		entry("sign", { stop = 1 }),
 	}
@@ -88,6 +94,29 @@ return function()
 			local plan = TrainingMapRules.read(hall(), KINDS)
 			expect(plan.route[1]).to.equal(Vector3.new(0, 0, 50))
 			expect(plan.route[3]).to.equal(Vector3.new(0, 0, 70))
+		end)
+
+		it("puts Harlow's lane in its order, with his offstage spot", function()
+			local plan = TrainingMapRules.read(hall(), KINDS)
+			expect(#plan.lane).to.equal(3)
+			expect(plan.lane[1]).to.equal(Vector3.new(5, 0, 55))
+			expect(plan.lane[3]).to.equal(Vector3.new(-5, 0, 75))
+			expect(plan.offstage).to.equal(at(10, 55))
+		end)
+
+		it("needs a lane of at least three points (in, past the player, out)", function()
+			local list = without(hall(), "lane")
+			table.insert(list, entry("lane", { order = 1 }))
+			table.insert(list, entry("lane", { order = 2, cframe = at(5, 5) }))
+			local _, errors = TrainingMapRules.read(list, KINDS)
+			expect(hasError(errors, "lane")).to.equal(true)
+		end)
+
+		it("needs his offstage spot and both of his doors", function()
+			for _, role in { "offstage", "staffDoor", "exitDoor" } do
+				local _, errors = TrainingMapRules.read(without(hall(), role), KINDS)
+				expect(hasError(errors, role)).to.equal(true)
+			end
 		end)
 
 		it("names a missing single part", function()

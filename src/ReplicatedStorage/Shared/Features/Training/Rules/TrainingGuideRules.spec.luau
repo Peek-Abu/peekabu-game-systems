@@ -96,10 +96,13 @@ return function()
 			expect(TrainingGuideRules.coach(4, at(false, false, true)).text).to.equal(
 				TrainingConstants.COACH.hidden.text
 			)
-			local clear = TrainingGuideRules.coach(4, at(true, false, true))
-			expect(clear.text).to.equal(TrainingConstants.COACH.clear.text)
-			expect(clear.pose).to.equal("cheer")
 			expect(TrainingGuideRules.coach(4, at(true)).text).to.equal(TrainingConstants.COACH.clear.text)
+		end)
+
+		it("cheers a player who hid: hiding is the win", function()
+			local brave = TrainingGuideRules.coach(4, at(true, false, true))
+			expect(brave.text).to.equal(TrainingConstants.COACH.clearHid.text)
+			expect(brave.pose).to.equal("cheer")
 		end)
 	end)
 

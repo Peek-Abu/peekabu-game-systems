@@ -6,7 +6,8 @@
 	Holds the stage (freeze, or a walk to a spot that ends frozen) and a queued chase. While staged, `intent` is his
 	intent and the service skips his brain (no sight, hearing or catches). `takeChase` hands the queued chase to his
 	next think, once. `command` carries out one action: `here` moves his rig, `chase` wakes him, `calm` returns his new
-	mind. `reset` clears it all (he despawned).
+	mind. `reset` clears it all (he despawned). `direct` carries out a game system's Order (OccupantStageRules.Order);
+	`current` is the stage now (nil: his brain thinks), so a director knows when a walk has arrived (it is frozen).
 
 	@class OccupantStageSystem
 ]=]
@@ -64,6 +65,41 @@ function OccupantStageSystem.takeChase(): number?
 	return userId
 end
 
+function OccupantStageSystem.current(): OccupantStageRules.Stage?
+	return staged
+end
+
+-- Moves his rig so its root sits at `goal`.
+local function moveRoot(rig: OccupantRigSystem.Rig, goal: CFrame)
+	rig.model:PivotTo(goal * rig.root.CFrame:Inverse() * rig.model:GetPivot())
+end
+
+--[=[
+	Carries out a game system's order on `rig`.
+]=]
+function OccupantStageSystem.direct(rig: OccupantRigSystem.Rig, order: OccupantStageRules.Order)
+	if order.kind == "park" then
+		-- The frame is where his feet stand: his root goes his own height above it.
+		moveRoot(rig, order.cframe * CFrame.new(0, rig.humanoid.HipHeight + rig.root.Size.Y / 2, 0))
+		staged = { kind = "freeze" }
+	elseif order.kind == "walk" then
+		staged = { kind = "goTo", position = order.position, run = order.run }
+		NpcServiceServer:wake(rig.model)
+	elseif order.kind == "face" then
+		moveRoot(rig, OccupantStageRules.facing(rig.root.CFrame, order.position))
+		staged = { kind = "freeze" }
+	elseif order.kind == "freeze" then
+		staged = { kind = "freeze" }
+	elseif order.kind == "free" then
+		staged = nil
+		NpcServiceServer:wake(rig.model)
+	else
+		staged = nil
+		pendingChase = order.userId
+		NpcServiceServer:wake(rig.model)
+	end
+end
+
 --[=[
 	Carries out one staging action. Returns whether it was done, a short line for the caller, and his new mind when the
 	action changed it (`calm`).
@@ -94,7 +130,7 @@ function OccupantStageSystem.command(request: Request): (boolean, string, Occupa
 		local rig = request.rig
 		local feetY = caller.Position.Y - request.callerHip - caller.Size.Y / 2
 		local goal = OccupantStageRules.standIn(caller.CFrame, feetY, rig.humanoid.HipHeight + rig.root.Size.Y / 2)
-		rig.model:PivotTo(goal * rig.root.CFrame:Inverse() * rig.model:GetPivot())
+		moveRoot(rig, goal)
 		staged = { kind = "freeze" }
 		return true, "he stands where you stood, frozen (free him with: harlow free)", nil
 	elseif action == "come" or action == "rush" then

@@ -56,6 +56,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Features.Training.TrainingServiceServer"] = "data layer, Queue, Office and Shift shell (TrainingRules, TrainingStopRules and TrainingMapRules are specced)",
 	["ServerScriptService.Features.Training.Systems.TrainingSiteSystem"] = "Instance/Vacuum/Cargo shell (the map is read and checked by the specced TrainingMapRules)",
 	["ServerScriptService.Features.Training.Systems.TrainingRunSystem"] = "Instance/signal shell (progress is the specced TrainingStopRules)",
+	["ServerScriptService.Features.Training.Systems.TrainingHarlowSystem"] = "Occupant/tween/raycast shell (the pass is the specced TrainingPassRules)",
 	["ServerScriptService.Commands.CurrencyAdd"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.AdminBan"] = "Cmdr command definition (server impl is specced)",
 	["ServerScriptService.Commands.AdminUnban"] = "Cmdr command definition (server impl is specced)",

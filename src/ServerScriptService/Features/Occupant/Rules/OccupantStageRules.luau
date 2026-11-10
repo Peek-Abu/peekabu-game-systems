@@ -11,6 +11,9 @@
 	While staged (`intent` returns his intent) his brain is skipped. `chase` and `calm` change his mind instead and
 	leave him unstaged.
 
+	A game system can direct him too (OccupantServiceServer:direct, an `Order`: the tutorial's scripted pass): park him
+	at a frame, walk or run him to a point, turn him to `face` a point (`facing`), freeze, free, or chase a player.
+
 	@class OccupantStageRules
 ]=]
 
@@ -26,6 +29,15 @@ type Senses = OccupantTypes.Senses
 
 export type Action = "freeze" | "free" | "come" | "rush" | "here" | "calm" | "chase"
 export type Stage = { kind: "freeze" } | { kind: "goTo", position: Vector3, run: boolean }
+-- A game system's direction (OccupantServiceServer:direct).
+export type Order =
+	-- `cframe`: where his feet stand, facing its look.
+	{ kind: "park", cframe: CFrame }
+	| { kind: "walk", position: Vector3, run: boolean }
+	| { kind: "face", position: Vector3 }
+	| { kind: "freeze" }
+	| { kind: "free" }
+	| { kind: "chase", userId: number }
 
 -- Within this many studs (flat) of a staged spot he has arrived.
 local ARRIVE_DISTANCE = 3
@@ -83,6 +95,17 @@ function OccupantStageRules.standIn(caller: CFrame, callerFeetY: number, rootHei
 	local flat = caller.LookVector * Vector3.new(1, 0, 1)
 	local facing = if flat.Magnitude > 0.01 then flat.Unit else Vector3.new(0, 0, -1)
 	return CFrame.lookAt(spot, spot + facing)
+end
+
+--[=[
+	His root frame turned in place to look flat at `target`; unchanged when `target` is straight above or below him.
+]=]
+function OccupantStageRules.facing(root: CFrame, target: Vector3): CFrame
+	local flat = (target - root.Position) * Vector3.new(1, 0, 1)
+	if flat.Magnitude < 0.01 then
+		return root
+	end
+	return CFrame.lookAt(root.Position, root.Position + flat.Unit)
 end
 
 --[=[

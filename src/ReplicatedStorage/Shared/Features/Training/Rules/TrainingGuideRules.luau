@@ -102,7 +102,7 @@ function TrainingGuideRules.coach(stop: number, situation: Situation): TrainingC
 	elseif id == "treasure" and situation.carrying and not situation.stopDone then
 		return lines.carrying
 	elseif id == "hide" and situation.stopDone then
-		return lines.clear
+		return if situation.hidden then lines.clearHid else lines.clear
 	elseif id == "hide" and situation.hidden then
 		return lines.hidden
 	elseif situation.stopDone then

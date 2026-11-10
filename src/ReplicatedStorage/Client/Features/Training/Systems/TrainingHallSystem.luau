@@ -8,7 +8,9 @@
 	  off, a Neon part to plain plastic), and the "creep" patches of Gloom fade and grow in, in ORDER.
 	- Stop 4 ("hide"): red and dark (a second, redder screen request on top), and the hiding furniture glows red (a
 	  Highlight), so the way to hide is plain. (Tutorial v3: no hall signs; Pippa's lines and the goal bar say it.)
-	  Once the player got away (`setClear`), the glow turns green, the red lifts and a small all-clear sound plays.
+	  Mr. Harlow's two doors (staffDoor, exitDoor) creak as they swing open and slam shut (their TrainingSwingOpen
+	  attribute, set by the server's TrainingHarlowSystem; 3D at the door). Once he has gone (`setClear`): the relief
+	  sting, the glow turns green, the red and the dark lift, and the hall's lights pop back on one by one, in ORDER.
 	- Stop 5 ("done"): every light pops back on, the Gloom fades away, the glow goes, and a happy sound plays.
 
 	The hall's "light" parts are the training's own (not OfficeLight-tagged), so nothing else switches them.
@@ -25,6 +27,8 @@ local TweenService = game:GetService("TweenService")
 
 local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideConstants)
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
+local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
+local TrainingAssets = require(ReplicatedStorage.Client.Features.Training.Data.TrainingAssets)
 local UISoundSystem = require(ReplicatedStorage.Client.Features.UI.Systems.UISoundSystem)
 local VfxServiceClient = require(ReplicatedStorage.Client.Features.Vfx.VfxServiceClient)
 
@@ -48,6 +52,10 @@ local generation = 0
 -- The dark screen at stops 3-4 and the hide stop's red on top (Vfx screen requests), while they are held.
 local darkToken: number? = nil
 local dangerToken: number? = nil
+-- The door listeners (one per Harlow door), while the hall is shown.
+local doorWatch: { RBXScriptConnection } = {}
+-- Seconds between two lights popping back on at the all-clear.
+local POP_STEP = 0.18
 
 local function danger(on: boolean)
 	local token = dangerToken
@@ -188,6 +196,54 @@ local function glow(model: Model, on: boolean)
 	end
 end
 
+-- His doors' sounds: a creak as one swings open, a slam as it shuts (the STAFF door's close is softer).
+local function watchDoors(model: Model)
+	if #doorWatch > 0 then
+		return
+	end
+	for _, role in { "staffDoor", "exitDoor" } do
+		for _, door in parts(model, role) do
+			table.insert(
+				doorWatch,
+				door:GetAttributeChangedSignal("TrainingSwingOpen"):Connect(function()
+					local open = door:GetAttribute("TrainingSwingOpen") == true
+					SoundServiceClient:playOneShot(if open then TrainingAssets.CREAK else TrainingAssets.SLAM, {
+						at = door,
+						volumeScale = if not open and role == "staffDoor" then 0.5 else 1,
+					})
+				end)
+			)
+		end
+	end
+end
+
+local function unwatchDoors()
+	for _, connection in doorWatch do
+		connection:Disconnect()
+	end
+	table.clear(doorWatch)
+end
+
+-- The all-clear: the hall's lights pop back on one by one, in ORDER.
+local function popOn(model: Model, mine: number)
+	for index, part in parts(model, "light") do
+		task.delay((index - 1) * POP_STEP, function()
+			if mine ~= generation or not cleared then
+				return
+			end
+			local state = saved[part]
+			if state == nil then
+				return
+			end
+			part.Material = state.material
+			for _, light in state.lights do
+				light.Enabled = true
+			end
+			saved[part] = nil
+		end)
+	end
+end
+
 local TrainingHallSystem = {}
 
 --[=[
@@ -204,6 +260,7 @@ function TrainingHallSystem.apply(stop: number)
 	generation += 1
 	local mine = generation
 	hideCreep(model)
+	watchDoors(model)
 	if stop >= STOP_QUIET and stop < STOP_DONE and before < STOP_QUIET then
 		for index, part in parts(model, "light") do
 			task.delay((index - 1) * TrainingConstants.LIGHT_STEP, function()
@@ -241,7 +298,11 @@ function TrainingHallSystem.setClear(stop: number?)
 	end
 	danger(shown == STOP_HIDE and not cleared)
 	if cleared then
-		UISoundSystem.play("confirm")
+		SoundServiceClient:playOneShot(TrainingAssets.RELIEF)
+		dark(false)
+		if model ~= nil then
+			popOn(model, generation)
+		end
 	end
 end
 
@@ -252,6 +313,7 @@ function TrainingHallSystem.clear()
 	generation += 1
 	shown = 0
 	cleared = false
+	unwatchDoors()
 	lightsOn()
 	dark(false)
 	danger(false)

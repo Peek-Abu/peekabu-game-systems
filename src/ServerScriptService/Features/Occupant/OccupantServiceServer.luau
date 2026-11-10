@@ -501,6 +501,8 @@ export type OccupantServiceServer = {
 		action: OccupantStageRules.Action,
 		target: Player?
 	) -> (boolean, string),
+	direct: (self: OccupantServiceServer, order: OccupantStageRules.Order) -> boolean,
+	directed: (self: OccupantServiceServer) -> OccupantStageRules.Stage?,
 }
 
 local OccupantServiceServer: OccupantServiceServer = {
@@ -624,6 +626,20 @@ local OccupantServiceServer: OccupantServiceServer = {
 		})
 		mind = nextMind or currentMind
 		return ok, message
+	end,
+
+	-- A game system directs him (the tutorial's scripted pass). False when he is not here.
+	direct = function(_self, order)
+		local current = rig
+		if current == nil then
+			return false
+		end
+		OccupantStageSystem.direct(current, order)
+		return true
+	end,
+
+	directed = function(_self)
+		return OccupantStageSystem.current()
 	end,
 
 	getMind = function(_self)

@@ -21,7 +21,12 @@ export type Role =
 	| "door" -- shuts the way on until its stop is done (STOP)
 	| "pile" -- a Gloom pile spawns here (STOP, KIND: a pile kind)
 	| "item" -- a cargo item spawns here (STOP, KIND: a cargo id)
-	| "route" -- one of Mr. Harlow's patrol points (ORDER)
+	| "route" -- one of Mr. Harlow's patrol points (ORDER), walked as a loop after a chase
+	| "lane" -- one point of his scripted pass at the escape stop (ORDER): in, past the player, out
+	| "offstage" -- where he waits out of sight: his feet stand at its centre, facing its look (CFrame); its lights are
+	-- the light that spills through the STAFF door while it is open
+	| "staffDoor" -- the door he comes in by (swings open on its -X edge; its light spills in)
+	| "exitDoor" -- the door he leaves by (swings open on its -X edge; slams shut behind him)
 	| "rest" -- where Mr. Harlow takes his break
 	| "safe" -- a box Mr. Harlow never enters (the start)
 	| "bay" -- a box he walks but never lingers in
@@ -56,6 +61,10 @@ local ROLES: { Role } = {
 	"pile",
 	"item",
 	"route",
+	"lane",
+	"offstage",
+	"staffDoor",
+	"exitDoor",
 	"rest",
 	"safe",
 	"bay",
@@ -83,8 +92,9 @@ local COACH: { [string]: CoachLine } = {
 	carrying = { text = "Now put it in the truck!", pose = "point" },
 	quiet = { text = "Uh oh, the lights! Don't stop. Stay on the arrows.", pose = "warn" },
 	hide = { text = "He's coming! Run away, or hide under the glowing desk!", pose = "hide" },
-	hidden = { text = "Shh! Stay still. I'll tell you when he's gone.", pose = "shh" },
+	hidden = { text = "Shh! Stay still and watch him walk by.", pose = "shh" },
 	clear = { text = "He's gone! Go now! Follow the arrows.", pose = "cheer" },
+	clearHid = { text = "You hid! So brave! Now follow the arrows.", pose = "cheer" },
 	done = { text = "You did it! You're ready for a real shift!", pose = "cheer" },
 	open = { text = "The door is open! Follow the arrows.", pose = "point" },
 	caught = { text = "Try again! Run away, or hide before he sees you.", pose = "shh" },
@@ -133,10 +143,21 @@ local TrainingConstants = {
 	-- knocked down and the screen is fully dark (CATCH_BEAT.dark + .fade to .back), so they stand up there and control
 	-- comes back once (option A, owner 11-07).
 	RETURN_DELAY = 0.62,
-	-- The escape stop (stop 4): passed once Mr. Harlow came within `near` studs (or chased the player) and the player
-	-- then stayed safe for `seconds`: he is not chasing them, not within `near`, and they are hidden, out of his sight,
-	-- or `far` studs away. If he never comes, it passes after `timeout` seconds. (TrainingStopRules.escapeStep)
-	ESCAPE = table.freeze({ near = 20, far = 35, seconds = 2.5, timeout = 25 }),
+	-- The escape stop (stop 4): Mr. Harlow's scripted pass (TrainingPassRules), seconds and studs. `enter`: the STAFF door
+	-- creaks open this long before he walks in; `pause`: his one stop by the player; `calm`: after a chase, how long his
+	-- brain must stop hunting before he walks out; `slam`: his exit door's swing shut; `retry`: after a pass with a catch,
+	-- how long until he comes round again; `spot`: how far he spots a player in the open; `swing`: a door's swing time;
+	-- `absent`: how long he may be missing from the shift during a pass before it ends anyway (nobody is stuck).
+	PASS = table.freeze({
+		enter = 1.4,
+		pause = 2,
+		calm = 1.5,
+		slam = 0.5,
+		retry = 3,
+		spot = 30,
+		swing = 0.45,
+		absent = 8,
+	}),
 	-- The world entry holding the last stop the player escaped at (the client's "He's gone!" cue).
 	CLEAR_ENTRY = "trainingClear",
 	-- After "Play training again", how long the hub's chevron trail leads a trained player to the pad (seconds).

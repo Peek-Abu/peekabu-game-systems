@@ -6,7 +6,9 @@
 	- every stop (TrainingConstants.STOPS) has a start ("stop") and a zone;
 	- a "piles" stop has at least one pile of a known kind, a "banked" stop at least one treasure (a valuable);
 	- a stop with its own goal has a door, so the player cannot walk past it;
-	- Harlow's route has at least two points with different orders (walked in order, as a loop);
+	- Harlow's route has at least two points with different orders (walked in order, as a loop, after a chase);
+	- Harlow's scripted pass at the escape stop: his lane (at least three ordered points: in through the STAFF door,
+	  past the player, out through his exit door), his one offstage spot, one staffDoor and one exitDoor;
 	- every role is known, and every pile or item kind is known.
 
 	`boxOf` turns a box part into its world-aligned bounds and `inside` tests a point.
@@ -43,6 +45,9 @@ export type Plan = {
 	piles: { Spawn },
 	items: { Spawn },
 	route: { Vector3 },
+	-- Harlow's scripted pass, in order, and where he waits out of sight (facing in).
+	lane: { Vector3 },
+	offstage: CFrame,
 }
 
 -- Which kinds the game knows: a pile kind, any cargo id, and a valuable (a treasure, not trash).
@@ -53,7 +58,7 @@ export type Kinds = {
 }
 
 local STOPS = TrainingConstants.STOPS
-local SINGLES = { "spawn", "rest", "safe", "bay" }
+local SINGLES = { "spawn", "rest", "safe", "bay", "offstage", "staffDoor", "exitDoor" }
 
 local TrainingMapRules = {}
 
@@ -170,24 +175,30 @@ function TrainingMapRules.read(entries: { Entry }, kinds: Kinds): (Plan?, { stri
 		end
 	end
 
-	local points = table.clone(all("route"))
-	table.sort(points, function(a, b)
-		return (a.order or 0) < (b.order or 0)
-	end)
-	local route: { Vector3 } = {}
-	local orders: { [number]: boolean } = {}
-	for _, entry in points do
-		local order = entry.order
-		if order == nil or orders[order] then
-			table.insert(errors, `route point with a missing or repeated order ({order or "?"})`)
-		else
-			orders[order] = true
-			table.insert(route, entry.cframe.Position)
+	-- A role's points in their ORDER, naming a missing or repeated order and too few points.
+	local function ordered(role: string, fewest: number): { Vector3 }
+		local points = table.clone(all(role))
+		table.sort(points, function(a, b)
+			return (a.order or 0) < (b.order or 0)
+		end)
+		local list: { Vector3 } = {}
+		local orders: { [number]: boolean } = {}
+		for _, entry in points do
+			local order = entry.order
+			if order == nil or orders[order] then
+				table.insert(errors, `{role} point with a missing or repeated order ({order or "?"})`)
+			else
+				orders[order] = true
+				table.insert(list, entry.cframe.Position)
+			end
 		end
+		if #list < fewest then
+			table.insert(errors, `the {role} needs at least {fewest} points (found {#list})`)
+		end
+		return list
 	end
-	if #route < 2 then
-		table.insert(errors, `the route needs at least two points (found {#route})`)
-	end
+	local route = ordered("route", 2)
+	local lane = ordered("lane", 3)
 
 	if #errors > 0 then
 		return nil, errors
@@ -205,6 +216,8 @@ function TrainingMapRules.read(entries: { Entry }, kinds: Kinds): (Plan?, { stri
 		piles = piles,
 		items = items,
 		route = route,
+		lane = lane,
+		offstage = single("offstage").cframe,
 	},
 		errors
 end

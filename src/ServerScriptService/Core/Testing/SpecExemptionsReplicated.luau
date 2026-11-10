@@ -35,6 +35,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.Features.Training.TrainingServiceClient"] = "Charm/ByteNet wiring shell (TrainingRules is specced)",
 	["ReplicatedStorage.Client.Features.Training.Systems.TrainingSpotlightSystem"] = "camera/PlayerGui/CollectionService/React-root shell (layout specced in TrainingSpotlightUtils)",
 	["ReplicatedStorage.Client.Features.Training.Systems.TrainingHallSystem"] = "Instance/tween/sound shell (the stop is the server's specced TrainingStopRules)",
+	["ReplicatedStorage.Client.Features.Training.Data.TrainingAssets"] = "asset id slots; registers the training's sounds at load (no decisions)",
 	["ReplicatedStorage.Client.Features.Training.Systems.TrainingHubSystem"] = "CollectionService/character/spotlight shell (TrainingRules is specced)",
 	["ReplicatedStorage.Client.Features.Training.Systems.TrainingSignSystem"] = "BillboardGui/React-root shell (roots specced in UIBillboards)",
 	["ReplicatedStorage.Client.UI.React.Screens.Training.TrainingSpotlight"] = "presentational React component (layout specced in TrainingSpotlightUtils)",
