@@ -35,9 +35,9 @@ return function()
 			expect(near(fit.scale, 1440 / 1920)).to.equal(true)
 		end)
 
-		it("fits a phone smaller than the 844x390 design (a 667x375 or 740x360 phone)", function()
+		it("fits a phone smaller than the 844x390 design, by its tighter side", function()
 			expect(near(TrainingFinishViewModel.fit(Vector2.new(667, 375), true).scale, 667 / 844)).to.equal(true)
-			expect(near(TrainingFinishViewModel.fit(Vector2.new(740, 360), true).scale, 360 / 390)).to.equal(true)
+			expect(near(TrainingFinishViewModel.fit(Vector2.new(800, 360), true).scale, 360 / 390)).to.equal(true)
 		end)
 
 		it("centres the scaled canvas in the area", function()
