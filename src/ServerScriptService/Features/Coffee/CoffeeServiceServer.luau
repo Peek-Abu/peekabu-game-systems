@@ -119,7 +119,7 @@ local function buyWithGleam(player: Player)
 	local userId = player.UserId
 	if not CoffeeRules.affords(MarketplaceServiceServer:getPremium(userId)) then
 		counters.gleamShort += 1
-		ToastServiceServer:send(player, { text = CoffeeRules.shortLine() })
+		ToastServiceServer:send(player, { text = CoffeeRules.shortLine(), style = ShiftConstants.TOAST_STICKY })
 		return
 	end
 	local committed, result = PlayerDataService:transaction({
@@ -133,7 +133,7 @@ local function buyWithGleam(player: Player)
 		-- The balance changed under us (spent elsewhere) or the profile is busy: nothing was taken.
 		counters.gleamShort += 1
 		log:warn(`{player.Name}'s Gleam coffee was refused: {result.rejectionReason or "transaction failed"}`)
-		ToastServiceServer:send(player, { text = CoffeeRules.shortLine() })
+		ToastServiceServer:send(player, { text = CoffeeRules.shortLine(), style = ShiftConstants.TOAST_STICKY })
 		return
 	end
 	counters.gleamBought += 1
