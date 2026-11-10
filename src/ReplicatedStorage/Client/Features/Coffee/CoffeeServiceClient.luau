@@ -48,6 +48,7 @@ local function widget(): React.ReactNode
 	local world = ReactCharm.useAtom(StateSyncClientStore.world)
 	local scale = usePaperHudScale()
 	local choosing, setChoosing = React.useState(false)
+	local premium = ReactCharm.useAtom(StateSyncClientStore.premium)
 	local badge = CoffeeRules.badge(world[CoffeeConstants.WORLD_ENTRY])
 	local training = world[TrainingConstants.WORLD_ENTRY] ~= nil
 	local phase = if snapshot ~= nil then snapshot.phase else "lobby"
@@ -88,6 +89,8 @@ local function widget(): React.ReactNode
 						buyGleam()
 					end,
 					onClose = close,
+					short = not CoffeeRules.affords(premium.balance),
+					shortLine = CoffeeRules.shortLine(),
 				})
 				else nil,
 		},

@@ -25,6 +25,10 @@ export type CoffeeChoiceProps = {
 	onRobux: (() -> ())?,
 	onGleam: () -> (),
 	onClose: () -> (),
+	-- The player has under 250 Gleam (CoffeeRules.affords): the Gleam button greys out (a press plays the error
+	-- sound) and the line says so (CoffeeRules.shortLine). The server checks again either way.
+	short: boolean,
+	shortLine: string,
 }
 
 local function CoffeeChoice(props: CoffeeChoiceProps): React.ReactNode
@@ -36,7 +40,7 @@ local function CoffeeChoice(props: CoffeeChoiceProps): React.ReactNode
 	local onRobux = props.onRobux
 	local children: { [string]: React.ReactNode } = {
 		line = e(ToonText, {
-			text = CoffeeConstants.TEXT.choiceLine,
+			text = if props.short then props.shortLine else CoffeeConstants.TEXT.choiceLine,
 			textSize = if phone then 15 else 22,
 			font = "body",
 			align = "center",
@@ -55,6 +59,7 @@ local function CoffeeChoice(props: CoffeeChoiceProps): React.ReactNode
 			anchor = Vector2.new(if onRobux ~= nil then 0 else 0.5, 1),
 			position = if onRobux ~= nil then UDim2.new(0.52, 0, 1, -14) else UDim2.new(0.5, 0, 1, -14),
 			size = UDim2.new(0.44, 0, 0, buttonHeight),
+			disabled = props.short,
 			onActivated = props.onGleam,
 		}),
 	}
