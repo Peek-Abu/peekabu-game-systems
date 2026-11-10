@@ -163,4 +163,16 @@ function TrainingGuideRules.tourHeld(changedAt: number?, now: number): boolean
 	return changedAt ~= nil and now - changedAt < TrainingConstants.COACH_HOLD
 end
 
+-- How a line of Pippa's feels: her card is calm (yellow caution tape) or danger (red emergency tape and glow).
+export type Mood = "calm" | "danger"
+
+local DANGER_POSES: { [TrainingConstants.CoachPose]: boolean } = { warn = true, hide = true, shh = true }
+
+--[=[
+	The mood of a line by Pippa's pose for it: careful, hide and shh lines are danger; the rest are calm.
+]=]
+function TrainingGuideRules.mood(pose: TrainingConstants.CoachPose): Mood
+	return if DANGER_POSES[pose] then "danger" else "calm"
+end
+
 return TrainingGuideRules

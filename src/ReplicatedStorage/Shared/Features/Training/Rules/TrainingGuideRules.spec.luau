@@ -146,6 +146,26 @@ return function()
 		end)
 	end)
 
+	describe("mood", function()
+		-- Owner pick 11-10 (option 2, caution tape): Pippa's card is calm for go-and-do lines and turns to red
+		-- emergency tape for the scary ones.
+		it("is danger for careful, hide and shh lines", function()
+			expect(TrainingGuideRules.mood("warn")).to.equal("danger")
+			expect(TrainingGuideRules.mood("hide")).to.equal("danger")
+			expect(TrainingGuideRules.mood("shh")).to.equal("danger")
+		end)
+
+		it("is calm for go-this-way and cheer lines", function()
+			expect(TrainingGuideRules.mood("point")).to.equal("calm")
+			expect(TrainingGuideRules.mood("cheer")).to.equal("calm")
+		end)
+
+		it("makes the hiding and all-clear lines danger then calm", function()
+			expect(TrainingGuideRules.mood(TrainingConstants.COACH.hidden.pose)).to.equal("danger")
+			expect(TrainingGuideRules.mood(TrainingConstants.COACH.clearHid.pose)).to.equal("calm")
+		end)
+	end)
+
 	describe("tour and stop lines", function()
 		local hold = TrainingConstants.COACH_HOLD
 

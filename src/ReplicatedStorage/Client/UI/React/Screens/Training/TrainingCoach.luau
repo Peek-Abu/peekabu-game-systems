@@ -1,13 +1,13 @@
 --!strict
 --[=[
-	TrainingCoach: Pippa telling the player what to do (tutorial v3). ONE cream card (owner, 11-10: portrait and words
-	must read as one piece; a close-up of her head and upper body, never her whole figure, never cut at the top): her
-	real 3D model, head, ears and chest, sits in the card's left end, cropped at the chest by the card's own edge
-	(`inset`: a warm window set into the card, her head popping out above its top; `bleed`: no window, the crop is the
-	card's bottom edge and a dashed divider splits her from the words), facing the player, in the pose for her kind of
-	line (EmployeePoseRegistry's coach poses: go this way, careful, cheer, shh, hide; shared poses on the kit rig, so any
-	employee could coach); her name tag and the line on the right. Presentational (exempt; the line and pose are the
-	specced TrainingGuideRules.coach via TrainingCoachStore).
+	TrainingCoach: Pippa telling the player what to do (tutorial v3). ONE cream card: her real 3D model, head, ears and
+	chest, in a warm window set into the card's left end (cropped at the window's bottom, never cut at the top), her
+	name on a tab on the card's top edge and her line beside her. The card reacts to the line's mood
+	(TrainingGuideRules.mood; owner pick 11-10, "caution tape"): calm lines wear the crew's yellow caution tape on the
+	top-right corner and a mint tab; danger lines (careful, hide, shh) red emergency tape on two corners, a red tab, a
+	pink tint and a red glow. Her pose fits her kind of line (EmployeePoseRegistry's coach poses: go this way,
+	careful, cheer, shh, hide). Presentational (exempt; the line, pose and mood are the specced TrainingGuideRules via
+	TrainingCoachStore).
 
 	@class TrainingCoach
 ]=]
@@ -17,6 +17,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage.Packages.React)
 local EmployeePoseRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeePoseRegistry)
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
+local TrainingGuideRules = require(ReplicatedStorage.Shared.Features.Training.Rules.TrainingGuideRules)
+local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonPanel = require(Toon.ToonPanel)
 local ToonText = require(Toon.ToonText)
@@ -45,11 +47,85 @@ local CONTEXTS: { [TrainingConstants.CoachPose]: EmployeePoseRegistry.PortraitCo
 	shh = "coachShh",
 	hide = "coachHide",
 }
--- How her portrait joins the card (two options for the owner, 11-10).
-export type Variant = "inset" | "bleed"
-local VARIANT: Variant = "inset"
 -- Her close-up frame's height per unit of its width (head, ears and chest).
 local PORTRAIT_TALL = 1.2
+
+-- The card's look per mood (owner pick 11-10, option 2 "caution tape"): calm lines wear the crew's yellow caution
+-- tape and a mint name tab; danger lines red emergency tape on two corners, a red name tab, a pink tint and a red glow
+-- round the card. No purple; every accent is something from the building.
+type MoodLook = {
+	tape: { Color3 },
+	tab: { Color3 },
+	tint: Color3,
+	glow: Color3?,
+	tapes: number,
+}
+local MOOD: { [TrainingGuideRules.Mood]: MoodLook } = {
+	calm = {
+		tape = { Color3.fromHex("FFD23A"), Color3.fromHex("2A2230") },
+		tab = { Color3.fromHex("5FF0BD"), Color3.fromHex("14B07C") },
+		tint = Color3.fromHex("FFF7E8"),
+		glow = nil,
+		tapes = 1,
+	},
+	danger = {
+		tape = { Color3.fromHex("FF4B4B"), Color3.fromHex("2A1820") },
+		tab = { Color3.fromHex("FF7A7A"), Color3.fromHex("D92B3A") },
+		tint = Color3.fromHex("FFE3DC"),
+		glow = Color3.fromHex("FF3C3C"),
+		tapes = 2,
+	},
+}
+
+type TapeProps = {
+	colors: { Color3 },
+	size: Vector2,
+	position: UDim2,
+	rotation: number,
+	line: number,
+	zIndex: number,
+}
+
+-- A strip of tape: diagonal stripes in a rotated CanvasGroup (it clips them to the strip at any angle) with an ink
+-- line along each long edge.
+local function Tape(props: TapeProps): React.ReactNode
+	local stripes: { [string]: React.ReactNode } = {}
+	local stripe = math.max(6, math.floor(props.size.Y * 0.75))
+	local count = math.ceil(props.size.X / (stripe * 2)) + 2
+	for index = 0, count do
+		stripes[`s{index}`] = e("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromOffset(index * stripe * 2 - stripe, props.size.Y / 2),
+			Size = UDim2.fromOffset(stripe, props.size.Y * 3),
+			Rotation = 45,
+			BackgroundColor3 = props.colors[2],
+			BorderSizePixel = 0,
+		})
+	end
+	stripes.edgeTop = e("Frame", {
+		Size = UDim2.new(1, 0, 0, props.line),
+		BackgroundColor3 = UIToonConstants.COLOR.ink,
+		BorderSizePixel = 0,
+		ZIndex = 2,
+	})
+	stripes.edgeBottom = e("Frame", {
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.fromScale(0, 1),
+		Size = UDim2.new(1, 0, 0, props.line),
+		BackgroundColor3 = UIToonConstants.COLOR.ink,
+		BorderSizePixel = 0,
+		ZIndex = 2,
+	})
+	return e("CanvasGroup", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = props.position,
+		Size = UDim2.fromOffset(props.size.X, props.size.Y),
+		Rotation = props.rotation,
+		BackgroundColor3 = props.colors[1],
+		BorderSizePixel = 0,
+		ZIndex = props.zIndex,
+	}, stripes)
+end
 
 local function TrainingCoach(props: TrainingCoachProps): React.ReactNode
 	local phone = props.phone
@@ -57,41 +133,44 @@ local function TrainingCoach(props: TrainingCoachProps): React.ReactNode
 	local k = if phone then 0.48 else 1
 	local ink = UIToonConstants.COLOR.ink
 	local cream = UIToonConstants.shade("cream")
+	local look = MOOD[TrainingGuideRules.mood(props.line.pose)]
 	local line = if phone then 3 else 5
 	local radius = if phone then 14 else 24
 	local card = if phone then Vector2.new(330, 78) else Vector2.new(690, 150)
 	local pad = math.floor(14 * k)
-	-- Her close-up: as wide as the card's left end, cropped at the card (the window's or the card's) bottom.
+	-- Her close-up sits in a warm window set into the card's left end, cropped at the window's bottom; her head and
+	-- ears rise over the card's top, so nothing cuts them.
 	local window = Vector2.new(math.floor(190 * k), card.Y - pad * 2)
 	local portrait = Vector2.new(window.X + math.floor(10 * k), math.floor(window.X * PORTRAIT_TALL))
-	local cropFromBottom = if VARIANT == "inset" then pad else math.floor(8 * k)
-	local rise = math.max(0, portrait.Y - (card.Y - cropFromBottom))
-	local tall = card.Y + rise
+	local rise = math.max(0, portrait.Y - (card.Y - pad))
+	-- Room over the card for her head, the name tab and the tape.
+	local tall = card.Y + math.max(rise, math.floor(30 * k))
+	local cardTop = tall - card.Y
 	local textLeft = pad + window.X + math.floor(18 * k)
+	local tabHeight = math.floor(34 * k)
 	local face: { [string]: React.ReactNode } = {
-		name = e(ToonText, {
-			text = "PIPPA",
-			meaning = "coral",
-			textSize = if phone then 13 else 22,
-			position = UDim2.fromOffset(textLeft, if phone then 6 else 14),
-			size = UDim2.fromOffset(card.X / 2, if phone then 15 else 26),
-			zIndex = z + 3,
+		tint = e("Frame", {
+			Size = UDim2.fromScale(1, 1),
+			BackgroundColor3 = look.tint,
+			BackgroundTransparency = 0.3,
+			BorderSizePixel = 0,
+			ZIndex = z + 1,
+		}, {
+			corner = e("UICorner", { CornerRadius = UDim.new(0, radius - line) }),
 		}),
 		words = e(ToonText, {
 			text = props.line.text,
 			font = "body",
 			textSize = if phone then 15 else 28,
-			position = UDim2.fromOffset(textLeft, if phone then 22 else 42),
-			size = UDim2.new(1, -textLeft - pad, 1, if phone then -30 else -56),
+			position = UDim2.fromOffset(textLeft, tabHeight / 2 + (if phone then 6 else 12)),
+			size = UDim2.new(1, -textLeft - pad, 1, -(tabHeight / 2 + (if phone then 12 else 24))),
 			wrapped = true,
 			fit = true,
 			alignY = "top",
 			zIndex = z + 3,
 		}),
-	}
-	if VARIANT == "inset" then
-		-- A warm window set into the card's left end: the card's darker cream, an ink rim, a white inner light.
-		face.window = e("Frame", {
+		-- A warm window set into the card's left end: the card's darker cream, an ink rim.
+		window = e("Frame", {
 			Position = UDim2.fromOffset(pad, pad),
 			Size = UDim2.fromOffset(window.X, window.Y),
 			BackgroundColor3 = Color3.new(1, 1, 1),
@@ -103,23 +182,8 @@ local function TrainingCoach(props: TrainingCoachProps): React.ReactNode
 				Color = ColorSequence.new(cream.base, cream.lo),
 				Rotation = 90,
 			}),
-		})
-	else
-		-- A dashed divider between her and her words, in the card's darker cream.
-		local dashes = 6
-		for index = 1, dashes do
-			local gap = (card.Y - pad * 2) / dashes
-			face[`dash{index}`] = e("Frame", {
-				Position = UDim2.fromOffset(pad + window.X + math.floor(6 * k), pad + (index - 1) * gap),
-				Size = UDim2.fromOffset(math.max(2, math.floor(4 * k)), math.floor(gap * 0.6)),
-				BackgroundColor3 = cream.lo,
-				BorderSizePixel = 0,
-				ZIndex = z + 2,
-			}, {
-				corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
-			})
-		end
-	end
+		}),
+	}
 	local children: { [string]: React.ReactNode } = {
 		card = e(ToonPanel, {
 			size = card,
@@ -131,19 +195,75 @@ local function TrainingCoach(props: TrainingCoachProps): React.ReactNode
 			zIndex = z + 1,
 			children = face,
 		}),
+		-- Her name on a tab sitting on the card's top edge: mint when calm, red in danger.
+		tab = e("Frame", {
+			AnchorPoint = Vector2.new(0, 0.5),
+			Position = UDim2.fromOffset(textLeft - math.floor(4 * k), cardTop),
+			Size = UDim2.fromOffset(math.floor(118 * k), tabHeight),
+			BackgroundColor3 = Color3.new(1, 1, 1),
+			ZIndex = z + 6,
+		}, {
+			corner = e("UICorner", { CornerRadius = UDim.new(0, math.floor(10 * k)) }),
+			stroke = e("UIStroke", { Color = ink, Thickness = math.max(2, line - 1) }),
+			fill = e("UIGradient", { Color = ColorSequence.new(look.tab[1], look.tab[2]), Rotation = 90 }),
+			name = e(ToonText, {
+				text = "PIPPA",
+				meaning = "white",
+				textSize = if phone then 14 else 24,
+				size = UDim2.fromScale(1, 1),
+				align = "center",
+				alignY = "center",
+				zIndex = z + 7,
+			}),
+		}),
+		-- The tape across the card's top-right corner (and, in danger, its bottom-right too).
+		tape = e(Tape, {
+			colors = look.tape,
+			size = Vector2.new(math.floor(170 * k), math.floor(28 * k)),
+			position = UDim2.fromOffset(card.X - math.floor(40 * k), cardTop + math.floor(6 * k)),
+			rotation = 18,
+			line = math.max(2, line - 2),
+			zIndex = z + 8,
+		}),
 	}
+	if look.tapes > 1 then
+		children.tapeLow = e(Tape, {
+			colors = look.tape,
+			size = Vector2.new(math.floor(150 * k), math.floor(26 * k)),
+			position = UDim2.fromOffset(card.X - math.floor(30 * k), tall - math.floor(10 * k)),
+			rotation = -14,
+			line = math.max(2, line - 2),
+			zIndex = z + 8,
+		})
+	end
+	local glowColor = look.glow
+	if glowColor ~= nil then
+		-- A red emergency glow round the card (the kit's 9-slice glow, tinted).
+		local spread = math.floor(26 * k)
+		children.glow = e("ImageLabel", {
+			AnchorPoint = Vector2.new(0, 1),
+			Position = UDim2.fromOffset(-spread, tall + spread),
+			Size = UDim2.fromOffset(card.X + spread * 2, card.Y + spread * 2),
+			BackgroundTransparency = 1,
+			Image = UIAssets.toon.glow,
+			ImageColor3 = glowColor,
+			ImageTransparency = 0.3,
+			ScaleType = Enum.ScaleType.Slice,
+			SliceCenter = Rect.new(48, 48, 80, 80),
+			ZIndex = z,
+		})
+	end
 	if props.scale ~= nil then
 		children.scale = e("UIScale", { Scale = props.scale })
 	end
 	-- Keyed by the pose: ToonViewport rebuilds its model only when the employee or look changes, not the pose. Its
-	-- bottom is the crop line (the window's or the card's bottom); its top rises over the card, so nothing cuts her
-	-- head or ears.
+	-- bottom is the window's bottom (the crop line); its top rises over the card.
 	children[`pippa_{props.line.pose}`] = e(ToonViewport, {
 		employee = COACH,
 		framing = "upper",
 		context = CONTEXTS[props.line.pose],
 		anchor = Vector2.new(0.5, 1),
-		position = UDim2.new(0, pad + window.X / 2, 1, -cropFromBottom),
+		position = UDim2.new(0, pad + window.X / 2, 1, -pad),
 		size = UDim2.fromOffset(portrait.X, portrait.Y),
 		zIndex = z + 4,
 	})
