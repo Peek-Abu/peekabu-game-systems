@@ -77,22 +77,6 @@ function TrainingGuideRules.trailTone(stop: number, situation: Situation): Tone
 	if situation.stopDone then
 		return "calm"
 	end
-	--[=[
-	Whether Pippa's run line changed to a new one (`current` differs from `previous`; the first line of a run counts),
-	which holds the spotlight tour aside (`tourHeld`): stop lines always show, a tour step waits and comes back after.
-]=]
-	function TrainingGuideRules.lineChanged(previous: string?, current: string?): boolean
-		return current ~= nil and current ~= previous
-	end
-
-	--[=[
-	Whether the spotlight tour stands aside at `now`: within COACH_HOLD seconds of Pippa's run line last changing (at
-	`changedAt`; nil = never).
-]=]
-	function TrainingGuideRules.tourHeld(changedAt: number?, now: number): boolean
-		return changedAt ~= nil and now - changedAt < TrainingConstants.COACH_HOLD
-	end
-
 	return TrainingGuideRules.tone(stop)
 end
 
@@ -161,6 +145,22 @@ end
 ]=]
 function TrainingGuideRules.ranEnough(sprintSeconds: number): boolean
 	return sprintSeconds >= TrainingConstants.RUN_SECONDS
+end
+
+--[=[
+	Whether Pippa's run line changed to a new one (`current` differs from `previous`; the first line of a run counts),
+	which holds the spotlight tour aside (`tourHeld`): stop lines always show, a tour step waits and comes back after.
+]=]
+function TrainingGuideRules.lineChanged(previous: string?, current: string?): boolean
+	return current ~= nil and current ~= previous
+end
+
+--[=[
+	Whether the spotlight tour stands aside at `now`: within COACH_HOLD seconds of Pippa's run line last changing (at
+	`changedAt`; nil = never).
+]=]
+function TrainingGuideRules.tourHeld(changedAt: number?, now: number): boolean
+	return changedAt ~= nil and now - changedAt < TrainingConstants.COACH_HOLD
 end
 
 return TrainingGuideRules
