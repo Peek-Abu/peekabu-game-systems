@@ -8,7 +8,7 @@
 
 -- The product's Roblox id: nil until the owner creates the developer product on the Creator Dashboard (then the buy
 -- prompt shows; a voucher still works without it).
-local PRODUCT_ID: number? = nil
+local PRODUCT_ID: number? = 3730097825
 
 local CoffeeConstants = {
 	-- The product's MarketplaceRegistry key and id.

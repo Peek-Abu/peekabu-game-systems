@@ -31,8 +31,8 @@ export type Deal = {
 }
 
 -- The product ids: nil until the owner creates them (then put the numbers here).
-local LEGENDARY_PRODUCT: number? = nil
-local NEW_HIRE_PRODUCT: number? = nil
+local LEGENDARY_PRODUCT: number? = 3730253755
+local NEW_HIRE_PRODUCT: number? = 3730253877
 
 local DEALS: { [string]: Deal } = {
 	pickLegendary = {
