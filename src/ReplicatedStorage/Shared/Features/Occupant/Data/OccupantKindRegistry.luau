@@ -2,7 +2,8 @@
 --[=[
 	OccupantKindRegistry: every monster kind the Occupant feature can run (the map-agnostic roster, plan
 	docs/superpowers/plans/2026-11-11-odd-hours-monster-roster-bramble.md). A kind is data: its rig template under
-	ReplicatedStorage, whether it has painted faces, its speeds, which behaviour blocks it uses and its twist.
+	ReplicatedStorage, whether it has painted faces, its speeds, which behaviour blocks it uses, its twist, and the
+	player-facing words a run with it uses (`wordsOf`: its name in "Caught by ...", its first-catch and overtime tips).
 
 	- `harlow`: today's manager, unchanged (his template, faces and speeds; every block; no twist).
 	- `bramble`: the School's owl mascot. No painted face swap (its buttons and stitched smile are the model), never
@@ -35,6 +36,14 @@ export type FreezeTwist = {
 	trail: boolean,
 }
 
+-- The player-facing words a run with this kind uses (kid reading level): its name in a sentence ("Caught by <caughtBy>")
+-- and the TipRegistry ids of its one-time tips for a first catch and for the overtime offer.
+export type Words = {
+	caughtBy: string,
+	catchTip: string,
+	overtimeTip: string,
+}
+
 export type Kind = {
 	id: KindId,
 	-- The art-owned rig Model under ReplicatedStorage (never in the source tree).
@@ -45,6 +54,7 @@ export type Kind = {
 	chaseSpeed: number,
 	blocks: Blocks,
 	freeze: FreezeTwist?,
+	words: Words,
 }
 
 local HARLOW: Kind = {
@@ -55,6 +65,7 @@ local HARLOW: Kind = {
 	chaseSpeed = OccupantConstants.CHASE_SPEED,
 	blocks = { desks = true, stares = true },
 	freeze = nil,
+	words = { caughtBy = "the Manager", catchTip = "firstCatch", overtimeTip = "overtime" },
 }
 
 local BRAMBLE: Kind = {
@@ -69,6 +80,7 @@ local BRAMBLE: Kind = {
 		headSwapSeconds = OccupantConstants.HEAD_SWAP_SECONDS,
 		trail = true,
 	},
+	words = { caughtBy = "Bramble", catchTip = "firstCatchBramble", overtimeTip = "overtimeBramble" },
 }
 
 local IDS: { KindId } = { "bramble", "harlow" }
@@ -107,6 +119,14 @@ end
 -- Every kind id, sorted.
 function OccupantKindRegistry.ids(): { KindId }
 	return table.clone(IDS)
+end
+
+--[=[
+	Kind `id`'s player-facing words (Harlow's for an unknown id).
+]=]
+function OccupantKindRegistry.wordsOf(id: string): Words
+	local kind = OccupantKindRegistry.get(id)
+	return if kind ~= nil then kind.words else HARLOW.words
 end
 
 --[=[

@@ -103,6 +103,14 @@ return function()
 			expect(view.incident[2]).to.equal("Your cargo dropped in the archive.")
 		end)
 
+		it("names the monster that caught you (Bramble on a School run)", function()
+			local view = CatchViewModel.cctv(input({ by = "Bramble" }))
+			expect(view.incident[1]).to.equal("Caught by Bramble at 3:42.")
+			expect(CatchViewModel.cctv(input({ by = "Bramble", phone = true })).incident[1]).to.equal(
+				"Caught by Bramble."
+			)
+		end)
+
 		it("says nothing dropped for empty hands, and keeps the phone short", function()
 			local empty = table.clone(REPORT)
 			empty.dropped = {}
@@ -180,6 +188,13 @@ return function()
 			local value = rehiredInput()
 			value.report = nil
 			expect(CatchViewModel.rehired(value)).to.equal(nil)
+		end)
+
+		it("names the monster on the HR notice", function()
+			local view = CatchViewModel.rehired(rehiredInput({ by = "Bramble" }))
+			expect(view.rows[2]).to.equal("Caught! 3:42, by Bramble")
+			local phone = CatchViewModel.rehired(rehiredInput({ by = "Bramble", phone = true }))
+			expect(phone.rows[1]).to.equal("Caught at 3:42 by Bramble")
 		end)
 
 		it("fills the HR notice", function()

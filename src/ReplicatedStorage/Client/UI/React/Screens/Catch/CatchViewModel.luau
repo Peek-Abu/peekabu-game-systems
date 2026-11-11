@@ -35,6 +35,8 @@ export type CctvInput = {
 	prevKey: string,
 	nextKey: string,
 	phone: boolean,
+	-- Who caught the player (OccupantCatchStore.caughtBy: "the Manager", "Bramble"); nil: the Manager.
+	by: string?,
 }
 
 export type CctvView = {
@@ -59,6 +61,8 @@ export type RehiredInput = {
 	nowServer: number,
 	nowClock: number,
 	phone: boolean,
+	-- Who caught the player, as on CctvInput.
+	by: string?,
 }
 
 export type RehiredView = {
@@ -141,17 +145,23 @@ local function feedOf(target: PublicPlayer, name: string, phone: boolean): (stri
 	return `REC   CAM {camText} · {roomText}`, `WATCHING  {string.upper(name)}`, details
 end
 
-local function incidentOf(report: OccupantTypes.CatchReport?, phone: boolean): { string }
+-- Who caught the player in a sentence: `by`, else the Manager (Harlow's words).
+local function byOf(by: string?): string
+	return by or "the Manager"
+end
+
+local function incidentOf(report: OccupantTypes.CatchReport?, phone: boolean, by: string?): { string }
 	if report == nil then
 		return {}
 	end
 	local lost = #report.dropped > 0
 	local where = CatchViewModel.roomPhrase(report.room)
+	local who = byOf(by)
 	if phone then
-		return { "Caught by the Manager.", if lost then `Cargo dropped in {where}.` else "Nothing dropped." }
+		return { `Caught by {who}.`, if lost then `Cargo dropped in {where}.` else "Nothing dropped." }
 	end
 	return {
-		`Caught by the Manager at {ShiftHudViewModel.clock(report.clock)}.`,
+		`Caught by {who} at {ShiftHudViewModel.clock(report.clock)}.`,
 		if lost then `Your cargo dropped in {where}.` else "You were carrying nothing.",
 	}
 end
@@ -188,7 +198,7 @@ function CatchViewModel.cctv(input: CctvInput): CctvView?
 		stamp = `{ShiftConstants.NIGHT_DAY} {CatchViewModel.nightClock(elapsed)}`,
 		back = back,
 		incidentTitle = if input.phone then "WHAT HAPPENED" else "WHAT HAPPENED · YOU",
-		incident = incidentOf(report, input.phone),
+		incident = incidentOf(report, input.phone, input.by),
 		prevKey = input.prevKey,
 		nextKey = input.nextKey,
 		canSwitch = canSwitch,
@@ -265,10 +275,10 @@ function CatchViewModel.rehired(input: RehiredInput): RehiredView?
 		then `Dropped: {table.concat(report.dropped, ", ")}. Go back for them!`
 		else "Dropped: nothing."
 	local rows: { string } = if input.phone
-		then { `Caught at {ended} by the Manager`, dropped }
+		then { `Caught at {ended} by {byOf(input.by)}`, dropped }
 		else {
 			`Name: {input.name}`,
-			`Caught! {ended}, by the Manager`,
+			`Caught! {ended}, by {byOf(input.by)}`,
 			`Back in! {back}`,
 			dropped,
 		}

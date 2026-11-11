@@ -64,6 +64,7 @@ local function CatchOverlay(): React.ReactNode
 	local snapshot = useAtom(ShiftStore.snapshot)
 	local publicPlayers = useAtom(StateSyncClientStore.publicPlayers)
 	local report = useAtom(OccupantCatchStore.report)
+	local caughtBy = useAtom(OccupantCatchStore.caughtBy)
 	-- Drawn scaled to the window on desktop (its corner pieces, countdown and slip are fixed px), via PaperHudFrame.
 	local hudScale = usePaperHudScale()
 	local layout: UIPaperConstants.Layout = hudScale.layout
@@ -85,6 +86,7 @@ local function CatchOverlay(): React.ReactNode
 		prevKey = prevKey,
 		nextKey = nextKey,
 		phone = layout == "phone",
+		by = caughtBy,
 	})
 	if view == nil then
 		return nil

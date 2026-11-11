@@ -37,6 +37,7 @@ local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local OccupantKindRegistry = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantKindRegistry)
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local OccupantTypes = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantTypes)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
@@ -83,6 +84,14 @@ local function harlowHead(): BasePart?
 		end
 	end
 	return nil
+end
+
+-- The running rig's kind (Harlow when none is found).
+local function runningKind(): OccupantKindRegistry.KindId
+	for _, instance in CollectionService:GetTagged(OccupantConstants.TAG) do
+		return OccupantKindRegistry.kindOf(instance)
+	end
+	return OccupantKindRegistry.DEFAULT
 end
 
 local function snap(cframe: CFrame)
@@ -185,7 +194,8 @@ local OccupantServiceClient: OccupantServiceClient = {
 		table.insert(
 			stoppers,
 			OccupantEvents.packets.CatchReport.listen(function(data: OccupantTypes.CatchReport)
-				OccupantCatchStore.setReport(data)
+				-- The catching kind's name (the running rig's; the Manager without one).
+				OccupantCatchStore.setReport(data, OccupantKindRegistry.wordsOf(runningKind()).caughtBy)
 			end)
 		)
 		table.insert(

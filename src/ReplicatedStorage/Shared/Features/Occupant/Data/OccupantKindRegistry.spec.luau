@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local OccupantKindRegistry = require(script.Parent.OccupantKindRegistry)
 local OccupantAssets = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantAssets)
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
+local TipRegistry = require(ReplicatedStorage.Shared.Features.Tip.Data.TipRegistry)
 
 return function()
 	describe("the kinds", function()
@@ -126,6 +127,34 @@ return function()
 			expect(OccupantKindRegistry.parse("Bramble")).to.equal(nil)
 			expect(OccupantKindRegistry.parse(nil)).to.equal(nil)
 			expect(OccupantKindRegistry.parse(3)).to.equal(nil)
+		end)
+	end)
+
+	describe("words", function()
+		it("keeps Harlow's words: the Manager, and his own tips", function()
+			local words = OccupantKindRegistry.wordsOf("harlow")
+			expect(words.caughtBy).to.equal("the Manager")
+			expect(words.catchTip).to.equal("firstCatch")
+			expect(words.overtimeTip).to.equal("overtime")
+		end)
+
+		it("gives Bramble its own name and tips, none of them naming Harlow or the Manager", function()
+			local words = OccupantKindRegistry.wordsOf("bramble")
+			expect(words.caughtBy).to.equal("Bramble")
+			expect(words.catchTip).to.equal("firstCatchBramble")
+			expect(words.overtimeTip).to.equal("overtimeBramble")
+		end)
+
+		it("names a registered tip for every kind's catch and overtime", function()
+			for _, id in OccupantKindRegistry.ids() do
+				local words = OccupantKindRegistry.wordsOf(id)
+				expect(TipRegistry.has(words.catchTip)).to.equal(true)
+				expect(TipRegistry.has(words.overtimeTip)).to.equal(true)
+			end
+		end)
+
+		it("is Harlow's for an unknown kind", function()
+			expect(OccupantKindRegistry.wordsOf("substitute")).to.equal(OccupantKindRegistry.wordsOf("harlow"))
 		end)
 	end)
 end

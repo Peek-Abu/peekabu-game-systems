@@ -16,11 +16,14 @@
 	@class ShiftOvertimeSystem
 ]=]
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local InteractionRegistry = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionRegistry)
+local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
+local OccupantKindRegistry = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantKindRegistry)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
@@ -87,8 +90,15 @@ local function realReaches(player: Player, target: Instance): boolean
 	return ShiftTimeClockSystem.reaches(player, target, CarryServiceServer:getCarried(player) ~= nil)
 end
 
+-- The overtime tip names the running monster (the Occupant-tagged rig's kind, read, never required: Occupant requires
+-- Shift); Harlow's when none runs.
 local function realOffered(player: Player)
-	TipServiceServer:first(player, "overtime")
+	local kind: OccupantKindRegistry.KindId = OccupantKindRegistry.DEFAULT
+	for _, instance in CollectionService:GetTagged(OccupantConstants.TAG) do
+		kind = OccupantKindRegistry.kindOf(instance)
+		break
+	end
+	TipServiceServer:first(player, OccupantKindRegistry.wordsOf(kind).overtimeTip)
 end
 
 local function realAnnounce(text: string)

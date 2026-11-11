@@ -19,6 +19,9 @@ local SETTING = "tips"
 local TEXT: { [string]: string } = {
 	firstCatch = "Mr. Harlow got you! Hide under a desk when you hear him coming.",
 	overtime = "Overtime! Sign the sheet in the truck: treasures pay more, but Mr. Harlow gets faster.",
+	-- Bramble's (a School run's monster; OccupantKindRegistry words pick a kind's tip ids).
+	firstCatchBramble = "Bramble got you! Keep watching it, or hide!",
+	overtimeBramble = "Overtime! Sign the sheet in the truck: treasures pay more, but Bramble gets faster.",
 	firstAbility = "Nice! Your power needs a little time to charge before you can use it again.",
 }
 

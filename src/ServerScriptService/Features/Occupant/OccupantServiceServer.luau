@@ -235,7 +235,10 @@ local catchHooks: OccupantCatchSystem.Hooks = {
 	spendLife = function(player: Player): boolean
 		return ShiftServiceServer:spendLife(player)
 	end,
-	onCaught = OccupantCatchSystem.caught,
+	-- The running kind picks the caught player's first-catch tip.
+	onCaught = function(player: Player, knockedOut: boolean)
+		OccupantCatchSystem.caught(player, knockedOut, currentKind)
+	end,
 }
 
 -- Catches `player` if the server's re-check allows (OccupantCatchSystem.attempt); `from` is the mind of the think that

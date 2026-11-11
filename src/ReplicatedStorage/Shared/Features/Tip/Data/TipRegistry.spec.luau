@@ -14,6 +14,26 @@ return function()
 		end
 	end)
 
+	it("has Bramble's own first-catch and overtime tips, which never name Mr. Harlow", function()
+		expect(TipRegistry.text("firstCatchBramble")).to.equal("Bramble got you! Keep watching it, or hide!")
+		for _, id in { "firstCatchBramble", "overtimeBramble" } do
+			local text = TipRegistry.text(id)
+			expect(type(text)).to.equal("string")
+			expect(#text <= TipRegistry.MAX_LENGTH).to.equal(true)
+			expect(string.find(text, "Harlow", 1, true)).to.equal(nil)
+			expect(string.find(text, "Bramble", 1, true) ~= nil).to.equal(true)
+		end
+	end)
+
+	it("keeps Mr. Harlow's tips as they were", function()
+		expect(TipRegistry.text("firstCatch")).to.equal(
+			"Mr. Harlow got you! Hide under a desk when you hear him coming."
+		)
+		expect(TipRegistry.text("overtime")).to.equal(
+			"Overtime! Sign the sheet in the truck: treasures pay more, but Mr. Harlow gets faster."
+		)
+	end)
+
 	it("knows no other tip", function()
 		expect(TipRegistry.text("nope")).to.equal(nil)
 		expect(TipRegistry.has("nope")).to.equal(false)

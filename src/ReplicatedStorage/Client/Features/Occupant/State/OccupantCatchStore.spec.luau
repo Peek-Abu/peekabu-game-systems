@@ -22,6 +22,13 @@ return function()
 		expect(OccupantCatchStore.rehiredAt()).to.equal(nil)
 	end)
 
+	it("keeps who caught the player with the report (the Manager when unnamed)", function()
+		OccupantCatchStore.setReport(REPORT, "Bramble")
+		expect(OccupantCatchStore.caughtBy()).to.equal("Bramble")
+		OccupantCatchStore.setReport(REPORT)
+		expect(OccupantCatchStore.caughtBy()).to.equal("the Manager")
+	end)
+
 	it("keeps the report through the rehire (the card lists what dropped)", function()
 		OccupantCatchStore.setReport(REPORT)
 		OccupantCatchStore.rehired(12)

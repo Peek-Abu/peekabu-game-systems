@@ -45,6 +45,7 @@ local AnimationRegistry = require(ReplicatedStorage.Shared.Features.Animation.Da
 local CargoRegistry = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoRegistry)
 local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
+local OccupantKindRegistry = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantKindRegistry)
 local OccupantTypes = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantTypes)
 local OccupantEvents = require(ReplicatedStorage.Shared.Features.Occupant.Net.OccupantEvents)
 local OccupantAnimationUtils = require(ReplicatedStorage.Shared.Features.Occupant.Utils.OccupantAnimationUtils)
@@ -293,10 +294,11 @@ local rehire: { [number]: boolean } = {}
 --[=[
 	A catch went through (the service's `onCaught` hook): Shift counts it (every catch, hit or not) and the crew is
 	told: "got caught!" for a hit, "out for the shift" when it knocked the player out (`knockedOut`); on a training
-	run only training's own line is sent (OccupantCatchUtils.feedback). The player is owed
+	run only training's own line is sent (OccupantCatchUtils.feedback). The first-catch tip is the catching kind's
+	(OccupantKindRegistry.wordsOf: Harlow's "firstCatch", Bramble's own; nil reads as Harlow). The player is owed
 	the Rehired notice only when afterCatch says so (OccupantCatchUtils.afterCatch).
 ]=]
-function OccupantCatchSystem.caught(player: Player, knockedOut: boolean)
+function OccupantCatchSystem.caught(player: Player, knockedOut: boolean, kind: OccupantKindRegistry.KindId?)
 	local after = OccupantCatchUtils.afterCatch(knockedOut)
 	if after.rehire then
 		rehire[player.UserId] = true
@@ -317,7 +319,7 @@ function OccupantCatchSystem.caught(player: Player, knockedOut: boolean)
 		})
 	end
 	if feedback.tip then
-		TipServiceServer:first(player, "firstCatch")
+		TipServiceServer:first(player, OccupantKindRegistry.wordsOf(kind or OccupantKindRegistry.DEFAULT).catchTip)
 	end
 end
 

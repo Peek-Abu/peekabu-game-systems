@@ -31,6 +31,7 @@ local useAtom = ReactCharm.useAtom
 
 local function CatchRehiredCard(): React.ReactNode
 	local report = useAtom(OccupantCatchStore.report)
+	local caughtBy = useAtom(OccupantCatchStore.caughtBy)
 	local rehiredAt = useAtom(OccupantCatchStore.rehiredAt)
 	local publicPlayers = useAtom(StateSyncClientStore.publicPlayers)
 	-- Drawn scaled to the window on desktop (the 760x600 notice is taller than a short window), via PaperHudFrame.
@@ -48,6 +49,7 @@ local function CatchRehiredCard(): React.ReactNode
 		nowServer = now,
 		nowClock = os.clock(),
 		phone = layout == "phone",
+		by = caughtBy,
 	})
 	if view == nil then
 		return nil
