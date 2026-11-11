@@ -34,6 +34,9 @@
 	  beat (OccupantDoorRules); a catch is never held.
 	- Escapes: a chased or stared-down player he stops tracking while they are still hidden fires `escaped`
 	  (OccupantEscapeRules; the Hide and Squeak badge).
+	- A freeze kind (Bramble): OccupantWatchSystem decides who watches it; while frozen its brain holds
+	  (Senses.frozen: OccupantBrainRules.hold), it opens no door and its root never turns (no look-around, no jerk).
+	  Harlow's kind has no freeze twist, so for him OccupantWatchSystem.freezeFor is nil and none of this runs.
 	- Role: he exists only where the shift role runs (QueueServiceServer:runsRole); a hub-only server spawns no Harlow.
 
 	Twin guard: OccupantRigSystem.build (before it builds) and `despawn` (after it removes the current rig) sweep away
@@ -84,6 +87,7 @@ local OccupantRigSystem = require(OccupantServer.Systems.OccupantRigSystem)
 local OccupantCatchSystem = require(OccupantServer.Systems.OccupantCatchSystem)
 local OccupantEffectSystem = require(OccupantServer.Systems.OccupantEffectSystem)
 local OccupantSeatSystem = require(OccupantServer.Systems.OccupantSeatSystem)
+local OccupantWatchSystem = require(OccupantServer.Systems.OccupantWatchSystem)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
 local HideServiceServer = require(ServerScriptService.Features.Hide.HideServiceServer)
 local NoiseServiceServer = require(ServerScriptService.Features.Noise.NoiseServiceServer)
@@ -271,10 +275,13 @@ local function think(def: NpcTypes.NpcDef, now: number, position: Vector3): NpcT
 	if current == nil or before == nil or state == nil then
 		return { kind = "idle" }
 	end
+	-- A freeze kind's freeze (nil for Harlow): frozen, it opens no door.
+	local freeze = OccupantWatchSystem.freezeFor(current.model)
+	local frozen = freeze ~= nil and freeze.frozen
 	-- Doors on his line of travel open first, so an opened leaf no longer blocks this think's sight rays; the beat
 	-- follows the same rule (he takes it only when he opened one). No heading: no door opens.
 	local heading = OccupantDoorRules.heading(current.root.AssemblyLinearVelocity, position, lastGoal)
-	if OfficeServiceServer:openDoorsNear(position, heading) then
+	if not frozen and OfficeServiceServer:openDoorsNear(position, heading) then
 		holdUntil = now + OccupantConstants.DOOR_BEAT_SECONDS
 	end
 	local participants = RoundServiceServer:participants()
@@ -294,6 +301,11 @@ local function think(def: NpcTypes.NpcDef, now: number, position: Vector3): NpcT
 		pacing = { tier = state.tier, solo = #participants <= 1, overtime = state.stage == "overtime" },
 	})
 	pendingNoise = nil
+	if freeze ~= nil then
+		senses.frozen = freeze.frozen
+		senses.frozenAt = freeze.frozenAt
+		senses.unfrozenAt = freeze.unfrozenAt
+	end
 	local force = pendingForce
 	if force ~= nil then
 		pendingForce = nil
@@ -476,8 +488,11 @@ local function onHeartbeat(deltaTime: number)
 	end
 	local now = os.clock()
 	watch(now)
-	OccupantSeatSystem.look(rig, mind, now)
-	OccupantSeatSystem.jerk(rig, mind, now)
+	-- A frozen freeze kind never turns (always false for Harlow).
+	if not OccupantWatchSystem.frozen() then
+		OccupantSeatSystem.look(rig, mind, now)
+		OccupantSeatSystem.jerk(rig, mind, now)
+	end
 end
 
 export type OccupantServiceServer = {
@@ -535,6 +550,19 @@ local OccupantServiceServer: OccupantServiceServer = {
 			return current ~= nil and npc == current.model and witness(player)
 		end)
 		NpcServiceServer:onAttack(OccupantConstants.NPC_KIND, onCatch)
+		-- The "watched" check for a freeze kind (idle while the rig is Harlow).
+		OccupantWatchSystem.start({
+			rig = function(): OccupantRigSystem.Rig?
+				return rig
+			end,
+			mind = function(): OccupantTypes.Mind?
+				return mind
+			end,
+			zone = function(): OccupantTypes.Zone?
+				return world().zone
+			end,
+		})
+		table.insert(stoppers, OccupantWatchSystem.stop)
 		-- ~8 s of spectating before the respawn (spec §4); Shift's resolver respawns in the loading bay.
 		DeathServiceServer:configure({ respawnDelay = OccupantConstants.SPECTATE_SECONDS })
 		table.insert(stoppers, OccupantCatchSystem.watchRehires())
@@ -656,6 +684,7 @@ local OccupantServiceServer: OccupantServiceServer = {
 			hearing = NoiseServiceServer:getHearingScale(),
 			counters = table.clone(counters),
 			effects = OccupantEffectSystem.getState(),
+			watch = OccupantWatchSystem.getState(),
 		}
 	end,
 }

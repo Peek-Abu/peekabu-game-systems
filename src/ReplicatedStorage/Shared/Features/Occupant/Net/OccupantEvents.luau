@@ -1,8 +1,9 @@
 --!strict
 --[=[
-	OccupantEvents: Mr. Harlow's ByteNet packets (server → clients only): the caught player's camera snap to his
-	face, the lights dying around a catch, every light flickering when a pressure tier rises, the incident report and
-	the Rehired card. Everything
+	OccupantEvents: Mr. Harlow's ByteNet packets: server → clients, the caught player's camera snap to his face, the
+	lights dying around a catch, every light flickering when a pressure tier rises, the incident report and the
+	Rehired card; client → server, the only one, the camera report a freeze kind's watch check reads
+	(OccupantWatchReportSystem → OccupantWatchSystem; untrusted, bounded by the server's own checks). Everything
 	else (his "?" / "!", his speech bubble, his mode for the heartbeat) rides replicated Instances and
 	attributes.
 
@@ -55,6 +56,15 @@ local OccupantEvents = ByteNet.defineNamespace(NAMESPACE, function()
 			Rehired = ByteNet.definePacket({
 				value = ByteNet.bool,
 				reliabilityType = "reliable",
+			}),
+			-- From a client, 10 times a second while a freeze kind is out: its camera's position and look direction.
+			-- Unreliable: a lost report only goes stale (FREEZE_REPORT_FRESH), the next one replaces it.
+			CameraReport = ByteNet.definePacket({
+				value = ByteNet.struct({
+					position = ByteNet.vec3,
+					look = ByteNet.vec3,
+				}),
+				reliabilityType = "unreliable",
 			}),
 		},
 		queries = {},
