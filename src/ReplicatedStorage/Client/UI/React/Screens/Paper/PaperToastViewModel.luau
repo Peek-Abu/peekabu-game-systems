@@ -94,7 +94,7 @@ local PHONE_NOTES_GAP = 10
 
 --[=[
 	Where the phone's sticky notes start (design px from the HUD frame's top): their top-centre spot, or, when Pippa's
-	coach card (`coach`, screen px; nil = not showing) covers that spot, just under the card, so a note is never
+	coach card (`coach`, screen px from the layer's top-left: TrainingCoachStore.areaOf; nil = not showing) covers that spot, just under the card, so a note is never
 	hidden behind her (the card is on the Coach layer, over the HUD). `screenWidth` is the screen's width (px), `scale`
 	and `shift` the HUD frame's scale and top shift (PaperHudFrame): design px = (screen px - shift) / scale.
 ]=]

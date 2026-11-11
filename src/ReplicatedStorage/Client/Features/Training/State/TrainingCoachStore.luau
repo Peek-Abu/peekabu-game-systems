@@ -61,6 +61,15 @@ local TrainingCoachStore = {
 	areas = areas,
 }
 
+-- A card's area in screen px: its AbsolutePosition and AbsoluteSize measured from its layer's own top-left (`origin`,
+-- the layer's AbsolutePosition). AbsolutePosition counts from under Roblox's top bar, so a full-screen layer
+-- (IgnoreGuiInset) sits at (0, -58): without this the card read 58 px higher than it is drawn, and the phone's notes
+-- (laid out from the layer's top) slid under it.
+function TrainingCoachStore.areaOf(position: Vector2, size: Vector2, origin: Vector2): Area
+	local at = position - origin
+	return { left = at.X, top = at.Y, right = at.X + size.X, bottom = at.Y + size.Y }
+end
+
 -- Where `owner`'s card is now (nil: it is gone).
 function TrainingCoachStore.setArea(owner: string, area: Area?)
 	local current = areas()

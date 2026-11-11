@@ -64,6 +64,24 @@ return function()
 		end)
 	end)
 
+	describe("areaOf", function()
+		it("measures a card from its layer's top-left, not from under the top bar", function()
+			-- Seen live: a full-screen layer (IgnoreGuiInset) sits at AbsolutePosition (0, -58); the card at (8, -12),
+			-- 330x115, is really 46..161 px down the screen.
+			local area = TrainingCoachStore.areaOf(Vector2.new(8, -12), Vector2.new(330, 115), Vector2.new(0, -58))
+			expect(area.left).to.equal(8)
+			expect(area.top).to.equal(46)
+			expect(area.right).to.equal(338)
+			expect(area.bottom).to.equal(161)
+		end)
+
+		it("is the absolute rect when the layer starts at the origin", function()
+			local area = TrainingCoachStore.areaOf(Vector2.new(10, 20), Vector2.new(30, 40), Vector2.zero)
+			expect(area.top).to.equal(20)
+			expect(area.bottom).to.equal(60)
+		end)
+	end)
+
 	describe("situation", function()
 		it("forgets the last stop's situation on a new stop", function()
 			TrainingCoachStore.setStop(4)

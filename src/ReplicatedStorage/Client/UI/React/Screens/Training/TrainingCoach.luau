@@ -17,6 +17,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage.Packages.React)
 local EmployeePoseRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeePoseRegistry)
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
+local TrainingCoachStore = require(ReplicatedStorage.Client.Features.Training.State.TrainingCoachStore)
 local TrainingGuideRules = require(ReplicatedStorage.Shared.Features.Training.Rules.TrainingGuideRules)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
@@ -41,12 +42,7 @@ export type TrainingCoachProps = {
 	onArea: ((area: Area?) -> ())?,
 }
 
-export type Area = {
-	left: number,
-	top: number,
-	right: number,
-	bottom: number,
-}
+export type Area = TrainingCoachStore.Area
 
 -- Who coaches (an EmployeeRegistry key).
 local COACH = "Pippa"
@@ -148,9 +144,10 @@ local function useArea(onArea: ((area: Area?) -> ())?): { current: Frame? }
 		end
 		local report = onArea
 		local function send()
-			local at = frame.AbsolutePosition
-			local size = frame.AbsoluteSize
-			report({ left = at.X, top = at.Y, right = at.X + size.X, bottom = at.Y + size.Y })
+			-- From the layer's own top-left (TrainingCoachStore.areaOf): AbsolutePosition counts from under the top bar.
+			local layer = frame:FindFirstAncestorWhichIsA("LayerCollector")
+			local origin = if layer ~= nil and layer:IsA("ScreenGui") then layer.AbsolutePosition else Vector2.zero
+			report(TrainingCoachStore.areaOf(frame.AbsolutePosition, frame.AbsoluteSize, origin))
 		end
 		send()
 		local moved = frame:GetPropertyChangedSignal("AbsolutePosition"):Connect(send)
