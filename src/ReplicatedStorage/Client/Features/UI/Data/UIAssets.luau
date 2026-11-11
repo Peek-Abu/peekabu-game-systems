@@ -190,9 +190,10 @@ UIAssets.toonPhotos = table.freeze({
 	mallCard = "rbxassetid://108801045193529",
 	managerPortrait = "rbxassetid://136047524517573",
 	officeWide = "rbxassetid://105469082592765",
-	-- The School's trip-card picture (the Office's is officeWide), PENDING "" until uploaded: while it is "", the card
-	-- draws the School map card's look instead (ShiftTransitViewModel.slip).
-	schoolWide = "",
+	-- The School's trip-card picture (the Office's is officeWide): Bramble at the end of a locker hall (Icey Labs, owner
+	-- OK 2026-11-11; decal 90341198768642). An empty slot would draw the School map card's look instead
+	-- (ShiftTransitViewModel.slip).
+	schoolWide = "rbxassetid://75797686913598",
 	pippaPortrait = "rbxassetid://100337810904422",
 	truckCut = "rbxassetid://72922265291902",
 	pippaSaluteCut = "rbxassetid://77407692720114",
