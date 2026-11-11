@@ -1,5 +1,6 @@
 --[[
-	Integration specs for the anomalies OfficeServiceServer publishes (stage 4 variation). They drive the live service
+	Integration specs for the anomalies OfficeServiceServer publishes (stage 4 variation) and the map a shift is built
+	on (office or school, the truck host's pick). They drive the live service
 	(beginShift rebuilds the office; reset puts it back), so they only run where this server builds an office.
 ]]
 
@@ -15,6 +16,7 @@ local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.Depo
 local OfficeAnomalyConstants = require(ReplicatedStorage.Shared.Features.Office.Data.OfficeAnomalyConstants)
 
 local ATTRIBUTE = OfficeAnomalyConstants.PUBLISHED_ATTRIBUTE
+local MAP_ATTRIBUTE = OfficeConstants.MAP_ATTRIBUTE
 
 return function()
 	describe("OfficeServiceServer anomalies", function()
@@ -25,7 +27,7 @@ return function()
 		end
 
 		local function begin(seed)
-			OfficeServiceServer:beginShift({ seed = seed, variant = "A", quota = 100 })
+			OfficeServiceServer:beginShift({ seed = seed, variant = "A", quota = 100, map = "office" })
 		end
 
 		afterEach(function()
@@ -74,6 +76,60 @@ return function()
 			expect(model():GetAttribute(ATTRIBUTE)).to.equal(
 				table.concat(OfficeVariationRules.anomalies(OfficeServiceServer:seed()), ",")
 			)
+		end)
+	end)
+
+	describe("OfficeServiceServer map", function()
+		local runs = QueueServiceServer:runsRole(DepotConstants.ROLE_SHIFT)
+
+		local function model()
+			return workspace:FindFirstChild(OfficeConstants.MODEL_NAME)
+		end
+
+		local function begin(seed, map)
+			OfficeServiceServer:beginShift({ seed = seed, variant = "A", quota = 100, map = map })
+		end
+
+		afterEach(function()
+			if runs then
+				OfficeServiceServer:reset()
+			end
+		end)
+
+		it("builds the School for a school shift and says so", function()
+			if not runs then
+				return
+			end
+			begin(7, "school")
+			expect(OfficeServiceServer:map()).to.equal("school")
+			expect(model():GetAttribute(MAP_ATTRIBUTE)).to.equal("school")
+			expect(#OfficeServiceServer:route() > 0).to.equal(true)
+		end)
+
+		it("builds the Office for an office shift, after a school one", function()
+			if not runs then
+				return
+			end
+			begin(7, "school")
+			begin(7, "office")
+			expect(OfficeServiceServer:map()).to.equal("office")
+			expect(model():GetAttribute(MAP_ATTRIBUTE)).to.equal("office")
+		end)
+
+		it("walks the same School route for the same seed", function()
+			if not runs then
+				return
+			end
+			begin(21, "school")
+			local first = OfficeServiceServer:route()
+			local seed = OfficeServiceServer:seed()
+			begin(21, "school")
+			expect(OfficeServiceServer:seed()).to.equal(seed)
+			local again = OfficeServiceServer:route()
+			expect(#again).to.equal(#first)
+			for index, point in first do
+				expect((again[index] - point).Magnitude < 1e-3).to.equal(true)
+			end
 		end)
 	end)
 end

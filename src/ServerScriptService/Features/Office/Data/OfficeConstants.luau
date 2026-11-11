@@ -252,6 +252,8 @@ return table.freeze({
 	-- One-stud foundation clears the artist-owned baseplate top at Y=0.
 	ORIGIN = CFrame.new(1000, 1, 0),
 	MODEL_NAME = "CleanupCrewOffice",
+	-- The built model's attribute naming the map it is ("office" or "school"; beginShift's `map`).
+	MAP_ATTRIBUTE = "LayoutMap",
 	ART_KIT_ID = "client-office-slate",
 	-- The art kit every generated map uses (OfficeLayoutGenerationUtils); the authored boot layout keeps ART_KIT_ID.
 	GENERATED_ART_KIT = "odd-hours-b1",

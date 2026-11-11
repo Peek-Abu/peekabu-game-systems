@@ -31,6 +31,11 @@
 	When generation from the shift's seed errors, the rebuild warns and tries the next seed up (GENERATE_RETRIES more
 	times) before raising, so `seed` is the seed actually used.
 
+	Maps: `beginShift`'s `map` picks the generator ("school": SchoolLayoutGenerationUtils, from the same base layout;
+	"office": OfficeLayoutGenerationUtils). Both output an OfficeTypes.Layout and pass the same checks, so everything
+	downstream (build, spawns, hide, the route) is unchanged. `map` is the map standing now (the model's
+	OfficeConstants.MAP_ATTRIBUTE; "office" at boot).
+
 	Authored sites (`useSite`, OfficeTypes.Site): a run can use a Studio-built map instead (the Training map); every
 	accessor answers from it and `beginShift` lets it place its own spawns. The generated office still stands unused.
 
@@ -66,6 +71,8 @@ local OfficeSpawnRules = require(OfficeServer.Rules.OfficeSpawnRules)
 local OfficeVariationRules = require(OfficeServer.Rules.OfficeVariationRules)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
 local OfficeLayoutGenerationUtils = require(OfficeServer.Utils.OfficeLayoutGenerationUtils)
+local SchoolLayoutGenerationUtils = require(ServerScriptService.Features.School.Utils.SchoolLayoutGenerationUtils)
+local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local OfficeLoadingBayUtils = require(OfficeServer.Utils.OfficeLoadingBayUtils)
 local OfficeGroundsUtils = require(OfficeServer.Utils.OfficeGroundsUtils)
 local OfficeFurniturePlacementUtils = require(OfficeServer.Utils.OfficeFurniturePlacementUtils)
@@ -118,6 +125,8 @@ local overtimeSpawned = false
 local stoppers: { () -> () } = {}
 -- The seed of the layout standing now (nil: the boot layout).
 local layoutSeed: number? = nil
+-- The map standing now (the boot layout is the office).
+local layoutMap: ShiftTypes.MapId = "office"
 -- A developer's forced anomaly set (the anomaly command); nil: the seed's pick. A rebuild drops it.
 local forcedAnomalies: { OfficeAnomalyConstants.AnomalyId }? = nil
 -- Fired (with the shift folder) once a shift's office is rebuilt and every spawn placed.
@@ -170,24 +179,27 @@ local restMarker = markerById[LAYOUT.rest]
 -- Seeds tried after the shift's own when generation fails (each the next seed up), before the error is raised.
 local GENERATE_RETRIES = 3
 
--- The layout generated from `seed`, or, when generation errors (every attempt invalid), from the next seed up, up to
--- GENERATE_RETRIES more times, so a shift still starts; then the last error is raised. Returns the seed used.
-local function generateLayout(seed: number): (OfficeTypes.Layout, number)
+-- The layout of `map` generated from `seed`, or, when generation errors (every attempt invalid), from the next seed
+-- up, up to GENERATE_RETRIES more times, so a shift still starts; then the last error is raised. Returns the seed used.
+local function generateLayout(seed: number, map: ShiftTypes.MapId): (OfficeTypes.Layout, number)
+	local generate = if map == "school"
+		then SchoolLayoutGenerationUtils.generate
+		else OfficeLayoutGenerationUtils.generate
 	local lastError = ""
 	for retry = 0, GENERATE_RETRIES do
 		local tried = seed + retry
-		local ok, result = pcall(OfficeLayoutGenerationUtils.generate, OfficeLayoutConstants.LAYOUT, tried)
+		local ok, result = pcall(generate, OfficeLayoutConstants.LAYOUT, tried)
 		if ok then
 			return result, tried
 		end
 		lastError = tostring(result)
-		log:warn(`office generation from seed {tried} failed: {lastError}`)
+		log:warn(`{map} generation from seed {tried} failed: {lastError}`)
 	end
-	error(`office generation failed from seed {seed} to {seed + GENERATE_RETRIES}: {lastError}`, 0)
+	error(`{map} generation failed from seed {seed} to {seed + GENERATE_RETRIES}: {lastError}`, 0)
 end
 
-local function rebuild(requested: number)
-	local layout, seed = generateLayout(requested)
+local function rebuild(requested: number, map: ShiftTypes.MapId)
+	local layout, seed = generateLayout(requested, map)
 	local ok, errors = OfficeLayoutRules.validate(layout)
 	assert(ok, `generated office layout is invalid: {table.concat(errors, "; ")}`)
 	local capacity, reason = OfficeLayoutRules.checkCapacity(layout)
@@ -222,6 +234,7 @@ local function rebuild(requested: number)
 	OfficeBuildSystem.clearStrays()
 	local current = OfficeBuildSystem.build(layout, OfficeConstants.ORIGIN, nil, seed)
 	current.model:SetAttribute("LayoutSeed", seed)
+	current.model:SetAttribute(OfficeConstants.MAP_ATTRIBUTE, map)
 	forcedAnomalies = nil
 	current.model:SetAttribute(
 		OfficeAnomalyConstants.PUBLISHED_ATTRIBUTE,
@@ -229,6 +242,7 @@ local function rebuild(requested: number)
 	)
 	built = current
 	layoutSeed = seed
+	layoutMap = map
 	OfficeDecorSystem.build(layout, OfficeConstants.ORIGIN, current.model, nil, seed)
 end
 
@@ -264,6 +278,7 @@ export type OfficeServiceServer = {
 	ready: SignalTyped.Signal<Folder>,
 	isReady: (self: OfficeServiceServer) -> boolean,
 	seed: (self: OfficeServiceServer) -> number?,
+	map: (self: OfficeServiceServer) -> ShiftTypes.MapId,
 	anomalies: (self: OfficeServiceServer) -> { OfficeAnomalyConstants.AnomalyId },
 	forceAnomalies: (self: OfficeServiceServer, ids: { OfficeAnomalyConstants.AnomalyId }?) -> boolean,
 	start: (self: OfficeServiceServer) -> (),
@@ -271,7 +286,7 @@ export type OfficeServiceServer = {
 	getState: (self: OfficeServiceServer) -> { [string]: any },
 	beginShift: (
 		self: OfficeServiceServer,
-		options: { seed: number, variant: string, quota: number }
+		options: { seed: number, variant: string, quota: number, map: ShiftTypes.MapId }
 	) -> OfficeTypes.SpawnPlan,
 	spawnOvertimeLoot: (self: OfficeServiceServer) -> number,
 	reset: (self: OfficeServiceServer) -> (),
@@ -338,6 +353,7 @@ local OfficeServiceServer: OfficeServiceServer = {
 		end)
 		OfficeBuildSystem.clearStrays()
 		local current = OfficeBuildSystem.build(LAYOUT, OfficeConstants.ORIGIN)
+		current.model:SetAttribute(OfficeConstants.MAP_ATTRIBUTE, layoutMap)
 		built = current
 		-- The office at night (exit signs, blue monitors, the elevator, ambience emitters), once.
 		OfficeDecorSystem.build(LAYOUT, OfficeConstants.ORIGIN, current.model)
@@ -400,7 +416,7 @@ local OfficeServiceServer: OfficeServiceServer = {
 			return placed
 		end
 		assert(built ~= nil, "OfficeServiceServer:beginShift before start")
-		rebuild(options.seed)
+		rebuild(options.seed, options.map)
 		local current = built
 		assert(current ~= nil, "OfficeServiceServer:beginShift before start")
 		local plan = rollPlan(options)
@@ -498,6 +514,11 @@ local OfficeServiceServer: OfficeServiceServer = {
 	]=]
 	seed = function(_self)
 		return layoutSeed
+	end,
+
+	-- The map standing now ("office" at boot and on an authored site's run).
+	map = function(_self)
+		return layoutMap
 	end,
 
 	--[=[
@@ -731,6 +752,7 @@ local OfficeServiceServer: OfficeServiceServer = {
 			greed = if plan ~= nil and plan.greed ~= nil then `{plan.greed.kind} @ {plan.greed.marker}` else nil,
 			hiddenUnderPiles = hiddenCount,
 			routePoints = #routePoints,
+			map = layoutMap,
 			site = if site ~= nil then site.model.Name else nil,
 		}
 	end,
