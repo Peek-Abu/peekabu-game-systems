@@ -82,6 +82,16 @@ return table.freeze({
 	RESULT_BOARD_TITLE = "HOW YOU DID",
 	-- M3 UI. The most trucks a depot layout has (the truck number riding the teleport is checked against it).
 	MAX_TRUCKS = 4,
+	-- The map pick (the School map plan; the ids and who may pick are DepotMapRules): the world entry that publishes
+	-- each truck's pick ({ [Queue pad id]: map id }), the pick's request rate, and the cards' words (kid reading level).
+	MAP_WORLD_ENTRY = "depotMap",
+	MAP_REQUEST_RATE = table.freeze({ maxRequests = 6, windowSeconds = 5 }),
+	MAP_TEXT = table.freeze({
+		office = "OFFICE",
+		school = "SCHOOL",
+		hostPicks = "The host picks the map.",
+		youPick = "Pick a map!",
+	}),
 	-- Public player field: the truck whose bed a player stands in (the queue pad card's "TRUCK 2").
 	PUBLIC_TRUCK = "truck",
 	-- The contract board's Interaction kind (its prompt opens the board scene).

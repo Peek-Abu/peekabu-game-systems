@@ -32,6 +32,10 @@ export type Platform = "pc" | "phone" | "tablet" | "console" | "unknown"
 
 export type Vote = "another" | "depot"
 
+-- The map a shift is played on (the truck's host picks it on the START panel; DepotMapRules.parse reads it off the
+-- untrusted depart payload, anything else is "office"). Both are generated each shift in the Shift place.
+export type MapId = "office" | "school"
+
 -- What the service should do on this clock step.
 export type TickAction = "none" | "start" | "endShift" | "resolveVote"
 
