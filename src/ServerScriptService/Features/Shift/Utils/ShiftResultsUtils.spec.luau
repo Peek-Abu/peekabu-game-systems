@@ -211,6 +211,14 @@ return function()
 			expect(award.detail).to.equal("woke the Manager 4 times")
 		end)
 
+		it("names the run's monster in LOUDEST VACUUM (Bramble on a School run)", function()
+			local crew = { member(1, "Ava", { woke = 4 }), member(2, "Ben", { woke = 0 }) }
+			local run = input(crew)
+			run.monster = "Bramble"
+			local award = awardOf(ShiftResultsUtils.build(run), "LOUDEST VACUUM")
+			expect(award.detail).to.equal("woke Bramble 4 times")
+		end)
+
 		it("hands a tie to crew order (more banked, then name)", function()
 			local crew =
 				{ member(1, "Zed", { banked = 50, caught = 1 }), member(2, "Amy", { banked = 50, caught = 1 }) }

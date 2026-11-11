@@ -18,6 +18,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PublicPlayerTypes = require(ReplicatedStorage.Shared.Data.PublicPlayerTypes)
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
+local DepotMapRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotMapRules)
 local HostConstants = require(ReplicatedStorage.Shared.Features.Host.Data.HostConstants)
 local QueueTypes = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueTypes)
 local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
@@ -67,6 +68,8 @@ export type ReviewView = {
 	crew: string,
 	quote: string,
 	stickies: { StickyView },
+	-- The run's monster kind (DepotMapRules.siteOf of the client's map): its render on MOST CAUGHT.
+	monster: string,
 }
 
 local JOIN_LINE = "Stand in the bed to join"
@@ -258,7 +261,9 @@ function DepotWorldViewModel.review(attributes: { [string]: unknown }): ReviewVi
 	local text = ShiftConstants.RATING_TEXT
 	-- A missed quota never rates above NEEDS IMPROVEMENT (the review's rule); an unknown word reads as it too.
 	local stamp = if met then text[rating] or text.needsImprovement else text.needsImprovement
-	local quote = if met then ShiftConstants.REVIEW_QUOTES.met else ShiftConstants.REVIEW_QUOTES.missed
+	-- The run's map (from its client) picks the met quote and the monster, like the shift's own review.
+	local site = DepotMapRules.siteOf(DepotMapRules.mapOfClient(client))
+	local quote = if met then site.quote else ShiftConstants.REVIEW_QUOTES.missed
 	local band = string.upper(WorldBillboardViewModel.clip(client, DepotWorldViewModel.BAND_CLIENT_MAX))
 	return {
 		band = `SHIFT REVIEW · {band}`,
@@ -278,6 +283,7 @@ function DepotWorldViewModel.review(attributes: { [string]: unknown }): ReviewVi
 		crew = if #names > 0 then `Crew: {table.concat(names, " · ")}` else "",
 		quote = `{quote.line} {quote.by}`,
 		stickies = stickies,
+		monster = site.monster,
 	}
 end
 

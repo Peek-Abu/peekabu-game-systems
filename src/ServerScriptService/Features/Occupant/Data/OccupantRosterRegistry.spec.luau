@@ -1,10 +1,21 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local DepotMapRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotMapRules)
 local OccupantRosterRegistry = require(script.Parent.OccupantRosterRegistry)
 local OccupantKindRegistry = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantKindRegistry)
 
 return function()
 	describe("the rosters", function()
+		it("runs the monster each map's run words are about (DepotMapRules.siteOf's monster)", function()
+			for _, map in { "office", "school" } do
+				local kinds = {}
+				for _, entry in OccupantRosterRegistry.get(map).entries do
+					kinds[entry.kind] = true
+				end
+				expect(kinds[DepotMapRules.siteOf(map).monster]).to.equal(true)
+			end
+		end)
+
 		it("puts Harlow alone in the Office", function()
 			local office = OccupantRosterRegistry.get("office")
 			expect(#office.entries).to.equal(1)

@@ -1,3 +1,6 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local OccupantPortraitAssets = require(ReplicatedStorage.Client.Features.Occupant.Data.OccupantPortraitAssets)
 local ShiftReviewViewModel = require(script.Parent.ShiftReviewViewModel)
 
 local function review(extra)
@@ -424,6 +427,27 @@ return function()
 			expect(view.awards[3].icon).to.equal("grab")
 			expect(view.awards[4].icon).to.equal("stamina")
 			expect(ShiftReviewViewModel.awardIcon("noisyVacuum")).to.equal("vacuum")
+		end)
+
+		it(
+			"puts the run's monster on Crew caught and MOST CAUGHT: Bramble's (or the stand-in) on a School run",
+			function()
+				local transit = { holds = {}, client = "Maple Hill School", map = "school" }
+				local view = ShiftReviewViewModel.review(snapshot(), nil, 4, 100, false, transit)
+				expect(view.cards[3].icon).to.equal(OccupantPortraitAssets.portrait("bramble", "hunt"))
+				expect(view.awards[2].icon).to.equal(OccupantPortraitAssets.portrait("bramble", "calm"))
+				for _, icon in { view.cards[3].icon, view.awards[2].icon } do
+					expect(icon).never.to.equal("managerHunt")
+					expect(icon).never.to.equal("managerCalm")
+				end
+			end
+		)
+
+		it("keeps Harlow on Crew caught and MOST CAUGHT on an Office run", function()
+			local transit = { holds = {}, client = "Harlow & Finch Ltd.", map = "office" }
+			local view = ShiftReviewViewModel.review(snapshot(), nil, 4, 100, false, transit)
+			expect(view.cards[3].icon).to.equal("managerHunt")
+			expect(view.awards[2].icon).to.equal("managerCalm")
 		end)
 
 		it("shows the vote's time left on its own", function()

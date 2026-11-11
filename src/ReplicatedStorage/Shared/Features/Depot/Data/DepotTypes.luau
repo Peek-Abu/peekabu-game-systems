@@ -27,6 +27,10 @@ export type MapSite = {
 	reviewTab: string,
 	-- The shift review's closing quote when the goal is met.
 	quote: { line: string, by: string },
+	-- The monster kind id the tip is about (an OccupantKindRegistry id, the map's OccupantRosterRegistry pick; its spec
+	-- checks the two agree): its portrait on the route slip and the review. A plain id, so Depot's types never load
+	-- Occupant's data.
+	monster: string,
 }
 
 export type CardKind = "drive" | "arrival"

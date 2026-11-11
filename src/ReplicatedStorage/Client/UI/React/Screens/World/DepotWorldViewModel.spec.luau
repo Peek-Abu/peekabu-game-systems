@@ -264,6 +264,23 @@ return function()
 			expect(view.stickies[2].name).to.equal("Jo")
 		end)
 
+		it("closes a School run's card with the School's quote and names its monster", function()
+			local school = card()
+			school[keys.client] = "Maple Hill School"
+			local view = DepotWorldViewModel.review(school)
+			local quote = DepotConstants.SCHOOL_SITE.quote
+			expect(view.quote).to.equal(`{quote.line} {quote.by}`)
+			expect(view.monster).to.equal("bramble")
+		end)
+
+		it("keeps an Office run's card with Harlow (and any unknown client's)", function()
+			local office = card()
+			office[keys.client] = "Harlow & Finch Ltd."
+			expect(DepotWorldViewModel.review(office).quote).to.equal(`{quotes.met.line} {quotes.met.by}`)
+			expect(DepotWorldViewModel.review(office).monster).to.equal("harlow")
+			expect(DepotWorldViewModel.review(card()).monster).to.equal("harlow")
+		end)
+
 		it("stamps a missed quota and never rates it above NEEDS IMPROVEMENT", function()
 			local missed = card()
 			missed[keys.met] = false

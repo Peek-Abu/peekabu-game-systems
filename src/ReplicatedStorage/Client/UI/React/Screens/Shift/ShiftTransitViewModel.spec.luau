@@ -1,4 +1,8 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local OccupantPortraitAssets = require(ReplicatedStorage.Client.Features.Occupant.Data.OccupantPortraitAssets)
 local ShiftTransitViewModel = require(script.Parent.ShiftTransitViewModel)
+local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 
 return function()
 	describe("slip", function()
@@ -75,6 +79,33 @@ return function()
 			)
 			expect(view.site).to.equal("4th floor offices · 8:30 shift")
 			expect(string.find(view.tip, "Manager", 1, true) ~= nil).to.equal(true)
+		end)
+
+		it("keeps the Office run's picture and Harlow's face on the tip", function()
+			for _, snapshot in { nil, { holds = {}, client = "Harlow & Finch Ltd.", map = "office" } } do
+				local view = ShiftTransitViewModel.slip(snapshot, false)
+				expect(view.photo).to.equal(UIAssets.toonPhotos.officeWide)
+				expect(view.portrait).to.equal("managerCalm")
+			end
+		end)
+
+		it("takes a School run's picture from the School's own slot, never the Office's", function()
+			local view = ShiftTransitViewModel.slip(
+				{ holds = {}, client = "Maple Hill School", truck = 1, map = "school" },
+				false
+			)
+			local slot = UIAssets.toonPhotos.schoolWide
+			-- An empty slot (no picture uploaded yet) draws the School map card's look instead.
+			expect(view.photo).to.equal(if slot == "" then nil else slot)
+			expect(view.photo).never.to.equal(UIAssets.toonPhotos.officeWide)
+			expect(view.photoIcon).to.equal("globe")
+		end)
+
+		it("puts Bramble's portrait on a School run's tip, the stand-in while its slot is empty", function()
+			local view = ShiftTransitViewModel.slip({ holds = {}, client = "Maple Hill School", map = "school" }, false)
+			expect(view.portrait).to.equal(OccupantPortraitAssets.portrait("bramble", "calm"))
+			expect(view.portrait).never.to.equal("managerCalm")
+			expect(view.portrait).never.to.equal("managerHunt")
 		end)
 
 		it("fits the load screen to the window", function()

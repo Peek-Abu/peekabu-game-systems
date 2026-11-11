@@ -14,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local DepotMapRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotMapRules)
+local OccupantPortraitAssets = require(ReplicatedStorage.Client.Features.Occupant.Data.OccupantPortraitAssets)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local ShiftCurrencyUtils = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftCurrencyUtils)
@@ -165,12 +166,13 @@ end
 
 local GRADE: { [ShiftTypes.Rating]: string } = { exceeds = "A", satisfactory = "B", needsImprovement = "C" }
 
--- The kit render for an award's symbol.
-function ShiftReviewViewModel.awardIcon(symbol: AwardSymbol): UIAssets.ToonIcon
+-- The kit render for an award's symbol; MOST CAUGHT's is the run's monster (`monster`, an OccupantKindRegistry id;
+-- Harlow when nil), through OccupantPortraitAssets.
+function ShiftReviewViewModel.awardIcon(symbol: AwardSymbol, monster: string?): UIAssets.ToonIcon
 	if symbol == "medal" then
 		return "trophy"
 	elseif symbol == "punchCard" then
-		return "managerCalm"
+		return OccupantPortraitAssets.portrait(monster or "harlow", "calm")
 	elseif symbol == "droppedMug" then
 		return "grab"
 	elseif symbol == "quietShoe" then
@@ -283,7 +285,7 @@ function ShiftReviewViewModel.shapesForAward(title: string): { AwardShape }
 	return if symbol ~= nil then ShiftReviewViewModel.awardShapes(symbol) else {}
 end
 
-local function awardOf(award: ShiftTypes.Award, myUserId: number, phone: boolean): AwardView
+local function awardOf(award: ShiftTypes.Award, myUserId: number, phone: boolean, monster: string): AwardView
 	local name = if myUserId ~= 0 and award.userId == myUserId then "you" else award.name
 	local line = if phone or award.detail == "" then name else `{name} — {award.detail}`
 	local symbol: AwardSymbol? = ShiftReviewViewModel.awardSymbol(award.title)
@@ -294,7 +296,7 @@ local function awardOf(award: ShiftTypes.Award, myUserId: number, phone: boolean
 		-- 0 is the server's "no player" (ShiftCardUtils); any other id is a player, including Studio test
 		-- players, whose ids are negative.
 		userId = if award.userId ~= 0 then award.userId else nil,
-		icon = if symbol ~= nil then ShiftReviewViewModel.awardIcon(symbol) else nil,
+		icon = if symbol ~= nil then ShiftReviewViewModel.awardIcon(symbol, monster) else nil,
 	}
 end
 
@@ -302,7 +304,8 @@ end
 	The review while the crew votes; nil outside results or before the review arrives. `myVote` is ShiftStore.myVote,
 	`myUserId` the local player's (0 matches nobody), `now` the server clock, `phone` the 5b layout. `transit` (the
 	`shiftTransit` entry) names the run's client and map, which pick the subtitle, the pill and the met quote
-	(DepotMapRules.siteOf); without it they are the Office's.
+	(DepotMapRules.siteOf), and the monster on the Crew caught card and the MOST CAUGHT award; without it they are the
+	Office's.
 ]=]
 function ShiftReviewViewModel.review(
 	snapshot: ShiftTypes.ShiftSnapshot?,
@@ -330,7 +333,7 @@ function ShiftReviewViewModel.review(
 	local extraAwards: { AwardView } = {}
 	for index, award in results.awards do
 		local folded = phone and index > PHONE_AWARDS
-		table.insert(if folded then extraAwards else awards, awardOf(award, myUserId, phone))
+		table.insert(if folded then extraAwards else awards, awardOf(award, myUserId, phone, site.monster))
 	end
 	local extra = #extraAwards
 	local total = math.max(#snapshot.crew, snapshot.votesAnother + snapshot.votesDepot, 1)
@@ -369,7 +372,7 @@ function ShiftReviewViewModel.review(
 			{
 				label = "Crew caught",
 				value = tostring(results.catches),
-				icon = "managerHunt",
+				icon = OccupantPortraitAssets.portrait(site.monster, "hunt"),
 				meaning = "coral",
 				gold = false,
 			},

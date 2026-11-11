@@ -7,7 +7,9 @@
 	- Carry `dropped`: a drop by hand, or a throw of a fragile item (a break), with the item's kind and value then.
 	  Catch drops ("death"), pocketing and banking ("forced") and resets never count;
 	- Noise `made`: one noise for each maker;
-	- ShiftAnalyticsWatchSystem `investigated`: Harlow went to investigate a noise; each of its makers woke him once;
+	- ShiftAnalyticsWatchSystem `investigated`: the monster went to investigate a noise; each of its makers woke it
+	  once, and the running rig's kind is remembered so LOUDEST VACUUM names it ("woke Bramble"; read off the
+	  Occupant-tagged rig, never required: Occupant requires Shift);
 	- ShiftAnalyticsSystem `loaded`: each accepted Load's cargo items, and its salvage when the shift is in overtime
 	  (the company rank's award reads both off the review; RankFormulas).
 
@@ -26,6 +28,7 @@
 	@class ShiftReviewSystem
 ]=]
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -35,6 +38,8 @@ local CargoRegistry = require(ReplicatedStorage.Shared.Features.Cargo.Data.Cargo
 local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
 local CarryTypes = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryTypes)
 local NoiseTypes = require(ReplicatedStorage.Shared.Features.Noise.Data.NoiseTypes)
+local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
+local OccupantKindRegistry = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantKindRegistry)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local CarryServiceServer = require(ServerScriptService.Features.Carry.CarryServiceServer)
@@ -71,6 +76,16 @@ end
 
 -- The roster the running system writes (nil when stopped).
 local current: ShiftRosterTracker.ShiftRosterTracker? = nil
+-- The kind of the monster the crew woke this shift (nil until one investigated a noise): the review names it.
+local wokeKind: OccupantKindRegistry.KindId? = nil
+
+-- The running rig's kind, or nil when none runs.
+local function runningKind(): OccupantKindRegistry.KindId?
+	for _, instance in CollectionService:GetTagged(OccupantConstants.TAG) do
+		return OccupantKindRegistry.kindOf(instance)
+	end
+	return nil
+end
 
 local ShiftReviewSystem = {}
 
@@ -109,6 +124,7 @@ local function build(input: ReviewInput): ShiftTypes.ShiftResults
 		offered = input.offered,
 		lookup = CargoRegistry.get,
 		ranFor = input.ranFor,
+		monster = OccupantKindRegistry.wordsOf(wokeKind or OccupantKindRegistry.DEFAULT).caughtBy,
 	})
 end
 
@@ -125,6 +141,7 @@ end
 
 function ShiftReviewSystem.start(roster: ShiftRosterTracker.ShiftRosterTracker, running: () -> boolean): () -> ()
 	current = roster
+	wokeKind = nil
 	local function each(makers: { number }, delta: ShiftRosterTracker.Delta)
 		if not running() then
 			return
@@ -173,6 +190,7 @@ function ShiftReviewSystem.start(roster: ShiftRosterTracker.ShiftRosterTracker, 
 	end)
 
 	local woke = ShiftAnalyticsWatchSystem.investigated:Connect(function(makers: { number })
+		wokeKind = runningKind() or wokeKind
 		each(makers, { woke = 1 })
 	end)
 

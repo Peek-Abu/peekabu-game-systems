@@ -4,7 +4,8 @@
 	TRANSIT_FADE_IN when `cover` leaves "none" and out over TRANSIT_FADE_OUT when it returns (it starts opaque when
 	mounted covered, so a booting client never sees an unlit frame). With cover "slip" it carries the trip, laid out on
 	a 1440x720 canvas scaled by `scale` (ShiftTransitViewModel.fit): the cream "EN ROUTE TO" card (the client in big
-	stroked letters, the site line, the graded office photo, the truck's number on a sticker), the Manager's tip on a
+	stroked letters, the site line, the run's map's graded photo (while a map's photo is not uploaded, its map card's icon on
+	a coloured plate), the truck's number on a sticker), the map's monster's tip and portrait on a
 	dark plate with Gloom pooled along its floor, the company truck render driving in on speed lines, and the grape
 	loading bar: a real progress bar that follows this client's readiness (`progress`) and never goes back, easing to
 	full with DOORS OPEN! once this client is ready, then the cover fades. A fading-out cover keeps its last lines. Presentational: the words are ShiftTransitViewModel.slip.
@@ -49,6 +50,36 @@ local CANVAS = Vector2.new(1440, 720)
 
 type Nodes = { [string]: React.ReactNode }
 
+-- The card's picture: the run's map's photo, or (while that map has none uploaded) the map card's icon on a gold
+-- plate in the same frame, so a School card never shows the Office.
+local function photo(view: ShiftTransitViewModel.SlipView): React.ReactNode
+	local image = view.photo
+	local frame: Nodes = {
+		corner = e("UICorner", { CornerRadius = UDim.new(0, 20) }),
+		stroke = e("UIStroke", { Color = COLOR.ink, Thickness = 5 }),
+	}
+	if image == nil then
+		-- The School map card's gold (DepotMapCards' gleam), lit from the top.
+		local gold = UIToonConstants.shade("gold")
+		frame.gradient = e("UIGradient", { Rotation = 90, Color = ColorSequence.new(gold.hi, gold.base) })
+		frame.icon = e(ToonIcon, {
+			icon = view.photoIcon,
+			anchor = Vector2.new(0.5, 0.5),
+			position = UDim2.fromScale(0.5, 0.5),
+			size = UDim2.fromOffset(170, 170),
+			drop = 6,
+			zIndex = 2,
+		})
+	end
+	return e("ImageLabel", {
+		Position = UDim2.fromOffset(28, 192),
+		Size = UDim2.fromOffset(544, 206),
+		BackgroundColor3 = if image ~= nil then COLOR.ink else COLOR.white,
+		Image = image or "",
+		ScaleType = Enum.ScaleType.Crop,
+	}, frame)
+end
+
 local function card(view: ShiftTransitViewModel.SlipView): React.ReactNode
 	local face: Nodes = {
 		heading = e(ToonText, {
@@ -73,16 +104,7 @@ local function card(view: ShiftTransitViewModel.SlipView): React.ReactNode
 			size = UDim2.fromOffset(540, 30),
 			fit = true,
 		}),
-		photo = e("ImageLabel", {
-			Position = UDim2.fromOffset(28, 192),
-			Size = UDim2.fromOffset(544, 206),
-			BackgroundColor3 = COLOR.ink,
-			Image = UIAssets.toonPhotos.officeWide,
-			ScaleType = Enum.ScaleType.Crop,
-		}, {
-			corner = e("UICorner", { CornerRadius = UDim.new(0, 20) }),
-			stroke = e("UIStroke", { Color = COLOR.ink, Thickness = 5 }),
-		}),
+		photo = photo(view),
 	}
 	local truck = view.truck
 	if truck ~= nil then
@@ -108,7 +130,7 @@ end
 local function tip(view: ShiftTransitViewModel.SlipView): React.ReactNode
 	local face: Nodes = {
 		face = e(ToonIcon, {
-			icon = "managerCalm",
+			icon = view.portrait,
 			position = UDim2.fromOffset(-46, -26),
 			size = UDim2.fromOffset(160, 160),
 			drop = 6,

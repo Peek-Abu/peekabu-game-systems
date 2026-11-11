@@ -4,7 +4,7 @@
 	(night, goo bubbles) under a grape title tab breaking its top edge. With `review` (your card): a cream card on the
 	stack, its grape header band naming the shift, the four rows (labels in Fredoka, values as stroked gold numbers),
 	CONTRACT MET / MISSED as a big stroked mint or coral title with the rating on a gold pill, the crew line and
-	Harlow's quote; and one gold award card per award (the award's render breaking its corner, the title over the
+	the run's quote (its map's); and one gold award card per award (the award's render breaking its corner, the title over the
 	name), tilted on the board's right. Without it: the bare board. Presentational; the words are
 	DepotWorldViewModel.review.
 
@@ -115,7 +115,12 @@ local function reviewCard(review: DepotWorldViewModel.ReviewView): React.ReactNo
 	})
 end
 
-local function awardCard(sticky: DepotWorldViewModel.StickyView, index: number, at: Vector2): React.ReactNode
+local function awardCard(
+	sticky: DepotWorldViewModel.StickyView,
+	index: number,
+	at: Vector2,
+	monster: string
+): React.ReactNode
 	local symbol: ShiftReviewViewModel.AwardSymbol? = ShiftReviewViewModel.awardSymbol(sticky.title)
 	local face: { [string]: React.ReactNode } = {
 		title = e(ToonText, {
@@ -150,7 +155,7 @@ local function awardCard(sticky: DepotWorldViewModel.StickyView, index: number, 
 			children = face,
 		}),
 		icon = e(ToonIcon, {
-			icon = if symbol ~= nil then ShiftReviewViewModel.awardIcon(symbol) else "trophy",
+			icon = if symbol ~= nil then ShiftReviewViewModel.awardIcon(symbol, monster) else "trophy",
 			position = UDim2.fromOffset(-16, -22),
 			size = UDim2.fromOffset(64, 64),
 			rotation = -8,
@@ -198,7 +203,7 @@ local function DepotResultBoard(props: DepotResultBoardProps): React.ReactNode
 		for index, sticky in review.stickies do
 			local at: Vector2? = AWARD_AT[index]
 			if at ~= nil then
-				children[`award{index}`] = awardCard(sticky, index, at)
+				children[`award{index}`] = awardCard(sticky, index, at, review.monster)
 			end
 		end
 	end

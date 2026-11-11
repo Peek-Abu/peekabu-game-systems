@@ -5,8 +5,9 @@
 	map off anything untrusted (the depart payload riding the teleport, a client's pick): only an exact map id counts,
 	anything else is the office. `decode` reads the published picks (the DepotConstants.MAP_WORLD_ENTRY world entry) on
 	a client, dropping bad entries; `mapOf` is a truck's pick, the office when it has none. `contractsOf` is a map's jobs
-	(the Office's DepotConstants.CONTRACTS, the School's SCHOOL_CONTRACTS) and `siteOf` its words during a run (the
-	route slip, the HUD, the review): every Office/School word is chosen here, by the run's map.
+	(the Office's DepotConstants.CONTRACTS, the School's SCHOOL_CONTRACTS), `mapOfClient` the map a finished run's client
+	was on (the hub's review card carries only the client), and `siteOf` its words during a run (the route slip, the
+	HUD, the review): every Office/School word is chosen here, by the run's map.
 
 	@class DepotMapRules
 ]=]
@@ -40,6 +41,7 @@ export type DepotMapRules = {
 	decode: (value: WorldTypes.WorldValue?) -> Picks,
 	mapOf: (picks: Picks, padId: string?) -> MapId,
 	contractsOf: (map: MapId) -> { DepotTypes.Contract },
+	mapOfClient: (client: string) -> MapId,
 	siteOf: (map: MapId) -> DepotTypes.MapSite,
 }
 
@@ -83,6 +85,16 @@ local DepotMapRules: DepotMapRules = {
 	-- The jobs a run on `map` may be.
 	contractsOf = function(map)
 		return if map == "school" then DepotConstants.SCHOOL_CONTRACTS else DepotConstants.CONTRACTS
+	end,
+
+	-- The map whose jobs name `client`; the office for any other client.
+	mapOfClient = function(client)
+		for _, contract in DepotConstants.SCHOOL_CONTRACTS do
+			if contract.client == client then
+				return "school"
+			end
+		end
+		return "office"
 	end,
 
 	-- `map`'s words during a run.

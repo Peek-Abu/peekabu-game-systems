@@ -33,9 +33,15 @@ export type ResultsInput = {
 	lookup: Lookup,
 	-- Seconds the shift ran (ShiftResults.ranFor).
 	ranFor: number?,
+	-- The run's monster as a sentence names it (OccupantKindRegistry words' caughtBy: "the Manager", "Bramble"), for
+	-- LOUDEST VACUUM; absent reads "the Manager".
+	monster: string?,
 }
 
 local ShiftResultsUtils = {}
+
+-- Who LOUDEST VACUUM woke when the run's monster is not named (Harlow's words).
+local DEFAULT_MONSTER = "the Manager"
 
 -- "once", "twice", "3 times".
 function ShiftResultsUtils.times(count: number): string
@@ -97,9 +103,10 @@ end
 --[=[
 	The four joke awards (Figma 5a/5c), from a crew already in crew order: EMPLOYEE OF THE NIGHT (most banked),
 	MOST CAUGHT, BUTTERFINGERS (most drops; names the most valuable), and LOUDEST VACUUM when someone
-	woke Harlow LOUDEST_MIN_WOKE times, else QUIETEST FEET. A stat nobody scored gives no award.
+	woke the run's monster (`monster`, named as in a sentence; the Manager when nil) LOUDEST_MIN_WOKE times, else
+	QUIETEST FEET. A stat nobody scored gives no award.
 ]=]
-function ShiftResultsUtils.awards(crew: { CrewStats }, lookup: Lookup): { ShiftTypes.Award }
+function ShiftResultsUtils.awards(crew: { CrewStats }, lookup: Lookup, monster: string?): { ShiftTypes.Award }
 	local titles = ShiftConstants.AWARD_TITLES
 	local awards: { ShiftTypes.Award } = {}
 	local function add(title: string, member: CrewStats, detail: string)
@@ -132,7 +139,7 @@ function ShiftResultsUtils.awards(crew: { CrewStats }, lookup: Lookup): { ShiftT
 		return member.woke or 0
 	end)
 	if loudest ~= nil and woke >= ShiftConstants.LOUDEST_MIN_WOKE then
-		add(titles.loudest, loudest, `woke the Manager {ShiftResultsUtils.times(woke)}`)
+		add(titles.loudest, loudest, `woke {monster or DEFAULT_MONSTER} {ShiftResultsUtils.times(woke)}`)
 	else
 		local quiet = quietest(crew)
 		if quiet ~= nil then
@@ -216,7 +223,7 @@ function ShiftResultsUtils.build(input: ResultsInput): ShiftTypes.ShiftResults
 		rating = ShiftResultsUtils.rating(quotaMade, salvage, input.offered),
 		quotaMet = quotaMade,
 		crew = lines,
-		awards = ShiftResultsUtils.awards(crew, input.lookup),
+		awards = ShiftResultsUtils.awards(crew, input.lookup, input.monster),
 		ranFor = input.ranFor,
 	}
 end

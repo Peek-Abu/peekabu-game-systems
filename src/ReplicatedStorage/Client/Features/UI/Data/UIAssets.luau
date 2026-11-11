@@ -29,6 +29,8 @@ export type ToonIcon =
 	| "abilityPottedPlant"
 	| "abilitySpotIt"
 	| "bell"
+	| "brambleCalm"
+	| "brambleHunt"
 	| "clock"
 	| "coffee"
 	| "dust"
@@ -135,6 +137,10 @@ local TOON_ICONS: { [ToonIcon]: string } = {
 	-- Padlock C, the night lock (owner pick for now, 2026-10-24; decal 135775868127022): a not-owned-yet card.
 	lockNight = "rbxassetid://102433972832334",
 	locker = "rbxassetid://132365115657905",
+	-- Bramble's portraits (the School's owl; its calm face and its chasing one), PENDING "" until rendered and
+	-- uploaded: OccupantPortraitAssets shows a neutral stand-in while a slot is "", never Harlow's.
+	brambleCalm = "",
+	brambleHunt = "",
 	managerCalm = "rbxassetid://79215225592922",
 	managerHunt = "rbxassetid://126690679697372",
 	monitor = "rbxassetid://115152845494708",
@@ -184,6 +190,9 @@ UIAssets.toonPhotos = table.freeze({
 	mallCard = "rbxassetid://108801045193529",
 	managerPortrait = "rbxassetid://136047524517573",
 	officeWide = "rbxassetid://105469082592765",
+	-- The School's trip-card picture (the Office's is officeWide), PENDING "" until uploaded: while it is "", the card
+	-- draws the School map card's look instead (ShiftTransitViewModel.slip).
+	schoolWide = "",
 	pippaPortrait = "rbxassetid://100337810904422",
 	truckCut = "rbxassetid://72922265291902",
 	pippaSaluteCut = "rbxassetid://77407692720114",

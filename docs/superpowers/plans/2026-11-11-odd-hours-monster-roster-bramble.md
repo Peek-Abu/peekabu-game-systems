@@ -104,3 +104,25 @@ Edits (no new modules):
      catch.
 
    Owner play-check.
+
+## Follow-up: the School's run presentation (trip picture, portraits, roster-aware words)
+
+A School run still showed Office/Harlow art and words in a few places. Rule per place:
+- **About one run** (the trip card, the shift review, its awards): follows that run's map, and so its monster kind.
+  The Office keeps its art and words exactly.
+- **General hub text** (stat hints, the field guide, an ability's line, the dispatch board's HAZARD row, the chat
+  wheel's ping): monster-neutral, kid reading level ("Monsters hear you less.").
+- **The Office board's own cards** (the Jobs menu's THE MANAGER card, the hub's Tonight card) stay Harlow's: they are
+  about tonight's Office job.
+
+Art slots, never invented ids:
+- `UIAssets.toonPhotos.schoolWide`: the School's trip-card picture, PENDING "" until uploaded. While empty the card
+  shows the School map card's look (its colour panel and its `globe` icon), no Office photo.
+- `UIAssets.toonIcons.brambleCalm` / `brambleHunt`: Bramble's portraits, PENDING "". While empty a Bramble portrait is
+  the neutral `flashlight` icon, never Harlow's.
+- `DepotTypes.MapSite.monster`: the kind a map's run words are about (Office harlow, School bramble); a server spec
+  checks it against `OccupantRosterRegistry`.
+
+| Feature | Realm | Subfolder | Name | Job (one line) |
+|---|---|---|---|---|
+| Occupant | client | Data | OccupantPortraitAssets | each monster kind's portrait icon (calm, hunt) by name, and the neutral stand-in while a kind's slot is empty |

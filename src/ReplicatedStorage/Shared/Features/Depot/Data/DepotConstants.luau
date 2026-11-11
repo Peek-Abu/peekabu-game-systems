@@ -93,13 +93,14 @@ local SCHOOL_CONTRACTS: { DepotTypes.Contract } = {
 
 -- Each map's words during a run (DepotMapRules.siteOf): the route slip's site line and tip (the tip is about the map's
 -- monster, its OccupantRosterRegistry pick), the HUD meter's site line, and the shift review's tab and closing quote
--- when the goal is met. The Office's are the words it always had.
+-- when the goal is met, and the monster kind the tip is about (its portrait). The Office's are the words it always had.
 local OFFICE_SITE: DepotTypes.MapSite = {
 	site = "4th floor offices",
 	hud = "Harlow & Finch · offices",
 	tip = BOARD_COPY.hazard,
 	reviewTab = "SHIFT REVIEW · HARLOW & FINCH",
 	quote = ShiftConstants.REVIEW_QUOTES.met,
+	monster = "harlow",
 }
 local SCHOOL_SITE: DepotTypes.MapSite = {
 	site = "School halls",
@@ -107,6 +108,7 @@ local SCHOOL_SITE: DepotTypes.MapSite = {
 	tip = "Bramble the owl can't move while you look at it. Watch it and take turns!",
 	reviewTab = "SHIFT REVIEW · MAPLE HILL SCHOOL",
 	quote = table.freeze({ line = '"The halls have never been so shiny!"', by = "— Maple Hill School, Front Desk" }),
+	monster = "bramble",
 }
 
 return table.freeze({

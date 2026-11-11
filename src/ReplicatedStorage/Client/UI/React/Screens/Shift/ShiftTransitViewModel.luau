@@ -3,8 +3,10 @@
 	ShiftTransitViewModel: the transit screen's route slip (ShiftTransitPanel). A dispatch slip on the company's paper:
 	the "MORROW & MORROW — DISPATCH" band with "TRUCK n" (none when unknown), ROUTE SLIP, FROM the company depot TO the
 	contract's client (cut at CLIENT_MAX; "Site on file" before the server names one), a note, and the red IN TRANSIT
-	stamp, which turns to ARRIVED once this client is ready. `advance` moves the loading bar toward the client's
-	readiness. Pure.
+	stamp, which turns to ARRIVED once this client is ready. The card's picture and the tip's portrait follow the run's
+	map like its words: the map's photo (the Office's officeWide; the School's own slot, and while that is empty the
+	School map card's icon instead) and its monster's portrait (OccupantPortraitAssets). `advance` moves the loading bar
+	toward the client's readiness. Pure.
 
 	@class ShiftTransitViewModel
 ]=]
@@ -16,6 +18,8 @@ local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTyp
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local WorldBillboardViewModel = require(ReplicatedStorage.Client.UI.React.Screens.World.WorldBillboardViewModel)
 local DepotMapRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotMapRules)
+local OccupantPortraitAssets = require(ReplicatedStorage.Client.Features.Occupant.Data.OccupantPortraitAssets)
+local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local PaperHudScaleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudScaleViewModel)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 
@@ -35,6 +39,22 @@ export type SlipView = {
 	site: string,
 	tip: string,
 	bar: string,
+	-- The card's picture: the run's map's photo, nil while that map's slot is empty (the card then draws `photoIcon`
+	-- on its own colour plate), and the tip's portrait, the map's monster's.
+	photo: string?,
+	photoIcon: UIAssets.ToonIcon,
+	portrait: UIAssets.ToonIcon,
+}
+
+-- Each map's trip-card photo (UIAssets.toonPhotos; "" = not uploaded yet) and the icon its map card wears
+-- (DepotMapCards), drawn in the photo's place while the photo is empty.
+local PHOTO: { [ShiftTypes.MapId]: string } = {
+	office = UIAssets.toonPhotos.officeWide,
+	school = UIAssets.toonPhotos.schoolWide,
+}
+local PHOTO_ICON: { [ShiftTypes.MapId]: UIAssets.ToonIcon } = {
+	office = "monitor",
+	school = "globe",
 }
 
 local ShiftTransitViewModel = {}
@@ -87,8 +107,10 @@ end
 function ShiftTransitViewModel.slip(snapshot: ShiftTypes.TransitSnapshot?, arrived: boolean): SlipView
 	local client = if snapshot ~= nil then snapshot.client else nil
 	local truck = if snapshot ~= nil then snapshot.truck else nil
-	-- The run's map picks the site line and the tip (the Office's when unknown).
-	local site = DepotMapRules.siteOf(DepotMapRules.parse(if snapshot ~= nil then snapshot.map else nil))
+	-- The run's map picks the site line, the tip, the picture and the portrait (the Office's when unknown).
+	local map: ShiftTypes.MapId = DepotMapRules.parse(if snapshot ~= nil then snapshot.map else nil)
+	local site = DepotMapRules.siteOf(map)
+	local photo = PHOTO[map]
 	local to = if client ~= nil
 		then WorldBillboardViewModel.clip(client, ShiftTransitViewModel.CLIENT_MAX)
 		else ShiftTransitViewModel.NO_CLIENT
@@ -100,6 +122,9 @@ function ShiftTransitViewModel.slip(snapshot: ShiftTypes.TransitSnapshot?, arriv
 			then TrainingConstants.ROOM_SITE
 			else `{site.site} · {ShiftHudViewModel.clock(ShiftConstants.SHIFT_SECONDS)} shift`,
 		tip = site.tip,
+		photo = if photo ~= "" then photo else nil,
+		photoIcon = PHOTO_ICON[map],
+		portrait = OccupantPortraitAssets.portrait(site.monster, "calm"),
 		bar = if arrived then "DOORS OPEN!" else "DRIVING TO THE SITE...",
 		band = `{ShiftConstants.EMPLOYER_BAND} — DISPATCH`,
 		truck = if truck ~= nil and truck > 0 then `TRUCK {truck}` else nil,
