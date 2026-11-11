@@ -242,6 +242,11 @@ export type Senses = {
 	spots: { Spot }?,
 	hiders: { Hider }?,
 	pacing: Pacing?,
+	-- A freeze kind (Bramble; OccupantWatchRules): watched right now (hold: no move, turn, door or catch, and his
+	-- clocks paused), since when, and when it last unfroze (no catch for FREEZE_CATCH_BLOCK after). Absent for Harlow.
+	frozen: boolean?,
+	frozenAt: number?,
+	unfrozenAt: number?,
 }
 
 -- What the catch rule needs about a would-be catch.

@@ -141,4 +141,79 @@ return function()
 			expect(step.intent.position).to.equal(spot.stand)
 		end)
 	end)
+	describe("the freeze (a freeze kind being watched)", function()
+		it("pause moves every clock that times what he does, and nothing else", function()
+			local mind = fresh()
+			mind.since = 10
+			mind.chaseAt = 11
+			mind.arrivedAt = 12
+			mind.phaseAt = 13
+			mind.standUntil = 14
+			mind.grace = { [7] = 50 }
+			local copy = table.clone(mind)
+			M.pause(copy, 2)
+			expect(copy.since).to.equal(12)
+			expect(copy.chaseAt).to.equal(13)
+			expect(copy.arrivedAt).to.equal(14)
+			expect(copy.phaseAt).to.equal(15)
+			expect(copy.standUntil).to.equal(16)
+			expect(copy.reactUntil).to.equal(nil)
+			expect(copy.grace[7]).to.equal(50)
+			expect(copy.nextWorkAt).to.equal(mind.nextWorkAt)
+			expect(mind.since).to.equal(10)
+		end)
+
+		it("pause does nothing for no time", function()
+			local mind = fresh()
+			mind.since = 10
+			M.pause(mind, 0)
+			M.pause(mind, -3)
+			expect(mind.since).to.equal(10)
+		end)
+
+		it("frozenSeconds counts from his last think, or from the freeze if it began later", function()
+			local mind = fresh()
+			mind.lastThink = 100
+			expect(M.frozenSeconds(mind, senses({ now = 101, frozenAt = 99 }))).to.be.near(1, 1e-6)
+			expect(M.frozenSeconds(mind, senses({ now = 101, frozenAt = 100.75 }))).to.be.near(0.25, 1e-6)
+			expect(M.frozenSeconds(fresh(), senses({ now = 101 }))).to.equal(0)
+		end)
+
+		it("catchBlocked: while frozen and for FREEZE_CATCH_BLOCK after, never without freeze senses", function()
+			expect(M.catchBlocked(senses({ frozen = true }))).to.equal(true)
+			expect(M.catchBlocked(senses({ unfrozenAt = 100 - C.FREEZE_CATCH_BLOCK / 2 }))).to.equal(true)
+			expect(M.catchBlocked(senses({ unfrozenAt = 100 - C.FREEZE_CATCH_BLOCK - 0.01 }))).to.equal(false)
+			expect(M.catchBlocked(senses())).to.equal(false)
+			expect(M.catchBlocked(senses({ frozen = false }))).to.equal(false)
+		end)
+
+		it("withoutCatch turns a grab into a run at them and drops a catch effect", function()
+			local glimpse = { userId = 7, position = Vector3.new(62, 3, 60), clear = true }
+			local step = {
+				mind = fresh(),
+				intent = { kind = "attack", target = 7 },
+				effects = { { kind = "catch", userId = 7 }, { kind = "release" } },
+			}
+			local safe = M.withoutCatch(step, senses({ players = { glimpse } }))
+			expect(safe.intent.kind).to.equal("goTo")
+			expect(safe.intent.position).to.equal(glimpse.position)
+			expect(safe.intent.run).to.equal(true)
+			expect(#safe.effects).to.equal(1)
+			expect(safe.effects[1].kind).to.equal("release")
+			expect(#step.effects).to.equal(2)
+		end)
+
+		it("withoutCatch idles when the grabbed player is not in his senses", function()
+			local step = { mind = fresh(), intent = { kind = "attack", target = 7 } }
+			expect(M.withoutCatch(step, senses()).intent.kind).to.equal("idle")
+		end)
+
+		it("withoutCatch leaves any other intent alone", function()
+			local goTo = { kind = "goTo", position = Vector3.new(1, 0, 1), run = false }
+			local step = { mind = fresh(), intent = goTo, effects = { { kind = "catch", userId = 7 } } }
+			local safe = M.withoutCatch(step, senses())
+			expect(safe.intent).to.equal(goTo)
+			expect(safe.effects).to.equal(nil)
+		end)
+	end)
 end

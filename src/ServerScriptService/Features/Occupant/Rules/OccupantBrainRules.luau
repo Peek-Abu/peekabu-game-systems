@@ -39,6 +39,11 @@
 	startled; a walk that goes nowhere is dropped, then he is lifted out (OccupantStuckRules); a supply cabinet's door
 	shuts whenever he leaves the phase that opened it (`shutDoor`). The service carries out each step's effects.
 
+	A freeze kind (Bramble, OccupantWatchRules) is held while watched (`Senses.frozen`, `hold`): no move, no turn, no
+	door, no catch, and every clock that times what he is doing is paused (frozen time never counts toward a give-up);
+	he still remembers whom he sees. After it unfreezes, no catch for FREEZE_CATCH_BLOCK (`Senses.unfrozenAt`): a grab
+	becomes a run at them. Harlow's senses carry neither, so none of this touches him.
+
 	The line-of-sight ray is the caller's (OccupantServiceServer): each Glimpse says whether it was clear.
 	Pure: nothing here yields or touches an Instance; it never changes the mind it is given. Times are
 	os.clock() seconds (the NPC brain's `now`).
@@ -496,11 +501,26 @@ function OccupantBrainRules.shutDoor(before: Mind, result: Step): Step
 end
 
 --[=[
+	A frozen think (a freeze kind being watched): he holds where he is (idle, no effects: no door, no catch, no body
+	change), his clocks paused by the time he has been frozen (OccupantMindUtils.pause); what he sees and the menace
+	gauge are still kept (OccupantDirectorRules.track), and the stuck watch starts again (he is not on a walk).
+]=]
+function OccupantBrainRules.hold(mind: Mind, senses: Senses): Step
+	local paused = table.clone(mind)
+	M.pause(paused, M.frozenSeconds(mind, senses))
+	local tracked = OccupantDirectorRules.track(mind, { mind = paused, intent = IDLE }, senses)
+	return OccupantStuckRules.watch(mind, { mind = tracked.mind, intent = IDLE }, senses)
+end
+
+--[=[
 	One think: the next mind, the NPC intent, a cue worth a speech bubble (or nil) and the effects for the service.
 	Also keeps when he walked into the loading bay, what he has seen, the menace gauge and his body (standing up,
-	startled: no move until then).
+	startled: no move until then). Frozen: `hold`; just unfrozen: no catch yet.
 ]=]
 function OccupantBrainRules.step(mind: Mind, senses: Senses): Step
+	if senses.frozen == true then
+		return OccupantBrainRules.hold(mind, senses)
+	end
 	local thought = OccupantBrainRules.shutDoor(mind, think(mind, senses))
 	local result = OccupantDirectorRules.track(mind, OccupantBrainRules.settleBody(thought, senses.now), senses)
 	-- The jerk's phase ends once his head is no longer held on them (an ordinary chase).
@@ -513,11 +533,16 @@ function OccupantBrainRules.step(mind: Mind, senses: Senses): Step
 		intent = IDLE
 	end
 	-- A walk that goes nowhere is dropped, then he is lifted out (never a freeze).
-	return OccupantStuckRules.watch(
+	local watched = OccupantStuckRules.watch(
 		mind,
 		{ mind = nextMind, intent = intent, cue = result.cue, effects = result.effects },
 		senses
 	)
+	-- Just unfrozen (a freeze kind): no catch until FREEZE_CATCH_BLOCK has passed.
+	if M.catchBlocked(senses) then
+		return M.withoutCatch(watched, senses)
+	end
+	return watched
 end
 
 return OccupantBrainRules

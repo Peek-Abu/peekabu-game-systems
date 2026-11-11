@@ -101,6 +101,81 @@ function M.forget(mind: Mind)
 end
 
 --[=[
+	Fills in a copy: every clock that times what he is doing (his mode, a phase, the look-around, the chase's give-up,
+	the bay linger, standing up, a startle, a swivelled head) moved `seconds` later, so time spent frozen (a freeze kind
+	being watched) never counts toward any of them. Grace, the director's steer and work breaks run on real time.
+]=]
+function M.pause(mind: Mind, seconds: number)
+	if seconds <= 0 then
+		return
+	end
+	mind.since += seconds
+	local function shift(value: number?): number?
+		return if value ~= nil then value + seconds else nil
+	end
+	mind.chaseAt = shift(mind.chaseAt)
+	mind.arrivedAt = shift(mind.arrivedAt)
+	mind.phaseAt = shift(mind.phaseAt)
+	mind.nearAt = shift(mind.nearAt)
+	mind.bayAt = shift(mind.bayAt)
+	mind.standUntil = shift(mind.standUntil)
+	mind.reactUntil = shift(mind.reactUntil)
+	mind.swivelUntil = shift(mind.swivelUntil)
+end
+
+--[=[
+	How long he has been frozen since his last think (or since the freeze began, if later): the time to pause.
+]=]
+function M.frozenSeconds(mind: Mind, senses: Senses): number
+	local from = mind.lastThink or senses.now
+	local frozenAt = senses.frozenAt
+	if frozenAt ~= nil and frozenAt > from then
+		from = frozenAt
+	end
+	return math.max(0, senses.now - from)
+end
+
+--[=[
+	Whether a catch is barred now: while frozen, and FREEZE_CATCH_BLOCK after the last unfreeze (never for Harlow,
+	whose senses carry neither).
+]=]
+function M.catchBlocked(senses: Senses): boolean
+	if senses.frozen == true then
+		return true
+	end
+	local unfrozenAt = senses.unfrozenAt
+	return unfrozenAt ~= nil and senses.now < unfrozenAt + OccupantConstants.FREEZE_CATCH_BLOCK
+end
+
+--[=[
+	`step` with no catch in it: a grab becomes a run at them (idle when they are not in his senses), and a catch
+	effect is dropped (as if the server refused it).
+]=]
+function M.withoutCatch(step: Step, senses: Senses): Step
+	local intent = step.intent
+	if intent.kind == "attack" then
+		local target = intent.target
+		intent = IDLE
+		for _, glimpse in senses.players do
+			if glimpse.userId == target then
+				intent = { kind = "goTo", position = glimpse.position, run = true }
+			end
+		end
+	end
+	local effects: { Effect }? = nil
+	if step.effects ~= nil then
+		local kept: { Effect } = {}
+		for _, effect in step.effects do
+			if effect.kind ~= "catch" then
+				table.insert(kept, effect)
+			end
+		end
+		effects = if #kept > 0 then kept else nil
+	end
+	return { mind = step.mind, intent = intent, cue = step.cue, effects = effects }
+end
+
+--[=[
 	A copy of `mind` in `mode`, begun `now`, not yet arrived anywhere, out of any work or stare.
 ]=]
 function M.enter(mind: Mind, mode: Mode, now: number): Mind

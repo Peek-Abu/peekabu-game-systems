@@ -1148,4 +1148,125 @@ return function()
 			end
 		)
 	end)
+	describe("frozen (a freeze kind being watched)", function()
+		local LIMIT = OccupantConstants.CHASE_GIVE_UP_SECONDS
+		local BLOCK = OccupantConstants.FREEZE_CATCH_BLOCK
+		local function at(now, harlowX, players, extra)
+			local value = senses({ now = now, position = Vector3.new(harlowX, 3, 60), players = players })
+			for key, item in extra or {} do
+				value[key] = item
+			end
+			return value
+		end
+		local function runner(userId, harlowX)
+			return player(userId, Vector3.new(harlowX + 25, 3, 60))
+		end
+		local function frozen(now, frozenAt)
+			return { frozen = true, frozenAt = frozenAt or now }
+		end
+
+		it("holds still on patrol: idle, no effects, the same mode", function()
+			local step = OccupantBrainRules.step(fresh(), senses({ frozen = true, frozenAt = 100 }))
+			expect(step.intent.kind).to.equal("idle")
+			expect(step.effects).to.equal(nil)
+			expect(step.mind.mode).to.equal("patrol")
+		end)
+
+		it("never grabs someone in reach while frozen", function()
+			local chase = OccupantBrainRules.step(fresh(), at(100, 60, { runner(7, 60) }))
+			local close = player(7, Vector3.new(62, 3, 60))
+			local held = OccupantBrainRules.step(chase.mind, at(100.2, 60, { close }, frozen(100.1)))
+			expect(held.intent.kind).to.equal("idle")
+			expect(held.effects).to.equal(nil)
+			expect(held.mind.mode).to.equal("chase")
+			expect(held.mind.target).to.equal(7)
+		end)
+
+		it("does not move toward a noise while frozen", function()
+			local step = OccupantBrainRules.step(fresh(), senses({ heard = Vector3.new(90, 0, 60), frozen = true }))
+			expect(step.intent.kind).to.equal("idle")
+			expect(step.mind.mode).to.equal("patrol")
+		end)
+
+		it("pauses the chase's give-up clock: frozen time does not count", function()
+			local chase = OccupantBrainRules.step(fresh(), at(100, 60, { runner(7, 60) }))
+			expect(chase.mind.chaseAt).to.equal(100)
+			local held = OccupantBrainRules.step(chase.mind, at(110, 60, { runner(7, 60) }, frozen(110, 100)))
+			expect(held.mind.chaseAt).to.equal(110)
+			local still =
+				OccupantBrainRules.step(held.mind, at(110 + LIMIT - 0.1, 70, { runner(7, 70) }, { unfrozenAt = 110 }))
+			expect(still.mind.mode).to.equal("chase")
+			local tired =
+				OccupantBrainRules.step(still.mind, at(110 + LIMIT, 70, { runner(7, 70) }, { unfrozenAt = 110 }))
+			expect(tired.mind.mode).to.equal("patrol")
+			expect(tired.cue).to.equal("giveUp")
+		end)
+
+		it("pauses only from when the freeze began, not the moving time before it", function()
+			local chase = OccupantBrainRules.step(fresh(), at(100, 60, { runner(7, 60) }))
+			local held = OccupantBrainRules.step(chase.mind, at(101, 60, { runner(7, 60) }, frozen(101, 100.6)))
+			expect(held.mind.chaseAt).to.be.near(100.4, 1e-6)
+		end)
+
+		it("pauses the look-around too", function()
+			local heard = OccupantBrainRules.step(fresh(), senses({ heard = Vector3.new(90, 0, 60) }))
+			local there = Vector3.new(90, 3, 61)
+			local arrived = OccupantBrainRules.step(heard.mind, senses({ position = there, now = 101 }))
+			expect(arrived.mind.arrivedAt).to.equal(101)
+			local held = OccupantBrainRules.step(
+				arrived.mind,
+				senses({ position = there, now = 105, frozen = true, frozenAt = 101 })
+			)
+			expect(held.mind.arrivedAt).to.equal(105)
+			local looking = OccupantBrainRules.step(
+				held.mind,
+				senses({ position = there, now = 105 + OccupantConstants.LOOK_SECONDS - 0.1, unfrozenAt = 105 })
+			)
+			expect(looking.mind.mode).to.equal("investigate")
+		end)
+
+		it("still remembers whom he sees while frozen", function()
+			local mind = fresh()
+			mind.lastThink = 100
+			local held = OccupantBrainRules.step(mind, at(100.5, 60, { runner(7, 60) }, frozen(100)))
+			expect(held.mind.watched[7]).to.be.near(0.5, 1e-6)
+			expect(held.mind.lastThink).to.equal(100.5)
+		end)
+
+		it("starts the stuck watch again, so a long freeze is never read as stuck", function()
+			local mind = fresh()
+			mind.stuckFrom = Vector3.new(60, 3, 60)
+			mind.stuckAt = 90
+			local held = OccupantBrainRules.step(mind, senses({ frozen = true }))
+			expect(held.mind.stuckAt).to.equal(nil)
+			expect(held.mind.stuckFrom).to.equal(nil)
+		end)
+
+		it("never changes the mind it is given", function()
+			local chase = OccupantBrainRules.step(fresh(), at(100, 60, { runner(7, 60) }))
+			OccupantBrainRules.step(chase.mind, at(110, 60, { runner(7, 60) }, frozen(110, 100)))
+			expect(chase.mind.chaseAt).to.equal(100)
+		end)
+
+		it("runs at someone in reach instead of grabbing them for 0.6 s after unfreezing", function()
+			local close = player(7, Vector3.new(62, 3, 60))
+			local blocked = OccupantBrainRules.step(fresh(), at(100, 60, { close }, { unfrozenAt = 100 - BLOCK + 0.1 }))
+			expect(blocked.mind.mode).to.equal("chase")
+			expect(blocked.intent.kind).to.equal("goTo")
+			expect(blocked.intent.position).to.equal(close.position)
+			expect(blocked.intent.run).to.equal(true)
+			local free = OccupantBrainRules.step(fresh(), at(100, 60, { close }, { unfrozenAt = 100 - BLOCK - 0.01 }))
+			expect(free.intent.kind).to.equal("attack")
+		end)
+
+		it("leaves Harlow exactly as he was: no frozen senses, the same step", function()
+			local close = player(7, Vector3.new(62, 3, 60))
+			local plain = OccupantBrainRules.step(fresh(), at(100, 60, { close }))
+			local unfrozen = OccupantBrainRules.step(fresh(), at(100, 60, { close }, { frozen = false }))
+			expect(plain.intent.kind).to.equal("attack")
+			expect(unfrozen.intent.kind).to.equal("attack")
+			expect(unfrozen.mind.mode).to.equal(plain.mind.mode)
+			expect(unfrozen.cue).to.equal(plain.cue)
+		end)
+	end)
 end
