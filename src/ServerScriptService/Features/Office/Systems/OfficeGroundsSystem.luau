@@ -34,6 +34,7 @@ local OfficeDecorConstants = require(ReplicatedStorage.Shared.Features.Office.Da
 local OfficeServer = ServerScriptService.Features.Office
 local OfficeConstants = require(OfficeServer.Data.OfficeConstants)
 local OfficeTypes = require(OfficeServer.Data.OfficeTypes)
+local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local OfficeArtKeyUtils = require(OfficeServer.Utils.OfficeArtKeyUtils)
 local OfficeGroundsUtils = require(OfficeServer.Utils.OfficeGroundsUtils)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
@@ -98,15 +99,19 @@ local OfficeGroundsSystem = {}
 	Builds the outside's Outdoors volumes, outside door hit boxes and inside exits for `layout` at `origin` under
 	`parent` (the office model), and returns the exits and outside doors by entrance id. Empty maps, and nothing
 	built, when the layout has no grounds. `visuals` supplies the leaf and sign art (default: the live
-	ArtVisualSystem).
+	ArtVisualSystem). `map` picks the entrances' kinds (the Office's when nil).
 ]=]
 function OfficeGroundsSystem.build(
 	layout: OfficeTypes.Layout,
 	origin: CFrame,
 	parent: Instance,
-	visuals: ArtVisualSystem.Controller?
+	visuals: ArtVisualSystem.Controller?,
+	map: ShiftTypes.MapId?
 ): Built
 	local built: Built = { exits = {}, doors = {} }
+	-- The map's entrance kinds (its prompts name it: "Enter School"; OfficeEntranceSystem registers and takes them);
+	-- the Office's by default.
+	local kinds = if map == "school" then OfficeConstants.ENTRANCES.school else OfficeConstants.ENTRANCES.office
 	local grounds = layout.grounds
 	if grounds == nil then
 		return built
@@ -144,7 +149,7 @@ function OfficeGroundsSystem.build(
 			origin * CFrame.new(outside.x, DOOR_SIZE.Y / 2, outside.z) * CFrame.Angles(0, outside.yaw, 0),
 			doors
 		)
-		interactable(door, OfficeConstants.ENTER_KIND, entrance.id)
+		interactable(door, kinds.enter, entrance.id)
 		built.doors[entrance.id] = door
 
 		local facade = facades[index]
@@ -153,7 +158,7 @@ function OfficeGroundsSystem.build(
 		if room ~= nil and edge ~= nil then
 			local leaves = OfficeDoorSystem.facadeLeaves(facade, room, origin, exits, art, `Exit_{entrance.id}`)
 			for _, leaf in leaves do
-				interactable(leaf, OfficeConstants.LEAVE_KIND, entrance.id)
+				interactable(leaf, kinds.leave, entrance.id)
 			end
 			built.exits[entrance.id] = leaves[1]
 

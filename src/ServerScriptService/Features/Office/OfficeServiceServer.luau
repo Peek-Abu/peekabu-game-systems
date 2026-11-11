@@ -232,7 +232,7 @@ local function rebuild(requested: number, map: ShiftTypes.MapId)
 	end
 	-- Guard: any other office model in Workspace (one a past cleanup missed) goes too, with a warning as evidence.
 	OfficeBuildSystem.clearStrays()
-	local current = OfficeBuildSystem.build(layout, OfficeConstants.ORIGIN, nil, seed)
+	local current = OfficeBuildSystem.build(layout, OfficeConstants.ORIGIN, nil, seed, map)
 	current.model:SetAttribute("LayoutSeed", seed)
 	current.model:SetAttribute(OfficeConstants.MAP_ATTRIBUTE, map)
 	forcedAnomalies = nil

@@ -358,6 +358,12 @@ return table.freeze({
 	-- leaf takes them out. Each carries the attribute EntranceId.
 	ENTER_KIND = "OfficeEnter",
 	LEAVE_KIND = "OfficeLeave",
+	-- Each map's entrance kinds and the object word its prompts show ("Enter Office" / "Leave School"): the Office's
+	-- are ENTER_KIND / LEAVE_KIND, unchanged (OfficeEntranceSystem.kindsFor reads them by the run's map).
+	ENTRANCES = table.freeze({
+		office = table.freeze({ enter = "OfficeEnter", leave = "OfficeLeave", object = "Office" }),
+		school = table.freeze({ enter = "SchoolEnter", leave = "SchoolLeave", object = "School" }),
+	}),
 	DOOR_PATH_LABEL = "OfficeDoor",
 	DOOR_HEIGHT = 9.4,
 	DOOR_LEAF_THICKNESS = 0.3,

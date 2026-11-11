@@ -119,6 +119,20 @@ return function()
 			expect(Constants.LEAVE_KIND).to.equal("OfficeLeave")
 		end)
 
+		it("tags a School's entrances with the School's kinds (its own prompt words)", function()
+			Shell.build(layout(), ORIGIN, model, art)
+			Grounds.build(layout(), ORIGIN, model, art, "school")
+			for _, part in model:FindFirstChild("Entrances"):GetChildren() do
+				expect(part:GetAttribute(Interaction.KIND_ATTRIBUTE)).to.equal(Constants.ENTRANCES.school.enter)
+			end
+			for _, leaf in model:FindFirstChild("Exits"):GetDescendants() do
+				local kind = leaf:GetAttribute(Interaction.KIND_ATTRIBUTE)
+				if kind ~= nil then
+					expect(kind).to.equal(Constants.ENTRANCES.school.leave)
+				end
+			end
+		end)
+
 		for _, case in
 			{
 				{ id = "dock", leaves = 1, material = Enum.Material.WoodPlanks },

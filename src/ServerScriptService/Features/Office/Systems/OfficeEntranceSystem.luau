@@ -1,7 +1,9 @@
 --!strict
 --[=[
 	OfficeEntranceSystem: the Lethal-style entrances of a generated office (stage 3). A crew member interacts with an
-	entrance's outside door (OfficeConstants.ENTER_KIND, "Enter") or its inside exit (LEAVE_KIND, "Leave"); their
+	entrance's outside door (OfficeConstants.ENTER_KIND, "Enter") or its inside exit (LEAVE_KIND, "Leave"); a School's
+	entrances carry the School's kinds (OfficeConstants.ENTRANCES.school: "Enter School" / "Leave School"; `kindsFor`
+	reads a map's), which work the same way. Their
 	screen fades to black over OUTSIDE.FADE_OUT, they are set down at the entrance's fixed inside (enter) or outside
 	(leave) frame, SPAWN_HEIGHT up, and the screen fades back in over OUTSIDE.FADE_IN. The same spot every time.
 
@@ -32,6 +34,7 @@ local InteractionRegistry = require(ReplicatedStorage.Shared.Features.Interactio
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local OfficeConstants = require(ServerScriptService.Features.Office.Data.OfficeConstants)
 local OfficeTypes = require(ServerScriptService.Features.Office.Data.OfficeTypes)
+local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
 
 local OUTSIDE = OfficeConstants.OUTSIDE
@@ -42,14 +45,22 @@ local STREAM_TIMEOUT = 2
 
 local log = Logger.new("OfficeEntranceSystem")
 
--- Registered at load: the generated office's entrance parts carry these kinds from the moment they are built.
-for kind, words in { [OfficeConstants.ENTER_KIND] = "Enter", [OfficeConstants.LEAVE_KIND] = "Leave" } do
-	if not InteractionRegistry.has(kind) then
-		InteractionRegistry.register(kind, {
-			actionText = words,
-			objectText = "Office",
-			maxDistance = OUTSIDE.ENTRANCE_REACH,
-		})
+export type EntranceKinds = { enter: string, leave: string, object: string }
+
+-- Every map's entrance kinds (the Office's first).
+local ALL_KINDS: { EntranceKinds } = { OfficeConstants.ENTRANCES.office, OfficeConstants.ENTRANCES.school }
+
+-- Registered at load: the generated office's entrance parts carry these kinds from the moment they are built. Each
+-- map's prompts name it ("Enter Office", "Leave School").
+for _, kinds in ALL_KINDS do
+	for kind, words in { [kinds.enter] = "Enter", [kinds.leave] = "Leave" } do
+		if not InteractionRegistry.has(kind) then
+			InteractionRegistry.register(kind, {
+				actionText = words,
+				objectText = kinds.object,
+				maxDistance = OUTSIDE.ENTRANCE_REACH,
+			})
+		end
 	end
 end
 
@@ -90,10 +101,36 @@ export type OfficeEntranceSystem = {
 local OfficeEntranceSystem = {}
 
 --[=[
+	The entrance kinds a layout of `map` is built with (OfficeGroundsSystem): the Office's for the office.
+]=]
+function OfficeEntranceSystem.kindsFor(map: ShiftTypes.MapId): EntranceKinds
+	return if map == "school" then OfficeConstants.ENTRANCES.school else OfficeConstants.ENTRANCES.office
+end
+
+-- Whether `kind` is any map's enter kind / any map's entrance kind.
+local function isEnter(kind: string): boolean
+	for _, kinds in ALL_KINDS do
+		if kind == kinds.enter then
+			return true
+		end
+	end
+	return false
+end
+
+local function isEntrance(kind: string): boolean
+	for _, kinds in ALL_KINDS do
+		if kind == kinds.enter or kind == kinds.leave then
+			return true
+		end
+	end
+	return false
+end
+
+--[=[
 	Where a teleport of `kind` sets the player down: the inside frame to enter, the outside frame to leave.
 ]=]
 function OfficeEntranceSystem.target(kind: string, outsideFrame: CFrame, insideFrame: CFrame): CFrame
-	return if kind == OfficeConstants.ENTER_KIND then insideFrame else outsideFrame
+	return if isEnter(kind) then insideFrame else outsideFrame
 end
 
 --[=[
@@ -187,13 +224,15 @@ function OfficeEntranceSystem.new(deps: Deps): OfficeEntranceSystem
 	local system: OfficeEntranceSystem
 	system = {
 		start = function()
-			for _, kind in { OfficeConstants.ENTER_KIND, OfficeConstants.LEAVE_KIND } do
-				InteractionServiceServer:onInteract(kind, function(player, target)
-					local id: OfficeTypes.EntranceId? = asEntranceId(target:GetAttribute("EntranceId"))
-					if id ~= nil then
-						system.request(player, kind, id, Workspace:GetServerTimeNow())
-					end
-				end)
+			for _, kinds in ALL_KINDS do
+				for _, kind in { kinds.enter, kinds.leave } do
+					InteractionServiceServer:onInteract(kind, function(player, target)
+						local id: OfficeTypes.EntranceId? = asEntranceId(target:GetAttribute("EntranceId"))
+						if id ~= nil then
+							system.request(player, kind, id, Workspace:GetServerTimeNow())
+						end
+					end)
+				end
 			end
 			-- Interaction keeps one handler per kind for the session; stopping drops every pending teleport.
 			return function()
@@ -203,7 +242,7 @@ function OfficeEntranceSystem.new(deps: Deps): OfficeEntranceSystem
 		end,
 
 		request = function(player, kind, entranceId, now)
-			if kind ~= OfficeConstants.ENTER_KIND and kind ~= OfficeConstants.LEAVE_KIND then
+			if not isEntrance(kind) then
 				return false
 			end
 			local root = rootOf(player)

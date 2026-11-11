@@ -36,6 +36,7 @@ local OfficeServer = ServerScriptService.Features.Office
 local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoConstants)
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideConstants)
+local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionConstants)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local OfficeConstants = require(OfficeServer.Data.OfficeConstants)
@@ -118,7 +119,8 @@ function OfficeBuildSystem.build(
 	layout: OfficeTypes.Layout,
 	origin: CFrame,
 	visuals: ArtVisualSystem.Controller?,
-	seed: number?
+	seed: number?,
+	map: ShiftTypes.MapId?
 ): Built
 	local art = visuals or ArtVisualSystem
 	local model = Instance.new("Model")
@@ -321,7 +323,7 @@ function OfficeBuildSystem.build(
 	end
 
 	local doors = OfficeDoorSystem.build(layout, origin, model, art)
-	local outside = OfficeGroundsSystem.build(layout, origin, model, art)
+	local outside = OfficeGroundsSystem.build(layout, origin, model, art, map)
 
 	model.Parent = Workspace
 	return {
