@@ -6,7 +6,7 @@
 	and draws DepotHubPanel in the V1 kit. JOBS / the Tonight card / GO! (when not aboard) open the contract board;
 	INVENTORY opens the Inventory, SHOP the Shop; GUIDE and SETTINGS push the hub pages; INVITE FRIENDS / JOIN GROUP call SocialServiceClient (SocialPerksPanel, hidden under the open clipboard); the clipboard is a CLIPBOARD tile under SHOP and the invite row sits under the Tonight card (owner 11-08, layout A; no clipboard before training is done, DepotHubViewModel.clipboardShown); the gift asks to claim (`onClaimGift`, from the service: components
 	never talk to the server). Aboard a truck the Next shift card is the queue pad's (DepotPad). Values are specced in
-	DepotHubViewModel and DepotPadViewModel.
+	DepotHubViewModel (off a truck, the small Find a truck tab instead of the Next shift card, hidden while a prompt is up).
 
 	@class DepotHub
 ]=]
@@ -33,12 +33,12 @@ local CurrencyUtils = require(ReplicatedStorage.Shared.Features.Currency.Utils.C
 local DepotStore = require(ReplicatedStorage.Client.Features.Depot.State.DepotStore)
 local QueueStore = require(ReplicatedStorage.Client.Features.Queue.State.QueueStore)
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
+local ShiftPromptStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftPromptStore)
 local SocialService = require(ReplicatedStorage.Client.Features.Social.SocialServiceClient)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local SceneStack = require(ReplicatedStorage.Client.UI.Scenes.SceneStack)
 local useServerClock = require(ReplicatedStorage.Client.UI.React.Hooks.useServerClock)
 local DepotHubPanel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotHubPanel)
-local DepotPadViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotPadViewModel)
 local VM = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotHubViewModel)
 local PaperHudFrame = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudFrame)
 local usePaperHudScale = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperHudScale)
@@ -85,6 +85,8 @@ local function DepotHub(props: DepotHubProps): React.ReactNode
 	local stamp = ReactCharm.useAtom(TimecardMomentStore.stamp)
 	local social = ReactCharm.useAtom(StateSyncClientStore.social)
 	local training = ReactCharm.useAtom(StateSyncClientStore.training)
+	-- An interaction prompt is up: the Find a truck tab steps aside (owner 11-11).
+	local promptUp = ReactCharm.useAtom(ShiftPromptStore.shown) ~= nil
 	local scale = usePaperHudScale()
 	local player = Players.LocalPlayer
 	if not VM.visible(snapshot, player.UserId) or card ~= nil then
@@ -141,7 +143,8 @@ local function DepotHub(props: DepotHubProps): React.ReactNode
 				credits = ToonStyleViewModel.grouped(CurrencyUtils.getCurrencyAmount(currency, "credits")),
 				gift = VM.gift(daily, now),
 				tonight = VM.tonight(boardContract()),
-				cta = if pad == nil then DepotPadViewModel.cta(nil, nil) else nil,
+				cta = nil,
+				findTruck = VM.findTruck(pad ~= nil, promptUp),
 				newJobs = rank == nil or rank.xp == 0,
 				onJobs = openBoard,
 				onInventory = function()

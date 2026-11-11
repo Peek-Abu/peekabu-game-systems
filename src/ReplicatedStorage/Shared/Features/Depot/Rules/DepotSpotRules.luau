@@ -7,6 +7,7 @@
 	  (EmployeeRegistry); `decode` checks the same on the client when the packet arrives.
 	- `nextStation`: the radio's next station (wraps; a bad index starts over).
 	- `bellReady`: whether a bell has rested its cooldown.
+	- `bellSwing`: the bell's swing after a ring; `noteRate`: the radio's music notes on a station.
 	- `driveGap`, `road`, `roadLength`, `along`: the delivery truck outside: the wait before its next pass, the road
 	  its tagged parts make (ordered; needs two at least, whole and unique orders), and where it is a distance down it.
 
@@ -140,6 +141,20 @@ function DepotSpotRules.along(road: { Vector3 }, distance: number): (Vector3, Ve
 	local before = road[#road - 1] or last
 	local leg = last - before
 	return last, if leg.Magnitude > 0 then leg.Unit else Vector3.new(0, 0, 1)
+end
+
+-- The bell's swing (degrees) `t` seconds after it rang: a damped sine, still at the start and stopped at the end.
+function DepotSpotRules.bellSwing(t: number): number
+	local swing = DepotSpotConstants.BELL_SWING
+	if t <= 0 or t >= swing.SECONDS then
+		return 0
+	end
+	return swing.DEGREES * math.exp(-swing.DAMPING * t) * math.sin(math.pi * 2 * swing.FREQUENCY * t)
+end
+
+-- Music notes a second from the radio on this station (none on a quiet one).
+function DepotSpotRules.noteRate(station: DepotSpotConstants.Station): number
+	return if station.track == nil then 0 else DepotSpotConstants.RADIO_NOTES.RATE
 end
 
 return DepotSpotRules

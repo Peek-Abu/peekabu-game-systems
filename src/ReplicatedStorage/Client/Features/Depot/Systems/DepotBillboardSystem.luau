@@ -10,7 +10,8 @@
 	PlayerGui) draws the whole result board with your card and award stickies, and while it exists the shared board draws
 	nothing (DepotWorldViewModel.drawsSharedBoard). The crew board draws the weekly crew leaderboard from the
 	`crewBoard` world entry (LeaderboardBoardViewModel), checked on the same tick and redrawn only when its words change
-	(the countdown moves once a minute).
+	(the countdown moves once a minute). The time clock's sign (DepotClockSign) and the daily bonus sheet (DepotDailySign,
+	today's work order, redrawn when the day turns) are drawn in the game's kit too (owner 11-11).
 
 	Spec-exempt shell (CollectionService, RunService, React roots); the decisions are the specced DepotWorldViewModel and
 	the UIBillboards core.
@@ -30,6 +31,8 @@ local QueueStore = require(ReplicatedStorage.Client.Features.Queue.State.QueueSt
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local UIBillboardHost = require(ReplicatedStorage.Client.UI.Layers.UIBillboardHost)
 local UIBillboards = require(ReplicatedStorage.Client.UI.Layers.UIBillboards)
+local DepotClockSign = require(ReplicatedStorage.Client.UI.React.Screens.World.DepotClockSign)
+local DepotDailySign = require(ReplicatedStorage.Client.UI.React.Screens.World.DepotDailySign)
 local DepotResultBoard = require(ReplicatedStorage.Client.UI.React.Screens.World.DepotResultBoard)
 local DepotBoardViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotBoardViewModel)
 local DepotTruckTag = require(ReplicatedStorage.Client.UI.React.Screens.World.DepotTruckTag)
@@ -41,6 +44,7 @@ local LeaderboardBoardViewModel =
 local LeaderboardConstants = require(ReplicatedStorage.Shared.Features.Leaderboard.Data.LeaderboardConstants)
 local LeaderboardCrewUtils = require(ReplicatedStorage.Shared.Features.Leaderboard.Utils.LeaderboardCrewUtils)
 local WorldBillboard = require(ReplicatedStorage.Client.UI.React.Screens.World.WorldBillboard)
+local WorkOrderRegistry = require(ReplicatedStorage.Shared.Features.WorkOrder.Data.WorkOrderRegistry)
 
 export type DepotBillboardState = {
 	mounted: number,
@@ -158,6 +162,24 @@ local function drawCrewBoards(force: boolean)
 	end
 end
 
+-- The small signs (owner 11-11): the time clock's (fixed words) and the daily bonus sheet (today's work order,
+-- redrawn when the day turns).
+local clockSigns: { [UIBillboards.WorldShell]: true } = {}
+local dailySigns: { [UIBillboards.WorldShell]: string } = {}
+
+local function drawClock(shell: UIBillboards.WorldShell)
+	roots.show(shell, sign(PX.clock, e(DepotClockSign, { view = DepotWorldViewModel.clockSign() })))
+end
+
+local function drawDaily(shell: UIBillboards.WorldShell, force: boolean)
+	local job = WorkOrderRegistry.orderFor(Workspace:GetServerTimeNow()).label
+	if not force and dailySigns[shell] == job then
+		return
+	end
+	dailySigns[shell] = job
+	roots.show(shell, sign(PX.daily, e(DepotDailySign, { view = DepotWorldViewModel.dailySign(job) })))
+end
+
 local function count(set: { [UIBillboards.WorldShell]: true }): number
 	local total = 0
 	for _ in set do
@@ -207,6 +229,17 @@ function DepotBillboardSystem.start()
 	end, function(shell)
 		crewBoards[shell] = nil
 	end)
+	watch(TAGS.clock, function(shell)
+		clockSigns[shell] = true
+		drawClock(shell)
+	end, function(shell)
+		clockSigns[shell] = nil
+	end)
+	watch(TAGS.daily, function(shell)
+		drawDaily(shell, true)
+	end, function(shell)
+		dailySigns[shell] = nil
+	end)
 	watch(TAGS.review, function(shell)
 		reviews[shell] = true
 		drawReview(shell)
@@ -233,6 +266,9 @@ function DepotBillboardSystem.start()
 		if next(crewBoards) ~= nil then
 			drawCrewBoards(false)
 		end
+		for shell in dailySigns do
+			drawDaily(shell, false)
+		end
 	end)
 	table.insert(stoppers, function()
 		ticking:Disconnect()
@@ -246,6 +282,8 @@ function DepotBillboardSystem.stop()
 	table.clear(stoppers)
 	roots.teardown()
 	table.clear(trucks)
+	table.clear(clockSigns)
+	table.clear(dailySigns)
 	table.clear(results)
 	table.clear(reviews)
 	table.clear(drawn)

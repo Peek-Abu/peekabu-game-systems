@@ -58,6 +58,26 @@ local DepotSpotConstants = {
 	-- The registered bell sound (DepotAssets), played at the bell on every client.
 	BELL_SOUND = "depotShiftBell",
 	STATIONS = table.freeze(STATIONS),
+	-- The bell's swing when it rings (DepotSpotRules.bellSwing): its parts with SWING_ATTRIBUTE swing about the
+	-- attachment PIVOT_NAME (on the bell's arm), DEGREES at most, dying down over SECONDS at FREQUENCY swings a second.
+	-- A gold ring wave puffs out from the bell (RING_*).
+	BELL_SWING = table.freeze({
+		SWING_ATTRIBUTE = "DepotSwing",
+		PIVOT_NAME = "BellPivot",
+		DEGREES = 28,
+		SECONDS = 1.6,
+		FREQUENCY = 2.4,
+		DAMPING = 2.6,
+		RING_SECONDS = 0.55,
+		RING_SIZE = 9,
+		RING_COLOR = Color3.fromRGB(255, 205, 80),
+	}),
+	-- The radio's music notes (DepotSpotRules.noteRate): notes a second on a station with music.
+	RADIO_NOTES = table.freeze({
+		RATE = 1.6,
+		-- The radio part that emits them (in the tagged radio model).
+		EMITTER_NAME = "RadioBody",
+	}),
 	-- The coffee scene's words.
 	COFFEE_LINE = "2x pay on your next shift!",
 	-- The scenes the client opens.

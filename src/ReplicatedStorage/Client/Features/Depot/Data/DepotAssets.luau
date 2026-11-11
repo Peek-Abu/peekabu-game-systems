@@ -47,7 +47,13 @@ for id, def in SOUNDS do
 	end
 end
 
+-- The radio's music-note flipbook image (see RADIO_NOTES below); nil until uploaded.
+local RADIO_NOTES: string? = nil
+
 return table.freeze({
 	SOUNDS = table.freeze(SOUNDS),
 	HUB_THEME = "depotHubTheme",
+	-- The radio's music notes: a 2x2 flipbook (two notes, a beamed pair, a sparkle) in gold and mint
+	-- (design/production-art/hub-dressing/radio_notes_flipbook.png). Nil until the owner OKs the upload: no notes.
+	RADIO_NOTES = RADIO_NOTES,
 })

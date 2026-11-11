@@ -132,4 +132,33 @@ return function()
 			expect(at).to.equal(Vector3.new(10, 0, 10))
 		end)
 	end)
+	describe("bellSwing", function()
+		local swing = DepotSpotConstants.BELL_SWING
+		it("starts still, swings out, dies down and stops at the end", function()
+			expect(DepotSpotRules.bellSwing(0)).to.equal(0)
+			local peak = 0
+			for t = 0, swing.SECONDS, 0.02 do
+				peak = math.max(peak, math.abs(DepotSpotRules.bellSwing(t)))
+			end
+			expect(peak > swing.DEGREES * 0.5).to.equal(true)
+			expect(peak <= swing.DEGREES + 1e-6).to.equal(true)
+			expect(math.abs(DepotSpotRules.bellSwing(swing.SECONDS * 0.9)) < swing.DEGREES * 0.25).to.equal(true)
+			expect(DepotSpotRules.bellSwing(swing.SECONDS)).to.equal(0)
+			expect(DepotSpotRules.bellSwing(swing.SECONDS + 5)).to.equal(0)
+			expect(DepotSpotRules.bellSwing(-1)).to.equal(0)
+		end)
+	end)
+
+	describe("noteRate", function()
+		it("plays notes on a station with music and none on a quiet one", function()
+			for _, station in DepotSpotConstants.STATIONS do
+				local rate = DepotSpotRules.noteRate(station)
+				if station.track == nil then
+					expect(rate).to.equal(0)
+				else
+					expect(rate > 0).to.equal(true)
+				end
+			end
+		end)
+	end)
 end

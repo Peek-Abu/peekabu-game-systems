@@ -164,4 +164,13 @@ function VM.copy(
 	-- Settings draws its own rows; it has no copy of its own.
 	return { title = "SETTINGS", subtitle = "", sections = {} }
 end
+-- The hub's small "Find a truck!" tab (owner 11-11: the full Next shift card got in the way): shown only while the
+-- player is not aboard a truck (aboard, the queue pad's full card shows) and hidden while an interaction prompt is
+-- up, so it never covers one.
+VM.FIND_TRUCK_TEXT = "Find a truck!"
+
+function VM.findTruck(aboard: boolean, promptUp: boolean): boolean
+	return not aboard and not promptUp
+end
+
 return VM

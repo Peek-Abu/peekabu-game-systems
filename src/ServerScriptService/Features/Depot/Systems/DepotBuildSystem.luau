@@ -395,48 +395,71 @@ function DepotBuildSystem.buildPlan(
 		crewSign.Parent = boards
 	end
 
-	-- A small physical clock (in the graybox: clear of both board silhouettes and the spawn lane).
+	-- The weekly time clock: an invisible hit box (the prompt, the collision) wearing the approved time clock art
+	-- (the trucks' TimeClock template, else a teal graybox block), with its sign drawn by the client in the game's kit
+	-- above it (DepotConstants.BILLBOARD_TAGS.clock; owner 11-11: no server text).
 	local clockSpot = plan.boards.clock
 	if clockSpot ~= nil then
 		local clock = boardAt("WeeklyTimeClock", Vector3.new(3, 4, 1), clockSpot, 2, Color3.fromHex("1f6e66"), boards)
 		clock:SetAttribute(InteractionConstants.KIND_ATTRIBUTE, TimecardConstants.CLOCK_KIND)
 		CollectionService:AddTag(clock, InteractionConstants.TAG)
-		local clockFace = surface("ClockFace", clock, Vector2.new(300, 400))
-		local clockText = Instance.new("TextLabel")
-		clockText.Size = UDim2.fromScale(1, 1)
-		clockText.BackgroundColor3 = Color3.fromHex("f1dfa9")
-		clockText.TextColor3 = Color3.fromHex("2e3536")
-		clockText.Font = Enum.Font.GothamBold
-		clockText.TextSize = 32
-		clockText.TextWrapped = true
-		clockText.Text = "WEEKLY\nTIMECARD\n\nVIEW YOUR CARD\n\nANY 5 OF 7 DAYS"
-		clockText.Parent = clockFace
-		clockFace.Parent = clock
-	end
-	local dailySpot = plan.boards.daily
-	if dailySpot ~= nil then
-		local daily = boardAt(
-			"DailyWorkOrderSheet",
-			Vector3.new(2.8, 3.6, 0.18),
-			dailySpot,
-			2.2,
-			Color3.fromHex("f1dfa9"),
+		local art = TruckVisual.clockTemplate()
+		if art ~= nil then
+			local body = art:Clone()
+			body.Name = "TimeClockArt"
+			local _, artSize = body:GetBoundingBox()
+			body:ScaleTo(math.min(3 / math.max(artSize.X, 0.1), 4 / math.max(artSize.Y, 0.1)))
+			body:PivotTo(clock.CFrame)
+			for _, part in body:GetDescendants() do
+				if part:IsA("BasePart") then
+					part.Anchored = true
+					part.CanCollide = false
+					part.CanQuery = false
+					part.CanTouch = false
+				end
+			end
+			body.Parent = boards
+			clock.Transparency = 1
+		end
+		local px = DepotConstants.BILLBOARD_PX.clock
+		local signPart = boardAt(
+			"ClockSignBoard",
+			Vector3.new(
+				px.X * DepotConstants.SMALL_SIGN_STUDS_PER_PX,
+				px.Y * DepotConstants.SMALL_SIGN_STUDS_PER_PX,
+				0.1
+			),
+			clockSpot,
+			4.4 + px.Y * DepotConstants.SMALL_SIGN_STUDS_PER_PX / 2,
+			Color3.new(1, 1, 1),
 			boards
 		)
+		signPart.Transparency = 1
+		signPart.CanCollide = false
+		signPart.CanQuery = false
+		local clockSign = surface("ClockSign", signPart, px)
+		CollectionService:AddTag(clockSign, DepotConstants.BILLBOARD_TAGS.clock)
+		clockSign.Parent = boards
+	end
+	-- The daily bonus sheet: an invisible hit box (the prompt) whose face the client draws in the game's kit
+	-- (DepotConstants.BILLBOARD_TAGS.daily: today's work order and its bonus).
+	local dailySpot = plan.boards.daily
+	if dailySpot ~= nil then
+		local px = DepotConstants.BILLBOARD_PX.daily
+		local size = Vector3.new(
+			px.X * DepotConstants.SMALL_SIGN_STUDS_PER_PX,
+			px.Y * DepotConstants.SMALL_SIGN_STUDS_PER_PX,
+			0.18
+		)
+		local daily =
+			boardAt("DailyWorkOrderSheet", size, dailySpot, 1.4 + size.Y / 2, Color3.fromHex("f1dfa9"), boards)
+		daily.Transparency = 1
 		daily.CanCollide = false
 		daily:SetAttribute(InteractionConstants.KIND_ATTRIBUTE, TimecardConstants.DAILY_KIND)
 		CollectionService:AddTag(daily, InteractionConstants.TAG)
-		local sheet = surface("DailyOrderFace", daily, Vector2.new(280, 360))
-		local text = Instance.new("TextLabel")
-		text.Size = UDim2.fromScale(1, 1)
-		text.BackgroundTransparency = 1
-		text.Font = Enum.Font.GothamBold
-		text.TextSize = 28
-		text.TextColor3 = Color3.fromHex("2e3536")
-		text.TextWrapped = true
-		text.Text = "TODAY'S\nJOB\n\nBONUS CREDITS\n\nREAD IT HERE"
-		text.Parent = sheet
-		sheet.Parent = daily
+		local dailySign = surface("DailySign", daily, px)
+		CollectionService:AddTag(dailySign, DepotConstants.BILLBOARD_TAGS.daily)
+		dailySign.Parent = boards
 	end
 	model.Parent = Workspace
 	return { model = model, trucks = trucks, resultBoard = resultBoard, contractBoard = contractBoard }

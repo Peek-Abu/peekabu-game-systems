@@ -9,7 +9,8 @@
 	- top-right: the Credits counter (the coin render overlapping a gold number) and the daily gift (OPEN! with a badge,
 	  else the time to the next day); on desktop the Tonight card (tonight's building photo, the Manager breaking its
 	  edge), which opens the Jobs board;
-	- bottom-centre: the Next shift card (DepotNextShiftCard), unless the queue pad's own card is up.
+	- bottom: off a truck, a small "Find a truck!" tab (bottom-right; phone bottom-centre), hidden while a prompt is up
+	  (owner 11-11: the full Next shift card got in the way); the full card is the queue pad's own (DepotPad) aboard.
 	Presentational: the words come from DepotHubViewModel / DepotPadViewModel, the actions from DepotHub. Exempt; story
 	in DepotHubPanel.story.
 
@@ -48,8 +49,10 @@ export type DepotHubPanelProps = {
 	credits: string,
 	gift: DepotHubViewModel.GiftView,
 	tonight: DepotHubViewModel.TonightView,
-	-- Nil while the queue pad's own card shows.
+	-- The full Next shift card; nil while the queue pad's own card shows (and in the hub, where the small tab shows).
 	cta: DepotPadViewModel.CtaView?,
+	-- The small "Find a truck!" tab (DepotHubViewModel.findTruck): off a truck, with no prompt up. It opens the Jobs board.
+	findTruck: boolean?,
 	newJobs: boolean,
 	onJobs: () -> (),
 	onInventory: () -> (),
@@ -397,6 +400,22 @@ local function DepotHubPanel(props: DepotHubPanelProps): React.ReactNode
 	}
 	if props.cta ~= nil then
 		nodes.cta = e(DepotNextShiftCard, { cta = props.cta, phone = props.phone, onGo = props.onGo })
+	elseif props.findTruck == true then
+		local phone = props.phone
+		nodes.findTruck = e(ToonButton, {
+			variant = "primary",
+			layout = "inline",
+			icon = "truck",
+			text = DepotHubViewModel.FIND_TRUCK_TEXT,
+			textSize = if phone then 18 else 28,
+			small = true,
+			-- Desktop: the bottom-right corner, out of the way of the world. Phone: bottom-centre between the thumbstick
+			-- and Jump, where the full card used to sit, at a third of its size.
+			anchor = if phone then Vector2.new(0.5, 1) else Vector2.new(1, 1),
+			position = if phone then UDim2.new(0.5, 0, 1, -8) else UDim2.new(1, -28, 1, -28),
+			size = if phone then UDim2.fromOffset(190, 46) else UDim2.fromOffset(310, 76),
+			onActivated = props.onGo,
+		})
 	end
 	return e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, nodes)
 end

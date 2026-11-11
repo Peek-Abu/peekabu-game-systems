@@ -16,6 +16,8 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local TimecardConstants = require(ReplicatedStorage.Shared.Features.Timecard.Data.TimecardConstants)
+
 local PublicPlayerTypes = require(ReplicatedStorage.Shared.Data.PublicPlayerTypes)
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local HostConstants = require(ReplicatedStorage.Shared.Features.Host.Data.HostConstants)
@@ -278,6 +280,25 @@ end
 -- Whether the shared result board's shell draws: not while this client has its own review shell (one sign per spot).
 function DepotWorldViewModel.drawsSharedBoard(hasReview: boolean): boolean
 	return not hasReview
+end
+
+export type ClockSignView = { title: string, line: string, reward: string }
+export type DailySignView = { title: string, job: string, line: string }
+
+-- The sign over the hub's weekly time clock: what it is and what punching in gives (TimecardConstants: the KEY_PUNCH-th
+-- punch pays a Gloom Locker key). Words for young players.
+function DepotWorldViewModel.clockSign(): ClockSignView
+	return {
+		title = "TIME CLOCK",
+		line = "Punch in every day!",
+		reward = `{TimecardConstants.KEY_PUNCH} days = a locker key`,
+	}
+end
+
+-- The daily bonus sheet: today's work order (WorkOrderRegistry.orderFor), named DAILY BONUS so it never reads like
+-- tonight's job on the contract board.
+function DepotWorldViewModel.dailySign(job: string): DailySignView
+	return { title = "DAILY BONUS", job = job, line = "Do it today for bonus Credits!" }
 end
 
 return DepotWorldViewModel

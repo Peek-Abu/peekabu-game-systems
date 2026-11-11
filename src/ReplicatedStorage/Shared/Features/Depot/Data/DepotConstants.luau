@@ -96,12 +96,17 @@ return table.freeze({
 	-- M3b world UI. The depot's signs are drawn at Figma's "1 px ≈ 1/40 stud": a shell's size in studs is its design
 	-- size in px times STUDS_PER_PX. BILLBOARD_PX is each sign's design size (the truck tag includes its 60 px wire).
 	STUDS_PER_PX = 1 / 40,
+	-- The small signs (the clock's and the daily sheet) are drawn finer: 64 px a stud.
+	SMALL_SIGN_STUDS_PER_PX = 1 / 64,
 	BILLBOARD_PX = table.freeze({
 		truck = Vector2.new(340, 310),
 		contract = Vector2.new(600, 420),
 		result = Vector2.new(1140, 446),
 		-- The weekly crew leaderboard (LeaderboardBoard).
 		crew = Vector2.new(720, 560),
+		-- The weekly time clock's sign over the clock, and the daily bonus sheet (owner 11-11: the game's kit).
+		clock = Vector2.new(320, 150),
+		daily = Vector2.new(300, 380),
 	}),
 	-- The tags the client finds each kind of depot shell by (DepotBillboardSystem); `review` is your own card's shell.
 	BILLBOARD_TAGS = table.freeze({
@@ -110,6 +115,8 @@ return table.freeze({
 		result = "DepotResultBoard",
 		review = "DepotReviewCard",
 		crew = "DepotCrewBoard",
+		clock = "DepotClockSign",
+		daily = "DepotDailySign",
 	}),
 	-- A truck tag shell's truck number and seats, written once by the server.
 	TRUCK_ATTRIBUTE = "DepotTruck",
