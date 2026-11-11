@@ -1,0 +1,157 @@
+[
+ {
+  "type": "image",
+  "path": "hb_pumpkin_round_color.png",
+  "name": "OH hub pumpkin round color"
+ },
+ {
+  "type": "image",
+  "path": "hb_pumpkin_round_normal.png",
+  "name": "OH hub pumpkin round normal"
+ },
+ {
+  "type": "image",
+  "path": "hb_pumpkin_round_rough.png",
+  "name": "OH hub pumpkin round rough"
+ },
+ {
+  "type": "model",
+  "path": "export/hb_pumpkin_tall.fbx",
+  "name": "OH hub pumpkin tall"
+ },
+ {
+  "type": "image",
+  "path": "hb_pumpkin_tall_color.png",
+  "name": "OH hub pumpkin tall color"
+ },
+ {
+  "type": "image",
+  "path": "hb_pumpkin_tall_normal.png",
+  "name": "OH hub pumpkin tall normal"
+ },
+ {
+  "type": "image",
+  "path": "hb_pumpkin_tall_rough.png",
+  "name": "OH hub pumpkin tall rough"
+ },
+ {
+  "type": "model",
+  "path": "export/hb_pumpkin_squat.fbx",
+  "name": "OH hub pumpkin pale"
+ },
+ {
+  "type": "image",
+  "path": "hb_pumpkin_squat_color.png",
+  "name": "OH hub pumpkin pale color"
+ },
+ {
+  "type": "image",
+  "path": "hb_pumpkin_squat_normal.png",
+  "name": "OH hub pumpkin pale normal"
+ },
+ {
+  "type": "image",
+  "path": "hb_pumpkin_squat_rough.png",
+  "name": "OH hub pumpkin pale rough"
+ },
+ {
+  "type": "model",
+  "path": "export/hb_leafpile_a.fbx",
+  "name": "OH hub leaf drift"
+ },
+ {
+  "type": "image",
+  "path": "hb_leafpile_a_color.png",
+  "name": "OH hub leaf drift color"
+ },
+ {
+  "type": "image",
+  "path": "hb_leafpile_a_normal.png",
+  "name": "OH hub leaf drift normal"
+ },
+ {
+  "type": "image",
+  "path": "hb_leafpile_a_rough.png",
+  "name": "OH hub leaf drift rough"
+ },
+ {
+  "type": "model",
+  "path": "export/hb_leafpile_b.fbx",
+  "name": "OH hub leaf scatter"
+ },
+ {
+  "type": "image",
+  "path": "hb_leafpile_b_color.png",
+  "name": "OH hub leaf scatter color"
+ },
+ {
+  "type": "image",
+  "path": "hb_leafpile_b_normal.png",
+  "name": "OH hub leaf scatter normal"
+ },
+ {
+  "type": "image",
+  "path": "hb_leafpile_b_rough.png",
+  "name": "OH hub leaf scatter rough"
+ },
+ {
+  "type": "model",
+  "path": "export/hb_tree_maple.fbx",
+  "name": "OH hub maple tree"
+ },
+ {
+  "type": "image",
+  "path": "hb_tree_maple_color.png",
+  "name": "OH hub maple tree color"
+ },
+ {
+  "type": "image",
+  "path": "hb_tree_maple_normal.png",
+  "name": "OH hub maple tree normal"
+ },
+ {
+  "type": "image",
+  "path": "hb_tree_maple_rough.png",
+  "name": "OH hub maple tree rough"
+ },
+ {
+  "type": "model",
+  "path": "export/hb_pendant.fbx",
+  "name": "OH hub garage lamp"
+ },
+ {
+  "type": "image",
+  "path": "hb_pendant_color.png",
+  "name": "OH hub garage lamp color"
+ },
+ {
+  "type": "image",
+  "path": "hb_pendant_normal.png",
+  "name": "OH hub garage lamp normal"
+ },
+ {
+  "type": "image",
+  "path": "hb_pendant_rough.png",
+  "name": "OH hub garage lamp rough"
+ },
+ {
+  "type": "model",
+  "path": "export/hb_wallpack.fbx",
+  "name": "OH hub wall light"
+ },
+ {
+  "type": "image",
+  "path": "hb_wallpack_color.png",
+  "name": "OH hub wall light color"
+ },
+ {
+  "type": "image",
+  "path": "hb_wallpack_normal.png",
+  "name": "OH hub wall light normal"
+ },
+ {
+  "type": "image",
+  "path": "hb_wallpack_rough.png",
+  "name": "OH hub wall light rough"
+ }
+]
