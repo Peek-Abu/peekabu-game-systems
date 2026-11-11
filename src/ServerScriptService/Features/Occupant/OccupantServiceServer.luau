@@ -37,6 +37,10 @@
 	- A freeze kind (Bramble): OccupantWatchSystem decides who watches it; while frozen its brain holds
 	  (Senses.frozen: OccupantBrainRules.hold), it opens no door and its root never turns (no look-around, no jerk).
 	  Harlow's kind has no freeze twist, so for him OccupantWatchSystem.freezeFor is nil and none of this runs.
+	- Kind (the monster roster): when a shift's site is built and the shift runs, the kind is the map's roster pick
+	  (OccupantRosterRules.kindForShift: OfficeServiceServer:map() and :seed(), so the same run gets the same kind;
+	  Office → harlow, School → bramble at launch; a training run is always harlow). OccupantRigSystem builds that kind's
+	  rig (stamping OccupantKind) and OccupantTuningFormulas takes its speeds.
 	- Role: he exists only where the shift role runs (QueueServiceServer:runsRole); a hub-only server spawns no Harlow.
 
 	Twin guard: OccupantRigSystem.build (before it builds) and `despawn` (after it removes the current rig) sweep away
@@ -63,6 +67,7 @@ local AnimationRegistry = require(ReplicatedStorage.Shared.Features.Animation.Da
 local NoiseRules = require(ReplicatedStorage.Shared.Features.Noise.Rules.NoiseRules)
 local NoiseTypes = require(ReplicatedStorage.Shared.Features.Noise.Data.NoiseTypes)
 local OccupantConstants = require(OccupantShared.Data.OccupantConstants)
+local OccupantKindRegistry = require(OccupantShared.Data.OccupantKindRegistry)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local OccupantTypes = require(OccupantShared.Data.OccupantTypes)
 local OccupantEvents = require(OccupantShared.Net.OccupantEvents)
@@ -76,6 +81,7 @@ local OccupantAlertRules = require(OccupantServer.Rules.OccupantAlertRules)
 local OccupantBrainRules = require(OccupantServer.Rules.OccupantBrainRules)
 local OccupantDoorRules = require(OccupantServer.Rules.OccupantDoorRules)
 local OccupantEscapeRules = require(OccupantServer.Rules.OccupantEscapeRules)
+local OccupantRosterRules = require(OccupantServer.Rules.OccupantRosterRules)
 local OccupantTurnRules = require(OccupantServer.Rules.OccupantTurnRules)
 local OccupantMindUtils = require(OccupantServer.Utils.OccupantMindUtils)
 local OccupantWorkRules = require(OccupantServer.Rules.OccupantWorkRules)
@@ -123,6 +129,8 @@ end
 local log = Logger.new("OccupantServiceServer")
 
 local rig: OccupantRigSystem.Rig? = nil
+-- The running rig's kind (the shift's roster pick; Harlow until one is built).
+local currentKind: OccupantKindRegistry.KindId = OccupantKindRegistry.DEFAULT
 local mind: OccupantTypes.Mind? = nil
 -- Until when the door beat holds his walk (os.clock); reset with the mind.
 local holdUntil = 0
@@ -161,8 +169,12 @@ local function applyTuning()
 	if current == nil or state == nil then
 		return
 	end
-	local tuning =
-		OccupantTuningFormulas.tuning(state.tier, #RoundServiceServer:participants(), ShiftServiceServer:isTraining())
+	local tuning = OccupantTuningFormulas.tuning(
+		state.tier,
+		#RoundServiceServer:participants(),
+		ShiftServiceServer:isTraining(),
+		OccupantKindRegistry.get(currentKind)
+	)
 	NpcServiceServer:setTuning(current.model, { walkSpeed = tuning.walkSpeed, runSpeed = tuning.runSpeed })
 	NoiseServiceServer:setHearingScale(tuning.hearing)
 end
@@ -415,8 +427,8 @@ local function despawn()
 	OccupantRigSystem.sweep()
 end
 
--- Builds Harlow for the running shift (yields while the rig is generated).
-local function spawnHarlow()
+-- Builds the shift's monster (its map's roster pick) for the running shift (yields while the rig is generated).
+local function spawnMonster()
 	if rig ~= nil or spawning then
 		return
 	end
@@ -430,10 +442,13 @@ local function spawnHarlow()
 	local start = rng:NextInteger(1, #points)
 	local direction = if rng:NextNumber() < 0.5 then -1 else 1
 	local at = CFrame.new(points[start] + Vector3.new(0, OccupantConstants.SPAWN_HEIGHT, 0))
-	local ok, built = pcall(OccupantRigSystem.build, at, parent)
+	local map = OfficeServiceServer:map()
+	local chosen: OccupantKindRegistry.KindId =
+		OccupantRosterRules.kindForShift(map, OfficeServiceServer:seed() or 0, ShiftServiceServer:isTraining())
+	local ok, built = pcall(OccupantRigSystem.build, at, parent, chosen)
 	spawning = false
 	if not ok then
-		log:error(`Harlow's rig failed to build: {tostring(built)}`)
+		log:error(`{chosen}'s rig failed to build: {tostring(built)}`)
 		return
 	end
 	local state = shift
@@ -444,6 +459,7 @@ local function spawnHarlow()
 	place = Sense.layout(points)
 	local fresh = OccupantBrainRules.newMind(start, direction, os.clock(), rng:NextNumber())
 	rig = built
+	currentKind = chosen
 	mind = fresh
 	holdUntil = 0
 	lastGoal = nil
@@ -460,7 +476,9 @@ local function spawnHarlow()
 	counters.spawned += 1
 	show(built, fresh, nil)
 	applyTuning()
-	log:info(`Harlow clocks in at route point {start}, walking {if direction > 0 then "forward" else "backward"}`)
+	log:info(
+		`{chosen} clocks in ({map}) at route point {start}, walking {if direction > 0 then "forward" else "backward"}`
+	)
 end
 
 local function onShift(state: ShiftTypes.ShiftState)
@@ -474,7 +492,7 @@ local function onShift(state: ShiftTypes.ShiftState)
 		OccupantEvents.packets.Flicker.sendToAll(true)
 	end
 	if rig == nil then
-		spawnHarlow()
+		spawnMonster()
 	end
 	applyTuning()
 end

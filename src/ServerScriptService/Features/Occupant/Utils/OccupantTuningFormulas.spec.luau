@@ -5,6 +5,8 @@ local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.Carg
 local CargoRegistry = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoRegistry)
 local CargoHandlingRules = require(ReplicatedStorage.Shared.Features.Cargo.Rules.CargoHandlingRules)
 local NoiseRules = require(ReplicatedStorage.Shared.Features.Noise.Rules.NoiseRules)
+local OccupantKindRegistry = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantKindRegistry)
+local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 
 -- Whether Harlow hears a noise of `radius` from `distance` studs away at this tier and crew size.
@@ -62,6 +64,39 @@ return function()
 			local chase = OccupantTuningFormulas.tuning(0, 1).runSpeed
 			expect(chase - 16 >= 3.5).to.equal(true)
 			expect(16 * (1 - 0.05 * CargoConstants.WEIGHT.tiny) < chase).to.equal(true)
+		end)
+	end)
+
+	describe("per kind", function()
+		local bramble = OccupantKindRegistry.get("bramble")
+		local harlow = OccupantKindRegistry.get("harlow")
+
+		it("is Harlow's tuning with no kind or with Harlow's kind", function()
+			for tier = 0, 2 do
+				for _, crew in { 1, 3 } do
+					local plain = OccupantTuningFormulas.tuning(tier, crew)
+					local his = OccupantTuningFormulas.tuning(tier, crew, false, harlow)
+					expect(his.walkSpeed).to.equal(plain.walkSpeed)
+					expect(his.runSpeed).to.equal(plain.runSpeed)
+					expect(his.hearing).to.equal(plain.hearing)
+				end
+			end
+		end)
+
+		it("starts Bramble at patrol 10 and chase 21 for a crew", function()
+			local tuning = OccupantTuningFormulas.tuning(0, 3, false, bramble)
+			expect(tuning.walkSpeed).to.equal(10)
+			expect(tuning.runSpeed).to.equal(21)
+			expect(tuning.hearing).to.equal(1)
+		end)
+
+		it("keeps Bramble slower than a sprint (23) at the top tier", function()
+			expect(OccupantTuningFormulas.tuning(2, 4, false, bramble).runSpeed < 23).to.equal(true)
+		end)
+
+		it("applies the training scale to Bramble's speeds too", function()
+			local training = OccupantTuningFormulas.tuning(0, 3, true, bramble)
+			expect(training.runSpeed).to.be.near(21 * ShiftConstants.TRAINING_SPEED, 1e-6)
 		end)
 	end)
 

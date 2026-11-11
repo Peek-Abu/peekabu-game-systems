@@ -120,6 +120,19 @@ function OccupantKindRegistry.freezes(id: string): boolean
 end
 
 --[=[
+	The rig templates to try for kind `id`, in order: its own, then Harlow's as a stand-in (so a kind whose model is not
+	built in the place yet still runs, with its own behaviour, in Harlow's body). Harlow (and an unknown id) has only
+	his own.
+]=]
+function OccupantKindRegistry.templatePaths(id: string): { { string } }
+	local kind = OccupantKindRegistry.get(id)
+	if kind == nil or kind.templatePath == HARLOW.templatePath then
+		return { HARLOW.templatePath }
+	end
+	return { kind.templatePath, HARLOW.templatePath }
+end
+
+--[=[
 	The kind a rig names in its KIND_ATTRIBUTE attribute; Harlow when it names none (or an unknown one).
 ]=]
 function OccupantKindRegistry.kindOf(model: Instance): KindId

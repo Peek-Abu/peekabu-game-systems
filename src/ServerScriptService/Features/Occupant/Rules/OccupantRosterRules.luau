@@ -3,7 +3,8 @@
 	OccupantRosterRules: which monster kind(s) a shift runs (the map-agnostic roster, plan
 	docs/superpowers/plans/2026-11-11-odd-hours-monster-roster-bramble.md). `pick` draws up to a roster's budget of
 	distinct kinds from its weighted entries with the shift's seed (the same seed, the same kinds); `kindFor` is the
-	one kind a map runs at launch (budget 1; Harlow for a map with no roster). `valid` checks a roster's shape.
+	one kind a map runs at launch (budget 1; Harlow for a map with no roster), and `kindForShift` the one a shift runs
+	(Harlow on a training run). `valid` checks a roster's shape.
 
 	Pure: a seeded Random, nothing else.
 
@@ -63,6 +64,17 @@ function OccupantRosterRules.kindFor(mapId: string, seed: number): KindId
 	local roster = OccupantRosterRegistry.get(mapId)
 	local kinds = if roster ~= nil then OccupantRosterRules.pick(roster, seed) else {}
 	return kinds[1] or OccupantKindRegistry.DEFAULT
+end
+
+--[=[
+	The kind a shift runs: Harlow on a training run (the tutorial is his), else `kindFor` the shift's map and seed (the
+	standing layout's seed, so the same run always gets the same kind).
+]=]
+function OccupantRosterRules.kindForShift(mapId: string, seed: number, training: boolean): KindId
+	if training then
+		return OccupantKindRegistry.DEFAULT
+	end
+	return OccupantRosterRules.kindFor(mapId, seed)
 end
 
 --[=[

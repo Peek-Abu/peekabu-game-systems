@@ -71,6 +71,28 @@ return function()
 		end)
 	end)
 
+	describe("kindForShift", function()
+		it("runs Harlow in the Office and Bramble in the School at launch", function()
+			for seed = 1, 10 do
+				expect(OccupantRosterRules.kindForShift("office", seed, false)).to.equal("harlow")
+				expect(OccupantRosterRules.kindForShift("school", seed, false)).to.equal("bramble")
+			end
+		end)
+
+		it("is the same kind for the same map and seed (deterministic per run)", function()
+			for seed = 1, 10 do
+				expect(OccupantRosterRules.kindForShift("school", seed, false)).to.equal(
+					OccupantRosterRules.kindFor("school", seed)
+				)
+			end
+		end)
+
+		it("always runs Harlow on a training run, whatever the map", function()
+			expect(OccupantRosterRules.kindForShift("school", 1, true)).to.equal("harlow")
+			expect(OccupantRosterRules.kindForShift("office", 1, true)).to.equal("harlow")
+		end)
+	end)
+
 	describe("valid", function()
 		it("accepts the registered rosters", function()
 			expect(OccupantRosterRules.valid(roster({ { kind = "harlow", weight = 1 } }, 1))).to.equal(true)

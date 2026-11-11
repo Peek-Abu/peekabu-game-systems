@@ -11,6 +11,12 @@
 	it) and, last, Npc with his NpcKind so
 	NpcServiceServer adopts him. `present` publishes what he shows and puts the painted face on his mask.
 
+	Kinds (OccupantKindRegistry): `build` takes the shift's kind (default Harlow) and stamps it in KIND_ATTRIBUTE (the
+	watch, head-turn and trail systems read it). The body is the first template of OccupantKindRegistry.templatePaths
+	the place has: the kind's own, else Harlow's as a stand-in (warned once per kind), so the School can be play-tested
+	with Bramble's behaviour (freeze, head) before its model exists. Harlow's own path and fallback are unchanged. Only a
+	kind with painted faces gets them (`present`).
+
 	Twin guard: `sweep` despawns every manager rig (a model tagged OccupantConstants.TAG) but the one kept and warns
 	"removed N stray manager rig(s)": there is only ever one Harlow, so any other is a twin a past cleanup missed (a
 	shift transit whose cleanup errored; it runs guarded). `build` sweeps before it builds; OccupantServiceServer's
@@ -28,6 +34,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local OccupantAssets = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantAssets)
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
+local OccupantKindRegistry = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantKindRegistry)
 local OccupantFaceUtils = require(ReplicatedStorage.Shared.Features.Occupant.Utils.OccupantFaceUtils)
 local OccupantTellRules = require(ReplicatedStorage.Shared.Features.Occupant.Rules.OccupantTellRules)
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
@@ -47,13 +54,33 @@ export type Rig = {
 local speechTokens: { [Model]: number } = {}
 setmetatable(speechTokens, { __mode = "k" })
 
--- The art template under ReplicatedStorage, if the place has it.
-local function template(): Model?
+-- The kinds already warned about standing in Harlow's body (one warning per kind per server).
+local warnedStandIn: { [string]: boolean } = {}
+
+-- The art template at `path` under ReplicatedStorage, if the place has it.
+local function find(path: { string }): Model?
 	local current: Instance? = ReplicatedStorage
-	for _, name in OccupantAssets.TEMPLATE_PATH do
+	for _, name in path do
 		current = if current ~= nil then current:FindFirstChild(name) else nil
 	end
 	return if current ~= nil and current:IsA("Model") then current else nil
+end
+
+-- Kind `kind`'s template: its own, else the next stand-in the place has (Harlow's), warned once; nil with none.
+local function template(kind: OccupantKindRegistry.KindId): Model?
+	for index, path in OccupantKindRegistry.templatePaths(kind) do
+		local art = find(path)
+		if art ~= nil then
+			if index > 1 and not warnedStandIn[kind] then
+				warnedStandIn[kind] = true
+				log:warn(
+					`no {kind} template in the place: {kind} runs in Harlow's rig (its own behaviour) until it is built`
+				)
+			end
+			return art
+		end
+	end
+	return nil
 end
 
 -- The fallback body, its description set from OccupantConstants.BODY. Yields.
@@ -77,9 +104,9 @@ local function generate(): Model
 	return model
 end
 
--- His body: the template's clone, else the fallback; named, with no Animate script.
-local function body(): Model
-	local art = template()
+-- The kind's body: the template's clone, else the fallback; named, with no Animate script.
+local function body(kind: OccupantKindRegistry.KindId): Model
+	local art = template(kind)
 	local model = if art ~= nil then art:Clone() else generate()
 	model.Name = OccupantConstants.DISPLAY_NAME
 	local animate = model:FindFirstChild("Animate")
@@ -121,12 +148,13 @@ function OccupantRigSystem.sweep(keep: Model?, tagged: { Instance }?, remove: ((
 end
 
 --[=[
-	Builds Harlow at `at` under `parent` and returns his rig, after sweeping away any manager rig already standing (a
-	twin). Yields (the rig is generated from a description).
+	Builds the monster of kind `kind` (default Harlow) at `at` under `parent` and returns its rig, after sweeping away
+	any manager rig already standing (a twin). Yields (the fallback rig is generated from a description).
 ]=]
-function OccupantRigSystem.build(at: CFrame, parent: Instance): Rig
+function OccupantRigSystem.build(at: CFrame, parent: Instance, kind: OccupantKindRegistry.KindId?): Rig
 	OccupantRigSystem.sweep()
-	local model = body()
+	local kindId: OccupantKindRegistry.KindId = if kind ~= nil then kind else OccupantKindRegistry.DEFAULT
+	local model = body(kindId)
 	local humanoid = model:FindFirstChildOfClass("Humanoid")
 	local root = model:FindFirstChild("HumanoidRootPart")
 	local head = model:FindFirstChild("Head")
@@ -138,9 +166,13 @@ function OccupantRigSystem.build(at: CFrame, parent: Instance): Rig
 		if humanoid:FindFirstChildOfClass("Animator") == nil then
 			Instance.new("Animator").Parent = humanoid
 		end
+		model:SetAttribute(OccupantConstants.KIND_ATTRIBUTE, kindId)
 		model:SetAttribute(OccupantConstants.LINE_ATTRIBUTE, "")
 		model:SetAttribute(OccupantConstants.MODE_ATTRIBUTE, "patrol")
-		OccupantRigSystem.setFace(model, OccupantFaceUtils.faceFor("patrol"))
+		local def = OccupantKindRegistry.get(kindId)
+		if def == nil or def.faces then
+			OccupantRigSystem.setFace(model, OccupantFaceUtils.faceFor("patrol"))
+		end
 		model:SetAttribute(OccupantConstants.TARGET_ATTRIBUTE, 0)
 		model:SetAttribute(NpcConstants.KIND_ATTRIBUTE, OccupantConstants.NPC_KIND)
 		model:PivotTo(at)
@@ -217,7 +249,10 @@ function OccupantRigSystem.present(rig: Rig, view: OccupantTellRules.View)
 	if point ~= nil then
 		set(model, OccupantConstants.GESTURE_TARGET_ATTRIBUTE, point)
 	end
-	OccupantRigSystem.setFace(model, view.face)
+	local kind = OccupantKindRegistry.get(OccupantKindRegistry.kindOf(model))
+	if kind == nil or kind.faces then
+		OccupantRigSystem.setFace(model, view.face)
+	end
 end
 
 return OccupantRigSystem
