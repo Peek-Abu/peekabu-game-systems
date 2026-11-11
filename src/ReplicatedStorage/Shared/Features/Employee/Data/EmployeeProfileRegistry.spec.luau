@@ -67,6 +67,17 @@ return function()
 		expect(spread("Prickles")).to.equal("3,3,3,3,3")
 	end)
 
+	it("words abilities for every map's monster", function()
+		expect(EmployeeProfileRegistry.get("Prickles").ability.detail).to.equal(
+			"Stand still as a potted plant for up to 8 seconds. Monsters walk right past."
+		)
+		for _, name in EmployeeRegistry.names() do
+			local detail = string.lower(EmployeeProfileRegistry.get(name).ability.detail)
+			expect(string.find(detail, "manager", 1, true)).to.equal(nil)
+			expect(string.find(detail, "harlow", 1, true)).to.equal(nil)
+		end
+	end)
+
 	it("lists the five stats in display order", function()
 		expect(table.concat(EmployeeProfileRegistry.STATS, ",")).to.equal("speed,stamina,strength,suction,quiet")
 	end)

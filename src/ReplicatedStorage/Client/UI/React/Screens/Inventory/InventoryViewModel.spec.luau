@@ -475,7 +475,7 @@ return function()
 			expect(stats[2].hint).to.equal("Run longer.")
 			expect(stats[3].hint).to.equal("Carry big stuff faster.")
 			expect(stats[4].hint).to.equal("Clean faster.")
-			expect(stats[5].hint).to.equal("Mr. Harlow hears you less.")
+			expect(stats[5].hint).to.equal("Monsters hear you less.")
 		end)
 	end)
 

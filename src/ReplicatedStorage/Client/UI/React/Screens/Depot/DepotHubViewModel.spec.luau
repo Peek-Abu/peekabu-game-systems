@@ -1,6 +1,32 @@
 local VM = require(script.Parent.DepotHubViewModel)
 local RankFormulas = require(game:GetService("ReplicatedStorage").Shared.Features.Rank.Utils.RankFormulas)
+local function monsterNeutral(text)
+	for _, word in { "manager", "harlow", "bramble", "boss" } do
+		expect(string.find(string.lower(text), word, 1, true)).to.equal(nil)
+	end
+end
+
 return function()
+	describe("guide words", function()
+		it("talks about monsters, not one map's monster, in the field guide", function()
+			for _, section in VM.copy("guide").sections do
+				monsterNeutral(section.title)
+				monsterNeutral(section.body)
+			end
+			local sections = VM.copy("guide").sections
+			expect(string.find(sections[3].body, "Monsters hear vacuums and dropped cargo.", 1, true)).to.equal(1)
+			expect(string.find(sections[4].body, "and faster monsters.", 1, true) ~= nil).to.equal(true)
+		end)
+
+		it("draws the noise section with the Quiet render, not Harlow's face", function()
+			expect(VM.sectionIcons("guide")[3]).to.equal("statQuiet")
+			for _, icon in VM.sectionIcons("guide") do
+				expect(icon).never.to.equal("managerHunt")
+				expect(icon).never.to.equal("managerCalm")
+			end
+		end)
+	end)
+
 	describe("hub HUD (V1)", function()
 		it("names the profile card in caps with the level, the rank and the XP to the next level", function()
 			local progress = RankFormulas.progress(45)

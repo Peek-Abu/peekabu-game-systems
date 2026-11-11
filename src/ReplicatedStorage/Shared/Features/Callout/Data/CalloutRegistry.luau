@@ -12,7 +12,8 @@ export type Ping = { id: string, word: string }
 local PINGS: { Ping } = {
 	{ id = "gloom", word = "Gloom here" },
 	{ id = "loot", word = "Loot here" },
-	{ id = "manager", word = "Manager!" },
+	-- Any map's monster (the id stays "manager": it rides the wire and the wheel's danger colour).
+	{ id = "manager", word = "Monster!" },
 	{ id = "help", word = "Help me!" },
 	{ id = "truck", word = "To the truck" },
 	{ id = "okay", word = "Okay!" },

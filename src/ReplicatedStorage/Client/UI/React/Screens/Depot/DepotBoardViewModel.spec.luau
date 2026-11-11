@@ -52,6 +52,16 @@ return function()
 		expect(rowOf(view, "NOTES").text).to.equal(contract.note)
 	end)
 
+	it("words the HAZARD row for every map's monster", function()
+		local desktop = DepotBoardViewModel.board(nil, nil, false)
+		expect(rowOf(desktop, "HAZARD").text).to.equal(
+			"Monsters roam the site. They hear vacuums and things you drop. Empty hands run faster."
+		)
+		expect(desktop.tip).to.equal(rowOf(desktop, "HAZARD").text)
+		local phone = DepotBoardViewModel.board(nil, nil, true)
+		expect(rowOf(phone, "HAZARD").text).to.equal("Monsters hear vacuums and drops")
+	end)
+
 	it("keeps the phone to four short rows", function()
 		local view = DepotBoardViewModel.board(nil, nil, true)
 		expect(#view.rows).to.equal(4)

@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CalloutAssets = require(script.Parent.CalloutAssets)
 local CalloutRegistry = require(ReplicatedStorage.Shared.Features.Callout.Data.CalloutRegistry)
+local OccupantPortraitAssets = require(ReplicatedStorage.Client.Features.Occupant.Data.OccupantPortraitAssets)
 local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 
@@ -11,6 +12,10 @@ return function()
 			expect(CalloutAssets.PING_ICON[ping.id]).to.be.ok()
 			expect(CalloutAssets.pingImage(ping.id) ~= "").to.equal(true)
 		end
+	end)
+
+	it("draws the monster ping with the neutral monster icon, not Harlow's face", function()
+		expect(CalloutAssets.PING_ICON.manager).to.equal(OccupantPortraitAssets.NEUTRAL)
 	end)
 
 	it("has a picture for every sticker", function()

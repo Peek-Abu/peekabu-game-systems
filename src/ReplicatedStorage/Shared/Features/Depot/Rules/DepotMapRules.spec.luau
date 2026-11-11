@@ -118,7 +118,9 @@ return function()
 			local site = DepotMapRules.siteOf("office")
 			expect(site.site).to.equal(DepotConstants.SITE)
 			expect(site.hud).to.equal("Harlow & Finch · offices")
-			expect(site.tip).to.equal(DepotConstants.BOARD_COPY.hazard)
+			expect(site.tip).to.equal(
+				"The Manager is here. He hears vacuums and things you drop. Empty hands run faster."
+			)
 			expect(site.monster).to.equal("harlow")
 			expect(site.reviewTab).to.equal("SHIFT REVIEW · HARLOW & FINCH")
 			expect(site.quote).to.equal(ShiftConstants.REVIEW_QUOTES.met)

@@ -11,4 +11,8 @@ return function()
 		expect(table.concat(ids, ",")).to.equal("gloom,loot,manager,help,truck,okay")
 		expect(CalloutRegistry.ping("nope")).never.to.be.ok()
 	end)
+
+	it("calls out any monster, not one map's", function()
+		expect(CalloutRegistry.ping("manager").word).to.equal("Monster!")
+	end)
 end

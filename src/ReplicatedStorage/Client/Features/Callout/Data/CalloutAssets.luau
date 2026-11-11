@@ -10,13 +10,15 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local OccupantPortraitAssets = require(ReplicatedStorage.Client.Features.Occupant.Data.OccupantPortraitAssets)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local UISoundFormulas = require(ReplicatedStorage.Client.Features.UI.Utils.UISoundFormulas)
 
 local PING_ICON: { [string]: UIAssets.ToonIcon } = {
 	gloom = "gloom",
 	loot = "gleamPile",
-	manager = "managerHunt",
+	-- "Monster!" is about any map's monster: the neutral monster icon, no one kind's face.
+	manager = OccupantPortraitAssets.NEUTRAL,
 	help = "grab",
 	truck = "truck",
 	okay = "heart",

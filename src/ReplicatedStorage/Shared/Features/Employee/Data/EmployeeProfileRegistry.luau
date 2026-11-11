@@ -89,7 +89,7 @@ local PROFILES: { [string]: Profile } = {
 		ability = {
 			name = "Potted Plant",
 			line = "Pretend to be a plant!",
-			detail = "Stand still as a potted plant for up to 8 seconds. The Manager walks right past.",
+			detail = "Stand still as a potted plant for up to 8 seconds. Monsters walk right past.",
 			cooldown = cooldownOf("Prickles"),
 			icon = "abilityPottedPlant",
 		},
