@@ -215,6 +215,7 @@ local function register(set: FootstepSet, setName: string, surface: string, from
 			SoundRegistry.register(id, {
 				assetId = assetId,
 				group = "SFX",
+				bus = "Steps",
 				volume = set.volume,
 				pitch = set.pitch,
 				rollOffMaxDistance = set.rollOffMaxDistance,
@@ -294,6 +295,7 @@ local function registerLayer(surface: string, volume: number, from: { string }, 
 			SoundRegistry.register(id, {
 				assetId = assetId,
 				group = "SFX",
+				bus = "Steps",
 				volume = volume,
 				pitch = LAYERS.pitch,
 				rollOffMaxDistance = LAYERS.rollOffMaxDistance,
@@ -317,8 +319,18 @@ local BODY_FALL = "footstepBodyFall"
 local JUMPS: { string } = { "footstepJump1", "footstepJump2", "footstepJump3", "footstepJump4" }
 local JUMP_PITCH = { min = 0.96, max = 1.04 }
 local BODY_SOUNDS: { [string]: SoundTypes.SoundDef } = {
-	[LAND] = { assetId = "rbxassetid://74178964320795", group = "SFX", volume = 0.9, rollOffMaxDistance = 50 },
-	[BODY_FALL] = { assetId = "rbxassetid://83428002679573", group = "SFX", volume = 1, rollOffMaxDistance = 70 },
+	[LAND] = {
+		assetId = "rbxassetid://74178964320795",
+		group = "SFX",
+		volume = 0.65,
+		rollOffMaxDistance = 50,
+	},
+	[BODY_FALL] = {
+		assetId = "rbxassetid://83428002679573",
+		group = "SFX",
+		volume = 0.7,
+		rollOffMaxDistance = 70,
+	},
 	footstepJump1 = {
 		assetId = "rbxassetid://75215822235284",
 		group = "SFX",
@@ -379,7 +391,7 @@ local BODY_SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	footstepLand_cappy = {
 		assetId = "rbxassetid://139676980813049",
 		group = "SFX",
-		volume = 0.9,
+		volume = 0.65,
 		rollOffMaxDistance = 50,
 	},
 	footstepJump_prickles_1 = {
@@ -413,13 +425,16 @@ local BODY_SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	footstepLand_prickles = {
 		assetId = "rbxassetid://89284924285103",
 		group = "SFX",
-		volume = 0.9,
+		volume = 0.65,
 		rollOffMaxDistance = 50,
 	},
 }
+-- Every jump, land and fall plays through the Steps bus with the footsteps.
 for id, def in BODY_SOUNDS do
 	if not SoundRegistry.has(id) then
-		SoundRegistry.register(id, def)
+		local stepped = table.clone(def)
+		stepped.bus = "Steps"
+		SoundRegistry.register(id, stepped)
 	end
 end
 

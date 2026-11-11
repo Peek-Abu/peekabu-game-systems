@@ -24,6 +24,7 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	[TUMBLE] = {
 		assetId = "rbxassetid://83428002679573",
 		group = "SFX",
+		bus = "Action",
 		volume = 0.45,
 		pitch = { min = 1.05, max = 1.15 },
 		rollOffMaxDistance = 45,

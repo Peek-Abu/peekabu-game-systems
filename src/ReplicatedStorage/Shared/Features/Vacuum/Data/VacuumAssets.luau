@@ -22,23 +22,37 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	vacuumWhine = {
 		assetId = "rbxassetid://107917509032443",
 		group = "SFX",
+		bus = "Action",
 		volume = 0.45,
 		looped = true,
 		rollOffMaxDistance = 60,
 	},
 	-- The motor winding down when the whine stops (started at the whine's pitch).
-	vacuumStop = { assetId = "rbxassetid://77219631283212", group = "SFX", volume = 0.45, rollOffMaxDistance = 60 },
+	vacuumStop = {
+		assetId = "rbxassetid://77219631283212",
+		group = "SFX",
+		bus = "Action",
+		volume = 0.45,
+		rollOffMaxDistance = 60,
+	},
 	-- The pile's last bit going up the hose: a soft pop.
 	vacuumPop = {
 		assetId = "rbxassetid://91652457132086",
 		group = "SFX",
+		bus = "Action",
 		volume = 0.8,
 		pitch = { min = 0.95, max = 1.1 },
 		rollOffMaxDistance = 60,
 	},
 	-- The canister's Gloom gauge rising, and the chime when the contract is met (the gauge is full).
-	canisterTick = { assetId = "rbxassetid://112926891018046", group = "UI", volume = 0.5 },
-	canisterChime = { assetId = "rbxassetid://134210659787428", group = "UI", volume = 0.8 },
+	-- (Mix 2026-11-10: it can fire every GLOOM_TICK_GAP = 0.15 s, so each tick is pitched a little differently.)
+	canisterTick = {
+		assetId = "rbxassetid://112926891018046",
+		group = "UI",
+		volume = 0.5,
+		pitch = { min = 0.96, max = 1.04 },
+	},
+	canisterChime = { assetId = "rbxassetid://134210659787428", group = "UI", volume = 0.5 },
 }
 
 for id, def in SOUNDS do

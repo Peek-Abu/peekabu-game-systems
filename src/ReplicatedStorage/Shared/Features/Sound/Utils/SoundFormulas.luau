@@ -97,4 +97,22 @@ function SoundFormulas.placeGain(source: SoundPlace?, listener: SoundPlace?): nu
 	return 0
 end
 
+--[=[
+	A level change in decibels as a linear amplitude gain (Sound / SoundGroup Volume is linear): 0 dB = 1, -6 dB ~ 0.5.
+]=]
+function SoundFormulas.dbToGain(db: number): number
+	return 10 ^ (db / 20)
+end
+
+--[=[
+	The Volume of a mix bus's SoundGroup: its trim (SoundConstants.BUSES) as a linear gain, capped at the engine's 10;
+	1 with no bus (the sound sits in its volume group directly).
+]=]
+function SoundFormulas.busGain(bus: SoundTypes.SoundBus?): number
+	if bus == nil then
+		return 1
+	end
+	return math.min(SoundFormulas.dbToGain(bus.db), 10)
+end
+
 return SoundFormulas

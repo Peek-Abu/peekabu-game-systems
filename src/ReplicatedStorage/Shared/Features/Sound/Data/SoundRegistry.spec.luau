@@ -66,6 +66,22 @@ return function()
 		refuses("spec-place-everywhere", def({ place = "Outside", heardEverywhere = true }))
 	end)
 
+	it("accepts a mix bus of the sound's own volume group", function()
+		ensure("spec-bus-step", def({ group = "SFX", bus = "Steps" }))
+		expect(SoundRegistry.get("spec-bus-step").bus).to.equal("Steps")
+		ensure("spec-bus-bed", def({ group = "Ambient", bus = "Beds", looped = true }))
+		expect(SoundRegistry.get("spec-bus-bed").bus).to.equal("Beds")
+	end)
+
+	it("rejects an unknown bus", function()
+		refuses("spec-bus-unknown", def({ bus = "Voices" }))
+	end)
+
+	it("rejects a bus that belongs to another volume group", function()
+		-- Beds sits in the Ambient group: an SFX sound in it would dodge the SFX slider.
+		refuses("spec-bus-cross", def({ group = "SFX", bus = "Beds" }))
+	end)
+
 	it("returns nil for an unknown id", function()
 		expect(SoundRegistry.get("spec-none")).to.equal(nil)
 	end)

@@ -58,6 +58,7 @@ local SoundIdlePool = require(ReplicatedStorage.Client.Features.Sound.State.Soun
 local SoundVoiceTracker = require(ReplicatedStorage.Client.Features.Sound.State.SoundVoiceTracker)
 
 type SoundGroupName = SoundTypes.SoundGroupName
+type SoundBusName = SoundTypes.SoundBusName
 type SoundPlace = SoundTypes.SoundPlace
 
 export type SoundHandle = {
@@ -84,7 +85,10 @@ local idle: SoundIdlePool.SoundIdlePool<Instance, Voice> = SoundIdlePool.new()
 -- The idle cap of each place pre-warmed above its default (a place that left the world is forgotten by the sweep).
 local caps: { [Instance]: number } = {}
 local groups: { [string]: SoundGroup? } = {}
--- The place groups, by "<volume group>/<place>", nested in their volume group, and each one's running fade.
+-- The mix buses' groups, by bus name, each nested in its volume group (SoundConstants.BUSES).
+local busGroups: { [string]: SoundGroup? } = {}
+-- The place groups, by "<volume group>/<bus>/<place>", nested in their bus (or volume) group, and each one's running
+-- fade.
 local placeGroups: { [string]: SoundGroup? } = {}
 -- Each place's groups (one per volume group). Kept per place, not in one map by place: iterating a map's literal-typed
 -- values widens them to string.
@@ -95,7 +99,7 @@ local placeFades: { [SoundGroup]: Tween? } = {}
 local placeBoxes: { SoundTypes.SoundPlaceBox } = {}
 local listenerPlace: SoundPlace? = nil
 -- The looping positional plays, placed again on every setPlaces: their volume group and where they play from.
-local placedLoops: { [Sound]: { group: SoundGroupName, at: SoundTypes.PlayAt } } = {}
+local placedLoops: { [Sound]: { group: SoundGroupName, bus: SoundBusName?, at: SoundTypes.PlayAt } } = {}
 -- token -> how to stop the sound playing for it (so an evicted voice can be stopped).
 local playing: { [number]: () -> () } = {}
 local music: Sound? = nil
@@ -132,14 +136,33 @@ local function groupFor(name: SoundGroupName): SoundGroup
 	return created
 end
 
--- The group a sound of volume group `name` joins in `place`: its place group nested in the volume group (made on
--- first use, at the listener's gain), or the volume group itself when placeless.
-local function placeGroupFor(name: SoundGroupName, place: SoundPlace?): SoundGroup
+-- The group of mix bus `bus` in volume group `name` (made on first use at its trim), or the volume group itself with
+-- no bus.
+local function busGroupFor(name: SoundGroupName, bus: SoundBusName?): SoundGroup
 	local parent = groupFor(name)
+	if bus == nil then
+		return parent
+	end
+	local existing = busGroups[bus]
+	if existing ~= nil then
+		return existing
+	end
+	local created = Instance.new("SoundGroup")
+	created.Name = bus
+	created.Volume = SoundFormulas.busGain(SoundConstants.BUSES[bus])
+	created.Parent = parent
+	busGroups[bus] = created
+	return created
+end
+
+-- The group a sound of volume group `name` and bus `bus` joins in `place`: its place group nested in the bus group
+-- (made on first use, at the listener's gain), or the bus group itself when placeless.
+local function placeGroupFor(name: SoundGroupName, bus: SoundBusName?, place: SoundPlace?): SoundGroup
+	local parent = busGroupFor(name, bus)
 	if place == nil then
 		return parent
 	end
-	local key = `{name}/{place}`
+	local key = `{name}/{bus or ""}/{place}`
 	local existing = placeGroups[key]
 	if existing ~= nil then
 		return existing
@@ -230,7 +253,7 @@ local function configure(
 	sound.Volume = def.volume * volumeScale
 	sound.PlaybackSpeed = SoundFormulas.pickPitch(def.pitch, rng:NextNumber()) * pitchScale
 	sound.Looped = def.looped == true
-	sound.SoundGroup = placeGroupFor(def.group, place)
+	sound.SoundGroup = placeGroupFor(def.group, def.bus, place)
 	-- Max first at its widest, so the min never meets a reused voice's smaller max on the way.
 	sound.RollOffMaxDistance = SoundConstants.DEFAULT_ROLL_OFF_MAX
 	sound.RollOffMinDistance = def.rollOffMinDistance or SoundConstants.DEFAULT_ROLL_OFF_MIN
@@ -417,7 +440,7 @@ local function start(
 	configure(sound, id, def, scale, pitchScale, placeFor(def, at))
 	sound.TimePosition = 0
 	if at ~= nil and def.looped == true and def.heardEverywhere ~= true and def.place == nil then
-		placedLoops[sound] = { group = def.group, at = at }
+		placedLoops[sound] = { group = def.group, bus = def.bus, at = at }
 	end
 
 	local token = claim(id, def)
@@ -662,7 +685,7 @@ local SoundServiceClient: SoundServiceClient = {
 		end
 		-- (A heardEverywhere or pinned loop is never in placedLoops.)
 		for sound, loop in placedLoops do
-			sound.SoundGroup = placeGroupFor(loop.group, SoundFormulas.placeOf(pointOf(loop.at), placeBoxes))
+			sound.SoundGroup = placeGroupFor(loop.group, loop.bus, SoundFormulas.placeOf(pointOf(loop.at), placeBoxes))
 		end
 	end,
 

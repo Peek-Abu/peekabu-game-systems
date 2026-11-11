@@ -23,8 +23,8 @@ local definitions: { [string]: SoundDef } = {}
 local SoundRegistry = {}
 
 --[=[
-	Registers a new sound. Asserts: the id is new; the asset id is canonical; the group is known; the
-	volume is within 0..10; a pitch range is positive and min <= max; maxConcurrent is a positive
+	Registers a new sound. Asserts: the id is new; the asset id is canonical; the group is known; a bus is
+	known and sits in that group; the volume is within 0..10; a pitch range is positive and min <= max; maxConcurrent is a positive
 	integer; rollOffMaxDistance is positive; rollOffMinDistance is positive and under the max (the sound's, else the
 	engine default); heardEverywhere is a boolean; a pinned place is Building or Outside, and
 	never on a heardEverywhere sound (that one is in no place).
@@ -38,6 +38,12 @@ function SoundRegistry.register(id: string, def: SoundDef)
 		`sound "{id}": assetId must be rbxassetid://<digits>`
 	)
 	assert(table.find(SoundConstants.GROUPS, def.group) ~= nil, `sound "{id}": unknown group "{def.group}"`)
+	local busName: SoundTypes.SoundBusName? = def.bus
+	if busName ~= nil then
+		local bus = SoundConstants.BUSES[busName]
+		assert(bus ~= nil, `sound "{id}": unknown bus "{busName}"`)
+		assert(bus.group == def.group, `sound "{id}": bus "{busName}" is in the {bus.group} group, not {def.group}`)
+	end
 	assert(def.volume >= 0 and def.volume <= 10, `sound "{id}": volume must be within 0..10`)
 	local pitch = def.pitch
 	if pitch ~= nil then

@@ -109,4 +109,34 @@ return function()
 			expect(SoundFormulas.placeGain(nil, nil)).to.equal(1)
 		end)
 	end)
+
+	describe("dbToGain", function()
+		it("is 1 at 0 dB", function()
+			expect(SoundFormulas.dbToGain(0)).to.equal(1)
+		end)
+
+		it("halves the amplitude at about -6 dB and doubles it at about +6 dB", function()
+			expect(SoundFormulas.dbToGain(-6)).to.be.near(0.501, 0.001)
+			expect(SoundFormulas.dbToGain(6)).to.be.near(1.995, 0.001)
+		end)
+
+		it("is 10x amplitude at +20 dB and a tenth at -20 dB", function()
+			expect(SoundFormulas.dbToGain(20)).to.be.near(10, 1e-9)
+			expect(SoundFormulas.dbToGain(-20)).to.be.near(0.1, 1e-9)
+		end)
+	end)
+
+	describe("busGain", function()
+		it("is the bus's trim as a linear gain", function()
+			expect(SoundFormulas.busGain({ group = "SFX", db = -6 })).to.be.near(0.501, 0.001)
+		end)
+
+		it("is 1 with no bus (the sound sits in its volume group directly)", function()
+			expect(SoundFormulas.busGain(nil)).to.equal(1)
+		end)
+
+		it("never exceeds the Sound group volume cap of 10", function()
+			expect(SoundFormulas.busGain({ group = "SFX", db = 40 })).to.equal(10)
+		end)
+	end)
 end

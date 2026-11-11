@@ -236,12 +236,12 @@ UIAssets.cctv = table.freeze({
 local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	uiHover = { assetId = "rbxassetid://125412787340819", group = "UI", volume = 0.7, maxConcurrent = 2 },
 	uiClick = { assetId = "rbxassetid://122165734026820", group = "UI", volume = 0.9, maxConcurrent = 2 },
-	uiConfirm = { assetId = "rbxassetid://83738970696959", group = "UI", volume = 0.9, maxConcurrent = 2 },
+	uiConfirm = { assetId = "rbxassetid://83738970696959", group = "UI", volume = 0.55, maxConcurrent = 2 },
 	uiBack = { assetId = "rbxassetid://130280445606800", group = "UI", volume = 0.9, maxConcurrent = 2 },
 	uiError = { assetId = "rbxassetid://139831732223870", group = "UI", volume = 0.9, maxConcurrent = 2 },
 	uiCta = { assetId = "rbxassetid://78569365251759", group = "UI", volume = 1, maxConcurrent = 1 },
 	uiPromptHold = { assetId = "rbxassetid://105267179969138", group = "UI", volume = 1, maxConcurrent = 1 },
-	uiPromptDone = { assetId = "rbxassetid://134811176097827", group = "UI", volume = 1, maxConcurrent = 2 },
+	uiPromptDone = { assetId = "rbxassetid://134811176097827", group = "UI", volume = 0.6, maxConcurrent = 2 },
 }
 for id, def in SOUNDS do
 	if not SoundRegistry.has(id) then

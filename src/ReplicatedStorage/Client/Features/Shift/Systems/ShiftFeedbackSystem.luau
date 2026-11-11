@@ -3,7 +3,7 @@
 	ShiftFeedbackSystem: how the shift sounds and feels on this client (Cleanup Crew spec §7 table: quota met (the
 	in-house "contract met" jingle since 2026-10-17, was the truck horn), tier up, overtime "ticking music layer", clock
 	out "horn honks"; the shift's start and end; the review's results jingle as it opens, ShiftCueUtils.jingle, with the
-	music and the beds ducked under it: an EqualizerSoundEffect on the Music and Ambient groups, so the players' own
+	music and the beds ducked under it, and under the PA chime before overtime (ShiftConstants.DUCK_CUES): an EqualizerSoundEffect on the Music and Ambient groups, so the players' own
 	group volumes are never touched). It
 	watches ShiftStore's snapshot: ShiftCueUtils says which moments just happened, and each plays its sound
 	(ShiftAssets.CUE_SOUNDS) and camera kick. Overtime keeps the ticking layer on (a SoundServiceClient ambience
@@ -77,7 +77,7 @@ local function shot(id: string, volumeScale: number?)
 	end
 end
 
--- Ducks the music and the beds under `sound` (the results jingle) until it ends: every band of an EqualizerSoundEffect
+-- Ducks the music and the beds under `sound` (the results jingle, a DUCK_CUES cue) until it ends: every band of an EqualizerSoundEffect
 -- on each group eases to RESULTS_DUCK_DB, then back to 0 and away.
 local function duckUnder(sound: Sound)
 	counters.ducks += 1
@@ -86,7 +86,7 @@ local function duckUnder(sound: Sound)
 		local group = SoundService:FindFirstChild(name)
 		if group ~= nil and group:IsA("SoundGroup") then
 			local duck = Instance.new("EqualizerSoundEffect")
-			duck.Name = "ShiftResultsDuck"
+			duck.Name = "ShiftDuck"
 			duck.LowGain = 0
 			duck.MidGain = 0
 			duck.HighGain = 0
@@ -160,7 +160,12 @@ local function onSnapshot(current: ShiftTypes.ShiftSnapshot?)
 	for _, cue in ShiftCueUtils.cues(last, current) do
 		counters.cues += 1
 		local id = ShiftAssets.CUE_SOUNDS[cue]
-		if id ~= nil then
+		if id ~= nil and table.find(ShiftConstants.DUCK_CUES, cue) ~= nil then
+			local handle = play(id)
+			if handle ~= nil then
+				duckUnder(handle.sound)
+			end
+		elseif id ~= nil then
 			shot(id)
 		end
 		kick(cue)

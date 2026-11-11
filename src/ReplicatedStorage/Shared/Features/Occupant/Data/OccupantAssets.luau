@@ -42,20 +42,28 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	harlowMutter = {
 		assetId = "rbxassetid://135690215756036",
 		group = "SFX",
-		volume = 0.35,
+		bus = "Threat",
+		volume = 0.55,
 		looped = true,
 		rollOffMaxDistance = 55,
 	},
 	-- Your heartbeat (2D): its rate and loudness are the dread's (OccupantDreadSystem), locked to the chase music's beat
 	-- in a chase on you.
-	harlowHeartbeat = { assetId = "rbxassetid://123214528916758", group = "SFX", volume = 0.8 },
+	harlowHeartbeat = { assetId = "rbxassetid://123214528916758", group = "SFX", bus = "Threat", volume = 0.8 },
 	-- He heard something: one deliberate pen click (the tapping cue for "?").
-	harlowCurious = { assetId = "rbxassetid://95530818541505", group = "SFX", volume = 0.8, rollOffMaxDistance = 90 },
+	harlowCurious = {
+		assetId = "rbxassetid://95530818541505",
+		group = "SFX",
+		bus = "Threat",
+		volume = 1,
+		rollOffMaxDistance = 90,
+	},
 	-- His typing while he sits at a desk (looped on his head, heard through rooms; the office typist's clip, reused). It
 	-- stops dead in the ambush.
 	harlowTyping = {
 		assetId = "rbxassetid://71155319819913",
 		group = "SFX",
+		bus = "Threat",
 		volume = 0.65,
 		looped = true,
 		rollOffMaxDistance = 70,
@@ -68,41 +76,96 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	harlowDread = { assetId = "rbxassetid://89353947977345", group = "Music", volume = 1.4, looped = true },
 	-- The ambush: he snaps round from the desk, chair shove, porcelain grind and the lock of his head over a pizz F dim7
 	-- (round-2 pick A, in-house, 1.1 s = AMBUSH_HOLD; positional). Plays as the ambush starts.
-	harlowAmbush = { assetId = "rbxassetid://90232187116807", group = "SFX", volume = 0.9, rollOffMaxDistance = 60 },
+	harlowAmbush = {
+		assetId = "rbxassetid://90232187116807",
+		group = "SFX",
+		bus = "Threat",
+		volume = 0.9,
+		rollOffMaxDistance = 60,
+	},
 	-- The slow turns (behaviours design §11, in-house round 5, characters/audio/listening/round5-turns): his neck's slow
 	-- porcelain creak through the 2.0 s turn (2.2 s, -17 LUFS, building ~5 dB to the end; stopped short with the turn),
 	-- ~4 dB under the ambush; and the jerk's sharp porcelain crack (0.53 s, its peak 3.6 ms in, so it lands on the
 	-- snap), louder by volume since its loudness is all in the snap, reaching as far as the chase starting.
-	harlowCreak = { assetId = "rbxassetid://114994366629386", group = "SFX", volume = 0.8, rollOffMaxDistance = 60 },
-	harlowCrack = { assetId = "rbxassetid://120508741459350", group = "SFX", volume = 1.3, rollOffMaxDistance = 80 },
+	harlowCreak = {
+		assetId = "rbxassetid://114994366629386",
+		group = "SFX",
+		bus = "Threat",
+		volume = 0.8,
+		rollOffMaxDistance = 60,
+	},
+	harlowCrack = {
+		assetId = "rbxassetid://120508741459350",
+		group = "SFX",
+		bus = "Threat",
+		volume = 1.1,
+		rollOffMaxDistance = 80,
+	},
 	-- He sits at a desk: casters roll the chair in, the seat creaks, the gas lift sighs and bottoms out (round-3 pick A,
 	-- in-house; positional, heard through the room). Plays as he reaches the chair.
-	harlowSit = { assetId = "rbxassetid://118633870993827", group = "SFX", volume = 0.9, rollOffMaxDistance = 70 },
+	harlowSit = {
+		assetId = "rbxassetid://118633870993827",
+		group = "SFX",
+		bus = "Threat",
+		volume = 0.9,
+		rollOffMaxDistance = 70,
+	},
 	-- His chair swivels as he rises out of the ambush (round-2 pick A = round-1 C + D layered): our SA3 squeak and
 	-- ceramic creak, played with the two library layers of that mix by their own ids (the user approved, 2026-10-17):
 	-- PSE "Office Chair 1" and APM "BASSBEND-Down 05". Their volumes are the mix's gains (-4.6 / -17.6 dB against
 	-- ours); SWIVEL says where each starts and stops.
-	deskSwivel = { assetId = "rbxassetid://80676054119585", group = "SFX", volume = 0.9, rollOffMaxDistance = 60 },
-	deskSwivelChair = { assetId = "rbxassetid://9117143754", group = "SFX", volume = 0.53, rollOffMaxDistance = 60 },
-	deskSwivelBend = { assetId = "rbxassetid://9043357191", group = "SFX", volume = 0.12, rollOffMaxDistance = 60 },
+	deskSwivel = {
+		assetId = "rbxassetid://80676054119585",
+		group = "SFX",
+		bus = "Threat",
+		volume = 0.9,
+		rollOffMaxDistance = 60,
+	},
+	deskSwivelChair = {
+		assetId = "rbxassetid://9117143754",
+		group = "SFX",
+		bus = "Threat",
+		volume = 0.53,
+		rollOffMaxDistance = 60,
+	},
+	deskSwivelBend = {
+		assetId = "rbxassetid://9043357191",
+		group = "SFX",
+		bus = "Threat",
+		volume = 0.12,
+		rollOffMaxDistance = 60,
+	},
 	-- The "spotted" sting at every chase start (2D for the one he chases, positional for everyone else).
-	harlowSpotted = { assetId = "rbxassetid://71081947321557", group = "SFX", volume = 1, rollOffMaxDistance = 90 },
+	harlowSpotted = {
+		assetId = "rbxassetid://71081947321557",
+		group = "SFX",
+		bus = "Stings",
+		volume = 1,
+		rollOffMaxDistance = 90,
+	},
 	-- The chase music for the chased player (round-2 pick B "Clockwork mallets", in-house: B minor, 144 bpm, 16 bars =
 	-- 26.67 s, bar-exact OGG loops; 2D, for as long as the chase on you lasts, under your racing heartbeat). One sting
 	-- bar, then five stems from one score with one common gain, so they sum to the mix (OccupantChaseMusicSystem):
 	-- intensity 1 = ostinato + low, intensity 2 adds motif, ticks and pulse as he closes (CHASE_STEMS).
-	harlowChaseSting = { assetId = "rbxassetid://136144780062166", group = "SFX", volume = 0.9 },
+	harlowChaseSting = { assetId = "rbxassetid://136144780062166", group = "SFX", bus = "Stings", volume = 0.9 },
 	harlowChase_ostinato = { assetId = "rbxassetid://124748025140120", group = "Music", volume = 0.9, looped = true },
 	harlowChase_low = { assetId = "rbxassetid://139872525713729", group = "Music", volume = 0.9, looped = true },
 	harlowChase_motif = { assetId = "rbxassetid://82959779790252", group = "Music", volume = 0.9, looped = true },
 	harlowChase_ticks = { assetId = "rbxassetid://89441335118534", group = "Music", volume = 0.9, looped = true },
 	harlowChase_pulse = { assetId = "rbxassetid://105316282966706", group = "Music", volume = 0.9, looped = true },
-	harlowSigh = { assetId = "rbxassetid://126145488520317", group = "SFX", volume = 0.8, rollOffMaxDistance = 80 },
+	harlowSigh = {
+		assetId = "rbxassetid://126145488520317",
+		group = "SFX",
+		bus = "Threat",
+		volume = 0.8,
+		rollOffMaxDistance = 80,
+	},
 	-- His 'voice': him scribbling you up on his clipboard, one clip per line (OccupantFeedbackUtils.clipFor picks among
 	-- the uploaded ones, so one clip covers every line until more are added).
 	harlowGibberish1 = {
 		assetId = "rbxassetid://112161993953770",
 		group = "SFX",
+		bus = "Threat",
 		volume = 0.9,
 		pitch = { min = 0.92, max = 1.12 },
 		rollOffMaxDistance = 90,
@@ -110,6 +173,7 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	harlowGibberish2 = {
 		assetId = PENDING,
 		group = "SFX",
+		bus = "Threat",
 		volume = 0.9,
 		pitch = { min = 0.92, max = 1.12 },
 		rollOffMaxDistance = 90,
@@ -117,6 +181,7 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	harlowGibberish3 = {
 		assetId = PENDING,
 		group = "SFX",
+		bus = "Threat",
 		volume = 0.9,
 		pitch = { min = 0.92, max = 1.12 },
 		rollOffMaxDistance = 90,
@@ -124,21 +189,34 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	harlowGibberish4 = {
 		assetId = PENDING,
 		group = "SFX",
+		bus = "Threat",
 		volume = 0.9,
 		pitch = { min = 0.92, max = 1.12 },
 		rollOffMaxDistance = 90,
 	},
 	-- The catch: a distorted sting for the caught player, the lights' power-down and his grab for everyone near.
-	harlowCatchSting = { assetId = "rbxassetid://88133727845312", group = "SFX", volume = 1 },
-	harlowPowerDown = { assetId = "rbxassetid://95527531363916", group = "SFX", volume = 0.9, rollOffMaxDistance = 90 },
-	harlowGrab = { assetId = "rbxassetid://9113482942", group = "SFX", volume = 0.9, rollOffMaxDistance = 60 },
+	harlowCatchSting = { assetId = "rbxassetid://88133727845312", group = "SFX", bus = "Stings", volume = 1 },
+	harlowPowerDown = {
+		assetId = "rbxassetid://95527531363916",
+		group = "SFX",
+		bus = "Threat",
+		volume = 0.9,
+		rollOffMaxDistance = 90,
+	},
+	harlowGrab = {
+		assetId = "rbxassetid://9113482942",
+		group = "SFX",
+		bus = "Threat",
+		volume = 0.9,
+		rollOffMaxDistance = 60,
+	},
 	-- You respawn after a catch, with the Rehired card: the time clock punches you back IN + glock C-F up a fourth
 	-- (round-3 pick A; 2D, only for you).
-	catchRehired = { assetId = "rbxassetid://80163458987401", group = "SFX", volume = 0.9 },
+	catchRehired = { assetId = "rbxassetid://80163458987401", group = "SFX", bus = "Stings", volume = 0.9 },
 	-- He throws you: FIRED (round-3 final pick F1 "heavy stamp": a backwards piano F dim7 swell into a heavy rubber
 	-- stamp on metal; 2D, only for the caught player; it replaces the engine's "oof"). Its stamp lands FIRED_HIT
 	-- seconds into the file, so it starts that long before the throw (OccupantScareSystem.snap).
-	catchFired = { assetId = "rbxassetid://99003711272251", group = "SFX", volume = 1 },
+	catchFired = { assetId = "rbxassetid://99003711272251", group = "SFX", bus = "Stings", volume = 1 },
 }
 
 -- The chase music's stems (OccupantChaseMusicSystem): `base` plays the whole chase, `near` fades in as he closes. The

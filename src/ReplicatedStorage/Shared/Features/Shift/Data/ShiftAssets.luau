@@ -21,25 +21,25 @@ local PENDING = ""
 
 local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- A punch-clock "ka-chunk" when the shift starts.
-	shiftPunchIn = { assetId = "rbxassetid://109228401071501", group = "SFX", volume = 0.8 },
+	shiftPunchIn = { assetId = "rbxassetid://109228401071501", group = "SFX", bus = "Reward", volume = 1.1 },
 	-- The contract met mid-shift: the company motif F-A-C-Bb on clarinet over an oom-pah-pah, a ta-da and a register
 	-- ding, "you did it, keep going" (round-3 pick M1, in-house; 2D, over the office bed).
-	shiftContractMet = { assetId = "rbxassetid://75263082800024", group = "SFX", volume = 0.9 },
+	shiftContractMet = { assetId = "rbxassetid://75263082800024", group = "SFX", bus = "Reward", volume = 0.9 },
 	-- The performance review's jingle as it opens (2D, once; JINGLE_SOUNDS by ShiftCueUtils.jingle), in-house: met (round-2
 	-- C, spooky-first waltz into the relief), met with overtime pay (round-3 O1: C bigger, harp gliss, timpani, coins), and
 	-- missed (round-3 F3: the same record slowing to a stop before the relief lands).
-	shiftResultsMet = { assetId = "rbxassetid://109779942246814", group = "SFX", volume = 0.9 },
-	shiftResultsOvertime = { assetId = "rbxassetid://122358530335366", group = "SFX", volume = 0.9 },
-	shiftResultsMissed = { assetId = "rbxassetid://136628215898951", group = "SFX", volume = 0.9 },
+	shiftResultsMet = { assetId = "rbxassetid://109779942246814", group = "SFX", bus = "Reward", volume = 0.9 },
+	shiftResultsOvertime = { assetId = "rbxassetid://122358530335366", group = "SFX", bus = "Reward", volume = 0.9 },
+	shiftResultsMissed = { assetId = "rbxassetid://136628215898951", group = "SFX", bus = "Reward", volume = 0.9 },
 	-- A low brass sting when the pressure tier rises.
-	shiftTierSting = { assetId = "rbxassetid://136159590763818", group = "SFX", volume = 0.7 },
+	shiftTierSting = { assetId = "rbxassetid://136159590763818", group = "SFX", bus = "Stings", volume = 0.7 },
 	-- An office PA chime before overtime.
-	shiftWarningChime = { assetId = "rbxassetid://126147740959997", group = "UI", volume = 0.8 },
-	shiftOvertimeSting = { assetId = "rbxassetid://95766845390235", group = "SFX", volume = 0.9 },
+	shiftWarningChime = { assetId = "rbxassetid://126147740959997", group = "UI", volume = 1.2 },
+	shiftOvertimeSting = { assetId = "rbxassetid://95766845390235", group = "SFX", bus = "Stings", volume = 0.9 },
 	-- The overtime layer: a clock ticking under everything (looped).
 	shiftTicking = { assetId = "rbxassetid://118452299844030", group = "Music", volume = 0.5, looped = true },
 	-- Two honks: the truck's countdown started (half the crew clocked out), or it leaves at once.
-	shiftClockOutHorn = { assetId = "rbxassetid://121905159563801", group = "SFX", volume = 1 },
+	shiftClockOutHorn = { assetId = "rbxassetid://121905159563801", group = "SFX", bus = "Stings", volume = 1 },
 	shiftCountdownTick = { assetId = "rbxassetid://135218748578686", group = "UI", volume = 0.6, maxConcurrent = 2 },
 	-- The toast styles' sounds (ShiftConstants.TOAST_STYLES): a paper rustle and a rubber stamp.
 	shiftStickyNote = { assetId = "rbxassetid://99429190384090", group = "UI", volume = 0.6 },

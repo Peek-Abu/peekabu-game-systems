@@ -21,15 +21,34 @@ local PENDING = ""
 
 local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- Banking: the item whooshing into the truck, then a cash-register "cha-ching" at the bed.
-	cargoSwoosh = { assetId = "rbxassetid://130905132369531", group = "SFX", volume = 0.6, rollOffMaxDistance = 60 },
-	cargoChaChing = { assetId = "rbxassetid://110411418261024", group = "SFX", volume = 0.9, rollOffMaxDistance = 80 },
+	cargoSwoosh = {
+		assetId = "rbxassetid://130905132369531",
+		group = "SFX",
+		bus = "Reward",
+		volume = 0.6,
+		rollOffMaxDistance = 60,
+	},
+	cargoChaChing = {
+		assetId = "rbxassetid://110411418261024",
+		group = "SFX",
+		bus = "Reward",
+		volume = 1.3,
+		rollOffMaxDistance = 80,
+	},
 	-- Your own hands and pockets.
-	cargoPickup = { assetId = "rbxassetid://95113352299095", group = "SFX", volume = 0.5 },
+	cargoPickup = {
+		assetId = "rbxassetid://95113352299095",
+		group = "SFX",
+		bus = "Action",
+		volume = 0.5,
+		pitch = { min = 0.95, max = 1.05 },
+	},
 	cargoPocket = { assetId = "rbxassetid://9121003380", group = "UI", volume = 0.6 },
 	-- Drops, by trait then weight (CargoFeedbackUtils.dropSound); heard by everyone near.
 	cargoThudLight = {
 		assetId = "rbxassetid://82279308966281",
 		group = "SFX",
+		bus = "Action",
 		volume = 0.7,
 		pitch = { min = 0.9, max = 1.1 },
 		rollOffMaxDistance = 70,
@@ -38,6 +57,7 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	cargoThudHeavy = {
 		assetId = "rbxassetid://77274323915881",
 		group = "SFX",
+		bus = "Action",
 		volume = 1,
 		pitch = { min = 0.9, max = 1.05 },
 		rollOffMaxDistance = 90,
@@ -46,6 +66,7 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	cargoShatter = {
 		assetId = "rbxassetid://9114597147",
 		group = "SFX",
+		bus = "Action",
 		volume = 0.9,
 		rollOffMaxDistance = 90,
 		maxConcurrent = 3,
@@ -53,6 +74,7 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	cargoSplash = {
 		assetId = "rbxassetid://87333978366779",
 		group = "SFX",
+		bus = "Action",
 		volume = 1,
 		rollOffMaxDistance = 120,
 		maxConcurrent = 2,
@@ -61,6 +83,7 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	cargoRattle = {
 		assetId = "rbxassetid://103584623487822",
 		group = "SFX",
+		bus = "Action",
 		volume = 0.5,
 		pitch = { min = 0.9, max = 1.15 },
 		rollOffMaxDistance = 40,
@@ -73,20 +96,52 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- sticky slip is silent on purpose, so this is its only sound); a jackpot appraisal starts with A1, holds a breath,
 	-- then pays off (red JACKPOT stamp, glock run, register, coins). A buried pile's glint: a music-box twinkle, mixed at
 	-- -24 LUFS (meant to be easy to miss).
-	cargoRevealLow = { assetId = "rbxassetid://103029093745671", group = "SFX", volume = 0.8, rollOffMaxDistance = 60 },
-	cargoRevealMid = { assetId = "rbxassetid://127359448338833", group = "SFX", volume = 0.8, rollOffMaxDistance = 60 },
-	cargoRevealHigh = { assetId = "rbxassetid://114181554867050", group = "SFX", volume = 0.8, rollOffMaxDistance = 70 },
+	cargoRevealLow = {
+		assetId = "rbxassetid://103029093745671",
+		group = "SFX",
+		bus = "Reward",
+		volume = 0.8,
+		rollOffMaxDistance = 60,
+	},
+	cargoRevealMid = {
+		assetId = "rbxassetid://127359448338833",
+		group = "SFX",
+		bus = "Reward",
+		volume = 0.8,
+		rollOffMaxDistance = 60,
+	},
+	cargoRevealHigh = {
+		assetId = "rbxassetid://114181554867050",
+		group = "SFX",
+		bus = "Reward",
+		volume = 0.8,
+		rollOffMaxDistance = 70,
+	},
 	cargoRevealJackpot = {
 		assetId = "rbxassetid://119747942358809",
 		group = "SFX",
+		bus = "Reward",
 		volume = 0.8,
 		rollOffMaxDistance = 80,
 	},
-	cargoAppraise = { assetId = "rbxassetid://78325157618409", group = "SFX", volume = 0.8, rollOffMaxDistance = 40 },
-	cargoJackpot = { assetId = "rbxassetid://112524045440299", group = "SFX", volume = 0.9, rollOffMaxDistance = 60 },
+	cargoAppraise = {
+		assetId = "rbxassetid://78325157618409",
+		group = "SFX",
+		bus = "Reward",
+		volume = 0.8,
+		rollOffMaxDistance = 40,
+	},
+	cargoJackpot = {
+		assetId = "rbxassetid://112524045440299",
+		group = "SFX",
+		bus = "Reward",
+		volume = 0.9,
+		rollOffMaxDistance = 60,
+	},
 	cargoGlint = {
 		assetId = "rbxassetid://100033229972306",
 		group = "SFX",
+		bus = "Reward",
 		volume = 0.8,
 		rollOffMaxDistance = 20,
 		maxConcurrent = 2,
@@ -97,6 +152,7 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	cargoRummage = {
 		assetId = "rbxassetid://9114061295",
 		group = "SFX",
+		bus = "Action",
 		volume = 0.6,
 		rollOffMaxDistance = 40,
 		maxConcurrent = 3,

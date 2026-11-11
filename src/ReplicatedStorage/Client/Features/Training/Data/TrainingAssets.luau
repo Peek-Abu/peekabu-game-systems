@@ -22,18 +22,20 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	trainingDoorCreak = {
 		assetId = "rbxassetid://96876231304223",
 		group = "SFX",
-		volume = 0.9,
+		bus = "Action",
+		volume = 2.2,
 		rollOffMaxDistance = 80,
 	},
 	-- "Door Slam" (Creator Store 121982576409852).
 	trainingDoorSlam = {
 		assetId = "rbxassetid://121982576409852",
 		group = "SFX",
+		bus = "Stings",
 		volume = 0.9,
 		rollOffMaxDistance = 90,
 	},
 	-- "Essential (sting)", APM Music on the Creator Store (9042046037): a warm, calm sting with a piano finish.
-	trainingRelief = { assetId = "rbxassetid://9042046037", group = "SFX", volume = 0.7 },
+	trainingRelief = { assetId = "rbxassetid://9042046037", group = "SFX", bus = "Stings", volume = 0.7 },
 }
 
 for id, def in SOUNDS do

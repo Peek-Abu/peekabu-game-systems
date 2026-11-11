@@ -189,6 +189,7 @@ local function library(assetId: string, volume: number, speed: number?): SoundTy
 	return {
 		assetId = assetId,
 		group = "SFX",
+		bus = "Action",
 		volume = volume,
 		rollOffMaxDistance = 50,
 		pitch = if speed ~= nil then { min = speed, max = speed } else nil,

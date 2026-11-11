@@ -18,11 +18,25 @@ local defaultVolumes: { [SoundTypes.SoundGroupName]: number } = {
 	Ambient = 0.7,
 }
 
+-- The mix: each bus's trim in dB, in its volume group (SoundTypes.SoundBusName says what goes where). Within a bus each
+-- sound's own volume matches its loudness to the bus's band; these trims set the bands against each other. Measured
+-- and set 2026-11-10 (docs/superpowers/specs/2026-11-10-sound-mix.md); tune here, not per sound.
+local buses: { [SoundTypes.SoundBusName]: SoundTypes.SoundBus } = {
+	Threat = { group = "SFX", db = 0 },
+	Stings = { group = "SFX", db = 0 },
+	Reward = { group = "SFX", db = 0 },
+	Action = { group = "SFX", db = 0 },
+	Steps = { group = "SFX", db = 0 },
+	Beds = { group = "Ambient", db = 0 },
+	Spots = { group = "Ambient", db = 0 },
+}
+
 -- Annotated (and frozen in place, not through a frozen literal) so the group-name literal types survive;
 -- an unannotated or freeze-wrapped literal widens them to `string`.
 local SoundConstants: {
 	GROUPS: { SoundTypes.SoundGroupName },
 	DEFAULT_GROUP_VOLUMES: { [SoundTypes.SoundGroupName]: number },
+	BUSES: { [SoundTypes.SoundBusName]: SoundTypes.SoundBus },
 	DEFAULT_SERVER_RADIUS: number,
 	DEFAULT_FADE: number,
 	IDLE_PER_PLACE: number,
@@ -36,6 +50,7 @@ local SoundConstants: {
 	table.freeze({
 		GROUPS = table.freeze(groups),
 		DEFAULT_GROUP_VOLUMES = table.freeze(defaultVolumes),
+		BUSES = table.freeze(buses),
 		-- How far a server-requested positional sound reaches when the caller gives no radius.
 		DEFAULT_SERVER_RADIUS = 150,
 		-- Default crossfade for music and ambience, in seconds.

@@ -256,6 +256,9 @@ return table.freeze({
 	RESULTS_DUCK_IN = 0.3,
 	RESULTS_DUCK_OUT = 1,
 	RESULTS_DUCK_GROUPS = table.freeze({ "Music", "Ambient" }),
+	-- The cues that duck the music and the beds the same way while they play (the profile: "music ducks 6 dB under the
+	-- PA"): the PA chime before overtime sat ~7 dB under the music (measured 2026-11-10).
+	DUCK_CUES = table.freeze({ "warning" }),
 	-- Crew status public fields (M3 UI: the crew roster and the CCTV), published by ShiftCrewStatusSystem every
 	-- CREW_STATUS_INTERVAL seconds while a shift runs. Flags are present only while true.
 	PUBLIC_IN_TRUCK = "inTruck",

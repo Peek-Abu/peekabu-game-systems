@@ -22,16 +22,24 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	abilityLetsGo = {
 		assetId = "rbxassetid://139330570557645",
 		group = "SFX",
+		bus = "Action",
 		volume = 1,
 		rollOffMaxDistance = 70,
 		maxConcurrent = 4,
 	},
 	-- Cappy's ping as the treasure lights up: 2D, his ears only (stereo).
-	abilitySpotPing = { assetId = "rbxassetid://118490563116936", group = "SFX", volume = 0.8, maxConcurrent = 1 },
+	abilitySpotPing = {
+		assetId = "rbxassetid://118490563116936",
+		group = "SFX",
+		bus = "Action",
+		volume = 0.8,
+		maxConcurrent = 1,
+	},
 	-- Cappy's phone, from the Spot It! clip's first frame: 3D, everyone near.
 	abilitySpotPhone = {
 		assetId = "rbxassetid://106880741715758",
 		group = "SFX",
+		bus = "Action",
 		volume = 0.9,
 		rollOffMaxDistance = 40,
 		maxConcurrent = 4,
@@ -41,14 +49,16 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	abilityPlantIn = {
 		assetId = "rbxassetid://88077512145082",
 		group = "SFX",
-		volume = 1,
+		bus = "Action",
+		volume = 5,
 		rollOffMaxDistance = 20,
 		maxConcurrent = 4,
 	},
 	abilityPlantOut = {
 		assetId = "rbxassetid://137494633014979",
 		group = "SFX",
-		volume = 1,
+		bus = "Action",
+		volume = 5,
 		rollOffMaxDistance = 20,
 		maxConcurrent = 4,
 	},
