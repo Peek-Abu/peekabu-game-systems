@@ -4,9 +4,11 @@
 
 	- Every Training pad (TrainingConstants.TRUCK_TAG, made a queue pad by the server only while the place offers
 	  training) carries a plain "TRAINING" tag (anyone can play it again), and while this player still needs
-	  training the coach stands beside it waving, "Start here!" (TrainingCoachSystem; owner 11-11).
+	  training the coach stands beside it waving (TrainingCoachSystem; owner 11-11), with no text floating over her.
 	- A player who still needs training gets Pippa's hint and an arrow to the nearest Training pad (a world spotlight
 	  step) whenever they are off the pad (TrainingRules.hubTrail): stepping on hides it, stepping off brings it back.
+	  Every hub step is `pinned`: Pippa's card stays at the bottom left of the screen, never swinging around with the
+	  camera (owner 11-11); the arrow on the screen's edge and the gold trail on the floor do the pointing.
 	- "Play training again" from the Guide (`again`): an arrow to the Training pad.
 	- The gold chevron trail on the floor from the player to the nearest Training pad (TrainingTrailSystem's hub
 	  goal): while this player still needs training, and after "Play training again" for AGAIN_TRAIL_SECONDS; never
@@ -119,6 +121,7 @@ local function pointToTraining()
 			seconds = math.huge,
 			accept = isTrainingPad,
 			edgeOnly = true,
+			pinned = true,
 			done = function()
 				return not isNew or onRun or standingOn(isTrainingPad)
 			end,
@@ -211,6 +214,7 @@ function TrainingHubSystem.tour()
 			tag = QueueConstants.TAG,
 			line = TrainingConstants.TEXT.tourTrucks,
 			seconds = 25,
+			pinned = true,
 			accept = function(part: BasePart)
 				return not isTrainingPad(part)
 			end,
@@ -244,6 +248,7 @@ function TrainingHubSystem.again()
 			seconds = 30,
 			accept = isTrainingPad,
 			edgeOnly = true,
+			pinned = true,
 			done = function()
 				return standingOn(isTrainingPad)
 			end,

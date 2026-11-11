@@ -13,7 +13,8 @@
 	  says so or after `seconds`. Off the screen the arrow sits on the edge on the target's side, worked out in the
 	  camera's own space (TrainingSpotlightUtils.offscreen); it waits until the camera has settled after a spawn.
 	  An `edgeOnly` step draws its arrow only on the edge: on the screen the target already has its own world marker
-	  (the Training pad's bobbing arrow), so a second arrow on it would be a duplicate (owner, 11-10).
+	  (the Training pad's bobbing arrow), so a second arrow on it would be a duplicate (owner, 11-10). A `pinned` step
+	  keeps Pippa's card in one place at the bottom left rather than next to the arrow (owner, 11-11).
 	- A "do" step shows only its line (nothing dimmed: the player has to move) and moves on when `done` says so.
 	- A step the player must do (`mustDo`: run, use the crew move) moves on ONLY when `done` says so: tapping the
 	  dark, another key, a page opening or its time running out never pass it.
@@ -53,6 +54,9 @@ export type Step = {
 	mustDo: boolean?,
 	-- World steps: the arrow shows only on the screen's edge (the target has its own marker on the screen).
 	edgeOnly: boolean?,
+	-- Pippa's card stays put at the bottom left instead of following the arrow (owner 11-11: words that swing around
+	-- with the camera are disorienting).
+	pinned: boolean?,
 }
 
 local FRAME_SECONDS = 1 / 30
@@ -223,6 +227,7 @@ local function draw(step: Step, now: number)
 		end,
 		leftInset = menuInset(screen),
 		onArea = tourArea,
+		pinned = step.pinned,
 	}
 	if step.kind == "do" then
 		props.linePosition = Vector2.new(math.max((screen.X - LINE_SIZE.X) / 2, 0), screen.Y * DO_LINE_Y)

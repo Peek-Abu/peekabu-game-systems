@@ -125,6 +125,17 @@ function TrainingSpotlightUtils.leftInset(rects: { Rect }, screen: Vector2, gap:
 end
 
 --[=[
+	Where a pinned coach card goes (a world step whose card stays put while the camera moves, owner 11-11: words that
+	swing around with the view are disorienting): its left edge and its bottom, in screen px. Bottom left, `margin` in,
+	just past the button column (`inset`, leftInset), and moved left only as far as it takes to keep the whole card
+	(`card` in size) on the screen, never past the left edge.
+]=]
+function TrainingSpotlightUtils.pinnedCoach(screen: Vector2, card: Vector2, inset: number, margin: number): Vector2
+	local x = math.max(math.min(inset + margin, screen.X - card.X - margin), 0)
+	return Vector2.new(x, screen.Y - margin)
+end
+
+--[=[
 	Whether the spotlight waits (hidden, its clock paused): a page is open over the hub (`pageDepth`, SceneStack) or a
 	popup tagged SPOTLIGHT_TAGS.popup is showing (`popupsOpen`), so Pippa never sits on top of either.
 ]=]

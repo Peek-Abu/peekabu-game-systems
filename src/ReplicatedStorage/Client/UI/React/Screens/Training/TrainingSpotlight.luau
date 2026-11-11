@@ -4,8 +4,9 @@
 	into. A UI step dims the whole screen except a hole round the one button to press, with a gold ring (ink edged)
 	round the hole and the gold arrow bobbing over it; tapping the dark skips the step (the hole itself lets the tap
 	through to the button). A world step dims nothing: the gold arrow points down at the target, or from the screen's
-	edge towards it. Either way Pippa says the line (TrainingCoach, pointing). Presentational; the layout is the
-	specced TrainingSpotlightUtils.
+	edge towards it. Either way Pippa says the line (TrainingCoach, pointing): next to what it points at, or, `pinned`,
+	in one place at the bottom left that never moves with the camera. Presentational; the layout is the specced
+	TrainingSpotlightUtils.
 
 	@class TrainingSpotlight
 ]=]
@@ -37,6 +38,9 @@ export type TrainingSpotlightProps = {
 	leftInset: number?,
 	-- Told where Pippa's card is on screen (TrainingCoach.onArea); nil = not reported.
 	onArea: ((area: TrainingCoach.Area?) -> ())?,
+	-- Pippa's card stays put at the bottom left (TrainingSpotlightUtils.pinnedCoach) instead of following the line
+	-- spot, so it never swings around with the camera; nil = follows.
+	pinned: boolean?,
 }
 
 local GOLD = TrainingConstants.GUIDE.calm
@@ -47,6 +51,8 @@ local ARROW_SIZE = 64
 -- The coach's size on screen (TrainingCoach's desktop / phone sizes).
 local COACH_DESKTOP = Vector2.new(706, 230)
 local COACH_PHONE = Vector2.new(342, 110)
+-- A pinned coach card's distance from the screen's bottom and from the button column (desktop px, scaled).
+local PINNED_MARGIN = 24
 
 -- The gold arrow image, its tip at `at`, rotated `rotation` degrees (0 = pointing down).
 local function arrowAt(at: Vector2, rotation: number, bob: number): React.ReactNode
@@ -73,6 +79,10 @@ local function Coach(props: TrainingSpotlightProps): React.ReactNode
 	local left = (props.leftInset or 0) + 8
 	local x = math.clamp(props.linePosition.X - size.X * 0.3, left, math.max(left, props.screen.X - size.X - 8))
 	local bottom = math.clamp(props.linePosition.Y + size.Y * 0.7, size.Y + 8, props.screen.Y - 8)
+	if props.pinned == true then
+		local at = TrainingSpotlightUtils.pinnedCoach(props.screen, size, props.leftInset or 0, PINNED_MARGIN * scale)
+		x, bottom = at.X, at.Y
+	end
 	return e(TrainingCoach, {
 		line = { text = props.line, pose = "point" },
 		phone = phone,
