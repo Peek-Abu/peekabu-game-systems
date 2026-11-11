@@ -7,8 +7,8 @@
 	  every role before services start.
 	- Where this server runs the depot role (the depot place; in Studio every role runs in one server) it
 	  builds the gameplay pieces into the place's Studio-built hub (a Model tagged DepotLayoutConstants.HUB.MODEL_TAG:
-	  its marker parts say where, DepotHubSystem / DepotHubRules; an unplayable hub falls back to the graybox with a
-	  warning), or, with no hub, the graybox garage at DepotLayoutConstants.ORIGIN, validated by DepotLayoutRules (a
+	  its marker parts say where, DepotHubSystem / DepotHubRules; an unplayable hub is a boot error naming every
+	  problem), or, with no hub model at all, the graybox garage at DepotLayoutConstants.ORIGIN, validated by DepotLayoutRules (a
 	  broken layout is a boot error): truck beds tagged QueuePad (Queue holds the parties, runs the countdown and
 	  Depart now), tonight's contract board (DepotContractUtils.tonight), the result board, and a tag shell over each
 	  truck that every client draws from Queue's state sync and the public `truck` field this service keeps
@@ -332,22 +332,12 @@ local DepotServiceServer: DepotServiceServer = {
 		end
 		local boardAttributes = DepotContractUtils.boardAttributes(contract)
 		local hub = DepotHubSystem.find()
-		local authored: DepotHubRules.Plan? = nil
 		if hub ~= nil then
-			local hubPlan, hubErrors = DepotHubRules.plan(DepotHubSystem.markers(hub), DepotHubSystem.bounds(hub))
+			-- No quiet fallback (owner, 2026-11-10): a broken hub is a boot error that names every problem. The
+			-- graybox below is only for a place with no hub model at all (the test place, a new game's first place).
+			local authored =
+				DepotHubRules.check(DepotHubSystem.markers(hub), DepotHubSystem.bounds(hub), hub:GetFullName())
 			DepotHubSystem.hide(hub)
-			if hubPlan == nil then
-				-- A broken hub must not strand players: the graybox is built instead, and the reason is loud.
-				log:warn(
-					`the Studio hub "{hub:GetFullName()}" is not playable, building the graybox:\n{table.concat(
-						hubErrors,
-						"\n"
-					)}`
-				)
-			end
-			authored = hubPlan
-		end
-		if authored ~= nil then
 			plan = authored
 			built = DepotBuildSystem.buildPlan(authored, boardAttributes)
 			log:info(`depot: the Studio hub ({#authored.trucks} trucks, {#authored.spawns} spawns)`)

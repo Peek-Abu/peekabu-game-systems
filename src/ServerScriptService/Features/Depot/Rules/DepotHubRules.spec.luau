@@ -146,6 +146,26 @@ return function()
 		end)
 	end)
 
+	describe("check (no quiet fallback: a broken hub stops the depot)", function()
+		it("returns the plan of a playable hub", function()
+			local plan = DepotHubRules.check(markers(), bounds(), "Workspace.Hub")
+			expect(#plan.trucks).to.equal(3)
+		end)
+
+		it("throws one clear message naming the hub, every problem and how to fix it", function()
+			local list = markers()
+			table.remove(list, 3)
+			list[1].capacity = 0
+			local ok, message = pcall(DepotHubRules.check, list, bounds(), "Workspace.NightGarage")
+			expect(ok).to.equal(false)
+			message = tostring(message)
+			expect(string.find(message, "Workspace.NightGarage", 1, true) ~= nil).to.equal(true)
+			expect(string.find(message, "trucks", 1, true) ~= nil).to.equal(true)
+			expect(string.find(message, "seats", 1, true) ~= nil).to.equal(true)
+			expect(string.find(message, "DepotTruckBay", 1, true) ~= nil).to.equal(true)
+		end)
+	end)
+
 	describe("inside", function()
 		local box =
 			{ cframe = CFrame.new(100, 10, 0) * CFrame.Angles(0, math.rad(30), 0), size = Vector3.new(40, 20, 30) }
