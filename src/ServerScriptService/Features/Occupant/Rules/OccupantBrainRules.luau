@@ -62,6 +62,7 @@ local OccupantDirectorRules = require(OccupantServer.Rules.OccupantDirectorRules
 local OccupantStareRules = require(OccupantServer.Rules.OccupantStareRules)
 local OccupantStuckRules = require(OccupantServer.Rules.OccupantStuckRules)
 local OccupantTurnRules = require(OccupantServer.Rules.OccupantTurnRules)
+local OccupantWatchRules = require(OccupantServer.Rules.OccupantWatchRules)
 local OccupantWorkRules = require(OccupantServer.Rules.OccupantWorkRules)
 local OccupantMenaceFormulas = require(OccupantServer.Utils.OccupantMenaceFormulas)
 local M = require(OccupantServer.Utils.OccupantMindUtils)
@@ -502,12 +503,12 @@ end
 
 --[=[
 	A frozen think (a freeze kind being watched): he holds where he is (idle, no effects: no door, no catch, no body
-	change), his clocks paused by the time he has been frozen (OccupantMindUtils.pause); what he sees and the menace
+	change), his clocks paused by the time he has been frozen (OccupantWatchRules.pause); what he sees and the menace
 	gauge are still kept (OccupantDirectorRules.track), and the stuck watch starts again (he is not on a walk).
 ]=]
 function OccupantBrainRules.hold(mind: Mind, senses: Senses): Step
 	local paused = table.clone(mind)
-	M.pause(paused, M.frozenSeconds(mind, senses))
+	OccupantWatchRules.pause(paused, OccupantWatchRules.frozenSeconds(mind, senses))
 	local tracked = OccupantDirectorRules.track(mind, { mind = paused, intent = IDLE }, senses)
 	return OccupantStuckRules.watch(mind, { mind = tracked.mind, intent = IDLE }, senses)
 end
@@ -539,8 +540,8 @@ function OccupantBrainRules.step(mind: Mind, senses: Senses): Step
 		senses
 	)
 	-- Just unfrozen (a freeze kind): no catch until FREEZE_CATCH_BLOCK has passed.
-	if M.catchBlocked(senses) then
-		return M.withoutCatch(watched, senses)
+	if OccupantWatchRules.catchBlocked(senses) then
+		return OccupantWatchRules.withoutCatch(watched, senses)
 	end
 	return watched
 end

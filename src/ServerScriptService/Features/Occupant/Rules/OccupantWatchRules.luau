@@ -15,6 +15,9 @@
 	FREEZE_UNFREEZE_BEAT (0.4 s), then moves. `canCatch`: never while frozen, nor for FREEZE_CATCH_BLOCK (0.6 s) after
 	unfreezing.
 
+	The brain's side (OccupantBrainRules): `pause` moves the clocks of a frozen think, `frozenSeconds` says by how much,
+	`catchBlocked` and `withoutCatch` keep a catch out while frozen and for the block after.
+
 	Pure: the rays are the caller's (OccupantWatchSystem); nothing here touches an Instance, and no function changes
 	the state it is given. Times are os.clock() seconds; a report's time is when the server received it.
 
@@ -22,8 +25,16 @@
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
 
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
+local OccupantTypes = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantTypes)
+local OccupantMindUtils = require(ServerScriptService.Features.Occupant.Utils.OccupantMindUtils)
+
+type Mind = OccupantTypes.Mind
+type Senses = OccupantTypes.Senses
+type Effect = OccupantTypes.Effect
+type Step = OccupantMindUtils.Step
 
 -- A client's camera report, as the server received it.
 export type Report = {
@@ -147,6 +158,81 @@ end
 function OccupantWatchRules.canCatch(state: Freeze, now: number): boolean
 	local unfrozenAt = state.unfrozenAt
 	return not state.frozen and (unfrozenAt == nil or now >= unfrozenAt + OccupantConstants.FREEZE_CATCH_BLOCK)
+end
+
+--[=[
+	Fills in a copy: every clock that times what he is doing (his mode, a phase, the look-around, the chase's give-up,
+	the bay linger, standing up, a startle, a swivelled head) moved `seconds` later, so time spent frozen never counts
+	toward any of them. Grace, the director's steer and work breaks run on real time.
+]=]
+function OccupantWatchRules.pause(mind: Mind, seconds: number)
+	if seconds <= 0 then
+		return
+	end
+	local function shift(value: number?): number?
+		return if value ~= nil then value + seconds else nil
+	end
+	mind.since += seconds
+	mind.chaseAt = shift(mind.chaseAt)
+	mind.arrivedAt = shift(mind.arrivedAt)
+	mind.phaseAt = shift(mind.phaseAt)
+	mind.nearAt = shift(mind.nearAt)
+	mind.bayAt = shift(mind.bayAt)
+	mind.standUntil = shift(mind.standUntil)
+	mind.reactUntil = shift(mind.reactUntil)
+	mind.swivelUntil = shift(mind.swivelUntil)
+end
+
+--[=[
+	How long he has been frozen since his last think (or since the freeze began, if later): the time to pause.
+]=]
+function OccupantWatchRules.frozenSeconds(mind: Mind, senses: Senses): number
+	local from = mind.lastThink or senses.now
+	local frozenAt = senses.frozenAt
+	if frozenAt ~= nil and frozenAt > from then
+		from = frozenAt
+	end
+	return math.max(0, senses.now - from)
+end
+
+--[=[
+	Whether a catch is barred now: while frozen, and FREEZE_CATCH_BLOCK after the last unfreeze (never for Harlow,
+	whose senses carry neither).
+]=]
+function OccupantWatchRules.catchBlocked(senses: Senses): boolean
+	if senses.frozen == true then
+		return true
+	end
+	local unfrozenAt = senses.unfrozenAt
+	return unfrozenAt ~= nil and senses.now < unfrozenAt + OccupantConstants.FREEZE_CATCH_BLOCK
+end
+
+--[=[
+	`step` with no catch in it: a grab becomes a run at them (idle when they are not in his senses), and a catch
+	effect is dropped (as if the server refused it).
+]=]
+function OccupantWatchRules.withoutCatch(step: Step, senses: Senses): Step
+	local intent = step.intent
+	if intent.kind == "attack" then
+		local target = intent.target
+		intent = OccupantMindUtils.IDLE
+		for _, glimpse in senses.players do
+			if glimpse.userId == target then
+				intent = { kind = "goTo", position = glimpse.position, run = true }
+			end
+		end
+	end
+	local effects: { Effect }? = nil
+	if step.effects ~= nil then
+		local kept: { Effect } = {}
+		for _, effect in step.effects do
+			if effect.kind ~= "catch" then
+				table.insert(kept, effect)
+			end
+		end
+		effects = if #kept > 0 then kept else nil
+	end
+	return { mind = step.mind, intent = intent, cue = step.cue, effects = effects }
 end
 
 return OccupantWatchRules

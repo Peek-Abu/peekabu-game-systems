@@ -1,6 +1,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
 
 local OccupantWatchRules = require(script.Parent.OccupantWatchRules)
+local OccupantBrainRules = require(ServerScriptService.Features.Occupant.Rules.OccupantBrainRules)
 local C = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 
 -- The monster stands 30 studs down +Z from the crew member, its head, chest and knees.
@@ -226,6 +228,104 @@ return function()
 			local free = OccupantWatchRules.advance(state, false, 10.4)
 			expect(OccupantWatchRules.canCatch(free, 10.4 + C.FREEZE_CATCH_BLOCK - 0.05)).to.equal(false)
 			expect(OccupantWatchRules.canCatch(free, 10.4 + C.FREEZE_CATCH_BLOCK)).to.equal(true)
+		end)
+	end)
+	describe("the brain's side", function()
+		local W = OccupantWatchRules
+		local function fresh()
+			return OccupantBrainRules.newMind(1, 1, 0)
+		end
+		local function senses(extra)
+			local value = {
+				position = Vector3.new(60, 3, 60),
+				look = Vector3.new(1, 0, 0),
+				now = 100,
+				sightRange = C.SIGHT_RANGE,
+				sightAngle = C.SIGHT_ANGLE,
+				players = {},
+				resting = false,
+				route = {},
+				restPoint = Vector3.new(200, 0, 200),
+				zone = { min = Vector3.new(0, -5, 0), max = Vector3.new(40, 20, 30) },
+			}
+			for key, item in extra or {} do
+				value[key] = item
+			end
+			return value
+		end
+
+		it("pause moves every clock that times what he does, and nothing else", function()
+			local mind = fresh()
+			mind.since = 10
+			mind.chaseAt = 11
+			mind.arrivedAt = 12
+			mind.phaseAt = 13
+			mind.standUntil = 14
+			mind.grace = { [7] = 50 }
+			local copy = table.clone(mind)
+			W.pause(copy, 2)
+			expect(copy.since).to.equal(12)
+			expect(copy.chaseAt).to.equal(13)
+			expect(copy.arrivedAt).to.equal(14)
+			expect(copy.phaseAt).to.equal(15)
+			expect(copy.standUntil).to.equal(16)
+			expect(copy.reactUntil).to.equal(nil)
+			expect(copy.grace[7]).to.equal(50)
+			expect(copy.nextWorkAt).to.equal(mind.nextWorkAt)
+			expect(mind.since).to.equal(10)
+		end)
+
+		it("pause does nothing for no time", function()
+			local mind = fresh()
+			mind.since = 10
+			W.pause(mind, 0)
+			W.pause(mind, -3)
+			expect(mind.since).to.equal(10)
+		end)
+
+		it("frozenSeconds counts from his last think, or from the freeze if it began later", function()
+			local mind = fresh()
+			mind.lastThink = 100
+			expect(W.frozenSeconds(mind, senses({ now = 101, frozenAt = 99 }))).to.be.near(1, 1e-6)
+			expect(W.frozenSeconds(mind, senses({ now = 101, frozenAt = 100.75 }))).to.be.near(0.25, 1e-6)
+			expect(W.frozenSeconds(fresh(), senses({ now = 101 }))).to.equal(0)
+		end)
+
+		it("catchBlocked: while frozen and for FREEZE_CATCH_BLOCK after, never without freeze senses", function()
+			expect(W.catchBlocked(senses({ frozen = true }))).to.equal(true)
+			expect(W.catchBlocked(senses({ unfrozenAt = 100 - C.FREEZE_CATCH_BLOCK / 2 }))).to.equal(true)
+			expect(W.catchBlocked(senses({ unfrozenAt = 100 - C.FREEZE_CATCH_BLOCK - 0.01 }))).to.equal(false)
+			expect(W.catchBlocked(senses())).to.equal(false)
+			expect(W.catchBlocked(senses({ frozen = false }))).to.equal(false)
+		end)
+
+		it("withoutCatch turns a grab into a run at them and drops a catch effect", function()
+			local glimpse = { userId = 7, position = Vector3.new(62, 3, 60), clear = true }
+			local step = {
+				mind = fresh(),
+				intent = { kind = "attack", target = 7 },
+				effects = { { kind = "catch", userId = 7 }, { kind = "release" } },
+			}
+			local safe = W.withoutCatch(step, senses({ players = { glimpse } }))
+			expect(safe.intent.kind).to.equal("goTo")
+			expect(safe.intent.position).to.equal(glimpse.position)
+			expect(safe.intent.run).to.equal(true)
+			expect(#safe.effects).to.equal(1)
+			expect(safe.effects[1].kind).to.equal("release")
+			expect(#step.effects).to.equal(2)
+		end)
+
+		it("withoutCatch idles when the grabbed player is not in his senses", function()
+			local step = { mind = fresh(), intent = { kind = "attack", target = 7 } }
+			expect(W.withoutCatch(step, senses()).intent.kind).to.equal("idle")
+		end)
+
+		it("withoutCatch leaves any other intent alone", function()
+			local goTo = { kind = "goTo", position = Vector3.new(1, 0, 1), run = false }
+			local step = { mind = fresh(), intent = goTo, effects = { { kind = "catch", userId = 7 } } }
+			local safe = W.withoutCatch(step, senses())
+			expect(safe.intent).to.equal(goTo)
+			expect(safe.effects).to.equal(nil)
 		end)
 	end)
 end
