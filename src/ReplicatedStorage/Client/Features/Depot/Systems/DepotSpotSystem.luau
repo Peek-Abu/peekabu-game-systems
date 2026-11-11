@@ -3,7 +3,8 @@
 	DepotSpotSystem: the hub's spots on this client (plan docs/superpowers/plans/2026-11-11-hub-interactables.md). The
 	server answers a spot's prompt with DepotEvents.Spot, checked again here (DepotSpotRules.decode), and this opens it:
 
-	- the Supply Counter opens the Shop; a standee opens the Shop on that employee's page;
+	- the Supply Counter opens the Shop; a standee opens the Shop on that employee's page; a Lost & Found locker door
+	  (the Gloom and the Gleam Locker) opens it on the Lockers tab;
 	- the coffee machine, the crew wall and the rank chart push their scenes (DepotSpotScene);
 	- the radio moves to the next station (DepotStore.nextStation; OfficeAtmosphereSystem plays it) and toasts its name;
 	  every radio puffs music notes (DepotAssets.RADIO_NOTES, a flipbook) at the station's rate (none on a quiet one).
@@ -169,6 +170,9 @@ local function open(opened: DepotSpotRules.Opened)
 		SceneStack.push(SCENES.crew)
 	elseif spot == "rank" then
 		SceneStack.push(SCENES.rank)
+	elseif spot == "locker" then
+		ShopStore.openTab(DepotSpotConstants.LOCKER_TAB)
+		SceneStack.push(ShopViewModel.SCENE)
 	elseif spot == "radio" then
 		local station = DepotStore.nextStation()
 		ToastStore.push(`Radio: {station.name}`, "info", RADIO_TOAST_SECONDS, os.clock())

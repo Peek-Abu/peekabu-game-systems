@@ -8,7 +8,7 @@
 	@class DepotSpotConstants
 ]=]
 
-export type Spot = "shop" | "standee" | "coffee" | "crew" | "rank" | "radio" | "bell"
+export type Spot = "shop" | "standee" | "coffee" | "crew" | "rank" | "radio" | "bell" | "locker"
 
 export type Station = {
 	-- The toast's words.
@@ -26,6 +26,7 @@ local KINDS: { [string]: string } = table.freeze({
 	rank = "depot-spot-rank",
 	radio = "depot-spot-radio",
 	bell = "depot-spot-bell",
+	locker = "depot-spot-locker",
 })
 
 -- The prompt per spot: its verb and noun (a standee's noun is replaced by the employee's name).
@@ -37,6 +38,8 @@ local PROMPTS: { [string]: { action: string, object: string } } = table.freeze({
 	rank = table.freeze({ action = "Look", object = "Rank chart" }),
 	radio = table.freeze({ action = "Next song", object = "Radio" }),
 	bell = table.freeze({ action = "Ring", object = "Shift bell" }),
+	-- A Lost & Found locker door (its noun is the door's LABEL_ATTRIBUTE: "Gloom Locker" or "Gleam Locker").
+	locker = table.freeze({ action = "Open", object = "Locker" }),
 })
 
 local STATIONS: { Station } = {
@@ -49,6 +52,10 @@ local DepotSpotConstants = {
 	PROMPTS = PROMPTS,
 	-- A standee names its employee (EmployeeRegistry name) here.
 	EMPLOYEE_ATTRIBUTE = "DepotEmployee",
+	-- Any spot may name itself on its prompt (a locker door: "Gloom Locker").
+	LABEL_ATTRIBUTE = "DepotLabel",
+	-- The Shop tab a locker door opens.
+	LOCKER_TAB = "lockers",
 	-- Studs: how close a player must stand (the server checks it too).
 	MAX_DISTANCE = 9,
 	-- Seconds one player waits before using the same spot again (the Interaction feature's cooldown).

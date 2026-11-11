@@ -69,3 +69,7 @@ Specs: `DepotSpotRules.spec`, `DepotStore.spec` (station), `DepotRankChartViewMo
 
 Also: the hub's small "Find a truck!" tab (DepotHubViewModel.findTruck), the bell's swing and ring wave
 (DepotSpotRules.bellSwing), the radio's music notes (DepotSpotRules.noteRate; the image waits on the owner's upload OK).
+
+Round 3 (owner 2026-11-11): a ninth spot, `locker` (`depot-spot-locker`): the Gloom and the Gleam Locker doors in the
+hub's locker row open the Shop on its Lockers tab (`ShopStore.openTab`); any spot may name itself on its prompt
+(`DepotLabel`). The radio notes image is uploaded (Icey Labs).

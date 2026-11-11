@@ -36,7 +36,7 @@ export type RoadMarker = {
 local BY_KIND: { [string]: Spot } = {}
 local BY_NAME: { [string]: Spot } = {}
 -- Every spot, in one list (iterated here: a table's keys come back as plain strings).
-local SPOTS: { Spot } = { "shop", "standee", "coffee", "crew", "rank", "radio", "bell" }
+local SPOTS: { Spot } = { "shop", "standee", "coffee", "crew", "rank", "radio", "bell", "locker" }
 for _, spot: Spot in SPOTS do
 	BY_KIND[DepotSpotConstants.KINDS[spot]] = spot
 	BY_NAME[spot] = spot

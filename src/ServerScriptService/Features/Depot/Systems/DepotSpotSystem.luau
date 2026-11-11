@@ -9,7 +9,8 @@
 	  DepotSpotConstants.EMPLOYEE_ATTRIBUTE) and the player is sent DepotEvents.Spot: the client opens what it says.
 	- The bell: each bell rests DepotSpotConstants.BELL_COOLDOWN after it rings (DepotSpotRules.bellReady, for
 	  everyone), and a ring is sent to every player (DepotEvents.Bell, the bell's position).
-	- A standee's prompt names its employee (the prompt's ObjectText), set when its prompt appears.
+	- A standee's prompt names its employee, and any spot with DepotSpotConstants.LABEL_ATTRIBUTE names itself (a Lost &
+	  Found locker door), on the prompt's ObjectText, set when its prompt appears.
 
 	Spec-exempt shell (Interaction wiring, ByteNet, Instances); the decisions are the specced DepotSpotRules.
 
@@ -60,10 +61,11 @@ local function nameStandee(target: Instance): () -> ()
 		local deadline = os.clock() + PROMPT_WAIT_SECONDS
 		while alive and os.clock() < deadline do
 			local prompt = target:FindFirstChild(InteractionConstants.PROMPT_NAME, true)
-			local employee = target:GetAttribute(DepotSpotConstants.EMPLOYEE_ATTRIBUTE)
+			local label = target:GetAttribute(DepotSpotConstants.LABEL_ATTRIBUTE)
+				or target:GetAttribute(DepotSpotConstants.EMPLOYEE_ATTRIBUTE)
 			if prompt ~= nil and prompt:IsA("ProximityPrompt") then
-				if type(employee) == "string" and employee ~= "" then
-					prompt.ObjectText = employee
+				if type(label) == "string" and label ~= "" then
+					prompt.ObjectText = label
 				end
 				return
 			end
@@ -101,7 +103,7 @@ function DepotSpotSystem.start(): () -> ()
 	local stopObserver = Observers.observeTag(InteractionConstants.TAG, function(target: Instance)
 		local kind = target:GetAttribute(InteractionConstants.KIND_ATTRIBUTE)
 		local spot = if type(kind) == "string" then DepotSpotRules.spotOf(kind) else nil
-		if spot == "standee" then
+		if spot == "standee" or target:GetAttribute(DepotSpotConstants.LABEL_ATTRIBUTE) ~= nil then
 			return nameStandee(target)
 		elseif spot == "bell" then
 			return function()

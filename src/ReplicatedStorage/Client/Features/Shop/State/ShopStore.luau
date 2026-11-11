@@ -3,8 +3,8 @@
 	ShopStore: the Shop's client state: which product page is open (`product`, nil = the Shop's front) and the last
 	buy result from the server (`result`, from ShopEvents.BuyResult) so the page can say "Need 300 more" or that it
 	is already owned. Opening another page clears the old result. `passInfo` holds each game pass's price and icon as
-	Roblox reported them (ShopServiceClient fetches them), by MarketplaceRegistry key. Charm atoms the Shop screen
-	reads.
+	Roblox reported them (ShopServiceClient fetches them), by MarketplaceRegistry key. `tab` is the tab the Shop opens on next (`openTab`, the hub's Lost & Found lockers).
+	Charm atoms the Shop screen reads.
 
 	@class ShopStore
 ]=]
@@ -24,12 +24,16 @@ local product = Charm.atom(noProduct)
 local noResult: Result? = nil
 local result = Charm.atom(noResult)
 local noPasses: { [string]: PassInfo } = {}
+-- The tab the Shop opens on next (the hub's Lost & Found lockers open it on "lockers"); nil: the Featured tab.
+local noTab: string? = nil
+local tab = Charm.atom(noTab)
 local passInfo = Charm.atom(noPasses)
 
 local ShopStore = {
 	product = product,
 	result = result,
 	passInfo = passInfo,
+	tab = tab,
 }
 
 function ShopStore.setPassInfo(key: string, info: PassInfo)
@@ -41,6 +45,14 @@ end
 function ShopStore.open(id: string?)
 	product(id)
 	result(nil)
+	tab(nil)
+end
+
+-- Opens the Shop on a tab (no item page): the next ShopScene mount starts there.
+function ShopStore.openTab(id: string)
+	product(nil)
+	result(nil)
+	tab(id)
 end
 
 function ShopStore.close()
@@ -57,6 +69,7 @@ function ShopStore.reset()
 	product(nil)
 	result(nil)
 	passInfo({})
+	tab(nil)
 end
 
 return ShopStore

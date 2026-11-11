@@ -30,7 +30,7 @@ return function()
 
 	describe("open", function()
 		it("opens every plain spot", function()
-			for _, spot in { "shop", "coffee", "crew", "rank", "radio", "bell" } do
+			for _, spot in { "shop", "coffee", "crew", "rank", "radio", "bell", "locker" } do
 				local opened = DepotSpotRules.open(spot, nil)
 				expect(opened).to.be.ok()
 				expect(opened.spot).to.equal(spot)

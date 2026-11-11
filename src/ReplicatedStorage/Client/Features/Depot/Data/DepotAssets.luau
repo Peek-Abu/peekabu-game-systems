@@ -47,13 +47,13 @@ for id, def in SOUNDS do
 	end
 end
 
--- The radio's music-note flipbook image (see RADIO_NOTES below); nil until uploaded.
-local RADIO_NOTES: string? = nil
+-- The radio's music-note flipbook image (see RADIO_NOTES below): Icey Labs decal 81235055229989, its image.
+local RADIO_NOTES: string? = "rbxassetid://84887799913082"
 
 return table.freeze({
 	SOUNDS = table.freeze(SOUNDS),
 	HUB_THEME = "depotHubTheme",
 	-- The radio's music notes: a 2x2 flipbook (two notes, a beamed pair, a sparkle) in gold and mint
-	-- (design/production-art/hub-dressing/radio_notes_flipbook.png). Nil until the owner OKs the upload: no notes.
+	-- (design/production-art/hub-dressing/radio_notes_flipbook.png). Uploaded with the owner's OK (2026-11-11).
 	RADIO_NOTES = RADIO_NOTES,
 })
