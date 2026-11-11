@@ -18,7 +18,8 @@
 	the crack lands on the same frame as the chase sting. No PA since 2026-10-16. And the hider's reveal: while he looks under their spot or tips his head under their
 	desk, their camera draws back into the spot and follows his face (OccupantTellRules.revealed), his face lit for them
 	alone (OccupantFaceLightSystem). Reads only
-	replicated state. Pending sounds are skipped silently and counted.
+	replicated state. Each of his sounds is the rig's kind's (OccupantKindRegistry.soundsOf: Bramble has none of Harlow's,
+	so for it this plays nothing but the reveal). Pending sounds are skipped silently and counted.
 
 	Spec-exempt shell (Sound, Instances, RunService); the choices are the specced OccupantTellRules.
 
@@ -32,6 +33,7 @@ local RunService = game:GetService("RunService")
 
 local OccupantAssets = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantAssets)
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
+local OccupantKindRegistry = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantKindRegistry)
 local OccupantTellRules = require(ReplicatedStorage.Shared.Features.Occupant.Rules.OccupantTellRules)
 local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundRegistry)
 local SoundTypes = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundTypes)
@@ -77,7 +79,11 @@ local counters = {
 	pending = 0,
 }
 
-local function play(id: string, options: SoundTypes.PlayOptions?): SoundServiceClient.SoundHandle?
+local function play(id: string?, options: SoundTypes.PlayOptions?): SoundServiceClient.SoundHandle?
+	-- The kind has no sound for this moment (Bramble plays none of Harlow's).
+	if id == nil then
+		return nil
+	end
 	if not SoundRegistry.has(id) then
 		counters.pending += 1
 		return nil
@@ -161,6 +167,8 @@ local function step()
 		stage = "none"
 		return
 	end
+	-- The rig's kind's own sounds (Bramble has none of Harlow's).
+	local sounds = OccupantKindRegistry.soundsOf(OccupantKindRegistry.kindOf(model))
 	local modeValue = model:GetAttribute(OccupantConstants.MODE_ATTRIBUTE)
 	local phaseValue = model:GetAttribute(OccupantConstants.PHASE_ATTRIBUTE)
 	local mode = if type(modeValue) == "string" then modeValue else nil
@@ -168,7 +176,7 @@ local function step()
 	-- His typing, and the ambush.
 	if OccupantTellRules.typing(mode, phase) then
 		if typing == nil then
-			typing = play("harlowTyping", { at = head })
+			typing = play(sounds.typing, { at = head })
 			if typing ~= nil then
 				counters.typingStarts += 1
 			end
@@ -178,17 +186,17 @@ local function step()
 	end
 	if OccupantTellRules.sat(lastPhase, phase) then
 		counters.sits += 1
-		play("harlowSit", { at = head })
+		play(sounds.sit, { at = head })
 	end
 	if phase == "ambush" and lastPhase ~= "ambush" then
 		counters.ambushes += 1
-		play("harlowAmbush", { at = head })
+		play(sounds.ambush, { at = head })
 	elseif OccupantTellRules.rose(lastPhase, phase) then
 		swivel(head)
 	end
 	if OccupantTellRules.alerted(lastMode, mode, phase) then
 		counters.turns += 1
-		play("harlowAmbush", { at = head })
+		play(sounds.ambush, { at = head })
 	end
 	lastPhase = phase
 	lastMode = mode
@@ -214,7 +222,7 @@ local function step()
 	if stage == "far" and now >= nextClick then
 		nextClick = now + within(OccupantConstants.PEN_CLICK)
 		counters.clicks += 1
-		play("harlowCurious", { at = head, volumeScale = 0.7 })
+		play(sounds.curious, { at = head, volumeScale = 0.7 })
 	end
 end
 
@@ -229,6 +237,9 @@ end
 -- Every frame: the slow turn's creak and the jerk's crack (behaviours design §11), on the frame the phase replicates.
 local function turnSounds()
 	local model, head = harlow()
+	local sounds = OccupantKindRegistry.soundsOf(
+		if model ~= nil then OccupantKindRegistry.kindOf(model) else OccupantKindRegistry.DEFAULT
+	)
 	local value = if model ~= nil then model:GetAttribute(OccupantConstants.PHASE_ATTRIBUTE) else nil
 	local phase = if type(value) == "string" then value else ""
 	if phase == turnPhase then
@@ -243,11 +254,11 @@ local function turnSounds()
 		stopCreak(0)
 		counters.creaks += 1
 		creakAt = os.clock()
-		creak = play("harlowCreak", { at = head })
+		creak = play(sounds.creak, { at = head })
 	end
 	if head ~= nil and OccupantTellRules.jerked(turnPhase, phase) then
 		counters.cracks += 1
-		play("harlowCrack", { at = head })
+		play(sounds.crack, { at = head })
 	end
 	turnPhase = phase
 end

@@ -3,7 +3,9 @@
 	OccupantKindRegistry: every monster kind the Occupant feature can run (the map-agnostic roster, plan
 	docs/superpowers/plans/2026-11-11-odd-hours-monster-roster-bramble.md). A kind is data: its rig template under
 	ReplicatedStorage, whether it has painted faces, its speeds, which behaviour blocks it uses, its twist, and the
-	player-facing words a run with it uses (`wordsOf`: its name in "Caught by ...", its first-catch and overtime tips).
+	player-facing words a run with it uses (`wordsOf`: its name in "Caught by ...", its first-catch and overtime tips),
+	its voice (`voiceOf`; Bramble has none) and its own sounds (`soundsOf`, `footstepSetOf`; Bramble plays none of
+	Harlow's).
 
 	- `harlow`: today's manager, unchanged (his template, faces and speeds; every block; no twist).
 	- `bramble`: the School's owl mascot. No painted face swap (its buttons and stitched smile are the model), never
@@ -44,6 +46,42 @@ export type Words = {
 	overtimeTip: string,
 }
 
+-- A kind's voice: its lines per cue (OccupantTypes.Cue; the server picks one, OccupantFeedbackUtils.pickLine), the
+-- fallback line per cue, and the clips the client voices a line with (OccupantFeedbackUtils.clipFor). A kind with no
+-- voice never says a line.
+export type Voice = {
+	lines: { [string]: { string } },
+	fallback: { [string]: string },
+	clips: { string },
+}
+
+-- A kind's own sounds: OccupantAssets.SOUNDS ids per slot (nil: that moment is silent for this kind), and its
+-- footsteps' FootstepAssets set (nil: its steps are silent). The chase music, the "spotted" sting, the heartbeat,
+-- the dread, the desk swivel and the Rehired punch are every kind's (the roster plan reuses them).
+export type Sounds = {
+	-- A loop on its head while it is out (Harlow's pen tapping).
+	mutter: string?,
+	-- It heard something, and the far warning's click.
+	curious: string?,
+	-- It gave up a search.
+	sigh: string?,
+	-- At a desk: the typing loop, sitting down, the ambush (and the alert turn).
+	typing: string?,
+	sit: string?,
+	ambush: string?,
+	-- The slow turn's creak and the jerk's crack.
+	creak: string?,
+	crack: string?,
+	-- The catch: the caught player's sting, the throw's stamp, and for everyone near its grab and the power-down.
+	catchSting: string?,
+	catchStamp: string?,
+	grab: string?,
+	powerDown: string?,
+	-- A freeze kind moving again.
+	unfreeze: string?,
+	footsteps: string?,
+}
+
 export type Kind = {
 	id: KindId,
 	-- The art-owned rig Model under ReplicatedStorage (never in the source tree).
@@ -55,6 +93,8 @@ export type Kind = {
 	blocks: Blocks,
 	freeze: FreezeTwist?,
 	words: Words,
+	voice: Voice?,
+	sounds: Sounds,
 }
 
 local HARLOW: Kind = {
@@ -66,6 +106,27 @@ local HARLOW: Kind = {
 	blocks = { desks = true, stares = true },
 	freeze = nil,
 	words = { caughtBy = "the Manager", catchTip = "firstCatch", overtimeTip = "overtime" },
+	voice = {
+		lines = OccupantConstants.LINE_VARIANTS,
+		fallback = OccupantConstants.LINES,
+		clips = OccupantAssets.GIBBERISH,
+	},
+	sounds = {
+		mutter = "harlowMutter",
+		curious = "harlowCurious",
+		sigh = "harlowSigh",
+		typing = "harlowTyping",
+		sit = "harlowSit",
+		ambush = "harlowAmbush",
+		creak = "harlowCreak",
+		crack = "harlowCrack",
+		catchSting = "harlowCatchSting",
+		catchStamp = "catchFired",
+		grab = "harlowGrab",
+		powerDown = "harlowPowerDown",
+		unfreeze = nil,
+		footsteps = "harlow",
+	},
 }
 
 local BRAMBLE: Kind = {
@@ -81,6 +142,27 @@ local BRAMBLE: Kind = {
 		trail = true,
 	},
 	words = { caughtBy = "Bramble", catchTip = "firstCatchBramble", overtimeTip = "overtimeBramble" },
+	-- No voice: Bramble never speaks (none of Harlow's lines, no barks).
+	voice = nil,
+	-- None of Harlow's sounds. Its catch and unfreeze are its own empty slots (PENDING in OccupantAssets, silent) until
+	-- the owner-approved Bramble sound round; its footsteps (the plan's soft foam thump) wait for a `bramble`
+	-- FootstepAssets set, so its steps are silent until then.
+	sounds = {
+		mutter = nil,
+		curious = nil,
+		sigh = nil,
+		typing = nil,
+		sit = nil,
+		ambush = nil,
+		creak = nil,
+		crack = nil,
+		catchSting = "brambleCatch",
+		catchStamp = nil,
+		grab = nil,
+		powerDown = nil,
+		unfreeze = "brambleUnfreeze",
+		footsteps = nil,
+	},
 }
 
 local IDS: { KindId } = { "bramble", "harlow" }
@@ -127,6 +209,29 @@ end
 function OccupantKindRegistry.wordsOf(id: string): Words
 	local kind = OccupantKindRegistry.get(id)
 	return if kind ~= nil then kind.words else HARLOW.words
+end
+
+--[=[
+	Kind `id`'s voice (nil: it never speaks); Harlow's for an unknown id.
+]=]
+function OccupantKindRegistry.voiceOf(id: string): Voice?
+	local kind = OccupantKindRegistry.get(id)
+	return if kind ~= nil then kind.voice else HARLOW.voice
+end
+
+--[=[
+	Kind `id`'s own sounds; Harlow's for an unknown id.
+]=]
+function OccupantKindRegistry.soundsOf(id: string): Sounds
+	local kind = OccupantKindRegistry.get(id)
+	return if kind ~= nil then kind.sounds else HARLOW.sounds
+end
+
+--[=[
+	The footstep set of a rig (its kind's; nil: its steps are silent). Footstep's TAG_SETS resolver for the Occupant tag.
+]=]
+function OccupantKindRegistry.footstepSetOf(model: Instance): string?
+	return OccupantKindRegistry.soundsOf(OccupantKindRegistry.kindOf(model)).footsteps
 end
 
 --[=[

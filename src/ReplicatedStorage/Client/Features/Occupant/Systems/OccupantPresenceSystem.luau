@@ -3,6 +3,8 @@
 	OccupantPresenceSystem: how Mr. Harlow sounds on this client (Cleanup Crew spec §4 "Tells": "heartbeat when he
 	is near but hasn't seen you; 3D footsteps and muttering through walls; '!' + sting + chase music when he spots
 	you; a sigh when he gives up"; "Voice": "pitched, distorted gibberish plus a speech bubble with the line").
+	- Each sound below is the rig's kind's (OccupantKindRegistry.soundsOf / voiceOf: Bramble has no voice and none of
+	  Harlow's sounds; the sting and the chase music are every kind's).
 	- A muttering loop on his head. (His footsteps are FootstepServiceClient's, played as his feet land.)
 	- His mode changes (OccupantFeedbackUtils.cues): a "hm?" when he investigates, the sting whenever a chase starts
 	  (on you: the chase music's own sting bar, 2D, however it started; positional "spotted" otherwise), the chase music
@@ -37,6 +39,7 @@ local OccupantShared = ReplicatedStorage.Shared.Features.Occupant
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local OccupantAssets = require(OccupantShared.Data.OccupantAssets)
 local OccupantConstants = require(OccupantShared.Data.OccupantConstants)
+local OccupantKindRegistry = require(OccupantShared.Data.OccupantKindRegistry)
 local OccupantFeedbackUtils = require(OccupantShared.Utils.OccupantFeedbackUtils)
 local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundRegistry)
 local SoundTypes = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundTypes)
@@ -47,6 +50,9 @@ type Harlow = {
 	model: Model,
 	root: BasePart,
 	head: BasePart,
+	-- The rig's kind's voice (nil: it never speaks) and own sounds (OccupantKindRegistry).
+	voice: OccupantKindRegistry.Voice?,
+	sounds: OccupantKindRegistry.Sounds,
 }
 
 export type OccupantPresenceState = {
@@ -91,7 +97,11 @@ local warm: { Sound } = {}
 -- Idle voices kept on his head: the mutter and typing loops, the three-layer swivel and a tell or voice line over them.
 local HEAD_VOICES = 6
 
-local function play(id: string, options: SoundTypes.PlayOptions?): SoundServiceClient.SoundHandle?
+local function play(id: string?, options: SoundTypes.PlayOptions?): SoundServiceClient.SoundHandle?
+	-- The kind has no sound for this moment (Bramble plays none of Harlow's).
+	if id == nil then
+		return nil
+	end
 	if OccupantAssets.SOUNDS[id] == nil then
 		log:warn(`"{id}" is not an OccupantAssets sound`)
 		return nil
@@ -110,7 +120,14 @@ local function find(): Harlow?
 			local root = instance:FindFirstChild("HumanoidRootPart")
 			local head = instance:FindFirstChild("Head")
 			if root ~= nil and root:IsA("BasePart") and head ~= nil and head:IsA("BasePart") then
-				return { model = instance, root = root, head = head }
+				local kind = OccupantKindRegistry.kindOf(instance)
+				return {
+					model = instance,
+					root = root,
+					head = head,
+					voice = OccupantKindRegistry.voiceOf(kind),
+					sounds = OccupantKindRegistry.soundsOf(kind),
+				}
 			end
 		end
 	end
@@ -148,11 +165,12 @@ local function onSpeech(model: Model)
 	end
 	counters.lines += 1
 	local harlow = current
-	if harlow == nil or not OccupantFeedbackUtils.voiced(text) then
+	local voice = if harlow ~= nil then harlow.voice else nil
+	if harlow == nil or voice == nil or not OccupantFeedbackUtils.voiced(text) then
 		return
 	end
 	local uploaded: { string } = {}
-	for _, id in OccupantAssets.GIBBERISH do
+	for _, id in voice.clips do
 		if SoundRegistry.has(id) then
 			table.insert(uploaded, id)
 		end
@@ -204,7 +222,7 @@ local function attach(harlow: Harlow)
 	SoundServiceClient:prewarm(harlow.head, HEAD_VOICES)
 	lastMode = nil
 	lastMine = false
-	mutter = play("harlowMutter", { at = harlow.head })
+	mutter = play(harlow.sounds.mutter, { at = harlow.head })
 	local model = harlow.model
 	speechConnection = model:GetAttributeChangedSignal(OccupantConstants.LINE_ATTRIBUTE):Connect(function()
 		onSpeech(model)
@@ -232,7 +250,7 @@ end
 local function onCue(cue: string, harlow: Harlow, mine: boolean)
 	counters.cues += 1
 	if cue == "curious" then
-		play("harlowCurious", { at = harlow.head })
+		play(harlow.sounds.curious, { at = harlow.head })
 	elseif cue == "spotted" then
 		counters.stings += 1
 		-- On you, the chase music's sting bar is the sting (chaseStart, next in the same list).
@@ -240,7 +258,7 @@ local function onCue(cue: string, harlow: Harlow, mine: boolean)
 			play("harlowSpotted", { at = harlow.head, volumeScale = 0.6 })
 		end
 	elseif cue == "giveUp" then
-		play("harlowSigh", { at = harlow.head })
+		play(harlow.sounds.sigh, { at = harlow.head })
 	elseif cue == "chaseStart" then
 		setMusic(true)
 	elseif cue == "chaseEnd" then

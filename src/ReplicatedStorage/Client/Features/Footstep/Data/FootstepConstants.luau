@@ -11,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local FootstepTypes = require(ReplicatedStorage.Client.Features.Footstep.Data.FootstepTypes)
 local CrouchConstants = require(ReplicatedStorage.Shared.Features.Crouch.Data.CrouchConstants)
+local OccupantKindRegistry = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantKindRegistry)
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 
 type Surface = FootstepTypes.Surface
@@ -75,8 +76,9 @@ return table.freeze({
 	SET_ATTRIBUTE = "FootstepSet",
 	-- A character's attribute: crouching (CrouchServiceServer sets it; the crouch gait).
 	CROUCH_ATTRIBUTE = CrouchConstants.CROUCHING_ATTRIBUTE,
-	-- The set for a tagged non-player character.
-	TAG_SETS = table.freeze({ [OccupantConstants.TAG] = "harlow" }),
+	-- The set for a tagged non-player character, read off the model (nil: its steps are silent): the monster's is its
+	-- kind's (OccupantKindRegistry.footstepSetOf: Harlow's heels; none for Bramble until its own set exists).
+	TAG_SETS = table.freeze({ [OccupantConstants.TAG] = OccupantKindRegistry.footstepSetOf }),
 	-- The set for a player character without an employee set of its own.
 	DEFAULT_SET = "default",
 	MATERIAL_SURFACES = table.freeze(MATERIAL_SURFACES),

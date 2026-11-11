@@ -16,7 +16,7 @@
 	  the shift. Their private incident report (room, shift clock, what they dropped) is sent
 	  (OccupantEvents.CatchReport) for the OUT FOR THE SHIFT screen.
 
-	At the throw he says the line ("You're FIRED!", not during the scare), and `hooks.onCaught` does the rest:
+	At the throw he says the line ("You're FIRED!", not during the scare; a kind with no voice, Bramble, says nothing), and `hooks.onCaught` does the rest:
 	`caught` counts the catch for Shift and toasts the crew ("got caught!" for a hit, "out for the shift" for the
 	last). The Rehired notice (`watchRehires`, `rehired`, `dropRehires`) is kept for a catch that publishes a
 	back-at time; afterCatch publishes none today. `standUpAll` gets everyone this system knocked down back up when
@@ -183,8 +183,12 @@ function OccupantCatchSystem.begin(rig: OccupantRigSystem.Rig, player: Player, h
 			knocked[userId] = player
 			DeathServiceServer:knockdown(player, velocity, OccupantConstants.KNOCKDOWN_SECONDS)
 		end
-		-- Figma 4a: the line comes with the throw, not the scare.
-		OccupantRigSystem.say(rig, OccupantConstants.LINES.caught)
+		-- Figma 4a: the line comes with the throw, not the scare; only a kind with a voice says it (Bramble has none).
+		local voice = OccupantKindRegistry.voiceOf(OccupantKindRegistry.kindOf(rig.model))
+		local caughtLine = if voice ~= nil then voice.fallback.caught else nil
+		if caughtLine ~= nil then
+			OccupantRigSystem.say(rig, caughtLine)
+		end
 		if after.publishBack ~= nil then
 			StateSyncPublicPlayerStore.set(userId, { [OccupantConstants.PUBLIC_CAUGHT_UNTIL] = after.publishBack })
 		end

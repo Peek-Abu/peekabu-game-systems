@@ -157,4 +157,110 @@ return function()
 			expect(OccupantKindRegistry.wordsOf("substitute")).to.equal(OccupantKindRegistry.wordsOf("harlow"))
 		end)
 	end)
+
+	describe("voice", function()
+		it("keeps Harlow's voice: his lines, his fallback lines and his clips", function()
+			local voice = OccupantKindRegistry.voiceOf("harlow")
+			expect(voice).to.be.ok()
+			expect(voice.lines).to.equal(OccupantConstants.LINE_VARIANTS)
+			expect(voice.fallback).to.equal(OccupantConstants.LINES)
+			expect(voice.fallback.caught).to.equal("You're FIRED!")
+			expect(voice.clips).to.equal(OccupantAssets.GIBBERISH)
+		end)
+
+		it("gives Bramble no voice at all", function()
+			expect(OccupantKindRegistry.voiceOf("bramble")).to.equal(nil)
+		end)
+
+		it("is Harlow's for an unknown kind", function()
+			expect(OccupantKindRegistry.voiceOf("substitute")).to.equal(OccupantKindRegistry.voiceOf("harlow"))
+		end)
+	end)
+
+	describe("sounds", function()
+		local SLOTS = {
+			"mutter",
+			"curious",
+			"sigh",
+			"typing",
+			"sit",
+			"ambush",
+			"creak",
+			"crack",
+			"catchSting",
+			"catchStamp",
+			"grab",
+			"powerDown",
+			"unfreeze",
+		}
+
+		it("keeps every one of Harlow's sounds where it was", function()
+			local sounds = OccupantKindRegistry.soundsOf("harlow")
+			expect(sounds.mutter).to.equal("harlowMutter")
+			expect(sounds.curious).to.equal("harlowCurious")
+			expect(sounds.sigh).to.equal("harlowSigh")
+			expect(sounds.typing).to.equal("harlowTyping")
+			expect(sounds.sit).to.equal("harlowSit")
+			expect(sounds.ambush).to.equal("harlowAmbush")
+			expect(sounds.creak).to.equal("harlowCreak")
+			expect(sounds.crack).to.equal("harlowCrack")
+			expect(sounds.catchSting).to.equal("harlowCatchSting")
+			expect(sounds.catchStamp).to.equal("catchFired")
+			expect(sounds.grab).to.equal("harlowGrab")
+			expect(sounds.powerDown).to.equal("harlowPowerDown")
+			expect(sounds.unfreeze).to.equal(nil)
+			expect(sounds.footsteps).to.equal("harlow")
+		end)
+
+		it("never gives Bramble one of Harlow's sounds or steps", function()
+			local sounds = OccupantKindRegistry.soundsOf("bramble")
+			for _, slot in SLOTS do
+				local id = sounds[slot]
+				if id ~= nil then
+					expect(string.find(id, "harlow", 1, true)).to.equal(nil)
+					expect(id).never.to.equal("catchFired")
+				end
+			end
+			expect(sounds.footsteps).to.equal(nil)
+			expect(sounds.mutter).to.equal(nil)
+			expect(sounds.curious).to.equal(nil)
+			expect(sounds.sigh).to.equal(nil)
+		end)
+
+		it("leaves Bramble's catch and unfreeze as its own named slots, silent until uploaded", function()
+			local sounds = OccupantKindRegistry.soundsOf("bramble")
+			expect(sounds.catchSting).to.equal("brambleCatch")
+			expect(sounds.unfreeze).to.equal("brambleUnfreeze")
+			for _, id in { "brambleCatch", "brambleUnfreeze" } do
+				expect(OccupantAssets.SOUNDS[id]).to.be.ok()
+				expect(OccupantAssets.SOUNDS[id].assetId).to.equal(OccupantAssets.PENDING)
+			end
+		end)
+
+		it("names only OccupantAssets sounds", function()
+			for _, kindId in OccupantKindRegistry.ids() do
+				local sounds = OccupantKindRegistry.soundsOf(kindId)
+				for _, slot in SLOTS do
+					local id = sounds[slot]
+					if id ~= nil then
+						expect(OccupantAssets.SOUNDS[id]).to.be.ok()
+					end
+				end
+			end
+		end)
+
+		it("is Harlow's for an unknown kind", function()
+			expect(OccupantKindRegistry.soundsOf("substitute")).to.equal(OccupantKindRegistry.soundsOf("harlow"))
+		end)
+	end)
+
+	describe("footstepSetOf", function()
+		it("is a rig's kind's footstep set: Harlow's heels for him, none for Bramble", function()
+			local harlow = Instance.new("Model")
+			expect(OccupantKindRegistry.footstepSetOf(harlow)).to.equal("harlow")
+			local bramble = Instance.new("Model")
+			bramble:SetAttribute(OccupantConstants.KIND_ATTRIBUTE, "bramble")
+			expect(OccupantKindRegistry.footstepSetOf(bramble)).to.equal(nil)
+		end)
+	end)
 end

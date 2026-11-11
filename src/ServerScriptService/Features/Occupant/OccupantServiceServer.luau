@@ -180,12 +180,16 @@ local function applyTuning()
 	NoiseServiceServer:setHearingScale(tuning.hearing)
 end
 
--- What he shows, and a line for a cue.
+-- What he shows, and a line for a cue (in the running kind's voice; a kind with none, Bramble, never says one).
 local function show(current: OccupantRigSystem.Rig, nextMind: OccupantTypes.Mind, cue: OccupantTypes.Cue?)
 	OccupantRigSystem.present(current, OccupantTellRules.view(nextMind, os.clock()))
-	local variants = if cue ~= nil then OccupantConstants.LINE_VARIANTS[cue] else nil
+	local voice = OccupantKindRegistry.voiceOf(currentKind)
+	if voice == nil or cue == nil then
+		return
+	end
+	local variants = voice.lines[cue]
 	local line = if variants ~= nil then OccupantFeedbackUtils.pickLine(variants, rng:NextNumber(), lastLine) else nil
-	line = line or OccupantTellRules.lineFor(cue)
+	line = line or voice.fallback[cue]
 	if line ~= nil then
 		lastLine = line
 		OccupantRigSystem.say(current, line)

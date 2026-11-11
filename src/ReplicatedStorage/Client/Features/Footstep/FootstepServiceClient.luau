@@ -4,8 +4,9 @@
 	(FootstepEmitterSystem: a step plays the frame a foot lands, only while the character moves on the ground).
 
 	- Who: every player's character (its set: the FootstepSet attribute, else its EmployeeName in lower case when
-	  FootstepAssets has that set, else `default`) and every model tagged with a FootstepConstants.TAG_SETS tag (the
-	  Manager: `harlow`).
+	  FootstepAssets has that set, else `default`) and every model tagged with a FootstepConstants.TAG_SETS tag, whose
+	  resolver names its set (the monster: its kind's, `harlow` for the Manager; a model it names no set for, Bramble
+	  for now, is not followed, so its steps are silent).
 	- Gait: hidden (the player's HideSpotId attribute), crouching (the character's Crouching attribute, CrouchServiceServer's),
 	  sprinting (the player's Sprinting attribute, the server's decision); an NPC walks, louder as it speeds up.
 	- Roblox's own character sounds (RbxCharacterSounds' running loop, jump, landing, wind, climb, swim, get-up and the
@@ -261,13 +262,21 @@ local function unfollowPlayer(player: Player)
 	end
 end
 
-local function followTagged(tag: string, setName: string)
+local function followTagged(tag: string, setOf: (model: Instance) -> string?)
 	local function onTagged(instance: Instance)
 		if instance:IsA("Model") then
 			local model = instance
+			local named = model:GetAttribute(FootstepConstants.SET_ATTRIBUTE)
+			local setName = if type(named) == "string" and FootstepAssets.SETS[named] ~= nil
+				then named
+				else setOf(model)
+			-- No set: its steps are silent (it is not followed).
+			if setName == nil or FootstepAssets.SETS[setName] == nil then
+				return
+			end
+			local chosen: string = setName
 			follow(model, function()
-				local named = model:GetAttribute(FootstepConstants.SET_ATTRIBUTE)
-				return if type(named) == "string" and FootstepAssets.SETS[named] ~= nil then named else setName
+				return chosen
 			end, function(): GaitInput
 				return { hidden = false, crouching = crouching(model), sprinting = false }
 			end)
@@ -392,8 +401,8 @@ local FootstepServiceClient: FootstepServiceClient = {
 				unfollowPlayer(player)
 			end
 		end)
-		for tag, setName in FootstepConstants.TAG_SETS do
-			followTagged(tag, setName)
+		for tag, setOf in FootstepConstants.TAG_SETS do
+			followTagged(tag, setOf)
 		end
 		local beat = RunService.Heartbeat:Connect(step)
 		table.insert(stoppers, function()

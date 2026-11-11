@@ -5,7 +5,8 @@
 	only the caught player gets) plays the distorted sting and, for SNAP_SECONDS, on the fallback body only (the Smile
 	Mask shows its own Hunting face), puts a grin over his face that stretches wide: the uploaded grin image (OccupantAssets.IMAGES.grin) or, while it is pending, a cartoon grin
 	built from frames (white eyes, a wide toothy mouth). `lightsOut` (everyone) plays the power-down and his grab
-	where it happened. The camera, the red screen and the dark lights are M2's (OccupantServiceClient,
+	where it happened. Every sound is the running rig's kind's (OccupantKindRegistry.soundsOf): Bramble's catch is its
+	own empty slot, and it has no stamp, grab or power-down. The camera, the red screen and the dark lights are M2's (OccupantServiceClient,
 	OccupantTellSystem).
 
 	Spec-exempt shell (Instances, tweens, Sound).
@@ -21,6 +22,7 @@ local OccupantShared = ReplicatedStorage.Shared.Features.Occupant
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local OccupantAssets = require(OccupantShared.Data.OccupantAssets)
 local OccupantConstants = require(OccupantShared.Data.OccupantConstants)
+local OccupantKindRegistry = require(OccupantShared.Data.OccupantKindRegistry)
 local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundRegistry)
 local SoundTypes = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundTypes)
 local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
@@ -37,7 +39,11 @@ export type OccupantScareState = {
 
 local counters: OccupantScareState = { scares = 0, grins = 0, lightsOut = 0, played = 0, pending = 0 }
 
-local function play(id: string, options: SoundTypes.PlayOptions?)
+local function play(id: string?, options: SoundTypes.PlayOptions?)
+	-- The kind has no sound for this moment (Bramble plays none of Harlow's).
+	if id == nil then
+		return
+	end
 	if OccupantAssets.SOUNDS[id] == nil then
 		log:warn(`"{id}" is not an OccupantAssets sound`)
 		return
@@ -58,6 +64,14 @@ local function headOf(): BasePart?
 		end
 	end
 	return nil
+end
+
+-- The running rig's kind's own sounds (Harlow's when none is found).
+local function sounds(): OccupantKindRegistry.Sounds
+	for _, instance in CollectionService:GetTagged(OccupantConstants.TAG) do
+		return OccupantKindRegistry.soundsOf(OccupantKindRegistry.kindOf(instance))
+	end
+	return OccupantKindRegistry.soundsOf(OccupantKindRegistry.DEFAULT)
 end
 
 local function frame(parent: Instance, size: UDim2, position: UDim2, color: Color3, round: boolean): Frame
@@ -102,11 +116,16 @@ local OccupantScareSystem = {}
 ]=]
 function OccupantScareSystem.snap()
 	counters.scares += 1
-	play("harlowCatchSting")
-	-- FIRED: its stamp lands on the throw, SNAP_SECONDS after the catch (OccupantCatchSystem).
-	task.delay(math.max(0, OccupantConstants.SNAP_SECONDS - OccupantAssets.FIRED_HIT), function()
-		play("catchFired")
-	end)
+	local own = sounds()
+	play(own.catchSting)
+	-- FIRED (Harlow's stamp; a kind without one has none): it lands on the throw, SNAP_SECONDS after the catch
+	-- (OccupantCatchSystem).
+	local stamp = own.catchStamp
+	if stamp ~= nil then
+		task.delay(math.max(0, OccupantConstants.SNAP_SECONDS - OccupantAssets.FIRED_HIT), function()
+			play(stamp)
+		end)
+	end
 	local head = headOf()
 	-- The Smile Mask has its own Hunting face (the server shows it): the grin is only for the fallback body.
 	if head == nil or (head.Parent ~= nil and head.Parent:FindFirstChild(OccupantAssets.FACE_PLATE) ~= nil) then
@@ -147,8 +166,9 @@ end
 ]=]
 function OccupantScareSystem.lightsOut(position: Vector3)
 	counters.lightsOut += 1
-	play("harlowPowerDown", { at = position })
-	play("harlowGrab", { at = position })
+	local own = sounds()
+	play(own.powerDown, { at = position })
+	play(own.grab, { at = position })
 end
 
 --[=[
