@@ -6,7 +6,7 @@
 	dim red in overtime; the depot's warm evening while the local player is in the hub); in overtime a red screen
 	tint and red ceiling lights; the office bed (its four looped beds, OfficeAssets.BED, pinned Building) while the
 	local player's crew is in a shift, with the yard bed (OfficeAssets.YARD_BED, pinned Outside) beside it when the
-	layout has grounds, so the place cut's door fade crossfades the two; and the hub's record (DepotAssets.HUB_THEME, the music slot) while they are in the hub. It is the
+	layout has grounds, so the place cut's door fade crossfades the two; and the hub radio's station (DepotStore.station; the first is the hub's record, DepotAssets.HUB_THEME; the music slot) while they are in the hub. It is the
 	one owner of Lighting and of the place's bed, so the hub and the office never fight over them. Every ATMOSPHERE_INTERVAL the broken lights near the
 	camera (OfficeLightUtils) blink, with a zap as a burst of blinks starts (OfficeLightUtils.zaps: once per burst, spaced
 	per tube and across tubes). It changes only a light's Color, Transparency and
@@ -37,9 +37,11 @@ local Workspace = game:GetService("Workspace")
 
 local OfficeClient = ReplicatedStorage.Client.Features.Office
 local Charm = require(ReplicatedStorage.Packages.Charm)
-local DepotAssets = require(ReplicatedStorage.Client.Features.Depot.Data.DepotAssets)
+-- Registers the hub's sounds (the radio's tracks) before a station plays.
+require(ReplicatedStorage.Client.Features.Depot.Data.DepotAssets)
 local DepotAtmosphereConstants = require(ReplicatedStorage.Client.Features.Depot.Data.DepotAtmosphereConstants)
 local DepotAtmosphereUtils = require(ReplicatedStorage.Client.Features.Depot.Utils.DepotAtmosphereUtils)
+local DepotStore = require(ReplicatedStorage.Client.Features.Depot.State.DepotStore)
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local SoundRegistry = require(ReplicatedStorage.Shared.Features.Sound.Data.SoundRegistry)
@@ -188,19 +190,29 @@ local function setYard(on: boolean)
 	setBed(OfficeAssets.YARD_BED, on)
 end
 
+-- The hub radio's station (DepotStore.station; the first is the hub's record) while in the hub, else nothing.
+local function playHubStation()
+	if not hubOn then
+		SoundServiceClient:playMusic(nil)
+		return
+	end
+	local track = DepotStore.stationDef().track
+	if track == nil then
+		SoundServiceClient:playMusic(nil)
+	elseif SoundRegistry.has(track) then
+		SoundServiceClient:playMusic(track)
+	else
+		counters.pending += 1
+	end
+end
+
 -- The hub's record while the local player is in the depot (the music slot: never on while a chase could play).
 local function setHub(on: boolean)
 	if on == hubOn then
 		return
 	end
 	hubOn = on
-	if not on then
-		SoundServiceClient:playMusic(nil)
-	elseif SoundRegistry.has(DepotAssets.HUB_THEME) then
-		SoundServiceClient:playMusic(DepotAssets.HUB_THEME)
-	else
-		counters.pending += 1
-	end
+	playHubStation()
 end
 
 -- The outdoor boxes the server built (Workspace.CleanupCrewOffice.Outdoors: one invisible part per ground). None when
@@ -357,6 +369,13 @@ function OfficeAtmosphereSystem.start()
 	end
 	onSnapshot(ShiftStore.snapshot())
 	table.insert(stoppers, Charm.subscribe(ShiftStore.snapshot, onSnapshot))
+	-- The radio changed station: play it now (only while in the hub).
+	table.insert(
+		stoppers,
+		Charm.subscribe(DepotStore.station, function()
+			playHubStation()
+		end)
+	)
 	-- The cover is up: finish any blend at once (nothing behind the screen should still be fading).
 	table.insert(
 		stoppers,

@@ -25,6 +25,7 @@
 	  (DepotEvents.LastShift, held until Ready like cards) feeds the board's "last shift" card.
 	- In a hub-only server (this server runs the depot but not the shift) the depot places spawning players on
 	  its spawn points (Death's spawn resolver); where Shift runs, Shift's trip owns it.
+	- The hub's spots (Studio parts with a `depot-spot-*` Interaction kind) are answered by DepotSpotSystem.
 	- The contract board's prompt (Interaction kind DepotConstants.BOARD_KIND) sends the player Board with
 	  tonight's contract id; the depart data carries the truck number (layout order) beside the contract id,
 	  and each player's public `truck` field (DepotConstants.PUBLIC_TRUCK) follows the truck bed they stand in.
@@ -60,6 +61,7 @@ local DepotHubSystem = require(DepotServer.Systems.DepotHubSystem)
 local DepotContractUtils = require(DepotServer.Utils.DepotContractUtils)
 local DepotPlaceUtils = require(DepotServer.Utils.DepotPlaceUtils)
 local DepotBuildSystem = require(DepotServer.Systems.DepotBuildSystem)
+local DepotSpotSystem = require(DepotServer.Systems.DepotSpotSystem)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
 local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
 local QueueRegistry = require(ServerScriptService.Features.Queue.Data.QueueRegistry)
@@ -268,6 +270,8 @@ local DepotServiceServer: DepotServiceServer = {
 		InteractionServiceServer:onInteract(DepotConstants.BOARD_KIND, function(player, _target)
 			DepotEvents.packets.Board.sendTo(contract.id, player)
 		end)
+		-- The hub's spots (Supply Counter, standees, coffee, crew wall, rank chart, radio, shift bell).
+		table.insert(stoppers, DepotSpotSystem.start())
 		QueueServiceServer:setArrivalPoint(DepotConstants.ROLE_DEPOT, function(_player, index)
 			return self:spawnCFrame(index)
 		end)

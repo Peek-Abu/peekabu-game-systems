@@ -6,7 +6,8 @@
 	most MAX_QUEUED_CARDS wait; the oldest is dropped); `expire` moves on once a card's time is up. Times are
 	os.clock(). Under the transit screen the drive card is dropped (`dropDrive`) and the card waiting behind the
 	screen gets its full time once it clears (`restamp`). `board` / `lastShift` hold the contract board's open contract id and the player's last shift
-	(DepotEvents.Board / LastShift). A mirror of what the server sent; nothing here is sent back.
+	(DepotEvents.Board / LastShift): a mirror of what the server sent; nothing here is sent back. `station` is the hub
+	radio's station on this client only (`nextStation`, the radio spot; OfficeAtmosphereSystem plays its track).
 
 	@class DepotStore
 ]=]
@@ -15,6 +16,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Charm = require(ReplicatedStorage.Packages.Charm)
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
+local DepotSpotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotSpotConstants)
+local DepotSpotRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotSpotRules)
 local DepotTypes = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotTypes)
 
 type Pending = {
@@ -32,6 +35,8 @@ local initialBoard: string? = nil
 local board = Charm.atom(initialBoard)
 local initialLast: DepotTypes.LastShift? = nil
 local lastShift = Charm.atom(initialLast)
+-- The hub radio's station (an index into DepotSpotConstants.STATIONS); OfficeAtmosphereSystem plays its track.
+local station = Charm.atom(1)
 local pending: { Pending } = {}
 
 local function kindOf(value: string): DepotTypes.CardKind?
@@ -67,6 +72,7 @@ local DepotStore = {
 	-- The contract id of the open board (nil: closed), and the player's last shift for its card.
 	board = board,
 	lastShift = lastShift,
+	station = station,
 }
 
 -- Shows (or queues) a card from the server. False, and nothing shown, for an unknown kind.
@@ -162,8 +168,20 @@ function DepotStore.setLastShift(value: DepotTypes.LastShift)
 	lastShift(table.clone(value))
 end
 
+-- The radio's station now.
+function DepotStore.stationDef(): DepotSpotConstants.Station
+	return DepotSpotConstants.STATIONS[station()] or DepotSpotConstants.STATIONS[1]
+end
+
+-- The radio was used: the next station (wraps). Returns the station now playing.
+function DepotStore.nextStation(): DepotSpotConstants.Station
+	station(DepotSpotRules.nextStation(station()))
+	return DepotStore.stationDef()
+end
+
 function DepotStore.clear()
 	table.clear(pending)
+	station(1)
 	card(nil)
 	board(nil)
 	lastShift(nil)

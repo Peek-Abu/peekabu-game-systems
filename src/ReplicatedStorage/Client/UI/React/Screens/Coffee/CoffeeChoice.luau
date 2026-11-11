@@ -2,7 +2,7 @@
 --[=[
 	CoffeeChoice: how to pay for Coffee for the crew (owner 11-10). A small cream panel under the coffee button (phone:
 	under it at the top right) with the grape title band and its X, the line "2x pay for 30 minutes", and two buttons:
-	"99 R$" (lilac; Roblox's purchase prompt) and "250" with the Gleam coin (gleam). Presentational (exempt; the
+	"99 R$" (lilac; Roblox's purchase prompt) and "250" with the Gleam coin (gleam). The hub's coffee machine shows it centred with its own line. Presentational (exempt; the
 	Gleam buy is the server's, checked by the specced CoffeeRules.payGleam).
 
 	@class CoffeeChoice
@@ -29,6 +29,11 @@ export type CoffeeChoiceProps = {
 	-- sound) and the line says so (CoffeeRules.shortLine). The server checks again either way.
 	short: boolean,
 	shortLine: string,
+	-- Where it sits: by default under the coffee button (the HUD); the hub's coffee machine centres it.
+	position: UDim2?,
+	anchor: Vector2?,
+	-- Its line when the player is not short (default CoffeeConstants.TEXT.choiceLine).
+	line: string?,
 }
 
 local function CoffeeChoice(props: CoffeeChoiceProps): React.ReactNode
@@ -40,7 +45,7 @@ local function CoffeeChoice(props: CoffeeChoiceProps): React.ReactNode
 	local onRobux = props.onRobux
 	local children: { [string]: React.ReactNode } = {
 		line = e(ToonText, {
-			text = if props.short then props.shortLine else CoffeeConstants.TEXT.choiceLine,
+			text = if props.short then props.shortLine else props.line or CoffeeConstants.TEXT.choiceLine,
 			textSize = if phone then 15 else 22,
 			font = "body",
 			align = "center",
@@ -78,8 +83,8 @@ local function CoffeeChoice(props: CoffeeChoiceProps): React.ReactNode
 	end
 	return e(ToonPanel, {
 		size = Vector2.new(width, if phone then 170 else 220),
-		anchor = Vector2.new(1, 0),
-		position = if phone then UDim2.new(1, -14, 0, 138) else UDim2.new(1, -24, 0, 396),
+		anchor = props.anchor or Vector2.new(1, 0),
+		position = props.position or if phone then UDim2.new(1, -14, 0, 138) else UDim2.new(1, -24, 0, 396),
 		pop = true,
 		header = {
 			title = CoffeeConstants.TEXT.choiceTitle,

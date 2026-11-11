@@ -2,7 +2,7 @@
 --[=[
 	DepotEvents: the Depot's ByteNet packets: Card (server → client), a travel card with the contract's words, the quota and the truck number (the drive card when a
 	party's truck leaves, the arrival card when it reaches the office; the client checks the kind,
-	DepotStore.show), Board (server → client: open the contract board) and LastShift (server → client: the
+	DepotStore.show), Board (server → client: open the contract board), Spot (server → client: a hub spot used) and Bell (server → all: a shift bell rang), LastShift (server → client: the
 	returning player's last shift, for the board's card), and Ready (client → server), sent once the client is listening for cards, so the server
 	holds a card until then (an arrival card can be sent before the client has loaded).
 
@@ -58,6 +58,20 @@ local DepotEvents = ByteNet.defineNamespace(NAMESPACE, function()
 					rating = ByteNet.string,
 					truck = ByteNet.uint8,
 				}),
+				reliabilityType = "reliable",
+			}),
+			-- To one player: a hub spot they used (DepotSpotRules.open on the server, DepotSpotRules.decode on the
+			-- client): what to open, and the standee's employee ("" for any other spot).
+			Spot = ByteNet.definePacket({
+				value = ByteNet.struct({
+					spot = ByteNet.string,
+					employee = ByteNet.string,
+				}),
+				reliabilityType = "reliable",
+			}),
+			-- To everyone: a shift bell rang here (its world position).
+			Bell = ByteNet.definePacket({
+				value = ByteNet.vec3,
 				reliabilityType = "reliable",
 			}),
 			-- Payload unused; the packet is the signal that this client now listens for Card.

@@ -9,7 +9,8 @@
 	to depart now) replaces Queue's placeholder pad widget, which init hides
 	with QueueServiceClient:setDefaultWidget(false); the depot's world signs (truck tags, the boards) are drawn by DepotBillboardSystem into the shells the server builds;
 	the trucks' scanner arches flash on each bank (DepotTruckScannerSystem), and an empty hub bay shows a ghost truck
-	that pops in solid when a host steps in (DepotTruckGhostSystem). While Shift's transit screen covers the view
+	that pops in solid when a host steps in (DepotTruckGhostSystem). The hub's spots open what the server says
+	(DepotSpotSystem) and a delivery truck drives past the yard now and then (DepotDriveBySystem). While Shift's transit screen covers the view
 	(ShiftTransitStore.covered) no card runs out: the drive card is dropped when the route slip comes up, and the card
 	behind the screen (the arrival folder) gets its full time once it clears.
 
@@ -37,6 +38,8 @@ local ShiftTransitStore = require(ReplicatedStorage.Client.Features.Shift.State.
 local QueueServiceClient = require(ReplicatedStorage.Client.Features.Queue.QueueServiceClient)
 local HostServiceClient = require(ReplicatedStorage.Client.Features.Host.HostServiceClient)
 local DepotTruckGhostSystem = require(ReplicatedStorage.Client.Features.Depot.Systems.DepotTruckGhostSystem)
+local DepotSpotSystem = require(ReplicatedStorage.Client.Features.Depot.Systems.DepotSpotSystem)
+local DepotDriveBySystem = require(ReplicatedStorage.Client.Features.Depot.Systems.DepotDriveBySystem)
 local SocialServiceClient = require(ReplicatedStorage.Client.Features.Social.SocialServiceClient)
 local MarketplaceServiceClient = require(ReplicatedStorage.Client.Features.Marketplace.MarketplaceServiceClient)
 local HostConstants = require(ReplicatedStorage.Shared.Features.Host.Data.HostConstants)
@@ -174,6 +177,9 @@ local DepotServiceClient: DepotServiceClient = {
 					SceneStack.remove(InventoryViewModel.SCENE)
 					SceneStack.remove(ShopViewModel.SCENE)
 					SceneStack.remove(LockerViewModel.OPENING_SCENE)
+					for _, scene in DepotSpotSystem.SCENES do
+						SceneStack.remove(scene)
+					end
 				end
 				syncPick()
 				syncReveal()
@@ -240,6 +246,9 @@ local DepotServiceClient: DepotServiceClient = {
 		DepotBillboardSystem.start()
 		table.insert(stoppers, DepotTruckScannerSystem.start())
 		table.insert(stoppers, DepotTruckGhostSystem.start())
+		-- The hub's spots (Supply Counter, standees, coffee, crew wall, rank chart, radio, bell) and the truck outside.
+		table.insert(stoppers, DepotSpotSystem.start())
+		table.insert(stoppers, DepotDriveBySystem.start())
 	end,
 
 	stop = function(_self)

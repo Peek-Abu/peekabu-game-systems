@@ -102,6 +102,10 @@ export type CoffeeServiceClient = {
 	init: (self: CoffeeServiceClient) -> (),
 	start: (self: CoffeeServiceClient) -> (),
 	stop: (self: CoffeeServiceClient) -> (),
+	-- The two ways to pay (the HUD's choice and the hub's coffee machine): Roblox's purchase prompt, or Gleam
+	-- (the server checks it).
+	buyRobux: (self: CoffeeServiceClient) -> (),
+	buyGleam: (self: CoffeeServiceClient) -> (),
 }
 
 local CoffeeServiceClient: CoffeeServiceClient = {
@@ -117,6 +121,14 @@ local CoffeeServiceClient: CoffeeServiceClient = {
 	start = function(_self) end,
 
 	stop = function(_self) end,
+
+	buyRobux = function(_self)
+		buyRobux()
+	end,
+
+	buyGleam = function(_self)
+		buyGleam()
+	end,
 }
 
 return CoffeeServiceClient

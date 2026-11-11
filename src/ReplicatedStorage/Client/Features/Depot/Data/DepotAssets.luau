@@ -18,6 +18,27 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- clarinet over harpsichord and pizz; a bar-exact 60 s OGG loop. 2D, the music slot, while you are in the hub
 	-- (OfficeAtmosphereSystem).
 	depotHubTheme = { assetId = "rbxassetid://113418650275760", group = "Music", volume = 1, looped = true },
+	-- The shift bell by the trucks (DepotSpotConstants.BELL_SOUND): the office's far ding, played at the bell for
+	-- everyone in the hub.
+	depotShiftBell = {
+		assetId = "rbxassetid://136430418224601",
+		group = "SFX",
+		volume = 1.1,
+		pitch = { min = 0.97, max = 1.03 },
+		maxConcurrent = 3,
+		rollOffMinDistance = 18,
+		rollOffMaxDistance = 140,
+	},
+	-- The delivery truck driving past the yard (DepotDriveBySystem): the shift truck's honk, far away.
+	depotDriveByHorn = {
+		assetId = "rbxassetid://121905159563801",
+		group = "SFX",
+		volume = 0.7,
+		pitch = { min = 0.92, max = 1.0 },
+		maxConcurrent = 1,
+		rollOffMinDistance = 30,
+		rollOffMaxDistance = 220,
+	},
 }
 
 for id, def in SOUNDS do

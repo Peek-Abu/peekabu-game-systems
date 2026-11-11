@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local DepotStore = require(script.Parent.DepotStore)
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
+local DepotSpotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotSpotConstants)
 
 local DRIVE = DepotConstants.DRIVE_CARD_SECONDS
 local ARRIVAL = DepotConstants.ARRIVAL_CARD_SECONDS
@@ -152,6 +153,24 @@ return function()
 			DepotStore.clear()
 			expect(DepotStore.lastShift()).to.equal(nil)
 			expect(DepotStore.board()).to.equal(nil)
+		end)
+	end)
+	describe("the radio", function()
+		it("starts on the first station and steps through them, round and round", function()
+			DepotStore.clear()
+			local stations = DepotSpotConstants.STATIONS
+			expect(DepotStore.station()).to.equal(1)
+			expect(DepotStore.stationDef().name).to.equal(stations[1].name)
+			local def = DepotStore.nextStation()
+			expect(DepotStore.station()).to.equal(if #stations > 1 then 2 else 1)
+			expect(def.name).to.equal(DepotStore.stationDef().name)
+			for _ = 1, #stations - 1 do
+				DepotStore.nextStation()
+			end
+			expect(DepotStore.station()).to.equal(1)
+			DepotStore.nextStation()
+			DepotStore.clear()
+			expect(DepotStore.station()).to.equal(1)
 		end)
 	end)
 end
