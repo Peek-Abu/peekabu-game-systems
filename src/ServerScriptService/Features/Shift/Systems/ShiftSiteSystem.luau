@@ -2,15 +2,17 @@
 --[=[
 	ShiftSiteSystem: the office as one run's site (Cleanup Crew spec §6.2, §6.5). It picks a run's A/B variant
 	(ShiftAnalyticsSystem.pickVariant) and the quota for the crew (ShiftQuotaFormulas), sets Round's clearance target,
-	rebuilds and spawns the office for it (OfficeServiceServer:beginShift, a fresh seed each run) and remembers how much
+	rebuilds and spawns the run's map for it (OfficeServiceServer:beginShift, a fresh seed each run; the map is the
+	truck host's pick, Choice.map) and remembers how much
 	salvage the roll offered, and spawns the overtime batch when overtime begins (`startOvertime`) (the review's "salvage found N of M"). `clear` resets everything a run made (Office,
 	Vacuum, Cargo), each step guarded so a throwing reset never stops the next shift, and forgets a prepared run.
 
-	- `prepare` is the transit's step, under the load screen, before the crew is placed; `take` hands its choice to the
-	  run when Round starts it (once);
+	- `prepare` is the transit's step, under the load screen, before the crew is placed, on the map the crew's trip
+	  carries (ShiftTripSystem.map: the host's pick, kept for Play again); `take` hands its choice to the run when
+	  Round starts it (once);
 
-	- `choose` + `build` are a run started some other way (an admin's round start): the office is built when the run
-	  begins and the crew moved into the truck.
+	- `choose` + `build` are a run started some other way (an admin's round start): always the office, built when the
+	  run begins, the crew moved into the truck.
 
 	Spec-exempt shell (the services it drives); the variant is the specced ShiftVariantRules, the quota the specced
 	ShiftQuotaFormulas, the roll the specced OfficeSpawnUtils.
@@ -33,10 +35,11 @@ local RoundServiceServer = require(ServerScriptService.Features.Round.RoundServi
 local ShiftAnalyticsSystem = require(ServerScriptService.Features.Shift.Systems.ShiftAnalyticsSystem)
 local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
 
--- A run's A/B variant and quota.
+-- A run's A/B variant, quota and map.
 export type Choice = {
 	variant: ShiftTypes.Variant,
 	quota: number,
+	map: ShiftTypes.MapId,
 }
 
 export type ShiftSiteSystem = {
@@ -44,7 +47,7 @@ export type ShiftSiteSystem = {
 	-- Overtime began: Office spawns the shift's overtime batch (once; OfficeServiceServer:spawnOvertimeLoot).
 	startOvertime: (self: ShiftSiteSystem) -> (),
 	choose: (self: ShiftSiteSystem, shift: number, crewSize: number) -> Choice,
-	prepare: (self: ShiftSiteSystem, shift: number, crewSize: number) -> Choice,
+	prepare: (self: ShiftSiteSystem, shift: number, crewSize: number, map: ShiftTypes.MapId) -> Choice,
 	build: (self: ShiftSiteSystem, choice: Choice, players: { Player }) -> (),
 	take: (self: ShiftSiteSystem) -> Choice?,
 	offered: (self: ShiftSiteSystem) -> number,
@@ -72,6 +75,7 @@ function ShiftSiteSystem.new(): ShiftSiteSystem
 			seed = rng:NextInteger(1, 1000000000),
 			variant = choice.variant,
 			quota = choice.quota,
+			map = choice.map,
 		})
 		offered = OfficeSpawnUtils.salvageCount(plan)
 		return plan
@@ -99,18 +103,21 @@ function ShiftSiteSystem.new(): ShiftSiteSystem
 		end,
 
 		choose = function(_self, shift, crewSize)
-			-- Each run's A/B variant (spec §4; rewards never read it); the quota scales with the crew.
+			-- Each run's A/B variant (spec §4; rewards never read it); the quota scales with the crew. A run started
+			-- this way (an admin's round start) plays the office.
 			local variant: ShiftTypes.Variant = ShiftAnalyticsSystem.pickVariant(shift)
-			return { variant = variant, quota = ShiftQuotaFormulas.quota(crewSize) }
+			return { variant = variant, quota = ShiftQuotaFormulas.quota(crewSize), map = "office" }
 		end,
 
-		prepare = function(self, shift, crewSize)
+		prepare = function(self, shift, crewSize, map)
 			local choice = self:choose(shift, crewSize)
+			choice.map = map
 			local plan = rebuild(choice)
 			prepared = choice
 			local greed = plan.greed
 			log:info(
-				`shift {shift} prepared: variant {choice.variant}, quota {choice.quota}, greed {if greed ~= nil
+				`shift {shift} prepared: {choice.map}, variant {choice.variant}, quota {choice.quota}, greed {if greed
+						~= nil
 					then greed.kind
 					else "?"}`
 			)

@@ -5,7 +5,9 @@
 
 	- Queue `arrived(party, payload)`: the party joins the crew (ShiftCrewTracker.join: added to a crew still
 	  here, replacing one that has gone), and the payload's contract id (untrusted: it rode the teleport) is
-	  resolved by DepotContractUtils for the result card;
+	  resolved by DepotContractUtils for the result card; its map (the truck host's pick) is read by
+	  DepotMapRules.parse (anything but a map id is the office; a training trip is the office) and kept for every
+	  shift of the run (`map`; Another shift keeps it) until the next party arrives;
 	- Queue `joinedLate(player)`: an expected member who came after the start joins the crew and is handed to
 	  `admit` (Shift's transit holds them behind the load screen and places them in the truck); every member of an
 	  arriving party is handed to `admit` too;
@@ -42,6 +44,7 @@ local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.Shif
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local DepotContractUtils = require(ServerScriptService.Features.Depot.Utils.DepotContractUtils)
+local DepotMapRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotMapRules)
 local DepotServiceServer = require(ServerScriptService.Features.Depot.DepotServiceServer)
 local OfficeServiceServer = require(ServerScriptService.Features.Office.OfficeServiceServer)
 local QueuePlaceRules = require(ServerScriptService.Features.Queue.Rules.QueuePlaceRules)
@@ -73,6 +76,8 @@ export type ShiftTripSystem = {
 	crewIds: (self: ShiftTripSystem, except: number?) -> { number },
 	-- The truck the crew rode (from the untrusted depart payload), nil when unknown.
 	truck: (self: ShiftTripSystem) -> number?,
+	-- The map the crew's host picked (from the untrusted depart payload; the office when unknown or training).
+	map: (self: ShiftTripSystem) -> ShiftTypes.MapId,
 	-- The contract's client the crew is working for (the transit slip's destination).
 	client: (self: ShiftTripSystem) -> string,
 	startable: (self: ShiftTripSystem, now: number) -> number,
@@ -127,6 +132,7 @@ function ShiftTripSystem.new(options: Options): ShiftTripSystem
 	local members = ShiftCrewTracker.new()
 	local contract: DepotTypes.Contract = DepotContractUtils.tonight(DepotConstants.CONTRACTS, os.time())
 	local truck: number? = nil
+	local map: ShiftTypes.MapId = "office"
 	local changed: () -> () = function() end
 	local stoppers: { () -> () } = {}
 
@@ -164,11 +170,13 @@ function ShiftTripSystem.new(options: Options): ShiftTripSystem
 				end
 				members:join(idsOf(party), presentIds())
 				-- A training trip goes to the training room, not the night's client (its route slip says so).
-				contract = if payload[TrainingConstants.MODE_KEY] == TrainingConstants.MODE
+				local training = payload[TrainingConstants.MODE_KEY] == TrainingConstants.MODE
+				contract = if training
 					then TrainingConstants.CONTRACT
 					else DepotContractUtils.resolve(DepotConstants.CONTRACTS, payload.contract)
 				truck = DepotContractUtils.truckOf(payload.truck, DepotConstants.MAX_TRUCKS)
-				log:info(`a crew of {#party} arrived for {contract.id}`)
+				map = if training then "office" else DepotMapRules.parse(payload.map)
+				log:info(`a crew of {#party} arrived for {contract.id} on the {map} map`)
 				changed()
 				for _, player in party do
 					options.admit(player)
@@ -225,6 +233,7 @@ function ShiftTripSystem.new(options: Options): ShiftTripSystem
 			QueueServiceServer:setArrivalPoint(DepotConstants.ROLE_SHIFT, nil)
 			members:clear()
 			truck = nil
+			map = "office"
 		end,
 
 		crew = function(_self)
@@ -237,6 +246,10 @@ function ShiftTripSystem.new(options: Options): ShiftTripSystem
 
 		truck = function(_self)
 			return truck
+		end,
+
+		map = function(_self)
+			return map
 		end,
 
 		client = function(_self)

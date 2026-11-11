@@ -238,7 +238,7 @@ end
 -- and rebuilds and spawns the office. The run itself starts when the transit settles.
 local function prepareShift()
 	clearShift()
-	local choice = site:prepare(RoundServiceServer:getPhase().round + 1, #trip:crewIds())
+	local choice = site:prepare(RoundServiceServer:getPhase().round + 1, #trip:crewIds(), trip:map())
 	local nextState = table.clone(state)
 	nextState.variant = choice.variant
 	nextState.quota = choice.quota
@@ -268,7 +268,8 @@ local function beginRun(wasPrepared: boolean)
 	clearRun()
 	lives:begin(RoundServiceServer:participants())
 	if not wasPrepared then
-		site:build({ variant = state.variant, quota = state.quota }, RoundServiceServer:participants())
+		-- An admin's round start plays the office.
+		site:build({ variant = state.variant, quota = state.quota, map = "office" }, RoundServiceServer:participants())
 	end
 	log:info(`shift {state.shift} started: variant {state.variant}, quota {state.quota}`)
 	VacuumServiceServer:setCrew(RoundServiceServer:participants())
