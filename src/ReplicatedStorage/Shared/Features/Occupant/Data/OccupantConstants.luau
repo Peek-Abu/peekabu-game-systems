@@ -647,4 +647,33 @@ return table.freeze({
 	GRIN_TEETH = 7,
 	GRIN_WHITE = Color3.fromRGB(250, 250, 240),
 	GRIN_INK = Color3.fromRGB(15, 10, 10),
+	-- The monster roster (OccupantKindRegistry): the rig attribute naming its kind (absent = "harlow"), whether a
+	-- freeze kind is watched right now, and the UserId its head turns to (0 = nobody).
+	KIND_ATTRIBUTE = "OccupantKind",
+	FROZEN_ATTRIBUTE = "OccupantFrozen",
+	HEAD_TARGET_ATTRIBUTE = "OccupantHeadTarget",
+	-- "Freezes while watched" (substitute spec, "Watched is decided on the server"; Bramble): the camera report's rate
+	-- and the server's check rate, how old a report may be, how far the camera may sit from the head (max zoom 13), the
+	-- look cone (half-angle, degrees) and the sight cap.
+	FREEZE_REPORT_INTERVAL = 0.1,
+	FREEZE_CHECK_INTERVAL = 0.1,
+	FREEZE_REPORT_FRESH = 0.3,
+	FREEZE_CAMERA_RANGE = 16,
+	FREEZE_CONE = 35,
+	FREEZE_RANGE = 80,
+	-- Fairness: after the last watcher looks away he holds this long, then no catch for FREEZE_CATCH_BLOCK more.
+	FREEZE_UNFREEZE_BEAT = 0.4,
+	FREEZE_CATCH_BLOCK = 0.6,
+	-- The owl head: after this long of non-stop watching it swaps to another crew member; a noise maker counts as
+	-- "heard" this long; how fast the client turns the head (per second, exponential).
+	HEAD_SWAP_SECONDS = 10,
+	HEAD_HEARD_SECONDS = 10,
+	HEAD_TURN_RATE = 4,
+	-- The trail: a feather every FEATHER_SPACING studs it moved unwatched, fading over FEATHER_FADE_SECONDS, at most
+	-- FEATHER_MAX at once, checked every FEATHER_INTERVAL.
+	FEATHER_SPACING = 3,
+	FEATHER_FADE_SECONDS = 20,
+	FEATHER_MAX = 60,
+	FEATHER_INTERVAL = 0.2,
+	FEATHER_COLOR = Color3.fromRGB(92, 168, 84),
 })
