@@ -1,0 +1,66 @@
+local OccupantHeadTurnSystem = require(script.Parent.OccupantHeadTurnSystem)
+
+return function()
+	describe("yawToward", function()
+		local frame = CFrame.new(0, 5, 0)
+
+		it("is 0 straight ahead (-Z)", function()
+			expect(OccupantHeadTurnSystem.yawToward(frame, Vector3.new(0, 5, -10))).to.be.near(0, 1e-6)
+		end)
+
+		it("turns left (+) to a point on its left and right (-) to one on its right", function()
+			expect(OccupantHeadTurnSystem.yawToward(frame, Vector3.new(-10, 5, 0))).to.be.near(math.pi / 2, 1e-6)
+			expect(OccupantHeadTurnSystem.yawToward(frame, Vector3.new(10, 5, 0))).to.be.near(-math.pi / 2, 1e-6)
+		end)
+
+		it("goes all the way round to a point right behind it, owl-style", function()
+			expect(math.abs(OccupantHeadTurnSystem.yawToward(frame, Vector3.new(0, 5, 10)))).to.be.near(math.pi, 1e-6)
+		end)
+
+		it("ignores height, and is 0 for a point straight above", function()
+			expect(OccupantHeadTurnSystem.yawToward(frame, Vector3.new(0, 50, -10))).to.be.near(0, 1e-6)
+			expect(OccupantHeadTurnSystem.yawToward(frame, Vector3.new(0, 50, 0))).to.equal(0)
+		end)
+
+		it("is relative to the body's facing", function()
+			local turnedFrame = CFrame.new(0, 5, 0) * CFrame.Angles(0, math.pi / 2, 0)
+			expect(OccupantHeadTurnSystem.yawToward(turnedFrame, Vector3.new(-10, 5, 0))).to.be.near(0, 1e-6)
+		end)
+	end)
+
+	describe("ease", function()
+		it("moves part way toward the target, never past it", function()
+			local yaw = OccupantHeadTurnSystem.ease(0, 1, 0.1, 4)
+			expect(yaw > 0).to.equal(true)
+			expect(yaw < 1).to.equal(true)
+			local later = OccupantHeadTurnSystem.ease(yaw, 1, 10, 4)
+			expect(later).to.be.near(1, 1e-3)
+			expect(later <= 1).to.equal(true)
+		end)
+
+		it("holds still with no time", function()
+			expect(OccupantHeadTurnSystem.ease(0.5, 2, 0, 4)).to.equal(0.5)
+		end)
+
+		it("never wraps: from just left of behind to just right of behind it swings back through the front", function()
+			local yaw = OccupantHeadTurnSystem.ease(3, -3, 0.1, 4)
+			expect(yaw < 3).to.equal(true)
+		end)
+	end)
+
+	describe("turned", function()
+		it("turns about the up axis and keeps the joint's position", function()
+			local base = CFrame.new(0, 1, 0)
+			local c0 = OccupantHeadTurnSystem.turned(base, math.pi / 2)
+			expect(c0.Position).to.equal(base.Position)
+			expect(c0.LookVector.X).to.be.near(-1, 1e-6)
+		end)
+
+		it("is the authored C0 at 0", function()
+			local base = CFrame.new(0, 1, 0) * CFrame.Angles(0.1, 0, 0)
+			local c0 = OccupantHeadTurnSystem.turned(base, 0)
+			expect((c0.Position - base.Position).Magnitude).to.be.near(0, 1e-6)
+			expect(c0.LookVector:Dot(base.LookVector)).to.be.near(1, 1e-6)
+		end)
+	end)
+end

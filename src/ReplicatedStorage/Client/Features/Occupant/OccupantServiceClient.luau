@@ -15,7 +15,10 @@
 	heartbeat, the dread loop, the screen's mood, the chase's FOV squeeze and footfall shake, and the ambience duck.
 	OccupantGestureSystem
 	lays his gestures over his joints; OccupantWarningSystem plays the staged warnings and his typing (no PA since
-	2026-10-16). OccupantCatchVfxSystem pops the porcelain crack at a knockdown or knock-out, for everyone.
+	2026-10-16). OccupantCatchVfxSystem pops the porcelain crack at a knockdown or knock-out, for everyone. For a freeze
+	kind (Bramble; none of these act on Harlow): OccupantWatchReportSystem sends the camera report the server's watch
+	check reads, OccupantHeadTurnSystem turns its owl head to the kid it is after, and OccupantTrailSystem lays feathers
+	where it moved unwatched.
 
 	A rehired player is held still while the card is up: the character's controls off and a sinking `ui` input context
 	silencing the gameplay actions (vacuum, hotbar), like a menu; then control comes back and the card fades out
@@ -53,6 +56,9 @@ local OccupantDreadSystem = require(ReplicatedStorage.Client.Features.Occupant.S
 local DreadOverlay = require(ReplicatedStorage.Client.UI.React.Screens.Dread.DreadOverlay)
 local OccupantCatchVfxSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantCatchVfxSystem)
 local OccupantFaceLightSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantFaceLightSystem)
+local OccupantWatchReportSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantWatchReportSystem)
+local OccupantHeadTurnSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantHeadTurnSystem)
+local OccupantTrailSystem = require(ReplicatedStorage.Client.Features.Occupant.Systems.OccupantTrailSystem)
 local CatchOverlay = require(ReplicatedStorage.Client.UI.React.Screens.Catch.CatchOverlay)
 local CatchRehiredCard = require(ReplicatedStorage.Client.UI.React.Screens.Catch.CatchRehiredCard)
 local HudRegistry = require(ReplicatedStorage.Client.UI.React.Screens.Hud.HudRegistry)
@@ -227,6 +233,12 @@ local OccupantServiceClient: OccupantServiceClient = {
 		table.insert(stoppers, OccupantWarningSystem.stop)
 		OccupantDreadSystem.start()
 		table.insert(stoppers, OccupantDreadSystem.stop)
+		OccupantWatchReportSystem.start()
+		table.insert(stoppers, OccupantWatchReportSystem.stop)
+		OccupantHeadTurnSystem.start()
+		table.insert(stoppers, OccupantHeadTurnSystem.stop)
+		OccupantTrailSystem.start()
+		table.insert(stoppers, OccupantTrailSystem.stop)
 	end,
 
 	stop = function(_self)
@@ -247,6 +259,8 @@ local OccupantServiceClient: OccupantServiceClient = {
 			gestures = OccupantGestureSystem.getState(),
 			warnings = OccupantWarningSystem.getState(),
 			dread = OccupantDreadSystem.getState(),
+			watchReports = OccupantWatchReportSystem.getState(),
+			trail = OccupantTrailSystem.getState(),
 		}
 	end,
 }
