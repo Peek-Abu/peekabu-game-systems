@@ -84,4 +84,34 @@ return function()
 			expect(frames.exits[2].Position.Z > 0).to.equal(true)
 		end)
 	end)
+
+	-- The owner's bug (11-10): a desk could only be hidden under from its front; from behind, its one prompt on the
+	-- front face was out of reach.
+	describe("reach", function()
+		it("lets a player reach a desk or a table from every side: front, back, left and right", function()
+			local frames = HideSpotUtils.frames("desk", CFrame.new(), DESK_SIZE, STAND)
+			local points = HideSpotUtils.reach("desk", DESK_SIZE, frames.prompt)
+			expect(#points).to.equal(4)
+			expect(points[1]).to.equal(frames.prompt)
+			expect(points[2].Z).to.be.near(DESK_SIZE.Z / 2 + 0.3, 1e-6)
+			expect(points[3].X).to.be.near(-DESK_SIZE.X / 2 - 0.3, 1e-6)
+			expect(points[4].X).to.be.near(DESK_SIZE.X / 2 + 0.3, 1e-6)
+			for _, point in points do
+				expect(point.Y).to.be.near(frames.prompt.Y, 1e-6)
+			end
+		end)
+
+		it("keeps a cabinet to its door: it is reached from the front only", function()
+			local frames = HideSpotUtils.frames("cabinet", CFrame.new(), CABINET_SIZE, STAND)
+			local points = HideSpotUtils.reach("cabinet", CABINET_SIZE, frames.prompt)
+			expect(#points).to.equal(1)
+			expect(points[1]).to.equal(frames.prompt)
+		end)
+
+		it("measures how far a player is from the nearest of them", function()
+			local points = { Vector3.new(0, 0, -2), Vector3.new(0, 0, 2) }
+			expect(HideSpotUtils.nearest(CFrame.new(10, 0, 0), points, Vector3.new(10, 0, 5))).to.be.near(3, 1e-6)
+			expect(HideSpotUtils.nearest(CFrame.new(), {}, Vector3.zero)).to.equal(math.huge)
+		end)
+	end)
 end

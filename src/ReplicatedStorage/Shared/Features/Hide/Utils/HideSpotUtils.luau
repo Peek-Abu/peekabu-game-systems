@@ -11,6 +11,9 @@
 	  (just outside its face, so the door itself never fills the view: the overlay draws the slats).
 	- `prompt`: the prompt's offset on the front face (furniture space).
 	- `exits`: where the body may come out, in order: in front, behind, then either side.
+	- `reach`: where a player can reach the spot from (furniture space): under a desk or a table from every side
+	  (front, back, left, right; owner 11-10: a desk could not be hidden under from behind), a cabinet from its
+	  door only. `nearest`: how far a player stands from the nearest of them.
 
 	`standHeight` is the character's root height over its feet (HipHeight plus half the root). Pure.
 
@@ -71,6 +74,38 @@ function HideSpotUtils.frames(noun: string, furniture: CFrame, size: Vector3, st
 		prompt = Vector3.new(0, promptY, front - 0.3),
 		exits = exits,
 	}
+end
+
+-- How far outside a face a reach point sits, as the front prompt does.
+local REACH_OUT = 0.3
+
+--[=[
+	The points a player reaches the spot from, in the spot's frame: the front prompt first, then (under a desk or a
+	table) the back, left and right faces at the prompt's height; a cabinet only from its front.
+]=]
+function HideSpotUtils.reach(noun: string, size: Vector3, prompt: Vector3): { Vector3 }
+	local def = HideConstants.FURNITURE[noun]
+	if def == nil or def.spot == "inside" then
+		return { prompt }
+	end
+	local y = prompt.Y
+	return {
+		prompt,
+		Vector3.new(0, y, size.Z / 2 + REACH_OUT),
+		Vector3.new(-size.X / 2 - REACH_OUT, y, 0),
+		Vector3.new(size.X / 2 + REACH_OUT, y, 0),
+	}
+end
+
+--[=[
+	How far `position` is from the nearest of `points` (in `frame`'s space); math.huge for none.
+]=]
+function HideSpotUtils.nearest(frame: CFrame, points: { Vector3 }, position: Vector3): number
+	local best = math.huge
+	for _, point in points do
+		best = math.min(best, (frame:PointToWorldSpace(point) - position).Magnitude)
+	end
+	return best
 end
 
 return HideSpotUtils

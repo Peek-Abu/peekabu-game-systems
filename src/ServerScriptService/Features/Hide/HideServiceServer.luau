@@ -276,7 +276,8 @@ local function enter(player: Player, spot: Spot): (boolean, string?)
 		occupied = tracker:occupant(spot.id) ~= nil,
 		cooling = tracker:cooling(player.UserId, spot.id, now),
 		rested = now - (lastLeft[player.UserId] or -math.huge) >= HideConstants.REENTER_SECONDS,
-		distance = if root ~= nil then (root.Position - spot.anchor.WorldPosition).Magnitude else math.huge,
+		-- From the nearest side the spot can be reached from (a desk from all round, a cabinet from its door).
+		distance = if root ~= nil then HideSpotUtils.nearest(spot.frame, spot.reach, root.Position) else math.huge,
 	})
 	if not ok or root == nil or humanoid == nil then
 		counters.refused += 1

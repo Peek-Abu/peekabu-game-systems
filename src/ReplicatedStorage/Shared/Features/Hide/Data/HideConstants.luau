@@ -121,6 +121,8 @@ return table.freeze({
 	SPOT_NOUN_ATTRIBUTE = "HideSpotNoun",
 	PEEK_ATTRIBUTE = "HidePeek",
 	PROMPT_NAME = "HidePrompt",
+	-- An extra side of a spot a player can reach it from (HideSpotUtils.reach): an attachment with the same prompt.
+	REACH_NAME = "HideReach",
 	-- The prompt: its own key (C / L1, so it never takes E from Search), a single press within ENTER_RANGE.
 	ACTION = "hide",
 	KEYBOARD_KEY = Enum.KeyCode.C,

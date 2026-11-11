@@ -43,6 +43,8 @@ local HideSpotSystem = {}
 function HideSpotSystem.new(hooks: Hooks): HideSpotSystem
 	local spots: { [string]: HideTypes.Spot } = {}
 	local prompts: { [string]: ProximityPrompt } = {}
+	-- Each spot's prompts on its other sides (HideSpotUtils.reach).
+	local others: { [string]: { ProximityPrompt } } = {}
 	local nextId = 0
 
 	local function build(furniture: Instance): (() -> ())?
@@ -92,18 +94,57 @@ function HideSpotSystem.new(hooks: Hooks): HideSpotSystem
 		prompt.Parent = anchor
 		anchor.Parent = furniture
 		CollectionService:AddTag(anchor, HideConstants.SPOT_TAG)
-		local spot: HideTypes.Spot =
-			{ id = id, kind = spotKind, noun = def.noun, furniture = furniture, frame = frame, anchor = anchor }
+		local reach = HideSpotUtils.reach(def.noun, furniture.Size, frames.prompt)
+		local spot: HideTypes.Spot = {
+			id = id,
+			kind = spotKind,
+			noun = def.noun,
+			furniture = furniture,
+			frame = frame,
+			anchor = anchor,
+			reach = reach,
+		}
 		spots[id] = spot
 		prompts[id] = prompt
-		local triggered = prompt.Triggered:Connect(function(player: Player)
-			hooks.onTrigger(player, spot)
-		end)
+		local triggers: { RBXScriptConnection } = {
+			prompt.Triggered:Connect(function(player: Player)
+				hooks.onTrigger(player, spot)
+			end),
+		}
+		-- The same prompt on the spot's other sides (a desk or a table is reached from all round): untagged
+		-- attachments that carry the spot's id and noun, so the client's chip and press read them as this spot.
+		local sides: { Attachment } = {}
+		local sidePrompts: { ProximityPrompt } = {}
+		others[id] = sidePrompts
+		for index = 2, #reach do
+			local side = Instance.new("Attachment")
+			side.Name = HideConstants.REACH_NAME
+			side.Position = furniture.CFrame:PointToObjectSpace(frame:PointToWorldSpace(reach[index]))
+			side:SetAttribute(HideConstants.SPOT_ID_ATTRIBUTE, id)
+			side:SetAttribute(HideConstants.SPOT_NOUN_ATTRIBUTE, def.noun)
+			local sidePrompt = prompt:Clone()
+			sidePrompt.Parent = side
+			table.insert(sidePrompts, sidePrompt)
+			side.Parent = furniture
+			table.insert(sides, side)
+			table.insert(
+				triggers,
+				sidePrompt.Triggered:Connect(function(player: Player)
+					hooks.onTrigger(player, spot)
+				end)
+			)
+		end
 		return function()
-			triggered:Disconnect()
+			for _, connection in triggers do
+				connection:Disconnect()
+			end
+			for _, side in sides do
+				side:Destroy()
+			end
 			hooks.onRemoved(spot)
 			spots[id] = nil
 			prompts[id] = nil
+			others[id] = nil
 			if anchor.Parent ~= nil then
 				anchor:Destroy()
 			end
@@ -137,6 +178,12 @@ function HideSpotSystem.new(hooks: Hooks): HideSpotSystem
 			local prompt: ProximityPrompt? = prompts[spotId]
 			if prompt ~= nil then
 				prompt.Enabled = open
+			end
+			local sides: { ProximityPrompt }? = others[spotId]
+			if sides ~= nil then
+				for _, side in sides do
+					side.Enabled = open
+				end
 			end
 		end,
 	}

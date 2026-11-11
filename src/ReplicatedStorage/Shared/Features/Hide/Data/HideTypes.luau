@@ -29,6 +29,8 @@ export type Spot = {
 	frame: CFrame,
 	-- The prompt's attachment.
 	anchor: Attachment,
+	-- Where a player reaches the spot from, in `frame`'s space (HideSpotUtils.reach): every side of a desk or a table.
+	reach: { Vector3 },
 }
 
 -- A player in a spot: since when (os.clock), and whether the Manager saw them go in.

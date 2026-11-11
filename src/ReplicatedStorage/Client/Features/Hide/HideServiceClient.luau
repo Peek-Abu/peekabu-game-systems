@@ -64,11 +64,17 @@ local hiddenSince = 0
 local cooling: { [string]: number } = {}
 local counters = { exits = 0, entered = 0 }
 
+-- A spot's prompt: on its tagged anchor, or on one of its other sides (an untagged HideReach attachment carrying the
+-- spot's id: a desk or a table is reached from all round).
 local function isHidePrompt(instance: Instance): boolean
+	local parent = instance.Parent
 	return instance:IsA("ProximityPrompt")
 		and instance.Name == HideConstants.PROMPT_NAME
-		and instance.Parent ~= nil
-		and instance.Parent:HasTag(HideConstants.SPOT_TAG)
+		and parent ~= nil
+		and (
+			parent:HasTag(HideConstants.SPOT_TAG)
+			or (parent.Name == HideConstants.REACH_NAME and parent:GetAttribute(HideConstants.SPOT_ID_ATTRIBUTE) ~= nil)
+		)
 end
 
 -- The hand item's size, or nil when empty-handed.
