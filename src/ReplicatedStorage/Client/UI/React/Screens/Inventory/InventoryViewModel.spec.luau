@@ -435,11 +435,14 @@ return function()
 		end)
 
 		it("carries the lore, the rarity word and the action", function()
-			local view = VM.detail(CosmeticRegistry.get("Pippa.Gloomkeeper"), loadout(), owner())
-			expect(view.name).to.equal("Gloomkeeper")
+			local view = VM.detail(CosmeticRegistry.get("Prickles.Showstopper"), loadout(), owner())
+			expect(view.name).to.equal("Showstopper")
 			expect(view.rarityText).to.equal("EPIC")
 			expect(view.lore ~= "").to.equal(true)
 			expect(view.action.text).to.equal("Gloom Locker")
+			-- An Epic that left the Gloom Locker says so instead of sending you there.
+			local gone = VM.detail(CosmeticRegistry.get("Pippa.Gloomkeeper"), loadout(), owner())
+			expect(gone.action.text).to.equal("Coming later")
 		end)
 
 		it("builds the change Wear sends", function()
