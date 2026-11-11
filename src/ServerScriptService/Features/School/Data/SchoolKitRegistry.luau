@@ -9,7 +9,9 @@
 	the principal, the teachers' lounge (Harlow's rest, the Office breakout's role), a bathroom (stalls are closets), the
 	janitor's closet, the front hall (the start room, the loading bay's size) and the three landmarks that fill a
 	lattice block: the gym, the cafeteria and the library (64 x 56). Hiding places are the Office's: desks at the
-	Office's 1.65x size (Hide's HUG_FREE_MIN fits under) and closets. School furniture uses the existing marker kinds
+	Office's 1.65x size (Hide's HUG_FREE_MIN fits under) and closets, kept as sparse per square stud as the Office's
+	(a classroom hides two: its teacher's desk and a big table or a closet; a landmark a few); student desks, benches and
+	study tables are low tables (kind table, no room under them). School furniture uses the existing marker kinds
 	with school art keys (chalkboard, bookshelf, trophyCase...); a key the art kit lacks falls back to the kind's own
 	art (OfficeArtKeyUtils), which is the greybox. Props name existing PROP_SIZES art only.
 
@@ -81,9 +83,11 @@ local KITS: { Kit } = {
 		width = 32,
 		depth = 26,
 		door = { offset = 6, width = 6.8, kind = "solid" },
-		-- Two rows of student desks facing the chalkboard on the back wall (their chairs on the front-wall side), and the
-		-- teacher's desk turned to face them.
-		markers = join(grid("desk", nil, { 5.5, 16, 26.5 }, { 10 }, 0), grid("desk", nil, { 5.5, 16 }, { 19.5 }, 0), {
+		-- Two rows of student desks (low tables: no room under them) facing the chalkboard on the back wall, a project
+		-- table at the back to hide under, and the teacher's desk turned to face the rows.
+		markers = join(grid("table", "studentDesk", { 5.5, 16, 26.5 }, { 10 }, 0), {
+			styled("table", "studentDesk", 16, 19.5, 0),
+			styled("desk", "projectTable", 5.5, 19.5, 0),
 			at("desk", 26.5, 18.8, HALF),
 			styled("board", "chalkboard", 11, 24.8, 0),
 			prop("artFrame", 0.635, 15, -QUARTER),
@@ -105,19 +109,26 @@ local KITS: { Kit } = {
 		width = 28,
 		depth = 28,
 		door = { offset = 22, width = 6.8, kind = "solid" },
-		-- A group of four desks back to back, the chalkboard on the back wall and cubbies on the right wall.
-		markers = join(grid("desk", nil, { 6, 14.4 }, { 10 }, 0), grid("desk", nil, { 6, 14.4 }, { 16.8 }, HALF), {
-			styled("board", "chalkboard", 14, 26.8, 0),
-			styled("shelf", "cubbies", 25.95, 18, QUARTER),
-			prop("artFrame", 0.635, 16, -QUARTER),
-			at("pile", 22, 10),
-			at("pile", 22, 24),
-			at("pile", 4, 25),
-			at("pile", 10, 4),
-			at("item", 22, 4),
-			at("item", 10, 23),
-			at("patrol", 22, 18),
-		}),
+		-- A group of four student desks back to back (low tables: no room under them), the chalkboard on the back wall,
+		-- cubbies and the teacher's desk on the right wall and a coat closet in the back-left corner.
+		markers = join(
+			grid("table", "studentDesk", { 5.25, 13.55 }, { 10 }, 0),
+			grid("table", "studentDesk", { 5.25, 13.55 }, { 16.8 }, HALF),
+			{
+				at("desk", 24.45, 22.5, QUARTER),
+				at("closet", 2.775, 23.6, -QUARTER),
+				styled("board", "chalkboard", 14, 26.8, 0),
+				styled("shelf", "cubbies", 25.95, 13, QUARTER),
+				prop("artFrame", 0.635, 16, -QUARTER),
+				at("pile", 22, 10),
+				at("pile", 10, 4),
+				at("pile", 14, 23),
+				at("pile", 20.5, 15.5),
+				at("item", 22, 4),
+				at("item", 8.5, 23),
+				at("patrol", 21, 7.5),
+			}
+		),
 	},
 	{
 		id = "art",
@@ -328,7 +339,7 @@ local KITS: { Kit } = {
 		-- back, crash mats in the middle.
 		markers = join(
 			grid("closet", "equipmentCloset", { 2.775 }, { 12, 20, 36, 44 }, -QUARTER),
-			grid("desk", "scorersTable", { 24, 40 }, { 46 }, 0),
+			grid("table", "scorersTable", { 24, 40 }, { 46 }, 0),
 			{
 				styled("board", "scoreboard", 32, 54.8, 0),
 				prop("rug", 32, 24, 0),
@@ -361,11 +372,11 @@ local KITS: { Kit } = {
 		width = 64,
 		depth = 56,
 		door = { offset = 32, width = 10, kind = "open" },
-		-- Two lunch tables of four seats to hide under, two small tables, the serving line on the back wall and a
-		-- vending machine and cooler on the right wall.
+		-- Two lunch tables of four seats (the front two of each tall enough to hide under, the back two low benches), two
+		-- small tables, the serving line on the back wall and a vending machine and cooler on the right wall.
 		markers = join(
 			grid("desk", "lunchTable", { 6.5, 14.9, 49.1, 57.5 }, { 12 }, 0),
-			grid("desk", "lunchTable", { 6.5, 14.9, 49.1, 57.5 }, { 18.8 }, HALF),
+			grid("table", "lunchBench", { 6.5, 14.9, 49.1, 57.5 }, { 18.8 }, HALF),
 			grid("table", "breakTable", { 24, 40 }, { 34 }, 0),
 			grid("counter", "kitchenCounter", { 20, 28.1, 36.2, 44.3 }, { 53.41 }, 0),
 			{
@@ -397,12 +408,14 @@ local KITS: { Kit } = {
 		width = 64,
 		depth = 56,
 		door = { offset = 32, width = 10, kind = "open" },
-		-- Rows of bookshelves on the left, two reading tables of four to hide under on the right, the front desk by the
-		-- door and a book-return closet in the back corner.
+		-- Rows of bookshelves on the left, two reading tables of four on the right (the front pair of the first tall
+		-- enough to hide under, the rest low study tables), the front desk by the door and a book-return closet in the
+		-- back corner.
 		markers = join(
 			grid("shelf", "bookshelf", { 4.5, 9.5, 14.5 }, { 12, 20, 28, 36, 44 }, 0),
-			grid("desk", "readingTable", { 40, 48.4 }, { 22, 42 }, 0),
-			grid("desk", "readingTable", { 40, 48.4 }, { 28.8, 48.8 }, HALF),
+			grid("desk", "readingTable", { 40, 48.4 }, { 22 }, 0),
+			grid("table", "studyTable", { 40, 48.4 }, { 42 }, 0),
+			grid("table", "studyTable", { 40, 48.4 }, { 28.8, 48.8 }, HALF),
 			{
 				styled("counter", "libraryDesk", 52, 8, 0),
 				styled("closet", "bookReturn", 2.775, 51, -QUARTER),

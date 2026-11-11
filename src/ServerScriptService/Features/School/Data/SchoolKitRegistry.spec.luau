@@ -158,9 +158,28 @@ return function()
 				expect(`{kit.id} hides {hides >= 1}`).to.equal(`{kit.id} hides true`)
 			end
 		end
-		-- Classrooms are the School's desk rooms.
+	end)
+
+	it("keeps the hiding places as sparse as the Office's: a few per room, the student desks low tables", function()
+		-- A classroom hides under its teacher's desk and one big table (or in a closet); its rows or groups of student
+		-- desks are low tables (kind table, no hide space), so a classroom stays readable without a grid of hides.
 		for _, id in SchoolConstants.CLASSROOM_KITS do
-			expect(`{id} desks {count(SchoolKitRegistry.get(id), "desk") >= 4}`).to.equal(`{id} desks true`)
+			local kit = SchoolKitRegistry.get(id)
+			local hides = count(kit, "desk") + count(kit, "closet")
+			expect(`{id} hides {hides >= 1 and hides <= 2}`).to.equal(`{id} hides true`)
+			expect(`{id} student desks {count(kit, "table") >= 4}`).to.equal(`{id} student desks true`)
+		end
+		-- A landmark keeps a few hides, not a hall full of them.
+		for _, kit in SchoolKitRegistry.KITS do
+			if LANDMARKS[kit.roomType] then
+				local hides = count(kit, "desk") + count(kit, "closet")
+				expect(`{kit.id} hides {hides >= 2 and hides <= 4}`).to.equal(`{kit.id} hides true`)
+			end
+		end
+		-- No room is a hiding grid: at most four hides in any kit.
+		for _, kit in SchoolKitRegistry.KITS do
+			local hides = count(kit, "desk") + count(kit, "closet")
+			expect(`{kit.id} hides {hides <= 4}`).to.equal(`{kit.id} hides true`)
 		end
 	end)
 

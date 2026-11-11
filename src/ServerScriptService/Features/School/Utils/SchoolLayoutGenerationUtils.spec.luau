@@ -147,6 +147,72 @@ return function()
 			end
 		end)
 
+		it("hides as densely as the Office: its mean hides per 1000 square studs of floor, within 15%", function()
+			-- The Office generator's mean over 100 seeds (desks and closets per 1000 square studs of every room's floor
+			-- but the bay's, halls included; OfficeLayoutMeasureHarness' area), measured 2026-11-11.
+			local OFFICE_DENSITY = 1.58
+			local total = 0
+			for seed = 1, SEEDS do
+				local layout = layoutFor(seed)
+				local area = 0
+				for _, room in layout.rooms do
+					if room.id ~= "bay" then
+						area += (room.maxX - room.minX) * (room.maxZ - room.minZ)
+					end
+				end
+				local hides = #Utils.markersOf(layout, "desk") + #Utils.markersOf(layout, "closet")
+				expect(hides >= OfficeConstants.HIDE_SPOTS_MIN).to.equal(true)
+				total += hides / area * 1000
+			end
+			local mean = total / SEEDS
+			expect(`{mean} {mean >= OFFICE_DENSITY * 0.85 and mean <= OFFICE_DENSITY * 1.15}`).to.equal(`{mean} true`)
+		end)
+
+		it("leaves no room more than one room from a hiding place", function()
+			for seed = 1, SEEDS do
+				local layout = layoutFor(seed)
+				local hidesIn = {}
+				for _, marker in layout.markers do
+					if marker.kind == "desk" or marker.kind == "closet" then
+						hidesIn[marker.room] = true
+					end
+				end
+				local byId, links = {}, {}
+				for _, room in layout.rooms do
+					byId[room.id] = room
+					links[room.id] = {}
+				end
+				for _, door in layout.doors do
+					table.insert(links[door.a], door.b)
+					table.insert(links[door.b], door.a)
+				end
+				-- Halls and junctions are free to cross; entering a kit room costs one.
+				local function nearHide(start)
+					local cost = { [start] = 0 }
+					local queue = { start }
+					while #queue > 0 do
+						local id = table.remove(queue, 1)
+						for _, next in links[id] do
+							local step = cost[id] + (if byId[next].kit ~= nil then 1 else 0)
+							if step <= 1 and (cost[next] == nil or step < cost[next]) then
+								if hidesIn[next] then
+									return true
+								end
+								cost[next] = step
+								table.insert(queue, next)
+							end
+						end
+					end
+					return false
+				end
+				for _, room in layout.rooms do
+					if room.kit ~= nil and not hidesIn[room.id] then
+						expect(`seed {seed} {room.id} {nearHide(room.id)}`).to.equal(`seed {seed} {room.id} true`)
+					end
+				end
+			end
+		end)
+
 		it("never overlaps two rooms, and keeps every room inside the exterior shell", function()
 			local envelope = OfficeConstants.OUTSIDE.ENVELOPE
 			for seed = 1, SEEDS do
