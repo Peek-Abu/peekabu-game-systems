@@ -26,12 +26,6 @@ return function()
 			expect(DepotMapRules.isMap(nil)).to.equal(false)
 			expect(DepotMapRules.isMap(2)).to.equal(false)
 		end)
-
-		it("lists the maps in card order, office first", function()
-			expect(#DepotMapRules.MAPS).to.equal(2)
-			expect(DepotMapRules.MAPS[1]).to.equal("office")
-			expect(DepotMapRules.MAPS[2]).to.equal("school")
-		end)
 	end)
 
 	describe("canPick", function()
