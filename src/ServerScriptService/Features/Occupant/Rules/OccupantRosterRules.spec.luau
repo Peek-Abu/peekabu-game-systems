@@ -1,4 +1,7 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local OccupantRosterRules = require(script.Parent.OccupantRosterRules)
+local OccupantKindRegistry = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantKindRegistry)
 
 local function roster(entries, budget)
 	return { entries = entries, budget = budget }
@@ -84,6 +87,15 @@ return function()
 				expect(OccupantRosterRules.kindForShift("school", seed, false)).to.equal(
 					OccupantRosterRules.kindFor("school", seed)
 				)
+			end
+		end)
+
+		it("leaves Harlow's path as it was: the Office runs harlow, who has no freeze twist", function()
+			for seed = 1, 10 do
+				local kind = OccupantKindRegistry.get(OccupantRosterRules.kindForShift("office", seed, false))
+				expect(kind.id).to.equal("harlow")
+				expect(kind.freeze).to.equal(nil)
+				expect(OccupantKindRegistry.freezes(kind.id)).to.equal(false)
 			end
 		end)
 
