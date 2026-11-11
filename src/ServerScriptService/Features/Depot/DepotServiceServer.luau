@@ -6,8 +6,10 @@
 	  id is a placeholder until the developer creates the shift place) in Queue's QueueRegistry, so Queue knows
 	  every role before services start.
 	- Where this server runs the depot role (the depot place; in Studio every role runs in one server) it
-	  builds the graybox garage at DepotLayoutConstants.ORIGIN, validated by DepotLayoutRules (a broken
-	  layout is a boot error): truck beds tagged QueuePad (Queue holds the parties, runs the countdown and
+	  builds the gameplay pieces into the place's Studio-built hub (a Model tagged DepotLayoutConstants.HUB.MODEL_TAG:
+	  its marker parts say where, DepotHubSystem / DepotHubRules; an unplayable hub falls back to the graybox with a
+	  warning), or, with no hub, the graybox garage at DepotLayoutConstants.ORIGIN, validated by DepotLayoutRules (a
+	  broken layout is a boot error): truck beds tagged QueuePad (Queue holds the parties, runs the countdown and
 	  Depart now), tonight's contract board (DepotContractUtils.tonight), the result board, and a tag shell over each
 	  truck that every client draws from Queue's state sync and the public `truck` field this service keeps
 	  (DepotBillboardSystem).
@@ -53,6 +55,8 @@ local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTyp
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local DepotLayoutConstants = require(DepotServer.Data.DepotLayoutConstants)
 local DepotLayoutRules = require(DepotServer.Rules.DepotLayoutRules)
+local DepotHubRules = require(DepotServer.Rules.DepotHubRules)
+local DepotHubSystem = require(DepotServer.Systems.DepotHubSystem)
 local DepotContractUtils = require(DepotServer.Utils.DepotContractUtils)
 local DepotPlaceUtils = require(DepotServer.Utils.DepotPlaceUtils)
 local DepotBuildSystem = require(DepotServer.Systems.DepotBuildSystem)
@@ -96,6 +100,8 @@ local LAYOUT = DepotLayoutConstants.LAYOUT
 local log = Logger.new("DepotServiceServer")
 
 local built: DepotBuildSystem.Built? = nil
+-- Where every gameplay piece stands: a Studio-built hub's markers when the place has one, else the graybox.
+local plan: DepotHubRules.Plan = DepotHubRules.fromLayout(LAYOUT, DepotLayoutConstants.ORIGIN)
 local contract: DepotTypes.Contract = DepotContractUtils.tonight(DepotConstants.CONTRACTS, os.time())
 -- The contract of the crew that last arrived here (a late member gets the same card).
 local crewContract: DepotTypes.Contract = contract
@@ -324,10 +330,33 @@ local DepotServiceServer: DepotServiceServer = {
 			ownsSpawns = true
 			log:info("hub spawns: the depot places players")
 		end
-		local ok, errors = DepotLayoutRules.validate(LAYOUT)
-		assert(ok, `depot layout is invalid:\n{table.concat(errors, "\n")}`)
-		built =
-			DepotBuildSystem.build(LAYOUT, DepotLayoutConstants.ORIGIN, DepotContractUtils.boardAttributes(contract))
+		local boardAttributes = DepotContractUtils.boardAttributes(contract)
+		local hub = DepotHubSystem.find()
+		local authored: DepotHubRules.Plan? = nil
+		if hub ~= nil then
+			local hubPlan, hubErrors = DepotHubRules.plan(DepotHubSystem.markers(hub), DepotHubSystem.bounds(hub))
+			DepotHubSystem.hide(hub)
+			if hubPlan == nil then
+				-- A broken hub must not strand players: the graybox is built instead, and the reason is loud.
+				log:warn(
+					`the Studio hub "{hub:GetFullName()}" is not playable, building the graybox:\n{table.concat(
+						hubErrors,
+						"\n"
+					)}`
+				)
+			end
+			authored = hubPlan
+		end
+		if authored ~= nil then
+			plan = authored
+			built = DepotBuildSystem.buildPlan(authored, boardAttributes)
+			log:info(`depot: the Studio hub ({#authored.trucks} trucks, {#authored.spawns} spawns)`)
+		else
+			local ok, errors = DepotLayoutRules.validate(LAYOUT)
+			assert(ok, `depot layout is invalid:\n{table.concat(errors, "\n")}`)
+			plan = DepotHubRules.fromLayout(LAYOUT, DepotLayoutConstants.ORIGIN)
+			built = DepotBuildSystem.build(LAYOUT, DepotLayoutConstants.ORIGIN, boardAttributes)
+		end
 		refreshTrucks()
 		local elapsed = 0
 		local ticking = RunService.Heartbeat:Connect(function(deltaTime)
@@ -340,7 +369,7 @@ local DepotServiceServer: DepotServiceServer = {
 		table.insert(stoppers, function()
 			ticking:Disconnect()
 		end)
-		log:info(`depot built: {#LAYOUT.trucks} trucks, tonight's contract {contract.id}`)
+		log:info(`depot built: {#plan.trucks} trucks, tonight's contract {contract.id}`)
 	end,
 
 	stop = function(_self)
@@ -371,9 +400,9 @@ local DepotServiceServer: DepotServiceServer = {
 		Where the `index`-th player appears in the depot (wrapping over the spawn points).
 	]=]
 	spawnCFrame = function(_self, index)
-		local spawns = LAYOUT.spawns
-		local point = spawns[(math.max(index, 1) - 1) % #spawns + 1]
-		return DepotLayoutConstants.ORIGIN * CFrame.new(point.x, DepotLayoutConstants.SPAWN_HEIGHT, point.z)
+		local spawns = plan.spawns
+		local spot = spawns[(math.max(index, 1) - 1) % #spawns + 1]
+		return spot * CFrame.new(0, DepotLayoutConstants.SPAWN_HEIGHT, 0)
 	end,
 
 	canPunchTimecard = function(_self, player)
@@ -383,16 +412,19 @@ local DepotServiceServer: DepotServiceServer = {
 		end
 		local character = player.Character
 		local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
+		-- In the depot's bounds' space, moved so the box's floor corner is 0, 0, 0 (the graybox's own floor space).
+		local bounds = plan.bounds
+		local size = bounds.size
 		local position = if root and root:IsA("BasePart")
-			then DepotLayoutConstants.ORIGIN:PointToObjectSpace(root.Position)
+			then bounds.cframe:PointToObjectSpace(root.Position) + size / 2
 			else nil
 		return DepotPlaceUtils.canPunchTimecard(
 			QueueServiceServer:runsRole(DepotConstants.ROLE_DEPOT),
 			phaseReader(),
 			departedForShift[player.UserId] == true,
 			position,
-			LAYOUT.floor,
-			DepotLayoutConstants.WALL_HEIGHT
+			{ minX = 0, minZ = 0, maxX = size.X, maxZ = size.Z },
+			size.Y
 		)
 	end,
 	-- Only callbacks cross into Depot; it does not require Timecard or Shift services.

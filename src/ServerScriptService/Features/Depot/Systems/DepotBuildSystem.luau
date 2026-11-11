@@ -13,8 +13,11 @@
 	board, and the floor paint DepotMarkingUtils plans (bays, ramp hazard bands, lanes, oil stains, BAY n stencils)
 	as thin non-colliding parts on top.
 
-	Instance shell; specs cover enclosure/surfaces, the lights and the floor paint, and DepotLayoutRules validates the
-	layout.
+	`buildPlan` places the same gameplay pieces where a DepotHubRules plan says (a Studio-built hub's markers) and
+	builds no room: the hub brings its own art. `build` is the graybox: buildPlan of the layout's plan, with the room.
+
+	Instance shell; specs cover enclosure/surfaces, the lights, the floor paint and a hub plan's placement, and
+	DepotLayoutRules / DepotHubRules validate the layouts.
 
 	@class DepotBuildSystem
 ]=]
@@ -32,6 +35,10 @@ local QueueConstants = require(ReplicatedStorage.Shared.Features.Queue.Data.Queu
 local TimecardConstants = require(ReplicatedStorage.Shared.Features.Timecard.Data.TimecardConstants)
 local DepotLayoutConstants = require(ServerScriptService.Features.Depot.Data.DepotLayoutConstants)
 local DepotMarkingUtils = require(ServerScriptService.Features.Depot.Utils.DepotMarkingUtils)
+local DepotHubRules = require(ServerScriptService.Features.Depot.Rules.DepotHubRules)
+
+-- A plan's board spot faces its readers; a board's sign is on its part's back face, so the part is turned round.
+local FLIP = CFrame.Angles(0, math.pi, 0)
 
 export type BuiltTruck = {
 	id: string,
@@ -188,13 +195,8 @@ end
 
 local DepotBuildSystem = {}
 
-function DepotBuildSystem.build(
-	layout: DepotTypes.Layout,
-	origin: CFrame,
-	contractAttributes: { [string]: string }
-): Built
-	local model = Instance.new("Model")
-	model.Name = DepotLayoutConstants.MODEL_NAME
+-- The graybox room: walls, ceiling, floor, ceiling lights over the trucks and boards, and the floor paint.
+local function buildRoom(layout: DepotTypes.Layout, origin: CFrame, model: Model)
 	local floor = layout.floor
 	local width = floor.maxX - floor.minX
 	local depth = floor.maxZ - floor.minZ
@@ -273,16 +275,56 @@ function DepotBuildSystem.build(
 	end
 
 	paintFloor(layout, origin, model)
+end
+
+-- A part `size` big whose bottom stands `lift` below its centre on `spot` (a plan board spot, which faces the
+-- readers). Signs are drawn on a part's back face, so the part is turned round to face its sign at the readers too.
+local function boardAt(name: string, size: Vector3, spot: CFrame, lift: number, color: Color3, parent: Instance): Part
+	return block(name, size, spot * FLIP * CFrame.new(0, lift, 0), color, parent)
+end
+
+--[=[
+	Builds the graybox depot: `layout` at `origin`, the room and every gameplay piece (buildPlan of
+	DepotHubRules.fromLayout, with the room).
+]=]
+function DepotBuildSystem.build(
+	layout: DepotTypes.Layout,
+	origin: CFrame,
+	contractAttributes: { [string]: string }
+): Built
+	return DepotBuildSystem.buildPlan(
+		DepotHubRules.fromLayout(layout, origin),
+		contractAttributes,
+		{ layout = layout, origin = origin }
+	)
+end
+
+--[=[
+	Builds the depot's gameplay pieces where `plan` puts them, under one Model in Workspace: per truck its bed (a
+	Queue pad: QueueCapacity, QueueCountdown and QueueDestination set BEFORE the QueuePad tag), its art and its tag
+	shell; the contract, result and crew boards; the time clock and the daily sheet. With `room` (the graybox), the
+	room too; a Studio-built hub brings its own.
+]=]
+function DepotBuildSystem.buildPlan(
+	plan: DepotHubRules.Plan,
+	contractAttributes: { [string]: string },
+	room: { layout: DepotTypes.Layout, origin: CFrame }?
+): Built
+	local model = Instance.new("Model")
+	model.Name = DepotLayoutConstants.MODEL_NAME
+	if room ~= nil then
+		buildRoom(room.layout, room.origin, model)
+	end
 
 	local bed = DepotLayoutConstants.BED_SIZE
 	local trucks: { BuiltTruck } = {}
-	for index, truck in layout.trucks do
+	for _, truck in plan.trucks do
 		local truckFolder = folder(truck.id, model)
 		-- Annotated: `block` returns a Part, and BuiltTruck.pad is a BasePart (table fields are invariant).
 		local pad: BasePart = block(
 			"TruckBed",
 			bed,
-			origin * CFrame.new(truck.x, bed.Y / 2, truck.z),
+			truck.cframe * CFrame.new(0, bed.Y / 2, 0),
 			DepotLayoutConstants.BED_COLOR,
 			truckFolder
 		)
@@ -294,21 +336,21 @@ function DepotBuildSystem.build(
 		CollectionService:AddTag(pad, QueueConstants.TAG)
 		TruckVisual.build(pad, truckFolder)
 		local tag = shell("PadTag", pad, DepotConstants.BILLBOARD_PX.truck, DepotLayoutConstants.PAD_TAG_OFFSET)
-		tag:SetAttribute(DepotConstants.TRUCK_ATTRIBUTE, index)
+		tag:SetAttribute(DepotConstants.TRUCK_ATTRIBUTE, truck.index)
 		-- The sign of an empty truck shows a regular truck's seats; a hosted one shows its live seats (Queue's).
 		tag:SetAttribute(DepotConstants.CAPACITY_ATTRIBUTE, math.min(truck.capacity, HostConstants.SEATS))
 		CollectionService:AddTag(tag, DepotConstants.BILLBOARD_TAGS.truck)
 		tag.Parent = truckFolder
-		table.insert(trucks, { id = truck.id, index = index, capacity = truck.capacity, pad = pad })
+		table.insert(trucks, { id = truck.id, index = truck.index, capacity = truck.capacity, pad = pad })
 	end
 
 	local boards = folder("Boards", model)
 	local boardSize = DepotLayoutConstants.BOARD_SIZE
-	local contractPoint = layout.contractBoard
-	local contractBoard = block(
+	local contractBoard = boardAt(
 		"ContractBoard",
 		boardSize,
-		origin * CFrame.new(contractPoint.x, boardSize.Y / 2, contractPoint.z),
+		plan.boards.contract,
+		boardSize.Y / 2,
 		DepotLayoutConstants.BOARD_COLOR,
 		boards
 	)
@@ -326,80 +368,76 @@ function DepotBuildSystem.build(
 	end
 	CollectionService:AddTag(contractSign, DepotConstants.BILLBOARD_TAGS.contract)
 	contractSign.Parent = boards
-	local resultPoint = layout.resultBoard
-	local resultBoard = block(
+	-- The sign draws the whole board; the part stays as its adornee but is not seen.
+	local resultPx = DepotConstants.BILLBOARD_PX.result
+	local resultSize = Vector3.new(resultPx.X / 80, resultPx.Y / 80, 1)
+	local resultBoard = boardAt(
 		"ResultBoard",
-		boardSize,
-		origin * CFrame.new(resultPoint.x, boardSize.Y / 2, resultPoint.z),
+		resultSize,
+		plan.boards.result,
+		resultSize.Y / 2,
 		DepotLayoutConstants.BOARD_COLOR,
 		boards
 	)
-	-- The sign draws the whole board; the part stays as its adornee but is not seen.
-	resultBoard.Size =
-		Vector3.new(DepotConstants.BILLBOARD_PX.result.X / 80, DepotConstants.BILLBOARD_PX.result.Y / 80, 1)
-	resultBoard.CFrame = origin * CFrame.new(resultPoint.x, resultBoard.Size.Y / 2, resultPoint.z)
-	local resultSign = surface("ResultSign", resultBoard, DepotConstants.BILLBOARD_PX.result)
+	local resultSign = surface("ResultSign", resultBoard, resultPx)
 	CollectionService:AddTag(resultSign, DepotConstants.BILLBOARD_TAGS.result)
 	resultSign.Parent = boards
 	-- The weekly crew leaderboard beside it (drawn by the client from the `crewBoard` world entry).
-	local crewPoint = layout.crewBoard
-	if crewPoint ~= nil then
+	local crewSpot = plan.boards.crew
+	if crewSpot ~= nil then
 		local crewPx = DepotConstants.BILLBOARD_PX.crew
-		local crewBoard = block(
-			"CrewBoard",
-			-- The result board's scale (80 px a stud), so the two signs read as a pair.
-			Vector3.new(crewPx.X / 80, crewPx.Y / 80, 1),
-			origin * CFrame.new(crewPoint.x, crewPx.Y / 160, crewPoint.z),
-			DepotLayoutConstants.BOARD_COLOR,
-			boards
-		)
+		-- The result board's scale (80 px a stud), so the two signs read as a pair.
+		local crewSize = Vector3.new(crewPx.X / 80, crewPx.Y / 80, 1)
+		local crewBoard =
+			boardAt("CrewBoard", crewSize, crewSpot, crewSize.Y / 2, DepotLayoutConstants.BOARD_COLOR, boards)
 		local crewSign = surface("CrewSign", crewBoard, crewPx)
 		CollectionService:AddTag(crewSign, DepotConstants.BILLBOARD_TAGS.crew)
 		crewSign.Parent = boards
 	end
 
-	-- A small physical clock, clear of both board silhouettes and the spawn lane.
-	local clock = block(
-		"WeeklyTimeClock",
-		Vector3.new(3, 4, 1),
-		origin * CFrame.new(contractPoint.x - 10, 2, contractPoint.z),
-		Color3.fromHex("1f6e66"),
-		boards
-	)
-	clock:SetAttribute(InteractionConstants.KIND_ATTRIBUTE, TimecardConstants.CLOCK_KIND)
-	CollectionService:AddTag(clock, InteractionConstants.TAG)
-	local clockFace = surface("ClockFace", clock, Vector2.new(300, 400))
-	local clockText = Instance.new("TextLabel")
-	clockText.Size = UDim2.fromScale(1, 1)
-	clockText.BackgroundColor3 = Color3.fromHex("f1dfa9")
-	clockText.TextColor3 = Color3.fromHex("2e3536")
-	clockText.Font = Enum.Font.GothamBold
-	clockText.TextSize = 32
-	clockText.TextWrapped = true
-	clockText.Text = "WEEKLY\nTIMECARD\n\nVIEW YOUR CARD\n\nANY 5 OF 7 DAYS"
-	clockText.Parent = clockFace
-	clockFace.Parent = clock
-	local daily = block(
-		"DailyWorkOrderSheet",
-		Vector3.new(2.8, 3.6, 0.18),
-		origin * CFrame.new(contractPoint.x - 5.3, 2.2, contractPoint.z - 0.6),
-		Color3.fromHex("f1dfa9"),
-		boards
-	)
-	daily.CanCollide = false
-	daily:SetAttribute(InteractionConstants.KIND_ATTRIBUTE, TimecardConstants.DAILY_KIND)
-	CollectionService:AddTag(daily, InteractionConstants.TAG)
-	local sheet = surface("DailyOrderFace", daily, Vector2.new(280, 360))
-	local text = Instance.new("TextLabel")
-	text.Size = UDim2.fromScale(1, 1)
-	text.BackgroundTransparency = 1
-	text.Font = Enum.Font.GothamBold
-	text.TextSize = 28
-	text.TextColor3 = Color3.fromHex("2e3536")
-	text.TextWrapped = true
-	text.Text = "TODAY'S\nJOB\n\nBONUS CREDITS\n\nREAD IT HERE"
-	text.Parent = sheet
-	sheet.Parent = daily
+	-- A small physical clock (in the graybox: clear of both board silhouettes and the spawn lane).
+	local clockSpot = plan.boards.clock
+	if clockSpot ~= nil then
+		local clock = boardAt("WeeklyTimeClock", Vector3.new(3, 4, 1), clockSpot, 2, Color3.fromHex("1f6e66"), boards)
+		clock:SetAttribute(InteractionConstants.KIND_ATTRIBUTE, TimecardConstants.CLOCK_KIND)
+		CollectionService:AddTag(clock, InteractionConstants.TAG)
+		local clockFace = surface("ClockFace", clock, Vector2.new(300, 400))
+		local clockText = Instance.new("TextLabel")
+		clockText.Size = UDim2.fromScale(1, 1)
+		clockText.BackgroundColor3 = Color3.fromHex("f1dfa9")
+		clockText.TextColor3 = Color3.fromHex("2e3536")
+		clockText.Font = Enum.Font.GothamBold
+		clockText.TextSize = 32
+		clockText.TextWrapped = true
+		clockText.Text = "WEEKLY\nTIMECARD\n\nVIEW YOUR CARD\n\nANY 5 OF 7 DAYS"
+		clockText.Parent = clockFace
+		clockFace.Parent = clock
+	end
+	local dailySpot = plan.boards.daily
+	if dailySpot ~= nil then
+		local daily = boardAt(
+			"DailyWorkOrderSheet",
+			Vector3.new(2.8, 3.6, 0.18),
+			dailySpot,
+			2.2,
+			Color3.fromHex("f1dfa9"),
+			boards
+		)
+		daily.CanCollide = false
+		daily:SetAttribute(InteractionConstants.KIND_ATTRIBUTE, TimecardConstants.DAILY_KIND)
+		CollectionService:AddTag(daily, InteractionConstants.TAG)
+		local sheet = surface("DailyOrderFace", daily, Vector2.new(280, 360))
+		local text = Instance.new("TextLabel")
+		text.Size = UDim2.fromScale(1, 1)
+		text.BackgroundTransparency = 1
+		text.Font = Enum.Font.GothamBold
+		text.TextSize = 28
+		text.TextColor3 = Color3.fromHex("2e3536")
+		text.TextWrapped = true
+		text.Text = "TODAY'S\nJOB\n\nBONUS CREDITS\n\nREAD IT HERE"
+		text.Parent = sheet
+		sheet.Parent = daily
+	end
 	model.Parent = Workspace
 	return { model = model, trucks = trucks, resultBoard = resultBoard, contractBoard = contractBoard }
 end

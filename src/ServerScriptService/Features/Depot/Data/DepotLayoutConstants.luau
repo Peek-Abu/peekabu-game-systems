@@ -41,6 +41,28 @@ return table.freeze({
 	ORIGIN = CFrame.new(-1000, 1.25, 0),
 	MODEL_NAME = "CleanupCrewDepot",
 	LAYOUT = LAYOUT,
+	-- A Studio-built hub (team handoff: builders work without code). One Model in Workspace tagged MODEL_TAG holds the
+	-- art and these marker parts, which the server reads once at start (DepotHubSystem) and hides; with no such model
+	-- the graybox above is built instead. The Training pad is its own part tagged TrainingConstants.TRUCK_TAG.
+	-- - TRUCK_TAG: a part the size of a truck bed, standing where the bed goes, its front face where the ramp comes
+	--   down; TRUCK_ATTRIBUTE is the bay number (1..N), CAPACITY_ATTRIBUTE / COUNTDOWN_ATTRIBUTE optional.
+	-- - SPAWN_TAG: a part on the floor, its front face the way the player looks.
+	-- - BOARD_TAG: a part on the floor, its front face toward the readers; BOARD_ATTRIBUTE is one of BOARD_KINDS.
+	HUB = table.freeze({
+		MODEL_TAG = "DepotHub",
+		TRUCK_TAG = "DepotTruckBay",
+		SPAWN_TAG = "DepotSpawn",
+		BOARD_TAG = "DepotBoardSpot",
+		TRUCK_ATTRIBUTE = "DepotTruck",
+		CAPACITY_ATTRIBUTE = "DepotSeats",
+		COUNTDOWN_ATTRIBUTE = "DepotCountdown",
+		BOARD_ATTRIBUTE = "DepotBoard",
+		BOARD_KINDS = table.freeze({ contract = true, result = true, crew = true, clock = true, daily = true }),
+		DEFAULT_COUNTDOWN = 15,
+		-- The graybox's time clock and daily sheet, from the contract board's spot.
+		GRAYBOX_CLOCK = table.freeze({ x = -10, z = 0 }),
+		GRAYBOX_DAILY = table.freeze({ x = -5.3, z = -0.6 }),
+	}),
 	-- Tall enough for a truck's tag sign above the box (the truck is ~14.8 studs high on its 3-stud bed).
 	WALL_HEIGHT = 22,
 	WALL_THICKNESS = 1,

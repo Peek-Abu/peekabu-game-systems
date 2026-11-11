@@ -138,4 +138,69 @@ return function()
 			expect(parts > #Layout.trucks * 10).to.equal(true)
 		end)
 	end)
+	describe("a Studio-built hub's plan", function()
+		local turn = CFrame.Angles(0, math.rad(90), 0)
+		local function plan()
+			local base = CFrame.new(60000, 0, 0)
+			return {
+				trucks = {
+					{ id = "truck1", index = 1, capacity = 6, countdown = 15, cframe = base * turn },
+					{
+						id = "truck2",
+						index = 2,
+						capacity = 4,
+						countdown = 12,
+						cframe = base * CFrame.new(0, 0, 30) * turn,
+					},
+					{
+						id = "truck3",
+						index = 3,
+						capacity = 6,
+						countdown = 15,
+						cframe = base * CFrame.new(0, 0, 60) * turn,
+					},
+				},
+				spawns = { base * CFrame.new(-30, 0, 0) },
+				boards = {
+					contract = base * CFrame.new(-40, 0, 10),
+					result = base * CFrame.new(-40, 0, 30),
+				},
+				bounds = { cframe = base, size = Vector3.new(100, 30, 100) },
+			}
+		end
+
+		it("builds no room of its own (the hub brings it)", function()
+			built = Build.buildPlan(plan(), {})
+			expect(built.model:FindFirstChild("Walls")).to.equal(nil)
+			expect(built.model:FindFirstChild("Ceiling")).to.equal(nil)
+			expect(built.model:FindFirstChild("Floor")).to.equal(nil)
+		end)
+
+		it("stands each truck bed on its bay, turned with it, as a queue pad with its seats", function()
+			local spots = plan()
+			built = Build.buildPlan(spots, {})
+			expect(#built.trucks).to.equal(3)
+			local second = built.trucks[2]
+			expect(second.index).to.equal(2)
+			expect(second.pad:GetAttribute("QueueCapacity")).to.equal(4)
+			expect(game:GetService("CollectionService"):HasTag(second.pad, "QueuePad")).to.equal(true)
+			local bottom = second.pad.CFrame * CFrame.new(0, -second.pad.Size.Y / 2, 0)
+			expect((bottom.Position - spots.trucks[2].cframe.Position).Magnitude < 1e-3).to.equal(true)
+			expect(second.pad.CFrame.LookVector:Dot(spots.trucks[2].cframe.LookVector) > 0.999).to.equal(true)
+		end)
+
+		it(
+			"faces each board's sign toward the board spot's readers, and leaves out the boards it has no spot for",
+			function()
+				local spots = plan()
+				built = Build.buildPlan(spots, {})
+				-- Signs are drawn on the part's back face: the part's +Z points where the spot looks.
+				local back = built.contractBoard.CFrame.LookVector * -1
+				expect(back:Dot(spots.boards.contract.LookVector) > 0.999).to.equal(true)
+				expect(built.model:FindFirstChild("CrewBoard", true)).to.equal(nil)
+				expect(built.model:FindFirstChild("WeeklyTimeClock", true)).to.equal(nil)
+				expect(built.model:FindFirstChild("DailyWorkOrderSheet", true)).to.equal(nil)
+			end
+		)
+	end)
 end
