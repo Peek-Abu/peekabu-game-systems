@@ -314,6 +314,9 @@ local function think(def: NpcTypes.NpcDef, now: number, position: Vector3): NpcT
 		pacing = { tier = state.tier, solo = #participants <= 1, overtime = state.stage == "overtime" },
 	})
 	pendingNoise = nil
+	-- The kind's behaviour blocks (Bramble: no desks; Harlow: every block).
+	local kindDef = OccupantKindRegistry.get(currentKind)
+	senses.blocks = if kindDef ~= nil then kindDef.blocks else nil
 	if freeze ~= nil then
 		senses.frozen = freeze.frozen
 		senses.frozenAt = freeze.frozenAt
@@ -632,9 +635,15 @@ local OccupantServiceServer: OccupantServiceServer = {
 		if current == nil or currentMind == nil or root == nil or not root:IsA("BasePart") then
 			return false, "no shift is running, or you have no character"
 		end
+		local def = OccupantKindRegistry.get(currentKind)
+		local blocks = if def ~= nil then def.blocks else nil
+		if blocks ~= nil and not blocks.desks then
+			return false, `{currentKind} never works at a desk`
+		end
 		local desks = Sense.known(current, os.clock(), true)
 		local hiders = Sense.hiders(RoundServiceServer:participants())
-		local nextMind, desk = OccupantWorkRules.summonNear(currentMind, desks, hiders, root.Position, os.clock())
+		local nextMind, desk =
+			OccupantWorkRules.summonNear(currentMind, desks, hiders, root.Position, os.clock(), blocks)
 		mind = nextMind or currentMind
 		return desk ~= nil, if desk ~= nil then `desk {desk.id}` else "no free desk that far from you"
 	end,

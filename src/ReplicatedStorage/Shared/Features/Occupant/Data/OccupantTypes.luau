@@ -213,6 +213,13 @@ export type Glimpse = {
 	speed: number?,
 }
 
+-- The behaviour blocks a monster kind may switch off (OccupantKindRegistry): work breaks, sit-ins and ambushes at
+-- desks, and stares at hiding spots.
+export type Blocks = {
+	desks: boolean,
+	stares: boolean,
+}
+
 -- Everything the brain decides from, gathered by OccupantServiceServer each think.
 export type Senses = {
 	reachTopY: number?,
@@ -247,6 +254,8 @@ export type Senses = {
 	frozen: boolean?,
 	frozenAt: number?,
 	unfrozenAt: number?,
+	-- The kind's behaviour blocks (absent = every block, Harlow as before; OccupantMindUtils.uses).
+	blocks: Blocks?,
 	-- A freeze kind just unfroze: the UserId its head held (OccupantHeadRules.lunge), who becomes its chase target.
 	lunge: number?,
 }

@@ -164,8 +164,15 @@ function M.spots(senses: Senses): { Spot }
 	return list
 end
 
+-- Whether the monster's kind uses behaviour block `block` (Senses.blocks; absent = every block, Harlow).
+function M.uses(senses: Senses, block: "desks" | "stares"): boolean
+	local blocks = senses.blocks
+	return blocks == nil or (if block == "desks" then blocks.desks else blocks.stares)
+end
+
+-- The desks he may sit at: none for a kind without the desk block (no work break, sit-in or ambush).
 function M.desks(senses: Senses): { Desk }
-	local list: { Desk } = senses.desks or {}
+	local list: { Desk } = if M.uses(senses, "desks") then senses.desks or {} else {}
 	return list
 end
 

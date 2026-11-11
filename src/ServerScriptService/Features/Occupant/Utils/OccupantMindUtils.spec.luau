@@ -4,6 +4,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local M = require(script.Parent.OccupantMindUtils)
 local OccupantBrainRules = require(ServerScriptService.Features.Occupant.Rules.OccupantBrainRules)
 local C = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
+local OccupantKindRegistry = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantKindRegistry)
 
 local ZONE = { min = Vector3.new(0, -5, 0), max = Vector3.new(40, 20, 30) }
 local ROUTE = { Vector3.new(100, 0, 100), Vector3.new(150, 0, 100), Vector3.new(150, 0, 150) }
@@ -139,6 +140,33 @@ return function()
 			expect(step.mind.phase).to.equal("approach")
 			expect(step.mind.entered[7]).to.be.near(6)
 			expect(step.intent.position).to.equal(spot.stand)
+		end)
+	end)
+
+	describe("uses (a kind's behaviour blocks)", function()
+		local DESK = { id = "d1", seat = CFrame.new(90, 4.6, 60), front = true, spotId = "s1" }
+
+		it("uses every block with no blocks in the senses (Harlow as before)", function()
+			expect(M.uses(senses(), "desks")).to.equal(true)
+			expect(M.uses(senses(), "stares")).to.equal(true)
+			expect(#M.desks(senses({ desks = { DESK } }))).to.equal(1)
+		end)
+
+		it("follows the registry: Harlow uses desks and stares, Bramble only stares", function()
+			local harlow = OccupantKindRegistry.get("harlow").blocks
+			local bramble = OccupantKindRegistry.get("bramble").blocks
+			expect(M.uses(senses({ blocks = harlow }), "desks")).to.equal(true)
+			expect(M.uses(senses({ blocks = harlow }), "stares")).to.equal(true)
+			expect(M.uses(senses({ blocks = bramble }), "desks")).to.equal(false)
+			expect(M.uses(senses({ blocks = bramble }), "stares")).to.equal(true)
+		end)
+
+		it("hides every desk from a kind without the desk block, so no sit-in finds one", function()
+			local bramble = OccupantKindRegistry.get("bramble").blocks
+			local value = senses({ desks = { DESK }, blocks = bramble })
+			expect(#M.desks(value)).to.equal(0)
+			expect(M.findDesk(value, "d1")).to.equal(nil)
+			expect(M.findDesk(senses({ desks = { DESK } }), "d1")).to.equal(DESK)
 		end)
 	end)
 end

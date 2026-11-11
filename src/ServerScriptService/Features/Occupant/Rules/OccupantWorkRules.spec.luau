@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local OccupantBrainRules = require(script.Parent.OccupantBrainRules)
 local OccupantWorkRules = require(script.Parent.OccupantWorkRules)
 local C = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
+local OccupantKindRegistry = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantKindRegistry)
 
 local ZONE = { min = Vector3.new(0, -5, 0), max = Vector3.new(40, 20, 30) }
 local ROUTE = { Vector3.new(100, 0, 100), Vector3.new(150, 0, 100), Vector3.new(150, 0, 150) }
@@ -405,6 +406,35 @@ return function()
 			)
 			expect(bolted.mind.phase).to.equal("ambush")
 			expect(bolted.mind.point).to.equal(Vector3.new(86, 0, 61))
+		end)
+	end)
+
+	describe("per kind (the desk block)", function()
+		local harlow = OccupantKindRegistry.get("harlow").blocks
+		local bramble = OccupantKindRegistry.get("bramble").blocks
+
+		it("Harlow still takes his work break with his kind's blocks", function()
+			local step = OccupantBrainRules.step(due(), senses({ blocks = harlow }))
+			expect(step.mind.mode).to.equal("work")
+			expect(step.mind.desk.id).to.equal("d1")
+		end)
+
+		it("Bramble never takes a work break, desks or not: he patrols on", function()
+			expect(OccupantWorkRules.due(due(), senses({ blocks = bramble }))).to.equal(nil)
+			local step = OccupantBrainRules.step(due(), senses({ blocks = bramble }))
+			expect(step.mind.mode).to.equal("patrol")
+			expect(step.mind.desk).to.equal(nil)
+		end)
+
+		it("a summon to a desk is refused for Bramble, granted for Harlow", function()
+			local mind = OccupantBrainRules.newMind(1, 1, 0)
+			local far = Vector3.new(90 + C.SUMMON_DISTANCE + 5, 3, 60)
+			local refused, none = OccupantWorkRules.summonNear(mind, { DESK }, {}, far, 100, bramble)
+			expect(refused).to.equal(nil)
+			expect(none).to.equal(nil)
+			local granted, desk = OccupantWorkRules.summonNear(mind, { DESK }, {}, far, 100, harlow)
+			expect(granted.mode).to.equal("work")
+			expect(desk.id).to.equal("d1")
 		end)
 	end)
 end

@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local OccupantStareRules = require(script.Parent.OccupantStareRules)
 local C = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
+local OccupantKindRegistry = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantKindRegistry)
 
 local function sitInput(extra)
 	local value = { roll = 0, sitIns = 0, lastSitInAt = nil, now = 500, front = true, occupied = true }
@@ -94,6 +95,43 @@ return function()
 				false
 			)
 			expect(OccupantStareRules.ambushes({ heard = false, seen = false, nearest = nil })).to.equal(false)
+		end)
+	end)
+
+	describe("per kind (the stare block)", function()
+		local SPOT = { id = "s1", center = Vector3.new(87, 1.5, 60), stand = Vector3.new(90.6, 0, 60) }
+		local HIDER = { userId = 7, spotId = "s1", seen = true }
+		local function mind()
+			return { grace = {}, cleared = {} }
+		end
+		local function senses(blocks)
+			return {
+				position = Vector3.new(60, 3, 60),
+				now = 100,
+				players = {},
+				spots = { SPOT },
+				hiders = { HIDER },
+				blocks = blocks,
+			}
+		end
+
+		it("Harlow and Bramble both stare down a hider they saw go in (the registry keeps Bramble's stare)", function()
+			for _, id in { "harlow", "bramble" } do
+				local hider, spot = OccupantStareRules.known(mind(), senses(OccupantKindRegistry.get(id).blocks))
+				expect(hider.userId).to.equal(7)
+				expect(spot.id).to.equal("s1")
+				expect(OccupantStareRules.suspect(mind(), senses(OccupantKindRegistry.get(id).blocks), SPOT.center).id).to.equal(
+					"s1"
+				)
+			end
+		end)
+
+		it("a kind without the stare block never stares at a spot", function()
+			local off = { desks = true, stares = false }
+			local hider, spot = OccupantStareRules.known(mind(), senses(off))
+			expect(hider).to.equal(nil)
+			expect(spot).to.equal(nil)
+			expect(OccupantStareRules.suspect(mind(), senses(off), SPOT.center)).to.equal(nil)
 		end)
 	end)
 end

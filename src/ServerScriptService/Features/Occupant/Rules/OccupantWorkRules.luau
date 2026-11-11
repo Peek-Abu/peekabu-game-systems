@@ -241,10 +241,11 @@ end
 local OccupantWorkRules = {}
 
 --[=[
-	A work break, when one is due and a desk fits (nil otherwise; the patrol goes on).
+	A work break, when one is due and a desk fits (nil otherwise; the patrol goes on). Never for a kind without the
+	desk block (Senses.blocks: Bramble).
 ]=]
 function OccupantWorkRules.due(current: Mind, senses: Senses): Step?
-	local desks = senses.desks
+	local desks = if M.uses(senses, "desks") then senses.desks else nil
 	if current.mode ~= "patrol" or desks == nil or senses.now < current.nextWorkAt or current.steer ~= nil then
 		return nil
 	end
@@ -285,15 +286,20 @@ end
 
 --[=[
 	A developer's summon (the ambush repro command): `mind` sent to the free desk nearest `point` at least
-	SUMMON_DISTANCE away (never one a hider is under), and that desk; nil, nil when there is none.
+	SUMMON_DISTANCE away (never one a hider is under), and that desk; nil, nil when there is none, or when the kind's
+	`blocks` switch desks off (Bramble never works at a desk).
 ]=]
 function OccupantWorkRules.summonNear(
 	mind: Mind,
 	desks: { OccupantTypes.Desk },
 	hiders: { OccupantTypes.Hider },
 	point: Vector3,
-	now: number
+	now: number,
+	blocks: OccupantTypes.Blocks?
 ): (Mind?, OccupantTypes.Desk?)
+	if blocks ~= nil and not blocks.desks then
+		return nil, nil
+	end
 	local occupied: { [string]: boolean } = {}
 	for _, hider in hiders do
 		occupied[hider.spotId] = true

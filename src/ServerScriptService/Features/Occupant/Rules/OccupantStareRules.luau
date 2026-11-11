@@ -300,9 +300,13 @@ function OccupantStareRules.think(current: Mind, senses: Senses, seen: { Glimpse
 end
 
 --[=[
-	The nearest hider he knows of (saw go in, or tracked there), with their spot.
+	The nearest hider he knows of (saw go in, or tracked there), with their spot. None for a kind without the stare
+	block (Senses.blocks).
 ]=]
 function OccupantStareRules.known(mind: Mind, senses: Senses): (Hider?, Spot?)
+	if not M.uses(senses, "stares") then
+		return nil, nil
+	end
 	local best: Hider? = nil
 	local bestSpot: Spot? = nil
 	local bestDistance = math.huge
@@ -321,9 +325,13 @@ function OccupantStareRules.known(mind: Mind, senses: Senses): (Hider?, Spot?)
 end
 
 --[=[
-	The hiding spot within SUSPECT_RADIUS of a noise he walked up to (nearest; not one he left alone lately).
+	The hiding spot within SUSPECT_RADIUS of a noise he walked up to (nearest; not one he left alone lately). None for a
+	kind without the stare block (Senses.blocks).
 ]=]
 function OccupantStareRules.suspect(mind: Mind, senses: Senses, point: Vector3): Spot?
+	if not M.uses(senses, "stares") then
+		return nil
+	end
 	local best: Spot? = nil
 	local bestDistance = math.huge
 	for _, spot in M.spots(senses) do

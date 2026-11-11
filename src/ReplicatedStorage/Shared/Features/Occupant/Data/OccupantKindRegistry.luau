@@ -19,15 +19,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local OccupantAssets = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantAssets)
 local OccupantConstants = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantConstants)
+local OccupantTypes = require(ReplicatedStorage.Shared.Features.Occupant.Data.OccupantTypes)
 
 export type KindId = "harlow" | "bramble"
 
 -- The behaviour blocks a kind may switch off (the shared ones, patrol, hear, chase, search and catch, always run):
--- work breaks and sit-ins at desks, and stares at hiding spots.
-export type Blocks = {
-	desks: boolean,
-	stares: boolean,
-}
+-- work breaks, sit-ins and ambushes at desks, and stares at hiding spots (the brain reads them as Senses.blocks).
+export type Blocks = OccupantTypes.Blocks
 
 -- The "freezes while watched" twist: the owl head (and how long non-stop watching lasts before it swaps target) and
 -- the trail where it moved unwatched.
