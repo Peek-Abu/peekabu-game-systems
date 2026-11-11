@@ -13,7 +13,7 @@
 	  Depart now), tonight's contract board (DepotContractUtils.tonight), the result board, and a tag shell over each
 	  truck that every client draws from Queue's state sync and the public `truck` field this service keeps
 	  (DepotBillboardSystem).
-	- A departing party carries tonight's contract id (setDepartData) and gets the drive card; a local move
+	- A departing party carries tonight's contract id on its truck's map (setDepartData) and gets the drive card; a local move
 	  to the depot lands on the spawn points (setArrivalPoint).
 	- An arriving party (and a member who joins late), wherever it lands, gets the arrival card for its
 	  contract (resolved from the untrusted payload), with the truck it rode (DepotContractUtils.truckOf) and the quota for the
@@ -128,6 +128,17 @@ local cardsPinned = 0
 local mapPicks = 0
 -- Each truck's map pick (by Queue pad id), published as the MAP_WORLD_ENTRY world entry.
 local maps = DepotMapTracker.new()
+
+-- The map truck `pad`'s host picked (the office when none).
+local function mapOfPad(pad: BasePart): ShiftTypes.MapId
+	local padId = QueueServiceServer.pads:padIdOf(pad)
+	return if padId ~= nil then maps:mapOf(padId) else DepotMapRules.parse(nil)
+end
+
+-- Tonight's job on `map` (the Office's is the board's `contract`).
+local function contractOn(map: ShiftTypes.MapId): DepotTypes.Contract
+	return DepotContractUtils.tonight(DepotMapRules.contractsOf(map), os.time())
+end
 
 local function publishMaps()
 	StateSyncWorldStore.set(DepotConstants.MAP_WORLD_ENTRY, maps:snapshot())
@@ -317,18 +328,20 @@ local DepotServiceServer: DepotServiceServer = {
 			TimecardEvents.packets.OpenClipboard.sendTo(false, player)
 		end)
 		QueueServiceServer:setDepartData(function(pad, _party)
-			local payload: QueueTypes.QueuePayload = { contract = contract.id }
+			-- The Training truck's run plays the Training map (TrainingServiceServer); any other truck its host's pick,
+			-- whose job is tonight's on that map (a School run is a school's job).
+			local training = isTrainingPad(pad)
+			local map: ShiftTypes.MapId = if training then DepotMapRules.parse(nil) else mapOfPad(pad)
+			local payload: QueueTypes.QueuePayload = { contract = contractOn(map).id }
 			-- The payload type allows no nil, so the key is only added for a known truck.
 			local index = truckIndexOf(pad)
 			if index ~= nil then
 				payload.truck = index
 			end
-			-- A Training run plays the Training map (TrainingServiceServer); any other truck its host's pick.
-			if isTrainingPad(pad) then
+			if training then
 				payload[TrainingConstants.MODE_KEY] = TrainingConstants.MODE
 			else
-				local padId = QueueServiceServer.pads:padIdOf(pad)
-				payload.map = if padId ~= nil then maps:mapOf(padId) else DepotMapRules.parse(nil)
+				payload.map = map
 			end
 			return payload
 		end)
@@ -341,7 +354,9 @@ local DepotServiceServer: DepotServiceServer = {
 			return self:spawnCFrame(index)
 		end)
 		local departing = QueueServiceServer.departing:Connect(function(pad, party)
-			-- The pick rode the depart data (resolved before this fires); the truck starts over.
+			-- The pick rode the depart data (resolved before this fires); read it for the drive card, then the truck
+			-- starts over.
+			local map: ShiftTypes.MapId = mapOfPad(pad)
 			local padId = QueueServiceServer.pads:padIdOf(pad)
 			if padId ~= nil and maps:clear(padId) then
 				publishMaps()
@@ -350,14 +365,17 @@ local DepotServiceServer: DepotServiceServer = {
 			if isTrainingPad(pad) then
 				return
 			end
-			sendCard(party, DepotContractUtils.driveCard(contract, truckIndexOf(pad)))
+			sendCard(party, DepotContractUtils.driveCard(contractOn(map), truckIndexOf(pad)))
 		end)
 		local arrived = QueueServiceServer.arrived:Connect(function(party, payload)
 			-- Only accepted arrivals mark a player away; a failed departure leaves hub access intact.
 			for _, player in party do
 				departedForShift[player.UserId] = true
 			end
-			crewContract = DepotContractUtils.resolve(DepotConstants.CONTRACTS, payload.contract)
+			crewContract = DepotContractUtils.resolve(
+				DepotMapRules.contractsOf(DepotMapRules.parse(payload.map)),
+				payload.contract
+			)
 			crewTruck = DepotContractUtils.truckOf(payload.truck, DepotConstants.MAX_TRUCKS)
 			crewQuota = ShiftQuotaFormulas.quota(#party)
 			if payload[TrainingConstants.MODE_KEY] ~= TrainingConstants.MODE then

@@ -34,6 +34,7 @@ local Workspace = game:GetService("Workspace")
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftEvents = require(ReplicatedStorage.Shared.Features.Shift.Net.ShiftEvents)
+local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local ShiftTransitUtils = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftTransitUtils)
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
 local OfficeServiceServer = require(ServerScriptService.Features.Office.OfficeServiceServer)
@@ -47,8 +48,8 @@ export type Options = {
 	prepare: () -> (),
 	-- Everyone held by the crew's transit left.
 	abandoned: () -> (),
-	-- The route slip's lines: the contract's client and the truck (ShiftTripSystem).
-	slip: () -> (string?, number?),
+	-- The route slip's lines: the contract's client, the truck and the run's map (ShiftTripSystem).
+	slip: () -> (string?, number?, ShiftTypes.MapId?),
 }
 
 export type ShiftTransitSystem = {
@@ -101,10 +102,10 @@ function ShiftTransitSystem.new(options: Options): ShiftTransitSystem
 		publishScheduled = true
 		task.defer(function()
 			publishScheduled = false
-			local client, truck = options.slip()
+			local client: string?, truck: number?, map: ShiftTypes.MapId? = options.slip()
 			StateSyncWorldStore.set(
 				ShiftConstants.TRANSIT_ENTRY,
-				ShiftTransitUtils.build(tracker:list(), client, truck)
+				ShiftTransitUtils.build(tracker:list(), client, truck, map)
 			)
 		end)
 	end

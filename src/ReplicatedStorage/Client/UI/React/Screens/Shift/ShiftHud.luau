@@ -21,6 +21,7 @@ local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Dat
 local InputServiceClient = require(ReplicatedStorage.Client.Features.Input.InputServiceClient)
 local OccupantCatchStore = require(ReplicatedStorage.Client.Features.Occupant.State.OccupantCatchStore)
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
+local ShiftTransitStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftTransitStore)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
 local usePaperHudScale = require(ReplicatedStorage.Client.UI.React.Screens.Paper.usePaperHudScale)
@@ -83,12 +84,20 @@ local function ShiftHud(): React.ReactNode
 	-- and do not pop again when the scare beat or the catch ends.
 	local hidden = ShiftHudViewModel.hidden(me, scaring)
 	local world = useAtom(StateSyncClientStore.world)
+	local transit = useAtom(ShiftTransitStore.snapshot)
 	local base = ShiftHudViewModel.hud(snapshot, me, now, false)
 	-- A training run counts its stops (the `training` world entry) instead of the Gloom goal.
 	local stop = world[TrainingConstants.WORLD_ENTRY]
-	local view = if base ~= nil and type(stop) == "number"
+	local trained = if base ~= nil and type(stop) == "number"
 		then ShiftHudViewModel.training(base, stop, #TrainingConstants.STOPS)
 		else base
+	-- The run's map (the transit entry) names the meter's site.
+	local view: ShiftHudViewModel.HudView? = nil
+	if trained ~= nil then
+		local onMap = table.clone(trained)
+		onMap.map = if transit ~= nil then transit.map else nil
+		view = onMap
+	end
 	if view == nil or snapshot == nil then
 		return nil
 	end

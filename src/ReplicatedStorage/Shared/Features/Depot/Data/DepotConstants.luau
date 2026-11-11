@@ -9,6 +9,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local DepotTypes = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotTypes)
+local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 
 -- The contract board's work order (Figma 2a/2b). Quota and shift lines are filled from ShiftConstants by
 -- DepotBoardViewModel; NOTES is the contract's own note. The quota line is for the crew in the reader's truck
@@ -45,7 +46,8 @@ local BOARD_COPY = table.freeze({
 local HUB_PLACE_ID = 113354563835664
 local SHIFT_PLACE_ID = 118845637680835
 
--- Tonight's job rotates by UTC day (DepotContractUtils.tonight). All are Harlow & Finch: there is one office.
+-- Tonight's job rotates by UTC day (DepotContractUtils.tonight). The Office's jobs are all Harlow & Finch: there is one
+-- office. A School run's jobs are SCHOOL_CONTRACTS (DepotMapRules.contractsOf picks a map's list).
 local CONTRACTS: { DepotTypes.Contract } = {
 	{
 		id = "harlow-finch-1",
@@ -67,12 +69,55 @@ local CONTRACTS: { DepotTypes.Contract } = {
 	},
 }
 
+-- The School's jobs (the School map plan): Maple Hill School, worded for young players. Ids never repeat the Office's.
+local SCHOOL_CONTRACTS: { DepotTypes.Contract } = {
+	{
+		id = "maple-hill-1",
+		client = "Maple Hill School",
+		job = "Clean the school before Monday.",
+		note = "The owl mascot is not where we left it.",
+	},
+	{
+		id = "maple-hill-2",
+		client = "Maple Hill School",
+		job = "Make the halls shine for picture day.",
+		note = "The night guard heard wings in the gym.",
+	},
+	{
+		id = "maple-hill-3",
+		client = "Maple Hill School",
+		job = "Clean every classroom before the bell.",
+		note = "Someone keeps moving the owl.",
+	},
+}
+
+-- Each map's words during a run (DepotMapRules.siteOf): the route slip's site line and tip (the tip is about the map's
+-- monster, its OccupantRosterRegistry pick), the HUD meter's site line, and the shift review's tab and closing quote
+-- when the goal is met. The Office's are the words it always had.
+local OFFICE_SITE: DepotTypes.MapSite = {
+	site = "4th floor offices",
+	hud = "Harlow & Finch · offices",
+	tip = BOARD_COPY.hazard,
+	reviewTab = "SHIFT REVIEW · HARLOW & FINCH",
+	quote = ShiftConstants.REVIEW_QUOTES.met,
+}
+local SCHOOL_SITE: DepotTypes.MapSite = {
+	site = "School halls",
+	hud = "Maple Hill · school",
+	tip = "Bramble the owl can't move while you look at it. Watch it and take turns!",
+	reviewTab = "SHIFT REVIEW · MAPLE HILL SCHOOL",
+	quote = table.freeze({ line = '"The halls have never been so shiny!"', by = "— Maple Hill School, Front Desk" }),
+}
+
 return table.freeze({
 	ROLE_DEPOT = "depot",
 	ROLE_SHIFT = "shift",
 	HUB_PLACE_ID = HUB_PLACE_ID,
 	SHIFT_PLACE_ID = SHIFT_PLACE_ID,
 	CONTRACTS = table.freeze(CONTRACTS),
+	SCHOOL_CONTRACTS = table.freeze(SCHOOL_CONTRACTS),
+	OFFICE_SITE = table.freeze(OFFICE_SITE),
+	SCHOOL_SITE = table.freeze(SCHOOL_SITE),
 	-- How long each travel card stays up; a card that arrives while another shows waits behind it.
 	DRIVE_CARD_SECONDS = 3,
 	ARRIVAL_CARD_SECONDS = 5,
@@ -98,8 +143,8 @@ return table.freeze({
 	BOARD_KIND = "depot-board",
 	-- The contract board's scene (DepotScene registers it; DepotBoardScreen's CLOSE removes it).
 	BOARD_SCENE = "depot.Board",
-	-- Every contract is the same office (open question 8).
-	SITE = "4th floor offices",
+	-- Every Office contract is the same office (open question 8); a School run's site is SCHOOL_SITE's.
+	SITE = OFFICE_SITE.site,
 	JOB_TITLE = "HARLOW & FINCH JOB",
 	BOARD_COPY = BOARD_COPY,
 	RETURN_TEXT = "Back at the depot. See how you did on the board.",

@@ -1,7 +1,8 @@
 --!strict
 --[=[
 	ShiftTransitUtils: the `shiftTransit` world entry (ShiftConstants.TRANSIT_ENTRY): who the transit holds behind the
-	load screen, and the route slip's lines. `build` turns the server's holds into plain data (a spot rides as x, y, z:
+	load screen, and the route slip's lines (the contract's client, the truck, and the run's map, which also picks the
+	run's words on the client: DepotMapRules.siteOf). `build` turns the server's holds into plain data (a spot rides as x, y, z:
 	charm-sync ships no Vector3); `decode` is the client's trust boundary for it (a wrong type anywhere rejects the whole
 	value); `holdOf` finds one player's hold. Pure.
 
@@ -11,6 +12,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local WorldTypes = require(ReplicatedStorage.Shared.Data.WorldTypes)
+local DepotMapRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotMapRules)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 
 type WorldValue = WorldTypes.WorldValue
@@ -54,7 +56,12 @@ local ShiftTransitUtils = {}
 --[=[
 	The world entry for `holds` (a fresh table: publish a new one every time).
 ]=]
-function ShiftTransitUtils.build(holds: { TransitHold }, client: string?, truck: number?): WorldTable
+function ShiftTransitUtils.build(
+	holds: { TransitHold },
+	client: string?,
+	truck: number?,
+	map: ShiftTypes.MapId?
+): WorldTable
 	local list: { WorldValue } = {}
 	for _, hold in holds do
 		local entry: WorldTable = { userId = hold.userId, id = hold.id, built = hold.built }
@@ -77,11 +84,15 @@ function ShiftTransitUtils.build(holds: { TransitHold }, client: string?, truck:
 	if truck ~= nil then
 		result.truck = truck
 	end
+	if map ~= nil then
+		result.map = map
+	end
 	return result
 end
 
 --[=[
-	Decodes a replicated transit entry, or nil when it is malformed. Absent holds read as none.
+	Decodes a replicated transit entry, or nil when it is malformed. Absent holds read as none; a map that is not
+	exactly a map id reads as none (the client then uses the Office's words).
 ]=]
 function ShiftTransitUtils.decode(value: WorldValue?): TransitSnapshot?
 	if type(value) ~= "table" then
@@ -113,6 +124,7 @@ function ShiftTransitUtils.decode(value: WorldValue?): TransitSnapshot?
 		holds = holds,
 		client = if type(client) == "string" then client else nil,
 		truck = if type(truck) == "number" then truck else nil,
+		map = if DepotMapRules.isMap(value.map) then DepotMapRules.parse(value.map) else nil,
 	}
 end
 

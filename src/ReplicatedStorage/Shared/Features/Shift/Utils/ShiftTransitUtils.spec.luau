@@ -24,6 +24,19 @@ return function()
 			expect(snapshot.truck).to.equal(2)
 		end)
 
+		it("round-trips the run's map, and leaves it off when unknown", function()
+			expect(ShiftTransitUtils.decode(ShiftTransitUtils.build({}, "Maple Hill School", 1, "school")).map).to.equal(
+				"school"
+			)
+			expect(ShiftTransitUtils.decode(ShiftTransitUtils.build({}, nil, nil, "office")).map).to.equal("office")
+			expect(ShiftTransitUtils.decode(ShiftTransitUtils.build({}, nil, nil)).map).to.equal(nil)
+		end)
+
+		it("reads an unknown map as none, never as a map", function()
+			expect(ShiftTransitUtils.decode({ holds = {}, map = "gym" }).map).to.equal(nil)
+			expect(ShiftTransitUtils.decode({ holds = {}, map = 3 }).map).to.equal(nil)
+		end)
+
 		it("ships only plain data (no Vector3)", function()
 			local built = ShiftTransitUtils.build({
 				{ userId = 7, id = 1, built = true, spot = Vector3.new(4, 5, 6) },

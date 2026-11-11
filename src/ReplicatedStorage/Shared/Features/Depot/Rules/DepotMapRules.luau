@@ -4,13 +4,17 @@
 	crew hosting's, HostServiceServer:hostOf); the maps are OFFICE and SCHOOL. `parse` reads a
 	map off anything untrusted (the depart payload riding the teleport, a client's pick): only an exact map id counts,
 	anything else is the office. `decode` reads the published picks (the DepotConstants.MAP_WORLD_ENTRY world entry) on
-	a client, dropping bad entries; `mapOf` is a truck's pick, the office when it has none.
+	a client, dropping bad entries; `mapOf` is a truck's pick, the office when it has none. `contractsOf` is a map's jobs
+	(the Office's DepotConstants.CONTRACTS, the School's SCHOOL_CONTRACTS) and `siteOf` its words during a run (the
+	route slip, the HUD, the review): every Office/School word is chosen here, by the run's map.
 
 	@class DepotMapRules
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
+local DepotTypes = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotTypes)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local WorldTypes = require(ReplicatedStorage.Shared.Data.WorldTypes)
 
@@ -35,6 +39,8 @@ export type DepotMapRules = {
 	canPick: (userId: number, host: number?) -> boolean,
 	decode: (value: WorldTypes.WorldValue?) -> Picks,
 	mapOf: (picks: Picks, padId: string?) -> MapId,
+	contractsOf: (map: MapId) -> { DepotTypes.Contract },
+	siteOf: (map: MapId) -> DepotTypes.MapSite,
 }
 
 local DepotMapRules: DepotMapRules = {
@@ -72,6 +78,16 @@ local DepotMapRules: DepotMapRules = {
 	mapOf = function(picks, padId)
 		local map: MapId? = if padId ~= nil then picks[padId] else nil
 		return if map ~= nil then map else "office"
+	end,
+
+	-- The jobs a run on `map` may be.
+	contractsOf = function(map)
+		return if map == "school" then DepotConstants.SCHOOL_CONTRACTS else DepotConstants.CONTRACTS
+	end,
+
+	-- `map`'s words during a run.
+	siteOf = function(map)
+		return if map == "school" then DepotConstants.SCHOOL_SITE else DepotConstants.OFFICE_SITE
 	end,
 }
 

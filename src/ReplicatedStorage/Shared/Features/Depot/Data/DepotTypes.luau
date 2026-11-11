@@ -15,6 +15,20 @@ export type Contract = {
 	note: string,
 }
 
+-- A map's words during a run (DepotConstants.OFFICE_SITE / SCHOOL_SITE, read through DepotMapRules.siteOf).
+export type MapSite = {
+	-- The route slip's site line ("<site> · 8:30 shift").
+	site: string,
+	-- The HUD meter's site line.
+	hud: string,
+	-- The route slip's tip: about the map's monster.
+	tip: string,
+	-- The shift review's tab.
+	reviewTab: string,
+	-- The shift review's closing quote when the goal is met.
+	quote: { line: string, by: string },
+}
+
 export type CardKind = "drive" | "arrival"
 
 -- A travel card on the wire (DepotEvents.Card): the contract's words, the quota (0 on the drive card) and the truck

@@ -13,6 +13,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
+local DepotMapRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotMapRules)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local ShiftCurrencyUtils = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftCurrencyUtils)
@@ -69,6 +70,8 @@ export type ReviewView = {
 	grade: string,
 	cards: { CardView },
 	tab: string,
+	-- The desktop's "SHIFT REVIEW · <client>" pill (the run's map's words).
+	pill: string,
 	subtitle: string,
 	headline: string,
 	met: boolean,
@@ -297,14 +300,17 @@ end
 
 --[=[
 	The review while the crew votes; nil outside results or before the review arrives. `myVote` is ShiftStore.myVote,
-	`myUserId` the local player's (0 matches nobody), `now` the server clock, `phone` the 5b layout.
+	`myUserId` the local player's (0 matches nobody), `now` the server clock, `phone` the 5b layout. `transit` (the
+	`shiftTransit` entry) names the run's client and map, which pick the subtitle, the pill and the met quote
+	(DepotMapRules.siteOf); without it they are the Office's.
 ]=]
 function ShiftReviewViewModel.review(
 	snapshot: ShiftTypes.ShiftSnapshot?,
 	myVote: string?,
 	myUserId: number,
 	now: number,
-	phone: boolean
+	phone: boolean,
+	transit: ShiftTypes.TransitSnapshot?
 ): ReviewView?
 	if snapshot == nil or snapshot.phase ~= "results" then
 		return nil
@@ -314,7 +320,11 @@ function ShiftReviewViewModel.review(
 		return nil
 	end
 	local met = results.quotaMet
-	local quote = if met then ShiftConstants.REVIEW_QUOTES.met else ShiftConstants.REVIEW_QUOTES.missed
+	local site = DepotMapRules.siteOf(DepotMapRules.parse(if transit ~= nil then transit.map else nil))
+	local client = if transit ~= nil and transit.client ~= nil
+		then transit.client
+		else DepotConstants.CONTRACTS[1].client
+	local quote = if met then site.quote else ShiftConstants.REVIEW_QUOTES.missed
 	local rating: ShiftTypes.Rating = if met then results.rating else "needsImprovement"
 	local awards: { AwardView } = {}
 	local extraAwards: { AwardView } = {}
@@ -372,7 +382,8 @@ function ShiftReviewViewModel.review(
 			},
 		},
 		tab = if phone then "HOW YOU DID" else "HOW YOU DID — NIGHT SHIFT",
-		subtitle = `{crewText} · {DepotConstants.CONTRACTS[1].client} · {DepotConstants.SITE}`,
+		pill = site.reviewTab,
+		subtitle = `{crewText} · {client} · {site.site}`,
 		headline = if met then "GOAL DONE!" else "GOAL MISSED",
 		met = met,
 		rows = {

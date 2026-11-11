@@ -1,4 +1,8 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local DepotMapRules = require(script.Parent.DepotMapRules)
+local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 
 return function()
 	describe("parse", function()
@@ -66,6 +70,55 @@ return function()
 			expect(DepotMapRules.mapOf(picks, "pad1")).to.equal("school")
 			expect(DepotMapRules.mapOf(picks, "pad2")).to.equal("office")
 			expect(DepotMapRules.mapOf(picks, nil)).to.equal("office")
+		end)
+	end)
+
+	describe("contractsOf", function()
+		it("is the office's jobs on the office, unchanged", function()
+			expect(DepotMapRules.contractsOf("office")).to.equal(DepotConstants.CONTRACTS)
+			expect(DepotMapRules.contractsOf("office")[1].client).to.equal("Harlow & Finch Ltd.")
+		end)
+
+		it("is the school's own jobs on the school, none of them Harlow & Finch", function()
+			local list = DepotMapRules.contractsOf("school")
+			expect(#list > 0).to.equal(true)
+			for _, contract in list do
+				expect(contract.client).to.equal("Maple Hill School")
+				expect(string.find(contract.job, "office", 1, true)).to.equal(nil)
+				expect(string.find(contract.note, "manager", 1, true)).to.equal(nil)
+			end
+			expect(list[1].job).to.equal("Clean the school before Monday.")
+		end)
+
+		it("never shares a contract id between maps", function()
+			local seen = {}
+			for _, map in { "office", "school" } do
+				for _, contract in DepotMapRules.contractsOf(map) do
+					expect(seen[contract.id]).to.equal(nil)
+					seen[contract.id] = true
+				end
+			end
+		end)
+	end)
+
+	describe("siteOf", function()
+		it("keeps the office's words as they were", function()
+			local site = DepotMapRules.siteOf("office")
+			expect(site.site).to.equal(DepotConstants.SITE)
+			expect(site.hud).to.equal("Harlow & Finch · offices")
+			expect(site.tip).to.equal(DepotConstants.BOARD_COPY.hazard)
+			expect(site.reviewTab).to.equal("SHIFT REVIEW · HARLOW & FINCH")
+			expect(site.quote).to.equal(ShiftConstants.REVIEW_QUOTES.met)
+		end)
+
+		it("gives the school its own words, with a tip about Bramble and no Office or Manager", function()
+			local site = DepotMapRules.siteOf("school")
+			expect(site.tip).to.equal("Bramble the owl can't move while you look at it. Watch it and take turns!")
+			for _, text in { site.site, site.hud, site.tip, site.reviewTab, site.quote.line, site.quote.by } do
+				expect(string.find(string.lower(text), "office", 1, true)).to.equal(nil)
+				expect(string.find(string.lower(text), "manager", 1, true)).to.equal(nil)
+				expect(string.find(string.lower(text), "harlow", 1, true)).to.equal(nil)
+			end
 		end)
 	end)
 end

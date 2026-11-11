@@ -115,6 +115,23 @@ return function()
 			expect(view.quote).to.equal('"Those were COMPANY ASSETS."')
 			expect(view.quoteBy).to.equal("— The Manager, Site Supervisor Proxy")
 			expect(view.voteTitle).to.equal("WHAT NEXT? (crew vote)")
+			expect(view.pill).to.equal("SHIFT REVIEW · HARLOW & FINCH")
+		end)
+
+		it("names a School run's client and site, with the school's own tab and quote", function()
+			local transit = { holds = {}, client = "Maple Hill School", map = "school" }
+			local view = ShiftReviewViewModel.review(snapshot(), nil, 4, 100, false, transit)
+			expect(view.subtitle).to.equal("Crew of Truck 2 · Maple Hill School · School halls")
+			expect(view.pill).to.equal("SHIFT REVIEW · MAPLE HILL SCHOOL")
+			expect(view.quote).to.equal('"The halls have never been so shiny!"')
+			expect(view.quoteBy).to.equal("— Maple Hill School, Front Desk")
+		end)
+
+		it("keeps an Office run's words as they were", function()
+			local transit = { holds = {}, client = "Harlow & Finch Ltd.", map = "office" }
+			local view = ShiftReviewViewModel.review(snapshot(), nil, 4, 100, false, transit)
+			expect(view.subtitle).to.equal("Crew of Truck 2 · Harlow & Finch Ltd. · 4th floor offices")
+			expect(view.quoteBy).to.equal("— The Manager, Site Supervisor Proxy")
 		end)
 
 		it("breaks the Gloom removed and the Credits earned down into dust, item cleaning and valuables", function()

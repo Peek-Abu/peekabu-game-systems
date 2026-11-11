@@ -58,6 +58,25 @@ return function()
 			expect(view.client).to.equal(string.upper(ShiftTransitViewModel.NO_CLIENT))
 		end)
 
+		it("writes a School run's slip: its client, its site and a tip about Bramble", function()
+			local view = ShiftTransitViewModel.slip(
+				{ holds = {}, client = "Maple Hill School", truck = 1, map = "school" },
+				false
+			)
+			expect(view.client).to.equal("MAPLE HILL SCHOOL")
+			expect(view.site).to.equal("School halls · 8:30 shift")
+			expect(view.tip).to.equal("Bramble the owl can't move while you look at it. Watch it and take turns!")
+		end)
+
+		it("keeps the Office run's slip as it was", function()
+			local view = ShiftTransitViewModel.slip(
+				{ holds = {}, client = "Harlow & Finch Ltd.", truck = 1, map = "office" },
+				false
+			)
+			expect(view.site).to.equal("4th floor offices · 8:30 shift")
+			expect(string.find(view.tip, "Manager", 1, true) ~= nil).to.equal(true)
+		end)
+
 		it("fits the load screen to the window", function()
 			expect(ShiftTransitViewModel.fit(Vector2.new(1920, 1080))).to.equal(1.25)
 			expect(ShiftTransitViewModel.fit(Vector2.new(844, 390))).to.equal(0.5)

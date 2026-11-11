@@ -420,8 +420,8 @@ voting = ShiftVoteSystem.new({
 transit = ShiftTransitSystem.new({
 	prepare = prepareShift,
 	abandoned = finishReset,
-	slip = function(): (string?, number?)
-		return trip:client(), trip:truck()
+	slip = function(): (string?, number?, ShiftTypes.MapId?)
+		return trip:client(), trip:truck(), trip:map()
 	end,
 })
 

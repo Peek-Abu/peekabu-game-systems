@@ -514,6 +514,15 @@ return function()
 			expect(meter.met).to.equal(false)
 		end)
 
+		it("names the run's site: the office's as it was, the school's on a School run", function()
+			expect(ShiftHudViewModel.meter({ quotaMet = false, overtime = false, map = "office" }).site).to.equal(
+				"Harlow & Finch · offices"
+			)
+			expect(ShiftHudViewModel.meter({ quotaMet = false, overtime = false, map = "school" }).site).to.equal(
+				"Maple Hill · school"
+			)
+		end)
+
 		it("celebrates a met contract, and calls out overtime", function()
 			expect(ShiftHudViewModel.meter({ quotaMet = true, overtime = false }).title).to.equal("GOAL DONE!")
 			expect(ShiftHudViewModel.meter({ quotaMet = true, overtime = false }).met).to.equal(true)

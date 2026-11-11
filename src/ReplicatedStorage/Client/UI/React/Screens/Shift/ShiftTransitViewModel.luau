@@ -15,7 +15,7 @@ local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.Shif
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local WorldBillboardViewModel = require(ReplicatedStorage.Client.UI.React.Screens.World.WorldBillboardViewModel)
-local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
+local DepotMapRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotMapRules)
 local PaperHudScaleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudScaleViewModel)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
 
@@ -29,7 +29,7 @@ export type SlipView = {
 	stamp: string,
 	arrived: boolean,
 	-- V1: the card's heading over the client ("EN ROUTE TO" / "ARRIVED AT"), the client in caps without its company
-	-- suffix, the site line, the Manager tip and the loading bar's words.
+	-- suffix, the site line, the map's monster tip and the loading bar's words.
 	heading: string,
 	client: string,
 	site: string,
@@ -87,6 +87,8 @@ end
 function ShiftTransitViewModel.slip(snapshot: ShiftTypes.TransitSnapshot?, arrived: boolean): SlipView
 	local client = if snapshot ~= nil then snapshot.client else nil
 	local truck = if snapshot ~= nil then snapshot.truck else nil
+	-- The run's map picks the site line and the tip (the Office's when unknown).
+	local site = DepotMapRules.siteOf(DepotMapRules.parse(if snapshot ~= nil then snapshot.map else nil))
 	local to = if client ~= nil
 		then WorldBillboardViewModel.clip(client, ShiftTransitViewModel.CLIENT_MAX)
 		else ShiftTransitViewModel.NO_CLIENT
@@ -96,8 +98,8 @@ function ShiftTransitViewModel.slip(snapshot: ShiftTypes.TransitSnapshot?, arriv
 		-- A training trip's slip names the training room and says what it is for, not the night's site and clock.
 		site = if client == TrainingConstants.CONTRACT.client
 			then TrainingConstants.ROOM_SITE
-			else `{DepotConstants.SITE} · {ShiftHudViewModel.clock(ShiftConstants.SHIFT_SECONDS)} shift`,
-		tip = DepotConstants.BOARD_COPY.hazard,
+			else `{site.site} · {ShiftHudViewModel.clock(ShiftConstants.SHIFT_SECONDS)} shift`,
+		tip = site.tip,
 		bar = if arrived then "DOORS OPEN!" else "DRIVING TO THE SITE...",
 		band = `{ShiftConstants.EMPLOYER_BAND} — DISPATCH`,
 		truck = if truck ~= nil and truck > 0 then `TRUCK {truck}` else nil,

@@ -19,6 +19,7 @@ local CargoRegistry = require(CargoShared.Data.CargoRegistry)
 local CargoTypes = require(CargoShared.Data.CargoTypes)
 local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
 local DeathConstants = require(ReplicatedStorage.Shared.Features.Death.Data.DeathConstants)
+local DepotMapRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotMapRules)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local ShiftCurrencyUtils = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftCurrencyUtils)
@@ -76,6 +77,8 @@ export type HudView = {
 	truck: number?,
 	-- On a training run: the stop the player is on (the meter shows the stops, not the shift's Gloom goal).
 	training: number?,
+	-- The run's map (the `shiftTransit` entry; nil: the office): it picks the meter's site line.
+	map: ShiftTypes.MapId?,
 }
 
 export type ButtonsView = {
@@ -587,14 +590,16 @@ end
 
 export type MeterView = { title: string, site: string, met: boolean }
 
--- The V1 Gloom meter's words: the job until the contract is met, then the win, then overtime's push. Every contract is
--- the one office (DepotConstants.SITE), so the site line is fixed. A training run is TRAINING.
-function ShiftHudViewModel.meter(view: { quotaMet: boolean, overtime: boolean, training: number? }): MeterView
+-- The V1 Gloom meter's words: the job until the contract is met, then the win, then overtime's push. The site line is
+-- the run's map's (DepotMapRules.siteOf; the office's when unknown). A training run is TRAINING.
+function ShiftHudViewModel.meter(
+	view: { quotaMet: boolean, overtime: boolean, training: number?, map: ShiftTypes.MapId? }
+): MeterView
 	if view.training ~= nil then
 		return { title = "TRAINING", site = "Harlow & Finch · training", met = false }
 	end
 	local title = if view.overtime then "OVERTIME!" elseif view.quotaMet then "GOAL DONE!" else "CLEAN THE GLOOM"
-	return { title = title, site = "Harlow & Finch · offices", met = view.quotaMet }
+	return { title = title, site = DepotMapRules.siteOf(DepotMapRules.parse(view.map)).hud, met = view.quotaMet }
 end
 
 -- The hint row is drawn on desktop with a keyboard only.

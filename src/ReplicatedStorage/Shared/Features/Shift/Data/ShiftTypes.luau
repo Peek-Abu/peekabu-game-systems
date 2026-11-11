@@ -193,11 +193,13 @@ export type TransitHold = {
 	spot: Vector3?,
 }
 
--- The `shiftTransit` world entry: who is held, and the slip's lines (the contract's client, the truck).
+-- The `shiftTransit` world entry: who is held, and the slip's lines (the contract's client, the truck), and the run's
+-- map (nil: unknown, read as the office), which picks the run's words on the client.
 export type TransitSnapshot = {
 	holds: { TransitHold },
 	client: string?,
 	truck: number?,
+	map: MapId?,
 }
 
 -- What this client's transit screen shows: nothing, plain black (the client booting, a respawn) or the route slip.

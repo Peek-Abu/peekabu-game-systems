@@ -17,6 +17,7 @@ local React = require(ReplicatedStorage.Packages.React)
 local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local ShiftStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftStore)
+local ShiftTransitStore = require(ReplicatedStorage.Client.Features.Shift.State.ShiftTransitStore)
 local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local useServerClock = require(ReplicatedStorage.Client.UI.React.Hooks.useServerClock)
 local UIPaperConstants = require(ReplicatedStorage.Client.UI.React.Screens.Paper.UIPaperConstants)
@@ -46,7 +47,8 @@ local function ShiftReviewScreen(): React.ReactNode
 	local viewport = usePaperViewport()
 	local phone = layout == "phone"
 	local userId = Players.LocalPlayer.UserId
-	local view = ShiftReviewViewModel.review(snapshot, myVote, userId, now, phone)
+	local transit = useAtom(ShiftTransitStore.snapshot)
+	local view = ShiftReviewViewModel.review(snapshot, myVote, userId, now, phone, transit)
 	if view == nil or snapshot == nil then
 		return nil
 	end

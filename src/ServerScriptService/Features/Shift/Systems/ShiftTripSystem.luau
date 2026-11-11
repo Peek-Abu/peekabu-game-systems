@@ -5,7 +5,7 @@
 
 	- Queue `arrived(party, payload)`: the party joins the crew (ShiftCrewTracker.join: added to a crew still
 	  here, replacing one that has gone), and the payload's contract id (untrusted: it rode the teleport) is
-	  resolved by DepotContractUtils for the result card; its map (the truck host's pick) is read by
+	  resolved by DepotContractUtils among its map's jobs (DepotMapRules.contractsOf) for the result card; its map (the truck host's pick) is read by
 	  DepotMapRules.parse (anything but a map id is the office; a training trip is the office) and kept for every
 	  shift of the run (`map`; Another shift keeps it) until the next party arrives;
 	- Queue `joinedLate(player)`: an expected member who came after the start joins the crew and is handed to
@@ -171,11 +171,12 @@ function ShiftTripSystem.new(options: Options): ShiftTripSystem
 				members:join(idsOf(party), presentIds())
 				-- A training trip goes to the training room, not the night's client (its route slip says so).
 				local training = payload[TrainingConstants.MODE_KEY] == TrainingConstants.MODE
+				map = if training then "office" else DepotMapRules.parse(payload.map)
+				-- The contract is resolved among the map's own jobs (an id from another map reads as its first).
 				contract = if training
 					then TrainingConstants.CONTRACT
-					else DepotContractUtils.resolve(DepotConstants.CONTRACTS, payload.contract)
+					else DepotContractUtils.resolve(DepotMapRules.contractsOf(map), payload.contract)
 				truck = DepotContractUtils.truckOf(payload.truck, DepotConstants.MAX_TRUCKS)
-				map = if training then "office" else DepotMapRules.parse(payload.map)
 				log:info(`a crew of {#party} arrived for {contract.id} on the {map} map`)
 				changed()
 				for _, player in party do
