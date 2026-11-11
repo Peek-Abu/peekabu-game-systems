@@ -4,7 +4,8 @@
 	party's truck leaves, the arrival card when it reaches the office; the client checks the kind,
 	DepotStore.show), Board (server → client: open the contract board), Spot (server → client: a hub spot used) and Bell (server → all: a shift bell rang), LastShift (server → client: the
 	returning player's last shift, for the board's card), and Ready (client → server), sent once the client is listening for cards, so the server
-	holds a card until then (an arrival card can be sent before the client has loaded).
+	holds a card until then (an arrival card can be sent before the client has loaded), and PickMap (client → server),
+	a truck host's map pick.
 
 	Boot-timing note (the CarryEvents precedent): the client waits for the per-namespace replicated value the
 	server creates when IT requires this module (at DepotServiceServer load).
@@ -72,6 +73,12 @@ local DepotEvents = ByteNet.defineNamespace(NAMESPACE, function()
 			-- To everyone: a shift bell rang here (its world position).
 			Bell = ByteNet.definePacket({
 				value = ByteNet.vec3,
+				reliabilityType = "reliable",
+			}),
+			-- A truck host picks their truck's map ("office" | "school"; anything else is dropped). The server checks the
+			-- sender hosts the truck they are aboard (DepotMapRules) and publishes the pick (DepotConstants.MAP_WORLD_ENTRY).
+			PickMap = ByteNet.definePacket({
+				value = ByteNet.string,
 				reliabilityType = "reliable",
 			}),
 			-- Payload unused; the packet is the signal that this client now listens for Card.

@@ -26,6 +26,11 @@
 	- In a hub-only server (this server runs the depot but not the shift) the depot places spawning players on
 	  its spawn points (Death's spawn resolver); where Shift runs, Shift's trip owns it.
 	- The hub's spots (Studio parts with a `depot-spot-*` Interaction kind) are answered by DepotSpotSystem.
+	- The map pick (the School map plan): a truck's host (crew hosting's, HostServiceServer:hostOf) sends PickMap; a
+	  pick from anyone else, or of no map, is dropped (DepotMapRules). Picks live in DepotMapTracker, are published as
+	  the DepotConstants.MAP_WORLD_ENTRY world entry (every client aboard sees the host's pick), ride the depart data as
+	  `map` (the Shift server reads it back with DepotMapRules.parse), and are forgotten when the party departs or the
+	  truck has no host left (it emptied). A truck nobody picked for plays the office.
 	- The contract board's prompt (Interaction kind DepotConstants.BOARD_KIND) sends the player Board with
 	  tonight's contract id; the depart data carries the truck number (layout order) beside the contract id,
 	  and each player's public `truck` field (DepotConstants.PUBLIC_TRUCK) follows the truck bed they stand in.
@@ -49,6 +54,7 @@ local DepotConstants = require(DepotShared.Data.DepotConstants)
 local TimecardConstants = require(ReplicatedStorage.Shared.Features.Timecard.Data.TimecardConstants)
 local DepotTypes = require(DepotShared.Data.DepotTypes)
 local DepotEvents = require(DepotShared.Net.DepotEvents)
+local DepotMapRules = require(DepotShared.Rules.DepotMapRules)
 local InteractionRegistry = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionRegistry)
 local QueueTypes = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueTypes)
 local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
@@ -62,6 +68,9 @@ local DepotContractUtils = require(DepotServer.Utils.DepotContractUtils)
 local DepotPlaceUtils = require(DepotServer.Utils.DepotPlaceUtils)
 local DepotBuildSystem = require(DepotServer.Systems.DepotBuildSystem)
 local DepotSpotSystem = require(DepotServer.Systems.DepotSpotSystem)
+local DepotMapTracker = require(DepotServer.State.DepotMapTracker)
+local HostServiceServer = require(ServerScriptService.Features.Host.HostServiceServer)
+local StateSyncWorldStore = require(ServerScriptService.Features.StateSync.State.StateSyncWorldStore)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
 local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
 local QueueRegistry = require(ServerScriptService.Features.Queue.Data.QueueRegistry)
@@ -116,6 +125,13 @@ local stoppers: { () -> () } = {}
 local ownsSpawns = false
 local cardsSent = 0
 local cardsPinned = 0
+local mapPicks = 0
+-- Each truck's map pick (by Queue pad id), published as the MAP_WORLD_ENTRY world entry.
+local maps = DepotMapTracker.new()
+
+local function publishMaps()
+	StateSyncWorldStore.set(DepotConstants.MAP_WORLD_ENTRY, maps:snapshot())
+end
 
 -- Clients that said they listen for cards (DepotEvents.Ready); a card for anyone else waits in `held`.
 local ready: { [Player]: true } = {}
@@ -192,12 +208,51 @@ local onReady = RequestHandler.wrap({
 	end,
 })
 
+-- A host's map pick for the truck they are aboard. Dropped unless the id is a map and the sender hosts that truck.
+local onPickMap = RequestHandler.wrap({
+	name = "DepotPickMap",
+	rateLimit = DepotConstants.MAP_REQUEST_RATE,
+	handler = function(data: unknown, player: Player)
+		if not DepotMapRules.isMap(data) then
+			return
+		end
+		local pad = QueueServiceServer:padOf(player)
+		local padId = if pad ~= nil then QueueServiceServer.pads:padIdOf(pad) else nil
+		if pad == nil or padId == nil then
+			return
+		end
+		if not DepotMapRules.canPick(player.UserId, HostServiceServer:hostOf(pad)) then
+			return
+		end
+		if maps:pick(padId, DepotMapRules.parse(data)) then
+			mapPicks += 1
+			publishMaps()
+		end
+	end,
+})
+
+-- Forgets the map picks of trucks with no host left (emptied).
+local function refreshMaps(current: DepotBuildSystem.Built)
+	local live: { [string]: boolean } = {}
+	for _, truck in current.trucks do
+		local padId = QueueServiceServer.pads:padIdOf(truck.pad)
+		if padId ~= nil and HostServiceServer:hostOf(truck.pad) ~= nil then
+			live[padId] = true
+		end
+	end
+	if maps:retain(live) then
+		publishMaps()
+	end
+end
+
 -- Keeps each player's public `truck` field on the truck bed they stand in (Queue's membership); written on change.
 -- The truck tags themselves are drawn by the client from Queue's state sync and these fields (DepotBillboardSystem).
 local function refreshTrucks()
-	if built == nil then
+	local current = built
+	if current == nil then
 		return
 	end
+	refreshMaps(current)
 	for _, player in Players:GetPlayers() do
 		local pad = QueueServiceServer:padOf(player)
 		local index = if pad ~= nil then truckIndexOf(pad) else nil
@@ -247,6 +302,7 @@ local DepotServiceServer: DepotServiceServer = {
 		"InteractionServiceServer",
 		"StateSyncServiceServer",
 		"DeathServiceServer",
+		"HostServiceServer",
 	},
 
 	--[=[
@@ -267,9 +323,12 @@ local DepotServiceServer: DepotServiceServer = {
 			if index ~= nil then
 				payload.truck = index
 			end
-			-- A Training run plays the Training map (TrainingServiceServer).
+			-- A Training run plays the Training map (TrainingServiceServer); any other truck its host's pick.
 			if isTrainingPad(pad) then
 				payload[TrainingConstants.MODE_KEY] = TrainingConstants.MODE
+			else
+				local padId = QueueServiceServer.pads:padIdOf(pad)
+				payload.map = if padId ~= nil then maps:mapOf(padId) else DepotMapRules.parse(nil)
 			end
 			return payload
 		end)
@@ -282,6 +341,11 @@ local DepotServiceServer: DepotServiceServer = {
 			return self:spawnCFrame(index)
 		end)
 		local departing = QueueServiceServer.departing:Connect(function(pad, party)
+			-- The pick rode the depart data (resolved before this fires); the truck starts over.
+			local padId = QueueServiceServer.pads:padIdOf(pad)
+			if padId ~= nil and maps:clear(padId) then
+				publishMaps()
+			end
 			-- A training trip has no contract to brief (training's own HUD and signs say what to do).
 			if isTrainingPad(pad) then
 				return
@@ -313,6 +377,12 @@ local DepotServiceServer: DepotServiceServer = {
 				onReady(data, player)
 			end
 		end)
+		local picking = DepotEvents.packets.PickMap.listen(function(data: string, player: Player?)
+			if player then
+				onPickMap(data, player)
+			end
+		end)
+		publishMaps()
 		local leaving = Players.PlayerRemoving:Connect(function(player)
 			departedForShift[player.UserId] = nil
 			ready[player] = nil
@@ -326,6 +396,7 @@ local DepotServiceServer: DepotServiceServer = {
 			late:Disconnect()
 			returned:Disconnect()
 			listening()
+			picking()
 			leaving:Disconnect()
 		end)
 
@@ -383,6 +454,8 @@ local DepotServiceServer: DepotServiceServer = {
 		table.clear(heldLast)
 		table.clear(truckOf)
 		table.clear(departedForShift)
+		maps:reset()
+		StateSyncWorldStore.clear(DepotConstants.MAP_WORLD_ENTRY)
 		QueueServiceServer:setDepartData(nil)
 		QueueServiceServer:setArrivalPoint(DepotConstants.ROLE_DEPOT, nil)
 		if ownsSpawns then
@@ -445,6 +518,7 @@ local DepotServiceServer: DepotServiceServer = {
 			role = QueueServiceServer:role() or "none",
 			cardsSent = cardsSent,
 			cardsPinned = cardsPinned,
+			mapPicks = mapPicks,
 		}
 	end,
 }
