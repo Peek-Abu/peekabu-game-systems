@@ -37,6 +37,29 @@ return function()
 		end)
 	end)
 
+	-- Owner 11-10: the coach's hide (ears folded forward over her eyes) read wrong. It must work for any employee,
+	-- so it is a cower that does not lean on ear shape: ears pinned back flat (as in the sneak), never over the face.
+	describe("the coach's hide", function()
+		local hide = EmployeePoseRegistry.get("Pippa").poses.hide
+		local shh = EmployeePoseRegistry.get("Pippa").poses.shh
+
+		it("pins the ears back flat, like the sneak, never folded forward over the face", function()
+			expect(hide.joints.RightEarBase.X > 0).to.equal(true)
+			expect(hide.joints.LeftEarBase.X > 0).to.equal(true)
+			expect(hide.joints.RightEarBase.X >= shh.joints.RightEarBase.X).to.equal(true)
+		end)
+
+		it("cowers: the head ducks and both arms hug in", function()
+			expect(hide.joints.Neck.X > 0).to.equal(true)
+			expect(hide.joints.RightElbow ~= nil and hide.joints.LeftElbow ~= nil).to.equal(true)
+		end)
+
+		it("wears the scared look, worried where an employee has none", function()
+			expect(hide.look).to.equal("Scared")
+			expect(hide.face).to.equal("Worried")
+		end)
+	end)
+
 	describe("every set", function()
 		for _, name in EmployeePoseRegistry.names() do
 			local set = EmployeePoseRegistry.get(name)

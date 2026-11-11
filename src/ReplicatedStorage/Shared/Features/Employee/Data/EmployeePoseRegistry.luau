@@ -193,21 +193,20 @@ local KIT_POSES: { [string]: PoseDef } = {
 		RightEarBase = Vector3.new(55, 0, -10),
 		LeftEarBase = Vector3.new(60, 0, 12),
 	}, "Shh"),
-	-- Hide!: can't look! Both ears fold forward down over her eyes, twisted flat side out so each one covers a whole
-	-- eye (checked front-on with a long lens: folded further they sink behind her cheeks; her left ear rests bent, so
-	-- it rolls in further than the right). Her paws can't reach past her muzzle, so they stay tucked up. Her eyes are
-	-- wider than her ears, so the face under them is Dazed: only the squeezed lid ends peek out (an open eye showed
-	-- white), with its wobbly mouth.
-	hide = pose("hide", "Dazed", {
+	-- Hide!: a cower that fits every employee (owner 11-10: the ears folded over her eyes read wrong, and an ear
+	-- trick depends on each employee's ears): curled forward, head ducked, both arms hugged in tight at the chest, ears
+	-- pinned flat back further than the sneak's (an employee with none just cowers). Her Scared face where she has
+	-- one, Worried otherwise.
+	hide = pose("hide", "Worried", {
 		RightShoulder = Vector3.new(0, 64, -40),
 		RightElbow = Vector3.new(0, 0, 100),
 		LeftShoulder = mirror(Vector3.new(0, 58, -46)),
 		LeftElbow = mirror(Vector3.new(0, 0, 92)),
-		Waist = Vector3.new(-8, 0, 6),
-		Neck = Vector3.new(14, 0, 0),
-		RightEarBase = Vector3.new(-129, 45, 3),
-		LeftEarBase = Vector3.new(-130, -45, -40),
-	}),
+		Waist = Vector3.new(14, 0, 4),
+		Neck = Vector3.new(12, -8, 6),
+		RightEarBase = Vector3.new(72, 0, -22),
+		LeftEarBase = Vector3.new(76, 0, 24),
+	}, "Scared"),
 	-- You did it!: both paws up beside her head (the right higher, out clear of her face), leaning back, head tipped.
 	coachCheer = pose("coachCheer", "Happy", {
 		RightShoulder = Vector3.new(0, -30, 12),
