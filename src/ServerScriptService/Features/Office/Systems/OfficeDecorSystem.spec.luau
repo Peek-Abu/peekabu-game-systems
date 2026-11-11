@@ -431,6 +431,31 @@ return function()
 			expect(plain).to.equal(2)
 		end)
 
+		it("makes every closet marker a hiding spot (inside it), whatever its art key", function()
+			template("furniture", "supplyCabinet")
+			template("furniture", "equipmentCloset")
+			local decor = decorOf(propLayout({
+				{ id = "a.closet.1", room = "a", kind = "closet", x = 6, z = 6 },
+				-- A School art key the kit lacks: the supply cabinet's art stands in.
+				{ id = "a.closet.2", room = "a", kind = "closet", art = "stall", x = 14, z = 6 },
+				-- A School art key the kit has: its own art attaches.
+				{ id = "a.closet.3", room = "a", kind = "closet", art = "equipmentCloset", x = 22, z = 6 },
+			}))
+			local hides = {}
+			for _, root in decor:GetChildren() do
+				local markerId = root:GetAttribute("OfficeDeskMarker")
+				if markerId ~= nil and string.find(markerId, "closet", 1, true) then
+					hides[markerId] = root:GetAttribute("OfficeArtKey")
+					expect(`{markerId} {root:HasTag("HideFurniture")}`).to.equal(`{markerId} true`)
+					expect(`{markerId} {root:GetAttribute("HideFurnitureKind")}`).to.equal(`{markerId} cabinet`)
+					expect(root.CanCollide).to.equal(true)
+				end
+			end
+			expect(hides["a.closet.1"]).to.equal("supplyCabinet")
+			expect(hides["a.closet.2"]).to.equal("supplyCabinet")
+			expect(hides["a.closet.3"]).to.equal("equipmentCloset")
+		end)
+
 		it("builds the elevator at its facade, facing into the room, and at ELEVATOR_POINT without one", function()
 			local boot = decorOf(propLayout({}))
 			local bootFront = boot:FindFirstChild("ElevatorFront")

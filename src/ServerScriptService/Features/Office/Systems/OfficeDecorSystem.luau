@@ -48,8 +48,6 @@ local DESK_SPREAD = OfficeConstants.DESK_SIZE / Vector3.new(5, 3, 3)
 -- A solid floor prop shorter than this never counts as a camera occluder.
 local LOW_PROP_HEIGHT = 3
 
--- Art-only furniture that is also a hiding spot, by its art key (under a table; inside a supply cabinet).
-local HIDE_KINDS: { [string]: HideConstants.FurnitureKind } = { breakTable = "table", supplyCabinet = "cabinet" }
 -- Art-only furniture that stands solid (the rest are see-through props).
 local SOLID: { [string]: boolean } = { filingCabinet = true, breakTable = true, supplyCabinet = true }
 
@@ -197,7 +195,8 @@ local function elevator(frame: CFrame, parent: Instance, art: ArtVisualSystem.Co
 end
 
 -- Optional additions have no graybox fallback: only approved art creates visible dressing. `key` is the piece's
--- default art key (it also decides collision and hiding); `override` and `roomType` pick other templates first.
+-- default art key (it also decides collision); `override` and `roomType` pick other templates first. `hideKind` is
+-- the Hide furniture kind its marker's kind makes it (the caller decides), kept only when a hider fits.
 local function artOnly(
 	key: string,
 	family: ArtTypes.Family,
@@ -207,7 +206,8 @@ local function artOnly(
 	parent: Instance,
 	art: ArtVisualSystem.Controller,
 	override: string?,
-	roomType: string?
+	roomType: string?,
+	hideKind: HideConstants.FurnitureKind?
 )
 	local root = part(key, size, floor * CFrame.new(0, size.Y / 2, 0), OfficeConstants.DESK_COLOR, parent)
 	root.Transparency = 1
@@ -226,15 +226,9 @@ local function artOnly(
 	if key == "officeChair" then
 		CollectionService:AddTag(root, OfficeDecorConstants.CHAIR_TAG)
 	end
-	-- The table is a hiding spot (Hide): under it; the supply cabinet too: inside it. Only the default art: a
-	-- restyled table (the conference table) has no measured hug space under it.
-	local hideKind: HideConstants.FurnitureKind? = if override == nil or override == key then HIDE_KINDS[key] else nil
 	-- Furniture hides only when the hider fits in the free space under it (a low coffee table does not; a taller table
 	-- art would make the break table a hiding spot again).
-	if hideKind ~= nil and not OfficeSurfaceUtils.canHideUnder(hideKind, size) then
-		hideKind = nil
-	end
-	if hideKind ~= nil then
+	if hideKind ~= nil and OfficeSurfaceUtils.canHideUnder(hideKind, size) then
 		root:SetAttribute(HideConstants.FURNITURE_KIND_ATTRIBUTE, hideKind)
 		CollectionService:AddTag(root, HideConstants.FURNITURE_TAG)
 	end
@@ -549,7 +543,9 @@ function OfficeDecorSystem.build(
 			OfficeArtKeyUtils.roomType(OfficeLayoutUtils.room(layout, marker.room))
 		)
 	end
-	-- The tall supply cabinets: solid, and a secure hiding spot (Hide). No art, no cabinet (`artOnly`).
+	-- The tall supply cabinets: solid, and a secure hiding spot (Hide): inside it. Every closet marker hides, whatever
+	-- art restyles it (a School stall or equipment closet), so OfficeLayoutRules.checkHideSpots counts what players can
+	-- really hide in. No art, no cabinet (`artOnly`).
 	for _, marker in OfficeLayoutUtils.markersOf(layout, "closet") do
 		artOnly(
 			"supplyCabinet",
@@ -560,10 +556,14 @@ function OfficeDecorSystem.build(
 			folder,
 			art,
 			marker.art,
-			OfficeArtKeyUtils.roomType(OfficeLayoutUtils.room(layout, marker.room))
+			OfficeArtKeyUtils.roomType(OfficeLayoutUtils.room(layout, marker.room)),
+			"cabinet"
 		)
 	end
+	-- A table is a hiding spot (Hide): under it, but only with the default art: a restyled table (the conference
+	-- table) has no measured hug space under it. The break table's own proxy leaves no room either (canHideUnder).
 	for _, marker in OfficeLayoutUtils.markersOf(layout, "table") do
+		local restyled = marker.art ~= nil and marker.art ~= "breakTable"
 		artOnly(
 			"breakTable",
 			"furniture",
@@ -573,7 +573,8 @@ function OfficeDecorSystem.build(
 			folder,
 			art,
 			marker.art,
-			OfficeArtKeyUtils.roomType(OfficeLayoutUtils.room(layout, marker.room))
+			OfficeArtKeyUtils.roomType(OfficeLayoutUtils.room(layout, marker.room)),
+			if restyled then nil else "table"
 		)
 	end
 	for _, marker in OfficeLayoutUtils.markersOf(layout, "prop") do
