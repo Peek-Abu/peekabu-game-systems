@@ -13,7 +13,9 @@
 	- Publishes: the freeze to the brain (`freezeFor`, read into OccupantTypes.Senses by OccupantServiceServer), the
 	  FROZEN_ATTRIBUTE on the rig (the client's trail), and on a change wakes the NPC so it holds or moves on its very next
 	  frame. The head's target (OccupantHeadRules: the brain's chase or search target, else the nearest crew member it saw
-	  or heard; the 10 s swap) goes out as the HEAD_TARGET_ATTRIBUTE UserId (0 = nobody).
+	  or heard; the 10 s swap) goes out as the HEAD_TARGET_ATTRIBUTE UserId (0 = nobody). On the check it unfreezes, the
+	  kid the head held (OccupantHeadRules.lunge: not hidden, not knocked down) is kept for the brain's next think
+	  (`takeLunge`, read into Senses.lunge): "when nobody watches, it lunges at that kid".
 
 	`parseReport`, `points` and `freezes` are specced; the rest is a Players/raycast/ByteNet shell around the specced
 	OccupantWatchRules and OccupantHeadRules.
@@ -67,6 +69,8 @@ local reports: { [Player]: Report } = {}
 local heardAt: { [number]: number } = {}
 local freeze: OccupantWatchRules.Freeze = OccupantWatchRules.newFreeze()
 local head: OccupantHeadRules.Head = OccupantHeadRules.newHead()
+-- The kid to lunge at, from the check it unfroze until the brain takes it (nil: none).
+local pendingLunge: number? = nil
 -- The rig being watched (nil while the rig is not a freeze kind).
 local watchedModel: Model? = nil
 local source: Source? = nil
@@ -120,6 +124,19 @@ function OccupantWatchSystem.freezeFor(model: Model): OccupantWatchRules.Freeze?
 		return nil
 	end
 	return table.clone(freeze)
+end
+
+--[=[
+	The kid `model` lunges at (OccupantHeadRules.lunge), once: taken by the brain's first think after it unfroze. Nil
+	unless this system is watching that rig and it just unfroze with a valid head target.
+]=]
+function OccupantWatchSystem.takeLunge(model: Model): number?
+	if watchedModel ~= model then
+		return nil
+	end
+	local lunge = pendingLunge
+	pendingLunge = nil
+	return lunge
 end
 
 -- Whether the rig being watched is frozen right now (false when there is none).
@@ -230,6 +247,7 @@ local function reset()
 	watchedModel = nil
 	freeze = OccupantWatchRules.newFreeze()
 	head = OccupantHeadRules.newHead()
+	pendingLunge = nil
 	table.clear(reports)
 	table.clear(heardAt)
 	if model ~= nil then
@@ -278,6 +296,7 @@ local function check(now: number)
 				hidden = hidden,
 				noticed = (mind ~= nil and mind.watched[player.UserId] ~= nil)
 					or (heard ~= nil and now < heard + OccupantConstants.HEAD_HEARD_SECONDS),
+				downed = DeathServiceServer:isDown(player) or DeathServiceServer:isDead(player),
 			})
 			if not watched then
 				local viewer: OccupantWatchRules.Viewer = {
@@ -308,14 +327,19 @@ local function check(now: number)
 	local target = 0
 	if twist ~= nil and twist.headTurn then
 		local hunting = mind ~= nil and (mind.mode == "chase" or mind.mode == "search")
-		head = OccupantHeadRules.advance(head, {
+		local input: OccupantHeadRules.Input = {
 			position = rig.root.Position,
 			brainTarget = if hunting and mind ~= nil then mind.target else nil,
 			crew = crew,
 			watched = freeze.frozen,
 			now = now,
 			swapSeconds = twist.headSwapSeconds,
-		})
+		}
+		local lunge = OccupantHeadRules.lunge(head, input, before)
+		if lunge ~= nil then
+			pendingLunge = lunge
+		end
+		head = OccupantHeadRules.advance(head, input)
 		target = head.target or 0
 	end
 	setAttributes(rig.model, freeze.frozen, target)

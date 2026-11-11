@@ -42,7 +42,8 @@
 	A freeze kind (Bramble, OccupantWatchRules) is held while watched (`Senses.frozen`, `hold`): no move, no turn, no
 	door, no catch, and every clock that times what he is doing is paused (frozen time never counts toward a give-up);
 	he still remembers whom he sees. After it unfreezes, no catch for FREEZE_CATCH_BLOCK (`Senses.unfrozenAt`): a grab
-	becomes a run at them. Harlow's senses carry neither, so none of this touches him.
+	becomes a run at them, and on the think it unfreezes the kid its head held becomes his chase target (`Senses.lunge`:
+	"when nobody watches, it lunges at that kid"). Harlow's senses carry none of these, so none of this touches him.
 
 	The line-of-sight ray is the caller's (OccupantServiceServer): each Glimpse says whether it was clear.
 	Pure: nothing here yields or touches an Instance; it never changes the mind it is given. Times are
@@ -516,12 +517,14 @@ end
 --[=[
 	One think: the next mind, the NPC intent, a cue worth a speech bubble (or nil) and the effects for the service.
 	Also keeps when he walked into the loading bay, what he has seen, the menace gauge and his body (standing up,
-	startled: no move until then). Frozen: `hold`; just unfrozen: no catch yet.
+	startled: no move until then). Frozen: `hold`; just unfrozen: the head's kid becomes his chase target
+	(`Senses.lunge`, OccupantWatchRules.lunge) and no catch yet.
 ]=]
-function OccupantBrainRules.step(mind: Mind, senses: Senses): Step
+function OccupantBrainRules.step(given: Mind, senses: Senses): Step
 	if senses.frozen == true then
-		return OccupantBrainRules.hold(mind, senses)
+		return OccupantBrainRules.hold(given, senses)
 	end
+	local mind = OccupantWatchRules.lunge(given, senses)
 	local thought = OccupantBrainRules.shutDoor(mind, think(mind, senses))
 	local result = OccupantDirectorRules.track(mind, OccupantBrainRules.settleBody(thought, senses.now), senses)
 	-- The jerk's phase ends once his head is no longer held on them (an ordinary chase).

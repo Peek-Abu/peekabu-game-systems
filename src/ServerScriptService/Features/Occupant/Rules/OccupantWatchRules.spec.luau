@@ -328,4 +328,82 @@ return function()
 			expect(safe.effects).to.equal(nil)
 		end)
 	end)
+
+	describe("the lunge (the head's kid becomes the chase target)", function()
+		local W = OccupantWatchRules
+		local function fresh()
+			return OccupantBrainRules.newMind(1, 1, 0)
+		end
+		local function senses(extra)
+			local value = {
+				position = Vector3.new(60, 3, 60),
+				look = Vector3.new(1, 0, 0),
+				now = 100,
+				sightRange = C.SIGHT_RANGE,
+				sightAngle = C.SIGHT_ANGLE,
+				players = {},
+				resting = false,
+				route = {},
+				restPoint = Vector3.new(200, 0, 200),
+				zone = { min = Vector3.new(0, -5, 0), max = Vector3.new(40, 20, 30) },
+			}
+			for key, item in extra or {} do
+				value[key] = item
+			end
+			return value
+		end
+		local function kid(userId, x, extra)
+			local value = { userId = userId, position = Vector3.new(x, 3, 60), clear = false }
+			for key, item in extra or {} do
+				value[key] = item
+			end
+			return value
+		end
+
+		it("chases the head's kid from patrol, running to where they are", function()
+			local mind = W.lunge(fresh(), senses({ players = { kid(7, 120) }, lunge = 7 }))
+			expect(mind.mode).to.equal("chase")
+			expect(mind.target).to.equal(7)
+			expect(mind.lastSeen).to.equal(Vector3.new(120, 3, 60))
+			expect(mind.chaseAt).to.equal(100)
+		end)
+
+		it("switches a chase to the head's kid", function()
+			local chasing = W.lunge(fresh(), senses({ players = { kid(7, 120), kid(8, 90) }, lunge = 7 }))
+			local switched = W.lunge(chasing, senses({ now = 101, players = { kid(7, 120), kid(8, 90) }, lunge = 8 }))
+			expect(switched.target).to.equal(8)
+			expect(switched.chaseAt).to.equal(101)
+		end)
+
+		it("keeps a chase of the same kid as it is (its give-up clock too)", function()
+			local chasing = W.lunge(fresh(), senses({ players = { kid(7, 120) }, lunge = 7 }))
+			local again = W.lunge(chasing, senses({ now = 103, players = { kid(7, 120) }, lunge = 7 }))
+			expect(again).to.equal(chasing)
+		end)
+
+		it("does nothing without a lunge, while frozen, or during a catch", function()
+			local mind = fresh()
+			expect(W.lunge(mind, senses({ players = { kid(7, 120) } }))).to.equal(mind)
+			expect(W.lunge(mind, senses({ players = { kid(7, 120) }, lunge = 7, frozen = true }))).to.equal(mind)
+			local catching = table.clone(mind)
+			catching.mode = "catch"
+			expect(W.lunge(catching, senses({ players = { kid(7, 120) }, lunge = 7 }))).to.equal(catching)
+		end)
+
+		it("never goes for a kid who is hidden, in grace, or not in his senses (out, or caught)", function()
+			local mind = fresh()
+			local hidden = senses({ players = { kid(7, 120, { hidden = true }) }, lunge = 7 })
+			expect(W.lunge(mind, hidden)).to.equal(mind)
+			local graced = table.clone(mind)
+			graced.grace = { [7] = 105 }
+			expect(W.lunge(graced, senses({ players = { kid(7, 120) }, lunge = 7 }))).to.equal(graced)
+			expect(W.lunge(mind, senses({ players = { kid(8, 120) }, lunge = 7 }))).to.equal(mind)
+		end)
+
+		it("never goes for a kid in the truck's box", function()
+			local mind = fresh()
+			local safe = { userId = 7, position = Vector3.new(20, 3, 15), clear = true }
+			expect(W.lunge(mind, senses({ players = { safe }, lunge = 7 }))).to.equal(mind)
+		end)
+	end)
 end

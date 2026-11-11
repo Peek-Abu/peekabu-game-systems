@@ -247,6 +247,8 @@ export type Senses = {
 	frozen: boolean?,
 	frozenAt: number?,
 	unfrozenAt: number?,
+	-- A freeze kind just unfroze: the UserId its head held (OccupantHeadRules.lunge), who becomes its chase target.
+	lunge: number?,
 }
 
 -- What the catch rule needs about a would-be catch.

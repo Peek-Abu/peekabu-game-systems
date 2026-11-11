@@ -9,6 +9,9 @@
 	  that is not hidden and not the one it looks at; alone, it keeps the same kid. The 10 s then start again. When the
 	  watching stops it goes back to the base target and the clock resets.
 
+	- The lunge: on the check the watching stops, the kid the head held (a swapped one too) is the one it goes for
+	  (`lunge`; the brain's chase target, OccupantWatchRules.lunge), unless they hid, are knocked down or are gone.
+
 	The server owns the choice (OccupantWatchSystem publishes it as a rig attribute); the client only turns the head.
 	Pure: no function changes the head it is given.
 
@@ -25,6 +28,8 @@ export type Member = {
 	position: Vector3,
 	hidden: boolean,
 	noticed: boolean,
+	-- Knocked down (Death): never lunged at.
+	downed: boolean?,
 }
 
 export type Input = {
@@ -128,6 +133,21 @@ function OccupantHeadRules.advance(head: Head, input: Input): Head
 		since = now
 	end
 	return { target = target, swapped = swapped, watchedSince = since }
+end
+
+--[=[
+	Whom it lunges at as the watching stops: the target `before` held, when it was watched (`wasWatched`) and is not now,
+	and that target is a crew member who is not hidden and not knocked down; else nil.
+]=]
+function OccupantHeadRules.lunge(before: Head, input: Input, wasWatched: boolean): number?
+	if not wasWatched or input.watched then
+		return nil
+	end
+	local member = find(input, before.target)
+	if member == nil or member.hidden or member.downed == true then
+		return nil
+	end
+	return member.userId
 end
 
 return OccupantHeadRules

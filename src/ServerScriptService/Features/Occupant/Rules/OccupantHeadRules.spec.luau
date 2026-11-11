@@ -139,4 +139,39 @@ return function()
 			expect(head.target).to.equal(1)
 		end)
 	end)
+
+	describe("the lunge (when nobody watches, it goes for that kid)", function()
+		local crew = { member(1, 5), member(2, 10), member(3, 30) }
+		local function held(target)
+			return { target = target, swapped = target, watchedSince = 90 }
+		end
+
+		it("is the kid the head held, on the check the watching stops", function()
+			expect(OccupantHeadRules.lunge(held(2), input(crew, false, 100), true)).to.equal(2)
+		end)
+
+		it("is the swapped kid after a 10 s swap, not the brain's target", function()
+			local head = OccupantHeadRules.advance(OccupantHeadRules.newHead(), input(crew, true, 100, 1))
+			head = OccupantHeadRules.advance(head, input(crew, true, 100 + SWAP, 1))
+			expect(head.target).to.equal(2)
+			expect(OccupantHeadRules.lunge(head, input(crew, false, 100 + SWAP + 0.1, 1), true)).to.equal(2)
+		end)
+
+		it("is nobody while still watched, or when it was not watched before", function()
+			expect(OccupantHeadRules.lunge(held(2), input(crew, true, 100), true)).to.equal(nil)
+			expect(OccupantHeadRules.lunge(held(2), input(crew, false, 100), false)).to.equal(nil)
+		end)
+
+		it("is nobody when the head held nobody", function()
+			expect(OccupantHeadRules.lunge(OccupantHeadRules.newHead(), input(crew, false, 100), true)).to.equal(nil)
+		end)
+
+		it("is never a kid who hid, is knocked down, or is gone", function()
+			local hid = { member(1, 5), member(2, 10, { hidden = true }) }
+			expect(OccupantHeadRules.lunge(held(2), input(hid, false, 100), true)).to.equal(nil)
+			local down = { member(1, 5), member(2, 10, { downed = true }) }
+			expect(OccupantHeadRules.lunge(held(2), input(down, false, 100), true)).to.equal(nil)
+			expect(OccupantHeadRules.lunge(held(9), input(crew, false, 100), true)).to.equal(nil)
+		end)
+	end)
 end

@@ -235,4 +235,33 @@ function OccupantWatchRules.withoutCatch(step: Step, senses: Senses): Step
 	return { mind = step.mind, intent = intent, cue = step.cue, effects = effects }
 end
 
+--[=[
+	The mind after the lunge (`Senses.lunge`: the kid its head held as the watching stopped, OccupantHeadRules.lunge):
+	a chase of that kid, run at where they are, even out of sight (it knew whom it was after). Unchanged without a lunge,
+	while frozen, during a catch, seated (the brain stands him up first), when he already chases that kid, or when the kid
+	is in grace, hidden, in the truck's box or not in his senses (out, or being caught).
+]=]
+function OccupantWatchRules.lunge(mind: Mind, senses: Senses): Mind
+	local userId = senses.lunge
+	if userId == nil or senses.frozen == true or mind.mode == "catch" or mind.seated == true then
+		return mind
+	end
+	if mind.mode == "chase" and mind.target == userId then
+		return mind
+	end
+	local graceUntil = mind.grace[userId]
+	if graceUntil ~= nil and senses.now < graceUntil then
+		return mind
+	end
+	for _, glimpse in senses.players do
+		if glimpse.userId == userId then
+			if glimpse.hidden == true or OccupantMindUtils.inZone(glimpse.position, senses.zone) then
+				return mind
+			end
+			return OccupantMindUtils.chase(mind, senses, glimpse, false).mind
+		end
+	end
+	return mind
+end
+
 return OccupantWatchRules

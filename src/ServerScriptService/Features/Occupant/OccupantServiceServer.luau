@@ -35,7 +35,8 @@
 	- Escapes: a chased or stared-down player he stops tracking while they are still hidden fires `escaped`
 	  (OccupantEscapeRules; the Hide and Squeak badge).
 	- A freeze kind (Bramble): OccupantWatchSystem decides who watches it; while frozen its brain holds
-	  (Senses.frozen: OccupantBrainRules.hold), it opens no door and its root never turns (no look-around, no jerk).
+	  (Senses.frozen: OccupantBrainRules.hold), it opens no door and its root never turns (no look-around, no jerk); on
+	  the think after it unfreezes, the kid its head held becomes its chase target (Senses.lunge).
 	  Harlow's kind has no freeze twist, so for him OccupantWatchSystem.freezeFor is nil and none of this runs.
 	- Kind (the monster roster): when a shift's site is built and the shift runs, the kind is the map's roster pick
 	  (OccupantRosterRules.kindForShift: OfficeServiceServer:map() and :seed(), so the same run gets the same kind;
@@ -317,6 +318,8 @@ local function think(def: NpcTypes.NpcDef, now: number, position: Vector3): NpcT
 		senses.frozen = freeze.frozen
 		senses.frozenAt = freeze.frozenAt
 		senses.unfrozenAt = freeze.unfrozenAt
+		-- Just unfrozen: the kid its head held becomes its chase target (OccupantWatchRules.lunge).
+		senses.lunge = OccupantWatchSystem.takeLunge(current.model)
 	end
 	local force = pendingForce
 	if force ~= nil then
