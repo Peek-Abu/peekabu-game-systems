@@ -80,7 +80,8 @@ local function Coach(props: TrainingSpotlightProps): React.ReactNode
 	local x = math.clamp(props.linePosition.X - size.X * 0.3, left, math.max(left, props.screen.X - size.X - 8))
 	local bottom = math.clamp(props.linePosition.Y + size.Y * 0.7, size.Y + 8, props.screen.Y - 8)
 	if props.pinned == true then
-		local at = TrainingSpotlightUtils.pinnedCoach(props.screen, size, props.leftInset or 0, PINNED_MARGIN * scale)
+		local at =
+			TrainingSpotlightUtils.pinnedCoach(props.screen, size, props.leftInset or 0, PINNED_MARGIN * scale, phone)
 		x, bottom = at.X, at.Y
 	end
 	return e(TrainingCoach, {

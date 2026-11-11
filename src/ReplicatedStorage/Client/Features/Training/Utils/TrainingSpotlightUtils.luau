@@ -128,9 +128,21 @@ end
 	Where a pinned coach card goes (a world step whose card stays put while the camera moves, owner 11-11: words that
 	swing around with the view are disorienting): its left edge and its bottom, in screen px. Bottom left, `margin` in,
 	just past the button column (`inset`, leftInset), and moved left only as far as it takes to keep the whole card
-	(`card` in size) on the screen, never past the left edge.
+	(`card` in size) on the screen, never past the left edge. On a `phone` the bottom left is the thumbstick's, so the
+	card sits centred at the top instead, PHONE_TOP px down (under Roblox's top bar).
 ]=]
-function TrainingSpotlightUtils.pinnedCoach(screen: Vector2, card: Vector2, inset: number, margin: number): Vector2
+TrainingSpotlightUtils.PHONE_TOP = 44
+
+function TrainingSpotlightUtils.pinnedCoach(
+	screen: Vector2,
+	card: Vector2,
+	inset: number,
+	margin: number,
+	phone: boolean?
+): Vector2
+	if phone == true then
+		return Vector2.new(math.max((screen.X - card.X) / 2, 0), card.Y + TrainingSpotlightUtils.PHONE_TOP)
+	end
 	local x = math.max(math.min(inset + margin, screen.X - card.X - margin), 0)
 	return Vector2.new(x, screen.Y - margin)
 end

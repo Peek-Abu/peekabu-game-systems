@@ -145,6 +145,12 @@ return function()
 			local at = TrainingSpotlightUtils.pinnedCoach(Vector2.new(300, 600), Vector2.new(400, 120), 0, 16)
 			expect(at.X).to.equal(0)
 		end)
+
+		it("on a phone sits centred at the top, clear of the thumbstick in the bottom left", function()
+			local at = TrainingSpotlightUtils.pinnedCoach(Vector2.new(800, 400), Vector2.new(340, 110), 120, 8, true)
+			expect(at.X).to.equal(230)
+			expect(at.Y).to.equal(110 + TrainingSpotlightUtils.PHONE_TOP)
+		end)
 	end)
 
 	describe("waits", function()
