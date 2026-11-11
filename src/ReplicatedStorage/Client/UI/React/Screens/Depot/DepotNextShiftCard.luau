@@ -7,7 +7,8 @@
 	the Jobs board, the queue pad departs now). On a hosted truck the host also gets two chips above the card (the
 	friends-only lock, `onLock`, and Invite, `onInvite`) and may kick another crew member: tap their seat, then tap
 	again while it asks "Kick?" (`onKick`; the ask clears after KICK_CONFIRM_SECONDS). On a phone the host's seats sit
-	above the card too, so kicking works there. Presentational (exempt; story in DepotHubPanel.story).
+	above the card too, so kicking works there. On a hosted truck the OFFICE / SCHOOL map cards (DepotMapCards, `maps`)
+	stand at the card's right above the host's chips; only the host's tap reaches `onPickMap`. Presentational (exempt; story in DepotHubPanel.story).
 
 	@class DepotNextShiftCard
 ]=]
@@ -17,6 +18,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage.Packages.React)
 local HostConstants = require(ReplicatedStorage.Shared.Features.Host.Data.HostConstants)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
+local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
+local DepotMapCards = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotMapCards)
 local DepotPadViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Depot.DepotPadViewModel)
 local CharacterPortrait = require(ReplicatedStorage.Client.UI.React.Screens.Portrait.CharacterPortrait)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
@@ -40,6 +43,9 @@ export type DepotNextShiftCardProps = {
 	onLock: ((locked: boolean) -> ())?,
 	onInvite: (() -> ())?,
 	onUpgrade: (() -> ())?,
+	-- A hosted truck's OFFICE / SCHOOL cards (DepotPadViewModel.maps) and the host's tap.
+	maps: DepotPadViewModel.MapPickView?,
+	onPickMap: ((map: ShiftTypes.MapId) -> ())?,
 }
 
 -- How long a seat's "Kick?" waits for the second tap.
@@ -351,6 +357,24 @@ local function DepotNextShiftCard(props: DepotNextShiftCardProps): React.ReactNo
 				BackgroundTransparency = 1,
 			}, seatRow(cta, PHONE_HOST_SEAT, asking, setAsking, props.onKick))
 		end
+	end
+	local maps = props.maps
+	local onPickMap = props.onPickMap
+	if maps ~= nil and onPickMap ~= nil then
+		-- The map cards stand at the card's right, over the host's chips (and a phone host's seats) when there are any.
+		local lift = 8
+		if controls ~= nil then
+			lift += chipHeight(props.phone) + 10
+			if props.phone and #cta.seats > 0 then
+				lift += PHONE_HOST_SEAT + 14
+			end
+		end
+		face.maps = e(DepotMapCards.render, {
+			view = maps,
+			phone = props.phone,
+			position = UDim2.new(1, -8, 0, -lift),
+			onPick = onPickMap,
+		})
 	end
 	local truckSize = g.truck
 	face.truck = e(ToonIcon, {

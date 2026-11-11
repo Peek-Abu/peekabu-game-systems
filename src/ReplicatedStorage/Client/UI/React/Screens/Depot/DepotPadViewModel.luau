@@ -5,7 +5,8 @@
 	A hosted truck (a held Queue pad, crew hosting) gives its host START, or CANCEL while the countdown runs, and its
 	riders "Waiting for <host> to start" with LEAVE; the host's seat is crowned. The host also gets the friends-only
 	lock and Invite (`hostControls`) and may pick any other crew member's seat to kick (`kickable`), until the truck
-	is leaving.
+	is leaving. On a hosted truck `maps` gives the OFFICE / SCHOOL map cards: the host taps one, the rest of the crew
+	sees the pick marked and "The host picks the map."
 	`shown` is where the card may be up at all: only in the depot hub (DepotHubViewModel.visible), so never for a crew
 	member once their shift is starting, running or in results, never behind the load screen, and never once the crew
 	has departed (the drive card is up). The queue snapshot alone is not enough: after a departure the party is left
@@ -69,7 +70,34 @@ export type CtaView = {
 	hostControls: HostControls?,
 }
 
+-- One map card on a hosted truck (the School map plan): OFFICE or SCHOOL, the truck's pick marked.
+export type MapCardView = { map: ShiftTypes.MapId, label: string, selected: boolean }
+
+-- The map cards: the host taps one (`canPick`); the rest of the crew sees the pick and `line` says who picks.
+export type MapPickView = { cards: { MapCardView }, canPick: boolean, line: string }
+
 local DepotPadViewModel = {}
+
+--[=[
+	The map cards for a player aboard a hosted truck that is not leaving yet, with the truck's `picked` map (the
+	server's pick, DepotMapRules.mapOf); nil anywhere else. Only the host may tap (the server checks again).
+]=]
+function DepotPadViewModel.maps(view: PadView?, picked: ShiftTypes.MapId): MapPickView?
+	if view == nil or not view.held or view.departing then
+		return nil
+	end
+	-- The cards in order, office first (the ids DepotMapRules accepts).
+	local cards: { MapCardView } = {
+		{ map = "office", label = DepotConstants.MAP_TEXT.office, selected = picked == "office" },
+		{ map = "school", label = DepotConstants.MAP_TEXT.school, selected = picked == "school" },
+	}
+	local isHost = view.hostId ~= nil and view.hostId == view.you
+	return {
+		cards = cards,
+		canPick = isHost,
+		line = if isHost then DepotConstants.MAP_TEXT.youPick else DepotConstants.MAP_TEXT.hostPicks,
+	}
+end
 
 -- Whether the queue card may show: in the depot hub, with no load screen and no drive card up.
 function DepotPadViewModel.shown(

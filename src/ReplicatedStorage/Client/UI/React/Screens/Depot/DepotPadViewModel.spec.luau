@@ -12,6 +12,59 @@ local function pad(extra)
 end
 
 return function()
+	describe("maps", function()
+		local function held(extra)
+			local value = pad({ held = true, endsAt = nil })
+			for key, item in extra or {} do
+				value[key] = item
+			end
+			return value
+		end
+
+		it("gives the host both map cards to tap, the pick marked", function()
+			local view = DepotPadViewModel.pad(held(), 3, NAMES, 2, 100, false, 3)
+			local maps = DepotPadViewModel.maps(view, "school")
+			expect(maps.canPick).to.equal(true)
+			expect(maps.line).to.equal("Pick a map!")
+			expect(#maps.cards).to.equal(2)
+			expect(maps.cards[1].map).to.equal("office")
+			expect(maps.cards[1].label).to.equal("OFFICE")
+			expect(maps.cards[1].selected).to.equal(false)
+			expect(maps.cards[2].map).to.equal("school")
+			expect(maps.cards[2].label).to.equal("SCHOOL")
+			expect(maps.cards[2].selected).to.equal(true)
+		end)
+
+		it("shows the rest of the crew the host's pick, not to tap", function()
+			local view = DepotPadViewModel.pad(held(), 3, NAMES, 2, 100, false, 1)
+			local maps = DepotPadViewModel.maps(view, "office")
+			expect(maps.canPick).to.equal(false)
+			expect(maps.line).to.equal("The host picks the map.")
+			expect(maps.cards[1].selected).to.equal(true)
+			expect(maps.cards[2].selected).to.equal(false)
+		end)
+
+		it("lets nobody pick before the server names a host", function()
+			local view = DepotPadViewModel.pad(held(), 3, NAMES, 2, 100, false, nil)
+			expect(DepotPadViewModel.maps(view, "office").canPick).to.equal(false)
+		end)
+
+		it("shows no cards off a hosted truck, once it is leaving, or when not aboard", function()
+			expect(DepotPadViewModel.maps(nil, "office")).to.equal(nil)
+			local plain = DepotPadViewModel.pad(pad(), 3, NAMES, 2, 100, false)
+			expect(DepotPadViewModel.maps(plain, "office")).to.equal(nil)
+			local leaving = DepotPadViewModel.pad(held({ departing = true }), 3, NAMES, 2, 100, false, 3)
+			expect(DepotPadViewModel.maps(leaving, "office")).to.equal(nil)
+		end)
+
+		it("keeps the pick locked in while the countdown runs (the host may still change it)", function()
+			local view = DepotPadViewModel.pad(held({ endsAt = 104 }), 3, NAMES, 2, 100, false, 3)
+			local maps = DepotPadViewModel.maps(view, "school")
+			expect(maps.canPick).to.equal(true)
+			expect(maps.cards[2].selected).to.equal(true)
+		end)
+	end)
+
 	it("shows nothing when not aboard", function()
 		expect(DepotPadViewModel.pad(nil, 3, NAMES, 2, 100, false)).to.equal(nil)
 		expect(DepotPadViewModel.pad(pad({ members = { 1 } }), 3, NAMES, 2, 100, false)).to.equal(nil)

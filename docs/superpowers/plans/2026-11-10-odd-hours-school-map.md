@@ -51,6 +51,7 @@ The layout checks are the Office's: validate, capacity, route, hide spots ≥ 8,
 | Shift | shared | Data | (edit) ShiftTypes | adds `MapId = "office" \| "school"` |
 | Depot | server | State | DepotMapTracker | which map each truck pad's host picked (cleared when the party leaves) |
 | Depot | shared | Rules | DepotMapRules | who may pick (the pad's host only) and which ids are valid |
+| UI (Screens/Depot) | client | — | DepotMapCards | the START panel's OFFICE / SCHOOL cards (presentational; DepotPadViewModel.maps decides) |
 
 Edits (no new modules):
 - `OfficeTypes.RoomType` gains `classroom | gym | cafeteria | library | nurse | principal | lounge | bathroom |

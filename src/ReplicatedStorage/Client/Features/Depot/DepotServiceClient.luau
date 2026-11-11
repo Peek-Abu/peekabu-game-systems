@@ -166,6 +166,10 @@ local DepotServiceClient: DepotServiceClient = {
 					onUpgrade = function()
 						MarketplaceServiceClient:promptPass(HostConstants.PASS_KEY)
 					end,
+					-- The host's map pick; the server checks they host the truck.
+					onPickMap = function(map)
+						DepotEvents.packets.PickMap.send(map)
+					end,
 				})
 			end, DepotConstants.HUD_ORDER - 1)
 		end

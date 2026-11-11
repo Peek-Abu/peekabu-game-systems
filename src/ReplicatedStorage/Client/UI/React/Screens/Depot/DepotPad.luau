@@ -4,7 +4,8 @@
 	it reads the queue snapshot, their public truck number, the server clock and the device layout, and draws
 	the hub's Next shift card (DepotNextShiftCard) in its aboard state: the truck's countdown, a seat per place and GO!
 	to depart now (which replaces the base placeholder pad panel); on a hosted truck the button is START, CANCEL or LEAVE
-	(HostStore names the host). Names are the crew display names (the view model names an unknown member "Crew"); the card only
+	(HostStore names the host), and the OFFICE / SCHOOL map cards with the truck's pick (the DepotConstants.MAP_WORLD_ENTRY
+	world entry, DepotMapRules.decode); the host's tap goes to `onPickMap`. Names are the crew display names (the view model names an unknown member "Crew"); the card only
 	displays, the server decides who is aboard and when the truck leaves. The button's action goes to the `onAction`
 	the service passes in (components never talk to the server). It draws only where DepotPadViewModel.shown allows: in the depot
 	hub (the shift snapshot), not behind the load screen (ShiftTransitStore.covered) and not once the drive card is up
@@ -19,6 +20,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage.Packages.React)
 local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
+local DepotMapRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotMapRules)
+local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local QueueSnapshotUtils = require(ReplicatedStorage.Shared.Features.Queue.Utils.QueueSnapshotUtils)
 local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
 local DepotStore = require(ReplicatedStorage.Client.Features.Depot.State.DepotStore)
@@ -45,12 +48,14 @@ export type DepotPadProps = {
 	onLock: (locked: boolean) -> (),
 	onInvite: () -> (),
 	onUpgrade: () -> (),
+	onPickMap: (map: ShiftTypes.MapId) -> (),
 }
 
 local function DepotPad(props: DepotPadProps): React.ReactNode
 	local snapshot = ReactCharm.useAtom(QueueStore.snapshot)
 	local hosts = ReactCharm.useAtom(HostStore.snapshot)
 	local publicPlayers = ReactCharm.useAtom(StateSyncClientStore.publicPlayers)
+	local world = ReactCharm.useAtom(StateSyncClientStore.world)
 	local shift = ReactCharm.useAtom(ShiftStore.snapshot)
 	local covered = ReactCharm.useAtom(ShiftTransitStore.covered)
 	local card = ReactCharm.useAtom(DepotStore.card)
@@ -87,6 +92,10 @@ local function DepotPad(props: DepotPadProps): React.ReactNode
 	local passLive = MarketplaceRegistry.pass(HostConstants.PASS_KEY) ~= nil
 	local owns = me ~= nil and me[MarketplaceConstants.passField(HostConstants.PASS_KEY)] == true
 	local cta = DepotPadViewModel.cta(view, truckNumber, passLive and not owns)
+	local maps = DepotPadViewModel.maps(
+		view,
+		DepotMapRules.mapOf(DepotMapRules.decode(world[DepotConstants.MAP_WORLD_ENTRY]), padId)
+	)
 	return React.createElement(PaperHudFrame, {
 		scale = hudScale.scale,
 		children = {
@@ -100,6 +109,8 @@ local function DepotPad(props: DepotPadProps): React.ReactNode
 				onLock = props.onLock,
 				onInvite = props.onInvite,
 				onUpgrade = props.onUpgrade,
+				maps = maps,
+				onPickMap = props.onPickMap,
 			}),
 		},
 	})

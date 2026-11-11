@@ -352,6 +352,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.UI.React.Screens.World.DepotWorkOrderBoard"] = "presentational React component (work order specced in DepotWorldViewModel; story in DepotWorld.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.World.DepotResultBoard"] = "presentational React component (review card specced in DepotWorldViewModel; story in DepotWorld.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Depot.DepotHubPanel"] = "presentational React component: the V1 hub HUD (story in DepotHubPanel.story; values specced in DepotHubViewModel)",
+	["ReplicatedStorage.Client.UI.React.Screens.Depot.DepotMapCards"] = "presentational React component: the truck's OFFICE / SCHOOL cards (what they show is specced in DepotPadViewModel.maps)",
 	["ReplicatedStorage.Client.UI.React.Screens.Depot.DepotNextShiftCard"] = "presentational React component (story in DepotHubPanel.story; words specced in DepotPadViewModel.cta)",
 	-- Cleanup Crew: the V1 "Gloom & Gleam" UI kit (2026-10-17)
 	["ReplicatedStorage.Client.UI.React.Screens.Toon.UIToonConstants"] = "static V1 palette, fonts, depth geometry and timings (no logic; shade is a frozen lookup)",
