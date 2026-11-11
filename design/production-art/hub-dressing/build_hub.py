@@ -34,6 +34,26 @@ H._SPEC.update({
     "leaf_red": lambda: _paint("leaf_red", (0.50, 0.07, 0.03), 0.65, 0.25, scale=16),
     "leaf_yel": lambda: _paint("leaf_yel", (0.82, 0.55, 0.08), 0.65, 0.25, scale=16),
     "leaf_brn": lambda: _paint("leaf_brn", (0.30, 0.15, 0.05), 0.8, 0.3, scale=16),
+    "leaf_vein": lambda: _paint("leaf_vein", (0.20, 0.07, 0.02), 0.8, 0.2, scale=30),
+    "mug_white": lambda: _paint("mug_white", (0.82, 0.80, 0.74), 0.25, 0.05, scale=8),
+    "mug_grape": lambda: _paint("mug_grape", (0.22, 0.10, 0.40), 0.3, 0.05, scale=8),
+    "mug_mint": lambda: _paint("mug_mint", (0.18, 0.55, 0.42), 0.3, 0.05, scale=8),
+    "coffee": lambda: _flat("coffee", (0.10, 0.05, 0.02), 0.15),
+    "tape": lambda: _paint("tape", (0.62, 0.48, 0.28), 0.35, 0.05, scale=20),
+    "label": lambda: _paint("label", (0.86, 0.84, 0.78), 0.6, 0.05, scale=40),
+    "label_red": lambda: _paint("label_red", (0.62, 0.10, 0.08), 0.5, 0.05, scale=40),
+    "seat_fabric": lambda: _paint("seat_fabric", (0.24, 0.10, 0.42), 0.9, 0.6, scale=60),
+    "steel_dark": lambda: _paint("steel_dark", (0.10, 0.11, 0.13), 0.35, 0.08, scale=14),
+    "steel_mid": lambda: _paint("steel_mid", (0.30, 0.32, 0.35), 0.3, 0.08, scale=14),
+    "enamel_red": lambda: _paint("enamel_red", (0.55, 0.08, 0.06), 0.25, 0.05, scale=10),
+    "brass": lambda: _paint("brass", (0.62, 0.42, 0.12), 0.25, 0.05, scale=12),
+    "keycap": lambda: _paint("keycap", (0.80, 0.78, 0.72), 0.4, 0.05, scale=30),
+    "screen_green": lambda: _flat("screen_green", (0.10, 0.45, 0.25), 0.2),
+    "tin_a": lambda: _paint("tin_a", (0.85, 0.62, 0.10), 0.3, 0.05),
+    "tin_b": lambda: _paint("tin_b", (0.12, 0.40, 0.65), 0.3, 0.05),
+    "bottle_a": lambda: _paint("bottle_a", (0.20, 0.62, 0.48), 0.2, 0.05),
+    "bottle_b": lambda: _paint("bottle_b", (0.70, 0.18, 0.40), 0.2, 0.05),
+    "towel": lambda: _paint("towel", (0.82, 0.78, 0.66), 0.95, 0.7, scale=50),
     "bark_au": lambda: _paint("bark_au", (0.11, 0.075, 0.05), 0.9, 0.9, scale=9),
     "crown_or": lambda: _paint("crown_or", (0.72, 0.26, 0.03), 0.8, 1.2, scale=26),
     "crown_red": lambda: _paint("crown_red", (0.48, 0.07, 0.03), 0.8, 1.2, scale=26),
@@ -125,33 +145,55 @@ def pumpkin():
 
 
 # --------------------------------------------------------------------- leaves ---
-def _leafmesh(name, size, mat, curl=0.25, seed=0, lobes=5):
-    """A flat maple-ish leaf (lobed outline fan) with a midrib fold and a curl, about `size` long, lying in XY."""
+# A maple leaf's right half, stem base at (0, 0), tip at (0, 1): five pointed lobes with deep notches.
+MAPLE_HALF = [(0.0, 0.08), (0.10, 0.04), (0.26, 0.12), (0.47, 0.03), (0.36, 0.22), (0.50, 0.30), (0.88, 0.40),
+              (0.64, 0.50), (0.70, 0.70), (0.47, 0.61), (0.38, 0.81), (0.24, 0.71), (0.11, 0.90), (0.0, 1.0)]
+MAPLE_TIPS = [(0.0, 1.0), (0.88, 0.40), (-0.88, 0.40), (0.47, 0.03), (-0.47, 0.03)]
+
+
+def _leafmesh(name, size, mat, curl=0.25, seed=0, lobes=5, veins="leaf_vein"):
+    """A maple leaf about `size` long lying in XY: the five-lobed outline (pointed tips, deep notches), raised veins to
+    each lobe tip, a stalk, a fold along the midrib and a curl. Veins and stalk are their own (darker) material."""
     rng = random.Random(seed)
+    outline = MAPLE_HALF[:-1] + [(0.0, 1.0)] + [(-x, y) for (x, y) in reversed(MAPLE_HALF[1:-1])]
+    jitter = [(x * rng.uniform(0.94, 1.06), y * rng.uniform(0.96, 1.04)) for (x, y) in outline]
     bm = bmesh.new()
-    c = bm.verts.new((0, 0, 0))
-    ring = []
-    n = 40
-    for i in range(n):
-        a = i / n * math.tau
-        # lobes: sharp points, deeper notches, a stalk notch at the bottom (a = -pi/2)
-        lob = 0.55 + 0.45 * abs(math.cos(a * lobes / 2)) ** 0.6
-        base = 1 - 0.55 * max(0.0, -math.sin(a)) ** 3
-        rr = size * 0.5 * lob * base * rng.uniform(0.93, 1.05)
-        x, y = math.cos(a) * rr, math.sin(a) * rr + size * 0.12
-        ring.append(bm.verts.new((x, y, 0)))
-    for i in range(n):
-        bm.faces.new((c, ring[i], ring[(i + 1) % n]))
+    c = bm.verts.new((0, 0.42 * size, 0))
+    ring = [bm.verts.new((x * size * 0.55, y * size, 0)) for (x, y) in jitter]
+    for i in range(len(ring)):
+        bm.faces.new((c, ring[i], ring[(i + 1) % len(ring)]))
     bmesh.ops.subdivide_edges(bm, edges=[e for e in bm.edges if c in e.verts], cuts=2, use_grid_fill=False)
+
+    def bend(co):
+        x, y, z = co
+        return Vector((x, y, z + abs(x) * 0.22 + curl * (x * x + 0.4 * (y - 0.4 * size) ** 2) / max(size, 0.01)))
+
     for v in bm.verts:
-        x, y, _ = v.co
-        v.co.z = abs(x) * 0.25 + curl * (x * x + 0.5 * y * y) / max(size, 0.01)  # midrib fold + cupping
-    # thickness so it reads from both sides
+        v.co = bend(v.co)
     ret = bmesh.ops.extrude_face_region(bm, geom=list(bm.faces))
     for v in [e for e in ret["geom"] if isinstance(e, bmesh.types.BMVert)]:
-        v.co.z -= 0.03
+        v.co.z -= 0.025
     bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
-    return H._add(name, bm, mat, 0)
+    ob = H._add(name, bm, mat, 0)
+    # veins: thin raised strips from the stem base to each lobe tip, plus the stalk
+    vb = bmesh.new()
+    base = Vector((0, 0.06 * size, 0))
+    for (tx, ty) in MAPLE_TIPS + [(0, -0.3)]:
+        tip = Vector((tx * size * 0.55 * 0.9, ty * size * 0.92, 0)) if ty > -0.2 else Vector((0, -0.28 * size, 0))
+        d = (tip - base)
+        w = (0.022 if ty > -0.2 else 0.035) * size
+        perp = Vector((-d.y, d.x, 0)).normalized() * w
+        steps = 4
+        prev = None
+        for s in range(steps + 1):
+            p = base + d * (s / steps)
+            a = bend(p + perp) + Vector((0, 0, 0.012)); b = bend(p - perp) + Vector((0, 0, 0.012))
+            va, vb_ = vb.verts.new(a), vb.verts.new(b)
+            if prev:
+                vb.faces.new((prev[0], prev[1], vb_, va))
+            prev = (va, vb_)
+    H._add(name + "_veins", vb, veins, 0)
+    return ob
 
 
 @prop
@@ -160,14 +202,14 @@ def leafpile():
     v = VAR["v"] or "a"
     rng = random.Random(41 if v == "a" else 77)
     mats = ["leaf_or", "leaf_red", "leaf_yel", "leaf_brn", "leaf_or"]
-    count = 26 if v == "a" else 18
+    count = 20 if v == "a" else 14
     for i in range(count):
         if v == "a":
             x = rng.gauss(0, 1.1); y = rng.uniform(-1.0, 1.0) * 0.9
             z = max(0.0, 0.35 * math.exp(-(x * x) / 2) * (1 - abs(y)) ) + 0.04 + i * 0.006
         else:
             x = rng.uniform(-2.8, 2.8); y = rng.uniform(-2.8, 2.8); z = 0.04 + rng.uniform(0, 0.05)
-        size = rng.uniform(0.55, 0.85)
+        size = rng.uniform(0.9, 1.35)
         ob = _leafmesh(f"leaf{i}", size, rng.choice(mats), curl=rng.uniform(0.15, 0.55), seed=i * 13 + 5, lobes=rng.choice((3, 5, 5)))
         ob.data.transform(Matrix.Rotation(rng.uniform(-0.45, 0.45), 4, "X") @ Matrix.Rotation(rng.uniform(-0.45, 0.45), 4, "Y"))
         ob.data.transform(Matrix.Rotation(rng.uniform(0, math.tau), 4, "Z"))
@@ -316,6 +358,149 @@ def wallpack():
         strut(f"frameS{s}", (s * 0.8, -0.95, 0.27), (s * 0.8, -0.55, 0.97), 0.08, "pack_grey", bevel=0.01)
     cyl("conduit", 0, -0.3, -0.6, 0.25, 0.09, "galv", 10)
     S2.finish2("hb_wallpack", tex=512)
+
+
+# ------------------------------------------------------------ hub props (round 3) ---
+def lathe(name, prof, mat, seg=24):
+    """A surface of revolution about Z from (radius, z) pairs."""
+    bm = bmesh.new()
+    rings = []
+    for (r, z) in prof:
+        rings.append([bm.verts.new((math.cos(i / seg * math.tau) * r, math.sin(i / seg * math.tau) * r, z)) for i in range(seg)])
+    for a, b in zip(rings, rings[1:]):
+        for i in range(seg):
+            bm.faces.new((a[i], a[(i + 1) % seg], b[(i + 1) % seg], b[i]))
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-4)
+    bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+    return H._add(name, bm, mat, 0)
+
+
+@prop
+def mug():
+    """A diner mug, 0.55 tall, with a handle and coffee inside (variant colour: white | grape | mint)."""
+    v = VAR["v"] or "white"
+    mat = {"white": "mug_white", "grape": "mug_grape", "mint": "mug_mint"}[v]
+    lathe("cup", [(0.0, 0.0), (0.24, 0.0), (0.27, 0.04), (0.28, 0.5), (0.31, 0.55), (0.26, 0.55), (0.24, 0.12), (0.0, 0.12)], mat, 28)
+    cyl("coffee", 0, 0, 0.38, 0.44, 0.245, "coffee", 24)
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.14, minor_radius=0.035, major_segments=16, minor_segments=8,
+                                     location=(0.3, 0, 0.29), rotation=(math.pi / 2, 0, 0))
+    h = bpy.context.active_object
+    h.data.materials.append(H.M(mat))
+    H.parts.append(h)
+    S2.finish2(f"hb_mug_{v}", tex=256)
+
+
+@prop
+def parcel():
+    """A taped cardboard shipping box with a label and a red sticker (a: 2x1.4x1.4, b: 1.4 cube, c: 2.4x1.6x1)."""
+    v = VAR["v"] or "a"
+    w, d, h = {"a": (2.0, 1.4, 1.4), "b": (1.4, 1.4, 1.4), "c": (2.4, 1.6, 1.0)}[v]
+    box("body", -w / 2, w / 2, -d / 2, d / 2, 0, h, "cardboard", bevel=0.03)
+    box("tapeTop", -0.12, 0.12, -d / 2 - 0.005, d / 2 + 0.005, h - 0.002, h + 0.008, "tape", bevel=0.0)
+    for s in (-1, 1):
+        box(f"tapeEnd{s}", -0.12, 0.12, s * d / 2 - 0.005 if s > 0 else -d / 2 - 0.005, s * d / 2 + 0.005 if s > 0 else -d / 2 + 0.005,
+            h - 0.35, h, "tape", bevel=0.0)
+    box("seam", -w / 2, w / 2, -0.008, 0.008, h - 0.001, h + 0.004, "lidplas", bevel=0.0)
+    box("label", -w * 0.3, w * 0.05, -d / 2 - 0.01, -d / 2, h * 0.35, h * 0.75, "label", bevel=0.0)
+    for k in range(3):
+        box(f"barcode{k}", -w * 0.27 + k * 0.08, -w * 0.25 + k * 0.08, -d / 2 - 0.014, -d / 2 - 0.009, h * 0.42, h * 0.55, "lidplas", bevel=0.0)
+    box("sticker", w / 2, w / 2 + 0.01, -d * 0.2, d * 0.2, h * 0.3, h * 0.55, "label_red", bevel=0.0)
+    S2.finish2(f"hb_parcel_{v}", tex=512)
+
+
+@prop
+def chair():
+    """A diner cafe chair: padded grape fabric seat and back on a steel frame, 3.2 tall, seat top at 1.77."""
+    sh = 1.55
+    box("seat", -0.95, 0.95, -0.95, 0.95, sh - 0.1, sh + 0.22, "seat_fabric", r=0.25, corners=("fl", "fr", "bl", "br"), bevel=0.08)
+    box("back", -0.9, 0.9, 0.78, 0.98, sh + 0.55, sh + 1.6, "seat_fabric", r=0.25, corners=("tl", "tr"), axis="Y", bevel=0.06)
+    for x in (-0.8, 0.8):
+        for y in (-0.8, 0.8):
+            rod(f"leg{x}{y}", (x * 1.05, y * 1.05, 0), (x, y, sh - 0.1), 0.05, "steel_dark", 10)
+        rod(f"post{x}", (x, 0.86, sh - 0.1), (x, 0.88, sh + 1.2), 0.045, "steel_dark", 10)
+    for y in (-0.85, 0.85):
+        rod(f"rail{y}", (-0.86, y * 1.03, 0.45), (0.86, y * 1.03, 0.45), 0.03, "steel_dark", 8)
+    S2.finish2("hb_chair", tex=512)
+
+
+@prop
+def espresso():
+    """A chunky diner espresso machine, 2.6 wide x 1.8 deep x 2.3 tall: red enamel body, steel top tray with a rail,
+    two group heads with handles, a steam wand, a pressure gauge with a glowing face, a cup on the drip tray."""
+    box("body", -1.3, 1.3, -0.8, 0.9, 0.0, 1.9, "enamel_red", r=0.25, corners=("tl", "tr"), axis="Y", bevel=0.06)
+    box("top", -1.35, 1.35, -0.85, 0.95, 1.9, 2.05, "steel_mid", bevel=0.03)
+    for x in (-0.9, 0.9):
+        rod(f"rail{x}", (x, -0.8, 2.25), (x, 0.9, 2.25), 0.04, "chrome", 8)
+    rod("railF", (-0.9, -0.8, 2.25), (0.9, -0.8, 2.25), 0.04, "chrome", 8)
+    box("tray", -1.15, 1.15, -1.25, -0.75, 0.25, 0.35, "steel_mid", bevel=0.02)
+    box("grate", -1.05, 1.05, -1.2, -0.8, 0.35, 0.37, "steel_dark", bevel=0.0)
+    for x in (-0.55, 0.55):
+        cyl(f"group{x}", x, -0.95, 1.05, 1.35, 0.22, "chrome", 16)
+        rod(f"handle{x}", (x, -1.0, 1.0), (x, -1.65, 0.95), 0.06, "steel_dark", 10)
+    rod("wand", (1.15, -0.85, 1.4), (1.3, -1.1, 0.7), 0.035, "chrome", 8)
+    cyl("gauge", 0, 1.5, -0.86, -0.8, 0.26, "chrome", 20, axis="Y")
+    cyl("gaugeFace", 0, 1.5, -0.88, -0.86, 0.2, "glow", 20, axis="Y")
+    box("badge", -0.45, 0.45, -0.82, -0.79, 0.55, 0.8, "brass", bevel=0.01)
+    cyl("cupE", 0.55, -1.0, 0.37, 0.62, 0.15, "mug_white", 16)
+    S2.finish2("hb_espresso", tex=512)
+
+
+@prop
+def register():
+    """An old cash register, 1.6 wide: brass body, a key bank, a number window and a drawer."""
+    box("drawer", -0.8, 0.8, -0.7, 0.6, 0.0, 0.35, "steel_dark", bevel=0.03)
+    box("body", -0.75, 0.75, -0.35, 0.6, 0.35, 1.05, "brass", r=0.12, corners=("tl", "tr"), axis="Y", bevel=0.03)
+    box("keybank", -0.72, 0.72, -0.7, -0.35, 0.35, 0.6, "steel_dark", bevel=0.02)
+    for row in range(3):
+        for col in range(5):
+            x = -0.55 + col * 0.27
+            y = -0.62 + row * 0.1
+            z = 0.6 + row * 0.07
+            cyl(f"key{row}{col}", x, y, z, z + 0.05, 0.05, "keycap", 10)
+    box("window", -0.4, 0.4, -0.1, 0.25, 1.05, 1.35, "steel_dark", r=0.08, corners=("tl", "tr"), axis="Y", bevel=0.02)
+    box("display", -0.33, 0.33, -0.12, -0.1, 1.1, 1.3, "screen_green", bevel=0.0)
+    S2.finish2("hb_register", tex=512)
+
+
+@prop
+def shelving():
+    """Steel supply shelving 6 wide x 1.8 deep x 8 tall (4 shelves) stocked with labelled boxes, tins, spray bottles
+    and rolled towels."""
+    rng = random.Random(21)
+    W, D, Hh = 6.0, 1.8, 8.0
+    for x in (-W / 2, W / 2):
+        for y in (-D / 2, D / 2):
+            box(f"upright{x}{y}", x - 0.08, x + 0.08, y - 0.08, y + 0.08, 0, Hh, "steel_dark", bevel=0.02)
+    levels = [0.3, 2.3, 4.3, 6.3]
+    for i, z in enumerate(levels):
+        box(f"shelf{i}", -W / 2, W / 2, -D / 2, D / 2, z, z + 0.12, "steel_mid", bevel=0.02)
+        box(f"lip{i}", -W / 2, W / 2, -D / 2 - 0.04, -D / 2, z + 0.06, z + 0.22, "steel_mid", bevel=0.01)
+        x = -W / 2 + 0.25
+        while x < W / 2 - 0.6:
+            kind = rng.choice(["box", "box", "tins", "bottles", "towels"])
+            top = z + 0.12
+            if kind == "box":
+                w = rng.uniform(0.8, 1.3)
+                h = rng.uniform(0.7, 1.4)
+                box(f"b{i}_{x:.2f}", x, x + w, -D / 2 + 0.15, D / 2 - 0.2, top, top + h, "cardboard", bevel=0.02)
+                box(f"bt{i}_{x:.2f}", x + w * 0.4, x + w * 0.6, -D / 2 + 0.14, D / 2 - 0.19, top + h - 0.01, top + h + 0.005, "tape", bevel=0.0)
+                box(f"bl{i}_{x:.2f}", x + 0.1, x + w * 0.55, -D / 2 + 0.135, -D / 2 + 0.15, top + h * 0.3, top + h * 0.65, "label", bevel=0.0)
+            elif kind == "tins":
+                w = 1.0
+                for k in range(3):
+                    cyl(f"t{i}_{x:.2f}_{k}", x + 0.17 + k * 0.33, -0.3, top, top + 0.55, 0.15, "tin_a" if k % 2 else "tin_b", 14)
+            elif kind == "bottles":
+                w = 1.0
+                for k in range(3):
+                    bx = x + 0.17 + k * 0.33
+                    cyl(f"s{i}_{x:.2f}_{k}", bx, -0.2, top, top + 0.75, 0.13, "bottle_a" if k % 2 else "bottle_b", 12)
+                    box(f"sh{i}_{x:.2f}_{k}", bx - 0.06, bx + 0.06, -0.38, -0.1, top + 0.75, top + 0.95, "lidplas", bevel=0.01)
+            else:
+                w = 1.1
+                for k in range(2):
+                    cyl(f"w{i}_{x:.2f}_{k}", -0.4 + k * 0.6, top + 0.25, x, x + w - 0.05, 0.25, "towel", 14, axis="X")
+            x += w + rng.uniform(0.08, 0.2)
+    S2.finish2("hb_shelving", tex=1024)
 
 
 if __name__ == "__main__":
