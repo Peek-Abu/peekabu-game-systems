@@ -7,6 +7,11 @@ local Base = require(Office.Data.OfficeLayoutConstants).LAYOUT
 local OfficeConstants = require(Office.Data.OfficeConstants)
 local Rules = require(Office.Rules.OfficeLayoutRules)
 local Utils = require(Office.Utils.OfficeLayoutUtils)
+local Spawn = require(Office.Utils.OfficeSpawnUtils)
+local SpawnRules = require(Office.Rules.OfficeSpawnRules)
+local ShiftConstants = require(game:GetService("ReplicatedStorage").Shared.Features.Shift.Data.ShiftConstants)
+-- The biggest crew's contract (Gloom): every generated School must be able to meet it, as the Office does.
+local CONTRACT = ShiftConstants.QUOTA_BY_CREW[#ShiftConstants.QUOTA_BY_CREW]
 
 local SEEDS = 50
 local LANDMARKS = { gym = true, cafeteria = true, library = true }
@@ -244,6 +249,36 @@ return function()
 				end
 			end
 			expect(total >= SEEDS * 6).to.equal(true)
+		end)
+
+		it("rolls spawns that meet the biggest crew's contract on every seed", function()
+			for seed = 1, SEEDS do
+				if seed % 10 == 0 then
+					task.wait()
+				end
+				local layout = layoutFor(seed)
+				-- Mirrors OfficeServiceServer's rollPlan: roll seeds seed, seed + 1, ... until one meets the contract.
+				local failure
+				local met = false
+				for attempt = 0, OfficeConstants.ROLL_ATTEMPTS - 1 do
+					local plan = Spawn.roll(layout, {
+						quota = CONTRACT,
+						variant = "A",
+						dirtyRooms = OfficeConstants.DIRTY_ROOMS,
+						pilesPerRoom = OfficeConstants.PILES_PER_ROOM,
+						valuables = OfficeConstants.VALUABLES,
+					}, Random.new(seed + attempt))
+					local ok, reason = SpawnRules.check(plan, layout, CONTRACT)
+					if ok then
+						met = true
+						break
+					end
+					failure = reason
+				end
+				if not met then
+					error(`seed {seed}: {failure}`)
+				end
+			end
 		end)
 
 		it("keeps the input immutable and builds on the generated art kit", function()
