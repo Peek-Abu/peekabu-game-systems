@@ -31,8 +31,25 @@ export type Room = {
 	depth: number?,
 }
 
--- What kind of workplace a kit room is.
-export type RoomType = "pods" | "conference" | "breakout" | "storage" | "server" | "reception"
+-- What kind of workplace a kit room is: the Office's types, then the School's (SchoolKitRegistry). The lounge is the
+-- School's breakout (Harlow's rest), the fronthall its start room.
+export type RoomType =
+	"pods"
+	| "conference"
+	| "breakout"
+	| "storage"
+	| "server"
+	| "reception"
+	| "classroom"
+	| "gym"
+	| "cafeteria"
+	| "library"
+	| "nurse"
+	| "principal"
+	| "lounge"
+	| "bathroom"
+	| "janitor"
+	| "fronthall"
 
 -- How a doorway is filled: open (no leaf), solid door, or glass door.
 export type DoorKind = "open" | "solid" | "glass"

@@ -105,6 +105,17 @@ return function()
 		expect(hasError(errors, "rest")).to.equal(true)
 	end)
 
+	it("flags a School teachers' lounge with no rest marker, and passes one that has it", function()
+		local kit = fixture()
+		kit.roomType = "lounge"
+		local _, errors = OfficeKitRules.check(kit)
+		expect(hasError(errors, "rest")).to.equal(true)
+		table.insert(kit.markers, { kind = "rest", x = 15, z = 12 })
+		local ok, after = OfficeKitRules.check(kit)
+		expect(table.concat(after, "; ")).to.equal("")
+		expect(ok).to.equal(true)
+	end)
+
 	it("flags fewer piles than a dirty room needs", function()
 		local kit = fixture()
 		table.remove(kit.markers, 5)

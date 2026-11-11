@@ -4,7 +4,7 @@
 	(furniture by its yawed footprint, point markers within MARKER_MARGIN), two furniture footprints that
 	overlap, furniture in the door approach (as deep as a swung-open leaf reaches), a desk without a clear chair
 	strip on its front (local -Z, the knee-hole side HideSpotUtils and OfficeDecorSystem use) or without room to
-	hide under, a missing patrol (or, in a breakout, rest) marker, fewer piles than a dirty room needs, and a pile or item
+	hide under, a missing patrol (or, in a breakout or a School lounge, rest) marker, fewer piles than a dirty room needs, and a pile or item
 	marker crowding furniture. Furniture is sized by OfficeLayoutUtils.markerSize, so a marker whose `art` has an
 	OfficeConstants.ART_SIZES entry (a conference table, a server rack) takes that art's footprint. `prop` markers
 	(art-only dressing, sized by OfficeConstants.PROP_SIZES[art]) count as furniture; a wall-mounted prop
@@ -335,8 +335,9 @@ function OfficeKitRules.check(kit: Kit): (boolean, { string })
 	if (counts.patrol or 0) < 1 then
 		table.insert(errors, `{label}: has no patrol marker`)
 	end
-	if kit.roomType == "breakout" and (counts.rest or 0) < 1 then
-		table.insert(errors, `{label}: a breakout has no rest marker`)
+	-- His break room: the Office's breakout, the School's teachers' lounge.
+	if (kit.roomType == "breakout" or kit.roomType == "lounge") and (counts.rest or 0) < 1 then
+		table.insert(errors, `{label}: a {kit.roomType} has no rest marker`)
 	end
 	local piles = counts.pile or 0
 	if piles < OfficeConstants.PILES_PER_ROOM.min then
