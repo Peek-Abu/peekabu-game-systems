@@ -3,8 +3,8 @@
 	TrainingHubSystem: training in the hub on this client.
 
 	- Every Training pad (TrainingConstants.TRUCK_TAG, made a queue pad by the server only while the place offers
-	  training) carries a sign: gold "New here? Start training!" while this
-	  player still needs training, plain "TRAINING" once they have done it (anyone can play it again).
+	  training) carries a plain "TRAINING" tag (anyone can play it again), and while this player still needs
+	  training the coach stands beside it waving, "Start here!" (TrainingCoachSystem; owner 11-11).
 	- A player who still needs training gets Pippa's hint and an arrow to the nearest Training pad (a world spotlight
 	  step) whenever they are off the pad (TrainingRules.hubTrail): stepping on hides it, stepping off brings it back.
 	- "Play training again" from the Guide (`again`): an arrow to the Training pad.
@@ -27,6 +27,7 @@ local RunService = game:GetService("RunService")
 local QueueConstants = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueConstants)
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local TrainingRules = require(ReplicatedStorage.Shared.Features.Training.Rules.TrainingRules)
+local TrainingCoachSystem = require(ReplicatedStorage.Client.Features.Training.Systems.TrainingCoachSystem)
 local TrainingSignSystem = require(ReplicatedStorage.Client.Features.Training.Systems.TrainingSignSystem)
 local TrainingSpotlightSystem = require(ReplicatedStorage.Client.Features.Training.Systems.TrainingSpotlightSystem)
 local TrainingTrailSystem = require(ReplicatedStorage.Client.Features.Training.Systems.TrainingTrailSystem)
@@ -95,11 +96,14 @@ local function nearestPadTop(): Vector3?
 end
 
 local function sign(pad: BasePart)
+	-- The coach stands at the pad while this player still needs training (her own "Start here!" over her head);
+	-- the pad's sign is then the plain tag, never a second gold one.
+	TrainingCoachSystem.set(pad, isNew)
 	TrainingSignSystem.show(pad, {
 		-- The short tag: Pippa's line already says "New here? Start training!" (one sentence, never two).
 		text = TrainingConstants.TEXT.truckTag,
 		number = nil,
-		active = isNew,
+		active = false,
 	}, SIGN_LIFT)
 end
 
@@ -164,6 +168,7 @@ function TrainingHubSystem.start()
 			if instance:IsA("BasePart") then
 				pads[instance] = nil
 				TrainingSignSystem.hide(instance)
+				TrainingCoachSystem.remove(instance)
 			end
 		end)
 	)
@@ -253,6 +258,7 @@ function TrainingHubSystem.stop()
 	table.clear(connections)
 	for pad in pads do
 		TrainingSignSystem.hide(pad)
+		TrainingCoachSystem.remove(pad)
 	end
 	table.clear(pads)
 	againUntil = nil

@@ -259,9 +259,20 @@ local TrainingConstants = {
 		tint = Color3.fromRGB(190, 182, 232),
 	}),
 
+	-- The coach at the hub's Training pad (TrainingCoachSystem; owner 11-11): who stands there, her pose
+	-- (EmployeePoseRegistry), where she stands in the pad's space and which way she faces in it.
+	HUB_COACH = table.freeze({
+		EMPLOYEE = "Pippa",
+		POSE = "wave",
+		SIDE = Vector3.new(-6, 0, 0),
+		FACING = Vector3.new(-1, 0, 0),
+	}),
+
 	TEXT = table.freeze({
 		truckSign = "New here? Start training!",
 		truckTag = "TRAINING",
+		-- The coach's line over her head at the Training pad (TrainingCoachSystem).
+		coach = "Start here!",
 		finished = "Great job! You're ready.",
 		finishTitle = "TRAINING DONE!",
 		finishGleam = "Gleam for finishing training!",

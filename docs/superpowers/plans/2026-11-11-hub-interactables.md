@@ -59,3 +59,13 @@ Edited: `DepotEvents` (Spot, Bell), `DepotStore` (radio station), `DepotAssets` 
 
 Specs: `DepotSpotRules.spec`, `DepotStore.spec` (station), `DepotRankChartViewModel.spec`. Both `DepotSpotSystem`s and
 `DepotDriveBySystem` are spec-exempt shells; their decisions are the specced rules.
+
+## Round 3 (owner notes 2026-11-11)
+
+| Feature | Realm | Subfolder | Name | Job (one line) |
+|---|---|---|---|---|
+| Training | client | Systems | TrainingCoachSystem | The coach (Pippa, waving) beside the Training pad while this player still needs training |
+| (UI) | client | Screens/World | DepotClockSign, DepotDailySign | The time clock's sign and the daily bonus sheet in the game's kit |
+
+Also: the hub's small "Find a truck!" tab (DepotHubViewModel.findTruck), the bell's swing and ring wave
+(DepotSpotRules.bellSwing), the radio's music notes (DepotSpotRules.noteRate; the image waits on the owner's upload OK).
