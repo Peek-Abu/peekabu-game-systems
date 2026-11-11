@@ -197,6 +197,8 @@ return function()
 		end)
 
 		it("takes a School's enter and leave prompts like the Office's", function()
+			-- Each kind from a fresh scene by the door, as the Office's enter and leave specs do (the scene's door parts
+			-- stand outside, so a leave right after an enter's teleport is rightly too far from them).
 			local kinds = OfficeEntranceSystem.kindsFor("school")
 			local folder, door, root, player = scene(Vector3.new(0, -2, 3))
 			local log = harness(door)
@@ -204,11 +206,15 @@ return function()
 			log.delayed[1].run()
 			local inside = INSIDE.Position + Vector3.new(0, OfficeConstants.SPAWN_HEIGHT, 0)
 			expect((root.Position - inside).Magnitude < 0.05).to.equal(true)
-			expect(log.system.request(player, kinds.leave, "dock", 200)).to.equal(true)
-			log.delayed[#log.delayed].run()
-			local outside = OUTSIDE.Position + Vector3.new(0, OfficeConstants.SPAWN_HEIGHT, 0)
-			expect((root.Position - outside).Magnitude < 0.05).to.equal(true)
 			folder:Destroy()
+
+			local leaveFolder, leaveDoor, leaveRoot, leavePlayer = scene(Vector3.new(0, -2, 3))
+			local leaveLog = harness(leaveDoor)
+			expect(leaveLog.system.request(leavePlayer, kinds.leave, "dock", 100)).to.equal(true)
+			leaveLog.delayed[1].run()
+			local outside = OUTSIDE.Position + Vector3.new(0, OfficeConstants.SPAWN_HEIGHT, 0)
+			expect((leaveRoot.Position - outside).Magnitude < 0.05).to.equal(true)
+			leaveFolder:Destroy()
 		end)
 
 		it("leaves to the outside frame", function()
