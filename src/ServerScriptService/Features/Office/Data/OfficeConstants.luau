@@ -99,6 +99,19 @@ local LIGHTING: {
 		conference = { panelBrightness = 0.22, panelRange = 14, allLit = false, fillBrightness = 1.5, fillRange = 11.5 },
 		server = { panelBrightness = 0.12, panelRange = 14, allLit = false, fillBrightness = 0.6, fillRange = 10 },
 		storage = { panelBrightness = 0.15, panelRange = 14, allLit = true, fillBrightness = 0.8, fillRange = 10 },
+		-- The School (SchoolKitRegistry): its rooms take the Office's warm recipe (the landmarks the pods', the biggest
+		-- Office room's; the lounge the breakout's; the front hall the reception's), its bathroom and janitor's closet
+		-- the storage closet's.
+		classroom = { panelBrightness = 0.22, panelRange = 14, allLit = false, fillBrightness = 1.7, fillRange = 11.5 },
+		gym = { panelBrightness = 0.22, panelRange = 14, allLit = false, fillBrightness = 1.7, fillRange = 11.5 },
+		cafeteria = { panelBrightness = 0.22, panelRange = 14, allLit = false, fillBrightness = 1.7, fillRange = 11.5 },
+		library = { panelBrightness = 0.22, panelRange = 14, allLit = false, fillBrightness = 1.7, fillRange = 11.5 },
+		nurse = { panelBrightness = 0.22, panelRange = 14, allLit = false, fillBrightness = 1.7, fillRange = 11.5 },
+		principal = { panelBrightness = 0.22, panelRange = 14, allLit = false, fillBrightness = 1.7, fillRange = 11.5 },
+		lounge = { panelBrightness = 0.22, panelRange = 14, allLit = false, fillBrightness = 1.7, fillRange = 11.5 },
+		fronthall = { panelBrightness = 0.22, panelRange = 14, allLit = false, fillBrightness = 1.7, fillRange = 11.5 },
+		bathroom = { panelBrightness = 0.15, panelRange = 14, allLit = true, fillBrightness = 0.8, fillRange = 10 },
+		janitor = { panelBrightness = 0.15, panelRange = 14, allLit = true, fillBrightness = 0.8, fillRange = 10 },
 	}
 -- Small accent lights by attachment name (they cast no shadows): every template OfficeBuildSystem or OfficeDecorSystem
 -- attaches gets one on each descendant Attachment named here (a server rack's LedLight, a floor lamp's LampLight).

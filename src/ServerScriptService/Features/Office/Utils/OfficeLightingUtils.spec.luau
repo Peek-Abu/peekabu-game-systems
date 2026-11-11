@@ -70,6 +70,23 @@ return function()
 			expect(storage.panels[1].brightness).to.equal(0.15)
 		end)
 
+		it("lights the School's rooms with the Office's recipes", function()
+			local pods = OfficeLightingUtils.roomLights(room(0, 64, 0, 56), "pods")
+			for _, roomType in
+				{ "classroom", "gym", "cafeteria", "library", "nurse", "principal", "lounge", "fronthall" }
+			do
+				local plan = OfficeLightingUtils.roomLights(room(0, 64, 0, 56), roomType)
+				expect(`{roomType} {countLit(plan.panels)}`).to.equal(`{roomType} {countLit(pods.panels)}`)
+				expect(`{roomType} {plan.panels[1].brightness}`).to.equal(`{roomType} 0.22`)
+				expect(OfficeConstants.LIGHTING[roomType] ~= nil).to.equal(true)
+			end
+			for _, roomType in { "bathroom", "janitor" } do
+				local plan = OfficeLightingUtils.roomLights(room(0, 12, 0, 12), roomType)
+				expect(`{roomType} {plan.panels[1].brightness} {plan.panels[1].lit}`).to.equal(`{roomType} 0.15 true`)
+				expect(OfficeConstants.LIGHTING[roomType] ~= nil).to.equal(true)
+			end
+		end)
+
 		it("a nil seed lights the same set as before", function()
 			local a = OfficeLightingUtils.roomLights(room(0, 60, 0, 44), "pods")
 			local b = OfficeLightingUtils.roomLights(room(0, 60, 0, 44), "pods", nil)

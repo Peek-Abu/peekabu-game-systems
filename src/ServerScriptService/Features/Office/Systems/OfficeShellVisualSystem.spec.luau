@@ -539,5 +539,19 @@ return function()
 			expect(Shell.floorMaterial("conference")).to.equal("carpet")
 			expect(Shell.floorMaterial("reception")).to.equal("carpet")
 		end)
+
+		it(
+			"floors the School's rooms: lino in classrooms, the cafeteria and the small rooms, wood in the gym",
+			function()
+				for _, roomType in { "classroom", "cafeteria", "nurse", "lounge", "fronthall" } do
+					expect(`{roomType} {Shell.floorMaterial(roomType)}`).to.equal(`{roomType} lino`)
+				end
+				expect(Shell.floorMaterial("gym")).to.equal("oak")
+				expect(Shell.floorMaterial("library")).to.equal("carpet")
+				expect(Shell.floorMaterial("principal")).to.equal("carpet")
+				expect(Shell.floorMaterial("bathroom")).to.equal("vinyl")
+				expect(Shell.floorMaterial("janitor")).to.equal("vinyl")
+			end
+		)
 	end)
 end

@@ -48,6 +48,17 @@ local FLOOR_BY_TYPE: { [string]: OfficeTypes.ShellMaterial } = {
 	server = "vinyl",
 	storage = "vinyl",
 	bay = "vinyl",
+	-- The School (no tile material yet: the bathroom takes vinyl).
+	classroom = "lino",
+	cafeteria = "lino",
+	nurse = "lino",
+	lounge = "lino",
+	fronthall = "lino",
+	gym = "oak",
+	library = "carpet",
+	principal = "carpet",
+	bathroom = "vinyl",
+	janitor = "vinyl",
 }
 
 local OfficeShellVisualSystem = {}
@@ -65,7 +76,9 @@ end
 
 --[=[
 	The floor material for a room type (OfficeArtKeyUtils.roomType): hallway carpet in corridors, lino in the
-	breakout room, vinyl in server and storage rooms and in the bay (OfficeBuildSystem passes "bay"), carpet else.
+	breakout room, vinyl in server and storage rooms and in the bay (OfficeBuildSystem passes "bay"), carpet else. The
+	School's: lino in classrooms, the cafeteria, the nurse, the lounge and the front hall, oak in the gym, carpet in the
+	library and the principal's office, vinyl in the bathroom and the janitor's closet.
 ]=]
 function OfficeShellVisualSystem.floorMaterial(roomType: string?): OfficeTypes.ShellMaterial
 	if roomType == nil then

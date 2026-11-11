@@ -28,7 +28,10 @@ local PAPER_BELOW = 0.4
 local ONE_ANOMALY_CHANCE = 0.65
 -- Evaluation order of desk items (folder is decided before paperStack, so a kept folder blocks the paper stack).
 local CLUTTER_ORDER = { "mug", "stationeryCup", "folder", "paperTray", "paperStack", "bookStack" }
-local STEADY_ROOMS: { [string]: boolean } = { storage = true, server = true, reception = true }
+-- Rooms whose light never varies: the Office's storage, server room and reception, and the School's janitor's closet and
+-- front hall (its storage and reception).
+local STEADY_ROOMS: { [string]: boolean } =
+	{ storage = true, server = true, reception = true, janitor = true, fronthall = true }
 
 local OfficeVariationRules = {}
 
@@ -81,7 +84,8 @@ function OfficeVariationRules.deskClutter(seed: number?, deskId: string): { stri
 end
 
 --[=[
-	A room's light this run: normal for the authored layout and for halls, storage, server and reception; else
+	A room's light this run: normal for the authored layout and for halls, storage, server and reception (and the
+	School's janitor's closet and front hall); else
 	60% normal, 30% dim, 10% dark.
 	@param seed number? -- the shift's layout seed
 	@param roomId string
