@@ -103,6 +103,8 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ServerScriptService.Features.Office.Data.OfficeTypes"] = "type definitions only (no runtime logic)",
 	["ServerScriptService.Features.Office.Data.OfficeConstants"] = "static placement, sizes and roll knobs (no logic)",
 	["ServerScriptService.Features.Office.Data.OfficeLayoutConstants"] = "authored layout data; validated by OfficeLayoutRules.spec",
+	-- Cleanup Crew: School (the procedural School map; its kits are specced in SchoolKitRegistry.spec)
+	["ServerScriptService.Features.School.Data.SchoolConstants"] = "static lattice, deck and room-slot knobs (no logic)",
 	["ServerScriptService.Features.Office.Systems.OfficeBuildSystem"] = "Instance builder (the layout is validated by the specced OfficeLayoutRules)",
 	["ServerScriptService.Features.Office.Systems.OfficeDoorSystem"] = "Instance/TweenService/Interaction shell (door maths is specced in OfficeDoorUtils)",
 	["ServerScriptService.Features.Office.OfficeServiceServer"] = "Instance/signal shell (layout rules, spawn roll and spawn rules are specced)",
