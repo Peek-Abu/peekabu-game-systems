@@ -46,6 +46,32 @@ local function prop(art: string, x: number, z: number, rotation: number?): KitMa
 	return { kind = "prop", x = x, z = z, rotation = rotation, art = art }
 end
 
+-- A grid of furniture (with a School art key, or none): one at each x of `xs` on each z of `zs`, all turned `rotation`.
+local function grid(
+	kind: OfficeTypes.MarkerKind,
+	art: string?,
+	xs: { number },
+	zs: { number },
+	rotation: number
+): { KitMarker }
+	local markers: { KitMarker } = {}
+	for _, z in zs do
+		for _, x in xs do
+			table.insert(markers, { kind = kind, x = x, z = z, rotation = rotation, art = art })
+		end
+	end
+	return markers
+end
+
+-- The lists joined, in order.
+local function join(...: { KitMarker }): { KitMarker }
+	local markers: { KitMarker } = {}
+	for _, list in { ... } do
+		table.move(list, 1, #list, #markers + 1, markers)
+	end
+	return markers
+end
+
 local KITS: { Kit } = {
 	{
 		id = "classroom_rows",
@@ -55,14 +81,9 @@ local KITS: { Kit } = {
 		width = 32,
 		depth = 26,
 		door = { offset = 6, width = 6.8, kind = "solid" },
-		markers = {
-			-- Two rows of student desks facing the chalkboard on the back wall (their chairs on the front-wall side), and
-			-- the teacher's desk turned to face them.
-			at("desk", 5.5, 10, 0),
-			at("desk", 16, 10, 0),
-			at("desk", 26.5, 10, 0),
-			at("desk", 5.5, 19.5, 0),
-			at("desk", 16, 19.5, 0),
+		-- Two rows of student desks facing the chalkboard on the back wall (their chairs on the front-wall side), and the
+		-- teacher's desk turned to face them.
+		markers = join(grid("desk", nil, { 5.5, 16, 26.5 }, { 10 }, 0), grid("desk", nil, { 5.5, 16 }, { 19.5 }, 0), {
 			at("desk", 26.5, 18.8, HALF),
 			styled("board", "chalkboard", 11, 24.8, 0),
 			prop("artFrame", 0.635, 15, -QUARTER),
@@ -74,7 +95,7 @@ local KITS: { Kit } = {
 			at("item", 10.75, 14.75),
 			at("item", 12, 3.5),
 			at("patrol", 16, 4.5),
-		},
+		}),
 	},
 	{
 		id = "classroom_groups",
@@ -84,12 +105,8 @@ local KITS: { Kit } = {
 		width = 28,
 		depth = 28,
 		door = { offset = 22, width = 6.8, kind = "solid" },
-		markers = {
-			-- A group of four desks back to back, the chalkboard on the back wall and cubbies on the right wall.
-			at("desk", 6, 10, 0),
-			at("desk", 14.4, 10, 0),
-			at("desk", 6, 16.8, HALF),
-			at("desk", 14.4, 16.8, HALF),
+		-- A group of four desks back to back, the chalkboard on the back wall and cubbies on the right wall.
+		markers = join(grid("desk", nil, { 6, 14.4 }, { 10 }, 0), grid("desk", nil, { 6, 14.4 }, { 16.8 }, HALF), {
 			styled("board", "chalkboard", 14, 26.8, 0),
 			styled("shelf", "cubbies", 25.95, 18, QUARTER),
 			prop("artFrame", 0.635, 16, -QUARTER),
@@ -100,7 +117,7 @@ local KITS: { Kit } = {
 			at("item", 22, 4),
 			at("item", 10, 23),
 			at("patrol", 22, 18),
-		},
+		}),
 	},
 	{
 		id = "art",
@@ -235,12 +252,8 @@ local KITS: { Kit } = {
 		width = 22,
 		depth = 18,
 		door = { offset = 11, width = 6.8, kind = "solid" },
-		markers = {
-			-- Four stalls on the back wall (closets: hide inside) and the sinks on the right wall.
-			styled("closet", "stall", 3.21, 15.225, 0),
-			styled("closet", "stall", 7.53, 15.225, 0),
-			styled("closet", "stall", 11.85, 15.225, 0),
-			styled("closet", "stall", 16.17, 15.225, 0),
+		-- Four stalls on the back wall (closets: hide inside) and the sinks on the right wall.
+		markers = join(grid("closet", "stall", { 3.21, 7.53, 11.85, 16.17 }, { 15.225 }, 0), {
 			styled("counter", "sinkCounter", 19.7, 6, QUARTER),
 			at("pile", 4, 4),
 			at("pile", 11, 9),
@@ -249,7 +262,7 @@ local KITS: { Kit } = {
 			at("item", 8, 11),
 			at("item", 15, 4),
 			at("patrol", 11, 8),
-		},
+		}),
 	},
 	{
 		id = "janitor",
@@ -311,36 +324,34 @@ local KITS: { Kit } = {
 		width = 64,
 		depth = 56,
 		door = { offset = 32, width = 10, kind = "open" },
-		markers = {
-			-- Equipment closets down the left wall, benches down the right, the scorers' tables and the scoreboard at the
-			-- back, crash mats in the middle.
-			styled("closet", "equipmentCloset", 2.775, 12, -QUARTER),
-			styled("closet", "equipmentCloset", 2.775, 20, -QUARTER),
-			styled("closet", "equipmentCloset", 2.775, 36, -QUARTER),
-			styled("closet", "equipmentCloset", 2.775, 44, -QUARTER),
-			styled("desk", "scorersTable", 24, 46, 0),
-			styled("desk", "scorersTable", 40, 46, 0),
-			styled("board", "scoreboard", 32, 54.8, 0),
-			prop("rug", 32, 24, 0),
-			prop("sofa", 61.14, 14, QUARTER),
-			prop("sofa", 61.14, 28, QUARTER),
-			prop("sofa", 61.14, 42, QUARTER),
-			prop("planter", 3.08, 52.99, 0),
-			prop("wallClock", 20, 55.375, 0),
-			at("pile", 16, 10),
-			at("pile", 48, 10),
-			at("pile", 32, 14),
-			at("pile", 20, 30),
-			at("pile", 44, 30),
-			at("pile", 32, 36),
-			at("pile", 12, 50),
-			at("pile", 52, 50),
-			at("item", 32, 8),
-			at("item", 10, 28),
-			at("item", 54, 22),
-			at("item", 32, 48),
-			at("patrol", 32, 28),
-		},
+		-- Equipment closets down the left wall, benches down the right, the scorers' tables and the scoreboard at the
+		-- back, crash mats in the middle.
+		markers = join(
+			grid("closet", "equipmentCloset", { 2.775 }, { 12, 20, 36, 44 }, -QUARTER),
+			grid("desk", "scorersTable", { 24, 40 }, { 46 }, 0),
+			{
+				styled("board", "scoreboard", 32, 54.8, 0),
+				prop("rug", 32, 24, 0),
+				prop("sofa", 61.14, 14, QUARTER),
+				prop("sofa", 61.14, 28, QUARTER),
+				prop("sofa", 61.14, 42, QUARTER),
+				prop("planter", 3.08, 52.99, 0),
+				prop("wallClock", 20, 55.375, 0),
+				at("pile", 16, 10),
+				at("pile", 48, 10),
+				at("pile", 32, 14),
+				at("pile", 20, 30),
+				at("pile", 44, 30),
+				at("pile", 32, 36),
+				at("pile", 12, 50),
+				at("pile", 52, 50),
+				at("item", 32, 8),
+				at("item", 10, 28),
+				at("item", 54, 22),
+				at("item", 32, 48),
+				at("patrol", 32, 28),
+			}
+		),
 	},
 	{
 		id = "cafeteria",
@@ -350,41 +361,33 @@ local KITS: { Kit } = {
 		width = 64,
 		depth = 56,
 		door = { offset = 32, width = 10, kind = "open" },
-		markers = {
-			-- Two lunch tables of four seats to hide under, two small tables, the serving line on the back wall and a
-			-- vending machine and cooler on the right wall.
-			styled("desk", "lunchTable", 6.5, 12, 0),
-			styled("desk", "lunchTable", 14.9, 12, 0),
-			styled("desk", "lunchTable", 6.5, 18.8, HALF),
-			styled("desk", "lunchTable", 14.9, 18.8, HALF),
-			styled("desk", "lunchTable", 49.1, 12, 0),
-			styled("desk", "lunchTable", 57.5, 12, 0),
-			styled("desk", "lunchTable", 49.1, 18.8, HALF),
-			styled("desk", "lunchTable", 57.5, 18.8, HALF),
-			styled("table", "breakTable", 24, 34, 0),
-			styled("table", "breakTable", 40, 34, 0),
-			styled("counter", "kitchenCounter", 20, 53.41, 0),
-			styled("counter", "kitchenCounter", 28.1, 53.41, 0),
-			styled("counter", "kitchenCounter", 36.2, 53.41, 0),
-			styled("counter", "kitchenCounter", 44.3, 53.41, 0),
-			prop("vending", 60.665, 32, QUARTER),
-			prop("waterCooler", 62.2425, 38, QUARTER),
-			prop("planter", 3.08, 52.99, 0),
-			prop("artFrame", 0.635, 34, -QUARTER),
-			prop("wallClock", 8, 55.375, 0),
-			at("pile", 26, 12),
-			at("pile", 38, 18),
-			at("pile", 32, 26),
-			at("pile", 10, 30),
-			at("pile", 54, 28),
-			at("pile", 20, 46),
-			at("pile", 44, 46),
-			at("item", 32, 8),
-			at("item", 12, 28),
-			at("item", 52, 40),
-			at("item", 32, 44),
-			at("patrol", 32, 24),
-		},
+		-- Two lunch tables of four seats to hide under, two small tables, the serving line on the back wall and a
+		-- vending machine and cooler on the right wall.
+		markers = join(
+			grid("desk", "lunchTable", { 6.5, 14.9, 49.1, 57.5 }, { 12 }, 0),
+			grid("desk", "lunchTable", { 6.5, 14.9, 49.1, 57.5 }, { 18.8 }, HALF),
+			grid("table", "breakTable", { 24, 40 }, { 34 }, 0),
+			grid("counter", "kitchenCounter", { 20, 28.1, 36.2, 44.3 }, { 53.41 }, 0),
+			{
+				prop("vending", 60.665, 32, QUARTER),
+				prop("waterCooler", 62.2425, 38, QUARTER),
+				prop("planter", 3.08, 52.99, 0),
+				prop("artFrame", 0.635, 34, -QUARTER),
+				prop("wallClock", 8, 55.375, 0),
+				at("pile", 26, 12),
+				at("pile", 38, 18),
+				at("pile", 32, 26),
+				at("pile", 10, 30),
+				at("pile", 54, 28),
+				at("pile", 20, 46),
+				at("pile", 44, 46),
+				at("item", 32, 8),
+				at("item", 12, 28),
+				at("item", 52, 40),
+				at("item", 32, 44),
+				at("patrol", 32, 24),
+			}
+		),
 	},
 	{
 		id = "library",
@@ -394,48 +397,30 @@ local KITS: { Kit } = {
 		width = 64,
 		depth = 56,
 		door = { offset = 32, width = 10, kind = "open" },
-		markers = {
-			-- Rows of bookshelves on the left, two reading tables of four to hide under on the right, the front desk by the
-			-- door and a book-return closet in the back corner.
-			styled("shelf", "bookshelf", 4.5, 12, 0),
-			styled("shelf", "bookshelf", 9.5, 12, 0),
-			styled("shelf", "bookshelf", 14.5, 12, 0),
-			styled("shelf", "bookshelf", 4.5, 20, 0),
-			styled("shelf", "bookshelf", 9.5, 20, 0),
-			styled("shelf", "bookshelf", 14.5, 20, 0),
-			styled("shelf", "bookshelf", 4.5, 28, 0),
-			styled("shelf", "bookshelf", 9.5, 28, 0),
-			styled("shelf", "bookshelf", 14.5, 28, 0),
-			styled("shelf", "bookshelf", 4.5, 36, 0),
-			styled("shelf", "bookshelf", 9.5, 36, 0),
-			styled("shelf", "bookshelf", 14.5, 36, 0),
-			styled("shelf", "bookshelf", 4.5, 44, 0),
-			styled("shelf", "bookshelf", 9.5, 44, 0),
-			styled("shelf", "bookshelf", 14.5, 44, 0),
-			styled("desk", "readingTable", 40, 22, 0),
-			styled("desk", "readingTable", 48.4, 22, 0),
-			styled("desk", "readingTable", 40, 28.8, HALF),
-			styled("desk", "readingTable", 48.4, 28.8, HALF),
-			styled("desk", "readingTable", 40, 42, 0),
-			styled("desk", "readingTable", 48.4, 42, 0),
-			styled("desk", "readingTable", 40, 48.8, HALF),
-			styled("desk", "readingTable", 48.4, 48.8, HALF),
-			styled("counter", "libraryDesk", 52, 8, 0),
-			styled("closet", "bookReturn", 2.775, 51, -QUARTER),
-			prop("planter", 60.92, 3.01, HALF),
-			prop("artFrame", 63.365, 30, QUARTER),
-			prop("wallClock", 32, 55.375, 0),
-			at("pile", 24, 10),
-			at("pile", 24, 30),
-			at("pile", 12, 16),
-			at("pile", 12, 32),
-			at("pile", 30, 48),
-			at("pile", 58, 20),
-			at("item", 32, 20),
-			at("item", 58, 40),
-			at("item", 24, 50),
-			at("patrol", 30, 30),
-		},
+		-- Rows of bookshelves on the left, two reading tables of four to hide under on the right, the front desk by the
+		-- door and a book-return closet in the back corner.
+		markers = join(
+			grid("shelf", "bookshelf", { 4.5, 9.5, 14.5 }, { 12, 20, 28, 36, 44 }, 0),
+			grid("desk", "readingTable", { 40, 48.4 }, { 22, 42 }, 0),
+			grid("desk", "readingTable", { 40, 48.4 }, { 28.8, 48.8 }, HALF),
+			{
+				styled("counter", "libraryDesk", 52, 8, 0),
+				styled("closet", "bookReturn", 2.775, 51, -QUARTER),
+				prop("planter", 60.92, 3.01, HALF),
+				prop("artFrame", 63.365, 30, QUARTER),
+				prop("wallClock", 32, 55.375, 0),
+				at("pile", 24, 10),
+				at("pile", 24, 30),
+				at("pile", 12, 16),
+				at("pile", 12, 32),
+				at("pile", 30, 48),
+				at("pile", 58, 20),
+				at("item", 32, 20),
+				at("item", 58, 40),
+				at("item", 24, 50),
+				at("patrol", 30, 30),
+			}
+		),
 	},
 }
 
