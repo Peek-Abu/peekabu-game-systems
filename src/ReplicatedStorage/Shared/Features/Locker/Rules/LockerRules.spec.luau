@@ -27,6 +27,14 @@ return function()
 			end
 			expect(#LockerRules.pool(GLOOM) > 0).to.equal(true)
 		end)
+
+		it("leaves out the three old Epic placeholders, which have no art", function()
+			for _, it_ in LockerRules.pool(GLOOM) do
+				expect(it_.id ~= "Pippa.Gloomkeeper").to.equal(true)
+				expect(it_.id ~= "Cappy.GhostDebunker").to.equal(true)
+				expect(it_.id ~= "Prickles.PotKnight").to.equal(true)
+			end
+		end)
 	end)
 
 	describe("odds", function()

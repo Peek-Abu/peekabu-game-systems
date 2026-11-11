@@ -95,7 +95,7 @@ return function()
 			local gleam = VM.band(CosmeticRegistry.get("Pippa.BubbleBuddy"), false, false)
 			expect(gleam.kind).to.equal("gleam")
 			expect(gleam.text).to.equal("1,500")
-			expect(VM.band(CosmeticRegistry.get("Pippa.Gloomkeeper"), false, false).kind).to.equal("locker")
+			expect(VM.band(CosmeticRegistry.get("Prickles.Showstopper"), false, false).kind).to.equal("locker")
 			expect(VM.band(CosmeticRegistry.get("Pippa.OwnerSpecial"), false, false).kind).to.equal("missed")
 		end)
 
@@ -137,7 +137,7 @@ return function()
 
 		it("points other locked items at where to get them, never as a working button", function()
 			local cases = {
-				["Pippa.Gloomkeeper"] = "Gloom Locker",
+				["Prickles.Showstopper"] = "Gloom Locker",
 				["Pippa.OwnerSpecial"] = "Missed it",
 			}
 			for id, text in cases do

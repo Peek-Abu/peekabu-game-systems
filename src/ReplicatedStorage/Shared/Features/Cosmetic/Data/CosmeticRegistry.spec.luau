@@ -89,6 +89,15 @@ return function()
 		expect(#item.lore > 0).to.equal(true)
 	end)
 
+	it("keeps the old Epic placeholders out of the Gloom Locker; their ids stay", function()
+		for _, id in { "Pippa.Gloomkeeper", "Cappy.GhostDebunker", "Prickles.PotKnight" } do
+			local item = CosmeticRegistry.get(id)
+			expect(item).to.be.ok()
+			expect(item.rarity).to.equal("epic")
+			expect(item.source).to.equal("later")
+		end
+	end)
+
 	it("only points at things that exist", function()
 		for _, item in all do
 			if item.employee ~= nil then

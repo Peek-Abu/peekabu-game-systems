@@ -162,7 +162,8 @@ local ITEMS: { CosmeticTypes.Item } = {
 		employee = "Pippa",
 		name = "Gloomkeeper",
 		rarity = "epic",
-		source = "gloomLocker",
+		source = "later",
+		-- Out of the Gloom Locker until it has art (owner, 2026-11-04); the id stays so owners keep it.
 		lore = "Pippa keeps the Gloom in line. Mostly.",
 	},
 	{
@@ -204,7 +205,8 @@ local ITEMS: { CosmeticTypes.Item } = {
 		employee = "Cappy",
 		name = "Ghost Debunker",
 		rarity = "epic",
-		source = "gloomLocker",
+		source = "later",
+		-- Out of the Gloom Locker until it has art (owner, 2026-11-04); the id stays so owners keep it.
 		lore = "Ghosts are not real. I have the gear to prove it.",
 		quote = true,
 	},
@@ -247,7 +249,8 @@ local ITEMS: { CosmeticTypes.Item } = {
 		employee = "Prickles",
 		name = "Pot Knight",
 		rarity = "epic",
-		source = "gloomLocker",
+		source = "later",
+		-- Out of the Gloom Locker until it has art (owner, 2026-11-04); the id stays so owners keep it.
 		lore = "Armour made from a flower pot. Prickles is very brave.",
 	},
 	{
