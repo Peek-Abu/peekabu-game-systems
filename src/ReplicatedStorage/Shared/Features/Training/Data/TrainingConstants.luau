@@ -260,7 +260,9 @@ local TrainingConstants = {
 	}),
 
 	-- The coach at the hub's Training pad (TrainingCoachSystem; owner 11-11): who stands there, her pose
-	-- (EmployeePoseRegistry), where she stands in the pad's space and which way she faces in it.
+	-- (EmployeePoseRegistry), where she stands in the pad's space and which way she faces in it. She carries no
+	-- floating text: her words are the on-screen coach card (owner 11-11: a billboard that swings with the camera is
+	-- disorienting).
 	HUB_COACH = table.freeze({
 		EMPLOYEE = "Pippa",
 		POSE = "wave",
@@ -271,8 +273,6 @@ local TrainingConstants = {
 	TEXT = table.freeze({
 		truckSign = "New here? Start training!",
 		truckTag = "TRAINING",
-		-- The coach's line over her head at the Training pad (TrainingCoachSystem).
-		coach = "Start here!",
 		finished = "Great job! You're ready.",
 		finishTitle = "TRAINING DONE!",
 		finishGleam = "Gleam for finishing training!",

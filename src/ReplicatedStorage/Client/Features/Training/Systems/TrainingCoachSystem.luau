@@ -3,11 +3,13 @@
 	TrainingCoachSystem: the coach at the hub's Training pad on this client (owner 11-11: an NPC with a purpose; it
 	replaces the floating "New here?" sign). While this player still needs training, Pippa stands beside each Training
 	pad on the side facing the hub, waving (EmployeePoseRegistry's `wave`: a portrait pose, never a per-character
-	animation), with TrainingConstants.TEXT.coach over her head. Once they have trained she is gone for them (the pad
-	keeps its plain TRAINING tag, so anyone can play it again). Built locally (EmployeePortraitSystem.build: an
+	animation). She carries no billboard: what she says is the on-screen coach card (TrainingHubSystem's spotlight
+	step, "New here? Start training!", with the edge arrow and the gold floor trail leading to the pad), because text
+	floating in the world swings around as the camera moves (owner 11-11). Once they have trained she is gone for them
+	(the pad keeps its plain TRAINING tag, so anyone can play it again). Built locally (EmployeePortraitSystem.build: an
 	anchored, inert posed copy), so nothing replicates and nobody else sees another player's coach.
 
-	Spec-exempt shell (Instances, the portrait build, the sign); the decision is the specced TrainingRules.isNew.
+	Spec-exempt shell (Instances, the portrait build); the decision is the specced TrainingRules.isNew.
 
 	@class TrainingCoachSystem
 ]=]
@@ -18,7 +20,6 @@ local Workspace = game:GetService("Workspace")
 local EmployeePoseRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeePoseRegistry)
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local EmployeePortraitSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeePortraitSystem)
-local TrainingSignSystem = require(ReplicatedStorage.Client.Features.Training.Systems.TrainingSignSystem)
 
 local COACH = TrainingConstants.HUB_COACH
 
@@ -52,10 +53,6 @@ local function build(pad: BasePart): Model?
 	local frame, size = coach:GetBoundingBox()
 	coach:PivotTo(coach:GetPivot() + Vector3.new(0, feet.Y - (frame.Position.Y - size.Y / 2), 0))
 	coach.Parent = Workspace
-	local head = coach.PrimaryPart
-	if head ~= nil then
-		TrainingSignSystem.show(head, { text = TrainingConstants.TEXT.coach, number = nil, active = true }, size.Y + 1)
-	end
 	return coach
 end
 
@@ -82,14 +79,10 @@ function TrainingCoachSystem.remove(pad: BasePart)
 		return
 	end
 	coaches[pad] = nil
-	local head = coach.PrimaryPart
-	if head ~= nil then
-		TrainingSignSystem.hide(head)
-	end
 	coach:Destroy()
 end
 
--- Whether a coach stands at `pad` (the hub then hangs no sign of its own over the pad's tag).
+-- Whether a coach stands at `pad`.
 function TrainingCoachSystem.has(pad: BasePart): boolean
 	return coaches[pad] ~= nil
 end
