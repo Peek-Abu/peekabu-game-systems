@@ -46,6 +46,8 @@ The layout checks are the Office's: validate, capacity, route, hide spots ≥ 8,
 | School | server | Data | SchoolKitRegistry | the school room kits (OfficeTypes.Kit): classrooms, gym, cafeteria, library, small rooms |
 | School | server | Utils | SchoolNetworkUtils | the hall network: lattice, forced landmark blocks, spine, extra edges, pruning (pure) |
 | School | server | Utils | SchoolLayoutGenerationUtils | a full School `Layout` from a seed (pure; first of N attempts that passes Office's checks) |
+| School | server | Utils | SchoolRoomSlotUtils | where rooms may go on a network: block quarters facing drawn halls, the wall band, a kit's front corner in a slot (pure) |
+| School | server | Utils | SchoolHallUtils | a hall's furnishing and patrol: junction patrol points, locker banks on wide halls, Harlow's route over the doors (pure) |
 | Shift | shared | Data | (edit) ShiftTypes | adds `MapId = "office" \| "school"` |
 | Depot | server | State | DepotMapTracker | which map each truck pad's host picked (cleared when the party leaves) |
 | Depot | shared | Rules | DepotMapRules | who may pick (the pad's host only) and which ids are valid |
