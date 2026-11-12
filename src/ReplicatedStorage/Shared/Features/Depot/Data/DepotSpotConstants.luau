@@ -178,6 +178,9 @@ local DepotSpotConstants = {
 	LOUNGE = table.freeze({
 		TAG = "DepotLoungeSpot",
 		EMPLOYEE = "Cappy",
+		-- The face he sleeps in (owner 11-12: his eyes were open while napping): a closed-eyes face from the model's Faces
+		-- folder (every employee has this one); he wears his own default face while he is awake to wave.
+		SLEEP_FACE = "RevealBlinkClosed",
 		WAKE_RADIUS = 10,
 		COOLDOWN = 25,
 	}),

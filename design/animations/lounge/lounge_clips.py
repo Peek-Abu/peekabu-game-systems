@@ -30,9 +30,11 @@ PELVIS = [-0.05, -0.35, PELVIS_TIP]
 SIT_LEGS = {
     # thighs forward over the cushion (the hips take back the pelvis tip so they stay level), shins down; the knees
     # fall apart a little, unevenly (relaxed, not posed)
-    "RightHip": [86 - PELVIS_TIP, 0, 7], "LeftHip": [88 - PELVIS_TIP, 0, -11],
-    "RightKnee": [-84, 0, 0], "LeftKnee": [-88, 0, 0],
-    "RightAnkle": [4, 0, 0], "LeftAnkle": [-2, 0, 0],
+    # (owner 11-12: the legs stretched out lazily, nearly straight, the shins resting out over the cushion's edge
+    # instead of folding down into it)
+    "RightHip": [80 - PELVIS_TIP, 0, 7], "LeftHip": [83 - PELVIS_TIP, 0, -11],
+    "RightKnee": [-26, 0, 0], "LeftKnee": [-34, 0, 0],
+    "RightAnkle": [-10, 0, 0], "LeftAnkle": [-6, 0, 0],
 }
 # The right hand resting on his belly, the left arm hanging limp by his hip (solved by FK on Cappy at player scale:
 # the kit's short arms can't reach further down the lap with the back leaned in).

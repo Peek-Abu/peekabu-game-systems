@@ -22,6 +22,8 @@ local DepotSpotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.
 local DepotLoungeRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotLoungeRules)
 local DepotAssets = require(ReplicatedStorage.Client.Features.Depot.Data.DepotAssets)
 local EmployeeNpcUtils = require(ReplicatedStorage.Client.Features.Employee.Utils.EmployeeNpcUtils)
+local EmployeeFaceSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeeFaceSystem)
+local EmployeeRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeRegistry)
 
 local LOUNGE = DepotSpotConstants.LOUNGE
 local FADE = 0.3
@@ -90,6 +92,13 @@ local function build(spot: BasePart): () -> ()
 	local doze = load(animator, dozeId, true, Enum.AnimationPriority.Idle)
 	local wave = load(animator, waveId, false, Enum.AnimationPriority.Action)
 	doze:Play(0, 1, 1)
+	-- Eyes closed while he dozes; his own face while he is awake to wave, closed again when the wave ends.
+	local def = EmployeeRegistry.get(LOUNGE.EMPLOYEE)
+	local function sleep()
+		EmployeeFaceSystem.applyNamed(model, LOUNGE.SLEEP_FACE, true)
+	end
+	sleep()
+	local dozedOff = wave.Stopped:Connect(sleep)
 	local alive = true
 	task.spawn(function()
 		local waited = 0
@@ -114,6 +123,9 @@ local function build(spot: BasePart): () -> ()
 		local now = os.clock()
 		if not wave.IsPlaying and DepotLoungeRules.wakes(distance, near, lastAt, now) then
 			lastAt = now
+			if def ~= nil then
+				EmployeeFaceSystem.apply(model, def.defaultFace, true)
+			end
 			wave:Play(FADE, 1, 1)
 		end
 		near = distance <= LOUNGE.WAKE_RADIUS
@@ -121,6 +133,7 @@ local function build(spot: BasePart): () -> ()
 	return function()
 		alive = false
 		watcher:Disconnect()
+		dozedOff:Disconnect()
 		model:Destroy()
 	end
 end
