@@ -15,12 +15,16 @@
 	@class DepotBoardVisualSystem
 ]=]
 
+local CollectionService = game:GetService("CollectionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local DepotLayoutConstants = require(ServerScriptService.Features.Depot.Data.DepotLayoutConstants)
+local DepotSpotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotSpotConstants)
 
 local BODY = DepotLayoutConstants.BOARD_BODY
 local BACKER = DepotLayoutConstants.BOARD_BACKER
+local IDLE = DepotSpotConstants.IDLE
 
 local function piece(
 	name: string,
@@ -305,6 +309,12 @@ function DepotBoardVisualSystem.hangClock(clock: BasePart, art: Model?, sign: Ba
 				part.CanQuery = false
 				part.CanTouch = false
 			end
+		end
+		-- Its dial ticks (DepotIdleMotionSystem's "tick": a second hand on the dial's -Z face, which looks at the readers).
+		local dial = body:FindFirstChild(IDLE.CLOCK_DIAL, true)
+		if dial ~= nil and dial:IsA("BasePart") then
+			dial:SetAttribute(IDLE.ATTRIBUTE, "tick")
+			CollectionService:AddTag(dial, IDLE.TAG)
 		end
 		body.Parent = parent
 		clock.Transparency = 1

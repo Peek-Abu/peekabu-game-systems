@@ -190,6 +190,8 @@ local DepotSpotConstants = {
 		RATTLE = table.freeze({ DEGREES = 3, FREQUENCY = 9, DAMPING = 5, SECONDS = 0.6 }),
 		SWAY = table.freeze({ DEGREES = 5, FREQUENCY = 1.3, SECONDS = 1.8 }),
 		FALL = table.freeze({ GRAVITY = 40, DISTANCE = 1.2 }),
+		-- The time clock art's dial part: the hub's clock (built by the server) tags it "tick" so its second hand turns.
+		CLOCK_DIAL = "ClockFace",
 		INTERVALS = table.freeze(IDLE_INTERVALS),
 	}),
 }

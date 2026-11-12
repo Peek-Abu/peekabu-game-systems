@@ -37,6 +37,21 @@ return function()
 				expect(art:GetPivot().LookVector:Dot(-clock.CFrame.LookVector) > 0.99).to.equal(true)
 			end
 		end)
+		it("tags the hub clock's dial for its ticking second hand (owner 11-11, ideas sheet #3)", function()
+			built = Build.build(Layout, CFrame.new(50000, 0, 0), {})
+			local clock = built.model:FindFirstChild("WeeklyTimeClock", true)
+			local art = clock.Parent:FindFirstChild("TimeClockArt")
+			if art ~= nil then
+				local Idle =
+					require(game:GetService("ReplicatedStorage").Shared.Features.Depot.Data.DepotSpotConstants).IDLE
+				local dial = art:FindFirstChild(Idle.CLOCK_DIAL, true)
+				expect(dial).never.to.equal(nil)
+				expect(game:GetService("CollectionService"):HasTag(dial, Idle.TAG)).to.equal(true)
+				expect(dial:GetAttribute(Idle.ATTRIBUTE)).to.equal("tick")
+				-- The second hand goes on the dial's -Z face: that face looks at the clock's readers.
+				expect(dial.CFrame.LookVector:Dot(-clock.CFrame.LookVector) > 0.99).to.equal(true)
+			end
+		end)
 
 		it("hangs the clock and its sign on a back that stands on the floor, and backs the daily sheet", function()
 			built = Build.build(Layout, CFrame.new(50000, 0, 0), {})
