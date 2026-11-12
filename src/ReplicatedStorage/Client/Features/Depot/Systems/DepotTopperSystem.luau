@@ -127,11 +127,20 @@ local function lane(anchor: CFrame, shade: UIToonConstants.Shade, start: number?
 	for index = 1, LANE.CHEVRONS do
 		marks[`c{index}`] = chevron(index, (index - 0.5) / LANE.CHEVRONS, shade.hi)
 	end
-	roots.show(gui, React.createElement("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, marks))
+	-- Turned round so the chevrons point back up the lane at the station (the way a player walks).
+	roots.show(
+		gui,
+		React.createElement(
+			"Frame",
+			{ Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Rotation = 180 },
+			marks
+		)
+	)
 end
 
 -- Dresses one topper at `at` (its canvas centre, facing the readers) for `stationKey`; returns its cleanup.
-local function dress(stationKey: string, at: CFrame, start: number?, length: number?): () -> ()
+-- `scale`: the topper's size against TOPPER.PLATE (an anchor's own width sets it; 1 on a sign shell).
+local function dress(stationKey: string, at: CFrame, scale: number, start: number?, length: number?): () -> ()
 	local station = DepotTopperConstants.STATIONS[stationKey]
 	if station == nil then
 		return function() end
@@ -144,16 +153,17 @@ local function dress(stationKey: string, at: CFrame, start: number?, length: num
 	canvas.Name = "TopperCanvas"
 	inert(canvas)
 	canvas.Transparency = 1
-	canvas.Size = Vector3.new(TOPPER.PLATE.X, TOPPER.PLATE.Y, 0.05)
+	local plate = TOPPER.PLATE * scale
+	canvas.Size = Vector3.new(plate.X, plate.Y, 0.05)
 	canvas.CFrame = at
 	canvas.Parent = group
 	-- The backing: a slab behind the plate body (the gui is drawn on the front face only).
-	local body = TOPPER.PLATE.Y * TOPPER.BODY_SHARE
+	local body = plate.Y * TOPPER.BODY_SHARE
 	local backing = Instance.new("Part")
 	backing.Name = "TopperBacking"
 	inert(backing)
-	backing.Size = Vector3.new(TOPPER.PLATE.X - 0.2, body - 0.15, BACKING_DEPTH)
-	backing.CFrame = at * CFrame.new(0, -TOPPER.PLATE.Y / 2 + body / 2 + 0.08, BACKING_DEPTH / 2 + 0.03)
+	backing.Size = Vector3.new(plate.X - 0.2 * scale, body - 0.15 * scale, BACKING_DEPTH)
+	backing.CFrame = at * CFrame.new(0, -plate.Y / 2 + body / 2 + 0.08 * scale, BACKING_DEPTH / 2 + 0.03)
 	backing.Color = UIToonConstants.COLOR.ink
 	backing.Material = Enum.Material.SmoothPlastic
 	backing.Parent = group
@@ -207,20 +217,38 @@ function DepotTopperSystem.start(): () -> ()
 		return dress(
 			key,
 			instance.CFrame,
+			math.max(instance.Size.X / TOPPER.PLATE.X, 0.25),
 			number(instance:GetAttribute(TOPPER.LANE_START_ATTRIBUTE)),
 			number(instance:GetAttribute(TOPPER.LANE_LENGTH_ATTRIBUTE))
 		)
 	end)
+	-- A sign shell's topper. With streaming on, the shell can arrive before the sign part it is drawn on, so it waits
+	-- for its Adornee to stream in (and re-dresses if the shell is moved onto another part).
 	local function onShell(stationKey: string): (instance: Instance) -> (() -> ())?
 		return function(instance: Instance)
 			if not instance:IsA("SurfaceGui") then
 				return nil
 			end
-			local part = instance.Adornee or instance.Parent
-			if part == nil or not part:IsA("BasePart") then
-				return nil
+			local gui: SurfaceGui = instance
+			local undress: (() -> ())? = nil
+			local function refresh()
+				if undress ~= nil then
+					undress()
+					undress = nil
+				end
+				local part = gui.Adornee or gui.Parent
+				if part ~= nil and part:IsA("BasePart") then
+					undress = dress(stationKey, DepotTopperRules.onShell(part.CFrame, part.Size, gui.Face), 1, nil, nil)
+				end
 			end
-			return dress(stationKey, DepotTopperRules.onShell(part.CFrame, part.Size, instance.Face), nil, nil)
+			refresh()
+			local moved = gui:GetPropertyChangedSignal("Adornee"):Connect(refresh)
+			return function()
+				moved:Disconnect()
+				if undress ~= nil then
+					undress()
+				end
+			end
 		end
 	end
 	local tags = DepotConstants.BILLBOARD_TAGS

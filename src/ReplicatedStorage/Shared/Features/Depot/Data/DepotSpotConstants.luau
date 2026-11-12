@@ -183,7 +183,8 @@ local DepotSpotConstants = {
 	}),
 	-- The stations' toppers (DepotTopperSystem, DepotTopperRules; owner 11-12, kit mock round 2 #1, ideas #5 and #6). A
 	-- builder places a thin part tagged TAG with ATTRIBUTE naming its station (a key of DepotTopperConstants.STATIONS);
-	-- its LookVector faces the readers. The client stands a kit plate there (PLATE studs, drawn at PIXELS_PER_STUD), a
+	-- its LookVector faces the readers and its width sets the topper's size (PLATE.X wide = 1x, so a builder resizes the
+	-- anchor to resize the topper). The client stands a kit plate there (PLATE studs, drawn at PIXELS_PER_STUD), a
 	-- backing behind it, a warm light pool under it (POOL) and the station's lane on the floor in front (LANE: from
 	-- LANE_START_ATTRIBUTE studs ahead of the anchor, LANE_LENGTH_ATTRIBUTE long; defaults below). The time clock and
 	-- the daily sheet are built by the server, so their toppers stand on their sign shells (SHELL_GAP above the top).
