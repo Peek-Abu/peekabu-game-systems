@@ -32,6 +32,36 @@ return function()
 		end)
 	end)
 
+	describe("DepotTopperRules.chevrons", function()
+		it("lays two bars per chevron flat on the lane, each pointing back at the station", function()
+			-- A lane running away from a station at the origin along +Z (its LookVector).
+			local laneAt, laneSize = Rules.lane(CFrame.lookAt(Vector3.zero, Vector3.zAxis), 0, 2, 6)
+			local bars, barSize = Rules.chevrons(laneAt, laneSize)
+			expect(#bars).to.equal(2 * TOPPER.LANE.CHEVRONS)
+			local top = laneAt.Position.Y + laneSize.Y / 2
+			for index = 1, #bars, 2 do
+				local left, right = bars[index], bars[index + 1]
+				for _, bar in { left, right } do
+					-- Flat, sitting on the lane's top, inside the lane.
+					expect(bar.UpVector:Dot(Vector3.yAxis)).to.be.near(1, 1e-6)
+					expect(bar.Position.Y - barSize.Y / 2).to.be.near(top, 1e-3)
+					expect(math.abs(bar.Position.X) < laneSize.X / 2).to.equal(true)
+					-- The bar's near end (towards -Z, the station) sits nearer the lane's middle than its far end:
+					-- the two bars meet at a point aimed at the station.
+					local near = bar.Position - bar.LookVector * (barSize.Z / 2)
+					local far = bar.Position + bar.LookVector * (barSize.Z / 2)
+					if near.Z > far.Z then
+						near, far = far, near
+					end
+					expect(math.abs(near.X) < math.abs(far.X)).to.equal(true)
+				end
+				-- The pair is a mirror image across the lane's middle.
+				expect(left.Position.X).to.be.near(-right.Position.X, 1e-6)
+				expect(left.Position.Z).to.be.near(right.Position.Z, 1e-6)
+			end
+		end)
+	end)
+
 	describe("DepotTopperRules.poolRange", function()
 		it("reaches the floor and a little past it, never less than the minimum", function()
 			expect(Rules.poolRange(14, 1)).to.equal(13 + TOPPER.POOL.REACH)

@@ -36,7 +36,6 @@ local CANVAS = TOPPER.PLATE * TOPPER.PIXELS_PER_STUD
 local BACKING_DEPTH = 0.08
 -- How see-through the lane paint is (a little, so the floor's grain shows through).
 local LANE_TRANSPARENCY = 0.15
-local LANE_PIXELS_PER_STUD = 50
 
 local roots = UIBillboards.new(UIBillboardHost.factory)
 
@@ -69,27 +68,6 @@ local function floorUnder(point: Vector3, ignore: { Instance }): number?
 	return if hit ~= nil then hit.Position.Y else nil
 end
 
--- One chevron (two bars meeting at a point) pointing up the lane's gui, at `y` (0..1 down the lane).
-local function chevron(index: number, y: number, color: Color3): React.ReactNode
-	local function bar(side: number): React.ReactNode
-		return React.createElement("Frame", {
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromScale(0.5 + side * 0.17, 0.5),
-			Size = UDim2.fromScale(0.42, 0.16),
-			Rotation = side * 38,
-			BackgroundColor3 = color,
-			BorderSizePixel = 0,
-		}, { corner = React.createElement("UICorner", { CornerRadius = UDim.new(1, 0) }) })
-	end
-	return React.createElement("Frame", {
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, y),
-		Size = UDim2.new(0.8, 0, 0, 40),
-		BackgroundTransparency = 1,
-		LayoutOrder = index,
-	}, { left = bar(-1), right = bar(1) })
-end
-
 -- The lane in front of a station: a flat strip in its colour, chevrons pointing back at the station.
 local function lane(anchor: CFrame, shade: UIToonConstants.Shade, start: number?, length: number?, parent: Instance)
 	local ignore: { Instance } = { parent }
@@ -116,26 +94,18 @@ local function lane(anchor: CFrame, shade: UIToonConstants.Shade, start: number?
 	strip.Material = Enum.Material.SmoothPlastic
 	strip.Transparency = LANE_TRANSPARENCY
 	strip.Parent = parent
-	local gui = Instance.new("SurfaceGui")
-	gui.Name = "Chevrons"
-	gui.Face = Enum.NormalId.Top
-	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-	gui.PixelsPerStud = LANE_PIXELS_PER_STUD
-	gui.LightInfluence = 1
-	gui.Parent = strip
-	local marks: { [string]: React.ReactNode } = {}
-	for index = 1, LANE.CHEVRONS do
-		marks[`c{index}`] = chevron(index, (index - 0.5) / LANE.CHEVRONS, shade.hi)
+	-- Chevrons pointing back up the lane at the station: thin flat bars a lighter shade of its colour.
+	local bars, barSize = DepotTopperRules.chevrons(at, size)
+	for index, bar in bars do
+		local piece = Instance.new("Part")
+		piece.Name = `Chevron{index}`
+		inert(piece)
+		piece.Size = barSize
+		piece.CFrame = bar
+		piece.Color = shade.hi
+		piece.Material = Enum.Material.SmoothPlastic
+		piece.Parent = parent
 	end
-	-- Turned round so the chevrons point back up the lane at the station (the way a player walks).
-	roots.show(
-		gui,
-		React.createElement(
-			"Frame",
-			{ Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Rotation = 180 },
-			marks
-		)
-	)
 end
 
 -- Dresses one topper at `at` (its canvas centre, facing the readers) for `stationKey`; returns its cleanup.

@@ -54,6 +54,37 @@ function DepotTopperRules.lane(anchor: CFrame, floorY: number, start: number?, l
 	return CFrame.lookAt(centre, centre + ahead), Vector3.new(LANE.WIDTH, LANE.THICKNESS, long)
 end
 
+-- A chevron's arm: its length and thickness against the lane's width, and its angle off the lane's line.
+local ARM_SHARE = 0.42
+local ARM_WIDTH = 0.12
+local ARM_ANGLE = math.rad(42)
+
+--[=[
+	The chevrons on a lane (`lane`, `size` from DepotTopperRules.lane): LANE.CHEVRONS of them spread along it, each
+	two flat bars meeting at a point aimed back up the lane at the station (the way a player walks). Returns every
+	bar's CFrame (left then right, chevron by chevron from the station end) and the bars' size.
+]=]
+function DepotTopperRules.chevrons(lane: CFrame, size: Vector3): ({ CFrame }, Vector3)
+	local arm = size.X * ARM_SHARE
+	local barSize = Vector3.new(ARM_WIDTH, LANE.THICKNESS, arm)
+	-- In the lane's own space -Z runs away from the station (its LookVector) and +Z back towards it; the bars lie on
+	-- its top face.
+	local y = size.Y / 2 + LANE.THICKNESS / 2
+	local reach = arm * math.cos(ARM_ANGLE)
+	local bars: { CFrame } = {}
+	for index = 1, LANE.CHEVRONS do
+		-- The tip, set back so the whole chevron stays inside its share of the lane.
+		local share = (index - 0.5) / LANE.CHEVRONS
+		local tipZ = size.Z / 2 - share * size.Z + reach / 2
+		for _, side in { -1, 1 } do
+			local direction = Vector3.new(side * math.sin(ARM_ANGLE), 0, -math.cos(ARM_ANGLE))
+			local centre = Vector3.new(0, y, tipZ) + direction * (arm / 2)
+			table.insert(bars, lane * CFrame.lookAt(centre, centre + direction))
+		end
+	end
+	return bars, barSize
+end
+
 --[=[
 	The light pool's range for a topper at height `anchorY` over a floor at `floorY`: down to the floor and REACH
 	past it, at least MIN_RANGE.
