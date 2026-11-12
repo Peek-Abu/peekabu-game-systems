@@ -26,6 +26,7 @@ local AnimationRegistry = require(ReplicatedStorage.Shared.Features.Animation.Da
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local TrainingCoachRules = require(ReplicatedStorage.Shared.Features.Training.Rules.TrainingCoachRules)
 local TrainingAssets = require(ReplicatedStorage.Client.Features.Training.Data.TrainingAssets)
+local EmployeeNpcUtils = require(ReplicatedStorage.Client.Features.Employee.Utils.EmployeeNpcUtils)
 
 local COACH = TrainingConstants.HUB_COACH
 -- Seconds the clips blend into each other.
@@ -48,14 +49,6 @@ type Coach = {
 -- The coach built beside each pad (this client only).
 local coaches: { [BasePart]: Coach } = {}
 local random = Random.new()
-
-local function characterSource(): Model?
-	local assets = ReplicatedStorage:FindFirstChild("Assets")
-	local crew = if assets ~= nil then assets:FindFirstChild("CleanupCrew") else nil
-	local characters = if crew ~= nil then crew:FindFirstChild("Characters") else nil
-	local source = if characters ~= nil then characters:FindFirstChild(COACH.EMPLOYEE) else nil
-	return if source ~= nil and source:IsA("Model") then source else nil
-end
 
 local function load(animator: Animator, id: string, looped: boolean, priority: Enum.AnimationPriority): AnimationTrack
 	local clip = Instance.new("Animation")
@@ -103,11 +96,11 @@ local function step(coach: Coach, dt: number)
 end
 
 local function build(pad: BasePart): Coach?
-	local source = characterSource()
-	if source == nil then
+	local copy = EmployeeNpcUtils.clone(COACH.EMPLOYEE)
+	if copy == nil then
 		return nil
 	end
-	local model = source:Clone()
+	local model: Model = copy
 	model.Name = "TrainingCoach"
 	local root = model:FindFirstChild("HumanoidRootPart")
 	if root == nil or not root:IsA("BasePart") then

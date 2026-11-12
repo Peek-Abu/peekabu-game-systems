@@ -26,12 +26,15 @@ local Observers = require(ReplicatedStorage.Packages.Observers)
 local DepotSpotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotSpotConstants)
 local DepotClerkRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotClerkRules)
 local DepotAssets = require(ReplicatedStorage.Client.Features.Depot.Data.DepotAssets)
+local EmployeeNpcUtils = require(ReplicatedStorage.Client.Features.Employee.Utils.EmployeeNpcUtils)
 
 local CLERK = DepotSpotConstants.CLERK
 local STAMP = CLERK.STAMP
 local PARCEL = CLERK.PARCEL
 -- Seconds the clips blend into each other.
 local FADE = 0.2
+-- Seconds the clerk waits for the stamp clip to load before sizing the parcel from it.
+local CLIP_LOAD_TIMEOUT = 10
 -- Studs the counter is searched for under the stamp's face.
 local COUNTER_SEARCH = 4
 -- How much the parcel squashes under the stamp while it presses (a share of its height).
@@ -51,6 +54,8 @@ type Clerk = {
 	parcel: Part?,
 	tape: Part?,
 	parcelHeight: number,
+	-- The clerk's size (Model:GetScale): the stamp and the parcel are authored for a scale of 1 and grow with her.
+	scale: number,
 	parcelBase: Vector3,
 	-- os.clock of the last lift (the parcel is hopping), or nil.
 	liftAt: number?,
@@ -61,14 +66,6 @@ type Clerk = {
 }
 
 local clerks: { [BasePart]: Clerk } = {}
-
-local function characterSource(name: string): Model?
-	local assets = ReplicatedStorage:FindFirstChild("Assets")
-	local crew = if assets ~= nil then assets:FindFirstChild("CleanupCrew") else nil
-	local characters = if crew ~= nil then crew:FindFirstChild("Characters") else nil
-	local source = if characters ~= nil then characters:FindFirstChild(name) else nil
-	return if source ~= nil and source:IsA("Model") then source else nil
-end
 
 local random = Random.new()
 
@@ -94,29 +91,29 @@ local function weld(to: BasePart, piece: BasePart, offset: CFrame)
 	joint.Parent = piece
 end
 
--- The rubber stamp in the right hand; returns its base (the face is the base's bottom).
-local function holdStamp(model: Model): BasePart?
+-- The rubber stamp in the right hand, at the clerk's size `s`; returns its base (the face is the base's bottom).
+local function holdStamp(model: Model, s: number): BasePart?
 	local hand = model:FindFirstChild("RightHand")
 	if hand == nil or not hand:IsA("BasePart") then
 		return nil
 	end
 	local degrees = STAMP.GRIP_DEGREES
-	local grip = CFrame.new(STAMP.GRIP_POSITION)
+	local grip = CFrame.new(STAMP.GRIP_POSITION * s)
 		* CFrame.fromEulerAnglesXYZ(math.rad(degrees.X), math.rad(degrees.Y), math.rad(degrees.Z))
 	local handle = part(
 		"StampHandle",
-		Vector3.new(STAMP.HANDLE_LENGTH, STAMP.HANDLE_WIDTH, STAMP.HANDLE_WIDTH),
+		Vector3.new(STAMP.HANDLE_LENGTH, STAMP.HANDLE_WIDTH, STAMP.HANDLE_WIDTH) * s,
 		STAMP.WOOD_COLOR,
 		Enum.Material.Wood,
 		model
 	)
 	handle.Shape = Enum.PartType.Cylinder
 	weld(hand, handle, grip * CFrame.Angles(0, 0, math.rad(90)))
-	local base = part("StampBase", STAMP.BASE, STAMP.BASE_COLOR, Enum.Material.SmoothPlastic, model)
-	weld(hand, base, grip * CFrame.new(0, -(STAMP.HANDLE_LENGTH + STAMP.BASE.Y) / 2, 0))
-	local knob = part("StampKnob", Vector3.one * STAMP.KNOB, STAMP.WOOD_COLOR, Enum.Material.Wood, model)
+	local base = part("StampBase", STAMP.BASE * s, STAMP.BASE_COLOR, Enum.Material.SmoothPlastic, model)
+	weld(hand, base, grip * CFrame.new(0, -(STAMP.HANDLE_LENGTH + STAMP.BASE.Y) * s / 2, 0))
+	local knob = part("StampKnob", Vector3.one * STAMP.KNOB * s, STAMP.WOOD_COLOR, Enum.Material.Wood, model)
 	knob.Shape = Enum.PartType.Ball
-	weld(hand, knob, grip * CFrame.new(0, STAMP.HANDLE_LENGTH / 2 + 0.01, 0))
+	weld(hand, knob, grip * CFrame.new(0, (STAMP.HANDLE_LENGTH / 2 + 0.01) * s, 0))
 	return base
 end
 
@@ -134,14 +131,25 @@ local function shapeParcel(clerk: Clerk, lift: number, scale: number)
 	local spread = 1 + (1 - scale) * 0.5
 	local at = CFrame.new(clerk.parcelBase + Vector3.new(0, lift + height / 2, 0))
 		* CFrame.fromOrientation(0, math.rad(clerk.spot.Orientation.Y), 0)
-	parcel.Size = Vector3.new(PARCEL.WIDTH * spread, height, PARCEL.DEPTH * spread)
+	local s = clerk.scale
+	parcel.Size = Vector3.new(PARCEL.WIDTH * s * spread, height, PARCEL.DEPTH * s * spread)
 	parcel.CFrame = at
-	tape.Size = Vector3.new(PARCEL.TAPE_WIDTH, height + 0.02, PARCEL.DEPTH * spread + 0.02)
+	tape.Size = Vector3.new(PARCEL.TAPE_WIDTH * s, height + 0.02, PARCEL.DEPTH * s * spread + 0.02)
 	tape.CFrame = at
 end
 
 -- The parcel under the stamp: the clip is posed at the contact, the face measured, the counter found below it.
 local function placeParcel(clerk: Clerk, base: BasePart)
+	-- The clip must be loaded before it can be posed: posed early the hand is still at her side and the parcel
+	-- lands on the floor beside her (owner 11-11).
+	local waited = 0
+	while clerk.stamp.Length <= 0 and waited < CLIP_LOAD_TIMEOUT do
+		waited += RunService.RenderStepped:Wait()
+	end
+	if clerk.stamp.Length <= 0 then
+		clerk.idle:Play(0, 1, 1)
+		return
+	end
 	clerk.stamp:Play(0, 1, 0)
 	clerk.stamp.TimePosition = CLERK.CONTACT_TIME
 	RunService.RenderStepped:Wait()
@@ -188,11 +196,11 @@ local function remove(spot: BasePart)
 end
 
 local function build(spot: BasePart)
-	local source = characterSource(CLERK.EMPLOYEE)
-	if source == nil then
+	local copy = EmployeeNpcUtils.clone(CLERK.EMPLOYEE)
+	if copy == nil then
 		return
 	end
-	local model = source:Clone()
+	local model: Model = copy
 	model.Name = "SupplyClerk"
 	local root = model:FindFirstChild("HumanoidRootPart")
 	if root == nil or not root:IsA("BasePart") then
@@ -219,7 +227,7 @@ local function build(spot: BasePart)
 		made.Parent = humanoid or model
 		animator = made
 	end
-	local base = holdStamp(model)
+	local base = holdStamp(model, model:GetScale())
 	model.Parent = Workspace
 	if animator == nil or base == nil then
 		model:Destroy()
@@ -250,6 +258,7 @@ local function build(spot: BasePart)
 		parcel = nil,
 		tape = nil,
 		parcelHeight = PARCEL.MIN_HEIGHT,
+		scale = model:GetScale(),
 		parcelBase = top,
 		liftAt = nil,
 		lastGreet = nil,
