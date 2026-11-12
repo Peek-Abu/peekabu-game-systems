@@ -39,6 +39,7 @@ local QueueServiceClient = require(ReplicatedStorage.Client.Features.Queue.Queue
 local HostServiceClient = require(ReplicatedStorage.Client.Features.Host.HostServiceClient)
 local DepotTruckGhostSystem = require(ReplicatedStorage.Client.Features.Depot.Systems.DepotTruckGhostSystem)
 local DepotSpotSystem = require(ReplicatedStorage.Client.Features.Depot.Systems.DepotSpotSystem)
+local DepotClerkSystem = require(ReplicatedStorage.Client.Features.Depot.Systems.DepotClerkSystem)
 local DepotDriveBySystem = require(ReplicatedStorage.Client.Features.Depot.Systems.DepotDriveBySystem)
 local SocialServiceClient = require(ReplicatedStorage.Client.Features.Social.SocialServiceClient)
 local MarketplaceServiceClient = require(ReplicatedStorage.Client.Features.Marketplace.MarketplaceServiceClient)
@@ -249,6 +250,8 @@ local DepotServiceClient: DepotServiceClient = {
 		-- The hub's spots (Supply Counter, standees, coffee, crew wall, rank chart, radio, bell) and the truck outside.
 		table.insert(stoppers, DepotSpotSystem.start())
 		table.insert(stoppers, DepotDriveBySystem.start())
+		-- Today's clerk behind the Supply Counter, stamping parcels.
+		table.insert(stoppers, DepotClerkSystem.start())
 	end,
 
 	stop = function(_self)

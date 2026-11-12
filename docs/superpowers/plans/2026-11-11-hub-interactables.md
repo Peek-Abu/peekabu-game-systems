@@ -73,3 +73,18 @@ Also: the hub's small "Find a truck!" tab (DepotHubViewModel.findTruck), the bel
 Round 3 (owner 2026-11-11): a ninth spot, `locker` (`depot-spot-locker`): the Gloom and the Gleam Locker doors in the
 hub's locker row open the Shop on its Lockers tab (`ShopStore.openTab`); any spot may name itself on its prompt
 (`DepotLabel`). The radio notes image is uploaded (Icey Labs).
+
+## The Supply Counter clerk ("Stamp & Stack", owner 2026-11-11)
+
+Today's clerk stands behind the Supply Counter stamping parcels (ClerkStamp, a 2.6 s loop; markers Thunk and Lift) and
+waves when you walk up or open the Shop there (ClerkGreet). One employee a day for everyone (the server's day number),
+so it is the same clerk on every client and nothing replicates. Clips uploaded to Icey Labs (stamp 109774578542575,
+greet 105235060315952; design/animations/clerk).
+
+| Feature | Realm | Subfolder | Name | Job (one line) |
+|---|---|---|---|---|
+| Depot | shared | Rules | DepotClerkRules | Which employee clerks today; when the clerk greets; the parcel's height and its hop |
+| Depot | client | Systems | DepotClerkSystem | Builds today's clerk at the DepotClerkSpot (stamp in hand, parcel on the counter) and plays the clips |
+
+Edited: `DepotSpotConstants` (CLERK), `DepotAssets` (the two clip ids), `DepotSpotSystem` (the Shop greets),
+`DepotServiceClient` (starts it). Spec: `DepotClerkRules.spec`; `DepotClerkSystem` is a spec-exempt shell.

@@ -3,7 +3,7 @@
 	DepotSpotSystem: the hub's spots on this client (plan docs/superpowers/plans/2026-11-11-hub-interactables.md). The
 	server answers a spot's prompt with DepotEvents.Spot, checked again here (DepotSpotRules.decode), and this opens it:
 
-	- the Supply Counter opens the Shop; a standee opens the Shop on that employee's page; a Lost & Found locker door
+	- the Supply Counter opens the Shop (and its clerk waves, DepotClerkSystem.greet); a standee opens the Shop on that employee's page; a Lost & Found locker door
 	  (the Gloom and the Gleam Locker) opens it on the Lockers tab;
 	- the coffee machine, the crew wall and the rank chart push their scenes (DepotSpotScene);
 	- the radio moves to the next station (DepotStore.nextStation; OfficeAtmosphereSystem plays it) and toasts its name;
@@ -28,6 +28,7 @@ local DepotEvents = require(ReplicatedStorage.Shared.Features.Depot.Net.DepotEve
 local DepotSpotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotSpotConstants)
 local DepotSpotRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotSpotRules)
 local DepotStore = require(ReplicatedStorage.Client.Features.Depot.State.DepotStore)
+local DepotClerkSystem = require(ReplicatedStorage.Client.Features.Depot.Systems.DepotClerkSystem)
 local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interaction.Data.InteractionConstants)
 local ShopStore = require(ReplicatedStorage.Client.Features.Shop.State.ShopStore)
 local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
@@ -159,6 +160,8 @@ DepotSpotSystem.SCENES = { SCENES.coffee, SCENES.crew, SCENES.rank }
 local function open(opened: DepotSpotRules.Opened)
 	local spot = opened.spot
 	if spot == "shop" then
+		-- The clerk behind the counter waves hello.
+		DepotClerkSystem.greet()
 		ShopStore.open(nil)
 		SceneStack.push(ShopViewModel.SCENE)
 	elseif spot == "standee" then

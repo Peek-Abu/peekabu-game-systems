@@ -108,6 +108,48 @@ local DepotSpotConstants = {
 		-- The chance the truck honks on a pass.
 		HORN_CHANCE = 0.5,
 	}),
+	-- The Supply Counter clerk (DepotClerkSystem, DepotClerkRules; owner 11-11 "Stamp & Stack"): today's employee
+	-- stands on the part tagged TAG (facing its LookVector) stamping parcels, and waves when a player comes near.
+	CLERK = table.freeze({
+		TAG = "DepotClerkSpot",
+		-- Seconds in a day of server time: the clerk changes once a day, the same for everyone.
+		DAY_SECONDS = 86400,
+		-- How often the client checks whether the day (and so the clerk) changed (seconds).
+		REFRESH_SECONDS = 60,
+		-- The clip markers the code acts on: the stamp lands (the parcel squashes), the stamp lifts (the parcel hops).
+		THUNK_MARKER = "Thunk",
+		LIFT_MARKER = "Lift",
+		-- When the stamp is on the parcel in the clip (seconds): where the parcel's height is measured.
+		CONTACT_TIME = 26 / 30,
+		-- Studs from the clerk a player walks up to get a wave; seconds before the next wave.
+		GREET = table.freeze({ RADIUS = 12, COOLDOWN = 20 }),
+		-- The parcel's hop after the stamp lifts: a beat (DELAY), up APEX studs and back down over SECONDS, then it
+		-- lands squashed to SQUASH of its height for SQUASH_SECONDS.
+		HOP = table.freeze({ DELAY = 0.08, APEX = 0.4, SECONDS = 0.3, SQUASH = 0.85, SQUASH_SECONDS = 0.1 }),
+		-- The parcel: its footprint (studs) and the height range that still reads as a parcel.
+		PARCEL = table.freeze({
+			WIDTH = 0.95,
+			DEPTH = 0.75,
+			MIN_HEIGHT = 0.15,
+			MAX_HEIGHT = 0.8,
+			TAPE_WIDTH = 0.22,
+			COLOR = Color3.fromRGB(196, 150, 98),
+			TAPE_COLOR = Color3.fromRGB(232, 208, 150),
+		}),
+		-- The rubber stamp in the clerk's right hand: a red base under a wooden handle and knob, held so its face is
+		-- flat on the parcel at the contact (GRIP: the handle's offset in RightHand space, measured on the kit rig;
+		-- design/animations/clerk/GATES.md).
+		STAMP = table.freeze({
+			BASE = Vector3.new(0.42, 0.12, 0.3),
+			HANDLE_LENGTH = 0.22,
+			HANDLE_WIDTH = 0.12,
+			KNOB = 0.2,
+			BASE_COLOR = Color3.fromRGB(214, 48, 49),
+			WOOD_COLOR = Color3.fromRGB(120, 78, 45),
+			GRIP_POSITION = Vector3.new(0.016, -0.047, -0.001),
+			GRIP_DEGREES = Vector3.new(78.9, -70.6, 77.9),
+		}),
+	}),
 }
 
 return table.freeze(DepotSpotConstants)

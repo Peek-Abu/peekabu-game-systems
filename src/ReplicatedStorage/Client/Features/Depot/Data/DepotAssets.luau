@@ -56,4 +56,8 @@ return table.freeze({
 	-- The radio's music notes: a 2x2 flipbook (two notes, a beamed pair, a sparkle) in gold and mint
 	-- (design/production-art/hub-dressing/radio_notes_flipbook.png). Uploaded with the owner's OK (2026-11-11).
 	RADIO_NOTES = RADIO_NOTES,
+	-- The Supply Counter clerk's clips (DepotClerkSystem; design/animations/clerk, Icey Labs, uploaded with the owner's
+	-- OK 2026-11-11): the stamping loop (markers Thunk, Lift) and the wave.
+	CLERK_STAMP = "rbxassetid://109774578542575",
+	CLERK_GREET = "rbxassetid://105235060315952",
 })
