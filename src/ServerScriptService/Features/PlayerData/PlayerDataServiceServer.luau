@@ -243,6 +243,7 @@ export type PlayerDataServiceServer = {
 	getActiveSlot: (self: PlayerDataServiceServer, userId: number) -> number?,
 	getSlotEpoch: (self: PlayerDataServiceServer, userId: number) -> number?,
 	isInTransaction: (self: PlayerDataServiceServer, userId: number) -> boolean,
+	wipe: (self: PlayerDataServiceServer, userId: number) -> (boolean, string?),
 	_getSlotShell: (
 		self: PlayerDataServiceServer,
 		userId: number,
@@ -1314,6 +1315,40 @@ local PlayerDataServiceServer: PlayerDataServiceServer = {
 		Cleans up event listeners and ends all active sessions.
 		@param self PlayerDataServiceServer -- The service instance
 	]=]
+	--[=[
+		Puts a loaded player's WHOLE profile back to a new player's (a deep copy of PROFILE_TEMPLATE, at the current
+		schema version) and mirrors it to the synced state. For the datawipe admin command, which then kicks the
+		player: other services keep per-session state built from the old save, and leaving ends the session, which
+		saves the fresh data. Refused (false and why) when the save is not loaded here or a transaction is running.
+
+		The data is replaced IN PLACE (cleared, then refilled), the same as _startSession's rollback: ProfileStore
+		tracks the profile by its Data table's identity.
+		@param userId number -- The player whose save is wiped
+		@return boolean -- True when the profile was wiped
+		@return string? -- Why not, when it was refused
+	]=]
+	wipe = function(_self, userId)
+		assert(type(userId) == "number", `userId must be a number, got {type(userId)}`)
+		local profile = playerProfiles[userId]
+		if not profile then
+			return false, "their save is not loaded in this server"
+		end
+		if profilesInTransaction[userId] then
+			return false, "their save is busy - try again"
+		end
+		local fresh = sift.Dictionary.copyDeep(PlayerDataConstants.PROFILE_TEMPLATE)
+		local data = profile.Data
+		for key in data do
+			data[key] = nil
+		end
+		for key, value in fresh do
+			data[key] = value
+		end
+		StateSyncServerStore.syncFromProfile(userId, data)
+		log:audit(`profile wiped for {userId}`)
+		return true, nil
+	end,
+
 	stop = function(self)
 		-- End all active profile sessions
 		for userId, profile in playerProfiles do

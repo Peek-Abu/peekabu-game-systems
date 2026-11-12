@@ -34,4 +34,18 @@ return function()
 			expect(TipRules.shouldShow({ seen = {} }, "nope", true)).to.equal(false)
 		end)
 	end)
+
+	describe("clear", function()
+		it("forgets every seen tip, so each shows again", function()
+			local tips = { seen = { firstCatch = true, other = true } }
+			expect(TipRules.clear(tips)).to.equal(true)
+			expect(next(tips.seen)).to.equal(nil)
+			expect(TipRules.shouldShow(tips, "firstCatch", true)).to.equal(true)
+			expect(TipRules.validate(tips)).to.equal(true)
+		end)
+
+		it("reports no change when nothing was seen", function()
+			expect(TipRules.clear({ seen = {} })).to.equal(false)
+		end)
+	end)
 end

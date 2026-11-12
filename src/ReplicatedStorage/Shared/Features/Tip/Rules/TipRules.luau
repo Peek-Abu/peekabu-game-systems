@@ -41,4 +41,13 @@ function TipRules.shouldShow(tips: PlayerDataTypes.Tips, id: string, enabled: bo
 	return enabled and TipRegistry.has(id) and tips.seen[id] ~= true
 end
 
+--[=[
+	Forgets every seen tip, in place, so each shows again (an admin's tester reset). True when anything was cleared.
+]=]
+function TipRules.clear(tips: PlayerDataTypes.Tips): boolean
+	local changed = next(tips.seen) ~= nil
+	table.clear(tips.seen)
+	return changed
+end
+
 return TipRules

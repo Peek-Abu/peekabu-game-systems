@@ -101,4 +101,16 @@ function TrainingRules.tour(value: PlayerDataTypes.Training): boolean
 	return true
 end
 
+--[=[
+	Makes the slice a new player's again, in place (an admin's tester reset: the player plays training again as new,
+	and its first finish pays the reward again). True when anything changed.
+]=]
+function TrainingRules.reset(value: PlayerDataTypes.Training): boolean
+	local changed = value.finished or value.runs ~= 0 or value.toured
+	value.finished = false
+	value.runs = 0
+	value.toured = false
+	return changed
+end
+
 return TrainingRules

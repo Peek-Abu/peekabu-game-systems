@@ -2292,5 +2292,82 @@ return function()
 				expect(PlayerDataService:isInTransaction(USER_ID)).to.equal(false)
 			end)
 		end)
+
+		describe("wipe", function()
+			local USER_ID = 1
+
+			-- Deep equality of plain data (the wiped profile against the template).
+			local function sameShape(a: any, b: any): boolean
+				if type(a) ~= "table" or type(b) ~= "table" then
+					return a == b
+				end
+				for key, value in a do
+					if not sameShape(value, b[key]) then
+						return false
+					end
+				end
+				for key in b do
+					if a[key] == nil then
+						return false
+					end
+				end
+				return true
+			end
+
+			it("refuses a userId with no loaded profile", function()
+				local ok, reason = PlayerDataService:wipe(999)
+				expect(ok).to.equal(false)
+				expect(reason).to.be.a("string")
+			end)
+
+			it("puts the whole profile back to a new player's, in the same table", function()
+				local profile = seed(USER_ID, 4321)
+				local data = profile.Data
+				data.account.dailyReward.streak = 7
+				local ok = PlayerDataService:wipe(USER_ID)
+				expect(ok).to.equal(true)
+				-- Same table: ProfileStore tracks the profile by its Data table's identity.
+				expect(profile.Data).to.equal(data)
+				expect(data._schemaVersion).to.equal(PlayerDataMigrationSystem.CURRENT_VERSION)
+				expect(sameShape(data, PlayerDataConstants.PROFILE_TEMPLATE)).to.equal(true)
+			end)
+
+			it("copies the template, so later writes never touch it", function()
+				local profile = seed(USER_ID, 50)
+				PlayerDataService:wipe(USER_ID)
+				expect(profile.Data.slots[1].currency).never.to.equal(
+					PlayerDataConstants.PROFILE_TEMPLATE.slots[1].currency
+				)
+			end)
+
+			it("mirrors the new-player data to the synced state", function()
+				seedSlotProfile(USER_ID, 4321)
+				PlayerDataService:wipe(USER_ID)
+				expect(StateSyncServerStore.currencies()[USER_ID].credits).to.equal(
+					PlayerDataConstants.PROFILE_TEMPLATE.slots[1].currency.credits
+				)
+			end)
+
+			it("refuses while a transaction is running for that player", function()
+				local profile = seed(USER_ID, 100)
+				local result: { ok: boolean?, reason: string? } = {}
+				PlayerDataService:transaction({
+					{
+						userId = USER_ID,
+						path = CURRENCY_PATH,
+						mutator = function(currency: any)
+							local ok, reason = PlayerDataService:wipe(USER_ID)
+							result.ok = ok
+							result.reason = reason
+							currency.credits += 1
+							return true
+						end,
+					},
+				})
+				expect(result.ok).to.equal(false)
+				expect(result.reason).to.be.a("string")
+				expect(profile.Data.slots[1].currency.credits).to.equal(101)
+			end)
+		end)
 	end)
 end

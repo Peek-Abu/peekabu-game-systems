@@ -41,7 +41,10 @@ ItemContentRegistry.init()
 
 -- Initialize services (PlayerDataServiceServer needs config, others don't)
 ServiceController:initService("PlayerDataServiceServer", {
-	storeName = "PlayerStore",
+	-- "_v2" (11-12): a fresh store for the first published test, so saves from the old published builds (owner and
+	-- testers, made before today's profile shape) are never loaded; nothing reads "PlayerStore" any more. Bump again
+	-- only to start EVERY player over; one player's save is reset with the datawipe admin command instead.
+	storeName = "PlayerStore_v2",
 	-- Use ProfileStore's in-memory mock in Studio so test sessions never touch live
 	-- data. In a published server this is false, so profiles persist to DataStore.
 	useMock = RunService:IsStudio(),

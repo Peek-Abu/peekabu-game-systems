@@ -236,6 +236,7 @@ export type TrainingServiceServer = {
 	getState: (self: TrainingServiceServer) -> { [string]: any },
 	isNew: (self: TrainingServiceServer, player: Player) -> boolean,
 	isTraining: (self: TrainingServiceServer) -> boolean,
+	reset: (self: TrainingServiceServer, userId: number) -> boolean,
 }
 
 local TrainingServiceServer: TrainingServiceServer = {
@@ -376,6 +377,21 @@ local TrainingServiceServer: TrainingServiceServer = {
 	]=]
 	isTraining = function(_self)
 		return current ~= nil
+	end,
+
+	--[=[
+		Makes `userId` new to training again (the trainingreset admin command): the hub points them at the Training
+		pad, and finishing pays the first-time reward again. False while their save is not loaded.
+	]=]
+	reset = function(_self, userId)
+		if trainingSlice.get(userId) == nil then
+			return false
+		end
+		trainingSlice.mutate(userId, function(slice)
+			return TrainingRules.reset(slice)
+		end)
+		log:audit(`training reset for {userId}`)
+		return true
 	end,
 
 	getState = function(_self)

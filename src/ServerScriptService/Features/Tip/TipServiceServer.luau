@@ -35,6 +35,7 @@ export type TipServiceServer = {
 	getState: (self: TipServiceServer) -> { [string]: any },
 	first: (self: TipServiceServer, player: Player, id: string) -> boolean,
 	once: (self: TipServiceServer, player: Player, id: string) -> boolean,
+	reset: (self: TipServiceServer, userId: number) -> boolean,
 }
 
 local TipServiceServer: TipServiceServer = {
@@ -88,6 +89,20 @@ local TipServiceServer: TipServiceServer = {
 			slice.seen[id] = true
 			return true
 		end)
+	end,
+
+	--[=[
+		Forgets every tip `userId` has seen, so each shows again (the trainingreset admin command). False while their
+		save is not loaded.
+	]=]
+	reset = function(_self, userId)
+		if tipsSlice.get(userId) == nil then
+			return false
+		end
+		tipsSlice.mutate(userId, function(slice)
+			return TipRules.clear(slice)
+		end)
+		return true
 	end,
 
 	getState = function(_self)
