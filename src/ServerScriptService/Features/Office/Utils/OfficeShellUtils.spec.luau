@@ -49,6 +49,14 @@ return function()
 			expect(sides[2]).to.be.near(0.25, 1e-6)
 		end)
 
+		it("marks each wall box with the face it is on (-1 or +1, by its offset from the wall line)", function()
+			for _, box in straight() do
+				expect(box.side == -1 or box.side == 1).to.equal(true)
+				-- A run along x: the -1 face stands at negative z, the +1 face at positive z.
+				expect(math.sign(box.cframe.Position.Z)).to.equal(box.side)
+			end
+		end)
+
 		it("trim on both faces", function()
 			local boxes = straight()
 			local wainscot = named(boxes, "oak")

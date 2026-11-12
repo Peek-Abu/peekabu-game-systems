@@ -143,7 +143,7 @@ function OfficeBuildSystem.build(
 		local roomType = if room.id == layout.startRoom or room.id == "bay"
 			then "bay"
 			else OfficeArtKeyUtils.roomType(room)
-		Shell.apply(floor, Shell.floorMaterial(roomType))
+		Shell.apply(floor, Shell.floorMaterial(roomType, layout.artKit))
 	end
 	Shell.build(layout, origin, model, art, nil, seed)
 

@@ -134,6 +134,7 @@ function OfficeShellUtils.wall(segment: Segment, first: number, last: number, ex
 	local outerLast = if extra ~= nil then extra.outerLast else nil
 	local gaps = if extra ~= nil then extra.gaps else nil
 	for _, side in { -1, 1 } do
+		local firstBox = #boxes + 1
 		table.insert(boxes, box("Plaster", "plaster", true, where, slabRange, slabY, between(0, side * shell.slab)))
 		local face = side * shell.slab
 		local function trim(name: string, material: ShellMaterial, proud: number, y0: number, y1: number)
@@ -160,6 +161,10 @@ function OfficeShellUtils.wall(segment: Segment, first: number, last: number, ex
 		trim("Wainscot", "oak", shell.wainscotProud, 0, shell.wainscotHeight)
 		trim("Rail", "rail", shell.railDepth, shell.wainscotHeight, shell.wainscotHeight + shell.railHeight)
 		trim("Skirt", "skirt", shell.skirtProud, 0, shell.skirtHeight)
+		-- Every box of this face carries its side, so a kit can dress each face for the room it looks into.
+		for index = firstBox, #boxes do
+			boxes[index].side = side
+		end
 	end
 	return boxes
 end

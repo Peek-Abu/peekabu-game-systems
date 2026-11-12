@@ -8,6 +8,7 @@
 
 local ServerScriptService = game:GetService("ServerScriptService")
 
+local OfficeShellConstants = require(ServerScriptService.Features.Office.Data.OfficeShellConstants)
 local OfficeTypes = require(ServerScriptService.Features.Office.Data.OfficeTypes)
 
 -- The dust is clustered (docs/superpowers/specs/2026-10-16-cleanup-crew-gloom-gleam-economy-design.md §3.1): a few
@@ -52,6 +53,13 @@ local PROP_SIZES: { [string]: Vector3 } = {
 	windowBay = Vector3.new(6, 10.3, 0.97),
 	column = Vector3.new(2.8, 13, 2.8),
 	receptionGlow = Vector3.new(14, 6, 0.6),
+	-- The School's dressing (school-maple-hill): a slatted bench, gym bleachers, and on the walls the hoop, the
+	-- classroom chalkboard and the gym scoreboard.
+	bench = Vector3.new(7.6, 2.53, 1.9),
+	chalkboard = Vector3.new(12, 5.5, 0.68),
+	scoreboard = Vector3.new(11, 6.2, 0.84),
+	bleachers = Vector3.new(15.392, 10.618, 14.75),
+	basketballHoop = Vector3.new(6.2, 5.45, 5.38),
 }
 local PROP_WALL_HEIGHT: { [string]: number } = {
 	artFrame = 6,
@@ -62,6 +70,11 @@ local PROP_WALL_HEIGHT: { [string]: number } = {
 	-- Its bottom 1.5 above the floor.
 	windowBay = 6.65,
 	receptionGlow = 6.5,
+	-- The rim at 9.5, the backboard top at 12.45 (under the 13 ceiling).
+	basketballHoop = 9.725,
+	-- The chalk tray at 2.75 (a kid can reach it); the scoreboard high on the gym wall (top at 12.6).
+	chalkboard = 5.5,
+	scoreboard = 9.5,
 }
 -- A desk-top prop's marker sits at its desk's centre (and yaw); the prop stands on the desktop at
 -- DESK_PLANT_OFFSET in the desk's frame (front is local -Z).
@@ -81,6 +94,23 @@ local ART_SIZES: { [string]: Vector3 } = {
 	kitchenCounter = Vector3.new(8, 6.35, 3.08),
 	receptionDesk = Vector3.new(12.86, 4.6, 5.16),
 	conferenceTable = Vector3.new(14, 4.95, 6),
+	-- The School's (school-maple-hill, each art's own bounds; the hide desks project table, reading table and cot
+	-- keep DESK_SIZE and the closets CLOSET_SIZE). The lunch table's attached benches widen its footprint; the free
+	-- box under its middle still fits a hider (OfficeSurfaceUtils.canHideUnder).
+	lunchTable = Vector3.new(10.4, 4.95, 8.25),
+	studentDesk = Vector3.new(3.64, 3.25, 4.36),
+	studyTable = Vector3.new(6, 3.18, 3.6),
+	lunchBench = Vector3.new(8, 2.9, 1.6),
+	scorersTable = Vector3.new(9.64, 4.35, 3.12),
+	piano = Vector3.new(6.92, 5.75, 6.08),
+	easel = Vector3.new(3.5, 8.794, 2.9),
+	cubbies = Vector3.new(5.3, 6.635, 2.425),
+	trophyCase = Vector3.new(5.08, 8, 2.04),
+	artSink = Vector3.new(6.1, 5.715, 2.629),
+	sinkCounter = Vector3.new(6, 7.9, 2.427),
+	servingCounter = Vector3.new(8.1, 5.97, 3.1),
+	libraryDesk = Vector3.new(6.16, 3.85, 2.71),
+	medicineCabinet = Vector3.new(1.963, 4.2, 1.92),
 }
 -- The spike's light recipe per room type (key = OfficeArtKeyUtils.roomType; an unknown type uses pods).
 local LIGHTING: {
@@ -149,71 +179,6 @@ local SHELL = table.freeze({
 	trimClearance = 0.55,
 })
 -- What each shell box is made of (a nil variant is none). Values measured from the spike and the mock room.
-local SHELL_MATERIALS: { [OfficeTypes.ShellMaterial]: { material: Enum.Material, variant: string?, color: Color3, transparency: number } } =
-	{
-		plaster = {
-			material = Enum.Material.Plaster,
-			variant = "OH_Plaster",
-			color = Color3.new(1, 1, 1),
-			transparency = 0,
-		},
-		oak = { material = Enum.Material.Wood, variant = "OH_Oak", color = Color3.new(1, 1, 1), transparency = 0 },
-		rail = { material = Enum.Material.Wood, variant = nil, color = Color3.fromRGB(110, 80, 56), transparency = 0 },
-		skirt = {
-			material = Enum.Material.SmoothPlastic,
-			variant = nil,
-			color = Color3.fromRGB(150, 112, 80),
-			transparency = 0,
-		},
-		frame = {
-			material = Enum.Material.SmoothPlastic,
-			variant = nil,
-			color = Color3.fromRGB(46, 48, 56),
-			transparency = 0,
-		},
-		grid = {
-			material = Enum.Material.SmoothPlastic,
-			variant = nil,
-			color = Color3.fromRGB(170, 165, 156),
-			transparency = 0,
-		},
-		glass = {
-			material = Enum.Material.Glass,
-			variant = nil,
-			color = Color3.fromRGB(170, 205, 215),
-			transparency = 0.6,
-		},
-		ceiling = {
-			material = Enum.Material.Concrete,
-			variant = "OH_Ceiling",
-			color = Color3.new(1, 1, 1),
-			transparency = 0,
-		},
-		carpet = {
-			material = Enum.Material.Fabric,
-			variant = "OH_Carpet",
-			color = Color3.new(1, 1, 1),
-			transparency = 0,
-		},
-		hallcarpet = {
-			material = Enum.Material.Fabric,
-			variant = "OH_Carpet",
-			color = Color3.fromRGB(191, 191, 198),
-			transparency = 0,
-		},
-		lino = {
-			material = Enum.Material.Plastic,
-			variant = "OH_Lino",
-			color = Color3.new(1, 1, 1),
-			transparency = 0,
-		},
-		vinyl = {
-			material = Enum.Material.Plastic,
-			variant = "OH_Vinyl",
-			color = Color3.new(1, 1, 1),
-			transparency = 0,
-		},
-	}
 
 -- The outside (OfficeGroundsUtils), layout space: the spike's world numbers minus ORIGIN plus EXTERIOR_OFFSET. The
 -- exterior sits around the office (offset zero), so each door is a short hop: a long teleport made the engine rebuild
@@ -340,7 +305,9 @@ return table.freeze({
 	WALL_THICKNESS = 1,
 	-- Shell trim and framing dimensions (OfficeShellUtils), measured from the approved spike.
 	SHELL = SHELL,
-	SHELL_MATERIALS = table.freeze(SHELL_MATERIALS),
+	-- The shell's looks live in OfficeShellConstants (kept here too, so callers read one table).
+	SHELL_MATERIALS = OfficeShellConstants.MATERIALS,
+	SHELL_THEMES = OfficeShellConstants.THEMES,
 	FLOOR_THICKNESS = 1,
 	-- A marker sits at least this far inside its room's walls.
 	MARKER_MARGIN = 2,

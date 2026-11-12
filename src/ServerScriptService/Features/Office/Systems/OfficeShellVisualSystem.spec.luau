@@ -553,5 +553,46 @@ return function()
 				expect(Shell.floorMaterial("janitor")).to.equal("vinyl")
 			end
 		)
+
+		it("floors the School kit's rooms with its own surfaces, and the rest as before", function()
+			local kit = "school-maple-hill"
+			expect(Shell.floorMaterial("hallway", kit)).to.equal("schoolHallFloor")
+			expect(Shell.floorMaterial("classroom", kit)).to.equal("schoolCarpet")
+			expect(Shell.floorMaterial("gym", kit)).to.equal("schoolMaple")
+			expect(Shell.floorMaterial("cafeteria", kit)).to.equal("schoolChecker")
+			expect(Shell.floorMaterial("bathroom", kit)).to.equal("schoolTile")
+			-- A room type the theme leaves alone keeps the shared floor; the Office kit is untouched.
+			expect(Shell.floorMaterial("library", kit)).to.equal("carpet")
+			expect(Shell.floorMaterial("hallway", "odd-hours-b1")).to.equal("hallcarpet")
+			expect(Shell.floorMaterial("classroom", nil)).to.equal("lino")
+		end)
+
+		it("dresses the School's walls by the room each face looks into, and leaves the Office's alone", function()
+			local kit = "school-maple-hill"
+			expect(Shell.themed("plaster", kit, "hallway")).to.equal("schoolHallBlock")
+			expect(Shell.themed("oak", kit, "hallway")).to.equal("schoolHallBand")
+			expect(Shell.themed("rail", kit, "hallway")).to.equal("schoolHallStripe")
+			expect(Shell.themed("plaster", kit, "classroom")).to.equal("schoolRoomPaint")
+			expect(Shell.themed("oak", kit, "gym")).to.equal("schoolRoomBand")
+			expect(Shell.themed("rail", kit, nil)).to.equal("schoolRoomRail")
+			-- Materials the theme does not name, and every other kit, pass through.
+			expect(Shell.themed("skirt", kit, "hallway")).to.equal("skirt")
+			expect(Shell.themed("glass", kit, "classroom")).to.equal("glass")
+			expect(Shell.themed("plaster", "odd-hours-b1", "hallway")).to.equal("plaster")
+			expect(Shell.themed("plaster", nil, "hallway")).to.equal("plaster")
+		end)
+
+		it("gives every themed material a look", function()
+			for _, theme in Constants.SHELL_THEMES do
+				for _, floor in theme.floors do
+					expect(Constants.SHELL_MATERIALS[floor] ~= nil).to.equal(true)
+				end
+				for _, map in { theme.hallway, theme.rooms } do
+					for _, material in map do
+						expect(Constants.SHELL_MATERIALS[material] ~= nil).to.equal(true)
+					end
+				end
+			end
+		end)
 	end)
 end

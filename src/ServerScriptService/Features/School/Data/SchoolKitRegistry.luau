@@ -89,7 +89,7 @@ local KITS: { Kit } = {
 			styled("table", "studentDesk", 16, 19.5, 0),
 			styled("desk", "projectTable", 5.5, 19.5, 0),
 			at("desk", 26.5, 18.8, HALF),
-			styled("board", "chalkboard", 11, 24.8, 0),
+			prop("chalkboard", 11, 25.16, 0),
 			prop("artFrame", 0.635, 15, -QUARTER),
 			prop("wallClock", 31.375, 15, QUARTER),
 			at("pile", 22, 3.5),
@@ -117,7 +117,7 @@ local KITS: { Kit } = {
 			{
 				at("desk", 24.45, 22.5, QUARTER),
 				at("closet", 2.775, 23.6, -QUARTER),
-				styled("board", "chalkboard", 14, 26.8, 0),
+				prop("chalkboard", 14, 27.16, 0),
 				styled("shelf", "cubbies", 25.95, 13, QUARTER),
 				prop("artFrame", 0.635, 16, -QUARTER),
 				at("pile", 22, 10),
@@ -143,8 +143,8 @@ local KITS: { Kit } = {
 			at("desk", 19, 10.5, 0),
 			at("desk", 19, 19.7, 0),
 			at("closet", 2.775, 20, -QUARTER),
-			styled("counter", "artSink", 25.7, 6, QUARTER),
-			styled("board", "easel", 8, 24.8, 0),
+			styled("counter", "artSink", 26.1, 6, QUARTER),
+			styled("board", "easel", 8, 24.0, 0),
 			prop("artFrame", 0.635, 12, -QUARTER),
 			at("pile", 8, 12),
 			at("pile", 4, 4),
@@ -309,8 +309,8 @@ local KITS: { Kit } = {
 			-- right wall's middle (the side doors) stay clear.
 			styled("shelf", "trophyCase", 2.1, 10, -QUARTER),
 			styled("shelf", "trophyCase", 2.1, 32, -QUARTER),
-			prop("sofa", 2.86, 21, -QUARTER),
-			prop("sofa", 8, 39.14, 0),
+			prop("bench", 1.6, 21, -QUARTER),
+			prop("bench", 8, 40.3, 0),
 			styled("counter", "officeCounter", 32, 36, 0),
 			prop("planter", 3.08, 3.01, HALF),
 			prop("planter", 40.92, 3.01, HALF),
@@ -335,17 +335,18 @@ local KITS: { Kit } = {
 		width = 64,
 		depth = 56,
 		door = { offset = 32, width = 10, kind = "open" },
-		-- Equipment closets down the left wall, benches down the right, the scorers' tables and the scoreboard at the
-		-- back, crash mats in the middle.
+		-- Equipment closets down the left wall, bleachers and two benches down the right, the scorers' tables, the
+		-- scoreboard high on the back wall and a hoop beside it, crash mats in the middle.
 		markers = join(
 			grid("closet", "equipmentCloset", { 2.775 }, { 12, 20, 36, 44 }, -QUARTER),
 			grid("table", "scorersTable", { 24, 40 }, { 46 }, 0),
 			{
-				styled("board", "scoreboard", 32, 54.8, 0),
+				prop("scoreboard", 32, 55.08, 0),
+				prop("basketballHoop", 12, 52.81, 0),
 				prop("rug", 32, 24, 0),
-				prop("sofa", 61.14, 14, QUARTER),
-				prop("sofa", 61.14, 28, QUARTER),
-				prop("sofa", 61.14, 42, QUARTER),
+				prop("bench", 62.55, 12, QUARTER),
+				prop("bleachers", 56.125, 28, QUARTER),
+				prop("bench", 62.55, 44, QUARTER),
 				prop("planter", 3.08, 52.99, 0),
 				prop("wallClock", 20, 55.375, 0),
 				at("pile", 16, 10),
@@ -372,13 +373,13 @@ local KITS: { Kit } = {
 		width = 64,
 		depth = 56,
 		door = { offset = 32, width = 10, kind = "open" },
-		-- Two lunch tables of four seats (the front two of each tall enough to hide under, the back two low benches), two
+		-- Four fold-out lunch tables with their benches attached (tall enough to hide under), two loose benches, two
 		-- small tables, the serving line on the back wall and a vending machine and cooler on the right wall.
 		markers = join(
-			grid("desk", "lunchTable", { 6.5, 14.9, 49.1, 57.5 }, { 12 }, 0),
-			grid("table", "lunchBench", { 6.5, 14.9, 49.1, 57.5 }, { 18.8 }, HALF),
+			grid("desk", "lunchTable", { 7.5, 19.5, 44.5, 56.5 }, { 12 }, 0),
+			grid("table", "lunchBench", { 19.5, 44.5 }, { 21 }, HALF),
 			grid("table", "breakTable", { 24, 40 }, { 34 }, 0),
-			grid("counter", "kitchenCounter", { 20, 28.1, 36.2, 44.3 }, { 53.41 }, 0),
+			grid("counter", "servingCounter", { 20, 28.1, 36.2, 44.3 }, { 53.95 }, 0),
 			{
 				prop("vending", 60.665, 32, QUARTER),
 				prop("waterCooler", 62.2425, 38, QUARTER),

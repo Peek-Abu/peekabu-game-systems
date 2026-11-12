@@ -38,6 +38,8 @@ type HasVariant = (name: string) -> boolean
 local PANEL_SIZE = Vector3.new(4, 0.2, 2)
 local FILL_SIZE = Vector3.one * 0.2
 local EPSILON = 1e-4
+-- How far off a wall line the room each face looks into is probed (faceMaterial).
+local FACE_PROBE = 1
 -- The deepest trim (wainscot, rail or skirt): how far past a slab end a corner's wrap can reach.
 local CORNER_TRIM_REACH =
 	math.max(OfficeConstants.SHELL.wainscotProud, OfficeConstants.SHELL.railDepth, OfficeConstants.SHELL.skirtProud)
@@ -80,11 +82,33 @@ end
 	School's: lino in classrooms, the cafeteria, the nurse, the lounge and the front hall, oak in the gym, carpet in the
 	library and the principal's office, vinyl in the bathroom and the janitor's closet.
 ]=]
-function OfficeShellVisualSystem.floorMaterial(roomType: string?): OfficeTypes.ShellMaterial
+function OfficeShellVisualSystem.floorMaterial(roomType: string?, kitId: string?): OfficeTypes.ShellMaterial
 	if roomType == nil then
 		return "carpet"
 	end
-	return FLOOR_BY_TYPE[roomType] or "carpet"
+	-- Read into optionals: an indexer's value type has no nil.
+	local theme: OfficeTypes.ShellTheme? = if kitId ~= nil then OfficeConstants.SHELL_THEMES[kitId] else nil
+	local own: OfficeTypes.ShellMaterial? = if theme ~= nil then theme.floors[roomType] else nil
+	return own or FLOOR_BY_TYPE[roomType] or "carpet"
+end
+
+--[=[
+	The material a shell box of `material` takes in kit `kitId` when its face looks into a room of `roomType`
+	(OfficeArtKeyUtils.roomType; "hallway" for a corridor): the kit's SHELL_THEMES hall or room dress where it names
+	one, `material` otherwise (and for every kit with no theme, the Office's).
+]=]
+function OfficeShellVisualSystem.themed(
+	material: OfficeTypes.ShellMaterial,
+	kitId: string?,
+	roomType: string?
+): OfficeTypes.ShellMaterial
+	local theme: OfficeTypes.ShellTheme? = if kitId ~= nil then OfficeConstants.SHELL_THEMES[kitId] else nil
+	if theme == nil then
+		return material
+	end
+	local dress = if roomType == "hallway" then theme.hallway else theme.rooms
+	local own: OfficeTypes.ShellMaterial? = dress[material]
+	return own or material
 end
 
 --[=[
@@ -115,9 +139,15 @@ local function newPart(name: string, size: Vector3, cframe: CFrame, parent: Inst
 	return part
 end
 
-local function build(box: OfficeTypes.ShellBox, origin: CFrame, parent: Instance, hasVariant: HasVariant?)
+local function build(
+	box: OfficeTypes.ShellBox,
+	origin: CFrame,
+	parent: Instance,
+	hasVariant: HasVariant?,
+	material: OfficeTypes.ShellMaterial?
+)
 	local part = newPart(box.name, box.size, origin * box.cframe, parent)
-	OfficeShellVisualSystem.apply(part, box.material, hasVariant)
+	OfficeShellVisualSystem.apply(part, material or box.material, hasVariant)
 	part.CanCollide = box.collide
 	part.CanQuery = box.collide
 	-- Grid strips hang under the slab, so their shadow is the slab's own.
@@ -249,6 +279,26 @@ local function facadeGaps(layout: OfficeTypes.Layout, segment: OfficeTypes.Segme
 	return gaps
 end
 
+-- The material a wall box takes in its layout's kit: dressed for the room its face looks into (probed just off the
+-- run's middle on that face), when the kit has a shell theme.
+local function faceMaterial(
+	layout: OfficeTypes.Layout,
+	segment: OfficeTypes.Segment,
+	box: OfficeTypes.ShellBox
+): OfficeTypes.ShellMaterial
+	local side = box.side
+	local kitId = layout.artKit
+	if side == nil or kitId == nil or OfficeConstants.SHELL_THEMES[kitId] == nil then
+		return box.material
+	end
+	local horizontal = segment.z1 == segment.z2
+	local midX, midZ = (segment.x1 + segment.x2) / 2, (segment.z1 + segment.z2) / 2
+	local probeX = if horizontal then midX else midX + side * FACE_PROBE
+	local probeZ = if horizontal then midZ + side * FACE_PROBE else midZ
+	local room = OfficeLayoutUtils.roomAt(layout, probeX, probeZ)
+	return OfficeShellVisualSystem.themed(box.material, kitId, OfficeArtKeyUtils.roomType(room))
+end
+
 local function buildWalls(layout: OfficeTypes.Layout, origin: CFrame, shell: Folder, hasVariant: HasVariant?)
 	local segments = OfficeLayoutUtils.mergedWallSegments(layout)
 	-- Everything a run's end can meet: the merged walls, the glass panes and the cased doorways' rough openings. A
@@ -280,7 +330,7 @@ local function buildWalls(layout: OfficeTypes.Layout, origin: CFrame, shell: Fol
 			gaps = facadeGaps(layout, segment),
 		}
 		for _, box in OfficeShellUtils.wall(segment, first, last, extra) do
-			build(box, origin, shell, hasVariant)
+			build(box, origin, shell, hasVariant, faceMaterial(layout, segment, box))
 		end
 	end
 	for _, pane in OfficeLayoutUtils.panes(layout) do

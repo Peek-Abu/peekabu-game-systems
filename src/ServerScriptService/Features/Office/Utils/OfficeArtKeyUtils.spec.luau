@@ -93,6 +93,21 @@ return function()
 			local visual = OfficeArtKeyUtils.attachFirst(art, root, "furniture", { "second" })
 			expect(visual:GetAttribute("ArtKitId")).to.equal("odd-hours-b1")
 		end)
+		it("walks the map kit's fallback (the School's: the Office kit) before the default kit", function()
+			root.Parent:SetAttribute("ArtKitId", "school-maple-hill")
+			local school = Instance.new("Folder")
+			school.Name = "school-maple-hill"
+			school.Parent = assets
+			local default = assets["test-keys"]
+			default.Name = ArtKitRegistry.DEFAULT_KIT
+			local office = default:Clone()
+			office.Name = "odd-hours-b1"
+			office.Parent = assets
+			local visual, key = OfficeArtKeyUtils.attachFirst(art, root, "furniture", { "first", "second" })
+			expect(visual ~= nil).to.equal(true)
+			expect(visual:GetAttribute("ArtKitId")).to.equal("odd-hours-b1")
+			expect(key).to.equal("second")
+		end)
 		it("returns nil when no key has a template", function()
 			local visual, key = OfficeArtKeyUtils.attachFirst(art, root, "furniture", { "first", "third" })
 			expect(visual).to.equal(nil)

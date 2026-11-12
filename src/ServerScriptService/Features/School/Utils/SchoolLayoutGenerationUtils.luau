@@ -221,7 +221,7 @@ end
 local function construct(base: Layout, rng: Random): (Layout?, string?)
 	local network = SchoolNetworkUtils.network(rng)
 	local layout: Layout = {
-		artKit = OfficeConstants.GENERATED_ART_KIT,
+		artKit = SchoolConstants.ART_KIT,
 		startRoom = "bay",
 		rooms = {},
 		doors = {},

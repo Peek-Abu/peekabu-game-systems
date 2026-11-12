@@ -3,9 +3,9 @@
 	OfficeArtKeyUtils: which art template does a piece of office furniture use? `candidates` lists the keys to try
 	in order (a marker's own `art` override, the default key's room-type variant, the default key) and `attachFirst`
 	attaches the first that has a template, so a kit that lacks the variant falls back to the plain art and a place
-	without the kit falls back to greybox. A piece the map's own kit lacks falls back to the default kit
-	(ArtKitRegistry.DEFAULT_KIT): `attachFirst` tries every key in the resolved kit, then every key again in the
-	default kit, so a restyling kit only needs the pieces it changes. Pure apart from the attach call.
+	without the kit falls back to greybox. A piece the map's own kit lacks falls back along the kit's chain
+	(ArtKitRegistry.chain: its fallback kits, then the default kit): `attachFirst` tries every key in each kit in turn,
+	so a restyling kit only needs the pieces it changes (the School's kit falls back to the Office's). Pure apart from the attach call.
 
 	@class OfficeArtKeyUtils
 ]=]
@@ -63,15 +63,9 @@ function OfficeArtKeyUtils.attachFirst(
 	family: ArtTypes.Family,
 	keys: { string }
 ): (Model?, string?)
-	for _, key in keys do
-		local visual = art.attach(root, family, key)
-		if visual ~= nil then
-			return visual, key
-		end
-	end
-	if art.resolveKit(root) ~= ArtKitRegistry.DEFAULT_KIT then
+	for _, kitId in ArtKitRegistry.chain(art.resolveKit(root)) do
 		for _, key in keys do
-			local visual = art.attach(root, family, key, ArtKitRegistry.DEFAULT_KIT)
+			local visual = art.attach(root, family, key, kitId)
 			if visual ~= nil then
 				return visual, key
 			end

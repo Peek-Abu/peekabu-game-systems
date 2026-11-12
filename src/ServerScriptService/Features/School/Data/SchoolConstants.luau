@@ -27,6 +27,8 @@ local DECK: { string } = { "lounge", "principal", "nurse", "bathroom", "bathroom
 local LANDMARKS: { OfficeTypes.RoomType } = { "gym", "cafeteria", "library" }
 
 return table.freeze({
+	-- The School's art kit (ArtKitRegistry): its own furniture and surfaces, falling back to the Office's kit.
+	ART_KIT = "school-maple-hill",
 	LATTICE_COLS = 4,
 	LATTICE_ROWS = 3,
 	LATTICE_STEP_X = 86,

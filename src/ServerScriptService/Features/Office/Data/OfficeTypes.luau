@@ -276,12 +276,34 @@ export type ShellMaterial =
 	| "hallcarpet"
 	| "lino"
 	| "vinyl"
+	-- The School kit's (OfficeConstants.SHELL_THEMES): its halls, its rooms and its floors.
+	| "schoolHallFloor"
+	| "schoolHallBlock"
+	| "schoolHallBand"
+	| "schoolHallStripe"
+	| "schoolRoomPaint"
+	| "schoolRoomBand"
+	| "schoolRoomRail"
+	| "schoolCarpet"
+	| "schoolMaple"
+	| "schoolChecker"
+	| "schoolTile"
+-- `side`: a wall box's face (-1 / +1, its offset from the wall line; OfficeShellUtils.wall), nil for other boxes.
 export type ShellBox = {
 	name: string,
 	size: Vector3,
 	cframe: CFrame,
 	material: ShellMaterial,
 	collide: boolean,
+	side: number?,
+}
+
+-- A kit's shell look (OfficeConstants.SHELL_THEMES): the materials a wall face looking into a hallway or into a room
+-- trades for its own, and the floor by room type (OfficeArtKeyUtils.roomType).
+export type ShellTheme = {
+	hallway: { [ShellMaterial]: ShellMaterial },
+	rooms: { [ShellMaterial]: ShellMaterial },
+	floors: { [string]: ShellMaterial },
 }
 
 -- A ceiling troffer panel (layout x/z); lit ones glow and carry a light.

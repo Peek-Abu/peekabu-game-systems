@@ -352,7 +352,7 @@ return function()
 			local layout = layoutFor(1)
 			expect(#Base.rooms).to.equal(before)
 			expect(Base.startRoom).to.equal("bay")
-			expect(layout.artKit).to.equal(OfficeConstants.GENERATED_ART_KIT)
+			expect(layout.artKit).to.equal(SchoolConstants.ART_KIT)
 		end)
 	end)
 end
