@@ -138,6 +138,9 @@ local TrainingConstants = {
 
 	-- The authored map.
 	MAP_TAG = "TrainingMap",
+	-- A map part dressed with real art keeps its gameplay (tags, roles, collision) and is made unseen; its look is a
+	-- Model of this name under it (TrainingHallSystem glows a hiding spot's art).
+	ART_NAME = "Art",
 	ROLE_ATTRIBUTE = "TrainingRole",
 	STOP_ATTRIBUTE = "TrainingStop",
 	ORDER_ATTRIBUTE = "TrainingOrder",

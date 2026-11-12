@@ -5,7 +5,9 @@
 
 	- Stop 3 ("quiet"): the screen darkens and greys (a Vfx screen request, so it reads dark whatever the place's
 	  lighting), the hall's "light" parts go out one by one, in their ORDER, LIGHT_STEP apart (their lights
-	  off, a Neon part to plain plastic), and the "creep" patches of Gloom fade and grow in, in ORDER.
+	  off, a Neon part to plain plastic), and the "creep" patches of Gloom fade and grow in, in ORDER. A patch with
+	  goo blobs as children spreads them over the floor (TrainingCreepRules; the patch part itself stays unseen); a
+	  bare patch part fades and grows itself.
 	- Stop 4 ("hide"): red and dark (a second, redder screen request on top), and the hiding furniture glows red (a
 	  Highlight), so the way to hide is plain. (Tutorial v3: no hall signs; Pippa's lines and the goal bar say it.)
 	  Mr. Harlow's two doors (staffDoor, exitDoor) creak as they swing open and slam shut (their TrainingSwingOpen
@@ -28,13 +30,16 @@ local TweenService = game:GetService("TweenService")
 
 local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideConstants)
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
+local TrainingCreepRules = require(ReplicatedStorage.Shared.Features.Training.Rules.TrainingCreepRules)
 local SoundServiceClient = require(ReplicatedStorage.Client.Features.Sound.SoundServiceClient)
 local TrainingAssets = require(ReplicatedStorage.Client.Features.Training.Data.TrainingAssets)
 local UISoundSystem = require(ReplicatedStorage.Client.Features.UI.Systems.UISoundSystem)
 local VfxServiceClient = require(ReplicatedStorage.Client.Features.Vfx.VfxServiceClient)
 
 type Saved = { material: Enum.Material, lights: { Light } }
-type Creep = { part: BasePart, transparency: number, size: Vector3 }
+-- A goo blob of a creep patch: as authored, in the patch's space.
+type Blob = { part: BasePart, transparency: number, size: Vector3, offset: CFrame }
+type Creep = { part: BasePart, transparency: number, size: Vector3, blobs: { Blob } }
 
 local STOP_QUIET = 3
 local STOP_HIDE = 4
@@ -147,8 +152,30 @@ local function hideCreep(model: Model)
 		return
 	end
 	for _, part in parts(model, "creep") do
-		table.insert(creeps, { part = part, transparency = part.Transparency, size = part.Size })
+		local blobs: { Blob } = {}
+		for _, child in part:GetDescendants() do
+			if child:IsA("BasePart") then
+				table.insert(blobs, {
+					part = child,
+					transparency = child.Transparency,
+					size = child.Size,
+					offset = part.CFrame:ToObjectSpace(child.CFrame),
+				})
+				child.Transparency = 1
+			end
+		end
+		table.insert(creeps, { part = part, transparency = part.Transparency, size = part.Size, blobs = blobs })
 		part.Transparency = 1
+	end
+end
+
+-- Puts a patch's blobs at `scale` of their spread and `fade` (0 hidden .. 1 as authored) of their opacity.
+local function spread(creep: Creep, scale: number, fade: number)
+	for _, blob in creep.blobs do
+		local frame, size = TrainingCreepRules.grow(blob.offset, blob.size, scale)
+		blob.part.Size = size
+		blob.part.CFrame = creep.part.CFrame * frame
+		blob.part.Transparency = 1 - (1 - blob.transparency) * fade
 	end
 end
 
@@ -158,12 +185,25 @@ local function creepIn(mine: number)
 			if mine ~= generation then
 				return
 			end
-			creep.part.Size = creep.size * Vector3.new(0.2, 1, 0.2)
-			TweenService:Create(
-				creep.part,
-				TweenInfo.new(TrainingConstants.CREEP_SECONDS, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-				{ Transparency = creep.transparency, Size = creep.size }
-			):Play()
+			local info = TweenInfo.new(TrainingConstants.CREEP_SECONDS, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+			if #creep.blobs == 0 then
+				creep.part.Size = creep.size * Vector3.new(0.2, 1, 0.2)
+				TweenService:Create(creep.part, info, { Transparency = creep.transparency, Size = creep.size }):Play()
+				return
+			end
+			local progress = Instance.new("NumberValue")
+			progress.Value = 0
+			spread(creep, 0.2, 0)
+			progress.Changed:Connect(function(value: number)
+				if mine == generation then
+					spread(creep, 0.2 + 0.8 * value, value)
+				end
+			end)
+			local tween = TweenService:Create(progress, info, { Value = 1 })
+			tween.Completed:Connect(function()
+				progress:Destroy()
+			end)
+			tween:Play()
 		end)
 	end
 end
@@ -171,6 +211,9 @@ end
 local function creepOut()
 	for _, creep in creeps do
 		TweenService:Create(creep.part, TweenInfo.new(1), { Transparency = 1 }):Play()
+		for _, blob in creep.blobs do
+			TweenService:Create(blob.part, TweenInfo.new(1), { Transparency = 1 }):Play()
+		end
 	end
 end
 
@@ -190,7 +233,9 @@ local function glow(model: Model, on: boolean)
 			highlight.FillTransparency = 0.75
 			highlight.OutlineColor = color
 			highlight.DepthMode = Enum.HighlightDepthMode.Occluded
-			highlight.Adornee = part
+			-- A dressed hiding spot glows on its art (the tagged part is then its unseen collider).
+			local art = part:FindFirstChild(TrainingConstants.ART_NAME)
+			highlight.Adornee = if art ~= nil then art else part
 			highlight.Parent = part
 			table.insert(glows, highlight)
 		end
@@ -329,6 +374,7 @@ function TrainingHallSystem.clear()
 	for _, creep in creeps do
 		creep.part.Transparency = creep.transparency
 		creep.part.Size = creep.size
+		spread(creep, 1, 1)
 	end
 	table.clear(creeps)
 end

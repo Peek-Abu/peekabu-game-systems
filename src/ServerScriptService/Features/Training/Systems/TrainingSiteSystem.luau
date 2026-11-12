@@ -6,7 +6,8 @@
 	the safe and bay boxes from the plan; `spawn` places the plan's Gloom piles (Vacuum) and cargo (Cargo) in the shift
 	folder and hands the spawned parts to `spawned`, so the run can follow them. The marker parts (spawn, stops, zones,
 	route, rest, boxes, pile and item spots) are hidden and non-solid at runtime; the doors, lights, creep and signs stay
-	(the run and the client drive them).
+	(the run and the client drive them). A full-size TruckBed (DepotTruckVisualConstants.BED_SIZE) gets the company
+	truck built round it (DepotTruckVisualSystem, as the office's loading bay).
 
 	Spec-exempt shell (Instances, Vacuum and Cargo); the reading and checks are the specced TrainingMapRules.
 
@@ -23,6 +24,8 @@ local InteractionConstants = require(ReplicatedStorage.Shared.Features.Interacti
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
+local DepotTruckVisualConstants = require(ServerScriptService.Features.Depot.Data.DepotTruckVisualConstants)
+local DepotTruckVisualSystem = require(ServerScriptService.Features.Depot.Systems.DepotTruckVisualSystem)
 local OfficeTypes = require(ServerScriptService.Features.Office.Data.OfficeTypes)
 local TrainingMapRules = require(ServerScriptService.Features.Training.Rules.TrainingMapRules)
 local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
@@ -44,6 +47,8 @@ local MARKERS: { [string]: boolean } = {
 	item = true,
 }
 
+-- Set on the truck bed once the truck is built round it.
+local TRUCK_BUILT = "TrainingTruckBuilt"
 -- Rises a spawn a little above its marker, so a character lands on the floor.
 local SPAWN_LIFT = 3
 -- Side-by-side gap between two crew spawns (training is solo; kept for an admin's extra player).
@@ -147,6 +152,14 @@ function TrainingSiteSystem.new(
 	if bed ~= nil then
 		bed:SetAttribute(InteractionConstants.KIND_ATTRIBUTE, CargoConstants.LOAD_KIND)
 		CollectionService:AddTag(bed, InteractionConstants.TAG)
+		-- A full-size truck bed (owner 11-12: the training truck read as a placeholder) gets the real company truck
+		-- round it, as the office's loading bay does; once per place, and never round a smaller bed, which the
+		-- truck would swallow.
+		local full = (bed.Size - DepotTruckVisualConstants.BED_SIZE).Magnitude < 0.01
+		if full and bed:GetAttribute(TRUCK_BUILT) ~= true then
+			bed:SetAttribute(TRUCK_BUILT, true)
+			DepotTruckVisualSystem.build(bed, bed.Parent or model)
+		end
 	end
 	local site: OfficeTypes.Site = {
 		model = model,
