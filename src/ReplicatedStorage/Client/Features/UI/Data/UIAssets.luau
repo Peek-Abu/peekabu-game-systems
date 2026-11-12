@@ -137,10 +137,11 @@ local TOON_ICONS: { [ToonIcon]: string } = {
 	-- Padlock C, the night lock (owner pick for now, 2026-10-24; decal 135775868127022): a not-owned-yet card.
 	lockNight = "rbxassetid://102433972832334",
 	locker = "rbxassetid://132365115657905",
-	-- Bramble's portraits (the School's owl; its calm face and its chasing one), PENDING "" until rendered and
-	-- uploaded: OccupantPortraitAssets shows a neutral stand-in while a slot is "", never Harlow's.
-	brambleCalm = "",
-	brambleHunt = "",
+	-- Bramble's portraits (the School's owl; its calm face and its chasing one): owner picks Calm A and Hunt A
+	-- (2026-11-12, Icey Labs; decals 107616608770271 / 72204075980314), rendered from the v4 model through Harlow's
+	-- iconize.py. OccupantPortraitAssets shows a neutral stand-in for any slot left "", never Harlow's.
+	brambleCalm = "rbxassetid://113499760594559",
+	brambleHunt = "rbxassetid://113099808413297",
 	managerCalm = "rbxassetid://79215225592922",
 	managerHunt = "rbxassetid://126690679697372",
 	monitor = "rbxassetid://115152845494708",
