@@ -191,16 +191,7 @@ end
 
 -- The radio's music notes: a flipbook emitter on its RADIO_NOTES.EMITTER_NAME part, bobbing up and swaying, at the
 -- station's rate (DepotSpotRules.noteRate: none on a quiet station). Nothing until the notes image is uploaded.
-local function noteEmitter(radio: Instance): ParticleEmitter?
-	local texture = DepotAssets.RADIO_NOTES
-	-- The tag may sit on the radio model or on a spot part inside it (owner 11-11: the notes never showed): search the
-	-- whole radio model for its emitter part.
-	local model = if radio:IsA("Model") then radio else radio:FindFirstAncestorWhichIsA("Model")
-	local name = DepotSpotConstants.RADIO_NOTES.EMITTER_NAME
-	local body = radio:FindFirstChild(name, true) or (if model ~= nil then model:FindFirstChild(name, true) else nil)
-	if texture == nil or body == nil or not body:IsA("BasePart") then
-		return nil
-	end
+local function noteEmitter(body: BasePart, texture: string): ParticleEmitter
 	local emitter = Instance.new("ParticleEmitter")
 	emitter.Name = "RadioNotes"
 	emitter.Texture = texture
@@ -257,14 +248,35 @@ function DepotSpotSystem.start(): () -> ()
 		if target:GetAttribute(InteractionConstants.KIND_ATTRIBUTE) ~= DepotSpotConstants.KINDS.radio then
 			return nil
 		end
-		local emitter = noteEmitter(target)
-		if emitter == nil then
+		local texture = DepotAssets.RADIO_NOTES
+		if texture == nil then
 			return nil
 		end
-		emitters[target] = emitter
+		-- The tag may sit on the radio model or on a spot part inside it: the emitter part is anywhere in the radio
+		-- model. With streaming on, the model arrives before its parts (owner 11-11: the notes never showed), so wait
+		-- for the part to stream in.
+		local model = if target:IsA("Model") then target else target:FindFirstAncestorWhichIsA("Model")
+		local root = model or target
+		local name = DepotSpotConstants.RADIO_NOTES.EMITTER_NAME
+		local emitter: ParticleEmitter? = nil
+		local function attach(candidate: Instance)
+			if emitter == nil and candidate.Name == name and candidate:IsA("BasePart") then
+				local made = noteEmitter(candidate, texture)
+				emitter = made
+				emitters[target] = made
+			end
+		end
+		local found = root:FindFirstChild(name, true)
+		if found ~= nil then
+			attach(found)
+		end
+		local arrived = root.DescendantAdded:Connect(attach)
 		return function()
+			arrived:Disconnect()
 			emitters[target] = nil
-			emitter:Destroy()
+			if emitter ~= nil then
+				emitter:Destroy()
+			end
 		end
 	end)
 	local stopStation = Charm.subscribe(DepotStore.station, function()
