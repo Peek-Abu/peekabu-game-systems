@@ -37,6 +37,8 @@ local PAD = 26
 local PHOTO = Vector2.new(208, 130)
 local GLOOM = 86
 local KEY = 34
+-- The E key and its word, at the number row's right end.
+local READ = 120
 local INK = UIToonConstants.COLOR.ink
 
 local function DepotWorkOrderBoard(props: DepotWorkOrderBoardProps): React.ReactNode
@@ -44,6 +46,8 @@ local function DepotWorkOrderBoard(props: DepotWorkOrderBoardProps): React.React
 	-- Clear of the drips poured from the header's foot.
 	local top = HEADER + 30
 	local right = PAD + PHOTO.X + 22
+	-- The number row, under the photo.
+	local row = top + PHOTO.Y + 12
 	local cap: { [string]: React.ReactNode } = {
 		key = e(ToonText, {
 			text = view.key,
@@ -68,30 +72,33 @@ local function DepotWorkOrderBoard(props: DepotWorkOrderBoardProps): React.React
 		}),
 		client = e(ToonText, {
 			text = view.client,
-			textSize = 32,
+			textSize = 34,
 			wrapped = true,
-			position = UDim2.fromOffset(right, top - 4),
-			size = UDim2.new(1, -right - PAD, 0, 74),
+			position = UDim2.fromOffset(right, top + 10),
+			size = UDim2.new(1, -right - PAD, 0, PHOTO.Y - 20),
 			fit = true,
 		}),
+		-- The Gloom to remove: the render and the big number on one row across the panel, under the photo.
 		gloom = e(ToonIcon, {
 			icon = "gloom",
-			position = UDim2.fromOffset(right - 8, top + 70),
+			position = UDim2.fromOffset(PAD - 6, row - 10),
 			size = UDim2.fromOffset(GLOOM, GLOOM),
 		}),
 		quota = e(ToonText, {
 			text = view.quota,
 			meaning = "gold",
 			textSize = 64,
-			position = UDim2.fromOffset(right + GLOOM - 4, top + 78),
-			size = UDim2.new(1, -right - GLOOM - PAD + 4, 0, 72),
+			wrapped = false,
+			position = UDim2.fromOffset(PAD + GLOOM, row),
+			size = UDim2.new(1, -2 * PAD - GLOOM - READ, 0, 70),
 			fit = true,
 		}),
 		key = e(ToonSurface, {
 			hue = "cream",
 			small = true,
 			radius = 9,
-			position = UDim2.fromOffset(PAD, top + PHOTO.Y + 26),
+			anchor = Vector2.new(1, 0),
+			position = UDim2.new(1, -PAD - READ + KEY + 4, 0, row + 18),
 			size = UDim2.fromOffset(KEY, KEY),
 			children = cap,
 		}),
@@ -99,8 +106,9 @@ local function DepotWorkOrderBoard(props: DepotWorkOrderBoardProps): React.React
 			text = "Read",
 			font = "body",
 			textSize = 20,
-			position = UDim2.fromOffset(PAD + KEY + 12, top + PHOTO.Y + 26),
-			size = UDim2.fromOffset(140, KEY - 4),
+			anchor = Vector2.new(1, 0),
+			position = UDim2.new(1, -PAD, 0, row + 20),
+			size = UDim2.fromOffset(READ - KEY - 14, KEY - 4),
 			fit = true,
 		}),
 	}
