@@ -1,12 +1,13 @@
 local VM = require(script.Parent.DepotHubViewModel)
 local RankFormulas = require(game:GetService("ReplicatedStorage").Shared.Features.Rank.Utils.RankFormulas)
-local function monsterNeutral(text)
-	for _, word in { "manager", "harlow", "bramble", "boss" } do
-		expect(string.find(string.lower(text), word, 1, true)).to.equal(nil)
-	end
-end
-
 return function()
+	-- Inside the spec function: TestEZ gives `expect` only to the function it runs.
+	local function monsterNeutral(text)
+		for _, word in { "manager", "harlow", "bramble", "boss" } do
+			expect(string.find(string.lower(text), word, 1, true)).to.equal(nil)
+		end
+	end
+
 	describe("guide words", function()
 		it("talks about monsters, not one map's monster, in the field guide", function()
 			for _, section in VM.copy("guide").sections do
