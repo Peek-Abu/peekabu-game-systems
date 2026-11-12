@@ -241,7 +241,8 @@ local DepotSpotConstants = {
 		-- (the tray), tipping TIP degrees, rests REST seconds, and is back on its shelf (local only).
 		VEND = table.freeze({
 			STOCK_TAG = "DepotVendingStock",
-			PUSH = 0.3,
+			-- Far enough to clear the shelf lips into the drop lane in front of them (the machine's shelves stand back).
+			PUSH = 0.55,
 			PUSH_SECONDS = 0.35,
 			TIP = 75,
 			REST = 1.2,

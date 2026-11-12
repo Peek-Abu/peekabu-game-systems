@@ -781,17 +781,20 @@ def vending():
     box("frameR", x1, x1 + t, fy - 0.04, fy + 0.05, z0 - t, z1 + t, "paint_mint", bevel=0.02)
     box("frameB", x0, x1, fy - 0.04, fy + 0.05, z0 - t, z0, "paint_mint", bevel=0.02)
     box("frameT", x0, x1, fy - 0.04, fy + 0.05, z1, z1 + t, "paint_mint", bevel=0.02)
+    # The shelves stand SET back from the glass, leaving a drop lane in front of them: a vended snack is nudged off
+    # its coil into the lane and falls past the shelves below to the tray (DepotIdleRules.vend).
+    sf = fy + 0.5
     for i in range(4):
         z = z0 + 0.12 + i * 1.15
-        box(f"shelf{i}", x0, x1, fy + 0.15, back, z - 0.05, z, "steel_mid", bevel=0.01)
-        box(f"shelfLip{i}", x0, x1, fy + 0.12, fy + 0.18, z - 0.05, z + 0.08, "paint_gold", bevel=0.01)
+        box(f"shelf{i}", x0, x1, sf, back, z - 0.05, z, "steel_mid", bevel=0.01)
+        box(f"shelfLip{i}", x0, x1, sf - 0.03, sf + 0.03, z - 0.05, z + 0.08, "paint_gold", bevel=0.01)
         for k in range(4):
             cx = x0 + 0.25 + k * 0.5
             pts = []
             for j in range(31):
                 tt = j / 30
                 ang = tt * math.tau * 3.5
-                pts.append((cx + math.cos(ang) * 0.17, fy + 0.25 + tt * (back - fy - 0.35), z + 0.17 + math.sin(ang) * 0.17))
+                pts.append((cx + math.cos(ang) * 0.17, sf + 0.1 + tt * (back - sf - 0.2), z + 0.17 + math.sin(ang) * 0.17))
             for j in range(len(pts) - 1):
                 rod(f"coil{i}_{k}_{j}", pts[j], pts[j + 1], 0.022, "chrome", 6)
     px0, px1 = x1 + 0.2, W / 2 - 0.2

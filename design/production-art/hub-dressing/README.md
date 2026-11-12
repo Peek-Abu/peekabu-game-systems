@@ -51,7 +51,21 @@ Sheet: notes `hub-r3-radio-bell-v2-look.jpg`.
 | pumpkin leaves a | 82777977320744 | 135627605351141 | 72535696753865 / 100488666054292 / 112328920216420 |
 | pumpkin leaves b | 123622410456209 | 78090684098995 | 127188943897320 / 73103075065016 / 109428284027877 |
 
-- **Snack machine remake (look sheet only, nothing uploaded).** `vending` (the hub machine's size: grape steel, mint and
+- **Snack machine remake (owner OK 11-12, uploaded and swapped in).** `vending` (the hub machine's size: grape steel, mint and
   gold trim, an open window onto four coil shelves, lit buttons, coin slot, card reader, pickup tray, a Gleam sparkle
   header) and `snack:can|bottle|chips|bar`. `r5_look.py` renders them; sheet: notes `hub-r5-vending-pumpkinleaf-look.jpg`.
   In the hub the stocked items are tagged `DepotVendingStock` (the vend motion drops one to the tray).
+
+  Uploaded with the owner's OK (all 41 ids checked group 189923277) and swapped in: `CoffeeCorner/vending` wears the new
+  mesh (its authored origin at (-12.5, 1.06, -240.2), turned 180 deg; the old `Glow` part carries the lit button and card
+  light), the glass sits in the new window, a soft `InsideLight`, and `vending/Stock` holds 16 snacks (bars, chips,
+  bottles, cans from the bottom up) tagged `DepotVendingStock`. The shelves stand back from the glass so a vended snack
+  drops down the lane in front of them; `IdleMotions/VendingCans` spans the window from the tray up, facing the glass.
+
+| Asset | Model | Mesh | Color / Normal / Rough (images) |
+|---|---|---|---|
+| snack machine v2 | 124770794210652 | 87520540525046 (+ Glow 72276313046221) | 73950959597054 / 101997262118335 / 138911549358103 |
+| snack can | 80265359587698 | 76826477230720 | 98246391209606 / 97093626673453 / 101999382998920 |
+| snack bottle | 74718849864046 | 138701778330518 | 121692672852079 / 92203595821535 / 101705239471195 |
+| snack chips | 133010450796957 | 84514870296740 | 76220164300441 / 134696409403450 / 114105196004947 |
+| snack bar | 79264925729143 | 115883930717980 | 100262445950274 / 138703037299381 / 98278877383864 |
