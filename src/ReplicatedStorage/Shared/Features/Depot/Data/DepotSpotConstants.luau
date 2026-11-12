@@ -172,6 +172,15 @@ local DepotSpotConstants = {
 	-- parts nudge about the bell pivot), "rattle" (the part jiggles about its left edge, a locker door), "twinkle"
 	-- (gold sparkles round it), "candrop" (a can falls inside it, a vending window), "tick" (a second hand on its front
 	-- face, a clock). INTERVALS: seconds between goes (min, max) for the ones that come and go.
+	-- The break room's sleepy employee (DepotLoungeSystem, DepotLoungeRules; owner 11-11, ideas sheet #4): EMPLOYEE dozes
+	-- sitting on the part tagged TAG (a sofa cushion, facing its LookVector) and wakes to wave when a player walks within
+	-- WAKE_RADIUS studs, at most once every COOLDOWN seconds.
+	LOUNGE = table.freeze({
+		TAG = "DepotLoungeSpot",
+		EMPLOYEE = "Cappy",
+		WAKE_RADIUS = 10,
+		COOLDOWN = 25,
+	}),
 	IDLE = table.freeze({
 		TAG = "DepotIdleMotion",
 		ATTRIBUTE = "IdleMotion",

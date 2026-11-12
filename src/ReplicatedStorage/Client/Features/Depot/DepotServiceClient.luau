@@ -41,6 +41,7 @@ local DepotTruckGhostSystem = require(ReplicatedStorage.Client.Features.Depot.Sy
 local DepotSpotSystem = require(ReplicatedStorage.Client.Features.Depot.Systems.DepotSpotSystem)
 local DepotClerkSystem = require(ReplicatedStorage.Client.Features.Depot.Systems.DepotClerkSystem)
 local DepotIdleMotionSystem = require(ReplicatedStorage.Client.Features.Depot.Systems.DepotIdleMotionSystem)
+local DepotLoungeSystem = require(ReplicatedStorage.Client.Features.Depot.Systems.DepotLoungeSystem)
 local DepotDriveBySystem = require(ReplicatedStorage.Client.Features.Depot.Systems.DepotDriveBySystem)
 local SocialServiceClient = require(ReplicatedStorage.Client.Features.Social.SocialServiceClient)
 local MarketplaceServiceClient = require(ReplicatedStorage.Client.Features.Marketplace.MarketplaceServiceClient)
@@ -254,6 +255,7 @@ local DepotServiceClient: DepotServiceClient = {
 		-- Today's clerk behind the Supply Counter, stamping parcels.
 		table.insert(stoppers, DepotClerkSystem.start())
 		table.insert(stoppers, DepotIdleMotionSystem.start())
+		table.insert(stoppers, DepotLoungeSystem.start())
 	end,
 
 	stop = function(_self)

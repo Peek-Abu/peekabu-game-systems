@@ -143,6 +143,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.Features.Depot.Systems.DepotSpotSystem"] = "ByteNet/scene-stack/Sound shell (the decisions are specced in DepotSpotRules and DepotStore)",
 	["ReplicatedStorage.Client.Features.Depot.Systems.DepotDriveBySystem"] = "CollectionService/RunService/Sound shell (road, timing and motion specced in DepotSpotRules)",
 	["ReplicatedStorage.Client.Features.Depot.Systems.DepotClerkSystem"] = "Instance/Animator shell (the fidget pool, the greet, the parcel height and hop are specced in DepotClerkRules)",
+	["ReplicatedStorage.Client.Features.Depot.Systems.DepotLoungeSystem"] = "Instance/Animator shell (when he wakes is the specced DepotLoungeRules)",
 	["ReplicatedStorage.Client.Features.Depot.Systems.DepotIdleMotionSystem"] = "Instance/particle/per-frame CFrame shell (the timing is the specced DepotIdleRules)",
 	["ReplicatedStorage.Shared.Features.Depot.Data.DepotSpotConstants"] = "static spot kinds, prompt words, stations and timings (no logic)",
 	["ReplicatedStorage.Client.UI.React.Screens.Depot.DepotSpotScene"] = "scene registration and thin screens (words specced in DepotRankChartViewModel, LeaderboardBoardViewModel and CoffeeRules)",

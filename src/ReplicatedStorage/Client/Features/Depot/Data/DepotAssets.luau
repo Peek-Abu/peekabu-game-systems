@@ -47,6 +47,11 @@ for id, def in SOUNDS do
 	end
 end
 
+-- The sofa sleeper's clips (DepotLoungeSystem; design/animations/lounge): nil until uploaded with the owner's OK, and
+-- the sleeper stays away until both are.
+local LOUNGE_DOZE: string? = nil
+local LOUNGE_WAVE: string? = nil
+
 -- The radio's music-note flipbook image (see RADIO_NOTES below): Icey Labs decal 81235055229989, its image.
 local RADIO_NOTES: string? = "rbxassetid://84887799913082"
 
@@ -60,6 +65,8 @@ return table.freeze({
 	-- OK 2026-11-11): the active idle (looped), the stamp fidget (v6, markers Thunk and Lift), the stretch fidget and
 	-- the wave.
 	-- The gold 4-point sparkle the stations' twinkle uses (DepotIdleMotionSystem): the UI kit's sparkle image.
+	LOUNGE_DOZE = LOUNGE_DOZE,
+	LOUNGE_WAVE = LOUNGE_WAVE,
 	SPARKLE = "rbxassetid://79532536364589",
 	CLERK_IDLE = "rbxassetid://111793457366391",
 	CLERK_STAMP = "rbxassetid://109774578542575",
