@@ -13,3 +13,10 @@ Source: ambientCG **ScatteredLeaves008** (CC0), 2K JPG, in `$TEXPIPE_WORK/cc0/Sc
 
 Look sheet: notes `hub-leaves-scan-look-2026-11-11.jpg`. Nothing uploaded; the scripts point at the scratch work
 folder (edit the paths at the top to rerun).
+
+## Single leaves (2026-11-11, look sheet only, nothing uploaded)
+The owner asked for a few good single leaves first, combined into piles once approved. `leaf_singles.py` paints each
+leaf's 512 px colour / normal / roughness from its outline (maple, red maple, oak, beech): veins with a darker groove
+beside a lighter rib, a base-to-tip gradient, a browned rim and spots, with the scan's low-frequency mottling and fine
+grain on top (cut-outs from the scan are ~30 px per leaf, too small). `leaf_singles_blend.py` builds each as a thin
+curled mesh folded along the midrib with a stalk, and renders the look. Sheet: notes `hub-r3-leaf-singles-look.jpg`.
