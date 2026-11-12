@@ -10,7 +10,8 @@
 	- sway: the bell's swing parts nudge a few degrees about its pivot now and then (never during a real ring).
 	- rattle: the part (a locker door) jiggles about its left edge now and then (the Gloom locker: goo inside).
 	- twinkle: a few gold sparkles round the part now and then (the Gleam locker).
-	- candrop: a can falls inside the part's box (a vending machine's window) now and then.
+	- candrop: one of the drinks and snacks stocked in the part's box (a vending machine's window) is vended now and
+	  then: nudged off its shelf, it drops to the tray and is back after (no more spinning can).
 	- tick: a second hand on the part's front face steps once a second (the time clock's face).
 
 	Spec-exempt shell (Instances, particles, per-frame CFrames); the timing is the specced DepotIdleRules.
@@ -18,6 +19,7 @@
 	@class DepotIdleMotionSystem
 ]=]
 
+local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -33,8 +35,6 @@ local IDLE = DepotSpotConstants.IDLE
 local SWING = DepotSpotConstants.BELL_SWING
 local STEAM_TEXTURE = "rbxasset://textures/particles/smoke_main.dds"
 local DROP_SIZE = 0.09
-local CAN_SIZE = Vector3.new(0.3, 0.5, 0.3)
-local CAN_COLORS = { Color3.fromRGB(214, 48, 49), Color3.fromRGB(51, 232, 169), Color3.fromRGB(92, 200, 255) }
 
 local random = Random.new()
 
@@ -219,34 +219,61 @@ local function twinkle(part: BasePart): () -> ()
 end
 
 -- A can falls from the top of the part's box to its bottom (inside a vending machine's window).
+-- The stocked items inside `part`'s box (parts tagged VEND.STOCK_TAG: the vending machine's drinks and snacks).
+local function stockIn(part: BasePart): { BasePart }
+	local found: { BasePart } = {}
+	local half = part.Size / 2 + Vector3.new(0.6, 0.6, 0.6)
+	for _, item in CollectionService:GetTagged(IDLE.VEND.STOCK_TAG) do
+		if item:IsA("BasePart") then
+			local at = part.CFrame:PointToObjectSpace(item.Position)
+			if math.abs(at.X) <= half.X and math.abs(at.Y) <= half.Y and math.abs(at.Z) <= half.Z then
+				table.insert(found, item)
+			end
+		end
+	end
+	return found
+end
+
+-- Now and then one stocked item is vended (owner 11-12: the machine dropped a spinning can): a local copy is nudged
+-- off its shelf toward the glass (`part`'s LookVector), drops to `part`'s bottom (the tray) tipping forward, rests,
+-- and goes; the item itself hides meanwhile and is back on its shelf after.
 local function candrop(part: BasePart): () -> ()
 	return every("candrop", function()
 		if part.Parent == nil then
 			return
 		end
-		local top = part.CFrame * CFrame.new(0, part.Size.Y / 2 - CAN_SIZE.Y / 2, 0)
-		local distance = math.max(0, part.Size.Y - CAN_SIZE.Y)
-		local can = Instance.new("Part")
-		can.Name = "IdleCan"
-		can.Shape = Enum.PartType.Cylinder
-		can.Size = Vector3.new(CAN_SIZE.Y, CAN_SIZE.X, CAN_SIZE.Z)
-		can.Color = CAN_COLORS[random:NextInteger(1, #CAN_COLORS)]
-		can.Material = Enum.Material.SmoothPlastic
-		inert(can)
-		can.CFrame = top * CFrame.Angles(0, 0, math.rad(90))
-		can.Parent = Workspace
+		local stock = stockIn(part)
+		if #stock == 0 then
+			return
+		end
+		local item = stock[random:NextInteger(1, #stock)]
+		local copy = item:Clone()
+		for _, tag in CollectionService:GetTags(copy) do
+			CollectionService:RemoveTag(copy, tag)
+		end
+		inert(copy)
+		copy.Parent = Workspace
+		item.LocalTransparencyModifier = 1
+		local start = item.CFrame
+		local ahead = Vector3.new(part.CFrame.LookVector.X, 0, part.CFrame.LookVector.Z)
+		ahead = if ahead.Magnitude > 1e-3 then ahead.Unit else Vector3.zAxis
+		local bottom = part.Position.Y - part.Size.Y / 2
+		local drop = math.max(0, (start.Position.Y - item.Size.Y / 2) - bottom)
+		-- Tipping forward: about the horizontal axis across the glass.
+		local across = ahead:Cross(Vector3.yAxis)
 		local t0 = os.clock()
 		while part:IsDescendantOf(game) do
-			local t = os.clock() - t0
-			local fallen = math.min(distance, DepotIdleRules.fall(t))
-			can.CFrame = top * CFrame.new(0, -fallen, 0) * CFrame.Angles(0, 0, math.rad(90 + 200 * t))
-			if fallen >= distance then
+			local forward, fallen, tip, done = DepotIdleRules.vend(os.clock() - t0, drop)
+			local at = start.Position + ahead * forward - Vector3.new(0, fallen, 0)
+			copy.CFrame = CFrame.fromAxisAngle(across, -math.rad(tip)) * start.Rotation + at
+			if done then
 				break
 			end
 			RunService.RenderStepped:Wait()
 		end
-		task.wait(0.8)
-		can:Destroy()
+		task.wait(IDLE.VEND.REST)
+		copy:Destroy()
+		item.LocalTransparencyModifier = 0
 	end)
 end
 

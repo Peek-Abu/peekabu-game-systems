@@ -87,21 +87,21 @@ end
 local COACH_POSES: { CoachPose } = { "point", "warn", "cheer", "shh", "hide" }
 
 local COACH: { [string]: CoachLine } = {
-	dust = { text = "Follow the gold arrows! Then hold the vacuum on the purple goo.", pose = "point" },
-	treasure = { text = "Grab the mug and take it to the truck. Leave the trash!", pose = "point" },
-	carrying = { text = "Now put it in the truck!", pose = "point" },
-	quiet = { text = "Uh oh, the lights! Don't stop. Stay on the arrows.", pose = "warn" },
-	hide = { text = "He's coming! Run away, or hide under the glowing desk!", pose = "hide" },
-	hidden = { text = "Shh! Stay still and watch him walk by.", pose = "shh" },
-	clear = { text = "He's gone! Go now! Follow the arrows.", pose = "cheer" },
-	clearHid = { text = "You hid! So brave! Now follow the arrows.", pose = "cheer" },
-	done = { text = "You did it! You're ready for a real shift!", pose = "cheer" },
-	open = { text = "The door is open! Follow the arrows.", pose = "point" },
-	caught = { text = "Try again! Run away, or hide before he sees you.", pose = "shh" },
-	shop = { text = "This is the Shop! Spend your Gleam here.", pose = "point" },
-	trucks = { text = "Hop on a truck with your crew!", pose = "cheer" },
-	vacuum = { text = "This is your vacuum! Pick it, then hold to suck up Gloom.", pose = "point" },
-	power = { text = "This is your power! Tap it now to try it.", pose = "point" },
+	dust = { text = "Listen up, rookie! Follow the gold arrows. Hold the vacuum on the purple goo.", pose = "point" },
+	treasure = { text = "Grab that mug. Take it to the truck. Leave the trash!", pose = "point" },
+	carrying = { text = "Good. Now put it in the truck.", pose = "point" },
+	quiet = { text = "Uh oh. The lights! Keep moving. Stay on the arrows.", pose = "warn" },
+	hide = { text = "He's coming! Run, or hide under the glowing desk. Now!", pose = "hide" },
+	hidden = { text = "Shh. Stay still. Let him walk by.", pose = "shh" },
+	clear = { text = "He's gone. Move it! Follow the arrows.", pose = "cheer" },
+	clearHid = { text = "You hid. Not bad, rookie! Now follow the arrows.", pose = "cheer" },
+	done = { text = "Hmph. You did it. You're ready for a real shift.", pose = "cheer" },
+	open = { text = "The door's open. Follow the arrows.", pose = "point" },
+	caught = { text = "Shake it off. Run, or hide before he sees you.", pose = "shh" },
+	shop = { text = "This is the Shop. Spend your Gleam here.", pose = "point" },
+	trucks = { text = "Hop on a truck with your crew. Go!", pose = "cheer" },
+	vacuum = { text = "This is your vacuum. Pick it. Then hold to suck up Gloom.", pose = "point" },
+	power = { text = "This is your power. Tap it now. Try it!", pose = "point" },
 }
 
 local GOALS: { [string]: GoalCard } = {
@@ -227,8 +227,11 @@ local TrainingConstants = {
 
 	COACH_POSES = table.freeze(COACH_POSES),
 
-	-- Pippa's lines (the stop's own line first; `open` once its door is open). Kid reading level.
+	-- The guide's lines (the stop's own line first; `open` once its door is open): Prickles, gruff but kind (owner
+	-- 11-12). Kid reading level.
 	COACH = table.freeze(COACH),
+	-- Who guides the tutorial on every card, in the hub and inside training (owner 11-12: Prickles, not Pippa).
+	GUIDE_EMPLOYEE = "Prickles",
 
 	-- The goal bar per stop (TrainingGoalBar), in place of the Gloom meter.
 	GOALS = table.freeze(GOALS),
@@ -238,7 +241,7 @@ local TrainingConstants = {
 		id = "training",
 		client = "Training Room",
 		job = "Learn the job",
-		note = "No rush. Pippa will show you.",
+		note = "No rush. Prickles will show you.",
 	}),
 	-- The route slip's site line on a training trip.
 	ROOM_SITE = "Morrow & Morrow · learn the job",
@@ -269,7 +272,7 @@ local TrainingConstants = {
 	HUB_COACH = table.freeze({
 		-- Prickles (owner 11-11: Pippa runs the Supply Counter, so a second Pippa beside her looked drab): the grumpy but
 		-- brave one, whose ability is hiding, which is what training teaches. He is also the voice of the hub's
-		-- "start training" card (TEXT.truckSign); inside training the guide is still Pippa.
+		-- "start training" card (TEXT.truckSign) and the guide inside training (GUIDE_EMPLOYEE).
 		EMPLOYEE = "Prickles",
 		SIDE = Vector3.new(-6, 0, 0),
 		FACING = Vector3.new(-1, 0, 0),
@@ -279,7 +282,7 @@ local TrainingConstants = {
 	}),
 
 	TEXT = table.freeze({
-		truckSign = "New here? Do training first. You got this!",
+		truckSign = "New here, rookie? Do training first.",
 		truckTag = "TRAINING",
 		finished = "Great job! You're ready.",
 		finishTitle = "TRAINING DONE!",
@@ -289,16 +292,16 @@ local TrainingConstants = {
 		back = "BACK TO THE DEPOT",
 		playAgain = "PLAY AGAIN",
 		caughtCard = "CAUGHT! YOU LOST A LIFE",
-		caughtLine = "It's OK! Try again from the start of this stop.",
+		caughtLine = "Shake it off. Try again from the start of this stop.",
 		you = "YOU",
 		reward = "Training done!",
 		failed = "Training could not start. Try again soon.",
-		tourShop = "You got 100 Gleam! Spend it in the Shop.",
-		tourTrucks = "Hop on a truck with your crew!",
+		tourShop = "100 Gleam. Earned it. Spend it in the Shop.",
+		tourTrucks = "Hop on a truck with your crew. Go!",
 		again = "Step on the TRAINING pad to play again!",
 		againButton = "PLAY TRAINING AGAIN",
-		tourVacuum = "This is your vacuum! Pick it, then hold to suck up Gloom.",
-		tourPower = "This is your power! Tap it now to try it.",
+		tourVacuum = "This is your vacuum. Pick it. Then hold to suck up Gloom.",
+		tourPower = "This is your power. Tap it now. Try it!",
 		tourRun = "Run! Hold Shift to run fast.",
 		tourRunPad = "Run! Press the left stick to run fast.",
 		tourRunTouch = "Run! Hold the SPRINT button.",

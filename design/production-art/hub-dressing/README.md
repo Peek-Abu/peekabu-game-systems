@@ -32,3 +32,26 @@ antenna), `bellpost` (teal post, base plate, collar, arm and yoke) and `bell` (b
 from the yoke at (0, -0.85, 4.1)); `radio_bell_look.py` renders them. When swapped into the hub: the radio mesh must be
 named `RadioBody` (the music notes emit from it) and the bell parts keep `DepotSwing` + the `BellPivot` attachment.
 Sheet: notes `hub-r3-radio-bell-v2-look.jpg`.
+
+## Round 5 (2026-11-12, owner notes)
+- **Pumpkins without leaves + a separate leaf prop.** `pumpkin:<variant>-bare` builds the pumpkins with no leaf or vine;
+  `pumpkinleaf:a|b` is two broad five-lobed pumpkin leaves with pale veins, stalks and a corkscrew tendril, shaped over a
+  round pumpkin's shoulder. Its authored pivot is the stem base; Roblox centres the mesh on its bounds, so in Roblox the
+  stem sits at (-0.0034, -0.2938, -0.197) (a) / (-0.2333, -0.2941, 0.2258) (b) from the MeshPart's centre, x the leaf's
+  scale (scale = the pumpkin's scale x its radius / 1.25: round 1.25, tall 1.0, pale 1.35). Uploaded with the owner's
+  pumpkin OK (all 40 ids checked group 189923277) and swapped in: the 14 lobby pumpkins wear the bare meshes
+  (ApplyMesh, size and CFrame kept), 7 of them (every other one) wear a leaf cluster in `Dressing/Autumn/PumpkinLeaves`
+  (the owner fixes the ones that look off).
+
+| Asset | Model | Mesh | Color / Normal / Rough (images) |
+|---|---|---|---|
+| pumpkin round bare | 114263424312463 | 98880936845404 | 75532230980509 / 119463233517741 / 71124988591438 |
+| pumpkin tall bare | 134081924395063 | 116707374539199 | 88617841673681 / 105881846486619 / 133343324659102 |
+| pumpkin pale bare | 93268058464016 | 111538999063491 | 100712249641636 / 78541582672765 / 105831343578270 |
+| pumpkin leaves a | 82777977320744 | 135627605351141 | 72535696753865 / 100488666054292 / 112328920216420 |
+| pumpkin leaves b | 123622410456209 | 78090684098995 | 127188943897320 / 73103075065016 / 109428284027877 |
+
+- **Snack machine remake (look sheet only, nothing uploaded).** `vending` (the hub machine's size: grape steel, mint and
+  gold trim, an open window onto four coil shelves, lit buttons, coin slot, card reader, pickup tray, a Gleam sparkle
+  header) and `snack:can|bottle|chips|bar`. `r5_look.py` renders them; sheet: notes `hub-r5-vending-pumpkinleaf-look.jpg`.
+  In the hub the stocked items are tagged `DepotVendingStock` (the vend motion drops one to the tray).

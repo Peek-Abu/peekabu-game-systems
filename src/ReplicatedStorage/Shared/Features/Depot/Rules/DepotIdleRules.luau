@@ -84,4 +84,23 @@ function DepotIdleRules.fallDone(t: number): boolean
 	return DepotIdleRules.fall(t) >= IDLE.FALL.DISTANCE
 end
 
+--[=[
+	A vended item `t` seconds after its turn comes (IDLE.VEND; owner 11-12: the machine dropped a spinning can): first
+	nudged `forward` off its shelf over PUSH_SECONDS, then falling `fallen` studs under FALL.GRAVITY to the tray `drop`
+	studs below, tipping forward `tip` degrees as it falls (never a spin); `done` once it lies in the tray.
+]=]
+function DepotIdleRules.vend(t: number, drop: number): (number, number, number, boolean)
+	local VEND = IDLE.VEND
+	local push = math.clamp(t / VEND.PUSH_SECONDS, 0, 1)
+	local forward = VEND.PUSH * (1 - (1 - push) ^ 2)
+	if t < VEND.PUSH_SECONDS then
+		return forward, 0, 0, false
+	end
+	local falling = t - VEND.PUSH_SECONDS
+	local height = math.max(0, drop)
+	local fallen = math.min(height, 0.5 * IDLE.FALL.GRAVITY * falling * falling)
+	local share = if height > 0 then fallen / height else 1
+	return VEND.PUSH, fallen, VEND.TIP * share, fallen >= height
+end
+
 return DepotIdleRules

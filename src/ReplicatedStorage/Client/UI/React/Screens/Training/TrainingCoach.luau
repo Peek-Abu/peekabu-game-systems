@@ -40,14 +40,14 @@ export type TrainingCoachProps = {
 	-- Told where the card is on screen (screen px) whenever it moves or resizes, and nil when it goes (so the phone's
 	-- sticky notes can keep clear of it: TrainingCoachStore.setArea).
 	onArea: ((area: Area?) -> ())?,
-	-- Who says the line (an EmployeeRegistry key: the card's name tab and portrait); nil = Pippa, the guide.
+	-- Who says the line (an EmployeeRegistry key: the card's name tab and portrait); nil = TrainingConstants.GUIDE_EMPLOYEE.
 	coach: string?,
 }
 
 export type Area = TrainingCoachStore.Area
 
--- Who coaches (an EmployeeRegistry key).
-local COACH = "Pippa"
+-- Who coaches (an EmployeeRegistry key): the tutorial's guide.
+local COACH = TrainingConstants.GUIDE_EMPLOYEE
 local CONTEXTS: { [TrainingConstants.CoachPose]: EmployeePoseRegistry.PortraitContext } = {
 	point = "coachPoint",
 	warn = "coachWarn",

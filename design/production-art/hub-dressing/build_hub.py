@@ -113,6 +113,9 @@ PUMP = {"round": (1.25, 0.95, "pumpkin"), "tall": (1.0, 1.25, "pumpkin"), "squat
 def pumpkin():
     """A ribbed pumpkin (10 lobes) with a curved stem and a curled vine leaf. round ~2.5 wide, tall ~2.5 high."""
     v = VAR["v"] or "round"
+    # "<variant>-bare": no leaf and no vine (owner 11-12: the leaves are their own prop, `pumpkinleaf`).
+    bare = v.endswith("-bare")
+    v = v.replace("-bare", "")
     r, hk, mat = PUMP[v]
     bm = bmesh.new(); bmesh.ops.create_uvsphere(bm, u_segments=60, v_segments=28, radius=1.0)
     for vt in bm.verts:
@@ -136,6 +139,9 @@ def pumpkin():
     for i in range(len(pts) - 1):
         t = 0.17 * r * (1 - i * 0.22)
         strut(f"stem{i}", pts[i], pts[i + 1], t, "stem", bevel=0.02)
+    if bare:
+        S2.finish2(f"hb_pumpkin_{v}_bare", tex=512)
+        return
     # a curled vine leaf lying on the shoulder
     leaf = _leafmesh("vleaf", 0.75 * r, "vine_leaf", curl=0.35, seed=3)
     # The veins and stalk are their own object: they move with the leaf (owner 11-11: they were left at the base,
@@ -623,6 +629,249 @@ def bell():
     rod("clapperRod", (0, 0, -0.12), (0, 0, -0.6), 0.02, "paint_ink", 8)
     sphere("clapper", 0, 0, -0.62, 0.07, "paint_ink")
     S2.finish2("hb_bell_v2", tex=1024)
+
+
+# ------------------------------------------------------- hub props (round 5, 11-12) ---
+
+H._SPEC.update({
+    # pumpkin leaves: deep green, a little waxy; the veins a paler green
+    "pk_leaf": lambda: _paint("pk_leaf", (0.11, 0.27, 0.07), 0.6, 0.35, scale=22),
+    "pk_vein": lambda: _paint("pk_vein", (0.42, 0.56, 0.20), 0.6, 0.2, scale=30),
+    "pk_vine": lambda: _paint("pk_vine", (0.20, 0.33, 0.10), 0.7, 0.4, scale=25),
+    # the vending machine: grape painted steel (the game's palette), mint and gold trim, a cream lit back
+    "paint_grape": lambda: _paint("paint_grape", (0.30, 0.16, 0.52), 0.4, 0.15, scale=18),
+    "paint_mint": lambda: _paint("paint_mint", (0.18, 0.72, 0.52), 0.35, 0.1, scale=18),
+    "paint_gold": lambda: _paint("paint_gold", (0.95, 0.66, 0.15), 0.3, 0.2, scale=18),
+    # snacks: glossy printed wrappers and cans in the game's colours
+    "wrap_coral": lambda: _paint("wrap_coral", (0.93, 0.28, 0.33), 0.25, 0.05, scale=12),
+    "wrap_grape": lambda: _paint("wrap_grape", (0.45, 0.24, 0.85), 0.25, 0.05, scale=12),
+    "wrap_mint": lambda: _paint("wrap_mint", (0.20, 0.82, 0.60), 0.25, 0.05, scale=12),
+    "wrap_gold": lambda: _paint("wrap_gold", (1.0, 0.74, 0.18), 0.25, 0.05, scale=12),
+    "wrap_sky": lambda: _paint("wrap_sky", (0.30, 0.72, 0.98), 0.25, 0.05, scale=12),
+    "wrap_cream": lambda: _paint("wrap_cream", (0.98, 0.94, 0.84), 0.35, 0.05, scale=12),
+    "wrap_ink": lambda: _paint("wrap_ink", (0.12, 0.07, 0.22), 0.4, 0.05, scale=12),
+    "can_metal": lambda: _paint("can_metal", (0.72, 0.73, 0.76), 0.2, 0.05, scale=14),
+    "soda_glass": lambda: _paint("soda_glass", (0.30, 0.55, 0.20), 0.08, 0.05, scale=10),
+})
+
+
+def _pkleaf(name, size, seed, cup=0.12):
+    """A pumpkin leaf about `size` across lying in XY, its stalk end at the origin pointing -Y: broad, roughly round,
+    five shallow rounded lobes with a fine toothed edge, a deep notch where the stalk joins, cupped and wavy, with
+    raised pale veins from the stalk to each lobe. Returns (leaf, veins)."""
+    rng = random.Random(seed)
+    centre = Vector((0, 0.5 * size, 0))
+    n = 90
+    bm = bmesh.new()
+    c = bm.verts.new(centre)
+    ring = []
+    for i in range(n):
+        a = -math.pi + (i + 0.5) / n * math.tau  # a = 0 points +Y (the leaf's tip), +-pi the stalk notch
+        lobes = 0.13 * math.cos(5 * a)
+        teeth = 0.012 * math.cos(46 * a)
+        notch = 0.55 * math.exp(-((abs(a) - math.pi) ** 2) / 0.05)
+        rr = size * 0.5 * (0.86 + lobes + teeth - notch)
+        ring.append(bm.verts.new(centre + Vector((math.sin(a) * rr, math.cos(a) * rr, 0))))
+    for i in range(n):
+        bm.faces.new((c, ring[i], ring[(i + 1) % n]))
+    bmesh.ops.subdivide_edges(bm, edges=[e for e in bm.edges if c in e.verts], cuts=3, use_grid_fill=False)
+
+    def shape(co):
+        d = co - centre
+        rad = d.length / (0.5 * size)
+        ang = math.atan2(d.x, d.y)
+        z = cup * size * rad * rad + 0.015 * size * math.sin(5 * ang) * rad
+        return Vector((co.x, co.y, co.z + z))
+
+    for v in bm.verts:
+        v.co = shape(v.co)
+    ret = bmesh.ops.extrude_face_region(bm, geom=list(bm.faces))
+    for v in [e for e in ret["geom"] if isinstance(e, bmesh.types.BMVert)]:
+        v.co.z -= 0.02
+    bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+    leaf = H._add(name, bm, "pk_leaf", 0)
+    vb = bmesh.new()
+    base = centre + Vector((0, -0.42 * size, 0))
+    for k in range(5):
+        a = (k - 2) * math.radians(62)
+        tip = centre + Vector((math.sin(a), math.cos(a), 0)) * size * 0.5 * 0.85
+        d = tip - base
+        perp = Vector((-d.y, d.x, 0)).normalized() * 0.018 * size
+        prev = None
+        for s_ in range(7):
+            q = base + d * (s_ / 6)
+            w = 1.0 - 0.7 * (s_ / 6)
+            va = vb.verts.new(shape(q + perp * w) + Vector((0, 0, 0.012)))
+            vbb = vb.verts.new(shape(q - perp * w) + Vector((0, 0, 0.012)))
+            if prev:
+                vb.faces.new((prev[0], prev[1], vbb, va))
+            prev = (va, vbb)
+    veins = H._add(name + "_veins", vb, "pk_vein", 0)
+    return leaf, veins
+
+
+@prop
+def pumpkinleaf():
+    """A pumpkin's leaves as their own prop (owner 11-12): two broad pumpkin leaves on short stalks off the stem, with a
+    corkscrew tendril, shaped over a round pumpkin's shoulder so they sit on any pumpkin. The pivot (origin) is where
+    the stalks leave the stem: place it at a pumpkin's stem base (scale with the pumpkin). Variant a | b."""
+    v = VAR["v"] or "a"
+    rng = random.Random(5 if v == "a" else 19)
+    # a stand-in round pumpkin to drape onto (removed before export), its top at the origin
+    r, hk = PUMP["round"][0], PUMP["round"][1]
+    bm = bmesh.new()
+    bmesh.ops.create_uvsphere(bm, u_segments=48, v_segments=24, radius=1.0)
+    for vt in bm.verts:
+        x, y, z = vt.co
+        flat = 1 - 0.28 * (abs(z) ** 2.2)
+        vt.co = Vector((x * r, y * r, (z * flat * hk) * r))
+    top = max(vv.co.z for vv in bm.verts)
+    bmesh.ops.translate(bm, verts=bm.verts, vec=(0, 0, -top + 0.02))
+    form = H._add("form", bm, "pumpkin", 0)
+    # (leaf size, turn round the stem, how far out its stalk reaches) as shares of the pumpkin's radius: the leaves
+    # lie on the shoulder, inside the pumpkin's outline, so the drape seats them on the skin.
+    plan = [(0.72, -30, 0.12), (0.55, 115, 0.1)] if v == "a" else [(0.78, 160, 0.12), (0.5, 40, 0.1)]
+    for k, (size, turn, out) in enumerate(plan):
+        leaf, veins = _pkleaf(f"pkleaf{k}", size * r, seed=rng.randint(0, 999))
+        # off its stalk, leaned a little, swung round the stem
+        for ob in (leaf, veins):
+            ob.data.transform(Matrix.Rotation(math.radians(rng.uniform(-8, 8)), 4, "Y"))
+            ob.data.transform(Matrix.Translation((0, out * r, 0)))
+            ob.data.transform(Matrix.Rotation(math.radians(turn), 4, "Z"))
+        _drape(form, (leaf, veins), 0.03)
+        notch = Vector((0, out * r, 0))
+        notch.rotate(Matrix.Rotation(math.radians(turn), 3, "Z"))
+        rod(f"stalk{k}", (0, 0, 0.12), (notch.x * 0.92, notch.y * 0.92, 0.0), 0.035, "pk_vine", 8)
+    # the corkscrew tendril
+    turn = math.radians(rng.uniform(60, 300))
+    pts = []
+    for i in range(36):
+        t = i / 35
+        ang = t * math.tau * 3
+        rad = 0.09 * (1 - 0.5 * t)
+        base = Vector((math.cos(turn) * 0.35 * t, math.sin(turn) * 0.35 * t, 0.15 + 0.45 * t))
+        pts.append(base + Vector((math.cos(ang) * rad, math.sin(ang) * rad, 0)))
+    for i in range(len(pts) - 1):
+        rod(f"tendril{i}", tuple(pts[i]), tuple(pts[i + 1]), 0.018, "pk_vine", 6)
+    if form in H.parts:
+        H.parts.remove(form)
+    bpy.data.objects.remove(form, do_unlink=True)
+    S2.finish2(f"hb_pumpkinleaf_{v}", tex=512)
+
+
+@prop
+def vending():
+    """A chunky snack machine, 3.6 wide x 3.12 deep x 7.4 tall (the hub machine's size): grape painted steel with mint
+    and gold trim; on the left a window (2 x 4.7; the glass is its own part in the hub) onto four shelves with spiral
+    coils and a lit cream back; on the right a panel of lit buttons, a coin slot and a card reader; a pickup tray with
+    a flap across the bottom; a header with a gold Gleam sparkle (no words, no brand). Stocked with the `snack` props
+    in the hub. Front = -Y."""
+    W, D, Hh = 3.6, 3.12, 7.4
+    fy = -D / 2
+    x0, x1, z0, z1 = -1.5, 0.5, 2.05, 6.75
+    back = 0.55
+    box("left", -W / 2, x0, fy, D / 2, 0.0, Hh, "paint_grape", bevel=0.04)
+    box("right", x1, W / 2, fy, D / 2, 0.0, Hh, "paint_grape", bevel=0.04)
+    box("base", x0, x1, fy, D / 2, 0.0, z0, "paint_grape", bevel=0.03)
+    box("head", x0, x1, fy, D / 2, z1, Hh, "paint_grape", bevel=0.03)
+    box("backWall", x0, x1, back, D / 2, z0, z1, "paint_grape", bevel=0.0)
+    box("backLit", x0 + 0.05, x1 - 0.05, back - 0.02, back, z0 + 0.05, z1 - 0.05, "paint_cream", bevel=0.0)
+    t = 0.09
+    box("frameL", x0 - t, x0, fy - 0.04, fy + 0.05, z0 - t, z1 + t, "paint_mint", bevel=0.02)
+    box("frameR", x1, x1 + t, fy - 0.04, fy + 0.05, z0 - t, z1 + t, "paint_mint", bevel=0.02)
+    box("frameB", x0, x1, fy - 0.04, fy + 0.05, z0 - t, z0, "paint_mint", bevel=0.02)
+    box("frameT", x0, x1, fy - 0.04, fy + 0.05, z1, z1 + t, "paint_mint", bevel=0.02)
+    for i in range(4):
+        z = z0 + 0.12 + i * 1.15
+        box(f"shelf{i}", x0, x1, fy + 0.15, back, z - 0.05, z, "steel_mid", bevel=0.01)
+        box(f"shelfLip{i}", x0, x1, fy + 0.12, fy + 0.18, z - 0.05, z + 0.08, "paint_gold", bevel=0.01)
+        for k in range(4):
+            cx = x0 + 0.25 + k * 0.5
+            pts = []
+            for j in range(31):
+                tt = j / 30
+                ang = tt * math.tau * 3.5
+                pts.append((cx + math.cos(ang) * 0.17, fy + 0.25 + tt * (back - fy - 0.35), z + 0.17 + math.sin(ang) * 0.17))
+            for j in range(len(pts) - 1):
+                rod(f"coil{i}_{k}_{j}", pts[j], pts[j + 1], 0.022, "chrome", 6)
+    px0, px1 = x1 + 0.2, W / 2 - 0.2
+    box("panel", px0, px1, fy - 0.03, fy + 0.02, 3.2, 6.6, "paint_ink", bevel=0.01)
+    for row in range(4):
+        for col in range(2):
+            bx = px0 + 0.22 + col * 0.42
+            bz = 5.95 - row * 0.42
+            box(f"btn{row}{col}", bx - 0.13, bx + 0.13, fy - 0.08, fy - 0.03, bz - 0.13, bz + 0.13,
+                "glow" if (row, col) == (0, 0) else "paint_cream", bevel=0.02)
+    box("coinPlate", px0 + 0.1, px1 - 0.1, fy - 0.07, fy - 0.03, 3.95, 4.35, "brass_scan", bevel=0.01)
+    box("coinSlot", px0 + 0.38, px1 - 0.38, fy - 0.08, fy - 0.07, 4.05, 4.25, "paint_ink", bevel=0.0)
+    box("cardReader", px0 + 0.15, px1 - 0.15, fy - 0.1, fy - 0.03, 3.35, 3.75, "steel_dark", bevel=0.02)
+    box("cardLight", px0 + 0.3, px1 - 0.3, fy - 0.11, fy - 0.1, 3.62, 3.68, "glow", bevel=0.0)
+    box("trayFrame", x0 - 0.05, x1 + 0.05, fy - 0.05, fy + 0.02, 0.45, 1.65, "paint_mint", bevel=0.02)
+    box("trayHole", x0 + 0.1, x1 - 0.1, fy - 0.06, fy - 0.04, 0.6, 1.5, "paint_ink", bevel=0.0)
+    box("flap", x0 + 0.12, x1 - 0.12, fy - 0.1, fy - 0.06, 0.95, 1.48, "steel_dark", bevel=0.02)
+    box("flapHandle", x0 + 0.6, x1 - 0.6, fy - 0.14, fy - 0.1, 1.3, 1.4, "chrome", bevel=0.01)
+    box("header", -W / 2 + 0.15, W / 2 - 0.15, fy - 0.06, fy + 0.02, 6.85, 7.25, "paint_mint", bevel=0.02)
+    bm = bmesh.new()
+    cx, cz = 0.0, 7.05
+    ring = []
+    for k in range(8):
+        a = k * math.pi / 4
+        rr = 0.17 if k % 2 == 0 else 0.05
+        ring.append(bm.verts.new((cx + math.sin(a) * rr, fy - 0.07, cz + math.cos(a) * rr)))
+    bm.faces.new(ring)
+    ret = bmesh.ops.extrude_face_region(bm, geom=list(bm.faces))
+    for vv in [e for e in ret["geom"] if isinstance(e, bmesh.types.BMVert)]:
+        vv.co.y -= 0.03
+    bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+    H._add("sparkle", bm, "paint_gold", 0)
+    for x in (-W / 2 + 0.25, W / 2 - 0.25):
+        for y in (fy + 0.25, D / 2 - 0.25):
+            cyl(f"foot{x}{y}", x, y, -0.06, 0.0, 0.12, "steel_dark", 10)
+    S2.finish2("hb_vending", tex=1024)
+
+
+@prop
+def snack():
+    """A vending machine snack, sized for a 0.5-wide coil slot (front = -Y, stands on z=0): can (a soda can, 0.62
+    tall), bottle (a curvy soda bottle, 0.9 tall), chips (a puffy crimped chip bag, 0.78 tall), bar (a wrapped candy
+    bar standing up, 0.72 tall)."""
+    v = VAR["v"] or "can"
+    if v == "can":
+        lathe("can", [(0.0, 0.0), (0.13, 0.0), (0.16, 0.04), (0.165, 0.08), (0.165, 0.54), (0.14, 0.6), (0.13, 0.62), (0.0, 0.62)], "wrap_mint", 28)
+        cyl("band", 0, 0, 0.22, 0.4, 0.168, "wrap_cream", 28)
+        cyl("stripe", 0, 0, 0.29, 0.33, 0.17, "wrap_coral", 28)
+        cyl("lid", 0, 0, 0.6, 0.625, 0.125, "can_metal", 24)
+        box("tab", -0.04, 0.04, -0.08, 0.02, 0.625, 0.64, "can_metal", bevel=0.005)
+        S2.finish2("hb_snack_can", tex=256)
+    elif v == "bottle":
+        prof = [(0.0, 0.0), (0.13, 0.0), (0.15, 0.04), (0.15, 0.2), (0.13, 0.27), (0.15, 0.36), (0.15, 0.52), (0.11, 0.66),
+                (0.055, 0.76), (0.05, 0.82), (0.0, 0.82)]
+        lathe("bottle", prof, "soda_glass", 28)
+        cyl("label", 0, 0, 0.36, 0.52, 0.153, "wrap_gold", 28)
+        cyl("labelStripe", 0, 0, 0.42, 0.46, 0.155, "wrap_coral", 28)
+        cyl("cap", 0, 0, 0.8, 0.9, 0.062, "wrap_coral", 16)
+        S2.finish2("hb_snack_bottle", tex=256)
+    elif v == "chips":
+        w, d, h = 0.44, 0.34, 0.78
+        # a squashed sphere, pinched flat into crimped seams at the top and bottom
+        bm = bmesh.new()
+        bmesh.ops.create_uvsphere(bm, u_segments=24, v_segments=16, radius=1.0)
+        for vt in bm.verts:
+            x, y, z = vt.co
+            pinch = 1.0 - min(1.0, abs(z) ** 6)
+            vt.co = Vector((x * w / 2 * (0.75 + 0.25 * pinch), y * d / 2 * pinch, (z + 1) * h / 2))
+        H._add("bag", bm, "wrap_gold", 0)
+        for k, (za, zb) in enumerate(((0.0, 0.07), (h - 0.07, h))):
+            box(f"crimp{k}", -w / 2 - 0.01, w / 2 + 0.01, -0.03, 0.03, za, zb, "wrap_coral", bevel=0.005)
+        box("window", -0.12, 0.12, -d / 2 - 0.05, -d / 2 - 0.035, 0.28, 0.5, "wrap_cream", bevel=0.0)
+        S2.finish2("hb_snack_chips", tex=256)
+    else:  # bar
+        w, d, h = 0.36, 0.1, 0.72
+        box("wrapper", -w / 2, w / 2, -d / 2, d / 2, 0.04, h - 0.04, "wrap_grape", bevel=0.02)
+        for k, (za, zb) in enumerate(((0.0, 0.05), (h - 0.05, h))):
+            box(f"end{k}", -w / 2 + 0.02, w / 2 - 0.02, -d / 2 + 0.03, d / 2 - 0.03, za, zb, "wrap_grape", bevel=0.005)
+        box("stripe", -w / 2 - 0.002, w / 2 + 0.002, -d / 2 - 0.004, d / 2 + 0.004, h * 0.42, h * 0.58, "wrap_gold", bevel=0.0)
+        S2.finish2("hb_snack_bar", tex=256)
 
 
 if __name__ == "__main__":

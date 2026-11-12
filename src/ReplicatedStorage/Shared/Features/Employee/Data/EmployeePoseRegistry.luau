@@ -250,9 +250,33 @@ local EmployeePoseRegistry = {
 	mirror = mirror,
 }
 
+-- Each employee's set, made once: the kit's poses, each wearing the employee's own face where its personality names
+-- one (EmployeeRegistry `poseFaces`, worn when the model has it; the pose's face otherwise).
+local SETS: { [string]: PortraitSet } = {}
+
 -- The employee's set: the kit's for every registered employee (without one, a stock avatar stays at rest).
 function EmployeePoseRegistry.get(employee: string): PortraitSet?
-	return if EmployeeRegistry.get(employee) ~= nil then KIT_SET else nil
+	local def = EmployeeRegistry.get(employee)
+	if def == nil then
+		return nil
+	end
+	local own = def.poseFaces
+	if own == nil then
+		return KIT_SET
+	end
+	local made = SETS[employee]
+	if made == nil then
+		local poses: { [string]: PoseDef } = {}
+		for name, kit in KIT_POSES do
+			local face = own[name]
+			poses[name] = if face ~= nil
+				then table.freeze({ name = kit.name, face = kit.face, joints = kit.joints, look = face })
+				else kit
+		end
+		made = table.freeze({ poses = table.freeze(poses), contexts = KIT_SET.contexts })
+		SETS[employee] = made
+	end
+	return made
 end
 
 -- The employees that have a set (every registered one), sorted.

@@ -233,6 +233,16 @@ local DepotSpotConstants = {
 		RATTLE = table.freeze({ DEGREES = 3, FREQUENCY = 9, DAMPING = 5, SECONDS = 0.6 }),
 		SWAY = table.freeze({ DEGREES = 5, FREQUENCY = 1.3, SECONDS = 1.8 }),
 		FALL = table.freeze({ GRAVITY = 40, DISTANCE = 1.2 }),
+		-- The vending machine's "candrop" (owner 11-12): one of the stocked items (parts tagged STOCK_TAG inside the
+		-- marker part's box) is nudged PUSH studs forward off its shelf over PUSH_SECONDS, drops to the marker's bottom
+		-- (the tray), tipping TIP degrees, rests REST seconds, and is back on its shelf (local only).
+		VEND = table.freeze({
+			STOCK_TAG = "DepotVendingStock",
+			PUSH = 0.3,
+			PUSH_SECONDS = 0.35,
+			TIP = 75,
+			REST = 1.2,
+		}),
 		-- The time clock art's dial part: the hub's clock (built by the server) tags it "tick" so its second hand turns.
 		CLOCK_DIAL = "ClockFace",
 		INTERVALS = table.freeze(IDLE_INTERVALS),

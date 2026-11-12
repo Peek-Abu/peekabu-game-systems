@@ -27,10 +27,39 @@ return function()
 			expect(EmployeePoseRegistry.get("Pippa")).to.be.ok()
 		end)
 
-		it("gives every employee on the kit rig the same set, so none shows the rig's T-pose", function()
-			expect(EmployeePoseRegistry.get("Prickles")).to.equal(EmployeePoseRegistry.get("Pippa"))
-			expect(EmployeePoseRegistry.get("Cappy")).to.equal(EmployeePoseRegistry.get("Pippa"))
+		it("gives every employee on the kit rig the same poses, so none shows the rig's T-pose", function()
+			local pippa = EmployeePoseRegistry.get("Pippa")
+			for _, name in { "Prickles", "Cappy" } do
+				local set = EmployeePoseRegistry.get(name)
+				expect(set.contexts).to.equal(pippa.contexts)
+				for poseName, pose in pippa.poses do
+					expect(set.poses[poseName].joints).to.equal(pose.joints)
+				end
+			end
 		end)
+
+		it(
+			"wears an employee's own face for a pose where its personality says so (owner 11-12: gruff Prickles)",
+			function()
+				local EmployeeRegistry =
+					require(game:GetService("ReplicatedStorage").Shared.Features.Employee.Data.EmployeeRegistry)
+				local prickles = EmployeePoseRegistry.get("Prickles")
+				local own = EmployeeRegistry.get("Prickles").poseFaces
+				expect(own).to.be.ok()
+				for poseName, face in own do
+					expect(prickles.poses[poseName].look).to.equal(face)
+				end
+				-- Not happy when he points the way.
+				expect(prickles.poses.point.look).never.to.equal("Happy")
+				expect(prickles.poses.point.look).to.be.ok()
+				-- An employee without its own faces keeps the kit's.
+				local pippa = EmployeePoseRegistry.get("Pippa")
+				expect(pippa.poses.point.look).to.equal(nil)
+				expect(pippa.poses.shh.look).to.equal("Shh")
+				-- The same set object each time (portraits key on it).
+				expect(EmployeePoseRegistry.get("Prickles")).to.equal(prickles)
+			end
+		)
 
 		it("returns nil for an employee with no portrait set", function()
 			expect(EmployeePoseRegistry.get("Nobody")).never.to.be.ok()

@@ -143,6 +143,9 @@ export type EmployeeDef = {
 	defaultFace: Face,
 	-- The face for every gameplay state.
 	expressions: { [GameplayState]: Face },
+	-- Portrait pose name (EmployeePoseRegistry) -> a face from this model's Faces folder it wears in that pose instead
+	-- of the kit's (its personality: gruff Prickles never points the way smiling). nil = the kit's faces.
+	poseFaces: { [string]: string }?,
 	-- The looks this employee can wear, by name, and the one everyone gets by default.
 	skins: { [string]: SkinDef },
 	-- The FootstepAssets set its steps play (the client's FootstepSet attribute); nil = its own name in lower case.
@@ -429,6 +432,18 @@ EMPLOYEES.Prickles = {
 		cleaning = "Content",
 		carrying = "Content",
 		idle = "Content",
+	},
+	-- Gruff but brave (owner 11-12: the coach must fit Prickles, not smile like Pippa): he points the way with grit,
+	-- says careful and hide looking tough, sneaks suspicious, and his "well done" is a smug grin; a win is a yeehaw.
+	poseFaces = {
+		point = "Grit",
+		warn = "RevealGuardedTough",
+		shh = "RevealSuspicious",
+		hide = "RevealGuardedTough",
+		coachCheer = "Smug",
+		victory = "Yeehaw",
+		wave = "Grit",
+		stand = "Content",
 	},
 	skins = {
 		Default = plainDefault(),
