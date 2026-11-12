@@ -218,9 +218,10 @@ for _, patch in map.Gloom:GetChildren() do
 			goo.Reflectance = 0.08
 			-- A wet highlight on the bigger blobs.
 			if d > 1.3 then
-				local shine = block("Shine", Vector3.new(0.09, d * 0.28, d * 0.18), patch.CFrame * CFrame.new(x - d * 0.18, floorY + layer + 0.02, z - d * 0.15) * up, Enum.Material.SmoothPlastic, Color3.fromRGB(176, 140, 255), patch)
+				local shine = block("Shine", Vector3.new(0.09, d * 0.28, d * 0.18), patch.CFrame * CFrame.new(x - d * 0.18, floorY + layer + 0.02, z - d * 0.15) * up, Enum.Material.Neon, Color3.fromRGB(150, 110, 240), patch)
 				shine.Shape = Enum.PartType.Cylinder
-				shine.Transparency = 0.35
+				-- A faint glow, so the goo still reads once the hall's lights go out at stop 3.
+				shine.Transparency = 0.45
 			end
 			blobs += 1
 		end
