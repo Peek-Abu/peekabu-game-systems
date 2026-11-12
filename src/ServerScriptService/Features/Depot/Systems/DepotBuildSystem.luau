@@ -403,37 +403,18 @@ function DepotBuildSystem.buildPlan(
 		local clock = boardAt("WeeklyTimeClock", Vector3.new(3, 4, 1), clockSpot, 2, Color3.fromHex("1f6e66"), boards)
 		clock:SetAttribute(InteractionConstants.KIND_ATTRIBUTE, TimecardConstants.CLOCK_KIND)
 		CollectionService:AddTag(clock, InteractionConstants.TAG)
-		local art = TruckVisual.clockTemplate()
-		if art ~= nil then
-			local body = art:Clone()
-			body.Name = "TimeClockArt"
-			local _, artSize = body:GetBoundingBox()
-			body:ScaleTo(math.min(3 / math.max(artSize.X, 0.1), 4 / math.max(artSize.Y, 0.1)))
-			body:PivotTo(clock.CFrame)
-			for _, part in body:GetDescendants() do
-				if part:IsA("BasePart") then
-					part.Anchored = true
-					part.CanCollide = false
-					part.CanQuery = false
-					part.CanTouch = false
-				end
-			end
-			body.Parent = boards
-			clock.Transparency = 1
-		end
 		local px = DepotConstants.BILLBOARD_PX.clock
+		local signSize = px * DepotConstants.SMALL_SIGN_STUDS_PER_PX
 		local signPart = boardAt(
 			"ClockSignBoard",
-			Vector3.new(
-				px.X * DepotConstants.SMALL_SIGN_STUDS_PER_PX,
-				px.Y * DepotConstants.SMALL_SIGN_STUDS_PER_PX,
-				0.1
-			),
+			Vector3.new(signSize.X, signSize.Y, 0.1),
 			clockSpot,
-			4.4 + px.Y * DepotConstants.SMALL_SIGN_STUDS_PER_PX / 2,
+			4.4 + signSize.Y / 2,
 			Color3.new(1, 1, 1),
 			boards
 		)
+		-- The art turned to the readers and the sign, both on one back standing on the floor (owner 11-11).
+		BoardVisual.hangClock(clock, TruckVisual.clockTemplate(), signPart, boards)
 		signPart.Transparency = 1
 		signPart.CanCollide = false
 		signPart.CanQuery = false
@@ -457,6 +438,14 @@ function DepotBuildSystem.buildPlan(
 		daily.CanCollide = false
 		daily:SetAttribute(InteractionConstants.KIND_ATTRIBUTE, TimecardConstants.DAILY_KIND)
 		CollectionService:AddTag(daily, InteractionConstants.TAG)
+		-- A back on legs behind the sheet, so it is not a picture floating in the air.
+		BoardVisual.backer(
+			"DailyBacker",
+			daily.CFrame * CFrame.new(0, 0, size.Z / 2),
+			Vector2.new(size.X, size.Y),
+			dailySpot.Y,
+			boards
+		)
 		local dailySign = surface("DailySign", daily, px)
 		CollectionService:AddTag(dailySign, DepotConstants.BILLBOARD_TAGS.daily)
 		dailySign.Parent = boards

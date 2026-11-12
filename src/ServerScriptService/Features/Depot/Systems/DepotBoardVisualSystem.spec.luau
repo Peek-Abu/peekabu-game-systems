@@ -132,4 +132,83 @@ return function()
 			end
 		end)
 	end)
+
+	describe("backer", function()
+		-- A small sign's face 3 studs up, facing +x (its readers), its frame's +Z toward them like a board's.
+		local face = CFrame.new(10, 4, 20) * CFrame.Angles(0, math.rad(90), 0)
+		local size = Vector2.new(4, 2)
+		local function local_(part)
+			local half = part.Size / 2
+			local low, high =
+				Vector3.new(math.huge, math.huge, math.huge), Vector3.new(-math.huge, -math.huge, -math.huge)
+			for _, x in { -1, 1 } do
+				for _, y in { -1, 1 } do
+					for _, z in { -1, 1 } do
+						local corner = face:PointToObjectSpace(
+							(part.CFrame * CFrame.new(half.X * x, half.Y * y, half.Z * z)).Position
+						)
+						low = low:Min(corner)
+						high = high:Max(corner)
+					end
+				end
+			end
+			return low, high
+		end
+
+		it("puts a solid back behind the whole face and nothing in front of it", function()
+			local model = Visual.backer("SignBacker", face, size, 1, folder)
+			local backing = model:FindFirstChild("Backing")
+			expect(backing).never.to.equal(nil)
+			local low, high = local_(backing)
+			expect(low.X <= -size.X / 2).to.equal(true)
+			expect(high.X >= size.X / 2).to.equal(true)
+			expect(low.Y <= -size.Y / 2).to.equal(true)
+			expect(high.Y >= size.Y / 2).to.equal(true)
+			expect(high.Z - low.Z >= 0.2).to.equal(true)
+			for _, part in model:GetDescendants() do
+				if part:IsA("BasePart") then
+					local _, partHigh = local_(part)
+					expect(partHigh.Z <= -0.01).to.equal(true)
+				end
+			end
+		end)
+
+		it("stands a raised back on legs down to the floor", function()
+			local model = Visual.backer("SignBacker", face, size, 1, folder)
+			local legs, feet = 0, 0
+			for _, part in model:GetChildren() do
+				if part.Name == "Leg" then
+					legs += 1
+					local low = local_(part)
+					expect(low.Y + face.Y).to.be.near(1, 0.13)
+					expect(part.CanCollide).to.equal(true)
+				elseif part.Name == "Foot" then
+					feet += 1
+					local low = local_(part)
+					expect(low.Y + face.Y).to.be.near(1, 1e-3)
+				end
+			end
+			expect(legs).to.equal(2)
+			expect(feet).to.equal(2)
+		end)
+
+		it("needs no legs when the back already reaches the floor", function()
+			local model = Visual.backer("SignBacker", face, size, face.Y - size.Y / 2, folder)
+			expect(model:FindFirstChild("Leg")).to.equal(nil)
+			local low = local_(model:FindFirstChild("Backing"))
+			expect(low.Y + face.Y).to.be.near(face.Y - size.Y / 2, 1e-3)
+		end)
+
+		it("is anchored and untouchable", function()
+			local model = Visual.backer("SignBacker", face, size, 1, folder)
+			expect(model.Parent).to.equal(folder)
+			for _, part in model:GetDescendants() do
+				if part:IsA("BasePart") then
+					expect(part.Anchored).to.equal(true)
+					expect(part.CanTouch).to.equal(false)
+					expect(part.CanQuery).to.equal(false)
+				end
+			end
+		end)
+	end)
 end

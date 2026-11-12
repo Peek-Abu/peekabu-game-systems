@@ -110,6 +110,22 @@ return table.freeze({
 		STICKER_TEAL = Color3.fromHex("1f6e66"),
 		STICKER_GOLD = Color3.fromHex("e8b23c"),
 	}),
+	-- The back behind a small sign (DepotBoardVisualSystem.backer; owner 11-11: no sign floats or is see-through from
+	-- behind): a teal panel MARGIN round the face and DEPTH deep, GAP behind it; raised, on two graphite legs (LEG
+	-- square, LEG_INSET in from the panel's sides) with feet on the floor. A back within MIN_LEG of the floor stands on it.
+	BOARD_BACKER = table.freeze({
+		MARGIN = 0.25,
+		DEPTH = 0.3,
+		GAP = 0.02,
+		LEG = 0.3,
+		LEG_INSET = 0.6,
+		MIN_LEG = 0.1,
+		FOOT = Vector3.new(0.5, 0.12, 1.4),
+		PANEL_COLOR = Color3.fromHex("1f6e66"),
+		LEG_COLOR = Color3.fromHex("2e3536"),
+		-- The time clock's back in its hit box's space (+Z toward the readers): where its art and sign hang.
+		CLOCK_BACK_Z = -0.45,
+	}),
 	-- Trucks, boards and spawns keep this far inside the walls.
 	MARGIN = 3,
 	-- Space between two trucks.

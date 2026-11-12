@@ -27,6 +27,36 @@ return function()
 			expect(dailySign ~= nil).to.equal(true)
 			expect(game:GetService("CollectionService"):HasTag(dailySign, "DepotDailySign")).to.equal(true)
 		end)
+		it("turns the time clock's art to face its readers (owner 11-11: it faced the wall)", function()
+			built = Build.build(Layout, CFrame.new(50000, 0, 0), {})
+			local clock = built.model:FindFirstChild("WeeklyTimeClock", true)
+			local art = built.model:FindFirstChild("TimeClockArt", true)
+			if art ~= nil then
+				-- The clock part's +Z faces its readers (a board's sign side); the art's face is its LookVector.
+				expect(art:GetPivot().LookVector:Dot(-clock.CFrame.LookVector) > 0.99).to.equal(true)
+			end
+		end)
+
+		it("hangs the clock and its sign on a back that stands on the floor, and backs the daily sheet", function()
+			built = Build.build(Layout, CFrame.new(50000, 0, 0), {})
+			local clock = built.model:FindFirstChild("WeeklyTimeClock", true)
+			local sign = built.model:FindFirstChild("ClockSignBoard", true)
+			local backer = built.model:FindFirstChild("ClockBacker", true)
+			expect(backer).never.to.equal(nil)
+			local backing = backer:FindFirstChild("Backing")
+			local floorY = clock.Position.Y - clock.Size.Y / 2
+			expect(backing.Position.Y - backing.Size.Y / 2).to.be.near(floorY, 1e-3)
+			expect(backing.Position.Y + backing.Size.Y / 2 >= sign.Position.Y + sign.Size.Y / 2).to.equal(true)
+			-- The sign sits on the back's face, not in the air in front of it.
+			local signBack = clock.CFrame:PointToObjectSpace(sign.Position).Z - sign.Size.Z / 2
+			local backFront = clock.CFrame:PointToObjectSpace(backing.Position).Z + backing.Size.Z / 2
+			expect(signBack - backFront >= 0).to.equal(true)
+			expect(signBack - backFront < 0.1).to.equal(true)
+			local daily = built.model:FindFirstChild("DailyBacker", true)
+			expect(daily).never.to.equal(nil)
+			expect(daily:FindFirstChild("Backing")).never.to.equal(nil)
+		end)
+
 		it("builds collidable visible ceiling geometry", function()
 			built = Build.build(Layout, CFrame.new(50000, 0, 0), {})
 			local ceiling = built.model:FindFirstChild("Ceiling", true)

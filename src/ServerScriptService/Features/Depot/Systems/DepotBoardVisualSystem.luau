@@ -20,6 +20,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local DepotLayoutConstants = require(ServerScriptService.Features.Depot.Data.DepotLayoutConstants)
 
 local BODY = DepotLayoutConstants.BOARD_BODY
+local BACKER = DepotLayoutConstants.BOARD_BACKER
 
 local function piece(
 	name: string,
@@ -218,6 +219,107 @@ function DepotBoardVisualSystem.build(board: BasePart, parent: Instance): Model
 
 	model.Parent = parent
 	return model
+end
+
+--[=[
+	Builds a back behind a small sign into a Model `name` under `parent`, and returns it. `face` is the centre of the
+	sign's face, its +Z toward the readers (a board part's frame); `size` the face's width and height. The panel stands
+	on the floor (`floorY`) when it reaches it, else on two legs with feet, so nothing floats and nothing is
+	see-through from behind. Only the legs collide.
+]=]
+function DepotBoardVisualSystem.backer(
+	name: string,
+	face: CFrame,
+	size: Vector2,
+	floorY: number,
+	parent: Instance
+): Model
+	local model = Instance.new("Model")
+	model.Name = name
+	local finish = Enum.Material.SmoothPlastic
+	local width = size.X + 2 * BACKER.MARGIN
+	local top = size.Y / 2 + BACKER.MARGIN
+	local floor = floorY - face.Y
+	local bottom = -size.Y / 2 - BACKER.MARGIN
+	local raised = bottom - floor > BACKER.MIN_LEG
+	if not raised then
+		bottom = floor
+	end
+	local panelZ = -BACKER.GAP - BACKER.DEPTH / 2
+	piece(
+		"Backing",
+		Vector3.new(width, top - bottom, BACKER.DEPTH),
+		face * CFrame.new(0, (top + bottom) / 2, panelZ),
+		BACKER.PANEL_COLOR,
+		finish,
+		model
+	)
+	if raised then
+		local legZ = -BACKER.GAP - BACKER.DEPTH - BACKER.LEG / 2
+		-- Each leg runs up behind the panel to half its height, so it reads as holding it.
+		local legTop = (top + bottom) / 2
+		for _, side in { -1, 1 } do
+			local x = side * (width / 2 - BACKER.LEG_INSET)
+			local leg = piece(
+				"Leg",
+				Vector3.new(BACKER.LEG, legTop - floor, BACKER.LEG),
+				face * CFrame.new(x, (legTop + floor) / 2, legZ),
+				BACKER.LEG_COLOR,
+				finish,
+				model
+			)
+			leg.CanCollide = true
+			piece(
+				"Foot",
+				BACKER.FOOT,
+				face * CFrame.new(x, floor + BACKER.FOOT.Y / 2, legZ - BACKER.FOOT.Z / 2 + BACKER.LEG / 2),
+				BACKER.LEG_COLOR,
+				finish,
+				model
+			)
+		end
+	end
+	model.Parent = parent
+	return model
+end
+
+--[=[
+	Hangs the weekly time clock (owner 11-11: it faced the wall, and its sign floated): `art` (the approved clock
+	template, nil = the hit box stays a graybox block) is cloned, fitted to `clock` (the hit box, its +Z toward the
+	readers) and turned to face them on the hit box's back; `sign` (its sign part, already above the clock) moves onto
+	that back; and one back (`backer`, "ClockBacker") behind both stands on the floor.
+]=]
+function DepotBoardVisualSystem.hangClock(clock: BasePart, art: Model?, sign: BasePart, parent: Instance)
+	local backZ = BACKER.CLOCK_BACK_Z
+	if art ~= nil then
+		local body = art:Clone()
+		body.Name = "TimeClockArt"
+		local _, artSize = body:GetBoundingBox()
+		body:ScaleTo(math.min(clock.Size.X / math.max(artSize.X, 0.1), clock.Size.Y / math.max(artSize.Y, 0.1)))
+		-- The art's pivot is its back centre and its face its LookVector.
+		body:PivotTo(clock.CFrame * CFrame.new(0, 0, backZ) * CFrame.Angles(0, math.pi, 0))
+		for _, part in body:GetDescendants() do
+			if part:IsA("BasePart") then
+				part.Anchored = true
+				part.CanCollide = false
+				part.CanQuery = false
+				part.CanTouch = false
+			end
+		end
+		body.Parent = parent
+		clock.Transparency = 1
+	end
+	local offset = clock.CFrame:ToObjectSpace(sign.CFrame)
+	sign.CFrame = clock.CFrame * CFrame.new(offset.X, offset.Y, backZ + sign.Size.Z / 2)
+	local low = -clock.Size.Y / 2 + BACKER.MARGIN
+	local high = offset.Y + sign.Size.Y / 2
+	DepotBoardVisualSystem.backer(
+		"ClockBacker",
+		clock.CFrame * CFrame.new(0, (low + high) / 2, backZ),
+		Vector2.new(math.max(sign.Size.X, clock.Size.X), high - low),
+		clock.Position.Y - clock.Size.Y / 2,
+		parent
+	)
 end
 
 return DepotBoardVisualSystem
