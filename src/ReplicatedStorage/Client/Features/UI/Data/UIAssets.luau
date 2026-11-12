@@ -28,7 +28,9 @@ export type ToonIcon =
 	"abilityLetsGo"
 	| "abilityPottedPlant"
 	| "abilitySpotIt"
+	| "bell"
 	| "clock"
+	| "coffee"
 	| "dust"
 	| "fishtank"
 	| "flashlight"
@@ -60,6 +62,7 @@ export type ToonIcon =
 	| "mop"
 	| "pippaHappy"
 	| "pippaWorried"
+	| "radio"
 	| "settings"
 	| "shopGift"
 	| "spray"
@@ -108,7 +111,12 @@ local TOON_ICONS: { [ToonIcon]: string } = {
 	gleamCrate = "rbxassetid://71294352475481",
 	gleamTruck = "rbxassetid://86130539333417",
 	shopGift = "rbxassetid://116419935164686",
+	-- The hub's station renders (2026-11-12): the shift bell and the radio from their models, the coffee mug from the
+	-- break room's (decals 127753490073652, 135622491578671, 132800978467871).
+	bell = "rbxassetid://85494966459975",
 	clock = "rbxassetid://97995675031546",
+	coffee = "rbxassetid://115766343705043",
+	radio = "rbxassetid://81820573675358",
 	dust = "rbxassetid://87348303383802",
 	fishtank = "rbxassetid://72370733106499",
 	flashlight = "rbxassetid://115788026706324",

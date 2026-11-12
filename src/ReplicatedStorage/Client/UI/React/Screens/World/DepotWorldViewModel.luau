@@ -16,8 +16,6 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local TimecardConstants = require(ReplicatedStorage.Shared.Features.Timecard.Data.TimecardConstants)
-
 local PublicPlayerTypes = require(ReplicatedStorage.Shared.Data.PublicPlayerTypes)
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local HostConstants = require(ReplicatedStorage.Shared.Features.Host.Data.HostConstants)
@@ -50,6 +48,8 @@ export type WorkOrderView = {
 	client: string,
 	job: string,
 	clear: string,
+	-- The Gloom to remove as a bare number (a range while the viewer is in no truck): the board's big number.
+	quota: string,
 	before: string,
 	key: string,
 	action: string,
@@ -188,11 +188,14 @@ function DepotWorldViewModel.workOrder(attributes: { [string]: unknown }, crew: 
 	end
 	local clear: string
 	local who: string
+	local quota: string
 	if crew == nil then
+		quota = `{ShiftQuotaFormulas.quota(1)}–{ShiftQuotaFormulas.quota(HostConstants.SEATS)}`
 		clear = `REMOVE {ShiftQuotaFormulas.quota(1)}–{ShiftQuotaFormulas.quota(HostConstants.SEATS)} GLOOM`
 		who = "more crew, more Gloom"
 	else
 		clear = string.upper(ShiftCurrencyUtils.contract(ShiftQuotaFormulas.quota(crew)))
+		quota = tostring(ShiftQuotaFormulas.quota(crew))
 		who = if crew <= 1 then "for one player" else `for a crew of {crew}`
 	end
 	return {
@@ -201,6 +204,7 @@ function DepotWorldViewModel.workOrder(attributes: { [string]: unknown }, crew: 
 		client = WorldBillboardViewModel.clip(client, DepotWorldViewModel.WORK_CLIENT_MAX),
 		job = job,
 		clear = clear,
+		quota = quota,
 		before = `{who} · {ShiftHudViewModel.clock(ShiftConstants.SHIFT_SECONDS)} on the clock`,
 		key = "E",
 		action = "Read today's job",
@@ -280,25 +284,6 @@ end
 -- Whether the shared result board's shell draws: not while this client has its own review shell (one sign per spot).
 function DepotWorldViewModel.drawsSharedBoard(hasReview: boolean): boolean
 	return not hasReview
-end
-
-export type ClockSignView = { title: string, line: string, reward: string }
-export type DailySignView = { title: string, job: string, line: string }
-
--- The sign over the hub's weekly time clock: what it is and what punching in gives (TimecardConstants: the KEY_PUNCH-th
--- punch pays a Gloom Locker key). Words for young players.
-function DepotWorldViewModel.clockSign(): ClockSignView
-	return {
-		title = "TIME CLOCK",
-		line = "Punch in every day!",
-		reward = `{TimecardConstants.KEY_PUNCH} days = a locker key`,
-	}
-end
-
--- The daily bonus sheet: today's work order (WorkOrderRegistry.orderFor), named DAILY BONUS so it never reads like
--- tonight's job on the contract board.
-function DepotWorldViewModel.dailySign(job: string): DailySignView
-	return { title = "DAILY BONUS", job = job, line = "Do it today for bonus Credits!" }
 end
 
 return DepotWorldViewModel

@@ -181,6 +181,48 @@ local DepotSpotConstants = {
 		WAKE_RADIUS = 10,
 		COOLDOWN = 25,
 	}),
+	-- The stations' toppers (DepotTopperSystem, DepotTopperRules; owner 11-12, kit mock round 2 #1, ideas #5 and #6). A
+	-- builder places a thin part tagged TAG with ATTRIBUTE naming its station (a key of DepotTopperConstants.STATIONS);
+	-- its LookVector faces the readers. The client stands a kit plate there (PLATE studs, drawn at PIXELS_PER_STUD), a
+	-- backing behind it, a warm light pool under it (POOL) and the station's lane on the floor in front (LANE: from
+	-- LANE_START_ATTRIBUTE studs ahead of the anchor, LANE_LENGTH_ATTRIBUTE long; defaults below). The time clock and
+	-- the daily sheet are built by the server, so their toppers stand on their sign shells (SHELL_GAP above the top).
+	TOPPER = table.freeze({
+		TAG = "DepotTopper",
+		ATTRIBUTE = "Topper",
+		LANE_START_ATTRIBUTE = "LaneStart",
+		LANE_LENGTH_ATTRIBUTE = "LaneLength",
+		-- The topper's canvas (studs): the plate at the bottom, the icon breaking out of its top edge above it.
+		PLATE = Vector2.new(2.8, 2.1),
+		-- The plate body's share of the canvas height (the backing covers just the body).
+		BODY_SHARE = 0.5,
+		PIXELS_PER_STUD = 100,
+		SHELL_GAP = 0.05,
+		POOL = table.freeze({
+			COLOR = Color3.fromRGB(255, 196, 120),
+			BRIGHTNESS = 1.6,
+			ANGLE = 70,
+			-- Studs past the floor the light reaches, at least MIN_RANGE.
+			REACH = 2,
+			MIN_RANGE = 6,
+		}),
+		LANE = table.freeze({
+			START = 2,
+			LENGTH = 6,
+			WIDTH = 1.6,
+			THICKNESS = 0.02,
+			-- Studs above the floor, so the lane never flickers with the floor paint.
+			LIFT = 0.012,
+			-- How far below the anchor the floor is looked for.
+			PROBE = 40,
+			CHEVRONS = 3,
+		}),
+		-- The outline on the station the prompt picked (ideas #6): soft, only while looked at.
+		OUTLINE = table.freeze({
+			TRANSPARENCY = 0.25,
+			FADE = 0.15,
+		}),
+	}),
 	IDLE = table.freeze({
 		TAG = "DepotIdleMotion",
 		ATTRIBUTE = "IdleMotion",

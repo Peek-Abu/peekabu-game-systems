@@ -38,6 +38,11 @@ local DepotBoardViewModel = require(ReplicatedStorage.Client.UI.React.Screens.De
 local DepotTruckTag = require(ReplicatedStorage.Client.UI.React.Screens.World.DepotTruckTag)
 local DepotWorkOrderBoard = require(ReplicatedStorage.Client.UI.React.Screens.World.DepotWorkOrderBoard)
 local DepotWorldViewModel = require(ReplicatedStorage.Client.UI.React.Screens.World.DepotWorldViewModel)
+local DepotRankBoard = require(ReplicatedStorage.Client.UI.React.Screens.World.DepotRankBoard)
+local DepotSignViewModel = require(ReplicatedStorage.Client.UI.React.Screens.World.DepotSignViewModel)
+local RankViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Rank.RankViewModel)
+local TimecardRules = require(ReplicatedStorage.Shared.Features.Timecard.Rules.TimecardRules)
+local WorkOrderRules = require(ReplicatedStorage.Shared.Features.WorkOrder.Rules.WorkOrderRules)
 local LeaderboardBoard = require(ReplicatedStorage.Client.UI.React.Screens.Leaderboard.LeaderboardBoard)
 local LeaderboardBoardViewModel =
 	require(ReplicatedStorage.Client.UI.React.Screens.Leaderboard.LeaderboardBoardViewModel)
@@ -162,22 +167,47 @@ local function drawCrewBoards(force: boolean)
 	end
 end
 
--- The small signs (owner 11-11): the time clock's (fixed words) and the daily bonus sheet (today's work order,
--- redrawn when the day turns).
-local clockSigns: { [UIBillboards.WorldShell]: true } = {}
+-- The number-and-picture signs (owner 11-12, kit mock round 2 #2): the time clock's punches, today's bonus job and
+-- the rank ladder, each from this player's synced state, redrawn on the tick only when what they show changed (each
+-- shell keeps the words it last drew).
+local clockSigns: { [UIBillboards.WorldShell]: string } = {}
 local dailySigns: { [UIBillboards.WorldShell]: string } = {}
+local rankBoards: { [UIBillboards.WorldShell]: string } = {}
 
-local function drawClock(shell: UIBillboards.WorldShell)
-	roots.show(shell, sign(PX.clock, e(DepotClockSign, { view = DepotWorldViewModel.clockSign() })))
+local function drawClock(shell: UIBillboards.WorldShell, force: boolean)
+	local now = Workspace:GetServerTimeNow()
+	local view = DepotSignViewModel.clock(TimecardRules.status(StateSyncClientStore.timecard(), now))
+	local words = `{table.concat(view.slots, ",")}|{view.keyEarned}`
+	if not force and clockSigns[shell] == words then
+		return
+	end
+	clockSigns[shell] = words
+	roots.show(shell, sign(PX.clock, e(DepotClockSign, { view = view })))
 end
 
 local function drawDaily(shell: UIBillboards.WorldShell, force: boolean)
-	local job = WorkOrderRegistry.orderFor(Workspace:GetServerTimeNow()).label
-	if not force and dailySigns[shell] == job then
+	local now = Workspace:GetServerTimeNow()
+	local view = DepotSignViewModel.daily(
+		WorkOrderRegistry.orderFor(now),
+		WorkOrderRules.roll(StateSyncClientStore.workOrder(), now)
+	)
+	local words = `{view.icon}|{view.count}|{view.progress}|{view.done}`
+	if not force and dailySigns[shell] == words then
 		return
 	end
-	dailySigns[shell] = job
-	roots.show(shell, sign(PX.daily, e(DepotDailySign, { view = DepotWorldViewModel.dailySign(job) })))
+	dailySigns[shell] = words
+	roots.show(shell, sign(PX.daily, e(DepotDailySign, { view = view })))
+end
+
+local function drawRank(shell: UIBillboards.WorldShell, force: boolean)
+	local rank = RankViewModel.rankOf(StateSyncClientStore.publicPlayers(), Players.LocalPlayer.UserId)
+	local view = DepotSignViewModel.ranks(if rank ~= nil then rank.xp else nil)
+	local words = tostring(view.you)
+	if not force and rankBoards[shell] == words then
+		return
+	end
+	rankBoards[shell] = words
+	roots.show(shell, sign(PX.rank, e(DepotRankBoard, { view = view })))
 end
 
 local function count(set: { [UIBillboards.WorldShell]: true }): number
@@ -230,10 +260,14 @@ function DepotBillboardSystem.start()
 		crewBoards[shell] = nil
 	end)
 	watch(TAGS.clock, function(shell)
-		clockSigns[shell] = true
-		drawClock(shell)
+		drawClock(shell, true)
 	end, function(shell)
 		clockSigns[shell] = nil
+	end)
+	watch(TAGS.rank, function(shell)
+		drawRank(shell, true)
+	end, function(shell)
+		rankBoards[shell] = nil
 	end)
 	watch(TAGS.daily, function(shell)
 		drawDaily(shell, true)
@@ -269,6 +303,12 @@ function DepotBillboardSystem.start()
 		for shell in dailySigns do
 			drawDaily(shell, false)
 		end
+		for shell in clockSigns do
+			drawClock(shell, false)
+		end
+		for shell in rankBoards do
+			drawRank(shell, false)
+		end
 	end)
 	table.insert(stoppers, function()
 		ticking:Disconnect()
@@ -284,6 +324,7 @@ function DepotBillboardSystem.stop()
 	table.clear(trucks)
 	table.clear(clockSigns)
 	table.clear(dailySigns)
+	table.clear(rankBoards)
 	table.clear(results)
 	table.clear(reviews)
 	table.clear(drawn)

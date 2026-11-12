@@ -42,6 +42,8 @@ local DepotSpotSystem = require(ReplicatedStorage.Client.Features.Depot.Systems.
 local DepotClerkSystem = require(ReplicatedStorage.Client.Features.Depot.Systems.DepotClerkSystem)
 local DepotIdleMotionSystem = require(ReplicatedStorage.Client.Features.Depot.Systems.DepotIdleMotionSystem)
 local DepotLoungeSystem = require(ReplicatedStorage.Client.Features.Depot.Systems.DepotLoungeSystem)
+local DepotTopperSystem = require(ReplicatedStorage.Client.Features.Depot.Systems.DepotTopperSystem)
+local DepotFocusOutlineSystem = require(ReplicatedStorage.Client.Features.Depot.Systems.DepotFocusOutlineSystem)
 local DepotDriveBySystem = require(ReplicatedStorage.Client.Features.Depot.Systems.DepotDriveBySystem)
 local SocialServiceClient = require(ReplicatedStorage.Client.Features.Social.SocialServiceClient)
 local MarketplaceServiceClient = require(ReplicatedStorage.Client.Features.Marketplace.MarketplaceServiceClient)
@@ -256,6 +258,8 @@ local DepotServiceClient: DepotServiceClient = {
 		table.insert(stoppers, DepotClerkSystem.start())
 		table.insert(stoppers, DepotIdleMotionSystem.start())
 		table.insert(stoppers, DepotLoungeSystem.start())
+		table.insert(stoppers, DepotTopperSystem.start())
+		table.insert(stoppers, DepotFocusOutlineSystem.start())
 	end,
 
 	stop = function(_self)

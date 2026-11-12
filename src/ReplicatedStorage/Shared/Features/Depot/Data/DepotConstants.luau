@@ -107,6 +107,8 @@ return table.freeze({
 		-- The weekly time clock's sign over the clock, and the daily bonus sheet (owner 11-11: the game's kit).
 		clock = Vector2.new(320, 150),
 		daily = Vector2.new(300, 380),
+		-- The rank ladder on the hub's rank poster (a Studio-placed shell; owner 11-12, kit mock round 2 #2).
+		rank = Vector2.new(420, 588),
 	}),
 	-- The tags the client finds each kind of depot shell by (DepotBillboardSystem); `review` is your own card's shell.
 	BILLBOARD_TAGS = table.freeze({
@@ -117,6 +119,7 @@ return table.freeze({
 		crew = "DepotCrewBoard",
 		clock = "DepotClockSign",
 		daily = "DepotDailySign",
+		rank = "DepotRankBoard",
 	}),
 	-- A truck tag shell's truck number and seats, written once by the server.
 	TRUCK_ATTRIBUTE = "DepotTruck",
