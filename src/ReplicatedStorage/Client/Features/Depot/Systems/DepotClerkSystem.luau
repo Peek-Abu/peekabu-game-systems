@@ -1,14 +1,15 @@
 --!strict
 --[=[
 	DepotClerkSystem: the Supply Counter clerk on this client (owner 11-11, "Stamp & Stack"; DepotSpotConstants.CLERK).
-	Today's employee (DepotClerkRules.clerkFor the server's day: the same on every client, so nothing replicates)
-	stands on the part tagged CLERK.TAG, facing its LookVector, a red rubber stamp in the right hand, stamping a parcel
-	on the counter (DepotAssets.CLERK_STAMP, looped). The parcel is sized once from the clip itself: the clip is posed at
-	the contact, the stamp's face is measured and the counter found under it, so the stamp lands on it for any employee
-	(DepotClerkRules.parcelHeight). On the clip's Thunk marker the parcel squashes a little under the stamp; on Lift it
-	hops (DepotClerkRules.hop). A player walking up, or opening the Shop at the counter (`greet`), gets a wave
-	(DepotAssets.CLERK_GREET, DepotClerkRules.greets), then the clerk goes back to stamping. Every REFRESH_SECONDS the
-	day is checked again and a new day brings the next employee.
+	Pippa (CLERK.EMPLOYEE: she ran the front desk before night shifts; the same on every client, so nothing replicates)
+	stands on the floor on the part tagged CLERK.TAG behind the counter, facing its LookVector, a red rubber stamp in
+	her right hand, a parcel on the counter in front of her. She plays an active idle (DepotAssets.CLERK_IDLE, looped)
+	and every few seconds breaks into a fidget picked by weight (DepotClerkRules.pickFidget: the stamp most of the
+	time, sometimes a stretch and yawn), then fades back to the idle. The parcel is sized once from the stamp clip
+	itself: the clip is posed at the contact, the stamp's face is measured and the counter found under it, so the stamp
+	lands on it for any employee (DepotClerkRules.parcelHeight). On the stamp's Thunk marker the parcel squashes a
+	little; on Lift it hops (DepotClerkRules.hop). A player walking up, or opening the Shop at the counter (`greet`),
+	gets a wave (DepotAssets.CLERK_GREET, DepotClerkRules.greets), which cuts any fidget short.
 
 	Spec-exempt shell (Instances, the Animator, the camera-free character build); the decisions are the specced
 	DepotClerkRules.
@@ -24,7 +25,6 @@ local Workspace = game:GetService("Workspace")
 local Observers = require(ReplicatedStorage.Packages.Observers)
 local DepotSpotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotSpotConstants)
 local DepotClerkRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotClerkRules)
-local EmployeeRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeRegistry)
 local DepotAssets = require(ReplicatedStorage.Client.Features.Depot.Data.DepotAssets)
 
 local CLERK = DepotSpotConstants.CLERK
@@ -39,10 +39,15 @@ local PRESS = 0.12
 
 type Clerk = {
 	spot: BasePart,
-	name: string,
 	model: Model,
+	idle: AnimationTrack,
 	stamp: AnimationTrack,
 	greet: AnimationTrack,
+	-- The fidgets by name (CLERK.FIDGETS), the one playing, the last one and when the next is due (os.clock).
+	fidgets: { [string]: AnimationTrack },
+	fidget: AnimationTrack?,
+	lastFidget: string?,
+	nextFidgetAt: number,
 	parcel: Part?,
 	tape: Part?,
 	parcelHeight: number,
@@ -65,9 +70,7 @@ local function characterSource(name: string): Model?
 	return if source ~= nil and source:IsA("Model") then source else nil
 end
 
-local function today(): string?
-	return DepotClerkRules.clerkFor(DepotClerkRules.dayOf(Workspace:GetServerTimeNow()), EmployeeRegistry.names())
-end
+local random = Random.new()
 
 local function part(name: string, size: Vector3, color: Color3, material: Enum.Material, parent: Instance): Part
 	local made = Instance.new("Part")
@@ -150,7 +153,8 @@ local function placeParcel(clerk: Clerk, base: BasePart)
 	local hit = Workspace:Raycast(at + Vector3.new(0, 0.05, 0), Vector3.new(0, -COUNTER_SEARCH, 0), params)
 	local counterY = if hit ~= nil then hit.Position.Y else at.Y - PARCEL.MIN_HEIGHT
 	clerk.parcelHeight = DepotClerkRules.parcelHeight(at.Y, counterY)
-	clerk.parcelBase = Vector3.new(at.X, at.Y - clerk.parcelHeight, at.Z)
+	-- It stands on the counter (a clamped height never leaves it floating).
+	clerk.parcelBase = Vector3.new(at.X, counterY, at.Z)
 	local parcel = Instance.new("Part")
 	parcel.Name = "ClerkParcel"
 	parcel.Anchored = true
@@ -168,7 +172,7 @@ local function placeParcel(clerk: Clerk, base: BasePart)
 	clerk.parcel, clerk.tape = parcel, tape
 	shapeParcel(clerk, 0, 1)
 	clerk.stamp:Stop(0)
-	clerk.stamp:Play(0, 1, 1)
+	clerk.idle:Play(0, 1, 1)
 end
 
 local function remove(spot: BasePart)
@@ -183,8 +187,8 @@ local function remove(spot: BasePart)
 	clerk.model:Destroy()
 end
 
-local function build(spot: BasePart, name: string)
-	local source = characterSource(name)
+local function build(spot: BasePart)
+	local source = characterSource(CLERK.EMPLOYEE)
 	if source == nil then
 		return
 	end
@@ -221,16 +225,28 @@ local function build(spot: BasePart, name: string)
 		model:Destroy()
 		return
 	end
-	local stampClip = Instance.new("Animation")
-	stampClip.AnimationId = DepotAssets.CLERK_STAMP
-	local greetClip = Instance.new("Animation")
-	greetClip.AnimationId = DepotAssets.CLERK_GREET
+	local function load(id: string, looped: boolean, priority: Enum.AnimationPriority): AnimationTrack
+		local clip = Instance.new("Animation")
+		clip.AnimationId = id
+		local track = animator:LoadAnimation(clip)
+		track.Looped = looped
+		track.Priority = priority
+		return track
+	end
+	local stamp = load(DepotAssets.CLERK_STAMP, false, Enum.AnimationPriority.Action)
 	local clerk: Clerk = {
 		spot = spot,
-		name = name,
 		model = model,
-		stamp = animator:LoadAnimation(stampClip),
-		greet = animator:LoadAnimation(greetClip),
+		idle = load(DepotAssets.CLERK_IDLE, true, Enum.AnimationPriority.Idle),
+		stamp = stamp,
+		greet = load(DepotAssets.CLERK_GREET, false, Enum.AnimationPriority.Action2),
+		fidgets = {
+			stamp = stamp,
+			stretch = load(DepotAssets.CLERK_STRETCH, false, Enum.AnimationPriority.Action),
+		},
+		fidget = nil,
+		lastFidget = nil,
+		nextFidgetAt = DepotClerkRules.nextFidgetAt(os.clock(), random:NextNumber()),
 		parcel = nil,
 		tape = nil,
 		parcelHeight = PARCEL.MIN_HEIGHT,
@@ -240,10 +256,6 @@ local function build(spot: BasePart, name: string)
 		near = false,
 		connections = {},
 	}
-	clerk.stamp.Looped = true
-	clerk.stamp.Priority = Enum.AnimationPriority.Action
-	clerk.greet.Looped = false
-	clerk.greet.Priority = Enum.AnimationPriority.Action2
 	clerks[spot] = clerk
 	table.insert(
 		clerk.connections,
@@ -257,14 +269,18 @@ local function build(spot: BasePart, name: string)
 			clerk.liftAt = os.clock()
 		end)
 	)
-	table.insert(
-		clerk.connections,
-		clerk.greet.Stopped:Connect(function()
-			if clerks[spot] == clerk and not clerk.stamp.IsPlaying then
-				clerk.stamp:Play(FADE, 1, 1)
-			end
-		end)
-	)
+	-- After a fidget or the wave: back to the idle, the next fidget due a few seconds later.
+	for _, track in { clerk.greet, clerk.fidgets.stamp, clerk.fidgets.stretch } do
+		table.insert(
+			clerk.connections,
+			track.Stopped:Connect(function()
+				if clerk.fidget == track then
+					clerk.fidget = nil
+				end
+				clerk.nextFidgetAt = DepotClerkRules.nextFidgetAt(os.clock(), random:NextNumber())
+			end)
+		)
+	end
 	table.insert(
 		clerk.connections,
 		RunService.RenderStepped:Connect(function()
@@ -284,6 +300,21 @@ local function build(spot: BasePart, name: string)
 	task.spawn(placeParcel, clerk, base)
 end
 
+-- Breaks from the idle into a fidget when one is due (none playing, no wave).
+local function fidget(clerk: Clerk)
+	if clerk.fidget ~= nil or clerk.greet.IsPlaying or os.clock() < clerk.nextFidgetAt then
+		return
+	end
+	local name = DepotClerkRules.pickFidget(random:NextNumber(), clerk.lastFidget)
+	local track: AnimationTrack? = clerk.fidgets[name]
+	if track == nil then
+		return
+	end
+	clerk.lastFidget = name
+	clerk.fidget = track
+	track:Play(FADE, 1, 1)
+end
+
 -- The clerk waves at the local player, `distance` studs away, if the rules allow it now.
 local function wave(clerk: Clerk, distance: number)
 	local now = os.clock()
@@ -291,7 +322,11 @@ local function wave(clerk: Clerk, distance: number)
 		return
 	end
 	clerk.lastGreet = now
-	clerk.stamp:Stop(FADE)
+	local playing = clerk.fidget
+	if playing ~= nil then
+		clerk.fidget = nil
+		playing:Stop(FADE)
+	end
 	-- The wave interrupts a hop or a press: the parcel settles.
 	clerk.liftAt = nil
 	shapeParcel(clerk, 0, 1)
@@ -317,35 +352,20 @@ function DepotClerkSystem.greet()
 	end
 end
 
--- Puts today's clerk on every clerk spot; returns the stopper.
+-- Puts the clerk on every clerk spot; returns the stopper.
 function DepotClerkSystem.start(): () -> ()
 	local stopSpots = Observers.observeTag(CLERK.TAG, function(instance: Instance)
 		if not instance:IsA("BasePart") then
 			return nil
 		end
-		local name = today()
-		if name ~= nil then
-			build(instance, name)
-		end
+		build(instance)
 		return function()
 			remove(instance)
 		end
 	end)
-	local running = true
-	task.spawn(function()
-		while running do
-			task.wait(CLERK.REFRESH_SECONDS)
-			local name = today()
-			for spot, clerk in clerks do
-				if running and name ~= nil and clerk.name ~= name then
-					remove(spot)
-					build(spot, name)
-				end
-			end
-		end
-	end)
 	local greeter = RunService.Heartbeat:Connect(function()
 		for _, clerk in clerks do
+			fidget(clerk)
 			local distance = distanceTo(clerk)
 			local near = distance ~= nil and distance <= CLERK.GREET.RADIUS
 			if near and not clerk.near and distance ~= nil then
@@ -355,7 +375,6 @@ function DepotClerkSystem.start(): () -> ()
 		end
 	end)
 	return function()
-		running = false
 		greeter:Disconnect()
 		stopSpots()
 		for spot in clerks do

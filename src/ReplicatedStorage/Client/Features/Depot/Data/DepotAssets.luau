@@ -57,7 +57,10 @@ return table.freeze({
 	-- (design/production-art/hub-dressing/radio_notes_flipbook.png). Uploaded with the owner's OK (2026-11-11).
 	RADIO_NOTES = RADIO_NOTES,
 	-- The Supply Counter clerk's clips (DepotClerkSystem; design/animations/clerk, Icey Labs, uploaded with the owner's
-	-- OK 2026-11-11): the stamping loop (markers Thunk, Lift) and the wave.
+	-- OK 2026-11-11): the active idle (looped), the stamp fidget (v6, markers Thunk and Lift), the stretch fidget and
+	-- the wave.
+	CLERK_IDLE = "rbxassetid://111793457366391",
 	CLERK_STAMP = "rbxassetid://109774578542575",
+	CLERK_STRETCH = "rbxassetid://89323328078889",
 	CLERK_GREET = "rbxassetid://105235060315952",
 })

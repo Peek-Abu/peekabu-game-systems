@@ -4,32 +4,44 @@ local DepotClerkRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.De
 local DepotSpotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotSpotConstants)
 
 local CLERK = DepotSpotConstants.CLERK
-local NAMES = { "Cappy", "Pippa", "Prickles" }
 
 return function()
-	describe("dayOf", function()
-		it("counts whole days of server time", function()
-			expect(DepotClerkRules.dayOf(0)).to.equal(0)
-			expect(DepotClerkRules.dayOf(86399.9)).to.equal(0)
-			expect(DepotClerkRules.dayOf(86400)).to.equal(1)
-			expect(DepotClerkRules.dayOf(86400 * 20000 + 5)).to.equal(20000)
+	describe("the clerk", function()
+		it("is Pippa, every day (owner 11-11: she ran the front desk before night shifts)", function()
+			expect(CLERK.EMPLOYEE).to.equal("Pippa")
 		end)
 	end)
 
-	describe("clerkFor", function()
-		it("takes the employees in turn, one a day", function()
-			expect(DepotClerkRules.clerkFor(0, NAMES)).to.equal("Cappy")
-			expect(DepotClerkRules.clerkFor(1, NAMES)).to.equal("Pippa")
-			expect(DepotClerkRules.clerkFor(2, NAMES)).to.equal("Prickles")
-			expect(DepotClerkRules.clerkFor(3, NAMES)).to.equal("Cappy")
+	describe("nextFidgetAt", function()
+		it("waits between FIDGET_MIN and FIDGET_MAX seconds of idle", function()
+			expect(DepotClerkRules.nextFidgetAt(10, 0)).to.equal(10 + CLERK.FIDGET_MIN)
+			expect(DepotClerkRules.nextFidgetAt(10, 1)).to.equal(10 + CLERK.FIDGET_MAX)
+		end)
+	end)
+
+	describe("pickFidget", function()
+		local total = 0
+		for _, entry in CLERK.FIDGETS do
+			total += entry.weight
+		end
+
+		it("picks by weight: the stamp most of the time", function()
+			expect(DepotClerkRules.pickFidget(0, nil)).to.equal(CLERK.FIDGETS[1].name)
+			local stampShare = CLERK.FIDGETS[1].weight / total
+			expect(DepotClerkRules.pickFidget(stampShare - 0.01, nil)).to.equal(CLERK.FIDGETS[1].name)
+			expect(DepotClerkRules.pickFidget(stampShare + 0.01, nil)).to.equal(CLERK.FIDGETS[2].name)
+			expect(DepotClerkRules.pickFidget(0.999, nil)).to.equal(CLERK.FIDGETS[#CLERK.FIDGETS].name)
 		end)
 
-		it("is the same clerk all day for everyone (it depends only on the day)", function()
-			expect(DepotClerkRules.clerkFor(20000, NAMES)).to.equal(DepotClerkRules.clerkFor(20000, table.clone(NAMES)))
+		it("never plays a one-off fidget twice in a row", function()
+			local last = CLERK.FIDGETS[#CLERK.FIDGETS]
+			expect(last.again).to.equal(false)
+			expect(DepotClerkRules.pickFidget(0.999, last.name)).never.to.equal(last.name)
 		end)
 
-		it("has no clerk without employees", function()
-			expect(DepotClerkRules.clerkFor(4, {})).to.equal(nil)
+		it("may stamp again right after a stamp", function()
+			expect(CLERK.FIDGETS[1].again).to.equal(true)
+			expect(DepotClerkRules.pickFidget(0, CLERK.FIDGETS[1].name)).to.equal(CLERK.FIDGETS[1].name)
 		end)
 	end)
 

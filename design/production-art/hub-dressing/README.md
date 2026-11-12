@@ -12,3 +12,14 @@ lights under `Lights` (they carry the old fixtures' lights), the maples and `Yar
 dumpster, barriers, outside wall lights, fireflies) under `Yard`, and `Training/TrainingTruck` (a 0.5-scale clone of
 `Assets.CleanupCrew.Truck` with the band livery and TRAINING signs). Placing a loaded mesh: its parts' CFrames are relative to
 the authored floor origin, so `cf * (part.CFrame.Rotation + part.CFrame.Position * k)` with `Size * k`.
+
+## Pumpkins v2 (2026-11-11, owner OK)
+The vine leaf's veins/stalk (`vleaf_veins`) were never moved with the leaf, so they sat inside the pumpkin, and the leaf
+cut into the ribs. `build_hub.py` now moves both and seats them rigidly on the skin (`_drape`). Re-uploaded to Icey Labs
+and swapped into the lobby's 14 pumpkins in place (MeshPart:ApplyMesh, scale and CFrame kept; SurfaceAppearance maps):
+
+| Variant | Model | Mesh | Color / Normal / Rough (image ids) |
+|---|---|---|---|
+| round | 118435555682999 | 77809726577446 | 99998307521436 / 74155896689065 / 131731772303976 |
+| tall | 139682393289774 | 132186097936997 | 97822968756899 / 91975468946512 / 122189962640296 |
+| pale (squat) | 103333606513045 | 124424530913187 | 109552291066008 / 130340302459288 / 128424890770824 |

@@ -1,8 +1,9 @@
 --!strict
 --[=[
 	DepotClerkRules: the Supply Counter clerk's decisions (owner 11-11, "Stamp & Stack"; DepotSpotConstants.CLERK).
-	Which employee clerks today (one a day, from the server's day number, so every client shows the same one), when the
-	clerk waves at a player, how tall the parcel on the counter is, and the parcel's hop after each stamp.
+	The clerk is always Pippa (she ran the front desk before night shifts). When she breaks from her idle into a fidget
+	and which one (the stamp most of the time), when she waves at a player, how tall the parcel on the counter is, and
+	the parcel's hop after each stamp.
 
 	@class DepotClerkRules
 ]=]
@@ -17,20 +18,37 @@ local HOP = CLERK.HOP
 local DepotClerkRules = {}
 
 --[=[
-	The day number of `serverTime` (seconds, Workspace:GetServerTimeNow()).
+	When the clerk next breaks from the idle into a fidget: `roll` (0..1) of the way from FIDGET_MIN to FIDGET_MAX
+	seconds after `now`.
 ]=]
-function DepotClerkRules.dayOf(serverTime: number): number
-	return math.floor(serverTime / CLERK.DAY_SECONDS)
+function DepotClerkRules.nextFidgetAt(now: number, roll: number): number
+	return now + CLERK.FIDGET_MIN + (CLERK.FIDGET_MAX - CLERK.FIDGET_MIN) * math.clamp(roll, 0, 1)
 end
 
 --[=[
-	Today's clerk: the employees (`names`, sorted, EmployeeRegistry.names) in turn, one a day; nil without any.
+	Which fidget the clerk plays (CLERK.FIDGETS by weight, `roll` 0..1), never a one-off (`again` false) twice in a row
+	after `last`: then the next one in the list instead.
 ]=]
-function DepotClerkRules.clerkFor(day: number, names: { string }): string?
-	if #names == 0 then
-		return nil
+function DepotClerkRules.pickFidget(roll: number, last: string?): string
+	local fidgets = CLERK.FIDGETS
+	local total = 0
+	for _, entry in fidgets do
+		total += entry.weight
 	end
-	return names[(day % #names) + 1]
+	local at = math.clamp(roll, 0, 0.999999) * total
+	local index = #fidgets
+	for i, entry in fidgets do
+		if at < entry.weight then
+			index = i
+			break
+		end
+		at -= entry.weight
+	end
+	local picked = fidgets[index]
+	if picked.name == last and not picked.again then
+		picked = fidgets[(index % #fidgets) + 1]
+	end
+	return picked.name
 end
 
 --[=[

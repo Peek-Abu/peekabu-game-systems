@@ -108,19 +108,24 @@ local DepotSpotConstants = {
 		-- The chance the truck honks on a pass.
 		HORN_CHANCE = 0.5,
 	}),
-	-- The Supply Counter clerk (DepotClerkSystem, DepotClerkRules; owner 11-11 "Stamp & Stack"): today's employee
-	-- stands on the part tagged TAG (facing its LookVector) stamping parcels, and waves when a player comes near.
+	-- The Supply Counter clerk (DepotClerkSystem, DepotClerkRules; owner 11-11 "Stamp & Stack"): Pippa (she ran the
+	-- front desk before night shifts) stands on the part tagged TAG (facing its LookVector) behind the counter in an
+	-- active idle (DepotAssets.CLERK_IDLE), breaking into a fidget every FIDGET_MIN..FIDGET_MAX seconds: one of FIDGETS
+	-- by weight (a one-off, `again` false, never twice in a row). She waves when a player comes near.
 	CLERK = table.freeze({
 		TAG = "DepotClerkSpot",
-		-- Seconds in a day of server time: the clerk changes once a day, the same for everyone.
-		DAY_SECONDS = 86400,
-		-- How often the client checks whether the day (and so the clerk) changed (seconds).
-		REFRESH_SECONDS = 60,
+		EMPLOYEE = "Pippa",
+		FIDGET_MIN = 3,
+		FIDGET_MAX = 7,
+		FIDGETS = table.freeze({
+			table.freeze({ name = "stamp", weight = 3, again = true }),
+			table.freeze({ name = "stretch", weight = 1, again = false }),
+		}),
 		-- The clip markers the code acts on: the stamp lands (the parcel squashes), the stamp lifts (the parcel hops).
 		THUNK_MARKER = "Thunk",
 		LIFT_MARKER = "Lift",
 		-- When the stamp is on the parcel in the clip (seconds): where the parcel's height is measured.
-		CONTACT_TIME = 26 / 30,
+		CONTACT_TIME = 24 / 30,
 		-- Studs from the clerk a player walks up to get a wave; seconds before the next wave.
 		GREET = table.freeze({ RADIUS = 12, COOLDOWN = 20 }),
 		-- The parcel's hop after the stamp lifts: a beat (DELAY), up APEX studs and back down over SECONDS, then it
