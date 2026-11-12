@@ -95,6 +95,11 @@ def _pose_tree(frame):
             p = at("LowerTorso")
             p["cf"] = [0.0, float(d), 0.0, 1, 0, 0, 0, 1, 0, 0, 0, 1]
             part = "LowerTorso"
+        elif joint == "Pelvis":
+            # [dy, dz, pitch]: the pelvis moved up dy and back dz (-dz slides it forward) and tipped by pitch (deg, X)
+            p = at("LowerTorso")
+            p["cf"] = [0.0, float(d[0]), float(d[1])] + angles([d[2], 0, 0])[3:]
+            part = "LowerTorso"
         else:
             part = JOINT_PART[joint]
             p = at(part)
@@ -161,6 +166,8 @@ def luau_builder(clips, folder):
                 continue
             elif joint == "Root":
                 parts.append(f"Root={num(d)}")
+            elif joint == "Pelvis":
+                parts.append(f"Pelvis={{{','.join(num(x) for x in d)}}}")
             else:
                 parts.append(f"{joint}={{{','.join(num(x) for x in d)}}}")
         return "{" + ",".join(parts) + "}"
@@ -190,6 +197,7 @@ for name, clip in CLIPS do
 			local key = (frame.easeJ and frame.easeJ[joint]) or frame.ease or "inout"
 			local p
 			if joint == "Root" then p = at("LowerTorso") p.CFrame = CFrame.new(0, d, 0) keyed.LowerTorso = true
+			elseif joint == "Pelvis" then p = at("LowerTorso") p.CFrame = CFrame.new(0, d[1], d[2]) * CFrame.Angles(math.rad(d[3]), 0, 0) keyed.LowerTorso = true
 			else p = at(JOINT_PART[joint]) p.CFrame = CFrame.Angles(math.rad(d[1]), math.rad(d[2]), math.rad(d[3])) keyed[JOINT_PART[joint]] = true end
 			p.EasingStyle = EASE[key][1] p.EasingDirection = EASE[key][2]
 		end
