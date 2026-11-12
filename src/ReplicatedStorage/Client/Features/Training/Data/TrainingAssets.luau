@@ -49,4 +49,7 @@ return table.freeze({
 	CREAK = "trainingDoorCreak",
 	SLAM = "trainingDoorSlam",
 	RELIEF = "trainingRelief",
+	-- The coach's wave at the hub's Training pad (TrainingCoachSystem): the generic wave clip made for every employee
+	-- (design/animations/clerk ClerkGreet_v5, Icey Labs, measured on Cappy, Pippa and Prickles).
+	COACH_WAVE = "rbxassetid://105235060315952",
 })

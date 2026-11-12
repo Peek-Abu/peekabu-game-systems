@@ -259,15 +259,20 @@ local TrainingConstants = {
 		tint = Color3.fromRGB(190, 182, 232),
 	}),
 
-	-- The coach at the hub's Training pad (TrainingCoachSystem; owner 11-11): who stands there, her pose
-	-- (EmployeePoseRegistry), where she stands in the pad's space and which way she faces in it. She carries no
-	-- floating text: her words are the on-screen coach card (owner 11-11: a billboard that swings with the camera is
-	-- disorienting).
+	-- The coach at the hub's Training pad (TrainingCoachSystem, TrainingCoachRules; owner 11-11): who stands there,
+	-- where she stands in the pad's space and which way she faces in it. She carries no floating text: her words are
+	-- the on-screen coach card (owner 11-11: a billboard that swings with the camera is disorienting). She is alive, not
+	-- a statue (owner 11-11): the stock idle loops (generic, never a per-character clip), she waves (the generic
+	-- wave, TrainingAssets.COACH_WAVE) when the player walks up and every WAVE.MIN..MAX seconds, and her head follows
+	-- the player (LOOK: degrees she turns at most, the angle off her front past which she gives up, studs she
+	-- watches to, how fast the head catches up).
 	HUB_COACH = table.freeze({
 		EMPLOYEE = "Pippa",
-		POSE = "wave",
 		SIDE = Vector3.new(-6, 0, 0),
 		FACING = Vector3.new(-1, 0, 0),
+		IDLE = "idle",
+		LOOK = table.freeze({ MAX_YAW = 65, MAX_PITCH = 25, BEHIND = 120, RANGE = 40, RATE = 5 }),
+		WAVE = table.freeze({ MIN = 7, MAX = 12, RADIUS = 14 }),
 	}),
 
 	TEXT = table.freeze({
