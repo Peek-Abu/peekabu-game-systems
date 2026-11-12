@@ -23,7 +23,7 @@ decal-resolved colour/normal/rough images. Every mesh as imported faces -Z (chec
 | desk | furniture | t9_desk_drawers 83257653345965 (body + `desk_drawer_1..3`, each drawer `SearchComponent = "drawer"`) | 8.8 x 4.95 x 4.6 | NegativeZ | Stretch | built (Task 9: drawers open in place; hide space passes, see below) |
 | officeChair | furniture | c_chair 76140780685205 | 2.71 x 4.60 x 2.79 | NegativeZ | Uniform | built |
 | locker | furniture | c_lockers 80348717249179 | 6 x 8 x 2.52 | - | Uniform | HELD: bank of lockers != single searchable locker (marker is ~2.5 x 7 x 2.5, art would shrink to 0.42x; slate locker via fallback) |
-| shelf | furniture | c_bookshelf 82298001439367 | 5.54 x 8 x 2.08 | NegativeZ | Uniform | built |
+| shelf | furniture | c_bookshelf v2 126189823139386 (v1 82298001439367) | 5.16 x 8 x 2.08 | NegativeZ | Uniform | built |
 | kitchenCounter | furniture | c_coffeebar 132077928644424 | 8 x 6.35 x 3.08 | NegativeZ | Uniform | built, SupportSurfaceY = 4.60 (measured worktop) |
 | corkboard | furniture | c_whiteboard 118580116232249 | 6.4 x 6.1 x 1.9 | NegativeZ | Uniform | built |
 | breakTable | furniture | c_coffeetable 139831089082474 | 5 x 1.8 x 3 | NegativeZ | Uniform | built |
@@ -173,3 +173,17 @@ MeshPart's bounds, so it was replaced in the script):
 
 - desk and locker are held in the script (`HELD` table; remove an entry to rebuild it, e.g. once a no-divider desk id replaces c_desk). Re-run result: built 25, pending 7, held 2, failed 0; `furniture/desk` and `furniture/locker` are absent from the kit.
 - Proportion mismatches (corkboard, counter, tables vs their proxies) are solved in code by Task 5, which adds `ART_SIZES` so the proxy follows the art's BaseSize; templates are left unchanged.
+
+## c_bookshelf v2 (owner OK 2026-11-12; Icey Labs group 189923277, all Approved, creator checked)
+
+The v1 shelf had a flat 4-book stack on its bottom shelf running 0.38 through the right side panel (texture-pipeline
+`build_set.py` let a stack start 0.5 from the side and be up to 1.2 wide; it now clamps the stack to the room left).
+v2 is the same shelf with that one stack narrowed: 5.16 x 8 x 2.08 (v1's bounds were 5.54 wide because of the stack).
+Look sheet: `turntables/c_bookshelf_v2_look.png`.
+
+| Asset | model | color | normal | rough |
+|---|---|---|---|---|
+| c_bookshelf_v2 | 126189823139386 | 77467087166620 | 114066087139539 | 137947715230076 |
+
+Swapping a placed v1 shelf (MeshPart, Size.X = 5.54 x s): `ApplyMesh` the v2 mesh, Size.X = 5.16 x s, and move it
+0.19 x s along its own +X (the v1 bounds centre sat 0.19 off the shelf's middle, toward the stack).

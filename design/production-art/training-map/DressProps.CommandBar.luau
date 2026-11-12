@@ -23,7 +23,7 @@ assert(map, "no TrainingMap in this place")
 local IDS = {
 	t9_desk_drawers = { "83257653345965", "123842368612124", "80606908058150", "78503818022681" },
 	t9_desk_drawers_tex = { "", "112922977638343", "71294390694507", "99519507784235" },
-	c_bookshelf = { "82298001439367", "138256636385004", "112643864130260", "102527266813417" },
+	c_bookshelf = { "126189823139386", "77467087166620", "114066087139539", "137947715230076" }, -- v2 (KIT_MAP)
 	c_copier = { "138748993668815", "84171327524635", "91368005682771", "114226177333107" },
 	t2_supplyCabinet = { "88586894738036", "126150657377347", "139489244266070", "95122457736870" },
 	r_planter = { "115416560681395", "111221186483756", "", "" },
@@ -173,7 +173,7 @@ do
 	end
 	for _, side in { -1, 1 } do
 		-- Two shelves side by side, meeting in the middle.
-		local shelfW = 5.54 * k
+		local shelfW = 5.16 * k
 		for _, x in { -shelfW / 2, shelfW / 2 } do
 			local m = place("c_bookshelf", at(x, side * (hz - shelfD / 2), Vector3.new(0, 0, side)), Vector3.new(hx, hy, shelfD), false, holder)
 			m.Name = "Shelf"
