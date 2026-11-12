@@ -130,7 +130,7 @@ def pumpkin():
             vt.co.z = 0.08 * r + (vt.co.z - 0.08 * r) * 0.3
     bmesh.ops.translate(bm, verts=bm.verts, vec=(0, 0, -min(v.co.z for v in bm.verts)))
     top = max(v.co.z for v in bm.verts)
-    H._add("body", bm, mat, 0)
+    body = H._add("body", bm, mat, 0)
     # curved, faceted stem (6 sides), tapered, bent over
     pts = [Vector((0, 0, top - 0.25)), Vector((0.03, 0, top + 0.25 * r)), Vector((0.14, 0.02, top + 0.45 * r)), Vector((0.32, 0.05, top + 0.55 * r))]
     for i in range(len(pts) - 1):
@@ -138,8 +138,13 @@ def pumpkin():
         strut(f"stem{i}", pts[i], pts[i + 1], t, "stem", bevel=0.02)
     # a curled vine leaf lying on the shoulder
     leaf = _leafmesh("vleaf", 0.75 * r, "vine_leaf", curl=0.35, seed=3)
-    leaf.data.transform(Matrix.Rotation(math.radians(-25), 4, "Y"))
-    leaf.data.transform(Matrix.Translation((-0.35 * r, 0.25 * r, top - 0.12 * r)))
+    # The veins and stalk are their own object: they move with the leaf (owner 11-11: they were left at the base,
+    # inside the pumpkin), and both drape onto the ribbed skin instead of cutting into it.
+    veins = bpy.data.objects[leaf.name + "_veins"]
+    for ob in (leaf, veins):
+        ob.data.transform(Matrix.Rotation(math.radians(-25), 4, "Y"))
+        ob.data.transform(Matrix.Translation((-0.35 * r, 0.25 * r, top - 0.12 * r)))
+    _drape(body, (leaf, veins), 0.02)
     rod("vine", (0, 0.05, top - 0.05), (-0.55 * r, 0.6 * r, top - 0.35 * r), 0.035, "vine_leaf", 6)
     S2.finish2(f"hb_pumpkin_{v}", tex=512)
 
@@ -149,6 +154,31 @@ def pumpkin():
 MAPLE_HALF = [(0.0, 0.08), (0.10, 0.04), (0.26, 0.12), (0.47, 0.03), (0.36, 0.22), (0.50, 0.30), (0.88, 0.40),
               (0.64, 0.50), (0.70, 0.70), (0.47, 0.61), (0.38, 0.81), (0.24, 0.71), (0.11, 0.90), (0.0, 1.0)]
 MAPLE_TIPS = [(0.0, 1.0), (0.88, 0.40), (-0.88, 0.40), (0.47, 0.03), (-0.47, 0.03)]
+
+
+def _drape(body, obs, gap):
+    """Seats `obs` (a leaf and its veins) on `body`: tilted to the skin's slope under the leaf's middle, then lifted as
+    one rigid piece until no vertex is closer than `gap` above the surface straight below it, so the leaf keeps its
+    shape (a per-vertex lift crumpled it) and nothing cuts into the ribs."""
+    from mathutils.bvhtree import BVHTree
+    bvh = BVHTree.FromObject(body, bpy.context.evaluated_depsgraph_get())
+    verts = [v for ob in obs for v in ob.data.vertices]
+    mid = sum((v.co for v in verts), Vector()) / len(verts)
+    hit = bvh.ray_cast(Vector((mid.x, mid.y, mid.z + 50.0)), Vector((0, 0, -1)))
+    if hit[0] is not None:
+        tilt = Vector((0, 0, 1)).rotation_difference(hit[1].normalized()).to_matrix().to_4x4()
+        about = Matrix.Translation(mid) @ tilt @ Matrix.Translation(-mid)
+        for ob in obs:
+            ob.data.transform(about)
+    lift = 0.0
+    for ob in obs:
+        for v in ob.data.vertices:
+            h = bvh.ray_cast(Vector((v.co.x, v.co.y, v.co.z + 50.0)), Vector((0, 0, -1)))
+            if h[0] is not None:
+                lift = max(lift, h[0].z + gap - v.co.z)
+    for ob in obs:
+        ob.data.transform(Matrix.Translation((0, 0, lift)))
+        ob.data.update()
 
 
 def _leafmesh(name, size, mat, curl=0.25, seed=0, lobes=5, veins="leaf_vein"):
