@@ -124,6 +124,17 @@ local TrainingConstants = {
 	TRUCK_TAG = "TrainingTruck",
 	TRUCK_CAPACITY = 1,
 	TRUCK_COUNTDOWN = 3,
+	-- The Training bay as a zone (owner 11-12: the whole bay starts training, not just the pad): a flat, invisible
+	-- floor part tagged ZONE_TAG covering the bay. With one in the hub the TRUCK_TAG pad is only the sign anchor
+	-- (the server marks it OFFERED_ATTRIBUTE instead of making it a queue pad), and the bay keeps a pool of
+	-- one-seat queue pads (ZONE_PAD_TAG, each the zone's size) so every player in it boards their own and gets
+	-- their own training server at the same time (TrainingZoneRules). An empty pad goes after ZONE_IDLE_SECONDS.
+	ZONE_TAG = "TrainingZone",
+	ZONE_PAD_TAG = "TrainingZonePad",
+	OFFERED_ATTRIBUTE = "TrainingOffered",
+	ZONE_MAX_PADS = 12,
+	ZONE_IDLE_SECONDS = 60,
+	ZONE_TICK_SECONDS = 0.5,
 
 	-- The authored map.
 	MAP_TAG = "TrainingMap",

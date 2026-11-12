@@ -2,8 +2,8 @@
 --[=[
 	TrainingHubSystem: training in the hub on this client.
 
-	- Every Training pad (TrainingConstants.TRUCK_TAG, made a queue pad by the server only while the place offers
-	  training) carries a plain "TRAINING" tag (anyone can play it again), and while this player still needs
+	- Every Training pad (TrainingConstants.TRUCK_TAG, marked OFFERED_ATTRIBUTE by the server only while the place
+	  offers training; with a Training zone the whole bay around it starts training, TrainingZoneSystem) carries a plain "TRAINING" tag (anyone can play it again), and while this player still needs
 	  training the coach stands beside it waving (TrainingCoachSystem; owner 11-11), with no text floating over her.
 	- A player who still needs training gets Pippa's hint and an arrow to the nearest Training pad (a world spotlight
 	  step) whenever they are off the pad (TrainingRules.hubTrail): stepping on hides it, stepping off brings it back.
@@ -50,19 +50,30 @@ local onRun = false
 local againUntil: number? = nil
 local trailClock = 0
 
--- A Training pad the server made a queue pad (it does so only while the place offers training).
+-- A Training pad the server offers (it marks it only while the place offers training).
 local function isTrainingPad(part: BasePart): boolean
 	return CollectionService:HasTag(part, TrainingConstants.TRUCK_TAG)
-		and CollectionService:HasTag(part, QueueConstants.TAG)
+		and part:GetAttribute(TrainingConstants.OFFERED_ATTRIBUTE) == true
 end
 
-local function standingOn(accept: (BasePart) -> boolean): boolean
+-- A queue pad that is not a real truck: the Training pad or a Training zone's (invisible) pads.
+local function isTrainingQueue(part: BasePart): boolean
+	return CollectionService:HasTag(part, TrainingConstants.TRUCK_TAG)
+		or CollectionService:HasTag(part, TrainingConstants.ZONE_PAD_TAG)
+end
+
+local function anyPart(_part: BasePart): boolean
+	return true
+end
+
+-- Whether the player stands on a part tagged `tag` that `accept` takes.
+local function standingOn(tag: string, accept: (BasePart) -> boolean): boolean
 	local character = Players.LocalPlayer.Character
 	if character == nil then
 		return false
 	end
 	local position = character:GetPivot().Position
-	for _, tagged in CollectionService:GetTagged(QueueConstants.TAG) do
+	for _, tagged in CollectionService:GetTagged(tag) do
 		if tagged:IsA("BasePart") and accept(tagged) then
 			local offset = tagged.CFrame:PointToObjectSpace(position)
 			local half = tagged.Size / 2
@@ -77,6 +88,12 @@ local function standingOn(accept: (BasePart) -> boolean): boolean
 		end
 	end
 	return false
+end
+
+-- On the Training pad, or anywhere in a Training zone (owner 11-12: the whole bay starts training).
+local function onTraining(): boolean
+	return (next(pads) ~= nil and standingOn(TrainingConstants.ZONE_TAG, anyPart))
+		or standingOn(TrainingConstants.TRUCK_TAG, isTrainingPad)
 end
 
 -- The top of the Training pad nearest the player.
@@ -125,7 +142,7 @@ local function pointToTraining()
 			edgeOnly = true,
 			pinned = true,
 			done = function()
-				return not isNew or onRun or standingOn(isTrainingPad)
+				return not isNew or onRun or onTraining()
 			end,
 		},
 	})
@@ -137,7 +154,7 @@ local function trailTick(deltaTime: number)
 		return
 	end
 	trailClock = 0
-	local onPad = standingOn(isTrainingPad)
+	local onPad = onTraining()
 	if onPad then
 		-- Reached: "Play training again" is answered, so stepping off does not bring the trail back.
 		againUntil = nil
@@ -158,15 +175,26 @@ local function added(instance: Instance)
 	end
 end
 
+-- A Training pad counts once the server marks it offered, whichever arrives last (the tag or the attribute).
+local function watch(instance: Instance)
+	added(instance)
+	if instance:IsA("BasePart") then
+		table.insert(
+			connections,
+			instance:GetAttributeChangedSignal(TrainingConstants.OFFERED_ATTRIBUTE):Connect(function()
+				added(instance)
+			end)
+		)
+	end
+end
+
 local TrainingHubSystem = {}
 
 function TrainingHubSystem.start()
 	if #connections > 0 then
 		return
 	end
-	-- A pad counts once it carries both tags, whichever arrives last.
-	table.insert(connections, CollectionService:GetInstanceAddedSignal(TrainingConstants.TRUCK_TAG):Connect(added))
-	table.insert(connections, CollectionService:GetInstanceAddedSignal(QueueConstants.TAG):Connect(added))
+	table.insert(connections, CollectionService:GetInstanceAddedSignal(TrainingConstants.TRUCK_TAG):Connect(watch))
 	table.insert(
 		connections,
 		CollectionService:GetInstanceRemovedSignal(TrainingConstants.TRUCK_TAG):Connect(function(instance: Instance)
@@ -178,7 +206,7 @@ function TrainingHubSystem.start()
 		end)
 	)
 	for _, instance in CollectionService:GetTagged(TrainingConstants.TRUCK_TAG) do
-		added(instance)
+		watch(instance)
 	end
 	trailClock = TRAIL_SECONDS
 	table.insert(connections, RunService.Heartbeat:Connect(trailTick))
@@ -218,11 +246,11 @@ function TrainingHubSystem.tour()
 			seconds = 25,
 			pinned = true,
 			accept = function(part: BasePart)
-				return not isTrainingPad(part)
+				return not isTrainingQueue(part)
 			end,
 			done = function()
-				return standingOn(function(part: BasePart)
-					return not isTrainingPad(part)
+				return standingOn(QueueConstants.TAG, function(part: BasePart)
+					return not isTrainingQueue(part)
 				end)
 			end,
 		},
@@ -252,7 +280,7 @@ function TrainingHubSystem.again()
 			edgeOnly = true,
 			pinned = true,
 			done = function()
-				return standingOn(isTrainingPad)
+				return onTraining()
 			end,
 		},
 	})

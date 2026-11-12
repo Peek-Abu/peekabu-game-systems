@@ -126,6 +126,12 @@ local truckOf: { [number]: number } = {}
 local departedForShift: { [number]: boolean } = {}
 local timecardShiftPhase: (() -> ShiftTypes.ShiftPhase)? = nil
 
+-- A training departure: the Training pad itself, or one of a Training zone's pads (TrainingZoneSystem).
+local function isTrainingPad(pad: BasePart): boolean
+	return CollectionService:HasTag(pad, TrainingConstants.TRUCK_TAG)
+		or CollectionService:HasTag(pad, TrainingConstants.ZONE_PAD_TAG)
+end
+
 -- The truck number (layout order) of a pad, or nil before the garage is built.
 local function truckIndexOf(pad: BasePart): number?
 	local current = built
@@ -261,8 +267,8 @@ local DepotServiceServer: DepotServiceServer = {
 			if index ~= nil then
 				payload.truck = index
 			end
-			-- The Training truck's run plays the Training map (TrainingServiceServer).
-			if CollectionService:HasTag(pad, TrainingConstants.TRUCK_TAG) then
+			-- A Training run plays the Training map (TrainingServiceServer).
+			if isTrainingPad(pad) then
 				payload[TrainingConstants.MODE_KEY] = TrainingConstants.MODE
 			end
 			return payload
@@ -277,7 +283,7 @@ local DepotServiceServer: DepotServiceServer = {
 		end)
 		local departing = QueueServiceServer.departing:Connect(function(pad, party)
 			-- A training trip has no contract to brief (training's own HUD and signs say what to do).
-			if CollectionService:HasTag(pad, TrainingConstants.TRUCK_TAG) then
+			if isTrainingPad(pad) then
 				return
 			end
 			sendCard(party, DepotContractUtils.driveCard(contract, truckIndexOf(pad)))

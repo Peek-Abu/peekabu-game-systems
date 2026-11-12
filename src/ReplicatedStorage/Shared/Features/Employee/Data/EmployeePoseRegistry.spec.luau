@@ -52,6 +52,10 @@ return function()
 				-- Not happy when he points the way.
 				expect(prickles.poses.point.look).never.to.equal("Happy")
 				expect(prickles.poses.point.look).to.be.ok()
+				-- Never the gritted-teeth face (owner 11-12: "I dont like the teeth"), in any pose.
+				for _, pose in prickles.poses do
+					expect(pose.look).never.to.equal("Grit")
+				end
 				-- An employee without its own faces keeps the kit's.
 				local pippa = EmployeePoseRegistry.get("Pippa")
 				expect(pippa.poses.point.look).to.equal(nil)

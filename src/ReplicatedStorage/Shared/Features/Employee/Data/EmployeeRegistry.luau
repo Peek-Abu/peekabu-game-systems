@@ -433,16 +433,17 @@ EMPLOYEES.Prickles = {
 		carrying = "Content",
 		idle = "Content",
 	},
-	-- Gruff but brave (owner 11-12: the coach must fit Prickles, not smile like Pippa): he points the way with grit,
-	-- says careful and hide looking tough, sneaks suspicious, and his "well done" is a smug grin; a win is a yeehaw.
+	-- Gruff but brave (owner 11-12: the coach must fit Prickles, not smile like Pippa): he points the way and says
+	-- careful and hide looking tough, sneaks suspicious, waves and says "well done" with a smug grin; a win is a
+	-- yeehaw. Never Grit: its gritted teeth read as a weird smile (owner 11-12: "I dont like the teeth").
 	poseFaces = {
-		point = "Grit",
+		point = "RevealGuardedTough",
 		warn = "RevealGuardedTough",
 		shh = "RevealSuspicious",
 		hide = "RevealGuardedTough",
 		coachCheer = "Smug",
 		victory = "Yeehaw",
-		wave = "Grit",
+		wave = "Smug",
 		stand = "Content",
 	},
 	skins = {

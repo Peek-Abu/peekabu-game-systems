@@ -69,3 +69,9 @@ Sheet: notes `hub-r3-radio-bell-v2-look.jpg`.
 | snack bottle | 74718849864046 | 138701778330518 | 121692672852079 / 92203595821535 / 101705239471195 |
 | snack chips | 133010450796957 | 84514870296740 | 76220164300441 / 134696409403450 / 114105196004947 |
 | snack bar | 79264925729143 | 115883930717980 | 100262445950274 / 138703037299381 / 98278877383864 |
+
+## Round 6 (2026-11-12, owner notes)
+- **Radio notes without the star.** The owner said the 4-point sparkle cell in `radio_notes_flipbook.png` looked
+  AI-made; it is a mint eighth note now (notes only). A decal cannot be updated in place over Open Cloud ("Updating
+  Decal is not supported yet"), so it is a new upload: decal 79230367007309, image 118582584373486 (both checked
+  group 189923277); `DepotAssets.RADIO_NOTES` points at the image.

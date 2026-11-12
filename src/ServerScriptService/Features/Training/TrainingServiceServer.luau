@@ -4,9 +4,13 @@
 	to its owner for the hub's arrow and spotlight).
 
 	- **The hub** (the depot role), only when this place holds the Training map (TrainingRules.offered; the map is
-	  built into both places together, so a place published without it shows no pad): every part tagged TrainingConstants.TRUCK_TAG becomes a one-seat queue pad to the
-	  shift place that departs with the training mode in its payload (DepotServiceServer adds it). The code-built
-	  depot has no such part, so one is made by its left wall (a Studio-built hub tags its own). A player who has just
+	  built into both places together, so a place published without it shows no pad): every part tagged TrainingConstants.TRUCK_TAG is marked
+	  OFFERED_ATTRIBUTE (the client's sign and arrow anchor). With a Training zone (ZONE_TAG, owner 11-12: the whole
+	  bay starts training) the bay keeps a pool of one-seat queue pads (TrainingZoneSystem), so every player in it
+	  gets their own training at the same time; without one, the TRUCK_TAG part itself becomes the one-seat queue
+	  pad. Either way the pad departs to the shift place with the training mode in its payload (DepotServiceServer
+	  adds it). The code-built depot has no such part, so one is made by its left wall (a Studio-built hub tags its
+	  own). A player who has just
 	  finished training is sent the after-training tour once (TrainingEvents.Tour), when their save loads or they come
 	  back from the run.
 	- **The run** (the shift role): a party of one arriving with the training mode plays the shift on the Studio-built
@@ -53,6 +57,7 @@ local TipServiceServer = require(ServerScriptService.Features.Tip.TipServiceServ
 local ToastServiceServer = require(ServerScriptService.Features.Toast.ToastServiceServer)
 local TrainingRunSystem = require(ServerScriptService.Features.Training.Systems.TrainingRunSystem)
 local TrainingSiteSystem = require(ServerScriptService.Features.Training.Systems.TrainingSiteSystem)
+local TrainingZoneSystem = require(ServerScriptService.Features.Training.Systems.TrainingZoneSystem)
 
 local trainingSlice = PlayerDataSliceSystem.registerAccount("training", TrainingRules.fresh(), function(account)
 	return account.training
@@ -89,9 +94,10 @@ local function defaultPad()
 	pad.Anchored = true
 	pad.Size = DEFAULT_PAD.size
 	pad.CFrame = DepotLayoutConstants.ORIGIN * CFrame.new(DEFAULT_PAD.x, DEFAULT_PAD.size.Y / 2, DEFAULT_PAD.z)
-	pad.Material = Enum.Material.Neon
-	pad.Color = Color3.fromRGB(120, 230, 190)
-	pad.Transparency = 0.35
+	-- A soft mint mat, not a glowing one (owner 11-12: the Neon pad read too bright).
+	pad.Material = Enum.Material.SmoothPlastic
+	pad.Color = Color3.fromRGB(110, 190, 160)
+	pad.Transparency = 0.2
 	pad.CanCollide = false
 	CollectionService:AddTag(pad, TrainingConstants.TRUCK_TAG)
 	pad.Parent = workspace
@@ -257,12 +263,27 @@ local TrainingServiceServer: TrainingServiceServer = {
 			log:info(`no single Training map in this place ({maps} found): no Training pad`)
 		end
 		if QueueServiceServer:runsRole(DepotConstants.ROLE_DEPOT) and offered then
+			-- A Studio-built hub's zones are in the place from the start.
+			local zoned = #CollectionService:GetTagged(TrainingConstants.ZONE_TAG) > 0
 			table.insert(
 				stoppers,
 				Observers.observeTag(TrainingConstants.TRUCK_TAG, function(pad: Instance)
 					if pad:IsA("BasePart") then
-						configurePad(pad)
+						if not zoned then
+							configurePad(pad)
+						end
+						pad:SetAttribute(TrainingConstants.OFFERED_ATTRIBUTE, true)
 					end
+					return nil
+				end)
+			)
+			table.insert(
+				stoppers,
+				Observers.observeTag(TrainingConstants.ZONE_TAG, function(zone: Instance)
+					if zone:IsA("BasePart") then
+						return TrainingZoneSystem.start(zone, configurePad)
+					end
+					log:warn(`{zone:GetFullName()} is tagged {TrainingConstants.ZONE_TAG} but is not a BasePart`)
 					return nil
 				end)
 			)

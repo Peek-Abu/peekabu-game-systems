@@ -52,13 +52,14 @@ end
 local LOUNGE_DOZE: string? = "rbxassetid://73224549950433"
 local LOUNGE_WAVE: string? = "rbxassetid://84529301509043"
 
--- The radio's music-note flipbook image (see RADIO_NOTES below): Icey Labs decal 81235055229989, its image.
-local RADIO_NOTES: string? = "rbxassetid://84887799913082"
+-- The radio's music-note flipbook image (see RADIO_NOTES below): Icey Labs decal 79230367007309, its image
+-- (owner 11-12: the sparkle cell read as AI-made, so it is a third note now; a decal cannot be updated in place).
+local RADIO_NOTES: string? = "rbxassetid://118582584373486"
 
 return table.freeze({
 	SOUNDS = table.freeze(SOUNDS),
 	HUB_THEME = "depotHubTheme",
-	-- The radio's music notes: a 2x2 flipbook (two notes, a beamed pair, a sparkle) in gold and mint
+	-- The radio's music notes: a 2x2 flipbook (two notes, a beamed pair, a mint eighth note) in gold and mint
 	-- (design/production-art/hub-dressing/radio_notes_flipbook.png). Uploaded with the owner's OK (2026-11-11).
 	RADIO_NOTES = RADIO_NOTES,
 	-- The gold 4-point sparkle the stations' twinkle uses (DepotIdleMotionSystem): the UI kit's sparkle image.
