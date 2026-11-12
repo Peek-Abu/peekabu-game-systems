@@ -41,6 +41,8 @@ export type TrainingSpotlightProps = {
 	-- Pippa's card stays put at the bottom left (TrainingSpotlightUtils.pinnedCoach) instead of following the line
 	-- spot, so it never swings around with the camera; nil = follows.
 	pinned: boolean?,
+	-- Who says the line (TrainingCoach.coach); nil = Pippa.
+	coach: string?,
 }
 
 local GOLD = TrainingConstants.GUIDE.calm
@@ -91,6 +93,7 @@ local function Coach(props: TrainingSpotlightProps): React.ReactNode
 		zIndex = 22,
 		scale = scale,
 		onArea = props.onArea,
+		coach = props.coach,
 	})
 end
 local function TrainingSpotlight(props: TrainingSpotlightProps): React.ReactNode

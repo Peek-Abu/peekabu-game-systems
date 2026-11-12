@@ -1,15 +1,15 @@
 --!strict
 --[=[
 	TrainingCoachSystem: the coach at the hub's Training pad on this client (owner 11-11: an NPC with a purpose; it
-	replaces the floating "New here?" sign). While this player still needs training, Pippa stands beside each Training
-	pad on the side facing the hub. She is alive, not a statue (owner 11-11): the stock idle loops under her, she waves
-	when the player walks up and every few seconds on her own, and her head follows the player
-	(TrainingCoachRules). Every clip is generic (the stock idle and the wave made for every employee), never a
-	per-character animation. She carries no billboard: what she says is the on-screen coach card (TrainingHubSystem's
-	spotlight step, with the edge arrow and the gold floor trail leading to the pad), because text floating in the
-	world swings around as the camera moves (owner 11-11). Once they have trained she is gone for them (the pad keeps
-	its plain TRAINING tag, so anyone can play it again). Built locally (a clone of the character, anchored and inert),
-	so nothing replicates and nobody else sees another player's coach.
+	replaces the floating "New here?" sign). While this player still needs training, the coach (HUB_COACH.EMPLOYEE:
+	Prickles, so he is not a second Pippa beside the clerk) stands beside each Training pad on the side facing the hub,
+	at player size (EmployeeNpcUtils). He is alive, not a statue (owner 11-11): the stock idle loops under him, he waves
+	(the generic wave v2) when the player walks up and every few seconds on his own, and his head follows the player
+	(TrainingCoachRules). Every clip is generic, never a per-character animation. He carries no billboard: what he says
+	is the on-screen coach card (TrainingHubSystem's spotlight step, his name and portrait, with the edge arrow and the
+	gold floor trail leading to the pad), because text floating in the world swings around as the camera moves. Once
+	the player has trained he is gone for them (the pad keeps its plain TRAINING tag, so anyone can play it again).
+	Built locally (anchored and inert), so nothing replicates and nobody else sees another player's coach.
 
 	Spec-exempt shell (Instances, the Animator, the neck joint); the decisions are the specced TrainingRules.isNew and
 	TrainingCoachRules.

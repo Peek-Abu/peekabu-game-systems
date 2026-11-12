@@ -118,6 +118,8 @@ local function pointToTraining()
 			kind = "world",
 			tag = TrainingConstants.TRUCK_TAG,
 			line = TrainingConstants.TEXT.truckSign,
+			-- Said by the coach standing at the pad.
+			coach = TrainingConstants.HUB_COACH.EMPLOYEE,
 			seconds = math.huge,
 			accept = isTrainingPad,
 			edgeOnly = true,

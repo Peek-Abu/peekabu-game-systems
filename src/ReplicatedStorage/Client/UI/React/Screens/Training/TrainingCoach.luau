@@ -40,6 +40,8 @@ export type TrainingCoachProps = {
 	-- Told where the card is on screen (screen px) whenever it moves or resizes, and nil when it goes (so the phone's
 	-- sticky notes can keep clear of it: TrainingCoachStore.setArea).
 	onArea: ((area: Area?) -> ())?,
+	-- Who says the line (an EmployeeRegistry key: the card's name tab and portrait); nil = Pippa, the guide.
+	coach: string?,
 }
 
 export type Area = TrainingCoachStore.Area
@@ -162,6 +164,7 @@ local function useArea(onArea: ((area: Area?) -> ())?): { current: Frame? }
 end
 
 local function TrainingCoach(props: TrainingCoachProps): React.ReactNode
+	local coach = props.coach or COACH
 	local ref = useArea(props.onArea)
 	local phone = props.phone
 	local z = props.zIndex or 30
@@ -242,7 +245,7 @@ local function TrainingCoach(props: TrainingCoachProps): React.ReactNode
 			stroke = e("UIStroke", { Color = ink, Thickness = math.max(2, line - 1) }),
 			fill = e("UIGradient", { Color = ColorSequence.new(look.tab[1], look.tab[2]), Rotation = 90 }),
 			name = e(ToonText, {
-				text = "PIPPA",
+				text = string.upper(coach),
 				meaning = "white",
 				textSize = if phone then 14 else 24,
 				size = UDim2.fromScale(1, 1),
@@ -294,8 +297,8 @@ local function TrainingCoach(props: TrainingCoachProps): React.ReactNode
 	end
 	-- Keyed by the pose: ToonViewport rebuilds its model only when the employee or look changes, not the pose. Its
 	-- bottom is the window's bottom (the crop line); its top rises over the card.
-	children[`pippa_{props.line.pose}`] = e(ToonViewport, {
-		employee = COACH,
+	children[`{coach}_{props.line.pose}`] = e(ToonViewport, {
+		employee = coach,
 		framing = "upper",
 		context = CONTEXTS[props.line.pose],
 		anchor = Vector2.new(0.5, 1),

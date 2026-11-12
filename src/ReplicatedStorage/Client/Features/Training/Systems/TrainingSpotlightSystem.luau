@@ -57,6 +57,8 @@ export type Step = {
 	-- Pippa's card stays put at the bottom left instead of following the arrow (owner 11-11: words that swing around
 	-- with the camera are disorienting).
 	pinned: boolean?,
+	-- Who says the line (an EmployeeRegistry key); nil = Pippa, the guide.
+	coach: string?,
 }
 
 local FRAME_SECONDS = 1 / 30
@@ -228,6 +230,7 @@ local function draw(step: Step, now: number)
 		leftInset = menuInset(screen),
 		onArea = tourArea,
 		pinned = step.pinned,
+		coach = step.coach,
 	}
 	if step.kind == "do" then
 		props.linePosition = Vector2.new(math.max((screen.X - LINE_SIZE.X) / 2, 0), screen.Y * DO_LINE_Y)

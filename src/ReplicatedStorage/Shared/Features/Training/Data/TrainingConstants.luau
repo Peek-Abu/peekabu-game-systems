@@ -267,7 +267,10 @@ local TrainingConstants = {
 	-- the player (LOOK: degrees she turns at most, the angle off her front past which she gives up, studs she
 	-- watches to, how fast the head catches up).
 	HUB_COACH = table.freeze({
-		EMPLOYEE = "Pippa",
+		-- Prickles (owner 11-11: Pippa runs the Supply Counter, so a second Pippa beside her looked drab): the grumpy but
+		-- brave one, whose ability is hiding, which is what training teaches. He is also the voice of the hub's
+		-- "start training" card (TEXT.truckSign); inside training the guide is still Pippa.
+		EMPLOYEE = "Prickles",
 		SIDE = Vector3.new(-6, 0, 0),
 		FACING = Vector3.new(-1, 0, 0),
 		IDLE = "idle",
@@ -276,7 +279,7 @@ local TrainingConstants = {
 	}),
 
 	TEXT = table.freeze({
-		truckSign = "New here? Start training!",
+		truckSign = "New here? Do training first. You got this!",
 		truckTag = "TRAINING",
 		finished = "Great job! You're ready.",
 		finishTitle = "TRAINING DONE!",
