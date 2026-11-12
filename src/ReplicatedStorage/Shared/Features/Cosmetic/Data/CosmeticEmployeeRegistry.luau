@@ -167,6 +167,15 @@ local ITEMS: { CosmeticTypes.Item } = {
 		lore = "Pippa keeps the Gloom in line. Mostly.",
 	},
 	{
+		id = "Pippa.BellJester",
+		kind = "skin",
+		employee = "Pippa",
+		name = "Bell Jester",
+		rarity = "epic",
+		source = "gloomLocker",
+		lore = "Bells on her cape and bells on her toes. You can hear Pippa coming!",
+	},
+	{
 		id = "Pippa.Bubbles",
 		kind = "emote",
 		employee = "Pippa",

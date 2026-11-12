@@ -98,6 +98,20 @@ return function()
 		end
 	end)
 
+	it("has Bell Jester Pippa: an Epic skin of hers from the Gloom Locker", function()
+		local item = CosmeticRegistry.get("Pippa.BellJester")
+		expect(item).to.be.ok()
+		expect(item.kind).to.equal("skin")
+		expect(item.employee).to.equal("Pippa")
+		expect(item.name).to.equal("Bell Jester")
+		expect(item.rarity).to.equal("epic")
+		expect(item.source).to.equal("gloomLocker")
+		-- A Locker prize: it has no shop price and comes with nothing else.
+		expect(item.price).never.to.be.ok()
+		expect(item.bundle).never.to.be.ok()
+		expect(#item.lore > 0).to.equal(true)
+	end)
+
 	it("has Backstage Cappy: an Epic skin of his from the Gloom Locker", function()
 		local item = CosmeticRegistry.get("Cappy.Backstage")
 		expect(item).to.be.ok()

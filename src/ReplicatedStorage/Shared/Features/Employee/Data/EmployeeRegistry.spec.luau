@@ -48,6 +48,22 @@ return function()
 			end
 		end)
 
+		it("gives Pippa a Bell Jester skin: its romper outfit and bow, her own fur kept", function()
+			local skin = EmployeeRegistry.get("Pippa").skins.BellJester
+			expect(skin).to.be.ok()
+			expect(skin.outfit).to.equal("PippaBellJester")
+			expect(table.concat(skin.accessories, ",")).to.equal("PippaBellJesterBow")
+			-- The outfit covers what it replaces itself (its HideParts), so without the art she stays Classic.
+			expect(skin.hidePieces).never.to.be.ok()
+			-- One look: no styles, and her fur keeps its own palette.
+			expect(skin.styles).never.to.be.ok()
+			expect(skin.paletteTextureId).never.to.be.ok()
+			expect(skin.piecePalettes).never.to.be.ok()
+			local item = CosmeticRegistry.get("Pippa.BellJester")
+			expect(item).to.be.ok()
+			expect(item.styles).never.to.be.ok()
+		end)
+
 		it("gives Pippa a Bubble Buddy skin wearing its outfit, in its catalogue's 3 styles", function()
 			local skin = EmployeeRegistry.get("Pippa").skins.BubbleBuddy
 			expect(skin).to.be.ok()

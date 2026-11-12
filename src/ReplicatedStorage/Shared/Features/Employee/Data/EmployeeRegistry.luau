@@ -210,6 +210,21 @@ local EMPLOYEES: { [string]: EmployeeDef } = {
 				facesFolder = nil,
 				accessories = {},
 			},
+			-- Gloom Locker Epic (Cosmetic Pippa.BellJester), a Gloom Carnival skin: a built jester outfit as one skinned
+			-- outfit over her own body (harlequin romper with puffed legs and cream frills, a scalloped capelet with a gold
+			-- cord and bells, a neck ruffle, cuffs, slim boots with curled toes and bells; her own tail copied). The outfit
+			-- hides her torso and feet itself (its HideParts), so nothing is listed in hidePieces and a place without the
+			-- art leaves her Classic. Fitted gear: a red bow on the chest (UpperTorso). One look, no styles; her fur keeps
+			-- its palette. The bells and the bow cast no shadow (their shadows read as smudges on the cream diamonds).
+			-- Icey Labs: outfit 105264153238774, bow 126687199561393. Built in
+			-- characters/skins/release/gloom_carnival/r2_pippa (p7_cut.py, p7_export.py, p7_bow.py).
+			BellJester = {
+				name = "BellJester",
+				paletteTextureId = nil,
+				facesFolder = nil,
+				accessories = { "PippaBellJesterBow" },
+				outfit = "PippaBellJester",
+			},
 			-- Legendary (Cosmetic Pippa.BubbleBuddy): the skinned raincoat, goggles and boots outfit, plus the bubble wand and
 			-- duck float the Bubbles emote shows (characters/skins/runtime-candidates-2026-10-26/bubble_buddy/v2-2026-10-28).
 			-- Each style recolours her fur too. Icey Labs images.
