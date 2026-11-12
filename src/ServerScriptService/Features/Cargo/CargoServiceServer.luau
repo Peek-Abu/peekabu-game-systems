@@ -15,7 +15,8 @@
 	- Search: desks and lockers stocked per shift (`stockSearchable`); a short hold gives what was rolled.
 	  Every completed search fires `searched` with the container (the Office dresses it open).
 	- Banking: the `cargo-load` interaction on the truck bed. Claim (CargoClaimTracker) → add (the game's
-	  `onBanked` handler) → destroy, in one synchronous step, so two Loads never count one item twice.
+	  `onBanked` handler) → destroy, in one synchronous step, so two Loads never count one item twice. Every Load
+	  fires `banked` with its banker and deposit.
 	- Grime (the loot loop, docs/superpowers/specs/2026-10-15-cleanup-crew-loot-loop-design.md, CargoGrimeSystem):
 	  valuables spawn grimy; vacuuming one (Vacuum's grime channel) cleans it, raises its value and appraises it at
 	  65% (a small sticky slip to the crew near it); an unappraised valuable banked is appraised at the truck (a
@@ -94,6 +95,8 @@ type Stock = { kind: string?, appraisal: CargoTypes.Appraisal?, searched: boolea
 
 local noiseMade: SignalTyped.Signal<Vector3, number, string, { number }> = SignalTyped.new()
 local searched: SignalTyped.Signal<BasePart> = SignalTyped.new()
+-- Every Load the truck takes: who loaded it and what it was worth (Training waits for its treasure here).
+local banked: SignalTyped.Signal<Player, CargoTypes.Deposit> = SignalTyped.new()
 local collected: SignalTyped.Signal<Player, Instance> = SignalTyped.new()
 -- The Gloom a cleaning step removed from a valuable (the shift credits it to the contract, live).
 local grimeRemoved: SignalTyped.Signal<Instance, number> = SignalTyped.new()
@@ -219,6 +222,7 @@ local loader = CargoLoadSystem.new({
 		CargoEvents.packets.Banked.sendToAll(CargoFeedbackUtils.banked(deposit, from, bed.Position, bed.Size, credited))
 		counters.banked += 1
 		grime:banked(deposit, banker)
+		banked:Fire(banker, deposit)
 	end,
 })
 
@@ -266,6 +270,7 @@ export type CargoServiceServer = {
 	dependencies: { string },
 	noiseMade: SignalTyped.Signal<Vector3, number, string, { number }>,
 	searched: SignalTyped.Signal<BasePart>,
+	banked: SignalTyped.Signal<Player, CargoTypes.Deposit>,
 	collected: SignalTyped.Signal<Player, Instance>,
 	grimeRemoved: SignalTyped.Signal<Instance, number>,
 	start: (self: CargoServiceServer) -> (),
@@ -309,6 +314,7 @@ CargoServiceServer = {
 	},
 	noiseMade = noiseMade,
 	searched = searched,
+	banked = banked,
 	collected = collected,
 	grimeRemoved = grimeRemoved,
 

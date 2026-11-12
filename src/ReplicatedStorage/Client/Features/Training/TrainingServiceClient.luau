@@ -6,7 +6,9 @@
 	  "training" slice (TrainingRules.isNew), and the after-training tour when the server sends it (TrainingEvents.Tour).
 	- On a player's first run (training's or a shift's): the hotbar tour when the server sends it
 	  (TrainingEvents.Hotbar): the vacuum's slot, then a run the player must do (hold Shift / RUN), then the power
-	  button, which passes only when they really use their crew move (TrainingGuideRules.ranEnough / powerUsed).
+	  button, which passes only when they really use their crew move (TrainingGuideRules.ranEnough / powerUsed). On a
+	  training run the steps after the vacuum follow the server's STEP_ENTRY (TrainingStepRules: suck up the Gloom,
+	  then run, then the power, in that order; the server decides when each is done).
 	- On a training run (tutorial v3): from the stop in the `training` world entry, the hall's lights out, creeping
 	  Gloom, red danger screen and glowing desk (TrainingHallSystem), the floor trail, arrow and ring
 	  (TrainingTrailSystem), and Pippa's lines and the goal bar (TrainingCoachStore, read by the TrainingGuideHud
@@ -77,7 +79,55 @@ end
 -- The finish screen's HUD order: above every other widget (the paper toasts are 1000, the hide chip 1010).
 local TRAINING_FINISH_HUD_ORDER = 2000
 
+-- The training run's first-stop step on now (the server's STEP_ENTRY), or nil outside a training run.
+local function stepNow(): string?
+	local value = StateSyncClientStore.world()[TrainingConstants.STEP_ENTRY]
+	return if type(value) == "string" then value else nil
+end
+
+local function runLineNow(): string
+	return if UserInputService.KeyboardEnabled
+		then TrainingConstants.TEXT.tourRun
+		elseif UserInputService.TouchEnabled then TrainingConstants.TEXT.tourRunTouch
+		else TrainingConstants.TEXT.tourRunPad
+end
+
+-- A training run's tour: the vacuum's slot, then each step the server is on, in its order (owner 11-12: a step can
+-- never be skipped); each tip stays until the server moves past its step.
+local function trainingTour(): { TrainingSpotlightSystem.Step }
+	local function past(order: { string }): () -> boolean
+		return function()
+			local step = stepNow()
+			return step == nil or table.find(order, step) == nil
+		end
+	end
+	local steps: { TrainingSpotlightSystem.Step } = {
+		{
+			kind = "gui",
+			tag = TrainingConstants.SPOTLIGHT_TAGS.vacuum,
+			line = TrainingConstants.TEXT.tourVacuum,
+			seconds = TrainingConstants.HOTBAR_SECONDS,
+			done = vacuumOut,
+		},
+		{ kind = "do", tag = "", line = TrainingConstants.TEXT.tourGloom, mustDo = true, done = past({ "gloom" }) },
+		{ kind = "do", tag = "", line = runLineNow(), mustDo = true, done = past({ "gloom", "run" }) },
+	}
+	if AbilityStore.abilityId() ~= nil then
+		table.insert(steps, {
+			kind = "gui",
+			tag = TrainingConstants.SPOTLIGHT_TAGS.power,
+			line = TrainingConstants.TEXT.tourPower,
+			mustDo = true,
+			done = past({ "gloom", "run", "power" }),
+		})
+	end
+	return steps
+end
+
 local function hotbarTour(): { TrainingSpotlightSystem.Step }
+	if stepNow() ~= nil then
+		return trainingTour()
+	end
 	local sprinted = 0
 	local lastCheck: number? = nil
 	local startReady = AbilityStore.readyAt()
@@ -90,10 +140,7 @@ local function hotbarTour(): { TrainingSpotlightSystem.Step }
 			done = vacuumOut,
 		},
 	}
-	local runLine = if UserInputService.KeyboardEnabled
-		then TrainingConstants.TEXT.tourRun
-		elseif UserInputService.TouchEnabled then TrainingConstants.TEXT.tourRunTouch
-		else TrainingConstants.TEXT.tourRunPad
+	local runLine = runLineNow()
 	table.insert(steps, {
 		kind = "do",
 		tag = "",

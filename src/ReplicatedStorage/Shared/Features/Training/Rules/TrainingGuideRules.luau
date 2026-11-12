@@ -81,11 +81,20 @@ function TrainingGuideRules.trailTone(stop: number, situation: Situation): Tone
 end
 
 --[=[
-	The goal bar's card for `stop`; nil outside the stops.
+	The goal bar's card for `stop`; nil outside the stops. At a stop with steps (the first), the step on now
+	(`step`, the server's STEP_ENTRY) picks its own card once the Gloom is done: the run, then the power.
 ]=]
-function TrainingGuideRules.goal(stop: number): TrainingConstants.GoalCard?
+function TrainingGuideRules.goal(stop: number, step: string?): TrainingConstants.GoalCard?
 	local id = idOf(stop)
-	return if id ~= nil then TrainingConstants.GOALS[id] else nil
+	if id == nil then
+		return nil
+	end
+	local def = STOPS[stop]
+	local stepCard = if step ~= nil then TrainingConstants.STEP_GOALS[step] else nil
+	if def.steps == true and stepCard ~= nil then
+		return stepCard
+	end
+	return TrainingConstants.GOALS[id]
 end
 
 --[=[

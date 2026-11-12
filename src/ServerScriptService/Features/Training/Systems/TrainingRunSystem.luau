@@ -2,7 +2,10 @@
 --[=[
 	TrainingRunSystem: one player's training run on the Training map, while the shift runs on it (TrainingSiteSystem is
 	the site). It follows the run's stops (TrainingStopRules): a stop's piles cleared (Vacuum's pileCleared) or its
-	treasure loaded (the item is destroyed when the truck banks it) finish that stop and open its doors; walking into
+	treasure loaded into the truck (Cargo's `banked`, with the treasure's kind; picking it up is not enough) finish that
+	stop and open its doors. A stop with `steps` (the first) finishes only once its steps are done in order
+	(TrainingStepRules: the Gloom, a run, the power; the server sees the sprint and the power button), the step on now
+	published as the STEP_ENTRY world entry for the client's tips; walking into
 	the next stop's zone (checked every POLL_SECONDS) moves the player on. The stop is published as the `training` world
 	entry for the client's hall effects (signs, lights out, the Gloom creeping, the glowing desk).
 
@@ -18,8 +21,8 @@
 	ShiftConstants.TRAINING_GRACE after a catch, so there is no catch straight after.
 	Walking into the last stop finishes the run: `finished` is called once (the reward, the finish screen).
 
-	Spec-exempt shell (Instances, signals, Shift and Vacuum); the decisions are the specced TrainingStopRules and
-	TrainingMapRules.
+	Spec-exempt shell (Instances, signals, Shift, Vacuum, Cargo, Sprint and Ability); the decisions are the specced
+	TrainingStopRules, TrainingStepRules and TrainingMapRules.
 
 	@class TrainingRunSystem
 ]=]
@@ -27,12 +30,20 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
+local Workspace = game:GetService("Workspace")
 
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
+local AbilityRegistry = require(ReplicatedStorage.Shared.Features.Ability.Data.AbilityRegistry)
+local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
+local EmployeeConstants = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeConstants)
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local TrainingEvents = require(ReplicatedStorage.Shared.Features.Training.Net.TrainingEvents)
+local TrainingStepRules = require(ReplicatedStorage.Shared.Features.Training.Rules.TrainingStepRules)
 local TrainingStopRules = require(ReplicatedStorage.Shared.Features.Training.Rules.TrainingStopRules)
+local AbilityServiceServer = require(ServerScriptService.Features.Ability.AbilityServiceServer)
+local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
 local ShiftServiceServer = require(ServerScriptService.Features.Shift.ShiftServiceServer)
+local SprintServiceServer = require(ServerScriptService.Features.Sprint.SprintServiceServer)
 local StateSyncWorldStore = require(ServerScriptService.Features.StateSync.State.StateSyncWorldStore)
 local TrainingHarlowSystem = require(ServerScriptService.Features.Training.Systems.TrainingHarlowSystem)
 local TrainingMapRules = require(ServerScriptService.Features.Training.Rules.TrainingMapRules)
@@ -67,6 +78,13 @@ local function open(door: BasePart)
 	door:SetAttribute("TrainingOpen", true)
 end
 
+-- Whether the player's employee has a power (the power step is skipped for one without).
+local function hasPower(player: Player): boolean
+	local character = player.Character
+	local name = if character ~= nil then character:GetAttribute(EmployeeConstants.NAME_ATTRIBUTE) else nil
+	return type(name) == "string" and AbilityRegistry.forEmployee(name) ~= nil
+end
+
 local TrainingRunSystem = {}
 
 function TrainingRunSystem.new(
@@ -76,6 +94,11 @@ function TrainingRunSystem.new(
 	finished: (player: Player) -> ()
 ): Run
 	local state = TrainingStopRules.new()
+	local steps = TrainingStepRules.new(hasPower(player))
+	-- The power button was pressed since the last step tick.
+	local pressed = false
+	-- The treasure kinds to load, by stop.
+	local treasures: { [number]: string } = {}
 	local harlow = TrainingHarlowSystem.new(player, model, plan)
 	local stoppers: { () -> () } = {}
 	local remaining: { [number]: { [BasePart]: true } } = {}
@@ -97,6 +120,7 @@ function TrainingRunSystem.new(
 
 	local function publish()
 		StateSyncWorldStore.set(TrainingConstants.WORLD_ENTRY, state.stop)
+		StateSyncWorldStore.set(TrainingConstants.STEP_ENTRY, TrainingStepRules.current(steps) or "done")
 	end
 
 	local function openDone()
@@ -140,7 +164,36 @@ function TrainingRunSystem.new(
 		end
 	end
 
-	local function poll()
+	-- The stops with steps: their piles were cleared (`cleared`) and their steps are all done.
+	local function stepsDone()
+		if not TrainingStepRules.done(steps) then
+			return
+		end
+		for stop, def in TrainingConstants.STOPS do
+			if def.steps == true then
+				complete(stop, "piles")
+			end
+		end
+	end
+
+	local function stepTick(dt: number)
+		local fired = pressed
+		pressed = false
+		local moved = TrainingStepRules.tick(steps, {
+			dt = dt,
+			sprinting = SprintServiceServer:isSprinting(player),
+			readyAt = AbilityServiceServer:readyAt(player),
+			pressed = fired,
+			now = Workspace:GetServerTimeNow(),
+		})
+		if moved then
+			publish()
+			stepsDone()
+		end
+	end
+
+	local function poll(dt: number)
+		stepTick(dt)
 		escapePoll()
 		local root = rootOf()
 		if root == nil then
@@ -168,13 +221,47 @@ function TrainingRunSystem.new(
 			if set[pile] then
 				set[pile] = nil
 				if next(set) == nil then
-					complete(stop, "piles")
+					local def = TrainingConstants.STOPS[stop]
+					if def ~= nil and def.steps == true then
+						-- Its steps start now (with the power the player's employee has now).
+						if TrainingStepRules.current(steps) == "gloom" then
+							steps = TrainingStepRules.new(hasPower(player))
+							TrainingStepRules.cleared(steps)
+							publish()
+							stepsDone()
+						end
+					else
+						complete(stop, "piles")
+					end
 				end
 			end
 		end
 	end)
 	table.insert(stoppers, function()
 		clearing:Disconnect()
+	end)
+
+	local pressing = AbilityServiceServer.pressed:Connect(function(who: Player)
+		if who == player then
+			pressed = true
+		end
+	end)
+	-- A treasure counts once the truck takes it (its kind in a Load by this player), never when it is picked up.
+	local banking = CargoServiceServer.banked:Connect(function(banker: Player, deposit)
+		if banker ~= player or stopped then
+			return
+		end
+		for stop, kind in treasures do
+			for _, item in deposit.items do
+				if item.kind == kind then
+					complete(stop, "banked")
+				end
+			end
+		end
+	end)
+	table.insert(stoppers, function()
+		pressing:Disconnect()
+		banking:Disconnect()
 	end)
 
 	local catching = ShiftServiceServer.caught:Connect(function(caught: Player, livesLeft: number)
@@ -205,8 +292,9 @@ function TrainingRunSystem.new(
 		if elapsed < POLL_SECONDS or stopped then
 			return
 		end
+		local dt = elapsed
 		elapsed = 0
-		poll()
+		poll(dt)
 	end)
 	table.insert(stoppers, function()
 		polling:Disconnect()
@@ -222,17 +310,12 @@ function TrainingRunSystem.new(
 			end
 			for _, item in items do
 				if item.treasure then
-					local part = item.part
-					local folder = part.Parent
-					local banking = part.Destroying:Connect(function()
-						-- Banked: the truck destroys what it takes. A shift reset destroys the folder first.
-						if folder ~= nil and folder.Parent ~= nil then
-							complete(item.stop, "banked")
-						end
-					end)
-					table.insert(stoppers, function()
-						banking:Disconnect()
-					end)
+					local kind = item.part:GetAttribute(CarryConstants.KIND_ATTRIBUTE)
+					if type(kind) == "string" then
+						treasures[item.stop] = kind
+					else
+						log:warn(`treasure {item.part:GetFullName()} has no cargo kind: its stop cannot be banked`)
+					end
 				end
 			end
 		end,
@@ -246,6 +329,7 @@ function TrainingRunSystem.new(
 			table.clear(stoppers)
 			StateSyncWorldStore.clear(TrainingConstants.WORLD_ENTRY)
 			StateSyncWorldStore.clear(TrainingConstants.CLEAR_ENTRY)
+			StateSyncWorldStore.clear(TrainingConstants.STEP_ENTRY)
 		end,
 
 		state = function(_self)

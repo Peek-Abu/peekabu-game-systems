@@ -51,6 +51,9 @@ export type Stop = {
 	goal: Goal,
 	-- The stop's sign, at a kid's reading level.
 	sign: string,
+	-- Its piles only finish the stop once its steps are done in order: the Gloom, then a run, then the power
+	-- (TrainingStepRules).
+	steps: boolean?,
 }
 
 local ROLES: { Role } = {
@@ -74,7 +77,7 @@ local ROLES: { Role } = {
 }
 
 local STOPS: { Stop } = {
-	{ id = "dust", goal = "piles", sign = "Hold to vacuum the Gloom!" },
+	{ id = "dust", goal = "piles", sign = "Hold to vacuum the Gloom!", steps = true },
 	{ id = "treasure", goal = "banked", sign = "Clean the treasure. Leave the trash!" },
 	{ id = "quiet", goal = "walk", sign = "Shh! He hears running." },
 	{ id = "hide", goal = "escape", sign = "He's coming! Run or hide!" },
@@ -110,6 +113,12 @@ local GOALS: { [string]: GoalCard } = {
 	quiet = { title = "FOLLOW THE ARROWS!", line = "The lights are going out. Keep going!", icon = "flashlight" },
 	hide = { title = "GET AWAY FROM HIM!", line = "Run away, or hide under the glowing desk.", icon = "!" },
 	done = { title = "TRAINING DONE!", line = "You're ready for a real shift.", icon = "trophy" },
+}
+
+-- The first stop's later steps (TrainingStepRules), each with its own goal card once the Gloom is done.
+local STEP_GOALS: { [string]: GoalCard } = {
+	run = { title = "RUN FAST!", line = "Hold run to go fast. Try it!", icon = "flashlight" },
+	power = { title = "USE YOUR POWER!", line = "Tap your power button. Try it!", icon = "trophy" },
 }
 
 local TrainingConstants = {
@@ -174,6 +183,10 @@ local TrainingConstants = {
 	}),
 	-- The world entry holding the last stop the player escaped at (the client's "He's gone!" cue).
 	CLEAR_ENTRY = "trainingClear",
+	-- The world entry holding the first stop's step on now (TrainingStepRules: "gloom", "run", "power", or "done"),
+	-- for the client's tips.
+	STEP_ENTRY = "trainingStep",
+	STEP_GOALS = table.freeze(STEP_GOALS),
 	-- After "Play training again", how long the hub's chevron trail leads a trained player to the pad (seconds).
 	AGAIN_TRAIL_SECONDS = 60,
 	-- The catch beat, in seconds from the throw (the Caught packet): a goo splat on a heart, the red card, a quick dark
@@ -316,6 +329,7 @@ local TrainingConstants = {
 		againButton = "PLAY TRAINING AGAIN",
 		tourVacuum = "This is your vacuum. Pick it. Then hold to suck up Gloom.",
 		tourPower = "This is your power. Tap it now. Try it!",
+		tourGloom = "Now hold to suck up all the purple Gloom!",
 		tourRun = "Run! Hold Shift to run fast.",
 		tourRunPad = "Run! Press the left stick to run fast.",
 		tourRunTouch = "Run! Hold the SPRINT button.",

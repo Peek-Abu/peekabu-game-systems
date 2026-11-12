@@ -31,10 +31,12 @@ local CargoConstants = require(ReplicatedStorage.Shared.Features.Cargo.Data.Carg
 local CargoRegistry = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoRegistry)
 local CarryConstants = require(ReplicatedStorage.Shared.Features.Carry.Data.CarryConstants)
 local HideConstants = require(ReplicatedStorage.Shared.Features.Hide.Data.HideConstants)
+local StateSyncConstants = require(ReplicatedStorage.Shared.Features.StateSync.Data.StateSyncConstants)
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local TrainingGuideRules = require(ReplicatedStorage.Shared.Features.Training.Rules.TrainingGuideRules)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local HideStore = require(ReplicatedStorage.Client.Features.Hide.State.HideStore)
+local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local TrainingCoachStore = require(ReplicatedStorage.Client.Features.Training.State.TrainingCoachStore)
 local TrainingTrailUtils = require(ReplicatedStorage.Client.Features.Training.Utils.TrainingTrailUtils)
 
@@ -187,10 +189,32 @@ local function liveInZone(map: Model, stopNumber: number, tag: string): { BasePa
 	return found
 end
 
-local function isTreasure(part: BasePart): boolean
-	local id = part:GetAttribute(CargoConstants.ID_ATTRIBUTE)
-	local def = if type(id) == "string" then CargoRegistry.get(id) else nil
+-- A treasure is salvage cargo (its kind is the Carry kind attribute; the cargo id is a number).
+local function isTreasureKind(kind: unknown): boolean
+	local def = if type(kind) == "string" then CargoRegistry.get(kind) else nil
 	return def ~= nil and def.category == "salvage"
+end
+
+local function isTreasure(part: BasePart): boolean
+	return isTreasureKind(part:GetAttribute(CarryConstants.KIND_ATTRIBUTE))
+end
+
+-- Whether a treasure sits in one of the local player's item slots (picked up: pocketed, its world part gone).
+local function pocketedTreasure(): boolean
+	local player = Players.LocalPlayer
+	if player == nil then
+		return false
+	end
+	local entry = StateSyncClientStore.publicPlayers()[StateSyncConstants.publicEntryKey(player.UserId)]
+	if entry == nil then
+		return false
+	end
+	for _, fields in CargoConstants.SLOT_FIELDS do
+		if isTreasureKind(entry[fields.kind]) then
+			return true
+		end
+	end
+	return false
 end
 
 -- The stop's treasure, carried or not: the cargo the local player holds, else the one in the zone.
@@ -205,6 +229,10 @@ local function treasureOf(map: Model, stopNumber: number): (BasePart?, boolean)
 		then
 			return tagged, true
 		end
+	end
+	-- Picked up (owner 11-12: grabbing the mug is not loading it): the guide points at the truck until it is loaded.
+	if pocketedTreasure() then
+		return nil, true
 	end
 	local loose: { BasePart } = {}
 	for _, part in liveInZone(map, stopNumber, CarryConstants.TAG) do

@@ -12,10 +12,12 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local React = require(ReplicatedStorage.Packages.React)
+local ReactCharm = require(ReplicatedStorage.Packages.ReactCharm)
 local TrainingConstants = require(ReplicatedStorage.Shared.Features.Training.Data.TrainingConstants)
 local TrainingGuideRules = require(ReplicatedStorage.Shared.Features.Training.Rules.TrainingGuideRules)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
+local StateSyncClientStore = require(ReplicatedStorage.Client.Features.StateSync.State.StateSyncClientStore)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonIcon = require(Toon.ToonIcon)
 local ToonPanel = require(Toon.ToonPanel)
@@ -115,7 +117,10 @@ end
 
 local function TrainingGoalBar(props: TrainingGoalBarProps): React.ReactNode
 	local phone = props.phone
-	local goal = TrainingGuideRules.goal(props.stop)
+	-- The first stop's step on now (the server's STEP_ENTRY): its card follows the step (run, then power).
+	local world = ReactCharm.useAtom(StateSyncClientStore.world)
+	local rawStep = world[TrainingConstants.STEP_ENTRY]
+	local goal = TrainingGuideRules.goal(props.stop, if type(rawStep) == "string" then rawStep else nil)
 	if goal == nil then
 		return nil
 	end

@@ -37,6 +37,7 @@ local AbilityShared = ReplicatedStorage.Shared.Features.Ability
 local AbilityServer = ServerScriptService.Features.Ability
 local Observers = require(ReplicatedStorage.Packages.Observers)
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
+local SignalTyped = require(ReplicatedStorage.Shared.Core.SignalTyped)
 local AbilityConstants = require(AbilityShared.Data.AbilityConstants)
 local AbilityRegistry = require(AbilityShared.Data.AbilityRegistry)
 local AbilityTypes = require(AbilityShared.Data.AbilityTypes)
@@ -262,7 +263,11 @@ local function endPlant(player: Player, reason: AbilityTypes.EndReason, calm: bo
 	say(player, reason)
 end
 
+-- Every press of the power button that reaches the server, used or refused (training's power step counts a press).
+local pressed: SignalTyped.Signal<Player> = SignalTyped.new()
+
 local function onUse(player: Player)
+	pressed:Fire(player)
 	-- A second press while planted (no-cooldown mode) never restarts the plant: moving ends it.
 	if tracker:plantOf(player.UserId) ~= nil then
 		return
@@ -426,6 +431,8 @@ end
 
 export type AbilityServiceServer = {
 	dependencies: { string },
+	-- Fires on every press of the power button that reaches the server, whether or not the power fires.
+	pressed: SignalTyped.Signal<Player>,
 	start: (self: AbilityServiceServer) -> (),
 	stop: (self: AbilityServiceServer) -> (),
 	getState: (self: AbilityServiceServer) -> { [string]: any },
@@ -437,6 +444,7 @@ export type AbilityServiceServer = {
 }
 
 local AbilityServiceServer: AbilityServiceServer = {
+	pressed = pressed,
 	dependencies = {
 		"AnimationServiceServer",
 		"CargoServiceServer",

@@ -66,6 +66,16 @@ return function()
 			end
 			expect(TrainingGuideRules.goal(0)).to.equal(nil)
 		end)
+
+		it("shows the first stop's step on now: the run, then the power, once the Gloom is done", function()
+			local gloom = TrainingGuideRules.goal(1, "gloom")
+			expect(gloom).to.equal(TrainingGuideRules.goal(1))
+			expect(TrainingGuideRules.goal(1, "run")).to.equal(TrainingConstants.STEP_GOALS.run)
+			expect(TrainingGuideRules.goal(1, "power")).to.equal(TrainingConstants.STEP_GOALS.power)
+			-- A step only changes the first stop's card.
+			expect(TrainingGuideRules.goal(2, "run")).to.equal(TrainingGuideRules.goal(2))
+			expect(TrainingGuideRules.goal(1, "done")).to.equal(TrainingGuideRules.goal(1))
+		end)
 	end)
 
 	describe("coach", function()
