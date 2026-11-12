@@ -59,6 +59,8 @@ return table.freeze({
 	-- The Supply Counter clerk's clips (DepotClerkSystem; design/animations/clerk, Icey Labs, uploaded with the owner's
 	-- OK 2026-11-11): the active idle (looped), the stamp fidget (v6, markers Thunk and Lift), the stretch fidget and
 	-- the wave.
+	-- The gold 4-point sparkle the stations' twinkle uses (DepotIdleMotionSystem): the UI kit's sparkle image.
+	SPARKLE = "rbxassetid://79532536364589",
 	CLERK_IDLE = "rbxassetid://111793457366391",
 	CLERK_STAMP = "rbxassetid://109774578542575",
 	CLERK_STRETCH = "rbxassetid://89323328078889",

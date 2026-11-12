@@ -47,6 +47,16 @@ local STATIONS: { Station } = {
 	table.freeze({ name = "Quiet Night", track = nil }),
 }
 
+-- Seconds between an idle motion's goes (min, max), by motion (IDLE below).
+local IDLE_INTERVALS: { [string]: { number } } = {
+	steam = { 3, 6 },
+	drip = { 2, 4 },
+	sway = { 9, 16 },
+	rattle = { 7, 14 },
+	twinkle = { 4, 8 },
+	candrop = { 12, 22 },
+}
+
 local DepotSpotConstants = {
 	KINDS = KINDS,
 	PROMPTS = PROMPTS,
@@ -155,6 +165,23 @@ local DepotSpotConstants = {
 			GRIP_POSITION = Vector3.new(0, 0, 0),
 			GRIP_DEGREES = Vector3.new(-14.6, -59.4, -22.6),
 		}),
+	}),
+	-- The stations' small idle motions (DepotIdleMotionSystem, DepotIdleRules; owner 11-11, ideas sheet #3). A builder
+	-- tags any part TAG and names its motion in ATTRIBUTE: "steam" (puffs from the part's top), "drip" (a drop falls
+	-- from its bottom), "bounce" (its model hops on the beat while the radio plays music), "sway" (its model's swing
+	-- parts nudge about the bell pivot), "rattle" (the part jiggles about its left edge, a locker door), "twinkle"
+	-- (gold sparkles round it), "candrop" (a can falls inside it, a vending window), "tick" (a second hand on its front
+	-- face, a clock). INTERVALS: seconds between goes (min, max) for the ones that come and go.
+	IDLE = table.freeze({
+		TAG = "DepotIdleMotion",
+		ATTRIBUTE = "IdleMotion",
+		-- The hub record: 96 bpm.
+		BEAT_SECONDS = 60 / 96,
+		BOUNCE = table.freeze({ APEX = 0.06, SHARE = 0.35 }),
+		RATTLE = table.freeze({ DEGREES = 3, FREQUENCY = 9, DAMPING = 5, SECONDS = 0.6 }),
+		SWAY = table.freeze({ DEGREES = 5, FREQUENCY = 1.3, SECONDS = 1.8 }),
+		FALL = table.freeze({ GRAVITY = 40, DISTANCE = 1.2 }),
+		INTERVALS = table.freeze(IDLE_INTERVALS),
 	}),
 }
 

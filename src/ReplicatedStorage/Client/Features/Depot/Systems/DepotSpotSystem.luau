@@ -154,6 +154,13 @@ end
 
 local DepotSpotSystem = {}
 
+--[=[
+	Whether `bell` is swinging from a ring right now (DepotIdleMotionSystem's little idle sway waits for it).
+]=]
+function DepotSpotSystem.ringing(bell: Instance): boolean
+	return swinging[bell] ~= nil
+end
+
 -- The spot scenes, so the depot can take them down when the player leaves the hub.
 DepotSpotSystem.SCENES = { SCENES.coffee, SCENES.crew, SCENES.rank }
 
@@ -186,7 +193,11 @@ end
 -- station's rate (DepotSpotRules.noteRate: none on a quiet station). Nothing until the notes image is uploaded.
 local function noteEmitter(radio: Instance): ParticleEmitter?
 	local texture = DepotAssets.RADIO_NOTES
-	local body = radio:FindFirstChild(DepotSpotConstants.RADIO_NOTES.EMITTER_NAME, true)
+	-- The tag may sit on the radio model or on a spot part inside it (owner 11-11: the notes never showed): search the
+	-- whole radio model for its emitter part.
+	local model = if radio:IsA("Model") then radio else radio:FindFirstAncestorWhichIsA("Model")
+	local name = DepotSpotConstants.RADIO_NOTES.EMITTER_NAME
+	local body = radio:FindFirstChild(name, true) or (if model ~= nil then model:FindFirstChild(name, true) else nil)
 	if texture == nil or body == nil or not body:IsA("BasePart") then
 		return nil
 	end
