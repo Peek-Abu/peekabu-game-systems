@@ -30,7 +30,8 @@ return function()
 		it("turns the time clock's art to face its readers (owner 11-11: it faced the wall)", function()
 			built = Build.build(Layout, CFrame.new(50000, 0, 0), {})
 			local clock = built.model:FindFirstChild("WeeklyTimeClock", true)
-			local art = built.model:FindFirstChild("TimeClockArt", true)
+			-- The hub's clock art beside its hit box (each truck carries its own TimeClockArt too).
+			local art = clock.Parent:FindFirstChild("TimeClockArt")
 			if art ~= nil then
 				-- The clock part's +Z faces its readers (a board's sign side); the art's face is its LookVector.
 				expect(art:GetPivot().LookVector:Dot(-clock.CFrame.LookVector) > 0.99).to.equal(true)
