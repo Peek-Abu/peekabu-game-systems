@@ -14,6 +14,14 @@ with a TrainingRole, the HideFurniture desks, the doors and the TruckBed keep th
    collider unseen, its look an `Art` model under it) and Office dressing round the walls.
 
 Uses the place's OH_Plaster / OH_Carpet / OH_Ceiling / OH_Oak MaterialVariants when it has them (the Shift place),
-else Roblox's Plaster / Carpet / Concrete / Wood (the lobby has none).
+else Roblox's Plaster / Carpet / Concrete / Wood. The lobby got the four Office variants copied from the Shift place's
+MaterialService (read 2026-11-12), image ids colour / normal / rough, StudsPerTile:
+
+| Variant | Base | Colour | Normal | Rough | Studs |
+|---|---|---|---|---|---|
+| OH_Plaster | Plaster | 112255944983790 | 131482043768970 | 108734579719883 | 10 |
+| OH_Oak | Wood | 140176970339235 | 133450618501853 | 98108513656521 | 6 |
+| OH_Carpet | Fabric | 122567516631364 | 99767245032269 | 71491637029770 | 8 |
+| OH_Ceiling | Concrete | 76019697303102 | 128615599160062 | 82067933016233 | 8 |
 
 Done in the lobby 2026-11-12 (unsaved, the owner saves). The Shift place's map is not restyled yet.

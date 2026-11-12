@@ -82,7 +82,8 @@ for _, p in shell:GetChildren() do
 			p.Color = Color3.fromRGB(120, 118, 124)
 			counts.floors += 1
 		elseif n:find("Floor") then
-			p.Material = Enum.Material.Carpet
+			-- OH_Carpet is a Fabric variant (a variant only shows on its own base material).
+			p.Material = if carpet ~= "" then Enum.Material.Fabric else Enum.Material.Carpet
 			p.MaterialVariant = carpet
 			-- The long hall cooler, the rooms warmer (the Office hallway tint vs its rooms).
 			p.Color = if n == "Floor" then Color3.fromRGB(150, 150, 160) else Color3.fromRGB(128, 118, 132)
