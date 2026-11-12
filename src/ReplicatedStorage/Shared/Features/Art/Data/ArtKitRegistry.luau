@@ -113,6 +113,10 @@ local keys: { [ArtTypes.Family]: { string } } = {
 		"mouse",
 		"bookStack",
 		"stationeryCup",
+		-- The vacuum's dust piles (VacuumPileArtSystem), in the default kit so every map shows them.
+		"pilePaper",
+		"pileCables",
+		"pileJunk",
 	},
 	-- Equipment is an extension family: company equipment has its own visual systems.
 	equipment = {},

@@ -53,6 +53,7 @@ local VacuumMotionRigSystem = require(ReplicatedStorage.Shared.Features.Vacuum.S
 local VacuumChannelTracker = require(ServerScriptService.Features.Vacuum.State.VacuumChannelTracker)
 local VacuumToolSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumToolSystem)
 local VacuumAimSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumAimSystem)
+local VacuumPileArtSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumPileArtSystem)
 local VacuumVisualSystem = require(ServerScriptService.Features.Vacuum.Systems.VacuumVisualSystem)
 local VacuumEquipmentRules = require(ReplicatedStorage.Shared.Features.Vacuum.Rules.VacuumEquipmentRules)
 local VacuumSkinRegistry = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumSkinRegistry)
@@ -178,6 +179,10 @@ local function shrink(pile: BasePart)
 	local bottom = pile.Position.Y - pile.Size.Y / 2
 	pile.Size = base * scale
 	pile.Position = Vector3.new(pile.Position.X, bottom + pile.Size.Y / 2, pile.Position.Z)
+	local kind = pile:GetAttribute(VacuumConstants.PILE_KIND_ATTRIBUTE)
+	if type(kind) == "string" then
+		VacuumPileArtSystem.rescale(pile, kind, scale)
+	end
 end
 
 -- The channel's completion: the pile is cleared once, for everyone on it.
@@ -404,6 +409,8 @@ local VacuumServiceServer: VacuumServiceServer = {
 		pile:SetAttribute(VacuumConstants.BASE_SIZE_ATTRIBUTE, style.size)
 		pile:SetAttribute(InteractionConstants.CHANNEL_KIND_ATTRIBUTE, VacuumConstants.CHANNEL_KIND)
 		pile.Parent = parent
+		-- Its art, where the place has it (VacuumPileArtSystem); else the block itself shows.
+		VacuumPileArtSystem.dress(pile, kind)
 		CollectionService:AddTag(pile, VacuumConstants.PILE_TAG)
 		counters.spawned += 1
 		return pile

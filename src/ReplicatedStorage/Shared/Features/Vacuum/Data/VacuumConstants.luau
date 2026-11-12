@@ -6,17 +6,35 @@
 	@class VacuumConstants
 ]=]
 
+-- `art`: the pile's art key in the default kit's props (VacuumPileArtSystem); the block's colour and material show only
+-- where a place lacks that art.
 export type PileStyle = {
 	size: Vector3,
 	color: Color3,
 	material: Enum.Material,
+	art: string,
 }
 
--- The three pile visuals (graybox).
+-- The three piles: the gameplay block (size) and its art (owner-approved hand-built piles, 2026-11-12).
 local PILE_KINDS: { [string]: PileStyle } = {
-	paper = { size = Vector3.new(4, 1.2, 4), color = Color3.fromRGB(235, 230, 215), material = Enum.Material.Fabric },
-	debris = { size = Vector3.new(3.5, 1, 3.5), color = Color3.fromRGB(120, 105, 90), material = Enum.Material.Slate },
-	cables = { size = Vector3.new(3, 0.8, 3), color = Color3.fromRGB(25, 25, 25), material = Enum.Material.Plastic },
+	paper = {
+		size = Vector3.new(4, 1.2, 4),
+		color = Color3.fromRGB(235, 230, 215),
+		material = Enum.Material.Fabric,
+		art = "pilePaper",
+	},
+	debris = {
+		size = Vector3.new(3.5, 1, 3.5),
+		color = Color3.fromRGB(120, 105, 90),
+		material = Enum.Material.Slate,
+		art = "pileJunk",
+	},
+	cables = {
+		size = Vector3.new(3, 0.8, 3),
+		color = Color3.fromRGB(25, 25, 25),
+		material = Enum.Material.Plastic,
+		art = "pileCables",
+	},
 }
 
 -- Cleaning a grimy valuable (docs/superpowers/specs/2026-10-15-cleanup-crew-loot-loop-design.md §3.2): one Interaction
@@ -68,6 +86,8 @@ return table.freeze({
 	NOISE_RADIUS = 40,
 	-- A pile shrinks to this fraction of its size as progress reaches full.
 	MIN_SCALE = 0.35,
+	-- A shrinking pile's art is re-fitted each time the pile shrinks this much more (VacuumPileArtSystem.rescale).
+	PILE_ART_STEP = 0.05,
 	-- The hold-to-vacuum Input action and how often the client re-aims.
 	ACTION = "vacuum",
 	AIM_INTERVAL = 0.1,
