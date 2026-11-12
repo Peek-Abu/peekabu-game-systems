@@ -184,22 +184,36 @@ end
 	Moves every marker that stands within LANDMARK_WALL_SNAP of a wall of `kit` (the kit's placed rectangle) out by
 	the distance from that kit wall to the same wall of `room` (the block it fills), on each axis: a vending machine,
 	a serving line or a scoreboard ends against the room's real wall instead of where the kit's wall would be. A marker
-	with no footprint (a pile, an item, a patrol point) snaps by its point. Pure: mutates `markers` only.
+	with no footprint (a pile, an item, a patrol point) snaps by its point. `hold`: a wall whose floor pieces stay
+	where the kit put them (its wall props still move: nothing hangs in the air), used when the back door needs that
+	wall's length. Pure: mutates `markers` only.
 ]=]
-function SchoolLayoutGenerationUtils.snapToWalls(markers: { Marker }, kit: Rect, room: Rect)
+function SchoolLayoutGenerationUtils.snapToWalls(markers: { Marker }, kit: Rect, room: Rect, hold: Edge?)
 	local reach = SchoolConstants.LANDMARK_WALL_SNAP
 	for _, marker in markers do
 		local hx, hz = halfExtents(marker)
 		local halfX, halfZ = hx or 0, hz or 0
+		local hung = marker.kind == "prop" and marker.art ~= nil and OfficeConstants.PROP_WALL_HEIGHT[marker.art] ~= nil
+		local function moves(edge: Edge): boolean
+			return hung or edge ~= hold
+		end
 		if marker.x - halfX - kit.minX <= reach then
-			marker.x += room.minX - kit.minX
+			if moves("minX") then
+				marker.x += room.minX - kit.minX
+			end
 		elseif kit.maxX - (marker.x + halfX) <= reach then
-			marker.x += room.maxX - kit.maxX
+			if moves("maxX") then
+				marker.x += room.maxX - kit.maxX
+			end
 		end
 		if marker.z - halfZ - kit.minZ <= reach then
-			marker.z += room.minZ - kit.minZ
+			if moves("minZ") then
+				marker.z += room.minZ - kit.minZ
+			end
 		elseif kit.maxZ - (marker.z + halfZ) <= reach then
-			marker.z += room.maxZ - kit.maxZ
+			if moves("maxZ") then
+				marker.z += room.maxZ - kit.maxZ
+			end
 		end
 	end
 end
@@ -272,20 +286,27 @@ local function placeLandmark(build: Build, landmark: SchoolNetworkUtils.Landmark
 	local room = placement.room
 	local kitRect: Rect = { minX = room.minX, maxX = room.maxX, minZ = room.minZ, maxZ = room.maxZ }
 	room.minX, room.maxX, room.minZ, room.maxZ = minX, maxX, minZ, maxZ
-	-- The kit's wall pieces follow the room's real walls (the block is wider and deeper than the kit).
-	SchoolLayoutGenerationUtils.snapToWalls(placement.markers, kitRect, room)
+	-- The kit's wall pieces follow the room's real walls (the block is wider and deeper than the kit). The back door
+	-- keeps clear of the pieces then standing along the back wall; when they leave it no room (a cafeteria's serving
+	-- line), the back wall's floor pieces stay where the kit put them (an island, the door behind) and only its wall
+	-- props move.
 	local width = SchoolConstants.LANDMARK_DOOR_WIDTH
 	local inset = SchoolConstants.LANDMARK_DOOR_INSET + width / 2
 	local want = minX + inset + rng:NextNumber() * math.max(0, maxX - minX - 2 * inset)
-	-- The back door keeps clear of the pieces now standing along the back wall.
-	local backX = SchoolLayoutGenerationUtils.freeDoorX(
-		placement.markers,
-		room,
-		if frontTop then maxZ else minZ,
-		width,
-		inset,
-		want
-	)
+	local backEdge: Edge = if frontTop then "maxZ" else "minZ"
+	local backZ = if frontTop then maxZ else minZ
+	local snapped = table.clone(placement.markers)
+	for index, marker in snapped do
+		snapped[index] = table.clone(marker)
+	end
+	SchoolLayoutGenerationUtils.snapToWalls(snapped, kitRect, room)
+	local backX = SchoolLayoutGenerationUtils.freeDoorX(snapped, room, backZ, width, inset, want)
+	if backX == nil then
+		SchoolLayoutGenerationUtils.snapToWalls(placement.markers, kitRect, room, backEdge)
+		backX = SchoolLayoutGenerationUtils.freeDoorX(placement.markers, room, backZ, width, inset, want)
+	else
+		placement.markers = snapped
+	end
 	if backX == nil then
 		return `the {landmark.roomType}'s back wall has no free stretch for its back door`
 	end

@@ -105,6 +105,18 @@ return function()
 			expect(markers[3].z).to.equal(30)
 		end)
 
+		it("holds a wall's floor pieces when asked, but still hangs its wall props on the real wall", function()
+			local kit = { minX = 10, maxX = 74, minZ = 0, maxZ = 56 }
+			local room = { minX = 9, maxX = 75, minZ = 0, maxZ = 67 }
+			local markers = {
+				{ id = "a", room = "r", kind = "prop", art = "scoreboard", x = 42, z = 55.08, rotation = 0 },
+				{ id = "b", room = "r", kind = "counter", art = "servingCounter", x = 42, z = 53.4, rotation = 0 },
+			}
+			Gen.snapToWalls(markers, kit, room, "maxZ")
+			expect(markers[1].z).to.be.near(66.08, 1e-6)
+			expect(markers[2].z).to.equal(53.4)
+		end)
+
 		it("puts a back door only where no wall piece stands", function()
 			local room = { minX = 0, maxX = 40, minZ = 0, maxZ = 20 }
 			local markers = { { id = "a", room = "r", kind = "prop", art = "bench", x = 20, z = 18.5, rotation = 0 } }
