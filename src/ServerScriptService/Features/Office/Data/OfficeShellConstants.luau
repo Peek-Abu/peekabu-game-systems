@@ -156,6 +156,8 @@ local SHELL_THEMES: { [string]: OfficeTypes.ShellTheme } = {
 		rooms = { plaster = "schoolRoomPaint", oak = "schoolRoomBand", rail = "schoolRoomRail" },
 		floors = {
 			hallway = "schoolHallFloor",
+			-- The front hall is the School's start room, built as the bay (OfficeBuildSystem): the halls' floor.
+			bay = "schoolHallFloor",
 			classroom = "schoolCarpet",
 			gym = "schoolMaple",
 			cafeteria = "schoolChecker",

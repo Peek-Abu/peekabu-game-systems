@@ -557,6 +557,7 @@ return function()
 		it("floors the School kit's rooms with its own surfaces, and the rest as before", function()
 			local kit = "school-maple-hill"
 			expect(Shell.floorMaterial("hallway", kit)).to.equal("schoolHallFloor")
+			expect(Shell.floorMaterial("bay", kit)).to.equal("schoolHallFloor")
 			expect(Shell.floorMaterial("classroom", kit)).to.equal("schoolCarpet")
 			expect(Shell.floorMaterial("gym", kit)).to.equal("schoolMaple")
 			expect(Shell.floorMaterial("cafeteria", kit)).to.equal("schoolChecker")

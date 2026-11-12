@@ -466,6 +466,28 @@ return function()
 			expect(sizes["a.shelf.2"]).to.equal(Constants.SHELF_SIZE)
 		end)
 
+		it("sizes a restyled desk's proxy by its art (a lunch table) and builds no office desktop on it", function()
+			template("furniture", "desk")
+			template("furniture", "lunchTable")
+			local layout = twoRooms("open", nil)
+			layout.markers = {
+				{ id = "a.desk.1", room = "a", kind = "desk", x = 6, z = 5, art = "lunchTable" },
+				{ id = "b.desk.1", room = "b", kind = "desk", x = 10, z = 15 },
+			}
+			local built = build(layout)
+			local byId = {}
+			for _, part in built.model.Furniture:GetChildren() do
+				local id = part:GetAttribute("OfficeMarkerId")
+				if id ~= nil then
+					byId[id] = part
+				end
+			end
+			expect(byId["a.desk.1"].Size).to.equal(Constants.ART_SIZES.lunchTable)
+			expect(byId["a.desk.1"]:FindFirstChild("Keyboard")).to.equal(nil)
+			expect(byId["b.desk.1"].Size).to.equal(Constants.DESK_SIZE)
+			expect(byId["b.desk.1"]:FindFirstChild("Keyboard") ~= nil).to.equal(true)
+		end)
+
 		it("hangs one blue point light on a server rack's LedLight attachment", function()
 			template("furniture", "serverRack")
 			local part = assets["test-map-a"].furniture.serverRack:FindFirstChildOfClass("Part")

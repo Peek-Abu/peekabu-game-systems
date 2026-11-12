@@ -162,6 +162,38 @@ return function()
 			end
 		end
 	end)
+	it("dresses only plain desks: a restyled desk (a lunch table) gets no monitor, clutter or chair", function()
+		template("furniture", "lunchTable")
+		local layout = {
+			artKit = "test-map-a",
+			startRoom = "a",
+			rooms = {
+				{ id = "a", name = "A", minX = 0, minZ = 0, maxX = 30, maxZ = 20 },
+				{ id = "b", name = "B", minX = 0, minZ = 20, maxX = 30, maxZ = 40 },
+			},
+			doors = { { a = "a", b = "b", x = 15, z = 20, width = 6, kind = "open" } },
+			markers = {
+				{ id = "a.desk.1", room = "a", kind = "desk", x = 15, z = 10, art = "lunchTable" },
+				{ id = "b.desk.1", room = "b", kind = "desk", x = 15, z = 30 },
+			},
+			truck = Layout.truck,
+		}
+		built = Build.build(layout, CFrame.new(60000, 0, 0), art)
+		local decor = Decor.build(layout, CFrame.new(60000, 0, 0), built.model, art)
+		local monitors, dressedFor = 0, {}
+		for _, child in decor:GetDescendants() do
+			if child.Name == "Monitor" and child:IsA("BasePart") then
+				monitors += 1
+			end
+			local owner = child:GetAttribute("OfficeDeskMarker")
+			if owner ~= nil then
+				dressedFor[owner] = true
+			end
+		end
+		expect(monitors).to.equal(1)
+		expect(dressedFor["a.desk.1"]).to.equal(nil)
+	end)
+
 	it("seats every chair facing its desk", function()
 		template("furniture", "officeChair")
 		local layout = table.clone(Layout)

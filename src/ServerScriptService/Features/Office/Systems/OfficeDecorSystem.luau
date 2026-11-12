@@ -441,6 +441,11 @@ function OfficeDecorSystem.build(
 	end
 	local lift = OfficeDecorConstants.EMITTER_LIFT
 	for index, desk in OfficeLayoutUtils.markersOf(layout, "desk") do
+		-- Only a plain office desk gets office dressing; a desk restyled by its art (the School's lunch table,
+		-- project table, cot) is dressed by its own art.
+		if desk.art ~= nil then
+			continue
+		end
 		local deskTop = origin
 			* CFrame.new(desk.x, OfficeConstants.DESK_SIZE.Y, desk.z)
 			* CFrame.Angles(0, desk.rotation or 0, 0)

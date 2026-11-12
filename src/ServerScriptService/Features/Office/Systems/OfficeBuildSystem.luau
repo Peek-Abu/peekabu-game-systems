@@ -182,7 +182,11 @@ function OfficeBuildSystem.build(
 	for _, marker in layout.markers do
 		if marker.kind == "desk" or marker.kind == "locker" then
 			local isDesk = marker.kind == "desk"
-			local size = if isDesk then OfficeConstants.DESK_SIZE else OfficeConstants.LOCKER_SIZE
+			-- A desk restyled by its art (the School's lunch table) takes the art's ART_SIZES proxy, a plain desk
+			-- DESK_SIZE (OfficeLayoutUtils.markerSize); a locker is always LOCKER_SIZE.
+			local size = if isDesk
+				then OfficeLayoutUtils.markerSize(marker) or OfficeConstants.DESK_SIZE
+				else OfficeConstants.LOCKER_SIZE
 			local part = block(
 				if isDesk then "Desk" else "Locker",
 				size,
@@ -212,8 +216,9 @@ function OfficeBuildSystem.build(
 					part:SetAttribute("OfficeDoorHingeSide", if clearance(1) > clearance(-1) then 1 else -1)
 				end
 			end
-			if isDesk then
-				-- The existing desktop remains the single monitor/keyboard fallback until decor supplies art.
+			-- A plain office desk's desktop (the monitor/keyboard fallback until decor supplies art); a desk restyled by
+			-- its art (a lunch table, a cot) is no office desk and gets none.
+			if isDesk and marker.art == nil then
 				DeskVisual.build(part)
 				part:SetAttribute("OfficeDeskDressed", true)
 			end
