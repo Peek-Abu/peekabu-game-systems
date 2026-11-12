@@ -12,7 +12,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "yard-dressing"))
 import build_yard as Y
 from build_yard import H, S2, strut, rod, _paint, _flat
-from hardlib import box, cyl, sphere, cone
+from hardlib import box, cyl, cylx, sphere, cone
 
 S2.OUT = os.environ.get("HUB_OUT", os.path.join(HERE, "out"))
 PROPS = {}
@@ -391,6 +391,25 @@ def wallpack():
 
 
 # ------------------------------------------------------------ hub props (round 3) ---
+
+# Scanned materials for the radio and the shift bell (owner 11-11: the Office procedure, scans then model). The texture
+# pass is texstyle.py `brass` (ambientCG Metal048C) and `paint` (PaintedMetal012, chipped paint kept, tinted per use);
+# wood is the oak scan. Needs TEXPIPE_WORK with those textures and cc0 sets.
+_TEX = os.path.join(H.WORK, "textures")
+_CC0 = os.path.join(H.WORK, "cc0")
+_BRASS = (os.path.join(_TEX, "brass_scan_color.png"), os.path.join(_CC0, "Metal048C", "Metal048C_2K-JPG_Displacement.jpg"))
+_PAINT = (os.path.join(_TEX, "paint_scan_color.png"),
+          os.path.join(_CC0, "PaintedMetal012", "PaintedMetal012_2K-JPG_Displacement.jpg"))
+H._SPEC.update({
+    "brass_scan": lambda: H._scan("brass_scan", *_BRASS, studs=1.2, bump=0.08, rough=0.3, tint=(0.96, 0.74, 0.40)),
+    "wood_radio": lambda: H._scan("wood_radio", *H._OAK, studs=3, bump=0.1, rough=0.4, tint=(0.85, 0.62, 0.42)),
+    "paint_teal": lambda: H._scan("paint_teal", *_PAINT, studs=2.5, bump=0.3, rough=0.5, tint=(0.16, 0.50, 0.46)),
+    "paint_cream": lambda: H._scan("paint_cream", *_PAINT, studs=1.5, bump=0.25, rough=0.5, tint=(1.0, 0.94, 0.80)),
+    "paint_coral": lambda: H._scan("paint_coral", *_PAINT, studs=1.5, bump=0.25, rough=0.45, tint=(0.95, 0.36, 0.30)),
+    "paint_ink": lambda: H._scan("paint_ink", *_PAINT, studs=1.5, bump=0.2, rough=0.55, tint=(0.14, 0.12, 0.16)),
+})
+
+
 def lathe(name, prof, mat, seg=24):
     """A surface of revolution about Z from (radius, z) pairs."""
     bm = bmesh.new()
@@ -531,6 +550,79 @@ def shelving():
                     cyl(f"w{i}_{x:.2f}_{k}", -0.4 + k * 0.6, top + 0.25, x, x + w - 0.05, 0.25, "towel", 14, axis="X")
             x += w + rng.uniform(0.08, 0.2)
     S2.finish2("hb_shelving", tex=1024)
+
+
+@prop
+def radio():
+    """A chunky 1950s tabletop radio, 1.9 wide x 0.95 deep x 1.35 tall: an oak cabinet rounded over the top, a cream
+    painted front, brass grille slats over a dark speaker cloth on the left, a round brass-rimmed dial with a coral
+    needle and two brass knobs on the right, a brass carry handle and a telescoping antenna. Front = -Y."""
+    w, d, h = 1.9, 0.95, 1.35
+    box("cabinet", -w / 2, w / 2, -d / 2, d / 2, 0.06, h, "wood_radio", r=0.32, corners=("tl", "tr"), axis="Y", bevel=0.04)
+    box("front", -w / 2 + 0.08, w / 2 - 0.08, -d / 2 - 0.02, -d / 2 + 0.02, 0.16, h - 0.16, "paint_cream",
+        r=0.24, corners=("tl", "tr"), axis="Y", bevel=0.015)
+    # the speaker: dark cloth panel with brass slats across it
+    gx0, gx1 = -w / 2 + 0.18, 0.12
+    box("cloth", gx0, gx1, -d / 2 - 0.03, -d / 2 - 0.01, 0.28, h - 0.3, "paint_ink", bevel=0.01)
+    for k in range(6):
+        z = 0.34 + k * (h - 0.68) / 5
+        box(f"slat{k}", gx0 - 0.02, gx1 + 0.02, -d / 2 - 0.07, -d / 2 - 0.02, z - 0.03, z + 0.03, "brass_scan", bevel=0.01)
+    # the dial: brass bezel, cream face, coral needle
+    dx, dz = 0.52, h * 0.62
+    cyl("bezel", dx, dz, -d / 2 - 0.08, -d / 2 - 0.01, 0.26, "brass_scan", 28, axis="Y")
+    cyl("dialFace", dx, dz, -d / 2 - 0.09, -d / 2 - 0.08, 0.21, "paint_cream", 28, axis="Y")
+    box("needle", dx - 0.012, dx + 0.012, -d / 2 - 0.1, -d / 2 - 0.09, dz - 0.02, dz + 0.17, "paint_coral", bevel=0.0)
+    for k in range(9):
+        a = math.radians(-60 + k * 15)
+        cx, cz = dx + math.sin(a) * 0.17, dz + math.cos(a) * 0.17
+        box(f"tick{k}", cx - 0.006, cx + 0.006, -d / 2 - 0.1, -d / 2 - 0.09, cz - 0.02, cz + 0.02, "paint_ink", bevel=0.0)
+    for k, x in enumerate((dx - 0.17, dx + 0.17)):
+        cyl(f"knob{k}", x, 0.32, -d / 2 - 0.14, -d / 2 - 0.01, 0.1, "brass_scan", 20, axis="Y")
+        cyl(f"knobCap{k}", x, 0.32, -d / 2 - 0.15, -d / 2 - 0.14, 0.07, "paint_cream", 20, axis="Y")
+    # carry handle and antenna
+    for x in (-0.45, 0.45):
+        rod(f"handlePost{x}", (x, 0, h - 0.06), (x, 0, h + 0.2), 0.035, "brass_scan", 10)
+    rod("handleBar", (-0.47, 0, h + 0.2), (0.47, 0, h + 0.2), 0.04, "brass_scan", 10)
+    rod("antenna", (0.75, 0.25, h - 0.1), (1.05, 0.35, h + 0.9), 0.018, "brass_scan", 8)
+    sphere("antennaTip", 1.05, 0.35, h + 0.92, 0.04, "brass_scan")
+    for x in (-w / 2 + 0.15, w / 2 - 0.15):
+        for y in (-d / 2 + 0.15, d / 2 - 0.15):
+            cyl(f"foot{x}{y}", x, y, 0.0, 0.07, 0.07, "paint_ink", 12)
+    S2.finish2("hb_radio_v2", tex=1024)
+
+
+@prop
+def bellpost():
+    """The shift bell's post (static part), 4.4 tall: a teal painted steel post on a round base plate with bolts, a
+    brass collar, and an arm out to the front (-Y) ending in a yoke the bell hangs from (the bell is `bell`, which
+    swings about the yoke pin at (0, -0.85, 4.1))."""
+    cyl("plate", 0, 0, 0.0, 0.1, 0.62, "paint_teal", 32)
+    for k in range(4):
+        a = k * math.pi / 2 + math.pi / 4
+        cyl(f"bolt{k}", math.cos(a) * 0.45, math.sin(a) * 0.45, 0.1, 0.16, 0.05, "brass_scan", 10)
+    box("post", -0.14, 0.14, -0.14, 0.14, 0.1, 4.25, "paint_teal", bevel=0.03)
+    cyl("collar", 0, 0, 3.75, 3.95, 0.2, "brass_scan", 20)
+    cyl("cap", 0, 0, 4.25, 4.35, 0.2, "brass_scan", 20)
+    box("arm", -0.07, 0.07, -0.95, 0.0, 4.02, 4.16, "paint_teal", bevel=0.02)
+    for x in (-0.22, 0.22):
+        box(f"yoke{x}", x - 0.03, x + 0.03, -0.92, -0.78, 3.95, 4.16, "brass_scan", bevel=0.01)
+    S2.finish2("hb_bellpost_v2", tex=1024)
+
+
+@prop
+def bell():
+    """The shift bell itself (the swinging part): a classic brass bell, 0.8 across the mouth, mouth down, with a
+    crown loop, the pin through it, and a dark clapper inside. Its pivot (the pin) is at the origin; the bell hangs
+    below it."""
+    prof = [(0.0, -0.08), (0.08, -0.08), (0.14, -0.12), (0.2, -0.2), (0.24, -0.32), (0.29, -0.48), (0.36, -0.62),
+            (0.42, -0.70), (0.40, -0.73), (0.33, -0.70), (0.27, -0.62), (0.21, -0.48), (0.17, -0.32), (0.13, -0.2),
+            (0.07, -0.13), (0.0, -0.13)]
+    lathe("bellBody", prof, "brass_scan", 36)
+    cyl("crown", 0, 0, -0.1, 0.0, 0.07, "brass_scan", 16)
+    cylx("pin", -0.25, 0.25, 0, 0, 0.03, "brass_scan", 10)
+    rod("clapperRod", (0, 0, -0.12), (0, 0, -0.6), 0.02, "paint_ink", 8)
+    sphere("clapper", 0, 0, -0.62, 0.07, "paint_ink")
+    S2.finish2("hb_bell_v2", tex=1024)
 
 
 if __name__ == "__main__":

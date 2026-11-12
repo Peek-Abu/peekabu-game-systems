@@ -23,3 +23,12 @@ and swapped into the lobby's 14 pumpkins in place (MeshPart:ApplyMesh, scale and
 | round | 118435555682999 | 77809726577446 | 99998307521436 / 74155896689065 / 131731772303976 |
 | tall | 139682393289774 | 132186097936997 | 97822968756899 / 91975468946512 / 122189962640296 |
 | pale (squat) | 103333606513045 | 124424530913187 | 109552291066008 / 130340302459288 / 128424890770824 |
+
+## Radio and shift bell v2 (2026-11-11, look sheet only, nothing uploaded)
+Office procedure. Texture pass: ambientCG Metal048C (brass) and PaintedMetal012 (chipped paint) through new
+`brass` / `paint` style classes (owner OK for the two downloads); wood is the oak scan. Model pass: `build_hub.py`
+props `radio` (1.9 x 0.95 x 1.35, oak cabinet, cream front, brass slats over a dark cloth, dial, knobs, handle,
+antenna), `bellpost` (teal post, base plate, collar, arm and yoke) and `bell` (brass bell, pivot at its pin, hangs
+from the yoke at (0, -0.85, 4.1)); `radio_bell_look.py` renders them. When swapped into the hub: the radio mesh must be
+named `RadioBody` (the music notes emit from it) and the bell parts keep `DepotSwing` + the `BellPivot` attachment.
+Sheet: notes `hub-r3-radio-bell-v2-look.jpg`.
