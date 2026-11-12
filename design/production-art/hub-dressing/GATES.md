@@ -42,8 +42,10 @@ with Read), or a command's output.
   EVIDENCE: Play: tracks = stock idle 507766666 + the generic wave 105235060315952 only. Neck yaw: player far ahead
   0.1, front-left 44.7, front-right -44.9, behind 0.0. Wave on walking up (front-left) = true; standing 20 studs away
   for 14 s: 1 wave of her own. Capture coach_look.
-- [ ] G8 Specs: DepotBoardVisualSystem, DepotBuildSystem, TrainingCoachRules specs pass in the Studio suite.
-  EVIDENCE: pending
+- [x] G8 Specs: DepotBoardVisualSystem, DepotBuildSystem, TrainingCoachRules specs pass in the Studio suite.
+  EVIDENCE: Studio suite (RunTests) "Tests: 6022 passed, 0 failed, 6022 total". The first run failed 1
+  (DepotBuildSystem.spec:36): the spec's recursive find picked a truck's own TimeClockArt; fixed in 31be926f to read
+  the hub clock's art beside its hit box. RunTests attribute cleared afterwards.
 - [x] G9 Gate: lint, format and typecheck clean (bash scripts/check.sh), no new file over the limit.
   EVIDENCE: full check.sh in polish-021838: selene 0 errors, stylua clean, luau-lsp only the existing
   QueueTicketSystem ForRange lint; file length fails only on files already over 400 (DepotBuildSystem kept at 386 code
