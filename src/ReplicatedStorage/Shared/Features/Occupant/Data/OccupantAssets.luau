@@ -217,11 +217,18 @@ local SOUNDS: { [string]: SoundTypes.SoundDef } = {
 	-- stamp on metal; 2D, only for the caught player; it replaces the engine's "oof"). Its stamp lands FIRED_HIT
 	-- seconds into the file, so it starts that long before the throw (OccupantScareSystem.snap).
 	catchFired = { assetId = "rbxassetid://99003711272251", group = "SFX", bus = "Stings", volume = 1 },
-	-- Bramble's own sounds (OccupantKindRegistry: Bramble never plays Harlow's voice, barks or catch sounds). Empty slots
-	-- until the owner-approved Bramble sound round fills them; PENDING, so never registered and silent:
-	-- its catch (the caught player's sting, 2D) and the soft puff as it unfreezes (positional; not played yet).
-	brambleCatch = { assetId = PENDING, group = "SFX", bus = "Stings", volume = 1 },
-	brambleUnfreeze = { assetId = PENDING, group = "SFX", bus = "Threat", volume = 0.8, rollOffMaxDistance = 60 },
+	-- Bramble's own sounds (OccupantKindRegistry: Bramble never plays Harlow's voice, barks or catch sounds); owner picks
+	-- 2026-11-12, Icey Labs. Its catch (the caught player's sting, 2D): pick A "music-box pounce" (wing snap, plush
+	-- whump, a music box winding down). The soft puff as it starts moving again (positional, OccupantWarningSystem):
+	-- pick B (felt touch, feather ruffle, joint ticks; no sparkle, it plays often).
+	brambleCatch = { assetId = "rbxassetid://107173701194509", group = "SFX", bus = "Stings", volume = 1 },
+	brambleUnfreeze = {
+		assetId = "rbxassetid://77118119360513",
+		group = "SFX",
+		bus = "Threat",
+		volume = 0.8,
+		rollOffMaxDistance = 60,
+	},
 }
 
 -- The chase music's stems (OccupantChaseMusicSystem): `base` plays the whole chase, `near` fades in as he closes. The

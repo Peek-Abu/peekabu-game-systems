@@ -19,7 +19,8 @@
 	desk, their camera draws back into the spot and follows his face (OccupantTellRules.revealed), his face lit for them
 	alone (OccupantFaceLightSystem). Reads only
 	replicated state. Each of his sounds is the rig's kind's (OccupantKindRegistry.soundsOf: Bramble has none of Harlow's,
-	so for it this plays nothing but the reveal). Pending sounds are skipped silently and counted.
+	so for it this plays only the reveal and its unfreeze puff: a freeze kind's own `unfreeze` sound from its head on
+	the frame it starts moving again, OccupantTellRules.unfroze). Pending sounds are skipped silently and counted.
 
 	Spec-exempt shell (Sound, Instances, RunService); the choices are the specced OccupantTellRules.
 
@@ -58,6 +59,9 @@ local creakAt = -math.huge
 -- How fast a cut-short creak fades (s).
 local CREAK_CUT = 0.08
 local lastPhase = ""
+-- Whether the rig was frozen last frame (nil before it is first seen), and which rig that was.
+local lastFrozen: boolean? = nil
+local frozenRig: Model? = nil
 local lastMode: string? = nil
 local stage: string = "none"
 local nextClick = 0
@@ -76,6 +80,7 @@ local counters = {
 	creaks = 0,
 	creakCuts = 0,
 	cracks = 0,
+	unfreezes = 0,
 	pending = 0,
 }
 
@@ -263,6 +268,27 @@ local function turnSounds()
 	turnPhase = phase
 end
 
+-- Every frame: a freeze kind's soft puff as it starts moving again (its kind's `unfreeze` sound, from its head).
+local function unfreezeSound()
+	local model, head = harlow()
+	if model ~= frozenRig then
+		frozenRig = model
+		lastFrozen = nil
+	end
+	if model == nil or head == nil then
+		return
+	end
+	local frozen = model:GetAttribute(OccupantConstants.FROZEN_ATTRIBUTE) == true
+	if OccupantTellRules.unfroze(lastFrozen, frozen) then
+		local sounds = OccupantKindRegistry.soundsOf(OccupantKindRegistry.kindOf(model))
+		if sounds.unfreeze ~= nil then
+			counters.unfreezes += 1
+			play(sounds.unfreeze, { at = head })
+		end
+	end
+	lastFrozen = frozen
+end
+
 local OccupantWarningSystem = {}
 
 function OccupantWarningSystem.start()
@@ -272,6 +298,7 @@ function OccupantWarningSystem.start()
 	local elapsed = 0
 	connection = RunService.Heartbeat:Connect(function(deltaTime: number)
 		turnSounds()
+		unfreezeSound()
 		elapsed += deltaTime
 		if elapsed >= OccupantConstants.TELL_INTERVAL then
 			elapsed = 0
@@ -289,6 +316,8 @@ function OccupantWarningSystem.stop()
 	stopTyping()
 	stopCreak(0)
 	turnPhase = ""
+	lastFrozen = nil
+	frozenRig = nil
 	setReveal(nil, false)
 	lastPhase = ""
 	lastMode = nil

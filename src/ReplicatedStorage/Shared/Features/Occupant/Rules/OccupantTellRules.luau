@@ -175,6 +175,15 @@ function OccupantTellRules.rose(before: string, after: string): boolean
 end
 
 --[=[
+	Whether a freeze kind (Bramble) just started moving again: frozen last frame, not frozen now (the server's
+	FROZEN_ATTRIBUTE). Its soft unfreeze puff plays from its head. The first frame a rig is seen (`before` nil) only
+	remembers its state.
+]=]
+function OccupantTellRules.unfroze(before: boolean?, after: boolean): boolean
+	return before == true and not after
+end
+
+--[=[
 	Whether a light `distance` studs from him is lit at `now` (`seed` tells lights apart). `hard`: his slow turn or stare
 	(behaviours design §11.2): out to SLOW_FLICKER_RADIUS, dark much more often.
 ]=]

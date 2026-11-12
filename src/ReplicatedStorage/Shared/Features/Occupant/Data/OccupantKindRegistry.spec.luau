@@ -227,13 +227,13 @@ return function()
 			expect(sounds.sigh).to.equal(nil)
 		end)
 
-		it("leaves Bramble's catch and unfreeze as its own named slots, silent until uploaded", function()
+		it("gives Bramble its own uploaded catch and unfreeze sounds", function()
 			local sounds = OccupantKindRegistry.soundsOf("bramble")
 			expect(sounds.catchSting).to.equal("brambleCatch")
 			expect(sounds.unfreeze).to.equal("brambleUnfreeze")
 			for _, id in { "brambleCatch", "brambleUnfreeze" } do
 				expect(OccupantAssets.SOUNDS[id]).to.be.ok()
-				expect(OccupantAssets.SOUNDS[id].assetId).to.equal(OccupantAssets.PENDING)
+				expect(string.match(OccupantAssets.SOUNDS[id].assetId, "^rbxassetid://%d+$")).to.be.ok()
 			end
 		end)
 

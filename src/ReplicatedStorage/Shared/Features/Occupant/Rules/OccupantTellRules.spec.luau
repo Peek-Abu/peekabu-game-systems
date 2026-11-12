@@ -188,6 +188,15 @@ return function()
 			expect(OccupantTellRules.rose("type", "ambush")).to.equal(false)
 		end)
 
+		it("hears a freeze kind's puff only on the frame it starts moving again", function()
+			expect(OccupantTellRules.unfroze(true, false)).to.equal(true)
+			expect(OccupantTellRules.unfroze(false, false)).to.equal(false)
+			expect(OccupantTellRules.unfroze(true, true)).to.equal(false)
+			expect(OccupantTellRules.unfroze(false, true)).to.equal(false)
+			-- The first frame a rig is seen only remembers its state.
+			expect(OccupantTellRules.unfroze(nil, false)).to.equal(false)
+		end)
+
 		it("hears his intake as his head turns to something he noticed", function()
 			expect(OccupantTellRules.alerted("patrol", "alert")).to.equal(true)
 			expect(OccupantTellRules.alerted("investigate", "alert")).to.equal(true)
