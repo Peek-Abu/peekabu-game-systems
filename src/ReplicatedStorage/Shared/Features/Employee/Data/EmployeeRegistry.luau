@@ -344,6 +344,25 @@ EMPLOYEES.Cappy = {
 			facesFolder = nil,
 			accessories = {},
 		},
+		-- Gloom Locker Epic (Cosmetic Cappy.Backstage), a Gloom Carnival skin: a built plum tailcoat (open front, notched
+		-- lapels, cream waistcoat, stiff tails, diamond left sleeve) as one skinned outfit over his own body. The outfit
+		-- hides his hoodie and bare torso itself (its HideAccessories / HideParts), so nothing is listed in hidePieces
+		-- and a place without the art leaves him in his hoodie. His own cap and sneakers stay and take plum palettes.
+		-- Fitted gear: an ace card on the cap (Head) and a lilac bow on the chest (UpperTorso). One look, no styles.
+		-- Icey Labs: outfit 98347578653637, bow 127280814361486, ace card 100677928631314, cap palette image
+		-- 82536151531567, sneaker palette image 137436566182955. Built in
+		-- characters/skins/release/gloom_carnival/r2_cappy (c8_cut.py, c7_export.py, c6_bow.py).
+		Backstage = {
+			name = "Backstage",
+			paletteTextureId = nil,
+			piecePalettes = {
+				Cap = "rbxassetid://82536151531567",
+				Sneakers = "rbxassetid://137436566182955",
+			},
+			facesFolder = nil,
+			accessories = { "CappyBackstageAce", "CappyBackstageBow" },
+			outfit = "CappyBackstage",
+		},
 		-- Legendary (Cosmetic Cappy.PJ): the skinned fleece onesie, bear hood with sleep mask and shark slippers
 		-- (characters/skins/runtime-candidates-2026-10-26/pj_cappy/v6-2026-10-29), over his own skin and hair: no
 		-- style repaints the body. The outfit hides his hoodie, cap, socks, sneakers and shorts (its HideAccessories).

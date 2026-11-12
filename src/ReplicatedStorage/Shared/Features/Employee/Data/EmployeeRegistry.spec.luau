@@ -88,6 +88,28 @@ return function()
 			expect(item.styles).never.to.be.ok()
 		end)
 
+		it(
+			"gives Cappy a Backstage skin: its tailcoat outfit, bow and ace card, his own cap and sneakers recoloured",
+			function()
+				local skin = EmployeeRegistry.get("Cappy").skins.Backstage
+				expect(skin).to.be.ok()
+				expect(skin.outfit).to.equal("CappyBackstage")
+				expect(table.concat(skin.accessories, ",")).to.equal("CappyBackstageAce,CappyBackstageBow")
+				-- The outfit hides his hoodie itself (its HideAccessories), so without the art he keeps his hoodie.
+				expect(skin.hidePieces).never.to.be.ok()
+				-- His own cap and sneakers stay and take the skin's colours; nothing else is repainted.
+				expect(skin.piecePalettes.Cap).to.be.ok()
+				expect(skin.piecePalettes.Sneakers).to.be.ok()
+				expect(skin.piecePalettes.Hoodie).never.to.be.ok()
+				-- One look: no styles, and his body keeps its own palette under the outfit.
+				expect(skin.styles).never.to.be.ok()
+				expect(skin.paletteTextureId).never.to.be.ok()
+				local item = CosmeticRegistry.get("Cappy.Backstage")
+				expect(item).to.be.ok()
+				expect(item.styles).never.to.be.ok()
+			end
+		)
+
 		it("gives Cappy a PJ skin wearing its outfit in 3 styles, over his own palettes", function()
 			local skin = EmployeeRegistry.get("Cappy").skins.PJ
 			expect(skin).to.be.ok()

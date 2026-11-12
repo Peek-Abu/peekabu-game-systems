@@ -211,6 +211,15 @@ local ITEMS: { CosmeticTypes.Item } = {
 		quote = true,
 	},
 	{
+		id = "Cappy.Backstage",
+		kind = "skin",
+		employee = "Cappy",
+		name = "Backstage",
+		rarity = "epic",
+		source = "gloomLocker",
+		lore = "A tailcoat, a big bow and an ace on his cap. Cappy runs the show from behind the curtain.",
+	},
+	{
 		id = "Cappy.CocoaSip",
 		kind = "emote",
 		employee = "Cappy",
