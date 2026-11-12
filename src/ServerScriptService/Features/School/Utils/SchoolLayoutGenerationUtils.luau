@@ -167,6 +167,85 @@ local function deal(build: Build, options: { Slot })
 	end
 end
 
+type Rect = { minX: number, maxX: number, minZ: number, maxZ: number }
+
+-- The marker's footprint half-extents (layout space), nil for a marker that is no furniture or prop.
+local function halfExtents(marker: Marker): (number?, number?)
+	local size = OfficeLayoutUtils.markerSize(marker)
+	if size == nil then
+		return nil, nil
+	end
+	local angle = marker.rotation or 0
+	local c, s = math.abs(math.cos(angle)), math.abs(math.sin(angle))
+	return (size.X * c + size.Z * s) / 2, (size.X * s + size.Z * c) / 2
+end
+
+--[=[
+	Moves every marker that stands within LANDMARK_WALL_SNAP of a wall of `kit` (the kit's placed rectangle) out by
+	the distance from that kit wall to the same wall of `room` (the block it fills), on each axis: a vending machine,
+	a serving line or a scoreboard ends against the room's real wall instead of where the kit's wall would be. A marker
+	with no footprint (a pile, an item, a patrol point) snaps by its point. Pure: mutates `markers` only.
+]=]
+function SchoolLayoutGenerationUtils.snapToWalls(markers: { Marker }, kit: Rect, room: Rect)
+	local reach = SchoolConstants.LANDMARK_WALL_SNAP
+	for _, marker in markers do
+		local hx, hz = halfExtents(marker)
+		local halfX, halfZ = hx or 0, hz or 0
+		if marker.x - halfX - kit.minX <= reach then
+			marker.x += room.minX - kit.minX
+		elseif kit.maxX - (marker.x + halfX) <= reach then
+			marker.x += room.maxX - kit.maxX
+		end
+		if marker.z - halfZ - kit.minZ <= reach then
+			marker.z += room.minZ - kit.minZ
+		elseif kit.maxZ - (marker.z + halfZ) <= reach then
+			marker.z += room.maxZ - kit.maxZ
+		end
+	end
+end
+
+--[=[
+	The x of a `width` door on the wall at `wallZ` of `room` that no marker standing within LANDMARK_WALL_SNAP of that
+	wall covers (with a stud either side), at least `inset` from each corner, nearest `want`; nil when none is free.
+]=]
+function SchoolLayoutGenerationUtils.freeDoorX(
+	markers: { Marker },
+	room: Rect,
+	wallZ: number,
+	width: number,
+	inset: number,
+	want: number
+): number?
+	local blocked: { { number } } = {}
+	for _, marker in markers do
+		local hx, hz = halfExtents(marker)
+		if
+			hx ~= nil
+			and hz ~= nil
+			and math.min(math.abs(marker.z - hz - wallZ), math.abs(marker.z + hz - wallZ))
+				<= SchoolConstants.LANDMARK_WALL_SNAP
+		then
+			table.insert(blocked, { marker.x - hx - 1, marker.x + hx + 1 })
+		end
+	end
+	local best: number? = nil
+	local x = room.minX + inset
+	while x <= room.maxX - inset do
+		local free = true
+		for _, span in blocked do
+			if x - width / 2 < span[2] and span[1] < x + width / 2 then
+				free = false
+				break
+			end
+		end
+		if free and (best == nil or math.abs(x - want) < math.abs(best - want)) then
+			best = x
+		end
+		x += 1
+	end
+	return best
+end
+
 -- A landmark fills its block between its two row halls: the kit's front door on one, an open back door on the other.
 local function placeLandmark(build: Build, landmark: SchoolNetworkUtils.Landmark): string?
 	local network = build.network
@@ -191,10 +270,25 @@ local function placeLandmark(build: Build, landmark: SchoolNetworkUtils.Landmark
 		then OfficeKitUtils.place(kit, id, cursor, minZ, "minZ", mirrored)
 		else OfficeKitUtils.place(kit, id, cursor + kit.width, maxZ, "maxZ", mirrored)
 	local room = placement.room
+	local kitRect: Rect = { minX = room.minX, maxX = room.maxX, minZ = room.minZ, maxZ = room.maxZ }
 	room.minX, room.maxX, room.minZ, room.maxZ = minX, maxX, minZ, maxZ
+	-- The kit's wall pieces follow the room's real walls (the block is wider and deeper than the kit).
+	SchoolLayoutGenerationUtils.snapToWalls(placement.markers, kitRect, room)
 	local width = SchoolConstants.LANDMARK_DOOR_WIDTH
 	local inset = SchoolConstants.LANDMARK_DOOR_INSET + width / 2
-	local backX = minX + inset + rng:NextNumber() * math.max(0, maxX - minX - 2 * inset)
+	local want = minX + inset + rng:NextNumber() * math.max(0, maxX - minX - 2 * inset)
+	-- The back door keeps clear of the pieces now standing along the back wall.
+	local backX = SchoolLayoutGenerationUtils.freeDoorX(
+		placement.markers,
+		room,
+		if frontTop then maxZ else minZ,
+		width,
+		inset,
+		want
+	)
+	if backX == nil then
+		return `the {landmark.roomType}'s back wall has no free stretch for its back door`
+	end
 	local doors: { Door } = {
 		{
 			a = id,
@@ -336,7 +430,7 @@ local function construct(base: Layout, rng: Random): (Layout?, string?)
 					layout,
 					rng,
 					network.junctions[room.id] ~= nil,
-					SchoolConstants.HALL_SEAT
+					{ seat = SchoolConstants.HALL_SEAT, junctionCorners = false }
 				)
 			)
 		end

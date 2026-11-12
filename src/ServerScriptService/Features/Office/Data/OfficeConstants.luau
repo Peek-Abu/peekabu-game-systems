@@ -59,6 +59,8 @@ local PROP_SIZES: { [string]: Vector3 } = {
 	chalkboard = Vector3.new(12, 5.5, 0.68),
 	scoreboard = Vector3.new(11, 6.2, 0.84),
 	bleachers = Vector3.new(15.392, 10.618, 14.75),
+	-- The lobby hub's approved vending machine (owner 2026-11-12), the School's own; the Office keeps its vending.
+	schoolVending = Vector3.new(3.6, 7.46, 3.26),
 	basketballHoop = Vector3.new(6.2, 5.45, 5.38),
 }
 local PROP_WALL_HEIGHT: { [string]: number } = {

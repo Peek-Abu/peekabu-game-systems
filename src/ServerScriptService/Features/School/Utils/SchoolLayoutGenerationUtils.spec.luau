@@ -32,6 +32,22 @@ local function layoutFor(seed)
 	return layout
 end
 
+-- A School room's wall props hang on a real wall: the footprint's back face lies on the room's wall face.
+local function hangsOnWall(room, marker)
+	local size = OfficeConstants.PROP_SIZES[marker.art]
+	local angle = marker.rotation or 0
+	local c, s = math.abs(math.cos(angle)), math.abs(math.sin(angle))
+	local hx, hz = (size.X * c + size.Z * s) / 2, (size.X * s + size.Z * c) / 2
+	local half = OfficeConstants.WALL_THICKNESS / 2
+	local gaps = {
+		marker.x - hx - (room.minX + half),
+		room.maxX - half - (marker.x + hx),
+		marker.z - hz - (room.minZ + half),
+		room.maxZ - half - (marker.z + hz),
+	}
+	return math.min(table.unpack(gaps)) <= 0.05
+end
+
 local function doorsOf(layout, roomId)
 	local found = {}
 	for _, door in layout.doors do
@@ -43,6 +59,71 @@ local function doorsOf(layout, roomId)
 end
 
 return function()
+	describe("wall pieces in the landmarks", function()
+		it("hangs every wall prop of every School room on a real wall (none where a kit's wall would be)", function()
+			for seed = 1, SEEDS do
+				local layout = layoutFor(seed)
+				local rooms = {}
+				for _, room in layout.rooms do
+					rooms[room.id] = room
+				end
+				for _, marker in layout.markers do
+					local room = rooms[marker.room]
+					if
+						room ~= nil
+						and room.zone ~= "hallway"
+						and marker.kind == "prop"
+						and OfficeConstants.PROP_WALL_HEIGHT[marker.art] ~= nil
+					then
+						local label = `seed {seed} {marker.id} {marker.art}`
+						expect(`{label} {hangsOnWall(room, marker)}`).to.equal(`{label} true`)
+					end
+				end
+			end
+		end)
+
+		it("snaps a piece near a kit wall out to the room's wall, and leaves the middle alone", function()
+			local kit = { minX = 10, maxX = 74, minZ = 0, maxZ = 56 }
+			local room = { minX = 9, maxX = 75, minZ = 0, maxZ = 67 }
+			local markers = {
+				{ id = "a", room = "r", kind = "prop", art = "scoreboard", x = 42, z = 55.08, rotation = 0 },
+				{
+					id = "b",
+					room = "r",
+					kind = "prop",
+					art = "schoolVending",
+					x = 71.32,
+					z = 32,
+					rotation = math.pi / 2,
+				},
+				{ id = "c", room = "r", kind = "pile", x = 40, z = 30 },
+			}
+			Gen.snapToWalls(markers, kit, room)
+			expect(markers[1].z).to.be.near(66.08, 1e-6)
+			expect(markers[2].x).to.be.near(72.32, 1e-6)
+			expect(markers[3].x).to.equal(40)
+			expect(markers[3].z).to.equal(30)
+		end)
+
+		it("puts a back door only where no wall piece stands", function()
+			local room = { minX = 0, maxX = 40, minZ = 0, maxZ = 20 }
+			local markers = { { id = "a", room = "r", kind = "prop", art = "bench", x = 20, z = 18.5, rotation = 0 } }
+			local x = Gen.freeDoorX(markers, room, 20, 10, 8, 20)
+			expect(x ~= nil).to.equal(true)
+			expect(math.abs(x - 20) >= 3.8 + 5 + 1 - 1e-6).to.equal(true)
+			expect(
+				Gen.freeDoorX(
+					{ { id = "w", room = "r", kind = "prop", art = "bleachers", x = 20, z = 12, rotation = 0 } },
+					{ minX = 0, maxX = 20, minZ = 0, maxZ = 20 },
+					20,
+					10,
+					8,
+					10
+				)
+			).to.equal(nil)
+		end)
+	end)
+
 	describe("procedural School generator", function()
 		it("is deterministic and varied", function()
 			local signatures = {}

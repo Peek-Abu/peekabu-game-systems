@@ -85,6 +85,7 @@ local keys: { [ArtTypes.Family]: { string } } = {
 		"medicineCabinet",
 		"stall",
 		"sinkCounter",
+		"schoolVending",
 	},
 	cargo = {
 		"rubbishBag",

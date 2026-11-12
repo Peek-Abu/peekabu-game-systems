@@ -30,6 +30,8 @@ type Edge = OfficeTypes.Edge
 type Rect = { minX: number, maxX: number, minZ: number, maxZ: number }
 -- A prop standing against `edge`, centred at `along` and `half` wide along the wall.
 type Stand = { edge: Edge, along: number, half: number, rect: Rect }
+-- A map's choices for its hall dressing (dress).
+export type DressOptions = { seat: string?, junctionCorners: boolean? }
 
 -- A collidable stands exactly SHELL.trimClearance off the plaster face: the wainscot, rail and skirt run behind it.
 local MAX_WALL_GAP = OfficeConstants.SHELL.trimClearance
@@ -400,15 +402,17 @@ end
 
 --[=[
 	The prop markers that dress hallway `room` (a run, or a junction when `junction`): sconces, art, planters, seats
-	(`seat`, a PROP_SIZES key: the sofa by default, the School's bench) and a clock, using only `rng`. Call after the
-	room's doors, facades and patrol points are in `layout`; the caller appends the result to `layout.markers`.
+	and a clock, using only `rng`. `options` (DressOptions): `seat`, the PROP_SIZES key a long wall's seat slot stands
+	(the sofa by default; the School's bench), and `junctionCorners`, false to leave a junction's corners bare (the
+	School's: its halls are lined with lockers already). Call after the room's doors, facades and patrol points are in
+	`layout`; the caller appends the result to `layout.markers`.
 ]=]
 function OfficeHallDressingUtils.dress(
 	room: Room,
 	layout: Layout,
 	rng: Random,
 	junction: boolean?,
-	seat: string?
+	options: DressOptions?
 ): { Marker }
 	local state: State = {
 		room = room,
@@ -421,7 +425,7 @@ function OfficeHallDressingUtils.dress(
 		hung = {},
 		frames = {},
 		collidable = not entrance(room, layout),
-		seat = seat or "sofa",
+		seat = if options ~= nil and options.seat ~= nil then options.seat else "sofa",
 		width = if junction == true then nil else math.min(room.maxX - room.minX, room.maxZ - room.minZ),
 		clear = NARROW_CLEAR,
 		markers = {},
@@ -452,7 +456,9 @@ function OfficeHallDressingUtils.dress(
 	end
 	sconces(state)
 	if junction == true then
-		corners(state)
+		if options == nil or options.junctionCorners ~= false then
+			corners(state)
+		end
 		return state.markers
 	end
 	local edges: { Edge } = if room.maxX - room.minX >= room.maxZ - room.minZ then ALONG_X_WALLS else ALONG_Z_WALLS

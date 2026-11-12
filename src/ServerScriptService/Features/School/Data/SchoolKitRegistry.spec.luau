@@ -80,7 +80,70 @@ local function count(kit, kind)
 	return n
 end
 
+-- Pieces that stand with their back to a wall (the kinds, and the dressing props among the prop markers).
+local WALL_BACKED_KINDS = { shelf = true, counter = true, cabinet = true, closet = true }
+local WALL_BACKED_PROPS = {
+	vending = true,
+	schoolVending = true,
+	waterCooler = true,
+	sofa = true,
+	bench = true,
+	bleachers = true,
+	copier = true,
+	planter = true,
+}
+-- A piece this close to a wall (its footprint's gap to the wall line, less half a wall) stands against it.
+local AGAINST = 1.2
+
+-- The wall a marker stands nearest to (its footprint's gap to each wall line, less half a wall), and that gap.
+local function nearestWall(kit, marker)
+	local size = OfficeLayoutUtils.markerSize(marker)
+	local angle = marker.rotation or 0
+	local c, s = math.abs(math.cos(angle)), math.abs(math.sin(angle))
+	local hx, hz = (size.X * c + size.Z * s) / 2, (size.X * s + size.Z * c) / 2
+	local half = OfficeConstants.WALL_THICKNESS / 2
+	local gaps = {
+		minX = marker.x - hx - half,
+		maxX = kit.width - half - (marker.x + hx),
+		minZ = marker.z - hz - half,
+		maxZ = kit.depth - half - (marker.z + hz),
+	}
+	local edge, gap = nil, math.huge
+	for name, value in gaps do
+		if value < gap then
+			edge, gap = name, value
+		end
+	end
+	return edge, gap
+end
+
+-- The wall a marker's back points at (its front is local -Z turned by its rotation).
+local function backWall(marker)
+	local angle = marker.rotation or 0
+	local bx, bz = math.sin(angle), math.cos(angle)
+	if math.abs(bx) > math.abs(bz) then
+		return if bx > 0 then "maxX" else "minX"
+	end
+	return if bz > 0 then "maxZ" else "minZ"
+end
+
 return function()
+	it("stands every wall piece against a wall with its back to that wall, never side-on or facing it", function()
+		for _, kit in SchoolKitRegistry.KITS do
+			for _, marker in kit.markers do
+				local backed = WALL_BACKED_KINDS[marker.kind] == true
+					or (marker.kind == "prop" and marker.art ~= nil and WALL_BACKED_PROPS[marker.art] == true)
+				if backed then
+					local edge, gap = nearestWall(kit, marker)
+					if gap <= AGAINST then
+						local label = `{kit.id} {marker.kind}/{marker.art} at ({marker.x}, {marker.z})`
+						expect(`{label} back to {backWall(marker)}`).to.equal(`{label} back to {edge}`)
+					end
+				end
+			end
+		end
+	end)
+
 	it("every kit passes OfficeKitRules", function()
 		for _, kit in SchoolKitRegistry.KITS do
 			local ok, errors = OfficeKitRules.check(kit)

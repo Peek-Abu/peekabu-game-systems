@@ -128,7 +128,7 @@ return function()
 						end
 						local bare = table.clone(layout)
 						bare.markers = others
-						for _, marker in Dressing.dress(room, bare, Random.new(seed), false, "bench") do
+						for _, marker in Dressing.dress(room, bare, Random.new(seed), false, { seat = "bench" }) do
 							expect(marker.art).never.to.equal("sofa")
 							if marker.art == "bench" then
 								benches += 1
@@ -144,6 +144,37 @@ return function()
 			end
 			expect(benches > 0).to.equal(true)
 			expect(sofas > 0).to.equal(true)
+		end)
+
+		it("leaves a junction's corners bare when asked (the School's), and dresses them by default", function()
+			local bareCorners, dressed = 0, 0
+			for seed = 1, SEEDS do
+				local layout = layoutFor(seed)
+				for _, room in layout.rooms do
+					if room.zone == "hallway" then
+						local others = {}
+						for _, marker in layout.markers do
+							if not (marker.kind == "prop" and marker.room == room.id) then
+								table.insert(others, marker)
+							end
+						end
+						local bare = table.clone(layout)
+						bare.markers = others
+						for _, marker in Dressing.dress(room, bare, Random.new(seed), true, { junctionCorners = false }) do
+							if COLLIDABLE[marker.art] then
+								bareCorners += 1
+							end
+						end
+						for _, marker in Dressing.dress(room, bare, Random.new(seed), true) do
+							if COLLIDABLE[marker.art] then
+								dressed += 1
+							end
+						end
+					end
+				end
+			end
+			expect(bareCorners).to.equal(0)
+			expect(dressed > 0).to.equal(true)
 		end)
 
 		it("keeps the lane clear: 7 in a 10-wide hall (coolers only), 9 in a 14-wide hall", function()

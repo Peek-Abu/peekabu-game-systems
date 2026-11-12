@@ -59,6 +59,9 @@ return table.freeze({
 	BAND_SLOT = 28,
 	-- A landmark room keeps at least this much floor behind its kit, so its back door opens onto clear floor.
 	LANDMARK_BACK_AISLE = 6,
+	-- A landmark's kit is smaller than its block: a piece within this many studs of a kit wall follows that wall out to
+	-- the room's real wall (SchoolLayoutGenerationUtils.snapToWalls), so nothing floats where the kit's wall would be.
+	LANDMARK_WALL_SNAP = 3,
 	-- A landmark's back door: this wide, open, at least LANDMARK_DOOR_INSET from the room's corners.
 	LANDMARK_DOOR_WIDTH = 10,
 	LANDMARK_DOOR_INSET = 8,

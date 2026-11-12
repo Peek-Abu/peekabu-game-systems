@@ -87,11 +87,12 @@ local KITS: { Kit } = {
 		width = 32,
 		depth = 26,
 		door = { offset = 6, width = 6.8, kind = "solid" },
-		-- Two rows of student desks (low tables: no room under them) facing the chalkboard on the back wall, a project
-		-- table at the back to hide under, and the teacher's desk turned to face the rows.
+		-- Two rows of student desks (low tables: no room under them) facing the chalkboard on the back wall, a coat
+		-- closet in the back-left corner to hide in (clear of the chalkboard), and the teacher's desk turned to face
+		-- the rows.
 		markers = join(grid("table", "studentDesk", { 5.5, 16, 26.5 }, { 10 }, 0), {
 			styled("table", "studentDesk", 16, 19.5, 0),
-			styled("desk", "projectTable", 5.5, 19.5, 0),
+			at("closet", 2.775, 22.75, -QUARTER),
 			styled("desk", "desk", 26.5, 18.8, HALF),
 			prop("chalkboard", 11, 25.16, 0),
 			prop("artFrame", 0.635, 15, -QUARTER),
@@ -99,7 +100,7 @@ local KITS: { Kit } = {
 			at("pile", 22, 3.5),
 			at("pile", 28, 4),
 			at("pile", 3, 3.5),
-			at("pile", 2.5, 24),
+			at("pile", 9, 21),
 			at("item", 10.75, 14.75),
 			at("item", 12, 3.5),
 			at("patrol", 16, 4.5),
@@ -195,7 +196,7 @@ local KITS: { Kit } = {
 			-- Two cots to hide under and the medicine cabinet.
 			styled("desk", "cot", 5.5, 15, 0),
 			styled("desk", "cot", 18.5, 15, 0),
-			styled("cabinet", "medicineCabinet", 21.6, 4, 0),
+			styled("cabinet", "medicineCabinet", 21.99, 4, QUARTER),
 			prop("wasteBin", 2.5, 3.5, 0),
 			prop("artFrame", 12, 21.365, 0),
 			at("pile", 12, 12),
@@ -247,7 +248,7 @@ local KITS: { Kit } = {
 			prop("sofa", 2.86, 12, -QUARTER),
 			styled("desk", "desk", 18, 14, 0),
 			styled("counter", "kitchenCounter", 20, 21.41, 0),
-			prop("vending", 24.665, 12, QUARTER),
+			prop("schoolVending", 25.32, 12, QUARTER),
 			prop("wallClock", 8, 23.375, 0),
 			at("pile", 24, 4),
 			at("pile", 4, 4),
@@ -385,7 +386,7 @@ local KITS: { Kit } = {
 			grid("table", "breakTable", { 24, 40 }, { 34 }, 0),
 			grid("counter", "servingCounter", { 20, 28.1, 36.2, 44.3 }, { 53.4 }, 0),
 			{
-				prop("vending", 60.665, 32, QUARTER),
+				prop("schoolVending", 61.32, 32, QUARTER),
 				prop("waterCooler", 62.2425, 38, QUARTER),
 				prop("planter", 3.08, 52.99, 0),
 				prop("artFrame", 0.635, 34, -QUARTER),
