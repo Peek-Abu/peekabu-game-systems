@@ -188,6 +188,8 @@ type State = {
 	-- The art frames among them, which a collidable prop never stands under.
 	frames: { [Edge]: { { number } } },
 	collidable: boolean,
+	-- The seat a long wall's collidable slot may stand (PROP_SIZES key; the Office's sofa, the School's bench).
+	seat: string,
 	-- Hall width (short side) and the clear width a prop must leave across it; nil in a junction.
 	width: number?,
 	clear: number,
@@ -325,7 +327,7 @@ local function dressWall(state: State, edge: Edge)
 				end
 			end
 		elseif rng:NextNumber() >= SLOT_SKIP then
-			local art = if rng:NextInteger(0, 1) == 0 then "planter" else "sofa"
+			local art = if rng:NextInteger(0, 1) == 0 then "planter" else state.seat
 			local width = state.width
 			if width ~= nil and width - sizeOf(art).Z - MAX_WALL_GAP < state.clear then
 				art = "waterCooler"
@@ -397,11 +399,17 @@ local function entrance(room: Room, layout: Layout): boolean
 end
 
 --[=[
-	The prop markers that dress hallway `room` (a run, or a junction when `junction`): sconces, art, planters, benches
-	and a clock, using only `rng`. Call after the room's doors, facades and patrol points are in `layout`; the caller
-	appends the result to `layout.markers`.
+	The prop markers that dress hallway `room` (a run, or a junction when `junction`): sconces, art, planters, seats
+	(`seat`, a PROP_SIZES key: the sofa by default, the School's bench) and a clock, using only `rng`. Call after the
+	room's doors, facades and patrol points are in `layout`; the caller appends the result to `layout.markers`.
 ]=]
-function OfficeHallDressingUtils.dress(room: Room, layout: Layout, rng: Random, junction: boolean?): { Marker }
+function OfficeHallDressingUtils.dress(
+	room: Room,
+	layout: Layout,
+	rng: Random,
+	junction: boolean?,
+	seat: string?
+): { Marker }
 	local state: State = {
 		room = room,
 		layout = layout,
@@ -413,6 +421,7 @@ function OfficeHallDressingUtils.dress(room: Room, layout: Layout, rng: Random, 
 		hung = {},
 		frames = {},
 		collidable = not entrance(room, layout),
+		seat = seat or "sofa",
 		width = if junction == true then nil else math.min(room.maxX - room.minX, room.maxZ - room.minZ),
 		clear = NARROW_CLEAR,
 		markers = {},

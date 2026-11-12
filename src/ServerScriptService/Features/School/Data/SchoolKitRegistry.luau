@@ -5,6 +5,10 @@
 	(OfficeKitRules, OfficeLayoutRules) and build take them unchanged. Every kit passes OfficeKitRules; the spec also
 	places each one in every facing and mirror and validates it as a layout.
 
+	Every desk names its art (the Office's plain `desk` art for a teacher, the principal and the lounge; the School's
+	project or reading table elsewhere), so none of them is dressed as an office desk (OfficeDecorSystem: no monitor,
+	clutter or office chair).
+
 	The pieces: two classroom layouts (rows facing a chalkboard, and desk groups), the art and music rooms, the nurse,
 	the principal, the teachers' lounge (Harlow's rest, the Office breakout's role), a bathroom (stalls are closets), the
 	janitor's closet, the front hall (the start room, the loading bay's size) and the three landmarks that fill a
@@ -88,7 +92,7 @@ local KITS: { Kit } = {
 		markers = join(grid("table", "studentDesk", { 5.5, 16, 26.5 }, { 10 }, 0), {
 			styled("table", "studentDesk", 16, 19.5, 0),
 			styled("desk", "projectTable", 5.5, 19.5, 0),
-			at("desk", 26.5, 18.8, HALF),
+			styled("desk", "desk", 26.5, 18.8, HALF),
 			prop("chalkboard", 11, 25.16, 0),
 			prop("artFrame", 0.635, 15, -QUARTER),
 			prop("wallClock", 31.375, 15, QUARTER),
@@ -115,7 +119,7 @@ local KITS: { Kit } = {
 			grid("table", "studentDesk", { 5.25, 13.55 }, { 10 }, 0),
 			grid("table", "studentDesk", { 5.25, 13.55 }, { 16.8 }, HALF),
 			{
-				at("desk", 24.45, 22.5, QUARTER),
+				styled("desk", "desk", 24.45, 22.5, QUARTER),
 				at("closet", 2.775, 23.6, -QUARTER),
 				prop("chalkboard", 14, 27.16, 0),
 				styled("shelf", "cubbies", 25.73, 13, QUARTER),
@@ -140,8 +144,8 @@ local KITS: { Kit } = {
 		door = { offset = 6, width = 6.8, kind = "solid" },
 		markers = {
 			-- Two paint tables, a sink on the right wall, a supply closet and an easel.
-			at("desk", 19, 10.5, 0),
-			at("desk", 19, 19.7, 0),
+			styled("desk", "projectTable", 19, 10.5, 0),
+			styled("desk", "projectTable", 19, 19.7, 0),
 			at("closet", 2.775, 20, -QUARTER),
 			styled("counter", "artSink", 25.63, 6, QUARTER),
 			styled("board", "easel", 8, 23.5, 0),
@@ -164,8 +168,8 @@ local KITS: { Kit } = {
 		door = { offset = 22, width = 6.8, kind = "solid" },
 		markers = {
 			-- Two risers to hide under, the piano and the instrument closet.
-			at("desk", 9, 12, 0),
-			at("desk", 9, 21.2, 0),
+			styled("desk", "readingTable", 9, 12, 0),
+			styled("desk", "readingTable", 9, 21.2, 0),
 			at("closet", 2.775, 3.3, -QUARTER),
 			styled("table", "piano", 20, 16, 0),
 			prop("artFrame", 27.365, 20, QUARTER),
@@ -213,7 +217,7 @@ local KITS: { Kit } = {
 		door = { offset = 12, width = 6.8, kind = "solid" },
 		markers = {
 			-- The big desk facing the door, filing cabinets in the back corners, planters by the door.
-			at("desk", 12, 13, HALF),
+			styled("desk", "desk", 12, 13, HALF),
 			at("cabinet", 2.1, 19.5, -QUARTER),
 			at("cabinet", 21.9, 19.5, QUARTER),
 			prop("planter", 3.08, 3.01, HALF),
@@ -241,7 +245,7 @@ local KITS: { Kit } = {
 			styled("table", "breakTable", 8, 12, QUARTER),
 			prop("rug", 8, 12, QUARTER),
 			prop("sofa", 2.86, 12, -QUARTER),
-			at("desk", 18, 14, 0),
+			styled("desk", "desk", 18, 14, 0),
 			styled("counter", "kitchenCounter", 20, 21.41, 0),
 			prop("vending", 24.665, 12, QUARTER),
 			prop("wallClock", 8, 23.375, 0),
@@ -409,11 +413,12 @@ local KITS: { Kit } = {
 		width = 64,
 		depth = 56,
 		door = { offset = 32, width = 10, kind = "open" },
-		-- Rows of bookshelves on the left, two reading tables of four on the right (the front pair of the first tall
-		-- enough to hide under, the rest low study tables), the front desk by the door and a book-return closet in the
-		-- back corner.
+		-- Four double-sided rows of bookshelves on the left (two shelves back to back, so every aisle shows books), two
+		-- reading tables of four on the right (the front pair of the first tall enough to hide under, the rest low study
+		-- tables), the front desk by the door and a book-return closet in the back corner.
 		markers = join(
-			grid("shelf", "bookshelf", { 4.5, 9.5, 14.5 }, { 12, 20, 28, 36, 44 }, 0),
+			grid("shelf", "bookshelf", { 4.5, 9.5, 14.5 }, { 12, 22, 32, 42 }, 0),
+			grid("shelf", "bookshelf", { 4.5, 9.5, 14.5 }, { 14, 24, 34, 44 }, HALF),
 			grid("desk", "readingTable", { 40, 48.4 }, { 22 }, 0),
 			grid("table", "studyTable", { 40, 48.4 }, { 42 }, 0),
 			grid("table", "studyTable", { 40, 48.4 }, { 28.8, 48.8 }, HALF),
@@ -425,8 +430,8 @@ local KITS: { Kit } = {
 				prop("wallClock", 32, 55.375, 0),
 				at("pile", 24, 10),
 				at("pile", 24, 30),
-				at("pile", 12, 16),
-				at("pile", 12, 32),
+				at("pile", 12, 18),
+				at("pile", 12, 28),
 				at("pile", 30, 48),
 				at("pile", 58, 20),
 				at("item", 32, 20),

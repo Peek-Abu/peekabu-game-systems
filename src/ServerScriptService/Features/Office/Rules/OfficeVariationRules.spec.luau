@@ -62,10 +62,10 @@ return function()
 			end
 		end)
 
-		it("keeps the School's janitor's closet and front hall normal, and varies its classrooms", function()
+		it("keeps the School's janitor's closet, front hall and landmarks normal, and varies its classrooms", function()
 			local seen = {}
 			for seed = 1, 300 do
-				for _, roomType in { "janitor", "fronthall" } do
+				for _, roomType in { "janitor", "fronthall", "gym", "cafeteria", "library" } do
 					expect(OfficeVariationRules.lightMood(seed, "r" .. seed, roomType)).to.equal("normal")
 				end
 				seen[OfficeVariationRules.lightMood(seed, "classroom1", "classroom")] = true

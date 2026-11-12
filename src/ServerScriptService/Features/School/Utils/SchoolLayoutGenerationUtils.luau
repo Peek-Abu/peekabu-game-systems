@@ -329,7 +329,16 @@ local function construct(base: Layout, rng: Random): (Layout?, string?)
 	end
 	for _, room in layout.rooms do
 		if room.zone == "hallway" then
-			addMarkers(build, OfficeHallDressingUtils.dress(room, layout, rng, network.junctions[room.id] ~= nil))
+			addMarkers(
+				build,
+				OfficeHallDressingUtils.dress(
+					room,
+					layout,
+					rng,
+					network.junctions[room.id] ~= nil,
+					SchoolConstants.HALL_SEAT
+				)
+			)
 		end
 	end
 	layout.route = SchoolHallUtils.route(layout, front.id)

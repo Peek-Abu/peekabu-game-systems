@@ -151,6 +151,18 @@ return function()
 		end
 	end)
 
+	it("names the art of every desk, so none is dressed as an office desk", function()
+		for _, kit in SchoolKitRegistry.KITS do
+			for _, marker in kit.markers do
+				if marker.kind == "desk" then
+					expect(`{kit.id} {marker.x},{marker.z} {marker.art ~= nil}`).to.equal(
+						`{kit.id} {marker.x},{marker.z} true`
+					)
+				end
+			end
+		end
+	end)
+
 	it("gives every room but the front hall a hiding place (a desk or a closet)", function()
 		for _, kit in SchoolKitRegistry.KITS do
 			if kit.roomType ~= "fronthall" then

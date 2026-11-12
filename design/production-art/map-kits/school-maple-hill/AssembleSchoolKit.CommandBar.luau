@@ -197,6 +197,28 @@ for key, row in IDS do
 	m.Parent = furniture
 	table.insert(report, key)
 end
+-- The hall locker (the slate kit's single searchable locker, which the Office keeps): recoloured to the approved
+-- look sheet's teal-green. Every part keeps its name (SearchDoor swings), only the colours change.
+local LOCKER_BODY, LOCKER_BACK = Color3.fromRGB(74, 116, 104), Color3.fromRGB(56, 90, 81)
+local slateLocker = kits:FindFirstChild("client-office-slate")
+slateLocker = slateLocker and slateLocker:FindFirstChild("furniture")
+slateLocker = slateLocker and slateLocker:FindFirstChild("locker")
+if slateLocker then
+	local locker = slateLocker:Clone()
+	for _, d in locker:GetDescendants() do
+		if d:IsA("BasePart") then
+			if d.Name == "LockerBack" then
+				d.Color = LOCKER_BACK
+			elseif d.Name ~= "NamePlate" and d.Name ~= "DoorVent" and d.Name ~= "DoorHandle" then
+				d.Color = LOCKER_BODY
+			end
+		end
+	end
+	locker.Parent = furniture
+	table.insert(report, "locker")
+else
+	table.insert(report, "locker FAILED: no slate locker template")
+end
 kit.Parent = kits
 
 local okRules, Rules = pcall(function()

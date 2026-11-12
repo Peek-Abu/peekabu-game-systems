@@ -113,6 +113,39 @@ end
 
 return function()
 	describe("OfficeHallDressingUtils", function()
+		it("stands a caller's seat in place of the sofa (the School's bench), the Office keeping its sofa", function()
+			local benches, sofas = 0, 0
+			for seed = 1, SEEDS do
+				local layout = layoutFor(seed)
+				for _, room in layout.rooms do
+					if room.zone == "hallway" then
+						-- The room's own dressing is redone, so the props generation already placed are left out.
+						local others = {}
+						for _, marker in layout.markers do
+							if not (marker.kind == "prop" and marker.room == room.id) then
+								table.insert(others, marker)
+							end
+						end
+						local bare = table.clone(layout)
+						bare.markers = others
+						for _, marker in Dressing.dress(room, bare, Random.new(seed), false, "bench") do
+							expect(marker.art).never.to.equal("sofa")
+							if marker.art == "bench" then
+								benches += 1
+							end
+						end
+						for _, marker in Dressing.dress(room, bare, Random.new(seed), false) do
+							if marker.art == "sofa" then
+								sofas += 1
+							end
+						end
+					end
+				end
+			end
+			expect(benches > 0).to.equal(true)
+			expect(sofas > 0).to.equal(true)
+		end)
+
 		it("keeps the lane clear: 7 in a 10-wide hall (coolers only), 9 in a 14-wide hall", function()
 			local seen = { narrow = 0, wide = 0 }
 			for seed = 1, SEEDS do
