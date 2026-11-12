@@ -156,46 +156,41 @@ do
 	table.insert(made, "IslandCabinet")
 end
 
--- Island: shelves facing out on all four sides, under an oak top.
+-- Island (owner 11-12: the first one was too compact and clipped): two rows of full-size bookshelves, back to back
+-- and side by side, the collider resized to exactly that block (10.32 x 8 x 4.16, standing on the floor where the
+-- island stood). The copier and the cabinet stand apart at its south corners.
 do
 	local p = dress(furniture.IslandShelves)
+	local W, H, D = 5.16, 8, 2.08
+	local centre = Vector3.new(p.Position.X, 0.5 + H / 2, p.Position.Z)
+	p.Size = Vector3.new(2 * W, H, 2 * D)
+	p.CFrame = CFrame.new(centre) * p.CFrame.Rotation
 	local holder = Instance.new("Model")
 	holder.Name = "Art"
 	holder.Parent = p
-	local hx, hy, hz = p.Size.X / 2, p.Size.Y, p.Size.Z / 2
-	local k = hy / 8
-	local shelfD = 2.08 * k
-	local cabD, cabW = 3.45 * k, 4.32 * k
-	local floor = p.CFrame * CFrame.new(0, -p.Size.Y / 2, 0)
-	local function at(x: number, z: number, facing: Vector3): CFrame
-		local pos = (floor * CFrame.new(x, hy / 2, z)).Position
-		return CFrame.lookAt(pos, pos + p.CFrame:VectorToWorldSpace(facing))
-	end
 	for _, side in { -1, 1 } do
-		-- Two shelves side by side, meeting in the middle.
-		local shelfW = 5.16 * k
-		for _, x in { -shelfW / 2, shelfW / 2 } do
-			local m = place("c_bookshelf", at(x, side * (hz - shelfD / 2), Vector3.new(0, 0, side)), Vector3.new(hx, hy, shelfD), false, holder)
+		for _, x in { -W / 2, W / 2 } do
+			local at = p.CFrame * CFrame.new(x, 0, side * D / 2)
+			local face = p.CFrame:VectorToWorldSpace(Vector3.new(0, 0, side))
+			local m = place("c_bookshelf", CFrame.lookAt(at.Position, at.Position + face), Vector3.new(W, H, D), true, holder)
 			m.Name = "Shelf"
 		end
-		for _, z in { -cabW / 2 - 0.02, cabW / 2 + 0.02 } do
-			local m = place("t2_supplyCabinet", at(side * (hx - cabD / 2), z, Vector3.new(side, 0, 0)), Vector3.new(cabW, hy, cabD), false, holder)
-			m.Name = "Cabinet"
-		end
 	end
-	local top = Instance.new("Part")
-	top.Name = "Top"
-	top.Size = Vector3.new(p.Size.X + 0.2, 0.3, p.Size.Z + 0.2)
-	top.CFrame = floor * CFrame.new(0, hy + 0.15, 0)
-	top.Material = Enum.Material.Wood
-	top.Color = Color3.fromRGB(122, 84, 52)
-	top.Anchored = true
-	top.CanCollide = false
-	top.CanQuery = false
-	top.CanTouch = false
-	top.Parent = holder
 	table.insert(made, "IslandShelves")
 end
+
+-- The copier and the cabinet move out to the island's south corners (their colliders and art together).
+local function moveTo(part: BasePart, x: number, z: number)
+	local old = part.CFrame
+	local new = CFrame.new(x, old.Position.Y, z) * old.Rotation
+	part.CFrame = new
+	local partArt = part:FindFirstChild("Art")
+	if partArt and partArt:IsA("Model") then
+		partArt:PivotTo(new * old:Inverse() * partArt:GetPivot())
+	end
+end
+moveTo(furniture.IslandCopier, -6.5, 1595.5)
+moveTo(furniture.IslandCabinet, 6.5, 1595.5)
 
 -- Office dressing round the walls (inert).
 local dressing = map:FindFirstChild("Dressing") or Instance.new("Folder")
