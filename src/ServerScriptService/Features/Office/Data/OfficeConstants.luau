@@ -75,7 +75,8 @@ local PROP_DESK_TOP: { [string]: boolean } = { deskPlant = true }
 local ART_SIZES: { [string]: Vector3 } = {
 	corkboard = Vector3.new(6.4, 6.1, 1.9),
 	breakTable = Vector3.new(5, 1.8, 3) * HIDE_FURNITURE_SCALE,
-	shelf = Vector3.new(5.54, 8, 2.08),
+	-- c_bookshelf v2 (2026-11-12): v1's 5.54 width was its book stack poking through the side panel.
+	shelf = Vector3.new(5.16, 8, 2.08),
 	serverRack = Vector3.new(2, 7, 3.5),
 	kitchenCounter = Vector3.new(8, 6.35, 3.08),
 	receptionDesk = Vector3.new(12.86, 4.6, 5.16),
