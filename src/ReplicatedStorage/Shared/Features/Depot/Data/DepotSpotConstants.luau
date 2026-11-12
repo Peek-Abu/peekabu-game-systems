@@ -136,23 +136,24 @@ local DepotSpotConstants = {
 			WIDTH = 0.95,
 			DEPTH = 0.75,
 			MIN_HEIGHT = 0.15,
-			MAX_HEIGHT = 0.8,
+			MAX_HEIGHT = 1.0,
 			TAPE_WIDTH = 0.22,
 			COLOR = Color3.fromRGB(196, 150, 98),
 			TAPE_COLOR = Color3.fromRGB(232, 208, 150),
 		}),
-		-- The rubber stamp in the clerk's right hand: a red base under a wooden handle and knob, held so its face is
-		-- flat on the parcel at the contact (GRIP: the handle's offset in RightHand space, measured on the kit rig;
-		-- design/animations/clerk/GATES.md).
+		-- The rubber stamp in the clerk's right hand: a red base under a wooden handle and knob, upright in the fist so
+		-- its face is flat on the parcel at the contact (GRIP: the handle's offset in RightHand space at a scale of 1,
+		-- solved on Pippa at the v6 stamp's contact frame so the handle stands straight up, owner 11-11: "stamp not
+		-- held properly").
 		STAMP = table.freeze({
 			BASE = Vector3.new(0.42, 0.12, 0.3),
-			HANDLE_LENGTH = 0.22,
+			HANDLE_LENGTH = 0.32,
 			HANDLE_WIDTH = 0.12,
 			KNOB = 0.2,
 			BASE_COLOR = Color3.fromRGB(214, 48, 49),
 			WOOD_COLOR = Color3.fromRGB(120, 78, 45),
-			GRIP_POSITION = Vector3.new(0.016, -0.047, -0.001),
-			GRIP_DEGREES = Vector3.new(78.9, -70.6, 77.9),
+			GRIP_POSITION = Vector3.new(0, 0, 0),
+			GRIP_DEGREES = Vector3.new(-14.6, -59.4, -22.6),
 		}),
 	}),
 }
