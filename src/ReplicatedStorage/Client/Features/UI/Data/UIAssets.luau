@@ -63,7 +63,10 @@ export type ToonIcon =
 	| "managerHunt"
 	| "monitor"
 	| "mop"
+	| "inventory"
 	| "pippaHappy"
+	| "pippaSkins"
+	| "priceTag"
 	| "pippaWorried"
 	| "radio"
 	| "settings"
@@ -105,8 +108,9 @@ UIAssets.paper = table.freeze(PAPER)
 -- baked in (their hard drop is a second, ink-tinted copy, never baked).
 local TOON_ICONS: { [ToonIcon]: string } = {
 	-- Ability renders (character step 4, 2026-10-24; decals in characters/ui/shipped-ui-assets.md). Let's Go! is
-	-- Pippa's own foot (owner pick).
-	abilityLetsGo = "rbxassetid://110925040898866",
+	-- Pippa's own foot (owner pick); redrawn 2026-11-13 with simpler fur and motion lines, no stars (decal
+	-- 139460474011465).
+	abilityLetsGo = "rbxassetid://124538881139374",
 	abilityPottedPlant = "rbxassetid://120058837938191",
 	abilitySpotIt = "rbxassetid://72513443568229",
 	-- Gleam bundle renders, smallest to biggest, made from the Gleam gem itself (v2, 2026-10-24).
@@ -128,6 +132,10 @@ local TOON_ICONS: { [ToonIcon]: string } = {
 	-- decals 87370888087827 / 94822868730395).
 	daily = "rbxassetid://97644014132156",
 	featured = "rbxassetid://94219536392095",
+	-- Round 3 (glossy, softer shine; owner picks 2026-11-13): the Inventory's backpack and the price tag on what you
+	-- can buy (decals 108925873210186 / 79687435541286).
+	inventory = "rbxassetid://81160659671419",
+	priceTag = "rbxassetid://140520500336666",
 	-- Round 2 (glossy family, softer shine; owner picks 2026-11-13): the Shop's stall and the sticker sheet for sticker
 	-- packs, stickers and the chat wheel (Icey Labs decals 106048651825814 / 104162197575790). They replace the shared
 	-- gift box.
@@ -156,7 +164,11 @@ local TOON_ICONS: { [ToonIcon]: string } = {
 	managerHunt = "rbxassetid://126690679697372",
 	monitor = "rbxassetid://115152845494708",
 	mop = "rbxassetid://135344307549758",
-	pippaHappy = "rbxassetid://83422913842035",
+	-- Today's Pippa waving (owner picks 2026-11-13, rendered from her v13 model with no hand in her head): coral, the
+	-- default employee, for the crew icons; lavender with glasses (her Owner Special skin) for Skins (decals
+	-- 89385811608046 / 70701119889101).
+	pippaHappy = "rbxassetid://126227546924097",
+	pippaSkins = "rbxassetid://97692146860492",
 	pippaWorried = "rbxassetid://77310837138468",
 	settings = "rbxassetid://112995353478331",
 	spray = "rbxassetid://122601719267115",
@@ -207,7 +219,9 @@ UIAssets.toonPhotos = table.freeze({
 	schoolWide = "rbxassetid://75797686913598",
 	pippaPortrait = "rbxassetid://100337810904422",
 	truckCut = "rbxassetid://72922265291902",
-	pippaSaluteCut = "rbxassetid://77407692720114",
+	-- Today's coral Pippa cheering, both arms up, on the empty award card (owner 2026-11-13: the old salute pressed her
+	-- hand into her head; decal 102894946805091).
+	pippaCheerCut = "rbxassetid://89228375154099",
 })
 
 -- Chat-wheel sticker art by CosmeticRegistry sticker id (2026-11-03, owner picks; style C, waist up): 512 px

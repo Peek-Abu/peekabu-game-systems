@@ -83,6 +83,19 @@ return function()
 		end)
 	end)
 
+	describe("lockIcon", function()
+		it("shows a price tag on what you can buy and the lock on the rest (owner pick 2026-11-13)", function()
+			local card = function(kind)
+				return { band = if kind ~= nil then { kind = kind, text = "x" } else nil }
+			end
+			expect(VM.lockIcon(card("credits"))).to.equal("priceTag")
+			expect(VM.lockIcon(card("gleam"))).to.equal("priceTag")
+			expect(VM.lockIcon(card("locker"))).to.equal("lockNight")
+			expect(VM.lockIcon(card("later"))).to.equal("lockNight")
+			expect(VM.lockIcon(card(nil))).to.equal("lockNight")
+		end)
+	end)
+
 	describe("band", function()
 		it("gives owned items no band and the worn one a Wearing band", function()
 			expect(VM.band(CosmeticRegistry.get("Pippa.GloomTouched"), true, false)).to.equal(nil)

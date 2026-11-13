@@ -151,7 +151,7 @@ local function itemCard(
 	end
 	if entry.dim then
 		stage.lock = e(ToonIcon, {
-			icon = "lockNight",
+			icon = VM.lockIcon(entry),
 			anchor = Vector2.new(1, 1),
 			position = UDim2.new(1, -6, 1, -6),
 			size = UDim2.fromOffset(if phone then 22 else 34, if phone then 22 else 34),

@@ -109,8 +109,9 @@ local function card(props: InventoryCrewPanelProps, entry: VM.CrewCard, order: n
 	}
 	if locked then
 		local lock = math.floor(w * 0.3)
+		-- Not hired yet: a price tag (you can hire them for Credits).
 		art.lock = e(ToonIcon, {
-			icon = "lockNight",
+			icon = "priceTag",
 			anchor = Vector2.new(0.5, 0.5),
 			position = UDim2.fromScale(0.5, 0.62),
 			size = UDim2.fromOffset(lock, lock),

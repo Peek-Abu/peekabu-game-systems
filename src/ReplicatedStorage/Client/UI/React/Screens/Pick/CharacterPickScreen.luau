@@ -3,7 +3,7 @@
 	CharacterPickScreen: the first-join pick (concept: characters/ui/character-ui/frames2/pick.jpg). On a ToonBackdrop
 	in the selected employee's colour, with rays behind the hero: the big gold "PICK YOUR EMPLOYEE!" and a plate under
 	it; a column of employee cards (their head breaking out of the card, name, line, "Free!" or the hire price, the
-	night padlock when locked); the selected employee LIVE on a raised platform with a two-line name plate; the About
+	price tag when locked: you can hire them); the selected employee LIVE on a raised platform with a two-line name plate; the About
 	card (who they are, the five gold stat bars, the ability card with its render); and the big mint "Start as
 	Pippa!". It sends the pick (CosmeticServiceClient:requestPick); DepotServiceClient takes the scene off when the
 	synced loadout says picked. No close button: everyone picks once. A locked employee can be previewed,
@@ -150,7 +150,7 @@ local function card(
 	if entry.locked then
 		local lock = math.floor(height * 0.42)
 		nodes.lock = e(ToonIcon, {
-			icon = "lockNight",
+			icon = "priceTag",
 			position = UDim2.fromOffset(0, math.floor(height * 0.18)),
 			size = UDim2.fromOffset(lock, lock),
 			drop = 3,

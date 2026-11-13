@@ -181,7 +181,7 @@ local function tiles(props: DepotHubPanelProps): React.ReactNode
 	local phone = props.phone
 	local list: { Tile } = {
 		{ key = "jobs", label = "JOBS", icon = "jobs", variant = "gleam", activate = props.onJobs },
-		{ key = "inventory", label = "INVENTORY", icon = "locker", variant = "grape", activate = props.onInventory },
+		{ key = "inventory", label = "INVENTORY", icon = "inventory", variant = "grape", activate = props.onInventory },
 		{ key = "guide", label = "GUIDE", icon = "guide", variant = "primary", activate = props.onGuide },
 		{ key = "settings", label = "SETTINGS", icon = "settings", variant = "lilac", activate = props.onSettings },
 	}

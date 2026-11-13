@@ -174,7 +174,7 @@ local function awardCard(
 		})
 	elseif featured then
 		face.pippa = e(ToonIcon, {
-			image = UIAssets.toonPhotos.pippaSaluteCut,
+			image = UIAssets.toonPhotos.pippaCheerCut,
 			anchor = Vector2.new(1, 1),
 			position = UDim2.new(1, if phone then 6 else 10, 1, 4),
 			size = UDim2.fromOffset(if phone then 90 else 200, if phone then 104 else 230),

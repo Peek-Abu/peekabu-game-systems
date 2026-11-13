@@ -150,7 +150,7 @@ function VM.tabs(hasPasses: boolean): { { id: string, text: string, icon: UIAsse
 	return {
 		{ id = "featured", text = "Featured", icon = "featured", soon = false },
 		{ id = "hires", text = "Hire", icon = "jobs", soon = false },
-		{ id = "skins", text = "Skins", icon = "pippaHappy", soon = false },
+		{ id = "skins", text = "Skins", icon = "pippaSkins", soon = false },
 		{ id = "gleam", text = "Gleam", icon = "gleam", soon = false },
 		{ id = "lockers", text = "Lockers", icon = "locker", soon = false },
 		{ id = "passes", text = "Passes", soon = not hasPasses },

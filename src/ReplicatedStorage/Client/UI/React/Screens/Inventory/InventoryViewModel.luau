@@ -210,6 +210,16 @@ function VM.skinKey(id: string): string
 	return string.match(id, "^[^%.]+%.(.+)$") or id
 end
 
+-- The mark on a locked item card: a price tag when its band is a price (you can buy it), else the lock (owner pick
+-- 2026-11-13: the price tag only on what you can buy).
+function VM.lockIcon(card: { band: Band? }): UIAssets.ToonIcon
+	local band = card.band
+	if band ~= nil and (band.kind == "credits" or band.kind == "gleam") then
+		return "priceTag"
+	end
+	return "lockNight"
+end
+
 -- The footer band: nil for an owned item, "Wearing" on the worn one, else where it comes from.
 function VM.band(item: Item, owned: boolean, worn: boolean): Band?
 	if worn then

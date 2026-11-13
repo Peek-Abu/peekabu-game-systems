@@ -127,7 +127,7 @@ local function InventoryScreen(props: InventoryScreenProps): React.ReactNode
 		end
 		bar = e(ToonMenuBar, {
 			title = "INVENTORY",
-			icon = "locker",
+			icon = "inventory",
 			-- Each screen has its own colour (owner pick 2026-11-13): the Inventory is sky blue.
 			hue = "sky",
 			tabs = tabs,
