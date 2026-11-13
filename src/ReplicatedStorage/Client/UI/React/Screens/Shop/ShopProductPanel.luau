@@ -317,6 +317,7 @@ local function ShopProductPanel(props: ShopProductPanelProps): React.ReactNode
 				currency = button.currency,
 				amount = button.price,
 				was = button.was,
+				inline = true,
 				textSize = math.floor(buttonHeight * 0.5),
 				meaning = "white",
 				align = "center",

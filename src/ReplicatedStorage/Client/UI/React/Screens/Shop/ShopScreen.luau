@@ -547,6 +547,8 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 		x = layout.titleX,
 		height = layout.barHeight,
 		phone = phone,
+		-- Six tabs: they shrink to fit beside the wallets.
+		width = virtual.X,
 	})
 
 	local body: React.ReactNode
@@ -844,6 +846,7 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 					currency = card.currency,
 					amount = card.price,
 					was = card.was,
+					inline = true,
 					textSize = if phone then 20 else 44,
 					meaning = "white",
 					align = "center",

@@ -53,6 +53,8 @@ export type ToonMenuBarProps = {
 	x: number,
 	height: number,
 	phone: boolean,
+	-- The bar's whole width (design px): when given, the tabs shrink to fit between the title and the wallets.
+	width: number?,
 }
 
 local function ToonMenuBar(props: ToonMenuBarProps): React.ReactNode
@@ -120,10 +122,26 @@ local function ToonMenuBar(props: ToonMenuBarProps): React.ReactNode
 	end
 	x += math.floor(art * 0.3) + plateWidth + (if phone then 14 else 24)
 
-	-- The tabs.
-	local tabText = math.floor(h * 0.4)
+	-- The tabs, shrunk together (text and width) when the bar is too narrow for them beside the wallets.
+	local walletWidth = if phone then 120 else 190
+	local tabGap = if phone then 8 else 12
+	local baseText = math.floor(h * 0.4)
+	local function tabWidth(tab: Tab, text: number): number
+		return math.floor(#tab.text * text * 0.66) + (if tab.icon ~= nil then text * 2 + 14 else 34)
+	end
+	local total = 0
+	for _, tab in props.tabs do
+		total += tabWidth(tab, baseText) + tabGap
+	end
+	local fit = 1
+	local barWidth = props.width
+	if barWidth ~= nil and total > 0 then
+		local room = barWidth - x - (h + 28) - 2 * (walletWidth + 18) - tabGap
+		fit = math.clamp(room / total, 0.6, 1)
+	end
+	local tabText = math.floor(baseText * fit)
 	for index, tab in props.tabs do
-		local width = math.floor(#tab.text * tabText * 0.66) + (if tab.icon ~= nil then tabText * 2 + 14 else 34)
+		local width = tabWidth(tab, tabText)
 		local selected = tab.id == props.current
 		local soon = tab.soon == true
 		nodes[`tab{index}`] = e(ToonButton, {
@@ -156,12 +174,11 @@ local function ToonMenuBar(props: ToonMenuBarProps): React.ReactNode
 				zIndex = 5,
 			})
 		end
-		x += width + (if phone then 8 else 12)
+		x += width + tabGap
 	end
 
 	-- The wallets and the close, from the right.
 	local walletText = math.floor(h * 0.44)
-	local walletWidth = if phone then 120 else 190
 	nodes.close = e(ToonButton, {
 		variant = "danger",
 		text = "X",

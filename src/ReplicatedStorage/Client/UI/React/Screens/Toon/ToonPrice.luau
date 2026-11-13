@@ -23,8 +23,10 @@ export type ToonPriceProps = {
 	currency: Currency,
 	-- Already grouped ("1,500").
 	amount: string,
-	-- A real higher price (grouped): before a sale, or a bundle's items alone. Struck through, above the price.
+	-- A real higher price (grouped): before a sale, or a bundle's items alone. Struck through, above the price (on a
+	-- card), or beside it (`inline`, inside a button, where there is no room above).
 	was: string?,
+	inline: boolean?,
 	textSize: number,
 	-- "gold" (default) on dark or coloured plates, "white" inside a coloured button.
 	meaning: UIToonConstants.Meaning?,
@@ -67,18 +69,19 @@ local function ToonPrice(props: ToonPriceProps): React.ReactNode
 			zIndex = props.zIndex,
 		}),
 	}
-	local row = e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = props.zIndex }, nodes)
-	local outer: { [string]: React.ReactNode } = { row = row }
+	local outer: { [string]: React.ReactNode } = {}
 	local was = props.was
 	if was ~= nil then
-		local wasSize = math.floor(size * 0.6)
+		local inline = props.inline == true
+		local wasSize = math.floor(size * (if inline then 0.6 else 0.8))
 		local xAnchor = if props.align == "left" then 0 elseif props.align == "center" then 0.5 else 1
-		outer.was = e("Frame", {
-			AnchorPoint = Vector2.new(xAnchor, 1),
-			Position = UDim2.new(xAnchor, 0, 0, 2),
+		local struck = e("Frame", {
+			AnchorPoint = if inline then nil else Vector2.new(xAnchor, 1),
+			Position = if inline then nil else UDim2.new(xAnchor, 0, 0, 2),
 			Size = UDim2.fromOffset(0, wasSize + 4),
 			AutomaticSize = Enum.AutomaticSize.X,
 			BackgroundTransparency = 1,
+			LayoutOrder = 3,
 			ZIndex = props.zIndex,
 		}, {
 			text = e(ToonText, {
@@ -100,7 +103,13 @@ local function ToonPrice(props: ToonPriceProps): React.ReactNode
 				ZIndex = (props.zIndex or 1) + 1,
 			}),
 		})
+		if inline then
+			nodes.was = struck
+		else
+			outer.was = struck
+		end
 	end
+	outer.row = e("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = props.zIndex }, nodes)
 	return e("Frame", {
 		AnchorPoint = props.anchor,
 		Position = props.position,
