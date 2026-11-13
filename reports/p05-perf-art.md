@@ -169,6 +169,29 @@ FacePlate; his hair, hoodie and shorts in the game are later uploads, not done y
 - Next, on the owner's yes: upload the new parts to Icey Labs, swap the MeshIds in `Assets.CleanupCrew.Characters`
   in both places, and play-check every skin's outfit and accessories on the lighter bodies.
 
+### D1 round 2 (owner: not OK yet; waiting on the level pick, nothing uploaded)
+
+Owner: the renders showed Cappy's earbuds without their Studio fix, and "I was fully expecting the decimation to bring
+it down to like 10k tris". Answers:
+- Source of truth checked against the live models, read-only, in both places. Every part to decimate (heads, face
+  plates, torsos, feet, ears, hands of Pippa, Prickles and Cappy) has the same triangle count and size live as in the
+  source build (`pippa/v13`, `prickles/v4`, `cappy/v6`), so the geometry is the game's. Cappy's earbuds are the same
+  mesh live and in the source. The owner's fix is their placement and texture (welded to the Head, TextureID
+  132723230315784), which a Head/FacePlate mesh swap never touches; the first renders just used the build file's old
+  placement. The only source mismatch is Cappy's hair (live 14,000 vs v6 13,948), not in the decimation set.
+- Lobby vs Shift: all 17 shared Characters/Outfits/Accessories models are identical, part by part (mesh ids, sizes,
+  offsets, colours, textures and maps, attachments, joints, cages). The Lobby has no Bramble (Shift only).
+- Pippa at 39,909 / 19,948 / 9,969 (from 83,200), same cameras plus close-ups (review page):
+  - 40k: no visible change anywhere.
+  - 20k: small steps on the hand's outline up close.
+  - 10k: fine at play distance and the face is untouched. Up close the hands look lumpy, the head's outline is
+    slightly angular, and the white inside the ears is jagged. Largest surface error 0.019 studs.
+- What doesn't break: shading (custom normals copied from the original), the face decal UVs, deformation (Pippa's limbs
+  are rigid R15 pieces; no skinning to break), and the clothing cages (separate meshes, left untouched).
+- 10k needs no retopo or bake for these round shapes. A per-part budget (more on hands and ears, less on the torso
+  and the back of the head) would make 10k cleaner: about 1-2 h per character plus checks. One skin (Bubble Buddy)
+  gets a play test on the chosen level before any swap.
+
 ## 4. Truck redo (`p1-truck-lore`): v4 is in both places (owner to save both), ready for the owner's play-check
 
 Shipped (2026-11-13). Owner: T1 "fine", T2 pass, plus one fix: "move wheels to side for back wheels? The top of
