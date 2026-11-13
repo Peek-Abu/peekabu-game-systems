@@ -32,7 +32,7 @@ Commit `a4722b80` on `game/cleanup-crew`.
   - On the emote stage (Bubble Ride), a left-drag turned Pippa 37° in place, still centred.
   - The light follows the turn.
   - Phone touch and the controller stick are not checked yet; they need the owner's devices.
-- **Found, not caused by this work (follow-up):** the shop's vacuum try-on (`turn = 150`) opened facing the front, not the back. The camera ended up on the model's front side, so the cloned character probably keeps the player's own world facing (`EmployeePreviewSystem.outfit`). Spin now lets the player turn it round, but the opening angle should be fixed at the source.
+- **Found, not caused by this work (follow-up):** the shop's vacuum try-on (`turn = 150`) opened facing the front, not the back. The camera ended up on the model's front side, so the cloned character probably keeps the player's own world facing (`EmployeePreviewSystem.outfit`). **Fixed** after the coordinator's go: `EmployeePreviewSystem.outfit` now stands a live clone of your character upright facing -Z (new spec case: a character turned 120° and tilted still previews facing -Z, in place). Not play-checked yet.
 
 **Files I edited** (please keep these in mind for the other shop sessions)
 - `src/ReplicatedStorage/Client/UI/React/Screens/Toon/ToonViewport.luau` (spin input and apply)
