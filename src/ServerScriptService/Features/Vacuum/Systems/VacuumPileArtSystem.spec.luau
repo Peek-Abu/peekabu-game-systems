@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local ArtKitRegistry = require(ReplicatedStorage.Shared.Features.Art.Data.ArtKitRegistry)
+local ArtKitRules = require(ReplicatedStorage.Shared.Features.Art.Rules.ArtKitRules)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local Visuals = require(ServerScriptService.Features.Art.Systems.ArtVisualSystem)
 local PileArt = require(script.Parent.VacuumPileArtSystem)
@@ -124,7 +125,7 @@ return function()
 		expect(refits > 5).to.equal(true)
 	end)
 
-	it("has every pile template in this place's kit pivoted at its base (the art stands on its pivot)", function()
+	it("has every pile template in this place's kit pivoted at its base and accepted by the art system", function()
 		local live = ReplicatedStorage:FindFirstChild("Assets")
 		local crew = live and live:FindFirstChild("CleanupCrew")
 		local kits = crew and crew:FindFirstChild("ArtKits")
@@ -135,6 +136,8 @@ return function()
 			if template ~= nil and template:IsA("Model") then
 				local below = lowestOf(template) - template:GetPivot().Position.Y
 				expect(`{kind} {math.abs(below) < 0.02}`).to.equal(`{kind} true`)
+				-- and the art system accepts it (BaseSize = its whole bounds, bottom-centred), or the pile shows no art
+				expect(`{kind} {ArtKitRules.validateTemplate(template, "props")}`).to.equal(`{kind} true`)
 			end
 		end
 	end)
