@@ -88,7 +88,7 @@ export type Product = {
 	-- An employee's hire page: their five display stats (the same rows as the About tab); empty for anything else.
 	stats: { InventoryViewModel.StatRow },
 	-- An employee's hire page: their ability card (`icon` names its render, UIAssets.iconImage); nil for anything else.
-	ability: { name: string, line: string, cooldown: string, icon: string }?,
+	ability: { name: string, line: string, cooldown: number, icon: string }?,
 	button: Button,
 	confirm: string,
 }
@@ -268,7 +268,7 @@ function VM.product(offer: Offer, owns: Owns, balances: Balances): Product
 			then {
 				name = profile.ability.name,
 				line = profile.ability.line,
-				cooldown = `{profile.ability.cooldown}s`,
+				cooldown = profile.ability.cooldown,
 				icon = profile.ability.icon,
 			}
 			else nil,

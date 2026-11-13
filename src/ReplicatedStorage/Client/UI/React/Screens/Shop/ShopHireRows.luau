@@ -16,7 +16,7 @@ local React = require(ReplicatedStorage.Packages.React)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonIcon = require(Toon.ToonIcon)
-local ToonPill = require(Toon.ToonPill)
+local ToonCooldown = require(Toon.ToonCooldown)
 local ToonStatRows = require(Toon.ToonStatRows)
 local ToonSurface = require(Toon.ToonSurface)
 local ToonText = require(Toon.ToonText)
@@ -69,13 +69,12 @@ function ShopHireRows.rows(product: VM.Product, size: number, phone: boolean, he
 				size = UDim2.new(1, -art - 90, 0, size),
 				fit = true,
 			}),
-			cooldown = e(ToonPill, {
-				text = ability.cooldown,
-				hue = "cream",
-				textSize = size - 2,
+			cooldown = e(ToonCooldown, {
+				seconds = ability.cooldown,
+				height = if phone then 44 else 70,
 				anchor = Vector2.new(1, 0.5),
-				position = UDim2.new(1, -12, 0.5, -4),
-				size = UDim2.fromOffset(if phone then 46 else 74, if phone then 32 else 56),
+				position = UDim2.new(1, -12, 0.5, -2),
+				size = UDim2.fromOffset(if phone then 54 else 80, if phone then 44 else 70),
 			}),
 			art = e(ToonIcon, {
 				image = UIAssets.iconImage(ability.icon),

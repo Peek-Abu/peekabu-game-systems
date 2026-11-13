@@ -363,6 +363,7 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.UI.React.Screens.Toon.ToonPanel"] = "presentational React component (story in ToonPanel.story; goo in ToonGooViewModel, motion in ToonMotionViewModel)",
 	["ReplicatedStorage.Client.UI.React.Screens.Toon.ToonSlot"] = "presentational React component (story in ToonSlot.story; states specced in ToonStyleViewModel)",
 	["ReplicatedStorage.Client.UI.React.Screens.Toon.ToonPill"] = "presentational React component (story in ToonPill.story)",
+	["ReplicatedStorage.Client.UI.React.Screens.Toon.ToonCooldown"] = "presentational React component (story in ToonCooldown.story; words specced in ToonStyleViewModel.cooldown)",
 	["ReplicatedStorage.Client.UI.React.Screens.Toon.ToonBar"] = "presentational React component (story in ToonBar.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Toon.ToonSlider"] = "presentational React component with input wiring (story in ToonSlider.story; the value maths specced in ToonSliderViewModel)",
 	["ReplicatedStorage.Client.UI.React.Screens.Toon.ToonText"] = "presentational React component (story in ToonText.story; stroke and drop specced in ToonStyleViewModel)",

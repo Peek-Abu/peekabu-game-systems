@@ -26,6 +26,7 @@ local Toon = ReplicatedStorage.Client.UI.React.Screens.Toon
 local ToonButton = require(Toon.ToonButton)
 local ToonFlag = require(Toon.ToonFlag)
 local ToonIcon = require(Toon.ToonIcon)
+local ToonCooldown = require(Toon.ToonCooldown)
 local ToonPill = require(Toon.ToonPill)
 local ToonPrice = require(Toon.ToonPrice)
 local ToonRarityFrame = require(Toon.ToonRarityFrame)
@@ -760,13 +761,12 @@ local function about(props: InventoryCharacterPanelProps): (React.ReactNode, Rea
 			Size = UDim2.new(1, -math.floor(abilitySize * 0.75) - 20, 1, -size - 40),
 			BackgroundTransparency = 1,
 		}, { text = body(if phone then profile.ability.line else profile.ability.detail, size - 2, COLOR.white) }),
-		cooldown = e(ToonPill, {
-			text = `{profile.ability.cooldown}s`,
-			hue = "cream",
-			textSize = size - 2,
+		cooldown = e(ToonCooldown, {
+			seconds = profile.ability.cooldown,
+			height = if phone then 44 else 66,
 			anchor = Vector2.new(1, 0),
-			position = UDim2.new(1, -14, 0, 12),
-			size = UDim2.fromOffset(if phone then 50 else 76, if phone then 30 else 48),
+			position = UDim2.new(1, -14, 0, 10),
+			size = UDim2.fromOffset(if phone then 54 else 78, if phone then 44 else 66),
 		}),
 	}
 	local row = if phone then 22 else 50

@@ -6,7 +6,8 @@
 	is a variant's palette colour (steel when disabled), `textOn` the text colour that reads on a face, `stroke` /
 	`drop` the ink stroke and hard drop for display text of a size, `pillWidth` the width a pill needs for its measured
 	label, `fitSize` the size a measured one-line label is drawn at to fit its room, `grouped` a count with thousands
-	commas, `blend` the pose part-way between two states. Pure.
+	commas, `cooldown` a cooldown as a big number and its small unit word (ToonCooldown), `blend` the pose part-way between
+	two states. Pure.
 
 	@class ToonStyleViewModel
 ]=]
@@ -193,6 +194,16 @@ function ToonStyleViewModel.grouped(value: number): string
 		index -= 3
 	end
 	return table.concat(groups, ",")
+end
+
+-- A cooldown in seconds as a big number and its unit word, drawn apart (ToonCooldown) so the unit never reads as a
+-- digit (owner, 2026-11-12: Luckiest Guy's "s" looks like a 5): "8" + "sec", a minute or more "1:30" + "min".
+function ToonStyleViewModel.cooldown(seconds: number): { value: string, unit: string }
+	local whole = if seconds ~= seconds or seconds <= 0 then 0 else math.floor(seconds + 0.5)
+	if whole >= 60 then
+		return { value = string.format("%d:%02d", whole // 60, whole % 60), unit = "min" }
+	end
+	return { value = tostring(whole), unit = "sec" }
 end
 
 return ToonStyleViewModel

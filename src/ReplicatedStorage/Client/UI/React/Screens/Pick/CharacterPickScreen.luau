@@ -32,6 +32,7 @@ local ToonBackdrop = require(Toon.ToonBackdrop)
 local ToonButton = require(Toon.ToonButton)
 local ToonFlag = require(Toon.ToonFlag)
 local ToonIcon = require(Toon.ToonIcon)
+local ToonCooldown = require(Toon.ToonCooldown)
 local ToonPill = require(Toon.ToonPill)
 local ToonPrice = require(Toon.ToonPrice)
 local ToonStatRows = require(Toon.ToonStatRows)
@@ -242,13 +243,12 @@ local function aboutCard(employee: string, layout: InventoryViewModel.Layout, he
 			size = UDim2.new(1, -math.floor(art * 0.7) - 90, 0, size + 4),
 			fit = true,
 		}),
-		cooldown = e(ToonPill, {
-			text = `{profile.ability.cooldown}s`,
-			hue = "cream",
-			textSize = size - 2,
+		cooldown = e(ToonCooldown, {
+			seconds = profile.ability.cooldown,
+			height = if phone then 46 else 72,
 			anchor = Vector2.new(1, 0.5),
-			position = UDim2.new(1, -14, 0.5, -4),
-			size = UDim2.fromOffset(if phone then 46 else 74, if phone then 40 else 66),
+			position = UDim2.new(1, -14, 0.5, -2),
+			size = UDim2.fromOffset(if phone then 56 else 84, if phone then 46 else 72),
 		}),
 	}
 	face.ability = e(ToonSurface, {
