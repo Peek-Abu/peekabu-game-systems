@@ -49,6 +49,29 @@ coordinator hands out Studio. Both rows stay "Ready to check" until the specs pa
 Every Gloom pays 1 Credit, so the School also pays more. The arrival card, the truck card title and the board quota
 all post the School contract on a School run.
 
+
+## Studio play checks (2026-11-13, real clicks)
+- **Suite:** the coordinator ran it green (6,629 / 0) on the served worktree, including these specs.
+- **Lobby:**
+  - The small selector is gone; the truck shows one PLACE tile.
+  - JOBS opens PLACES with DANGER meters at Office 1 and School 2.
+  - With 2,400 Credits the School card offered "Use 10 Gleam". BUY → SURE? → bought: Credits 2400 → 0,
+    Gleam 100 → 90, School OPEN.
+  - Tapping School off a truck shows its details without picking it.
+  - As host: PLACE → tap School → TONIGHT! tag, solo goal 800, the server's pick is `school`, and the truck tile
+    reads SCHOOL.
+- **Shift:** host picks School → START. The server built `map = school` with quota 800, 25 piles and loot worth
+  about 1,976. The HUD reads GLOOM 0 / 800 at Maple Hill.
+- **Fixed after the check (`72ab6474`):**
+  - The PLACE pill clipped at "TAP TO PICK A". It is now wider, and the fix was seen in the Shift run.
+  - On a locked card the note covered the place's name. It now sits above the name. **Not yet seen in Studio.**
+- **Follow-ups done (`06605cea`):**
+  - The hub's TONIGHT card shows the truck's picked place (Maple Hill + Bramble).
+  - While the host has the places menu open, the idle auto-start waits. The pause is capped at 90 s, and closing
+    the menu leaves at least 15 s. **Specs only, not yet play-checked.**
+- **Clean-up:** the test account is restored (0 Credits, 100 Gleam, School locked), apart from the free Pippa hire
+  at the first pick screen. Both Studios were left clean.
+
 ## Modules
 | Feature | Realm | Subfolder | Name | Job |
 |---|---|---|---|---|
