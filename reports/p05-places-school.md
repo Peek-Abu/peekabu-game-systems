@@ -64,11 +64,15 @@ all post the School contract on a School run.
   about 1,976. The HUD reads GLOOM 0 / 800 at Maple Hill.
 - **Fixed after the check (`72ab6474`):**
   - The PLACE pill clipped at "TAP TO PICK A". It is now wider, and the fix was seen in the Shift run.
-  - On a locked card the note covered the place's name. It now sits above the name. **Not yet seen in Studio.**
+  - On a locked card the note covered the place's name. It now sits above the name (seen in the Lobby recheck).
 - **Follow-ups done (`06605cea`):**
   - The hub's TONIGHT card shows the truck's picked place (Maple Hill + Bramble).
   - While the host has the places menu open, the idle auto-start waits. The pause is capped at 90 s, and closing
-    the menu leaves at least 15 s. **Specs only, not yet play-checked.**
+    the menu leaves at least 15 s.
+- **Lobby recheck after those fixes:**
+  - The locked card's BUY ("Use 10 Gleam") and note now sit above "MAPLE HILL".
+  - A host kept the menu open for 80+ s and the truck didn't leave.
+  - The TONIGHT card showed MAPLE HILL SCHOOL with the new photo and Bramble.
 - **Clean-up:** the test account is restored (0 Credits, 100 Gleam, School locked), apart from the free Pippa hire
   at the first pick screen. Both Studios were left clean.
 
