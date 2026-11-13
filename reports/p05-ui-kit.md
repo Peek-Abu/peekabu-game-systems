@@ -16,8 +16,14 @@ Work files (outside the repo, next to the other sessions' notes):
   `src/ReplicatedStorage/Client/Features/UI/Data/UIAssets.luau`:
   ChatWheelButtons (Emotes), DepotBoardViewModel (CREW chip), InventoryCrewPanel (hire silhouette),
   InventoryViewModel (Crew tab), ShopViewModel (Skins tab), ShiftReviewPanel (empty award card).
-- Status: waiting for a Studio slot to render today's Pippa (Edit mode, temp model, posed wave + salute), then
-  cutout.py + iconize.py, then the owner's OK, then upload to Icey Labs.
+- Rendered 2026-11-13 in the Shift place (Edit only, coordinator's slot): a temp clone of
+  `Assets.CleanupCrew.Characters.Pippa` (ModelVersion v13, Happy face, lanyard via
+  `EmployeeLanyardSystem.attachPreview`), posed by Motor6D C0 (wave; salute at the brow side), temp lights and day
+  Lighting, then the temp folder deleted and Lighting restored exactly. Not saved.
+- Files: `p05-ui-kit/pippa/raw|cut|out` (`out/ic_pippa_happy.png` 256 px ink/white rim, `out/cut_pippa_salute.png`
+  600 px ink/cream rim) and `pippa_old_vs_new.jpg`. The salute capture was small (444 px tall), so the 600 px cut is a
+  little soft; recapture closer if the owner wants it sharper.
+- Status: card 1 of the review page asks yes/no; on yes, upload both to Icey Labs and swap the two ids.
 
 ## 2. Icon / UI kit options (`p1-ui-kit`)
 Built as an HTML review page because the Figma Desktop Bridge plugin was not connected (figma-console reports no
@@ -45,7 +51,7 @@ Today: `DepotTimecardPanel.luau` (620x390, Timecard + Today's Job faces). Concep
 
 ## Waiting on
 - Owner picks on the review page (cards 2-5).
-- A Studio slot for the Pippa renders.
+- The owner's yes on the Pippa renders (card 1).
 
 ## Not done
 - Nothing built in game yet (all three rows need the owner's yes first). No uploads.
