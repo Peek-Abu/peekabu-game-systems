@@ -53,6 +53,8 @@ local TOAST_STYLES: { [string]: ToastTypes.ToastStyle } = {
 }
 
 -- Seconds into the shift at which the pressure tier rises (2:00 and 4:00).
+-- Each map's contract scale (QUOTA_SCALE_BY_MAP below), by map id.
+local QUOTA_SCALE_BY_MAP: { office: number, school: number } = { office = 1, school = 1.25 }
 local TIER_TIMES: { number } = { 120, 240 }
 
 -- The review's rating stamp text (Figma 5a/5c) per ShiftTypes.Rating.
@@ -105,6 +107,11 @@ return table.freeze({
 	-- same +50 a player asks 74 / 76% of the site (OfficeSpawnUtils' top-up still holds, measured 2026-10-29).
 	QUOTA = 690,
 	QUOTA_BY_CREW = table.freeze({ 640, 690, 740, 790, 840, 890 }),
+	-- The contract on each map is QUOTA_BY_CREW times its scale, rounded to QUOTA_STEP (ShiftQuotaFormulas.quota). The
+	-- School, the second place, asks 25% more (p1-school-danger, 2026-11-14: solo 800, a crew of 4 990); it also rolls
+	-- more piles and valuables (OfficeConstants.SPAWN_BY_MAP), and every Gloom pays CREDITS_PER_GLOOM, so it pays more.
+	QUOTA_SCALE_BY_MAP = table.freeze(QUOTA_SCALE_BY_MAP),
+	QUOTA_STEP = 5,
 	-- 8:30 on the clock (owner, 2026-10-22: the corridor office walks further than the old grid; was 7:00).
 	SHIFT_SECONDS = 510,
 	-- Round's countdown, configured but unused: a shift starts with Round's startNow once its transit settles.

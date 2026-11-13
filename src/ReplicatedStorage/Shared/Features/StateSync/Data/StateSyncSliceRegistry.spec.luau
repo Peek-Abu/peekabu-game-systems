@@ -51,6 +51,7 @@ return function()
 					training = { finished = false, runs = 0, toured = false },
 					coffee = { seconds = 0, since = 0 },
 					deals = { bought = {}, picks = {} },
+					places = { owned = {} },
 					loadout = {
 						current = "Pippa",
 						picked = false,
@@ -84,6 +85,7 @@ return function()
 				training = true,
 				coffee = true,
 				deals = true,
+				places = true,
 			}
 
 			for name, definition in StateSyncSliceRegistry.DEFINITIONS do
@@ -104,6 +106,7 @@ return function()
 				"inventory",
 				"loadout",
 				"lockers",
+				"places",
 				"premium",
 				"settings",
 				"social",

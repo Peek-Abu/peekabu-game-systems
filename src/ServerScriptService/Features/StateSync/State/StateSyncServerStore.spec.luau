@@ -72,6 +72,7 @@ return function()
 					titles = { earned = {} },
 					coffee = { seconds = 0, since = 0 },
 					deals = { bought = {}, picks = {} },
+					places = { owned = {} },
 				},
 				slots = {
 					{
@@ -115,6 +116,7 @@ return function()
 					titles = { earned = {} },
 					coffee = { seconds = 0, since = 0 },
 					deals = { bought = {}, picks = {} },
+					places = { owned = {} },
 				},
 				slots = {
 					{
@@ -164,6 +166,7 @@ return function()
 					titles = { earned = {} },
 					coffee = { seconds = 0, since = 0 },
 					deals = { bought = {}, picks = {} },
+					places = { owned = {} },
 				},
 				slots = {
 					{

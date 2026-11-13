@@ -339,6 +339,8 @@ local EXEMPT_MODULES: { [string]: string } = {
 	-- Cleanup Crew: Depot
 	["ReplicatedStorage.Shared.Features.Depot.Data.DepotTypes"] = "type definitions only (no runtime logic)",
 	["ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants"] = "static names, place ids, contracts and card texts (no logic)",
+	["ReplicatedStorage.Client.Features.Depot.Net.DepotPlaceSender"] = "thin ByteNet sender (two packet sends; the server decides, specced in DepotPlaceRules)",
+	["ReplicatedStorage.Shared.Features.Depot.Data.DepotPlaceConstants"] = "static place prices, danger levels and menu words (read through the specced DepotPlaceRules)",
 	["ReplicatedStorage.Shared.Features.Depot.Net.DepotEvents"] = "ByteNet packet definitions (no logic)",
 	["ReplicatedStorage.Client.Features.Depot.DepotServiceClient"] = "ByteNet/HUD registration/RunService shell (DepotStore is specced)",
 	["ReplicatedStorage.Client.UI.React.Screens.Depot.DepotCardPanel"] = "presentational React component (card lines specced in DepotCardViewModel; story in DepotCardPanel.story)",
@@ -352,7 +354,8 @@ local EXEMPT_MODULES: { [string]: string } = {
 	["ReplicatedStorage.Client.UI.React.Screens.World.DepotWorkOrderBoard"] = "presentational React component (work order specced in DepotWorldViewModel; story in DepotWorld.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.World.DepotResultBoard"] = "presentational React component (review card specced in DepotWorldViewModel; story in DepotWorld.story)",
 	["ReplicatedStorage.Client.UI.React.Screens.Depot.DepotHubPanel"] = "presentational React component: the V1 hub HUD (story in DepotHubPanel.story; values specced in DepotHubViewModel)",
-	["ReplicatedStorage.Client.UI.React.Screens.Depot.DepotMapCards"] = "presentational React component: the truck's OFFICE / SCHOOL cards (what they show is specced in DepotPadViewModel.maps)",
+	["ReplicatedStorage.Client.UI.React.Screens.Depot.DepotPlaceCard"] = "presentational React component: one places-menu card (what it shows is specced in DepotBoardViewModel.board)",
+	["ReplicatedStorage.Client.UI.React.Screens.Depot.DepotPlaceButton"] = "presentational React component: the truck's PLACE button (what it shows is specced in DepotPadViewModel.place)",
 	["ReplicatedStorage.Client.UI.React.Screens.Depot.DepotNextShiftCard"] = "presentational React component (story in DepotHubPanel.story; words specced in DepotPadViewModel.cta)",
 	-- Cleanup Crew: the V1 "Gloom & Gleam" UI kit (2026-10-17)
 	["ReplicatedStorage.Client.UI.React.Screens.Toon.UIToonConstants"] = "static V1 palette, fonts, depth geometry and timings (no logic; shade is a frozen lookup)",

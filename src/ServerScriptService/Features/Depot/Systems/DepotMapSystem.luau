@@ -2,8 +2,8 @@
 --[=[
 	DepotMapSystem: the truck map pick on the server (the School map plan), split out of DepotServiceServer.
 
-	- A truck's host (crew hosting's, HostServiceServer:hostOf) sends DepotEvents.PickMap; a pick from anyone else, or
-	  of no map, is dropped (DepotMapRules). Picks live in a DepotMapTracker and are published as the
+	- A truck's host (crew hosting's, HostServiceServer:hostOf) sends DepotEvents.PickMap (from the places menu); a pick
+	  from anyone else, of no map, or of a place the host has not unlocked (DepotPlaceSystem.owns) is dropped. Picks live in a DepotMapTracker and are published as the
 	  DepotConstants.MAP_WORLD_ENTRY world entry, so every client aboard sees the host's pick.
 	- DepotServiceServer reads a truck's pick into the depart data (`mapOfPad`), forgets it when the party departs
 	  (`departed`), and each tick hands over the trucks so a truck with no host left (it emptied) starts over on the
@@ -23,6 +23,7 @@ local DepotEvents = require(ReplicatedStorage.Shared.Features.Depot.Net.DepotEve
 local DepotMapRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotMapRules)
 local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local DepotMapTracker = require(ServerScriptService.Features.Depot.State.DepotMapTracker)
+local DepotPlaceSystem = require(ServerScriptService.Features.Depot.Systems.DepotPlaceSystem)
 local HostServiceServer = require(ServerScriptService.Features.Host.HostServiceServer)
 local QueueServiceServer = require(ServerScriptService.Features.Queue.QueueServiceServer)
 local RequestHandler = require(ServerScriptService.Core.Net.RequestHandler)
@@ -53,7 +54,12 @@ local onPickMap = RequestHandler.wrap({
 		if not DepotMapRules.canPick(player.UserId, HostServiceServer:hostOf(pad)) then
 			return
 		end
-		if maps:pick(padId, DepotMapRules.parse(data)) then
+		-- A locked place (the School before the host bought it) is never picked.
+		local map: ShiftTypes.MapId = DepotMapRules.parse(data)
+		if not DepotPlaceSystem.owns(player.UserId, map) then
+			return
+		end
+		if maps:pick(padId, map) then
 			accepted += 1
 			publish()
 		end
@@ -78,10 +84,15 @@ function DepotMapSystem.start(): () -> ()
 	end
 end
 
--- The map truck `pad`'s host picked (the office when none).
+-- The map truck `pad`'s host picked (the office when none, or when its host no longer hosts or owns the pick).
 function DepotMapSystem.mapOfPad(pad: BasePart): ShiftTypes.MapId
 	local padId = QueueServiceServer.pads:padIdOf(pad)
-	return if padId ~= nil then maps:mapOf(padId) else DepotMapRules.parse(nil)
+	local map: ShiftTypes.MapId = if padId ~= nil then maps:mapOf(padId) else DepotMapRules.parse(nil)
+	local host = HostServiceServer:hostOf(pad)
+	if host == nil or not DepotPlaceSystem.owns(host, map) then
+		return DepotMapRules.parse(nil)
+	end
+	return map
 end
 
 -- Truck `pad`'s party departed (its pick already rode the depart data): the truck starts over.
@@ -92,12 +103,14 @@ function DepotMapSystem.departed(pad: BasePart)
 	end
 end
 
--- Forgets the picks of the trucks among `pads` with no host left (emptied).
+-- Forgets the picks of the trucks among `pads` with no host left (emptied), or whose host (passed to someone new)
+-- does not own the picked place: that truck starts over on the office.
 function DepotMapSystem.refresh(pads: { BasePart })
 	local live: { [string]: boolean } = {}
 	for _, pad in pads do
 		local padId = QueueServiceServer.pads:padIdOf(pad)
-		if padId ~= nil and HostServiceServer:hostOf(pad) ~= nil then
+		local host = HostServiceServer:hostOf(pad)
+		if padId ~= nil and host ~= nil and DepotPlaceSystem.owns(host, maps:mapOf(padId)) then
 			live[padId] = true
 		end
 	end

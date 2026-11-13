@@ -1,10 +1,13 @@
 --!strict
 --[=[
-	DepotBoardViewModel: the depot's contract board (Figma 2a/2b): tonight's work order (numbered from the contract id,
-	the same everywhere), its rows (desktop six, phone four; the HAZARD row marked; the QUOTA row for the crew in the
-	reader's truck, `crewOf`, else the range by crew size), the night guard's sticky, the
-	returning player's last-shift card (none for a player who has not played) and the dispatch slip; and `fit`, the
-	scale that keeps the board on a smaller screen. Pure.
+	DepotBoardViewModel: the depot's places menu (the contract board, Figma 2a/2b; p1-places-menu). One photo card per
+	place: the Office and the School (`places`: open, or locked with its Credits BUY that takes two taps; its DANGER
+	level; the focused place ringed, the truck's pick tagged TONIGHT!; only the host's tap picks, DepotPlaceRules decides
+	what is owned) and the planned buildings coming soon. The detail follows the focused place: its client, its contract
+	for the crew in the reader's truck (`crewOf`, else the range by crew size), its tip and its monster. Also tonight's
+	work order (numbered from the contract id, the same everywhere), its rows (desktop six, phone four; the HAZARD row
+	marked), the night guard's sticky, the returning player's last-shift card (none for a player who has not played)
+	and the dispatch slip; and `fit`, the scale that keeps the board on a smaller screen. Pure.
 
 	@class DepotBoardViewModel
 ]=]
@@ -12,9 +15,14 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
+local DepotPlaceConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotPlaceConstants)
+local DepotMapRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotMapRules)
+local DepotPlaceRules = require(ReplicatedStorage.Shared.Features.Depot.Rules.DepotPlaceRules)
 local HostConstants = require(ReplicatedStorage.Shared.Features.Host.Data.HostConstants)
 local DepotTypes = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotTypes)
+local PlayerDataTypes = require(ReplicatedStorage.Shared.Data.PlayerDataTypes)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
+local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local QueueSnapshotUtils = require(ReplicatedStorage.Shared.Features.Queue.Utils.QueueSnapshotUtils)
 local QueueTypes = require(ReplicatedStorage.Shared.Features.Queue.Data.QueueTypes)
 local ShiftCurrencyUtils = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftCurrencyUtils)
@@ -22,6 +30,8 @@ local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local PaperHudScaleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Paper.PaperHudScaleViewModel)
 local ShiftHudViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Shift.ShiftHudViewModel)
+
+type MapId = ShiftTypes.MapId
 
 export type RowView = { label: string, text: string, hazard: boolean }
 
@@ -35,17 +45,57 @@ export type LastView = {
 
 -- V1: one contract chip (QUOTA, SHIFT, PAY, CREW) with its render.
 export type ChipView = { label: string, value: string, icon: UIAssets.ToonIcon }
--- V1: one building card on the Jobs menu. Only tonight's office is open; the planned buildings show as coming soon
--- (their concept photos are stand-ins until the maps exist).
+
+-- A locked place's BUY button: its price, whether the reader can afford it, and whether the first tap waits on SURE?
+-- (two taps buy, so a kid never spends Credits by mistake).
+export type BuyView = { text: string, price: string, enabled: boolean, confirming: boolean }
+
+export type Photo = "office" | "school" | "hospital" | "motel" | "mall"
+
+-- One card on the places menu: a playable place (`map`; open when owned, else locked with its BUY) with its DANGER
+-- level, or a planned building coming soon (no `map`; its concept photo is a stand-in until the map exists).
+-- `focused` is the ringed card the detail shows; `picked` the truck's pick; `canPick` lets the reader's tap pick it
+-- for their truck (the host only).
 export type BuildingView = {
 	name: string,
 	site: string,
-	photo: "office" | "hospital" | "motel" | "mall",
+	photo: Photo,
 	open: boolean,
 	tag: string,
+	map: MapId?,
+	danger: number?,
+	focused: boolean,
+	picked: boolean,
+	canPick: boolean,
+	buy: BuyView?,
+}
+
+-- Where the reader stands: the host of a hosted truck, crew aboard one, or not on a hosted truck.
+export type Role = "host" | "crew" | "none"
+
+-- What the places menu knows about the reader.
+export type PlacesInput = {
+	-- Their bought places (the `places` slice; nil before it syncs).
+	owned: PlayerDataTypes.Places?,
+	-- The truck's pick when aboard a hosted truck (the server's, DepotMapRules.mapOf), else nil.
+	picked: MapId?,
+	-- The card they last tapped off a truck (nil: the Office).
+	viewing: MapId?,
+	role: Role,
+	credits: number,
+	-- The place whose BUY was tapped once and waits on SURE?.
+	confirming: MapId?,
 }
 
 export type BoardView = {
+	-- The menu's header and the line under the cards (who picks the place).
+	header: string,
+	pickLine: string,
+	dangerLabel: string,
+	dangerMax: number,
+	-- The focused place (the truck's pick aboard one, else the card last tapped) and its monster's kind.
+	focus: MapId,
+	monster: string,
 	client: string,
 	chips: { ChipView },
 	buildings: { BuildingView },
@@ -137,43 +187,144 @@ function DepotBoardViewModel.crewOf(snapshot: QueueTypes.QueueSnapshot?, userId:
 	return if pad ~= nil then #pad.members else nil
 end
 
--- The CONTRACT row: the contract for a crew of `crew`, or the range by crew size when there is no crew yet.
-local function quotaText(crew: number?, phone: boolean): string
+-- The CONTRACT row: the contract on `map` for a crew of `crew`, or the range by crew size when there is no crew yet.
+local function quotaText(crew: number?, phone: boolean, map: MapId): string
 	local copy = DepotConstants.BOARD_COPY
 	if crew == nil then
 		-- A regular truck's range (1 to SEATS): a Big Crew's bigger contract is not posted.
-		local low = ShiftQuotaFormulas.quota(1)
-		local high = ShiftQuotaFormulas.quota(HostConstants.SEATS)
+		local low = ShiftQuotaFormulas.quota(1, map)
+		local high = ShiftQuotaFormulas.quota(HostConstants.SEATS, map)
 		return string.format(if phone then copy.quotaPhoneRange else copy.quotaRange, low, high)
 	end
-	local quota = ShiftQuotaFormulas.quota(crew)
+	local quota = ShiftQuotaFormulas.quota(crew, map)
 	if phone then
 		return string.format(copy.quotaPhoneCrew, quota)
 	end
 	return if crew <= 1 then string.format(copy.quotaSolo, quota) else string.format(copy.quotaCrew, quota, crew)
 end
 
-local BUILDINGS: { BuildingView } = {
-	{ name = "ST. AGNES HOSPITAL", site = "West wing night ward", photo = "hospital", open = false, tag = "SOON" },
-	{ name = "LANTERN LANE MOTEL", site = "Rooms 1–24", photo = "motel", open = false, tag = "SOON" },
-	{ name = "GLIMMER MALL", site = "After hours", photo = "mall", open = false, tag = "SOON" },
+type Soon = { name: string, site: string, photo: Photo }
+
+local SOON: { Soon } = {
+	{ name = "ST. AGNES HOSPITAL", site = "West wing night ward", photo = "hospital" },
+	{ name = "LANTERN LANE MOTEL", site = "Rooms 1–24", photo = "motel" },
+	{ name = "GLIMMER MALL", site = "After hours", photo = "mall" },
 }
 
--- The QUOTA chip: the crew's contract, or the range by crew size.
-local function quotaChip(crew: number?): string
+-- The QUOTA chip: the crew's contract on `map`, or the range by crew size.
+local function quotaChip(crew: number?, map: MapId): string
 	if crew == nil then
-		local low = ShiftQuotaFormulas.quota(1)
-		local high = ShiftQuotaFormulas.quota(HostConstants.SEATS)
+		local low = ShiftQuotaFormulas.quota(1, map)
+		local high = ShiftQuotaFormulas.quota(HostConstants.SEATS, map)
 		return `{low}–{high} Gloom`
 	end
-	return `{ShiftQuotaFormulas.quota(crew)} Gloom`
+	return `{ShiftQuotaFormulas.quota(crew, map)} Gloom`
 end
 
--- `crew`: the size of the reader's truck crew (crewOf); nil when they are not in a truck.
-function DepotBoardViewModel.board(id: string?, last: DepotTypes.LastShift?, phone: boolean, crew: number?): BoardView
+-- "1,500": a whole number with thousands commas.
+function DepotBoardViewModel.commas(value: number): string
+	local text = tostring(math.floor(value))
+	local out = ""
+	while #text > 3 do
+		out = "," .. string.sub(text, -3) .. out
+		text = string.sub(text, 1, -4)
+	end
+	return text .. out
+end
+
+local NO_PLACES: PlacesInput = {
+	owned = nil,
+	picked = nil,
+	viewing = nil,
+	role = "none",
+	credits = 0,
+	confirming = nil,
+}
+
+-- Where `myId` stands: the host of the hosted truck `padId` (hosted by `hostId`), its crew, or "none" (off a truck, or
+-- on a truck nobody hosts yet).
+function DepotBoardViewModel.roleOf(padId: string?, hostId: number?, myId: number): Role
+	if padId == nil or hostId == nil then
+		return "none"
+	end
+	return if hostId == myId then "host" else "crew"
+end
+
+-- The place the ring and the detail show: the truck's pick aboard a hosted truck, else the card last tapped.
+function DepotBoardViewModel.focusOf(places: PlacesInput): MapId
+	local source = if places.role ~= "none" and places.picked ~= nil then places.picked else places.viewing
+	if source == "school" then
+		return "school"
+	end
+	return "office"
+end
+
+-- The line under the cards: who picks the place.
+local function pickLine(role: Role): string
+	local text = DepotPlaceConstants.TEXT
+	if role == "host" then
+		return text.youPick
+	elseif role == "crew" then
+		return text.hostPicks
+	end
+	return text.findTruck
+end
+
+-- One playable place's card.
+local function placeCard(map: MapId, name: string, places: PlacesInput, focus: MapId): BuildingView
+	local text = DepotPlaceConstants.TEXT
+	local open = DepotPlaceRules.owns(places.owned, map)
+	local picked = places.role ~= "none" and places.picked == map
+	local tag = if picked then text.picked elseif open then text.open else text.locked
+	local buy: BuyView? = nil
+	if not open then
+		local price = DepotPlaceRules.price(map)
+		local affordable = places.credits >= price
+		local confirming = affordable and places.confirming == map
+		buy = {
+			text = if not affordable then text.tooPoor elseif confirming then text.sure else text.buy,
+			price = DepotBoardViewModel.commas(price),
+			enabled = affordable,
+			confirming = confirming,
+		}
+	end
+	return {
+		name = name,
+		site = DepotMapRules.siteOf(map).site,
+		photo = map,
+		open = open,
+		tag = tag,
+		map = map,
+		danger = DepotPlaceRules.danger(map),
+		focused = focus == map,
+		picked = picked,
+		canPick = open and places.role == "host",
+		buy = buy,
+	}
+end
+
+-- The client a run on `map` works for (the Office's from tonight's board contract `office`).
+local function clientOf(map: MapId, office: DepotTypes.Contract): string
+	if map == "school" then
+		return string.upper(DepotConstants.SCHOOL_CONTRACTS[1].client)
+	end
+	return string.upper(office.client)
+end
+
+-- `crew`: the size of the reader's truck crew (crewOf); nil when they are not in a truck. `places`: the places
+-- menu's state (nil: nothing bought, not on a hosted truck, the Office in focus).
+function DepotBoardViewModel.board(
+	id: string?,
+	last: DepotTypes.LastShift?,
+	phone: boolean,
+	crew: number?,
+	places: PlacesInput?
+): BoardView
+	local input = places or NO_PLACES
+	local focus: MapId = DepotBoardViewModel.focusOf(input)
 	local contract = contractOf(id)
 	local copy = DepotConstants.BOARD_COPY
-	local quota = quotaText(crew, phone)
+	local quota = quotaText(crew, phone, focus)
 	local shift = ShiftHudViewModel.clock(ShiftConstants.SHIFT_SECONDS)
 	local rows: { RowView }
 	if phone then
@@ -194,30 +345,45 @@ function DepotBoardViewModel.board(id: string?, last: DepotTypes.LastShift?, pho
 		}
 	end
 	local number = DepotBoardViewModel.workOrder(contract.id)
-	local client = string.upper(contract.client)
+	local client = clientOf(focus, contract)
+	local officeName = (string.gsub(string.upper(contract.client), "%s+LTD%.?$", ""))
 	local buildings: { BuildingView } = {
-		{
-			name = (string.gsub(client, "%s+LTD%.?$", "")),
-			site = DepotConstants.SITE,
-			photo = "office",
-			open = true,
-			tag = "TONIGHT!",
-		},
+		placeCard("office", officeName, input, focus),
+		placeCard("school", clientOf("school", contract), input, focus),
 	}
-	for _, building in BUILDINGS do
-		table.insert(buildings, building)
+	for _, soon in SOON do
+		table.insert(buildings, {
+			name = soon.name,
+			site = soon.site,
+			photo = soon.photo,
+			open = false,
+			tag = "SOON",
+			map = nil,
+			danger = nil,
+			focused = false,
+			picked = false,
+			canPick = false,
+			buy = nil,
+		})
 	end
+	local site = DepotMapRules.siteOf(focus)
 	local lastView = if last ~= nil then lastOf(last, phone) else nil
 	return {
+		header = DepotPlaceConstants.TEXT.title,
+		pickLine = pickLine(input.role),
+		dangerLabel = DepotPlaceConstants.TEXT.danger,
+		dangerMax = DepotPlaceConstants.DANGER_MAX,
+		focus = focus,
+		monster = site.monster,
 		client = client,
 		chips = {
-			{ label = "QUOTA", value = quotaChip(crew), icon = "gloom" },
+			{ label = "QUOTA", value = quotaChip(crew, focus), icon = "gloom" },
 			{ label = "SHIFT", value = shift, icon = "stopwatch" },
 			{ label = "PAY", value = "1 per Gloom", icon = "credits" },
 			{ label = "CREW", value = "1–4 employees", icon = "pippaHappy" },
 		},
 		buildings = buildings,
-		tip = copy.hazard,
+		tip = if focus == "office" then copy.hazard else site.tip,
 		lastLine = if last ~= nil then `Last shift: {lastOf(last, true).lines[1]}` else nil,
 		title = copy.title,
 		workOrder = if phone then `JOB {number} · {string.upper(contract.client)}` else `JOB {number}`,

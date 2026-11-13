@@ -11,6 +11,7 @@ local OfficeLootUtils = require(ServerScriptService.Features.Office.Utils.Office
 local CargoRegistry = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoRegistry)
 local CargoAppraisalFormulas = require(ReplicatedStorage.Shared.Features.Cargo.Utils.CargoAppraisalFormulas)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
+local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 local SchoolLayoutGenerationUtils = require(ServerScriptService.Features.School.Utils.SchoolLayoutGenerationUtils)
 
@@ -705,4 +706,80 @@ return function()
 			end
 		end
 	)
+
+	-- The School is the second, harder place (p1-school-danger): it rolls with its own spawn numbers
+	-- (OfficeConstants.SPAWN_BY_MAP.school) against its own, bigger contract (ShiftQuotaFormulas "school").
+	describe("the School's spawn numbers", function()
+		local function mapOptions(map, quota)
+			local spawn = OfficeConstants.SPAWN_BY_MAP[map]
+			return {
+				quota = quota,
+				variant = "B",
+				dirtyRooms = spawn.dirtyRooms,
+				pilesPerRoom = spawn.pilesPerRoom,
+				valuables = spawn.valuables,
+				valueScale = spawn.valueScale,
+				topUpMax = spawn.topUpMax,
+			}
+		end
+
+		it("keeps the Office the easier place: the School has more mess, more valuables, worth more", function()
+			local office = OfficeConstants.SPAWN_BY_MAP.office
+			local school = OfficeConstants.SPAWN_BY_MAP.school
+			expect(office.dirtyRooms.min).to.equal(OfficeConstants.DIRTY_ROOMS.min)
+			expect(office.valuables.max).to.equal(OfficeConstants.VALUABLES.max)
+			expect(office.valueScale).to.equal(1)
+			expect(school.dirtyRooms.min > office.dirtyRooms.min).to.equal(true)
+			expect(school.pilesPerRoom.max > office.pilesPerRoom.max).to.equal(true)
+			expect(school.valuables.min > office.valuables.min).to.equal(true)
+			expect(school.valueScale > 1).to.equal(true)
+		end)
+
+		it("leaves every School shift enough Gloom for its crew's School contract, piles spaced apart", function()
+			for crew = 1, #ShiftConstants.QUOTA_BY_CREW do
+				local contract = ShiftQuotaFormulas.quota(crew, "school")
+				for seed = 1, 25 do
+					if seed % 5 == 0 then
+						task.wait()
+					end
+					local layout = SchoolLayoutGenerationUtils.generate(LAYOUT, seed)
+					local plan = OfficeSpawnUtils.roll(layout, mapOptions("school", contract), Random.new(seed))
+					local gloom = OfficeLootUtils.gloomOf(plan).total
+					if gloom < contract then
+						error(`school seed {seed}: {gloom} Gloom for a crew of {crew}'s contract of {contract}`)
+					end
+					local ok, reason = OfficeSpawnRules.check(plan, layout, contract)
+					if not ok then
+						error(`school seed {seed}, crew {crew}: {reason}`)
+					end
+				end
+			end
+		end)
+
+		it("prices a School valuable at its Office roll times the School's value scale", function()
+			local layout = SchoolLayoutGenerationUtils.generate(LAYOUT, 7)
+			local plain = OfficeSpawnUtils.roll(layout, mapOptions("office", QUOTA), Random.new(7))
+			local scaled = mapOptions("office", QUOTA)
+			scaled.valueScale = 1.25
+			local rich = OfficeSpawnUtils.roll(layout, scaled, Random.new(7))
+			local before, after = valuablesOf(plain), valuablesOf(rich)
+			expect(#after).to.equal(#before)
+			expect(#after > 0).to.equal(true)
+			for index, entry in after do
+				expect(entry.appraisal.base).to.equal(
+					math.max(1, math.floor(before[index].appraisal.base * 1.25 + 0.5))
+				)
+			end
+		end)
+
+		it("offers more valuables on a School than on an Office of the same seed, on average", function()
+			local office, school = 0, 0
+			for seed = 1, 20 do
+				local layout = SchoolLayoutGenerationUtils.generate(LAYOUT, seed)
+				office += #valuablesOf(OfficeSpawnUtils.roll(layout, mapOptions("office", 0), Random.new(seed)))
+				school += #valuablesOf(OfficeSpawnUtils.roll(layout, mapOptions("school", 0), Random.new(seed)))
+			end
+			expect(school > office).to.equal(true)
+		end)
+	end)
 end

@@ -21,6 +21,26 @@ local HIDE_FURNITURE_SCALE = 1.65
 local DIRTY_ROOMS: OfficeTypes.Range = { min = 4, max = 6 }
 local PILES_PER_ROOM: OfficeTypes.Range = { min = 3, max = 5 }
 local VALUABLES: OfficeTypes.Range = { min = 10, max = 14 }
+-- Each map's spawn numbers (p1-school-danger, 2026-11-14). The Office is the easier first place: the ranges above. The
+-- School, the second place, is messier and richer: more dirty rooms (each still at least 3 piles, so a School's
+-- tight classrooms can still be dirty), up to 6 piles a room, more valuables, each worth x1.25, and room for 12 top-up
+-- piles so its 25% bigger contract (ShiftConstants.QUOTA_SCALE_BY_MAP) stays coverable for a Big Crew of six.
+local SPAWN_BY_MAP: { office: OfficeTypes.MapSpawn, school: OfficeTypes.MapSpawn } = {
+	office = table.freeze({
+		dirtyRooms = DIRTY_ROOMS,
+		pilesPerRoom = PILES_PER_ROOM,
+		valuables = VALUABLES,
+		valueScale = 1,
+		topUpMax = 6,
+	}),
+	school = table.freeze({
+		dirtyRooms = table.freeze({ min = 5, max = 7 }),
+		pilesPerRoom = table.freeze({ min = 3, max = 6 }),
+		valuables = table.freeze({ min = 13, max = 17 }),
+		valueScale = 1.25,
+		topUpMax = 12,
+	}),
+}
 -- Original catalog dimensions, rounded upward for visual fit without shrinking readable props.
 local DESK_PROP_SIZES: { [string]: Vector3 } = {
 	mug = Vector3.new(0.685, 0.56, 0.48),
@@ -363,6 +383,8 @@ return table.freeze({
 	-- How many valuables a map offers, counting the greed target, desk valuables and buried ones (no trash: the Gloom
 	-- economy rolls none).
 	VALUABLES = table.freeze(VALUABLES),
+	-- Each map's spawn numbers (OfficeServiceServer rolls a shift with its map's).
+	SPAWN_BY_MAP = table.freeze(SPAWN_BY_MAP),
 	-- Chance a desk or locker holds a valuable; once DESK_VALUABLES_MAX of them hold one, the rest hold nothing (a
 	-- generated office has dozens of desks: uncapped, they would eat the whole valuables budget).
 	SEARCH_FILL_CHANCE = 0.5,

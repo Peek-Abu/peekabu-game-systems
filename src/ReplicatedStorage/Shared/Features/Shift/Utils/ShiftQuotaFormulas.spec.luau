@@ -28,6 +28,29 @@ return function()
 			expect(ShiftQuotaFormulas.quota(0)).to.equal(ShiftConstants.QUOTA_BY_CREW[1])
 			expect(ShiftQuotaFormulas.quota(9)).to.equal(ShiftConstants.QUOTA_BY_CREW[#ShiftConstants.QUOTA_BY_CREW])
 		end)
+
+		it("asks the Office's table on the office and when no map is named", function()
+			for crew = 1, #ShiftConstants.QUOTA_BY_CREW do
+				expect(ShiftQuotaFormulas.quota(crew, "office")).to.equal(ShiftConstants.QUOTA_BY_CREW[crew])
+				expect(ShiftQuotaFormulas.quota(crew, nil)).to.equal(ShiftConstants.QUOTA_BY_CREW[crew])
+			end
+		end)
+
+		it("asks 25% more at the School, rounded to 5 (solo 800, a crew of 4 990, six 1115)", function()
+			expect(ShiftQuotaFormulas.quota(1, "school")).to.equal(800)
+			expect(ShiftQuotaFormulas.quota(2, "school")).to.equal(865)
+			expect(ShiftQuotaFormulas.quota(3, "school")).to.equal(925)
+			expect(ShiftQuotaFormulas.quota(4, "school")).to.equal(990)
+			expect(ShiftQuotaFormulas.quota(6, "school")).to.equal(1115)
+		end)
+
+		it("always asks more at the School than at the Office for the same crew", function()
+			for crew = 1, #ShiftConstants.QUOTA_BY_CREW do
+				expect(ShiftQuotaFormulas.quota(crew, "school") > ShiftQuotaFormulas.quota(crew, "office")).to.equal(
+					true
+				)
+			end
+		end)
 	end)
 
 	describe("pay", function()

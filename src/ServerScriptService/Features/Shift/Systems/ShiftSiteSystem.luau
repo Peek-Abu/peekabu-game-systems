@@ -111,7 +111,9 @@ function ShiftSiteSystem.new(): ShiftSiteSystem
 
 		prepare = function(self, shift, crewSize, map)
 			local choice = self:choose(shift, crewSize)
+			-- The map's own contract: the School asks more than the Office (ShiftQuotaFormulas).
 			choice.map = map
+			choice.quota = ShiftQuotaFormulas.quota(crewSize, map)
 			local plan = rebuild(choice)
 			prepared = choice
 			local greed = plan.greed

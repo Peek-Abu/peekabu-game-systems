@@ -137,8 +137,8 @@ return table.freeze({
 	MAP_TEXT = table.freeze({
 		office = "OFFICE",
 		school = "SCHOOL",
-		hostPicks = "The host picks the map.",
-		youPick = "Pick a map!",
+		hostPicks = "The host picks the place.",
+		youPick = "Tap to pick a place!",
 	}),
 	-- Public player field: the truck whose bed a player stands in (the queue pad card's "TRUCK 2").
 	PUBLIC_TRUCK = "truck",

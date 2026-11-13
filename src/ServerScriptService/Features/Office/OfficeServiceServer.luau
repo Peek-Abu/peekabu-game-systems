@@ -274,13 +274,20 @@ local function fresh(roll: CargoTypes.AppraisalRoll?): CargoTypes.Appraisal?
 	return if roll ~= nil then CargoAppraisalFormulas.fresh(roll) else nil
 end
 
-local function rollPlan(options: { seed: number, variant: string, quota: number }): OfficeTypes.SpawnPlan
+local function rollPlan(
+	options: { seed: number, variant: string, quota: number, map: ShiftTypes.MapId }
+): OfficeTypes.SpawnPlan
+	-- The map's own spawn numbers: the School rolls more mess and richer valuables than the Office.
+	local byMap = OfficeConstants.SPAWN_BY_MAP
+	local spawn = if options.map == "school" then byMap.school else byMap.office
 	local rollOptions: OfficeTypes.RollOptions = {
 		quota = options.quota,
 		variant = options.variant,
-		dirtyRooms = OfficeConstants.DIRTY_ROOMS,
-		pilesPerRoom = OfficeConstants.PILES_PER_ROOM,
-		valuables = OfficeConstants.VALUABLES,
+		dirtyRooms = spawn.dirtyRooms,
+		pilesPerRoom = spawn.pilesPerRoom,
+		valuables = spawn.valuables,
+		valueScale = spawn.valueScale,
+		topUpMax = spawn.topUpMax,
 	}
 	local plan: OfficeTypes.SpawnPlan
 	for attempt = 0, OfficeConstants.ROLL_ATTEMPTS - 1 do

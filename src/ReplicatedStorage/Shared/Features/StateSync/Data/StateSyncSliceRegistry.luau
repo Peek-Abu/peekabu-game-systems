@@ -121,6 +121,12 @@ local DEFINITIONS: { [string]: SliceDefinition } = {
 			return profile.account.deals
 		end,
 	},
+	-- ACCOUNT-WIDE: the places bought with Credits (DepotPlaceSystem); owner-only.
+	places = {
+		read = function(profile)
+			return profile.account.places
+		end,
+	},
 	-- ACCOUNT-WIDE: keys and pity per Locker (LockerServiceServer); owner-only.
 	lockers = {
 		read = function(profile)

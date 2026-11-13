@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local DepotBoardViewModel = require(script.Parent.DepotBoardViewModel)
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
+local DepotPlaceConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotPlaceConstants)
 local HostConstants = require(ReplicatedStorage.Shared.Features.Host.Data.HostConstants)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
 local ShiftQuotaFormulas = require(ReplicatedStorage.Shared.Features.Shift.Utils.ShiftQuotaFormulas)
@@ -220,17 +221,117 @@ return function()
 			expect(view.chips[1].value).to.equal(`{low}–{high} Gloom`)
 		end)
 
-		it("opens tonight's building and shows the planned ones as coming soon", function()
+		it("opens the Office, locks the School behind its price, and shows the planned ones as coming soon", function()
 			local view = DepotBoardViewModel.board(nil, nil, false, nil)
-			expect(#view.buildings).to.equal(4)
-			expect(view.buildings[1].name).to.equal("HARLOW & FINCH")
-			expect(view.buildings[1].open).to.equal(true)
-			expect(view.buildings[1].tag).to.equal("TONIGHT!")
-			expect(view.buildings[1].photo).to.equal("office")
-			for index = 2, 4 do
+			expect(view.header).to.equal("PLACES")
+			expect(#view.buildings).to.equal(5)
+			local office, school = view.buildings[1], view.buildings[2]
+			expect(office.name).to.equal("HARLOW & FINCH")
+			expect(office.map).to.equal("office")
+			expect(office.open).to.equal(true)
+			expect(office.tag).to.equal("OPEN")
+			expect(office.focused).to.equal(true)
+			expect(office.buy).to.equal(nil)
+			expect(school.name).to.equal("MAPLE HILL SCHOOL")
+			expect(school.photo).to.equal("school")
+			expect(school.open).to.equal(false)
+			expect(school.tag).to.equal("LOCKED")
+			expect(school.buy.price).to.equal(DepotBoardViewModel.commas(DepotPlaceConstants.PLACES.school.price))
+			for index = 3, 5 do
 				expect(view.buildings[index].open).to.equal(false)
 				expect(view.buildings[index].tag).to.equal("SOON")
+				expect(view.buildings[index].map).to.equal(nil)
 			end
+		end)
+	end)
+
+	describe("places", function()
+		local function places(extra)
+			local value = { owned = nil, picked = nil, viewing = nil, role = "none", credits = 0, confirming = nil }
+			for key, item in extra do
+				value[key] = item
+			end
+			return value
+		end
+		local PRICE = DepotPlaceConstants.PLACES.school.price
+
+		it("rates each place's DANGER, the Office easiest", function()
+			local view = DepotBoardViewModel.board(nil, nil, false, nil, places({}))
+			expect(view.dangerLabel).to.equal("DANGER")
+			expect(view.dangerMax).to.equal(5)
+			expect(view.buildings[1].danger).to.equal(1)
+			expect(view.buildings[2].danger).to.equal(3)
+			expect(view.buildings[3].danger).to.equal(nil)
+		end)
+
+		it("lets only the host pick, and only an open place", function()
+			local host = DepotBoardViewModel.board(nil, nil, false, 2, places({ role = "host", picked = "office" }))
+			expect(host.pickLine).to.equal("Tap a place to pick it!")
+			expect(host.buildings[1].canPick).to.equal(true)
+			expect(host.buildings[2].canPick).to.equal(false)
+			local crew = DepotBoardViewModel.board(nil, nil, false, 2, places({ role = "crew", picked = "office" }))
+			expect(crew.pickLine).to.equal("The host picks the place.")
+			expect(crew.buildings[1].canPick).to.equal(false)
+			local off = DepotBoardViewModel.board(nil, nil, false, nil, places({}))
+			expect(off.pickLine).to.equal("Get on a truck to pick a place.")
+		end)
+
+		it("tags the truck's pick TONIGHT! and shows its job, the School's bigger contract included", function()
+			local owned = { owned = { school = true } }
+			local view = DepotBoardViewModel.board(
+				nil,
+				nil,
+				false,
+				3,
+				places({ role = "crew", picked = "school", owned = owned })
+			)
+			expect(view.focus).to.equal("school")
+			expect(view.buildings[2].tag).to.equal("TONIGHT!")
+			expect(view.buildings[2].focused).to.equal(true)
+			expect(view.buildings[1].tag).to.equal("OPEN")
+			expect(view.client).to.equal("MAPLE HILL SCHOOL")
+			expect(view.monster).to.equal("bramble")
+			expect(view.chips[1].value).to.equal(`{ShiftQuotaFormulas.quota(3, "school")} Gloom`)
+			expect(view.tip).to.equal(DepotConstants.SCHOOL_SITE.tip)
+		end)
+
+		it("shows a card tapped off a truck without tagging it", function()
+			local view = DepotBoardViewModel.board(nil, nil, false, nil, places({ viewing = "school" }))
+			expect(view.focus).to.equal("school")
+			expect(view.buildings[2].focused).to.equal(true)
+			expect(view.buildings[2].tag).to.equal("LOCKED")
+		end)
+
+		it("buys in two taps: BUY, then SURE?", function()
+			local first = DepotBoardViewModel.board(nil, nil, false, nil, places({ credits = PRICE }))
+			expect(first.buildings[2].buy.text).to.equal("BUY")
+			expect(first.buildings[2].buy.enabled).to.equal(true)
+			expect(first.buildings[2].buy.confirming).to.equal(false)
+			local second =
+				DepotBoardViewModel.board(nil, nil, false, nil, places({ credits = PRICE, confirming = "school" }))
+			expect(second.buildings[2].buy.text).to.equal("SURE?")
+			expect(second.buildings[2].buy.confirming).to.equal(true)
+		end)
+
+		it("greys the BUY of a player short of Credits", function()
+			local view =
+				DepotBoardViewModel.board(nil, nil, false, nil, places({ credits = PRICE - 1, confirming = "school" }))
+			expect(view.buildings[2].buy.enabled).to.equal(false)
+			expect(view.buildings[2].buy.confirming).to.equal(false)
+			expect(view.buildings[2].buy.text).to.equal("Need more Credits")
+		end)
+
+		it("tells the host, the crew and everyone else apart", function()
+			expect(DepotBoardViewModel.roleOf("pad1", 3, 3)).to.equal("host")
+			expect(DepotBoardViewModel.roleOf("pad1", 1, 3)).to.equal("crew")
+			expect(DepotBoardViewModel.roleOf("pad1", nil, 3)).to.equal("none")
+			expect(DepotBoardViewModel.roleOf(nil, 3, 3)).to.equal("none")
+		end)
+
+		it("prints prices with commas", function()
+			expect(DepotBoardViewModel.commas(1500)).to.equal("1,500")
+			expect(DepotBoardViewModel.commas(999)).to.equal("999")
+			expect(DepotBoardViewModel.commas(1234567)).to.equal("1,234,567")
 		end)
 
 		it("keeps a tip line and the returning player's last shift on one line", function()

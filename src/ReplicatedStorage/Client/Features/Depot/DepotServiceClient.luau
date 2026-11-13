@@ -166,9 +166,10 @@ local DepotServiceClient: DepotServiceClient = {
 					onUpgrade = function()
 						MarketplaceServiceClient:promptPass(HostConstants.PASS_KEY)
 					end,
-					-- The host's map pick; the server checks they host the truck.
-					onPickMap = function(map)
-						DepotEvents.packets.PickMap.send(map)
+					-- The PLACE button opens the places menu (the host picks there; DepotPlaceSender).
+					onOpenPlaces = function()
+						DepotStore.openBoard(DepotStore.board() or DepotConstants.CONTRACTS[1].id)
+						SceneStack.push(DepotConstants.BOARD_SCENE)
 					end,
 				})
 			end, DepotConstants.HUD_ORDER - 1)

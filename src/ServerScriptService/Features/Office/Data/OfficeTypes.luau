@@ -211,6 +211,19 @@ export type RollOptions = {
 	dirtyRooms: Range,
 	pilesPerRoom: Range,
 	valuables: Range,
+	-- Every rolled valuable's appraisal is this many times its roll (rounded; nil = x1). The School's are worth more.
+	valueScale: number?,
+	-- At most this many top-up piles (step 7; nil = OfficeConstants.TOP_UP_MAX). The School's bigger contract may need more.
+	topUpMax: number?,
+}
+
+-- One map's spawn numbers (OfficeConstants.SPAWN_BY_MAP): the RollOptions every shift on that map rolls with.
+export type MapSpawn = {
+	dirtyRooms: Range,
+	pilesPerRoom: Range,
+	valuables: Range,
+	valueScale: number,
+	topUpMax: number,
 }
 
 -- A pile on a marker, possibly with a cargo item buried under it (and that valuable's rolled appraisal).

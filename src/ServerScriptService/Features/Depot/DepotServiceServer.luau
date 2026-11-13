@@ -67,6 +67,7 @@ local DepotPlaceUtils = require(DepotServer.Utils.DepotPlaceUtils)
 local DepotBuildSystem = require(DepotServer.Systems.DepotBuildSystem)
 local DepotSpotSystem = require(DepotServer.Systems.DepotSpotSystem)
 local DepotMapSystem = require(DepotServer.Systems.DepotMapSystem)
+local DepotPlaceSystem = require(DepotServer.Systems.DepotPlaceSystem)
 local DeathServiceServer = require(ServerScriptService.Features.Death.DeathServiceServer)
 local InteractionServiceServer = require(ServerScriptService.Features.Interaction.InteractionServiceServer)
 local QueueRegistry = require(ServerScriptService.Features.Queue.Data.QueueRegistry)
@@ -264,6 +265,9 @@ local DepotServiceServer: DepotServiceServer = {
 		"StateSyncServiceServer",
 		"DeathServiceServer",
 		"HostServiceServer",
+		-- DepotPlaceSystem's `places` slice and its Credits spend.
+		"PlayerDataServiceServer",
+		"CurrencyServiceServer",
 	},
 
 	--[=[
@@ -319,12 +323,10 @@ local DepotServiceServer: DepotServiceServer = {
 			for _, player in party do
 				departedForShift[player.UserId] = true
 			end
-			crewContract = DepotContractUtils.resolve(
-				DepotMapRules.contractsOf(DepotMapRules.parse(payload.map)),
-				payload.contract
-			)
+			local crewMap: ShiftTypes.MapId = DepotMapRules.parse(payload.map)
+			crewContract = DepotContractUtils.resolve(DepotMapRules.contractsOf(crewMap), payload.contract)
 			crewTruck = DepotContractUtils.truckOf(payload.truck, DepotConstants.MAX_TRUCKS)
-			crewQuota = ShiftQuotaFormulas.quota(#party)
+			crewQuota = ShiftQuotaFormulas.quota(#party, crewMap)
 			if payload[TrainingConstants.MODE_KEY] ~= TrainingConstants.MODE then
 				sendCard(party, DepotContractUtils.arrivalCard(crewContract, crewQuota, crewTruck))
 			end
@@ -343,6 +345,7 @@ local DepotServiceServer: DepotServiceServer = {
 			end
 		end)
 		table.insert(stoppers, DepotMapSystem.start())
+		table.insert(stoppers, DepotPlaceSystem.start())
 		local leaving = Players.PlayerRemoving:Connect(function(player)
 			departedForShift[player.UserId] = nil
 			ready[player] = nil
@@ -476,6 +479,7 @@ local DepotServiceServer: DepotServiceServer = {
 			cardsSent = cardsSent,
 			cardsPinned = cardsPinned,
 			mapPicks = DepotMapSystem.picks(),
+			placesBought = DepotPlaceSystem.bought(),
 		}
 	end,
 }

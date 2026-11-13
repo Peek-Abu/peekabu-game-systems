@@ -70,32 +70,27 @@ export type CtaView = {
 	hostControls: HostControls?,
 }
 
--- One map card on a hosted truck (the School map plan): OFFICE or SCHOOL, the truck's pick marked.
-export type MapCardView = { map: ShiftTypes.MapId, label: string, selected: boolean }
-
--- The map cards: the host taps one (`canPick`); the rest of the crew sees the pick and `line` says who picks.
-export type MapPickView = { cards: { MapCardView }, canPick: boolean, line: string }
+-- The PLACE button on a hosted truck (p1-places-menu): the truck's place (its pick, else the Office) and the line
+-- over it saying who picks. Anyone's tap opens the places menu; only the host's tap there picks.
+export type PlaceButtonView = { map: ShiftTypes.MapId, label: string, line: string, host: boolean }
 
 local DepotPadViewModel = {}
 
 --[=[
-	The map cards for a player aboard a hosted truck that is not leaving yet, with the truck's `picked` map (the
-	server's pick, DepotMapRules.mapOf); nil anywhere else. Only the host may tap (the server checks again).
+	The PLACE button for a player aboard a hosted truck that is not leaving yet, showing the truck's `picked` place
+	(the server's pick, DepotMapRules.mapOf); nil anywhere else. The places menu it opens is where the host picks.
 ]=]
-function DepotPadViewModel.maps(view: PadView?, picked: ShiftTypes.MapId): MapPickView?
+function DepotPadViewModel.place(view: PadView?, picked: ShiftTypes.MapId): PlaceButtonView?
 	if view == nil or not view.held or view.departing then
 		return nil
 	end
-	-- The cards in order, office first (the ids DepotMapRules accepts).
-	local cards: { MapCardView } = {
-		{ map = "office", label = DepotConstants.MAP_TEXT.office, selected = picked == "office" },
-		{ map = "school", label = DepotConstants.MAP_TEXT.school, selected = picked == "school" },
-	}
 	local isHost = view.hostId ~= nil and view.hostId == view.you
+	local text = DepotConstants.MAP_TEXT
 	return {
-		cards = cards,
-		canPick = isHost,
-		line = if isHost then DepotConstants.MAP_TEXT.youPick else DepotConstants.MAP_TEXT.hostPicks,
+		map = picked,
+		label = if picked == "school" then text.school else text.office,
+		line = if isHost then text.youPick else text.hostPicks,
+		host = isHost,
 	}
 end
 
@@ -117,7 +112,8 @@ function DepotPadViewModel.pad(
 	now: number,
 	phone: boolean,
 	hostId: number?,
-	locked: boolean?
+	locked: boolean?,
+	map: ShiftTypes.MapId?
 ): PadView?
 	if pad == nil or table.find(pad.members, myId) == nil then
 		return nil
@@ -139,7 +135,8 @@ function DepotPadViewModel.pad(
 	else
 		title = if truck ~= nil then `TRUCK {truck} — {DepotConstants.JOB_TITLE}` else DepotConstants.JOB_TITLE
 	end
-	title = `{title} · {ShiftQuotaFormulas.quota(#pad.members)} {string.upper(ShiftConstants.CONTRACT_UNIT)}`
+	-- The crew's contract on the truck's place (the School's is bigger).
+	title = `{title} · {ShiftQuotaFormulas.quota(#pad.members, map)} {string.upper(ShiftConstants.CONTRACT_UNIT)}`
 	return {
 		title = title,
 		count = `{#pad.members} / {pad.capacity}`,

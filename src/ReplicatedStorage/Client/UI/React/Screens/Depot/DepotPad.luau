@@ -4,8 +4,9 @@
 	it reads the queue snapshot, their public truck number, the server clock and the device layout, and draws
 	the hub's Next shift card (DepotNextShiftCard) in its aboard state: the truck's countdown, a seat per place and GO!
 	to depart now (which replaces the base placeholder pad panel); on a hosted truck the button is START, CANCEL or LEAVE
-	(HostStore names the host), and the OFFICE / SCHOOL map cards with the truck's pick (the DepotConstants.MAP_WORLD_ENTRY
-	world entry, DepotMapRules.decode); the host's tap goes to `onPickMap`. Names are the crew display names (the view model names an unknown member "Crew"); the card only
+	(HostStore names the host), and the PLACE button with the truck's pick (the DepotConstants.MAP_WORLD_ENTRY
+	world entry, DepotMapRules.decode), whose tap goes to `onOpenPlaces` (the places menu, where the host picks); the
+	title posts the crew's contract on that place. Names are the crew display names (the view model names an unknown member "Crew"); the card only
 	displays, the server decides who is aboard and when the truck leaves. The button's action goes to the `onAction`
 	the service passes in (components never talk to the server). It draws only where DepotPadViewModel.shown allows: in the depot
 	hub (the shift snapshot), not behind the load screen (ShiftTransitStore.covered) and not once the drive card is up
@@ -48,7 +49,8 @@ export type DepotPadProps = {
 	onLock: (locked: boolean) -> (),
 	onInvite: () -> (),
 	onUpgrade: () -> (),
-	onPickMap: (map: ShiftTypes.MapId) -> (),
+	-- The PLACE button's tap: opens the places menu.
+	onOpenPlaces: () -> (),
 }
 
 local function DepotPad(props: DepotPadProps): React.ReactNode
@@ -83,7 +85,10 @@ local function DepotPad(props: DepotPadProps): React.ReactNode
 	local hosted = if padId ~= nil and hosts ~= nil then hosts.trucks[padId] else nil
 	local locked = hosted ~= nil and hosted.locked
 	local truckNumber = if type(truck) == "number" then truck else nil
-	local view = DepotPadViewModel.pad(pad, player.UserId, names, truckNumber, now, phone, hostId, locked)
+	-- The truck's place (the host's pick; the Office when none).
+	local picked: ShiftTypes.MapId =
+		DepotMapRules.mapOf(DepotMapRules.decode(world[DepotConstants.MAP_WORLD_ENTRY]), padId)
+	local view = DepotPadViewModel.pad(pad, player.UserId, names, truckNumber, now, phone, hostId, locked, picked)
 	if view == nil then
 		return nil
 	end
@@ -92,10 +97,7 @@ local function DepotPad(props: DepotPadProps): React.ReactNode
 	local passLive = MarketplaceRegistry.pass(HostConstants.PASS_KEY) ~= nil
 	local owns = me ~= nil and me[MarketplaceConstants.passField(HostConstants.PASS_KEY)] == true
 	local cta = DepotPadViewModel.cta(view, truckNumber, passLive and not owns)
-	local maps = DepotPadViewModel.maps(
-		view,
-		DepotMapRules.mapOf(DepotMapRules.decode(world[DepotConstants.MAP_WORLD_ENTRY]), padId)
-	)
+	local place = DepotPadViewModel.place(view, picked)
 	return React.createElement(PaperHudFrame, {
 		scale = hudScale.scale,
 		children = {
@@ -109,8 +111,8 @@ local function DepotPad(props: DepotPadProps): React.ReactNode
 				onLock = props.onLock,
 				onInvite = props.onInvite,
 				onUpgrade = props.onUpgrade,
-				maps = maps,
-				onPickMap = props.onPickMap,
+				place = place,
+				onOpenPlaces = props.onOpenPlaces,
 			}),
 		},
 	})

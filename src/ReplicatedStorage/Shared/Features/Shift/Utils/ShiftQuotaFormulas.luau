@@ -16,6 +16,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CargoTypes = require(ReplicatedStorage.Shared.Features.Cargo.Data.CargoTypes)
 local ShiftConstants = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftConstants)
+local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTypes)
 local VacuumConstants = require(ReplicatedStorage.Shared.Features.Vacuum.Data.VacuumConstants)
 
 export type Breakdown = {
@@ -39,11 +40,19 @@ end
 local ShiftQuotaFormulas = {}
 
 --[=[
-	The contract (Gloom) for a crew of `crew` (clamped to QUOTA_BY_CREW's sizes).
+	The contract (Gloom) for a crew of `crew` (clamped to QUOTA_BY_CREW's sizes) on `map` (the Office when nil): the
+	crew's QUOTA_BY_CREW figure times the map's QUOTA_SCALE_BY_MAP, rounded to the nearest QUOTA_STEP.
 ]=]
-function ShiftQuotaFormulas.quota(crew: number): number
+function ShiftQuotaFormulas.quota(crew: number, map: ShiftTypes.MapId?): number
 	local byCrew = ShiftConstants.QUOTA_BY_CREW
-	return byCrew[math.clamp(math.floor(crew), 1, #byCrew)]
+	local base = byCrew[math.clamp(math.floor(crew), 1, #byCrew)]
+	local scales = ShiftConstants.QUOTA_SCALE_BY_MAP
+	local scale = if map == "school" then scales.school else scales.office
+	if scale == 1 then
+		return base
+	end
+	local step = ShiftConstants.QUOTA_STEP
+	return math.floor(base * scale / step + 0.5) * step
 end
 
 --[=[

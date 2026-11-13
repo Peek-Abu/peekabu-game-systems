@@ -62,6 +62,7 @@ local function makeProfileData(xp)
 			titles = { earned = {} },
 			coffee = { seconds = 0, since = 0 },
 			deals = { bought = {}, picks = {} },
+			places = { owned = {} },
 			premium = { balance = 0 },
 			receipts = { ids = {} },
 			firstSeen = { at = 0 },

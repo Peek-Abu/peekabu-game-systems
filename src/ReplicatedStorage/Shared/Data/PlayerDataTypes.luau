@@ -188,6 +188,14 @@ export type Deals = {
 }
 
 --[=[
+	The account-wide places slice (DepotPlaceSystem, DepotPlaceRules): the places bought with Credits (map id -> true).
+	The Office is free and never listed. Owner-only sync, for the places menu.
+]=]
+export type Places = {
+	owned: { [string]: boolean },
+}
+
+--[=[
 	The account-wide daily reward slice: the UTC day index (days since the Unix epoch, shifted by
 	DailyRewardConstants.DAY_OFFSET_HOURS) of the last claim (0 = never) and the current streak.
 ]=]
@@ -293,6 +301,7 @@ export type PlayerAccount = {
 	training: Training,
 	coffee: Coffee,
 	deals: Deals,
+	places: Places,
 	-- Extend with other ACCOUNT-WIDE slices here (settings, entitlements, ...)
 }
 

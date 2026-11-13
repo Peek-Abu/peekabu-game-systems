@@ -70,6 +70,7 @@ local function makeProfileData()
 			titles = { earned = {} },
 			coffee = { seconds = 0, since = 0 },
 			deals = { bought = {}, picks = {} },
+			places = { owned = {} },
 		},
 		slots = slots,
 	}

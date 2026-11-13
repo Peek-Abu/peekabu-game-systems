@@ -15,11 +15,13 @@
 	5. buried loot: one BURY_CHANCE draw per pile (OfficeLootUtils.buried), each hit burying a buriable valuable,
 	   capped so MIN_OPEN of the budget is left for the open;
 	6. the rest of the budget in the open (on item markers, or the furniture tops their kind belongs on);
-	7. the top-up: plain piles on free pile markers (the dirty rooms' leftovers first), at most TOP_UP_MAX, while the site's Gloom is too thin for the
+	7. the top-up: plain piles on free pile markers (the dirty rooms' leftovers first), at most `options.topUpMax`
+	   (else TOP_UP_MAX), while the site's Gloom is too thin for the
 	   contract (`options.quota`, OfficeLootUtils.shortfall; docs/superpowers/specs/
 	   2026-10-16-cleanup-crew-gloom-gleam-economy-design.md §3.4).
 
-	Every valuable is appraised as it is placed (CargoAppraisalFormulas.roll, scaled by its marker's depth). No trash
+	Every valuable is appraised as it is placed (CargoAppraisalFormulas.roll, scaled by its marker's depth, then by
+	`options.valueScale`: the School's are worth more). No trash
 	is rolled: it counts toward nothing under the Gloom contract. The A/B variant no longer changes the roll.
 	OfficeSpawnRules.check verifies the result. Pure.
 
@@ -302,6 +304,10 @@ function OfficeSpawnUtils.roll(
 			return nil
 		end
 		local roll = CargoAppraisalFormulas.roll(def, depthOf(marker), rng)
+		local scale = options.valueScale or 1
+		if scale ~= 1 then
+			return { base = math.max(1, math.floor(roll.base * scale + 0.5)), variant = roll.variant }
+		end
 		return roll
 	end
 
@@ -476,7 +482,7 @@ function OfficeSpawnUtils.roll(
 	-- 7. The top-up: a site too thin in Gloom for the contract gets a few more plain piles.
 	local topped = 0
 	while
-		topped < OfficeConstants.TOP_UP_MAX
+		topped < (options.topUpMax or OfficeConstants.TOP_UP_MAX)
 		and #piles < #pileMarkers
 		and OfficeLootUtils.shortfall(plan, options.quota)
 	do
