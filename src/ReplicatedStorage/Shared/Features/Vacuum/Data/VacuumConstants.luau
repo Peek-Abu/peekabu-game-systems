@@ -7,12 +7,15 @@
 ]=]
 
 -- `art`: the pile's art key in the default kit's props (VacuumPileArtSystem); the block's colour and material show only
--- where a place lacks that art.
+-- where a place lacks that art. `artSize`: the box the art is fitted to at full size (the built pile's bounds, its
+-- outline included), at the concept's size next to an employee so a pile reads from across a room: it overhangs the
+-- gameplay block (`size`, whose X/Z alone set the vacuum's reach), which stays as tuned.
 export type PileStyle = {
 	size: Vector3,
 	color: Color3,
 	material: Enum.Material,
 	art: string,
+	artSize: Vector3,
 }
 
 -- The three piles: the gameplay block (size) and its art (owner-approved hand-built piles, 2026-11-12).
@@ -22,18 +25,21 @@ local PILE_KINDS: { [string]: PileStyle } = {
 		color = Color3.fromRGB(235, 230, 215),
 		material = Enum.Material.Fabric,
 		art = "pilePaper",
+		artSize = Vector3.new(5.5, 3.7, 4.85),
 	},
 	debris = {
 		size = Vector3.new(3.5, 1, 3.5),
 		color = Color3.fromRGB(120, 105, 90),
 		material = Enum.Material.Slate,
 		art = "pileJunk",
+		artSize = Vector3.new(5.1, 3.05, 4.65),
 	},
 	cables = {
 		size = Vector3.new(3, 0.8, 3),
 		color = Color3.fromRGB(25, 25, 25),
 		material = Enum.Material.Plastic,
 		art = "pileCables",
+		artSize = Vector3.new(4.6, 3.2, 3.75),
 	},
 }
 
