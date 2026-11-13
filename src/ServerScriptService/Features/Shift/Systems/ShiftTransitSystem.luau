@@ -178,7 +178,9 @@ function ShiftTransitSystem.new(options: Options): ShiftTransitSystem
 	-- Every held player whose own hold is over: released; the crew's transit finishes once it settles.
 	local function check()
 		local current = crewId
-		if current ~= nil then
+		-- Not before the crew is placed: `prepare` yields while the office builds (OfficeBuildPaceTracker), and a
+		-- timeout or an emptied crew settled then would start (or abandon) the run under a half-built office.
+		if current ~= nil and crewPlaced then
 			local status = tracker:status(current, now())
 			if status ~= "waiting" then
 				finishCrew(current, status)
@@ -306,6 +308,10 @@ function ShiftTransitSystem.new(options: Options): ShiftTransitSystem
 					return
 				end
 				guarded("preparing the shift", options.prepare)
+				-- The build yields: a transit cancelled meanwhile places nobody.
+				if crewId ~= id then
+					return
+				end
 				for index, player in playersOf(tracker:members(id)) do
 					place(player, OfficeServiceServer:spawnCFrame(index))
 				end

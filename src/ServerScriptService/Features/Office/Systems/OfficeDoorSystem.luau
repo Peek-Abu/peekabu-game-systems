@@ -67,6 +67,7 @@ local OfficeDoorUtils = require(OfficeServer.Utils.OfficeDoorUtils)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
 local OfficeArtKeyUtils = require(OfficeServer.Utils.OfficeArtKeyUtils)
 local OfficeVariationRules = require(OfficeServer.Rules.OfficeVariationRules)
+local OfficeBuildPaceTracker = require(OfficeServer.State.OfficeBuildPaceTracker)
 
 local log = Logger.new("OfficeDoorSystem")
 
@@ -319,6 +320,7 @@ function OfficeDoorSystem.build(
 			records[id] = record
 			table.insert(states, record.state)
 		end
+		OfficeBuildPaceTracker.step()
 	end
 
 	-- Facades: locked fake doors on unbroken walls (closed, flush, locked: tagged FACADE_KIND, they only rattle), their
@@ -334,6 +336,7 @@ function OfficeDoorSystem.build(
 				rattles[leaf] = { frame = leaf.CFrame, progress = Instance.new("NumberValue"), tween = nil }
 			end
 		end
+		OfficeBuildPaceTracker.step()
 	end
 
 	-- Starts a swing to open or shut. A close that ends with someone in the doorway reopens instead of shutting them in.

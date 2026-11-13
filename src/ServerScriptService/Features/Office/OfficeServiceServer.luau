@@ -85,6 +85,7 @@ local OfficeDecorSystem = require(OfficeServer.Systems.OfficeDecorSystem)
 local OfficeDoorSystem = require(OfficeServer.Systems.OfficeDoorSystem)
 local OfficeDressingSystem = require(OfficeServer.Systems.OfficeDressingSystem)
 local OfficeSearchedDressingSystem = require(OfficeServer.Systems.OfficeSearchedDressingSystem)
+local OfficeBuildPaceTracker = require(OfficeServer.State.OfficeBuildPaceTracker)
 local CargoServiceServer = require(ServerScriptService.Features.Cargo.CargoServiceServer)
 local VacuumServiceServer = require(ServerScriptService.Features.Vacuum.VacuumServiceServer)
 local QueueServiceServer = require(ServerScriptService.Features.Queue.QueueServiceServer)
@@ -114,6 +115,9 @@ for _, marker in LAYOUT.markers do
 end
 
 local built: OfficeBuildSystem.Built? = nil
+-- Whether a rebuild is under way (it yields between pieces): a second beginShift waits for it instead of building a
+-- second office beside it.
+local rebuilding = false
 local shiftJanitor = Janitor.new()
 local shiftFolder: Folder? = nil
 local dressing = OfficeSearchedDressingSystem.new()
@@ -200,6 +204,7 @@ end
 
 local function rebuild(requested: number, map: ShiftTypes.MapId)
 	local layout, seed = generateLayout(requested, map)
+	OfficeBuildPaceTracker.step()
 	local ok, errors = OfficeLayoutRules.validate(layout)
 	assert(ok, `generated office layout is invalid: {table.concat(errors, "; ")}`)
 	local capacity, reason = OfficeLayoutRules.checkCapacity(layout)
@@ -211,6 +216,7 @@ local function rebuild(requested: number, map: ShiftTypes.MapId)
 	local walkOk, walkReason =
 		OfficeLayoutRules.checkWalk(layout, OfficeConstants.WALK_SPEED * OfficeConstants.MAX_WALK_SECONDS)
 	assert(walkOk, walkReason or "generated layout walk")
+	OfficeBuildPaceTracker.step()
 	LAYOUT = layout
 	depths = OfficeLayoutUtils.depths(layout)
 	table.clear(markerById)
@@ -227,8 +233,11 @@ local function rebuild(requested: number, map: ShiftTypes.MapId)
 	restMarker = markerById[layout.rest]
 	local old = built
 	if old ~= nil then
+		-- Gone before the (yielding) build starts: nothing reads a destroyed office while the new one goes up.
+		built = nil
 		old.doors.destroy()
 		old.model:Destroy()
+		OfficeBuildPaceTracker.step()
 	end
 	-- Guard: any other office model in Workspace (one a past cleanup missed) goes too, with a warning as evidence.
 	OfficeBuildSystem.clearStrays()
@@ -243,6 +252,7 @@ local function rebuild(requested: number, map: ShiftTypes.MapId)
 	built = current
 	layoutSeed = seed
 	layoutMap = map
+	OfficeBuildPaceTracker.step()
 	OfficeDecorSystem.build(layout, OfficeConstants.ORIGIN, current.model, nil, seed)
 end
 
@@ -352,6 +362,7 @@ local OfficeServiceServer: OfficeServiceServer = {
 			end
 		end)
 		OfficeBuildSystem.clearStrays()
+		OfficeBuildPaceTracker.shared:begin()
 		local current = OfficeBuildSystem.build(LAYOUT, OfficeConstants.ORIGIN)
 		current.model:SetAttribute(OfficeConstants.MAP_ATTRIBUTE, layoutMap)
 		built = current
@@ -416,7 +427,17 @@ local OfficeServiceServer: OfficeServiceServer = {
 			return placed
 		end
 		assert(built ~= nil, "OfficeServiceServer:beginShift before start")
-		rebuild(options.seed, options.map)
+		-- The build yields a frame between pieces (OfficeBuildPaceTracker), so a rebuild never holds the server.
+		while rebuilding do
+			task.wait()
+		end
+		rebuilding = true
+		OfficeBuildPaceTracker.shared:begin()
+		local rebuilt, failure = pcall(rebuild, options.seed, options.map)
+		rebuilding = false
+		if not rebuilt then
+			error(failure, 0)
+		end
 		local current = built
 		assert(current ~= nil, "OfficeServiceServer:beginShift before start")
 		local plan = rollPlan(options)
@@ -443,6 +464,7 @@ local OfficeServiceServer: OfficeServiceServer = {
 					pile:SetAttribute(CargoConstants.BURIED_ATTRIBUTE, true)
 				end
 			end
+			OfficeBuildPaceTracker.step()
 		end
 		for _, itemPlan in plan.items do
 			local marker = markerById[itemPlan.marker]
@@ -454,6 +476,7 @@ local OfficeServiceServer: OfficeServiceServer = {
 					{ appraisal = fresh(itemPlan.appraisal) }
 				)
 			end
+			OfficeBuildPaceTracker.step()
 		end
 		for _, search in plan.searchables do
 			local part: BasePart? = current.searchables[search.marker]

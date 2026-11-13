@@ -38,6 +38,7 @@ local ShiftTypes = require(ReplicatedStorage.Shared.Features.Shift.Data.ShiftTyp
 local OfficeArtKeyUtils = require(OfficeServer.Utils.OfficeArtKeyUtils)
 local OfficeGroundsUtils = require(OfficeServer.Utils.OfficeGroundsUtils)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
+local OfficeBuildPaceTracker = require(OfficeServer.State.OfficeBuildPaceTracker)
 local OfficeDecorSystem = require(script.Parent.OfficeDecorSystem)
 local OfficeDoorSystem = require(script.Parent.OfficeDoorSystem)
 
@@ -172,6 +173,7 @@ function OfficeGroundsSystem.build(
 		else
 			log:warn(`entrance {entrance.id}: exit room or edge could not be resolved; no inside exit built`)
 		end
+		OfficeBuildPaceTracker.step()
 	end
 	return built
 end

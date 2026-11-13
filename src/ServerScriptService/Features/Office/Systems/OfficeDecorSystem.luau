@@ -41,6 +41,7 @@ local OfficeSurfaceUtils = require(OfficeServer.Utils.OfficeSurfaceUtils)
 local OfficeArtKeyUtils = require(OfficeServer.Utils.OfficeArtKeyUtils)
 local OfficeLightingUtils = require(OfficeServer.Utils.OfficeLightingUtils)
 local OfficeVariationRules = require(OfficeServer.Rules.OfficeVariationRules)
+local OfficeBuildPaceTracker = require(OfficeServer.State.OfficeBuildPaceTracker)
 
 -- Desk dressing was laid out on a 5x3 top; its spots move with the real top (the props keep their size).
 local DESK_SPREAD = OfficeConstants.DESK_SIZE / Vector3.new(5, 3, 3)
@@ -532,6 +533,7 @@ function OfficeDecorSystem.build(
 		if index % OfficeDecorConstants.TYPING_EVERY == 1 then
 			emitter("typing", (deskTop * CFrame.new(-1 * DESK_SPREAD.X, lift, 0)).Position, folder)
 		end
+		OfficeBuildPaceTracker.step()
 	end
 	-- Sparse art-only furniture: corner filing cabinets and meeting/break tables with lootable
 	-- tops. No graybox fallback: a missing kit leaves the room as it was (see `artOnly`).
@@ -547,6 +549,7 @@ function OfficeDecorSystem.build(
 			marker.art,
 			OfficeArtKeyUtils.roomType(OfficeLayoutUtils.room(layout, marker.room))
 		)
+		OfficeBuildPaceTracker.step()
 	end
 	-- The tall supply cabinets: solid, and a secure hiding spot (Hide): inside it. Every closet marker hides, whatever
 	-- art restyles it (a School stall or equipment closet), so OfficeLayoutRules.checkHideSpots counts what players can
@@ -564,6 +567,7 @@ function OfficeDecorSystem.build(
 			OfficeArtKeyUtils.roomType(OfficeLayoutUtils.room(layout, marker.room)),
 			"cabinet"
 		)
+		OfficeBuildPaceTracker.step()
 	end
 	-- A table is a hiding spot (Hide): under it, but only with the default art: a restyled table (the conference
 	-- table) has no measured hug space under it. The break table's own proxy leaves no room either (canHideUnder).
@@ -581,11 +585,13 @@ function OfficeDecorSystem.build(
 			OfficeArtKeyUtils.roomType(OfficeLayoutUtils.room(layout, marker.room)),
 			if restyled then nil else "table"
 		)
+		OfficeBuildPaceTracker.step()
 	end
 	for _, marker in OfficeLayoutUtils.markersOf(layout, "prop") do
 		if OfficeVariationRules.keepProp(seed, marker.id, marker.art or "") then
 			propAt(marker, OfficeArtKeyUtils.roomType(OfficeLayoutUtils.room(layout, marker.room)), origin, folder, art)
 		end
+		OfficeBuildPaceTracker.step()
 	end
 	-- On the layout's elevator facade; the authored boot layout has none and keeps ELEVATOR_POINT.
 	elevator(OfficeDoorUtils.elevatorFrameFor(layout, origin), folder, art)

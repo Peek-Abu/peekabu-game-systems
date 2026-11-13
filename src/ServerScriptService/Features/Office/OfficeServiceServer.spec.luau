@@ -11,6 +11,7 @@ local OfficeServer = ServerScriptService.Features.Office
 local OfficeConstants = require(OfficeServer.Data.OfficeConstants)
 local OfficeVariationRules = require(OfficeServer.Rules.OfficeVariationRules)
 local OfficeServiceServer = require(OfficeServer.OfficeServiceServer)
+local OfficeBuildPaceTracker = require(OfficeServer.State.OfficeBuildPaceTracker)
 local QueueServiceServer = require(ServerScriptService.Features.Queue.QueueServiceServer)
 local DepotConstants = require(ReplicatedStorage.Shared.Features.Depot.Data.DepotConstants)
 local OfficeAnomalyConstants = require(ReplicatedStorage.Shared.Features.Office.Data.OfficeAnomalyConstants)
@@ -115,6 +116,20 @@ return function()
 			expect(OfficeServiceServer:map()).to.equal("office")
 			expect(model():GetAttribute(MAP_ATTRIBUTE)).to.equal("office")
 		end)
+
+		-- A whole map build is seconds of work: it yields a frame between pieces so no resumption holds the server
+		-- (or trips Play's 10 s script timeout). One piece's work may run past the slice, never a whole pass.
+		for _, map in { "school", "office" } do
+			it(`builds the {map} in slices, never holding the server for long`, function()
+				if not runs then
+					return
+				end
+				begin(13, map)
+				local stats = OfficeBuildPaceTracker.shared:stats()
+				expect(stats.yields > 0).to.equal(true)
+				expect(stats.longest < OfficeConstants.BUILD_SLICE_SECONDS + 0.5).to.equal(true)
+			end)
+		end
 
 		it("walks the same School route for the same seed", function()
 			if not runs then

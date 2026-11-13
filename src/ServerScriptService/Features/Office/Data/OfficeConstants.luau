@@ -306,6 +306,9 @@ return table.freeze({
 	DECOR_MONITOR_SIZE = Vector3.new(2.25, 1.845, 0.7),
 	ELEVATOR_FRONT_SIZE = Vector3.new(6, 8, 0.5),
 	SHIFT_FOLDER_NAME = "Shift",
+	-- A map build yields a frame once a stretch of it has run this long (OfficeBuildPaceTracker): no resumption holds
+	-- the server much past it (one piece's work over), far under Play's 10 s script timeout.
+	BUILD_SLICE_SECONDS = 0.08,
 	WALL_HEIGHT = 13,
 	WALL_THICKNESS = 1,
 	-- Shell trim and framing dimensions (OfficeShellUtils), measured from the approved spike.

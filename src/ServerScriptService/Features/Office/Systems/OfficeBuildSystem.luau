@@ -45,6 +45,7 @@ local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
 local OfficeArtKeyUtils = require(OfficeServer.Utils.OfficeArtKeyUtils)
 local OfficeLoadingBayUtils = require(OfficeServer.Utils.OfficeLoadingBayUtils)
 local OfficeLightingUtils = require(OfficeServer.Utils.OfficeLightingUtils)
+local OfficeBuildPaceTracker = require(OfficeServer.State.OfficeBuildPaceTracker)
 local OfficeDoorSystem = require(script.Parent.OfficeDoorSystem)
 local OfficeGroundsSystem = require(script.Parent.OfficeGroundsSystem)
 
@@ -144,6 +145,7 @@ function OfficeBuildSystem.build(
 			then "bay"
 			else OfficeArtKeyUtils.roomType(room)
 		Shell.apply(floor, Shell.floorMaterial(roomType, layout.artKit))
+		OfficeBuildPaceTracker.step()
 	end
 	Shell.build(layout, origin, model, art, nil, seed)
 
@@ -301,6 +303,7 @@ function OfficeBuildSystem.build(
 				end
 			end
 		end
+		OfficeBuildPaceTracker.step()
 	end
 
 	-- The truck's box is Harlow's no-go zone (he may walk the rest of the bay): a volume his paths cost math.huge

@@ -32,6 +32,7 @@ local OfficeGroundsUtils = require(OfficeServer.Utils.OfficeGroundsUtils)
 local OfficeLayoutUtils = require(OfficeServer.Utils.OfficeLayoutUtils)
 local OfficeLightingUtils = require(OfficeServer.Utils.OfficeLightingUtils)
 local OfficeShellUtils = require(OfficeServer.Utils.OfficeShellUtils)
+local OfficeBuildPaceTracker = require(OfficeServer.State.OfficeBuildPaceTracker)
 
 type HasVariant = (name: string) -> boolean
 
@@ -367,11 +368,13 @@ local function buildWalls(layout: OfficeTypes.Layout, origin: CFrame, shell: Fol
 		for _, box in OfficeShellUtils.wall(segment, first, last, extra) do
 			build(box, origin, shell, hasVariant, faceMaterial(layout, segment, box))
 		end
+		OfficeBuildPaceTracker.step()
 	end
 	for _, pane in OfficeLayoutUtils.panes(layout) do
 		for _, box in OfficeShellUtils.glassPane(pane) do
 			build(box, origin, shell, hasVariant)
 		end
+		OfficeBuildPaceTracker.step()
 	end
 	for _, door in layout.doors do
 		local room = OfficeLayoutUtils.room(layout, door.a)
@@ -384,6 +387,7 @@ local function buildWalls(layout: OfficeTypes.Layout, origin: CFrame, shell: Fol
 				build(lintel(door, edge == "minZ" or edge == "maxZ"), origin, shell, hasVariant)
 			end
 		end
+		OfficeBuildPaceTracker.step()
 	end
 	for _, facade in facadesOf(layout) do
 		local room = OfficeLayoutUtils.room(layout, facade.room)
@@ -394,6 +398,7 @@ local function buildWalls(layout: OfficeTypes.Layout, origin: CFrame, shell: Fol
 				build(box, origin, shell, hasVariant)
 			end
 		end
+		OfficeBuildPaceTracker.step()
 	end
 end
 
@@ -483,10 +488,12 @@ function OfficeShellVisualSystem.build(
 		local roomFolder = folder(room.name, lights)
 		for _, panel in plan.panels do
 			buildPanel(panel, recipe.panelRange, roomType, origin, roomFolder, art)
+			OfficeBuildPaceTracker.step()
 		end
 		for _, fill in plan.fills do
 			buildFill(fill, origin, roomFolder)
 		end
+		OfficeBuildPaceTracker.step()
 	end
 end
 
