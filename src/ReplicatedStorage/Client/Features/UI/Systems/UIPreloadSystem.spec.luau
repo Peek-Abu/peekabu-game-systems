@@ -29,11 +29,16 @@ return function()
 		it("loads every batch in order and is ready with a full bar", function()
 			local root = art()
 			local loaded = {}
+			local warmed = 0
 			UIPreloadSystem.start({
 				art = root,
 				images = { "rbxassetid://1" },
 				preload = function(items)
 					table.insert(loaded, items)
+				end,
+				warm = function()
+					warmed += 1
+					return function() end
 				end,
 			})
 			-- faces:Pippa, images, character:Pippa, outfits
@@ -48,6 +53,8 @@ return function()
 			expect(state.done).to.equal(3)
 			expect(state.total).to.equal(3)
 			expect(state.timedOut).to.equal(false)
+			-- The crew cards warm once the batches are done.
+			expect(warmed).to.equal(1)
 			root:Destroy()
 		end)
 
@@ -57,6 +64,9 @@ return function()
 			UIPreloadSystem.start({
 				art = root,
 				images = {},
+				warm = function()
+					return function() end
+				end,
 				preload = function()
 					calls += 1
 					if calls == 1 then
@@ -93,6 +103,9 @@ return function()
 			local options = {
 				art = root,
 				images = {},
+				warm = function()
+					return function() end
+				end,
 				preload = function()
 					calls += 1
 				end,

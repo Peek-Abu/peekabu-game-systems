@@ -8,7 +8,8 @@
 	  anchored, no Animator, no scripts. The engine renders it once: cards and grids. Each look (employee, skin, style,
 	  pose, the badge's rank, per source) is built once and kept: later calls get a Clone of it, so reopening the
 	  Shop or the Inventory, or a card rebuilt after an equip or a purchase, never dresses and poses it again (that
-	  ran the skin fitting, the lanyard and the pose for every card in one frame). `reset` empties the cache.
+	  ran the skin fitting, the lanyard and the pose for every card in one frame). `warm` builds looks ahead, one a
+	  frame (UIPreloadSystem warms every crew card after the art preload). `reset` empties the cache.
 	- `live(employee, skin, source, style?)`: the dressed model with its root held and the body free, an Animator, no
 	  scripts: put it in a WorldModel and `playIdle` it. At most LIVE_CAP exist at once (the hero and one hovered
 	  card); `live` returns nil past the cap. `release` destroys one and frees its slot at once (destroying it alone
@@ -161,6 +162,33 @@ function EmployeePreviewSystem.static(
 		staticCount[source] = (staticCount[source] or 0) + 1
 	end
 	return copy:Clone()
+end
+
+-- One look `warm` builds ahead: an employee, a skin (nil = the default look) and the pose its cards use.
+export type Look = { employee: string, skin: string?, pose: EmployeePoseRegistry.PoseDef? }
+
+--[=[
+	Builds `looks` into the static cache in the background, one per frame (starting the frame after the call), so the
+	first Shop or Inventory open after joining clones its cards instead of building them all in one frame. Returns the
+	cancel.
+]=]
+function EmployeePreviewSystem.warm(looks: { Look }, source: Instance): () -> ()
+	local cancelled = false
+	task.defer(function()
+		for _, look in looks do
+			RunService.Heartbeat:Wait()
+			if cancelled then
+				return
+			end
+			local copy = EmployeePreviewSystem.static(look.employee, look.skin, source, look.pose)
+			if copy ~= nil then
+				copy:Destroy()
+			end
+		end
+	end)
+	return function()
+		cancelled = true
+	end
 end
 
 -- Gives back `model`'s live slot (once).

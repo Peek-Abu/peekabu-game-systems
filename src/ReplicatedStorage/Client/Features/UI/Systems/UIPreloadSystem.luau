@@ -5,9 +5,11 @@
 	ContentProvider:PreloadAsync call, run one after another on their own thread; a failed batch is logged and skipped.
 	UIPreloadStore gets the bar's progress after each essential batch and `ready` once they are all in, or after
 	UIPreloadRules.ESSENTIAL_TIMEOUT seconds whatever is left (the rest keeps loading). Each batch's load time is logged,
-	so a slow join is visible in the output.
+	so a slow join is visible in the output. Once every batch is done it warms the crew cards: every employee in every
+skin, in the "crew" pose the Shop's and the Inventory's cards use, built one a frame into EmployeePreviewSystem's
+cache (EmployeePreviewSystem.warm), so the first open of those screens clones its cards.
 
-	`start` takes optional stand-ins (the art folder, the image ids, the loader, the timeout) for specs; the place's own
+	`start` takes optional stand-ins (the art folder, the image ids, the loader, the timeout, the warm-up) for specs; the place's own
 	are ReplicatedStorage.Assets.CleanupCrew, UIAssets' pictures plus every skin palette in EmployeeRegistry, and
 	ContentProvider:PreloadAsync.
 
@@ -18,7 +20,10 @@ local ContentProvider = game:GetService("ContentProvider")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Logger = require(ReplicatedStorage.Shared.Core.Logger)
+local EmployeePoseRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeePoseRegistry)
+local EmployeePoseRules = require(ReplicatedStorage.Shared.Features.Employee.Rules.EmployeePoseRules)
 local EmployeeRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeRegistry)
+local EmployeePreviewSystem = require(ReplicatedStorage.Client.Features.Employee.Systems.EmployeePreviewSystem)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
 local UIPreloadRules = require(ReplicatedStorage.Client.Features.UI.Rules.UIPreloadRules)
 local UIPreloadStore = require(ReplicatedStorage.Client.Features.UI.State.UIPreloadStore)
@@ -30,6 +35,8 @@ export type Options = {
 	images: { string }?,
 	preload: ((items: { Instance | string }) -> ())?,
 	timeout: number?,
+	-- Runs once every batch is done; returns its cancel.
+	warm: (() -> () -> ())?,
 }
 
 export type UIPreloadState = {
@@ -42,6 +49,7 @@ export type UIPreloadState = {
 }
 
 local generation = 0
+local cancelWarm: (() -> ())? = nil
 local running = false
 local state: UIPreloadState = { done = 0, total = 0, elapsed = 0, timedOut = false, seconds = {} }
 local startedAt = 0
@@ -108,6 +116,22 @@ local function placePreload(items: { Instance | string })
 	end)
 end
 
+-- Every employee in every skin, in the pose their Shop and Inventory cards use ("crew"), warmed into the preview cache.
+local function placeWarm(): () -> ()
+	local looks: { EmployeePreviewSystem.Look } = {}
+	for _, name in EmployeeRegistry.names() do
+		local def = EmployeeRegistry.get(name)
+		if def ~= nil then
+			local pose = EmployeePoseRules.select(EmployeePoseRegistry.get(name), "crew", {})
+			table.insert(looks, { employee = name, pose = pose })
+			for key in def.skins do
+				table.insert(looks, { employee = name, skin = key, pose = pose })
+			end
+		end
+	end
+	return EmployeePreviewSystem.warm(looks, ReplicatedStorage)
+end
+
 local UIPreloadSystem = {}
 
 function UIPreloadSystem.start(options: Options?)
@@ -172,12 +196,20 @@ function UIPreloadSystem.start(options: Options?)
 				end
 			end
 		end
+		if mine == generation then
+			cancelWarm = (given.warm or placeWarm)()
+		end
 	end)
 end
 
 function UIPreloadSystem.stop()
 	generation += 1
 	running = false
+	local cancel = cancelWarm
+	if cancel ~= nil then
+		cancel()
+		cancelWarm = nil
+	end
 end
 
 function UIPreloadSystem.getState(): UIPreloadState
