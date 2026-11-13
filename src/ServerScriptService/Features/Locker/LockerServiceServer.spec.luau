@@ -234,7 +234,8 @@ return function()
 			expect(ok).to.equal(true)
 			expect(MarketplaceService:getPremium(1)).to.equal(100)
 			expect(CosmeticService:owns(1, "Pippa.BubbleBuddy")).to.equal(true)
-			expect(CosmeticService:owns(1, "Pippa.Bubbles")).to.equal(true)
+			-- A skin grants only itself (owner, 2026-11-13): its emote is its own item (or comes in its bundle).
+			expect(CosmeticService:owns(1, "Pippa.Bubbles")).to.equal(false)
 		end)
 	end)
 end

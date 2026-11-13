@@ -122,7 +122,7 @@ return function()
 				for _, id in pj.items do
 					expect(table.find(legendary, id)).to.be.ok()
 				end
-				-- "Pick any Legendary skin + its emote and stickers": the emote and the sticker pack come with it.
+				-- "Pick any Legendary skin + its emote, stickers and idle": its whole bundle comes with it.
 				expect(table.find(legendary, "Cappy.CocoaSip")).to.be.ok()
 				expect(table.find(legendary, "CozyPack")).to.be.ok()
 				local hire = DealRules.grants("pickNewHire", "Prickles")

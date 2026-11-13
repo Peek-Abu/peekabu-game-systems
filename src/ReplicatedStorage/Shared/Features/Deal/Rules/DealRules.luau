@@ -181,7 +181,7 @@ function DealRules.canChoose(deal: DealId, choice: string, slice: Deals, owns: O
 	return true, nil
 end
 
--- A Legendary skin and the rest of its bundle (its emote and sticker pack); the skin alone when it has no bundle.
+-- A Legendary skin and the rest of its bundle (its emote, sticker pack and idle); the skin alone when it has no bundle.
 local function withBundle(skin: string): { string }
 	local bundle = CosmeticBundleRegistry.containing(skin)[1]
 	if bundle == nil then

@@ -83,7 +83,7 @@ function VM.cards(id: DealId, owns: Owns): { Card }
 				employee = employee,
 				skinKey = skinKeyOf(choice),
 				title = nameOf(choice),
-				line = "+ emote and stickers",
+				line = "+ emote, stickers and idle",
 			})
 		else
 			local skin = DealRules.legendaryOf(choice)

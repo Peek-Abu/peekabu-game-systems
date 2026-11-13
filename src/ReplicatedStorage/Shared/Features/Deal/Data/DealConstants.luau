@@ -46,9 +46,9 @@ local DEALS: { [string]: Deal } = {
 		-- A Legendary bundle (1,500) + 500 Gleam = 2,000 Gleam = R$ 1,332 at the best pack: R$ 399 is 70% off.
 		off = 70,
 		name = "Pick a Legendary",
-		line = "Pick any Legendary skin + its emote and stickers. Plus 500 Gleam!",
+		line = "Pick any Legendary skin + its emote, stickers and idle. Plus 500 Gleam!",
 		chooseTitle = "PICK YOUR LEGENDARY!",
-		chooseLine = "Pick one. It comes with its emote and stickers.",
+		chooseLine = "Pick one. It comes with its emote, stickers and idle.",
 	},
 	pickNewHire = {
 		id = "pickNewHire",
@@ -59,7 +59,7 @@ local DEALS: { [string]: Deal } = {
 		-- A hire (5,000 Credits = 500 Gleam) + a Legendary bundle (1,500) = 2,000 Gleam = R$ 1,332: R$ 349 is 74% off.
 		off = 74,
 		name = "Pick a New Hire",
-		line = "Hire a new employee now + their Legendary skin, emote and stickers!",
+		line = "Hire a new employee now + their Legendary skin, emote, stickers and idle!",
 		chooseTitle = "PICK YOUR NEW HIRE!",
 		chooseLine = "Pick one. They come with their Legendary skin.",
 	},

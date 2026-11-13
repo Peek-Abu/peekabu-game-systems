@@ -491,13 +491,14 @@ return function()
 
 		it("names the other items of its bundle under In a bundle with", function()
 			local bubble = VM.detail(CosmeticRegistry.get("Pippa.BubbleBuddy"), loadout(), owner())
-			expect(#bubble.comesWith).to.equal(2)
+			expect(#bubble.comesWith).to.equal(3)
 			expect(bubble.comesWith[1].name).to.equal("Bubble Ride")
 			expect(bubble.comesWith[1].kind).to.equal("emote")
 			expect(bubble.comesWith[2].kind).to.equal("stickerPack")
-			-- The emote's bundle mates: the skin and the pack, never itself.
+			expect(bubble.comesWith[3].kind).to.equal("idle")
+			-- The emote's bundle mates: the skin, the pack and the idle, never itself.
 			local emote = VM.detail(CosmeticRegistry.get("Pippa.Bubbles"), loadout(), owner())
-			expect(#emote.comesWith).to.equal(2)
+			expect(#emote.comesWith).to.equal(3)
 			expect(emote.comesWith[1].id).to.equal("Pippa.BubbleBuddy")
 			expect(#VM.detail(CosmeticRegistry.get("Pippa.Default"), loadout(), owner()).comesWith).to.equal(0)
 		end)
