@@ -325,17 +325,20 @@ local function ShopProductPanel(props: ShopProductPanelProps): React.ReactNode
 		content = priced
 	end
 	face.buy = e(ToonButton, {
-		variant = if button.kind == "buy" then "primary" elseif button.kind == "short" then "gleam" else "secondary",
+		variant = if button.kind == "buy"
+			then "primary"
+			elseif button.kind == "short" or button.kind == "topup" then "gleam"
+			else "secondary",
 		text = if content == nil then button.text else nil,
 		content = content,
 		textSize = if phone then 18 else 34,
 		disabled = not button.enabled,
-		sound = if button.kind == "buy" then "cta" else nil,
+		sound = if button.kind == "buy" or button.kind == "topup" then "cta" else nil,
 		anchor = Vector2.new(0, 1),
 		position = UDim2.new(0, pad, 1, -(if phone then 22 else 48)),
 		size = UDim2.fromOffset(inner, buttonHeight),
 		onActivated = function()
-			if button.kind == "buy" then
+			if button.kind == "buy" or button.kind == "topup" then
 				props.onBuy()
 			elseif button.kind == "short" then
 				props.onGetMore()

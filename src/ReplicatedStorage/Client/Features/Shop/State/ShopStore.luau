@@ -5,6 +5,8 @@
 	is already owned. Opening another page clears the old result. `passInfo` holds each game pass's price and icon as
 	Roblox reported them (ShopServiceClient fetches them), by MarketplaceRegistry key; `bundleInfo` the same for each Gleam
 	bundle's developer product (its Robux price and icon), by bundle key. `tab` is the tab the Shop opens on next (`openTab`, the hub's Lost & Found lockers).
+	`returnTo` is where to go back to after the player buys Gleam for something (`goBack`), and `ask` puts that item's
+	Yes/No question up when the Shop lands back on it.
 	Charm atoms the Shop screen reads.
 
 	@class ShopStore
@@ -15,6 +17,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Charm = require(ReplicatedStorage.Packages.Charm)
 
 export type Result = { offer: string, reason: string }
+
+-- Where the Shop goes back to after the player buys Gleam (ShopViewModel.returnTo): `offer`'s page (nil: just `tab`),
+-- once their Gleam reaches `gleam`. `name` is what they went for, for the Gleam tab's line.
+export type Return = { offer: string?, tab: string, gleam: number, name: string }
 
 -- A game pass as Roblox reports it (MarketplaceService product info): its Robux price (nil when not for sale), icon
 -- and Dashboard name.
@@ -34,6 +40,10 @@ local tab = Charm.atom(noTab)
 local passInfo = Charm.atom(noPasses)
 local noBundles: { [string]: ProductInfo } = {}
 local bundleInfo = Charm.atom(noBundles)
+local noReturn: Return? = nil
+local returnTo = Charm.atom(noReturn)
+-- Set when the Shop goes back to an item after a Gleam buy: its page opens with the Yes/No question up.
+local ask = Charm.atom(false)
 
 local ShopStore = {
 	product = product,
@@ -41,7 +51,32 @@ local ShopStore = {
 	passInfo = passInfo,
 	bundleInfo = bundleInfo,
 	tab = tab,
+	returnTo = returnTo,
+	ask = ask,
 }
+
+-- Remembers where to go back to after a Gleam buy (nil forgets it).
+function ShopStore.setReturn(value: Return?)
+	returnTo(value)
+end
+
+-- Goes back to what the player went to get Gleam for: its page with the question up (or its tab), and forgets it.
+function ShopStore.goBack()
+	local back = returnTo()
+	if back == nil then
+		return
+	end
+	returnTo(nil)
+	product(back.offer)
+	result(nil)
+	tab(back.tab)
+	ask(back.offer ~= nil)
+end
+
+-- The page has put its Yes/No question up.
+function ShopStore.asked()
+	ask(false)
+end
 
 function ShopStore.setPassInfo(key: string, info: PassInfo)
 	local nextInfo = table.clone(passInfo())
@@ -55,10 +90,13 @@ function ShopStore.setBundleInfo(key: string, info: ProductInfo)
 	bundleInfo(nextInfo)
 end
 
+-- Opens the Shop (on an item's page, or its front) from outside: any old way back is forgotten.
 function ShopStore.open(id: string?)
 	product(id)
 	result(nil)
 	tab(nil)
+	returnTo(nil)
+	ask(false)
 end
 
 -- Opens the Shop on a tab (no item page): the next ShopScene mount starts there.
@@ -66,6 +104,8 @@ function ShopStore.openTab(id: string)
 	product(nil)
 	result(nil)
 	tab(id)
+	returnTo(nil)
+	ask(false)
 end
 
 function ShopStore.close()
@@ -84,6 +124,8 @@ function ShopStore.reset()
 	passInfo({})
 	bundleInfo({})
 	tab(nil)
+	returnTo(nil)
+	ask(false)
 end
 
 return ShopStore

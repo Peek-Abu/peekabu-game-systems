@@ -1,12 +1,34 @@
 local ShopRequestRules = require(script.Parent.ShopRequestRules)
 
 return function()
-	it("round-trips an offer id", function()
-		expect(ShopRequestRules.parseBuy(ShopRequestRules.buildBuy("Pippa.BubbleBuddy"))).to.equal("Pippa.BubbleBuddy")
+	it("round-trips an offer id, with no Gleam agreed", function()
+		local request = ShopRequestRules.parseBuy(ShopRequestRules.buildBuy("Pippa.BubbleBuddy"))
+		expect(request.offer).to.equal("Pippa.BubbleBuddy")
+		expect(request.gleam).to.equal(0)
+	end)
+
+	it("round-trips the Gleam the player agreed to pay for the rest", function()
+		local request = ShopRequestRules.parseBuy(ShopRequestRules.buildBuy("Cappy", 30))
+		expect(request.offer).to.equal("Cappy")
+		expect(request.gleam).to.equal(30)
 	end)
 
 	it("drops anything else", function()
-		for _, payload in { nil, "Pippa", {}, { offer = "" }, { offer = 3 }, { offer = string.rep("x", 65) } } do
+		for _, payload in
+			{
+				nil,
+				"Pippa",
+				{},
+				{ offer = "" },
+				{ offer = 3 },
+				{ offer = string.rep("x", 65) },
+				{ offer = "Cappy", gleam = -1 },
+				{ offer = "Cappy", gleam = 1.5 },
+				{ offer = "Cappy", gleam = "30" },
+				{ offer = "Cappy", gleam = 0 / 0 },
+				{ offer = "Cappy", gleam = math.huge },
+			}
+		do
 			local parsed, reason = ShopRequestRules.parseBuy(payload)
 			expect(parsed).never.to.be.ok()
 			expect(reason).to.be.a("string")

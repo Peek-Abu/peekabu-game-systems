@@ -2,7 +2,8 @@
 --[=[
 	CharacterPickViewModel: the first-join pick screen's values: a card per employee (the free one first: "Free!" or
 	its hire price), the main button (Start as an employee you own; Hire for their Credits price when you can afford
-	it; otherwise how many more Credits you need), and when the screen opens (the loadout has synced, the pick is not
+	it; Hire with Gleam when Gleam can pay the rest, asked again before it spends; otherwise how many more Credits you
+	need), and when the screen opens (the loadout has synced, the pick is not
 	made, the player is in the depot). Every employee comes from the catalogue; nothing is per character.
 
 	@class CharacterPickViewModel
@@ -13,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CosmeticConstants = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticConstants)
 local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticRegistry)
 local CosmeticTypes = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticTypes)
+local ShopTopUpRules = require(ReplicatedStorage.Shared.Features.Shop.Rules.ShopTopUpRules)
 local ToonStyleViewModel = require(ReplicatedStorage.Client.UI.React.Screens.Toon.ToonStyleViewModel)
 
 type Owns = (id: string) -> boolean
@@ -26,8 +28,9 @@ export type Card = {
 	tag: string,
 }
 
--- `kind`: start as the selected employee, or hire them first (a Credits purchase through the Shop).
-export type Start = { text: string, enabled: boolean, kind: "start" | "hire" | "none" }
+-- `kind`: start as the selected employee, or hire them first (a Credits purchase through the Shop); "topup" hires with
+-- `gleam` Gleam paying the rest (asked twice: the second tap says how much).
+export type Start = { text: string, enabled: boolean, kind: "start" | "hire" | "topup" | "none", gleam: number? }
 
 local VM = {
 	SCENE = "characterPick",
@@ -61,7 +64,7 @@ function VM.cards(owns: Owns, selected: string): { Card }
 	return cards
 end
 
-function VM.start(selected: string, owns: Owns, credits: number): Start
+function VM.start(selected: string, owns: Owns, credits: number, gleam: number?, sure: boolean?): Start
 	local item = CosmeticRegistry.get(selected)
 	if owns(selected) then
 		return { text = `Start as {if item ~= nil then item.name else selected}!`, enabled = true, kind = "start" }
@@ -72,6 +75,16 @@ function VM.start(selected: string, owns: Owns, credits: number): Start
 	end
 	if credits >= price then
 		return { text = `Hire for {ToonStyleViewModel.grouped(price)}`, enabled = true, kind = "hire" }
+	end
+	local plan = ShopTopUpRules.plan("credits", price, credits)
+	if plan ~= nil and (gleam or 0) >= plan.gleam then
+		local amount = ToonStyleViewModel.grouped(plan.gleam)
+		return {
+			text = if sure then `Tap again: use {amount} Gleam` else `Hire with {amount} Gleam`,
+			enabled = true,
+			kind = "topup",
+			gleam = plan.gleam,
+		}
 	end
 	return {
 		text = `Need {ToonStyleViewModel.grouped(price - credits)} more Credits`,

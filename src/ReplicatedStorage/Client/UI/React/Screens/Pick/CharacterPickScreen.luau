@@ -285,6 +285,9 @@ local function CharacterPickScreen(props: CharacterPickScreenProps): React.React
 	local livePhone = usePaperLayout() == "phone"
 	local entitlements = ReactCharm.useAtom(StateSyncClientStore.entitlements)
 	local currency = ReactCharm.useAtom(StateSyncClientStore.currency)
+	local premium = ReactCharm.useAtom(StateSyncClientStore.premium)
+	-- "Hire with 30 Gleam" was tapped once for this employee ("" none): the next tap spends.
+	local sureOf, setSureOf = React.useState("")
 	local buyResult = ReactCharm.useAtom(ShopStore.result)
 	local deals = ReactCharm.useAtom(StateSyncClientStore.deals)
 	local selected, setSelected = React.useState(VM.DEFAULT)
@@ -338,7 +341,13 @@ local function CharacterPickScreen(props: CharacterPickScreenProps): React.React
 
 	local tint = InventoryViewModel.color(selected)
 	local profile = EmployeeProfileRegistry.get(selected)
-	local start = VM.start(selected, owns, CurrencyUtils.getCurrencyAmount(currency, "credits"))
+	local start = VM.start(
+		selected,
+		owns,
+		CurrencyUtils.getCurrencyAmount(currency, "credits"),
+		if props.owns == nil then premium.balance else 0,
+		sureOf == selected
+	)
 	-- Pick a New Hire for a locked employee: hire them now with their Legendary skin (a Robux deal, once).
 	local dealText = if props.owns == nil
 		then DealViewModel.hireButton(selected, owns, deals, DealServiceClient:productReady("pickNewHire"))
@@ -482,7 +491,15 @@ local function CharacterPickScreen(props: CharacterPickScreenProps): React.React
 							if not start.enabled or props.owns ~= nil then
 								return
 							end
-							if start.kind == "hire" then
+							if start.kind == "topup" then
+								-- Gleam pays the rest: the first tap asks, the second spends.
+								if sureOf ~= selected then
+									setSureOf(selected)
+								else
+									setSureOf("")
+									ShopServiceClient:requestBuy(selected, start.gleam)
+								end
+							elseif start.kind == "hire" then
 								-- Hiring is a Shop purchase; once it lands the button says Start.
 								ShopServiceClient:requestBuy(selected)
 							else

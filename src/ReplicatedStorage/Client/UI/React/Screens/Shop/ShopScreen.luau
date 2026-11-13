@@ -6,11 +6,15 @@
 	- Featured: the day's Featured banner (the item posed, its name, what's inside, its price button, when the shop
 	  changes; owner, 2026-10-29: only a product page animates) and Today's picks (6 cards), with the Gleam bundles along the bottom;
 	- Skins: every item for sale, filterable by employee, owned ones stamped OWNED;
-	- Gleam: the four Gleam bundles (greyed "Soon" until their Robux products exist);
+	- Hire: every employee for sale (their card opens the hire page);
+	- Gleam: the four Gleam bundles (greyed "Soon" until their Robux products exist); when the player came here short
+	  on Gleam for something (ShopStore.returnTo), it says how much more for what, marks the bundle that is just right,
+	  has a Back button, and goes back to that item with its Yes/No question up as soon as the Gleam arrives;
 	- Passes: every registered game pass (ShopPassesPanel), its price and icon as Roblox reported them, Owned once the
 	  player's public `pass:` field says so (live after a purchase); greyed "Soon" while no pass is registered;
 	- a product page (ShopProductPanel) when ShopStore.product is set (a card, or "See in Shop" in the Inventory).
-	Buying asks Yes / No first, then sends ShopServiceClient:requestBuy; what was bought arrives through the synced
+	Buying asks Yes / No first, then sends ShopServiceClient:requestBuy (with the Gleam the player said yes to when
+	Gleam pays the rest of a Credits price); what was bought arrives through the synced
 	entitlements and the reveal. Values are ShopViewModel's. `preview` swaps the stores for fixed data (the story).
 	Exempt (wires stores; story in ShopScreen.story).
 
@@ -308,6 +312,17 @@ local function bundleCard(
 			children = face,
 		}),
 	}
+	if bundle.best then
+		nodes.best = e(ToonFlag, {
+			text = "Just right!",
+			hue = "mint",
+			tilt = -5,
+			textSize = if phone then 11 else 20,
+			position = UDim2.fromOffset(-6, -10),
+			size = UDim2.fromOffset(if phone then 90 else 170, if phone then 22 else 36),
+			zIndex = 6,
+		})
+	end
 	if bundle.bonus ~= nil then
 		nodes.bonus = e(ToonBurst, {
 			text = bundle.bonus,
@@ -381,6 +396,23 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 		return nil
 	end)
 	local confirming, setConfirming = React.useState(false)
+	local returnTo = ReactCharm.useAtom(ShopStore.returnTo)
+	local ask = ReactCharm.useAtom(ShopStore.ask)
+	-- Back to what the player went to get Gleam for, as soon as the Gleam they bought arrives (never in a preview).
+	local gleamNow = if props.preview ~= nil then props.preview.gleam else premium.balance
+	React.useEffect(function()
+		if props.preview == nil and returnTo ~= nil and VM.returnReady(returnTo, gleamNow) then
+			setTab(returnTo.tab)
+			ShopStore.goBack()
+		end
+	end, { gleamNow, if returnTo ~= nil then returnTo.gleam else -1 })
+	-- Landed back on the item: put its Yes/No question up.
+	React.useEffect(function()
+		if ask then
+			ShopStore.asked()
+			setConfirming(true)
+		end
+	end, { ask })
 	local now, setNow = React.useState(workspace:GetServerTimeNow())
 	React.useEffect(function(): () -> ()
 		local running = true
@@ -425,7 +457,10 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 		SceneStack.remove(VM.SCENE)
 	end
 	-- Roblox's price and icon for each bundle once fetched (the story keeps the known ones).
-	local bundles = VM.bundles(if preview ~= nil then {} else bundleInfo)
+	local bundles = VM.bundles(
+		if preview ~= nil then {} else bundleInfo,
+		if returnTo ~= nil then VM.bestBundle(returnTo.gleam - balances.gleam) else nil
+	)
 	local function buyBundle(key: string)
 		if preview == nil then
 			MarketplaceServiceClient:promptProduct(key)
@@ -469,6 +504,9 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 			setTab(id)
 			if preview == nil then
 				ShopStore.close()
+				if id ~= "gleam" then
+					ShopStore.setReturn(nil)
+				end
 			end
 		end,
 		-- Back to the tab the page was opened from (named, so it never repeats the SHOP plate beside it).
@@ -508,9 +546,11 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 				setConfirming(true)
 			end,
 			onGetMore = function()
+				local back = VM.returnTo(offer, balances, tab)
 				setTab("gleam")
 				if preview == nil then
 					ShopStore.close()
+					ShopStore.setReturn(back)
 				end
 			end,
 		})
@@ -537,7 +577,9 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 					onActivated = function()
 						setConfirming(false)
 						if preview == nil then
-							ShopServiceClient:requestBuy(offer.id)
+							-- A yes to "Use 30 Gleam" is a yes to at most that much Gleam for the rest.
+							local gleam = if product.button.kind == "topup" then product.button.gleam else nil
+							ShopServiceClient:requestBuy(offer.id, gleam)
 						end
 					end,
 				}),
@@ -634,6 +676,39 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 				ScrollBarThickness = 6,
 			}, grid),
 		})
+	elseif tab == "hires" then
+		local columns = if phone then 3 else 4
+		local cellWidth = math.floor((content.width - (columns - 1) * gap - 32) / columns)
+		local cell = Vector2.new(cellWidth, math.floor(cellWidth * 1.3))
+		local grid: Nodes = {
+			layout = e("UIGridLayout", {
+				CellSize = UDim2.fromOffset(cell.X, cell.Y),
+				CellPadding = UDim2.fromOffset(gap, gap + 6),
+				SortOrder = Enum.SortOrder.LayoutOrder,
+			}),
+			pad = e("UIPadding", {
+				PaddingLeft = UDim.new(0, 12),
+				PaddingRight = UDim.new(0, 8),
+				PaddingTop = UDim.new(0, 16),
+				PaddingBottom = UDim.new(0, 12),
+			}),
+		}
+		for index, card in VM.hires(owns, balances) do
+			grid[card.id] = offerCard(card, cell, phone, index, open)
+		end
+		local headingSize = math.floor(layout.headingSize * 0.75)
+		body = group({
+			heading = heading("HIRE A NEW EMPLOYEE", headingSize, UDim2.fromOffset(0, 0), 700),
+			grid = e("ScrollingFrame", {
+				Position = UDim2.fromOffset(0, headingSize + 14),
+				Size = UDim2.new(1, 0, 1, -headingSize - 14),
+				BackgroundTransparency = 1,
+				BorderSizePixel = 0,
+				CanvasSize = UDim2.fromOffset(0, 0),
+				AutomaticCanvasSize = Enum.AutomaticSize.Y,
+				ScrollBarThickness = 6,
+			}, grid),
+		})
 	elseif tab == "lockers" then
 		local gloom = if preview ~= nil then preview.credits else CurrencyUtils.getCurrencyAmount(currency, "gloom")
 		body = e(LockerPanel, {
@@ -643,6 +718,9 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 			preview = preview ~= nil,
 			onGetGleam = function()
 				setTab("gleam")
+				if preview == nil then
+					ShopStore.setReturn(VM.lockerReturn(balances.gleam))
+				end
 			end,
 		})
 	elseif tab == "passes" then
@@ -657,8 +735,10 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 		})
 	elseif tab == "gleam" then
 		local note = e(ToonText, {
-			text = "Gleam buys skins, emotes and stickers. Everything is cosmetic: it never makes you stronger.",
-			font = "body",
+			text = if returnTo ~= nil
+				then VM.returnNote(returnTo, balances.gleam)
+				else "Gleam buys skins, emotes and stickers. Everything is cosmetic: it never makes you stronger.",
+			font = if returnTo ~= nil then "display" else "body",
 			color = COLOR.white,
 			textSize = size,
 			position = UDim2.fromOffset(0, 0),
@@ -666,8 +746,28 @@ local function ShopScreen(props: ShopScreenProps): React.ReactNode
 			wrapped = true,
 			fit = true,
 		})
+		local backButton: React.ReactNode = nil
+		if returnTo ~= nil then
+			local back = returnTo
+			backButton = e(ToonButton, {
+				variant = "secondary",
+				text = `Back to {back.name}`,
+				textSize = if phone then 14 else 24,
+				small = true,
+				anchor = Vector2.new(1, 0),
+				position = UDim2.fromScale(1, 0),
+				size = UDim2.fromOffset(if phone then 190 else 360, if phone then 32 else 54),
+				onActivated = function()
+					-- Back without buying: the page, but no question.
+					setTab(back.tab)
+					ShopStore.goBack()
+					ShopStore.asked()
+				end,
+			})
+		end
 		body = group({
 			heading = heading("GET GLEAM", layout.headingSize, UDim2.fromOffset(0, 0), 600),
+			back = backButton,
 			note = e("Frame", {
 				Position = UDim2.fromOffset(0, layout.headingSize + 12),
 				Size = UDim2.new(1, 0, 0, size * 2 + 6),

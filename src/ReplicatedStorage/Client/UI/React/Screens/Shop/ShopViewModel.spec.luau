@@ -63,14 +63,40 @@ return function()
 			local short = VM.button(offer, owner(), { gleam = 1200, credits = 0 })
 			expect(short.kind).to.equal("short")
 			expect(short.text).to.equal("Need 300 more")
-			-- Short on Gleam leads to the Gleam tab; short on Credits has nowhere to go yet.
+			-- Short on Gleam leads to the Gleam tab, which needs the whole price.
 			expect(short.enabled).to.equal(true)
-			expect(VM.button(ShopRegistry.get("Prickles"), owner(), broke).enabled).to.equal(false)
+			expect(short.gleam).to.equal(1500)
+		end)
+
+		it("lets Gleam pay the rest of a Credits price", function()
+			local rate = ShopConstants.TOP_UP.credits
+			local prickles = ShopRegistry.get("Prickles")
+			-- 300 Credits short, with Gleam to spare: one tap (and a yes) pays the rest.
+			local topUp = VM.button(prickles, owner(), { gleam = 500, credits = 2200 })
+			expect(topUp.kind).to.equal("topup")
+			expect(topUp.enabled).to.equal(true)
+			expect(topUp.gleam).to.equal(math.ceil(300 / rate))
+			expect(topUp.text).to.equal(`Use {math.ceil(300 / rate)} Gleam`)
+			-- Not enough Gleam for the rest either: the button leads to the Gleam tab for it.
+			local short = VM.button(prickles, owner(), broke)
+			expect(short.kind).to.equal("short")
+			expect(short.enabled).to.equal(true)
+			expect(short.text).to.equal("Need 2,500 more")
+			expect(short.gleam).to.equal(math.ceil(2500 / rate))
+			-- Enough Credits: Gleam is never touched.
+			expect(VM.button(prickles, owner(), { gleam = 500, credits = 2500 }).kind).to.equal("buy")
 		end)
 
 		it("asks before spending, in plain words", function()
 			expect(VM.confirm(ShopRegistry.get("Pippa.BubbleBuddy"))).to.equal("Buy Bubble Buddy for 1,500 Gleam?")
 			expect(VM.confirm(ShopRegistry.get("Prickles"))).to.equal("Hire Prickles for 2,500 Credits?")
+			local gleam = math.ceil(300 / ShopConstants.TOP_UP.credits)
+			expect(VM.confirm(ShopRegistry.get("Prickles"), { gleam = 500, credits = 2200 })).to.equal(
+				`You need 300 more Credits. Use {gleam} Gleam to hire Prickles?`
+			)
+			expect(VM.product(ShopRegistry.get("Prickles"), owner(), { gleam = 500, credits = 2200 }).confirm).to.equal(
+				`You need 300 more Credits. Use {gleam} Gleam to hire Prickles?`
+			)
 		end)
 	end)
 
@@ -142,6 +168,35 @@ return function()
 		it("is false on a vacuum's page (the hero is seen from behind) and an emote's (it loops the emote)", function()
 			expect(VM.reacts(VM.card(ShopRegistry.get("Vacuum.BrassBellows"), owner(), rich))).to.equal(false)
 			expect(VM.reacts(VM.card(ShopRegistry.get("Prickles.Lasso"), owner(), rich))).to.equal(false)
+		end)
+	end)
+
+	describe("hire tab", function()
+		it("comes right after Featured", function()
+			local tabs = VM.tabs(false)
+			expect(tabs[1].id).to.equal("featured")
+			expect(tabs[2].id).to.equal("hires")
+			expect(tabs[2].text).to.equal("Hire")
+			expect(tabs[2].soon).to.equal(false)
+		end)
+
+		it("lists every employee for sale and nothing else, hired ones last", function()
+			local employees = 0
+			for _, offer in ShopRegistry.all() do
+				if CosmeticRegistry.get(offer.items[1]).kind == "employee" then
+					employees += 1
+				end
+			end
+			expect(employees > 0).to.equal(true)
+			local cards = VM.hires(owner(), rich)
+			expect(#cards).to.equal(employees)
+			for _, card in cards do
+				expect(card.kind).to.equal("employee")
+				expect(card.currency).to.equal("credits")
+			end
+			local hired = VM.hires(owner({ cards[1].id }), rich)
+			expect(hired[#hired].id).to.equal(cards[1].id)
+			expect(hired[#hired].state).to.equal("owned")
 		end)
 	end)
 
@@ -246,6 +301,72 @@ return function()
 		end)
 	end)
 
+	describe("back to the item after buying Gleam", function()
+		it("remembers the item and the Gleam it needs, and is ready once the Gleam is there", function()
+			local back = VM.returnTo(ShopRegistry.get("Pippa.BubbleBuddy"), { gleam = 1200, credits = 0 }, "skins")
+			expect(back.offer).to.equal("Pippa.BubbleBuddy")
+			expect(back.tab).to.equal("skins")
+			expect(back.gleam).to.equal(1500)
+			expect(back.name).to.equal("Bubble Buddy")
+			expect(VM.returnReady(back, 1499)).to.equal(false)
+			expect(VM.returnReady(back, 1500)).to.equal(true)
+			-- A hire needs only the Gleam for the rest.
+			local hire = VM.returnTo(ShopRegistry.get("Prickles"), { gleam = 0, credits = 2200 }, "hires")
+			expect(hire.gleam).to.equal(math.ceil(300 / ShopConstants.TOP_UP.credits))
+		end)
+
+		it("goes back to the Lockers once the player has a Gleam key's worth, or after any Gleam buy", function()
+			local LockerConstants = require(ReplicatedStorage.Shared.Features.Locker.Data.LockerConstants)
+			local key = LockerConstants.LOCKERS.gleam.keyPrice
+			local back = VM.lockerReturn(key - 30)
+			expect(back.offer).to.equal(nil)
+			expect(back.tab).to.equal("lockers")
+			expect(back.gleam).to.equal(key)
+			expect(VM.returnNote(back, key - 30)).to.equal("Get 30 more Gleam for a Gleam key!")
+			expect(VM.lockerReturn(key + 5).gleam).to.equal(key + 6)
+		end)
+
+		it("says how much more Gleam, for what", function()
+			local back = VM.returnTo(ShopRegistry.get("Pippa.BubbleBuddy"), { gleam = 1200, credits = 0 }, "skins")
+			expect(VM.returnNote(back, 1200)).to.equal("Get 300 more Gleam for Bubble Buddy!")
+			expect(VM.returnNote(back, 1500)).to.equal("You have enough for Bubble Buddy!")
+		end)
+
+		it("points at the smallest bundle that covers what is missing, else the biggest", function()
+			local smallest, biggest = nil, nil
+			for _, bundle in ShopConstants.BUNDLES do
+				if ShopConstants.PRODUCT_IDS[bundle.key] ~= nil then
+					if smallest == nil or bundle.gleam < smallest.gleam then
+						smallest = bundle
+					end
+					if biggest == nil or bundle.gleam > biggest.gleam then
+						biggest = bundle
+					end
+				end
+			end
+			expect(VM.bestBundle(1)).to.equal(smallest.key)
+			expect(VM.bestBundle(biggest.gleam + 1)).to.equal(biggest.key)
+			for _, bundle in ShopConstants.BUNDLES do
+				local best = VM.bestBundle(bundle.gleam)
+				local picked
+				for _, other in ShopConstants.BUNDLES do
+					if other.key == best then
+						picked = other
+					end
+				end
+				expect(picked.gleam >= bundle.gleam).to.equal(true)
+			end
+			local marked = 0
+			for _, card in VM.bundles({}, smallest.key) do
+				if card.best then
+					marked += 1
+					expect(card.key).to.equal(smallest.key)
+				end
+			end
+			expect(marked).to.equal(1)
+		end)
+	end)
+
 	it("counts time down in plain units", function()
 		expect(VM.timer(2 * 86400 + 14 * 3600 + 5)).to.equal("2d 14h")
 		expect(VM.timer(6 * 3600 + 12 * 60)).to.equal("6h 12m")
@@ -258,6 +379,7 @@ return function()
 		expect(VM.resultText("short")).to.equal("Not enough yet!")
 		expect(VM.resultText("owned")).to.equal("You already have it!")
 		expect(VM.resultText("locked during a shift")).to.equal("The Shop opens at the depot.")
+		expect(VM.resultText("top up changed")).to.equal("The Gleam price changed. Look again!")
 		expect(VM.resultText("anything else")).to.equal("That didn't work. Try again!")
 	end)
 end

@@ -2,7 +2,8 @@
 --[=[
 	ShopViewModel: everything the Shop screens show, from the offers (ShopRegistry / today's ShopRotationUtils.live),
 	the catalogue and what the player owns and has: offer cards (name, "Skin · Pippa", price, owned / affordable /
-	too dear), the buy button (Buy / Owned / "Need 300 more"), the Yes/No question before spending, the product page
+	too dear), the buy button (Buy / Owned / "Need 300 more" / "Use 30 Gleam" when Gleam pays the rest of a Credits
+	price), the Yes/No question before spending, where to come back to after buying Gleam (returnTo, bestBundle), the product page
 	(lore, styles, what's inside with each extra's own price, an employee's ability and five display stats), the Skins tab list, the Gleam bundles, the Passes cards
 	(every registered game pass: its words from ShopConstants.PASS_COPY, its price and icon as Roblox reported them,
 	Owned once bought), the countdowns, and a refused buy in kid words. Nothing here is per item: a new offer shows up by itself.
@@ -16,9 +17,11 @@ local CosmeticRegistry = require(ReplicatedStorage.Shared.Features.Cosmetic.Data
 local CosmeticTypes = require(ReplicatedStorage.Shared.Features.Cosmetic.Data.CosmeticTypes)
 local EmployeeProfileRegistry = require(ReplicatedStorage.Shared.Features.Employee.Data.EmployeeProfileRegistry)
 local EmployeeSkinRules = require(ReplicatedStorage.Shared.Features.Employee.Rules.EmployeeSkinRules)
+local LockerConstants = require(ReplicatedStorage.Shared.Features.Locker.Data.LockerConstants)
 local ShopConstants = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopConstants)
 local ShopRegistry = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopRegistry)
 local ShopRules = require(ReplicatedStorage.Shared.Features.Shop.Rules.ShopRules)
+local ShopTopUpRules = require(ReplicatedStorage.Shared.Features.Shop.Rules.ShopTopUpRules)
 local ShopTypes = require(ReplicatedStorage.Shared.Features.Shop.Data.ShopTypes)
 local ShopStore = require(ReplicatedStorage.Client.Features.Shop.State.ShopStore)
 local UIAssets = require(ReplicatedStorage.Client.Features.UI.Data.UIAssets)
@@ -68,9 +71,12 @@ export type OfferCard = {
 export type Button = {
 	text: string,
 	enabled: boolean,
-	kind: "buy" | "owned" | "short",
+	-- "topup": short on Credits, and Gleam pays the rest (`gleam` of it) after a yes.
+	kind: "buy" | "owned" | "short" | "topup",
 	currency: ShopTypes.Currency,
 	price: string,
+	-- "topup": the Gleam for the rest. "short": the Gleam balance it needs (the price, or the rest of a Credits price).
+	gleam: number?,
 }
 
 export type Inside = { id: string, name: string, kind: string, alone: string? }
@@ -101,6 +107,8 @@ export type Bundle = {
 	-- The product's icon (rbxassetid).
 	image: string,
 	available: boolean,
+	-- The one that best covers what the player came for (the smallest that is enough; VM.bestBundle).
+	best: boolean,
 }
 
 local KIND_WORD: { [CosmeticTypes.Kind]: string } = {
@@ -130,6 +138,7 @@ VM.SCENE = "shop"
 function VM.tabs(hasPasses: boolean): { { id: string, text: string, icon: UIAssets.ToonIcon?, soon: boolean } }
 	return {
 		{ id = "featured", text = "Featured", icon = "shopGift", soon = false },
+		{ id = "hires", text = "Hire", icon = "jobs", soon = false },
 		{ id = "skins", text = "Skins", icon = "pippaHappy", soon = false },
 		{ id = "gleam", text = "Gleam", icon = "gleam", soon = false },
 		{ id = "lockers", text = "Lockers", icon = "locker", soon = false },
@@ -186,6 +195,23 @@ function VM.reacts(card: OfferCard): boolean
 	return card.vacuum == nil and card.emote == nil
 end
 
+-- How a short player pays the rest in Gleam (ShopTopUpRules); nil for a Gleam price or when not short.
+local function topUpOf(offer: Offer, balances: Balances): ShopTopUpRules.Plan?
+	if offer.currency == "gleam" then
+		return nil
+	end
+	return ShopTopUpRules.plan(offer.currency, offer.price, balanceOf(offer, balances))
+end
+
+-- The Gleam balance the player needs for this offer: its price in Gleam, or the Gleam for the rest of a Credits price.
+local function gleamNeeded(offer: Offer, balances: Balances): number
+	if offer.currency == "gleam" then
+		return offer.price
+	end
+	local plan = topUpOf(offer, balances)
+	return if plan ~= nil then plan.gleam else 0
+end
+
 function VM.button(offer: Offer, owns: Owns, balances: Balances): Button
 	local price = ToonStyleViewModel.grouped(offer.price)
 	if ShopRules.owned(offer, owns) then
@@ -193,24 +219,103 @@ function VM.button(offer: Offer, owns: Owns, balances: Balances): Button
 	end
 	local missing = ShopRules.missing(offer, balanceOf(offer, balances))
 	if missing > 0 then
+		local plan = topUpOf(offer, balances)
+		if plan ~= nil and balances.gleam >= plan.gleam then
+			return {
+				text = `Use {ToonStyleViewModel.grouped(plan.gleam)} Gleam`,
+				enabled = true,
+				kind = "topup",
+				currency = offer.currency,
+				price = price,
+				gleam = plan.gleam,
+			}
+		end
 		return {
 			text = `Need {ToonStyleViewModel.grouped(missing)} more`,
-			-- Short on Gleam: the button leads to the Gleam tab. Credits are earned on shifts.
-			enabled = offer.currency == "gleam",
+			-- Leads to the Gleam tab, and back here once there is enough.
+			enabled = offer.currency == "gleam" or plan ~= nil,
 			kind = "short",
 			currency = offer.currency,
 			price = price,
+			gleam = gleamNeeded(offer, balances),
 		}
 	end
 	return { text = price, enabled = true, kind = "buy", currency = offer.currency, price = price }
 end
 
-function VM.confirm(offer: Offer): string
+-- The Yes/No question before spending; with `balances`, a short Credits price asks about the Gleam for the rest.
+function VM.confirm(offer: Offer, balances: Balances?): string
 	local item = main(offer)
 	local name = if item ~= nil then item.name else offer.id
-	local verb = if item ~= nil and item.kind == "employee" then "Hire" else "Buy"
+	local hire = item ~= nil and item.kind == "employee"
+	local plan = if balances ~= nil then topUpOf(offer, balances) else nil
+	if plan ~= nil and balances ~= nil then
+		local missing = ToonStyleViewModel.grouped(offer.price - math.max(0, balanceOf(offer, balances)))
+		local gleam = ToonStyleViewModel.grouped(plan.gleam)
+		return `You need {missing} more Credits. Use {gleam} Gleam to {if hire then "hire" else "buy"} {name}?`
+	end
+	local verb = if hire then "Hire" else "Buy"
 	local currency = if offer.currency == "gleam" then "Gleam" else "Credits"
 	return `{verb} {name} for {ToonStyleViewModel.grouped(offer.price)} {currency}?`
+end
+
+--[=[
+	Where the Shop goes back to once the player has bought the Gleam they went for: this offer's page (opened from
+	`tab`), when their Gleam reaches what it needs (the price, or the rest of a Credits price). Copied from the shops
+	that do this well: say exactly how much more, point at the smallest bundle that covers it, and land back on the
+	item with the Yes/No question already up, so finishing takes one tap.
+]=]
+function VM.returnTo(offer: Offer, balances: Balances, tab: string): ShopStore.Return
+	local item = main(offer)
+	return {
+		offer = offer.id,
+		tab = tab,
+		gleam = gleamNeeded(offer, balances),
+		name = if item ~= nil then item.name else offer.id,
+	}
+end
+
+function VM.returnReady(back: ShopStore.Return, gleam: number): boolean
+	return gleam >= back.gleam
+end
+
+-- The way back from the Lockers tab: once the player has a Gleam key's worth, or (already enough, e.g. for an item a
+-- restricted player buys directly) after any Gleam buy.
+function VM.lockerReturn(gleam: number): ShopStore.Return
+	local key = LockerConstants.LOCKERS.gleam.keyPrice
+	return {
+		offer = nil,
+		tab = "lockers",
+		gleam = if gleam < key then key else gleam + 1,
+		name = "a Gleam key",
+	}
+end
+
+-- The Gleam tab's line while the player is getting Gleam for something.
+function VM.returnNote(back: ShopStore.Return, gleam: number): string
+	local missing = back.gleam - gleam
+	if missing <= 0 then
+		return `You have enough for {back.name}!`
+	end
+	return `Get {ToonStyleViewModel.grouped(missing)} more Gleam for {back.name}!`
+end
+
+-- The bundle to point at for `missing` Gleam: the smallest one on sale that covers it, else the biggest on sale.
+function VM.bestBundle(missing: number): string?
+	local best: ShopTypes.GleamBundle? = nil
+	local biggest: ShopTypes.GleamBundle? = nil
+	for _, bundle in ShopConstants.BUNDLES do
+		if ShopConstants.PRODUCT_IDS[bundle.key] ~= nil then
+			if bundle.gleam >= missing and (best == nil or bundle.gleam < best.gleam) then
+				best = bundle
+			end
+			if biggest == nil or bundle.gleam > biggest.gleam then
+				biggest = bundle
+			end
+		end
+	end
+	local picked = best or biggest
+	return if picked ~= nil then picked.key else nil
 end
 
 function VM.product(offer: Offer, owns: Owns, balances: Balances): Product
@@ -273,11 +378,35 @@ function VM.product(offer: Offer, owns: Owns, balances: Balances): Product
 			}
 			else nil,
 		button = VM.button(offer, owns, balances),
-		confirm = VM.confirm(offer),
+		confirm = VM.confirm(offer, balances),
 	}
 end
 
--- Every offer except employees (they are hired on the pick screen and the Crew tab), filtered to one employee's
+-- The Hire tab: every employee for sale (a new hire shows up by itself), cheapest first, the ones already hired last.
+function VM.hires(owns: Owns, balances: Balances): { OfferCard }
+	local cards: { OfferCard } = {}
+	local prices: { [string]: number } = {}
+	for _, offer in ShopRegistry.all() do
+		local item = main(offer)
+		if item ~= nil and item.kind == "employee" then
+			table.insert(cards, VM.card(offer, owns, balances))
+			prices[offer.id] = offer.price
+		end
+	end
+	table.sort(cards, function(a: OfferCard, b: OfferCard): boolean
+		local ownedA, ownedB = a.state == "owned", b.state == "owned"
+		if ownedA ~= ownedB then
+			return ownedB
+		end
+		if prices[a.id] ~= prices[b.id] then
+			return prices[a.id] < prices[b.id]
+		end
+		return a.id < b.id
+	end)
+	return cards
+end
+
+-- Every offer except employees (they are on the Hire tab, the pick screen and the Crew tab), filtered to one employee's
 -- items and the shared ones; what you can buy first (by rarity, highest first), what you own last.
 function VM.skins(owns: Owns, balances: Balances, employee: string?): { OfferCard }
 	local cards: { OfferCard } = {}
@@ -305,8 +434,8 @@ function VM.skins(owns: Owns, balances: Balances, employee: string?): { OfferCar
 end
 
 -- The Gleam bundles; each one's price and icon as Roblox reported them in `infos` (by bundle key), the known ones
--- (ShopConstants.BUNDLES) until it does.
-function VM.bundles(infos: { [string]: ShopStore.ProductInfo }): { Bundle }
+-- (ShopConstants.BUNDLES) until it does; `best` (a bundle key) is marked as the one to buy.
+function VM.bundles(infos: { [string]: ShopStore.ProductInfo }, best: string?): { Bundle }
 	local list: { Bundle } = {}
 	for _, bundle in ShopConstants.BUNDLES do
 		local info = infos[bundle.key]
@@ -318,6 +447,7 @@ function VM.bundles(infos: { [string]: ShopStore.ProductInfo }): { Bundle }
 			bonus = if bundle.bonus > 0 then `+{bundle.bonus}%` else nil,
 			image = if info ~= nil and info.icon ~= nil then info.icon else bundle.image,
 			available = ShopConstants.PRODUCT_IDS[bundle.key] ~= nil,
+			best = bundle.key == best,
 		})
 	end
 	return list
@@ -381,6 +511,8 @@ function VM.resultText(reason: string): string?
 		return "You already have it!"
 	elseif reason == "locked during a shift" then
 		return "The Shop opens at the depot."
+	elseif reason == "top up changed" then
+		return "The Gleam price changed. Look again!"
 	end
 	return "That didn't work. Try again!"
 end

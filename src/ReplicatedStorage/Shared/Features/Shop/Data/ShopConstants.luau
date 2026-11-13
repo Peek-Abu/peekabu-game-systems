@@ -30,6 +30,14 @@ local PRODUCT_IDS: { [string]: number } = {
 	gleam1500 = 3722076697,
 }
 
+-- Gleam pays the rest when a player is short (ShopTopUpRules): how much of each currency one Gleam covers. Only the
+-- currencies listed can be topped up. Owner, 11-13: 1 Gleam = 10 Credits (a good shift is about 1,000 Credits, so one
+-- shift of play is about 100 Gleam), and "no gleam top up on the gloom locker!" (it would make that open a paid random
+-- item), so Gloom is never listed.
+local TOP_UP: { [string]: number } = {
+	credits = 10,
+}
+
 -- The Passes tab's card words (kid reading level), by MarketplaceRegistry pass key.
 local PASS_COPY: { [string]: { name: string, line: string } } = {
 	bigCrew = { name = "Big Crew", line = "Your truck holds 6 friends! Only you need it." },
@@ -44,7 +52,10 @@ return table.freeze({
 	NEW_SECONDS = 3 * 86400,
 	LAST_DAY_SECONDS = 86400,
 	MAX_ID_LENGTH = 64,
+	-- The most Gleam one buy request may agree to top up with (a hire from zero Credits is 250).
+	MAX_TOP_UP = 100000,
 	BUNDLES = table.freeze(BUNDLES),
 	PRODUCT_IDS = table.freeze(PRODUCT_IDS),
 	PASS_COPY = table.freeze(PASS_COPY),
+	TOP_UP = table.freeze(TOP_UP),
 })
