@@ -86,3 +86,15 @@ Today: `DepotTimecardPanel.luau` (620x390, Timecard + Today's Job faces). Concep
 ## Round 2 on the review page
 Matte, hand-painted icons (no plastic gloss) for: style (matte spotlight/calendar), backpack, sticker sheet, shop,
 price tag, Let's Go; plus "which Pippa: coral / lavender / both".
+
+## Round 2 (glossy family chosen, softer shine)
+- Built e606be97: Shop = toy shop stall (Shop bar, hub SHOP tile, depot SHOP topper); sticker packs, stickers, the chat
+  wheel's Stickers button and the Inventory chat-wheel tab = sticker sheet (also the callout fallback). `shopGift` and
+  `gift` are gone from `UIAssets.toonIcons`. Icey Labs decals 106048651825814 / 104162197575790.
+- Built 7915b4a5: Featured spotlight, daily calendar, soap-bubble "earned it" mark.
+- Fixed 5cf36245: the spotlight and calendar were re-cut (v2 images); the owner's "weird white / black outline" was the
+  floor shadow GPT sheets keep, outlined by iconize. `deshadow.py` (now also in the game-ui-design skill scripts, with
+  a note in icons-and-photos.md) removes it before the outline.
+- Round 3 on the review page: backpack with fewer colours, Let's Go with simpler fur, the price tag with the edge fixed.
+- Still open: which Pippa (coral / lavender / both) and the Pippa re-render (needs Studio); the in-game capture of the
+  clipboard and colours (waiting for "Lobby go").
