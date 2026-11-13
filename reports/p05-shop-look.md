@@ -70,3 +70,8 @@ No sparkle, diamond or 4-point-star motifs. Mock-up sources are in this session'
 - **Fixed after the check** (commit `ccd3cce6`): the default tier's word now says CLASSIC like its flag (it said COMMON), and a tier's backdrop is opaque (the depot showed through the pale colours; the emote stage was already opaque and looked cleaner).
 - Captures are on the review page (top section, "B in the game").
 - The Launch List row stays open for later polish (sounds, VFX, per-tier poses).
+
+## Recheck in the Lobby (2026-11-14, second Play)
+- CLASSIC word, solid tier backdrop and the vacuum try-on from behind are all confirmed in real Play. The try-on was checked in the Shop (Brass Bellows) and in Inventory (Pippa > Skins > Brass Bellows, reached by real clicks).
+- New from this check: once the backdrop was solid, Legendary's white rays vanished on the pale yellow. I tuned them live and committed the values: top `FFD23F`, white rays at 0.1, gold counter rays at 0.55. The page captures show the tuned look; these values were set by hand in that Play and have not had a fresh boot check.
+- Fresh captures are on the review page (top section).
