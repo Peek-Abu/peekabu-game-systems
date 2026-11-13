@@ -277,7 +277,11 @@ function EmployeePreviewSystem.outfit(
 		and character:GetAttribute(EmployeeConstants.SKIN_ATTRIBUTE) == skinKey
 		and (character:GetAttribute(EmployeeConstants.STYLE_ATTRIBUTE) or 1) == style
 	then
-		model = cloneCharacter(character)
+		local copy = cloneCharacter(character)
+		model = copy
+		-- The copy keeps your world facing; a preview's camera (PortraitViewModel.camera, its `turn`) expects the rig
+		-- upright facing -Z like the art, or a try-on meant to show your back opens on your front.
+		copy:PivotTo(CFrame.new(copy:GetPivot().Position))
 	end
 	if model == nil then
 		model = dressed(outfit.employee, skinKey, source, style)
