@@ -115,3 +115,17 @@ price tag, Let's Go; plus "which Pippa: coral / lavender / both".
 - Uploads (Icey Labs, Approved, Image ids verified group 189923277): backpack 81160659671419, Let's Go 124538881139374,
   price tag 140520500336666, Pippa wave coral 126227546924097, wave lavender 97692146860492, cheer coral
   89228375154099. The old `pippaSaluteCut` is replaced by `pippaCheerCut`.
+
+## In-game check (Lobby Play, 2026-11-13)
+- Method: a temp LocalScript (`p05-ui-kit/p05-capture-mount.luau`, injected under PlayerScripts) mounted the real
+  screens in preview mode (no save, no player data written), using `ReactRoblox.createLegacyRoot` (a `createRoot`
+  remount after a script teardown never rendered) and the game's own `PaperHudFrame` scale. Audio muted, temp script
+  and gui deleted, Play stopped, no P05 attributes left, RunTests false.
+- Seen working: pick screen (price tags, Let's Go), hub (backpack INVENTORY, calendar gift, stall SHOP), Shop (mint,
+  spotlight Featured, lavender Skins tab, sticker sheet on packs), Inventory (sky, coral Crew tab, sticker Chat Wheel
+  tab, price tags on unhired crew), Guide (gold), Settings (night), clipboard desktop + phone.
+- Fixed after the check (3791a4e4): TODAY'S JOB tab, "1 GLOOM KEY", "NEW JOB IN 5H 12M" were cut off; PAID stamp moved.
+- Captures: `p05-ui-kit/play/*.jpg` and the review page's top section. Launch List rows set to "decide" with
+  "Ready to check" (not done).
+- Not checked in real play with a real profile: the clipboard opened from the hub button (needs a trained profile),
+  the reward bubbles in a live shift, the award card cheer on a real Shift Review.
