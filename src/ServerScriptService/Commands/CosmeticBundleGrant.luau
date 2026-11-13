@@ -1,7 +1,7 @@
 --!strict
 return {
-	Name = "bundlegrant",
-	Aliases = {},
+	Name = "cosmeticbundlegrant",
+	Aliases = { "bundlegrant" },
 	Description = "Unlocks every item in a cosmetic bundle for a player (the items they own stay owned).",
 	Group = "Admins",
 	Args = {
