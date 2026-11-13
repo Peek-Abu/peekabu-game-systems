@@ -273,7 +273,7 @@ local function topRight(props: DepotHubPanelProps): React.ReactNode
 		gift = e(ToonButton, {
 			variant = "grape",
 			layout = "tile",
-			icon = "gift",
+			icon = "daily",
 			text = gift.text,
 			textSize = if phone then 13 else 24,
 			badge = if gift.ready then "!" else nil,

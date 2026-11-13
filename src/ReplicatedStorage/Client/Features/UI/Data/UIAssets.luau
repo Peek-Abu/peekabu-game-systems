@@ -38,7 +38,8 @@ export type ToonIcon =
 	| "flashlight"
 	| "friendsLock"
 	| "friendsLockOpen"
-	| "gift"
+	| "daily"
+	| "featured"
 	| "credits"
 	| "gleam"
 	| "gleamBucket"
@@ -122,7 +123,10 @@ local TOON_ICONS: { [ToonIcon]: string } = {
 	dust = "rbxassetid://87348303383802",
 	fishtank = "rbxassetid://72370733106499",
 	flashlight = "rbxassetid://115788026706324",
-	gift = "rbxassetid://84976135728496",
+	-- Owner picks 2026-11-13 (one picture per job, no more shared gift): the daily reward's calendar with a gold tick and
+	-- the Shop's Featured spotlight (GPT renders, ink outline; Icey Labs decals 123972910876460 / 86065362565121).
+	daily = "rbxassetid://133319516052590",
+	featured = "rbxassetid://114915594745213",
 	credits = "rbxassetid://120886772987647", -- the Credits ticket (2026-10-21, decal 72265330733611)
 	gleam = "rbxassetid://138856527532184", -- the premium Gleam crystal (2026-10-21, decal 98003345456608)
 	globe = "rbxassetid://105862507048588",
@@ -231,7 +235,9 @@ UIAssets.toon = table.freeze({
 	glow = "rbxassetid://78717613960831",
 	rays = "rbxassetid://103836764476829",
 	patternBubbles = "rbxassetid://90150192373857",
-	sparkle = "rbxassetid://79532536364589",
+	-- The "you earned it" mark (ToonSparkle): three soap bubbles, owner pick 2026-11-13 over the 4-point star (Icey Labs
+	-- decal 111550379423940).
+	sparkle = "rbxassetid://74624776191966",
 	-- Character step 4 (2026-10-24): white shapes tinted per use. `stripes` a 128 px 45-degree stripe tile;
 	-- `ribbon` a 256x80 flag with a notched right end (9-slice centre 24..200 x 16..64; the notch is the right 56 px);
 	-- `burst` a 256 px spiky deal badge with an ink outline; `stamp` a 256 px double ring (the word is text on top).

@@ -115,7 +115,7 @@ local function DepotDailySign(props: DepotDailySignProps): React.ReactNode
 			panel = e(ToonPanel, {
 				size = PANEL,
 				hue = "gold",
-				header = { title = view.title, icon = "gift", height = HEADER, titleSize = 34 },
+				header = { title = view.title, icon = "daily", height = HEADER, titleSize = 34 },
 				children = face,
 			}),
 		}),

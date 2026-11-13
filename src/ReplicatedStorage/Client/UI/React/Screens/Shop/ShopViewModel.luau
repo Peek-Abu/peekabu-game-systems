@@ -148,7 +148,7 @@ VM.SCENE = "shop"
 -- The Shop's tabs; Passes shows greyed ("Soon") until a game pass is registered (`hasPasses`).
 function VM.tabs(hasPasses: boolean): { { id: string, text: string, icon: UIAssets.ToonIcon?, soon: boolean } }
 	return {
-		{ id = "featured", text = "Featured", icon = "shopGift", soon = false },
+		{ id = "featured", text = "Featured", icon = "featured", soon = false },
 		{ id = "hires", text = "Hire", icon = "jobs", soon = false },
 		{ id = "skins", text = "Skins", icon = "pippaHappy", soon = false },
 		{ id = "gleam", text = "Gleam", icon = "gleam", soon = false },

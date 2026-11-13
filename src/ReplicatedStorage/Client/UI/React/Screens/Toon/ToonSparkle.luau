@@ -1,6 +1,6 @@
 --!strict
 --[=[
-	ToonSparkle: Gleam's gold 4-point sparkles, the kit's "you earned something" mark (rewards, CTAs, gold numbers):
+	ToonSparkle: Gleam's soap bubbles (owner pick 2026-11-13, replacing the 4-point stars), the kit's "you earned something" mark (rewards, CTAs, gold numbers):
 	one sparkle image per spot, each pulsing and turning a little on a stagger (ToonMotionViewModel.twinkle), driven by
 	one looping TweenService value. `spots` places them (position and size in the parent). Presentational (exempt;
 	story in ToonSparkle.story; the twinkle is specced).
