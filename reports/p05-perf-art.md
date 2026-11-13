@@ -115,6 +115,24 @@ Measured in the Lobby (Studio Play, client frame times from RenderStepped; swaps
   opening when `ReplicatedStorage.Assets.CleanupCrew.LockerStage` exists, so if both are in the place the Workspace
   copy is dead weight until then. Check in Studio before removing (place art: the owner's call).
 
+### Decimation proposal (owner's yes/no)
+
+| Candidate | Today | Proposed | Look risk |
+|---|---|---|---|
+| Employee heads (Pippa, Cappy, Prickles) | 17.6k-19.9k each | about half, with `optimize_mesh.py` (max surface error 0.005 studs) | low: the October test moved Pippa's head by 0.0005 studs at most |
+| FacePlates | 10.1k each | about 5k | low: face UVs re-sampled, error 0.0004 |
+| Cappy's hair and skinned shorts | 14.0k, 14.7k | about half | medium: skinned mesh, re-check how it bends |
+| Skin outfits (Sheriff 71k, Showstopper 43k, ...) | 21k-71k each | later, after the bodies | medium-high: fitted to the body, each needs a play re-check |
+| `LockerStage_Ref` in the Lobby | 222k | remove from Workspace if `Assets.CleanupCrew.LockerStage` exists | none in play (the client already destroys it on first use); place art, owner's call |
+| Hub props (leaf piles 13.8k x 8, bookshelf 13k x 6, vending 15.8k) | 765k in the hub | leave | engine LOD already thins them at distance |
+
+- **D1.** Decimate the three employees' bodies (heads, FacePlates, then hair/shorts), shown to you side by side
+  before any upload? (yes / no)
+- **D2.** Remove `LockerStage_Ref` from the Lobby's Workspace if the ReplicatedStorage copy is there? (yes / no)
+
+The work is a separate task (proposed: "Cut character triangles with optimize_mesh"): finish the tool's OM1-OM5
+gates on the shipped builds, render the comparison, and upload to Icey Labs only after your yes.
+
 ## 4. Truck redo (`p1-truck-lore`): concepts, waiting on the owner
 
 - Three looks, all at today's footprint (16 x 24 bed, 10 high, open back and ramp), no company name on any:
@@ -134,5 +152,6 @@ Measured in the Lobby (Studio Play, client frame times from RenderStepped; swaps
 - Studio's master volume was set to 0 for the Plays and left there.
 - Neither place had Rojo connected during this session (Shift showed the connect prompt; the Lobby lacked 3af5823d
   after the served worktree pulled it).
-- Gate failures that were already there: selene's shadowing warning in `UIPreloadRules.luau:161` stops
-  `scripts/check.sh`; many files are over the 400-line limit (VacuumVisualSystem 427, EmployeeServiceServer now 419).
+- Gate: selene's shadowing warning in `UIPreloadRules.luau:161`, which stopped `scripts/check.sh`, is fixed in
+  `c9658522`. Many files are still over the 400-line limit (on the "split the long files" row; EmployeeServiceServer
+  is now 419).
