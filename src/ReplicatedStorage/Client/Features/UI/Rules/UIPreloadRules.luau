@@ -158,8 +158,8 @@ function UIPreloadRules.lookArt(
 	if art == nil then
 		return items
 	end
-	local characters = art:FindFirstChild("Characters")
-	local template = if characters ~= nil then characters:FindFirstChild(employee) else nil
+	local roster = art:FindFirstChild("Characters")
+	local template = if roster ~= nil then roster:FindFirstChild(employee) else nil
 	if template ~= nil then
 		table.insert(items, template)
 	end
