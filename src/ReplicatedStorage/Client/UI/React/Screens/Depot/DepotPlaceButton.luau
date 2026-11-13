@@ -38,14 +38,15 @@ local LOOK: { [ShiftTypes.MapId]: Look } = {
 	school = { icon = "globe", variant = "gleam" },
 }
 
--- The tile's width and height, and the pill's height, per layout (phone tiles match the hub's 66 px tiles).
-local DESKTOP = { width = 200, side = 124, pill = 34, text = 26, line = 18 }
-local PHONE = { width = 110, side = 66, pill = 24, text = 14, line = 12 }
+-- The tile's width and height, and the pill's width and height, per layout (phone tiles match the hub's 66 px
+-- tiles). The pill is wider than the tile so its line never clips (play check 11-13: "TAP TO PICK A").
+local DESKTOP = { width = 200, side = 124, pillWidth = 300, pill = 34, text = 26, line = 18 }
+local PHONE = { width = 110, side = 66, pillWidth = 190, pill = 24, text = 14, line = 12 }
 
 -- The block's size (the tile under the pill), for the parent to stack it.
 local function size(phone: boolean): Vector2
 	local g = if phone then PHONE else DESKTOP
-	return Vector2.new(g.width, g.pill + 8 + g.side)
+	return Vector2.new(math.max(g.width, g.pillWidth), g.pill + 8 + g.side)
 end
 
 local function DepotPlaceButton(props: DepotPlaceButtonProps): React.ReactNode
@@ -63,9 +64,9 @@ local function DepotPlaceButton(props: DepotPlaceButtonProps): React.ReactNode
 			text = view.line,
 			hue = "cream",
 			textSize = g.line,
-			anchor = Vector2.new(0.5, 0),
-			position = UDim2.fromScale(0.5, 0),
-			size = UDim2.fromOffset(box.X, g.pill),
+			anchor = Vector2.new(1, 0),
+			position = UDim2.fromScale(1, 0),
+			size = UDim2.fromOffset(g.pillWidth, g.pill),
 		}),
 		tile = e(ToonButton, {
 			variant = look.variant,
@@ -75,7 +76,7 @@ local function DepotPlaceButton(props: DepotPlaceButtonProps): React.ReactNode
 			textSize = g.text,
 			small = props.phone,
 			radius = if props.phone then 16 else 22,
-			position = UDim2.fromOffset(0, g.pill + 8),
+			position = UDim2.fromOffset(box.X - g.width, g.pill + 8),
 			size = UDim2.fromOffset(g.width, g.side),
 			selected = true,
 			onActivated = props.onOpen,

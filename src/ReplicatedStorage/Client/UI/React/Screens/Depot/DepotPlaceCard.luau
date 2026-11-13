@@ -163,18 +163,19 @@ local function DepotPlaceCard(
 			scale = if phone then 0.4 else 0.8,
 			zIndex = 3,
 		})
-		local lockSide = if phone then 30 else (if buy ~= nil then 84 else 110)
-		photo.lock = e(ToonIcon, {
-			icon = "lock",
-			anchor = Vector2.new(0.5, 0.5),
-			position = UDim2.fromScale(
-				0.5,
-				if buy ~= nil then (if phone then 0.36 else 0.32) else (if phone then 0.28 else 0.36)
-			),
-			size = UDim2.fromOffset(lockSide, lockSide),
-			drop = if phone then 3 else 6,
-			zIndex = 5,
-		})
+		-- With a BUY the padlock shrinks and rises so the button and its note clear the place's name (play check 11-13).
+		-- A phone card with a BUY has no room for the padlock too: the button says it is locked.
+		local lockSide = if buy ~= nil then 50 else (if phone then 30 else 110)
+		photo.lock = if buy ~= nil and phone
+			then nil
+			else e(ToonIcon, {
+				icon = "lock",
+				anchor = Vector2.new(0.5, 0.5),
+				position = UDim2.fromScale(0.5, if buy ~= nil then 0.27 else (if phone then 0.28 else 0.36)),
+				size = UDim2.fromOffset(lockSide, lockSide),
+				drop = if phone then 3 else 6,
+				zIndex = 5,
+			})
 	end
 	local face: Nodes = {
 		photo = e("ImageLabel", {
@@ -234,11 +235,11 @@ local function DepotPlaceCard(
 						and buy.gleam == 0
 					then `{buy.text} · {buy.price}`
 					else buy.text,
-				textSize = if phone then 12 else 26,
+				textSize = if phone then 12 else 22,
 				small = phone,
 				anchor = Vector2.new(0.5, 0.5),
-				position = UDim2.fromScale(0.5, if phone then 0.6 else 0.6),
-				size = UDim2.fromOffset(if phone then 118 else 236, if phone then 26 else 58),
+				position = UDim2.fromScale(0.5, if phone then 0.42 else 0.44),
+				size = UDim2.new(1, if phone then -10 else -24, 0, if phone then 24 else 48),
 				disabled = not buy.enabled,
 				selected = buy.confirming,
 				sound = if buy.confirming then "cta" else nil,
@@ -257,7 +258,7 @@ local function DepotPlaceCard(
 					color = COLOR.white,
 					textSize = 17,
 					anchor = Vector2.new(0.5, 0),
-					position = UDim2.new(0.5, 0, 0.6, 34),
+					position = UDim2.new(0.5, 0, 0.44, 28),
 					size = UDim2.new(1, -24, 0, 22),
 					align = "center",
 					fit = true,
