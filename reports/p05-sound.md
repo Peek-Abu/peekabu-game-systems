@@ -30,12 +30,30 @@ Launch List row `p1-sound-pass`. Status: **round 1 is waiting on the owner's pic
 
    Music masters are -20 (hub), -21 (yard) and -22 (calm) LUFS, bar-exact 48 kHz OGG loops, with stems kept.
 
+4. **Listening page, round 2 (foley):** https://claude.ai/artifact/2UCQgxuE3Hf4EfJv1mFzyp. It has 14 cards and 29
+   options, and picks save as `p05r2-01` to `p05r2-14`.
+   - **Cards:** shop buy, locker open by rarity (a 4-tier ladder, 2 door families), hire, rank up, quota tick, hide in,
+     hide out, pushed out of a hiding spot, glass break, truck door, truck engine start, truck drive-by, scanner beep
+     and Bramble steps.
+   - **How they were made:** local Stable Audio 3 Medium foley stems (16 prompts x 3 takes, picked by measured
+     onsets and attack), plus CC0 instrument layers in F major.
+   - **Plain options:** the world foley (hide, tumble, glass, truck, drive-by, Bramble) has a version with the event
+     alone. It passes every gate except layer count, which the owner's 11-04 verdict waives for world events. The
+     page shows gate tags only on the layered cues.
+   - **Truck engine:** round-1 truck D (approved 10-16, never wired) is option C.
+5. **Owner picks so far (round 1):**
+   - hub track 3 "Lunch Line" = **A**;
+   - yard music = **A**, with the note "This should be for hub too!", so it also goes on the hub radio;
+   - hub shift bell = **A**;
+   - teammate ping = **none**: needs a new round.
+
 ## Open questions
-- **SFX generator:** on 11-07 the owner held the round-8 in-house SFX (locker by rarity, shop buy, rank up, quota tick,
-  hide in/out, hub ambience, truck) "waiting for a better sound generator". The ElevenLabs MCP is now connected, but its
-  key is the key ID, not the `sk_` key, so every call fails. It's also paid. Waiting on the coordinator/owner: use
-  ElevenLabs (fix the key, OK a cost), or local SA3 + samples?
-- **GPU:** asked the coordinator for the local Stable Audio GPU. No answer yet.
+- **SFX generator:** settled by the coordinator. Use local SA3 + CC0, with no ElevenLabs: the owner prefers free tools.
+  The ElevenLabs key (the key ID was saved instead of the `sk_` key) has been passed to the owner. The GPU was used in
+  one short batch and is idle again; ComfyUI is stopped and `gpu.lock` is removed.
+- **Upload OK:** asked on the row. After the owner finishes both pages, the picks go to Icey Labs and get wired in.
+- **Still to make:** hub ambience (garage room tone; SA3 bed stems exist in `stems/garage_bed_*`) and a new teammate
+  ping.
 
 ## Next
 - **Round 2 (foley-type SFX, once the generator is decided):** shop buy, locker open by rarity, hire, hide in/out,
@@ -49,5 +67,5 @@ Launch List row `p1-sound-pass`. Status: **round 1 is waiting on the owner's pic
   - yard music and calm-shift music slots (`OfficeAtmosphereSystem`).
 
 ## Where things are
-- Builds (outside git): `E:/AudioTools/work/p05-sound/`. Scores in `build/p05music.py`, tonal cues in
+- Builds (outside git): `E:/AudioTools/work/p05-sound/`. Scores in `build/p05music.py`, foley stems `build/gen_stems.py` + mixes `build/mix_foley.py`, tonal cues in
   `build/sfx_tonal.py`. Renders, stems and masters in `music/<track>/`, `sfx-tonal/`.
