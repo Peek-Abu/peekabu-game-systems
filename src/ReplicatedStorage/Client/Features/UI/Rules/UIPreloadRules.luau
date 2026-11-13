@@ -102,7 +102,10 @@ function UIPreloadRules.batches(art: Instance?, images: { string }, screen: { st
 		end
 		table.insert(batches, { name = "screen", items = items, essential = true })
 	end
-	local roster = if art ~= nil then characters(art) else {}
+	local roster: { Instance } = {}
+	if art ~= nil then
+		roster = characters(art)
+	end
 	for _, character in roster do
 		local sets = faceSets(character)
 		if #sets > 0 then

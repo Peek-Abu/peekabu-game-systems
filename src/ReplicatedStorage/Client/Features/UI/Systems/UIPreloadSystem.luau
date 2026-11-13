@@ -95,10 +95,12 @@ local function placeImages(): { string }
 				if skin.paletteTextureId ~= nil then
 					table.insert(palettes, skin.paletteTextureId)
 				end
-				for _, id in skin.piecePalettes or {} do
+				local pieces: { [string]: string } = skin.piecePalettes or {}
+				for _, id in pieces do
 					table.insert(palettes, id)
 				end
-				for _, style in skin.styles or {} do
+				local styles: { EmployeeRegistry.StyleDef } = skin.styles or {}
+				for _, style in styles do
 					if style.paletteTextureId ~= nil then
 						table.insert(palettes, style.paletteTextureId)
 					end
